@@ -1,5 +1,10 @@
 <?php
 
+use Mpdf\Config\ConfigVariables;
+use Mpdf\Config\FontVariables;
+use Mpdf\Mpdf;
+use Mpdf\Output\Destination;
+
 /**
  * Phase 0 — ঝুঁকি পরীক্ষা ১: mPDF বাংলা যুক্তাক্ষর রেন্ডারিং।
  *
@@ -9,9 +14,9 @@
  * চালানো:  php tests/phase0/bangla_pdf_test.php
  */
 
-require __DIR__ . '/../../vendor/autoload.php';
+require __DIR__.'/../../vendor/autoload.php';
 
-$out = __DIR__ . '/output';
+$out = __DIR__.'/output';
 if (! is_dir($out)) {
     mkdir($out, 0777, true);
 }
@@ -19,11 +24,11 @@ if (! is_dir($out)) {
 // যেসব যুক্তাক্ষরে DomPDF ভাঙে — একটাও ভাঙলে পরীক্ষা ব্যর্থ
 $conjuncts = [
     'ক্ষ' => 'ক্ষুদ্র ব্যবসা',
-    '্র'  => 'প্রতিষ্ঠান, ক্রয়, বিক্রয়',
-    '্য'  => 'ব্যাংক হিসাব, ন্যূনতম',
+    '্র' => 'প্রতিষ্ঠান, ক্রয়, বিক্রয়',
+    '্য' => 'ব্যাংক হিসাব, ন্যূনতম',
     'ঙ্ক' => 'অঙ্ক, শঙ্কা',
-    'ৎ'   => 'উৎপাদন, তৎক্ষণাৎ',
-    '্ব'  => 'স্বাক্ষর, দ্বিতীয়',
+    'ৎ' => 'উৎপাদন, তৎক্ষণাৎ',
+    '্ব' => 'স্বাক্ষর, দ্বিতীয়',
     'ঞ্চ' => 'পঞ্চম, সঞ্চয়',
     'ষ্ট' => 'কষ্ট, স্পষ্ট',
     'ন্ত' => 'অন্তর্ভুক্ত, শান্ত',
@@ -86,7 +91,7 @@ $html = <<<HTML
 HTML;
 
 $sizes = [
-    'A4'   => ['format' => 'A4', 'margin' => 12],
+    'A4' => ['format' => 'A4', 'margin' => 12],
     '80mm' => ['format' => [80, 250], 'margin' => 3],
     '58mm' => ['format' => [58, 250], 'margin' => 2],
 ];
@@ -94,7 +99,7 @@ $sizes = [
 $fail = 0;
 foreach ($sizes as $label => $cfg) {
     try {
-        $mpdf = new \Mpdf\Mpdf([
+        $mpdf = new Mpdf([
             'mode' => 'utf-8',
             'format' => $cfg['format'],
             'margin_left' => $cfg['margin'],
@@ -103,10 +108,10 @@ foreach ($sizes as $label => $cfg) {
             'margin_bottom' => $cfg['margin'],
             'tempDir' => sys_get_temp_dir(),
             'fontDir' => array_merge(
-                (new \Mpdf\Config\ConfigVariables())->getDefaults()['fontDir'],
-                [__DIR__ . '/../../storage/fonts']
+                (new ConfigVariables)->getDefaults()['fontDir'],
+                [__DIR__.'/../../storage/fonts']
             ),
-            'fontdata' => (new \Mpdf\Config\FontVariables())->getDefaults()['fontdata'] + [
+            'fontdata' => (new FontVariables)->getDefaults()['fontdata'] + [
                 'hindsiliguri' => [
                     'R' => 'HindSiliguri-Regular.ttf',
                     'B' => 'HindSiliguri-Bold.ttf',
@@ -125,10 +130,10 @@ foreach ($sizes as $label => $cfg) {
         $mpdf->WriteHTML($html);
 
         $file = "{$out}/bangla-{$label}.pdf";
-        $mpdf->Output($file, \Mpdf\Output\Destination::FILE);
+        $mpdf->Output($file, Destination::FILE);
 
         printf("OK    %-5s  %s  (%d bytes)\n", $label, basename($file), filesize($file));
-    } catch (\Throwable $e) {
+    } catch (Throwable $e) {
         printf("FAIL  %-5s  %s\n", $label, $e->getMessage());
         $fail++;
     }

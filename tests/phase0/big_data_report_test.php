@@ -10,11 +10,12 @@
  * চালানো:  php tests/phase0/big_data_report_test.php
  */
 
-require __DIR__ . '/../../vendor/autoload.php';
+require __DIR__.'/../../vendor/autoload.php';
 
-$app = require_once __DIR__ . '/../../bootstrap/app.php';
-$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+$app = require_once __DIR__.'/../../bootstrap/app.php';
+$app->make(Kernel::class)->bootstrap();
 
+use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Support\Facades\DB;
 
 const ROWS = 100_000;
@@ -24,6 +25,7 @@ function ms(callable $fn): array
 {
     $t = microtime(true);
     $result = $fn();
+
     return [round((microtime(true) - $t) * 1000, 1), $result];
 }
 
@@ -31,7 +33,7 @@ echo "Phase 0 — বড় ডাটায় রিপোর্ট পরী�
 echo str_repeat('-', 62), "\n";
 
 DB::statement('DROP TABLE IF EXISTS phase0_ledger');
-DB::statement("
+DB::statement('
     CREATE TABLE phase0_ledger (
         id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
         company_id   BIGINT UNSIGNED NOT NULL,
@@ -48,7 +50,7 @@ DB::statement("
         INDEX idx_company_acct   (company_id, account_id, trx_date),
         INDEX idx_source         (source_type, source_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-");
+');
 
 // ---------- ১. ডাটা বসানো ----------
 $types = ['sales_invoice', 'purchase_invoice', 'receipt_voucher', 'payment_voucher', 'journal_voucher'];
@@ -61,16 +63,16 @@ $types = ['sales_invoice', 'purchase_invoice', 'receipt_voucher', 'payment_vouch
             $debit = $n % 2 === 0 ? round(mt_rand(100, 500000) / 100, 4) : 0;
             $credit = $debit > 0 ? 0 : round(mt_rand(100, 500000) / 100, 4);
             $rows[] = [
-                'company_id'  => ($n % 3) + 1,
-                'branch_id'   => ($n % 7) + 1,
-                'account_id'  => ($n % 120) + 1,
-                'trx_date'    => date('Y-m-d', strtotime('2025-01-01 +' . ($n % 400) . ' days')),
-                'debit'       => $debit,
-                'credit'      => $credit,
+                'company_id' => ($n % 3) + 1,
+                'branch_id' => ($n % 7) + 1,
+                'account_id' => ($n % 120) + 1,
+                'trx_date' => date('Y-m-d', strtotime('2025-01-01 +'.($n % 400).' days')),
+                'debit' => $debit,
+                'credit' => $credit,
                 'source_type' => $types[$n % 5],
-                'source_id'   => intdiv($n, 2) + 1,
-                'narration'   => 'বিবরণ ' . $n,
-                'created_at'  => date('Y-m-d H:i:s'),
+                'source_id' => intdiv($n, 2) + 1,
+                'narration' => 'বিবরণ '.$n,
+                'created_at' => date('Y-m-d H:i:s'),
             ];
         }
         DB::table('phase0_ledger')->insert($rows);
@@ -89,7 +91,7 @@ $results = [];
     ->groupBy('account_id')
     ->selectRaw('account_id, SUM(debit) AS dr, SUM(credit) AS cr')
     ->get());
-$results['Trial Balance (এক বছর, ১২০ হিসাব)'] = [$t, $rows->count() . ' রো'];
+$results['Trial Balance (এক বছর, ১২০ হিসাব)'] = [$t, $rows->count().' রো'];
 
 // ---------- ৩. এক হিসাবের লেজার + চলমান ব্যালেন্স ----------
 [$t, $rows] = ms(fn () => DB::select("
@@ -100,7 +102,7 @@ $results['Trial Balance (এক বছর, ১২০ হিসাব)'] = [$t, $
       AND trx_date BETWEEN '2025-01-01' AND '2025-12-31'
     ORDER BY trx_date, id
 "));
-$results['Ledger + চলমান ব্যালেন্স (এক হিসাব)'] = [$t, count($rows) . ' রো'];
+$results['Ledger + চলমান ব্যালেন্স (এক হিসাব)'] = [$t, count($rows).' রো'];
 
 // ---------- ৪. পেজিনেটেড লিস্ট (Day Book-এর মতো) ----------
 [$t, $rows] = ms(fn () => DB::table('phase0_ledger')
@@ -108,7 +110,7 @@ $results['Ledger + চলমান ব্যালেন্স (এক হিস
     ->whereBetween('trx_date', ['2025-06-01', '2025-06-30'])
     ->orderBy('trx_date')->orderBy('id')
     ->limit(50)->offset(0)->get());
-$results['Day Book — প্রথম পাতা (৫০ রো)'] = [$t, $rows->count() . ' রো'];
+$results['Day Book — প্রথম পাতা (৫০ রো)'] = [$t, $rows->count().' রো'];
 
 // ---------- ৫. গভীর পেজ — শেয়ার্ড হোস্টের আসল ফাঁদ ----------
 // offset কোম্পানির নিজের রো-সংখ্যার ভেতরে হতে হবে, নাহলে কোয়েরি ফাঁকা ফেরত দেয় ও কিছুই মাপে না
@@ -118,7 +120,7 @@ $deepOffset = intdiv($companyRows, 2);
     ->where('company_id', 1)
     ->orderBy('trx_date')->orderBy('id')
     ->limit(50)->offset($deepOffset)->get());
-$results["গভীর পেজ — offset " . number_format($deepOffset)] = [$t, $rows->count() . ' রো'];
+$results['গভীর পেজ — offset '.number_format($deepOffset)] = [$t, $rows->count().' রো'];
 
 // ---------- ৬. ড্রিল-ডাউন (source_type + source_id) ----------
 // ডাটায় সত্যিই আছে এমন একটা জোড়া বেছে নেওয়া — নাহলে ফাঁকা লুকআপ মাপা হয়
@@ -129,7 +131,7 @@ $sample = DB::table('phase0_ledger')
     ->where('source_type', $sample->source_type)
     ->where('source_id', $sample->source_id)
     ->get());
-$results['ড্রিল-ডাউন — এক ডকুমেন্টের এন্ট্রি'] = [$t, $rows->count() . ' রো'];
+$results['ড্রিল-ডাউন — এক ডকুমেন্টের এন্ট্রি'] = [$t, $rows->count().' রো'];
 if ($rows->count() === 0) {
     echo "সতর্কতা: ড্রিল-ডাউন কোয়েরি ফাঁকা — পরীক্ষাটা অর্থহীন\n";
     $rowsEmpty = true;

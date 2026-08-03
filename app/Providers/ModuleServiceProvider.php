@@ -1,0 +1,83 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Providers;
+
+use App\Core\Module\ModuleRegistry;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\ServiceProvider;
+
+/**
+ * প্রতিটা মডিউলের রুট, ভিউ, অনুবাদ ও মাইগ্রেশন নিজে থেকে নিবন্ধন করে।
+ *
+ * প্ল্যান সেকশন ১৯.৩ — মডিউল নিজের ফোল্ডারে যা রাখবে, কোর সেটা খুঁজে নেবে।
+ * এখানে কোনো মডিউলের নাম লেখা নেই এবং কখনো লেখা হবে না; নাম লিখতে হলে
+ * "কোর কোড না ছুঁয়ে নতুন মডিউল" কথাটাই মিথ্যা হয়ে যায়।
+ */
+class ModuleServiceProvider extends ServiceProvider
+{
+    public function register(): void
+    {
+        $this->app->singleton(ModuleRegistry::class, fn () => new ModuleRegistry(app_path('Modules')));
+    }
+
+    public function boot(ModuleRegistry $registry): void
+    {
+        foreach ($registry->all() as $module) {
+            $this->registerTranslations($module->dir('Resources', 'lang'), $module->code);
+            $this->registerViews($module->dir('Resources', 'views'), $module->code);
+            $this->registerMigrations($module->dir('Database', 'Migrations'));
+            $this->registerRoutes($module->dir('Routes'), $module->code, $module->namespace);
+        }
+    }
+
+    private function registerTranslations(string $path, string $code): void
+    {
+        // দুই ভাষার ফাইলই থাকতে হবে — নিয়ম ৯। একটা থাকলে অন্যটায় ফলব্যাক
+        // হয়ে যাবে আর কেউ টের পাবে না, তাই দুটোই দাবি করা হয়।
+        foreach (['bn', 'en'] as $locale) {
+            if (! is_dir($path.DIRECTORY_SEPARATOR.$locale)) {
+                return;
+            }
+        }
+
+        $this->loadTranslationsFrom($path, $code);
+    }
+
+    private function registerViews(string $path, string $code): void
+    {
+        if (is_dir($path)) {
+            $this->loadViewsFrom($path, $code);
+        }
+    }
+
+    private function registerMigrations(string $path): void
+    {
+        if (is_dir($path)) {
+            $this->loadMigrationsFrom($path);
+        }
+    }
+
+    private function registerRoutes(string $path, string $code, string $namespace): void
+    {
+        $web = $path.DIRECTORY_SEPARATOR.'web.php';
+
+        if (is_file($web)) {
+            Route::middleware('web')
+                ->namespace($namespace.'\\Http\\Controllers')
+                ->name($code.'.')
+                ->group($web);
+        }
+
+        $api = $path.DIRECTORY_SEPARATOR.'api.php';
+
+        if (is_file($api)) {
+            Route::middleware('api')
+                ->prefix('api')
+                ->namespace($namespace.'\\Http\\Controllers')
+                ->name('api.'.$code.'.')
+                ->group($api);
+        }
+    }
+}
