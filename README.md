@@ -1,58 +1,110 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# ABOS — All Business Operating System
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+*Built Around Your Business.*
+Developed by Al-Amin Shuvo · Powered by UNIVER BANGLADESH · www.aboserp.com
 
-## About Laravel
+একটা হালকা ERP — Laravel 13, PHP 8.3, MySQL 8.4। পরিকল্পনা:
+`E:\ABOS\ABOS_Lightweight_ERP_Plan_v3.1.docx`
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+---
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## চালু করা
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+```powershell
+# MySQL চালু (Laragon বন্ধ থাকলে)
+C:\laragon\bin\mysql\mysql-8.4.3-winx64\bin\mysqld.exe --datadir="C:\laragon\bin\mysql\mysql-8.4.3-winx64\data" --console
 
-## Learning Laravel
+# ডাটাবেজ ও ডেমো ডাটা
+php artisan migrate:fresh --seeder=DemoSeeder --seed
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+# টেস্ট
+php artisan test
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
-
-```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+# সার্ভার
+php artisan serve
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+ডেমো লগইন — সবার পাসওয়ার্ড `password`:
 
-## Contributing
+| ব্যবহারকারী | ইমেইল | রোল | কোম্পানি |
+|---|---|---|---|
+| Al-Amin Shuvo | owner@abos.test | owner | ALPHA + BETA |
+| হিসাবরক্ষক | accounts@abos.test | accountant | ALPHA |
+| বিক্রয়কর্মী | sales@abos.test | salesman | ALPHA |
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+মালিক দুই কোম্পানিতেই আছেন — সুইচ করে দেখলে বোঝা যায় এক কোম্পানির ডাটা
+অন্যটায় নেই।
 
-## Code of Conduct
+---
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## অলঙ্ঘনীয় শর্ত
 
-## Security Vulnerabilities
+1. **নেস্টেড ফোল্ডার কাঠামো** — প্রতিটা মডিউল নিজের ফোল্ডারে, ভেতরে
+   Controllers, Models, Services, Requests, views, lang, Migrations।
+2. **১০০% এন্টারপ্রাইজ-গ্রেড কোডিং** — কোনো স্টাব নয়, কোনো "আপাতত চলবে" নয়।
+3. **১০০% এন্টারপ্রাইজ-গ্রেড ডিজাইন** — এক টোকেন, এক টুলবার, এক ফর্ম স্ট্যান্ডার্ড।
+4. **১০০% এন্টারপ্রাইজ-গ্রেড সিকিউরিটি** — প্রতিটা কোয়েরিতে `company_id`,
+   প্রতিটা রুটে permission, প্রতিটা লেনদেনে অডিট, প্রতিটা ইনপুটে ভ্যালিডেশন।
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+**গুণগত মানে কোনো ছাড় নেই।** সময় কম পড়লে স্কোপ কমবে, মান নয়।
 
-## License
+---
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## কাঠামো
+
+```
+app/
+├── Core/                      সব মডিউলের সাধারণ ভিত্তি
+│   ├── Concerns/                BelongsToCompany · HasDocumentStatus
+│   ├── Contracts/               Drillable
+│   ├── Engines/                 আটটা engine
+│   ├── Module/                  ModuleDefinition · ModuleRegistry
+│   ├── Services/                SettingsService
+│   └── Support/                 CompanyContext · DocumentStatus
+├── Modules/                   প্রতিটা মডিউল স্বয়ংসম্পূর্ণ
+│   ├── Accounts/  module.php
+│   ├── Customer/  module.php
+│   └── …
+└── Providers/ModuleServiceProvider.php   ← Modules/ স্ক্যান করে সব রেজিস্টার করে
+```
+
+নতুন মডিউল যোগ করতে কোর কোড ছুঁতে হয় না — `app/Modules/<Name>/` ফোল্ডার আর
+তার ভেতরে `module.php` রাখলেই কোর সেটা খুঁজে নেয়, রুট-মেনু-permission-
+মাইগ্রেশন সব নিজে থেকে বসায়। বিস্তারিত প্ল্যানের সেকশন ১৯-এ।
+
+---
+
+## আটটা Engine
+
+| Engine | কাজ | অবস্থা |
+|---|---|---|
+| **Posting** | হিসাবের খাতায় লেখার একমাত্র পথ; ডেবিট=ক্রেডিট বাধ্যতামূলক | ✅ |
+| **Number Series** | row lock দিয়ে ডকুমেন্ট নম্বর, কখনো দুইবার এক নম্বর নয় | ✅ |
+| **Approval** | polymorphic, বহু-স্তর, সীমা-সাপেক্ষ | ✅ |
+| **Drill-down** | যেকোনো সংখ্যা থেকে তার উৎস ডকুমেন্টে | ✅ |
+| **Attachment** | ফাইল ডিস্কে (base64 নয়), সংস্করণ সহ | ✅ |
+| **Module Registry** | module.php পড়ে সব নিবন্ধন | ✅ |
+| **Print / Template** | ৬ ডকুমেন্ট × ৩ কাগজ × ২ ভাষা | ⏳ |
+| **Report** | কোয়েরি + কলাম কনফিগে | ⏳ |
+
+---
+
+## যা প্রমাণিত হয়েছে (Phase 0)
+
+- **বাংলা PDF** — mPDF + Hind Siliguri-তে ১২টা কঠিন যুক্তাক্ষর A4/৮০mm/৫৮mm
+  তিন কাগজেই অক্ষত। `php tests/phase0/bangla_pdf_test.php`
+- **১ লাখ রো-তে রিপোর্ট** — Trial Balance ১৪০ms, Ledger ১২ms, Day Book ২.৪ms।
+  `php tests/phase0/big_data_report_test.php`
+- **একটা ফাঁদ** — tabular ফন্টে (DejaVu Sans) বাংলা অঙ্ক ফাঁকা বাক্স হয়ে যায়।
+  তাই টাকার অঙ্ক সবসময় ইংরেজিতে। প্রমাণ টেস্ট PDF-এর "সংখ্যার নিয়ম" টেবিলে।
+
+---
+
+## টেস্ট
+
+```
+php artisan test
+```
+
+MySQL-এ চলে, sqlite-এ নয় — sqlite-এ row lock নেই, তাই নম্বর সিরিজের
+concurrency পাহারাটা ওখানে পাশ করত আর বাগটা প্রোডাকশনে যেত।

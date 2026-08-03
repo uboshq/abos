@@ -1,0 +1,144 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\Feature\Core;
+
+use App\Core\Engines\Approval\ApprovalEngine;
+use App\Core\Engines\NumberSeries\NumberSeriesEngine;
+use App\Core\Engines\Posting\PostingEngine;
+use App\Core\Services\SettingsService;
+use App\Core\Support\CompanyContext;
+use App\Models\Approval;
+use App\Models\Branch;
+use App\Models\Company;
+use App\Models\LedgerEntry;
+use App\Models\NumberSeries;
+use App\Models\User;
+use Database\Seeders\DemoSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+/**
+ * ভিত্তিটা সত্যিই দাঁড়িয়েছে কি না — Phase 1-এর Exit Criteria।
+ *
+ * প্ল্যান সেকশন ৬ বলে Phase 1 তখনই শেষ যখন "একটা ডামি মডেলে posting +
+ * approval + audit + drill-down + দুই ভাষা — পাঁচটাই কাজ করছে"। এই টেস্টটা
+ * ঠিক সেটাই একসাথে করে দেখায়, আসল ডেমো ডাটার উপর।
+ */
+class FoundationWorksEndToEndTest extends TestCase
+{
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(DemoSeeder::class);
+    }
+
+    protected function tearDown(): void
+    {
+        CompanyContext::clear();
+        parent::tearDown();
+    }
+
+    public function test_the_whole_chain_holds_together(): void
+    {
+        $owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
+        $salesman = User::query()->where('email', 'sales@abos.test')->firstOrFail();
+
+        $alpha = Company::query()->where('code', 'ALPHA')->firstOrFail();
+        $beta = Company::query()->where('code', 'BETA')->firstOrFail();
+
+        // ১. কোম্পানি প্রসঙ্গ
+        $owner->switchCompany($alpha->id);
+        CompanyContext::set($owner->fresh()->current_company_id, $owner->fresh()->current_branch_id);
+
+        $this->assertSame($alpha->id, CompanyContext::id());
+        $this->assertSame(3, Branch::query()->count(), 'Alpha has three branches.');
+
+        // ২. নম্বর ইস্যু
+        $numbers = app(NumberSeriesEngine::class);
+        $invoiceNo = $numbers->next('SI', sourceType: 'sales_invoice', sourceId: 1);
+
+        $this->assertSame('INV-2026-2027-0001', $invoiceNo);
+
+        // ৩. হিসাবে বসানো
+        $posting = app(PostingEngine::class);
+        $posting->post('sales_invoice', 1, '2026-08-04', [
+            ['account_id' => 1101, 'debit' => 11500, 'party_type' => 'customer', 'party_id' => 7],
+            ['account_id' => 4001, 'credit' => 10000],
+            ['account_id' => 2201, 'credit' => 1500],
+        ], documentNo: $invoiceNo);
+
+        $this->assertSame(3, LedgerEntry::query()->count());
+        $this->assertEquals(
+            LedgerEntry::query()->sum('debit'),
+            LedgerEntry::query()->sum('credit'),
+            'The books must balance.',
+        );
+
+        // ৪. প্রতিটা লাইন তার উৎসে ফিরতে পারে — নিয়ম ১
+        $entry = LedgerEntry::query()->first();
+        $this->assertSame('sales_invoice', $entry->source_type);
+        $this->assertSame(1, (int) $entry->source_id);
+        $this->assertSame($invoiceNo, $entry->document_no);
+
+        // ৫. অনুমোদন — ছাড় ১,০০০-এর উপরে হলে মালিকের সম্মতি লাগে
+        $approvals = app(ApprovalEngine::class);
+        $document = Branch::query()->first();
+
+        $small = $approvals->request($document, 'sales', 'discount', '500', userId: $salesman->id);
+        $this->assertNull($small, 'A small discount should not need anybody.');
+
+        $large = $approvals->request($document, 'sales', 'discount', '2500', userId: $salesman->id);
+        $this->assertNotNull($large);
+        $this->assertSame(Approval::PENDING, $large->status);
+
+        $decided = $approvals->approve($large, $owner, 'ঠিক আছে');
+        $this->assertSame(Approval::APPROVED, $decided->status);
+
+        // ৬. সেটিংস — মডিউল থেকে আসা ডিফল্ট
+        $settings = app(SettingsService::class);
+        $this->assertTrue($settings->enabled('customer.credit_limit_enabled'));
+        $this->assertSame(7, $settings->get('accounts.backdate_days'));
+
+        // ৭. দুই ভাষা
+        app()->setLocale('bn');
+        $this->assertSame('খসড়া', __('core.status.draft'));
+        $this->assertSame('আলফা ট্রেডার্স লিমিটেড', $alpha->name());
+
+        app()->setLocale('en');
+        $this->assertSame('Draft', __('core.status.draft'));
+        $this->assertSame('Alpha Traders Ltd.', $alpha->name());
+
+        // ৮. অন্য কোম্পানিতে গেলে কিছুই দেখা যায় না
+        $owner->switchCompany($beta->id);
+        CompanyContext::set($beta->id);
+
+        $this->assertSame(0, LedgerEntry::query()->count(), "Beta must not see Alpha's ledger.");
+        $this->assertSame(1, Branch::query()->count(), 'Beta has one branch.');
+        $this->assertSame(0, Approval::query()->count());
+
+        // ৯. ফিরে গেলে সব আগের মতোই
+        $owner->switchCompany($alpha->id);
+        CompanyContext::set($alpha->id);
+
+        $this->assertSame(3, LedgerEntry::query()->count());
+    }
+
+    public function test_the_demo_data_is_usable_as_it_stands(): void
+    {
+        $this->assertSame(2, Company::query()->count());
+        $this->assertSame(3, User::query()->count());
+
+        $alpha = Company::query()->where('code', 'ALPHA')->firstOrFail();
+
+        CompanyContext::set($alpha->id);
+
+        $this->assertSame(10, NumberSeries::query()->count(), 'Every document type needs a series.');
+        $this->assertNotNull($alpha->currentFinancialYear());
+        $this->assertNotNull($alpha->defaultBranch());
+        $this->assertSame('DHK', $alpha->defaultBranch()->code);
+    }
+}
