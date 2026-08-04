@@ -43,14 +43,14 @@
             <h2 class="mb-3 font-semibold">{{ __('customer::section.identity') }}</h2>
 
             <div class="grid gap-3 sm:grid-cols-2">
-                <x-customer::field name="code" :label="__('customer::field.code')"
+                <x-ui.field name="code" :label="__('customer::field.code')"
                                    :value="old('code', $customer->code)"
                                    :hint="$isNew ? __('customer::message.code_auto') : null" />
 
-                <x-customer::field name="name_en" :label="__('customer::field.name_en')"
+                <x-ui.field name="name_en" :label="__('customer::field.name_en')"
                                    :value="old('name_en', $customer->name_en)" required />
 
-                <x-customer::field name="name_bn" :label="__('customer::field.name_bn')"
+                <x-ui.field name="name_bn" :label="__('customer::field.name_bn')"
                                    :value="old('name_bn', $customer->name_bn)"
                                    :required="$requireBangla"
                                    :hint="__('customer::message.bn_name_hint')" />
@@ -58,13 +58,13 @@
                 {{-- মোবাইলে সঠিক কী-বোর্ড আসার জন্য type ঠিক দিতে হয়
                      (সেকশন ২০.৫) — ফোনের ঘরে অক্ষরের কী-বোর্ড এলে ফিল্ড
                      সেলসম্যানের প্রতিটা এন্ট্রি ধীর হয়। --}}
-                <x-customer::field name="phone" type="tel" :label="__('customer::field.phone')"
+                <x-ui.field name="phone" type="tel" :label="__('customer::field.phone')"
                                    :value="old('phone', $customer->phone)" />
 
-                <x-customer::field name="email" type="email" :label="__('customer::field.email')"
+                <x-ui.field name="email" type="email" :label="__('customer::field.email')"
                                    :value="old('email', $customer->email)" />
 
-                <x-customer::field name="customer_type" :label="__('customer::field.type')"
+                <x-ui.field name="customer_type" :label="__('customer::field.type')"
                                    :value="old('customer_type', $customer->customer_type)"
                                    :hint="__('customer::message.type_hint')" />
             </div>
@@ -74,9 +74,9 @@
             <h2 class="mb-3 font-semibold">{{ __('customer::section.address') }}</h2>
 
             <div class="grid gap-3 sm:grid-cols-2">
-                <x-customer::field name="address_en" :label="__('customer::field.address_en')"
+                <x-ui.field name="address_en" :label="__('customer::field.address_en')"
                                    :value="old('address_en', $customer->address_en)" />
-                <x-customer::field name="address_bn" :label="__('customer::field.address_bn')"
+                <x-ui.field name="address_bn" :label="__('customer::field.address_bn')"
                                    :value="old('address_bn', $customer->address_bn)" />
 
                 <label class="block">
@@ -102,12 +102,12 @@
 
                 <div class="grid gap-3 sm:grid-cols-2">
                     {{-- inputmode="decimal" — টাকার ঘরে ফোনে সংখ্যার কী-বোর্ড --}}
-                    <x-customer::field name="credit_limit" type="number" step="0.01" inputmode="decimal"
+                    <x-ui.field name="credit_limit" type="number" step="0.01" inputmode="decimal"
                                        :label="__('customer::field.credit_limit')"
                                        :value="old('credit_limit', $customer->credit_limit)"
                                        :hint="__('customer::message.zero_means_unlimited')" numeric />
 
-                    <x-customer::field name="credit_days" type="number" inputmode="numeric"
+                    <x-ui.field name="credit_days" type="number" inputmode="numeric"
                                        :label="__('customer::field.credit_days')"
                                        :value="old('credit_days', $customer->credit_days)" numeric />
                 </div>
@@ -124,10 +124,10 @@
                 </p>
 
                 <div class="grid gap-3 sm:grid-cols-2">
-                    <x-customer::field name="opening_balance" type="number" step="0.01" inputmode="decimal"
+                    <x-ui.field name="opening_balance" type="number" step="0.01" inputmode="decimal"
                                        :label="__('customer::field.opening_balance')"
                                        :value="old('opening_balance', 0)" numeric />
-                    <x-customer::field name="opening_date" type="date"
+                    <x-ui.field name="opening_date" type="date"
                                        :label="__('customer::field.opening_date')"
                                        :value="old('opening_date')" />
                 </div>

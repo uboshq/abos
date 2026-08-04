@@ -28,7 +28,7 @@ return [
             ['label' => 'accounts::menu.dashboard', 'route' => 'accounts.dashboard', 'permission' => 'accounts.view', 'planned' => true],
         ],
         'master' => [
-            ['label' => 'accounts::menu.chart_of_accounts', 'route' => 'accounts.coa.index', 'permission' => 'accounts.coa.view', 'planned' => true],
+            ['label' => 'accounts::menu.chart_of_accounts', 'route' => 'accounts.coa.index', 'permission' => 'accounts.coa.view'],
             ['label' => 'accounts::menu.cash_tills', 'route' => 'accounts.till.index', 'permission' => 'accounts.till.view', 'planned' => true],
         ],
         'transactions' => [

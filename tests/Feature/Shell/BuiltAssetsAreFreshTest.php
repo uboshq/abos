@@ -54,7 +54,15 @@ class BuiltAssetsAreFreshTest extends TestCase
     }
 
     /**
-     * Tailwind যেখান থেকে ক্লাস খোঁজে।
+     * যে ফাইলগুলোতে সত্যিই Tailwind ক্লাস থাকতে পারে।
+     *
+     * প্রথম চেষ্টায় app/Modules-এর সব .php ধরা হয়েছিল, আর তাতে সার্ভিস,
+     * রুট ও ভাষার ফাইল বদলালেও পরীক্ষাটা ভাঙত — অথচ ওগুলোর সাথে CSS-এর
+     * কোনো সম্পর্ক নেই। প্রতিটা ব্যাকএন্ড বদলে "npm run build চালান"
+     * বলা মানে কিছুদিনের মধ্যেই কেউ আর বার্তাটা পড়বে না।
+     *
+     * ক্লাস থাকে দুই জায়গায়: Blade টেমপ্লেট, আর যে PHP কম্পোনেন্ট ক্লাস
+     * হাতে ক্লাসের তালিকা বানায় (app/View)।
      *
      * @return list<string>
      */
@@ -62,7 +70,14 @@ class BuiltAssetsAreFreshTest extends TestCase
     {
         $files = [];
 
-        foreach ([resource_path('views'), resource_path('css'), app_path('Modules'), app_path('View')] as $root) {
+        $roots = [
+            resource_path('views') => '/\.blade\.php$/',
+            resource_path('css') => '/\.css$/',
+            app_path('Modules') => '/\.blade\.php$/',
+            app_path('View') => '/\.php$/',
+        ];
+
+        foreach ($roots as $root => $pattern) {
             if (! is_dir($root)) {
                 continue;
             }
@@ -72,7 +87,7 @@ class BuiltAssetsAreFreshTest extends TestCase
             );
 
             foreach ($iterator as $file) {
-                if ($file->isFile() && preg_match('/\.(blade\.php|css|php)$/', $file->getFilename())) {
+                if ($file->isFile() && preg_match($pattern, $file->getFilename())) {
                     $files[] = $file->getPathname();
                 }
             }

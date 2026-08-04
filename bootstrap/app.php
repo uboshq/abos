@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\NormalizeUnicodeInput;
 use App\Http\Middleware\ResolveCompanyContext;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -20,6 +21,13 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             ResolveCompanyContext::class,
         ]);
+
+        /*
+         * ইউনিকোড নিয়মিতকরণ সবার আগে — ভ্যালিডেশন, খোঁজা ও সংরক্ষণ
+         * তিনটাই যেন একই বাইট দেখে। পরে বসালে ভ্যালিডেশন এক রূপ দেখত
+         * আর ডাটাবেজে আরেক রূপ যেত।
+         */
+        $middleware->prepend(NormalizeUnicodeInput::class);
 
         /*
          * রুট-মডেল বাইন্ডিং-এর আগে।

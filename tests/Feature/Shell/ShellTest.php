@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Shell;
 
 use App\Core\Module\ModuleDefinition;
+use App\Core\Module\ModuleRegistry;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\PermissionSyncer;
 use App\Core\Support\CompanyContext;
@@ -253,8 +254,15 @@ class ShellTest extends TestCase
         // রেকর্ডে, সেশনে নয় — অন্য ডিভাইসে লগইন করলেও একই ভাষা (নিয়ম ৯)।
         $this->assertSame('en', $owner->fresh()->locale);
 
-        // মেনুর লেবেলও ইংরেজিতে — অনুবাদ পুরো পাতায়, শুধু শিরোনামে নয়
-        $this->actingAs($owner->fresh())->get('/')->assertSee('Customers', false);
+        // মডিউলের লেবেলও ইংরেজিতে — অনুবাদ পুরো পাতায়, শুধু শিরোনামে নয়।
+        //
+        // লেবেলটা রেজিস্ট্রি থেকে নেওয়া, হাতে লেখা নয়: আগে এখানে একটা
+        // নির্দিষ্ট মেনু সারির নাম লেখা ছিল, আর নতুন একটা মডিউল সক্রিয়
+        // হওয়ামাত্র সাইডবারে অন্য মডিউলের সারিগুলো দেখাতে শুরু করায়
+        // পরীক্ষাটা ভেঙে গিয়েছিল — নিয়ম ভাঙায় নয়, অগ্রগতিতে।
+        $label = app(ModuleRegistry::class)->all()['customer']->name['en'];
+
+        $this->actingAs($owner->fresh())->get('/')->assertSee($label, false);
     }
 
     public function test_every_module_permission_is_registered_in_the_database(): void
