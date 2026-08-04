@@ -77,6 +77,37 @@ return [
         'powered_by' => 'Powered by UNIVER BANGLADESH',
     ],
 
+    'components' => [
+        'title' => 'Components',
+        'subtitle' => 'Every screen is built from these — one toolbar, one form, one table',
+        'buttons' => 'Buttons',
+        'badges' => 'Badges and status',
+    ],
+
+    'table' => [
+        'date' => 'Date',
+        'document' => 'Document',
+        'party' => 'Party',
+        'debit' => 'Debit',
+        'credit' => 'Credit',
+        'balance' => 'Balance',
+        'narration' => 'Narration',
+    ],
+
+    'toolbar' => [
+        'filter' => 'Filter',
+        'columns' => 'Columns',
+        'density' => 'Density',
+        'refresh' => 'Refresh',
+        'group' => 'Group',
+        'freeze' => 'Freeze',
+    ],
+
+    'empty' => [
+        'nothing_here' => 'Nothing here yet',
+        'no_results' => 'Nothing matched that search',
+    ],
+
     'status_bar' => [
         'operational' => 'Operational',
         'maintenance' => 'Maintenance',

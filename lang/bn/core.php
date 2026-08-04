@@ -82,6 +82,37 @@ return [
         'powered_by' => 'Powered by UNIVER BANGLADESH',
     ],
 
+    'components' => [
+        'title' => 'কম্পোনেন্ট',
+        'subtitle' => 'সব স্ক্রিন এই কম্পোনেন্টগুলোর উপরেই দাঁড়াবে — এক টুলবার, এক ফর্ম, এক টেবিল',
+        'buttons' => 'বাটন',
+        'badges' => 'ব্যাজ ও অবস্থা',
+    ],
+
+    'table' => [
+        'date' => 'তারিখ',
+        'document' => 'ডকুমেন্ট',
+        'party' => 'পক্ষ',
+        'debit' => 'ডেবিট',
+        'credit' => 'ক্রেডিট',
+        'balance' => 'ব্যালেন্স',
+        'narration' => 'বিবরণ',
+    ],
+
+    'toolbar' => [
+        'filter' => 'ফিল্টার',
+        'columns' => 'কলাম',
+        'density' => 'ঘনত্ব',
+        'refresh' => 'নতুন করে আনো',
+        'group' => 'গ্রুপ',
+        'freeze' => 'আটকাও',
+    ],
+
+    'empty' => [
+        'nothing_here' => 'এখানে এখনো কিছু নেই',
+        'no_results' => 'খোঁজার সাথে কিছু মিলল না',
+    ],
+
     'status_bar' => [
         'operational' => 'সচল',
         'maintenance' => 'রক্ষণাবেক্ষণ',

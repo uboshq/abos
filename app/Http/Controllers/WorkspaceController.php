@@ -27,6 +27,24 @@ class WorkspaceController extends Controller
     }
 
     /**
+     * কম্পোনেন্ট গ্যালারি — সেকশন ১৫.২৭।
+     *
+     * নতুন স্ক্রিন লেখার আগে কী কী আছে দেখে নেওয়ার জায়গা, আর কোনো
+     * কম্পোনেন্ট বদলালে চার প্রস্থে চোখে দেখে নেওয়ার জায়গা।
+     */
+    public function components(Request $request): View
+    {
+        return view('workspace.components', [
+            'menu' => $this->menu->forUser($request->user()),
+            'sampleRows' => [
+                ['date' => '০৪/০৮/২০২৬', 'document' => 'INV-2026-2027-0001', 'party' => 'করিম স্টোর', 'debit' => '11,500.00', 'credit' => ''],
+                ['date' => '০৪/০৮/২০২৬', 'document' => 'RCV-2026-2027-0001', 'party' => 'করিম স্টোর', 'debit' => '', 'credit' => '5,000.00'],
+                ['date' => '০৫/০৮/২০২৬', 'document' => 'PUR-2026-2027-0001', 'party' => 'রহিম ট্রেডার্স', 'debit' => '8,250.50', 'credit' => ''],
+            ],
+        ]);
+    }
+
+    /**
      * কোম্পানি বদলানো।
      *
      * switchCompany() নিজেই যাচাই করে ব্যবহারকারীর ওই কোম্পানিতে ঢোকার

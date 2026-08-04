@@ -37,8 +37,11 @@
         <div class="flex min-w-0 flex-1 flex-col">
             <x-shell.topbar />
 
+            {{-- নিচের প্যাডিং bottom nav-এর উচ্চতার সমান নয়, তার চেয়ে বেশি:
+                 ঠিক সমান দিলে শেষ বোতামটা বারের গা ঘেঁষে থাকে আর আঙুল দিয়ে
+                 টিপতে গেলে ভুলে nav-এ চাপ পড়ে। --}}
             <main id="main"
-                  class="flex-1 px-3 pt-4 pb-(--spacing-bottom-nav) md:px-5 md:pb-5 lg:px-6"
+                  class="flex-1 px-3 pt-4 pb-[calc(var(--spacing-bottom-nav)+1.5rem)] md:px-5 md:pb-5 lg:px-6"
                   tabindex="-1">
                 {{-- কনটেন্টের সর্বোচ্চ প্রস্থ — সেকশন ২০.১। বড় স্ক্রিনে
                      টেনে লম্বা নয়; জায়গা বাড়লে কলাম বাড়ে, লাইন নয়। --}}

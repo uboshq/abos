@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth')->group(function () {
     Route::get('/', [WorkspaceController::class, 'dashboard'])->name('dashboard');
+    Route::get('/components', [WorkspaceController::class, 'components'])->name('components');
 
     Route::post('/company/switch', [WorkspaceController::class, 'switchCompany'])->name('company.switch');
     Route::post('/locale/switch', [WorkspaceController::class, 'switchLocale'])->name('locale.switch');
