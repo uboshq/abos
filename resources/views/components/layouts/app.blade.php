@@ -52,6 +52,31 @@
 
                  হিসাবের ছকে ৩৭৫px-এ ৯১px উপচে পড়ছিল ঠিক এই কারণে।
                  টুলবারের সার্চ ঘরে একই সমস্যা আগেও ধরা পড়েছিল। --}}
+            {{-- ছাপার মাথা — শুধু কাগজে।
+
+                 পর্দায় কোম্পানি ও শাখা টপবারে দেখা যায়, তাই সেখানে
+                 এটা লাগে না। কিন্তু কাগজে ওই টপবারটা যায় না, আর তখন
+                 একটা বকেয়ার তালিকা হাতে নিয়ে বলা যায় না ওটা কোন
+                 প্রতিষ্ঠানের, কোন শাখার, কবেকার — দুইটা ডিপো এক অফিসে
+                 হলে কাগজদুটো আলাদা করার কোনো উপায় থাকে না।
+
+                 তারিখটাও দরকার: "এই বকেয়া কবেকার" প্রশ্নের উত্তর কাগজে
+                 না থাকলে এক সপ্তাহ পরে কাগজটা আর কাজে লাগে না। --}}
+            @php($printCompany = auth()->user()?->currentCompany)
+
+            @if ($printCompany)
+                <div class="hidden print:block print:mb-4 print:border-b print:border-black print:pb-2">
+                    <p class="print:text-base print:font-bold">{{ $printCompany->name() }}</p>
+
+                    <p class="print:text-xs">
+                        @if ($printBranch = auth()->user()?->currentBranch)
+                            {{ $printBranch->name() }} ·
+                        @endif
+                        {{ __('core.print.printed_at') }}: {{ now()->format('d/m/Y H:i') }}
+                    </p>
+                </div>
+            @endif
+
             <main id="main"
                   class="min-w-0 flex-1 px-3 pt-4 pb-[calc(var(--spacing-bottom-nav)+1.5rem)]
                          md:px-5 md:pb-[calc(var(--spacing-status-bar)+1.5rem)] lg:px-6"

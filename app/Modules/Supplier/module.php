@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\Supplier\Imports\SupplierImporter;
 use App\Modules\Supplier\Models\Supplier;
 use App\Modules\Supplier\Reports\PartyReports;
 
@@ -58,6 +59,12 @@ return [
 
     'drill_sources' => [
         'supplier' => Supplier::class,
+    ],
+
+    // পুরনো খাতা থেকে আনা — ইমপোর্টের পর্দা এই ঘোষণা থেকেই সারিটা
+    // দেখায়, তাই কোর কোডে কোনো মডিউলের নাম লিখতে হয় না।
+    'imports' => [
+        'supplier' => SupplierImporter::class,
     ],
 
     // Report engine এগুলো boot-এ নিবন্ধন করে, তাই রিপোর্ট যোগ করতে

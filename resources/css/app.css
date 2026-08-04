@@ -291,3 +291,110 @@
         }
     }
 }
+
+/* ─────────────────────────────────────────────────────────────────
+   ছাপা — পর্দার তালিকা ও রিপোর্ট কাগজে
+
+   টুলবারের Print বোতামটা window.print() ডাকে, অর্থাৎ যা পর্দায় আছে
+   তাই কাগজে যায়। কোনো print stylesheet না থাকায় সাইডবার, টপবার,
+   নিচের বার আর টুলবারের বোতামগুলোও ছাপা হত — তিন পাতার একটা রিপোর্টে
+   প্রতিটা পাতায় একবার করে।
+
+   এটা ডকুমেন্ট ছাপার জায়গা নয়। চালান, ইনভয়েস ও ভাউচারের নিজস্ব
+   লেআউট আছে (resources/views/print/), কারণ ওগুলোর মাপ কাগজ ধরে বদলায়
+   আর ৫৮mm থার্মালে পর্দার টেবিল বসেই না। এখানে শুধু "যা দেখছি তা
+   কাগজে চাই" — তালিকা ও রিপোর্টের জন্য।
+   ───────────────────────────────────────────────────────────────── */
+
+@media print {
+    /* chrome কাগজে যায় না — ওগুলো পর্দায় চলার জিনিস */
+    aside,
+    header.sticky,
+    footer.fixed,
+    .print-hide {
+        display: none !important;
+    }
+
+    /* টুলবারের বোতামগুলো কাগজে অর্থহীন, কিন্তু ফিল্টারের মানগুলো
+       নয়: "কোন তারিখ থেকে কোন তারিখ" না থাকলে কাগজটা পড়ে বোঝা
+       যায় না কীসের রিপোর্ট। তাই বোতাম যায়, ঘর থাকে। */
+    button,
+    [type='submit'],
+    [role='button'] {
+        display: none !important;
+    }
+
+    main {
+        padding: 0 !important;
+        max-width: none !important;
+    }
+
+    body {
+        background: #fff !important;
+        color: #000 !important;
+        font-size: 10pt;
+    }
+
+    /* কার্ড ও ছায়া কাগজে টোনার খরচ ছাড়া কিছু নয় */
+    .rounded-\(--radius-card\),
+    [class*='shadow-'] {
+        border: 0 !important;
+        box-shadow: none !important;
+    }
+
+    /* সারি যেন পাতার মাঝখানে ভাগ না হয় — অর্ধেক সারি দুই পাতায়
+       থাকলে সংখ্যাটা কোন নামের সেটা বলা যায় না */
+    tr,
+    td,
+    th {
+        break-inside: avoid;
+    }
+
+    thead {
+        /* প্রতিটা পাতায় হেডার — নাহলে দ্বিতীয় পাতা থেকে কলামের নাম
+           নেই, আর কোন সংখ্যাটা ডেবিট তা অনুমান করতে হয় */
+        display: table-header-group;
+    }
+
+    /* বড় পর্দায় কার্ড ভিউ বেছে থাকলেও কাগজে টেবিলই ভালো — কাগজে
+       স্ক্রল নেই, তাই টেবিলে অনেক বেশি সারি ধরে */
+    .table-cards.as-cards tbody {
+        display: table-row-group;
+    }
+
+    .table-cards.as-cards tr {
+        display: table-row;
+    }
+
+    .table-cards.as-cards td {
+        display: table-cell;
+    }
+
+    .table-cards.as-cards td::before {
+        content: none;
+    }
+
+    .table-cards.as-cards thead {
+        position: static;
+        width: auto;
+        height: auto;
+        clip: auto;
+    }
+
+    a {
+        /* লিংকের রং কাগজে অর্থহীন — ক্লিক করা যায় না */
+        color: #000 !important;
+        text-decoration: none !important;
+    }
+
+    /* খোঁজার ঘরটা কাগজে কিছু বলে না — খালি থাকলে অর্থহীন, আর ভরা
+       থাকলেও ফলটা তো নিচের টেবিলেই আছে। কিন্তু তারিখ ও শাখার ঘরগুলো
+       থাকে: ওগুলো ছাড়া কাগজটা পড়ে বোঝা যায় না কীসের রিপোর্ট। */
+    input[type='search'] {
+        display: none !important;
+    }
+
+    @page {
+        margin: 12mm;
+    }
+}

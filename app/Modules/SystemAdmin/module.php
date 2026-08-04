@@ -36,6 +36,8 @@ return [
             ['label' => 'system_admin::menu.login_history', 'route' => 'admin.logins', 'permission' => 'system_admin.audit.view', 'planned' => true],
         ],
         'settings' => [
+            ['label' => 'core.import.title', 'route' => 'system_admin.import.index',
+                'permission' => 'system_admin.import.manage'],
             ['label' => 'system_admin::menu.control_panel', 'route' => 'system_admin.control-panel', 'permission' => 'system_admin.settings.manage'],
             ['label' => 'system_admin::menu.backup', 'route' => 'admin.backup', 'permission' => 'system_admin.backup.manage', 'planned' => true],
         ],
@@ -46,6 +48,9 @@ return [
         'system_admin.user.manage',
         'system_admin.role.manage',
         'system_admin.settings.manage',
+        // ইমপোর্টের নিজের অনুমতি: একসাথে দুই হাজার সারি বসানো সেটিংস
+        // বদলানোর চেয়ে ভিন্ন ক্ষমতা, আর ভুল ফাইল দিলে ফল অনেক বড়
+        'system_admin.import.manage',
         'system_admin.audit.view',
         'system_admin.backup.manage',
     ],

@@ -99,7 +99,7 @@
             </label>
         @endif
 
-        <div class="ms-auto flex items-center gap-1">
+        <div class="print-hide ms-auto flex items-center gap-1">
 
             {{-- View — তালিকা নাকি কার্ড।
 

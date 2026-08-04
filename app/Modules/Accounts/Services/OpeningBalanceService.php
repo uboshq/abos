@@ -175,10 +175,6 @@ final class OpeningBalanceService
      */
     private function dateFor(Carbon|string|null $date): Carbon
     {
-        if ($date !== null) {
-            return $date instanceof Carbon ? $date : Carbon::parse($date);
-        }
-
         $year = FinancialYear::query()->where('is_current', true)->first();
 
         if ($year === null) {
@@ -187,6 +183,26 @@ final class OpeningBalanceService
             );
         }
 
-        return Carbon::parse($year->starts_on);
+        $start = Carbon::parse($year->starts_on);
+
+        if ($date === null) {
+            return $start;
+        }
+
+        $given = $date instanceof Carbon ? $date : Carbon::parse($date);
+
+        /*
+         * অর্থবছরের আগের তারিখ হলে বছরের প্রথম দিনে বসে।
+         *
+         * পুরনো খাতা থেকে আনার সময় এটা প্রায় সবসময় ঘটে: করিমের কাছে
+         * বকেয়াটা ২০২৪ সাল থেকে, অথচ ABOS-এ প্রথম অর্থবছর ২০২৬-২৭।
+         * ওই তারিখে কোনো অর্থবছর নেই, তাই Posting engine ঠিকই ব্যতিক্রম
+         * ছুঁড়ত — আর পুরো ইমপোর্টটা আটকে যেত।
+         *
+         * সরিয়ে দেওয়াটা শুধু কারিগরি সুবিধা নয়, হিসাবেও ঠিক: খাতা যেদিন
+         * শুরু হয়েছে তার আগের কোনো দিনে দাখিলা বসানোর মানে হয় না। আসল
+         * তারিখটা হারায় না — সেটা পক্ষের নিজের opening_date ঘরে থেকে যায়।
+         */
+        return $given->lt($start) ? $start : $given;
     }
 }
