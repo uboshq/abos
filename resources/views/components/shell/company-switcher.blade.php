@@ -25,6 +25,14 @@
             ])
             @if ($others->isEmpty()) disabled @endif>
 
+        {{-- গ্রাহকের নিজের লোগো — ABOS-এর নয়। প্রোডাক্টের মার্ক সাইডবারের
+             মাথায়; এখানে ব্যবহারকারী দেখে সে কোন প্রতিষ্ঠানের হয়ে কাজ
+             করছে, আর নামের পাশে লোগোটা সেটা এক নজরে বলে। --}}
+        @if ($company->logo_path)
+            <img src="{{ Storage::url($company->logo_path) }}" alt=""
+                 class="h-7 w-auto max-w-16 shrink-0 object-contain" aria-hidden="true">
+        @endif
+
         <span class="min-w-0 text-start">
             <span class="block max-w-40 truncate text-sm font-medium text-(--color-ink)">
                 {{ $company->name() }}
@@ -60,9 +68,13 @@
                     @csrf
                     <input type="hidden" name="company_id" value="{{ $other->id }}">
                     <button type="submit" role="menuitem"
-                            class="flex min-h-(--spacing-touch) w-full items-center px-3 text-start text-sm
+                            class="flex min-h-(--spacing-touch) w-full items-center gap-2 px-3 text-start text-sm
                                    transition-colors hover:bg-(--color-surface-hover)">
-                        {{ $other->name() }}
+                        @if ($other->logo_path)
+                            <img src="{{ Storage::url($other->logo_path) }}" alt=""
+                                 class="h-5 w-auto max-w-12 shrink-0 object-contain" aria-hidden="true">
+                        @endif
+                        <span class="min-w-0 truncate">{{ $other->name() }}</span>
                     </button>
                 </form>
             @endforeach

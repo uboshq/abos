@@ -265,6 +265,42 @@ class ShellTest extends TestCase
         $this->assertStringContainsString('sr-only', $markup);
     }
 
+    public function test_the_top_bar_shows_the_companys_own_logo(): void
+    {
+        $response = $this->actingAs($this->owner())->get('/');
+
+        // গ্রাহকের নিজের লোগো, ABOS-এর নয়: প্রোডাক্টের মার্ক সাইডবারের
+        // মাথায়, আর এখানে ব্যবহারকারী দেখে সে কোন প্রতিষ্ঠানের হয়ে
+        // কাজ করছে।
+        $response->assertSee('logos/Trade Depot.png', false);
+    }
+
+    public function test_switching_company_swaps_the_logo_too(): void
+    {
+        $owner = $this->owner();
+        $familyMart = Company::query()->where('code', 'FMART')->firstOrFail();
+
+        $owner->switchCompany($familyMart->id);
+
+        $response = $this->actingAs($owner->fresh())->get('/');
+
+        $response->assertSee('logos/FamilyMart.png', false);
+
+        // Trade Depot-এর লোগো পাতা থেকে উধাও হয় না — সেটা এখন সুইচারের
+        // তালিকায়, "কোথায় যেতে পারি" হিসেবে। যা বদলেছে তা হলো কোনটা
+        // চলতি: স্ট্যাটাস বার ও শিরোনাম দুটোই নতুন কোম্পানির।
+        $response->assertSee('ফ্যামিলি মার্ট', false);
+        $response->assertSee('প্রধান কার্যালয়', false);
+    }
+
+    public function test_a_company_without_a_logo_still_renders(): void
+    {
+        // লোগো ঐচ্ছিক — না থাকলে শুধু নামটা দেখাবে, ভাঙা ছবির আইকন নয়।
+        Company::query()->update(['logo_path' => null]);
+
+        $this->actingAs($this->owner())->get('/')->assertOk();
+    }
+
     public function test_the_top_bar_has_a_full_screen_button(): void
     {
         $markup = $this->codeOf(resource_path('views/components/shell/topbar.blade.php'));
