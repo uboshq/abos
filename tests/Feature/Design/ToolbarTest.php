@@ -266,13 +266,27 @@ class ToolbarTest extends TestCase
     }
 
     /** @return list<string> */
+    /**
+     * পর্দার সারিগুলো, কিন্তু কেবল এই টেস্টের নিজের বানানো তিনটা।
+     *
+     * ডেমো ডাটাতেও সরবরাহকারী আছে, আর তাদের প্রদেয় শূন্য। পুরো তালিকাটা
+     * মিলিয়ে দেখলে ডেমোতে একজন সরবরাহকারী যোগ হলেই এই টেস্ট ভাঙত, অথচ
+     * সাজানোর কোডে কিছুই বদলায়নি। যা পরীক্ষা করার কথা সেটা হলো তিনটা
+     * সারির আপেক্ষিক ক্রম, তাই বাকিগুলো বাদ।
+     *
+     * @return list<string>
+     */
     private function supplierNames(?string $sort = null): array
     {
         $response = $this->actingAs($this->user)
             ->get(route('supplier.index', array_filter(['sort' => $sort])))
             ->assertOk();
 
-        return $response->viewData('suppliers')->pluck('name_en')->all();
+        return $response->viewData('suppliers')
+            ->pluck('name_en')
+            ->filter(fn (string $name) => in_array($name, ['Small', 'Middle', 'Biggest'], true))
+            ->values()
+            ->all();
     }
 
     private function customer(string $name, string $opening): void

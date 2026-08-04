@@ -20,6 +20,7 @@ use App\Modules\Inventory\Services\WarehouseService;
 use App\Modules\MasterData\Models\ReasonCode;
 use App\Modules\MasterData\Models\Unit;
 use App\Modules\MasterData\Services\MasterListService;
+use App\Modules\Supplier\Services\SupplierService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Permission;
@@ -132,10 +133,13 @@ class DemoSeeder extends Seeder
             ]);
         });
 
-        // গুদাম, পণ্য আর চারটা অবস্থাতেই কিছু মাল — নাহলে মজুদের পর্দা
-        // খুললে ফাঁকা টেবিল, আর ফাঁকা টেবিল দেখে বোঝা যায় না অঙ্কটা ঠিক
-        // আছে কি না।
-        CompanyContext::forCompany($alpha->id, fn () => $this->setUpStock());
+        // সরবরাহকারী, গুদাম, পণ্য আর চারটা অবস্থাতেই কিছু মাল — নাহলে
+        // মজুদের পর্দা খুললে ফাঁকা টেবিল, আর ফাঁকা টেবিল দেখে বোঝা যায় না
+        // অঙ্কটা ঠিক আছে কি না।
+        CompanyContext::forCompany($alpha->id, function () {
+            $this->setUpSuppliers();
+            $this->setUpStock();
+        });
 
         CompanyContext::clear();
 
@@ -193,6 +197,34 @@ class DemoSeeder extends Seeder
             app(StandardChart::class)->install();
             app(MasterListService::class)->installDefaults();
         });
+    }
+
+    /**
+     * দুইজন সরবরাহকারী।
+     *
+     * ক্রয়ের কোনো পর্দাই সরবরাহকারী ছাড়া খোলা যায় না — আদেশ, চালান,
+     * বিল তিনটাতেই প্রথম ঘরটা সরবরাহকারীর। ফাঁকা তালিকা রেখে দিলে নতুন
+     * কেউ ক্রয় দেখতে গিয়ে ভাবতেন মডিউলটা কাজ করে না।
+     */
+    private function setUpSuppliers(): void
+    {
+        $suppliers = app(SupplierService::class);
+
+        $suppliers->create([
+            'name_en' => 'Pran RFL Distribution',
+            'name_bn' => 'প্রাণ আরএফএল ডিস্ট্রিবিউশন',
+            'phone' => '+8801711000001',
+            'address_en' => 'Ganginar Par, Mymensingh',
+            'address_bn' => 'গাঙ্গিনার পাড়, ময়মনসিংহ',
+        ]);
+
+        $suppliers->create([
+            'name_en' => 'Akij Food & Beverage',
+            'name_bn' => 'আকিজ ফুড অ্যান্ড বেভারেজ',
+            'phone' => '+8801711000002',
+            'address_en' => 'Charpara, Mymensingh',
+            'address_bn' => 'চরপাড়া, ময়মনসিংহ',
+        ]);
     }
 
     /**
