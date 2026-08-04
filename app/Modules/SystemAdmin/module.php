@@ -36,7 +36,7 @@ return [
             ['label' => 'system_admin::menu.login_history', 'route' => 'admin.logins', 'permission' => 'system_admin.audit.view', 'planned' => true],
         ],
         'settings' => [
-            ['label' => 'system_admin::menu.control_panel', 'route' => 'admin.control-panel', 'permission' => 'system_admin.settings.manage', 'planned' => true],
+            ['label' => 'system_admin::menu.control_panel', 'route' => 'system_admin.control-panel', 'permission' => 'system_admin.settings.manage'],
             ['label' => 'system_admin::menu.backup', 'route' => 'admin.backup', 'permission' => 'system_admin.backup.manage', 'planned' => true],
         ],
     ],
