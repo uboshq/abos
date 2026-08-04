@@ -94,6 +94,26 @@ return [
         'narration' => 'Narration',
     ],
 
+    'print' => [
+        'paper' => [
+            'a4' => 'A4',
+            '80_mm' => '80 mm (thermal)',
+            '58_mm' => '58 mm (thermal)',
+        ],
+        'document_no' => 'No.',
+        'date' => 'Date',
+        'party' => 'Party',
+        'account' => 'Account',
+        'total' => 'Total',
+        'in_words' => 'In words',
+        'phone' => 'Phone',
+        'printed_at' => 'Printed',
+        'prepared_by' => 'Prepared by',
+        'approved_by' => 'Approved by',
+        'received_by' => 'Received by',
+        'show_vendor_credit' => 'Show "Powered by ABOS" on printouts',
+    ],
+
     'toolbar' => [
         'filter' => 'Filter',
         'columns' => 'Columns',

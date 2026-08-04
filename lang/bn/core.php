@@ -99,6 +99,26 @@ return [
         'narration' => 'বিবরণ',
     ],
 
+    'print' => [
+        'paper' => [
+            'a4' => 'A4',
+            '80_mm' => '৮০ মিমি (থার্মাল)',
+            '58_mm' => '৫৮ মিমি (থার্মাল)',
+        ],
+        'document_no' => 'নম্বর',
+        'date' => 'তারিখ',
+        'party' => 'পক্ষ',
+        'account' => 'হিসাব',
+        'total' => 'সর্বমোট',
+        'in_words' => 'কথায়',
+        'phone' => 'ফোন',
+        'printed_at' => 'ছাপা হয়েছে',
+        'prepared_by' => 'প্রস্তুতকারী',
+        'approved_by' => 'অনুমোদনকারী',
+        'received_by' => 'গ্রহীতার স্বাক্ষর',
+        'show_vendor_credit' => 'প্রিন্টের নিচে "Powered by ABOS" দেখাও',
+    ],
+
     'toolbar' => [
         'filter' => 'ফিল্টার',
         'columns' => 'কলাম',
