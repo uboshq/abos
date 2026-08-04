@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Core\Engines\Report\ReportEngine;
 use App\Core\Module\ModuleRegistry;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
@@ -20,15 +21,22 @@ class ModuleServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(ModuleRegistry::class, fn () => new ModuleRegistry(app_path('Modules')));
+        $this->app->singleton(ReportEngine::class);
     }
 
-    public function boot(ModuleRegistry $registry): void
+    public function boot(ModuleRegistry $registry, ReportEngine $reports): void
     {
         foreach ($registry->all() as $module) {
             $this->registerTranslations($module->dir('Resources', 'lang'), $module->code);
             $this->registerViews($module->dir('Resources', 'views'), $module->code);
             $this->registerMigrations($module->dir('Database', 'Migrations'));
             $this->registerRoutes($module->dir('Routes'), $module->code, $module->namespace);
+
+            // রিপোর্টও মডিউলের নিজের — module.php-তে ঘোষিত, তাই নতুন
+            // মডিউলের রিপোর্ট যোগ করতে কোর ফাইলে নাম লিখতে হয় না।
+            foreach ($module->reports as $provider) {
+                $provider::registerAll($reports);
+            }
         }
     }
 

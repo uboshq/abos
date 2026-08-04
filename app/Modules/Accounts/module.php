@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+use App\Modules\Accounts\Reports\CoreReports;
 
 /**
  * Accounts & Finance — প্ল্যান সেকশন ১৯.২।
@@ -85,6 +86,12 @@ return [
     ],
 
     'drill_sources' => [],
+
+    // রিপোর্ট সরবরাহকারী — কোর নিজে থেকে ডেকে নেবে (সেকশন ১৯.৩)।
+    // কোর ফাইলে মডিউলের নাম লিখতে হয় না।
+    'reports' => [
+        CoreReports::class,
+    ],
 
     'settings' => [
         [

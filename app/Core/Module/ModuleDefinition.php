@@ -38,6 +38,13 @@ final class ModuleDefinition
         public readonly array $drillSources,
         /** @var list<array{key: string, label: string, type: string, default: mixed, group?: string}> */
         public readonly array $settings,
+        /**
+         * রিপোর্ট সরবরাহকারী ক্লাসগুলো — প্রতিটার একটা স্থির
+         * registerAll(ReportEngine) পদ্ধতি থাকতে হবে।
+         *
+         * @var list<class-string>
+         */
+        public readonly array $reports,
         public readonly string $path,
         public readonly string $namespace,
     ) {}
@@ -90,9 +97,38 @@ final class ModuleDefinition
             docTypes: $raw['doc_types'] ?? [],
             drillSources: $raw['drill_sources'] ?? [],
             settings: array_values($raw['settings'] ?? []),
+            reports: self::validateReports($raw['reports'] ?? [], $path),
             path: $path,
             namespace: $namespace,
         );
+    }
+
+    /**
+     * রিপোর্ট সরবরাহকারীরা সত্যিই নিবন্ধন করতে পারে কি না — বুট-টাইমে।
+     *
+     * ভুল ক্লাসের নাম বা পদ্ধতি না থাকা ধরা না পড়লে রিপোর্টগুলো নীরবে
+     * অনুপস্থিত থাকত, আর কেউ খুঁজতে গিয়ে বুঝত মেনুতে আছে কিন্তু খোলে না।
+     *
+     * @param  list<mixed>  $reports
+     * @return list<class-string>
+     */
+    private static function validateReports(array $reports, string $path): array
+    {
+        foreach ($reports as $class) {
+            if (! is_string($class) || ! class_exists($class)) {
+                throw new InvalidArgumentException(
+                    "{$path}: report provider '".(is_string($class) ? $class : gettype($class))."' does not exist."
+                );
+            }
+
+            if (! method_exists($class, 'registerAll')) {
+                throw new InvalidArgumentException(
+                    "{$path}: report provider {$class} needs a static registerAll(ReportEngine) method."
+                );
+            }
+        }
+
+        return array_values($reports);
     }
 
     /** ব্যবহারকারীর ভাষায় মডিউলের নাম। */
