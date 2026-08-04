@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'close_year' => 'বছর বন্ধ করুন',
     'new_account' => 'নতুন খাত',
     'edit_account' => 'খাত সম্পাদনা',
     'install_chart' => 'প্রমিত ছক বসান',

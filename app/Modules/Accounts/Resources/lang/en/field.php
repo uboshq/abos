@@ -3,6 +3,15 @@
 declare(strict_types=1);
 
 return [
+    'closing_year' => 'Year being closed',
+    'next_year' => 'Next year',
+    'year_name' => 'Year name',
+    'starts_on' => 'Starts',
+    'ends_on' => 'Ends',
+    'net_result' => 'Result for the year',
+    'accounts_to_close' => 'Accounts to be zeroed',
+    'financial_years' => 'Financial years',
+    'type_year_to_confirm' => 'Type :name to confirm',
     'code' => 'Code',
     'name' => 'Name',
     'name_en' => 'Name (English)',

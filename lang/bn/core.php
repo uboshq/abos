@@ -145,6 +145,17 @@ return [
         'show_vendor_credit' => 'প্রিন্টের নিচে "Powered by ABOS" দেখাও',
     ],
 
+    'role' => [
+        'owner' => 'মালিক',
+        'accountant' => 'হিসাবরক্ষক',
+        'salesman' => 'বিক্রয়কর্মী',
+    ],
+
+    'notice' => [
+        'backup_stale' => 'দুই দিনের বেশি ব্যাকআপ হয়নি — ডিস্ক নষ্ট হলে কিছুই ফেরানো যাবে না।',
+        'awaiting_decision' => '{1} ১টি সিদ্ধান্তের অপেক্ষায়|[2,*] :count টি সিদ্ধান্তের অপেক্ষায়',
+    ],
+
     'yes' => 'হ্যাঁ',
     'no' => 'না',
 
@@ -175,6 +186,9 @@ return [
     'a11y' => [
         'skip_to_content' => 'সরাসরি কাজের অংশে যান',
         'module_navigation' => 'মডিউল বদলান',
+        'collapse_sidebar' => 'সাইডবার গুটাও',
+        'expand_sidebar' => 'সাইডবার খোলো',
+        'filter_menu' => 'মেনুতে খুঁজুন…',
         'main_navigation' => 'প্রধান মেনু',
     ],
 

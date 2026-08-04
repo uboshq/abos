@@ -3,6 +3,15 @@
 declare(strict_types=1);
 
 return [
+    'closing_year' => 'যে বছর বন্ধ হচ্ছে',
+    'next_year' => 'পরের বছর',
+    'year_name' => 'বছরের নাম',
+    'starts_on' => 'শুরু',
+    'ends_on' => 'শেষ',
+    'net_result' => 'বছরের নিট ফল',
+    'accounts_to_close' => 'যত খাত শূন্য হবে',
+    'financial_years' => 'অর্থবছরগুলো',
+    'type_year_to_confirm' => 'নিশ্চিত করতে লিখুন: :name',
     'code' => 'কোড',
     'name' => 'নাম',
     'name_en' => 'নাম (ইংরেজি)',

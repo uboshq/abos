@@ -10,6 +10,7 @@ use App\Modules\Accounts\Http\Controllers\ChartOfAccountsController;
 use App\Modules\Accounts\Http\Controllers\MoneyTransferController;
 use App\Modules\Accounts\Http\Controllers\ReportController;
 use App\Modules\Accounts\Http\Controllers\VoucherController;
+use App\Modules\Accounts\Http\Controllers\YearEndController;
 use App\Modules\Accounts\Models\Account;
 use Illuminate\Support\Facades\Route;
 
@@ -103,6 +104,19 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
      * ভেতরের কী বদলালে বুকমার্ক ভাঙত।
      */
     Route::get('/reports/{slug}', [ReportController::class, 'show'])->name('report.show');
+
+    /*
+     * বছর সমাপনী।
+     *
+     * {year} সংখ্যায় বাঁধা, আর index আলাদা পথে — নাহলে ভবিষ্যতে
+     * /year-end/settings জাতীয় কিছু যোগ করলে সেটাকে একটা id ভেবে
+     * বাইন্ডিং ৪০৪ দিত।
+     */
+    Route::prefix('year-end')->name('year_end.')->group(function () {
+        Route::get('/', [YearEndController::class, 'index'])->name('index');
+        Route::post('/{year}/close', [YearEndController::class, 'close'])
+            ->whereNumber('year')->name('close');
+    });
 
     Route::prefix('cash-counts')->name('count.')->group(function () {
         Route::get('/', [CashCountController::class, 'index'])->name('index');
