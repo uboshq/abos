@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'year_end' => 'Year End',
     'dashboard' => 'Accounts Dashboard',
     'chart_of_accounts' => 'Chart of Accounts',
     'cash_tills' => 'Cash Tills',

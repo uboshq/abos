@@ -21,10 +21,23 @@
     ) ?? ($menu[0] ?? null);
 @endphp
 
-<aside class="sticky top-0 hidden h-dvh shrink-0 md:flex
-              md:w-(--spacing-sidebar-icon)
-              lg:w-(--spacing-sidebar)
-              xl:w-(--spacing-sidebar-wide)">
+{{--
+    গুটানো অবস্থাটা localStorage-এ, তাই পাতা বদলালেও থেকে যায়।
+
+    x-cloak-এর দরকার নেই: ডিফল্ট "খোলা", আর Alpine বুট হওয়ার আগে
+    সাইডবারটা খোলাই দেখায় — অর্থাৎ ভুল অবস্থাটা দেখা যায় না, শুধু
+    গুটানো ব্যবহারকারীর ক্ষেত্রে এক পলকে খোলা থেকে গুটিয়ে যায়।
+--}}
+<aside x-data="{
+           collapsed: localStorage.getItem('abos.sidebar') === 'collapsed',
+           filter: '',
+       }"
+       x-effect="localStorage.setItem('abos.sidebar', collapsed ? 'collapsed' : 'open')"
+       class="relative sticky top-0 hidden h-dvh shrink-0 md:flex
+              md:w-(--spacing-sidebar-icon)"
+       :class="collapsed
+           ? 'lg:w-(--spacing-sidebar-icon) xl:w-(--spacing-sidebar-icon)'
+           : 'lg:w-(--spacing-sidebar) xl:w-(--spacing-sidebar-wide)'">
 
     <div class="flex min-w-0 flex-1 flex-col">
 
@@ -33,14 +46,27 @@
              গাঢ় রাখলে লোগোর নিচের রেখা আর টপবারের নিচের রেখা একই উচ্চতায়
              থাকলেও দুই রঙের হত, আর পর্দার দুই অর্ধেক দুইটা আলাদা স্ক্রিনের
              মতো দেখাত। --}}
+        {{-- গুটানো অবস্থায় px-3 থাকলে ৪৪px ঘরে মাত্র ২০px জায়গা থাকত,
+             আর ৩২px-এর মার্কটা ওখানে চেপে গিয়ে লম্বাটে দেখাত। তাই তখন
+             পাশের ফাঁক শূন্য আর লোগো মাঝখানে। --}}
         <a href="{{ route('dashboard') }}"
            class="flex h-(--spacing-header) shrink-0 items-center gap-2 border-b border-(--color-border)
-                  bg-(--color-surface-card) px-3 transition-colors hover:bg-(--color-surface-app)"
+                  bg-(--color-surface-card) transition-colors hover:bg-(--color-surface-app)"
+           :class="collapsed ? 'justify-center px-0' : 'px-2 lg:px-3'"
            title="{{ __('core.menu.dashboard') }}">
 
             {{-- সরু সাইডবারে (৪৪px) শুধু মার্ক — ওখানে ওয়ার্ডমার্ক ধরে না। --}}
+            {{-- দুইটা ক্লাস একসাথে বসিয়ে (lg:hidden + lg:block) টগল করা
+                 যায় না — দুইটাই থেকে যায়, আর স্টাইলশিটে যেটা পরে আছে
+                 সেটাই জেতে। প্রথমবার তাতে গুটানো অবস্থায় লোগো একেবারে
+                 উধাও হয়ে গিয়েছিল।
+
+                 তাই একটাই ক্লাস শর্তসাপেক্ষে যোগ হয়: খোলা থাকলে বড়
+                 পর্দায় মার্কটা লুকাও (ওখানে ওয়ার্ডমার্ক আছে), গুটানো
+                 থাকলে লুকিও না। --}}
             <img src="{{ asset('brand/abos-icon-transparent.png') }}" alt="ABOS"
-                 class="size-(--spacing-logo-sidebar) shrink-0 lg:hidden">
+                 class="size-(--spacing-logo-sidebar) shrink-0"
+                 :class="collapsed ? '' : 'lg:hidden'">
 
             {{-- খোলা সাইডবারে পূর্ণ ওয়ার্ডমার্ক — নাম ও পূর্ণরূপ দুটোই
                  ডিজাইনারের নিজের লেটারিংয়ে।
@@ -51,10 +77,35 @@
                  যায় না। ৩২০×৯৬ অনুপাতে max-h-10 দিলে ১৩৩px চওড়া, যা
                  ২২০px সাইডবারেও অনেকটা জায়গা রেখে বসে। --}}
             <img src="{{ asset('brand/abos-wordmark-transparent.png') }}" alt="ABOS"
-                 class="hidden max-h-10 w-auto object-contain object-left lg:block">
+                 class="hidden max-h-10 w-auto object-contain object-left"
+                 :class="collapsed ? '' : 'lg:block'">
 
             <span class="sr-only">{{ __('core.brand.full_name') }}</span>
         </a>
+
+        {{-- গুটিয়ে ফেলার বোতাম।
+
+             ছোট পর্দায় দেখানো হয় না: ওখানে তালিকাটা এমনিতেই থাকে না,
+             তাই গোটানোর কিছু নেই — আর যে বোতাম কিছু বদলায় না সেটা মৃত
+             বোতাম।
+
+             পছন্দটা localStorage-এ। সেশনে রাখলে প্রতি লগইনে ফিরে আসত,
+             আর সার্ভারে রাখলে প্রতিটা ক্লিকে একটা রিকোয়েস্ট যেত — অথচ
+             এটা নিছক এই ব্রাউজারের দেখার পছন্দ, কোম্পানির সেটিং নয়। --}}
+        <button type="button"
+                @click="collapsed = ! collapsed"
+                class="absolute end-1 top-4 z-10 hidden size-7 items-center justify-center
+                       rounded-(--radius-field) text-(--color-ink-muted) transition-colors
+                       hover:bg-(--color-surface-hover) hover:text-(--color-ink) lg:flex"
+                :aria-label="collapsed
+                    ? '{{ __('core.a11y.expand_sidebar') }}'
+                    : '{{ __('core.a11y.collapse_sidebar') }}'"
+                :aria-expanded="collapsed ? 'false' : 'true'">
+            <svg viewBox="0 0 24 24" aria-hidden="true" class="size-4 fill-current"
+                 :class="collapsed && 'rotate-180'">
+                <path d="M11.7 6.3 6 12l5.7 5.7 1.4-1.4L8.8 12l4.3-4.3-1.4-1.4Zm6 0L12 12l5.7 5.7 1.4-1.4L14.8 12l4.3-4.3-1.4-1.4Z"/>
+            </svg>
+        </button>
 
         <div class="flex min-h-0 flex-1">
 
@@ -65,6 +116,37 @@
             <nav class="flex w-(--spacing-sidebar-icon) shrink-0 flex-col items-center
                         overflow-y-auto border-e border-black/10 bg-(--color-brand-700) py-1"
                  aria-label="{{ __('core.a11y.module_navigation') }}">
+
+                {{-- ড্যাশবোর্ড — রেলের সবার উপরে, মডিউলগুলোর আগে।
+
+                     আগে ওখানে যাওয়ার একমাত্র পথ ছিল লোগোতে ক্লিক করা।
+                     লোগো যে একটা লিংক সেটা কেউ আন্দাজ করে না — ফলে
+                     ড্যাশবোর্ড কার্যত লুকানো ছিল, অথচ সেটাই দিনের শুরুর
+                     পাতা।
+
+                     মডিউলগুলো থেকে একটা রেখা দিয়ে আলাদা: এটা কোনো মডিউল
+                     নয়, এটা সবগুলোর উপরের পাতা। --}}
+                @php
+                    $onDashboard = request()->routeIs('dashboard');
+                @endphp
+
+                <a href="{{ route('dashboard') }}"
+                   @class([
+                       'relative mb-1 flex h-11 w-full items-center justify-center border-b border-white/15 transition-colors',
+                       'bg-white/15' => $onDashboard,
+                       'hover:bg-white/10' => ! $onDashboard,
+                   ])
+                   @if ($onDashboard) aria-current="page" @endif
+                   title="{{ __('core.menu.dashboard') }}">
+
+                    @if ($onDashboard)
+                        <span class="absolute inset-y-1 start-0 w-[3px] rounded-e bg-white"
+                              aria-hidden="true"></span>
+                    @endif
+
+                    <x-shell.module-icon group="dashboard" tone="white" />
+                    <span class="sr-only">{{ __('core.menu.dashboard') }}</span>
+                </a>
 
                 @foreach ($menu as $module)
                     @php
@@ -99,7 +181,8 @@
                  সব মডিউলের সব পাতা একসাথে দেখালে তালিকাটা যত লম্বা হয়,
                  তাতে খোঁজা আর স্ক্রল করা ছাড়া উপায় থাকে না। --}}
             <div class="hidden min-w-0 flex-1 flex-col border-e border-(--color-border)
-                        bg-(--color-surface-card) lg:flex">
+                        bg-(--color-surface-card) lg:flex"
+                 x-show="! collapsed">
 
                 @if ($activeModule)
                     <p class="shrink-0 truncate px-3 pt-3 pb-1 text-2xs font-semibold uppercase
@@ -107,12 +190,57 @@
                         {{ $activeModule['label'] }}
                     </p>
 
+                    {{-- মেনুতে খোঁজা।
+
+                         টপবারের সার্চ পুরো সিস্টেম খোঁজে — গ্রাহক, বিল,
+                         খাত। এটা শুধু এই তালিকাটা ছাঁকে। দুইটা আলাদা
+                         কাজ: একটা "রহিমকে খুঁজছি", অন্যটা "পাতাটার নাম
+                         মনে নেই, কিন্তু ওতে 'রোল' আছে"।
+
+                         মডিউলে দশটার কম পাতা থাকলে ঘরটা দেখানো হয় না —
+                         চোখেই সব দেখা যায়, আর তখন ঘরটা শুধু জায়গা নেয়। --}}
+                    @php
+                        $itemCount = collect($activeModule['groups'])->flatten(1)->count();
+                    @endphp
+
+                    @if ($itemCount >= 10)
+                        <label class="relative shrink-0 px-2 pb-2">
+                            <span class="sr-only">{{ __('core.a11y.filter_menu') }}</span>
+                            <input type="search"
+                                   x-model="filter"
+                                   placeholder="{{ __('core.a11y.filter_menu') }}"
+                                   class="h-8 w-full rounded-(--radius-field) border border-(--color-border)
+                                          bg-(--color-surface-app) px-2 text-sm">
+                        </label>
+                    @endif
+
+                    {{-- কিছু না মিললে বলা হয়।
+
+                         না বললে ব্যবহারকারী একটা সম্পূর্ণ ফাঁকা প্যানেল
+                         দেখতেন আর ভাবতেন মেনুটা ভেঙে গেছে — অথচ শুধু
+                         তার লেখা শব্দটার সাথে কিছু মেলেনি। --}}
+                    @php
+                        $labels = collect($activeModule['groups'])->flatten(1)
+                            ->pluck('label')->map(fn ($l) => mb_strtolower($l))->values();
+                    @endphp
+
+                    <p x-show="filter !== '' && ! {{ Js::from($labels) }}
+                               .some(l => l.includes(filter.toLowerCase().trim()))"
+                       x-cloak
+                       class="px-3 py-2 text-2xs text-(--color-ink-muted)">
+                        {{ __('core.empty.no_results') }}
+                    </p>
+
                     <nav class="flex-1 overflow-y-auto overflow-x-hidden pb-4"
                          aria-label="{{ __('core.a11y.main_navigation') }}">
 
                         @foreach ($activeModule['groups'] as $group => $items)
                             @foreach ($items as $item)
+                                {{-- ছাঁকাটা ক্লায়েন্টেই — সারিগুলো ইতিমধ্যেই
+                                     পাতায় আছে, তাই সার্ভারে যাওয়ার কোনো
+                                     কারণ নেই। খালি ফিল্টারে সব দেখা যায়। --}}
                                 <a @if ($item['url']) href="{{ $item['url'] }}" @endif
+                                   x-show="filter === '' || {{ Js::from(mb_strtolower($item['label'])) }}.includes(filter.toLowerCase().trim())"
                                    @class([
                                        'flex min-h-(--spacing-touch) items-center gap-2 ps-3 pe-2 text-sm transition-colors',
                                        'border-s-[3px] border-(--color-brand-500) bg-(--color-surface-selected) ps-2 font-medium text-(--color-brand-700)' => $item['active'],

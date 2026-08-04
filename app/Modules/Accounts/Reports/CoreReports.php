@@ -8,6 +8,7 @@ use App\Core\Engines\Report\ReportColumn;
 use App\Core\Engines\Report\ReportDefinition;
 use App\Core\Engines\Report\ReportEngine;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Services\YearEndService;
 use Illuminate\Database\Query\Expression;
 use Illuminate\Support\Facades\DB;
 
@@ -262,6 +263,20 @@ final class CoreReports
                 // ছবিতে "কবে থেকে" প্রশ্নটাই অর্থহীন
                 ->when($dateRange, fn ($q) => $q->where('ledger_entries.trx_date', '>=', $f['from']))
                 ->where('ledger_entries.trx_date', '<=', $f['to'])
+                /*
+                 * বছর সমাপনীর দাখিলাটা লাভ-লোকসানে গোনা হয় না।
+                 *
+                 * ওটা আয়-ব্যয়ের খাতগুলো শূন্য করার জন্য, বছরের শেষ দিনে।
+                 * ধরলে বন্ধ করা বছরের লাভ-লোকসান খুললে সব শূন্য দেখাত —
+                 * অর্থাৎ বছর বন্ধ করার সাথে সাথে ওই বছরের ফলটাই পর্দা
+                 * থেকে মুছে যেত।
+                 *
+                 * ব্যালেন্স শিটে বাদ দেওয়ার দরকার নেই: ওখানে আয়-ব্যয়
+                 * থাকেই না, আর সঞ্চিত মুনাফার লাইনটা ওখানে থাকা জরুরি।
+                 */
+                ->when($dateRange, fn ($q) => $q->where(
+                    'ledger_entries.source_type', '!=', YearEndService::CLOSE_SOURCE,
+                ))
                 ->groupBy(
                     'ledger_entries.account_id', 'accounts.code',
                     'accounts.name_en', 'accounts.name_bn', 'accounts.type',

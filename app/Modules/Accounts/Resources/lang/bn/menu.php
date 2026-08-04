@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 /** Accounts মডিউলের মেনু — নিয়ম ৯: কোনো লেখা Blade বা module.php-তে হার্ডকোড নয়। */
 return [
+    'year_end' => 'বছর সমাপনী',
     'dashboard' => 'হিসাব ড্যাশবোর্ড',
     'chart_of_accounts' => 'হিসাব তালিকা',
     'cash_tills' => 'ক্যাশ টিল',

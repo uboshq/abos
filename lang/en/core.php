@@ -140,6 +140,17 @@ return [
         'show_vendor_credit' => 'Show "Powered by ABOS" on printouts',
     ],
 
+    'role' => [
+        'owner' => 'Owner',
+        'accountant' => 'Accountant',
+        'salesman' => 'Salesman',
+    ],
+
+    'notice' => [
+        'backup_stale' => 'No backup for over two days — nothing could be recovered if the disk fails.',
+        'awaiting_decision' => '{1} 1 waiting for a decision|[2,*] :count waiting for a decision',
+    ],
+
     'yes' => 'Yes',
     'no' => 'No',
 
@@ -171,6 +182,9 @@ return [
     'a11y' => [
         'skip_to_content' => 'Skip to content',
         'module_navigation' => 'Switch module',
+        'collapse_sidebar' => 'Collapse sidebar',
+        'expand_sidebar' => 'Expand sidebar',
+        'filter_menu' => 'Filter menu…',
         'main_navigation' => 'Main navigation',
     ],
 

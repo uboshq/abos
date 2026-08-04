@@ -17,6 +17,17 @@ return [
     'opening_note' => 'What the balance was before this system. Can only be set now — to change it later, post a journal voucher.',
     'opening_balance' => 'Opening balance',
 
+    'year_closing' => 'Year-end closing',
+    'year_opening' => 'Opening balance for the year',
+
+    'year_end_note' => 'Closing the year zeroes the income and expense accounts and moves the result to retained earnings. It cannot be undone.',
+    'no_current_year' => 'No financial year is current.',
+    'goes_to_retained' => 'moves to retained earnings',
+    'income_expense_zeroed' => 'income and expense accounts',
+    'carry_forward_note' => 'No separate entry carries assets, liabilities and equity forward — the ledger here is continuous, so those balances stay as they were. Posting one would double every figure.',
+    'confirm_hint' => 'Guards against a mis-click — the name must match exactly.',
+    'year_closed' => ':closed is closed, :opened is open.',
+
     'no_entries' => 'No transactions on this account yet.',
     'system_account' => 'System account',
     'too_many_to_tree' => 'The chart has :count accounts — more than the :limit that render as a tree at once. Search by code or name above.',

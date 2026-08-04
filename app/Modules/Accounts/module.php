@@ -56,6 +56,9 @@ return [
             ['label' => 'accounts::menu.cash_flow', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'cash-flow'], 'permission' => 'accounts.report.final'],
         ],
         'settings' => [
+            // বছর সমাপনী রোজকার কাজ নয়, তাই সেটিংসের সাথে — আর অনুমতিও
+            // চূড়ান্ত হিসাবের, কারণ এটা বছরের ফল চূড়ান্ত করে দেয়
+            ['label' => 'accounts::menu.year_end', 'route' => 'accounts.year_end.index', 'permission' => 'accounts.report.final'],
             ['label' => 'accounts::menu.settings', 'route' => 'accounts.settings', 'permission' => 'accounts.manage'],
         ],
     ],
