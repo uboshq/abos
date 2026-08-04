@@ -7,13 +7,13 @@ namespace Tests\Feature\Core;
 use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
+use App\Core\Services\NumberSeriesProvisioner;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Models\Approval;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\LedgerEntry;
-use App\Models\NumberSeries;
 use App\Models\User;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -58,18 +58,23 @@ class FoundationWorksEndToEndTest extends TestCase
         $this->assertSame(4, Branch::query()->count(), 'Trade Depot has a head office and three upazila branches.');
 
         // ২. নম্বর ইস্যু
+        //
+        // JV ব্যবহার করা হচ্ছে, SI নয়: নম্বর সিরিজ এখন মডিউলের ঘোষণা
+        // থেকে তৈরি হয়, আর সেলস মডিউল এখনো লেখা হয়নি — তাই SI বলে
+        // কিছু নেই। আগে সিডারে হাতে লেখা তালিকায় ছিল, আর সেটাই
+        // অস্তিত্বহীন একটা ডকুমেন্টের সিরিজ বানিয়ে রাখত।
         $numbers = app(NumberSeriesEngine::class);
-        $invoiceNo = $numbers->next('SI', sourceType: 'sales_invoice', sourceId: 1);
+        $documentNo = $numbers->next('JV', sourceType: 'journal_voucher', sourceId: 1);
 
-        $this->assertSame('INV-2026-2027-0001', $invoiceNo);
+        $this->assertSame('JRN-2026-2027-0001', $documentNo);
 
         // ৩. হিসাবে বসানো
         $posting = app(PostingEngine::class);
-        $posting->post('sales_invoice', 1, '2026-08-04', [
+        $posting->post('journal_voucher', 1, '2026-08-04', [
             ['account_id' => 1101, 'debit' => 11500, 'party_type' => 'customer', 'party_id' => 7],
             ['account_id' => 4001, 'credit' => 10000],
             ['account_id' => 2201, 'credit' => 1500],
-        ], documentNo: $invoiceNo);
+        ], documentNo: $documentNo);
 
         $this->assertSame(3, LedgerEntry::query()->count());
         $this->assertEquals(
@@ -80,9 +85,9 @@ class FoundationWorksEndToEndTest extends TestCase
 
         // ৪. প্রতিটা লাইন তার উৎসে ফিরতে পারে — নিয়ম ১
         $entry = LedgerEntry::query()->first();
-        $this->assertSame('sales_invoice', $entry->source_type);
+        $this->assertSame('journal_voucher', $entry->source_type);
         $this->assertSame(1, (int) $entry->source_id);
-        $this->assertSame($invoiceNo, $entry->document_no);
+        $this->assertSame($documentNo, $entry->document_no);
 
         // ৫. অনুমোদন — ছাড় ১,০০০-এর উপরে হলে মালিকের সম্মতি লাগে
         $approvals = app(ApprovalEngine::class);
@@ -136,7 +141,14 @@ class FoundationWorksEndToEndTest extends TestCase
 
         CompanyContext::set($alpha->id);
 
-        $this->assertSame(10, NumberSeries::query()->count(), 'Every document type needs a series.');
+        // সংখ্যা গোনা হয় না, ঘোষণার সাথে মেলানো হয়: মডিউল যা ঘোষণা
+        // করেছে তার প্রতিটার সিরিজ আছে কি না। একটা স্থির সংখ্যা লিখলে
+        // নতুন ডকুমেন্ট টাইপ যোগ হলেই টেস্টটা ভাঙত — নিয়ম ভাঙায় নয়।
+        $this->assertSame(
+            [],
+            app(NumberSeriesProvisioner::class)->missing(),
+            'Every declared document type needs a series.',
+        );
         $this->assertNotNull($alpha->currentFinancialYear());
         $this->assertNotNull($alpha->defaultBranch());
         $this->assertSame('MMS', $alpha->defaultBranch()->code);

@@ -21,6 +21,7 @@ return [
         'purchase_invoice' => 'Purchase Invoice',
         'receipt_voucher' => 'Receipt Voucher',
         'payment_voucher' => 'Payment Voucher',
+        'expense_voucher' => 'Expense Voucher',
         'journal_voucher' => 'Journal Voucher',
         'contra_voucher' => 'Contra Voucher',
         'money_transfer' => 'Money Transfer',

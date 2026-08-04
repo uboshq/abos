@@ -1,19 +1,31 @@
 {{--
-    হাতে কত, আর সীমা ছাড়িয়েছে কি না।
+    হাতে কত — আর দুইটা জিনিস যা চোখে পড়া দরকার।
 
-    সীমা ছাড়ানোটা লাল করে দেখানো হয়, আটকানো হয় না — বিকেলে আদায় বেশি
-    হলে সেটা কারও দোষ নয়। কিন্তু দেখা না গেলে টাকাটা রাতেও ওই হাতেই
-    থেকে যেত, আর সেটাই আসল ঝুঁকি।
+    সীমা ছাড়ানো: আটকানো হয় না, কারণ বিকেলে আদায় বেশি হওয়া কারও দোষ নয়।
+    কিন্তু দেখা না গেলে টাকাটা রাতেও ওই হাতেই থেকে যেত, আর সেটাই ঝুঁকি।
+
+    ঋণাত্মক: হাতে ঋণাত্মক টাকা বলে কিছু নেই। এটা দেখা মানে হয় কোনো আদায়
+    লেখা হয়নি, নয় তারিখ ভুল, নয় ভুল কাউন্টার থেকে খরচ লেখা হয়েছে —
+    তিনটাই ভুল, আর দেরিতে ধরা পড়লে মিলানো কঠিন হয়ে যায়।
 --}}
-@php $over = bccomp((string) $till->limit_amount, '0', 4) > 0
-    && bccomp((string) $balance, (string) $till->limit_amount, 4) > 0 @endphp
+@php
+    $negative = bccomp((string) $balance, '0', 4) < 0;
+
+    $over = ! $negative
+        && bccomp((string) $till->limit_amount, '0', 4) > 0
+        && bccomp((string) $balance, (string) $till->limit_amount, 4) > 0;
+@endphp
 
 <span class="block">
-    <span @class(['num block', 'font-semibold text-(--color-danger)' => $over])>
+    <span @class(['num block', 'font-semibold text-(--color-danger)' => $negative || $over])>
         {{ number_format((float) $balance, 2) }}
     </span>
 
-    @if ($over)
+    @if ($negative)
+        <span class="block text-2xs text-(--color-danger)">
+            {{ __('accounts::message.negative_cash') }}
+        </span>
+    @elseif ($over)
         <span class="num block text-2xs text-(--color-ink-muted)">
             {{ __('accounts::field.limit') }} {{ number_format((float) $till->limit_amount, 2) }}
         </span>

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CashTill;
+use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Reports\CoreReports;
 
 /**
@@ -34,11 +35,11 @@ return [
             ['label' => 'accounts::menu.cash_tills', 'route' => 'accounts.till.index', 'permission' => 'accounts.till.view'],
         ],
         'transactions' => [
-            ['label' => 'accounts::menu.receipt', 'route' => 'accounts.voucher.receipt', 'permission' => 'accounts.voucher.create', 'planned' => true],
-            ['label' => 'accounts::menu.payment', 'route' => 'accounts.voucher.payment', 'permission' => 'accounts.voucher.create', 'planned' => true],
-            ['label' => 'accounts::menu.expense', 'route' => 'accounts.voucher.expense', 'permission' => 'accounts.voucher.create', 'planned' => true],
-            ['label' => 'accounts::menu.journal', 'route' => 'accounts.voucher.journal', 'permission' => 'accounts.voucher.create', 'planned' => true],
-            ['label' => 'accounts::menu.contra', 'route' => 'accounts.voucher.contra', 'permission' => 'accounts.voucher.create', 'planned' => true],
+            ['label' => 'accounts::menu.receipt', 'route' => 'accounts.voucher.index', 'route_params' => ['type' => 'receipt'], 'permission' => 'accounts.voucher.create'],
+            ['label' => 'accounts::menu.payment', 'route' => 'accounts.voucher.index', 'route_params' => ['type' => 'payment'], 'permission' => 'accounts.voucher.create'],
+            ['label' => 'accounts::menu.expense', 'route' => 'accounts.voucher.index', 'route_params' => ['type' => 'expense'], 'permission' => 'accounts.voucher.create'],
+            ['label' => 'accounts::menu.journal', 'route' => 'accounts.voucher.index', 'route_params' => ['type' => 'journal'], 'permission' => 'accounts.voucher.create'],
+            ['label' => 'accounts::menu.contra', 'route' => 'accounts.voucher.index', 'route_params' => ['type' => 'contra'], 'permission' => 'accounts.voucher.create'],
             ['label' => 'accounts::menu.money_transfer', 'route' => 'accounts.transfer.index', 'permission' => 'accounts.transfer.create', 'planned' => true],
             ['label' => 'accounts::menu.cash_count', 'route' => 'accounts.count.index', 'permission' => 'accounts.count.create', 'planned' => true],
         ],
@@ -87,9 +88,25 @@ return [
         'CC' => 'accounts::doc.cash_count',
     ],
 
+    /*
+     * Drill-down মানচিত্র — নিয়ম ১।
+     *
+     * পাঁচটা ভাউচারের ধরন আলাদা করে লেখা, একটা 'voucher' নয়: লেজারে
+     * প্রতিটা ধরন নিজের নামে বসে (receipt_voucher, contra_voucher…),
+     * আর রিপোর্টে ওই নামটাই দেখা যায়। একটা সাধারণ নাম দিলে ডে বুকে
+     * প্রতিটা সারি শুধু "ভাউচার" বলত, কোন ধরনের তা নয়।
+     *
+     * বিপরীত এন্ট্রিগুলো "receipt_voucher:reversal" নামে বসে; সেগুলো
+     * এখানে লেখার দরকার নেই, DrillResolver উপসর্গটা ছেঁটে নেয়।
+     */
     'drill_sources' => [
         'account' => Account::class,
         'cash_till' => CashTill::class,
+        'receipt_voucher' => Voucher::class,
+        'payment_voucher' => Voucher::class,
+        'expense_voucher' => Voucher::class,
+        'journal_voucher' => Voucher::class,
+        'contra_voucher' => Voucher::class,
     ],
 
     // রিপোর্ট সরবরাহকারী — কোর নিজে থেকে ডেকে নেবে (সেকশন ১৯.৩)।

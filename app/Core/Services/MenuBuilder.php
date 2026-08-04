@@ -68,11 +68,23 @@ final class MenuBuilder
                         continue;
                     }
 
+                    /*
+                     * প্যারামিটারসহ রুট — যেমন পাঁচ ধরনের ভাউচার একই
+                     * রুটের পাঁচটা ঠিকানা।
+                     *
+                     * সক্রিয় কি না তা তখন শুধু রুটের নাম দেখে বলা যায় না:
+                     * পাঁচটা সারিরই নাম accounts.voucher.index, তাই একটায়
+                     * থাকলে পাঁচটাই সক্রিয় দেখাত। প্যারামিটারগুলোও
+                     * মেলাতে হয়।
+                     */
+                    $params = $item['route_params'] ?? [];
+
                     $visible[] = [
                         'label' => __($item['label']),
                         'route' => $item['route'],
-                        'url' => route($item['route']),
-                        'active' => request()->routeIs($item['route']),
+                        'url' => route($item['route'], $params),
+                        'active' => request()->routeIs($item['route'])
+                            && $this->paramsMatch($params),
                     ];
                 }
 
@@ -118,6 +130,22 @@ final class MenuBuilder
         }
 
         return $ordered;
+    }
+
+    /**
+     * এই অনুরোধের রুট প্যারামিটারগুলো মেনু সারির সাথে মেলে কি না।
+     *
+     * @param  array<string, string|int>  $params
+     */
+    private function paramsMatch(array $params): bool
+    {
+        foreach ($params as $key => $value) {
+            if ((string) request()->route($key) !== (string) $value) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private function allowed(?User $user, ?string $permission): bool

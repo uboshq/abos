@@ -26,6 +26,7 @@ return [
         'purchase_invoice' => 'ক্রয় চালান',
         'receipt_voucher' => 'আদায় ভাউচার',
         'payment_voucher' => 'পরিশোধ ভাউচার',
+        'expense_voucher' => 'খরচ ভাউচার',
         'journal_voucher' => 'জাবেদা ভাউচার',
         'contra_voucher' => 'কন্ট্রা ভাউচার',
         'money_transfer' => 'টাকা হস্তান্তর',

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\Core\Services\NumberSeriesProvisioner;
 use App\Core\Services\PermissionSyncer;
 use App\Core\Support\CompanyContext;
 use App\Models\ApprovalFlow;
@@ -11,7 +12,6 @@ use App\Models\ApprovalFlowStep;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\FinancialYear;
-use App\Models\NumberSeries;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -153,34 +153,18 @@ class DemoSeeder extends Seeder
                 'is_current' => true,
             ]);
 
-            // প্রতিটা ডকুমেন্ট টাইপের সিরিজ। শাখাভিত্তিক নয় — কোম্পানি-ব্যাপী,
-            // কারণ শুরুতে বেশিরভাগ প্রতিষ্ঠান এটাই চায়; শাখা আলাদা করতে চাইলে
-            // Master Data থেকে যোগ করা যাবে।
-            $types = [
-                'SI' => ['sales', 'INV'],
-                'SR' => ['sales', 'SRT'],
-                'PI' => ['purchase', 'PUR'],
-                'RV' => ['accounts', 'RCV'],
-                'PV' => ['accounts', 'PAY'],
-                'JV' => ['accounts', 'JRN'],
-                'CV' => ['accounts', 'CON'],
-                'MT' => ['accounts', 'TRF'],
-                'CC' => ['accounts', 'CNT'],
-                'CUS' => ['customer', 'CUS'],
-            ];
-
-            foreach ($types as $docType => [$module, $prefix]) {
-                NumberSeries::create([
-                    'module' => $module,
-                    'doc_type' => $docType,
-                    'prefix' => $prefix,
-                    'format' => '{PREFIX}-{FY}-{SEQ}',
-                    'padding' => 4,
-                    'next_number' => 1,
-                    'start_number' => 1,
-                    'financial_year_id' => $year->id,
-                ]);
-            }
+            /*
+             * নম্বর সিরিজ — মডিউলের ঘোষণা থেকে, হাতে লেখা তালিকা থেকে নয়।
+             *
+             * আগে এখানে একটা তালিকা ছিল, আর module.php-র ঘোষণার সাথে সেটা
+             * মিলত না: খরচ ভাউচারের টাইপ ঘোষিত ছিল কিন্তু সিরিজ ছিল না,
+             * তাই প্রথম খরচ ভাউচারটা লিখতে গিয়েই আটকে গেল।
+             *
+             * শাখাভিত্তিক নয় — কোম্পানি-ব্যাপী, কারণ শুরুতে বেশিরভাগ
+             * প্রতিষ্ঠান এটাই চায়; শাখা আলাদা করতে চাইলে Master Data
+             * থেকে যোগ করা যাবে।
+             */
+            app(NumberSeriesProvisioner::class)->provision($year);
         });
     }
 

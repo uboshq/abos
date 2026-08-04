@@ -62,6 +62,22 @@ final class DrillResolver
      */
     public function resolve(string $sourceType, int|string $sourceId): ?Drillable
     {
+        /*
+         * বিপরীত এন্ট্রিও তার মূল ডকুমেন্টে ফেরত যায়।
+         *
+         * PostingEngine::reverse() সারিগুলো "expense_voucher:reversal"
+         * নামে বসায়, যাতে একই ডকুমেন্ট দুইবার পোস্ট হয়েছে বলে ভুল না
+         * হয়। কিন্তু ওই নামটা কোনো মডিউল ঘোষণা করে না, তাই ড্রিল-ডাউনে
+         * সারিগুলো "উৎস পাওয়া যাচ্ছে না" দেখাত।
+         *
+         * অথচ ব্যাখ্যা সবচেয়ে বেশি দরকার ঠিক ওই সারিগুলোরই: ডে বুকে
+         * একটা উল্টো এন্ট্রি দেখে প্রথম প্রশ্নই হয় "এটা কীসের"। উপসর্গটা
+         * ছেঁটে দিলে উত্তরটা এক ক্লিক দূরে থাকে।
+         */
+        $sourceType = str_contains($sourceType, ':')
+            ? strtok($sourceType, ':')
+            : $sourceType;
+
         $modelClass = $this->map()[$sourceType] ?? null;
 
         if ($modelClass === null) {

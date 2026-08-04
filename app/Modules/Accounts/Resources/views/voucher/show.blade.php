@@ -1,0 +1,203 @@
+{{--
+    একটা ভাউচার — যা লেখা হয়েছে, আর যা লেজারে বসেছে।
+
+    সারিগুলো ডেবিট-ক্রেডিট আকারেই দেখানো হয়, এমনকি সহজ ফর্মে লেখা
+    ভাউচারেও। কারণ এটাই আসল রেকর্ড: পর্দায় "কার কাছ থেকে" লেখা হলেও
+    হিসাবের খাতায় সেটা দুইটা সারি, আর ছাপা কাগজেও তাই থাকবে।
+--}}
+@php
+    $totals = $voucher->totals();
+    $canEdit = $voucher->isEditable();
+@endphp
+
+<x-layouts.app :menu="$menu">
+    <x-slot:title>{{ $voucher->document_no }}</x-slot:title>
+
+    <x-slot:header>
+        <x-ui.page-header :title="$voucher->document_no" :subtitle="$voucher->typeLabel()">
+            <x-slot:actions>
+                @if ($voucher->isDraft())
+                    @can('accounts.voucher.update')
+                        <x-ui.button tone="secondary" :href="route('accounts.voucher.edit', $voucher)">
+                            {{ __('core.action.edit') }}
+                        </x-ui.button>
+
+                        <form method="POST" action="{{ route('accounts.voucher.post', $voucher) }}">
+                            @csrf
+                            <x-ui.button type="submit" tone="primary">
+                                {{ __('accounts::action.post_now') }}
+                            </x-ui.button>
+                        </form>
+                    @endcan
+                @endif
+
+                @unless ($voucher->isCancelled())
+                    @can('accounts.voucher.delete')
+                        {{-- বাতিলের কারণ বাধ্যতামূলক — কারণ ছাড়া বাতিল করা
+                             ভাউচার পরে কেউ ব্যাখ্যা করতে পারে না --}}
+                        <form method="POST" action="{{ route('accounts.voucher.cancel', $voucher) }}"
+                              x-data="{ ask() {
+                                  const r = prompt('{{ __('accounts::message.cancel_reason_prompt') }}');
+                                  if (! r) return false;
+                                  this.$refs.reason.value = r;
+                                  return true;
+                              } }"
+                              @submit="if (! ask()) $event.preventDefault()">
+                            @csrf
+                            <input type="hidden" name="cancel_reason" x-ref="reason">
+                            <x-ui.button type="submit" tone="secondary">
+                                {{ __('accounts::action.cancel_voucher') }}
+                            </x-ui.button>
+                        </form>
+                    @endcan
+                @endunless
+            </x-slot:actions>
+        </x-ui.page-header>
+    </x-slot:header>
+
+    @if (session('saved'))
+        <div role="status"
+             class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm
+                    text-(--color-badge-success-ink)">
+            {{ session('saved') }}
+        </div>
+    @endif
+
+    @if ($errors->any())
+        <div role="alert"
+             class="mb-4 rounded-(--radius-field) bg-(--color-badge-danger-bg) px-3 py-2 text-sm
+                    text-(--color-badge-danger-ink)">
+            <ul class="list-inside list-disc">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    @if ($voucher->isCancelled())
+        {{-- বাতিল হলে সেটাই প্রথম যা চোখে পড়া উচিত, নাহলে কেউ এই
+             কাগজটা দেখে ভাবত হিসাবটা এখনো চালু আছে --}}
+        <div role="status"
+             class="mb-4 rounded-(--radius-card) border border-(--color-danger) bg-(--color-badge-danger-bg)
+                    px-4 py-3 text-sm text-(--color-badge-danger-ink)">
+            <p class="font-semibold">{{ __('accounts::message.this_is_cancelled') }}</p>
+            <p class="mt-1">{{ $voucher->cancel_reason }}</p>
+            <p class="mt-1 text-2xs">
+                {{ $voucher->canceller?->name }} ·
+                {{ $voucher->cancelled_at?->format('d/m/Y H:i') }}
+            </p>
+        </div>
+    @endif
+
+    <div class="grid gap-4 lg:grid-cols-3">
+        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+            <h2 class="text-sm font-medium text-(--color-ink-muted)">{{ __('accounts::field.amount') }}</h2>
+            <p class="num mt-1 text-2xl font-semibold">{{ number_format((float) $voucher->amount, 2) }}</p>
+
+            <div class="mt-3">
+                @include('accounts::voucher.partials.status', ['voucher' => $voucher])
+            </div>
+        </section>
+
+        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4
+                        lg:col-span-2">
+            <h2 class="mb-3 font-semibold">{{ __('accounts::section.details') }}</h2>
+
+            <dl class="grid gap-x-4 gap-y-2 sm:grid-cols-3">
+                @foreach ([
+                    'accounts::field.date' => $voucher->trx_date?->format('d/m/Y'),
+                    'core.company.branch' => $voucher->branch?->name(),
+                    'accounts::field.instrument' => $voucher->instrument
+                        ? __('accounts::instrument.' . $voucher->instrument) : null,
+                    'accounts::field.instrument_no' => $voucher->instrument_no,
+                    'accounts::field.instrument_date' => $voucher->instrument_date?->format('d/m/Y'),
+                    'core.table.narration' => $voucher->narration,
+                ] as $label => $value)
+                    @if (filled($value))
+                        <div>
+                            <dt class="text-2xs text-(--color-ink-muted)">{{ __($label) }}</dt>
+                            <dd class="text-sm">{{ $value }}</dd>
+                        </div>
+                    @endif
+                @endforeach
+            </dl>
+
+            {{-- কে লিখল ও কে পোস্ট করল — নিয়ম ২। কাগজের ভাউচারে দুইটা
+                 সই থাকে; পর্দাতেও দুইটা নাম থাকা দরকার। --}}
+            <p class="mt-3 border-t border-(--color-border) pt-3 text-2xs text-(--color-ink-muted)">
+                {{ __('core.print.prepared_by') }}: {{ $voucher->creator?->name ?? '—' }}
+                @if ($voucher->approver)
+                    · {{ __('core.print.approved_by') }}: {{ $voucher->approver->name }}
+                    ({{ $voucher->approved_at?->format('d/m/Y H:i') }})
+                @endif
+            </p>
+        </section>
+    </div>
+
+    <section class="mt-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
+                    bg-(--color-surface-card)">
+        <h2 class="border-b border-(--color-border) px-4 py-3 font-semibold">
+            {{ __('accounts::section.entries') }}
+        </h2>
+
+        <div class="overflow-x-auto">
+            <table class="w-full border-collapse text-sm">
+                <thead>
+                    <tr class="border-b border-(--color-border) bg-(--color-surface-app)">
+                        <th scope="col" class="px-3 py-2 text-start font-medium text-(--color-ink-muted)">
+                            {{ __('core.print.account') }}
+                        </th>
+                        <th scope="col" class="hidden px-3 py-2 text-start font-medium
+                                               text-(--color-ink-muted) lg:table-cell">
+                            {{ __('core.table.narration') }}
+                        </th>
+                        <th scope="col" style="width: 10rem"
+                            class="num px-3 py-2 text-start font-medium text-(--color-ink-muted)">
+                            {{ __('core.table.debit') }}
+                        </th>
+                        <th scope="col" style="width: 10rem"
+                            class="num px-3 py-2 text-start font-medium text-(--color-ink-muted)">
+                            {{ __('core.table.credit') }}
+                        </th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @foreach ($voucher->lines as $line)
+                        <tr class="border-b border-(--color-border)">
+                            <td class="px-3 py-2">
+                                {{-- খাতটা ক্লিকযোগ্য — নিয়ম ১ --}}
+                                <a href="{{ route('accounts.coa.show', $line->account) }}"
+                                   class="text-(--color-brand-500) underline-offset-2 hover:underline">
+                                    {{ $line->account->label() }}
+                                </a>
+                            </td>
+                            <td class="hidden px-3 py-2 text-(--color-ink-muted) lg:table-cell">
+                                {{ $line->narration }}
+                            </td>
+                            <td class="num px-3 py-2">
+                                {{ bccomp((string) $line->debit, '0', 4) > 0
+                                    ? number_format((float) $line->debit, 2) : '' }}
+                            </td>
+                            <td class="num px-3 py-2">
+                                {{ bccomp((string) $line->credit, '0', 4) > 0
+                                    ? number_format((float) $line->credit, 2) : '' }}
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+
+                <tfoot>
+                    <tr class="bg-(--color-surface-app) font-semibold">
+                        <td class="px-3 py-2 text-end lg:hidden">{{ __('core.print.total') }}</td>
+                        <td class="hidden px-3 py-2 lg:table-cell"></td>
+                        <td class="hidden px-3 py-2 text-end lg:table-cell">{{ __('core.print.total') }}</td>
+                        <td class="num px-3 py-2">{{ number_format((float) $totals['debit'], 2) }}</td>
+                        <td class="num px-3 py-2">{{ number_format((float) $totals['credit'], 2) }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </section>
+</x-layouts.app>

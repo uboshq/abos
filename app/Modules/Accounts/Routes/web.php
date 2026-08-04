@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Modules\Accounts\Http\Controllers\CashTillController;
 use App\Modules\Accounts\Http\Controllers\ChartOfAccountsController;
+use App\Modules\Accounts\Http\Controllers\VoucherController;
 use App\Modules\Accounts\Models\Account;
 use Illuminate\Support\Facades\Route;
 
@@ -45,5 +46,34 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
 
         // resource ছকের বাইরে, তাই অনুমতি কন্ট্রোলারে হাতে যাচাই করা হয়
         Route::post('/{till}/primary', [CashTillController::class, 'makePrimary'])->name('primary');
+    });
+
+    /*
+     * ভাউচার — ধরনটা URL-এ।
+     *
+     * /vouchers/receipt, /vouchers/journal — মেনুর পাঁচটা সারি পাঁচটা
+     * আলাদা ঠিকানায় যায়, অথচ কন্ট্রোলার এক। ধরনটা ক্যোয়ারি প্যারামিটার
+     * হলে ছাপার শিরোনাম ও ব্রেডক্রাম্ব দুইটাই অনিশ্চিত হত।
+     *
+     * {voucher} রুটগুলো ধরন ছাড়া, কারণ একটা ভাউচার নিজেই জানে সে কোন
+     * ধরনের — ঠিকানায় ধরনটা আবার লিখলে দুইটা অমিল হতে পারত।
+     */
+    Route::prefix('vouchers')->name('voucher.')->group(function () {
+        Route::get('/{voucher}', [VoucherController::class, 'show'])
+            ->whereNumber('voucher')->name('show');
+        Route::get('/{voucher}/edit', [VoucherController::class, 'edit'])
+            ->whereNumber('voucher')->name('edit');
+        Route::put('/{voucher}', [VoucherController::class, 'update'])
+            ->whereNumber('voucher')->name('update');
+        Route::post('/{voucher}/post', [VoucherController::class, 'post'])
+            ->whereNumber('voucher')->name('post');
+        Route::post('/{voucher}/cancel', [VoucherController::class, 'cancel'])
+            ->whereNumber('voucher')->name('cancel');
+
+        // ধরনভিত্তিক রুটগুলো শেষে — নাহলে /vouchers/receipt কে একটা
+        // ভাউচারের id ভেবে বাইন্ডিং ৪০৪ দিত
+        Route::get('/{type}', [VoucherController::class, 'index'])->name('index');
+        Route::get('/{type}/create', [VoucherController::class, 'create'])->name('create');
+        Route::post('/{type}', [VoucherController::class, 'store'])->name('store');
     });
 });

@@ -24,4 +24,22 @@ return [
     'primary_till_cannot_close' => 'The main cash counter cannot be closed — end-of-day deposits need somewhere '
         .'defined to go. Make another one primary first.',
     'cash_group_missing' => 'The chart has no ":code Cash in Hand" account. Install the standard chart first.',
+    'unknown_voucher_type' => 'That is not a valid voucher type.',
+    'no_lines' => 'A voucher needs at least one line.',
+    'not_balanced' => 'Debit and credit do not match — debit :debit, credit :credit.',
+    'amount_must_be_positive' => 'The amount must be more than zero.',
+    'same_account_both_sides' => 'The same account cannot be on both sides — the money would go nowhere.',
+    'account_missing' => 'One of the lines has no account.',
+    'inactive_account' => '":name" is inactive, so it takes no new transactions.',
+    'already_posted' => 'Voucher :no has already been posted.',
+    'already_cancelled' => 'This voucher is already cancelled.',
+    'cancelled_cannot_post' => 'A cancelled voucher cannot be posted.',
+    'posted_cannot_edit' => ':no is posted and cannot be changed. '
+        .'To correct it, cancel and issue a new voucher — that is the rule on paper too.',
+    'cancel_reason_required' => 'A reason for cancelling is required.',
+    'no_financial_year' => 'No financial year covers :date.',
+    'year_closed' => 'Financial year :year is closed, so nothing new can be posted into it.',
+    'line_needs_account' => 'This line has an amount but no account.',
+    'line_both_sides' => 'A line cannot carry both a debit and a credit — split it into two.',
+    'journal_needs_two_lines' => 'A journal needs amounts on at least two lines.',
 ];

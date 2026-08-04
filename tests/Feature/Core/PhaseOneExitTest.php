@@ -77,13 +77,14 @@ class PhaseOneExitTest extends TestCase
 
         // ২. Number Series — row lock, কখনো দুইবার এক নম্বর নয়
         $numbers = app(NumberSeriesEngine::class);
-        $first = $numbers->next('SI', sourceType: 'sales_invoice', sourceId: 1);
-        $second = $numbers->next('SI', sourceType: 'sales_invoice', sourceId: 2);
+        // JV — সেলস মডিউল এখনো নেই, তাই SI বলেও কিছু নেই
+        $first = $numbers->next('JV', sourceType: 'journal_voucher', sourceId: 1);
+        $second = $numbers->next('JV', sourceType: 'journal_voucher', sourceId: 2);
         $this->assertNotSame($first, $second);
-        $this->assertSame('INV-2026-2027-0001', $first);
+        $this->assertSame('JRN-2026-2027-0001', $first);
 
         // ৩. Posting — ডেবিট = ক্রেডিট, নাহলে কিছুই বসে না
-        app(PostingEngine::class)->post('sales_invoice', 1, '2026-08-04', [
+        app(PostingEngine::class)->post('journal_voucher', 1, '2026-08-04', [
             ['account_id' => 1101, 'debit' => 11500, 'party_type' => 'customer', 'party_id' => 7],
             ['account_id' => 4001, 'credit' => 10000],
             ['account_id' => 2201, 'credit' => 1500],
@@ -97,9 +98,9 @@ class PhaseOneExitTest extends TestCase
 
         // ৪. Drill-down — প্রতিটা সংখ্যা তার উৎসে ফিরতে পারে (নিয়ম ১)
         $entry = LedgerEntry::query()->first();
-        $this->assertSame('sales_invoice', $entry->source_type);
+        $this->assertSame('journal_voucher', $entry->source_type);
         $described = app(DrillResolver::class)->describe($entry->source_type, $entry->source_id);
-        $this->assertSame('sales_invoice', $described['type']);
+        $this->assertSame('journal_voucher', $described['type']);
 
         // ৫. Approval — সীমার উপরে অনুমোদন লাগে, নিজেরটা নিজে দেওয়া যায় না
         $approvals = app(ApprovalEngine::class);
@@ -159,7 +160,7 @@ class PhaseOneExitTest extends TestCase
         $owner->switchCompany($alpha->id);
         CompanyContext::set($alpha->id);
 
-        app(PostingEngine::class)->post('sales_invoice', 1, '2026-08-04', [
+        app(PostingEngine::class)->post('journal_voucher', 1, '2026-08-04', [
             ['account_id' => 1101, 'debit' => 500],
             ['account_id' => 4001, 'credit' => 500],
         ]);

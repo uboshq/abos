@@ -8,5 +8,6 @@ return [
     'bank' => 'Bank details',
     'opening' => 'Opening balance',
     'custody' => 'Custody',
+    'details' => 'Details',
     'entries' => 'Transactions',
 ];
