@@ -233,6 +233,26 @@ class ShellTest extends TestCase
         $this->assertSame([], $drift['unregistered']);
     }
 
+    public function test_the_sidebar_stays_put_while_the_page_scrolls(): void
+    {
+        $markup = $this->codeOf(resource_path('views/components/shell/sidebar.blade.php'));
+
+        // ভেতরের nav-এ overflow-y-auto থাকলেও যথেষ্ট নয়: বাইরের aside-এর
+        // উচ্চতা ভিউপোর্টে বাঁধা না থাকলে সেটা কনটেন্টের সাথে লম্বা হয়ে
+        // যায় আর পুরো পাতার সাথে উপরে উঠে যায় — লোগো ও মেনু চোখের
+        // বাইরে চলে যায়।
+        $this->assertStringContainsString('sticky', $markup);
+        $this->assertStringContainsString('h-dvh', $markup);
+        $this->assertStringContainsString('overflow-y-auto', $markup);
+    }
+
+    public function test_the_top_bar_stays_put_too(): void
+    {
+        $markup = $this->codeOf(resource_path('views/components/shell/topbar.blade.php'));
+
+        $this->assertStringContainsString('sticky', $markup);
+    }
+
     public function test_the_shell_never_asks_the_server_whether_this_is_a_mobile(): void
     {
         // সেকশন ২০.৭ — ট্যাবলেট, ছোট করা উইন্ডো ও zoom সবই ভুল উত্তর দেয়।

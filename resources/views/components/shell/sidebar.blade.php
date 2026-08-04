@@ -6,7 +6,10 @@
     মোবাইলে একেবারে লুকানো (নিচে bottom nav থাকে), ট্যাবলেটে আইকন-only ৬৪px,
     ল্যাপটপে পূর্ণ ২২০px, বড় মনিটরে ২৬০px। একই মার্কআপ, শুধু CSS বদলায়।
 --}}
-<aside class="hidden shrink-0 flex-col bg-(--color-sidebar) text-(--color-sidebar-icon)
+{{-- sticky top-0 h-dvh — নাহলে সাইডবারটা পাতার সাথে স্ক্রল করে উপরে উঠে
+     যায়, আর লোগো ও মডিউলের নাম চোখের বাইরে চলে যায়। উচ্চতা ভিউপোর্টে
+     বাঁধা থাকলে ভেতরের nav নিজে স্ক্রল করে, বাইরেরটা স্থির থাকে। --}}
+<aside class="sticky top-0 hidden h-dvh shrink-0 flex-col bg-(--color-sidebar) text-(--color-sidebar-icon)
               md:flex md:w-(--spacing-sidebar-icon)
               lg:w-(--spacing-sidebar)
               xl:w-(--spacing-sidebar-wide)">
