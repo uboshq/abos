@@ -52,7 +52,9 @@
     {{-- গ্রুপের ব্যালেন্সও দেখানো হয় — সেটাই তার নিচের সবার যোগফল, আর
          না দেখালে "চলতি সম্পদ কত" প্রশ্নের উত্তর পর্দায় থাকত না --}}
     <td @class(['num px-3 py-2', 'font-semibold' => $account->is_group])>
-        {{ number_format((float) $balance, 2) }}
+        {{-- অঙ্কটাই লিংক — নিয়ম ১। খাতের পাতায় ঠিক সেই এন্ট্রিগুলো
+             আছে যেগুলো যোগ হয়ে এই সংখ্যাটা হয়েছে। --}}
+        <x-ui.amount :value="$balance" :href="route('accounts.coa.show', $account)" />
     </td>
 
     <td class="px-3 py-2 text-end">

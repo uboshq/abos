@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Core\Concerns\BelongsToCompany;
+use App\Core\Concerns\HasPublicId;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -13,6 +14,7 @@ class NumberSeries extends Model
 {
     use BelongsToCompany;
     use HasFactory;
+    use HasPublicId;
 
     protected $table = 'number_series';
 

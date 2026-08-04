@@ -68,10 +68,9 @@
         <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">
             <form method="GET" class="contents">
-                <x-ui.toolbar :columns="false" :density="false">
+                <x-ui.toolbar>
                     <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
-                        <input type="checkbox" name="inactive" value="1" @checked($showInactive)
-                               onchange="this.form.submit()" class="size-4">
+                        <input type="checkbox" name="inactive" value="1" @checked($showInactive) class="size-4">
                         {{ __('accounts::action.show_inactive') }}
                     </label>
                 </x-ui.toolbar>
@@ -90,6 +89,7 @@
                     <x-ui.empty-state :message="__('core.empty.no_results')" />
                 @else
                     <x-ui.table
+            :compact="request()->boolean('compact')"
                         :empty="__('core.empty.no_results')"
                         :rows="$results"
                         :columns="[
@@ -101,7 +101,11 @@
                              'render' => fn ($a) => __('accounts::type.' . $a->type)],
                             ['key' => 'balance', 'label' => __('accounts::field.balance'), 'numeric' => true,
                              'width' => '10rem',
-                             'render' => fn ($a) => $a->is_group ? '' : number_format((float) ($balances[$a->id] ?? 0), 2)],
+                             // অঙ্কটাই লিংক — নিয়ম ১
+                             'render' => fn ($a) => $a->is_group ? '' : view('ui.amount-link', [
+                                 'value' => $balances[$a->id] ?? 0,
+                                 'href' => route('accounts.coa.show', $a),
+                             ])],
                             ['key' => 'is_active', 'label' => __('accounts::field.state'), 'width' => '7rem',
                              'render' => fn ($a) => view('accounts::coa.partials.state', ['account' => $a])],
                         ]" />

@@ -67,10 +67,11 @@
 
     <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
-            <x-ui.toolbar :columns="false" :density="false" />
+            <x-ui.toolbar />
         </form>
 
         <x-ui.table
+            :compact="request()->boolean('compact')"
             :empty="$q ? __('core.empty.no_results') : __('accounts::message.no_transfers')"
             :rows="$transfers"
             :columns="[

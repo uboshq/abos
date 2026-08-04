@@ -17,8 +17,11 @@
 @endphp
 
 <span class="block">
-    <span @class(['num block', 'font-semibold text-(--color-danger)' => $negative || $over])>
-        {{ number_format((float) $balance, 2) }}
+    <span @class(['block', 'font-semibold' => $negative || $over])>
+        {{-- অঙ্কটাই লিংক — কাউন্টারের পাতায় লেনদেনগুলো আছে (নিয়ম ১) --}}
+        <x-ui.amount :value="$balance"
+                     :href="route('accounts.till.show', $till)"
+                     :tone="$negative || $over ? 'danger' : null" />
     </span>
 
     @if ($negative)

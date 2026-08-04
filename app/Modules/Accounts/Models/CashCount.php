@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Accounts\Models;
 
 use App\Core\Concerns\BelongsToCompany;
+use App\Core\Concerns\HasPublicId;
 use App\Core\Contracts\Drillable;
 use App\Core\Support\DocumentStatus;
 use App\Models\Branch;
@@ -26,6 +27,7 @@ class CashCount extends Model implements Drillable
 {
     use BelongsToCompany;
     use HasFactory;
+    use HasPublicId;
     use SoftDeletes;
 
     /**

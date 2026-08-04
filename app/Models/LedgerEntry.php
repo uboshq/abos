@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Core\Concerns\BelongsToCompany;
+use App\Core\Concerns\HasPublicId;
 use App\Core\Engines\Drill\DrillResolver;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -22,6 +23,7 @@ class LedgerEntry extends Model
 {
     use BelongsToCompany;
     use HasFactory;
+    use HasPublicId;
 
     protected $fillable = [
         'company_id', 'branch_id', 'financial_year_id', 'account_id',

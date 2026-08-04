@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Core\Concerns\BelongsToCompany;
+use App\Core\Concerns\HasPublicId;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -16,6 +17,7 @@ class Approval extends Model
 {
     use BelongsToCompany;
     use HasFactory;
+    use HasPublicId;
 
     public const PENDING = 'pending';
 

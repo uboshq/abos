@@ -27,7 +27,7 @@
 
     <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
-            <x-ui.toolbar :search="false" :columns="false" :density="false">
+            <x-ui.toolbar :search="false">
                 @if ($report->hasFilter('date_range'))
                     <label class="flex items-center gap-2 text-sm">
                         <span class="sr-only">{{ __('accounts::field.from_date') }}</span>
@@ -78,7 +78,9 @@
                     </label>
                 @endif
 
-                <x-ui.button type="submit" tone="secondary">{{ __('core.action.search') }}</x-ui.button>
+                {{-- জমা দেওয়ার বোতামটা এখানে ছিল, এখন টুলবারের ফিল্টার
+                     প্যানেলের নিজেরই একটা আছে — দুইটা থাকলে একই সারিতে
+                     দুইবার "খুঁজুন" দেখাত --}}
             </x-ui.toolbar>
         </form>
 

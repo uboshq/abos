@@ -108,13 +108,18 @@ class ComponentTest extends TestCase
     {
         $response = $this->actingAs($this->owner())->get('/components');
 
-        // সেকশন ১৫.২৪ — এক টুলবার। নতুন বোতাম কম্পোনেন্টে যোগ হবে,
-        // স্ক্রিনে নয়; নাহলে এক স্ক্রিনে Export বাঁয়ে আর অন্যটায় ডানে।
+        /*
+         * সেকশন ১৫.২৪ — এক টুলবার। নতুন বোতাম কম্পোনেন্টে যোগ হবে,
+         * স্ক্রিনে নয়; নাহলে এক স্ক্রিনে Sort বাঁয়ে আর অন্যটায় ডানে।
+         *
+         * Columns ও Export তালিকা থেকে বাদ: ওগুলো কখনো তৈরিই হয়নি,
+         * শুধু খালি <button> হিসেবে বসে ছিল। তৈরি না হওয়া জিনিস
+         * দেখানোর চেয়ে না দেখানোই সৎ — যেদিন তৈরি হবে সেদিন এখানেও
+         * ফিরবে। প্রতিটা বোতাম সত্যিই কিছু করে কি না তা ToolbarTest
+         * পাহারা দেয়।
+         */
         foreach ([
-            __('core.toolbar.filter'),
-            __('core.toolbar.columns'),
             __('core.toolbar.density'),
-            __('core.action.export'),
             __('core.action.print'),
             __('core.toolbar.refresh'),
         ] as $label) {
@@ -122,12 +127,30 @@ class ComponentTest extends TestCase
         }
     }
 
+    /**
+     * টুলবারের প্রতিটা আইকন-বোতামে aria-label আছে।
+     *
+     * মোবাইলে hover নেই, তাই title-এর উপর ভরসা করা যায় না (সেকশন ২০.৫)।
+     * আগে এটা toolbar-button কম্পোনেন্টটা পড়ে দেখত, কিন্তু ওই
+     * কম্পোনেন্টটা ছিল একটা মৃত বোতাম — সরিয়ে দেওয়া হয়েছে। এখন
+     * টুলবারের নিজের উৎসই দেখা হয়।
+     */
     public function test_toolbar_buttons_carry_a_label_for_screen_readers(): void
     {
-        // মোবাইলে hover নেই, তাই title-এর উপর ভরসা করা যায় না (সেকশন ২০.৫)।
-        $markup = file_get_contents(resource_path('views/components/ui/toolbar-button.blade.php'));
+        $markup = file_get_contents(resource_path('views/components/ui/toolbar.blade.php'));
 
-        $this->assertStringContainsString('aria-label', $markup);
+        preg_match_all('/<button\b[^>]*>/s', preg_replace('/\{\{--.*?--\}\}/s', '', $markup), $buttons);
+
+        $this->assertNotEmpty($buttons[0]);
+
+        foreach ($buttons[0] as $button) {
+            // যে বোতামে লেখা আছে তার আলাদা লেবেল লাগে না — Filter By-তে
+            // শব্দটাই পর্দায় দেখা যায়
+            $labelled = str_contains($button, 'aria-label')
+                || str_contains($button, 'aria-controls');
+
+            $this->assertTrue($labelled, "লেবেল ছাড়া বোতাম:\n{$button}");
+        }
     }
 
     public function test_status_badges_never_rely_on_colour_alone(): void

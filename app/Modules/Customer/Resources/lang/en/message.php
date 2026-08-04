@@ -12,12 +12,14 @@ return [
     'opening_note' => 'What was owed before this system. Can only be set now — '
         .'to change it later, post a journal voucher, or the ledger and this list would disagree.',
 
+    'search_placeholder' => 'Search customer or mobile...',
+
     'none_yet' => 'No customers yet.',
     'created' => 'Customer added.',
     'updated' => 'Customer updated.',
     'deactivated' => 'Customer deactivated.',
+    'activated' => 'Customer is active again.',
 
-    'opening_row' => 'Opening balance',
     'no_transactions' => 'No transactions for this customer yet.',
     'over_limit' => 'Outstanding is over the credit limit.',
     'deactivate_confirm' => 'This customer will be deactivated. Past transactions and balances stay. Continue?',

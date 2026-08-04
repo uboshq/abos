@@ -44,7 +44,10 @@ final class AccountService
                 // বসানোর সময়, আর সেটা markAsSystem() দিয়ে।
                 'is_system' => false,
                 'status' => DocumentStatus::CONFIRMED,
-                'branch_id' => null,
+                // branch_id এখানে ছিল, অথচ accounts টেবিলে ওই কলামই নেই —
+                // হিসাবের ছক কোম্পানি-ব্যাপী, শাখাভিত্তিক নয়। সাধারণ
+                // অবস্থায় mass assignment ওটা ফেলে দিত বলে কিছু হত না,
+                // কিন্তু সিডারে গার্ড বন্ধ থাকে, আর তখন ইনসার্টটাই ভাঙত।
                 'created_by' => auth()->id(),
             ]);
         });

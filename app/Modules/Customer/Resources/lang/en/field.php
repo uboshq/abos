@@ -11,11 +11,18 @@ return [
     'email' => 'Email',
     'type' => 'Type',
     'address_en' => 'Address (English)',
+    'address' => 'Address',
     'address_bn' => 'Address (Bangla)',
     'credit_limit' => 'Credit limit',
     'credit_days' => 'Credit days',
     'opening_balance' => 'Opening balance',
     'opening_date' => 'Opening date',
     'outstanding' => 'Outstanding',
+
+    // Ageing buckets, in days
+    'bucket_current' => '0–30 days',
+    'bucket_30' => '31–60 days',
+    'bucket_60' => '61–90 days',
+    'bucket_90' => '90+ days',
     'state' => 'Status',
 ];

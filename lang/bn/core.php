@@ -145,8 +145,15 @@ return [
         'show_vendor_credit' => 'প্রিন্টের নিচে "Powered by ABOS" দেখাও',
     ],
 
+    'yes' => 'হ্যাঁ',
+    'no' => 'না',
+
     'toolbar' => [
         'filter' => 'ফিল্টার',
+        'sort_by' => 'সাজাও',
+        'view' => 'দেখাও',
+        'view_list' => 'তালিকা হিসেবে',
+        'view_grid' => 'কার্ড হিসেবে',
         'columns' => 'কলাম',
         'density' => 'ঘনত্ব',
         'refresh' => 'নতুন করে আনো',

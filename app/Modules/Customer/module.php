@@ -10,6 +10,7 @@ declare(strict_types=1);
  */
 
 use App\Modules\Customer\Models\Customer;
+use App\Modules\Customer\Reports\PartyReports;
 
 return [
     'code' => 'customer',
@@ -39,6 +40,12 @@ return [
         'master' => [
             ['label' => 'customer::menu.customers', 'route' => 'customer.index', 'permission' => 'customer.view'],
         ],
+        'reports' => [
+            ['label' => 'customer::menu.due_list', 'route' => 'customer.report.show',
+                'route_params' => ['slug' => 'due-list'], 'permission' => 'customer.report'],
+            ['label' => 'customer::menu.ageing', 'route' => 'customer.report.show',
+                'route_params' => ['slug' => 'ageing'], 'permission' => 'customer.report'],
+        ],
     ],
 
     'permissions' => [
@@ -59,6 +66,12 @@ return [
     // Drill-down engine এই মানচিত্র দিয়েই "কোন হিসাব কোথা থেকে এল" দেখায় — নিয়ম ১।
     'drill_sources' => [
         'customer' => Customer::class,
+    ],
+
+    // Report engine এগুলো boot-এ নিবন্ধন করে, তাই রিপোর্ট যোগ করতে
+    // কোনো কোর ফাইলে নাম লিখতে হয় না (সেকশন ১৯.৭)।
+    'reports' => [
+        PartyReports::class,
     ],
 
     // Control Panel-এ যে সুইচগুলো দেখাবে — নিয়ম ৭।

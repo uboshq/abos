@@ -52,8 +52,10 @@
 
             {{-- num ক্লাসটা ট্যাবুলার অঙ্ক দেয় — একই প্রস্থে প্রতিটা সংখ্যা,
                  তাই দুই অঙ্ক পাশাপাশি রাখলে দশমিক বিন্দু এক লাইনে থাকে। --}}
-            <p class="num mt-1 text-2xl font-semibold">
-                {{ number_format((float) $outstanding, 2) }}
+            {{-- অঙ্কটাই লিংক — নিচের টেবিলে ঠিক সেই লেনদেনগুলো আছে
+                 যেগুলো যোগ হয়ে এই সংখ্যাটা হয়েছে (নিয়ম ১) --}}
+            <p class="mt-1 text-2xl font-semibold">
+                <x-ui.amount :value="$outstanding" href="#transactions" />
             </p>
 
             @if ($creditLimitOn && bccomp((string) $customer->credit_limit, '0', 4) > 0)
@@ -88,9 +90,9 @@
                 @foreach ([
                     'customer::field.phone' => $customer->phone,
                     'customer::field.email' => $customer->email,
-                    'customer::field.type' => $customer->customer_type,
+                    'customer::field.type' => $customer->typeName(),
                     'core.company.branch' => $customer->branch?->name(),
-                    'customer::field.address_en' => $customer->address(),
+                    'customer::field.address' => $customer->address(),
                 ] as $label => $value)
                     @if (filled($value))
                         <div>
@@ -104,7 +106,7 @@
     </div>
 
     {{-- লেনদেন — অঙ্কটা কোথা থেকে এল (নিয়ম ১) --}}
-    <section class="mt-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
+    <section id="transactions" class="mt-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">
         <h2 class="border-b border-(--color-border) px-4 py-3 font-semibold">
             {{ __('customer::section.transactions') }}

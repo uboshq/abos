@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modules;
 
+use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
@@ -232,14 +233,21 @@ class MasterDataTest extends TestCase
 
     public function test_installing_the_defaults_makes_the_first_invoice_possible(): void
     {
-        $made = $this->lists()->installDefaults();
+        $this->lists()->installDefaults();
 
-        // একক নেই মানে পরিমাণের এককই নেই; শর্ত নেই মানে বকেয়ার তারিখ নেই
-        $this->assertGreaterThan(0, $made['units']);
-        $this->assertGreaterThan(0, $made['taxes']);
-        $this->assertGreaterThan(0, $made['terms']);
-        $this->assertGreaterThan(0, $made['party_types']);
-        $this->assertGreaterThan(0, $made['reasons']);
+        /*
+         * গোনা হয় তালিকায় কী আছে, installDefaults() কয়টা সারি বানাল
+         * তা নয়। কোম্পানি তৈরির অংশ হিসেবেই তালিকাগুলো বসে যায়, তাই
+         * এখানে ডাকলে সে ০ ফেরত দেয় — আর সেটাই কাম্য। প্রশ্নটা
+         * "কয়টা তৈরি হলো" নয়, "প্রথম বিলটা লেখা যায় কি না"।
+         *
+         * একক নেই মানে পরিমাণের এককই নেই; শর্ত নেই মানে বকেয়ার তারিখ নেই।
+         */
+        $this->assertTrue(Unit::query()->exists(), 'একক ছাড়া পরিমাণ লেখা যায় না।');
+        $this->assertTrue(Tax::query()->exists());
+        $this->assertTrue(PaymentTerm::query()->exists(), 'শর্ত ছাড়া বকেয়ার তারিখ নেই।');
+        $this->assertTrue(PartyType::query()->exists());
+        $this->assertTrue(ReasonCode::query()->exists());
     }
 
     public function test_installing_twice_changes_nothing(): void
@@ -321,11 +329,14 @@ class MasterDataTest extends TestCase
 
     public function test_two_records_in_one_list_cannot_share_a_code(): void
     {
-        $this->lists()->create(Unit::class, ['code' => 'PCS', 'name_en' => 'Piece', 'factor' => 1]);
+        // প্রমিত তালিকার কোড নয় — ওগুলো কোম্পানি তৈরির সময়েই বসে
+        // যায়, তাই এখানে ব্যবহার করলে টেস্টটা নিজের নিয়মে নয়, সিডারের
+        // কারণে পাস করত
+        $this->lists()->create(Unit::class, ['code' => 'DUP-1', 'name_en' => 'Piece', 'factor' => 1]);
 
         $this->expectException(ValidationException::class);
 
-        $this->lists()->create(Unit::class, ['code' => 'PCS', 'name_en' => 'Pieces', 'factor' => 1]);
+        $this->lists()->create(Unit::class, ['code' => 'DUP-1', 'name_en' => 'Pieces', 'factor' => 1]);
     }
 
     // ── একক ও রূপান্তর ─────────────────────────────────────────────────
@@ -333,15 +344,15 @@ class MasterDataTest extends TestCase
     public function test_a_unit_converts_through_every_level_to_its_base(): void
     {
         $gram = $this->lists()->create(Unit::class, [
-            'code' => 'G', 'name_en' => 'Gram', 'factor' => 1, 'allows_fraction' => true,
+            'code' => 'T-G', 'name_en' => 'Gram', 'factor' => 1, 'allows_fraction' => true,
         ]);
 
         $kg = $this->lists()->create(Unit::class, [
-            'code' => 'KG', 'name_en' => 'Kilogram', 'factor' => 1000, 'base_unit_id' => $gram->id,
+            'code' => 'T-KG', 'name_en' => 'Kilogram', 'factor' => 1000, 'base_unit_id' => $gram->id,
         ]);
 
         $bag = $this->lists()->create(Unit::class, [
-            'code' => 'BAG', 'name_en' => 'Bag', 'factor' => 25, 'base_unit_id' => $kg->id,
+            'code' => 'T-BAG', 'name_en' => 'Bag', 'factor' => 25, 'base_unit_id' => $kg->id,
         ]);
 
         // ১ বস্তা = ২৫ কেজি = ২৫,০০০ গ্রাম — এক স্তরে থামলে ২৫ আসত
@@ -350,9 +361,9 @@ class MasterDataTest extends TestCase
 
     public function test_a_unit_cannot_be_its_own_base(): void
     {
-        $pcs = $this->lists()->create(Unit::class, ['code' => 'PCS', 'name_en' => 'Piece', 'factor' => 1]);
+        $pcs = $this->lists()->create(Unit::class, ['code' => 'T-PCS', 'name_en' => 'Piece', 'factor' => 1]);
         $ctn = $this->lists()->create(Unit::class, [
-            'code' => 'CTN', 'name_en' => 'Carton', 'factor' => 12, 'base_unit_id' => $pcs->id,
+            'code' => 'T-CTN', 'name_en' => 'Carton', 'factor' => 12, 'base_unit_id' => $pcs->id,
         ]);
 
         $this->expectException(ValidationException::class);
@@ -431,14 +442,35 @@ class MasterDataTest extends TestCase
     public function test_one_company_never_sees_another_companys_master_data(): void
     {
         $this->locations()->installBangladesh();
-        $this->lists()->installDefaults();
+
+        /*
+         * দুই কোম্পানিরই নিজের প্রমিত তালিকা আছে (কোম্পানি তৈরির সময়েই
+         * বসে), তাই "অন্যটায় শূন্য" দিয়ে আর বিচ্ছিন্নতা মাপা যায় না —
+         * ওটা বরং প্রমাণ করত তালিকাগুলো বসেইনি।
+         *
+         * আসল প্রশ্ন: এই কোম্পানিতে বানানো একটা সারি ওই কোম্পানিতে
+         * দেখা যায় কি না, আর দুই দিকের সারিগুলো আলাদা কি না।
+         */
+        $mine = $this->lists()->create(Unit::class, [
+            'code' => 'ONLY-MINE',
+            'name_en' => 'Only Mine',
+            'name_bn' => 'শুধু আমার',
+            'factor' => 1,
+        ]);
+
+        $myUnitIds = Unit::query()->pluck('id')->all();
 
         $other = Company::query()->where('code', 'FMART')->firstOrFail();
         CompanyContext::set($other->id, $other->defaultBranch()?->id);
 
+        $this->assertNull(Unit::query()->find($mine->id));
+        $this->assertFalse(Unit::query()->where('code', 'ONLY-MINE')->exists());
+
+        // অবস্থান দুই কোম্পানিতেই বসানো হয় না, তাই ওখানে শূন্যই সঠিক
         $this->assertSame(0, Location::query()->count());
-        $this->assertSame(0, Unit::query()->count());
-        $this->assertSame(0, Tax::query()->count());
+
+        // একই কোড দুই কোম্পানিতে থাকতে পারে, কিন্তু সারিগুলো আলাদা
+        $this->assertSame([], array_intersect($myUnitIds, Unit::query()->pluck('id')->all()));
     }
 
     public function test_view_permission_alone_cannot_change_anything(): void
@@ -501,6 +533,7 @@ class MasterDataTest extends TestCase
         $this->put(route('master_data.series.update', $series), [
             'prefix' => 'XYZ',
             'padding' => 4,
+            'format' => '{PREFIX}-{SEQ}',
             'next_number' => 9999,
         ])->assertRedirect();
 
@@ -508,5 +541,95 @@ class MasterDataTest extends TestCase
 
         $this->assertSame('XYZ', $series->prefix);
         $this->assertSame($before, $series->next_number);
+    }
+
+    /**
+     * নম্বরের ছক ব্যবহারকারী নিজে ঠিক করতে পারেন।
+     *
+     * ইঞ্জিনে ছকটা বরাবরই ছিল, শুধু পর্দায় খোলা ছিল না — তাই প্রতিটা
+     * প্রতিষ্ঠান একই চেহারার নম্বরে আটকে থাকত।
+     */
+    public function test_the_number_format_can_be_changed_from_the_screen(): void
+    {
+        $series = NumberSeries::query()->firstOrFail();
+
+        $this->put(route('master_data.series.update', $series), [
+            'prefix' => 'INV',
+            'suffix' => 'BD',
+            'padding' => 5,
+            'format' => '{PREFIX}/{YY}/{SEQ}/{SUFFIX}',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $series->refresh();
+
+        $this->assertSame('{PREFIX}/{YY}/{SEQ}/{SUFFIX}', $series->format);
+
+        // নমুনাটা ইঞ্জিনের নিজের কোড থেকে আসে, তাই এটাই আসল নম্বরের চেহারা
+        $preview = app(NumberSeriesEngine::class)->preview($series);
+
+        $this->assertStringStartsWith('INV/', $preview);
+        $this->assertStringEndsWith('/BD', $preview);
+        $this->assertStringContainsString(str_pad((string) $series->next_number, 5, '0', STR_PAD_LEFT), $preview);
+    }
+
+    /**
+     * অনুসর্গ খালি রাখা যায়।
+     *
+     * কলামটা NOT NULL, তাই null পাঠালে সেভ করার সময় ডাটাবেজ ব্যতিক্রম
+     * ছুঁড়ত আর ব্যবহারকারী একটা ৫০০ পাতা পেতেন — অথচ ঘরটা ঐচ্ছিকই।
+     * ব্রাউজারে পরীক্ষা করার সময় অনুসর্গ দেওয়া ছিল বলে ধরা পড়েনি।
+     */
+    public function test_the_suffix_may_be_left_empty(): void
+    {
+        $series = NumberSeries::query()->firstOrFail();
+
+        $this->put(route('master_data.series.update', $series), [
+            'prefix' => 'INV',
+            'suffix' => '',
+            'padding' => 4,
+            'format' => '{PREFIX}-{SEQ}',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->assertSame('', $series->fresh()->suffix);
+    }
+
+    /**
+     * {SEQ} ছাড়া ছক নেওয়া হয় না।
+     *
+     * নিলে প্রতিটা ডকুমেন্ট একই নম্বর পেত — "INV-2026" বারবার। সেভ করার
+     * সময় কোনো ভুল দেখাত না; ধরা পড়ত অনেক পরে, যখন দুইটা ভিন্ন বিলের
+     * নম্বর এক হয়ে যেত, আর ততদিনে কাগজ ছাপা হয়ে গেছে।
+     */
+    public function test_a_format_without_the_running_number_is_refused(): void
+    {
+        $series = NumberSeries::query()->firstOrFail();
+        $before = $series->format;
+
+        $this->put(route('master_data.series.update', $series), [
+            'prefix' => 'INV',
+            'padding' => 4,
+            'format' => '{PREFIX}-{YYYY}',
+        ])->assertSessionHasErrors('format');
+
+        $this->assertSame($before, $series->fresh()->format);
+    }
+
+    /**
+     * পর্দার নমুনা আর ইস্যু হওয়া নম্বর একই।
+     *
+     * আগে পর্দাটা নিজে হাতে "{prefix}-{বছর}-{ক্রম}" জুড়ে দেখাত, আর
+     * ছকটা অন্য কিছু হলে নমুনাটা মিথ্যা বলত — ব্যবহারকারী একটা দেখে
+     * সেভ করতেন, ডকুমেন্টে বসত অন্যটা।
+     */
+    public function test_the_sample_on_screen_matches_the_number_actually_issued(): void
+    {
+        $series = NumberSeries::query()->where('doc_type', 'CUS')->firstOrFail();
+
+        $engine = app(NumberSeriesEngine::class);
+
+        $shown = $engine->preview($series);
+        $issued = $engine->next('CUS');
+
+        $this->assertSame($shown, $issued);
     }
 }

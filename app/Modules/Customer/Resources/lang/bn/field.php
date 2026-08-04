@@ -11,11 +11,18 @@ return [
     'email' => 'ইমেইল',
     'type' => 'ধরন',
     'address_en' => 'ঠিকানা (ইংরেজি)',
+    'address' => 'ঠিকানা',
     'address_bn' => 'ঠিকানা (বাংলা)',
     'credit_limit' => 'ক্রেডিট সীমা',
     'credit_days' => 'ক্রেডিট দিন',
     'opening_balance' => 'খোলা ব্যালেন্স',
     'opening_date' => 'খোলার তারিখ',
     'outstanding' => 'বকেয়া',
+
+    // বয়সের ধাপ — দিনে
+    'bucket_current' => '০–৩০ দিন',
+    'bucket_30' => '৩১–৬০ দিন',
+    'bucket_60' => '৬১–৯০ দিন',
+    'bucket_90' => '৯০+ দিন',
     'state' => 'অবস্থা',
 ];

@@ -43,17 +43,25 @@ class SyncPermissions extends Command
 
         $result = $syncer->sync();
 
-        if ($result['created'] === []) {
-            $this->info("নতুন কিছু নেই — {$result['existing']}টা অনুমতি আগে থেকেই আছে।");
-
-            return self::SUCCESS;
-        }
-
         foreach ($result['created'] as $name) {
             $this->line("  + {$name}");
         }
 
-        $this->info(count($result['created']).'টা নতুন অনুমতি যোগ হয়েছে।');
+        if ($result['created'] === []) {
+            $this->info("নতুন কিছু নেই — {$result['existing']}টা অনুমতি আগে থেকেই আছে।");
+        } else {
+            $this->info(count($result['created']).'টা নতুন অনুমতি যোগ হয়েছে।');
+        }
+
+        /*
+         * মালিকের রোলে কয়টা বসল সেটা আলাদা করে বলা হয়, কারণ দুইটা
+         * আলাদা ঘটনা। অনুমতি তৈরি হওয়া মানেই কারও কাছে পৌঁছানো নয় —
+         * প্রথমবার এটা ধরা পড়েছিল ব্রাউজারে, যখন নতুন মডিউলের প্রতিটা
+         * পর্দা মালিককেও ৪০৩ দিচ্ছিল।
+         */
+        if ($result['granted'] > 0) {
+            $this->info($result['granted'].'টা অনুমতি মালিকের রোলে বসানো হয়েছে।');
+        }
 
         return self::SUCCESS;
     }

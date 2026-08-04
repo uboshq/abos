@@ -10,6 +10,7 @@ use App\Core\Support\DocumentStatus;
 use App\Models\Company;
 use App\Models\LedgerEntry;
 use App\Models\User;
+use App\Modules\Accounts\Services\OpeningBalanceService;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Customer\Services\CustomerService;
 use Database\Seeders\DemoSeeder;
@@ -154,6 +155,47 @@ class CustomerTest extends TestCase
         $this->assertSame('1300.0000', $customer->outstanding());
     }
 
+    /**
+     * খোলা ব্যালেন্স খাতায় বসে, শুধু গ্রাহকের সারিতে নয়।
+     *
+     * আগে বসত না, আর তাতে গ্রাহকের পাতায় পাওনা দেখাত অথচ ট্রায়াল
+     * ব্যালেন্সে অঙ্কটা কোথাও থাকত না। দাখিলাটা দুই লাইনের — প্রাপ্য
+     * ডেবিট, সঞ্চিত মুনাফা ক্রেডিট — তাই খাতা মেলাও থাকে।
+     */
+    public function test_an_opening_balance_reaches_the_ledger_as_a_real_entry(): void
+    {
+        $customer = $this->make(['opening_balance' => '1000.0000', 'opening_date' => '2026-07-01']);
+
+        $lines = LedgerEntry::query()
+            ->where('source_type', 'customer'.OpeningBalanceService::SOURCE_SUFFIX)
+            ->where('source_id', $customer->id)
+            ->get();
+
+        $this->assertCount(2, $lines, 'খোলা ব্যালেন্স দুই লাইনের দাখিলা।');
+
+        // দাখিলাটা ভারসাম্যপূর্ণ — দুই দিকে সমান। যোগফলটা bccomp দিয়ে
+        // মেলানো হয়, স্ট্রিং তুলনায় নয়: Collection::sum() দশমিকের শূন্য
+        // ফেলে দেয় ("1000.0000" নয়, "1000"), আর ওটা অঙ্কের ভুল নয়।
+        $this->assertSame(0, bccomp((string) $lines->sum('debit'), '1000', 4));
+        $this->assertSame(0, bccomp((string) $lines->sum('credit'), '1000', 4));
+
+        // পক্ষের লাইনটাই গ্রাহকের নামে — অন্যটা সঞ্চিত মুনাফা, নির্দিষ্ট
+        // কারও নয়, তাই তাতে party_id থাকে না
+        $this->assertSame(
+            1,
+            $lines->where('party_type', 'customer')->where('party_id', $customer->id)->count(),
+        );
+    }
+
+    public function test_a_zero_opening_balance_posts_nothing_at_all(): void
+    {
+        $customer = $this->make(['opening_balance' => '0.0000']);
+
+        // শূন্যের দাখিলা বসালে লেজারে দুইটা শূন্য সারি থাকত, যা পড়ার
+        // সময় শুধু বিভ্রান্ত করে
+        $this->assertFalse(app(OpeningBalanceService::class)->exists('customer', $customer->id));
+    }
+
     public function test_a_zero_credit_limit_means_unlimited_not_blocked(): void
     {
         $customer = $this->make(['credit_limit' => 0]);
@@ -254,8 +296,9 @@ class CustomerTest extends TestCase
             ->assertSee('INV-2026-2027-0001')
             ->assertSee('RCV-2026-2027-0001')
             // খোলা ব্যালেন্সও একটা সারি — নাহলে প্রথম ব্যালেন্স ১৫০০
-            // দেখাত অথচ ডেবিট ৫০০, আর বাকি ১০০০-এর কোনো ব্যাখ্যা থাকত না
-            ->assertSee(__('customer::message.opening_row'), false)
+            // দেখাত অথচ ডেবিট ৫০০, আর বাকি ১০০০-এর কোনো ব্যাখ্যা থাকত না।
+            // সারিটা এখন লেজারের সত্যিকারের দাখিলা, কৃত্রিম নয়।
+            ->assertSee(__('accounts::message.opening_balance'), false)
             // চলমান ব্যালেন্স: ১০০০ + ৫০০ = ১৫০০, তারপর − ৩০০ = ১২০০
             ->assertSee('1,500.00')
             ->assertSee('1,200.00');
@@ -269,7 +312,7 @@ class CustomerTest extends TestCase
         $this->actingAs($this->user)
             ->get(route('customer.show', $customer))
             ->assertOk()
-            ->assertDontSee(__('customer::message.opening_row'), false);
+            ->assertDontSee(__('accounts::message.opening_balance'), false);
     }
 
     public function test_creating_through_the_screen_works_end_to_end(): void
