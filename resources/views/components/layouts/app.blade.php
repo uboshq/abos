@@ -1,0 +1,60 @@
+{{--
+    Application Shell — প্ল্যান সেকশন ১৫.১।
+
+    একটাই শেল, সব ডিভাইসে। কোন অংশ দেখা যাবে সেটা শুধু CSS ঠিক করে —
+    Blade-এ @if($isMobile) জাতীয় কিছু নেই এবং থাকবে না (সেকশন ২০.৭), কারণ
+    সার্ভার স্ক্রিনের মাপ জানে না আর জানার দরকারও নেই।
+--}}
+<!DOCTYPE html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}"
+      data-theme="{{ auth()->user()?->theme ?? 'light' }}">
+<head>
+    <meta charset="utf-8">
+
+    {{-- এই লাইনটা ছাড়া মোবাইল ব্রাউজার ৯৮০px চওড়া একটা কাল্পনিক ডেস্কটপ
+         ধরে নেয় আর কোনো media query কাজ করে না (সেকশন ২০.১)। --}}
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>{{ isset($title) ? $title . ' — ABOS' : 'ABOS' }}</title>
+
+    <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+</head>
+
+<body class="min-h-dvh">
+    {{-- মোবাইলে সাইডবার লুকানো থাকে; এই লিংকটা কি-বোর্ড ব্যবহারকারীকে
+         সরাসরি কাজের জায়গায় নিয়ে যায় (সেকশন ১৫.২০)। --}}
+    <a href="#main"
+       class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50
+              focus:rounded-(--radius-field) focus:bg-(--color-brand-500) focus:px-4 focus:py-2
+              focus:text-(--color-ink-inverse)">
+        {{ __('core.a11y.skip_to_content') }}
+    </a>
+
+    <div class="flex min-h-dvh">
+        <x-shell.sidebar :menu="$menu ?? []" />
+
+        <div class="flex min-w-0 flex-1 flex-col">
+            <x-shell.topbar />
+
+            <main id="main"
+                  class="flex-1 px-3 pt-4 pb-(--spacing-bottom-nav) md:px-5 md:pb-5 lg:px-6"
+                  tabindex="-1">
+                {{-- কনটেন্টের সর্বোচ্চ প্রস্থ — সেকশন ২০.১। বড় স্ক্রিনে
+                     টেনে লম্বা নয়; জায়গা বাড়লে কলাম বাড়ে, লাইন নয়। --}}
+                <div class="mx-auto w-full max-w-(--spacing-content-max)">
+                    @isset($header)
+                        <div class="mb-4">{{ $header }}</div>
+                    @endisset
+
+                    {{ $slot }}
+                </div>
+            </main>
+
+            <x-shell.statusbar />
+        </div>
+    </div>
+
+    <x-shell.bottom-nav :menu="$menu ?? []" />
+</body>
+</html>

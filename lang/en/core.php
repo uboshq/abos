@@ -54,6 +54,38 @@ return [
         'help' => 'Help',
         'cancel' => 'Cancel',
         'search' => 'Search',
+        'search_anything' => 'Search anything…',
+        'switch_language' => 'Switch language',
+        'logout' => 'Log out',
+        'more' => 'More',
+    ],
+
+    'dashboard' => [
+        'foundation_ready' => 'The foundation is in place',
+        'foundation_note' => 'Core engines, tenant scoping, approvals, attachments and both languages are working. Modules sit on top of this.',
+    ],
+
+    'accounting' => [
+        'receivable' => 'Receivable',
+        'payable' => 'Payable',
+    ],
+
+    'brand' => [
+        'developed_by' => 'Developed by Al-Amin Shuvo',
+        'full_name' => 'All Business Operating System',
+        'tagline' => 'Built Around Your Business.',
+        'powered_by' => 'Powered by UNIVER BANGLADESH',
+    ],
+
+    'status_bar' => [
+        'operational' => 'Operational',
+        'maintenance' => 'Maintenance',
+        'incident' => 'Incident',
+    ],
+
+    'a11y' => [
+        'skip_to_content' => 'Skip to content',
+        'main_navigation' => 'Main navigation',
     ],
 
     'company' => [

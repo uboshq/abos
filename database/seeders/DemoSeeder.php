@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\Core\Services\PermissionSyncer;
 use App\Core\Support\CompanyContext;
 use App\Models\ApprovalFlow;
 use App\Models\ApprovalFlowStep;
@@ -14,6 +15,7 @@ use App\Models\NumberSeries;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
 /**
@@ -49,9 +51,33 @@ class DemoSeeder extends Seeder
             'locale' => 'bn',
         ]);
 
+        // প্রতিটা module.php-তে ঘোষিত অনুমতি ডাটাবেজে বসাও — নাহলে মেনু
+        // ফাঁকা থাকবে, কারণ মেনু অনুমতি দেখে ফিল্টার হয়।
+        app(PermissionSyncer::class)->sync();
+
+        $roles = [];
+
         foreach (['owner', 'accountant', 'salesman'] as $role) {
-            Role::findOrCreate($role);
+            $roles[$role] = Role::findOrCreate($role);
         }
+
+        // মালিক সব পারেন। বাকিদের সীমা module.php-র prefix ধরে —
+        // হিসাবরক্ষক accounts.*, বিক্রয়কর্মী sales.* ও customer.*।
+        $roles['owner']->syncPermissions(Permission::all());
+
+        $roles['accountant']->syncPermissions(
+            Permission::query()->where('name', 'like', 'accounts.%')->get()
+        );
+
+        $roles['salesman']->syncPermissions(
+            Permission::query()
+                ->where('name', 'like', 'sales.%')
+                ->orWhere('name', 'like', 'customer.%')
+                // ছাড়ের সীমা অতিক্রমের অনুমতি বিক্রয়কর্মীর নেই — সেটাই
+                // অনুমোদন চাওয়ার কারণ।
+                ->where('name', '!=', 'customer.credit_limit.override')
+                ->get()
+        );
 
         $this->setUpCompany($alpha, [
             ['code' => 'DHK', 'name_en' => 'Dhaka Head Office', 'name_bn' => 'ঢাকা প্রধান কার্যালয়', 'is_default' => true],

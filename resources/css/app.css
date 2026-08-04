@@ -1,9 +1,237 @@
 @import 'tailwindcss';
+@import './tokens.css';
 
+@source '../../app/Modules/**/Resources/views/**/*.blade.php';
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 
-@theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+/* ─────────────────────────────────────────────────────────────────
+   ফন্ট — নিজেদের সার্ভার থেকে, CDN থেকে নয় (সেকশন ১৭.৪)।
+
+   Poppins ব্র্যান্ড ও হেডিং, Hind Siliguri বাংলা। unicode-range দিয়ে
+   ভাগ করা: ইংরেজি ইন্টারফেসে বাংলা ফাইলটা (~৭২KB প্রতি ওজন) নামেই না।
+   ───────────────────────────────────────────────────────────────── */
+
+@font-face {
+    font-family: 'Poppins';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('/fonts/poppins-400.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Poppins';
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url('/fonts/poppins-500.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Poppins';
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url('/fonts/poppins-600.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Poppins';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('/fonts/poppins-700.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'Hind Siliguri';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('/fonts/hind-siliguri-400-bengali.woff2') format('woff2');
+    unicode-range: U+0964-0965, U+0980-09FE, U+1CD0, U+1CD2, U+1CD5-1CD6, U+1CD8, U+1CE1, U+1CEA, U+1CED, U+1CF2, U+1CF5-1CF7, U+200C-200D, U+20B9, U+25CC, U+A8F1;
+}
+@font-face {
+    font-family: 'Hind Siliguri';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('/fonts/hind-siliguri-400-latin.woff2') format('woff2');
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215;
+}
+@font-face {
+    font-family: 'Hind Siliguri';
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url('/fonts/hind-siliguri-500-bengali.woff2') format('woff2');
+    unicode-range: U+0964-0965, U+0980-09FE, U+200C-200D, U+20B9, U+25CC;
+}
+@font-face {
+    font-family: 'Hind Siliguri';
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url('/fonts/hind-siliguri-600-bengali.woff2') format('woff2');
+    unicode-range: U+0964-0965, U+0980-09FE, U+200C-200D, U+20B9, U+25CC;
+}
+@font-face {
+    font-family: 'Hind Siliguri';
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url('/fonts/hind-siliguri-600-latin.woff2') format('woff2');
+    unicode-range: U+0000-00FF, U+2000-206F, U+20AC, U+2212;
+}
+@font-face {
+    font-family: 'Hind Siliguri';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('/fonts/hind-siliguri-700-bengali.woff2') format('woff2');
+    unicode-range: U+0964-0965, U+0980-09FE, U+200C-200D, U+20B9, U+25CC;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   ভিত্তি
+   ───────────────────────────────────────────────────────────────── */
+
+@layer base {
+    html {
+        /* rem-ভিত্তিক সব মাপ এখান থেকে স্কেল করে। বড় স্ক্রিনে বেস ফন্ট
+           বড় হয় (সেকশন ২০.১) — তাই ৪K মনিটরে লেখা ছোট দেখায় না, আর
+           দেয়াল-স্ক্রিনেও দূর থেকে পড়া যায়। */
+        font-size: clamp(15px, 0.72vw + 11px, 20px);
+
+        /* মোবাইল ব্রাউজার নিজে থেকে লেখা বড় করে দেয়, যা clamp()-এর
+           হিসাব নষ্ট করে — দুই প্রিফিক্সই লাগে, iOS Safari এখনো
+           প্রিফিক্স ছাড়া মানে না। */
+        -webkit-text-size-adjust: 100%;
+        text-size-adjust: 100%;
+    }
+
+    body {
+        background-color: var(--color-surface-app);
+        color: var(--color-ink-body);
+        font-family: var(--font-sans);
+        font-size: var(--text-base);
+        line-height: 1.55;
+
+        /* পাতা কখনো আড়াআড়ি স্ক্রল করবে না — সেকশন ২০.১। চওড়া টেবিল
+           নিজের ভেতরে স্ক্রল করে, পুরো লেআউট নয়। */
+        overflow-x: hidden;
+    }
+
+    :lang(bn) {
+        font-family: var(--font-bangla);
+    }
+
+    /*
+     * হেডিং রং উত্তরাধিকারে নেয়, নিজে ঠিক করে না।
+     *
+     * আগে এখানে color: var(--color-ink) লেখা ছিল, আর সেটা গাঢ় প্যানেলে
+     * (লগইনের বাঁ পাশ, সাইডবার) সাদা লেখাকে প্রায় অদৃশ্য কালো করে দিত —
+     * প্রথম স্ক্রিনশটেই ধরা পড়েছে। প্রতিটা গাঢ় জায়গায় আলাদা করে রং
+     * লিখে ঠিক করা যেত, কিন্তু তখন পরের গাঢ় প্যানেলেও কেউ ভুলত।
+     *
+     * উত্তরাধিকার নিলে হেডিং তার কনটেইনারের রং পায়, যা সবসময় সঠিক।
+     * সাদা পৃষ্ঠতলে গাঢ় শিরোনাম চাইলে সেটা .heading দিয়ে।
+     */
+    h1, h2, h3, h4 {
+        color: inherit;
+        font-weight: 600;
+        line-height: 1.3;
+    }
+
+    /* মূল পৃষ্ঠতলে শিরোনাম — body-র রঙের চেয়ে গাঢ়, ১৭.৮৫:১ */
+    main h1, main h2, main h3,
+    .heading {
+        color: var(--color-ink);
+    }
+
+    /* হিসাবের প্রতিটা সংখ্যা — কলাম মেলার একমাত্র উপায়।
+       এই ক্লাসটা শুধু ফন্ট ঠিক করে, সারিবদ্ধকরণ নয়: একটা ক্লাস দুইটা কাজ
+       করলে KPI টাইলের সংখ্যাও ডানে সরে যায়, যা কেউ চায়নি। */
+    .tabular {
+        font-family: var(--font-numeric);
+        font-variant-numeric: tabular-nums;
+    }
+
+    /* টেবিলের সংখ্যার কলাম — ডানে সারিবদ্ধ, কারণ দশমিক বিন্দু এক লাইনে
+       না থাকলে চোখে যোগফল মেলানো যায় না */
+    td.num,
+    th.num {
+        font-family: var(--font-numeric);
+        font-variant-numeric: tabular-nums;
+        text-align: right;
+    }
+
+    :focus-visible {
+        outline: 2px solid var(--color-brand-500);
+        outline-offset: 2px;
+        border-radius: 4px;
+    }
+
+    ::placeholder {
+        color: var(--color-ink-placeholder);
+    }
+
+    [disabled],
+    .is-disabled {
+        color: var(--color-ink-disabled);
+        cursor: not-allowed;
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   টেবিল → card — সেকশন ২০.৩
+
+   ইচ্ছাকৃতভাবে max-width, বাকি সব mobile-first-এর উল্টো। কারণ টেবিল
+   আচরণটাই HTML-এর ডিফল্ট; মোবাইলে সেটা ভাঙতে হয়, তৈরি করতে হয় না।
+   ───────────────────────────────────────────────────────────────── */
+
+@layer components {
+    .table-responsive {
+        width: 100%;
+        overflow-x: auto;
+    }
+
+    @media (max-width: 767px) {
+        .table-cards thead {
+            /* display:none নয় — স্ক্রিন রিডারের কাছে হেডার থাকা দরকার */
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            clip: rect(0 0 0 0);
+        }
+
+        .table-cards tr {
+            display: block;
+            margin-bottom: 0.75rem;
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-field);
+            background: var(--color-surface-card);
+            padding: 0.5rem 0.75rem;
+        }
+
+        .table-cards td {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            border: 0;
+            padding: 0.35rem 0;
+        }
+
+        /* data-label ছাড়া ব্যবহারকারী শুধু কতগুলো সংখ্যা দেখবে, কোনটা কী
+           বোঝার উপায় থাকবে না। শেয়ার্ড টেবিল কম্পোনেন্টে বাধ্যতামূলক। */
+        .table-cards td::before {
+            content: attr(data-label);
+            color: var(--color-ink-muted);
+            font-weight: 500;
+            flex-shrink: 0;
+        }
+
+        .table-cards td.num {
+            text-align: right;
+        }
+    }
 }

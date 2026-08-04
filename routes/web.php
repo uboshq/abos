@@ -1,7 +1,22 @@
 <?php
 
+declare(strict_types=1);
+
+use App\Http\Controllers\WorkspaceController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
+/*
+ * শেলের নিজের রুট। মডিউলের রুট এখানে নয় — প্রতিটা মডিউল নিজের
+ * Routes/web.php রাখে আর ModuleServiceProvider সেটা নিজে থেকে নিবন্ধন করে
+ * (সেকশন ১৯.৩)। এখানে মডিউলের নাম লিখলে "কোর না ছুঁয়ে নতুন মডিউল"
+ * কথাটাই মিথ্যা হয়ে যায়।
+ */
+
+Route::middleware('auth')->group(function () {
+    Route::get('/', [WorkspaceController::class, 'dashboard'])->name('dashboard');
+
+    Route::post('/company/switch', [WorkspaceController::class, 'switchCompany'])->name('company.switch');
+    Route::post('/locale/switch', [WorkspaceController::class, 'switchLocale'])->name('locale.switch');
 });
+
+require __DIR__.'/auth.php';

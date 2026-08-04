@@ -1,0 +1,242 @@
+/**
+ * ABOS Design Tokens — প্ল্যান সেকশন ১৪ (রং), ১৬.৮ (মাপ), ১৭ (ব্র্যান্ড),
+ * ২০ (breakpoint)।
+ *
+ * অলঙ্ঘনীয় শর্ত ৩: "এক টোকেন … প্রতিটা স্ক্রিনে একই রং-স্পেসিং-টাইপোগ্রাফি।"
+ * তাই কোনো Blade ফাইলে কাঁচা hex লেখা হবে না — লিখলে ডার্ক থিম আর পরের
+ * রিব্র্যান্ড দুটোই অসম্ভব হয়ে যায়।
+ *
+ * রঙের মানগুলো হিসাব করে যাচাই করা (সেকশন ১৪.৭)। যেখানে মূল প্যালেট WCAG AA
+ * পাশ করেনি, সেখানে সংশোধিত মান বসানো হয়েছে এবং কারণ লেখা আছে।
+ */
+
+@theme {
+    /* ─────────────────────────────────────────────────────────────
+       ব্র্যান্ড — সেকশন ১৭.৩-এ লোগোর রঙের সাথে মিলিয়ে দেওয়া
+       ───────────────────────────────────────────────────────────── */
+
+    /* ইন্টারঅ্যাকটিভ নীল: বাটন, লিংক, ফোকাস। সাদায় ৫.১৭ — AA পাশ। */
+    --color-brand-500: #2563eb;
+    --color-brand-600: #1d4ed8;
+
+    /* লোগোর নীল। সাদায় ৮.৬৩ — হেডিং ও সাইডবার অ্যাকটিভে। */
+    --color-brand-700: #0d47a1;
+
+    /* লোগোর নেভি। ডার্ক ব্যাকগ্রাউন্ড ও প্রিন্ট হেডিং। */
+    --color-brand-900: #0b132b;
+
+    --color-brand-100: #dbeafe;
+    --color-brand-50: #eff6ff;
+
+    /* লোগোর লাল ও গোল্ড — শুধু লোগো ও লগইন হিরোতে।
+       কখনো Error বা Warning-এ নয় (সেকশন ১৭.৩): ভুলের বার্তা আর ব্র্যান্ড
+       এক রকম দেখালে ব্যবহারকারী দুটোর পার্থক্য শেখে না। */
+    --color-brand-red: #e10600;
+    --color-brand-gold: #ffc107;
+
+    /* ─────────────────────────────────────────────────────────────
+       মডিউল রং — সাইডবার আইকন, ট্যাব ইন্ডিকেটর, বড় ফিল (৩:১ যথেষ্ট)
+       ছোট লেখায় এগুলো নয়; সেখানে নিচের ব্যাজ জোড়া।
+       ───────────────────────────────────────────────────────────── */
+    --color-module-dashboard: #2563eb;
+    --color-module-finance: #4f46e5;
+    --color-module-sales: #10b981;
+    --color-module-purchase: #f59e0b;
+    --color-module-inventory: #06b6d4;
+    --color-module-hr: #f43f5e;
+    --color-module-crm: #8b5cf6;
+    --color-module-reports: #475569;
+    --color-module-approval: #ea580c;
+    --color-module-security: #0b132b;
+
+    /* ─────────────────────────────────────────────────────────────
+       স্ট্যাটাস — সেকশন ১৪.৭-এর সংশোধিত মান
+
+       মূল প্যালেটে Success #10B981 (২.৫৪), Warning #F59E0B (২.১৫) ও
+       Danger #EF4444 (৩.৭৬) সাদা লেখা নিয়ে AA পাশ করত না। ফিল গাঢ় করা
+       হয়েছে; অ্যাম্বারে রং রেখে লেখা গাঢ় করা হয়েছে, কারণ গাঢ় অ্যাম্বার
+       আর বাদামির পার্থক্য থাকে না।
+       ───────────────────────────────────────────────────────────── */
+
+    /* সাদা লেখা নিয়ে AA পাশ করে এমন ফিল */
+    --color-success: #047857;       /* ৫.৪৮ ✓  (ছিল #10B981 → ২.৫৪ ✗) */
+    --color-success-hover: #065f46;
+    --color-danger: #dc2626;        /* ৪.৮৩ ✓  (ছিল #EF4444 → ৩.৭৬ ✗) */
+    --color-danger-hover: #b91c1c;
+    --color-info: #1d4ed8;
+
+    /* অ্যাম্বার রং থাকে, লেখা গাঢ় — #0F172A নিয়ে ৮.৩১ ✓ */
+    --color-warning: #f59e0b;
+    --color-warning-hover: #b45309;
+    --color-warning-ink: #0f172a;
+
+    /* ব্যাজ — ছোট লেখার একমাত্র নিরাপদ পথ, সবগুলো ৬.৩+ */
+    --color-badge-success-bg: #dcfce7;
+    --color-badge-success-ink: #166534;   /* ৬.৪৯ ✓ */
+    --color-badge-pending-bg: #fef3c7;
+    --color-badge-pending-ink: #92400e;   /* ৬.৩৭ ✓ */
+    --color-badge-danger-bg: #fee2e2;
+    --color-badge-danger-ink: #991b1b;    /* ৬.৮০ ✓ */
+    --color-badge-info-bg: #dbeafe;
+    --color-badge-info-ink: #1e40af;      /* ৭.১৫ ✓ */
+    --color-badge-draft-bg: #f1f5f9;
+    --color-badge-draft-ink: #334155;     /* ৯.৪৫ ✓ */
+    --color-badge-inventory-bg: #cffafe;
+    --color-badge-inventory-ink: #155e75;  /* ৬.৪৯ ✓ */
+
+    /* ─────────────────────────────────────────────────────────────
+       হিসাবের রং — সবসময় চিহ্ন বা লেবেলের সাথে, কখনো রং একা নয়
+       (সেকশন ১৪.৯): কালার-ব্লাইন্ড ব্যবহারকারী ও সাদাকালো প্রিন্ট।
+       ───────────────────────────────────────────────────────────── */
+    --color-income: #15803d;        /* ৫.০২ ✓  (ছিল #16A34A → ৩.৩০) */
+    --color-expense: #dc2626;       /* ৪.৮৩ ✓ */
+    --color-profit: #047857;        /* ৫.৪৮ ✓  (ছিল #059669 → ৩.৭৭) */
+    --color-loss: #b91c1c;
+    --color-cash: #2563eb;
+    --color-bank: #4f46e5;
+    --color-receivable: #0e7490;    /* ৫.৩৬ ✓  (ছিল #0891B2 → ৩.৬৮) */
+    --color-payable: #b45309;       /* ৫.০২ ✓  (ছিল #D97706 → ৩.১৯) */
+
+    /* ─────────────────────────────────────────────────────────────
+       পৃষ্ঠতল ও কালি
+       ───────────────────────────────────────────────────────────── */
+    --color-surface-app: #f8fafc;
+    --color-surface-card: #ffffff;
+    --color-surface-muted: #f1f5f9;
+    --color-surface-hover: #eff6ff;
+    --color-surface-selected: #dbeafe;
+    --color-border: #e5e7eb;
+    --color-border-strong: #cbd5e1;
+
+    --color-ink: #0f172a;           /* ১৭.৮৫ ✓ */
+    --color-ink-body: #334155;      /* ৯.৯০ ✓ */
+    --color-ink-muted: #64748b;     /* ৪.৫৫ ✓ */
+    --color-ink-placeholder: #64748b; /* ৪.৭৬ ✓  (ছিল #94A3B8 → ২.৫৬ ✗) */
+    --color-ink-disabled: #94a3b8;  /* ছিল #CBD5E1 → ১.৪৮, পড়াই যেত না */
+    --color-ink-inverse: #ffffff;
+
+    /* সাইডবার — গাঢ়, সব থিমে এক */
+    --color-sidebar: #0f172a;
+    --color-sidebar-hover: #1e293b;
+    --color-sidebar-active: #2563eb;
+    --color-sidebar-border: #334155;
+    --color-sidebar-icon: #cbd5e1;  /* সাইডবারে ১২.০২ ✓ */
+
+    /* ─────────────────────────────────────────────────────────────
+       চার্ট — সেকশন ১৪.৮-এর সংশোধিত ক্রম।
+       মূল আটটা রং কালার-ব্লাইন্ড সেপারেশন যাচাইয়ে ফেল করত: স্লেট ধূসর
+       দেখাত, আর পিংক-লাল পাশাপাশি আলাদা করা যেত না। এই ক্রম লাইট ও ডার্ক
+       দুই মোডেই পাঁচটা যাচাই পাশ করে। ক্রমেই বরাদ্দ হবে, ঘুরিয়ে নয়।
+       ───────────────────────────────────────────────────────────── */
+    --color-chart-1: #2563eb;
+    --color-chart-2: #d97706;
+    --color-chart-3: #7c3aed;
+    --color-chart-4: #059669;
+    --color-chart-5: #dc2626;
+    --color-chart-6: #0891b2;
+    --color-chart-7: #db2777;
+    --color-chart-8: #4d7c0f;
+
+    /* ─────────────────────────────────────────────────────────────
+       টাইপোগ্রাফি — সেকশন ১৭.৪
+
+       Poppins-এ বাংলা অক্ষর নেই, তাই Hind Siliguri সাথে থাকে; না দিলে
+       ব্রাউজার নিজের মতো ফলব্যাক বসায় আর প্রতিটা কম্পিউটারে আলাদা দেখায়।
+       ───────────────────────────────────────────────────────────── */
+    --font-sans: 'Poppins', 'Hind Siliguri', ui-sans-serif, system-ui, sans-serif;
+    --font-bangla: 'Hind Siliguri', 'Poppins', ui-sans-serif, sans-serif;
+
+    /* হিসাবের কলামে tabular figures বাধ্যতামূলক — Poppins-এর সংখ্যা
+       proportional, অর্থাৎ ১ আর ৮ আলাদা চওড়া, আর টাকার কলাম এলোমেলো দেখায়।
+       টাকার অঙ্ক সবসময় ইংরেজিতে (সেকশন ১৮.৪): Phase 0-এর PDF পরীক্ষায়
+       দেখা গেছে tabular ফন্টে বাংলা অঙ্ক ফাঁকা বাক্স হয়ে যায়। */
+    --font-numeric: 'Inter', 'Poppins', ui-monospace, monospace;
+
+    --text-2xs: 0.6875rem;
+    --text-xs: 0.75rem;
+    --text-sm: 0.8125rem;
+    --text-base: 0.875rem;
+    --text-md: 1rem;
+    --text-lg: 1.125rem;
+    --text-xl: 1.375rem;
+    --text-2xl: 1.75rem;
+
+    /* ─────────────────────────────────────────────────────────────
+       মাপ — সেকশন ১৬.৮
+       ───────────────────────────────────────────────────────────── */
+    --radius-field: 12px;
+    --radius-card: 20px;
+    --radius-badge: 999px;
+
+    --spacing-header: 64px;
+    --spacing-field: 48px;          /* ইনপুট ও বাটনের উচ্চতা */
+    --spacing-touch: 44px;          /* ন্যূনতম টাচ টার্গেট — সেকশন ২০.৫ */
+    --spacing-icon: 20px;
+    --spacing-logo: 44px;
+    --spacing-logo-sidebar: 32px;
+    --spacing-login-card: 460px;
+    --spacing-sidebar: 220px;
+    --spacing-sidebar-wide: 260px;
+    --spacing-sidebar-icon: 64px;
+    --spacing-bottom-nav: 56px;
+
+    /* কনটেন্টের সর্বোচ্চ প্রস্থ — সেকশন ২০.১। বড় স্ক্রিনে টেনে লম্বা করা
+       হয় না; জায়গা বাড়লে কলাম বাড়ে, লাইন নয়। ১৫০ অক্ষরের লাইন পড়া যায় না। */
+    --spacing-content-max: 1600px;
+    --spacing-prose-max: 72ch;
+
+    --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 1px 3px rgb(15 23 42 / 0.06);
+    --shadow-raised: 0 4px 12px rgb(15 23 42 / 0.08);
+    --shadow-overlay: 0 12px 32px rgb(15 23 42 / 0.16);
+
+    /* মোশন — Reduced Motion চালু থাকলে নিচে শূন্য করা হয় */
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --duration-fast: 120ms;
+    --duration-base: 200ms;
+    --duration-slow: 320ms;
+
+    /* Breakpoint — সেকশন ২০.২। চারটাই, নতুন আবিষ্কার নয়। */
+    --breakpoint-md: 768px;
+    --breakpoint-lg: 1024px;
+    --breakpoint-xl: 1440px;
+    --breakpoint-2xl: 1920px;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   ডার্ক থিম — সেকশন ১৪.৪। V1.5-এর ফিচার, কিন্তু টোকেনের কাঠামো এখনই,
+   নাহলে প্রতিটা স্ক্রিনে হার্ডকোডেড রং জমে যাবে (সেকশন ১৫.২১)।
+
+   স্বয়ংক্রিয় উল্টো নয় — প্রতিটা ধাপ আলাদা করে বাছা, আর গাঢ় পৃষ্ঠতলে
+   যাচাই করা।
+   ───────────────────────────────────────────────────────────────── */
+:root[data-theme='dark'] {
+    --color-surface-app: #020617;
+    --color-surface-card: #111827;
+    --color-surface-muted: #0f172a;
+    --color-surface-hover: #1e293b;
+    --color-surface-selected: #1e3a8a;
+    --color-border: #1e293b;
+    --color-border-strong: #334155;
+
+    --color-ink: #f8fafc;            /* #020617-এ ১৯.২৮ ✓ */
+    --color-ink-body: #e2e8f0;
+    --color-ink-muted: #cbd5e1;      /* #111827-এ ১১.৯৫ ✓ */
+    --color-ink-placeholder: #94a3b8;
+    --color-ink-disabled: #64748b;
+    --color-ink-inverse: #0f172a;
+
+    --color-brand-500: #3b82f6;      /* কার্ডে ৪.৮২ ✓ */
+    --color-brand-600: #60a5fa;
+
+    /* গোল্ড সাদায় ১.৬৩ — অচল; কিন্তু নেভিতে ১১.২৮ — এখানে ব্যবহারযোগ্য */
+    --color-brand-gold: #ffc107;
+}
+
+/* ব্যবহারকারী নড়াচড়া কমাতে বললে — সেকশন ১৫.২০ ও ১৬.৭ */
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --duration-fast: 0ms;
+        --duration-base: 0ms;
+        --duration-slow: 0ms;
+    }
+}

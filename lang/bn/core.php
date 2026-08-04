@@ -59,6 +59,38 @@ return [
         'help' => 'সাহায্য',
         'cancel' => 'বাতিল',
         'search' => 'খুঁজুন',
+        'search_anything' => 'যেকোনো কিছু খুঁজুন…',
+        'switch_language' => 'ভাষা বদলান',
+        'logout' => 'লগ আউট',
+        'more' => 'আরও',
+    ],
+
+    'dashboard' => [
+        'foundation_ready' => 'ভিত্তি প্রস্তুত',
+        'foundation_note' => 'কোর engine, টেন্যান্ট স্কোপ, অনুমোদন, সংযুক্তি ও দ্বিভাষিক ব্যবস্থা কাজ করছে। মডিউলগুলো এখন এই ভিত্তির উপর বসবে।',
+    ],
+
+    'accounting' => [
+        'receivable' => 'বকেয়া আদায়',
+        'payable' => 'পরিশোধযোগ্য',
+    ],
+
+    'brand' => [
+        'developed_by' => 'Developed by Al-Amin Shuvo',
+        'full_name' => 'All Business Operating System',
+        'tagline' => 'Built Around Your Business.',
+        'powered_by' => 'Powered by UNIVER BANGLADESH',
+    ],
+
+    'status_bar' => [
+        'operational' => 'সচল',
+        'maintenance' => 'রক্ষণাবেক্ষণ',
+        'incident' => 'সমস্যা',
+    ],
+
+    'a11y' => [
+        'skip_to_content' => 'সরাসরি কাজের অংশে যান',
+        'main_navigation' => 'প্রধান মেনু',
     ],
 
     'company' => [
