@@ -16,8 +16,11 @@
         @endif
     </div>
 
+    {{-- print-hide: "নতুন সরবরাহকারী" কাগজে ক্লিক করা যায় না। বোতামগুলো
+         <a> হলে print CSS-এর button নিয়মে ধরা পড়ে না, তাই এখানে স্পষ্ট
+         করে বলা। --}}
     @isset($actions)
-        <div class="flex flex-wrap items-center gap-2">
+        <div class="print-hide flex flex-wrap items-center gap-2">
             {{ $actions }}
         </div>
     @endisset

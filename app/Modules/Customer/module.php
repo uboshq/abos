@@ -9,6 +9,7 @@ declare(strict_types=1);
  * বাকি দশটা মডিউলের নমুনা — এখানে যা লেখা আছে, বাকিগুলোতেও ঠিক তাই থাকবে।
  */
 
+use App\Modules\Customer\Imports\CustomerImporter;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Customer\Reports\PartyReports;
 
@@ -66,6 +67,10 @@ return [
     // Drill-down engine এই মানচিত্র দিয়েই "কোন হিসাব কোথা থেকে এল" দেখায় — নিয়ম ১।
     'drill_sources' => [
         'customer' => Customer::class,
+    ],
+
+    'imports' => [
+        'customer' => CustomerImporter::class,
     ],
 
     // Report engine এগুলো boot-এ নিবন্ধন করে, তাই রিপোর্ট যোগ করতে

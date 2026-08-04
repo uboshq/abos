@@ -141,6 +141,22 @@ final class CustomerService
      *
      * @param  array<string, mixed>  $data
      */
+    /**
+     * সেভ না করে দেখা — সারিটা গ্রহণযোগ্য কি না।
+     *
+     * ইমপোর্টের যাচাই-পর্দার জন্য। ওখানে একই নিয়ম আলাদা করে লিখলে একদিন
+     * একটা বদলে যেত আর অন্যটা পুরনো থেকে যেত — তখন পর্দায় সারিটা সবুজ
+     * দেখাত, আর বসানোর সময় ব্যর্থ হত।
+     *
+     * @param  array<string, mixed>  $data
+     *
+     * @throws ValidationException
+     */
+    public function assertImportable(array $data): void
+    {
+        $this->assertBanglaNameIfRequired($data);
+    }
+
     private function assertBanglaNameIfRequired(array $data, ?Customer $existing = null): void
     {
         if (! $this->settings->enabled('customer.require_bn_name')) {

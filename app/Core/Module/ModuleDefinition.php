@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Module;
 
+use App\Core\Contracts\Importer;
 use InvalidArgumentException;
 
 /**
@@ -45,6 +46,16 @@ final class ModuleDefinition
          * @var list<class-string>
          */
         public readonly array $reports,
+
+        /**
+         * পুরনো খাতা থেকে কী কী আনা যায়।
+         *
+         * প্রতিটা মডিউল নিজে বলে দেয় সে কোন সারিগুলো নিতে পারে, তাই
+         * ইমপোর্টের পর্দাটা কোনো মডিউলের নাম জানে না (সেকশন ১৯.৭)।
+         *
+         * @var array<string, class-string>
+         */
+        public readonly array $imports,
         public readonly string $path,
         public readonly string $namespace,
     ) {}
@@ -117,9 +128,39 @@ final class ModuleDefinition
             drillSources: $raw['drill_sources'] ?? [],
             settings: array_values($raw['settings'] ?? []),
             reports: self::validateReports($raw['reports'] ?? [], $path),
+            imports: self::validateImports($raw['imports'] ?? [], $path),
             path: $path,
             namespace: $namespace,
         );
+    }
+
+    /**
+     * ইমপোর্টারগুলো সত্যিই আছে কি না — বুট-টাইমে।
+     *
+     * ভুল নাম ধরা না পড়লে ইমপোর্টের পর্দায় একটা সারি দেখাত, আর ক্লিক
+     * করলে ৫০০ পড়ত — অর্থাৎ ভুলটা ধরা পড়ত ব্যবহারকারীর হাতে, প্রথম
+     * গ্রাহকের ডেটা আনার দিনে।
+     *
+     * @param  array<string, mixed>  $imports
+     * @return array<string, class-string>
+     */
+    private static function validateImports(array $imports, string $path): array
+    {
+        foreach ($imports as $key => $class) {
+            if (! is_string($class) || ! class_exists($class)) {
+                throw new InvalidArgumentException(
+                    "{$path}: importer '{$key}' points at '".(is_string($class) ? $class : gettype($class))."', which does not exist."
+                );
+            }
+
+            if (! is_subclass_of($class, Importer::class)) {
+                throw new InvalidArgumentException(
+                    "{$path}: importer {$class} must implement the Importer contract."
+                );
+            }
+        }
+
+        return $imports;
     }
 
     /**

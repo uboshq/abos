@@ -151,6 +151,28 @@ return [
         'awaiting_decision' => '{1} 1 waiting for a decision|[2,*] :count waiting for a decision',
     ],
 
+    'import' => [
+        'title' => 'Bring in from the old books',
+        'note' => 'Download the template, fill it in and send it back. You will see which rows are usable before anything is saved.',
+        'what' => 'What to bring in',
+        'file' => 'CSV file',
+        'template' => 'Template',
+        'check' => 'Check first',
+        'commit' => 'Bring them in',
+        'line' => 'Row',
+        'problem' => 'Problem',
+        'ok_rows' => '{0} No usable rows|{1} 1 usable row|[2,*] :count usable rows',
+        'bad_rows' => '{0} No rows with problems|{1} 1 row has a problem|[2,*] :count rows have problems',
+        'imported' => '{0} Nothing was brought in|{1} 1 row brought in|[2,*] :count rows brought in',
+        'truncated' => 'The file has more than :max rows — the rest were not read. Split it and send again.',
+        'empty_file' => 'The file is empty.',
+        'missing_column' => ':column is empty.',
+        'not_a_number' => ':column is not a number.',
+        'not_a_date' => ':column is not a date — use day/month/year.',
+        'unknown_value' => 'Could not match ":value" in :column.',
+        'nothing_to_import' => 'No usable rows, so nothing was saved.',
+    ],
+
     'yes' => 'Yes',
     'no' => 'No',
 
