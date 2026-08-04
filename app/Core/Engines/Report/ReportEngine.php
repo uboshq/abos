@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Core\Engines\Report;
 
 use App\Core\Support\CompanyContext;
+use App\Core\Support\RunningBalance;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -202,17 +203,20 @@ final class ReportEngine
                 ->forPage(1, ($page - 1) * $perPage)
                 ->get();
 
-            foreach ($before as $row) {
-                $row = (array) $row;
-                $opening = bcadd($opening, bcsub((string) ($row['debit'] ?? 0), (string) ($row['credit'] ?? 0), 4), 4);
-            }
+            $opening = RunningBalance::sumOf(
+                $before,
+                fn ($row) => ((array) $row)['debit'] ?? 0,
+                fn ($row) => ((array) $row)['credit'] ?? 0,
+            );
         }
 
-        $balance = $opening;
+        // হিসাবটা RunningBalance-এ, এখানে নয় — গ্রাহকের পর্দাতেও একই
+        // চলমান ব্যালেন্স লাগে, আর দুই জায়গায় দুইবার লিখলে একদিন দুইটা
+        // আলাদা উত্তর দিত।
+        $running = new RunningBalance($opening);
 
-        return $rows->map(function (array $row) use (&$balance) {
-            $balance = bcadd($balance, bcsub((string) ($row['debit'] ?? 0), (string) ($row['credit'] ?? 0), 4), 4);
-            $row['balance'] = $balance;
+        return $rows->map(function (array $row) use ($running) {
+            $row['balance'] = $running->add($row['debit'] ?? 0, $row['credit'] ?? 0);
 
             return $row;
         });

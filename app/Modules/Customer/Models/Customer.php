@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Customer\Models;
 
 use App\Core\Concerns\BelongsToCompany;
+use App\Core\Concerns\HasActiveState;
 use App\Core\Concerns\HasDocumentStatus;
 use App\Core\Contracts\Drillable;
 use App\Models\Branch;
@@ -27,6 +28,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Customer extends Model implements Drillable
 {
     use BelongsToCompany;
+    use HasActiveState;
     use HasDocumentStatus;
     use HasFactory;
     use SoftDeletes;
@@ -80,11 +82,6 @@ class Customer extends Model implements Drillable
         }
 
         return $this->address_en;
-    }
-
-    public function scopeActive(Builder $query): Builder
-    {
-        return $query->where('is_active', true);
     }
 
     /**

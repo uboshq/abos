@@ -70,11 +70,30 @@ final class ModuleDefinition
         }
 
         $menu = $raw['menu'] ?? [];
-        foreach (array_keys($menu) as $group) {
+        foreach ($menu as $group => $items) {
             if (! in_array($group, self::MENU_GROUPS, true)) {
                 throw new InvalidArgumentException(
                     "{$path}: unknown menu group '{$group}'. Allowed: ".implode(', ', self::MENU_GROUPS).'.'
                 );
+            }
+
+            foreach ($items as $item) {
+                foreach (['label', 'route', 'permission'] as $key) {
+                    if (! isset($item[$key])) {
+                        throw new InvalidArgumentException(
+                            "{$path}: every menu item needs '{$key}'. A menu item without a permission would show "
+                            .'to everyone, and one without a label would render as an empty row.'
+                        );
+                    }
+                }
+
+                if (! in_array($item['permission'], $raw['permissions'] ?? [], true)) {
+                    throw new InvalidArgumentException(
+                        "{$path}: menu item '{$item['route']}' asks for permission '{$item['permission']}', which "
+                        .'this module does not declare. Nobody would ever be granted it, so the item would be '
+                        .'invisible to every user including the owner.'
+                    );
+                }
             }
         }
 

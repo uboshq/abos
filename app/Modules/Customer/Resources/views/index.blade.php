@@ -51,7 +51,9 @@
                 [
                     'key' => 'code',
                     'label' => __('customer::field.code'),
-                    'width' => '9rem',
+                    // CUS-2026-2027-0001 — অর্থবছর সহ কোড লম্বা হয়, আর
+                    // ৯rem-এ সেটা দুই লাইনে ভেঙে যাচ্ছিল
+                    'width' => '13rem',
                     'render' => fn ($c) => view('customer::partials.code-link', ['customer' => $c]),
                 ],
                 ['key' => 'name_en', 'label' => __('customer::field.name'), 'render' => fn ($c) => $c->name()],

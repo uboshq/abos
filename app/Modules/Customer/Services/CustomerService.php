@@ -47,6 +47,11 @@ final class CustomerService
                 ...$data,
                 'branch_id' => $data['branch_id'] ?? CompanyContext::branchId(),
                 'status' => DocumentStatus::CONFIRMED,
+                // ডাটাবেজে ডিফল্ট true আছে, তবু এখানে বসানো হয়: ডিফল্টটা
+                // শুধু সারিতে বসে, ফেরত দেওয়া মডেলে নয়। ফলে যে কোড এই
+                // মডেলটা ধরে is_active দেখত, সে null পেত — আর null মিথ্যা
+                // বলেই গ্রাহকটাকে নিষ্ক্রিয় ভাবত।
+                'is_active' => $data['is_active'] ?? true,
                 'created_by' => auth()->id(),
             ]);
 

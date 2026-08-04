@@ -1,0 +1,134 @@
+{{--
+    একজন গ্রাহক।
+
+    বকেয়ার অঙ্কটা এখানে নিছক একটা সংখ্যা নয় — নিয়ম ১ বলে প্রতিটা অঙ্ক থেকে
+    তার উৎসে যাওয়া যাবে। তাই অঙ্কটা লেজারের লিংক, আর নিচে সেই লেনদেনগুলোই
+    দেখানো হয় যেগুলো যোগ হয়ে অঙ্কটা হয়েছে। খোলা ব্যালেন্সও আলাদা সারি,
+    কারণ সেটা কোনো ডকুমেন্ট থেকে আসেনি — সেটা না বললে যোগফল মেলে না।
+--}}
+<x-layouts.app :menu="$menu">
+    <x-slot:title>{{ $customer->name() }}</x-slot:title>
+
+    <x-slot:header>
+        <x-ui.page-header :title="$customer->name()" :subtitle="$customer->code">
+            <x-slot:actions>
+                @can('update', $customer)
+                    <x-ui.button tone="secondary" :href="route('customer.edit', $customer)">
+                        {{ __('core.action.edit') }}
+                    </x-ui.button>
+                @endcan
+
+                @can('delete', $customer)
+                    @if ($customer->is_active)
+                        <form method="POST" action="{{ route('customer.destroy', $customer) }}"
+                              onsubmit="return confirm('{{ __('customer::message.deactivate_confirm') }}')">
+                            @csrf
+                            @method('DELETE')
+                            <x-ui.button type="submit" tone="secondary">
+                                {{ __('customer::action.deactivate') }}
+                            </x-ui.button>
+                        </form>
+                    @endif
+                @endcan
+            </x-slot:actions>
+        </x-ui.page-header>
+    </x-slot:header>
+
+    @if (session('saved'))
+        <div role="status"
+             class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm
+                    text-(--color-badge-success-ink)">
+            {{ session('saved') }}
+        </div>
+    @endif
+
+    <div class="grid gap-4 lg:grid-cols-3">
+
+        {{-- বকেয়া --}}
+        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+            <h2 class="text-sm font-medium text-(--color-ink-muted)">
+                {{ __('customer::field.outstanding') }}
+            </h2>
+
+            {{-- num ক্লাসটা ট্যাবুলার অঙ্ক দেয় — একই প্রস্থে প্রতিটা সংখ্যা,
+                 তাই দুই অঙ্ক পাশাপাশি রাখলে দশমিক বিন্দু এক লাইনে থাকে। --}}
+            <p class="num mt-1 text-2xl font-semibold">
+                {{ number_format((float) $outstanding, 2) }}
+            </p>
+
+            @if ($creditLimitOn && bccomp((string) $customer->credit_limit, '0', 4) > 0)
+                <p class="mt-2 text-2xs text-(--color-ink-muted)">
+                    {{ __('customer::field.credit_limit') }}:
+                    <span class="num">{{ number_format((float) $customer->credit_limit, 2) }}</span>
+                    @if ($customer->credit_days > 0)
+                        · {{ $customer->credit_days }} {{ __('customer::field.credit_days') }}
+                    @endif
+                </p>
+
+                @if ($customer->wouldExceedCreditLimit('0'))
+                    {{-- সীমা ইতিমধ্যেই ছাড়িয়ে গেছে — এটা বিক্রির পর্দায় জানার
+                         চেয়ে এখানে জানা ভালো। --}}
+                    <p class="mt-2 rounded-(--radius-field) bg-(--color-badge-danger-bg) px-2 py-1
+                              text-2xs text-(--color-badge-danger-ink)">
+                        {{ __('customer::message.over_limit') }}
+                    </p>
+                @endif
+            @endif
+        </section>
+
+        {{-- পরিচয় --}}
+        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4
+                        lg:col-span-2">
+            <div class="mb-3 flex items-center justify-between gap-2">
+                <h2 class="font-semibold">{{ __('customer::section.identity') }}</h2>
+                @include('customer::partials.state-badge', ['customer' => $customer])
+            </div>
+
+            <dl class="grid gap-x-4 gap-y-2 sm:grid-cols-2">
+                @foreach ([
+                    'customer::field.phone' => $customer->phone,
+                    'customer::field.email' => $customer->email,
+                    'customer::field.type' => $customer->customer_type,
+                    'core.company.branch' => $customer->branch?->name(),
+                    'customer::field.address_en' => $customer->address(),
+                ] as $label => $value)
+                    @if (filled($value))
+                        <div>
+                            <dt class="text-2xs text-(--color-ink-muted)">{{ __($label) }}</dt>
+                            <dd class="text-sm">{{ $value }}</dd>
+                        </div>
+                    @endif
+                @endforeach
+            </dl>
+        </section>
+    </div>
+
+    {{-- লেনদেন — অঙ্কটা কোথা থেকে এল (নিয়ম ১) --}}
+    <section class="mt-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
+                    bg-(--color-surface-card)">
+        <h2 class="border-b border-(--color-border) px-4 py-3 font-semibold">
+            {{ __('customer::section.transactions') }}
+        </h2>
+
+        <x-ui.table
+            :empty="__('customer::message.no_transactions')"
+            :rows="$entries"
+            :columns="[
+                ['key' => 'trx_date', 'label' => __('core.table.date'), 'width' => '8rem',
+                 'render' => fn ($e) => $e->trx_date?->format('d/m/Y')],
+                ['key' => 'document', 'label' => __('core.table.document'),
+                 'render' => fn ($e) => view('customer::partials.entry-source', ['entry' => $e])],
+                ['key' => 'narration', 'label' => __('core.table.narration')],
+                ['key' => 'debit', 'label' => __('core.table.debit'), 'numeric' => true, 'width' => '8rem',
+                 'render' => fn ($e) => (float) $e->debit ? number_format((float) $e->debit, 2) : ''],
+                ['key' => 'credit', 'label' => __('core.table.credit'), 'numeric' => true, 'width' => '8rem',
+                 'render' => fn ($e) => (float) $e->credit ? number_format((float) $e->credit, 2) : ''],
+                ['key' => 'balance', 'label' => __('core.table.balance'), 'numeric' => true, 'width' => '9rem',
+                 'render' => fn ($e) => number_format((float) $e->running_balance, 2)],
+            ]" />
+
+        @if ($entries->hasPages())
+            <div class="border-t border-(--color-border) px-3 py-2">{{ $entries->links() }}</div>
+        @endif
+    </section>
+</x-layouts.app>

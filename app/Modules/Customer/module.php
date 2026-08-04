@@ -24,20 +24,20 @@ return [
     // গ্রাহকের পাওনা হিসাবের খাতায় বসে, তাই accounts আগে তৈরি হতে হবে।
     'depends_on' => ['accounts'],
 
+    /*
+     * এখানে শুধু সেই স্ক্রিনগুলো, যেগুলো সত্যিই আছে।
+     *
+     * প্রথমে ড্যাশবোর্ড, বিবরণী, বকেয়া তালিকা, বয়সভিত্তিক ও সেটিংস — পাঁচটাই
+     * লেখা ছিল, অথচ একটারও রুট তৈরি হয়নি। MenuBuilder অনুপস্থিত রুটে url
+     * null দেয়, তাই মেনুতে পাঁচটা মৃত সারি বসত: ব্যবহারকারী ক্লিক করত,
+     * কিছুই হত না। ওটাই সবচেয়ে খারাপ ধরনের স্টাব — কাজটা আছে বলে দেখায়।
+     *
+     * স্ক্রিনটা যেদিন তৈরি হবে, সেদিনই সারিটা এখানে ফিরবে। ModuleMenuTest
+     * পাহারা দেয় — ঘোষিত রুট না থাকলে টেস্ট ভাঙে।
+     */
     'menu' => [
-        'dashboard' => [
-            ['label' => 'customer::menu.dashboard', 'route' => 'customer.dashboard', 'permission' => 'customer.view'],
-        ],
         'master' => [
             ['label' => 'customer::menu.customers', 'route' => 'customer.index', 'permission' => 'customer.view'],
-        ],
-        'reports' => [
-            ['label' => 'customer::menu.statement', 'route' => 'customer.statement', 'permission' => 'customer.report'],
-            ['label' => 'customer::menu.due_list', 'route' => 'customer.due', 'permission' => 'customer.report'],
-            ['label' => 'customer::menu.ageing', 'route' => 'customer.ageing', 'permission' => 'customer.report'],
-        ],
-        'settings' => [
-            ['label' => 'customer::menu.settings', 'route' => 'customer.settings', 'permission' => 'customer.manage'],
         ],
     ],
 

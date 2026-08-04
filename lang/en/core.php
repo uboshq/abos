@@ -45,6 +45,7 @@ return [
     'action' => [
         'create' => 'Create',
         'save' => 'Save',
+        'edit' => 'Edit',
         'approve' => 'Approve',
         'print' => 'Print',
         'export' => 'Export',
@@ -168,6 +169,11 @@ return [
         'switch' => 'Switch company',
         'branch' => 'Branch',
         'financial_year' => 'Financial year',
+    ],
+
+    'form' => [
+        'required' => 'required',
+        'optional' => 'optional',
     ],
 
     'profile' => [

@@ -5,6 +5,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Middleware\SubstituteBindings;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -19,6 +20,26 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             ResolveCompanyContext::class,
         ]);
+
+        /*
+         * রুট-মডেল বাইন্ডিং-এর আগে।
+         *
+         * append করলে এটা SubstituteBindings-এর পরে চলত, আর তখন
+         * /customers/4 খুলতে গেলে বাইন্ডিং Customer খুঁজতে যেত এমন সময়ে
+         * যখন কোনো কোম্পানি বসানো হয়নি — BelongsToCompany ঠিক কাজটাই
+         * করত, ব্যতিক্রম ছুঁড়ত, আর পাতাটা ৫০০ দিত।
+         *
+         * StartSession-এর পরেই থাকতে হবে (ব্যবহারকারী কে জানা দরকার),
+         * কিন্তু বাইন্ডিং-এর আগে। priority তালিকা ঠিক এই কাজের জন্য।
+         *
+         * টেস্টে ধরা পড়েনি কারণ setUp()-এ CompanyContext::set() ডাকা
+         * হত — আসল রিকোয়েস্টে যা কখনো ঘটে না। CustomerTest-এ এখন একটা
+         * পরীক্ষা আছে যা লগইন থেকে শুরু করে, প্রসঙ্গ নিজে বসায় না।
+         */
+        $middleware->prependToPriorityList(
+            before: SubstituteBindings::class,
+            prepend: ResolveCompanyContext::class,
+        );
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

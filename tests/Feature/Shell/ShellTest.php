@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Shell;
 
+use App\Core\Module\ModuleDefinition;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\PermissionSyncer;
 use App\Core\Support\CompanyContext;
@@ -42,6 +43,11 @@ class ShellTest extends TestCase
     private function owner(): User
     {
         return User::query()->where('email', 'owner@abos.test')->firstOrFail();
+    }
+
+    private function company(): Company
+    {
+        return Company::query()->where('code', 'TDEPOT')->firstOrFail();
     }
 
     /**
@@ -140,12 +146,17 @@ class ShellTest extends TestCase
     {
         $response = $this->actingAs($this->owner())->get('/');
 
-        $response->assertSee('হিসাব ও অর্থ', false);
-        $response->assertSee('জাবেদা ভাউচার', false);
-        $response->assertSee('রেওয়ামিল', false);
+        // মডিউলের নিজের module.php থেকে আসা সারি, কোরে লেখা নয়
+        $response->assertSee('গ্রাহক', false);
 
         // কাঁচা অনুবাদ কী পাতায় থাকা মানে lang ফাইল নেই — নিয়ম ৯।
         $response->assertDontSee('::menu.', false);
+
+        // আগে এখানে "জাবেদা ভাউচার" ও "রেওয়ামিল" যাচাই করা হত। ওই
+        // স্ক্রিনগুলো এখনো তৈরি হয়নি, আর মেনুতে সেগুলো আসত নিষ্ক্রিয়
+        // সারি হয়ে — মানে পরীক্ষাটা প্রমাণ করত যে মেনুতে মৃত লিংক আছে।
+        // এখন planned সারি রেন্ডারই হয় না, তাই যাচাইটা সরানো হল।
+        $response->assertDontSee('জাবেদা ভাউচার', false);
     }
 
     public function test_the_menu_hides_what_a_role_cannot_reach(): void
@@ -155,23 +166,44 @@ class ShellTest extends TestCase
         $menu = app(MenuBuilder::class)->forUser($salesman);
         $codes = array_column($menu, 'code');
 
-        // বিক্রয়কর্মীর accounts.* অনুমতি নেই, তাই মডিউলটাই তালিকায় নেই।
-        // ধূসর করে দেখানো হয় না — সেটা শুধু জানায় সে কী পারে না।
+        // বিক্রয়কর্মীর গ্রাহক দেখার অধিকার আছে, তাই মডিউলটা আছে।
         $this->assertContains('customer', $codes);
-        $this->assertNotContains('accounts', $codes);
+
+        // অধিকার না থাকলে মডিউলটাই তালিকায় নেই — ধূসর করে দেখানো হয় না,
+        // সেটা শুধু জানায় সে কী পারে না।
+        $stranger = User::factory()->create();
+        $stranger->companies()->attach($this->company(), ['is_active' => true]);
+        $stranger->forceFill(['current_company_id' => $this->company()->id])->save();
+
+        $this->assertSame([], app(MenuBuilder::class)->forUser($stranger->fresh()));
     }
 
+    /**
+     * module.php-তে যে ক্রমেই লেখা হোক, প্রদর্শনের ক্রম এক — সেকশন ১৫.২।
+     * নাহলে "একটা মডিউল শিখলে সব চেনা" কথাটা মিথ্যা হয়ে যায়।
+     *
+     * কোনো একটা মডিউলের নাম ধরে নয়, সব মডিউলের উপর: আগে এটা accounts-এর
+     * পাঁচটা গ্রুপ ধরে লেখা ছিল, আর ওই গ্রুপগুলো এখন লুকানো (স্ক্রিন তৈরি
+     * হয়নি) — তাই পরীক্ষাটা মডিউলের অগ্রগতির সাথে ভেঙে যেত, নিয়ম ভাঙলে নয়।
+     */
     public function test_the_menu_groups_stay_in_the_same_order_everywhere(): void
     {
-        $menu = app(MenuBuilder::class)->forUser($this->owner());
-        $accounts = collect($menu)->firstWhere('code', 'accounts');
+        $canonical = ModuleDefinition::MENU_GROUPS;
 
-        // module.php-তে যে ক্রমেই লেখা হোক, প্রদর্শনের ক্রম এক — সেকশন ১৫.২।
-        // নাহলে "একটা মডিউল শিখলে সব চেনা" কথাটা মিথ্যা হয়ে যায়।
-        $this->assertSame(
-            ['dashboard', 'master', 'transactions', 'reports', 'settings'],
-            array_keys($accounts['groups']),
-        );
+        $menu = app(MenuBuilder::class)->forUser($this->owner());
+
+        $this->assertNotEmpty($menu, 'মালিকের মেনু খালি — তাহলে কিছুই যাচাই হত না।');
+
+        foreach ($menu as $module) {
+            $shown = array_keys($module['groups']);
+
+            // যেগুলো দেখানো হচ্ছে সেগুলো নির্দিষ্ট ক্রমেরই একটা উপ-ক্রম
+            $this->assertSame(
+                array_values(array_intersect($canonical, $shown)),
+                $shown,
+                "{$module['code']} মডিউলের গ্রুপের ক্রম ঠিক নেই।",
+            );
+        }
     }
 
     public function test_switching_company_lands_on_the_dashboard_of_the_new_one(): void
@@ -221,7 +253,8 @@ class ShellTest extends TestCase
         // রেকর্ডে, সেশনে নয় — অন্য ডিভাইসে লগইন করলেও একই ভাষা (নিয়ম ৯)।
         $this->assertSame('en', $owner->fresh()->locale);
 
-        $this->actingAs($owner->fresh())->get('/')->assertSee('Accounts &amp; Finance', false);
+        // মেনুর লেবেলও ইংরেজিতে — অনুবাদ পুরো পাতায়, শুধু শিরোনামে নয়
+        $this->actingAs($owner->fresh())->get('/')->assertSee('Customers', false);
     }
 
     public function test_every_module_permission_is_registered_in_the_database(): void

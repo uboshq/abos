@@ -24,20 +24,20 @@ return [
 
     'menu' => [
         'master' => [
-            ['label' => 'system_admin::menu.companies', 'route' => 'admin.companies', 'permission' => 'system_admin.company.manage'],
-            ['label' => 'system_admin::menu.branches', 'route' => 'admin.branches', 'permission' => 'system_admin.company.manage'],
-            ['label' => 'system_admin::menu.users', 'route' => 'admin.users', 'permission' => 'system_admin.user.manage'],
-            ['label' => 'system_admin::menu.roles', 'route' => 'admin.roles', 'permission' => 'system_admin.role.manage'],
-            ['label' => 'system_admin::menu.financial_years', 'route' => 'admin.financial-years', 'permission' => 'system_admin.company.manage'],
-            ['label' => 'system_admin::menu.number_series', 'route' => 'admin.number-series', 'permission' => 'system_admin.company.manage'],
+            ['label' => 'system_admin::menu.companies', 'route' => 'admin.companies', 'permission' => 'system_admin.company.manage', 'planned' => true],
+            ['label' => 'system_admin::menu.branches', 'route' => 'admin.branches', 'permission' => 'system_admin.company.manage', 'planned' => true],
+            ['label' => 'system_admin::menu.users', 'route' => 'admin.users', 'permission' => 'system_admin.user.manage', 'planned' => true],
+            ['label' => 'system_admin::menu.roles', 'route' => 'admin.roles', 'permission' => 'system_admin.role.manage', 'planned' => true],
+            ['label' => 'system_admin::menu.financial_years', 'route' => 'admin.financial-years', 'permission' => 'system_admin.company.manage', 'planned' => true],
+            ['label' => 'system_admin::menu.number_series', 'route' => 'admin.number-series', 'permission' => 'system_admin.company.manage', 'planned' => true],
         ],
         'reports' => [
-            ['label' => 'system_admin::menu.activity_log', 'route' => 'admin.activity', 'permission' => 'system_admin.audit.view'],
-            ['label' => 'system_admin::menu.login_history', 'route' => 'admin.logins', 'permission' => 'system_admin.audit.view'],
+            ['label' => 'system_admin::menu.activity_log', 'route' => 'admin.activity', 'permission' => 'system_admin.audit.view', 'planned' => true],
+            ['label' => 'system_admin::menu.login_history', 'route' => 'admin.logins', 'permission' => 'system_admin.audit.view', 'planned' => true],
         ],
         'settings' => [
-            ['label' => 'system_admin::menu.control_panel', 'route' => 'admin.control-panel', 'permission' => 'system_admin.settings.manage'],
-            ['label' => 'system_admin::menu.backup', 'route' => 'admin.backup', 'permission' => 'system_admin.backup.manage'],
+            ['label' => 'system_admin::menu.control_panel', 'route' => 'admin.control-panel', 'permission' => 'system_admin.settings.manage', 'planned' => true],
+            ['label' => 'system_admin::menu.backup', 'route' => 'admin.backup', 'permission' => 'system_admin.backup.manage', 'planned' => true],
         ],
     ],
 

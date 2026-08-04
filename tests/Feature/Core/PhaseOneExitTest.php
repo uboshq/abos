@@ -12,6 +12,7 @@ use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Engines\Print\PaperSize;
 use App\Core\Engines\Print\PrintEngine;
 use App\Core\Engines\Report\ReportEngine;
+use App\Core\Module\ModuleDefinition;
 use App\Core\Module\ModuleRegistry;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\PermissionSyncer;
@@ -182,13 +183,22 @@ class PhaseOneExitTest extends TestCase
         // অনুমতি ডাটাবেজে — নাহলে মেনু ফাঁকা
         $this->assertSame([], app(PermissionSyncer::class)->drift()['unregistered']);
 
-        // মেনু module.php থেকে, স্থির ক্রমে
+        // মেনু module.php থেকে, স্থির ক্রমে।
+        //
+        // কোনো মডিউলের নাম ধরে নয়: যে স্ক্রিন এখনো তৈরি হয়নি তার সারি
+        // মেনুতে আসে না, তাই accounts-এর গ্রুপগুলো ধরে লিখলে পরীক্ষাটা
+        // নিয়ম ভাঙার বদলে অগ্রগতির কারণে ভেঙে পড়ত।
         $menu = app(MenuBuilder::class)->forUser($owner);
         $this->assertNotEmpty($menu);
-        $this->assertSame(
-            ['dashboard', 'master', 'transactions', 'reports', 'settings'],
-            array_keys(collect($menu)->firstWhere('code', 'accounts')['groups']),
-        );
+
+        foreach ($menu as $module) {
+            $shown = array_keys($module['groups']);
+
+            $this->assertSame(
+                array_values(array_intersect(ModuleDefinition::MENU_GROUPS, $shown)),
+                $shown,
+            );
+        }
     }
 
     public function test_switching_company_survives_a_reload(): void

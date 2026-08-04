@@ -49,6 +49,21 @@ final class MenuBuilder
                 $visible = [];
 
                 foreach ($items as $item) {
+                    // এখনো তৈরি হয়নি এমন স্ক্রিন মেনুতে আসে না।
+                    //
+                    // আগে আসত — নিষ্ক্রিয় সারি হিসেবে, "৫০০ পাতার চেয়ে ভালো"
+                    // যুক্তিতে। কিন্তু ২৯টা সারির মধ্যে ২৯টাই নিষ্ক্রিয় হলে
+                    // মেনুটা আর মেনু থাকে না, প্রতিশ্রুতির তালিকা হয়ে যায়।
+                    // ব্যবহারকারী ক্লিক করে, কিছু হয় না, আর ভাবে সিস্টেম নষ্ট।
+                    //
+                    // ঘোষণাটা module.php-তেই থাকে (planned => true), তাই
+                    // ক্রমটা হারায় না। ModuleMenuTest দুই দিক থেকেই পাহারা
+                    // দেয়: planned নয় অথচ রুট নেই — ভাঙে; planned অথচ রুট
+                    // আছে — সেটাও ভাঙে, যাতে পতাকাটা তুলতে ভুল না হয়।
+                    if ($item['planned'] ?? false) {
+                        continue;
+                    }
+
                     if (! $this->allowed($user, $item['permission'] ?? null)) {
                         continue;
                     }
@@ -56,11 +71,8 @@ final class MenuBuilder
                     $visible[] = [
                         'label' => __($item['label']),
                         'route' => $item['route'],
-                        // রুটটা এখনো তৈরি হয়নি এমন হতে পারে — মডিউল ধাপে ধাপে
-                        // তৈরি হয়। তখন আইটেমটা দেখাবে কিন্তু নিষ্ক্রিয় থাকবে,
-                        // কারণ একটা ৫০০ পাতার চেয়ে সেটা ভালো।
-                        'url' => Route::has($item['route']) ? route($item['route']) : null,
-                        'active' => Route::has($item['route']) && request()->routeIs($item['route']),
+                        'url' => route($item['route']),
+                        'active' => request()->routeIs($item['route']),
                     ];
                 }
 
