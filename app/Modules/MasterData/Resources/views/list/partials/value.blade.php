@@ -1,0 +1,40 @@
+{{--
+    একটা ঘরের মান — ধরন অনুযায়ী।
+
+    সুইচ ✓ / — হিসেবে, কারণ "true"/"1" পড়তে হয় না, দেখা যায়। বাছাই করা
+    মানগুলো অনুবাদ হয়ে আসে (ভ্যাট, খুচরা), কাঁচা কোড নয়।
+--}}
+@php $value = $record->{$column} @endphp
+
+@switch ($field['type'])
+    @case ('switch')
+        <span @class(['text-(--color-success)' => $value, 'text-(--color-ink-placeholder)' => ! $value])>
+            {{ $value ? '✓' : '—' }}
+        </span>
+        @break
+
+    @case ('number')
+        <span class="num">{{ $value === null ? '' : rtrim(rtrim(number_format((float) $value, 4), '0'), '.') }}</span>
+        @break
+
+    @case ('select')
+        @php
+            $source = $field['options'];
+            $list = $options[$source] ?? [];
+        @endphp
+
+        @if ($source === 'tax_kinds')
+            {{ $value ? __('master_data::kind.' . $value) : '—' }}
+        @elseif ($source === 'applies')
+            {{ $value ? __('master_data::applies.' . $value) : '—' }}
+        @elseif ($source === 'contexts')
+            {{ $value ? __('master_data::context.' . $value) : '—' }}
+        @else
+            {{-- সম্পর্কিত রেকর্ড — id নয়, নাম --}}
+            {{ collect($list)->firstWhere('id', $value)?->name() ?? '—' }}
+        @endif
+        @break
+
+    @default
+        {{ $value }}
+@endswitch

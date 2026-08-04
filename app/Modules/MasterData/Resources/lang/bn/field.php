@@ -1,0 +1,34 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'code' => 'কোড',
+    'name' => 'নাম',
+    'name_en' => 'নাম (ইংরেজি)',
+    'name_bn' => 'নাম (বাংলা)',
+    'level' => 'স্তর',
+    'parent' => 'উপরের এলাকা',
+    'assigned_to' => 'দায়িত্বে',
+    'base_unit' => 'ভিত্তি একক',
+    'factor' => 'রূপান্তর',
+    'allows_fraction' => 'ভগ্নাংশে চলে',
+    'rate' => 'হার (%)',
+    'kind' => 'ধরন',
+    'is_inclusive' => 'দামের ভেতরে',
+    'account' => 'হিসাবের খাত',
+    'days' => 'দিন',
+    'early_discount_percent' => 'আগে দিলে ছাড় (%)',
+    'early_discount_days' => 'কত দিনের মধ্যে',
+    'applies_to' => 'কার জন্য',
+    'context' => 'কোথায় ব্যবহার',
+    'returns_to_stock' => 'স্টকে ফেরে',
+    'needs_approval' => 'অনুমোদন লাগে',
+    'party_type' => 'পক্ষের ধরন',
+    'is_default' => 'ডিফল্ট',
+    'state' => 'অবস্থা',
+    'path' => 'পথ',
+    'prefix' => 'উপসর্গ',
+    'next_number' => 'পরের নম্বর',
+    'doc_type' => 'ডকুমেন্ট',
+];
