@@ -9,5 +9,8 @@ return [
     'opening' => 'Opening balance',
     'custody' => 'Custody',
     'details' => 'Details',
+    'hand_over' => 'Handing over',
+    'receive' => 'Receiving',
+    'notes' => 'Note breakdown',
     'entries' => 'Transactions',
 ];

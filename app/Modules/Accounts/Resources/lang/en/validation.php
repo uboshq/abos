@@ -42,4 +42,12 @@ return [
     'line_needs_account' => 'This line has an amount but no account.',
     'line_both_sides' => 'A line cannot carry both a debit and a credit — split it into two.',
     'journal_needs_two_lines' => 'A journal needs amounts on at least two lines.',
+    'till_not_found' => 'That cash counter was not found.',
+    'transfer_no_destination' => 'Choose where the money goes — a counter or the bank.',
+    'same_till_both_sides' => 'The same counter cannot be on both sides.',
+    'not_enough_in_hand' => 'Only :have is in hand — more than that cannot be handed over.',
+    'transfer_already_confirmed' => 'This transfer has already been received.',
+    'transfer_cancelled' => 'A cancelled transfer cannot be received.',
+    'count_already_approved' => 'This count has already been approved.',
+    'no_adjustment_account' => 'There is no :type account to post the difference to. Add one to the chart.',
 ];

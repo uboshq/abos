@@ -1,0 +1,170 @@
+{{--
+    একটা গণনা — গোনা কত, খাতায় কত, আর পার্থক্যটা কোথায় বসল।
+
+    পার্থক্য থাকলে সেটাই সবচেয়ে বড় করে দেখানো হয়, আর অনুমোদনের পর
+    যে জাবেদাটা বসেছে সেটাও ক্লিকযোগ্য (নিয়ম ১) — নাহলে "টাকাটা কোথায়
+    গেল" প্রশ্নের উত্তর পর্দায় থাকত না।
+--}}
+<x-layouts.app :menu="$menu">
+    <x-slot:title>{{ $count->document_no }}</x-slot:title>
+
+    <x-slot:header>
+        <x-ui.page-header :title="$count->document_no"
+                          :subtitle="$count->till?->name()">
+            <x-slot:actions>
+                @unless ($count->isApproved())
+                    @can('accounts.count.approve')
+                        <form method="POST" action="{{ route('accounts.count.approve', $count) }}">
+                            @csrf
+                            <x-ui.button type="submit" tone="primary">
+                                {{ $count->matches()
+                                    ? __('accounts::action.approve_count')
+                                    : __('accounts::action.approve_and_adjust') }}
+                            </x-ui.button>
+                        </form>
+                    @endcan
+                @endunless
+            </x-slot:actions>
+        </x-ui.page-header>
+    </x-slot:header>
+
+    @if (session('saved'))
+        <div role="status"
+             class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm
+                    text-(--color-badge-success-ink)">
+            {{ session('saved') }}
+        </div>
+    @endif
+
+    @if ($errors->any())
+        <div role="alert"
+             class="mb-4 rounded-(--radius-field) bg-(--color-badge-danger-bg) px-3 py-2 text-sm
+                    text-(--color-badge-danger-ink)">
+            <ul class="list-inside list-disc">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    <div class="grid gap-4 sm:grid-cols-3">
+        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+            <h2 class="text-sm font-medium text-(--color-ink-muted)">{{ __('accounts::field.counted') }}</h2>
+            <p class="num mt-1 text-2xl font-semibold">{{ number_format((float) $count->counted_amount, 2) }}</p>
+        </section>
+
+        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+            <h2 class="text-sm font-medium text-(--color-ink-muted)">{{ __('accounts::field.expected') }}</h2>
+            <p class="num mt-1 text-2xl font-semibold">{{ number_format((float) $count->expected_amount, 2) }}</p>
+        </section>
+
+        <section @class([
+            'rounded-(--radius-card) border p-4',
+            'border-(--color-border) bg-(--color-surface-card)' => $count->matches(),
+            'border-(--color-danger) bg-(--color-badge-danger-bg)' => ! $count->matches(),
+        ])>
+            <h2 class="text-sm font-medium text-(--color-ink-muted)">{{ __('accounts::field.difference') }}</h2>
+
+            @if ($count->matches())
+                <p class="mt-1 text-2xl font-semibold text-(--color-success)">
+                    ✓ <span class="text-base font-normal">{{ __('accounts::message.count_matches') }}</span>
+                </p>
+            @else
+                <p class="num mt-1 text-2xl font-semibold text-(--color-badge-danger-ink)">
+                    {{ $count->isSurplus() ? '+' : '' }}{{ number_format((float) $count->difference, 2) }}
+                </p>
+                <p class="mt-1 text-2xs text-(--color-badge-danger-ink)">
+                    {{ $count->isSurplus()
+                        ? __('accounts::message.surplus_note')
+                        : __('accounts::message.shortage_note') }}
+                </p>
+            @endif
+        </section>
+    </div>
+
+    <div class="mt-4 grid gap-4 lg:grid-cols-3">
+        <section class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
+                        bg-(--color-surface-card) lg:col-span-2">
+            <h2 class="border-b border-(--color-border) px-4 py-3 font-semibold">
+                {{ __('accounts::section.notes') }}
+            </h2>
+
+            @php $notes = $count->countedNotes() @endphp
+
+            @if ($notes === [])
+                <x-ui.empty-state :message="__('accounts::message.no_notes_recorded')" />
+            @else
+                <table class="w-full border-collapse text-sm">
+                    <thead>
+                        <tr class="border-b border-(--color-border) bg-(--color-surface-app)">
+                            <th scope="col" class="num px-3 py-2 text-start font-medium text-(--color-ink-muted)">
+                                {{ __('accounts::field.note') }}
+                            </th>
+                            <th scope="col" class="num px-3 py-2 text-start font-medium text-(--color-ink-muted)">
+                                {{ __('accounts::field.pieces') }}
+                            </th>
+                            <th scope="col" class="num px-3 py-2 text-start font-medium text-(--color-ink-muted)">
+                                {{ __('accounts::field.amount') }}
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($notes as $note => $qty)
+                            <tr class="border-b border-(--color-border)">
+                                <td class="num px-3 py-2 font-medium">{{ number_format($note) }}</td>
+                                <td class="num px-3 py-2">{{ number_format($qty) }}</td>
+                                <td class="num px-3 py-2">{{ number_format($note * $qty, 2) }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                    <tfoot>
+                        <tr class="bg-(--color-surface-app) font-semibold">
+                            <td class="px-3 py-2">{{ __('core.print.total') }}</td>
+                            <td class="num px-3 py-2">{{ number_format(array_sum($notes)) }}</td>
+                            <td class="num px-3 py-2">{{ number_format((float) $count->counted_amount, 2) }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            @endif
+        </section>
+
+        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+            <div class="mb-3 flex items-center justify-between gap-2">
+                <h2 class="font-semibold">{{ __('accounts::section.details') }}</h2>
+                @include('accounts::count.partials.status', ['count' => $count])
+            </div>
+
+            <dl class="space-y-2">
+                @foreach ([
+                    'accounts::field.date' => $count->trx_date?->format('d/m/Y'),
+                    'accounts::field.counted_by' => $count->counter?->name,
+                    'core.print.approved_by' => $count->approver?->name,
+                    'core.table.narration' => $count->narration,
+                ] as $label => $value)
+                    @if (filled($value))
+                        <div>
+                            <dt class="text-2xs text-(--color-ink-muted)">{{ __($label) }}</dt>
+                            <dd class="text-sm">{{ $value }}</dd>
+                        </div>
+                    @endif
+                @endforeach
+            </dl>
+
+            @if ($count->adjustment)
+                {{-- সমন্বয়ের জাবেদাটা ক্লিকযোগ্য — নিয়ম ১। না থাকলে
+                     "পার্থক্যের টাকাটা কোথায় বসল" প্রশ্নের উত্তর
+                     পর্দায় থাকত না। --}}
+                <p class="mt-3 border-t border-(--color-border) pt-3 text-sm">
+                    <span class="block text-2xs text-(--color-ink-muted)">
+                        {{ __('accounts::field.adjustment') }}
+                    </span>
+                    <a href="{{ route('accounts.voucher.show', $count->adjustment) }}"
+                       class="num text-(--color-brand-500) underline-offset-2 hover:underline">
+                        {{ $count->adjustment->document_no }}
+                    </a>
+                </p>
+            @endif
+        </section>
+    </div>
+</x-layouts.app>

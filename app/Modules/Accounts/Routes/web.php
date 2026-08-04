@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 
+use App\Modules\Accounts\Http\Controllers\CashCountController;
 use App\Modules\Accounts\Http\Controllers\CashTillController;
 use App\Modules\Accounts\Http\Controllers\ChartOfAccountsController;
+use App\Modules\Accounts\Http\Controllers\MoneyTransferController;
 use App\Modules\Accounts\Http\Controllers\VoucherController;
 use App\Modules\Accounts\Models\Account;
 use Illuminate\Support\Facades\Route;
@@ -75,5 +77,22 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
         Route::get('/{type}', [VoucherController::class, 'index'])->name('index');
         Route::get('/{type}/create', [VoucherController::class, 'create'])->name('create');
         Route::post('/{type}', [VoucherController::class, 'store'])->name('store');
+    });
+
+    Route::prefix('money-transfers')->name('transfer.')->group(function () {
+        Route::get('/', [MoneyTransferController::class, 'index'])->name('index');
+        Route::get('/create', [MoneyTransferController::class, 'create'])->name('create');
+        Route::post('/', [MoneyTransferController::class, 'store'])->name('store');
+        Route::get('/{transfer}', [MoneyTransferController::class, 'show'])->name('show');
+        Route::post('/{transfer}/confirm', [MoneyTransferController::class, 'confirm'])->name('confirm');
+        Route::post('/{transfer}/cancel', [MoneyTransferController::class, 'cancel'])->name('cancel');
+    });
+
+    Route::prefix('cash-counts')->name('count.')->group(function () {
+        Route::get('/', [CashCountController::class, 'index'])->name('index');
+        Route::get('/create', [CashCountController::class, 'create'])->name('create');
+        Route::post('/', [CashCountController::class, 'store'])->name('store');
+        Route::get('/{count}', [CashCountController::class, 'show'])->name('show');
+        Route::post('/{count}/approve', [CashCountController::class, 'approve'])->name('approve');
     });
 });

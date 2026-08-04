@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\CashCount;
 use App\Modules\Accounts\Models\CashTill;
+use App\Modules\Accounts\Models\MoneyTransfer;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Reports\CoreReports;
 
@@ -40,8 +42,8 @@ return [
             ['label' => 'accounts::menu.expense', 'route' => 'accounts.voucher.index', 'route_params' => ['type' => 'expense'], 'permission' => 'accounts.voucher.create'],
             ['label' => 'accounts::menu.journal', 'route' => 'accounts.voucher.index', 'route_params' => ['type' => 'journal'], 'permission' => 'accounts.voucher.create'],
             ['label' => 'accounts::menu.contra', 'route' => 'accounts.voucher.index', 'route_params' => ['type' => 'contra'], 'permission' => 'accounts.voucher.create'],
-            ['label' => 'accounts::menu.money_transfer', 'route' => 'accounts.transfer.index', 'permission' => 'accounts.transfer.create', 'planned' => true],
-            ['label' => 'accounts::menu.cash_count', 'route' => 'accounts.count.index', 'permission' => 'accounts.count.create', 'planned' => true],
+            ['label' => 'accounts::menu.money_transfer', 'route' => 'accounts.transfer.index', 'permission' => 'accounts.transfer.create'],
+            ['label' => 'accounts::menu.cash_count', 'route' => 'accounts.count.index', 'permission' => 'accounts.count.create'],
         ],
         'reports' => [
             ['label' => 'accounts::menu.day_book', 'route' => 'accounts.report.daybook', 'permission' => 'accounts.report', 'planned' => true],
@@ -107,6 +109,8 @@ return [
         'expense_voucher' => Voucher::class,
         'journal_voucher' => Voucher::class,
         'contra_voucher' => Voucher::class,
+        'money_transfer' => MoneyTransfer::class,
+        'cash_count' => CashCount::class,
     ],
 
     // রিপোর্ট সরবরাহকারী — কোর নিজে থেকে ডেকে নেবে (সেকশন ১৯.৩)।
