@@ -1,0 +1,511 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Purchase\Services;
+
+use App\Core\Engines\NumberSeries\NumberSeriesEngine;
+use App\Core\Engines\Posting\PostingEngine;
+use App\Core\Services\SettingsService;
+use App\Core\Support\CompanyContext;
+use App\Core\Support\DocumentStatus;
+use App\Models\FinancialYear;
+use App\Models\IssuedNumber;
+use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Inventory\Models\Product;
+use App\Modules\Purchase\Models\PurchaseBill;
+use App\Modules\Purchase\Models\PurchaseBillLine;
+use App\Modules\Purchase\Models\PurchaseReceiptLine;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+
+/**
+ * ক্রয় বিল — কী দিতে হবে।
+ *
+ * ── এই ফাইলের কেন্দ্রীয় সিদ্ধান্ত ────────────────────────────────────
+ * বিলটা নতুন করে মজুদ বাড়ায় না। মজুদ আগেই বেড়েছে, মাল বুঝে নেওয়ার দিন।
+ * বিলের কাজ শুধু দায়টা সরানো:
+ *
+ *     Dr  প্রাপ্ত মাল, বিল আসেনি (2160)
+ *     Cr  প্রদেয় হিসাব (2110, সরবরাহকারীর নামে)
+ *
+ * বিলে আবার মজুদ ডেবিট করলে একই মাল দুইবার সম্পদ হয়ে বসত, আর ব্যালেন্স
+ * শিট ঠিক ততটাই বেশি দেখাত।
+ *
+ * ── ২১৬০ থেকে যা সরে তা চালানের দাম, বিলের দাম নয় ───────────────────
+ * সরবরাহকারী প্রায়ই চালানের চেয়ে অন্য দরে বিল পাঠান। মাল নেওয়ার দিন
+ * ২১৬০-এ যে টাকাটা বসেছিল সেটা চালানের দর ধরে, তাই সরাতেও হবে ঠিক সেই
+ * টাকাটাই — নাহলে খাতটায় একটা অবশিষ্ট পড়ে থাকত যা কোনো চালানের নয়,
+ * কোনো বিলেরও নয়, আর কেউ কোনোদিন খুঁজে পেত না।
+ *
+ * পার্থক্যটা তাই আলাদা করে দেখা যায়, আর সেটিংস চাইলে বিলটা আটকেও দেয়।
+ */
+final class PurchaseBillService
+{
+    use CalculatesLineTotals;
+
+    public function __construct(
+        private readonly NumberSeriesEngine $numbers,
+        private readonly PostingEngine $posting,
+        private readonly SettingsService $settings,
+    ) {}
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @param  list<array<string, mixed>>  $lines
+     */
+    public function create(array $data, array $lines): PurchaseBill
+    {
+        if ($lines === []) {
+            throw ValidationException::withMessages(['lines' => __('purchase::validation.no_lines')]);
+        }
+
+        return DB::transaction(function () use ($data, $lines) {
+            $trxDate = Carbon::parse($data['trx_date'] ?? now());
+            $year = $this->resolveFinancialYear($trxDate);
+
+            $supplierId = (int) $data['supplier_id'];
+            $this->assertBillNoIsFree($supplierId, $data['supplier_bill_no'] ?? null);
+
+            $documentNo = $this->numbers->next('PBL');
+
+            $bill = PurchaseBill::create([
+                'company_id' => CompanyContext::id(),
+                'branch_id' => $data['branch_id'] ?? CompanyContext::branchId(),
+                'financial_year_id' => $year->id,
+                'document_no' => $documentNo,
+                'supplier_id' => $supplierId,
+                'trx_date' => $trxDate->toDateString(),
+                'due_on' => $data['due_on'] ?? null,
+                'supplier_bill_no' => $data['supplier_bill_no'] ?? null,
+                'narration' => $data['narration'] ?? null,
+                'status' => DocumentStatus::DRAFT,
+                'created_by' => auth()->id(),
+            ]);
+
+            $this->replaceLines($bill, $lines);
+
+            IssuedNumber::query()
+                ->where('document_no', $documentNo)
+                ->whereNull('source_id')
+                ->update([
+                    'source_type' => PurchaseBill::drillSourceType(),
+                    'source_id' => $bill->id,
+                ]);
+
+            return $bill->fresh(['lines']);
+        });
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @param  list<array<string, mixed>>  $lines
+     */
+    public function update(PurchaseBill $bill, array $data, array $lines): PurchaseBill
+    {
+        $this->assertEditable($bill);
+
+        if ($lines === []) {
+            throw ValidationException::withMessages(['lines' => __('purchase::validation.no_lines')]);
+        }
+
+        return DB::transaction(function () use ($bill, $data, $lines) {
+            $trxDate = Carbon::parse($data['trx_date'] ?? $bill->trx_date);
+
+            $billNo = $data['supplier_bill_no'] ?? null;
+
+            if ($billNo !== $bill->supplier_bill_no) {
+                $this->assertBillNoIsFree($bill->supplier_id, $billNo, $bill->id);
+            }
+
+            $bill->update([
+                'trx_date' => $trxDate->toDateString(),
+                'due_on' => $data['due_on'] ?? null,
+                'supplier_bill_no' => $billNo,
+                'narration' => $data['narration'] ?? null,
+                'financial_year_id' => $this->resolveFinancialYear($trxDate)->id,
+            ]);
+
+            $this->replaceLines($bill, $lines);
+
+            return $bill->fresh(['lines']);
+        });
+    }
+
+    /**
+     * বিলটা খাতায় বসানো — দায় সরবরাহকারীর নামে যায়।
+     */
+    public function confirm(PurchaseBill $bill): PurchaseBill
+    {
+        if ($bill->status !== DocumentStatus::DRAFT) {
+            throw ValidationException::withMessages([
+                'status' => __('purchase::validation.only_draft_confirms', ['no' => $bill->document_no]),
+            ]);
+        }
+
+        $bill->loadMissing('lines.receiptLine');
+
+        if ($bill->lines->isEmpty()) {
+            throw ValidationException::withMessages(['lines' => __('purchase::validation.no_lines')]);
+        }
+
+        return DB::transaction(function () use ($bill) {
+            $this->postToLedger($bill);
+
+            $bill->update(['status' => DocumentStatus::CONFIRMED]);
+
+            return $bill->fresh(['lines']);
+        });
+    }
+
+    /**
+     * বাতিল — উল্টো এন্ট্রি, সারি মোছা নয় (নিয়ম ৫)।
+     *
+     * বাতিল হলে দায়টা সরবরাহকারীর নাম থেকে ২১৬০-এ ফিরে যায়, অর্থাৎ মালটা
+     * আবার "বিল আসেনি" অবস্থায় ফেরে। সেটাই ঠিক: মাল তো ফেরত যায়নি, শুধু
+     * বিলটা ভুল ছিল।
+     */
+    public function cancel(PurchaseBill $bill, string $reason, Carbon|string|null $onDate = null): PurchaseBill
+    {
+        if ($bill->status === DocumentStatus::CANCELLED) {
+            throw ValidationException::withMessages([
+                'status' => __('purchase::validation.already_cancelled', ['no' => $bill->document_no]),
+            ]);
+        }
+
+        $date = $onDate === null ? now() : Carbon::parse($onDate);
+
+        return DB::transaction(function () use ($bill, $reason, $date) {
+            if ($bill->status === DocumentStatus::CONFIRMED) {
+                $this->posting->reverse(
+                    sourceType: PurchaseBill::drillSourceType(),
+                    sourceId: $bill->id,
+                    reversalDate: $date,
+                    reason: $reason,
+                );
+            }
+
+            $bill->update([
+                'status' => DocumentStatus::CANCELLED,
+                'cancelled_by' => auth()->id(),
+                'cancelled_at' => now(),
+                'cancel_reason' => $reason,
+            ]);
+
+            return $bill->fresh(['lines']);
+        });
+    }
+
+    /**
+     * খতিয়ানে বসানো।
+     *
+     * তিন রকম লাইন হতে পারে, আর তিনটাই এক পোস্টিং-এ যায়:
+     *
+     *   ১. ২১৬০ ডেবিট — চালানে যা বসেছিল, ঠিক ততটুকু
+     *   ২. মজুদ ডেবিট — চালান ছাড়া সরাসরি বিল হলে (মাল আগে ঢোকেনি)
+     *   ৩. ভ্যাট ডেবিট — সরকারের কাছ থেকে ফেরতযোগ্য অংশ
+     *
+     * আর ক্রেডিটে একটাই: সরবরাহকারীর প্রদেয়।
+     */
+    private function postToLedger(PurchaseBill $bill): void
+    {
+        $total = (string) $bill->total;
+
+        if (bccomp($total, '0', 4) <= 0) {
+            throw ValidationException::withMessages([
+                'lines' => __('purchase::validation.zero_value_bill'),
+            ]);
+        }
+
+        $pendingAmount = '0';   // ২১৬০ থেকে যা সরবে
+        $directAmount = '0';    // চালান ছাড়া সরাসরি বিল
+
+        foreach ($bill->lines as $line) {
+            $receiptLine = $line->receiptLine;
+
+            if ($receiptLine === null) {
+                // চালান নেই মানে মালটা এই বিলেই প্রথম খাতায় এল
+                $directAmount = bcadd($directAmount, (string) $line->amount, 4);
+
+                continue;
+            }
+
+            /*
+             * চালানের দর ধরে, বিলের দর ধরে নয় — ফাইলের মাথার ব্যাখ্যা।
+             *
+             * বিলে যতটুকু পরিমাণ, ঠিক ততটুকুর চালান-মূল্য সরে। বিলে ৪০
+             * বস্তার দাম থাকলেও চালানে ছিল ৫০, তাই ৪০ বস্তার চালান-মূল্যই
+             * সরবে — বাকি ১০ বস্তা ২১৬০-এ থাকবে, আর সেটাই ঠিক: ওগুলোর
+             * বিল এখনো আসেনি।
+             */
+            $atReceiptRate = bcmul((string) $line->qty, (string) $receiptLine->rate, 4);
+            $pendingAmount = bcadd($pendingAmount, $atReceiptRate, 4);
+        }
+
+        $lines = [];
+
+        if (bccomp($pendingAmount, '0', 4) > 0) {
+            $lines[] = [
+                'account_id' => $this->account(StandardChart::GOODS_RECEIVED_NOT_INVOICED)->id,
+                'debit' => $pendingAmount,
+                'party_type' => 'supplier',
+                'party_id' => $bill->supplier_id,
+                'narration' => __('purchase::message.bill_clears_pending', ['no' => $bill->document_no]),
+            ];
+        }
+
+        if (bccomp($directAmount, '0', 4) > 0) {
+            $lines[] = [
+                'account_id' => $this->account(StandardChart::INVENTORY)->id,
+                'debit' => $directAmount,
+                'narration' => __('purchase::message.stock_in', ['no' => $bill->document_no]),
+            ];
+        }
+
+        $tax = (string) $bill->tax;
+
+        if (bccomp($tax, '0', 4) > 0) {
+            $lines[] = [
+                'account_id' => $this->account(StandardChart::VAT_PAYABLE)->id,
+                'debit' => $tax,
+                'narration' => __('purchase::message.input_vat', ['no' => $bill->document_no]),
+            ];
+        }
+
+        /*
+         * ডেবিটের যোগফল আর বিলের মোট এক না-ও হতে পারে, আর সেটাই স্বাভাবিক:
+         * সরবরাহকারী অন্য দরে বিল পাঠালে পার্থক্যটা কোথাও যেতে হবে।
+         *
+         * ওটা মূল্য-পার্থক্য, আর ওটা খরচ — মজুদে ঢোকালে গুদামের মালের দাম
+         * আসল দামের চেয়ে আলাদা হয়ে যেত, অথচ মালটা একই।
+         */
+        $debits = array_reduce($lines, fn ($sum, $l) => bcadd($sum, $l['debit'], 4), '0');
+        $difference = bcsub($total, $debits, 4);
+
+        if (bccomp($difference, '0', 4) !== 0) {
+            $this->assertDifferenceAllowed($bill, $difference);
+
+            $variance = $this->account(StandardChart::PURCHASE_PRICE_VARIANCE);
+
+            $lines[] = bccomp($difference, '0', 4) > 0
+                ? ['account_id' => $variance->id, 'debit' => $difference,
+                    'narration' => __('purchase::message.price_variance', ['no' => $bill->document_no])]
+                : ['account_id' => $variance->id, 'credit' => bcmul($difference, '-1', 4),
+                    'narration' => __('purchase::message.price_variance', ['no' => $bill->document_no])];
+        }
+
+        $lines[] = [
+            'account_id' => $this->account(StandardChart::PAYABLE)->id,
+            'credit' => $total,
+            'party_type' => 'supplier',
+            'party_id' => $bill->supplier_id,
+            'narration' => __('purchase::message.payable_to_supplier', ['no' => $bill->document_no]),
+        ];
+
+        $this->posting->post(
+            sourceType: PurchaseBill::drillSourceType(),
+            sourceId: $bill->id,
+            trxDate: $bill->trx_date,
+            lines: $lines,
+            documentNo: $bill->document_no,
+            branchId: $bill->branch_id,
+        );
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $lines
+     */
+    private function replaceLines(PurchaseBill $bill, array $lines): void
+    {
+        $bill->lines()->delete();
+
+        $totals = ['subtotal' => '0', 'discount' => '0', 'tax' => '0', 'total' => '0'];
+        $lineNo = 0;
+
+        foreach ($lines as $line) {
+            $productId = (int) ($line['product_id'] ?? 0);
+            $qty = $this->positive($line['qty'] ?? null, 'qty');
+            $rate = $this->money($line['rate'] ?? null);
+
+            if ($productId <= 0 || ! Product::query()->whereKey($productId)->exists()) {
+                throw ValidationException::withMessages(['lines' => __('purchase::validation.unknown_product')]);
+            }
+
+            $receiptLine = $this->resolveReceiptLine($bill, $line['purchase_receipt_line_id'] ?? null, $productId, $qty);
+
+            $figures = $this->lineFigures($qty, $rate, $line['discount'] ?? '0', $line['tax'] ?? '0');
+
+            PurchaseBillLine::create([
+                'purchase_bill_id' => $bill->id,
+                'product_id' => $productId,
+                'purchase_receipt_line_id' => $receiptLine?->id,
+                'qty' => $qty,
+                'rate' => $rate,
+                'discount' => $figures['discount'],
+                'tax' => $figures['tax'],
+                'amount' => $figures['amount'],
+                'line_no' => ++$lineNo,
+                'narration' => $line['narration'] ?? null,
+            ]);
+
+            $totals = $this->addToTotals($totals, $figures);
+        }
+
+        $bill->update($totals);
+    }
+
+    /**
+     * চালানের লাইনটা এই সরবরাহকারীর, আর তার এখনো বিল না-হওয়া অংশ যথেষ্ট।
+     */
+    private function resolveReceiptLine(
+        PurchaseBill $bill,
+        mixed $receiptLineId,
+        int $productId,
+        string $qty,
+    ): ?PurchaseReceiptLine {
+        if (blank($receiptLineId)) {
+            return null;
+        }
+
+        $receiptLine = PurchaseReceiptLine::query()
+            ->with('receipt')
+            ->whereKey((int) $receiptLineId)
+            ->first();
+
+        if ($receiptLine === null || $receiptLine->receipt === null) {
+            throw ValidationException::withMessages(['lines' => __('purchase::validation.unknown_receipt_line')]);
+        }
+
+        // অন্য কোম্পানির চালানের id পাঠিয়ে দেওয়া আটকায় — গ্লোবাল স্কোপ
+        // সন্তান-টেবিলে নেই, বাবার উপর আছে
+        if ($receiptLine->receipt->company_id !== CompanyContext::id()) {
+            throw ValidationException::withMessages(['lines' => __('purchase::validation.unknown_receipt_line')]);
+        }
+
+        if ($receiptLine->receipt->supplier_id !== $bill->supplier_id) {
+            throw ValidationException::withMessages(['lines' => __('purchase::validation.receipt_other_supplier')]);
+        }
+
+        if ($receiptLine->receipt->status !== DocumentStatus::CONFIRMED) {
+            throw ValidationException::withMessages([
+                'lines' => __('purchase::validation.receipt_not_confirmed', [
+                    'no' => $receiptLine->receipt->document_no,
+                ]),
+            ]);
+        }
+
+        if ($receiptLine->product_id !== $productId) {
+            throw ValidationException::withMessages(['lines' => __('purchase::validation.line_product_mismatch')]);
+        }
+
+        /*
+         * একই চালানের লাইন দুইবার বিল করা যায় না।
+         *
+         * করলে ২১৬০ খাতটা ঋণাত্মক হয়ে যেত — এমন একটা দায় যা কেউ কোনোদিন
+         * বসায়নি, অথচ সরানো হয়েছে। আর সরবরাহকারীকে একই মালের দাম দুইবার
+         * দেওয়া হত।
+         */
+        $alreadyBilled = $receiptLine->billLines()
+            ->where('purchase_bill_id', '<>', $bill->id)
+            ->whereHas('bill', fn ($q) => $q->where('status', '<>', DocumentStatus::CANCELLED))
+            ->sum('qty');
+
+        $wouldBe = bcadd((string) ($alreadyBilled ?: '0'), $qty, 4);
+
+        if (bccomp($wouldBe, (string) $receiptLine->received_qty, 4) > 0) {
+            throw ValidationException::withMessages([
+                'lines' => __('purchase::validation.over_billed', [
+                    'no' => $receiptLine->receipt->document_no,
+                    'received' => rtrim(rtrim((string) $receiptLine->received_qty, '0'), '.'),
+                ]),
+            ]);
+        }
+
+        return $receiptLine;
+    }
+
+    /**
+     * দামের পার্থক্য মেনে নেওয়া হবে কি না — সেটিংস (নিয়ম ৭)।
+     */
+    private function assertDifferenceAllowed(PurchaseBill $bill, string $difference): void
+    {
+        if (! $this->settings->get('purchase.block_price_mismatch', true)) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'lines' => __('purchase::validation.price_mismatch', [
+                'no' => $bill->document_no,
+                'difference' => number_format((float) $difference, 2),
+            ]),
+        ]);
+    }
+
+    /**
+     * একই সরবরাহকারীর একই বিল নম্বর দুইবার নয়।
+     *
+     * সরবরাহকারী ভুল করে দুইবার একই বিল পাঠালে ধরা না পড়লে একই মালের দাম
+     * দুইবার শোধ হয়ে যেত, আর সেটা ধরা পড়ত অনেক পরে — যদি আদৌ পড়ত।
+     */
+    private function assertBillNoIsFree(int $supplierId, mixed $billNo, ?int $exceptId = null): void
+    {
+        $billNo = trim((string) ($billNo ?? ''));
+
+        if ($billNo === '') {
+            return;
+        }
+
+        $exists = PurchaseBill::query()
+            ->where('supplier_id', $supplierId)
+            ->where('supplier_bill_no', $billNo)
+            ->where('status', '<>', DocumentStatus::CANCELLED)
+            ->when($exceptId, fn ($q) => $q->whereKeyNot($exceptId))
+            ->exists();
+
+        if ($exists) {
+            throw ValidationException::withMessages([
+                'supplier_bill_no' => __('purchase::validation.duplicate_bill_no', ['no' => $billNo]),
+            ]);
+        }
+    }
+
+    private function assertEditable(PurchaseBill $bill): void
+    {
+        if ($bill->status !== DocumentStatus::DRAFT) {
+            throw ValidationException::withMessages([
+                'status' => __('purchase::validation.only_draft_edits', ['no' => $bill->document_no]),
+            ]);
+        }
+    }
+
+    private function account(string $code): Account
+    {
+        $account = Account::query()->where('code', $code)->first();
+
+        if ($account === null) {
+            throw ValidationException::withMessages([
+                'status' => __('purchase::validation.missing_account', ['code' => $code]),
+            ]);
+        }
+
+        return $account;
+    }
+
+    private function resolveFinancialYear(Carbon $date): FinancialYear
+    {
+        $year = FinancialYear::query()
+            ->whereDate('starts_on', '<=', $date->toDateString())
+            ->whereDate('ends_on', '>=', $date->toDateString())
+            ->first();
+
+        if ($year === null) {
+            throw ValidationException::withMessages([
+                'trx_date' => __('purchase::validation.no_financial_year', ['date' => $date->toDateString()]),
+            ]);
+        }
+
+        return $year;
+    }
+}

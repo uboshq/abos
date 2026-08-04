@@ -1,0 +1,36 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'stock_in' => ':no — goods into the warehouse',
+    'awaiting_bill' => ':no — goods received, bill awaited',
+    'bill_clears_pending' => ':no — clears the pending liability',
+    'input_vat' => ':no — input VAT',
+    'price_variance' => ':no — purchase price variance',
+    'payable_to_supplier' => ':no — payable to the supplier',
+    'order_created' => 'Purchase order created.',
+    'order_updated' => 'Purchase order updated.',
+    'order_confirmed' => 'Order confirmed — goods can now be received against it.',
+    'order_cancelled' => 'Order cancelled.',
+    'receipt_created' => 'Receipt created — confirming it puts the goods in the warehouse.',
+    'receipt_updated' => 'Receipt updated.',
+    'receipt_confirmed' => 'Goods are in the warehouse and the liability is in the books.',
+    'receipt_cancelled' => 'Receipt cancelled — stock and books both reversed.',
+    'bill_created' => 'Bill created.',
+    'bill_updated' => 'Bill updated.',
+    'bill_confirmed' => 'Bill posted — the liability is now in the supplier\'s name.',
+    'bill_cancelled' => 'Bill cancelled.',
+    'no_orders' => 'No purchase orders yet.',
+    'no_receipts' => 'Nothing received yet.',
+    'no_bills' => 'No purchase bills yet.',
+    'order_search' => 'Search by number or supplier…',
+    'receipt_search' => 'Search by number, challan no or supplier…',
+    'bill_search' => 'Search by number, bill no or supplier…',
+    'order_note' => 'An order moves nothing — not stock, not the books. That happens when goods arrive.',
+    'receipt_note' => 'Confirming puts the goods in the warehouse and the liability in the books, together.',
+    'bill_note' => 'A bill brings in no new goods — it moves the liability into the supplier\'s name.',
+    'lines' => 'Lines',
+    'cancel_reason' => 'Reason for cancelling',
+    'pending_of_order' => ':count line(s) of this order are still to arrive.',
+];

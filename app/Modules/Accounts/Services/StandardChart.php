@@ -39,19 +39,48 @@ final class StandardChart
 
     public const VAT_PAYABLE = '2120';
 
+    /**
+     * প্রাপ্ত মাল, বিল আসেনি।
+     *
+     * ট্রাক আসে সোমবার, বিল আসে বৃহস্পতিবার। ওই তিন দিন মালটা গুদামে আছে —
+     * বেচা যাচ্ছে, তার দাম আছে — অথচ কাগজে কোনো দায় নেই। বিলের দিনে হিসাব
+     * বসালে ওই তিন দিন ব্যালেন্স শিট মিথ্যা বলত: সম্পদ বেড়েছে, দায় বাড়েনি,
+     * আর পার্থক্যটা নীরবে মুনাফা হয়ে দেখাত।
+     *
+     * তাই মাল বুঝে নেওয়ার দিনই দায়টা এখানে বসে, আর বিল এলে এখান থেকে সরে
+     * সরবরাহকারীর নামে যায়। খাতটা শূন্য না হলে হয় বিল বাকি, নয় কেউ বিল
+     * ছাড়াই মাল নামিয়েছে — দুটোই জানা দরকার।
+     */
+    public const GOODS_RECEIVED_NOT_INVOICED = '2160';
+
     public const RETAINED_EARNINGS = '3300';
 
     public const SALES = '4100';
 
     public const COST_OF_GOODS_SOLD = '5100';
 
+    /**
+     * ক্রয়মূল্যের পার্থক্য।
+     *
+     * সরবরাহকারী প্রায়ই চালানের চেয়ে অন্য দরে বিল পাঠান। মাল নেওয়ার দিন
+     * মজুদে যে দাম বসেছিল সেটাই মালের আসল দাম — বিলের দর আলাদা হলে
+     * পার্থক্যটা মজুদে ঢোকানো যায় না, নাহলে গুদামের একই মালের দুই রকম
+     * দাম হয়ে যেত।
+     *
+     * তাই পার্থক্যটা খরচ, আর আলাদা খাতে — খাতটা দেখলেই বোঝা যায় কোন
+     * সরবরাহকারী দর নিয়ে নিয়মিত এদিক-ওদিক করছেন।
+     */
+    public const PURCHASE_PRICE_VARIANCE = '5150';
+
     public const DISCOUNT_GIVEN = '5300';
 
     /** @var list<string> */
     public const SYSTEM_CODES = [
         self::CASH_IN_HAND, self::BANK_AND_MFS, self::RECEIVABLE, self::INVENTORY,
-        self::PAYABLE, self::VAT_PAYABLE, self::RETAINED_EARNINGS,
-        self::SALES, self::COST_OF_GOODS_SOLD, self::DISCOUNT_GIVEN,
+        self::PAYABLE, self::VAT_PAYABLE, self::GOODS_RECEIVED_NOT_INVOICED,
+        self::RETAINED_EARNINGS,
+        self::SALES, self::COST_OF_GOODS_SOLD, self::PURCHASE_PRICE_VARIANCE,
+        self::DISCOUNT_GIVEN,
     ];
 
     public function __construct(private readonly AccountService $accounts) {}
@@ -159,6 +188,8 @@ final class StandardChart
             ['2130', 'Salary Payable', 'প্রদেয় বেতন', $L, '2100', false, []],
             ['2140', 'Expenses Payable', 'প্রদেয় খরচ', $L, '2100', false, []],
             ['2150', 'Advance from Customers', 'গ্রাহকের অগ্রিম', $L, '2100', false, []],
+            // মাল এসেছে, বিল আসেনি — ধ্রুবকটার মন্তব্যে কারণ লেখা আছে
+            ['2160', 'Goods Received Not Invoiced', 'প্রাপ্ত মাল, বিল আসেনি', $L, '2100', false, []],
 
             ['2200', 'Long Term Liabilities', 'দীর্ঘমেয়াদি দায়', $L, '2000', true, []],
             ['2210', 'Bank Loan', 'ব্যাংক ঋণ', $L, '2200', false, []],
@@ -182,6 +213,8 @@ final class StandardChart
             // ── খরচ ───────────────────────────────────────────────────
             ['5000', 'Expenses', 'খরচ', $X, null, true, []],
             ['5100', 'Cost of Goods Sold', 'বিক্রীত পণ্যের ব্যয়', $X, '5000', false, []],
+            // চালানের দর আর বিলের দরের পার্থক্য — ধ্রুবকের মন্তব্যে কারণ
+            ['5150', 'Purchase Price Variance', 'ক্রয়মূল্যের পার্থক্য', $X, '5000', false, []],
 
             ['5200', 'Operating Expenses', 'পরিচালন ব্যয়', $X, '5000', true, []],
             ['5201', 'Salary & Wages', 'বেতন ও মজুরি', $X, '5200', false, []],

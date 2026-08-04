@@ -1,0 +1,36 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'supplier' => 'Supplier',
+    'product' => 'Product',
+    'warehouse' => 'Warehouse',
+    'branch' => 'Branch',
+    'ordered' => 'Ordered',
+    'received' => 'Received',
+    'pending' => 'Pending',
+    'unbilled' => 'Not billed',
+    'unbilled_value' => 'Value not billed',
+    'bill_count' => 'Bills',
+    'subtotal' => 'Subtotal',
+    'discount' => 'Discount',
+    'tax' => 'VAT',
+    'total' => 'Total',
+    'rate' => 'Rate',
+    'quantity' => 'Quantity',
+    'amount' => 'Amount',
+    'document_no' => 'Number',
+    'date' => 'Date',
+    'expected_on' => 'Expected on',
+    'due_on' => 'Due on',
+    'supplier_challan_no' => 'Supplier\'s challan no',
+    'supplier_bill_no' => 'Supplier\'s bill no',
+    'narration' => 'Narration',
+    'status' => 'Status',
+    'order' => 'Purchase order',
+    'receipt' => 'Receipt',
+    'unit' => 'Unit',
+    'line_no' => 'No',
+    'state' => 'State',
+];
