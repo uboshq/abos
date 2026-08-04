@@ -1,0 +1,36 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'code' => 'Code',
+    'name' => 'Name',
+    'name_en' => 'Name (English)',
+    'name_bn' => 'Name (Bangla)',
+    'barcode' => 'Barcode',
+    'brand' => 'Brand',
+    'category' => 'Category',
+    'unit' => 'Unit',
+    'tax' => 'VAT',
+    'purchase_price' => 'Purchase price',
+    'sale_price' => 'Sale price',
+    'reorder_level' => 'Reorder level',
+    'product' => 'Product',
+    'warehouse' => 'Warehouse',
+    'branch' => 'Branch',
+    'address' => 'Address',
+    'address_en' => 'Address (English)',
+    'address_bn' => 'Address (Bangla)',
+    'floor' => 'On floor',
+    'reserved' => 'Reserved',
+    'hold' => 'Held',
+    'available' => 'Available',
+    'reason' => 'Reason',
+    'counted' => 'Counted',
+    'difference' => 'Difference',
+    'state' => 'Status',
+    'is_default' => 'Main warehouse',
+    'quantity' => 'Quantity',
+    'date' => 'Date',
+    'narration' => 'Narration',
+];

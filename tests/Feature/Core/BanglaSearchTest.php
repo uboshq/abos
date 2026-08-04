@@ -151,9 +151,14 @@ class BanglaSearchTest extends TestCase
 
         $offenders = [];
 
-        foreach (Schema::getTableListing() as $listed) {
-            $table = str_contains($listed, '.') ? explode('.', $listed)[1] : $listed;
+        // চলতি স্কিমা স্পষ্ট করে বলা — নাহলে পাশের ডেটাবেসের টেবিলও
+        // তালিকায় আসে, আর তখন এখানে নেই এমন টেবিল পড়তে গিয়ে ভাঙত
+        $listing = Schema::getTableListing(
+            schema: Schema::getCurrentSchemaName(),
+            schemaQualified: false,
+        );
 
+        foreach ($listing as $table) {
             $columns = collect(Schema::getColumns($table))
                 ->filter(fn (array $c) => in_array(
                     $c['type_name'],

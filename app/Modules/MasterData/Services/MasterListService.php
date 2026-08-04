@@ -260,6 +260,25 @@ final class MasterListService
                     'needs_approval' => true]],
             ['MISTAKE', 'Entry mistake', 'এন্ট্রির ভুল',
                 ['context' => ReasonCode::CANCELLATION, 'returns_to_stock' => true]],
+
+            /*
+             * মাল আটকে রাখার কারণ — তিনটা, আর তৃতীয়টা বাকি দুইটার মতো নয়।
+             *
+             * প্রথম দুইটা সমস্যা: মাল নষ্ট, বা ফেরত এসেছে আর দেখা হয়নি।
+             * তৃতীয়টা সিদ্ধান্ত — মালিক দাম বাড়ার অপেক্ষায় মাল ছাড়ছেন না।
+             * একই "আটকানো" সংখ্যার নিচে তিনটাই থাকে, তাই কারণ আলাদা না
+             * রাখলে "৪০ বস্তা আটকানো" দেখে মালিক ভাবতেন তার মালে সমস্যা,
+             * অথচ ৩৫ বস্তা তিনি নিজেই আটকে রেখেছেন।
+             *
+             * এই তিনটা না থাকলে আটকানোর ফর্মের কারণের ঘর ফাঁকা থাকত, আর
+             * কারণ ছাড়া আটকানো যায় না — মানে সুবিধাটাই অচল থাকত।
+             */
+            ['HOLD-DMG', 'Damaged, awaiting decision', 'ক্ষতিগ্রস্ত, সিদ্ধান্তের অপেক্ষায়',
+                ['context' => ReasonCode::HOLD, 'returns_to_stock' => false]],
+            ['HOLD-RET', 'Returned, awaiting check', 'ফেরত এসেছে, যাচাইয়ের অপেক্ষায়',
+                ['context' => ReasonCode::HOLD, 'returns_to_stock' => true]],
+            ['HOLD-PRICE', 'Held back for a better price', 'দাম বাড়ার অপেক্ষায় আটকানো',
+                ['context' => ReasonCode::HOLD, 'returns_to_stock' => true]],
         ]);
 
         return $made;

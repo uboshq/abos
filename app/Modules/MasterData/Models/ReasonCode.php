@@ -63,10 +63,26 @@ class ReasonCode extends Model implements Drillable
 
     public const DISCOUNT = 'discount';
 
+    /**
+     * মাল আটকে রাখার কারণ।
+     *
+     * তিন রকমের, আর তৃতীয়টাই এটাকে আলাদা করে রাখার কারণ:
+     *
+     *   ১. ক্ষতিগ্রস্ত বা সন্দেহজনক — তাকে আছে, বিক্রি করা যাবে না
+     *   ২. ফেরত আসা মাল, যাচাইয়ের আগে
+     *   ৩. **দাম বাড়ার অপেক্ষায় ধরে রাখা** — মাল ঠিকই আছে, মালিক
+     *      এখন বেচতে চান না
+     *
+     * তৃতীয়টা ত্রুটি নয়, বাণিজ্যিক সিদ্ধান্ত। রিপোর্টে দুইটা একসাথে
+     * গুনলে মালিককে বলা হত তার মালে সমস্যা আছে, অথচ ওটা তার কৌশল।
+     */
+    public const HOLD = 'hold';
+
     /** @var list<string> */
     public const CONTEXTS = [
         self::SALES_RETURN, self::PURCHASE_RETURN,
         self::STOCK_ADJUSTMENT, self::CANCELLATION, self::DISCOUNT,
+        self::HOLD,
     ];
 
     public function scopeInContext(Builder $query, string $context): Builder
