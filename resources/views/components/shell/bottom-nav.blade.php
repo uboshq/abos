@@ -32,7 +32,10 @@
                'text-(--color-ink-muted)' => ! $active,
            ])
            @if ($active) aria-current="page" @endif>
-            <x-shell.module-icon :module="$module['code']" :group="array_key_first($module['groups'])" />
+            {{-- মোবাইলেও মডিউলের নিজের আকার — পাঁচটা আইটেম একরকম দেখালে
+                 নিচের বারটা পড়া ছাড়া কাজে লাগে না। রং currentColor, তাই
+                 সক্রিয় আইটেমটা লেখার সাথেই রং বদলায়। --}}
+            <x-shell.module-icon :module="$module['code']" shape="module" tone="current" />
             <span class="w-full truncate text-center">{{ $module['label'] }}</span>
         </a>
     @endforeach

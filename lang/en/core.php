@@ -136,6 +136,7 @@ return [
 
     'a11y' => [
         'skip_to_content' => 'Skip to content',
+        'module_navigation' => 'Switch module',
         'main_navigation' => 'Main navigation',
     ],
 

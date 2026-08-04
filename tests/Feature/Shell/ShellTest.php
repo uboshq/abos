@@ -233,6 +233,61 @@ class ShellTest extends TestCase
         $this->assertSame([], $drift['unregistered']);
     }
 
+    public function test_the_sidebar_head_matches_the_top_bar(): void
+    {
+        $sidebar = $this->codeOf(resource_path('views/components/shell/sidebar.blade.php'));
+        $topbar = $this->codeOf(resource_path('views/components/shell/topbar.blade.php'));
+
+        // একই উচ্চতা ও একই রং — নাহলে লোগোর নিচের রেখা আর টপবারের নিচের
+        // রেখা দুই রকম হয়, আর পর্দার দুই অর্ধেক দুইটা আলাদা স্ক্রিনের মতো
+        // দেখায়।
+        foreach ([$sidebar, $topbar] as $markup) {
+            $this->assertStringContainsString('h-(--spacing-header)', $markup);
+            $this->assertStringContainsString('bg-(--color-surface-card)', $markup);
+        }
+    }
+
+    public function test_the_full_product_name_is_never_shown_clipped(): void
+    {
+        $markup = $this->codeOf(resource_path('views/components/shell/sidebar.blade.php'));
+
+        // ২২০px সাইডবারে লাইনটা ধরে না, তাই ওখানে দেখানোই হয় না —
+        // "All Business Operating Syste" লাইনের মতো নয়, ত্রুটির মতো পড়ায়।
+        $this->assertMatchesRegularExpression(
+            '/hidden[^"]*whitespace-nowrap[^"]*xl:block/',
+            $markup,
+        );
+
+        // মাপটা rem নয়, স্থির px: বেস ফন্ট clamp() দিয়ে ভিউপোর্টের সাথে
+        // বাড়ে কিন্তু সাইডবারের প্রস্থ স্থির, তাই rem হলে বড় স্ক্রিনে
+        // আবার কেটে যেত।
+        $this->assertStringContainsString('text-[11px]', $markup);
+    }
+
+    public function test_each_module_has_its_own_icon_on_the_rail(): void
+    {
+        $markup = file_get_contents(resource_path('views/components/shell/module-icon.blade.php'));
+
+        // একই আইকন সব মডিউলে দিলে রেলটাই অর্থহীন — ব্যবহারকারীকে প্রতিবার
+        // হোভার করে পড়তে হয়।
+        preg_match('/\$modules = \[(.*?)\n    \];/s', $markup, $m);
+        $this->assertNotEmpty($m, 'The module icon map is missing.');
+
+        preg_match_all("/'([a-z_]+)' => '([^']+)'/", $m[1], $icons, PREG_SET_ORDER);
+        $paths = array_column($icons, 2);
+
+        $this->assertGreaterThanOrEqual(10, count($paths));
+        $this->assertSame(count($paths), count(array_unique($paths)), 'Two modules share an icon.');
+    }
+
+    public function test_the_rail_draws_its_icons_white_not_in_the_module_colour(): void
+    {
+        $markup = $this->codeOf(resource_path('views/components/shell/sidebar.blade.php'));
+
+        // গাঢ় নীলের উপর emerald বা navy বসালে ৩:১ কনট্রাস্টও থাকে না।
+        $this->assertStringContainsString('tone="white"', $markup);
+    }
+
     public function test_the_sidebar_stays_put_while_the_page_scrolls(): void
     {
         $markup = $this->codeOf(resource_path('views/components/shell/sidebar.blade.php'));

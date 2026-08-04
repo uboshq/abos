@@ -141,6 +141,7 @@ return [
 
     'a11y' => [
         'skip_to_content' => 'সরাসরি কাজের অংশে যান',
+        'module_navigation' => 'মডিউল বদলান',
         'main_navigation' => 'প্রধান মেনু',
     ],
 
