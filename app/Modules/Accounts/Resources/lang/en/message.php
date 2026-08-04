@@ -63,5 +63,10 @@ return [
     'row_count' => '{0} No rows|{1} 1 row|[2,*] :count rows',
     'nothing_in_range' => 'No transactions in this range.',
     'page_of' => 'Page :page of :pages — totals cover everything',
+    'settings_saved' => 'Settings saved.',
+    'settings_note' => 'For this company — other companies keep their own.',
+    'needs_attention' => 'Needs attention',
+    'draft_vouchers' => '{1} 1 draft voucher is not posted|[2,*] :count draft vouchers are not posted',
+    'pending_transfers' => '{1} 1 transfer is waiting to be received|[2,*] :count transfers are waiting to be received',
     'count' => '{0} No accounts|{1} 1 account|[2,*] :count accounts',
 ];

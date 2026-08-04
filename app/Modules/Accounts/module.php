@@ -30,7 +30,7 @@ return [
 
     'menu' => [
         'dashboard' => [
-            ['label' => 'accounts::menu.dashboard', 'route' => 'accounts.dashboard', 'permission' => 'accounts.view', 'planned' => true],
+            ['label' => 'accounts::menu.dashboard', 'route' => 'accounts.dashboard', 'permission' => 'accounts.view'],
         ],
         'master' => [
             ['label' => 'accounts::menu.chart_of_accounts', 'route' => 'accounts.coa.index', 'permission' => 'accounts.coa.view'],
@@ -56,7 +56,7 @@ return [
             ['label' => 'accounts::menu.cash_flow', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'cash-flow'], 'permission' => 'accounts.report.final'],
         ],
         'settings' => [
-            ['label' => 'accounts::menu.settings', 'route' => 'accounts.settings', 'permission' => 'accounts.manage', 'planned' => true],
+            ['label' => 'accounts::menu.settings', 'route' => 'accounts.settings', 'permission' => 'accounts.manage'],
         ],
     ],
 

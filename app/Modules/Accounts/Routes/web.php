@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Modules\Accounts\Http\Controllers\AccountsDashboardController;
+use App\Modules\Accounts\Http\Controllers\AccountsSettingsController;
 use App\Modules\Accounts\Http\Controllers\CashCountController;
 use App\Modules\Accounts\Http\Controllers\CashTillController;
 use App\Modules\Accounts\Http\Controllers\ChartOfAccountsController;
@@ -17,6 +19,11 @@ use Illuminate\Support\Facades\Route;
  */
 
 Route::middleware('auth')->prefix('accounts')->group(function () {
+
+    Route::get('/', [AccountsDashboardController::class, 'show'])->name('dashboard');
+
+    Route::get('/settings', [AccountsSettingsController::class, 'edit'])->name('settings');
+    Route::put('/settings', [AccountsSettingsController::class, 'update'])->name('settings.update');
 
     Route::prefix('chart-of-accounts')->name('coa.')->group(function () {
         Route::get('/', [ChartOfAccountsController::class, 'index'])->name('index');
