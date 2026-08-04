@@ -63,6 +63,8 @@ return [
         'switch_language' => 'ভাষা বদলান',
         'logout' => 'লগ আউট',
         'more' => 'আরও',
+        'fullscreen' => 'পূর্ণ পর্দা',
+        'exit_fullscreen' => 'পূর্ণ পর্দা থেকে বেরোন (Esc)',
     ],
 
     'dashboard' => [
@@ -80,6 +82,28 @@ return [
         'full_name' => 'All Business Operating System',
         'tagline' => 'Built Around Your Business.',
         'powered_by' => 'Powered by UNIVER BANGLADESH',
+    ],
+
+    'appearance' => [
+        'title' => 'চেহারা',
+        'subtitle' => 'আপনার নিজের পর্দার রং, থিম ও ভাষা — কোম্পানির সেটিং নয়',
+        'accent' => 'রং',
+        'accent_note' => 'নির্দিষ্ট কয়েকটা রং, মুক্ত পিকার নয়: প্রতিটার কনট্রাস্ট যাচাই করা, তাই কোনোটাতেই বোতামের লেখা অপঠনযোগ্য হয় না।',
+        'theme' => 'থিম',
+        'theme_note' => 'হালকা নাকি গাঢ় পটভূমি।',
+        'light' => 'হালকা',
+        'dark' => 'গাঢ়',
+        'language' => 'ভাষা',
+        'saved' => 'সংরক্ষিত হয়েছে।',
+    ],
+
+    'accent' => [
+        'blue' => 'নীল',
+        'teal' => 'সবুজাভ নীল',
+        'indigo' => 'ইন্ডিগো',
+        'violet' => 'বেগুনি',
+        'emerald' => 'সবুজ',
+        'slate' => 'ধূসর',
     ],
 
     'components' => [

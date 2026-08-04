@@ -132,8 +132,8 @@ class ShellTest extends TestCase
         $response = $this->actingAs($this->owner())->get('/');
 
         $response->assertOk();
-        $response->assertSee('আলফা ট্রেডার্স লিমিটেড', false);
-        $response->assertSee('ঢাকা প্রধান কার্যালয়', false);
+        $response->assertSee('ট্রেড ডিপো', false);
+        $response->assertSee('প্রধান ময়মনসিংহ', false);
     }
 
     public function test_the_menu_is_built_from_module_files_and_is_translated(): void
@@ -177,7 +177,7 @@ class ShellTest extends TestCase
     public function test_switching_company_lands_on_the_dashboard_of_the_new_one(): void
     {
         $owner = $this->owner();
-        $beta = Company::query()->where('code', 'BETA')->firstOrFail();
+        $beta = Company::query()->where('code', 'FMART')->firstOrFail();
 
         $response = $this->actingAs($owner)->post('/company/switch', ['company_id' => $beta->id]);
 
@@ -196,7 +196,7 @@ class ShellTest extends TestCase
     public function test_switching_into_a_company_you_do_not_belong_to_fails(): void
     {
         $salesman = User::query()->where('email', 'sales@abos.test')->firstOrFail();
-        $beta = Company::query()->where('code', 'BETA')->firstOrFail();
+        $beta = Company::query()->where('code', 'FMART')->firstOrFail();
         $before = $salesman->current_company_id;
 
         // withoutExceptionHandling ছাড়া Laravel ব্যতিক্রমটাকে একটা ৫০০
@@ -251,17 +251,32 @@ class ShellTest extends TestCase
     {
         $markup = $this->codeOf(resource_path('views/components/shell/sidebar.blade.php'));
 
-        // ২২০px সাইডবারে লাইনটা ধরে না, তাই ওখানে দেখানোই হয় না —
-        // "All Business Operating Syste" লাইনের মতো নয়, ত্রুটির মতো পড়ায়।
-        $this->assertMatchesRegularExpression(
-            '/hidden[^"]*whitespace-nowrap[^"]*xl:block/',
-            $markup,
-        );
+        // নামটা এখন টাইপ করা লেখা নয়, ডিজাইনারের নিজের লেটারিংয়ে আঁকা
+        // ওয়ার্ডমার্ক। ছবি প্রস্থ অনুযায়ী ছোট-বড় হয়, কেটে যায় না — তাই
+        // "All Business Operating Syste" সমস্যাটার আর অস্তিত্বই নেই।
+        $this->assertStringContainsString('abos-wordmark-transparent.png', $markup);
+        $this->assertStringContainsString('object-contain', $markup);
 
-        // মাপটা rem নয়, স্থির px: বেস ফন্ট clamp() দিয়ে ভিউপোর্টের সাথে
-        // বাড়ে কিন্তু সাইডবারের প্রস্থ স্থির, তাই rem হলে বড় স্ক্রিনে
-        // আবার কেটে যেত।
-        $this->assertStringContainsString('text-[11px]', $markup);
+        // সরু সাইডবারে (৪৪px) ওয়ার্ডমার্ক ধরে না, তাই সেখানে শুধু মার্ক।
+        $this->assertStringContainsString('abos-icon-transparent.png', $markup);
+
+        // স্ক্রিন রিডারের জন্য পূর্ণরূপটা লেখা হিসেবেও থাকে — একটা ছবির
+        // alt="ABOS" পড়ে শোনালে পূর্ণরূপটা হারিয়ে যেত।
+        $this->assertStringContainsString('sr-only', $markup);
+    }
+
+    public function test_the_top_bar_has_a_full_screen_button(): void
+    {
+        $markup = $this->codeOf(resource_path('views/components/shell/topbar.blade.php'));
+        $toggle = $this->codeOf(resource_path('views/components/shell/fullscreen-toggle.blade.php'));
+
+        $this->assertStringContainsString('fullscreen-toggle', $markup);
+
+        // অবস্থাটা document থেকে পড়া, নিজে মনে রাখা নয়: Esc বা F11 দিয়েও
+        // ফুল-স্ক্রিন ছাড়া যায়, আর তখন নিজের রাখা boolean বাস্তবের সাথে
+        // অমিল হয়ে বোতামটা ভুল আইকন দেখাত।
+        $this->assertStringContainsString('fullscreenchange', $toggle);
+        $this->assertStringContainsString('document.fullscreenElement', $toggle);
     }
 
     public function test_each_module_has_its_own_icon_on_the_rail(): void

@@ -38,29 +38,22 @@
                   bg-(--color-surface-card) px-3 transition-colors hover:bg-(--color-surface-app)"
            title="{{ __('core.menu.dashboard') }}">
 
-            <img src="{{ asset('brand/abos-icon-64.png') }}" alt=""
-                 class="size-(--spacing-logo-sidebar) shrink-0" aria-hidden="true">
+            {{-- সরু সাইডবারে (৪৪px) শুধু মার্ক — ওখানে ওয়ার্ডমার্ক ধরে না। --}}
+            <img src="{{ asset('brand/abos-icon-transparent.png') }}" alt="ABOS"
+                 class="size-(--spacing-logo-sidebar) shrink-0 lg:hidden">
 
-            <span class="hidden min-w-0 lg:block">
-                <span class="block truncate font-semibold text-(--color-ink)">ABOS</span>
+            {{-- খোলা সাইডবারে পূর্ণ ওয়ার্ডমার্ক — নাম ও পূর্ণরূপ দুটোই
+                 ডিজাইনারের নিজের লেটারিংয়ে।
 
-                {{-- স্লোগান — শুধু যেখানে পুরোটা ধরে।
+                 আগে এখানে মার্ক + টাইপ করা "ABOS" + টাইপ করা পূর্ণরূপ ছিল,
+                 আর পূর্ণরূপটা ঘরে না ধরে কেটে যেত। ছবিটা একটাই জিনিস, তাই
+                 কাটার প্রশ্নই নেই — সেটা প্রস্থ অনুযায়ী ছোট-বড় হয়, ভেঙে
+                 যায় না। ৩২০×৯৬ অনুপাতে max-h-10 দিলে ১৩৩px চওড়া, যা
+                 ২২০px সাইডবারেও অনেকটা জায়গা রেখে বসে। --}}
+            <img src="{{ asset('brand/abos-wordmark-transparent.png') }}" alt="ABOS"
+                 class="hidden max-h-10 w-auto object-contain object-left lg:block">
 
-                     ২৯ অক্ষরের লাইনটার দরকার ১৭৪px। ২২০px সাইডবারে (lg)
-                     লোগো ও প্যাডিং বাদ দিয়ে থাকে ১৬৪px — তাই ওখানে সেটা
-                     "All Business Operating Syste" হয়ে কাটা পড়ত, যা লাইনের
-                     মতো নয়, ত্রুটির মতো পড়ায়। ২৬০px-এ (xl) পুরোটা ধরে।
-
-                     মাপটা rem নয়, স্থির px — আর এটাই দ্বিতীয় ফাঁদ ছিল।
-                     বেস ফন্ট clamp() দিয়ে ভিউপোর্টের সাথে বাড়ে (সেকশন ২০.১),
-                     কিন্তু সাইডবারের প্রস্থ স্থির ২৬০px। তাই বড় স্ক্রিনে
-                     লেখাটা বাড়ত অথচ ঘরটা বাড়ত না, আর ১৬০০px-এ আবার কেটে
-                     যেত। স্থির ঘরে স্থির মাপ। --}}
-                <span class="hidden whitespace-nowrap text-[11px] font-semibold tracking-tight
-                             text-(--color-brand-700) xl:block">
-                    {{ __('core.brand.full_name') }}
-                </span>
-            </span>
+            <span class="sr-only">{{ __('core.brand.full_name') }}</span>
         </a>
 
         <div class="flex min-h-0 flex-1">
@@ -69,8 +62,8 @@
 
                  ব্র্যান্ডের নিজের নীল, স্লেট-কালো নয়: পর্দার সবচেয়ে চওড়া
                  রঙিন পৃষ্ঠতলটা প্রোডাক্টের নিজের রং হওয়াই স্বাভাবিক। --}}
-            <nav class="flex w-(--spacing-sidebar-icon) shrink-0 flex-col items-center gap-1
-                        overflow-y-auto border-e border-black/10 bg-(--color-brand-700) py-2"
+            <nav class="flex w-(--spacing-sidebar-icon) shrink-0 flex-col items-center
+                        overflow-y-auto border-e border-black/10 bg-(--color-brand-700) py-1"
                  aria-label="{{ __('core.a11y.module_navigation') }}">
 
                 @foreach ($menu as $module)
@@ -79,14 +72,23 @@
                         $first = collect($module['groups'])->flatten(1)->firstWhere('url', '!==', null);
                     @endphp
 
+                    {{-- সক্রিয় মডিউল চেনা যায় বাঁ পাশের সাদা দাগ দিয়ে, শুধু
+                         হালকা পটভূমি দিয়ে নয়: সরু রেলে ৪৪px বর্গের ভেতরে
+                         একটা ফিকে আয়তক্ষেত্র চোখে পড়ে না। --}}
                     <a @if ($first) href="{{ $first['url'] }}" @endif
                        @class([
-                           'flex size-11 items-center justify-center rounded-(--radius-field) transition-colors',
-                           'bg-white/20' => $isActive,
+                           'relative flex h-11 w-full items-center justify-center transition-colors',
+                           'bg-white/15' => $isActive,
                            'hover:bg-white/10' => ! $isActive,
                        ])
                        @if ($isActive) aria-current="true" @endif
                        title="{{ $module['label'] }}">
+
+                        @if ($isActive)
+                            <span class="absolute inset-y-1 start-0 w-[3px] rounded-e bg-white"
+                                  aria-hidden="true"></span>
+                        @endif
+
                         <x-shell.module-icon :module="$module['code']" shape="module" tone="white" />
                     </a>
                 @endforeach

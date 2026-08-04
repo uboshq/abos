@@ -30,23 +30,26 @@ class DemoSeeder extends Seeder
     public function run(): void
     {
         $alpha = Company::create([
-            'code' => 'ALPHA',
-            'name_en' => 'Alpha Traders Ltd.',
-            'name_bn' => 'আলফা ট্রেডার্স লিমিটেড',
-            'address_en' => '12 Motijheel C/A, Dhaka 1000',
-            'address_bn' => '১২ মতিঝিল বা/এ, ঢাকা ১০০০',
+            'code' => 'TDEPOT',
+            'name_en' => 'Trade Depot',
+            'name_bn' => 'ট্রেড ডিপো',
+            'address_en' => 'Ganginar Par, Mymensingh 2200',
+            'address_bn' => 'গাঙ্গিনার পাড়, ময়মনসিংহ ২২০০',
             'phone' => '+8801700000000',
             'bin' => '000123456-0101',
+            'logo_path' => 'logos/Trade Depot.png',
             'currency' => 'BDT',
             'locale' => 'bn',
         ]);
 
         $beta = Company::create([
-            'code' => 'BETA',
-            'name_en' => 'Beta Distribution',
-            'name_bn' => 'বিটা ডিস্ট্রিবিউশন',
-            'address_en' => '44 Agrabad, Chattogram',
-            'address_bn' => '৪৪ আগ্রাবাদ, চট্টগ্রাম',
+            'code' => 'FMART',
+            'name_en' => 'Family Mart',
+            'name_bn' => 'ফ্যামিলি মার্ট',
+            'address_en' => 'Charpara, Mymensingh 2200',
+            'address_bn' => 'চরপাড়া, ময়মনসিংহ ২২০০',
+            'phone' => '+8801700000001',
+            'logo_path' => 'logos/FamilyMart.png',
             'currency' => 'BDT',
             'locale' => 'bn',
         ]);
@@ -79,10 +82,14 @@ class DemoSeeder extends Seeder
                 ->get()
         );
 
+        // একটা ডিপোর প্রধান কার্যালয় ও তিনটা উপজেলা শাখা — বাস্তব বিন্যাস।
+        // শাখা আলাদা করে না রাখলে সব এন্ট্রি একটাতেই বসে, যা DMS-এ একটা
+        // আলাদা ফিক্স লেগেছিল।
         $this->setUpCompany($alpha, [
-            ['code' => 'DHK', 'name_en' => 'Dhaka Head Office', 'name_bn' => 'ঢাকা প্রধান কার্যালয়', 'is_default' => true],
-            ['code' => 'CTG', 'name_en' => 'Chattogram Depot', 'name_bn' => 'চট্টগ্রাম ডিপো'],
-            ['code' => 'SYL', 'name_en' => 'Sylhet Depot', 'name_bn' => 'সিলেট ডিপো'],
+            ['code' => 'MMS', 'name_en' => 'Main Mymensingh', 'name_bn' => 'প্রধান ময়মনসিংহ', 'is_default' => true],
+            ['code' => 'NTK', 'name_en' => 'Netrakona', 'name_bn' => 'নেত্রকোনা'],
+            ['code' => 'DMD', 'name_en' => 'Dumdy', 'name_bn' => 'ডুমডি'],
+            ['code' => 'KDA', 'name_en' => 'Kendua', 'name_bn' => 'কেন্দুয়া'],
         ]);
 
         $this->setUpCompany($beta, [
@@ -124,9 +131,9 @@ class DemoSeeder extends Seeder
         $this->command?->table(
             ['ব্যবহারকারী', 'ইমেইল', 'রোল', 'কোম্পানি'],
             [
-                ['Al-Amin Shuvo', 'owner@abos.test', 'owner', 'ALPHA + BETA'],
-                ['হিসাবরক্ষক', 'accounts@abos.test', 'accountant', 'ALPHA'],
-                ['বিক্রয়কর্মী', 'sales@abos.test', 'salesman', 'ALPHA'],
+                ['Al-Amin Shuvo', 'owner@abos.test', 'owner', $alpha->code.' + '.$beta->code],
+                ['হিসাবরক্ষক', 'accounts@abos.test', 'accountant', $alpha->code],
+                ['বিক্রয়কর্মী', 'sales@abos.test', 'salesman', $alpha->code],
             ],
         );
         $this->command?->comment('সবার পাসওয়ার্ড: password');

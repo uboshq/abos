@@ -58,6 +58,8 @@ return [
         'switch_language' => 'Switch language',
         'logout' => 'Log out',
         'more' => 'More',
+        'fullscreen' => 'Full screen',
+        'exit_fullscreen' => 'Exit full screen (Esc)',
     ],
 
     'dashboard' => [
@@ -75,6 +77,28 @@ return [
         'full_name' => 'All Business Operating System',
         'tagline' => 'Built Around Your Business.',
         'powered_by' => 'Powered by UNIVER BANGLADESH',
+    ],
+
+    'appearance' => [
+        'title' => 'Appearance',
+        'subtitle' => 'Your own colour, theme and language — not a company setting',
+        'accent' => 'Colour',
+        'accent_note' => 'A fixed set rather than a free picker: each one has had its contrast checked, so no choice leaves a button unreadable.',
+        'theme' => 'Theme',
+        'theme_note' => 'Light or dark background.',
+        'light' => 'Light',
+        'dark' => 'Dark',
+        'language' => 'Language',
+        'saved' => 'Saved.',
+    ],
+
+    'accent' => [
+        'blue' => 'Blue',
+        'teal' => 'Teal',
+        'indigo' => 'Indigo',
+        'violet' => 'Violet',
+        'emerald' => 'Emerald',
+        'slate' => 'Slate',
     ],
 
     'components' => [

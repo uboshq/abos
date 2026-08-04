@@ -47,15 +47,15 @@ class FoundationWorksEndToEndTest extends TestCase
         $owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
         $salesman = User::query()->where('email', 'sales@abos.test')->firstOrFail();
 
-        $alpha = Company::query()->where('code', 'ALPHA')->firstOrFail();
-        $beta = Company::query()->where('code', 'BETA')->firstOrFail();
+        $alpha = Company::query()->where('code', 'TDEPOT')->firstOrFail();
+        $beta = Company::query()->where('code', 'FMART')->firstOrFail();
 
         // ১. কোম্পানি প্রসঙ্গ
         $owner->switchCompany($alpha->id);
         CompanyContext::set($owner->fresh()->current_company_id, $owner->fresh()->current_branch_id);
 
         $this->assertSame($alpha->id, CompanyContext::id());
-        $this->assertSame(3, Branch::query()->count(), 'Alpha has three branches.');
+        $this->assertSame(4, Branch::query()->count(), 'Trade Depot has a head office and three upazila branches.');
 
         // ২. নম্বর ইস্যু
         $numbers = app(NumberSeriesEngine::class);
@@ -106,11 +106,11 @@ class FoundationWorksEndToEndTest extends TestCase
         // ৭. দুই ভাষা
         app()->setLocale('bn');
         $this->assertSame('খসড়া', __('core.status.draft'));
-        $this->assertSame('আলফা ট্রেডার্স লিমিটেড', $alpha->name());
+        $this->assertSame('ট্রেড ডিপো', $alpha->name());
 
         app()->setLocale('en');
         $this->assertSame('Draft', __('core.status.draft'));
-        $this->assertSame('Alpha Traders Ltd.', $alpha->name());
+        $this->assertSame('Trade Depot', $alpha->name());
 
         // ৮. অন্য কোম্পানিতে গেলে কিছুই দেখা যায় না
         $owner->switchCompany($beta->id);
@@ -132,13 +132,13 @@ class FoundationWorksEndToEndTest extends TestCase
         $this->assertSame(2, Company::query()->count());
         $this->assertSame(3, User::query()->count());
 
-        $alpha = Company::query()->where('code', 'ALPHA')->firstOrFail();
+        $alpha = Company::query()->where('code', 'TDEPOT')->firstOrFail();
 
         CompanyContext::set($alpha->id);
 
         $this->assertSame(10, NumberSeries::query()->count(), 'Every document type needs a series.');
         $this->assertNotNull($alpha->currentFinancialYear());
         $this->assertNotNull($alpha->defaultBranch());
-        $this->assertSame('DHK', $alpha->defaultBranch()->code);
+        $this->assertSame('MMS', $alpha->defaultBranch()->code);
     }
 }

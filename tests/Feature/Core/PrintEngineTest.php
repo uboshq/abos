@@ -33,7 +33,7 @@ class PrintEngineTest extends TestCase
 
         $this->seed(DemoSeeder::class);
 
-        $company = Company::query()->where('code', 'ALPHA')->firstOrFail();
+        $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         CompanyContext::set($company->id);
 
         $this->engine = new PrintEngine(app(SettingsService::class));
@@ -53,7 +53,7 @@ class PrintEngineTest extends TestCase
                 'document_no' => 'RCV-2026-2027-0001',
                 'date' => '০৪/০৮/২০২৬',
                 'party' => 'করিম স্টোর',
-                'branch' => 'ঢাকা প্রধান কার্যালয়',
+                'branch' => 'প্রধান ময়মনসিংহ',
                 'narration' => 'বিক্রয়ের বিপরীতে আদায়, ক্ষুদ্র কিস্তি',
                 'amount_in_words' => 'এগারো হাজার পাঁচশত টাকা মাত্র',
                 'total_debit' => '11,500.00',

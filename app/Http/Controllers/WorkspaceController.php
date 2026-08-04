@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Core\Services\MenuBuilder;
+use App\Core\Support\Accent;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
@@ -66,6 +68,39 @@ class WorkspaceController extends Controller
         // রিডাইরেক্ট, রেন্ডার নয় — কোম্পানি বদলের পর আগের পাতার ডাটা
         // অন্য কোম্পানির, আর সেটা দেখানো মানে দুই কোম্পানি মিশে যাওয়া।
         return redirect()->route('dashboard');
+    }
+
+    /**
+     * চেহারা — রং, থিম, ভাষা। ব্যক্তির পছন্দ, কোম্পানির সেটিং নয়।
+     */
+    public function appearance(Request $request): View
+    {
+        $user = $request->user();
+
+        return view('workspace.appearance', [
+            'menu' => $this->menu->forUser($user),
+            'accents' => Accent::all(),
+            'current' => [
+                'accent' => $user->accent ?? Accent::DEFAULT,
+                'theme' => $user->theme ?? 'light',
+                'locale' => $user->locale ?? config('app.locale'),
+            ],
+        ]);
+    }
+
+    public function saveAppearance(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            // মুক্ত পিকার নয় — যাচাই করা তালিকার বাইরের কোনো মান নেওয়া হয় না,
+            // কারণ একটা অপঠনযোগ্য রঙে সেভ বোতামটাই হারিয়ে যায়।
+            'accent' => ['required', 'string', Rule::in(Accent::keys())],
+            'theme' => ['required', 'string', 'in:light,dark'],
+            'locale' => ['required', 'string', 'in:bn,en'],
+        ]);
+
+        $request->user()->forceFill($validated)->save();
+
+        return back()->with('saved', true);
     }
 
     public function switchLocale(Request $request): RedirectResponse

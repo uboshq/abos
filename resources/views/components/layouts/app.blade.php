@@ -6,8 +6,11 @@
     সার্ভার স্ক্রিনের মাপ জানে না আর জানার দরকারও নেই।
 --}}
 <!DOCTYPE html>
+{{-- অ্যাকসেন্ট রংটা সার্ভারেই বসে, JavaScript-এ নয়। JS-এ করলে পাতাটা
+     আগে ডিফল্ট রঙে আঁকা হত, তারপর বদলাত — প্রতিটা লোডে একবার ঝলকানি। --}}
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}"
-      data-theme="{{ auth()->user()?->theme ?? 'light' }}">
+      data-theme="{{ auth()->user()?->theme ?? 'light' }}"
+      style="{{ \App\Core\Support\Accent::styleFor(auth()->user()?->accent ?? \App\Core\Support\Accent::DEFAULT) }}">
 <head>
     <meta charset="utf-8">
 
@@ -37,11 +40,13 @@
         <div class="flex min-w-0 flex-1 flex-col">
             <x-shell.topbar />
 
-            {{-- নিচের প্যাডিং bottom nav-এর উচ্চতার সমান নয়, তার চেয়ে বেশি:
-                 ঠিক সমান দিলে শেষ বোতামটা বারের গা ঘেঁষে থাকে আর আঙুল দিয়ে
+            {{-- নিচের প্যাডিং যা যা ঢেকে রাখে তার সমষ্টির চেয়ে বেশি:
+                 মোবাইলে bottom nav, বড় স্ক্রিনে স্থির স্ট্যাটাস বার। ঠিক
+                 সমান দিলে শেষ বোতামটা বারের গা ঘেঁষে থাকে আর আঙুল দিয়ে
                  টিপতে গেলে ভুলে nav-এ চাপ পড়ে। --}}
             <main id="main"
-                  class="flex-1 px-3 pt-4 pb-[calc(var(--spacing-bottom-nav)+1.5rem)] md:px-5 md:pb-5 lg:px-6"
+                  class="flex-1 px-3 pt-4 pb-[calc(var(--spacing-bottom-nav)+1.5rem)]
+                         md:px-5 md:pb-[calc(var(--spacing-status-bar)+1.5rem)] lg:px-6"
                   tabindex="-1">
                 {{-- কনটেন্টের সর্বোচ্চ প্রস্থ — সেকশন ২০.১। বড় স্ক্রিনে
                      টেনে লম্বা নয়; জায়গা বাড়লে কলাম বাড়ে, লাইন নয়। --}}
@@ -53,10 +58,14 @@
                     {{ $slot }}
                 </div>
             </main>
-
-            <x-shell.statusbar />
         </div>
     </div>
+
+    {{-- স্ট্যাটাস বার লেআউটের বাইরে, পর্দার একদম নিচে ও একদম বাঁ প্রান্ত
+         থেকে। ভেতরের কলামে রাখলে সাইডবারের ডান পাশ থেকে শুরু হত, আর
+         কনটেন্টের সাথে স্ক্রল করে চোখের বাইরে চলে যেত — অথচ কোন কোম্পানি
+         ও কোন অর্থবছরে কাজ হচ্ছে সেটা সবসময় দেখা যাওয়ার কথা। --}}
+    <x-shell.statusbar />
 
     <x-shell.bottom-nav :menu="$menu ?? []" />
 </body>

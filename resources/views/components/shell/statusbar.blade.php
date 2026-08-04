@@ -15,8 +15,9 @@
     $year = $user?->currentCompany?->currentFinancialYear();
 @endphp
 
-<footer class="hidden shrink-0 items-center gap-4 border-t border-(--color-border)
-               bg-(--color-surface-card) px-5 py-1.5 text-2xs text-(--color-ink-muted) lg:flex">
+<footer class="fixed inset-x-0 bottom-0 z-20 hidden h-(--spacing-status-bar) items-center gap-4
+               border-t border-(--color-border) bg-(--color-surface-card) px-3
+               text-2xs text-(--color-ink-muted) md:flex">
 
     <span class="flex items-center gap-1.5">
         <span class="size-2 rounded-full bg-(--color-success)" aria-hidden="true"></span>

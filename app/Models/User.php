@@ -16,7 +16,7 @@ use Illuminate\Notifications\Notifiable;
 use RuntimeException;
 use Spatie\Permission\Traits\HasRoles;
 
-#[Fillable(['name', 'email', 'password', 'locale', 'theme', 'is_active'])]
+#[Fillable(['name', 'email', 'password', 'locale', 'theme', 'accent', 'is_active'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {

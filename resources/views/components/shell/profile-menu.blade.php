@@ -25,7 +25,14 @@
             <p class="truncate text-2xs text-(--color-ink-muted)">{{ $user?->email }}</p>
         </div>
 
-        <form method="POST" action="{{ route('logout') }}">
+        <a href="{{ route('appearance') }}" role="menuitem"
+           class="flex min-h-(--spacing-touch) items-center gap-2 px-3 text-sm
+                  transition-colors hover:bg-(--color-surface-hover)">
+            <span aria-hidden="true">🎨</span>
+            {{ __('core.appearance.title') }}
+        </a>
+
+        <form method="POST" action="{{ route('logout') }}" class="border-t border-(--color-border)">
             @csrf
             <button type="submit" role="menuitem"
                     class="flex min-h-(--spacing-touch) w-full items-center px-3 text-start text-sm

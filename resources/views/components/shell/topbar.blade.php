@@ -36,6 +36,8 @@
     </button>
 
     <div class="ms-auto flex items-center gap-1">
+        <x-shell.fullscreen-toggle />
+
         {{-- ভাষা — নিয়ম ৯। সেভ হয় ব্যবহারকারীর রেকর্ডে, সেশনে নয়। --}}
         <form method="POST" action="{{ route('locale.switch') }}" class="contents">
             @csrf

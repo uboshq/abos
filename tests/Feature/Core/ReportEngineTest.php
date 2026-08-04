@@ -36,7 +36,7 @@ class ReportEngineTest extends TestCase
 
         $this->seed(DemoSeeder::class);
 
-        $this->company = Company::query()->where('code', 'ALPHA')->firstOrFail();
+        $this->company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         CompanyContext::set($this->company->id);
 
         $this->reports = app(ReportEngine::class);
@@ -180,7 +180,7 @@ class ReportEngineTest extends TestCase
     {
         $this->postInvoices(4);
 
-        $beta = Company::query()->where('code', 'BETA')->firstOrFail();
+        $beta = Company::query()->where('code', 'FMART')->firstOrFail();
 
         CompanyContext::forCompany($beta->id, function () {
             $result = app(ReportEngine::class)->run(

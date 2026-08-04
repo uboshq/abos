@@ -58,7 +58,7 @@ class PhaseOneExitTest extends TestCase
     {
         $owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
         $salesman = User::query()->where('email', 'sales@abos.test')->firstOrFail();
-        $alpha = Company::query()->where('code', 'ALPHA')->firstOrFail();
+        $alpha = Company::query()->where('code', 'TDEPOT')->firstOrFail();
 
         $owner->switchCompany($alpha->id);
         CompanyContext::set($alpha->id, $owner->fresh()->current_branch_id);
@@ -152,8 +152,8 @@ class PhaseOneExitTest extends TestCase
     public function test_the_cross_cutting_rules_hold(): void
     {
         $owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
-        $alpha = Company::query()->where('code', 'ALPHA')->firstOrFail();
-        $beta = Company::query()->where('code', 'BETA')->firstOrFail();
+        $alpha = Company::query()->where('code', 'TDEPOT')->firstOrFail();
+        $beta = Company::query()->where('code', 'FMART')->firstOrFail();
 
         $owner->switchCompany($alpha->id);
         CompanyContext::set($alpha->id);
@@ -194,7 +194,7 @@ class PhaseOneExitTest extends TestCase
     public function test_switching_company_survives_a_reload(): void
     {
         $owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
-        $beta = Company::query()->where('code', 'BETA')->firstOrFail();
+        $beta = Company::query()->where('code', 'FMART')->firstOrFail();
 
         $owner->switchCompany($beta->id);
 
@@ -202,6 +202,6 @@ class PhaseOneExitTest extends TestCase
         // রিলোডে মুছে যেত।
         $this->assertSame($beta->id, User::query()->find($owner->id)->current_company_id);
 
-        $this->actingAs($owner->fresh())->get('/')->assertOk()->assertSee('বিটা ডিস্ট্রিবিউশন', false);
+        $this->actingAs($owner->fresh())->get('/')->assertOk()->assertSee('ফ্যামিলি মার্ট', false);
     }
 }

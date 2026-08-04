@@ -16,6 +16,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/', [WorkspaceController::class, 'dashboard'])->name('dashboard');
     Route::get('/components', [WorkspaceController::class, 'components'])->name('components');
 
+    Route::get('/appearance', [WorkspaceController::class, 'appearance'])->name('appearance');
+    Route::post('/appearance', [WorkspaceController::class, 'saveAppearance'])->name('appearance.save');
+
     Route::post('/company/switch', [WorkspaceController::class, 'switchCompany'])->name('company.switch');
     Route::post('/locale/switch', [WorkspaceController::class, 'switchLocale'])->name('locale.switch');
 });
