@@ -1,6 +1,8 @@
 <?php
 
 declare(strict_types=1);
+use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Reports\CoreReports;
 
 /**
@@ -29,7 +31,7 @@ return [
         ],
         'master' => [
             ['label' => 'accounts::menu.chart_of_accounts', 'route' => 'accounts.coa.index', 'permission' => 'accounts.coa.view'],
-            ['label' => 'accounts::menu.cash_tills', 'route' => 'accounts.till.index', 'permission' => 'accounts.till.view', 'planned' => true],
+            ['label' => 'accounts::menu.cash_tills', 'route' => 'accounts.till.index', 'permission' => 'accounts.till.view'],
         ],
         'transactions' => [
             ['label' => 'accounts::menu.receipt', 'route' => 'accounts.voucher.receipt', 'permission' => 'accounts.voucher.create', 'planned' => true],
@@ -85,7 +87,10 @@ return [
         'CC' => 'accounts::doc.cash_count',
     ],
 
-    'drill_sources' => [],
+    'drill_sources' => [
+        'account' => Account::class,
+        'cash_till' => CashTill::class,
+    ],
 
     // রিপোর্ট সরবরাহকারী — কোর নিজে থেকে ডেকে নেবে (সেকশন ১৯.৩)।
     // কোর ফাইলে মডিউলের নাম লিখতে হয় না।

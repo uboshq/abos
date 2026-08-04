@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\Accounts\Http\Controllers\CashTillController;
 use App\Modules\Accounts\Http\Controllers\ChartOfAccountsController;
 use App\Modules\Accounts\Models\Account;
 use Illuminate\Support\Facades\Route;
@@ -31,5 +32,18 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
         Route::get('/{account}/edit', [ChartOfAccountsController::class, 'edit'])->name('edit');
         Route::put('/{account}', [ChartOfAccountsController::class, 'update'])->name('update');
         Route::delete('/{account}', [ChartOfAccountsController::class, 'destroy'])->name('destroy');
+    });
+
+    Route::prefix('cash-tills')->name('till.')->group(function () {
+        Route::get('/', [CashTillController::class, 'index'])->name('index');
+        Route::get('/create', [CashTillController::class, 'create'])->name('create');
+        Route::post('/', [CashTillController::class, 'store'])->name('store');
+        Route::get('/{till}', [CashTillController::class, 'show'])->name('show');
+        Route::get('/{till}/edit', [CashTillController::class, 'edit'])->name('edit');
+        Route::put('/{till}', [CashTillController::class, 'update'])->name('update');
+        Route::delete('/{till}', [CashTillController::class, 'destroy'])->name('destroy');
+
+        // resource ছকের বাইরে, তাই অনুমতি কন্ট্রোলারে হাতে যাচাই করা হয়
+        Route::post('/{till}/primary', [CashTillController::class, 'makePrimary'])->name('primary');
     });
 });

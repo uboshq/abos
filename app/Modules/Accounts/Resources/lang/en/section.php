@@ -7,5 +7,6 @@ return [
     'placement' => 'Placement in the chart',
     'bank' => 'Bank details',
     'opening' => 'Opening balance',
+    'custody' => 'Custody',
     'entries' => 'Transactions',
 ];
