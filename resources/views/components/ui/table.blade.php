@@ -38,7 +38,7 @@
                                     'py-2.5' => ! $compact,
                                     'num' => $column['numeric'],
                                 ])>
-                                {{ $valueOf($row, $column['key']) }}
+                                {{ $cell($row, $column) }}
                             </td>
                         @endforeach
                     </tr>

@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * একটা প্রতিষ্ঠান। টেন্যান্সির উপরের স্তর — বাকি প্রায় সব টেবিলেই এর id বসে।
@@ -70,6 +71,23 @@ class Company extends Model
         }
 
         return $this->name_en;
+    }
+
+    /**
+     * লোগোর ঠিকানা, না থাকলে null।
+     *
+     * ডিস্কের নামটা এখানে একবার লেখা — ভিউতে নয়। ভিউতে Storage::url()
+     * ডাকা হচ্ছিল, যেটা ডিফল্ট ডিস্ক ধরে; ফাইলটা আসলে public ডিস্কে,
+     * আর দুটো একই পথ দিচ্ছিল বলে ভুলটা চোখে পড়েনি। ডিফল্ট ডিস্ক বদলালেই
+     * প্রতিটা লোগো ভেঙে যেত।
+     */
+    public function logoUrl(): ?string
+    {
+        if (! $this->logo_path || ! Storage::disk('public')->exists($this->logo_path)) {
+            return null;
+        }
+
+        return Storage::disk('public')->url($this->logo_path);
     }
 
     public function address(?string $locale = null): ?string

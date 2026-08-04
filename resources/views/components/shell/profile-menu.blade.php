@@ -6,11 +6,9 @@
             @keydown.escape.window="open = false"
             :aria-expanded="open"
             aria-haspopup="menu"
-            class="flex size-(--spacing-touch) items-center justify-center rounded-full
-                   bg-(--color-brand-700) text-sm font-semibold text-(--color-ink-inverse)"
+            class="flex shrink-0 rounded-full"
             title="{{ $user?->name }}">
-        {{-- আদ্যক্ষর — ছবি নেই বলে ফাঁকা বৃত্ত দেখানোর চেয়ে ভালো --}}
-        {{ mb_substr($user?->name ?? '?', 0, 1) }}
+        <x-ui.avatar :user="$user" />
     </button>
 
     <div x-show="open"
@@ -20,10 +18,22 @@
          class="absolute end-0 top-full z-40 mt-1 w-56 rounded-(--radius-field) border
                 border-(--color-border) bg-(--color-surface-card) py-1 shadow-(--shadow-overlay)">
 
-        <div class="border-b border-(--color-border) px-3 py-2">
-            <p class="truncate text-sm font-medium text-(--color-ink)">{{ $user?->name }}</p>
-            <p class="truncate text-2xs text-(--color-ink-muted)">{{ $user?->email }}</p>
+        <div class="flex items-center gap-2 border-b border-(--color-border) px-3 py-2">
+            <x-ui.avatar :user="$user" size="sm" />
+            <span class="min-w-0">
+                <span class="block truncate text-sm font-medium text-(--color-ink)">{{ $user?->name }}</span>
+                <span class="block truncate text-2xs text-(--color-ink-muted)">{{ $user?->email }}</span>
+            </span>
         </div>
+
+        {{-- ছবি ও নাম বদলানোর জায়গা এখানে নয়, প্রোফাইল পাতায়: মেনুর
+             ভেতরে আপলোড বসালে সেটিং দুই জায়গায় ভাগ হয়ে যায়। --}}
+        <a href="{{ route('profile') }}" role="menuitem"
+           class="flex min-h-(--spacing-touch) items-center gap-2 px-3 text-sm
+                  transition-colors hover:bg-(--color-surface-hover)">
+            <span aria-hidden="true">👤</span>
+            {{ __('core.profile.title') }}
+        </a>
 
         <a href="{{ route('appearance') }}" role="menuitem"
            class="flex min-h-(--spacing-touch) items-center gap-2 px-3 text-sm

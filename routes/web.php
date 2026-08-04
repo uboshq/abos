@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\WorkspaceController;
 use Illuminate\Support\Facades\Route;
 
@@ -15,6 +16,11 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('auth')->group(function () {
     Route::get('/', [WorkspaceController::class, 'dashboard'])->name('dashboard');
     Route::get('/components', [WorkspaceController::class, 'components'])->name('components');
+
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile');
+    Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar');
+    Route::delete('/profile/avatar', [ProfileController::class, 'removeAvatar'])->name('profile.avatar.remove');
 
     Route::get('/appearance', [WorkspaceController::class, 'appearance'])->name('appearance');
     Route::post('/appearance', [WorkspaceController::class, 'saveAppearance'])->name('appearance.save');

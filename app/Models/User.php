@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 use Spatie\Permission\Traits\HasRoles;
 
@@ -36,6 +37,39 @@ class User extends Authenticatable
             'is_active' => 'boolean',
             'last_login_at' => 'datetime',
         ];
+    }
+
+    /**
+     * ছবির ঠিকানা, না থাকলে null।
+     *
+     * ফাইলটা মুছে গেলেও কলামে পথ থেকে যেতে পারে (ব্যাকআপ থেকে ফেরানো,
+     * হাতে মোছা)। তখন ভাঙা ছবির আইকনের বদলে আদ্যক্ষর দেখানোই ভালো, তাই
+     * ফাইলটা আছে কি না দেখে নেওয়া হয়।
+     */
+    public function avatarUrl(): ?string
+    {
+        if (! $this->avatar_path) {
+            return null;
+        }
+
+        if (! Storage::disk('public')->exists($this->avatar_path)) {
+            return null;
+        }
+
+        return Storage::disk('public')->url($this->avatar_path);
+    }
+
+    /**
+     * ছবি না থাকলে যে অক্ষরটা দেখানো হয়।
+     *
+     * mb_substr, substr নয় — বাংলা নামে প্রথম "অক্ষর" তিন বাইটের, আর
+     * substr সেটাকে মাঝখান থেকে কেটে অর্থহীন বাইট ফেরত দিত।
+     */
+    public function initial(): string
+    {
+        $name = trim($this->name ?? '');
+
+        return $name === '' ? '?' : mb_strtoupper(mb_substr($name, 0, 1));
     }
 
     /** যে কোম্পানিগুলোতে এই ব্যবহারকারী ঢুকতে পারে। */

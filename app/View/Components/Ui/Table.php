@@ -20,7 +20,7 @@ use InvalidArgumentException;
  */
 class Table extends Component
 {
-    /** @var list<array{key: string, label: string, numeric: bool, width: ?string}> */
+    /** @var list<array{key: string, label: string, numeric: bool, width: ?string, render: ?\Closure}> */
     public array $normalised = [];
 
     /**
@@ -53,6 +53,12 @@ class Table extends Component
                 'label' => $column['label'],
                 'numeric' => (bool) ($column['numeric'] ?? false),
                 'width' => $column['width'] ?? null,
+                // ঘরের ভেতরে লিংক বা ব্যাজ বসানোর একমাত্র পথ।
+                //
+                // এটা ছাড়া প্রতিটা তালিকা-স্ক্রিনে HtmlString হাতে বানিয়ে
+                // কম্পোনেন্ট নিজে রেন্ডার করতে হত — Customer মডিউল লিখতে
+                // গিয়ে ঠিক সেটাই ঘটেছিল, আর সেটাই ছিল ভিত্তির ফাঁকের চিহ্ন।
+                'render' => $column['render'] ?? null,
             ];
         }
     }
@@ -62,9 +68,22 @@ class Table extends Component
         return view('components.ui.table');
     }
 
-    /** একটা সারি থেকে একটা ঘরের মান — অ্যারে ও অবজেক্ট দুটোই চলে। */
-    public function valueOf(mixed $row, string $key): mixed
+    /**
+     * একটা ঘরের বিষয়বস্তু।
+     *
+     * কলামের নিজের render থাকলে সেটাই চলে, আর তার ফেরত দেওয়া HtmlString
+     * অক্ষত থাকে (লিংক, ব্যাজ)। না থাকলে সাধারণ মান, যা Blade নিজেই
+     * escape করে — অর্থাৎ HTML বেরোনোর একমাত্র দরজা এই render, যেটা
+     * ডেভেলপার সচেতনভাবে লেখে।
+     *
+     * @param  array{key: string, render: ?\Closure}  $column
+     */
+    public function cell(mixed $row, array $column): mixed
     {
-        return data_get($row, $key);
+        if ($column['render'] instanceof \Closure) {
+            return ($column['render'])($row);
+        }
+
+        return data_get($row, $column['key']);
     }
 }

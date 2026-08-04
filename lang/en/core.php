@@ -169,4 +169,24 @@ return [
         'branch' => 'Branch',
         'financial_year' => 'Financial year',
     ],
+
+    'profile' => [
+        'title' => 'My profile',
+        'subtitle' => 'Your name and photo',
+        'identity' => 'Identity',
+        'name' => 'Name',
+        'email' => 'Email',
+        'photo' => 'Photo',
+        'photo_note' => 'JPG, PNG or WebP — up to :mb MB. The photo will be cropped square.',
+        'upload_photo' => 'Upload photo',
+        'change_photo' => 'Change photo',
+        'remove_photo' => 'Remove photo',
+        'remove_confirm' => 'The photo will be removed. Continue?',
+        'saved' => 'Saved.',
+    ],
+
+    'avatar' => [
+        'not_an_image' => 'That file could not be opened as an image. Use JPG, PNG or WebP.',
+        'too_large' => 'That photo is too large. Please use a smaller one.',
+    ],
 ];

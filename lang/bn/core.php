@@ -174,4 +174,24 @@ return [
         'branch' => 'শাখা',
         'financial_year' => 'অর্থবছর',
     ],
+
+    'profile' => [
+        'title' => 'আমার প্রোফাইল',
+        'subtitle' => 'আপনার নাম ও ছবি',
+        'identity' => 'পরিচয়',
+        'name' => 'নাম',
+        'email' => 'ইমেইল',
+        'photo' => 'ছবি',
+        'photo_note' => 'JPG, PNG বা WebP — সর্বোচ্চ :mb মেগাবাইট। ছবিটা বর্গাকারে কেটে নেওয়া হবে।',
+        'upload_photo' => 'ছবি দিন',
+        'change_photo' => 'ছবি বদলান',
+        'remove_photo' => 'ছবি সরান',
+        'remove_confirm' => 'ছবিটা সরিয়ে ফেলা হবে। ঠিক আছে?',
+        'saved' => 'সংরক্ষিত হয়েছে।',
+    ],
+
+    'avatar' => [
+        'not_an_image' => 'ফাইলটা ছবি হিসেবে খোলা গেল না। JPG, PNG বা WebP দিন।',
+        'too_large' => 'ছবিটা অনেক বড়। ছোট একটা ছবি দিন।',
+    ],
 ];
