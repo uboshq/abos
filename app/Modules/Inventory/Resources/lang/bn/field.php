@@ -1,0 +1,36 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'code' => 'কোড',
+    'name' => 'নাম',
+    'name_en' => 'নাম (ইংরেজি)',
+    'name_bn' => 'নাম (বাংলা)',
+    'barcode' => 'বারকোড',
+    'brand' => 'ব্র্যান্ড',
+    'category' => 'শ্রেণি',
+    'unit' => 'একক',
+    'tax' => 'ভ্যাট',
+    'purchase_price' => 'ক্রয়মূল্য',
+    'sale_price' => 'বিক্রয়মূল্য',
+    'reorder_level' => 'পুনঃক্রয়ের স্তর',
+    'product' => 'পণ্য',
+    'warehouse' => 'গুদাম',
+    'branch' => 'শাখা',
+    'address' => 'ঠিকানা',
+    'address_en' => 'ঠিকানা (ইংরেজি)',
+    'address_bn' => 'ঠিকানা (বাংলা)',
+    'floor' => 'তাকে',
+    'reserved' => 'ধরা',
+    'hold' => 'আটকানো',
+    'available' => 'বিক্রয়যোগ্য',
+    'reason' => 'কারণ',
+    'counted' => 'গোনা হলো',
+    'difference' => 'পার্থক্য',
+    'state' => 'অবস্থা',
+    'is_default' => 'প্রধান গুদাম',
+    'quantity' => 'পরিমাণ',
+    'date' => 'তারিখ',
+    'narration' => 'বিবরণ',
+];

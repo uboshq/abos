@@ -14,6 +14,11 @@ use App\Models\Company;
 use App\Models\FinancialYear;
 use App\Models\User;
 use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Inventory\Services\ProductService;
+use App\Modules\Inventory\Services\StockService;
+use App\Modules\Inventory\Services\WarehouseService;
+use App\Modules\MasterData\Models\ReasonCode;
+use App\Modules\MasterData\Models\Unit;
 use App\Modules\MasterData\Services\MasterListService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -127,6 +132,11 @@ class DemoSeeder extends Seeder
             ]);
         });
 
+        // গুদাম, পণ্য আর চারটা অবস্থাতেই কিছু মাল — নাহলে মজুদের পর্দা
+        // খুললে ফাঁকা টেবিল, আর ফাঁকা টেবিল দেখে বোঝা যায় না অঙ্কটা ঠিক
+        // আছে কি না।
+        CompanyContext::forCompany($alpha->id, fn () => $this->setUpStock());
+
         CompanyContext::clear();
 
         $this->command?->info('ডেমো ডাটা তৈরি হয়েছে।');
@@ -183,6 +193,100 @@ class DemoSeeder extends Seeder
             app(StandardChart::class)->install();
             app(MasterListService::class)->installDefaults();
         });
+    }
+
+    /**
+     * দুইটা গুদাম, কয়েকটা পণ্য, আর চারটা অবস্থাতেই মাল।
+     *
+     * পরিমাণগুলো ইচ্ছাকৃতভাবে আলাদা: একটা পণ্যে শুধু তাকের মাল, একটায়
+     * অর্ডারে ধরা আছে, একটায় আটকানো, আর একটায় তিনটাই। তাতে মজুদের পর্দা
+     * খুললেই Floor − Reserved − Hold = Available অঙ্কটা চোখে পড়ে, আর
+     * ভুল হলে সেটাও চোখে পড়ে।
+     */
+    private function setUpStock(): void
+    {
+        $warehouses = app(WarehouseService::class);
+        $products = app(ProductService::class);
+        $stock = app(StockService::class);
+
+        $main = $warehouses->create([
+            'code' => 'WH-MMS',
+            'name_en' => 'Mymensingh Store',
+            'name_bn' => 'ময়মনসিংহ গুদাম',
+            'branch_id' => Branch::query()->where('code', 'MMS')->value('id'),
+            'is_default' => true,
+        ]);
+
+        $netrakona = $warehouses->create([
+            'code' => 'WH-NTK',
+            'name_en' => 'Netrakona Store',
+            'name_bn' => 'নেত্রকোনা গুদাম',
+            'branch_id' => Branch::query()->where('code', 'NTK')->value('id'),
+        ]);
+
+        $unit = Unit::query()->where('code', 'PCS')->value('id');
+        $sack = Unit::query()->where('code', 'BAG')->value('id') ?? $unit;
+
+        $rows = [
+            ['Fine Rice 50kg', 'মিনিকেট চাল ৫০ কেজি', $sack, '3400', '3550', '8901000000017'],
+            ['Soyabean Oil 5L', 'সয়াবিন তেল ৫ লিটার', $unit, '820', '880', '8901000000024'],
+            ['Lentil 1kg', 'মসুর ডাল ১ কেজি', $unit, '135', '150', '8901000000031'],
+            ['Sugar 1kg', 'চিনি ১ কেজি', $unit, '118', '128', '8901000000048'],
+        ];
+
+        $made = [];
+
+        foreach ($rows as [$en, $bn, $unitId, $buy, $sell, $barcode]) {
+            $made[] = $products->create([
+                'name_en' => $en,
+                'name_bn' => $bn,
+                'unit_id' => $unitId,
+                'purchase_price' => $buy,
+                'sale_price' => $sell,
+                'reorder_level' => '20',
+                'barcode' => $barcode,
+            ]);
+        }
+
+        [$rice, $oil, $lentil, $sugar] = $made;
+
+        // খোলা মজুদ — উৎস 'opening', যাতে ড্রিল-ডাউনে "কোথা থেকে এল"
+        // প্রশ্নের একটা উত্তর থাকে
+        foreach ([[$rice, '120'], [$oil, '75'], [$lentil, '240'], [$sugar, '180']] as [$product, $qty]) {
+            $stock->move(
+                product: $product, warehouse: $main,
+                sourceType: 'opening', sourceId: $product->id,
+                floor: $qty, narration: 'খোলা মজুদ',
+            );
+        }
+
+        $stock->move(
+            product: $rice, warehouse: $netrakona,
+            sourceType: 'opening', sourceId: $rice->id,
+            floor: '40', narration: 'খোলা মজুদ',
+        );
+
+        // অর্ডারে ধরা — মাল তাকেই আছে, কিন্তু অন্যের নামে
+        $stock->move(
+            product: $lentil, warehouse: $main,
+            sourceType: 'sales_order', sourceId: 1,
+            reserved: '60', documentNo: 'SO-000001',
+        );
+
+        $stock->move(
+            product: $sugar, warehouse: $main,
+            sourceType: 'sales_order', sourceId: 2,
+            reserved: '25', documentNo: 'SO-000002',
+        );
+
+        // আটকানো — দুইটা কারণে, আর কারণ দুইটা এক জিনিস নয়
+        $stock->hold($rice, $main, '30', $this->reason('HOLD-PRICE'));
+        $stock->hold($sugar, $main, '12', $this->reason('HOLD-DMG'));
+    }
+
+    private function reason(string $code): ReasonCode
+    {
+        return ReasonCode::query()->where('code', $code)->firstOrFail();
     }
 
     private function user(string $name, string $email, string $role): User

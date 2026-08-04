@@ -77,10 +77,24 @@ return new class extends Migration
     {
         $tables = [];
 
-        foreach (Schema::getTableListing() as $name) {
-            // কিছু ড্রাইভারে নামের সাথে স্কিমা আসে (public.customers)
-            $name = str_contains($name, '.') ? substr(strrchr($name, '.'), 1) : $name;
+        /*
+         * চলতি স্কিমাটা স্পষ্ট করে বলতেই হবে।
+         *
+         * খালি getTableListing() ডাকলে MySQL ব্যবহারকারী যত ডেটাবেস দেখতে
+         * পায় সবগুলোর টেবিল ফেরত আসে — স্কিমাসহ নামে (abos.customers,
+         * abos_test.customers)। সেই নাম থেকে স্কিমা কেটে ফেললে পাশের
+         * ডেটাবেসের তালিকা দিয়ে এই ডেটাবেসে ALTER চলত: এখানে নেই এমন
+         * টেবিলে গিয়ে মাইগ্রেশন ভাঙত, আর একই টেবিল বারবার ঘোরা হত।
+         *
+         * সার্ভারে এটা আরও খারাপ — এক গ্রাহকের ডেটাবেসের টেবিলের তালিকা
+         * অন্য গ্রাহকের ডেটাবেসে DDL চালাত।
+         */
+        $listing = Schema::getTableListing(
+            schema: Schema::getCurrentSchemaName(),
+            schemaQualified: false,
+        );
 
+        foreach ($listing as $name) {
             if (in_array($name, self::SKIP, true)) {
                 continue;
             }

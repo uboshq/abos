@@ -1,0 +1,11 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'identity' => 'Identity',
+    'pricing' => 'Pricing',
+    'stock' => 'Stock',
+    'movements' => 'Movements',
+    'address' => 'Address',
+];

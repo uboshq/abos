@@ -1,0 +1,96 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Inventory\Services;
+
+use App\Modules\Inventory\Models\Warehouse;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+
+/**
+ * গুদাম তৈরি ও সম্পাদনা।
+ */
+final class WarehouseService
+{
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    public function create(array $data): Warehouse
+    {
+        return DB::transaction(function () use ($data) {
+            $this->assertCodeIsFree(trim((string) $data['code']));
+
+            $warehouse = Warehouse::create([
+                ...$data,
+                'code' => trim((string) $data['code']),
+                'is_default' => false,
+                'is_active' => true,
+                'created_by' => auth()->id(),
+            ]);
+
+            // প্রথম গুদামটাই প্রধান — নাহলে কোনো প্রধান ছাড়া শুরু হত,
+            // আর মাল কোথায় ঢুকবে তা বলার কেউ থাকত না
+            if (($data['is_default'] ?? false) || Warehouse::query()->count() === 1) {
+                $warehouse->makeDefault();
+            }
+
+            return $warehouse->fresh();
+        });
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    public function update(Warehouse $warehouse, array $data): Warehouse
+    {
+        if (trim((string) $data['code']) !== $warehouse->code) {
+            $this->assertCodeIsFree(trim((string) $data['code']), $warehouse->id);
+        }
+
+        $makeDefault = (bool) ($data['is_default'] ?? false);
+        unset($data['is_default']);
+
+        $warehouse->update($data);
+
+        if ($makeDefault) {
+            $warehouse->makeDefault();
+        }
+
+        return $warehouse->fresh();
+    }
+
+    public function deactivate(Warehouse $warehouse): Warehouse
+    {
+        /*
+         * প্রধান গুদাম নিষ্ক্রিয় করা যায় না।
+         *
+         * করলে মাল কোথায় ঢুকবে তা বলার কেউ থাকত না, আর পরের ক্রয়টা
+         * একটা অচেনা ত্রুটিতে আটকে যেত। আগে অন্য একটাকে প্রধান করতে হয়।
+         */
+        if ($warehouse->is_default) {
+            throw ValidationException::withMessages([
+                'is_default' => __('master_data::validation.default_cannot_be_deactivated'),
+            ]);
+        }
+
+        $warehouse->refresh()->forceFill(['is_active' => false])->save();
+
+        return $warehouse->fresh();
+    }
+
+    private function assertCodeIsFree(string $code, ?int $exceptId = null): void
+    {
+        $taken = Warehouse::query()
+            ->where('code', $code)
+            ->when($exceptId, fn ($q, $id) => $q->whereKeyNot($id))
+            ->withTrashed()
+            ->exists();
+
+        if ($taken) {
+            throw ValidationException::withMessages([
+                'code' => __('inventory::validation.warehouse_code_taken'),
+            ]);
+        }
+    }
+}

@@ -50,9 +50,14 @@ class PublicIdTest extends TestCase
     {
         $missing = [];
 
-        foreach (Schema::getTableListing() as $table) {
-            $table = str_contains($table, '.') ? substr(strrchr($table, '.'), 1) : $table;
+        // চলতি স্কিমা স্পষ্ট করে বলা — নাহলে পাশের ডেটাবেসের টেবিলও
+        // তালিকায় আসে, আর এখানে নেই এমন নাম নিয়ে টেস্ট ভুল অভিযোগ করে
+        $listing = Schema::getTableListing(
+            schema: Schema::getCurrentSchemaName(),
+            schemaQualified: false,
+        );
 
+        foreach ($listing as $table) {
             if (in_array($table, self::FRAMEWORK, true)) {
                 continue;
             }

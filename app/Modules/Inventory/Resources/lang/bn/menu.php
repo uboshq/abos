@@ -1,0 +1,13 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'products' => 'পণ্য তালিকা',
+    'warehouses' => 'গুদাম',
+    'stock' => 'মজুদ',
+    'adjust' => 'গণনা ও সমন্বয়',
+    'stock_ledger' => 'মজুদের খতিয়ান',
+    'stock_summary' => 'মজুদের সারাংশ',
+    'hold_report' => 'আটকানো মাল',
+];
