@@ -13,6 +13,8 @@ use App\Models\Branch;
 use App\Models\Company;
 use App\Models\FinancialYear;
 use App\Models\User;
+use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\MasterData\Services\MasterListService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Permission;
@@ -165,6 +167,21 @@ class DemoSeeder extends Seeder
              * থেকে যোগ করা যাবে।
              */
             app(NumberSeriesProvisioner::class)->provision($year);
+
+            /*
+             * হিসাবের প্রমিত ছক ও মাস্টার তালিকাগুলো।
+             *
+             * দুইটাই এতদিন ছিল, শুধু কেউ ডাকত না — আর সেটা ধরা পড়ল
+             * সরবরাহকারীর খোলা ব্যালেন্স বসাতে গিয়ে: খাত নেই মানে
+             * দাখিলাই বসে না। মানে একটা নতুন কোম্পানি খুললে তার হিসাবের
+             * ছক ফাঁকা থাকত, একক ফাঁকা থাকত, শর্ত ফাঁকা থাকত — প্রথম
+             * বিলটাই লেখা যেত না।
+             *
+             * নম্বর সিরিজের বেলায় ঠিক এই ভুলটাই হয়েছিল, তাই নিয়মটা
+             * একই: কোম্পানি তৈরির অংশ হিসেবেই সব বসবে, পরে মনে করে নয়।
+             */
+            app(StandardChart::class)->install();
+            app(MasterListService::class)->installDefaults();
         });
     }
 

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'format_needs_sequence' => 'নম্বরের ছকে {SEQ} থাকতেই হবে — ওটা না থাকলে প্রতিটা ডকুমেন্ট একই নম্বর পেত।',
     'code_required' => 'কোড দিতে হবে।',
     'code_taken' => ':code কোডে আরেকটা রেকর্ড আছে।',
     'unknown_level' => 'এলাকার স্তরটা ঠিক নয়।',

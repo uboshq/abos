@@ -64,9 +64,16 @@
                 <x-ui.field name="email" type="email" :label="__('customer::field.email')"
                                    :value="old('email', $customer->email)" />
 
-                <x-ui.field name="customer_type" :label="__('customer::field.type')"
-                                   :value="old('customer_type', $customer->customer_type)"
-                                   :hint="__('customer::message.type_hint')" />
+                {{-- ধরন মাস্টার তালিকা থেকে, মুক্ত লেখা নয় — প্রতিষ্ঠান
+                     নিজেই নতুন ধরন যোগ করতে পারে, তাই এখানে কোনো স্থির
+                     তালিকাও নেই। আগে এটা খোলা ইনপুট ছিল, আর তাতে একই
+                     ধরন "পাইকারি", "পাইকারী", "wholesale" তিন বানানে
+                     জমা হত — তারপর ধরন ধরে রিপোর্ট করা যেত না। --}}
+                <x-ui.select name="party_type_id" :label="__('customer::field.type')"
+                             :options="$partyTypes->mapWithKeys(fn ($t) => [$t->id => $t->name()])"
+                             :selected="$customer->party_type_id"
+                             :hint="__('customer::message.type_hint')"
+                             placeholder="—" />
             </div>
         </section>
 

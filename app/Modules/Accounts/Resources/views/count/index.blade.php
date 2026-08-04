@@ -27,10 +27,11 @@
 
     <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
-            <x-ui.toolbar :columns="false" :density="false" />
+            <x-ui.toolbar />
         </form>
 
         <x-ui.table
+            :compact="request()->boolean('compact')"
             :empty="$q ? __('core.empty.no_results') : __('accounts::message.no_counts')"
             :rows="$counts"
             :columns="[
@@ -41,7 +42,10 @@
                 ['key' => 'cash_till_id', 'label' => __('accounts::menu.cash_tills'),
                  'render' => fn ($c) => $c->till?->name()],
                 ['key' => 'counted_amount', 'label' => __('accounts::field.counted'), 'numeric' => true,
-                 'width' => '10rem', 'render' => fn ($c) => number_format((float) $c->counted_amount, 2)],
+                 'width' => '10rem', 'render' => fn ($c) => view('ui.amount-link', [
+                     'value' => $c->counted_amount,
+                     'href' => route('accounts.count.show', $c),
+                 ])],
                 ['key' => 'difference', 'label' => __('accounts::field.difference'), 'numeric' => true,
                  'width' => '10rem', 'render' => fn ($c) => view('accounts::count.partials.difference', ['count' => $c])],
                 ['key' => 'status', 'label' => __('accounts::field.state'), 'width' => '8rem',

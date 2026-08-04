@@ -48,7 +48,10 @@
         <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="text-sm font-medium text-(--color-ink-muted)">{{ __('accounts::field.balance') }}</h2>
 
-            <p class="num mt-1 text-2xl font-semibold">{{ number_format((float) $balance, 2) }}</p>
+            {{-- অঙ্কটাই লিংক — নিচের টেবিলে এই খাতের এন্ট্রিগুলো (নিয়ম ১) --}}
+            <p class="mt-1 text-2xl font-semibold">
+                <x-ui.amount :value="$balance" href="#transactions" />
+            </p>
 
             <p class="mt-2 text-2xs text-(--color-ink-muted)">
                 {{ __('accounts::nature.' . $account->nature) }} · {{ __('accounts::type.' . $account->type) }}
@@ -101,7 +104,7 @@
     </div>
 
     @if ($account->is_group)
-        <section class="mt-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
+        <section id="transactions" class="mt-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card)">
             <h2 class="border-b border-(--color-border) px-4 py-3 font-semibold">
                 {{ __('accounts::menu.chart_of_accounts') }}

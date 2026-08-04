@@ -10,7 +10,7 @@
     <x-ui.empty-state :message="$empty" />
 @else
     <div class="table-responsive">
-        <table class="table-cards w-full border-collapse text-sm">
+        <table @class(['table-cards w-full border-collapse text-sm', 'as-cards' => $grid])>
             <thead>
                 <tr class="border-b border-(--color-border) bg-(--color-surface-app)">
                     @foreach ($normalised as $column)

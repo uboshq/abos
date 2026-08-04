@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Customer\Http\Controllers;
 
 use App\Core\Concerns\AuthorizesResource;
+use App\Core\Concerns\SortsLists;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingsService;
 use App\Core\Support\RunningBalance;
@@ -14,9 +15,12 @@ use App\Models\LedgerEntry;
 use App\Modules\Customer\Http\Requests\CustomerRequest;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Customer\Services\CustomerService;
+use App\Modules\MasterData\Models\PartyType;
+use Illuminate\Contracts\Database\Query\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\View\View;
 
 /**
@@ -29,6 +33,7 @@ use Illuminate\View\View;
 class CustomerController extends Controller implements HasMiddleware
 {
     use AuthorizesResource;
+    use SortsLists;
 
     public function __construct(
         private readonly CustomerService $customers,
@@ -39,15 +44,27 @@ class CustomerController extends Controller implements HasMiddleware
     /** সাতটা পদ্ধতির সাতটা অনুমতি — একটাও হাতে লেখা নয়। */
     public static function middleware(): array
     {
-        return static::resourcePermissions(Customer::class, 'customer');
+        return [
+            ...static::resourcePermissions(Customer::class, 'customer'),
+
+            // ফিরিয়ে আনাও নিষ্ক্রিয় করার অনুমতিতেই — নাহলে সুইচের
+            // একদিকে তালা থাকত, অন্যদিকে নয়
+            new Middleware('can:delete,customer', only: ['activate']),
+        ];
     }
 
     public function index(Request $request): View
     {
-        $customers = Customer::query()
+        $query = Customer::query()
             ->search($request->query('q'))
             ->when($request->boolean('inactive') === false, fn ($q) => $q->active())
-            ->orderBy('name_en')
+            ->with('partyType')
+            // বকেয়া সারির সাথেই আসে, নাহলে ৫০ সারিতে ৫০টা কোয়েরি
+            ->withOutstanding();
+
+        $sort = $this->applySort($query, $request, $this->sorts());
+
+        $customers = $query
             // পেজিনেশন বাধ্যতামূলক (সেকশন ৯) — শেয়ার্ড হোস্টে পুরো তালিকা
             // এক রেসপন্সে পাঠানো মানে টাইমআউট।
             ->paginate(50)
@@ -58,6 +75,8 @@ class CustomerController extends Controller implements HasMiddleware
             'customers' => $customers,
             'q' => $request->query('q'),
             'showInactive' => $request->boolean('inactive'),
+            'sortOptions' => $this->sortLabels(),
+            'sort' => $sort,
         ]);
     }
 
@@ -66,9 +85,7 @@ class CustomerController extends Controller implements HasMiddleware
         return view('customer::form', [
             'menu' => $this->menu->forUser($request->user()),
             'customer' => new Customer(['credit_limit' => 0, 'credit_days' => 0, 'is_active' => true]),
-            'branches' => Branch::query()->active()->orderBy('name_en')->get(),
-            'requireBangla' => $this->settings->enabled('customer.require_bn_name'),
-            'creditLimitOn' => $this->settings->enabled('customer.credit_limit_enabled'),
+            ...$this->options(),
         ]);
     }
 
@@ -98,10 +115,14 @@ class CustomerController extends Controller implements HasMiddleware
         $page = max(1, (int) $request->query('page', 1));
         $perPage = 50;
 
-        // চলমান ব্যালেন্স শুরু হয় খোলা ব্যালেন্স থেকে, তারপর আগের
-        // পাতাগুলোর সব সারি — নাহলে প্রতিটা পাতা শূন্য থেকে শুরু হত আর
-        // শেষ পাতার ব্যালেন্স উপরের বকেয়ার সাথে মিলত না।
-        $opening = (string) $customer->opening_balance;
+        // চলমান ব্যালেন্স শুরু শূন্য থেকে, তারপর আগের পাতাগুলোর সব সারি —
+        // নাহলে প্রতিটা পাতা শূন্য থেকে শুরু হত আর শেষ পাতার ব্যালেন্স
+        // উপরের বকেয়ার সাথে মিলত না।
+        //
+        // খোলা ব্যালেন্স আলাদা করে যোগ করা হয় না: ওটা এখন লেজারের
+        // সত্যিকারের একটা দাখিলা (OpeningBalanceService), তাই নিজে
+        // থেকেই প্রথম সারি হয়ে আসে।
+        $opening = '0';
 
         if ($page > 1) {
             $opening = RunningBalance::sumOf(
@@ -120,27 +141,19 @@ class CustomerController extends Controller implements HasMiddleware
             $entry->running_balance = $running->add($entry->debit, $entry->credit);
         });
 
-        // খোলা ব্যালেন্স নিজেও একটা সারি — প্রথম পাতায়, সবার উপরে।
-        //
-        // না দিলে যোগফল মেলে না: করিমের প্রথম বিল ১১,৫০০ অথচ ব্যালেন্স
-        // দেখায় ২৩,৫০০, আর বাকি ১২,০০০ কোথা থেকে এল তার কোনো উত্তর
-        // পর্দায় নেই। নিয়ম ১ ঠিক এটাই নিষেধ করে।
-        //
-        // সারিটা সেভ করা হয় না — এটা লেজারের এন্ট্রি নয়, গ্রাহকের রেকর্ডে
-        // লেখা একটা সংখ্যা। দেখানোর জন্য একই আকার দেওয়া হচ্ছে যাতে
-        // টেবিলটার আলাদা কোনো নিয়ম না লাগে।
-        if ($page === 1 && bccomp((string) $customer->opening_balance, '0', 4) !== 0) {
-            $opening = new LedgerEntry([
-                'trx_date' => $customer->opening_date,
-                'debit' => $customer->opening_balance,
-                'credit' => 0,
-                'narration' => __('customer::message.opening_row'),
-            ]);
-
-            $opening->running_balance = (string) $customer->opening_balance;
-
-            $entries->setCollection($entries->getCollection()->prepend($opening));
-        }
+        /*
+         * খোলা ব্যালেন্সের কৃত্রিম সারিটা এখানে আর নেই।
+         *
+         * আগে ছিল, কারণ অঙ্কটা শুধু গ্রাহকের রেকর্ডে লেখা একটা সংখ্যা
+         * ছিল — লেজারে কিছু ছিল না। না দেখালে যোগফল মিলত না: করিমের
+         * প্রথম বিল ১১,৫০০ অথচ ব্যালেন্স ২৩,৫০০, আর বাকি ১২,০০০ কোথা
+         * থেকে এল তার উত্তর পর্দায় নেই — নিয়ম ১ ঠিক এটাই নিষেধ করে।
+         *
+         * কিন্তু ওটা উপসর্গের চিকিৎসা ছিল। আসল সমস্যা ছিল অঙ্কটা খাতায়
+         * না বসা, আর সেটা এই পাতাতেই থামত না — ট্রায়াল ব্যালেন্স ও
+         * বকেয়া তালিকাতেও সংখ্যাটা উধাও থাকত। এখন খোলা ব্যালেন্স
+         * সত্যিকারের দাখিলা, তাই সারিটা নিজে থেকেই আসে।
+         */
 
         return view('customer::show', [
             'menu' => $this->menu->forUser($request->user()),
@@ -156,10 +169,61 @@ class CustomerController extends Controller implements HasMiddleware
         return view('customer::form', [
             'menu' => $this->menu->forUser($request->user()),
             'customer' => $customer,
+            ...$this->options(),
+        ]);
+    }
+
+    /**
+     * কোন বাছাই কী করে।
+     *
+     * প্রথমটাই ডিফল্ট, আর সেটা "সবচেয়ে বেশি বকেয়া আগে": তালিকাটা
+     * খোলার আসল কারণ প্রায় সবসময় "কার কাছে টাকা আটকে আছে", বর্ণ
+     * অনুযায়ী কে কোথায় তা নয়।
+     *
+     * @return array<string, callable(Builder): mixed>
+     */
+    private function sorts(): array
+    {
+        return [
+            'due_desc' => fn ($q) => $q->orderByDesc('outstanding_net')->orderBy('name_en'),
+            'due_asc' => fn ($q) => $q->orderBy('outstanding_net')->orderBy('name_en'),
+            'name' => fn ($q) => $q->orderBy('name_en'),
+            'code' => fn ($q) => $q->orderBy('code'),
+            'recent' => fn ($q) => $q->orderByDesc('created_at'),
+        ];
+    }
+
+    /** @return array<string, string> */
+    private function sortLabels(): array
+    {
+        return [
+            'due_desc' => __('customer::sort.due_desc'),
+            'due_asc' => __('customer::sort.due_asc'),
+            'name' => __('customer::sort.name'),
+            'code' => __('customer::sort.code'),
+            'recent' => __('customer::sort.recent'),
+        ];
+    }
+
+    /**
+     * ফর্মের ড্রপডাউন ও সুইচগুলো — তৈরি ও সম্পাদনা দুই জায়গায় এক।
+     *
+     * আগে দুইবার লেখা ছিল, আর ধরনের ড্রপডাউন যোগ করতে গিয়ে দেখা গেল
+     * একটায় বসিয়ে অন্যটায় ভুলে যাওয়া কতটা সহজ — সেটাই One Form
+     * Standard-এর পেছনের যুক্তি (সেকশন ১৫.২৪)।
+     *
+     * @return array<string, mixed>
+     */
+    private function options(): array
+    {
+        return [
             'branches' => Branch::query()->active()->orderBy('name_en')->get(),
+            // "both" ধরনগুলোও আসে: একটা প্রতিষ্ঠান একইসাথে গ্রাহক ও
+            // সরবরাহকারী হতে পারে, আর দুইবার লিখতে বলার মানে নেই
+            'partyTypes' => PartyType::query()->for(PartyType::CUSTOMER)->active()->orderBy('code')->get(),
             'requireBangla' => $this->settings->enabled('customer.require_bn_name'),
             'creditLimitOn' => $this->settings->enabled('customer.credit_limit_enabled'),
-        ]);
+        ];
     }
 
     public function update(CustomerRequest $request, Customer $customer): RedirectResponse
@@ -184,5 +248,21 @@ class CustomerController extends Controller implements HasMiddleware
         return redirect()
             ->route('customer.index')
             ->with('saved', __('customer::message.deactivated', ['name' => $customer->name()]));
+    }
+
+    /**
+     * আবার সক্রিয় করা।
+     *
+     * নিষ্ক্রিয় করা একমুখী দরজা হলে ব্যবহারকারী ভুল করে বন্ধ করা
+     * গ্রাহকের জন্য দ্বিতীয় একটা রেকর্ড খুলত — একই দোকান দুইবার,
+     * দুইটা আলাদা বকেয়া নিয়ে। সেটাই সবচেয়ে খারাপ ফল।
+     */
+    public function activate(Customer $customer): RedirectResponse
+    {
+        $this->customers->activate($customer);
+
+        return redirect()
+            ->route('customer.show', $customer)
+            ->with('saved', __('customer::message.activated'));
     }
 }

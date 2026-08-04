@@ -9,6 +9,7 @@ use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Models\IssuedNumber;
+use App\Modules\Accounts\Services\OpeningBalanceService;
 use App\Modules\Customer\Models\Customer;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -25,6 +26,7 @@ final class CustomerService
     public function __construct(
         private readonly NumberSeriesEngine $numbers,
         private readonly SettingsService $settings,
+        private readonly OpeningBalanceService $openings,
     ) {}
 
     /**
@@ -37,9 +39,9 @@ final class CustomerService
         return DB::transaction(function () use ($data) {
             // কোড না দিলে সিরিজ থেকে — নম্বর ইস্যু ট্রানজেকশনের ভেতরে,
             // নাহলে গ্রাহক সেভ ব্যর্থ হলেও কোডটা খরচ হয়ে যেত।
-            $data['code'] = filled($data['code'] ?? null)
-                ? trim($data['code'])
-                : $this->numbers->next('CUS');
+            $givenCode = filled($data['code'] ?? null);
+
+            $data['code'] = $givenCode ? trim($data['code']) : $this->numbers->next('CUS');
 
             $this->assertCodeIsFree($data['code']);
 
@@ -55,14 +57,36 @@ final class CustomerService
                 'created_by' => auth()->id(),
             ]);
 
-            // ইস্যু করা কোডটা কোন গ্রাহকে বসল, সেটা নম্বর-রেজিস্টারে
-            // ফেরত লেখা হয় — নাহলে "CUS-0007 কার" প্রশ্নের উত্তর থাকত না।
-            if (blank($data['code_was_given'] ?? null)) {
+            /*
+             * ইস্যু করা কোডটা কোন গ্রাহকে বসল, সেটা নম্বর-রেজিস্টারে
+             * ফেরত লেখা হয় — নাহলে "CUS-0007 কার" প্রশ্নের উত্তর থাকত না।
+             *
+             * শর্তটা আগে $data['code_was_given'] দেখত, অথচ ওই কী কেউ
+             * কোথাও বসাত না — মানে শর্তটা সবসময় সত্যি ছিল। হাতে লেখা
+             * কোডের জন্য রেজিস্টারে সারি থাকে না বলে ক্ষতি হয়নি, কিন্তু
+             * শর্তটা কিছুই বাছাই করছিল না।
+             */
+            if (! $givenCode) {
                 IssuedNumber::query()
                     ->where('document_no', $customer->code)
                     ->whereNull('source_id')
                     ->update(['source_type' => Customer::drillSourceType(), 'source_id' => $customer->id]);
             }
+
+            /*
+             * খোলা ব্যালেন্স খাতায়ও যায়, শুধু গ্রাহকের সারিতে নয়।
+             *
+             * না গেলে গ্রাহকের পাতায় পাওনা দেখাত, অথচ ট্রায়াল ব্যালেন্স
+             * বা বকেয়া তালিকায় অঙ্কটা কোথাও থাকত না — ওরা লেজার থেকে
+             * গোনে। দুই জায়গা থেকে দুই সংখ্যা মানে একদিন অমিল।
+             */
+            $this->openings->forReceivable(
+                Customer::drillSourceType(),
+                $customer->id,
+                $customer->code,
+                (string) $customer->opening_balance,
+                $customer->opening_date,
+            );
 
             return $customer;
         });

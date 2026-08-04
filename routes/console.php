@@ -1,8 +1,27 @@
 <?php
 
-use Illuminate\Foundation\Inspiring;
-use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
 
-Artisan::command('inspire', function () {
-    $this->comment(Inspiring::quote());
-})->purpose('Display an inspiring quote');
+/*
+ * নির্ধারিত কাজ।
+ *
+ * সার্ভার অফিসের একটা মেশিন, তাই এখানে যা লেখা আছে তা সত্যিই চলতে হলে
+ * উইন্ডোজে একটা Task Scheduler এন্ট্রি লাগে:
+ *
+ *     php artisan schedule:run   — প্রতি মিনিটে
+ *
+ * ওই এন্ট্রিটা না থাকলে নিচের কিছুই চলবে না, আর কেউ টের পাবে না —
+ * বিশেষ করে ব্যাকআপ, যেটার অনুপস্থিতি জানা যায় ঠিক সেই দিন যেদিন
+ * সেটা দরকার পড়ে।
+ */
+
+// রোজ রাতে ব্যাকআপ, আর নিয়েই ফিরিয়ে এনে যাচাই। সময়টা কনফিগ থেকে,
+// কারণ কোন সময়ে অফিস বন্ধ থাকে সেটা প্রতিষ্ঠানভেদে আলাদা।
+Schedule::command('abos:backup')
+    ->dailyAt((string) config('abos.backup.daily_at'))
+    ->withoutOverlapping()
+    ->onFailure(function () {
+        // ব্যর্থ ব্যাকআপ নীরবে যেতে দেওয়া যায় না — সবাই ভাববে ব্যাকআপ
+        // আছে, অথচ নেই
+        logger()->critical('রাতের ব্যাকআপ ব্যর্থ হয়েছে — হাতে দেখতে হবে।');
+    });

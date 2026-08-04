@@ -15,6 +15,8 @@ return [
     'group_hint' => 'A group is only a heading — it takes no entries of its own and shows the total of what sits under it.',
     'parent_sets_type' => 'Pick a parent and the type comes from it.',
     'opening_note' => 'What the balance was before this system. Can only be set now — to change it later, post a journal voucher.',
+    'opening_balance' => 'Opening balance',
+
     'no_entries' => 'No transactions on this account yet.',
     'system_account' => 'System account',
     'too_many_to_tree' => 'The chart has :count accounts — more than the :limit that render as a tree at once. Search by code or name above.',

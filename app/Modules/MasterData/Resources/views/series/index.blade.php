@@ -36,6 +36,24 @@
         </div>
     @endif
 
+    {{-- কী কী চিহ্ন লেখা যায় তা দেখানো হয়। না দেখালে ব্যবহারকারী
+         অনুমান করতেন, আর ভুল চিহ্ন হুবহু নম্বরে বসে যেত। --}}
+    <div class="mb-4 rounded-(--radius-card) border border-(--color-border)
+                bg-(--color-surface-card) p-4">
+        <p class="mb-2 max-w-(--spacing-prose-max) text-sm text-(--color-ink-muted)">
+            {{ __('master_data::message.series_placeholders') }}
+        </p>
+
+        <dl class="grid gap-x-4 gap-y-1 sm:grid-cols-2 lg:grid-cols-4">
+            @foreach ($placeholders as $token => $label)
+                <div class="flex items-baseline gap-2">
+                    <dt class="num text-2xs font-medium">{{ $token }}</dt>
+                    <dd class="text-2xs text-(--color-ink-muted)">{{ __($label) }}</dd>
+                </div>
+            @endforeach
+        </dl>
+    </div>
+
     <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <div class="overflow-x-auto">
             <table class="w-full border-collapse text-sm">
@@ -44,17 +62,29 @@
                         <th scope="col" class="px-3 py-2 text-start font-medium text-(--color-ink-muted)">
                             {{ __('master_data::field.doc_type') }}
                         </th>
-                        <th scope="col" style="width: 10rem"
+                        <th scope="col" style="width: 8rem"
                             class="px-3 py-2 text-start font-medium text-(--color-ink-muted)">
                             {{ __('master_data::field.prefix') }}
                         </th>
-                        <th scope="col" style="width: 8rem"
-                            class="num px-3 py-2 text-start font-medium text-(--color-ink-muted)">
-                            {{ __('master_data::field.next_number') }}
-                        </th>
-                        <th scope="col" style="width: 12rem"
+                        <th scope="col" style="width: 7rem"
                             class="px-3 py-2 text-start font-medium text-(--color-ink-muted)">
-                            {{ __('core.print.document_no') }}
+                            {{ __('master_data::field.suffix') }}
+                        </th>
+                        <th scope="col" style="width: 16rem"
+                            class="px-3 py-2 text-start font-medium text-(--color-ink-muted)">
+                            {{ __('master_data::field.format') }}
+                        </th>
+                        <th scope="col" style="width: 6rem"
+                            class="num px-3 py-2 text-start font-medium text-(--color-ink-muted)">
+                            {{ __('master_data::field.padding') }}
+                        </th>
+                        <th scope="col" style="width: 8rem"
+                            class="px-3 py-2 text-start font-medium text-(--color-ink-muted)">
+                            {{ __('master_data::field.reset_yearly') }}
+                        </th>
+                        <th scope="col" style="width: 13rem"
+                            class="px-3 py-2 text-start font-medium text-(--color-ink-muted)">
+                            {{ __('master_data::field.sample') }}
                         </th>
                         <th scope="col" style="width: 7rem" class="px-3 py-2"></th>
                     </tr>
@@ -78,21 +108,55 @@
                                 </td>
 
                                 <td class="px-3 py-2">
+                                    <span class="sr-only">{{ __('master_data::field.prefix') }}</span>
                                     <input type="text" name="prefix" value="{{ $row->prefix }}"
+                                           aria-label="{{ __('master_data::field.prefix') }}"
                                            class="h-(--spacing-field) w-full rounded-(--radius-field) border
                                                   border-(--color-border) bg-(--color-surface-card) px-2">
                                 </td>
 
-                                {{-- পরের নম্বরটা দেখানো হয়, বদলানো যায় না --}}
-                                <td class="num px-3 py-2 text-(--color-ink-muted)">
-                                    {{ number_format($row->next_number) }}
+                                <td class="px-3 py-2">
+                                    <input type="text" name="suffix" value="{{ $row->suffix }}"
+                                           aria-label="{{ __('master_data::field.suffix') }}"
+                                           class="h-(--spacing-field) w-full rounded-(--radius-field) border
+                                                  border-(--color-border) bg-(--color-surface-card) px-2">
                                 </td>
 
                                 <td class="px-3 py-2">
+                                    <input type="text" name="format" value="{{ $row->format }}"
+                                           aria-label="{{ __('master_data::field.format') }}"
+                                           class="num h-(--spacing-field) w-full rounded-(--radius-field) border
+                                                  border-(--color-border) bg-(--color-surface-card) px-2 text-2xs">
+                                </td>
+
+                                <td class="px-3 py-2">
+                                    <input type="number" name="padding" value="{{ $row->padding }}"
+                                           min="1" max="12" inputmode="numeric"
+                                           aria-label="{{ __('master_data::field.padding') }}"
+                                           class="num h-(--spacing-field) w-full rounded-(--radius-field) border
+                                                  border-(--color-border) bg-(--color-surface-card) px-2 text-end">
+                                </td>
+
+                                <td class="px-3 py-2">
+                                    <label class="flex min-h-(--spacing-touch) items-center gap-2">
+                                        <input type="checkbox" name="reset_yearly" value="1"
+                                               @checked($row->reset_yearly) class="size-4">
+                                        <span class="text-2xs text-(--color-ink-muted)">
+                                            {{ $row->reset_yearly ? __('core.yes') : __('core.no') }}
+                                        </span>
+                                    </label>
+                                </td>
+
+                                {{-- নমুনাটা ইঞ্জিনের নিজের কোড থেকে আসে।
+
+                                     আগে এখানে "{prefix}-{বছর}-{ক্রম}" হাতে জোড়া
+                                     হত, অথচ ছকটা অন্য কিছু হলে নমুনাটা মিথ্যা
+                                     বলত — ব্যবহারকারী একটা দেখে সেভ করতেন, আর
+                                     ডকুমেন্টে বসত অন্যটা। --}}
+                                <td class="px-3 py-2">
                                     <span class="num text-2xs text-(--color-ink-muted)">
-                                        {{ $row->prefix }}-{{ $row->financialYear?->name ?? '…' }}-{{ str_pad((string) $row->next_number, (int) $row->padding, '0', STR_PAD_LEFT) }}
+                                        {{ $engine->preview($row) }}
                                     </span>
-                                    <input type="hidden" name="padding" value="{{ $row->padding }}">
                                 </td>
 
                                 <td class="px-3 py-2 text-end">

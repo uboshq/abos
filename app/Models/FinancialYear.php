@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Core\Concerns\BelongsToCompany;
+use App\Core\Concerns\HasPublicId;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
@@ -20,6 +21,7 @@ class FinancialYear extends Model
 {
     use BelongsToCompany;
     use HasFactory;
+    use HasPublicId;
 
     protected $fillable = [
         'company_id', 'name', 'starts_on', 'ends_on',

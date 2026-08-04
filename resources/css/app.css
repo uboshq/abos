@@ -95,6 +95,13 @@
    ───────────────────────────────────────────────────────────────── */
 
 @layer base {
+    /* Alpine বুট হওয়ার আগে x-show="false" ঘরগুলো দৃশ্যমান থাকে, তাই
+       ফিল্টার প্যানেল এক পলকের জন্য খুলে গিয়ে বন্ধ হত — পাতাটা লাফাত।
+       Alpine বুট হলে সে নিজেই x-cloak মুছে দেয়। */
+    [x-cloak] {
+        display: none !important;
+    }
+
     html {
         /* rem-ভিত্তিক সব মাপ এখান থেকে স্কেল করে। বড় স্ক্রিনে বেস ফন্ট
            বড় হয় (সেকশন ২০.১) — তাই ৪K মনিটরে লেখা ছোট দেখায় না, আর
@@ -194,44 +201,93 @@
         overflow-x: auto;
     }
 
-    @media (max-width: 767px) {
-        .table-cards thead {
-            /* display:none নয় — স্ক্রিন রিডারের কাছে হেডার থাকা দরকার */
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            overflow: hidden;
-            clip: rect(0 0 0 0);
+    /* কার্ড রূপটা ডিফল্ট, আর বড় পর্দায় সেটা টেবিলে ফিরে যায়।
+       উল্টো দিক থেকে লেখার কারণ: ব্যবহারকারী চাইলে বড় পর্দাতেও কার্ড
+       দেখতে পারেন (টুলবারের View টগল)। ওটা একটা ক্লাস, আর ক্লাস কখনো
+       মিডিয়া কোয়েরির ভেতরে ঢুকতে পারে না — তাই নিয়মগুলো একবার লিখে
+       বড় পর্দায় বাতিল করা হয়, দুইবার লেখা হয় না। */
+
+    .table-cards thead {
+        /* display:none নয় — স্ক্রিন রিডারের কাছে হেডার থাকা দরকার */
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+    }
+
+    .table-cards tr {
+        display: block;
+        margin-bottom: 0.75rem;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-field);
+        background: var(--color-surface-card);
+        padding: 0.5rem 0.75rem;
+    }
+
+    .table-cards td {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        border: 0;
+        padding: 0.35rem 0;
+    }
+
+    /* data-label ছাড়া ব্যবহারকারী শুধু কতগুলো সংখ্যা দেখবে, কোনটা কী
+       বোঝার উপায় থাকবে না। শেয়ার্ড টেবিল কম্পোনেন্টে বাধ্যতামূলক। */
+    .table-cards td::before {
+        content: attr(data-label);
+        color: var(--color-ink-muted);
+        font-weight: 500;
+        flex-shrink: 0;
+    }
+
+    .table-cards td.num {
+        text-align: right;
+    }
+
+    /* বড় পর্দায় আবার সত্যিকারের টেবিল — যদি না ব্যবহারকারী কার্ড
+       বেছে নিয়ে থাকেন (.as-cards)। */
+    @media (min-width: 768px) {
+        .table-cards:not(.as-cards) thead {
+            position: static;
+            width: auto;
+            height: auto;
+            overflow: visible;
+            clip: auto;
         }
 
-        .table-cards tr {
-            display: block;
-            margin-bottom: 0.75rem;
-            border: 1px solid var(--color-border);
-            border-radius: var(--radius-field);
-            background: var(--color-surface-card);
-            padding: 0.5rem 0.75rem;
-        }
-
-        .table-cards td {
-            display: flex;
-            justify-content: space-between;
-            gap: 1rem;
+        .table-cards:not(.as-cards) tr {
+            display: table-row;
+            margin-bottom: 0;
             border: 0;
-            padding: 0.35rem 0;
+            border-bottom: 1px solid var(--color-border);
+            border-radius: 0;
+            background: transparent;
+            padding: 0;
         }
 
-        /* data-label ছাড়া ব্যবহারকারী শুধু কতগুলো সংখ্যা দেখবে, কোনটা কী
-           বোঝার উপায় থাকবে না। শেয়ার্ড টেবিল কম্পোনেন্টে বাধ্যতামূলক। */
-        .table-cards td::before {
-            content: attr(data-label);
-            color: var(--color-ink-muted);
-            font-weight: 500;
-            flex-shrink: 0;
+        .table-cards:not(.as-cards) td {
+            display: table-cell;
+            border: 0;
         }
 
-        .table-cards td.num {
-            text-align: right;
+        .table-cards:not(.as-cards) td::before {
+            content: none;
+        }
+    }
+
+    /* কার্ড ভিউতে বড় পর্দায় কয়েকটা কার্ড পাশাপাশি — একটা কার্ডের
+       জন্য পুরো প্রস্থ নষ্ট করার মানে নেই। */
+    @media (min-width: 768px) {
+        .table-cards.as-cards tbody {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
+            gap: 0.75rem;
+        }
+
+        .table-cards.as-cards tr {
+            margin-bottom: 0;
         }
     }
 }

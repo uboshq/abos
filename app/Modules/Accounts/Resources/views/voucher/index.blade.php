@@ -32,7 +32,7 @@
 
     <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
-            <x-ui.toolbar :columns="false" :density="false">
+            <x-ui.toolbar>
                 {{-- তারিখের পরিসর — ভাউচারের তালিকায় এটাই সবচেয়ে বেশি
                      ব্যবহৃত ফিল্টার, তাই লুকানো নয় --}}
                 <input type="date" name="from" value="{{ request('from') }}"
@@ -49,6 +49,7 @@
         </form>
 
         <x-ui.table
+            :compact="request()->boolean('compact')"
             :empty="$q ? __('core.empty.no_results') : __('accounts::message.no_vouchers')"
             :rows="$vouchers"
             :columns="[

@@ -1,0 +1,95 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Console\Commands;
+
+use App\Core\Services\BackupService;
+use Illuminate\Console\Command;
+use Illuminate\Support\Carbon;
+use Throwable;
+
+/**
+ * ব্যাকআপ নেওয়া, আর নিয়েই সেটা ফিরিয়ে এনে দেখা।
+ *
+ * --verify ডিফল্টে চালু। কারণটা সহজ: যে ব্যাকআপ কখনো restore করে দেখা
+ * হয়নি সেটা ব্যাকআপ নয়, আশা। ভাঙা ডাম্প নীরবে জমতে থাকে, আর সেটা জানা
+ * যায় ঠিক সেই দিন যেদিন সত্যিই দরকার পড়ে — অর্থাৎ সবচেয়ে খারাপ দিনে।
+ */
+class Backup extends Command
+{
+    protected $signature = 'abos:backup
+        {--no-verify : ফিরিয়ে এনে যাচাই কোরো না (দ্রুত, কিন্তু তখন আর জানা যায় না ডাম্পটা কাজের কি না)}
+        {--keep-only : নতুন ডাম্প নিও না, শুধু পুরনোগুলো মুছে দাও}';
+
+    protected $description = 'ডাটাবেজের ব্যাকআপ নেয়, যাচাই করে, আর পুরনোগুলো মুছে দেয়';
+
+    public function handle(BackupService $backups): int
+    {
+        $now = Carbon::now();
+
+        try {
+            if (! $this->option('keep-only')) {
+                $result = $backups->run($now);
+
+                $this->info(sprintf(
+                    'ব্যাকআপ নেওয়া হয়েছে: %s (%s)',
+                    basename($result['file']),
+                    $this->size($result['bytes']),
+                ));
+
+                if ($result['mirrored'] !== null) {
+                    $this->line('  দ্বিতীয় কপি: '.$result['mirrored']);
+                } else {
+                    // থামানো হয় না — একটা ব্যাকআপ শূন্যের চেয়ে ভালো।
+                    // কিন্তু বলা হয়, কারণ একই ডিস্কে রাখা ব্যাকআপ ডিস্ক
+                    // ফেল করলে ব্যাকআপও নিয়ে যায়।
+                    $this->warn('  দ্বিতীয় কোনো গন্তব্য বলা নেই (ABOS_BACKUP_MIRROR) — '
+                        .'একই ডিস্ক নষ্ট হলে ব্যাকআপও হারাবে।');
+                }
+
+                if (! $this->option('no-verify')) {
+                    $check = $backups->verify($result['file']);
+
+                    $this->info("  যাচাই ঠিক আছে — ফিরিয়ে এনে {$check['tables']}টা টেবিল পাওয়া গেছে।");
+                }
+            }
+
+            $removed = $backups->prune($now);
+
+            if ($removed !== []) {
+                $this->line(sprintf(
+                    '  %dটা পুরনো ডাম্প মুছে ফেলা হয়েছে (%d দিনের বেশি)।',
+                    count($removed),
+                    (int) config('abos.backup.keep_days'),
+                ));
+            }
+
+            return self::SUCCESS;
+        } catch (Throwable $e) {
+            /*
+             * ব্যর্থতা চিৎকার করে বলা হয়।
+             *
+             * নীরবে ব্যর্থ হওয়া ব্যাকআপ সবচেয়ে বিপজ্জনক জিনিস: সবাই
+             * ভাবে ব্যাকআপ আছে, অথচ নেই। তাই exit code-ও ব্যর্থ, যাতে
+             * scheduler বা cron-এর নজরদারি এটা ধরতে পারে।
+             */
+            $this->error('ব্যাকআপ ব্যর্থ: '.$e->getMessage());
+
+            return self::FAILURE;
+        }
+    }
+
+    private function size(int $bytes): string
+    {
+        foreach (['B', 'KB', 'MB', 'GB'] as $unit) {
+            if ($bytes < 1024) {
+                return round($bytes, 1).' '.$unit;
+            }
+
+            $bytes = (int) ($bytes / 1024);
+        }
+
+        return $bytes.' TB';
+    }
+}

@@ -62,9 +62,16 @@ class ChartOfAccountsTest extends TestCase
 
     public function test_the_standard_chart_installs_a_usable_five_type_structure(): void
     {
-        $created = app(StandardChart::class)->install();
+        app(StandardChart::class)->install();
 
-        $this->assertGreaterThan(40, $created);
+        /*
+         * গোনা হয় ছকে কী আছে, install() কয়টা সারি বানাল তা নয়।
+         *
+         * নতুন কোম্পানি তৈরির অংশ হিসেবেই ছকটা বসে যায়, তাই এখানে
+         * install() ডাকলে সে ০ ফেরত দেয় — আর সেটা ঠিকই। প্রশ্নটা
+         * "কয়টা সারি তৈরি হলো" নয়, "ছকটা ব্যবহারযোগ্য কি না"।
+         */
+        $this->assertGreaterThan(40, Account::query()->count());
 
         foreach (Account::TYPES as $type) {
             $this->assertTrue(
@@ -84,10 +91,14 @@ class ChartOfAccountsTest extends TestCase
 
     public function test_installing_twice_changes_nothing(): void
     {
-        $first = app(StandardChart::class)->install();
+        app(StandardChart::class)->install();
 
+        $before = Account::query()->count();
+
+        // দ্বিতীয়বার ডাকলে একটাও নতুন সারি নয় — কেউ ভুল করে বোতামটা
+        // দুইবার চাপলে ছকে প্রতিটা খাত দুইবার থাকত
         $this->assertSame(0, app(StandardChart::class)->install());
-        $this->assertSame($first, Account::query()->count());
+        $this->assertSame($before, Account::query()->count());
     }
 
     public function test_every_account_in_the_standard_chart_has_both_names(): void
@@ -342,20 +353,44 @@ class ChartOfAccountsTest extends TestCase
 
     public function test_one_company_never_sees_another_companys_chart(): void
     {
+        /*
+         * দুই কোম্পানিরই নিজের প্রমিত ছক আছে (কোম্পানি তৈরির সময়েই বসে),
+         * তাই "অন্যটায় শূন্য খাত" দিয়ে আর বিচ্ছিন্নতা মাপা যায় না — ওটা
+         * বরং প্রমাণ করত ছকটা বসেইনি।
+         *
+         * আসল প্রশ্ন: এখানকার একটা খাত ওখানে দেখা যায় কি না, আর দুই
+         * দিকের খাতগুলো আলাদা সারি কি না।
+         */
         app(StandardChart::class)->install();
-        $mine = Account::query()->count();
+
+        $mine = app(AccountService::class)->create([
+            'code' => 'ONLY-MINE',
+            'name_en' => 'Only Mine',
+            'name_bn' => 'শুধু আমার',
+            'type' => Account::ASSET,
+        ]);
+
+        $myAccountIds = Account::query()->pluck('id')->all();
 
         $other = Company::query()->where('code', 'FMART')->firstOrFail();
         CompanyContext::set($other->id, $other->defaultBranch()?->id);
 
-        $this->assertGreaterThan(0, $mine);
-        $this->assertSame(0, Account::query()->count());
+        $this->assertNull(Account::query()->find($mine->id));
+        $this->assertNull(StandardChart::find('ONLY-MINE'));
+
+        // একই কোড দুই কোম্পানিতে থাকতে পারে, কিন্তু সারিগুলো আলাদা
+        $this->assertSame([], array_intersect($myAccountIds, Account::query()->pluck('id')->all()));
     }
 
     // ── স্ক্রিন ও অনুমতি ───────────────────────────────────────────────
 
     public function test_the_empty_chart_screen_offers_to_install_the_standard_one(): void
     {
+        // ছকটা কোম্পানি তৈরির সময়েই বসে যায়, তাই খালি পর্দাটা দেখতে
+        // হলে আগে খালি করতে হয় — নাহলে এই টেস্ট কখনোই ওই অবস্থাটা
+        // দেখত না, শুধু চুপচাপ পাস করত
+        Account::query()->forceDelete();
+
         $this->actingAs($this->user)
             ->get(route('accounts.coa.index'))
             ->assertOk()
@@ -364,6 +399,8 @@ class ChartOfAccountsTest extends TestCase
 
     public function test_installing_from_the_screen_works_end_to_end(): void
     {
+        Account::query()->forceDelete();
+
         $this->actingAs($this->user)
             ->post(route('accounts.coa.install'))
             ->assertRedirect(route('accounts.coa.index'));

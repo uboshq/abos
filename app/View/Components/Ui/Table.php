@@ -32,6 +32,15 @@ class Table extends Component
         array $columns = [],
         public ?string $empty = null,
         public bool $compact = false,
+        /*
+         * কার্ড রূপ বড় পর্দাতেও।
+         *
+         * ছোট পর্দায় এটা এমনিতেই হয় (CSS), তাই এই সুইচটা শুধু বড় পর্দার
+         * জন্য — ব্যবহারকারী টুলবারের View টগল থেকে বেছে নেন। কিছু
+         * তালিকা কার্ড হিসেবেই বেশি পড়ার মতো, বিশেষ করে যেখানে সারি কম
+         * আর প্রতিটা সারিতে অনেক তথ্য।
+         */
+        public bool $grid = false,
     ) {
         foreach ($columns as $index => $column) {
             if (is_string($column)) {

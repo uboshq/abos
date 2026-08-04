@@ -140,8 +140,16 @@ return [
         'show_vendor_credit' => 'Show "Powered by ABOS" on printouts',
     ],
 
+    'yes' => 'Yes',
+    'no' => 'No',
+
     'toolbar' => [
-        'filter' => 'Filter',
+        // ব্যবহারকারীর দেওয়া নমুনায় লেখা ছিল "Filter By", "Filter" নয়
+        'filter' => 'Filter By',
+        'sort_by' => 'Sort by',
+        'view' => 'View',
+        'view_list' => 'As a list',
+        'view_grid' => 'As cards',
         'columns' => 'Columns',
         'density' => 'Density',
         'refresh' => 'Refresh',

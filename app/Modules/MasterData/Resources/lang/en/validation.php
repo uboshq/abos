@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'format_needs_sequence' => 'The number format must contain {SEQ} — without it every document would get the same number.',
     'code_required' => 'A code is required.',
     'code_taken' => 'Another record already uses code :code.',
     'unknown_level' => 'That is not a valid location level.',

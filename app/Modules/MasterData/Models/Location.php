@@ -6,6 +6,7 @@ namespace App\Modules\MasterData\Models;
 
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasActiveState;
+use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsMasterRecord;
 use App\Core\Contracts\Drillable;
 use App\Core\Services\SettingsService;
@@ -38,6 +39,7 @@ class Location extends Model implements Drillable
     use BelongsToCompany;
     use HasActiveState;
     use HasFactory;
+    use HasPublicId;
     use IsMasterRecord;
     use SoftDeletes;
 

@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Customer\Http\Requests;
 
+use App\Core\Support\CompanyContext;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 /**
  * গ্রাহকের ইনপুট যাচাই — অলঙ্ঘনীয় শর্ত ৪ ("প্রতিটা ইনপুটে ভ্যালিডেশন")।
@@ -36,6 +38,21 @@ class CustomerRequest extends FormRequest
             'email' => ['nullable', 'email', 'max:191'],
             'address_en' => ['nullable', 'string', 'max:500'],
             'address_bn' => ['nullable', 'string', 'max:500'],
+            /*
+             * ধরন এখন মাস্টার তালিকার একটা সারি।
+             *
+             * exists-এ company_id-ও, কারণ গ্লোবাল স্কোপ Eloquent-এ কাজ
+             * করে, ভ্যালিডেটরের কাঁচা কোয়েরিতে নয় — ওটা ছাড়া অন্য
+             * কোম্পানির ধরনের id পাঠিয়ে দেওয়া যেত।
+             */
+            'party_type_id' => [
+                'nullable', 'integer',
+                Rule::exists('mdm_party_types', 'id')->where('company_id', CompanyContext::id()),
+            ],
+
+            // পুরনো মুক্ত লেখাটা এখনো নেওয়া হয়, কিন্তু ফর্মে ঘরটা নেই:
+            // মাইগ্রেশনে যে সারিগুলোর নাম মেলেনি সেগুলোর তথ্য যেন
+            // ইমপোর্ট বা API দিয়ে ফেরানো যায়
             'customer_type' => ['nullable', 'string', 'max:32'],
 
             // ঋণাত্মক সীমার কোনো অর্থ নেই; শূন্য মানে সীমাহীন।
@@ -45,7 +62,10 @@ class CustomerRequest extends FormRequest
             'opening_balance' => ['nullable', 'numeric'],
             'opening_date' => ['nullable', 'date'],
 
-            'branch_id' => ['nullable', 'integer'],
+            'branch_id' => [
+                'nullable', 'integer',
+                Rule::exists('branches', 'id')->where('company_id', CompanyContext::id()),
+            ],
             'is_active' => ['nullable', 'boolean'],
         ];
     }

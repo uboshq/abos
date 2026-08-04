@@ -71,16 +71,16 @@
 
     <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
-            <x-ui.toolbar :columns="false" :density="false">
+            <x-ui.toolbar>
                 <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
-                    <input type="checkbox" name="inactive" value="1" @checked(request()->boolean('inactive'))
-                           onchange="this.form.submit()" class="size-4">
+                    <input type="checkbox" name="inactive" value="1" @checked(request()->boolean('inactive')) class="size-4">
                     {{ __('master_data::action.show_inactive') }}
                 </label>
             </x-ui.toolbar>
         </form>
 
         <x-ui.table
+            :compact="request()->boolean('compact')"
             :empty="$q ? __('core.empty.no_results') : __('master_data::message.none_yet')"
             :rows="$records"
             :columns="array_merge(

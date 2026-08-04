@@ -7,6 +7,7 @@ namespace App\Modules\Accounts\Models;
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasActiveState;
 use App\Core\Concerns\HasDocumentStatus;
+use App\Core\Concerns\HasPublicId;
 use App\Core\Contracts\Drillable;
 use App\Core\Support\RunningBalance;
 use App\Models\LedgerEntry;
@@ -32,6 +33,7 @@ class Account extends Model implements Drillable
     use HasActiveState;
     use HasDocumentStatus;
     use HasFactory;
+    use HasPublicId;
     use SoftDeletes;
 
     /** পাঁচটা মূল ধরন — এর বাইরে কিছু নেই। */

@@ -168,6 +168,30 @@ final class NumberSeriesEngine
             ->first();
     }
 
+    /**
+     * পরের নম্বরটা দেখতে কেমন হবে — কিছু খরচ না করে।
+     *
+     * সেটিংসের পর্দায় ছক বদলানোর সময় এটাই দেখানো হয়। আগে ওই পর্দাটা
+     * নিজে হাতে "{prefix}-{বছর}-{ক্রম}" জুড়ে দেখাত, অথচ ছকটা অন্য কিছু
+     * হলে নমুনাটা মিথ্যা বলত — ব্যবহারকারী একটা জিনিস দেখে সেভ করতেন
+     * আর ডকুমেন্টে বসত অন্যটা।
+     *
+     * এখন নমুনা আর আসল নম্বর একই কোড থেকে আসে, তাই দুইটা আলাদা হতে
+     * পারে না।
+     */
+    public function preview(NumberSeries $series, ?int $sequence = null): string
+    {
+        return $this->format(
+            $series,
+            $sequence ?? $series->next_number,
+            $series->branch_id,
+            $series->financial_year_id !== null
+                ? FinancialYear::query()->find($series->financial_year_id)
+                : null,
+            Carbon::today(),
+        );
+    }
+
     private function format(
         NumberSeries $series,
         int $sequence,

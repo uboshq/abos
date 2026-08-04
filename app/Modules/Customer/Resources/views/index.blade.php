@@ -33,12 +33,14 @@
 
     <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
-            <x-ui.toolbar :columns="false" :density="false">
+            <x-ui.toolbar
+                :search-placeholder="__('customer::message.search_placeholder')"
+                :sort="$sortOptions"
+                view>
                 {{-- নিষ্ক্রিয় গ্রাহকও দেখা যাবে, কিন্তু ডিফল্টে নয়: তালিকাটা
                      রোজকার কাজের, আর নিষ্ক্রিয়রা সেখানে শুধু ভিড় বাড়ায়। --}}
                 <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
-                    <input type="checkbox" name="inactive" value="1" @checked($showInactive)
-                           onchange="this.form.submit()" class="size-4">
+                    <input type="checkbox" name="inactive" value="1" @checked($showInactive) class="size-4">
                     {{ __('customer::action.show_inactive') }}
                 </label>
             </x-ui.toolbar>
@@ -47,6 +49,8 @@
         <x-ui.table
             :empty="$q ? __('core.empty.no_results') : __('customer::message.none_yet')"
             :rows="$customers"
+            :compact="request()->boolean('compact')"
+            :grid="request('view') === 'grid'"
             :columns="[
                 [
                     'key' => 'code',
@@ -56,14 +60,26 @@
                     'width' => '13rem',
                     'render' => fn ($c) => view('customer::partials.code-link', ['customer' => $c]),
                 ],
-                ['key' => 'name_en', 'label' => __('customer::field.name'), 'render' => fn ($c) => $c->name()],
+                [
+                    'key' => 'name_en',
+                    'label' => __('customer::field.name'),
+                    // স্পষ্ট প্রস্থ, নাহলে বাংলা নাম কয়েক লাইনে ভাঙে —
+                    // বাকি কলামগুলোর নির্দিষ্ট প্রস্থের পর যা থাকে তাতেই
+                    // নামটা চাপা পড়ে যায়
+                    'width' => '20rem',
+                    'render' => fn ($c) => $c->name(),
+                ],
                 ['key' => 'phone', 'label' => __('customer::field.phone'), 'width' => '9rem'],
                 [
                     'key' => 'outstanding',
                     'label' => __('customer::field.outstanding'),
                     'numeric' => true,
                     'width' => '10rem',
-                    'render' => fn ($c) => number_format((float) $c->outstanding(), 2),
+                    // অঙ্কটাই লিংক — নিয়ম ১
+                    'render' => fn ($c) => view('ui.amount-link', [
+                        'value' => $c->outstanding(),
+                        'href' => route('customer.show', $c),
+                    ]),
                 ],
                 [
                     'key' => 'is_active',
