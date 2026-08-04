@@ -64,7 +64,7 @@ final class ReportEngine
         // যোগফল পুরো ফলের উপর — আলাদা কোয়েরিতে, কারণ পাতাভিত্তিক যোগফল
         // ভুল উত্তর দেয় এবং সেটা ভুল বলে চেনাও যায় না।
         $totals = $this->totalsFor($report, clone $query);
-        $count = (clone $query)->count();
+        $count = $this->countFor($report, clone $query);
 
         $rows = $query
             ->forPage(max(1, $page), $perPage)
@@ -148,6 +148,30 @@ final class ReportEngine
      *
      * @return array<string, string>
      */
+    /**
+     * কতটা সারি — গ্রুপ করা রিপোর্টেও ঠিক।
+     *
+     * সরাসরি count() ডাকলে GROUP BY করা কোয়েরিতে ভুল উত্তর আসে: SQL
+     * তখন প্রতিটা গ্রুপের জন্য একটা করে গণনা ফেরত দেয়, আর Laravel
+     * প্রথমটাই নিয়ে নেয়। ফলে রেওয়ামিলে "৪টি সারি" মানে ছিল "প্রথম
+     * খাতে ৪টি এন্ট্রি" — সংখ্যাটা ভুল, অথচ দেখতে যুক্তিসঙ্গত।
+     *
+     * ভুলটা ধরা পড়েছে ক্যাশ ফ্লোতে: তিন দিনের ডাটায় "১টি সারি" দেখাচ্ছিল,
+     * অথচ পর্দায় তিনটা সারিই ছিল।
+     *
+     * যোগফলের মতোই সমাধান — কোয়েরিটাকে সাব-কোয়েরি বানিয়ে তার উপর গণনা।
+     */
+    private function countFor(ReportDefinition $report, $query): int
+    {
+        if ($report->groupBy === null) {
+            return $query->count();
+        }
+
+        return (int) DB::query()
+            ->fromSub($query->reorder(), 'grouped')
+            ->count();
+    }
+
     private function totalsFor(ReportDefinition $report, $query): array
     {
         $columns = $report->totalledColumns();

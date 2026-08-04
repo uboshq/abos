@@ -60,5 +60,8 @@ return [
     'shortage_note' => 'Short in hand. Approving posts the difference as an expense.',
     'surplus_note' => 'Over in hand. Approving posts the difference as other income.',
     'no_notes_recorded' => 'No note breakdown was recorded.',
+    'row_count' => '{0} No rows|{1} 1 row|[2,*] :count rows',
+    'nothing_in_range' => 'No transactions in this range.',
+    'page_of' => 'Page :page of :pages — totals cover everything',
     'count' => '{0} No accounts|{1} 1 account|[2,*] :count accounts',
 ];

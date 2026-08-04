@@ -160,8 +160,12 @@ class ShellTest extends TestCase
         // একসাথে প্রমাণ করে যে planned পতাকাটা সত্যিই কাজ করে।
         $response->assertSee('জাবেদা ভাউচার', false);
 
-        // আর যেটা এখনো লেখা হয়নি সেটা এখনো নেই
-        $response->assertDontSee('রেওয়ামিল', false);
+        // রেওয়ামিলও এখন আছে — আটটা রিপোর্টই তৈরি
+        $response->assertSee('রেওয়ামিল', false);
+
+        // আর যেটা এখনো লেখা হয়নি সেটা এখনো নেই: মডিউলের নিজের
+        // ড্যাশবোর্ড ও সেটিংস পর্দা দুইটাই planned
+        $response->assertDontSee(__('accounts::menu.settings'), false);
     }
 
     public function test_the_menu_hides_what_a_role_cannot_reach(): void

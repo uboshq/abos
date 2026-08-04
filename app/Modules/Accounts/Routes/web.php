@@ -6,6 +6,7 @@ use App\Modules\Accounts\Http\Controllers\CashCountController;
 use App\Modules\Accounts\Http\Controllers\CashTillController;
 use App\Modules\Accounts\Http\Controllers\ChartOfAccountsController;
 use App\Modules\Accounts\Http\Controllers\MoneyTransferController;
+use App\Modules\Accounts\Http\Controllers\ReportController;
 use App\Modules\Accounts\Http\Controllers\VoucherController;
 use App\Modules\Accounts\Models\Account;
 use Illuminate\Support\Facades\Route;
@@ -87,6 +88,14 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
         Route::post('/{transfer}/confirm', [MoneyTransferController::class, 'confirm'])->name('confirm');
         Route::post('/{transfer}/cancel', [MoneyTransferController::class, 'cancel'])->name('cancel');
     });
+
+    /*
+     * রিপোর্ট — আটটা, একটাই কন্ট্রোলার।
+     *
+     * ঠিকানায় engine-এর ভেতরের কী নয়, পড়ার মতো নাম: /reports/day-book।
+     * ভেতরের কী বদলালে বুকমার্ক ভাঙত।
+     */
+    Route::get('/reports/{slug}', [ReportController::class, 'show'])->name('report.show');
 
     Route::prefix('cash-counts')->name('count.')->group(function () {
         Route::get('/', [CashCountController::class, 'index'])->name('index');
