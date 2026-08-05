@@ -49,7 +49,8 @@ return [
     ],
 
     'action' => [
-        'create' => 'নতুন',
+        'create' => 'তৈরি করুন',
+        'apply' => 'প্রয়োগ',
         'save' => 'সংরক্ষণ',
         'edit' => 'সম্পাদনা',
         'approve' => 'অনুমোদন',
@@ -83,7 +84,9 @@ return [
         'developed_by' => 'Developed by Al-Amin Shuvo',
         'full_name' => 'All Business Operating System',
         'tagline' => 'Built Around Your Business.',
-        'powered_by' => 'Powered by UNIVER BANGLADESH',
+        'powered_by' => 'Powered by',
+        /* Not translated: a company's name is its name. */
+        'powered_by_name' => 'UNIVER BANGLADESH',
     ],
 
     'appearance' => [
@@ -142,6 +145,25 @@ return [
         'prepared_by' => 'প্রস্তুতকারী',
         'approved_by' => 'অনুমোদনকারী',
         'received_by' => 'গ্রহীতার স্বাক্ষর',
+        'item' => 'পণ্য',
+        'unit' => 'একক',
+        'qty' => 'পরিমাণ',
+        'rate' => 'দর',
+        'amount' => 'টাকা',
+        'minus' => 'ঋণাত্মক',
+        'subtotal' => 'মোট',
+        'discount' => 'ছাড়',
+        'tax' => 'ভ্যাট',
+        'delivered_by' => 'প্রেরকের স্বাক্ষর',
+        'driver' => 'চালকের স্বাক্ষর',
+        'gate_officer' => 'নিরাপত্তা প্রহরী',
+        'storekeeper' => 'গুদাম রক্ষক',
+        'customer_copy' => 'গ্রাহকের কপি',
+        'office_copy' => 'অফিস কপি',
+        'draft_notice' => 'খসড়া — এটি চূড়ান্ত বিল নয়',
+        'no_price_notice' => 'এই কাগজে দাম লেখা নেই',
+        'print' => 'ছাপুন',
+        'choose_paper' => 'কাগজ বাছুন',
         'show_vendor_credit' => 'প্রিন্টের নিচে "Powered by ABOS" দেখাও',
     ],
 
@@ -151,7 +173,14 @@ return [
         'salesman' => 'বিক্রয়কর্মী',
     ],
 
+    'create' => [
+        'nothing_yet' => 'এখনো তৈরি করার কিছু নেই — যে মডিউলগুলো রেকর্ড বানায় সেগুলো এখনো বসেনি।',
+    ],
     'notice' => [
+        'awaiting_mine' => 'আপনার সিদ্ধান্তের অপেক্ষায়',
+        'approvals_later' => 'অনুমোদন — যে মডিউল অনুমোদন চায়, পর্দাটা তার সাথেই আসবে।',
+        'title' => 'নজরে আনার মতো',
+        'none' => 'এই মুহূর্তে নজরে আনার মতো কিছু নেই।',
         'backup_stale' => 'দুই দিনের বেশি ব্যাকআপ হয়নি — ডিস্ক নষ্ট হলে কিছুই ফেরানো যাবে না।',
         'awaiting_decision' => '{1} ১টি সিদ্ধান্তের অপেক্ষায়|[2,*] :count টি সিদ্ধান্তের অপেক্ষায়',
     ],
@@ -182,12 +211,20 @@ return [
     'no' => 'না',
 
     'toolbar' => [
+        'columns' => 'কলাম',
+        'columns_note' => 'সবগুলো টিক তুলে দিলে টেবিল সব কলামই দেখাবে — খালি টেবিলে কারও কাজ হয় না।',
+        'export' => 'রপ্তানি',
+        'export_csv' => 'CSV (Excel-এ খোলে)',
+        'export_pdf' => 'PDF — ছাপুন, তারপর PDF হিসেবে সেভ',
+        'share' => 'শেয়ার',
+        'share_email' => 'ইমেইল',
+        'share_copy' => 'লিংক কপি',
+        'share_copied' => 'লিংক কপি হয়েছে',
         'filter' => 'ফিল্টার',
         'sort_by' => 'সাজাও',
         'view' => 'দেখাও',
         'view_list' => 'তালিকা হিসেবে',
         'view_grid' => 'কার্ড হিসেবে',
-        'columns' => 'কলাম',
         'density' => 'ঘনত্ব',
         'refresh' => 'নতুন করে আনো',
         'group' => 'গ্রুপ',

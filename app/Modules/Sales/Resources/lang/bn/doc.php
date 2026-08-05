@@ -9,4 +9,6 @@ return [
     'challan' => 'ডেলিভারি চালান',
     'invoice' => 'বিক্রয় বিল',
     'collection' => 'আদায়',
+    'gatepass' => 'গেটপাস',
+    'delivery_order' => 'ডেলিভারি অর্ডার',
 ];
