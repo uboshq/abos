@@ -139,7 +139,19 @@ class ComponentTest extends TestCase
     {
         $markup = file_get_contents(resource_path('views/components/ui/toolbar.blade.php'));
 
-        preg_match_all('/<button\b[^>]*>/s', preg_replace('/\{\{--.*?--\}\}/s', '', $markup), $buttons);
+        /*
+         * অ্যাট্রিবিউটের মান উদ্ধৃতির ভেতরে থাকলে সেখানকার `>` গোনা হয় না।
+         *
+         * আগে নিয়মটা ছিল `[^>]*`, আর সেটা Alpine-এর হ্যান্ডলারে এসে ভেঙে
+         * যেত: `setTimeout(() => copied = false)` লেখা থাকলে তীরের `>`-কেই
+         * ট্যাগের শেষ ধরে নিত, ফলে তার পরের aria-label আর ম্যাচেই আসত না।
+         * টেস্টটা তখন লেবেল-থাকা বোতামকেও লেবেলহীন বলত — অর্থাৎ পাহারাটা
+         * মিথ্যা অভিযোগ করত, আর সেটা ঠিক করতে গিয়ে কেউ অপ্রয়োজনীয়
+         * অ্যাট্রিবিউট যোগ করত।
+         */
+        $pattern = '/<button\b(?:[^>"\']|"[^"]*"|\'[^\']*\')*>/s';
+
+        preg_match_all($pattern, preg_replace('/\{\{--.*?--\}\}/s', '', $markup), $buttons);
 
         $this->assertNotEmpty($buttons[0]);
 

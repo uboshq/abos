@@ -25,6 +25,10 @@
                         </x-ui.button>
                     @endcan
                 @endif
+                <x-ui.print-menu :documents="[
+                    ['label' => __('sales::doc.invoice'), 'url' => route('sales.print.invoice', $invoice)],
+                    ['label' => __('core.print.draft_notice'), 'url' => route('sales.print.draft', $invoice)],
+                ]" />
             </x-slot:actions>
         </x-ui.page-header>
     </x-slot:header>

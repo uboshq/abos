@@ -24,6 +24,10 @@
                         </x-ui.button>
                     @endcan
                 @endif
+                <x-ui.print-menu :documents="[
+                    ['label' => __('sales::doc.challan'), 'url' => route('sales.print.challan', $challan)],
+                    ['label' => __('sales::doc.gatepass'), 'url' => route('sales.print.gatepass', $challan)],
+                ]" />
             </x-slot:actions>
         </x-ui.page-header>
     </x-slot:header>

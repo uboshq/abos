@@ -45,6 +45,7 @@ return [
 
     'action' => [
         'create' => 'Create',
+        'apply' => 'Apply',
         'save' => 'Save',
         'edit' => 'Edit',
         'approve' => 'Approve',
@@ -78,7 +79,9 @@ return [
         'developed_by' => 'Developed by Al-Amin Shuvo',
         'full_name' => 'All Business Operating System',
         'tagline' => 'Built Around Your Business.',
-        'powered_by' => 'Powered by UNIVER BANGLADESH',
+        'powered_by' => 'Powered by',
+        /* Not translated: a company's name is its name. */
+        'powered_by_name' => 'UNIVER BANGLADESH',
     ],
 
     'appearance' => [
@@ -137,6 +140,25 @@ return [
         'prepared_by' => 'Prepared by',
         'approved_by' => 'Approved by',
         'received_by' => 'Received by',
+        'item' => 'Item',
+        'unit' => 'Unit',
+        'qty' => 'Qty',
+        'rate' => 'Rate',
+        'amount' => 'Amount',
+        'minus' => 'Minus',
+        'subtotal' => 'Subtotal',
+        'discount' => 'Discount',
+        'tax' => 'VAT',
+        'delivered_by' => 'Delivered by',
+        'driver' => 'Driver\'s signature',
+        'gate_officer' => 'Security officer',
+        'storekeeper' => 'Storekeeper',
+        'customer_copy' => 'Customer copy',
+        'office_copy' => 'Office copy',
+        'draft_notice' => 'DRAFT — this is not a final bill',
+        'no_price_notice' => 'Prices are not shown on this document',
+        'print' => 'Print',
+        'choose_paper' => 'Choose paper',
         'show_vendor_credit' => 'Show "Powered by ABOS" on printouts',
     ],
 
@@ -146,7 +168,14 @@ return [
         'salesman' => 'Salesman',
     ],
 
+    'create' => [
+        'nothing_yet' => 'Nothing to create yet — the modules that make records are not installed.',
+    ],
     'notice' => [
+        'awaiting_mine' => 'Waiting for your decision',
+        'approvals_later' => 'Approvals — the screen arrives with the module that raises them.',
+        'title' => 'Needs attention',
+        'none' => 'Nothing needs attention.',
         'backup_stale' => 'No backup for over two days — nothing could be recovered if the disk fails.',
         'awaiting_decision' => '{1} 1 waiting for a decision|[2,*] :count waiting for a decision',
     ],
@@ -177,13 +206,21 @@ return [
     'no' => 'No',
 
     'toolbar' => [
+        'columns' => 'Columns',
+        'columns_note' => 'Untick them all and the table shows every column — an empty table helps nobody.',
+        'export' => 'Export',
+        'export_csv' => 'CSV (opens in Excel)',
+        'export_pdf' => 'PDF — print, then save as PDF',
+        'share' => 'Share',
+        'share_email' => 'Email',
+        'share_copy' => 'Copy link',
+        'share_copied' => 'Link copied',
         // ব্যবহারকারীর দেওয়া নমুনায় লেখা ছিল "Filter By", "Filter" নয়
         'filter' => 'Filter By',
         'sort_by' => 'Sort by',
         'view' => 'View',
         'view_list' => 'As a list',
         'view_grid' => 'As cards',
-        'columns' => 'Columns',
         'density' => 'Density',
         'refresh' => 'Refresh',
         'group' => 'Group',

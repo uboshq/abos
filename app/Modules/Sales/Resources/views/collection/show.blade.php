@@ -15,6 +15,9 @@
                         <x-ui.button type="submit" tone="primary">{{ __('sales::action.confirm') }}</x-ui.button>
                     </form>
                 @endcan
+                <x-ui.print-menu :documents="[
+                    ['label' => __('sales::doc.collection'), 'url' => route('sales.print.receipt', $collection)],
+                ]" />
             </x-slot:actions>
         </x-ui.page-header>
     </x-slot:header>

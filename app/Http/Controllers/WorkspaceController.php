@@ -114,4 +114,25 @@ class WorkspaceController extends Controller
 
         return back();
     }
+
+    /**
+     * আলো আর অন্ধকারের মাঝে অদলবদল — টপবারের এক চাপে।
+     *
+     * চেহারা পাতায় এটা আগেই ছিল, কিন্তু একটা পাতা খুলে, রেডিও বেছে, সেভ
+     * চেপে তবে থিম বদলানো — যে জিনিস দিনে দুবার বদলায় তার জন্য বেশি।
+     * সন্ধ্যায় ডিপোর আলো কমে, আর তখনই লোকে অন্ধকার থিম চায়।
+     *
+     * ভাষার সুইচের মতোই ব্যবহারকারীর রেকর্ডে সেভ হয়, সেশনে নয় — বাড়ির
+     * ফোনে খুললেও একই থিম (নিয়ম ৯)।
+     */
+    public function switchTheme(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'theme' => ['required', 'string', 'in:light,dark'],
+        ]);
+
+        $request->user()->forceFill(['theme' => $validated['theme']])->save();
+
+        return back();
+    }
 }

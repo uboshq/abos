@@ -27,6 +27,7 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/company/switch', [WorkspaceController::class, 'switchCompany'])->name('company.switch');
     Route::post('/locale/switch', [WorkspaceController::class, 'switchLocale'])->name('locale.switch');
+    Route::post('/theme/switch', [WorkspaceController::class, 'switchTheme'])->name('theme.switch');
 });
 
 require __DIR__.'/auth.php';

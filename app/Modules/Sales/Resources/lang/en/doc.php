@@ -9,4 +9,6 @@ return [
     'challan' => 'Delivery Challan',
     'invoice' => 'Sales Invoice',
     'collection' => 'Collection',
+    'gatepass' => 'Gate Pass',
+    'delivery_order' => 'Delivery Order',
 ];
