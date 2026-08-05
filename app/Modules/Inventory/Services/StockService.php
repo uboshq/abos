@@ -257,6 +257,12 @@ final class StockService
         return $this->statesFor($product, $warehouse)['hold'];
     }
 
+    /** অর্ডারে ধরা পরিমাণ — Sales মডিউল এটাই লেখে ও পড়ে। */
+    public function reservedQty(Product $product, ?Warehouse $warehouse = null): string
+    {
+        return $this->statesFor($product, $warehouse)['reserved'];
+    }
+
     public function availableQty(Product $product, ?Warehouse $warehouse = null): string
     {
         return $this->statesFor($product, $warehouse)['available'];

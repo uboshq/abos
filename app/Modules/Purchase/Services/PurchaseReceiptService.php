@@ -352,7 +352,7 @@ final class PurchaseReceiptService
             throw ValidationException::withMessages(['lines' => __('purchase::validation.line_not_in_order')]);
         }
 
-        if ($orderLine->product_id !== $productId) {
+        if ((int) $orderLine->product_id !== $productId) {
             throw ValidationException::withMessages(['lines' => __('purchase::validation.line_product_mismatch')]);
         }
 

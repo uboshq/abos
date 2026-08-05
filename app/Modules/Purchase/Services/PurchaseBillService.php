@@ -380,11 +380,11 @@ final class PurchaseBillService
 
         // অন্য কোম্পানির চালানের id পাঠিয়ে দেওয়া আটকায় — গ্লোবাল স্কোপ
         // সন্তান-টেবিলে নেই, বাবার উপর আছে
-        if ($receiptLine->receipt->company_id !== CompanyContext::id()) {
+        if ((int) $receiptLine->receipt->company_id !== (int) CompanyContext::id()) {
             throw ValidationException::withMessages(['lines' => __('purchase::validation.unknown_receipt_line')]);
         }
 
-        if ($receiptLine->receipt->supplier_id !== $bill->supplier_id) {
+        if ((int) $receiptLine->receipt->supplier_id !== (int) $bill->supplier_id) {
             throw ValidationException::withMessages(['lines' => __('purchase::validation.receipt_other_supplier')]);
         }
 
@@ -396,7 +396,7 @@ final class PurchaseBillService
             ]);
         }
 
-        if ($receiptLine->product_id !== $productId) {
+        if ((int) $receiptLine->product_id !== $productId) {
             throw ValidationException::withMessages(['lines' => __('purchase::validation.line_product_mismatch')]);
         }
 
