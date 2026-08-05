@@ -307,6 +307,98 @@ class InventoryTest extends TestCase
         $this->assertSame($before, StockMovement::query()->count());
     }
 
+    // ── ফ্রি পণ্যের ভাণ্ডার ─────────────────────────────────────────────
+
+    /**
+     * ফ্রি মাল বিক্রয়যোগ্য সংখ্যায় গোনা হয় না।
+     *
+     * "১০ কার্টন কিনলে ১ ফ্রি" — ওই এক কার্টন কোম্পানি কেনেনি, আর কেউ
+     * টাকা দিয়ে সেটা কিনতেও পারবে না। একই ঘরে গুনলে কাউন্টারে "৭৪৬ আছে"
+     * দেখে বেচতে গিয়ে দেখা যেত ৬২টা আসলে ফ্রি, বিক্রির নয়।
+     */
+    public function test_free_stock_never_counts_as_sellable(): void
+    {
+        $product = $this->product();
+
+        $this->receive($product, '100');
+
+        $this->stock()->move(
+            product: $product, warehouse: $this->warehouse,
+            sourceType: 'test_receipt', sourceId: 9,
+            free: '20',
+        );
+
+        $states = $this->stock()->statesFor($product, $this->warehouse);
+
+        $this->assertSame(0, bccomp($states['floor'], '100', 4));
+        $this->assertSame(0, bccomp($states['available'], '100', 4), 'ফ্রি মাল বিক্রয়যোগ্যে যোগ হয় না');
+        $this->assertSame(0, bccomp($states['free'], '20', 4));
+        $this->assertSame(0, bccomp($states['free_available'], '20', 4));
+    }
+
+    /** ফ্রি ভাণ্ডারেও অর্ডারে ধরা যায়, আর সেটা আলাদা ঘরে। */
+    public function test_free_stock_can_be_reserved_separately(): void
+    {
+        $product = $this->product();
+
+        $this->stock()->move(
+            product: $product, warehouse: $this->warehouse,
+            sourceType: 'test_receipt', sourceId: 9, free: '30',
+        );
+
+        $this->stock()->move(
+            product: $product, warehouse: $this->warehouse,
+            sourceType: 'test_order', sourceId: 9, freeReserved: '12',
+        );
+
+        $states = $this->stock()->statesFor($product, $this->warehouse);
+
+        $this->assertSame(0, bccomp($states['free'], '30', 4), 'ধরা মাল তাকেই থাকে');
+        $this->assertSame(0, bccomp($states['free_reserved'], '12', 4));
+        $this->assertSame(0, bccomp($states['free_available'], '18', 4));
+
+        // বিক্রির ঘরগুলো ছোঁয়া হয়নি
+        $this->assertSame(0, bccomp($states['reserved'], '0', 4));
+    }
+
+    /**
+     * যে ফ্রি মাল নেই তা দেওয়া যায় না।
+     *
+     * না আটকালে ফ্রি স্টক ঋণাত্মক হত, আর প্রস্তুতকারকের কাছে হিসাব দিতে
+     * গিয়ে দেখা যেত আমরা যা পেয়েছি তার চেয়ে বেশি দিয়েছি।
+     */
+    public function test_free_stock_that_is_not_there_cannot_be_given(): void
+    {
+        $product = $this->product();
+
+        $this->stock()->move(
+            product: $product, warehouse: $this->warehouse,
+            sourceType: 'test_receipt', sourceId: 9, free: '5',
+        );
+
+        $this->expectException(ValidationException::class);
+
+        $this->stock()->move(
+            product: $product, warehouse: $this->warehouse,
+            sourceType: 'test_issue', sourceId: 9, free: '-6',
+        );
+    }
+
+    /** বিক্রির মজুদ থাকলেও ফ্রি দেওয়া যায় না — ভাণ্ডার দুইটা আলাদা। */
+    public function test_sellable_stock_cannot_cover_a_free_giveaway(): void
+    {
+        $product = $this->product();
+
+        $this->receive($product, '100');
+
+        $this->expectException(ValidationException::class);
+
+        $this->stock()->move(
+            product: $product, warehouse: $this->warehouse,
+            sourceType: 'test_issue', sourceId: 9, free: '-1',
+        );
+    }
+
     // ── গুদাম ───────────────────────────────────────────────────────────
 
     /**
