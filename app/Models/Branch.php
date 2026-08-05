@@ -7,6 +7,7 @@ namespace App\Models;
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasActiveState;
 use App\Core\Concerns\HasPublicId;
+use App\Core\Concerns\IsAudited;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -24,6 +25,7 @@ class Branch extends Model
     use HasActiveState;
     use HasFactory;
     use HasPublicId;
+    use IsAudited;
     use SoftDeletes;
 
     protected $fillable = [

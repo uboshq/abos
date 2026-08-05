@@ -6,6 +6,7 @@ namespace App\Modules\Hr\Models;
 
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
+use App\Core\Concerns\IsAudited;
 use App\Modules\Accounts\Models\Account;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -22,6 +23,7 @@ class PayslipLine extends Model
     use BelongsToCompany;
     use HasFactory;
     use HasPublicId;
+    use IsAudited;
 
     protected $table = 'hr_payslip_lines';
 

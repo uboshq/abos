@@ -6,6 +6,7 @@ namespace App\Modules\MasterData\Models;
 
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
+use App\Core\Concerns\IsAudited;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -24,6 +25,7 @@ class ExchangeRate extends Model
     use BelongsToCompany;
     use HasFactory;
     use HasPublicId;
+    use IsAudited;
     use SoftDeletes;
 
     protected $table = 'mdm_exchange_rates';

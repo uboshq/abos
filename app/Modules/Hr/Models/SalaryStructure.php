@@ -6,6 +6,7 @@ namespace App\Modules\Hr\Models;
 
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
+use App\Core\Concerns\IsAudited;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -23,6 +24,7 @@ class SalaryStructure extends Model
     use BelongsToCompany;
     use HasFactory;
     use HasPublicId;
+    use IsAudited;
     use SoftDeletes;
 
     protected $table = 'hr_salary_structures';

@@ -7,6 +7,7 @@ namespace App\Modules\Hr\Models;
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasDocumentStatus;
 use App\Core\Concerns\HasPublicId;
+use App\Core\Concerns\IsAudited;
 use App\Core\Contracts\Drillable;
 use App\Models\Branch;
 use App\Models\User;
@@ -30,6 +31,7 @@ class PayrollRun extends Model implements Drillable
     use HasDocumentStatus;
     use HasFactory;
     use HasPublicId;
+    use IsAudited;
     use SoftDeletes;
 
     protected $table = 'hr_payroll_runs';

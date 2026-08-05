@@ -1,0 +1,22 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'when' => 'কখন',
+    'who' => 'কে',
+    'action' => 'কাজ',
+    'record' => 'রেকর্ড',
+    'module' => 'মডিউল',
+    'field' => 'ঘর',
+    'old_value' => 'পুরাতন মান',
+    'new_value' => 'নতুন মান',
+    'reason' => 'কারণ',
+    'ip' => 'IP',
+    'device' => 'ডিভাইস',
+    'branch' => 'শাখা',
+    'changes' => 'পরিবর্তন',
+    'from' => 'থেকে',
+    'to' => 'পর্যন্ত',
+    'search' => 'নম্বর বা নাম',
+];

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Sales\Models;
 
 use App\Core\Concerns\HasPublicId;
+use App\Core\Concerns\IsAudited;
 use App\Modules\Inventory\Models\Product;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -14,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class DeliveryChallanLine extends Model
 {
     use HasPublicId;
+    use IsAudited;
 
     protected $table = 'sal_challan_lines';
 

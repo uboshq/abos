@@ -8,6 +8,7 @@ use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasActiveState;
 use App\Core\Concerns\HasDocumentStatus;
 use App\Core\Concerns\HasPublicId;
+use App\Core\Concerns\IsAudited;
 use App\Core\Contracts\Drillable;
 use App\Models\User;
 use App\Modules\MasterData\Models\Tax;
@@ -34,6 +35,7 @@ class Product extends Model implements Drillable
     use HasDocumentStatus;
     use HasFactory;
     use HasPublicId;
+    use IsAudited;
     use SoftDeletes;
 
     protected $table = 'inv_products';

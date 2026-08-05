@@ -7,6 +7,7 @@ namespace App\Modules\Inventory\Models;
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasActiveState;
 use App\Core\Concerns\HasPublicId;
+use App\Core\Concerns\IsAudited;
 use App\Core\Concerns\IsMasterRecord;
 use App\Core\Contracts\Drillable;
 use App\Models\Branch;
@@ -28,6 +29,7 @@ class Warehouse extends Model implements Drillable
     use HasActiveState;
     use HasFactory;
     use HasPublicId;
+    use IsAudited;
     use IsMasterRecord;
     use SoftDeletes;
 

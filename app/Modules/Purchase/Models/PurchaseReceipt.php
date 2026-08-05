@@ -7,6 +7,7 @@ namespace App\Modules\Purchase\Models;
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasDocumentStatus;
 use App\Core\Concerns\HasPublicId;
+use App\Core\Concerns\IsAudited;
 use App\Core\Contracts\Drillable;
 use App\Models\Branch;
 use App\Models\User;
@@ -33,6 +34,7 @@ class PurchaseReceipt extends Model implements Drillable
     use BelongsToCompany;
     use HasDocumentStatus;
     use HasPublicId;
+    use IsAudited;
     use SoftDeletes;
 
     protected $table = 'pur_receipts';
