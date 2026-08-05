@@ -85,6 +85,12 @@ class DirectSaleController extends Controller implements HasMiddleware
                 'deposit' => $this->settings->get('sales.field_deposit', true),
                 'credit_limit' => $this->settings->get('sales.field_credit_limit', true),
                 'vat' => $this->settings->get('master_data.tax_enabled', true),
+                'warehouse_select' => $this->settings->get('sales.field_warehouse_select', true),
+                'sub_total' => $this->settings->get('sales.field_sub_total', true),
+                'total_item' => $this->settings->get('sales.field_total_item', true),
+                'sales_qty' => $this->settings->get('sales.field_sales_qty', true),
+                'free_qty_total' => $this->settings->get('sales.field_free_qty_total', true),
+                'total_qty' => $this->settings->get('sales.field_total_qty', true),
             ],
         ]);
     }

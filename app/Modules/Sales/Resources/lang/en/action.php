@@ -26,4 +26,10 @@ return [
     'clear_data' => 'Clear Data',
     'clear_full' => 'Clear Full Data',
     'add_gift' => 'Add a gift',
+    'chart_bulk_do' => 'Chart / Bulk DO',
+    'transportation' => 'Transportation',
+    'shipment' => 'Shipment',
+    'add_deposit' => 'Add Deposit',
+    'add_note' => 'Add Note',
+    'expense' => 'Expense',
 ];

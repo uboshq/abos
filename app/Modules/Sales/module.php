@@ -211,6 +211,48 @@ return [
             'group' => 'entry',
         ],
         [
+            'key' => 'sales.field_warehouse_select',
+            'label' => 'sales::settings.field_warehouse_select',
+            'type' => 'boolean',
+            'default' => true,
+            'group' => 'entry',
+        ],
+        [
+            'key' => 'sales.field_sub_total',
+            'label' => 'sales::settings.field_sub_total',
+            'type' => 'boolean',
+            'default' => true,
+            'group' => 'entry',
+        ],
+        [
+            'key' => 'sales.field_total_item',
+            'label' => 'sales::settings.field_total_item',
+            'type' => 'boolean',
+            'default' => true,
+            'group' => 'entry',
+        ],
+        [
+            'key' => 'sales.field_sales_qty',
+            'label' => 'sales::settings.field_sales_qty',
+            'type' => 'boolean',
+            'default' => true,
+            'group' => 'entry',
+        ],
+        [
+            'key' => 'sales.field_free_qty_total',
+            'label' => 'sales::settings.field_free_qty_total',
+            'type' => 'boolean',
+            'default' => true,
+            'group' => 'entry',
+        ],
+        [
+            'key' => 'sales.field_total_qty',
+            'label' => 'sales::settings.field_total_qty',
+            'type' => 'boolean',
+            'default' => true,
+            'group' => 'entry',
+        ],
+        [
             // চালান ছাড়া সরাসরি বিল কাটা যাবে কি না — কাউন্টার বিক্রিতে লাগে
             'key' => 'sales.invoice_needs_challan',
             'label' => 'sales::settings.invoice_needs_challan',

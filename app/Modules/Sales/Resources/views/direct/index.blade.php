@@ -64,7 +64,7 @@
                      পর্দার প্রস্থে নয় — তাই ঘরগুলো যেখানে বসছে সেখানকার
                      জায়গা দেখেই সিদ্ধান্ত হয়। --}}
                 <div class="@container">
-                <div class="grid gap-2 grid-cols-2 @md:grid-cols-3 @3xl:grid-cols-5">
+                <div class="grid gap-2 grid-cols-2 @xl:grid-cols-5">
                     <label class="block">
                         <span class="mb-1 block text-2xs font-semibold uppercase tracking-wide
                                      text-(--color-ink-muted)">{{ __('sales::field.challan_date') }}</span>
@@ -105,19 +105,26 @@
                         </label>
                     @endif
 
-                    <label class="block">
-                        <span class="mb-1 block text-2xs font-semibold uppercase tracking-wide
-                                     text-(--color-ink-muted)">{{ __('sales::field.warehouse') }}</span>
-                        <select name="warehouse_id"
-                                class="h-8 w-full rounded-(--radius-field) border border-(--color-border)
-                                       bg-(--color-surface-app) px-2 text-sm">
-                            @foreach ($warehouses as $w)
-                                <option value="{{ $w->id }}" @selected($warehouse?->id === $w->id)>
-                                    {{ $w->name() }} ({{ $w->code }})
-                                </option>
-                            @endforeach
-                        </select>
-                    </label>
+                    @if ($show['warehouse_select'])
+                        <label class="block">
+                            <span class="mb-1 block text-2xs font-semibold uppercase tracking-wide
+                                         text-(--color-ink-muted)">{{ __('sales::field.warehouse') }}</span>
+                            <select name="warehouse_id"
+                                    class="h-8 w-full rounded-(--radius-field) border border-(--color-border)
+                                           bg-(--color-surface-app) px-2 text-sm">
+                                @foreach ($warehouses as $w)
+                                    <option value="{{ $w->id }}" @selected($warehouse?->id === $w->id)>
+                                        {{ $w->name() }} ({{ $w->code }})
+                                    </option>
+                                @endforeach
+                            </select>
+                        </label>
+                    @else
+                        {{-- এক গুদামের প্রতিষ্ঠানে বাছার কিছু নেই — ঘরটা
+                             লুকানো, কিন্তু গুদামটা যায়ই, নাহলে মাল কোথা
+                             থেকে বেরোল তা লেখা থাকত না --}}
+                        <input type="hidden" name="warehouse_id" value="{{ $warehouse?->id }}">
+                    @endif
                 </div>
                 </div>
             </section>
@@ -127,8 +134,12 @@
                             bg-(--color-surface-card) p-3">
                 <div class="grid gap-3 lg:grid-cols-[1fr_13rem_9rem]">
 
-                    {{-- বাঁ: খোঁজা ও ঘরগুলো --}}
-                    <div class="min-w-0">
+                    {{-- বাঁ: খোঁজা ও ঘরগুলো।
+
+                         @container — মাপটা এই কলামের নিজের প্রস্থে, পর্দার
+                         নয়। ভিউপোর্ট ধরে মাপলে ডান পাশের প্যানেল জায়গা
+                         নেওয়ায় পাঁচটা ঘর তিন-দুইয়ে ভেঙে চার সারি হয়ে যেত। --}}
+                    <div class="@container min-w-0">
                         <label class="relative block">
                             <span class="sr-only">{{ __('sales::message.type_or_pick') }}</span>
                             <svg viewBox="0 0 24 24" aria-hidden="true"
@@ -180,29 +191,29 @@
                         </div>
 
                         {{-- প্রথম সারি: পরিমাণ · একক · ফ্রি · একক · মোট --}}
-                        <div class="mt-3 grid gap-2 sm:grid-cols-3 xl:grid-cols-5">
+                        <div class="mt-3 grid gap-2 grid-cols-2 @xl:grid-cols-5">
                             <x-sales::entry-field label="sales::field.qty">
                                 <input type="number" step="0.01" min="0" x-model="entry.qty"
-                                       class="num h-9 w-full rounded-(--radius-field) border border-(--color-border)
+                                       class="num h-8 w-full rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-app) px-2 text-end text-sm">
                             </x-sales::entry-field>
 
                             <x-sales::entry-field label="sales::field.uom">
                                 <input type="text" readonly :value="picked?.unit || ''"
-                                       class="h-9 w-full rounded-(--radius-field) border border-(--color-border)
+                                       class="h-8 w-full rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-app) px-2 text-sm text-(--color-ink-muted)">
                             </x-sales::entry-field>
 
                             @if ($show['free_qty'])
                                 <x-sales::entry-field label="sales::field.free_qty">
                                     <input type="number" step="0.01" min="0" x-model="entry.freeQty"
-                                           class="num h-9 w-full rounded-(--radius-field) border border-(--color-border)
+                                           class="num h-8 w-full rounded-(--radius-field) border border-(--color-border)
                                                   bg-(--color-surface-app) px-2 text-end text-sm">
                                 </x-sales::entry-field>
 
                                 <x-sales::entry-field label="sales::field.uom">
                                     <input type="text" readonly :value="picked?.unit || ''"
-                                           class="h-9 w-full rounded-(--radius-field) border border-(--color-border)
+                                           class="h-8 w-full rounded-(--radius-field) border border-(--color-border)
                                                   bg-(--color-surface-app) px-2 text-sm text-(--color-ink-muted)">
                                 </x-sales::entry-field>
                             @endif
@@ -213,29 +224,29 @@
                                  থেকে ভুল সংখ্যক মাল বেরোত। --}}
                             <x-sales::entry-field label="sales::field.total_qty">
                                 <input type="text" readonly :value="qty(entryTotalQty)"
-                                       class="num h-9 w-full rounded-(--radius-field) border border-(--color-border)
+                                       class="num h-8 w-full rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-app) px-2 text-end text-sm font-semibold">
                             </x-sales::entry-field>
                         </div>
 
                         {{-- দ্বিতীয় সারি: দর · মোট টাকা · ছাড় · ভ্যাট · নিট --}}
-                        <div class="mt-2 grid gap-2 sm:grid-cols-3 xl:grid-cols-5">
+                        <div class="mt-2 grid gap-2 grid-cols-2 @xl:grid-cols-5">
                             <x-sales::entry-field label="sales::field.sales_rate">
                                 <input type="number" step="0.0001" min="0" x-model="entry.rate"
-                                       class="num h-9 w-full rounded-(--radius-field) border border-(--color-border)
+                                       class="num h-8 w-full rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-app) px-2 text-end text-sm">
                             </x-sales::entry-field>
 
                             <x-sales::entry-field label="sales::field.total_amount">
                                 <input type="text" readonly :value="money(entryBase)"
-                                       class="num h-9 w-full rounded-(--radius-field) border border-(--color-border)
+                                       class="num h-8 w-full rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-app) px-2 text-end text-sm">
                             </x-sales::entry-field>
 
                             @if ($show['line_discount'])
                                 <x-sales::entry-field label="sales::field.discount_pct">
                                     <input type="number" step="0.01" min="0" max="100" x-model="entry.discountPercent"
-                                           class="num h-9 w-full rounded-(--radius-field) border border-(--color-border)
+                                           class="num h-8 w-full rounded-(--radius-field) border border-(--color-border)
                                                   bg-(--color-surface-app) px-2 text-end text-sm">
                                 </x-sales::entry-field>
                             @endif
@@ -243,14 +254,14 @@
                             @if ($vatEnabled)
                                 <x-sales::entry-field label="sales::field.vat">
                                     <input type="text" readonly :value="money(entryVat)"
-                                           class="num h-9 w-full rounded-(--radius-field) border border-(--color-border)
+                                           class="num h-8 w-full rounded-(--radius-field) border border-(--color-border)
                                                   bg-(--color-surface-app) px-2 text-end text-sm">
                                 </x-sales::entry-field>
                             @endif
 
                             <x-sales::entry-field label="sales::field.net_value">
                                 <input type="text" readonly :value="money(entryNet)"
-                                       class="num h-9 w-full rounded-(--radius-field) border border-(--color-border)
+                                       class="num h-8 w-full rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-app) px-2 text-end text-sm font-semibold">
                             </x-sales::entry-field>
                         </div>
@@ -520,8 +531,11 @@
         </div>
 
         {{-- ══ ডান পাশের প্যানেল ═══════════════════════════════════════ --}}
-        <aside class="space-y-0 self-start rounded-(--radius-card) border border-(--color-border)
-                      bg-(--color-surface-card) xl:sticky xl:top-3">
+        <aside class="flex flex-col self-start rounded-(--radius-card) border
+                      border-(--color-border) bg-(--color-surface-card)
+                      xl:sticky xl:top-3 xl:max-h-[calc(100dvh-5.5rem)]">
+
+            <div class="min-h-0 flex-1 overflow-y-auto">
 
             {{-- ক্রেতা --}}
             <div class="border-b border-(--color-border) p-3">
@@ -559,9 +573,11 @@
                     <span class="num" x-text="'৳' + money(grossTotal)"></span>
                 </x-sales::panel-row>
 
-                <x-sales::panel-row :label="__('sales::field.sub_total_no_vat')">
-                    <span class="num" x-text="'৳' + money(subTotal)"></span>
-                </x-sales::panel-row>
+                @if ($show['sub_total'])
+                    <x-sales::panel-row :label="__('sales::field.sub_total_no_vat')">
+                        <span class="num" x-text="'৳' + money(subTotal)"></span>
+                    </x-sales::panel-row>
+                @endif
 
                 <x-sales::panel-row :label="__('sales::field.discount_amount')">
                     <input type="number" step="0.01" min="0" name="discount_amount" x-model="discountAmount"
@@ -636,19 +652,66 @@
 
             <div class="space-y-1 p-3 text-2xs">
                 @foreach ([
-                    'sales::field.total_item' => 'counts.totalItem',
-                    'sales::field.total_sales_qty' => 'counts.totalSalesQty',
-                    'sales::field.total_free_qty' => 'counts.totalFreeQty',
-                    'sales::field.total_free_plus_sales' => 'counts.totalQty',
-                ] as $label => $expr)
-                    <x-sales::panel-row :label="__($label)">
-                        <span class="num" x-text="{{ $expr }} || '—'"></span>
-                    </x-sales::panel-row>
+                    ['label' => 'sales::field.total_item', 'expr' => 'counts.totalItem', 'on' => 'total_item'],
+                    ['label' => 'sales::field.total_sales_qty', 'expr' => 'counts.totalSalesQty', 'on' => 'sales_qty'],
+                    ['label' => 'sales::field.total_free_qty', 'expr' => 'counts.totalFreeQty', 'on' => 'free_qty_total'],
+                    ['label' => 'sales::field.total_free_plus_sales', 'expr' => 'counts.totalQty', 'on' => 'total_qty'],
+                ] as $row)
+                    @if ($show[$row['on']])
+                        <x-sales::panel-row :label="__($row['label'])">
+                            <span class="num" x-text="{{ $row['expr'] }} || '—'"></span>
+                        </x-sales::panel-row>
+                    @endif
                 @endforeach
             </div>
 
+            </div>
+
+            {{-- নমুনার ছয়টা বোতাম।
+
+                 ── কেন এগুলো এখানে, যদিও সব কাজ এখনো তৈরি হয়নি ──────────
+                 জায়গাটা ধরে রাখা: কাজগুলো এলে কোথায় বসবে তা আগেই ঠিক থাকে,
+                 আর ব্যবহারকারী দুই পণ্যের মাঝে গিয়ে একই বিন্যাস পান।
+
+                 তবে চুপচাপ কিছু-না-করা নয়। যে বোতাম চাপা যায় অথচ কিছুই হয়
+                 না, সেটাই সবচেয়ে খারাপ স্টাব — মানুষ ভাবে সিস্টেম নষ্ট।
+                 তাই চাপলে পরিষ্কার করে বলা হয় জিনিসটা আসছে।
+
+                 খরচ ও জমা দুইটা সত্যিই কাজ করে — ওগুলোর ঘর এই প্যানেলেই
+                 আছে, তাই বোতামটা সেখানেই নিয়ে যায়। --}}
+            <div class="grid grid-cols-2 gap-1 border-t border-(--color-border) p-3">
+                @foreach (array_filter([
+                    ['key' => 'chart_bulk_do', 'action' => null, 'show' => true],
+                    ['key' => 'expense', 'action' => 'expense_amount', 'show' => $show['expense']],
+                    ['key' => 'transportation', 'action' => null, 'show' => true],
+                    ['key' => 'shipment', 'action' => null, 'show' => true],
+                    ['key' => 'add_deposit', 'action' => 'deposit', 'show' => $show['deposit']],
+                    ['key' => 'add_note', 'action' => null, 'show' => true],
+                ], fn (array $b) => $b['show']) as $button)
+                    <button type="button"
+                            @if ($button['action'])
+                                @click="focusField('{{ $button['action'] }}')"
+                            @else
+                                @click="upcoming = @js(__('sales::action.'.$button['key']))"
+                            @endif
+                            @class([
+                                'rounded-(--radius-field) border border-(--color-border) px-2 py-1.5 text-2xs',
+                                'transition-colors hover:bg-(--color-surface-hover)',
+                                'text-(--color-ink-muted)' => $button['action'] === null,
+                            ])>
+                        {{ __('sales::action.'.$button['key']) }}
+                    </button>
+                @endforeach
+            </div>
+
+            <p x-show="upcoming" x-cloak
+               class="mx-3 rounded-(--radius-field) bg-(--color-badge-pending-bg) px-2 py-1 text-2xs
+                      text-(--color-badge-pending-ink)">
+                <span x-text="upcoming"></span> — {{ __('sales::message.upcoming') }}
+            </p>
+
             {{-- বোতাম --}}
-            <div class="space-y-2 border-t border-(--color-border) p-3">
+            <div class="space-y-2 p-3">
                 <x-ui.button type="submit" tone="primary" class="w-full"
                              ::disabled="lines.length === 0">
                     {{ __('sales::action.confirm') }}
@@ -687,6 +750,7 @@
                     expenseAmount: '',
                     roundingAmount: '',
                     deposit: '',
+                    upcoming: '',
                     nextKey: 1,
 
                     get visible() {
@@ -845,6 +909,15 @@
                             totalFreeQty: this.qty(free),
                             totalQty: this.qty(sales + free),
                         };
+                    },
+
+                    /* যে বোতামের কাজটা এই পাতাতেই আছে, সেটা ওই ঘরে নিয়ে
+                       যায় — নতুন কোনো পপ-আপ নয়। খরচ বসাতে গিয়ে একটা জানালা
+                       খুলে আবার বন্ধ করা কাউন্টারে দুইটা বাড়তি চাপ। */
+                    focusField(name) {
+                        this.upcoming = '';
+                        const el = this.$el.querySelector(`[name="${name}"]`);
+                        if (el) { el.focus(); el.select?.(); }
                     },
 
                     money(v) {

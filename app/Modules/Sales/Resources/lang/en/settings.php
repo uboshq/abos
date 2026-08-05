@@ -18,4 +18,10 @@ return [
     'field_do_no' => 'Show the DO number field',
     'field_deposit' => 'Show the counter deposit field',
     'field_credit_limit' => 'Show the customer\'s credit limit',
+    'field_warehouse_select' => 'Show the warehouse picker',
+    'field_sub_total' => 'Show the Sub Total (without VAT) row',
+    'field_total_item' => 'Show the Total Item count',
+    'field_sales_qty' => 'Show Total Sales Qnty',
+    'field_free_qty_total' => 'Show Free Qty.',
+    'field_total_qty' => 'Show Total Free+Sales Qty',
 ];
