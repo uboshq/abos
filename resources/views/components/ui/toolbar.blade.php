@@ -71,9 +71,27 @@
        an export quietly comes back short. */
     $params = collect(request()->query())->except('page')->all();
     $shareUrl = url()->current().'?'.http_build_query($params);
+
+    /*
+     * প্যানেলটা খোলা থাকবে কি না।
+     *
+     * আগে এখানে ঘরের নামের একটা তালিকা ছিল — from, to, branch_id, status।
+     * ফলে যে পর্দা অন্য নামের ছাঁকনি ব্যবহার করত (অডিটে user, action,
+     * module) সেখানে ছাঁকনি দেওয়ার পরেও প্যানেলটা বন্ধ হয়ে ফিরত, আর
+     * ব্যবহারকারী দেখতেন তালিকা ছোট হয়ে গেছে কিন্তু কেন তা দেখতে পেতেন
+     * না — ছাঁকনিটা তুলবেন কী করে সেটাও নয়।
+     *
+     * তাই নাম ধরে নয়, বাদ দিয়ে: টুলবারের নিজের ঘরগুলো (খোঁজা, সাজানো,
+     * দৃশ্য, ঘনত্ব, পাতা, কলাম) ছাড়া ঠিকানায় আর কিছু থাকলেই সেটা
+     * স্ক্রিনের ছাঁকনি, আর প্যানেলটা খোলা থাকে।
+     */
+    $ownKeys = ['q', 'sort', 'view', 'compact', 'page', 'hide', 'show'];
+    $screenFilters = collect(request()->query())
+        ->except($ownKeys)
+        ->filter(fn ($value) => $value !== '' && $value !== null);
 @endphp
 
-<div x-data="{ filtersOpen: {{ $hasFilters && request()->hasAny(['from', 'to', 'branch_id', 'inactive', 'account_id', 'status']) ? 'true' : 'false' }} }"
+<div x-data="{ filtersOpen: {{ $hasFilters && $screenFilters->isNotEmpty() ? 'true' : 'false' }} }"
      {{ $attributes->merge(['class' => 'border-b border-(--color-border) bg-(--color-surface-card)']) }}>
 
     <div class="flex flex-wrap items-center gap-2 px-3 py-2">

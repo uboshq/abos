@@ -280,4 +280,7 @@ return [
         'not_an_image' => 'That file could not be opened as an image. Use JPG, PNG or WebP.',
         'too_large' => 'That photo is too large. Please use a smaller one.',
     ],
+    'count' => [
+        'records' => ':count record|:count records',
+    ],
 ];

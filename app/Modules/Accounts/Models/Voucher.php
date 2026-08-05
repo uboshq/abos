@@ -7,6 +7,7 @@ namespace App\Modules\Accounts\Models;
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasDocumentStatus;
 use App\Core\Concerns\HasPublicId;
+use App\Core\Concerns\IsAudited;
 use App\Core\Contracts\Drillable;
 use App\Core\Support\DocumentStatus;
 use App\Models\Branch;
@@ -31,6 +32,7 @@ class Voucher extends Model implements Drillable
     use HasDocumentStatus;
     use HasFactory;
     use HasPublicId;
+    use IsAudited;
     use SoftDeletes;
 
     /** টাকা ঢুকল — গ্রাহকের আদায়, অন্য আয়। */

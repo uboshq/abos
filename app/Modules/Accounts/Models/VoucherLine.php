@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Accounts\Models;
 
 use App\Core\Concerns\HasPublicId;
+use App\Core\Concerns\IsAudited;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -20,6 +21,7 @@ class VoucherLine extends Model
 {
     use HasFactory;
     use HasPublicId;
+    use IsAudited;
 
     protected $fillable = [
         'voucher_id', 'account_id', 'party_type', 'party_id',

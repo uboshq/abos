@@ -6,6 +6,7 @@ namespace App\Modules\Accounts\Models;
 
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
+use App\Core\Concerns\IsAudited;
 use App\Core\Contracts\Drillable;
 use App\Core\Support\DocumentStatus;
 use App\Models\Branch;
@@ -28,6 +29,7 @@ class MoneyTransfer extends Model implements Drillable
     use BelongsToCompany;
     use HasFactory;
     use HasPublicId;
+    use IsAudited;
     use SoftDeletes;
 
     protected $fillable = [
