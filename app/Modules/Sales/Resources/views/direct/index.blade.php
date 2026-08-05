@@ -1,32 +1,31 @@
 {{--
-    সরাসরি বিক্রয় — নমুনার চারটা অংশ।
+    সরাসরি বিক্রয় — নমুনার হুবহু বিন্যাস।
 
-        ১. এন্ট্রি স্ট্রিপ  (উপরে বাঁয়ে)  পণ্য খোঁজা, লাইভ মজুদ, পরিমাণ, দর
-        ২. ডকুমেন্ট হেডার  (উপরে ডানে)   গুদাম, তারিখ, মেয়াদ, DO, ক্রেতা
-        ৩. কার্ট           (মাঝে)        পণ্যের সারি, নিচে উপহারের সারি
-        ৪. টোটাল প্যানেল   (ডান কলাম)    মোট থেকে বকেয়া পর্যন্ত
+        উপরে সরু স্ট্রিপ   তারিখ · বিল নম্বর · মেয়াদ · DO · গুদাম
+        এন্ট্রি এলাকা       বাঁয়ে ঘরগুলো, মাঝে "এই লাইন", ডানে পণ্যের ছবি
+        কার্ট              SL# থেকে টাকা পর্যন্ত ন'টা কলাম
+        ডান পাশের প্যানেল   ক্রেতা, এই চালান, দিতে হবে, পার্টির বকেয়া, গোনা
 
-    ── কেন এন্ট্রি উপরে, কার্ট নিচে ─────────────────────────────────────
-    হাত যে ক্রমে কাজ করে সেই ক্রমেই: পণ্য বাছা → পরিমাণ → কার্টে যোগ →
-    পরের পণ্য। কার্ট উপরে থাকলে প্রতিটা পণ্যের পর চোখ নিচ থেকে উপরে ফিরে
-    আসত।
+    ── কেন ডান পাশটা আলাদা কলাম, নিচে নয় ────────────────────────────────
+    টাকার অঙ্কগুলো সবসময় চোখের সামনে থাকতে হয়, কার্ট যত লম্বাই হোক।
+    নিচে রাখলে দশ লাইনের বিলে Confirm বোতামটা ভাঁজের নিচে চলে যেত, আর
+    কাউন্টারের লোককে স্ক্রল করে খুঁজতে হত — যে কাজটা করতে তিনি এসেছেন।
 
-    ── লাইভ মজুদ কেন ছয়টা সংখ্যা ────────────────────────────────────────
-    "বিক্রয়যোগ্য ৭৪৬" দেখে কেউ জানে না তার মধ্যে কতটা অন্য অর্ডারে ধরা,
-    কতটা আটকানো, আর ফ্রি ভাণ্ডারে আলাদা কতটা পড়ে আছে। ছয়টাই পাশে থাকলে
-    প্রশ্নটা করার আগেই উত্তর থাকে — অন্য পর্দায় যেতে হয় না।
+    ── "এই লাইন" প্যানেলটা কেন ────────────────────────────────────────
+    কার্টে যোগ করার আগেই লাইনটার টাকা কত হচ্ছে সেটা দেখা যায়। না দেখালে
+    ভুল দর বা ভুল ছাড় ধরা পড়ত কার্টে যোগ করার পরে, আর তখন সারিটা মুছে
+    আবার লিখতে হত।
 --}}
+@php
+    $vatEnabled = $show['vat'] ?? true;
+@endphp
+
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('sales::menu.direct') }}</x-slot:title>
 
-    <x-slot:header>
-        <x-ui.page-header :title="__('sales::menu.direct')"
-                          :subtitle="__('sales::message.direct_note')" />
-    </x-slot:header>
-
     @if (session('saved'))
         <div role="status"
-             class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm
+             class="mb-3 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm
                     text-(--color-badge-success-ink)">
             {{ session('saved') }}
         </div>
@@ -34,7 +33,7 @@
 
     @if ($errors->any())
         <div role="alert"
-             class="mb-4 rounded-(--radius-field) bg-(--color-badge-danger-bg) px-3 py-2 text-sm
+             class="mb-3 rounded-(--radius-field) bg-(--color-badge-danger-bg) px-3 py-2 text-sm
                     text-(--color-badge-danger-ink)">
             <ul class="list-inside list-disc">
                 @foreach ($errors->all() as $error)
@@ -45,251 +44,468 @@
     @endif
 
     <form method="POST" action="{{ route('sales.direct.store') }}"
-          x-data="directSale({{ Illuminate\Support\Js::from($products) }}, {{ Illuminate\Support\Js::from($customers->mapWithKeys(fn ($c) => [$c->id => ['limit' => (string) $c->credit_limit, 'due' => $c->outstanding(), 'days' => (int) $c->credit_days]])) }}, {{ $walkinId }})"
-          class="space-y-4">
+          x-data="directSale({{ Illuminate\Support\Js::from($products) }}, {{ Illuminate\Support\Js::from($customerTerms) }}, {{ $walkinId }}, {{ $vatEnabled ? 'true' : 'false' }})"
+          class="grid gap-3 xl:grid-cols-[1fr_17rem]">
         @csrf
 
-        <div class="grid gap-4 xl:grid-cols-2">
+        {{-- ══ বাঁ দিক: স্ট্রিপ · এন্ট্রি · কার্ট ══════════════════════ --}}
+        <div class="min-w-0 space-y-3">
 
-            {{-- ── ১. এন্ট্রি স্ট্রিপ ───────────────────────────────── --}}
-            <section class="rounded-(--radius-card) border border-(--color-border)
-                            bg-(--color-surface-card) p-4">
-                <h2 class="mb-3 text-sm font-semibold">{{ __('sales::field.product') }}</h2>
+            {{-- ── ডকুমেন্ট স্ট্রিপ ──────────────────────────────────── --}}
+            <section class="rounded-(--radius-card) border-t-2 border-(--color-success)
+                            border-x border-b border-(--color-border)
+                            bg-(--color-surface-card) p-3">
+                {{-- পাঁচটা ঘরই এক সারিতে, আর ঘরগুলো সরু।
 
-                <input type="search" x-model="term" x-ref="search"
-                       x-init="$nextTick(() => $refs.search.focus())"
-                       @keydown.enter.prevent="pickFirst()"
-                       placeholder="{{ __('sales::message.pos_search') }}"
-                       class="h-11 w-full rounded-(--radius-field) border border-(--color-border)
-                              bg-(--color-surface-app) px-3 text-base">
-
-                {{-- বাছাই করা পণ্যটার নাম বড় করে — কাউন্টারে ডেস্কের ওপাশ
-                     থেকেও পড়া যেতে হবে --}}
-                <p class="mt-2 min-h-6 text-base font-semibold" x-text="picked ? picked.name : ''"></p>
-
-                {{-- লাইভ মজুদ — ছয়টা সংখ্যা --}}
-                <div class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3" x-show="picked" x-cloak>
-                    @foreach ([
-                        'main' => 'sales::field.main_stock',
-                        'reserved' => 'sales::field.reserved_short',
-                        'available' => 'sales::field.available_short',
-                        'free' => 'sales::field.free_stock',
-                        'free_available' => 'sales::field.free_available',
-                        'inCart' => 'sales::field.in_cart',
-                    ] as $key => $label)
-                        <div class="rounded-(--radius-field) bg-(--color-surface-app) px-2 py-1">
-                            <span class="block text-2xs text-(--color-ink-muted)">{{ __($label) }}</span>
-                            <span class="num text-sm font-semibold"
-                                  x-text="stockFigure('{{ $key }}')"></span>
-                        </div>
-                    @endforeach
-                </div>
-
-                <p x-show="! picked" x-cloak class="mt-2 text-2xs text-(--color-ink-muted)">
-                    {{ __('sales::message.pick_item_to_see_stock') }}
-                </p>
-
-                {{-- তালিকা --}}
-                <div class="mt-3 max-h-48 space-y-1 overflow-y-auto">
-                    <template x-for="p in visible" :key="p.id">
-                        <button type="button" @click="pick(p)"
-                                class="flex w-full items-baseline justify-between gap-2 rounded-(--radius-field)
-                                       px-2 py-1.5 text-start text-sm transition-colors
-                                       hover:bg-(--color-surface-hover)">
-                            <span class="min-w-0 truncate" x-text="p.name"></span>
-                            <span class="num shrink-0 text-2xs text-(--color-ink-muted)"
-                                  x-text="qty(p.available)"></span>
-                        </button>
-                    </template>
-                </div>
-
-                {{-- পরিমাণ ও দর --}}
-                <div class="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                     আগে xl:grid-cols-5 দেওয়া ছিল, কিন্তু ডান পাশের প্যানেল
+                     জায়গা নিয়ে নেওয়ায় বাঁ দিকটা আর "xl" হত না — ফলে পাঁচটা
+                     ঘর দুই সারিতে ভেঙে যেত আর স্ট্রিপটা দ্বিগুণ উঁচু দেখাত।
+                     এখন মাপটা ধরা হয়েছে কনটেইনারের নিজের প্রস্থে (@container),
+                     পর্দার প্রস্থে নয় — তাই ঘরগুলো যেখানে বসছে সেখানকার
+                     জায়গা দেখেই সিদ্ধান্ত হয়। --}}
+                <div class="@container">
+                <div class="grid gap-2 grid-cols-2 @md:grid-cols-3 @3xl:grid-cols-5">
                     <label class="block">
-                        <span class="mb-1 block text-2xs font-medium">{{ __('sales::field.quantity') }}</span>
-                        <input type="number" step="0.01" min="0.01" x-model="entry.qty"
-                               class="num h-9 w-full rounded-(--radius-field) border border-(--color-border)
-                                      bg-(--color-surface-app) px-2 text-end text-sm">
+                        <span class="mb-1 block text-2xs font-semibold uppercase tracking-wide
+                                     text-(--color-ink-muted)">{{ __('sales::field.challan_date') }}</span>
+                        <input type="date" name="trx_date" value="{{ old('trx_date', now()->toDateString()) }}"
+                               class="h-8 w-full rounded-(--radius-field) border border-(--color-border)
+                                      bg-(--color-surface-app) px-2 text-sm">
                     </label>
 
-                    @if ($show['free_qty'])
-                        <label class="block">
-                            <span class="mb-1 block text-2xs font-medium">{{ __('sales::field.free_qty') }}</span>
-                            <input type="number" step="0.01" min="0" x-model="entry.freeQty"
-                                   class="num h-9 w-full rounded-(--radius-field) border border-(--color-border)
-                                          bg-(--color-surface-app) px-2 text-end text-sm">
-                        </label>
-                    @endif
+                    {{-- বিলের নম্বর নিশ্চিত করার সময় বসে — সিরিজ থেকে।
 
+                         আগে থেকে দেখালে খসড়া বাতিল হলে ওই নম্বরটা খরচ হয়ে
+                         সিরিজে একটা ফাঁক থেকে যেত, আর নিরীক্ষায় "৪৭ নম্বর
+                         বিলটা কোথায়" প্রশ্নের উত্তর থাকত না। --}}
                     <label class="block">
-                        <span class="mb-1 block text-2xs font-medium">{{ __('sales::field.rate') }}</span>
-                        <input type="number" step="0.0001" min="0" x-model="entry.rate"
-                               class="num h-9 w-full rounded-(--radius-field) border border-(--color-border)
-                                      bg-(--color-surface-app) px-2 text-end text-sm">
+                        <span class="mb-1 block text-2xs font-semibold uppercase tracking-wide
+                                     text-(--color-ink-muted)">{{ __('sales::field.inv_number') }}</span>
+                        <input type="text" disabled value="{{ __('sales::field.on_confirm') }}"
+                               class="h-8 w-full rounded-(--radius-field) border border-(--color-border)
+                                      bg-(--color-surface-app) px-2 text-sm text-(--color-ink-muted)">
                     </label>
 
-                    @if ($show['line_discount'])
-                        <label class="block">
-                            <span class="mb-1 block text-2xs font-medium">{{ __('sales::field.discount') }} %</span>
-                            <input type="number" step="0.01" min="0" max="100" x-model="entry.discountPercent"
-                                   class="num h-9 w-full rounded-(--radius-field) border border-(--color-border)
-                                          bg-(--color-surface-app) px-2 text-end text-sm">
-                        </label>
-                    @endif
-                </div>
-
-                <div class="mt-3 flex flex-wrap items-center gap-2">
-                    <x-ui.button type="button" tone="primary" ::disabled="! picked"
-                                 x-on:click="addToCart()">
-                        {{ __('sales::action.add_to_cart') }}
-                    </x-ui.button>
-
-                    <x-ui.button type="button" tone="secondary" x-on:click="clearEntry()">
-                        {{ __('sales::action.clear_data') }}
-                    </x-ui.button>
-
-                    <span class="num ms-auto text-sm font-semibold" x-text="money(entryNet)"></span>
-                </div>
-            </section>
-
-            {{-- ── ২. ডকুমেন্ট হেডার ────────────────────────────────── --}}
-            <section class="rounded-(--radius-card) border border-(--color-border)
-                            bg-(--color-surface-card) p-4">
-                <h2 class="mb-3 text-sm font-semibold">{{ __('sales::section.header') }}</h2>
-
-                <div class="grid gap-3 sm:grid-cols-2">
-                    <x-ui.select name="warehouse_id" :label="__('sales::field.warehouse')"
-                                 :options="$warehouses->mapWithKeys(fn ($w) => [$w->id => $w->name()])"
-                                 :selected="$warehouse?->id" placeholder="-" />
-
-                    <x-ui.field name="trx_date" type="date" :label="__('sales::field.date')"
-                                :value="old('trx_date', now()->toDateString())" />
-
-                    <div>
-                        <label class="mb-1 block text-sm font-medium" for="customer_id">
-                            {{ __('sales::field.customer') }}
-                        </label>
-                        <select id="customer_id" name="customer_id" x-model="customerId"
-                                class="h-(--spacing-field) w-full rounded-(--radius-field) border
-                                       border-(--color-border) bg-(--color-surface-card) px-3">
-                            @foreach ($customers as $customer)
-                                <option value="{{ $customer->id }}"
-                                        @selected($customer->id === $walkinId)>{{ $customer->name() }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <x-ui.field name="credit_period_days" type="number" min="0" max="365"
-                                :label="__('sales::field.credit_period')"
-                                x-model="creditDays" />
+                    <label class="block">
+                        <span class="mb-1 block text-2xs font-semibold uppercase tracking-wide
+                                     text-(--color-ink-muted)">{{ __('sales::field.credit_period') }}</span>
+                        <input type="number" min="0" max="365" name="credit_period_days" x-model="creditDays"
+                               placeholder="{{ __('sales::field.days') }}"
+                               class="num h-8 w-full rounded-(--radius-field) border border-(--color-border)
+                                      bg-(--color-surface-app) px-2 text-sm">
+                    </label>
 
                     @if ($show['do_no'])
-                        <x-ui.field name="do_no" :label="__('sales::field.do_no')" />
+                        <label class="block">
+                            <span class="mb-1 block text-2xs font-semibold uppercase tracking-wide
+                                         text-(--color-ink-muted)">{{ __('sales::field.do_no') }}</span>
+                            <input type="text" name="do_no" placeholder="{{ __('sales::field.optional') }}"
+                                   class="h-8 w-full rounded-(--radius-field) border border-(--color-border)
+                                          bg-(--color-surface-app) px-2 text-sm">
+                        </label>
                     @endif
 
-                    <x-ui.field name="vehicle_no" :label="__('sales::field.vehicle_no')" />
+                    <label class="block">
+                        <span class="mb-1 block text-2xs font-semibold uppercase tracking-wide
+                                     text-(--color-ink-muted)">{{ __('sales::field.warehouse') }}</span>
+                        <select name="warehouse_id"
+                                class="h-8 w-full rounded-(--radius-field) border border-(--color-border)
+                                       bg-(--color-surface-app) px-2 text-sm">
+                            @foreach ($warehouses as $w)
+                                <option value="{{ $w->id }}" @selected($warehouse?->id === $w->id)>
+                                    {{ $w->name() }} ({{ $w->code }})
+                                </option>
+                            @endforeach
+                        </select>
+                    </label>
                 </div>
+                </div>
+            </section>
 
-                @if ($show['credit_limit'])
-                    {{-- ক্রেতার অবস্থা — সীমা ও বকেয়া পাশাপাশি।
+            {{-- ── এন্ট্রি এলাকা ─────────────────────────────────────── --}}
+            <section class="rounded-(--radius-card) border border-(--color-border)
+                            bg-(--color-surface-card) p-3">
+                <div class="grid gap-3 lg:grid-cols-[1fr_13rem_9rem]">
 
-                         দুইটা একসাথে না দেখালে "সীমা ৫০,০০০" দেখে মনে হত
-                         পুরোটাই খালি, অথচ ৪৮,০০০ আগেই বাকি। --}}
-                    <div class="mt-3 grid grid-cols-2 gap-2 text-sm">
-                        <div class="rounded-(--radius-field) bg-(--color-surface-app) px-2 py-1">
-                            <span class="block text-2xs text-(--color-ink-muted)">
-                                {{ __('sales::field.credit_limit') }}
-                            </span>
-                            <span class="num font-semibold" x-text="money(customer.limit)"></span>
+                    {{-- বাঁ: খোঁজা ও ঘরগুলো --}}
+                    <div class="min-w-0">
+                        <label class="relative block">
+                            <span class="sr-only">{{ __('sales::message.type_or_pick') }}</span>
+                            <svg viewBox="0 0 24 24" aria-hidden="true"
+                                 class="pointer-events-none absolute start-2 top-1/2 size-5 -translate-y-1/2
+                                        fill-(--color-brand-500)">
+                                <path d="M10 2a8 8 0 1 0 4.9 14.3l5.4 5.4 1.4-1.4-5.4-5.4A8 8 0 0 0 10 2Zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12Z"/>
+                            </svg>
+                            <input type="search" x-model="term" x-ref="search"
+                                   x-init="$nextTick(() => $refs.search.focus())"
+                                   @keydown.enter.prevent="pickFirst()"
+                                   placeholder="{{ __('sales::message.type_or_pick') }}"
+                                   class="h-11 w-full rounded-(--radius-field) border border-(--color-border)
+                                          bg-(--color-surface-app) ps-9 pe-3 text-lg">
+                        </label>
+
+                        {{-- বাছাই করা পণ্যের মজুদ — নমুনা দাবি করে এটা পণ্য
+                             বাছার সাথে সাথেই দেখা যাবে --}}
+                        <p class="mt-1 text-2xs text-(--color-ink-muted)" x-show="! picked" x-cloak>
+                            {{ __('sales::message.pick_item_to_see_stock') }}
+                        </p>
+
+                        <div class="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-2xs" x-show="picked" x-cloak>
+                            @foreach ([
+                                'main' => 'sales::field.main_stock',
+                                'reserved' => 'sales::field.reserved_short',
+                                'available' => 'sales::field.available_short',
+                                'free' => 'sales::field.free_stock',
+                                'free_available' => 'sales::field.free_available',
+                            ] as $key => $label)
+                                <span>
+                                    <span class="text-(--color-ink-muted)">{{ __($label) }}</span>
+                                    <span class="num font-semibold" x-text="qty(picked?.{{ $key }})"></span>
+                                </span>
+                            @endforeach
                         </div>
-                        <div class="rounded-(--radius-field) bg-(--color-surface-app) px-2 py-1">
-                            <span class="block text-2xs text-(--color-ink-muted)">
-                                {{ __('sales::field.previous_balance') }}
-                            </span>
-                            <span class="num font-semibold" x-text="money(customer.due)"></span>
+
+                        {{-- খোঁজার ফল --}}
+                        <div class="mt-2 max-h-40 space-y-0.5 overflow-y-auto" x-show="term.trim() !== ''" x-cloak>
+                            <template x-for="p in visible" :key="p.id">
+                                <button type="button" @click="pick(p)"
+                                        class="flex w-full items-baseline justify-between gap-2 rounded-(--radius-field)
+                                               px-2 py-1 text-start text-sm transition-colors
+                                               hover:bg-(--color-surface-hover)">
+                                    <span class="min-w-0 truncate" x-text="p.name"></span>
+                                    <span class="num shrink-0 text-2xs text-(--color-ink-muted)"
+                                          x-text="qty(p.available)"></span>
+                                </button>
+                            </template>
+                        </div>
+
+                        {{-- প্রথম সারি: পরিমাণ · একক · ফ্রি · একক · মোট --}}
+                        <div class="mt-3 grid gap-2 sm:grid-cols-3 xl:grid-cols-5">
+                            <x-sales::entry-field label="sales::field.qty">
+                                <input type="number" step="0.01" min="0" x-model="entry.qty"
+                                       class="num h-9 w-full rounded-(--radius-field) border border-(--color-border)
+                                              bg-(--color-surface-app) px-2 text-end text-sm">
+                            </x-sales::entry-field>
+
+                            <x-sales::entry-field label="sales::field.uom">
+                                <input type="text" readonly :value="picked?.unit || ''"
+                                       class="h-9 w-full rounded-(--radius-field) border border-(--color-border)
+                                              bg-(--color-surface-app) px-2 text-sm text-(--color-ink-muted)">
+                            </x-sales::entry-field>
+
+                            @if ($show['free_qty'])
+                                <x-sales::entry-field label="sales::field.free_qty">
+                                    <input type="number" step="0.01" min="0" x-model="entry.freeQty"
+                                           class="num h-9 w-full rounded-(--radius-field) border border-(--color-border)
+                                                  bg-(--color-surface-app) px-2 text-end text-sm">
+                                </x-sales::entry-field>
+
+                                <x-sales::entry-field label="sales::field.uom">
+                                    <input type="text" readonly :value="picked?.unit || ''"
+                                           class="h-9 w-full rounded-(--radius-field) border border-(--color-border)
+                                                  bg-(--color-surface-app) px-2 text-sm text-(--color-ink-muted)">
+                                </x-sales::entry-field>
+                            @endif
+
+                            {{-- মোট পরিমাণ নিজে থেকেই — বিক্রয় + ফ্রি।
+
+                                 হাতে লিখতে দিলে কেউ ভুল যোগ করত, আর গুদাম
+                                 থেকে ভুল সংখ্যক মাল বেরোত। --}}
+                            <x-sales::entry-field label="sales::field.total_qty">
+                                <input type="text" readonly :value="qty(entryTotalQty)"
+                                       class="num h-9 w-full rounded-(--radius-field) border border-(--color-border)
+                                              bg-(--color-surface-app) px-2 text-end text-sm font-semibold">
+                            </x-sales::entry-field>
+                        </div>
+
+                        {{-- দ্বিতীয় সারি: দর · মোট টাকা · ছাড় · ভ্যাট · নিট --}}
+                        <div class="mt-2 grid gap-2 sm:grid-cols-3 xl:grid-cols-5">
+                            <x-sales::entry-field label="sales::field.sales_rate">
+                                <input type="number" step="0.0001" min="0" x-model="entry.rate"
+                                       class="num h-9 w-full rounded-(--radius-field) border border-(--color-border)
+                                              bg-(--color-surface-app) px-2 text-end text-sm">
+                            </x-sales::entry-field>
+
+                            <x-sales::entry-field label="sales::field.total_amount">
+                                <input type="text" readonly :value="money(entryBase)"
+                                       class="num h-9 w-full rounded-(--radius-field) border border-(--color-border)
+                                              bg-(--color-surface-app) px-2 text-end text-sm">
+                            </x-sales::entry-field>
+
+                            @if ($show['line_discount'])
+                                <x-sales::entry-field label="sales::field.discount_pct">
+                                    <input type="number" step="0.01" min="0" max="100" x-model="entry.discountPercent"
+                                           class="num h-9 w-full rounded-(--radius-field) border border-(--color-border)
+                                                  bg-(--color-surface-app) px-2 text-end text-sm">
+                                </x-sales::entry-field>
+                            @endif
+
+                            @if ($vatEnabled)
+                                <x-sales::entry-field label="sales::field.vat">
+                                    <input type="text" readonly :value="money(entryVat)"
+                                           class="num h-9 w-full rounded-(--radius-field) border border-(--color-border)
+                                                  bg-(--color-surface-app) px-2 text-end text-sm">
+                                </x-sales::entry-field>
+                            @endif
+
+                            <x-sales::entry-field label="sales::field.net_value">
+                                <input type="text" readonly :value="money(entryNet)"
+                                       class="num h-9 w-full rounded-(--radius-field) border border-(--color-border)
+                                              bg-(--color-surface-app) px-2 text-end text-sm font-semibold">
+                            </x-sales::entry-field>
                         </div>
                     </div>
-                @endif
+
+                    {{-- মাঝ: এই লাইন --}}
+                    <div class="rounded-(--radius-card) bg-(--color-badge-success-bg) p-3">
+                        <p class="text-2xs font-semibold uppercase tracking-wide text-(--color-badge-success-ink)">
+                            {{ __('sales::field.this_line') }}
+                        </p>
+                        <p class="num mt-1 text-2xl font-bold text-(--color-badge-success-ink)"
+                           x-text="'৳' + money(entryNet)"></p>
+
+                        <dl class="mt-2 space-y-0.5 text-2xs">
+                            @foreach ([
+                                'sales::field.net_value' => 'entryAfterDiscount',
+                                'sales::field.vat' => 'entryVat',
+                                'sales::field.total_qty' => 'entryTotalQty',
+                            ] as $label => $expr)
+                                <div class="flex justify-between gap-2">
+                                    <dt class="text-(--color-ink-muted)">{{ __($label) }}</dt>
+                                    <dd class="num" x-text="money({{ $expr }})"></dd>
+                                </div>
+                            @endforeach
+                        </dl>
+
+                        <div class="mt-2 grid grid-cols-2 gap-1">
+                            @if ($show['gift'])
+                                <button type="button" @click="addGift()"
+                                        class="rounded-(--radius-field) border border-(--color-badge-pending-ink)/30
+                                               bg-(--color-badge-pending-bg) px-2 py-1 text-2xs font-medium
+                                               text-(--color-badge-pending-ink)">
+                                    {{ __('sales::field.gift') }}
+                                </button>
+                            @endif
+
+                            {{-- ক্রয়মূল্য — ভেতরের কথা, গ্রাহককে পড়ে শোনানোর
+                                 জন্য নয়। তাই আলাদা বোতামের পেছনে: চোখে পড়ে
+                                 না, কিন্তু দরকার হলে এক চাপ দূরে। --}}
+                            <button type="button" @click="showCosting = ! showCosting"
+                                    class="rounded-(--radius-field) border border-(--color-border)
+                                           px-2 py-1 text-2xs font-medium">
+                                {{ __('sales::field.costing') }}
+                            </button>
+                        </div>
+
+                        <p x-show="showCosting" x-cloak class="num mt-1 text-2xs text-(--color-ink-muted)"
+                           x-text="picked ? money(picked.cost) : ''"></p>
+
+                        <div class="mt-2 grid grid-cols-2 gap-1">
+                            <button type="button" @click="addToCart()" ::disabled="! picked"
+                                    class="rounded-(--radius-field) bg-(--color-success) px-2 py-2 text-2xs
+                                           font-semibold text-white disabled:opacity-50">
+                                {{ __('sales::action.add_to_cart') }}
+                            </button>
+                            <button type="button" @click="clearEntry()"
+                                    class="rounded-(--radius-field) bg-(--color-danger) px-2 py-2 text-2xs
+                                           font-semibold text-white">
+                                {{ __('sales::action.clear_data') }}
+                            </button>
+                        </div>
+
+                        <div class="mt-2 border-t border-(--color-badge-success-ink)/20 pt-1 text-2xs">
+                            <div class="flex justify-between">
+                                <span class="text-(--color-ink-muted)">{{ __('sales::field.in_cart') }}</span>
+                                <span class="num" x-text="lines.length + ' ' + @js(__('sales::field.items'))"></span>
+                            </div>
+                            <div class="flex justify-between font-semibold">
+                                <span>{{ __('sales::field.running_total') }}</span>
+                                <span class="num" x-text="'৳' + money(subTotal)"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- ডান: পণ্যের ছবির জায়গা --}}
+                    <div class="hidden items-center justify-center rounded-(--radius-card)
+                                border border-(--color-border) p-3 lg:flex">
+                        <div class="text-center">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"
+                                 class="mx-auto size-12 fill-(--color-ink-muted)/40">
+                                <path d="M12 2 3 6.5v11L12 22l9-4.5v-11L12 2Zm0 2.2 6.6 3.3L12 10.8 5.4 7.5 12 4.2ZM5 9.3l6 3v7.4l-6-3V9.3Zm8 10.4v-7.4l6-3v7.4l-6 3Z"/>
+                            </svg>
+                            <p class="mt-1 text-2xs text-(--color-ink-muted)"
+                               x-text="picked ? picked.name : @js(__('sales::message.pick_an_item'))"></p>
+                        </div>
+                    </div>
+                </div>
             </section>
-        </div>
 
-        <div class="grid gap-4 xl:grid-cols-[1fr_20rem]">
+            {{-- ── কার্ট ────────────────────────────────────────────── --}}
+            <section class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
+                            bg-(--color-surface-card)">
+                <div class="table-responsive">
+                    <table class="table-cards w-full text-sm">
+                        <thead class="border-b border-(--color-border) text-(--color-ink-muted)">
+                            <tr>
+                                <th class="p-2 text-start font-medium">{{ __('sales::field.sl') }}</th>
+                                <th class="p-2 text-start font-medium">{{ __('sales::field.item_name') }}</th>
+                                <th class="p-2 text-end font-medium">{{ __('sales::field.unit_price') }}</th>
+                                <th class="p-2 text-end font-medium">{{ __('sales::field.quantity') }}</th>
+                                @if ($show['free_qty'])
+                                    <th class="p-2 text-end font-medium">{{ __('sales::field.free_unit') }}</th>
+                                @endif
+                                <th class="p-2 text-end font-medium">{{ __('sales::field.total_qty') }}</th>
+                                @if ($show['line_discount'])
+                                    <th class="p-2 text-end font-medium">{{ __('sales::field.dis') }}</th>
+                                @endif
+                                @if ($vatEnabled)
+                                    <th class="p-2 text-end font-medium">{{ __('sales::field.vat') }}</th>
+                                @endif
+                                <th class="p-2 text-end font-medium">{{ __('sales::field.amount') }}</th>
+                                <th class="p-2"><span class="sr-only">{{ __('sales::action.remove_line') }}</span></th>
+                            </tr>
+                        </thead>
 
-            {{-- ── ৩. কার্ট ও উপহার ─────────────────────────────────── --}}
-            <div class="space-y-4">
-                <section class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
+                        <tbody>
+                            <template x-for="(line, i) in lines" :key="line.key">
+                                <tr class="border-b border-(--color-border)">
+                                    <td class="p-2" x-text="i + 1"></td>
+
+                                    <td class="p-2" data-label="{{ __('sales::field.item_name') }}">
+                                        <span x-text="line.name"></span>
+                                        <input type="hidden" :name="`lines[${i}][product_id]`" :value="line.id">
+                                    </td>
+
+                                    <td class="p-1 text-end" data-label="{{ __('sales::field.unit_price') }}">
+                                        <input type="number" step="0.0001" min="0" x-model="line.rate"
+                                               :name="`lines[${i}][rate]`"
+                                               class="num h-8 w-full sm:w-24 rounded-(--radius-field) border
+                                                      border-(--color-border) bg-(--color-surface-app) px-2 text-end">
+                                    </td>
+
+                                    <td class="p-1 text-end" data-label="{{ __('sales::field.quantity') }}">
+                                        <input type="number" step="0.01" min="0.01" x-model="line.qty"
+                                               :name="`lines[${i}][qty]`"
+                                               class="num h-8 w-full sm:w-20 rounded-(--radius-field) border
+                                                      border-(--color-border) bg-(--color-surface-app) px-2 text-end">
+                                    </td>
+
+                                    @if ($show['free_qty'])
+                                        <td class="p-1 text-end" data-label="{{ __('sales::field.free_unit') }}">
+                                            <input type="number" step="0.01" min="0" x-model="line.freeQty"
+                                                   :name="`lines[${i}][free_qty]`"
+                                                   class="num h-8 w-full sm:w-20 rounded-(--radius-field) border
+                                                          border-(--color-border) bg-(--color-surface-app) px-2 text-end">
+                                        </td>
+                                    @endif
+
+                                    <td class="num p-2 text-end" data-label="{{ __('sales::field.total_qty') }}"
+                                        x-text="qty(Number(line.qty || 0) + Number(line.freeQty || 0))"></td>
+
+                                    @if ($show['line_discount'])
+                                        <td class="p-1 text-end" data-label="{{ __('sales::field.dis') }}">
+                                            <input type="number" step="0.01" min="0" max="100"
+                                                   x-model="line.discountPercent"
+                                                   :name="`lines[${i}][discount_percent]`"
+                                                   class="num h-8 w-full sm:w-20 rounded-(--radius-field) border
+                                                          border-(--color-border) bg-(--color-surface-app) px-2 text-end">
+                                        </td>
+                                    @endif
+
+                                    @if ($vatEnabled)
+                                        <td class="num p-2 text-end" data-label="{{ __('sales::field.vat') }}"
+                                            x-text="money(lineVat(line))"></td>
+                                    @endif
+
+                                    <td class="num p-2 text-end font-medium" data-label="{{ __('sales::field.amount') }}"
+                                        x-text="money(lineNet(line))"></td>
+
+                                    <td class="p-1 text-end">
+                                        <button type="button" @click="lines.splice(i, 1)"
+                                                aria-label="{{ __('sales::action.remove_line') }}"
+                                                class="rounded-(--radius-field) px-2 py-1 text-(--color-ink-muted)
+                                                       hover:bg-(--color-surface-hover)">&times;</button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p x-show="lines.length === 0" x-cloak
+                   class="p-8 text-center text-sm text-(--color-ink-muted)">
+                    {{ __('sales::message.nothing_added') }}
+                </p>
+            </section>
+
+            {{-- ── উপহার ────────────────────────────────────────────── --}}
+            @if ($show['gift'])
+                <section x-show="gifts.length > 0" x-cloak
+                         class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                                 bg-(--color-surface-card)">
-                    <h2 class="border-b border-(--color-border) px-4 py-3 text-sm font-semibold">
-                        {{ __('sales::message.lines') }}
+                    <h2 class="flex items-center justify-between border-b border-(--color-border) px-3 py-2">
+                        <span class="text-2xs font-semibold uppercase tracking-wide">
+                            {{ __('sales::field.gift_item') }}
+                        </span>
+                        <span class="text-2xs text-(--color-ink-muted)">{{ __('sales::message.not_for_sales') }}</span>
                     </h2>
 
                     <div class="table-responsive">
                         <table class="table-cards w-full text-sm">
                             <thead class="border-b border-(--color-border) text-(--color-ink-muted)">
                                 <tr>
-                                    <th class="p-2 text-start font-medium">#</th>
-                                    <th class="p-2 text-start font-medium">{{ __('sales::field.product') }}</th>
-                                    <th class="p-2 text-end font-medium">{{ __('sales::field.rate') }}</th>
+                                    <th class="p-2 text-start font-medium">{{ __('sales::field.sl') }}</th>
+                                    <th class="p-2 text-start font-medium">{{ __('sales::field.gift_for') }}</th>
+                                    <th class="p-2 text-start font-medium">{{ __('sales::field.item_name') }}</th>
                                     <th class="p-2 text-end font-medium">{{ __('sales::field.quantity') }}</th>
-                                    @if ($show['free_qty'])
-                                        <th class="p-2 text-end font-medium">{{ __('sales::field.free_qty') }}</th>
-                                    @endif
-                                    @if ($show['line_discount'])
-                                        <th class="p-2 text-end font-medium">{{ __('sales::field.discount') }}</th>
-                                    @endif
-                                    <th class="p-2 text-end font-medium">{{ __('sales::field.amount') }}</th>
+                                    <th class="p-2 text-start font-medium">{{ __('sales::field.remarks') }}</th>
                                     <th class="p-2"><span class="sr-only">{{ __('sales::action.remove_line') }}</span></th>
                                 </tr>
                             </thead>
 
                             <tbody>
-                                <template x-for="(line, i) in lines" :key="line.key">
+                                <template x-for="(gift, i) in gifts" :key="gift.key">
                                     <tr class="border-b border-(--color-border)">
                                         <td class="p-2" x-text="i + 1"></td>
 
-                                        <td class="p-2" data-label="{{ __('sales::field.product') }}">
-                                            <span x-text="line.name"></span>
-                                            <input type="hidden" :name="`lines[${i}][product_id]`" :value="line.id">
+                                        <td class="p-1" data-label="{{ __('sales::field.gift_for') }}">
+                                            <select x-model="gift.againstProductId"
+                                                    :name="`gifts[${i}][against_product_id]`"
+                                                    class="h-8 w-full rounded-(--radius-field) border
+                                                           border-(--color-border) bg-(--color-surface-app) px-2">
+                                                <option value="">-</option>
+                                                <template x-for="line in lines" :key="line.key">
+                                                    <option :value="line.id" x-text="line.name"></option>
+                                                </template>
+                                            </select>
                                         </td>
 
-                                        <td class="p-1 text-end" data-label="{{ __('sales::field.rate') }}">
-                                            <input type="number" step="0.0001" min="0" x-model="line.rate"
-                                                   :name="`lines[${i}][rate]`"
-                                                   class="num h-8 w-full sm:w-24 rounded-(--radius-field) border
-                                                          border-(--color-border) bg-(--color-surface-app) px-2 text-end">
+                                        <td class="p-1" data-label="{{ __('sales::field.item_name') }}">
+                                            <select x-model="gift.productId" :name="`gifts[${i}][product_id]`"
+                                                    class="h-8 w-full rounded-(--radius-field) border
+                                                           border-(--color-border) bg-(--color-surface-app) px-2">
+                                                <option value="">-</option>
+                                                @foreach ($products as $product)
+                                                    <option value="{{ $product->id }}">{{ $product->name }}</option>
+                                                @endforeach
+                                            </select>
                                         </td>
 
                                         <td class="p-1 text-end" data-label="{{ __('sales::field.quantity') }}">
-                                            <input type="number" step="0.01" min="0.01" x-model="line.qty"
-                                                   :name="`lines[${i}][qty]`"
+                                            <input type="number" step="0.01" min="0" x-model="gift.qty"
+                                                   :name="`gifts[${i}][qty]`"
                                                    class="num h-8 w-full sm:w-20 rounded-(--radius-field) border
                                                           border-(--color-border) bg-(--color-surface-app) px-2 text-end">
                                         </td>
 
-                                        @if ($show['free_qty'])
-                                            <td class="p-1 text-end" data-label="{{ __('sales::field.free_qty') }}">
-                                                <input type="number" step="0.01" min="0" x-model="line.freeQty"
-                                                       :name="`lines[${i}][free_qty]`"
-                                                       class="num h-8 w-full sm:w-20 rounded-(--radius-field) border
-                                                              border-(--color-border) bg-(--color-surface-app) px-2 text-end">
-                                            </td>
-                                        @endif
-
-                                        @if ($show['line_discount'])
-                                            <td class="p-1 text-end" data-label="{{ __('sales::field.discount') }}">
-                                                <input type="number" step="0.01" min="0" max="100"
-                                                       x-model="line.discountPercent"
-                                                       :name="`lines[${i}][discount_percent]`"
-                                                       class="num h-8 w-full sm:w-20 rounded-(--radius-field) border
-                                                              border-(--color-border) bg-(--color-surface-app) px-2 text-end">
-                                            </td>
-                                        @endif
-
-                                        <td class="num p-2 text-end" data-label="{{ __('sales::field.amount') }}"
-                                            x-text="money(lineNet(line))"></td>
+                                        <td class="p-1" data-label="{{ __('sales::field.remarks') }}">
+                                            <input type="text" x-model="gift.remarks" :name="`gifts[${i}][remarks]`"
+                                                   class="h-8 w-full rounded-(--radius-field) border
+                                                          border-(--color-border) bg-(--color-surface-app) px-2">
+                                        </td>
 
                                         <td class="p-1 text-end">
-                                            <button type="button" @click="lines.splice(i, 1)"
+                                            <button type="button" @click="gifts.splice(i, 1)"
                                                     aria-label="{{ __('sales::action.remove_line') }}"
                                                     class="rounded-(--radius-field) px-2 py-1 text-(--color-ink-muted)
                                                            hover:bg-(--color-surface-hover)">&times;</button>
@@ -299,203 +515,170 @@
                             </tbody>
                         </table>
                     </div>
-
-                    <p x-show="lines.length === 0" x-cloak
-                       class="p-6 text-center text-sm text-(--color-ink-muted)">
-                        {{ __('sales::message.nothing_added') }}
-                    </p>
                 </section>
+            @endif
+        </div>
 
-                @if ($show['gift'])
-                    {{-- উপহারের গ্রিড — আলাদা, কারণ ওগুলো বিক্রির নয়।
+        {{-- ══ ডান পাশের প্যানেল ═══════════════════════════════════════ --}}
+        <aside class="space-y-0 self-start rounded-(--radius-card) border border-(--color-border)
+                      bg-(--color-surface-card) xl:sticky xl:top-3">
 
-                         একই টেবিলে মেশালে বিলের যোগফলের সাথে সারির সংখ্যা
-                         মিলত না, আর গ্রাহক ভাবতেন উপহারের জন্যও টাকা নেওয়া
-                         হয়েছে। --}}
-                    <section class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
-                                    bg-(--color-surface-card)">
-                        <h2 class="flex items-center justify-between border-b border-(--color-border) px-4 py-3">
-                            <span class="text-sm font-semibold">{{ __('sales::field.gift_item') }}</span>
-                            <span class="text-2xs text-(--color-ink-muted)">
-                                {{ __('sales::message.not_for_sales') }}
-                            </span>
-                        </h2>
+            {{-- ক্রেতা --}}
+            <div class="border-b border-(--color-border) p-3">
+                <label class="relative block">
+                    <span class="sr-only">{{ __('sales::message.search_customer') }}</span>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"
+                         class="pointer-events-none absolute start-2 top-1/2 size-4 -translate-y-1/2
+                                fill-(--color-brand-500)">
+                        <path d="M10 2a8 8 0 1 0 4.9 14.3l5.4 5.4 1.4-1.4-5.4-5.4A8 8 0 0 0 10 2Zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12Z"/>
+                    </svg>
+                    <select name="customer_id" x-model="customerId"
+                            class="h-9 w-full rounded-(--radius-field) border border-(--color-border)
+                                   bg-(--color-surface-app) ps-8 pe-2 text-sm">
+                        @foreach ($customers as $customer)
+                            <option value="{{ $customer->id }}" @selected($customer->id === $walkinId)>
+                                {{ $customer->name() }}
+                            </option>
+                        @endforeach
+                    </select>
+                </label>
 
-                        <div class="table-responsive">
-                            <table class="table-cards w-full text-sm">
-                                <thead class="border-b border-(--color-border) text-(--color-ink-muted)">
-                                    <tr>
-                                        <th class="p-2 text-start font-medium">#</th>
-                                        <th class="p-2 text-start font-medium">{{ __('sales::field.gift_for') }}</th>
-                                        <th class="p-2 text-start font-medium">{{ __('sales::field.gift_item') }}</th>
-                                        <th class="p-2 text-end font-medium">{{ __('sales::field.quantity') }}</th>
-                                        <th class="p-2 text-start font-medium">{{ __('sales::field.remarks') }}</th>
-                                        <th class="p-2"><span class="sr-only">{{ __('sales::action.remove_line') }}</span></th>
-                                    </tr>
-                                </thead>
-
-                                <tbody>
-                                    <template x-for="(gift, i) in gifts" :key="gift.key">
-                                        <tr class="border-b border-(--color-border)">
-                                            <td class="p-2" x-text="i + 1"></td>
-
-                                            <td class="p-1" data-label="{{ __('sales::field.gift_for') }}">
-                                                <select x-model="gift.againstProductId"
-                                                        :name="`gifts[${i}][against_product_id]`"
-                                                        class="h-8 w-full rounded-(--radius-field) border
-                                                               border-(--color-border) bg-(--color-surface-app) px-2">
-                                                    <option value="">-</option>
-                                                    <template x-for="line in lines" :key="line.key">
-                                                        <option :value="line.id" x-text="line.name"></option>
-                                                    </template>
-                                                </select>
-                                            </td>
-
-                                            <td class="p-1" data-label="{{ __('sales::field.gift_item') }}">
-                                                <select x-model="gift.productId" :name="`gifts[${i}][product_id]`"
-                                                        class="h-8 w-full rounded-(--radius-field) border
-                                                               border-(--color-border) bg-(--color-surface-app) px-2">
-                                                    <option value="">-</option>
-                                                    @foreach ($products as $product)
-                                                        <option value="{{ $product->id }}">{{ $product->name }}</option>
-                                                    @endforeach
-                                                </select>
-                                            </td>
-
-                                            <td class="p-1 text-end" data-label="{{ __('sales::field.quantity') }}">
-                                                <input type="number" step="0.01" min="0" x-model="gift.qty"
-                                                       :name="`gifts[${i}][qty]`"
-                                                       class="num h-8 w-full sm:w-20 rounded-(--radius-field) border
-                                                              border-(--color-border) bg-(--color-surface-app) px-2 text-end">
-                                            </td>
-
-                                            <td class="p-1" data-label="{{ __('sales::field.remarks') }}">
-                                                <input type="text" x-model="gift.remarks"
-                                                       :name="`gifts[${i}][remarks]`"
-                                                       class="h-8 w-full rounded-(--radius-field) border
-                                                              border-(--color-border) bg-(--color-surface-app) px-2">
-                                            </td>
-
-                                            <td class="p-1 text-end">
-                                                <button type="button" @click="gifts.splice(i, 1)"
-                                                        aria-label="{{ __('sales::action.remove_line') }}"
-                                                        class="rounded-(--radius-field) px-2 py-1 text-(--color-ink-muted)
-                                                               hover:bg-(--color-surface-hover)">&times;</button>
-                                            </td>
-                                        </tr>
-                                    </template>
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <div class="flex items-center justify-between p-3">
-                            <p x-show="gifts.length === 0" x-cloak class="text-2xs text-(--color-ink-muted)">
-                                {{ __('sales::message.gift_none') }}
-                            </p>
-                            <button type="button" @click="addGift()"
-                                    class="ms-auto rounded-(--radius-field) border border-(--color-border)
-                                           px-3 py-1.5 text-2xs transition-colors hover:bg-(--color-surface-hover)">
-                                + {{ __('sales::action.add_gift') }}
-                            </button>
-                        </div>
-                    </section>
+                @if ($show['credit_limit'])
+                    <p class="mt-1 flex justify-between text-2xs">
+                        <span class="text-(--color-ink-muted)">{{ __('sales::field.credit_limit') }}</span>
+                        <span class="num" x-text="customer.limit > 0 ? money(customer.limit) : '—'"></span>
+                    </p>
                 @endif
             </div>
 
-            {{-- ── ৪. টোটাল প্যানেল ─────────────────────────────────── --}}
-            <section class="space-y-2 rounded-(--radius-card) border border-(--color-border)
-                            bg-(--color-surface-card) p-4 xl:sticky xl:top-4 xl:h-fit">
+            {{-- এই চালান --}}
+            <x-sales::panel-heading>{{ __('sales::field.this_challan') }}</x-sales::panel-heading>
 
-                <div class="flex items-baseline justify-between text-sm">
-                    <span class="text-(--color-ink-muted)">{{ __('sales::field.subtotal') }}</span>
-                    <span class="num" x-text="money(subTotal)"></span>
-                </div>
+            <div class="space-y-1 p-3 text-2xs">
+                <x-sales::panel-row :label="__('sales::field.invoice_total')" strong>
+                    <span class="num" x-text="'৳' + money(grossTotal)"></span>
+                </x-sales::panel-row>
 
-                <label class="flex items-center justify-between gap-2 text-sm">
-                    <span class="text-(--color-ink-muted)">{{ __('sales::field.discount_amount') }}</span>
+                <x-sales::panel-row :label="__('sales::field.sub_total_no_vat')">
+                    <span class="num" x-text="'৳' + money(subTotal)"></span>
+                </x-sales::panel-row>
+
+                <x-sales::panel-row :label="__('sales::field.discount_amount')">
                     <input type="number" step="0.01" min="0" name="discount_amount" x-model="discountAmount"
-                           class="num h-8 w-24 rounded-(--radius-field) border border-(--color-border)
-                                  bg-(--color-surface-app) px-2 text-end">
-                </label>
+                           placeholder="{{ __('sales::field.amount_or_pct') }}"
+                           class="num h-7 w-24 rounded-(--radius-field) border border-(--color-border)
+                                  bg-(--color-surface-app) px-1 text-end">
+                </x-sales::panel-row>
+
+                @if ($vatEnabled)
+                    <x-sales::panel-row :label="__('sales::field.vat')">
+                        <span class="num" x-text="'৳' + money(vatTotal)"></span>
+                    </x-sales::panel-row>
+                @endif
 
                 @if ($show['expense'])
-                    <label class="flex items-center justify-between gap-2 text-sm">
-                        <span class="text-(--color-ink-muted)">{{ __('sales::field.expense') }}</span>
+                    <x-sales::panel-row :label="__('sales::field.expense')">
                         <input type="number" step="0.01" min="0" name="expense_amount" x-model="expenseAmount"
-                               class="num h-8 w-24 rounded-(--radius-field) border border-(--color-border)
-                                      bg-(--color-surface-app) px-2 text-end">
-                    </label>
+                               class="num h-7 w-24 rounded-(--radius-field) border border-(--color-border)
+                                      bg-(--color-surface-app) px-1 text-end">
+                    </x-sales::panel-row>
                 @endif
 
                 @if ($show['rounding'])
-                    <label class="flex items-center justify-between gap-2 text-sm">
-                        <span class="text-(--color-ink-muted)">{{ __('sales::field.rounding') }}</span>
+                    <x-sales::panel-row :label="__('sales::field.rounding')">
                         <input type="number" step="0.01" min="0" name="rounding_amount" x-model="roundingAmount"
-                               class="num h-8 w-24 rounded-(--radius-field) border border-(--color-border)
-                                      bg-(--color-surface-app) px-2 text-end">
-                    </label>
+                               class="num h-7 w-24 rounded-(--radius-field) border border-(--color-border)
+                                      bg-(--color-surface-app) px-1 text-end">
+                    </x-sales::panel-row>
                 @endif
+            </div>
 
-                <div class="flex items-baseline justify-between border-t border-(--color-border) pt-2">
-                    <span class="font-semibold">{{ __('sales::field.net_payable') }}</span>
-                    <span class="num text-2xl font-bold" x-text="money(netPayable)"></span>
-                </div>
+            {{-- দিতে হবে --}}
+            <x-sales::panel-heading tone="success">
+                {{ __('sales::field.to_pay_on_this') }}
+            </x-sales::panel-heading>
+
+            <div class="space-y-1 bg-(--color-badge-success-bg)/40 p-3 text-2xs">
+                <x-sales::panel-row :label="__('sales::field.net_payable')" strong>
+                    <span class="num text-sm" x-text="'৳' + money(netPayable)"></span>
+                </x-sales::panel-row>
 
                 @if ($show['deposit'])
-                    <label class="block">
-                        <span class="mb-1 block text-sm font-medium">{{ __('sales::field.deposit') }}</span>
+                    <x-sales::panel-row :label="__('sales::field.received_deposit')">
                         <input type="number" step="0.01" min="0" name="deposit" x-model="deposit"
-                               class="num h-10 w-full rounded-(--radius-field) border border-(--color-border)
-                                      bg-(--color-surface-app) px-3 text-end text-lg">
-                    </label>
-
-                    <div class="flex items-baseline justify-between text-sm">
-                        <span class="text-(--color-ink-muted)">{{ __('sales::field.invoice_due') }}</span>
-                        <span class="num font-semibold" x-text="money(invoiceDue)"></span>
-                    </div>
+                               class="num h-7 w-24 rounded-(--radius-field) border border-(--color-border)
+                                      bg-(--color-surface-app) px-1 text-end">
+                    </x-sales::panel-row>
                 @endif
 
-                <div class="flex items-baseline justify-between border-t border-(--color-border) pt-2 text-sm">
-                    <span class="text-(--color-ink-muted)">{{ __('sales::field.outstanding') }}</span>
-                    <span class="num font-semibold" x-text="money(outstanding)"></span>
-                </div>
+                <x-sales::panel-row :label="__('sales::field.invoice_due')" strong>
+                    <span class="num" x-text="'৳' + money(invoiceDue)"></span>
+                </x-sales::panel-row>
+            </div>
 
-                {{-- গোনার ঘরগুলো — নমুনার শেষ চারটা --}}
-                <dl class="grid grid-cols-2 gap-1 border-t border-(--color-border) pt-2 text-2xs">
-                    @foreach ([
-                        'totalItem' => 'sales::field.total_item',
-                        'totalSalesQty' => 'sales::field.total_sales_qty',
-                        'totalFreeQty' => 'sales::field.total_free_qty',
-                        'totalQty' => 'sales::field.total_qty',
-                    ] as $key => $label)
-                        <div class="flex justify-between gap-1">
-                            <dt class="text-(--color-ink-muted)">{{ __($label) }}</dt>
-                            <dd class="num" x-text="counts.{{ $key }}"></dd>
-                        </div>
-                    @endforeach
-                </dl>
+            {{-- পার্টির বকেয়া --}}
+            <x-sales::panel-heading tone="pending">
+                {{ __('sales::field.what_party_owes') }}
+            </x-sales::panel-heading>
 
+            <div class="space-y-1 bg-(--color-badge-pending-bg)/40 p-3 text-2xs">
+                <x-sales::panel-row :label="__('sales::field.previous_balance')">
+                    <span class="num" x-text="customer.due > 0 ? money(customer.due) : '—'"></span>
+                </x-sales::panel-row>
+
+                <x-sales::panel-row :label="__('sales::field.outstanding')" strong>
+                    <span class="num" x-text="outstanding > 0 ? money(outstanding) : '—'"></span>
+                </x-sales::panel-row>
+            </div>
+
+            {{-- গোনা --}}
+            <x-sales::panel-heading>{{ __('sales::field.quantities') }}</x-sales::panel-heading>
+
+            <div class="space-y-1 p-3 text-2xs">
+                @foreach ([
+                    'sales::field.total_item' => 'counts.totalItem',
+                    'sales::field.total_sales_qty' => 'counts.totalSalesQty',
+                    'sales::field.total_free_qty' => 'counts.totalFreeQty',
+                    'sales::field.total_free_plus_sales' => 'counts.totalQty',
+                ] as $label => $expr)
+                    <x-sales::panel-row :label="__($label)">
+                        <span class="num" x-text="{{ $expr }} || '—'"></span>
+                    </x-sales::panel-row>
+                @endforeach
+            </div>
+
+            {{-- বোতাম --}}
+            <div class="space-y-2 border-t border-(--color-border) p-3">
                 <x-ui.button type="submit" tone="primary" class="w-full"
                              ::disabled="lines.length === 0">
                     {{ __('sales::action.confirm') }}
                 </x-ui.button>
 
-                <x-ui.button type="button" tone="secondary" class="w-full" x-on:click="clearAll()">
+                <button type="button" @click="clearAll()"
+                        class="w-full rounded-(--radius-field) bg-(--color-danger)/10 px-3 py-2 text-2xs
+                               font-medium text-(--color-danger)">
                     {{ __('sales::action.clear_full') }}
-                </x-ui.button>
-            </section>
-        </div>
+                </button>
+
+                <a href="{{ route('sales.challan.index') }}"
+                   class="block text-center text-2xs text-(--color-ink-muted) hover:underline">
+                    ← {{ __('core.action.cancel') }}
+                </a>
+            </div>
+        </aside>
     </form>
 
     @push('scripts')
         <script>
-            function directSale(catalogue, customers, walkinId) {
+            function directSale(catalogue, customers, walkinId, vatEnabled) {
                 return {
                     catalogue,
                     customers,
+                    vatEnabled,
                     term: '',
                     picked: null,
-                    entry: { qty: '1', freeQty: '', rate: '', discountPercent: '' },
+                    showCosting: false,
+                    entry: { qty: '', freeQty: '', rate: '', discountPercent: '' },
                     lines: [],
                     gifts: [],
                     customerId: String(walkinId || ''),
@@ -508,22 +691,23 @@
 
                     get visible() {
                         const t = this.term.trim().toLowerCase();
-                        const list = t === ''
-                            ? this.catalogue
-                            : this.catalogue.filter(p =>
-                                p.name.toLowerCase().includes(t)
-                                || p.code.toLowerCase().includes(t)
-                                || (p.barcode || '').toLowerCase().includes(t));
-                        return list.slice(0, 40);
+                        if (t === '') return [];
+
+                        return this.catalogue.filter(p =>
+                            p.name.toLowerCase().includes(t)
+                            || p.code.toLowerCase().includes(t)
+                            || (p.barcode || '').toLowerCase().includes(t)
+                        ).slice(0, 30);
                     },
 
                     get customer() {
-                        return this.customers[this.customerId] || { limit: '0', due: '0', days: 0 };
+                        return this.customers[this.customerId] || { limit: 0, due: 0, days: 0 };
                     },
 
                     pick(product) {
                         this.picked = product;
                         this.entry.rate = product.rate;
+                        this.entry.qty = this.entry.qty || '1';
                         this.term = '';
                     },
 
@@ -532,28 +716,29 @@
                         if (first) this.pick(first);
                     },
 
-                    /*
-                     * পর্দার মজুদ সংখ্যা কার্টের সাথে মিলিয়ে দেখানো।
-                     *
-                     * কার্টে ইতিমধ্যে ৫০ থাকলে "আছে ৭৪৬" আর সত্যি নয় — বাকি
-                     * ৬৯৬। সংখ্যাটা না মেলালে দ্বিতীয়বার একই পণ্য যোগ করার
-                     * সময় ভুল সংখ্যা দেখে বেশি বেচা হয়ে যেত।
-                     */
-                    stockFigure(key) {
-                        if (! this.picked) return '';
+                    // ── চলতি লাইনের অঙ্ক ────────────────────────────────
+                    get entryBase() {
+                        return (Number(this.entry.qty) || 0) * (Number(this.entry.rate) || 0);
+                    },
 
-                        if (key === 'inCart') {
-                            return this.qty(this.lines
-                                .filter(l => l.id === this.picked.id)
-                                .reduce((s, l) => s + (Number(l.qty) || 0), 0));
-                        }
+                    get entryAfterDiscount() {
+                        return this.entryBase
+                            - this.entryBase * (Number(this.entry.discountPercent) || 0) / 100;
+                    },
 
-                        return this.qty(this.picked[key]);
+                    get entryVat() {
+                        if (! this.vatEnabled || ! this.picked) return 0;
+                        return this.entryAfterDiscount * Number(this.picked.vatRate || 0) / 100;
                     },
 
                     get entryNet() {
-                        const base = (Number(this.entry.qty) || 0) * (Number(this.entry.rate) || 0);
-                        return base - base * (Number(this.entry.discountPercent) || 0) / 100;
+                        return this.entryAfterDiscount + this.entryVat;
+                    },
+
+                    /* বিক্রয় + ফ্রি — গুদাম থেকে মোট যতটা বেরোবে।
+                       নমুনায় ঘরটা নিজে থেকেই ভরে, হাতে লেখা যায় না। */
+                    get entryTotalQty() {
+                        return (Number(this.entry.qty) || 0) + (Number(this.entry.freeQty) || 0);
                     },
 
                     addToCart() {
@@ -563,6 +748,8 @@
                             key: this.nextKey++,
                             id: this.picked.id,
                             name: this.picked.name,
+                            unit: this.picked.unit,
+                            vatRate: this.picked.vatRate || 0,
                             qty: this.entry.qty || '1',
                             freeQty: this.entry.freeQty || '',
                             rate: this.entry.rate || '0',
@@ -575,8 +762,9 @@
 
                     clearEntry() {
                         this.picked = null;
-                        this.entry = { qty: '1', freeQty: '', rate: '', discountPercent: '' };
+                        this.entry = { qty: '', freeQty: '', rate: '', discountPercent: '' };
                         this.term = '';
+                        this.showCosting = false;
                     },
 
                     clearAll() {
@@ -593,23 +781,45 @@
                         this.gifts.push({
                             key: this.nextKey++,
                             productId: '',
-                            againstProductId: '',
+                            againstProductId: this.picked ? String(this.picked.id) : '',
                             qty: '',
                             remarks: @js(__('sales::message.not_for_sales')),
                         });
                     },
 
+                    // ── কার্টের অঙ্ক ────────────────────────────────────
+                    lineBase(line) {
+                        return (Number(line.qty) || 0) * (Number(line.rate) || 0);
+                    },
+
+                    lineAfterDiscount(line) {
+                        return this.lineBase(line)
+                            - this.lineBase(line) * (Number(line.discountPercent) || 0) / 100;
+                    },
+
+                    lineVat(line) {
+                        if (! this.vatEnabled) return 0;
+                        return this.lineAfterDiscount(line) * Number(line.vatRate || 0) / 100;
+                    },
+
                     lineNet(line) {
-                        const base = (Number(line.qty) || 0) * (Number(line.rate) || 0);
-                        return base - base * (Number(line.discountPercent) || 0) / 100;
+                        return this.lineAfterDiscount(line) + this.lineVat(line);
                     },
 
                     get subTotal() {
-                        return this.lines.reduce((s, l) => s + this.lineNet(l), 0);
+                        return this.lines.reduce((s, l) => s + this.lineAfterDiscount(l), 0);
+                    },
+
+                    get vatTotal() {
+                        return this.lines.reduce((s, l) => s + this.lineVat(l), 0);
+                    },
+
+                    get grossTotal() {
+                        return this.subTotal + this.vatTotal;
                     },
 
                     get netPayable() {
-                        return this.subTotal
+                        return this.grossTotal
                             - (Number(this.discountAmount) || 0)
                             + (Number(this.expenseAmount) || 0)
                             + (Number(this.roundingAmount) || 0);
@@ -620,8 +830,6 @@
                         return due > 0 ? due : 0;
                     },
 
-                    /* আগের বকেয়া + এই বিলের বাকি — কাউন্টারে এই সংখ্যাটাই
-                       বলে দেয় গ্রাহককে আর কত টাকা চাইতে হবে */
                     get outstanding() {
                         return (Number(this.customer.due) || 0) + this.invoiceDue;
                     },

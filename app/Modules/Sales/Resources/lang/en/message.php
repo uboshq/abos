@@ -75,4 +75,7 @@ return [
     'pick_item_to_see_stock' => 'Pick an item to see its stock.',
     'nothing_added' => 'Nothing added yet. Pick an item above and press Add to Cart.',
     'gift_none' => 'No gifts.',
+    'type_or_pick' => 'Type or pick an item…',
+    'search_customer' => 'Search customer…',
+    'pick_an_item' => 'Pick an item',
 ];
