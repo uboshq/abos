@@ -6,6 +6,7 @@ namespace Database\Seeders;
 
 use App\Core\Services\NumberSeriesProvisioner;
 use App\Core\Services\PermissionSyncer;
+use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Models\ApprovalFlow;
 use App\Models\ApprovalFlowStep;
@@ -241,6 +242,14 @@ class DemoSeeder extends Seeder
         ]);
 
         $suppliers->create([
+            'name_en' => 'Bismillah Distribution',
+            'name_bn' => 'বিসমিল্লাহ ডিস্ট্রিবিউশন',
+            'phone' => '+8801711000003',
+            'address_en' => 'Kendua, Netrakona',
+            'address_bn' => 'কেন্দুয়া, নেত্রকোনা',
+        ]);
+
+        $suppliers->create([
             'name_en' => 'Akij Food & Beverage',
             'name_bn' => 'আকিজ ফুড অ্যান্ড বেভারেজ',
             'phone' => '+8801711000002',
@@ -262,33 +271,54 @@ class DemoSeeder extends Seeder
     {
         $customers = app(CustomerService::class);
 
-        $customers->create([
-            'name_en' => 'Kendua Bazar Store',
-            'name_bn' => 'কেন্দুয়া বাজার স্টোর',
-            'phone' => '+8801811000001',
-            'address_en' => 'Kendua Bazar, Netrakona',
-            'address_bn' => 'কেন্দুয়া বাজার, নেত্রকোনা',
-            'credit_limit' => '50000',
-            'credit_days' => 15,
-        ]);
+        /*
+         * নামগুলো ubos-dms থেকে নেওয়া — বানানো নয়।
+         *
+         * দুইটা পণ্য একই ব্যবসার, তাই ডেমো ডাটাও এক রাখলে একটাতে দেখা
+         * পর্দা অন্যটায় চিনতে অসুবিধা হয় না। আর DMS-এর নামগুলো আসল
+         * ডিপোর তালিকা থেকে এসেছে, তাই সেগুলো দিয়ে পরীক্ষা করলে যা দেখা
+         * যায় তা বাস্তবেও ওরকমই দেখাবে — "Test Customer 1" দিয়ে যা
+         * কোনোদিন দেখা যেত না।
+         */
+        foreach ([
+            ['Rahim Traders', 'রহিম ট্রেডার্স', '+8801811000001',
+                'Kendua Bazar, Netrakona', 'কেন্দুয়া বাজার, নেত্রকোনা', '50000', 15],
+            ['Karim Stores', 'করিম স্টোর্স', '+8801811000002',
+                'Dumdy Bazar, Mymensingh', 'ডুমডি বাজার, ময়মনসিংহ', '20000', 7],
+            ['Bismillah Enterprise', 'বিসমিল্লাহ এন্টারপ্রাইজ', '+8801811000003',
+                'Ganginar Par, Mymensingh', 'গাঙ্গিনার পাড়, ময়মনসিংহ', '75000', 30],
+            ['Alam Store', 'আলম স্টোর', '+8801811000004',
+                'Kendua, Netrakona', 'কেন্দুয়া, নেত্রকোনা', '10000', 7],
+            ['Niloy Store', 'নিলয় স্টোর', '+8801811000005',
+                'Charpara, Mymensingh', 'চরপাড়া, ময়মনসিংহ', '0', 0],
+        ] as [$en, $bn, $phone, $addressEn, $addressBn, $limit, $days]) {
+            $customers->create([
+                'name_en' => $en,
+                'name_bn' => $bn,
+                'phone' => $phone,
+                'address_en' => $addressEn,
+                'address_bn' => $addressBn,
+                'credit_limit' => $limit,
+                'credit_days' => $days,
+            ]);
+        }
 
-        $customers->create([
-            'name_en' => 'Dumdy Traders',
-            'name_bn' => 'ডুমডি ট্রেডার্স',
-            'phone' => '+8801811000002',
-            'address_en' => 'Dumdy Bazar, Mymensingh',
-            'address_bn' => 'ডুমডি বাজার, ময়মনসিংহ',
-            'credit_limit' => '20000',
-            'credit_days' => 7,
-        ]);
-
-        // নগদ গ্রাহক — ধার নেই, তাই সীমাও শূন্য
-        $customers->create([
+        /*
+         * নগদ গ্রাহক — কাউন্টারের বিক্রি এই নামে বসে।
+         *
+         * POS-এ প্রতিবার গ্রাহক বাছতে বললে লাইন দাঁড়িয়ে যায়, তাই একজন
+         * আগে থেকে বসানো থাকে। আলাদা POS-তালিকা নয়, এই একই মাস্টারেরই
+         * একটা সারি — দুইটা তালিকা রাখলে একই দোকানের হিসাব দুই জায়গায়
+         * ভাগ হয়ে যেত।
+         */
+        $walkin = $customers->create([
             'name_en' => 'Cash Customer',
             'name_bn' => 'নগদ গ্রাহক',
             'credit_limit' => 0,
             'credit_days' => 0,
         ]);
+
+        app(SettingsService::class)->set('sales.walkin_customer_id', $walkin->id);
     }
 
     /**
@@ -323,11 +353,21 @@ class DemoSeeder extends Seeder
         $unit = Unit::query()->where('code', 'PCS')->value('id');
         $sack = Unit::query()->where('code', 'BAG')->value('id') ?? $unit;
 
+        /*
+         * পণ্যের নাম ও বাংলা রীতি ubos-dms থেকে — বিশেষ করে মাপের অংশটা।
+         *
+         * DMS-এর নাম-পরামর্শক "Milk Powder 1kg" থেকে "গুঁড়া দুধ ১ কেজি"
+         * বানায়: সংখ্যাটা বাংলা অঙ্কে, আর এককটা বাংলা শব্দে ("gm" →
+         * "গ্রাম", "জিএম" নয়)। একই ছক এখানেও, নাহলে এক পণ্যের বাংলা নাম
+         * দুই পণ্যে দুই রকম হত।
+         */
         $rows = [
-            ['Fine Rice 50kg', 'মিনিকেট চাল ৫০ কেজি', $sack, '3400', '3550', '8901000000017'],
-            ['Soyabean Oil 5L', 'সয়াবিন তেল ৫ লিটার', $unit, '820', '880', '8901000000024'],
-            ['Lentil 1kg', 'মসুর ডাল ১ কেজি', $unit, '135', '150', '8901000000031'],
-            ['Sugar 1kg', 'চিনি ১ কেজি', $unit, '118', '128', '8901000000048'],
+            ['Miniket Rice 50kg', 'মিনিকেট চাল ৫০ কেজি', $sack, '3400', '3550', '8901000000017'],
+            ['Soyabean Oil 5 ltr', 'সয়াবিন তেল ৫ লিটার', $unit, '820', '880', '8901000000024'],
+            ['Milk Powder 1kg', 'গুঁড়া দুধ ১ কেজি', $unit, '690', '740', '8901000000031'],
+            ['Cosmos Biscuit 40gm', 'কসমস বিস্কুট ৪০ গ্রাম', $unit, '8', '10', '8901000000048'],
+            ['Premium Tea 250gm', 'প্রিমিয়াম চা ২৫০ গ্রাম', $unit, '145', '165', '8901000000055'],
+            ['Soap 100gm', 'সাবান ১০০ গ্রাম', $unit, '42', '50', '8901000000062'],
         ];
 
         $made = [];
@@ -344,11 +384,12 @@ class DemoSeeder extends Seeder
             ]);
         }
 
-        [$rice, $oil, $lentil, $sugar] = $made;
+        [$rice, $oil, $milk, $biscuit, $tea, $soap] = $made;
 
         // খোলা মজুদ — উৎস 'opening', যাতে ড্রিল-ডাউনে "কোথা থেকে এল"
         // প্রশ্নের একটা উত্তর থাকে
-        foreach ([[$rice, '120'], [$oil, '75'], [$lentil, '240'], [$sugar, '180']] as [$product, $qty]) {
+        foreach ([[$rice, '120'], [$oil, '75'], [$milk, '240'], [$biscuit, '1800'],
+            [$tea, '260'], [$soap, '400']] as [$product, $qty]) {
             $stock->move(
                 product: $product, warehouse: $main,
                 sourceType: 'opening', sourceId: $product->id,
@@ -364,20 +405,20 @@ class DemoSeeder extends Seeder
 
         // অর্ডারে ধরা — মাল তাকেই আছে, কিন্তু অন্যের নামে
         $stock->move(
-            product: $lentil, warehouse: $main,
+            product: $milk, warehouse: $main,
             sourceType: 'sales_order', sourceId: 1,
             reserved: '60', documentNo: 'SO-000001',
         );
 
         $stock->move(
-            product: $sugar, warehouse: $main,
+            product: $biscuit, warehouse: $main,
             sourceType: 'sales_order', sourceId: 2,
             reserved: '25', documentNo: 'SO-000002',
         );
 
         // আটকানো — দুইটা কারণে, আর কারণ দুইটা এক জিনিস নয়
         $stock->hold($rice, $main, '30', $this->reason('HOLD-PRICE'));
-        $stock->hold($sugar, $main, '12', $this->reason('HOLD-DMG'));
+        $stock->hold($soap, $main, '12', $this->reason('HOLD-DMG'));
     }
 
     private function reason(string $code): ReasonCode

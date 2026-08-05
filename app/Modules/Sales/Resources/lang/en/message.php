@@ -62,4 +62,10 @@ return [
     'invoice_note' => 'The invoice posts income, the receivable and the cost of goods, all at once.',
     'collection_note' => 'Say which invoices the money is against and the chasing list stays right by itself.',
     'unallocated' => 'Unallocated',
+    'pos_search' => 'Scan a barcode or type a name…',
+    'pos_hint' => 'A scan goes straight into the basket. Enter adds the first product.',
+    'pos_empty_cart' => 'Basket is empty — tap a product or scan a barcode.',
+    'pos_today' => 'Your sales today',
+    'pos_done' => ':no — sale complete. Change :change.',
+    'pos_narration' => ':no — cash at the counter',
 ];

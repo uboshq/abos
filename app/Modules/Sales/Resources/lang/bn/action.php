@@ -20,4 +20,6 @@ return [
     'deliver_against' => 'এই অর্ডারের মাল পাঠান',
     'invoice_against' => 'এই চালানের বিল করুন',
     'collect_against' => 'এই বিলের টাকা নিন',
+    'checkout' => 'বিক্রি সম্পূর্ণ করুন',
+    'exact' => 'ঠিক টাকা',
 ];

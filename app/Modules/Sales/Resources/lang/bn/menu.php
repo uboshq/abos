@@ -14,4 +14,5 @@ return [
     'collections' => 'আদায়',
     'undelivered' => 'মাল গেছে, বিল হয়নি',
     'by_customer' => 'গ্রাহকভিত্তিক বিক্রয়',
+    'pos' => 'কাউন্টার (POS)',
 ];

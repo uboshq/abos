@@ -249,7 +249,10 @@ return [
 
     'company' => [
         'switch' => 'Switch company',
+        'company' => 'Company',
         'branch' => 'Branch',
+        'branch_of' => 'Branch — :company',
+        'stamped_with_branch' => 'Everything you enter is stamped with the branch you are in.',
         'financial_year' => 'Financial year',
     ],
 

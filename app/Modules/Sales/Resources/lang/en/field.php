@@ -51,4 +51,7 @@ return [
     'instrument_no' => 'Cheque / reference no',
     'instrument_date' => 'Cheque date',
     'cost_of_goods' => 'Cost of goods sold',
+    'paid' => 'Paid',
+    'change' => 'Change',
+    'available_short' => 'have',
 ];
