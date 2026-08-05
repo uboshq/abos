@@ -22,4 +22,9 @@ return [
     'default_hint' => 'New transactions pick this automatically. Only one can be the default.',
     'too_many' => ':count locations — more than render as a tree at once. Search above.',
     'count' => '{0} None|{1} 1|[2,*] :count',
+    'rate_saved' => 'Rate saved.',
+    'no_rate_yet' => 'No rate has been entered yet.',
+    'no_base_currency' => 'Make one currency the default first — that is the base your books are kept in, and every other rate is measured against it.',
+    'base_currency_rate_is_one' => ':code is the company\'s own currency, so its rate is always 1 — there is nothing to enter.',
+    'rate_meaning' => 'The rate reads: 1 :code equals this many :base. The date is when the rate starts applying — until the next one is entered.',
 ];

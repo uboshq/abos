@@ -7,4 +7,6 @@ return [
     'ait' => 'Advance income tax',
     'vds' => 'VAT at source',
     'sd' => 'Supplementary duty',
+    'own' => 'Own',
+    'rented' => 'Rented',
 ];

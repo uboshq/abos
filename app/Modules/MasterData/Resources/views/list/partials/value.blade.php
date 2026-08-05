@@ -23,12 +23,9 @@
             $list = $options[$source] ?? [];
         @endphp
 
-        @if ($source === 'tax_kinds')
-            {{ $value ? __('master_data::kind.' . $value) : '—' }}
-        @elseif ($source === 'applies')
-            {{ $value ? __('master_data::applies.' . $value) : '—' }}
-        @elseif ($source === 'contexts')
-            {{ $value ? __('master_data::context.' . $value) : '—' }}
+        @if ($field['labels'] ?? false)
+            {{-- ধ্রুবকের তালিকা — কোন ফাইলে অনুবাদ তা ঘরের ঘোষণায় --}}
+            {{ $value ? __('master_data::' . $field['labels'] . '.' . $value) : '—' }}
         @else
             {{-- সম্পর্কিত রেকর্ড — id নয়, নাম --}}
             {{ collect($list)->firstWhere('id', $value)?->name() ?? '—' }}

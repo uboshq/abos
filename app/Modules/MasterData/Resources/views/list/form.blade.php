@@ -81,15 +81,14 @@
                                         $selected = old($name, $record->{$name});
                                     @endphp
 
-                                    @if (in_array($source, ['tax_kinds', 'applies', 'contexts'], true))
-                                        {{-- ধ্রুবকের তালিকা — অনুবাদ হয়ে আসে, কাঁচা কোড নয় --}}
-                                        @php
-                                            $prefix = match ($source) {
-                                                'tax_kinds' => 'master_data::kind.',
-                                                'applies' => 'master_data::applies.',
-                                                default => 'master_data::context.',
-                                            };
-                                        @endphp
+                                    @if ($field['labels'] ?? false)
+                                        {{-- ধ্রুবকের তালিকা — অনুবাদ হয়ে আসে, কাঁচা কোড নয়।
+
+                                             কোন ফাইলে অনুবাদ তা ঘরের ঘোষণাতেই বলা থাকে।
+                                             আগে এখানে তিনটা নাম হাতে লেখা ছিল, তাই চতুর্থ
+                                             একটা ধ্রুবক-তালিকা যোগ করলে সেটা নিঃশব্দে
+                                             কাঁচা কোড দেখাত ("own", "rented")। --}}
+                                        @php $prefix = 'master_data::' . $field['labels'] . '.' @endphp
 
                                         @foreach ($list as $value)
                                             <option value="{{ $value }}" @selected($selected === $value)>

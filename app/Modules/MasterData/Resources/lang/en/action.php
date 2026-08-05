@@ -10,4 +10,7 @@ return [
     'show_inactive' => 'Show inactive too',
     'install_defaults' => 'Install standard lists',
     'install_bangladesh' => 'Install Bangladesh divisions',
+    'rates' => 'Rates',
+    'save_rate' => 'Save Rate',
+    'back_to_currencies' => '← Currencies',
 ];
