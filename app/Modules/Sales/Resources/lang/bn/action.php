@@ -26,4 +26,10 @@ return [
     'clear_data' => 'ঘর খালি করুন',
     'clear_full' => 'সব মুছুন',
     'add_gift' => 'উপহার যোগ করুন',
+    'chart_bulk_do' => 'চার্ট / বাল্ক DO',
+    'transportation' => 'পরিবহন',
+    'shipment' => 'শিপমেন্ট',
+    'add_deposit' => 'জমা যোগ',
+    'add_note' => 'নোট যোগ',
+    'expense' => 'খরচ',
 ];

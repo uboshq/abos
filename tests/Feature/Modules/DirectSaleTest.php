@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Modules;
 
 use App\Core\Engines\Report\ReportEngine;
+use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Models\Company;
@@ -378,6 +379,107 @@ class DirectSaleTest extends TestCase
         ]));
 
         $this->assertSame(0, bccomp((string) $invoice->total, '500', 4));
+    }
+
+    /**
+     * প্রতিটা ঘরের সুইচ সত্যিই ঘরটা লুকায়।
+     *
+     * ── কেন এই পরীক্ষাটা ঘোষণা গুনে থামে না ──────────────────────────
+     * সুইচ ঘোষণা করা সহজ, ভিউতে সেটা মানা আলাদা কাজ। ঘোষিত অথচ না-মানা
+     * সুইচ সবচেয়ে খারাপ ধরনের: Control Panel-এ বন্ধ করে ব্যবহারকারী ভাবেন
+     * কাজ হয়েছে, অথচ পর্দায় ঘরটা রয়েই যায়।
+     *
+     * তাই প্রতিটা সুইচ বন্ধ করে পাতাটা এঁকে দেখা হয় লেখাটা সত্যিই গেল
+     * কি না।
+     */
+    public function test_every_field_switch_really_hides_its_field(): void
+    {
+        $settings = app(SettingsService::class);
+
+        $cases = [
+            'sales.field_do_no' => __('sales::field.do_no'),
+            'sales.field_free_qty' => __('sales::field.free_qty'),
+            'sales.field_gift' => __('sales::field.gift_item'),
+            'sales.field_line_discount' => __('sales::field.discount_pct'),
+            'sales.field_expense' => __('sales::field.expense'),
+            'sales.field_rounding' => __('sales::field.rounding'),
+            'sales.field_deposit' => __('sales::field.received_deposit'),
+            'sales.field_credit_limit' => __('sales::field.credit_limit'),
+            'sales.field_warehouse_select' => __('sales::field.warehouse'),
+            'sales.field_sub_total' => __('sales::field.sub_total_no_vat'),
+            'sales.field_total_item' => __('sales::field.total_item'),
+            'sales.field_sales_qty' => __('sales::field.total_sales_qty'),
+            'sales.field_free_qty_total' => __('sales::field.total_free_qty'),
+            'sales.field_total_qty' => __('sales::field.total_free_plus_sales'),
+        ];
+
+        foreach ($cases as $key => $label) {
+            /*
+             * খোঁজা হয় লেখাটার শেষ সহ ("মোট ফ্রি" তারপর ট্যাগ), শুধু লেখাটা নয়।
+             *
+             * কারণ "মোট ফ্রি" আসলে "মোট ফ্রি+বিক্রয়"-এর শুরুটাও — শুধু
+             * লেখা খুঁজলে একটা সারি বন্ধ করেও অন্যটার ভেতরে সেটা পাওয়া
+             * যেত, আর পরীক্ষা মিথ্যা নালিশ করত।
+             */
+            $needle = '/'.preg_quote($label, '/').'\s*</u';
+
+            $settings->set($key, true);
+            $settings->flush();
+            $this->assertMatchesRegularExpression($needle, $this->formMarkup(), "খোলা থাকলেও ঘরটা নেই: {$key}");
+
+            $settings->set($key, false);
+            $settings->flush();
+            $this->assertDoesNotMatchRegularExpression($needle, $this->formMarkup(), "বন্ধ করেও ঘরটা রয়ে গেছে: {$key}");
+
+            $settings->set($key, true);
+        }
+    }
+
+    /**
+     * কেবল ফর্মটুকু — শেল বাদ।
+     *
+     * পুরো পাতা ধরে খুঁজলে সাইডবারের মেনুর শব্দও মিলে যায়: "গুদাম" ঘরটা
+     * লুকানো সত্ত্বেও Inventory-র মেনুতে ওই শব্দটা থেকেই যায়, আর টেস্ট
+     * মিথ্যা অভিযোগ করে।
+     */
+    private function formMarkup(): string
+    {
+        $html = $this->actingAs($this->user)
+            ->get(route('sales.direct.create'))
+            ->assertOk()
+            ->getContent();
+
+        // ঠিক এই পর্দার ফর্মটা — টপবারের কোম্পানি-সুইচারও একটা POST ফর্ম,
+        // আর প্রথম <form> ধরলে সেটাই আসত
+        $needle = 'action="'.route('sales.direct.store').'"';
+
+        $start = strpos($html, $needle);
+        $this->assertNotFalse($start, 'সরাসরি বিক্রয়ের ফর্মটাই পাওয়া গেল না');
+
+        $end = strpos($html, '</form>', $start);
+
+        return substr($html, $start, $end - $start);
+    }
+
+    /**
+     * গুদাম বাছার ঘর বন্ধ থাকলেও গুদামটা যায়।
+     *
+     * না গেলে মাল কোন গুদাম থেকে বেরোল তা লেখা থাকত না, আর এক গুদামের
+     * প্রতিষ্ঠানেও একদিন দ্বিতীয় গুদাম খুললে পুরনো চালানগুলো অনাথ হত।
+     */
+    public function test_hiding_the_warehouse_picker_still_stamps_a_warehouse(): void
+    {
+        app(SettingsService::class)->set('sales.field_warehouse_select', false);
+
+        $this->actingAs($this->user)->post(route('sales.direct.store'), [
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'lines' => [['product_id' => $this->product->id, 'qty' => '2', 'rate' => '100']],
+        ])->assertRedirect();
+
+        $challan = DeliveryChallan::query()->latest('id')->firstOrFail();
+
+        $this->assertSame($this->warehouse->id, (int) $challan->warehouse_id);
     }
 
     public function test_a_user_without_the_permission_cannot_reach_it(): void

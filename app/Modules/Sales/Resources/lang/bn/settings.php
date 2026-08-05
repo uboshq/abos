@@ -18,4 +18,10 @@ return [
     'field_do_no' => 'DO নম্বরের ঘর দেখাও',
     'field_deposit' => 'কাউন্টারে জমার ঘর দেখাও',
     'field_credit_limit' => 'ক্রেতার বাকির সীমা দেখাও',
+    'field_warehouse_select' => 'গুদাম বাছার ঘর দেখাও',
+    'field_sub_total' => 'মোট (ভ্যাট ছাড়া) সারিটা দেখাও',
+    'field_total_item' => 'মোট পণ্যের গোনা দেখাও',
+    'field_sales_qty' => 'মোট বিক্রয় পরিমাণ দেখাও',
+    'field_free_qty_total' => 'মোট ফ্রি পরিমাণ দেখাও',
+    'field_total_qty' => 'মোট ফ্রি+বিক্রয় পরিমাণ দেখাও',
 ];
