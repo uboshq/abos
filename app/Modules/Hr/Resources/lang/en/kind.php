@@ -10,4 +10,12 @@ return [
     'cash' => 'Cash',
     'bank' => 'Bank',
     'mfs' => 'Mobile banking',
+    'present' => 'Present',
+    'absent' => 'Absent',
+    'leave' => 'On leave',
+    'holiday' => 'Holiday',
+    'pending' => 'Pending',
+    'approved' => 'Approved',
+    'rejected' => 'Rejected',
+    'cancelled' => 'Withdrawn',
 ];

@@ -19,4 +19,13 @@ return [
     'already_cancelled' => 'This run was already cancelled.',
     'head_needs_an_account' => 'The head :head has no ledger account, and the standard one could not be found.',
     'salary_payable_missing' => 'The chart has no Salary Payable account, so there is nowhere for the salary to sit.',
+    'to_before_from' => 'The end date cannot be before the start date.',
+    'days_must_be_positive' => 'The number of days must be greater than zero.',
+    'days_exceed_range' => 'Those dates span :span days, so no more can be asked for.',
+    'not_employed_then' => 'They were not employed at that time.',
+    'leave_overlaps' => 'They already have leave covering some of those days.',
+    'not_enough_leave' => 'Only :left days of :type are left.',
+    'leave_already_decided' => 'This application has already been decided.',
+    'leave_already_cancelled' => 'This application was already withdrawn.',
+    'unknown_attendance_status' => 'That attendance status is not one we know.',
 ];

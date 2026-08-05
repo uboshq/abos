@@ -6,6 +6,7 @@ namespace App\Modules\Hr\Services;
 
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
+use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Models\FinancialYear;
@@ -37,6 +38,8 @@ final class PayrollService
 {
     public function __construct(
         private readonly SalaryStructureService $salaries,
+        private readonly AttendanceService $attendance,
+        private readonly SettingsService $settings,
         private readonly PostingEngine $posting,
         private readonly NumberSeriesEngine $numbers,
     ) {}
@@ -274,6 +277,19 @@ final class PayrollService
     {
         $components = $this->salaries->componentsOn($employee, $monthEnd);
 
+        /*
+         * অনুপস্থিতির ভাগ — যতটুকু কাটার কথা ততটুকুই।
+         *
+         * ── কেন সব খাতে নয় ────────────────────────────────────────
+         * তিন দিন কামাই করলে বেতন ও ভাতা কমে, কিন্তু অগ্রিমের কিস্তি
+         * কমে না — ধার তো পুরোটাই নেওয়া হয়েছিল। কোন খাত কমবে তা
+         * খাতের নিজের ঘরে (prorated_by_attendance) লেখা আছে।
+         *
+         * সুইচ বন্ধ থাকলে বা হাজিরাই না বসানো থাকলে ভাগটা ১ — কারও
+         * বেতন কাটে না।
+         */
+        $factor = $this->attendanceFactor($employee, $monthEnd);
+
         $slip = Payslip::create([
             'company_id' => $run->company_id,
             'payroll_run_id' => $run->id,
@@ -293,6 +309,10 @@ final class PayrollService
             /** @var SalaryHead $head */
             $head = $component['head'];
 
+            $amount = $head->prorated_by_attendance
+                ? bcmul($component['amount'], $factor, 4)
+                : $component['amount'];
+
             PayslipLine::create([
                 'company_id' => $run->company_id,
                 'payslip_id' => $slip->id,
@@ -301,15 +321,15 @@ final class PayrollService
                 'head_name_en' => $head->name_en,
                 'head_name_bn' => $head->name_bn,
                 'kind' => $head->kind,
-                'amount' => $component['amount'],
+                'amount' => $amount,
                 'sort_order' => $head->sort_order,
                 'account_id' => $this->accountFor($head)?->id,
             ]);
 
             if ($head->isEarning()) {
-                $gross = bcadd($gross, $component['amount'], 4);
+                $gross = bcadd($gross, $amount, 4);
             } else {
-                $deductions = bcadd($deductions, $component['amount'], 4);
+                $deductions = bcadd($deductions, $amount, 4);
             }
         }
 
@@ -320,6 +340,41 @@ final class PayrollService
         ])->save();
 
         return $slip->fresh();
+    }
+
+    /**
+     * মাসের কত ভাগ বেতন প্রাপ্য — ১ মানে পুরোটা।
+     *
+     * ── কেন মাসের দিন দিয়ে ভাগ, ২৬ বা ৩০ দিয়ে নয় ─────────────────
+     * ফেব্রুয়ারিতে ২৮ দিন আর জুলাইয়ে ৩১। স্থির ৩০ ধরলে ফেব্রুয়ারিতে
+     * এক দিন কামাই করলে মাসের ১/৩০ কাটত, অথচ মাসটাই ২৮ দিনের —
+     * অর্থাৎ কম কাটত। ছোট পার্থক্য, কিন্তু প্রতি মাসে, প্রতিজনের।
+     *
+     * ── কেন হাজিরা না বসালে ভাগটা ১ ────────────────────────────────
+     * খালি খাতাকে অনুপস্থিতি ধরলে সুইচ চালু করার প্রথম মাসেই সবার
+     * বেতন শূন্য হত।
+     */
+    private function attendanceFactor(Employee $employee, Carbon $monthEnd): string
+    {
+        if (! $this->settings->get('hr.attendance_affects_salary')) {
+            return '1';
+        }
+
+        $unpaid = $this->attendance->unpaidDays($employee, $monthEnd);
+
+        if (bccomp($unpaid, '0', 1) <= 0) {
+            return '1';
+        }
+
+        $daysInMonth = (string) $monthEnd->daysInMonth;
+        $paid = bcsub($daysInMonth, $unpaid, 1);
+
+        // পুরো মাস অনুপস্থিত থাকলে ভাগটা শূন্য, ঋণাত্মক নয়
+        if (bccomp($paid, '0', 1) <= 0) {
+            return '0';
+        }
+
+        return bcdiv($paid, $daysInMonth, 6);
     }
 
     /**
