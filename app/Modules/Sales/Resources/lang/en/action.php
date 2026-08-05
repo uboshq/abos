@@ -22,4 +22,8 @@ return [
     'collect_against' => 'Collect against this invoice',
     'checkout' => 'Complete sale',
     'exact' => 'Exact',
+    'add_to_cart' => 'Add to Cart',
+    'clear_data' => 'Clear Data',
+    'clear_full' => 'Clear Full Data',
+    'add_gift' => 'Add a gift',
 ];

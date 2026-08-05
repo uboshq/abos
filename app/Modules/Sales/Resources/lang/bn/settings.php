@@ -10,4 +10,12 @@ return [
     'allow_negative_stock' => 'বিক্রয়যোগ্য মালের বেশি বেচতে দাও',
     'invoice_needs_challan' => 'চালান ছাড়া বিল কাটা যাবে না',
     'walkin_customer' => 'নগদ বিক্রি যে গ্রাহকের নামে বসবে',
+    'field_free_qty' => 'ফ্রি পরিমাণের ঘর দেখাও',
+    'field_gift' => 'উপহারের সারি দেখাও',
+    'field_line_discount' => 'লাইনে ছাড়ের ঘর দেখাও',
+    'field_expense' => 'খরচের ঘর দেখাও',
+    'field_rounding' => 'রাউন্ডিংয়ের ঘর দেখাও',
+    'field_do_no' => 'DO নম্বরের ঘর দেখাও',
+    'field_deposit' => 'কাউন্টারে জমার ঘর দেখাও',
+    'field_credit_limit' => 'ক্রেতার বাকির সীমা দেখাও',
 ];

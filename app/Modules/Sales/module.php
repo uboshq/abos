@@ -48,6 +48,7 @@ return [
     'menu' => [
         'transactions' => [
             ['label' => 'sales::menu.pos', 'route' => 'sales.pos.index', 'permission' => 'sales.pos'],
+            ['label' => 'sales::menu.direct', 'route' => 'sales.direct.create', 'permission' => 'sales.challan.create'],
             ['label' => 'sales::menu.orders', 'route' => 'sales.order.index', 'permission' => 'sales.order.view'],
             ['label' => 'sales::menu.challans', 'route' => 'sales.challan.index', 'permission' => 'sales.challan.view'],
             ['label' => 'sales::menu.invoices', 'route' => 'sales.invoice.index', 'permission' => 'sales.invoice.view'],
@@ -144,6 +145,69 @@ return [
             'label' => 'sales::settings.walkin_customer',
             'type' => 'integer',
             'default' => 0,
+            'group' => 'entry',
+        ],
+        /*
+         * সরাসরি বিক্রয়ের ঘরগুলো — প্রতিটার নিজের সুইচ (নিয়ম ৭)।
+         *
+         * DMS-এ ঠিক এভাবেই, আর কারণটা বাস্তব: যে ডিপো ফ্রি মাল দেয় না
+         * তার পর্দায় ফ্রি পরিমাণের ঘর থাকলে প্রতিবার সেটা এড়িয়ে যেতে হয়,
+         * আর একদিন তাড়াহুড়োয় ওখানেই সংখ্যা বসে যায়।
+         */
+        [
+            'key' => 'sales.field_free_qty',
+            'label' => 'sales::settings.field_free_qty',
+            'type' => 'boolean',
+            'default' => true,
+            'group' => 'entry',
+        ],
+        [
+            'key' => 'sales.field_gift',
+            'label' => 'sales::settings.field_gift',
+            'type' => 'boolean',
+            'default' => true,
+            'group' => 'entry',
+        ],
+        [
+            'key' => 'sales.field_line_discount',
+            'label' => 'sales::settings.field_line_discount',
+            'type' => 'boolean',
+            'default' => true,
+            'group' => 'entry',
+        ],
+        [
+            'key' => 'sales.field_expense',
+            'label' => 'sales::settings.field_expense',
+            'type' => 'boolean',
+            'default' => true,
+            'group' => 'entry',
+        ],
+        [
+            'key' => 'sales.field_rounding',
+            'label' => 'sales::settings.field_rounding',
+            'type' => 'boolean',
+            'default' => true,
+            'group' => 'entry',
+        ],
+        [
+            'key' => 'sales.field_do_no',
+            'label' => 'sales::settings.field_do_no',
+            'type' => 'boolean',
+            'default' => true,
+            'group' => 'entry',
+        ],
+        [
+            'key' => 'sales.field_deposit',
+            'label' => 'sales::settings.field_deposit',
+            'type' => 'boolean',
+            'default' => true,
+            'group' => 'entry',
+        ],
+        [
+            'key' => 'sales.field_credit_limit',
+            'label' => 'sales::settings.field_credit_limit',
+            'type' => 'boolean',
+            'default' => true,
             'group' => 'entry',
         ],
         [

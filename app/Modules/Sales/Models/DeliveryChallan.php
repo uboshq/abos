@@ -42,7 +42,9 @@ class DeliveryChallan extends Model implements Drillable
     protected $fillable = [
         'company_id', 'branch_id', 'financial_year_id', 'document_no',
         'customer_id', 'warehouse_id', 'sales_order_id', 'trx_date',
-        'vehicle_no', 'driver_name', 'total',
+        'vehicle_no', 'driver_name', 'do_no', 'total',
+        'discount_amount', 'expense_amount', 'rounding_amount',
+        'deposit_amount', 'credit_period_days',
         'status', 'narration', 'created_by',
         'cancelled_by', 'cancelled_at', 'cancel_reason',
     ];
@@ -53,12 +55,22 @@ class DeliveryChallan extends Model implements Drillable
             'trx_date' => 'date',
             'cancelled_at' => 'datetime',
             'total' => 'decimal:4',
+            'discount_amount' => 'decimal:4',
+            'expense_amount' => 'decimal:4',
+            'rounding_amount' => 'decimal:4',
+            'deposit_amount' => 'decimal:4',
         ];
     }
 
     public function lines(): HasMany
     {
         return $this->hasMany(DeliveryChallanLine::class)->orderBy('line_no');
+    }
+
+    /** উপহারের সারি — অন্য পণ্য, বিক্রির জন্য নয়। */
+    public function giftLines(): HasMany
+    {
+        return $this->hasMany(DeliveryChallanGiftLine::class)->orderBy('line_no');
     }
 
     public function customer(): BelongsTo

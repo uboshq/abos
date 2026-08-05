@@ -1,0 +1,202 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Sales\Http\Controllers;
+
+use App\Core\Services\MenuBuilder;
+use App\Core\Services\SettingsService;
+use App\Core\Support\CompanyContext;
+use App\Http\Controllers\Controller;
+use App\Modules\Customer\Models\Customer;
+use App\Modules\Inventory\Models\Product;
+use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Sales\Services\DirectSaleService;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
+use Illuminate\View\View;
+
+/**
+ * সরাসরি বিক্রয়ের পর্দা — নমুনা অনুযায়ী চারটা অংশ।
+ *
+ *     ১. এন্ট্রি স্ট্রিপ  — পণ্য খোঁজা, লাইভ মজুদ, পরিমাণ ও দর, কার্টে যোগ
+ *     ২. ডকুমেন্ট হেডার  — গুদাম, তারিখ, বাকির মেয়াদ, DO নম্বর, ক্রেতা
+ *     ৩. কার্ট           — পণ্যের সারি, আর তার নিচে আলাদা উপহারের সারি
+ *     ৪. টোটাল প্যানেল   — মোট থেকে বকেয়া পর্যন্ত, নমুনার ক্রমেই
+ *
+ * ── কেন পুরো তালিকা পাতার সাথে ───────────────────────────────────────
+ * POS-এর মতোই: প্রতিটা অক্ষরে সার্ভারে গেলে কাউন্টারে দেরি হয়, আর ইন্টারনেট
+ * গেলে বিক্রিই বন্ধ। এখানে প্রতিটা পণ্যের সাথে ছয়টা মজুদ সংখ্যাও যায়,
+ * কারণ নমুনা দাবি করে সেগুলো পণ্য বাছার সাথে সাথেই দেখা যাবে।
+ */
+class DirectSaleController extends Controller implements HasMiddleware
+{
+    /** এর বেশি পণ্য হলে পাতার সাথে পাঠানো বন্ধ, সার্ভারে খোঁজা শুরু। */
+    private const INLINE_CATALOGUE_LIMIT = 2000;
+
+    public function __construct(
+        private readonly DirectSaleService $sales,
+        private readonly SettingsService $settings,
+        private readonly MenuBuilder $menu,
+    ) {}
+
+    public static function middleware(): array
+    {
+        return [new Middleware('can:sales.challan.create')];
+    }
+
+    public function create(Request $request): View
+    {
+        $warehouse = $this->warehouse($request);
+
+        return view('sales::direct.index', [
+            'menu' => $this->menu->forUser($request->user()),
+            'products' => $this->catalogue($warehouse),
+            'customers' => Customer::query()->active()->orderBy('name_en')->get(),
+            'warehouses' => Warehouse::query()->active()->orderBy('code')->get(),
+            'warehouse' => $warehouse,
+            'walkinId' => (int) $this->settings->get('sales.walkin_customer_id', 0),
+
+            /*
+             * ঘরগুলো কোম্পানি চাইলে বন্ধ করতে পারে (নিয়ম ৭)।
+             *
+             * DMS-এ প্রতিটা ঘরের নিজের সুইচ আছে, আর কারণটা বাস্তব: যে
+             * ডিপো ভ্যাট দেয় না তার কাগজে ভ্যাটের সারি থাকলে প্রতিবার
+             * শূন্য দেখে চোখ সরাতে হয়, আর একদিন ভুল ঘরে টাকা বসে।
+             */
+            'show' => [
+                'free_qty' => $this->settings->get('sales.field_free_qty', true),
+                'gift' => $this->settings->get('sales.field_gift', true),
+                'line_discount' => $this->settings->get('sales.field_line_discount', true),
+                'expense' => $this->settings->get('sales.field_expense', true),
+                'rounding' => $this->settings->get('sales.field_rounding', true),
+                'do_no' => $this->settings->get('sales.field_do_no', true),
+                'deposit' => $this->settings->get('sales.field_deposit', true),
+                'credit_limit' => $this->settings->get('sales.field_credit_limit', true),
+            ],
+        ]);
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        $companyId = CompanyContext::id();
+
+        $data = $request->validate([
+            'customer_id' => ['nullable', 'integer',
+                Rule::exists('customers', 'id')->where('company_id', $companyId)],
+            'warehouse_id' => ['nullable', 'integer',
+                Rule::exists('inv_warehouses', 'id')->where('company_id', $companyId)],
+            'trx_date' => ['nullable', 'date'],
+            'do_no' => ['nullable', 'string', 'max:64'],
+            'vehicle_no' => ['nullable', 'string', 'max:64'],
+            'driver_name' => ['nullable', 'string', 'max:191'],
+            'credit_period_days' => ['nullable', 'integer', 'min:0', 'max:365'],
+            'discount_amount' => ['nullable', 'numeric', 'min:0'],
+            'expense_amount' => ['nullable', 'numeric', 'min:0'],
+            'rounding_amount' => ['nullable', 'numeric', 'min:0'],
+            'deposit' => ['nullable', 'numeric', 'min:0'],
+            'narration' => ['nullable', 'string', 'max:500'],
+
+            'lines' => ['required', 'array', 'min:1'],
+            'lines.*.product_id' => ['required', 'integer',
+                Rule::exists('inv_products', 'id')->where('company_id', $companyId)],
+            'lines.*.qty' => ['required', 'numeric', 'gt:0'],
+            'lines.*.free_qty' => ['nullable', 'numeric', 'min:0'],
+            'lines.*.rate' => ['required', 'numeric', 'min:0'],
+            'lines.*.discount_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
+
+            'gifts' => ['nullable', 'array'],
+            'gifts.*.product_id' => ['nullable', 'integer',
+                Rule::exists('inv_products', 'id')->where('company_id', $companyId)],
+            'gifts.*.against_product_id' => ['nullable', 'integer',
+                Rule::exists('inv_products', 'id')->where('company_id', $companyId)],
+            'gifts.*.qty' => ['nullable', 'numeric', 'min:0'],
+            'gifts.*.remarks' => ['nullable', 'string', 'max:191'],
+        ]);
+
+        $result = $this->sales->complete(
+            $data,
+            $data['lines'],
+            array_values(array_filter(
+                $data['gifts'] ?? [],
+                fn (array $gift) => filled($gift['product_id'] ?? null) && (float) ($gift['qty'] ?? 0) > 0,
+            )),
+        );
+
+        // সোজা রসিদে — বিক্রির পরের কাজটা কাগজ দেওয়া
+        return redirect()
+            ->route('sales.print.invoice', ['invoice' => $result['invoice']->id, 'paper' => '80mm'])
+            ->with('saved', __('sales::message.direct_done', [
+                'challan' => $result['challan']->document_no,
+                'invoice' => $result['invoice']->document_no,
+                'change' => number_format((float) $result['change'], 2),
+            ]));
+    }
+
+    /**
+     * পর্দার সাথে যাওয়া পণ্যতালিকা — ছয়টা মজুদ সংখ্যা সহ।
+     *
+     * সাব-সিলেক্টে, সারি প্রতি কোয়েরিতে নয়।
+     *
+     * @return Collection<int, object>
+     */
+    private function catalogue(?Warehouse $warehouse): Collection
+    {
+        $sum = fn (string $column) => DB::table('inv_stock_movements')
+            ->selectRaw("COALESCE(SUM({$column}), 0)")
+            ->whereColumn('product_id', 'inv_products.id')
+            ->where('company_id', CompanyContext::id())
+            ->when($warehouse, fn ($q) => $q->where('warehouse_id', $warehouse->id));
+
+        return Product::query()
+            ->active()
+            ->with('unit')
+            ->select('inv_products.*')
+            ->selectSub($sum('floor_change'), 'floor_total')
+            ->selectSub($sum('reserved_change'), 'reserved_total')
+            ->selectSub($sum('hold_change'), 'hold_total')
+            ->selectSub($sum('free_change'), 'free_total')
+            ->selectSub($sum('free_reserved_change'), 'free_reserved_total')
+            ->orderBy('name_en')
+            ->limit(self::INLINE_CATALOGUE_LIMIT)
+            ->get()
+            ->map(function (Product $p) {
+                $available = bcsub(
+                    bcsub((string) $p->floor_total, (string) $p->reserved_total, 4),
+                    (string) $p->hold_total,
+                    4,
+                );
+
+                return (object) [
+                    'id' => $p->id,
+                    'code' => $p->code,
+                    'name' => $p->name(),
+                    'unit' => $p->unit?->name() ?? '',
+                    'rate' => (string) $p->sale_price,
+                    'barcode' => (string) $p->barcode,
+
+                    // নমুনার লাইভ স্টক প্যানেল — ছয়টাই
+                    'main' => (string) $p->floor_total,
+                    'reserved' => (string) $p->reserved_total,
+                    'hold' => (string) $p->hold_total,
+                    'available' => $available,
+                    'free' => (string) $p->free_total,
+                    'free_available' => bcsub((string) $p->free_total, (string) $p->free_reserved_total, 4),
+                ];
+            });
+    }
+
+    private function warehouse(Request $request): ?Warehouse
+    {
+        $id = $request->integer('warehouse_id');
+
+        return $id > 0
+            ? Warehouse::query()->find($id)
+            : Warehouse::query()->where('is_default', true)->active()->first();
+    }
+}

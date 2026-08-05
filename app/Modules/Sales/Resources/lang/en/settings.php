@@ -10,4 +10,12 @@ return [
     'allow_negative_stock' => 'Allow selling more than is available',
     'invoice_needs_challan' => 'An invoice must follow a challan',
     'walkin_customer' => 'Customer that cash sales are booked against',
+    'field_free_qty' => 'Show the free quantity field',
+    'field_gift' => 'Show the gift lines',
+    'field_line_discount' => 'Show discount on each line',
+    'field_expense' => 'Show the expense field',
+    'field_rounding' => 'Show the rounding field',
+    'field_do_no' => 'Show the DO number field',
+    'field_deposit' => 'Show the counter deposit field',
+    'field_credit_limit' => 'Show the customer\'s credit limit',
 ];
