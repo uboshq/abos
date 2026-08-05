@@ -23,6 +23,15 @@ class DeliveryChallanRequest extends FormRequest
             'sales_order_id' => ['nullable', 'integer',
                 Rule::exists('sal_orders', 'id')->where('company_id', $companyId)],
             'trx_date' => ['required', 'date'],
+            /*
+             * বহরের গাড়ি হলে id, বাইরের গাড়ি হলে শুধু লেখা নম্বর।
+             *
+             * দুইটাই ঐচ্ছিক, কারণ ভাড়ার ট্রাকও মাল নিয়ে যায় — বাধ্য
+             * করলে মানুষ যেকোনো একটা গাড়ি বেছে নিত শুধু ফর্ম পার করতে,
+             * আর কাগজে ভুল নম্বর ছাপত।
+             */
+            'vehicle_id' => ['nullable', 'integer',
+                Rule::exists('mdm_vehicles', 'id')->where('company_id', $companyId)],
             'vehicle_no' => ['nullable', 'string', 'max:64'],
             'driver_name' => ['nullable', 'string', 'max:191'],
             'narration' => ['nullable', 'string', 'max:500'],
@@ -45,7 +54,7 @@ class DeliveryChallanRequest extends FormRequest
     {
         return $this->safe()->only([
             'customer_id', 'warehouse_id', 'sales_order_id',
-            'trx_date', 'vehicle_no', 'driver_name', 'narration',
+            'trx_date', 'vehicle_id', 'vehicle_no', 'driver_name', 'narration',
         ]);
     }
 

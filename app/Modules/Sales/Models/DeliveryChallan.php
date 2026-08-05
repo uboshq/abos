@@ -12,6 +12,7 @@ use App\Models\Branch;
 use App\Models\User;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\MasterData\Models\Vehicle;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -42,7 +43,7 @@ class DeliveryChallan extends Model implements Drillable
     protected $fillable = [
         'company_id', 'branch_id', 'financial_year_id', 'document_no',
         'customer_id', 'warehouse_id', 'sales_order_id', 'trx_date',
-        'vehicle_no', 'driver_name', 'do_no', 'total',
+        'vehicle_id', 'vehicle_no', 'driver_name', 'do_no', 'total',
         'discount_amount', 'expense_amount', 'rounding_amount',
         'deposit_amount', 'credit_period_days',
         'status', 'narration', 'created_by',
@@ -81,6 +82,27 @@ class DeliveryChallan extends Model implements Drillable
     public function warehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class);
+    }
+
+    /** @return BelongsTo<Vehicle, $this> */
+    public function vehicle(): BelongsTo
+    {
+        return $this->belongsTo(Vehicle::class);
+    }
+
+    /**
+     * কাগজে যে নম্বরটা ছাপা হবে।
+     *
+     * ── কেন বহরের গাড়িটা আগে ────────────────────────────────────────
+     * দুই জায়গায় নম্বর থাকতে পারে, আর দুইটা আলাদা হলে সত্যিটা বহরেরটাই:
+     * নম্বরপ্লেট বদলালে মাস্টারে একবার ঠিক করলেই পুরনো চালানগুলোও ঠিক
+     * নম্বর দেখায়, অথচ লেখা নম্বরটা যেদিন টাইপ হয়েছিল সেদিনেই আটকে থাকে।
+     *
+     * বহরের বাইরের গাড়ি হলে লেখা নম্বরটাই একমাত্র নম্বর।
+     */
+    public function vehiclePlate(): string
+    {
+        return $this->vehicle?->registration_no ?? (string) $this->vehicle_no;
     }
 
     public function order(): BelongsTo

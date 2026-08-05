@@ -8,12 +8,16 @@ use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\User;
+use App\Modules\Customer\Models\Customer;
+use App\Modules\Inventory\Models\Product;
+use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\MasterData\Models\Currency;
 use App\Modules\MasterData\Models\ExchangeRate;
 use App\Modules\MasterData\Models\Vehicle;
 use App\Modules\MasterData\Models\VehicleType;
 use App\Modules\MasterData\Services\ExchangeRateService;
 use App\Modules\MasterData\Services\MasterListService;
+use App\Modules\Sales\Services\DeliveryChallanService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -310,6 +314,112 @@ class CurrencyAndVehicleTest extends TestCase
         // নম্বরপ্লেট দিয়েও খোঁজা যায় — কাগজে ওটাই লেখা থাকে
         $this->assertTrue(Vehicle::query()->search('11-2233')->exists());
         $this->assertTrue(Vehicle::query()->search('Karim')->exists());
+    }
+
+    // ── চালানের সাথে যোগ ──────────────────────────────────────────────
+
+    /**
+     * বহরের গাড়ি বাছলে চালান সত্যিকারের যোগ রাখে, শুধু লেখা নয়।
+     *
+     * ── কেন FK, শুধু নম্বর নয় ────────────────────────────────────────
+     * "এই ট্রাকটা এ মাসে কয়টা চালানে গেল" — লেখা নম্বর দিয়ে এর উত্তর
+     * দিতে গেলে বানানে মেলাতে হত, আর "DHAKA METRO TA 11-2233" ও
+     * "Dhaka Metro Ta 11 2233" দুইটা আলাদা গাড়ি হয়ে যেত।
+     */
+    public function test_a_challan_remembers_which_fleet_vehicle_carried_it(): void
+    {
+        $vehicle = $this->fleetVehicle();
+
+        $challan = app(DeliveryChallanService::class)->create([
+            'customer_id' => Customer::query()->value('id'),
+            'warehouse_id' => Warehouse::query()->where('is_default', true)->value('id'),
+            'trx_date' => '2026-08-04',
+            'vehicle_id' => $vehicle->id,
+            'driver_name' => 'Karim Mia',
+        ], [[
+            'product_id' => Product::query()->value('id'),
+            'delivered_qty' => '2',
+            'rate' => '100',
+        ]]);
+
+        $this->assertSame($vehicle->id, $challan->vehicle_id);
+        $this->assertSame($vehicle->registration_no, $challan->fresh()->vehiclePlate());
+    }
+
+    /**
+     * বহরের বাইরের গাড়ি — শুধু লেখা নম্বর, আর সেটাই ছাপা হয়।
+     *
+     * ভাড়ার ট্রাক বাধ্যতামূলকভাবে তালিকায় থাকতে হবে বললে গুদামের লোক
+     * যেকোনো একটা গাড়ি বেছে নিতেন শুধু ফর্মটা পার করতে।
+     */
+    public function test_a_rented_truck_still_goes_out_with_only_a_typed_number(): void
+    {
+        $challan = app(DeliveryChallanService::class)->create([
+            'customer_id' => Customer::query()->value('id'),
+            'warehouse_id' => Warehouse::query()->where('is_default', true)->value('id'),
+            'trx_date' => '2026-08-04',
+            'vehicle_no' => 'DHAKA METRO TA 99-0001',
+        ], [[
+            'product_id' => Product::query()->value('id'),
+            'delivered_qty' => '1',
+            'rate' => '100',
+        ]]);
+
+        $this->assertNull($challan->vehicle_id);
+        $this->assertSame('DHAKA METRO TA 99-0001', $challan->vehiclePlate());
+    }
+
+    /** নম্বরপ্লেট বদলালে পুরনো চালানও নতুন নম্বর দেখায়। */
+    public function test_correcting_a_plate_in_the_master_fixes_every_old_challan(): void
+    {
+        $vehicle = $this->fleetVehicle();
+
+        $challan = app(DeliveryChallanService::class)->create([
+            'customer_id' => Customer::query()->value('id'),
+            'warehouse_id' => Warehouse::query()->where('is_default', true)->value('id'),
+            'trx_date' => '2026-08-04',
+            'vehicle_id' => $vehicle->id,
+            'vehicle_no' => 'typed by hand, wrongly',
+        ], [[
+            'product_id' => Product::query()->value('id'),
+            'delivered_qty' => '1',
+            'rate' => '100',
+        ]]);
+
+        $vehicle->forceFill(['registration_no' => 'DHAKA METRO TA 22-3344'])->save();
+
+        $this->assertSame('DHAKA METRO TA 22-3344', $challan->fresh()->vehiclePlate());
+    }
+
+    public function test_the_challan_form_offers_the_fleet_only_when_it_is_switched_on(): void
+    {
+        $this->fleetVehicle();
+
+        $this->assertStringContainsString('name="vehicle_id"',
+            $this->get(route('sales.challan.create'))->assertOk()->getContent());
+
+        $settings = app(SettingsService::class);
+        $settings->set('master_data.vehicle_enabled', false);
+        $settings->flush();
+
+        $html = $this->get(route('sales.challan.create'))->assertOk()->getContent();
+
+        $this->assertStringNotContainsString('name="vehicle_id"', $html);
+
+        // লেখা নম্বরের ঘরটা থেকেই যায় — নাহলে ভাড়ার গাড়ির নম্বর
+        // লেখার কোনো জায়গা থাকত না
+        $this->assertStringContainsString('name="vehicle_no"', $html);
+    }
+
+    private function fleetVehicle(): Vehicle
+    {
+        return Vehicle::query()->create([
+            'code' => 'V-01',
+            'name_en' => 'Blue Truck',
+            'registration_no' => 'DHAKA METRO TA 11-2233',
+            'vehicle_type_id' => VehicleType::query()->where('code', 'TRUCK')->value('id'),
+            'owner_type' => 'own',
+        ]);
     }
 
     public function test_the_defaults_install_a_base_currency_and_vehicle_types(): void

@@ -7,11 +7,13 @@ namespace App\Modules\Sales\Http\Controllers;
 use App\Core\Concerns\AuthorizesResource;
 use App\Core\Concerns\SortsLists;
 use App\Core\Services\MenuBuilder;
+use App\Core\Services\SettingsService;
 use App\Core\Support\DocumentStatus;
 use App\Http\Controllers\Controller;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\MasterData\Models\Vehicle;
 use App\Modules\Sales\Http\Requests\DeliveryChallanRequest;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesOrder;
@@ -33,6 +35,7 @@ class DeliveryChallanController extends Controller implements HasMiddleware
     public function __construct(
         private readonly DeliveryChallanService $service,
         private readonly MenuBuilder $menu,
+        private readonly SettingsService $settings,
     ) {}
 
     public static function middleware(): array
@@ -170,6 +173,17 @@ class DeliveryChallanController extends Controller implements HasMiddleware
             'products' => Product::query()->active()->with('unit')->orderBy('name_en')->get(),
             'orders' => SalesOrder::query()->open()->with('customer')
                 ->orderByDesc('trx_date')->limit(200)->get(),
+
+            /*
+             * বহরের গাড়িগুলো — সুইচ বন্ধ থাকলে খালি।
+             *
+             * খালি হলে ফর্মে শুধু লেখা নম্বরের ঘরটাই থাকে, ঠিক আগের
+             * মতো। যে প্রতিষ্ঠান বহরের তালিকা রাখে না, তার পর্দায়
+             * চিরকাল খালি একটা ড্রপডাউন ঝুলে থাকা উচিত নয়।
+             */
+            'vehicles' => $this->settings->get('master_data.vehicle_enabled')
+                ? Vehicle::query()->active()->orderBy('code')->get()
+                : collect(),
         ];
     }
 

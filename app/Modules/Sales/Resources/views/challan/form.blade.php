@@ -78,6 +78,20 @@
                 <x-ui.field name="trx_date" type="date" :label="__('sales::field.date')"
                             :value="old('trx_date', $challan->trx_date?->toDateString() ?? now()->toDateString())"
                             required />
+                {{-- বহরের তালিকা থাকলে সেখান থেকে বাছা যায়, আর তার পাশে
+                     লেখা নম্বরের ঘরটাও থাকে।
+
+                     দুইটাই রাখার কারণ: ভাড়ার ট্রাকও মাল নিয়ে যায়, আর
+                     শুধু ড্রপডাউন রাখলে ওই চালানটা লেখাই যেত না — তখন
+                     মানুষ যেকোনো একটা গাড়ি বেছে নিত ফর্ম পার করতে, আর
+                     গেটপাসে ভুল নম্বর ছাপত। --}}
+                @if ($vehicles->isNotEmpty())
+                    <x-ui.select name="vehicle_id" :label="__('sales::field.vehicle')"
+                                 :options="$vehicles->mapWithKeys(fn ($v) => [$v->id => $v->registration_no . ' — ' . $v->name()])"
+                                 :selected="old('vehicle_id', $challan->vehicle_id)"
+                                 :placeholder="__('sales::field.vehicle_not_in_fleet')" />
+                @endif
+
                 <x-ui.field name="vehicle_no" :label="__('sales::field.vehicle_no')"
                             :value="old('vehicle_no', $challan->vehicle_no)" />
 

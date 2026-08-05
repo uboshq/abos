@@ -240,7 +240,8 @@ class SalesPrintController extends Controller implements HasMiddleware
             'core.print.date' => $challan->trx_date?->format('d/m/Y') ?? '',
             'sales::field.customer' => $challan->customer?->name() ?? '',
             'sales::field.warehouse' => $challan->warehouse?->name() ?? '',
-            'sales::field.vehicle_no' => $challan->vehicle_no ?? '',
+            // বহরের গাড়ি হলে মাস্টারের নম্বরপ্লেট, নাহলে লেখা নম্বরটা
+            'sales::field.vehicle_no' => $challan->vehiclePlate(),
             'sales::field.driver_name' => $challan->driver_name ?? '',
         ];
     }
