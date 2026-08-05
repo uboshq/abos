@@ -39,6 +39,8 @@ return [
 
         'transactions' => [
             ['label' => 'hr::menu.payroll', 'route' => 'hr.payroll.index', 'permission' => 'hr.payroll.view'],
+            ['label' => 'hr::menu.attendance', 'route' => 'hr.attendance.index', 'permission' => 'hr.attendance.view'],
+            ['label' => 'hr::menu.leave', 'route' => 'hr.leave.index', 'permission' => 'hr.leave.view'],
         ],
     ],
 
@@ -63,6 +65,19 @@ return [
          */
         'hr.payroll.view',
         'hr.payroll.manage',
+
+        'hr.attendance.view',
+        'hr.attendance.manage',
+
+        /*
+         * ছুটি চাওয়া আর ছুটি মঞ্জুর করা আলাদা।
+         *
+         * এক অনুমতিতে রাখলে যে কেউ নিজের ছুটি নিজেই মঞ্জুর করতে পারত,
+         * আর অনুমোদন বলে কিছু থাকত না।
+         */
+        'hr.leave.view',
+        'hr.leave.manage',
+        'hr.leave.approve',
     ],
 
     'doc_types' => [
@@ -82,6 +97,23 @@ return [
          * পুরনো নাম প্রতিটা তালিকায় থাকলে খোঁজা কঠিন হয়। কিন্তু মোছা
          * হয় না — পুরনো বেতনশিটে নামটা থাকতেই হবে।
          */
+        /*
+         * অনুপস্থিতিতে বেতন কাটবে কি না।
+         *
+         * ডিফল্টে বন্ধ, আর কারণটা গুরুতর: চালু থাকলে যে প্রতিষ্ঠান রোজ
+         * হাজিরা লেখে না তার খাতা খালি থাকত। খালি খাতা মানে সবাই
+         * অনুপস্থিত — প্রথম মাসেই সবার বেতন কাটা যেত।
+         *
+         * (সেবা স্তরেও দ্বিতীয় পাহারা আছে: যে দিনের সারি লেখা নেই সেটা
+         * গোনাই হয় না। কিন্তু বেতনের মতো জায়গায় একটা পাহারা যথেষ্ট নয়।)
+         */
+        [
+            'key' => 'hr.attendance_affects_salary',
+            'label' => 'hr::settings.attendance_affects_salary',
+            'type' => 'boolean',
+            'default' => false,
+            'group' => 'entry',
+        ],
         [
             'key' => 'hr.show_left_employees',
             'label' => 'hr::settings.show_left_employees',

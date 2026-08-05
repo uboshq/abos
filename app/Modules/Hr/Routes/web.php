@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Modules\Hr\Http\Controllers\AttendanceController;
 use App\Modules\Hr\Http\Controllers\EmployeeController;
+use App\Modules\Hr\Http\Controllers\LeaveController;
 use App\Modules\Hr\Http\Controllers\PayrollController;
 use App\Modules\Hr\Http\Controllers\PayslipPrintController;
 use App\Modules\Hr\Http\Controllers\SalaryHeadController;
@@ -55,6 +57,37 @@ Route::middleware('auth')->prefix('hr')->group(function () {
 
     Route::get('/payslips/{payslip}/print', [PayslipPrintController::class, 'one'])
         ->whereNumber('payslip')->name('payslip.print');
+
+    /*
+     * হাজিরা — একটা দিনের পর্দা, আর সেই দিনের সবার সারি একসাথে সংরক্ষণ।
+     *
+     * মাসিক গ্রিড নয়: ত্রিশ দিন × বিশ জন মানে ছয়শো ঘর, আর ফোনে সেটা
+     * ভরা যায় না। গুদামের লোক সকালে একবার আজকের পর্দাটা খুলে সবার
+     * হাজিরা বসান — সেটাই আসল কাজের ধরন।
+     */
+    Route::prefix('attendance')->name('attendance.')->group(function () {
+        Route::get('/', [AttendanceController::class, 'index'])->name('index');
+        Route::post('/', [AttendanceController::class, 'store'])->name('store');
+        Route::get('/sheet', [AttendanceController::class, 'sheet'])->name('sheet');
+    });
+
+    Route::prefix('leave')->name('leave.')->group(function () {
+        Route::get('/', [LeaveController::class, 'index'])->name('index');
+        Route::get('/create', [LeaveController::class, 'create'])->name('create');
+        Route::post('/', [LeaveController::class, 'store'])->name('store');
+        Route::post('/{application}/approve', [LeaveController::class, 'approve'])
+            ->whereNumber('application')->name('approve');
+        Route::post('/{application}/reject', [LeaveController::class, 'reject'])
+            ->whereNumber('application')->name('reject');
+        Route::post('/{application}/cancel', [LeaveController::class, 'cancel'])
+            ->whereNumber('application')->name('cancel');
+    });
+
+    Route::prefix('leave-types')->name('leave_type.')->group(function () {
+        Route::get('/', [LeaveController::class, 'types'])->name('index');
+        Route::post('/', [LeaveController::class, 'storeType'])->name('store');
+        Route::post('/install-defaults', [LeaveController::class, 'installTypes'])->name('install');
+    });
 
     Route::prefix('salary-heads')->name('salary_head.')->group(function () {
         Route::get('/', [SalaryHeadController::class, 'index'])->name('index');
