@@ -68,4 +68,11 @@ return [
     'pos_today' => 'Your sales today',
     'pos_done' => ':no — sale complete. Change :change.',
     'pos_narration' => ':no — cash at the counter',
+    'direct_note' => 'Goods go out without an order and the bill is raised there and then — challan, invoice and deposit in one press.',
+    'direct_done' => ':challan and :invoice created. Change :change.',
+    'direct_narration' => ':no — deposit against a direct sale',
+    'not_for_sales' => 'Not for Sales',
+    'pick_item_to_see_stock' => 'Pick an item to see its stock.',
+    'nothing_added' => 'Nothing added yet. Pick an item above and press Add to Cart.',
+    'gift_none' => 'No gifts.',
 ];

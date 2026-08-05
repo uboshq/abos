@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Modules\Sales\Http\Controllers\CollectionController;
 use App\Modules\Sales\Http\Controllers\DeliveryChallanController;
+use App\Modules\Sales\Http\Controllers\DirectSaleController;
 use App\Modules\Sales\Http\Controllers\PosController;
 use App\Modules\Sales\Http\Controllers\SalesInvoiceController;
 use App\Modules\Sales\Http\Controllers\SalesOrderController;
@@ -25,6 +26,18 @@ Route::middleware('auth')->prefix('sales')->group(function () {
         Route::get('/', [PosController::class, 'index'])->name('index');
         Route::post('/', [PosController::class, 'checkout'])->name('checkout');
         Route::get('/lookup', [PosController::class, 'lookup'])->name('lookup');
+    });
+
+    /*
+     * সরাসরি বিক্রয় — অর্ডার ছাড়াই মাল ও বিল, এক চাপে।
+     *
+     * তালিকার কোনো পর্দা নেই: যা তৈরি হয় সেগুলো চালান ও বিলের তালিকাতেই
+     * দেখা যায়। আলাদা তালিকা রাখলে একই চালান দুই জায়গায় থাকত, আর
+     * "কত মাল বেরিয়েছে" প্রশ্নের দুইটা উত্তর হত।
+     */
+    Route::prefix('direct')->name('direct.')->group(function () {
+        Route::get('/', [DirectSaleController::class, 'create'])->name('create');
+        Route::post('/', [DirectSaleController::class, 'store'])->name('store');
     });
 
     Route::prefix('orders')->name('order.')->group(function () {

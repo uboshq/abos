@@ -19,13 +19,16 @@ class DeliveryChallanLine extends Model
 
     protected $fillable = [
         'delivery_challan_id', 'product_id', 'sales_order_line_id',
-        'delivered_qty', 'rate', 'amount', 'line_no', 'narration',
+        'delivered_qty', 'free_qty', 'rate', 'discount_percent',
+        'amount', 'line_no', 'narration',
     ];
 
     protected function casts(): array
     {
         return [
             'delivered_qty' => 'decimal:4',
+            'free_qty' => 'decimal:4',
+            'discount_percent' => 'decimal:4',
             'rate' => 'decimal:4',
             'amount' => 'decimal:4',
         ];
