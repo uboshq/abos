@@ -14,4 +14,12 @@ return [
     'show_left' => 'ছেড়ে যাওয়াদেরও দেখাও',
     'deactivate' => 'নিষ্ক্রিয় করুন',
     'back_to_employee' => '← কর্মীর পাতা',
+    'new_run' => 'নতুন রান',
+    'build' => 'শিট বানান',
+    'rebuild' => 'আবার বানান',
+    'confirm' => 'নিশ্চিত করুন',
+    'cancel_run' => 'বাতিল',
+    'bank_file' => 'ব্যাংক ফাইল',
+    'print_payslips' => 'সব বেতনশিট',
+    'print_one' => 'শিট',
 ];

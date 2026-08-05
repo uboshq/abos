@@ -125,10 +125,19 @@ class Employee extends Model implements Drillable
         return $this->leaving_date === null || $date->lte($this->leaving_date->endOfDay());
     }
 
-    /** বেতনের তালিকায় যারা আসবে — সক্রিয় ও ওই মাসে কর্মরত। */
+    /**
+     * বেতনের তালিকায় যারা আসবে — ওই মাসে যারা কর্মরত ছিলেন।
+     *
+     * ── কেন এখানে active() নেই ──────────────────────────────────────
+     * চাকরির অবসানে কর্মী নিষ্ক্রিয় হন। active() ধরলে যে মাসে কেউ
+     * ছেড়ে গেছেন সেই মাসেই তিনি তালিকা থেকে পড়ে যেতেন — অথচ ওই মাসের
+     * দশ দিন তিনি কাজ করেছেন, আর ওই বেতনটা তার পাওনা।
+     *
+     * তারিখই এখানে একমাত্র কর্তৃপক্ষ: যোগদানের পর, আর ছাড়ার আগে।
+     */
     public function scopeOnPayrollFor(Builder $query, Carbon $monthEnd): Builder
     {
-        return $query->active()
+        return $query
             ->whereDate('joining_date', '<=', $monthEnd->toDateString())
             ->where(fn (Builder $q) => $q->whereNull('leaving_date')
                 ->orWhereDate('leaving_date', '>=', $monthEnd->copy()->startOfMonth()->toDateString()));

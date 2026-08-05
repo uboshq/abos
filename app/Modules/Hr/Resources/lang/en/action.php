@@ -14,4 +14,12 @@ return [
     'show_left' => 'Show those who left',
     'deactivate' => 'Deactivate',
     'back_to_employee' => '← Employee',
+    'new_run' => 'New Run',
+    'build' => 'Build payslips',
+    'rebuild' => 'Rebuild',
+    'confirm' => 'Confirm',
+    'cancel_run' => 'Cancel',
+    'bank_file' => 'Bank file',
+    'print_payslips' => 'All payslips',
+    'print_one' => 'Payslip',
 ];

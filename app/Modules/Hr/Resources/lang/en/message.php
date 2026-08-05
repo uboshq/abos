@@ -20,4 +20,13 @@ return [
     'history' => 'Everything entered so far',
     'as_of' => 'In effect on :date',
     'left_on' => 'Left on :date',
+    'run_built' => 'Payslips built for :count employees. Check the figures, then confirm.',
+    'run_rebuilt' => 'The payslips were rebuilt.',
+    'run_confirmed' => 'The salary is in the books. The bank file can be downloaded now.',
+    'run_cancelled' => 'The run was cancelled and its ledger entries reversed.',
+    'no_runs' => 'No payroll has been run yet.',
+    'draft_payslip' => 'DRAFT — this salary has not been confirmed',
+    'ledger_narration' => 'Salary for :month (:no)',
+    'confirm_note' => 'Confirming puts the earnings into expense and the net into Salary Payable. No money has moved yet — that happens on a voucher.',
+    'bank_file_note' => ':count salaries go through the bank. Cash and mobile-banking rows are not in the file.',
 ];

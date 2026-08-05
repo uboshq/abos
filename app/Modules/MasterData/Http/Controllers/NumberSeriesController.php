@@ -7,6 +7,7 @@ namespace App\Modules\MasterData\Http\Controllers;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Module\ModuleRegistry;
 use App\Core\Services\MenuBuilder;
+use App\Core\Services\NumberSeriesProvisioner;
 use App\Http\Controllers\Controller;
 use App\Models\NumberSeries;
 use Illuminate\Http\RedirectResponse;
@@ -52,6 +53,7 @@ class NumberSeriesController extends Controller implements HasMiddleware
         private readonly MenuBuilder $menu,
         private readonly ModuleRegistry $registry,
         private readonly NumberSeriesEngine $numbers,
+        private readonly NumberSeriesProvisioner $provisioner,
     ) {}
 
     public static function middleware(): array
@@ -61,6 +63,22 @@ class NumberSeriesController extends Controller implements HasMiddleware
 
     public function index(Request $request): View
     {
+        /*
+         * তালিকা দেখানোর আগে অনুপস্থিত সিরিজগুলো বসিয়ে নেওয়া।
+         *
+         * ── কেন এখানে ───────────────────────────────────────────────
+         * সিরিজ তৈরি হয় বছর খোলার সময়। কিন্তু নতুন একটা মডিউল (বা
+         * পুরনো মডিউলে নতুন একটা ডকুমেন্ট) মাঝপথে যোগ হলে চলতি বছরে
+         * তার সিরিজ থাকে না, আর প্রথম ডকুমেন্ট বানাতে গিয়ে ব্যবহারকারী
+         * পান: "সিরিজ নেই, Master Data → ডকুমেন্ট নম্বর সিরিজে বসান।"
+         *
+         * তিনি এখানে এসে দেখতেন সারিটাই নেই, আর বসানোরও কোনো বোতাম
+         * নেই — বার্তাটা তাকে এমন এক পর্দায় পাঠাত যেখানে কিছু করার নেই।
+         *
+         * কাজটা নিরীহ: যা আছে তা ছোঁয়া হয় না, শুধু অনুপস্থিতগুলো বসে।
+         */
+        $this->provisioner->provision();
+
         return view('master_data::series.index', [
             'menu' => $this->menu->forUser($request->user()),
             'series' => NumberSeries::query()

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Modules\Hr\Models\Employee;
+use App\Modules\Hr\Models\PayrollRun;
 
 /**
  * HR ও পে-রোল — প্ল্যানের ফেজ ৯।
@@ -35,6 +36,10 @@ return [
             ['label' => 'hr::menu.employees', 'route' => 'hr.employee.index', 'permission' => 'hr.employee.view'],
             ['label' => 'hr::menu.salary_heads', 'route' => 'hr.salary_head.index', 'permission' => 'hr.salary.manage'],
         ],
+
+        'transactions' => [
+            ['label' => 'hr::menu.payroll', 'route' => 'hr.payroll.index', 'permission' => 'hr.payroll.view'],
+        ],
     ],
 
     'permissions' => [
@@ -49,10 +54,24 @@ return [
          */
         'hr.salary.view',
         'hr.salary.manage',
+
+        /*
+         * বেতনের রান দেখা আর চালানো আলাদা।
+         *
+         * মাসের শেষে কে কত পাচ্ছে তা অনেকেরই দেখা দরকার, কিন্তু
+         * খাতায় বসানোর ও ব্যাংকে ফাইল পাঠানোর ক্ষমতা একজনের।
+         */
+        'hr.payroll.view',
+        'hr.payroll.manage',
+    ],
+
+    'doc_types' => [
+        'PAY' => 'hr::doc.payroll',
     ],
 
     'drill_sources' => [
         'employee' => Employee::class,
+        'payroll_run' => PayrollRun::class,
     ],
 
     'settings' => [
