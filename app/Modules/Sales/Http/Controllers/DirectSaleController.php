@@ -53,11 +53,17 @@ class DirectSaleController extends Controller implements HasMiddleware
     public function create(Request $request): View
     {
         $warehouse = $this->warehouse($request);
+        $customers = Customer::query()->active()->orderBy('name_en')->get();
 
         return view('sales::direct.index', [
             'menu' => $this->menu->forUser($request->user()),
             'products' => $this->catalogue($warehouse),
-            'customers' => Customer::query()->active()->orderBy('name_en')->get(),
+            'customers' => $customers,
+            'customerTerms' => $customers->mapWithKeys(fn (Customer $c) => [$c->id => [
+                'limit' => (float) $c->credit_limit,
+                'due' => (float) $c->outstanding(),
+                'days' => (int) $c->credit_days,
+            ]]),
             'warehouses' => Warehouse::query()->active()->orderBy('code')->get(),
             'warehouse' => $warehouse,
             'walkinId' => (int) $this->settings->get('sales.walkin_customer_id', 0),
@@ -78,6 +84,7 @@ class DirectSaleController extends Controller implements HasMiddleware
                 'do_no' => $this->settings->get('sales.field_do_no', true),
                 'deposit' => $this->settings->get('sales.field_deposit', true),
                 'credit_limit' => $this->settings->get('sales.field_credit_limit', true),
+                'vat' => $this->settings->get('master_data.tax_enabled', true),
             ],
         ]);
     }
@@ -155,7 +162,7 @@ class DirectSaleController extends Controller implements HasMiddleware
 
         return Product::query()
             ->active()
-            ->with('unit')
+            ->with(['unit', 'tax'])
             ->select('inv_products.*')
             ->selectSub($sum('floor_change'), 'floor_total')
             ->selectSub($sum('reserved_change'), 'reserved_total')
@@ -179,6 +186,17 @@ class DirectSaleController extends Controller implements HasMiddleware
                     'unit' => $p->unit?->name() ?? '',
                     'rate' => (string) $p->sale_price,
                     'barcode' => (string) $p->barcode,
+
+                    /*
+                     * ভ্যাটের হার পণ্যের নিজের কর থেকে।
+                     *
+                     * পর্দায় হার বসিয়ে দিলে পণ্যভেদে আলাদা হার আর মানা হত
+                     * না — ওষুধে শূন্য, বিস্কুটে সাড়ে সাত।
+                     */
+                    'vatRate' => (float) ($p->tax?->rate ?? 0),
+
+                    // ক্রয়মূল্য — ভেতরের কথা, তাই পর্দায় বোতামের পেছনে
+                    'cost' => (float) $p->purchase_price,
 
                     // নমুনার লাইভ স্টক প্যানেল — ছয়টাই
                     'main' => (string) $p->floor_total,
