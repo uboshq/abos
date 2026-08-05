@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\MasterData\Http\Controllers\ExchangeRateController;
 use App\Modules\MasterData\Http\Controllers\LocationController;
 use App\Modules\MasterData\Http\Controllers\MasterListController;
 use App\Modules\MasterData\Http\Controllers\NumberSeriesController;
@@ -35,6 +36,17 @@ Route::middleware('auth')->prefix('master-data')->group(function () {
 
     Route::get('/number-series', [NumberSeriesController::class, 'index'])->name('series.index');
     Route::put('/number-series/{series}', [NumberSeriesController::class, 'update'])->name('series.update');
+
+    /*
+     * মুদ্রার হারের ইতিহাস — সাধারণ তালিকার বাইরের একমাত্র মাস্টার পর্দা।
+     *
+     * সাধারণ লুপের আগে বসানো, যাতে ঠিকানাটা কোনো দিন {id} প্যাটার্নের
+     * পেছনে পড়ে না যায়।
+     */
+    Route::get('/currencies/{id}/rates', [ExchangeRateController::class, 'index'])
+        ->whereNumber('id')->name('currency.rates');
+    Route::post('/currencies/{id}/rates', [ExchangeRateController::class, 'store'])
+        ->whereNumber('id')->name('currency.rates.store');
 
     /*
      * ছয়টা তালিকা — একই কন্ট্রোলার, আলাদা ঠিকানা ও আলাদা রুট-নাম।

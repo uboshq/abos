@@ -18,4 +18,6 @@ return [
     'factor_must_be_positive' => 'রূপান্তরের সংখ্যা শূন্যের বেশি হতে হবে।',
     'rate_out_of_range' => 'করের হার ০ থেকে ১০০-র মধ্যে হতে হবে।',
     'top_level_has_no_parent' => ':level সবচেয়ে উপরের স্তর — এর উপরে কিছু বসে না।',
+    'base_currency_has_no_rate' => 'ভিত্তি মুদ্রার হার হয় না — নিজের সাপেক্ষে হার সবসময় ১।',
+    'rate_must_be_positive' => 'হার শূন্যের বেশি হতে হবে।',
 ];

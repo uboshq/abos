@@ -11,4 +11,8 @@ return [
     'party_types' => 'পক্ষের ধরন',
     'reason_codes' => 'কারণ কোড',
     'number_series' => 'ডকুমেন্ট নম্বর সিরিজ',
+    'currencies' => 'মুদ্রা',
+    'exchange_rates' => 'বিনিময় হার',
+    'vehicle_types' => 'গাড়ির ধরন',
+    'vehicles' => 'গাড়ি ও বহর',
 ];

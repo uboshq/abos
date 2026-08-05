@@ -18,4 +18,6 @@ return [
     'factor_must_be_positive' => 'The conversion factor must be more than zero.',
     'rate_out_of_range' => 'A tax rate must be between 0 and 100.',
     'top_level_has_no_parent' => ':level is the top level — nothing sits above it.',
+    'base_currency_has_no_rate' => 'The base currency has no rate — against itself it is always 1.',
+    'rate_must_be_positive' => 'The rate must be greater than zero.',
 ];

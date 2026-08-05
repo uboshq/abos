@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\MasterData\Models\Currency;
 use App\Modules\MasterData\Models\Location;
 use App\Modules\MasterData\Models\PartyType;
 use App\Modules\MasterData\Models\PaymentTerm;
@@ -9,6 +10,8 @@ use App\Modules\MasterData\Models\PriceList;
 use App\Modules\MasterData\Models\ReasonCode;
 use App\Modules\MasterData\Models\Tax;
 use App\Modules\MasterData\Models\Unit;
+use App\Modules\MasterData\Models\Vehicle;
+use App\Modules\MasterData\Models\VehicleType;
 
 /**
  * Master Data — প্ল্যান সেকশন ৪ ও Phase 3।
@@ -44,6 +47,19 @@ return [
             ['label' => 'master_data::menu.price_lists', 'route' => 'master_data.price_list.index', 'permission' => 'master_data.view'],
             ['label' => 'master_data::menu.party_types', 'route' => 'master_data.party_type.index', 'permission' => 'master_data.view'],
             ['label' => 'master_data::menu.reason_codes', 'route' => 'master_data.reason.index', 'permission' => 'master_data.view'],
+
+            /*
+             * তিনটা সারি সুইচের পেছনে।
+             *
+             * এক মুদ্রার প্রতিষ্ঠানে "মুদ্রা" আর "বিনিময় হার" মেনুতে
+             * থাকলে প্রতিবার সেগুলো এড়িয়ে যেতে হত, আর যার নিজের গাড়ি
+             * নেই তার বহরের তালিকা চিরকাল খালি থাকত — খালি তালিকা
+             * দেখলে মানুষ ভাবে কিছু হারিয়ে গেছে।
+             */
+            ['label' => 'master_data::menu.currencies', 'route' => 'master_data.currency.index', 'permission' => 'master_data.view', 'setting' => 'master_data.multi_currency_enabled'],
+            ['label' => 'master_data::menu.vehicle_types', 'route' => 'master_data.vehicle_type.index', 'permission' => 'master_data.view', 'setting' => 'master_data.vehicle_enabled'],
+            ['label' => 'master_data::menu.vehicles', 'route' => 'master_data.vehicle.index', 'permission' => 'master_data.view', 'setting' => 'master_data.vehicle_enabled'],
+
             ['label' => 'master_data::menu.number_series', 'route' => 'master_data.series.index', 'permission' => 'master_data.manage'],
         ],
     ],
@@ -64,6 +80,9 @@ return [
         'price_list' => PriceList::class,
         'party_type' => PartyType::class,
         'reason_code' => ReasonCode::class,
+        'currency' => Currency::class,
+        'vehicle_type' => VehicleType::class,
+        'vehicle' => Vehicle::class,
     ],
 
     'settings' => [
@@ -93,6 +112,29 @@ return [
             'label' => 'master_data::settings.multi_unit_enabled',
             'type' => 'boolean',
             'default' => true,
+            'group' => 'entry',
+        ],
+
+        /*
+         * দুইটাই ডিফল্টে বন্ধ।
+         *
+         * অন্য সুইচগুলো ডিফল্টে খোলা, কারণ ওগুলো ছাড়া কাজই চলে না।
+         * এই দুইটা উল্টো: বেশিরভাগ প্রতিষ্ঠান এক মুদ্রায় চলে আর
+         * ভাড়ার গাড়িতে মাল পাঠায়। খোলা রাখলে সবাইকে প্রথম দিনেই
+         * তিনটা অপ্রয়োজনীয় মেনু সরাতে হত।
+         */
+        [
+            'key' => 'master_data.multi_currency_enabled',
+            'label' => 'master_data::settings.multi_currency_enabled',
+            'type' => 'boolean',
+            'default' => false,
+            'group' => 'entry',
+        ],
+        [
+            'key' => 'master_data.vehicle_enabled',
+            'label' => 'master_data::settings.vehicle_enabled',
+            'type' => 'boolean',
+            'default' => false,
             'group' => 'entry',
         ],
     ],

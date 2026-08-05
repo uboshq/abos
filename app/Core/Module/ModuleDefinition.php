@@ -105,6 +105,25 @@ final class ModuleDefinition
                         .'invisible to every user including the owner.'
                     );
                 }
+
+                /*
+                 * সুইচের পেছনের সারি — সুইচটা ঘোষিত কি না তা এখানেই ধরা।
+                 *
+                 * অঘোষিত কী দিলে SettingsService সেটা চিনত না, আর সারিটা
+                 * চিরকাল অদৃশ্য থাকত — কোনো ভুলের বার্তা ছাড়াই। টাইপো
+                 * সবচেয়ে সম্ভাব্য কারণ, আর টাইপোর শাস্তি একটা হারিয়ে
+                 * যাওয়া মেনু সারি হওয়া উচিত নয়।
+                 */
+                if (isset($item['setting'])) {
+                    $declared = array_column($raw['settings'] ?? [], 'key');
+
+                    if (! in_array($item['setting'], $declared, true)) {
+                        throw new InvalidArgumentException(
+                            "{$path}: menu item '{$item['route']}' is gated on setting '{$item['setting']}', which "
+                            .'this module does not declare. The item would never appear, and nothing would say why.'
+                        );
+                    }
+                }
             }
         }
 

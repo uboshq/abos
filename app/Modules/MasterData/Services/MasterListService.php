@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Modules\MasterData\Services;
 
+use App\Modules\MasterData\Models\Currency;
 use App\Modules\MasterData\Models\PartyType;
 use App\Modules\MasterData\Models\PaymentTerm;
 use App\Modules\MasterData\Models\PriceList;
 use App\Modules\MasterData\Models\ReasonCode;
 use App\Modules\MasterData\Models\Tax;
 use App\Modules\MasterData\Models\Unit;
+use App\Modules\MasterData\Models\VehicleType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -279,6 +281,37 @@ final class MasterListService
                 ['context' => ReasonCode::HOLD, 'returns_to_stock' => true]],
             ['HOLD-PRICE', 'Held back for a better price', 'দাম বাড়ার অপেক্ষায় আটকানো',
                 ['context' => ReasonCode::HOLD, 'returns_to_stock' => true]],
+        ]);
+
+        /*
+         * মুদ্রা ও গাড়ির ধরন — সুইচ বন্ধ থাকলেও বসে।
+         *
+         * সুইচ খোলার দিনটা তালিকা বানানোর দিন হওয়া উচিত নয়: যে
+         * প্রতিষ্ঠান আজ ডলারে বিল করতে শুরু করল, তাকে প্রথমে "টাকা"
+         * নামের একটা সারি হাতে বানাতে বললে কাজটা সেখানেই থামত।
+         *
+         * টাকাই ডিফল্ট — ভিত্তি মুদ্রা, আর বাকি সবার হার এর সাপেক্ষে।
+         */
+        $made['currencies'] = $this->seed(Currency::class, [
+            ['BDT', 'Bangladeshi Taka', 'বাংলাদেশি টাকা', ['symbol' => '৳', 'decimal_places' => 2]],
+            ['USD', 'US Dollar', 'মার্কিন ডলার', ['symbol' => '$', 'decimal_places' => 2]],
+            ['EUR', 'Euro', 'ইউরো', ['symbol' => '€', 'decimal_places' => 2]],
+            ['INR', 'Indian Rupee', 'ভারতীয় রুপি', ['symbol' => '₹', 'decimal_places' => 2]],
+        ]);
+
+        $base = Currency::query()->where('code', 'BDT')->first();
+
+        if ($base !== null && ! Currency::query()->where('is_default', true)->exists()) {
+            $base->makeDefault();
+        }
+
+        $made['vehicle_types'] = $this->seed(VehicleType::class, [
+            ['TRUCK', 'Truck', 'ট্রাক', []],
+            ['PICKUP', 'Pickup', 'পিকআপ', []],
+            ['VAN', 'Van', 'ভ্যান', []],
+            ['CNG', 'CNG / Auto', 'সিএনজি', []],
+            ['RICKSHAW', 'Rickshaw Van', 'রিকশা ভ্যান', []],
+            ['BOAT', 'Boat', 'নৌকা', []],
         ]);
 
         return $made;

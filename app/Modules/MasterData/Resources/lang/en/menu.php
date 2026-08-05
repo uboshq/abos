@@ -11,4 +11,8 @@ return [
     'party_types' => 'Party types',
     'reason_codes' => 'Reason codes',
     'number_series' => 'Document number series',
+    'currencies' => 'Currencies',
+    'exchange_rates' => 'Exchange Rates',
+    'vehicle_types' => 'Vehicle Types',
+    'vehicles' => 'Vehicles & Fleet',
 ];
