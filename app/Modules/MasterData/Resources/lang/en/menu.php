@@ -15,4 +15,7 @@ return [
     'exchange_rates' => 'Exchange Rates',
     'vehicle_types' => 'Vehicle Types',
     'vehicles' => 'Vehicles & Fleet',
+    'departments' => 'Departments',
+    'designations' => 'Designations',
+    'employment_types' => 'Employment Types',
 ];

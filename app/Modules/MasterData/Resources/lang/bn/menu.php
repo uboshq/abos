@@ -15,4 +15,7 @@ return [
     'exchange_rates' => 'বিনিময় হার',
     'vehicle_types' => 'গাড়ির ধরন',
     'vehicles' => 'গাড়ি ও বহর',
+    'departments' => 'বিভাগ',
+    'designations' => 'পদবি',
+    'employment_types' => 'নিয়োগের ধরন',
 ];
