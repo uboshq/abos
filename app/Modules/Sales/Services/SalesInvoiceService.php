@@ -155,9 +155,13 @@ final class SalesInvoiceService
                     continue;
                 }
 
+                $warehouse = $invoice->warehouse ?? $this->defaultWarehouse();
+
+                $this->assertEnoughToSell($line->product, $warehouse, (string) $line->qty);
+
                 $this->stock->move(
                     product: $line->product,
-                    warehouse: $invoice->warehouse ?? $this->defaultWarehouse(),
+                    warehouse: $warehouse,
                     sourceType: SalesInvoice::STOCK_SOURCE,
                     sourceId: $invoice->id,
                     floor: bcmul((string) $line->qty, '-1', 4),
@@ -437,6 +441,36 @@ final class SalesInvoiceService
         if (bccomp($invoice->collectedAmount(), '0', 4) > 0) {
             throw ValidationException::withMessages([
                 'status' => __('sales::validation.invoice_already_collected', ['no' => $invoice->document_no]),
+            ]);
+        }
+    }
+
+    /**
+     * বিক্রয়যোগ্য মালের বেশি বেচা যায় না — কাউন্টারেও নয়।
+     *
+     * এখানে দেখা হয় Available, শুধু Floor নয়। Floor দেখলে অর্ডারে ধরা বা
+     * আটকানো মালও বেচা যেত: কেউ ১০ বস্তা অর্ডার দিয়ে রেখেছেন, আর কাউন্টার
+     * সেগুলোই বেচে দিল। তখন ধরে রাখার প্রতিশ্রুতিটার আর কোনো মানে থাকত না,
+     * আর ভুলটা ধরা পড়ত মাল দিতে গিয়ে — অর্ডার দেওয়া গ্রাহকের সামনে।
+     *
+     * StockService নিজে Floor পাহারা দেয়, কিন্তু ওটা ভিন্ন প্রশ্নের উত্তর:
+     * "তাকে আছে কি না"। "বেচা যাবে কি না" প্রশ্নটা বিক্রয়ের, তাই উত্তরটাও
+     * এখানে।
+     */
+    private function assertEnoughToSell(Product $product, ?Warehouse $warehouse, string $qty): void
+    {
+        if ($warehouse === null || $this->settings->get('sales.allow_negative_stock', false)) {
+            return;
+        }
+
+        $available = $this->stock->availableQty($product, $warehouse);
+
+        if (bccomp($available, $qty, 4) < 0) {
+            throw ValidationException::withMessages([
+                'lines' => __('sales::validation.not_enough_available', [
+                    'product' => $product->name(),
+                    'available' => rtrim(rtrim($available, '0'), '.'),
+                ]),
             ]);
         }
     }

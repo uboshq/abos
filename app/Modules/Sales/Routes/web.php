@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Modules\Sales\Http\Controllers\CollectionController;
 use App\Modules\Sales\Http\Controllers\DeliveryChallanController;
+use App\Modules\Sales\Http\Controllers\PosController;
 use App\Modules\Sales\Http\Controllers\SalesInvoiceController;
 use App\Modules\Sales\Http\Controllers\SalesOrderController;
 use App\Modules\Sales\Http\Controllers\SalesPrintController;
@@ -16,6 +17,15 @@ use Illuminate\Support\Facades\Route;
  */
 
 Route::middleware('auth')->prefix('sales')->group(function () {
+
+    /*
+     * কাউন্টার — সবচেয়ে উপরে, কারণ দিনের সবচেয়ে বেশি ব্যবহৃত পর্দা এটাই।
+     */
+    Route::prefix('pos')->name('pos.')->group(function () {
+        Route::get('/', [PosController::class, 'index'])->name('index');
+        Route::post('/', [PosController::class, 'checkout'])->name('checkout');
+        Route::get('/lookup', [PosController::class, 'lookup'])->name('lookup');
+    });
 
     Route::prefix('orders')->name('order.')->group(function () {
         Route::get('/', [SalesOrderController::class, 'index'])->name('index');

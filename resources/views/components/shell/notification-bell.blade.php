@@ -30,9 +30,9 @@
                    text-(--color-ink-muted) transition-colors hover:bg-(--color-surface-hover)"
             title="{{ __('core.notice.title') }}"
             aria-label="{{ __('core.notice.title') }}">
-        <svg viewBox="0 0 24 24" class="size-(--spacing-icon) fill-current" aria-hidden="true">
-            <path d="M12 22a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2Zm6-6v-5a6 6 0 0 0-5-5.9V4a1 1 0 1 0-2 0v1.1A6 6 0 0 0 6 11v5l-2 2v1h16v-1l-2-2Z"/>
-        </svg>
+        {{-- ঘণ্টাটাও ইমোজি — অনুমোদনের সিলের মতো একই কারণে। ubos-dms-এ
+             দুইটাই ইমোজি, তাই দুই পণ্যে টপবারটা একরকম দেখায়। --}}
+        <span aria-hidden="true" class="text-lg leading-none">🔔</span>
 
         @if ($notices)
             {{-- সংখ্যাটা ব্যাজে, কারণ "কিছু একটা আছে" আর "সাতটা আছে" দুটো

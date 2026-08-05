@@ -20,4 +20,6 @@ return [
     'deliver_against' => 'Deliver against this order',
     'invoice_against' => 'Invoice this challan',
     'collect_against' => 'Collect against this invoice',
+    'checkout' => 'Complete sale',
+    'exact' => 'Exact',
 ];

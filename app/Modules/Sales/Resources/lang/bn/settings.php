@@ -9,4 +9,5 @@ return [
     'reserve_on_order' => 'অর্ডার নিশ্চিত হলে মাল ধরে রাখো',
     'allow_negative_stock' => 'বিক্রয়যোগ্য মালের বেশি বেচতে দাও',
     'invoice_needs_challan' => 'চালান ছাড়া বিল কাটা যাবে না',
+    'walkin_customer' => 'নগদ বিক্রি যে গ্রাহকের নামে বসবে',
 ];

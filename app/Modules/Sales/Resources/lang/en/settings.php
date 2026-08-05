@@ -9,4 +9,5 @@ return [
     'reserve_on_order' => 'Hold stock when an order is confirmed',
     'allow_negative_stock' => 'Allow selling more than is available',
     'invoice_needs_challan' => 'An invoice must follow a challan',
+    'walkin_customer' => 'Customer that cash sales are booked against',
 ];

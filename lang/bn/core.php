@@ -253,7 +253,10 @@ return [
 
     'company' => [
         'switch' => 'কোম্পানি বদলান',
+        'company' => 'কোম্পানি',
         'branch' => 'শাখা',
+        'branch_of' => 'শাখা — :company',
+        'stamped_with_branch' => 'আপনি যা লিখছেন তা এই শাখার নামেই বসছে।',
         'financial_year' => 'অর্থবছর',
     ],
 

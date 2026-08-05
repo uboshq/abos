@@ -26,6 +26,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/appearance', [WorkspaceController::class, 'saveAppearance'])->name('appearance.save');
 
     Route::post('/company/switch', [WorkspaceController::class, 'switchCompany'])->name('company.switch');
+    Route::post('/branch/switch', [WorkspaceController::class, 'switchBranch'])->name('branch.switch');
     Route::post('/locale/switch', [WorkspaceController::class, 'switchLocale'])->name('locale.switch');
     Route::post('/theme/switch', [WorkspaceController::class, 'switchTheme'])->name('theme.switch');
 });

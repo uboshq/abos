@@ -51,4 +51,7 @@ return [
     'instrument_no' => 'চেক/রেফারেন্স নম্বর',
     'instrument_date' => 'চেকের তারিখ',
     'cost_of_goods' => 'বিক্রীত পণ্যের ব্যয়',
+    'paid' => 'যা দিলেন',
+    'change' => 'ফেরত',
+    'available_short' => 'আছে',
 ];

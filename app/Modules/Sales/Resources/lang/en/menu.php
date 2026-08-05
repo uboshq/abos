@@ -14,4 +14,5 @@ return [
     'collections' => 'Collections',
     'undelivered' => 'Delivered, Not Invoiced',
     'by_customer' => 'Sales by Customer',
+    'pos' => 'Counter (POS)',
 ];

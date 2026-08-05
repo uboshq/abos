@@ -48,4 +48,5 @@ return [
     'collection_must_be_positive' => 'A collection must be more than zero.',
     'unknown_account' => 'That account is not in this company chart.',
     'not_a_money_account' => ':name is not a cash or bank account — money does not land there.',
+    'no_walkin_customer' => 'No cash-sale customer is set — choose one in the Control Panel, otherwise there is no saying whose name the day\'s sales go under.',
 ];

@@ -47,6 +47,7 @@ return [
 
     'menu' => [
         'transactions' => [
+            ['label' => 'sales::menu.pos', 'route' => 'sales.pos.index', 'permission' => 'sales.pos'],
             ['label' => 'sales::menu.orders', 'route' => 'sales.order.index', 'permission' => 'sales.order.view'],
             ['label' => 'sales::menu.challans', 'route' => 'sales.challan.index', 'permission' => 'sales.challan.view'],
             ['label' => 'sales::menu.invoices', 'route' => 'sales.invoice.index', 'permission' => 'sales.invoice.view'],
@@ -76,6 +77,7 @@ return [
         'sales.collection.view',
         'sales.collection.create',
         'sales.collection.cancel',
+        'sales.pos',
         'sales.discount.override',
         'sales.report',
         'sales.manage',
@@ -125,6 +127,23 @@ return [
             'label' => 'sales::settings.allow_negative_stock',
             'type' => 'boolean',
             'default' => false,
+            'group' => 'entry',
+        ],
+        [
+            /*
+             * কাউন্টারে যে গ্রাহকের নামে নগদ বিক্রি বসবে।
+             *
+             * POS-এ প্রতিবার গ্রাহক বাছতে বললে গতিটাই চলে যায় — কাউন্টারে
+             * লাইন দাঁড়িয়ে থাকে। তাই একটা "নগদ গ্রাহক" আগে থেকে বসানো
+             * থাকে, আর যিনি নাম-ঠিকানা দিতে চান কেবল তার বেলায় বাছতে হয়।
+             *
+             * আলাদা POS-গ্রাহক তালিকা নয়, একই মাস্টারের একটা সারি — দুইটা
+             * তালিকা রাখলে একই দোকানের হিসাব দুই জায়গায় ভাগ হয়ে যেত।
+             */
+            'key' => 'sales.walkin_customer_id',
+            'label' => 'sales::settings.walkin_customer',
+            'type' => 'integer',
+            'default' => 0,
             'group' => 'entry',
         ],
         [
