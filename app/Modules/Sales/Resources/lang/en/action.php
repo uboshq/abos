@@ -1,0 +1,23 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'new_order' => 'New order',
+    'new_receipt' => 'Receive goods',
+    'new_bill' => 'New bill',
+    'confirm' => 'Confirm',
+    'cancel_document' => 'Cancel',
+    'edit' => 'Edit',
+    'add_line' => 'Add a line',
+    'remove_line' => 'Remove',
+    'show_cancelled' => 'Show cancelled too',
+    'receive_against' => 'Receive against this order',
+    'bill_against' => 'Bill this receipt',
+    'new_challan' => 'Send goods',
+    'new_invoice' => 'New invoice',
+    'new_collection' => 'Collect money',
+    'deliver_against' => 'Deliver against this order',
+    'invoice_against' => 'Invoice this challan',
+    'collect_against' => 'Collect against this invoice',
+];

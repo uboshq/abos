@@ -14,6 +14,7 @@ use App\Models\Company;
 use App\Models\FinancialYear;
 use App\Models\User;
 use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Customer\Services\CustomerService;
 use App\Modules\Inventory\Services\ProductService;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\Inventory\Services\WarehouseService;
@@ -82,11 +83,31 @@ class DemoSeeder extends Seeder
 
         $roles['salesman']->syncPermissions(
             Permission::query()
-                ->where('name', 'like', 'sales.%')
-                ->orWhere('name', 'like', 'customer.%')
-                // ছাড়ের সীমা অতিক্রমের অনুমতি বিক্রয়কর্মীর নেই — সেটাই
-                // অনুমোদন চাওয়ার কারণ।
-                ->where('name', '!=', 'customer.credit_limit.override')
+                /*
+                 * দুইটা উপসর্গ বন্ধনীর ভেতরে — নাহলে AND আগে বাঁধে।
+                 *
+                 * আগে এটা ->where(...)->orWhere(...)->where('name','!=',...)
+                 * ছিল, আর SQL দাঁড়াত: sales.% OR (customer.% AND নয়-এটা)।
+                 * অর্থাৎ বাদ দেওয়ার নিয়মটা কেবল দ্বিতীয় উপসর্গে খাটত, আর
+                 * বিক্রয়কর্মী চিরকাল ধারের সীমা পার করার অনুমতি পেয়ে
+                 * এসেছেন — মন্তব্যে ঠিক উল্টোটা লেখা থাকা সত্ত্বেও।
+                 */
+                ->where(fn ($q) => $q->where('name', 'like', 'sales.%')
+                    ->orWhere('name', 'like', 'customer.%'))
+                /*
+                 * সীমা অতিক্রমের অনুমতিগুলো বিক্রয়কর্মীর নেই — সেটাই
+                 * অনুমোদন চাওয়ার কারণ।
+                 *
+                 * তালিকাটা আলাদা করে লেখা, কারণ "sales.%" ধরনের ঢালাও
+                 * অনুমতি নতুন কিছু যোগ হলেই তাকেও দিয়ে দেয়। ঠিক সেটাই
+                 * হয়েছিল: Sales মডিউল sales.discount.override ঘোষণা করল,
+                 * আর বিক্রয়কর্মী নীরবে ধারের সীমা পার করার ক্ষমতা পেয়ে
+                 * গেলেন — কোনো ভুল বার্তা ছাড়াই।
+                 */
+                ->whereNotIn('name', [
+                    'customer.credit_limit.override',
+                    'sales.discount.override',
+                ])
                 ->get()
         );
 
@@ -138,6 +159,7 @@ class DemoSeeder extends Seeder
         // অঙ্কটা ঠিক আছে কি না।
         CompanyContext::forCompany($alpha->id, function () {
             $this->setUpSuppliers();
+            $this->setUpCustomers();
             $this->setUpStock();
         });
 
@@ -224,6 +246,48 @@ class DemoSeeder extends Seeder
             'phone' => '+8801711000002',
             'address_en' => 'Charpara, Mymensingh',
             'address_bn' => 'চরপাড়া, ময়মনসিংহ',
+        ]);
+    }
+
+    /**
+     * তিনজন গ্রাহক।
+     *
+     * সরবরাহকারীর মতোই কারণ: বিক্রয়ের চারটা পর্দার প্রথম ঘরটাই গ্রাহকের,
+     * তাই তালিকা ফাঁকা থাকলে অর্ডারই খোলা যায় না।
+     *
+     * একজনের ধারের সীমা বসানো আছে — সীমার নিয়মটা চোখে দেখার জন্য।
+     * সীমা ছাড়া সবাই সমান হলে ব্যাপারটা আছে কি না তা বোঝাই যেত না।
+     */
+    private function setUpCustomers(): void
+    {
+        $customers = app(CustomerService::class);
+
+        $customers->create([
+            'name_en' => 'Kendua Bazar Store',
+            'name_bn' => 'কেন্দুয়া বাজার স্টোর',
+            'phone' => '+8801811000001',
+            'address_en' => 'Kendua Bazar, Netrakona',
+            'address_bn' => 'কেন্দুয়া বাজার, নেত্রকোনা',
+            'credit_limit' => '50000',
+            'credit_days' => 15,
+        ]);
+
+        $customers->create([
+            'name_en' => 'Dumdy Traders',
+            'name_bn' => 'ডুমডি ট্রেডার্স',
+            'phone' => '+8801811000002',
+            'address_en' => 'Dumdy Bazar, Mymensingh',
+            'address_bn' => 'ডুমডি বাজার, ময়মনসিংহ',
+            'credit_limit' => '20000',
+            'credit_days' => 7,
+        ]);
+
+        // নগদ গ্রাহক — ধার নেই, তাই সীমাও শূন্য
+        $customers->create([
+            'name_en' => 'Cash Customer',
+            'name_bn' => 'নগদ গ্রাহক',
+            'credit_limit' => 0,
+            'credit_days' => 0,
         ]);
     }
 

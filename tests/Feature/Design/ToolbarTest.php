@@ -81,11 +81,15 @@ class ToolbarTest extends TestCase
         $this->customer('Biggest', '90000.0000');
         $this->customer('Middle', '5000.0000');
 
+        // সরবরাহকারীর মতোই — কেবল এই টেস্টের বানানো তিনটা সারি গোনা হয়,
+        // কারণ ডেমো ডাটাতেও গ্রাহক আছে আর তাদের বকেয়া শূন্য
         $names = $this->actingAs($this->user)
             ->get(route('customer.index'))
             ->assertOk()
             ->viewData('customers')
             ->pluck('name_en')
+            ->filter(fn (string $name) => in_array($name, ['Small', 'Middle', 'Biggest'], true))
+            ->values()
             ->all();
 
         $this->assertSame(['Biggest', 'Middle', 'Small'], $names);

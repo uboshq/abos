@@ -100,7 +100,14 @@ class BanglaSearchTest extends TestCase
             ])->assertSessionHasNoErrors();
         }
 
-        $names = Customer::query()->orderBy('name_en')->pluck('name_bn')->all();
+        // কেবল এই টেস্টের বানানো দুইটা — ডেমো ডাটাতেও গ্রাহক আছে, আর
+        // সেখানে একজন যোগ হলেই এই গোনাটা ভাঙত, অথচ স্বাভাবিকীকরণে
+        // কিছুই বদলায়নি
+        $names = Customer::query()
+            ->where('name_en', 'like', 'Store %')
+            ->orderBy('name_en')
+            ->pluck('name_bn')
+            ->all();
 
         $this->assertCount(2, $names);
         // দুইভাবে টাইপ করা হলেও ডাটাবেজে একই বাইট — নাহলে দুইটা আলাদা

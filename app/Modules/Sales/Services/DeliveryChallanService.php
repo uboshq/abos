@@ -1,0 +1,397 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Sales\Services;
+
+use App\Core\Engines\NumberSeries\NumberSeriesEngine;
+use App\Core\Services\SettingsService;
+use App\Core\Support\CompanyContext;
+use App\Core\Support\DocumentStatus;
+use App\Models\FinancialYear;
+use App\Models\IssuedNumber;
+use App\Modules\Inventory\Models\Product;
+use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Inventory\Services\StockService;
+use App\Modules\Sales\Models\DeliveryChallan;
+use App\Modules\Sales\Models\DeliveryChallanLine;
+use App\Modules\Sales\Models\SalesOrder;
+use App\Modules\Sales\Models\SalesOrderLine;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+
+/**
+ * ডেলিভারি চালান — মাল বেরিয়ে গেছে।
+ *
+ * ── দুইটা কাজ একই চলাচলে ──────────────────────────────────────────────
+ * মাল তাক থেকে নামে (Floor কমে), আর অর্ডারে ধরা থাকলে সেই ধরাটাও ছাড়ে
+ * (Reserved কমে) — একটাই সারিতে, একই ট্রানজেকশনে।
+ *
+ * আলাদা দুইটা সারিতে লিখলে একদিন একটা বসত আর অন্যটা বসত না, আর তখন মালটা
+ * একইসাথে "চলে গেছে" ও "অর্ডারে ধরা আছে" দেখাত — অর্থাৎ Available দুইবার
+ * কমত, একবার মাল যাওয়ার জন্য আর একবার ধরা থাকার জন্য।
+ *
+ * খতিয়ানে কিছু বসে না। মাল বেরোনো মানে বিক্রি নয় — ফেরত আসতে পারে। আয়
+ * ও খরচ দুটোই বসে বিলের দিনে।
+ */
+final class DeliveryChallanService
+{
+    use CalculatesSalesLines;
+
+    public function __construct(
+        private readonly NumberSeriesEngine $numbers,
+        private readonly StockService $stock,
+        private readonly SettingsService $settings,
+    ) {}
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @param  list<array<string, mixed>>  $lines
+     */
+    public function create(array $data, array $lines): DeliveryChallan
+    {
+        if ($lines === []) {
+            throw ValidationException::withMessages(['lines' => __('sales::validation.no_lines')]);
+        }
+
+        return DB::transaction(function () use ($data, $lines) {
+            $trxDate = Carbon::parse($data['trx_date'] ?? now());
+            $year = $this->resolveFinancialYear($trxDate);
+
+            $order = $this->resolveOrder($data['sales_order_id'] ?? null);
+            $warehouse = $this->resolveWarehouse($data['warehouse_id'] ?? $order?->warehouse_id);
+
+            $documentNo = $this->numbers->next('DC');
+
+            $challan = DeliveryChallan::create([
+                'company_id' => CompanyContext::id(),
+                'branch_id' => $warehouse->branch_id ?? CompanyContext::branchId(),
+                'financial_year_id' => $year->id,
+                'document_no' => $documentNo,
+                'customer_id' => $order?->customer_id ?? $data['customer_id'],
+                'warehouse_id' => $warehouse->id,
+                'sales_order_id' => $order?->id,
+                'trx_date' => $trxDate->toDateString(),
+                'vehicle_no' => $data['vehicle_no'] ?? null,
+                'driver_name' => $data['driver_name'] ?? null,
+                'narration' => $data['narration'] ?? null,
+                'status' => DocumentStatus::DRAFT,
+                'created_by' => auth()->id(),
+            ]);
+
+            $this->replaceLines($challan, $lines);
+
+            IssuedNumber::query()
+                ->where('document_no', $documentNo)
+                ->whereNull('source_id')
+                ->update([
+                    'source_type' => DeliveryChallan::drillSourceType(),
+                    'source_id' => $challan->id,
+                ]);
+
+            return $challan->fresh(['lines']);
+        });
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @param  list<array<string, mixed>>  $lines
+     */
+    public function update(DeliveryChallan $challan, array $data, array $lines): DeliveryChallan
+    {
+        $this->assertEditable($challan);
+
+        if ($lines === []) {
+            throw ValidationException::withMessages(['lines' => __('sales::validation.no_lines')]);
+        }
+
+        return DB::transaction(function () use ($challan, $data, $lines) {
+            $trxDate = Carbon::parse($data['trx_date'] ?? $challan->trx_date);
+            $warehouse = $this->resolveWarehouse($data['warehouse_id'] ?? $challan->warehouse_id);
+
+            $challan->update([
+                'warehouse_id' => $warehouse->id,
+                'branch_id' => $warehouse->branch_id ?? $challan->branch_id,
+                'trx_date' => $trxDate->toDateString(),
+                'vehicle_no' => $data['vehicle_no'] ?? null,
+                'driver_name' => $data['driver_name'] ?? null,
+                'narration' => $data['narration'] ?? null,
+                'financial_year_id' => $this->resolveFinancialYear($trxDate)->id,
+            ]);
+
+            $this->replaceLines($challan, $lines);
+
+            return $challan->fresh(['lines']);
+        });
+    }
+
+    /**
+     * মাল বেরিয়ে গেল — স্টক নামে, ধরা ছাড়ে।
+     */
+    public function confirm(DeliveryChallan $challan): DeliveryChallan
+    {
+        if ($challan->status !== DocumentStatus::DRAFT) {
+            throw ValidationException::withMessages([
+                'status' => __('sales::validation.only_draft_confirms', ['no' => $challan->document_no]),
+            ]);
+        }
+
+        $challan->loadMissing(['lines.product', 'lines.orderLine', 'warehouse']);
+
+        if ($challan->lines->isEmpty()) {
+            throw ValidationException::withMessages(['lines' => __('sales::validation.no_lines')]);
+        }
+
+        return DB::transaction(function () use ($challan) {
+            foreach ($challan->lines as $line) {
+                $qty = (string) $line->delivered_qty;
+
+                /*
+                 * অর্ডারে যতটুকু ধরা ছিল ঠিক ততটুকুই ছাড়া হয়, বেশি নয়।
+                 *
+                 * চালানে অর্ডারের চেয়ে বেশি মাল থাকলে (অনুমোদিত অতিরিক্ত)
+                 * বাড়তিটুকু কখনো ধরাই ছিল না — ওটুকুও ছাড়তে গেলে Reserved
+                 * ঋণাত্মক হয়ে যেত, আর তখন Available স্টকের চেয়ে বেশি
+                 * দেখাত।
+                 */
+                $release = $line->orderLine !== null
+                    ? $this->releasableQty($line->orderLine, $qty)
+                    : '0';
+
+                $this->stock->move(
+                    product: $line->product,
+                    warehouse: $challan->warehouse,
+                    sourceType: DeliveryChallan::STOCK_SOURCE,
+                    sourceId: $challan->id,
+                    floor: bcmul($qty, '-1', 4),
+                    reserved: bccomp($release, '0', 4) > 0 ? bcmul($release, '-1', 4) : '0',
+                    date: $challan->trx_date,
+                    documentNo: $challan->document_no,
+                );
+            }
+
+            $challan->update(['status' => DocumentStatus::CONFIRMED]);
+
+            return $challan->fresh(['lines']);
+        });
+    }
+
+    /**
+     * বাতিল — মাল স্টকে ফেরে, আর অর্ডারের ধরাটাও ফিরে আসে।
+     */
+    public function cancel(DeliveryChallan $challan, string $reason, Carbon|string|null $onDate = null): DeliveryChallan
+    {
+        if ($challan->status === DocumentStatus::CANCELLED) {
+            throw ValidationException::withMessages([
+                'status' => __('sales::validation.already_cancelled', ['no' => $challan->document_no]),
+            ]);
+        }
+
+        $challan->loadMissing(['lines.product', 'lines.orderLine.order', 'warehouse']);
+
+        $this->assertNotInvoiced($challan);
+
+        $date = $onDate === null ? now() : Carbon::parse($onDate);
+
+        return DB::transaction(function () use ($challan, $reason, $date) {
+            if ($challan->status === DocumentStatus::CONFIRMED) {
+                foreach ($challan->lines as $line) {
+                    $qty = (string) $line->delivered_qty;
+
+                    // অর্ডারটা এখনো খোলা থাকলেই ধরাটা ফেরত বসে; বাতিল
+                    // অর্ডারে ফেরালে ধরা থেকে যেত যা কেউ কোনোদিন ছাড়ত না
+                    $reserve = $line->orderLine?->order?->status === DocumentStatus::CONFIRMED
+                        ? $qty
+                        : '0';
+
+                    $this->stock->move(
+                        product: $line->product,
+                        warehouse: $challan->warehouse,
+                        sourceType: DeliveryChallan::STOCK_SOURCE.':cancel',
+                        sourceId: $challan->id,
+                        floor: $qty,
+                        reserved: $reserve,
+                        date: $date,
+                        documentNo: $challan->document_no,
+                        narration: $reason,
+                    );
+                }
+            }
+
+            $challan->update([
+                'status' => DocumentStatus::CANCELLED,
+                'cancelled_by' => auth()->id(),
+                'cancelled_at' => now(),
+                'cancel_reason' => $reason,
+            ]);
+
+            return $challan->fresh(['lines']);
+        });
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $lines
+     */
+    private function replaceLines(DeliveryChallan $challan, array $lines): void
+    {
+        $challan->lines()->delete();
+
+        $total = '0';
+        $lineNo = 0;
+
+        foreach ($lines as $line) {
+            $productId = (int) ($line['product_id'] ?? 0);
+            $qty = $this->positive($line['delivered_qty'] ?? null, 'delivered_qty');
+            $rate = $this->money($line['rate'] ?? null);
+
+            if ($productId <= 0 || ! Product::query()->whereKey($productId)->exists()) {
+                throw ValidationException::withMessages(['lines' => __('sales::validation.unknown_product')]);
+            }
+
+            $orderLine = $this->resolveOrderLine($challan, $line['sales_order_line_id'] ?? null, $productId);
+
+            $amount = bcmul($qty, $rate, 4);
+
+            DeliveryChallanLine::create([
+                'delivery_challan_id' => $challan->id,
+                'product_id' => $productId,
+                'sales_order_line_id' => $orderLine?->id,
+                'delivered_qty' => $qty,
+                'rate' => $rate,
+                'amount' => $amount,
+                'line_no' => ++$lineNo,
+                'narration' => $line['narration'] ?? null,
+            ]);
+
+            $total = bcadd($total, $amount, 4);
+        }
+
+        $challan->update(['total' => $total]);
+    }
+
+    /**
+     * এই লাইনের বিপরীতে কতটুকু ধরা এখনো ছাড়া যায়।
+     */
+    private function releasableQty(SalesOrderLine $orderLine, string $qty): string
+    {
+        // এই চালানের নিজের সারিগুলো এখনো স্টকে বসেনি, তাই আগেরগুলো গোনা
+        $alreadyDelivered = $orderLine->challanLines()
+            ->whereHas('challan', fn ($q) => $q->where('status', DocumentStatus::CONFIRMED))
+            ->sum('delivered_qty');
+
+        $stillReserved = bcsub(
+            (string) $orderLine->ordered_qty,
+            (string) ($alreadyDelivered ?: '0'),
+            4,
+        );
+
+        if (bccomp($stillReserved, '0', 4) <= 0) {
+            return '0';
+        }
+
+        return bccomp($qty, $stillReserved, 4) > 0 ? $stillReserved : $qty;
+    }
+
+    private function resolveOrderLine(DeliveryChallan $challan, mixed $orderLineId, int $productId): ?SalesOrderLine
+    {
+        if ($challan->sales_order_id === null || blank($orderLineId)) {
+            return null;
+        }
+
+        $orderLine = SalesOrderLine::query()
+            ->where('sales_order_id', $challan->sales_order_id)
+            ->whereKey((int) $orderLineId)
+            ->first();
+
+        if ($orderLine === null) {
+            throw ValidationException::withMessages(['lines' => __('sales::validation.line_not_in_order')]);
+        }
+
+        if ((int) $orderLine->product_id !== $productId) {
+            throw ValidationException::withMessages(['lines' => __('sales::validation.line_product_mismatch')]);
+        }
+
+        return $orderLine;
+    }
+
+    private function resolveOrder(mixed $orderId): ?SalesOrder
+    {
+        if (blank($orderId)) {
+            return null;
+        }
+
+        $order = SalesOrder::query()->whereKey((int) $orderId)->first();
+
+        if ($order === null) {
+            throw ValidationException::withMessages([
+                'sales_order_id' => __('sales::validation.unknown_order'),
+            ]);
+        }
+
+        if ($order->status !== DocumentStatus::CONFIRMED) {
+            throw ValidationException::withMessages([
+                'sales_order_id' => __('sales::validation.order_not_open', ['no' => $order->document_no]),
+            ]);
+        }
+
+        return $order;
+    }
+
+    private function resolveWarehouse(mixed $warehouseId): Warehouse
+    {
+        $warehouse = blank($warehouseId)
+            ? Warehouse::query()->where('is_default', true)->active()->first()
+            : Warehouse::query()->whereKey((int) $warehouseId)->first();
+
+        if ($warehouse === null) {
+            throw ValidationException::withMessages([
+                'warehouse_id' => __('sales::validation.unknown_warehouse'),
+            ]);
+        }
+
+        return $warehouse;
+    }
+
+    /**
+     * বিল হয়ে যাওয়া চালান বাতিল করা যায় না — ক্রমটা উল্টো দিকে।
+     */
+    private function assertNotInvoiced(DeliveryChallan $challan): void
+    {
+        $invoiced = DeliveryChallanLine::query()
+            ->where('delivery_challan_id', $challan->id)
+            ->whereHas('invoiceLines.invoice', fn ($q) => $q->where('status', '<>', DocumentStatus::CANCELLED))
+            ->exists();
+
+        if ($invoiced) {
+            throw ValidationException::withMessages([
+                'status' => __('sales::validation.challan_already_invoiced', ['no' => $challan->document_no]),
+            ]);
+        }
+    }
+
+    private function assertEditable(DeliveryChallan $challan): void
+    {
+        if ($challan->status !== DocumentStatus::DRAFT) {
+            throw ValidationException::withMessages([
+                'status' => __('sales::validation.only_draft_edits', ['no' => $challan->document_no]),
+            ]);
+        }
+    }
+
+    private function resolveFinancialYear(Carbon $date): FinancialYear
+    {
+        $year = FinancialYear::query()
+            ->whereDate('starts_on', '<=', $date->toDateString())
+            ->whereDate('ends_on', '>=', $date->toDateString())
+            ->first();
+
+        if ($year === null) {
+            throw ValidationException::withMessages([
+                'trx_date' => __('sales::validation.no_financial_year', ['date' => $date->toDateString()]),
+            ]);
+        }
+
+        return $year;
+    }
+}
