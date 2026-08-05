@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Hr\Services;
 
+use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Hr\Models\SalaryHead;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -100,12 +102,33 @@ final class SalaryHeadService
             ['ADVANCE', 'Advance Recovery', 'অগ্রিম কর্তন', SalaryHead::DEDUCTION, SalaryHead::FIXED, false, 20],
         ];
 
+        /*
+         * প্রতিটা খাতের হিসাব-খাত সাথেই বসে।
+         *
+         * ── কেন বসানো, খালি রেখে দেওয়া নয় ──────────────────────────
+         * খালি থাকলে বেতন পোস্ট করার সময় সবগুলো ফলব্যাকে গিয়ে পড়ত, আর
+         * ভবিষ্য তহবিল "প্রদেয় বেতন"-এ মিশে যেত। তখন "তহবিলে কত জমা
+         * দিতে হবে" প্রশ্নের উত্তর খতিয়ানে আর থাকত না।
+         *
+         * পুরনো কোম্পানির ছকে ২১৩১ বা ১১৩০ না থাকলে সেগুলো null থাকে,
+         * আর পোস্টিং তখন ফলব্যাকে চলে — কাজ থামে না।
+         */
+        $accounts = [
+            'PF' => StandardChart::PROVIDENT_FUND_PAYABLE,
+            'ADVANCE' => StandardChart::EMPLOYEE_ADVANCE,
+        ];
+
         $made = 0;
 
         foreach ($rows as [$code, $en, $bn, $kind, $calculation, $isBasic, $order]) {
             if (SalaryHead::query()->where('code', $code)->withTrashed()->exists()) {
                 continue;
             }
+
+            $accountCode = $accounts[$code]
+                ?? ($kind === SalaryHead::EARNING
+                    ? StandardChart::SALARY_EXPENSE
+                    : StandardChart::SALARY_PAYABLE);
 
             SalaryHead::create([
                 'code' => $code,
@@ -114,6 +137,7 @@ final class SalaryHeadService
                 'kind' => $kind,
                 'calculation' => $calculation,
                 'is_basic' => $isBasic,
+                'account_id' => Account::query()->where('code', $accountCode)->value('id'),
 
                 /*
                  * ভবিষ্য তহবিল ও অগ্রিম অনুপস্থিতির ভাগে কমে না।

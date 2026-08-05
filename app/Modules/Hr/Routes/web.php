@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Modules\Hr\Http\Controllers\EmployeeController;
+use App\Modules\Hr\Http\Controllers\PayrollController;
+use App\Modules\Hr\Http\Controllers\PayslipPrintController;
 use App\Modules\Hr\Http\Controllers\SalaryHeadController;
 use App\Modules\Hr\Http\Controllers\SalaryStructureController;
 use Illuminate\Support\Facades\Route;
@@ -32,6 +34,27 @@ Route::middleware('auth')->prefix('hr')->group(function () {
         Route::put('/{employee}', [EmployeeController::class, 'update'])->whereNumber('employee')->name('update');
         Route::delete('/{employee}', [EmployeeController::class, 'destroy'])->whereNumber('employee')->name('destroy');
     });
+
+    /*
+     * বেতনের রান।
+     *
+     * ব্যাংক ফাইলের ঠিকানা {run}-এর নিচে, কারণ ফাইলটা একটা রানেরই —
+     * আলাদা কোনো পর্দা নেই, রানের পাতা থেকেই নামানো হয়।
+     */
+    Route::prefix('payroll')->name('payroll.')->group(function () {
+        Route::get('/', [PayrollController::class, 'index'])->name('index');
+        Route::get('/create', [PayrollController::class, 'create'])->name('create');
+        Route::post('/', [PayrollController::class, 'store'])->name('store');
+        Route::get('/{run}', [PayrollController::class, 'show'])->whereNumber('run')->name('show');
+        Route::post('/{run}/rebuild', [PayrollController::class, 'rebuild'])->whereNumber('run')->name('rebuild');
+        Route::post('/{run}/confirm', [PayrollController::class, 'confirm'])->whereNumber('run')->name('confirm');
+        Route::post('/{run}/cancel', [PayrollController::class, 'cancel'])->whereNumber('run')->name('cancel');
+        Route::get('/{run}/bank-file', [PayrollController::class, 'bankFile'])->whereNumber('run')->name('bank_file');
+        Route::get('/{run}/payslips', [PayslipPrintController::class, 'all'])->whereNumber('run')->name('payslips');
+    });
+
+    Route::get('/payslips/{payslip}/print', [PayslipPrintController::class, 'one'])
+        ->whereNumber('payslip')->name('payslip.print');
 
     Route::prefix('salary-heads')->name('salary_head.')->group(function () {
         Route::get('/', [SalaryHeadController::class, 'index'])->name('index');

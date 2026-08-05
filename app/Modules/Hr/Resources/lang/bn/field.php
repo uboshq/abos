@@ -38,4 +38,10 @@ return [
     'net' => 'নিট বেতন',
     'entered_by' => 'বসিয়েছেন',
     'status' => 'অবস্থা',
+    'month' => 'মাস',
+    'employee_count' => 'কর্মী',
+    'trx_date' => 'খরচের তারিখ',
+    'paid_by' => 'প্রদানকারী',
+    'received_by' => 'প্রাপকের সই',
+    'document_no' => 'নম্বর',
 ];

@@ -74,6 +74,22 @@ final class StandardChart
 
     public const DISCOUNT_GIVEN = '5300';
 
+    /*
+     * বেতনের দুইটা খাত — খরচ ও দায়।
+     *
+     * ধ্রুবক হিসেবে রাখা, কারণ বেতনের রান কোড ধরে এগুলো খোঁজে: যে
+     * খাতে হিসাব-খাত বসানো নেই তার আয় এখানে আর কর্তন ওখানে যায়।
+     * নাম ধরে খুঁজলে "Salary & Wages" নাম বদলানোর দিনে বেতন পোস্ট
+     * করা বন্ধ হয়ে যেত।
+     */
+    public const SALARY_EXPENSE = '5201';
+
+    public const SALARY_PAYABLE = '2130';
+
+    public const PROVIDENT_FUND_PAYABLE = '2131';
+
+    public const EMPLOYEE_ADVANCE = '1131';
+
     /** @var list<string> */
     public const SYSTEM_CODES = [
         self::CASH_IN_HAND, self::BANK_AND_MFS, self::RECEIVABLE, self::INVENTORY,
@@ -81,6 +97,8 @@ final class StandardChart
         self::RETAINED_EARNINGS,
         self::SALES, self::COST_OF_GOODS_SOLD, self::PURCHASE_PRICE_VARIANCE,
         self::DISCOUNT_GIVEN,
+        self::SALARY_EXPENSE, self::SALARY_PAYABLE,
+        self::PROVIDENT_FUND_PAYABLE, self::EMPLOYEE_ADVANCE,
     ];
 
     public function __construct(private readonly AccountService $accounts) {}
@@ -166,8 +184,19 @@ final class StandardChart
             ['1102', 'Bank & Mobile Money', 'ব্যাংক ও মোবাইল ব্যাংকিং', $A, '1100', true, []],
 
             ['1110', 'Accounts Receivable', 'প্রাপ্য হিসাব', $A, '1100', false, []],
+
             ['1120', 'Inventory', 'মজুদ পণ্য', $A, '1100', false, []],
             ['1130', 'Advance & Prepayments', 'অগ্রিম ও অগ্রিম পরিশোধ', $A, '1100', false, []],
+
+            /*
+             * কর্মীর অগ্রিম আলাদা খাতে, সাধারণ অগ্রিমের সাথে নয়।
+             *
+             * টাকাটা ফেরত আসবে বেতন থেকে কিস্তিতে, আর "কার কাছে কত
+             * অগ্রিম পড়ে আছে" প্রশ্নটা বেতনের দিনে ওঠে। ভাড়ার অগ্রিমের
+             * সাথে এক খাতে থাকলে ওই প্রশ্নের উত্তর বের করতে প্রতিবার
+             * সারিগুলো হাতে বাছতে হত।
+             */
+            ['1131', 'Advance to Employees', 'কর্মীর অগ্রিম', $A, '1100', false, []],
             ['1140', 'Security Deposits', 'জামানত', $A, '1100', false, []],
 
             ['1200', 'Fixed Assets', 'স্থায়ী সম্পদ', $A, '1000', true, []],
@@ -186,6 +215,15 @@ final class StandardChart
             ['2110', 'Accounts Payable', 'প্রদেয় হিসাব', $L, '2100', false, []],
             ['2120', 'VAT Payable', 'প্রদেয় ভ্যাট', $L, '2100', false, []],
             ['2130', 'Salary Payable', 'প্রদেয় বেতন', $L, '2100', false, []],
+
+            /*
+             * ভবিষ্য তহবিল প্রদেয় বেতনের সাথে মেশে না।
+             *
+             * কেটে রাখা টাকাটা কর্মীর, কিন্তু এখনো তহবিলে জমা হয়নি — দুইটা
+             * আলাদা দায়। এক খাতে রাখলে "বেতন বাবদ কত বাকি" আর "তহবিলে কত
+             * জমা দিতে হবে" দুইটা প্রশ্নের একটাই উত্তর থাকত।
+             */
+            ['2131', 'Provident Fund Payable', 'প্রদেয় ভবিষ্য তহবিল', $L, '2100', false, []],
             ['2140', 'Expenses Payable', 'প্রদেয় খরচ', $L, '2100', false, []],
             ['2150', 'Advance from Customers', 'গ্রাহকের অগ্রিম', $L, '2100', false, []],
             // মাল এসেছে, বিল আসেনি — ধ্রুবকটার মন্তব্যে কারণ লেখা আছে

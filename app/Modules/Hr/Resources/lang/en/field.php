@@ -38,4 +38,10 @@ return [
     'net' => 'Net Salary',
     'entered_by' => 'Entered By',
     'status' => 'Status',
+    'month' => 'Month',
+    'employee_count' => 'Employees',
+    'trx_date' => 'Expense Date',
+    'paid_by' => 'Paid By',
+    'received_by' => 'Received By',
+    'document_no' => 'No.',
 ];
