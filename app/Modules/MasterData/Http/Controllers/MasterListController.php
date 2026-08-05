@@ -9,6 +9,9 @@ use App\Core\Services\SettingsService;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\MasterData\Models\Currency;
+use App\Modules\MasterData\Models\Department;
+use App\Modules\MasterData\Models\Designation;
+use App\Modules\MasterData\Models\EmploymentType;
 use App\Modules\MasterData\Models\PartyType;
 use App\Modules\MasterData\Models\PaymentTerm;
 use App\Modules\MasterData\Models\PriceList;
@@ -141,6 +144,36 @@ class MasterListController extends Controller implements HasMiddleware
             'columns' => ['symbol', 'decimal_places'],
             'extra_action' => ['route' => 'master_data.currency.rates', 'label' => 'master_data::action.rates'],
             'setting' => 'master_data.multi_currency_enabled',
+        ],
+
+        /*
+         * প্রতিষ্ঠানের গড়ন — তিনটাই সরল তালিকা, নিজস্ব ঘর ছাড়া।
+         *
+         * সুইচের পেছনে নয়: বিভাগ ও পদবি ছাড়া কর্মীর তালিকাই লেখা যায় না,
+         * আর যে প্রতিষ্ঠানে কর্মী নেই সেখানে HR মডিউলটাই বন্ধ থাকে।
+         */
+        'departments' => [
+            'model' => Department::class,
+            'route' => 'department',
+            'title' => 'master_data::menu.departments',
+            'fields' => [],
+            'columns' => [],
+        ],
+
+        'designations' => [
+            'model' => Designation::class,
+            'route' => 'designation',
+            'title' => 'master_data::menu.designations',
+            'fields' => [],
+            'columns' => [],
+        ],
+
+        'employment-types' => [
+            'model' => EmploymentType::class,
+            'route' => 'employment_type',
+            'title' => 'master_data::menu.employment_types',
+            'fields' => [],
+            'columns' => [],
         ],
 
         'vehicle-types' => [

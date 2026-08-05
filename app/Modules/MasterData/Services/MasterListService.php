@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Modules\MasterData\Services;
 
 use App\Modules\MasterData\Models\Currency;
+use App\Modules\MasterData\Models\Department;
+use App\Modules\MasterData\Models\Designation;
+use App\Modules\MasterData\Models\EmploymentType;
 use App\Modules\MasterData\Models\PartyType;
 use App\Modules\MasterData\Models\PaymentTerm;
 use App\Modules\MasterData\Models\PriceList;
@@ -304,6 +307,43 @@ final class MasterListService
         if ($base !== null && ! Currency::query()->where('is_default', true)->exists()) {
             $base->makeDefault();
         }
+
+        /*
+         * প্রতিষ্ঠানের গড়ন।
+         *
+         * প্রথম কর্মীটা যোগ করার সময় বিভাগ ও পদবির ঘর খালি থাকলে কাজটা
+         * সেখানেই থামত — আর মানুষ তখন "সাধারণ" নামে একটা বিভাগ বানিয়ে
+         * সবাইকে তাতে ফেলে দিত, যা পরে আর ঠিক হত না।
+         */
+        $made['departments'] = $this->seed(Department::class, [
+            ['SALES', 'Sales', 'বিক্রয়', []],
+            ['STORE', 'Warehouse', 'গুদাম', []],
+            ['ACCT', 'Accounts', 'হিসাব', []],
+            ['ADMIN', 'Administration', 'প্রশাসন', []],
+            ['DELIV', 'Delivery', 'সরবরাহ', []],
+        ]);
+
+        $made['designations'] = $this->seed(Designation::class, [
+            ['MGR', 'Manager', 'ব্যবস্থাপক', []],
+            ['ASTMGR', 'Assistant Manager', 'সহকারী ব্যবস্থাপক', []],
+            ['SR', 'Sales Representative', 'বিক্রয় প্রতিনিধি', []],
+            ['STOREKP', 'Storekeeper', 'গুদামরক্ষী', []],
+            ['ACCT', 'Accountant', 'হিসাবরক্ষক', []],
+            ['DRIVER', 'Driver', 'চালক', []],
+            ['HELPER', 'Helper', 'সহকারী', []],
+        ]);
+
+        /*
+         * দৈনিক কর্মী আলাদা: তার বেতন হাজিরার সাথে বাঁধা, মাসের সাথে নয়।
+         * তাই ধরনটা কেবল একটা লেবেল নয়, বেতনের হিসাবের শর্ত।
+         */
+        $made['employment_types'] = $this->seed(EmploymentType::class, [
+            ['PERM', 'Permanent', 'স্থায়ী', []],
+            ['PROB', 'Probation', 'শিক্ষানবিশ', []],
+            ['CONTRACT', 'Contract', 'চুক্তিভিত্তিক', []],
+            ['DAILY', 'Daily wage', 'দৈনিক মজুরি', []],
+            ['PART', 'Part time', 'খণ্ডকালীন', []],
+        ]);
 
         $made['vehicle_types'] = $this->seed(VehicleType::class, [
             ['TRUCK', 'Truck', 'ট্রাক', []],

@@ -3,6 +3,9 @@
 declare(strict_types=1);
 
 use App\Modules\MasterData\Models\Currency;
+use App\Modules\MasterData\Models\Department;
+use App\Modules\MasterData\Models\Designation;
+use App\Modules\MasterData\Models\EmploymentType;
 use App\Modules\MasterData\Models\Location;
 use App\Modules\MasterData\Models\PartyType;
 use App\Modules\MasterData\Models\PaymentTerm;
@@ -48,6 +51,11 @@ return [
             ['label' => 'master_data::menu.party_types', 'route' => 'master_data.party_type.index', 'permission' => 'master_data.view'],
             ['label' => 'master_data::menu.reason_codes', 'route' => 'master_data.reason.index', 'permission' => 'master_data.view'],
 
+            // প্রতিষ্ঠানের গড়ন — কর্মীর তালিকা এই তিনটার উপর দাঁড়ায়
+            ['label' => 'master_data::menu.departments', 'route' => 'master_data.department.index', 'permission' => 'master_data.view'],
+            ['label' => 'master_data::menu.designations', 'route' => 'master_data.designation.index', 'permission' => 'master_data.view'],
+            ['label' => 'master_data::menu.employment_types', 'route' => 'master_data.employment_type.index', 'permission' => 'master_data.view'],
+
             /*
              * তিনটা সারি সুইচের পেছনে।
              *
@@ -81,6 +89,9 @@ return [
         'party_type' => PartyType::class,
         'reason_code' => ReasonCode::class,
         'currency' => Currency::class,
+        'department' => Department::class,
+        'designation' => Designation::class,
+        'employment_type' => EmploymentType::class,
         'vehicle_type' => VehicleType::class,
         'vehicle' => Vehicle::class,
     ],
