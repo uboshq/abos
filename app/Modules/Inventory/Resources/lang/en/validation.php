@@ -13,4 +13,5 @@ return [
     'not_that_much_held' => 'Not that much is held — there is :held.',
     'not_enough_on_floor' => 'There is not that much :product in :warehouse — there is :have.',
     'warehouse_code_taken' => 'Another warehouse already uses this code.',
+    'not_enough_free' => 'Only :have free stock of :product is in :warehouse — no more can be given.',
 ];

@@ -58,12 +58,15 @@ final class StockService
         Carbon|string|null $date = null,
         ?string $documentNo = null,
         ?string $narration = null,
+        string $free = '0',
+        string $freeReserved = '0',
     ): StockMovement {
-        $this->assertSomethingMoves($floor, $reserved, $hold);
+        $this->assertSomethingMoves($floor, $reserved, $hold, $free, $freeReserved);
 
         return DB::transaction(function () use (
             $product, $warehouse, $sourceType, $sourceId,
-            $floor, $reserved, $hold, $reason, $date, $documentNo, $narration
+            $floor, $reserved, $hold, $reason, $date, $documentNo, $narration,
+            $free, $freeReserved
         ) {
             /*
              * তাকে যা নেই তা বের করা যায় না।
@@ -76,6 +79,13 @@ final class StockService
                 $this->assertEnoughOnFloor($product, $warehouse, $floor);
             }
 
+            // ফ্রি ভাণ্ডারেও একই নিয়ম — যে ফ্রি মাল নেই তা দেওয়া যায় না।
+            // না আটকালে ফ্রি স্টক ঋণাত্মক হয়ে যেত, আর প্রস্তুতকারকের কাছে
+            // হিসাব দিতে গিয়ে দেখা যেত আমরা যা পেয়েছি তার চেয়ে বেশি দিয়েছি।
+            if (bccomp($free, '0', 4) < 0) {
+                $this->assertEnoughFree($product, $warehouse, $free);
+            }
+
             return StockMovement::create([
                 'branch_id' => $warehouse->branch_id ?? CompanyContext::branchId(),
                 'product_id' => $product->id,
@@ -84,6 +94,8 @@ final class StockService
                 'floor_change' => $floor,
                 'reserved_change' => $reserved,
                 'hold_change' => $hold,
+                'free_change' => $free,
+                'free_reserved_change' => $freeReserved,
                 'reason_code_id' => $reason?->id,
                 'source_type' => $sourceType,
                 'source_id' => $sourceId,
@@ -211,16 +223,24 @@ final class StockService
         );
     }
 
-    // ── চারটা অবস্থা ───────────────────────────────────────────────────
+    // ── অবস্থাগুলো ─────────────────────────────────────────────────────
 
     /**
-     * চারটা সংখ্যা একসাথে — একটা কোয়েরিতে।
+     * সবগুলো সংখ্যা একসাথে — একটা কোয়েরিতে।
      *
-     * আলাদা করে চারবার গুনলে একই পাতায় চারটা কোয়েরি হত, আর তালিকায়
-     * পঞ্চাশ পণ্যে দুইশো। তার চেয়েও বড় কথা: চারটা আলাদা মুহূর্তে গোনা
-     * সংখ্যা একে অন্যের সাথে না-ও মিলতে পারে।
+     * আলাদা করে বারবার গুনলে একই পাতায় অনেকগুলো কোয়েরি হত, আর তালিকায়
+     * পঞ্চাশ পণ্যে কয়েকশো। তার চেয়েও বড় কথা: আলাদা মুহূর্তে গোনা সংখ্যা
+     * একে অন্যের সাথে না-ও মিলতে পারে।
      *
-     * @return array{floor: string, reserved: string, hold: string, available: string}
+     * বিক্রির মাল আর ফ্রি মাল দুইটা আলাদা ভাণ্ডার, একই ছকে গোনা:
+     *
+     *     বিক্রয়যোগ্য     = তাকে − অর্ডারে ধরা − আটকানো
+     *     ফ্রি পাওয়া যাবে = ফ্রি তাকে − ফ্রি অর্ডারে ধরা
+     *
+     * ফ্রি মালে "আটকানো" নেই — দাম বাড়ার অপেক্ষায় ফ্রি মাল কেউ ধরে রাখে
+     * না, কারণ ওটা বেচাই হয় না।
+     *
+     * @return array{floor: string, reserved: string, hold: string, available: string, free: string, free_reserved: string, free_available: string}
      */
     public function statesFor(Product $product, ?Warehouse $warehouse = null): array
     {
@@ -230,13 +250,17 @@ final class StockService
             ->selectRaw('
                 COALESCE(SUM(floor_change), 0) as floor,
                 COALESCE(SUM(reserved_change), 0) as reserved,
-                COALESCE(SUM(hold_change), 0) as hold
+                COALESCE(SUM(hold_change), 0) as hold,
+                COALESCE(SUM(free_change), 0) as free,
+                COALESCE(SUM(free_reserved_change), 0) as free_reserved
             ')
             ->first();
 
         $floor = (string) ($row->floor ?? 0);
         $reserved = (string) ($row->reserved ?? 0);
         $hold = (string) ($row->hold ?? 0);
+        $free = (string) ($row->free ?? 0);
+        $freeReserved = (string) ($row->free_reserved ?? 0);
 
         return [
             'floor' => $floor,
@@ -244,7 +268,23 @@ final class StockService
             'hold' => $hold,
             // বিক্রয়যোগ্য = তাকে যা আছে − ধরা − আটকানো
             'available' => bcsub(bcsub($floor, $reserved, 4), $hold, 4),
+
+            'free' => $free,
+            'free_reserved' => $freeReserved,
+            'free_available' => bcsub($free, $freeReserved, 4),
         ];
+    }
+
+    /** তাকে থাকা ফ্রি মাল — বিক্রির মজুদের সাথে মেশে না। */
+    public function freeQty(Product $product, ?Warehouse $warehouse = null): string
+    {
+        return $this->statesFor($product, $warehouse)['free'];
+    }
+
+    /** যত ফ্রি মাল সত্যিই দেওয়া যাবে। */
+    public function freeAvailableQty(Product $product, ?Warehouse $warehouse = null): string
+    {
+        return $this->statesFor($product, $warehouse)['free_available'];
     }
 
     public function floorQty(Product $product, ?Warehouse $warehouse = null): string
@@ -270,16 +310,52 @@ final class StockService
 
     // ── নিয়ম ───────────────────────────────────────────────────────────
 
-    private function assertSomethingMoves(string $floor, string $reserved, string $hold): void
-    {
+    private function assertSomethingMoves(
+        string $floor,
+        string $reserved,
+        string $hold,
+        string $free = '0',
+        string $freeReserved = '0',
+    ): void {
         $allZero = bccomp($floor, '0', 4) === 0
             && bccomp($reserved, '0', 4) === 0
-            && bccomp($hold, '0', 4) === 0;
+            && bccomp($hold, '0', 4) === 0
+            && bccomp($free, '0', 4) === 0
+            && bccomp($freeReserved, '0', 4) === 0;
 
         if ($allZero) {
             // তিনটাই শূন্য মানে সারিটা কিছুই বলে না, শুধু খতিয়ান লম্বা করে
             throw ValidationException::withMessages([
                 'qty' => __('inventory::validation.nothing_moves'),
+            ]);
+        }
+    }
+
+    /**
+     * ফ্রি ভাণ্ডারে যা নেই তা দেওয়া যায় না।
+     *
+     * তাকের নিয়মের হুবহু যমজ, আলাদা ঘরে — কারণ ভাণ্ডার দুইটা। একটার ঘাটতি
+     * অন্যটা দিয়ে পূরণ করা যায় না: বিক্রির মাল ফ্রি দিয়ে দিলে ওটার
+     * ক্রয়মূল্য কোথাও যেত না, আর মুনাফা ঠিক ততটাই বেশি দেখাত।
+     */
+    private function assertEnoughFree(Product $product, Warehouse $warehouse, string $free): void
+    {
+        $onHand = StockMovement::query()
+            ->forProduct($product->id)
+            ->inWarehouse($warehouse->id)
+            ->lockForUpdate()
+            ->selectRaw('COALESCE(SUM(free_change), 0) as free')
+            ->value('free');
+
+        $wanted = bcmul($free, '-1', 4);
+
+        if (bccomp($wanted, (string) $onHand, 4) > 0) {
+            throw ValidationException::withMessages([
+                'free_qty' => __('inventory::validation.not_enough_free', [
+                    'product' => $product->name(),
+                    'warehouse' => $warehouse->name(),
+                    'have' => (string) $onHand,
+                ]),
             ]);
         }
     }

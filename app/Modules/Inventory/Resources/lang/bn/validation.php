@@ -13,4 +13,5 @@ return [
     'not_that_much_held' => 'এত মাল আটকানো নেই — আছে :held।',
     'not_enough_on_floor' => ':warehouse-এ :product এত নেই — আছে :have।',
     'warehouse_code_taken' => 'এই কোডে আরেকটা গুদাম আছে।',
+    'not_enough_free' => ':warehouse-এ :product-এর ফ্রি স্টক আছে :have — তার বেশি ফ্রি দেওয়া যাবে না।',
 ];

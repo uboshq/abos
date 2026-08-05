@@ -36,7 +36,8 @@ class StockMovement extends Model
 
     protected $fillable = [
         'company_id', 'branch_id', 'product_id', 'warehouse_id', 'trx_date',
-        'floor_change', 'reserved_change', 'hold_change', 'reason_code_id',
+        'floor_change', 'reserved_change', 'hold_change',
+        'free_change', 'free_reserved_change', 'reason_code_id',
         'source_type', 'source_id', 'document_no', 'narration', 'created_by',
     ];
 
@@ -47,6 +48,8 @@ class StockMovement extends Model
             'floor_change' => 'decimal:4',
             'reserved_change' => 'decimal:4',
             'hold_change' => 'decimal:4',
+            'free_change' => 'decimal:4',
+            'free_reserved_change' => 'decimal:4',
         ];
     }
 
