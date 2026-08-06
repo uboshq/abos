@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\ExportListing;
 use App\Http\Middleware\NormalizeUnicodeInput;
 use App\Http\Middleware\ResolveCompanyContext;
 use Illuminate\Foundation\Application;
@@ -20,6 +21,13 @@ return Application::configure(basePath: dirname(__DIR__))
         // কারণ প্রসঙ্গ ছাড়া টেন্যান্ট ডাটা ছোঁয়া মানে সব কোম্পানির রো দেখা।
         $middleware->web(append: [
             ResolveCompanyContext::class,
+
+            /*
+             * ?export=csv থাকলে পর্দার তালিকাটা ফাইল হয়ে নামে।
+             *
+             * ভিউ রেন্ডার হওয়ার পরে কাজ করে, তাই সবার শেষে।
+             */
+            ExportListing::class,
         ]);
 
         /*

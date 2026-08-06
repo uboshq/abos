@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\View\Components\Ui;
 
+use App\Core\Services\ListExport;
 use Illuminate\View\Component;
 use Illuminate\View\View;
 use InvalidArgumentException;
@@ -74,6 +75,30 @@ class Table extends Component
 
     public function render(): View
     {
+        /*
+         * জেনারেটর হলে একবারেই তালিকা বানিয়ে নেওয়া।
+         *
+         * রপ্তানি আর পর্দা দুইজনেই সারিগুলো ঘুরে দেখে, আর জেনারেটর
+         * দ্বিতীয়বার ঘোরানো যায় না — তখন CSV-তে সব সারি থাকত আর
+         * পর্দাটা খালি আসত (বা উল্টোটা)। Collection ও paginator
+         * Countable, তাই তাদের এই খরচটা লাগে না।
+         */
+        if (! is_array($this->rows) && ! $this->rows instanceof \Countable) {
+            $this->rows = iterator_to_array($this->rows);
+        }
+
+        /*
+         * টুলবারের "Export CSV" এখান থেকেই তার ডেটা পায়।
+         *
+         * কলাম দুই জায়গায় লেখা হয় না বলেই এখানে — যা পর্দায় আঁকা হচ্ছে
+         * হুবহু সেটাই ফাইলে যায়।
+         */
+        $export = app(ListExport::class);
+
+        if ($export->wanted()) {
+            $export->capture($this->normalised, $this->rows, $this->cell(...));
+        }
+
         return view('components.ui.table');
     }
 

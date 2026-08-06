@@ -11,6 +11,7 @@ use App\Models\AuditFieldChange;
 use App\Models\AuditTrail;
 use App\Models\Company;
 use App\Models\FinancialYear;
+use App\Models\NumberSeries;
 use App\Models\User;
 use App\Modules\Accounts\Models\MoneyTransfer;
 use App\Modules\MasterData\Models\Vehicle;
@@ -106,6 +107,35 @@ class AuditTest extends TestCase
         $vehicle->update(['code' => 'V-01']);
 
         $this->assertSame($before, AuditTrail::query()->count());
+    }
+
+    /**
+     * নম্বর এগোনো অডিটে যায় না, কিন্তু উপসর্গ বদলানো যায়।
+     *
+     * ── কেন এটা ধরা দরকার ───────────────────────────────────────────
+     * ধরা পড়েছিল অডিটের CSV চোখে দেখে: অর্ধেক সারি ছিল "সম্পাদনা —
+     * next_number: ৬ → ৭", প্রতিটা ডকুমেন্ট তৈরির পিছুপিছু একটা। কোনো
+     * টেস্ট ভাঙেনি, কারণ লেখাটা তো ঠিকই হচ্ছিল — শুধু ওই সারিগুলোর
+     * ভিড়ে আসল পরিবর্তনগুলো খুঁজে পাওয়া যেত না।
+     *
+     * উল্টো দিকটাও এখানে: উপসর্গ মানুষের সিদ্ধান্ত, আর সেটা লগ হবেই।
+     * নাহলে "বিলের নম্বর হঠাৎ অন্যরকম কেন" প্রশ্নের উত্তর থাকত না।
+     */
+    public function test_a_number_series_logs_the_prefix_but_not_the_counter(): void
+    {
+        $series = NumberSeries::query()->firstOrFail();
+
+        $before = AuditTrail::query()->count();
+        $series->update(['next_number' => $series->next_number + 1]);
+
+        $this->assertSame($before, AuditTrail::query()->count(), 'নম্বর এগোনো অডিটে বসেছে।');
+
+        $series->update(['prefix' => 'XX']);
+
+        $trail = AuditTrail::query()->latest('id')->firstOrFail();
+
+        $this->assertSame(NumberSeries::class, $trail->auditable_type);
+        $this->assertSame('prefix', $trail->changes()->firstOrFail()->field);
     }
 
     /**
