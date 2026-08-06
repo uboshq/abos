@@ -7,6 +7,7 @@ use App\Modules\Purchase\Models\Payment;
 use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Purchase\Models\PurchaseOrder;
 use App\Modules\Purchase\Models\PurchaseReceipt;
+use App\Modules\Purchase\Models\PurchaseReturn;
 use App\Modules\Purchase\Reports\PurchaseReports;
 
 /**
@@ -57,6 +58,7 @@ return [
             ['label' => 'purchase::menu.receipts', 'route' => 'purchase.receipt.index', 'permission' => 'purchase.receipt.view'],
             ['label' => 'purchase::menu.bills', 'route' => 'purchase.bill.index', 'permission' => 'purchase.bill.view'],
             ['label' => 'purchase::menu.payments', 'route' => 'purchase.payment.index', 'permission' => 'purchase.payment.view'],
+            ['label' => 'purchase::menu.returns', 'route' => 'purchase.return.index', 'permission' => 'purchase.return.view'],
         ],
         'reports' => [
             ['label' => 'purchase::menu.pending_orders', 'route' => 'purchase.report.show',
@@ -91,6 +93,17 @@ return [
         'purchase.payment.create',
         'purchase.payment.cancel',
 
+        /*
+         * ফেরতের চাবিও আলাদা।
+         *
+         * ফেরত মানে প্রদেয় কমিয়ে দেওয়া — টাকা না দিয়েই দায় থেকে অঙ্ক
+         * সরানো। যে মাল বুঝে নেয় তার হাতে এই ক্ষমতা থাকলে ভুয়া ফেরত
+         * দেখিয়ে ঘাটতি ঢাকা যেত।
+         */
+        'purchase.return.view',
+        'purchase.return.create',
+        'purchase.return.cancel',
+
         'purchase.report',
         'purchase.manage',
     ],
@@ -99,7 +112,16 @@ return [
         'PO' => 'purchase::doc.order',
         'GRN' => 'purchase::doc.receipt',
         'PBL' => 'purchase::doc.bill',
-        'PAY' => 'purchase::doc.payment',
+        /*
+         * কোডগুলো ছোট, উপসর্গগুলো নয়।
+         *
+         * কাগজে ছাপা হয় উপসর্গ (PMT-2026-2027-0001), আর কোডটা ভেতরের
+         * নাম। SP-কে PAY বলা যেত না: হিসাবের পরিশোধ ভাউচার আগে থেকেই
+         * PAY উপসর্গ নেয়, আর দুইটা কাগজে একই নম্বর ছাপা হলে মেলানোর
+         * সময় কেউ বুঝত না কোনটার কথা।
+         */
+        'SP' => 'purchase::doc.payment',
+        'PR' => 'purchase::doc.return',
     ],
 
     'drill_sources' => [
@@ -107,6 +129,7 @@ return [
         'purchase_receipt' => PurchaseReceipt::class,
         'purchase_bill' => PurchaseBill::class,
         'purchase_payment' => Payment::class,
+        'purchase_return' => PurchaseReturn::class,
     ],
 
     'reports' => [

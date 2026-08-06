@@ -29,6 +29,11 @@ return [
     'over_billed' => ':no চালানে এসেছে :received — তার বেশি বিল করা যাবে না।',
     'price_mismatch' => ':no বিলের টাকা চালানের সাথে :difference টাকা মিলছে না। মিলিয়ে নিন, নাহলে Control Panel থেকে এই আটকানোটা বন্ধ করুন।',
     'duplicate_bill_no' => 'এই সরবরাহকারীর :no নম্বর বিল আগেই আছে — একই বিল দুইবার শোধ হয়ে যেত।',
+    // ফেরত
+    'zero_value_return' => 'শূন্য টাকার ফেরত খাতায় বসে না।',
+    'unknown_invoice_line' => 'বিলের লাইনটা এই কোম্পানির তালিকায় নেই।',
+    'over_returned' => ':no বিলে আর :room ফেরত নেওয়া যাবে — তার বেশি নয়।',
+
     'missing_account' => 'হিসাবের ছকে :code খাতটা নেই — ছকটা বসানো হয়নি।',
     'not_enough_available' => ':product-এর বিক্রয়যোগ্য আছে :available — তার বেশি অর্ডার নেওয়া যাবে না। Control Panel থেকে এই আটকানোটা বন্ধ করা যায়।',
     'over_credit_limit' => ':customer-এর ধারের সীমা :limit টাকা, আর এই অর্ডারে সেটা পেরিয়ে যায়।',

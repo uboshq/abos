@@ -84,7 +84,7 @@ final class PayrollService
                 'company_id' => CompanyContext::id(),
                 'branch_id' => CompanyContext::branchId(),
                 'financial_year_id' => $this->financialYear($trx)?->id,
-                'document_no' => $this->numbers->next('PAY'),
+                'document_no' => $this->numbers->next('PRL'),
                 'month' => $monthStart->toDateString(),
                 'trx_date' => $trx->toDateString(),
                 'status' => DocumentStatus::DRAFT,

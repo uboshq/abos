@@ -29,6 +29,11 @@ return [
     'over_billed' => ':no received :received — no more than that can be billed.',
     'price_mismatch' => ':no differs from the receipt by :difference. Reconcile it, or switch this check off in the Control Panel.',
     'duplicate_bill_no' => 'Bill :no already exists for this supplier — the same bill would be paid twice.',
+    // Return
+    'zero_value_return' => 'A return worth nothing does not go in the books.',
+    'unknown_invoice_line' => 'That invoice line is not in this company list.',
+    'over_returned' => 'Only :room more can come back against :no.',
+
     'missing_account' => 'Account :code is missing from the chart — the chart has not been installed.',
     'not_enough_available' => 'Only :available of :product can be sold. Switch this check off in the Control Panel to take the order anyway.',
     'over_credit_limit' => 'The credit limit for :customer is :limit and this order goes past it.',

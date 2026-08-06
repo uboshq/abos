@@ -12,6 +12,7 @@ return [
     'add_line' => 'Add a line',
     'remove_line' => 'Remove',
     'new_payment' => 'New payment',
+    'new_return' => 'New return',
     'show_cancelled' => 'Show cancelled too',
     'receive_against' => 'Receive against this order',
     'bill_against' => 'Bill this receipt',

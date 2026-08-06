@@ -7,6 +7,7 @@ use App\Modules\Purchase\Http\Controllers\PurchaseBillController;
 use App\Modules\Purchase\Http\Controllers\PurchaseOrderController;
 use App\Modules\Purchase\Http\Controllers\PurchaseReceiptController;
 use App\Modules\Purchase\Http\Controllers\PurchaseReportController;
+use App\Modules\Purchase\Http\Controllers\PurchaseReturnController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -61,6 +62,17 @@ Route::middleware('auth')->prefix('purchase')->group(function () {
         Route::put('/{payment}', [PaymentController::class, 'update'])->whereNumber('payment')->name('update');
         Route::post('/{payment}/confirm', [PaymentController::class, 'confirm'])->whereNumber('payment')->name('confirm');
         Route::post('/{payment}/cancel', [PaymentController::class, 'cancel'])->whereNumber('payment')->name('cancel');
+    });
+
+    Route::prefix('returns')->name('return.')->group(function () {
+        Route::get('/', [PurchaseReturnController::class, 'index'])->name('index');
+        Route::get('/create', [PurchaseReturnController::class, 'create'])->name('create');
+        Route::post('/', [PurchaseReturnController::class, 'store'])->name('store');
+        Route::get('/{return}', [PurchaseReturnController::class, 'show'])->whereNumber('return')->name('show');
+        Route::get('/{return}/edit', [PurchaseReturnController::class, 'edit'])->whereNumber('return')->name('edit');
+        Route::put('/{return}', [PurchaseReturnController::class, 'update'])->whereNumber('return')->name('update');
+        Route::post('/{return}/confirm', [PurchaseReturnController::class, 'confirm'])->whereNumber('return')->name('confirm');
+        Route::post('/{return}/cancel', [PurchaseReturnController::class, 'cancel'])->whereNumber('return')->name('cancel');
     });
 
     Route::get('/reports/{slug}', [PurchaseReportController::class, 'show'])->name('report.show');

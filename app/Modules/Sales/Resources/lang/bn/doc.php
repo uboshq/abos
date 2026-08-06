@@ -11,4 +11,5 @@ return [
     'collection' => 'আদায়',
     'gatepass' => 'গেটপাস',
     'delivery_order' => 'ডেলিভারি অর্ডার',
+    'return' => 'বিক্রয় ফেরত',
 ];

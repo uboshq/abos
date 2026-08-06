@@ -40,4 +40,7 @@ return [
     'instrument' => 'মাধ্যম',
     'instrument_no' => 'চেক/রেফারেন্স নম্বর',
     'instrument_date' => 'চেকের তারিখ',
+
+    // ফেরতের ঘর
+    'reason' => 'কারণ',
 ];

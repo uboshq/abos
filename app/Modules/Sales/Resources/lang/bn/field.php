@@ -112,4 +112,8 @@ return [
     'total_free_plus_sales' => 'মোট ফ্রি+বিক্রয়',
     'vehicle' => 'বহরের গাড়ি',
     'vehicle_not_in_fleet' => 'বহরের বাইরের গাড়ি',
+
+    // ফেরতের ঘর
+    'reason' => 'কারণ',
+    'not_sellable' => 'আর বেচা যাবে না',
 ];

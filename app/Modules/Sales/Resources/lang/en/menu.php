@@ -16,4 +16,5 @@ return [
     'by_customer' => 'Sales by Customer',
     'pos' => 'Counter (POS)',
     'direct' => 'Direct Sales',
+    'returns' => 'Sales Returns',
 ];

@@ -7,4 +7,5 @@ return [
     'receipt' => 'Goods Receipt',
     'bill' => 'Purchase Bill',
     'payment' => 'Payment',
+    'return' => 'Purchase Return',
 ];
