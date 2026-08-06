@@ -85,7 +85,7 @@
      * দৃশ্য, ঘনত্ব, পাতা, কলাম) ছাড়া ঠিকানায় আর কিছু থাকলেই সেটা
      * স্ক্রিনের ছাঁকনি, আর প্যানেলটা খোলা থাকে।
      */
-    $ownKeys = ['q', 'sort', 'view', 'compact', 'page', 'hide', 'show'];
+    $ownKeys = ['q', 'sort', 'view', 'compact', 'page', 'hide', 'show', 'export'];
     $screenFilters = collect(request()->query())
         ->except($ownKeys)
         ->filter(fn ($value) => $value !== '' && $value !== null);
@@ -300,9 +300,16 @@
                     <div x-show="open" x-cloak x-transition.opacity
                          class="absolute end-0 z-30 mt-1 w-52 overflow-hidden rounded-(--radius-card)
                                 border border-(--color-border) bg-(--color-surface-card) shadow-lg">
-                        <a href="{{ url()->current().'?'.http_build_query($params + ['export' => 'csv']) }}"
+                        {{-- পাতার নম্বরটা সাথে যায় (page বাদ যায়নি এখানে),
+                             কারণ ফাইলটা এই পাতারই সারিগুলো নিয়ে বেরোয়।
+                             বাদ দিলে তিন নম্বর পাতা থেকে রপ্তানি করলে এক
+                             নম্বর পাতা নেমে আসত, আর কেউ টের পেত না। --}}
+                        <a href="{{ url()->current().'?'.http_build_query(request()->query() + ['export' => 'csv']) }}"
                            class="block px-3 py-2 text-sm hover:bg-(--color-surface-hover)">
                             {{ __('core.toolbar.export_csv') }}
+                            <span class="block text-2xs text-(--color-ink-muted)">
+                                {{ __('core.toolbar.export_csv_note') }}
+                            </span>
                         </a>
                         {{-- লেখা থাকা সত্ত্বেও aria-label — ComponentTest
                              ট্যাগের ভেতরটাই কেবল পড়ে, ভেতরের লেখা দেখে না,

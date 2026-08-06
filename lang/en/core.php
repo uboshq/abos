@@ -210,6 +210,7 @@ return [
         'columns_note' => 'Untick them all and the table shows every column — an empty table helps nobody.',
         'export' => 'Export',
         'export_csv' => 'CSV (opens in Excel)',
+        'export_csv_note' => 'Exactly what you see on this page',
         'export_pdf' => 'PDF — print, then save as PDF',
         'share' => 'Share',
         'share_email' => 'Email',

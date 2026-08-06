@@ -201,8 +201,21 @@ final class AuditEngine
     {
         $changes = [];
 
+        /*
+         * মডেলের নিজের বাদ-তালিকা।
+         *
+         * ── কেন মডেল প্রতি, একটা বৈশ্বিক তালিকায় নয় ────────────────
+         * কোন ঘরটা যন্ত্রের হিসাব আর কোনটা ব্যবসার তথ্য, সেটা মডেলটাই
+         * জানে। next_number নম্বর-সিরিজে যন্ত্রের হিসাব, কিন্তু অন্য
+         * কোথাও একই নামের ঘর অর্থবহ হতে পারত — নাম দেখে বৈশ্বিকভাবে
+         * বাদ দিলে সেটাও চুপচাপ হারাত।
+         *
+         * @var list<string> $ignored
+         */
+        $ignored = method_exists($subject, 'auditIgnores') ? $subject->auditIgnores() : [];
+
         foreach ($subject->getChanges() as $field => $new) {
-            if (in_array($field, self::NEVER_LOGGED, true)) {
+            if (in_array($field, self::NEVER_LOGGED, true) || in_array($field, $ignored, true)) {
                 continue;
             }
 

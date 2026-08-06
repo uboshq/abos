@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Core\Services\ListExport;
 use App\Core\Services\SettingsService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\ServiceProvider;
@@ -28,6 +29,18 @@ class AppServiceProvider extends ServiceProvider
          * বস্তু হলে set()-এর অকার্যকর-করা সবার জন্যই কাজ করে।
          */
         $this->app->singleton(SettingsService::class);
+
+        /*
+         * রপ্তানির সংগ্রাহক — অনুরোধ প্রতি একটা।
+         *
+         * টেবিল কম্পোনেন্ট সারিগুলো এতে জমা দেয়, আর মিডলওয়্যার সেখান
+         * থেকেই ফাইলটা বানায়। দুইজন একই বস্তু না পেলে মিডলওয়্যার সবসময়
+         * খালি হাতে ফিরত, আর রপ্তানি নীরবে কাজ করা বন্ধ করে দিত।
+         *
+         * scoped, singleton নয়: পরের অনুরোধে আগের পর্দার সারিগুলো পড়ে
+         * থাকা চলবে না।
+         */
+        $this->app->scoped(ListExport::class);
     }
 
     /**
