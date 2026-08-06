@@ -30,6 +30,8 @@
         <form method="GET" class="contents">
             <x-ui.toolbar :search-placeholder="__('sales::message.challan_search')"
                           :sort="$sortOptions">
+                <x-ui.date-range :dates="$dates" />
+
                 <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
                     <input type="checkbox" name="cancelled" value="1" @checked($showCancelled) class="size-4">
                     {{ __('sales::action.show_cancelled') }}

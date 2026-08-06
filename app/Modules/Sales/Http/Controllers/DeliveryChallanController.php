@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Sales\Http\Controllers;
 
 use App\Core\Concerns\AuthorizesResource;
+use App\Core\Concerns\FiltersByDate;
 use App\Core\Concerns\SortsLists;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingsService;
@@ -30,6 +31,7 @@ use Illuminate\View\View;
 class DeliveryChallanController extends Controller implements HasMiddleware
 {
     use AuthorizesResource;
+    use FiltersByDate;
     use SortsLists;
 
     public function __construct(
@@ -56,6 +58,8 @@ class DeliveryChallanController extends Controller implements HasMiddleware
             ->when(! $request->boolean('cancelled'),
                 fn ($q) => $q->where('status', '<>', DocumentStatus::CANCELLED));
 
+        $dates = $this->applyDateRange($query, $request);
+
         $sort = $this->applySort($query, $request, [
             'recent' => fn ($q) => $q->orderByDesc('trx_date')->orderByDesc('id'),
             'oldest' => fn ($q) => $q->orderBy('trx_date')->orderBy('id'),
@@ -67,6 +71,7 @@ class DeliveryChallanController extends Controller implements HasMiddleware
             'menu' => $this->menu->forUser($request->user()),
             'challans' => $query->paginate(50)->withQueryString(),
             'q' => $request->query('q'),
+            'dates' => $dates,
             'sort' => $sort,
             'sortOptions' => $this->sortLabels(),
             'showCancelled' => $request->boolean('cancelled'),

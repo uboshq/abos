@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Core\Dashboard\DashboardRegistry;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\Accent;
 use Illuminate\Http\RedirectResponse;
@@ -19,12 +20,24 @@ use Illuminate\View\View;
  */
 class WorkspaceController extends Controller
 {
-    public function __construct(private readonly MenuBuilder $menu) {}
+    public function __construct(
+        private readonly MenuBuilder $menu,
+        private readonly DashboardRegistry $widgets,
+    ) {}
 
+    /**
+     * হোম পর্দা।
+     *
+     * ── এখানে কোনো মডিউলের নাম নেই ──────────────────────────────────
+     * সংখ্যাগুলো মডিউলরা নিজেরা দেয় (module.php → widgets), আর কোর
+     * কেবল জিজ্ঞেস করে। নতুন মডিউল যোগ হলে তার সংখ্যা এখানে আপনিই
+     * উঠবে — এই ফাইল ছোঁয়া লাগবে না (সেকশন ১৯.৭)।
+     */
     public function dashboard(Request $request): View
     {
         return view('workspace.dashboard', [
             'menu' => $this->menu->forUser($request->user()),
+            'groups' => $this->widgets->forUser($request->user()),
         ]);
     }
 

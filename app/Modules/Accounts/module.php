@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+use App\Modules\Accounts\Dashboard\AccountsWidgets;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CashCount;
 use App\Modules\Accounts\Models\CashTill;
@@ -120,6 +121,11 @@ return [
     // কোর ফাইলে মডিউলের নাম লিখতে হয় না।
     'reports' => [
         CoreReports::class,
+    ],
+
+    // হোম পর্দার টাকার সংখ্যাগুলো
+    'widgets' => [
+        AccountsWidgets::class,
     ],
 
     'settings' => [

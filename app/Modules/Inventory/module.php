@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\Inventory\Dashboard\InventoryWidgets;
 use App\Modules\Inventory\Imports\ProductImporter;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
@@ -92,6 +93,10 @@ return [
 
     'reports' => [
         StockReports::class,
+    ],
+
+    'widgets' => [
+        InventoryWidgets::class,
     ],
 
     'settings' => [
