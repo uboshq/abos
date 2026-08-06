@@ -103,6 +103,8 @@
             </div>
         </section>
 
+        <x-ui.attachments :document="$receipt" />
+
         @can('delete', $receipt)
             @if ($receipt->status !== \App\Core\Support\DocumentStatus::CANCELLED)
                 <x-purchase::cancel-form :action="route('purchase.receipt.cancel', $receipt)" />

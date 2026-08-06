@@ -106,6 +106,8 @@
             </div>
         </section>
 
+        <x-ui.attachments :document="$invoice" />
+
         @can('delete', $invoice)
             @if ($invoice->status !== \App\Core\Support\DocumentStatus::CANCELLED)
                 <x-sales::cancel-form :action="route('sales.invoice.cancel', $invoice)" />

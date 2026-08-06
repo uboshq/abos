@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\WorkspaceController;
 use Illuminate\Support\Facades\Route;
@@ -16,6 +17,19 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('auth')->group(function () {
     Route::get('/', [WorkspaceController::class, 'dashboard'])->name('dashboard');
     Route::get('/components', [WorkspaceController::class, 'components'])->name('components');
+
+    /*
+     * ডকুমেন্টের কাগজপত্র — যেকোনো মডিউলের যেকোনো ডকুমেন্টে।
+     *
+     * শেলের রুট, কারণ কাগজ কোনো একটা মডিউলের জিনিস নয়। তবু এখানে
+     * কোনো মডিউলের নাম নেই: কাগজটা কার, সেটা (source_type, id) জোড়া
+     * থেকেই বেরোয় — ঠিক যেভাবে ড্রিল-ডাউন কাজ করে।
+     */
+    Route::post('/attachments', [AttachmentController::class, 'store'])->name('attachment.store');
+    Route::get('/attachments/{attachment}', [AttachmentController::class, 'download'])
+        ->whereNumber('attachment')->name('attachment.download');
+    Route::delete('/attachments/{attachment}', [AttachmentController::class, 'destroy'])
+        ->whereNumber('attachment')->name('attachment.destroy');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile');
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
