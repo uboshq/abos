@@ -6,4 +6,5 @@ return [
     'order' => 'Purchase Order',
     'receipt' => 'Goods Receipt',
     'bill' => 'Purchase Bill',
+    'payment' => 'Payment',
 ];

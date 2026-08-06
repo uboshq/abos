@@ -29,5 +29,15 @@ return [
     'over_billed' => ':no চালানে এসেছে :received — তার বেশি বিল করা যাবে না।',
     'price_mismatch' => ':no বিলের টাকা চালানের সাথে :difference টাকা মিলছে না। মিলিয়ে নিন, নাহলে Control Panel থেকে এই আটকানোটা বন্ধ করুন।',
     'duplicate_bill_no' => 'এই সরবরাহকারীর :no নম্বর বিল আগেই আছে — একই বিল দুইবার শোধ হয়ে যেত।',
+    // পরিশোধ
+    'payment_must_be_positive' => 'পরিশোধের অঙ্ক শূন্যের বেশি হতে হবে।',
+    'unknown_bill' => 'বিলটা এই কোম্পানির তালিকায় নেই।',
+    'bill_other_supplier' => 'বিলটা অন্য সরবরাহকারীর।',
+    'bill_not_confirmed' => ':no বিলটা এখনো খাতায় বসেনি।',
+    'over_allocated' => ':no বিলের বাকি :due টাকা — তার বেশি বসানো যাবে না।',
+    'allocation_over_amount' => 'বিলে ভাগ করা হয়েছে :allocated টাকা, অথচ পরিশোধ :amount টাকা।',
+    'unknown_account' => 'খাতটা এই কোম্পানির ছকে নেই।',
+    'not_a_money_account' => ':name নগদ বা ব্যাংক জাতীয় খাত নয় — ওখান থেকে টাকা যায় না।',
+
     'missing_account' => 'হিসাবের ছকে :code খাতটা নেই — ছকটা বসানো হয়নি।',
 ];

@@ -11,6 +11,7 @@ return [
     'edit' => 'সম্পাদনা',
     'add_line' => 'আরেকটা লাইন',
     'remove_line' => 'সরাও',
+    'new_payment' => 'নতুন পরিশোধ',
     'show_cancelled' => 'বাতিলগুলোও দেখাও',
     'receive_against' => 'এই আদেশের মাল নিন',
     'bill_against' => 'এই চালানের বিল করুন',

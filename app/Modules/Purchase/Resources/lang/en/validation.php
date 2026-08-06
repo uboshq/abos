@@ -29,5 +29,15 @@ return [
     'over_billed' => ':no received :received — no more than that can be billed.',
     'price_mismatch' => ':no differs from the receipt by :difference. Reconcile it, or switch this check off in the Control Panel.',
     'duplicate_bill_no' => 'Bill :no already exists for this supplier — the same bill would be paid twice.',
+    // Payment
+    'payment_must_be_positive' => 'A payment must be more than zero.',
+    'unknown_bill' => 'That bill is not in this company list.',
+    'bill_other_supplier' => 'That bill belongs to another supplier.',
+    'bill_not_confirmed' => ':no is not posted yet.',
+    'over_allocated' => ':no has :due owing — no more than that can be put against it.',
+    'allocation_over_amount' => ':allocated has been allocated but the payment is :amount.',
+    'unknown_account' => 'That account is not in this company chart.',
+    'not_a_money_account' => ':name is not a cash or bank account — money does not leave from there.',
+
     'missing_account' => 'Account :code is missing from the chart — the chart has not been installed.',
 ];

@@ -125,6 +125,8 @@ final class CollectionService
             ]);
         }
 
+        $this->assertStillFits($collection);
+
         return DB::transaction(function () use ($collection) {
             $this->posting->post(
                 sourceType: Collection::drillSourceType(),
@@ -183,6 +185,37 @@ final class CollectionService
 
             return $collection->fresh(['lines']);
         });
+    }
+
+    /**
+     * খাতায় বসানোর মুহূর্তে ভাগগুলো এখনো খাটে কি না।
+     *
+     * একই বিলের বিপরীতে দুইটা খসড়া আদায় লেখা যায় — তৈরির সময় দুইটাই
+     * বৈধ ছিল, কারণ তখন কোনোটাই খাতায় বসেনি। দুইটাই নিশ্চিত হলে বিলে
+     * তার মোটের চেয়ে বেশি টাকা বসত।
+     */
+    private function assertStillFits(Collection $collection): void
+    {
+        $collection->loadMissing('lines.invoice');
+
+        foreach ($collection->lines as $line) {
+            $invoice = $line->invoice;
+
+            if ($invoice === null) {
+                continue;
+            }
+
+            $due = $invoice->dueAmount();
+
+            if (bccomp((string) $line->amount, $due, 4) > 0) {
+                throw ValidationException::withMessages([
+                    'lines' => __('sales::validation.over_allocated', [
+                        'no' => $invoice->document_no,
+                        'due' => number_format((float) $due, 2),
+                    ]),
+                ]);
+            }
+        }
     }
 
     /**
