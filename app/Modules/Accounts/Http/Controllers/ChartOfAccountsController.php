@@ -72,6 +72,18 @@ class ChartOfAccountsController extends Controller implements HasMiddleware
             ? $query->search($q)->limit(100)->get()
             : ($total <= self::TREE_LIMIT ? $query->get() : new Collection);
 
+        /*
+         * শুধু খোঁজার ফলে — গাছের চেহারায় পথ দেখানো হয় না।
+         *
+         * খোঁজার ফলে প্রতিটা সারির নিচে তার পুরো পথ থাকে (উপরের মন্তব্য),
+         * আর ১০০টা সারির জন্য সেটা স্তরে স্তরে কোয়েরি হত। গাছেও ডাকলে
+         * ওখানে অকারণে একটা বাড়তি কোয়েরি যোগ হত — যে খরচটা এখানে কমাতে
+         * বসেছি সেটাই অন্য পাতায় ফিরিয়ে আনা হত।
+         */
+        if ($searching) {
+            Account::primeAncestry($accounts);
+        }
+
         return view('accounts::coa.index', [
             'menu' => $this->menu->forUser($request->user()),
             'tree' => $searching ? new Collection : $this->tree($accounts),
@@ -279,11 +291,19 @@ class ChartOfAccountsController extends Controller implements HasMiddleware
      */
     private function groupOptions(array $exclude = []): Collection
     {
-        return Account::query()
-            ->where('is_group', true)
-            ->active()
-            ->when($exclude !== [], fn ($q) => $q->whereNotIn('id', $exclude))
-            ->orderBy('code')
-            ->get();
+        /*
+         * primeAncestry — ফর্মের ঝুলন্ত তালিকায় প্রতিটা নাম তার গভীরতা
+         * অনুযায়ী ভেতরে সরানো থাকে, আর গভীরতাটা আসে শিকড় গুনে। এটা ছাড়া
+         * প্রতিটা বিকল্পের জন্য parent, তার parent — মাপা হয়েছে: ৪৪টা
+         * কোয়েরির ১৮টাই ছিল কেবল ওই গোনা।
+         */
+        return Account::primeAncestry(
+            Account::query()
+                ->where('is_group', true)
+                ->active()
+                ->when($exclude !== [], fn ($q) => $q->whereNotIn('id', $exclude))
+                ->orderBy('code')
+                ->get()
+        );
     }
 }

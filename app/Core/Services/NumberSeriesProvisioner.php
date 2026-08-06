@@ -73,14 +73,26 @@ final class NumberSeriesProvisioner
         return DB::transaction(function () use ($year) {
             $created = 0;
 
+            /*
+             * কোন ধরনগুলো ইতিমধ্যে আছে — একবারে, ধরনপ্রতি নয়।
+             *
+             * আগে প্রতিটা ডকুমেন্ট টাইপের জন্য আলাদা করে "আছে কি না"
+             * জিজ্ঞেস করা হত। ২৩টা ধরনের জন্য ২৩টা কোয়েরি, আর এই
+             * কাজটা নম্বর সিরিজের পাতা খোলার সময় প্রতিবারই চলে —
+             * অর্থাৎ প্রায় সবসময়ই উত্তর "হ্যাঁ, আছে", আর তবু ২৩বার
+             * জিজ্ঞেস করা হত।
+             *
+             * তালিকাটা লুপের ভেতরেই বাড়ে, তাই নতুন বসানো সিরিজ
+             * দ্বিতীয়বার বসে না — আগের exists() ঠিক এই কাজটাই করত।
+             */
+            $existing = NumberSeries::query()
+                ->where('financial_year_id', $year->id)
+                ->pluck('doc_type')
+                ->flip();
+
             foreach ($this->registry->all() as $module) {
                 foreach (array_keys($module->docTypes) as $docType) {
-                    $exists = NumberSeries::query()
-                        ->where('doc_type', $docType)
-                        ->where('financial_year_id', $year->id)
-                        ->exists();
-
-                    if ($exists) {
+                    if ($existing->has($docType)) {
                         continue;
                     }
 
@@ -95,6 +107,7 @@ final class NumberSeriesProvisioner
                         'financial_year_id' => $year->id,
                     ]);
 
+                    $existing->put($docType, true);
                     $created++;
                 }
             }

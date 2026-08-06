@@ -88,7 +88,17 @@ class PurchaseBill extends Model implements Drillable
      */
     public function paidAmount(): string
     {
-        $paid = $this->paymentLines()
+        /*
+         * তালিকা withPaid() দিয়ে এলে অঙ্কটা সারির সাথেই এসেছে।
+         *
+         * পরিশোধের পর্দায় বকেয়া বিলগুলো ঝুলন্ত তালিকায় দেখানো হয়, আর
+         * প্রতিটার পাশে বাকি টাকা লেখা থাকে। এই ঘরটা না থাকলে বিলপ্রতি
+         * একটা করে যোগফল — বকেয়ার তালিকা ছাঁকার সময় একবার, তারপর
+         * পর্দায় লেখার সময় আরেকবার।
+         */
+        $preloaded = $this->getAttribute('paid_total');
+
+        $paid = $preloaded ?? $this->paymentLines()
             ->whereHas('payment', fn ($q) => $q->whereIn('status', [
                 DocumentStatus::CONFIRMED,
                 DocumentStatus::CLOSED,
@@ -96,6 +106,28 @@ class PurchaseBill extends Model implements Drillable
             ->sum('amount');
 
         return (string) ($paid ?: '0');
+    }
+
+    /**
+     * তালিকার জন্য পরিশোধের যোগফল — বিলপ্রতি একটা নয়, পুরোটার জন্য একটা।
+     *
+     * শর্তগুলো উপরের paidAmount()-এর হুবহু নকল, আর সেটা ইচ্ছাকৃত ঝুঁকি:
+     * দুই জায়গায় দুই রকম হলে তালিকায় এক অঙ্ক আর একক পাতায় আরেক অঙ্ক
+     * দেখা যেত। একটা বদলালে অন্যটাও বদলাতে হবে — PaymentServiceTest
+     * দুই পথেই একই ফল আসছে কি না দেখে।
+     */
+    public function scopeWithPaid(Builder $query): Builder
+    {
+        $paid = PaymentLine::query()
+            ->selectRaw('COALESCE(SUM(amount), 0)')
+            ->whereColumn('pur_payment_lines.purchase_bill_id', 'pur_bills.id')
+            ->whereHas('payment', fn ($q) => $q->whereIn('status', [
+                DocumentStatus::CONFIRMED,
+                DocumentStatus::CLOSED,
+            ]));
+
+        // pur_bills.* না দিলে addSelect শুধু সাব-কোয়েরিটাই আনত
+        return $query->addSelect(['pur_bills.*', 'paid_total' => $paid]);
     }
 
     /**

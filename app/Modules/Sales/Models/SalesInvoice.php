@@ -109,7 +109,13 @@ class SalesInvoice extends Model implements Drillable
          * ধরা পড়েছে ক্রয়ের আয়না বানাতে গিয়ে, ওখানে একই ভুলটা নকল
          * হওয়ার পর।
          */
-        $collected = $this->collectionLines()
+        /*
+         * তালিকা withCollected() দিয়ে এলে অঙ্কটা সারির সাথেই এসেছে —
+         * আদায়ের পর্দায় ২০০টা বকেয়া বিলের জন্য ২০০টা যোগফল নয়, একটা।
+         */
+        $preloaded = $this->getAttribute('collected_total');
+
+        $collected = $preloaded ?? $this->collectionLines()
             ->whereHas('collection', fn ($q) => $q->whereIn('status', [
                 DocumentStatus::CONFIRMED,
                 DocumentStatus::CLOSED,
@@ -117,6 +123,28 @@ class SalesInvoice extends Model implements Drillable
             ->sum('amount');
 
         return (string) ($collected ?: '0');
+    }
+
+    /**
+     * তালিকার জন্য আদায়ের যোগফল — বিলপ্রতি একটা নয়, পুরোটার জন্য একটা।
+     *
+     * শর্তগুলো উপরের collectedAmount()-এর হুবহু নকল, আর সেটা ইচ্ছাকৃত:
+     * দুই জায়গায় দুই রকম হলে তালিকায় এক অঙ্ক আর একক পাতায় আরেক অঙ্ক
+     * দেখা যেত — আর এই মডেলে ঠিক ওই ধরনের ভুল (খসড়া আদায় গোনা) একবার
+     * ঘটেছে। একটা বদলালে অন্যটাও বদলাতে হবে।
+     */
+    public function scopeWithCollected(Builder $query): Builder
+    {
+        $collected = CollectionLine::query()
+            ->selectRaw('COALESCE(SUM(amount), 0)')
+            ->whereColumn('sal_collection_lines.sales_invoice_id', 'sal_invoices.id')
+            ->whereHas('collection', fn ($q) => $q->whereIn('status', [
+                DocumentStatus::CONFIRMED,
+                DocumentStatus::CLOSED,
+            ]));
+
+        // sal_invoices.* না দিলে addSelect শুধু সাব-কোয়েরিটাই আনত
+        return $query->addSelect(['sal_invoices.*', 'collected_total' => $collected]);
     }
 
     public function dueAmount(): string

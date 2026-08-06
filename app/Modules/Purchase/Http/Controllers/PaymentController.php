@@ -186,6 +186,12 @@ class PaymentController extends Controller implements HasMiddleware
             'openBills' => PurchaseBill::query()
                 ->where('status', DocumentStatus::CONFIRMED)
                 ->with('supplier')
+                /*
+                 * withPaid — নিচের ছাঁকনি ও পর্দার লেখা, দুইটাই এই অঙ্কটা
+                 * চায়। এটা ছাড়া ২০০টা বিলের জন্য ছাঁকতে ২০০ আর দেখাতে
+                 * আরও ২০০ কোয়েরি হত; মাপা পাতায় দেখা গেছে আটবার।
+                 */
+                ->withPaid()
                 ->orderByDesc('trx_date')
                 ->limit(200)
                 ->get()

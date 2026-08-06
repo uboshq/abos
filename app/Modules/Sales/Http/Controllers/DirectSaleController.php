@@ -53,7 +53,15 @@ class DirectSaleController extends Controller implements HasMiddleware
     public function create(Request $request): View
     {
         $warehouse = $this->warehouse($request);
-        $customers = Customer::query()->active()->orderBy('name_en')->get();
+        /*
+         * withOutstanding() — নিচের customerTerms-এর জন্য, আর কারণটা গোনার।
+         *
+         * প্রতিটা গ্রাহকের বকেয়া ওখানে চাওয়া হয়। স্কোপটা না দিলে
+         * outstanding() নিজে থেকে খাতা খুঁজত — গ্রাহকপ্রতি একটা কোয়েরি।
+         * ছয়জনের ডেমোতে সেটা চোখে পড়ে না, তিন হাজার গ্রাহকের ডিপোতে
+         * কাউন্টারের পাতা খোলা মানেই তিন হাজার কোয়েরি।
+         */
+        $customers = Customer::query()->active()->withOutstanding()->orderBy('name_en')->get();
 
         return view('sales::direct.index', [
             'menu' => $this->menu->forUser($request->user()),
