@@ -22,6 +22,61 @@
 
     <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+    {{--
+        মাউস পৌঁছালেই পাতাটা আনা শুরু — ক্লিকের অপেক্ষা নয়।
+
+        ── কেন এটা লাগল ────────────────────────────────────────────────
+        সার্ভার একটা পাতা ১৩০ মিলিসেকেন্ডে দেয়, সেটা ধীর নয়। কিন্তু
+        ABOS-এর প্রতিটা ক্লিকে গোটা পাতা নতুন করে আসে, আর ওই ১৩০
+        মিলিসেকেন্ড ফাঁকা পর্দা হিসেবে চোখে পড়ে। ব্যবহারকারী তুলনা করেন
+        এমন সফটওয়্যারের সাথে যেখানে ক্লিকে শুধু ভেতরটা বদলায়।
+
+        মেনুর উপর মাউস আসা আর ক্লিক পড়ার মাঝে গড়ে ২০০ মিলিসেকেন্ড থাকে।
+        eagerness: moderate ঠিক ওই সময়টাতেই আনা শুরু করে, তাই ক্লিক পড়ার
+        সময় পাতাটা ব্রাউজারের হাতেই থাকে।
+
+        ── কোনগুলো বাদ, আর কেন ─────────────────────────────────────────
+        prefetch মানে সার্ভারে সত্যিকারের একটা GET যায়। যে ঠিকানাগুলো
+        শুধু দেখায় না, কিছু করে বা ভারী কাজ করে, সেগুলো মাউস ছুঁলেই
+        চলে গেলে ভুল হত:
+
+          • ছাপার পাতা — mPDF পুরো কাগজ বানায়, শুধু হাত সরে গেলেই নয়
+          • সংযুক্তি ও storage — ফাইল নামানো শুরু হয়ে যেত
+          • export=csv — ওটাও ফাইল, আর তালিকা পুরোটা টানে
+          • login/logout — সেশনের সাথে খেলা চলে না
+
+        নতুন কোনো লিংক যদি দেখানো ছাড়া আর কিছু করে, তাতে
+        data-no-prefetch বসালেই সে বাদ পড়ে — নিচের শেষ নিয়মটা তা ধরে।
+        prerender নয়, prefetch — prerender পাতার JavaScript-ও চালিয়ে
+        ফেলত, আর তখন "দেখা" আর "করা"-র সীমারেখা ঝাপসা হয়ে যেত।
+
+        যে ব্রাউজার এটা বোঝে না সে চুপচাপ উপেক্ষা করে; কিছুই ভাঙে না।
+    --}}
+    <script type="speculationrules">
+    {
+        "prefetch": [{
+            "where": {
+                "and": [
+                    { "href_matches": "/*" },
+                    { "not": { "href_matches": "/sales/print/*" } },
+                    { "not": { "href_matches": "/hr/payslips/*" } },
+                    { "not": { "href_matches": "/hr/payroll/*/payslips" } },
+                    { "not": { "href_matches": "/hr/payroll/*/bank-file" } },
+                    { "not": { "href_matches": "/attachments/*" } },
+                    { "not": { "href_matches": "/storage/*" } },
+                    { "not": { "href_matches": "/login" } },
+                    { "not": { "href_matches": "/logout" } },
+                    { "not": { "href_matches": { "pathname": "/*", "search": "*export=*" } } },
+                    { "not": { "selector_matches": "[data-no-prefetch]" } },
+                    { "not": { "selector_matches": "[download]" } },
+                    { "not": { "selector_matches": "[target=_blank]" } }
+                ]
+            },
+            "eagerness": "moderate"
+        }]
+    }
+    </script>
 </head>
 
 <body class="min-h-dvh">
