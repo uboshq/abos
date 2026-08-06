@@ -304,7 +304,13 @@
                              কারণ ফাইলটা এই পাতারই সারিগুলো নিয়ে বেরোয়।
                              বাদ দিলে তিন নম্বর পাতা থেকে রপ্তানি করলে এক
                              নম্বর পাতা নেমে আসত, আর কেউ টের পেত না। --}}
+                        {{-- data-no-prefetch — মাউস ছুঁলেই ফাইল বানানো শুরু হয় না।
+                             শেল ঠিকানার ধরন দেখে বাদ দেওয়ার চেষ্টা করে, কিন্তু
+                             এখানে export প্যারামিটারটা কততম হবে তা আগে থেকে জানা
+                             নেই (খোঁজা/সাজানো/পাতা সবই সাথে যায়), তাই লিংকটাই
+                             নিজে বলে দেয়। --}}
                         <a href="{{ url()->current().'?'.http_build_query(request()->query() + ['export' => 'csv']) }}"
+                           data-no-prefetch
                            class="block px-3 py-2 text-sm hover:bg-(--color-surface-hover)">
                             {{ __('core.toolbar.export_csv') }}
                             <span class="block text-2xs text-(--color-ink-muted)">
