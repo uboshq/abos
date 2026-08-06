@@ -98,6 +98,10 @@
             </div>
         </section>
 
+        {{-- গ্রাহকের সই করা চালানের কপি — ডেলিভারি নিয়ে প্রশ্ন উঠলে
+             এটাই একমাত্র প্রমাণ --}}
+        <x-ui.attachments :document="$challan" />
+
         @can('delete', $challan)
             @if ($challan->status !== \App\Core\Support\DocumentStatus::CANCELLED)
                 <x-sales::cancel-form :action="route('sales.challan.cancel', $challan)" />

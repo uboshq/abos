@@ -65,6 +65,18 @@ return [
         'exit_fullscreen' => 'Exit full screen (Esc)',
     ],
 
+    'attachment' => [
+        'title' => 'Papers',
+        'none' => 'No papers have been added to this document.',
+        'upload' => 'Add a paper',
+        'remove' => 'Remove',
+        'uploaded' => 'The paper was added.',
+        'removed' => 'The paper was removed.',
+        'limit' => 'Up to 10 MB. Images, PDF, Excel are fine; programs are not.',
+        'unknown_source' => 'Papers cannot be kept against this kind of document.',
+        'refused' => 'The file was not accepted — :reason',
+    ],
+
     'dashboard' => [
         'today' => 'Today',
         'this_month' => 'This month',

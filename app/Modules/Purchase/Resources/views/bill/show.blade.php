@@ -91,6 +91,10 @@
             </div>
         </section>
 
+        {{-- সরবরাহকারীর আসল বিলের ছবি বা স্ক্যান — মিলিয়ে দেখার জন্য
+             ছয় মাস পরেও এটাই লাগে --}}
+        <x-ui.attachments :document="$bill" />
+
         @can('delete', $bill)
             @if ($bill->status !== \App\Core\Support\DocumentStatus::CANCELLED)
                 <x-purchase::cancel-form :action="route('purchase.bill.cancel', $bill)" />
