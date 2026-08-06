@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\Purchase\Dashboard\PurchaseWidgets;
 use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Purchase\Models\PurchaseOrder;
 use App\Modules\Purchase\Models\PurchaseReceipt;
@@ -94,6 +95,10 @@ return [
 
     'reports' => [
         PurchaseReports::class,
+    ],
+
+    'widgets' => [
+        PurchaseWidgets::class,
     ],
 
     'settings' => [

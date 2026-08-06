@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\Sales\Dashboard\SalesWidgets;
 use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesInvoice;
@@ -100,6 +101,11 @@ return [
 
     'reports' => [
         SalesReports::class,
+    ],
+
+    // হোম পর্দার সংখ্যাগুলো — কোর জিজ্ঞেস করে, মডিউল উত্তর দেয়
+    'widgets' => [
+        SalesWidgets::class,
     ],
 
     'settings' => [

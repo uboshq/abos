@@ -66,6 +66,10 @@ return [
     ],
 
     'dashboard' => [
+        'today' => 'Today',
+        'this_month' => 'This month',
+        'needs_doing' => 'Needs doing',
+        'nothing_to_show' => 'Nothing to show here — the figures come from the modules you have permission to open.',
         'foundation_ready' => 'The foundation is in place',
         'foundation_note' => 'Core engines, tenant scoping, approvals, attachments and both languages are working. Modules sit on top of this.',
     ],
@@ -115,6 +119,8 @@ return [
 
     'table' => [
         'date' => 'Date',
+        'from_date' => 'From date',
+        'to_date' => 'To date',
         'document' => 'Document',
         'party' => 'Party',
         'debit' => 'Debit',

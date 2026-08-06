@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Module;
 
+use App\Core\Contracts\DashboardWidgets;
 use App\Core\Contracts\Importer;
 use InvalidArgumentException;
 
@@ -46,6 +47,16 @@ final class ModuleDefinition
          * @var list<class-string>
          */
         public readonly array $reports,
+
+        /**
+         * হোম পর্দার উইজেট সরবরাহকারীরা — DashboardWidgets বাস্তবায়ন করে।
+         *
+         * কোর কোনো মডিউলের নাম জানে না, তাই হোম পর্দার সংখ্যাগুলো
+         * মডিউলের দিক থেকেই আসে (সেকশন ১৯.৭)।
+         *
+         * @var list<class-string>
+         */
+        public readonly array $widgets,
 
         /**
          * পুরনো খাতা থেকে কী কী আনা যায়।
@@ -147,6 +158,7 @@ final class ModuleDefinition
             drillSources: $raw['drill_sources'] ?? [],
             settings: array_values($raw['settings'] ?? []),
             reports: self::validateReports($raw['reports'] ?? [], $path),
+            widgets: self::validateWidgets($raw['widgets'] ?? [], $raw['permissions'] ?? [], $path),
             imports: self::validateImports($raw['imports'] ?? [], $path),
             path: $path,
             namespace: $namespace,
@@ -180,6 +192,47 @@ final class ModuleDefinition
         }
 
         return $imports;
+    }
+
+    /**
+     * উইজেট সরবরাহকারীরা — বুট-টাইমেই যাচাই।
+     *
+     * ── কেন অনুমতিগুলোও এখানে মিলিয়ে দেখা হয় না ─────────────────────
+     * দেখা হয়, আর কারণটা মেনুর মতোই: উইজেট এমন কোনো অনুমতি চাইলে যা
+     * মডিউল ঘোষণাই করেনি, সেটা কাউকে কখনো দেওয়া হত না — ফলে সংখ্যাটা
+     * চিরকাল অদৃশ্য থাকত, কোনো ভুলের বার্তা ছাড়াই। কিন্তু উইজেটের
+     * অনুমতি জানা যায় কেবল widgets() ডাকলে, আর সেটা বুট-টাইমে ডাকা
+     * চলে না (কোয়েরি চালাবে, তখনো ডাটাবেজ প্রসঙ্গ নেই)। তাই এখানে
+     * কেবল ক্লাস ও চুক্তি, আর অনুমতির মিলটা DashboardTest ধরে।
+     *
+     * @param  list<mixed>  $widgets
+     * @param  list<mixed>  $permissions
+     * @return list<class-string>
+     */
+    private static function validateWidgets(array $widgets, array $permissions, string $path): array
+    {
+        foreach ($widgets as $class) {
+            if (! is_string($class) || ! class_exists($class)) {
+                throw new InvalidArgumentException(
+                    "{$path}: dashboard widget provider '".(is_string($class) ? $class : gettype($class))."' does not exist."
+                );
+            }
+
+            if (! is_subclass_of($class, DashboardWidgets::class)) {
+                throw new InvalidArgumentException(
+                    "{$path}: widget provider {$class} must implement the DashboardWidgets contract."
+                );
+            }
+        }
+
+        if ($widgets !== [] && $permissions === []) {
+            throw new InvalidArgumentException(
+                "{$path}: a module offering dashboard widgets must declare permissions — every widget names one, "
+                .'and a permission nobody can be granted makes the figure invisible to everyone.'
+            );
+        }
+
+        return array_values($widgets);
     }
 
     /**

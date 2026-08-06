@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\Hr\Dashboard\HrWidgets;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\PayrollRun;
 
@@ -87,6 +88,10 @@ return [
     'drill_sources' => [
         'employee' => Employee::class,
         'payroll_run' => PayrollRun::class,
+    ],
+
+    'widgets' => [
+        HrWidgets::class,
     ],
 
     'settings' => [
