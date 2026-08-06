@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Services;
 
+use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use Illuminate\Support\Carbon;
@@ -56,8 +57,17 @@ final class StatusNotices
             return [];
         }
 
+        /*
+         * ক্যাশের চাবিতে ব্যবহারকারীও।
+         *
+         * অনুমোদনের নোটিশটা এখন "আপনার সিদ্ধান্তের অপেক্ষায় কয়টা" —
+         * অর্থাৎ একই কোম্পানির দুইজন দুইটা আলাদা সংখ্যা দেখেন। শুধু
+         * কোম্পানি ধরে ক্যাশ করলে যিনি আগে পাতা খুলতেন তাঁর সংখ্যাটাই
+         * পরের জনের ঘণ্টায় বসত — আর সেটা কেবল ভুল নয়, ফাঁসও: যাঁর
+         * সিদ্ধান্তের অধিকার নেই তিনিও দেখে ফেলতেন কিছু ঝুলে আছে।
+         */
         return Cache::remember(
-            "abos.notice.{$companyId}",
+            "abos.notice.{$companyId}.".(auth()->id() ?? 0),
             self::TTL,
             fn () => array_values(array_filter([
                 $this->backupNotice(),
@@ -117,14 +127,28 @@ final class StatusNotices
      */
     private function approvalNotice(): ?array
     {
-        if (! Schema::hasTable('approvals')) {
+        $user = auth()->user();
+
+        if ($user === null || ! Schema::hasTable('approvals')) {
             return null;
         }
 
-        $count = DB::table('approvals')
-            ->where('company_id', CompanyContext::id())
-            ->where('status', 'pending')
-            ->count();
+        /*
+         * "আমার সিদ্ধান্তের অপেক্ষায়", কোম্পানির মোট নয়।
+         *
+         * আগে এখানে কোম্পানির সব অপেক্ষমাণ অনুরোধ গোনা হত। ফলে যিনি
+         * কোনো ছকেই নেই তিনিও রোজ "৩টি সিদ্ধান্তের অপেক্ষায়" দেখতেন
+         * আর কিছুই করতে পারতেন না — আর যিনি সত্যিই সিদ্ধান্ত দেবেন
+         * তিনিও বুঝতেন না কয়টা তাঁর।
+         *
+         * যে সংখ্যা দেখে কিছু করার নেই, মানুষ সেটা দেখা বন্ধ করে দেয় —
+         * আর তারপর যেদিন সংখ্যাটা তাঁরই, সেদিনও দেখে না।
+         */
+        if ($user->cannot('approval.decide')) {
+            return null;
+        }
+
+        $count = app(ApprovalEngine::class)->pendingFor($user)->count();
 
         if ($count === 0) {
             return null;
@@ -132,7 +156,15 @@ final class StatusNotices
 
         return [
             'text' => trans_choice('core.notice.awaiting_decision', $count, ['count' => $count]),
-            'url' => null,
+
+            /*
+             * লিংকটা এখন আছে।
+             *
+             * নোটিশটা লেখা হয়েছিল অনুমোদনের পর্দা তৈরি হওয়ার আগে, তাই
+             * url ছিল null — অর্থাৎ "তিনটা ঝুলে আছে" জানা যেত, কিন্তু
+             * কোথায় গিয়ে সিদ্ধান্ত দিতে হবে তা নয়।
+             */
+            'url' => Route::has('approval.inbox.index') ? route('approval.inbox.index') : null,
             'tone' => 'pending',
         ];
     }

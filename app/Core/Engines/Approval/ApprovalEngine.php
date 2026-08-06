@@ -28,6 +28,13 @@ use RuntimeException;
 final class ApprovalEngine
 {
     /**
+     * এই অনুরোধে যে ছকগুলো ইতিমধ্যে খোঁজা হয়েছে।
+     *
+     * @var array<string, ?ApprovalFlow>
+     */
+    private array $flowCache = [];
+
+    /**
      * অনুমোদন লাগবে কি না — লাগলে অনুরোধ তৈরি করে ফেরত দেয়, নাহলে null।
      *
      * null ফেরা মানে "এগিয়ে যাও", তাই কলিং কোড সরল থাকে:
@@ -254,6 +261,24 @@ final class ApprovalEngine
     {
         $documentType = $document !== null ? class_basename($document) : null;
 
+        /*
+         * একই অনুরোধের ভেতরে একই ছক বারবার খোঁজা হয় না।
+         *
+         * ── কেন এটা দরকার হলো ───────────────────────────────────────
+         * pendingFor() প্রতিটা অপেক্ষমাণ অনুরোধের জন্য canDecide() ডাকে,
+         * আর সেটা প্রতিবার ছক খোঁজে — বিশটা অনুরোধ মানে বিশটা কোয়েরি,
+         * আর তার সাথে বিশবার steps। ঘণ্টাটা এখন প্রতিটা পাতায় এই
+         * হিসাবটা করে, তাই খরচটা আর কোণে পড়ে থাকে না।
+         *
+         * অনুরোধের মধ্যে ছক বদলায় না: ছক সংরক্ষণ করলে পরের পাতাটা
+         * নতুন অনুরোধ, আর সেখানে ক্যাশটাও নতুন।
+         */
+        $key = $module.'|'.$action.'|'.($documentType ?? '');
+
+        if (array_key_exists($key, $this->flowCache)) {
+            return $this->flowCache[$key];
+        }
+
         $query = ApprovalFlow::query()
             ->where('module', $module)
             ->where('action', $action)
@@ -264,7 +289,7 @@ final class ApprovalEngine
             $specific = (clone $query)->where('document_type', $documentType)->first();
 
             if ($specific !== null) {
-                return $specific;
+                return $this->flowCache[$key] = $specific;
             }
         }
 
@@ -274,7 +299,7 @@ final class ApprovalEngine
          * NULL রাখলে unique index কাজ করত না (MySQL-এ NULL ≠ NULL), আর
          * একই কাজে দুইটা ছক বসে যেত — একটা চলত, অন্যটা নীরবে মরে থাকত।
          */
-        return $query->where('document_type', '')->first();
+        return $this->flowCache[$key] = $query->where('document_type', '')->first();
     }
 
     private function assertPending(Approval $approval): void
