@@ -261,6 +261,78 @@ class ChartOfAccountsTest extends TestCase
         $this->assertNotNull(Account::query()->find($leaf->id));
     }
 
+    /**
+     * একবারে বসানো শিকড় আর সারিপ্রতি হাঁটা — একই পথ দিতে হবে।
+     *
+     * ── কেন এটা আলাদা করে পরীক্ষা করা হয় ────────────────────────────
+     * খাতের ফর্মে ঝুলন্ত তালিকার প্রতিটা নাম তার গভীরতা অনুযায়ী ভেতরে
+     * সরানো থাকে, আর গভীরতাটা আসে শিকড় গুনে। আগে প্রতিটা বিকল্পের
+     * জন্য parent, তার parent — স্তরে স্তরে কোয়েরি হত (মাপা: ৪৪টার
+     * ১৮টাই ওই গোনা)। primeAncestry() একবারে সবগুলো বসায়।
+     *
+     * ভুল হলে চোখে পড়ত না — শুধু ইনডেন্টেশন সরে যেত, আর "১১০১ নগদ"
+     * দেখে মনে হত ওটা একটা মূল খাত, অথচ ওটা "১১০০ চলতি সম্পদ"-এর নিচে।
+     */
+    public function test_primed_ancestry_matches_walking_row_by_row(): void
+    {
+        $top = $this->make(['code' => '9000', 'is_group' => true]);
+        $mid = $this->make(['code' => '9010', 'is_group' => true, 'parent_id' => $top->id]);
+        $leaf = $this->make(['code' => '9011', 'parent_id' => $mid->id]);
+
+        $walked = Account::query()->get()
+            ->mapWithKeys(fn (Account $a) => [$a->id => $a->ancestors()->pluck('id')->all()]);
+
+        $primed = Account::primeAncestry(Account::query()->get());
+
+        foreach ($primed as $account) {
+            $this->assertSame(
+                $walked[$account->id],
+                $account->ancestors()->pluck('id')->all(),
+                "খাত {$account->code}-এর শিকড় দুই পথে দুই রকম",
+            );
+        }
+
+        $primedLeaf = $primed->firstWhere('id', $leaf->id);
+        $this->assertSame([$top->id, $mid->id], $primedLeaf->ancestors()->pluck('id')->all());
+    }
+
+    /**
+     * নিষ্ক্রিয় বাবা থাকলেও পথটা কাটা যায় না।
+     *
+     * primeAncestry() তালিকার খাতগুলো নয়, কোম্পানির সব খাত দেখে শিকড়
+     * বানায় — ঠিক এই কারণেই। শুধু তালিকারগুলো দেখলে একটা নিষ্ক্রিয়
+     * গোষ্ঠীর নিচের সক্রিয় খাতটা মূল খাত বলে দেখাত।
+     */
+    public function test_an_inactive_group_still_appears_in_the_path(): void
+    {
+        $top = $this->make(['code' => '9000', 'is_group' => true]);
+        $leaf = $this->make(['code' => '9001', 'parent_id' => $top->id]);
+
+        $top->forceFill(['is_active' => false])->save();
+
+        $primed = Account::primeAncestry(Account::query()->active()->get());
+        $primedLeaf = $primed->firstWhere('id', $leaf->id);
+
+        $this->assertSame([$top->id], $primedLeaf->ancestors()->pluck('id')->all());
+    }
+
+    /**
+     * শিকড় বসানো খাতটা এরপরও সেভ করা যায়।
+     *
+     * ancestor_chain টেবিলের কোনো কলাম নয়। Eloquent ওটাকে "বদলে গেছে"
+     * ধরলে save() ওই নামে একটা কলাম লিখতে যেত আর ভেঙে পড়ত।
+     */
+    public function test_a_primed_account_can_still_be_saved(): void
+    {
+        $account = $this->make(['code' => '9002']);
+
+        $primed = Account::primeAncestry(Account::query()->whereKey($account->id)->get())->first();
+        $primed->name_en = 'Renamed from the list';
+        $primed->save();
+
+        $this->assertSame('Renamed from the list', $account->fresh()->name_en);
+    }
+
     public function test_activating_a_child_activates_its_parents_too(): void
     {
         $top = $this->make(['code' => '9000', 'is_group' => true]);

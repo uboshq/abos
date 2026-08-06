@@ -359,6 +359,68 @@ class PurchasePaymentTest extends TestCase
     }
 
     /** ওই অঙ্কের একটা নিশ্চিত ক্রয় বিল। */
+    /**
+     * তালিকার সাব-কোয়েরি আর বিলপ্রতি যোগফল — একই উত্তর দিতে হবে।
+     *
+     * ── কেন এই পরীক্ষাটা আলাদা করে দরকার ────────────────────────────
+     * পরিশোধের পর্দায় ২০০টা বকেয়া বিল দেখানো হয়, আর প্রতিটার পাশে
+     * বাকি টাকা লেখা থাকে। আগে ওই অঙ্কটা বিলপ্রতি একটা করে কোয়েরিতে
+     * আসত; এখন withPaid() একটা সাব-কোয়েরিতে সবগুলো আনে।
+     *
+     * দুইটা এখন আলাদা কোড, একই শর্ত হাতে নকল করা — আর ঠিক এখানেই
+     * বিপদ। কেউ একটা পথের শর্ত বদলে অন্যটা ভুলে গেলে তালিকায় এক অঙ্ক
+     * আর বিল খুলে আরেক অঙ্ক দেখা যেত, আর কেউ টেরও পেত না। তাই দুইটা
+     * পথ একই উত্তরে পৌঁছায় কি না সেটা পরীক্ষা করা হয়, শুধু অঙ্কটা ঠিক
+     * কি না তা নয়।
+     *
+     * খসড়া পরিশোধটাও ইচ্ছে করে রাখা: সাব-কোয়েরিতে স্ট্যাটাসের ছাঁকনি
+     * বাদ পড়লে ওইটাই ধরিয়ে দেবে।
+     */
+    public function test_the_list_subquery_and_the_per_bill_sum_agree(): void
+    {
+        $bill = $this->confirmedBill('1000');
+
+        $this->payments()->confirm(
+            $this->payments()->create(
+                ['supplier_id' => $this->supplier->id, 'trx_date' => now()->toDateString(), 'amount' => '300'],
+                [['purchase_bill_id' => $bill->id, 'amount' => '300']],
+            )
+        );
+
+        // খসড়াটা গোনা চলবে না — টাকা এখনো যায়নি
+        $this->payments()->create(
+            ['supplier_id' => $this->supplier->id, 'trx_date' => now()->toDateString(), 'amount' => '250'],
+            [['purchase_bill_id' => $bill->id, 'amount' => '250']],
+        );
+
+        $fromList = PurchaseBill::query()->withPaid()->whereKey($bill->id)->firstOrFail();
+        $fromBill = PurchaseBill::query()->whereKey($bill->id)->firstOrFail();
+
+        $this->assertSame('300.0000', $fromBill->paidAmount());
+        $this->assertSame($fromBill->paidAmount(), $fromList->paidAmount());
+        $this->assertSame($fromBill->dueAmount(), $fromList->dueAmount());
+        $this->assertSame('700.0000', $fromList->dueAmount());
+    }
+
+    /**
+     * তালিকা থেকে আসা বিলটা সেভ করা যায়।
+     *
+     * paid_total টেবিলের কোনো কলাম নয়, সাব-কোয়েরি থেকে আসা একটা ঘর।
+     * Eloquent ওটাকে "বদলে গেছে" ধরলে save() ওই নামে একটা কলাম লিখতে
+     * যেত আর SQL ভেঙে পড়ত — অর্থাৎ তালিকা দিয়ে আনা কোনো বিল আর
+     * সম্পাদনা করা যেত না।
+     */
+    public function test_a_bill_from_the_list_can_still_be_saved(): void
+    {
+        $bill = $this->confirmedBill('1000');
+
+        $fromList = PurchaseBill::query()->withPaid()->whereKey($bill->id)->firstOrFail();
+        $fromList->narration = 'তালিকা থেকে সম্পাদনা';
+        $fromList->save();
+
+        $this->assertSame('তালিকা থেকে সম্পাদনা', $bill->fresh()->narration);
+    }
+
     private function confirmedBill(string $total): PurchaseBill
     {
         return $this->bills()->confirm(

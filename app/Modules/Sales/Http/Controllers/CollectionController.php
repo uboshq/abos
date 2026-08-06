@@ -176,8 +176,10 @@ class CollectionController extends Controller implements HasMiddleware
                     ->whereIn('code', [StandardChart::CASH_IN_HAND,
                         StandardChart::BANK_AND_MFS])->select('id'))
                 ->orderBy('code')->get(),
+            // withCollected — পর্দায় প্রতিটা বিলের পাশে বাকি টাকা লেখা
+            // থাকে, আর সেটা বিলপ্রতি একটা করে যোগফল চালাত
             'openInvoices' => SalesInvoice::query()->where('status', DocumentStatus::CONFIRMED)
-                ->with('customer')->orderByDesc('trx_date')->limit(200)->get(),
+                ->with('customer')->withCollected()->orderByDesc('trx_date')->limit(200)->get(),
         ];
     }
 

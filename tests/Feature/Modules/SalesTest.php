@@ -440,6 +440,58 @@ class SalesTest extends TestCase
         $this->assertSame(0, bccomp($second->fresh()->dueAmount(), '0', 4));
     }
 
+    /**
+     * তালিকার সাব-কোয়েরি আর বিলপ্রতি যোগফল — একই উত্তর দিতে হবে।
+     *
+     * আদায়ের পর্দায় বকেয়া বিলগুলো একসাথে দেখানো হয়, আর প্রতিটার পাশে
+     * বাকি টাকা লেখা থাকে। withCollected() ওই অঙ্কগুলো একটা সাব-কোয়েরিতে
+     * আনে, আর collectedAmount() একটা বিলের জন্য নিজে যোগ করে। দুইটা
+     * আলাদা কোড, শর্তগুলো হাতে নকল করা — একটা বদলে অন্যটা না বদলালে
+     * তালিকায় এক অঙ্ক আর বিল খুলে আরেক অঙ্ক দেখা যেত।
+     *
+     * খসড়া আদায়টা ইচ্ছে করে রাখা: এই মডেলে ঠিক ওই ভুলটাই একবার হয়েছিল
+     * (খসড়া গোনা হত), আর সাব-কোয়েরিতে ছাঁকনি বাদ পড়লে ওইটাই ধরাবে।
+     */
+    public function test_the_list_subquery_and_the_per_invoice_sum_agree(): void
+    {
+        $invoice = $this->invoices()->confirm($this->makeInvoice(null, '10', '100'));
+
+        $this->collections()->confirm($this->collections()->create(
+            ['customer_id' => $this->customer->id, 'trx_date' => now()->toDateString(), 'amount' => '300'],
+            [['sales_invoice_id' => $invoice->id, 'amount' => '300']],
+        ));
+
+        // খসড়া — টাকা এখনো হাতে আসেনি, গোনা চলবে না
+        $this->collections()->create(
+            ['customer_id' => $this->customer->id, 'trx_date' => now()->toDateString(), 'amount' => '200'],
+            [['sales_invoice_id' => $invoice->id, 'amount' => '200']],
+        );
+
+        $fromList = SalesInvoice::query()->withCollected()->whereKey($invoice->id)->firstOrFail();
+        $fromInvoice = SalesInvoice::query()->whereKey($invoice->id)->firstOrFail();
+
+        $this->assertSame('300.0000', $fromInvoice->collectedAmount());
+        $this->assertSame($fromInvoice->collectedAmount(), $fromList->collectedAmount());
+        $this->assertSame($fromInvoice->dueAmount(), $fromList->dueAmount());
+    }
+
+    /**
+     * তালিকা থেকে আসা বিলটা সেভ করা যায়।
+     *
+     * collected_total টেবিলের কলাম নয়, সাব-কোয়েরির ঘর। Eloquent ওটাকে
+     * "বদলে গেছে" ধরলে save() ওই নামে কলাম লিখতে গিয়ে ভেঙে পড়ত।
+     */
+    public function test_an_invoice_from_the_list_can_still_be_saved(): void
+    {
+        $invoice = $this->invoices()->confirm($this->makeInvoice(null, '2', '100'));
+
+        $fromList = SalesInvoice::query()->withCollected()->whereKey($invoice->id)->firstOrFail();
+        $fromList->narration = 'তালিকা থেকে সম্পাদনা';
+        $fromList->save();
+
+        $this->assertSame('তালিকা থেকে সম্পাদনা', $invoice->fresh()->narration);
+    }
+
     /** বিলের বকেয়ার চেয়ে বেশি বসানো যায় না। */
     public function test_more_than_the_invoice_due_cannot_be_allocated(): void
     {

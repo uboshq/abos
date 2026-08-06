@@ -42,6 +42,9 @@ use Illuminate\Validation\ValidationException;
  */
 final class YearEndService
 {
+    /** কোম্পানির ভাষা — narration() দেখুন, কেন একবারই দেখা হয়। */
+    private ?string $companyLocale = null;
+
     public function __construct(
         private readonly PostingEngine $posting,
         private readonly NumberSeriesProvisioner $series,
@@ -384,7 +387,18 @@ final class YearEndService
      */
     private function narration(bool $open = false): string
     {
-        $locale = Company::query()->whereKey(CompanyContext::id())->value('locale');
+        /*
+         * ভাষাটা একবার দেখা — বছর বন্ধের পাতায় এই মেথডটা কয়েকবার ডাকা
+         * হয়, আর প্রতিবার একই কোম্পানির একই ঘরটা জিজ্ঞেস করা হত।
+         * মনে রাখাটা কেবল এই রিকোয়েস্টের জন্য; সার্ভিসের বস্তুটা
+         * রিকোয়েস্ট শেষে মরে যায়, তাই কেউ ভাষা বদলালে পরের পাতাতেই
+         * নতুনটা দেখা যাবে।
+         */
+        $this->companyLocale ??= Company::query()
+            ->whereKey(CompanyContext::id())
+            ->value('locale') ?? config('app.locale');
+
+        $locale = $this->companyLocale;
 
         return __(
             $open ? 'accounts::message.year_opening' : 'accounts::message.year_closing',

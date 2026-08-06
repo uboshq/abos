@@ -232,6 +232,21 @@ class Account extends Model implements Drillable
      */
     public function ancestors(): Collection
     {
+        /*
+         * তালিকা primeAncestry() দিয়ে এলে শিকড়টা সারির সাথেই এসেছে।
+         *
+         * না দেখলে প্রতিটা সারির জন্য parent, তার parent, তার parent —
+         * স্তরে স্তরে একটা করে কোয়েরি। হিসাবের ছকের পাতায় ঠিক সেটাই
+         * হচ্ছিল: ৮০টা খাত × ৩ স্তর, আর পাতাটা ১.১ সেকেন্ড নিত যেখানে
+         * বাকি সব পাতা ০.১৫। বকেয়ার ক্ষেত্রে যেভাবে outstanding_net
+         * বসিয়ে দেওয়া হয়, এটাও ঠিক তাই।
+         */
+        $primed = $this->getAttribute('ancestor_chain');
+
+        if ($primed instanceof Collection) {
+            return $primed;
+        }
+
         $chain = new Collection;
         $node = $this->parent;
 
@@ -244,6 +259,56 @@ class Account extends Model implements Drillable
         }
 
         return $chain;
+    }
+
+    /**
+     * একগুচ্ছ খাতের শিকড় একবারেই বসিয়ে দেওয়া — সারিপ্রতি নয়, সব মিলিয়ে একটা কোয়েরি।
+     *
+     * ── কেন গোটা কোম্পানির খাত আনা হয়, শুধু দেখানোরগুলো নয় ──────────
+     * তালিকায় সচরাচর সক্রিয় খাতগুলোই থাকে, কিন্তু একটা সক্রিয় খাতের
+     * উপরের গোষ্ঠীটা নিষ্ক্রিয় হতে পারে। তখন শুধু তালিকার খাতগুলো দিয়ে
+     * শিকড় বানালে পথটা মাঝপথে কেটে যেত — "১১০১ নগদ" দেখাত, অথচ ওটা
+     * "১১০০ চলতি সম্পদ"-এর নিচে। পথ ভুল দেখানোর চেয়ে একটা বাড়তি
+     * কোয়েরি সস্তা।
+     *
+     * @param  Collection<int, self>  $accounts
+     * @return Collection<int, self>
+     */
+    public static function primeAncestry(Collection $accounts): Collection
+    {
+        if ($accounts->isEmpty()) {
+            return $accounts;
+        }
+
+        $nodes = static::query()
+            ->select(['id', 'parent_id', 'code', 'name_en', 'name_bn'])
+            ->get()
+            ->keyBy('id');
+
+        foreach ($accounts as $account) {
+            $chain = new Collection;
+            $node = $nodes->get($account->parent_id);
+
+            // একই ৩২ স্তরের সীমা, একই কারণে — চক্র থাকলে থেমে যেতে হবে।
+            for ($depth = 0; $node !== null && $depth < 32; $depth++) {
+                $chain->prepend($node);
+                $node = $nodes->get($node->parent_id);
+            }
+
+            $account->setAttribute('ancestor_chain', $chain);
+
+            /*
+             * ঘরটা টেবিলে নেই, তাই "বদলে গেছে" তালিকাতেও থাকা চলবে না।
+             *
+             * না সরালে এরপর কেউ ওই মডেলটা save() করলে Eloquent
+             * ancestor_chain নামের একটা কলাম লিখতে যেত আর SQL ভেঙে
+             * পড়ত — দেখানোর জন্য বসানো একটা ঘর লেখার পথে বাধা হয়ে
+             * দাঁড়াত।
+             */
+            $account->syncOriginalAttribute('ancestor_chain');
+        }
+
+        return $accounts;
     }
 
     /**

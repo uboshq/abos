@@ -28,6 +28,27 @@ use RuntimeException;
 final class NumberSeriesEngine
 {
     /**
+     * শাখা ও অর্থবছরের নাম — একবার দেখে মনে রাখা, প্রতি সারিতে নয়।
+     *
+     * ── কেন ─────────────────────────────────────────────────────────
+     * preview() প্রতিটা সিরিজের নমুনা নম্বর বানায়, আর নমুনায় শাখার কোড
+     * ও অর্থবছরের নাম বসে। সেটিংসের পাতায় ২৪টা সিরিজ পাশাপাশি দেখানো
+     * হয় — সবগুলোই একই শাখার, একই বছরের। তবু প্রতিটা সারির জন্য আলাদা
+     * করে খোঁজা হত, আর পাতাটা ৬১টা কোয়েরি চালাত যার ২৪টাই ছিল হুবহু
+     * একই প্রশ্ন।
+     *
+     * মনে রাখাটা শুধু এই রিকোয়েস্টের জন্য — ইঞ্জিনের বস্তুটা রিকোয়েস্ট
+     * শেষে মরে যায়। তাই কেউ শাখার কোড বদলালে পরের পাতাতেই নতুনটা দেখা
+     * যাবে; বাসি তথ্য জমে থাকার জায়গা নেই।
+     *
+     * @var array<int, ?string>
+     */
+    private array $branchCodes = [];
+
+    /** @var array<int, ?FinancialYear> */
+    private array $financialYears = [];
+
+    /**
      * পরের নম্বর নাও ও ধরে রাখো।
      *
      * ডকুমেন্ট সেভ হওয়ার ট্রানজেকশনের ভেতরেই ডাকতে হবে — বাইরে ডাকলে
@@ -186,10 +207,35 @@ final class NumberSeriesEngine
             $sequence ?? $series->next_number,
             $series->branch_id,
             $series->financial_year_id !== null
-                ? FinancialYear::query()->find($series->financial_year_id)
+                ? $this->financialYear($series->financial_year_id)
                 : null,
             Carbon::today(),
         );
+    }
+
+    /**
+     * শাখাটা না থাকলেও মনে রাখা হয় (null হিসেবে)।
+     *
+     * array_key_exists দিয়ে দেখা হয়, isset দিয়ে নয় — isset null-কে
+     * "নেই" ধরত, আর মুছে ফেলা একটা শাখার জন্য প্রতিবার নতুন করে খোঁজা
+     * চলত, ঠিক যে সমস্যাটা এড়াতে এটা বসানো।
+     */
+    private function branchCode(int $branchId): ?string
+    {
+        if (! array_key_exists($branchId, $this->branchCodes)) {
+            $this->branchCodes[$branchId] = Branch::query()->find($branchId)?->code;
+        }
+
+        return $this->branchCodes[$branchId];
+    }
+
+    private function financialYear(int $yearId): ?FinancialYear
+    {
+        if (! array_key_exists($yearId, $this->financialYears)) {
+            $this->financialYears[$yearId] = FinancialYear::query()->find($yearId);
+        }
+
+        return $this->financialYears[$yearId];
     }
 
     private function format(
@@ -200,7 +246,7 @@ final class NumberSeriesEngine
         Carbon $date,
     ): string {
         $branchCode = $branchId !== null
-            ? (Branch::query()->find($branchId)?->code ?? '')
+            ? ($this->branchCode($branchId) ?? '')
             : '';
 
         return str_replace(

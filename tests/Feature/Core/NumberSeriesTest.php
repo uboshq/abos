@@ -56,6 +56,39 @@ class NumberSeriesTest extends TestCase
         );
     }
 
+    /**
+     * দুইবার বসালেও একটাই সিরিজ থাকে।
+     *
+     * ── কেন এই পাহারাটা ─────────────────────────────────────────────
+     * provision() নম্বর সিরিজের পাতা খোলার সময় প্রতিবারই চলে। আগে
+     * প্রতিটা ডকুমেন্ট টাইপের জন্য আলাদা করে "আছে কি না" জিজ্ঞেস করা
+     * হত — ২৩টা ধরনে ২৩টা কোয়েরি, আর প্রায় সবসময়ই উত্তর "হ্যাঁ"।
+     * এখন তালিকাটা একবারে আসে আর স্মৃতিতে মেলানো হয়।
+     *
+     * এই বদলে ভুল হওয়ার একটাই পথ: তালিকাটা লুপের ভেতরে না বাড়লে একই
+     * ধরনের সিরিজ দুইবার বসত (দুইটা মডিউল একই টাইপ ঘোষণা করলে), আর
+     * তখন একই কাগজের দুইটা কাউন্টার চলত — দুইটা নথি এক নম্বর পেত।
+     */
+    public function test_provisioning_twice_leaves_exactly_one_series_per_type(): void
+    {
+        $provisioner = app(NumberSeriesProvisioner::class);
+
+        $first = $provisioner->provision();
+        $second = $provisioner->provision();
+
+        $this->assertGreaterThan(0, $first, 'প্রথমবারেই কিছু বসার কথা ছিল।');
+        $this->assertSame(0, $second, 'দ্বিতীয়বার নতুন কিছু বসার কথা নয়।');
+
+        $duplicates = NumberSeries::query()
+            ->get()
+            ->groupBy(fn (NumberSeries $s) => $s->doc_type.'|'.$s->financial_year_id)
+            ->filter(fn ($rows) => $rows->count() > 1)
+            ->keys()
+            ->all();
+
+        $this->assertSame([], $duplicates, 'এই ধরনগুলোর একাধিক সিরিজ আছে — একই নম্বর দুইবার ছাপা হবে।');
+    }
+
     protected function setUp(): void
     {
         parent::setUp();

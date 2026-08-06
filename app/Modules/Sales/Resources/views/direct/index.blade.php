@@ -492,13 +492,22 @@
                                         </td>
 
                                         <td class="p-1" data-label="{{ __('sales::field.item_name') }}">
+                                            {{-- পণ্যতালিকা এখানে সার্ভার থেকে আবার আঁকা হয় না।
+
+                                                 উপরে ওই একই তালিকা JSON হিসেবে চলে গেছে
+                                                 (directSale-এর catalogue), তাই দ্বিতীয়বার
+                                                 <option> হিসেবে পাঠানো মানে একই ডেটা দুইবার।
+                                                 ছয়টা পণ্যে সেটা চোখে পড়ে না, কিন্তু দুই
+                                                 হাজার পণ্যের গুদামে এটাই পাতাটাকে ভারী করে
+                                                 তুলত — আর কাউন্টারের পাতা দিনে কয়েকশো বার
+                                                 খোলা হয়। --}}
                                             <select x-model="gift.productId" :name="`gifts[${i}][product_id]`"
                                                     class="h-8 w-full rounded-(--radius-field) border
                                                            border-(--color-border) bg-(--color-surface-app) px-2">
                                                 <option value="">-</option>
-                                                @foreach ($products as $product)
-                                                    <option value="{{ $product->id }}">{{ $product->name }}</option>
-                                                @endforeach
+                                                <template x-for="p in catalogue" :key="p.id">
+                                                    <option :value="p.id" x-text="p.name"></option>
+                                                </template>
                                             </select>
                                         </td>
 
