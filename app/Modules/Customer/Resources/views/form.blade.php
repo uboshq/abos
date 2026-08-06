@@ -141,6 +141,9 @@
             </section>
         @endif
 
+        {{-- কোম্পানির নিজের যোগ করা ঘরগুলো — কিছু না বানালে কিছুই আঁকা হয় না --}}
+        <x-ui.custom-fields :record="$customer" />
+
         <div class="flex flex-wrap gap-2">
             <x-ui.button type="submit" tone="primary"
                          ::class="busy && 'pointer-events-none opacity-70'">

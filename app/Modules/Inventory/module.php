@@ -104,6 +104,11 @@ return [
         'stock_transfer' => StockTransfer::class,
     ],
 
+    // পণ্যে নিজস্ব ঘর — তাকের কোড, সরবরাহকারীর নিজস্ব নম্বর, আর যা
+    // কোম্পানির দরকার। গুদাম বা স্থানান্তরে নয়: ওগুলোয় মানুষ নিজের
+    // তথ্য লেখে না।
+    'custom_fields' => ['product'],
+
     'imports' => [
         'product' => ProductImporter::class,
     ],

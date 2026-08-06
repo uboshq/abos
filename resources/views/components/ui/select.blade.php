@@ -6,6 +6,9 @@
     'placeholder' => null,
     'hint' => null,
     'required' => false,
+
+    // ভুলের বার্তা কোন নামে খুঁজবে — x-ui.field-এর মতোই, একই কারণে
+    'errorKey' => null,
 ])
 
 {{--
@@ -25,7 +28,8 @@
     প্রতিটা নতুন মডেলের জন্য এখানে একটা শর্ত জুড়ত।
 --}}
 @php
-    $hasError = $errors->has($name);
+    $key = $errorKey ?? $name;
+    $hasError = $errors->has($key);
     $describedBy = collect([
         $hint ? "{$name}-hint" : null,
         $hasError ? "{$name}-error" : null,
@@ -75,7 +79,7 @@
         <p id="{{ $name }}-hint" class="mt-1 text-2xs text-(--color-ink-muted)">{{ $hint }}</p>
     @endif
 
-    @error($name)
+    @error($key)
         <p id="{{ $name }}-error" class="mt-1 text-2xs text-(--color-danger)">{{ $message }}</p>
     @enderror
 </div>

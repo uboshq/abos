@@ -163,6 +163,8 @@
             </section>
         @endif
 
+        <x-ui.custom-fields :record="$supplier" />
+
         <div class="flex flex-wrap gap-2">
             <x-ui.button type="submit" tone="primary"
                          ::class="busy && 'pointer-events-none opacity-70'">
