@@ -6,6 +6,7 @@ namespace App\Modules\Supplier\Http\Controllers;
 
 use App\Core\Concerns\AuthorizesResource;
 use App\Core\Concerns\SortsLists;
+use App\Core\Services\CustomFieldService;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingsService;
 use App\Core\Support\RunningBalance;
@@ -96,6 +97,8 @@ class SupplierController extends Controller implements HasMiddleware
     {
         $supplier = $this->suppliers->create($request->validated());
 
+        app(CustomFieldService::class)->save($supplier, $request->input('custom', []));
+
         return redirect()
             ->route('supplier.show', $supplier)
             ->with('saved', __('supplier::message.created'));
@@ -168,6 +171,8 @@ class SupplierController extends Controller implements HasMiddleware
     public function update(SupplierRequest $request, Supplier $supplier): RedirectResponse
     {
         $this->suppliers->update($supplier, $request->validated());
+
+        app(CustomFieldService::class)->save($supplier, $request->input('custom', []));
 
         return redirect()
             ->route('supplier.show', $supplier)

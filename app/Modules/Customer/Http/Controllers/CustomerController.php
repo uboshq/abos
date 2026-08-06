@@ -6,6 +6,7 @@ namespace App\Modules\Customer\Http\Controllers;
 
 use App\Core\Concerns\AuthorizesResource;
 use App\Core\Concerns\SortsLists;
+use App\Core\Services\CustomFieldService;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingsService;
 use App\Core\Support\RunningBalance;
@@ -92,6 +93,16 @@ class CustomerController extends Controller implements HasMiddleware
     public function store(CustomerRequest $request): RedirectResponse
     {
         $customer = $this->customers->create($request->validated());
+
+        /*
+         * নিজস্ব ঘরগুলো আলাদা করে — সেবার ভেতরে নয়।
+         *
+         * CustomerService জানে গ্রাহকের কী কী ঘর আছে; নিজস্ব ঘরগুলো
+         * কোম্পানি চালানোর সময় বানায়, তাই সেবার কোনো ধারণাই নেই ওগুলোর
+         * সম্পর্কে। সেবায় ঢোকালে প্রতিটা মডিউলের প্রতিটা সেবায় একই
+         * কোড বসত।
+         */
+        app(CustomFieldService::class)->save($customer, $request->input('custom', []));
 
         return redirect()
             ->route('customer.show', $customer)
@@ -229,6 +240,8 @@ class CustomerController extends Controller implements HasMiddleware
     public function update(CustomerRequest $request, Customer $customer): RedirectResponse
     {
         $this->customers->update($customer, $request->validated());
+
+        app(CustomFieldService::class)->save($customer, $request->input('custom', []));
 
         return redirect()
             ->route('customer.show', $customer)

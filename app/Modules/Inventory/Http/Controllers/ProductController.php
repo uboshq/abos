@@ -6,6 +6,7 @@ namespace App\Modules\Inventory\Http\Controllers;
 
 use App\Core\Concerns\AuthorizesResource;
 use App\Core\Concerns\SortsLists;
+use App\Core\Services\CustomFieldService;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingsService;
 use App\Http\Controllers\Controller;
@@ -85,6 +86,10 @@ class ProductController extends Controller implements HasMiddleware
     {
         $product = $this->products->create($request->validated());
 
+        // কোম্পানির নিজের যোগ করা ঘরগুলো — সেবার বাইরে, কারণ সেবা
+        // ওগুলোর অস্তিত্বই জানে না
+        app(CustomFieldService::class)->save($product, $request->input('custom', []));
+
         return redirect()
             ->route('inventory.product.show', $product)
             ->with('saved', __('inventory::message.created'));
@@ -121,6 +126,8 @@ class ProductController extends Controller implements HasMiddleware
     public function update(ProductRequest $request, Product $product): RedirectResponse
     {
         $this->products->update($product, $request->validated());
+
+        app(CustomFieldService::class)->save($product, $request->input('custom', []));
 
         return redirect()
             ->route('inventory.product.show', $product)

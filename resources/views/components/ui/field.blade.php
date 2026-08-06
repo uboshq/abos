@@ -7,6 +7,18 @@
     'required' => false,
     'numeric' => false,
     'readonly' => false,
+
+    /*
+     * ভুলের বার্তা কোন নামে খুঁজবে — না দিলে ঘরের নামেই।
+     *
+     * ── কেন এটা লাগল ────────────────────────────────────────────────
+     * নিজস্ব ঘরের ইনপুটের নাম হয় custom[route_no], কারণ অ্যারে হিসেবে
+     * যেতে হয়। কিন্তু ভ্যালিডেশন ভুল লেখে custom.route_no নামে। ফলে
+     * $errors->has('custom[route_no]') কখনো সত্যি হত না, আর ভুলের
+     * বার্তাটা কোনোদিন দেখা যেত না — ব্যবহারকারী শুধু দেখতেন ফর্মটা
+     * ফিরে এসেছে, কেন তা নয়।
+     */
+    'errorKey' => null,
 ])
 
 {{--
@@ -22,7 +34,8 @@
     দাঁড়াত, সরানো নয়।
 --}}
 @php
-    $hasError = $errors->has($name);
+    $key = $errorKey ?? $name;
+    $hasError = $errors->has($key);
     $describedBy = collect([
         $hint ? "{$name}-hint" : null,
         $hasError ? "{$name}-error" : null,
@@ -66,7 +79,7 @@
         <p id="{{ $name }}-hint" class="mt-1 text-2xs text-(--color-ink-muted)">{{ $hint }}</p>
     @endif
 
-    @error($name)
+    @error($key)
         {{-- ভুলটা ঘরের পাশেই — উপরের তালিকায় থাকলে লম্বা ফর্মে কোন ঘরটা
              ভুল সেটা খুঁজতে হয় (সেকশন ১৫.২৩)। --}}
         <p id="{{ $name }}-error" class="mt-1 text-2xs text-(--color-danger)">{{ $message }}</p>

@@ -72,6 +72,19 @@ final class ModuleDefinition
         public readonly array $approvals,
 
         /**
+         * যেসব রেকর্ডে কোম্পানি নিজের ঘর যোগ করতে পারে — drill source-এর নাম।
+         *
+         * ── কেন মডিউল বলে, সেটিংসের পর্দা নয় ────────────────────────
+         * "গ্রাহকে নিজস্ব ঘর বসানো যায়, কিন্তু খতিয়ানের সারিতে নয়" —
+         * এই সিদ্ধান্তটা মডিউলের, কারণ সে-ই জানে কোন রেকর্ডটা মানুষের
+         * সম্পাদনা করা মাস্টার আর কোনটা যন্ত্রের লেখা। তালিকাটা সেটিংসে
+         * হাতে লিখলে কোর মডিউলের নাম চিনে ফেলত (সেকশন ১৯.৭)।
+         *
+         * @var list<string>
+         */
+        public readonly array $customFields,
+
+        /**
          * পুরনো খাতা থেকে কী কী আনা যায়।
          *
          * প্রতিটা মডিউল নিজে বলে দেয় সে কোন সারিগুলো নিতে পারে, তাই
@@ -173,6 +186,11 @@ final class ModuleDefinition
             reports: self::validateReports($raw['reports'] ?? [], $path),
             widgets: self::validateWidgets($raw['widgets'] ?? [], $raw['permissions'] ?? [], $path),
             approvals: self::validateApprovals($raw['approvals'] ?? [], $path),
+            customFields: self::validateCustomFields(
+                $raw['custom_fields'] ?? [],
+                $raw['drill_sources'] ?? [],
+                $path,
+            ),
             imports: self::validateImports($raw['imports'] ?? [], $path),
             path: $path,
             namespace: $namespace,
@@ -206,6 +224,34 @@ final class ModuleDefinition
         }
 
         return $imports;
+    }
+
+    /**
+     * নিজস্ব ঘর যেসব রেকর্ডে বসে — বুট-টাইমেই যাচাই।
+     *
+     * ── কেন drill_sources-এর সাথে মেলানো হয় ─────────────────────────
+     * নামটা ভুল লিখলে (customers বনাম customer) সেটিংসে সারিটা দেখা
+     * যেত, ঘর বানানোও যেত — শুধু কোনো ফর্মে কোনোদিন দেখা যেত না।
+     * আর ব্যবহারকারী ভাবতেন ব্যবস্থাটাই কাজ করে না।
+     *
+     * @param  list<mixed>  $entities
+     * @param  array<string, mixed>  $drillSources
+     * @return list<string>
+     */
+    private static function validateCustomFields(array $entities, array $drillSources, string $path): array
+    {
+        foreach ($entities as $entity) {
+            if (! is_string($entity) || ! array_key_exists($entity, $drillSources)) {
+                throw new InvalidArgumentException(
+                    "{$path}: custom fields are declared for '"
+                    .(is_string($entity) ? $entity : gettype($entity))
+                    ."', which this module does not register as a drill source. Without that the form would "
+                    .'never find the record, and the fields would be invisible everywhere.'
+                );
+            }
+        }
+
+        return array_values($entities);
     }
 
     /**
