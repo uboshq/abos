@@ -9,6 +9,7 @@ use App\Models\Approval;
 use App\Models\ApprovalDecision;
 use App\Models\ApprovalFlow;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -181,11 +182,37 @@ final class ApprovalEngine
         return $approval->fresh();
     }
 
+    /**
+     * এই ডকুমেন্টের এই কাজের সবশেষ অনুরোধ — থাকলে।
+     *
+     * ── কেন এটা দরকার ───────────────────────────────────────────────
+     * request() কেবল *অপেক্ষমাণ* অনুরোধ দেখে পুনরাবৃত্তি ঠেকায়। তাই
+     * অনুমোদন হয়ে যাওয়ার পর আবার ডাকলে সে একটা নতুন অনুরোধ বানাত —
+     * আর ডকুমেন্টটা চিরকাল আটকে থাকত: অনুমোদন পেলেই আবার নতুন
+     * অনুমোদন লাগত।
+     *
+     * তাই যে সেবা পাহারা বসায় সে আগে এটা দেখে নেয়: সিদ্ধান্ত হয়ে
+     * থাকলে সেই সিদ্ধান্তটাই মানা হয়, নতুন অনুরোধ নয়।
+     */
+    public function latestFor(Model $document, string $action): ?Approval
+    {
+        return Approval::query()
+            ->where('approvable_type', $document::class)
+            ->where('approvable_id', $document->getKey())
+            ->where('action', $action)
+            ->orderByDesc('id')
+            ->first();
+    }
+
     /** এই ব্যবহারকারীর অপেক্ষমাণ তালিকা — Approval Centre-এর queue। */
-    public function pendingFor(User $user): iterable
+    /** @return Collection<int, Approval> */
+    public function pendingFor(User $user): Collection
     {
         return Approval::query()
             ->pending()
+            // অনুরোধকারীর নাম প্রতিটা সারিতে দেখানো হয়, তাই সাথেই আসে
+            ->with('requester')
+            ->orderBy('requested_at')
             ->get()
             ->filter(fn (Approval $approval) => $this->canDecide($approval, $user))
             ->values();
@@ -241,7 +268,13 @@ final class ApprovalEngine
             }
         }
 
-        return $query->whereNull('document_type')->first();
+        /*
+         * "সব ধরনে" মানে খালি লেখা, NULL নয়।
+         *
+         * NULL রাখলে unique index কাজ করত না (MySQL-এ NULL ≠ NULL), আর
+         * একই কাজে দুইটা ছক বসে যেত — একটা চলত, অন্যটা নীরবে মরে থাকত।
+         */
+        return $query->where('document_type', '')->first();
     }
 
     private function assertPending(Approval $approval): void

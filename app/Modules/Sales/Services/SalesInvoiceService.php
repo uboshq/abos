@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Services;
 
+use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
+use App\Models\Approval;
 use App\Models\FinancialYear;
 use App\Models\IssuedNumber;
 use App\Modules\Accounts\Models\Account;
@@ -51,7 +53,66 @@ final class SalesInvoiceService
         private readonly PostingEngine $posting,
         private readonly StockService $stock,
         private readonly SettingsService $settings,
+        private readonly ApprovalEngine $approvals,
     ) {}
+
+    /**
+     * ছাড়ের অনুমোদন — নিশ্চিত করার আগে।
+     *
+     * ── কেন নিশ্চিত করার সময়ে, তৈরির সময়ে নয় ───────────────────────
+     * খসড়া বিল কোনো হিসাবে নেই; ওটা বদলানো যায়, মুছেও ফেলা যায়। ছাড়
+     * তখনো কারও ক্ষতি করেনি। ক্ষতিটা হয় নিশ্চিত করার মুহূর্তে — তখনই
+     * আয় কমে বসে। তাই পাহারাটা ঠিক সেখানেই।
+     *
+     * ── কেন এখানে ব্যতিক্রম ছোঁড়া হয় ───────────────────────────────
+     * অনুরোধটা তৈরি হয় আর বিলটা খসড়া হয়েই থাকে। অনুমোদনকারী "হ্যাঁ"
+     * বললে ব্যবহারকারী আবার নিশ্চিত চাপেন, আর এবার পথটা খোলা থাকে।
+     * নিজে থেকে নিশ্চিত হয়ে যাওয়াটা ভুল হত: অনুমোদনের পর মালটা তখনো
+     * গুদামে আছে কি না সেটা আবার দেখা দরকার।
+     */
+    private function assertDiscountApproved(SalesInvoice $invoice): void
+    {
+        $discount = (string) ($invoice->discount ?? '0');
+
+        if (bccomp($discount, '0', 4) <= 0) {
+            return;
+        }
+
+        /*
+         * সিদ্ধান্ত হয়ে থাকলে সেটাই মানা হয়, নতুন অনুরোধ নয়।
+         *
+         * এটা না দেখলে অনুমোদনের পরেও পরের "নিশ্চিত"-এ আরেকটা নতুন
+         * অনুরোধ তৈরি হত — বিলটা কোনোদিন খাতায় বসত না, আর অনুমোদনকারী
+         * একই ছাড় বারবার অনুমোদন করে যেতেন।
+         */
+        $decided = $this->approvals->latestFor($invoice, 'discount');
+
+        if ($decided?->status === Approval::APPROVED) {
+            return;
+        }
+
+        if ($decided?->status === Approval::REJECTED) {
+            throw ValidationException::withMessages([
+                'discount' => __('sales::validation.discount_rejected'),
+            ]);
+        }
+
+        $approval = $this->approvals->request(
+            document: $invoice,
+            module: 'sales',
+            action: 'discount',
+            amount: $discount,
+            reason: $invoice->narration,
+        );
+
+        if ($approval === null) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'discount' => __('sales::validation.discount_awaiting'),
+        ]);
+    }
 
     /**
      * @param  array<string, mixed>  $data
@@ -141,6 +202,16 @@ final class SalesInvoiceService
         if ($invoice->lines->isEmpty()) {
             throw ValidationException::withMessages(['lines' => __('sales::validation.no_lines')]);
         }
+
+        /*
+         * লেনদেনের বাইরে, ইচ্ছাকৃতভাবে।
+         *
+         * ভেতরে রাখলে ব্যতিক্রমটা অনুরোধের সারিটাও রোল-ব্যাক করত —
+         * অর্থাৎ প্রতিবার নিশ্চিত চাপলে একটা নতুন অনুরোধ তৈরি হয়ে
+         * সাথে সাথে মুছে যেত, আর অনুমোদনকারীর তালিকায় কোনোদিন কিছু
+         * আসত না।
+         */
+        $this->assertDiscountApproved($invoice);
 
         return DB::transaction(function () use ($invoice) {
             /*

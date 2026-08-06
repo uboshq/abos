@@ -59,6 +59,19 @@ final class ModuleDefinition
         public readonly array $widgets,
 
         /**
+         * যে কাজগুলোয় এই মডিউল অনুমোদন চাইতে পারে — কাজ => লেবেল কী।
+         *
+         * ── কেন মডিউল বলে, অনুমোদনের পর্দা নয় ───────────────────────
+         * অনুমোদনের ছক সাজানোর পর্দায় একটা ড্রপডাউন লাগে: কোন মডিউলের
+         * কোন কাজে অনুমোদন বসবে। তালিকাটা ওই পর্দায় হাতে লিখলে কোর
+         * মডিউলের নাম জেনে ফেলত, আর নতুন মডিউলের কাজ ওখানে যোগ করতে
+         * কোর ফাইল খুলতে হত (সেকশন ১৯.৭)।
+         *
+         * @var array<string, string>
+         */
+        public readonly array $approvals,
+
+        /**
          * পুরনো খাতা থেকে কী কী আনা যায়।
          *
          * প্রতিটা মডিউল নিজে বলে দেয় সে কোন সারিগুলো নিতে পারে, তাই
@@ -159,6 +172,7 @@ final class ModuleDefinition
             settings: array_values($raw['settings'] ?? []),
             reports: self::validateReports($raw['reports'] ?? [], $path),
             widgets: self::validateWidgets($raw['widgets'] ?? [], $raw['permissions'] ?? [], $path),
+            approvals: self::validateApprovals($raw['approvals'] ?? [], $path),
             imports: self::validateImports($raw['imports'] ?? [], $path),
             path: $path,
             namespace: $namespace,
@@ -192,6 +206,36 @@ final class ModuleDefinition
         }
 
         return $imports;
+    }
+
+    /**
+     * অনুমোদনযোগ্য কাজগুলো — নাম ও লেবেল, দুইটাই লেখা।
+     *
+     * লেবেল ছাড়া ছকের পর্দায় কাঁচা চাবি দেখা যেত ("discount"), আর
+     * ব্যবহারকারী বুঝতেন না কোনটা বাছছেন।
+     *
+     * @param  array<string, mixed>  $approvals
+     * @return array<string, string>
+     */
+    private static function validateApprovals(array $approvals, string $path): array
+    {
+        foreach ($approvals as $action => $label) {
+            if (! is_string($action) || ! preg_match('/^[a-z][a-z0-9_]*$/', $action)) {
+                throw new InvalidArgumentException(
+                    "{$path}: approval action '".(is_string($action) ? $action : gettype($action))
+                    ."' must be lowercase snake_case — it is stored in a column and matched exactly."
+                );
+            }
+
+            if (! is_string($label) || ! str_contains($label, '::')) {
+                throw new InvalidArgumentException(
+                    "{$path}: approval action '{$action}' needs a translation key as its label, so the flow screen "
+                    .'can name it in both languages.'
+                );
+            }
+        }
+
+        return $approvals;
     }
 
     /**
