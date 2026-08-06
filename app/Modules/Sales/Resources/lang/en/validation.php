@@ -48,5 +48,7 @@ return [
     'collection_must_be_positive' => 'A collection must be more than zero.',
     'unknown_account' => 'That account is not in this company chart.',
     'not_a_money_account' => ':name is not a cash or bank account — money does not land there.',
+    'discount_awaiting' => 'This discount needs approval — the request has been sent. The invoice stays a draft; press Confirm again once it is approved.',
+    'discount_rejected' => 'The discount was sent back. Lower it and confirm again.',
     'no_walkin_customer' => 'No cash-sale customer is set — choose one in the Control Panel, otherwise there is no saying whose name the day\'s sales go under.',
 ];
