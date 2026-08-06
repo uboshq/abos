@@ -33,4 +33,13 @@ return [
     'quantity' => 'Quantity',
     'date' => 'Date',
     'narration' => 'Narration',
+
+    // Transfer fields
+    'from_warehouse' => 'From warehouse',
+    'to_warehouse' => 'To warehouse',
+    'from_to' => 'From → to',
+    'items' => 'Items',
+    'line_no' => 'No',
+    'dispatched_at' => 'Dispatched',
+    'received_at' => 'Arrived',
 ];

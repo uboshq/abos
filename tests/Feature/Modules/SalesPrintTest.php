@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Modules;
 
 use App\Core\Engines\Print\PaperSize;
+use App\Core\Engines\Print\PrintableDocument;
 use App\Core\Support\AmountInWords;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
@@ -183,6 +184,56 @@ class SalesPrintTest extends TestCase
         $this->assertTrue($rendered->showMoney);
         $this->assertNotEmpty($rendered->totals);
         $this->assertNotEmpty($rendered->amountInWords);
+    }
+
+    /**
+     * থার্মাল রসিদে গ্রাহকের নাম এক লাইনেই থাকে।
+     *
+     * ── কেন এটা গুরুত্বপূর্ণ ────────────────────────────────────────
+     * কাউন্টারে দাঁড়ানো গ্রাহকের হাতে যা যায় সেটাই এই কাগজ। বাংলা নাম
+     * সহজেই লম্বা হয় ("বিসমিল্লাহ ডিস্ট্রিবিউশন এন্টারপ্রাইজ অ্যান্ড
+     * সন্স"), আর ৮০mm রোলে লেবেলের ঘর বাদ দিলে মানের জন্য যা থাকে তাতে
+     * ওটা দুই লাইনে ভেঙে যেত — রসিদের মাথাটা তখন এলোমেলো দেখাত।
+     *
+     * এখানে দুইটাই যাচাই হয়: ঘরটা ভাঙার অনুমতি পায়নি (nowrap), আর
+     * লেখাটা কাগজে ধরার মতো লম্বায় কেটে গেছে।
+     */
+    public function test_a_long_customer_name_stays_on_one_line_on_a_receipt(): void
+    {
+        $document = new PrintableDocument(
+            title: 'বিক্রয় বিল',
+            meta: [
+                'sales::field.customer' => 'বিসমিল্লাহ ডিস্ট্রিবিউশন এন্টারপ্রাইজ অ্যান্ড সন্স',
+                'core.print.document_no' => 'INV-2026-2027-0001',
+            ],
+            lines: [],
+        );
+
+        $html = View::make('print.document-body', [
+            'doc' => $document,
+            'paper' => PaperSize::of(PaperSize::THERMAL_80),
+        ])->render();
+
+        $this->assertStringContainsString('white-space: nowrap', $html);
+
+        // নামটা কাটা পড়েছে, তাই এক লাইনেই ধরে
+        $this->assertStringContainsString('…', $html);
+        $this->assertStringNotContainsString('অ্যান্ড সন্স', $html);
+
+        // ছোট মানগুলো অক্ষত — নম্বর কেটে গেলে কাগজটাই অকেজো
+        $this->assertStringContainsString('INV-2026-2027-0001', $html);
+
+        /*
+         * A4-তে কিছুই কাটা যায় না — ওখানে জায়গা আছে, আর পুরো নামটাই
+         * ছাপা উচিত।
+         */
+        $wide = View::make('print.document-body', [
+            'doc' => $document,
+            'paper' => PaperSize::of(PaperSize::A4),
+        ])->render();
+
+        $this->assertStringContainsString('অ্যান্ড সন্স', $wide);
+        $this->assertStringNotContainsString('white-space: nowrap', $wide);
     }
 
     /** খসড়ায় বড় করে লেখা থাকে যে এটা চূড়ান্ত নয়। */

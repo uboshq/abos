@@ -12,4 +12,11 @@ return [
     'adjust' => 'সমন্বয় করুন',
     'hold' => 'আটকান',
     'release' => 'ছেড়ে দিন',
+    'new_transfer' => 'নতুন স্থানান্তর',
+    'dispatch' => 'রওনা দিন',
+    'receive' => 'বুঝে নিন',
+    'cancel_transfer' => 'স্থানান্তর বাতিল',
+    'add_line' => 'লাইন যোগ',
+    'remove_line' => 'লাইন সরান',
+    'show_cancelled' => 'বাতিলগুলোও দেখাও',
 ];

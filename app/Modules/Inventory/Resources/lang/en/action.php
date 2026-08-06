@@ -12,4 +12,11 @@ return [
     'adjust' => 'Adjust',
     'hold' => 'Hold',
     'release' => 'Release',
+    'new_transfer' => 'New transfer',
+    'dispatch' => 'Dispatch',
+    'receive' => 'Receive',
+    'cancel_transfer' => 'Cancel transfer',
+    'add_line' => 'Add line',
+    'remove_line' => 'Remove line',
+    'show_cancelled' => 'Show cancelled too',
 ];

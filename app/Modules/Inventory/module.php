@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Modules\Inventory\Dashboard\InventoryWidgets;
 use App\Modules\Inventory\Imports\ProductImporter;
 use App\Modules\Inventory\Models\Product;
+use App\Modules\Inventory\Models\StockTransfer;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Reports\StockReports;
 
@@ -50,6 +51,7 @@ return [
         'transactions' => [
             ['label' => 'inventory::menu.stock', 'route' => 'inventory.stock.index', 'permission' => 'inventory.stock.view'],
             ['label' => 'inventory::menu.adjust', 'route' => 'inventory.stock.adjust', 'permission' => 'inventory.stock.adjust'],
+            ['label' => 'inventory::menu.transfers', 'route' => 'inventory.transfer.index', 'permission' => 'inventory.transfer.view'],
         ],
         'reports' => [
             ['label' => 'inventory::menu.stock_ledger', 'route' => 'inventory.report.show',
@@ -73,6 +75,19 @@ return [
         'inventory.stock.view',
         'inventory.stock.adjust',
         'inventory.stock.hold',
+
+        /*
+         * স্থানান্তরের চাবি চারটা, আর পাঠানো ও বুঝে নেওয়া আলাদা।
+         *
+         * পাঠান এক গুদামের লোক, বুঝে নেন অন্য গুদামের। একজনেই দুইটা
+         * করতে পারলে "পাঠিয়েছি, পৌঁছেছে" লিখে দিয়ে মাল পথেই সরিয়ে
+         * ফেলা যেত, আর কাগজে সবই মিলত।
+         */
+        'inventory.transfer.view',
+        'inventory.transfer.create',
+        'inventory.transfer.receive',
+        'inventory.transfer.cancel',
+
         'inventory.report',
         'inventory.manage',
     ],
@@ -80,11 +95,13 @@ return [
     'doc_types' => [
         'PRD' => 'inventory::doc.product_code',
         'ADJ' => 'inventory::doc.adjustment',
+        'STF' => 'inventory::doc.transfer',
     ],
 
     'drill_sources' => [
         'product' => Product::class,
         'warehouse' => Warehouse::class,
+        'stock_transfer' => StockTransfer::class,
     ],
 
     'imports' => [

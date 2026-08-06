@@ -10,4 +10,5 @@ return [
     'stock_ledger' => 'Stock Ledger',
     'stock_summary' => 'Stock Summary',
     'hold_report' => 'Held Stock',
+    'transfers' => 'Stock Transfers',
 ];
