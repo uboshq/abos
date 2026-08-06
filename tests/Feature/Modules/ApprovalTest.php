@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Modules;
 
 use App\Core\Engines\Approval\ApprovalEngine;
+use App\Core\Services\StatusNotices;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Models\Approval;
@@ -20,6 +21,7 @@ use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Services\SalesInvoiceService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
@@ -331,6 +333,47 @@ class ApprovalTest extends TestCase
         $this->expectException(ValidationException::class);
 
         app(ApprovalFlowService::class)->delete($flow);
+    }
+
+    /**
+     * ঘণ্টাটা সিদ্ধান্তদাতাকে খুঁজে নেয়, আর কেবল তাঁকেই।
+     *
+     * ── কেন এটা আলাদা করে পরীক্ষা ───────────────────────────────────
+     * নোটিশটা আগে কোম্পানির মোট অপেক্ষমাণ অনুরোধ গুনত আর কোথাও নিয়ে
+     * যেত না। ফলে যিনি কোনো ছকেই নেই তিনিও "৩টি সিদ্ধান্তের অপেক্ষায়"
+     * দেখতেন — যে সংখ্যা দেখে কিছু করার নেই, মানুষ সেটা দেখা বন্ধ করে
+     * দেয়, আর তারপর যেদিন সংখ্যাটা সত্যিই তাঁর, সেদিনও দেখে না।
+     */
+    public function test_the_bell_reaches_the_decider_and_nobody_else(): void
+    {
+        $this->flow(threshold: '500');
+        $this->actingAs($this->seller);
+
+        try {
+            app(SalesInvoiceService::class)->confirm($this->draft(discount: '900'));
+        } catch (ValidationException) {
+            // অনুরোধ তৈরি হলো
+        }
+
+        Cache::flush();
+
+        // সিদ্ধান্তদাতা — সংখ্যাটা আছে, আর লিংকটা ইনবক্সে নিয়ে যায়
+        $this->actingAs($this->manager);
+        $notice = collect(app(StatusNotices::class)->all())
+            ->firstWhere('text', trans_choice('core.notice.awaiting_decision', 1, ['count' => 1]));
+
+        $this->assertNotNull($notice, 'অনুমোদনকারীর ঘণ্টায় অনুরোধটা নেই।');
+        $this->assertSame(route('approval.inbox.index'), $notice['url']);
+
+        // অনুরোধকারী নিজে — নিজের অনুরোধ নিজে অনুমোদন করা যায় না, তাই
+        // তাঁর ঘণ্টায় এটা ওঠার কথা নয়
+        Cache::flush();
+        $this->actingAs($this->seller);
+
+        $this->assertNull(
+            collect(app(StatusNotices::class)->all())->firstWhere('tone', 'pending'),
+            'নিজের অনুরোধ নিজের ঘণ্টায় উঠেছে।',
+        );
     }
 
     // ── সহায়ক ───────────────────────────────────────────────────────────

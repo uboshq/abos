@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Services\ListExport;
 use App\Core\Services\SettingsService;
 use Illuminate\Database\Schema\Blueprint;
@@ -41,6 +42,18 @@ class AppServiceProvider extends ServiceProvider
          * থাকা চলবে না।
          */
         $this->app->scoped(ListExport::class);
+
+        /*
+         * অনুমোদনের ইঞ্জিনও অনুরোধ প্রতি একটা।
+         *
+         * ছকগুলো ভেতরে জমিয়ে রাখে (একই ছক বিশবার খোঁজা হয় না)। বাঁধন
+         * না থাকলে প্রতিটা app(ApprovalEngine::class) নতুন বস্তু বানাত
+         * আর জমানোটা বৃথা যেত।
+         *
+         * scoped, singleton নয়: পরের অনুরোধে আগের ছক ধরে রাখা চলবে না —
+         * মালিক ছক বদলালে সেটা সাথে সাথেই কার্যকর হওয়া দরকার।
+         */
+        $this->app->scoped(ApprovalEngine::class);
     }
 
     /**
