@@ -32,4 +32,5 @@ return [
     'add_deposit' => 'জমা যোগ',
     'add_note' => 'নোট যোগ',
     'expense' => 'খরচ',
+    'new_return' => 'নতুন ফেরত',
 ];

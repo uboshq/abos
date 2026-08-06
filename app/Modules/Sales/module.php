@@ -7,6 +7,7 @@ use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Models\SalesOrder;
+use App\Modules\Sales\Models\SalesReturn;
 use App\Modules\Sales\Reports\SalesReports;
 
 /**
@@ -54,6 +55,7 @@ return [
             ['label' => 'sales::menu.challans', 'route' => 'sales.challan.index', 'permission' => 'sales.challan.view'],
             ['label' => 'sales::menu.invoices', 'route' => 'sales.invoice.index', 'permission' => 'sales.invoice.view'],
             ['label' => 'sales::menu.collections', 'route' => 'sales.collection.index', 'permission' => 'sales.collection.view'],
+            ['label' => 'sales::menu.returns', 'route' => 'sales.return.index', 'permission' => 'sales.return.view'],
         ],
         'reports' => [
             ['label' => 'sales::menu.pending_orders', 'route' => 'sales.report.show',
@@ -79,6 +81,18 @@ return [
         'sales.collection.view',
         'sales.collection.create',
         'sales.collection.cancel',
+
+        /*
+         * ফেরতের চাবি বিক্রয়ের চাবি থেকে আলাদা।
+         *
+         * ফেরত নেওয়া মানে গ্রাহকের পাওনা কমিয়ে দেওয়া — টাকা ছাড়াই
+         * খাতা থেকে অঙ্ক সরানো। বিক্রি করার অধিকার থাকলেই সেটা করা
+         * যাবে না; নাহলে যে কেউ ভুয়া ফেরত দেখিয়ে নিজের ঘাটতি ঢাকতে
+         * পারত।
+         */
+        'sales.return.view',
+        'sales.return.create',
+        'sales.return.cancel',
         'sales.pos',
         'sales.discount.override',
         'sales.report',
@@ -90,6 +104,7 @@ return [
         'DC' => 'sales::doc.challan',
         'INV' => 'sales::doc.invoice',
         'COL' => 'sales::doc.collection',
+        'SR' => 'sales::doc.return',
     ],
 
     'drill_sources' => [
@@ -97,6 +112,7 @@ return [
         'delivery_challan' => DeliveryChallan::class,
         'sales_invoice' => SalesInvoice::class,
         'collection' => Collection::class,
+        'sales_return' => SalesReturn::class,
     ],
 
     'reports' => [

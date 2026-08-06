@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Core;
 
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
+use App\Core\Services\NumberSeriesProvisioner;
 use App\Core\Support\CompanyContext;
 use App\Models\Branch;
 use App\Models\Company;
@@ -25,6 +26,35 @@ class NumberSeriesTest extends TestCase
     private NumberSeriesEngine $engine;
 
     private Company $company;
+
+    /**
+     * দুইটা ডকুমেন্ট টাইপ কখনো একই উপসর্গ নেবে না।
+     *
+     * ── কেন এই পাহারাটা দরকার হলো ───────────────────────────────────
+     * ক্রয়ে পরিশোধ যোগ করার সময় তার টাইপ রাখা হয়েছিল 'PAY'। উপসর্গের
+     * তালিকায় হিসাবের পরিশোধ ভাউচার (PV) আগে থেকেই 'PAY' উপসর্গ নেয়,
+     * আর অচেনা টাইপের উপসর্গ হয় টাইপটাই — অর্থাৎ দুইটাই PAY।
+     *
+     * ফল: দুইটা আলাদা কাগজে PAY-2026-2027-0001, দুইবার। প্রতিটা টেস্ট
+     * সবুজ থাকত, কারণ প্রতিটা সিরিজ আলাদাভাবে ঠিকই গুনত — ভুলটা ধরা
+     * পড়ত সেদিন, যেদিন কেউ দুইটা কাগজ পাশাপাশি রেখে মেলাতে বসত।
+     */
+    public function test_no_two_document_types_share_a_prefix(): void
+    {
+        app(NumberSeriesProvisioner::class)->provision();
+
+        $byPrefix = NumberSeries::query()
+            ->get()
+            ->groupBy('prefix')
+            ->map(fn ($rows) => $rows->pluck('doc_type')->unique()->values()->all())
+            ->filter(fn (array $types) => count($types) > 1);
+
+        $this->assertSame(
+            [],
+            $byPrefix->all(),
+            'এই উপসর্গগুলো একাধিক ডকুমেন্ট টাইপ ভাগ করে নিচ্ছে — নম্বর দুইবার ছাপা হবে।',
+        );
+    }
 
     protected function setUp(): void
     {

@@ -60,7 +60,7 @@ final class PaymentService
                 ]);
             }
 
-            $documentNo = $this->numbers->next('PAY');
+            $documentNo = $this->numbers->next('SP');
 
             $payment = Payment::create([
                 'company_id' => CompanyContext::id(),

@@ -11,4 +11,5 @@ return [
     'collection' => 'Collection',
     'gatepass' => 'Gate Pass',
     'delivery_order' => 'Delivery Order',
+    'return' => 'Sales Return',
 ];

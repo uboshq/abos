@@ -112,4 +112,8 @@ return [
     'total_free_plus_sales' => 'Total Free+Sales Qty',
     'vehicle' => 'Fleet Vehicle',
     'vehicle_not_in_fleet' => 'Not in the fleet',
+
+    // Return fields
+    'reason' => 'Reason',
+    'not_sellable' => 'Not sellable again',
 ];

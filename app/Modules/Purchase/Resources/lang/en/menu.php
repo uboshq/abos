@@ -7,6 +7,7 @@ return [
     'receipts' => 'Goods Received',
     'bills' => 'Purchase Bills',
     'payments' => 'Payments',
+    'returns' => 'Purchase Returns',
     'pending_orders' => 'Pending Orders',
     'uninvoiced' => 'Received, Not Invoiced',
     'by_supplier' => 'Purchases by Supplier',

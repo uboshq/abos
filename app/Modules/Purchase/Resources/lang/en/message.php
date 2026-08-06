@@ -43,6 +43,18 @@ return [
     'money_out' => ':no — money paid out',
     'against_payable' => ':no — against payable',
 
+    // Return
+    'return_created' => 'The return was created — confirming it takes the goods out.',
+    'return_updated' => 'The return was updated.',
+    'return_confirmed' => 'The goods left the warehouse and the payable came down, together.',
+    'return_cancelled' => 'The return was cancelled — both the stock and the ledger went back.',
+    'no_returns' => 'No purchase returns yet.',
+    'return_search' => 'Search by number or supplier…',
+    'return_note' => 'Against a bill the rate comes from the bill, and no more can go back than was bought.',
+    'return_lowers_payable' => ':no — payable reduced by return',
+    'stock_out' => ':no — goods left the warehouse',
+    'return_vat' => ':no — input VAT reversed',
+
     'lines' => 'Lines',
     'cancel_reason' => 'Reason for cancelling',
     'pending_of_order' => ':count line(s) of this order are still to arrive.',

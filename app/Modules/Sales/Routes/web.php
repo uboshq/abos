@@ -10,6 +10,7 @@ use App\Modules\Sales\Http\Controllers\SalesInvoiceController;
 use App\Modules\Sales\Http\Controllers\SalesOrderController;
 use App\Modules\Sales\Http\Controllers\SalesPrintController;
 use App\Modules\Sales\Http\Controllers\SalesReportController;
+use App\Modules\Sales\Http\Controllers\SalesReturnController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -105,6 +106,17 @@ Route::middleware('auth')->prefix('sales')->group(function () {
             ->whereNumber('order')->name('delivery_order');
         Route::get('/collection/{collection}', [SalesPrintController::class, 'receipt'])
             ->whereNumber('collection')->name('receipt');
+    });
+
+    Route::prefix('returns')->name('return.')->group(function () {
+        Route::get('/', [SalesReturnController::class, 'index'])->name('index');
+        Route::get('/create', [SalesReturnController::class, 'create'])->name('create');
+        Route::post('/', [SalesReturnController::class, 'store'])->name('store');
+        Route::get('/{return}', [SalesReturnController::class, 'show'])->whereNumber('return')->name('show');
+        Route::get('/{return}/edit', [SalesReturnController::class, 'edit'])->whereNumber('return')->name('edit');
+        Route::put('/{return}', [SalesReturnController::class, 'update'])->whereNumber('return')->name('update');
+        Route::post('/{return}/confirm', [SalesReturnController::class, 'confirm'])->whereNumber('return')->name('confirm');
+        Route::post('/{return}/cancel', [SalesReturnController::class, 'cancel'])->whereNumber('return')->name('cancel');
     });
 
     Route::get('/reports/{slug}', [SalesReportController::class, 'show'])->name('report.show');

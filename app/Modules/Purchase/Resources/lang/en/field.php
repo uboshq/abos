@@ -39,5 +39,8 @@ return [
     'instrument' => 'Method',
     'instrument_no' => 'Cheque / reference no',
     'instrument_date' => 'Cheque date',
+
+    // Return fields
+    'reason' => 'Reason',
     'state' => 'State',
 ];

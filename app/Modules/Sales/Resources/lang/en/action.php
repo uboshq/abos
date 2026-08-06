@@ -32,4 +32,5 @@ return [
     'add_deposit' => 'Add Deposit',
     'add_note' => 'Add Note',
     'expense' => 'Expense',
+    'new_return' => 'New return',
 ];
