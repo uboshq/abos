@@ -12,4 +12,7 @@ return [
     'floor_high' => 'Most on the floor first',
     'hold_high' => 'Most held first',
     'default_first' => 'Main store first',
+    'on_the_way' => 'On the way first',
+    'recent' => 'Newest first',
+    'oldest' => 'Oldest first',
 ];

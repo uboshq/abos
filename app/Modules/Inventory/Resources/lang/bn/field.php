@@ -33,4 +33,13 @@ return [
     'quantity' => 'পরিমাণ',
     'date' => 'তারিখ',
     'narration' => 'বিবরণ',
+
+    // স্থানান্তরের ঘর
+    'from_warehouse' => 'যে গুদাম থেকে',
+    'to_warehouse' => 'যে গুদামে',
+    'from_to' => 'কোথা থেকে কোথায়',
+    'items' => 'পণ্য',
+    'line_no' => 'ক্রম',
+    'dispatched_at' => 'রওনা দিয়েছে',
+    'received_at' => 'পৌঁছেছে',
 ];

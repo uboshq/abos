@@ -26,4 +26,20 @@ return [
     'adjust_note' => 'Enter what was actually found. The difference is what goes in the ledger, not the new figure — so it stays possible to ask where the stock went.',
     'count' => '{0} No products|{1} 1 product|[2,*] :count products',
     'warehouse_count' => '{0} No warehouses|{1} 1 warehouse|[2,*] :count warehouses',
+
+    // Transfer
+    'transfer_created' => 'The transfer was created — dispatching it holds the goods.',
+    'transfer_updated' => 'The transfer was updated.',
+    'transfer_dispatched' => 'On the way — the goods are held at the source and cannot be sold.',
+    'transfer_received' => 'Arrived — the goods left the source and are on the destination shelf.',
+    'transfer_cancelled' => 'The transfer was cancelled — the held goods were released.',
+    'no_transfers' => 'No transfers yet.',
+    'transfer_search' => 'Search by number…',
+    'transfer_note' => 'Dispatching holds the goods at the source; they only reach the destination when received.',
+    'transfer_holding' => 'The goods are still at :warehouse but held — waiting to be received.',
+    'transfer_on_the_way' => ':no — dispatched',
+    'transfer_left' => ':no — left the source warehouse',
+    'transfer_arrived' => ':no — onto the destination shelf',
+    'lines' => 'Lines',
+    'cancel_reason' => 'Reason for cancelling',
 ];

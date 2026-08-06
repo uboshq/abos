@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Modules\Inventory\Http\Controllers\ProductController;
 use App\Modules\Inventory\Http\Controllers\StockController;
 use App\Modules\Inventory\Http\Controllers\StockReportController;
+use App\Modules\Inventory\Http\Controllers\StockTransferController;
 use App\Modules\Inventory\Http\Controllers\WarehouseController;
 use Illuminate\Support\Facades\Route;
 
@@ -44,6 +45,23 @@ Route::middleware('auth')->prefix('inventory')->group(function () {
         Route::post('/adjust', [StockController::class, 'storeAdjustment'])->name('adjust.store');
         Route::post('/hold', [StockController::class, 'storeHold'])->name('hold');
         Route::post('/release', [StockController::class, 'storeRelease'])->name('release');
+    });
+
+    Route::prefix('transfers')->name('transfer.')->group(function () {
+        Route::get('/', [StockTransferController::class, 'index'])->name('index');
+        Route::get('/create', [StockTransferController::class, 'create'])->name('create');
+        Route::post('/', [StockTransferController::class, 'store'])->name('store');
+        Route::get('/{transfer}', [StockTransferController::class, 'show'])->whereNumber('transfer')->name('show');
+        Route::get('/{transfer}/edit', [StockTransferController::class, 'edit'])->whereNumber('transfer')->name('edit');
+        Route::put('/{transfer}', [StockTransferController::class, 'update'])->whereNumber('transfer')->name('update');
+
+        // রওনা আর বুঝে নেওয়া — দুইটা আলাদা কাজ, দুইটা আলাদা চাবি
+        Route::post('/{transfer}/dispatch', [StockTransferController::class, 'dispatch'])
+            ->whereNumber('transfer')->name('dispatch');
+        Route::post('/{transfer}/receive', [StockTransferController::class, 'receive'])
+            ->whereNumber('transfer')->name('receive');
+        Route::post('/{transfer}/cancel', [StockTransferController::class, 'cancel'])
+            ->whereNumber('transfer')->name('cancel');
     });
 
     Route::get('/reports/{slug}', [StockReportController::class, 'show'])->name('report.show');

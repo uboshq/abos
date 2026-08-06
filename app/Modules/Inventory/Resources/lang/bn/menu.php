@@ -10,4 +10,5 @@ return [
     'stock_ledger' => 'মজুদের খতিয়ান',
     'stock_summary' => 'মজুদের সারাংশ',
     'hold_report' => 'আটকানো মাল',
+    'transfers' => 'স্টক স্থানান্তর',
 ];
