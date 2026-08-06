@@ -208,6 +208,15 @@ class SalesTest extends TestCase
             [['sales_invoice_id' => $invoice->id, 'amount' => '2000']],
         );
 
+        /*
+         * খসড়া আদায়ে বিলের বাকি কমে না।
+         *
+         * আগে কমত — "বাতিল ছাড়া সব" গোনা হত বলে। ফলে কেউ একটা আদায়
+         * লিখে রেখে দিলেই বিলটা শোধ দেখাত, আর তাগাদার তালিকা থেকে
+         * হারিয়ে যেত। টাকা তখনো আসেনি।
+         */
+        $this->assertSame(0, bccomp($invoice->fresh()->dueAmount(), '2000', 4));
+
         $this->collections()->confirm($collection);
 
         $this->assertSame(0, bccomp($this->balanceOf(StandardChart::RECEIVABLE), '0', 4));

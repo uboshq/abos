@@ -32,5 +32,12 @@ return [
     'receipt' => 'Receipt',
     'unit' => 'Unit',
     'line_no' => 'No',
+
+    // Payment fields
+    'bill' => 'Bill',
+    'account' => 'Paid from',
+    'instrument' => 'Method',
+    'instrument_no' => 'Cheque / reference no',
+    'instrument_date' => 'Cheque date',
     'state' => 'State',
 ];

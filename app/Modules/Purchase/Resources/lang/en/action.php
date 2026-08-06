@@ -11,6 +11,7 @@ return [
     'edit' => 'Edit',
     'add_line' => 'Add a line',
     'remove_line' => 'Remove',
+    'new_payment' => 'New payment',
     'show_cancelled' => 'Show cancelled too',
     'receive_against' => 'Receive against this order',
     'bill_against' => 'Bill this receipt',

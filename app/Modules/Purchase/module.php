@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Modules\Purchase\Dashboard\PurchaseWidgets;
+use App\Modules\Purchase\Models\Payment;
 use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Purchase\Models\PurchaseOrder;
 use App\Modules\Purchase\Models\PurchaseReceipt;
@@ -55,6 +56,7 @@ return [
             ['label' => 'purchase::menu.orders', 'route' => 'purchase.order.index', 'permission' => 'purchase.order.view'],
             ['label' => 'purchase::menu.receipts', 'route' => 'purchase.receipt.index', 'permission' => 'purchase.receipt.view'],
             ['label' => 'purchase::menu.bills', 'route' => 'purchase.bill.index', 'permission' => 'purchase.bill.view'],
+            ['label' => 'purchase::menu.payments', 'route' => 'purchase.payment.index', 'permission' => 'purchase.payment.view'],
         ],
         'reports' => [
             ['label' => 'purchase::menu.pending_orders', 'route' => 'purchase.report.show',
@@ -77,6 +79,18 @@ return [
         'purchase.bill.view',
         'purchase.bill.create',
         'purchase.bill.cancel',
+
+        /*
+         * পরিশোধের চাবি আলাদা তিনটা।
+         *
+         * যিনি বিল তোলেন আর যিনি টাকা দেন — বেশিরভাগ ডিপোতে দুইজন
+         * আলাদা মানুষ, আর ইচ্ছাকৃতভাবে: একজনেই দুইটা করলে ভুয়া বিল
+         * তুলে নিজেই তার টাকা দিয়ে দেওয়া যেত, আর কাগজে সবই মিলত।
+         */
+        'purchase.payment.view',
+        'purchase.payment.create',
+        'purchase.payment.cancel',
+
         'purchase.report',
         'purchase.manage',
     ],
@@ -85,12 +99,14 @@ return [
         'PO' => 'purchase::doc.order',
         'GRN' => 'purchase::doc.receipt',
         'PBL' => 'purchase::doc.bill',
+        'PAY' => 'purchase::doc.payment',
     ],
 
     'drill_sources' => [
         'purchase_order' => PurchaseOrder::class,
         'purchase_receipt' => PurchaseReceipt::class,
         'purchase_bill' => PurchaseBill::class,
+        'purchase_payment' => Payment::class,
     ],
 
     'reports' => [

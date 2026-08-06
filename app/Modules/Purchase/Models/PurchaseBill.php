@@ -9,6 +9,7 @@ use App\Core\Concerns\HasDocumentStatus;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Contracts\Drillable;
+use App\Core\Support\DocumentStatus;
 use App\Models\Branch;
 use App\Models\User;
 use App\Modules\Supplier\Models\Supplier;
@@ -64,6 +65,50 @@ class PurchaseBill extends Model implements Drillable
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
+    }
+
+    /** এই বিলের বিপরীতে যত পরিশোধ বসেছে। */
+    public function paymentLines(): HasMany
+    {
+        return $this->hasMany(PaymentLine::class, 'purchase_bill_id');
+    }
+
+    /**
+     * এই বিলে কত টাকা দেওয়া হয়েছে।
+     *
+     * ── কেবল খাতায় বসা পরিশোধ ───────────────────────────────────────
+     * খসড়া পরিশোধে টাকা এখনো যায়নি — ওটা লেখা হয়েছে, পোস্ট হয়নি।
+     * গুনলে বিলটা শোধ দেখাত অথচ সরবরাহকারীর কাছে টাকা যায়নি, আর
+     * বকেয়ার তালিকা থেকে বিলটা নীরবে হারিয়ে যেত।
+     *
+     * ধরা পড়েছে পর্দা চালিয়ে: একটা খসড়া পরিশোধ তৈরি করেই দেখা গেল
+     * ১,০০০ টাকার বিলের বাকি ৪০০ দেখাচ্ছে।
+     *
+     * বাতিল হয়ে যাওয়া পরিশোধও বাদ — টাকাটা ফেরত এসেছে, বিলটা আবার বাকি।
+     */
+    public function paidAmount(): string
+    {
+        $paid = $this->paymentLines()
+            ->whereHas('payment', fn ($q) => $q->whereIn('status', [
+                DocumentStatus::CONFIRMED,
+                DocumentStatus::CLOSED,
+            ]))
+            ->sum('amount');
+
+        return (string) ($paid ?: '0');
+    }
+
+    /**
+     * এখনো কত বাকি।
+     *
+     * ঋণাত্মক হয় না: অতিরিক্ত শোধ (অগ্রিম) বিলের বাকি নয়, সরবরাহকারীর
+     * খাতার ব্যাপার — ওটা এখানে দেখালে "বাকি −৫০০" পড়ে কেউ বুঝত না।
+     */
+    public function dueAmount(): string
+    {
+        $due = bcsub((string) $this->total, $this->paidAmount(), 4);
+
+        return bccomp($due, '0', 4) > 0 ? $due : '0.0000';
     }
 
     public function branch(): BelongsTo

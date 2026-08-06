@@ -9,6 +9,7 @@ use App\Core\Concerns\HasDocumentStatus;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Contracts\Drillable;
+use App\Core\Support\DocumentStatus;
 use App\Models\Branch;
 use App\Models\User;
 use App\Modules\Customer\Models\Customer;
@@ -98,8 +99,21 @@ class SalesInvoice extends Model implements Drillable
      */
     public function collectedAmount(): string
     {
+        /*
+         * কেবল খাতায় বসা আদায়।
+         *
+         * আগে এখানে "বাতিল ছাড়া সব" গোনা হত, অর্থাৎ খসড়া আদায়ও। ফলে
+         * কেউ একটা আদায় লিখে রেখে দিলেই বিলটা শোধ দেখাত — টাকা হাতে
+         * আসার আগেই বিলটা তাগাদার তালিকা থেকে হারিয়ে যেত।
+         *
+         * ধরা পড়েছে ক্রয়ের আয়না বানাতে গিয়ে, ওখানে একই ভুলটা নকল
+         * হওয়ার পর।
+         */
         $collected = $this->collectionLines()
-            ->whereHas('collection', fn ($q) => $q->where('status', '<>', 'cancelled'))
+            ->whereHas('collection', fn ($q) => $q->whereIn('status', [
+                DocumentStatus::CONFIRMED,
+                DocumentStatus::CLOSED,
+            ]))
             ->sum('amount');
 
         return (string) ($collected ?: '0');

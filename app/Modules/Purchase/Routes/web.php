@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\Purchase\Http\Controllers\PaymentController;
 use App\Modules\Purchase\Http\Controllers\PurchaseBillController;
 use App\Modules\Purchase\Http\Controllers\PurchaseOrderController;
 use App\Modules\Purchase\Http\Controllers\PurchaseReceiptController;
@@ -49,6 +50,17 @@ Route::middleware('auth')->prefix('purchase')->group(function () {
         Route::put('/{bill}', [PurchaseBillController::class, 'update'])->whereNumber('bill')->name('update');
         Route::post('/{bill}/confirm', [PurchaseBillController::class, 'confirm'])->whereNumber('bill')->name('confirm');
         Route::post('/{bill}/cancel', [PurchaseBillController::class, 'cancel'])->whereNumber('bill')->name('cancel');
+    });
+
+    Route::prefix('payments')->name('payment.')->group(function () {
+        Route::get('/', [PaymentController::class, 'index'])->name('index');
+        Route::get('/create', [PaymentController::class, 'create'])->name('create');
+        Route::post('/', [PaymentController::class, 'store'])->name('store');
+        Route::get('/{payment}', [PaymentController::class, 'show'])->whereNumber('payment')->name('show');
+        Route::get('/{payment}/edit', [PaymentController::class, 'edit'])->whereNumber('payment')->name('edit');
+        Route::put('/{payment}', [PaymentController::class, 'update'])->whereNumber('payment')->name('update');
+        Route::post('/{payment}/confirm', [PaymentController::class, 'confirm'])->whereNumber('payment')->name('confirm');
+        Route::post('/{payment}/cancel', [PaymentController::class, 'cancel'])->whereNumber('payment')->name('cancel');
     });
 
     Route::get('/reports/{slug}', [PurchaseReportController::class, 'show'])->name('report.show');
