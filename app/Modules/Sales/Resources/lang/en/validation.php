@@ -56,4 +56,5 @@ return [
     'discount_awaiting' => 'This discount needs approval — the request has been sent. The invoice stays a draft; press Confirm again once it is approved.',
     'discount_rejected' => 'The discount was sent back. Lower it and confirm again.',
     'no_walkin_customer' => 'No cash-sale customer is set — choose one in the Control Panel, otherwise there is no saying whose name the day\'s sales go under.',
+    'return_needs_invoice' => 'A return must name the sales invoice it comes from — without it there is no way to know what those goods cost. For goods sold on an invoice ABOS never held, use a stock adjustment that carries a rate.',
 ];

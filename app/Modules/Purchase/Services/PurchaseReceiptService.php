@@ -15,6 +15,7 @@ use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Inventory\Services\CostLayerService;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\Purchase\Models\PurchaseOrder;
 use App\Modules\Purchase\Models\PurchaseOrderLine;
@@ -50,6 +51,7 @@ final class PurchaseReceiptService
         private readonly NumberSeriesEngine $numbers,
         private readonly PostingEngine $posting,
         private readonly StockService $stock,
+        private readonly CostLayerService $costs,
         private readonly SettingsService $settings,
     ) {}
 
@@ -171,6 +173,30 @@ final class PurchaseReceiptService
                     date: $receipt->trx_date,
                     documentNo: $receipt->document_no,
                 );
+
+                /*
+                 * মালের সাথে তার দামও ঢোকে — এখানেই, একই লেনদেনে।
+                 *
+                 * ── কেন চালানের দর, বিলের নয় ────────────────────────
+                 * বিল পরে আসে, আর মাঝখানে মাল বিক্রি হয়ে যেতে পারে।
+                 * বিলের অপেক্ষা করলে ততক্ষণ ওই মালের কোনো দাম থাকত না,
+                 * আর বিক্রয় থেমে যেত। সরবরাহকারী পরে অন্য দরে বিল
+                 * পাঠালে পার্থক্যটা মূল্য-পার্থক্য খাতে যায় (বিলের
+                 * পোস্টিং দেখুন) — মজুদের দর বদলায় না, কারণ মালটা তো
+                 * একই মাল।
+                 *
+                 * স্তর প্রতি লাইনে একটা, চালানে একটা নয়: এক চালানে একই
+                 * পণ্য দুই দরে এলে দুইটা আলাদা স্তরই সত্যি।
+                 */
+                $this->costs->receive(
+                    product: $line->product,
+                    qty: (string) $line->received_qty,
+                    unitCost: (string) $line->rate,
+                    sourceType: PurchaseReceipt::STOCK_SOURCE,
+                    sourceId: $receipt->id,
+                    documentNo: $receipt->document_no,
+                    date: $receipt->trx_date,
+                );
             }
 
             $this->postToLedger($receipt);
@@ -204,6 +230,17 @@ final class PurchaseReceiptService
 
         return DB::transaction(function () use ($receipt, $reason, $date) {
             if ($receipt->status === DocumentStatus::CONFIRMED) {
+                /*
+                 * দামটা আগে তোলা হয়, মাল সরানোর আগে — ইচ্ছাকৃতভাবে।
+                 *
+                 * ওই চালানের মাল ইতিমধ্যে বিক্রি হয়ে গেলে withdraw()
+                 * থামিয়ে দেয়, আর তখন স্টকও নড়ে না। উল্টো ক্রমে করলে
+                 * মাল সরানোর পর দাম তুলতে গিয়ে থামত, আর অর্ধেক কাজ
+                 * হওয়া অবস্থায় লেনদেনটা ফেরত যেত — ফল একই, কিন্তু
+                 * ব্যবহারকারী ততক্ষণে "স্টক কমে গেছে" দেখে ফেলতেন।
+                 */
+                $this->costs->withdraw(PurchaseReceipt::STOCK_SOURCE, $receipt->id);
+
                 foreach ($receipt->lines as $line) {
                     /*
                      * মাল ফেরত যাওয়ার আগে দেখা হয় সেটা এখনো তাকে আছে কি না।

@@ -46,4 +46,5 @@ return [
     'not_enough_to_return' => ':available of :product is in the warehouse — no more than that can go back.',
 
     'missing_account' => 'Account :code is missing from the chart — the chart has not been installed.',
+    'bill_needs_warehouse' => 'This bill brings goods in without a receipt, but no warehouse is named and there is no default one. Pick a warehouse.',
 ];

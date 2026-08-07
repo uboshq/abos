@@ -42,4 +42,5 @@ return [
     'transfer_arrived' => ':no — onto the destination shelf',
     'lines' => 'Lines',
     'cancel_reason' => 'Reason for cancelling',
+    'surplus_rate_note' => 'Only needed when the count finds more than the books say. Leave it empty for a shortage — the cost then comes from the goods own consignment.',
 ];

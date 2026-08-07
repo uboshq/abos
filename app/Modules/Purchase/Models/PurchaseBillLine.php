@@ -22,7 +22,7 @@ class PurchaseBillLine extends Model
 
     protected $fillable = [
         'purchase_bill_id', 'product_id', 'purchase_receipt_line_id',
-        'qty', 'rate', 'discount', 'tax', 'amount', 'line_no', 'narration',
+        'qty', 'rate', 'sales_price', 'discount', 'tax', 'amount', 'line_no', 'narration',
     ];
 
     protected function casts(): array

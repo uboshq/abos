@@ -38,7 +38,7 @@ class PurchaseBill extends Model implements Drillable
 
     protected $fillable = [
         'company_id', 'branch_id', 'financial_year_id', 'document_no',
-        'supplier_id', 'trx_date', 'due_on', 'supplier_bill_no',
+        'supplier_id', 'warehouse_id', 'trx_date', 'due_on', 'supplier_bill_no',
         'subtotal', 'discount', 'tax', 'total',
         'status', 'narration', 'created_by',
         'cancelled_by', 'cancelled_at', 'cancel_reason',
@@ -167,6 +167,15 @@ class PurchaseBill extends Model implements Drillable
                 ->orWhereHas('supplier', fn (Builder $s) => $s->search($term));
         });
     }
+
+    /**
+     * স্টকের চলাচলে যে উৎস বসে — StockService::move()-এ পাঠানো হয়।
+     *
+     * বিল সচরাচর মাল নড়ায় না; নড়ায় কেবল যখন তার পেছনে কোনো চালান নেই,
+     * অর্থাৎ মাল আর বিল একসাথে এসেছে। উৎসটা আলাদা রাখা হয়েছে যাতে
+     * গুদামের খতিয়ানে দেখা যায় মালটা কোন কাগজে ঢুকেছিল।
+     */
+    public const STOCK_SOURCE = 'purchase_bill';
 
     // ── Drillable ───────────────────────────────────────────────────────
 

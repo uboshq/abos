@@ -42,4 +42,5 @@ return [
     'line_no' => 'No',
     'dispatched_at' => 'Dispatched',
     'received_at' => 'Arrived',
+    'surplus_rate' => 'Rate for surplus',
 ];

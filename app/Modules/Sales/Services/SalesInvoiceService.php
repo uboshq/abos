@@ -17,6 +17,7 @@ use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Inventory\Services\CostLayerService;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\Sales\Models\DeliveryChallanLine;
 use App\Modules\Sales\Models\SalesInvoice;
@@ -52,6 +53,7 @@ final class SalesInvoiceService
         private readonly NumberSeriesEngine $numbers,
         private readonly PostingEngine $posting,
         private readonly StockService $stock,
+        private readonly CostLayerService $costs,
         private readonly SettingsService $settings,
         private readonly ApprovalEngine $approvals,
     ) {}
@@ -241,6 +243,7 @@ final class SalesInvoiceService
                 );
             }
 
+            $this->takeCostFromLayers($invoice);
             $this->postToLedger($invoice);
 
             $invoice->update(['status' => DocumentStatus::CONFIRMED]);
@@ -397,13 +400,21 @@ final class SalesInvoiceService
             $figures = $this->lineFigures($qty, $rate, $line['discount'] ?? '0', $line['tax'] ?? '0');
 
             /*
-             * খরচের দর এই মুহূর্তের ক্রয়মূল্য, আর সেটা লাইনে জমা থাকে।
+             * খসড়ায় দরটা শূন্য — আসলটা বসে confirm-এ, স্তর থেকে টেনে।
              *
-             * বাকি সব সংখ্যা লেজার থেকে গোনা হয়, এটা ব্যতিক্রম — কারণ
-             * ক্রয়মূল্য পরে বদলায়। পরে গুনলে গত মাসের মুনাফা আজ অন্যরকম
-             * দেখাত, আর কেউ বলতে পারত না কোনটা সত্যি।
+             * ── কেন এখানে একটা আন্দাজ বসানো হয় না ───────────────────
+             * আগে এখানে পণ্য-মাস্টারের ক্রয়মূল্য বসত, আর সেটাই ছিল পুরো
+             * গোলমালের উৎস: মাল খতিয়ানে ঢুকত চালানের আসল দরে, বেরোত
+             * মাস্টারের দরে, আর দুইটা কখনো এক হত না। ১,০০০ টাকার মালের
+             * ৪০% বেচে মজুদ খাত থেকে ১৩,৬০০ বেরিয়ে গিয়েছিল।
+             *
+             * একটা আন্দাজ বসিয়ে রাখলে খসড়ার পর্দায় সেটা "খরচ" বলে
+             * দেখা যেত, আর confirm-এর পর অন্য সংখ্যা — কেউ বিশ্বাস করত
+             * না কোনটা সত্যি। শূন্য থাকা মানে "এখনো জানা যায়নি", আর
+             * সেটাই সত্যি: কোন চালানের মাল যাবে তা তো মাল বেরোনোর আগে
+             * জানা যায় না।
              */
-            $unitCost = (string) $product->purchase_price;
+            $unitCost = '0';
 
             SalesInvoiceLine::create([
                 'sales_invoice_id' => $invoice->id,
@@ -424,6 +435,59 @@ final class SalesInvoiceService
         }
 
         $invoice->update([...$totals, 'cost_of_goods' => $cost]);
+    }
+
+    /**
+     * খরচের দর — যে চালানে মালটা ঢুকেছিল সেটার দর, স্তর থেকে টেনে।
+     *
+     * ── কেন এটা confirm-এ, লাইন তৈরির সময়ে নয় ───────────────────────
+     * খসড়া বিল দিনের পর দিন পড়ে থাকতে পারে, আর ততক্ষণে ওই মাল অন্য
+     * বিলে বেরিয়ে যেতে পারে। খসড়ার সময় স্তর টানলে মালটা আটকে থাকত
+     * অথচ কেউ সেটা বিক্রিই করেনি। স্টক যে মুহূর্তে নামে, দামও ঠিক সেই
+     * মুহূর্তেই টানা হয় — দুইটা একই লেনদেনে, তাই কখনো আলাদা হয় না।
+     *
+     * ── আগে যা ছিল, আর কেন সেটা ভুল ─────────────────────────────────
+     * দর আসত পণ্য-মাস্টারে লেখা ক্রয়মূল্য থেকে, আর মাল খতিয়ানে ঢুকত
+     * চালানের আসল দরে। জীবন্ত পর্দায় চালিয়ে ধরা পড়েছে: ১,০০০ টাকার ১০
+     * বস্তার ৪টা বেচে মজুদ খাত থেকে ১৩,৬০০ বেরিয়ে গিয়েছিল, আর খাতটা
+     * ঋণাত্মক হয়ে বসেছিল। বিস্তারিত:
+     * docs/Finding — Inventory is valued two different ways.md
+     *
+     * চালানে-বাঁধা লাইনও এখানে আসে: মালটা চালানের দিন গুদাম থেকে
+     * নেমেছে বটে, কিন্তু বিক্রয় হিসেবে খরচ বসে বিলের দিনেই।
+     */
+    private function takeCostFromLayers(SalesInvoice $invoice): void
+    {
+        $cost = '0';
+
+        foreach ($invoice->lines as $line) {
+            $taken = $this->costs->issue(
+                product: $line->product,
+                qty: (string) $line->qty,
+                sourceType: SalesInvoice::STOCK_SOURCE,
+                sourceId: $invoice->id,
+                documentNo: $invoice->document_no,
+                date: $invoice->trx_date,
+            );
+
+            /*
+             * লাইনের দরটা গড়, কারণ একটা লাইন একাধিক চালান থেকে আসতে
+             * পারে — ১৫ বস্তার ১০টা পুরনো দরে, ৫টা নতুন দরে। সারিতে
+             * একটাই সংখ্যা দেখানো যায়, তাই গড়ই দেখানো হয়। ভাঙা
+             * হিসাবটা হারায় না: প্রতিটা টান আলাদা সারিতে লেখা থাকে,
+             * আর ওখান থেকেই চালানে পৌঁছানো যায়।
+             */
+            $line->update([
+                'unit_cost' => bccomp((string) $line->qty, '0', 4) > 0
+                    ? bcdiv($taken['cost'], (string) $line->qty, 4)
+                    : '0',
+            ]);
+
+            $cost = bcadd($cost, $taken['cost'], 4);
+        }
+
+        $invoice->update(['cost_of_goods' => $cost]);
+        $invoice->refresh();
     }
 
     private function resolveChallanLine(

@@ -83,6 +83,28 @@ final class StandardChart
      */
     public const PURCHASE_PRICE_VARIANCE = '5150';
 
+    /**
+     * গণনায় যা কম বা বেশি পাওয়া গেল।
+     *
+     * ── কেন এই খাতটা দরকার হলো ─────────────────────────────────────
+     * মজুদ সমন্বয় এতদিন কেবল গুদামের হিসাব বদলাত, খতিয়ানে কিছুই বসাত
+     * না। ফলে গণনায় পাঁচ বস্তা কম পাওয়া গেলে তাক থেকে কমত, অথচ ব্যালেন্স
+     * শিটে মজুদের টাকা যেমন ছিল তেমনই থাকত — ঘাটতিটা কোনো খরচ হিসেবে
+     * কোথাও বসত না, আর মুনাফা ঠিক ততটাই বেশি দেখাত।
+     *
+     * ── কেন বিক্রীত পণ্যের ব্যয়ে নয় ────────────────────────────────
+     * ৫১০০-এ ফেললে সংখ্যাটা মিশে যেত, আর "আমার মাল কোথায় যাচ্ছে"
+     * প্রশ্নের উত্তর হারাত। চুরি, নষ্ট হওয়া, ভুল গণনা — এগুলো বিক্রির
+     * খরচ নয়, আর এগুলোর দিকে আলাদা করে তাকাতে হয়। খাতটা বড় হতে থাকলে
+     * সেটা নিজেই একটা খবর।
+     *
+     * ── একটাই খাত, দুই দিকের জন্য ──────────────────────────────────
+     * কম পাওয়া গেলে ডেবিট, বেশি পাওয়া গেলে ক্রেডিট। দুইটা আলাদা খাত
+     * রাখলে বছরশেষে দুইটা যোগ-বিয়োগ করে নিট বের করতে হত, অথচ প্রশ্নটা
+     * সবসময় নিট নিয়েই — "সব মিলিয়ে কতটা মাল হারালাম"।
+     */
+    public const INVENTORY_SHORTAGE_SURPLUS = '5160';
+
     public const DISCOUNT_GIVEN = '5300';
 
     /*
@@ -107,6 +129,7 @@ final class StandardChart
         self::PAYABLE, self::VAT_PAYABLE, self::GOODS_RECEIVED_NOT_INVOICED,
         self::RETAINED_EARNINGS,
         self::SALES, self::COST_OF_GOODS_SOLD, self::PURCHASE_PRICE_VARIANCE,
+        self::INVENTORY_SHORTAGE_SURPLUS,
         self::DISCOUNT_GIVEN,
         self::SALARY_EXPENSE, self::SALARY_PAYABLE,
         self::PROVIDENT_FUND_PAYABLE, self::EMPLOYEE_ADVANCE,
@@ -290,6 +313,8 @@ final class StandardChart
             ['5100', 'Cost of Goods Sold', 'বিক্রীত পণ্যের ব্যয়', $X, '5000', false, []],
             // চালানের দর আর বিলের দরের পার্থক্য — ধ্রুবকের মন্তব্যে কারণ
             ['5150', 'Purchase Price Variance', 'ক্রয়মূল্যের পার্থক্য', $X, '5000', false, []],
+            // গণনায় কম বা বেশি — ধ্রুবকের মন্তব্যে কারণ
+            ['5160', 'Inventory Shortage & Surplus', 'মজুদ ঘাটতি ও উদ্বৃত্ত', $X, '5000', false, []],
 
             ['5200', 'Operating Expenses', 'পরিচালন ব্যয়', $X, '5000', true, []],
             ['5201', 'Salary & Wages', 'বেতন ও মজুরি', $X, '5200', false, []],
