@@ -54,6 +54,28 @@
                 <x-ui.field name="counted" type="number" step="0.01" inputmode="decimal"
                             :label="__('inventory::field.counted')" numeric required />
 
+                {{--
+                    দরের ঘর — কেবল গণনায় বেশি পাওয়া গেলে যেটা লাগে।
+
+                    ── কেন এটা সবসময় দেখা যায় ─────────────────────────
+                    বেশি না কম পাওয়া গেছে তা জানা যায় তাকের সংখ্যাটা
+                    খাতার সংখ্যার সাথে মেলানোর পর, আর খাতার সংখ্যাটা
+                    নির্ভর করে কোন পণ্য ও কোন গুদাম বাছা হলো তার উপর।
+                    ঘরটা লুকিয়ে রেখে ঠিক সময়ে দেখাতে হলে পর্দাকে প্রতিটা
+                    পণ্যের বর্তমান স্টক আগে থেকে জানতে হত — অর্থাৎ পুরো
+                    গুদামটা পাতার সাথে পাঠাতে হত।
+
+                    তাই ঘরটা থাকে, আর ব্যাখ্যাটা পাশে থাকে। কম পাওয়া
+                    গেলে এটা খালি রাখলেই চলে — তখন মালের দাম স্তরেই লেখা
+                    আছে। বেশি পাওয়া গেলে সার্ভার দর ছাড়া এগোবে না, আর
+                    কারণটা বার্তায় বলে দেয়।
+                --}}
+                <x-ui.field name="unit_cost" type="number" step="0.01" min="0" inputmode="decimal"
+                            :label="__('inventory::field.surplus_rate')" numeric />
+                <p class="-mt-2 text-2xs text-(--color-ink-muted)">
+                    {{ __('inventory::message.surplus_rate_note') }}
+                </p>
+
                 <x-ui.select name="reason_code_id" :label="__('inventory::field.reason')"
                              :options="$reasons->mapWithKeys(fn ($r) => [$r->id => $r->name()])"
                              placeholder="-" required />

@@ -16,6 +16,9 @@ use App\Models\FinancialYear;
 use App\Models\User;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Services\CustomerService;
+use App\Modules\Inventory\Models\Product;
+use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Inventory\Services\CostLayerService;
 use App\Modules\Inventory\Services\ProductService;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\Inventory\Services\WarehouseService;
@@ -390,18 +393,10 @@ class DemoSeeder extends Seeder
         // প্রশ্নের একটা উত্তর থাকে
         foreach ([[$rice, '120'], [$oil, '75'], [$milk, '240'], [$biscuit, '1800'],
             [$tea, '260'], [$soap, '400']] as [$product, $qty]) {
-            $stock->move(
-                product: $product, warehouse: $main,
-                sourceType: 'opening', sourceId: $product->id,
-                floor: $qty, narration: 'খোলা মজুদ',
-            );
+            $this->openWith($product, $main, $qty);
         }
 
-        $stock->move(
-            product: $rice, warehouse: $netrakona,
-            sourceType: 'opening', sourceId: $rice->id,
-            floor: '40', narration: 'খোলা মজুদ',
-        );
+        $this->openWith($rice, $netrakona, '40');
 
         // অর্ডারে ধরা — মাল তাকেই আছে, কিন্তু অন্যের নামে
         $stock->move(
@@ -419,6 +414,39 @@ class DemoSeeder extends Seeder
         // আটকানো — দুইটা কারণে, আর কারণ দুইটা এক জিনিস নয়
         $stock->hold($rice, $main, '30', $this->reason('HOLD-PRICE'));
         $stock->hold($soap, $main, '12', $this->reason('HOLD-DMG'));
+    }
+
+    /**
+     * খোলা মজুদ — মাল আর তার দাম, একসাথে।
+     *
+     * ── কেন দামটাও ─────────────────────────────────────────────────────
+     * খোলা মজুদ মানে "ব্যবসা শুরুর দিন তাকে যা ছিল", আর তাকে থাকা মালের
+     * একটা দাম থাকেই — নইলে ওটা সম্পদ হিসেবে ব্যালেন্স শিটে বসত না।
+     *
+     * দামটা না বসালে প্রথম বিক্রয়েই আটকে যেত: FIFO জিজ্ঞেস করে "এই
+     * মালটা কোন চালানে, কত দামে ঢুকেছিল?", আর খোলা মজুদের কোনো উত্তর
+     * থাকত না। ঠিক এটাই ধরা পড়েছে — স্তর বসানোর পর ছয়টা পুরনো টেস্ট
+     * লাল হয়ে গিয়েছিল, আর তারা ঠিকই বলছিল।
+     *
+     * বাস্তব ডিপোতেও নিয়মটা এক: পুরনো হিসাব থেকে ABOS-এ আসার দিন
+     * প্রতিটা পণ্যের পরিমাণের পাশে তার দরও লিখতে হবে।
+     */
+    private function openWith(Product $product, Warehouse $warehouse, string $qty): void
+    {
+        app(StockService::class)->move(
+            product: $product, warehouse: $warehouse,
+            sourceType: 'opening', sourceId: $product->id,
+            floor: $qty, narration: 'খোলা মজুদ',
+        );
+
+        app(CostLayerService::class)->receive(
+            product: $product,
+            qty: $qty,
+            unitCost: (string) $product->purchase_price,
+            sourceType: 'opening',
+            sourceId: $product->id,
+            documentNo: 'OPENING',
+        );
     }
 
     private function reason(string $code): ReasonCode

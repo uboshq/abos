@@ -14,6 +14,9 @@ use App\Models\IssuedNumber;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Inventory\Models\Product;
+use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Inventory\Services\CostLayerService;
+use App\Modules\Inventory\Services\StockService;
 use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Purchase\Models\PurchaseBillLine;
 use App\Modules\Purchase\Models\PurchaseReceiptLine;
@@ -49,6 +52,8 @@ final class PurchaseBillService
     public function __construct(
         private readonly NumberSeriesEngine $numbers,
         private readonly PostingEngine $posting,
+        private readonly StockService $stock,
+        private readonly CostLayerService $costs,
         private readonly SettingsService $settings,
     ) {}
 
@@ -77,6 +82,7 @@ final class PurchaseBillService
                 'financial_year_id' => $year->id,
                 'document_no' => $documentNo,
                 'supplier_id' => $supplierId,
+                'warehouse_id' => $data['warehouse_id'] ?? null,
                 'trx_date' => $trxDate->toDateString(),
                 'due_on' => $data['due_on'] ?? null,
                 'supplier_bill_no' => $data['supplier_bill_no'] ?? null,
@@ -121,6 +127,7 @@ final class PurchaseBillService
             }
 
             $bill->update([
+                'warehouse_id' => $data['warehouse_id'] ?? null,
                 'trx_date' => $trxDate->toDateString(),
                 'due_on' => $data['due_on'] ?? null,
                 'supplier_bill_no' => $billNo,
@@ -152,12 +159,116 @@ final class PurchaseBillService
         }
 
         return DB::transaction(function () use ($bill) {
+            $this->bringInDirectLines($bill);
             $this->postToLedger($bill);
+            $this->applySalesPrices($bill);
 
             $bill->update(['status' => DocumentStatus::CONFIRMED]);
 
             return $bill->fresh(['lines']);
         });
+    }
+
+    /**
+     * চালান ছাড়া আসা মাল — গুদামে ঢোকে, আর দামটাও সাথে ঢোকে।
+     *
+     * ── কেন বিলও মাল ঢোকায় ──────────────────────────────────────────
+     * মালিকের সিদ্ধান্ত: ডিপোতে অনেক সময় মাল আর বিল একসাথেই আসে, তখন
+     * আলাদা করে "মাল বুঝে নেওয়া"র কাগজ বানানো বাড়তি কাজ। কিন্তু তাহলে
+     * বিলকেই মালটা ঢোকাতে হবে — নইলে খতিয়ানে মজুদ বাড়ত আর গুদামে
+     * কিছুই ঢুকত না, যেটা পর্দা চালিয়ে দেখতে গিয়ে ধরা পড়েছিল।
+     *
+     * যে লাইনের পেছনে চালান আছে সেটা এখানে বাদ — ওই মাল আগেই ঢুকেছে,
+     * আর তার দামও আগেই স্তরে বসেছে। দুইবার ঢোকালে গুদামে দ্বিগুণ মাল
+     * দেখাত।
+     */
+    private function bringInDirectLines(PurchaseBill $bill): void
+    {
+        $direct = $bill->lines->filter(fn (PurchaseBillLine $line) => $line->receiptLine === null);
+
+        if ($direct->isEmpty()) {
+            return;
+        }
+
+        $warehouse = $this->warehouseFor($bill);
+
+        foreach ($direct as $line) {
+            $this->stock->move(
+                product: $line->product,
+                warehouse: $warehouse,
+                sourceType: PurchaseBill::STOCK_SOURCE,
+                sourceId: $bill->id,
+                floor: (string) $line->qty,
+                date: $bill->trx_date,
+                documentNo: $bill->document_no,
+            );
+
+            /*
+             * দর হিসাব করা হয় ছাড়ের পরে, করের আগে।
+             *
+             * ছাড় বাদ না দিলে মালটা যত টাকায় সত্যিই পাওয়া গেছে তার
+             * চেয়ে দামি দেখাত, আর বেচার সময় মুনাফা কম দেখাত। আর কর
+             * যোগ করলে উল্টোটা: ভ্যাট ফেরতযোগ্য, ওটা মালের দাম নয়।
+             */
+            $unitCost = bccomp((string) $line->qty, '0', 4) > 0
+                ? bcdiv((string) $line->amount, (string) $line->qty, 4)
+                : '0';
+
+            $this->costs->receive(
+                product: $line->product,
+                qty: (string) $line->qty,
+                unitCost: $unitCost,
+                sourceType: PurchaseBill::STOCK_SOURCE,
+                sourceId: $bill->id,
+                documentNo: $bill->document_no,
+                date: $bill->trx_date,
+            );
+        }
+    }
+
+    /**
+     * নতুন বিক্রয়মূল্য — যে লাইনে বলা আছে, কেবল সেখানে।
+     *
+     * ── কেন ক্রয়ের কাগজে বিক্রয়ের দাম ───────────────────────────────
+     * মালিকের কথা: "direct purchase-এর সময়েই sales price দেব।" ট্রাক
+     * গেটে দাঁড়িয়ে, নতুন দরে মাল এসেছে, আর ওই দর দেখেই ঠিক হয় আজ কত
+     * দামে বেচা হবে। আলাদা পর্দায় পাঠালে মাঝের সময়টুকু পুরনো দামে
+     * বিক্রি চলত — নতুন দরে কেনা মাল পুরনো দরের মুনাফায়।
+     *
+     * null মানে "দাম বদলাব না", শূন্য মানে "বিনামূল্যে"। দুইটা এক করে
+     * ফেললে দাম না বদলাতে চাওয়া প্রতিটা লাইন পণ্যটার দাম শূন্য করে দিত।
+     */
+    private function applySalesPrices(PurchaseBill $bill): void
+    {
+        foreach ($bill->lines as $line) {
+            if ($line->sales_price === null) {
+                continue;
+            }
+
+            $line->product->update(['sale_price' => $line->sales_price]);
+        }
+    }
+
+    /**
+     * কোন গুদামে — বিলে বলা থাকলে সেটা, নইলে প্রধান গুদাম।
+     *
+     * প্রধান গুদামও না থাকলে থামতে হয়। "যেকোনো একটা" বেছে নিলে মাল
+     * এমন জায়গায় ঢুকত যেখানে কেউ খুঁজতে যাবে না, আর গণনার দিনে
+     * পার্থক্যটা কোথা থেকে এল তার উত্তর থাকত না।
+     */
+    private function warehouseFor(PurchaseBill $bill): Warehouse
+    {
+        $warehouse = $bill->warehouse_id !== null
+            ? Warehouse::query()->find($bill->warehouse_id)
+            : Warehouse::query()->where('is_default', true)->active()->first();
+
+        if ($warehouse === null) {
+            throw ValidationException::withMessages([
+                'warehouse_id' => __('purchase::validation.bill_needs_warehouse'),
+            ]);
+        }
+
+        return $warehouse;
     }
 
     /**
@@ -343,6 +454,19 @@ final class PurchaseBillService
                 'purchase_receipt_line_id' => $receiptLine?->id,
                 'qty' => $qty,
                 'rate' => $rate,
+
+                /*
+                 * খালি ঘর আর শূন্য আলাদা রাখা হয়।
+                 *
+                 * '' এলে null — "দাম বদলাব না"। '0' এলে শূন্য — "আজ থেকে
+                 * বিনামূল্যে"। দুইটা এক করে ফেললে যে লাইনে কেউ দাম
+                 * লেখেননি সেটাও পণ্যটার দাম মুছে দিত, আর পরদিন কাউন্টারে
+                 * সবকিছু শূন্য টাকায় বেরিয়ে যেত।
+                 */
+                'sales_price' => ($line['sales_price'] ?? '') === '' || ($line['sales_price'] ?? null) === null
+                    ? null
+                    : $this->money($line['sales_price']),
+
                 'discount' => $figures['discount'],
                 'tax' => $figures['tax'],
                 'amount' => $figures['amount'],

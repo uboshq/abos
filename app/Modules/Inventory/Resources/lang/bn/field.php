@@ -42,4 +42,5 @@ return [
     'line_no' => 'ক্রম',
     'dispatched_at' => 'রওনা দিয়েছে',
     'received_at' => 'পৌঁছেছে',
+    'surplus_rate' => 'বেশি পাওয়া মালের দর',
 ];

@@ -273,6 +273,47 @@ final class CostLayerService
         });
     }
 
+    /**
+     * নথি বাতিল — তার আনা স্তরগুলো তুলে নেওয়া।
+     *
+     * ── কেন ছোঁয়া হয়ে গেলে আর তোলা যায় না ──────────────────────────
+     * ওই স্তরের মাল যদি ইতিমধ্যে বিক্রি হয়ে থাকে, তবে সেই বিক্রয়ের
+     * খরচ ওই দামেই বসে গেছে। এখন স্তরটা তুলে নিলে খরচটা এমন মালের
+     * থাকত যা কখনো আসেইনি, আর গত মাসের মুনাফা আজ বদলে যেত।
+     *
+     * FIFO-তে পুরনো স্তর আগে খরচ হয়, তাই সচরাচর সদ্য আসা চালানের
+     * স্তরে কেউ হাত দেয়নি — বাতিল করা যায়। ছোঁয়া হয়ে গেলে সৎ পথ
+     * বাতিল নয়, ক্রয় ফেরত।
+     *
+     * @return int কতগুলো স্তর তোলা হলো
+     */
+    public function withdraw(string $sourceType, int $sourceId): int
+    {
+        return DB::transaction(function () use ($sourceType, $sourceId) {
+            $layers = CostLayer::query()
+                ->where('source_type', $sourceType)
+                ->where('source_id', $sourceId)
+                ->lockForUpdate()
+                ->get();
+
+            foreach ($layers as $layer) {
+                if (bccomp((string) $layer->qty_remaining, (string) $layer->qty_in, 4) !== 0) {
+                    throw ValidationException::withMessages([
+                        'status' => __('inventory::validation.layer_already_used', [
+                            'document' => $layer->document_no ?? (string) $layer->id,
+                        ]),
+                    ]);
+                }
+            }
+
+            foreach ($layers as $layer) {
+                $layer->delete();
+            }
+
+            return $layers->count();
+        });
+    }
+
     /** এই পণ্যের যত মাল স্তরে পড়ে আছে, তার মোট মূল্য। */
     public function valueOnHand(Product $product): string
     {

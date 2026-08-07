@@ -29,4 +29,6 @@ return [
     'no_financial_year' => ':date does not fall in any open financial year.',
     'no_cost_layer' => ':qty of :product has no purchase cost on record — the shelf has it, but nothing says which consignment it came in on. Bring it in with a stock adjustment that carries a rate, then try again.',
     'return_exceeds_issue' => 'More of :product cannot come back than went out.',
+    'layer_already_used' => 'Goods from :document have already left, so it can no longer be cancelled — the sales they went into are already costed at that price. Use a purchase return instead.',
+    'surplus_needs_rate' => 'Surplus found in a count needs a rate — only you know which consignment it came from, and without a rate it can never leave the shelf again.',
 ];

@@ -10,6 +10,7 @@ use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Inventory\Services\StockAdjustmentService;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\MasterData\Models\ReasonCode;
 use Illuminate\Database\Query\Builder;
@@ -34,6 +35,7 @@ class StockController extends Controller implements HasMiddleware
 
     public function __construct(
         private readonly StockService $stock,
+        private readonly StockAdjustmentService $adjustments,
         private readonly MenuBuilder $menu,
     ) {}
 
@@ -162,13 +164,14 @@ class StockController extends Controller implements HasMiddleware
     {
         $data = $this->validatedMovement($request, ReasonCode::STOCK_ADJUSTMENT, 'counted');
 
-        $movement = $this->stock->adjust(
+        $movement = $this->adjustments->adjust(
             product: $data['product'],
             warehouse: $data['warehouse'],
             countedQty: (string) $request->input('counted'),
             reason: $data['reason'],
             date: $request->input('trx_date'),
             narration: $request->input('narration'),
+            unitCost: $request->input('unit_cost'),
         );
 
         // মিলে গেলে কোনো সারি বসে না — আর সেটা ব্যবহারকারীকে বলা হয়,
@@ -233,6 +236,15 @@ class StockController extends Controller implements HasMiddleware
             $qtyField => ['required', 'numeric'],
             'trx_date' => ['nullable', 'date'],
             'narration' => ['nullable', 'string', 'max:500'],
+
+            /*
+             * দর — কেবল গণনায় বেশি পাওয়া গেলে, আর তখন বাধ্যতামূলক।
+             *
+             * এখানে required করা যায় না, কারণ পাওয়া গেছে বেশি না কম
+             * সেটা জানা যায় গোনার পর — তাক আর খাতার পার্থক্য দেখে।
+             * পাহারাটা তাই সার্ভিসে, যেখানে পার্থক্যটা জানা।
+             */
+            'unit_cost' => ['nullable', 'numeric', 'min:0'],
         ]);
 
         $reason = ReasonCode::query()->findOrFail($request->integer('reason_code_id'));

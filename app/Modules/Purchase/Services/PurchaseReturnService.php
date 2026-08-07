@@ -14,6 +14,7 @@ use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Inventory\Services\CostLayerService;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\Purchase\Models\PurchaseBillLine;
 use App\Modules\Purchase\Models\PurchaseReturn;
@@ -44,6 +45,7 @@ final class PurchaseReturnService
         private readonly NumberSeriesEngine $numbers,
         private readonly PostingEngine $posting,
         private readonly StockService $stock,
+        private readonly CostLayerService $costs,
     ) {}
 
     /**
@@ -157,6 +159,7 @@ final class PurchaseReturnService
                 );
             }
 
+            $this->takeCostFromLayers($return);
             $this->postToLedger($return);
 
             $return->update(['status' => DocumentStatus::CONFIRMED]);
@@ -212,6 +215,39 @@ final class PurchaseReturnService
         });
     }
 
+    /**
+     * ফেরত যাওয়া মালের আসল দাম — স্তর থেকে, পুরনো আগে।
+     *
+     * ── কেন সাধারণ FIFO, ওই বিলের স্তর ধরে নয় ───────────────────────
+     * "যে বিলে এসেছিল সেই বিলের স্তর থেকেই বেরোক" শুনতে বেশি নিখুঁত,
+     * কিন্তু ওই স্তরের মাল ততক্ষণে বিক্রি হয়ে গিয়ে থাকতে পারে। তখন
+     * তাকে যে মালটা পড়ে আছে সেটা অন্য চালানের, আর ফেরত যাচ্ছে সেটাই।
+     * তাই যা সত্যিই তাক থেকে যাচ্ছে, তার দামই বেরোয়।
+     *
+     * পার্থক্যটা হারায় না — বিলের দর আর এই দামের ফারাক মূল্য-পার্থক্য
+     * খাতে বসে (postToLedger দেখুন)।
+     */
+    private function takeCostFromLayers(PurchaseReturn $return): void
+    {
+        $cost = '0';
+
+        foreach ($return->lines as $line) {
+            $taken = $this->costs->issue(
+                product: $line->product,
+                qty: (string) $line->qty,
+                sourceType: PurchaseReturn::STOCK_SOURCE,
+                sourceId: $return->id,
+                documentNo: $return->document_no,
+                date: $return->trx_date,
+            );
+
+            $cost = bcadd($cost, $taken['cost'], 4);
+        }
+
+        $return->update(['cost_of_goods' => $cost]);
+        $return->refresh();
+    }
+
     private function postToLedger(PurchaseReturn $return): void
     {
         $total = (string) $return->total;
@@ -232,10 +268,44 @@ final class PurchaseReturnService
             ],
             [
                 'account_id' => $this->account(StandardChart::INVENTORY)->id,
-                'credit' => (string) $return->subtotal,
+
+                /*
+                 * মজুদ কমে যত টাকায় মালটা ঢুকেছিল, ঠিক ততটাই।
+                 *
+                 * ── কেন বিলের দর নয় ────────────────────────────────
+                 * প্রদেয় কমে বিলের দরে — সেটাই সরবরাহকারী ফেরত দেবেন।
+                 * কিন্তু মজুদ থেকে বেরোয় মালটা যে দামে ঢুকেছিল সেটাই।
+                 * দুইটা সচরাচর এক, কারণ ফেরত যাওয়া মাল সাধারণত ওই
+                 * বিলেরই। এক না হলে পার্থক্যটা মূল্য-পার্থক্য খাতে যায়,
+                 * নিচে।
+                 *
+                 * বিলের দরে মজুদ কমালে খাতা আর তাক আবার আলাদা হয়ে
+                 * যেত — ঠিক যে রোগটা সারাতে স্তর বসানো হয়েছে।
+                 */
+                'credit' => (string) $return->cost_of_goods,
                 'narration' => __('purchase::message.stock_out', ['no' => $return->document_no]),
             ],
         ];
+
+        /*
+         * বিলের দর আর মালের আসল দামের পার্থক্য।
+         *
+         * পুরনো সস্তা চালানের মাল ফেরত গেলে সরবরাহকারী আজকের দরে টাকা
+         * ফেরত দেন, অথচ মজুদ থেকে বেরোয় পুরনো দাম। পার্থক্যটা কোথাও
+         * যেতে হবে, আর সেটা মুনাফা নয় — ক্রয়ের দামের হেরফের, যার নিজের
+         * খাত আগে থেকেই আছে (চালান ও বিলের দর আলাদা হলে ওখানেই যায়)।
+         */
+        $variance = bcsub((string) $return->subtotal, (string) $return->cost_of_goods, 4);
+
+        if (bccomp($variance, '0', 4) !== 0) {
+            $account = $this->account(StandardChart::PURCHASE_PRICE_VARIANCE);
+
+            $lines[] = bccomp($variance, '0', 4) > 0
+                ? ['account_id' => $account->id, 'credit' => $variance,
+                    'narration' => __('purchase::message.price_variance', ['no' => $return->document_no])]
+                : ['account_id' => $account->id, 'debit' => bcmul($variance, '-1', 4),
+                    'narration' => __('purchase::message.price_variance', ['no' => $return->document_no])];
+        }
 
         $tax = (string) $return->tax;
 

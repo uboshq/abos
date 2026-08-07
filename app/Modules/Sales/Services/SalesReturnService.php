@@ -14,7 +14,9 @@ use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Inventory\Services\CostLayerService;
 use App\Modules\Inventory\Services\StockService;
+use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Models\SalesInvoiceLine;
 use App\Modules\Sales\Models\SalesReturn;
 use App\Modules\Sales\Models\SalesReturnLine;
@@ -49,6 +51,7 @@ final class SalesReturnService
         private readonly NumberSeriesEngine $numbers,
         private readonly PostingEngine $posting,
         private readonly StockService $stock,
+        private readonly CostLayerService $costs,
     ) {}
 
     /**
@@ -162,6 +165,7 @@ final class SalesReturnService
                 );
             }
 
+            $this->putCostBackInLayers($return);
             $this->postToLedger($return);
 
             $return->update(['status' => DocumentStatus::CONFIRMED]);
@@ -215,6 +219,58 @@ final class SalesReturnService
 
             return $return->fresh(['lines']);
         });
+    }
+
+    /**
+     * ফেরত আসা মাল স্তরে ফেরে — যে দামে বেরিয়েছিল, ঠিক সেই দামে।
+     *
+     * ── কেন আজকের দর নয় ────────────────────────────────────────────
+     * গ্রাহক গত মাসের মাল ফেরত দিলে সেটা গত মাসের দামের মাল। আজকের দরে
+     * ফিরিয়ে নিলে দাম বাড়লে মুনাফা তৈরি হত শুধু ফেরত নেওয়ার কারণে —
+     * কেউ কিছু বেচেনি, তবু খাতায় লাভ বসত।
+     *
+     * ── কেন মূল বিলটা লাগে ─────────────────────────────────────────
+     * "যে দামে বেরিয়েছিল" জানতে হলে জানতে হবে কোন বিলে বেরিয়েছিল।
+     * ফেরতের কাগজে মূল বিলটা বাঁধা থাকে, আর সেটাই এখানে ব্যবহার হয়।
+     */
+    private function putCostBackInLayers(SalesReturn $return): void
+    {
+        /*
+         * কোন বিলের মাল ফিরছে, সেটা না জানলে দামও জানা যায় না।
+         *
+         * ── কেন এটা confirm-এ আটকায়, ফর্মে নয় ───────────────────────
+         * খসড়া বানানোর সময় ব্যবহারকারী হয়তো বিলটা খুঁজছেন। তখনই
+         * আটকালে কাগজটা শুরুই করা যেত না। কিন্তু খাতায় বসার আগে
+         * প্রশ্নটার উত্তর থাকতেই হবে।
+         *
+         * ── পুরনো কাগজের মাল ফিরলে কী ───────────────────────────────
+         * ABOS-এ নেই এমন বিলের মাল ফিরলে এই কাগজটা ঠিক পথ নয় — তখন
+         * দরসহ মজুদ সমন্বয়ই সৎ পথ, কারণ ওখানে দামটা মানুষ নিজে লেখেন,
+         * আর কেউ কিছু ধরে নেয় না।
+         */
+        if ($return->sales_invoice_id === null) {
+            throw ValidationException::withMessages([
+                'sales_invoice_id' => __('sales::validation.return_needs_invoice'),
+            ]);
+        }
+
+        $cost = '0';
+
+        foreach ($return->lines as $line) {
+            $cost = bcadd($cost, $this->costs->returnToLayers(
+                product: $line->product,
+                qty: (string) $line->qty,
+                issuedSourceType: SalesInvoice::STOCK_SOURCE,
+                issuedSourceId: $return->sales_invoice_id,
+                sourceType: SalesReturn::STOCK_SOURCE,
+                sourceId: $return->id,
+                documentNo: $return->document_no,
+                date: $return->trx_date,
+            ), 4);
+        }
+
+        $return->update(['cost_of_goods' => $cost]);
+        $return->refresh();
     }
 
     private function postToLedger(SalesReturn $return): void
@@ -364,21 +420,28 @@ final class SalesReturnService
             $subtotal = bcadd($subtotal, $amount, 4);
             $taxTotal = bcadd($taxTotal, $tax, 4);
 
-            /*
-             * ফেরত মালের ব্যয় — পণ্যের ক্রয়মূল্য ধরে।
-             *
-             * বিক্রয় বিলেও ব্যয়টা ঠিক এভাবেই হিসাব হয়, তাই দুইটা মেলে।
-             * অন্য কোনো নিয়ম (গড় দর, FIFO) বসালে বিক্রি আর ফেরতে দুই
-             * রকম ব্যয় বসত, আর মজুদের অঙ্ক ধীরে ধীরে সরে যেত।
-             */
-            $cost = bcadd($cost, bcmul($qty, (string) $product->purchase_price, 4), 4);
         }
 
         $return->update([
             'subtotal' => $subtotal,
             'tax' => $taxTotal,
             'total' => bcadd($subtotal, $taxTotal, 4),
-            'cost_of_goods' => $cost,
+
+            /*
+             * খসড়ায় ব্যয় শূন্য — আসলটা বসে confirm-এ, স্তরে ফেরানোর সময়।
+             *
+             * ── আগে যা ছিল, আর কেন সেটা ভুল ─────────────────────────
+             * ব্যয়টা হিসাব হত পণ্য-মাস্টারের ক্রয়মূল্য ধরে, আর মন্তব্যে
+             * লেখা ছিল "বিক্রয় বিলেও ঠিক এভাবেই হয়, তাই দুইটা মেলে"।
+             * কথাটা সত্যি ছিল — দুইটা মিলত, কিন্তু দুইটাই ভুল দরে। যে
+             * মালটা ১০০ টাকায় ঢুকেছিল সেটা ৩,৪০০ টাকায় বেরোত আর ৩,৪০০
+             * টাকায় ফিরত, আর মজুদের খাত ধীরে ধীরে নয়, লাফিয়ে সরত।
+             *
+             * এখন মালটা ঠিক যে দামে বেরিয়েছিল সেই দামেই ফেরে — মূল
+             * বিক্রয়ের টানগুলো ধরে ধরে। তাতে বিক্রি আর ফেরত হুবহু
+             * একে অপরকে কাটে, এক পয়সাও পড়ে থাকে না।
+             */
+            'cost_of_goods' => '0',
         ]);
     }
 

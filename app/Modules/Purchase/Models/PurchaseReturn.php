@@ -38,7 +38,7 @@ class PurchaseReturn extends Model implements Drillable
     protected $fillable = [
         'company_id', 'branch_id', 'financial_year_id', 'document_no',
         'supplier_id', 'warehouse_id', 'purchase_bill_id', 'reason_code_id',
-        'trx_date', 'subtotal', 'tax', 'total',
+        'trx_date', 'subtotal', 'tax', 'total', 'cost_of_goods',
         'status', 'narration', 'created_by',
         'cancelled_by', 'cancelled_at', 'cancel_reason',
     ];
