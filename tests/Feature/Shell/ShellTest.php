@@ -374,11 +374,28 @@ class ShellTest extends TestCase
         preg_match('/\$modules = \[(.*?)\n    \];/s', $markup, $m);
         $this->assertNotEmpty($m, 'The module icon map is missing.');
 
-        preg_match_all("/'([a-z_]+)' => '([^']+)'/", $m[1], $icons, PREG_SET_ORDER);
-        $paths = array_column($icons, 2);
+        /*
+         * প্রতিটা আইকন এখন দুইটা পথ: কাঠামো আর উজ্জ্বল অংশ (২০২৬-০৮-০৭)।
+         *
+         * আগে এখানে একটামাত্র লেখা খোঁজা হত, আর আকার বদলানোর দিনে টেস্টটা
+         * শূন্য পথ পেয়ে থেমে গিয়েছিল — সে ঠিকই বলছিল, শুধু নতুন আকারটা
+         * চিনত না।
+         *
+         * দুইটা পথ একসাথে মিলিয়ে দেখা হয়, একটা নয়: দুইটা মডিউলের কাঠামো
+         * এক হলেও উজ্জ্বল অংশে আলাদা হলে চোখে আলাদাই লাগে, আর সেটাই এই
+         * পাহারার আসল প্রশ্ন — রেলে তাকিয়ে মডিউলটা চেনা যায় কি না।
+         */
+        preg_match_all("/'([a-z_]+)' => \[\s*'([^']*)',\s*'([^']*)',\s*\]/s", $m[1], $icons, PREG_SET_ORDER);
 
-        $this->assertGreaterThanOrEqual(10, count($paths));
-        $this->assertSame(count($paths), count(array_unique($paths)), 'Two modules share an icon.');
+        $signatures = array_map(fn (array $i) => $i[2].'|'.$i[3], $icons);
+
+        $this->assertGreaterThanOrEqual(10, count($signatures), 'The rail has fewer icons than modules.');
+        $this->assertSame(count($signatures), count(array_unique($signatures)), 'Two modules share an icon.');
+
+        // একটাও যেন পুরোপুরি ফাঁকা না হয় — ফাঁকা মানে রেলে একটা ফাঁকা ঘর
+        foreach ($icons as $icon) {
+            $this->assertNotSame('', $icon[2].$icon[3], "The {$icon[1]} icon is empty.");
+        }
     }
 
     public function test_the_rail_draws_its_icons_white_not_in_the_module_colour(): void

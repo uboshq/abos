@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Hr\Http\Controllers;
 
+use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
@@ -139,12 +140,22 @@ class LeaveController extends Controller implements HasMiddleware
     public function storeType(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'code' => ['required', 'string', 'max:32'],
+            // খালি রাখলে সিরিজ থেকে বসে — মালিকের নির্দেশ (২০২৬-০৮-০৭)
+            'code' => ['nullable', 'string', 'max:32'],
             'name_en' => ['required', 'string', 'max:120'],
             'name_bn' => ['nullable', 'string', 'max:120'],
             'days_per_year' => ['required', 'numeric', 'min:0', 'max:365'],
             'is_paid' => ['nullable', 'boolean'],
         ]);
+
+        /*
+         * কোডটা এখানেই বসে, সার্ভিসে নয় — ছুটির ধরনের নিজের কোনো
+         * সার্ভিস নেই, আর কেবল কোডের জন্য একটা বানানো মানে একটা ফাইল
+         * বাড়ানো যাতে আর কিছুই থাকবে না।
+         */
+        $data['code'] = trim((string) ($data['code'] ?? '')) !== ''
+            ? trim((string) $data['code'])
+            : app(NumberSeriesEngine::class)->next('LVT');
 
         LeaveType::create([
             ...$data,

@@ -34,6 +34,17 @@ class CustomerRequest extends FormRequest
             'name_en' => ['required', 'string', 'max:191'],
             'name_bn' => ['nullable', 'string', 'max:191'],
 
+            // দোকানের নাম নয়, যিনি চালান তাঁর নাম
+            'owner_name' => ['nullable', 'string', 'max:191'],
+
+            /*
+             * পয়েন্ট ঐচ্ছিক — নতুন দোকান বসানোর সময় এলাকা ভাগ এখনো ঠিক
+             * না-ও হতে পারে, আর তখন গ্রাহককে আটকে রাখার মানে নেই। তালিকায়
+             * ফাঁকা ঘর দেখেই বোঝা যাবে কোনগুলো এখনো বসানো বাকি।
+             */
+            'location_id' => ['nullable', 'integer',
+                Rule::exists('mdm_locations', 'id')->where('company_id', CompanyContext::id())],
+
             'phone' => ['nullable', 'string', 'max:32'],
             'email' => ['nullable', 'email', 'max:191'],
             'address_en' => ['nullable', 'string', 'max:500'],

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Services;
 
+use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Modules\Accounts\Models\Account;
@@ -20,7 +21,10 @@ use Illuminate\Validation\ValidationException;
  */
 final class CashTillService
 {
-    public function __construct(private readonly AccountService $accounts) {}
+    public function __construct(
+        private readonly AccountService $accounts,
+        private readonly NumberSeriesEngine $numbers,
+    ) {}
 
     /**
      * @param  array<string, mixed>  $data
@@ -30,7 +34,15 @@ final class CashTillService
         return DB::transaction(function () use ($data) {
             $parent = $this->cashParent();
 
-            $code = trim((string) $data['code']);
+            /*
+             * কোড না দিলে সিরিজ থেকে — মালিকের নির্দেশ (২০২৬-০৮-০৭)।
+             *
+             * টিলের কোডটা নিচে খাতের কোডেও বসে ("১১০১-TIL-…"), তাই
+             * অটো কোড হলে ছকেও একই পরিচয়ই যায় — দুই পর্দায় এক জিনিস
+             * এক নামে।
+             */
+            $code = trim((string) ($data['code'] ?? ''));
+            $code = $code !== '' ? $code : $this->numbers->next('TIL');
 
             $this->assertCodeIsFree($code);
 

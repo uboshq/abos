@@ -9,6 +9,7 @@ use App\Modules\Inventory\Models\CostLayer;
 use App\Modules\Inventory\Models\CostLayerUse;
 use App\Modules\Inventory\Models\Product;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use RuntimeException;
@@ -96,41 +97,11 @@ final class CostLayerService
                 ->lockForUpdate()
                 ->get();
 
-            $remaining = $qty;
-            $cost = '0';
-            $uses = [];
+            $drawn = $this->drawFrom($layers, $qty, $product, $sourceType, $sourceId, $documentNo, $date);
 
-            foreach ($layers as $layer) {
-                if (bccomp($remaining, '0', 4) <= 0) {
-                    break;
-                }
-
-                $take = bccomp((string) $layer->qty_remaining, $remaining, 4) >= 0
-                    ? $remaining
-                    : (string) $layer->qty_remaining;
-
-                $amount = bcmul($take, (string) $layer->unit_cost, 4);
-
-                $uses[] = CostLayerUse::create([
-                    'company_id' => $this->companyId(),
-                    'cost_layer_id' => $layer->id,
-                    'product_id' => $product->id,
-                    'source_type' => $sourceType,
-                    'source_id' => $sourceId,
-                    'document_no' => $documentNo,
-                    'trx_date' => $this->date($date),
-                    'qty' => $take,
-                    'unit_cost' => $layer->unit_cost,
-                    'amount' => $amount,
-                    'created_by' => auth()->id(),
-                ]);
-
-                $layer->qty_remaining = bcsub((string) $layer->qty_remaining, $take, 4);
-                $layer->save();
-
-                $cost = bcadd($cost, $amount, 4);
-                $remaining = bcsub($remaining, $take, 4);
-            }
+            $cost = $drawn['cost'];
+            $uses = $drawn['uses'];
+            $remaining = $drawn['left'];
 
             /*
              * স্তরে যত মাল আছে তার বেশি বেরোতে পারে না।
@@ -274,6 +245,60 @@ final class CostLayerService
     }
 
     /**
+     * নির্দিষ্ট একটা চালানের মাল বের করা — না কুলালে বাকিটা FIFO-তে।
+     *
+     * ── কেন ক্রয় ফেরতে এটা লাগে ─────────────────────────────────────
+     * সরবরাহকারীকে যে দুই বস্তা ফেরত যাচ্ছে সেগুলো **ওই বিলেরই** মাল,
+     * অন্য কোনো চালানের নয়। সাধারণ FIFO চালালে তাকের সবচেয়ে পুরনো
+     * মালটা বেরোত — ৫০ টাকায় কেনা বস্তা ৩,৪০০ দরে বেরিয়ে যেত, আর
+     * পার্থক্যটা মূল্য-পার্থক্য খাতে জমত। খাতা ভারসাম্যে থাকত, তবু
+     * সংখ্যাটা মিথ্যা বলত।
+     *
+     * ── আর না কুলালে FIFO কেন ───────────────────────────────────────
+     * ওই বিলের মাল ইতিমধ্যে বিক্রি হয়ে গিয়ে থাকতে পারে। তখন তাকে যা
+     * পড়ে আছে সেটা অন্য চালানের, আর ফেরত যাচ্ছে সেটাই — তাই যা সত্যিই
+     * যাচ্ছে তার দামই বেরোয়। পার্থক্যটা তখন সত্যিকারের পার্থক্য।
+     *
+     * @return array{cost: string, uses: list<CostLayerUse>}
+     */
+    public function issueFromSource(
+        Product $product,
+        string $qty,
+        string $fromSourceType,
+        int $fromSourceId,
+        string $sourceType,
+        int $sourceId,
+        ?string $documentNo = null,
+        Carbon|string|null $date = null,
+    ): array {
+        return DB::transaction(function () use (
+            $product, $qty, $fromSourceType, $fromSourceId, $sourceType, $sourceId, $documentNo, $date
+        ) {
+            $layers = CostLayer::query()
+                ->where('product_id', $product->id)
+                ->where('source_type', $fromSourceType)
+                ->where('source_id', $fromSourceId)
+                ->where('qty_remaining', '>', 0)
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get();
+
+            $taken = $this->drawFrom($layers, $qty, $product, $sourceType, $sourceId, $documentNo, $date);
+
+            if (bccomp($taken['left'], '0', 4) > 0) {
+                $rest = $this->issue($product, $taken['left'], $sourceType, $sourceId, $documentNo, $date);
+
+                return [
+                    'cost' => bcadd($taken['cost'], $rest['cost'], 4),
+                    'uses' => [...$taken['uses'], ...$rest['uses']],
+                ];
+            }
+
+            return ['cost' => $taken['cost'], 'uses' => $taken['uses']];
+        });
+    }
+
+    /**
      * নথি বাতিল — তার আনা স্তরগুলো তুলে নেওয়া।
      *
      * ── কেন ছোঁয়া হয়ে গেলে আর তোলা যায় না ──────────────────────────
@@ -334,6 +359,67 @@ final class CostLayerService
         return (string) (CostLayer::query()
             ->where('product_id', $product->id)
             ->sum('qty_remaining') ?: '0');
+    }
+
+    /**
+     * দেওয়া স্তরগুলো থেকে যতটা কুলায় টেনে নেওয়া।
+     *
+     * দুই জায়গায় লাগে — সাধারণ FIFO টান, আর নির্দিষ্ট চালান থেকে টান।
+     * নিয়মটা এক জায়গায় রাখা হয়েছে, কারণ দুই কপি হলে একদিন একটাতে
+     * সারি লেখা হত আর অন্যটাতে হত না।
+     *
+     * "কত বাকি রইল" ফেরত দেয়, নিজে থামে না — কে থামবে সেটা ডাকা
+     * পক্ষের সিদ্ধান্ত।
+     *
+     * @param  Collection<int, CostLayer>  $layers
+     * @return array{cost: string, uses: list<CostLayerUse>, left: string}
+     */
+    private function drawFrom(
+        $layers,
+        string $qty,
+        Product $product,
+        string $sourceType,
+        int $sourceId,
+        ?string $documentNo,
+        Carbon|string|null $date,
+    ): array {
+        $remaining = $qty;
+        $cost = '0';
+        $uses = [];
+
+        foreach ($layers as $layer) {
+            if (bccomp($remaining, '0', 4) <= 0) {
+                break;
+            }
+
+            $take = bccomp((string) $layer->qty_remaining, $remaining, 4) >= 0
+                ? $remaining
+                : (string) $layer->qty_remaining;
+
+            $amount = bcmul($take, (string) $layer->unit_cost, 4);
+
+            $uses[] = CostLayerUse::create([
+                'company_id' => $this->companyId(),
+                'cost_layer_id' => $layer->id,
+                'product_id' => $product->id,
+                'source_type' => $sourceType,
+                'source_id' => $sourceId,
+                'document_no' => $documentNo,
+                'trx_date' => $this->date($date),
+                'qty' => $take,
+                'unit_cost' => $layer->unit_cost,
+                'amount' => $amount,
+                'created_by' => auth()->id(),
+            ]);
+
+            $layer->qty_remaining = bcsub((string) $layer->qty_remaining, $take, 4);
+            $layer->save();
+
+            $cost = bcadd($cost, $amount, 4);
+            $remaining = bcsub($remaining, $take, 4);
+        }
+
+        return ['cost' => $cost, 'uses' => $uses, 'left' => $remaining];
     }
 
     private function companyId(): int

@@ -124,7 +124,8 @@ class WarehouseController extends Controller implements HasMiddleware
         $companyId = CompanyContext::id();
 
         $data = $request->validate([
-            'code' => ['required', 'string', 'max:32'],
+            // খালি রাখলে সিরিজ থেকে বসে — WarehouseService::create() দেখুন
+            'code' => ['nullable', 'string', 'max:32'],
             'name_en' => ['required', 'string', 'max:191'],
             'name_bn' => ['nullable', 'string', 'max:191'],
             'address_en' => ['nullable', 'string', 'max:500'],

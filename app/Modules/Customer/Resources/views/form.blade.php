@@ -55,6 +55,20 @@
                                    :required="$requireBangla"
                                    :hint="__('customer::message.bn_name_hint')" />
 
+                {{-- দোকানের নাম আর মালিকের নাম এক নয়।
+
+                     "মায়ের দোয়া স্টোর" কাগজে ছাপা হয়, আর ফোনে ধরতে হয়
+                     "রফিকুল ইসলাম"-কে। এক ঘরে দুইটা লিখলে চালানে ভুল
+                     নাম যেত। --}}
+                <x-ui.field name="owner_name" :label="__('customer::field.owner_name')"
+                            :value="old('owner_name', $customer->owner_name)" />
+
+                <x-ui.select name="location_id" :label="__('customer::field.point')"
+                             :options="$locations->mapWithKeys(fn ($l) => [$l->id => $l->name()])"
+                             :selected="old('location_id', $customer->location_id)"
+                             placeholder="-"
+                             :hint="__('customer::message.point_hint')" />
+
                 {{-- মোবাইলে সঠিক কী-বোর্ড আসার জন্য type ঠিক দিতে হয়
                      (সেকশন ২০.৫) — ফোনের ঘরে অক্ষরের কী-বোর্ড এলে ফিল্ড
                      সেলসম্যানের প্রতিটা এন্ট্রি ধীর হয়। --}}

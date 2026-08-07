@@ -25,4 +25,9 @@ return [
     'bucket_60' => '61–90 days',
     'bucket_90' => '90+ days',
     'state' => 'Status',
+    'point' => 'Point',
+    'area' => 'Area',
+    'owner_name' => 'Owner name',
+    'available_limit' => 'Available limit',
+    'last_purchase' => 'Last purchase',
 ];

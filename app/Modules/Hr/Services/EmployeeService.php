@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Hr\Services;
 
+use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Modules\Hr\Models\Employee;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -18,13 +19,24 @@ use Illuminate\Validation\ValidationException;
  */
 final class EmployeeService
 {
+    public function __construct(private readonly NumberSeriesEngine $numbers) {}
+
     /**
      * @param  array<string, mixed>  $data
      */
     public function create(array $data): Employee
     {
         return DB::transaction(function () use ($data) {
+            /*
+             * কোড না দিলে সিরিজ থেকে — মালিকের নির্দেশ (২০২৬-০৮-০৭):
+             * "সব জায়গায় কোড অটো বসবে"।
+             *
+             * নম্বরটা ট্রানজেকশনের ভেতরে, নাহলে কর্মী সেভ ব্যর্থ হলেও
+             * কোডটা খরচ হয়ে যেত। হাতে দিলে সেটাই থাকে — পুরনো খাতার
+             * কর্মী নম্বর (যেমন ৪৭) ধরে রাখা যায়।
+             */
             $code = trim((string) ($data['code'] ?? ''));
+            $code = $code !== '' ? $code : $this->numbers->next('EMP');
 
             $this->assertCodeIsFree($code);
             $this->assertDatesMakeSense($data);

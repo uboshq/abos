@@ -51,14 +51,26 @@
             :rows="$customers"
             :compact="request()->boolean('compact')"
             :grid="request('view') === 'grid'"
+            {{--
+                কলামের ক্রমটা মালিকের দেওয়া (২০২৬-০৮-০৭), হুবহু:
+                ক্রম · নাম · পয়েন্ট · এরিয়া · মালিক · মোবাইল · পাওনা ·
+                অবস্থা · বিস্তারিত · কাজ।
+
+                কোডের কলামটা সরানো হয়েছে, বাদ দেওয়া হয়নি — নামটাই এখন
+                কোডের লিংক বহন করে। কারণ ওই ক্রমে কোড নেই, অথচ কোড ছাড়া
+                একই নামের দুইটা দোকান আলাদা করা যেত না।
+
+                ক্রম নম্বরটা পাতার সাথে চলে (firstItem), সারির গোনা নয় —
+                তিন নম্বর পাতায় আবার ১ থেকে শুরু হলে "১৪ নম্বরটা দেখুন"
+                বলা যেত না।
+            --}}
             :columns="[
                 [
-                    'key' => 'code',
-                    'label' => __('customer::field.code'),
-                    // CUS-2026-2027-0001 — অর্থবছর সহ কোড লম্বা হয়, আর
-                    // ৯rem-এ সেটা দুই লাইনে ভেঙে যাচ্ছিল
-                    'width' => '13rem',
-                    'render' => fn ($c) => view('customer::partials.code-link', ['customer' => $c]),
+                    'key' => 'sl',
+                    'label' => __('core.table.serial'),
+                    'width' => '4rem',
+                    'numeric' => true,
+                    'render' => fn ($c, $i) => $customers->firstItem() + $i,
                 ],
                 [
                     'key' => 'name_en',
@@ -66,8 +78,26 @@
                     // স্পষ্ট প্রস্থ, নাহলে বাংলা নাম কয়েক লাইনে ভাঙে —
                     // বাকি কলামগুলোর নির্দিষ্ট প্রস্থের পর যা থাকে তাতেই
                     // নামটা চাপা পড়ে যায়
-                    'width' => '20rem',
-                    'render' => fn ($c) => $c->name(),
+                    'width' => '18rem',
+                    'render' => fn ($c) => view('customer::partials.code-link', ['customer' => $c]),
+                ],
+                [
+                    'key' => 'point',
+                    'label' => __('customer::field.point'),
+                    'width' => '9rem',
+                    'render' => fn ($c) => $c->location?->name() ?? '—',
+                ],
+                [
+                    'key' => 'area',
+                    'label' => __('customer::field.area'),
+                    'width' => '9rem',
+                    'render' => fn ($c) => $c->area()?->name() ?? '—',
+                ],
+                [
+                    'key' => 'owner_name',
+                    'label' => __('customer::field.owner_name'),
+                    'width' => '11rem',
+                    'render' => fn ($c) => $c->owner_name ?: '—',
                 ],
                 ['key' => 'phone', 'label' => __('customer::field.phone'), 'width' => '9rem'],
                 [
@@ -86,6 +116,12 @@
                     'label' => __('customer::field.state'),
                     'width' => '7rem',
                     'render' => fn ($c) => view('customer::partials.state-badge', ['customer' => $c]),
+                ],
+                [
+                    'key' => 'actions',
+                    'label' => __('core.table.actions'),
+                    'width' => '8rem',
+                    'render' => fn ($c) => view('customer::partials.row-actions', ['customer' => $c]),
                 ],
             ]" />
 

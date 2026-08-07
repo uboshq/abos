@@ -29,7 +29,9 @@
         <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <div class="grid gap-3 md:grid-cols-2">
                 <x-ui.field name="code" :label="__('hr::field.code')"
-                            :value="old('code', $head->code)" required />
+                            :value="old('code', $head->code)"
+                            :placeholder="__('core.create.code_auto')"
+                            :hint="$head->exists ? null : __('core.create.code_auto_hint')" />
                 <x-ui.field name="name_en" :label="__('hr::field.name_en')"
                             :value="old('name_en', $head->name_en)" required />
                 <x-ui.field name="name_bn" :label="__('hr::field.name_bn')"

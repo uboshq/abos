@@ -38,7 +38,10 @@
                                     'py-2.5' => ! $compact,
                                     'num' => $column['numeric'],
                                 ])>
-                                {{ $cell($row, $column) }}
+                                {{-- $loop->parent — ভেতরের লুপটা কলামের,
+                                     বাইরেরটা সারির, আর ক্রম নম্বর চাই
+                                     সারিরটাই --}}
+                                {{ $cell($row, $column, $loop->parent->index) }}
                             </td>
                         @endforeach
                     </tr>

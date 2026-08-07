@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Hr\Services;
 
+use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Hr\Models\SalaryHead;
@@ -19,13 +20,17 @@ use Illuminate\Validation\ValidationException;
  */
 final class SalaryHeadService
 {
+    public function __construct(private readonly NumberSeriesEngine $numbers) {}
+
     /**
      * @param  array<string, mixed>  $data
      */
     public function create(array $data): SalaryHead
     {
         return DB::transaction(function () use ($data) {
+            // কোড না দিলে সিরিজ থেকে — মালিকের নির্দেশ (২০২৬-০৮-০৭)
             $code = trim((string) ($data['code'] ?? ''));
+            $code = $code !== '' ? $code : $this->numbers->next('SLH');
 
             $this->assertCodeIsFree($code);
             $this->assertBasicIsAnEarning($data);

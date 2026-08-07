@@ -127,8 +127,10 @@ class SalesReturnTest extends TestCase
 
         $this->returns()->confirm(
             $this->returns()->create(
+                // মূল বিলটা এখন বাধ্যতামূলক: কোন বিলের মাল ফিরছে না
+                // জানলে ওই মালের খরচ কত ছিল তাও জানা যায় না
                 ['customer_id' => $this->customer->id, 'warehouse_id' => $this->warehouse->id,
-                    'trx_date' => now()->toDateString()],
+                    'sales_invoice_id' => $invoice->id, 'trx_date' => now()->toDateString()],
                 [['product_id' => $this->product->id,
                     'sales_invoice_line_id' => $invoice->lines->first()->id, 'qty' => '2']],
             )

@@ -58,6 +58,27 @@ final class NumberSeriesProvisioner
     ];
 
     /**
+     * নম্বরের ছক — মাস্টারের পরিচয়ে অর্থবছর থাকে না।
+     *
+     * ── কেন থাকে না ─────────────────────────────────────────────────
+     * একটা বিল ২০২৬-২৭ অর্থবছরের — তারিখটা তার পরিচয়ের অংশ। কিন্তু
+     * একটা দোকান বা একটা পণ্য কোনো বছরের নয়; সে বছরের পর বছর একই
+     * থাকে। CUS-2026-2027-0001 পড়তে গিয়ে চোখ প্রতিবার একটা অপ্রাসঙ্গিক
+     * সংখ্যা পার হয়, আর তালিকার কলামে ওটা দুই লাইনে ভেঙে যায়।
+     *
+     * ── কোরের এই মডিউলগুলোর নাম জানার দরকার নেই (নিয়ম ১৯.৭) ────────
+     * লেবেলের চাবিটাই বলে দেয়: যেটা "…_code"-এ শেষ, সেটা কোনো কাগজ নয়,
+     * একটা জিনিসের পরিচয় — পণ্য, গুদাম, কর্মী, গ্রাহক। মডিউল নিজেই
+     * নামটা বেছে দেয়, কোর শুধু নিয়মটা পড়ে।
+     */
+    private static function formatFor(string $labelKey): string
+    {
+        return str_ends_with($labelKey, '_code')
+            ? '{PREFIX}-{SEQ}'
+            : '{PREFIX}-{FY}-{SEQ}';
+    }
+
+    /**
      * অনুপস্থিত সিরিজগুলো তৈরি — যা আছে তা ছোঁয়া হয় না।
      *
      * @return int কতগুলো নতুন সিরিজ তৈরি হল
@@ -100,7 +121,7 @@ final class NumberSeriesProvisioner
                         'module' => $module->code,
                         'doc_type' => $docType,
                         'prefix' => self::FRIENDLY_PREFIX[$docType] ?? $docType,
-                        'format' => '{PREFIX}-{FY}-{SEQ}',
+                        'format' => self::formatFor($module->docTypes[$docType]),
                         'padding' => 4,
                         'next_number' => 1,
                         'start_number' => 1,

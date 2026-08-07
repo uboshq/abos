@@ -51,6 +51,25 @@ class CostLayerTest extends TestCase
         $this->actingAs($user);
 
         $this->product = Product::query()->orderBy('id')->firstOrFail();
+
+        /*
+         * খোলা মজুদের স্তরটা সরিয়ে নেওয়া হয়, প্রতিটা পরীক্ষার আগে।
+         *
+         * ── কেন ─────────────────────────────────────────────────────
+         * সিডার এখন খোলা মজুদের সাথে দামও বসায় (১২০ বস্তা @ ৩,৪০০) —
+         * সেটা ঠিক, কারণ তাকে থাকা মালের একটা দাম থাকেই। কিন্তু এই
+         * ফাইলের পরীক্ষাগুলো FIFO-র ক্রম নিয়ে, আর তাতে শুরুর অবস্থাটা
+         * জানা থাকতে হয়। না সরালে "১৫টা বেরোল, খরচ ১৬০০" মেলে না —
+         * পুরনো সস্তা স্তরটাই আগে বেরোয়।
+         *
+         * স্তরটা মোছা হয় না, খরচ করা হয় — মোছা মানে ইতিহাস মুছে ফেলা,
+         * আর এই ইঞ্জিনের পুরো কথাই হলো ইতিহাস থাকবে।
+         */
+        $onHand = $this->costs()->qtyOnHand($this->product);
+
+        if (bccomp($onHand, '0', 4) > 0) {
+            $this->costs()->issue($this->product, $onHand, 'test_opening_cleared', 1);
+        }
     }
 
     /**
@@ -169,7 +188,19 @@ class CostLayerTest extends TestCase
         }
 
         $this->assertSame('2.0000', $this->costs()->qtyOnHand($this->product));
-        $this->assertSame(0, CostLayerUse::query()->where('product_id', $this->product->id)->count());
+
+        /*
+         * প্রশ্নটা "কোনো টান আছে কি না" নয়, "এই ব্যর্থ টানটা কিছু লিখেছে
+         * কি না" — তাই উৎস ধরে গোনা হয়।
+         *
+         * আগে পণ্যের সব টান গোনা হত আর শূন্য আশা করা হত। setUp এখন খোলা
+         * মজুদ খরচ করে শুরু করে (সিডার এখন দামসহ মাল বসায়), তাই ওখানেই
+         * দুইটা সারি থাকে — টেস্টটা ঠিকই ধরেছিল, শুধু ভুল প্রশ্ন করছিল।
+         */
+        $this->assertSame(0, CostLayerUse::query()
+            ->where('source_type', 'test_out')
+            ->where('source_id', 1)
+            ->count());
     }
 
     /**
