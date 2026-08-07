@@ -40,8 +40,12 @@
             <h2 class="mb-3 font-semibold">{{ __('accounts::section.identity') }}</h2>
 
             <div class="grid gap-3 sm:grid-cols-2">
+                {{-- খালি রাখলে নিজে বসে। পুরনো ইঙ্গিতটা থেকে যায়, কারণ
+                     টিলের কোড খাতের কোডেও যায় — কেউ হাতে দিলে সেটা
+                     জানা দরকার। --}}
                 <x-ui.field name="code" :label="__('accounts::field.code')"
-                            :value="old('code', $till->code)" required
+                            :value="old('code', $till->code)"
+                            :placeholder="__('core.create.code_auto')"
                             :hint="$isNew ? __('accounts::message.till_code_hint') : null" />
 
                 <x-ui.field name="name_en" :label="__('accounts::field.name_en')"

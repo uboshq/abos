@@ -163,7 +163,7 @@
                               aria-hidden="true"></span>
                     @endif
 
-                    <x-shell.module-icon group="dashboard" tone="white" />
+                    <x-shell.module-icon group="dashboard" tone="white" size="rail" />
                     <span class="sr-only">{{ __('core.menu.dashboard') }}</span>
                 </a>
 
@@ -190,7 +190,7 @@
                                   aria-hidden="true"></span>
                         @endif
 
-                        <x-shell.module-icon :module="$module['code']" shape="module" tone="white" />
+                        <x-shell.module-icon :module="$module['code']" shape="module" tone="white" size="rail" />
                     </a>
                 @endforeach
             </nav>

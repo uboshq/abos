@@ -22,8 +22,10 @@ use App\Modules\Inventory\Services\CostLayerService;
 use App\Modules\Inventory\Services\ProductService;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\Inventory\Services\WarehouseService;
+use App\Modules\MasterData\Models\Location;
 use App\Modules\MasterData\Models\ReasonCode;
 use App\Modules\MasterData\Models\Unit;
+use App\Modules\MasterData\Services\LocationService;
 use App\Modules\MasterData\Services\MasterListService;
 use App\Modules\Supplier\Services\SupplierService;
 use Illuminate\Database\Seeder;
@@ -270,9 +272,93 @@ class DemoSeeder extends Seeder
      * একজনের ধারের সীমা বসানো আছে — সীমার নিয়মটা চোখে দেখার জন্য।
      * সীমা ছাড়া সবাই সমান হলে ব্যাপারটা আছে কি না তা বোঝাই যেত না।
      */
+    /**
+     * ডিপোর নিজের এলাকা-ছক — এরিয়া আর তার নিচের পয়েন্ট।
+     *
+     * দেশ ও বিভাগ কোর নিজে বসায় (LocationService::installBangladesh),
+     * কারণ ওগুলো সবার জন্য এক। এরিয়া থেকে নিচে ব্যবসার নিজের ছক, তাই
+     * ডেমো ডিপোরটা এখানে।
+     *
+     * ── কেন এটা লাগল ────────────────────────────────────────────────
+     * গ্রাহকের তালিকায় পয়েন্ট ও এরিয়ার কলাম আছে (মালিকের চাওয়া ক্রম),
+     * আর ওগুলো ফাঁকা থাকলে কলাম দুইটা দেখেই বোঝা যেত না তারা কী দেখাবে।
+     * ফাঁকা ড্যাশ ভরা একটা তালিকা দিয়ে ডিজাইন যাচাই করা যায় না।
+     *
+     * @return array<string, int> পয়েন্টের কোড => id
+     */
+    private function setUpLocations(): array
+    {
+        $locations = app(LocationService::class);
+        $locations->installBangladesh();
+
+        $mymensingh = Location::query()
+            ->where('level', Location::DIVISION)
+            ->where('code', 'MYM')
+            ->firstOrFail();
+
+        $points = [];
+
+        /*
+         * এরিয়া › টেরিটরি › পয়েন্ট — মাঝের ধাপটা বাদ দেওয়া যায় না।
+         *
+         * প্রথমে পয়েন্টগুলো সরাসরি এরিয়ার নিচে বসানো হয়েছিল, আর
+         * LocationService থামিয়ে দিল: "উপরে টেরিটরি থাকার কথা, এরিয়া
+         * নয়।" সে ঠিকই বলছিল — ধাপটা এই কোম্পানিতে চালু আছে, আর চালু
+         * ধাপ এড়িয়ে গেলে গাছটার মাঝখানে ফাঁক পড়ত।
+         *
+         * বাস্তবেও ধাপটা কাজের: একজন এসআর একটা টেরিটরি চালান, আর তার
+         * নিচে কয়েকটা বাজার (পয়েন্ট)।
+         */
+        foreach ([
+            ['MYM-SAD', 'Mymensingh Sadar', 'ময়মনসিংহ সদর', [
+                ['TR-MYM1', 'Mymensingh Town', 'ময়মনসিংহ শহর', [
+                    ['PT-GNG', 'Ganginar Par', 'গাঙ্গিনার পাড়'],
+                    ['PT-CHR', 'Charpara', 'চরপাড়া'],
+                ]],
+            ]],
+            ['NTK', 'Netrakona', 'নেত্রকোনা', [
+                ['TR-NTK1', 'Kendua Route', 'কেন্দুয়া রুট', [
+                    ['PT-KDA', 'Kendua Bazar', 'কেন্দুয়া বাজার'],
+                    ['PT-DMD', 'Dumdy Bazar', 'ডুমডি বাজার'],
+                ]],
+            ]],
+        ] as [$areaCode, $areaEn, $areaBn, $territoryRows]) {
+            $area = $locations->create([
+                'code' => $areaCode,
+                'name_en' => $areaEn,
+                'name_bn' => $areaBn,
+                'level' => Location::AREA,
+                'parent_id' => $mymensingh->id,
+            ]);
+
+            foreach ($territoryRows as [$trCode, $trEn, $trBn, $pointRows]) {
+                $territory = $locations->create([
+                    'code' => $trCode,
+                    'name_en' => $trEn,
+                    'name_bn' => $trBn,
+                    'level' => Location::TERRITORY,
+                    'parent_id' => $area->id,
+                ]);
+
+                foreach ($pointRows as [$code, $en, $bn]) {
+                    $points[$code] = $locations->create([
+                        'code' => $code,
+                        'name_en' => $en,
+                        'name_bn' => $bn,
+                        'level' => Location::POINT,
+                        'parent_id' => $territory->id,
+                    ])->id;
+                }
+            }
+        }
+
+        return $points;
+    }
+
     private function setUpCustomers(): void
     {
         $customers = app(CustomerService::class);
+        $points = $this->setUpLocations();
 
         /*
          * নামগুলো ubos-dms থেকে নেওয়া — বানানো নয়।
@@ -283,21 +369,31 @@ class DemoSeeder extends Seeder
          * যায় তা বাস্তবেও ওরকমই দেখাবে — "Test Customer 1" দিয়ে যা
          * কোনোদিন দেখা যেত না।
          */
+        /*
+         * মালিকের নাম আর পয়েন্ট — দোকানের নামের সাথে মিলিয়ে।
+         *
+         * "মায়ের দোয়া স্টোর"-এ ফোন করলে "রফিকুল ইসলাম"-কে চাইতে হয়;
+         * দুইটা আলাদা তথ্য, তাই আলাদা ঘরে। আর পয়েন্টটা ঠিকানার সাথে
+         * মেলানো — কেন্দুয়ার দোকান কেন্দুয়া পয়েন্টে, নইলে তালিকার
+         * এরিয়া কলামটা ঠিকানার সাথে অমিল দেখাত।
+         */
         foreach ([
-            ['Rahim Traders', 'রহিম ট্রেডার্স', '+8801811000001',
+            ['Rahim Traders', 'রহিম ট্রেডার্স', 'Md. Rahim Uddin', 'PT-KDA', '+8801811000001',
                 'Kendua Bazar, Netrakona', 'কেন্দুয়া বাজার, নেত্রকোনা', '50000', 15],
-            ['Karim Stores', 'করিম স্টোর্স', '+8801811000002',
+            ['Karim Stores', 'করিম স্টোর্স', 'Abdul Karim', 'PT-DMD', '+8801811000002',
                 'Dumdy Bazar, Mymensingh', 'ডুমডি বাজার, ময়মনসিংহ', '20000', 7],
-            ['Bismillah Enterprise', 'বিসমিল্লাহ এন্টারপ্রাইজ', '+8801811000003',
+            ['Bismillah Enterprise', 'বিসমিল্লাহ এন্টারপ্রাইজ', 'Shahidul Islam', 'PT-GNG', '+8801811000003',
                 'Ganginar Par, Mymensingh', 'গাঙ্গিনার পাড়, ময়মনসিংহ', '75000', 30],
-            ['Alam Store', 'আলম স্টোর', '+8801811000004',
+            ['Alam Store', 'আলম স্টোর', 'Nurul Alam', 'PT-KDA', '+8801811000004',
                 'Kendua, Netrakona', 'কেন্দুয়া, নেত্রকোনা', '10000', 7],
-            ['Niloy Store', 'নিলয় স্টোর', '+8801811000005',
+            ['Niloy Store', 'নিলয় স্টোর', 'Niloy Chandra Das', 'PT-CHR', '+8801811000005',
                 'Charpara, Mymensingh', 'চরপাড়া, ময়মনসিংহ', '0', 0],
-        ] as [$en, $bn, $phone, $addressEn, $addressBn, $limit, $days]) {
+        ] as [$en, $bn, $owner, $point, $phone, $addressEn, $addressBn, $limit, $days]) {
             $customers->create([
                 'name_en' => $en,
                 'name_bn' => $bn,
+                'owner_name' => $owner,
+                'location_id' => $points[$point] ?? null,
                 'phone' => $phone,
                 'address_en' => $addressEn,
                 'address_bn' => $addressBn,

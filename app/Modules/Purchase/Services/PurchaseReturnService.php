@@ -16,7 +16,9 @@ use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\CostLayerService;
 use App\Modules\Inventory\Services\StockService;
+use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Purchase\Models\PurchaseBillLine;
+use App\Modules\Purchase\Models\PurchaseReceipt;
 use App\Modules\Purchase\Models\PurchaseReturn;
 use App\Modules\Purchase\Models\PurchaseReturnLine;
 use Illuminate\Support\Carbon;
@@ -216,30 +218,52 @@ final class PurchaseReturnService
     }
 
     /**
-     * ফেরত যাওয়া মালের আসল দাম — স্তর থেকে, পুরনো আগে।
+     * ফেরত যাওয়া মালের আসল দাম — যে বিলে এসেছিল, সেই স্তর থেকেই।
      *
-     * ── কেন সাধারণ FIFO, ওই বিলের স্তর ধরে নয় ───────────────────────
-     * "যে বিলে এসেছিল সেই বিলের স্তর থেকেই বেরোক" শুনতে বেশি নিখুঁত,
-     * কিন্তু ওই স্তরের মাল ততক্ষণে বিক্রি হয়ে গিয়ে থাকতে পারে। তখন
-     * তাকে যে মালটা পড়ে আছে সেটা অন্য চালানের, আর ফেরত যাচ্ছে সেটাই।
-     * তাই যা সত্যিই তাক থেকে যাচ্ছে, তার দামই বেরোয়।
+     * ── কেন ওই বিলের স্তর, সাধারণ FIFO নয় ───────────────────────────
+     * সরবরাহকারীকে যে দুই বস্তা ফেরত যাচ্ছে সেগুলো **ওই বিলেরই** মাল।
+     * প্রথমে সাধারণ FIFO বসানো হয়েছিল, আর টেস্ট ধরিয়ে দিল কেন সেটা
+     * ভুল: ৫০ টাকায় কেনা বস্তা তাকের পুরনো ৩,৪০০ দরে বেরিয়ে যাচ্ছিল,
+     * আর ৬,৭০০ টাকা মূল্য-পার্থক্য খাতে জমছিল। খাতা ভারসাম্যে ছিল,
+     * তবু সংখ্যাটা মিথ্যা বলত।
      *
-     * পার্থক্যটা হারায় না — বিলের দর আর এই দামের ফারাক মূল্য-পার্থক্য
-     * খাতে বসে (postToLedger দেখুন)।
+     * ওই স্তরে মাল না কুলালে বাকিটা FIFO-তে আসে — ততক্ষণে ওই বিলের
+     * মাল বিক্রি হয়ে গেলে তাকে যা আছে সেটাই তো যাচ্ছে। তখনকার
+     * পার্থক্যটা সত্যিকারের পার্থক্য, আর সেটাই খাতে বসে।
+     *
+     * বিলের সাথে জোড়া নেই এমন লাইনে সাধারণ FIFO — কোন চালানের মাল তা
+     * বলার কিছু নেই বলেই।
      */
     private function takeCostFromLayers(PurchaseReturn $return): void
     {
         $cost = '0';
 
         foreach ($return->lines as $line) {
-            $taken = $this->costs->issue(
-                product: $line->product,
-                qty: (string) $line->qty,
-                sourceType: PurchaseReturn::STOCK_SOURCE,
-                sourceId: $return->id,
-                documentNo: $return->document_no,
-                date: $return->trx_date,
-            );
+            $billLine = $line->billLine;
+
+            $taken = $billLine !== null
+                ? $this->costs->issueFromSource(
+                    product: $line->product,
+                    qty: (string) $line->qty,
+                    fromSourceType: $billLine->purchase_receipt_line_id !== null
+                        ? PurchaseReceipt::STOCK_SOURCE
+                        : PurchaseBill::STOCK_SOURCE,
+                    fromSourceId: $billLine->purchase_receipt_line_id !== null
+                        ? ($billLine->receiptLine?->purchase_receipt_id ?? 0)
+                        : $billLine->purchase_bill_id,
+                    sourceType: PurchaseReturn::STOCK_SOURCE,
+                    sourceId: $return->id,
+                    documentNo: $return->document_no,
+                    date: $return->trx_date,
+                )
+                : $this->costs->issue(
+                    product: $line->product,
+                    qty: (string) $line->qty,
+                    sourceType: PurchaseReturn::STOCK_SOURCE,
+                    sourceId: $return->id,
+                    documentNo: $return->document_no,
+                    date: $return->trx_date,
+                );
 
             $cost = bcadd($cost, $taken['cost'], 4);
         }

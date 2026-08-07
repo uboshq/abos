@@ -113,7 +113,8 @@ class SalaryHeadController extends Controller implements HasMiddleware
         ]);
 
         return $request->validate([
-            'code' => ['required', 'string', 'max:32'],
+            // খালি রাখলে সিরিজ থেকে বসে — SalaryHeadService::create() দেখুন
+            'code' => ['nullable', 'string', 'max:32'],
             'name_en' => ['required', 'string', 'max:120'],
             'name_bn' => ['nullable', 'string', 'max:120'],
             'kind' => ['required', Rule::in(SalaryHead::KINDS)],

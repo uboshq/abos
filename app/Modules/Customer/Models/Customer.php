@@ -10,15 +10,19 @@ use App\Core\Concerns\HasDocumentStatus;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Contracts\Drillable;
+use App\Core\Support\DocumentStatus;
 use App\Models\Branch;
 use App\Models\LedgerEntry;
 use App\Models\User;
+use App\Modules\MasterData\Models\Location;
 use App\Modules\MasterData\Models\PartyType;
+use App\Modules\Sales\Models\SalesInvoice;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
 /**
  * একজন গ্রাহক।
@@ -39,7 +43,7 @@ class Customer extends Model implements Drillable
     use SoftDeletes;
 
     protected $fillable = [
-        'company_id', 'branch_id', 'code', 'name_en', 'name_bn',
+        'company_id', 'branch_id', 'location_id', 'code', 'name_en', 'name_bn', 'owner_name',
         'phone', 'email', 'address_en', 'address_bn', 'customer_type', 'party_type_id',
         'credit_limit', 'credit_days', 'opening_balance', 'opening_date',
         'receivable_account_id', 'status', 'is_active', 'created_by',
@@ -133,6 +137,81 @@ class Customer extends Model implements Drillable
                 ->orWhere('code', 'like', $like)
                 ->orWhere('phone', 'like', $like);
         });
+    }
+
+    /**
+     * দোকানটা গাছের কোন ধাপে বসে — সচরাচর পয়েন্ট।
+     */
+    public function location(): BelongsTo
+    {
+        return $this->belongsTo(Location::class);
+    }
+
+    /**
+     * উপরের এরিয়াটা — জমা রাখা নয়, গাছ থেকে গোনা।
+     *
+     * ── কেন কলামে রাখা হয় না ────────────────────────────────────────
+     * একটা পয়েন্ট একদিন অন্য এরিয়ায় সরতে পারে (এলাকা ভাগ হয়, নতুন
+     * এরিয়া খোলে)। কলামে জমা থাকলে ওই দিনের পর গ্রাহকের সারিতে পুরনো
+     * এরিয়াটাই লেখা থেকে যেত, আর তালিকা ও গাছ দুই রকম কথা বলত।
+     *
+     * গ্রাহক নিজেই এরিয়ায় বসলে সেটাই ফেরে — নিচের ধাপ না থাকলে উপরে
+     * খোঁজার কিছু নেই।
+     */
+    public function area(): ?Location
+    {
+        $node = $this->location;
+
+        if ($node === null) {
+            return null;
+        }
+
+        if ($node->level === Location::AREA) {
+            return $node;
+        }
+
+        return $node->ancestors()->firstWhere('level', Location::AREA);
+    }
+
+    /**
+     * আর কত ধার দেওয়া যায়।
+     *
+     * ── সীমা শূন্য মানে সীমাহীন, বন্ধ নয় ────────────────────────────
+     * wouldExceedCreditLimit()-এ একই সিদ্ধান্ত, একই কারণে: শূন্যকে
+     * "কিছুই বাকি রাখা যাবে না" ধরলে নতুন গ্রাহকের প্রথম বিলটাই আটকে
+     * যেত। তাই সীমা বসানো না থাকলে এখানে null ফেরে — "প্রযোজ্য নয়",
+     * আর পর্দায় একটা ড্যাশ। শূন্য দেখালে মানুষ ভাবত ধার শেষ।
+     *
+     * ঋণাত্মক হয় না: সীমা ছাড়িয়ে গেলে বাকি "শূন্য", আর ছাড়িয়ে যাওয়ার
+     * খবরটা আলাদা করে দেখানো হয় (over_limit বার্তা)।
+     */
+    public function availableLimit(): ?string
+    {
+        $limit = (string) $this->credit_limit;
+
+        if (bccomp($limit, '0', 4) === 0) {
+            return null;
+        }
+
+        $left = bcsub($limit, $this->outstanding(), 4);
+
+        return bccomp($left, '0', 4) > 0 ? $left : '0.0000';
+    }
+
+    /**
+     * শেষ কবে কিছু কিনেছেন।
+     *
+     * খাতায় বসা বিল ধরে, খসড়া নয় — খসড়া বিল কেনা নয়, লেখা। ছয় মাস চুপ
+     * থাকা গ্রাহকের সারিতে গতকালের তারিখ দেখালে কেউ তাঁকে ফোন করত না।
+     */
+    public function lastPurchaseOn(): ?Carbon
+    {
+        $date = SalesInvoice::query()
+            ->where('customer_id', $this->id)
+            ->whereIn('status', [DocumentStatus::CONFIRMED, DocumentStatus::CLOSED])
+            ->max('trx_date');
+
+        return $date === null ? null : Carbon::parse($date);
     }
 
     /**

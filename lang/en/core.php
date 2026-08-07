@@ -164,6 +164,8 @@ return [
     ],
 
     'table' => [
+        'actions' => 'Actions',
+        'serial' => 'SL#',
         'date' => 'Date',
         'from_date' => 'From date',
         'to_date' => 'To date',
@@ -220,8 +222,30 @@ return [
         'salesman' => 'Salesman',
     ],
 
+    /*
+     * সক্রিয় / নিষ্ক্রিয় — এক জায়গায়, প্রতিটা মডিউলে আলাদা নয়।
+     *
+     * গ্রাহক, সরবরাহকারী, পণ্য, গুদাম — সবার জন্য একই দুইটা শব্দ। আগে
+     * প্রতিটা মডিউল নিজের লেখা রাখত, আর একদিন একটায় "বন্ধ" আর অন্যটায়
+     * "নিষ্ক্রিয়" লেখা থাকত, অথচ জিনিসটা এক।
+     */
+    'state' => [
+        'active' => 'Active',
+        'inactive' => 'Inactive',
+    ],
+
     'create' => [
         'nothing_yet' => 'Nothing to create yet — the modules that make records are not installed.',
+
+        /*
+         * কোডের ঘরে যা লেখা থাকে, আর তার নিচের ছোট লাইনটা।
+         *
+         * ঘরটা ফাঁকা রাখা যায় বলেই এই দুইটা দরকার: placeholder না থাকলে
+         * ব্যবহারকারী ভাবতেন কিছু একটা লিখতেই হবে, আর hint না থাকলে
+         * ফাঁকা রেখে সেভ করার পর কোডটা কোথা থেকে এল তা রহস্যই থাকত।
+         */
+        'code_auto' => 'Assigned automatically',
+        'code_auto_hint' => 'Leave it empty and one will be given. Type one only to keep a code from your old books.',
     ],
     'notice' => [
         'awaiting_mine' => 'Waiting for your decision',

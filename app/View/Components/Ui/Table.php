@@ -110,12 +110,20 @@ class Table extends Component
      * escape করে — অর্থাৎ HTML বেরোনোর একমাত্র দরজা এই render, যেটা
      * ডেভেলপার সচেতনভাবে লেখে।
      *
+     * ── render দ্বিতীয় একটা সংখ্যাও পায়: এই পাতায় সারিটা কত নম্বর ──
+     * ক্রম নম্বরের কলামের জন্য (SL#), যেটা কোনো ঘরে জমা থাকে না — ওটা
+     * সারির অবস্থান, তথ্য নয়। যে কলামগুলোর দরকার নেই তারা কেবল প্রথম
+     * প্যারামিটারটা নেয়, আর PHP বাড়তিটা চুপচাপ ফেলে দেয়।
+     *
+     * পাতার নম্বর এখানে যোগ করা হয় না — সেটা তালিকার নিজের কাজ
+     * (paginator->firstItem()), কারণ টেবিল জানে না সে কোন পাতায় আছে।
+     *
      * @param  array{key: string, render: ?\Closure}  $column
      */
-    public function cell(mixed $row, array $column): mixed
+    public function cell(mixed $row, array $column, int $index = 0): mixed
     {
         if ($column['render'] instanceof \Closure) {
-            return ($column['render'])($row);
+            return ($column['render'])($row, $index);
         }
 
         return data_get($row, $column['key']);

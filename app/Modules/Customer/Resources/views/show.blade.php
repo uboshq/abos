@@ -67,6 +67,17 @@
                     @endif
                 </p>
 
+                {{-- আর কত ধার দেওয়া যায় — সীমার নিচেই, কারণ প্রশ্নটা
+                     সবসময় জোড়ায় আসে: "সীমা কত, আর কতটা বাকি আছে"। --}}
+                <p class="mt-1 text-2xs text-(--color-ink-muted)">
+                    {{ __('customer::field.available_limit') }}:
+                    <span class="num">
+                        {{ $customer->availableLimit() === null
+                            ? '—'
+                            : number_format((float) $customer->availableLimit(), 2) }}
+                    </span>
+                </p>
+
                 @if ($customer->wouldExceedCreditLimit('0'))
                     {{-- সীমা ইতিমধ্যেই ছাড়িয়ে গেছে — এটা বিক্রির পর্দায় জানার
                          চেয়ে এখানে জানা ভালো। --}}
@@ -87,12 +98,18 @@
             </div>
 
             <dl class="grid gap-x-4 gap-y-2 sm:grid-cols-2">
+                {{-- ক্রমটা মালিকের দেওয়া তালিকার মতোই: কে চালান, কোথায়
+                     বসে, কীভাবে ধরা যায় — তারপর বাকি সব। --}}
                 @foreach ([
+                    'customer::field.owner_name' => $customer->owner_name,
+                    'customer::field.point' => $customer->location?->name(),
+                    'customer::field.area' => $customer->area()?->name(),
                     'customer::field.phone' => $customer->phone,
                     'customer::field.email' => $customer->email,
                     'customer::field.type' => $customer->typeName(),
                     'core.company.branch' => $customer->branch?->name(),
                     'customer::field.address' => $customer->address(),
+                    'customer::field.last_purchase' => $customer->lastPurchaseOn()?->format('d/m/Y'),
                 ] as $label => $value)
                     @if (filled($value))
                         <div>

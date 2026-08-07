@@ -16,6 +16,7 @@ use App\Models\LedgerEntry;
 use App\Modules\Customer\Http\Requests\CustomerRequest;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Customer\Services\CustomerService;
+use App\Modules\MasterData\Models\Location;
 use App\Modules\MasterData\Models\PartyType;
 use Illuminate\Contracts\Database\Query\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -229,6 +230,23 @@ class CustomerController extends Controller implements HasMiddleware
     {
         return [
             'branches' => Branch::query()->active()->orderBy('name_en')->get(),
+
+            /*
+             * দোকান বসে গাছের নিচের ধাপে, তাই কেবল সেগুলোই দেখানো হয়।
+             *
+             * পুরো গাছ দেখালে কেউ একদিন একটা দোকানকে "বাংলাদেশ"-এ বসিয়ে
+             * দিতেন, আর তালিকায় তার এরিয়া ফাঁকা থাকত — কারণ দেশের উপরে
+             * এরিয়া খুঁজে পাওয়া যায় না।
+             *
+             * টেরিটরি ও রুটও আছে: কোনো ডিপো পয়েন্ট পর্যন্ত নামে না, আবার
+             * কেউ রুট পর্যন্ত যায়। ধাপটা কড়া করে বাঁধলে যে কোম্পানির
+             * পয়েন্ট নেই তার গ্রাহক কোথাও বসানো যেত না।
+             */
+            'locations' => Location::query()
+                ->atLevel([Location::TERRITORY, Location::POINT, Location::ROUTE])
+                ->active()
+                ->orderBy('name_en')
+                ->get(),
             // "both" ধরনগুলোও আসে: একটা প্রতিষ্ঠান একইসাথে গ্রাহক ও
             // সরবরাহকারী হতে পারে, আর দুইবার লিখতে বলার মানে নেই
             'partyTypes' => PartyType::query()->for(PartyType::CUSTOMER)->active()->orderBy('code')->get(),

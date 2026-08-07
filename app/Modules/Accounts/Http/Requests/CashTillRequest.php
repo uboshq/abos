@@ -23,7 +23,8 @@ class CashTillRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'code' => ['required', 'string', 'max:32', 'regex:/^[A-Za-z0-9][A-Za-z0-9\-\.]*$/'],
+            // খালি রাখলে সিরিজ থেকে বসে — CashTillService::create() দেখুন
+            'code' => ['nullable', 'string', 'max:32', 'regex:/^[A-Za-z0-9][A-Za-z0-9\-\.]*$/'],
             'name_en' => ['required', 'string', 'max:120'],
             'name_bn' => ['nullable', 'string', 'max:120'],
 

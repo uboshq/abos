@@ -35,8 +35,12 @@
         {{-- পরিচয় --}}
         <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <div class="grid gap-3 md:grid-cols-3">
+                {{-- খালি রাখলে কোডটা নিজে বসে (মালিকের নির্দেশ)। ঘরটা
+                     থাকে, কারণ পুরনো খাতার কর্মী নম্বর ধরে রাখতে হতে পারে। --}}
                 <x-ui.field name="code" :label="__('hr::field.code')"
-                            :value="old('code', $employee->code)" required />
+                            :value="old('code', $employee->code)"
+                            :placeholder="__('core.create.code_auto')"
+                            :hint="$employee->exists ? null : __('core.create.code_auto_hint')" />
                 <x-ui.field name="name_en" :label="__('hr::field.name_en')"
                             :value="old('name_en', $employee->name_en)" required />
                 <x-ui.field name="name_bn" :label="__('hr::field.name_bn')"

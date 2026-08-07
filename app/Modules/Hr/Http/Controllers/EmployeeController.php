@@ -160,7 +160,8 @@ class EmployeeController extends Controller implements HasMiddleware
         $companyId = CompanyContext::id();
 
         return $request->validate([
-            'code' => ['required', 'string', 'max:32'],
+            // খালি রাখলে সিরিজ থেকে বসে — EmployeeService::create() দেখুন
+            'code' => ['nullable', 'string', 'max:32'],
             'name_en' => ['required', 'string', 'max:120'],
             'name_bn' => ['nullable', 'string', 'max:120'],
             'father_name' => ['nullable', 'string', 'max:120'],

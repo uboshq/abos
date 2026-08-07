@@ -25,4 +25,9 @@ return [
     'bucket_60' => '৬১–৯০ দিন',
     'bucket_90' => '৯০+ দিন',
     'state' => 'অবস্থা',
+    'point' => 'পয়েন্ট',
+    'area' => 'এরিয়া',
+    'owner_name' => 'মালিকের নাম',
+    'available_limit' => 'বাকি সীমা',
+    'last_purchase' => 'শেষ কেনা',
 ];

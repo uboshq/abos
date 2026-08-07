@@ -10,6 +10,8 @@ use App\Models\AuditFieldChange;
 use App\Models\AuditTrail;
 use App\Models\IssuedNumber;
 use App\Models\LedgerEntry;
+use App\Modules\Inventory\Models\CostLayer;
+use App\Modules\Inventory\Models\CostLayerUse;
 use App\Modules\Inventory\Models\StockMovement;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -76,6 +78,18 @@ final class AuditEngine
          */
         LedgerEntry::class => 'append-only ledger, already traceable to its audited document',
         StockMovement::class => 'append-only stock ledger, same reason',
+
+        /*
+         * মালের দামের স্তর ও তার টানগুলো — একই যুক্তি, আরেকটা খাতা।
+         *
+         * স্তর তৈরি হয় মাল ঢোকার নথিতে, আর টান বসে মাল বেরোনোর নথিতে;
+         * দুইটাই অডিটেড। qty_remaining বদলায় ঠিকই, কিন্তু সেটা মানুষের
+         * সম্পাদনা নয় — একটা টানের সরাসরি ফল, আর টানটার নিজের সারি
+         * আছে। অডিট বসালে একটা বিক্রয়ে দুই-তিনটা বাড়তি সারি জমত, আর
+         * নতুন কোনো তথ্য যোগ হত না।
+         */
+        CostLayer::class => 'append-only cost ledger, traceable to the document that brought the goods in',
+        CostLayerUse::class => 'each row is itself the record of one draw, from an audited document',
 
         /*
          * নম্বর ইস্যুর হিসাব — যন্ত্রের খাতা। প্রতিটা ডকুমেন্ট তৈরিতে

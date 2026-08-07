@@ -11,4 +11,5 @@ return [
     'contra_voucher' => 'কন্ট্রা ভাউচার',
     'money_transfer' => 'টাকা হস্তান্তর',
     'cash_count' => 'নগদ গণনা',
+    'till_code' => 'ক্যাশ টিলের কোড',
 ];

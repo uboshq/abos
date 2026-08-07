@@ -32,8 +32,13 @@
 
         <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <div class="grid gap-3 sm:grid-cols-2">
+                {{-- কোড খালি রাখলে নিজে বসে (মালিকের নির্দেশ)। ঘরটা
+                     তবু থাকে: পুরনো হিসাব থেকে আসা গুদামের কোড কাগজপত্রে
+                     লেখা আছে, আর সেটা বদলে ফেলা যাবে না। --}}
                 <x-ui.field name="code" :label="__('inventory::field.code')"
-                            :value="old('code', $warehouse->code)" required />
+                            :value="old('code', $warehouse->code)"
+                            :placeholder="__('core.message.code_auto')"
+                            :hint="$warehouse->exists ? null : __('core.message.code_auto_hint')" />
 
                 <x-ui.field name="name_en" :label="__('inventory::field.name_en')"
                             :value="old('name_en', $warehouse->name_en)" required />

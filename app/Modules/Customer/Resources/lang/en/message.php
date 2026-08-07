@@ -25,4 +25,6 @@ return [
     'deactivate_confirm' => 'This customer will be deactivated. Past transactions and balances stay. Continue?',
 
     'count' => '{0} No customers|{1} 1 customer|[2,*] :count customers',
+    'confirm_deactivate' => 'Deactivate this customer? Their history and dues stay; only new billing stops.',
+    'point_hint' => 'Which point the shop sits at. The area follows from it.',
 ];

@@ -6,4 +6,5 @@ return [
     'product_code' => 'Product Code',
     'adjustment' => 'Stock Adjustment',
     'transfer' => 'Stock Transfer',
+    'warehouse_code' => 'Warehouse Code',
 ];

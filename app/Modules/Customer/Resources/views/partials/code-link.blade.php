@@ -1,3 +1,19 @@
-{{-- গ্রাহকের কোড, তার নিজের পাতায় ক্লিকযোগ্য — নিয়ম ১। --}}
+{{--
+    দোকানের নাম, তার নিজের পাতায় ক্লিকযোগ্য — নিয়ম ১।
+
+    ── নামটা উপরে, কোডটা নিচে ছোট করে ──────────────────────────────────
+    আগে এখানে কেবল কোডটা ছিল, আর মালিকের চাওয়া তালিকায় কলামটার নাম
+    "Customer Name"। কোড দেখে কেউ দোকান চেনে না — মানুষ চেনে "মায়ের দোয়া
+    স্টোর" নামে, আর কোড খোঁজে কেবল কাগজ মেলানোর সময়।
+
+    কোডটা তবু থাকে, আর সেটা দরকার: একই নামে দুইটা দোকান থাকতে পারে
+    (একই মালিকের দুই শাখা, বা এলাকায় একই নামে দুইজন), আর তখন কোডটাই
+    একমাত্র আলাদা করার উপায়।
+--}}
 <a href="{{ route('customer.show', $customer) }}"
-   class="text-(--color-brand-500) underline-offset-2 hover:underline">{{ $customer->code }}</a>
+   class="block leading-tight">
+    <span class="text-(--color-brand-500) underline-offset-2 hover:underline">
+        {{ $customer->name() }}
+    </span>
+    <span class="mt-0.5 block text-2xs text-(--color-ink-muted)">{{ $customer->code }}</span>
+</a>
