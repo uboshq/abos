@@ -76,13 +76,21 @@ class MasterDataTest extends TestCase
 
     public function test_a_location_must_sit_directly_under_the_level_above_it(): void
     {
+        /*
+         * নিজের কোড, সিডারের BD/MYM নয়।
+         *
+         * সিডার এখন বাংলাদেশ ও আটটা বিভাগ বসিয়ে রাখে, তাই BD দিয়ে আরেকটা
+         * দেশ বানাতে গেলে "এই কোডে আরেকটা রেকর্ড আছে" বলে থামে — আর সেটা
+         * ঠিকই বলে, কিন্তু এই টেস্টের প্রশ্ন সেটা নয়। এখানকার প্রশ্ন:
+         * একটা ধাপ কি তার ঠিক উপরের ধাপের নিচেই বসে?
+         */
         $country = $this->locations()->create([
-            'code' => 'BD', 'name_en' => 'Bangladesh', 'level' => Location::COUNTRY,
+            'code' => 'TST-C', 'name_en' => 'Testland', 'level' => Location::COUNTRY,
         ]);
 
         // বিভাগ দেশের নিচে — ঠিক
         $division = $this->locations()->create([
-            'code' => 'MYM', 'name_en' => 'Mymensingh', 'level' => Location::DIVISION,
+            'code' => 'TST-D', 'name_en' => 'Test Division', 'level' => Location::DIVISION,
             'parent_id' => $country->id,
         ]);
 
@@ -130,8 +138,9 @@ class MasterDataTest extends TestCase
 
     public function test_a_location_cannot_change_level(): void
     {
+        // নিজের কোড — সিডারের BD ইতিমধ্যেই বসানো
         $country = $this->locations()->create([
-            'code' => 'BD', 'name_en' => 'Bangladesh', 'level' => Location::COUNTRY,
+            'code' => 'TST-C2', 'name_en' => 'Testland Two', 'level' => Location::COUNTRY,
         ]);
 
         $this->expectException(ValidationException::class);
@@ -197,7 +206,9 @@ class MasterDataTest extends TestCase
 
     public function test_deactivating_a_location_takes_everything_under_it(): void
     {
-        $this->locations()->installBangladesh();
+        // গাছটা সিডারেই বসানো — দেশ, আটটা বিভাগ, আর ডিপোর নিজের
+        // এরিয়া-টেরিটরি-পয়েন্ট। সবগুলোই এই দেশের নিচে।
+        $before = Location::query()->count();
 
         $country = Location::query()->atLevel(Location::COUNTRY)->firstOrFail();
 
@@ -206,14 +217,30 @@ class MasterDataTest extends TestCase
         // একটা সক্রিয় বিভাগ নিষ্ক্রিয় দেশের নিচে ঝুললে ড্রপডাউনে দেখা
         // যেত কিন্তু গাছে খুঁজে পাওয়া যেত না
         $this->assertSame(0, Location::query()->active()->count());
-        $this->assertSame(9, Location::query()->count(), 'রেকর্ডগুলো থেকে যাবে — নিয়ম ৫।');
+
+        // সংখ্যাটা হাতে লেখা নয়, আগের গোনা — সিডারে একটা পয়েন্ট যোগ
+        // হলে টেস্টটা ভাঙবে না, অথচ নিয়ম ৫ ঠিকই পাহারা দেবে
+        $this->assertSame($before, Location::query()->count(), 'রেকর্ডগুলো থেকে যাবে — নিয়ম ৫।');
     }
 
     public function test_bangladesh_installs_once_and_only_once(): void
     {
-        $this->assertSame(9, $this->locations()->installBangladesh());
+        /*
+         * ডেমো সিডার এখন নিজেই installBangladesh() ডাকে, তারপর ডিপোর
+         * নিজের এরিয়া-টেরিটরি-পয়েন্ট বসায় — গ্রাহকের তালিকায় ওই
+         * কলামগুলো ফাঁকা থাকলে নকশাটা যাচাই করা যেত না। তাই এখানে গাছ
+         * ভরা অবস্থায় শুরু হয়, আর "প্রথম" ডাকটা আসলে দ্বিতীয়।
+         *
+         * পাহারাটার আসল প্রশ্ন তাতে বদলায় না: দুইবার ডাকলে দেশ ও বিভাগ
+         * দুইবার বসে না তো? নইলে রিপোর্টে দুইটা "ময়মনসিংহ" দেখা যেত।
+         */
+        $before = Location::query()->count();
+
         $this->assertSame(0, $this->locations()->installBangladesh());
-        $this->assertSame(9, Location::query()->count());
+        $this->assertSame($before, Location::query()->count());
+
+        $this->assertSame(1, Location::query()->atLevel(Location::COUNTRY)->count());
+        $this->assertSame(8, Location::query()->atLevel(Location::DIVISION)->count());
     }
 
     public function test_every_installed_location_has_both_names(): void

@@ -156,7 +156,7 @@ class SalesReturnTest extends TestCase
         $this->returns()->confirm(
             $this->returns()->create(
                 ['customer_id' => $this->customer->id, 'warehouse_id' => $this->warehouse->id,
-                    'trx_date' => now()->toDateString()],
+                    'sales_invoice_id' => $invoice->id, 'trx_date' => now()->toDateString()],
                 [['product_id' => $this->product->id,
                     'sales_invoice_line_id' => $invoice->lines->first()->id,
                     'qty' => '2', 'to_hold' => true]],
@@ -183,7 +183,7 @@ class SalesReturnTest extends TestCase
 
         $return = $this->returns()->create(
             ['customer_id' => $this->customer->id, 'warehouse_id' => $this->warehouse->id,
-                'trx_date' => now()->toDateString()],
+                'sales_invoice_id' => $invoice->id, 'trx_date' => now()->toDateString()],
             [['product_id' => $this->product->id,
                 'sales_invoice_line_id' => $invoice->lines->first()->id, 'qty' => '12']],
         );
@@ -202,7 +202,7 @@ class SalesReturnTest extends TestCase
 
         $return = $this->returns()->create(
             ['customer_id' => $this->customer->id, 'warehouse_id' => $this->warehouse->id,
-                'trx_date' => now()->toDateString()],
+                'sales_invoice_id' => $invoice->id, 'trx_date' => now()->toDateString()],
             [['product_id' => $this->product->id,
                 'sales_invoice_line_id' => $invoice->lines->first()->id,
                 'qty' => '2', 'rate' => '9999']],
@@ -221,7 +221,7 @@ class SalesReturnTest extends TestCase
         $return = $this->returns()->confirm(
             $this->returns()->create(
                 ['customer_id' => $this->customer->id, 'warehouse_id' => $this->warehouse->id,
-                    'trx_date' => now()->toDateString()],
+                    'sales_invoice_id' => $invoice->id, 'trx_date' => now()->toDateString()],
                 [['product_id' => $this->product->id,
                     'sales_invoice_line_id' => $invoice->lines->first()->id, 'qty' => '2']],
             )
@@ -251,7 +251,7 @@ class SalesReturnTest extends TestCase
 
         $return = $this->returns()->create(
             ['customer_id' => $this->customer->id, 'warehouse_id' => $this->warehouse->id,
-                'trx_date' => now()->toDateString()],
+                'sales_invoice_id' => $invoice->id, 'trx_date' => now()->toDateString()],
             [['product_id' => $this->product->id,
                 'sales_invoice_line_id' => $invoice->lines->first()->id, 'qty' => '2']],
         );
