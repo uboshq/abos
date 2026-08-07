@@ -27,4 +27,6 @@ return [
     'only_draft_edits' => ':no is not a draft — it cannot be changed once dispatched.',
     'already_cancelled' => ':no was already cancelled.',
     'no_financial_year' => ':date does not fall in any open financial year.',
+    'no_cost_layer' => ':qty of :product has no purchase cost on record — the shelf has it, but nothing says which consignment it came in on. Bring it in with a stock adjustment that carries a rate, then try again.',
+    'return_exceeds_issue' => 'More of :product cannot come back than went out.',
 ];
