@@ -26,6 +26,18 @@
             'discount' => (string) $l->discount,
             'tax' => (string) $l->tax,
             'link' => (string) ($l->purchase_receipt_line_id ?? ''),
+
+            /*
+             * সংরক্ষিত লাইনে দামটা ফিরে আসে, কিন্তু anchor খালি —
+             * markup ও margin জমা থাকে না, আর জমা রাখাও উচিত নয়
+             * (একই জিনিস দুই জায়গায়)। খুলে দর বদলালে তাই দামটাই টেকে,
+             * যেটা "দাম টাইপ করেছিলেন" ধরে নেওয়ারই সমান — আর সংরক্ষিত
+             * একটা দামের ক্ষেত্রে ওটাই সঠিক অনুমান।
+             */
+            'sales_price' => $l->sales_price === null ? '' : (string) $l->sales_price,
+            'markup' => '',
+            'margin' => '',
+            'anchor' => $l->sales_price === null ? '' : 'sales_price',
         ])->all();
 
     $existing = old('lines', $seed);
@@ -89,9 +101,17 @@
         <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="mb-3 font-semibold">{{ __('purchase::message.lines') }}</h2>
 
+            {{--
+                বিক্রয়মূল্যের তিনটা ঘর কেবল বিলেই।
+
+                মালিকের কথা: "direct purchase-এর সময়েই sales price দেব।"
+                ট্রাক গেটে দাঁড়িয়ে, নতুন দরে মাল এসেছে, আর ওই দর দেখেই
+                ঠিক হয় আজ কত দামে বেচা হবে। আদেশ বা চালানে নয় — আদেশে
+                দর এখনো চূড়ান্ত নয়, আর চালানে টাকার কথাই ওঠে না।
+            --}}
             <x-purchase::line-editor :products="$products" :lines="$existing" qty-field="qty"
                                      :link-field="$receiptLines->isNotEmpty() ? 'purchase_receipt_line_id' : null"
-                                     :link-options="$receiptLines" />
+                                     :link-options="$receiptLines" show-sales-price />
         </section>
 
         <div class="flex flex-wrap gap-2">

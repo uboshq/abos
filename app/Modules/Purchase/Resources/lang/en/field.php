@@ -43,4 +43,9 @@ return [
     // Return fields
     'reason' => 'Reason',
     'state' => 'State',
+
+    // Sales price — on the purchase paper, because the rate is what sets it
+    'sales_price' => 'Sales price',
+    'markup' => 'Markup %',
+    'margin' => 'Margin %',
 ];

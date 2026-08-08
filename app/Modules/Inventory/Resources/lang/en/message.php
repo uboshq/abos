@@ -43,4 +43,16 @@ return [
     'lines' => 'Lines',
     'cancel_reason' => 'Reason for cancelling',
     'surplus_rate_note' => 'Only needed when the count finds more than the books say. Leave it empty for a shortage — the cost then comes from the goods own consignment.',
+
+    // Opening stock — the day the old books are carried in
+    'opening_narration' => 'Opening stock',
+    'opening_saved' => ':product — :qty onto the shelf, :value into Inventory.',
+    'opening_needs_qty' => 'The quantity must be greater than zero.',
+    'opening_needs_cost' => 'Opening stock needs a rate. Goods at zero cost are not an asset on the balance sheet, yet selling them would show the whole price as profit.',
+    'opening_already_done' => 'Opening stock for :product at :warehouse has already been entered. Use Count & Adjust to change it.',
+    'opening_too_late' => ':product has already moved at :warehouse, so the moment for opening stock has passed. FIFO draws layers in the order they were laid down — entering it now would put the opening goods at the back of the queue and quietly distort the profit. Use Count & Adjust instead.',
+    'opening_none' => 'No opening stock has been entered yet.',
+    'opening_note' => 'What was on the shelf the day the old books were carried into ABOS. The rate is needed beside the quantity — without it the first sale asks FIFO what the goods cost, and there is no answer.',
+    'opening_total' => 'Entered so far',
+    'opening_search' => 'Search by product name or code…',
 ];

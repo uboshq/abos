@@ -43,4 +43,6 @@ return [
     'dispatched_at' => 'রওনা দিয়েছে',
     'received_at' => 'পৌঁছেছে',
     'surplus_rate' => 'বেশি পাওয়া মালের দর',
+    'opening_rate' => 'প্রতি এককের দর',
+    'opening_value' => 'মূল্য',
 ];

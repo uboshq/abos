@@ -595,4 +595,60 @@ class PurchaseTest extends TestCase
         $this->assertSame(0, bccomp((string) $row['unbilled_qty'], '100', 4));
         $this->assertSame(0, bccomp((string) $row['unbilled_value'], '5000', 4));
     }
+
+    // ── ক্রয়ের কাগজে বিক্রয়মূল্য ──────────────────────────────────────
+
+    /**
+     * বিলে দেওয়া বিক্রয়মূল্য পণ্যের দামে গিয়ে বসে।
+     *
+     * মালিকের কথা: "direct purchase-এর সময়েই sales price দেব।" ট্রাক গেটে
+     * দাঁড়িয়ে, নতুন দরে মাল এসেছে, আর ওই দর দেখেই ঠিক হয় আজ কত দামে বেচা
+     * হবে। আলাদা পর্দায় পাঠালে মাঝের সময়টুকু পুরনো দামে বিক্রি চলত।
+     */
+    public function test_a_sales_price_on_the_bill_reaches_the_product(): void
+    {
+        $before = (string) $this->product->fresh()->sale_price;
+
+        $bill = $this->bills()->create(
+            ['supplier_id' => $this->supplier->id, 'trx_date' => now()->toDateString()],
+            [['product_id' => $this->product->id, 'qty' => '10', 'rate' => '50', 'sales_price' => '72.50']],
+        );
+
+        $this->bills()->confirm($bill);
+
+        $this->assertSame(0, bccomp((string) $this->product->fresh()->sale_price, '72.50', 4));
+
+        // আগের দামটা ৭২.৫০ ছিল না — নইলে "বদলেছে" প্রমাণ করার কিছু থাকত
+        // না। উপরে ছিল না নিচে, সেটা প্রশ্ন নয়; সমান না হলেই যথেষ্ট।
+        $this->assertNotSame(0, bccomp($before, '72.50', 4),
+            'পরীক্ষাটা অর্থহীন হত যদি দামটা আগেই ৭২.৫০ থাকত');
+    }
+
+    /**
+     * দাম না বললে দাম বদলায় না — শূন্য করে দেয় না।
+     *
+     * null মানে "দাম বদলাব না", শূন্য মানে "বিনামূল্যে"। দুইটা এক করে
+     * ফেললে দাম না বদলাতে চাওয়া প্রতিটা লাইনই পণ্যটার দাম শূন্য করে দিত,
+     * আর তারপর প্রতিটা বিক্রয়ে পুরো টাকাটাই ছাড় হয়ে যেত।
+     */
+    public function test_a_bill_without_a_sales_price_leaves_the_product_alone(): void
+    {
+        $before = (string) $this->product->fresh()->sale_price;
+
+        $this->bills()->confirm($this->makeBill(null, '10', '50'));
+
+        $this->assertSame(0, bccomp((string) $this->product->fresh()->sale_price, $before, 4));
+        $this->assertSame(1, bccomp($before, '0', 4), 'শুরুর দামটা শূন্য হলে এই পরীক্ষা কিছুই প্রমাণ করত না');
+    }
+
+    /** তিনটা ঘরই বিলের পর্দায় আছে — দাম, markup, margin। */
+    public function test_the_bill_screen_carries_the_three_pricing_boxes(): void
+    {
+        $response = $this->get(route('purchase.bill.create'));
+
+        $response->assertOk();
+        $response->assertSee('sales_price', false);
+        $response->assertSee(__('purchase::field.markup'), false);
+        $response->assertSee(__('purchase::field.margin'), false);
+    }
 }

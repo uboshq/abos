@@ -43,4 +43,6 @@ return [
     'dispatched_at' => 'Dispatched',
     'received_at' => 'Arrived',
     'surplus_rate' => 'Rate for surplus',
+    'opening_rate' => 'Rate per unit',
+    'opening_value' => 'Value',
 ];
