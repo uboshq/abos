@@ -62,6 +62,45 @@
                             </li>
                         @endforeach
                     </ul>
+
+                    {{--
+                        কে বানাল আর কার নামে — ব্র্যান্ডিং প্যানেলে, ফর্মের
+                        নিচে নয়।
+
+                        ── কেন সরানো হল ─────────────────────────────────
+                        এটা ব্র্যান্ডিং, আর ব্র্যান্ডিংয়ের জায়গা এই পাশটাই।
+                        ফর্মের নিচে থাকলে লগইন করতে আসা লোকটার চোখ শেষ
+                        মুহূর্তে ওখানে যেত — যেখানে তার একটাই কাজ, বোতামে
+                        চাপ দেওয়া।
+
+                        ── কেন লাইনটা ভাঙা ছিল ──────────────────────────
+                        লেখা ছিল "Developed by … · Powered by" — তারপর
+                        কিছুই না। নামটা (powered_by_name) আর চিহ্নটা
+                        দুইটাই বাদ পড়েছিল, তাই বাক্যটা মাঝপথে থেমে থাকত।
+                        স্ট্যাটাসবারে তিনটাই ছিল, এখানে ছিল না।
+                    --}}
+                    <div class="mt-10 border-t border-white/15 pt-5 text-xs text-white/70">
+                        <p>{{ __('core.brand.developed_by') }}</p>
+
+                        <div class="mt-2 flex items-center gap-2">
+                            <span>{{ __('core.brand.powered_by') }}</span>
+
+                            {{-- aria-hidden — নামটা পাশেই লেখা, পর্দা-পাঠক
+                                 যেন একই কথা দুবার না বলে --}}
+                            <img src="{{ asset('brand/univer-mark.png') }}" alt="" aria-hidden="true"
+                                 class="size-7 shrink-0 object-contain">
+
+                            <span class="font-medium tracking-wide text-white">
+                                {{ __('core.brand.powered_by_name') }}
+                            </span>
+                        </div>
+
+                        <p class="mt-1 text-(--color-brand-gold)">
+                            {{ __('core.brand.powered_by_slogan') }}
+                        </p>
+
+                        <p class="mt-3 text-white/50">v{{ config('app.version', '0.1.0') }}</p>
+                    </div>
                 </div>
             </section>
 
@@ -152,11 +191,30 @@
                     {{-- Passkey / Microsoft / Google — V1-এ দেখানো হয় না
                          (সেকশন ১৬.৪): অকার্যকর বোতাম ব্যবহারকারীকে হতাশ করে। --}}
 
+                    {{--
+                        কে বানাল, তার নাম এখানে আর নেই — বাঁ পাশের
+                        ব্র্যান্ডিং প্যানেলে গেছে।
+
+                        তবে সংস্করণটা থেকে যায়, আর ছোট পর্দাতেই সবচেয়ে
+                        দরকারি: ওখানে বাঁ পাশের প্যানেলটা লুকানো থাকে
+                        (md:flex), তাই "কোন সংস্করণ চলছে" প্রশ্নের উত্তর
+                        আর কোথাও থাকত না — অথচ ফোন থেকে কেউ সমস্যার কথা
+                        বললে ওটাই প্রথম প্রশ্ন।
+                    --}}
                     <div class="mt-8 border-t border-(--color-border) pt-4 text-center text-2xs
-                                text-(--color-ink-muted)">
-                        <p>{{ __('core.brand.developed_by') }} · {{ __('core.brand.powered_by') }}</p>
+                                text-(--color-ink-muted) md:hidden">
+                        <p>{{ __('core.brand.developed_by') }}</p>
+                        <p class="mt-1">
+                            {{ __('core.brand.powered_by') }} {{ __('core.brand.powered_by_name') }}
+                        </p>
                         <p class="mt-1">v{{ config('app.version', '0.1.0') }}</p>
                     </div>
+
+                    {{-- বড় পর্দায় শুধু সংস্করণ — বাকিটা বাঁ পাশে দেখা যাচ্ছে --}}
+                    <p class="mt-8 hidden border-t border-(--color-border) pt-4 text-center text-2xs
+                              text-(--color-ink-muted) md:block">
+                        v{{ config('app.version', '0.1.0') }}
+                    </p>
                 </div>
             </section>
         </div>

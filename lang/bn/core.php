@@ -149,6 +149,8 @@ return [
         'powered_by' => 'Powered by',
         /* Not translated: a company's name is its name. */
         'powered_by_name' => 'UNIVER BANGLADESH',
+        /* Nor is a company's own slogan, for the same reason. */
+        'powered_by_slogan' => 'Empowering Tomorrow',
     ],
 
     'appearance' => [
