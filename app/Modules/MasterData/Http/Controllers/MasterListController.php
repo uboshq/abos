@@ -6,6 +6,7 @@ namespace App\Modules\MasterData\Http\Controllers;
 
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingsService;
+use App\Core\Support\CodeFromName;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\MasterData\Models\Currency;
@@ -215,8 +216,12 @@ class MasterListController extends Controller implements HasMiddleware
         return [
             new Middleware('can:master_data.view', only: ['index']),
             new Middleware('can:master_data.manage', only: [
-                'create', 'store', 'edit', 'update', 'destroy', 'makeDefault', 'installDefaults',
+                'create', 'store', 'edit', 'update', 'destroy', 'activate',
+                'makeDefault', 'installDefaults',
             ]),
+
+            // মোছার চাবি আলাদা — module.php-তে কারণ
+            new Middleware('can:master_data.delete', only: ['purge']),
         ];
     }
 
@@ -268,7 +273,7 @@ class MasterListController extends Controller implements HasMiddleware
             ->with('saved', __('master_data::message.created'));
     }
 
-    public function edit(Request $request, string $kind, int $id): View
+    public function edit(Request $request, int|string $id, string $kind): View
     {
         $spec = $this->spec($kind);
 
@@ -281,13 +286,13 @@ class MasterListController extends Controller implements HasMiddleware
         ]);
     }
 
-    public function update(Request $request, string $kind, int $id): RedirectResponse
+    public function update(Request $request, int|string $id, string $kind): RedirectResponse
     {
         $spec = $this->spec($kind);
 
         $record = $spec['model']::query()->findOrFail($id);
 
-        $this->lists->update($record, $this->validated($request, $spec));
+        $this->lists->update($record, $this->validated($request, $spec, $id));
 
         return redirect()
             ->route('master_data.'.$spec['route'].'.index')
@@ -295,7 +300,7 @@ class MasterListController extends Controller implements HasMiddleware
     }
 
     /** নিষ্ক্রিয় করা — মোছা নয় (নিয়ম ৫)। */
-    public function destroy(string $kind, int $id): RedirectResponse
+    public function destroy(int|string $id, string $kind): RedirectResponse
     {
         $spec = $this->spec($kind);
 
@@ -304,7 +309,42 @@ class MasterListController extends Controller implements HasMiddleware
         return back()->with('saved', __('master_data::message.deactivated'));
     }
 
-    public function makeDefault(string $kind, int $id): RedirectResponse
+    /**
+     * সত্যিই মুছে ফেলা — কেবল যেটা কোথাও ব্যবহার হয়নি।
+     *
+     * ব্যবহার হয়ে থাকলে সার্ভিস থামিয়ে দেয় আর কোথায় ব্যবহার হয়েছে
+     * সেটা বলে দেয়, যাতে "কেন হল না" প্রশ্নটা না থাকে।
+     */
+    public function purge(int|string $id, string $kind): RedirectResponse
+    {
+        $spec = $this->spec($kind);
+
+        $removed = $this->lists->delete($spec['model']::query()->findOrFail($id));
+
+        /*
+         * কী ঘটল সেটা বলে দেওয়া হয়, কারণ দুইটা আলাদা জিনিস ঘটতে পারে
+         * আর ব্যবহারকারী কোনটা চেয়েছিলেন তা সে জানে না। "মুছে ফেলুন"
+         * চেপে সারিটা তালিকায় ধূসর হয়ে পড়ে থাকতে দেখলে মনে হত কাজটাই
+         * হয়নি।
+         */
+        return redirect()
+            ->route('master_data.'.$spec['route'].'.index')
+            ->with('saved', $removed
+                ? __('master_data::message.deleted')
+                : __('master_data::message.in_use_deactivated'));
+    }
+
+    /** আবার সক্রিয় — নিষ্ক্রিয় করা একমুখী দরজা হতে পারে না। */
+    public function activate(int|string $id, string $kind): RedirectResponse
+    {
+        $spec = $this->spec($kind);
+
+        $this->lists->activate($spec['model']::query()->findOrFail($id));
+
+        return back()->with('saved', __('master_data::message.activated'));
+    }
+
+    public function makeDefault(int|string $id, string $kind): RedirectResponse
     {
         $spec = $this->spec($kind);
 
@@ -328,10 +368,22 @@ class MasterListController extends Controller implements HasMiddleware
      * @param  array<string, mixed>  $spec
      * @return array<string, mixed>
      */
-    private function validated(Request $request, array $spec): array
+    private function validated(Request $request, array $spec, ?int $id = null): array
     {
         $rules = [
-            'code' => ['required', 'string', 'max:32'],
+            /*
+             * কোড আর বাধ্যতামূলক নয় — খালি রাখলে নাম থেকে বসে।
+             *
+             * মালিকের সিদ্ধান্ত (২০২৬-০৮-০৯): "সব কোড আগে নিজে বসবে,
+             * তারপর কারো লাগলে এডিট করে নতুন কোড বসাবে।"
+             *
+             * ফর্মে ঘরটা টাইপ করার সাথে সাথেই ভরে যায়, তাই সচরাচর
+             * এখানে খালি আসে না। কিন্তু নিয়মটা সার্ভারেও থাকতে হবে:
+             * ব্রাউজারের JS বন্ধ থাকলে, বা কেউ ঘরটা মুছে দিলে, অথবা
+             * ইমপোর্টে কোড ছাড়া সারি এলে — তিন ক্ষেত্রেই সার্ভারই শেষ
+             * কথা।
+             */
+            'code' => ['nullable', 'string', 'max:32'],
             'name_en' => ['required', 'string', 'max:120'],
             'name_bn' => ['nullable', 'string', 'max:120'],
             'is_default' => ['nullable', 'boolean'],
@@ -371,7 +423,28 @@ class MasterListController extends Controller implements HasMiddleware
         // থেকে বন্ধ হয়ে যেত
         $request->merge($switches + ['is_default' => $request->boolean('is_default')]);
 
-        return $request->validate($rules);
+        $data = $request->validate($rules);
+
+        /*
+         * কোড খালি হলে নামটাই কোড হয়ে বসে।
+         *
+         * যাচাইয়ের পরে, কারণ নামটা তখনই নিশ্চিতভাবে আছে — আগে করলে
+         * নাম ছাড়া অনুরোধে খালি নাম থেকে খালি কোড বানানোর চেষ্টা হত।
+         *
+         * সম্পাদনার সময় নিজের সারিটা বাদ, নইলে কোড না বদলে সেভ করলেই
+         * নিজের কোডটাকে "নেওয়া হয়ে গেছে" ধরে CAR2 বসিয়ে দিত।
+         */
+        if (($data['code'] ?? '') === '') {
+            $scope = $spec['model']::query();
+
+            if ($id !== null) {
+                $scope->whereKeyNot($id);
+            }
+
+            $data['code'] = CodeFromName::forQuery((string) $data['name_en'], $scope);
+        }
+
+        return $data;
     }
 
     /**

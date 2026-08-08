@@ -70,6 +70,15 @@ Route::middleware('auth')->prefix('master-data')->group(function () {
                 ->defaults('kind', $slug)->whereNumber('id')->name('update');
             Route::delete('/{id}', [MasterListController::class, 'destroy'])
                 ->defaults('kind', $slug)->whereNumber('id')->name('destroy');
+            // ফেরার পথ — নিষ্ক্রিয় করা একমুখী দরজা হতে পারে না
+            // (MasterListService::activate-এ কারণ)
+            Route::post('/{id}/activate', [MasterListController::class, 'activate'])
+                ->defaults('kind', $slug)->whereNumber('id')->name('activate');
+
+            // মোছা — ব্যবহার না হলে সত্যিই, নাহলে নিষ্ক্রিয়
+            // (MasterListService::delete-এ পুরো নিয়ম)
+            Route::delete('/{id}/purge', [MasterListController::class, 'purge'])
+                ->defaults('kind', $slug)->whereNumber('id')->name('purge');
             Route::post('/{id}/default', [MasterListController::class, 'makeDefault'])
                 ->defaults('kind', $slug)->whereNumber('id')->name('default');
         });

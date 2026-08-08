@@ -20,4 +20,5 @@ return [
     'top_level_has_no_parent' => ':level সবচেয়ে উপরের স্তর — এর উপরে কিছু বসে না।',
     'base_currency_has_no_rate' => 'ভিত্তি মুদ্রার হার হয় না — নিজের সাপেক্ষে হার সবসময় ১।',
     'rate_must_be_positive' => 'হার শূন্যের বেশি হতে হবে।',
+    'in_use_cannot_delete' => ':where টেবিলে ব্যবহার হয়ে গেছে, তাই মোছা যাবে না।',
 ];
