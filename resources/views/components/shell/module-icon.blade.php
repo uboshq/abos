@@ -108,7 +108,13 @@
             'm21 33-9-9 4.2-4.2 4.8 4.8L34.8 12 39 16.2 21 33Z',
         ],
 
-        // মাস্টার ডাটা — ভাঙা দুইটা বলয় আর তিনটা বিন্দু (DMS · MDM)
+        /*
+         * মাস্টার ডাটা — আসল চিহ্নটা shell/icons/master-data.blade.php-এ।
+         *
+         * ওটা স্ট্রোক দিয়ে আঁকা, তাই এই দুই-পথের ছাঁচে আঁটে না। নিচের
+         * এন্ট্রিটা কেবল রঙের তালিকা ও তালিকা-আইকনের জন্য রইল; module
+         * আকারে এটা কখনো আঁকা হয় না।
+         */
         'master_data' => [
             'M12.7 38a2.3 2.3 0 1 1 0 4.6 2.3 2.3 0 0 1 0-4.6ZM18.7 5.1a19.6 19.6 0 0 0-8.4 32.9l2.2-2.3A16.4 16.4 0 0 1 19.8 8.2l-1.1-3.1Zm23 27.2a19.6 19.6 0 0 1-26 9.5l1.4-3a16.4 16.4 0 0 0 21.7-8l2.9 1.5Zm-7.3-24.9a19.6 19.6 0 0 1 8.1 10.2l-3.1 1.1a16.4 16.4 0 0 0-6.8-8.5l1.8-2.8Z',
             'M26.8 0a5.3 5.3 0 1 1 0 10.6 5.3 5.3 0 0 1 0-10.6ZM13 21.5a2.2 2.2 0 1 1 0 4.4 2.2 2.2 0 0 1 0-4.4Zm15 12.5a10.8 10.8 0 0 1-14.5-7.1l3.1-.9A7.6 7.6 0 0 0 26.9 31L28 34Zm-14.1-13.8a10.8 10.8 0 0 1 14.4-6.1l-1.2 3a7.6 7.6 0 0 0-10.1 4.3l-3.1-1.2Z',
@@ -184,12 +190,30 @@
      */
     $accentFill = $tone === 'white' ? '#2ec4b6' : $fill;
     $accentOpacity = $tone === 'white' ? '1' : '0.55';
+
+    /*
+     * যে আইকনগুলো দুইটা ভরাট পথে আঁটে না, তাদের নিজের ফাইল।
+     *
+     * মাস্টার ডাটার চিহ্নটা স্ট্রোক দিয়ে আঁকা — টানা রেখা, ভরাট আকার
+     * নয় — আর তার উপর চাকতি ও লেখা। এই ছাঁচে জোর করে বসাতে গিয়েই
+     * আগেরবার সেটা একটা অচেনা দলা হয়ে গিয়েছিল।
+     */
+    $partial = $shape === 'module' && $module === 'master_data'
+        ? 'shell.icons.master-data'
+        : null;
 @endphp
 
 <svg viewBox="0 0 48 48" aria-hidden="true" focusable="false"
      class="shrink-0"
      style="width: var(--spacing-{{ $size === 'rail' ? 'rail-icon' : 'icon' }});
             height: var(--spacing-{{ $size === 'rail' ? 'rail-icon' : 'icon' }})">
+    @if ($partial !== null)
+        @include('components.' . $partial, [
+            'fill' => $fill,
+            'accentFill' => $accentFill,
+            'accentOpacity' => $accentOpacity,
+        ])
+    @else
     {{-- evenodd — ভেতরের ছিদ্রগুলো সত্যিই ছিদ্র হয়, আর পটভূমির রং
          ওখান দিয়ে দেখা যায়। --}}
     @if ($body !== '')
@@ -199,5 +223,7 @@
     @if ($accent !== '')
         <path d="{{ $accent }}" fill-rule="evenodd"
               style="fill: {{ $accentFill }}; fill-opacity: {{ $accentOpacity }}" />
+    @endif
+
     @endif
 </svg>
