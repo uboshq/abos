@@ -31,7 +31,7 @@
         <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <dl class="grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-4">
                 @foreach ([
-                    'purchase::field.date' => $return->trx_date?->format('d/m/Y'),
+                    'purchase::field.date' => \App\Core\Support\DateFormat::format($return->trx_date),
                     'purchase::field.warehouse' => $return->warehouse?->name() ?: '-',
                     'purchase::field.bill' => $return->bill?->document_no ?: '-',
                     'purchase::field.reason' => $return->reasonCode?->name() ?: '-',

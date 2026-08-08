@@ -36,7 +36,7 @@
             :rows="$counts"
             :columns="[
                 ['key' => 'trx_date', 'label' => __('core.table.date'), 'width' => '8rem',
-                 'render' => fn ($c) => $c->trx_date?->format('d/m/Y')],
+                 'render' => fn ($c) => \App\Core\Support\DateFormat::format($c->trx_date)],
                 ['key' => 'document_no', 'label' => __('core.print.document_no'), 'width' => '13rem',
                  'render' => fn ($c) => view('accounts::count.partials.number', ['count' => $c])],
                 ['key' => 'cash_till_id', 'label' => __('accounts::menu.cash_tills'),

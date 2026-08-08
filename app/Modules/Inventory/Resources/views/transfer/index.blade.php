@@ -48,7 +48,7 @@
             :compact="request()->boolean('compact')"
             :columns="[
                 ['key' => 'trx_date', 'label' => __('inventory::field.date'), 'width' => '7rem',
-                 'render' => fn ($t) => $t->trx_date?->format('d/m/Y')],
+                 'render' => fn ($t) => \App\Core\Support\DateFormat::format($t->trx_date)],
                 ['key' => 'document_no', 'label' => __('core.print.document_no'), 'width' => '13rem',
                  'render' => fn ($t) => new \Illuminate\Support\HtmlString(
                      '<a href=\'' . route('inventory.transfer.show', $t) . '\' '

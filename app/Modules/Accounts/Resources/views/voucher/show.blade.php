@@ -85,7 +85,7 @@
             <p class="mt-1">{{ $voucher->cancel_reason }}</p>
             <p class="mt-1 text-2xs">
                 {{ $voucher->canceller?->name }} ·
-                {{ $voucher->cancelled_at?->format('d/m/Y H:i') }}
+                {{ \App\Core\Support\DateFormat::formatWithTime($voucher->cancelled_at) }}
             </p>
         </div>
     @endif
@@ -106,12 +106,12 @@
 
             <dl class="grid gap-x-4 gap-y-2 sm:grid-cols-3">
                 @foreach ([
-                    'accounts::field.date' => $voucher->trx_date?->format('d/m/Y'),
+                    'accounts::field.date' => \App\Core\Support\DateFormat::format($voucher->trx_date),
                     'core.company.branch' => $voucher->branch?->name(),
                     'accounts::field.instrument' => $voucher->instrument
                         ? __('accounts::instrument.' . $voucher->instrument) : null,
                     'accounts::field.instrument_no' => $voucher->instrument_no,
-                    'accounts::field.instrument_date' => $voucher->instrument_date?->format('d/m/Y'),
+                    'accounts::field.instrument_date' => \App\Core\Support\DateFormat::format($voucher->instrument_date),
                     'core.table.narration' => $voucher->narration,
                 ] as $label => $value)
                     @if (filled($value))
@@ -129,7 +129,7 @@
                 {{ __('core.print.prepared_by') }}: {{ $voucher->creator?->name ?? '—' }}
                 @if ($voucher->approver)
                     · {{ __('core.print.approved_by') }}: {{ $voucher->approver->name }}
-                    ({{ $voucher->approved_at?->format('d/m/Y H:i') }})
+                    ({{ \App\Core\Support\DateFormat::formatWithTime($voucher->approved_at) }})
                 @endif
             </p>
         </section>

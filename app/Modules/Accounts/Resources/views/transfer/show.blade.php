@@ -128,7 +128,7 @@
 
             <dl class="mt-4 grid gap-x-4 gap-y-2 border-t border-(--color-border) pt-3 sm:grid-cols-3">
                 @foreach ([
-                    'accounts::field.date' => $transfer->trx_date?->format('d/m/Y'),
+                    'accounts::field.date' => \App\Core\Support\DateFormat::format($transfer->trx_date),
                     'core.company.branch' => $transfer->branch?->name(),
                     'core.table.narration' => $transfer->narration,
                 ] as $label => $value)
@@ -145,7 +145,7 @@
                 <p class="mt-3 border-t border-(--color-border) pt-3 text-2xs text-(--color-ink-muted)">
                     {{ __('accounts::message.received_at', [
                         'name' => $transfer->confirmer?->name ?? '—',
-                        'at' => $transfer->confirmed_at?->format('d/m/Y H:i') ?? '—',
+                        'at' => \App\Core\Support\DateFormat::formatWithTime($transfer->confirmed_at) ?? '—',
                     ]) }}
                 </p>
             @endif

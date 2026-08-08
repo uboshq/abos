@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Core\Support\DateFormat;
+
 /**
  * System Administration — কোম্পানি, শাখা, ব্যবহারকারী, Control Panel।
  *
@@ -76,6 +78,45 @@ return [
             'type' => 'string',
             'default' => 'a4',
             'group' => 'print',
+        ],
+        /*
+         * তারিখ ও সময়ের ছক — মালিকের নির্দেশ (২০২৬-০৮-০৭)।
+         *
+         * ১৮/০২/২০২৬, ০২/১৮/২০২৬, Feb 18, 2026 — তিনটাই চলতে হবে। কারণটা
+         * বাস্তব: ০২/০৩ দেখে কেউ বলতে পারে না ওটা ২ মার্চ না ৩ ফেব্রুয়ারি,
+         * আর ওই ভুলটা একটা চেকের তারিখে ঘটলে টাকা ভুল দিনে যায়।
+         *
+         * group 'general' — এটা প্রতিষ্ঠানের নিজের রীতি, ছাপার সিদ্ধান্ত
+         * নয়। ছাপা কাগজও এই একই ছকই মানে, নইলে পর্দায় এক তারিখ আর
+         * কাগজে আরেক তারিখ দেখা যেত।
+         *
+         * ছকগুলোর তালিকা DateFormat-এ, এখানে নয় — সেটিংস কেবল বাছাইটা
+         * জমা রাখে, আর কোনটা বৈধ তা ওখানেই যাচাই হয়।
+         */
+        [
+            'key' => 'company.date_format',
+            'label' => 'system_admin::settings.date_format',
+            'type' => 'string',
+
+            /*
+             * তালিকাটা DateFormat থেকে, এখানে হাতে লেখা নয়।
+             *
+             * দুই জায়গায় লিখলে একদিন একটাতে নতুন ছক যোগ হত আর অন্যটাতে
+             * হত না — তখন পর্দায় বাছা যেত এমন একটা ছক যেটা যাচাইয়ে
+             * বাতিল, বা উল্টোটা। নমুনাগুলোও ওখানেই বানানো, তাই "d/m/Y"
+             * এর পাশে "১৮/০২/২০২৬" সবসময় সত্যি।
+             */
+            'options' => [DateFormat::class, 'dateOptions'],
+            'default' => 'd/m/Y',
+            'group' => 'general',
+        ],
+        [
+            'key' => 'company.time_format',
+            'label' => 'system_admin::settings.time_format',
+            'type' => 'string',
+            'options' => [DateFormat::class, 'timeOptions'],
+            'default' => 'h:i A',
+            'group' => 'general',
         ],
         [
             'key' => 'system.auto_logout_minutes',

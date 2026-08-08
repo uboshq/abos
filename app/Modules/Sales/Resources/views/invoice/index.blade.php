@@ -48,7 +48,7 @@
                     'key' => 'trx_date',
                     'label' => __('sales::field.date'),
                     'width' => '7rem',
-                    'render' => fn ($d) => $d->trx_date?->format('d/m/Y'),
+                    'render' => fn ($d) => \App\Core\Support\DateFormat::format($d->trx_date),
                 ],
                 [
                     'key' => 'document_no',
@@ -68,7 +68,7 @@
                     'key' => 'due_on',
                     'label' => __('sales::field.due_on'),
                     'width' => '8rem',
-                    'render' => fn ($d) => $d->due_on?->format('d/m/Y'),
+                    'render' => fn ($d) => \App\Core\Support\DateFormat::format($d->due_on),
                 ],
                 [
                     'key' => 'total',

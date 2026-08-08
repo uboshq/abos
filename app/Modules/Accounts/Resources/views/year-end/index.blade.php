@@ -148,9 +148,9 @@
             :columns="[
                 ['key' => 'name', 'label' => __('accounts::field.year_name'), 'width' => '10rem'],
                 ['key' => 'starts_on', 'label' => __('accounts::field.starts_on'), 'width' => '10rem',
-                 'render' => fn ($y) => $y->starts_on?->format('d/m/Y')],
+                 'render' => fn ($y) => \App\Core\Support\DateFormat::format($y->starts_on)],
                 ['key' => 'ends_on', 'label' => __('accounts::field.ends_on'), 'width' => '10rem',
-                 'render' => fn ($y) => $y->ends_on?->format('d/m/Y')],
+                 'render' => fn ($y) => \App\Core\Support\DateFormat::format($y->ends_on)],
                 ['key' => 'is_closed', 'label' => __('accounts::field.state'),
                  'render' => fn ($y) => view('accounts::year-end.partials.state', ['year' => $y])],
             ]" />

@@ -7,6 +7,7 @@ namespace App\Modules\Sales\Http\Controllers;
 use App\Core\Engines\Print\PaperSize;
 use App\Core\Engines\Print\PrintableDocument;
 use App\Core\Engines\Print\PrintEngine;
+use App\Core\Support\DateFormat;
 use App\Http\Controllers\Controller;
 use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\DeliveryChallan;
@@ -134,9 +135,9 @@ class SalesPrintController extends Controller implements HasMiddleware
             title: __('sales::doc.order'),
             meta: [
                 'core.print.document_no' => $order->document_no,
-                'core.print.date' => $order->trx_date?->format('d/m/Y') ?? '',
+                'core.print.date' => DateFormat::format($order->trx_date),
                 'sales::field.customer' => $order->customer?->name() ?? '',
-                'sales::field.deliver_on' => $order->deliver_on?->format('d/m/Y') ?? '',
+                'sales::field.deliver_on' => DateFormat::format($order->deliver_on),
             ],
             lines: $this->productLines($order->lines, 'ordered_qty'),
             totals: $this->totals($order),
@@ -173,7 +174,7 @@ class SalesPrintController extends Controller implements HasMiddleware
             title: __('sales::doc.delivery_order'),
             meta: [
                 'core.print.document_no' => $order->document_no,
-                'core.print.date' => now()->format('d/m/Y'),
+                'core.print.date' => DateFormat::format(now()),
                 'sales::field.customer' => $order->customer?->name() ?? '',
                 'sales::field.warehouse' => $order->warehouse?->name() ?? '',
             ],
@@ -195,7 +196,7 @@ class SalesPrintController extends Controller implements HasMiddleware
             title: __('sales::doc.collection'),
             meta: [
                 'core.print.document_no' => $collection->document_no,
-                'core.print.date' => $collection->trx_date?->format('d/m/Y') ?? '',
+                'core.print.date' => DateFormat::format($collection->trx_date),
                 'sales::field.customer' => $collection->customer?->name() ?? '',
                 'sales::field.account' => $collection->account?->name() ?? '',
                 'sales::field.instrument_no' => $collection->instrument_no ?? '',
@@ -224,9 +225,9 @@ class SalesPrintController extends Controller implements HasMiddleware
     {
         return [
             'core.print.document_no' => $invoice->document_no,
-            'core.print.date' => $invoice->trx_date?->format('d/m/Y') ?? '',
+            'core.print.date' => DateFormat::format($invoice->trx_date),
             'sales::field.customer' => $invoice->customer?->name() ?? '',
-            'sales::field.due_on' => $invoice->due_on?->format('d/m/Y') ?? '',
+            'sales::field.due_on' => DateFormat::format($invoice->due_on),
         ];
     }
 
@@ -237,7 +238,7 @@ class SalesPrintController extends Controller implements HasMiddleware
     {
         return [
             'core.print.document_no' => $challan->document_no,
-            'core.print.date' => $challan->trx_date?->format('d/m/Y') ?? '',
+            'core.print.date' => DateFormat::format($challan->trx_date),
             'sales::field.customer' => $challan->customer?->name() ?? '',
             'sales::field.warehouse' => $challan->warehouse?->name() ?? '',
             // বহরের গাড়ি হলে মাস্টারের নম্বরপ্লেট, নাহলে লেখা নম্বরটা

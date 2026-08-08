@@ -60,7 +60,7 @@
                     @endif
 
                     <span class="text-2xs text-(--color-ink-muted)">
-                        {{ $paper->uploader?->name }} · {{ $paper->created_at?->format('d/m/Y') }}
+                        {{ $paper->uploader?->name }} · {{ \App\Core\Support\DateFormat::format($paper->created_at) }}
                     </span>
 
                     @if ($canAttach)

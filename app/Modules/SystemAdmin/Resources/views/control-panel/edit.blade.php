@@ -72,6 +72,36 @@
                                                        class="mt-1 size-4">
                                                 <span>{{ __($setting['label']) }}</span>
                                             </label>
+                                        @elseif (! empty($setting['options']))
+                                            {{--
+                                                বাছাইয়ের তালিকা — লেখার ঘর নয়।
+
+                                                তারিখের ছকের মতো সেটিংসে যা লেখা
+                                                থাকে সেটা সরাসরি PHP-র format()-এ
+                                                যায়। লেখার ঘর রাখলে একটা টাইপো
+                                                প্রতিটা তারিখকে আবর্জনা করে ছাপাত,
+                                                আর ছাপা কাগজ আর ফেরানো যায় না।
+
+                                                পাশে নমুনা থাকে (১৮/০২/২০২৬), কারণ
+                                                "d/m/Y" পড়ে কেউ বলতে পারে না কী
+                                                দেখাবে — আর ঠিক ওই না-বোঝাটাই
+                                                ভুল ছক বাছার কারণ।
+                                            --}}
+                                            <label class="block">
+                                                <span class="mb-1 block text-sm font-medium">
+                                                    {{ __($setting['label']) }}
+                                                </span>
+                                                <select name="settings[{{ $setting['key'] }}]"
+                                                        class="h-(--spacing-field) w-full max-w-56 rounded-(--radius-field)
+                                                               border border-(--color-border) bg-(--color-surface-card) px-3">
+                                                    @foreach (is_callable($setting['options']) ? call_user_func($setting['options']) : $setting['options'] as $value => $sample)
+                                                        <option value="{{ $value }}"
+                                                                @selected((string) $setting['value'] === (string) $value)>
+                                                            {{ $sample }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                            </label>
                                         @else
                                             <label class="block">
                                                 <span class="mb-1 block text-sm font-medium">

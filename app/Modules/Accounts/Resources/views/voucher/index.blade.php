@@ -54,7 +54,7 @@
             :rows="$vouchers"
             :columns="[
                 ['key' => 'trx_date', 'label' => __('core.table.date'), 'width' => '8rem',
-                 'render' => fn ($v) => $v->trx_date?->format('d/m/Y')],
+                 'render' => fn ($v) => \App\Core\Support\DateFormat::format($v->trx_date)],
                 ['key' => 'document_no', 'label' => __('core.print.document_no'), 'width' => '13rem',
                  'render' => fn ($v) => view('accounts::voucher.partials.number', ['voucher' => $v])],
                 ['key' => 'narration', 'label' => __('core.table.narration')],
