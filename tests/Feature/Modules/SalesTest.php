@@ -165,6 +165,11 @@ class SalesTest extends TestCase
         // নিয়ে তুলনা করা হয় — ধ্রুবক সংখ্যা ধরে নিলে ডেমো বদলালেই ভাঙত
         $before = $this->stock()->statesFor($this->product, $this->warehouse);
 
+        // খতিয়ানেও শুরুর অবস্থাটাই ধরা হয়, একই কারণে: খোলা মজুদ এখন
+        // মজুদ খাতে বসে, তাই ওই খাতের পরম মান আর শূন্য থেকে শুরু হয় না।
+        // এই পরীক্ষার প্রশ্ন "কতটা নাড়ল", "কত হল" নয়।
+        $inventoryBefore = $this->balanceOf(StandardChart::INVENTORY);
+
         // ── অর্ডার: মাল ধরা পড়ে, তাকেই থাকে ──
         $order = $this->orders()->confirm($this->makeOrder('10', '200'));
 
@@ -200,7 +205,11 @@ class SalesTest extends TestCase
         // খরচ = ১০ × পণ্যের ক্রয়মূল্য
         $cost = bcmul('10', (string) $this->product->purchase_price, 4);
         $this->assertSame(0, bccomp($this->balanceOf(StandardChart::COST_OF_GOODS_SOLD), $cost, 4));
-        $this->assertSame(0, bccomp($this->balanceOf(StandardChart::INVENTORY), bcmul($cost, '-1', 4), 4));
+        $this->assertSame(0, bccomp(
+            bcsub($this->balanceOf(StandardChart::INVENTORY), $inventoryBefore, 4),
+            bcmul($cost, '-1', 4),
+            4,
+        ));
 
         // ── আদায়: পাওনা কমে ──
         $collection = $this->collections()->create(

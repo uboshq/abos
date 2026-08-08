@@ -147,6 +147,16 @@ class PurchaseTest extends TestCase
         $stock = app(StockService::class);
         $openingStock = $stock->floorQty($this->product, $this->warehouse);
 
+        /*
+         * খতিয়ানেও শুরুর অবস্থাটা ধরে রাখা হয়, স্টকের মতোই।
+         *
+         * খোলা মজুদ এখন খতিয়ানেও বসে (আগে বসত না — আট লাখ টাকার মাল
+         * খাতার বাইরে পড়ে থাকত)। তাই মজুদ খাতের পরম মান আর শূন্য থেকে
+         * শুরু হয় না, আর এই পরীক্ষার প্রশ্নটাও পরম মান নিয়ে নয় —
+         * "এই তিনটা কাগজ কতটা নাড়াল" নিয়ে।
+         */
+        $openingLedger = $this->balanceOf(StandardChart::INVENTORY);
+
         // ── আদেশ: কিছুই নড়ে না ──
         $order = $this->orders()->confirm($this->makeOrder('100', '50'));
 
@@ -165,7 +175,11 @@ class PurchaseTest extends TestCase
             4,
         ));
 
-        $this->assertSame(0, bccomp($this->balanceOf(StandardChart::INVENTORY), '5000', 4));
+        $this->assertSame(0, bccomp(
+            bcsub($this->balanceOf(StandardChart::INVENTORY), $openingLedger, 4),
+            '5000',
+            4,
+        ));
         // দায় ক্রেডিটে, তাই ডেবিট − ক্রেডিট ঋণাত্মক
         $this->assertSame(0, bccomp($this->balanceOf(StandardChart::GOODS_RECEIVED_NOT_INVOICED), '-5000', 4));
         $this->assertSame(0, bccomp($this->balanceOf(StandardChart::PAYABLE), '0', 4),
@@ -179,7 +193,11 @@ class PurchaseTest extends TestCase
         $this->assertSame(0, bccomp($this->balanceOf(StandardChart::PAYABLE), '-5000', 4));
 
         // মজুদ একবারই বেড়েছে — বিল নতুন করে মাল আনে না
-        $this->assertSame(0, bccomp($this->balanceOf(StandardChart::INVENTORY), '5000', 4));
+        $this->assertSame(0, bccomp(
+            bcsub($this->balanceOf(StandardChart::INVENTORY), $openingLedger, 4),
+            '5000',
+            4,
+        ));
     }
 
     /**
@@ -247,6 +265,9 @@ class PurchaseTest extends TestCase
         // এই কোম্পানিতে দামের অমিল আটকানো বন্ধ — নাহলে বিলটাই বসত না
         app(SettingsService::class)->set('purchase.block_price_mismatch', false);
 
+        // মজুদ খাতে খোলা মজুদের টাকাও বসে আছে, তাই পরিবর্তনটাই মাপা হয়
+        $inventoryBefore = $this->balanceOf(StandardChart::INVENTORY);
+
         $receipt = $this->receipts()->confirm($this->makeReceipt(null, '100', '50'));
 
         // সরবরাহকারী ৫২ টাকা দরে বিল পাঠালেন
@@ -259,7 +280,11 @@ class PurchaseTest extends TestCase
         $this->assertSame(0, bccomp($this->balanceOf(StandardChart::PURCHASE_PRICE_VARIANCE), '200', 4));
 
         // মজুদ চালানের দামেই আছে
-        $this->assertSame(0, bccomp($this->balanceOf(StandardChart::INVENTORY), '5000', 4));
+        $this->assertSame(0, bccomp(
+            bcsub($this->balanceOf(StandardChart::INVENTORY), $inventoryBefore, 4),
+            '5000',
+            4,
+        ));
 
         // সরবরাহকারীকে দিতে হবে বিলের পুরোটাই
         $this->assertSame(0, bccomp($this->balanceOf(StandardChart::PAYABLE), '-5200', 4));
@@ -358,13 +383,17 @@ class PurchaseTest extends TestCase
     {
         $stock = app(StockService::class);
         $before = $stock->floorQty($this->product, $this->warehouse);
+        $inventoryBefore = $this->balanceOf(StandardChart::INVENTORY);
 
         $receipt = $this->receipts()->confirm($this->makeReceipt(null, '40', '50'));
 
         $this->receipts()->cancel($receipt, 'ভুল পণ্য এসেছিল');
 
         $this->assertSame(0, bccomp($stock->floorQty($this->product, $this->warehouse), $before, 4));
-        $this->assertSame(0, bccomp($this->balanceOf(StandardChart::INVENTORY), '0', 4));
+
+        // বাতিলের পর মজুদ খাত ঠিক যেখানে ছিল সেখানেই — শূন্যে নয়,
+        // কারণ খোলা মজুদের টাকা ওখানে আগে থেকেই বসা
+        $this->assertSame(0, bccomp($this->balanceOf(StandardChart::INVENTORY), $inventoryBefore, 4));
         $this->assertSame(0, bccomp($this->balanceOf(StandardChart::GOODS_RECEIVED_NOT_INVOICED), '0', 4));
 
         // সারি মোছা হয়নি — উল্টো সারি বসেছে

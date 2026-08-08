@@ -76,7 +76,11 @@ class FoundationWorksEndToEndTest extends TestCase
             ['account_id' => 2201, 'credit' => 1500],
         ], documentNo: $documentNo);
 
-        $this->assertSame(3, LedgerEntry::query()->count());
+        // নিজের কাগজের সারি গোনা হয়, সবার নয় — সিডারে খোলা মজুদের
+        // দাখিলাও এখন খতিয়ানে বসে, আর এই ধাপের প্রশ্ন তাদের নিয়ে নয়।
+        $voucherEntries = LedgerEntry::query()->where('source_type', 'journal_voucher');
+
+        $this->assertSame(3, (clone $voucherEntries)->count());
         $this->assertEquals(
             LedgerEntry::query()->sum('debit'),
             LedgerEntry::query()->sum('credit'),
@@ -84,7 +88,7 @@ class FoundationWorksEndToEndTest extends TestCase
         );
 
         // ৪. প্রতিটা লাইন তার উৎসে ফিরতে পারে — নিয়ম ১
-        $entry = LedgerEntry::query()->first();
+        $entry = (clone $voucherEntries)->first();
         $this->assertSame('journal_voucher', $entry->source_type);
         $this->assertSame(1, (int) $entry->source_id);
         $this->assertSame($documentNo, $entry->document_no);
@@ -129,7 +133,7 @@ class FoundationWorksEndToEndTest extends TestCase
         $owner->switchCompany($alpha->id);
         CompanyContext::set($alpha->id);
 
-        $this->assertSame(3, LedgerEntry::query()->count());
+        $this->assertSame(3, (clone $voucherEntries)->count());
     }
 
     public function test_the_demo_data_is_usable_as_it_stands(): void

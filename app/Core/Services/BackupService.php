@@ -191,21 +191,76 @@ final class BackupService
          */
         $defaults = $this->defaultsFile($db);
 
+        /*
+         * ডাম্প আগে, চাপ পরে — `| gzip` দিয়ে নয়।
+         *
+         * উইন্ডোজে gzip বলে কোনো প্রোগ্রাম নেই, আর পাইপটা cmd চালায়।
+         * ফল: অফিসের মেশিনে প্রতিটা রাতের ব্যাকআপ "'gzip' is not
+         * recognized" বলে ব্যর্থ হত — অথচ ডাম্পটা ততক্ষণে নেওয়া হয়ে
+         * গেছে, শুধু চাপতে গিয়ে হারিয়ে যেত।
+         *
+         * PHP-র নিজের zlib দুই জায়গাতেই আছে, তাই বাইরের কিছুর উপর আর
+         * নির্ভর করতে হয় না।
+         */
+        $raw = $target.'.sql';
+
         try {
             $command = sprintf(
                 '%s --defaults-extra-file=%s --single-transaction --quick --routines '
-                .'--default-character-set=utf8mb4 %s | gzip > %s',
+                .'--default-character-set=utf8mb4 --result-file=%s %s',
                 escapeshellarg((string) config('abos.backup.mysqldump')),
                 escapeshellarg($defaults),
+                escapeshellarg($raw),
                 escapeshellarg((string) $db['database']),
-                escapeshellarg($target),
             );
 
             // --single-transaction: টেবিল লক না করেই সামঞ্জস্যপূর্ণ ডাম্প,
             // তাই ব্যাকআপ চলাকালীন কেউ বিল কাটতে গিয়ে আটকায় না
             $this->shell($command, 'mysqldump চালানো গেল না');
+
+            $this->compress($raw, $target);
         } finally {
+            @unlink($raw);
             @unlink($defaults);
+        }
+    }
+
+    /**
+     * একটা ফাইল gzip করা, টুকরো টুকরো করে।
+     *
+     * পুরোটা মেমরিতে তোলা হয় না — এক বছরের খাতা কয়েকশো মেগাবাইট হয়,
+     * আর PHP-র memory_limit ওখানেই থেমে যেত।
+     */
+    private function compress(string $source, string $target): void
+    {
+        $in = fopen($source, 'rb');
+
+        if ($in === false) {
+            throw new RuntimeException("ডাম্পটা পড়া গেল না: {$source}");
+        }
+
+        $out = gzopen($target, 'wb9');
+
+        if ($out === false) {
+            fclose($in);
+            throw new RuntimeException("ব্যাকআপ ফাইলটা লেখা গেল না: {$target}");
+        }
+
+        try {
+            while (! feof($in)) {
+                $chunk = fread($in, 1024 * 1024);
+
+                if ($chunk === false) {
+                    throw new RuntimeException("ডাম্প পড়ার মাঝপথে থেমে গেল: {$source}");
+                }
+
+                if ($chunk !== '' && gzwrite($out, $chunk) === false) {
+                    throw new RuntimeException("ব্যাকআপ লেখার মাঝপথে থেমে গেল: {$target}");
+                }
+            }
+        } finally {
+            fclose($in);
+            gzclose($out);
         }
     }
 
@@ -214,19 +269,59 @@ final class BackupService
         $db = config('database.connections.mysql');
         $defaults = $this->defaultsFile($db);
 
+        // ফিরিয়ে আনাও একই কারণে দুই ধাপে — gzip নেই, তাই আগে খুলে নেওয়া
+        $raw = $file.'.restore.sql';
+
         try {
+            $this->decompress($file, $raw);
+
             $this->shell(
                 sprintf(
-                    'gzip -dc %s | %s --defaults-extra-file=%s %s',
-                    escapeshellarg($file),
+                    '%s --defaults-extra-file=%s %s < %s',
                     escapeshellarg((string) config('abos.backup.mysql')),
                     escapeshellarg($defaults),
                     escapeshellarg($database),
+                    escapeshellarg($raw),
                 ),
                 'ডাম্পটা ফিরিয়ে আনা গেল না',
             );
         } finally {
+            @unlink($raw);
             @unlink($defaults);
+        }
+    }
+
+    /** gzip খোলা, একই কারণে টুকরো টুকরো করে। */
+    private function decompress(string $source, string $target): void
+    {
+        $in = gzopen($source, 'rb');
+
+        if ($in === false) {
+            throw new RuntimeException("ব্যাকআপ ফাইলটা খোলা গেল না: {$source}");
+        }
+
+        $out = fopen($target, 'wb');
+
+        if ($out === false) {
+            gzclose($in);
+            throw new RuntimeException("খোলা ডাম্পটা লেখা গেল না: {$target}");
+        }
+
+        try {
+            while (! gzeof($in)) {
+                $chunk = gzread($in, 1024 * 1024);
+
+                if ($chunk === false) {
+                    throw new RuntimeException("ব্যাকআপ খোলার মাঝপথে থেমে গেল: {$source}");
+                }
+
+                if ($chunk !== '' && fwrite($out, $chunk) === false) {
+                    throw new RuntimeException("খোলা ডাম্প লেখার মাঝপথে থেমে গেল: {$target}");
+                }
+            }
+        } finally {
+            gzclose($in);
+            fclose($out);
         }
     }
 

@@ -76,6 +76,70 @@ final class OpeningBalanceService
     }
 
     /**
+     * শুরুর দিন তাকে যা ছিল — মজুদ ডেবিট, অবশিষ্ট মুনাফা ক্রেডিট।
+     *
+     * ── কেন এটা লাগল ────────────────────────────────────────────────
+     * খোলা মজুদ এতদিন কেবল গুদামে ঢুকত (পরিমাণ) আর স্তরে বসত (দাম),
+     * কিন্তু খতিয়ানে কিছুই যেত না। ফল: ডিপোর তাকে ৮,৪০,০০০ টাকার মাল,
+     * অথচ ব্যালেন্স শিটে মজুদ শূন্য। সম্পদটা ছিল, খাতায় ছিল না।
+     *
+     * ধরা পড়েছে FIFO বসানোর পর — স্তরে মালের মূল্য আর খতিয়ানের মজুদ
+     * পাশাপাশি রেখে। আগে দুইটা সংখ্যা কখনো একসাথে দেখা হত না, তাই
+     * ফাঁকটাও কেউ দেখেনি।
+     *
+     * ── কেন অবশিষ্ট মুনাফার বিপরীতে, ঘাটতি-উদ্বৃত্ত খাতে নয় ─────────
+     * শুরুর দিনের মাল এই বছরের কোনো ঘটনা নয় — সেটা আগের ব্যবসার ফল,
+     * নতুন খাতায় তোলা হচ্ছে মাত্র। ঘাটতি-উদ্বৃত্ত খাতে ফেললে প্রথম
+     * মাসেই আট লাখ টাকা "আয়" দেখাত, অথচ কেউ কিছু বেচেনি।
+     *
+     * গ্রাহক ও সরবরাহকারীর খোলা ব্যালেন্সেও একই খাত, একই কারণে।
+     *
+     * ── sourceId পণ্যের নয়, চলাচলের ──────────────────────────────────
+     * প্রথমে পণ্যের id দেওয়া হয়েছিল, আর তাতে একই পণ্য দুই গুদামে থাকলে
+     * দ্বিতীয় দাখিলাটা বাতিল হয়ে যেত — পোস্টিং ইঞ্জিন একই উৎসে দুইবার
+     * বসতে দেয় না, আর সেটা ঠিকই করে (নইলে একই কাগজ দুইবার পোস্ট করলে
+     * খাতা দ্বিগুণ হত)।
+     *
+     * ধরা পড়েছে সিডার চালিয়ে: নেত্রকোনার ৪০ বস্তা চাল, ১,৩৬,০০০ টাকা,
+     * নীরবে বাদ পড়ে গিয়েছিল। চলাচলের id দিলে প্রতিটা গুদামের প্রতিটা
+     * ঢোকা আলাদা ঘটনা — যা সত্যিও।
+     *
+     * @return list<LedgerEntry>
+     */
+    public function forInventory(
+        int $sourceId,
+        string $documentNo,
+        string $amount,
+        Carbon|string|null $date = null,
+    ): array {
+        if (bccomp($amount, '0', 4) <= 0) {
+            return [];
+        }
+
+        $inventory = StandardChart::find(StandardChart::INVENTORY);
+        $equity = StandardChart::find(StandardChart::RETAINED_EARNINGS);
+
+        if ($inventory === null || $equity === null) {
+            throw new PostingException(
+                'Opening stock needs the standard chart — install it before bringing stock in.'
+            );
+        }
+
+        $narration = $this->narration();
+
+        return $this->posting->post(
+            sourceType: 'opening_stock',
+            sourceId: $sourceId,
+            trxDate: $this->dateFor($date),
+            lines: [
+                ['account_id' => $inventory->id, 'debit' => $amount, 'narration' => $narration],
+                ['account_id' => $equity->id, 'credit' => $amount, 'narration' => $narration],
+            ],
+            documentNo: $documentNo,
+        );
+    }
+
+    /**
      * খোলা ব্যালেন্সের দাখিলা আছে কি না।
      *
      * সম্পাদনায় খোলা ব্যালেন্স বদলানো যায় না, তবু এটা দরকার: পুরনো

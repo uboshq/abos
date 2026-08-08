@@ -16,6 +16,7 @@ use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\VoucherService;
 use Database\Seeders\DemoSeeder;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -96,6 +97,20 @@ class VoucherTest extends TestCase
     private function balance(int $accountId): string
     {
         return Account::query()->findOrFail($accountId)->balanceOn();
+    }
+
+    /**
+     * এই ভাউচারটার খতিয়ানের সারি — সবার নয়।
+     *
+     * "খতিয়ানে একটাও সারি নেই" আগে সত্যি ছিল, এখন নয়: সিডার খোলা মজুদের
+     * দাখিলা বসায়। খসড়া কিছু বসায়নি — এটা যাচাই করার প্রশ্নটা সবসময়ই
+     * "এই কাগজটা কী বসাল", "মোট কয়টা সারি আছে" নয়।
+     */
+    private function entriesFor(Voucher $voucher): Builder
+    {
+        return LedgerEntry::query()
+            ->where('source_type', Voucher::SOURCE_TYPES[$voucher->type])
+            ->where('source_id', $voucher->id);
     }
 
     // ── দিক — সবচেয়ে জরুরি অংশ ────────────────────────────────────────
@@ -180,7 +195,7 @@ class VoucherTest extends TestCase
         $voucher = $this->simple('receipt', $this->receivable, $this->cash);
 
         $this->assertTrue($voucher->isDraft());
-        $this->assertSame(0, LedgerEntry::query()->count());
+        $this->assertSame(0, $this->entriesFor($voucher)->count());
         $this->assertSame('0.0000', $this->balance($this->cash));
     }
 
@@ -302,7 +317,7 @@ class VoucherTest extends TestCase
         $this->service()->cancel($voucher, 'আর দরকার নেই');
 
         $this->assertSame(DocumentStatus::CANCELLED, $voucher->fresh()->status);
-        $this->assertSame(0, LedgerEntry::query()->count());
+        $this->assertSame(0, $this->entriesFor($voucher)->count());
     }
 
     public function test_cancelling_without_a_reason_is_refused(): void
