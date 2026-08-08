@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\Inventory\Http\Controllers\OpeningStockController;
 use App\Modules\Inventory\Http\Controllers\ProductController;
 use App\Modules\Inventory\Http\Controllers\StockController;
 use App\Modules\Inventory\Http\Controllers\StockReportController;
@@ -48,6 +49,10 @@ Route::middleware('auth')->prefix('inventory')->group(function () {
         Route::get('/', [StockController::class, 'index'])->name('index');
         Route::get('/adjust', [StockController::class, 'adjust'])->name('adjust');
         Route::post('/adjust', [StockController::class, 'storeAdjustment'])->name('adjust.store');
+
+        // খোলা মজুদ — পুরনো খাতা থেকে আসার দিনের কাজ, সমন্বয় নয়
+        Route::get('/opening', [OpeningStockController::class, 'index'])->name('opening');
+        Route::post('/opening', [OpeningStockController::class, 'store'])->name('opening.store');
         Route::post('/hold', [StockController::class, 'storeHold'])->name('hold');
         Route::post('/release', [StockController::class, 'storeRelease'])->name('release');
     });

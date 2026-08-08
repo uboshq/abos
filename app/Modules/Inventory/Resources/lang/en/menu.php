@@ -11,4 +11,5 @@ return [
     'stock_summary' => 'Stock Summary',
     'hold_report' => 'Held Stock',
     'transfers' => 'Stock Transfers',
+    'opening' => 'Opening Stock',
 ];

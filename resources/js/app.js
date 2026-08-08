@@ -1,4 +1,5 @@
 import Alpine from 'alpinejs'
+import { reprice } from './pricing.js'
 
 /*
  * Alpine শুধু ছোট UI ইন্টারঅ্যাকশনে — ড্রপডাউন, পাসওয়ার্ড দেখানো, ট্যাব
@@ -7,5 +8,14 @@ import Alpine from 'alpinejs'
  *
  * সেকশন ২০.৭: JS দিয়ে লেআউট বদলানো হয় না। CSS যা পারে তার জন্য JS নয়।
  */
+/*
+ * বিক্রয়মূল্যের অঙ্কটা এখান থেকে Blade-এ পৌঁছায়।
+ *
+ * ইনলাইন লিখলে ওটার কোনো পরীক্ষা লেখা যেত না, আর ওই অঙ্কই একটা গোটা
+ * ডিপোর প্রতিটা পণ্যের দাম ঠিক করে। এখন বিশুদ্ধ ফাংশন, পরীক্ষা আছে
+ * (`npm test`), আর Blade শুধু ডাকে।
+ */
+window.abos = { reprice }
+
 window.Alpine = Alpine
 Alpine.start()

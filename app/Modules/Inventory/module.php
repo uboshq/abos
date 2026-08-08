@@ -51,6 +51,7 @@ return [
         'transactions' => [
             ['label' => 'inventory::menu.stock', 'route' => 'inventory.stock.index', 'permission' => 'inventory.stock.view'],
             ['label' => 'inventory::menu.adjust', 'route' => 'inventory.stock.adjust', 'permission' => 'inventory.stock.adjust'],
+            ['label' => 'inventory::menu.opening', 'route' => 'inventory.stock.opening', 'permission' => 'inventory.stock.opening'],
             ['label' => 'inventory::menu.transfers', 'route' => 'inventory.transfer.index', 'permission' => 'inventory.transfer.view'],
         ],
         'reports' => [
@@ -75,6 +76,16 @@ return [
         'inventory.stock.view',
         'inventory.stock.adjust',
         'inventory.stock.hold',
+
+        /*
+         * খোলা মজুদের নিজের চাবি, সমন্বয়ের চাবি নয়।
+         *
+         * এই একটা পর্দাই সরাসরি অবশিষ্ট মুনাফায় টাকা বসাতে পারে, কোনো
+         * কাগজ বা অনুমোদন ছাড়াই — কারণ শুরুর দিনের মালের আগে কোনো কাগজ
+         * থাকেই না। তাই যিনি রোজ গুদাম গোনেন তাঁর হাতে এটা থাকা উচিত নয়;
+         * এটা মালিক বা হিসাবরক্ষকের একবারের কাজ।
+         */
+        'inventory.stock.opening',
 
         /*
          * স্থানান্তরের চাবি চারটা, আর পাঠানো ও বুঝে নেওয়া আলাদা।

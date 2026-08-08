@@ -15,6 +15,7 @@
     'linkField' => null,
     'linkOptions' => [],
     'showDiscount' => true,
+    'showSalesPrice' => false,
 ])
 
 <div x-data="{
@@ -22,6 +23,7 @@
         add() {
             this.rows.push({
                 product_id: '', qty: '', rate: '', discount: '', tax: '', link: '',
+                sales_price: '', markup: '', margin: '', anchor: '',
             });
         },
         remove(i) {
@@ -36,6 +38,35 @@
         get total() {
             return this.rows.reduce((sum, row) => sum + this.amount(row), 0);
         },
+
+        /*
+         * দাম · markup · margin — তিনটা জ্যান্ত বাক্স, চারটা সংখ্যা।
+         *
+         * ── markup আর margin এক জিনিস নয় ─────────────────────────────
+         * markup মাপা হয় খরচের ওপর, margin দামের ওপর। ১০০-তে কিনে
+         * ১৫০-তে বেচা মানে ৫০% markup, কিন্তু ৩৩.৩% margin। যে ডিপো
+         * "৪০%" বলতে margin বোঝে আর পায় markup, সে প্রতিটা লাইনেই কম
+         * দামে বেচে — সারা বছর, আর বছরশেষে কেউ ধরতে পারে না কেন কম
+         * পড়ল। তাই দুইটা বাক্সই থাকে, দুইটাই জ্যান্ত।
+         *
+         * ── কোনটা স্থির থাকে, তা নির্ভর করে শেষে কী বলা হয়েছিল ────────
+         * markup বা margin লিখলে মানুষটা একটা **নীতি** বলেছেন ("আমি
+         * এটা চল্লিশ শতাংশে বেচি") — দর বদলালে দামটা নতুন দর ধরে বসবে।
+         * দাম লিখলে তিনি একটা **দাম** বলেছেন, সচরাচর প্যাকেটে ছাপা বা
+         * ডিলারের সাথে ঠিক করা — দর বদলালেও দামটা টেকে, বদলায় margin,
+         * যেটা তাঁর ঠিক জানা দরকার।
+         *
+         * ── যেটাতে কার্সর আছে সেটা ছোঁয়া হয় না ──────────────────────
+         * নিজে থেকে বসিয়ে দিলে টাইপ করতে থাকা মানুষটার সাথে লড়াই হত।
+         * তাই edited ঘরটা কখনো লেখা হয় না।
+         *
+         * ── আর কোনোটা না ছোঁয়া পর্যন্ত কিছুই বসে না ─────────────────
+         * নইলে কেউ শুধু ক্রয়দরটা লিখলেই পর্দায় একটা বিক্রয়মূল্য ভেসে
+         * উঠত যেটা কেউ বেছে নেয়নি — আর সেটাই সেভ হয়ে যেত।
+         */
+        priced(row, edited) {
+            Object.assign(row, window.abos.reprice(row, edited));
+        },
      }"
      x-init="if (rows.length === 0) add()">
 
@@ -49,6 +80,11 @@
                     @endif
                     <th class="p-2 text-end font-medium">{{ __('purchase::field.quantity') }}</th>
                     <th class="p-2 text-end font-medium">{{ __('purchase::field.rate') }}</th>
+                    @if ($showSalesPrice)
+                        <th class="p-2 text-end font-medium">{{ __('purchase::field.sales_price') }}</th>
+                        <th class="p-2 text-end font-medium">{{ __('purchase::field.markup') }}</th>
+                        <th class="p-2 text-end font-medium">{{ __('purchase::field.margin') }}</th>
+                    @endif
                     @if ($showDiscount)
                         <th class="p-2 text-end font-medium">{{ __('purchase::field.discount') }}</th>
                         <th class="p-2 text-end font-medium">{{ __('purchase::field.tax') }}</th>
@@ -95,9 +131,39 @@
                         <td class="p-1" data-label="{{ __('purchase::field.rate') }}">
                             <input type="number" step="0.0001" inputmode="decimal" required
                                    :name="`lines[${i}][rate]`" x-model="row.rate"
+                                   @input="priced(row, 'rate')"
                                    class="num h-9 w-full sm:w-28 rounded-(--radius-field) border border-(--color-border)
                                           bg-(--color-surface-card) px-2 text-end">
                         </td>
+
+                        @if ($showSalesPrice)
+                            {{--
+                                বিক্রয়মূল্যের ঘরটাই একমাত্র যেটা সার্ভারে
+                                যায়। markup ও margin-এর name নেই — ওরা
+                                দুইটা জানালা, সংরক্ষিত তথ্য নয়। একই
+                                জিনিস দুই জায়গায় জমা রাখলে একদিন আলাদা
+                                হবেই, আর তখন কোনটা সত্যি বলার উপায় থাকে না।
+                            --}}
+                            <td class="p-1" data-label="{{ __('purchase::field.sales_price') }}">
+                                <input type="number" step="0.01" min="0" inputmode="decimal"
+                                       :name="`lines[${i}][sales_price]`" x-model="row.sales_price"
+                                       @input="priced(row, 'sales_price')"
+                                       class="num h-9 w-full sm:w-28 rounded-(--radius-field) border border-(--color-border)
+                                              bg-(--color-surface-card) px-2 text-end">
+                            </td>
+                            <td class="p-1" data-label="{{ __('purchase::field.markup') }}">
+                                <input type="number" step="0.01" inputmode="decimal"
+                                       x-model="row.markup" @input="priced(row, 'markup')"
+                                       class="num h-9 w-full sm:w-20 rounded-(--radius-field) border border-(--color-border)
+                                              bg-(--color-surface-card) px-2 text-end">
+                            </td>
+                            <td class="p-1" data-label="{{ __('purchase::field.margin') }}">
+                                <input type="number" step="0.01" inputmode="decimal"
+                                       x-model="row.margin" @input="priced(row, 'margin')"
+                                       class="num h-9 w-full sm:w-20 rounded-(--radius-field) border border-(--color-border)
+                                              bg-(--color-surface-card) px-2 text-end">
+                            </td>
+                        @endif
 
                         @if ($showDiscount)
                             <td class="p-1" data-label="{{ __('purchase::field.discount') }}">
@@ -130,7 +196,8 @@
 
             <tfoot>
                 <tr>
-                    <td class="p-2 text-end font-medium" colspan="{{ ($showDiscount ? 5 : 3) + ($linkField ? 1 : 0) }}">
+                    <td class="p-2 text-end font-medium"
+                        colspan="{{ ($showDiscount ? 5 : 3) + ($linkField ? 1 : 0) + ($showSalesPrice ? 3 : 0) }}">
                         {{ __('purchase::field.total') }}
                     </td>
                     <td class="num p-2 text-end font-semibold" x-text="total.toFixed(2)"></td>
