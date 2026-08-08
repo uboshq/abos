@@ -1,39 +1,79 @@
-{{-- সারির নিজের বাড়তি পর্দা — এখন কেবল মুদ্রার হারের ইতিহাস।
+{{--
+    সারির কাজগুলো — একটা বোতামের ভেতরে।
 
-     দেখার অনুমতিতেই দেখা যায়, নিচের বোতামগুলোর মতো manage লাগে না:
-     হার দেখা আর হার বসানো এক কাজ নয়। --}}
-@if ($spec['extra_action'] ?? false)
-    <a href="{{ route($spec['extra_action']['route'], ['id' => $record->id]) }}"
-       class="mr-1 rounded-(--radius-field) px-2 py-1 text-2xs text-(--color-brand-500)
-              transition-colors hover:bg-(--color-surface-hover)">
-        {{ __($spec['extra_action']['label']) }}
-    </a>
-@endif
+    ── আগে কী ছিল, আর কেন যথেষ্ট ছিল না ───────────────────────────────
+    কেবল "নিষ্ক্রিয় করুন" দেখাত। সম্পাদনায় যাওয়ার একমাত্র পথ ছিল বাঁ
+    পাশের কোডটায় ক্লিক করা — যেটা লিংক বলে চেনা যায় না, তাই কেউ
+    খুঁজেও পেত না।
 
-@can('master_data.manage')
-    <span class="flex flex-wrap justify-end gap-1">
-        {{-- ডিফল্ট করা এক ক্লিকে — ফর্ম খুলে সেভ করতে হয় না --}}
-        @if ($record::supportsDefault() && ! $record->is_default && $record->is_active)
-            <form method="POST" action="{{ route('master_data.' . $spec['route'] . '.default', $record->id) }}">
-                @csrf
-                <button type="submit"
-                        class="rounded-(--radius-field) px-2 py-1 text-2xs text-(--color-brand-500)
-                               transition-colors hover:bg-(--color-surface-hover)">
-                    {{ __('master_data::action.make_default') }}
-                </button>
-            </form>
-        @endif
+    আর নিষ্ক্রিয় সারিতে কিছুই থাকত না: ভুল করে একটা একক বন্ধ করে
+    ফেললে ফেরানোর কোনো উপায় নেই, নতুন করে বানাতে গেলেও একই কোড দুইবার
+    বসাতে গিয়ে আটকাত। গুদামে এই ফাঁদটা আগেই ধরা পড়েছিল।
 
-        @if ($record->is_active)
-            <form method="POST" action="{{ route('master_data.' . $spec['route'] . '.destroy', $record->id) }}">
-                @csrf
-                @method('DELETE')
-                <button type="submit"
-                        class="rounded-(--radius-field) px-2 py-1 text-2xs text-(--color-ink-muted)
-                               transition-colors hover:bg-(--color-surface-hover)">
-                    {{ __('master_data::action.deactivate') }}
-                </button>
-            </form>
-        @endif
-    </span>
-@endcan
+    ── "মুছে ফেলা" বলে কিছু নেই, ইচ্ছে করেই ────────────────────────────
+    ব্যবহার হয়ে যাওয়া একটা একক সত্যিই মুছে দিলে পুরনো প্রতিটা পণ্য,
+    চালান ও বিলের সারি এমন কিছুর দিকে দেখাত যা আর নেই — আর সেটা ধরা
+    পড়ত ছয় মাস পর, কোনো রিপোর্ট খুলতে গিয়ে। নিষ্ক্রিয় করাই এখানে
+    মুছে ফেলা: নতুন কাগজে আর আসে না, পুরনো কাগজ অক্ষত থাকে (নিয়ম ৫)।
+--}}
+@php
+    $route = fn (string $action) => route('master_data.'.$spec['route'].'.'.$action, $record->id);
+
+    $items = [];
+
+    /*
+     * সারির নিজের বাড়তি পর্দা — এখন কেবল মুদ্রার হারের ইতিহাস।
+     *
+     * দেখার অনুমতিতেই দেখা যায়, বাকিগুলোর মতো manage লাগে না: হার দেখা
+     * আর হার বসানো এক কাজ নয়।
+     */
+    if ($spec['extra_action'] ?? false) {
+        $items[] = [
+            'label' => __($spec['extra_action']['label']),
+            'url' => route($spec['extra_action']['route'], ['id' => $record->id]),
+        ];
+    }
+
+    if (auth()->user()?->can('master_data.manage')) {
+        $items[] = ['label' => __('master_data::action.edit'), 'url' => $route('edit')];
+
+        // ডিফল্ট করা এক ক্লিকে — ফর্ম খুলে সেভ করতে হয় না
+        if ($record::supportsDefault() && ! $record->is_default && $record->is_active) {
+            $items[] = [
+                'label' => __('master_data::action.make_default'),
+                'url' => $route('default'),
+                'method' => 'post',
+            ];
+        }
+
+        /*
+         * একই জায়গায় দুইটা অবস্থার দুইটা কাজ।
+         *
+         * সক্রিয় সারিতে "নিষ্ক্রিয় করুন", নিষ্ক্রিয় সারিতে "সক্রিয়
+         * করুন" — দুইটা একসাথে কখনো দরকার হয় না, আর পাশাপাশি থাকলে
+         * ভুলটাতে চাপ পড়ত।
+         */
+        $items[] = $record->is_active
+            ? ['label' => __('master_data::action.deactivate'), 'url' => $route('destroy'),
+                'method' => 'delete', 'tone' => 'danger']
+            : ['label' => __('master_data::action.activate'), 'url' => $route('activate'),
+                'method' => 'post', 'tone' => 'success'];
+    }
+
+    /*
+     * মোছা — আলাদা চাবিতে, আর তালিকার একদম শেষে।
+     *
+     * শেষে, কারণ এটাই একমাত্র কাজ যেটা ফেরানো যায় না। মাঝখানে থাকলে
+     * "নিষ্ক্রিয় করুন"-এ ক্লিক করতে গিয়ে একটা ঘর নিচে পড়ত।
+     */
+    if (auth()->user()?->can('master_data.delete')) {
+        $items[] = [
+            'label' => __('master_data::action.delete'),
+            'url' => $route('purge'),
+            'method' => 'delete',
+            'tone' => 'danger',
+        ];
+    }
+@endphp
+
+<x-ui.row-actions :items="$items" />

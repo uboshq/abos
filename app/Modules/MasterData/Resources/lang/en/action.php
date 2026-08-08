@@ -6,6 +6,8 @@ return [
     'new' => 'New',
     'edit' => 'Edit',
     'deactivate' => 'Deactivate',
+    'activate' => 'Activate',
+    'delete' => 'Delete',
     'make_default' => 'Make default',
     'show_inactive' => 'Show inactive too',
     'install_defaults' => 'Install standard lists',
