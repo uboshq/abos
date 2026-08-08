@@ -14,6 +14,7 @@ use App\Models\Branch;
 use App\Models\Company;
 use App\Models\FinancialYear;
 use App\Models\User;
+use App\Modules\Accounts\Services\OpeningBalanceService;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Services\CustomerService;
 use App\Modules\Inventory\Models\Product;
@@ -529,11 +530,13 @@ class DemoSeeder extends Seeder
      */
     private function openWith(Product $product, Warehouse $warehouse, string $qty): void
     {
-        app(StockService::class)->move(
+        $movement = app(StockService::class)->move(
             product: $product, warehouse: $warehouse,
             sourceType: 'opening', sourceId: $product->id,
             floor: $qty, narration: 'খোলা মজুদ',
         );
+
+        $value = bcmul($qty, (string) $product->purchase_price, 4);
 
         app(CostLayerService::class)->receive(
             product: $product,
@@ -542,6 +545,20 @@ class DemoSeeder extends Seeder
             sourceType: 'opening',
             sourceId: $product->id,
             documentNo: 'OPENING',
+        );
+
+        /*
+         * খতিয়ানেও বসে — নইলে তাকে মাল থাকে আর ব্যালেন্স শিটে শূন্য।
+         *
+         * আগে এই লাইনটা ছিল না, আর তাতে ডিপোর ৮,৪০,০০০ টাকার মাল খাতার
+         * বাইরে পড়ে থাকত। ধরা পড়েছে FIFO বসানোর পর, স্তরের মূল্য আর
+         * খতিয়ানের মজুদ পাশাপাশি রেখে — আগে দুইটা সংখ্যা কখনো একসাথে
+         * দেখা হত না।
+         */
+        app(OpeningBalanceService::class)->forInventory(
+            sourceId: $movement->id,
+            documentNo: 'OPENING',
+            amount: $value,
         );
     }
 

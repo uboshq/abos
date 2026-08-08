@@ -90,14 +90,17 @@ class PhaseOneExitTest extends TestCase
             ['account_id' => 2201, 'credit' => 1500],
         ], documentNo: $first);
 
-        $this->assertSame(3, LedgerEntry::query()->count());
+        // নিজের কাগজের সারি গোনা হয়, সবার নয় — খোলা মজুদও এখন খতিয়ানে বসে
+        $voucherEntries = LedgerEntry::query()->where('source_type', 'journal_voucher');
+
+        $this->assertSame(3, (clone $voucherEntries)->count());
         $this->assertEquals(
             LedgerEntry::query()->sum('debit'),
             LedgerEntry::query()->sum('credit'),
         );
 
         // ৪. Drill-down — প্রতিটা সংখ্যা তার উৎসে ফিরতে পারে (নিয়ম ১)
-        $entry = LedgerEntry::query()->first();
+        $entry = (clone $voucherEntries)->first();
         $this->assertSame('journal_voucher', $entry->source_type);
         $described = app(DrillResolver::class)->describe($entry->source_type, $entry->source_id);
         $this->assertSame('journal_voucher', $described['type']);
