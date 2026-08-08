@@ -28,4 +28,5 @@ return [
     'deactivate_confirm' => 'This supplier will be deactivated. Past transactions and balances stay. Continue?',
 
     'count' => '{0} No suppliers|{1} 1 supplier|[2,*] :count suppliers',
+    'confirm_deactivate' => 'Deactivate this supplier? Their history and dues stay; only new buying stops.',
 ];

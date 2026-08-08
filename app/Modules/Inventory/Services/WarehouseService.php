@@ -96,6 +96,22 @@ final class WarehouseService
         return $warehouse->fresh();
     }
 
+    /**
+     * আবার সক্রিয় করা।
+     *
+     * ── কেন নিষ্ক্রিয় করা একমুখী দরজা হতে পারে না ───────────────────
+     * ফেরার পথ না থাকলে ভুল করে বন্ধ করা গুদামের জন্য ব্যবহারকারী
+     * দ্বিতীয় একটা রেকর্ড খুলতেন — একই গুদাম দুইবার, দুইটা আলাদা
+     * স্টক নিয়ে। তারপর মাল কোনটায় আছে সেই প্রশ্নের উত্তর থাকত না।
+     * গ্রাহকে ঠিক এই যুক্তিতেই activate আছে।
+     */
+    public function activate(Warehouse $warehouse): Warehouse
+    {
+        $warehouse->refresh()->forceFill(['is_active' => true])->save();
+
+        return $warehouse->fresh();
+    }
+
     private function assertCodeIsFree(string $code, ?int $exceptId = null): void
     {
         $taken = Warehouse::query()

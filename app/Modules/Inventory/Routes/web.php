@@ -37,6 +37,11 @@ Route::middleware('auth')->prefix('inventory')->group(function () {
         Route::get('/{warehouse}/edit', [WarehouseController::class, 'edit'])->whereNumber('warehouse')->name('edit');
         Route::put('/{warehouse}', [WarehouseController::class, 'update'])->whereNumber('warehouse')->name('update');
         Route::delete('/{warehouse}', [WarehouseController::class, 'destroy'])->whereNumber('warehouse')->name('destroy');
+
+        // ফেরার পথ — নিষ্ক্রিয় করা একমুখী দরজা হতে পারে না
+        // (WarehouseService::activate-এ কারণ)
+        Route::post('/{warehouse}/activate', [WarehouseController::class, 'activate'])
+            ->whereNumber('warehouse')->name('activate');
     });
 
     Route::prefix('stock')->name('stock.')->group(function () {
