@@ -48,6 +48,7 @@ return [
         'apply' => 'Apply',
         'save' => 'Save',
         'edit' => 'Edit',
+        'view' => 'View',
         'approve' => 'Approve',
         'print' => 'Print',
         'export' => 'Export',
