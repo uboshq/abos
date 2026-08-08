@@ -15,6 +15,7 @@ use App\Modules\Inventory\Services\WarehouseService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -36,7 +37,12 @@ class WarehouseController extends Controller implements HasMiddleware
 
     public static function middleware(): array
     {
-        return static::resourcePermissions(Warehouse::class, 'warehouse');
+        return [
+            ...static::resourcePermissions(Warehouse::class, 'warehouse'),
+
+            // সক্রিয় করাও নিষ্ক্রিয় করার মতোই ক্ষমতা — পণ্যে একই নিয়ম
+            new Middleware('can:delete,warehouse', only: ['activate']),
+        ];
     }
 
     public function index(Request $request): View
@@ -110,6 +116,15 @@ class WarehouseController extends Controller implements HasMiddleware
     public function destroy(Warehouse $warehouse): RedirectResponse
     {
         $this->warehouses->deactivate($warehouse);
+
+        return redirect()
+            ->route('inventory.warehouse.index')
+            ->with('saved', __('inventory::message.warehouse_updated'));
+    }
+
+    public function activate(Warehouse $warehouse): RedirectResponse
+    {
+        $this->warehouses->activate($warehouse);
 
         return redirect()
             ->route('inventory.warehouse.index')
