@@ -171,9 +171,17 @@ final class MasterListService
      */
     public function delete(Model $record): bool
     {
+        /*
+         * ডিফল্ট সারির নিজের বার্তা।
+         *
+         * আগে নিষ্ক্রিয় করার বার্তাটাই ব্যবহার হত — "The default cannot
+         * be deactivated"। কাজটা ঠিকই আটকাত, কিন্তু মানুষ Delete চেপে
+         * "deactivated" পড়ে ভাবতেন অন্য কিছু ঘটেছে। যে বার্তা যে কাজের
+         * কথা বলে না, সেটা ভুল বার্তা।
+         */
         if (($record->is_default ?? false) === true) {
             throw ValidationException::withMessages([
-                'is_active' => __('master_data::validation.default_cannot_deactivate'),
+                'code' => __('master_data::validation.default_cannot_delete'),
             ]);
         }
 
@@ -259,7 +267,25 @@ final class MasterListService
             $node = $node->baseUnit;
         }
 
-        if (bccomp((string) $unit->factor, '0', 6) <= 0) {
+        /*
+         * খালি রূপান্তরকে ১ ধরা হয়, ছোড়া হয় না।
+         *
+         * আগে সরাসরি bccomp((string) $unit->factor, ...) ডাকা হত। খালি
+         * হলে সেটা bccomp('') হয়ে যেত, আর PHP 8 ওতে ValueError ছোড়ে —
+         * ভ্যালিডেশনের বার্তা নয়, সাদা ৫০০।
+         *
+         * "রূপান্তর বলা হয়নি" মানে "১" — এই এককই মূল একক। ওটাই ধরে
+         * নেওয়া হয়, কারণ অন্য কোনো অর্থ হয় না।
+         */
+        $factor = trim((string) $unit->factor);
+
+        if ($factor === '') {
+            $unit->forceFill(['factor' => 1])->save();
+
+            return;
+        }
+
+        if (bccomp($factor, '0', 6) <= 0) {
             throw ValidationException::withMessages([
                 'factor' => __('master_data::validation.factor_must_be_positive'),
             ]);

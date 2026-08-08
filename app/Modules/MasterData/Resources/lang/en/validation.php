@@ -21,4 +21,5 @@ return [
     'base_currency_has_no_rate' => 'The base currency has no rate — against itself it is always 1.',
     'rate_must_be_positive' => 'The rate must be greater than zero.',
     'in_use_cannot_delete' => 'Used in :where, so it cannot be deleted.',
+    'default_cannot_delete' => 'This is the default, so it cannot be deleted. Make another one the default first.',
 ];

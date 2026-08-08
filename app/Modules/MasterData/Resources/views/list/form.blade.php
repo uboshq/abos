@@ -42,12 +42,43 @@
         <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="mb-3 font-semibold">{{ __('master_data::section.identity') }}</h2>
 
-            <div class="grid gap-3 sm:grid-cols-2">
+            {{--
+                নাম লিখলে কোড নিজে বসে।
+
+                ── কেন ব্রাউজারেও, যদিও সার্ভার এমনিতেই বসায় ────────────
+                কোড খালি রেখে সেভ করলে সার্ভার নাম থেকে একটা বানিয়ে দেয়।
+                কিন্তু ব্যবহারকারী সেটা জানেন না — তিনি একটা খালি ঘর দেখেন
+                আর ভাবেন কী লিখবেন। ঘরটা টাইপ করার সাথে সাথে ভরে গেলে
+                প্রশ্নটাই ওঠে না, আর পছন্দ না হলে মুছে নিজেরটা লেখা যায়।
+
+                ── যেটাতে কার্সর আছে, বা যেটা মানুষ লিখেছেন, সেটা ছোঁয়া হয় না
+                touched বসে যেই মুহূর্তে কেউ কোডের ঘরে হাত দেন। তারপর নাম
+                বদলালেও কোড আর নড়ে না — নইলে হাতে লেখা CTN নাম শোধরানোর
+                সাথে সাথে CAR হয়ে যেত।
+
+                সম্পাদনায় কোড আগে থেকেই ভরা, তাই touched শুরুতেই সত্য:
+                বিদ্যমান একটা কোড কখনো নিজে থেকে বদলায় না।
+            --}}
+            <div class="grid gap-3 sm:grid-cols-2"
+                 x-data="{
+                     touched: @js((string) old('code', $record->code) !== ''),
+                     suggest(name) {
+                         if (this.touched) return;
+
+                         // ইংরেজি অক্ষর ও অঙ্ক ছাড়া সব বাদ, তারপর গোড়া
+                         // থেকে তিন অক্ষর — সার্ভারে CodeFromName ঠিক
+                         // একই নিয়ম মানে, তাই দুই জায়গায় একই উত্তর আসে
+                         const letters = (name || '').replace(/[^A-Za-z0-9]+/g, '');
+                         this.$refs.code.value = letters.slice(0, 3).toUpperCase();
+                     },
+                 }">
                 <x-ui.field name="code" :label="__('master_data::field.code')"
-                            :value="old('code', $record->code)" required />
+                            :value="old('code', $record->code)"
+                            x-ref="code" @input="touched = true" />
 
                 <x-ui.field name="name_en" :label="__('master_data::field.name_en')"
-                            :value="old('name_en', $record->name_en)" required />
+                            :value="old('name_en', $record->name_en)" required
+                            @input="suggest($event.target.value)" />
 
                 <x-ui.field name="name_bn" :label="__('master_data::field.name_bn')"
                             :value="old('name_bn', $record->name_bn)" />
