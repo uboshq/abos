@@ -40,7 +40,7 @@
         <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <dl class="grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-4">
                 @foreach ([
-                    'purchase::field.date' => $receipt->trx_date?->format('d/m/Y'),
+                    'purchase::field.date' => \App\Core\Support\DateFormat::format($receipt->trx_date),
                     'purchase::field.warehouse' => $receipt->warehouse?->name() ?: '-',
                     'purchase::field.supplier_challan_no' => $receipt->supplier_challan_no ?: '-',
                     'purchase::field.narration' => $receipt->narration ?: '-',

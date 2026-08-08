@@ -48,7 +48,7 @@
             :compact="request()->boolean('compact')"
             :columns="[
                 ['key' => 'trx_date', 'label' => __('purchase::field.date'), 'width' => '7rem',
-                 'render' => fn ($p) => $p->trx_date?->format('d/m/Y')],
+                 'render' => fn ($p) => \App\Core\Support\DateFormat::format($p->trx_date)],
                 ['key' => 'document_no', 'label' => __('core.print.document_no'), 'width' => '13rem',
                  'render' => fn ($p) => view('purchase::components.doc-link', [
                      'document' => $p, 'route' => 'purchase.payment.show'])],

@@ -46,7 +46,7 @@
                     'key' => 'trx_date',
                     'label' => __('purchase::field.date'),
                     'width' => '7rem',
-                    'render' => fn ($d) => $d->trx_date?->format('d/m/Y'),
+                    'render' => fn ($d) => \App\Core\Support\DateFormat::format($d->trx_date),
                 ],
                 [
                     'key' => 'document_no',

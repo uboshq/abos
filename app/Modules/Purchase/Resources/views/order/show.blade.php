@@ -45,8 +45,8 @@
         <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <dl class="grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-4">
                 @foreach ([
-                    'purchase::field.date' => $order->trx_date?->format('d/m/Y'),
-                    'purchase::field.expected_on' => $order->expected_on?->format('d/m/Y') ?: '-',
+                    'purchase::field.date' => \App\Core\Support\DateFormat::format($order->trx_date),
+                    'purchase::field.expected_on' => \App\Core\Support\DateFormat::format($order->expected_on) ?: '-',
                     'purchase::field.warehouse' => $order->warehouse?->name() ?: '-',
                     'purchase::field.narration' => $order->narration ?: '-',
                 ] as $label => $value)
@@ -114,7 +114,7 @@
                     @foreach ($order->receipts as $receipt)
                         <li>
                             <x-purchase::doc-link :document="$receipt" route="purchase.receipt.show" />
-                            <span class="text-(--color-ink-muted)">{{ $receipt->trx_date?->format('d/m/Y') }}</span>
+                            <span class="text-(--color-ink-muted)">{{ \App\Core\Support\DateFormat::format($receipt->trx_date) }}</span>
                         </li>
                     @endforeach
                 </ul>

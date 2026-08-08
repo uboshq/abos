@@ -19,7 +19,7 @@
         @break
 
     @case (\App\Core\Engines\Report\ReportColumn::DATE)
-        {{ $value ? \Illuminate\Support\Carbon::parse($value)->format('d/m/Y') : '' }}
+        {{ \App\Core\Support\DateFormat::format($value) }}
         @break
 
     @case (\App\Core\Engines\Report\ReportColumn::DOCUMENT)

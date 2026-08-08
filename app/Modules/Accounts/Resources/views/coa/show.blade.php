@@ -137,7 +137,7 @@
                 :rows="$entries"
                 :columns="[
                     ['key' => 'trx_date', 'label' => __('core.table.date'), 'width' => '8rem',
-                     'render' => fn ($e) => $e->trx_date?->format('d/m/Y')],
+                     'render' => fn ($e) => \App\Core\Support\DateFormat::format($e->trx_date)],
                     ['key' => 'document_no', 'label' => __('core.table.document'),
                      'render' => fn ($e) => view('accounts::coa.partials.entry-source', ['entry' => $e])],
                     ['key' => 'narration', 'label' => __('core.table.narration')],

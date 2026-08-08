@@ -44,7 +44,7 @@
         <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <dl class="grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-4">
                 @foreach ([
-                    'sales::field.date' => $challan->trx_date?->format('d/m/Y'),
+                    'sales::field.date' => \App\Core\Support\DateFormat::format($challan->trx_date),
                     'sales::field.warehouse' => $challan->warehouse?->name() ?: '-',
                     'sales::field.vehicle_no' => $challan->vehicle_no ?: '-',
                     'sales::field.driver_name' => $challan->driver_name ?: '-',

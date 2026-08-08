@@ -58,9 +58,9 @@
         <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <dl class="grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-4">
                 @foreach ([
-                    'inventory::field.date' => $transfer->trx_date?->format('d/m/Y'),
-                    'inventory::field.dispatched_at' => $transfer->dispatched_at?->format('d/m/Y H:i') ?: '-',
-                    'inventory::field.received_at' => $transfer->received_at?->format('d/m/Y H:i') ?: '-',
+                    'inventory::field.date' => \App\Core\Support\DateFormat::format($transfer->trx_date),
+                    'inventory::field.dispatched_at' => \App\Core\Support\DateFormat::formatWithTime($transfer->dispatched_at) ?: '-',
+                    'inventory::field.received_at' => \App\Core\Support\DateFormat::formatWithTime($transfer->received_at) ?: '-',
                     'inventory::field.narration' => $transfer->narration ?: '-',
                 ] as $label => $value)
                     <div>

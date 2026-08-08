@@ -124,7 +124,7 @@
             :rows="$movements"
             :columns="[
                 ['key' => 'trx_date', 'label' => __('core.table.date'), 'width' => '8rem',
-                 'render' => fn ($m) => $m->trx_date?->format('d/m/Y')],
+                 'render' => fn ($m) => \App\Core\Support\DateFormat::format($m->trx_date)],
                 ['key' => 'document', 'label' => __('core.table.document'),
                  'render' => fn ($m) => view('inventory::partials.movement-source', ['movement' => $m])],
                 ['key' => 'warehouse_id', 'label' => __('inventory::field.warehouse'),

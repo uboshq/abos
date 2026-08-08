@@ -2,7 +2,7 @@
 @if ($year->is_closed)
     <x-ui.badge tone="draft">{{ __('accounts::state.year_closed') }}</x-ui.badge>
     <span class="ms-2 text-2xs text-(--color-ink-muted)">
-        {{ $year->closed_at?->format('d/m/Y') }}
+        {{ \App\Core\Support\DateFormat::format($year->closed_at) }}
     </span>
 @elseif ($year->is_current)
     <x-ui.badge tone="success">{{ __('accounts::state.year_current') }}</x-ui.badge>

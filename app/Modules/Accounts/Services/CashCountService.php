@@ -6,6 +6,7 @@ namespace App\Modules\Accounts\Services;
 
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\DateFormat;
 use App\Core\Support\DocumentStatus;
 use App\Models\FinancialYear;
 use App\Modules\Accounts\Models\Account;
@@ -208,7 +209,7 @@ final class CashCountService
 
         if ($year === null) {
             throw ValidationException::withMessages([
-                'trx_date' => __('accounts::validation.no_financial_year', ['date' => $date->format('d/m/Y')]),
+                'trx_date' => __('accounts::validation.no_financial_year', ['date' => DateFormat::format($date)]),
             ]);
         }
 

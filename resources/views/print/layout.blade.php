@@ -102,7 +102,7 @@
 @yield('body')
 
 <div class="foot">
-    {{ __('core.print.printed_at') }}: {{ now()->format('d/m/Y H:i') }}
+    {{ __('core.print.printed_at') }}: {{ \App\Core\Support\DateFormat::formatWithTime(now()) }}
     @if (auth()->check()) · {{ auth()->user()->name }} @endif
 
     @if ($vendorCredit)

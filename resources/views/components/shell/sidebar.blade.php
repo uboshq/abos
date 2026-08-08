@@ -52,10 +52,28 @@
            filter: '',
        }"
        x-effect="localStorage.setItem('abos.sidebar', collapsed ? 'collapsed' : 'open')"
+       {{--
+           চওড়া মাপটা স্থির ক্লাসেই, Alpine-এর অপেক্ষায় নয়।
+
+           ── কেন ─────────────────────────────────────────────────────
+           আগে প্রস্থটা কেবল :class দিয়ে বসত, অর্থাৎ Alpine বুট হওয়ার
+           আগ পর্যন্ত aside-এর প্রস্থ ছিল ৪৪px — আইকন রেলের মাপ। ভেতরের
+           মেনু প্যানেলটা তখন শূন্য প্রস্থে চাপা পড়ত, আর তার প্রথম দুইটা
+           অক্ষর ("গ্রা", "CU") পাতার শিরোনামের উপর উঁকি দিত।
+
+           ধরা পড়েছে ছবি তুলে — কোড পড়ে নয়। ছবিটা Alpine বুট হওয়ার
+           আগেই উঠেছিল, আর তাতেই দেখা গেল আসল ব্রাউজারেও ওই ভগ্নাংশ
+           সেকেন্ডে ঠিক এটাই ঘটে।
+
+           এখন স্থির ক্লাসই খোলা অবস্থাটা ধরে রাখে (যেটা ডিফল্ট), আর
+           Alpine কেবল গুটানো অবস্থাটা সামলায় — অর্থাৎ সে দেরি করলে
+           পাতার চেহারা ভাঙে না, শুধু গুটানো থাকলে খুলতে এক পলক লাগে।
+       --}}
        class="relative sticky top-0 hidden h-dvh shrink-0 md:flex
-              md:w-(--spacing-sidebar-icon)"
+              md:w-(--spacing-sidebar-icon)
+              lg:w-(--spacing-sidebar) xl:w-(--spacing-sidebar-wide)"
        :class="collapsed
-           ? 'lg:w-(--spacing-sidebar-icon) xl:w-(--spacing-sidebar-icon)'
+           ? 'lg:w-(--spacing-sidebar-icon)! xl:w-(--spacing-sidebar-icon)!'
            : 'lg:w-(--spacing-sidebar) xl:w-(--spacing-sidebar-wide)'">
 
     <div class="flex min-w-0 flex-1 flex-col">

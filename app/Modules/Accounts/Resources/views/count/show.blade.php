@@ -137,7 +137,7 @@
 
             <dl class="space-y-2">
                 @foreach ([
-                    'accounts::field.date' => $count->trx_date?->format('d/m/Y'),
+                    'accounts::field.date' => \App\Core\Support\DateFormat::format($count->trx_date),
                     'accounts::field.counted_by' => $count->counter?->name,
                     'core.print.approved_by' => $count->approver?->name,
                     'core.table.narration' => $count->narration,

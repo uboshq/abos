@@ -45,8 +45,8 @@
         <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <dl class="grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-4">
                 @foreach ([
-                    'sales::field.date' => $invoice->trx_date?->format('d/m/Y'),
-                    'sales::field.due_on' => $invoice->due_on?->format('d/m/Y') ?: '-',
+                    'sales::field.date' => \App\Core\Support\DateFormat::format($invoice->trx_date),
+                    'sales::field.due_on' => \App\Core\Support\DateFormat::format($invoice->due_on) ?: '-',
                     'sales::field.collected' => number_format((float) $invoice->collectedAmount(), 2),
                     'sales::field.due' => number_format((float) $invoice->dueAmount(), 2),
                 ] as $label => $value)

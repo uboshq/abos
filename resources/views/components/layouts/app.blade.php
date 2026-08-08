@@ -127,7 +127,7 @@
                         @if ($printBranch = auth()->user()?->currentBranch)
                             {{ $printBranch->name() }} ·
                         @endif
-                        {{ __('core.print.printed_at') }}: {{ now()->format('d/m/Y H:i') }}
+                        {{ __('core.print.printed_at') }}: {{ \App\Core\Support\DateFormat::formatWithTime(now()) }}
                     </p>
                 </div>
             @endif

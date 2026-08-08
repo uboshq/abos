@@ -109,7 +109,7 @@
                     'customer::field.type' => $customer->typeName(),
                     'core.company.branch' => $customer->branch?->name(),
                     'customer::field.address' => $customer->address(),
-                    'customer::field.last_purchase' => $customer->lastPurchaseOn()?->format('d/m/Y'),
+                    'customer::field.last_purchase' => \App\Core\Support\DateFormat::format($customer->lastPurchaseOn()),
                 ] as $label => $value)
                     @if (filled($value))
                         <div>
@@ -134,7 +134,7 @@
             :rows="$entries"
             :columns="[
                 ['key' => 'trx_date', 'label' => __('core.table.date'), 'width' => '8rem',
-                 'render' => fn ($e) => $e->trx_date?->format('d/m/Y')],
+                 'render' => fn ($e) => \App\Core\Support\DateFormat::format($e->trx_date)],
                 ['key' => 'document', 'label' => __('core.table.document'),
                  'render' => fn ($e) => view('customer::partials.entry-source', ['entry' => $e])],
                 ['key' => 'narration', 'label' => __('core.table.narration')],
