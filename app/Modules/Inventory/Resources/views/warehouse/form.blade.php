@@ -37,8 +37,12 @@
                      লেখা আছে, আর সেটা বদলে ফেলা যাবে না। --}}
                 <x-ui.field name="code" :label="__('inventory::field.code')"
                             :value="old('code', $warehouse->code)"
-                            :placeholder="__('core.message.code_auto')"
-                            :hint="$warehouse->exists ? null : __('core.message.code_auto_hint')" />
+                            {{-- core.create.*, core.message.* নয় — ওই গ্রুপটা
+                                 নেই, তাই Laravel চাবিটাই ছাপিয়ে দিত আর
+                                 ব্যবহারকারী পর্দায় "core.message.code_auto"
+                                 পড়তেন --}}
+                            :placeholder="__('core.create.code_auto')"
+                            :hint="$warehouse->exists ? null : __('core.create.code_auto_hint')" />
 
                 <x-ui.field name="name_en" :label="__('inventory::field.name_en')"
                             :value="old('name_en', $warehouse->name_en)" required />
