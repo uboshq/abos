@@ -36,6 +36,21 @@ final class ReportDefinition
         public readonly array $filters = ['date_range'],
         public readonly ?string $groupBy = null,
         public readonly bool $runningBalance = false,
+
+        /*
+         * একটা তারিখ **পর্যন্ত** জের, নাকি একটা পরিসরের ঘটনা?
+         *
+         * রেওয়ামিল ও ব্যালেন্স শিট একটা মুহূর্তের ছবি — "৩১ জুলাই পর্যন্ত
+         * কার কত"। ওখানে "কবে থেকে" প্রশ্নটার কোনো উত্তর নেই; জের সবসময়
+         * শুরু থেকেই গোনা। ডে বুক বা লাভ-লোকসান ঠিক উল্টো।
+         *
+         * পর্দা এটা দেখে ঠিক করে "From" ঘরটা দেখাবে কি না। ঘরটা দেখানো
+         * হত দুইদিকেই, আর রেওয়ামিলের পাশে একটা তারিখ-ভরা "From" ঘর বসে
+         * থাকলে ব্যবহারকারী ধরে নেন সংখ্যাটা ওই তারিখ থেকে গোনা।
+         *
+         * পতাকাটা মডিউল নিজে তোলে, কোর কোনো রিপোর্টের নাম জানে না (১৯.৭)।
+         */
+        public readonly bool $asOfDate = false,
     ) {
         $this->columns = array_map(
             fn (array $column, int $index) => ReportColumn::fromArray($column, $index),
@@ -53,5 +68,10 @@ final class ReportDefinition
     public function hasFilter(string $name): bool
     {
         return in_array($name, $this->filters, true);
+    }
+
+    public function isAsOfDate(): bool
+    {
+        return $this->asOfDate;
     }
 }

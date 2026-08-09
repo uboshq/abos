@@ -215,6 +215,35 @@ class AccountReportsTest extends TestCase
      * যেত — অথচ ডেবিট আর ক্রেডিট তবু সমান আসত, তাই ভুলটা ধরা পড়ত
      * না। ৮,৪০,০০০ টাকার মজুদ পর্দায় ৩,৪০০ দেখাচ্ছিল।
      */
+    /**
+     * জেরের রিপোর্টে "কবে থেকে" ঘরটা পর্দাতেও থাকে না।
+     *
+     * ── কেন শুধু অঙ্ক সারানো যথেষ্ট ছিল না ──────────────────────────
+     * রেওয়ামিলের কোয়েরি থেকে শুরুর তারিখটা বাদ দেওয়া হয়েছে, তাই সংখ্যা
+     * এখন ঠিক। কিন্তু ফিল্টারে "From" ঘরটা রয়ে গিয়েছিল, চলতি মাসের ১
+     * তারিখ লেখা অবস্থায় — আর একটা তারিখ-ভরা নিষ্ক্রিয় ঘর পর্দায় বসে
+     * থাকা মানে ব্যবহারকারীকে বলা "সংখ্যাটা এই তারিখ থেকে গোনা", যা
+     * সত্যি নয়। পরীক্ষক দুইবার এটাকে "ফিল্টার এখনো চলতি মাসে আটকে
+     * আছে" বলে রিপোর্ট করেছেন — পর্দা যা দেখায় সেটাই তো তিনি পড়েন।
+     */
+    public function test_a_balance_report_offers_no_from_date_on_screen(): void
+    {
+        $this->get(route('accounts.report.show', ['slug' => 'trial-balance']))
+            ->assertOk()
+            ->assertSee(__('accounts::field.as_on'))
+            ->assertDontSee('name="from"', false);
+
+        $this->get(route('accounts.report.show', ['slug' => 'balance-sheet']))
+            ->assertOk()
+            ->assertDontSee('name="from"', false);
+
+        // সময়ের রিপোর্টে দুইটা তারিখই থাকে — ডে বুকে "কবে থেকে" ছাড়া
+        // প্রশ্নটাই অর্থহীন
+        $this->get(route('accounts.report.show', ['slug' => 'day-book']))
+            ->assertOk()
+            ->assertSee('name="from"', false);
+    }
+
     public function test_the_trial_balance_carries_everything_before_the_from_date(): void
     {
         $before = $this->report('accounts.trial_balance')->totals['debit'];
