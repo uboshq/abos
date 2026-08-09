@@ -71,9 +71,36 @@
                             :value="old('trx_date', $return->trx_date?->toDateString() ?? now()->toDateString())"
                             required />
 
+                {{--
+                    ইনভয়েস বাছলেই পাতাটা ওই ইনভয়েস নিয়ে ফিরে আসে।
+
+                    ── কী ভেঙেছিল ─────────────────────────────────────
+                    ঘরটা নিছক একটা ড্রপডাউন ছিল — বেছে নিলে কিছুই ঘটত না।
+                    উপরের @php ব্লক লাইনগুলো ভরে কেবল যখন ঠিকানায়
+                    `?sales_invoice_id=` থাকে, অর্থাৎ কেবল ইনভয়েসের পাতা
+                    থেকে "এই বিলের বিপরীতে ফেরত" লিংকে এলে।
+
+                    ফলে ফেরতের পর্দায় সরাসরি এসে ইনভয়েস বাছলে পণ্য, দর —
+                    কিছুই আসত না, সব হাতে টাইপ করতে হত। অথচ পর্দার নিজের
+                    বর্ণনায় লেখা "দর বিলের দর থেকেই আসে"। পর্দা যা দাবি
+                    করে আর যা করে, দুইটা আলাদা হলে মানুষ পর্দাকে বিশ্বাস
+                    করা ছেড়ে দেয়।
+
+                    ── কেন নতুন করে লোড, ব্রাউজারে ভরা নয় ──────────────
+                    দরটা আসতে হবে **সেই বিলের সেই লাইন** থেকে, আর সেটা
+                    সার্ভারই জানে। ব্রাউজারে ভরতে হলে প্রতিটা ইনভয়েসের
+                    প্রতিটা লাইন পাতার সাথে পাঠাতে হত — দুইশো বিলের
+                    ডিপোতে সেটা মেগাবাইটের ব্যাপার।
+
+                    onchange-এ ফর্ম সাবমিট নয়, কারণ তাতে অর্ধেক ভরা ফেরতটা
+                    সেভ হওয়ার চেষ্টা করত। শুধু ঠিকানা বদলে নতুন করে খোলা।
+                --}}
                 <x-ui.select name="sales_invoice_id" :label="__('sales::field.invoice')"
                              :options="$invoices->mapWithKeys(fn ($i) => [$i->id => $i->document_no.' — '.$i->customer?->name()])"
-                             :selected="$invoice?->id ?? $return->sales_invoice_id" placeholder="-" />
+                             :selected="$invoice?->id ?? $return->sales_invoice_id" placeholder="-"
+                             @change="if ($event.target.value) {
+                                 window.location = '{{ route('sales.return.create') }}?sales_invoice_id=' + $event.target.value;
+                             }" />
 
                 <x-ui.select name="reason_code_id" :label="__('sales::field.reason')"
                              :options="$reasons->mapWithKeys(fn ($r) => [$r->id => $r->name()])"
