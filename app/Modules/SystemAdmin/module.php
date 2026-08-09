@@ -26,8 +26,15 @@ return [
 
     'menu' => [
         'master' => [
-            ['label' => 'system_admin::menu.companies', 'route' => 'admin.companies', 'permission' => 'system_admin.company.manage', 'planned' => true],
-            ['label' => 'system_admin::menu.branches', 'route' => 'admin.branches', 'permission' => 'system_admin.company.manage', 'planned' => true],
+            /*
+             * কোম্পানি ও শাখা — একটাই পর্দা, দুইটা নয়।
+             *
+             * শাখা কোম্পানির ভেতরের জিনিস; আলাদা পাতায় রাখলে প্রথম
+             * প্রশ্নটাই হত "কোন কোম্পানির শাখা?", আর উত্তরটা দিতে
+             * আরেকটা বাছাইয়ের ঘর লাগত। কোম্পানির পাতাতেই তার শাখাগুলো
+             * থাকলে প্রশ্নটাই ওঠে না।
+             */
+            ['label' => 'system_admin::menu.companies', 'route' => 'system_admin.company.index', 'permission' => 'system_admin.company.manage'],
             ['label' => 'system_admin::menu.users', 'route' => 'admin.users', 'permission' => 'system_admin.user.manage', 'planned' => true],
             ['label' => 'system_admin::menu.roles', 'route' => 'admin.roles', 'permission' => 'system_admin.role.manage', 'planned' => true],
             ['label' => 'system_admin::menu.financial_years', 'route' => 'admin.financial-years', 'permission' => 'system_admin.company.manage', 'planned' => true],

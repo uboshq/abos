@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
-use App\Core\Services\NumberSeriesProvisioner;
+use App\Core\Services\CompanyProvisioner;
 use App\Core\Services\PermissionSyncer;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
@@ -12,10 +12,8 @@ use App\Models\ApprovalFlow;
 use App\Models\ApprovalFlowStep;
 use App\Models\Branch;
 use App\Models\Company;
-use App\Models\FinancialYear;
 use App\Models\User;
 use App\Modules\Accounts\Services\OpeningBalanceService;
-use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Services\CustomerService;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
@@ -27,7 +25,6 @@ use App\Modules\MasterData\Models\Location;
 use App\Modules\MasterData\Models\ReasonCode;
 use App\Modules\MasterData\Models\Unit;
 use App\Modules\MasterData\Services\LocationService;
-use App\Modules\MasterData\Services\MasterListService;
 use App\Modules\Supplier\Services\SupplierService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -184,48 +181,24 @@ class DemoSeeder extends Seeder
         $this->command?->comment('সবার পাসওয়ার্ড: password');
     }
 
+    /**
+     * ডেমো কোম্পানিটাও ঠিক সেই পথেই চালু হয় যেভাবে আসলটা হবে।
+     *
+     * রেসিপিটা আগে এখানেই লেখা ছিল। পর্দা থেকে কোম্পানি বানানোর পথ
+     * খোলার পর দুই জায়গায় দুইটা রেসিপি থাকত, আর একদিন একটায় নতুন ধাপ
+     * যোগ হত আর অন্যটায় না — তখন পর্দা দিয়ে বানানো কোম্পানিগুলো নীরবে
+     * অসম্পূর্ণ থাকত, আর ডেমোতে সব ঠিক দেখাত।
+     *
+     * এখন দুইটাই CompanyProvisioner ডাকে। ডেমোতে যা কাজ করে, আসলেও তাই
+     * করে — আর সেটাই ডেমো রাখার একমাত্র কারণ।
+     */
     private function setUpCompany(Company $company, array $branches): void
     {
-        CompanyContext::forCompany($company->id, function () use ($branches) {
-            foreach ($branches as $branch) {
-                Branch::create($branch);
-            }
-
-            $year = FinancialYear::create([
-                'name' => '2026-2027',
-                'starts_on' => '2026-07-01',
-                'ends_on' => '2027-06-30',
-                'is_current' => true,
-            ]);
-
-            /*
-             * নম্বর সিরিজ — মডিউলের ঘোষণা থেকে, হাতে লেখা তালিকা থেকে নয়।
-             *
-             * আগে এখানে একটা তালিকা ছিল, আর module.php-র ঘোষণার সাথে সেটা
-             * মিলত না: খরচ ভাউচারের টাইপ ঘোষিত ছিল কিন্তু সিরিজ ছিল না,
-             * তাই প্রথম খরচ ভাউচারটা লিখতে গিয়েই আটকে গেল।
-             *
-             * শাখাভিত্তিক নয় — কোম্পানি-ব্যাপী, কারণ শুরুতে বেশিরভাগ
-             * প্রতিষ্ঠান এটাই চায়; শাখা আলাদা করতে চাইলে Master Data
-             * থেকে যোগ করা যাবে।
-             */
-            app(NumberSeriesProvisioner::class)->provision($year);
-
-            /*
-             * হিসাবের প্রমিত ছক ও মাস্টার তালিকাগুলো।
-             *
-             * দুইটাই এতদিন ছিল, শুধু কেউ ডাকত না — আর সেটা ধরা পড়ল
-             * সরবরাহকারীর খোলা ব্যালেন্স বসাতে গিয়ে: খাত নেই মানে
-             * দাখিলাই বসে না। মানে একটা নতুন কোম্পানি খুললে তার হিসাবের
-             * ছক ফাঁকা থাকত, একক ফাঁকা থাকত, শর্ত ফাঁকা থাকত — প্রথম
-             * বিলটাই লেখা যেত না।
-             *
-             * নম্বর সিরিজের বেলায় ঠিক এই ভুলটাই হয়েছিল, তাই নিয়মটা
-             * একই: কোম্পানি তৈরির অংশ হিসেবেই সব বসবে, পরে মনে করে নয়।
-             */
-            app(StandardChart::class)->install();
-            app(MasterListService::class)->installDefaults();
-        });
+        app(CompanyProvisioner::class)->setUp($company, $branches, [
+            'name' => '2026-2027',
+            'starts_on' => '2026-07-01',
+            'ends_on' => '2027-06-30',
+        ]);
     }
 
     /**
