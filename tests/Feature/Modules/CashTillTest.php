@@ -263,6 +263,51 @@ class CashTillTest extends TestCase
         $this->assertSame('1101-CASH09', $till->account->code);
     }
 
+    /**
+     * খোলা ব্যালেন্স শূন্য হলে তারিখ চাওয়া হয় না।
+     *
+     * ── কী ভেঙেছিল ─────────────────────────────────────────────────
+     * নিয়মটা ছিল `required_with:opening_balance`, আর সেটা ঘরটা খালি
+     * কিনা দেখে না — শুধু পাঠানো হয়েছে কিনা দেখে। ফর্মে ঘরটায় ডিফল্ট
+     * "0" বসানো, তাই প্রতিবারই তারিখ চাইত।
+     *
+     * যিনি শুধু নাম আর শাখা দিয়ে একটা কাউন্টার বানাতে চান — খোলা
+     * ব্যালেন্স নিয়ে যিনি ভাবেনইনি — তিনি এমন একটা ঘরের জন্য আটকে
+     * যেতেন যেটা তিনি ছোঁনওনি। পরীক্ষায় দুইবার ধরা পড়েছে, দুইটা
+     * আলাদা কোম্পানিতে।
+     */
+    public function test_a_till_with_no_opening_balance_needs_no_opening_date(): void
+    {
+        $this->actingAs($this->user)
+            ->post(route('accounts.till.store'), [
+                'code' => 'CASH10',
+                'name_en' => 'Morning Counter',
+                'name_bn' => 'সকালের কাউন্টার',
+
+                // ফর্মটা ঠিক এটাই পাঠায় — ঘরটা ছোঁয়া না হলেও
+                'opening_balance' => '0',
+            ])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect();
+
+        $this->assertTrue(CashTill::query()->where('code', 'CASH10')->exists());
+    }
+
+    /** কিন্তু সত্যিকারের খোলা ব্যালেন্সে তারিখটা লাগেই। */
+    public function test_a_real_opening_balance_still_needs_its_date(): void
+    {
+        $this->actingAs($this->user)
+            ->post(route('accounts.till.store'), [
+                'code' => 'CASH11',
+                'name_en' => 'Night Counter',
+                'name_bn' => 'রাতের কাউন্টার',
+                'opening_balance' => '5000',
+            ])
+            ->assertSessionHasErrors('opening_date');
+
+        $this->assertFalse(CashTill::query()->where('code', 'CASH11')->exists());
+    }
+
     public function test_making_a_till_primary_from_the_list_works(): void
     {
         $first = $this->service()->ensurePrimaryTill();
