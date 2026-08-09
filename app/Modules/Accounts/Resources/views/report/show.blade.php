@@ -29,14 +29,33 @@
         <form method="GET" class="contents">
             <x-ui.toolbar :search="false">
                 @if ($report->hasFilter('date_range'))
-                    <label class="flex items-center gap-2 text-sm">
-                        <span class="sr-only">{{ __('accounts::field.from_date') }}</span>
-                        <input type="date" name="from" value="{{ $filters['from'] ?? '' }}"
-                               class="h-9 rounded-(--radius-field) border border-(--color-border)
-                                      bg-(--color-surface-app) px-2 text-sm">
-                    </label>
+                    {{--
+                        জেরের রিপোর্টে "কবে থেকে" বলে কিছু নেই।
+
+                        রেওয়ামিল আর ব্যালেন্স শিট একটা তারিখ **পর্যন্ত** জের
+                        দেখায় — শুরুর তারিখ ওখানে অর্থহীন। তবু ঘরটা দেখানো
+                        হত, আর ডিফল্টে চলতি মাসের ১ তারিখ বসানো থাকত।
+
+                        রেওয়ামিলে সেটা একসময় সত্যিই ব্যালেন্স কেটে দিত (৮.৪
+                        লাখের খোলা মজুদ ৩,৪০০ দেখাত); ওই অঙ্কের ভুলটা সারানো
+                        হয়েছে। কিন্তু ঘরটা রয়ে গিয়েছিল, আর একটা নিষ্ক্রিয়
+                        ঘর তারিখ দেখিয়ে বসে থাকা মানে ব্যবহারকারী ভাববেন
+                        সংখ্যাটা ওই তারিখ থেকে গোনা — অর্থাৎ পর্দা একটা
+                        মিথ্যা বলছে, নীরবে।
+                    --}}
+                    @unless ($report->isAsOfDate())
+                        <label class="flex items-center gap-2 text-sm">
+                            <span class="sr-only">{{ __('accounts::field.from_date') }}</span>
+                            <input type="date" name="from" value="{{ $filters['from'] ?? '' }}"
+                                   class="h-9 rounded-(--radius-field) border border-(--color-border)
+                                          bg-(--color-surface-app) px-2 text-sm">
+                        </label>
+                    @endunless
 
                     <label class="flex items-center gap-2 text-sm">
+                        @if ($report->isAsOfDate())
+                            <span class="text-(--color-ink-muted)">{{ __('accounts::field.as_on') }}</span>
+                        @endif
                         <span class="sr-only">{{ __('accounts::field.to_date') }}</span>
                         <input type="date" name="to" value="{{ $filters['to'] ?? '' }}"
                                class="h-9 rounded-(--radius-field) border border-(--color-border)

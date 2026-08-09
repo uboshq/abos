@@ -123,6 +123,7 @@ final class CoreReports
     {
         return new ReportDefinition(
             key: 'accounts.trial_balance',
+            asOfDate: true,
             title: 'accounts::menu.trial_balance',
             filters: ['date_range', 'branch'],
             groupBy: 'account_id',
@@ -272,6 +273,15 @@ final class CoreReports
             key: $key,
             title: $title,
             filters: ['date_range', 'branch'],
+
+            /*
+             * dateRange না মানেই ব্যালেন্স শিট — একটা তারিখ পর্যন্ত জের।
+             *
+             * তাই পর্দাতেও "From" ঘরটা দেখানোর কিছু নেই; একই পতাকা
+             * দুইটা কাজ করে, আর দুইটা আলাদা রাখলে একদিন একটা বদলে
+             * অন্যটা রয়ে যেত।
+             */
+            asOfDate: ! $dateRange,
             groupBy: 'account_id',
             query: fn (array $f) => DB::table('ledger_entries')
                 ->leftJoin('accounts', 'accounts.id', '=', 'ledger_entries.account_id')

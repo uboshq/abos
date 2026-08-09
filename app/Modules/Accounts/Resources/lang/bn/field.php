@@ -91,4 +91,5 @@ return [
     'principal' => 'আসল',
     'interest' => 'সুদ',
     'instalment_total' => 'মোট',
+    'as_on' => 'যে তারিখ পর্যন্ত',
 ];

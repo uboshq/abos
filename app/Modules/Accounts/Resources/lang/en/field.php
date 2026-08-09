@@ -91,4 +91,5 @@ return [
     'principal' => 'Principal',
     'interest' => 'Interest',
     'instalment_total' => 'Total',
+    'as_on' => 'As on',
 ];
