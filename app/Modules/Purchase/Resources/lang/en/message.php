@@ -58,4 +58,11 @@ return [
     'lines' => 'Lines',
     'cancel_reason' => 'Reason for cancelling',
     'pending_of_order' => ':count line(s) of this order are still to arrive.',
+    'paid_against' => 'Paid against :no',
+    'direct_done' => ':no — stock is in and the bill is on the books.',
+    'search_product' => 'Type a product name or code',
+    'on_hand' => 'In stock',
+    'last_rate' => 'Last rate',
+    'no_lines_yet' => 'No products added yet.',
+    'paid_more_confirm' => 'This pays more than the invoice. The extra stays as an advance with the supplier. Continue?',
 ];

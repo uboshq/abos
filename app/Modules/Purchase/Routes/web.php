@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\Purchase\Http\Controllers\DirectPurchaseController;
 use App\Modules\Purchase\Http\Controllers\PaymentController;
 use App\Modules\Purchase\Http\Controllers\PurchaseBillController;
 use App\Modules\Purchase\Http\Controllers\PurchaseOrderController;
@@ -19,6 +20,18 @@ use Illuminate\Support\Facades\Route;
  */
 
 Route::middleware('auth')->prefix('purchase')->group(function () {
+
+    /*
+     * সরাসরি ক্রয় চালান — এক পর্দায় মাল, দাম আর টাকা।
+     *
+     * তালিকা নেই ইচ্ছাকৃতভাবে: এটা একটা এন্ট্রির পর্দা, আর যা বসে
+     * সেগুলো ক্রয় বিলের তালিকাতেই থাকে। আলাদা তালিকা রাখলে একই কাগজ
+     * দুই জায়গায় দেখা যেত, আর কোনটা আসল তা নিয়ে প্রশ্ন উঠত।
+     */
+    Route::prefix('direct')->name('direct.')->group(function () {
+        Route::get('/', [DirectPurchaseController::class, 'create'])->name('create');
+        Route::post('/', [DirectPurchaseController::class, 'store'])->name('store');
+    });
 
     Route::prefix('orders')->name('order.')->group(function () {
         Route::get('/', [PurchaseOrderController::class, 'index'])->name('index');
