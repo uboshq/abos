@@ -54,4 +54,7 @@ return [
     'transfer_cancelled' => 'A cancelled transfer cannot be received.',
     'count_already_approved' => 'This count has already been approved.',
     'no_adjustment_account' => 'There is no :type account to post the difference to. Add one to the chart.',
+    'loan_amount_positive' => 'The amount must be more than zero.',
+    'loan_over_limit' => 'Only :available is left on the limit — no more than that can be drawn.',
+    'instalment_already_paid' => 'This instalment has already been paid.',
 ];

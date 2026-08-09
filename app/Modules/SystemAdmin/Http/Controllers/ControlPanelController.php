@@ -62,6 +62,7 @@ class ControlPanelController extends Controller implements HasMiddleware
         $submitted = (array) $request->input('settings', []);
 
         $changed = 0;
+        $refused = [];
 
         foreach ($this->settings->definitions() as $key => $definition) {
             $raw = $submitted[$key] ?? null;
@@ -78,10 +79,43 @@ class ControlPanelController extends Controller implements HasMiddleware
                 continue;
             }
 
-            if ($this->settings->get($key) !== $value) {
-                $this->settings->set($key, $value);
-                $changed++;
+            if ($this->settings->get($key) === $value) {
+                continue;
             }
+
+            /*
+             * যে পর্দায় কাগজ আছে সেটা আড়াল করতে দেওয়া হয় না।
+             *
+             * সুইচ বন্ধ করলে মেনু থেকে সারিটা উধাও হয়। যে কোম্পানির
+             * দশটা অর্ডার ঝুলে আছে তার অর্ডার-পর্দা কেউ বন্ধ করে দিলে
+             * ওই দশটা কাগজের আর কোনো দরজা থাকত না — অথচ সেগুলো বাতিলও
+             * হয়নি, শেষও হয়নি। তাই খালি পর্দাই কেবল আড়াল করা যায়।
+             *
+             * মডিউলের নাম কোরে নেই: ক্লাসটা module.php বলে দেয় ('holds'),
+             * কোর শুধু গুনে দেখে (১৯.৭)।
+             */
+            $holds = $definition['holds'] ?? null;
+
+            if ($value === false && $holds !== null && $holds::query()->exists()) {
+                $refused[] = __($definition['label']);
+
+                continue;
+            }
+
+            $this->settings->set($key, $value);
+            $changed++;
+        }
+
+        if ($refused !== []) {
+            return back()
+                ->with('saved', trans_choice(
+                    'system_admin::message.switches_saved',
+                    $changed,
+                    ['count' => $changed],
+                ))
+                ->withErrors(['settings' => __('system_admin::validation.screen_holds_records', [
+                    'screens' => implode('; ', $refused),
+                ])]);
         }
 
         return back()->with('saved', trans_choice(

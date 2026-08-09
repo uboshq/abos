@@ -5,10 +5,16 @@ declare(strict_types=1);
 namespace Tests\Feature\Modules;
 
 use App\Core\Module\ModuleRegistry;
+use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\User;
+use App\Modules\Customer\Models\Customer;
+use App\Modules\Inventory\Models\Product;
+use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Sales\Models\SalesOrder;
+use App\Modules\Sales\Services\SalesOrderService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
@@ -100,6 +106,83 @@ class ControlPanelTest extends TestCase
         $this->assertFalse($settings->enabled('customer.credit_limit_enabled'));
         $this->assertSame(21, $settings->get('accounts.backdate_days'));
         $this->assertTrue($settings->enabled('master_data.region_enabled'));
+    }
+
+    /**
+     * পর্দার সুইচ বন্ধ করলে সারিটা মেনু থেকেই উধাও।
+     *
+     * শুধু সেটিংসটা সেভ হওয়া যথেষ্ট নয় — সেভ হয়েও মেনুতে সারিটা থেকে
+     * গেলে ব্যবহারকারীর কাছে সুইচটার কোনো মানে থাকত না।
+     */
+    public function test_turning_a_screen_off_takes_it_out_of_the_menu(): void
+    {
+        $menu = app(MenuBuilder::class);
+
+        $names = fn () => collect($menu->forUser($this->user->fresh()))
+            ->flatMap(fn ($module) => collect($module['groups'] ?? [])->flatten(1))
+            ->pluck('route')
+            ->all();
+
+        /*
+         * সরাসরি বিক্রয়ের পর্দাটা বেছে নেওয়া হল, অর্ডারের নয়।
+         *
+         * অর্ডারের পর্দা নিজের কাগজ ধরে রাখে, তাই ডেমো ডেটায় সেটা বন্ধই
+         * করা যায় না (নিচের পরীক্ষাটা ঠিক সেটাই দেখে)। সরাসরি বিক্রয়ের
+         * নিজের কোনো কাগজ নেই — সে চালান আর বিল বানায়, যেগুলোর নিজের
+         * পর্দা আলাদা।
+         */
+        $this->assertContains('sales.direct.create', $names());
+
+        $this->put(route('system_admin.control-panel.update'), [
+            'settings' => ['sales.screen_direct' => '0'],
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        app(SettingsService::class)->flush();
+
+        $this->assertNotContains('sales.direct.create', $names());
+    }
+
+    /**
+     * কাগজ ধরে থাকা পর্দা আড়াল করা যায় না।
+     *
+     * ── কেন এই পাহারা ──────────────────────────────────────────────
+     * সুইচ বন্ধ মানে মেনু থেকে সারিটা উধাও। দশটা অর্ডার ঝুলে থাকা
+     * অবস্থায় কেউ অর্ডার-পর্দা বন্ধ করলে ওই দশটা কাগজের আর কোনো দরজা
+     * থাকত না — অথচ সেগুলো বাতিলও হয়নি, শেষও হয়নি।
+     */
+    public function test_a_screen_that_holds_documents_refuses_to_hide(): void
+    {
+        $settings = app(SettingsService::class);
+
+        /*
+         * একটা অর্ডার নিজেরাই বানানো — ডেমো ডেটার উপর ভরসা করে নয়।
+         *
+         * প্রথমে ধরে নেওয়া হয়েছিল ডেমোতে অর্ডার আছে; ছিল না, আর তখন
+         * পরীক্ষাটা পাহারাটার বদলে ডেমো ডেটার গঠন যাচাই করছিল।
+         */
+        app(SalesOrderService::class)->create(
+            [
+                'customer_id' => Customer::query()->firstOrFail()->id,
+                'warehouse_id' => Warehouse::query()->where('is_default', true)->firstOrFail()->id,
+                'trx_date' => now()->toDateString(),
+            ],
+            [[
+                'product_id' => Product::query()->firstOrFail()->id,
+                'ordered_qty' => '10',
+                'rate' => '200',
+            ]],
+        );
+
+        $this->assertTrue(SalesOrder::query()->exists());
+
+        $this->put(route('system_admin.control-panel.update'), [
+            'settings' => ['sales.screen_orders' => '0'],
+        ])->assertSessionHasErrors('settings');
+
+        $settings->flush();
+
+        // সুইচটা যেমন ছিল তেমনই — আর সারিটাও মেনুতে আছে
+        $this->assertTrue($settings->enabled('sales.screen_orders'));
     }
 
     /**

@@ -24,4 +24,5 @@ return [
     'balance_sheet' => 'স্থিতিপত্র',
     'cash_flow' => 'নগদ প্রবাহ',
     'settings' => 'সেটিংস',
+    'loans' => 'ঋণ',
 ];

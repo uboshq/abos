@@ -28,6 +28,12 @@ return [
     'approve_and_adjust' => 'Approve and adjust',
     'deactivate' => 'Deactivate',
     'activate' => 'Activate',
+    'new_loan' => 'New loan',
+    'save_loan' => 'Save loan',
+    'draw_down' => 'Draw down',
+    'repay' => 'Repay',
+    'charge_interest' => 'Charge interest',
+    'pay_instalment' => 'Pay',
     'expand_all' => 'Expand all',
     'collapse_all' => 'Collapse all',
 ];

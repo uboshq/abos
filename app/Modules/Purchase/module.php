@@ -54,8 +54,10 @@ return [
 
     'menu' => [
         'transactions' => [
-            ['label' => 'purchase::menu.orders', 'route' => 'purchase.order.index', 'permission' => 'purchase.order.view'],
-            ['label' => 'purchase::menu.receipts', 'route' => 'purchase.receipt.index', 'permission' => 'purchase.receipt.view'],
+            ['label' => 'purchase::menu.orders', 'route' => 'purchase.order.index', 'permission' => 'purchase.order.view',
+                'setting' => 'purchase.screen_orders'],
+            ['label' => 'purchase::menu.receipts', 'route' => 'purchase.receipt.index', 'permission' => 'purchase.receipt.view',
+                'setting' => 'purchase.screen_receipts'],
             ['label' => 'purchase::menu.bills', 'route' => 'purchase.bill.index', 'permission' => 'purchase.bill.view'],
             ['label' => 'purchase::menu.payments', 'route' => 'purchase.payment.index', 'permission' => 'purchase.payment.view'],
             ['label' => 'purchase::menu.returns', 'route' => 'purchase.return.index', 'permission' => 'purchase.return.view'],
@@ -141,6 +143,39 @@ return [
     ],
 
     'settings' => [
+        /*
+         * কোন পর্দাগুলো থাকবে — বিক্রয়ের মতোই (Sales/module.php)।
+         *
+         * ছোট ডিপো সরাসরি কেনে: গাড়ি আসে, মাল নামে, চালান হাতে ধরিয়ে
+         * দেয়। তার মেনুতে "ক্রয় আদেশ" আর "মাল গ্রহণ" দুইটা সারি সারা
+         * বছর অব্যবহৃত পড়ে থাকে। বড় প্রতিষ্ঠানে ঠিক উল্টো — ওখানে
+         * আদেশ ছাড়া মাল ঢোকে না।
+         */
+        [
+            'key' => 'purchase.screen_direct',
+            'label' => 'purchase::settings.screen_direct',
+            'type' => 'boolean',
+            'default' => true,
+            'group' => 'screens',
+        ],
+        [
+            'key' => 'purchase.screen_orders',
+            'label' => 'purchase::settings.screen_orders',
+            'type' => 'boolean',
+            'default' => true,
+            'group' => 'screens',
+
+            // কাগজ থাকলে আড়াল করা যাবে না — কারণটা Sales/module.php-এ
+            'holds' => PurchaseOrder::class,
+        ],
+        [
+            'key' => 'purchase.screen_receipts',
+            'label' => 'purchase::settings.screen_receipts',
+            'type' => 'boolean',
+            'default' => true,
+            'group' => 'screens',
+            'holds' => PurchaseReceipt::class,
+        ],
         [
             /*
              * বিল ছাড়া মাল নেওয়া যাবে কি না।

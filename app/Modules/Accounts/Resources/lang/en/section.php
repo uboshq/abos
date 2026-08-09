@@ -13,4 +13,8 @@ return [
     'receive' => 'Receiving',
     'notes' => 'Note breakdown',
     'entries' => 'Transactions',
+    'loan_terms' => 'Loan terms',
+    'loan_accounts' => 'Where it posts',
+    'schedule' => 'Instalment schedule',
+    'loan_movement' => 'Draw and repay',
 ];

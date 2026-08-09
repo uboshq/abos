@@ -7,4 +7,5 @@ return [
     'entry' => 'Entry rules',
     'print' => 'Printing',
     'location' => 'Locations',
+    'screens' => 'Which screens appear',
 ];

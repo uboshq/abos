@@ -24,4 +24,9 @@ return [
     'field_sales_qty' => 'Show Total Sales Qnty',
     'field_free_qty_total' => 'Show Free Qty.',
     'field_total_qty' => 'Show Total Free+Sales Qty',
+
+    'screen_pos' => 'Show the Counter (POS) screen',
+    'screen_direct' => 'Show the Direct Sales screen',
+    'screen_orders' => 'Show the Sales Orders screen',
+    'screen_challans' => 'Show the Delivery Challans screen',
 ];

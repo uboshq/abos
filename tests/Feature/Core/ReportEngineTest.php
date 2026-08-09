@@ -173,7 +173,18 @@ class ReportEngineTest extends TestCase
         $result = $this->reports->run('accounts.trial_balance', ['from' => '2026-08-01', 'to' => '2026-08-31']);
 
         $this->assertSame($result->totals['debit'], $result->totals['credit']);
-        $this->assertCount(2, $result->rows, 'Two accounts were touched.');
+
+        /*
+         * এই চালানগুলোর দুইটা খাত, আর ডেমো ডেটার খোলা জেরগুলো আরও কিছু।
+         *
+         * সংখ্যাটা আগে ২ ছিল, কারণ রেওয়ামিল ভুল করে "from" তারিখটা
+         * ব্যালেন্সেও লাগাত আর তার আগের সব দাখিলা বাদ দিত। রেওয়ামিল
+         * জেরের রিপোর্ট — আগের সব কিছু এতে থাকতেই হবে।
+         */
+        $this->assertGreaterThanOrEqual(2, count($result->rows));
+
+        $names = array_column($result->rows, 'account_name');
+        $this->assertNotEmpty(array_filter($names), 'প্রতিটা সারির খাতের নাম থাকতে হবে।');
     }
 
     public function test_a_report_only_sees_the_company_in_context(): void

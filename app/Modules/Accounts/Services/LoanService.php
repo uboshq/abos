@@ -10,6 +10,7 @@ use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Modules\Accounts\Models\Loan;
 use App\Modules\Accounts\Models\LoanInstalment;
+use App\Modules\Accounts\Models\LoanMovement;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -66,7 +67,8 @@ final class LoanService
                  * বসে না। সীমা একটা অনুমতি, দায় নয়।
                  */
                 if ($intoAccountId !== null) {
-                    $this->drawDown($loan, (string) $loan->sanctioned, $intoAccountId);
+                    // টাকাটা ঋণের শুরুর তারিখেই ঢুকেছে, আজকের তারিখে নয়
+                    $this->drawDown($loan, (string) $loan->sanctioned, $intoAccountId, $loan->start_date);
                 }
             }
 
@@ -107,16 +109,18 @@ final class LoanService
             }
         }
 
+        $movement = $this->movement($loan, LoanMovement::DRAW, $amount, $date, $intoAccountId);
+
         // টাকা এল (সম্পদ ডেবিট), দায় জন্মাল (ক্রেডিট)
         $this->posting->post(
-            sourceType: Loan::drillSourceType(),
-            sourceId: $loan->id,
-            trxDate: $this->dateFor($date),
+            sourceType: LoanMovement::drillSourceType(),
+            sourceId: $movement->id,
+            trxDate: $movement->trx_date->toDateString(),
             lines: [
                 ['account_id' => $intoAccountId, 'debit' => $amount],
                 ['account_id' => $loan->liability_account_id, 'credit' => $amount],
             ],
-            documentNo: $loan->document_no,
+            documentNo: $movement->document_no,
         );
     }
 
@@ -157,9 +161,16 @@ final class LoanService
             $interest = (string) $instalment->interest;
             $principal = bcsub($paid, $interest, 4);
 
+            /*
+             * কিস্তিটাই এখানে ডকুমেন্ট — ঋণ নয়।
+             *
+             * প্রতিটা কিস্তির নিজের id আছে, তাই ছত্রিশটা কিস্তি মানে
+             * ছত্রিশটা আলাদা ডকুমেন্ট, আর একই কিস্তি দুইবার বসাতে গেলে
+             * পোস্টিং ইঞ্জিন নিজেই আটকায়।
+             */
             $this->posting->post(
-                sourceType: Loan::drillSourceType(),
-                sourceId: $loan->id,
+                sourceType: LoanInstalment::drillSourceType(),
+                sourceId: $instalment->id,
                 trxDate: $this->dateFor($date),
                 lines: [
                     ['account_id' => $loan->liability_account_id, 'debit' => $principal],
@@ -192,15 +203,17 @@ final class LoanService
             ]);
         }
 
+        $movement = $this->movement($loan, LoanMovement::REPAY, $amount, $date, $fromAccountId);
+
         $this->posting->post(
-            sourceType: Loan::drillSourceType(),
-            sourceId: $loan->id,
-            trxDate: $this->dateFor($date),
+            sourceType: LoanMovement::drillSourceType(),
+            sourceId: $movement->id,
+            trxDate: $movement->trx_date->toDateString(),
             lines: [
                 ['account_id' => $loan->liability_account_id, 'debit' => $amount],
                 ['account_id' => $fromAccountId, 'credit' => $amount],
             ],
-            documentNo: $loan->document_no,
+            documentNo: $movement->document_no,
         );
     }
 
@@ -220,16 +233,46 @@ final class LoanService
             return;
         }
 
+        $movement = $this->movement($loan, LoanMovement::INTEREST, $amount, $date, null);
+
         $this->posting->post(
-            sourceType: Loan::drillSourceType(),
-            sourceId: $loan->id,
-            trxDate: $this->dateFor($date),
+            sourceType: LoanMovement::drillSourceType(),
+            sourceId: $movement->id,
+            trxDate: $movement->trx_date->toDateString(),
             lines: [
                 ['account_id' => $loan->interest_account_id, 'debit' => $amount],
                 ['account_id' => $loan->liability_account_id, 'credit' => $amount],
             ],
-            documentNo: $loan->document_no,
+            documentNo: $movement->document_no,
         );
+    }
+
+    /**
+     * নড়াচড়ার সারিটা — খতিয়ানে বসার আগে।
+     *
+     * নম্বরটা ঋণের নম্বরের সাথে ক্রম জুড়ে হয় (LN-2026-2027-0001/M3),
+     * আলাদা সিরিজ নয়: কাগজে ঋণটাই এক, আর এগুলো তারই ভেতরের ঘটনা।
+     */
+    private function movement(
+        Loan $loan,
+        string $kind,
+        string $amount,
+        Carbon|string|null $date,
+        ?int $counterAccountId,
+    ): LoanMovement {
+        $next = LoanMovement::query()->where('loan_id', $loan->id)->count() + 1;
+
+        return LoanMovement::create([
+            'company_id' => CompanyContext::id(),
+            'branch_id' => CompanyContext::branchId(),
+            'loan_id' => $loan->id,
+            'kind' => $kind,
+            'document_no' => $loan->document_no.'/M'.$next,
+            'trx_date' => $this->dateFor($date),
+            'amount' => $amount,
+            'counter_account_id' => $counterAccountId,
+            'created_by' => auth()->id(),
+        ]);
     }
 
     /** সূচিটা একবারই বসে, ঋণ তৈরির সময়। */

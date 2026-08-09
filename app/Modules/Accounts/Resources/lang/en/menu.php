@@ -23,4 +23,5 @@ return [
     'balance_sheet' => 'Balance Sheet',
     'cash_flow' => 'Cash Flow',
     'settings' => 'Settings',
+    'loans' => 'Loans',
 ];

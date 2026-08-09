@@ -13,4 +13,8 @@ return [
     'receive' => 'যিনি নেবেন',
     'notes' => 'নোটের হিসাব',
     'entries' => 'লেনদেন',
+    'loan_terms' => 'ঋণের শর্ত',
+    'loan_accounts' => 'কোন খাতে বসবে',
+    'schedule' => 'কিস্তির সূচি',
+    'loan_movement' => 'তোলা ও জমা',
 ];

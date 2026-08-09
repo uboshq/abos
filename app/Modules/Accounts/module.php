@@ -5,6 +5,9 @@ use App\Modules\Accounts\Dashboard\AccountsWidgets;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CashCount;
 use App\Modules\Accounts\Models\CashTill;
+use App\Modules\Accounts\Models\Loan;
+use App\Modules\Accounts\Models\LoanInstalment;
+use App\Modules\Accounts\Models\LoanMovement;
 use App\Modules\Accounts\Models\MoneyTransfer;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Reports\CoreReports;
@@ -36,6 +39,15 @@ return [
         'master' => [
             ['label' => 'accounts::menu.chart_of_accounts', 'route' => 'accounts.coa.index', 'permission' => 'accounts.coa.view'],
             ['label' => 'accounts::menu.cash_tills', 'route' => 'accounts.till.index', 'permission' => 'accounts.till.view'],
+
+            /*
+             * ঋণ মাস্টারে, লেনদেনে নয়।
+             *
+             * একটা ঋণ একটা চুক্তি — বছরে একবার বসে, তারপর বছরের পর বছর
+             * থাকে। রোজকার লেনদেন তার কিস্তিগুলো, আর সেগুলো ঋণের নিজের
+             * পাতা থেকেই দেওয়া হয়।
+             */
+            ['label' => 'accounts::menu.loans', 'route' => 'accounts.loan.index', 'permission' => 'accounts.loan.view'],
         ],
         'transactions' => [
             ['label' => 'accounts::menu.receipt', 'route' => 'accounts.voucher.index', 'route_params' => ['type' => 'receipt'], 'permission' => 'accounts.voucher.create'],
@@ -137,6 +149,17 @@ return [
         'contra_voucher' => Voucher::class,
         'money_transfer' => MoneyTransfer::class,
         'cash_count' => CashCount::class,
+
+        /*
+         * ঋণ নিজে খতিয়ানে বসে না — তার নড়াচড়া আর কিস্তিগুলো বসে।
+         *
+         * ঋণটা তবু এখানে আছে, কারণ রিপোর্টে "কোন ঋণ" বলতে ওটাকেই
+         * দেখাতে হয়; কিন্তু ledger_entries.source_type-এ কখনো 'loan'
+         * বসে না। কারণটা LoanMovement-এ লেখা।
+         */
+        'loan' => Loan::class,
+        'loan_movement' => LoanMovement::class,
+        'loan_instalment' => LoanInstalment::class,
     ],
 
     // রিপোর্ট সরবরাহকারী — কোর নিজে থেকে ডেকে নেবে (সেকশন ১৯.৩)।

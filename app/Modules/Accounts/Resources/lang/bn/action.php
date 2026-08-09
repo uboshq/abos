@@ -28,6 +28,12 @@ return [
     'approve_and_adjust' => 'অনুমোদন ও সমন্বয়',
     'deactivate' => 'নিষ্ক্রিয় করুন',
     'activate' => 'সক্রিয় করুন',
+    'new_loan' => 'নতুন ঋণ',
+    'save_loan' => 'ঋণ সংরক্ষণ',
+    'draw_down' => 'টাকা তুলুন',
+    'repay' => 'জমা দিন',
+    'charge_interest' => 'সুদ বসান',
+    'pay_instalment' => 'পরিশোধ',
     'expand_all' => 'সব খুলুন',
     'collapse_all' => 'সব বন্ধ করুন',
 ];

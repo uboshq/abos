@@ -54,4 +54,7 @@ return [
     'transfer_cancelled' => 'বাতিল করা হস্তান্তর গ্রহণ করা যায় না।',
     'count_already_approved' => 'এই গণনা আগেই অনুমোদিত হয়েছে।',
     'no_adjustment_account' => 'সমন্বয়ের জন্য কোনো :type খাত নেই। হিসাবের ছকে একটা যোগ করুন।',
+    'loan_amount_positive' => 'টাকার অঙ্ক শূন্যের বেশি হতে হবে।',
+    'loan_over_limit' => 'সীমার আর মাত্র :available টাকা খালি আছে — এর বেশি তোলা যাবে না।',
+    'instalment_already_paid' => 'এই কিস্তিটা আগেই পরিশোধ করা হয়েছে।',
 ];

@@ -10,4 +10,7 @@ return [
     'awaiting_receipt' => 'Awaiting receipt',
     'received' => 'Received',
     'approved' => 'Approved',
+    'due' => 'Due',
+    'paid' => 'Paid',
+    'overdue' => 'Overdue',
 ];

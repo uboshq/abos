@@ -143,7 +143,7 @@ class LoanController extends Controller implements HasMiddleware
     {
         return view('accounts::loan.show', [
             'menu' => $this->menu->forUser($request->user()),
-            'loan' => $loan->load('instalments', 'liabilityAccount', 'interestAccount'),
+            'loan' => $loan->load('instalments', 'movements.counterAccount', 'liabilityAccount', 'interestAccount'),
             'moneyAccounts' => $this->moneyAccounts(),
         ]);
     }

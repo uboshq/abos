@@ -18,7 +18,7 @@
 
     <form method="POST" action="{{ route('accounts.count.store') }}"
           x-data="cashCount()"
-          @submit="busy ? $event.preventDefault() : (busy = true)"
+          @submit="guard($event)"
           class="max-w-3xl space-y-4">
         @csrf
 
@@ -88,11 +88,12 @@
                                 <td class="num px-3 py-1.5 font-medium">{{ number_format($note) }}</td>
 
                                 <td class="px-3 py-1.5">
+                                    {{-- x-model, DOM ঘেঁটে নয় — কারণটা নিচের স্ক্রিপ্টে লেখা --}}
                                     <input type="number" min="0" step="1" inputmode="numeric"
                                            name="counts[{{ $note }}]"
                                            value="{{ old('counts.' . $note) }}"
                                            data-note="{{ $note }}"
-                                           @input="recount()"
+                                           x-model.number="counts[{{ $note }}]"
                                            class="num h-(--spacing-field) w-full rounded-(--radius-field) border
                                                   border-(--color-border) bg-(--color-surface-card) px-2 text-end">
                                 </td>
@@ -125,7 +126,7 @@
 
         <div class="flex flex-wrap gap-2">
             <x-ui.button type="submit" tone="primary"
-                         ::class="(busy || total <= 0) && 'pointer-events-none opacity-50'">
+                         ::class="busy && 'pointer-events-none opacity-50'">
                 {{ __('accounts::action.save_count') }}
             </x-ui.button>
 
@@ -137,38 +138,75 @@
 
     @push('scripts')
         <script>
+            /*
+             * নোট গোনার হিসাব।
+             *
+             * ── আগে এটা কাজ করত না, আর নীরবেই করত না ────────────────────
+             * প্রতিটা ঘরে @input="recount()" ছিল, আর recount() ভেতরে
+             * this.$el.querySelectorAll('input[data-note]') দিয়ে ঘরগুলো
+             * খুঁজত। কিন্তু হ্যান্ডলারের ভেতরে $el মানে **যে ঘরে টাইপ করা
+             * হয়েছে সেই ঘরটা**, কম্পোনেন্টের গোড়া নয় — আর একটা input-এর
+             * ভেতরে কোনো input থাকে না। তাই তালিকাটা সবসময় খালি আসত,
+             * total সবসময় ০ থাকত, আর Save বোতামটা (total <= 0 হলে
+             * নিষ্ক্রিয়) কখনো সক্রিয় হত না।
+             *
+             * কনসোলে কোনো এরর ছিল না — তাই টেস্টও কিছু বলত না, আর
+             * "দিনশেষে গণনা" ও "নগদ মিলকরণ" দুইটা ফিচারই ব্যবহারের
+             * অযোগ্য ছিল, অথচ পর্দাটা দেখতে ঠিকই লাগত।
+             *
+             * এখন DOM ঘাঁটা হয় না। ঘরগুলো x-model দিয়ে counts-এ বাঁধা,
+             * আর যোগফল counts থেকেই গোনা — তাই একই ভুল আর ঘটতে পারে না।
+             */
             function cashCount() {
                 return {
                     busy: false,
-                    total: 0,
-                    pieces: 0,
                     counts: {},
                     lineOf(note) {
                         return note * (this.counts[note] || 0);
+                    },
+                    get total() {
+                        return Object.entries(this.counts).reduce(
+                            (sum, [note, qty]) => sum + Number(note) * (Number(qty) || 0), 0,
+                        );
+                    },
+                    get pieces() {
+                        return Object.values(this.counts).reduce(
+                            (sum, qty) => sum + (Number(qty) || 0), 0,
+                        );
                     },
                     format(n) {
                         return (n || 0).toLocaleString('en-US', {
                             minimumFractionDigits: 2, maximumFractionDigits: 2,
                         });
                     },
-                    recount() {
-                        const next = {};
-                        let total = 0, pieces = 0;
+                    /*
+                     * খালি ড্রয়ারও গোনা যায় — কিন্তু জিজ্ঞেস করে।
+                     *
+                     * শূন্য গণনা একটা সত্যিকারের ঘটনা (ড্রয়ার খালি), আর
+                     * সেটা আটকে দিলে ওই দিনটার মিলকরণই করা যেত না। কিন্তু
+                     * ফাঁকা ফর্ম ভুল করে পাঠালে বইয়ের পুরো টাকাটা
+                     * "ঘাটতি" হয়ে সমন্বয়ে বসে যেত — তাই একবার জিজ্ঞেস।
+                     */
+                    guard(event) {
+                        if (this.busy) { event.preventDefault(); return; }
 
-                        this.$el.querySelectorAll('input[data-note]').forEach((input) => {
-                            const note = parseInt(input.dataset.note, 10);
-                            const qty = parseInt(input.value, 10) || 0;
+                        if (this.total <= 0 && ! window.confirm(@js(__('accounts::message.zero_count_confirm')))) {
+                            event.preventDefault();
+                            return;
+                        }
 
-                            next[note] = qty;
-                            total += note * qty;
-                            pieces += qty;
-                        });
-
-                        this.counts = next;
-                        this.total = total;
-                        this.pieces = pieces;
+                        this.busy = true;
                     },
-                    init() { this.recount(); },
+                    /*
+                     * ভুল সংশোধনের পর ফর্মটা ফিরে এলে (old input) ঘরগুলোয়
+                     * সংখ্যা লেখা থাকে; x-model খালি counts দেখে সেগুলো
+                     * মুছে দিত, তাই আগে একবার পড়ে নেওয়া হয়।
+                     */
+                    init() {
+                        this.$root.querySelectorAll('input[data-note]').forEach((input) => {
+                            this.counts[input.dataset.note] = parseInt(input.value, 10) || 0;
+                        });
+                    },
                 };
             }
         </script>
