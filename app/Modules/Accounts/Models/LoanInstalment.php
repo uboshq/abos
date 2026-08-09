@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Models;
 
+use App\Core\Concerns\HasPublicId;
+use App\Core\Contracts\Drillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -20,9 +22,10 @@ use Illuminate\Support\Carbon;
  * সারি হিসেবে থাকায় ব্যাংক কোনো কিস্তি বদলালে (পুনঃতফসিল, আংশিক
  * পরিশোধ) সেই সারিটাই শোধরানো যায়।
  */
-class LoanInstalment extends Model
+class LoanInstalment extends Model implements Drillable
 {
     use HasFactory;
+    use HasPublicId;
 
     public const DUE = 'due';
 
@@ -72,5 +75,34 @@ class LoanInstalment extends Model
     public function isOverdue(): bool
     {
         return ! $this->isPaid() && $this->due_date?->isBefore(Carbon::today());
+    }
+
+    // ── Drillable — নিয়ম ১ ────────────────────────────────────────────
+
+    /**
+     * খতিয়ানে কিস্তিটাই ডকুমেন্ট, ঋণ নয়।
+     *
+     * একটা ঋণে ছত্রিশটা কিস্তি মানে ছত্রিশটা আলাদা ঘটনা, আর প্রতিটার
+     * নিজের তারিখ ও অঙ্ক। ঋণকে ডকুমেন্ট ধরলে দ্বিতীয় কিস্তিটাই
+     * "আগেই পোস্ট করা হয়েছে" বলে ফিরে যেত।
+     */
+    public static function drillSourceType(): string
+    {
+        return 'loan_instalment';
+    }
+
+    public function drillDocumentNo(): string
+    {
+        return $this->loan->document_no.'/'.$this->no;
+    }
+
+    public function drillLabel(): string
+    {
+        return __('accounts::field.instalment_no').' '.$this->no.' — '.$this->loan->lender;
+    }
+
+    public function drillRoute(): array
+    {
+        return ['accounts.loan.show', ['loan' => $this->loan_id]];
     }
 }

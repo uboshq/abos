@@ -130,7 +130,26 @@ final class CoreReports
                 ->leftJoin('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
                 ->where('ledger_entries.company_id', $f['company_id'])
                 ->when($f['branch_id'], fn ($q, $branch) => $q->where('ledger_entries.branch_id', $branch))
-                ->whereBetween('ledger_entries.trx_date', [$f['from'], $f['to']])
+                /*
+                 * শুরুর তারিখ ধরা হয় না — রেওয়ামিল একটা মুহূর্তের ছবি।
+                 *
+                 * ── যে ভুলটা এখানে ছিল ─────────────────────────────────
+                 * আগে whereBetween(from, to) ছিল, অর্থাৎ পরিসরের ভেতরের
+                 * চলাচল যোগ হত। ফিল্টারের ডিফল্ট "চলতি মাসের ১ তারিখ"
+                 * ভাঁজ করা থাকে, তাই কেউ সেটা দেখতেও পেত না — অথচ ওর
+                 * আগের প্রতিটা দাখিলা (খোলা মজুদ, খোলা ব্যালেন্স, গত
+                 * মাসের সব লেনদেন) রেওয়ামিল থেকে বাদ পড়ে যেত।
+                 *
+                 * ফলটা সবচেয়ে খারাপ ধরনের: সংখ্যাটা ভুল, অথচ ডেবিট আর
+                 * ক্রেডিট তবু সমান — তাই দেখে বোঝার উপায় ছিল না। ৮,৪০,০০০
+                 * টাকার খোলা মজুদ পর্দায় ৩,৪০০ দেখাচ্ছিল, আর সেটাকে
+                 * "ডেমো ডেটার সমস্যা" ভাবা হয়েছিল।
+                 *
+                 * ব্যালেন্স শিট শুরু থেকেই ঠিক ছিল (summaryByAccount-এ
+                 * dateRange: false); রেওয়ামিলও তারই মতো — জেরের রিপোর্ট,
+                 * সময়ের রিপোর্ট নয়।
+                 */
+                ->where('ledger_entries.trx_date', '<=', $f['to'])
                 ->groupBy('ledger_entries.account_id', 'accounts.code', 'accounts.name_en', 'accounts.name_bn')
                 ->orderBy('accounts.code')
                 ->select([

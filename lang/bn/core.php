@@ -32,6 +32,9 @@ return [
         'money_transfer' => 'টাকা হস্তান্তর',
         'cash_count' => 'নগদ গণনা',
         'customer' => 'গ্রাহক',
+        'loan' => 'ঋণ',
+        'loan_movement' => 'ঋণের লেনদেন',
+        'loan_instalment' => 'ঋণের কিস্তি',
     ],
 
     'posting' => [

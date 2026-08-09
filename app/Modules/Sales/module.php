@@ -49,10 +49,14 @@ return [
 
     'menu' => [
         'transactions' => [
-            ['label' => 'sales::menu.pos', 'route' => 'sales.pos.index', 'permission' => 'sales.pos'],
-            ['label' => 'sales::menu.direct', 'route' => 'sales.direct.create', 'permission' => 'sales.challan.create'],
-            ['label' => 'sales::menu.orders', 'route' => 'sales.order.index', 'permission' => 'sales.order.view'],
-            ['label' => 'sales::menu.challans', 'route' => 'sales.challan.index', 'permission' => 'sales.challan.view'],
+            ['label' => 'sales::menu.pos', 'route' => 'sales.pos.index', 'permission' => 'sales.pos',
+                'setting' => 'sales.screen_pos'],
+            ['label' => 'sales::menu.direct', 'route' => 'sales.direct.create', 'permission' => 'sales.challan.create',
+                'setting' => 'sales.screen_direct'],
+            ['label' => 'sales::menu.orders', 'route' => 'sales.order.index', 'permission' => 'sales.order.view',
+                'setting' => 'sales.screen_orders'],
+            ['label' => 'sales::menu.challans', 'route' => 'sales.challan.index', 'permission' => 'sales.challan.view',
+                'setting' => 'sales.screen_challans'],
             ['label' => 'sales::menu.invoices', 'route' => 'sales.invoice.index', 'permission' => 'sales.invoice.view'],
             ['label' => 'sales::menu.collections', 'route' => 'sales.collection.index', 'permission' => 'sales.collection.view'],
             ['label' => 'sales::menu.returns', 'route' => 'sales.return.index', 'permission' => 'sales.return.view'],
@@ -182,6 +186,66 @@ return [
             'default' => 0,
             'group' => 'entry',
         ],
+        /*
+         * কোন পর্দাগুলো থাকবে — মালিকের সিদ্ধান্ত, কোডের নয়।
+         *
+         * প্রতিষ্ঠানভেদে কাজের ধরন আলাদা: ডিপো সরাসরি বেচে, দোকানে
+         * কাউন্টার লাগে, কেউ অর্ডার নিয়ে পরে পাঠায়। যেটা লাগে না সেই
+         * সারিটা মেনুতে থাকলে প্রতিদিন সেটা এড়িয়ে যেতে হয়, আর একদিন
+         * তাড়াহুড়োয় ওখানেই ঢুকে পড়ে।
+         *
+         * সুইচ বন্ধ মানে শুধু মেনু থেকে উধাও — কোড, রুট, কাগজ কিছুই
+         * যায় না। তাই যেকোনো দিন ফেরানো যায়, আর পুরনো কাগজগুলোও
+         * তাদের নিজের ঠিকানায় খোলা থাকে।
+         */
+        [
+            'key' => 'sales.screen_pos',
+            'label' => 'sales::settings.screen_pos',
+            'type' => 'boolean',
+
+            /*
+             * ডিফল্ট বন্ধ — একমাত্র এই সুইচটাই।
+             *
+             * কাউন্টার POS দোকানের জিনিস, পরিবেশকের নয়, আর ABOS-এর
+             * প্রথম ব্যবহারকারী একটা ডিপো। বাকি পর্দাগুলো ডিফল্ট চালু:
+             * যা আছে তা হঠাৎ উধাও হয়ে গেলে সেটা আপগ্রেডে ভাঙা মনে হয়।
+             */
+            'default' => false,
+            'group' => 'screens',
+        ],
+        [
+            'key' => 'sales.screen_direct',
+            'label' => 'sales::settings.screen_direct',
+            'type' => 'boolean',
+            'default' => true,
+            'group' => 'screens',
+        ],
+        [
+            'key' => 'sales.screen_orders',
+            'label' => 'sales::settings.screen_orders',
+            'type' => 'boolean',
+            'default' => true,
+            'group' => 'screens',
+
+            /*
+             * কাগজ থাকলে পর্দা আড়াল করা যাবে না।
+             *
+             * দশটা অর্ডার নিয়ে বসে থাকা কোম্পানির অর্ডার-পর্দা কেউ বন্ধ
+             * করে দিলে ওই দশটা কাগজের কোনো দরজা থাকত না — অথচ সেগুলো
+             * বাতিলও হয়নি, শেষও হয়নি। কোরে মডিউলের নাম নেই: ক্লাসটা
+             * মডিউল নিজে বলে, কোর শুধু গুনে দেখে (১৯.৭)।
+             */
+            'holds' => SalesOrder::class,
+        ],
+        [
+            'key' => 'sales.screen_challans',
+            'label' => 'sales::settings.screen_challans',
+            'type' => 'boolean',
+            'default' => true,
+            'group' => 'screens',
+            'holds' => DeliveryChallan::class,
+        ],
+
         /*
          * সরাসরি বিক্রয়ের ঘরগুলো — প্রতিটার নিজের সুইচ (নিয়ম ৭)।
          *

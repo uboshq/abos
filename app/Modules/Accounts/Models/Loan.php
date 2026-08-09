@@ -9,6 +9,7 @@ use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Contracts\Drillable;
 use App\Core\Support\DocumentStatus;
+use App\Models\LedgerEntry;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -61,6 +62,11 @@ class Loan extends Model implements Drillable
         return $this->hasMany(LoanInstalment::class)->orderBy('no');
     }
 
+    public function movements(): HasMany
+    {
+        return $this->hasMany(LoanMovement::class)->orderBy('trx_date')->orderBy('id');
+    }
+
     public function liabilityAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'liability_account_id');
@@ -100,11 +106,26 @@ class Loan extends Model implements Drillable
      */
     public function outstanding(): string
     {
+        /*
+         * এই ঋণের সব ডকুমেন্ট — নড়াচড়া আর কিস্তি।
+         *
+         * ঋণ নিজে খতিয়ানে বসে না (LoanMovement-এ কারণটা লেখা), তাই
+         * তার দায় খুঁজতে হয় তার ডকুমেন্টগুলোর মধ্য দিয়ে।
+         */
         $entries = LedgerEntry::query()
             ->where('account_id', $this->liability_account_id)
             ->where(function ($q) {
-                $q->where('source_type', self::drillSourceType())
-                    ->where('source_id', $this->id);
+                $q->where(function ($m) {
+                    $m->where('source_type', LoanMovement::drillSourceType())
+                        ->whereIn('source_id', LoanMovement::query()
+                            ->where('loan_id', $this->id)
+                            ->select('id'));
+                })->orWhere(function ($i) {
+                    $i->where('source_type', LoanInstalment::drillSourceType())
+                        ->whereIn('source_id', LoanInstalment::query()
+                            ->where('loan_id', $this->id)
+                            ->select('id'));
+                });
             })
             ->get();
 
@@ -144,9 +165,9 @@ class Loan extends Model implements Drillable
         return $this->lender.' — '.$this->document_no;
     }
 
-    public function drillUrl(): string
+    public function drillRoute(): array
     {
-        return route('accounts.loan.show', $this->id);
+        return ['accounts.loan.show', ['loan' => $this->id]];
     }
 
     public function isDraft(): bool

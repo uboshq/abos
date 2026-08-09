@@ -67,6 +67,7 @@ return [
     'received_at' => 'Confirmed by :name — :at',
     'no_counts' => 'No counts yet.',
     'count_note' => 'Count what is in hand, note by note. The book figure appears after you save.',
+    'zero_count_confirm' => 'Is the drawer really empty? Saving a zero count will post the whole book balance as a shortage.',
     'count_recorded' => ':no — count saved.',
     'count_approved' => ':no — count approved.',
     'count_matches' => 'Matches',
@@ -82,4 +83,19 @@ return [
     'draft_vouchers' => '{1} 1 draft voucher is not posted|[2,*] :count draft vouchers are not posted',
     'pending_transfers' => '{1} 1 transfer is waiting to be received|[2,*] :count transfers are waiting to be received',
     'count' => '{0} No accounts|{1} 1 account|[2,*] :count accounts',
+
+    // Loans
+    'loan_created' => 'The loan is on the books. A term loan also has its instalment schedule.',
+    'loan_drawn' => 'Drawn — the liability rose by the same amount.',
+    'loan_repaid' => 'Paid in — the balance came down by the same amount.',
+    'instalment_paid' => 'Instalment paid — principal came off the liability, interest went to expense.',
+    'interest_charged' => 'Interest charged — no money moved, the balance went up.',
+    'no_loans' => 'No loans yet.',
+    'loan_note' => 'A term loan has a fixed instalment schedule; a CC has a limit you draw against and repay as you like. The two are accounted for differently.',
+    'loan_total' => 'Total outstanding',
+    'loan_outstanding' => 'Outstanding',
+    'loan_available' => 'Left on the limit',
+    'loan_settled' => 'Settled',
+    'schedule_note' => 'Check this against the bank\'s paper. If it disagrees the loan has to be entered again — the wrong interest method (reducing or flat) changes the split in every instalment.',
+    'cc_interest_note' => 'Take the figure from the bank statement rather than working it out here. The bank counts days its own way and the two will never agree to the paisa.',
 ];

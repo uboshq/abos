@@ -11,4 +11,5 @@ return [
     'money_transfer' => 'Money Transfer',
     'cash_count' => 'Cash Count',
     'till_code' => 'Cash Till Code',
+    'loan' => 'Loan',
 ];

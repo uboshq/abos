@@ -192,7 +192,49 @@ class AccountReportsTest extends TestCase
         // প্রতিটা ভাউচার সমান, তাই যোগফলও সমান — না মিললে কোথাও
         // একটা সারি হারিয়েছে
         $this->assertSame($result->totals['debit'], $result->totals['credit']);
-        $this->assertSame('31000.00', $result->totals['debit']);
+
+        /*
+         * ৮,৭১,০০০ = এই টেস্টের তিনটা ভাউচারের ৩১,০০০ + ডেমো ডেটার
+         * ৮,৪০,০০০ খোলা মজুদ (০১/০৭/২০২৬ তারিখে বসানো)।
+         *
+         * আগে এখানে ৩১,০০০ লেখা ছিল, আর সেটাই ভুলটাকে সবুজ রেখেছিল:
+         * রেওয়ামিল "from" তারিখের আগের সব দাখিলা বাদ দিত, টেস্টও ঠিক
+         * ততটুকুই চাইত। আসল পর্দায় খোলা মজুদ ৮,৪০,০০০ থাকা সত্ত্বেও
+         * ৩,৪০০ দেখাচ্ছিল, অথচ ডেবিট-ক্রেডিট সমান বলে কিছু ধরা পড়েনি।
+         */
+        $this->assertSame('871000.00', $result->totals['debit']);
+    }
+
+    /**
+     * রেওয়ামিল জেরের রিপোর্ট, সময়ের রিপোর্ট নয়।
+     *
+     * ── যে ভুলটা এই টেস্টটা পাহারা দেয় ─────────────────────────────
+     * আগে রেওয়ামিল whereBetween(from, to) করত, আর ফিল্টারের ডিফল্ট
+     * "চলতি মাসের ১ তারিখ" ভাঁজ করা থাকায় কেউ সেটা দেখতেও পেত না।
+     * ফলে খোলা মজুদ, খোলা ব্যালেন্স আর গত মাসের সব দাখিলা বাদ পড়ে
+     * যেত — অথচ ডেবিট আর ক্রেডিট তবু সমান আসত, তাই ভুলটা ধরা পড়ত
+     * না। ৮,৪০,০০০ টাকার মজুদ পর্দায় ৩,৪০০ দেখাচ্ছিল।
+     */
+    public function test_the_trial_balance_carries_everything_before_the_from_date(): void
+    {
+        $before = $this->report('accounts.trial_balance')->totals['debit'];
+
+        // পরিসরের আগের একটা দাখিলা — যেমন খোলা ব্যালেন্স বা গত মাসের
+        // লেনদেন
+        $svc = app(VoucherService::class);
+        $svc->post($svc->create(
+            ['type' => Voucher::CONTRA, 'trx_date' => '2026-07-15', 'narration' => 'আগের মাসের'],
+            $svc->twoLineEntry(Voucher::CONTRA, $this->bank, $this->till->account_id, '7500', 'আগের মাসের'),
+        ));
+
+        $after = $this->report('accounts.trial_balance')->totals['debit'];
+
+        // ৭,৫০০ যোগ হয়েছে, যদিও তারিখটা "from"-এর আগে
+        $this->assertSame(0, bccomp(bcsub($after, $before, 2), '7500.00', 2));
+
+        // আর তবু দুই দিক সমান
+        $result = $this->report('accounts.trial_balance');
+        $this->assertSame($result->totals['debit'], $result->totals['credit']);
     }
 
     public function test_the_profit_and_loss_holds_only_income_and_expense(): void

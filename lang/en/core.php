@@ -27,6 +27,9 @@ return [
         'money_transfer' => 'Money Transfer',
         'cash_count' => 'Cash Count',
         'customer' => 'Customer',
+        'loan' => 'Loan',
+        'loan_movement' => 'Loan Movement',
+        'loan_instalment' => 'Loan Instalment',
     ],
 
     'posting' => [
