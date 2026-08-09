@@ -54,6 +54,8 @@ return [
 
     'menu' => [
         'transactions' => [
+            ['label' => 'purchase::menu.direct', 'route' => 'purchase.direct.create', 'permission' => 'purchase.bill.create',
+                'setting' => 'purchase.screen_direct'],
             ['label' => 'purchase::menu.orders', 'route' => 'purchase.order.index', 'permission' => 'purchase.order.view',
                 'setting' => 'purchase.screen_orders'],
             ['label' => 'purchase::menu.receipts', 'route' => 'purchase.receipt.index', 'permission' => 'purchase.receipt.view',

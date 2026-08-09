@@ -94,12 +94,23 @@
 
                     onchange-এ ফর্ম সাবমিট নয়, কারণ তাতে অর্ধেক ভরা ফেরতটা
                     সেভ হওয়ার চেষ্টা করত। শুধু ঠিকানা বদলে নতুন করে খোলা।
+
+                    ── আর কেন সাধারণ onchange, Alpine-এর @change নয় ────
+                    আগে এখানে `@change` লেখা ছিল। Alpine কেবল তখনই কোনো
+                    অ্যাট্রিবিউট পড়ে যখন তার উপরে কোথাও `x-data` থাকে —
+                    আর এই ফর্মে সেটা নেই (একমাত্র x-data নিচের সারির
+                    টেবিলে)। তাই হ্যান্ডলারটা কখনো বাঁধাই হয়নি: ইনভয়েস
+                    বাছলে কিচ্ছু হত না, কনসোলে কোনো এররও না।
+
+                    এই একটা কাজের জন্য পুরো ফর্মকে Alpine-এর ভেতরে টেনে
+                    আনার দরকার নেই — এক লাইনের সাধারণ জাভাস্ক্রিপ্টই
+                    যথেষ্ট, আর সেটা কোনো কিছুর উপর নির্ভর করে না।
                 --}}
                 <x-ui.select name="sales_invoice_id" :label="__('sales::field.invoice')"
                              :options="$invoices->mapWithKeys(fn ($i) => [$i->id => $i->document_no.' — '.$i->customer?->name()])"
                              :selected="$invoice?->id ?? $return->sales_invoice_id" placeholder="-"
-                             @change="if ($event.target.value) {
-                                 window.location = '{{ route('sales.return.create') }}?sales_invoice_id=' + $event.target.value;
+                             onchange="if (this.value) {
+                                 window.location = '{{ route('sales.return.create') }}?sales_invoice_id=' + this.value;
                              }" />
 
                 <x-ui.select name="reason_code_id" :label="__('sales::field.reason')"

@@ -16,4 +16,7 @@ return [
     'show_cancelled' => 'বাতিলগুলোও দেখাও',
     'receive_against' => 'এই আদেশের মাল নিন',
     'bill_against' => 'এই চালানের বিল করুন',
+    'confirm_direct' => 'চালান নিশ্চিত করুন',
+    'clear_all' => 'সব মুছুন',
+    'clear_line' => 'মুছুন',
 ];

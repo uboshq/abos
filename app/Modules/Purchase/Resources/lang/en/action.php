@@ -16,4 +16,7 @@ return [
     'show_cancelled' => 'Show cancelled too',
     'receive_against' => 'Receive against this order',
     'bill_against' => 'Bill this receipt',
+    'confirm_direct' => 'Confirm invoice',
+    'clear_all' => 'Clear all',
+    'clear_line' => 'Clear',
 ];

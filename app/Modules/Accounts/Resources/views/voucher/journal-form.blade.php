@@ -210,8 +210,25 @@
                             minimumFractionDigits: 2, maximumFractionDigits: 2,
                         });
                     },
+                    /*
+                     * $root, $el নয় — আর এই এক অক্ষরেই ফিচারটা মরে ছিল।
+                     *
+                     * @input="recount()" থেকে ডাকা হলে Alpine-এর $el মানে
+                     * **যে ঘরে টাইপ করা হয়েছে সেই input-টা**, কম্পোনেন্টের
+                     * গোড়া নয়। একটা input-এর ভেতরে আর কোনো input থাকে না,
+                     * তাই তালিকাটা সবসময় খালি আসত, debit ও credit দুইটাই
+                     * ০ থাকত, balanced কখনো true হত না — আর "Save and post"
+                     * বোতামটা balanced দেখে নিষ্ক্রিয় থাকে।
+                     *
+                     * ফল: **কোনো জাবেদা কখনো সেভ করা যেত না।** কনসোলে এরর
+                     * নেই, পর্দা দেখতে নিখুঁত, শুধু বোতামে ক্লিক করা যায় না।
+                     * নগদ গণনার পর্দায় হুবহু একই ভুল ছিল — একই দিনে ধরা
+                     * পড়েছে দুইটাই।
+                     *
+                     * $root কম্পোনেন্টের গোড়া, যেখান থেকেই ডাকা হোক।
+                     */
                     recount() {
-                        const sum = (sel) => [...this.$el.querySelectorAll(sel)]
+                        const sum = (sel) => [...this.$root.querySelectorAll(sel)]
                             .reduce((t, i) => t + (parseFloat(i.value) || 0), 0);
                         this.debit = sum('input[name$="[debit]"]');
                         this.credit = sum('input[name$="[credit]"]');
