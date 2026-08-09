@@ -7,6 +7,7 @@ use App\Modules\Accounts\Http\Controllers\AccountsSettingsController;
 use App\Modules\Accounts\Http\Controllers\CashCountController;
 use App\Modules\Accounts\Http\Controllers\CashTillController;
 use App\Modules\Accounts\Http\Controllers\ChartOfAccountsController;
+use App\Modules\Accounts\Http\Controllers\LoanController;
 use App\Modules\Accounts\Http\Controllers\MoneyTransferController;
 use App\Modules\Accounts\Http\Controllers\ReportController;
 use App\Modules\Accounts\Http\Controllers\VoucherController;
@@ -44,6 +45,29 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
         Route::get('/{account}/edit', [ChartOfAccountsController::class, 'edit'])->name('edit');
         Route::put('/{account}', [ChartOfAccountsController::class, 'update'])->name('update');
         Route::delete('/{account}', [ChartOfAccountsController::class, 'destroy'])->name('destroy');
+    });
+
+    /*
+     * ঋণ — টার্ম লোন ও CC।
+     *
+     * মোছার কোনো রুট নেই: ঋণ একটা চুক্তি, আর তার প্রতিটা কিস্তি
+     * খতিয়ানে বসে গেছে। ভুল হলে বিপরীত দাখিলা, মুছে ফেলা নয়।
+     */
+    Route::prefix('loans')->name('loan.')->group(function () {
+        Route::get('/', [LoanController::class, 'index'])->name('index');
+        Route::get('/create', [LoanController::class, 'create'])->name('create');
+        Route::post('/', [LoanController::class, 'store'])->name('store');
+        Route::get('/{loan}', [LoanController::class, 'show'])->whereNumber('loan')->name('show');
+
+        // টাকা তোলা ও জমা — CC-তে যতবার খুশি, টার্ম লোনে একবারই
+        Route::post('/{loan}/draw', [LoanController::class, 'drawDown'])
+            ->whereNumber('loan')->name('draw');
+        Route::post('/{loan}/repay', [LoanController::class, 'repay'])
+            ->whereNumber('loan')->name('repay');
+        Route::post('/{loan}/interest', [LoanController::class, 'chargeInterest'])
+            ->whereNumber('loan')->name('interest');
+        Route::post('/{loan}/instalments/{instalment}', [LoanController::class, 'payInstalment'])
+            ->whereNumber('loan')->whereNumber('instalment')->name('instalment.pay');
     });
 
     Route::prefix('cash-tills')->name('till.')->group(function () {

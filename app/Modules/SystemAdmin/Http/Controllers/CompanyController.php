@@ -54,8 +54,25 @@ class CompanyController extends Controller implements HasMiddleware
              * পাওয়া লাগে। যিনি দেখেন তিনি system_admin.company.manage
              * ধারী, অর্থাৎ প্রতিষ্ঠানের মালিক।
              */
+            /*
+             * শাখা গোনার সময় টেন্যান্ট স্কোপ সরাতে হয়।
+             *
+             * ── কী ভুল দেখাচ্ছিল ───────────────────────────────────
+             * Branch-এ BelongsToCompany গ্লোবাল স্কোপ আছে, তাই
+             * withCount('branches') চুপচাপ "AND company_id = চলতি
+             * কোম্পানি" জুড়ে দিত। ফল: নিজের সারিতে ঠিক সংখ্যা, আর
+             * বাকি প্রতিটা কোম্পানির সারিতে **শূন্য** — যদিও তাদের
+             * শাখা আছে।
+             *
+             * পরীক্ষায় ধরা পড়েছে: তিনটা শাখা বানানোর পরেও তালিকায়
+             * ০ দেখাচ্ছিল। কোনো ত্রুটিবার্তা নেই, শুধু ভুল সংখ্যা।
+             *
+             * স্কোপটা এখানেই সরানো নিরাপদ: এই পাতাটা খোলেন
+             * system_admin.company.manage ধারী, যাঁর কাছে সব কোম্পানিই
+             * নিজের — আর গোনা হচ্ছে কেবল সংখ্যা, কারো ডাটা নয়।
+             */
             'companies' => Company::query()
-                ->withCount('branches')
+                ->withCount(['branches' => fn ($q) => $q->withoutGlobalScopes()])
                 ->orderBy('name_en')
                 ->get(),
         ]);
