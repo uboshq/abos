@@ -44,7 +44,17 @@ class AccountRequest extends FormRequest
             'is_bank' => ['nullable', 'boolean'],
 
             'opening_balance' => ['nullable', 'numeric'],
-            'opening_date' => ['nullable', 'date', 'required_with:opening_balance'],
+            /*
+             * তারিখ লাগে কেবল অশূন্য খোলা ব্যালেন্সে — ক্যাশ টিলের ফর্মে
+             * একই ভুল ছিল, একই কারণে।
+             *
+             * `required_with` ঘরটা খালি কিনা দেখে না, শুধু পাঠানো হয়েছে
+             * কিনা দেখে। ঘরে ডিফল্ট "0" বসানো থাকলে প্রতিবারই তারিখ
+             * চাইত, যদিও কেউ কোনো খোলা ব্যালেন্স দেননি।
+             */
+            'opening_date' => ['nullable', 'date', Rule::requiredIf(
+                fn () => bccomp((string) ($this->input('opening_balance') ?: '0'), '0', 4) !== 0,
+            )],
 
             'account_number' => ['nullable', 'string', 'max:64'],
             'bank_name' => ['nullable', 'string', 'max:120'],
