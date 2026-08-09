@@ -159,6 +159,42 @@ class CompanySetupTest extends TestCase
             'সিডার আর পর্দা দুই রকম কোম্পানি বানাচ্ছে — রেসিপি আবার দুই জায়গায় চলে গেছে।');
     }
 
+    /**
+     * তালিকায় প্রতিটা কোম্পানির নিজের শাখার সংখ্যা — শূন্য নয়।
+     *
+     * ── কী ভুল দেখাচ্ছিল ────────────────────────────────────────────
+     * Branch-এ টেন্যান্ট স্কোপ আছে, তাই withCount('branches') চুপচাপ
+     * "AND company_id = চলতি কোম্পানি" জুড়ে দিত। নিজের সারিতে সংখ্যা
+     * ঠিক আসত, আর বাকি প্রতিটা কোম্পানির সারিতে শূন্য।
+     *
+     * পরীক্ষায় ধরা পড়েছে — তিনটা শাখা বানানোর পরেও তালিকা ০ দেখাচ্ছিল।
+     * কোনো ত্রুটি নেই, শুধু ভুল সংখ্যা; আর ভুল সংখ্যা সবচেয়ে খারাপ,
+     * কারণ ওটা দেখতে ঠিকই লাগে।
+     */
+    public function test_the_list_counts_each_companys_own_branches(): void
+    {
+        $other = Company::query()->where('code', 'FMART')->firstOrFail();
+
+        CompanyContext::forCompany($other->id, function () {
+            Branch::create(['code' => 'CTG', 'name_en' => 'Chattogram']);
+            Branch::create(['code' => 'DHK', 'name_en' => 'Dhaka']);
+        });
+
+        // চলতি কোম্পানি TDEPOT, তাই FMART-এর গোনাটাই আসল পরীক্ষা
+        $response = $this->get(route('system_admin.company.index'));
+
+        $response->assertOk();
+
+        $listed = $response->viewData('companies')->firstWhere('code', 'FMART');
+
+        $expected = CompanyContext::forCompany($other->id, fn () => Branch::query()->count());
+
+        $this->assertSame($expected, $listed->branches_count,
+            'তালিকা অন্য কোম্পানির শাখা গুনতে পারছে না — স্কোপটা আবার ঢুকে পড়েছে।');
+
+        $this->assertGreaterThan(0, $listed->branches_count);
+    }
+
     /** একটা শাখা পরে যোগ করা যায়। */
     public function test_a_branch_can_be_added_afterwards(): void
     {

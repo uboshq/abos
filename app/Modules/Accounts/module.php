@@ -77,6 +77,16 @@ return [
         'accounts.report',
         'accounts.report.final',
         'accounts.till.view',
+
+        /*
+         * ঋণের নিজের চাবি।
+         *
+         * একটা ঋণ বসানো মানে দায় জন্মানো আর টাকা ঢোকা — দুইটাই
+         * প্রতিষ্ঠানের সবচেয়ে বড় সিদ্ধান্তের একটা। যিনি রোজ ভাউচার
+         * লেখেন তাঁর হাতে এটা থাকা উচিত নয়।
+         */
+        'accounts.loan.view',
+        'accounts.loan.manage',
         'accounts.till.manage',
         'accounts.transfer.create',
         'accounts.transfer.confirm',
@@ -101,6 +111,9 @@ return [
          * সংখ্যাটাই হিসাবের কাঠামো।
          */
         'TIL' => 'accounts::doc.till_code',
+
+        // ঋণ — LN-2026-2027-0001
+        'LN' => 'accounts::doc.loan',
     ],
 
     /*
