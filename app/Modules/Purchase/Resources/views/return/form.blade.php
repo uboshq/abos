@@ -69,9 +69,24 @@
                             :value="old('trx_date', $return->trx_date?->toDateString() ?? now()->toDateString())"
                             required />
 
+                {{--
+                    বিল বাছলেই পাতাটা ওই বিল নিয়ে ফিরে আসে।
+
+                    বিক্রয় ফেরতের পর্দাতেও হুবহু একই ভুল ছিল, আর একই
+                    সমাধান: ঘরটা নিছক একটা ড্রপডাউন ছিল, বেছে নিলে কিছুই
+                    ঘটত না। উপরের @php ব্লক লাইনগুলো ভরে কেবল যখন ঠিকানায়
+                    `?purchase_bill_id=` থাকে — অর্থাৎ কেবল বিলের পাতা
+                    থেকে লিংকে এলে।
+
+                    ফলে পর্দাটা দাবি করত "দর বিলের দর থেকেই আসে", অথচ
+                    বাস্তবে সব হাতে টাইপ করতে হত।
+                --}}
                 <x-ui.select name="purchase_bill_id" :label="__('purchase::field.bill')"
                              :options="$bills->mapWithKeys(fn ($b) => [$b->id => $b->document_no.' — '.$b->supplier?->name()])"
-                             :selected="$bill?->id ?? $return->purchase_bill_id" placeholder="-" />
+                             :selected="$bill?->id ?? $return->purchase_bill_id" placeholder="-"
+                             @change="if ($event.target.value) {
+                                 window.location = '{{ route('purchase.return.create') }}?purchase_bill_id=' + $event.target.value;
+                             }" />
 
                 {{-- কারণটা ঐচ্ছিক নয় বলা যায় না — পুরনো মাল ফেরত এলে
                      কারণ জানা না-ও থাকতে পারে। কিন্তু থাকলে রিপোর্টে
