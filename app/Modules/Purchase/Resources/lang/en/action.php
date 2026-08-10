@@ -19,4 +19,5 @@ return [
     'confirm_direct' => 'Confirm invoice',
     'clear_all' => 'Clear all',
     'clear_line' => 'Clear',
+    'bill_against_order' => 'Bill this order',
 ];

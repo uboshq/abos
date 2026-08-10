@@ -13,6 +13,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Purchase\Http\Requests\PurchaseBillRequest;
 use App\Modules\Purchase\Models\PurchaseBill;
+use App\Modules\Purchase\Models\PurchaseOrder;
 use App\Modules\Purchase\Models\PurchaseReceipt;
 use App\Modules\Purchase\Services\PurchaseBillService;
 use App\Modules\Supplier\Models\Supplier;
@@ -79,10 +80,24 @@ class PurchaseBillController extends Controller implements HasMiddleware
         // হয়নি ঠিক ততটুকু নিয়ে
         $receipt = $this->chosenReceipt($request);
 
+        /*
+         * আদেশ ধরেও খোলা যায় — মাল গ্রহণের কাগজ ছাড়াই।
+         *
+         * যে ডিপো GRN ব্যবহার করে না (আর Control Panel-এ ওই পর্দাটা বন্ধও
+         * করা যায়), তার আদেশ এতদিন কখনো বিলে পৌঁছাতই না। এখন পৌঁছায়, আর
+         * সারিগুলো আদেশের সারির সাথে জোড়া থাকে — নইলে "অপেক্ষমাণ আদেশ"
+         * তালিকায় ওটা চিরকাল ঝুলে থাকত।
+         *
+         * দুইটা একসাথে দেওয়ার মানে নেই: চালান দেওয়া থাকলে সেটাই জেতে,
+         * কারণ চালানই বেশি নির্দিষ্ট (কতটা সত্যিই এসেছে তা সে জানে)।
+         */
+        $order = $receipt === null ? $this->chosenOrder($request) : null;
+
         return view('purchase::bill.form', [
             'menu' => $this->menu->forUser($request->user()),
             'bill' => new PurchaseBill(['trx_date' => now()->toDateString()]),
             'receipt' => $receipt,
+            'order' => $order,
             'receipts' => PurchaseReceipt::query()
                 ->where('status', DocumentStatus::CONFIRMED)
                 ->with('supplier')->orderByDesc('trx_date')->limit(200)->get(),
@@ -164,6 +179,26 @@ class PurchaseBillController extends Controller implements HasMiddleware
         }
 
         return PurchaseReceipt::query()
+            ->where('status', DocumentStatus::CONFIRMED)
+            ->with(['lines.product.unit', 'supplier'])
+            ->find($id);
+    }
+
+    /**
+     * নিশ্চিত করা একটা আদেশ, যেটার বিপরীতে সরাসরি বিল হবে।
+     *
+     * খসড়া আদেশ বাদ: সেটা এখনো সরবরাহকারীকে পাঠানোই হয়নি, তাই তার
+     * বিপরীতে বিল আসার কথা নয়।
+     */
+    private function chosenOrder(Request $request): ?PurchaseOrder
+    {
+        $id = $request->integer('purchase_order_id');
+
+        if ($id <= 0) {
+            return null;
+        }
+
+        return PurchaseOrder::query()
             ->where('status', DocumentStatus::CONFIRMED)
             ->with(['lines.product.unit', 'supplier'])
             ->find($id);

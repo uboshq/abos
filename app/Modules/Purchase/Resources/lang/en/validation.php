@@ -47,4 +47,7 @@ return [
 
     'missing_account' => 'Account :code is missing from the chart — the chart has not been installed.',
     'bill_needs_warehouse' => 'This bill brings goods in without a receipt, but no warehouse is named and there is no default one. Pick a warehouse.',
+    'unknown_order_line' => 'That order line was not found.',
+    'order_other_supplier' => 'The order belongs to another supplier — one bill cannot mix suppliers.',
+    'order_not_confirmed' => 'Order :no is not confirmed yet, so nothing can be billed against it.',
 ];

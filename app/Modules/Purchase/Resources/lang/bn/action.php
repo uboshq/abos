@@ -19,4 +19,5 @@ return [
     'confirm_direct' => 'চালান নিশ্চিত করুন',
     'clear_all' => 'সব মুছুন',
     'clear_line' => 'মুছুন',
+    'bill_against_order' => 'এই আদেশের বিল করুন',
 ];

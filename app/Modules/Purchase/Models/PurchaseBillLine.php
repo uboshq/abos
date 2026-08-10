@@ -21,7 +21,7 @@ class PurchaseBillLine extends Model
     protected $table = 'pur_bill_lines';
 
     protected $fillable = [
-        'purchase_bill_id', 'product_id', 'purchase_receipt_line_id',
+        'purchase_bill_id', 'product_id', 'purchase_receipt_line_id', 'purchase_order_line_id',
         'qty', 'rate', 'sales_price', 'discount', 'tax', 'amount', 'line_no', 'narration',
     ];
 
@@ -49,5 +49,17 @@ class PurchaseBillLine extends Model
     public function receiptLine(): BelongsTo
     {
         return $this->belongsTo(PurchaseReceiptLine::class, 'purchase_receipt_line_id');
+    }
+
+    /**
+     * চালান ছাড়া সরাসরি আদেশের বিপরীতে বিল।
+     *
+     * দুইটা জোড়া পরস্পর-বিকল্প: সারিটা হয় চালান ধরে আসে, নয় আদেশ ধরে,
+     * নয় কোনোটাই। আদেশ ধরে এলে মালটা এই বিল কনফার্ম করার সময়েই গুদামে
+     * ঢোকে — ঠিক সরাসরি ক্রয়ের মতো, কারণ মাল গ্রহণের কোনো কাগজ হয়নি।
+     */
+    public function orderLine(): BelongsTo
+    {
+        return $this->belongsTo(PurchaseOrderLine::class, 'purchase_order_line_id');
     }
 }
