@@ -8,6 +8,13 @@
 @php
     $isNew = ! $bill->exists;
 
+    /*
+     * তিনটা অবস্থা: চালান ধরে, আদেশ ধরে, নয়তো ফাঁকা/সংরক্ষিত।
+     *
+     * আদেশ ধরে এলে "আর কত আসা বাকি" (pendingQty) নেওয়া হয়, চালানের
+     * ক্ষেত্রে "আর কতটার বিল বাকি" (unbilledQty) — দুইটা আলাদা প্রশ্ন,
+     * কারণ আদেশে মাল এখনো আসেইনি আর চালানে এসে গেছে।
+     */
     $seed = $isNew && $receipt
         ? $receipt->lines
             ->filter(fn ($l) => bccomp($l->unbilledQty(), '0', 4) > 0)
@@ -19,13 +26,24 @@
                 'tax' => '',
                 'link' => (string) $l->id,
             ])->values()->all()
+        : ($isNew && $order
+        ? $order->lines
+            ->filter(fn ($l) => bccomp($l->pendingQty(), '0', 4) > 0)
+            ->map(fn ($l) => [
+                'product_id' => (string) $l->product_id,
+                'qty' => rtrim(rtrim($l->pendingQty(), '0'), '.'),
+                'rate' => (string) $l->rate,
+                'discount' => '',
+                'tax' => '',
+                'link' => (string) $l->id,
+            ])->values()->all()
         : $bill->lines->map(fn ($l) => [
             'product_id' => (string) $l->product_id,
             'qty' => (string) $l->qty,
             'rate' => (string) $l->rate,
             'discount' => (string) $l->discount,
             'tax' => (string) $l->tax,
-            'link' => (string) ($l->purchase_receipt_line_id ?? ''),
+            'link' => (string) ($l->purchase_receipt_line_id ?? $l->purchase_order_line_id ?? ''),
 
             /*
              * সংরক্ষিত লাইনে দামটা ফিরে আসে, কিন্তু anchor খালি —
@@ -38,13 +56,33 @@
             'markup' => '',
             'margin' => '',
             'anchor' => $l->sales_price === null ? '' : 'sales_price',
-        ])->all();
+        ])->all());
 
     $existing = old('lines', $seed);
 
     $receiptLines = ($receipt?->lines ?? collect())->mapWithKeys(fn ($l) => [
         $l->id => ($l->product?->code ?? '') . ' - ' . rtrim(rtrim($l->unbilledQty(), '0'), '.'),
     ]);
+
+    $orderLines = ($order?->lines ?? collect())
+        ->filter(fn ($l) => bccomp($l->pendingQty(), '0', 4) > 0)
+        ->mapWithKeys(fn ($l) => [
+            $l->id => ($l->product?->code ?? '') . ' - ' . rtrim(rtrim($l->pendingQty(), '0'), '.'),
+        ]);
+
+    /*
+     * সারিটা কার সাথে জোড়া — চালান, আদেশ, নাকি কিছুই না।
+     *
+     * সম্পাদনার সময় বিলের নিজের সারি দেখে ঠিক করা হয়, কারণ তখন
+     * $receipt ও $order দুইটাই খালি (ঠিকানায় কিছু নেই)।
+     */
+    $linkField = match (true) {
+        $receiptLines->isNotEmpty() => 'purchase_receipt_line_id',
+        $orderLines->isNotEmpty() => 'purchase_order_line_id',
+        ! $isNew && $bill->lines->contains(fn ($l) => $l->purchase_order_line_id !== null) => 'purchase_order_line_id',
+        ! $isNew && $bill->lines->contains(fn ($l) => $l->purchase_receipt_line_id !== null) => 'purchase_receipt_line_id',
+        default => null,
+    };
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -78,7 +116,7 @@
             <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <x-ui.select name="supplier_id" :label="__('purchase::field.supplier')"
                              :options="$suppliers->mapWithKeys(fn ($s) => [$s->id => $s->name()])"
-                             :selected="$receipt?->supplier_id ?? $bill->supplier_id"
+                             :selected="$receipt?->supplier_id ?? $order?->supplier_id ?? $bill->supplier_id"
                              placeholder="-" required />
 
                 <x-ui.field name="trx_date" type="date" :label="__('purchase::field.date')"
@@ -110,8 +148,9 @@
                 দর এখনো চূড়ান্ত নয়, আর চালানে টাকার কথাই ওঠে না।
             --}}
             <x-purchase::line-editor :products="$products" :lines="$existing" qty-field="qty"
-                                     :link-field="$receiptLines->isNotEmpty() ? 'purchase_receipt_line_id' : null"
-                                     :link-options="$receiptLines" show-sales-price />
+                                     :link-field="$linkField"
+                                     :link-options="$receiptLines->isNotEmpty() ? $receiptLines : $orderLines"
+                                     show-sales-price />
         </section>
 
         <div class="flex flex-wrap gap-2">

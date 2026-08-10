@@ -51,11 +51,30 @@ final class PurchaseReports
          */
         $cancelled = DocumentStatus::CANCELLED;
 
-        $received = "(select COALESCE(SUM(rl2.received_qty), 0)
+        /*
+         * "এসেছে" মানে দুইটা পথের যোগফল।
+         *
+         * ── কেন দুইটা ─────────────────────────────────────────────────
+         * আগে কেবল মাল গ্রহণের কাগজ (GRN) গোনা হত। কিন্তু আদেশ থেকে
+         * সরাসরি বিলও করা যায় — যে ডিপো GRN লেখে না তার একমাত্র পথ
+         * ওটাই, আর তখন মাল বিল নিশ্চিত করার সময়েই গুদামে ঢোকে।
+         *
+         * শুধু GRN গুনলে ওই আদেশগুলো বিল হয়ে যাওয়ার পরেও "অপেক্ষমাণ"
+         * তালিকায় বসে থাকত, আর কেউ বুঝত না মালটা এসে গেছে কি না। ভুল
+         * সংখ্যা, অথচ পর্দা ঠিক দেখায় — সবচেয়ে খারাপ ধরনের ভুল।
+         *
+         * বাতিল দুই দিকেই বাদ: বাতিল কাগজের মাল আর আসবে না।
+         */
+        $received = "((select COALESCE(SUM(rl2.received_qty), 0)
                 from pur_receipt_lines rl2
                 join pur_receipts r2 on r2.id = rl2.purchase_receipt_id
                 where rl2.purchase_order_line_id = ol.id
-                  and r2.status <> '{$cancelled}')";
+                  and r2.status <> '{$cancelled}')
+            + (select COALESCE(SUM(bl2.qty), 0)
+                from pur_bill_lines bl2
+                join pur_bills b2 on b2.id = bl2.purchase_bill_id
+                where bl2.purchase_order_line_id = ol.id
+                  and b2.status <> '{$cancelled}'))";
 
         return new ReportDefinition(
             key: 'purchase.pending_orders',

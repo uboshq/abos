@@ -23,6 +23,7 @@ use App\Modules\Purchase\Services\PurchaseBillService;
 use App\Modules\Purchase\Services\PurchaseOrderService;
 use App\Modules\Purchase\Services\PurchaseReceiptService;
 use App\Modules\Supplier\Models\Supplier;
+use App\Modules\Supplier\Services\SupplierService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
@@ -650,5 +651,115 @@ class PurchaseTest extends TestCase
         $response->assertSee('sales_price', false);
         $response->assertSee(__('purchase::field.markup'), false);
         $response->assertSee(__('purchase::field.margin'), false);
+    }
+
+    // ── আদেশ থেকে সরাসরি বিল (চালান ছাড়া) ──────────────────────────────
+
+    /**
+     * আদেশ ধরে বিলের ফর্ম খুললে সারিগুলো ভরে আসে।
+     *
+     * এতদিন কেবল চালান ধরে খোলা যেত। যে ডিপো মাল গ্রহণের কাগজ লেখে না
+     * তার আদেশ বিলে পৌঁছাতই না — ঠিকানায় ?purchase_order_id= দিলে ফর্ম
+     * ফাঁকা আসত, আর পরীক্ষক সেটাকেই বাগ হিসেবে রিপোর্ট করেছিলেন।
+     */
+    public function test_the_bill_form_fills_from_an_order(): void
+    {
+        $order = $this->orders()->confirm($this->makeOrder('100', '50'));
+
+        $response = $this->get(route('purchase.bill.create', ['purchase_order_id' => $order->id]))
+            ->assertOk();
+
+        // সরবরাহকারী আদেশ থেকে বেছে নেওয়া
+        $response->assertSee('value="'.$this->supplier->id.'" selected', false);
+
+        // আর পরিমাণ ও দর আদেশের সারি থেকে
+        $this->assertStringContainsString('100', $response->getContent());
+        $this->assertStringContainsString(__('purchase::field.order'), $response->getContent());
+    }
+
+    /**
+     * আদেশের বিপরীতে বিল করলে মাল গুদামে ঢোকে।
+     *
+     * মাঝে কোনো গ্রহণের কাগজ নেই, তাই মালটা এই বিল নিশ্চিত করার সময়েই
+     * ঢুকতে হবে — নইলে গুদামে মাল আছে অথচ খাতায় নেই।
+     */
+    public function test_billing_an_order_brings_the_goods_in(): void
+    {
+        $order = $this->orders()->confirm($this->makeOrder('100', '50'));
+        $stock = app(StockService::class);
+        $before = $stock->availableQty($this->product, $this->warehouse);
+
+        $bill = $this->bills()->create(
+            ['supplier_id' => $this->supplier->id, 'trx_date' => now()->toDateString()],
+            [[
+                'product_id' => $this->product->id,
+                'qty' => '100',
+                'rate' => '50',
+                'purchase_order_line_id' => $order->lines->first()->id,
+            ]],
+        );
+
+        $this->bills()->confirm($bill);
+
+        $after = $stock->availableQty($this->product, $this->warehouse);
+        $this->assertSame(0, bccomp(bcsub($after, $before, 4), '100', 4));
+
+        // জোড়াটা সত্যিই লেখা হয়েছে — নইলে আদেশটা অপেক্ষমাণই থেকে যেত
+        $this->assertSame(
+            $order->lines->first()->id,
+            $bill->fresh(['lines'])->lines->first()->purchase_order_line_id,
+        );
+    }
+
+    /**
+     * বিল হয়ে গেলে আদেশটা আর "অপেক্ষমাণ" থাকে না।
+     *
+     * শুধু ফর্ম ভরালে এটা হত না: রিপোর্টটা কেবল চালানের পরিমাণ গুনত,
+     * তাই বিল হয়ে যাওয়ার পরেও আদেশ তালিকায় বসে থাকত।
+     */
+    public function test_an_order_billed_directly_leaves_the_pending_list(): void
+    {
+        $order = $this->orders()->confirm($this->makeOrder('100', '50'));
+
+        $pending = fn () => app(ReportEngine::class)
+            ->run('purchase.pending_orders', [
+                'from' => '2020-01-01',
+                'to' => '2030-12-31',
+            ])->totalRows;
+
+        $this->assertGreaterThan(0, $pending(), 'নতুন আদেশটা অপেক্ষমাণ তালিকায় থাকার কথা।');
+
+        $this->bills()->confirm($this->bills()->create(
+            ['supplier_id' => $this->supplier->id, 'trx_date' => now()->toDateString()],
+            [[
+                'product_id' => $this->product->id,
+                'qty' => '100',
+                'rate' => '50',
+                'purchase_order_line_id' => $order->lines->first()->id,
+            ]],
+        ));
+
+        $this->assertSame(0, $pending(), 'পুরো বিল হয়ে যাওয়ার পরেও আদেশটা অপেক্ষমাণ দেখাচ্ছে।');
+    }
+
+    /** অন্য সরবরাহকারীর আদেশের সারি এই বিলে বসানো যায় না। */
+    public function test_an_order_line_of_another_supplier_is_refused(): void
+    {
+        $order = $this->orders()->confirm($this->makeOrder('100', '50'));
+
+        $other = app(SupplierService::class)
+            ->create(['name_en' => 'Another House', 'opening_balance' => 0]);
+
+        $this->expectException(ValidationException::class);
+
+        $this->bills()->create(
+            ['supplier_id' => $other->id, 'trx_date' => now()->toDateString()],
+            [[
+                'product_id' => $this->product->id,
+                'qty' => '10',
+                'rate' => '50',
+                'purchase_order_line_id' => $order->lines->first()->id,
+            ]],
+        );
     }
 }

@@ -43,6 +43,14 @@ class PurchaseBillRequest extends FormRequest
             // চালানের লাইনটা এই কোম্পানির কি না তা সেবা স্তর দেখে —
             // সন্তান-টেবিলে company_id নেই, বাবার আছে
             'lines.*.purchase_receipt_line_id' => ['nullable', 'integer'],
+
+            /*
+             * চালান ছাড়া সরাসরি আদেশের বিপরীতে বিল।
+             *
+             * দুইটা জোড়া পরস্পর-বিকল্প, তাই দুইটাই ঐচ্ছিক — একটা সারি
+             * হয় চালান ধরে আসে, নয় আদেশ ধরে, নয় কোনোটাই।
+             */
+            'lines.*.purchase_order_line_id' => ['nullable', 'integer'],
             'lines.*.qty' => ['required', 'numeric', 'gt:0'],
             'lines.*.rate' => ['required', 'numeric', 'min:0'],
 

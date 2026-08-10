@@ -19,6 +19,7 @@ use App\Modules\Inventory\Services\CostLayerService;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Purchase\Models\PurchaseBillLine;
+use App\Modules\Purchase\Models\PurchaseOrderLine;
 use App\Modules\Purchase\Models\PurchaseReceiptLine;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -446,12 +447,24 @@ final class PurchaseBillService
 
             $receiptLine = $this->resolveReceiptLine($bill, $line['purchase_receipt_line_id'] ?? null, $productId, $qty);
 
+            /*
+             * চালান না থাকলে আদেশের সারির সাথে জোড়া।
+             *
+             * চালান থাকলে সেটাই জেতে — চালানই বেশি নির্দিষ্ট (কতটা
+             * সত্যিই এসেছে সে জানে), আর দুইটা জোড়া একসাথে থাকার কোনো
+             * অর্থ নেই।
+             */
+            $orderLine = $receiptLine === null
+                ? $this->resolveOrderLine($bill, $line['purchase_order_line_id'] ?? null, $productId)
+                : null;
+
             $figures = $this->lineFigures($qty, $rate, $line['discount'] ?? '0', $line['tax'] ?? '0');
 
             PurchaseBillLine::create([
                 'purchase_bill_id' => $bill->id,
                 'product_id' => $productId,
                 'purchase_receipt_line_id' => $receiptLine?->id,
+                'purchase_order_line_id' => $orderLine?->id,
                 'qty' => $qty,
                 'rate' => $rate,
 
@@ -548,6 +561,61 @@ final class PurchaseBillService
         }
 
         return $receiptLine;
+    }
+
+    /**
+     * আদেশের সারি — চালান ছাড়া সরাসরি বিল করার পথ।
+     *
+     * ── কেন এই পথটা আছে ─────────────────────────────────────────────
+     * ছোট ডিপো মাল গ্রহণের কাগজ লেখে না; গাড়ি আসে, মাল নামে, চালান হাতে।
+     * Control Panel-এ GRN-এর পর্দাটা বন্ধও করা যায় — আর তখন আদেশ থেকে
+     * বিলে পৌঁছানোর কোনো পথই থাকত না, আদেশটা চিরকাল ঝুলে থাকত।
+     *
+     * চালানের যাচাইগুলোর সবকটাই এখানেও, একটা বাদে: "কতটা এসেছে তার
+     * বেশি বিল নয়" — আদেশে মাল তো এখনো আসেইনি, তাই ওখানে মাপকাঠি
+     * আদেশের পরিমাণ, প্রাপ্তির নয়।
+     */
+    private function resolveOrderLine(
+        PurchaseBill $bill,
+        mixed $orderLineId,
+        int $productId,
+    ): ?PurchaseOrderLine {
+        if (blank($orderLineId)) {
+            return null;
+        }
+
+        $orderLine = PurchaseOrderLine::query()
+            ->with('order')
+            ->whereKey((int) $orderLineId)
+            ->first();
+
+        if ($orderLine === null || $orderLine->order === null) {
+            throw ValidationException::withMessages(['lines' => __('purchase::validation.unknown_order_line')]);
+        }
+
+        // অন্য কোম্পানির আদেশের id পাঠিয়ে দেওয়া আটকায় — গ্লোবাল স্কোপ
+        // সন্তান-টেবিলে নেই, বাবার উপর আছে
+        if ((int) $orderLine->order->company_id !== (int) CompanyContext::id()) {
+            throw ValidationException::withMessages(['lines' => __('purchase::validation.unknown_order_line')]);
+        }
+
+        if ((int) $orderLine->order->supplier_id !== (int) $bill->supplier_id) {
+            throw ValidationException::withMessages(['lines' => __('purchase::validation.order_other_supplier')]);
+        }
+
+        if ($orderLine->order->status !== DocumentStatus::CONFIRMED) {
+            throw ValidationException::withMessages([
+                'lines' => __('purchase::validation.order_not_confirmed', [
+                    'no' => $orderLine->order->document_no,
+                ]),
+            ]);
+        }
+
+        if ((int) $orderLine->product_id !== $productId) {
+            throw ValidationException::withMessages(['lines' => __('purchase::validation.line_product_mismatch')]);
+        }
+
+        return $orderLine;
     }
 
     /**

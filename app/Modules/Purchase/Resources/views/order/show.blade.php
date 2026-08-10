@@ -28,6 +28,24 @@
                             {{ __('purchase::action.receive_against') }}
                         </x-ui.button>
                     @endcan
+
+                    {{--
+                        চালান ছাড়াই সরাসরি বিল।
+
+                        ছোট ডিপো মাল গ্রহণের কাগজ লেখে না — গাড়ি আসে, মাল
+                        নামে, চালান হাতে। এতদিন এই পথটা ছিল না, তাই আদেশ
+                        তৈরি হয়ে ঝুলে থাকত; আর Control Panel-এ GRN-এর
+                        পর্দাটা বন্ধ করলে তো উপায়ই থাকত না।
+
+                        মালটা তখন এই বিল নিশ্চিত করার সময়েই গুদামে ঢোকে,
+                        কারণ মাঝে কোনো গ্রহণের কাগজ নেই।
+                    --}}
+                    @can('create', \App\Modules\Purchase\Models\PurchaseBill::class)
+                        <x-ui.button tone="secondary"
+                                     :href="route('purchase.bill.create', ['purchase_order_id' => $order->id])">
+                            {{ __('purchase::action.bill_against_order') }}
+                        </x-ui.button>
+                    @endcan
                 @endif
             </x-slot:actions>
         </x-ui.page-header>
