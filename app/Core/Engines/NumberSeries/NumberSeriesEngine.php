@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Engines\NumberSeries;
 
+use App\Core\Services\NumberSeriesProvisioner;
 use App\Core\Support\CompanyContext;
 use App\Models\Branch;
 use App\Models\FinancialYear;
@@ -27,6 +28,10 @@ use RuntimeException;
  */
 final class NumberSeriesEngine
 {
+    public function __construct(
+        private readonly NumberSeriesProvisioner $provisioner,
+    ) {}
+
     /**
      * শাখা ও অর্থবছরের নাম — একবার দেখে মনে রাখা, প্রতি সারিতে নয়।
      *
@@ -170,6 +175,39 @@ final class NumberSeriesEngine
 
             if ($series !== null) {
                 return $series;
+            }
+        }
+
+        /*
+         * ধরনটা ঘোষিত অথচ সিরিজ নেই — নিজে বসিয়ে নাও।
+         *
+         * ── কেন এটা লাগল ───────────────────────────────────────────────
+         * সিরিজগুলো বসে কোম্পানি তৈরির সময়, ওই মুহূর্তে যত ডকুমেন্ট টাইপ
+         * ঘোষিত ছিল তত। কিন্তু নতুন ফিচার নতুন টাইপ আনে — ঋণ এল 'LN'
+         * নিয়ে। যে কোম্পানিগুলো তার আগে তৈরি, তাদের জন্য 'LN'-এর কোনো
+         * সিরিজ কখনোই বসত না, আর প্রথম ঋণ সেভ করতে গেলেই এই ব্যতিক্রম
+         * উঠত — পর্দায় সোজা ৫০০। পরীক্ষক ঠিক তা-ই পেয়েছেন।
+         *
+         * ব্যবহারকারীর দিক থেকে এটা অর্থহীন: তিনি "মাস্টার ডাটা → নম্বর
+         * সিরিজ"-এ গিয়ে কী বসাবেন, যখন ফিচারটা কালই যোগ হয়েছে? তাঁর
+         * কোনো ভুল নেই, শুধু কোম্পানিটা পুরনো।
+         *
+         * তাই ঘোষিত ধরনের জন্য সিরিজটা এখানেই তৈরি হয় — একই ছক, একই
+         * উপসর্গ, যা কোম্পানি তৈরির সময় হত। অঘোষিত ধরন এখনো ব্যতিক্রম
+         * ছোড়ে: 'PBL' লিখতে গিয়ে 'PLB' লিখলে সেটা নীরবে একটা নতুন সিরিজ
+         * বানিয়ে ফেলা সবচেয়ে খারাপ ফল হত।
+         */
+        if ($this->provisioner->knows($docType)) {
+            $this->provisioner->provision(
+                $financialYearId === null ? null : FinancialYear::query()->find($financialYearId),
+            );
+
+            $series = $this->findSeries($companyId, $docType, null, $financialYearId);
+
+            if ($series !== null) {
+                // সদ্য তৈরি সারিটা লক করে ফেরত — নইলে দুইটা অনুরোধ একই
+                // নম্বর পেত
+                return NumberSeries::query()->whereKey($series->id)->lockForUpdate()->firstOrFail();
             }
         }
 
