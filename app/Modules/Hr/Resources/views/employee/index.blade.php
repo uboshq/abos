@@ -4,6 +4,23 @@
     ছেড়ে যাওয়া কর্মীরা ডিফল্টে নেই, কিন্তু মোছাও হয়নি — চেকবক্সে
     দেখা যায়। পুরনো বেতনশিটে নামটা লাগে, তাই মোছার কোনো পথ নেই।
 --}}
+@php
+    $columns = [
+        ['key' => 'code', 'label' => __('hr::field.code'), 'width' => '8rem',
+         'render' => fn ($e) => view('hr::employee.partials.code', ['employee' => $e])],
+        ['key' => 'name_en', 'label' => __('hr::field.name'),
+         'render' => fn ($e) => view('hr::employee.partials.name', ['employee' => $e])],
+        ['key' => 'department', 'label' => __('hr::field.department'), 'width' => '12rem',
+         'render' => fn ($e) => $e->department?->name() ?? '—'],
+        ['key' => 'designation', 'label' => __('hr::field.designation'), 'width' => '12rem',
+         'render' => fn ($e) => $e->designation?->name() ?? '—'],
+        ['key' => 'mobile', 'label' => __('hr::field.mobile'), 'width' => '10rem',
+         'render' => fn ($e) => $e->mobile ?? '—'],
+        ['key' => 'joining_date', 'label' => __('hr::field.joining_date'), 'width' => '10rem',
+         'render' => fn ($e) => $e->joining_date?->format('d M Y') ?? '—'],
+    ];
+@endphp
+
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('hr::menu.employees') }}</x-slot:title>
 
@@ -31,7 +48,8 @@
 
     <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
-            <x-ui.toolbar :sort="$sortOptions"
+            <x-ui.toolbar
+                :columns="$columns" :sort="$sortOptions"
                           :search-placeholder="__('hr::field.name')">
                 <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
                     <input type="checkbox" name="left" value="1" @checked($showLeft) class="size-4">
@@ -43,20 +61,7 @@
         <x-ui.table
             :empty="$q ? __('core.empty.no_results') : __('hr::message.no_employees')"
             :rows="$employees"
-            :columns="[
-                ['key' => 'code', 'label' => __('hr::field.code'), 'width' => '8rem',
-                 'render' => fn ($e) => view('hr::employee.partials.code', ['employee' => $e])],
-                ['key' => 'name_en', 'label' => __('hr::field.name'),
-                 'render' => fn ($e) => view('hr::employee.partials.name', ['employee' => $e])],
-                ['key' => 'department', 'label' => __('hr::field.department'), 'width' => '12rem',
-                 'render' => fn ($e) => $e->department?->name() ?? '—'],
-                ['key' => 'designation', 'label' => __('hr::field.designation'), 'width' => '12rem',
-                 'render' => fn ($e) => $e->designation?->name() ?? '—'],
-                ['key' => 'mobile', 'label' => __('hr::field.mobile'), 'width' => '10rem',
-                 'render' => fn ($e) => $e->mobile ?? '—'],
-                ['key' => 'joining_date', 'label' => __('hr::field.joining_date'), 'width' => '10rem',
-                 'render' => fn ($e) => $e->joining_date?->format('d M Y') ?? '—'],
-            ]" />
+            :columns="$columns" />
     </div>
 
     <div class="mt-4">{{ $employees->links() }}</div>

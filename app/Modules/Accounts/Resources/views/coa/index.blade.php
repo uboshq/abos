@@ -8,6 +8,26 @@
     খোঁজার সময় গাছটা সরে গিয়ে সমতল ফল আসে — কেউ "ভাড়া" লিখলে সে ওই
     খাতটা চায়, তার পূর্বপুরুষদের নয়। পথটা প্রতিটা সারিতেই লেখা থাকে।
 --}}
+@php
+    $columns = [
+                    ['key' => 'code', 'label' => __('accounts::field.code'), 'width' => '8rem',
+                     'render' => fn ($a) => view('accounts::coa.partials.code', ['account' => $a])],
+                    ['key' => 'name_en', 'label' => __('accounts::field.name'),
+                     'render' => fn ($a) => view('accounts::coa.partials.name-with-path', ['account' => $a])],
+                    ['key' => 'type', 'label' => __('accounts::field.type'), 'width' => '8rem',
+                     'render' => fn ($a) => __('accounts::type.' . $a->type)],
+                    ['key' => 'balance', 'label' => __('accounts::field.balance'), 'numeric' => true,
+                     'width' => '10rem',
+                     // অঙ্কটাই লিংক — নিয়ম ১
+                     'render' => fn ($a) => $a->is_group ? '' : view('ui.amount-link', [
+                         'value' => $balances[$a->id] ?? 0,
+                         'href' => route('accounts.coa.show', $a),
+                     ])],
+                    ['key' => 'is_active', 'label' => __('accounts::field.state'), 'width' => '7rem',
+                     'render' => fn ($a) => view('accounts::coa.partials.state', ['account' => $a])],
+                ];
+@endphp
+
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('accounts::menu.chart_of_accounts') }}</x-slot:title>
 
@@ -68,7 +88,8 @@
         <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">
             <form method="GET" class="contents">
-                <x-ui.toolbar>
+                <x-ui.toolbar
+                :columns="$columns">
                     <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
                         <input type="checkbox" name="inactive" value="1" @checked($showInactive) class="size-4">
                         {{ __('accounts::action.show_inactive') }}
@@ -92,23 +113,7 @@
             :compact="request()->boolean('compact')"
                         :empty="__('core.empty.no_results')"
                         :rows="$results"
-                        :columns="[
-                            ['key' => 'code', 'label' => __('accounts::field.code'), 'width' => '8rem',
-                             'render' => fn ($a) => view('accounts::coa.partials.code', ['account' => $a])],
-                            ['key' => 'name_en', 'label' => __('accounts::field.name'),
-                             'render' => fn ($a) => view('accounts::coa.partials.name-with-path', ['account' => $a])],
-                            ['key' => 'type', 'label' => __('accounts::field.type'), 'width' => '8rem',
-                             'render' => fn ($a) => __('accounts::type.' . $a->type)],
-                            ['key' => 'balance', 'label' => __('accounts::field.balance'), 'numeric' => true,
-                             'width' => '10rem',
-                             // অঙ্কটাই লিংক — নিয়ম ১
-                             'render' => fn ($a) => $a->is_group ? '' : view('ui.amount-link', [
-                                 'value' => $balances[$a->id] ?? 0,
-                                 'href' => route('accounts.coa.show', $a),
-                             ])],
-                            ['key' => 'is_active', 'label' => __('accounts::field.state'), 'width' => '7rem',
-                             'render' => fn ($a) => view('accounts::coa.partials.state', ['account' => $a])],
-                        ]" />
+                        :columns="$columns" />
                 @endif
             @elseif (! $tooManyToShow)
                 <div class="overflow-x-auto">

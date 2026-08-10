@@ -6,6 +6,21 @@
     তালিকাতেই মেলে — আর সেটাই উদ্দেশ্য: প্রতিবার ভেতরে ঢুকতে হলে কেউ
     অডিট দেখতই না।
 --}}
+@php
+    $columns = [
+        ['key' => 'created_at', 'label' => __('governance::field.when'), 'width' => '12rem',
+         'render' => fn ($t) => $t->created_at->format('d M Y, H:i')],
+        ['key' => 'user', 'label' => __('governance::field.who'), 'width' => '11rem',
+         'render' => fn ($t) => $t->user?->name ?? __('governance::message.system')],
+        ['key' => 'action', 'label' => __('governance::field.action'), 'width' => '8rem',
+         'render' => fn ($t) => __('governance::action.' . $t->action)],
+        ['key' => 'record', 'label' => __('governance::field.record'),
+         'render' => fn ($t) => view('governance::audit.partials.record', ['trail' => $t])],
+        ['key' => 'changes', 'label' => __('governance::field.changes'),
+         'render' => fn ($t) => view('governance::audit.partials.summary', ['trail' => $t])],
+    ];
+@endphp
+
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('governance::menu.audit_trail') }}</x-slot:title>
 
@@ -33,7 +48,8 @@
             প্যানেলে; খোঁজার ঘরটা টুলবারের নিজের।
         --}}
         <form method="GET" class="contents">
-            <x-ui.toolbar :search-placeholder="__('governance::label.search_hint')">
+            <x-ui.toolbar
+                :columns="$columns" :search-placeholder="__('governance::label.search_hint')">
                 <select name="user" aria-label="{{ __('governance::field.who') }}"
                         class="h-9 rounded-(--radius-field) border border-(--color-border)
                                bg-(--color-surface-app) px-2 text-sm">
@@ -83,18 +99,7 @@
             :compact="request()->boolean('compact')"
             :empty="array_filter($filters) ? __('governance::message.none') : __('governance::message.nothing_yet')"
             :rows="$trails"
-            :columns="[
-                ['key' => 'created_at', 'label' => __('governance::field.when'), 'width' => '12rem',
-                 'render' => fn ($t) => $t->created_at->format('d M Y, H:i')],
-                ['key' => 'user', 'label' => __('governance::field.who'), 'width' => '11rem',
-                 'render' => fn ($t) => $t->user?->name ?? __('governance::message.system')],
-                ['key' => 'action', 'label' => __('governance::field.action'), 'width' => '8rem',
-                 'render' => fn ($t) => __('governance::action.' . $t->action)],
-                ['key' => 'record', 'label' => __('governance::field.record'),
-                 'render' => fn ($t) => view('governance::audit.partials.record', ['trail' => $t])],
-                ['key' => 'changes', 'label' => __('governance::field.changes'),
-                 'render' => fn ($t) => view('governance::audit.partials.summary', ['trail' => $t])],
-            ]" />
+            :columns="$columns" />
 
         @if ($trails->hasPages())
             <div class="border-t border-(--color-border) px-3 py-2">{{ $trails->links() }}</div>

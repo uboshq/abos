@@ -7,6 +7,19 @@
     চালু স্তরগুলো শিরোনামের নিচে দেখানো হয়, কারণ অঞ্চল ও টেরিটরি বন্ধ
     থাকলে ব্যবহারকারী বুঝবে না কেন তার এরিয়ার বাবা সরাসরি বিভাগ।
 --}}
+@php
+    $columns = [
+                ['key' => 'code', 'label' => __('master_data::field.code'), 'width' => '9rem',
+                 'render' => fn ($l) => view('master_data::location.partials.code', ['location' => $l])],
+                ['key' => 'name_en', 'label' => __('master_data::field.path'),
+                 'render' => fn ($l) => $l->path()],
+                ['key' => 'level', 'label' => __('master_data::field.level'), 'width' => '9rem',
+                 'render' => fn ($l) => __('master_data::level.' . $l->level)],
+                ['key' => 'assigned_to', 'label' => __('master_data::field.assigned_to'), 'width' => '11rem',
+                 'render' => fn ($l) => $l->assignee?->name ?? '—'],
+            ];
+@endphp
+
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('master_data::menu.locations') }}</x-slot:title>
 
@@ -76,7 +89,8 @@
         <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">
             <form method="GET" class="contents">
-                <x-ui.toolbar>
+                <x-ui.toolbar
+                :columns="$columns">
                     <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
                         <input type="checkbox" name="inactive" value="1" @checked($showInactive) class="size-4">
                         {{ __('master_data::action.show_inactive') }}
@@ -95,16 +109,7 @@
             :compact="request()->boolean('compact')"
                     :empty="__('core.empty.no_results')"
                     :rows="$results"
-                    :columns="[
-                        ['key' => 'code', 'label' => __('master_data::field.code'), 'width' => '9rem',
-                         'render' => fn ($l) => view('master_data::location.partials.code', ['location' => $l])],
-                        ['key' => 'name_en', 'label' => __('master_data::field.path'),
-                         'render' => fn ($l) => $l->path()],
-                        ['key' => 'level', 'label' => __('master_data::field.level'), 'width' => '9rem',
-                         'render' => fn ($l) => __('master_data::level.' . $l->level)],
-                        ['key' => 'assigned_to', 'label' => __('master_data::field.assigned_to'), 'width' => '11rem',
-                         'render' => fn ($l) => $l->assignee?->name ?? '—'],
-                    ]" />
+                    :columns="$columns" />
             @elseif (! $tooManyToShow)
                 <div class="overflow-x-auto">
                     <table class="w-full border-collapse text-sm">

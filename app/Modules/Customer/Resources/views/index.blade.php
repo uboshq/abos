@@ -6,6 +6,69 @@
     সেটাই হয়েছিল — ঘরের ভেতর লিংক বসাতে HtmlString হাতে বানাতে হচ্ছিল।
     সমাধান স্ক্রিনে নয়, কম্পোনেন্টে: কলাম এখন নিজের render দিতে পারে।
 --}}
+@php
+    $columns = [
+        [
+            'key' => 'sl',
+            'label' => __('core.table.serial'),
+            'width' => '4rem',
+            'numeric' => true,
+            'render' => fn ($c, $i) => $customers->firstItem() + $i,
+        ],
+        [
+            'key' => 'name_en',
+            'label' => __('customer::field.name'),
+            // স্পষ্ট প্রস্থ, নাহলে বাংলা নাম কয়েক লাইনে ভাঙে —
+            // বাকি কলামগুলোর নির্দিষ্ট প্রস্থের পর যা থাকে তাতেই
+            // নামটা চাপা পড়ে যায়
+            'width' => '18rem',
+            'render' => fn ($c) => view('customer::partials.code-link', ['customer' => $c]),
+        ],
+        [
+            'key' => 'point',
+            'label' => __('customer::field.point'),
+            'width' => '9rem',
+            'render' => fn ($c) => $c->location?->name() ?? '—',
+        ],
+        [
+            'key' => 'area',
+            'label' => __('customer::field.area'),
+            'width' => '9rem',
+            'render' => fn ($c) => $c->area()?->name() ?? '—',
+        ],
+        [
+            'key' => 'owner_name',
+            'label' => __('customer::field.owner_name'),
+            'width' => '11rem',
+            'render' => fn ($c) => $c->owner_name ?: '—',
+        ],
+        ['key' => 'phone', 'label' => __('customer::field.phone'), 'width' => '9rem'],
+        [
+            'key' => 'outstanding',
+            'label' => __('customer::field.outstanding'),
+            'numeric' => true,
+            'width' => '10rem',
+            // অঙ্কটাই লিংক — নিয়ম ১
+            'render' => fn ($c) => view('ui.amount-link', [
+                'value' => $c->outstanding(),
+                'href' => route('customer.show', $c),
+            ]),
+        ],
+        [
+            'key' => 'is_active',
+            'label' => __('customer::field.state'),
+            'width' => '7rem',
+            'render' => fn ($c) => view('customer::partials.state-badge', ['customer' => $c]),
+        ],
+        [
+            'key' => 'actions',
+            'label' => __('core.table.actions'),
+            'width' => '8rem',
+            'render' => fn ($c) => view('customer::partials.row-actions', ['customer' => $c]),
+        ],
+    ];
+@endphp
+
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('customer::menu.customers') }}</x-slot:title>
 
@@ -34,6 +97,7 @@
     <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
             <x-ui.toolbar
+                :columns="$columns"
                 :search-placeholder="__('customer::message.search_placeholder')"
                 :sort="$sortOptions"
                 view>
@@ -64,66 +128,7 @@
                 তিন নম্বর পাতায় আবার ১ থেকে শুরু হলে "১৪ নম্বরটা দেখুন"
                 বলা যেত না।
             --}}
-            :columns="[
-                [
-                    'key' => 'sl',
-                    'label' => __('core.table.serial'),
-                    'width' => '4rem',
-                    'numeric' => true,
-                    'render' => fn ($c, $i) => $customers->firstItem() + $i,
-                ],
-                [
-                    'key' => 'name_en',
-                    'label' => __('customer::field.name'),
-                    // স্পষ্ট প্রস্থ, নাহলে বাংলা নাম কয়েক লাইনে ভাঙে —
-                    // বাকি কলামগুলোর নির্দিষ্ট প্রস্থের পর যা থাকে তাতেই
-                    // নামটা চাপা পড়ে যায়
-                    'width' => '18rem',
-                    'render' => fn ($c) => view('customer::partials.code-link', ['customer' => $c]),
-                ],
-                [
-                    'key' => 'point',
-                    'label' => __('customer::field.point'),
-                    'width' => '9rem',
-                    'render' => fn ($c) => $c->location?->name() ?? '—',
-                ],
-                [
-                    'key' => 'area',
-                    'label' => __('customer::field.area'),
-                    'width' => '9rem',
-                    'render' => fn ($c) => $c->area()?->name() ?? '—',
-                ],
-                [
-                    'key' => 'owner_name',
-                    'label' => __('customer::field.owner_name'),
-                    'width' => '11rem',
-                    'render' => fn ($c) => $c->owner_name ?: '—',
-                ],
-                ['key' => 'phone', 'label' => __('customer::field.phone'), 'width' => '9rem'],
-                [
-                    'key' => 'outstanding',
-                    'label' => __('customer::field.outstanding'),
-                    'numeric' => true,
-                    'width' => '10rem',
-                    // অঙ্কটাই লিংক — নিয়ম ১
-                    'render' => fn ($c) => view('ui.amount-link', [
-                        'value' => $c->outstanding(),
-                        'href' => route('customer.show', $c),
-                    ]),
-                ],
-                [
-                    'key' => 'is_active',
-                    'label' => __('customer::field.state'),
-                    'width' => '7rem',
-                    'render' => fn ($c) => view('customer::partials.state-badge', ['customer' => $c]),
-                ],
-                [
-                    'key' => 'actions',
-                    'label' => __('core.table.actions'),
-                    'width' => '8rem',
-                    'render' => fn ($c) => view('customer::partials.row-actions', ['customer' => $c]),
-                ],
-            ]" />
+            :columns="$columns" />
 
         @if ($customers->hasPages())
             <div class="border-t border-(--color-border) px-3 py-2">

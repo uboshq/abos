@@ -8,6 +8,38 @@
     ব্যালেন্স আসে লেজার থেকে, কাউন্টারের নিজের কোনো কলাম থেকে নয় —
     দুই জায়গায় একই সংখ্যা রাখলে একদিন সেগুলো আলাদা হত।
 --}}
+@php
+    $columns = [
+        [
+            'key' => 'code',
+            'label' => __('accounts::field.code'),
+            'width' => '9rem',
+            'render' => fn ($t) => view('accounts::till.partials.code', ['till' => $t]),
+        ],
+        [
+            'key' => 'name_en',
+            'label' => __('accounts::field.name'),
+            'render' => fn ($t) => view('accounts::till.partials.name', ['till' => $t]),
+        ],
+        [
+            'key' => 'holder_id',
+            'label' => __('accounts::field.holder'),
+            'width' => '12rem',
+            'render' => fn ($t) => $t->holder?->name ?? '—',
+        ],
+        [
+            'key' => 'balance',
+            'label' => __('accounts::field.in_hand'),
+            'numeric' => true,
+            'width' => '11rem',
+            'render' => fn ($t) => view('accounts::till.partials.balance', [
+                'till' => $t,
+                'balance' => $balances[$t->id] ?? '0',
+            ]),
+        ],
+    ];
+@endphp
+
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('accounts::menu.cash_tills') }}</x-slot:title>
 
@@ -47,7 +79,9 @@
 
     <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
-            <x-ui.toolbar>
+            <x-ui.toolbar
+                :sort="$sortOptions"
+                :columns="$columns">
                 <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
                     <input type="checkbox" name="inactive" value="1" @checked($showInactive) class="size-4">
                     {{ __('accounts::action.show_closed') }}
@@ -59,34 +93,6 @@
             :compact="request()->boolean('compact')"
             :empty="$q ? __('core.empty.no_results') : __('accounts::message.no_tills')"
             :rows="$tills"
-            :columns="[
-                [
-                    'key' => 'code',
-                    'label' => __('accounts::field.code'),
-                    'width' => '9rem',
-                    'render' => fn ($t) => view('accounts::till.partials.code', ['till' => $t]),
-                ],
-                [
-                    'key' => 'name_en',
-                    'label' => __('accounts::field.name'),
-                    'render' => fn ($t) => view('accounts::till.partials.name', ['till' => $t]),
-                ],
-                [
-                    'key' => 'holder_id',
-                    'label' => __('accounts::field.holder'),
-                    'width' => '12rem',
-                    'render' => fn ($t) => $t->holder?->name ?? '—',
-                ],
-                [
-                    'key' => 'balance',
-                    'label' => __('accounts::field.in_hand'),
-                    'numeric' => true,
-                    'width' => '11rem',
-                    'render' => fn ($t) => view('accounts::till.partials.balance', [
-                        'till' => $t,
-                        'balance' => $balances[$t->id] ?? '0',
-                    ]),
-                ],
-            ]" />
+            :columns="$columns" />
     </div>
 </x-layouts.app>

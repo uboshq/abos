@@ -31,6 +31,63 @@
     পাতায় কাঁচা লেখা হয়ে ছাপা হয়। এই ভুলটা এই বিল্ডে দুইবার হয়েছে।
 --}}
 
+@php
+    $columns = [
+        [
+            'key' => 'code',
+            'label' => __('inventory::field.product'),
+            'width' => '22rem',
+            'render' => fn ($p) => view('inventory::partials.product-link', ['product' => $p]),
+        ],
+        [
+            'key' => 'unit_id',
+            'label' => __('inventory::field.unit'),
+            'width' => '6rem',
+            'render' => fn ($p) => $p->unit?->name(),
+        ],
+        [
+            'key' => 'floor',
+            'label' => __('inventory::field.floor'),
+            'numeric' => true,
+            'width' => '8rem',
+            'render' => fn ($p) => view('ui.amount-link', [
+                'value' => $p->floor_total,
+                'href' => route('inventory.product.show', $p).'#movements',
+            ]),
+        ],
+        [
+            'key' => 'reserved',
+            'label' => __('inventory::field.reserved'),
+            'numeric' => true,
+            'width' => '8rem',
+            'render' => fn ($p) => view('ui.amount-link', [
+                'value' => $p->reserved_total,
+                'href' => route('inventory.product.show', $p).'#movements',
+            ]),
+        ],
+        [
+            'key' => 'hold',
+            'label' => __('inventory::field.hold'),
+            'numeric' => true,
+            'width' => '8rem',
+            'render' => fn ($p) => view('ui.amount-link', [
+                'value' => $p->hold_total,
+                'href' => route('inventory.report.show', 'inventory.hold'),
+            ]),
+        ],
+        [
+            'key' => 'available',
+            'label' => __('inventory::field.available'),
+            'numeric' => true,
+            'width' => '9rem',
+            'render' => fn ($p) => view('ui.amount-link', [
+                'value' => $available($p),
+                'href' => route('inventory.product.show', $p).'#movements',
+            ]),
+        ],
+    ];
+@endphp
+
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('inventory::menu.stock') }}</x-slot:title>
 
@@ -57,7 +114,8 @@
 
     <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
-            <x-ui.toolbar :search-placeholder="__('inventory::message.search_placeholder')"
+            <x-ui.toolbar
+                :columns="$columns" :search-placeholder="__('inventory::message.search_placeholder')"
                           :sort="$sortOptions">
                 <label class="flex items-center gap-2 text-sm">
                     <span class="sr-only">{{ __('inventory::field.warehouse') }}</span>
@@ -77,60 +135,7 @@
             :empty="$q ? __('core.empty.no_results') : __('inventory::message.none_yet')"
             :rows="$products"
             :compact="request()->boolean('compact')"
-            :columns="[
-                [
-                    'key' => 'code',
-                    'label' => __('inventory::field.product'),
-                    'width' => '22rem',
-                    'render' => fn ($p) => view('inventory::partials.product-link', ['product' => $p]),
-                ],
-                [
-                    'key' => 'unit_id',
-                    'label' => __('inventory::field.unit'),
-                    'width' => '6rem',
-                    'render' => fn ($p) => $p->unit?->name(),
-                ],
-                [
-                    'key' => 'floor',
-                    'label' => __('inventory::field.floor'),
-                    'numeric' => true,
-                    'width' => '8rem',
-                    'render' => fn ($p) => view('ui.amount-link', [
-                        'value' => $p->floor_total,
-                        'href' => route('inventory.product.show', $p).'#movements',
-                    ]),
-                ],
-                [
-                    'key' => 'reserved',
-                    'label' => __('inventory::field.reserved'),
-                    'numeric' => true,
-                    'width' => '8rem',
-                    'render' => fn ($p) => view('ui.amount-link', [
-                        'value' => $p->reserved_total,
-                        'href' => route('inventory.product.show', $p).'#movements',
-                    ]),
-                ],
-                [
-                    'key' => 'hold',
-                    'label' => __('inventory::field.hold'),
-                    'numeric' => true,
-                    'width' => '8rem',
-                    'render' => fn ($p) => view('ui.amount-link', [
-                        'value' => $p->hold_total,
-                        'href' => route('inventory.report.show', 'inventory.hold'),
-                    ]),
-                ],
-                [
-                    'key' => 'available',
-                    'label' => __('inventory::field.available'),
-                    'numeric' => true,
-                    'width' => '9rem',
-                    'render' => fn ($p) => view('ui.amount-link', [
-                        'value' => $available($p),
-                        'href' => route('inventory.product.show', $p).'#movements',
-                    ]),
-                ],
-            ]" />
+            :columns="$columns" />
 
         @if ($products->hasPages())
             <div class="border-t border-(--color-border) px-3 py-2">{{ $products->links() }}</div>

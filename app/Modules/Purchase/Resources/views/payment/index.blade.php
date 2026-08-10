@@ -4,6 +4,24 @@
     এখানে লোকে আসে "আজ কাকে কত দিলাম" দেখতে, তাই তারিখই প্রথম কলাম আর
     সাম্প্রতিকটাই ডিফল্ট বাছাই।
 --}}
+@php
+    $columns = [
+        ['key' => 'trx_date', 'label' => __('purchase::field.date'), 'width' => '7rem',
+         'render' => fn ($p) => \App\Core\Support\DateFormat::format($p->trx_date)],
+        ['key' => 'document_no', 'label' => __('core.print.document_no'), 'width' => '13rem',
+         'render' => fn ($p) => view('purchase::components.doc-link', [
+             'document' => $p, 'route' => 'purchase.payment.show'])],
+        ['key' => 'supplier', 'label' => __('purchase::field.supplier'),
+         'render' => fn ($p) => $p->supplier?->name()],
+        ['key' => 'account', 'label' => __('purchase::field.account'), 'width' => '11rem',
+         'render' => fn ($p) => $p->account?->name()],
+        ['key' => 'amount', 'label' => __('purchase::field.amount'), 'numeric' => true, 'width' => '10rem',
+         'render' => fn ($p) => number_format((float) $p->amount, 2)],
+        ['key' => 'status', 'label' => __('purchase::field.state'), 'width' => '8rem',
+         'render' => fn ($p) => view('purchase::components.status-badge', ['document' => $p])],
+    ];
+@endphp
+
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('purchase::menu.payments') }}</x-slot:title>
 
@@ -31,7 +49,8 @@
 
     <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
-            <x-ui.toolbar :search-placeholder="__('purchase::message.payment_search')"
+            <x-ui.toolbar
+                :columns="$columns" :search-placeholder="__('purchase::message.payment_search')"
                           :sort="$sortOptions">
                 <x-ui.date-range :dates="$dates" />
 
@@ -46,21 +65,7 @@
             :empty="$q ? __('core.empty.no_results') : __('purchase::message.no_payments')"
             :rows="$payments"
             :compact="request()->boolean('compact')"
-            :columns="[
-                ['key' => 'trx_date', 'label' => __('purchase::field.date'), 'width' => '7rem',
-                 'render' => fn ($p) => \App\Core\Support\DateFormat::format($p->trx_date)],
-                ['key' => 'document_no', 'label' => __('core.print.document_no'), 'width' => '13rem',
-                 'render' => fn ($p) => view('purchase::components.doc-link', [
-                     'document' => $p, 'route' => 'purchase.payment.show'])],
-                ['key' => 'supplier', 'label' => __('purchase::field.supplier'),
-                 'render' => fn ($p) => $p->supplier?->name()],
-                ['key' => 'account', 'label' => __('purchase::field.account'), 'width' => '11rem',
-                 'render' => fn ($p) => $p->account?->name()],
-                ['key' => 'amount', 'label' => __('purchase::field.amount'), 'numeric' => true, 'width' => '10rem',
-                 'render' => fn ($p) => number_format((float) $p->amount, 2)],
-                ['key' => 'status', 'label' => __('purchase::field.state'), 'width' => '8rem',
-                 'render' => fn ($p) => view('purchase::components.status-badge', ['document' => $p])],
-            ]" />
+            :columns="$columns" />
 
         @if ($payments->hasPages())
             <div class="border-t border-(--color-border) px-3 py-2">{{ $payments->links() }}</div>
