@@ -128,7 +128,20 @@
                     </ul>
                 </div>
 
-                <template x-if="picked">
+                {{-- x-show, x-if নয়।
+
+                     x-if ভেতরের অংশটা DOM থেকে সরিয়ে-এনে বসায়, আর ওই
+                     ক্লোন করা অংশ থেকে বাইরের x-ref দেখা যায় না — তাই
+                     addToCart()-এ $refs.search অনির্ধারিত ছিল, আর
+                     "Cannot read properties of undefined (reading 'focus')"
+                     এররে Alpine ওখানেই থেমে যেত। থেমে যাওয়া মানে কার্টের
+                     সারিগুলোর ::name বাঁধা হত না, ফলে সাবমিটে lines ফাঁকা
+                     যেত আর সার্ভার "The lines field is required" বলত —
+                     কার্ট চোখের সামনে ঠিক দেখালেও।
+
+                     সরাসরি বিক্রয়ের পর্দা শুরু থেকেই x-show ব্যবহার করে;
+                     এটাও তা-ই করে। --}}
+                <div x-show="picked" x-cloak>
                     <div class="mt-3">
                         <div class="mb-2 flex flex-wrap items-baseline gap-x-4 gap-y-1">
                             <span class="font-semibold" x-text="picked.name"></span>
@@ -249,7 +262,7 @@
                             </x-ui.button>
                         </div>
                     </div>
-                </template>
+                </div>
             </section>
 
             {{-- ── কার্ট ─────────────────────────────────────────────── --}}
@@ -519,7 +532,13 @@
                         });
 
                         this.clearEntry();
-                        this.$nextTick(() => this.$refs.search.focus());
+
+                        /* ?. — একটা ঘর খুঁজে না পাওয়া কখনো পুরো পর্দা
+                           থামানোর কারণ হওয়া উচিত নয়। এখানে ঠিক তা-ই
+                           হয়েছিল: focus() এররে Alpine থেমে যেত, কার্টের
+                           ঘরগুলোর name বাঁধা হত না, আর সাবমিটে সার্ভার
+                           কোনো লাইনই পেত না। */
+                        this.$nextTick(() => this.$refs.search?.focus());
                     },
 
                     clearEntry() {

@@ -79,6 +79,25 @@ final class NumberSeriesProvisioner
     }
 
     /**
+     * কোনো মডিউল কি সত্যিই এই ডকুমেন্ট টাইপটা ঘোষণা করেছে?
+     *
+     * সিরিজ না পেলে ইঞ্জিন এটা জিজ্ঞেস করে। ঘোষিত হলে সিরিজটা নিজে
+     * বসিয়ে নেয় (পুরনো কোম্পানিতে নতুন ফিচার এলে এটাই লাগে); অঘোষিত
+     * হলে ব্যতিক্রম ছোড়ে — টাইপো থেকে নীরবে একটা সিরিজ জন্মানোর চেয়ে
+     * থেমে যাওয়া ভালো।
+     */
+    public function knows(string $docType): bool
+    {
+        foreach ($this->registry->all() as $module) {
+            if (array_key_exists($docType, $module->docTypes)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * অনুপস্থিত সিরিজগুলো তৈরি — যা আছে তা ছোঁয়া হয় না।
      *
      * @return int কতগুলো নতুন সিরিজ তৈরি হল

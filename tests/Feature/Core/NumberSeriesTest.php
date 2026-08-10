@@ -89,6 +89,53 @@ class NumberSeriesTest extends TestCase
         $this->assertSame([], $duplicates, 'এই ধরনগুলোর একাধিক সিরিজ আছে — একই নম্বর দুইবার ছাপা হবে।');
     }
 
+    /**
+     * পুরনো কোম্পানিতে নতুন ফিচার এলে নম্বরটা নিজে বসে।
+     *
+     * ── যে ৫০০-টা এটা ঠেকায় ────────────────────────────────────────
+     * সিরিজগুলো বসে কোম্পানি তৈরির সময়, ওই মুহূর্তের ঘোষিত ধরন ধরে।
+     * ঋণ এল 'LN' নিয়ে — কিন্তু ডিপোর কোম্পানিটা তার আগের। ফলে প্রথম
+     * ঋণ সেভ করতে গেলেই "No number series is configured" উঠত, আর
+     * ব্যবহারকারী পেতেন একটা খালি ৫০০ পাতা।
+     *
+     * তাঁর কোনো ভুল ছিল না; ভুল ছিল ধরে নেওয়ায় যে ডকুমেন্টের ধরন
+     * কখনো বাড়ে না।
+     */
+    public function test_a_document_type_added_after_the_company_still_gets_a_number(): void
+    {
+        // কোম্পানি তৈরির সময় যা যা ছিল, সব বসল
+        app(NumberSeriesProvisioner::class)->provision();
+
+        // তারপর একটা ধরন হারিয়ে গেল — ঠিক যেভাবে পুরনো কোম্পানিতে নতুন
+        // ধরনটা কখনো বসেইনি
+        NumberSeries::query()->where('doc_type', 'LN')->delete();
+
+        $this->assertSame(0, NumberSeries::query()->where('doc_type', 'LN')->count());
+
+        $no = $this->engine->next('LN');
+
+        $this->assertStringContainsString('2026-2027', $no);
+        $this->assertSame(1, NumberSeries::query()->where('doc_type', 'LN')->count());
+
+        // আর পরেরটা যথারীতি তার পরের সংখ্যা
+        $this->assertNotSame($no, $this->engine->next('LN'));
+    }
+
+    /**
+     * অঘোষিত ধরন এখনো থামায়।
+     *
+     * নিজে বসানোর সুবিধাটা যেন টাইপো ঢাকার কাজে না লাগে — 'PBL' লিখতে
+     * গিয়ে 'PLB' লিখলে নীরবে একটা নতুন সিরিজ জন্মানোই সবচেয়ে খারাপ ফল।
+     */
+    public function test_an_undeclared_document_type_is_still_refused(): void
+    {
+        app(NumberSeriesProvisioner::class)->provision();
+
+        $this->expectException(\RuntimeException::class);
+
+        $this->engine->next('NOPE');
+    }
+
     protected function setUp(): void
     {
         parent::setUp();
