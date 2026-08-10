@@ -92,6 +92,42 @@ class Company extends Model
         return Storage::disk('public')->url($this->logo_path);
     }
 
+    /**
+     * ছাপার জন্য লোগো — ছবিটা নিজেই, পথ নয়।
+     *
+     * ── কেন পথ দিয়ে কাজ চলে না ──────────────────────────────────────
+     * ছাপার লেআউটে লেখা ছিল `src="{{ storage_path('app/public/'.$path) }}"`।
+     * Trade Depot-এর ফাইলটার নাম "Trade Depot.png" — **নামের মাঝে একটা
+     * স্পেস**। উদ্ধৃতিহীন HTML অ্যাট্রিবিউটে স্পেস মানে সেখানেই মানটা
+     * শেষ, তাই mPDF পথটা পেত "…/logos/Trade" পর্যন্ত, আর লোগোটা ভাঙা
+     * দেখাত। FamilyMart-এর নামে স্পেস নেই বলে ওখানে ধরা পড়ত না, আর
+     * Provati Traders-এ কোনো লোগোই ছিল না — এ কারণেই বাগটা "শুধু একটা
+     * কোম্পানিতে" বলে মনে হয়েছিল।
+     *
+     * base64 বসালে পথের প্রশ্নই থাকে না: স্পেস, ব্যাকস্ল্যাশ, storage
+     * symlink আছে কি নেই — কোনোটাই আর ব্যাপার নয়, আর mPDF-কে ডিস্কে
+     * যেতেই হয় না।
+     *
+     * ফাইল না থাকলে বা পড়া না গেলে null — logoUrl()-এর মতোই। কলামে পথ
+     * লেখা আছে অথচ ফাইল মুছে গেছে, এটা বাস্তবে ঘটে।
+     */
+    public function logoData(): ?string
+    {
+        if (! $this->logo_path || ! Storage::disk('public')->exists($this->logo_path)) {
+            return null;
+        }
+
+        $bytes = Storage::disk('public')->get($this->logo_path);
+
+        if ($bytes === null || $bytes === '') {
+            return null;
+        }
+
+        $mime = Storage::disk('public')->mimeType($this->logo_path) ?: 'image/png';
+
+        return 'data:'.$mime.';base64,'.base64_encode($bytes);
+    }
+
     public function address(?string $locale = null): ?string
     {
         $locale = $locale ?? app()->getLocale();

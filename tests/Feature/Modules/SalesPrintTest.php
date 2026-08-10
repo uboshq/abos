@@ -21,6 +21,7 @@ use App\Modules\Sales\Services\SalesInvoiceService;
 use App\Modules\Sales\Services\SalesOrderService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\View;
 use Tests\TestCase;
 
@@ -320,5 +321,77 @@ class SalesPrintTest extends TestCase
     {
         $this->assertSame('শূন্য টাকা মাত্র', AmountInWords::of('0', 'bn'));
         $this->assertStringContainsString('ঋণাত্মক', AmountInWords::of('-50', 'bn'));
+    }
+
+    // ── কাগজের মাথায় লোগো ───────────────────────────────────────────────
+
+    /**
+     * নামের মাঝে স্পেস থাকলেও লোগো ছাপায় পৌঁছায়।
+     *
+     * ── যে বাগটা এটা ঠেকায় ─────────────────────────────────────────
+     * ছাপার লেআউটে ছিল `src="{{ storage_path('app/public/'.$path) }}"`।
+     * Trade Depot-এর ফাইলটার নাম "Trade Depot.png"; উদ্ধৃতিহীন HTML
+     * অ্যাট্রিবিউটে স্পেস মানে মানটা সেখানেই শেষ, তাই mPDF পথ পেত
+     * "…/logos/Trade" পর্যন্ত আর লোগোটা ভাঙা দেখাত।
+     *
+     * এই একটা কারণেই বাগটা "শুধু একটা কোম্পানিতে" বলে মনে হয়েছিল:
+     * FamilyMart-এর নামে স্পেস নেই, আর Provati Traders-এ লোগোই ছিল না।
+     */
+    public function test_a_logo_named_with_a_space_still_reaches_the_paper(): void
+    {
+        Storage::fake('public');
+
+        $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
+
+        // এক পিক্সেলের সত্যিকারের PNG — নামের মাঝে স্পেস, ঠিক আসল
+        // ফাইলটার মতো
+        Storage::disk('public')->put('logos/Trade Depot.png', base64_decode(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
+        ));
+
+        $company->forceFill(['logo_path' => 'logos/Trade Depot.png'])->save();
+
+        $data = $company->fresh()->logoData();
+
+        $this->assertNotNull($data, 'স্পেসওয়ালা নামের লোগো পড়া গেল না।');
+        $this->assertStringStartsWith('data:image/', $data);
+        $this->assertStringContainsString(';base64,', $data);
+    }
+
+    /** কলামে পথ আছে অথচ ফাইল নেই — বাস্তবে ঘটে, আর ছাপা থামা উচিত নয়। */
+    public function test_a_missing_logo_file_is_simply_left_out(): void
+    {
+        Storage::fake('public');
+
+        $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
+        $company->forceFill(['logo_path' => 'logos/gone.png'])->save();
+
+        $this->assertNull($company->fresh()->logoData());
+
+        // আর কাগজটা তবু ছাপা হয়
+        $this->actingAs($this->user)
+            ->get(route('sales.print.invoice', $this->invoice()).'?paper='.PaperSize::A4)
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/pdf');
+    }
+
+    /**
+     * ছাপার লেআউট আর ফাইলের পথ বসায় না।
+     *
+     * storage_path() ফেরত দেয় ডিস্কের পথ — উইন্ডোজে ব্যাকস্ল্যাশ সহ,
+     * আর নামে স্পেস থাকলে সেটা HTML-এ ভেঙে যায়। ছবিটা নিজেই বসালে
+     * এসব প্রশ্নই ওঠে না।
+     */
+    public function test_the_print_layout_embeds_the_image_not_a_path(): void
+    {
+        $source = file_get_contents(resource_path('views/print/layout.blade.php'));
+
+        $this->assertStringNotContainsString(
+            'storage_path(',
+            $source,
+            'ছাপার লেআউটে আবার ফাইলের পথ বসানো হয়েছে।',
+        );
+
+        $this->assertStringContainsString('logoData()', $source);
     }
 }
