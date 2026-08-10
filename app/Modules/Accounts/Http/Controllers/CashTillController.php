@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Accounts\Http\Controllers;
 
 use App\Core\Concerns\AuthorizesResource;
+use App\Core\Concerns\SortsLists;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\RunningBalance;
@@ -31,6 +32,7 @@ use Illuminate\View\View;
 class CashTillController extends Controller implements HasMiddleware
 {
     use AuthorizesResource;
+    use SortsLists;
 
     public function __construct(
         private readonly CashTillService $tills,
@@ -44,13 +46,14 @@ class CashTillController extends Controller implements HasMiddleware
 
     public function index(Request $request): View
     {
-        $tills = CashTill::query()
+        $query = CashTill::query()
             ->search($request->query('q'))
             ->when(! $request->boolean('inactive'), fn ($q) => $q->active())
-            ->with(['account', 'holder', 'branch'])
-            ->orderByDesc('is_primary')
-            ->orderBy('code')
-            ->get();
+            ->with(['account', 'holder', 'branch']);
+
+        $sort = $this->applySort($query, $request, $this->sorts());
+
+        $tills = $query->get();
 
         // ব্যালেন্স একবারে, প্রতিটা টিলের জন্য আলাদা কোয়েরি নয় — দশটা
         // কাউন্টারে দশটা কোয়েরি হত, আর তালিকাটা রোজ খোলা হয়।
@@ -63,7 +66,37 @@ class CashTillController extends Controller implements HasMiddleware
             'total' => array_reduce($balances, fn ($c, $b) => bcadd((string) $c, $b, 4), '0'),
             'q' => $request->query('q'),
             'showInactive' => $request->boolean('inactive'),
+            'sortOptions' => $this->sortLabels(),
+            'sort' => $sort,
         ]);
+    }
+
+    /**
+     * সাজানোর নিয়ম — প্রথমটাই ডিফল্ট।
+     *
+     * প্রধান কাউন্টার আগে, তারপর কোড: তালিকাটা খোলা হয় "কার কাছে কত"
+     * দেখতে, আর প্রধান কাউন্টারেই সবচেয়ে বেশি টাকা থাকে। বর্ণানুক্রম
+     * ডিফল্ট করলে প্রতিবার চোখ খুঁজতে হত।
+     *
+     * @return array<string, \Closure>
+     */
+    private function sorts(): array
+    {
+        return [
+            'primary' => fn ($q) => $q->orderByDesc('is_primary')->orderBy('code'),
+            'code' => fn ($q) => $q->orderBy('code'),
+            'name' => fn ($q) => $q->orderBy('name_en'),
+        ];
+    }
+
+    /** @return array<string, string> */
+    private function sortLabels(): array
+    {
+        return [
+            'primary' => __('accounts::sort.primary_first'),
+            'code' => __('accounts::field.code'),
+            'name' => __('accounts::field.name'),
+        ];
     }
 
     public function create(Request $request): View

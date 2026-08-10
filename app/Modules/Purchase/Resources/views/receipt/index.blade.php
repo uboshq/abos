@@ -1,4 +1,52 @@
 {{-- মাল বুঝে নেওয়া — তালিকা। --}}
+@php
+    $columns = [
+        [
+            'key' => 'trx_date',
+            'label' => __('purchase::field.date'),
+            'width' => '7rem',
+            'render' => fn ($d) => \App\Core\Support\DateFormat::format($d->trx_date),
+        ],
+        [
+            'key' => 'document_no',
+            'label' => __('purchase::field.document_no'),
+            'width' => '12rem',
+            'render' => fn ($d) => view('purchase::components.doc-link', [
+                'document' => $d,
+                'route' => 'purchase.receipt.show',
+            ]),
+        ],
+        [
+            'key' => 'supplier_id',
+            'label' => __('purchase::field.supplier'),
+            'render' => fn ($d) => $d->supplier?->name(),
+        ],
+        [
+            'key' => 'warehouse_id',
+            'label' => __('purchase::field.warehouse'),
+            'width' => '12rem',
+            'render' => fn ($d) => $d->warehouse?->name(),
+        ],
+
+        [
+            'key' => 'total',
+            'label' => __('purchase::field.total'),
+            'numeric' => true,
+            'width' => '10rem',
+            'render' => fn ($d) => view('ui.amount-link', [
+                'value' => $d->total,
+                'href' => route('purchase.receipt.show', $d),
+            ]),
+        ],
+        [
+            'key' => 'status',
+            'label' => __('purchase::field.state'),
+            'width' => '8rem',
+            'render' => fn ($d) => view('purchase::components.status-badge', ['document' => $d]),
+        ],
+    ];
+@endphp
+
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('purchase::menu.receipts') }}</x-slot:title>
 
@@ -26,7 +74,8 @@
 
     <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
-            <x-ui.toolbar :search-placeholder="__('purchase::message.receipt_search')"
+            <x-ui.toolbar
+                :columns="$columns" :search-placeholder="__('purchase::message.receipt_search')"
                           :sort="$sortOptions">
                 <x-ui.date-range :dates="$dates" />
 
@@ -41,51 +90,7 @@
             :empty="$q ? __('core.empty.no_results') : __('purchase::message.no_receipts')"
             :rows="$receipts"
             :compact="request()->boolean('compact')"
-            :columns="[
-                [
-                    'key' => 'trx_date',
-                    'label' => __('purchase::field.date'),
-                    'width' => '7rem',
-                    'render' => fn ($d) => \App\Core\Support\DateFormat::format($d->trx_date),
-                ],
-                [
-                    'key' => 'document_no',
-                    'label' => __('purchase::field.document_no'),
-                    'width' => '12rem',
-                    'render' => fn ($d) => view('purchase::components.doc-link', [
-                        'document' => $d,
-                        'route' => 'purchase.receipt.show',
-                    ]),
-                ],
-                [
-                    'key' => 'supplier_id',
-                    'label' => __('purchase::field.supplier'),
-                    'render' => fn ($d) => $d->supplier?->name(),
-                ],
-                [
-                    'key' => 'warehouse_id',
-                    'label' => __('purchase::field.warehouse'),
-                    'width' => '12rem',
-                    'render' => fn ($d) => $d->warehouse?->name(),
-                ],
-
-                [
-                    'key' => 'total',
-                    'label' => __('purchase::field.total'),
-                    'numeric' => true,
-                    'width' => '10rem',
-                    'render' => fn ($d) => view('ui.amount-link', [
-                        'value' => $d->total,
-                        'href' => route('purchase.receipt.show', $d),
-                    ]),
-                ],
-                [
-                    'key' => 'status',
-                    'label' => __('purchase::field.state'),
-                    'width' => '8rem',
-                    'render' => fn ($d) => view('purchase::components.status-badge', ['document' => $d]),
-                ],
-            ]" />
+            :columns="$columns" />
 
         @if ($receipts->hasPages())
             <div class="border-t border-(--color-border) px-3 py-2">{{ $receipts->links() }}</div>

@@ -195,6 +195,78 @@ class ToolbarTest extends TestCase
      * বোতাম যোগ করা সবচেয়ে সহজ কাজ, আর সেটা ধরার আর কোনো উপায় নেই:
      * পাতাটা ২০০ দেয়, বোতামটা দেখা যায়, কিছুই ভাঙে না।
      */
+    /**
+     * Columns মেনু কলাম দেখায়, আর টিক তুললে কলামটা সত্যিই যায়।
+     *
+     * ── কেন এটা এতদিন অর্ধেক ছিল ───────────────────────────────────
+     * টুলবারে মেনুটা লেখা ছিল আর সে `?hide=code` বসাত, কিন্তু টেবিল ওই
+     * প্যারামিটারটা পড়তই না — টিক তুললে ঠিকানা বদলাত, পাতা নতুন করে
+     * খুলত, আর কলামটা যেমন ছিল তেমনই থাকত। তার উপর কোনো পর্দা টুলবারকে
+     * কলামের তালিকাই দিত না, তাই বোতামটা কোথাও দেখাই যেত না।
+     *
+     * দুই দিক এক সাথে না মিললে এটা আবার সেই "কাজটা আছে বলে দেখায়"
+     * বোতাম হয়ে যায়, যেগুলো এই টুলবার থেকে একবার সরানো হয়েছিল।
+     */
+    public function test_the_columns_menu_really_hides_a_column(): void
+    {
+        $url = route('inventory.product.index');
+
+        // মেনুটা দেখা যায়, আর তাতে কলামের নাম আছে
+        $this->actingAs($this->user)->get($url)
+            ->assertOk()
+            ->assertSee(__('core.toolbar.columns'))
+            ->assertSee(__('inventory::field.barcode'));
+
+        // টিক তুললে ওই কলামের শিরোনামটা আর থাকে না
+        $hidden = $this->actingAs($this->user)->get($url.'?hide=barcode')->assertOk();
+
+        /*
+         * টেবিলের শিরোনামের ভেতরে খোঁজা, পুরো পাতায় নয়।
+         *
+         * Columns মেনু নিজেই প্রতিটা কলামের নাম দেখায় — টিক দেওয়ার জন্য
+         * নামটা ওখানে থাকতেই হবে। তাই পুরো HTML-এ "বারকোড" খুঁজলে সেটা
+         * সবসময়ই পাওয়া যাবে, আর টেস্টটা কখনো কিছু প্রমাণ করত না।
+         */
+        $this->assertStringNotContainsString(
+            __('inventory::field.barcode'),
+            $this->tableHead($hidden->getContent()),
+            'Columns মেনুতে টিক তোলার পরেও কলামটা টেবিলে রয়ে গেছে।',
+        );
+
+        // অন্য কলামগুলো অক্ষত — একটা লুকাতে গিয়ে টেবিল ভেঙে ফেলা নয়
+        $this->assertStringContainsString(
+            __('inventory::field.code'),
+            $this->tableHead($hidden->getContent()),
+        );
+    }
+
+    /**
+     * সব কলাম লুকানোর চেষ্টা করলে টেবিল খালি হয় না।
+     *
+     * কলামহীন একটা টেবিল মানে সারি আছে অথচ কিছুই পড়া যায় না — তার চেয়ে
+     * লুকানোর অনুরোধটা উপেক্ষা করাই ভালো।
+     */
+    public function test_hiding_every_column_is_ignored(): void
+    {
+        $all = 'code,name_en,barcode,unit_id,sale_price,is_active';
+
+        $response = $this->actingAs($this->user)
+            ->get(route('inventory.product.index').'?hide='.$all)
+            ->assertOk();
+
+        $this->assertStringContainsString(
+            __('inventory::field.code'),
+            $this->tableHead($response->getContent()),
+            'সব কলাম লুকানোর অনুরোধে টেবিলটা কলামহীন হয়ে গেছে।',
+        );
+    }
+
+    /** টেবিলের শিরোনামের অংশটুকু — বাকি পাতাটা বাদ। */
+    private function tableHead(string $html): string
+    {
+        return preg_match('/<thead\b.*?<\/thead>/s', $html, $m) === 1 ? $m[0] : '';
+    }
+
     public function test_no_button_in_the_toolbar_is_decoration(): void
     {
         $source = File::get(resource_path('views/components/ui/toolbar.blade.php'));

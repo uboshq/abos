@@ -5,6 +5,47 @@
     "প্রদেয়" (চিহ্ন উল্টো), আর ধরনটা এখন মাস্টার তালিকা থেকে আসা নাম —
     মুক্ত লেখা নয়।
 --}}
+@php
+    $columns = [
+        [
+            'key' => 'code',
+            'label' => __('supplier::field.code'),
+            'width' => '13rem',
+            'render' => fn ($s) => view('supplier::partials.code-link', ['supplier' => $s]),
+        ],
+        [
+            'key' => 'name_en',
+            'label' => __('supplier::field.name'),
+            'width' => '20rem',
+            'render' => fn ($s) => $s->name(),
+        ],
+        [
+            'key' => 'party_type_id',
+            'label' => __('supplier::field.party_type'),
+            'render' => fn ($s) => $s->partyType?->name(),
+        ],
+        ['key' => 'phone', 'label' => __('supplier::field.phone'), 'width' => '9rem'],
+        [
+            'key' => 'payable',
+            'label' => __('supplier::field.payable'),
+            'numeric' => true,
+            'width' => '10rem',
+            // অঙ্কটাই লিংক — নিয়ম ১। ব্যবহারকারী কোডে ক্লিক করেন
+            // না, তিনি সংখ্যাটা দেখে জানতে চান এটা কোথা থেকে এল।
+            'render' => fn ($s) => view('ui.amount-link', [
+                'value' => $s->payable(),
+                'href' => route('supplier.show', $s),
+            ]),
+        ],
+        [
+            'key' => 'is_active',
+            'label' => __('supplier::field.state'),
+            'width' => '7rem',
+            'render' => fn ($s) => view('supplier::partials.state-badge', ['supplier' => $s]),
+        ],
+    ];
+@endphp
+
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('supplier::menu.suppliers') }}</x-slot:title>
 
@@ -33,6 +74,7 @@
     <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
             <x-ui.toolbar
+                :columns="$columns"
                 :search-placeholder="__('supplier::message.search_placeholder')"
                 :sort="$sortOptions"
                 view>
@@ -61,44 +103,7 @@
             :rows="$suppliers"
             :compact="request()->boolean('compact')"
             :grid="request('view') === 'grid'"
-            :columns="[
-                [
-                    'key' => 'code',
-                    'label' => __('supplier::field.code'),
-                    'width' => '13rem',
-                    'render' => fn ($s) => view('supplier::partials.code-link', ['supplier' => $s]),
-                ],
-                [
-                    'key' => 'name_en',
-                    'label' => __('supplier::field.name'),
-                    'width' => '20rem',
-                    'render' => fn ($s) => $s->name(),
-                ],
-                [
-                    'key' => 'party_type_id',
-                    'label' => __('supplier::field.party_type'),
-                    'render' => fn ($s) => $s->partyType?->name(),
-                ],
-                ['key' => 'phone', 'label' => __('supplier::field.phone'), 'width' => '9rem'],
-                [
-                    'key' => 'payable',
-                    'label' => __('supplier::field.payable'),
-                    'numeric' => true,
-                    'width' => '10rem',
-                    // অঙ্কটাই লিংক — নিয়ম ১। ব্যবহারকারী কোডে ক্লিক করেন
-                    // না, তিনি সংখ্যাটা দেখে জানতে চান এটা কোথা থেকে এল।
-                    'render' => fn ($s) => view('ui.amount-link', [
-                        'value' => $s->payable(),
-                        'href' => route('supplier.show', $s),
-                    ]),
-                ],
-                [
-                    'key' => 'is_active',
-                    'label' => __('supplier::field.state'),
-                    'width' => '7rem',
-                    'render' => fn ($s) => view('supplier::partials.state-badge', ['supplier' => $s]),
-                ],
-            ]" />
+            :columns="$columns" />
 
         @if ($suppliers->hasPages())
             <div class="border-t border-(--color-border) px-3 py-2">

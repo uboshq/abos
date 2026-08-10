@@ -5,6 +5,54 @@
     আর মজুদ গুদামভেদে আলাদা। একটা "মোট মজুদ" কলাম দিলে ব্যবহারকারী ওটাকে
     "আমার শাখায় কত" ভেবে নিতেন। মজুদের নিজের পর্দা আছে, গুদামের ফিল্টার সহ।
 --}}
+@php
+    /*
+     * কলামগুলো একবার, দুই জায়গায়।
+     *
+     * টেবিল এগুলো এঁকে, আর টুলবারের Columns মেনু এগুলোর নাম দেখিয়ে
+     * টিক তোলার সুযোগ দেয়। আগে তালিকাটা কেবল টেবিলের ভেতরে ইনলাইনে
+     * ছিল, তাই টুলবার জানতই না কোন কলামগুলো আছে — আর Columns বোতামটা
+     * কোনো পর্দাতেই দেখা যেত না।
+     *
+     * দুই জায়গায় হাতে লিখলে একদিন একটায় কলাম যোগ হত আর অন্যটায় নয়,
+     * তাই একটাই তালিকা।
+     */
+    $columns = [
+        [
+            'key' => 'code',
+            'label' => __('inventory::field.code'),
+            'width' => '13rem',
+            'render' => fn ($p) => view('inventory::partials.code-link', ['product' => $p]),
+        ],
+        [
+            'key' => 'name_en',
+            'label' => __('inventory::field.name'),
+            'width' => '20rem',
+            'render' => fn ($p) => $p->name(),
+        ],
+        ['key' => 'barcode', 'label' => __('inventory::field.barcode'), 'width' => '10rem'],
+        [
+            'key' => 'unit_id',
+            'label' => __('inventory::field.unit'),
+            'width' => '7rem',
+            'render' => fn ($p) => $p->unit?->name(),
+        ],
+        [
+            'key' => 'sale_price',
+            'label' => __('inventory::field.sale_price'),
+            'numeric' => true,
+            'width' => '9rem',
+            'render' => fn ($p) => number_format((float) $p->sale_price, 2),
+        ],
+        [
+            'key' => 'is_active',
+            'label' => __('inventory::field.state'),
+            'width' => '7rem',
+            'render' => fn ($p) => view('inventory::partials.state-badge', ['record' => $p]),
+        ],
+    ];
+@endphp
+
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('inventory::menu.products') }}</x-slot:title>
 
@@ -35,6 +83,7 @@
             <x-ui.toolbar
                 :search-placeholder="__('inventory::message.search_placeholder')"
                 :sort="$sortOptions"
+                :columns="$columns"
                 view>
                 <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
                     <input type="checkbox" name="inactive" value="1" @checked($showInactive) class="size-4">
@@ -48,40 +97,7 @@
             :rows="$products"
             :compact="request()->boolean('compact')"
             :grid="request('view') === 'grid'"
-            :columns="[
-                [
-                    'key' => 'code',
-                    'label' => __('inventory::field.code'),
-                    'width' => '13rem',
-                    'render' => fn ($p) => view('inventory::partials.code-link', ['product' => $p]),
-                ],
-                [
-                    'key' => 'name_en',
-                    'label' => __('inventory::field.name'),
-                    'width' => '20rem',
-                    'render' => fn ($p) => $p->name(),
-                ],
-                ['key' => 'barcode', 'label' => __('inventory::field.barcode'), 'width' => '10rem'],
-                [
-                    'key' => 'unit_id',
-                    'label' => __('inventory::field.unit'),
-                    'width' => '7rem',
-                    'render' => fn ($p) => $p->unit?->name(),
-                ],
-                [
-                    'key' => 'sale_price',
-                    'label' => __('inventory::field.sale_price'),
-                    'numeric' => true,
-                    'width' => '9rem',
-                    'render' => fn ($p) => number_format((float) $p->sale_price, 2),
-                ],
-                [
-                    'key' => 'is_active',
-                    'label' => __('inventory::field.state'),
-                    'width' => '7rem',
-                    'render' => fn ($p) => view('inventory::partials.state-badge', ['record' => $p]),
-                ],
-            ]" />
+            :columns="$columns" />
 
         @if ($products->hasPages())
             <div class="border-t border-(--color-border) px-3 py-2">{{ $products->links() }}</div>
