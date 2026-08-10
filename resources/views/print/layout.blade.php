@@ -78,8 +78,13 @@
 </style>
 
 <div class="doc-head">
-    @if ($company->logo_path && ! $thermal)
-        <img src="{{ storage_path('app/public/' . $company->logo_path) }}" style="height: 14mm;" alt="">
+    {{-- ছবিটা নিজেই বসে, পথ নয় — কারণটা Company::logoData()-এ লেখা।
+         থার্মাল কাগজে লোগো ছাপা হয় না: ৫৮ মিমি চওড়ায় ওটা একটা ধূসর
+         দাগ, আর তাপীয় কালিতে ধূসর ভালো আসে না। --}}
+    @php $logo = $thermal ? null : $company->logoData(); @endphp
+
+    @if ($logo)
+        <img src="{{ $logo }}" style="height: 14mm;" alt="">
     @endif
 
     <div class="company-name">{{ $company->name() }}</div>
