@@ -9,4 +9,5 @@ return [
     'due_list' => 'Due List',
     'ageing' => 'Ageing',
     'settings' => 'Settings',
+    'collection' => 'Collections by customer',
 ];

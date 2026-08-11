@@ -24,4 +24,5 @@ return [
     'cash_flow' => 'Cash Flow',
     'settings' => 'Settings',
     'loans' => 'Loans',
+    'inflow' => 'Money In',
 ];

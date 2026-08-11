@@ -30,4 +30,7 @@ return [
     'owner_name' => 'Owner name',
     'available_limit' => 'Available limit',
     'last_purchase' => 'Last purchase',
+    'billed_in_period' => 'Billed',
+    'collected_in_period' => 'Collected',
+    'net_change' => 'Net change',
 ];

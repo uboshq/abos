@@ -30,4 +30,7 @@ return [
     'owner_name' => 'মালিকের নাম',
     'available_limit' => 'বাকি সীমা',
     'last_purchase' => 'শেষ কেনা',
+    'billed_in_period' => 'এ সময়ে বিক্রয়',
+    'collected_in_period' => 'এ সময়ে আদায়',
+    'net_change' => 'নিট পরিবর্তন',
 ];

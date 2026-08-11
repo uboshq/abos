@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modules;
 
+use App\Core\Engines\Report\ReportEngine;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
@@ -388,6 +389,50 @@ class CustomerTest extends TestCase
         $this->assertSame('customer', Customer::drillSourceType());
         $this->assertSame($customer->code, $customer->drillDocumentNo());
         $this->assertSame(['customer.show', ['customer' => $customer->id]], $customer->drillRoute());
+    }
+
+    // ── কে কত দিল ───────────────────────────────────────────────────────
+
+    /**
+     * আদায়ের রিপোর্ট বিক্রয় আর আদায় আলাদা করে দেখায়।
+     *
+     * ── কেন বকেয়ার তালিকা দিয়ে এই প্রশ্নের উত্তর হয় না ──────────────
+     * এই গ্রাহক এ মাসে ৫,০০০ টাকার মাল নিয়েছেন আর ৫,০০০ দিয়েছেন। তাঁর
+     * বকেয়া ঠিক যেখানে ছিল সেখানেই — অথচ তিনি মাসের সবচেয়ে ভালো
+     * পরিশোধকারী। বকেয়ার তালিকা এটা বলতেই পারে না; দুইটা কলাম আলাদা
+     * লাগে।
+     */
+    public function test_the_collection_report_separates_billing_from_paying(): void
+    {
+        $customer = $this->make();
+
+        $this->entry($customer, debit: '5000.0000');
+        $this->entry($customer, credit: '5000.0000');
+
+        $rows = app(ReportEngine::class)
+            ->run('customer.collection', ['from' => '2026-08-01', 'to' => '2026-08-31'])
+            ->rows;
+
+        $mine = collect($rows)->firstWhere('party_id', $customer->id);
+
+        $this->assertNotNull($mine, 'গ্রাহকটা তালিকায় নেই।');
+        $this->assertSame(0, bccomp((string) $mine['billed'], '5000', 4));
+        $this->assertSame(0, bccomp((string) $mine['collected'], '5000', 4));
+
+        // নিট শূন্য — বকেয়া বাড়েওনি, কমেওনি
+        $this->assertSame(0, bccomp((string) $mine['movement'], '0', 4));
+    }
+
+    /** যে গ্রাহকের এই সময়ে কিছুই হয়নি, তাঁর সারি আসে না। */
+    public function test_a_quiet_customer_stays_out_of_the_collection_report(): void
+    {
+        $quiet = $this->make(['name_en' => 'Quiet Shop']);
+
+        $rows = app(ReportEngine::class)
+            ->run('customer.collection', ['from' => '2026-08-01', 'to' => '2026-08-31'])
+            ->rows;
+
+        $this->assertNull(collect($rows)->firstWhere('party_id', $quiet->id));
     }
 
     private function entry(Customer $customer, string $debit = '0', string $credit = '0', ?string $documentNo = null): void
