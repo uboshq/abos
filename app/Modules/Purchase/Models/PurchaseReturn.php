@@ -51,6 +51,13 @@ class PurchaseReturn extends Model implements Drillable
             'subtotal' => 'decimal:4',
             'tax' => 'decimal:4',
             'total' => 'decimal:4',
+
+            /*
+             * ফেরত মালের ক্রয়মূল্য — খতিয়ানে মজুদ খাত থেকে এই অঙ্কটাই
+             * বাদ যায়। cast ছাড়া ছিল, অর্থাৎ FIFO স্তর থেকে আসা মানটা
+             * string হয়ে ফিরত আর দাখিলার অঙ্কে গিয়ে বসত।
+             */
+            'cost_of_goods' => 'decimal:4',
         ];
     }
 
