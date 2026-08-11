@@ -30,6 +30,12 @@ class PurchaseBillLine extends Model
         return [
             'qty' => 'decimal:4',
             'rate' => 'decimal:4',
+
+            // সরাসরি ক্রয়ের পর্দায় বসানো বিক্রয়মূল্য — এটাও টাকা, তাই
+            // এটাও decimal। cast ছাড়া ছিল, আর তখন markup/margin-এর
+            // অঙ্কে একটা `+` লিখলেই PHP float বানিয়ে ফেলত।
+            'sales_price' => 'decimal:4',
+
             'discount' => 'decimal:4',
             'tax' => 'decimal:4',
             'amount' => 'decimal:4',
