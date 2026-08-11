@@ -92,4 +92,11 @@ return [
     'interest' => 'Interest',
     'instalment_total' => 'Total',
     'as_on' => 'As on',
+
+    // On the printed voucher
+    'voucher_no' => 'Voucher no.',
+    'account' => 'Account',
+    'narration' => 'Particulars',
+    'total_debit' => 'Total debit',
+    'total_credit' => 'Total credit',
 ];
