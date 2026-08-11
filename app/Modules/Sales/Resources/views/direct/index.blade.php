@@ -312,7 +312,7 @@
                            x-text="picked ? money(picked.cost) : ''"></p>
 
                         <div class="mt-2 grid grid-cols-2 gap-1">
-                            <button type="button" @click="addToCart()" ::disabled="! picked"
+                            <button type="button" @click="addToCart()" :disabled="! picked"
                                     class="rounded-(--radius-field) bg-(--color-success) px-2 py-2 text-2xs
                                            font-semibold text-white disabled:opacity-50">
                                 {{ __('sales::action.add_to_cart') }}

@@ -104,6 +104,38 @@ class DirectPurchaseTest extends TestCase
             ->assertSee(__('purchase::action.confirm_direct'));
     }
 
+    /**
+     * পর্দার লাইনগুলো সত্যিই ফর্মের সাথে যায়।
+     *
+     * ── কেন এটা আলাদা করে দরকার ─────────────────────────────────────
+     * নিচের টেস্টগুলো `lines[0][product_id]` সরাসরি POST করে —
+     * অর্থাৎ **ব্রাউজারকে পুরো পাশ কাটিয়ে**। ফলে ঘরগুলো আদৌ ওই নামে
+     * তৈরি হচ্ছে কি না, সেটা একটাও টেস্ট দেখত না।
+     *
+     * হয়নি: ঘরগুলো লেখা ছিল `::name="..."`। Blade কেবল কম্পোনেন্ট
+     * ট্যাগে `::` খুলে দেয়, সাধারণ `<input>`-এ নয় — তাই অ্যাট্রিবিউটটা
+     * হুবহু `::name` হয়ে ব্রাউজারে যেত আর Alpine সেটা চিনত না। কোনো
+     * ঘরে `name` বসত না, আর name ছাড়া ইনপুট ফর্মের সাথে যায়ই না।
+     *
+     * পরীক্ষক পণ্য যোগ করতেন, সারিটা পর্দায় দেখতেন, তারপর "Confirm
+     * invoice" চাপলে আসত "The lines field is required." — লাইন চোখের
+     * সামনে, অথচ ব্যবস্থা বলছে লাইন নেই।
+     */
+    public function test_the_line_fields_are_actually_bound_to_the_form(): void
+    {
+        $html = $this->get(route('purchase.direct.create'))->assertOk()->getContent();
+
+        // Alpine-এর বাঁধন, একটাই কোলন দিয়ে।
+        $this->assertStringContainsString(':name="`lines[${index}][product_id]`"', $html,
+            'লাইনের product_id ঘরটার নাম Alpine দিয়ে বাঁধা নেই — ফর্ম পাঠালে কোনো লাইন যাবে না।');
+        $this->assertStringContainsString(':name="`lines[${index}][qty]`"', $html,
+            'পরিমাণের ঘরটার নাম বাঁধা নেই।');
+
+        // আর দুই কোলনের একটাও যেন সাধারণ ইনপুটে না থাকে।
+        $this->assertStringNotContainsString('::name=', $html,
+            'রেন্ডার করা HTML-এ `::name` রয়ে গেছে — Alpine ওটা উপেক্ষা করবে।');
+    }
+
     public function test_one_screen_brings_the_goods_in_and_the_liability_on_the_books(): void
     {
         $before = app(StockService::class)->availableQty($this->product, $this->warehouse);

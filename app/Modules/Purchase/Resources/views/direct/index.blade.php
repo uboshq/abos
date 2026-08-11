@@ -297,27 +297,27 @@
                                     <td class="num px-2 py-1.5" x-text="index + 1"></td>
                                     <td class="px-2 py-1.5">
                                         <span x-text="line.name"></span>
-                                        <input type="hidden" ::name="`lines[${index}][product_id]`" ::value="line.id">
-                                        <input type="hidden" ::name="`lines[${index}][sales_price]`"
-                                               ::value="line.sales_price">
+                                        <input type="hidden" :name="`lines[${index}][product_id]`" :value="line.id">
+                                        <input type="hidden" :name="`lines[${index}][sales_price]`"
+                                               :value="line.sales_price">
                                     </td>
                                     <td class="px-2 py-1.5">
                                         <input type="number" step="0.01" inputmode="decimal"
-                                               ::name="`lines[${index}][qty]`" x-model="line.qty"
+                                               :name="`lines[${index}][qty]`" x-model="line.qty"
                                                class="num h-8 w-20 rounded-(--radius-field) border
                                                       border-(--color-border) bg-(--color-surface-card) px-1 text-end">
                                     </td>
                                     @if ($show['free_qty'])
                                         <td class="px-2 py-1.5">
                                             <input type="number" step="0.01" inputmode="decimal"
-                                                   ::name="`lines[${index}][free_qty]`" x-model="line.free_qty"
+                                                   :name="`lines[${index}][free_qty]`" x-model="line.free_qty"
                                                    class="num h-8 w-20 rounded-(--radius-field) border
                                                           border-(--color-border) bg-(--color-surface-card) px-1 text-end">
                                         </td>
                                     @endif
                                     <td class="px-2 py-1.5">
                                         <input type="number" step="0.01" inputmode="decimal"
-                                               ::name="`lines[${index}][rate]`" x-model="line.rate"
+                                               :name="`lines[${index}][rate]`" x-model="line.rate"
                                                class="num h-8 w-24 rounded-(--radius-field) border
                                                       border-(--color-border) bg-(--color-surface-card) px-1 text-end">
                                     </td>
@@ -326,7 +326,7 @@
                                     @if ($show['line_discount'])
                                         <td class="px-2 py-1.5">
                                             <input type="number" step="0.01" inputmode="decimal"
-                                                   ::name="`lines[${index}][discount]`" x-model="line.discount"
+                                                   :name="`lines[${index}][discount]`" x-model="line.discount"
                                                    class="num h-8 w-20 rounded-(--radius-field) border
                                                           border-(--color-border) bg-(--color-surface-card) px-1 text-end">
                                         </td>
@@ -334,7 +334,7 @@
                                     @if ($show['vat'])
                                         <td class="px-2 py-1.5">
                                             <input type="number" step="0.01" inputmode="decimal"
-                                                   ::name="`lines[${index}][tax]`" x-model="line.tax"
+                                                   :name="`lines[${index}][tax]`" x-model="line.tax"
                                                    class="num h-8 w-20 rounded-(--radius-field) border
                                                           border-(--color-border) bg-(--color-surface-card) px-1 text-end">
                                         </td>
