@@ -6,6 +6,7 @@ use App\Modules\Purchase\Http\Controllers\DirectPurchaseController;
 use App\Modules\Purchase\Http\Controllers\PaymentController;
 use App\Modules\Purchase\Http\Controllers\PurchaseBillController;
 use App\Modules\Purchase\Http\Controllers\PurchaseOrderController;
+use App\Modules\Purchase\Http\Controllers\PurchasePrintController;
 use App\Modules\Purchase\Http\Controllers\PurchaseReceiptController;
 use App\Modules\Purchase\Http\Controllers\PurchaseReportController;
 use App\Modules\Purchase\Http\Controllers\PurchaseReturnController;
@@ -20,6 +21,27 @@ use Illuminate\Support\Facades\Route;
  */
 
 Route::middleware('auth')->prefix('purchase')->group(function () {
+    /*
+     * ছাপা — চারটা কাগজ, তিনটা মাপে (?paper=58mm|80mm|a4)।
+     *
+     * সবগুলো GET, কারণ ছাপা কিছু বদলায় না — আর তাতে কাগজটা বুকমার্ক করা
+     * যায় আর ব্রাউজারের ফিরে যাওয়ার বোতামও ভাঙে না। Sales-এর ছাপার
+     * রুটগুলোও ঠিক একই ছাঁচে।
+     *
+     * গ্রুপটা উপরে, কারণ `print` একটা স্থির অংশ আর নিচের রুটগুলোয়
+     * `{bill}`/`{order}` বসে — স্থির পথ আগে না বসালে একদিন একটা
+     * প্যারামিটার ওটাকে গিলে ফেলে।
+     */
+    Route::prefix('print')->name('print.')->group(function () {
+        Route::get('/bill/{bill}', [PurchasePrintController::class, 'bill'])
+            ->whereNumber('bill')->name('bill');
+        Route::get('/order/{order}', [PurchasePrintController::class, 'order'])
+            ->whereNumber('order')->name('order');
+        Route::get('/receipt/{receipt}', [PurchasePrintController::class, 'receipt'])
+            ->whereNumber('receipt')->name('receipt');
+        Route::get('/return/{return}', [PurchasePrintController::class, 'creditNote'])
+            ->whereNumber('return')->name('return');
+    });
 
     /*
      * সরাসরি ক্রয় চালান — এক পর্দায় মাল, দাম আর টাকা।
