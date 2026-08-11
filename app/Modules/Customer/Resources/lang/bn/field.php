@@ -29,7 +29,9 @@ return [
     'area' => 'এরিয়া',
     'owner_name' => 'মালিকের নাম',
     'available_limit' => 'বাকি সীমা',
-    'last_purchase' => 'শেষ কেনা',
+
+    // 'last_purchase' এখান থেকে সরেছে — কথাটা বিক্রয়ের, তাই চাবিটাও
+    // এখন Sales-এর (sales::field.last_purchase, SalesFacts)
     'billed_in_period' => 'এ সময়ে বিক্রয়',
     'collected_in_period' => 'এ সময়ে আদায়',
     'net_change' => 'নিট পরিবর্তন',

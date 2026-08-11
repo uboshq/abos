@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Services;
 
+use App\Core\Contracts\ProvisionsCompany;
 use App\Modules\Accounts\Models\Account;
 use Illuminate\Support\Facades\DB;
 
@@ -24,8 +25,18 @@ use Illuminate\Support\Facades\DB;
  * SYSTEM চিহ্নিত খাতগুলো কোড ধরে খোঁজা হয় — বিক্রয় পোস্ট করার সময়
  * "প্রাপ্য হিসাব" কোথায় বসবে সেটা নাম দেখে নয়, কোড দেখে ঠিক হয়।
  */
-final class StandardChart
+final class StandardChart implements ProvisionsCompany
 {
+    /**
+     * নতুন কোম্পানি হলে প্রমিত ছকটা বসে।
+     *
+     * install() নিজেই যা আছে তা আবার বসায় না, তাই বারবার ডাকা নিরাপদ।
+     */
+    public function provisionCompany(): void
+    {
+        $this->install();
+    }
+
     /** যে খাতগুলো অন্য মডিউল কোড ধরে খোঁজে — মুছা বা ধরন বদলানো যায় না। */
     public const CASH_IN_HAND = '1101';
 

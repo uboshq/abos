@@ -109,7 +109,6 @@
                     'customer::field.type' => $customer->typeName(),
                     'core.company.branch' => $customer->branch?->name(),
                     'customer::field.address' => $customer->address(),
-                    'customer::field.last_purchase' => \App\Core\Support\DateFormat::format($customer->lastPurchaseOn()),
                 ] as $label => $value)
                     @if (filled($value))
                         <div>
@@ -117,6 +116,22 @@
                             <dd class="text-sm">{{ $value }}</dd>
                         </div>
                     @endif
+                @endforeach
+
+                {{-- বাকি মডিউলরা এই গ্রাহক সম্পর্কে যা জানে — "শেষ কেনা
+                     কবে" বিক্রয়ের কথা, গ্রাহকের নয়। এই পাতা জানে না কে
+                     কী দিল, শুধু জিজ্ঞেস করে। --}}
+                @foreach ($facts as $fact)
+                    <div>
+                        <dt class="text-2xs text-(--color-ink-muted)">{{ __($fact->label) }}</dt>
+                        <dd class="text-sm">
+                            @if ($fact->url)
+                                <a href="{{ $fact->url }}" class="underline">{{ $fact->value }}</a>
+                            @else
+                                {{ $fact->value }}
+                            @endif
+                        </dd>
+                    </div>
                 @endforeach
             </dl>
         </section>

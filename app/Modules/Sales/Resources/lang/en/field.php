@@ -116,4 +116,8 @@ return [
     // Return fields
     'reason' => 'Reason',
     'not_sellable' => 'Not sellable again',
+
+    // What sales has to say about a customer — shown on the customer's page,
+    // contributed from here (see SalesFacts)
+    'last_purchase' => 'Last purchase',
 ];

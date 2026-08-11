@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Modules;
 
 use App\Core\Engines\Audit\AuditEngine;
+use App\Core\Module\ModuleRegistry;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Models\AuditFieldChange;
@@ -295,7 +296,7 @@ class AuditTest extends TestCase
 
             $class = $this->classNameOf($file);
 
-            if (array_key_exists($class, AuditEngine::NOT_AUDITED)) {
+            if (array_key_exists($class, $this->exempt())) {
                 continue;
             }
 
@@ -311,10 +312,35 @@ class AuditTest extends TestCase
     /** প্রতিটা ব্যতিক্রমের একটা লিখিত কারণ আছে। */
     public function test_every_exception_carries_a_reason(): void
     {
-        foreach (AuditEngine::NOT_AUDITED as $class => $reason) {
+        foreach ($this->exempt() as $class => $reason) {
             $this->assertTrue(class_exists($class), "ব্যতিক্রমের তালিকায় অচেনা ক্লাস: {$class}");
             $this->assertNotSame('', trim($reason), "কারণ ছাড়া ব্যতিক্রম: {$class}");
         }
+    }
+
+    /**
+     * অডিটের ব্যতিক্রম — কোরের ও প্রতিটা মডিউলের, একসাথে।
+     *
+     * ── কেন দুই জায়গা ───────────────────────────────────────────────
+     * কোরের নিজের মডেলগুলো (অডিট টেবিল, খতিয়ান, নম্বর ইস্যু) কোরেই
+     * থাকে। মডিউলের মডেল মডিউলেই — নইলে কোর ওই মডিউলের নাম জেনে
+     * ফেলত (§১৯.৭), আর সবাই যার উপর দাঁড়ায় সে কারও উপর দাঁড়ালে
+     * সীমানাটাই থাকে না।
+     *
+     * পাহারাটা একটুও দুর্বল হয়নি: দুইটা তালিকা এখানে মিলিয়ে দেখা হয়,
+     * তাই নতুন মডেলে অডিট বসাতে ভুলে গেলে আগের মতোই ধরা পড়ে।
+     *
+     * @return array<class-string, string>
+     */
+    private function exempt(): array
+    {
+        $exempt = AuditEngine::NOT_AUDITED;
+
+        foreach (app(ModuleRegistry::class)->all() as $module) {
+            $exempt = [...$exempt, ...$module->auditExempt];
+        }
+
+        return $exempt;
     }
 
     // ── পর্দা ─────────────────────────────────────────────────────────

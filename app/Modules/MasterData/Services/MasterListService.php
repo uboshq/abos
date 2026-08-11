@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\MasterData\Services;
 
+use App\Core\Contracts\ProvisionsCompany;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\MasterData\Models\Currency;
@@ -31,8 +32,19 @@ use Illuminate\Validation\ValidationException;
  * যা এখানে নেই: প্রতিটার নিজস্ব যাচাই (এককের চক্র, করের হারের সীমা)।
  * ওগুলো নিচে আলাদা পদ্ধতিতে, কারণ ওগুলো সত্যিই আলাদা।
  */
-final class MasterListService
+final class MasterListService implements ProvisionsCompany
 {
+    /**
+     * নতুন কোম্পানি হলে ডিফল্ট তালিকাগুলো বসে।
+     *
+     * seed() প্রতিটা তালিকায় আগে দেখে নেয় কিছু আছে কি না, তাই বারবার
+     * ডাকলেও দুইবার বসে না।
+     */
+    public function provisionCompany(): void
+    {
+        $this->installDefaults();
+    }
+
     /**
      * @param  class-string<Model>  $model
      * @param  array<string, mixed>  $data

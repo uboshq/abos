@@ -15,6 +15,7 @@ use App\Modules\MasterData\Models\Tax;
 use App\Modules\MasterData\Models\Unit;
 use App\Modules\MasterData\Models\Vehicle;
 use App\Modules\MasterData\Models\VehicleType;
+use App\Modules\MasterData\Services\MasterListService;
 
 /**
  * Master Data — প্ল্যান সেকশন ৪ ও Phase 3।
@@ -92,6 +93,19 @@ return [
 
     // এই মডিউলের নিজের কোনো ডকুমেন্ট নম্বর নেই — মাস্টার রেকর্ডের কোড
     // ব্যবহারকারী নিজেই দেয়, কারণ সেগুলো ব্যবসার ভাষা ("PCS", "CTN")
+
+    /*
+     * নতুন কোম্পানি হলে ডিফল্ট তালিকাগুলো এখান থেকে বসে — একক, কর,
+     * পরিশোধের শর্ত, কারণ কোড।
+     *
+     * accounts-এর পরে চলে, আর সেটা এখানে লেখা নেই: depends_on-এ
+     * accounts আছে, আর ModuleRegistry নির্ভরতার ক্রমেই ফেরত দেয়।
+     * ক্রমটা জরুরি — করের সারি নিজের হিসাব-খাত খোঁজে, আর ছক না বসলে
+     * সেই খাত থাকত না।
+     */
+    'provisions' => [
+        MasterListService::class,
+    ],
 
     'drill_sources' => [
         'location' => Location::class,

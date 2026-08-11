@@ -13,7 +13,6 @@ use App\Modules\Accounts\Http\Requests\VoucherRequest;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\VoucherService;
-use App\Modules\Customer\Models\Customer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -249,7 +248,21 @@ class VoucherController extends Controller implements HasMiddleware
             'expenseAccounts' => $all->where('type', Account::EXPENSE)->values(),
             'incomeAccounts' => $all->where('type', Account::INCOME)->values(),
             'branches' => Branch::query()->active()->orderBy('name_en')->get(),
-            'customers' => Customer::query()->active()->orderBy('name_en')->limit(500)->get(),
+
+            /*
+             * এখানে একসময় 'customers' নামে একটা তালিকা যেত — ৫০০ জন
+             * গ্রাহক, প্রতিটা ভাউচার ফর্মে। কোনো পর্দা ওটা পড়ত না।
+             *
+             * ── কেন ওটা তালিকায় ফিরবে না ────────────────────────────
+             * ভাউচারের পক্ষ বাছা হয় **হিসাবের খাত** ধরে, গ্রাহক ধরে নয়
+             * ("প্রাপ্য হিসাব" ডেবিট হয়, "করিম স্টোর" নয়)। তাই
+             * তালিকাটা কেবল অব্যবহৃতই ছিল না, ভুল ধারণারও ছিল।
+             *
+             * আর এটাই Accounts-কে Customer-এর উপর দাঁড় করিয়ে রেখেছিল,
+             * অথচ Accounts কারও উপর দাঁড়ায় না — সবাই তার উপর দাঁড়ায়।
+             * একটা অব্যবহৃত লাইনের জন্য পুরো নির্ভরতার ক্রমটা উল্টে
+             * ছিল, আর BoundariesTest সেটাই ধরল।
+             */
             'sides' => $this->sidesFor($type),
         ];
     }

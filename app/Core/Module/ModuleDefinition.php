@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Core\Module;
 
+use App\Core\Contracts\ContributesFacts;
 use App\Core\Contracts\DashboardWidgets;
 use App\Core\Contracts\Importer;
+use App\Core\Contracts\ProvisionsCompany;
 use InvalidArgumentException;
 
 /**
@@ -83,6 +85,48 @@ final class ModuleDefinition
          * @var list<string>
          */
         public readonly array $customFields,
+
+        /**
+         * যে মডেলগুলো অডিটে যায় না — আর কেন।
+         *
+         * ── কেন মডিউল নিজে বলে ──────────────────────────────────────
+         * তালিকাটা আগে কোরে ছিল, আর তাতে কোর জানত মজুদ নামে একটা
+         * মডিউল আছে ও তার তিনটা মডেল কী কী (§১৯.৭ ভাঙত)। সবাই কোরের
+         * উপর দাঁড়ায়; কোর কারও নাম জানলে তাকে ছাড়া কোর চলে না।
+         *
+         * মানটা একটা বাক্য, শুধু true নয় — ছয় মাস পর কেউ যখন জিজ্ঞেস
+         * করবে "এই মডেলটা অডিটে নেই কেন", উত্তরটা পাশেই থাকা দরকার।
+         *
+         * @var array<class-string, string>
+         */
+        public readonly array $auditExempt,
+
+        /**
+         * অন্য মডিউলের রেকর্ড সম্পর্কে এই মডিউলের যা বলার আছে।
+         *
+         * "শেষ কেনা কবে" গ্রাহকের পাতায় বসে, কিন্তু কথাটা বিক্রয়ের।
+         * গ্রাহকের মডেল নিজে বিক্রয় খুঁজতে গেলে customer → sales →
+         * customer চক্র তৈরি হত; উল্টো দিক থেকে দিলে হয় না।
+         *
+         * @var list<class-string<ContributesFacts>>
+         */
+        public readonly array $facts,
+
+        /**
+         * নতুন কোম্পানি তৈরি হলে যে সার্ভিসগুলোকে একবার ডাকতে হয়।
+         *
+         * ── কেন মডিউল বলে, CompanyProvisioner নয় ────────────────────
+         * কোর আগে নিজেই দুইটা সার্ভিসের নাম জানত — হিসাবের প্রমিত ছক
+         * আর মাস্টার তালিকা (§১৯.৭ ভাঙত)। তার চেয়ে বড় দাম ছিল এই:
+         * HR-এর প্রমিত বেতন-খাতগুলো নতুন কোম্পানিতে বসত না, কারণ
+         * বসাতে হলে কোরে আরেকটা লাইন লিখতে হত আর কেউ লেখেনি।
+         *
+         * ক্রমটা এখানে লেখা নেই — ModuleRegistry নির্ভরতার ক্রমে ফেরত
+         * দেয়, তাই accounts সবসময় master_data-র আগে চলে।
+         *
+         * @var list<class-string<ProvisionsCompany>>
+         */
+        public readonly array $provisions,
 
         /**
          * পুরনো খাতা থেকে কী কী আনা যায়।
@@ -191,6 +235,9 @@ final class ModuleDefinition
                 $raw['drill_sources'] ?? [],
                 $path,
             ),
+            auditExempt: self::validateAuditExempt($raw['audit_exempt'] ?? [], $path),
+            facts: self::validateFacts($raw['facts'] ?? [], $path),
+            provisions: self::validateProvisions($raw['provisions'] ?? [], $path),
             imports: self::validateImports($raw['imports'] ?? [], $path),
             path: $path,
             namespace: $namespace,
@@ -207,6 +254,94 @@ final class ModuleDefinition
      * @param  array<string, mixed>  $imports
      * @return array<string, class-string>
      */
+    /**
+     * অডিটের ব্যতিক্রম — ক্লাসটা সত্যিই আছে কি না, আর কারণ লেখা আছে কি না।
+     *
+     * ── কারণটা বাধ্যতামূলক কেন ──────────────────────────────────────
+     * `Model::class => true` লিখতে দিলে তালিকাটা এক বছরে এমন নামের
+     * সংগ্রহ হত যার একটাও কেউ ব্যাখ্যা করতে পারত না, আর তখন "এটা কি
+     * ইচ্ছাকৃত, নাকি কেউ অডিট বসাতে ভুলে গেছে" প্রশ্নের উত্তর থাকত না।
+     * ব্যতিক্রম একটা সিদ্ধান্ত; সিদ্ধান্তের কারণ থাকে।
+     *
+     * @param  array<class-string, string>  $exempt
+     * @return array<class-string, string>
+     */
+    private static function validateAuditExempt(array $exempt, string $path): array
+    {
+        foreach ($exempt as $class => $reason) {
+            if (! is_string($class) || ! class_exists($class)) {
+                throw new InvalidArgumentException(
+                    "{$path}: audit_exempt names '".(is_string($class) ? $class : gettype($class))."', which does not exist."
+                );
+            }
+
+            if (! is_string($reason) || trim($reason) === '') {
+                throw new InvalidArgumentException(
+                    "{$path}: audit_exempt {$class} needs a reason — a sentence saying why it is not audited."
+                );
+            }
+        }
+
+        return $exempt;
+    }
+
+    /**
+     * তথ্য-সরবরাহকারীরা — ক্লাসটা আছে কি না, চুক্তিটা মানে কি না।
+     *
+     * ভুল নাম ধরা না পড়লে সারিটা কোনোদিন বসত না, আর অনুপস্থিত একটা
+     * সারির অনুপস্থিতি কেউ খেয়াল করে না।
+     *
+     * @param  list<mixed>  $facts
+     * @return list<class-string<ContributesFacts>>
+     */
+    private static function validateFacts(array $facts, string $path): array
+    {
+        foreach ($facts as $class) {
+            if (! is_string($class) || ! class_exists($class)) {
+                throw new InvalidArgumentException(
+                    "{$path}: fact provider '".(is_string($class) ? $class : gettype($class))."' does not exist."
+                );
+            }
+
+            if (! is_subclass_of($class, ContributesFacts::class)) {
+                throw new InvalidArgumentException(
+                    "{$path}: fact provider {$class} must implement the ContributesFacts contract."
+                );
+            }
+        }
+
+        return array_values($facts);
+    }
+
+    /**
+     * কোম্পানি চালুর সার্ভিসগুলো — ক্লাসটা আছে কি না, চুক্তিটা মানে কি না।
+     *
+     * ভুল নাম ধরা না পড়লে কোম্পানিটা তৈরি হত ঠিকই, শুধু ওই মডিউলের
+     * ভিত্তি সারিগুলো ছাড়া — আর সেটা টের পাওয়া যেত অনেক পরে, প্রথম
+     * লেনদেন লিখতে গিয়ে।
+     *
+     * @param  list<mixed>  $provisions
+     * @return list<class-string<ProvisionsCompany>>
+     */
+    private static function validateProvisions(array $provisions, string $path): array
+    {
+        foreach ($provisions as $class) {
+            if (! is_string($class) || ! class_exists($class)) {
+                throw new InvalidArgumentException(
+                    "{$path}: company provisioner '".(is_string($class) ? $class : gettype($class))."' does not exist."
+                );
+            }
+
+            if (! is_subclass_of($class, ProvisionsCompany::class)) {
+                throw new InvalidArgumentException(
+                    "{$path}: company provisioner {$class} must implement the ProvisionsCompany contract."
+                );
+            }
+        }
+
+        return array_values($provisions);
+    }
+
     private static function validateImports(array $imports, string $path): array
     {
         foreach ($imports as $key => $class) {

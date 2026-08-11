@@ -11,6 +11,7 @@ use App\Modules\Accounts\Models\LoanMovement;
 use App\Modules\Accounts\Models\MoneyTransfer;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Reports\CoreReports;
+use App\Modules\Accounts\Services\StandardChart;
 
 /**
  * Accounts & Finance — প্ল্যান সেকশন ১৯.২।
@@ -163,6 +164,18 @@ return [
         'loan' => Loan::class,
         'loan_movement' => LoanMovement::class,
         'loan_instalment' => LoanInstalment::class,
+    ],
+
+    /*
+     * নতুন কোম্পানি হলে প্রমিত হিসাব-ছকটা এখান থেকে বসে।
+     *
+     * আগে CompanyProvisioner নিজেই StandardChart-এর নাম জানত, অর্থাৎ
+     * কোর একটা মডিউলের ভেতরের সার্ভিস চিনত (§১৯.৭)। এখন ঘোষণাটা
+     * মডিউলের নিজের, আর ক্রমটা depends_on থেকেই আসে — accounts কারও
+     * উপর নির্ভর করে না, তাই সে সবার আগে চলে।
+     */
+    'provisions' => [
+        StandardChart::class,
     ],
 
     // রিপোর্ট সরবরাহকারী — কোর নিজে থেকে ডেকে নেবে (সেকশন ১৯.৩)।
