@@ -136,6 +136,72 @@ class DirectPurchaseTest extends TestCase
             'রেন্ডার করা HTML-এ `::name` রয়ে গেছে — Alpine ওটা উপেক্ষা করবে।');
     }
 
+    /**
+     * পণ্যের শেষ ক্রয়দর ও মজুদ সত্যিই পর্দায় পৌঁছায়।
+     *
+     * ── কেন এটা markup/margin-এর সাথে জড়িত ──────────────────────────
+     * পরীক্ষক দুইটা অভিযোগ করেছিলেন, আর ওরা আসলে একটাই শিকল:
+     *
+     *   "In stock ও Last rate টাইল সবসময় শূন্য দেখায়"
+     *   "markup/margin ঘরগুলো নতুন করে হিসাব করে না"
+     *
+     * দ্বিতীয়টা প্রথমটার ফল। পণ্য বাছলে `entry.rate` বসে
+     * `product.last_rate` থেকে; ওটা শূন্য হলে দর শূন্য থাকে, আর শূন্য
+     * দরের উপর markup-এর কোনো অর্থ নেই — `reprice` তখন ইচ্ছাকৃতভাবেই
+     * কিছু ফেরত দেয় না (pricing.test.js-এ পিন করা)। পর্দায় সেটা
+     * দেখায় "কিছুই হচ্ছে না" বলে।
+     *
+     * তাই পরীক্ষাটা অঙ্কের নয়, **সরবরাহের**: সংখ্যাগুলো ব্রাউজারে
+     * পৌঁছাচ্ছে কি না।
+     */
+    public function test_the_last_rate_and_stock_reach_the_screen(): void
+    {
+        $this->product->forceFill([
+            'purchase_price' => '125.5000',
+            'sale_price' => '180.0000',
+        ])->save();
+
+        $html = $this->get(route('purchase.direct.create'))->assertOk()->getContent();
+
+        /*
+         * উদ্ধৃতিচিহ্ন ধরে খোঁজা হয় না, ইচ্ছাকৃতভাবে।
+         *
+         * তালিকাটা `x-data="..."` অ্যাট্রিবিউটের ভেতরে বসে, আর
+         * `Js::from` সেখানে নিরাপদে বসানোর জন্য উদ্ধৃতিগুলো
+         * `"`-তে বদলে দেয়। `"last_rate":` খুঁজলে পরীক্ষাটা তাই
+         * **এস্কেপিং মাপত, সরবরাহ নয়** — আর Laravel একদিন এস্কেপিংয়ের
+         * ধরন বদলালে পরীক্ষাটা ভাঙত অথচ কিছুই ভাঙেনি।
+         *
+         * প্রশ্নটা সরল: চাবিটা আর সংখ্যাটা পাতায় পৌঁছেছে কি না।
+         */
+        foreach (['last_rate', '125.5', 'sales_price', '180', 'on_hand'] as $needle) {
+            $this->assertStringContainsString($needle, $html,
+                "'{$needle}' পর্দায় পৌঁছায়নি — দর বা মজুদ ছাড়া markup ও margin-এর "
+                .'অঙ্ক শুরুই হতে পারে না, আর টাইলগুলো শূন্য দেখায়।');
+        }
+    }
+
+    /**
+     * তিনটা ঘরের অঙ্কটা যে ফাংশনটা করে, সেটা পাতায় সত্যিই আছে।
+     *
+     * `window.abos.reprice` না থাকলে `priced()` প্রতিবার ব্যতিক্রম
+     * ছুড়ত, আর Alpine-এর ভেতরে ছোড়া ব্যতিক্রম নীরবে থেমে যায় — ঘরগুলো
+     * তখন ঠিক ওভাবেই আচরণ করত যেভাবে পরীক্ষক দেখেছেন: কিছুই হয় না,
+     * কোথাও কোনো বার্তা নেই।
+     */
+    public function test_the_pricing_helper_is_loaded_on_the_page(): void
+    {
+        $html = $this->get(route('purchase.direct.create'))->assertOk()->getContent();
+
+        $this->assertStringContainsString('window.abos.reprice', $html,
+            'দর নির্ধারণের ফাংশনটা পর্দা থেকে ডাকা হচ্ছে না।');
+
+        $bundle = resource_path('js/app.js');
+
+        $this->assertStringContainsString('window.abos = { reprice }', (string) file_get_contents($bundle),
+            'reprice ব্রাউজারে প্রকাশ করা নেই — পর্দা ডাকলে undefined পাবে।');
+    }
+
     public function test_one_screen_brings_the_goods_in_and_the_liability_on_the_books(): void
     {
         $before = app(StockService::class)->availableQty($this->product, $this->warehouse);
