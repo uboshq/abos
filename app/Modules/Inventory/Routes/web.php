@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Modules\Inventory\Http\Controllers\OpeningStockController;
 use App\Modules\Inventory\Http\Controllers\ProductController;
 use App\Modules\Inventory\Http\Controllers\StockController;
+use App\Modules\Inventory\Http\Controllers\StockPrintController;
 use App\Modules\Inventory\Http\Controllers\StockReportController;
 use App\Modules\Inventory\Http\Controllers\StockTransferController;
 use App\Modules\Inventory\Http\Controllers\WarehouseController;
@@ -66,6 +67,15 @@ Route::middleware('auth')->prefix('inventory')->group(function () {
         Route::get('/create', [StockTransferController::class, 'create'])->name('create');
         Route::post('/', [StockTransferController::class, 'store'])->name('store');
         Route::get('/{transfer}', [StockTransferController::class, 'show'])->whereNumber('transfer')->name('show');
+
+        /*
+         * কাগজটা — মালের সাথে যায়, দুই প্রান্তে দুইজনের সই নিয়ে।
+         *
+         * `{transfer}` সংখ্যায় বাঁধা, তাই `print` অংশটা তার সাথে
+         * সংঘাত করে না।
+         */
+        Route::get('/{transfer}/print', [StockPrintController::class, 'transfer'])
+            ->whereNumber('transfer')->name('print');
         Route::get('/{transfer}/edit', [StockTransferController::class, 'edit'])->whereNumber('transfer')->name('edit');
         Route::put('/{transfer}', [StockTransferController::class, 'update'])->whereNumber('transfer')->name('update');
 
