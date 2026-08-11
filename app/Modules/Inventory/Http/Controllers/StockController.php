@@ -43,7 +43,22 @@ class StockController extends Controller implements HasMiddleware
     {
         return [
             new Middleware('can:inventory.stock.view', only: ['index']),
-            new Middleware('can:inventory.stock.adjust', only: ['adjust', 'storeAdjustment']),
+            /*
+             * ইস্যুর পর্দাটাও এখানে — আগে কোনো তালিকাতেই ছিল না।
+             *
+             * ফল: রুটে `can:` বসত না, তাই **যে কেউ লগইন করলেই** গুদাম
+             * থেকে মাল বের করে দিতে পারতেন, আর সেটা সোজা খতিয়ানে বসত
+             * (উপহার, মালিকের উত্তোলন, আপ্যায়ন)। মেনুর সারিটা ঠিকই
+             * `inventory.stock.adjust` চাইত, তাই চাবি না থাকলে সারিটা
+             * দেখাত না — কিন্তু ঠিকানাটা টাইপ করলেই পর্দা খুলে যেত।
+             *
+             * মেনু যা চায়, রুটও এখন তা-ই চায়। EveryRouteIsGuardedTest
+             * এখন প্রতিটা রুট ধরে দেখে, তাই পরের পর্দাটা যোগ করার সময়
+             * ভুলে গেলে টেস্ট ভাঙবে।
+             */
+            new Middleware('can:inventory.stock.adjust', only: [
+                'adjust', 'storeAdjustment', 'issue', 'storeIssue',
+            ]),
             new Middleware('can:inventory.stock.hold', only: ['storeHold', 'storeRelease']),
         ];
     }
