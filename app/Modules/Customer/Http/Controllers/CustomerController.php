@@ -6,6 +6,7 @@ namespace App\Modules\Customer\Http\Controllers;
 
 use App\Core\Concerns\AuthorizesResource;
 use App\Core\Concerns\SortsLists;
+use App\Core\Panels\FactRegistry;
 use App\Core\Services\CustomFieldService;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingsService;
@@ -41,6 +42,15 @@ class CustomerController extends Controller implements HasMiddleware
         private readonly CustomerService $customers,
         private readonly MenuBuilder $menu,
         private readonly SettingsService $settings,
+
+        /*
+         * বাকি মডিউলরা এই গ্রাহক সম্পর্কে যা জানে।
+         *
+         * Customer নিজে কারও ভেতরে হাত দেয় না — কোরকে জিজ্ঞেস করে,
+         * আর কোর রেজিস্ট্রি হেঁটে উত্তর জোগাড় করে। কে কী দিল তা এই
+         * কন্ট্রোলার জানে না, জানার দরকারও নেই।
+         */
+        private readonly FactRegistry $facts,
     ) {}
 
     /** সাতটা পদ্ধতির সাতটা অনুমতি — একটাও হাতে লেখা নয়। */
@@ -173,6 +183,7 @@ class CustomerController extends Controller implements HasMiddleware
             'outstanding' => $customer->outstanding(),
             'entries' => $entries,
             'creditLimitOn' => $this->settings->enabled('customer.credit_limit_enabled'),
+            'facts' => $this->facts->forRecord(Customer::drillSourceType(), $customer->id),
         ]);
     }
 

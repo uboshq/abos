@@ -7,6 +7,7 @@ namespace Tests\Feature\Modules;
 use App\Core\Engines\Report\ReportEngine;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\DateFormat;
 use App\Core\Support\DocumentStatus;
 use App\Models\Company;
 use App\Models\LedgerEntry;
@@ -661,5 +662,42 @@ class SalesTest extends TestCase
 
         $this->assertSame(0, bccomp((string) $row['uninvoiced_qty'], '6', 4));
         $this->assertSame(0, bccomp((string) $row['uninvoiced_value'], '720', 4));
+    }
+
+    // ── গ্রাহকের পাতায় বিক্রয়ের বক্তব্য ──────────────────────────────
+
+    /**
+     * "শেষ কেনা" গ্রাহকের পাতায় বসে, অথচ কথাটা বিক্রয়ের।
+     *
+     * ── কেন পুরো পর্দাটাই ডাকা হয়, SalesFacts::factsFor() নয় ────────
+     * সরবরাহকারীটা সরাসরি ডাকলে পরীক্ষাটা পাশ করত এমনকি module.php-তে
+     * ঘোষণাটা না থাকলেও, বা কন্ট্রোলার FactRegistry-কে না ডাকলেও, বা
+     * পর্দা $facts না ছাপালেও — অর্থাৎ জিনিসটা অনুপস্থিত থাকলেও পাশ
+     * করত। তাই HTTP দিয়ে, আর তারিখটা পর্দার লেখায় খোঁজা।
+     */
+    public function test_the_customers_page_shows_what_sales_knows_about_them(): void
+    {
+        // আগে: কোনো বিল নেই, তাই সারিটাও নেই — খালি সারি বসলে "শেষ কেনা: —"
+        // দেখাত, যেটা তথ্য নয়
+        $this->get(route('customer.show', $this->customer))
+            ->assertOk()
+            ->assertDontSee(__('sales::field.last_purchase'));
+
+        $invoice = $this->invoices()->confirm($this->makeInvoice(null, '3', '150'));
+
+        $this->get(route('customer.show', $this->customer))
+            ->assertOk()
+            ->assertSee(__('sales::field.last_purchase'))
+            ->assertSee(DateFormat::format($invoice->trx_date));
+    }
+
+    /** খসড়া বিল কেনা নয়, লেখা — ছয় মাস চুপ থাকা গ্রাহকে গতকালের তারিখ বসে না। */
+    public function test_a_draft_invoice_is_not_a_purchase(): void
+    {
+        $this->makeInvoice(null, '3', '150');
+
+        $this->get(route('customer.show', $this->customer))
+            ->assertOk()
+            ->assertDontSee(__('sales::field.last_purchase'));
     }
 }

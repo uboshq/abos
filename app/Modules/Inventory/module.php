@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 use App\Modules\Inventory\Dashboard\InventoryWidgets;
 use App\Modules\Inventory\Imports\ProductImporter;
+use App\Modules\Inventory\Models\CostLayer;
+use App\Modules\Inventory\Models\CostLayerUse;
 use App\Modules\Inventory\Models\Product;
+use App\Modules\Inventory\Models\StockMovement;
 use App\Modules\Inventory\Models\StockTransfer;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Reports\StockReports;
@@ -133,6 +136,27 @@ return [
         'product' => Product::class,
         'warehouse' => Warehouse::class,
         'stock_transfer' => StockTransfer::class,
+    ],
+
+    /*
+     * যে মডেলগুলো অডিটে যায় না — আর কেন।
+     *
+     * ── কেন তালিকাটা এখানে, কোরে নয় ────────────────────────────────
+     * আগে এই তিনটা কোরের AuditEngine::NOT_AUDITED-এ লেখা ছিল, অর্থাৎ
+     * কোর জানত মজুদ নামে একটা মডিউল আছে আর তার তিনটা মডেল কী কী।
+     * সবাই কোরের উপর দাঁড়ায়; কোর কারও নাম জানলে তাকে ছাড়া কোর চলে না।
+     *
+     * পাহারাটা যায়নি: AuditCoverageTest দুইটা তালিকা মিলিয়ে দেখে, তাই
+     * নতুন মডেল লিখে অডিট বসাতে ভুলে গেলে আগের মতোই টেস্ট ভাঙবে।
+     *
+     * তিনটাই append-only খাতা — সারি বদলায় না, আর প্রতিটা সারি কোনো
+     * না কোনো অডিটেড ডকুমেন্ট থেকে এসেছে। অডিট বসালে একটা বিক্রয়ে
+     * দুই-তিনটা বাড়তি সারি জমত, নতুন কোনো তথ্য ছাড়াই।
+     */
+    'audit_exempt' => [
+        StockMovement::class => 'append-only stock ledger, traceable to its audited document',
+        CostLayer::class => 'append-only cost ledger, traceable to the document that brought the goods in',
+        CostLayerUse::class => 'each row is itself the record of one draw, from an audited document',
     ],
 
     // পণ্যে নিজস্ব ঘর — তাকের কোড, সরবরাহকারীর নিজস্ব নম্বর, আর যা

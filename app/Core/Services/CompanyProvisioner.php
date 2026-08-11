@@ -4,13 +4,12 @@ declare(strict_types=1);
 
 namespace App\Core\Services;
 
+use App\Core\Module\ModuleRegistry;
 use App\Core\Support\CompanyContext;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\FinancialYear;
 use App\Models\User;
-use App\Modules\Accounts\Services\StandardChart;
-use App\Modules\MasterData\Services\MasterListService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -43,8 +42,7 @@ final class CompanyProvisioner
 {
     public function __construct(
         private readonly NumberSeriesProvisioner $series,
-        private readonly StandardChart $chart,
-        private readonly MasterListService $lists,
+        private readonly ModuleRegistry $modules,
     ) {}
 
     /**
@@ -96,13 +94,31 @@ final class CompanyProvisioner
             /*
              * ক্রমটা বদলানো যাবে না।
              *
-             * সিরিজ অর্থবছর ধরে বসে, তাই বছরটা আগে। ছক ও মাস্টার
-             * তালিকা তার পরে — কর তার হিসাবের খাত খোঁজে, আর খাত না
+             * সিরিজ অর্থবছর ধরে বসে, তাই বছরটা আগে। মডিউলের ভিত্তি
+             * সারিগুলো তার পরে — কর তার হিসাবের খাত খোঁজে, আর খাত না
              * থাকলে করের সারিটাই বসে না।
+             *
+             * ── কেন এখানে কোনো মডিউলের নাম নেই ──────────────────────
+             * আগে এই তিনটা লাইনের দুইটা ছিল `$this->chart->install()`
+             * আর `$this->lists->installDefaults()` — অর্থাৎ কোর জানত
+             * accounts ও master_data নামে দুইটা মডিউল আছে, আর তাদের
+             * সার্ভিসের নাম কী (§১৯.৭ ভাঙত)।
+             *
+             * তার আসল দাম ছিল নীরব: HR বা অন্য কোনো মডিউল নিজের
+             * ভিত্তি সারি নিয়ে এলে সেগুলো নতুন কোম্পানিতে বসত না,
+             * কারণ বসাতে হলে এই ফাইলটা খুলে আরেকটা লাইন লিখতে হত।
+             *
+             * ক্রমটা এখনো ঠিক থাকে: ModuleRegistry::all() নির্ভরতার
+             * ক্রমে ফেরত দেয়, তাই accounts (যার নির্ভরতা নেই) সবসময়
+             * master_data-র (যে accounts-এর উপর দাঁড়ায়) আগে চলে।
              */
             $this->series->provision($financialYear);
-            $this->chart->install();
-            $this->lists->installDefaults();
+
+            foreach ($this->modules->all() as $module) {
+                foreach ($module->provisions as $service) {
+                    app($service)->provisionCompany();
+                }
+            }
         });
     }
 

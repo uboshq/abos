@@ -8,6 +8,7 @@ use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Models\SalesOrder;
 use App\Modules\Sales\Models\SalesReturn;
+use App\Modules\Sales\Panels\SalesFacts;
 use App\Modules\Sales\Reports\SalesReports;
 
 /**
@@ -121,6 +122,18 @@ return [
 
     'reports' => [
         SalesReports::class,
+    ],
+
+    /*
+     * গ্রাহকের পাতায় বিক্রয়ের বক্তব্য — "শেষ কেনা কবে"।
+     *
+     * আগে উত্তরটা দিত Customer নিজে, `SalesInvoice` খুঁজে। তাতে
+     * customer → sales → customer চক্র তৈরি হত, আর বিক্রয় ছাড়া
+     * গ্রাহকের পাতাটাই খুলত না। এদিক থেকে দিলে কোনো নতুন নির্ভরতা
+     * লাগে না — Sales গ্রাহককে আগে থেকেই চেনে।
+     */
+    'facts' => [
+        SalesFacts::class,
     ],
 
     // হোম পর্দার সংখ্যাগুলো — কোর জিজ্ঞেস করে, মডিউল উত্তর দেয়

@@ -29,7 +29,9 @@ return [
     'area' => 'Area',
     'owner_name' => 'Owner name',
     'available_limit' => 'Available limit',
-    'last_purchase' => 'Last purchase',
+
+    // 'last_purchase' moved out — it is a sales fact, so the key lives
+    // there now (sales::field.last_purchase, SalesFacts)
     'billed_in_period' => 'Billed',
     'collected_in_period' => 'Collected',
     'net_change' => 'Net change',

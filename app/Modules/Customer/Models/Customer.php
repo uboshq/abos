@@ -10,19 +10,16 @@ use App\Core\Concerns\HasDocumentStatus;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Contracts\Drillable;
-use App\Core\Support\DocumentStatus;
 use App\Models\Branch;
 use App\Models\LedgerEntry;
 use App\Models\User;
 use App\Modules\MasterData\Models\Location;
 use App\Modules\MasterData\Models\PartyType;
-use App\Modules\Sales\Models\SalesInvoice;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Carbon;
 
 /**
  * একজন গ্রাহক।
@@ -198,21 +195,21 @@ class Customer extends Model implements Drillable
         return bccomp($left, '0', 4) > 0 ? $left : '0.0000';
     }
 
-    /**
-     * শেষ কবে কিছু কিনেছেন।
+    /*
+     * এখানে একসময় lastPurchaseOn() ছিল, আর সেটা `SalesInvoice` খুঁজত।
      *
-     * খাতায় বসা বিল ধরে, খসড়া নয় — খসড়া বিল কেনা নয়, লেখা। ছয় মাস চুপ
-     * থাকা গ্রাহকের সারিতে গতকালের তারিখ দেখালে কেউ তাঁকে ফোন করত না।
+     * ── কেন সেটা সরল ────────────────────────────────────────────────
+     * Sales নির্ভর করে Customer-এর উপর। Customer আবার Sales খুঁজলে
+     * চক্র — customer → sales → customer। module.php-তে ঘোষণা করে
+     * দিলে চক্রটা "বৈধ" হত, সমাধান হত না: দুইটার একটাকেও আলাদা করে
+     * বন্ধ বা বদলানো যেত না, আর বিক্রয় বন্ধ থাকা প্রতিষ্ঠানে গ্রাহকের
+     * পাতাটাই খুলত না।
+     *
+     * "শেষ কেনা কবে" কথাটা আসলে বিক্রয়ের, গ্রাহক কেবল তার বিষয়। তাই
+     * উত্তরটা এখন Sales দেয় (SalesFacts), আর গ্রাহকের পাতা কেবল
+     * জিজ্ঞেস করে "এই রেকর্ড সম্পর্কে কারও কিছু বলার আছে?" — কে বলল
+     * তা না জেনেই।
      */
-    public function lastPurchaseOn(): ?Carbon
-    {
-        $date = SalesInvoice::query()
-            ->where('customer_id', $this->id)
-            ->whereIn('status', [DocumentStatus::CONFIRMED, DocumentStatus::CLOSED])
-            ->max('trx_date');
-
-        return $date === null ? null : Carbon::parse($date);
-    }
 
     /**
      * এই গ্রাহকের বর্তমান পাওনা।

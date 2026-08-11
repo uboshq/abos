@@ -10,9 +10,6 @@ use App\Models\AuditFieldChange;
 use App\Models\AuditTrail;
 use App\Models\IssuedNumber;
 use App\Models\LedgerEntry;
-use App\Modules\Inventory\Models\CostLayer;
-use App\Modules\Inventory\Models\CostLayerUse;
-use App\Modules\Inventory\Models\StockMovement;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
@@ -60,6 +57,12 @@ final class AuditEngine
      * অডিট বসাতে ভুলে গেলে টেস্ট ভাঙে — আর ভাঙার সাথে সাথেই ধরা পড়ে,
      * বছর পরে নয়।
      *
+     * ── কোরের নিজের মডেলগুলোই কেবল এখানে ────────────────────────────
+     * মডিউলের মডেল এখানে লিখলে কোর ওই মডিউলের নাম জেনে ফেলত (§১৯.৭)।
+     * মডিউল নিজের ব্যতিক্রম নিজেই ঘোষণা করে — module.php-তে
+     * 'audit_exempt' => [Model::class => 'কেন']. AuditCoverageTest
+     * দুইটা তালিকা মিলিয়ে দেখে, তাই পাহারাটা যেমন ছিল তেমনই থাকে।
+     *
      * @var array<class-string, string>
      */
     public const NOT_AUDITED = [
@@ -77,19 +80,6 @@ final class AuditEngine
          * নতুন কোনো তথ্য যোগ হত না — ওগুলো নিজেরাই ইতিহাস।
          */
         LedgerEntry::class => 'append-only ledger, already traceable to its audited document',
-        StockMovement::class => 'append-only stock ledger, same reason',
-
-        /*
-         * মালের দামের স্তর ও তার টানগুলো — একই যুক্তি, আরেকটা খাতা।
-         *
-         * স্তর তৈরি হয় মাল ঢোকার নথিতে, আর টান বসে মাল বেরোনোর নথিতে;
-         * দুইটাই অডিটেড। qty_remaining বদলায় ঠিকই, কিন্তু সেটা মানুষের
-         * সম্পাদনা নয় — একটা টানের সরাসরি ফল, আর টানটার নিজের সারি
-         * আছে। অডিট বসালে একটা বিক্রয়ে দুই-তিনটা বাড়তি সারি জমত, আর
-         * নতুন কোনো তথ্য যোগ হত না।
-         */
-        CostLayer::class => 'append-only cost ledger, traceable to the document that brought the goods in',
-        CostLayerUse::class => 'each row is itself the record of one draw, from an audited document',
 
         /*
          * নম্বর ইস্যুর হিসাব — যন্ত্রের খাতা। প্রতিটা ডকুমেন্ট তৈরিতে
