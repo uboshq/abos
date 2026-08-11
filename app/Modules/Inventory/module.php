@@ -51,6 +51,15 @@ return [
         'transactions' => [
             ['label' => 'inventory::menu.stock', 'route' => 'inventory.stock.index', 'permission' => 'inventory.stock.view'],
             ['label' => 'inventory::menu.adjust', 'route' => 'inventory.stock.adjust', 'permission' => 'inventory.stock.adjust'],
+
+            /*
+             * সমন্বয়ের পাশে, কিন্তু আলাদা সারি।
+             *
+             * দুইটার প্রশ্ন আলাদা: সমন্বয় মানে "খাতা আর তাক মেলেনি",
+             * ইস্যু মানে "জেনেশুনে দিয়ে দিলাম"। এক সারিতে রাখলে
+             * আপ্যায়নের বিস্কুট মজুদ ঘাটতির রিপোর্টে গিয়ে বসত।
+             */
+            ['label' => 'inventory::menu.issue', 'route' => 'inventory.stock.issue', 'permission' => 'inventory.stock.adjust'],
             ['label' => 'inventory::menu.opening', 'route' => 'inventory.stock.opening', 'permission' => 'inventory.stock.opening'],
             ['label' => 'inventory::menu.transfers', 'route' => 'inventory.transfer.index', 'permission' => 'inventory.transfer.view'],
         ],

@@ -45,4 +45,5 @@ return [
     'surplus_rate' => 'Rate for surplus',
     'opening_rate' => 'Rate per unit',
     'opening_value' => 'Value',
+    'issued_qty' => 'Quantity issued',
 ];

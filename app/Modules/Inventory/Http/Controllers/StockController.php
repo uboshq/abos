@@ -183,6 +183,47 @@ class StockController extends Controller implements HasMiddleware
             ]));
     }
 
+    /**
+     * বিক্রি ছাড়া মাল বের করে দেওয়ার পর্দা।
+     *
+     * সমন্বয়ের পর্দা থেকে আলাদা, কারণ প্রশ্নটাই আলাদা: ওখানে "গুনে কত
+     * পেলাম", এখানে "কতটা দিয়ে দিলাম"। কারণটা বেছে নিলেই টাকাটা ঠিক
+     * খাতে যায় — আপ্যায়ন খরচে, উপহার উপহারে, মালিকের ব্যবহার উত্তোলনে।
+     */
+    public function issue(Request $request): View
+    {
+        return view('inventory::stock.issue', [
+            'menu' => $this->menu->forUser($request->user()),
+            'products' => Product::query()->active()->orderBy('name_en')->get(),
+            'warehouses' => Warehouse::query()->active()->orderBy('code')->get(),
+            'reasons' => ReasonCode::query()
+                ->inContext(ReasonCode::STOCK_ISSUE)
+                ->active()->with('account')->orderBy('code')->get(),
+            'stock' => $this->stock,
+        ]);
+    }
+
+    public function storeIssue(Request $request): RedirectResponse
+    {
+        $data = $this->validatedMovement($request, ReasonCode::STOCK_ISSUE, 'qty');
+
+        $movement = $this->adjustments->issue(
+            product: $data['product'],
+            warehouse: $data['warehouse'],
+            qty: (string) $request->input('qty'),
+            reason: $data['reason'],
+            date: $request->input('trx_date'),
+            narration: $request->input('narration'),
+        );
+
+        return back()->with('saved', __('inventory::message.issued', [
+            'qty' => rtrim(rtrim((string) $request->input('qty'), '0'), '.'),
+            'reason' => $data['reason']->name(),
+            'account' => $data['reason']->account?->label()
+                ?? __('inventory::message.issue_no_account'),
+        ]));
+    }
+
     public function storeHold(Request $request): RedirectResponse
     {
         $data = $this->validatedMovement($request, ReasonCode::HOLD, 'qty');

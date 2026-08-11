@@ -12,4 +12,5 @@ return [
     'hold_report' => 'Held Stock',
     'transfers' => 'Stock Transfers',
     'opening' => 'Opening Stock',
+    'issue' => 'Stock Issue',
 ];

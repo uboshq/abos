@@ -200,6 +200,117 @@ class StockAdjustmentTest extends TestCase
         );
     }
 
+    // ── বিক্রি ছাড়া মাল বেরোনো ──────────────────────────────────────────
+
+    /**
+     * অফিসে খাওয়া বিস্কুট আপ্যায়ন খরচে যায়, মজুদ ঘাটতিতে নয়।
+     *
+     * ── কেন এই পার্থক্যটা জরুরি ─────────────────────────────────────
+     * দুইটাই মজুদ কমায়, তাই কোডের দিক থেকে এক মনে হয়। কিন্তু "মজুদ
+     * ঘাটতি" মানে মাল হারিয়েছে — নিরীক্ষায় ওই খাতটা দেখে ধরে নেওয়া হয়
+     * গুদামে চুরি বা অব্যবস্থা আছে। অথচ বিস্কুটটা মালিক নিজেই খেতে
+     * দিয়েছেন, আর সেটা একটা স্বাভাবিক ব্যবসায়িক খরচ।
+     */
+    public function test_office_entertainment_lands_in_the_entertainment_account(): void
+    {
+        $reason = $this->issueReason('ENTERTAIN');
+
+        $entertainBefore = $this->balanceOf(StandardChart::ENTERTAINMENT);
+        $shortageBefore = $this->balanceOf(StandardChart::INVENTORY_SHORTAGE_SURPLUS);
+        $inventoryBefore = $this->balanceOf(StandardChart::INVENTORY);
+
+        $this->adjustments()->issue(
+            product: $this->product,
+            warehouse: $this->warehouse,
+            qty: '2',
+            reason: $reason,
+        );
+
+        $cost = bcmul('2', (string) $this->product->purchase_price, 4);
+
+        $this->assertSame(bcadd($entertainBefore, $cost, 4), $this->balanceOf(StandardChart::ENTERTAINMENT));
+        $this->assertSame(bcsub($inventoryBefore, $cost, 4), $this->balanceOf(StandardChart::INVENTORY));
+
+        // ঘাটতির খাত ছোঁয়া হয়নি — এটাই এই ফিচারের মূল কথা
+        $this->assertSame($shortageBefore, $this->balanceOf(StandardChart::INVENTORY_SHORTAGE_SURPLUS));
+    }
+
+    /**
+     * মালিকের নিজের ব্যবহার উত্তোলনে যায় — খরচে নয়।
+     *
+     * ── কেন এটা সবচেয়ে বেশি ভুল হয় ─────────────────────────────────
+     * দেখতে খরচের মতোই: মাল গেল, টাকা গেল। কিন্তু ব্যবসা কিছু পায়নি —
+     * মালিক নিজের জন্য নিয়েছেন। খরচ লিখলে ব্যবসার মুনাফা কম দেখায়, আর
+     * মালিকের মূলধনের হিসাব ভুল থাকে; বছরশেষে "কে কত নিল" প্রশ্নের
+     * উত্তরই থাকে না।
+     */
+    public function test_owner_personal_use_reduces_capital_not_profit(): void
+    {
+        $reason = $this->issueReason('OWNUSE');
+
+        $drawingsBefore = $this->balanceOf(StandardChart::DRAWINGS);
+
+        $this->adjustments()->issue(
+            product: $this->product,
+            warehouse: $this->warehouse,
+            qty: '1',
+            reason: $reason,
+        );
+
+        $cost = (string) $this->product->purchase_price;
+
+        // উত্তোলন ডেবিট প্রকৃতির — মালিকের মূলধন কমে
+        $this->assertSame(bcadd($drawingsBefore, $cost, 4), $this->balanceOf(StandardChart::DRAWINGS));
+    }
+
+    /** উপহার নিজের খাতে — কর হিসাবে আলাদা করে লাগে বলে। */
+    public function test_a_gift_has_its_own_account(): void
+    {
+        $before = $this->balanceOf(StandardChart::GIFTS_AND_DONATIONS);
+
+        $this->adjustments()->issue(
+            product: $this->product,
+            warehouse: $this->warehouse,
+            qty: '1',
+            reason: $this->issueReason('GIFT'),
+        );
+
+        $this->assertSame(
+            bcadd($before, (string) $this->product->purchase_price, 4),
+            $this->balanceOf(StandardChart::GIFTS_AND_DONATIONS),
+        );
+    }
+
+    /** তাকে যা নেই তা দেওয়া যায় না — বিস্কুটটা হয় ছিল, নয় ছিল না। */
+    public function test_more_than_the_shelf_holds_cannot_go_out(): void
+    {
+        $this->expectException(ValidationException::class);
+
+        $this->adjustments()->issue(
+            product: $this->product,
+            warehouse: $this->warehouse,
+            qty: bcadd($this->floor(), '1', 4),
+            reason: $this->issueReason('ENTERTAIN'),
+        );
+    }
+
+    /** পর্দাটা খোলে, আর কোন কারণ কোন খাতে যায় তা দেখায়। */
+    public function test_the_issue_screen_shows_where_each_reason_posts(): void
+    {
+        $this->get(route('inventory.stock.issue'))
+            ->assertOk()
+            ->assertSee(__('inventory::message.issue_where_it_goes'))
+            ->assertSee($this->issueReason('OWNUSE')->name());
+    }
+
+    private function issueReason(string $code): ReasonCode
+    {
+        return ReasonCode::query()
+            ->inContext(ReasonCode::STOCK_ISSUE)
+            ->where('code', $code)
+            ->firstOrFail();
+    }
+
     private function adjustments(): StockAdjustmentService
     {
         return app(StockAdjustmentService::class);

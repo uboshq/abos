@@ -50,6 +50,10 @@ Route::middleware('auth')->prefix('inventory')->group(function () {
         Route::get('/adjust', [StockController::class, 'adjust'])->name('adjust');
         Route::post('/adjust', [StockController::class, 'storeAdjustment'])->name('adjust.store');
 
+        // বিক্রি ছাড়া মাল বেরোনো — আপ্যায়ন, উপহার, মালিকের ব্যবহার, নমুনা
+        Route::get('/issue', [StockController::class, 'issue'])->name('issue');
+        Route::post('/issue', [StockController::class, 'storeIssue'])->name('issue.store');
+
         // খোলা মজুদ — পুরনো খাতা থেকে আসার দিনের কাজ, সমন্বয় নয়
         Route::get('/opening', [OpeningStockController::class, 'index'])->name('opening');
         Route::post('/opening', [OpeningStockController::class, 'store'])->name('opening.store');
