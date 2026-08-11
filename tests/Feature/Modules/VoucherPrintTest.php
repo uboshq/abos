@@ -10,10 +10,12 @@ use App\Models\Company;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\VoucherService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\View;
 use Tests\TestCase;
 
 /**
@@ -56,30 +58,25 @@ class VoucherPrintTest extends TestCase
     private function receipt(): Voucher
     {
         /*
-         * নগদের খাতটা ১১০১-এর **নিচের** সারি, ১১০১ নিজে নয়।
+         * নগদের খাতটা টিলের খাত, ১১০১ নয়।
          *
-         * ১১০১ একটা গ্রুপ (হাতে নগদ), আর গ্রুপে সরাসরি লেনদেন বসে না —
-         * তাই ওটা দিয়ে খসড়া তৈরি হয় কিন্তু পোস্ট করতে গেলে আটকায়।
-         * বাতিলের পরীক্ষাটা পোস্ট করে, তাই ওখানেই ধরা পড়েছিল।
+         * ১১০১ ("হাতে নগদ") একটা গ্রুপ, আর গ্রুপে সরাসরি লেনদেন বসে না।
+         * ওটা দিয়ে খসড়া তৈরি হয় ঠিকই, কিন্তু পোস্ট করতে গেলে আটকায় —
+         * তাই বাতিলের পরীক্ষাটা প্রথমে এখানেই থেমে গিয়েছিল।
+         *
+         * `ensurePrimaryTill()` প্রতিটা কোম্পানির প্রধান ড্রয়ার আর তার
+         * নিজের postable খাত তৈরি করে। VoucherTest-ও ঠিক এটাই করে, আর
+         * ওখানে পোস্ট করা কাজ করে — কাজ করা জিনিসটাই নকল করা হলো।
          */
-        $group = Account::query()->where('code', StandardChart::CASH_IN_HAND)->firstOrFail();
-
-        $cash = Account::query()->where('parent_id', $group->id)->where('is_group', false)->first()
-            ?? $group;
-
-        // পাল্টা খাতেও একই সাবধানতা — যেটাই হোক, গ্রুপ নয়।
-        $other = Account::query()
-            ->where('is_group', false)
-            ->whereKeyNot($cash->id)
-            ->orderBy('code')
-            ->firstOrFail();
+        $cash = (int) app(CashTillService::class)->ensurePrimaryTill()->account_id;
+        $other = Account::query()->where('code', '5202')->firstOrFail();
 
         return app(VoucherService::class)->create([
             'type' => Voucher::RECEIPT,
             'trx_date' => now()->toDateString(),
             'narration' => 'নগদ প্রাপ্তি',
         ], [
-            ['account_id' => $cash->id, 'debit' => '1500', 'credit' => '0'],
+            ['account_id' => $cash, 'debit' => '1500', 'credit' => '0'],
             ['account_id' => $other->id, 'debit' => '0', 'credit' => '1500'],
         ]);
     }
@@ -155,23 +152,54 @@ class VoucherPrintTest extends TestCase
 
     // ── কাগজে যা থাকতেই হবে ──────────────────────────────────────
 
-    /*
-     * ── এখনো যাচাই হয়নি: বাতিল ভাউচারের কাগজ ────────────────────────
+    /**
+     * বাতিল ভাউচারও ছাপা যায় — কিন্তু গায়ে "বাতিল" লেখা থাকে।
      *
-     * কন্ট্রোলার বাতিল ভাউচারে "বাতিল" ছাপ বসায়
-     * (`accounts::print.cancelled`), আর সেটা জরুরি: চালু রসিদের মতো
-     * দেখতে একটা বাতিল রসিদ নিয়ে কেউ ফেরত দেওয়া টাকা আবার দাবি করতে
-     * পারেন।
+     * ছাপতে না দিলে "ওই রসিদটার কী হলো" প্রশ্নের উত্তর দেখানো যেত না।
+     * কিন্তু চালু রসিদের মতো দেখতে একটা বাতিল রসিদ নিয়ে কেউ ফেরত দেওয়া
+     * টাকা আবার দাবি করতে পারেন, তাই কাগজটাকে নিজেই সেটা বলতে হয়।
      *
-     * পরীক্ষাটা লেখা হয়েছিল আর সরানো হয়েছে, কারণ **ছাপা নয়, তার
-     * সেটআপ** আটকে যাচ্ছিল: ভাউচারটা পোস্ট করতে গেলে "গ্রুপ খাতে
-     * সরাসরি লেনদেন বসে না" — ডেমো ছকের কোন খাতটা postable তা খুঁজে
-     * বের করা আলাদা কাজ, আর সেটা এই ফাইলের বিষয় নয়।
-     *
-     * ভাঙা পরীক্ষা রেখে দেওয়ার চেয়ে সরিয়ে লিখে রাখা ভালো — ভাঙা
-     * পরীক্ষা কয়েক দিনেই "ওটা তো এমনিই লাল" হয়ে যায়, আর তখন পাশের
-     * আসল লালগুলোও কেউ দেখে না। **ছাপ বসে কি না, সেটা এখনো প্রমাণিত নয়।**
+     * ── PDF-এর ভেতরে লেখা খোঁজা হয় না ───────────────────────────────
+     * mPDF-এর বাইনারিতে বাংলা লেখা সাবসেট করা ফন্টে এনকোড হয়ে বসে, তাই
+     * "বাতিল" শব্দটা ওখানে খুঁজে পাওয়া যায় না — পাওয়া না যাওয়াটা কিছুই
+     * প্রমাণ করে না। তাই যাচাইটা এক ধাপ আগে: কন্ট্রোলার টেমপ্লেটকে
+     * `notice` পাঠায় কি না, আর সেটা বাতিল হলেই কেবল।
      */
+    public function test_a_cancelled_voucher_says_so_on_the_paper(): void
+    {
+        $voucher = $this->receipt();
+
+        app(VoucherService::class)->post($voucher);
+        app(VoucherService::class)->cancel($voucher->fresh(), 'ভুল খাতে বসেছিল');
+
+        $seen = [];
+        View::composer('print.voucher', function ($view) use (&$seen) {
+            $seen = $view->getData();
+        });
+
+        $this->get(route('accounts.voucher.print', $voucher))
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/pdf');
+
+        $this->assertSame(__('accounts::print.cancelled'), $seen['notice'] ?? null,
+            'বাতিল ভাউচারের কাগজে "বাতিল" ছাপ বসেনি — চালু রসিদের মতোই দেখাবে।');
+    }
+
+    /** চালু ভাউচারে ওই ছাপটা থাকে না। */
+    public function test_a_live_voucher_carries_no_cancelled_stamp(): void
+    {
+        $voucher = $this->receipt();
+
+        $seen = [];
+        View::composer('print.voucher', function ($view) use (&$seen) {
+            $seen = $view->getData();
+        });
+
+        $this->get(route('accounts.voucher.print', $voucher))->assertOk();
+
+        $this->assertNull($seen['notice'] ?? null,
+            'চালু ভাউচারের কাগজে "বাতিল" ছাপ বসেছে।');
+    }
 
     /**
      * জার্নাল ভাউচারও ছাপা যায়।
