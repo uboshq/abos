@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\MasterData\Http\Controllers;
 
+use App\Core\Concerns\SortsLists;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CodeFromName;
@@ -46,6 +47,8 @@ use Illuminate\View\View;
  */
 class MasterListController extends Controller implements HasMiddleware
 {
+    use SortsLists;
+
     /**
      * ছয়টা তালিকার সংজ্ঞা।
      *
@@ -230,11 +233,13 @@ class MasterListController extends Controller implements HasMiddleware
         $spec = $this->spec($kind);
         $model = $spec['model'];
 
-        $records = $model::query()
+        $query = $model::query()
             ->search($request->query('q'))
-            ->when(! $request->boolean('inactive'), fn ($q) => $q->active())
-            ->defaultFirst()
-            ->get();
+            ->when(! $request->boolean('inactive'), fn ($q) => $q->active());
+
+        $sort = $this->applySort($query, $request, $this->sorts($model));
+
+        $records = $query->get();
 
         return view('master_data::list.index', [
             'menu' => $this->menu->forUser($request->user()),
@@ -246,7 +251,43 @@ class MasterListController extends Controller implements HasMiddleware
             'canInstallDefaults' => $records->isEmpty() && ! $request->boolean('inactive'),
             'q' => $request->query('q'),
             'options' => $this->options(),
+            'sortOptions' => $this->sortLabels(),
+            'sort' => $sort,
         ]);
+    }
+
+    /**
+     * ডিফল্ট সারিটা আগে — সেটাই প্রতিদিন সবচেয়ে বেশি খোঁজা হয়।
+     *
+     * ── কেন মডেলটা লাগে ────────────────────────────────────────────
+     * সব তালিকায় "ডিফল্ট" বলে কিছু নেই — এককে বা কারণ কোডে ডিফল্ট
+     * ধারণাটাই অর্থহীন। যাদের নেই তাদের জন্য defaultFirst() কল করলে
+     * অস্তিত্বহীন কলামে ORDER BY যেত।
+     *
+     * @param  class-string  $model
+     * @return array<string, \Closure>
+     */
+    private function sorts(string $model): array
+    {
+        $first = $model::supportsDefault()
+            ? ['default' => fn ($q) => $q->defaultFirst()]
+            : [];
+
+        return [
+            ...$first,
+            'code' => fn ($q) => $q->orderBy('code'),
+            'name' => fn ($q) => $q->orderBy('name_en'),
+        ];
+    }
+
+    /** @return array<string, string> */
+    private function sortLabels(): array
+    {
+        return [
+            'default' => __('master_data::sort.default_first'),
+            'code' => __('master_data::field.code'),
+            'name' => __('master_data::field.name'),
+        ];
     }
 
     public function create(Request $request, string $kind): View

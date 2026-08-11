@@ -71,7 +71,7 @@
 
     <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
-            <x-ui.toolbar>
+            <x-ui.toolbar :sort="$sortOptions">
                 <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
                     <input type="checkbox" name="inactive" value="1" @checked(request()->boolean('inactive')) class="size-4">
                     {{ __('master_data::action.show_inactive') }}

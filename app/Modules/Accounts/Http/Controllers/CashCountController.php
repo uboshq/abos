@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Http\Controllers;
 
+use App\Core\Concerns\SortsLists;
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounts\Models\CashCount;
@@ -24,6 +25,8 @@ use Illuminate\View\View;
  */
 class CashCountController extends Controller implements HasMiddleware
 {
+    use SortsLists;
+
     public function __construct(
         private readonly CashCountService $counts,
         private readonly MenuBuilder $menu,
@@ -39,19 +42,50 @@ class CashCountController extends Controller implements HasMiddleware
 
     public function index(Request $request): View
     {
-        $counts = CashCount::query()
+        $query = CashCount::query()
             ->search($request->query('q'))
-            ->with(['till', 'counter', 'approver'])
-            ->orderByDesc('trx_date')
-            ->orderByDesc('id')
-            ->paginate(50)
-            ->withQueryString();
+            ->with(['till', 'counter', 'approver']);
+
+        $sort = $this->applySort($query, $request, $this->sorts());
+
+        $counts = $query->paginate(50)->withQueryString();
 
         return view('accounts::count.index', [
             'menu' => $this->menu->forUser($request->user()),
             'counts' => $counts,
             'q' => $request->query('q'),
+            'sortOptions' => $this->sortLabels(),
+            'sort' => $sort,
         ]);
+    }
+
+    /**
+     * নতুন গণনা আগে — তালিকাটা খোলা হয় "আজ কে গুনল" দেখতে।
+     *
+     * পার্থক্য দিয়ে সাজানোটা আলাদা প্রশ্নের উত্তর: কোন গণনায় সবচেয়ে
+     * বড় গরমিল ছিল। ওটাই খোঁজা হয় যখন কিছু একটা সন্দেহ হয়।
+     *
+     * @return array<string, \Closure>
+     */
+    private function sorts(): array
+    {
+        return [
+            'latest' => fn ($q) => $q->orderByDesc('trx_date')->orderByDesc('id'),
+            'oldest' => fn ($q) => $q->orderBy('trx_date')->orderBy('id'),
+            // পার্থক্যটা সংরক্ষিত কলাম, তাই হিসাব করার দরকার নেই। ABS —
+            // ঘাটতি আর উদ্বৃত্ত দুইটাই সমান সন্দেহজনক
+            'difference' => fn ($q) => $q->orderByRaw('ABS(difference) DESC'),
+        ];
+    }
+
+    /** @return array<string, string> */
+    private function sortLabels(): array
+    {
+        return [
+            'latest' => __('accounts::sort.latest'),
+            'oldest' => __('accounts::sort.oldest'),
+            'difference' => __('accounts::sort.biggest_difference'),
+        ];
     }
 
     public function create(Request $request): View

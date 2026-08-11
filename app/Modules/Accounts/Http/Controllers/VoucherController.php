@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Http\Controllers;
 
+use App\Core\Concerns\SortsLists;
 use App\Core\Engines\Drill\DrillResolver;
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
@@ -31,6 +32,8 @@ use Illuminate\View\View;
  */
 class VoucherController extends Controller implements HasMiddleware
 {
+    use SortsLists;
+
     public function __construct(
         private readonly VoucherService $vouchers,
         private readonly MenuBuilder $menu,
@@ -57,23 +60,53 @@ class VoucherController extends Controller implements HasMiddleware
     {
         $type = $this->assertType($type);
 
-        $vouchers = Voucher::query()
+        $query = Voucher::query()
             ->ofType($type)
             ->search($request->query('q'))
             ->when($request->query('from'), fn ($q, $d) => $q->whereDate('trx_date', '>=', $d))
             ->when($request->query('to'), fn ($q, $d) => $q->whereDate('trx_date', '<=', $d))
-            ->when($request->query('status'), fn ($q, $s) => $q->where('status', $s))
-            ->orderByDesc('trx_date')
-            ->orderByDesc('id')
-            ->paginate(50)
-            ->withQueryString();
+            ->when($request->query('status'), fn ($q, $s) => $q->where('status', $s));
+
+        $sort = $this->applySort($query, $request, $this->sorts());
+
+        $vouchers = $query->paginate(50)->withQueryString();
 
         return view('accounts::voucher.index', [
             'menu' => $this->menu->forUser($request->user()),
             'type' => $type,
             'vouchers' => $vouchers,
             'q' => $request->query('q'),
+            'sortOptions' => $this->sortLabels(),
+            'sort' => $sort,
         ]);
+    }
+
+    /**
+     * সাজানোর নিয়ম — নতুন আগে, কারণ ভাউচারের তালিকা আজকের কাজ দেখতে
+     * খোলা হয়। টাকার অঙ্ক দিয়ে সাজানো লাগে অন্য প্রশ্নে: "সবচেয়ে বড়
+     * খরচটা কী ছিল"।
+     *
+     * @return array<string, \Closure>
+     */
+    private function sorts(): array
+    {
+        return [
+            'latest' => fn ($q) => $q->orderByDesc('trx_date')->orderByDesc('id'),
+            'oldest' => fn ($q) => $q->orderBy('trx_date')->orderBy('id'),
+            'amount' => fn ($q) => $q->orderByDesc('total'),
+            'document_no' => fn ($q) => $q->orderBy('document_no'),
+        ];
+    }
+
+    /** @return array<string, string> */
+    private function sortLabels(): array
+    {
+        return [
+            'latest' => __('accounts::sort.latest'),
+            'oldest' => __('accounts::sort.oldest'),
+            'amount' => __('accounts::sort.amount'),
+            'document_no' => __('core.print.document_no'),
+        ];
     }
 
     public function create(Request $request, string $type): View

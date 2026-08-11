@@ -7,4 +7,6 @@ return [
     'name' => 'Name',
     'newest' => 'Newest joiners',
     'department' => 'Department',
+    'applied' => 'Order applied',
+    'payslip_order' => 'Payslip order',
 ];
