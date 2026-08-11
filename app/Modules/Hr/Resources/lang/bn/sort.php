@@ -7,4 +7,6 @@ return [
     'name' => 'নাম',
     'newest' => 'নতুন যোগদান আগে',
     'department' => 'বিভাগ',
+    'applied' => 'আবেদনের ক্রমে',
+    'payslip_order' => 'পে-স্লিপের ক্রমে',
 ];

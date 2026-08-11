@@ -62,4 +62,5 @@ return [
     'absent' => 'Absent',
     'unpaid_days' => 'Unpaid days',
     'marked' => 'Marked',
+    'employee' => 'Employee',
 ];

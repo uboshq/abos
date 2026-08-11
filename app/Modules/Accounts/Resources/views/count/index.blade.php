@@ -48,6 +48,7 @@
     <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
             <x-ui.toolbar
+                :sort="$sortOptions"
                 :columns="$columns" />
         </form>
 

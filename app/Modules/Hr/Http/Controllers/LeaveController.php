@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Hr\Http\Controllers;
 
+use App\Core\Concerns\SortsLists;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
@@ -24,6 +25,8 @@ use Illuminate\View\View;
  */
 class LeaveController extends Controller implements HasMiddleware
 {
+    use SortsLists;
+
     public function __construct(
         private readonly LeaveService $leave,
         private readonly MenuBuilder $menu,
@@ -40,18 +43,48 @@ class LeaveController extends Controller implements HasMiddleware
 
     public function index(Request $request): View
     {
-        $applications = LeaveApplication::query()
+        $query = LeaveApplication::query()
             ->with(['employee', 'leaveType', 'decider'])
-            ->when($request->boolean('pending'), fn ($q) => $q->pending())
-            ->orderByDesc('from_date')->orderByDesc('id')
-            ->paginate(50)
-            ->withQueryString();
+            ->when($request->boolean('pending'), fn ($q) => $q->pending());
+
+        $sort = $this->applySort($query, $request, $this->sorts());
+
+        $applications = $query->paginate(50)->withQueryString();
 
         return view('hr::leave.index', [
             'menu' => $this->menu->forUser($request->user()),
             'applications' => $applications,
             'onlyPending' => $request->boolean('pending'),
+            'sortOptions' => $this->sortLabels(),
+            'sort' => $sort,
         ]);
+    }
+
+    /**
+     * আসন্ন ছুটি আগে — তালিকাটা খোলা হয় "কে কবে থাকবে না" জানতে।
+     *
+     * আবেদনের ক্রম দিয়েও সাজানো যায়: কে আগে চেয়েছিল, যেটা একই দিনে
+     * দুইজন চাইলে কাজে লাগে।
+     *
+     * @return array<string, \Closure>
+     */
+    private function sorts(): array
+    {
+        return [
+            'from_date' => fn ($q) => $q->orderByDesc('from_date')->orderByDesc('id'),
+            'applied' => fn ($q) => $q->orderByDesc('id'),
+            'employee' => fn ($q) => $q->orderBy('employee_id')->orderByDesc('from_date'),
+        ];
+    }
+
+    /** @return array<string, string> */
+    private function sortLabels(): array
+    {
+        return [
+            'from_date' => __('hr::field.from_date'),
+            'applied' => __('hr::sort.applied'),
+            'employee' => __('hr::field.employee'),
+        ];
     }
 
     public function create(Request $request): View

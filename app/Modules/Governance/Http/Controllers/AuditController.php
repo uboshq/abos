@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Governance\Http\Controllers;
 
+use App\Core\Concerns\SortsLists;
 use App\Core\Module\ModuleRegistry;
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
@@ -27,6 +28,8 @@ use Illuminate\View\View;
  */
 class AuditController extends Controller implements HasMiddleware
 {
+    use SortsLists;
+
     public function __construct(
         private readonly MenuBuilder $menu,
         private readonly ModuleRegistry $registry,
@@ -55,12 +58,15 @@ class AuditController extends Controller implements HasMiddleware
                 $q->where(fn (Builder $inner) => $inner
                     ->where('document_no', 'like', $like)
                     ->orWhere('label', 'like', $like));
-            })
-            ->orderByDesc('id');
+            });
+
+        $sort = $this->applySort($query, $request, $this->sorts());
 
         return view('governance::audit.index', [
             'menu' => $this->menu->forUser($request->user()),
             'trails' => $query->paginate(60)->withQueryString(),
+            'sortOptions' => $this->sortLabels(),
+            'sort' => $sort,
             'actions' => AuditTrail::ACTIONS,
             'modules' => $this->moduleOptions(),
 
@@ -123,6 +129,31 @@ class AuditController extends Controller implements HasMiddleware
      *
      * @return array<string, string>
      */
+    /**
+     * নতুন আগে — অডিট পড়া হয় "এইমাত্র কে কী করল" জানতে।
+     *
+     * পুরনো আগে দিয়ে সাজানো লাগে অন্য সময়: কোনো একটা কাগজের পুরো
+     * ইতিহাস শুরু থেকে পড়তে হলে।
+     *
+     * @return array<string, \Closure>
+     */
+    private function sorts(): array
+    {
+        return [
+            'latest' => fn ($q) => $q->orderByDesc('id'),
+            'oldest' => fn ($q) => $q->orderBy('id'),
+        ];
+    }
+
+    /** @return array<string, string> */
+    private function sortLabels(): array
+    {
+        return [
+            'latest' => __('governance::sort.latest'),
+            'oldest' => __('governance::sort.oldest'),
+        ];
+    }
+
     private function moduleOptions(): array
     {
         $options = [];

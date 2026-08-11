@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Http\Controllers;
 
+use App\Core\Concerns\SortsLists;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
@@ -29,6 +30,8 @@ use Illuminate\View\View;
  */
 class MoneyTransferController extends Controller implements HasMiddleware
 {
+    use SortsLists;
+
     public function __construct(
         private readonly MoneyTransferService $transfers,
         private readonly MenuBuilder $menu,
@@ -45,17 +48,19 @@ class MoneyTransferController extends Controller implements HasMiddleware
 
     public function index(Request $request): View
     {
-        $transfers = MoneyTransfer::query()
+        $query = MoneyTransfer::query()
             ->search($request->query('q'))
-            ->with(['fromTill', 'toTill', 'toAccount', 'giver', 'receiver'])
-            ->orderByDesc('trx_date')
-            ->orderByDesc('id')
-            ->paginate(50)
-            ->withQueryString();
+            ->with(['fromTill', 'toTill', 'toAccount', 'giver', 'receiver']);
+
+        $sort = $this->applySort($query, $request, $this->sorts());
+
+        $transfers = $query->paginate(50)->withQueryString();
 
         return view('accounts::transfer.index', [
             'menu' => $this->menu->forUser($request->user()),
             'transfers' => $transfers,
+            'sortOptions' => $this->sortLabels(),
+            'sort' => $sort,
             // যেগুলো এই ব্যবহারকারীর গ্রহণের অপেক্ষায়
             'awaiting' => MoneyTransfer::query()
                 ->awaiting((int) $request->user()->id)
@@ -64,6 +69,33 @@ class MoneyTransferController extends Controller implements HasMiddleware
                 ->get(),
             'q' => $request->query('q'),
         ]);
+    }
+
+    /**
+     * নতুন আগে; টাকার অঙ্ক দিয়েও সাজানো যায়।
+     *
+     * বড় অঙ্কের হস্তান্তরগুলোই সবচেয়ে বেশি দেখা হয় — কারণ ওখানেই
+     * ভুল হলে সবচেয়ে বেশি টাকা আটকে যায়।
+     *
+     * @return array<string, \Closure>
+     */
+    private function sorts(): array
+    {
+        return [
+            'latest' => fn ($q) => $q->orderByDesc('trx_date')->orderByDesc('id'),
+            'oldest' => fn ($q) => $q->orderBy('trx_date')->orderBy('id'),
+            'amount' => fn ($q) => $q->orderByDesc('amount'),
+        ];
+    }
+
+    /** @return array<string, string> */
+    private function sortLabels(): array
+    {
+        return [
+            'latest' => __('accounts::sort.latest'),
+            'oldest' => __('accounts::sort.oldest'),
+            'amount' => __('accounts::sort.amount'),
+        ];
     }
 
     public function create(Request $request): View

@@ -62,4 +62,5 @@ return [
     'absent' => 'অনুপস্থিত',
     'unpaid_days' => 'কাটা যাবে',
     'marked' => 'বসানো হয়েছে',
+    'employee' => 'কর্মী',
 ];

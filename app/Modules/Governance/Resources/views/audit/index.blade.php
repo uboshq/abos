@@ -49,6 +49,7 @@
         --}}
         <form method="GET" class="contents">
             <x-ui.toolbar
+                :sort="$sortOptions"
                 :columns="$columns" :search-placeholder="__('governance::label.search_hint')">
                 <select name="user" aria-label="{{ __('governance::field.who') }}"
                         class="h-9 rounded-(--radius-field) border border-(--color-border)
