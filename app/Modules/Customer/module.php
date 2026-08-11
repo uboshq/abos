@@ -46,6 +46,11 @@ return [
                 'route_params' => ['slug' => 'due-list'], 'permission' => 'customer.report'],
             ['label' => 'customer::menu.ageing', 'route' => 'customer.report.show',
                 'route_params' => ['slug' => 'ageing'], 'permission' => 'customer.report'],
+
+            // "কত পাওনা" নয়, "এ মাসে কে কত দিল" — আদায়কারীর জমার সাথে
+            // মেলানোর তালিকা
+            ['label' => 'customer::menu.collection', 'route' => 'customer.report.show',
+                'route_params' => ['slug' => 'collection'], 'permission' => 'customer.report'],
         ],
     ],
 

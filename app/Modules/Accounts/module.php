@@ -62,6 +62,9 @@ return [
             ['label' => 'accounts::menu.day_book', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'day-book'], 'permission' => 'accounts.report'],
             ['label' => 'accounts::menu.cash_book', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'cash-book'], 'permission' => 'accounts.report'],
             ['label' => 'accounts::menu.bank_book', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'bank-book'], 'permission' => 'accounts.report'],
+
+            // "আজ কত টাকা ঢুকল" — নগদ বই বলে কোন ড্রয়ারে, এটা বলে কোন কাগজে
+            ['label' => 'accounts::menu.inflow', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'inflow'], 'permission' => 'accounts.report'],
             ['label' => 'accounts::menu.ledger', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'ledger'], 'permission' => 'accounts.report'],
             ['label' => 'accounts::menu.trial_balance', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'trial-balance'], 'permission' => 'accounts.report'],
             ['label' => 'accounts::menu.profit_loss', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'profit-loss'], 'permission' => 'accounts.report.final'],

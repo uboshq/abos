@@ -33,7 +33,76 @@ final class CoreReports
         $engine->register(self::profitAndLoss());
         $engine->register(self::balanceSheet());
         $engine->register(self::cashFlow());
+        $engine->register(self::inflow());
     }
+
+    /**
+     * আদায়ের তালিকা — কোন টাকা কার কাছ থেকে ঢুকল।
+     *
+     * ── কেন নগদ বই দিয়ে কাজ চলে না ──────────────────────────────────
+     * নগদ বই বলে টাকাটা **কোন ড্রয়ারে** ঢুকল, আর তাতে ঢোকা-বেরোনো
+     * দুইটাই থাকে। কিন্তু আদায় নিয়ে যে প্রশ্নটা রোজ করা হয় সেটা আলাদা:
+     * "আজ কার কাছ থেকে কত এল"। উত্তরটা পক্ষের নামে, খাতের নামে নয় —
+     * আর মালিক ওই তালিকাটাই মেলান আদায়কারীর জমা দেওয়া টাকার সাথে।
+     *
+     * শুধু ডেবিট, আর কেবল টাকার খাতে: টাকা ঢোকা মানে নগদ বা ব্যাংক
+     * বাড়া। ক্রেডিট বাদ, নইলে বেরোনো টাকাও তালিকায় আসত আর যোগফলটা
+     * "মোট আদায়" থাকত না।
+     */
+    public static function inflow(): ReportDefinition
+    {
+        return new ReportDefinition(
+            key: 'accounts.inflow',
+            title: 'accounts::menu.inflow',
+            filters: ['date_range', 'branch'],
+            query: fn (array $f) => DB::table('ledger_entries')
+                ->leftJoin('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
+                ->where('ledger_entries.company_id', $f['company_id'])
+                ->where(fn ($q) => $q->where('accounts.is_cash', true)->orWhere('accounts.is_bank', true))
+                ->when($f['branch_id'], fn ($q, $branch) => $q->where('ledger_entries.branch_id', $branch))
+                ->whereBetween('ledger_entries.trx_date', [$f['from'], $f['to']])
+                ->where('ledger_entries.debit', '>', 0)
+                ->orderBy('ledger_entries.trx_date')
+                ->orderBy('ledger_entries.id')
+                ->select([
+                    'ledger_entries.trx_date',
+                    'ledger_entries.document_no',
+                    self::accountName(),
+                    'ledger_entries.narration',
+                    'ledger_entries.debit',
+                    'ledger_entries.source_type',
+                    'ledger_entries.source_id',
+                ]),
+            columns: [
+                ['key' => 'trx_date', 'label' => 'core.print.date', 'type' => ReportColumn::DATE, 'width' => '7rem'],
+                [
+                    'key' => 'document_no',
+                    'label' => 'core.table.document',
+                    'type' => ReportColumn::DOCUMENT,
+                    'source_type' => 'source_type',
+                    'source_id' => 'source_id',
+                    'width' => '12rem',
+                ],
+                ['key' => 'account_name', 'label' => 'accounts::field.received_into'],
+                ['key' => 'narration', 'label' => 'core.table.narration'],
+                ['key' => 'debit', 'label' => 'accounts::field.received', 'type' => ReportColumn::MONEY],
+            ],
+        );
+    }
+
+    /*
+     * পক্ষের নাম এখানে নেই, ইচ্ছাকৃতভাবে।
+     *
+     * খতিয়ান কেবল party_type ও party_id রাখে, নাম নয়। নাম আনতে হলে
+     * গ্রাহক ও সরবরাহকারীর টেবিলে জোড় লাগাতে হত — অর্থাৎ Accounts-কে
+     * ওই দুইটা মডিউলের টেবিলের নাম জানতে হত, অথচ Accounts কারও উপর
+     * নির্ভর করে না (module.php-তে depends_on ফাঁকা)। সবাই যার উপর
+     * দাঁড়ায় সে কারও উপর দাঁড়ালে সীমানাটাই থাকে না।
+     *
+     * নম্বরটা ক্লিকযোগ্য, আর ওই কাগজে পক্ষের নাম আছে — এক ক্লিকেই
+     * উত্তর। আর "কে কত দিল" প্রশ্নের সরাসরি উত্তর দেয় গ্রাহক মডিউলের
+     * আদায় রিপোর্ট, যেখানে ওই জোড়টা স্বাভাবিক।
+     */
 
     /** দৈনিক খতিয়ান — একটা তারিখ পরিসরের সব লেনদেন, ক্রমানুসারে। */
     public static function dayBook(): ReportDefinition

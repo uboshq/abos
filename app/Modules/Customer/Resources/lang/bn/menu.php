@@ -9,4 +9,5 @@ return [
     'due_list' => 'বকেয়া তালিকা',
     'ageing' => 'বকেয়ার বয়স',
     'settings' => 'সেটিংস',
+    'collection' => 'কে কত দিল',
 ];

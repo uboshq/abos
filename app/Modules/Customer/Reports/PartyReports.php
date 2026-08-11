@@ -40,6 +40,70 @@ final class PartyReports
     {
         $engine->register(self::dueList());
         $engine->register(self::ageing());
+        $engine->register(self::collection());
+    }
+
+    /**
+     * কে কত দিল — একটা সময়ের ভেতরে, গ্রাহকভিত্তিক।
+     *
+     * ── কেন বকেয়ার তালিকা দিয়ে এই প্রশ্নের উত্তর হয় না ────────────────
+     * বকেয়ার তালিকা বলে **কত পাওনা**, আর সেটা একটা মুহূর্তের অবস্থা।
+     * কিন্তু মাস শেষে মালিকের প্রশ্নটা আলাদা: "এ মাসে কে কত দিল"।
+     * দুইটা এক নয় — যে গ্রাহক মাসজুড়ে নিয়মিত দিয়েছেন অথচ নতুন বিলও
+     * নিয়েছেন, তাঁর বকেয়া অপরিবর্তিত থাকতে পারে যদিও তিনি সবচেয়ে ভালো
+     * পরিশোধকারী।
+     *
+     * আদায় মানে গ্রাহকের খাতে ক্রেডিট: প্রাপ্য ডেবিট প্রকৃতির, তাই টাকা
+     * এলে সেটা কমে। বিক্রয় ঠিক উল্টো — ডেবিট।
+     *
+     * শুরুর তারিখের আগের কিছু ধরা হয় না, কারণ প্রশ্নটাই "এই সময়ে কত"।
+     * আগের বকেয়া জানতে বকেয়ার তালিকা আছে।
+     */
+    public static function collection(): ReportDefinition
+    {
+        return new ReportDefinition(
+            key: 'customer.collection',
+            title: 'customer::menu.collection',
+            filters: ['date_range', 'branch'],
+            groupBy: 'party_id',
+            query: fn (array $f) => DB::table('ledger_entries')
+                ->join('customers', 'customers.id', '=', 'ledger_entries.party_id')
+                ->where('ledger_entries.company_id', $f['company_id'])
+                ->where('ledger_entries.party_type', Customer::drillSourceType())
+                ->when($f['branch_id'], fn ($q, $branch) => $q->where('ledger_entries.branch_id', $branch))
+                ->whereBetween('ledger_entries.trx_date', [$f['from'], $f['to']])
+                ->groupBy('ledger_entries.party_id', 'customers.code', 'customers.name_en', 'customers.name_bn')
+                // যে গ্রাহকের এই সময়ে কিছুই হয়নি তাঁর সারি শুধু ভিড় বাড়ায়
+                ->havingRaw('SUM(ledger_entries.credit) > 0 OR SUM(ledger_entries.debit) > 0')
+                ->orderByRaw('SUM(ledger_entries.credit) DESC')
+                ->select([
+                    'ledger_entries.party_id',
+                    self::customerName(),
+                    DB::raw("'".Customer::drillSourceType()."' as party_type_literal"),
+                    DB::raw('SUM(ledger_entries.debit) as billed'),
+                    DB::raw('SUM(ledger_entries.credit) as collected'),
+                    DB::raw('SUM(ledger_entries.debit) - SUM(ledger_entries.credit) as movement'),
+                ]),
+            columns: [
+                [
+                    'key' => 'customer_name',
+                    'label' => 'customer::field.name',
+                    'type' => ReportColumn::DOCUMENT,
+                    'source_type' => 'party_type_literal',
+                    'source_id' => 'party_id',
+                ],
+                ['key' => 'billed', 'label' => 'customer::field.billed_in_period', 'type' => ReportColumn::MONEY],
+                ['key' => 'collected', 'label' => 'customer::field.collected_in_period', 'type' => ReportColumn::MONEY],
+
+                /*
+                 * নিট পরিবর্তন — ধনাত্মক মানে বকেয়া বেড়েছে।
+                 *
+                 * এই একটা কলামই বলে দেয় গ্রাহকটা এ মাসে এগিয়েছেন না
+                 * পিছিয়েছেন, দুইটা সংখ্যা মাথায় বিয়োগ না করেই।
+                 */
+                ['key' => 'movement', 'label' => 'customer::field.net_change', 'type' => ReportColumn::MONEY],
+            ],
+        );
     }
 
     /**

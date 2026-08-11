@@ -266,6 +266,43 @@ class AccountReportsTest extends TestCase
         $this->assertSame($result->totals['debit'], $result->totals['credit']);
     }
 
+    /**
+     * আদায়ের তালিকা — কেবল ঢোকা টাকা, বেরোনোটা নয়।
+     *
+     * ── কেন নগদ বই দিয়ে এই প্রশ্নের উত্তর হয় না ────────────────────
+     * নগদ বইয়ে ঢোকা-বেরোনো দুইটাই থাকে, তাই "আজ কত আদায় হল" জানতে
+     * চোখ দিয়ে ডেবিটের সারিগুলো বেছে নিতে হত। এই তালিকায় কেবল ঢোকা,
+     * তাই যোগফলটাই উত্তর।
+     *
+     * সিড ডাটায় টাকা ঢুকেছে দুইবার: আদায় ২০,০০০ নগদে, আর কন্ট্রার
+     * ৫,০০০ ব্যাংকে। খরচের ৬,০০০ বেরিয়েছে, তাই তালিকায় থাকার কথা নয়।
+     */
+    public function test_the_inflow_list_shows_only_money_coming_in(): void
+    {
+        $result = $this->report('accounts.inflow');
+
+        $this->assertSame(2, $result->totalRows, 'ঢোকা টাকার সারি দুইটা হওয়ার কথা');
+        $this->assertSame('25000.00', $result->totals['debit']);
+    }
+
+    /**
+     * কন্ট্রা দুই দিকেই টাকার খাত — তবু একবারই গোনা হয়।
+     *
+     * নগদ থেকে ব্যাংকে ৫,০০০ সরালে ব্যাংকে ঢোকে আর নগদ থেকে বেরোয়।
+     * ক্রেডিটের সারিটা বাদ না দিলে একই টাকা "আদায়" হিসেবে গোনা হত,
+     * অথচ বাইরে থেকে এক পয়সাও আসেনি।
+     */
+    public function test_a_contra_does_not_double_count_as_collection(): void
+    {
+        $rows = $this->report('accounts.inflow')->rows;
+
+        $amounts = array_map(fn ($r) => (string) $r['debit'], $rows);
+
+        $this->assertContains('20000.0000', $amounts);
+        $this->assertContains('5000.0000', $amounts);
+        $this->assertCount(2, $amounts);
+    }
+
     public function test_the_profit_and_loss_holds_only_income_and_expense(): void
     {
         $result = $this->report('accounts.profit_loss');
