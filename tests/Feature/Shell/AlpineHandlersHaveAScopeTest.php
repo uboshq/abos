@@ -123,6 +123,77 @@ class AlpineHandlersHaveAScopeTest extends TestCase
         ]));
     }
 
+    /**
+     * `$refs.x` ডাকা হচ্ছে অথচ `x-ref="x"` কোথাও নেই।
+     *
+     * ── যে ভুলটা এই পাহারা ধরে ──────────────────────────────────────
+     * সরাসরি ক্রয়ের পর্দায় পণ্য যোগ করার পর কার্সরটা সার্চ ঘরে ফেরত
+     * যাওয়ার কথা ছিল: `this.$refs.search.focus()`। কিন্তু ঘরটা ছিল
+     * `<template x-if>`-এর ভেতরে, আর Alpine ক্লোন করা টেমপ্লেটের
+     * `x-ref` বাইরের কম্পোনেন্টে তোলে না। তাই `$refs.search` ছিল
+     * `undefined`।
+     *
+     * ── কেন এটা শুধু কার্সর হারানোর চেয়ে অনেক বেশি ──────────────────
+     * `undefined.focus()` একটা TypeError ছোড়ে, আর ওটা পড়ে ঠিক মাঝখানে
+     * — লাইনটা কার্টে বসার পর, কিন্তু ফর্মের লুকানো ঘরগুলো তৈরি হওয়ার
+     * আগে। পর্দায় লাইনটা দেখা যেত, যোগফলও ঠিক আসত, অথচ "Confirm"
+     * চাপলে সার্ভার বলত "The lines field is required" আর পুরো কার্ট
+     * উধাও হয়ে যেত। পরীক্ষক লিখেছেন: "এই সম্পূর্ণ নতুন ফিচারটা এই
+     * মুহূর্তে ব্যবহারযোগ্য না।"
+     *
+     * অর্থাৎ একটা কসমেটিক লাইন পুরো পর্দাটা অকেজো করে দিয়েছিল, আর
+     * সার্ভারের কোনো টেস্ট সেটা ধরতে পারত না — ভাঙাটা ব্রাউজারে।
+     */
+    public function test_every_ref_a_component_uses_actually_exists(): void
+    {
+        $offenders = [];
+
+        foreach ($this->bladeFiles() as $file) {
+            $source = file_get_contents($file);
+
+            if ($source === false) {
+                continue;
+            }
+
+            preg_match_all('/\$refs\.([A-Za-z_][\w]*)/', $source, $uses);
+
+            if ($uses[1] === []) {
+                continue;
+            }
+
+            preg_match_all('/x-ref="([^"]+)"/', $source, $declared);
+
+            foreach (array_unique($uses[1]) as $ref) {
+                if (! in_array($ref, $declared[1], true)) {
+                    $offenders[] = $this->relative($file).' → $refs.'.$ref;
+
+                    continue;
+                }
+
+                /*
+                 * ঘোষিত, কিন্তু টেমপ্লেটের ভেতরে — যা ঘোষিত না থাকারই সমান।
+                 *
+                 * `<template x-if>` বা `x-for` যা ক্লোন করে, তার `x-ref`
+                 * বাইরের কম্পোনেন্ট থেকে দেখা যায় না। খুঁজে পাওয়া কঠিন,
+                 * কারণ সোর্সে লেখাটা ঠিকই আছে।
+                 */
+                if (preg_match(
+                    '/<template[^>]*\bx-(if|for)\b[^>]*>(?:(?!<\/template>).)*x-ref="'.preg_quote($ref, '/').'"/s',
+                    $source,
+                )) {
+                    $offenders[] = $this->relative($file).' → $refs.'.$ref.' (x-ref sits inside a <template>)';
+                }
+            }
+        }
+
+        $this->assertSame([], $offenders, implode("\n", [
+            'এই $refs-গুলো কোনো x-ref-এর সাথে মেলে না, তাই undefined আসবে।',
+            'তার উপর .focus() বা .value ডাকলে TypeError পড়ে, আর Alpine ওই',
+            'হ্যান্ডলারের বাকি কাজটুকু আর করে না — অর্ধেক হয়ে থেমে থাকে।',
+            'x-ref যোগ করুন, আর টেমপ্লেটের ভেতরে হলে x-show দিয়ে বাইরে আনুন।',
+        ]));
+    }
+
     /** @return list<string> */
     private function bladeFiles(): array
     {
