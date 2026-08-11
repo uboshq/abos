@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Core\Engines\Report\ReportEngine;
+use App\Core\Events\EventRegistry;
 use App\Core\Module\ModuleRegistry;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
@@ -24,8 +25,16 @@ class ModuleServiceProvider extends ServiceProvider
         $this->app->singleton(ReportEngine::class);
     }
 
-    public function boot(ModuleRegistry $registry, ReportEngine $reports): void
+    public function boot(ModuleRegistry $registry, ReportEngine $reports, EventRegistry $events): void
     {
+        /*
+         * শ্রোতাদের নিবন্ধন — মডিউলের ঘোষণা থেকে, কোরের তালিকা থেকে নয়।
+         *
+         * লুপের বাইরে, কারণ এক মডিউল অন্য মডিউলের ঘটনা শোনে; দুইটাই
+         * পড়া শেষ না হলে ক্রম নিয়ে ভাবতে হত (§১৯.৭)।
+         */
+        $events->register();
+
         foreach ($registry->all() as $module) {
             $this->registerTranslations($module->dir('Resources', 'lang'), $module->code);
             $this->registerViews($module->dir('Resources', 'views'), $module->code);

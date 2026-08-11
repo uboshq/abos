@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Modules\Sales\Dashboard\SalesWidgets;
+use App\Modules\Sales\Events\InvoiceConfirmed;
 use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesInvoice;
@@ -122,6 +123,20 @@ return [
 
     'reports' => [
         SalesReports::class,
+    ],
+
+    /*
+     * এই মডিউল যে ঘটনাগুলো ঘোষণা করে — একটা চুক্তি।
+     *
+     * অন্য মডিউল এই তালিকা দেখে ঠিক করে কার কথা শুনবে। তালিকায় না
+     * থাকা মানে ওটা এই মডিউলের ভেতরের ব্যাপার, কাল বদলে যেতে পারে।
+     *
+     * খেয়াল রাখতে হবে: বিলের **দাখিলা ও স্টক চলাচল ইভেন্টে যায় না** —
+     * ওগুলো confirm()-এর ভেতরে, একই ট্রানজেকশনে। ইভেন্ট একদিন হারায়,
+     * খাতা হারানো যায় না।
+     */
+    'events' => [
+        InvoiceConfirmed::class,
     ],
 
     /*

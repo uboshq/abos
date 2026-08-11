@@ -8,6 +8,7 @@ use App\Core\Contracts\ContributesFacts;
 use App\Core\Contracts\DashboardWidgets;
 use App\Core\Contracts\Importer;
 use App\Core\Contracts\ProvisionsCompany;
+use App\Core\Events\DomainEvent;
 use InvalidArgumentException;
 
 /**
@@ -100,6 +101,28 @@ final class ModuleDefinition
          * @var array<class-string, string>
          */
         public readonly array $auditExempt,
+
+        /**
+         * এই মডিউল যে ঘটনাগুলো ঘোষণা করে — একটা চুক্তি, একটা তালিকা নয়।
+         *
+         * এখানে যা লেখা, অন্য মডিউল তার উপর নির্ভর করতে পারে। যা লেখা
+         * নেই, সেটা এই মডিউলের ভেতরের ব্যাপার — কাল বদলে যেতে পারে।
+         *
+         * @var list<class-string<DomainEvent>>
+         */
+        public readonly array $events,
+
+        /**
+         * এই মডিউল কার কথা শোনে — ঘটনা => শ্রোতারা।
+         *
+         * ── কেন এখানে, EventServiceProvider-এ নয় ────────────────────
+         * কোরে লিখলে কোর প্রতিটা মডিউলের শ্রোতার নাম জানত (§১৯.৭), আর
+         * নতুন মডিউল যোগ করতে কোর ফাইল খুলতে হত — ঠিক যেটা এড়ানোর
+         * জন্য পুরো মডিউল ব্যবস্থাটা।
+         *
+         * @var array<class-string<DomainEvent>, list<class-string>>
+         */
+        public readonly array $listeners,
 
         /**
          * অন্য মডিউলের রেকর্ড সম্পর্কে এই মডিউলের যা বলার আছে।
@@ -236,6 +259,8 @@ final class ModuleDefinition
                 $path,
             ),
             auditExempt: self::validateAuditExempt($raw['audit_exempt'] ?? [], $path),
+            events: self::validateEvents($raw['events'] ?? [], $path),
+            listeners: self::validateListeners($raw['listeners'] ?? [], $path),
             facts: self::validateFacts($raw['facts'] ?? [], $path),
             provisions: self::validateProvisions($raw['provisions'] ?? [], $path),
             imports: self::validateImports($raw['imports'] ?? [], $path),
@@ -283,6 +308,95 @@ final class ModuleDefinition
         }
 
         return $exempt;
+    }
+
+    /**
+     * ঘোষিত ঘটনাগুলো — ক্লাসটা আছে, DomainEvent, আর নামটা অতীত কালে।
+     *
+     * ── কেন নামের কালটাও যাচাই হয় ───────────────────────────────────
+     * `ConfirmInvoice` নামের একটা ইভেন্ট পড়লে মনে হয় সেটা একটা আদেশ,
+     * আর শ্রোতা ভাবতে শুরু করে সে "না" বলতে পারে। ইভেন্টে "না" বলা
+     * যায় না — যা ঘটে গেছে তা ঘটেই গেছে। নামটা ভুল হলে ভুল ধারণাটা
+     * ছয় মাস পর কোডে বসে যায়, আর তখন সরানো যায় না।
+     *
+     * পরীক্ষাটা সরল: নামের শেষে `ed` বা `en` (Confirmed, Taken)। সব
+     * ইংরেজি অতীত কাল এতে ধরা পড়বে না, কিন্তু ভুলগুলোর প্রায় সবই ধরা
+     * পড়ে — আর যেটা পড়ে না, সেটা অন্তত ইচ্ছাকৃত।
+     *
+     * @param  list<mixed>  $events
+     * @return list<class-string<DomainEvent>>
+     */
+    private static function validateEvents(array $events, string $path): array
+    {
+        foreach ($events as $class) {
+            if (! is_string($class) || ! class_exists($class)) {
+                throw new InvalidArgumentException(
+                    "{$path}: event '".(is_string($class) ? $class : gettype($class))."' does not exist."
+                );
+            }
+
+            if (! is_subclass_of($class, DomainEvent::class)) {
+                throw new InvalidArgumentException(
+                    "{$path}: event {$class} must extend DomainEvent."
+                );
+            }
+
+            $name = class_basename($class);
+
+            if (! str_ends_with($name, 'ed') && ! str_ends_with($name, 'en')) {
+                throw new InvalidArgumentException(
+                    "{$path}: event {$name} should be named in the past tense — something that has already "
+                    .'happened (InvoiceConfirmed, StockTaken). A present-tense name reads like a command, and a '
+                    .'listener cannot refuse an event.'
+                );
+            }
+        }
+
+        return array_values($events);
+    }
+
+    /**
+     * শ্রোতারা — কোন ঘটনায় কে, আর দুইটাই সত্যিই আছে কি না।
+     *
+     * শ্রোতার ক্লাসে `handle()` থাকতে হবে। না থাকলে ইভেন্টটা ছোড়া হত,
+     * কিছুই ঘটত না, আর কোথাও কোনো ভুলের বার্তা আসত না — অনুপস্থিত
+     * প্রতিক্রিয়ার অনুপস্থিতি কেউ খেয়াল করে না।
+     *
+     * @param  array<string, mixed>  $listeners
+     * @return array<class-string<DomainEvent>, list<class-string>>
+     */
+    private static function validateListeners(array $listeners, string $path): array
+    {
+        $validated = [];
+
+        foreach ($listeners as $event => $handlers) {
+            if (! is_string($event) || ! class_exists($event) || ! is_subclass_of($event, DomainEvent::class)) {
+                throw new InvalidArgumentException(
+                    "{$path}: listeners are declared for '".(is_string($event) ? $event : gettype($event))
+                    ."', which is not a DomainEvent."
+                );
+            }
+
+            foreach ((array) $handlers as $handler) {
+                if (! is_string($handler) || ! class_exists($handler)) {
+                    throw new InvalidArgumentException(
+                        "{$path}: listener '".(is_string($handler) ? $handler : gettype($handler))
+                        ."' for {$event} does not exist."
+                    );
+                }
+
+                if (! method_exists($handler, 'handle')) {
+                    throw new InvalidArgumentException(
+                        "{$path}: listener {$handler} needs a handle() method. Without it the event would fire, "
+                        .'nothing would happen, and nothing would say why.'
+                    );
+                }
+            }
+
+            $validated[$event] = array_values((array) $handlers);
+        }
+
+        return $validated;
     }
 
     /**
