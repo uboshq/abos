@@ -19,6 +19,7 @@ use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\CostLayerService;
 use App\Modules\Inventory\Services\StockService;
+use App\Modules\Sales\Events\InvoiceConfirmed;
 use App\Modules\Sales\Models\DeliveryChallanLine;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Models\SalesInvoiceLine;
@@ -248,7 +249,25 @@ final class SalesInvoiceService
 
             $invoice->update(['status' => DocumentStatus::CONFIRMED]);
 
-            return $invoice->fresh(['lines']);
+            $confirmed = $invoice->fresh(['lines']);
+
+            /*
+             * ঘটনাটা লেনদেনের **পরে**, ভেতরে নয়।
+             *
+             * ── কেন ─────────────────────────────────────────────────
+             * ভেতরে ছুড়লে শ্রোতা এমন একটা বিল দেখত যা এখনো কমিট হয়নি।
+             * শ্রোতা SMS পাঠালে আর তারপর লেনদেনটা রোল-ব্যাক করলে গ্রাহক
+             * একটা বিলের খবর পেতেন যেটার অস্তিত্বই নেই — আর সেটা ফেরত
+             * নেওয়ার কোনো উপায় নেই।
+             *
+             * afterCommit ব্যবহার করা হয়েছে, নিজে হাতে লেনদেনের বাইরে
+             * সরিয়ে নয়: confirm() নিজেই নেস্টেড লেনদেনে ডাকা হতে পারে
+             * (POS-এ বিল ও আদায় একসাথে), আর তখন "বাইরে" মানে ভুল
+             * জায়গা — সবচেয়ে বাইরের লেনদেনটা তখনো খোলা।
+             */
+            DB::afterCommit(fn () => event(InvoiceConfirmed::from($confirmed)));
+
+            return $confirmed;
         });
     }
 
