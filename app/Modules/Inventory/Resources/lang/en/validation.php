@@ -31,4 +31,6 @@ return [
     'return_exceeds_issue' => 'More of :product cannot come back than went out.',
     'layer_already_used' => 'Goods from :document have already left, so it can no longer be cancelled — the sales they went into are already costed at that price. Use a purchase return instead.',
     'surplus_needs_rate' => 'Surplus found in a count needs a rate — only you know which consignment it came from, and without a rate it can never leave the shelf again.',
+    'issue_needs_qty' => 'The quantity issued must be more than zero.',
+    'issue_more_than_stock' => 'Only :have is on the shelf — no more than that can go out.',
 ];

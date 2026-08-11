@@ -54,6 +54,66 @@ final class StockAdjustmentService
      *
      * ঘাটতিতে দর লাগে না: যে মাল বেরিয়ে যাচ্ছে তার দাম স্তরেই লেখা আছে।
      */
+    /**
+     * বিক্রি ছাড়া মাল বের করে দেওয়া।
+     *
+     * ── সমন্বয় থেকে আলাদা কেন ───────────────────────────────────────
+     * প্রশ্ন দুইটা আলাদা। সমন্বয়ে বলা হয় "গুনে কত পেলাম", আর সিস্টেম
+     * পার্থক্যটা বের করে — অর্থাৎ একটা **ভুল ধরা পড়ছে**। এখানে বলা হয়
+     * "কতটা দিয়ে দিলাম", আর কিছুই ভুল হয়নি: মালটা জেনেশুনে গেছে।
+     *
+     * এক পর্দায় রাখলে ব্যবহারকারীকে মাথায় বিয়োগ করতে হত ("তাকে ৫০ আছে,
+     * ২ কার্টন দিলাম, তাহলে লিখব ৪৮") — আর ওই বিয়োগটাই ভুল হয়। তার
+     * চেয়েও বড় কথা, "মজুদ ঘাটতি" রিপোর্টে আপ্যায়নের বিস্কুট ঘাটতি
+     * হিসেবে দেখাত, আর মালিক ভাবতেন গুদামে চুরি হচ্ছে।
+     *
+     * টাকাটা কোন খাতে যাবে তা কারণ বলে দেয় (ReasonCode::account) —
+     * আপ্যায়ন খরচে, উপহার উপহারের খাতে, আর মালিকের ব্যবহার উত্তোলনে,
+     * যেটা খরচই নয়।
+     */
+    public function issue(
+        Product $product,
+        Warehouse $warehouse,
+        string $qty,
+        ReasonCode $reason,
+        Carbon|string|null $date = null,
+        ?string $narration = null,
+    ): ?StockMovement {
+        if (bccomp($qty, '0', 4) <= 0) {
+            throw ValidationException::withMessages([
+                'qty' => __('inventory::validation.issue_needs_qty'),
+            ]);
+        }
+
+        $onHand = $this->stock->floorQty($product, $warehouse);
+
+        /*
+         * তাকে যা নেই তা দেওয়া যায় না।
+         *
+         * বিক্রয়ে ঋণাত্মক মজুদ একটা সেটিংসে খোলা যায় (মাল পথে আছে,
+         * কাগজ পরে হবে)। এখানে সেটা অর্থহীন: বিস্কুটটা হয় তাকে ছিল,
+         * নয় ছিল না।
+         */
+        if (bccomp($qty, $onHand, 4) > 0) {
+            throw ValidationException::withMessages([
+                'qty' => __('inventory::validation.issue_more_than_stock', [
+                    'have' => rtrim(rtrim($onHand, '0'), '.'),
+                ]),
+            ]);
+        }
+
+        // গুনে-পাওয়া পরিমাণ = এখন যা আছে − যতটা যাচ্ছে। বাকিটা adjust()
+        // যা করে তা-ই: স্তর থেকে দাম নেওয়া, খতিয়ানে বসানো।
+        return $this->adjust(
+            product: $product,
+            warehouse: $warehouse,
+            countedQty: bcsub($onHand, $qty, 4),
+            reason: $reason,
+            date: $date,
+            narration: $narration,
+        );
+    }
+
     public function adjust(
         Product $product,
         Warehouse $warehouse,
@@ -150,7 +210,21 @@ final class StockAdjustmentService
         ?string $narration,
     ): void {
         $inventory = $this->account(StandardChart::INVENTORY);
-        $difference = $this->account(StandardChart::INVENTORY_SHORTAGE_SURPLUS);
+
+        /*
+         * কারণটা নিজের খাত বললে সেটাই, নইলে মজুদ ঘাটতি ও উদ্বৃত্ত।
+         *
+         * ── কেন কারণভেদে খাত আলাদা ──────────────────────────────────
+         * গণনার পার্থক্য বা নষ্ট মাল সত্যিই ঘাটতি — ৫১৬০ ঠিক জায়গা।
+         * কিন্তু অফিসে খাওয়া বিস্কুট আপ্যায়ন খরচ, কাউকে দেওয়া উপহার
+         * উপহারের খাত (কর হিসাবে আলাদা করে লাগে), আর মালিকের বাসায়
+         * নেওয়া পণ্য **খরচই নয়** — ওটা উত্তোলন, মালিকের মূলধন কমে।
+         *
+         * সবগুলো ৫১৬০-এ ফেললে ব্যবসার মুনাফা ভুল হত, আর "মজুদ ঘাটতি"
+         * রিপোর্ট দেখে মালিক ভাবতেন গুদামে চুরি হচ্ছে — অথচ ওটা তাঁরই
+         * নেওয়া মাল।
+         */
+        $difference = $reason->account ?? $this->account(StandardChart::INVENTORY_SHORTAGE_SURPLUS);
 
         $note = $narration !== null && $narration !== ''
             ? $reason->name().' — '.$narration

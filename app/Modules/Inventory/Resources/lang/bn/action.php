@@ -19,4 +19,5 @@ return [
     'add_line' => 'লাইন যোগ',
     'remove_line' => 'লাইন সরান',
     'show_cancelled' => 'বাতিলগুলোও দেখাও',
+    'issue' => 'মাল বের করুন',
 ];

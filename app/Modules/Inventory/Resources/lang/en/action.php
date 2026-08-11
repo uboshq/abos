@@ -19,4 +19,5 @@ return [
     'add_line' => 'Add line',
     'remove_line' => 'Remove line',
     'show_cancelled' => 'Show cancelled too',
+    'issue' => 'Issue stock',
 ];

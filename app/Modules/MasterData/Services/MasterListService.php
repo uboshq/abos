@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\MasterData\Services;
 
+use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\MasterData\Models\Currency;
 use App\Modules\MasterData\Models\Department;
 use App\Modules\MasterData\Models\Designation;
@@ -407,6 +409,29 @@ final class MasterListService
                 ['context' => ReasonCode::CANCELLATION, 'returns_to_stock' => true]],
 
             /*
+             * বিক্রি ছাড়া মাল বেরোনোর তিনটা কারণ, তিনটা আলাদা খাত।
+             *
+             * খাতগুলো এখানে বসে না — কোড থেকে খাতের id জানা যায় না, আর
+             * প্রতিষ্ঠানভেদে খরচের খাত আলাদাও হতে পারে। বসানো হয় ছক
+             * ইনস্টল হওয়ার পর (CompanyProvisioner-এর ক্রম), আর সেটাই
+             * ReasonCode::linkStandardAccounts() করে।
+             *
+             * তৃতীয়টার খাত ৩২০০ উত্তোলন — খরচ নয়। মালিকের নিজের
+             * ব্যবহারকে খরচ লিখলে ব্যবসার মুনাফা কম দেখায় আর বছরশেষে
+             * কে কত নিল তা বলার উপায় থাকে না।
+             */
+            ['ENTERTAIN', 'Office entertainment', 'অফিসের আপ্যায়ন',
+                ['context' => ReasonCode::STOCK_ISSUE, 'returns_to_stock' => false]],
+            ['GIFT', 'Gift given', 'উপহার দেওয়া হয়েছে',
+                ['context' => ReasonCode::STOCK_ISSUE, 'returns_to_stock' => false,
+                    'needs_approval' => true]],
+            ['OWNUSE', 'Owner personal use', 'মালিকের ব্যক্তিগত ব্যবহার',
+                ['context' => ReasonCode::STOCK_ISSUE, 'returns_to_stock' => false,
+                    'needs_approval' => true]],
+            ['SAMPLE', 'Sample given', 'নমুনা দেওয়া হয়েছে',
+                ['context' => ReasonCode::STOCK_ISSUE, 'returns_to_stock' => false]],
+
+            /*
              * মাল আটকে রাখার কারণ — তিনটা, আর তৃতীয়টা বাকি দুইটার মতো নয়।
              *
              * প্রথম দুইটা সমস্যা: মাল নষ্ট, বা ফেরত এসেছে আর দেখা হয়নি।
@@ -494,7 +519,49 @@ final class MasterListService
             ['BOAT', 'Boat', 'নৌকা', []],
         ]);
 
+        $this->linkIssueReasonsToAccounts();
+
         return $made;
+    }
+
+    /**
+     * বিক্রি ছাড়া মাল বেরোনোর কারণগুলোকে তাদের খাতে জোড়া।
+     *
+     * ── কেন এটা seed()-এর ভেতরে নয় ─────────────────────────────────
+     * seed() কোড আর নাম নিয়ে কাজ করে; খাতের id সে জানে না, আর জানার
+     * কথাও নয় — খাতগুলো তৈরি হয় ছক বসার সময়, যেটা আলাদা একটা ধাপ
+     * (CompanyProvisioner: series → chart → lists)।
+     *
+     * খাত না পেলে কারণটা জোড়াহীন থেকে যায়, আর তখন মাল বেরোলে টাকাটা
+     * মজুদ ঘাটতিতে যাবে — ভুল জায়গা, কিন্তু হিসাব তবু মেলে। চুপচাপ
+     * একটা খাত বানিয়ে ফেলার চেয়ে সেটাই ভালো: ছকটা প্রতিষ্ঠানের নিজের,
+     * আর কোন খরচ কোন খাতে যাবে তা তারাই ঠিক করে।
+     */
+    private function linkIssueReasonsToAccounts(): void
+    {
+        $map = [
+            'ENTERTAIN' => StandardChart::ENTERTAINMENT,
+            'GIFT' => StandardChart::GIFTS_AND_DONATIONS,
+            'OWNUSE' => StandardChart::DRAWINGS,
+            'SAMPLE' => StandardChart::MARKETING,
+        ];
+
+        foreach ($map as $code => $accountCode) {
+            $reason = ReasonCode::query()
+                ->where('code', $code)
+                ->whereNull('account_id')
+                ->first();
+
+            if ($reason === null) {
+                continue;
+            }
+
+            $account = Account::query()->where('code', $accountCode)->first();
+
+            if ($account !== null) {
+                $reason->forceFill(['account_id' => $account->id])->save();
+            }
+        }
     }
 
     /**
