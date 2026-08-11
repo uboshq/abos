@@ -92,4 +92,11 @@ return [
     'interest' => 'সুদ',
     'instalment_total' => 'মোট',
     'as_on' => 'যে তারিখ পর্যন্ত',
+
+    // ছাপা ভাউচারে
+    'voucher_no' => 'ভাউচার নং',
+    'account' => 'হিসাব খাত',
+    'narration' => 'বিবরণ',
+    'total_debit' => 'মোট ডেবিট',
+    'total_credit' => 'মোট ক্রেডিট',
 ];

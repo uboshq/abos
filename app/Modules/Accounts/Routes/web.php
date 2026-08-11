@@ -11,6 +11,7 @@ use App\Modules\Accounts\Http\Controllers\LoanController;
 use App\Modules\Accounts\Http\Controllers\MoneyTransferController;
 use App\Modules\Accounts\Http\Controllers\ReportController;
 use App\Modules\Accounts\Http\Controllers\VoucherController;
+use App\Modules\Accounts\Http\Controllers\VoucherPrintController;
 use App\Modules\Accounts\Http\Controllers\YearEndController;
 use App\Modules\Accounts\Models\Account;
 use Illuminate\Support\Facades\Route;
@@ -96,6 +97,15 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
     Route::prefix('vouchers')->name('voucher.')->group(function () {
         Route::get('/{voucher}', [VoucherController::class, 'show'])
             ->whereNumber('voucher')->name('show');
+
+        /*
+         * কাগজটা — /vouchers/{id}/print?paper=80mm
+         *
+         * স্থির পথটা {voucher}-এর পরে বসেছে কিন্তু নিজের অংশ নিয়ে,
+         * তাই সংঘাত নেই: /{voucher} শুধু সংখ্যা মানে (whereNumber)।
+         */
+        Route::get('/{voucher}/print', VoucherPrintController::class)
+            ->whereNumber('voucher')->name('print');
         Route::get('/{voucher}/edit', [VoucherController::class, 'edit'])
             ->whereNumber('voucher')->name('edit');
         Route::put('/{voucher}', [VoucherController::class, 'update'])
