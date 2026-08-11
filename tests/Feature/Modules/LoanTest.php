@@ -7,6 +7,7 @@ namespace Tests\Feature\Modules;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\LedgerEntry;
+use App\Models\NumberSeries;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Loan;
@@ -369,6 +370,55 @@ class LoanTest extends TestCase
 
         $this->assertCount(12, $loan->instalments);
         $this->assertSame(0, bccomp($loan->outstanding(), '600000', 4));
+    }
+
+    /**
+     * ফিচারটার আগে তৈরি হওয়া কোম্পানিতেও ঋণ সেভ হয়।
+     *
+     * ── পরীক্ষক যা পেয়েছেন (১০ আগস্ট ২০২৬, ১০:৩৩) ──────────────────
+     * `/accounts/loans/create` থেকে সব ঘর ভরে "Save loan" চাপলে সোজা
+     * HTTP 500, আর লগে: "No number series is configured for document
+     * type 'LN'."
+     *
+     * কারণটা ব্যবহারকারীর কিছু নয়: সিরিজগুলো বসে কোম্পানি তৈরির দিনে,
+     * ওই দিন যত ডকুমেন্ট টাইপ ঘোষিত ছিল তত। ঋণ এসেছে পরে, 'LN' নিয়ে —
+     * তাই পুরনো কোম্পানিগুলোর জন্য সারিটা কোনোদিন বসেনি।
+     *
+     * ── কেন সিরিজটা এখানে মুছে ফেলা হয় ─────────────────────────────
+     * DemoSeeder আজকের কোড দিয়ে কোম্পানি বানায়, তাই তার 'LN' সিরিজ
+     * আছেই — অর্থাৎ সাধারণ পরীক্ষা এই অবস্থাটায় কোনোদিন পৌঁছাত না, আর
+     * পরীক্ষক যা পেয়েছেন তা এখানে কখনো ধরা পড়ত না। সারিটা মুছে দিয়ে
+     * ঠিক ওই পুরনো কোম্পানিটাই বানানো হয়।
+     */
+    public function test_a_company_older_than_the_loan_feature_can_still_save_one(): void
+    {
+        NumberSeries::query()->where('doc_type', 'LN')->delete();
+
+        $this->assertSame(0, NumberSeries::query()->where('doc_type', 'LN')->count());
+
+        $this->actingAs($this->user)
+            ->post(route('accounts.loan.store'), [
+                'lender' => 'City Bank',
+                'kind' => Loan::TERM,
+                'interest_method' => LoanSchedule::REDUCING,
+                'sanctioned' => '200000',
+                'interest_rate' => '10',
+                'tenure_months' => 12,
+                'start_date' => '2026-08-01',
+                'liability_account_id' => $this->liabilityAccount()->id,
+                'interest_account_id' => $this->interestAccount()->id,
+                'into_account_id' => $this->moneyAccount()->id,
+            ])
+            ->assertRedirect();
+
+        $loan = Loan::query()->where('lender', 'City Bank')->firstOrFail();
+
+        // নম্বরটা সত্যিই বসেছে — খালি নয়, আর ঘোষিত উপসর্গ ধরে
+        $this->assertStringStartsWith('LN-', $loan->document_no);
+
+        // আর টাকাটাও এসেছে: সূচি ও দায়, দুইটাই
+        $this->assertCount(12, $loan->instalments);
+        $this->assertSame(0, bccomp($loan->outstanding(), '200000', 4));
     }
 
     public function test_a_term_loan_from_the_form_must_say_where_the_money_lands(): void
