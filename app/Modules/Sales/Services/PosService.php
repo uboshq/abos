@@ -10,6 +10,7 @@ use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Sales\Models\SalesInvoice;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -39,6 +40,86 @@ final class PosService
         private readonly CollectionService $collections,
         private readonly SettingsService $settings,
     ) {}
+
+    /**
+     * কার্টটা ধরে রাখা — ক্রেতা টাকা আনতে গেছেন।
+     *
+     * খসড়াই থাকে: মাল নড়ে না, টাকা ওঠে না, খাতায় কিছু বসে না। কেবল
+     * `parked_at` বসে, যাতে টিলের পর্দা জানে এটা কাউন্টারে ঝুলে আছে,
+     * কোনো ভুলে ফেলে রাখা খসড়া নয়।
+     *
+     * @param  array<string, mixed>  $data
+     * @param  list<array<string, mixed>>  $lines
+     */
+    public function park(array $data, array $lines): SalesInvoice
+    {
+        if ($lines === []) {
+            throw ValidationException::withMessages(['lines' => __('sales::validation.no_lines')]);
+        }
+
+        $customer = $this->resolveCustomer($data['customer_id'] ?? null);
+
+        return DB::transaction(function () use ($data, $lines, $customer) {
+            $invoice = $this->invoices->create(
+                [
+                    'customer_id' => $customer->id,
+                    'warehouse_id' => $data['warehouse_id'] ?? null,
+                    'trx_date' => $data['trx_date'] ?? now()->toDateString(),
+                    'narration' => $data['narration'] ?? null,
+                ],
+                $lines,
+            );
+
+            $invoice->forceFill(['parked_at' => now()])->save();
+
+            return $invoice->fresh(['lines']);
+        });
+    }
+
+    /**
+     * কাউন্টারে যা যা ঝুলে আছে — পুরনোটা আগে।
+     *
+     * পুরনো আগে, কারণ যেটা সবচেয়ে বেশিক্ষণ ঝুলে আছে সেটাই সবচেয়ে
+     * সম্ভাব্য পরিত্যক্ত — আর দিন শেষে ওটাই আগে সিদ্ধান্ত চায়।
+     *
+     * @return Collection<int, SalesInvoice>
+     */
+    public function parked()
+    {
+        return SalesInvoice::query()
+            ->whereNotNull('parked_at')
+            ->where('status', DocumentStatus::DRAFT)
+            ->with('lines')
+            ->orderBy('parked_at')
+            ->get();
+    }
+
+    /**
+     * ধরে রাখা বিলটা আবার কাউন্টারে তোলা।
+     *
+     * ── কেন `parked_at` মুছে দেওয়া হয় ───────────────────────────────
+     * তোলার পর ওটা আর অপেক্ষা করছে না — ক্যাশিয়ারের সামনে আছে। মুছে না
+     * দিলে একই বিল দুই কাউন্টারে একসাথে তোলা যেত, আর একজন নিশ্চিত করার
+     * পর অন্যজন খালি পর্দা নিয়ে বসে থাকতেন।
+     */
+    public function resume(SalesInvoice $invoice): SalesInvoice
+    {
+        if ($invoice->parked_at === null) {
+            throw ValidationException::withMessages([
+                'invoice' => __('sales::validation.not_parked'),
+            ]);
+        }
+
+        if ($invoice->status !== DocumentStatus::DRAFT) {
+            throw ValidationException::withMessages([
+                'invoice' => __('sales::validation.already_done', ['no' => $invoice->document_no]),
+            ]);
+        }
+
+        $invoice->forceFill(['parked_at' => null])->save();
+
+        return $invoice->fresh(['lines']);
+    }
 
     /**
      * একটা কাউন্টার বিক্রি সম্পূর্ণ করা।
