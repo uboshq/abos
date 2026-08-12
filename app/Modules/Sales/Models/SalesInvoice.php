@@ -50,6 +50,15 @@ class SalesInvoice extends Model implements Drillable
          */
         'idempotency_key',
 
+        /*
+         * কাউন্টারে অপেক্ষা করছে — ক্রেতা টাকা আনতে গেছেন।
+         *
+         * তারিখ থাকা মানে ঝুলে আছে, না থাকা মানে সাধারণ খসড়া। নতুন
+         * কোনো স্ট্যাটাস নয়, নাহলে "খসড়া কয়টা" দুই জায়গায় জিজ্ঞেস
+         * করতে হত।
+         */
+        'parked_at',
+
         'customer_id', 'warehouse_id', 'trx_date', 'due_on',
         'subtotal', 'discount', 'tax', 'total', 'cost_of_goods',
         'status', 'narration', 'created_by',
@@ -62,6 +71,7 @@ class SalesInvoice extends Model implements Drillable
             'trx_date' => 'date',
             'due_on' => 'date',
             'cancelled_at' => 'datetime',
+            'parked_at' => 'datetime',
             'subtotal' => 'decimal:4',
             'discount' => 'decimal:4',
             'tax' => 'decimal:4',

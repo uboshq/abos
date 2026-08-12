@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 return [
     'no_lines' => 'At least one line is needed — a document with no lines does nothing.',
+
+    // Bills held at the counter
+    'not_parked' => 'That bill is not waiting at the counter, so there is nothing to bring back.',
+    'already_done' => 'Bill :no has already been completed — it cannot be picked up again.',
     'only_draft_confirms' => ':no is not a draft, so it cannot be confirmed again.',
     'only_draft_edits' => ':no is not a draft — cancel it and make a new one to change a posted document.',
     'already_cancelled' => ':no was already cancelled.',
