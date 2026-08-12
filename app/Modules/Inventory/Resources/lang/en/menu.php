@@ -13,4 +13,5 @@ return [
     'transfers' => 'Stock Transfers',
     'opening' => 'Opening Stock',
     'issue' => 'Stock Issue',
+    'expiring' => 'Expiring Soon',
 ];

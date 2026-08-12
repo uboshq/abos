@@ -73,6 +73,17 @@ return [
                 'route_params' => ['slug' => 'stock-summary'], 'permission' => 'inventory.report'],
             ['label' => 'inventory::menu.hold_report', 'route' => 'inventory.report.show',
                 'route_params' => ['slug' => 'hold'], 'permission' => 'inventory.report'],
+
+            /*
+             * মেয়াদ ঘনিয়ে আসা লট — সুইচের পেছনে।
+             *
+             * যে ব্যবসায় ব্যাচ ধরা হয় না, তার কাছে এই সারিটা চিরকাল
+             * খালি একটা পাতা খুলত, আর মেনুতে জায়গা নিত। ব্যাচের সুইচ
+             * চালু থাকলেই কেবল দেখা যায় (নিয়ম ৭)।
+             */
+            ['label' => 'inventory::menu.expiring', 'route' => 'inventory.report.show',
+                'route_params' => ['slug' => 'expiring'], 'permission' => 'inventory.report',
+                'setting' => 'inventory.batch_enabled'],
         ],
     ],
 
@@ -198,6 +209,25 @@ return [
             'label' => 'inventory::settings.non_moving_days',
             'type' => 'integer',
             'default' => 90,
+            'group' => 'entry',
+        ],
+        [
+            /*
+             * ব্যাচ ও মেয়াদ ধরা হবে কি না।
+             *
+             * ডিফল্ট বন্ধ, কারণ ABOS-এর প্রথম ব্যবহারকারী একটা ডিপো,
+             * ফার্মেসি নয়। চালু করলে পণ্যের ফর্মে "ব্যাচ ধরো" ঘরটা
+             * দেখা যায়, মাল বুঝে নেওয়ার সময় লট ও মেয়াদ চাওয়া হয়, আর
+             * মেয়াদের রিপোর্টটা মেনুতে আসে।
+             *
+             * সুইচটা কেবল **পর্দার** — নিয়মগুলো নয়। যে পণ্যে ব্যাচ ধরা
+             * আছে, তার MRP সিলিং বা মেয়াদের বাধা এই সুইচ বন্ধ করলেও
+             * খাটে; নাহলে সুইচ নামিয়ে মেয়াদোত্তীর্ণ মাল বেচা যেত।
+             */
+            'key' => 'inventory.batch_enabled',
+            'label' => 'inventory::settings.batch_enabled',
+            'type' => 'boolean',
+            'default' => false,
             'group' => 'entry',
         ],
         [

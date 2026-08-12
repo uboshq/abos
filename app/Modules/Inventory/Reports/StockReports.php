@@ -24,6 +24,66 @@ final class StockReports
         $engine->register(self::stockLedger());
         $engine->register(self::stockSummary());
         $engine->register(self::holdReport());
+        $engine->register(self::expiring());
+    }
+
+    /**
+     * কোন লটগুলোর মেয়াদ ঘনিয়ে আসছে — আর কতটা পড়ে আছে।
+     *
+     * ── কেন সতর্কতা নয়, রিপোর্ট ────────────────────────────────────
+     * মেয়াদোত্তীর্ণ মাল বিক্রয়ে আসেই না (BatchAllocator), কিন্তু ওটা
+     * শেষ প্রতিরক্ষা — তখন টাকাটা ইতিমধ্যেই হারানো। যেটা টাকা বাঁচায়
+     * সেটা হলো **আগে থেকে জানা**: এখনো তিন মাস আছে, এখন ফেরত পাঠানো
+     * যায়, ছাড় দিয়ে বেচা যায়, বা অন্য শাখায় সরানো যায়।
+     *
+     * ── ইতিমধ্যে মেয়াদ পেরোনো লটও থাকে, ইচ্ছাকৃতভাবে ────────────────
+     * ঋণাত্মক "কত দিন বাকি" নিয়ে ওগুলো তালিকার একদম উপরে বসে। ওগুলো
+     * বাদ দিলে তালিকাটা পরিচ্ছন্ন দেখাত আর **যে মালটা আসলে গুদামে
+     * পড়ে আছে সেটাই অদৃশ্য থাকত** — অথচ ওটাই সেই মাল যা নিয়ে এখনই
+     * কিছু করতে হবে: ডিস্ট্রিবিউটরকে ফেরত, নয়তো লিখে ফেলা।
+     *
+     * ── শূন্য লট বাদ ───────────────────────────────────────────────
+     * যে লট শেষ হয়ে গেছে তার মেয়াদ নিয়ে কারও কিছু করার নেই। ওগুলো
+     * রাখলে ছয় মাসে তালিকাটা এত লম্বা হত যে কেউ পড়ত না।
+     */
+    public static function expiring(): ReportDefinition
+    {
+        return new ReportDefinition(
+            key: 'inventory.expiring',
+            title: 'inventory::menu.expiring',
+            filters: ['branch'],
+            query: fn (array $f) => DB::table('inv_batches as b')
+                ->join('inv_products as p', 'p.id', '=', 'b.product_id')
+                ->leftJoin('inv_stock_movements as m', function ($join) {
+                    $join->on('m.batch_id', '=', 'b.id');
+                })
+                ->where('b.company_id', $f['company_id'])
+                ->whereNull('b.deleted_at')
+                ->whereNotNull('b.expiry_date')
+                ->when($f['branch_id'], fn ($q, $b) => $q->where('m.branch_id', $b))
+                ->groupBy('b.id', 'b.batch_no', 'b.expiry_date', 'b.mrp', 'p.code', 'p.name_en')
+                // শূন্য বা ঋণাত্মক লট বাদ — তালিকাটা কাজের জিনিস, ইতিহাস নয়
+                ->havingRaw('COALESCE(SUM(m.floor_change), 0) > 0')
+                ->orderBy('b.expiry_date')
+                ->select([
+                    'b.expiry_date',
+                    'p.code as product_code',
+                    'p.name_en as product_name',
+                    'b.batch_no',
+                    'b.mrp',
+                    DB::raw('COALESCE(SUM(m.floor_change), 0) as on_hand'),
+                    DB::raw('DATEDIFF(b.expiry_date, CURDATE()) as days_left'),
+                ]),
+            columns: [
+                ['key' => 'expiry_date', 'label' => 'inventory::field.expiry_date', 'type' => ReportColumn::DATE, 'width' => '7rem'],
+                ['key' => 'days_left', 'label' => 'inventory::field.days_left', 'width' => '6rem'],
+                ['key' => 'product_code', 'label' => 'inventory::field.code', 'width' => '7rem'],
+                ['key' => 'product_name', 'label' => 'inventory::field.product'],
+                ['key' => 'batch_no', 'label' => 'inventory::field.batch_no', 'width' => '8rem'],
+                ['key' => 'on_hand', 'label' => 'inventory::field.floor', 'type' => ReportColumn::MONEY],
+                ['key' => 'mrp', 'label' => 'inventory::field.mrp', 'type' => ReportColumn::MONEY],
+            ],
+        );
     }
 
     /** এক পণ্যের প্রতিটা নড়াচড়া, ক্রমানুসারে। */

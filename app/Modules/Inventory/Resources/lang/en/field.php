@@ -46,4 +46,8 @@ return [
     'opening_rate' => 'Rate per unit',
     'opening_value' => 'Value',
     'issued_qty' => 'Quantity issued',
+    'expiry_date' => 'Expiry',
+    'days_left' => 'Days left',
+    'batch_no' => 'Lot no.',
+    'mrp' => 'Printed price',
 ];

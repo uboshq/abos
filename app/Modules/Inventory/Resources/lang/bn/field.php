@@ -46,4 +46,8 @@ return [
     'opening_rate' => 'প্রতি এককের দর',
     'opening_value' => 'মূল্য',
     'issued_qty' => 'কতটা যাচ্ছে',
+    'expiry_date' => 'মেয়াদ',
+    'days_left' => 'বাকি দিন',
+    'batch_no' => 'লট নং',
+    'mrp' => 'ছাপা দাম',
 ];
