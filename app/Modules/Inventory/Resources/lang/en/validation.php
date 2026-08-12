@@ -14,6 +14,11 @@ return [
 
     // The printed price is a ceiling, and it is per lot
     'above_printed_price' => 'Lot :batch is printed at :mrp — :asked is above it, and selling above the printed price is not allowed.',
+
+    // The 2D barcode on the pack
+    'barcode_truncated' => 'The (:ai) part of the barcode is cut short — a damaged scan would look up the wrong product.',
+    'barcode_unknown_part' => "Unrecognised part ':part' in the barcode — is this a GS1 code, or is the scanner set up wrongly?",
+    'barcode_bad_date' => "Cannot read ':date' as a date — GS1 expects YYMMDD.",
     'hold_needs_quantity' => 'Say how much to hold.',
     'wrong_reason_context' => 'That reason is not for holding stock.',
     'not_enough_available' => 'Not that much is available — there is :available.',
