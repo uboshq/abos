@@ -11,6 +11,9 @@ return [
     // Batch allocation
     'qty_positive' => 'Say how much — a quantity of zero picks no lot at all.',
     'batch_short' => 'Not enough :product across its lots — :short short. Unexpired lots only; check whether some has expired.',
+
+    // The printed price is a ceiling, and it is per lot
+    'above_printed_price' => 'Lot :batch is printed at :mrp — :asked is above it, and selling above the printed price is not allowed.',
     'hold_needs_quantity' => 'Say how much to hold.',
     'wrong_reason_context' => 'That reason is not for holding stock.',
     'not_enough_available' => 'Not that much is available — there is :available.',
