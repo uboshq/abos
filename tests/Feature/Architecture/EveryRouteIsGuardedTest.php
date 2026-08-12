@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Architecture;
 
+use App\Core\Module\ModuleRegistry;
 use Illuminate\Routing\Route;
 use Illuminate\Support\Facades\Route as Router;
 use ReflectionMethod;
@@ -128,6 +129,66 @@ class EveryRouteIsGuardedTest extends TestCase
             'হয় কন্ট্রোলারের middleware()-এ can: বসান, নয় পদ্ধতিতে $this->authorize(),',
             'নয় ANY_SIGNED_IN_USER-এ কারণসহ লিখুন।',
             ...$unguarded,
+        ]));
+    }
+
+    /**
+     * রুট যে চাবি চায়, কোনো মডিউল সেটা ঘোষণা করেছে।
+     *
+     * ── কেন এটা আলাদা করে দেখা দরকার ────────────────────────────────
+     * অঘোষিত চাবি কাউকে কোনোদিন দেওয়া হয় না — `PermissionSyncer`
+     * মডিউলের ঘোষণা থেকেই রোল ভরে। তাই একটা টাইপো (`purchase.bil.view`)
+     * মানে পর্দাটা **সবার জন্য চিরকাল বন্ধ, মালিকসহ**, আর কোথাও কোনো
+     * ভুলের বার্তা নেই — শুধু ৪০৩।
+     *
+     * WP-0.6 ঠিক এই কারণেই লাগত: নতুন মডিউলের অনুমতি তৈরি হয়েও কোনো
+     * রোলে যেত না, আর মালিক প্রতিটা পর্দায় ৪০৩ পাচ্ছিলেন।
+     *
+     * আজ একটাও নেই। পাহারাটা বসানো যাতে কালও না থাকে।
+     */
+    public function test_every_permission_a_route_demands_is_declared_by_a_module(): void
+    {
+        $declared = [];
+
+        foreach (app(ModuleRegistry::class)->all() as $module) {
+            foreach ($module->permissions as $permission) {
+                $declared[$permission] = true;
+            }
+        }
+
+        $unknown = [];
+
+        foreach ($this->ourRoutes() as $route) {
+            foreach ($route->gatherMiddleware() as $middleware) {
+                if (! is_string($middleware) || ! str_starts_with($middleware, 'can:')) {
+                    continue;
+                }
+
+                $ability = substr($middleware, 4);
+
+                /*
+                 * `can:viewAny,App\...\Customer` — পলিসি, অনুমতির নাম নয়।
+                 * পলিসির ভেতরের চাবিটা এখান থেকে দেখা যায় না, আর
+                 * প্রতিটা মডিউলের নিজের অনুমতি-পরীক্ষা ওটা ধরে।
+                 */
+                if (str_contains($ability, ',') || isset($declared[$ability])) {
+                    continue;
+                }
+
+                $unknown[] = ($route->getName() ?? $route->uri()).' → '.$ability;
+            }
+        }
+
+        $unknown = array_values(array_unique($unknown));
+        sort($unknown);
+
+        $this->assertNotEmpty($declared, 'একটাও ঘোষিত অনুমতি পাওয়া যায়নি।');
+
+        $this->assertSame([], $unknown, implode("\n", [
+            'এই রুটগুলো এমন চাবি চায় যা কোনো মডিউল ঘোষণা করেনি।',
+            'অঘোষিত চাবি কোনো রোলে বসে না, তাই পর্দাটা সবার জন্য বন্ধ —',
+            'মালিকসহ — আর কোথাও কিছু বলা হয় না, শুধু ৪০৩।',
+            ...$unknown,
         ]));
     }
 
