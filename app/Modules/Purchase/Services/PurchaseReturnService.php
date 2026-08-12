@@ -15,6 +15,7 @@ use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\CostLayerService;
+use App\Modules\Inventory\Services\ReadsPackedQuantities;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Purchase\Models\PurchaseBillLine;
@@ -43,6 +44,8 @@ use Illuminate\Validation\ValidationException;
  */
 final class PurchaseReturnService
 {
+    use ReadsPackedQuantities;
+
     public function __construct(
         private readonly NumberSeriesEngine $numbers,
         private readonly PostingEngine $posting,
@@ -380,6 +383,15 @@ final class PurchaseReturnService
                 throw ValidationException::withMessages(['lines' => __('purchase::validation.unknown_product')]);
             }
 
+            /*
+             * প্যাকে ফেরত — "১ বাক্স ফেরত" লেখা যায়।
+             *
+             * শুধু পরিমাণটাই নামে; দর নিচে মূল বিলের লাইন থেকে আসে, আর
+             * ওখানে সেটা আগেই পণ্যের এককে বসানো।
+             */
+            $pack = $this->packed($product, $qty, $line['unit_id'] ?? null);
+            $qty = $pack['qty'];
+
             $billLine = null;
 
             if (filled($line['purchase_bill_line_id'] ?? null)) {
@@ -405,9 +417,20 @@ final class PurchaseReturnService
              * দরে ফেরত দেখিয়ে প্রদেয় বেশি কমাতে পারত, আর মজুদের মূল্যও
              * ভুল হত।
              */
-            $rate = $billLine !== null
-                ? (string) $billLine->rate
-                : $this->money($line['rate'] ?? $product->purchase_price);
+            $rate = match (true) {
+                $billLine !== null => (string) $billLine->rate,
+
+                // হাতে লেখা দর — যে এককে লেখা, সেখান থেকে নামে
+                filled($line['rate'] ?? null) => $this->packed(
+                    $product,
+                    '1',
+                    $pack['entered_unit_id'],
+                    $this->money($line['rate']),
+                )['rate'],
+
+                // মাস্টারের দাম — আগেই পণ্যের এককে, নামানোর কিছু নেই
+                default => $this->money($product->purchase_price),
+            };
 
             $amount = bcmul($qty, $rate, 4);
             $tax = $this->money($line['tax'] ?? '0');
@@ -418,6 +441,8 @@ final class PurchaseReturnService
                 'product_id' => $product->id,
                 'purchase_bill_line_id' => $billLine?->id,
                 'qty' => $qty,
+                'entered_qty' => $pack['entered_qty'],
+                'entered_unit_id' => $pack['entered_unit_id'],
                 'rate' => $rate,
                 'tax' => $tax,
                 'amount' => $amount,

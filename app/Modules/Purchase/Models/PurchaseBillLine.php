@@ -6,6 +6,7 @@ namespace App\Modules\Purchase\Models;
 
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Modules\Inventory\Concerns\HasEnteredPack;
 use App\Modules\Inventory\Models\Product;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class PurchaseBillLine extends Model
 {
+    use HasEnteredPack;
     use HasPublicId;
     use IsAudited;
 
@@ -22,13 +24,15 @@ class PurchaseBillLine extends Model
 
     protected $fillable = [
         'purchase_bill_id', 'product_id', 'purchase_receipt_line_id', 'purchase_order_line_id',
-        'qty', 'rate', 'sales_price', 'discount', 'tax', 'amount', 'line_no', 'narration',
+        'qty', 'entered_qty', 'entered_unit_id',
+        'rate', 'sales_price', 'discount', 'tax', 'amount', 'line_no', 'narration',
     ];
 
     protected function casts(): array
     {
         return [
             'qty' => 'decimal:4',
+            'entered_qty' => 'decimal:4',
             'rate' => 'decimal:4',
 
             // সরাসরি ক্রয়ের পর্দায় বসানো বিক্রয়মূল্য — এটাও টাকা, তাই

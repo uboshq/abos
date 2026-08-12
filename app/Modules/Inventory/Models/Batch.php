@@ -6,6 +6,7 @@ namespace App\Modules\Inventory\Models;
 
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
+use App\Core\Concerns\IsAudited;
 use App\Core\Contracts\Drillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -32,6 +33,16 @@ class Batch extends Model implements Drillable
     use BelongsToCompany;
     use HasFactory;
     use HasPublicId;
+
+    /*
+     * মেয়াদ আর ছাপা দাম বদলালে চিহ্ন থাকতে হবে।
+     *
+     * একটা লটের মেয়াদের তারিখ পিছিয়ে দিলে মেয়াদোত্তীর্ণ মাল আবার
+     * বিক্রয়যোগ্য হয়ে যায়, আর MRP বাড়িয়ে দিলে ছাপা দামের সীমাটাই
+     * সরে যায়। দুইটাই এক ঘরের সম্পাদনা, আর দুইটাই ধরা না পড়ার মতো —
+     * তাই পুরনো আর নতুন মান দুইটাই রাখা হয়।
+     */
+    use IsAudited;
     use SoftDeletes;
 
     protected $table = 'inv_batches';

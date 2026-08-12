@@ -64,8 +64,10 @@ class StockPrintController extends Controller implements HasMiddleware
             ], fn ($value) => filled($value)),
             lines: $transfer->lines->map(fn ($line) => [
                 'name' => trim(($line->product?->code ?? '').' '.($line->product?->name() ?? '')),
-                'qty' => $this->qty($line->qty),
-                'unit' => $line->product?->unit?->name() ?? '',
+                // যে প্যাকে পাঠানো হয়েছিল সেটাই কাগজে — ওপারে যিনি
+                // গুনবেন তিনি বাক্স গোনেন, পিস নয়
+                'qty' => $this->qty($line->packedQty()),
+                'unit' => $line->packedUnitName(),
             ])->values()->all(),
             totals: [],
             signatures: [

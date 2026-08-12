@@ -1,8 +1,16 @@
 {{--
     লগইন — প্ল্যান সেকশন ১৬।
 
-    ডেস্কটপে ৬০/৪০, ট্যাবলেটে ৫০/৫০, মোবাইলে এক কলাম — লগইন আগে,
-    ব্র্যান্ডিং সংক্ষিপ্ত (সেকশন ১৬.৭)।
+    ── কেন পাতাজোড়া নয়, মাঝখানে একটা কার্ড ─────────────────────────────
+    আগে দুইটা প্যানেল পুরো পর্দা জুড়ে ছড়ানো ছিল। বড় মনিটরে সেটা এক
+    হাত ফাঁকা নীল আর এক হাত ফাঁকা সাদা হয়ে দাঁড়াত, আর চোখ কোথায়
+    দাঁড়াবে বোঝা যেত না। কার্ডটা ছোট রাখলে দুইটা ঘর আর একটা বোতাম —
+    যে কাজে এসেছেন, সেটাই সামনে।
+
+    ── বাইরের জমিনটা আলপনা ──────────────────────────────────────────────
+    খালি জায়গা সাদা রাখলে কার্ডটা ভেসে থাকত। আলপনা ওই জায়গাটাকে
+    জমিন করে দেয় — আর সোনা এখানেই চলে: লগইন, ছাপা আর খালি পর্দা।
+    কাজের কোনো টেবিল বা ফর্মে এই নকশা যায় না।
 --}}
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="light">
@@ -14,44 +22,60 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 
-<body class="min-h-dvh bg-(--color-surface-app)">
-    <div class="flex min-h-dvh flex-col">
+{{--
+    জমিনের রঙটা ব্র্যান্ডের গাঢ় নীল, তার উপরে আলপনার টালি।
 
-        {{-- হেডার — সেকশন ১৬.২ --}}
-        <header class="flex h-(--spacing-header) shrink-0 items-center gap-4 border-b
-                       border-(--color-border) bg-(--color-surface-card) px-4 md:px-6">
-            <img src="{{ asset('brand/abos-wordmark.png') }}" alt="ABOS" class="h-6 w-auto">
+    background-image আগে, রঙ পরে — নকশাটা রঙের উপরে বসে। ছবিটা না
+    এলেও (ধীর সংযোগ, ব্লক করা) রঙটা থাকে, তাই পাতাটা কখনো সাদা
+    ঝলসানো অবস্থায় দেখা যায় না।
+--}}
+<body class="min-h-dvh bg-(--color-brand-900) bg-[length:240px_240px] bg-repeat"
+      style="background-image: url('{{ asset('brand/alpona.svg') }}')">
 
-            <div class="ms-auto flex items-center gap-3 text-sm">
-                <a href="?locale={{ app()->getLocale() === 'bn' ? 'en' : 'bn' }}"
-                   class="flex min-h-(--spacing-touch) items-center px-2 text-(--color-ink-muted)
-                          transition-colors hover:text-(--color-ink)">
-                    🌐 {{ app()->getLocale() === 'bn' ? 'English' : 'বাংলা' }}
-                </a>
+    <div class="flex min-h-dvh items-center justify-center p-4 sm:p-6">
 
-                <span class="hidden items-center gap-1.5 text-(--color-ink-muted) sm:flex">
-                    <span class="size-2 rounded-full bg-(--color-success)" aria-hidden="true"></span>
-                    {{ __('core.status_bar.operational') }}
-                </span>
-            </div>
-        </header>
+        {{--
+            কার্ডটাই পুরো পাতা — ভেতরে বাঁয়ে ব্র্যান্ডিং, ডানে ফর্ম।
 
-        <div class="flex flex-1 flex-col lg:flex-row">
+            ── কার্ডটা <main> নয়, ফর্মটা ─────────────────────────────────
+            পুরো কার্ডে <main> বসানো হয়েছিল, আর তাতেই ব্র্যান্ডিংয়ের সাদা
+            শিরোনামটা কালো হয়ে গাঢ় নীলে মিলিয়ে গিয়েছিল — app.css-এ নিয়ম
+            আছে `main h1 { color: ink }`, যাতে সাদা পাতায় শিরোনাম গাঢ়
+            হয়। ওই নিয়মের পাশেই লেখা আছে এই ফাঁদটা আগেও একবার ধরা
+            পড়েছিল, আর ঠিক একইভাবে: স্ক্রিনশটে।
+        --}}
+        <div class="flex w-full max-w-4xl flex-col overflow-hidden rounded-2xl
+                    bg-(--color-surface-card) shadow-2xl ring-1 ring-black/10 lg:flex-row">
 
             {{-- ব্র্যান্ডিং প্যানেল — মোবাইলে নিচে সরে যায় (লগইন আগে) --}}
-            <section class="order-2 hidden flex-col justify-center bg-(--color-brand-900) px-8 py-12
-                            text-(--color-ink-inverse) md:flex lg:order-1 lg:w-1/2 xl:w-3/5">
-                <div class="mx-auto max-w-lg">
+            <aside class="order-2 hidden flex-col justify-center bg-(--color-brand-900) px-8 py-10
+                          text-(--color-ink-inverse) md:flex lg:order-1 lg:w-1/2">
+                <div class="mx-auto w-full max-w-sm">
                     {{-- হালকা SVG ও CSS, ভারী অ্যানিমেশন নয় — লগইন পাতাই
                          প্রথম অভিজ্ঞতা, আর ডিপোর ধীর সংযোগে ভারী অ্যানিমেশন
                          মানে প্রথম ছাপটাই "স্লো" (সেকশন ১৬.১০)। --}}
-                    <img src="{{ asset('brand/abos-icon-192.png') }}" alt=""
-                         class="mb-6 size-20" aria-hidden="true">
+                    {{--
+                        পুরো লকআপ — আইকন নয়।
 
-                    <h1 class="text-2xl font-semibold">{{ __('core.brand.full_name') }}</h1>
-                    <p class="mt-2 text-lg text-(--color-brand-gold)">{{ __('core.brand.tagline') }}</p>
+                        ── কেন ট্যাগলাইনের আলাদা লাইনটা আর নেই ──────────
+                        লকআপের নিচেই "BUILT AROUND YOUR BUSINESS" লেখা
+                        আছে। পাশে আবার একই কথা বসালে একই বাক্য দুইবার
+                        পড়তে হত, আর নকশাটা এলোমেলো দেখাত।
 
-                    <ul class="mt-8 grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                        ── কেন এই ছবিটা আলাদা ফাইল ─────────────────────
+                        মূল ফাইলটার পেছনে গাঢ় জমিন বসানো ছিল, তাই সেটা
+                        সরাসরি বসালে প্যানেলের উপর একটা কালো চতুর্ভুজ
+                        দেখা যেত। উজ্জ্বলতা ধরে আলফা বসিয়ে জমিনটা স্বচ্ছ
+                        করা হয়েছে, আর অক্ষরের চারপাশের আভাটা রাখা হয়েছে
+                        — শক্ত করে কেটে ফেললে কিনারায় একটা রেখা থাকত।
+                    --}}
+                    <img src="{{ asset('brand/abos-lockup-dark.png') }}"
+                         alt="{{ __('core.brand.full_name') }}"
+                         width="720" height="263" class="mb-5 w-64 max-w-full">
+
+                    <h1 class="text-lg font-semibold">{{ __('core.brand.full_name') }}</h1>
+
+                    <ul class="mt-4 grid grid-cols-2 gap-x-5 gap-y-1.5 text-xs">
                         @foreach ([
                             'multi_company', 'multi_branch', 'secure', 'fast',
                             'audit_trail', 'daily_backup', 'role_based', 'hyperlinked',
@@ -79,7 +103,7 @@
                         দুইটাই বাদ পড়েছিল, তাই বাক্যটা মাঝপথে থেমে থাকত।
                         স্ট্যাটাসবারে তিনটাই ছিল, এখানে ছিল না।
                     --}}
-                    <div class="mt-10 border-t border-white/15 pt-5 text-xs text-white/70">
+                    <div class="mt-6 border-t border-white/15 pt-4 text-2xs text-white/70">
                         <p>{{ __('core.brand.developed_by') }}</p>
 
                         <div class="mt-2 flex items-center gap-2">
@@ -102,11 +126,33 @@
                         <p class="mt-3 text-white/50">v{{ config('app.version', '0.1.0') }}</p>
                     </div>
                 </div>
-            </section>
+            </aside>
 
-            {{-- লগইন প্যানেল --}}
-            <section class="order-1 flex flex-1 items-center justify-center px-4 py-10 lg:order-2 lg:w-1/2 xl:w-2/5">
+            {{-- লগইন প্যানেল — পাতার আসল কাজ, তাই <main> এখানে --}}
+            <main class="order-1 flex flex-1 items-center justify-center px-6 py-8 lg:order-2 lg:w-1/2">
                 <div class="w-full max-w-(--spacing-login-card)">
+                    {{--
+                        ভাষা ও চালু-অবস্থা — পাতার হেডার নয়, কার্ডের ভেতরে।
+
+                        পাতাজোড়া হেডারটা তুলে দেওয়া হয়েছে (কার্ডের বাইরে
+                        এখন আলপনার জমিন), কিন্তু দুইটা কথা হারানো চলে না:
+                        বাংলা/English বদলানোর পথ, আর সার্ভার চলছে কিনা।
+                        দ্বিতীয়টা না থাকলে লগইন আটকে গেলে কেউ বলতে পারত
+                        না দোষটা পাসওয়ার্ডের না সার্ভারের।
+                    --}}
+                    <div class="mb-5 flex items-center justify-between gap-3 text-xs">
+                        <span class="flex items-center gap-1.5 text-(--color-ink-muted)">
+                            <span class="size-2 rounded-full bg-(--color-success)" aria-hidden="true"></span>
+                            {{ __('core.status_bar.operational') }}
+                        </span>
+
+                        <a href="?locale={{ app()->getLocale() === 'bn' ? 'en' : 'bn' }}"
+                           class="flex min-h-(--spacing-touch) items-center rounded-(--radius-field) px-2
+                                  text-(--color-ink-muted) transition-colors hover:text-(--color-ink)">
+                            🌐 {{ app()->getLocale() === 'bn' ? 'English' : 'বাংলা' }}
+                        </a>
+                    </div>
+
                     <h2 class="text-xl font-semibold text-(--color-ink)">{{ __('auth.welcome_back') }}</h2>
                     <p class="mt-1 text-sm text-(--color-ink-muted)">{{ __('auth.sign_in_to_workspace') }}</p>
 
@@ -201,7 +247,7 @@
                         আর কোথাও থাকত না — অথচ ফোন থেকে কেউ সমস্যার কথা
                         বললে ওটাই প্রথম প্রশ্ন।
                     --}}
-                    <div class="mt-8 border-t border-(--color-border) pt-4 text-center text-2xs
+                    <div class="mt-6 border-t border-(--color-border) pt-3 text-center text-2xs
                                 text-(--color-ink-muted) md:hidden">
                         <p>{{ __('core.brand.developed_by') }}</p>
                         <p class="mt-1">
@@ -211,12 +257,12 @@
                     </div>
 
                     {{-- বড় পর্দায় শুধু সংস্করণ — বাকিটা বাঁ পাশে দেখা যাচ্ছে --}}
-                    <p class="mt-8 hidden border-t border-(--color-border) pt-4 text-center text-2xs
+                    <p class="mt-6 hidden border-t border-(--color-border) pt-3 text-center text-2xs
                               text-(--color-ink-muted) md:block">
                         v{{ config('app.version', '0.1.0') }}
                     </p>
                 </div>
-            </section>
+            </main>
         </div>
     </div>
 </body>

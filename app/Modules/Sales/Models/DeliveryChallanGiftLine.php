@@ -6,6 +6,7 @@ namespace App\Modules\Sales\Models;
 
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Modules\Inventory\Concerns\HasEnteredPack;
 use App\Modules\Inventory\Models\Product;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -23,6 +24,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class DeliveryChallanGiftLine extends Model
 {
+    use HasEnteredPack;
     use HasPublicId;
     use IsAudited;
 
@@ -30,12 +32,12 @@ class DeliveryChallanGiftLine extends Model
 
     protected $fillable = [
         'delivery_challan_id', 'product_id', 'against_product_id',
-        'qty', 'remarks', 'line_no',
+        'qty', 'entered_qty', 'entered_unit_id', 'remarks', 'line_no',
     ];
 
     protected function casts(): array
     {
-        return ['qty' => 'decimal:4'];
+        return ['qty' => 'decimal:4', 'entered_qty' => 'decimal:4'];
     }
 
     public function challan(): BelongsTo

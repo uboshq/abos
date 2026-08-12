@@ -304,7 +304,8 @@ class ShellTest extends TestCase
         // নামটা এখন টাইপ করা লেখা নয়, ডিজাইনারের নিজের লেটারিংয়ে আঁকা
         // ওয়ার্ডমার্ক। ছবি প্রস্থ অনুযায়ী ছোট-বড় হয়, কেটে যায় না — তাই
         // "All Business Operating Syste" সমস্যাটার আর অস্তিত্বই নেই।
-        $this->assertStringContainsString('abos-wordmark-transparent.png', $markup);
+        // গাঢ় সাইডবারে গাঢ়-জমিনের রূপটাই — সাদা-জমিনের অক্ষর ওখানে মিলিয়ে যেত
+        $this->assertStringContainsString('abos-wordmark-dark.png', $markup);
         $this->assertStringContainsString('object-contain', $markup);
 
         // সরু সাইডবারে (৪৪px) ওয়ার্ডমার্ক ধরে না, তাই সেখানে শুধু মার্ক।

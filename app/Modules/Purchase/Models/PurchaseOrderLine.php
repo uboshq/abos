@@ -6,6 +6,7 @@ namespace App\Modules\Purchase\Models;
 
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Modules\Inventory\Concerns\HasEnteredPack;
 use App\Modules\Inventory\Models\Product;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -24,13 +25,15 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class PurchaseOrderLine extends Model
 {
+    use HasEnteredPack;
     use HasPublicId;
     use IsAudited;
 
     protected $table = 'pur_order_lines';
 
     protected $fillable = [
-        'purchase_order_id', 'product_id', 'ordered_qty', 'rate',
+        'purchase_order_id', 'product_id', 'ordered_qty',
+        'entered_qty', 'entered_unit_id', 'rate',
         'discount', 'tax', 'amount', 'line_no', 'narration',
     ];
 
@@ -38,6 +41,7 @@ class PurchaseOrderLine extends Model
     {
         return [
             'ordered_qty' => 'decimal:4',
+            'entered_qty' => 'decimal:4',
             'rate' => 'decimal:4',
             'discount' => 'decimal:4',
             'tax' => 'decimal:4',

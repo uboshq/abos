@@ -7,4 +7,5 @@ return [
     'non_moving_days' => 'Days before stock counts as non-moving',
     'brand_enabled' => 'Brand field',
     'batch_enabled' => 'Track lots and expiry',
+    'pack_entry_enabled' => 'Enter quantities in packs (box, strip, piece)',
 ];

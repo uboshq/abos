@@ -89,6 +89,30 @@ class Unit extends Model implements Drillable
         return bcmul($quantity, $factor, 6);
     }
 
+    /**
+     * সিঁড়ির একদম নিচের একক — যার আর কোনো ভিত্তি নেই।
+     *
+     * দুইটা একক তুলনাযোগ্য কিনা এটাই বলে দেয়: বস্তা আর গ্রাম দুইটারই
+     * গোড়া গ্রাম, তাই একটাকে অন্যটায় বদলানো যায়। পিস আর কেজির গোড়া
+     * আলাদা — ওদের মধ্যে রূপান্তর মানে বানানো একটা সংখ্যা।
+     *
+     * সীমাটা toBase()-এর মতোই: তথ্য নষ্ট হয়ে চক্র হলে লুপটা থামত না।
+     */
+    public function rootUnitId(): int
+    {
+        $node = $this;
+
+        for ($depth = 0; $depth < 8; $depth++) {
+            if ($node->base_unit_id === null || $node->baseUnit === null) {
+                return $node->id;
+            }
+
+            $node = $node->baseUnit;
+        }
+
+        return $node->id;
+    }
+
     // ── Drillable — নিয়ম ১ ────────────────────────────────────────────
 
     public static function drillSourceType(): string

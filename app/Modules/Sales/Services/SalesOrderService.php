@@ -12,6 +12,7 @@ use App\Models\FinancialYear;
 use App\Models\IssuedNumber;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Inventory\Services\ReadsPackedQuantities;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\Sales\Models\SalesOrder;
 use App\Modules\Sales\Models\SalesOrderLine;
@@ -37,6 +38,7 @@ use Illuminate\Validation\ValidationException;
 final class SalesOrderService
 {
     use CalculatesSalesLines;
+    use ReadsPackedQuantities;
 
     public function __construct(
         private readonly NumberSeriesEngine $numbers,
@@ -228,9 +230,16 @@ final class SalesOrderService
             $qty = $this->positive($line['ordered_qty'] ?? null, 'ordered_qty');
             $rate = $this->money($line['rate'] ?? null);
 
-            if ($productId <= 0 || ! Product::query()->whereKey($productId)->exists()) {
+            $product = Product::query()->find($productId);
+
+            if ($productId <= 0 || $product === null) {
                 throw ValidationException::withMessages(['lines' => __('sales::validation.unknown_product')]);
             }
+
+            // "২ বাক্স @ ৮০০" — পরিমাণ আর দর একসাথে পণ্যের এককে নামে
+            $pack = $this->packed($product, $qty, $line['unit_id'] ?? null, $rate);
+            $qty = $pack['qty'];
+            $rate = $pack['rate'];
 
             $figures = $this->lineFigures($qty, $rate, $line['discount'] ?? '0', $line['tax'] ?? '0');
 
@@ -238,6 +247,8 @@ final class SalesOrderService
                 'sales_order_id' => $order->id,
                 'product_id' => $productId,
                 'ordered_qty' => $qty,
+                'entered_qty' => $pack['entered_qty'],
+                'entered_unit_id' => $pack['entered_unit_id'],
                 'rate' => $rate,
                 'discount' => $figures['discount'],
                 'tax' => $figures['tax'],

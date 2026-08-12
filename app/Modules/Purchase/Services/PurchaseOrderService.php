@@ -10,6 +10,7 @@ use App\Core\Support\DocumentStatus;
 use App\Models\FinancialYear;
 use App\Models\IssuedNumber;
 use App\Modules\Inventory\Models\Product;
+use App\Modules\Inventory\Services\ReadsPackedQuantities;
 use App\Modules\Purchase\Models\PurchaseOrder;
 use App\Modules\Purchase\Models\PurchaseOrderLine;
 use Illuminate\Support\Carbon;
@@ -27,6 +28,7 @@ use Illuminate\Validation\ValidationException;
 final class PurchaseOrderService
 {
     use CalculatesLineTotals;
+    use ReadsPackedQuantities;
 
     public function __construct(private readonly NumberSeriesEngine $numbers) {}
 
@@ -175,12 +177,19 @@ final class PurchaseOrderService
 
             $this->assertProductExists($productId);
 
+            // "২ বাক্স @ ৮০০" — পরিমাণ আর দর একসাথে পণ্যের এককে নামে
+            $pack = $this->packed(Product::query()->findOrFail($productId), $qty, $line['unit_id'] ?? null, $rate);
+            $qty = $pack['qty'];
+            $rate = $pack['rate'];
+
             $figures = $this->lineFigures($qty, $rate, $line['discount'] ?? '0', $line['tax'] ?? '0');
 
             PurchaseOrderLine::create([
                 'purchase_order_id' => $order->id,
                 'product_id' => $productId,
                 'ordered_qty' => $qty,
+                'entered_qty' => $pack['entered_qty'],
+                'entered_unit_id' => $pack['entered_unit_id'],
                 'rate' => $rate,
                 'discount' => $figures['discount'],
                 'tax' => $figures['tax'],

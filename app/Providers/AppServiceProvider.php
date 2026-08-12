@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Services\ListExport;
 use App\Core\Services\SettingsService;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\ServiceProvider;
 
@@ -61,6 +62,28 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        /*
+         * নতুন ঘর $fillable-এ না বসালে চুপ করে হারিয়ে যায় — আর নয়।
+         *
+         * ── কেন এটা এখানে বসল ─────────────────────────────────────────
+         * এই ভুলটা তিনবার হয়েছে: batch_id, idempotency_key, parked_at।
+         * প্রতিবার মাইগ্রেশন হয়েছে, সার্ভিস ঘরটা পাঠিয়েছে, কোথাও কোনো
+         * ভুলের বার্তা আসেনি — শুধু ঘরটা খালি থেকে গেছে। ব্যাচের বেলায়
+         * মজুদ শূন্য দেখিয়েছে, আর চাবির বেলায় একই বিল দুইবার বসেছে।
+         *
+         * Eloquent-এর নিয়ম হলো, $fillable-এ না থাকা চাবি নীরবে ফেলে
+         * দেওয়া। এই সুইচটা সেই নীরবতা তুলে দেয়: তখন ওটা ব্যতিক্রম হয়ে
+         * পরীক্ষায় ধরা পড়ে, চালু ব্যবসার খাতায় নয়।
+         *
+         * ── কেন কেবল local আর testing ────────────────────────────────
+         * চালু সার্ভারে এটা চালু থাকলে একটা ভুলে-পাঠানো বাড়তি চাবি
+         * পুরো পাতাটা ভেঙে দিত — যেখানে আগে কেবল ওই ঘরটা বাদ পড়ত।
+         * ভুল ধরার জায়গা উন্নয়ন আর পরীক্ষা, ক্রেতার সামনে নয়।
+         */
+        Model::preventSilentlyDiscardingAttributes(
+            $this->app->environment(['local', 'testing']),
+        );
+
         /*
          * প্রতিটা নতুন টেবিলে বাইরের কী — এক লাইনে।
          *

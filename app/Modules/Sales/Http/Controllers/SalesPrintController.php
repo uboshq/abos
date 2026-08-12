@@ -253,11 +253,17 @@ class SalesPrintController extends Controller implements HasMiddleware
      */
     private function productLines($lines, string $qtyField): array
     {
+        /*
+         * যে প্যাকে লেখা হয়েছিল সেটাই কাগজে — "২ বাক্স", "২০০ পিস" নয়।
+         *
+         * গুদামের লোক বাক্স গোনেন, আর ক্রেতা যা চেয়েছিলেন কাগজে সেটাই
+         * দেখতে চান। ভেতরের হিসাব পিসেই চলে; এই দুইটা ঘর কেবল চোখের।
+         */
         return $lines->map(fn ($line) => [
             'name' => $this->productName($line),
-            'qty' => $this->qty($line->{$qtyField}),
-            'unit' => $line->product?->unit?->name() ?? '',
-            'rate' => $this->money($line->rate),
+            'qty' => $this->qty($line->packedQty($qtyField)),
+            'unit' => $line->packedUnitName(),
+            'rate' => $this->money($line->packedRate('rate', $qtyField)),
             'amount' => $this->money($line->amount),
         ])->values()->all();
     }

@@ -177,14 +177,16 @@ class PurchasePrintController extends Controller implements HasMiddleware
     private function lines($lines, string $qtyField, bool $money = true): array
     {
         return $lines->map(function ($line) use ($qtyField, $money) {
+            // যে প্যাকে লেখা হয়েছিল সেটাই কাগজে — সরবরাহকারীর বিলের
+            // সাথে মেলাতে গেলে "১০ বাক্স" খুঁজতে হয়, "১০০০ পিস" নয়
             $row = [
                 'name' => trim(($line->product?->code ?? '').' '.($line->product?->name() ?? '')),
-                'qty' => $this->qty($line->{$qtyField}),
-                'unit' => $line->product?->unit?->name() ?? '',
+                'qty' => $this->qty($line->packedQty($qtyField)),
+                'unit' => $line->packedUnitName(),
             ];
 
             if ($money) {
-                $row['rate'] = $this->money($line->rate);
+                $row['rate'] = $this->money($line->packedRate('rate', $qtyField));
                 $row['amount'] = $this->money($line->amount);
             }
 

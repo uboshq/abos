@@ -272,8 +272,11 @@ class CompanySetupTest extends TestCase
             'name' => 'দোকানের লোক',
             'email' => 'hand@abos.test',
             'password' => bcrypt('password'),
-            'current_company_id' => CompanyContext::id(),
         ]);
+
+        // চলতি কোম্পানি mass assignment-এ বসে না — switchCompany() সদস্যপদ
+        // যাচাই করে, আর সেই পাহারাটা এড়ানোর পথ খোলা রাখা হয়নি
+        $hand->forceFill(['current_company_id' => CompanyContext::id()])->save();
 
         $hand->assignRole($role);
 
