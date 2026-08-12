@@ -35,7 +35,7 @@ class StockMovement extends Model
     protected $table = 'inv_stock_movements';
 
     protected $fillable = [
-        'company_id', 'branch_id', 'product_id', 'warehouse_id', 'trx_date',
+        'company_id', 'branch_id', 'product_id', 'warehouse_id', 'batch_id', 'trx_date',
         'floor_change', 'reserved_change', 'hold_change',
         'free_change', 'free_reserved_change', 'reason_code_id',
         'source_type', 'source_id', 'document_no', 'narration', 'created_by',
@@ -56,6 +56,17 @@ class StockMovement extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    /**
+     * কোন লট থেকে — ব্যাচ ধরা পণ্য হলে।
+     *
+     * বেশিরভাগ সারিতে খালি, আর সেটাই স্বাভাবিক: চাল, সাবান, বিস্কুটে
+     * লট বলে কিছু নেই। যে পণ্যে আছে, সেখানে এই সূত্রটাই রিকলের উত্তর।
+     */
+    public function batch(): BelongsTo
+    {
+        return $this->belongsTo(Batch::class);
     }
 
     public function warehouse(): BelongsTo
