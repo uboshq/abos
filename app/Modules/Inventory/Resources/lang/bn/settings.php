@@ -7,4 +7,5 @@ return [
     'non_moving_days' => 'কত দিন না নড়লে অচল',
     'brand_enabled' => 'ব্র্যান্ডের ঘর',
     'batch_enabled' => 'ব্যাচ ও মেয়াদ ধরা হবে',
+    'pack_entry_enabled' => 'প্যাকে পরিমাণ লেখা যাবে (বাক্স, পাতা, পিস)',
 ];

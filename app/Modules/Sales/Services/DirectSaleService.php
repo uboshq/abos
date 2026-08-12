@@ -8,6 +8,7 @@ use App\Core\Services\SettingsService;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Inventory\Services\ReadsPackedQuantities;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\DeliveryChallanGiftLine;
@@ -36,6 +37,8 @@ use Illuminate\Validation\ValidationException;
  */
 final class DirectSaleService
 {
+    use ReadsPackedQuantities;
+
     public function __construct(
         private readonly DeliveryChallanService $challans,
         private readonly SalesInvoiceService $invoices,
@@ -140,6 +143,9 @@ final class DirectSaleService
             'product_id' => (int) $line['product_id'],
             'delivered_qty' => (string) $line['qty'],
             'rate' => (string) $line['rate'],
+
+            // প্যাকটা চালান পর্যন্ত যায়, আর সেখানেই একবার নামে
+            'unit_id' => $line['unit_id'] ?? null,
         ], $lines));
     }
 
@@ -162,6 +168,16 @@ final class DirectSaleService
             'qty' => (string) $line->delivered_qty,
             'rate' => (string) $line->rate,
             'discount' => $this->lineDiscount($line),
+
+            /*
+             * প্যাকটা চালান থেকে বিলে যায়, কিন্তু হিসাব আর হয় না।
+             *
+             * unit_id পাঠালে বিলে দ্বিতীয়বার ভাগ হত — ২ বাক্স ২০০ পিস
+             * না হয়ে ২ পিস। তাই কেবল লেখা দুইটা ঘরই যায়, যাতে ক্রেতার
+             * হাতের বিলে "২ বাক্স" ছাপা থাকে।
+             */
+            'entered_qty' => $line->entered_qty,
+            'entered_unit_id' => $line->entered_unit_id,
         ])->values()->all();
     }
 
@@ -218,15 +234,22 @@ final class DirectSaleService
                 continue;
             }
 
-            if (! Product::query()->whereKey($productId)->exists()) {
+            $product = Product::query()->find($productId);
+
+            if ($product === null) {
                 throw ValidationException::withMessages(['gifts' => __('sales::validation.unknown_product')]);
             }
+
+            // উপহারও প্যাকে যায় — "১ বাক্স ফ্রি"
+            $pack = $this->packed($product, $qty, $gift['unit_id'] ?? null);
 
             DeliveryChallanGiftLine::create([
                 'delivery_challan_id' => $challan->id,
                 'product_id' => $productId,
                 'against_product_id' => ($gift['against_product_id'] ?? null) ?: null,
-                'qty' => $qty,
+                'qty' => $pack['qty'],
+                'entered_qty' => $pack['entered_qty'],
+                'entered_unit_id' => $pack['entered_unit_id'],
                 'remarks' => $gift['remarks'] ?? __('sales::message.not_for_sales'),
                 'line_no' => ++$lineNo,
             ]);

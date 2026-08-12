@@ -7,6 +7,7 @@ namespace App\Modules\Inventory\Models;
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Modules\Inventory\Concerns\HasEnteredPack;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -19,18 +20,20 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class StockTransferLine extends Model
 {
     use BelongsToCompany;
+    use HasEnteredPack;
     use HasPublicId;
     use IsAudited;
 
     protected $table = 'inv_transfer_lines';
 
     protected $fillable = [
-        'company_id', 'stock_transfer_id', 'product_id', 'qty', 'line_no',
+        'company_id', 'stock_transfer_id', 'product_id',
+        'qty', 'entered_qty', 'entered_unit_id', 'line_no',
     ];
 
     protected function casts(): array
     {
-        return ['qty' => 'decimal:4'];
+        return ['qty' => 'decimal:4', 'entered_qty' => 'decimal:4'];
     }
 
     public function transfer(): BelongsTo

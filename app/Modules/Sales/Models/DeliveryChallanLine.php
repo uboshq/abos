@@ -6,6 +6,7 @@ namespace App\Modules\Sales\Models;
 
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Modules\Inventory\Concerns\HasEnteredPack;
 use App\Modules\Inventory\Models\Product;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -14,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /** চালানের একটা লাইন — এক পণ্য, যত গেল। */
 class DeliveryChallanLine extends Model
 {
+    use HasEnteredPack;
     use HasPublicId;
     use IsAudited;
 
@@ -21,7 +23,8 @@ class DeliveryChallanLine extends Model
 
     protected $fillable = [
         'delivery_challan_id', 'product_id', 'sales_order_line_id',
-        'delivered_qty', 'free_qty', 'rate', 'discount_percent',
+        'delivered_qty', 'entered_qty', 'entered_unit_id',
+        'free_qty', 'rate', 'discount_percent',
         'amount', 'line_no', 'narration',
     ];
 
@@ -29,6 +32,7 @@ class DeliveryChallanLine extends Model
     {
         return [
             'delivered_qty' => 'decimal:4',
+            'entered_qty' => 'decimal:4',
             'free_qty' => 'decimal:4',
             'discount_percent' => 'decimal:4',
             'rate' => 'decimal:4',

@@ -6,6 +6,7 @@ namespace App\Modules\Purchase\Models;
 
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Modules\Inventory\Concerns\HasEnteredPack;
 use App\Modules\Inventory\Models\Product;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -16,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class PurchaseReceiptLine extends Model
 {
+    use HasEnteredPack;
     use HasPublicId;
     use IsAudited;
 
@@ -23,13 +25,15 @@ class PurchaseReceiptLine extends Model
 
     protected $fillable = [
         'purchase_receipt_id', 'product_id', 'purchase_order_line_id',
-        'received_qty', 'rate', 'amount', 'line_no', 'narration',
+        'received_qty', 'entered_qty', 'entered_unit_id',
+        'rate', 'amount', 'line_no', 'narration',
     ];
 
     protected function casts(): array
     {
         return [
             'received_qty' => 'decimal:4',
+            'entered_qty' => 'decimal:4',
             'rate' => 'decimal:4',
             'amount' => 'decimal:4',
         ];

@@ -56,6 +56,19 @@ final class MasterListService implements ProvisionsCompany
 
             $this->assertCodeIsFree($model, $code);
 
+            /*
+             * যে তালিকায় "ডিফল্ট" বলে কিছু নেই, সেখানে ঘরটা ফেলে দেওয়া।
+             *
+             * ফর্মটা সব তালিকার জন্য একটাই, তাই গাড়ির পর্দা থেকেও
+             * is_default আসে — অথচ mdm_vehicles-এ ওই ঘরই নেই। নিচের
+             * spread ওটা বয়ে নিয়ে যেত, আর Eloquent চুপ করে ফেলে দিত।
+             * ফেলে দেওয়াই ঠিক, কিন্তু চুপ করে নয়: strict mode চালু
+             * হওয়ার পর ওটাই পুরো সংরক্ষণ ভেঙে দিত।
+             */
+            if (! $model::supportsDefault()) {
+                unset($data['is_default']);
+            }
+
             $record = $model::create([
                 ...$data,
                 'code' => $code,

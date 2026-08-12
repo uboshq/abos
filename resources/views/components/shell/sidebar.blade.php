@@ -113,7 +113,10 @@
                  কাটার প্রশ্নই নেই — সেটা প্রস্থ অনুযায়ী ছোট-বড় হয়, ভেঙে
                  যায় না। ৩২০×৯৬ অনুপাতে max-h-10 দিলে ১৩৩px চওড়া, যা
                  ২২০px সাইডবারেও অনেকটা জায়গা রেখে বসে। --}}
-            <img src="{{ asset('brand/abos-wordmark-transparent.png') }}" alt="ABOS"
+            {{-- গাঢ় জমিনের রূপ: সাইডবার #0F172A, আর সাদা-জমিনের
+                 ওয়ার্ডমার্কের অক্ষর গাঢ় নীল — ওটা এখানে বসালে লোগোটা
+                 প্রায় অদৃশ্য হয়ে যেত। --}}
+            <img src="{{ asset('brand/abos-wordmark-dark.png') }}" alt="ABOS"
                  class="hidden max-h-10 w-auto object-contain object-left"
                  :class="collapsed ? '' : 'lg:block'">
 

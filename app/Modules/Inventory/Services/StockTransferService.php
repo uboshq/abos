@@ -39,6 +39,8 @@ use Illuminate\Validation\ValidationException;
  */
 final class StockTransferService
 {
+    use ReadsPackedQuantities;
+
     public function __construct(
         private readonly NumberSeriesEngine $numbers,
         private readonly StockService $stock,
@@ -298,11 +300,16 @@ final class StockTransferService
                 throw ValidationException::withMessages(['lines' => __('inventory::validation.unknown_product')]);
             }
 
+            // "২ বাক্স পাঠানো হল" — গুদামের মধ্যেও প্যাকেই লেখা হয়
+            $pack = $this->packed($product, $qty, $line['unit_id'] ?? null);
+
             StockTransferLine::create([
                 'company_id' => $transfer->company_id,
                 'stock_transfer_id' => $transfer->id,
                 'product_id' => $product->id,
-                'qty' => bcadd($qty, '0', 4),
+                'qty' => bcadd($pack['qty'], '0', 4),
+                'entered_qty' => $pack['entered_qty'],
+                'entered_unit_id' => $pack['entered_unit_id'],
                 'line_no' => ++$lineNo,
             ]);
         }

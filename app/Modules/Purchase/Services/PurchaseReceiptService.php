@@ -16,6 +16,7 @@ use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\CostLayerService;
+use App\Modules\Inventory\Services\ReadsPackedQuantities;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\Purchase\Models\PurchaseOrder;
 use App\Modules\Purchase\Models\PurchaseOrderLine;
@@ -46,6 +47,7 @@ use Illuminate\Validation\ValidationException;
 final class PurchaseReceiptService
 {
     use CalculatesLineTotals;
+    use ReadsPackedQuantities;
 
     public function __construct(
         private readonly NumberSeriesEngine $numbers,
@@ -342,9 +344,16 @@ final class PurchaseReceiptService
             $qty = $this->positive($line['received_qty'] ?? null, 'received_qty');
             $rate = $this->money($line['rate'] ?? null);
 
-            if ($productId <= 0 || ! Product::query()->whereKey($productId)->exists()) {
+            $product = Product::query()->find($productId);
+
+            if ($productId <= 0 || $product === null) {
                 throw ValidationException::withMessages(['lines' => __('purchase::validation.unknown_product')]);
             }
+
+            // "২ বাক্স @ ৮০০" — পরিমাণ আর দর একসাথে পণ্যের এককে নামে
+            $pack = $this->packed($product, $qty, $line['unit_id'] ?? null, $rate);
+            $qty = $pack['qty'];
+            $rate = $pack['rate'];
 
             $orderLine = $this->resolveOrderLine($receipt, $line['purchase_order_line_id'] ?? null, $productId, $qty);
 
@@ -355,6 +364,8 @@ final class PurchaseReceiptService
                 'product_id' => $productId,
                 'purchase_order_line_id' => $orderLine?->id,
                 'received_qty' => $qty,
+                'entered_qty' => $pack['entered_qty'],
+                'entered_unit_id' => $pack['entered_unit_id'],
                 'rate' => $rate,
                 'amount' => $amount,
                 'line_no' => ++$lineNo,

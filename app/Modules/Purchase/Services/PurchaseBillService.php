@@ -16,6 +16,7 @@ use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\CostLayerService;
+use App\Modules\Inventory\Services\ReadsPackedQuantities;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Purchase\Models\PurchaseBillLine;
@@ -49,6 +50,7 @@ use Illuminate\Validation\ValidationException;
 final class PurchaseBillService
 {
     use CalculatesLineTotals;
+    use ReadsPackedQuantities;
 
     public function __construct(
         private readonly NumberSeriesEngine $numbers,
@@ -441,9 +443,16 @@ final class PurchaseBillService
             $qty = $this->positive($line['qty'] ?? null, 'qty');
             $rate = $this->money($line['rate'] ?? null);
 
-            if ($productId <= 0 || ! Product::query()->whereKey($productId)->exists()) {
+            $product = Product::query()->find($productId);
+
+            if ($productId <= 0 || $product === null) {
                 throw ValidationException::withMessages(['lines' => __('purchase::validation.unknown_product')]);
             }
+
+            // "২ বাক্স @ ৮০০" — পরিমাণ আর দর একসাথে পণ্যের এককে নামে
+            $pack = $this->packed($product, $qty, $line['unit_id'] ?? null, $rate);
+            $qty = $pack['qty'];
+            $rate = $pack['rate'];
 
             $receiptLine = $this->resolveReceiptLine($bill, $line['purchase_receipt_line_id'] ?? null, $productId, $qty);
 
@@ -466,6 +475,8 @@ final class PurchaseBillService
                 'purchase_receipt_line_id' => $receiptLine?->id,
                 'purchase_order_line_id' => $orderLine?->id,
                 'qty' => $qty,
+                'entered_qty' => $pack['entered_qty'],
+                'entered_unit_id' => $pack['entered_unit_id'],
                 'rate' => $rate,
 
                 /*
@@ -475,10 +486,15 @@ final class PurchaseBillService
                  * বিনামূল্যে"। দুইটা এক করে ফেললে যে লাইনে কেউ দাম
                  * লেখেননি সেটাও পণ্যটার দাম মুছে দিত, আর পরদিন কাউন্টারে
                  * সবকিছু শূন্য টাকায় বেরিয়ে যেত।
+                 *
+                 * ক্রয়দরের মতো এটাও এন্ট্রির একক থেকে নামে। না নামালে
+                 * বাক্সে বিল তোলার দিন পণ্যের বিক্রয়মূল্য ১০০ গুণ হয়ে
+                 * মাস্টারে বসত, আর পরদিন কাউন্টারে প্রতিটা পিস বাক্সের
+                 * দামে বিক্রি হত।
                  */
                 'sales_price' => ($line['sales_price'] ?? '') === '' || ($line['sales_price'] ?? null) === null
                     ? null
-                    : $this->money($line['sales_price']),
+                    : $this->packed($product, '1', $pack['entered_unit_id'], $this->money($line['sales_price']))['rate'],
 
                 'discount' => $figures['discount'],
                 'tax' => $figures['tax'],

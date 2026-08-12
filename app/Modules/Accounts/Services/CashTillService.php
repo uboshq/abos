@@ -63,6 +63,16 @@ final class CashTillService
                 'opening_date' => $data['opening_date'] ?? null,
             ]);
 
+            /*
+             * খোলা ব্যালেন্স উপরে খাতে বসে গেছে — টিলে ওই ঘর দুইটা নেই।
+             *
+             * বসানোর কথাও নয়: টাকার অঙ্ক এক জায়গায় থাকলে দুই জায়গার
+             * অমিল কখনো হয় না। কিন্তু নিচের spread ফর্মের ওই দুইটা ঘর
+             * বয়ে নিয়ে যেত, আর Eloquent চুপ করে ফেলে দিত — update()
+             * ইতিমধ্যে ঠিক এই কারণেই ওগুলো unset করে।
+             */
+            unset($data['opening_balance'], $data['opening_date']);
+
             $till = CashTill::create([
                 ...$data,
                 'code' => $code,

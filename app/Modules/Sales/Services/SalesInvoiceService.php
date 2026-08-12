@@ -18,6 +18,7 @@ use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\CostLayerService;
+use App\Modules\Inventory\Services\ReadsPackedQuantities;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\Sales\Events\InvoiceConfirmed;
 use App\Modules\Sales\Models\DeliveryChallanLine;
@@ -49,6 +50,7 @@ use Illuminate\Validation\ValidationException;
 final class SalesInvoiceService
 {
     use CalculatesSalesLines;
+    use ReadsPackedQuantities;
 
     public function __construct(
         private readonly NumberSeriesEngine $numbers,
@@ -414,6 +416,17 @@ final class SalesInvoiceService
                 throw ValidationException::withMessages(['lines' => __('sales::validation.unknown_product')]);
             }
 
+            /*
+             * "২ বাক্স @ ৮০০" — পরিমাণ আর দর দুইটাই পণ্যের এককে নামে।
+             *
+             * শুধু পরিমাণ নামালে বিলটা ২০০ × ৮০০ = ১,৬০,০০০ হত। নিচের
+             * সবকিছু — মজুদ, স্তর, চালানের মিল — এখান থেকে পণ্যের
+             * এককেই চলে, তাই কাউকে আর একক নিয়ে ভাবতে হয় না।
+             */
+            $pack = $this->packed($product, $qty, $line['unit_id'] ?? null, $rate, $line);
+            $qty = $pack['qty'];
+            $rate = $pack['rate'];
+
             $challanLine = $this->resolveChallanLine($invoice, $line['delivery_challan_line_id'] ?? null, $productId, $qty);
 
             $figures = $this->lineFigures($qty, $rate, $line['discount'] ?? '0', $line['tax'] ?? '0');
@@ -440,6 +453,8 @@ final class SalesInvoiceService
                 'product_id' => $productId,
                 'delivery_challan_line_id' => $challanLine?->id,
                 'qty' => $qty,
+                'entered_qty' => $pack['entered_qty'],
+                'entered_unit_id' => $pack['entered_unit_id'],
                 'rate' => $rate,
                 'discount' => $figures['discount'],
                 'tax' => $figures['tax'],

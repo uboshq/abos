@@ -15,6 +15,7 @@ use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\CostLayerService;
+use App\Modules\Inventory\Services\ReadsPackedQuantities;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Models\SalesInvoiceLine;
@@ -47,6 +48,8 @@ use Illuminate\Validation\ValidationException;
  */
 final class SalesReturnService
 {
+    use ReadsPackedQuantities;
+
     public function __construct(
         private readonly NumberSeriesEngine $numbers,
         private readonly PostingEngine $posting,
@@ -373,6 +376,15 @@ final class SalesReturnService
                 throw ValidationException::withMessages(['lines' => __('sales::validation.unknown_product')]);
             }
 
+            /*
+             * প্যাকে ফেরত — "১ পাতা ফেরত" লেখা যায়।
+             *
+             * শুধু পরিমাণটাই নামে। দর নামে না, কারণ নিচে সেটা মূল বিলের
+             * লাইন থেকে আসে — আর ওখানে দর আগেই পণ্যের এককে বসানো।
+             */
+            $pack = $this->packed($product, $qty, $line['unit_id'] ?? null);
+            $qty = $pack['qty'];
+
             $invoiceLine = null;
 
             if (filled($line['sales_invoice_line_id'] ?? null)) {
@@ -397,9 +409,24 @@ final class SalesReturnService
              * ফেরতের দর বিক্রির দরই হওয়া উচিত। হাতে বসাতে দিলে কেউ বেশি
              * দরে ফেরত দেখিয়ে গ্রাহকের পাওনা বেশি কমাতে পারত।
              */
-            $rate = $invoiceLine !== null
-                ? (string) $invoiceLine->rate
-                : $this->money($line['rate'] ?? $product->sale_price);
+            /*
+             * বিল ছাড়া ফেরতে হাতে লেখা দরটা এন্ট্রির এককে — সেটা নামাতে
+             * হয়। পণ্য-মাস্টারের দাম নামে না; ওটা আগেই পণ্যের এককে।
+             */
+            $rate = match (true) {
+                $invoiceLine !== null => (string) $invoiceLine->rate,
+
+                // হাতে লেখা দর — যে এককে লেখা, সেখান থেকে নামে
+                filled($line['rate'] ?? null) => $this->packed(
+                    $product,
+                    '1',
+                    $pack['entered_unit_id'],
+                    $this->money($line['rate']),
+                )['rate'],
+
+                // মাস্টারের দাম — আগেই পণ্যের এককে, নামানোর কিছু নেই
+                default => $this->money($product->sale_price),
+            };
 
             $amount = bcmul($qty, $rate, 4);
             $tax = $this->money($line['tax'] ?? '0');
@@ -410,6 +437,8 @@ final class SalesReturnService
                 'product_id' => $product->id,
                 'sales_invoice_line_id' => $invoiceLine?->id,
                 'qty' => $qty,
+                'entered_qty' => $pack['entered_qty'],
+                'entered_unit_id' => $pack['entered_unit_id'],
                 'rate' => $rate,
                 'tax' => $tax,
                 'amount' => $amount,

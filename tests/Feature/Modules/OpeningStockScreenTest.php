@@ -295,8 +295,11 @@ class OpeningStockScreenTest extends TestCase
             'name' => 'গুদামের লোক',
             'email' => 'counter@abos.test',
             'password' => bcrypt('password'),
-            'current_company_id' => CompanyContext::id(),
         ]);
+
+        // চলতি কোম্পানি mass assignment-এ বসে না — switchCompany() সদস্যপদ
+        // যাচাই করে, আর সেই পাহারাটা এড়ানোর পথ খোলা রাখা হয়নি
+        $counter->forceFill(['current_company_id' => CompanyContext::id()])->save();
 
         $counter->assignRole($role);
 
