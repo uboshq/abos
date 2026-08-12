@@ -56,7 +56,23 @@ final class PosService
         $customer = $this->resolveCustomer($data['customer_id'] ?? null);
         $paid = $this->money($data['paid'] ?? '0');
 
-        return DB::transaction(function () use ($data, $lines, $customer, $paid) {
+        /*
+         * টিলের পাঠানো চাবি — এক কার্টে একটা।
+         *
+         * একই চাবি আবার এলে সেটা একই বিক্রয়: ধীর সংযোগ আর দ্বিতীয়বার
+         * Enter, দ্বিতীয় ক্রেতা নয়। আগেরটা খুঁজে দিয়ে দেওয়া হয়, নতুন
+         * করে কিছু বসে না।
+         *
+         * চাবি না এলে কিছুই বদলায় না — পুরনো টিল, ইমপোর্ট বা পরীক্ষার
+         * কোড যেভাবে চলত সেভাবেই চলে।
+         */
+        $key = trim((string) ($data['idempotency_key'] ?? '')) ?: null;
+
+        if ($key !== null && ($already = $this->soldUnder($key)) !== null) {
+            return $this->result($already, $paid);
+        }
+
+        return DB::transaction(function () use ($data, $lines, $customer, $paid, $key) {
             $invoice = $this->invoices->create(
                 [
                     'customer_id' => $customer->id,
@@ -66,6 +82,17 @@ final class PosService
                 ],
                 $lines,
             );
+
+            /*
+             * চাবিটা বিলের গায়ে বসে, আর ইনডেক্সই আসল পাহারা।
+             *
+             * উপরে খুঁজে দেখা সাধারণ দুইবার-চাপা সামলায়। কিন্তু দুইটা
+             * অনুরোধ কাছাকাছি এলে দুইজনেই খুঁজে কিছু পায় না, আর দুইজনেই
+             * বসায় — ওখানে ইউনিক ইনডেক্স দ্বিতীয়টাকে ফিরিয়ে দেয়।
+             */
+            if ($key !== null) {
+                $invoice->forceFill(['idempotency_key' => $key])->save();
+            }
 
             $invoice = $this->invoices->confirm($invoice);
 
@@ -101,6 +128,37 @@ final class PosService
                 'change' => $change,
             ];
         });
+    }
+
+    /**
+     * এই চাবিতে আগেই কিছু বিক্রি হয়েছে কি না।
+     *
+     * খালি চাবিতে খোঁজা হয় না, ইচ্ছাকৃতভাবে: NULL খুঁজলে চাবিহীন
+     * প্রথম বিলটাই উঠে আসত, আর টিলের হাতে অন্য কারও রসিদ চলে যেত।
+     */
+    private function soldUnder(string $key): ?SalesInvoice
+    {
+        return SalesInvoice::query()->where('idempotency_key', $key)->first();
+    }
+
+    /**
+     * আগেই বসে যাওয়া বিক্রয়ের উত্তরটা আবার বানানো।
+     *
+     * ── ফেরত টাকা নতুন করে হিসাব হয়, সংরক্ষিত নয় ────────────────────
+     * ক্রেতা যা দিয়েছিলেন সেটা এই অনুরোধেই এসেছে, আর বিলের মোট বিলেই
+     * আছে — দুইটা থেকেই ফেরতটা বের হয়। আলাদা করে জমা রাখলে সেটা
+     * তৃতীয় একটা সংখ্যা হত যা কোনোদিন যাচাই করা যেত না।
+     *
+     * @return array{invoice: SalesInvoice, change: string}
+     */
+    private function result(SalesInvoice $invoice, string $paid): array
+    {
+        $total = (string) $invoice->total;
+
+        return [
+            'invoice' => $invoice->load('lines'),
+            'change' => bccomp($paid, $total, 4) > 0 ? bcsub($paid, $total, 4) : '0.0000',
+        ];
     }
 
     /**
