@@ -41,6 +41,15 @@ class SalesInvoice extends Model implements Drillable
 
     protected $fillable = [
         'company_id', 'branch_id', 'financial_year_id', 'document_no',
+
+        /*
+         * টিলের পাঠানো চাবি — একই কার্টের দ্বিতীয় অনুরোধ চেনার জন্য।
+         *
+         * বেশিরভাগ বিলে খালি: সরাসরি বিক্রয়, ইমপোর্ট, চালান থেকে বিল
+         * — কেউ চাবি পাঠায় না, আর তাদের কিছু বদলায় না।
+         */
+        'idempotency_key',
+
         'customer_id', 'warehouse_id', 'trx_date', 'due_on',
         'subtotal', 'discount', 'tax', 'total', 'cost_of_goods',
         'status', 'narration', 'created_by',

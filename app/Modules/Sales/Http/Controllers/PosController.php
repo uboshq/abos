@@ -75,6 +75,15 @@ class PosController extends Controller implements HasMiddleware
             'warehouse_id' => ['nullable', 'integer',
                 Rule::exists('inv_warehouses', 'id')->where('company_id', $companyId)],
             'paid' => ['required', 'numeric', 'min:0'],
+
+            /*
+             * টিলের চাবি — এক কার্টে একটা, ব্রাউজারে তৈরি।
+             *
+             * ঐচ্ছিক, কারণ পুরনো টিল বা পরীক্ষার কোড এটা পাঠায় না, আর
+             * না পাঠালে আচরণ আগের মতোই। যারা পাঠায়, তাদের দ্বিতীয়বার
+             * Enter চাপা দ্বিতীয় বিল বানায় না।
+             */
+            'idempotency_key' => ['nullable', 'string', 'max:64'],
             'lines' => ['required', 'array', 'min:1'],
             'lines.*.product_id' => ['required', 'integer',
                 Rule::exists('inv_products', 'id')->where('company_id', $companyId)],
