@@ -50,12 +50,36 @@ return [
              */
             ['label' => 'accounts::menu.loans', 'route' => 'accounts.loan.index', 'permission' => 'accounts.loan.view'],
         ],
+        /*
+         * পাঁচটা সারিই `accounts.report` চায়, `accounts.voucher.create` নয়।
+         *
+         * ── কী ভুল ছিল ──────────────────────────────────────────────
+         * সারিগুলো চাইত `accounts.voucher.create`, অথচ রুটটা প্রয়োগ করে
+         * `accounts.report` (VoucherController::middleware, index ও show)।
+         * ফলে যে ক্যাশিয়ারের ভাউচার লেখার চাবি আছে কিন্তু রিপোর্টের নেই,
+         * তিনি মেনুতে পাঁচটা সারি দেখতেন আর ক্লিক করলেই ৪০৩ পেতেন —
+         * নিজের রোজকার কাজের পর্দায়।
+         *
+         * ── কেন মেনু বদলালো, রুট নয় ─────────────────────────────────
+         * দুই দিকের যেকোনোটা বদলালেই কারও না কারও প্রবেশাধিকার বদলায়।
+         * রুট বদলালে যাঁদের কেবল `accounts.report` আছে (হিসাবরক্ষক, যিনি
+         * দেখেন কিন্তু লেখেন না) তাঁরা ভাউচারের তালিকা হারাতেন — আর সেটা
+         * একটা ব্যবসায়িক সিদ্ধান্ত, বাগ সারানো নয়।
+         *
+         * মেনু বদলালে কেউ কিছু হারায় না: যিনি আগে পাতাটা খুলতে পারতেন
+         * তিনি এখনো পারেন, শুধু যে সারিটা কোনোদিন কাজ করত না সেটা আর
+         * দেখা যায় না।
+         *
+         * আলাদা `accounts.voucher.view` চাবি বসানোই সবচেয়ে পরিষ্কার হত,
+         * কিন্তু তাতে পুরনো রোলগুলোয় নতুন চাবি বিলি করতে হত — সেটা
+         * আলাদা কাজ, আর মালিকের সিদ্ধান্ত।
+         */
         'transactions' => [
-            ['label' => 'accounts::menu.receipt', 'route' => 'accounts.voucher.index', 'route_params' => ['type' => 'receipt'], 'permission' => 'accounts.voucher.create'],
-            ['label' => 'accounts::menu.payment', 'route' => 'accounts.voucher.index', 'route_params' => ['type' => 'payment'], 'permission' => 'accounts.voucher.create'],
-            ['label' => 'accounts::menu.expense', 'route' => 'accounts.voucher.index', 'route_params' => ['type' => 'expense'], 'permission' => 'accounts.voucher.create'],
-            ['label' => 'accounts::menu.journal', 'route' => 'accounts.voucher.index', 'route_params' => ['type' => 'journal'], 'permission' => 'accounts.voucher.create'],
-            ['label' => 'accounts::menu.contra', 'route' => 'accounts.voucher.index', 'route_params' => ['type' => 'contra'], 'permission' => 'accounts.voucher.create'],
+            ['label' => 'accounts::menu.receipt', 'route' => 'accounts.voucher.index', 'route_params' => ['type' => 'receipt'], 'permission' => 'accounts.report'],
+            ['label' => 'accounts::menu.payment', 'route' => 'accounts.voucher.index', 'route_params' => ['type' => 'payment'], 'permission' => 'accounts.report'],
+            ['label' => 'accounts::menu.expense', 'route' => 'accounts.voucher.index', 'route_params' => ['type' => 'expense'], 'permission' => 'accounts.report'],
+            ['label' => 'accounts::menu.journal', 'route' => 'accounts.voucher.index', 'route_params' => ['type' => 'journal'], 'permission' => 'accounts.report'],
+            ['label' => 'accounts::menu.contra', 'route' => 'accounts.voucher.index', 'route_params' => ['type' => 'contra'], 'permission' => 'accounts.report'],
             ['label' => 'accounts::menu.money_transfer', 'route' => 'accounts.transfer.index', 'permission' => 'accounts.transfer.create'],
             ['label' => 'accounts::menu.cash_count', 'route' => 'accounts.count.index', 'permission' => 'accounts.count.create'],
         ],
