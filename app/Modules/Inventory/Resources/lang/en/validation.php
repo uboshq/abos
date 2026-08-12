@@ -7,6 +7,10 @@ return [
     'barcode_taken' => 'Another product already uses barcode :barcode — a scanner could not tell them apart.',
     'not_negative' => ':field cannot be negative.',
     'nothing_moves' => 'No quantity was given — a zero row only lengthens the ledger.',
+
+    // Batch allocation
+    'qty_positive' => 'Say how much — a quantity of zero picks no lot at all.',
+    'batch_short' => 'Not enough :product across its lots — :short short. Unexpired lots only; check whether some has expired.',
     'hold_needs_quantity' => 'Say how much to hold.',
     'wrong_reason_context' => 'That reason is not for holding stock.',
     'not_enough_available' => 'Not that much is available — there is :available.',
