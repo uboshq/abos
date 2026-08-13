@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\Inventory\Http\Controllers\BatchController;
 use App\Modules\Inventory\Http\Controllers\OpeningStockController;
 use App\Modules\Inventory\Http\Controllers\ProductController;
 use App\Modules\Inventory\Http\Controllers\StockController;
@@ -60,6 +61,20 @@ Route::middleware('auth')->prefix('inventory')->group(function () {
         Route::post('/opening', [OpeningStockController::class, 'store'])->name('opening.store');
         Route::post('/hold', [StockController::class, 'storeHold'])->name('hold');
         Route::post('/release', [StockController::class, 'storeRelease'])->name('release');
+    });
+
+    /*
+     * লট — এখন কেবল দুইটা সংশোধন, নিজের কোনো তালিকা নেই।
+     *
+     * লটগুলো পণ্যের পাতায় দেখা যায়, আর ওখান থেকেই বদলানো হয়। আলাদা
+     * তালিকা বানালে সেটা হত পণ্যহীন একরাশ নম্বরের পাতা — কেউ ওভাবে
+     * লট খোঁজে না, সবাই খোঁজে "এই ওষুধের কোন লটটা"।
+     */
+    Route::prefix('batches')->name('batch.')->group(function () {
+        Route::put('/{batch}/price', [BatchController::class, 'reprice'])
+            ->whereNumber('batch')->name('reprice');
+        Route::put('/{batch}/expiry', [BatchController::class, 'correctExpiry'])
+            ->whereNumber('batch')->name('expiry');
     });
 
     Route::prefix('transfers')->name('transfer.')->group(function () {

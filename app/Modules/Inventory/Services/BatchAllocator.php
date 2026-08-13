@@ -6,6 +6,7 @@ namespace App\Modules\Inventory\Services;
 
 use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Product;
+use App\Modules\Inventory\Models\StockMovement;
 use App\Modules\Inventory\Models\Warehouse;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -77,14 +78,44 @@ class BatchAllocator
              * খুঁজে-বের-করার সুতোটাই ছিঁড়ে দিত যার জন্য ব্যাচ আছে।
              */
             throw ValidationException::withMessages([
-                'qty' => __('inventory::validation.batch_short', [
-                    'product' => $product->name(),
-                    'short' => rtrim(rtrim($left, '0'), '.'),
-                ]),
+                'qty' => $this->shortMessage($product, $warehouse, $left),
             ]);
         }
 
         return $taken;
+    }
+
+    /**
+     * কেন কম পড়ল — দুইটা কারণ, দুইটা আলাদা বার্তা।
+     *
+     * ── কেন আলাদা ───────────────────────────────────────────────────
+     * "লটে যথেষ্ট নেই" সত্যি কথা, কিন্তু দোকানি যখন পর্দায় ১২০ পিস
+     * দেখছেন তখন ওই বাক্যটা পড়ে তিনি হিসাবকেই ভুল ভাববেন — আর ভাবাটাই
+     * স্বাভাবিক, কারণ মাল সত্যিই তাকে আছে।
+     *
+     * তফাতটা হলো ওই মাল লট ধরা শুরু হওয়ার আগের। ব্যবস্থার পক্ষে জানার
+     * উপায় নেই ওগুলো কোন লটের, আর ধরে নিয়ে বসিয়ে দিলে রিকলের খাতা
+     * মিথ্যা হত। তাই বেচা হয় না — কিন্তু কারণটা বলা হয়, আর করণীয়ও।
+     */
+    private function shortMessage(Product $product, Warehouse $warehouse, string $short): string
+    {
+        $untracked = (string) StockMovement::query()
+            ->where('product_id', $product->id)
+            ->where('warehouse_id', $warehouse->id)
+            ->whereNull('batch_id')
+            ->sum('floor_change');
+
+        if (bccomp($untracked, '0', 4) > 0) {
+            return __('inventory::validation.batch_untracked_stock', [
+                'product' => $product->name(),
+                'qty' => rtrim(rtrim($untracked, '0'), '.'),
+            ]);
+        }
+
+        return __('inventory::validation.batch_short', [
+            'product' => $product->name(),
+            'short' => rtrim(rtrim($short, '0'), '.'),
+        ]);
     }
 
     /**

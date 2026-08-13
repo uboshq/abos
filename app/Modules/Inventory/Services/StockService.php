@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Inventory\Services;
 
 use App\Core\Support\CompanyContext;
+use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\StockMovement;
 use App\Modules\Inventory\Models\Warehouse;
@@ -60,13 +61,22 @@ final class StockService
         ?string $narration = null,
         string $free = '0',
         string $freeReserved = '0',
+
+        /*
+         * কোন লট থেকে — ব্যাচ ধরা পণ্যে বাধ্যতামূলক, বাকিতে খালি।
+         *
+         * চলাচলের সারিতেই বসে, আলাদা কোনো লট-খতিয়ানে নয়। দুইটা রাখলে
+         * একদিন দুইটা আলাদা হত, আর তখন রিকলের সময় কোনটা সত্যি তা বলার
+         * উপায় থাকত না (Inventory-র ভুল নং ২)।
+         */
+        ?Batch $batch = null,
     ): StockMovement {
         $this->assertSomethingMoves($floor, $reserved, $hold, $free, $freeReserved);
 
         return DB::transaction(function () use (
             $product, $warehouse, $sourceType, $sourceId,
             $floor, $reserved, $hold, $reason, $date, $documentNo, $narration,
-            $free, $freeReserved
+            $free, $freeReserved, $batch
         ) {
             /*
              * তাকে যা নেই তা বের করা যায় না।
@@ -90,6 +100,7 @@ final class StockService
                 'branch_id' => $warehouse->branch_id ?? CompanyContext::branchId(),
                 'product_id' => $product->id,
                 'warehouse_id' => $warehouse->id,
+                'batch_id' => $batch?->id,
                 'trx_date' => ($date instanceof Carbon ? $date : Carbon::parse($date ?? now()))->toDateString(),
                 'floor_change' => $floor,
                 'reserved_change' => $reserved,
@@ -104,6 +115,134 @@ final class StockService
                 'created_by' => auth()->id(),
             ]);
         });
+    }
+
+    /**
+     * তাক থেকে মাল বের করা — লট ধরা থাকলে লট বেছে।
+     *
+     * ── কেন এটা move()-এর পাশে, ভেতরে নয় ────────────────────────────
+     * move() একটা সারি লেখে। লট ধরা পণ্যে একটা বিক্রয় কয়টা সারি হবে
+     * তা আগে থেকে জানা যায় না — পাঁচটা চাইলে পুরনো লটে তিনটা, পরেরটায়
+     * দুইটা, অর্থাৎ দুইটা সারি। move()-কে বহুবচন বানালে বাকি সব
+     * ডাকনেওয়ালার কাছেও সেটা ফেরত দিত, অথচ তাদের একটাই সারি।
+     *
+     * ── কেন track_batch দেখে ─────────────────────────────────────────
+     * ডিপোর চাল-ডাল-সাবানে লট নেই, আর কোনোদিন হবেও না। সবাইকে লট দিয়ে
+     * বের করতে বললে ওই পণ্যগুলোর প্রতিটা বিক্রয় "লটে যথেষ্ট নেই" বলে
+     * ফিরে যেত — একটা ফার্মেসি-সুবিধা চালু করলে গোটা ডিপো বন্ধ।
+     *
+     * @return list<StockMovement> লট ধরা না থাকলে একটাই সারি
+     */
+    public function issue(
+        Product $product,
+        Warehouse $warehouse,
+        string $sourceType,
+        int $sourceId,
+        string $qty,
+        string $reserved = '0',
+        Carbon|string|null $date = null,
+        ?string $documentNo = null,
+        ?string $narration = null,
+    ): array {
+        $out = bcmul($qty, '-1', 4);
+
+        if (! $product->track_batch) {
+            return [$this->move(
+                product: $product,
+                warehouse: $warehouse,
+                sourceType: $sourceType,
+                sourceId: $sourceId,
+                floor: $out,
+                reserved: $reserved,
+                date: $date,
+                documentNo: $documentNo,
+                narration: $narration,
+            )];
+        }
+
+        $allocation = app(BatchAllocator::class)->allocate(
+            $product,
+            $warehouse,
+            $qty,
+            $date === null ? null : ($date instanceof Carbon ? $date : Carbon::parse($date)),
+        );
+
+        $movements = [];
+
+        foreach ($allocation as $index => $slice) {
+            /*
+             * ধরা মাল ছাড়ার অঙ্কটা প্রথম সারিতেই, ভাগ করে নয়।
+             *
+             * Reserved লট ধরে রাখা হয় না — ওটা পণ্য ও গুদামের সংখ্যা।
+             * প্রতিটা সারিতে ভাগ করে বসালে যোগফল একই থাকত, কিন্তু
+             * পড়ার সময় মনে হত লট ধরেও কিছু ধরা আছে, যা মিথ্যা।
+             */
+            $movements[] = $this->move(
+                product: $product,
+                warehouse: $warehouse,
+                sourceType: $sourceType,
+                sourceId: $sourceId,
+                floor: bcmul($slice['qty'], '-1', 4),
+                reserved: $index === 0 ? $reserved : '0',
+                date: $date,
+                documentNo: $documentNo,
+                narration: $narration,
+                batch: $slice['batch'],
+            );
+        }
+
+        return $movements;
+    }
+
+    /**
+     * আগের চলাচলগুলো উল্টে দেওয়া — বাতিল বা ফেরতের সময়।
+     *
+     * ── কেন লাইন থেকে নতুন করে গোনা হয় না ───────────────────────────
+     * বেরোনোর সময় কোন লট থেকে কতটা গেছে সেটা কেবল চলাচলের সারিতেই
+     * লেখা আছে। লাইন থেকে আবার গুনলে FEFO আজকের অবস্থা ধরে অন্য লট
+     * বাছত — মাল ফিরত সেই লটে যেখান থেকে কখনো বেরোয়ইনি, আর রিকলের
+     * খাতা মিথ্যা হয়ে যেত।
+     *
+     * @return list<StockMovement>
+     */
+    public function reverse(
+        string $sourceType,
+        int $sourceId,
+        string $reversedType,
+        Carbon|string|null $date = null,
+        ?string $narration = null,
+        ?callable $reservedFor = null,
+    ): array {
+        $original = StockMovement::query()
+            ->where('source_type', $sourceType)
+            ->where('source_id', $sourceId)
+            ->with(['product', 'warehouse', 'batch'])
+            ->get();
+
+        $movements = [];
+
+        foreach ($original as $row) {
+            if ($row->product === null || $row->warehouse === null) {
+                continue;
+            }
+
+            $reserved = $reservedFor === null ? '0' : (string) $reservedFor($row);
+
+            $movements[] = $this->move(
+                product: $row->product,
+                warehouse: $row->warehouse,
+                sourceType: $reversedType,
+                sourceId: $sourceId,
+                floor: bcmul((string) $row->floor_change, '-1', 4),
+                reserved: $reserved,
+                date: $date,
+                documentNo: $row->document_no,
+                narration: $narration,
+                batch: $row->batch,
+            );
+        }
+
+        return $movements;
     }
 
     /**
