@@ -82,6 +82,14 @@ return [
     'pos_today' => 'আজ আপনার বিক্রি',
     'pos_done' => ':no — বিক্রি সম্পূর্ণ। ফেরত :change টাকা।',
     'pos_narration' => ':no — কাউন্টারে নগদ',
+
+    // কাউন্টারে ধরে রাখা বিল
+    'pos_parked' => ':no কাউন্টারে অপেক্ষা করছে। খাতায় কিছু বসেনি।',
+    'pos_resumed' => ':no আবার কাউন্টারে উঠেছে।',
+    'pos_park' => 'ধরে রাখুন',
+    'pos_parked_bills' => 'কাউন্টারে অপেক্ষমাণ',
+    'pos_parked_none' => 'কিছু অপেক্ষা করছে না।',
+    'pos_parked_line' => ':no · :lines পদ · :total',
     'direct_note' => 'অর্ডার ছাড়াই মাল বেরোয় আর তখনই বিল হয় — এক চাপে চালান, বিল আর জমা।',
     'direct_done' => ':challan ও :invoice তৈরি হয়েছে। ফেরত :change টাকা।',
     'direct_narration' => ':no — সরাসরি বিক্রয়ে জমা',

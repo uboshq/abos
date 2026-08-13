@@ -36,6 +36,11 @@ class PurchaseReturnRequest extends FormRequest
             // সন্তান-টেবিলে company_id নেই, বাবার আছে
             'lines.*.purchase_bill_line_id' => ['nullable', 'integer'],
             'lines.*.qty' => ['required', 'numeric', 'gt:0'],
+
+            // কোন প্যাকে ফেরত যাচ্ছে — খালি মানে পণ্যের নিজের একক
+            'lines.*.unit_id' => ['nullable', 'integer',
+                Rule::exists('mdm_units', 'id')->where('company_id', $companyId)],
+
             'lines.*.rate' => ['nullable', 'numeric', 'min:0'],
             'lines.*.tax' => ['nullable', 'numeric', 'min:0'],
         ];

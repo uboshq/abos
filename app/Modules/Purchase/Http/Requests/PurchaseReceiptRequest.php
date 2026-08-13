@@ -35,6 +35,11 @@ class PurchaseReceiptRequest extends FormRequest
             // এখানে আদেশটা কোনটা তা নিয়ম লেখার সময় জানা যায় না
             'lines.*.purchase_order_line_id' => ['nullable', 'integer'],
             'lines.*.received_qty' => ['required', 'numeric', 'gt:0'],
+
+            // কোন প্যাকে এসেছে — খালি মানে পণ্যের নিজের একক
+            'lines.*.unit_id' => ['nullable', 'integer',
+                Rule::exists('mdm_units', 'id')->where('company_id', $companyId)],
+
             'lines.*.rate' => ['required', 'numeric', 'min:0'],
             'lines.*.narration' => ['nullable', 'string', 'max:500'],
         ];

@@ -31,6 +31,17 @@ class SalesInvoiceRequest extends FormRequest
             // সন্তান-টেবিলে company_id নেই, বাবার আছে
             'lines.*.delivery_challan_line_id' => ['nullable', 'integer'],
             'lines.*.qty' => ['required', 'numeric', 'gt:0'],
+
+            /*
+             * কোন প্যাকে লেখা হয়েছে — খালি মানে পণ্যের নিজের একক।
+             *
+             * নিয়মটা না থাকলে validated() ঘরটা নীরবে ফেলে দিত: পর্দায়
+             * "বাক্স" বাছা যেত, ফর্ম জমাও হত, অথচ সার্ভারে কিছুই
+             * পৌঁছাত না আর মাল যেত পিস হিসেবে।
+             */
+            'lines.*.unit_id' => ['nullable', 'integer',
+                Rule::exists('mdm_units', 'id')->where('company_id', $companyId)],
+
             'lines.*.rate' => ['required', 'numeric', 'min:0'],
             'lines.*.discount' => ['nullable', 'numeric', 'min:0'],
             'lines.*.tax' => ['nullable', 'numeric', 'min:0'],

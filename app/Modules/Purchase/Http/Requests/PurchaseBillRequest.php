@@ -52,6 +52,11 @@ class PurchaseBillRequest extends FormRequest
              */
             'lines.*.purchase_order_line_id' => ['nullable', 'integer'],
             'lines.*.qty' => ['required', 'numeric', 'gt:0'],
+
+            // কোন প্যাকে লেখা — খালি মানে পণ্যের নিজের একক
+            'lines.*.unit_id' => ['nullable', 'integer',
+                Rule::exists('mdm_units', 'id')->where('company_id', $companyId)],
+
             'lines.*.rate' => ['required', 'numeric', 'min:0'],
 
             /*

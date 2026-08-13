@@ -42,6 +42,11 @@ class DeliveryChallanRequest extends FormRequest
             // অর্ডারের লাইনটা কোন অর্ডারের তা সেবা স্তর মিলিয়ে দেখে
             'lines.*.sales_order_line_id' => ['nullable', 'integer'],
             'lines.*.delivered_qty' => ['required', 'numeric', 'gt:0'],
+
+            // কোন প্যাকে লেখা — খালি মানে পণ্যের নিজের একক
+            'lines.*.unit_id' => ['nullable', 'integer',
+                Rule::exists('mdm_units', 'id')->where('company_id', $companyId)],
+
             'lines.*.rate' => ['required', 'numeric', 'min:0'],
             'lines.*.narration' => ['nullable', 'string', 'max:500'],
         ];

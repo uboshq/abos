@@ -40,7 +40,42 @@
         </div>
     @endif
 
-    <div x-data="pos({{ Illuminate\Support\Js::from($products) }}, {{ $walkinId }})"
+    {{--
+        কাউন্টারে অপেক্ষমাণ বিল — দুই কলামের উপরে, দুইটা ফর্মের বাইরে।
+
+        ভেতরে রাখা যেত না: প্রতিটা সারিতে "তুলুন" বোতামের নিজের ফর্ম
+        লাগে, আর ফর্মের ভেতরে ফর্ম HTML-এ চলে না — ব্রাউজার ভেতরেরটা
+        ফেলে দেয়, তাই বোতামটা নীরবে কিছুই করত না।
+
+        কিছু ঝুলে না থাকলে পট্টিটাই আসে না; খালি একটা বাক্স কাউন্টারের
+        জায়গা নেয় আর কিছু বলে না।
+    --}}
+    @if ($parked->isNotEmpty())
+        <div class="mb-4 rounded-(--radius-card) border border-(--color-border)
+                    bg-(--color-surface-card) p-3">
+            <h2 class="mb-2 text-sm font-semibold">{{ __('sales::message.pos_parked_bills') }}</h2>
+
+            <div class="flex flex-wrap gap-2">
+                @foreach ($parked as $bill)
+                    <form method="POST" action="{{ route('sales.pos.resume', ['invoice' => $bill->id]) }}">
+                        @csrf
+                        <button type="submit"
+                                class="rounded-(--radius-field) border border-(--color-border)
+                                       px-3 py-2 text-start text-xs transition-colors
+                                       hover:bg-(--color-surface-hover)">
+                            <span class="block font-medium">{{ $bill->no }}</span>
+                            <span class="block text-2xs text-(--color-ink-muted)">
+                                {{ $bill->lines }} · <span class="num">{{ number_format((float) $bill->total, 2) }}</span>
+                                · {{ $bill->since }}
+                            </span>
+                        </button>
+                    </form>
+                @endforeach
+            </div>
+        </div>
+    @endif
+
+    <div x-data="pos({{ Illuminate\Support\Js::from($products) }}, {{ $walkinId }}, {{ Illuminate\Support\Js::from($resumed) }})"
          @keydown.window.escape="term = ''"
          class="grid gap-4 lg:grid-cols-[1fr_22rem]">
 
@@ -203,6 +238,23 @@
                     {{ __('sales::action.checkout') }}
                 </x-ui.button>
 
+                {{--
+                    ধরে রাখা — একই ফর্ম, শুধু গন্তব্য আলাদা (formaction)।
+
+                    আলাদা ফর্ম বানালে ঝুড়ির প্রতিটা সারি দুইবার লিখতে হত,
+                    আর একদিন একটা ঘর একটায় যোগ হয়ে অন্যটায় বাদ পড়ত।
+                    JavaScript-এও করা যেত, কিন্তু formaction HTML-এরই
+                    জিনিস — স্ক্রিপ্ট না চললেও কাজ করে।
+                --}}
+                <button type="submit"
+                        formaction="{{ route('sales.pos.park') }}"
+                        x-show="lines.length > 0" x-cloak
+                        class="min-h-(--spacing-touch) w-full rounded-(--radius-field)
+                               border border-(--color-border) text-sm
+                               transition-colors hover:bg-(--color-surface-hover)">
+                    {{ __('sales::message.pos_park') }}
+                </button>
+
                 <p class="text-center text-2xs text-(--color-ink-muted)">
                     {{ __('sales::message.pos_today') }}:
                     <span class="num">{{ number_format((float) $todaysTotal, 2) }}</span>
@@ -213,12 +265,27 @@
 
     @push('scripts')
         <script>
-            function pos(catalogue, walkinId) {
+            function pos(catalogue, walkinId, resumed) {
                 return {
                     catalogue,
                     walkinId,
+
+                    /*
+                     * তোলা বিলের সারিগুলো নিয়েই পর্দা খোলে।
+                     *
+                     * সার্ভার সারিগুলো পাঠায় লাইনের চেহারায় (product_id),
+                     * আর কার্ট চেনে id নামে — তাই এখানেই বদলে নেওয়া হয়।
+                     * না বদলালে সারিগুলো দেখা যেত, কিন্তু একই পণ্য আবার
+                     * চাপলে নতুন সারি হত আর রসিদে জিনিসটা দুইবার থাকত।
+                     */
+                    lines: (resumed || []).map(l => ({
+                        id: l.product_id,
+                        name: l.name,
+                        rate: l.rate,
+                        qty: Number(l.qty),
+                    })),
+
                     term: '',
-                    lines: [],
                     paid: '',
 
                     get visible() {

@@ -82,6 +82,14 @@ return [
     'pos_today' => 'Your sales today',
     'pos_done' => ':no — sale complete. Change :change.',
     'pos_narration' => ':no — cash at the counter',
+
+    // Bills held at the counter
+    'pos_parked' => ':no is waiting at the counter. Nothing has been posted.',
+    'pos_resumed' => ':no is back on the counter.',
+    'pos_park' => 'Hold',
+    'pos_parked_bills' => 'Waiting at the counter',
+    'pos_parked_none' => 'Nothing is waiting.',
+    'pos_parked_line' => ':no · :lines items · :total',
     'direct_note' => 'Goods go out without an order and the bill is raised there and then — challan, invoice and deposit in one press.',
     'direct_done' => ':challan and :invoice created. Change :change.',
     'direct_narration' => ':no — deposit against a direct sale',
