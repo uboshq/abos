@@ -10,8 +10,10 @@ use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Http\Controllers\Controller;
 use App\Modules\Customer\Models\Customer;
+use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Inventory\Services\PackBarcode;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Services\PosService;
 use Illuminate\Http\JsonResponse;
@@ -22,6 +24,7 @@ use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 /**
@@ -232,13 +235,47 @@ class PosController extends Controller implements HasMiddleware
      * পাতার সাথে পাঠানো তালিকায় না পেলে তখনই কেবল সার্ভারে আসা হয়, তাই
      * স্বাভাবিক অবস্থায় এই রুটটা কখনো ডাকা হয় না।
      */
-    public function lookup(Request $request): JsonResponse
+    public function lookup(Request $request, PackBarcode $barcodes): JsonResponse
     {
-        $code = trim((string) $request->query('code'));
+        $raw = trim((string) $request->query('code'));
 
-        if ($code === '') {
+        if ($raw === '') {
             return response()->json(null, 404);
         }
+
+        /*
+         * ২ডি বারকোড হলে আগে ভেঙে নেওয়া।
+         *
+         * ── এটা না থাকলে যা হত ──────────────────────────────────────
+         * ওষুধের কার্টনের GS1 DataMatrix স্ক্যান করলে স্ক্যানার পাঠায়
+         * পুরো element string — GTIN, মেয়াদ আর লট একসাথে, মাঝে
+         * বিভাজক। ওই গোটা স্ট্রিংটা `barcode` কলামে খুঁজলে কোনোদিন
+         * কিছু মিলত না, আর ক্যাশিয়ার ভাবতেন পণ্যটা তালিকায় নেই —
+         * অথচ ওটা সামনেই আছে।
+         *
+         * সাধারণ ১ডি বারকোড (EAN-১৩) হুবহু আগের মতোই চলে: read()
+         * ওটাকে GS1 নয় বলে চেনায়, আর কোডটা যেমন ছিল তেমনই থাকে।
+         */
+        /*
+         * পড়া না গেলে কাঁচা কোডটাই খোঁজা হয় — অনুরোধ ভাঙা হয় না।
+         *
+         * read() অচেনা AI পেলে ব্যতিক্রম ছোঁড়ে, আর সেটা ঠিক: মজুদের
+         * পর্দায় কেউ হাতে বারকোড বসালে তাঁকে জানানো দরকার লেখাটা
+         * বেঠিক। কিন্তু কাউন্টারে প্রশ্নটা আলাদা — "এই কোডে কোনো পণ্য
+         * আছে?" — আর সেখানে অপাঠ্য কোডের সৎ উত্তর "নেই", ৪২২ নয়।
+         *
+         * ব্যতিক্রম যেতে দিলে আরো খারাপ হত: এই রুটটা `api/*`-এ নয়, তাই
+         * Laravel JSON নয়, রিডাইরেক্ট বানাতে যেত — আর ক্যাশিয়ারের
+         * পর্দায় স্ক্যানারের একটা এলোমেলো পাঠানো লেখা গোটা কাউন্টার
+         * ভেঙে দিত।
+         */
+        try {
+            $parsed = $barcodes->read($raw);
+        } catch (ValidationException) {
+            $parsed = ['gtin' => null, 'batch_no' => null, 'expiry_date' => null];
+        }
+
+        $code = $parsed['gtin'] ?? $raw;
 
         $product = Product::query()
             ->active()
@@ -250,6 +287,19 @@ class PosController extends Controller implements HasMiddleware
             return response()->json(null, 404);
         }
 
+        /*
+         * স্ক্যান করা লটটা এই পণ্যের কি না — মিলিয়ে দেখা হয়।
+         *
+         * না মিললে লটটা পাঠানোই হয় না। ভুল লট কার্টে বসলে FEFO-র
+         * সিদ্ধান্ত ছাপিয়ে ভুল বাক্স থেকে মাল বেরোত, আর রিকলের খাতা
+         * মিথ্যা হত। মিলল না মানে সাধারণত পণ্যটা এখনো ওই লটে গুদামে
+         * ওঠেনি — তখন FEFO নিজের কাজ করবে।
+         */
+        $batch = $parsed['batch_no'] === null ? null : Batch::query()
+            ->where('product_id', $product->id)
+            ->where('batch_no', $parsed['batch_no'])
+            ->first();
+
         return response()->json([
             'id' => $product->id,
             'code' => $product->code,
@@ -257,6 +307,20 @@ class PosController extends Controller implements HasMiddleware
             'unit' => $product->unit?->name(),
             'rate' => (string) $product->sale_price,
             'barcode' => $product->barcode,
+
+            /*
+             * স্ক্যান থেকে পাওয়া লট ও মেয়াদ — পর্দায় দেখানোর জন্য।
+             *
+             * কার্টে লট বসানো হয় না: কোন লট বেরোবে সেটা FEFO ঠিক করে
+             * মাল বেরোনোর মুহূর্তে, আর সেটাই ঠিক। এখানে সংখ্যাগুলো
+             * থাকে যাতে ক্যাশিয়ার হাতের প্যাকেটটার সাথে মিলিয়ে নিতে
+             * পারেন — বিশেষত মেয়াদটা।
+             */
+            'scanned_batch' => $batch?->batch_no,
+
+            // মাস/বছর — প্যাকেটের গায়ে যেভাবে ছাপা থাকে, দিন ছাড়া
+            'scanned_expiry' => $parsed['expiry_date']?->format('m/Y'),
+            'batch_known' => $parsed['batch_no'] !== null && $batch !== null,
         ]);
     }
 
