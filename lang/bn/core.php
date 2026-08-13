@@ -234,6 +234,9 @@ return [
         'office_copy' => 'অফিস কপি',
         'draft_notice' => 'খসড়া — এটি চূড়ান্ত বিল নয়',
         'no_price_notice' => 'এই কাগজে দাম লেখা নেই',
+
+        // একই কাগজের দ্বিতীয় ও পরের ছাপা
+        'duplicate_notice' => 'DUPLICATE — এই কাগজটি আগেও ছাপা হয়েছে',
         'print' => 'ছাপুন',
         'choose_paper' => 'কাগজ বাছুন',
         'show_vendor_credit' => 'প্রিন্টের নিচে "Powered by ABOS" দেখাও',

@@ -217,6 +217,9 @@ return [
         'office_copy' => 'Office copy',
         'draft_notice' => 'DRAFT — this is not a final bill',
         'no_price_notice' => 'Prices are not shown on this document',
+
+        // Second and later prints of the same paper
+        'duplicate_notice' => 'DUPLICATE — this paper has been printed before',
         'print' => 'Print',
         'choose_paper' => 'Choose paper',
         'show_vendor_credit' => 'Show "Powered by ABOS" on printouts',

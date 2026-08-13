@@ -53,6 +53,37 @@ final class PrintableDocument
      * ভাষা নয়। PrintEngine ছাপার সময় লোকেল বদলে দেয়, তাই DTO তৈরির
      * মুহূর্তে ডাকলে ভুল ভাষায় বসত।
      */
+    /**
+     * উপরের সতর্কবার্তাটা বদলে একটা কপি — যেমন "DUPLICATE"।
+     *
+     * ── কেন নতুন কপি, বসিয়ে দেওয়া নয় ────────────────────────────────
+     * DTO-টা readonly, আর সেটা ইচ্ছাকৃত: কাগজটা তৈরি হওয়ার পর কেউ
+     * যেন তার লাইন বা যোগফল বদলাতে না পারে। বার্তাটা কেবল তখনই জানা
+     * যায় যখন দেখা হয় এই কাগজ আগে ছাপা হয়েছিল কি না — অর্থাৎ DTO
+     * বানানোর পরে। তাই বদল নয়, নতুন একটা কপি।
+     *
+     * আগেরটা থাকলে সেটাই থাকে: খসড়ার "চূড়ান্ত নয়" লেখাটা DUPLICATE-এর
+     * চেয়ে বেশি জরুরি — খসড়া দিয়ে কেউ টাকা চাইতে গেলে সেটা বড় ভুল।
+     */
+    public function withNotice(?string $notice): self
+    {
+        if ($this->notice !== null || $notice === null) {
+            return $this;
+        }
+
+        return new self(
+            title: $this->title,
+            meta: $this->meta,
+            lines: $this->lines,
+            totals: $this->totals,
+            signatures: $this->signatures,
+            showMoney: $this->showMoney,
+            amountInWords: $this->amountInWords,
+            narration: $this->narration,
+            notice: $notice,
+        );
+    }
+
     public function withWordsFor(string $amount, string $locale): self
     {
         return new self(

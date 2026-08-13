@@ -14,6 +14,7 @@ use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Models\SalesOrder;
+use App\Modules\Sales\Services\PrintQueue;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -44,6 +45,9 @@ class SalesPrintController extends Controller implements HasMiddleware
 
         // কোন লাইনে কোন লট গেছে — চলাচলের সারি থেকে, এক কোয়েরিতে
         private readonly IssuedLots $lots,
+
+        // কাগজটা বেরোল কি না, আর কতবার — DUPLICATE-এর ভিত্তি
+        private readonly PrintQueue $queue,
     ) {}
 
     public static function middleware(): array
@@ -69,7 +73,16 @@ class SalesPrintController extends Controller implements HasMiddleware
             narration: $invoice->narration,
         );
 
-        return $this->pdf($request, $doc, (string) $invoice->total, $invoice->document_no);
+        /*
+         * বিলটা সারিতে ওঠে, আর দ্বিতীয়বার থেকে DUPLICATE বসে।
+         *
+         * খসড়ায় নয় (নিচের draft): ওটা এমনিতেই "চূড়ান্ত নয়" লেখা নিয়ে
+         * বেরোয়, আর খসড়া কতবার ছাপা হলো তা কারও জানার দরকার নেই।
+         */
+        return $this->pdf(
+            $request, $doc, (string) $invoice->total, $invoice->document_no,
+            type: 'sales_invoice', id: $invoice->id,
+        );
     }
 
     /**
@@ -112,7 +125,11 @@ class SalesPrintController extends Controller implements HasMiddleware
             narration: $challan->narration,
         );
 
-        return $this->pdf($request, $doc, (string) $challan->total, $challan->document_no);
+        // চালানও — একই কারণে: দুইটা একরকম চালান মানে দুইবার মাল দাবি
+        return $this->pdf(
+            $request, $doc, (string) $challan->total, $challan->document_no,
+            type: 'sales_challan', id: $challan->id,
+        );
     }
 
     /**
@@ -380,14 +397,38 @@ class SalesPrintController extends Controller implements HasMiddleware
      * ব্রাউজারে খোলে, নামানো হয় না (`inline`): বেশিরভাগ সময় কাগজটা দেখে
      * তারপর ছাপা হয়, আর প্রতিবার ফাইল নামলে Downloads ফোল্ডার ভরে যেত।
      */
-    private function pdf(Request $request, PrintableDocument $doc, string $amount, string $documentNo): Response
-    {
+    private function pdf(
+        Request $request,
+        PrintableDocument $doc,
+        string $amount,
+        string $documentNo,
+        ?string $type = null,
+        ?int $id = null,
+    ): Response {
         $paper = $request->query('paper', PaperSize::A4);
 
         // অজানা মাপ এলে ৪০৪ নয়, A4 — পুরনো বুকমার্ক বা হাতে বদলানো URL
         // দিয়ে কাগজটা ছাপা না হওয়ার কোনো কারণ নেই
         if (! in_array($paper, PaperSize::all(), true)) {
             $paper = PaperSize::A4;
+        }
+
+        /*
+         * দ্বিতীয়বার ছাপা কাগজে DUPLICATE।
+         *
+         * ── কেন এটা দরকার ───────────────────────────────────────────
+         * একই বিলের দুইটা একরকম কাগজ ঘুরলে কোনটা আসল তা বলার উপায়
+         * থাকে না — আর ক্রেতা দুইটা নিয়ে দুইবার ফেরতের দাবি করতে
+         * পারেন, বা কর্মী একটা দেখিয়ে দ্বিতীয়বার টাকা নিতে পারেন।
+         *
+         * গোনাটা বাড়ে PDF সত্যিই তৈরি হওয়ার পর, আগে নয়: ব্যর্থ চেষ্টায়
+         * কোনো কাগজ বেরোয় না, আর সেটা গুনলে প্রথম সত্যিকারের কাগজেই
+         * DUPLICATE বসত।
+         */
+        $job = $type === null ? null : $this->queue->queue($type, (int) $id, $paper, $documentNo);
+
+        if ($job?->isReprint()) {
+            $doc = $doc->withNotice(__('core.print.duplicate_notice'));
         }
 
         $locale = app()->getLocale();
@@ -400,6 +441,10 @@ class SalesPrintController extends Controller implements HasMiddleware
             ],
             paper: $paper,
         );
+
+        if ($job !== null) {
+            $this->queue->printed($job);
+        }
 
         return response($pdf, 200, [
             'Content-Type' => 'application/pdf',
