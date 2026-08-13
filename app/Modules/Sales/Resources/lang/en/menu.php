@@ -17,4 +17,5 @@ return [
     'pos' => 'Counter (POS)',
     'direct' => 'Direct Sales',
     'returns' => 'Sales Returns',
+    'lot_trace' => 'Trace a lot (recall)',
 ];

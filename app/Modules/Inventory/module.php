@@ -84,6 +84,8 @@ return [
             ['label' => 'inventory::menu.expiring', 'route' => 'inventory.report.show',
                 'route_params' => ['slug' => 'expiring'], 'permission' => 'inventory.report',
                 'setting' => 'inventory.batch_enabled'],
+
+            // রিকলের পর্দাটা বিক্রয়ের মেনুতে — উত্তরটা গ্রাহকের তালিকা
         ],
     ],
 

@@ -70,6 +70,13 @@ Route::middleware('auth')->prefix('inventory')->group(function () {
      * তালিকা বানালে সেটা হত পণ্যহীন একরাশ নম্বরের পাতা — কেউ ওভাবে
      * লট খোঁজে না, সবাই খোঁজে "এই ওষুধের কোন লটটা"।
      */
+    /*
+     * লট — কেবল দুইটা সংশোধন।
+     *
+     * রিকলের পর্দাটা এখানে নেই, Sales-এ (`sales.lot.trace`): উত্তরটা
+     * গ্রাহকের তালিকা, আর Inventory ঘোষণা করেছে সে Sales-এর উপর
+     * দাঁড়ায় না।
+     */
     Route::prefix('batches')->name('batch.')->group(function () {
         Route::put('/{batch}/price', [BatchController::class, 'reprice'])
             ->whereNumber('batch')->name('reprice');

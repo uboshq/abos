@@ -50,4 +50,5 @@ return [
     'days_left' => 'Days left',
     'batch_no' => 'Lot no.',
     'mrp' => 'Printed price',
+    'phone' => 'Phone',
 ];

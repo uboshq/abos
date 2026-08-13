@@ -14,4 +14,5 @@ return [
     'opening' => 'Opening Stock',
     'issue' => 'Stock Issue',
     'expiring' => 'Expiring Soon',
+    'trace' => 'Trace a lot (recall)',
 ];
