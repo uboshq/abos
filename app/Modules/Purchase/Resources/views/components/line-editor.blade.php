@@ -18,6 +18,15 @@
     'showSalesPrice' => false,
 ])
 
+@php
+    // প্যাকের তালিকা — কন্ট্রোল প্যানেলের সুইচের পেছনে (বিক্রয়ের
+    // সম্পাদকেও হুবহু এই নিয়ম; দুই কাগজে দুই রকম হলে একই পণ্য
+    // কেনার সময় বাক্সে আর বেচার সময় পিসে লিখতে হত)
+    $packs = app(App\Core\Services\SettingsService::class)->enabled('inventory.pack_entry_enabled')
+        ? app(App\Modules\Inventory\Services\PackConversion::class)->optionsFor($products)
+        : [];
+@endphp
+
 {{--
     দাম · markup · margin — তিনটা জ্যান্ত বাক্স, চারটা সংখ্যা।
 
@@ -52,9 +61,13 @@
 --}}
 <div x-data="{
         rows: {{ Illuminate\Support\Js::from($lines) }},
+        packs: {{ Illuminate\Support\Js::from($packs) }},
+        unitsFor(row) {
+            return this.packs[row.product_id] ?? [];
+        },
         add() {
             this.rows.push({
-                product_id: '', qty: '', rate: '', discount: '', tax: '', link: '',
+                product_id: '', qty: '', rate: '', discount: '', tax: '', link: '', unit_id: '',
                 sales_price: '', markup: '', margin: '', anchor: '',
             });
         },
@@ -86,6 +99,9 @@
                         <th class="p-2 text-start font-medium">{{ __('purchase::field.'.($linkField === 'purchase_order_line_id' ? 'order' : 'receipt')) }}</th>
                     @endif
                     <th class="p-2 text-end font-medium">{{ __('purchase::field.quantity') }}</th>
+                    @if ($packs !== [])
+                        <th class="p-2 text-start font-medium">{{ __('purchase::field.unit') }}</th>
+                    @endif
                     <th class="p-2 text-end font-medium">{{ __('purchase::field.rate') }}</th>
                     @if ($showSalesPrice)
                         <th class="p-2 text-end font-medium">{{ __('purchase::field.sales_price') }}</th>
@@ -106,6 +122,7 @@
                     <tr class="border-b border-(--color-border)">
                         <td class="p-1" data-label="{{ __('purchase::field.product') }}">
                             <select :name="`lines[${i}][product_id]`" x-model="row.product_id" required
+                                    @change="row.unit_id = ''"
                                     class="h-9 w-full rounded-(--radius-field) border border-(--color-border)
                                            bg-(--color-surface-card) px-2">
                                 <option value="">-</option>
@@ -134,6 +151,31 @@
                                    class="num h-9 w-full sm:w-28 rounded-(--radius-field) border border-(--color-border)
                                           bg-(--color-surface-card) px-2 text-end">
                         </td>
+
+                        @if ($packs !== [])
+                            {{--
+                                একক — কেবল যে পণ্যের একাধিক প্যাক আছে তার সারিতে।
+
+                                ফাঁকা মানে পণ্যের নিজের একক, অর্থাৎ আগের মতোই।
+                                পণ্য বদলালে মুছে যায়: আগের পণ্যের "বাক্স" নতুন
+                                পণ্যের সিঁড়িতে না-ও থাকতে পারে।
+
+                                দর, বিক্রয়মূল্য আর markup সবই এন্ট্রির এককে
+                                লেখা হয়; সার্ভার তিনটাকেই একসাথে নামায়, তাই
+                                পর্দার markup আর খাতার markup এক থাকে।
+                            --}}
+                            <td class="p-1" data-label="{{ __('purchase::field.unit') }}">
+                                <select :name="`lines[${i}][unit_id]`" x-model="row.unit_id"
+                                        x-show="unitsFor(row).length > 0"
+                                        class="h-9 w-full sm:w-28 rounded-(--radius-field) border border-(--color-border)
+                                               bg-(--color-surface-card) px-2">
+                                    <option value="">-</option>
+                                    <template x-for="unit in unitsFor(row)" :key="unit.id">
+                                        <option :value="unit.id" x-text="unit.label"></option>
+                                    </template>
+                                </select>
+                            </td>
+                        @endif
 
                         <td class="p-1" data-label="{{ __('purchase::field.rate') }}">
                             <input type="number" step="0.0001" inputmode="decimal" required
@@ -204,7 +246,7 @@
             <tfoot>
                 <tr>
                     <td class="p-2 text-end font-medium"
-                        colspan="{{ ($showDiscount ? 5 : 3) + ($linkField ? 1 : 0) + ($showSalesPrice ? 3 : 0) }}">
+                        colspan="{{ ($showDiscount ? 5 : 3) + ($linkField ? 1 : 0) + ($showSalesPrice ? 3 : 0) + ($packs !== [] ? 1 : 0) }}">
                         {{ __('purchase::field.total') }}
                     </td>
                     <td class="num p-2 text-end font-semibold" x-text="total.toFixed(2)"></td>

@@ -155,6 +155,55 @@ final class PackConversion
     }
 
     /**
+     * অনেক পণ্যের জন্য একসাথে — পর্দার ড্রপডাউন ভরার জন্য।
+     *
+     * ── কেন unitsFor() লুপে ডাকা হয় না ──────────────────────────────
+     * ওটা প্রতিবার পুরো একক-তালিকা তোলে। পাঁচশো পণ্যের ফর্মে সেটা
+     * পাঁচশোটা কোয়েরি — ঠিক ওই জিনিসটাই একবার আদায়ের পর্দাকে ধীর
+     * করে দিয়েছিল। এখানে তালিকাটা একবার ওঠে, তারপর গোড়া ধরে ভাগ
+     * করে প্রতিটা পণ্যকে তার সিঁড়িটা ধরিয়ে দেওয়া হয়।
+     *
+     * ফেরত আসে কেবল সেই পণ্যগুলো যাদের একাধিক একক আছে — একটামাত্র
+     * বিকল্পের ড্রপডাউন পর্দায় শুধু জায়গা নিত।
+     *
+     * @param  iterable<Product>  $products
+     * @return array<int, list<array{id: int, label: string}>>
+     */
+    public function optionsFor(iterable $products): array
+    {
+        $units = Unit::query()->active()->with('baseUnit')->get();
+
+        if ($units->isEmpty()) {
+            return [];
+        }
+
+        // গোড়া ধরে ভাগ, আর প্রতিটা দলে বড়টা আগে
+        $byRoot = $units
+            ->groupBy(fn (Unit $unit) => $unit->rootUnitId())
+            ->map(fn (Collection $group) => $group
+                ->sortByDesc(fn (Unit $unit) => (float) $unit->toBase('1'))
+                ->map(fn (Unit $unit) => ['id' => $unit->id, 'label' => $unit->name()])
+                ->values()
+                ->all());
+
+        $rootOf = $units->mapWithKeys(fn (Unit $unit) => [$unit->id => $unit->rootUnitId()]);
+
+        $options = [];
+
+        foreach ($products as $product) {
+            $root = $rootOf[$product->unit_id] ?? null;
+
+            if ($root === null || count($byRoot[$root] ?? []) < 2) {
+                continue;
+            }
+
+            $options[$product->id] = $byRoot[$root];
+        }
+
+        return $options;
+    }
+
+    /**
      * ছাপা আর পর্দার জন্য: "২ বাক্স (২০০ পিস)"।
      *
      * এক এককে লেখা হলে বন্ধনীটা আসে না — "১০ পিস (১০ পিস)" কেউ পড়ে

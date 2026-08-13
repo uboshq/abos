@@ -27,6 +27,17 @@ Route::middleware('auth')->prefix('sales')->group(function () {
         Route::get('/', [PosController::class, 'index'])->name('index');
         Route::post('/', [PosController::class, 'checkout'])->name('checkout');
         Route::get('/lookup', [PosController::class, 'lookup'])->name('lookup');
+
+        /*
+         * কাউন্টারে ধরে রাখা বিল — ক্রেতা টাকা আনতে গেছেন।
+         *
+         * তোলাটা POST, GET নয়: তোলার সময় বিলটার parked_at মুছে যায়,
+         * অর্থাৎ অবস্থা বদলায়। GET হলে ব্রাউজারের prefetch বা কারো
+         * পাঠানো লিংকেই বিলটা কাউন্টারের তালিকা থেকে হারিয়ে যেত।
+         */
+        Route::post('/park', [PosController::class, 'park'])->name('park');
+        Route::post('/{invoice}/resume', [PosController::class, 'resume'])
+            ->whereNumber('invoice')->name('resume');
     });
 
     /*

@@ -34,6 +34,11 @@ class SalesReturnRequest extends FormRequest
                 Rule::exists('inv_products', 'id')->where('company_id', $companyId)],
             'lines.*.sales_invoice_line_id' => ['nullable', 'integer'],
             'lines.*.qty' => ['required', 'numeric', 'gt:0'],
+
+            // কোন প্যাকে ফেরত এসেছে — খালি মানে পণ্যের নিজের একক
+            'lines.*.unit_id' => ['nullable', 'integer',
+                Rule::exists('mdm_units', 'id')->where('company_id', $companyId)],
+
             'lines.*.rate' => ['nullable', 'numeric', 'min:0'],
             'lines.*.tax' => ['nullable', 'numeric', 'min:0'],
 

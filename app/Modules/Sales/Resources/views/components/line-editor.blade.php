@@ -17,11 +17,33 @@
     'showDiscount' => true,
 ])
 
+@php
+    /*
+        প্যাকের তালিকা — কন্ট্রোল প্যানেলের সুইচের পেছনে।
+
+        ── কেন কন্ট্রোলারে নয়, এখানে ────────────────────────────────
+        ছয়টা ফর্ম এই কম্পোনেন্টটা ব্যবহার করে। কন্ট্রোলারে বসালে
+        ছয় জায়গায় একই লাইন লিখতে হত, আর একদিন কেউ সপ্তম ফর্ম বানিয়ে
+        ওটা ভুলে যেত — তখন ওই পর্দায় একক বাছাই নীরবে উধাও থাকত।
+
+        সুইচ বন্ধ থাকলে খালি অ্যারে, তাই ঘরটাই আসে না — যে ব্যবসা
+        এক এককে বেচে তার প্রতিটা সারিতে একটা বাড়তি ড্রপডাউন কেবল
+        টাইপিং বাড়াত।
+    */
+    $packs = app(App\Core\Services\SettingsService::class)->enabled('inventory.pack_entry_enabled')
+        ? app(App\Modules\Inventory\Services\PackConversion::class)->optionsFor($products)
+        : [];
+@endphp
+
 <div x-data="{
         rows: {{ Illuminate\Support\Js::from($lines) }},
+        packs: {{ Illuminate\Support\Js::from($packs) }},
+        unitsFor(row) {
+            return this.packs[row.product_id] ?? [];
+        },
         add() {
             this.rows.push({
-                product_id: '', qty: '', rate: '', discount: '', tax: '', link: '',
+                product_id: '', qty: '', rate: '', discount: '', tax: '', link: '', unit_id: '',
             });
         },
         remove(i) {
@@ -48,6 +70,9 @@
                         <th class="p-2 text-start font-medium">{{ __('sales::field.'.($linkField === 'purchase_order_line_id' ? 'order' : 'receipt')) }}</th>
                     @endif
                     <th class="p-2 text-end font-medium">{{ __('sales::field.quantity') }}</th>
+                    @if ($packs !== [])
+                        <th class="p-2 text-start font-medium">{{ __('sales::field.unit') }}</th>
+                    @endif
                     <th class="p-2 text-end font-medium">{{ __('sales::field.rate') }}</th>
                     @if ($showDiscount)
                         <th class="p-2 text-end font-medium">{{ __('sales::field.discount') }}</th>
@@ -63,6 +88,7 @@
                     <tr class="border-b border-(--color-border)">
                         <td class="p-1" data-label="{{ __('sales::field.product') }}">
                             <select :name="`lines[${i}][product_id]`" x-model="row.product_id" required
+                                    @change="row.unit_id = ''"
                                     class="h-9 w-full rounded-(--radius-field) border border-(--color-border)
                                            bg-(--color-surface-card) px-2">
                                 <option value="">-</option>
@@ -91,6 +117,32 @@
                                    class="num h-9 w-full sm:w-28 rounded-(--radius-field) border border-(--color-border)
                                           bg-(--color-surface-card) px-2 text-end">
                         </td>
+
+                        @if ($packs !== [])
+                            {{--
+                                একক — কেবল যে পণ্যের একাধিক প্যাক আছে তার সারিতে।
+
+                                ফাঁকা রাখলে পণ্যের নিজের এককেই ধরা হয়, অর্থাৎ
+                                আগে যেভাবে চলত সেভাবেই। সার্ভার একই নিয়ম মানে
+                                (ReadsPackedQuantities), তাই পর্দা আর খাতা কখনো
+                                দুই কথা বলে না।
+
+                                পণ্য বদলালে এককটা মুছে যায়: আগের পণ্যের "বাক্স"
+                                নতুন পণ্যের সিঁড়িতে না-ও থাকতে পারে, আর তখন
+                                সার্ভার অনুরোধটা ফিরিয়ে দিত।
+                            --}}
+                            <td class="p-1" data-label="{{ __('sales::field.unit') }}">
+                                <select :name="`lines[${i}][unit_id]`" x-model="row.unit_id"
+                                        x-show="unitsFor(row).length > 0"
+                                        class="h-9 w-full sm:w-28 rounded-(--radius-field) border border-(--color-border)
+                                               bg-(--color-surface-card) px-2">
+                                    <option value="">-</option>
+                                    <template x-for="unit in unitsFor(row)" :key="unit.id">
+                                        <option :value="unit.id" x-text="unit.label"></option>
+                                    </template>
+                                </select>
+                            </td>
+                        @endif
 
                         <td class="p-1" data-label="{{ __('sales::field.rate') }}">
                             <input type="number" step="0.0001" inputmode="decimal" required
@@ -130,7 +182,10 @@
 
             <tfoot>
                 <tr>
-                    <td class="p-2 text-end font-medium" colspan="{{ ($showDiscount ? 5 : 3) + ($linkField ? 1 : 0) }}">
+                    {{-- এককের ঘরটা এলে মোটের সারিও এক ঘর পিছিয়ে বসে, নাহলে
+                         যোগফলটা টাকার কলামের নিচ থেকে সরে যেত --}}
+                    <td class="p-2 text-end font-medium"
+                        colspan="{{ ($showDiscount ? 5 : 3) + ($linkField ? 1 : 0) + ($packs !== [] ? 1 : 0) }}">
                         {{ __('sales::field.total') }}
                     </td>
                     <td class="num p-2 text-end font-semibold" x-text="total.toFixed(2)"></td>

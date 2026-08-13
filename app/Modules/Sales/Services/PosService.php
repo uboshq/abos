@@ -295,9 +295,22 @@ final class PosService
     /** আজ এই কাউন্টারে কত বিক্রি হয়েছে — পর্দার উপরে দেখানোর জন্য। */
     public function todaysTotal(): string
     {
+        /*
+         * কেবল খাতায় বসা বিল — খসড়া নয়।
+         *
+         * ── আগে "বাতিল ছাড়া সব" গোনা হত ─────────────────────────────
+         * তাতে খসড়াও ঢুকত, আর বিল ধরে রাখার সুবিধাটা আসার পর সেটাই
+         * ফাঁদ হয়ে দাঁড়াত: ক্রেতা টাকা আনতে গেছেন, বিলটা কাউন্টারে
+         * ঝুলছে, অথচ ক্যাশিয়ারের "আজ কত বিক্রি" ঘরে ওই টাকাটা যোগ
+         * হয়ে বসে আছে। শিফট মেলানোর সময় হাতের নগদ কম পড়ত, আর কেউ
+         * বুঝত না কেন।
+         *
+         * নিয়মটা SalesInvoice::collectedAmount()-এর হুবহু নকল, আর
+         * সেটা ইচ্ছাকৃত — ওখানেও একবার ঠিক এই ভুলটাই ছিল।
+         */
         $total = SalesInvoice::query()
             ->whereDate('trx_date', now()->toDateString())
-            ->where('status', '<>', DocumentStatus::CANCELLED)
+            ->whereIn('status', [DocumentStatus::CONFIRMED, DocumentStatus::CLOSED])
             ->where('created_by', auth()->id())
             ->sum('total');
 

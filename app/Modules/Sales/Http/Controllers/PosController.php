@@ -7,10 +7,12 @@ namespace App\Modules\Sales\Http\Controllers;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\DocumentStatus;
 use App\Http\Controllers\Controller;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Services\PosService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -62,6 +64,29 @@ class PosController extends Controller implements HasMiddleware
             'warehouse' => $warehouse,
             'walkinId' => (int) $this->settings->get('sales.walkin_customer_id', 0),
             'todaysTotal' => $this->pos->todaysTotal(),
+
+            /*
+             * কাউন্টারে ঝুলে থাকা বিলগুলো — পুরনোটা আগে।
+             *
+             * যেটা সবচেয়ে বেশিক্ষণ ঝুলে আছে সেটাই সবচেয়ে সম্ভাব্য
+             * পরিত্যক্ত, আর দিন শেষে ওটাই আগে সিদ্ধান্ত চায়।
+             */
+            'parked' => $this->pos->parked()->map(fn (SalesInvoice $bill) => (object) [
+                'id' => $bill->id,
+                'no' => $bill->document_no,
+                'since' => $bill->parked_at?->diffForHumans(),
+                'total' => (string) $bill->total,
+                'lines' => $bill->lines->count(),
+            ]),
+
+            /*
+             * তোলা বিলের সারিগুলো — পর্দা খোলার সাথেই কার্টে বসে।
+             *
+             * তোলার পর ভিন্ন পাতায় না পাঠিয়ে একই পর্দায় ফেরানো হয়:
+             * ক্যাশিয়ারের কাছে কাউন্টার একটাই জায়গা, আর ওখান থেকে
+             * সরালে অভ্যাসটাই ভেঙে যেত।
+             */
+            'resumed' => $this->resumedCart($request),
         ]);
     }
 
@@ -106,6 +131,99 @@ class PosController extends Controller implements HasMiddleware
                 'no' => $result['invoice']->document_no,
                 'change' => number_format((float) $result['change'], 2),
             ]));
+    }
+
+    /**
+     * তোলা বিলটার সারি — কার্টে বসানোর মতো করে।
+     *
+     * খালি অ্যারে ফেরে যদি কিছু তোলা না হয়ে থাকে, বা যে বিলটার কথা
+     * বলা হয়েছে সেটা এই কোম্পানির না হয়। খসড়া নয় এমন বিলও বাদ:
+     * নিশ্চিত হওয়া বিল কার্টে তুললে ক্যাশিয়ার দ্বিতীয়বার টাকা নিতেন।
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function resumedCart(Request $request): array
+    {
+        $id = $request->integer('resume');
+
+        if ($id <= 0) {
+            return [];
+        }
+
+        $invoice = SalesInvoice::query()
+            ->where('status', DocumentStatus::DRAFT)
+            ->with('lines.product')
+            ->find($id);
+
+        if ($invoice === null) {
+            return [];
+        }
+
+        return $invoice->lines->map(fn ($line) => [
+            'product_id' => $line->product_id,
+            'name' => $line->product?->name() ?? '',
+            'qty' => (string) $line->qty,
+            'rate' => (string) $line->rate,
+            'discount' => (string) $line->discount,
+        ])->values()->all();
+    }
+
+    /**
+     * কার্টটা ধরে রাখা — ক্রেতা টাকা আনতে গেছেন, পেছনে লাইন।
+     *
+     * ── কেন বাতিল নয় ────────────────────────────────────────────────
+     * এটা না থাকলে ক্যাশিয়ার যা করেন সেটাই সমস্যা: বিলটা বাতিল করেন,
+     * আর ক্রেতা ফিরলে আবার গোড়া থেকে টাইপ করেন। তখন বাতিলের সংখ্যা
+     * দিয়ে আর কিছু বোঝা যায় না — দিনে ত্রিশটা বাতিল দেখে বলার উপায়
+     * থাকে না কোনটা ভুল, কোনটা চুরির চেষ্টা, আর কোনটা কেবল একজন
+     * ক্রেতা টাকা আনতে গিয়েছিলেন।
+     */
+    public function park(Request $request): RedirectResponse
+    {
+        $companyId = CompanyContext::id();
+
+        $data = $request->validate([
+            'customer_id' => ['nullable', 'integer',
+                Rule::exists('customers', 'id')->where('company_id', $companyId)],
+            'warehouse_id' => ['nullable', 'integer',
+                Rule::exists('inv_warehouses', 'id')->where('company_id', $companyId)],
+            'narration' => ['nullable', 'string', 'max:120'],
+            'lines' => ['required', 'array', 'min:1'],
+            'lines.*.product_id' => ['required', 'integer',
+                Rule::exists('inv_products', 'id')->where('company_id', $companyId)],
+            'lines.*.qty' => ['required', 'numeric', 'gt:0'],
+            'lines.*.rate' => ['required', 'numeric', 'min:0'],
+            'lines.*.discount' => ['nullable', 'numeric', 'min:0'],
+        ]);
+
+        $invoice = $this->pos->park($data, $data['lines']);
+
+        return redirect()
+            ->route('sales.pos.index')
+            ->with('saved', __('sales::message.pos_parked', ['no' => $invoice->document_no]));
+    }
+
+    /**
+     * ধরে রাখা বিলটা আবার কাউন্টারে তোলা।
+     *
+     * তোলার পর ওটা আর অপেক্ষমাণ তালিকায় থাকে না — নাহলে একই বিল দুই
+     * কাউন্টারে একসাথে তোলা যেত, আর একজন নিশ্চিত করার পর অন্যজন খালি
+     * পর্দা নিয়ে বসে থাকতেন।
+     */
+    public function resume(Request $request, SalesInvoice $invoice): RedirectResponse
+    {
+        /*
+         * অন্য কোম্পানির বিল এখানে পৌঁছায়ই না — SalesInvoice-এ কোম্পানির
+         * গ্লোবাল স্কোপ আছে, তাই রুট-বাইন্ডিংই ৪০৪ দেয়। তবু ধরে নেওয়া
+         * হয় না; স্কোপটা কোনোদিন সরলে এই লাইনটাই শেষ পাহারা।
+         */
+        abort_unless((int) $invoice->company_id === CompanyContext::id(), 404);
+
+        $resumed = $this->pos->resume($invoice);
+
+        return redirect()
+            ->route('sales.pos.index', ['resume' => $resumed->id])
+            ->with('saved', __('sales::message.pos_resumed', ['no' => $resumed->document_no]));
     }
 
     /**
