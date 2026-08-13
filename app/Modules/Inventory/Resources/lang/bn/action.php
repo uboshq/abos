@@ -20,4 +20,5 @@ return [
     'remove_line' => 'লাইন সরান',
     'show_cancelled' => 'বাতিলগুলোও দেখাও',
     'issue' => 'মাল বের করুন',
+    'trace' => 'খুঁজুন',
 ];

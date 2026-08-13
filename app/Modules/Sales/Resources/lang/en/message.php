@@ -101,4 +101,11 @@ return [
     'search_customer' => 'Search customer…',
     'pick_an_item' => 'Pick an item',
     'upcoming' => 'coming soon',
+    // Recall — where did this lot go
+    'trace_note' => 'Pick a lot to see what is still on the shelf and who received the rest.',
+    'trace_on_hand' => 'Still on the shelf',
+    'trace_on_hand_note' => 'This much can be stopped right now — take it off sale.',
+    'trace_gone' => 'With customers',
+    'trace_gone_note' => 'Went to :count customers — they need a phone call.',
+    'trace_nobody' => 'None of this lot has gone out yet.',
 ];

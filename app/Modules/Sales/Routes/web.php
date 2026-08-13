@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Modules\Sales\Http\Controllers\CollectionController;
 use App\Modules\Sales\Http\Controllers\DeliveryChallanController;
 use App\Modules\Sales\Http\Controllers\DirectSaleController;
+use App\Modules\Sales\Http\Controllers\LotTraceController;
 use App\Modules\Sales\Http\Controllers\PosController;
 use App\Modules\Sales\Http\Controllers\SalesInvoiceController;
 use App\Modules\Sales\Http\Controllers\SalesOrderController;
@@ -102,6 +103,14 @@ Route::middleware('auth')->prefix('sales')->group(function () {
      * সবগুলো GET, কারণ ছাপা কিছু বদলায় না — আর তাতে কাগজটা বুকমার্ক করা
      * যায়, আর ব্রাউজারের ফিরে যাওয়ার বোতামও ভাঙে না।
      */
+    /*
+     * রিকল — "এই লটটা কাদের কাছে গেছে"।
+     *
+     * বিক্রয়ে, মজুদে নয়: উত্তরটা গ্রাহকের নাম ও ফোন নম্বরের তালিকা।
+     * GET, কারণ এটা প্রশ্ন — লিংকটা কপি করে পাঠানো যায়।
+     */
+    Route::get('/lots/trace', [LotTraceController::class, 'show'])->name('lot.trace');
+
     Route::prefix('print')->name('print.')->group(function () {
         Route::get('/invoice/{invoice}', [SalesPrintController::class, 'invoice'])
             ->whereNumber('invoice')->name('invoice');
