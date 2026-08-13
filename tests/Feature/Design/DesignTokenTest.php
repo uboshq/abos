@@ -212,10 +212,15 @@ class DesignTokenTest extends TestCase
         $this->assertNotEmpty($this->value('spacing-prose-max'));
     }
 
-    public function test_the_bangla_font_is_in_the_stack_because_poppins_has_no_bangla(): void
+    /** ল্যাটিন ফন্টগুলোয় বাংলা অক্ষর নেই, তাই Hind Siliguri সবগুলোর সাথে। */
+    public function test_the_bangla_font_is_in_every_stack(): void
     {
         $this->assertStringContainsString('Hind Siliguri', $this->value('font-sans'));
         $this->assertStringContainsString('Hind Siliguri', $this->value('font-bangla'));
+
+        // শিরোনামেও — নাহলে বাংলা শিরোনাম ব্রাউজারের ফলব্যাকে যেত আর
+        // প্রতিটা কম্পিউটারে আলাদা দেখাত
+        $this->assertStringContainsString('Hind Siliguri', $this->value('font-heading'));
     }
 
     public function test_fonts_are_served_from_our_own_host(): void
@@ -226,7 +231,20 @@ class DesignTokenTest extends TestCase
         $this->assertStringNotContainsString('fonts.googleapis.com', $css);
         $this->assertStringNotContainsString('fonts.gstatic.com', $css);
 
-        foreach (['poppins-400', 'poppins-600', 'hind-siliguri-400-bengali', 'hind-siliguri-600-bengali'] as $file) {
+        /*
+         * ব্র্যান্ড গাইডলাইন ৫ নং: শিরোনামে Montserrat, লেখায় Inter।
+         * Poppins বিদায় নিয়েছে — ওটা ব্র্যান্ডের সিদ্ধান্ত ছিল না।
+         *
+         * Inter এখানে থাকা জরুরি: নামটা --font-numeric-এ অনেক আগে থেকেই
+         * ছিল, অথচ ফাইলটা কখনো বসানো হয়নি, তাই টাকার প্রতিটা কলাম
+         * ব্রাউজারের নিজের monospace-এ দেখাত। এই তালিকাটাই সেটা ধরত,
+         * যদি নামটা এখানে থাকত।
+         */
+        foreach ([
+            'inter-400', 'inter-600',
+            'montserrat-600', 'montserrat-700',
+            'hind-siliguri-400-bengali', 'hind-siliguri-600-bengali',
+        ] as $file) {
             $this->assertFileExists(public_path("fonts/{$file}.woff2"));
         }
     }
