@@ -47,6 +47,10 @@ return [
     // Opening stock — the day the old books are carried in
     'opening_narration' => 'Opening stock',
     'opening_saved' => ':product — :qty onto the shelf, :value into Inventory.',
+
+    // Lot corrections — both land in the audit trail with their reason
+    'batch_repriced' => 'The printed price on lot :batch has been changed. Past sales are untouched.',
+    'batch_expiry_corrected' => 'The expiry on lot :batch has been corrected.',
     'opening_needs_qty' => 'The quantity must be greater than zero.',
     'opening_needs_cost' => 'Opening stock needs a rate. Goods at zero cost are not an asset on the balance sheet, yet selling them would show the whole price as profit.',
     'opening_already_done' => 'Opening stock for :product at :warehouse has already been entered. Use Count & Adjust to change it.',

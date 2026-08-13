@@ -17,6 +17,9 @@ return [
     // Batch allocation
     'qty_positive' => 'Say how much — a quantity of zero picks no lot at all.',
     'batch_short' => 'Not enough :product across its lots — :short short. Unexpired lots only; check whether some has expired.',
+    'batch_untracked_stock' => ':qty of :product is on the shelf, but it arrived before lot tracking began — there is no way to know which lot it belongs to, so it cannot be sold. Put it back in through Opening Stock, this time with a lot.',
+    'reprice_needs_a_reason' => 'Say why — in six months this line will be the only answer to that question.',
+    'not_a_price' => 'A price must be a number, and not negative.',
 
     // The printed price is a ceiling, and it is per lot
     'above_printed_price' => 'Lot :batch is printed at :mrp — :asked is above it, and selling above the printed price is not allowed.',

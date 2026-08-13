@@ -11,7 +11,9 @@ use App\Core\Support\DocumentStatus;
 use App\Models\FinancialYear;
 use App\Models\IssuedNumber;
 use App\Modules\Inventory\Models\Product;
+use App\Modules\Inventory\Models\StockMovement;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Inventory\Services\PrintedPriceCeiling;
 use App\Modules\Inventory\Services\ReadsPackedQuantities;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\Sales\Models\DeliveryChallan;
@@ -44,6 +46,10 @@ final class DeliveryChallanService
     public function __construct(
         private readonly NumberSeriesEngine $numbers,
         private readonly StockService $stock,
+
+        // ছাপা দামের সীমা — কোম্পানি বন্ধ করতে পারে না, তাই কোনো সুইচ নেই
+        private readonly PrintedPriceCeiling $ceiling,
+
         private readonly SettingsService $settings,
     ) {}
 
@@ -163,16 +169,26 @@ final class DeliveryChallanService
                     ? $this->releasableQty($line->orderLine, $qty)
                     : '0';
 
-                $this->stock->move(
+                /*
+                 * issue() — move() নয়, কারণ লট ধরা পণ্যে একটা লাইন
+                 * কয়টা চলাচল হবে তা আগে থেকে জানা যায় না।
+                 *
+                 * যে পণ্যে লট ধরা নেই তার আচরণ অবিকল আগের মতোই: একটাই
+                 * সারি, batch_id খালি। ডিপোর চাল-ডাল-সাবান কিছু টের
+                 * পায় না।
+                 */
+                $movements = $this->stock->issue(
                     product: $line->product,
                     warehouse: $challan->warehouse,
                     sourceType: DeliveryChallan::STOCK_SOURCE,
                     sourceId: $challan->id,
-                    floor: bcmul($qty, '-1', 4),
+                    qty: $qty,
                     reserved: bccomp($release, '0', 4) > 0 ? bcmul($release, '-1', 4) : '0',
                     date: $challan->trx_date,
                     documentNo: $challan->document_no,
                 );
+
+                $this->assertWithinPrintedPrice($line, $movements);
             }
 
             $challan->update(['status' => DocumentStatus::CONFIRMED]);
@@ -200,21 +216,45 @@ final class DeliveryChallanService
 
         return DB::transaction(function () use ($challan, $reason, $date) {
             if ($challan->status === DocumentStatus::CONFIRMED) {
-                foreach ($challan->lines as $line) {
-                    $qty = (string) $line->delivered_qty;
+                /*
+                 * মাল ফেরে যে লট থেকে বেরিয়েছিল সেই লটেই।
+                 *
+                 * আগে এখানে লাইন ধরে নতুন করে গোনা হত, আর লট না থাকায়
+                 * সেটা ঠিকই ছিল। লট আসার পর ওটা ভুল হয়ে যেত: FEFO
+                 * আজকের অবস্থা ধরে অন্য লট বাছত, মাল ফিরত এমন বাক্সে
+                 * যেখান থেকে কখনো বেরোয়ইনি, আর রিকলের সময় ভুল ক্রেতার
+                 * কাছে ফোন যেত।
+                 */
+                $this->stock->reverse(
+                    sourceType: DeliveryChallan::STOCK_SOURCE,
+                    sourceId: $challan->id,
+                    reversedType: DeliveryChallan::STOCK_SOURCE.':cancel',
+                    date: $date,
+                    narration: $reason,
+                );
 
-                    // অর্ডারটা এখনো খোলা থাকলেই ধরাটা ফেরত বসে; বাতিল
-                    // অর্ডারে ফেরালে ধরা থেকে যেত যা কেউ কোনোদিন ছাড়ত না
+                /*
+                 * ধরাটা আলাদা সারিতে ফেরে — লট ধরে নয়, লাইন ধরে।
+                 *
+                 * Reserved পণ্য ও গুদামের সংখ্যা, লটের নয়। আর অর্ডারটা
+                 * এখনো খোলা থাকলেই কেবল ফেরে; বাতিল অর্ডারে ফেরালে ধরা
+                 * থেকে যেত যা কেউ কোনোদিন ছাড়ত না।
+                 */
+                foreach ($challan->lines as $line) {
                     $reserve = $line->orderLine?->order?->status === DocumentStatus::CONFIRMED
-                        ? $qty
+                        ? (string) $line->delivered_qty
                         : '0';
+
+                    if (bccomp($reserve, '0', 4) <= 0) {
+                        continue;
+                    }
 
                     $this->stock->move(
                         product: $line->product,
                         warehouse: $challan->warehouse,
                         sourceType: DeliveryChallan::STOCK_SOURCE.':cancel',
                         sourceId: $challan->id,
-                        floor: $qty,
+                        floor: '0',
                         reserved: $reserve,
                         date: $date,
                         documentNo: $challan->document_no,
@@ -232,6 +272,50 @@ final class DeliveryChallanService
 
             return $challan->fresh(['lines']);
         });
+    }
+
+    /**
+     * ছাপা দামের উপরে যাচ্ছে কি না — যে লটগুলো সত্যিই বেরোল, তাদের ধরে।
+     *
+     * ── কেন মাল বেরোনোর পরে, আগে নয় ─────────────────────────────────
+     * কোন লট যাবে সেটা FEFO ঠিক করে, আর সেটা জানা যায় বরাদ্দের পরেই।
+     * আগে দেখতে গেলে অনুমান করতে হত — আর অনুমানটা ভুল হলে ভুলের দিকটা
+     * সবচেয়ে খারাপ: পুরনো সস্তা লট নতুন দামে বেরিয়ে যেত।
+     *
+     * পুরোটা একই লেনদেনে, তাই সীমা ভাঙলে চলাচলগুলোও ফিরে যায় — অর্ধেক
+     * বেরোনো মাল বলে কিছু থাকে না।
+     *
+     * @param  list<StockMovement>  $movements
+     */
+    private function assertWithinPrintedPrice(DeliveryChallanLine $line, array $movements): void
+    {
+        /*
+         * ক্রেতা প্রতি এককে যা দেন — ছাড়ের পরে।
+         *
+         * ছাড়ের আগের দর দেখলে ২৫ টাকা দর আর ঋণাত্মক ছাড় বসিয়ে সীমাটা
+         * পেরোনো যেত, আর কাগজে নিয়মটা টিকে থাকত।
+         */
+        $percent = (string) ($line->discount_percent ?? '0');
+        $rate = (string) $line->rate;
+
+        /*
+         * শতাংশটা শূন্য না হলেই হিসাবে ধরা হয় — ধনাত্মক হোক বা ঋণাত্মক।
+         *
+         * প্রথমে কেবল ধনাত্মক হলে ধরতাম, আর তাতে ঠিক সেই ফাঁকটাই খোলা
+         * থেকে যেত যেটা বন্ধ করার কথা: ১২০ দর আর −১০% "ছাড়" মানে ক্রেতা
+         * দিচ্ছেন ১৩২, অথচ কোড দেখত ১২০ আর সীমাটা পেরোনো ধরা পড়ত না।
+         * টেস্টটা না লিখলে ফাঁকটা কোড পড়েও চোখে পড়ত না — মন্তব্যে তো
+         * লেখাই ছিল যে ঋণাত্মক ছাড় আটকানো হয়।
+         */
+        $net = bccomp($percent, '0', 4) !== 0
+            ? bcsub($rate, bcdiv(bcmul($rate, $percent, 6), '100', 6), 6)
+            : $rate;
+
+        foreach ($movements as $movement) {
+            if ($movement->batch !== null) {
+                $this->ceiling->assertWithin($movement->batch, $net);
+            }
+        }
     }
 
     /**
