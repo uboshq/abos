@@ -12,6 +12,7 @@ use App\Modules\Sales\Http\Controllers\SalesOrderController;
 use App\Modules\Sales\Http\Controllers\SalesPrintController;
 use App\Modules\Sales\Http\Controllers\SalesReportController;
 use App\Modules\Sales\Http\Controllers\SalesReturnController;
+use App\Modules\Sales\Http\Controllers\ShiftController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -37,6 +38,7 @@ Route::middleware('auth')->prefix('sales')->group(function () {
          * পাঠানো লিংকেই বিলটা কাউন্টারের তালিকা থেকে হারিয়ে যেত।
          */
         Route::post('/park', [PosController::class, 'park'])->name('park');
+
         Route::post('/{invoice}/resume', [PosController::class, 'resume'])
             ->whereNumber('invoice')->name('resume');
     });
@@ -103,6 +105,21 @@ Route::middleware('auth')->prefix('sales')->group(function () {
      * সবগুলো GET, কারণ ছাপা কিছু বদলায় না — আর তাতে কাগজটা বুকমার্ক করা
      * যায়, আর ব্রাউজারের ফিরে যাওয়ার বোতামও ভাঙে না।
      */
+    /*
+     * শিফট — ড্রয়ারটার জন্য কেউ একজন দায়ী।
+     *
+     * খোলা ও বন্ধ দুইটাই POST: অবস্থা বদলায়, আর টাকার দায় বদলায়।
+     * Z-রিপোর্ট GET — ওটা প্রশ্ন, তাই লিংকটা পাঠানো যায়।
+     */
+    Route::prefix('shifts')->name('shift.')->group(function () {
+        Route::get('/', [ShiftController::class, 'index'])->name('index');
+        Route::post('/', [ShiftController::class, 'open'])->name('open');
+        Route::post('/{shift}/close', [ShiftController::class, 'close'])
+            ->whereNumber('shift')->name('close');
+        Route::get('/{shift}', [ShiftController::class, 'show'])
+            ->whereNumber('shift')->name('show');
+    });
+
     /*
      * রিকল — "এই লটটা কাদের কাছে গেছে"।
      *

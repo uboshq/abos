@@ -33,4 +33,6 @@ return [
     'add_note' => 'Add Note',
     'expense' => 'Expense',
     'new_return' => 'New return',
+    'shift_open' => 'Open shift',
+    'shift_close' => 'Close shift',
 ];

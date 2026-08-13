@@ -120,4 +120,7 @@ return [
     // What sales has to say about a customer — shown on the customer's page,
     // contributed from here (see SalesFacts)
     'last_purchase' => 'Last purchase',
+    'user' => 'User',
+    'time' => 'Time',
+    'till' => 'Drawer',
 ];

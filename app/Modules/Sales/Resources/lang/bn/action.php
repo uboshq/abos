@@ -33,4 +33,6 @@ return [
     'add_note' => 'নোট যোগ',
     'expense' => 'খরচ',
     'new_return' => 'নতুন ফেরত',
+    'shift_open' => 'শিফট খুলুন',
+    'shift_close' => 'শিফট বন্ধ করুন',
 ];
