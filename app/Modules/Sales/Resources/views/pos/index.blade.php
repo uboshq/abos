@@ -75,8 +75,31 @@
         </div>
     @endif
 
+    {{--
+        ── পুরো বিক্রয় মাউস না ছুঁয়ে ────────────────────────────────────
+        প্ল্যানের শেষ হওয়ার শর্তগুলোর একটা। কাউন্টারে হাত দুইটাই ব্যস্ত
+        থাকে — একটায় স্ক্যানার, একটায় মাল — তাই মাউস ধরতে গেলে প্রতিটা
+        বিক্রয়ে দুই সেকেন্ড যায়, আর লাইনে দশজন থাকলে সেটাই ভিড়।
+
+        স্ক্যানার নিজে Enter পাঠায়, তাই Enter খোঁজার ঘরেই আটকে থাকে
+        (প্রথম পণ্যটা ঝুড়িতে যায়)। বাকি কাজগুলো F-কি-তে, কারণ ওগুলোয়
+        বারকোডের কোনো অক্ষর নেই — অক্ষরের কি ব্যবহার করলে স্ক্যান করা
+        কোডের মাঝখানে একটা শর্টকাট চলে যেত।
+
+            F2   টাকার ঘরে যাও
+            F4   বিল ধরে রাখো
+            F8   খোঁজার ঘরে ফেরো
+            Esc  খোঁজা মুছে ফেলো
+            টাকার ঘরে Enter  → বিক্রয় সম্পূর্ণ
+
+        preventDefault দরকার: F2 ব্রাউজারের নিজের কাজ নয়, কিন্তু কিছু
+        ব্রাউজারে F4/F8 ঠিকানার বার বা ডিবাগারে যায়।
+    --}}
     <div x-data="pos({{ Illuminate\Support\Js::from($products) }}, {{ $walkinId }}, {{ Illuminate\Support\Js::from($resumed) }})"
          @keydown.window.escape="term = ''"
+         @keydown.window.f2.prevent="$refs.paid?.focus()"
+         @keydown.window.f4.prevent="$refs.hold?.click()"
+         @keydown.window.f8.prevent="$refs.search?.focus()"
          class="grid gap-4 lg:grid-cols-[1fr_22rem]">
 
         {{-- ── বাঁ দিক: খোঁজা ও পণ্য ───────────────────────────────── --}}
@@ -96,6 +119,20 @@
 
                 <p class="mt-2 text-2xs text-(--color-ink-muted)">
                     {{ __('sales::message.pos_hint') }}
+                </p>
+
+                {{-- কি-বোর্ডের মানচিত্র — মাউস না ছোঁয়ার শর্তটা তখনই
+                     কাজে লাগে যখন কি-গুলো কোথাও লেখা থাকে --}}
+                <p class="mt-1 text-2xs text-(--color-ink-muted)">
+                    {{ __('sales::message.pos_keys') }}
+                </p>
+
+                {{-- খুঁজে পাওয়া যায়নি — নীরবতা নয় --}}
+                <p x-show="notFound" x-cloak
+                   class="mt-2 rounded-(--radius-field) bg-(--color-badge-danger-bg) px-2 py-1
+                          text-2xs text-(--color-badge-danger-ink)">
+                    {{ __('sales::message.pos_not_found') }}
+                    <span class="num" x-text="notFound"></span>
                 </p>
             </div>
 
@@ -153,6 +190,16 @@
                                     <div class="truncate text-sm" x-text="line.name"></div>
                                     <div class="num text-2xs text-(--color-ink-muted)"
                                          x-text="money(line.rate) + ' × ' + qty(line.qty)"></div>
+
+                                    {{-- স্ক্যানে পাওয়া লট ও মেয়াদ — মিলিয়ে
+                                         দেখার জন্য। স্ক্যান না হলে কিছুই আসে
+                                         না, তাই ডিপোর সারি আগের মতোই। --}}
+                                    <div x-show="line.batch || line.expiry" x-cloak
+                                         class="text-2xs text-(--color-ink-muted)">
+                                        <span x-text="line.batch"></span>
+                                        <span x-show="line.batch && line.expiry"> · </span>
+                                        <span class="num" x-text="line.expiry"></span>
+                                    </div>
                                 </div>
 
                                 <span class="num text-sm font-medium" x-text="money(lineTotal(line))"></span>
@@ -208,8 +255,19 @@
                     <label class="mb-1 block text-sm font-medium" for="paid">
                         {{ __('sales::field.paid') }}
                     </label>
+                    {{--
+                        টাকার ঘরে Enter মানে বিক্রয় সম্পূর্ণ।
+
+                        ফর্মে একাধিক ঘর থাকলে ব্রাউজার Enter-এ প্রথম
+                        submit বোতামটা চাপে — এখানে সেটাই "সম্পূর্ণ",
+                        তাই আচরণটা এমনিতেই ঠিক। তবু স্পষ্ট করে লেখা,
+                        কারণ পরে কেউ "ধরে রাখুন" বোতামটা উপরে সরালে
+                        Enter নীরবে বিল ধরে রাখা শুরু করত।
+                    --}}
                     <input id="paid" name="paid" type="number" step="0.01" min="0"
                            x-model="paid"
+                           x-ref="paid"
+                           @keydown.enter.prevent="lines.length > 0 && $el.form.requestSubmit($refs.checkout)"
                            class="num h-11 w-full rounded-(--radius-field) border border-(--color-border)
                                   bg-(--color-surface-app) px-3 text-end text-lg">
 
@@ -234,7 +292,8 @@
                 </div>
 
                 <x-ui.button type="submit" tone="primary" class="w-full"
-                             ::disabled="lines.length === 0">
+                             ::disabled="lines.length === 0"
+                             x-ref="checkout">
                     {{ __('sales::action.checkout') }}
                 </x-ui.button>
 
@@ -248,6 +307,7 @@
                 --}}
                 <button type="submit"
                         formaction="{{ route('sales.pos.park') }}"
+                        x-ref="hold"
                         x-show="lines.length > 0" x-cloak
                         class="min-h-(--spacing-touch) w-full rounded-(--radius-field)
                                border border-(--color-border) text-sm
@@ -288,6 +348,16 @@
                     term: '',
                     paid: '',
 
+                    /*
+                     * শেষ যে কোডটা খুঁজে পাওয়া যায়নি।
+                     *
+                     * নীরবে কিছু না করলে ক্যাশিয়ার দ্বিতীয়বার, তৃতীয়বার
+                     * স্ক্যান করতেন আর ভাবতেন স্ক্যানারটা নষ্ট। কোডটা
+                     * দেখিয়ে দিলে তিনি অন্তত জানেন যন্ত্র পড়েছে,
+                     * ব্যবস্থা চেনেনি।
+                     */
+                    notFound: '',
+
                     get visible() {
                         const t = this.term.trim().toLowerCase();
 
@@ -311,10 +381,70 @@
                      */
                     takeFirst() {
                         const first = this.visible[0];
-                        if (first) this.add(first);
+
+                        if (first) {
+                            this.add(first);
+                            return;
+                        }
+
+                        /*
+                         * পাতার তালিকায় নেই — সার্ভারকে জিজ্ঞেস করা হয়।
+                         *
+                         * ── ওষুধের কার্টনে এটাই একমাত্র পথ ─────────────
+                         * GS1 DataMatrix স্ক্যান করলে স্ক্যানার পাঠায় গোটা
+                         * element string (পণ্য + লট + মেয়াদ একসাথে)। ওই
+                         * লেখাটা পাতার তালিকার নাম/কোড/বারকোডের কোনোটার
+                         * সাথেই মেলে না, তাই স্থানীয় খোঁজা সবসময় খালি
+                         * ফেরে — আর ক্যাশিয়ার দেখেন "পণ্য নেই", অথচ
+                         * প্যাকেটটা তাঁর হাতেই।
+                         *
+                         * সার্ভারের lookup বারকোডটা ভেঙে GTIN বের করে,
+                         * আর সাথে লট ও মেয়াদও ফেরত দেয়।
+                         */
+                        const scanned = this.term.trim();
+
+                        if (scanned === '') return;
+
+                        this.askServer(scanned);
+                    },
+
+                    async askServer(code) {
+                        try {
+                            const response = await fetch(
+                                '{{ route('sales.pos.lookup') }}?code=' + encodeURIComponent(code),
+                                { headers: { 'Accept': 'application/json' } },
+                            );
+
+                            if (!response.ok) {
+                                this.notFound = code;
+                                return;
+                            }
+
+                            const product = await response.json();
+
+                            this.add({
+                                id: product.id,
+                                name: product.name,
+                                rate: product.rate,
+                                batch: product.scanned_batch,
+                                expiry: product.scanned_expiry,
+                            });
+                        } catch (e) {
+                            /*
+                             * নেট গেলে কাউন্টার থামে না।
+                             *
+                             * খোঁজাটা ব্যর্থ হলে কেবল "পাওয়া গেল না"
+                             * দেখায়; ঝুড়ি, মোট আর ছাপা সবই আগের মতো
+                             * চলে। ব্যতিক্রম ছড়াতে দিলে Alpine-এর পুরো
+                             * অংশটা থেমে যেত।
+                             */
+                            this.notFound = code;
+                        }
                     },
 
                     add(product) {
+                        this.notFound = '';
+
                         const existing = this.lines.find(l => l.id === product.id);
 
                         // একই পণ্য দ্বিতীয়বার স্ক্যান করলে নতুন সারি নয়,
@@ -328,6 +458,19 @@
                                 name: product.name,
                                 rate: product.rate,
                                 qty: 1,
+
+                                /*
+                                 * স্ক্যানে পাওয়া লট ও মেয়াদ — কেবল
+                                 * দেখানোর জন্য, কার্টে পাঠানোর জন্য নয়।
+                                 *
+                                 * কোন লট বেরোবে সেটা FEFO ঠিক করে মাল
+                                 * বেরোনোর মুহূর্তে। এখানে সংখ্যাগুলো
+                                 * থাকে যাতে ক্যাশিয়ার হাতের প্যাকেটের
+                                 * সাথে মিলিয়ে নিতে পারেন — বিশেষত
+                                 * মেয়াদটা, যেটা ছোট ছাপায় পড়া কঠিন।
+                                 */
+                                batch: product.batch ?? null,
+                                expiry: product.expiry ?? null,
                             });
                         }
 
