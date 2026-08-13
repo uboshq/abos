@@ -8,6 +8,7 @@ use App\Core\Contracts\DashboardWidgets;
 use App\Core\Dashboard\Widget;
 use App\Core\Engines\Report\ReportEngine;
 use App\Core\Support\DocumentStatus;
+use App\Core\Support\Money;
 use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\SalesInvoice;
 use Illuminate\Support\Carbon;
@@ -36,7 +37,7 @@ final class SalesWidgets implements DashboardWidgets
             new Widget(
                 group: 'today',
                 label: __('sales::dashboard.sales_today'),
-                value: number_format(self::invoiceTotal($today, $today), 2),
+                value: Money::format(self::invoiceTotal($today, $today), 2),
                 href: route('sales.invoice.index', ['from' => $today, 'to' => $today]),
                 permission: 'sales.invoice.view',
                 tone: 'money',
@@ -46,7 +47,7 @@ final class SalesWidgets implements DashboardWidgets
             new Widget(
                 group: 'today',
                 label: __('sales::dashboard.collected_today'),
-                value: number_format(self::collectionTotal($today, $today), 2),
+                value: Money::format(self::collectionTotal($today, $today), 2),
                 href: route('sales.collection.index', ['from' => $today, 'to' => $today]),
                 permission: 'sales.collection.view',
                 tone: 'money',
@@ -56,7 +57,7 @@ final class SalesWidgets implements DashboardWidgets
             new Widget(
                 group: 'month',
                 label: __('sales::dashboard.sales_this_month'),
-                value: number_format(self::invoiceTotal($monthStart, $today), 2),
+                value: Money::format(self::invoiceTotal($monthStart, $today), 2),
                 href: route('sales.invoice.index', ['from' => $monthStart, 'to' => $today]),
                 permission: 'sales.invoice.view',
                 tone: 'money',
@@ -66,7 +67,7 @@ final class SalesWidgets implements DashboardWidgets
             new Widget(
                 group: 'month',
                 label: __('sales::dashboard.collected_this_month'),
-                value: number_format(self::collectionTotal($monthStart, $today), 2),
+                value: Money::format(self::collectionTotal($monthStart, $today), 2),
                 href: route('sales.collection.index', ['from' => $monthStart, 'to' => $today]),
                 permission: 'sales.collection.view',
                 tone: 'money',
@@ -118,20 +119,20 @@ final class SalesWidgets implements DashboardWidgets
      * খসড়াও বাদ: খসড়া বিল এখনো বিক্রয় নয়, আর ওটা যোগ করলে হোম পর্দার
      * সংখ্যা আর বিক্রয় খাতার সংখ্যা আলাদা হয়ে যেত।
      */
-    private static function invoiceTotal(string $from, string $to): float
+    private static function invoiceTotal(string $from, string $to): string
     {
-        return (float) SalesInvoice::query()
+        return Money::of(SalesInvoice::query()
             ->whereIn('status', [DocumentStatus::CONFIRMED, DocumentStatus::CLOSED])
             ->whereBetween('trx_date', [$from, $to])
-            ->sum('total');
+            ->sum('total'));
     }
 
-    private static function collectionTotal(string $from, string $to): float
+    private static function collectionTotal(string $from, string $to): string
     {
-        return (float) Collection::query()
+        return Money::of(Collection::query()
             ->whereIn('status', [DocumentStatus::CONFIRMED, DocumentStatus::CLOSED])
             ->whereBetween('trx_date', [$from, $to])
-            ->sum('amount');
+            ->sum('amount'));
     }
 
     /**

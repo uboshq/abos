@@ -8,6 +8,7 @@ use App\Core\Engines\Print\PaperSize;
 use App\Core\Engines\Print\PrintEngine;
 use App\Core\Support\AmountInWords;
 use App\Core\Support\DateFormat;
+use App\Core\Support\Money;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Models\VoucherLine;
@@ -192,6 +193,6 @@ class VoucherPrintController extends Controller implements HasMiddleware
 
     private function money(mixed $value): string
     {
-        return number_format((float) $value, 2);
+        return Money::format($value);
     }
 }

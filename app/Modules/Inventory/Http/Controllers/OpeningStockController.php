@@ -6,6 +6,7 @@ namespace App\Modules\Inventory\Http\Controllers;
 
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\Money;
 use App\Http\Controllers\Controller;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\StockMovement;
@@ -100,8 +101,8 @@ class OpeningStockController extends Controller implements HasMiddleware
 
         return back()->with('saved', __('inventory::message.opening_saved', [
             'product' => $product->name(),
-            'qty' => number_format((float) $validated['qty'], 2),
-            'value' => number_format((float) bcmul((string) $validated['qty'], (string) $validated['unit_cost'], 4), 2),
+            'qty' => Money::format($validated['qty']),
+            'value' => Money::format(bcmul((string) $validated['qty'], (string) $validated['unit_cost'], 4)),
         ]));
     }
 

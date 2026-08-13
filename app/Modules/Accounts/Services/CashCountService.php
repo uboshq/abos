@@ -8,6 +8,7 @@ use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DateFormat;
 use App\Core\Support\DocumentStatus;
+use App\Core\Support\Money;
 use App\Models\FinancialYear;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CashCount;
@@ -127,8 +128,8 @@ final class CashCountService
             ? $this->accountOr('5299', Account::EXPENSE)   // বিবিধ খরচ
             : $this->accountOr('4300', Account::INCOME);   // অন্যান্য আয়
 
-        $amount = ltrim((string) $count->difference, '-');
-        $amount = number_format((float) $amount, 4, '.', '');
+        // ঘাটতি বা উদ্বৃত্তের অঙ্কটা ভাউচারে যাচ্ছে — তাই bcmath, float নয়
+        $amount = Money::round(ltrim((string) $count->difference, '-'), 4);
 
         $note = __('accounts::message.count_adjustment', [
             'no' => $count->document_no,

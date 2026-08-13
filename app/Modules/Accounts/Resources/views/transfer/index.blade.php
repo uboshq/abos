@@ -17,7 +17,7 @@
         ['key' => 'to_till_id', 'label' => __('accounts::field.moved_to'),
          'render' => fn ($t) => $t->destinationName() . ($t->receiver ? ' — ' . $t->receiver->name : '')],
         ['key' => 'amount', 'label' => __('accounts::field.amount'), 'numeric' => true, 'width' => '10rem',
-         'render' => fn ($t) => number_format((float) $t->amount, 2)],
+         'render' => fn ($t) => \App\Core\Support\Money::format($t->amount)],
         ['key' => 'status', 'label' => __('accounts::field.state'), 'width' => '9rem',
          'render' => fn ($t) => view('accounts::transfer.partials.status', ['transfer' => $t])],
     ];
@@ -67,7 +67,7 @@
                         </span>
 
                         <span class="flex items-center gap-3">
-                            <span class="num font-semibold">{{ number_format((float) $item->amount, 2) }}</span>
+                            <span class="num font-semibold">{{ \App\Core\Support\Money::format($item->amount) }}</span>
 
                             <form method="POST" action="{{ route('accounts.transfer.confirm', $item) }}">
                                 @csrf

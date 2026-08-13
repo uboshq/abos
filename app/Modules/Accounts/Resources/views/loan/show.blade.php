@@ -56,7 +56,7 @@
             <h2 class="text-sm font-medium text-(--color-ink-muted)">
                 {{ $loan->isTerm() ? __('accounts::field.sanctioned') : __('accounts::field.cc_limit') }}
             </h2>
-            <p class="num mt-1 text-2xl font-semibold">{{ number_format((float) $loan->sanctioned, 2) }}</p>
+            <p class="num mt-1 text-2xl font-semibold">{{ \App\Core\Support\Money::format($loan->sanctioned) }}</p>
             <p class="mt-2 text-2xs text-(--color-ink-muted)">
                 {{ __('accounts::field.interest_rate') }}:
                 <span class="num">{{ rtrim(rtrim((string) $loan->interest_rate, '0'), '.') }}</span>
@@ -78,7 +78,7 @@
             <p class="num mt-1 text-2xl font-semibold">
                 <a href="{{ route('accounts.coa.show', $loan->liabilityAccount) }}"
                    class="text-(--color-brand-500) underline-offset-2 hover:underline">
-                    {{ number_format((float) $loan->outstanding(), 2) }}
+                    {{ \App\Core\Support\Money::format($loan->outstanding()) }}
                 </a>
             </p>
             <p class="mt-2 text-2xs text-(--color-ink-muted)">
@@ -91,7 +91,7 @@
                 <h2 class="text-sm font-medium text-(--color-ink-muted)">
                     {{ __('accounts::message.loan_available') }}
                 </h2>
-                <p class="num mt-1 text-2xl font-semibold">{{ number_format((float) $loan->available(), 2) }}</p>
+                <p class="num mt-1 text-2xl font-semibold">{{ \App\Core\Support\Money::format($loan->available()) }}</p>
             </section>
         @endif
     </div>
@@ -178,10 +178,10 @@
                             <tr @class(['bg-(--color-badge-danger-bg)' => $row->isOverdue()])>
                                 <td class="num px-3 py-2">{{ $row->no }}</td>
                                 <td class="px-3 py-2">{{ $row->due_date?->format('d/m/Y') }}</td>
-                                <td class="num px-3 py-2 text-end">{{ number_format((float) $row->principal, 2) }}</td>
-                                <td class="num px-3 py-2 text-end">{{ number_format((float) $row->interest, 2) }}</td>
+                                <td class="num px-3 py-2 text-end">{{ \App\Core\Support\Money::format($row->principal) }}</td>
+                                <td class="num px-3 py-2 text-end">{{ \App\Core\Support\Money::format($row->interest) }}</td>
                                 <td class="num px-3 py-2 text-end font-medium">
-                                    {{ number_format((float) $row->total(), 2) }}
+                                    {{ \App\Core\Support\Money::format($row->total()) }}
                                 </td>
                                 <td class="px-3 py-2">
                                     @if ($row->isPaid())
@@ -252,7 +252,7 @@
                                                         {{ __('accounts::field.amount') }}
                                                     </span>
                                                     <input type="number" name="amount" step="0.01" inputmode="decimal"
-                                                           placeholder="{{ number_format((float) $row->total(), 2, '.', '') }}"
+                                                           placeholder="{{ \App\Core\Support\Money::round($row->total(), 2) }}"
                                                            class="h-(--spacing-field) rounded-(--radius-field) border
                                                                   border-(--color-border) bg-(--color-surface-card)
                                                                   px-3 text-end font-(family-name:--font-numeric)">
@@ -312,7 +312,7 @@
                                     @endif
                                 </td>
                                 <td class="num px-3 py-2 text-end">
-                                    {{ number_format((float) $movement->amount, 2) }}
+                                    {{ \App\Core\Support\Money::format($movement->amount) }}
                                 </td>
                             </tr>
                         @endforeach

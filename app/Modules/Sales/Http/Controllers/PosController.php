@@ -8,6 +8,7 @@ use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
+use App\Core\Support\Money;
 use App\Http\Controllers\Controller;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Batch;
@@ -132,7 +133,7 @@ class PosController extends Controller implements HasMiddleware
             ->route('sales.print.invoice', ['invoice' => $result['invoice']->id, 'paper' => '80mm'])
             ->with('saved', __('sales::message.pos_done', [
                 'no' => $result['invoice']->document_no,
-                'change' => number_format((float) $result['change'], 2),
+                'change' => Money::format($result['change']),
             ]));
     }
 

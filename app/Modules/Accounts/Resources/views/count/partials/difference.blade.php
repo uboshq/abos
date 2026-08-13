@@ -6,6 +6,6 @@
     <span class="text-(--color-success)" aria-label="{{ __('accounts::message.count_matches') }}">✓</span>
 @else
     <span class="num font-semibold text-(--color-danger)">
-        {{ $count->isSurplus() ? '+' : '' }}{{ number_format((float) $count->difference, 2) }}
+        {{ $count->isSurplus() ? '+' : '' }}{{ \App\Core\Support\Money::format($count->difference) }}
     </span>
 @endif

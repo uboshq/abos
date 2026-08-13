@@ -16,7 +16,7 @@
         ['key' => 'account', 'label' => __('purchase::field.account'), 'width' => '11rem',
          'render' => fn ($p) => $p->account?->name()],
         ['key' => 'amount', 'label' => __('purchase::field.amount'), 'numeric' => true, 'width' => '10rem',
-         'render' => fn ($p) => number_format((float) $p->amount, 2)],
+         'render' => fn ($p) => \App\Core\Support\Money::format($p->amount)],
         ['key' => 'status', 'label' => __('purchase::field.state'), 'width' => '8rem',
          'render' => fn ($p) => view('purchase::components.status-badge', ['document' => $p])],
     ];

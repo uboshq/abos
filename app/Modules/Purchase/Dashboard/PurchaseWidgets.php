@@ -8,6 +8,7 @@ use App\Core\Contracts\DashboardWidgets;
 use App\Core\Dashboard\Widget;
 use App\Core\Engines\Report\ReportEngine;
 use App\Core\Support\DocumentStatus;
+use App\Core\Support\Money;
 use App\Modules\Purchase\Models\PurchaseBill;
 use Illuminate\Support\Carbon;
 
@@ -30,7 +31,7 @@ final class PurchaseWidgets implements DashboardWidgets
             new Widget(
                 group: 'today',
                 label: __('purchase::dashboard.purchases_today'),
-                value: number_format(self::billTotal($today, $today), 2),
+                value: Money::format(self::billTotal($today, $today), 2),
                 href: route('purchase.bill.index', ['from' => $today, 'to' => $today]),
                 permission: 'purchase.bill.view',
                 tone: 'money',
@@ -40,7 +41,7 @@ final class PurchaseWidgets implements DashboardWidgets
             new Widget(
                 group: 'month',
                 label: __('purchase::dashboard.purchases_this_month'),
-                value: number_format(self::billTotal($monthStart, $today), 2),
+                value: Money::format(self::billTotal($monthStart, $today), 2),
                 href: route('purchase.bill.index', ['from' => $monthStart, 'to' => $today]),
                 permission: 'purchase.bill.view',
                 tone: 'money',
@@ -69,12 +70,12 @@ final class PurchaseWidgets implements DashboardWidgets
         ];
     }
 
-    private static function billTotal(string $from, string $to): float
+    private static function billTotal(string $from, string $to): string
     {
-        return (float) PurchaseBill::query()
+        return Money::of(PurchaseBill::query()
             ->whereIn('status', [DocumentStatus::CONFIRMED, DocumentStatus::CLOSED])
             ->whereBetween('trx_date', [$from, $to])
-            ->sum('total');
+            ->sum('total'));
     }
 
     /** সংখ্যাটা রিপোর্ট থেকেই — ক্লিক করে যা খোলে, ঠিক তাই। */

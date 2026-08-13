@@ -14,7 +14,7 @@
         @break
 
     @case ('number')
-        <span class="num">{{ $value === null ? '' : rtrim(rtrim(number_format((float) $value, 4), '0'), '.') }}</span>
+        <span class="num">{{ $value === null ? '' : rtrim(rtrim(\App\Core\Support\Money::format($value, 4), '0'), '.') }}</span>
         @break
 
     @case ('select')

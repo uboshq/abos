@@ -7,6 +7,7 @@ namespace App\Modules\Sales\Http\Controllers;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\Money;
 use App\Http\Controllers\Controller;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
@@ -155,7 +156,7 @@ class DirectSaleController extends Controller implements HasMiddleware
             ->with('saved', __('sales::message.direct_done', [
                 'challan' => $result['challan']->document_no,
                 'invoice' => $result['invoice']->document_no,
-                'change' => number_format((float) $result['change'], 2),
+                'change' => Money::format($result['change']),
             ]));
     }
 

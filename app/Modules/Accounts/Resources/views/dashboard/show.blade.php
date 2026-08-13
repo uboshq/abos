@@ -61,7 +61,7 @@
                 <p class="text-sm text-(--color-ink-muted)">{{ __($label) }}</p>
                 <p class="num mt-1 text-2xl font-semibold"
                    @if ($tone !== 'brand') style="color: var(--color-{{ $tone }})" @endif>
-                    {{ number_format((float) $value, 2) }}
+                    {{ \App\Core\Support\Money::format($value) }}
                 </p>
             </a>
         @endforeach
@@ -79,7 +79,7 @@
                 ] as $label => $value)
                     <div class="flex items-baseline justify-between gap-3">
                         <dt class="text-sm text-(--color-ink-muted)">{{ __($label) }}</dt>
-                        <dd class="num font-medium">{{ number_format((float) $value, 2) }}</dd>
+                        <dd class="num font-medium">{{ \App\Core\Support\Money::format($value) }}</dd>
                     </div>
                 @endforeach
 
@@ -89,7 +89,7 @@
                         'num font-semibold',
                         'text-(--color-danger)' => bccomp(bcsub($incomeThisMonth, $expenseThisMonth, 4), '0', 4) < 0,
                     ])>
-                        {{ number_format((float) bcsub($incomeThisMonth, $expenseThisMonth, 4), 2) }}
+                        {{ \App\Core\Support\Money::format(bcsub($incomeThisMonth, $expenseThisMonth, 4)) }}
                     </dd>
                 </div>
             </dl>

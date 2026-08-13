@@ -6,6 +6,7 @@ namespace App\Modules\Accounts\Dashboard;
 
 use App\Core\Contracts\DashboardWidgets;
 use App\Core\Dashboard\Widget;
+use App\Core\Support\Money;
 use App\Models\LedgerEntry;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CashTill;
@@ -31,7 +32,7 @@ final class AccountsWidgets implements DashboardWidgets
             new Widget(
                 group: 'today',
                 label: __('accounts::dashboard.cash_in_hand'),
-                value: number_format((float) self::cashInHand(), 2),
+                value: Money::format(self::cashInHand()),
                 href: route('accounts.till.index'),
                 permission: 'accounts.till.view',
                 tone: 'money',
@@ -41,7 +42,7 @@ final class AccountsWidgets implements DashboardWidgets
             new Widget(
                 group: 'today',
                 label: __('accounts::dashboard.bank_balance'),
-                value: number_format((float) self::bankBalance(), 2),
+                value: Money::format(self::bankBalance()),
                 href: route('accounts.dashboard'),
                 permission: 'accounts.view',
                 tone: 'money',
@@ -51,7 +52,7 @@ final class AccountsWidgets implements DashboardWidgets
             new Widget(
                 group: 'month',
                 label: __('core.accounting.receivable'),
-                value: number_format((float) self::balanceOf(StandardChart::RECEIVABLE), 2),
+                value: Money::format(self::balanceOf(StandardChart::RECEIVABLE)),
                 href: route('accounts.coa.index'),
                 permission: 'accounts.view',
                 tone: 'money',
@@ -61,7 +62,7 @@ final class AccountsWidgets implements DashboardWidgets
             new Widget(
                 group: 'month',
                 label: __('core.accounting.payable'),
-                value: number_format((float) self::balanceOf(StandardChart::PAYABLE), 2),
+                value: Money::format(self::balanceOf(StandardChart::PAYABLE)),
                 href: route('accounts.coa.index'),
                 permission: 'accounts.view',
                 tone: 'money',

@@ -3,7 +3,7 @@
     @foreach ($rows as $label => $value)
         <div class="flex justify-between gap-4 {{ $loop->last ? 'border-t border-(--color-border) pt-1 font-semibold' : '' }}">
             <dt class="text-(--color-ink-muted)">{{ __($label) }}</dt>
-            <dd class="num">{{ number_format((float) $value, 2) }}</dd>
+            <dd class="num">{{ \App\Core\Support\Money::format($value) }}</dd>
         </div>
     @endforeach
 </dl>

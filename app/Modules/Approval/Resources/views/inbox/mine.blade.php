@@ -32,7 +32,7 @@
                 ['key' => 'module', 'label' => __('approval::field.action'),
                  'render' => fn ($a) => view('approval::inbox.partials.what', ['approval' => $a, 'labels' => $labels])],
                 ['key' => 'amount', 'label' => __('approval::field.amount'), 'numeric' => true, 'width' => '9rem',
-                 'render' => fn ($a) => $a->amount === null ? '—' : number_format((float) $a->amount, 2)],
+                 'render' => fn ($a) => $a->amount === null ? '—' : \App\Core\Support\Money::format($a->amount)],
                 ['key' => 'status', 'label' => __('approval::field.status'), 'width' => '8rem',
                  'render' => fn ($a) => view('approval::inbox.partials.status', ['approval' => $a])],
                 ['key' => 'open', 'label' => '', 'width' => '7rem',

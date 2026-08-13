@@ -62,7 +62,7 @@
                         @foreach ($tills as $till)
                             <option value="{{ $till->id }}" @selected(old('from_till_id') == $till->id)>
                                 {{ $till->code }} — {{ $till->name() }}
-                                ({{ number_format((float) $till->balance(), 2) }})
+                                ({{ \App\Core\Support\Money::format($till->balance()) }})
                             </option>
                         @endforeach
                     </select>

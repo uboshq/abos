@@ -30,7 +30,7 @@
         </span>
     @elseif ($over)
         <span class="num block text-2xs text-(--color-ink-muted)">
-            {{ __('accounts::field.limit') }} {{ number_format((float) $till->limit_amount, 2) }}
+            {{ __('accounts::field.limit') }} {{ \App\Core\Support\Money::format($till->limit_amount) }}
         </span>
     @endif
 </span>

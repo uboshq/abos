@@ -58,7 +58,7 @@
                             <p class="mt-0.5 text-2xs text-(--color-ink-muted)">
                                 {{ $flow->threshold_amount === null
                                     ? __('approval::action.always')
-                                    : __('approval::field.threshold').': '.number_format((float) $flow->threshold_amount, 2) }}
+                                    : __('approval::field.threshold').': '.\App\Core\Support\Money::format($flow->threshold_amount) }}
                                 @unless ($flow->is_active)
                                     · {{ __('approval::status.cancelled') }}
                                 @endunless

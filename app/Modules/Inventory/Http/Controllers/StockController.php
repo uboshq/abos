@@ -7,6 +7,7 @@ namespace App\Modules\Inventory\Http\Controllers;
 use App\Core\Concerns\SortsLists;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\Money;
 use App\Http\Controllers\Controller;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
@@ -194,7 +195,7 @@ class StockController extends Controller implements HasMiddleware
         return back()->with('saved', $movement === null
             ? __('inventory::message.adjust_matched')
             : __('inventory::message.adjusted', [
-                'difference' => number_format((float) $movement->floor_change, 2),
+                'difference' => Money::format($movement->floor_change),
             ]));
     }
 

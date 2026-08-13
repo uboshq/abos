@@ -8,6 +8,7 @@ use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
+use App\Core\Support\Money;
 use App\Models\FinancialYear;
 use App\Models\IssuedNumber;
 use App\Modules\Inventory\Models\Product;
@@ -309,7 +310,7 @@ final class SalesOrderService
         throw ValidationException::withMessages([
             'customer_id' => __('sales::validation.over_credit_limit', [
                 'customer' => $customer->name(),
-                'limit' => number_format((float) $customer->credit_limit, 2),
+                'limit' => Money::format($customer->credit_limit),
             ]),
         ]);
     }

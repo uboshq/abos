@@ -8,6 +8,7 @@ use App\Core\Engines\Print\PaperSize;
 use App\Core\Engines\Print\PrintableDocument;
 use App\Core\Engines\Print\PrintEngine;
 use App\Core\Support\DateFormat;
+use App\Core\Support\Money;
 use App\Http\Controllers\Controller;
 use App\Modules\Inventory\Services\IssuedLots;
 use App\Modules\Sales\Models\Collection;
@@ -371,13 +372,13 @@ class SalesPrintController extends Controller implements HasMiddleware
 
     private function money(mixed $value): string
     {
-        return number_format((float) $value, 2);
+        return Money::format($value);
     }
 
     /** পরিমাণে পিছনের শূন্য বাদ — "১০.০০০০ বস্তা" কেউ লেখে না। */
     private function qty(mixed $value): string
     {
-        $formatted = rtrim(rtrim(number_format((float) $value, 4, '.', ','), '0'), '.');
+        $formatted = rtrim(rtrim(Money::format($value, 4), '0'), '.');
 
         return $formatted === '' ? '0' : $formatted;
     }

@@ -9,6 +9,7 @@ use App\Core\Engines\Print\PrintableDocument;
 use App\Core\Engines\Print\PrintEngine;
 use App\Core\Support\DateFormat;
 use App\Core\Support\DocumentStatus;
+use App\Core\Support\Money;
 use App\Http\Controllers\Controller;
 use App\Modules\Inventory\Models\StockTransfer;
 use Illuminate\Http\Request;
@@ -110,13 +111,16 @@ class StockPrintController extends Controller implements HasMiddleware
         ]);
     }
 
-    /** ভগ্নাংশ থাকলে দেখাও, না থাকলে নয় — "১০.০০ পিস" কেউ লেখে না। */
+    /**
+     * ভগ্নাংশ থাকলে দেখাও, না থাকলে নয় — "১০.০০ পিস" কেউ লেখে না।
+     *
+     * ভগ্নাংশ আছে কি না সেটাও স্ট্রিং ধরে দেখা, `fmod()` দিয়ে নয় —
+     * ওতে সংখ্যাটা float হত।
+     */
     private function qty(mixed $value): string
     {
-        $number = (float) $value;
+        $trimmed = rtrim(rtrim(Money::format($value, 4), '0'), '.');
 
-        return fmod($number, 1.0) === 0.0
-            ? number_format($number)
-            : rtrim(rtrim(number_format($number, 4), '0'), '.');
+        return $trimmed === '' ? '0' : $trimmed;
     }
 }

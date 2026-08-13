@@ -15,7 +15,7 @@
         {{-- শূন্য দেখানো হয় না: একটা কলামে অর্ধেক সারিতে "0.00" থাকলে
              চোখ প্রতিটাতে থামে, অথচ ওগুলোর কোনো মানে নেই --}}
         {{ $value !== null && bccomp((string) $value, '0', 4) !== 0
-            ? number_format((float) $value, 2) : '' }}
+            ? \App\Core\Support\Money::format($value) : '' }}
         @break
 
     @case (\App\Core\Engines\Report\ReportColumn::DATE)

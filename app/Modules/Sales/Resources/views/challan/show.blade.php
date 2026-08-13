@@ -79,16 +79,16 @@
                      'render' => fn ($l) => $l->product?->unit?->name()],
                     ['key' => 'delivered_qty', 'label' => __('sales::field.delivered'),
                      'numeric' => true, 'width' => '8rem',
-                     'render' => fn ($l) => number_format((float) $l->delivered_qty, 2)],
+                     'render' => fn ($l) => \App\Core\Support\Money::format($l->delivered_qty)],
                     ['key' => 'uninvoiced', 'label' => __('sales::field.uninvoiced'),
                      'numeric' => true, 'width' => '8rem',
-                     'render' => fn ($l) => number_format((float) $l->uninvoicedQty(), 2)],
+                     'render' => fn ($l) => \App\Core\Support\Money::format($l->uninvoicedQty())],
                     ['key' => 'rate', 'label' => __('sales::field.rate'),
                      'numeric' => true, 'width' => '8rem',
-                     'render' => fn ($l) => number_format((float) $l->rate, 2)],
+                     'render' => fn ($l) => \App\Core\Support\Money::format($l->rate)],
                     ['key' => 'amount', 'label' => __('sales::field.amount'),
                      'numeric' => true, 'width' => '9rem',
-                     'render' => fn ($l) => number_format((float) $l->amount, 2)],
+                     'render' => fn ($l) => \App\Core\Support\Money::format($l->amount)],
                 ]" />
 
             <div class="flex border-t border-(--color-border) p-4">

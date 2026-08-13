@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Http\Requests;
 
+use App\Core\Support\Money;
 use App\Modules\Accounts\Models\Voucher;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -113,8 +114,8 @@ class VoucherRequest extends FormRequest
 
                 if (bccomp($debit, $credit, 4) !== 0) {
                     $validator->errors()->add('lines', __('accounts::validation.not_balanced', [
-                        'debit' => number_format((float) $debit, 2),
-                        'credit' => number_format((float) $credit, 2),
+                        'debit' => Money::format($debit),
+                        'credit' => Money::format($credit),
                     ]));
                 }
             },

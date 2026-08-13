@@ -42,7 +42,7 @@
             'label' => __('inventory::field.sale_price'),
             'numeric' => true,
             'width' => '9rem',
-            'render' => fn ($p) => number_format((float) $p->sale_price, 2),
+            'render' => fn ($p) => \App\Core\Support\Money::format($p->sale_price),
         ],
         [
             'key' => 'is_active',

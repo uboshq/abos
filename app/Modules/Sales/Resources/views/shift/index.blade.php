@@ -84,7 +84,7 @@
                 <div class="rounded-(--radius-card) border border-(--color-border)
                             bg-(--color-surface-card) p-4">
                     <div class="text-sm text-(--color-ink-muted)">{{ __('sales::message.'.$label) }}</div>
-                    <div class="num mt-1 text-xl font-semibold">{{ number_format((float) $value, 2) }}</div>
+                    <div class="num mt-1 text-xl font-semibold">{{ \App\Core\Support\Money::format($value) }}</div>
                 </div>
             @endforeach
         </div>
@@ -151,7 +151,7 @@
                                 {{ $row->opened_at?->format('H:i') }}–{{ $row->closed_at?->format('H:i') }}
                             </td>
                             <td class="num p-2 text-end" data-label="{{ __('sales::message.shift_counted') }}">
-                                {{ number_format((float) $row->closing_counted, 2) }}
+                                {{ \App\Core\Support\Money::format($row->closing_counted) }}
                             </td>
                             <td class="p-2 text-end">
                                 <a href="{{ route('sales.shift.show', ['shift' => $row->id]) }}"

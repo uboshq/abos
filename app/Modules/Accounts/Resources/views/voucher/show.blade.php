@@ -93,7 +93,7 @@
     <div class="grid gap-4 lg:grid-cols-3">
         <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="text-sm font-medium text-(--color-ink-muted)">{{ __('accounts::field.amount') }}</h2>
-            <p class="num mt-1 text-2xl font-semibold">{{ number_format((float) $voucher->amount, 2) }}</p>
+            <p class="num mt-1 text-2xl font-semibold">{{ \App\Core\Support\Money::format($voucher->amount) }}</p>
 
             <div class="mt-3">
                 @include('accounts::voucher.partials.status', ['voucher' => $voucher])
@@ -178,11 +178,11 @@
                             </td>
                             <td class="num px-3 py-2">
                                 {{ bccomp((string) $line->debit, '0', 4) > 0
-                                    ? number_format((float) $line->debit, 2) : '' }}
+                                    ? \App\Core\Support\Money::format($line->debit) : '' }}
                             </td>
                             <td class="num px-3 py-2">
                                 {{ bccomp((string) $line->credit, '0', 4) > 0
-                                    ? number_format((float) $line->credit, 2) : '' }}
+                                    ? \App\Core\Support\Money::format($line->credit) : '' }}
                             </td>
                         </tr>
                     @endforeach
@@ -193,8 +193,8 @@
                         <td class="px-3 py-2 text-end lg:hidden">{{ __('core.print.total') }}</td>
                         <td class="hidden px-3 py-2 lg:table-cell"></td>
                         <td class="hidden px-3 py-2 text-end lg:table-cell">{{ __('core.print.total') }}</td>
-                        <td class="num px-3 py-2">{{ number_format((float) $totals['debit'], 2) }}</td>
-                        <td class="num px-3 py-2">{{ number_format((float) $totals['credit'], 2) }}</td>
+                        <td class="num px-3 py-2">{{ \App\Core\Support\Money::format($totals['debit']) }}</td>
+                        <td class="num px-3 py-2">{{ \App\Core\Support\Money::format($totals['credit']) }}</td>
                     </tr>
                 </tfoot>
             </table>

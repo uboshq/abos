@@ -8,6 +8,7 @@ use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
+use App\Core\Support\Money;
 use App\Models\FinancialYear;
 use App\Models\IssuedNumber;
 use App\Modules\Accounts\Models\Account;
@@ -211,7 +212,7 @@ final class CollectionService
                 throw ValidationException::withMessages([
                     'lines' => __('sales::validation.over_allocated', [
                         'no' => $invoice->document_no,
-                        'due' => number_format((float) $due, 2),
+                        'due' => Money::format($due),
                     ]),
                 ]);
             }
@@ -270,7 +271,7 @@ final class CollectionService
                 throw ValidationException::withMessages([
                     'lines' => __('sales::validation.over_allocated', [
                         'no' => $invoice->document_no,
-                        'due' => number_format((float) $due, 2),
+                        'due' => Money::format($due),
                     ]),
                 ]);
             }
@@ -288,8 +289,8 @@ final class CollectionService
         if (bccomp($allocated, (string) $collection->amount, 4) > 0) {
             throw ValidationException::withMessages([
                 'lines' => __('sales::validation.allocation_over_amount', [
-                    'allocated' => number_format((float) $allocated, 2),
-                    'amount' => number_format((float) $collection->amount, 2),
+                    'allocated' => Money::format($allocated),
+                    'amount' => Money::format($collection->amount),
                 ]),
             ]);
         }

@@ -16,7 +16,7 @@
         ['key' => 'reason', 'label' => __('sales::field.reason'), 'width' => '10rem',
          'render' => fn ($r) => $r->reasonCode?->name() ?: '—'],
         ['key' => 'total', 'label' => __('sales::field.total'), 'numeric' => true, 'width' => '10rem',
-         'render' => fn ($r) => number_format((float) $r->total, 2)],
+         'render' => fn ($r) => \App\Core\Support\Money::format($r->total)],
         ['key' => 'status', 'label' => __('sales::field.state'), 'width' => '8rem',
          'render' => fn ($r) => view('sales::components.status-badge', ['document' => $r])],
     ];

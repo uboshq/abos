@@ -151,7 +151,7 @@
                                     @if ($index === 0)
                                         {{ __('core.print.total') }}
                                     @elseif ($column->total && isset($result->totals[$column->key]))
-                                        {{ number_format((float) $result->totals[$column->key], 2) }}
+                                        {{ \App\Core\Support\Money::format($result->totals[$column->key]) }}
                                     @endif
                                 </td>
                             @endforeach

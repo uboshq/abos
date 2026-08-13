@@ -114,7 +114,7 @@
                                             <option value="">-</option>
                                             @foreach ($openInvoices as $open)
                                                 <option value="{{ $open->id }}">
-                                                    {{ $open->document_no }} — {{ number_format((float) $open->dueAmount(), 2) }}
+                                                    {{ $open->document_no }} — {{ \App\Core\Support\Money::format($open->dueAmount()) }}
                                                 </option>
                                             @endforeach
                                         </select>

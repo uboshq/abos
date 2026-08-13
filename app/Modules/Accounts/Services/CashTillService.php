@@ -7,6 +7,7 @@ namespace App\Modules\Accounts\Services;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
+use App\Core\Support\Money;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CashTill;
 use Illuminate\Support\Facades\DB;
@@ -164,7 +165,7 @@ final class CashTillService
         if (bccomp($till->balance(), '0', 4) !== 0) {
             throw ValidationException::withMessages([
                 'is_active' => __('accounts::validation.till_has_money', [
-                    'amount' => number_format((float) $till->balance(), 2),
+                    'amount' => Money::format($till->balance()),
                 ]),
             ]);
         }

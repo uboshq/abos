@@ -96,7 +96,7 @@
         <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
             <div class="flex items-baseline justify-between border-b border-(--color-border) px-4 py-3">
                 <h2 class="font-semibold">{{ __('inventory::message.opening_total') }}</h2>
-                <span class="num font-semibold">{{ number_format((float) $total, 2) }}</span>
+                <span class="num font-semibold">{{ \App\Core\Support\Money::format($total) }}</span>
             </div>
 
             <x-ui.table
@@ -113,13 +113,13 @@
                      'render' => fn ($r) => app()->getLocale() === 'bn' && $r->warehouse_bn
                          ? $r->warehouse_bn : $r->warehouse_en],
                     ['key' => 'qty', 'label' => __('inventory::field.quantity'), 'numeric' => true, 'width' => '7rem',
-                     'render' => fn ($r) => number_format((float) $r->qty, 2)],
+                     'render' => fn ($r) => \App\Core\Support\Money::format($r->qty)],
                     ['key' => 'unit_cost', 'label' => __('inventory::field.opening_rate'),
                      'numeric' => true, 'width' => '8rem',
-                     'render' => fn ($r) => number_format((float) $r->unit_cost, 2)],
+                     'render' => fn ($r) => \App\Core\Support\Money::format($r->unit_cost)],
                     ['key' => 'value', 'label' => __('inventory::field.opening_value'),
                      'numeric' => true, 'width' => '9rem',
-                     'render' => fn ($r) => number_format((float) $r->value, 2)],
+                     'render' => fn ($r) => \App\Core\Support\Money::format($r->value)],
                 ]" />
         </section>
     </div>

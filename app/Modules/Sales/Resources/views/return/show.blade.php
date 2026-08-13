@@ -65,11 +65,11 @@
                     ['key' => 'qty', 'label' => __('sales::field.quantity'), 'numeric' => true, 'width' => '8rem',
                      'render' => fn ($l) => rtrim(rtrim((string) $l->qty, '0'), '.').' '.($l->product?->unit?->code ?? '')],
                     ['key' => 'rate', 'label' => __('sales::field.rate'), 'numeric' => true, 'width' => '8rem',
-                     'render' => fn ($l) => number_format((float) $l->rate, 2)],
+                     'render' => fn ($l) => \App\Core\Support\Money::format($l->rate)],
                     ['key' => 'to_hold', 'label' => __('sales::field.not_sellable'), 'width' => '9rem',
                      'render' => fn ($l) => $l->to_hold ? __('core.yes') : __('core.no')],
                     ['key' => 'amount', 'label' => __('sales::field.amount'), 'numeric' => true, 'width' => '10rem',
-                     'render' => fn ($l) => number_format((float) $l->amount, 2)],
+                     'render' => fn ($l) => \App\Core\Support\Money::format($l->amount)],
                 ]" />
 
             <div class="flex border-t border-(--color-border) p-4">
