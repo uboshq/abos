@@ -194,30 +194,47 @@ final class StockTransferService
 
         return DB::transaction(function () use ($transfer) {
             foreach ($transfer->lines as $line) {
-                // উৎস ছাড়ল — তাক থেকেও, আটকানো থেকেও
-                $this->stock->move(
+                /*
+                 * উৎস ছাড়ল — তাক থেকেও, আটকানো থেকেও।
+                 *
+                 * issue() ব্যবহার করা হয় move() নয়, কারণ লট ধরা পণ্যে
+                 * কোন লটটা যাচ্ছে সেটা এখানেও ঠিক করতে হয়। move() দিয়ে
+                 * করলে লট ছাড়া মাল বেরোত: উৎসে লটের যোগফল আর মোট মজুদ
+                 * আলাদা হয়ে যেত, আর গন্তব্যের মালটা "লট ধরা শুরুর আগের"
+                 * বলে চিরকাল অবিক্রেয় থাকত।
+                 */
+                $left = $this->stock->issue(
                     product: $line->product,
                     warehouse: $transfer->fromWarehouse,
                     sourceType: StockTransfer::STOCK_SOURCE,
                     sourceId: $transfer->id,
-                    floor: bcmul((string) $line->qty, '-1', 4),
+                    qty: (string) $line->qty,
                     hold: bcmul((string) $line->qty, '-1', 4),
                     date: now(),
                     documentNo: $transfer->document_no,
                     narration: __('inventory::message.transfer_left', ['no' => $transfer->document_no]),
                 );
 
-                // গন্তব্যে ঢুকল
-                $this->stock->move(
-                    product: $line->product,
-                    warehouse: $transfer->toWarehouse,
-                    sourceType: StockTransfer::STOCK_SOURCE,
-                    sourceId: $transfer->id,
-                    floor: (string) $line->qty,
-                    date: now(),
-                    documentNo: $transfer->document_no,
-                    narration: __('inventory::message.transfer_arrived', ['no' => $transfer->document_no]),
-                );
+                /*
+                 * গন্তব্যে ঢুকল — উৎসে যে লট থেকে যতটা গেছে, ঠিক ততটাই।
+                 *
+                 * একটা লাইন একাধিক লট থেকে পূরণ হতে পারে, তাই গন্তব্যেও
+                 * তত সারি। ট্রাকে যা উঠেছে আর যা নেমেছে এক জিনিস — লট
+                 * ধরে ধরে।
+                 */
+                foreach ($left as $movement) {
+                    $this->stock->move(
+                        product: $line->product,
+                        warehouse: $transfer->toWarehouse,
+                        sourceType: StockTransfer::STOCK_SOURCE,
+                        sourceId: $transfer->id,
+                        floor: bcmul((string) $movement->floor_change, '-1', 4),
+                        date: now(),
+                        documentNo: $transfer->document_no,
+                        narration: __('inventory::message.transfer_arrived', ['no' => $transfer->document_no]),
+                        batch: $movement->batch,
+                    );
+                }
             }
 
             $transfer->update([
