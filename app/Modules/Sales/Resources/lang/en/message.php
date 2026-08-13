@@ -125,4 +125,6 @@ return [
     'shift_matched' => 'It matches.',
     'shift_bills' => 'Bills this shift',
     'shift_today' => 'Closed today',
+    'pos_keys' => 'F2 payment · F4 hold · F8 search · Esc clear · Enter in payment completes the sale',
+    'pos_not_found' => 'No product for this code:',
 ];
