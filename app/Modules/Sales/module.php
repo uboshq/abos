@@ -53,6 +53,14 @@ return [
         'transactions' => [
             ['label' => 'sales::menu.pos', 'route' => 'sales.pos.index', 'permission' => 'sales.pos',
                 'setting' => 'sales.screen_pos'],
+
+            /*
+             * শিফট — কাউন্টারের ঠিক নিচে, একই সুইচের পেছনে।
+             *
+             * যে ব্যবসায় কাউন্টারের পর্দাই নেই, তার ড্রয়ারের শিফটও নেই।
+             */
+            ['label' => 'sales::menu.shift', 'route' => 'sales.shift.index', 'permission' => 'sales.pos',
+                'setting' => 'sales.screen_pos'],
             ['label' => 'sales::menu.direct', 'route' => 'sales.direct.create', 'permission' => 'sales.challan.create',
                 'setting' => 'sales.screen_direct'],
             ['label' => 'sales::menu.orders', 'route' => 'sales.order.index', 'permission' => 'sales.order.view',

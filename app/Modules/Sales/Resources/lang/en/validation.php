@@ -5,6 +5,12 @@ declare(strict_types=1);
 return [
     'no_lines' => 'At least one line is needed — a document with no lines does nothing.',
 
+    // Counter shifts
+    'till_already_open' => 'A shift is already open on :till. Two people answerable for one drawer means nobody is — close the other one first.',
+    'you_already_have_a_shift' => 'You already have a shift open. With two open there would be no saying which drawer a shortfall came from.',
+    'shift_already_closed' => 'That shift is already closed.',
+    'shift_required' => 'Open a shift first — which drawer the money goes into, and who answers for it, both need to be known.',
+
     // Bills held at the counter
     'not_parked' => 'That bill is not waiting at the counter, so there is nothing to bring back.',
     'already_done' => 'Bill :no has already been completed — it cannot be picked up again.',
