@@ -143,6 +143,7 @@ final class StockService
         Carbon|string|null $date = null,
         ?string $documentNo = null,
         ?string $narration = null,
+        string $hold = '0',
     ): array {
         $out = bcmul($qty, '-1', 4);
 
@@ -154,6 +155,7 @@ final class StockService
                 sourceId: $sourceId,
                 floor: $out,
                 reserved: $reserved,
+                hold: $hold,
                 date: $date,
                 documentNo: $documentNo,
                 narration: $narration,
@@ -184,6 +186,7 @@ final class StockService
                 sourceId: $sourceId,
                 floor: bcmul($slice['qty'], '-1', 4),
                 reserved: $index === 0 ? $reserved : '0',
+                hold: $index === 0 ? $hold : '0',
                 date: $date,
                 documentNo: $documentNo,
                 narration: $narration,

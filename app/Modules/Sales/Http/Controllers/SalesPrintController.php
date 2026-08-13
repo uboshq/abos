@@ -9,6 +9,7 @@ use App\Core\Engines\Print\PrintableDocument;
 use App\Core\Engines\Print\PrintEngine;
 use App\Core\Support\DateFormat;
 use App\Http\Controllers\Controller;
+use App\Modules\Inventory\Services\IssuedLots;
 use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesInvoice;
@@ -38,7 +39,12 @@ use Illuminate\Routing\Controllers\Middleware;
  */
 class SalesPrintController extends Controller implements HasMiddleware
 {
-    public function __construct(private readonly PrintEngine $print) {}
+    public function __construct(
+        private readonly PrintEngine $print,
+
+        // কোন লাইনে কোন লট গেছে — চলাচলের সারি থেকে, এক কোয়েরিতে
+        private readonly IssuedLots $lots,
+    ) {}
 
     public static function middleware(): array
     {
@@ -57,7 +63,7 @@ class SalesPrintController extends Controller implements HasMiddleware
         $doc = new PrintableDocument(
             title: __('sales::doc.invoice'),
             meta: $this->invoiceMeta($invoice),
-            lines: $this->productLines($invoice->lines, 'qty'),
+            lines: $this->productLines($invoice->lines, 'qty', $this->lotsForInvoice($invoice)),
             totals: $this->totals($invoice),
             signatures: ['core.print.prepared_by', 'core.print.received_by'],
             narration: $invoice->narration,
@@ -79,7 +85,7 @@ class SalesPrintController extends Controller implements HasMiddleware
         $doc = new PrintableDocument(
             title: __('sales::doc.invoice'),
             meta: $this->invoiceMeta($invoice),
-            lines: $this->productLines($invoice->lines, 'qty'),
+            lines: $this->productLines($invoice->lines, 'qty', $this->lotsForInvoice($invoice)),
             totals: $this->totals($invoice),
             signatures: [],
             narration: $invoice->narration,
@@ -96,7 +102,11 @@ class SalesPrintController extends Controller implements HasMiddleware
         $doc = new PrintableDocument(
             title: __('sales::doc.challan'),
             meta: $this->challanMeta($challan),
-            lines: $this->productLines($challan->lines, 'delivered_qty'),
+            lines: $this->productLines(
+                $challan->lines,
+                'delivered_qty',
+                $this->lots->forDocument(DeliveryChallan::STOCK_SOURCE, $challan->id),
+            ),
             totals: ['core.print.total' => $this->money($challan->total)],
             signatures: ['core.print.delivered_by', 'core.print.driver', 'core.print.received_by'],
             narration: $challan->narration,
@@ -118,7 +128,11 @@ class SalesPrintController extends Controller implements HasMiddleware
         $doc = new PrintableDocument(
             title: __('sales::doc.gatepass'),
             meta: $this->challanMeta($challan),
-            lines: $this->productLines($challan->lines, 'delivered_qty'),
+            lines: $this->productLines(
+                $challan->lines,
+                'delivered_qty',
+                $this->lots->forDocument(DeliveryChallan::STOCK_SOURCE, $challan->id),
+            ),
             signatures: ['core.print.storekeeper', 'core.print.driver', 'core.print.gate_officer'],
             showMoney: false,
             notice: __('core.print.no_price_notice'),
@@ -248,10 +262,47 @@ class SalesPrintController extends Controller implements HasMiddleware
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<int, object>  $lines
-     * @return list<array{name: string, qty: string, unit: string, rate: string, amount: string}>
+     * বিলের লটগুলো — চালান থেকে, বিল থেকে নয়।
+     *
+     * ── কেন এই ঘুরপথ ────────────────────────────────────────────────
+     * মাল বেরোয় চালানে, বিলে নয়। তাই লটের সিদ্ধান্তটাও ওখানেই লেখা।
+     * বিলের লাইন তার চালানের লাইনকে চেনে, আর ওই সুতো ধরেই লটে পৌঁছানো
+     * যায়।
+     *
+     * একটা বিলে একাধিক চালান থাকতে পারে (কয়েক দিনের মাল একসাথে বিল),
+     * তাই সবগুলো মিলিয়ে নেওয়া হয়।
+     *
+     * চালান ছাড়া বিল হলে (Control Panel-এ ছাড় দেওয়া থাকলে) কোনো লট
+     * নেই — মালটা কখন কোন লট থেকে গেল সেই প্রশ্নেরই উত্তর নেই।
+     *
+     * @return array<int, string>
      */
-    private function productLines($lines, string $qtyField): array
+    private function lotsForInvoice(SalesInvoice $invoice): array
+    {
+        $challanIds = $invoice->lines
+            ->map(fn ($line) => $line->challanLine?->delivery_challan_id)
+            ->filter()
+            ->unique();
+
+        $lots = [];
+
+        foreach ($challanIds as $challanId) {
+            foreach ($this->lots->forDocument(DeliveryChallan::STOCK_SOURCE, (int) $challanId) as $productId => $label) {
+                $lots[$productId] = isset($lots[$productId])
+                    ? $lots[$productId].', '.$label
+                    : $label;
+            }
+        }
+
+        return $lots;
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, object>  $lines
+     * @param  array<int, string>  $lots  পণ্যের আইডি → ব্যাচের লেখা
+     * @return list<array{name: string, qty: string, unit: string, rate: string, amount: string, note: string}>
+     */
+    private function productLines($lines, string $qtyField, array $lots = []): array
     {
         /*
          * যে প্যাকে লেখা হয়েছিল সেটাই কাগজে — "২ বাক্স", "২০০ পিস" নয়।
@@ -265,6 +316,15 @@ class SalesPrintController extends Controller implements HasMiddleware
             'unit' => $line->packedUnitName(),
             'rate' => $this->money($line->packedRate('rate', $qtyField)),
             'amount' => $this->money($line->amount),
+
+            /*
+             * ব্যাচ ও মেয়াদ — নামের নিচে, ছোট করে।
+             *
+             * ওষুধে এটা সাজসজ্জা নয়: রিকল হলে ক্রেতার হাতের কাগজই বলে
+             * দেয় তার পাতাটা ওই লটের কি না। লট ধরা না থাকলে ঘরটা খালি,
+             * আর কাগজ অবিকল আগের মতো।
+             */
+            'note' => $lots[$line->product_id] ?? '',
         ])->values()->all();
     }
 
