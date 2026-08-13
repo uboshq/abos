@@ -74,7 +74,7 @@
                          : '-'],
                     ['key' => 'amount', 'label' => __('purchase::field.amount'),
                      'numeric' => true, 'width' => '10rem',
-                     'render' => fn ($l) => number_format((float) $l->amount, 2)],
+                     'render' => fn ($l) => \App\Core\Support\Money::format($l->amount)],
                 ]" />
 
             <div class="flex border-t border-(--color-border) p-4">

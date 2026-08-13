@@ -46,7 +46,7 @@
     <x-slot:header>
         <x-ui.page-header
             :title="__('accounts::menu.cash_tills')"
-            :subtitle="__('accounts::message.till_total', ['amount' => number_format((float) $total, 2)])">
+            :subtitle="__('accounts::message.till_total', ['amount' => \App\Core\Support\Money::format($total)])">
             <x-slot:actions>
                 @can('create', \App\Modules\Accounts\Models\CashTill::class)
                     <x-ui.button tone="primary" icon="+" :href="route('accounts.till.create')">

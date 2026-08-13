@@ -7,6 +7,7 @@ namespace App\Modules\Hr\Http\Controllers;
 use App\Core\Engines\Print\PaperSize;
 use App\Core\Engines\Print\PrintableDocument;
 use App\Core\Engines\Print\PrintEngine;
+use App\Core\Support\Money;
 use App\Http\Controllers\Controller;
 use App\Modules\Hr\Models\PayrollRun;
 use App\Modules\Hr\Models\Payslip;
@@ -76,7 +77,7 @@ class PayslipPrintController extends Controller implements HasMiddleware
                 'qty' => '',
                 'unit' => '',
                 'rate' => '',
-                'amount' => number_format((float) $line->amount, 2),
+                'amount' => Money::format($line->amount),
             ];
         }
 
@@ -92,9 +93,9 @@ class PayslipPrintController extends Controller implements HasMiddleware
                 __('hr::field.bank_account_no') => (string) $slip->bank_account_no,
             ], fn (string $value) => $value !== ''),
             totals: [
-                __('hr::field.gross') => number_format((float) $slip->gross, 2),
-                __('hr::field.deductions') => number_format((float) $slip->deductions, 2),
-                __('hr::field.net') => number_format((float) $slip->net, 2),
+                __('hr::field.gross') => Money::format($slip->gross),
+                __('hr::field.deductions') => Money::format($slip->deductions),
+                __('hr::field.net') => Money::format($slip->net),
             ],
 
             /*

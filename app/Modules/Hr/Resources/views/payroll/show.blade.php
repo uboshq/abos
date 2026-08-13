@@ -53,9 +53,9 @@
         <div class="grid gap-3 sm:grid-cols-4">
             @foreach ([
                 'hr::field.employee_count' => $run->employee_count,
-                'hr::field.gross' => number_format((float) $run->gross_total, 2),
-                'hr::field.deductions' => number_format((float) $run->deduction_total, 2),
-                'hr::field.net' => number_format((float) $run->net_total, 2),
+                'hr::field.gross' => \App\Core\Support\Money::format($run->gross_total),
+                'hr::field.deductions' => \App\Core\Support\Money::format($run->deduction_total),
+                'hr::field.net' => \App\Core\Support\Money::format($run->net_total),
             ] as $label => $value)
                 <div class="rounded-(--radius-card) border border-(--color-border)
                             bg-(--color-surface-card) p-3">
@@ -122,11 +122,11 @@
                 ['key' => 'method', 'label' => __('hr::field.payment_method'), 'width' => '9rem',
                  'render' => fn ($s) => __('hr::kind.' . $s->payment_method)],
                 ['key' => 'gross', 'label' => __('hr::field.gross'), 'numeric' => true, 'width' => '9rem',
-                 'render' => fn ($s) => number_format((float) $s->gross, 2)],
+                 'render' => fn ($s) => \App\Core\Support\Money::format($s->gross)],
                 ['key' => 'deductions', 'label' => __('hr::field.deductions'), 'numeric' => true,
-                 'width' => '9rem', 'render' => fn ($s) => number_format((float) $s->deductions, 2)],
+                 'width' => '9rem', 'render' => fn ($s) => \App\Core\Support\Money::format($s->deductions)],
                 ['key' => 'net', 'label' => __('hr::field.net'), 'numeric' => true, 'width' => '9rem',
-                 'render' => fn ($s) => number_format((float) $s->net, 2)],
+                 'render' => fn ($s) => \App\Core\Support\Money::format($s->net)],
                 ['key' => 'print', 'label' => '—', 'width' => '6rem',
                  'render' => fn ($s) => view('hr::payroll.partials.slip_print', ['slip' => $s])],
             ]" />

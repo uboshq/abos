@@ -9,6 +9,7 @@ use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
+use App\Core\Support\Money;
 use App\Models\FinancialYear;
 use App\Models\IssuedNumber;
 use App\Modules\Accounts\Models\Account;
@@ -646,7 +647,7 @@ final class PurchaseBillService
         throw ValidationException::withMessages([
             'lines' => __('purchase::validation.price_mismatch', [
                 'no' => $bill->document_no,
-                'difference' => number_format((float) $difference, 2),
+                'difference' => Money::format($difference),
             ]),
         ]);
     }

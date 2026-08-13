@@ -96,7 +96,7 @@
                                         <input type="number" step="0.0001" min="0"
                                                name="amounts[{{ $head->id }}]"
                                                value="{{ old('amounts.' . $head->id) }}"
-                                               placeholder="{{ $current ? number_format((float) $current['amount'], 2) : '—' }}"
+                                               placeholder="{{ $current ? \App\Core\Support\Money::format($current['amount']) : '—' }}"
                                                class="num w-32 rounded-(--radius-field) border border-(--color-border)
                                                       bg-(--color-surface) px-2 py-1.5 text-end text-sm">
                                     </td>
@@ -125,22 +125,22 @@
                         @foreach ($components as $component)
                             <div class="flex items-center justify-between gap-2">
                                 <dt class="text-(--color-ink-muted)">{{ $component['head']->name() }}</dt>
-                                <dd class="num">{{ number_format((float) $component['amount'], 2) }}</dd>
+                                <dd class="num">{{ \App\Core\Support\Money::format($component['amount']) }}</dd>
                             </div>
                         @endforeach
 
                         <div class="mt-2 flex items-center justify-between gap-2 border-t
                                     border-(--color-border) pt-2">
                             <dt class="text-(--color-ink-muted)">{{ __('hr::field.gross') }}</dt>
-                            <dd class="num">{{ number_format((float) $totals['gross'], 2) }}</dd>
+                            <dd class="num">{{ \App\Core\Support\Money::format($totals['gross']) }}</dd>
                         </div>
                         <div class="flex items-center justify-between gap-2">
                             <dt class="text-(--color-ink-muted)">{{ __('hr::field.deductions') }}</dt>
-                            <dd class="num">{{ number_format((float) $totals['deductions'], 2) }}</dd>
+                            <dd class="num">{{ \App\Core\Support\Money::format($totals['deductions']) }}</dd>
                         </div>
                         <div class="flex items-center justify-between gap-2 font-semibold">
                             <dt>{{ __('hr::field.net') }}</dt>
-                            <dd class="num">{{ number_format((float) $totals['net'], 2) }}</dd>
+                            <dd class="num">{{ \App\Core\Support\Money::format($totals['net']) }}</dd>
                         </div>
                     </dl>
                 @endif
@@ -163,7 +163,7 @@
                     ['key' => 'head', 'label' => __('hr::field.name'),
                      'render' => fn ($r) => $r->salaryHead?->name() ?? '—'],
                     ['key' => 'amount', 'label' => __('hr::field.amount'), 'numeric' => true, 'width' => '10rem',
-                     'render' => fn ($r) => number_format((float) $r->amount, 2)],
+                     'render' => fn ($r) => \App\Core\Support\Money::format($r->amount)],
                     ['key' => 'creator', 'label' => __('hr::field.entered_by'), 'width' => '12rem',
                      'render' => fn ($r) => $r->creator?->name ?? '—'],
                 ]" />

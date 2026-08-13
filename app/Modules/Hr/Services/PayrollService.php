@@ -9,6 +9,7 @@ use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
+use App\Core\Support\Money;
 use App\Models\FinancialYear;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
@@ -249,7 +250,8 @@ final class PayrollService
             $rows[] = [
                 (string) $slip->bank_account_no,
                 (string) ($slip->bank_account_name ?: $slip->employee?->name_en),
-                number_format((float) $slip->net, 2, '.', ''),
+                // ব্যাংকের ফাইলে যাওয়া অঙ্ক — গোল করা bcmath-এ, কমা ছাড়া
+                Money::round($slip->net, 2),
                 (string) $slip->bank_routing_no,
                 (string) $slip->bank_name,
                 (string) $slip->employee?->code,

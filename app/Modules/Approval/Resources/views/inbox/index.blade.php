@@ -35,7 +35,7 @@
                 ['key' => 'requested_by', 'label' => __('approval::field.requested_by'), 'width' => '11rem',
                  'render' => fn ($a) => $a->requester?->name],
                 ['key' => 'amount', 'label' => __('approval::field.amount'), 'numeric' => true, 'width' => '9rem',
-                 'render' => fn ($a) => $a->amount === null ? '—' : number_format((float) $a->amount, 2)],
+                 'render' => fn ($a) => $a->amount === null ? '—' : \App\Core\Support\Money::format($a->amount)],
                 ['key' => 'open', 'label' => '', 'width' => '7rem',
                  'render' => fn ($a) => view('approval::inbox.partials.open', ['approval' => $a])],
             ]" />

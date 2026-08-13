@@ -47,8 +47,8 @@
                 @foreach ([
                     'sales::field.date' => \App\Core\Support\DateFormat::format($invoice->trx_date),
                     'sales::field.due_on' => \App\Core\Support\DateFormat::format($invoice->due_on) ?: '-',
-                    'sales::field.collected' => number_format((float) $invoice->collectedAmount(), 2),
-                    'sales::field.due' => number_format((float) $invoice->dueAmount(), 2),
+                    'sales::field.collected' => \App\Core\Support\Money::format($invoice->collectedAmount()),
+                    'sales::field.due' => \App\Core\Support\Money::format($invoice->dueAmount()),
                 ] as $label => $value)
                     <div>
                         <dt class="text-(--color-ink-muted)">{{ __($label) }}</dt>
@@ -80,19 +80,19 @@
                      'render' => fn ($l) => $l->product?->unit?->name()],
                     ['key' => 'qty', 'label' => __('sales::field.quantity'),
                      'numeric' => true, 'width' => '8rem',
-                     'render' => fn ($l) => number_format((float) $l->qty, 2)],
+                     'render' => fn ($l) => \App\Core\Support\Money::format($l->qty)],
                     ['key' => 'rate', 'label' => __('sales::field.rate'),
                      'numeric' => true, 'width' => '8rem',
-                     'render' => fn ($l) => number_format((float) $l->rate, 2)],
+                     'render' => fn ($l) => \App\Core\Support\Money::format($l->rate)],
                     ['key' => 'discount', 'label' => __('sales::field.discount'),
                      'numeric' => true, 'width' => '8rem',
-                     'render' => fn ($l) => number_format((float) $l->discount, 2)],
+                     'render' => fn ($l) => \App\Core\Support\Money::format($l->discount)],
                     ['key' => 'tax', 'label' => __('sales::field.tax'),
                      'numeric' => true, 'width' => '8rem',
-                     'render' => fn ($l) => number_format((float) $l->tax, 2)],
+                     'render' => fn ($l) => \App\Core\Support\Money::format($l->tax)],
                     ['key' => 'amount', 'label' => __('sales::field.amount'),
                      'numeric' => true, 'width' => '9rem',
-                     'render' => fn ($l) => number_format((float) $l->amount, 2)],
+                     'render' => fn ($l) => \App\Core\Support\Money::format($l->amount)],
                 ]" />
 
             <div class="flex border-t border-(--color-border) p-4">

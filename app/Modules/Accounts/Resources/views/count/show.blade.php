@@ -51,12 +51,12 @@
     <div class="grid gap-4 sm:grid-cols-3">
         <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="text-sm font-medium text-(--color-ink-muted)">{{ __('accounts::field.counted') }}</h2>
-            <p class="num mt-1 text-2xl font-semibold">{{ number_format((float) $count->counted_amount, 2) }}</p>
+            <p class="num mt-1 text-2xl font-semibold">{{ \App\Core\Support\Money::format($count->counted_amount) }}</p>
         </section>
 
         <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="text-sm font-medium text-(--color-ink-muted)">{{ __('accounts::field.expected') }}</h2>
-            <p class="num mt-1 text-2xl font-semibold">{{ number_format((float) $count->expected_amount, 2) }}</p>
+            <p class="num mt-1 text-2xl font-semibold">{{ \App\Core\Support\Money::format($count->expected_amount) }}</p>
         </section>
 
         <section @class([
@@ -72,7 +72,7 @@
                 </p>
             @else
                 <p class="num mt-1 text-2xl font-semibold text-(--color-badge-danger-ink)">
-                    {{ $count->isSurplus() ? '+' : '' }}{{ number_format((float) $count->difference, 2) }}
+                    {{ $count->isSurplus() ? '+' : '' }}{{ \App\Core\Support\Money::format($count->difference) }}
                 </p>
                 <p class="mt-1 text-2xs text-(--color-badge-danger-ink)">
                     {{ $count->isSurplus()
@@ -114,7 +114,8 @@
                             <tr class="border-b border-(--color-border)">
                                 <td class="num px-3 py-2 font-medium">{{ number_format($note) }}</td>
                                 <td class="num px-3 py-2">{{ number_format($qty) }}</td>
-                                <td class="num px-3 py-2">{{ number_format($note * $qty, 2) }}</td>
+                                {{-- সারির অঙ্কটা নিচের মোটে যায়, তাই গুণটাও bcmath-এ --}}
+                                <td class="num px-3 py-2">{{ \App\Core\Support\Money::format(bcmul((string) $note, (string) $qty, 4)) }}</td>
                             </tr>
                         @endforeach
                     </tbody>
@@ -122,7 +123,7 @@
                         <tr class="bg-(--color-surface-app) font-semibold">
                             <td class="px-3 py-2">{{ __('core.print.total') }}</td>
                             <td class="num px-3 py-2">{{ number_format(array_sum($notes)) }}</td>
-                            <td class="num px-3 py-2">{{ number_format((float) $count->counted_amount, 2) }}</td>
+                            <td class="num px-3 py-2">{{ \App\Core\Support\Money::format($count->counted_amount) }}</td>
                         </tr>
                     </tfoot>
                 </table>

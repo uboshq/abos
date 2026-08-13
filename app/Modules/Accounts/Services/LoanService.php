@@ -8,6 +8,7 @@ use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
+use App\Core\Support\Money;
 use App\Modules\Accounts\Models\Loan;
 use App\Modules\Accounts\Models\LoanInstalment;
 use App\Modules\Accounts\Models\LoanMovement;
@@ -103,7 +104,7 @@ final class LoanService
             if (bccomp($after, (string) $loan->sanctioned, 4) > 0) {
                 throw ValidationException::withMessages([
                     'amount' => __('accounts::validation.loan_over_limit', [
-                        'available' => number_format((float) $loan->available(), 2),
+                        'available' => Money::format($loan->available()),
                     ]),
                 ]);
             }

@@ -54,7 +54,7 @@
                             'num text-xl font-semibold',
                             'text-(--color-danger)' => bccomp($preview['profit'], '0', 4) < 0,
                         ])>
-                            {{ number_format((float) $preview['profit'], 2) }}
+                            {{ \App\Core\Support\Money::format($preview['profit']) }}
                         </dd>
                         <dd class="text-2xs text-(--color-ink-muted)">
                             {{ __('accounts::message.goes_to_retained') }}

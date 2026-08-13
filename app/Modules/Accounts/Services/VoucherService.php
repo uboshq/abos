@@ -9,6 +9,7 @@ use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DateFormat;
 use App\Core\Support\DocumentStatus;
+use App\Core\Support\Money;
 use App\Models\FinancialYear;
 use App\Models\IssuedNumber;
 use App\Modules\Accounts\Models\Account;
@@ -336,8 +337,8 @@ final class VoucherService
 
             throw ValidationException::withMessages([
                 'lines' => __('accounts::validation.not_balanced', [
-                    'debit' => number_format((float) $t['debit'], 2),
-                    'credit' => number_format((float) $t['credit'], 2),
+                    'debit' => Money::format($t['debit']),
+                    'credit' => Money::format($t['credit']),
                 ]),
             ]);
         }
@@ -390,13 +391,18 @@ final class VoucherService
         return $year;
     }
 
+    /**
+     * খতিয়ানে ঢোকার আগে টাকার রূপ ঠিক করা।
+     *
+     * ── কেন এটা দেখানোর ফরম্যাটিং নয় ────────────────────────────────
+     * এই মানটা পর্দায় যায় না, **খাতায় যায়**। আগে এখানে
+     * `number_format((float) $value, 4)` ছিল — অর্থাৎ ভাউচারের প্রতিটা
+     * অঙ্ক ডেবিট-ক্রেডিট মেলানোর আগেই একবার float হয়ে আসত। যে জায়গাটা
+     * সবচেয়ে বেশি নির্ভুলতা দাবি করে, ঠিক সেখানেই।
+     */
     private function money(mixed $value): string
     {
-        if ($value === null || $value === '') {
-            return '0';
-        }
-
-        return number_format((float) $value, 4, '.', '');
+        return Money::round($value, 4);
     }
 
     /**

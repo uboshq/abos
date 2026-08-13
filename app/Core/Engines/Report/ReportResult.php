@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Core\Engines\Report;
 
+use App\Core\Support\Money;
+
 /**
  * একবার চালানো রিপোর্টের ফল।
  *
@@ -73,9 +75,15 @@ final class ReportResult
         }
 
         if ($column->isNumeric()) {
-            // টাকার অঙ্ক সবসময় ইংরেজি সংখ্যায় (সেকশন ১৮.৪) — number_format
-            // ইংরেজি অঙ্কই দেয়, আর সেটাই চাই।
-            return number_format((float) $value, $column->decimals(), '.', ',');
+            /*
+             * টাকার অঙ্ক সবসময় ইংরেজি সংখ্যায় (সেকশন ১৮.৪), আর গোল করা
+             * bcmath-এ — `number_format` হলে float ছুঁতে হত।
+             *
+             * যোগফলগুলো bcadd দিয়ে গোনা, অথচ এখানে float-এ ফরম্যাট করলে
+             * ঠিক-মাঝামাঝি অঙ্কে (x.xx5) মোট আর সারি দুই দিকে গোল হত —
+             * এক পর্দায় দুইটা সংখ্যা, যোগ করলে মেলে না।
+             */
+            return Money::format($value, $column->decimals());
         }
 
         return (string) $value;
@@ -85,6 +93,6 @@ final class ReportResult
     {
         $value = $this->totals[$column->key] ?? null;
 
-        return $value === null ? '' : number_format((float) $value, $column->decimals(), '.', ',');
+        return $value === null ? '' : Money::format($value, $column->decimals());
     }
 }

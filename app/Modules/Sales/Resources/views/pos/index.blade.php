@@ -65,7 +65,7 @@
                                        hover:bg-(--color-surface-hover)">
                             <span class="block font-medium">{{ $bill->no }}</span>
                             <span class="block text-2xs text-(--color-ink-muted)">
-                                {{ $bill->lines }} · <span class="num">{{ number_format((float) $bill->total, 2) }}</span>
+                                {{ $bill->lines }} · <span class="num">{{ \App\Core\Support\Money::format($bill->total) }}</span>
                                 · {{ $bill->since }}
                             </span>
                         </button>
@@ -317,7 +317,7 @@
 
                 <p class="text-center text-2xs text-(--color-ink-muted)">
                     {{ __('sales::message.pos_today') }}:
-                    <span class="num">{{ number_format((float) $todaysTotal, 2) }}</span>
+                    <span class="num">{{ \App\Core\Support\Money::format($todaysTotal) }}</span>
                 </p>
             </div>
         </form>

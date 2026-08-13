@@ -41,7 +41,7 @@
                             {{ __('approval::field.amount') }}
                         </dt>
                         <dd class="tabular text-sm">
-                            {{ $approval->amount === null ? '—' : number_format((float) $approval->amount, 2) }}
+                            {{ $approval->amount === null ? '—' : \App\Core\Support\Money::format($approval->amount) }}
                         </dd>
                     </div>
 

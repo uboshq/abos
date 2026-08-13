@@ -57,7 +57,7 @@
             <div class="rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card) p-4">
                 <p class="text-sm text-(--color-ink-muted)">{{ __($label) }}</p>
-                <p class="num mt-1 text-2xl font-semibold">{{ number_format((float) $value, 2) }}</p>
+                <p class="num mt-1 text-2xl font-semibold">{{ \App\Core\Support\Money::format($value) }}</p>
             </div>
         @endforeach
     </div>
@@ -104,7 +104,7 @@
                 ] as $label => $value)
                     <div class="flex items-baseline justify-between gap-3">
                         <dt class="text-sm text-(--color-ink-muted)">{{ __($label) }}</dt>
-                        <dd class="num font-medium">{{ number_format((float) $value, 2) }}</dd>
+                        <dd class="num font-medium">{{ \App\Core\Support\Money::format($value) }}</dd>
                     </div>
                 @endforeach
             </dl>
@@ -132,9 +132,9 @@
                 ['key' => 'reason_code_id', 'label' => __('inventory::field.reason'),
                  'render' => fn ($m) => $m->reasonCode?->name()],
                 ['key' => 'floor_change', 'label' => __('inventory::field.floor'), 'numeric' => true, 'width' => '8rem',
-                 'render' => fn ($m) => (float) $m->floor_change ? number_format((float) $m->floor_change, 2) : ''],
+                 'render' => fn ($m) => (float) $m->floor_change ? \App\Core\Support\Money::format($m->floor_change) : ''],
                 ['key' => 'hold_change', 'label' => __('inventory::field.hold'), 'numeric' => true, 'width' => '8rem',
-                 'render' => fn ($m) => (float) $m->hold_change ? number_format((float) $m->hold_change, 2) : ''],
+                 'render' => fn ($m) => (float) $m->hold_change ? \App\Core\Support\Money::format($m->hold_change) : ''],
             ]" />
 
         @if ($movements->hasPages())

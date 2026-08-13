@@ -41,18 +41,18 @@
                 ] as $label => $value)
                     <tr class="border-b border-(--color-border)">
                         <td class="py-2">{{ __('sales::message.'.$label) }}</td>
-                        <td class="num py-2 text-end">{{ number_format((float) $value, 2) }}</td>
+                        <td class="num py-2 text-end">{{ \App\Core\Support\Money::format($value) }}</td>
                     </tr>
                 @endforeach
 
                 <tr class="border-b border-(--color-border) font-medium">
                     <td class="py-2">{{ __('sales::message.shift_expected') }}</td>
-                    <td class="num py-2 text-end">{{ number_format((float) $figures['expected'], 2) }}</td>
+                    <td class="num py-2 text-end">{{ \App\Core\Support\Money::format($figures['expected']) }}</td>
                 </tr>
 
                 <tr class="border-b border-(--color-border) font-medium">
                     <td class="py-2">{{ __('sales::message.shift_counted') }}</td>
-                    <td class="num py-2 text-end">{{ number_format((float) $figures['counted'], 2) }}</td>
+                    <td class="num py-2 text-end">{{ \App\Core\Support\Money::format($figures['counted']) }}</td>
                 </tr>
             </tbody>
         </table>
@@ -73,7 +73,7 @@
             <div class="flex items-baseline justify-between">
                 <span class="font-medium">{{ __('sales::message.shift_difference') }}</span>
                 <span class="num text-xl font-semibold">
-                    {{ number_format((float) $figures['difference'], 2) }}
+                    {{ \App\Core\Support\Money::format($figures['difference']) }}
                 </span>
             </div>
 

@@ -14,7 +14,7 @@
     <x-slot:header>
         <x-ui.page-header
             :title="__('accounts::menu.loans')"
-            :subtitle="__('accounts::message.loan_total') . ': ' . number_format((float) $total, 2)">
+            :subtitle="__('accounts::message.loan_total') . ': ' . \App\Core\Support\Money::format($total)">
             <x-slot:actions>
                 @can('accounts.loan.manage')
                     <x-ui.button tone="primary" icon="+" :href="route('accounts.loan.create')">
@@ -56,7 +56,7 @@
                      : __('accounts::field.loan_cc')],
                 ['key' => 'sanctioned', 'label' => __('accounts::field.sanctioned'),
                  'numeric' => true, 'width' => '10rem',
-                 'render' => fn ($l) => number_format((float) $l->sanctioned, 2)],
+                 'render' => fn ($l) => \App\Core\Support\Money::format($l->sanctioned)],
                 ['key' => 'rate', 'label' => __('accounts::field.interest_rate'),
                  'numeric' => true, 'width' => '7rem',
                  'render' => fn ($l) => rtrim(rtrim((string) $l->interest_rate, '0'), '.')],
@@ -64,7 +64,7 @@
                  'numeric' => true, 'width' => '11rem',
                  'render' => fn ($l) => $l->isSettled()
                      ? __('accounts::message.loan_settled')
-                     : number_format((float) $l->outstanding(), 2)],
+                     : \App\Core\Support\Money::format($l->outstanding())],
             ]" />
     </div>
 </x-layouts.app>

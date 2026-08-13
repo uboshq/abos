@@ -65,11 +65,11 @@
                     ['key' => 'qty', 'label' => __('purchase::field.quantity'), 'numeric' => true, 'width' => '8rem',
                      'render' => fn ($l) => rtrim(rtrim((string) $l->qty, '0'), '.').' '.($l->product?->unit?->code ?? '')],
                     ['key' => 'rate', 'label' => __('purchase::field.rate'), 'numeric' => true, 'width' => '8rem',
-                     'render' => fn ($l) => number_format((float) $l->rate, 2)],
+                     'render' => fn ($l) => \App\Core\Support\Money::format($l->rate)],
                     ['key' => 'tax', 'label' => __('purchase::field.tax'), 'numeric' => true, 'width' => '8rem',
-                     'render' => fn ($l) => number_format((float) $l->tax, 2)],
+                     'render' => fn ($l) => \App\Core\Support\Money::format($l->tax)],
                     ['key' => 'amount', 'label' => __('purchase::field.amount'), 'numeric' => true, 'width' => '10rem',
-                     'render' => fn ($l) => number_format((float) $l->amount, 2)],
+                     'render' => fn ($l) => \App\Core\Support\Money::format($l->amount)],
                 ]" />
 
             <div class="flex border-t border-(--color-border) p-4">

@@ -70,13 +70,13 @@
                 'num mt-1 text-2xl font-semibold',
                 'text-(--color-danger)' => $till->isOverLimit(),
             ])>
-                {{ number_format((float) $balance, 2) }}
+                {{ \App\Core\Support\Money::format($balance) }}
             </p>
 
             @if (bccomp((string) $till->limit_amount, '0', 4) > 0)
                 <p class="mt-2 text-2xs text-(--color-ink-muted)">
                     {{ __('accounts::field.limit') }}:
-                    <span class="num">{{ number_format((float) $till->limit_amount, 2) }}</span>
+                    <span class="num">{{ \App\Core\Support\Money::format($till->limit_amount) }}</span>
                 </p>
 
                 @if ($till->isOverLimit())
@@ -157,11 +157,11 @@
                  'render' => fn ($e) => view('accounts::coa.partials.entry-source', ['entry' => $e])],
                 ['key' => 'narration', 'label' => __('core.table.narration')],
                 ['key' => 'debit', 'label' => __('accounts::field.received'), 'numeric' => true, 'width' => '8rem',
-                 'render' => fn ($e) => (float) $e->debit ? number_format((float) $e->debit, 2) : ''],
+                 'render' => fn ($e) => (float) $e->debit ? \App\Core\Support\Money::format($e->debit) : ''],
                 ['key' => 'credit', 'label' => __('accounts::field.paid'), 'numeric' => true, 'width' => '8rem',
-                 'render' => fn ($e) => (float) $e->credit ? number_format((float) $e->credit, 2) : ''],
+                 'render' => fn ($e) => (float) $e->credit ? \App\Core\Support\Money::format($e->credit) : ''],
                 ['key' => 'balance', 'label' => __('core.table.balance'), 'numeric' => true, 'width' => '9rem',
-                 'render' => fn ($e) => number_format((float) $e->running_balance, 2)],
+                 'render' => fn ($e) => \App\Core\Support\Money::format($e->running_balance)],
             ]" />
 
         @if ($entries->hasPages())

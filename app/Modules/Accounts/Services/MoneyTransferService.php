@@ -9,6 +9,7 @@ use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DateFormat;
 use App\Core\Support\DocumentStatus;
+use App\Core\Support\Money;
 use App\Models\FinancialYear;
 use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Models\MoneyTransfer;
@@ -210,7 +211,7 @@ final class MoneyTransferService
         if (bccomp($amount, $inHand, 4) > 0) {
             throw ValidationException::withMessages([
                 'amount' => __('accounts::validation.not_enough_in_hand', [
-                    'have' => number_format((float) $inHand, 2),
+                    'have' => Money::format($inHand),
                 ]),
             ]);
         }
@@ -218,7 +219,8 @@ final class MoneyTransferService
 
     private function amount(mixed $value): string
     {
-        $amount = number_format((float) $value, 4, '.', '');
+        // টাকাটা খাতায় যাচ্ছে, পর্দায় নয় — তাই গোল করা bcmath-এ
+        $amount = Money::round($value, 4);
 
         if (bccomp($amount, '0', 4) <= 0) {
             throw ValidationException::withMessages([

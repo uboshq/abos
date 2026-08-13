@@ -87,7 +87,7 @@
     <div class="grid gap-4 lg:grid-cols-3">
         <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="text-sm font-medium text-(--color-ink-muted)">{{ __('accounts::field.amount') }}</h2>
-            <p class="num mt-1 text-2xl font-semibold">{{ number_format((float) $transfer->amount, 2) }}</p>
+            <p class="num mt-1 text-2xl font-semibold">{{ \App\Core\Support\Money::format($transfer->amount) }}</p>
 
             <div class="mt-3">
                 @include('accounts::transfer.partials.status', ['transfer' => $transfer])

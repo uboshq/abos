@@ -73,14 +73,14 @@
                                         <span class="text-2xs">({{ __('hr::kind.deduction') }})</span>
                                     @endunless
                                 </dt>
-                                <dd class="num">{{ number_format((float) $component['amount'], 2) }}</dd>
+                                <dd class="num">{{ \App\Core\Support\Money::format($component['amount']) }}</dd>
                             </div>
                         @endforeach
 
                         <div class="mt-2 flex items-center justify-between gap-2 border-t border-(--color-border) pt-2
                                     font-semibold">
                             <dt>{{ __('hr::field.net') }}</dt>
-                            <dd class="num">{{ number_format((float) $totals['net'], 2) }}</dd>
+                            <dd class="num">{{ \App\Core\Support\Money::format($totals['net']) }}</dd>
                         </div>
                     </dl>
                 @endif
