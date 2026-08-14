@@ -352,17 +352,25 @@
                  x-show="! $store.sidebar.collapsed">
 
                 @if ($activeModule)
-                    <p class="shrink-0 truncate px-3 pt-3 pb-1 text-2xs font-semibold uppercase
-                              tracking-wide text-(--color-ink-muted)">
-                        {{ $activeModule['label'] }}
-                    </p>
+                    {{-- এই তালিকাটা ছাঁকা — গোটা সিস্টেম খোঁজা নয়।
 
-                    {{-- মেনুতে খোঁজা।
+                         ── কেন ঘরটা মডিউলের নামের উপরে ─────────────────
+                         নিচে ছিল, আর তাতে মালিক জিজ্ঞেস করেছেন "এটা তো
+                         গ্লোবাল সার্চ, মডিউলের নিচে কেন?" — প্রশ্নটাই
+                         প্রমাণ। দুইটা ঘর দেখতে একরকম, আর নামের নিচে
+                         বসলে মনে হয় ওটা মডিউলের ভেতরের কোনো বড় খোঁজ।
+
+                         উপরে বসলে ক্রমটা পড়া যায়: "এই প্যানেলে খুঁজুন"
+                         → "আপনি আছেন মাস্টার ডাটায়" → পাতাগুলো।
+
+                         ── লেখাটাও মডিউলের নাম বলে ─────────────────────
+                         "মেনুতে খুঁজুন" কোন মেনু তা বলত না। "মাস্টার
+                         ডাটায় খুঁজুন" পড়েই বোঝা যায় পরিধিটা কতটুকু।
 
                          টপবারের সার্চ পুরো সিস্টেম খোঁজে — গ্রাহক, বিল,
-                         খাত। এটা শুধু এই তালিকাটা ছাঁকে। দুইটা আলাদা
-                         কাজ: একটা "রহিমকে খুঁজছি", অন্যটা "পাতাটার নাম
-                         মনে নেই, কিন্তু ওতে 'রোল' আছে"।
+                         খাত। দুইটা আলাদা কাজ: একটা "রহিমকে খুঁজছি",
+                         অন্যটা "পাতাটার নাম মনে নেই, কিন্তু ওতে 'রোল'
+                         আছে"। এটা সার্ভারেই যায় না।
 
                          মডিউলে দশটার কম পাতা থাকলে ঘরটা দেখানো হয় না —
                          চোখেই সব দেখা যায়, আর তখন ঘরটা শুধু জায়গা নেয়। --}}
@@ -371,15 +379,28 @@
                     @endphp
 
                     @if ($itemCount >= 10)
-                        <label class="relative shrink-0 px-2 pb-2">
-                            <span class="sr-only">{{ __('core.a11y.filter_menu') }}</span>
+                        <label class="relative shrink-0 px-2 pt-2.5 pb-1">
+                            <span class="sr-only">
+                                {{ __('core.a11y.filter_this_menu', ['module' => $activeModule['label']]) }}
+                            </span>
+
+                            <span class="pointer-events-none absolute inset-y-0 start-4 flex items-center
+                                         text-(--color-ink-placeholder)" aria-hidden="true">
+                                <x-ui.icon name="search" :size="15" />
+                            </span>
+
                             <input type="search"
                                    x-model="filter"
-                                   placeholder="{{ __('core.a11y.filter_menu') }}"
+                                   placeholder="{{ __('core.a11y.filter_this_menu', ['module' => $activeModule['label']]) }}"
                                    class="h-8 w-full rounded-(--radius-field) border border-(--color-border)
-                                          bg-(--color-surface-app) px-2 text-sm">
+                                          bg-(--color-surface-card) ps-8 pe-2 text-sm">
                         </label>
                     @endif
+
+                    <p class="shrink-0 truncate px-3 pt-2 pb-1 text-2xs font-semibold uppercase
+                              tracking-wide text-(--color-ink-muted)">
+                        {{ $activeModule['label'] }}
+                    </p>
 
                     {{-- কিছু না মিললে বলা হয়।
 

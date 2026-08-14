@@ -119,6 +119,8 @@ return [
         'today' => 'Today',
         'this_month' => 'This month',
         'needs_doing' => 'Needs doing',
+        // The zero rows fold into one line — "looked, nothing there"
+        'nothing_pending' => 'Nothing pending on one other thing|Nothing pending on :count other things',
         'nothing_to_show' => 'Nothing to show here — the figures come from the modules you have permission to open.',
         'foundation_ready' => 'The foundation is in place',
         'foundation_note' => 'Core engines, tenant scoping, approvals, attachments and both languages are working. Modules sit on top of this.',
@@ -336,6 +338,7 @@ return [
         'collapse_sidebar' => 'Collapse sidebar',
         'expand_sidebar' => 'Expand sidebar',
         'filter_menu' => 'Filter menu…',
+        'filter_this_menu' => ':module · search…',
         'main_navigation' => 'Main navigation',
         // The path row — "Home / Module / Screen"
         'breadcrumb' => 'Where you are',
