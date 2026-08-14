@@ -8,6 +8,7 @@ use App\Modules\Accounts\Http\Controllers\CashCountController;
 use App\Modules\Accounts\Http\Controllers\CashTillController;
 use App\Modules\Accounts\Http\Controllers\ChartOfAccountsController;
 use App\Modules\Accounts\Http\Controllers\LoanController;
+use App\Modules\Accounts\Http\Controllers\MoneyCustodyController;
 use App\Modules\Accounts\Http\Controllers\MoneyTransferController;
 use App\Modules\Accounts\Http\Controllers\MoneyTransferPrintController;
 use App\Modules\Accounts\Http\Controllers\ReportController;
@@ -122,6 +123,14 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
         Route::get('/{type}/create', [VoucherController::class, 'create'])->name('create');
         Route::post('/{type}', [VoucherController::class, 'store'])->name('store');
     });
+
+    /*
+     * টাকা ও হেফাজত — কোন টাকা কার কাছে আছে।
+     *
+     * হস্তান্তরের আগে, কারণ পড়ার ক্রমটাই তাই: আগে জানতে হয় টাকা কোথায়,
+     * তারপর সেটা সরানোর কথা ওঠে।
+     */
+    Route::get('money-custody', MoneyCustodyController::class)->name('custody');
 
     Route::prefix('money-transfers')->name('transfer.')->group(function () {
         Route::get('/', [MoneyTransferController::class, 'index'])->name('index');

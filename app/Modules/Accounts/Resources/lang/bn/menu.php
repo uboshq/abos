@@ -13,6 +13,7 @@ return [
     'expense' => 'খরচ ভাউচার',
     'journal' => 'জাবেদা ভাউচার',
     'contra' => 'কন্ট্রা ভাউচার',
+    'money_custody' => 'টাকা ও হেফাজত',
     'money_transfer' => 'টাকা হস্তান্তর',
     'cash_count' => 'নগদ গণনা',
     'day_book' => 'দৈনিক খতিয়ান',

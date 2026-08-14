@@ -172,6 +172,8 @@ return [
     ],
 
     'table' => [
+        'code' => 'Code',
+        'name' => 'Name',
         'actions' => 'Actions',
         'serial' => 'SL#',
         'date' => 'Date',
