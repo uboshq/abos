@@ -165,6 +165,104 @@ class VoucherPrintTest extends TestCase
      * প্রমাণ করে না। তাই যাচাইটা এক ধাপ আগে: কন্ট্রোলার টেমপ্লেটকে
      * `notice` পাঠায় কি না, আর সেটা বাতিল হলেই কেবল।
      */
+    /**
+     * কাগজে সত্যিই যা ছাপা হয়।
+     *
+     * ── কেন এই সাহায্যকারীটা লাগল ───────────────────────────────────
+     * নিচের পরীক্ষাগুলো আগে দেখত কন্ট্রোলার টেমপ্লেটকে কী **পাঠাচ্ছে**।
+     * সেটা যথেষ্ট নয়, আর সেটাই প্রমাণিত হয়েছে দুইবার: `notice` বছরের
+     * পর বছর পাঠানো হচ্ছিল অথচ টেমপ্লেট ওটা ছাপত না, আর `signatures`
+     * হিসাব করা হচ্ছিল অথচ টেমপ্লেটে তিনটা নাম হাতে লেখা ছিল। দুইবারই
+     * পরীক্ষা সবুজ ছিল, আর কাগজ ভুল ছিল।
+     *
+     * PDF-এর বাইনারিতে খোঁজা যায় না — mPDF বাংলা লেখা সাবসেট করা ফন্টে
+     * এনকোড করে, তাই না-পাওয়া কিছুই প্রমাণ করে না। তাই মাঝের ধাপটা:
+     * আসল রিকোয়েস্ট চালানো হয়, তার ডেটা ধরা হয়, আর সেই ডেটা দিয়ে
+     * টেমপ্লেটটাই HTML-এ রেন্ডার করা হয়। ওটাই কাগজে যায়।
+     */
+    private function paperHtml(Voucher $voucher, string $paper = PaperSize::A4): string
+    {
+        $seen = [];
+        View::composer('print.voucher', function ($view) use (&$seen) {
+            $seen = $view->getData();
+        });
+
+        $this->get(route('accounts.voucher.print', $voucher).'?paper='.$paper)->assertOk();
+
+        $this->assertNotSame([], $seen, 'ছাপার টেমপ্লেটটাই ডাকা হয়নি।');
+
+        return view('print.voucher', $seen)->render();
+    }
+
+    /**
+     * বাতিলের কথাটা কাগজেই লেখা থাকে।
+     *
+     * আগের পরীক্ষাটা কেবল `notice` পাঠানো হচ্ছে কি না দেখত। এটা কাগজের
+     * লেখাটা দেখে — টেমপ্লেট ওটা উপেক্ষা করলে এটা ভাঙে।
+     */
+    public function test_the_cancelled_word_is_actually_printed(): void
+    {
+        $voucher = $this->receipt();
+
+        app(VoucherService::class)->post($voucher);
+        app(VoucherService::class)->cancel($voucher->fresh(), 'ভুল খাতে বসেছিল');
+
+        $this->assertStringContainsString(
+            __('accounts::print.cancelled'),
+            $this->paperHtml($voucher->fresh()),
+            'বাতিল ভাউচারের কাগজে "বাতিল" কথাটা নেই — চালু রসিদের মতোই দেখাবে।',
+        );
+    }
+
+    /**
+     * জাবেদার কাগজে "গ্রহণকারী" থাকে না।
+     *
+     * জাবেদা দুই খাতের মধ্যে একটা সমন্বয় — কেউ কিছু গ্রহণ করে না। ভুল
+     * নামের সই-ঘর খালি ঘরের চেয়ে খারাপ: কাগজটা পরে প্রমাণ হিসেবে
+     * দাঁড়ায়, আর তাতে লেখা থাকে কে কী করেছে।
+     */
+    public function test_a_journal_paper_has_no_receiver_to_sign(): void
+    {
+        $html = $this->paperHtml($this->journal());
+
+        $this->assertStringContainsString(__('accounts::print.prepared_by'), $html);
+        $this->assertStringContainsString(__('accounts::print.approved_by'), $html);
+        $this->assertStringNotContainsString(__('accounts::print.received_by'), $html,
+            'জাবেদার কাগজে "গ্রহণকারী" ছাপা হয়েছে — জাবেদায় গ্রহণ করার কেউ নেই।');
+    }
+
+    /**
+     * আদায়ের রসিদে গ্রাহক দিয়েছেন, নেননি।
+     *
+     * টেমপ্লেটে নামগুলো হাতে লেখা থাকায় আদায়ের কাগজেও "গ্রহণকারী"
+     * বসত — অথচ টাকাটা গ্রাহক দিয়েছেন। যাঁর হাতে রসিদটা যায় তিনিই
+     * ওই লাইনটা পড়েন।
+     */
+    public function test_a_receipt_asks_the_payer_to_sign(): void
+    {
+        $html = $this->paperHtml($this->receipt());
+
+        $this->assertStringContainsString(__('accounts::print.paid_by'), $html);
+        $this->assertStringNotContainsString(__('accounts::print.received_by'), $html,
+            'আদায়ের রসিদে "গ্রহণকারী" ছাপা হয়েছে — গ্রাহক দিয়েছেন, নেননি।');
+    }
+
+    /**
+     * তাপীয় কাগজে একটাই সই-ঘর, আর সেটা অপর পক্ষের।
+     *
+     * ৫৮মিমি-তে তিনটা ঘর পাশাপাশি বসালে প্রতিটার চওড়া এক ইঞ্চিরও কম —
+     * সই করা যায় না। যেটা থাকে সেটা অপর পক্ষের, কারণ হাতে-হাতে
+     * লেনদেনে ওই সইটাই আসল; বাকি দুইটা অফিসের ভেতরের।
+     */
+    public function test_a_thermal_receipt_keeps_only_the_payers_line(): void
+    {
+        $html = $this->paperHtml($this->receipt(), PaperSize::THERMAL_58);
+
+        $this->assertStringContainsString(__('accounts::print.paid_by'), $html);
+        $this->assertStringNotContainsString(__('accounts::print.prepared_by'), $html,
+            '৫৮মিমি কাগজে তিনটা সই-ঘর বসেছে — ওখানে একটার বেশি ধরে না।');
+    }
+
     public function test_a_cancelled_voucher_says_so_on_the_paper(): void
     {
         $voucher = $this->receipt();
@@ -208,12 +306,13 @@ class VoucherPrintTest extends TestCase
      * "চলার কথা" আর "চলে" এক জিনিস নয় — বিশেষ করে জার্নালে, যেখানে কোনো
      * পক্ষ থাকে না আর সইয়ের ঘরও আলাদা।
      */
-    public function test_a_journal_voucher_prints_too(): void
+    /** অফিসের খরচের একটা জাবেদা — কোনো পক্ষ নেই, তাই সইয়ের ঘরও আলাদা। */
+    private function journal(): Voucher
     {
         $expense = Account::query()->where('code', '5208')->firstOrFail();
         $cash = Account::query()->where('code', StandardChart::CASH_IN_HAND)->firstOrFail();
 
-        $journal = app(VoucherService::class)->create([
+        return app(VoucherService::class)->create([
             'type' => Voucher::JOURNAL,
             'trx_date' => now()->toDateString(),
             'narration' => 'অফিসের বিস্কুট',
@@ -222,8 +321,11 @@ class VoucherPrintTest extends TestCase
                 'narration' => 'এক কার্টন বিস্কুট'],
             ['account_id' => $cash->id, 'debit' => '0', 'credit' => '450'],
         ]);
+    }
 
-        $this->get(route('accounts.voucher.print', $journal))
+    public function test_a_journal_voucher_prints_too(): void
+    {
+        $this->get(route('accounts.voucher.print', $this->journal()))
             ->assertOk()
             ->assertHeader('Content-Type', 'application/pdf');
     }
