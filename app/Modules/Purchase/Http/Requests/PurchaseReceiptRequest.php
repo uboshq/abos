@@ -39,6 +39,12 @@ class PurchaseReceiptRequest extends FormRequest
             // মালের সাথে আসা ফ্রি কার্টন — শূন্য চলে, ঋণাত্মক নয়
             'lines.*.free_qty' => ['nullable', 'numeric', 'min:0'],
 
+            // লট ধরা পণ্যে নম্বরটা বাধ্যতামূলক, কিন্তু সেটা সেবা স্তর
+            // ঠিক করে — কোন পণ্য লট ধরে চলে তা পণ্যটা না দেখে বলা যায় না
+            'lines.*.batch_no' => ['nullable', 'string', 'max:60'],
+            'lines.*.expiry_date' => ['nullable', 'date'],
+            'lines.*.mrp' => ['nullable', 'numeric', 'min:0'],
+
             // কোন প্যাকে এসেছে — খালি মানে পণ্যের নিজের একক
             'lines.*.unit_id' => ['nullable', 'integer',
                 Rule::exists('mdm_units', 'id')->where('company_id', $companyId)],

@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Inventory\Services;
 
+use App\Core\Support\CompanyContext;
 use App\Modules\Inventory\Models\Batch;
+use App\Modules\Inventory\Models\Product;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -33,6 +35,58 @@ use Illuminate\Validation\ValidationException;
  */
 final class BatchService
 {
+    /**
+     * মাল ঢোকার সময় লটটা জন্মায় — বা আগেরটাই ফেরে।
+     *
+     * ── কেন `firstOrCreate`, আর দ্বিতীয়বার কিছু বদলায় না ──────────────
+     * একই লট নম্বরে মাল দুইবার আসা রোজকার ঘটনা: সোমবার ৫০ কার্টন,
+     * বুধবার আরও ৩০, একই ব্যাচ। দ্বিতীয়বার নতুন লট খুললে "এই ব্যাচে
+     * কত আছে" প্রশ্নের দুইটা উত্তর হত, আর রিকলে একটা অর্ধেক তালিকা।
+     *
+     * কিন্তু দ্বিতীয়বার মেয়াদ বা ছাপা দাম **বদলানো হয় না**, এমনকি
+     * কাগজে অন্য কিছু লেখা থাকলেও। কারণ ওই দুইটা ঘর নিঃশব্দে বদলানোর
+     * জিনিস নয়:
+     *
+     *   - মেয়াদ পিছিয়ে দিলে মেয়াদোত্তীর্ণ মাল আবার বিক্রয়যোগ্য হয়ে যেত
+     *   - MRP বাড়িয়ে দিলে পুরনো প্যাকেটগুলো বেআইনি দামে বেচা যেত
+     *
+     * দুইটাই বদলানোর নিজস্ব পথ আছে — `correctExpiry()` ও `reprice()` —
+     * আর দুইটাতেই আলাদা অনুমতি, কারণ ও অডিট লাগে। টাইপো একটা ভুল;
+     * নিঃশব্দে ঠিক হয়ে যাওয়া একটা বিপদ।
+     *
+     * @param  string|null  $expiry  খালি চলে — সব লটে মেয়াদ থাকে না
+     * @param  string|null  $mrp  খালি মানে গায়ে দাম ছাপা নেই
+     */
+    public function receive(
+        Product $product,
+        string $batchNo,
+        ?string $expiry = null,
+        ?string $mrp = null,
+        ?string $supplierRef = null,
+    ): Batch {
+        $batchNo = trim($batchNo);
+
+        if ($batchNo === '') {
+            throw ValidationException::withMessages([
+                'lines' => __('inventory::validation.batch_no_required', ['product' => $product->name()]),
+            ]);
+        }
+
+        return DB::transaction(fn () => Batch::query()->firstOrCreate(
+            [
+                'product_id' => $product->id,
+                'batch_no' => $batchNo,
+            ],
+            [
+                'company_id' => CompanyContext::id(),
+                'expiry_date' => $expiry ?: null,
+                'mrp' => $mrp !== null && $mrp !== '' ? $mrp : null,
+                'supplier_ref' => $supplierRef,
+                'created_by' => auth()->id(),
+            ],
+        ));
+    }
+
     /**
      * ছাপা দাম বদলানো।
      *
