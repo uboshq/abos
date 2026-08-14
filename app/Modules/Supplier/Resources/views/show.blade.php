@@ -145,9 +145,9 @@
                  'render' => fn ($e) => view('supplier::partials.entry-source', ['entry' => $e])],
                 ['key' => 'narration', 'label' => __('core.table.narration')],
                 ['key' => 'debit', 'label' => __('core.table.debit'), 'numeric' => true, 'width' => '8rem',
-                 'render' => fn ($e) => (float) $e->debit ? \App\Core\Support\Money::format($e->debit) : ''],
+                 'render' => fn ($e) => \App\Core\Support\Money::isZero($e->debit) ? '' : \App\Core\Support\Money::format($e->debit)],
                 ['key' => 'credit', 'label' => __('core.table.credit'), 'numeric' => true, 'width' => '8rem',
-                 'render' => fn ($e) => (float) $e->credit ? \App\Core\Support\Money::format($e->credit) : ''],
+                 'render' => fn ($e) => \App\Core\Support\Money::isZero($e->credit) ? '' : \App\Core\Support\Money::format($e->credit)],
                 ['key' => 'balance', 'label' => __('core.table.balance'), 'numeric' => true, 'width' => '9rem',
                  'render' => fn ($e) => \App\Core\Support\Money::format($e->running_balance)],
             ]" />

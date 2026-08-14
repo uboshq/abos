@@ -209,4 +209,147 @@ class MoneyIsNeverAFloatTest extends TestCase
 
         return class_exists($class) ? $class : null;
     }
+
+    /**
+     * যেখানে `(float)` ইচ্ছাকৃত, আর কেন।
+     *
+     * ── কেন তালিকা, কেন নিষেধ নয় ────────────────────────────────────
+     * সব cast ক্ষতিকর নয়। তিন রকম ব্যবহার বৈধ:
+     *
+     *   ১. **তুলনা** — `(float) $line['qty'] > 0` কেবল ছাঁকে, যোগ করে
+     *      না। ভুল হলে সারিটা বাদ পড়ত, সংখ্যা ভুল হত না।
+     *   ২. **ব্রাউজারে পাঠানো** — JSON-এ যাওয়ার পর ওটা JavaScript-এর
+     *      সংখ্যা হবেই; ওখানে bcmath বলে কিছু নেই। খাতায় বসার সংখ্যা
+     *      সবসময় সার্ভারে আবার হিসাব হয়।
+     *   ৩. **টাকা নয়** — ফাইলের আকার, সাজানোর চাবি।
+     *
+     * তালিকাটা নিষেধের চেয়ে ভালো: প্রতিটা ব্যতিক্রম একটা **সিদ্ধান্ত**
+     * হয়ে থাকে, অভ্যাস নয়। নতুন কোনো cast এলে এই পরীক্ষা ভাঙে, আর
+     * যিনি লিখেছেন তাঁকে এখানে কারণ লিখতে হয়।
+     *
+     * @var array<string, string> ফাইল => কারণ
+     */
+    private const FLOAT_IS_DELIBERATE = [
+        'app/Models/Attachment.php' => 'ফাইলের আকার, টাকা নয়',
+        'app/Modules/Inventory/Http/Requests/StockTransferRequest.php' => 'তুলনা — খালি সারি ছাঁকা',
+        'app/Modules/Inventory/Services/PackConversion.php' => 'সাজানোর চাবি, হিসাব নয়',
+        'app/Modules/Purchase/Http/Controllers/DirectPurchaseController.php' => 'তুলনা — শূন্যের বেশি কি না',
+        'app/Modules/Purchase/Http/Requests/PaymentRequest.php' => 'তুলনা — খালি সারি ছাঁকা',
+        'app/Modules/Purchase/Http/Requests/PurchaseReturnRequest.php' => 'তুলনা — খালি সারি ছাঁকা',
+        'app/Modules/Purchase/Services/DirectPurchaseService.php' => 'তুলনা, আর ব্রাউজারে পাঠানো মান',
+        'app/Modules/Sales/Http/Controllers/DirectSaleController.php' => 'ব্রাউজারে পাঠানো মান — POS পর্দার JS',
+        'app/Modules/Sales/Http/Requests/CollectionRequest.php' => 'তুলনা — খালি সারি ছাঁকা',
+        'app/Modules/Sales/Http/Requests/SalesReturnRequest.php' => 'তুলনা — খালি সারি ছাঁকা',
+    ];
+
+    /**
+     * কোডের ভেতরে নতুন কোনো `(float)` ঢুকল কি না।
+     *
+     * ── কেন উপরের দুইটা পরীক্ষা যথেষ্ট ছিল না ───────────────────────
+     * ওগুলো **স্কিমা ও cast** পাহারা দেয় — কলামটা DECIMAL কি না, মডেলে
+     * decimal হিসেবে ফেরে কি না। কিন্তু কলাম ঠিক থাকলেও কোডের ভেতরে
+     * `(float)` লিখে ফেলা যায়, আর তখন ক্ষতিটা হুবহু একই।
+     *
+     * ঠিক সেটাই ঘটেছিল লট-ট্রেসে: `$recipients->sum(fn ($r) => (float)
+     * $r->qty)` — রিকলের মোট পরিমাণটা float-এ যোগ হত। একশো সারিতে
+     * ০.১ কেজি করে যোগ করলে ফল ১০ হয় না, আর রিকলে ওই ভুলের মানে হলো
+     * কিছু মাল হিসাবের বাইরে থেকে যাওয়া — যে ভুলটা কেউ ধরতেও পারে না,
+     * কারণ তালিকাটা দেখে মনে হয় সবাই ধরা পড়েছে।
+     *
+     * তিনটা পরীক্ষা মিলে তাই তিনটা স্তর: ডাটাবেজ, মডেল, কোড।
+     */
+    public function test_no_new_float_cast_creeps_into_the_code(): void
+    {
+        $offenders = [];
+
+        foreach ($this->phpAndBladeFiles() as $path) {
+            $relative = str_replace(DIRECTORY_SEPARATOR, '/', substr($path, strlen(base_path()) + 1));
+
+            // নিজের ঘরে bcmath-এর মোড়ক লেখা হয়, ওখানে ব্যতিক্রম স্বাভাবিক
+            if ($relative === 'app/Core/Support/Money.php') {
+                continue;
+            }
+
+            $body = $this->withoutComments(file_get_contents($path));
+
+            if (preg_match('/\(float\)|floatval\s*\(|\(double\)/', $body) !== 1) {
+                continue;
+            }
+
+            if (! array_key_exists($relative, self::FLOAT_IS_DELIBERATE)) {
+                $offenders[] = $relative;
+            }
+        }
+
+        $this->assertSame([], $offenders,
+            'টাকা বা পরিমাণ float-এ নেওয়া হয়েছে। ইচ্ছাকৃত হলে FLOAT_IS_DELIBERATE-এ '
+            .'কারণসহ লিখুন:
+'.implode('
+', $offenders));
+    }
+
+    /**
+     * তালিকাটা যেন পুরনো না হয়।
+     *
+     * কোনো ফাইল থেকে cast সরে গেলে তালিকার সারিটাও যাওয়া উচিত —
+     * নাহলে ছাড়পত্রটা থেকে যায়, আর পরের বার ওই ফাইলে নতুন একটা cast
+     * ঢুকলে কেউ ধরতে পারে না।
+     */
+    public function test_the_deliberate_list_has_no_stale_rows(): void
+    {
+        $stale = [];
+
+        foreach (self::FLOAT_IS_DELIBERATE as $relative => $why) {
+            $path = base_path($relative);
+
+            if (! is_file($path)) {
+                $stale[] = $relative.' (ফাইলটাই নেই)';
+
+                continue;
+            }
+
+            if (preg_match('/\(float\)|floatval\s*\(|\(double\)/',
+                $this->withoutComments(file_get_contents($path))) !== 1) {
+                $stale[] = $relative.' (cast আর নেই)';
+            }
+        }
+
+        $this->assertSame([], $stale,
+            'FLOAT_IS_DELIBERATE-এ পুরনো সারি:
+'.implode('
+', $stale));
+    }
+
+    /** @return list<string> app-এর প্রতিটা PHP ও Blade ফাইল */
+    private function phpAndBladeFiles(): array
+    {
+        $out = [];
+
+        $files = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator(base_path('app'), \FilesystemIterator::SKIP_DOTS)
+        );
+
+        foreach ($files as $file) {
+            if (in_array($file->getExtension(), ['php'], true)) {
+                $out[] = $file->getPathname();
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * মন্তব্য বাদ — সেখানে cast-এর নাম লেখা থাকতেই পারে।
+     *
+     * "এখানে আগে `(float)` ছিল, কেন সরানো হলো" — ওটা ব্যাখ্যা, অপরাধ
+     * নয়। না ছাঁটলে এই পরীক্ষা নিজের ব্যাখ্যাটাকেই ধরত, আর তখন লেখা
+     * বন্ধ করে দিতে হত।
+     */
+    private function withoutComments(string $code): string
+    {
+        $code = preg_replace('/\{\{--.*?--\}\}/su', '', $code);
+        $code = preg_replace('!/\*.*?\*/!su', '', $code);
+
+        return preg_replace('!//.*!', '', $code);
+    }
 }

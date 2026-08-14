@@ -132,9 +132,9 @@
                 ['key' => 'reason_code_id', 'label' => __('inventory::field.reason'),
                  'render' => fn ($m) => $m->reasonCode?->name()],
                 ['key' => 'floor_change', 'label' => __('inventory::field.floor'), 'numeric' => true, 'width' => '8rem',
-                 'render' => fn ($m) => (float) $m->floor_change ? \App\Core\Support\Money::format($m->floor_change) : ''],
+                 'render' => fn ($m) => \App\Core\Support\Money::isZero($m->floor_change) ? '' : \App\Core\Support\Money::format($m->floor_change)],
                 ['key' => 'hold_change', 'label' => __('inventory::field.hold'), 'numeric' => true, 'width' => '8rem',
-                 'render' => fn ($m) => (float) $m->hold_change ? \App\Core\Support\Money::format($m->hold_change) : ''],
+                 'render' => fn ($m) => \App\Core\Support\Money::isZero($m->hold_change) ? '' : \App\Core\Support\Money::format($m->hold_change)],
             ]" />
 
         @if ($movements->hasPages())

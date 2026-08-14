@@ -60,7 +60,15 @@
                         bg-(--color-surface-card) p-4">
                 <div class="text-sm text-(--color-ink-muted)">{{ __('sales::message.trace_gone') }}</div>
                 <div class="num mt-1 text-2xl font-semibold">
-                    {{ rtrim(rtrim((string) $recipients->sum(fn ($r) => (float) $r->qty), '0'), '.') ?: '0' }}
+                    {{-- যোগফলটা bcmath-এ, float-এ নয়।
+
+                         আগে এখানে `sum(fn ($r) => (float) $r->qty)` ছিল —
+                         অর্থাৎ রিকলের মোট পরিমাণটা float-এ যোগ হত। একশো
+                         সারিতে ০.১ কেজি করে যোগ করলে ফলটা ১০ হয় না, আর
+                         রিকলে ওই ভুলের মানে হলো কিছু মাল হিসাবের বাইরে
+                         থেকে যাওয়া। --}}
+                    {{ \App\Core\Support\Money::quantity(
+                        \App\Core\Support\Money::sumOf($recipients, fn ($r) => $r->qty)) }}
                 </div>
                 <p class="mt-1 text-2xs text-(--color-ink-muted)">
                     {{ __('sales::message.trace_gone_note', ['count' => $recipients->count()]) }}
