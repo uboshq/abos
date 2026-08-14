@@ -188,9 +188,23 @@ class VoucherController extends Controller implements HasMiddleware
             ->with('saved', __('accounts::message.voucher_saved', ['no' => $voucher->document_no]));
     }
 
-    /** খসড়াটা লেজারে বসানো। */
-    public function post(Voucher $voucher): RedirectResponse
+    /**
+     * খসড়াটা লেজারে বসানো।
+     *
+     * ব্যাংকের লেনদেন নম্বরটা এখানেই নেওয়া হয়, লেখার ফর্মে নয় — লেখার
+     * সময় নম্বরটা এখনো তৈরিই হয়নি। যা আসেনি তা মুছে যায় না, তাই
+     * `filled()` — খালি পাঠালে আগের নম্বরটা টিকে থাকে।
+     */
+    public function post(Request $request, Voucher $voucher): RedirectResponse
     {
+        $validated = $request->validate([
+            'instrument_no' => ['nullable', 'string', 'max:64'],
+        ]);
+
+        if (filled($validated['instrument_no'] ?? null)) {
+            $voucher->forceFill(['instrument_no' => trim($validated['instrument_no'])])->save();
+        }
+
         $this->vouchers->post($voucher);
 
         return back()->with('saved', __('accounts::message.voucher_posted', ['no' => $voucher->document_no]));

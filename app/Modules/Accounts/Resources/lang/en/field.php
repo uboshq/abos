@@ -48,6 +48,9 @@ return [
     'instrument' => 'Mode',
     'instrument_no' => 'Cheque / txn number',
     'instrument_date' => 'Cheque date',
+    // Asked for at posting time, so it gets its own name — "Cheque/" would
+    // mislead there, since most of the time this is a bKash TrxID
+    'bank_reference' => 'Bank / MFS transaction no.',
     'from_date' => 'From date',
     'to_date' => 'To date',
     'given_by' => 'Handed over by',

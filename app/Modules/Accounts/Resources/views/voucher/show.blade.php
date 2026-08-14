@@ -8,6 +8,16 @@
 @php
     $totals = $voucher->totals();
     $canEdit = $voucher->isEditable();
+
+    /*
+     * ব্যাংকে গেলে লেনদেনের নম্বরটা এখানেই চাওয়া হয়, লেখার সময় নয়।
+     *
+     * লেখার মুহূর্তে বিকাশের TrxID জন্মায়ইনি — তখন চাইলে মানুষ `0`
+     * বসিয়ে এগিয়ে যেতেন। লেজারে বসানোর মুহূর্তেই টাকাটা সত্যিই নড়ে,
+     * তাই নম্বরটাও তখন হাতে থাকে।
+     */
+    $bankAccount = $voucher->lines->map(fn ($line) => $line->account)->first(fn ($a) => $a?->is_bank);
+    $needsReference = $bankAccount !== null && blank($voucher->instrument_no);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -22,8 +32,17 @@
                             {{ __('core.action.edit') }}
                         </x-ui.button>
 
-                        <form method="POST" action="{{ route('accounts.voucher.post', $voucher) }}">
+                        <form method="POST" action="{{ route('accounts.voucher.post', $voucher) }}"
+                              class="flex items-end gap-2">
                             @csrf
+                            @if ($needsReference)
+                                <x-ui.field name="instrument_no"
+                                            :label="__('accounts::field.bank_reference')"
+                                            :hint="$bankAccount->label()"
+                                            :value="old('instrument_no')"
+                                            required
+                                            class="w-56" />
+                            @endif
                             <x-ui.button type="submit" tone="primary">
                                 {{ __('accounts::action.post_now') }}
                             </x-ui.button>
