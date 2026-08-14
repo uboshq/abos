@@ -12,6 +12,7 @@ return [
     'expense' => 'Expense Voucher',
     'journal' => 'Journal Voucher',
     'contra' => 'Contra Voucher',
+    'money_custody' => 'Money & custody',
     'money_transfer' => 'Money Transfer',
     'cash_count' => 'Cash Count',
     'day_book' => 'Day Book',

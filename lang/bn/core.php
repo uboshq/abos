@@ -189,6 +189,8 @@ return [
     ],
 
     'table' => [
+        'code' => 'কোড',
+        'name' => 'নাম',
         'actions' => 'কাজ',
         'serial' => 'ক্রম',
         'date' => 'তারিখ',
