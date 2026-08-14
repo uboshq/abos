@@ -510,3 +510,64 @@
         margin: 12mm;
     }
 }
+
+/* ─────────────────────────────────────────────────────────────────
+   মেনু প্যানেলের স্ক্রলবার — সরু ও শান্ত।
+
+   ব্রাউজারের ডিফল্ট পাটাতনটা ১৭px চওড়া ধূসর একটা খাঁজ, আর ২২৪px
+   প্যানেলে সেটা লেখার জায়গা খেয়ে নেয় ও চোখে পড়ে বেশি। এখানে ৬px, আর
+   পাটাতনটা স্বচ্ছ — তাই থাকে শুধু হাতলটা, আর সেটাও ম্লান।
+
+   Firefox-এর নিজের সিনট্যাক্স আলাদা, তাই দুইটাই লেখা।
+   ───────────────────────────────────────────────────────────────── */
+.menu-panel nav,
+.menu-panel .overflow-y-auto {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border) transparent;
+}
+
+.menu-panel nav::-webkit-scrollbar,
+.menu-panel .overflow-y-auto::-webkit-scrollbar {
+    width: 6px;
+}
+
+.menu-panel nav::-webkit-scrollbar-track,
+.menu-panel .overflow-y-auto::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.menu-panel nav::-webkit-scrollbar-thumb,
+.menu-panel .overflow-y-auto::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 999px;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   রেলের hover-তালিকা — খোলা ও বন্ধ হওয়ার নরম ধাপ।
+
+   `visibility` ছাড়া কেবল `opacity` দিলে অদৃশ্য প্যানেলটা মাউস ধরে
+   রাখত, আর তার নিচের বোতামে ক্লিক করা যেত না। দুইটা একসাথে বদলানো
+   হয়, আর visibility-তে দেরি দেওয়া হয় যাতে ফেড-আউটটা দেখা যায়।
+   ───────────────────────────────────────────────────────────────── */
+.rail-flyout {
+    transition: opacity 120ms ease, visibility 0s linear 120ms;
+}
+
+.group\/rail:hover .rail-flyout,
+.group\/rail:focus-within .rail-flyout {
+    transition: opacity 120ms ease, visibility 0s;
+}
+
+/* মাউস টাইল থেকে তালিকায় যাওয়ার পথে ৪px ফাঁক পেরোতে হয়; ওই ফাঁকে
+   hover ছুটে গেলে তালিকাটা বন্ধ হয়ে যেত। অদৃশ্য একটা সেতু। */
+.rail-flyout::before {
+    content: '';
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: -8px;
+    width: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .rail-flyout { transition: none; }
+}

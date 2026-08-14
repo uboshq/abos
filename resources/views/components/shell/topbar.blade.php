@@ -26,6 +26,37 @@
     <img src="{{ asset('brand/abos-icon-64.png') }}" alt="ABOS"
          class="size-8 shrink-0 md:hidden">
 
+    {{--
+        মেনু গুটানো-খোলার একমাত্র সুইচ।
+
+        ── কেন এটা এখানে, সাইডবারের ভেতরে নয় ───────────────────────────
+        আগে বোতামটা ছিল সাইডবারের ভেতরে, একটা `«` চিহ্ন। কিন্তু সে যা
+        গুটায় তার ভেতরেই বসে — গুটিয়ে ফেললে সে নিজেই উধাও, আর খোলার
+        কোনো পথ থাকত না। ব্যবহারকারীকে তখন হয় পাতা রিফ্রেশ করতে হত, নয়
+        localStorage মুছতে হত।
+
+        টপবারের এই ঘরটা দুই অবস্থাতেই একই জায়গায় থাকে, আর সেটাই একমাত্র
+        রূপ যেটা মানুষ শিখতে পারে।
+
+        অবস্থাটা Alpine store-এ ($store.sidebar), কারণ সুইচ এখানে আর যা
+        নড়ে সেটা অন্য শাখায় — প্রতিটার নিজের x-data রাখলে দুইজনের দুই
+        রকম উত্তর থাকত।
+
+        সীমানাসহ, কারণ এটা একটা বোতাম: পাশের লোগো ও কোম্পানির ব্লক
+        দুইটাই লিংক, আর সীমানা ছাড়া তিনটাই একই রকম লাগত।
+    --}}
+    <button type="button"
+            @click="$store.sidebar.toggle()"
+            class="hidden size-9 shrink-0 items-center justify-center rounded-(--radius-field)
+                   border border-(--color-border) text-(--color-ink-muted) transition-colors
+                   hover:bg-(--color-surface-app) hover:text-(--color-ink) md:flex"
+            :aria-expanded="$store.sidebar.collapsed ? 'false' : 'true'"
+            :aria-label="$store.sidebar.collapsed
+                ? '{{ __('core.a11y.expand_sidebar') }}'
+                : '{{ __('core.a11y.collapse_sidebar') }}'">
+        <x-ui.icon name="list" :size="18" />
+    </button>
+
     @if ($company)
         {{-- কোম্পানি ও শাখা — ব্যবহারকারী সবসময় জানবে সে কোথায় কাজ করছে।
              একাধিক কোম্পানি থাকলেই সুইচার সক্রিয় (সেকশন ১৫.১৫)।

@@ -32,8 +32,13 @@
 
          প্রিন্টের মতো এখানেও, কারণ পর্দাটা সারাদিন খোলা থাকে। বন্ধ করার
          সুইচটা প্রিন্টের জন্য আলাদা: কাগজ বাইরে যায়, পর্দা যায় না। --}}
-    <span class="hidden shrink-0 items-center gap-1.5 lg:flex">
-        {{ __('core.brand.powered_by') }}
+    {{-- চিহ্নটা সব মাপে থাকে, শুধু লেখাটা সরু পর্দায় লুকায়।
+
+         আগে গোটা ব্লকটাই `lg:` থেকে দেখা যেত, তাই ল্যাপটপের নিচের
+         মাপগুলোয় নির্মাতার কোনো চিহ্নই থাকত না — অথচ চিহ্নটার জায়গা
+         লাগে ২০px, আর ওটাই লাইনটার একমাত্র অংশ যেটা দূর থেকে চেনা যায়। --}}
+    <span class="flex shrink-0 items-center gap-1.5">
+        <span class="hidden lg:inline">{{ __('core.brand.powered_by') }}</span>
         {{-- চিহ্নটা লেখার মাঝখানে, দুই শব্দের পরে আর নামের আগে — যেভাবে
              লকআপটা আঁকা। ছবিটা ABOS-এ ছিলই না, তাই লাইনটা কেবল লেখা হয়ে
              ছিল: যে চিহ্ন কোথাও নেই সেটা কেউ খুঁজতেও যায় না।
@@ -41,8 +46,10 @@
              aria-hidden, কারণ নামটা পাশেই লেখা আছে — পর্দা-পাঠক যেন একই
              কথা দুবার না বলে। --}}
         <img src="{{ asset('brand/univer-mark.png') }}" alt="" aria-hidden="true"
-             class="size-4 shrink-0 object-contain">
-        <span>{{ __('core.brand.powered_by_name') }}</span>
+             class="size-5 shrink-0 object-contain">
+        <span class="hidden font-medium text-(--color-ink-body) sm:inline">
+            {{ __('core.brand.powered_by_name') }}
+        </span>
     </span>
 
     {{-- নোটিশগুলো — ক্লিকযোগ্য, কারণ জানানোই যথেষ্ট নয়।

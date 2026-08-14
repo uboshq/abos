@@ -14,6 +14,7 @@ use App\Models\Company;
 use App\Models\User;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Blade;
 use Tests\TestCase;
 
 /**
@@ -366,45 +367,87 @@ class ShellTest extends TestCase
         $this->assertStringContainsString('document.fullscreenElement', $toggle);
     }
 
-    public function test_each_module_has_its_own_icon_on_the_rail(): void
+    /** রেলে যে মডিউলগুলো সত্যিই বসে — মেনু থেকেই নেওয়া, হাতে লেখা নয়। */
+    private function railModules(): array
     {
-        $markup = file_get_contents(resource_path('views/components/shell/module-icon.blade.php'));
-
-        // একই আইকন সব মডিউলে দিলে রেলটাই অর্থহীন — ব্যবহারকারীকে প্রতিবার
-        // হোভার করে পড়তে হয়।
-        preg_match('/\$modules = \[(.*?)\n    \];/s', $markup, $m);
-        $this->assertNotEmpty($m, 'The module icon map is missing.');
-
-        /*
-         * প্রতিটা আইকন এখন দুইটা পথ: কাঠামো আর উজ্জ্বল অংশ (২০২৬-০৮-০৭)।
-         *
-         * আগে এখানে একটামাত্র লেখা খোঁজা হত, আর আকার বদলানোর দিনে টেস্টটা
-         * শূন্য পথ পেয়ে থেমে গিয়েছিল — সে ঠিকই বলছিল, শুধু নতুন আকারটা
-         * চিনত না।
-         *
-         * দুইটা পথ একসাথে মিলিয়ে দেখা হয়, একটা নয়: দুইটা মডিউলের কাঠামো
-         * এক হলেও উজ্জ্বল অংশে আলাদা হলে চোখে আলাদাই লাগে, আর সেটাই এই
-         * পাহারার আসল প্রশ্ন — রেলে তাকিয়ে মডিউলটা চেনা যায় কি না।
-         */
-        preg_match_all("/'([a-z_]+)' => \[\s*'([^']*)',\s*'([^']*)',\s*\]/s", $m[1], $icons, PREG_SET_ORDER);
-
-        $signatures = array_map(fn (array $i) => $i[2].'|'.$i[3], $icons);
-
-        $this->assertGreaterThanOrEqual(10, count($signatures), 'The rail has fewer icons than modules.');
-        $this->assertSame(count($signatures), count(array_unique($signatures)), 'Two modules share an icon.');
-
-        // একটাও যেন পুরোপুরি ফাঁকা না হয় — ফাঁকা মানে রেলে একটা ফাঁকা ঘর
-        foreach ($icons as $icon) {
-            $this->assertNotSame('', $icon[2].$icon[3], "The {$icon[1]} icon is empty.");
-        }
+        return app(MenuBuilder::class)->forUser($this->owner());
     }
 
-    public function test_the_rail_draws_its_icons_white_not_in_the_module_colour(): void
+    /**
+     * রেলে তাকিয়ে মডিউলটা চেনা যায়।
+     *
+     * ── প্রশ্নটা কী ──────────────────────────────────────────────────
+     * রেলে কোনো লেখা নেই। বারোটা চিহ্ন উপর-নিচে বসে, আর ২০px-এ একরঙা
+     * আউটলাইনে গুদাম আর বাক্স প্রায় একই ধূসর আকার। তাই দুইটা সংকেত:
+     * আলাদা আঁকা, আর আলাদা রং। যেকোনো একটা মিলে গেলে ওই জোড়াটা চেনা
+     * যায় না।
+     *
+     * ── কেন মেনু থেকে মডিউলের তালিকা ───────────────────────────────
+     * হাতে লেখা তালিকায় নতুন মডিউল যোগ করতে ভুলে গেলে পরীক্ষাটা সবুজই
+     * থাকত, আর রেলে একটা ফাঁকা ঘর বসত।
+     */
+    public function test_every_module_on_the_rail_can_be_told_apart(): void
+    {
+        $icons = $this->codeOf(resource_path('views/components/ui/icon.blade.php'));
+        $tokens = file_get_contents(resource_path('css/tokens.css'));
+
+        $modules = $this->railModules();
+        $this->assertGreaterThanOrEqual(8, count($modules), 'রেলে মডিউলই নেই।');
+
+        $drawings = [];
+        $colours = [];
+
+        foreach ($modules as $module) {
+            $code = $module['code'];
+
+            // ১ · আঁকাটা আছে, আর ফাঁকা নয়
+            $svg = Blade::render('<x-ui.icon name="'.$module['icon'].'" />');
+            $this->assertStringContainsString('<svg', $svg, "{$code}: রেলে ফাঁকা ঘর বসবে।");
+            $drawings[$code] = $svg;
+
+            // ২ · রঙের টোকেনটা আছে — নাম হুবহু মডিউলের কোড
+            $this->assertMatchesRegularExpression(
+                '/--color-module-'.preg_quote($code, '/').'\s*:\s*(#[0-9a-f]{3,8})/i',
+                $tokens,
+                "{$code}: --color-module-{$code} টোকেনটা নেই, তাই টাইলটা ব্র্যান্ড নীলে পড়বে।",
+            );
+
+            preg_match('/--color-module-'.preg_quote($code, '/').'\s*:\s*(#[0-9a-f]{3,8})/i', $tokens, $m);
+            $colours[$code] = strtolower($m[1]);
+        }
+
+        // ৩ · কেউ কারও আঁকা বা রং ভাগ করে না
+        $this->assertSame(count($drawings), count(array_unique($drawings)),
+            'দুইটা মডিউল একই আঁকা ব্যবহার করছে: '.implode(', ', array_keys($drawings)));
+        $this->assertSame(count($colours), count(array_unique($colours)),
+            'দুইটা মডিউল একই রং ব্যবহার করছে: '.json_encode($colours));
+
+        $this->assertStringNotContainsString('$modules = [', $icons,
+            'আইকন সেটে মডিউলের একটা আলাদা টেবিল ফিরে এসেছে।');
+    }
+
+    /**
+     * রেলের রং আসে টোকেন থেকে, কোড ধরে — নাম ধরে নয়।
+     *
+     * শেল কোনো মডিউলের নাম বলতে পারে না (§১৯.৭)। আগে core-এ একটা
+     * অনুবাদ টেবিল ছিল (accounts → finance, customer → crm), আর সেটাই
+     * নিয়মটা ভাঙত। এখন টোকেনের নামই কোড, তাই শেল শুধু কোডটা বসায়।
+     */
+    public function test_the_rail_names_no_module_of_its_own(): void
     {
         $markup = $this->codeOf(resource_path('views/components/shell/sidebar.blade.php'));
 
-        // গাঢ় নীলের উপর emerald বা navy বসালে ৩:১ কনট্রাস্টও থাকে না।
-        $this->assertStringContainsString('tone="white"', $markup);
+        $this->assertStringContainsString('--color-module-{{ $module[\'code\'] }}', $markup,
+            'রেল রংটা কোড ধরে নিচ্ছে না।');
+
+        // টোকেন না থাকলেও পর্দা ভাঙে না
+        $this->assertStringContainsString('var(--color-brand-600)', $markup,
+            'টোকেন না থাকলে টাইলটা রংহীন হয়ে যাবে।');
+
+        foreach ($this->railModules() as $module) {
+            $this->assertStringNotContainsString("'".$module['code']."'", $markup,
+                "সাইডবার {$module['code']} মডিউলের নাম ধরে কথা বলছে (§১৯.৭)।");
+        }
     }
 
     public function test_the_sidebar_stays_put_while_the_page_scrolls(): void

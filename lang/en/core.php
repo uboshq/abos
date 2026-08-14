@@ -337,6 +337,8 @@ return [
         'expand_sidebar' => 'Expand sidebar',
         'filter_menu' => 'Filter menu…',
         'main_navigation' => 'Main navigation',
+        // The path row — "Home / Module / Screen"
+        'breadcrumb' => 'Where you are',
     ],
 
     'company' => [
