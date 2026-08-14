@@ -33,6 +33,19 @@ final class ReportColumn
         /** ড্রিল-ডাউনের জন্য: কোন কলামে source_type ও source_id আছে */
         public readonly ?string $sourceTypeKey,
         public readonly ?string $sourceIdKey,
+
+        /**
+         * এই কলামটা দেখতে যে অনুমতি লাগে — null মানে সবার জন্য।
+         *
+         * ── কেন কলামে, রিপোর্টে নয় ──────────────────────────────────
+         * "ক্রেতা ধরে বিক্রয়" রিপোর্টটা বিক্রয়কর্মীর দরকার — কে কত
+         * কিনছে সেটা তাঁর রোজকার কাজ। কিন্তু ওই একই রিপোর্টে মুনাফার
+         * কলামটা তাঁর দেখার কথা নয়। পুরো রিপোর্ট আটকালে হয় তাঁর কাজ
+         * বন্ধ, নয় মুনাফা ফাঁস — দুইটার কোনোটাই চলে না।
+         *
+         * তাই আড়ালটা কলাম ধরে: সারিগুলো তিনি দেখেন, ওই একটা ঘর নয়।
+         */
+        public readonly ?string $permission = null,
     ) {}
 
     /** @param array<string, mixed> $definition */
@@ -65,7 +78,24 @@ final class ReportColumn
             width: $definition['width'] ?? null,
             sourceTypeKey: $definition['source_type'] ?? null,
             sourceIdKey: $definition['source_id'] ?? null,
+            permission: $definition['permission'] ?? null,
         );
+    }
+
+    /**
+     * এই ব্যবহারকারী কলামটা দেখতে পাবেন কি না।
+     *
+     * লগইন ছাড়া কেউ রিপোর্ট দেখে না, কিন্তু null এলে **আড়াল করাই**
+     * নিরাপদ দিক: অনুমতি যাচাই করার মতো কেউ না থাকলে সংখ্যাটা
+     * দেখানোর কোনো কারণ নেই।
+     */
+    public function visibleTo(mixed $user): bool
+    {
+        if ($this->permission === null) {
+            return true;
+        }
+
+        return $user !== null && $user->can($this->permission);
     }
 
     public function isNumeric(): bool
