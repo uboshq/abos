@@ -263,6 +263,9 @@ return [
         'none' => 'Nothing needs attention.',
         'backup_stale' => 'No backup for over two days — nothing could be recovered if the disk fails.',
         'awaiting_decision' => '{1} 1 waiting for a decision|[2,*] :count waiting for a decision',
+
+        // The screen is switched off in Control Panel, so knowing the address does not open it
+        'screen_switched_off' => 'This screen is switched off for this company. To turn it on: System Management → Control Panel.',
     ],
 
     'import' => [

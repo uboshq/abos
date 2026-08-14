@@ -61,6 +61,17 @@ class PosTest extends TestCase
 
         $this->warehouse = Warehouse::query()->where('is_default', true)->firstOrFail();
         $this->product = Product::query()->firstOrFail();
+
+        /*
+         * কাউন্টারের পর্দা ডিফল্ট বন্ধ — পরিবেশকের জিনিস নয় (Sales
+         * module.php)। তাই পরীক্ষা করার আগে চালু করে নিতে হয়।
+         *
+         * আগে লাগত না, কারণ সুইচটা দেখা হত কেবল মেনু বানানোর সময়;
+         * রুটটা খোলাই থাকত। অর্থাৎ এই পরীক্ষাগুলো এতদিন **বন্ধ থাকা**
+         * পর্দা পরীক্ষা করে পাশ করছিল — ঠিক সেই ফাঁকটাই
+         * `RefuseSwitchedOffScreens` বন্ধ করেছে।
+         */
+        app(SettingsService::class)->set('sales.screen_pos', true);
     }
 
     private function pos(): PosService
@@ -321,6 +332,10 @@ class PosTest extends TestCase
 
         $this->user->switchCompany($other->id);
         CompanyContext::set($other->id, $other->defaultBranch()?->id);
+
+        // সুইচটা কোম্পানিভিত্তিক — এক কোম্পানিতে কাউন্টার চালু করা
+        // মানে অন্য কোম্পানিতেও চালু নয়। তাই এখানে আলাদা করে।
+        app(SettingsService::class)->set('sales.screen_pos', true);
 
         $products = $this->actingAs($this->user)
             ->get(route('sales.pos.index'))

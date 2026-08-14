@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modules;
 
+use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\User;
@@ -46,6 +47,10 @@ class PosScanTest extends TestCase
             'track_batch' => true,
             'barcode' => '08901234567890',
         ])->save();
+
+        // কাউন্টারের পর্দা ডিফল্ট বন্ধ (Sales module.php) — স্ক্যানের
+        // পথটাও ওই সুইচের পেছনে, তাই আগে চালু করে নেওয়া হয়।
+        app(SettingsService::class)->set('sales.screen_pos', true);
     }
 
     /** ওষুধের কার্টনের গায়ে যেমন থাকে — GTIN, মেয়াদ, লট। */
