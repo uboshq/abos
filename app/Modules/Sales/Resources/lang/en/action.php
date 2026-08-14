@@ -35,4 +35,6 @@ return [
     'new_return' => 'New return',
     'shift_open' => 'Open shift',
     'shift_close' => 'Close shift',
+    'print_again' => 'Print again',
+    'print_settled' => 'It came out',
 ];

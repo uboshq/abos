@@ -35,4 +35,6 @@ return [
     'new_return' => 'নতুন ফেরত',
     'shift_open' => 'শিফট খুলুন',
     'shift_close' => 'শিফট বন্ধ করুন',
+    'print_again' => 'আবার ছাপুন',
+    'print_settled' => 'বেরিয়ে গেছে',
 ];

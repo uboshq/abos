@@ -112,6 +112,14 @@ return [
     'shift_opened' => ':till is open. The closing count goes in here at the end of the day.',
     'shift_closed' => 'Shift closed — the figures are below.',
     'shift_note' => 'Someone answers for the drawer. Enter what you counted on opening, count again and close at the end.',
+
+    // The queue screen — the paper did not come out, the sale did not wait
+    'print_queue_note' => 'The sale finished; the paper did not come out. When the printer is working, press again from here.',
+    'print_queue_empty' => 'Every paper came out',
+    'print_queue_empty_note' => 'Nothing is waiting. If a printer jams, those papers collect here.',
+    'print_job_settled' => ':no — taken off the waiting list.',
+    'print_waiting' => 'Not printed',
+    'print_failed' => 'Failed',
     'shift_none_open' => 'You have no shift open.',
     'shift_no_till' => 'Someone is at every drawer right now.',
     'shift_opening' => 'Counted at open',

@@ -7,6 +7,7 @@ use App\Modules\Sales\Http\Controllers\DeliveryChallanController;
 use App\Modules\Sales\Http\Controllers\DirectSaleController;
 use App\Modules\Sales\Http\Controllers\LotTraceController;
 use App\Modules\Sales\Http\Controllers\PosController;
+use App\Modules\Sales\Http\Controllers\PrintQueueController;
 use App\Modules\Sales\Http\Controllers\SalesInvoiceController;
 use App\Modules\Sales\Http\Controllers\SalesOrderController;
 use App\Modules\Sales\Http\Controllers\SalesPrintController;
@@ -127,6 +128,18 @@ Route::middleware('auth')->prefix('sales')->group(function () {
      * GET, কারণ এটা প্রশ্ন — লিংকটা কপি করে পাঠানো যায়।
      */
     Route::get('/lots/trace', [LotTraceController::class, 'show'])->name('lot.trace');
+
+    /*
+     * যে কাগজগুলো এখনো বেরোয়নি।
+     *
+     * তালিকাটা GET — একটা প্রশ্ন। "বেরিয়ে গেছে" চিহ্নিত করা POST,
+     * কারণ ওটা অবস্থা বদলায়।
+     */
+    Route::prefix('print-queue')->name('print_queue.')->group(function () {
+        Route::get('/', [PrintQueueController::class, 'index'])->name('index');
+        Route::post('/{job}/settle', [PrintQueueController::class, 'settle'])
+            ->whereNumber('job')->name('settle');
+    });
 
     Route::prefix('print')->name('print.')->group(function () {
         Route::get('/invoice/{invoice}', [SalesPrintController::class, 'invoice'])
