@@ -14,6 +14,7 @@ use App\Models\FinancialYear;
 use App\Models\IssuedNumber;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\CostLayerService;
@@ -50,6 +51,7 @@ use Illuminate\Validation\ValidationException;
  */
 final class PurchaseBillService
 {
+    use BringsInLots;
     use CalculatesLineTotals;
     use ReadsPackedQuantities;
 
@@ -197,6 +199,9 @@ final class PurchaseBillService
         $warehouse = $this->warehouseFor($bill);
 
         foreach ($direct as $line) {
+            // লট ধরা পণ্যে লটটা এখানেই জন্মায় — মালের সাথে একসাথে
+            $batch = $this->lotFor($line, $bill->supplier_bill_no ?: $bill->document_no);
+
             $this->stock->move(
                 product: $line->product,
                 warehouse: $warehouse,
@@ -205,9 +210,10 @@ final class PurchaseBillService
                 floor: (string) $line->qty,
                 date: $bill->trx_date,
                 documentNo: $bill->document_no,
+                batch: $batch,
             );
 
-            $this->bringInFree($bill, $line, $warehouse);
+            $this->bringInFree($bill, $line, $warehouse, $batch);
 
             /*
              * দর হিসাব করা হয় ছাড়ের পরে, করের আগে।
@@ -284,8 +290,12 @@ final class PurchaseBillService
      * আর "কত ফ্রি এল, কত ফ্রি গেল" প্রশ্নের উত্তর দেওয়া যায় — ওই
      * সংখ্যাটাই প্রস্তুতকারকের কাছে হিসাব দিতে লাগে।
      */
-    private function bringInFree(PurchaseBill $bill, PurchaseBillLine $line, Warehouse $warehouse): void
-    {
+    private function bringInFree(
+        PurchaseBill $bill,
+        PurchaseBillLine $line,
+        Warehouse $warehouse,
+        ?Batch $batch = null,
+    ): void {
         $free = (string) $line->free_qty;
 
         if (bccomp($free, '0', 4) <= 0) {
@@ -300,6 +310,10 @@ final class PurchaseBillService
             date: $bill->trx_date,
             documentNo: $bill->document_no,
             free: $free,
+
+            // ফ্রি কার্টনেও একই লট নম্বর ছাপা — মেয়াদোত্তীর্ণ ফ্রি
+            // ওষুধ বিক্রির চেয়ে কম বিপজ্জনক নয়, আর রিকলেও ধরা পড়তে হবে
+            batch: $batch,
         );
     }
 
@@ -567,6 +581,16 @@ final class PurchaseBillService
                 'purchase_order_line_id' => $orderLine?->id,
                 'qty' => $qty,
                 'free_qty' => $free,
+
+                /*
+                 * লট, মেয়াদ ও ছাপা দাম — লেখা থাকে, লট জন্মায় নিশ্চিত
+                 * করার মুহূর্তে। খসড়া বিল কখনো নিশ্চিত না হলে একটা খালি
+                 * লট তালিকায় বসে থাকত।
+                 */
+                'batch_no' => filled($line['batch_no'] ?? null) ? trim((string) $line['batch_no']) : null,
+                'expiry_date' => $line['expiry_date'] ?? null,
+                'mrp' => filled($line['mrp'] ?? null) ? (string) $line['mrp'] : null,
+
                 'entered_qty' => $pack['entered_qty'],
                 'entered_unit_id' => $pack['entered_unit_id'],
                 'rate' => $rate,

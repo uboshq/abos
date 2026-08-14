@@ -46,6 +46,7 @@ use Illuminate\Validation\ValidationException;
  */
 final class PurchaseReceiptService
 {
+    use BringsInLots;
     use CalculatesLineTotals;
     use ReadsPackedQuantities;
 
@@ -166,6 +167,9 @@ final class PurchaseReceiptService
                  * লাইনটাই দেখানো যায়, পুরো চালানটা নয়। এক চালানে একই পণ্য
                  * দুইবার থাকলে (দুই দরে) পার্থক্যটা তখনই ধরা পড়ে।
                  */
+                // লট ধরা পণ্যে লটটা এখানেই জন্মায় — মালের সাথে একসাথে
+                $batch = $this->lotFor($line, $receipt->supplier_challan_no ?: $receipt->document_no);
+
                 $this->stock->move(
                     product: $line->product,
                     warehouse: $receipt->warehouse,
@@ -174,6 +178,7 @@ final class PurchaseReceiptService
                     floor: (string) $line->received_qty,
                     date: $receipt->trx_date,
                     documentNo: $receipt->document_no,
+                    batch: $batch,
                 );
 
                 /*
@@ -192,6 +197,11 @@ final class PurchaseReceiptService
                         date: $receipt->trx_date,
                         documentNo: $receipt->document_no,
                         free: (string) $line->free_qty,
+
+                        // ফ্রি কার্টনেও একই লট নম্বর ছাপা থাকে, আর
+                        // মেয়াদোত্তীর্ণ ফ্রি ওষুধ বিক্রির চেয়ে কম
+                        // বিপজ্জনক নয় — রিকলেও ওগুলো ধরা পড়তে হবে
+                        batch: $batch,
                     );
                 }
 
@@ -407,6 +417,19 @@ final class PurchaseReceiptService
                 'purchase_order_line_id' => $orderLine?->id,
                 'received_qty' => $qty,
                 'free_qty' => $free,
+
+                /*
+                 * লট, মেয়াদ ও ছাপা দাম — যিনি মাল বুঝে নিচ্ছেন তিনিই
+                 * প্যাকেটের গায়ে যা লেখা তা দেখছেন। পরে আর কেউ দেখবে না।
+                 *
+                 * লটটা এখানে তৈরি হয় না, লেখা থাকে — জন্মায় নিশ্চিত
+                 * করার মুহূর্তে, মালের সাথে। খসড়া কাগজ কখনো নিশ্চিত না
+                 * হলে একটা খালি লট তালিকায় বসে থাকত।
+                 */
+                'batch_no' => filled($line['batch_no'] ?? null) ? trim((string) $line['batch_no']) : null,
+                'expiry_date' => $line['expiry_date'] ?? null,
+                'mrp' => filled($line['mrp'] ?? null) ? (string) $line['mrp'] : null,
+
                 'entered_qty' => $pack['entered_qty'],
                 'entered_unit_id' => $pack['entered_unit_id'],
                 'rate' => $rate,

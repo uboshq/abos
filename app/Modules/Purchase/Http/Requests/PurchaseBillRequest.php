@@ -56,6 +56,16 @@ class PurchaseBillRequest extends FormRequest
             // "১০ কার্টন কিনলে ১ কার্টন ফ্রি" — শূন্য চলে, ঋণাত্মক নয়
             'lines.*.free_qty' => ['nullable', 'numeric', 'min:0'],
 
+            /*
+             * লট, মেয়াদ ও ছাপা দাম — লট ধরা পণ্যে নম্বরটা বাধ্যতামূলক,
+             * কিন্তু সেটা এখানে বলা যায় না: কোন পণ্য লট ধরে চলে তা
+             * জানতে পণ্যটা দেখতে হয়। সেবা স্তর নিজে আটকায়, আর বার্তায়
+             * পণ্যের নাম থাকে — "কোন সারিতে" প্রশ্নের উত্তরসহ।
+             */
+            'lines.*.batch_no' => ['nullable', 'string', 'max:60'],
+            'lines.*.expiry_date' => ['nullable', 'date'],
+            'lines.*.mrp' => ['nullable', 'numeric', 'min:0'],
+
             // কোন প্যাকে লেখা — খালি মানে পণ্যের নিজের একক
             'lines.*.unit_id' => ['nullable', 'integer',
                 Rule::exists('mdm_units', 'id')->where('company_id', $companyId)],
