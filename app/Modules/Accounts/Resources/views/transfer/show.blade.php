@@ -41,6 +41,15 @@
                         </form>
                     @endcan
                 @endunless
+                {{-- স্লিপটা — দুইজনের সইয়ের কাগজ।
+
+                     বাতিল করা হস্তান্তরেও ছাপা যায়, ইচ্ছাকৃতভাবে: কাগজে
+                     "বাতিল" লেখা ওঠে, আর ওই কাগজটাই প্রমাণ যে হস্তান্তরটা
+                     হয়নি। ছাপা বন্ধ করলে বাতিলের কোনো কাগজ থাকত না। --}}
+                <x-ui.print-menu :documents="[
+                    ['label' => __('accounts::print.handover_title'),
+                     'url' => route('accounts.transfer.print', $transfer)],
+                ]" />
             </x-slot:actions>
         </x-ui.page-header>
     </x-slot:header>

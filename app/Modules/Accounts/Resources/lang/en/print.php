@@ -17,6 +17,17 @@ return [
     // Signature lines. Which of these appear depends on the voucher
     // type — money coming in needs the payer's signature, money going
     // out needs the receiver's.
+    // The handover slip — the paper both sides sign
+    'handover_title' => 'Money handover receipt',
+    'handover_copy_giver' => "Giver's copy",
+    'handover_copy_receiver' => "Receiver's copy",
+    'handover_copy_single' => 'One copy for both sides',
+    'handover_cut_here' => 'Cut here',
+    'handover_from' => 'From',
+    'handover_to' => 'To',
+    'handover_amount' => 'Amount handed over',
+    'handover_given_by' => 'Given by',
+    'handover_received_by' => 'Received by',
     'paid_by' => 'Paid by',
     'received_by' => 'Received by',
     'prepared_by' => 'Prepared by',
