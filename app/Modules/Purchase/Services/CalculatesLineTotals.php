@@ -89,6 +89,38 @@ trait CalculatesLineTotals
     }
 
     /**
+     * পরিমাণের ঘর যেখানে শূন্য চলে — যেমন ফ্রি পরিমাণ।
+     *
+     * ── কেন `money()` ব্যবহার করা হলো না ─────────────────────────────
+     * নিয়মগুলো হুবহু এক (খালি মানে শূন্য, ঋণাত্মক নয়), কিন্তু ভুল
+     * করলে বার্তাটা হত "টাকার ঘর ঋণাত্মক হতে পারে না" — অথচ ব্যবহারকারী
+     * টাকার ঘরে হাত দেননি, পরিমাণের ঘরে দিয়েছেন। ভুল বার্তা মানুষকে
+     * ভুল ঘরে খুঁজতে পাঠায়।
+     */
+    private function zeroOrMore(mixed $value, string $field): string
+    {
+        $value = trim((string) ($value ?? ''));
+
+        if ($value === '') {
+            return '0.0000';
+        }
+
+        if (! is_numeric($value)) {
+            throw ValidationException::withMessages([
+                'lines' => __('purchase::validation.not_a_number'),
+            ]);
+        }
+
+        if (bccomp($value, '0', 4) < 0) {
+            throw ValidationException::withMessages([
+                'lines' => __('purchase::validation.quantity_must_not_be_negative', ['field' => $field]),
+            ]);
+        }
+
+        return bcadd($value, '0', 4);
+    }
+
+    /**
      * পরিমাণের ঘর — শূন্য চলবে না।
      *
      * শূন্য পরিমাণের লাইন কোনো কাজ করে না, অথচ বিলের কাগজে একটা সারি

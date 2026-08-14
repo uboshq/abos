@@ -25,7 +25,7 @@ class PurchaseReceiptLine extends Model
 
     protected $fillable = [
         'purchase_receipt_id', 'product_id', 'purchase_order_line_id',
-        'received_qty', 'entered_qty', 'entered_unit_id',
+        'received_qty', 'free_qty', 'entered_qty', 'entered_unit_id',
         'rate', 'amount', 'line_no', 'narration',
     ];
 
@@ -33,6 +33,7 @@ class PurchaseReceiptLine extends Model
     {
         return [
             'received_qty' => 'decimal:4',
+            'free_qty' => 'decimal:4',
             'entered_qty' => 'decimal:4',
             'rate' => 'decimal:4',
             'amount' => 'decimal:4',

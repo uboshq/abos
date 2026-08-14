@@ -207,6 +207,8 @@ final class PurchaseBillService
                 documentNo: $bill->document_no,
             );
 
+            $this->bringInFree($bill, $line, $warehouse);
+
             /*
              * দর হিসাব করা হয় ছাড়ের পরে, করের আগে।
              *
@@ -228,6 +230,77 @@ final class PurchaseBillService
                 date: $bill->trx_date,
             );
         }
+    }
+
+    /**
+     * বাতিলে মালটাও ফেরে — খতিয়ানের সাথে সাথেই।
+     *
+     * ── কী ভেঙেছিল ──────────────────────────────────────────────────
+     * `confirm()` চালান-ছাড়া লাইনের মাল গুদামে ঢোকাত আর ক্রয়মূল্য
+     * ব্যয়-স্তরে বসাত, কিন্তু `cancel()` কেবল খতিয়ান ফেরাত। ফলে বাতিল
+     * করা বিলের মাল গুদামে থেকে যেত আর তার দামও স্তরে বসে থাকত —
+     * **মজুদের খাতা আর হিসাবের খাতা আলাদা হয়ে যেত**, অথচ কোনো ভুল
+     * দেখাত না।
+     *
+     * `PurchaseReceiptService::cancel()` দুইটাই ফেরাত, অর্থাৎ চালানের
+     * পথ ঠিক ছিল আর বিলের পথ নয় — একই ঘটনার দুই আচরণ।
+     *
+     * ── কেন দুইবার reverse ──────────────────────────────────────────
+     * বিক্রয়ের মাল আর ফ্রি মাল আলাদা উৎস-নামে বসে (`:free`), যাতে
+     * "কত ফ্রি এল" প্রশ্নের উত্তর আলাদা করে দেওয়া যায়। উল্টাতেও তাই
+     * দুইবার — একই কল দুইটা উৎস ধরতে পারে না।
+     *
+     * ── মাল বেরিয়ে গেলে কী ─────────────────────────────────────────
+     * তখন `StockService` নিজেই আটকায় ("তাকে যা নেই তা বের করা যায়
+     * না"), আর সেটাই ঠিক: যে মাল বেচা হয়ে গেছে তার বিল বাতিল করা যায়
+     * না — আগে বিক্রয়টা ফেরাতে হবে।
+     */
+    private function takeBackDirectLines(PurchaseBill $bill, Carbon $date, string $reason): void
+    {
+        $this->costs->withdraw(PurchaseBill::STOCK_SOURCE, $bill->id);
+
+        foreach ([PurchaseBill::STOCK_SOURCE, PurchaseBill::STOCK_SOURCE.':free'] as $source) {
+            $this->stock->reverse(
+                sourceType: $source,
+                sourceId: $bill->id,
+                reversedType: $source.':cancel',
+                date: $date,
+                narration: $reason,
+            );
+        }
+    }
+
+    /**
+     * ফ্রি মাল নিজের ভাণ্ডারে ঢোকে — বিক্রয়ের মজুদে নয়।
+     *
+     * ── কেন ব্যয়-স্তরে কিছু যায় না ──────────────────────────────────
+     * "১০ কার্টন কিনলে ১ কার্টন ফ্রি" — ওই এক কার্টন কোম্পানি কেনেনি,
+     * তার কোনো ক্রয়মূল্য নেই। গড় দরে মিশিয়ে দিলে প্রতিটা বিক্রির খরচ
+     * একটু করে কমে যেত, আর মুনাফা বেশি দেখাত। ভাণ্ডারটা আলাদা ঠিক এই
+     * কারণেই (৮ আগস্টের মাইগ্রেশন)।
+     *
+     * ── কেন এটা তার নিজের উৎস-নাম নিয়ে চলে ──────────────────────────
+     * `:free` আলাদা করে লেখা, যাতে বাতিলের সময় ফ্রি সারিটা চেনা যায়
+     * আর "কত ফ্রি এল, কত ফ্রি গেল" প্রশ্নের উত্তর দেওয়া যায় — ওই
+     * সংখ্যাটাই প্রস্তুতকারকের কাছে হিসাব দিতে লাগে।
+     */
+    private function bringInFree(PurchaseBill $bill, PurchaseBillLine $line, Warehouse $warehouse): void
+    {
+        $free = (string) $line->free_qty;
+
+        if (bccomp($free, '0', 4) <= 0) {
+            return;
+        }
+
+        $this->stock->move(
+            product: $line->product,
+            warehouse: $warehouse,
+            sourceType: PurchaseBill::STOCK_SOURCE.':free',
+            sourceId: $bill->id,
+            date: $bill->trx_date,
+            documentNo: $bill->document_no,
+            free: $free,
+        );
     }
 
     /**
@@ -294,6 +367,8 @@ final class PurchaseBillService
 
         return DB::transaction(function () use ($bill, $reason, $date) {
             if ($bill->status === DocumentStatus::CONFIRMED) {
+                $this->takeBackDirectLines($bill, $date, $reason);
+
                 $this->posting->reverse(
                     sourceType: PurchaseBill::drillSourceType(),
                     sourceId: $bill->id,
@@ -470,12 +545,28 @@ final class PurchaseBillService
 
             $figures = $this->lineFigures($qty, $rate, $line['discount'] ?? '0', $line['tax'] ?? '0');
 
+            /*
+             * ফ্রি পরিমাণ — একই সারির একই এককে, তাই একই রূপান্তরে।
+             *
+             * "২ বাক্স, সাথে ১ বাক্স ফ্রি" — ফ্রিটাও বাক্সেই লেখা হয়,
+             * পিসে নয়। আলাদা একক ধরলে একই সারিতে দুইটা একক থাকত।
+             *
+             * দর লাগে না: ফ্রি মালের ক্রয়মূল্য নেই, আর সেটাই আলাদা
+             * ভাণ্ডার রাখার মূল কারণ।
+             */
+            $free = $this->packed(
+                $product,
+                $this->zeroOrMore($line['free_qty'] ?? null, 'free_qty'),
+                $line['unit_id'] ?? null,
+            )['qty'];
+
             PurchaseBillLine::create([
                 'purchase_bill_id' => $bill->id,
                 'product_id' => $productId,
                 'purchase_receipt_line_id' => $receiptLine?->id,
                 'purchase_order_line_id' => $orderLine?->id,
                 'qty' => $qty,
+                'free_qty' => $free,
                 'entered_qty' => $pack['entered_qty'],
                 'entered_unit_id' => $pack['entered_unit_id'],
                 'rate' => $rate,

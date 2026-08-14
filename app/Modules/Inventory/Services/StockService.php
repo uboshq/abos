@@ -206,6 +206,16 @@ final class StockService
      * বাছত — মাল ফিরত সেই লটে যেখান থেকে কখনো বেরোয়ইনি, আর রিকলের
      * খাতা মিথ্যা হয়ে যেত।
      *
+     * ── ফ্রি ভাণ্ডারও উল্টায় ────────────────────────────────────────
+     * প্রথম লেখায় কেবল `floor_change` উল্টাত। তখন ধরা পড়েনি, কারণ ফ্রি
+     * ভাণ্ডারে মাল ঢোকানোর কোনো পথই ছিল না — সারিগুলো সবসময় শূন্য
+     * থাকত, আর শূন্য উল্টালে কিছুই বদলায় না।
+     *
+     * পথটা বসানোর সাথে সাথেই এটা সত্যিকারের বাগ হয়ে উঠত: বাতিল করা
+     * বিলের ফ্রি মাল গুদামে থেকে যেত, আর বাতিল করা বিক্রয়ের ফ্রি মাল
+     * ফিরত না — প্রস্তুতকারকের কাছে "কত ফ্রি দিলাম" বলার সংখ্যাটাই
+     * ভুল হয়ে যেত।
+     *
      * @return list<StockMovement>
      */
     public function reverse(
@@ -230,6 +240,15 @@ final class StockService
             }
 
             $reserved = $reservedFor === null ? '0' : (string) $reservedFor($row);
+            $free = bcmul((string) $row->free_change, '-1', 4);
+
+            // পুরোপুরি শূন্য সারি উল্টানোর কিছু নেই — move() নিজেই
+            // আপত্তি করত ("কিছুই নড়ছে না"), আর সেটা ঠিকই করত
+            if (bccomp((string) $row->floor_change, '0', 4) === 0
+                && bccomp($reserved, '0', 4) === 0
+                && bccomp($free, '0', 4) === 0) {
+                continue;
+            }
 
             $movements[] = $this->move(
                 product: $row->product,
@@ -241,6 +260,7 @@ final class StockService
                 date: $date,
                 documentNo: $row->document_no,
                 narration: $narration,
+                free: $free,
                 batch: $row->batch,
             );
         }

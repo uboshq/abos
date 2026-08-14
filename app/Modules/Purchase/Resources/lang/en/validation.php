@@ -16,6 +16,7 @@ return [
     'not_a_number' => 'Please enter a number.',
     'negative_amount' => 'An amount cannot be negative.',
     'quantity_must_be_positive' => 'Quantity must be greater than zero (:field).',
+    'quantity_must_not_be_negative' => 'Quantity cannot be negative (:field).',
     'zero_value_receipt' => 'A receipt worth nothing does not reach the books — enter a rate.',
     'zero_value_bill' => 'A bill worth nothing does not reach the books.',
     'line_not_in_order' => 'That line does not belong to this order.',
