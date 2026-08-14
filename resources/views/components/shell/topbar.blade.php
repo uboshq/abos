@@ -108,14 +108,25 @@
 
         <x-shell.fullscreen-toggle />
 
-        {{-- ভাষা — নিয়ম ৯। সেভ হয় ব্যবহারকারীর রেকর্ডে, সেশনে নয়। --}}
+        {{-- ভাষা — নিয়ম ৯। সেভ হয় ব্যবহারকারীর রেকর্ডে, সেশনে নয়।
+
+             আইকন **ও** লেখা, একটা নয়।
+
+             ── কেন দুইটাই ─────────────────────────────────────────────
+             শুধু পৃথিবীর আইকন হলে বোঝা যেত না কোন ভাষায় যাচ্ছে — আর
+             পাশের বোতামগুলো সব আইকন, তাই একটা একা "EN" লেখা বোতাম ওই
+             সারিতে বেমানান লাগত (মালিক ধরেছেন, ১৪ আগস্ট)।
+
+             লেখাটা গন্তব্যের ভাষায়: বাংলায় থাকলে "EN", ইংরেজিতে থাকলে
+             "বাং" — অর্থাৎ বোতামটা বলে কোথায় যাবে, কোথায় আছে তা নয়। --}}
         <form method="POST" action="{{ route('locale.switch') }}" class="contents">
             @csrf
             <button type="submit" name="locale" value="{{ app()->getLocale() === 'bn' ? 'en' : 'bn' }}"
-                    class="flex size-(--spacing-touch) items-center justify-center rounded-(--radius-field)
+                    class="flex h-(--spacing-touch) items-center gap-1.5 rounded-(--radius-field) px-2
                            text-sm font-medium text-(--color-ink-muted) transition-colors
-                           hover:bg-(--color-surface-hover)"
+                           hover:bg-(--color-surface-hover) hover:text-(--color-ink)"
                     title="{{ __('core.action.switch_language') }}">
+                <x-ui.icon name="globe" :size="18" />
                 {{ app()->getLocale() === 'bn' ? 'EN' : 'বাং' }}
             </button>
         </form>

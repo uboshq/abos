@@ -93,13 +93,22 @@ class AccountReportsTest extends TestCase
         $svc = app(VoucherService::class);
         $cash = (int) $this->till->account_id;
 
+        /*
+         * ব্যাংক ছুঁলে লেনদেনের নম্বর লাগে।
+         *
+         * নম্বর ছাড়া পোস্ট হয় না — একই ব্যাংক লেনদেন দুইবার খাতায় ওঠা
+         * আটকানোর পাহারা (BankMoneyIsBookedOnceTest)। এখানে নম্বরটা
+         * বসানো মানে পাহারাটা আড়াল করা নয়; এই পরীক্ষাগুলোর প্রশ্ন
+         * রিপোর্ট নিয়ে, আর তারা তাদের নিজের প্রশ্নেই থাকুক।
+         */
         foreach ([
-            ['receipt', $this->sales, $cash, '20000.00', '2026-08-10'],
-            ['expense', $cash, $this->rent, '6000.00', '2026-08-11'],
-            ['contra', $cash, $this->bank, '5000.00', '2026-08-12'],
-        ] as [$type, $from, $to, $amount, $date]) {
+            ['receipt', $this->sales, $cash, '20000.00', '2026-08-10', null],
+            ['expense', $cash, $this->rent, '6000.00', '2026-08-11', null],
+            ['contra', $cash, $this->bank, '5000.00', '2026-08-12', 'RPT-CONTRA-1'],
+        ] as [$type, $from, $to, $amount, $date, $reference]) {
             $svc->post($svc->create(
-                ['type' => $type, 'trx_date' => $date, 'narration' => 'seed'],
+                ['type' => $type, 'trx_date' => $date, 'narration' => 'seed',
+                    'instrument_no' => $reference],
                 $svc->twoLineEntry($type, $from, $to, $amount, 'seed'),
             ));
         }
@@ -252,7 +261,8 @@ class AccountReportsTest extends TestCase
         // লেনদেন
         $svc = app(VoucherService::class);
         $svc->post($svc->create(
-            ['type' => Voucher::CONTRA, 'trx_date' => '2026-07-15', 'narration' => 'আগের মাসের'],
+            ['type' => Voucher::CONTRA, 'trx_date' => '2026-07-15', 'narration' => 'আগের মাসের',
+                'instrument_no' => 'RPT-CONTRA-2'],
             $svc->twoLineEntry(Voucher::CONTRA, $this->bank, $this->till->account_id, '7500', 'আগের মাসের'),
         ));
 

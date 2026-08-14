@@ -27,6 +27,7 @@ return [
     'till_has_money' => 'This counter still holds :amount. Deposit or transfer it first, then close.',
     'primary_till_cannot_close' => 'The main cash counter cannot be closed — end-of-day deposits need somewhere '
         .'defined to go. Make another one primary first.',
+    'no_transit_account' => 'The chart has no ":code Cash in Transit" account. Install the standard chart first — without it there is nowhere for handed-over money to sit.',
     'cash_group_missing' => 'The chart has no ":code Cash in Hand" account. Install the standard chart first.',
     'unknown_voucher_type' => 'That is not a valid voucher type.',
     'no_lines' => 'A voucher needs at least one line.',
