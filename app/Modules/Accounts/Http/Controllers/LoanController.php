@@ -69,9 +69,29 @@ class LoanController extends Controller implements HasMiddleware
 
     public function create(Request $request): View
     {
+        /*
+         * সুদের খাত আগে থেকেই বাছা — কিন্তু বদলানো যায়।
+         *
+         * ── কেন ডিফল্ট লাগল ─────────────────────────────────────────
+         * ঘরটা বাধ্যতামূলক, আর তালিকায় ত্রিশটা খরচের খাত। প্রথম ঋণ
+         * বসানোর সময় মানুষ যেটা চেনা মনে হয় সেটাই বেছে নেন — আর
+         * "ব্যাংক চার্জ" নামটা কাছাকাছি শোনায় বলে সুদ ওখানেই গিয়ে বসত।
+         * পরীক্ষায় ঠিক সেটাই হয়েছিল (HP, ১৩ আগস্ট)।
+         *
+         * দুইটা মিশে গেলে "ধার করতে বছরে কত খরচ হলো" প্রশ্নের উত্তর
+         * দেওয়া যায় না, আর নিরীক্ষক সুদ আলাদা করে দেখতে চান।
+         *
+         * তবু ঘরটা খোলা: কেউ ব্যাংক-ঋণ ও ব্যক্তি-ঋণের সুদ আলাদা খাতে
+         * রাখেন, আর সেটা তাঁদের সিদ্ধান্ত।
+         */
+        $loan = new Loan;
+        $loan->interest_account_id = Account::query()
+            ->where('code', StandardChart::INTEREST_EXPENSE)
+            ->value('id');
+
         return view('accounts::loan.form', [
             'menu' => $this->menu->forUser($request->user()),
-            'loan' => new Loan,
+            'loan' => $loan,
             'liabilityAccounts' => $this->accountsUnder('2200'),
             'interestAccounts' => $this->postableAccounts(Account::EXPENSE),
             'moneyAccounts' => $this->moneyAccounts(),

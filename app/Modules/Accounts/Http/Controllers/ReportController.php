@@ -39,6 +39,23 @@ class ReportController extends Controller implements HasMiddleware
         'day-book' => 'accounts.day_book',
         'cash-book' => 'accounts.cash_book',
         'bank-book' => 'accounts.bank_book',
+
+        /*
+         * আদায়ের তালিকা — "আজ কত টাকা ঢুকল, কোন কাগজে"।
+         *
+         * ── কেন এটা এখানে ছিল না ────────────────────────────────────
+         * রিপোর্টটা লেখা হয়েছিল, ইঞ্জিনে নিবন্ধিতও হয়েছিল
+         * (`CoreReports::inflow()`), মেনুতে সারিও বসেছিল — কেবল
+         * ঠিকানা থেকে ওই কী-তে পৌঁছানোর এই সেতুটা কেউ বসায়নি। ফলে
+         * সাইডবারে লিংক দেখা যেত, ক্লিক করলে ৪০৪।
+         *
+         * `ModuleMenuTest` ধরেনি কারণ সে দেখে রুটের **নাম** আছে কি না
+         * (`accounts.report.show` ছিলই), প্যারামিটারটা কাজ করে কি না
+         * তা নয়। পাহারাটা এখন সেটাও দেখে।
+         *
+         * ধরা পড়েছে HP-র পরীক্ষকের ২২টা মেনু ধরে ধরে খোলায়, ১৪ আগস্ট।
+         */
+        'inflow' => 'accounts.inflow',
         'ledger' => 'accounts.ledger',
         'trial-balance' => 'accounts.trial_balance',
         'profit-loss' => 'accounts.profit_loss',

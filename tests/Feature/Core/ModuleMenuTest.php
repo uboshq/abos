@@ -6,7 +6,10 @@ namespace Tests\Feature\Core;
 
 use App\Core\Module\ModuleRegistry;
 use App\Core\Services\MenuBuilder;
+use App\Core\Support\CompanyContext;
+use App\Models\Company;
 use App\Models\User;
+use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Facades\Route;
@@ -46,6 +49,89 @@ class ModuleMenuTest extends TestCase
             ['মেনুতে আছে কিন্তু রুট নেই — ক্লিক করলে কিছু হবে না:'],
             $missing,
             ["স্ক্রিনটা তৈরি করুন, নয়তো module.php-তে 'planned' => true বসান।"],
+        )));
+    }
+
+    /**
+     * সারিটা কেবল কোথাও নয়, **খোলে** এমন জায়গায় নিয়ে যায়।
+     *
+     * ── কেন উপরেরটা যথেষ্ট ছিল না ───────────────────────────────────
+     * উপরের পরীক্ষাটা দেখে রুটের **নাম** নিবন্ধিত কি না। কিন্তু ন-টা
+     * হিসাবের রিপোর্ট একই রুট ভাগ করে (`accounts.report.show`), আর
+     * তফাত কেবল `slug` প্যারামিটারে। কন্ট্রোলারের তালিকায় ওই slug না
+     * থাকলে পাতাটা ৪০৪ দেয় — অথচ রুটের নাম আছে বলে পুরনো পরীক্ষা
+     * সবুজ থাকত।
+     *
+     * ঠিক এটাই ঘটেছিল "আদায়ের তালিকা"-য়: রিপোর্ট লেখা, ইঞ্জিনে
+     * নিবন্ধিত, মেনুতে সারি — কিন্তু ঠিকানা থেকে ওই রিপোর্টে পৌঁছানোর
+     * সেতুটা কেউ বসায়নি। HP-র পরীক্ষক ২২টা মেনু একে একে খুলে ধরেন
+     * (১৪ আগস্ট); ততদিন কেউ জানত না।
+     *
+     * এখানে প্রতিটা সারি সত্যিই খোলা হয়। ৪০৩ চলে — ওটা অনুমতির কথা
+     * বলে, আর ওই ব্যবহারকারীর অনুমতি নেই মানে পর্দাটা নেই তা নয়।
+     */
+    public function test_every_menu_row_actually_opens(): void
+    {
+        $this->seed(DemoSeeder::class);
+
+        $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
+        CompanyContext::set($company->id, $company->defaultBranch()?->id);
+
+        /*
+         * সব অনুমতিওয়ালা ব্যবহারকারী।
+         *
+         * কম অনুমতিতে চালালে সারিগুলো ৪০৩ দিত আর পরীক্ষাটা কিছুই
+         * প্রমাণ করত না — ভাঙা পাতা আর অনুমতি-নেই পাতা দেখতে এক।
+         */
+        foreach (app(ModuleRegistry::class)->all() as $module) {
+            foreach ($module->permissions as $permission) {
+                Permission::findOrCreate($permission, 'web');
+            }
+        }
+
+        $user = User::query()->where('email', 'owner@abos.test')->firstOrFail();
+        $user->givePermissionTo(Permission::all());
+
+        $broken = [];
+
+        /*
+         * ঘোষণা নয়, **তৈরি মেনু** ধরে হাঁটা।
+         *
+         * ── কেন ─────────────────────────────────────────────────────
+         * `module.php`-এর কাঁচা তালিকায় এমন সারিও আছে যেগুলো Control
+         * Panel-এ বন্ধ (কাউন্টার, বহুমুদ্রা, বহর, মেয়াদের রিপোর্ট)।
+         * বন্ধ পর্দা ৪০৪ দেয় — আর সেটাই ঠিক, `RefuseSwitchedOffScreens`
+         * ঠিক ওই কাজটাই করে। কাঁচা তালিকা ধরে চললে পরীক্ষাটা নিজের
+         * ব্যবস্থার সঠিক আচরণকেই ভাঙা বলত।
+         *
+         * `MenuBuilder` ইতিমধ্যেই অনুমতি, planned ও সুইচ তিনটাই মেনে
+         * তালিকা বানায় — অর্থাৎ ব্যবহারকারী যা সত্যিই দেখেন। প্রশ্নটাও
+         * ঠিক সেটাই: **যা দেখা যাচ্ছে, তাতে ক্লিক করলে কি কিছু খোলে?**
+         */
+        foreach (app(MenuBuilder::class)->forUser($user->fresh()) as $module) {
+            foreach ($module['groups'] as $group => $rows) {
+                foreach ($rows as $row) {
+                    if ($row['url'] === null) {
+                        continue;
+                    }
+
+                    // কেবল GET — POST সারি ঠিকানা নয়, কাজ
+                    if (! in_array('GET', Route::getRoutes()->getByName($row['route'])->methods(), true)) {
+                        continue;
+                    }
+
+                    $status = $this->actingAs($user)->get($row['url'])->getStatusCode();
+
+                    if ($status >= 400) {
+                        $broken[] = "{$module['code']}: {$group} → {$row['url']} = {$status}";
+                    }
+                }
+            }
+        }
+
+        $this->assertSame([], $broken, implode("\n", array_merge(
+            ['মেনুতে দেখা যাচ্ছে, ক্লিক করলে ভাঙে:'],
+            $broken,
         )));
     }
 

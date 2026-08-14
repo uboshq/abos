@@ -8,6 +8,7 @@ use App\Core\Engines\Print\PaperSize;
 use App\Core\Engines\Print\PrintableDocument;
 use App\Core\Engines\Print\PrintEngine;
 use App\Core\Support\DateFormat;
+use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Http\Controllers\Controller;
 use App\Modules\Inventory\Services\IssuedLots;
@@ -83,7 +84,7 @@ class SalesPrintController extends Controller implements HasMiddleware
          */
         return $this->pdf(
             $request, $doc, (string) $invoice->total, $invoice->document_no,
-            type: PrintJob::INVOICE, id: $invoice->id,
+            type: PrintJob::INVOICE, id: $invoice->id, document: $invoice,
         );
     }
 
@@ -107,7 +108,10 @@ class SalesPrintController extends Controller implements HasMiddleware
             notice: __('core.print.draft_notice'),
         );
 
-        return $this->pdf($request, $doc, (string) $invoice->total, $invoice->document_no);
+        return $this->pdf(
+            $request, $doc, (string) $invoice->total, $invoice->document_no,
+            document: $invoice,
+        );
     }
 
     public function challan(Request $request, DeliveryChallan $challan): Response
@@ -130,7 +134,7 @@ class SalesPrintController extends Controller implements HasMiddleware
         // চালানও — একই কারণে: দুইটা একরকম চালান মানে দুইবার মাল দাবি
         return $this->pdf(
             $request, $doc, (string) $challan->total, $challan->document_no,
-            type: PrintJob::CHALLAN, id: $challan->id,
+            type: PrintJob::CHALLAN, id: $challan->id, document: $challan,
         );
     }
 
@@ -157,7 +161,7 @@ class SalesPrintController extends Controller implements HasMiddleware
             notice: __('core.print.no_price_notice'),
         );
 
-        return $this->pdf($request, $doc, '0', $challan->document_no);
+        return $this->pdf($request, $doc, '0', $challan->document_no, document: $challan);
     }
 
     public function order(Request $request, SalesOrder $order): Response
@@ -178,7 +182,7 @@ class SalesPrintController extends Controller implements HasMiddleware
             narration: $order->narration,
         );
 
-        return $this->pdf($request, $doc, (string) $order->total, $order->document_no);
+        return $this->pdf($request, $doc, (string) $order->total, $order->document_no, document: $order);
     }
 
     /**
@@ -217,7 +221,7 @@ class SalesPrintController extends Controller implements HasMiddleware
             notice: __('core.print.no_price_notice'),
         );
 
-        return $this->pdf($request, $doc, '0', $order->document_no);
+        return $this->pdf($request, $doc, '0', $order->document_no, document: $order);
     }
 
     /** টাকার রসিদ — আদায়ের কাগজ। */
@@ -246,7 +250,7 @@ class SalesPrintController extends Controller implements HasMiddleware
             narration: $collection->narration,
         );
 
-        return $this->pdf($request, $doc, (string) $collection->amount, $collection->document_no);
+        return $this->pdf($request, $doc, (string) $collection->amount, $collection->document_no, document: $collection);
     }
 
     // ── সহায়ক ───────────────────────────────────────────────────────────
@@ -406,6 +410,7 @@ class SalesPrintController extends Controller implements HasMiddleware
         string $documentNo,
         ?string $type = null,
         ?int $id = null,
+        ?object $document = null,
     ): Response {
         $paper = $request->query('paper', PaperSize::A4);
 
@@ -413,6 +418,27 @@ class SalesPrintController extends Controller implements HasMiddleware
         // দিয়ে কাগজটা ছাপা না হওয়ার কোনো কারণ নেই
         if (! in_array($paper, PaperSize::all(), true)) {
             $paper = PaperSize::A4;
+        }
+
+        /*
+         * বাতিল করা কাগজের গায়ে "বাতিল" — সবার আগে।
+         *
+         * ── কেন এখানে, প্রতিটা পদ্ধতিতে নয় ─────────────────────────
+         * ছয়টা কাগজ, আর সপ্তমটা লেখার দিনে কেউ ভুলত। ভুলটা কোনো ভুল
+         * দেখাত না: বাতিল করা চালান ছাপলে **হুবহু বৈধ একটা কাগজ**
+         * বেরোত, আর সেটা দেখিয়ে গেট থেকে মাল বের করে নেওয়া যেত।
+         *
+         * স্থানান্তরের কাগজে যুক্তিটা আগে থেকেই লেখা ছিল, ভাউচারের
+         * কন্ট্রোলারেও ছিল — বিক্রয় ও ক্রয়ের দশটা কাগজে ছিল না। HP-র
+         * পরীক্ষক ভাউচারেরটা ধরেন (১৪ আগস্ট); খুঁজতে গিয়ে দেখা গেল
+         * বাকিগুলোও একই অবস্থায়।
+         *
+         * DUPLICATE-এর আগে, কারণ বাতিল বেশি জরুরি: দ্বিতীয় কপি নিয়ে
+         * বড়জোর দুইবার দাবি করা যায়, বাতিল কাগজ নিয়ে মাল নেওয়া যায়।
+         * খসড়ার সাথে সংঘর্ষ নেই — খসড়া আর বাতিল একসাথে হয় না।
+         */
+        if (($document?->status ?? null) === DocumentStatus::CANCELLED) {
+            $doc = $doc->withNotice(__('core.print.cancelled_notice'));
         }
 
         /*

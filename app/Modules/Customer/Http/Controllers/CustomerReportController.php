@@ -28,6 +28,19 @@ class CustomerReportController extends Controller implements HasMiddleware
      * @var array<string, string>
      */
     private const SLUGS = [
+        /*
+         * আদায়ের তালিকা — কার কাছ থেকে কত এল।
+         *
+         * হিসাব মডিউলের `inflow`-এর মতোই এখানেও সেতুটা বাদ পড়েছিল:
+         * রিপোর্ট লেখা, ইঞ্জিনে নিবন্ধিত (`customer.collection`), মেনুতে
+         * সারি — অথচ ঠিকানা থেকে ওখানে পৌঁছানো যেত না, ৪০৪ আসত।
+         *
+         * দুইটাই ধরা পড়েছে একই দিনে: একটা HP-র পরীক্ষকের হাতে, আর
+         * এটা ওই ভুল থেকে লেখা নতুন পরীক্ষায় (`ModuleMenuTest`), প্রথম
+         * চালেই। একই ভুল দুই মডিউলে — তাই পাহারাটাই আসল সমাধান ছিল।
+         */
+        'collection' => 'customer.collection',
+
         'due-list' => 'customer.due_list',
         'ageing' => 'customer.ageing',
     ];
