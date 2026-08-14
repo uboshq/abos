@@ -90,20 +90,38 @@ class MoneyTransferTest extends TestCase
 
     // ── দুই ধাপ — সবচেয়ে জরুরি অংশ ────────────────────────────────────
 
-    public function test_handing_over_moves_no_money_until_it_is_received(): void
+    /**
+     * দেওয়ার সাথে সাথেই টাকা টিল থেকে বেরোয়, কিন্তু গ্রহীতার কাছে যায় না।
+     *
+     * ── এই পরীক্ষাটা আগে উল্টো দাবি করত ─────────────────────────────
+     * লেখা ছিল "দাতার ব্যালেন্স বদলায় না, খতিয়ানে একটা সারিও বসে না",
+     * আর যুক্তি ছিল "গ্রহণ নিশ্চিত না হওয়া পর্যন্ত টাকাটা দাতার"।
+     * দায়িত্বের দিক থেকে ঠিক, ব্যালেন্সের দিক থেকে মিথ্যা: টাকাটা
+     * ড্রয়ার থেকে বেরিয়ে গেছে। ওই দিন গণনা করলে ঘাটতি দেখাত, আর
+     * হেফাজতকারী দায়ী হতেন এমন টাকার জন্য যেটা তিনি দিয়ে দিয়েছেন।
+     *
+     * দায়িত্বটা হারায়নি — টাকাটা গ্রহীতার খাতেও যায়নি, গেছে "পথের
+     * টাকা" খাতে, যেটা কারও হাতে নেই। পুরো গল্পটা MoneyOnTheRoadTest-এ।
+     */
+    public function test_handing_over_takes_it_out_of_the_till_but_not_into_the_receivers(): void
     {
         $before = $this->from->fresh()->balance();
 
         $transfer = $this->start('5000.00');
 
-        // দাতা মনে করছে টাকা চলে গেছে, কিন্তু হিসাবে এখনো তার কাছেই।
-        // এক ধাপে করলে এখানেই টাকাটা গ্রহীতার হিসাবে চলে যেত, আর পথে
-        // কিছু হলে সিস্টেম গ্রহীতার পক্ষে সাক্ষ্য দিত।
         $this->assertTrue($transfer->isPending());
-        $this->assertSame($before, $this->from->fresh()->balance());
-        $this->assertSame('0.0000', $this->to->fresh()->balance());
+
+        $this->assertSame(0, bccomp(bcsub($before, $this->from->fresh()->balance(), 4), '5000', 4),
+            'হাতে হাতে দেওয়ার পরেও টাকাটা দাতার টিলে রয়ে গেছে।');
+
+        $this->assertSame('0.0000', $this->to->fresh()->balance(),
+            'গ্রহণ করার আগেই টাকাটা গ্রহীতার হিসাবে চলে গেছে।');
+
+        // গ্রহণের পোস্টিংটা এখনো হয়নি; পাঠানোরটা হয়েছে
         $this->assertSame(0, LedgerEntry::query()
             ->where('source_type', 'money_transfer')->count());
+        $this->assertGreaterThan(0, LedgerEntry::query()
+            ->where('source_type', 'money_transfer:sent')->count());
     }
 
     public function test_receiving_moves_the_money_and_names_who_confirmed(): void

@@ -42,6 +42,9 @@ final class StandardChart implements ProvisionsCompany
 
     public const BANK_AND_MFS = '1102';
 
+    /** পথের টাকা — দেওয়া হয়েছে, এখনো গ্রহণ হয়নি। কারও হাতে নেই। */
+    public const CASH_IN_TRANSIT = '1103';
+
     public const RECEIVABLE = '1110';
 
     public const INVENTORY = '1120';
@@ -163,7 +166,8 @@ final class StandardChart implements ProvisionsCompany
 
     /** @var list<string> */
     public const SYSTEM_CODES = [
-        self::CASH_IN_HAND, self::BANK_AND_MFS, self::RECEIVABLE, self::INVENTORY,
+        self::CASH_IN_HAND, self::BANK_AND_MFS, self::CASH_IN_TRANSIT,
+        self::RECEIVABLE, self::INVENTORY,
         self::PAYABLE, self::VAT_PAYABLE, self::GOODS_RECEIVED_NOT_INVOICED,
         self::RETAINED_EARNINGS,
         self::SALES, self::COST_OF_GOODS_SOLD, self::PURCHASE_PRICE_VARIANCE,
@@ -279,6 +283,30 @@ final class StandardChart implements ProvisionsCompany
             // ব্যাংক ও বিকাশ/নগদ/রকেট একই মাথার নিচে: MFS হিসাবের
             // দিক থেকে ব্যাংকের মতোই আচরণ করে — জমা, উত্তোলন, বিবরণী।
             ['1102', 'Bank & Mobile Money', 'ব্যাংক ও মোবাইল ব্যাংকিং', $A, '1100', true, []],
+
+            /*
+             * পথের টাকা — দেওয়া হয়েছে, এখনো কেউ গ্রহণ করেনি।
+             *
+             * ── কেন আলাদা খাত লাগল ─────────────────────────────────
+             * হস্তান্তর দুই ধাপের: দাতা "দিলাম" বলেন, গ্রহীতা পরে
+             * "পেলাম" বলেন। আগে প্রথম ধাপে খতিয়ানে কিছুই বসত না, তাই
+             * টাকাটা ড্রয়ার থেকে বেরিয়ে গেলেও **দাতার টিলের ব্যালেন্সে
+             * থেকে যেত**।
+             *
+             * ফল: ওই দিন নগদ গণনা করলে টিলে ঘাটতি দেখাত, আর
+             * হেফাজতকারী দায়ী হতেন এমন টাকার জন্য যেটা তিনি হাতে হাতে
+             * দিয়ে দিয়েছেন। ABOS গণনা করে, তাই এই খাতটা এখানে দরকার।
+             *
+             * দ্বিতীয় লাভ: টাকাটা টিল থেকে বেরিয়ে যাওয়ায় **একই টাকা
+             * দুইবার পাঠানো** আর সম্ভব নয় — আগে একই ৫,০০০ একই মিনিটে
+             * সিন্দুকে ও ব্যাংকে পাঠালে দুইটাই সম্ভব দেখাত।
+             *
+             * ── কেন নগদের নিচে নয় ───────────────────────────────────
+             * "হাতে নগদ ১১০১"-এর নিচে বসালে টিলের যোগফলে এটাও ঢুকত, আর
+             * "কার কাছে কত" প্রশ্নের উত্তরে পথের টাকাও কারও নামে গোনা
+             * হত। এটা কারও হাতে নেই — এটাই পুরো কথা।
+             */
+            ['1103', 'Cash in Transit', 'পথের টাকা', $A, '1100', false, []],
 
             ['1110', 'Accounts Receivable', 'প্রাপ্য হিসাব', $A, '1100', false, []],
 

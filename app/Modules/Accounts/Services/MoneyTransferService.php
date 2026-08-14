@@ -11,6 +11,7 @@ use App\Core\Support\DateFormat;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Models\FinancialYear;
+use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Models\MoneyTransfer;
 use Illuminate\Support\Carbon;
@@ -18,16 +19,26 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
- * টাকা হস্তান্তর — দুই ধাপে।
+ * টাকা হস্তান্তর — দুই ধাপে, দুইটা পায়ে।
  *
- * ধাপ ১: দাতা "দিলাম" বলে। কিছুই লেজারে বসে না।
- * ধাপ ২: গ্রহীতা "পেলাম" বলে। তখনই দুইটা এন্ট্রি বসে।
+ * ধাপ ১: দাতা "দিলাম" বলেন। টিল থেকে টাকা বেরিয়ে **পথের টাকা** খাতে
+ *        ওঠে (১১০৩)।
+ * ধাপ ২: গ্রহীতা "পেলাম" বলেন। পথ থেকে তাঁর খাতে যায়।
  *
+ * ── কেন এক ধাপে নয় ─────────────────────────────────────────────────
  * এক ধাপে করলে দাতার "দিয়েছি" বলাই যথেষ্ট হত, আর টাকাটা সাথে সাথে
  * অন্যের হিসাবে চলে যেত — অথচ সে হয়তো এখনো পায়নি। পথে টাকা হারালে
  * তখন দুইজনেই বলত অন্যজনের কাছে, আর সিস্টেম গ্রহীতার পক্ষে সাক্ষ্য
- * দিত। দুই ধাপে টাকাটা গ্রহণ নিশ্চিত হওয়ার আগ পর্যন্ত দাতার হিসাবেই
- * থাকে, তাই দায়িত্ব নিয়ে অস্পষ্টতা থাকে না।
+ * দিত।
+ *
+ * ── কেন প্রথম ধাপেও খতিয়ানে বসে ─────────────────────────────────────
+ * আগে প্রথম ধাপে কিছুই বসত না। দায়িত্বের দিক থেকে ঠিক ছিল, কিন্তু
+ * ব্যালেন্সের দিক থেকে মিথ্যা: টাকাটা ড্রয়ার থেকে বেরিয়ে গেছে অথচ
+ * টিলের ব্যালেন্স তা বলছিল না। ওই দিন নগদ গণনা করলে ঘাটতি দেখাত, আর
+ * একই টাকা দুইবারও পাঠানো যেত।
+ *
+ * "পথের টাকা" খাতটা কারও হাতে নেই — সেটাই পুরো কথা। দায়িত্ব দলিলেই
+ * থাকে: কে দিয়েছেন, কে পাবেন, দুইটাই লেখা।
  */
 final class MoneyTransferService
 {
@@ -53,7 +64,7 @@ final class MoneyTransferService
 
             $trxDate = Carbon::parse($data['trx_date'] ?? now());
 
-            return MoneyTransfer::create([
+            $transfer = MoneyTransfer::create([
                 'company_id' => CompanyContext::id(),
                 'branch_id' => $data['branch_id'] ?? CompanyContext::branchId(),
                 'financial_year_id' => $this->year($trxDate)->id,
@@ -71,7 +82,65 @@ final class MoneyTransferService
                 'status' => DocumentStatus::DRAFT,
                 'created_by' => auth()->id(),
             ]);
+
+            /*
+             * প্রথম পা — টাকাটা টিল থেকে বেরিয়ে পথে ওঠে।
+             *
+             * ── কেন এখনই, গ্রহণের অপেক্ষায় নয় ────────────────────────
+             * আগে প্রথম ধাপে খতিয়ানে কিছুই বসত না, যুক্তি ছিল "গ্রহণ
+             * নিশ্চিত না হওয়া পর্যন্ত টাকাটা দাতার"। দায়িত্বের দিক থেকে
+             * ঠিক, কিন্তু **ব্যালেন্সের দিক থেকে মিথ্যা**: টাকাটা ড্রয়ার
+             * থেকে বেরিয়ে গেছে, অথচ টিলের ব্যালেন্স তা বলছিল না।
+             *
+             * ফল ছিল দুইটা:
+             *   ১. ওই দিন নগদ গণনা করলে টিলে ঘাটতি দেখাত, আর
+             *      হেফাজতকারী দায়ী হতেন এমন টাকার জন্য যেটা তিনি হাতে
+             *      হাতে দিয়ে দিয়েছেন
+             *   ২. একই টাকা দুইবার পাঠানো যেত — একই ৫,০০০ একই মিনিটে
+             *      সিন্দুকে ও ব্যাংকে, দুইটাই সম্ভব দেখাত
+             *
+             * দায়িত্বটা হারায় না: টাকাটা গ্রহীতার খাতেও যায়নি, গেছে
+             * "পথের টাকা" খাতে — যেটা কারও হাতে নেই, আর দলিলে দাতার
+             * নাম লেখা আছে।
+             */
+            $this->posting->post(
+                MoneyTransfer::drillSourceType().':sent',
+                $transfer->id,
+                $transfer->trx_date,
+                [
+                    ['account_id' => $this->transitAccount()->id,
+                        'debit' => $transfer->amount, 'credit' => '0'],
+                    ['account_id' => $transfer->fromTill->account_id,
+                        'debit' => '0', 'credit' => $transfer->amount],
+                ],
+                documentNo: $transfer->document_no,
+                branchId: $transfer->branch_id,
+            );
+
+            return $transfer;
         });
+    }
+
+    /**
+     * "পথের টাকা" খাতটা — না থাকলে বলা হয়, নিঃশব্দে অন্য খাতে বসে না।
+     *
+     * পুরনো কোম্পানিতে ছকটা বসার আগে খাতটা নাও থাকতে পারে। তখন
+     * হস্তান্তরটা আটকে যাওয়াই ঠিক: টাকা কোথায় গেল তা না জেনে খতিয়ানে
+     * বসানোর চেয়ে থেমে যাওয়া ভালো।
+     */
+    private function transitAccount(): Account
+    {
+        $account = StandardChart::find(StandardChart::CASH_IN_TRANSIT);
+
+        if ($account === null) {
+            throw ValidationException::withMessages([
+                'amount' => __('accounts::validation.no_transit_account', [
+                    'code' => StandardChart::CASH_IN_TRANSIT,
+                ]),
+            ]);
+        }
+
+        return $account;
     }
 
     /**
@@ -100,15 +169,21 @@ final class MoneyTransferService
         }
 
         return DB::transaction(function () use ($transfer, $destination, $receivedBy) {
+            /*
+             * দ্বিতীয় পা — পথ থেকে গন্তব্যে।
+             *
+             * উৎস এখানে দাতার টিল নয়, "পথের টাকা": প্রথম পায়েই টিল
+             * থেকে টাকাটা বেরিয়ে গেছে। টিল লিখলে ওই টাকাটা দুইবার
+             * বেরোত, আর দাতার ব্যালেন্স ঋণাত্মক হয়ে যেত।
+             */
             $this->posting->post(
                 MoneyTransfer::drillSourceType(),
                 $transfer->id,
                 $transfer->trx_date,
                 [
-                    // গন্তব্য বাড়ে, উৎস কমে — ভাউচারের twoLineEntry-র
-                    // মতোই দিক, আর একই কারণে এক জায়গায় লেখা
                     ['account_id' => $destination, 'debit' => $transfer->amount, 'credit' => '0'],
-                    ['account_id' => $transfer->fromTill->account_id, 'debit' => '0', 'credit' => $transfer->amount],
+                    ['account_id' => $this->transitAccount()->id,
+                        'debit' => '0', 'credit' => $transfer->amount],
                 ],
                 documentNo: $transfer->document_no,
                 branchId: $transfer->branch_id,
@@ -143,6 +218,14 @@ final class MoneyTransferService
         }
 
         return DB::transaction(function () use ($transfer, $reason) {
+            /*
+             * দুইটা পা-ই ফেরাতে হয়, আর ক্রমটা উল্টো।
+             *
+             * নিশ্চিত হয়ে থাকলে দুইটা পোস্টিং হয়েছে: পাঠানো ও গ্রহণ।
+             * কেবল গ্রহণেরটা ফেরালে টাকাটা "পথের টাকা" খাতে আটকে থাকত —
+             * কারও হাতে নেই, অথচ খাতায় আছে, আর কেউ কোনোদিন খুঁজেও পেত
+             * না। খসড়া অবস্থাতেও পাঠানোর পা-টা বসেছে, তাই সেটাও ফেরে।
+             */
             if ($transfer->isConfirmed()) {
                 $this->posting->reverse(
                     MoneyTransfer::drillSourceType(),
@@ -151,6 +234,13 @@ final class MoneyTransferService
                     $reason,
                 );
             }
+
+            $this->posting->reverse(
+                MoneyTransfer::drillSourceType().':sent',
+                $transfer->id,
+                now()->toDateString(),
+                $reason,
+            );
 
             $transfer->forceFill([
                 'status' => DocumentStatus::CANCELLED,
