@@ -28,7 +28,7 @@
             :subtitle="trans_choice('accounts::message.voucher_count', $vouchers->total(), ['count' => $vouchers->total()])">
             <x-slot:actions>
                 @can('accounts.voucher.create')
-                    <x-ui.button tone="primary" icon="+" :href="route('accounts.voucher.create', $type)">
+                    <x-ui.button tone="primary" icon="plus" :href="route('accounts.voucher.create', $type)">
                         {{ __('accounts::action.new_voucher') }}
                     </x-ui.button>
                 @endcan

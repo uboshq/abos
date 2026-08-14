@@ -55,7 +55,7 @@
             :subtitle="trans_choice('supplier::message.count', $suppliers->total(), ['count' => $suppliers->total()])">
             <x-slot:actions>
                 @can('create', \App\Modules\Supplier\Models\Supplier::class)
-                    <x-ui.button tone="primary" icon="+" :href="route('supplier.create')">
+                    <x-ui.button tone="primary" icon="plus" :href="route('supplier.create')">
                         {{ __('supplier::action.new') }}
                     </x-ui.button>
                 @endcan

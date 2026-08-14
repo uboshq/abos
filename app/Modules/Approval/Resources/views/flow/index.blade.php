@@ -12,7 +12,7 @@
             :title="__('approval::menu.flows')"
             :subtitle="trans_choice('core.count.records', $flows->count(), ['count' => $flows->count()])">
             <x-slot:actions>
-                <x-ui.button tone="primary" icon="+" :href="route('approval.flow.create')">
+                <x-ui.button tone="primary" icon="plus" :href="route('approval.flow.create')">
                     {{ __('approval::action.new_flow') }}
                 </x-ui.button>
             </x-slot:actions>

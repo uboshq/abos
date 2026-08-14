@@ -30,7 +30,7 @@
             খালি থাকাই স্বাভাবিক — এটা রোজকার কাজের পর্দা নয়, প্রিন্টার
             বিগড়ানোর দিনের। তাই বার্তাটা "কিছু নেই" নয়, "সব বেরিয়ে গেছে"।
         --}}
-        <x-ui.empty-state icon="🖨️" :message="__('sales::message.print_queue_empty')" />
+        <x-ui.empty-state icon="printer" :message="__('sales::message.print_queue_empty')" />
     @else
         <div class="overflow-x-auto rounded-(--radius-card) border border-(--color-border)">
             <table class="w-full text-sm">

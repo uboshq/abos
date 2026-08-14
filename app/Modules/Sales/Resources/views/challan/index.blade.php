@@ -57,7 +57,7 @@
             :subtitle="__('sales::message.challan_note')">
             <x-slot:actions>
                 @can('create', \App\Modules\Sales\Models\DeliveryChallan::class)
-                    <x-ui.button tone="primary" icon="+" :href="route('sales.challan.create')">
+                    <x-ui.button tone="primary" icon="plus" :href="route('sales.challan.create')">
                         {{ __('sales::action.new_challan') }}
                     </x-ui.button>
                 @endcan

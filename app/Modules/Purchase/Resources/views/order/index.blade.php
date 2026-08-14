@@ -50,7 +50,7 @@
             :subtitle="__('purchase::message.order_note')">
             <x-slot:actions>
                 @can('create', \App\Modules\Purchase\Models\PurchaseOrder::class)
-                    <x-ui.button tone="primary" icon="+" :href="route('purchase.order.create')">
+                    <x-ui.button tone="primary" icon="plus" :href="route('purchase.order.create')">
                         {{ __('purchase::action.new_order') }}
                     </x-ui.button>
                 @endcan

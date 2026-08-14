@@ -24,7 +24,7 @@
             :subtitle="trans_choice('inventory::message.warehouse_count', $warehouses->total(), ['count' => $warehouses->total()])">
             <x-slot:actions>
                 @can('create', \App\Modules\Inventory\Models\Warehouse::class)
-                    <x-ui.button tone="primary" icon="+" :href="route('inventory.warehouse.create')">
+                    <x-ui.button tone="primary" icon="plus" :href="route('inventory.warehouse.create')">
                         {{ __('inventory::action.new_warehouse') }}
                     </x-ui.button>
                 @endcan

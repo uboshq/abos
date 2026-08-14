@@ -27,7 +27,7 @@
     <x-slot:header>
         <x-ui.page-header :title="__('hr::menu.salary_heads')">
             <x-slot:actions>
-                <x-ui.button tone="primary" icon="+" :href="route('hr.salary_head.create')">
+                <x-ui.button tone="primary" icon="plus" :href="route('hr.salary_head.create')">
                     {{ __('hr::action.new_head') }}
                 </x-ui.button>
             </x-slot:actions>

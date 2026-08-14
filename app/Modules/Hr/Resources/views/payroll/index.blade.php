@@ -6,7 +6,7 @@
         <x-ui.page-header :title="__('hr::menu.payroll')">
             <x-slot:actions>
                 @can('hr.payroll.manage')
-                    <x-ui.button tone="primary" icon="+" :href="route('hr.payroll.create')">
+                    <x-ui.button tone="primary" icon="plus" :href="route('hr.payroll.create')">
                         {{ __('hr::action.new_run') }}
                     </x-ui.button>
                 @endcan

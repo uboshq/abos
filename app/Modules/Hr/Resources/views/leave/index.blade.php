@@ -28,7 +28,7 @@
                     <x-ui.button :href="route('hr.leave_type.index')">
                         {{ __('hr::menu.leave_types') }}
                     </x-ui.button>
-                    <x-ui.button tone="primary" icon="+" :href="route('hr.leave.create')">
+                    <x-ui.button tone="primary" icon="plus" :href="route('hr.leave.create')">
                         {{ __('hr::action.apply_leave') }}
                     </x-ui.button>
                 @endcan

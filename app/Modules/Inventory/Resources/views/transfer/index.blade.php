@@ -31,7 +31,7 @@
             :subtitle="trans_choice('core.count.records', $transfers->total(), ['count' => $transfers->total()])">
             <x-slot:actions>
                 @can('inventory.transfer.create')
-                    <x-ui.button tone="primary" icon="+" :href="route('inventory.transfer.create')">
+                    <x-ui.button tone="primary" icon="plus" :href="route('inventory.transfer.create')">
                         {{ __('inventory::action.new_transfer') }}
                     </x-ui.button>
                 @endcan

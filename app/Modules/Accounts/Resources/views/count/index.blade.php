@@ -30,7 +30,7 @@
     <x-slot:header>
         <x-ui.page-header :title="__('accounts::menu.cash_count')">
             <x-slot:actions>
-                <x-ui.button tone="primary" icon="+" :href="route('accounts.count.create')">
+                <x-ui.button tone="primary" icon="plus" :href="route('accounts.count.create')">
                     {{ __('accounts::action.new_count') }}
                 </x-ui.button>
             </x-slot:actions>

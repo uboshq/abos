@@ -16,7 +16,7 @@
             :subtitle="trans_choice('master_data::message.count', $records->count(), ['count' => $records->count()])">
             <x-slot:actions>
                 @can('master_data.manage')
-                    <x-ui.button tone="primary" icon="+"
+                    <x-ui.button tone="primary" icon="plus"
                                  :href="route('master_data.' . $spec['route'] . '.create')">
                         {{ __('master_data::action.new') }}
                     </x-ui.button>

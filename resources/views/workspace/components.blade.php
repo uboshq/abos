@@ -14,8 +14,8 @@
         <x-ui.page-header :title="__('core.components.title')"
                           :subtitle="__('core.components.subtitle')">
             <x-slot:actions>
-                <x-ui.button tone="secondary" icon="↺">{{ __('core.action.history') }}</x-ui.button>
-                <x-ui.button tone="primary" icon="+">{{ __('core.action.create') }}</x-ui.button>
+                <x-ui.button tone="secondary" icon="refresh">{{ __('core.action.history') }}</x-ui.button>
+                <x-ui.button tone="primary" icon="plus">{{ __('core.action.create') }}</x-ui.button>
             </x-slot:actions>
         </x-ui.page-header>
     </x-slot:header>

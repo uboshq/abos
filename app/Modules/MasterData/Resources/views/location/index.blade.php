@@ -30,7 +30,7 @@
             <x-slot:actions>
                 @can('master_data.manage')
                     @if ($total > 0)
-                        <x-ui.button tone="primary" icon="+" :href="route('master_data.location.create')">
+                        <x-ui.button tone="primary" icon="plus" :href="route('master_data.location.create')">
                             {{ __('master_data::action.new') }}
                         </x-ui.button>
                     @endif

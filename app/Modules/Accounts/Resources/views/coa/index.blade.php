@@ -38,7 +38,7 @@
             <x-slot:actions>
                 @can('create', \App\Modules\Accounts\Models\Account::class)
                     @if ($total > 0)
-                        <x-ui.button tone="primary" icon="+" :href="route('accounts.coa.create')">
+                        <x-ui.button tone="primary" icon="plus" :href="route('accounts.coa.create')">
                             {{ __('accounts::action.new_account') }}
                         </x-ui.button>
                     @endif

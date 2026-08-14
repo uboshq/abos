@@ -57,7 +57,7 @@
             :subtitle="__('sales::message.collection_note')">
             <x-slot:actions>
                 @can('create', \App\Modules\Sales\Models\Collection::class)
-                    <x-ui.button tone="primary" icon="+" :href="route('sales.collection.create')">
+                    <x-ui.button tone="primary" icon="plus" :href="route('sales.collection.create')">
                         {{ __('sales::action.new_collection') }}
                     </x-ui.button>
                 @endcan

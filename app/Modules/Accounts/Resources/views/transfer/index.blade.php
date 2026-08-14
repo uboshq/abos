@@ -29,7 +29,7 @@
     <x-slot:header>
         <x-ui.page-header :title="__('accounts::menu.money_transfer')">
             <x-slot:actions>
-                <x-ui.button tone="primary" icon="+" :href="route('accounts.transfer.create')">
+                <x-ui.button tone="primary" icon="plus" :href="route('accounts.transfer.create')">
                     {{ __('accounts::action.new_transfer') }}
                 </x-ui.button>
             </x-slot:actions>
