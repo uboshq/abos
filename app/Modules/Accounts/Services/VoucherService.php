@@ -136,6 +136,7 @@ final class VoucherService
         $voucher->load('lines.account');
 
         $this->assertLinesArePostable($voucher);
+        $this->assertBankReferenceIsFree($voucher);
 
         return DB::transaction(function () use ($voucher) {
             $this->posting->post(
@@ -203,6 +204,11 @@ final class VoucherService
                 'cancelled_by' => auth()->id(),
                 'cancelled_at' => now(),
                 'cancel_reason' => $reason,
+                // ব্যাংক লেনদেনের নম্বরটা আবার খালি হয় — ভুল ভাউচার
+                // বাতিল করে একই TrxID নিয়ে সঠিকটা তোলা রোজকার কাজ, আর
+                // ধরে রাখলে ওই টাকাটা আর কখনো খাতায় উঠত না। নম্বরটা
+                // `instrument_no`-তে থেকেই যায়, শুধু জোড়াটা ছাড়া পায়
+                'money_account_id' => null,
             ])->save();
 
             return $voucher->fresh(['lines']);
@@ -299,6 +305,70 @@ final class VoucherService
         $voucher->load('lines');
 
         $voucher->forceFill(['amount' => $voucher->totals()['debit']])->save();
+    }
+
+    /**
+     * ব্যাংক বা MFS-এ গেলে লেনদেনের নম্বর লাগে, আর সেটা একবারই।
+     *
+     * ── কেন নিশ্চিত করার সময়, এন্ট্রির সময় নয় ───────────────────────
+     * এন্ট্রির মুহূর্তে হিসাবরক্ষক লিখছেন "করিম স্টোরকে ৫০,০০০ দেব" —
+     * বিকাশের TrxID তখনো **জন্মায়ইনি**। তখন বাধ্যতামূলক করলে মানুষ
+     * `0` বা `-` বসিয়ে এগিয়ে যেতেন, আর **ভুল নম্বর কোনো নম্বর না
+     * থাকার চেয়ে খারাপ**: ব্যাংক মেলানোর সময় ওটা দেখে সবাই ভাবে
+     * মিলে গেছে।
+     *
+     * নিশ্চিতকরণ সেই মুহূর্ত যখন টাকা সত্যিই নড়ে। অনুমোদনের ধাপ থাকলে
+     * সেটা এর আগেই ঘটে, তাই অনুমোদনকারীও নম্বরটা বসাতে পারেন — আর
+     * থ্রেশহোল্ডের নিচে অনুমোদন না লাগলেও পাহারাটা থেকে যায়।
+     *
+     * ── নগদে চাওয়া হয় না ───────────────────────────────────────────
+     * নগদের কোনো TrxID নেই। চাইলে প্রতিটা নগদ ভাউচারে একটা বানানো
+     * নম্বর বসত। তাই শর্তটা টাকার খাতের উপর: ব্যাংক হলে লাগে।
+     *
+     * ── কী আটকায়, আর কী আটকায় না ───────────────────────────────────
+     * আটকায়: **একই ব্যাংক লেনদেন দুইবার খাতায় ওঠা** — হিসাবরক্ষক
+     * তুললেন, ম্যানেজারও তুললেন। আটকায় না: একই বিলের বিপরীতে দুইটা
+     * আলাদা পাঠানো — ওটা বিলের বরাদ্দের কাজ, আলাদা পাহারা।
+     */
+    private function assertBankReferenceIsFree(Voucher $voucher): void
+    {
+        $account = $voucher->lines
+            ->map(fn (VoucherLine $line) => $line->account)
+            ->first(fn (?Account $a) => $a?->is_bank);
+
+        // নগদ, বা টাকার কোনো ব্যাংক-খাত নেই (জাবেদা) — প্রশ্নই ওঠে না
+        if ($account === null) {
+            return;
+        }
+
+        $reference = trim((string) $voucher->instrument_no);
+
+        if ($reference === '') {
+            throw ValidationException::withMessages([
+                'instrument_no' => __('accounts::validation.bank_reference_required', [
+                    'account' => $account->label(),
+                ]),
+            ]);
+        }
+
+        $twin = Voucher::query()
+            ->where('money_account_id', $account->id)
+            ->where('instrument_no', $reference)
+            ->whereKeyNot($voucher->id)
+            ->first();
+
+        if ($twin !== null) {
+            throw ValidationException::withMessages([
+                'instrument_no' => __('accounts::validation.bank_reference_used', [
+                    'reference' => $reference,
+                    'no' => $twin->document_no,
+                ]),
+            ]);
+        }
+
+        // খাতটা মাথায় বসে, কারণ অনন্যতার ইনডেক্সও মাথার উপর — লাইনে
+        // বসালে দুই লাইনের ভাউচারে নিয়মটা কোন লাইনের তা বলা যেত না
+        $voucher->forceFill(['money_account_id' => $account->id])->save();
     }
 
     /**

@@ -46,6 +46,9 @@ class VoucherTest extends TestCase
 
     private int $rent;
 
+    /** ব্যাংক লেনদেনের নম্বর যেন প্রতিবার আলাদা হয়। */
+    private int $reference = 0;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -84,12 +87,28 @@ class VoucherTest extends TestCase
         return app(VoucherService::class);
     }
 
+    /**
+     * ব্যাংক ছুঁলে লেনদেনের নম্বরটা এখানেই বসে।
+     *
+     * নম্বরটা ছাড়া পোস্ট হয় না — সেটা নিজের পরীক্ষায় প্রমাণিত
+     * (`test_bank_money_cannot_be_posted_without_a_transaction_number`)।
+     * তাই এখানে বসানোটা নিয়মটাকে আড়াল করছে না, শুধু বাকি পরীক্ষাগুলোকে
+     * তাদের নিজের প্রশ্নে থাকতে দিচ্ছে। প্রতিটা ডাকে নতুন নম্বর, কারণ
+     * একই নম্বর দুইবার বসানোও আটকানো।
+     */
     private function simple(string $type, int $from, int $to, string $amount = '1000.00'): Voucher
     {
         $svc = $this->service();
 
+        $touchesBank = in_array($this->bank, [$from, $to], true);
+
         return $svc->create(
-            ['type' => $type, 'trx_date' => '2026-08-10', 'narration' => 'test'],
+            [
+                'type' => $type,
+                'trx_date' => '2026-08-10',
+                'narration' => 'test',
+                'instrument_no' => $touchesBank ? 'TRX'.++$this->reference : null,
+            ],
             $svc->twoLineEntry($type, $from, $to, $amount, 'test'),
         );
     }

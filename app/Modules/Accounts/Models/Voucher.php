@@ -82,7 +82,7 @@ class Voucher extends Model implements Drillable
     protected $fillable = [
         'company_id', 'branch_id', 'financial_year_id', 'type', 'document_no',
         'trx_date', 'party_type', 'party_id', 'amount', 'narration',
-        'instrument', 'instrument_no', 'instrument_date',
+        'instrument', 'instrument_no', 'instrument_date', 'money_account_id',
         'status', 'approved_by', 'approved_at',
         'cancelled_by', 'cancelled_at', 'cancel_reason', 'created_by',
     ];
