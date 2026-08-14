@@ -56,7 +56,7 @@
             :subtitle="__('purchase::message.bill_note')">
             <x-slot:actions>
                 @can('create', \App\Modules\Purchase\Models\PurchaseBill::class)
-                    <x-ui.button tone="primary" icon="+" :href="route('purchase.bill.create')">
+                    <x-ui.button tone="primary" icon="plus" :href="route('purchase.bill.create')">
                         {{ __('purchase::action.new_bill') }}
                     </x-ui.button>
                 @endcan

@@ -149,7 +149,8 @@
                         <a href="?locale={{ app()->getLocale() === 'bn' ? 'en' : 'bn' }}"
                            class="flex min-h-(--spacing-touch) items-center rounded-(--radius-field) px-2
                                   text-(--color-ink-muted) transition-colors hover:text-(--color-ink)">
-                            🌐 {{ app()->getLocale() === 'bn' ? 'English' : 'বাংলা' }}
+                            <x-ui.icon name="globe" :size="15" class="me-1.5" />
+                            {{ app()->getLocale() === 'bn' ? 'English' : 'বাংলা' }}
                         </a>
                     </div>
 
@@ -206,7 +207,12 @@
                                         class="absolute inset-y-0 end-0 flex w-12 items-center justify-center
                                                text-(--color-ink-muted)"
                                         :aria-label="show ? '{{ __('auth.hide_password') }}' : '{{ __('auth.show_password') }}'">
-                                    👁
+                                    {{-- দুইটা আলাদা আঁকা, একটা ঘুরিয়ে নয়: কাটা-চোখ
+                                         মানে "এখন লুকানো", আর সেটা চোখের উপর একটা
+                                         দাগ — ইমোজিতে ওই দ্বিতীয় অবস্থাটা ছিলই না,
+                                         তাই বোতামটা চাপার পর কিছু বদলাত না। --}}
+                                    <span x-show="! show"><x-ui.icon name="eye" :size="18" /></span>
+                                    <span x-show="show" x-cloak><x-ui.icon name="eye_off" :size="18" /></span>
                                 </button>
                             </div>
                             <p x-show="caps" x-cloak

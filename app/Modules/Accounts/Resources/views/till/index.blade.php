@@ -49,7 +49,7 @@
             :subtitle="__('accounts::message.till_total', ['amount' => \App\Core\Support\Money::format($total)])">
             <x-slot:actions>
                 @can('create', \App\Modules\Accounts\Models\CashTill::class)
-                    <x-ui.button tone="primary" icon="+" :href="route('accounts.till.create')">
+                    <x-ui.button tone="primary" icon="plus" :href="route('accounts.till.create')">
                         {{ __('accounts::action.new_till') }}
                     </x-ui.button>
                 @endcan

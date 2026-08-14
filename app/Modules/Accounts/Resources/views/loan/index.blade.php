@@ -17,7 +17,7 @@
             :subtitle="__('accounts::message.loan_total') . ': ' . \App\Core\Support\Money::format($total)">
             <x-slot:actions>
                 @can('accounts.loan.manage')
-                    <x-ui.button tone="primary" icon="+" :href="route('accounts.loan.create')">
+                    <x-ui.button tone="primary" icon="plus" :href="route('accounts.loan.create')">
                         {{ __('core.action.create') }}
                     </x-ui.button>
                 @endcan

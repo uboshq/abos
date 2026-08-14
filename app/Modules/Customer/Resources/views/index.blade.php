@@ -78,7 +78,7 @@
             :subtitle="trans_choice('customer::message.count', $customers->total(), ['count' => $customers->total()])">
             <x-slot:actions>
                 @can('create', \App\Modules\Customer\Models\Customer::class)
-                    <x-ui.button tone="primary" icon="+" :href="route('customer.create')">
+                    <x-ui.button tone="primary" icon="plus" :href="route('customer.create')">
                         {{ __('customer::action.new') }}
                     </x-ui.button>
                 @endcan

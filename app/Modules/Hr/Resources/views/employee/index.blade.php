@@ -30,7 +30,7 @@
             :subtitle="trans_choice('core.count.records', $employees->total(), ['count' => $employees->total()])">
             <x-slot:actions>
                 @can('hr.employee.manage')
-                    <x-ui.button tone="primary" icon="+" :href="route('hr.employee.create')">
+                    <x-ui.button tone="primary" icon="plus" :href="route('hr.employee.create')">
                         {{ __('hr::action.new_employee') }}
                     </x-ui.button>
                 @endcan

@@ -57,7 +57,7 @@
             :subtitle="__('sales::message.invoice_note')">
             <x-slot:actions>
                 @can('create', \App\Modules\Sales\Models\SalesInvoice::class)
-                    <x-ui.button tone="primary" icon="+" :href="route('sales.invoice.create')">
+                    <x-ui.button tone="primary" icon="plus" :href="route('sales.invoice.create')">
                         {{ __('sales::action.new_invoice') }}
                     </x-ui.button>
                 @endcan

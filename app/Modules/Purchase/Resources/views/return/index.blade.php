@@ -31,7 +31,7 @@
             :subtitle="trans_choice('core.count.records', $returns->total(), ['count' => $returns->total()])">
             <x-slot:actions>
                 @can('purchase.return.create')
-                    <x-ui.button tone="primary" icon="+" :href="route('purchase.return.create')">
+                    <x-ui.button tone="primary" icon="plus" :href="route('purchase.return.create')">
                         {{ __('purchase::action.new_return') }}
                     </x-ui.button>
                 @endcan

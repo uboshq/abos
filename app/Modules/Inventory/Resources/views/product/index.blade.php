@@ -62,7 +62,7 @@
             :subtitle="trans_choice('inventory::message.count', $products->total(), ['count' => $products->total()])">
             <x-slot:actions>
                 @can('create', \App\Modules\Inventory\Models\Product::class)
-                    <x-ui.button tone="primary" icon="+" :href="route('inventory.product.create')">
+                    <x-ui.button tone="primary" icon="plus" :href="route('inventory.product.create')">
                         {{ __('inventory::action.new_product') }}
                     </x-ui.button>
                 @endcan

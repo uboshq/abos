@@ -19,7 +19,7 @@
             :title="__('system_admin::menu.companies')"
             :subtitle="trans_choice('core.count.records', $companies->count(), ['count' => $companies->count()])">
             <x-slot:actions>
-                <x-ui.button tone="primary" icon="+" :href="route('system_admin.company.create')">
+                <x-ui.button tone="primary" icon="plus" :href="route('system_admin.company.create')">
                     {{ __('core.action.create') }}
                 </x-ui.button>
             </x-slot:actions>

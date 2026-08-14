@@ -23,15 +23,21 @@
         . 'px-4 text-sm font-medium transition-colors ' . ($tones[$tone] ?? $tones['secondary']);
 @endphp
 
+{{-- আইকনটা এখন সেটের একটা নাম (`plus`), লেখা নয়।
+
+     আগে এখানে যা আসত তা হুবহু ছাপা হত, আর একত্রিশটা ডাকের জায়গায় বসানো
+     ছিল যোগ চিহ্নটা নিজেই — অর্থাৎ একত্রিশটা পর্দার "নতুন" বোতামে একটা
+     টাইপ করা অক্ষর। ওটা ফন্টের সাথে বদলাত, স্ট্রোকের পুরুত্ব বাকি আইকনের সাথে
+     মিলত না, আর বাংলা ফন্টে আরেক রকম দেখাত। --}}
 @if ($href)
     <a href="{{ $href }}" {{ $attributes->merge(['class' => $classes]) }}>
-        @if ($icon)<span aria-hidden="true">{{ $icon }}</span>@endif
+        @if ($icon)<x-ui.icon :name="$icon" :size="17" />@endif
         {{ $slot }}
     </a>
 @else
     <button type="{{ $attributes->get('type', 'button') }}"
             {{ $attributes->except('type')->merge(['class' => $classes]) }}>
-        @if ($icon)<span aria-hidden="true">{{ $icon }}</span>@endif
+        @if ($icon)<x-ui.icon :name="$icon" :size="17" />@endif
         {{ $slot }}
     </button>
 @endif
