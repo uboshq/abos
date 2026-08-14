@@ -95,14 +95,24 @@
                      'render' => fn ($l) => \App\Core\Support\Money::format($l->amount)],
                 ]" />
 
+            {{--
+                বিক্রীত পণ্যের ব্যয় কেবল যাঁর দেখার কথা তাঁকেই।
+
+                সারিটা এখানে ছিল সবার জন্য, অথচ ওটা ক্রয়মূল্য — বিলটা
+                যিনি কাটছেন তাঁর কাজে লাগে না, আর জানা থাকলে দরকষাকষিতে
+                ব্যবহার হয়। রিপোর্টের মুনাফার কলামটাও একই অনুমতির পেছনে,
+                যাতে এক জায়গায় ঢাকা আর অন্য জায়গায় খোলা না থাকে।
+            --}}
             <div class="flex border-t border-(--color-border) p-4">
-                <x-sales::totals :rows="[
+                <x-sales::totals :rows="array_filter([
                     'sales::field.subtotal' => $invoice->subtotal,
                     'sales::field.discount' => $invoice->discount,
                     'sales::field.tax' => $invoice->tax,
-                    'sales::field.cost_of_goods' => $invoice->cost_of_goods,
+                    'sales::field.cost_of_goods' => auth()->user()?->can('sales.cost.view')
+                        ? $invoice->cost_of_goods
+                        : null,
                     'sales::field.total' => $invoice->total,
-                ]" />
+                ], fn ($value) => $value !== null)" />
             </div>
         </section>
 

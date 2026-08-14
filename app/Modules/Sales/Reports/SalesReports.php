@@ -190,7 +190,21 @@ final class SalesReports
                 ['key' => 'discount', 'label' => 'sales::field.discount', 'type' => ReportColumn::MONEY],
                 ['key' => 'tax', 'label' => 'sales::field.tax', 'type' => ReportColumn::MONEY],
                 ['key' => 'total', 'label' => 'sales::field.total', 'type' => ReportColumn::MONEY],
-                ['key' => 'gross_profit', 'label' => 'sales::field.gross_profit', 'type' => ReportColumn::MONEY],
+                /*
+                 * মুনাফা — অনুমতির পেছনে।
+                 *
+                 * ── কেন পুরো রিপোর্ট নয়, কেবল এই কলামটা ─────────────
+                 * "কে কত কিনছে" প্রশ্নটা বিক্রয়কর্মীর রোজকার কাজ, তাই
+                 * রিপোর্টটা তাঁর দরকার। কিন্তু ওই একই সারিতে কত লাভ
+                 * হলো সেটা তাঁর জানার কথা নয় — জানলে দরকষাকষিতে সেটাই
+                 * ব্যবহার হয়, আর ক্রয়মূল্য প্রতিযোগীর কাছে পৌঁছানোর
+                 * সবচেয়ে সহজ পথ ওটাই।
+                 *
+                 * পুরো রিপোর্ট আটকালে হয় তাঁর কাজ বন্ধ, নয় মুনাফা ফাঁস।
+                 * কলাম ধরে আড়াল করলে দুইটার কোনোটাই ঘটে না।
+                 */
+                ['key' => 'gross_profit', 'label' => 'sales::field.gross_profit', 'type' => ReportColumn::MONEY,
+                    'permission' => 'sales.cost.view'],
             ],
         );
     }

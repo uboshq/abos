@@ -29,6 +29,28 @@ final class ReportResult
         public readonly array $filters,
     ) {}
 
+    /**
+     * এই ব্যবহারকারী যে কলামগুলো দেখতে পাবেন — কলাম নেওয়ার একমাত্র পথ।
+     *
+     * ── কেন এখানে, প্রতিটা পর্দায় নয় ────────────────────────────────
+     * একটা রিপোর্ট তিনভাবে বেরোয়: পর্দায়, রপ্তানিতে, ছাপায়। তিন
+     * জায়গায় আলাদা করে `@can` লিখলে একদিন একটায় লেখা হত আর বাকি
+     * দুইটায় নয় — আর তখন আড়ালটা **আড়াল না থাকার চেয়ে খারাপ** হত,
+     * কারণ পর্দা দেখে সবাই ধরে নিত সংখ্যাটা ঢাকা আছে।
+     *
+     * তিনটাই এই একটা তালিকা থেকে তৈরি হয় (`ListExport` পর্দার কলামই
+     * ধরে নেয়), তাই এক জায়গায় বসালে তিনটাতেই বসে।
+     *
+     * @return list<ReportColumn>
+     */
+    public function columnsFor(mixed $user): array
+    {
+        return array_values(array_filter(
+            $this->report->columns,
+            fn (ReportColumn $column) => $column->visibleTo($user),
+        ));
+    }
+
     public function isEmpty(): bool
     {
         return $this->rows === [];

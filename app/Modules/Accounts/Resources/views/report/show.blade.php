@@ -14,6 +14,16 @@
     $document = \App\Core\Engines\Report\ReportColumn::DOCUMENT;
 
     $filters = $result->filters;
+
+    /*
+        কলাম আসে ব্যবহারকারী ধরে, সংজ্ঞা থেকে সরাসরি নয়।
+
+        ক্রয়মূল্য ও মুনাফার কলামগুলো অনুমতির পেছনে (`permission` ঘরে
+        লেখা)। এখানে একবার ছেঁকে নিলে পর্দা, রপ্তানি ও ছাপা তিনটাই একই
+        তালিকা পায় — রপ্তানি এই টেবিলটার কলামই ধরে নেয়। তিন জায়গায়
+        আলাদা করে লিখলে একদিন একটায় লেখা হত আর বাকি দুইটায় নয়।
+    */
+    $columns = $result->columnsFor(auth()->user());
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -110,7 +120,7 @@
                 <table class="w-full border-collapse text-sm">
                     <thead>
                         <tr class="border-b border-(--color-border) bg-(--color-surface-app)">
-                            @foreach ($report->columns as $column)
+                            @foreach ($columns as $column)
                                 <th scope="col"
                                     @class([
                                         'px-3 py-2 text-start font-medium text-(--color-ink-muted)',
@@ -128,7 +138,7 @@
                         @foreach ($result->rows as $row)
                             <tr class="border-b border-(--color-border) transition-colors
                                        hover:bg-(--color-surface-hover)">
-                                @foreach ($report->columns as $column)
+                                @foreach ($columns as $column)
                                     <td @class([
                                         'px-3 py-2 align-middle',
                                         'num' => in_array($column->type, [$money], true),
@@ -146,7 +156,7 @@
 
                     <tfoot>
                         <tr class="bg-(--color-surface-app) font-semibold">
-                            @foreach ($report->columns as $index => $column)
+                            @foreach ($columns as $index => $column)
                                 <td @class(['px-3 py-2', 'num' => in_array($column->type, [$money], true)])>
                                     @if ($index === 0)
                                         {{ __('core.print.total') }}
