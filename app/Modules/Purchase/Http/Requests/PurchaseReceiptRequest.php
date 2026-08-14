@@ -36,6 +36,9 @@ class PurchaseReceiptRequest extends FormRequest
             'lines.*.purchase_order_line_id' => ['nullable', 'integer'],
             'lines.*.received_qty' => ['required', 'numeric', 'gt:0'],
 
+            // মালের সাথে আসা ফ্রি কার্টন — শূন্য চলে, ঋণাত্মক নয়
+            'lines.*.free_qty' => ['nullable', 'numeric', 'min:0'],
+
             // কোন প্যাকে এসেছে — খালি মানে পণ্যের নিজের একক
             'lines.*.unit_id' => ['nullable', 'integer',
                 Rule::exists('mdm_units', 'id')->where('company_id', $companyId)],

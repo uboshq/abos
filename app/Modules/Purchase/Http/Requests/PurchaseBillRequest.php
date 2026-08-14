@@ -53,6 +53,9 @@ class PurchaseBillRequest extends FormRequest
             'lines.*.purchase_order_line_id' => ['nullable', 'integer'],
             'lines.*.qty' => ['required', 'numeric', 'gt:0'],
 
+            // "১০ কার্টন কিনলে ১ কার্টন ফ্রি" — শূন্য চলে, ঋণাত্মক নয়
+            'lines.*.free_qty' => ['nullable', 'numeric', 'min:0'],
+
             // কোন প্যাকে লেখা — খালি মানে পণ্যের নিজের একক
             'lines.*.unit_id' => ['nullable', 'integer',
                 Rule::exists('mdm_units', 'id')->where('company_id', $companyId)],

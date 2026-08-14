@@ -16,6 +16,7 @@ return [
     'not_a_number' => 'সংখ্যার ঘরে সংখ্যা দিন।',
     'negative_amount' => 'টাকার ঘর ঋণাত্মক হতে পারে না।',
     'quantity_must_be_positive' => 'পরিমাণ শূন্যের বেশি হতে হবে (:field)।',
+    'quantity_must_not_be_negative' => 'পরিমাণ ঋণাত্মক হতে পারে না (:field)।',
     'zero_value_receipt' => 'শূন্য টাকার চালান খাতায় বসে না — দর দিন।',
     'zero_value_bill' => 'শূন্য টাকার বিল খাতায় বসে না।',
     'line_not_in_order' => 'লাইনটা এই আদেশের নয়।',

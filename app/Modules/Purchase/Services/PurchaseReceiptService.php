@@ -177,6 +177,25 @@ final class PurchaseReceiptService
                 );
 
                 /*
+                 * ফ্রি মাল নিজের ভাণ্ডারে — বিক্রয়যোগ্য মজুদে নয়।
+                 *
+                 * "১০ কার্টন কিনলে ১ কার্টন ফ্রি" — ওই কার্টনটা গাড়িতে
+                 * একসাথেই আসে, তাই এখানেই ঢোকে। ব্যয়-স্তরে কিছু যায়
+                 * না: তার ক্রয়মূল্য নেই, আর সেটাই আলাদা ভাণ্ডারের কারণ।
+                 */
+                if (bccomp((string) $line->free_qty, '0', 4) > 0) {
+                    $this->stock->move(
+                        product: $line->product,
+                        warehouse: $receipt->warehouse,
+                        sourceType: PurchaseReceipt::STOCK_SOURCE.':free',
+                        sourceId: $receipt->id,
+                        date: $receipt->trx_date,
+                        documentNo: $receipt->document_no,
+                        free: (string) $line->free_qty,
+                    );
+                }
+
+                /*
                  * মালের সাথে তার দামও ঢোকে — এখানেই, একই লেনদেনে।
                  *
                  * ── কেন চালানের দর, বিলের নয় ────────────────────────
@@ -262,6 +281,22 @@ final class PurchaseReceiptService
                         documentNo: $receipt->document_no,
                         narration: $reason,
                     );
+
+                    // ফ্রি মালও ফেরে — নাহলে বাতিল করা চালানের ফ্রি
+                    // কার্টনগুলো ভাণ্ডারে থেকে যেত, আর প্রস্তুতকারকের
+                    // কাছে "কত ফ্রি পেলাম" সংখ্যাটা ভুল হত
+                    if (bccomp((string) $line->free_qty, '0', 4) > 0) {
+                        $this->stock->move(
+                            product: $line->product,
+                            warehouse: $receipt->warehouse,
+                            sourceType: PurchaseReceipt::STOCK_SOURCE.':free:cancel',
+                            sourceId: $receipt->id,
+                            date: $date,
+                            documentNo: $receipt->document_no,
+                            narration: $reason,
+                            free: bcmul((string) $line->free_qty, '-1', 4),
+                        );
+                    }
                 }
 
                 $this->posting->reverse(
@@ -359,11 +394,19 @@ final class PurchaseReceiptService
 
             $amount = bcmul($qty, $rate, 4);
 
+            // ফ্রি পরিমাণ একই সারির একই এককে — "১০ বাক্স, ১ বাক্স ফ্রি"
+            $free = $this->packed(
+                $product,
+                $this->zeroOrMore($line['free_qty'] ?? null, 'free_qty'),
+                $line['unit_id'] ?? null,
+            )['qty'];
+
             PurchaseReceiptLine::create([
                 'purchase_receipt_id' => $receipt->id,
                 'product_id' => $productId,
                 'purchase_order_line_id' => $orderLine?->id,
                 'received_qty' => $qty,
+                'free_qty' => $free,
                 'entered_qty' => $pack['entered_qty'],
                 'entered_unit_id' => $pack['entered_unit_id'],
                 'rate' => $rate,

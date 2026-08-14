@@ -17,9 +17,11 @@ use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\StockService;
+use App\Modules\Purchase\Services\PurchaseBillService;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Services\DirectSaleService;
+use App\Modules\Supplier\Models\Supplier;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
@@ -82,16 +84,31 @@ class DirectSaleTest extends TestCase
         return app(StockService::class);
     }
 
-    /** ফ্রি ভাণ্ডারে কিছু মাল রাখা — প্রস্তুতকারকের পাঠানো। */
+    /**
+     * ফ্রি ভাণ্ডারে কিছু মাল রাখা — প্রস্তুতকারকের পাঠানো।
+     *
+     * ── কেন এখন সত্যিকারের ক্রয় দিয়ে ────────────────────────────────
+     * আগে এটা নিজেই `stock->move(free: …)` ডেকে ভাণ্ডারটা ভরে নিত,
+     * `sourceType: 'test_free_receipt'` দিয়ে। তাতে নিচের পরীক্ষাগুলো
+     * প্রমাণ করত "ফ্রি মাল ফ্রি ভাণ্ডার থেকে বেরোয়" — অথচ **ওই
+     * ভাণ্ডারে মাল ঢোকার পথটাই বাস্তবে ছিল না**।
+     *
+     * অর্থাৎ জিনিসটা না থাকলেও পরীক্ষাগুলো পাশ করত, আর আসল দোকানে
+     * ফ্রি দিতে গেলে বিক্রয়ই আটকে যেত। এখন মালটা ঢোকে যে পথে সত্যিই
+     * ঢোকে — একটা ক্রয় বিলের ফ্রি পরিমাণ হয়ে।
+     */
     private function receiveFree(Product $product, string $qty): void
     {
-        $this->stock()->move(
-            product: $product,
-            warehouse: $this->warehouse,
-            sourceType: 'test_free_receipt',
-            sourceId: 1,
-            free: $qty,
+        $bill = app(PurchaseBillService::class)->create(
+            [
+                'supplier_id' => Supplier::query()->value('id'),
+                'warehouse_id' => $this->warehouse->id,
+                'trx_date' => now()->toDateString(),
+            ],
+            [['product_id' => $product->id, 'qty' => '1', 'free_qty' => $qty, 'rate' => '1']],
         );
+
+        app(PurchaseBillService::class)->confirm($bill);
     }
 
     private function balanceOf(string $code): string

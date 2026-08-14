@@ -24,7 +24,7 @@ class PurchaseBillLine extends Model
 
     protected $fillable = [
         'purchase_bill_id', 'product_id', 'purchase_receipt_line_id', 'purchase_order_line_id',
-        'qty', 'entered_qty', 'entered_unit_id',
+        'qty', 'free_qty', 'entered_qty', 'entered_unit_id',
         'rate', 'sales_price', 'discount', 'tax', 'amount', 'line_no', 'narration',
     ];
 
@@ -32,6 +32,7 @@ class PurchaseBillLine extends Model
     {
         return [
             'qty' => 'decimal:4',
+            'free_qty' => 'decimal:4',
             'entered_qty' => 'decimal:4',
             'rate' => 'decimal:4',
 
