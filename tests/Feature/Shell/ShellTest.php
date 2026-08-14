@@ -284,16 +284,37 @@ class ShellTest extends TestCase
         $this->assertSame([], $drift['unregistered']);
     }
 
-    public function test_the_sidebar_head_matches_the_top_bar(): void
+    /**
+     * ব্র্যান্ডের ঘরটা টপবারের চেয়ে উঁচু, আর সেটা ইচ্ছাকৃত।
+     *
+     * ── আগে এখানে কী দাবি ছিল ───────────────────────────────────────
+     * "দুইটার উচ্চতা এক হতে হবে, নাহলে পর্দার দুই অর্ধেক দুই রকম
+     * দেখায়।" যুক্তিটা ভালো, কিন্তু মাপটা মানেনি: লকআপের অনুপাত
+     * ২.৮১:১, তাই ২২০px প্যানেলে ওটা ৬৮px উঁচু চায় আর ৬৪px মাথায়
+     * ধরে না। উচ্চতা মেলাতে গিয়ে লোগোটা কোণে একটা ছোট চিহ্ন হয়ে বসে
+     * থাকত — মালিক ওটাই ধরিয়ে দেন (১৪ আগস্ট)।
+     *
+     * তাই ঘরটা নিচে নামে। যেটা এখনো মেলাতে হয় সেটা রং: দুইটাই সাদা,
+     * নাহলে উপরের-বাঁ কোণটা আলাদা একটা পাটাতনের মতো লাগত।
+     */
+    public function test_the_brand_plate_has_room_for_the_lockup(): void
     {
         $sidebar = $this->codeOf(resource_path('views/components/shell/sidebar.blade.php'));
         $topbar = $this->codeOf(resource_path('views/components/shell/topbar.blade.php'));
+        $tokens = file_get_contents(resource_path('css/tokens.css'));
 
-        // একই উচ্চতা ও একই রং — নাহলে লোগোর নিচের রেখা আর টপবারের নিচের
-        // রেখা দুই রকম হয়, আর পর্দার দুই অর্ধেক দুইটা আলাদা স্ক্রিনের মতো
-        // দেখায়।
+        $this->assertStringContainsString('h-(--spacing-brand-plate)', $sidebar);
+        $this->assertStringContainsString('h-(--spacing-header)', $topbar);
+
+        preg_match('/--spacing-header:\s*(\d+)px/', $tokens, $h);
+        preg_match('/--spacing-brand-plate:\s*(\d+)px/', $tokens, $p);
+
+        $this->assertNotEmpty($p, 'ব্র্যান্ড প্লেটের মাপের টোকেনটা নেই।');
+        $this->assertGreaterThan((int) $h[1], (int) $p[1],
+            'প্লেটটা টপবারের সমান বা ছোট — লকআপটা আবার কোণে চেপে বসবে।');
+
+        // রং দুইটাই এক
         foreach ([$sidebar, $topbar] as $markup) {
-            $this->assertStringContainsString('h-(--spacing-header)', $markup);
             $this->assertStringContainsString('bg-(--color-surface-card)', $markup);
         }
     }
@@ -305,8 +326,23 @@ class ShellTest extends TestCase
         // নামটা এখন টাইপ করা লেখা নয়, ডিজাইনারের নিজের লেটারিংয়ে আঁকা
         // ওয়ার্ডমার্ক। ছবি প্রস্থ অনুযায়ী ছোট-বড় হয়, কেটে যায় না — তাই
         // "All Business Operating Syste" সমস্যাটার আর অস্তিত্বই নেই।
-        // গাঢ় সাইডবারে গাঢ়-জমিনের রূপটাই — সাদা-জমিনের অক্ষর ওখানে মিলিয়ে যেত
-        $this->assertStringContainsString('abos-wordmark-dark.png', $markup);
+
+        /*
+         * সাদা মাথায় সাদা-জমিনের রূপ।
+         *
+         * ── এই দাবিটা আগে উল্টো ছিল ─────────────────────────────────
+         * এখানে লেখা ছিল `abos-wordmark-dark.png`, যুক্তি ছিল "গাঢ়
+         * সাইডবারে গাঢ়-জমিনের রূপ"। কিন্তু মাথাটা গাঢ় নয় — উপরের
+         * পরীক্ষাটাই দাবি করে ওটা `--color-surface-card`, অর্থাৎ সাদা।
+         * দুইটা পরীক্ষা পরস্পরবিরোধী ছিল, আর এটা ভুলটাকেই পাহারা দিচ্ছিল।
+         *
+         * `-dark` মানে "গাঢ় জমিনের জন্য আঁকা": ওটার ক্রোম-রুপালি প্রান্ত
+         * সাদার উপর পড়ে সস্তা WordArt-এর মতো দেখায়। মালিক ছবি পাঠিয়ে
+         * ধরিয়ে দেন, ১৪ আগস্ট।
+         */
+        $this->assertStringContainsString('abos-wordmark-transparent.png', $markup);
+        $this->assertStringNotContainsString('abos-wordmark-dark.png', $markup,
+            'সাদা মাথায় গাঢ়-জমিনের ওয়ার্ডমার্ক বসেছে — ক্রোম প্রান্তটা ধুয়ে যাবে।');
         $this->assertStringContainsString('object-contain', $markup);
 
         // সরু সাইডবারে (৪৪px) ওয়ার্ডমার্ক ধরে না, তাই সেখানে শুধু মার্ক।
