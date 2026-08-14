@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modules;
 
+use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Models\Company;
@@ -48,6 +49,10 @@ class PosParkScreenTest extends TestCase
         $this->product = Product::query()->firstOrFail();
         $this->warehouse = Warehouse::query()->where('is_default', true)->firstOrFail();
         $this->customer = Customer::query()->firstOrFail();
+
+        // কাউন্টারের পর্দা ডিফল্ট বন্ধ (Sales module.php) — পরীক্ষা
+        // করার আগে চালু করে নেওয়া হয়।
+        app(SettingsService::class)->set('sales.screen_pos', true);
     }
 
     private function park(string $qty = '2')

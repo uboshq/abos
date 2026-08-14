@@ -1,0 +1,183 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Middleware;
+
+use App\Core\Module\ModuleRegistry;
+use App\Core\Services\SettingsService;
+use Closure;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
+
+/**
+ * Control Panel-এ বন্ধ করা পর্দা সত্যিই বন্ধ — মেনু থেকে সরানো নয়।
+ *
+ * ── কী ভেঙেছিল ──────────────────────────────────────────────────────
+ * সুইচটা দেখা হত কেবল `MenuBuilder`-এ। ফলে বন্ধ করলে সারিটা মেনু থেকে
+ * সরত ঠিকই, কিন্তু রুটটা খোলাই থাকত — লিংক জানা থাকলে (বুকমার্ক, আগের
+ * ট্যাব, কারও পাঠানো ঠিকানা) যে কেউ ঢুকে কাজ করে ফেলতে পারতেন।
+ *
+ * অর্থাৎ সুইচটা ছিল আড়াল, বাধা নয়। HP-র পরীক্ষক ১৩ আগস্ট ধরেন: Direct
+ * Purchase Invoice বন্ধ করার পরেও সরাসরি ঠিকানা দিয়ে পর্দাটা খুলছিল।
+ *
+ * ── কেন মানচিত্রটা মডিউলের ঘোষণা থেকেই তৈরি ─────────────────────────
+ * প্রতিটা রুট ফাইলে আলাদা করে মিডলওয়্যার বসানো যেত। কিন্তু তাহলে
+ * উনিশতম পর্দাটা লেখার দিনে কেউ ভুলত, আর ভুলটা কোনো ভুল দেখাত না —
+ * পর্দাটা শুধু চুপচাপ খোলা থেকে যেত।
+ *
+ * `module.php`-এর মেনু সারিতে `route` আর `setting` দুইটাই আগে থেকেই
+ * লেখা। তাই কোর ওই ঘোষণা পড়েই মানচিত্রটা বানায়, আর কোনো মডিউলকে
+ * দ্বিতীয়বার কিছু বলতে হয় না। কোর তখনো কোনো মডিউলের নাম জানে না
+ * (সেকশন ১৯.৭) — সে কেবল যা ঘোষিত তা মানে।
+ *
+ * ── কেন উপসর্গ ধরে, শুধু ঐ রুটটা নয় ─────────────────────────────────
+ * মেনুতে থাকে `purchase.direct.create`, কিন্তু ওই পর্দার সাথে আসে
+ * `purchase.direct.store`, `...preview` — এগুলো মেনুতে নেই। শুধু
+ * মেনুর রুটটা আটকালে পর্দাটা খুলত না, অথচ ফর্মটা POST করলে কাজ হয়ে
+ * যেত। তাই `purchase.direct.` উপসর্গের সবগুলোই আটকায়।
+ *
+ * প্যারামিটারসহ সারি (`inventory.report.show` + `slug=expiring`) এর
+ * ব্যতিক্রম: ওখানে উপসর্গ ধরলে একই রুটের বাকি রিপোর্টগুলোও বন্ধ হয়ে
+ * যেত। ওগুলো হুবহু রুট ও প্যারামিটার মিলিয়ে দেখা হয়।
+ */
+final class RefuseSwitchedOffScreens
+{
+    /** @var array<string, string>|null উপসর্গ => সুইচের কী */
+    private ?array $prefixes = null;
+
+    /** @var list<array{route: string, params: array<string, mixed>, setting: string}>|null */
+    private ?array $exact = null;
+
+    public function __construct(
+        private readonly ModuleRegistry $registry,
+        private readonly SettingsService $settings,
+    ) {}
+
+    public function handle(Request $request, Closure $next): Response
+    {
+        $route = $request->route();
+        $name = $route?->getName();
+
+        if ($name === null) {
+            return $next($request);
+        }
+
+        $setting = $this->switchFor($name, $route->parameters());
+
+        /*
+         * ৪০৪, ৪০৩ নয় — বন্ধ পর্দা এই কোম্পানির জন্য সত্যিই নেই।
+         *
+         * `MasterListController::spec()` আগে থেকেই ঠিক এই কাজটা এই
+         * কোডেই করত, কেবল নিজের পর্দাগুলোর জন্য। দুই জায়গায় দুই কোড
+         * দিলে একই ঘটনার দুই রকম উত্তর যেত, আর কোনটা সত্যি তা বলার
+         * উপায় থাকত না।
+         */
+        if ($setting !== null && ! $this->settings->get($setting, true)) {
+            abort(404, __('core.message.screen_switched_off'));
+        }
+
+        return $next($request);
+    }
+
+    /**
+     * এই রুটটা কোন সুইচের পেছনে — না থাকলে null।
+     *
+     * @param  array<string, mixed>  $params
+     */
+    private function switchFor(string $name, array $params): ?string
+    {
+        $this->build();
+
+        // মডিউলের নিজের সুইচ আগে: পুরো মডিউল বন্ধ থাকলে ভেতরের সারির
+        // সুইচ কী বলছে তা অবান্তর (সেকশন ১৯.৫)।
+        foreach ($this->registry->all() as $module) {
+            if (str_starts_with($name, $module->code.'.')
+                && ! $this->settings->get($module->code.'.enabled', true)) {
+                return $module->code.'.enabled';
+            }
+        }
+
+        foreach ($this->exact as $entry) {
+            if ($entry['route'] === $name && $this->matches($entry['params'], $params)) {
+                return $entry['setting'];
+            }
+        }
+
+        /*
+         * সবচেয়ে লম্বা মিল জেতে।
+         *
+         * একটা মডিউলে `sales.order.` আর `sales.` দুইটাই থাকলে ছোটটা
+         * আগে মিলে গিয়ে ভুল সুইচ ফেরত দিত।
+         */
+        $best = null;
+
+        foreach ($this->prefixes as $prefix => $setting) {
+            if (str_starts_with($name, $prefix)
+                && ($best === null || strlen($prefix) > strlen($best[0]))) {
+                $best = [$prefix, $setting];
+            }
+        }
+
+        return $best[1] ?? null;
+    }
+
+    /**
+     * মেনুর প্যারামিটারগুলো অনুরোধেরটার সাথে মেলে কি না।
+     *
+     * অনুরোধে বাড়তি প্যারামিটার থাকতে পারে; ঘোষিতগুলো মিললেই যথেষ্ট।
+     *
+     * @param  array<string, mixed>  $declared
+     * @param  array<string, mixed>  $actual
+     */
+    private function matches(array $declared, array $actual): bool
+    {
+        foreach ($declared as $key => $value) {
+            if (! array_key_exists($key, $actual) || (string) $actual[$key] !== (string) $value) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function build(): void
+    {
+        if ($this->prefixes !== null) {
+            return;
+        }
+
+        $this->prefixes = [];
+        $this->exact = [];
+
+        foreach ($this->registry->all() as $module) {
+            foreach ($module->menu as $items) {
+                foreach ($items as $item) {
+                    if (! isset($item['setting'], $item['route'])) {
+                        continue;
+                    }
+
+                    $params = $item['route_params'] ?? [];
+
+                    if ($params !== []) {
+                        $this->exact[] = [
+                            'route' => $item['route'],
+                            'params' => $params,
+                            'setting' => $item['setting'],
+                        ];
+
+                        continue;
+                    }
+
+                    $dot = strrpos($item['route'], '.');
+
+                    if ($dot === false) {
+                        continue;
+                    }
+
+                    $this->prefixes[substr($item['route'], 0, $dot + 1)] = $item['setting'];
+                }
+            }
+        }
+    }
+}

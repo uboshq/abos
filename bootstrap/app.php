@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\ExportListing;
 use App\Http\Middleware\NormalizeUnicodeInput;
+use App\Http\Middleware\RefuseSwitchedOffScreens;
 use App\Http\Middleware\ResolveCompanyContext;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -49,6 +50,14 @@ return Application::configure(basePath: dirname(__DIR__))
         // কারণ প্রসঙ্গ ছাড়া টেন্যান্ট ডাটা ছোঁয়া মানে সব কোম্পানির রো দেখা।
         $middleware->web(append: [
             ResolveCompanyContext::class,
+
+            /*
+             * Control Panel-এ বন্ধ করা পর্দা রুট-স্তরেও বন্ধ।
+             *
+             * প্রসঙ্গের পরেই, কারণ সুইচগুলো কোম্পানিভিত্তিক — কোন
+             * কোম্পানি তা না জেনে কোন সুইচ পড়তে হবে বলা যায় না।
+             */
+            RefuseSwitchedOffScreens::class,
 
             /*
              * ?export=csv থাকলে পর্দার তালিকাটা ফাইল হয়ে নামে।

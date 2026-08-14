@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modules;
 
+use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\User;
@@ -44,6 +45,10 @@ class ShiftScreenTest extends TestCase
         $this->actingAs($this->owner);
 
         $this->till = app(CashTillService::class)->ensurePrimaryTill();
+
+        // শিফট কাউন্টারের সুইচের পেছনে, আর সেটা ডিফল্ট বন্ধ — পর্দাটা
+        // পরীক্ষা করতে হলে আগে চালু করে নিতে হয় (Sales module.php)।
+        app(SettingsService::class)->set('sales.screen_pos', true);
     }
 
     private function openShift(string $counted = '1000')
