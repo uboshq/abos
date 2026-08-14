@@ -13,6 +13,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Inventory\Services\IssuedLots;
 use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\DeliveryChallan;
+use App\Modules\Sales\Models\PrintJob;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Models\SalesOrder;
 use App\Modules\Sales\Services\PrintQueue;
@@ -82,7 +83,7 @@ class SalesPrintController extends Controller implements HasMiddleware
          */
         return $this->pdf(
             $request, $doc, (string) $invoice->total, $invoice->document_no,
-            type: 'sales_invoice', id: $invoice->id,
+            type: PrintJob::INVOICE, id: $invoice->id,
         );
     }
 
@@ -129,7 +130,7 @@ class SalesPrintController extends Controller implements HasMiddleware
         // চালানও — একই কারণে: দুইটা একরকম চালান মানে দুইবার মাল দাবি
         return $this->pdf(
             $request, $doc, (string) $challan->total, $challan->document_no,
-            type: 'sales_challan', id: $challan->id,
+            type: PrintJob::CHALLAN, id: $challan->id,
         );
     }
 

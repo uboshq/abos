@@ -123,4 +123,6 @@ return [
     'user' => 'User',
     'time' => 'Time',
     'till' => 'Drawer',
+    'paper' => 'Paper',
+    'print_failure' => 'What went wrong',
 ];

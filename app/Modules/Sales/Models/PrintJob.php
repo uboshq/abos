@@ -39,6 +39,24 @@ class PrintJob extends Model
     /** চেষ্টা হয়েছে, ব্যর্থ — কারণটা `failure`-এ। */
     public const FAILED = 'failed';
 
+    /**
+     * কোন কাগজ, আর সেটা আবার চাইতে হলে কোন রুট।
+     *
+     * ── কেন মানচিত্রটা এখানে ────────────────────────────────────────
+     * নামগুলো আগে দুই ফাইলে হাতে লেখা স্ট্রিং ছিল
+     * (`SalesPrintController`-এ বসানো, সারির পর্দায় পড়া)। তৃতীয় কাগজ
+     * যোগ করার দিনে একটা জায়গায় লিখে অন্যটা ভোলা যেত, আর ভুলটা কোনো
+     * ভুল দেখাত না — সারিটা শুধু একটা লিংকহীন সারি হয়ে বসে থাকত।
+     */
+    public const INVOICE = 'sales_invoice';
+
+    public const CHALLAN = 'sales_challan';
+
+    public const PAPERS = [
+        self::INVOICE => ['route' => 'sales.print.invoice', 'param' => 'invoice'],
+        self::CHALLAN => ['route' => 'sales.print.challan', 'param' => 'challan'],
+    ];
+
     protected $table = 'sal_print_jobs';
 
     protected $fillable = [
@@ -69,5 +87,25 @@ class PrintJob extends Model
     public function scopeWaiting(Builder $query): Builder
     {
         return $query->whereIn('status', [self::WAITING, self::FAILED]);
+    }
+
+    /**
+     * কাগজটা আবার চাওয়ার ঠিকানা — অচেনা ধরনে কিছুই না।
+     *
+     * সারির পর্দা লিংকটা এখান থেকেই নেয়। পর্দায় `if` লিখে ধরন মেলালে
+     * ওই তালিকাটা দ্বিতীয়বার লেখা হত, আর দুইটা তালিকা একদিন আলাদা হত।
+     */
+    public function printUrl(): ?string
+    {
+        $paper = self::PAPERS[$this->document_type] ?? null;
+
+        if ($paper === null) {
+            return null;
+        }
+
+        return route($paper['route'], [
+            $paper['param'] => $this->document_id,
+            'paper' => $this->paper,
+        ]);
     }
 }

@@ -70,6 +70,21 @@ return [
             ['label' => 'sales::menu.invoices', 'route' => 'sales.invoice.index', 'permission' => 'sales.invoice.view'],
             ['label' => 'sales::menu.collections', 'route' => 'sales.collection.index', 'permission' => 'sales.collection.view'],
             ['label' => 'sales::menu.returns', 'route' => 'sales.return.index', 'permission' => 'sales.return.view'],
+
+            /*
+             * যে কাগজ বেরোয়নি।
+             *
+             * ── কেন কাউন্টারের সুইচের পেছনে নয় ──────────────────────
+             * প্রিন্টার আটকায় কাউন্টারেও, অফিসের ডেস্কেও — বিল ও চালান
+             * দুই জায়গা থেকেই ছাপা হয়। `sales.screen_pos`-এর পেছনে
+             * রাখলে যে ডিপো কাউন্টার ব্যবহার করে না তাদের আটকে যাওয়া
+             * কাগজগুলো কোথাও দেখা যেত না।
+             *
+             * সাধারণত সারিটা খালি, আর খালি থাকাই স্বাভাবিক — এটা
+             * রোজকার কাজের পর্দা নয়, প্রিন্টার বিগড়ানোর দিনের।
+             */
+            ['label' => 'sales::menu.print_queue', 'route' => 'sales.print_queue.index',
+                'permission' => 'sales.invoice.view'],
         ],
         'reports' => [
             ['label' => 'sales::menu.pending_orders', 'route' => 'sales.report.show',
