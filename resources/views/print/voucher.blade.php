@@ -17,6 +17,27 @@
         $showNarration = $paper->maxColumns() >= 4;
     @endphp
 
+    @if (! empty($notice))
+        {{--
+            বাতিল করা ভাউচারের গায়ে "বাতিল"।
+
+            ── কী ভেঙেছিল ───────────────────────────────────────────────
+            কন্ট্রোলার এই লেখাটা পাঠাত, আর এই টেমপ্লেটে সেটা ধরার কোনো
+            ঘর ছিল না — তাই বাতিল করা ভাউচার ছাপলে **হুবহু বৈধ একটা
+            কাগজ** বেরোত। কেউ সেটা টাকা পাওয়ার প্রমাণ হিসেবে দেখাতে
+            পারতেন, আর কাগজ দেখে ধরার কোনো উপায় ছিল না।
+
+            বিক্রয়-ক্রয়ের কাগজে ব্লকটা `print.document-body`-তে আগে
+            থেকেই ছিল; ভাউচার আলাদা টেমপ্লেট বলে সে বাদ পড়েছিল। HP-র
+            পরীক্ষক ১৪ আগস্ট ধরেন।
+        --}}
+        <div style="text-align: center; font-weight: bold; border: 0.4mm solid #000;
+                    padding: {{ $thermal ? '1mm' : '2mm' }}; margin-bottom: {{ $thermal ? 2 : 4 }}mm;
+                    font-size: {{ $thermal ? 8 : 11 }}pt;">
+            {{ $notice }}
+        </div>
+    @endif
+
     <table class="meta">
         <tr>
             <td class="label" style="width: 22mm">{{ __('core.print.document_no') }}</td>

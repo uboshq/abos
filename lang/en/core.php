@@ -220,6 +220,9 @@ return [
 
         // Second and later prints of the same paper
         'duplicate_notice' => 'DUPLICATE — this paper has been printed before',
+
+        // A cancelled paper looks exactly like a valid one; the line is the only difference
+        'cancelled_notice' => 'CANCELLED — this document has been cancelled and is not valid',
         'print' => 'Print',
         'choose_paper' => 'Choose paper',
         'show_vendor_credit' => 'Show "Powered by ABOS" on printouts',

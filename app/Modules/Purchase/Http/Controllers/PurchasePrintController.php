@@ -8,6 +8,7 @@ use App\Core\Engines\Print\PaperSize;
 use App\Core\Engines\Print\PrintableDocument;
 use App\Core\Engines\Print\PrintEngine;
 use App\Core\Support\DateFormat;
+use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Http\Controllers\Controller;
 use App\Modules\Purchase\Models\PurchaseBill;
@@ -78,7 +79,10 @@ class PurchasePrintController extends Controller implements HasMiddleware
             narration: $bill->narration,
         );
 
-        return $this->pdf($request, $doc, (string) $bill->total, (string) $bill->document_no);
+        return $this->pdf(
+            $request, $doc, (string) $bill->total, (string) $bill->document_no,
+            document: $bill,
+        );
     }
 
     /**
@@ -105,7 +109,10 @@ class PurchasePrintController extends Controller implements HasMiddleware
             narration: $order->narration,
         );
 
-        return $this->pdf($request, $doc, (string) $order->total, (string) $order->document_no);
+        return $this->pdf(
+            $request, $doc, (string) $order->total, (string) $order->document_no,
+            document: $order,
+        );
     }
 
     /**
@@ -134,7 +141,7 @@ class PurchasePrintController extends Controller implements HasMiddleware
             narration: $receipt->narration,
         );
 
-        return $this->pdf($request, $doc, '0', (string) $receipt->document_no);
+        return $this->pdf($request, $doc, '0', (string) $receipt->document_no, document: $receipt);
     }
 
     /**
@@ -162,7 +169,10 @@ class PurchasePrintController extends Controller implements HasMiddleware
             narration: $return->narration,
         );
 
-        return $this->pdf($request, $doc, (string) $return->total, (string) $return->document_no);
+        return $this->pdf(
+            $request, $doc, (string) $return->total, (string) $return->document_no,
+            document: $return,
+        );
     }
 
     /**
@@ -217,14 +227,30 @@ class PurchasePrintController extends Controller implements HasMiddleware
         return $rows;
     }
 
-    private function pdf(Request $request, PrintableDocument $doc, string $amount, string $documentNo): Response
-    {
+    private function pdf(
+        Request $request,
+        PrintableDocument $doc,
+        string $amount,
+        string $documentNo,
+        ?object $document = null,
+    ): Response {
         $paper = $request->query('paper', PaperSize::A4);
 
         // অজানা মাপে ৪০৪ নয় — পুরনো বুকমার্কের জন্য কাগজ আটকে যাওয়ার
         // কোনো কারণ নেই।
         if (! in_array($paper, PaperSize::all(), true)) {
             $paper = PaperSize::A4;
+        }
+
+        /*
+         * বাতিল করা কাগজের গায়ে "বাতিল"।
+         *
+         * বিক্রয়ের কাগজে একই ব্যবস্থা, একই কারণে: বাতিল করা ক্রয় বিল
+         * বা ফেরতের কাগজ ছাপলে হুবহু বৈধ একটা কাগজ বেরোত, আর সেটা
+         * দেখিয়ে সরবরাহকারীর কাছে দাবি করা যেত।
+         */
+        if (($document?->status ?? null) === DocumentStatus::CANCELLED) {
+            $doc = $doc->withNotice(__('core.print.cancelled_notice'));
         }
 
         $pdf = $this->print->render(
