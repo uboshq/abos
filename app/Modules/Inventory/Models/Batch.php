@@ -85,6 +85,25 @@ class Batch extends Model implements Drillable
             ->sum('floor_change');
     }
 
+    /**
+     * এই ব্যাচে কতটা **ফ্রি** মাল আছে।
+     *
+     * ── কেন আলাদা, `balance()`-এর সাথে যোগ করা নয় ────────────────────
+     * ফ্রি মাল একই ভৌত লটেরই অংশ — একই কার্টন, একই ব্যাচ নম্বর, একই
+     * মেয়াদ। তাই লোভ হয় দুইটা একসাথে গুনে "এই লটে মোট কত" বলার।
+     *
+     * কিন্তু তাহলে বিক্রয়ের FEFO এমন লট বেছে নিত যেখানে কেবল ফ্রি মাল
+     * আছে — কাউন্টারে "লটে ৫ আছে" দেখিয়ে বেচতে গেলে থামত, আর কর্মী
+     * বুঝতেন না কেন। ভাণ্ডার দুইটা আলাদা রাখার যে যুক্তি (৮ আগস্ট),
+     * লটের ভেতরেও সেই একই যুক্তি খাটে।
+     */
+    public function freeBalance(?Warehouse $warehouse = null): string
+    {
+        return (string) $this->movements()
+            ->when($warehouse !== null, fn ($q) => $q->where('warehouse_id', $warehouse->id))
+            ->sum('free_change');
+    }
+
     /** মেয়াদ পেরিয়ে গেছে কি না — যেদিন জিজ্ঞেস করা হচ্ছে সেই দিন ধরে। */
     public function hasExpired(?Carbon $on = null): bool
     {

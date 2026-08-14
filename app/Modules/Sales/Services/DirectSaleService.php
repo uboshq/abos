@@ -8,6 +8,7 @@ use App\Core\Services\SettingsService;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Inventory\Services\BatchAllocator;
 use App\Modules\Inventory\Services\ReadsPackedQuantities;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\Sales\Models\DeliveryChallan;
@@ -45,6 +46,7 @@ final class DirectSaleService
         private readonly CollectionService $collections,
         private readonly StockService $stock,
         private readonly SettingsService $settings,
+        private readonly BatchAllocator $batches,
     ) {}
 
     /**
@@ -272,27 +274,78 @@ final class DirectSaleService
                 continue;
             }
 
-            $this->stock->move(
-                product: $line->product,
-                warehouse: $warehouse,
-                sourceType: DeliveryChallan::STOCK_SOURCE.':free',
-                sourceId: $challan->id,
-                date: $challan->trx_date,
-                documentNo: $challan->document_no,
-                free: bcmul($free, '-1', 4),
+            $this->giveAway(
+                $challan,
+                $warehouse,
+                $line->product,
+                $free,
+                DeliveryChallan::STOCK_SOURCE.':free',
             );
         }
 
         foreach ($challan->giftLines as $gift) {
+            $this->giveAway(
+                $challan,
+                $warehouse,
+                $gift->product,
+                (string) $gift->qty,
+                DeliveryChallan::STOCK_SOURCE.':gift',
+                $gift->remarks,
+            );
+        }
+    }
+
+    /**
+     * ফ্রি ভাণ্ডার থেকে মাল বের করা — লট ধরা হলে লট বেছে।
+     *
+     * ── কেন ফ্রি মালেও লট ─────────────────────────────────────────────
+     * আগে এটা সরাসরি `move()` ডাকত, লট ছাড়া। ফলে দুইটা জিনিস ঘটত:
+     *
+     *   ১. **মেয়াদোত্তীর্ণ মাল ফ্রি হয়ে বেরিয়ে যেত।** বিক্রির লাইনে
+     *      মেয়াদ আটকাত, ফ্রি-র লাইনে আটকাত না — অথচ কার্টনটা একই।
+     *   ২. **রিকলে ওই ক্রেতারা বাদ পড়তেন।** "এই ব্যাচ কার কাছে গেছে"
+     *      প্রশ্নের উত্তরে ফ্রি ও উপহারে যাওয়া অংশটা থাকত না, আর
+     *      তালিকাটা দেখে মনে হত সবাই ধরা পড়েছে।
+     *
+     * লট ধরা নয় এমন পণ্যে (চাল, সাবান) আগের মতোই একটা সারি — বরাদ্দের
+     * কিছু নেই, বাছারও কিছু নেই।
+     */
+    private function giveAway(
+        DeliveryChallan $challan,
+        Warehouse $warehouse,
+        Product $product,
+        string $qty,
+        string $sourceType,
+        ?string $narration = null,
+    ): void {
+        $out = bcmul($qty, '-1', 4);
+
+        if (! $product->track_batch) {
             $this->stock->move(
-                product: $gift->product,
+                product: $product,
                 warehouse: $warehouse,
-                sourceType: DeliveryChallan::STOCK_SOURCE.':gift',
+                sourceType: $sourceType,
                 sourceId: $challan->id,
                 date: $challan->trx_date,
                 documentNo: $challan->document_no,
-                narration: $gift->remarks,
-                free: bcmul((string) $gift->qty, '-1', 4),
+                narration: $narration,
+                free: $out,
+            );
+
+            return;
+        }
+
+        foreach ($this->batches->allocateFree($product, $warehouse, $qty) as $slice) {
+            $this->stock->move(
+                product: $product,
+                warehouse: $warehouse,
+                sourceType: $sourceType,
+                sourceId: $challan->id,
+                date: $challan->trx_date,
+                documentNo: $challan->document_no,
+                narration: $narration,
+                free: bcmul($slice['qty'], '-1', 4),
+                batch: $slice['batch'],
             );
         }
     }
