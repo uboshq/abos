@@ -114,13 +114,12 @@ class StockPrintController extends Controller implements HasMiddleware
     /**
      * ভগ্নাংশ থাকলে দেখাও, না থাকলে নয় — "১০.০০ পিস" কেউ লেখে না।
      *
-     * ভগ্নাংশ আছে কি না সেটাও স্ট্রিং ধরে দেখা, `fmod()` দিয়ে নয় —
-     * ওতে সংখ্যাটা float হত।
+     * নিয়মটা এখন `Money::quantity()`-তে, এখানে নয়: একই কাজ চারটা
+     * জায়গায় হাতে লেখা ছিল, আর তার একটায় ভেতরে `(float)` ঢুকে
+     * পড়েছিল। কপি যত, ভুল ধরা তত কঠিন।
      */
     private function qty(mixed $value): string
     {
-        $trimmed = rtrim(rtrim(Money::format($value, 4), '0'), '.');
-
-        return $trimmed === '' ? '0' : $trimmed;
+        return Money::quantity($value);
     }
 }
