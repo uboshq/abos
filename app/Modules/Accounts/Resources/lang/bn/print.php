@@ -15,6 +15,17 @@ declare(strict_types=1);
 return [
     // সইয়ের ঘর। কোনটা কাগজে বসবে তা ভাউচারের ধরনে ঠিক হয় — টাকা
     // এলে যিনি দিলেন তাঁর সই, টাকা গেলে যিনি নিলেন তাঁর।
+    // হস্তান্তরের স্লিপ — দুই সইয়ের কাগজ
+    'handover_title' => 'টাকা হস্তান্তরের রসিদ',
+    'handover_copy_giver' => 'দাতার কপি',
+    'handover_copy_receiver' => 'গ্রহীতার কপি',
+    'handover_copy_single' => 'দুই পক্ষের জন্য এক কপি',
+    'handover_cut_here' => 'এখানে কাটুন',
+    'handover_from' => 'কোথা থেকে',
+    'handover_to' => 'কোথায়',
+    'handover_amount' => 'হস্তান্তরিত টাকা',
+    'handover_given_by' => 'যিনি দিলেন',
+    'handover_received_by' => 'যিনি পেলেন',
     'paid_by' => 'প্রদানকারীর স্বাক্ষর',
     'received_by' => 'গ্রহণকারীর স্বাক্ষর',
     'prepared_by' => 'প্রস্তুতকারী',

@@ -9,6 +9,7 @@ use App\Modules\Accounts\Http\Controllers\CashTillController;
 use App\Modules\Accounts\Http\Controllers\ChartOfAccountsController;
 use App\Modules\Accounts\Http\Controllers\LoanController;
 use App\Modules\Accounts\Http\Controllers\MoneyTransferController;
+use App\Modules\Accounts\Http\Controllers\MoneyTransferPrintController;
 use App\Modules\Accounts\Http\Controllers\ReportController;
 use App\Modules\Accounts\Http\Controllers\VoucherController;
 use App\Modules\Accounts\Http\Controllers\VoucherPrintController;
@@ -129,6 +130,14 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
         Route::get('/{transfer}', [MoneyTransferController::class, 'show'])->name('show');
         Route::post('/{transfer}/confirm', [MoneyTransferController::class, 'confirm'])->name('confirm');
         Route::post('/{transfer}/cancel', [MoneyTransferController::class, 'cancel'])->name('cancel');
+
+        /*
+         * স্লিপটা — /money-transfers/{id}/print?paper=80mm
+         *
+         * দুইজনের সইয়ের কাগজ। কেন এটা দরকার, সেটা কন্ট্রোলারে লেখা।
+         */
+        Route::get('/{transfer}/print', MoneyTransferPrintController::class)
+            ->whereNumber('transfer')->name('print');
     });
 
     /*
