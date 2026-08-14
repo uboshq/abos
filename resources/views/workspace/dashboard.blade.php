@@ -144,12 +144,52 @@
                             {{ $widget->value }}
                         </p>
 
-                        @if ($widget->hint)
+                        {{-- তুলনা ও ইঙ্গিত এক সারিতে: "↑ ১২.৪%" নিজে
+                             কিছু বলে না, "কিসের তুলনায়" পাশে থাকলেই
+                             সংখ্যাটা পড়া যায়। --}}
+                        @if ($widget->delta || $widget->hint)
                             <p @class([
-                                'mt-1 text-2xs',
+                                'mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-2xs',
                                 'text-white/60' => $lead,
                                 'text-(--color-ink-muted)' => ! $lead,
-                            ])>{{ $widget->hint }}</p>
+                            ])>
+                                @if ($widget->delta)
+                                    {{-- ব্লক রূপেই, ইনলাইনে নয় — ইনলাইনটা
+                                         এই সংস্করণে ভাঙা (উপরের নোট) --}}
+                                    @php
+                                        $up = ! str_starts_with(trim($widget->delta), '-');
+                                    @endphp
+
+                                    <span @class([
+                                        'inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold',
+                                        'bg-white/15 text-white' => $lead,
+                                        'bg-(--color-badge-success-bg) text-(--color-badge-success-ink)'
+                                            => ! $lead && $up,
+                                        'bg-(--color-badge-danger-bg) text-(--color-badge-danger-ink)'
+                                            => ! $lead && ! $up,
+                                    ])>
+                                        <x-ui.icon :name="$up ? 'arrow_up' : 'arrow_down'" :size="11" />
+                                        {{ ltrim($widget->delta, '+-') }}
+                                    </span>
+                                @endif
+
+                                @if ($widget->hint)
+                                    <span>{{ $widget->hint }}</span>
+                                @endif
+                            </p>
+                        @endif
+
+                        {{-- ভাগটা কেবল প্রধান কার্ডে — ছোট কার্ডে তিনটা
+                             ঘর পাশাপাশি বসলে কোনোটাই পড়া যায় না। --}}
+                        @if ($lead && $widget->parts !== [])
+                            <div class="mt-4 flex flex-wrap gap-x-8 gap-y-3 border-t border-white/15 pt-3">
+                                @foreach ($widget->parts as $partLabel => $partValue)
+                                    <div>
+                                        <p class="text-2xs text-white/60">{{ $partLabel }}</p>
+                                        <p class="tabular mt-0.5 font-semibold">{{ $partValue }}</p>
+                                    </div>
+                                @endforeach
+                            </div>
                         @endif
                     </a>
                 @endforeach
@@ -184,6 +224,23 @@
                     <a href="{{ $widget->href }}"
                        class="flex items-center gap-3 border-b border-(--color-border) px-4 py-3
                               transition-colors last:border-b-0 hover:bg-(--color-surface-hover)">
+                        {{-- আইকনটা সারির চরিত্রের রঙে — বিশটা সারি একই
+                             রকম দেখালে কোনটা টাকার আর কোনটা মালের তা
+                             পড়ে বের করতে হয়। আইকন না দিলে ঘরটাই থাকে না। --}}
+                        @if ($widget->icon)
+                            <span @class([
+                                'grid size-8 shrink-0 place-items-center rounded-(--radius-field)',
+                                'bg-(--color-badge-warning-bg) text-(--color-badge-warning-ink)'
+                                    => $widget->tone === 'warn',
+                                'bg-(--color-badge-success-bg) text-(--color-badge-success-ink)'
+                                    => $widget->tone === 'good',
+                                'bg-(--color-surface-app) text-(--color-brand-600)'
+                                    => ! in_array($widget->tone, ['warn', 'good'], true),
+                            ])>
+                                <x-ui.icon :name="$widget->icon" :size="16" />
+                            </span>
+                        @endif
+
                         <span class="min-w-0 flex-1">
                             <span class="block truncate text-sm font-medium">{{ $widget->label }}</span>
                             @if ($widget->hint)

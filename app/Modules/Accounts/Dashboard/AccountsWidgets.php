@@ -29,24 +29,39 @@ final class AccountsWidgets implements DashboardWidgets
     public static function widgets(): array
     {
         return [
+            /*
+             * হাতে ও ব্যাংকে মোট — একটা সংখ্যা, নিচে ভাগ।
+             *
+             * ── কেন দুইটা কার্ড এক করা হলো ──────────────────────────
+             * আগে "হাতে নগদ" ও "ব্যাংকে" আলাদা দুইটা কার্ড ছিল, আর
+             * মালিকের আসল প্রশ্নটা — "আমার কত টাকা আছে" — কোথাও লেখা
+             * ছিল না; দুইটা যোগ করতে হত মাথায়। কার্ড দুইটার একটা
+             * শূন্য হলে (এই ডিপোয় ব্যাংক শূন্য) পর্দায় বড় করে একটা
+             * শূন্য বসে থাকত, যেটা কিছুই বলে না।
+             *
+             * ভাগটা হারায় না — নিচে তিনটা ঘরে থেকে যায়, আর ক্লিক করলে
+             * নগদ কাউন্টারের তালিকা খোলে (নিয়ম ১)।
+             *
+             * ── "পথে" কেন এখনো শূন্য ────────────────────────────────
+             * হস্তান্তর করা টাকা এখনো দাতার টিলেই গোনা হয়, কারণ
+             * Cash in Transit খাতটা এখনো বানানো হয়নি (তালিকার ৮ক)।
+             * ঘরটা তবু রাখা: ওটা বসলে সংখ্যাটা নিজে থেকেই ভরবে, আর
+             * ততদিন "পথে কিছু নেই" কথাটাও একটা উত্তর।
+             */
             new Widget(
                 group: 'today',
-                label: __('accounts::dashboard.cash_in_hand'),
-                value: Money::format(self::cashInHand()),
+                label: __('accounts::dashboard.money_on_hand'),
+                value: Money::format(bcadd(self::cashInHand(), self::bankBalance(), 4)),
                 href: route('accounts.till.index'),
                 permission: 'accounts.till.view',
                 tone: 'money',
                 sort: 30,
-            ),
-
-            new Widget(
-                group: 'today',
-                label: __('accounts::dashboard.bank_balance'),
-                value: Money::format(self::bankBalance()),
-                href: route('accounts.dashboard'),
-                permission: 'accounts.view',
-                tone: 'money',
-                sort: 40,
+                icon: 'accounts',
+                parts: [
+                    __('accounts::dashboard.cash_in_hand') => Money::format(self::cashInHand()),
+                    __('accounts::dashboard.bank_balance') => Money::format(self::bankBalance()),
+                    __('accounts::dashboard.in_transit') => Money::format(self::inTransit()),
+                ],
             ),
 
             new Widget(
@@ -111,6 +126,26 @@ final class AccountsWidgets implements DashboardWidgets
     private static function bankBalance(): string
     {
         return self::sumOf(Account::query()->where('is_bank', true)->postable()->pluck('id')->all());
+    }
+
+    /**
+     * পথে থাকা টাকা — দেওয়া হয়েছে, এখনো গ্রহণ হয়নি।
+     *
+     * ── কেন খতিয়ান থেকে নয় ──────────────────────────────────────────
+     * হস্তান্তর গ্রহণের আগে খতিয়ানে কিছুই বসে না (দুই ধাপের নকশা), তাই
+     * এই টাকাটার কোনো খাত নেই — সে এখনো দাতার টিলের ব্যালেন্সেই গোনা
+     * হচ্ছে। অর্থাৎ সংখ্যাটা আপাতত দলিল থেকে আসে, খাত থেকে নয়।
+     *
+     * Cash in Transit খাতটা বসলে (তালিকার ৮ক) এটাই ওই খাতের ব্যালেন্স
+     * হবে আর যোগফলে দুইবার গোনা বন্ধ হবে। ততদিন এটা "কার হাতে পথে
+     * কত" প্রশ্নের সৎ উত্তর, শুধু খাতায় আলাদা করা নেই।
+     */
+    private static function inTransit(): string
+    {
+        return Money::sumOf(
+            MoneyTransfer::query()->pending()->get(),
+            fn (MoneyTransfer $transfer) => $transfer->amount,
+        );
     }
 
     private static function balanceOf(string $code): string
