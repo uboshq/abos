@@ -44,16 +44,33 @@ final class BatchTrace
              * অনুমান, কিন্তু ভুল; আসল নাম `sal_challans`। মডেলটাই
              * একমাত্র জায়গা যেখানে নামটা সত্যি।
              */
+            /*
+             * তিনটা উৎস, একটাই প্রশ্ন।
+             *
+             * বিক্রির মাল যায় `sales_challan` নামে, কিন্তু ফ্রি পরিমাণ
+             * যায় `:free` আর উপহার `:gift` নামে। শুধু প্রথমটা ধরলে
+             * যাঁরা ফ্রি বা উপহার পেয়েছেন তাঁরা তালিকার বাইরে থাকতেন —
+             * আর তালিকাটা দেখে মনে হত সবাই ধরা পড়েছে। রিকলে ওটাই
+             * সবচেয়ে বিপজ্জনক ভুল: একটা সম্পূর্ণ দেখতে অসম্পূর্ণ তালিকা।
+             */
             ->join((new DeliveryChallan)->getTable().' as c', function ($join) {
                 $join->on('c.id', '=', 'm.source_id')
-                    ->where('m.source_type', '=', DeliveryChallan::STOCK_SOURCE);
+                    ->whereIn('m.source_type', [
+                        DeliveryChallan::STOCK_SOURCE,
+                        DeliveryChallan::STOCK_SOURCE.':free',
+                        DeliveryChallan::STOCK_SOURCE.':gift',
+                    ]);
             })
             ->leftJoin('customers as cu', 'cu.id', '=', 'c.customer_id')
             ->where('m.company_id', CompanyContext::id())
             ->where('m.batch_id', $batch->id)
 
-            // কেবল বেরিয়ে যাওয়া সারি, ফেরার সারি নয়
-            ->where('m.floor_change', '<', 0)
+            // কেবল বেরিয়ে যাওয়া সারি, ফেরার সারি নয় — বিক্রির মাল
+            // তাক থেকে যায়, ফ্রি ও উপহার নিজের ভাণ্ডার থেকে
+            ->where(function ($q) {
+                $q->where('m.floor_change', '<', 0)
+                    ->orWhere('m.free_change', '<', 0);
+            })
 
             /*
              * বাতিল হওয়া চালান বাদ।

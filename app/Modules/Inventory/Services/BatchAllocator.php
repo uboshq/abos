@@ -42,6 +42,46 @@ class BatchAllocator
         string $wanted,
         ?Carbon $on = null,
     ): array {
+        return $this->take($product, $warehouse, $wanted, $on, free: false);
+    }
+
+    /**
+     * ফ্রি ভাণ্ডার থেকে — একই লট, একই মেয়াদের ক্রম, আলাদা হিসাব।
+     *
+     * ── কেন এটাও লট ধরে ─────────────────────────────────────────────
+     * ফ্রি কার্টনের গায়েও ব্যাচ নম্বর ছাপা, আর মেয়াদোত্তীর্ণ ফ্রি ওষুধ
+     * বিক্রি করা ওষুধের চেয়ে এক চুলও কম বিপজ্জনক নয়। রিকল হলে যাঁরা
+     * ফ্রি পেয়েছেন তাঁদেরও ফোন করতে হবে — নাহলে তালিকাটা দেখে মনে হবে
+     * সবাই ধরা পড়েছে, অথচ কয়েকজন বাদ।
+     *
+     * ── কেন কম পড়ার বার্তা আলাদা ────────────────────────────────────
+     * "লট ধরা শুরুর আগের মাল" কথাটা ফ্রি ভাণ্ডারে খাটে না — ওই
+     * ভাণ্ডারটাই নতুন, তার আগে কিছু ছিল না। তাই সেখানে সোজা কথাটাই
+     * বলা হয়: এত কম পড়ছে।
+     *
+     * @return list<array{batch: Batch, qty: string}> মেয়াদের ক্রমে
+     */
+    public function allocateFree(
+        Product $product,
+        Warehouse $warehouse,
+        string $wanted,
+        ?Carbon $on = null,
+    ): array {
+        return $this->take($product, $warehouse, $wanted, $on, free: true);
+    }
+
+    /**
+     * দুই ভাণ্ডারের একই বাছাই — কেবল কোন ঘরটা গোনা হবে তার তফাত।
+     *
+     * @return list<array{batch: Batch, qty: string}>
+     */
+    private function take(
+        Product $product,
+        Warehouse $warehouse,
+        string $wanted,
+        ?Carbon $on,
+        bool $free,
+    ): array {
         if (bccomp($wanted, '0', 4) <= 0) {
             throw ValidationException::withMessages([
                 'qty' => __('inventory::validation.qty_positive'),
@@ -56,7 +96,7 @@ class BatchAllocator
                 break;
             }
 
-            $available = $batch->balance($warehouse);
+            $available = $free ? $batch->freeBalance($warehouse) : $batch->balance($warehouse);
 
             if (bccomp($available, '0', 4) <= 0) {
                 continue;
@@ -78,7 +118,12 @@ class BatchAllocator
              * খুঁজে-বের-করার সুতোটাই ছিঁড়ে দিত যার জন্য ব্যাচ আছে।
              */
             throw ValidationException::withMessages([
-                'qty' => $this->shortMessage($product, $warehouse, $left),
+                'qty' => $free
+                    ? __('inventory::validation.free_batch_short', [
+                        'product' => $product->name(),
+                        'short' => rtrim(rtrim($left, '0'), '.'),
+                    ])
+                    : $this->shortMessage($product, $warehouse, $left),
             ]);
         }
 

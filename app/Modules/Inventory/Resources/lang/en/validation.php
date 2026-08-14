@@ -16,6 +16,7 @@ return [
 
     // Batch allocation
     'qty_positive' => 'Say how much — a quantity of zero picks no lot at all.',
+    'free_batch_short' => 'Not enough free :product across its lots — :short short. Expired lots were not counted.',
     'batch_no_required' => ':product is tracked by lot, so the lot number has to be written down as the goods come in — there is no way to learn it later.',
     'batch_short' => 'Not enough :product across its lots — :short short. Unexpired lots only; check whether some has expired.',
     'batch_untracked_stock' => ':qty of :product is on the shelf, but it arrived before lot tracking began — there is no way to know which lot it belongs to, so it cannot be sold. Put it back in through Opening Stock, this time with a lot.',
