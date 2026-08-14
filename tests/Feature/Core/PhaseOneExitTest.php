@@ -134,6 +134,9 @@ class PhaseOneExitTest extends TestCase
             foreach (['bn', 'en'] as $locale) {
                 $this->assertStringStartsWith('%PDF-', $print->render('voucher', [
                     'title' => 'বিক্রয় চালান',
+                    // ভাউচারের কাগজে সইয়ের ঘর বাধ্যতামূলক — টেমপ্লেট
+                    // নিজে থেকে নাম বানায় না (দেখুন VoucherPrintTest)
+                    'signatures' => ['গ্রহণকারীর স্বাক্ষর', 'প্রস্তুতকারী', 'অনুমোদনকারী'],
                     'voucher' => [
                         'document_no' => $first,
                         'date' => '০৪/০৮/২০২৬',

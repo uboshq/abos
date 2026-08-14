@@ -341,6 +341,8 @@ return [
         'expand_sidebar' => 'সাইডবার খোলো',
         'filter_menu' => 'মেনুতে খুঁজুন…',
         'main_navigation' => 'প্রধান মেনু',
+        // পথের সারি — "হোম / মডিউল / পর্দা"
+        'breadcrumb' => 'কোথায় আছেন',
     ],
 
     'company' => [

@@ -47,11 +47,7 @@
     সাইডবারটা খোলাই দেখায় — অর্থাৎ ভুল অবস্থাটা দেখা যায় না, শুধু
     গুটানো ব্যবহারকারীর ক্ষেত্রে এক পলকে খোলা থেকে গুটিয়ে যায়।
 --}}
-<aside x-data="{
-           collapsed: localStorage.getItem('abos.sidebar') === 'collapsed',
-           filter: '',
-       }"
-       x-effect="localStorage.setItem('abos.sidebar', collapsed ? 'collapsed' : 'open')"
+<aside x-data="{ filter: '' }"
        {{--
            চওড়া মাপটা স্থির ক্লাসেই, Alpine-এর অপেক্ষায় নয়।
 
@@ -72,7 +68,7 @@
        class="relative sticky top-0 hidden h-dvh shrink-0 md:flex
               md:w-(--spacing-sidebar-icon)
               lg:w-(--spacing-sidebar) xl:w-(--spacing-sidebar-wide)"
-       :class="collapsed
+       :class="$store.sidebar.collapsed
            ? 'lg:w-(--spacing-sidebar-icon)! xl:w-(--spacing-sidebar-icon)!'
            : 'lg:w-(--spacing-sidebar) xl:w-(--spacing-sidebar-wide)'">
 
@@ -86,24 +82,39 @@
         {{-- গুটানো অবস্থায় px-3 থাকলে ৪৪px ঘরে মাত্র ২০px জায়গা থাকত,
              আর ৩২px-এর মার্কটা ওখানে চেপে গিয়ে লম্বাটে দেখাত। তাই তখন
              পাশের ফাঁক শূন্য আর লোগো মাঝখানে। --}}
+        {{--
+            মাথাটা দুই ভাগ, রেল ও প্যানেলের সাথে খাড়াভাবে মিলিয়ে।
+
+            ── কেন এক টুকরো নয় ─────────────────────────────────────────
+            আগে মাথাটা পুরো সাইডবারের উপর দিয়ে একটানা যেত, তাই রেলের
+            গাঢ় কলামটা শুরু হত তার নিচ থেকে — উপরের-বাঁ কোণে সাদার
+            একটা চওড়া পট্টি, আর তার নিচে হঠাৎ নেভি। দুই কলাম দুই
+            জায়গা থেকে শুরু হলে ওটা একটা শেল মনে হয় না।
+
+            এখন রেলের অংশটা নেভিই থাকে আর তাতে পণ্যের মার্ক বসে সাদা
+            টাইলে; পাশে সাদা পটে ওয়ার্ডমার্ক। দুইটা মিলে একটাই কোণ।
+        --}}
+        <div class="flex h-(--spacing-brand-plate) shrink-0 border-b border-(--color-border)">
+            {{-- রেলের ঘর — মার্কটা সাদা টাইলে, কারণ ওটা সাদা জমিনের
+                 জন্য আঁকা; নেভির উপর সরাসরি বসালে নিজের নীল মিলিয়ে যেত। --}}
+            <a href="{{ route('dashboard') }}"
+               class="grid w-(--spacing-sidebar-icon) shrink-0 place-items-center bg-(--color-brand-900)"
+               title="{{ __('core.brand.full_name') }}">
+                <span class="grid size-10 place-items-center overflow-hidden rounded-[11px] bg-white">
+                    <img src="{{ asset('brand/abos-icon-transparent.png') }}" alt=""
+                         aria-hidden="true" class="size-7 object-contain">
+                </span>
+            </a>
+
         <a href="{{ route('dashboard') }}"
-           class="flex h-(--spacing-header) shrink-0 items-center gap-2 border-b border-(--color-border)
+           class="flex min-w-0 flex-1 items-center gap-2
                   bg-(--color-surface-card) transition-colors hover:bg-(--color-surface-app)"
-           :class="collapsed ? 'justify-center px-0' : 'px-2 lg:px-3'"
+           :class="$store.sidebar.collapsed ? 'justify-center px-0' : 'px-2 lg:px-3'"
            title="{{ __('core.menu.dashboard') }}">
 
-            {{-- সরু সাইডবারে (৪৪px) শুধু মার্ক — ওখানে ওয়ার্ডমার্ক ধরে না। --}}
-            {{-- দুইটা ক্লাস একসাথে বসিয়ে (lg:hidden + lg:block) টগল করা
-                 যায় না — দুইটাই থেকে যায়, আর স্টাইলশিটে যেটা পরে আছে
-                 সেটাই জেতে। প্রথমবার তাতে গুটানো অবস্থায় লোগো একেবারে
-                 উধাও হয়ে গিয়েছিল।
-
-                 তাই একটাই ক্লাস শর্তসাপেক্ষে যোগ হয়: খোলা থাকলে বড়
-                 পর্দায় মার্কটা লুকাও (ওখানে ওয়ার্ডমার্ক আছে), গুটানো
-                 থাকলে লুকিও না। --}}
-            <img src="{{ asset('brand/abos-icon-transparent.png') }}" alt="ABOS"
-                 class="size-(--spacing-logo-sidebar) shrink-0"
-                 :class="collapsed ? '' : 'lg:hidden'">
+            {{-- মার্কটা এখানে আর নেই — পাশের রেলের ঘরেই সেটা সবসময়
+                 বসে, দুই অবস্থাতেই। এখানেও রাখলে গুটানো অবস্থায় একই
+                 ছবি পাশাপাশি দুইবার দেখা যেত। --}}
 
             {{-- খোলা সাইডবারে পূর্ণ ওয়ার্ডমার্ক — নাম ও পূর্ণরূপ দুটোই
                  ডিজাইনারের নিজের লেটারিংয়ে।
@@ -113,39 +124,58 @@
                  কাটার প্রশ্নই নেই — সেটা প্রস্থ অনুযায়ী ছোট-বড় হয়, ভেঙে
                  যায় না। ৩২০×৯৬ অনুপাতে max-h-10 দিলে ১৩৩px চওড়া, যা
                  ২২০px সাইডবারেও অনেকটা জায়গা রেখে বসে। --}}
-            {{-- গাঢ় জমিনের রূপ: সাইডবার #0F172A, আর সাদা-জমিনের
-                 ওয়ার্ডমার্কের অক্ষর গাঢ় নীল — ওটা এখানে বসালে লোগোটা
-                 প্রায় অদৃশ্য হয়ে যেত। --}}
-            <img src="{{ asset('brand/abos-wordmark-dark.png') }}" alt="ABOS"
-                 class="hidden max-h-10 w-auto object-contain object-left"
-                 :class="collapsed ? '' : 'lg:block'">
+            {{--
+                সাদা মাথায় সাদা-জমিনের ওয়ার্ডমার্ক।
+
+                এখানে আগে `-dark` ভার্সনটা বসানো ছিল, নামটা দেখে —
+                কিন্তু ওই নামের মানে "গাঢ় জমিনের জন্য", আর ওটার ক্রোম-
+                রুপালি প্রান্ত সাদার উপর পড়ে সস্তা WordArt-এর মতো
+                দেখাত। মাথাটা সাদা (উপরের মন্তব্য), তাই গাঢ় নীল
+                অক্ষরের ভার্সনটাই এখানকার।
+            --}}
+            {{-- ওয়ার্ডমার্কটা ঘরের পুরো চওড়া নেয়, একটা ছোট চিহ্ন হয়ে
+                 কোণে বসে থাকে না — ব্র্যান্ডের ঘরে ব্র্যান্ডটাই প্রধান। --}}
+            <span class="hidden w-full min-w-0 flex-col items-stretch gap-1.5"
+                  :class="$store.sidebar.collapsed ? '' : 'lg:flex'">
+                <img src="{{ asset('brand/abos-wordmark-transparent.png') }}" alt="ABOS"
+                     class="h-auto w-full object-contain object-left">
+
+                {{--
+                    স্লোগানটা লেখা, ছবি নয়।
+
+                    সরবরাহ করা লকআপে স্লোগানসহ ছবিটা ৭২০×২৬২। ৫৬px উঁচু
+                    মাথায় ওটা সর্বোচ্চ ১৫৪px চওড়া হতে পারে, আর তাতে
+                    স্লোগানের লেখা দাঁড়ায় ~৪px — একটা সোনালি দাগ, পড়া
+                    যায় না।
+
+                    অক্ষরগুলো ছবিই থাকে, কারণ ওগুলো কাস্টম আঁকা; স্লোগানটা
+                    মূল আর্টেও letter-spaced small-caps, কাস্টম কিছু নয়।
+
+                    ফিতার উপর নেভি লেখা, সাদার উপর সোনালি লেখা নয়: উজ্জ্বল
+                    সোনা সাদায় ২.৪:১, পড়াই যেত না। ফিতায় সোনাটা জমিন আর
+                    লেখাটা নেভি — কনট্রাস্ট ৮:১-এর উপরে, আর সোনা তখনো সাজ,
+                    তথ্য নয়।
+                --}}
+                {{-- ফিতাটাও পুরো চওড়ায়, লেখা মাঝখানে — লকআপে স্লোগানটা
+                     অক্ষরগুলোর নিচে ঠিক ততটাই চওড়া। --}}
+                {{-- এক লাইনেই — `whitespace-nowrap` ছাড়া লেখাটা "BUILT
+                     AROUND YOUR / BUSINESS" হয়ে দুই লাইনে ভেঙে যেত, আর
+                     ফিতাটা তখন একটা বাক্স হয়ে দাঁড়াত। মাপ ও ফাঁক এমন
+                     যাতে ২২০px ঘরে ধরে; ইংরেজি স্লোগান লম্বা হলে
+                     `text-clip` নয়, ফিতাটাই সরু হয়। --}}
+                <span class="w-full whitespace-nowrap rounded-full px-2 py-0.5 text-center
+                             text-[7px] font-bold uppercase tracking-[0.1em]
+                             text-(--color-brand-900) shadow-sm"
+                      style="background: var(--color-brand-gold-gradient)">
+                    {{-- দাঁড়ি ছাড়া — লকআপে ওটা নেই, আর ফিতার ভেতরে একটা
+                         বিন্দু শেষে ঝুলে থাকে --}}
+                    {{ rtrim(__('core.brand.tagline'), '.') }}
+                </span>
+            </span>
 
             <span class="sr-only">{{ __('core.brand.full_name') }}</span>
         </a>
-
-        {{-- গুটিয়ে ফেলার বোতাম।
-
-             ছোট পর্দায় দেখানো হয় না: ওখানে তালিকাটা এমনিতেই থাকে না,
-             তাই গোটানোর কিছু নেই — আর যে বোতাম কিছু বদলায় না সেটা মৃত
-             বোতাম।
-
-             পছন্দটা localStorage-এ। সেশনে রাখলে প্রতি লগইনে ফিরে আসত,
-             আর সার্ভারে রাখলে প্রতিটা ক্লিকে একটা রিকোয়েস্ট যেত — অথচ
-             এটা নিছক এই ব্রাউজারের দেখার পছন্দ, কোম্পানির সেটিং নয়। --}}
-        <button type="button"
-                @click="collapsed = ! collapsed"
-                class="absolute end-1 top-4 z-10 hidden size-7 items-center justify-center
-                       rounded-(--radius-field) text-(--color-ink-muted) transition-colors
-                       hover:bg-(--color-surface-hover) hover:text-(--color-ink) lg:flex"
-                :aria-label="collapsed
-                    ? '{{ __('core.a11y.expand_sidebar') }}'
-                    : '{{ __('core.a11y.collapse_sidebar') }}'"
-                :aria-expanded="collapsed ? 'false' : 'true'">
-            <svg viewBox="0 0 24 24" aria-hidden="true" class="size-4 fill-current"
-                 :class="collapsed && 'rotate-180'">
-                <path d="M11.7 6.3 6 12l5.7 5.7 1.4-1.4L8.8 12l4.3-4.3-1.4-1.4Zm6 0L12 12l5.7 5.7 1.4-1.4L14.8 12l4.3-4.3-1.4-1.4Z"/>
-            </svg>
-        </button>
+        </div>
 
         <div class="flex min-h-0 flex-1">
 
@@ -153,8 +183,19 @@
 
                  ব্র্যান্ডের নিজের নীল, স্লেট-কালো নয়: পর্দার সবচেয়ে চওড়া
                  রঙিন পৃষ্ঠতলটা প্রোডাক্টের নিজের রং হওয়াই স্বাভাবিক। --}}
-            <nav class="flex w-(--spacing-sidebar-icon) shrink-0 flex-col items-center
-                        overflow-y-auto border-e border-black/10 bg-(--color-brand-700) py-1"
+            {{-- রেলটা গাঢ় নেভি, ব্র্যান্ড নীল নয়: প্রতিটা টাইল এখন নিজের
+                 রঙে, আর ব্র্যান্ড নীলের উপর ইন্ডিগো টাইলটা প্রায় মিলিয়ে
+                 যেত। নেভি সব রঙের জন্যই যথেষ্ট গাঢ় জমিন।
+
+                 `gap-1.5` — টাইলগুলো আলাদা জিনিস, একটা লম্বা রঙিন ফিতা
+                 নয়। ফাঁক না থাকলে বারোটা রং জোড়া লেগে একটা রংধনু হত। --}}
+            {{-- `overflow-visible` — নাহলে hover-এর তালিকাটা রেলের
+                 প্রান্তেই কেটে যেত, আর গোটা জিনিসটার কোনো মানে থাকত না।
+                 বারোটা মডিউলে রেলের উচ্চতা ~৫৯০px, তাই সাধারণ পর্দায়
+                 স্ক্রলের দরকার পড়ে না; খুব ছোট উচ্চতায় বাইরের `aside`
+                 নিজেই স্ক্রল করে। --}}
+            <nav class="flex w-(--spacing-sidebar-icon) shrink-0 flex-col items-center gap-1.5
+                        overflow-visible border-e border-black/10 bg-(--color-brand-900) py-2"
                  aria-label="{{ __('core.a11y.module_navigation') }}">
 
                 {{-- ড্যাশবোর্ড — রেলের সবার উপরে, মডিউলগুলোর আগে।
@@ -172,19 +213,21 @@
 
                 <a href="{{ route('dashboard') }}"
                    @class([
-                       'relative mb-1 flex h-11 w-full items-center justify-center border-b border-white/15 transition-colors',
-                       'bg-white/15' => $onDashboard,
-                       'hover:bg-white/10' => ! $onDashboard,
+                       'relative mb-1 flex h-11 w-full items-center justify-center border-b border-white/15',
+                       'transition-transform hover:-translate-y-px' => ! $onDashboard,
                    ])
                    @if ($onDashboard) aria-current="page" @endif
                    title="{{ __('core.menu.dashboard') }}">
 
-                    @if ($onDashboard)
-                        <span class="absolute inset-y-1 start-0 w-[3px] rounded-e bg-white"
-                              aria-hidden="true"></span>
-                    @endif
+                    <span @class([
+                              'grid size-9 place-items-center rounded-[11px] text-white transition-shadow',
+                              'ring-2 ring-(--color-brand-gold) shadow-lg' => $onDashboard,
+                          ])
+                          style="background: var(--color-module-dashboard)"
+                          aria-hidden="true">
+                        <x-ui.icon name="dashboard" :size="19" />
+                    </span>
 
-                    <x-shell.module-icon group="dashboard" tone="white" size="rail" />
                     <span class="sr-only">{{ __('core.menu.dashboard') }}</span>
                 </a>
 
@@ -194,35 +237,119 @@
                         $first = collect($module['groups'])->flatten(1)->firstWhere('url', '!==', null);
                     @endphp
 
-                    {{-- সক্রিয় মডিউল চেনা যায় বাঁ পাশের সাদা দাগ দিয়ে, শুধু
-                         হালকা পটভূমি দিয়ে নয়: সরু রেলে ৪৪px বর্গের ভেতরে
-                         একটা ফিকে আয়তক্ষেত্র চোখে পড়ে না। --}}
-                    <a @if ($first) href="{{ $first['url'] }}" @endif
-                       @class([
-                           'relative flex h-11 w-full items-center justify-center transition-colors',
-                           'bg-white/15' => $isActive,
-                           'hover:bg-white/10' => ! $isActive,
-                       ])
-                       @if ($isActive) aria-current="true" @endif
-                       title="{{ $module['label'] }}">
+                    {{--
+                        প্রতিটা মডিউল নিজের রঙের টাইলে।
 
-                        @if ($isActive)
-                            <span class="absolute inset-y-1 start-0 w-[3px] rounded-e bg-white"
-                                  aria-hidden="true"></span>
-                        @endif
+                        ── কেন রং, শুধু আকার নয় ────────────────────────
+                        রেলে বারোটা চিহ্ন উপর-নিচে বসে, আর ২০px-এ একরঙা
+                        আউটলাইনে গুদাম আর বাক্স প্রায় একই ধূসর আকার। তখন
+                        চেনার বদলে **পড়তে** হয়, অথচ রেলে কোনো লেখাই নেই।
+                        আকার ও রং — দুইটা সংকেত একসাথে দিলে এক ঝলকেই ধরা
+                        যায়।
 
-                        <x-shell.module-icon :module="$module['code']" shape="module" tone="white" size="rail" />
-                    </a>
+                        ── রংটা কোথা থেকে ─────────────────────────────
+                        `--color-module-{code}` — টোকেনের নামই মডিউলের
+                        কোড, তাই এখানে কারও নাম লেখা নেই (§১৯.৭)। টোকেন
+                        না থাকলে ব্র্যান্ড নীল বসে, পর্দা ভাঙে না।
+
+                        ── সক্রিয়টা চেনা যায় সোনার রিং দিয়ে ────────────
+                        টাইলগুলো এমনিতেই রঙিন, তাই "একটু গাঢ় পটভূমি"
+                        দিয়ে সক্রিয়টা আলাদা করা যায় না — সোনা এখানে
+                        কোনো তথ্য নয়, শুধু "আপনি এখানে" বলার সাজ।
+                    --}}
+                    {{--
+                        মাউস রাখলেই ওই মডিউলের পর্দাগুলো পাশে খোলে।
+
+                        ── কেন ─────────────────────────────────────────
+                        আগে যেকোনো পর্দায় পৌঁছাতে তিন চাল লাগত: রেলে
+                        ক্লিক → মডিউল খোলে → প্যানেল পড়া → আবার ক্লিক।
+                        যিনি জানেন কোথায় যাচ্ছেন তাঁর জন্য ওই মাঝের
+                        ধাপটা নিছক অপেক্ষা।
+
+                        এখন দুইটা পথ, আর কোনোটাই বাধ্যতামূলক নয়:
+                          • ক্লিক → মডিউল খোলে, প্যানেলে পর্দাগুলো পড়া যায়
+                          • hover → পর্দাগুলো পাশেই, সরাসরি এক ক্লিকে
+
+                        ── কি-বোর্ডেও ─────────────────────────────────
+                        `focus-within` — Tab দিয়ে টাইলে এলেই তালিকাটা
+                        খোলে, নাহলে যিনি মাউস ব্যবহার করেন না তাঁর জন্য
+                        পথটা থাকত না।
+
+                        ── ব্রাউজারের নিজের tooltip-এর বদলে ────────────
+                        `title` প্রায় এক সেকেন্ড অপেক্ষা করে। লেখাহীন
+                        বারোটা টাইলের সারিতে ওই দেরিটা এত লম্বা যে মানুষ
+                        অপেক্ষা না করে ক্লিক করে দেখে নেয় — আর সেটাই
+                        সমস্যাটা ফিরিয়ে আনে।
+                    --}}
+                    <div class="group/rail relative w-full">
+                        <a @if ($first) href="{{ $first['url'] }}" @endif
+                           @class([
+                               'relative flex h-11 w-full items-center justify-center transition-transform',
+                               'hover:-translate-y-px' => ! $isActive,
+                           ])
+                           @if ($isActive) aria-current="true" @endif
+                           title="{{ $module['label'] }}">
+
+                            <span @class([
+                                      'grid size-9 place-items-center rounded-[11px] text-white transition-shadow',
+                                      'ring-2 ring-(--color-brand-gold) shadow-lg' => $isActive,
+                                  ])
+                                  style="background: var(--color-module-{{ $module['code'] }}, var(--color-brand-600))"
+                                  aria-hidden="true">
+                                <x-ui.icon :name="$module['icon']" :size="19" />
+                            </span>
+
+                            <span class="sr-only">{{ $module['label'] }}</span>
+                        </a>
+
+                        <div class="rail-flyout invisible absolute start-full top-0 z-50 ms-1 w-60
+                                    rounded-(--radius-card) border border-(--color-border)
+                                    bg-(--color-surface-card) py-1.5 opacity-0 shadow-lg
+                                    group-hover/rail:visible group-hover/rail:opacity-100
+                                    group-focus-within/rail:visible group-focus-within/rail:opacity-100"
+                             role="presentation">
+
+                            {{-- মাথায় মডিউলের নাম ও তার নিজের রং — কোন
+                                 তালিকাটা খুলল সেটা না বললে পাশাপাশি
+                                 দুইটা মডিউলের তালিকা একই রকম দেখাত। --}}
+                            <div class="flex items-center gap-2 px-3 pb-1.5">
+                                <span class="grid size-6 shrink-0 place-items-center rounded-md text-white"
+                                      style="background: var(--color-module-{{ $module['code'] }}, var(--color-brand-600))"
+                                      aria-hidden="true">
+                                    <x-ui.icon :name="$module['icon']" :size="14" />
+                                </span>
+                                <span class="truncate text-sm font-semibold">{{ $module['label'] }}</span>
+                            </div>
+
+                            <div class="max-h-[70vh] overflow-y-auto">
+                                @foreach (collect($module['groups'])->flatten(1) as $item)
+                                    <a @if ($item['url']) href="{{ $item['url'] }}" @endif
+                                       @class([
+                                           'flex items-center px-3 py-1.5 text-sm',
+                                           'font-semibold text-(--color-brand-700)' => $item['active'],
+                                           'text-(--color-ink-body) hover:bg-(--color-surface-hover)' => ! $item['active'] && $item['url'],
+                                           'cursor-not-allowed text-(--color-ink-disabled)' => ! $item['url'],
+                                       ])>
+                                        <span class="truncate">{{ $item['label'] }}</span>
+                                    </a>
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
                 @endforeach
             </nav>
 
-            {{-- তালিকা — শুধু চলতি মডিউলের পাতা, সাদা পটভূমিতে।
+            {{-- তালিকা — শুধু চলতি মডিউলের পাতা।
 
                  সব মডিউলের সব পাতা একসাথে দেখালে তালিকাটা যত লম্বা হয়,
-                 তাতে খোঁজা আর স্ক্রল করা ছাড়া উপায় থাকে না। --}}
-            <div class="hidden min-w-0 flex-1 flex-col border-e border-(--color-border)
-                        bg-(--color-surface-card) lg:flex"
-                 x-show="! collapsed">
+                 তাতে খোঁজা আর স্ক্রল করা ছাড়া উপায় থাকে না।
+
+                 জমিনটা খাঁটি সাদা নয়, এক ধাপ হালকা টিন্ট (surface-app):
+                 ডানের কনটেন্ট এলাকাও সাদা কার্ডে ভরা, আর প্যানেলও সাদা
+                 হলে দুইটার মাঝের সীমানাটা কেবল ১px রেখা হয়ে দাঁড়াত। --}}
+            <div class="menu-panel hidden min-w-0 flex-1 flex-col border-e border-(--color-border)
+                        bg-(--color-surface-app) lg:flex"
+                 x-show="! $store.sidebar.collapsed">
 
                 @if ($activeModule)
                     <p class="shrink-0 truncate px-3 pt-3 pb-1 text-2xs font-semibold uppercase
@@ -271,19 +398,24 @@
                         {{ __('core.empty.no_results') }}
                     </p>
 
-                    <nav class="flex-1 overflow-y-auto overflow-x-hidden pb-4"
+                    <nav class="flex-1 space-y-px overflow-y-auto overflow-x-hidden px-2 pb-4"
                          aria-label="{{ __('core.a11y.main_navigation') }}">
 
                         @foreach ($activeModule['groups'] as $group => $items)
                             @foreach ($items as $item)
                                 {{-- ছাঁকাটা ক্লায়েন্টেই — সারিগুলো ইতিমধ্যেই
                                      পাতায় আছে, তাই সার্ভারে যাওয়ার কোনো
-                                     কারণ নেই। খালি ফিল্টারে সব দেখা যায়। --}}
+                                     কারণ নেই। খালি ফিল্টারে সব দেখা যায়।
+
+                                     সক্রিয় সারিটা ভরাট নীল পিল, বাঁ পাশের
+                                     দাগ নয়: দাগটা সরু আর ফিকে টিন্টের সাথে
+                                     মিলে যেত, আর তালিকাটা লম্বা হলে "আমি
+                                     কোথায়" প্রশ্নের উত্তর খুঁজতে হত। --}}
                                 <a @if ($item['url']) href="{{ $item['url'] }}" @endif
                                    x-show="filter === '' || {{ Js::from(mb_strtolower($item['label'])) }}.includes(filter.toLowerCase().trim())"
                                    @class([
-                                       'flex min-h-(--spacing-touch) items-center gap-2 ps-3 pe-2 text-sm transition-colors',
-                                       'border-s-[3px] border-(--color-brand-500) bg-(--color-surface-selected) ps-2 font-medium text-(--color-brand-700)' => $item['active'],
+                                       'flex min-h-9 items-center gap-2 rounded-(--radius-field) px-2.5 text-sm transition-colors',
+                                       'bg-(--color-brand-500) font-semibold text-(--color-ink-inverse) shadow-sm' => $item['active'],
                                        'text-(--color-ink-body) hover:bg-(--color-surface-hover)' => ! $item['active'] && $item['url'],
                                        'cursor-not-allowed text-(--color-ink-disabled)' => ! $item['url'],
                                    ])
