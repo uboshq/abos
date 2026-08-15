@@ -9,7 +9,6 @@ use App\Core\Concerns\HasDocumentStatus;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Contracts\Drillable;
-use App\Core\Support\DocumentStatus;
 use App\Models\Branch;
 use App\Models\User;
 use App\Modules\Supplier\Models\Supplier;
@@ -99,10 +98,7 @@ class PurchaseBill extends Model implements Drillable
         $preloaded = $this->getAttribute('paid_total');
 
         $paid = $preloaded ?? $this->paymentLines()
-            ->whereHas('payment', fn ($q) => $q->whereIn('status', [
-                DocumentStatus::CONFIRMED,
-                DocumentStatus::CLOSED,
-            ]))
+            ->whereHas('payment', fn ($q) => $q->posted())
             ->sum('amount');
 
         return (string) ($paid ?: '0');
@@ -121,10 +117,7 @@ class PurchaseBill extends Model implements Drillable
         $paid = PaymentLine::query()
             ->selectRaw('COALESCE(SUM(amount), 0)')
             ->whereColumn('pur_payment_lines.purchase_bill_id', 'pur_bills.id')
-            ->whereHas('payment', fn ($q) => $q->whereIn('status', [
-                DocumentStatus::CONFIRMED,
-                DocumentStatus::CLOSED,
-            ]));
+            ->whereHas('payment', fn ($q) => $q->posted());
 
         // pur_bills.* না দিলে addSelect শুধু সাব-কোয়েরিটাই আনত
         return $query->addSelect(['pur_bills.*', 'paid_total' => $paid]);

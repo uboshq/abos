@@ -37,4 +37,7 @@ return [
     'shift_close' => 'শিফট বন্ধ করুন',
     'print_again' => 'আবার ছাপুন',
     'print_settled' => 'বেরিয়ে গেছে',
+    'split_payment' => 'ভাগ করে দিন',
+    'add_payment_row' => 'আরেকটা উপায়',
+    'take_back' => 'ফেরত নিন',
 ];

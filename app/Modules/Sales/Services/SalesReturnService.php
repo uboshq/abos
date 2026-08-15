@@ -488,10 +488,7 @@ final class SalesReturnService
         $alreadyReturned = SalesReturnLine::query()
             ->where('sales_invoice_line_id', $invoiceLine->id)
             ->whereKeyNot($line->id)
-            ->whereHas('return', fn ($q) => $q->whereIn('status', [
-                DocumentStatus::CONFIRMED,
-                DocumentStatus::CLOSED,
-            ]))
+            ->whereHas('return', fn ($q) => $q->posted())
             ->sum('qty');
 
         $room = bcsub((string) $invoiceLine->qty, (string) ($alreadyReturned ?: '0'), 4);

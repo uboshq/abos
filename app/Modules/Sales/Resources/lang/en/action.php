@@ -37,4 +37,7 @@ return [
     'shift_close' => 'Close shift',
     'print_again' => 'Print again',
     'print_settled' => 'It came out',
+    'split_payment' => 'Split the payment',
+    'add_payment_row' => 'Another method',
+    'take_back' => 'Take it back',
 ];

@@ -478,10 +478,7 @@ final class PurchaseReturnService
         $alreadyReturned = PurchaseReturnLine::query()
             ->where('purchase_bill_line_id', $billLine->id)
             ->whereKeyNot($line->id)
-            ->whereHas('return', fn ($q) => $q->whereIn('status', [
-                DocumentStatus::CONFIRMED,
-                DocumentStatus::CLOSED,
-            ]))
+            ->whereHas('return', fn ($q) => $q->posted())
             ->sum('qty');
 
         $room = bcsub((string) $billLine->qty, (string) ($alreadyReturned ?: '0'), 4);

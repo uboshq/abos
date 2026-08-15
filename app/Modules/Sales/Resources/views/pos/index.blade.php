@@ -95,11 +95,32 @@
         preventDefault দরকার: F2 ব্রাউজারের নিজের কাজ নয়, কিন্তু কিছু
         ব্রাউজারে F4/F8 ঠিকানার বার বা ডিবাগারে যায়।
     --}}
-    <div x-data="pos({{ Illuminate\Support\Js::from($products) }}, {{ $walkinId }}, {{ Illuminate\Support\Js::from($resumed) }})"
-         @keydown.window.escape="term = ''"
+    <div x-data="pos({{ Illuminate\Support\Js::from($products) }}, {{ $walkinId }}, {{ Illuminate\Support\Js::from($resumed) }}, {{ Illuminate\Support\Js::from($discountOn) }}, {{ Illuminate\Support\Js::from($methods) }})"
+         {{--
+             কি-বোর্ডের সারি — কাউন্টারে হাত মাউসে যায় না।
+
+             ── কেন এতগুলো ─────────────────────────────────────────────
+             ব্যস্ত কাউন্টারে প্রতিটা মাউস-নাগাল এক-দুই সেকেন্ড, আর দিনে
+             তিনশো বিক্রয়ে সেটা ঘণ্টার হিসাব। যিনি রোজ চালান তিনি
+             পর্দাটার দিকে তাকানও না — আঙুল জানে কোথায় কী।
+
+             নম্বরগুলো কাউন্টারে চেনা ছকেই: F2 টাকা, F4 ধরে রাখা,
+             F8 খোঁজা — এই তিনটা আগেই ছিল, তাই বদলানো হয়নি। কারও
+             অভ্যাস ভাঙা মানে তাঁকে আবার পর্দার দিকে তাকাতে বাধ্য করা।
+
+             Esc দুই ধাপে: আগে খোঁজার লেখা, তারপর খোলা প্যানেল। একবারে
+             সব বন্ধ করলে ভুল করে চাপলে ফেরতের টাইপ করা সবটা যেত।
+         --}}
+         @keydown.window.escape="term ? (term = '') : closePanels()"
+         @keydown.window.f1.prevent="helping = !helping"
          @keydown.window.f2.prevent="$refs.paid?.focus()"
+         @keydown.window.f3.prevent="openReturn()"
          @keydown.window.f4.prevent="$refs.hold?.click()"
+         @keydown.window.f6.prevent="startSplit()"
+         @keydown.window.f7.prevent="document.querySelector('[name=customer_id]')?.focus()"
          @keydown.window.f8.prevent="$refs.search?.focus()"
+         @keydown.window.f9.prevent="lines.length && (paid = total.toFixed(2))"
+         @keydown.window.f10.prevent="lines.length && $refs.checkout?.click()"
          class="grid gap-4 lg:grid-cols-[1fr_22rem]">
 
         {{-- ── বাঁ দিক: খোঁজা ও পণ্য ───────────────────────────────── --}}
@@ -233,6 +254,35 @@
 
                                 <input type="hidden" :name="`lines[${i}][product_id]`" :value="line.id">
                             </div>
+
+                            {{--
+                                লাইনে ছাড় — কাউন্টারে যেভাবে দেওয়া হয়।
+
+                                ── কেন বিলের গায়ে নয়, লাইনে ─────────────────
+                                ক্যাশিয়ার বলেন "এই আইটেমে ৫০ টাকা কম", পুরো
+                                বিলে নয়। বিলের গায়ে বসালে সেটা লাইনগুলোয়
+                                ভাগ করতে হত, আর তখন কোন পণ্যে কত ছাড় গেল তা
+                                হারিয়ে যেত — মুনাফার রিপোর্টে ওই সংখ্যাটাই
+                                লাগে।
+
+                                ── অনুমোদন আপনাআপনি ─────────────────────────
+                                ছাড়ের সীমা কোম্পানির অনুমোদনের ছকে; বিল
+                                নিশ্চিত করার সময় `SalesInvoiceService` নিজেই
+                                অনুরোধ পাঠায়। এখানে আলাদা কিছু করতে হয় না,
+                                আর সেটাই ঠিক — দুই জায়গায় দুইটা সীমা থাকলে
+                                একদিন তারা আলাদা হত।
+                            --}}
+                            <div x-show="discountOn" x-cloak class="mt-1 flex items-center gap-1">
+                                <label class="text-2xs text-(--color-ink-muted)"
+                                       :for="`discount-${i}`">{{ __('sales::field.discount') }}</label>
+
+                                <input type="number" step="0.01" min="0" :id="`discount-${i}`"
+                                       x-model="line.discount"
+                                       :max="lineBase(line)"
+                                       :name="`lines[${i}][discount]`"
+                                       class="num ms-auto h-8 w-24 rounded-(--radius-field) border
+                                              border-(--color-border) bg-(--color-surface-app) px-2 text-end text-sm">
+                            </div>
                         </div>
                     </template>
 
@@ -284,6 +334,83 @@
                         </template>
                     </div>
 
+                    {{--
+                        ভাগ করে দেওয়া — ২,০০০ বিকাশে, বাকিটা নগদে।
+
+                        ── কেন এটা লাগে ─────────────────────────────────
+                        বাংলাদেশে রোজকার ঘটনা, কারণ বিকাশের ব্যালেন্স গোল
+                        অঙ্কে থাকে। এক উপায়ে বাধ্য করলে ক্যাশিয়ার পুরোটা
+                        "নগদ" লিখে দিতেন, আর দিনশেষে ড্রয়ারে ২,০০০ কম
+                        পড়ত — ঠিক সেই মিথ্যা ঘাটতি, যেটা সারাতেই উপায়ের
+                        তালিকাটা বানানো হয়েছিল।
+
+                        ── কেন লুকানো থাকে ──────────────────────────────
+                        বেশিরভাগ বিক্রয় এক উপায়েই। ঘরগুলো সবসময় খোলা
+                        রাখলে প্রতিটা নগদ বিক্রয়ে দুইটা বাড়তি ট্যাব চাপতে
+                        হত, আর কাউন্টারে ওইটুকুই গতি নষ্ট করার জন্য যথেষ্ট।
+                    --}}
+                    @if ($methods->isNotEmpty())
+                        <button type="button" x-show="!splitting" x-cloak @click="startSplit()"
+                                class="mt-2 w-full rounded-(--radius-field) border border-(--color-border)
+                                       py-1.5 text-2xs text-(--color-ink-muted)
+                                       transition-colors hover:bg-(--color-surface-hover)">
+                            {{ __('sales::action.split_payment') }}
+                        </button>
+
+                        <div x-show="splitting" x-cloak class="mt-2 space-y-1">
+                            <template x-for="(part, p) in payments" :key="p">
+                                <div class="flex items-center gap-1">
+                                    <select :name="`payments[${p}][payment_method_id]`"
+                                            x-model="part.method_id"
+                                            class="h-9 min-w-0 flex-1 rounded-(--radius-field) border
+                                                   border-(--color-border) bg-(--color-surface-app) px-2 text-sm">
+                                        <option value="">{{ __('sales::field.cash') }}</option>
+                                        @foreach ($methods as $method)
+                                            <option value="{{ $method->id }}">{{ $method->name() }}</option>
+                                        @endforeach
+                                    </select>
+
+                                    <input type="number" step="0.01" min="0"
+                                           x-model="part.amount"
+                                           :name="`payments[${p}][amount]`"
+                                           class="num h-9 w-24 rounded-(--radius-field) border
+                                                  border-(--color-border) bg-(--color-surface-app)
+                                                  px-2 text-end text-sm">
+
+                                    {{-- নম্বর কেবল যে উপায়ে লাগে — নগদে TrxID নেই --}}
+                                    <input type="text" x-show="needsReference(part)" x-cloak
+                                           x-model="part.reference"
+                                           :name="`payments[${p}][reference]`"
+                                           :placeholder="'{{ __('sales::field.instrument_no') }}'"
+                                           class="h-9 w-28 rounded-(--radius-field) border
+                                                  border-(--color-border) bg-(--color-surface-app) px-2 text-sm">
+
+                                    <button type="button" @click="payments.splice(p, 1)"
+                                            x-show="payments.length > 1"
+                                            :aria-label="'{{ __('sales::action.remove_line') }}'"
+                                            class="rounded-(--radius-field) px-1.5
+                                                   text-(--color-ink-muted)">&times;</button>
+                                </div>
+                            </template>
+
+                            <div class="flex items-center justify-between gap-2">
+                                <button type="button" @click="payments.push({method_id: '', amount: '', reference: ''})"
+                                        class="rounded-(--radius-field) border border-(--color-border)
+                                               px-2 py-1 text-2xs">
+                                    {{ __('sales::action.add_payment_row') }}
+                                </button>
+
+                                {{-- ভাগগুলোর যোগফল — না মিললে সেবাটাই আটকায়,
+                                     কিন্তু ততক্ষণে ক্রেতা দাঁড়িয়ে আছেন --}}
+                                <span class="num text-2xs"
+                                      :class="Math.abs(splitTotal - Number(paid || 0)) < 0.005
+                                              ? 'text-(--color-ink-muted)'
+                                              : 'text-(--color-danger)'"
+                                      x-text="money(splitTotal)"></span>
+                            </div>
+                        </div>
+                    @endif
+
                     <div class="mt-2 flex items-baseline justify-between text-sm"
                          x-show="Number(paid) > total" x-cloak>
                         <span class="text-(--color-ink-muted)">{{ __('sales::field.change') }}</span>
@@ -321,14 +448,219 @@
                 </p>
             </div>
         </form>
+
+        {{--
+            কি-বোর্ডের তালিকা — F1।
+
+            দশটা শর্টকাট থাকা আর না থাকা সমান, যদি কেউ না জানে কোনটা কী
+            করে। নতুন ক্যাশিয়ার প্রথম দিনে একবার দেখেন, তারপর আর লাগে না।
+        --}}
+        <div x-show="helping" x-cloak @click.self="helping = false"
+             class="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
+            <div class="w-full max-w-sm rounded-(--radius-card) bg-(--color-surface-card) p-4 shadow-lg">
+                <h2 class="mb-3 font-medium">{{ __('sales::message.pos_keys') }}</h2>
+
+                <dl class="space-y-1 text-sm">
+                    @foreach ([
+                        'F1' => 'sales::message.key_help',
+                        'F2' => 'sales::message.key_paid',
+                        'F3' => 'sales::message.key_return',
+                        'F4' => 'sales::message.key_hold',
+                        'F6' => 'sales::message.key_split',
+                        'F7' => 'sales::message.key_customer',
+                        'F8' => 'sales::message.key_search',
+                        'F9' => 'sales::message.key_exact',
+                        'F10' => 'sales::message.key_checkout',
+                        'Esc' => 'sales::message.key_close',
+                    ] as $key => $label)
+                        <div class="flex justify-between gap-4">
+                            <dt class="num font-medium">{{ $key }}</dt>
+                            <dd class="text-(--color-ink-muted)">{{ __($label) }}</dd>
+                        </div>
+                    @endforeach
+                </dl>
+            </div>
+        </div>
+
+        {{--
+            কাউন্টার থেকেই ফেরত — F3।
+
+            ── কেন এখানে, অফিসের পর্দায় নয় ─────────────────────────────
+            ক্রেতা দোকানে দাঁড়িয়ে আছেন, হাতে বিল আর মাল। অন্য পর্দায়
+            যেতে বললে ক্যাশিয়ার হয় লাইন থামান, নয় কাগজে টুকে রাখেন —
+            আর ওই কাগজটা রাতে হারায়। মালটা তখন গুদামে ফেরে না, খাতায়
+            বিক্রয়ই থেকে যায়।
+        --}}
+        <div x-show="returning" x-cloak @click.self="returning = false"
+             class="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-black/40 p-4">
+            <form method="POST" action="{{ route('sales.pos.return') }}"
+                  class="mt-8 w-full max-w-lg rounded-(--radius-card) bg-(--color-surface-card) p-4 shadow-lg">
+                @csrf
+                <input type="hidden" name="warehouse_id" value="{{ $warehouse?->id }}">
+
+                <h2 class="mb-3 font-medium">{{ __('sales::message.pos_return') }}</h2>
+
+                <div class="flex gap-2">
+                    <input type="text" x-model="billNo" name="document_no"
+                           x-ref="billNo"
+                           @keydown.enter.prevent="findBill()"
+                           :placeholder="'{{ __('sales::field.inv_number') }}'"
+                           class="h-10 min-w-0 flex-1 rounded-(--radius-field) border border-(--color-border)
+                                  bg-(--color-surface-app) px-3 text-sm">
+
+                    <button type="button" @click="findBill()"
+                            class="rounded-(--radius-field) border border-(--color-border) px-3 text-sm">
+                        {{ __('core.action.search') }}
+                    </button>
+                </div>
+
+                <p x-show="billError" x-cloak class="mt-2 text-2xs text-(--color-danger)" x-text="billError"></p>
+
+                <template x-if="bill">
+                    <div class="mt-3">
+                        <p class="text-2xs text-(--color-ink-muted)">
+                            <span x-text="bill.customer"></span> · <span class="num" x-text="bill.date"></span>
+                        </p>
+
+                        <div class="mt-2 space-y-1">
+                            <template x-for="(line, i) in bill.lines" :key="line.id">
+                                <div class="flex items-center gap-2 text-sm">
+                                    <span class="min-w-0 flex-1 truncate" x-text="line.name"></span>
+
+                                    {{-- আর কতটুকু ফেরত নেওয়া যায় — দ্বিতীয়বার
+                                         ফেরতের সময় এটা না জানালে ক্যাশিয়ার
+                                         পুরোটা টাইপ করতেন আর সেবাটা আটকাত --}}
+                                    <span class="num text-2xs text-(--color-ink-muted)"
+                                          x-text="`${roomOn(line)} / ${line.qty}`"></span>
+
+                                    <input type="number" step="0.01" min="0" :max="roomOn(line)"
+                                           x-model="line.take"
+                                           :name="`lines[${i}][qty]`"
+                                           class="num h-9 w-20 rounded-(--radius-field) border
+                                                  border-(--color-border) bg-(--color-surface-app)
+                                                  px-2 text-end text-sm">
+
+                                    <input type="hidden" :name="`lines[${i}][product_id]`" :value="line.product_id">
+                                    <input type="hidden" :name="`lines[${i}][sales_invoice_line_id]`" :value="line.id">
+                                </div>
+                            </template>
+                        </div>
+
+                        {{-- টাকা ফেরত ঐচ্ছিক: বাকিতে কেনা মাল ফেরত এলে
+                             টাকা যায় না, কেবল পাওনা কমে --}}
+                        <label class="mt-3 flex items-center gap-2 text-sm">
+                            <input type="checkbox" name="refund" value="1" x-model="refunding">
+                            {{ __('sales::message.pos_refund_cash') }}
+                        </label>
+
+                        <div class="mt-3 flex gap-2">
+                            <button type="submit"
+                                    class="min-h-(--spacing-touch) flex-1 rounded-(--radius-field)
+                                           bg-(--color-brand-600) text-sm font-medium text-white">
+                                {{ __('sales::action.take_back') }}
+                            </button>
+
+                            <button type="button" @click="returning = false"
+                                    class="min-h-(--spacing-touch) rounded-(--radius-field) border
+                                           border-(--color-border) px-4 text-sm">
+                                {{ __('core.action.cancel') }}
+                            </button>
+                        </div>
+                    </div>
+                </template>
+            </form>
+        </div>
     </div>
 
     @push('scripts')
         <script>
-            function pos(catalogue, walkinId, resumed) {
+            function pos(catalogue, walkinId, resumed, discountOn, methods) {
                 return {
                     catalogue,
                     walkinId,
+                    discountOn,
+                    methods,
+
+                    /*
+                     * ভাগ করে পরিশোধ — শুরুতে বন্ধ।
+                     *
+                     * বেশিরভাগ বিক্রয় এক উপায়েই; ঘরগুলো খোলা রাখলে
+                     * প্রতিটা নগদ বিক্রয়ে বাড়তি ট্যাব চাপতে হত।
+                     */
+                    splitting: false,
+                    payments: [],
+
+                    /*
+                     * কি-বোর্ডের সাহায্য — F1।
+                     *
+                     * ── কেন এটা ছাড়া বাকি কি-গুলোর মানে নেই ─────────
+                     * দশটা শর্টকাট থাকা আর না থাকা সমান, যদি কেউ না
+                     * জানে কোনটা কী করে। নতুন ক্যাশিয়ার প্রথম দিনেই
+                     * F1 চেপে তালিকাটা দেখতে পান, আর তারপর আর লাগে না।
+                     */
+                    helping: false,
+
+                    closePanels() {
+                        this.helping = false;
+                        this.returning = false;
+                    },
+
+                    // ── কাউন্টার থেকেই ফেরত ──────────────────────────
+                    returning: false,
+                    billNo: '',
+                    bill: null,
+                    billError: '',
+                    refunding: true,
+
+                    openReturn() {
+                        this.returning = true;
+                        this.$nextTick(() => this.$refs.billNo?.focus());
+                    },
+
+                    /*
+                     * নম্বর ধরে বিলটা আনা।
+                     *
+                     * নেট গেলে কাউন্টার থামে না: ব্যর্থ হলে কেবল একটা
+                     * বার্তা দেখায়, ঝুড়ি ও বিক্রয় আগের মতোই চলে।
+                     */
+                    async findBill() {
+                        this.bill = null;
+                        this.billError = '';
+
+                        const no = String(this.billNo || '').trim();
+
+                        if (no === '') {
+                            return;
+                        }
+
+                        try {
+                            const response = await fetch(
+                                `{{ route('sales.pos.bill') }}?no=${encodeURIComponent(no)}`,
+                                {headers: {Accept: 'application/json'}},
+                            );
+
+                            if (!response.ok) {
+                                this.billError = '{{ __('sales::message.pos_bill_not_found') }}';
+
+                                return;
+                            }
+
+                            const bill = await response.json();
+
+                            // প্রতিটা সারিতে "কতটুকু ফেরত নিচ্ছি" — শুরুতে
+                            // খালি, কারণ বেশিরভাগ ফেরতে এক-দুইটা পণ্যই আসে
+                            bill.lines.forEach((l) => { l.take = ''; });
+
+                            this.bill = bill;
+                        } catch (e) {
+                            this.billError = '{{ __('sales::message.pos_bill_not_found') }}';
+                        }
+                    },
+
+                    /** এই লাইনে আর কতটুকু ফেরত নেওয়া যায়। */
+                    roomOn(line) {
+                        return Math.max(0, Number(line.qty) - Number(line.returned || 0));
+                    },
 
                     /*
                      * তোলা বিলের সারিগুলো নিয়েই পর্দা খোলে।
@@ -343,6 +675,7 @@
                         name: l.name,
                         rate: l.rate,
                         qty: Number(l.qty),
+                        discount: l.discount || '',
                     })),
 
                     term: '',
@@ -459,6 +792,10 @@
                                 rate: product.rate,
                                 qty: 1,
 
+                                // ছাড় শুরুতে খালি — শূন্য লিখলে ঘরটায়
+                                // "0" বসে থাকত আর টাইপ করতে আগে মুছতে হত
+                                discount: '',
+
                                 /*
                                  * স্ক্যানে পাওয়া লট ও মেয়াদ — কেবল
                                  * দেখানোর জন্য, কার্টে পাঠানোর জন্য নয়।
@@ -482,8 +819,52 @@
                         this.lines.splice(index, 1);
                     },
 
-                    lineTotal(line) {
+                    /*
+                     * ভাগ করে দেওয়া শুরু — প্রথম সারিতে পুরো টাকাটাই।
+                     *
+                     * খালি সারি দিয়ে শুরু করলে ক্যাশিয়ারকে দুইবার টাইপ
+                     * করতে হত: একবার মোট, একবার প্রথম ভাগ। পুরোটা বসিয়ে
+                     * দিলে তিনি কেবল দ্বিতীয় সারিতে যতটা সরাতে চান
+                     * ততটুকুই লেখেন।
+                     */
+                    startSplit() {
+                        this.splitting = true;
+
+                        if (this.payments.length === 0) {
+                            this.payments = [
+                                {method_id: '', amount: (this.paid || this.total.toFixed(2)), reference: ''},
+                                {method_id: '', amount: '', reference: ''},
+                            ];
+                        }
+                    },
+
+                    get splitTotal() {
+                        return this.payments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+                    },
+
+                    needsReference(part) {
+                        const found = this.methods.find((m) => String(m.id) === String(part.method_id));
+
+                        return Boolean(found && found.needs_reference);
+                    },
+
+                    lineBase(line) {
                         return (Number(line.qty) || 0) * (Number(line.rate) || 0);
+                    },
+
+                    /*
+                     * ছাড় বাদ দিয়ে লাইনের টাকা।
+                     *
+                     * ছাড় লাইনের চেয়ে বেশি হতে পারে না — সেবাটাও সেটা
+                     * আটকায়, কিন্তু পর্দায় ঋণাত্মক সংখ্যা দেখানো মানে
+                     * ক্রেতাকে ভুল মোট দেখানো, আর সেটা সংশোধনের আগেই
+                     * বলা হয়ে যায়।
+                     */
+                    lineTotal(line) {
+                        const base = this.lineBase(line);
+                        const off = Math.min(Number(line.discount) || 0, base);
+
+                        return base - off;
                     },
 
                     get total() {

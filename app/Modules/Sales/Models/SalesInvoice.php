@@ -9,7 +9,6 @@ use App\Core\Concerns\HasDocumentStatus;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Contracts\Drillable;
-use App\Core\Support\DocumentStatus;
 use App\Models\Branch;
 use App\Models\User;
 use App\Modules\Customer\Models\Customer;
@@ -135,10 +134,7 @@ class SalesInvoice extends Model implements Drillable
         $preloaded = $this->getAttribute('collected_total');
 
         $collected = $preloaded ?? $this->collectionLines()
-            ->whereHas('collection', fn ($q) => $q->whereIn('status', [
-                DocumentStatus::CONFIRMED,
-                DocumentStatus::CLOSED,
-            ]))
+            ->whereHas('collection', fn ($q) => $q->posted())
             ->sum('amount');
 
         return (string) ($collected ?: '0');
@@ -157,10 +153,7 @@ class SalesInvoice extends Model implements Drillable
         $collected = CollectionLine::query()
             ->selectRaw('COALESCE(SUM(amount), 0)')
             ->whereColumn('sal_collection_lines.sales_invoice_id', 'sal_invoices.id')
-            ->whereHas('collection', fn ($q) => $q->whereIn('status', [
-                DocumentStatus::CONFIRMED,
-                DocumentStatus::CLOSED,
-            ]));
+            ->whereHas('collection', fn ($q) => $q->posted());
 
         // sal_invoices.* না দিলে addSelect শুধু সাব-কোয়েরিটাই আনত
         return $query->addSelect(['sal_invoices.*', 'collected_total' => $collected]);

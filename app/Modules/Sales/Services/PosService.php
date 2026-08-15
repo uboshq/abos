@@ -6,10 +6,18 @@ namespace App\Modules\Sales\Services;
 
 use App\Core\Services\SettingsService;
 use App\Core\Support\DocumentStatus;
+use App\Core\Support\Money;
+use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Accounts\Services\CashTillService;
+use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Accounts\Services\VoucherService;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\MasterData\Models\PaymentMethod;
 use App\Modules\Sales\Metrics\SalesMetrics;
 use App\Modules\Sales\Models\SalesInvoice;
+use App\Modules\Sales\Models\SalesInvoiceLine;
+use App\Modules\Sales\Models\SalesReturn;
+use App\Modules\Sales\Models\SalesReturnLine;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -39,6 +47,9 @@ final class PosService
         private readonly SalesInvoiceService $invoices,
         private readonly CollectionService $collections,
         private readonly SettingsService $settings,
+        private readonly SalesReturnService $returns,
+        private readonly VoucherService $vouchers,
+        private readonly CashTillService $tills,
     ) {}
 
     /**
@@ -135,7 +146,20 @@ final class PosService
         }
 
         $customer = $this->resolveCustomer($data['customer_id'] ?? null);
-        $paid = $this->money($data['paid'] ?? '0');
+
+        /*
+         * ভাগ করে দিলে "যা দিলেন" ভাগগুলোর যোগফলই।
+         *
+         * ── কেন এখানে গোনা হয়, পর্দার পাঠানো সংখ্যা নয় ──────────────
+         * পর্দা যোগফলটা পাঠাতে পারত, কিন্তু তখন দুইটা সংখ্যা থাকত যারা
+         * আলাদা হতে পারে — আর ওই তফাতটা মানে হয় গ্রাহকের নামে না-দেওয়া
+         * জমা, নয় ক্যাশিয়ারের হাতে বেহিসাবি টাকা।
+         *
+         * `paid` তবু মিলিয়ে দেখা হয় (`split()`), কারণ পর্দাটা যদি
+         * অন্য যোগফল দেখিয়ে থাকে তবে ক্রেতাকেও ওই সংখ্যাটাই বলা
+         * হয়েছে, আর সেটা নীরবে বদলে দেওয়া চলে না।
+         */
+        $paid = $this->paidTotal($data);
 
         /*
          * টিলের পাঠানো চাবি — এক কার্টে একটা।
@@ -190,38 +214,7 @@ final class PosService
             $change = bccomp($paid, $total, 4) > 0 ? bcsub($paid, $total, 4) : '0.0000';
 
             if (bccomp($applied, '0', 4) > 0) {
-                /*
-                 * টাকাটা কীভাবে এল — নগদ, বিকাশ, নাকি কার্ড।
-                 *
-                 * উপায়টা বাছা না থাকলে নগদ, কারণ কাউন্টারে বেশিরভাগ
-                 * বিক্রয় নগদেই আর প্রতিবার বাছতে বলা মানে দ্রুততা নষ্ট।
-                 */
-                $method = $this->paymentMethod($data['payment_method_id'] ?? null);
-
-                $collection = $this->collections->create(
-                    [
-                        'customer_id' => $customer->id,
-                        /*
-                         * খাত না বললে কিছুই পাঠানো হয় না — আদায়ের সেবাই
-                         * প্রধান নগদ কাউন্টার বেছে নেয়।
-                         *
-                         * আগে এখানে নিজের একটা ডিফল্ট ছিল, আর সেটা
-                         * ছিল "হাতে নগদ" মাথাটা (১১০১) — গ্রুপ খাত।
-                         * ওখানে বসানো টাকা কোনো ব্যালেন্সে দেখাত না।
-                         * দুইটা জায়গায় দুইটা ডিফল্ট থাকলে একটা ভুল
-                         * হলে অন্যটা দেখে ধরা যায় না।
-                         */
-                        'account_id' => $method?->account_id ?? ($data['account_id'] ?? null),
-                        'trx_date' => $data['trx_date'] ?? now()->toDateString(),
-                        'amount' => $applied,
-                        'instrument' => $method?->name(),
-                        'instrument_no' => $this->reference($method, $data['reference'] ?? null),
-                        'narration' => __('sales::message.pos_narration', ['no' => $invoice->document_no]),
-                    ],
-                    [['sales_invoice_id' => $invoice->id, 'amount' => $applied]],
-                );
-
-                $this->collections->confirm($collection);
+                $this->takeMoney($data, $invoice, $customer, $applied);
             }
 
             return [
@@ -229,6 +222,320 @@ final class PosService
                 'change' => $change,
             ];
         });
+    }
+
+    /**
+     * টাকাটা নেওয়া — এক উপায়ে, বা কয়েকটায় ভাগ করে।
+     *
+     * ── কেন ভাগ করে নেওয়া লাগে ──────────────────────────────────────
+     * ২,৩০০ টাকার বিলে ক্রেতা ২,০০০ বিকাশে পাঠিয়ে বাকি ৩০০ নগদে দেন —
+     * বাংলাদেশে রোজকার ঘটনা, কারণ বিকাশের ব্যালেন্স গোল অঙ্কে থাকে।
+     * এক উপায়ে বাধ্য করলে ক্যাশিয়ার পুরোটা "নগদ" লিখে দিতেন, আর
+     * দিনশেষে ড্রয়ারে ২,০০০ কম পড়ত — ঠিক সেই মিথ্যা ঘাটতি, যেটা
+     * সারাতেই উপায়ের তালিকাটা বানানো হয়েছিল।
+     *
+     * ── কেন প্রতিটা ভাগ আলাদা আদায় ──────────────────────────────────
+     * একটা আদায়ের একটাই খাত, আর সেটাই ঠিক: ২,০০০ বিকাশের খাতে আর ৩০০
+     * নগদের খাতে যাওয়ার কথা। এক সারিতে দুই খাতের টাকা লিখলে খাত ধরে
+     * ব্যালেন্স মেলানোর উপায়ই থাকত না।
+     *
+     * ── পুরনো পথটা ভাঙে না ──────────────────────────────────────────
+     * `payments` না এলে আগের মতোই একটা উপায় (বা নগদ)। টিল, ইমপোর্ট,
+     * পুরনো পরীক্ষা — সবাই যেভাবে ডাকত সেভাবেই ডাকে।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function takeMoney(array $data, SalesInvoice $invoice, Customer $customer, string $applied): void
+    {
+        foreach ($this->split($data, $applied) as $part) {
+            if (bccomp($part['amount'], '0', 4) <= 0) {
+                continue;
+            }
+
+            $method = $part['method'];
+
+            $collection = $this->collections->create(
+                [
+                    'customer_id' => $customer->id,
+                    /*
+                     * খাত না বললে কিছুই পাঠানো হয় না — আদায়ের সেবাই
+                     * প্রধান নগদ কাউন্টার বেছে নেয়।
+                     *
+                     * আগে এখানে নিজের একটা ডিফল্ট ছিল, আর সেটা ছিল
+                     * "হাতে নগদ" মাথাটা (১১০১) — গ্রুপ খাত। ওখানে
+                     * বসানো টাকা কোনো ব্যালেন্সে দেখাত না।
+                     */
+                    'account_id' => $method?->account_id ?? ($data['account_id'] ?? null),
+                    'trx_date' => $data['trx_date'] ?? now()->toDateString(),
+                    'amount' => $part['amount'],
+                    'instrument' => $method?->name(),
+                    'instrument_no' => $this->reference($method, $part['reference']),
+                    'narration' => __('sales::message.pos_narration', ['no' => $invoice->document_no]),
+                ],
+                [['sales_invoice_id' => $invoice->id, 'amount' => $part['amount']]],
+            );
+
+            $this->collections->confirm($collection);
+        }
+    }
+
+    /**
+     * কাউন্টারে বিল ধরে ফেরত নেওয়া।
+     *
+     * ── কেন কাউন্টার থেকেই ─────────────────────────────────────────
+     * ক্রেতা দোকানে দাঁড়িয়ে আছেন, হাতে বিল আর মাল। ফেরতের জন্য অফিসের
+     * পর্দায় যেতে বললে ক্যাশিয়ার হয় লাইন থামিয়ে রাখেন, নয় "পরে করব"
+     * বলে কাগজে টুকে রাখেন — আর ওই কাগজটা রাতে হারায়। মালটা তখন
+     * গুদামে ফেরে না, খাতায় বিক্রয়ই থেকে যায়।
+     *
+     * ── নতুন কোনো নিয়ম এখানে নেই ────────────────────────────────────
+     * ভেতরে `SalesReturnService`-ই ডাকা হয়, তাই বিক্রীত পরিমাণের সীমা,
+     * স্টকের অঙ্ক, ব্যয়-স্তরে ফেরত, খতিয়ানের দাখিলা — সবই একই কোড।
+     * আলাদা করে লিখলে কাউন্টারের ফেরতে ব্যয়-স্তর ফিরত না, আর মাস শেষে
+     * মুনাফা বেশি দেখাত।
+     *
+     * ── টাকা ফেরত ঐচ্ছিক, আর সেটাই বাস্তব ───────────────────────────
+     * বাকিতে কেনা মাল ফেরত এলে টাকা যায় না, কেবল পাওনা কমে। নগদে
+     * কেনা হলে ড্রয়ার থেকে টাকা ফেরত যায়, আর সেটা একটা পরিশোধ ভাউচার —
+     * ছাপা যায়, অডিটে থাকে, আর টিলের গণনায় ধরা পড়ে।
+     *
+     * @param  array<string, mixed>  $data
+     * @param  list<array<string, mixed>>  $lines
+     * @return array{return: SalesReturn, refund: ?Voucher}
+     */
+    public function takeBack(array $data, array $lines): array
+    {
+        $invoice = $this->soldOn($data['document_no'] ?? '');
+
+        return DB::transaction(function () use ($data, $lines, $invoice) {
+            $return = $this->returns->create([
+                'customer_id' => $invoice->customer_id,
+                'warehouse_id' => $data['warehouse_id'] ?? $invoice->warehouse_id,
+                'sales_invoice_id' => $invoice->id,
+                'reason_code_id' => $data['reason_code_id'] ?? null,
+                'trx_date' => $data['trx_date'] ?? now()->toDateString(),
+                'narration' => __('sales::message.pos_return_narration', ['no' => $invoice->document_no]),
+            ], $lines);
+
+            $return = $this->returns->confirm($return);
+
+            $refund = null;
+
+            if (($data['refund'] ?? false) && bccomp((string) $return->total, '0', 4) > 0) {
+                $refund = $this->refund($return);
+            }
+
+            return ['return' => $return, 'refund' => $refund];
+        });
+    }
+
+    /**
+     * নম্বর ধরে বিলটা খুঁজে বের করা।
+     *
+     * খসড়া বা বাতিল বিলের বিপরীতে ফেরত হয় না: খসড়ায় মাল বেরোয়ইনি, আর
+     * বাতিলে সেটা ইতিমধ্যে ফেরত ধরা হয়েছে। দুইটার যেকোনোটায় ফেরত নিলে
+     * গুদামে এমন মাল ঢুকত যা কোনোদিন বেরোয়নি।
+     */
+    public function soldOn(string $documentNo): SalesInvoice
+    {
+        $documentNo = trim($documentNo);
+
+        $invoice = $documentNo === '' ? null : SalesInvoice::query()
+            ->where('document_no', $documentNo)
+            ->posted()
+            ->with(['lines.product', 'customer'])
+            ->first();
+
+        if ($invoice === null) {
+            throw ValidationException::withMessages([
+                'document_no' => __('sales::validation.no_such_bill', ['no' => $documentNo]),
+            ]);
+        }
+
+        return $invoice;
+    }
+
+    /**
+     * এই লাইন থেকে আগে কত ফেরত গেছে।
+     *
+     * ক্যাশিয়ারকে জানাতে হয় আর কতটুকু বাকি — না জানালে তিনি পুরোটা
+     * টাইপ করতেন আর সেবাটা আটকে দিত, ক্রেতার সামনে দাঁড়িয়ে।
+     */
+    public function alreadyReturned(SalesInvoiceLine $line): string
+    {
+        $sum = SalesReturnLine::query()
+            ->where('sales_invoice_line_id', $line->id)
+            ->whereHas('return', fn ($q) => $q->posted())
+            ->sum('qty');
+
+        return Money::quantity((string) ($sum ?: '0'));
+    }
+
+    /**
+     * ড্রয়ার থেকে টাকা ফেরত — একটা পরিশোধ ভাউচার।
+     *
+     * ── কেন ভাউচার, ঋণাত্মক আদায় নয় ────────────────────────────────
+     * ঋণাত্মক একটা আদায় লিখলে "আজ কত আদায় হয়েছে" সংখ্যাটা নীরবে কমে
+     * যেত, অথচ ওই টাকাটা কেউ কোনোদিন দেয়ইনি। ভাউচার হলে দুইটা ঘটনা
+     * দুইটা কাগজে থাকে — আর ফেরতের কাগজটা ছাপা যায়, যেটা ক্রেতা
+     * চাইবেনই।
+     */
+    private function refund(SalesReturn $return): Voucher
+    {
+        $till = $this->tills->ensurePrimaryTill();
+
+        $voucher = $this->vouchers->create([
+            'type' => Voucher::PAYMENT,
+            'trx_date' => $return->trx_date,
+            'party_type' => 'customer',
+            'party_id' => $return->customer_id,
+            'narration' => __('sales::message.pos_refund_narration', ['no' => $return->document_no]),
+        ], $this->vouchers->twoLineEntry(
+            type: Voucher::PAYMENT,
+            fromAccountId: $till->account_id,
+            toAccountId: StandardChart::find(StandardChart::RECEIVABLE)->id,
+            amount: (string) $return->total,
+        ));
+
+        return $this->vouchers->post($voucher);
+    }
+
+    /**
+     * ক্রেতা মোট কত দিলেন।
+     *
+     * ভাগ করে দিলে ভাগগুলোর যোগফল; নাহলে `paid` ঘরটাই।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function paidTotal(array $data): string
+    {
+        $payments = $data['payments'] ?? null;
+
+        if (! is_array($payments) || $payments === []) {
+            return $this->money($data['paid'] ?? '0');
+        }
+
+        $sum = '0';
+
+        foreach ($payments as $payment) {
+            $sum = bcadd($sum, $this->money($payment['amount'] ?? '0'), 4);
+        }
+
+        return $sum;
+    }
+
+    /**
+     * টাকাটা কীভাবে ভাগ হলো — আর ফেরতটা কোন ভাগ থেকে যায়।
+     *
+     * ── কেন ভাগগুলোর যোগফল "যা দিলেন"-এর সমান হতে হয় ───────────────
+     * বেশি হলে গ্রাহকের নামে এমন জমা বসত যা তিনি দেননি; কম হলে বিলটা
+     * আংশিক শোধ দেখাত অথচ ক্যাশিয়ার পুরোটা নিয়েছেন। দুইটাই দিনশেষে
+     * ধরা পড়ত, আর তখন কোন বিলে ভুল তা খুঁজে বের করা যেত না।
+     *
+     * ── ফেরত সবসময় নগদের ভাগ থেকে ──────────────────────────────────
+     * ২,৩০০ টাকার বিলে ২,০০০ বিকাশে আর ৫০০ নগদে — ফেরত ২০০। ওই ২০০
+     * ড্রয়ার থেকেই যায়, বিকাশ থেকে নয়: বিকাশে পাঠানো টাকা ফেরত দেওয়া
+     * যায় না। সমান ভাগে কাটলে বিকাশের খাতে ১,৯১৩ বসত, অথচ ব্যাংকের
+     * বিবরণীতে ২,০০০ — আর মাসের শেষে ওই তফাতটা কেউ মেলাতে পারত না।
+     *
+     * নগদের কোনো ভাগ না থাকলে বেশি টাকা নেওয়াই যায় না, কারণ ফেরত
+     * দেওয়ার কিছু নেই।
+     *
+     * @param  array<string, mixed>  $data
+     * @return list<array{method: ?PaymentMethod, amount: string, reference: ?string}>
+     */
+    private function split(array $data, string $applied): array
+    {
+        $payments = $data['payments'] ?? null;
+
+        if (! is_array($payments) || $payments === []) {
+            return [[
+                'method' => $this->paymentMethod($data['payment_method_id'] ?? null),
+                'amount' => $applied,
+                'reference' => $data['reference'] ?? null,
+            ]];
+        }
+
+        $parts = [];
+        $paid = '0';
+
+        foreach ($payments as $payment) {
+            $amount = $this->money($payment['amount'] ?? '0');
+
+            // শূন্যের সারি বাদ — পর্দায় একটা খালি ঘর থেকে গেলে সেটা
+            // ইচ্ছা নয়, আর শূন্য টাকার আদায় খাতায় একটা অর্থহীন সারি
+            if (bccomp($amount, '0', 4) <= 0) {
+                continue;
+            }
+
+            $parts[] = [
+                'method' => $this->paymentMethod($payment['payment_method_id'] ?? null),
+                'amount' => $amount,
+                'reference' => $payment['reference'] ?? null,
+            ];
+
+            $paid = bcadd($paid, $amount, 4);
+        }
+
+        if ($parts === []) {
+            throw ValidationException::withMessages(['payments' => __('sales::validation.no_payment_parts')]);
+        }
+
+        /*
+         * পর্দা যদি নিজে একটা যোগফলও পাঠায়, সেটা মিলতে হবে।
+         *
+         * ঘরটা না এলে মিলিয়ে দেখার কিছু নেই — যোগফলটা ভাগগুলো থেকেই
+         * গোনা হয়েছে। কিন্তু এলে সেটা ক্রেতাকে দেখানো সংখ্যা, আর সেটা
+         * নীরবে বদলে দেওয়া চলে না।
+         */
+        $handed = trim((string) ($data['paid'] ?? ''));
+
+        if ($handed !== '' && bccomp($paid, $this->money($handed), 4) !== 0) {
+            throw ValidationException::withMessages([
+                'payments' => __('sales::validation.split_does_not_add_up', [
+                    'sum' => $paid,
+                    'paid' => $this->money($handed),
+                ]),
+            ]);
+        }
+
+        $change = bcsub($paid, $applied, 4);
+
+        if (bccomp($change, '0', 4) <= 0) {
+            return $parts;
+        }
+
+        return $this->takeChangeFromCash($parts, $change);
+    }
+
+    /**
+     * ফেরতটা নগদের ভাগ থেকে কেটে নেওয়া।
+     *
+     * @param  list<array{method: ?PaymentMethod, amount: string, reference: ?string}>  $parts
+     * @return list<array{method: ?PaymentMethod, amount: string, reference: ?string}>
+     */
+    private function takeChangeFromCash(array $parts, string $change): array
+    {
+        foreach ($parts as $i => $part) {
+            /*
+             * উপায় না বলা মানে নগদ — `paymentMethod()` তাই null ফেরায়
+             * আর আদায়ের সেবা প্রধান নগদ কাউন্টার বেছে নেয়। সেই
+             * ভাগটাও এখানে নগদ হিসেবেই গোনা হয়।
+             */
+            $isCash = $part['method'] === null || $part['method']->isCash();
+
+            if (! $isCash || bccomp($part['amount'], $change, 4) < 0) {
+                continue;
+            }
+
+            $parts[$i]['amount'] = bcsub($part['amount'], $change, 4);
+
+            return $parts;
+        }
+
+        throw ValidationException::withMessages([
+            'payments' => __('sales::validation.change_needs_cash'),
+        ]);
     }
 
     /**

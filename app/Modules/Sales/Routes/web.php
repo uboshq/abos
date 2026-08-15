@@ -42,6 +42,15 @@ Route::middleware('auth')->prefix('sales')->group(function () {
 
         Route::post('/{invoice}/resume', [PosController::class, 'resume'])
             ->whereNumber('invoice')->name('resume');
+
+        /*
+         * কাউন্টার থেকেই ফেরত।
+         *
+         * খোঁজাটা GET (কিছু বদলায় না), নেওয়াটা POST — মাল গুদামে ফেরে,
+         * খাতায় দাখিলা বসে, আর টাকা ড্রয়ার থেকে যেতে পারে।
+         */
+        Route::get('/bill', [PosController::class, 'bill'])->name('bill');
+        Route::post('/return', [PosController::class, 'takeBack'])->name('return');
     });
 
     /*

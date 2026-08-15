@@ -71,4 +71,8 @@ return [
     'discount_rejected' => 'The discount was sent back. Lower it and confirm again.',
     'no_walkin_customer' => 'No cash-sale customer is set — choose one in the Control Panel, otherwise there is no saying whose name the day\'s sales go under.',
     'return_needs_invoice' => 'A return must name the sales invoice it comes from — without it there is no way to know what those goods cost. For goods sold on an invoice ABOS never held, use a stock adjustment that carries a rate.',
+    'no_payment_parts' => 'None of the payment rows has an amount.',
+    'split_does_not_add_up' => 'The rows add to :sum but :paid was taken — the two do not agree.',
+    'change_needs_cash' => 'Change has to come out of a cash row — money sent by bKash or card cannot be handed back.',
+    'no_such_bill' => 'No confirmed bill numbered :no was found.',
 ];
