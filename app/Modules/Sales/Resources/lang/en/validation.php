@@ -75,4 +75,5 @@ return [
     'split_does_not_add_up' => 'The rows add to :sum but :paid was taken — the two do not agree.',
     'change_needs_cash' => 'Change has to come out of a cash row — money sent by bKash or card cannot be handed back.',
     'no_such_bill' => 'No confirmed bill numbered :no was found.',
+    'reprint_limit_reached' => ':no has already been printed :count times, which is the limit. Printing it again needs permission.',
 ];

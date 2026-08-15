@@ -455,6 +455,16 @@ class SalesPrintController extends Controller implements HasMiddleware
          */
         $job = $type === null ? null : $this->queue->queue($type, (int) $id, $paper, $documentNo);
 
+        /*
+         * সীমা পেরোলে এখানেই থামে — PDF তৈরির আগে।
+         *
+         * পরে বসালে কাগজটা তৈরি হয়ে যেত, শুধু ফেরত দেওয়া হত না — আর
+         * তখন গোনাটা বেড়ে যেত এমন একটা কাগজের জন্য যেটা কেউ পায়নি।
+         */
+        if ($job !== null) {
+            $this->queue->assertMayPrint($job);
+        }
+
         if ($job?->isReprint()) {
             $doc = $doc->withNotice(__('core.print.duplicate_notice'));
         }

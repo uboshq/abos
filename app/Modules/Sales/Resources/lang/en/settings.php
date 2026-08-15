@@ -29,4 +29,5 @@ return [
     'screen_direct' => 'Show the Direct Sales screen',
     'screen_orders' => 'Show the Sales Orders screen',
     'screen_challans' => 'Show the Delivery Challans screen',
+    'reprint_limit' => 'How many times one paper may be printed (0 = no limit)',
 ];
