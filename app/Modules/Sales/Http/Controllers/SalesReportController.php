@@ -23,6 +23,7 @@ class SalesReportController extends Controller implements HasMiddleware
         'pending-orders' => 'sales.pending_orders',
         'uninvoiced' => 'sales.uninvoiced',
         'by-customer' => 'sales.by_customer',
+        'by-product' => 'sales.by_product',
     ];
 
     public function __construct(

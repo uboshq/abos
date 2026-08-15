@@ -112,10 +112,22 @@ class CostIsHiddenTest extends TestCase
      */
     public function test_the_profit_column_is_absent_from_the_export(): void
     {
-        $csv = $this->actingAs($this->clerk())
+        $response = $this->actingAs($this->clerk())
             ->get(route('sales.report.show', ['slug' => 'by-customer', 'export' => 'csv']))
-            ->assertOk()
-            ->getContent();
+            ->assertOk();
+
+        /*
+         * সত্যিই একটা ফাইল, পাতা নয়।
+         *
+         * এই লাইনটা আগে ছিল না, আর তাই পরীক্ষাটা **HTML পাতাটাই পড়ত**:
+         * রিপোর্টের পর্দায় রপ্তানি কোনোদিন কাজ করেনি, `?export=csv`
+         * চুপচাপ পাতাটাই ফেরত দিত। পাতায় কলামটা এমনিতেই ঢাকা, তাই
+         * দাবিটা পাশ করত — রপ্তানি না থাকলেও।
+         */
+        $this->assertStringContainsString('text/csv', (string) $response->headers->get('content-type'),
+            'রপ্তানি একটা ফাইল দেয়নি — পাতাটাই ফিরেছে।');
+
+        $csv = $response->getContent();
 
         $this->assertStringNotContainsString(__('sales::field.gross_profit'), $csv);
 
@@ -127,10 +139,14 @@ class CostIsHiddenTest extends TestCase
     /** অনুমতি থাকলে রপ্তানিতেও থাকে। */
     public function test_the_profit_column_is_in_the_export_with_permission(): void
     {
-        $csv = $this->actingAs($this->clerk(['sales.cost.view']))
+        $response = $this->actingAs($this->clerk(['sales.cost.view']))
             ->get(route('sales.report.show', ['slug' => 'by-customer', 'export' => 'csv']))
-            ->assertOk()
-            ->getContent();
+            ->assertOk();
+
+        $this->assertStringContainsString('text/csv', (string) $response->headers->get('content-type'),
+            'রপ্তানি একটা ফাইল দেয়নি — পাতাটাই ফিরেছে।');
+
+        $csv = $response->getContent();
 
         $this->assertStringContainsString(__('sales::field.gross_profit'), $csv);
     }

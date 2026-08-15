@@ -200,7 +200,15 @@ final class PurchaseReports
                 ->when($f['branch_id'], fn ($q, $br) => $q->where('b.branch_id', $br))
                 ->whereBetween('b.trx_date', [$f['from'], $f['to']])
                 ->whereNull('b.deleted_at')
-                ->where('b.status', '<>', DocumentStatus::CANCELLED)
+                /*
+                 * খাতায় বসা বিল — খসড়া নয়।
+                 *
+                 * বিক্রয়ের একই রিপোর্টে ঠিক এই ভুলটাই ছিল: "বাতিল ছাড়া
+                 * সব" মানে খসড়াও, আর তখন এখনো নিশ্চিত না-হওয়া একটা বিল
+                 * সরবরাহকারীর নামে যোগ হয়ে বসে থাকত। কেউ দরকষাকষিতে
+                 * বসতেন এমন একটা সংখ্যা নিয়ে যা খাতায় নেই।
+                 */
+                ->whereIn('b.status', DocumentStatus::POSTED)
                 ->groupBy('b.supplier_id', 's.code', 's.name_en', 's.name_bn')
                 ->orderByRaw('SUM(b.total) desc')
                 ->select([
