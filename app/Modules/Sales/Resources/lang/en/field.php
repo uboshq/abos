@@ -129,4 +129,5 @@ return [
     'till' => 'Drawer',
     'paper' => 'Paper',
     'print_failure' => 'What went wrong',
+    'cash' => 'Cash',
 ];

@@ -15,6 +15,7 @@ use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\PackBarcode;
+use App\Modules\MasterData\Models\PaymentMethod;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Services\PosService;
 use Illuminate\Http\JsonResponse;
@@ -68,6 +69,21 @@ class PosController extends Controller implements HasMiddleware
             'warehouse' => $warehouse,
             'walkinId' => (int) $this->settings->get('sales.walkin_customer_id', 0),
             'todaysTotal' => $this->pos->todaysTotal(),
+
+            // কাউন্টারে ছাড়ের ঘরটা প্রতি-কোম্পানি সুইচে (নিয়ম ৭)
+            'discountOn' => $this->settings->enabled('sales.field_line_discount'),
+
+            /*
+             * টাকা নেওয়ার উপায়গুলো।
+             *
+             * ── কেন এতদিন পর্দায় ছিল না ─────────────────────────────
+             * `PosService` বিকাশ/কার্ড আগে থেকেই বুঝত, কিন্তু পর্দায়
+             * বাছার কোনো ঘর ছিল না — অর্থাৎ সুবিধাটা কোডে ছিল, কাউন্টারে
+             * ছিল না। এক ধরনের স্টাব: কাজটা আছে বলে দেখায়, অথচ যিনি
+             * ব্যবহার করবেন তিনি পৌঁছাতে পারেন না।
+             */
+            'methods' => PaymentMethod::query()->active()->orderBy('code')
+                ->get(['id', 'code', 'name_en', 'name_bn', 'needs_reference', 'account_id']),
 
             /*
              * কাউন্টারে ঝুলে থাকা বিলগুলো — পুরনোটা আগে।
@@ -236,6 +252,74 @@ class PosController extends Controller implements HasMiddleware
      * পাতার সাথে পাঠানো তালিকায় না পেলে তখনই কেবল সার্ভারে আসা হয়, তাই
      * স্বাভাবিক অবস্থায় এই রুটটা কখনো ডাকা হয় না।
      */
+    /**
+     * নম্বর ধরে বিলটা — কাউন্টারে ফেরত নেওয়ার জন্য।
+     *
+     * সারিগুলোর সাথে "আগে কত ফেরত গেছে" পাঠানো হয়, কারণ একই বিল থেকে
+     * দ্বিতীয়বার ফেরত নিতে গেলে ক্যাশিয়ারকে জানতে হয় আর কতটুকু বাকি।
+     * না জানালে তিনি পুরোটা টাইপ করতেন, আর সেবাটা আটকে দিত — ক্রেতার
+     * সামনে দাঁড়িয়ে।
+     */
+    public function bill(Request $request): JsonResponse
+    {
+        try {
+            $invoice = $this->pos->soldOn((string) $request->query('no'));
+        } catch (ValidationException $e) {
+            return response()->json(['message' => $e->getMessage()], 404);
+        }
+
+        return response()->json([
+            'id' => $invoice->id,
+            'no' => $invoice->document_no,
+            'customer' => $invoice->customer?->name(),
+            'date' => $invoice->trx_date?->toDateString(),
+            'lines' => $invoice->lines->map(fn ($line) => [
+                'id' => $line->id,
+                'product_id' => $line->product_id,
+                'name' => $line->product?->name(),
+                /*
+                 * দুইটাই একই ছাঁচে।
+                 *
+                 * `qty` কাঁচা ঢাললে "১ / ১.০০০০" দেখাত, আর পাশের
+                 * সংখ্যাটা "১" — একই পর্দায় একই জিনিস দুই চেহারায়।
+                 */
+                'qty' => Money::quantity((string) $line->qty),
+                'returned' => $this->pos->alreadyReturned($line),
+                'rate' => Money::format((string) $line->rate, 2),
+            ])->all(),
+        ]);
+    }
+
+    /**
+     * ফেরতটা নেওয়া।
+     *
+     * ── কেন পুরো পাতা ফেরে, JSON নয় ─────────────────────────────────
+     * ফেরতের পর ক্যাশিয়ারের একটা কাগজ লাগে — ক্রেতা ওটা চাইবেনই। পাতা
+     * ফিরলে ছাপার লিংকটা সাথেই আসে, আর দ্বিতীয় একটা অনুরোধ লাগে না।
+     */
+    public function takeBack(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'document_no' => ['required', 'string'],
+            'warehouse_id' => ['nullable', 'integer'],
+            'reason_code_id' => ['nullable', 'integer'],
+            'refund' => ['nullable', 'boolean'],
+            'lines' => ['required', 'array', 'min:1'],
+            'lines.*.product_id' => ['required', 'integer'],
+            'lines.*.qty' => ['required', 'numeric', 'min:0.0001'],
+            'lines.*.sales_invoice_line_id' => ['nullable', 'integer'],
+        ]);
+
+        $result = $this->pos->takeBack($data, $data['lines']);
+
+        return redirect()
+            ->route('sales.pos.index')
+            ->with('status', __('sales::message.pos_returned', [
+                'no' => $result['return']->document_no,
+                'amount' => Money::format((string) $result['return']->total, 2),
+            ]));
+    }
+
     public function lookup(Request $request, PackBarcode $barcodes): JsonResponse
     {
         $raw = trim((string) $request->query('code'));

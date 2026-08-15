@@ -36,11 +36,19 @@ class OneFigureOneDefinitionTest extends TestCase
      */
     public function test_the_counted_statuses_are_written_in_exactly_one_place(): void
     {
-        // দুই ভঙ্গিতেই লেখা যায়, তাই দুইটাই দেখা হয়
-        $needles = [
-            'CONFIRMED, self::CLOSED]',
-            'CONFIRMED, DocumentStatus::CLOSED]',
-        ];
+        /*
+         * ফাঁকা জায়গা মুছে তারপর খোঁজা।
+         *
+         * ── কেন, আর কীভাবে ধরা পড়ল ──────────────────────────────────
+         * প্রথম রূপে নিডলগুলো হুবহু লেখা খুঁজত, তাই এক লাইনের নকল ধরা
+         * পড়ত আর কয়েক লাইনে ভাঙা নকল পড়ত না। ঠিক তেমন একটা নকল
+         * `SalesReturnService`-এ বসে ছিল — পাহারাটা সবুজ দেখাচ্ছিল
+         * অথচ নিয়মটা দুই জায়গায় লেখা ছিল।
+         *
+         * একটা পাহারা যা অর্ধেক ধরে, তার বিপদ ধরতে না পারার চেয়ে বেশি:
+         * সবুজ দেখে সবাই ধরে নেয় জিনিসটা এক জায়গায় আছে।
+         */
+        $pattern = '/CONFIRMED,(?:self|DocumentStatus)::CLOSED,?\]/';
         $home = 'app/Core/Support/DocumentStatus.php';
 
         $offenders = [];
@@ -52,13 +60,10 @@ class OneFigureOneDefinitionTest extends TestCase
                 continue;
             }
 
-            $code = $this->withoutComments(file_get_contents($path));
+            $code = preg_replace('/\s+/', '', $this->withoutComments(file_get_contents($path)));
 
-            foreach ($needles as $needle) {
-                if (str_contains($code, $needle)) {
-                    $offenders[] = $relative;
-                    break;
-                }
+            if (preg_match($pattern, $code) === 1) {
+                $offenders[] = $relative;
             }
         }
 
