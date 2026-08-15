@@ -24,6 +24,15 @@ final class ReportColumn
 
     public const DOCUMENT = 'document';
 
+    /*
+     * শতাংশ — অবদান ও পরিবর্তন।
+     *
+     * টাকা নয় বলে আলাদা: শতাংশের যোগফল হয় না (তিনটা সারির ৪০% + ৩০%
+     * + ৩০% = ১০০%, আর সেটা "মোট" সারিতে বসালে অর্থহীন), আর খালি মান
+     * মানে শূন্য নয় — মানে "আগের সময়ে জিনিসটাই ছিল না"।
+     */
+    public const PERCENT = 'percent';
+
     private function __construct(
         public readonly string $key,
         public readonly string $label,
@@ -64,7 +73,7 @@ final class ReportColumn
 
         $type = $definition['type'] ?? self::TEXT;
 
-        if (! in_array($type, [self::TEXT, self::MONEY, self::QUANTITY, self::DATE, self::DOCUMENT], true)) {
+        if (! in_array($type, [self::TEXT, self::MONEY, self::QUANTITY, self::DATE, self::DOCUMENT, self::PERCENT], true)) {
             throw new InvalidArgumentException("Report column '{$definition['key']}' has unknown type '{$type}'.");
         }
 
@@ -100,7 +109,7 @@ final class ReportColumn
 
     public function isNumeric(): bool
     {
-        return in_array($this->type, [self::MONEY, self::QUANTITY], true);
+        return in_array($this->type, [self::MONEY, self::QUANTITY, self::PERCENT], true);
     }
 
     /** এই কলামের মান ক্লিক করলে উৎস ডকুমেন্টে যাবে — নিয়ম ১। */
@@ -114,6 +123,11 @@ final class ReportColumn
         return match ($this->type) {
             self::MONEY => 2,
             self::QUANTITY => 3,
+
+            // শতাংশে দুই ঘরই যথেষ্ট — ৪০.১২% আর ৪০.১২৩৪% একই সিদ্ধান্তে
+            // নিয়ে যায়, আর দ্বিতীয়টা সারিটাকে চওড়া করে
+            self::PERCENT => 2,
+
             default => 0,
         };
     }

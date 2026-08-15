@@ -158,6 +158,15 @@ final class SalesReports
             title: 'sales::menu.by_customer',
             filters: ['date_range', 'branch'],
             groupBy: 'customer_id',
+
+            /*
+             * "সবচেয়ে বড়" মানে এখানে মোট বিক্রয়।
+             *
+             * এটাই অবদান % ও Top N চালু করে — "প্রথম দশজন ক্রেতা মোট
+             * বিক্রয়ের ৬৮%"। এক ক্রেতা একাই ৪০% হলে সেটা একটা ঝুঁকি,
+             * আর ওই সংখ্যাটা তালিকা দেখে বোঝা যায় না।
+             */
+            rankBy: 'total',
             query: fn (array $f) => DB::table('sal_invoices as i')
                 ->join('customers as cu', 'cu.id', '=', 'i.customer_id')
                 ->where('i.company_id', $f['company_id'])
@@ -247,6 +256,10 @@ final class SalesReports
             title: 'sales::menu.by_product',
             filters: ['date_range', 'branch'],
             groupBy: 'product_id',
+
+            // "সবচেয়ে বড়" মানে এখানে মুনাফা, বিক্রয় নয় — রিপোর্টটার
+            // প্রশ্নই তো "কোনটা আসলে টাকা দেয়"
+            rankBy: 'gross_profit',
             query: fn (array $f) => DB::table('sal_invoice_lines as il')
                 ->join('sal_invoices as i', 'i.id', '=', 'il.sales_invoice_id')
                 ->join('inv_products as p', 'p.id', '=', 'il.product_id')

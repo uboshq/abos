@@ -194,6 +194,9 @@ final class PurchaseReports
             title: 'purchase::menu.by_supplier',
             filters: ['date_range', 'branch'],
             groupBy: 'supplier_id',
+
+            // এক সরবরাহকারীর উপর কতটা নির্ভরতা — তিনি থামলে কী থামে
+            rankBy: 'total',
             query: fn (array $f) => DB::table('pur_bills as b')
                 ->join('suppliers as s', 's.id', '=', 'b.supplier_id')
                 ->where('b.company_id', $f['company_id'])
