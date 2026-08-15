@@ -47,6 +47,7 @@ return [
             ['label' => 'master_data::menu.locations', 'route' => 'master_data.location.index', 'permission' => 'master_data.view'],
             ['label' => 'master_data::menu.units', 'route' => 'master_data.unit.index', 'permission' => 'master_data.view'],
             ['label' => 'master_data::menu.taxes', 'route' => 'master_data.tax.index', 'permission' => 'master_data.view'],
+            ['label' => 'master_data::menu.payment_methods', 'route' => 'master_data.payment_method.index', 'permission' => 'master_data.view'],
             ['label' => 'master_data::menu.payment_terms', 'route' => 'master_data.term.index', 'permission' => 'master_data.view'],
             ['label' => 'master_data::menu.price_lists', 'route' => 'master_data.price_list.index', 'permission' => 'master_data.view'],
             ['label' => 'master_data::menu.party_types', 'route' => 'master_data.party_type.index', 'permission' => 'master_data.view'],

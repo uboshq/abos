@@ -10,6 +10,7 @@ use App\Models\Company;
 use App\Models\LedgerEntry;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Purchase\Models\PurchaseBill;
@@ -71,7 +72,7 @@ class PurchasePaymentTest extends TestCase
         $bill = $this->confirmedBill('1000');
 
         $payableBefore = $this->balanceOf(StandardChart::PAYABLE);
-        $cashBefore = $this->balanceOf(StandardChart::CASH_IN_HAND);
+        $cashBefore = $this->balanceOfAccount($this->cashTillAccount());
 
         $this->payments()->confirm(
             $this->payments()->create(
@@ -88,7 +89,7 @@ class PurchasePaymentTest extends TestCase
 
         $this->assertSame(
             bcsub($cashBefore, '400.0000', 4),
-            $this->balanceOf(StandardChart::CASH_IN_HAND),
+            $this->balanceOfAccount($this->cashTillAccount()),
         );
     }
 
@@ -428,6 +429,31 @@ class PurchasePaymentTest extends TestCase
                 ['supplier_id' => $this->supplier->id, 'trx_date' => now()->toDateString()],
                 [['product_id' => $this->product->id, 'qty' => '1', 'rate' => $total]],
             )
+        );
+    }
+
+    /**
+     * নগদ কোথায় বসে — প্রধান নগদ কাউন্টারের খাতে, "হাতে নগদ" মাথায় নয়।
+     *
+     * ── এই পরীক্ষাগুলো আগে মাথাটাই দেখত ─────────────────────────────
+     * ১১০১ একটা গ্রুপ, আর গ্রুপে বসানো সারি কোনো ব্যালেন্সে দেখায় না
+     * (`Account::balanceOn()` গ্রুপের নিজের সারি গোনে না)। আদায় ঠিক
+     * ওখানেই টাকা বসাত, আর এই পরীক্ষাগুলো সেটাকেই সঠিক বলে ধরে রাখত।
+     *
+     * এখন টাকা যায় প্রধান কাউন্টারে — কারও হেফাজতে, আর দিনশেষের
+     * গণনায় মেলে।
+     */
+    private function cashTillAccount(): Account
+    {
+        return app(CashTillService::class)
+            ->ensurePrimaryTill()->account;
+    }
+
+    private function balanceOfAccount(Account $account): string
+    {
+        return LedgerEntry::query()->where('account_id', $account->id)->get()->reduce(
+            fn (string $sum, LedgerEntry $e) => bcadd($sum, bcsub((string) $e->debit, (string) $e->credit, 4), 4),
+            '0',
         );
     }
 

@@ -12,6 +12,7 @@ use App\Models\Company;
 use App\Models\LedgerEntry;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
@@ -111,6 +112,31 @@ class DirectSaleTest extends TestCase
         app(PurchaseBillService::class)->confirm($bill);
     }
 
+    /**
+     * নগদ কোথায় বসে — প্রধান নগদ কাউন্টারের খাতে, "হাতে নগদ" মাথায় নয়।
+     *
+     * ── এই পরীক্ষাগুলো আগে মাথাটাই দেখত ─────────────────────────────
+     * ১১০১ একটা গ্রুপ, আর গ্রুপে বসানো সারি কোনো ব্যালেন্সে দেখায় না
+     * (`Account::balanceOn()` গ্রুপের নিজের সারি গোনে না)। আদায় ঠিক
+     * ওখানেই টাকা বসাত, আর এই পরীক্ষাগুলো সেটাকেই সঠিক বলে ধরে রাখত।
+     *
+     * এখন টাকা যায় প্রধান কাউন্টারে — কারও হেফাজতে, আর দিনশেষের
+     * গণনায় মেলে।
+     */
+    private function cashTillAccount(): Account
+    {
+        return app(CashTillService::class)
+            ->ensurePrimaryTill()->account;
+    }
+
+    private function balanceOfAccount(Account $account): string
+    {
+        return LedgerEntry::query()->where('account_id', $account->id)->get()->reduce(
+            fn (string $sum, LedgerEntry $e) => bcadd($sum, bcsub((string) $e->debit, (string) $e->credit, 4), 4),
+            '0',
+        );
+    }
+
     private function balanceOf(string $code): string
     {
         $account = Account::query()->where('code', $code)->firstOrFail();
@@ -164,7 +190,7 @@ class DirectSaleTest extends TestCase
         // আয়, আর টাকা এসে যাওয়ায় পাওনা শূন্য
         $this->assertSame(0, bccomp($this->balanceOf(StandardChart::SALES), '-1000', 4));
         $this->assertSame(0, bccomp($this->balanceOf(StandardChart::RECEIVABLE), '0', 4));
-        $this->assertSame(0, bccomp($this->balanceOf(StandardChart::CASH_IN_HAND), '1000', 4));
+        $this->assertSame(0, bccomp($this->balanceOfAccount($this->cashTillAccount()), '1000', 4));
 
         // বিক্রীত পণ্যের ব্যয়ও বসেছে — লম্বা পথের মতোই
         $cost = bcmul('10', (string) $this->product->purchase_price, 4);
@@ -345,7 +371,7 @@ class DirectSaleTest extends TestCase
         $result = $this->sell(['deposit' => '1500']);
 
         $this->assertSame(0, bccomp($result['change'], '500', 4));
-        $this->assertSame(0, bccomp($this->balanceOf(StandardChart::CASH_IN_HAND), '1000', 4));
+        $this->assertSame(0, bccomp($this->balanceOfAccount($this->cashTillAccount()), '1000', 4));
     }
 
     /**

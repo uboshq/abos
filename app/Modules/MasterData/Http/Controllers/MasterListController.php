@@ -15,6 +15,7 @@ use App\Modules\MasterData\Models\Department;
 use App\Modules\MasterData\Models\Designation;
 use App\Modules\MasterData\Models\EmploymentType;
 use App\Modules\MasterData\Models\PartyType;
+use App\Modules\MasterData\Models\PaymentMethod;
 use App\Modules\MasterData\Models\PaymentTerm;
 use App\Modules\MasterData\Models\PriceList;
 use App\Modules\MasterData\Models\ReasonCode;
@@ -82,6 +83,25 @@ class MasterListController extends Controller implements HasMiddleware
                 'account_id' => ['type' => 'select', 'label' => 'master_data::field.account', 'options' => 'accounts'],
             ],
             'columns' => ['rate', 'kind', 'is_inclusive'],
+        ],
+
+        /*
+         * কাউন্টারে টাকা নেওয়ার উপায় — নগদ, বিকাশ, কার্ড।
+         *
+         * খাতটা বাধ্যতামূলক, আর সেটাই সারিটার একমাত্র কাজ: POS ওই খাত
+         * দেখেই টাকা বসায়। খাত ছাড়া সারিটা কিছুই বলে না।
+         */
+        'payment-methods' => [
+            'model' => PaymentMethod::class,
+            'route' => 'payment_method',
+            'title' => 'master_data::menu.payment_methods',
+            'fields' => [
+                'account_id' => ['type' => 'select', 'label' => 'master_data::field.money_account',
+                    'options' => 'money_accounts'],
+                'needs_reference' => ['type' => 'switch', 'label' => 'master_data::field.needs_reference'],
+                'fee_percent' => ['type' => 'number', 'label' => 'master_data::field.fee_percent', 'step' => '0.0001'],
+            ],
+            'columns' => ['account_id', 'needs_reference', 'fee_percent'],
         ],
 
         'payment-terms' => [
@@ -546,6 +566,15 @@ class MasterListController extends Controller implements HasMiddleware
             'units' => Unit::query()->active()->orderBy('code')->get(),
             'party_types' => PartyType::query()->active()->orderBy('code')->get(),
             'accounts' => Account::query()->postable()->active()->orderBy('code')->get(),
+
+            /*
+             * টাকার খাতগুলোই — নগদ ও ব্যাংক/MFS।
+             *
+             * পুরো ছক দেখালে কেউ ভুল করে "বিক্রয়" বা "ভাড়া" বেছে
+             * ফেলতে পারতেন, আর তখন প্রতিটা বিক্রয়ের টাকা আয়ের খাতে
+             * দুইবার বসত। তালিকাটা ছোট রাখাই এখানে পাহারা।
+             */
+            'money_accounts' => Account::query()->money()->postable()->active()->orderBy('code')->get(),
             'tax_kinds' => Tax::KINDS,
             'applies' => PartyType::APPLIES,
             'contexts' => ReasonCode::CONTEXTS,

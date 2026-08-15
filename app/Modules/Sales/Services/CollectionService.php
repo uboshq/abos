@@ -12,6 +12,7 @@ use App\Core\Support\Money;
 use App\Models\FinancialYear;
 use App\Models\IssuedNumber;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\CollectionLine;
@@ -37,6 +38,7 @@ final class CollectionService
     public function __construct(
         private readonly NumberSeriesEngine $numbers,
         private readonly PostingEngine $posting,
+        private readonly CashTillService $tills,
     ) {}
 
     /**
@@ -302,10 +304,33 @@ final class CollectionService
      * যেকোনো খাত নিতে দিলে কেউ ভুল করে "বিক্রয়" খাতে আদায় বসাত, আর
      * তখন আয় দুইবার গোনা হত।
      */
+    /**
+     * খাত না বললে টাকা কোথায় যাবে — প্রধান নগদ কাউন্টারে।
+     *
+     * ── কেন টিল, কেন "হাতে নগদ" মাথাটা নয় ───────────────────────────
+     * মাথাটা গ্রুপ, আর গ্রুপে বসানো টাকা কোনো ব্যালেন্সে দেখায় না।
+     * তার চেয়ে বড় কথা: নগদ একটা খাত নয়, **কার হাতে** সেই প্রশ্ন।
+     * প্রধান কাউন্টারে বসালে টাকাটা একজনের হেফাজতে যায়, আর দিনশেষের
+     * গণনায় সেটা মেলে।
+     *
+     * ── একটাও কাউন্টার না থাকলে থামানো হয় না, বানানো হয় ─────────────
+     * প্রথমে থামানো হচ্ছিল ("আগে একটা কাউন্টার খুলুন")। কিন্তু নগদ
+     * নেওয়া কোনো ঐচ্ছিক কাজ নয় — যে কোম্পানি নগদ নেয় তার একটা
+     * কাউন্টার লাগবেই, আর সেটা প্রথম আদায়ের মুহূর্তে চাইতে বসা মানে
+     * ক্রেতাকে দাঁড় করিয়ে রেখে সেটিংসে যাওয়া।
+     *
+     * `ensurePrimaryTill()` এই কাজটার জন্যই আছে, আর সে থাকলে আবার
+     * বানায় না। তাই টাকা কখনো অভিভাবকহীন খাতে পড়ে না।
+     */
+    private function defaultCashAccount(): ?Account
+    {
+        return $this->tills->ensurePrimaryTill()->account;
+    }
+
     private function resolveMoneyAccount(mixed $accountId): Account
     {
         $account = blank($accountId)
-            ? Account::query()->where('code', StandardChart::CASH_IN_HAND)->first()
+            ? $this->defaultCashAccount()
             : Account::query()->whereKey((int) $accountId)->first();
 
         if ($account === null) {
@@ -314,11 +339,34 @@ final class CollectionService
             ]);
         }
 
+        /*
+         * গ্রুপ খাতে টাকা বসে না।
+         *
+         * ── কী ঘটছিল ────────────────────────────────────────────────
+         * খাত না বললে ডিফল্ট ছিল ১১০১ "হাতে নগদ" — যেটা একটা **মাথা**,
+         * খাত নয়। ওখানে বসানো সারি খতিয়ানে থাকত ঠিকই, কিন্তু কোনো
+         * ব্যালেন্সে দেখাত না: `Account::balanceOn()` গ্রুপের নিজের
+         * সারি গোনে না, কেবল সন্তানদের যোগ করে (আর সেটাই ঠিক, কারণ
+         * গ্রুপে সরাসরি এন্ট্রি বসার কথাই নয়)।
+         *
+         * ফলে কাউন্টারের নগদ বিক্রয়ের টাকা এমন জায়গায় জমা হত যেখানে
+         * সেটা কোথাও গোনা হত না — না টিলের ব্যালেন্সে, না ড্যাশবোর্ডের
+         * "হাতে নগদ"-এ, না নগদ গণনার তুলনায়।
+         *
+         * ভাউচারে এই নিয়মটা আগে থেকেই ছিল (`assertLinesArePostable`);
+         * আদায় ওই পথে না গিয়ে সরাসরি খাত বেছে নিত, তাই পাহারাটা এখানে
+         * পৌঁছায়নি।
+         */
+        if ($account->is_group) {
+            throw ValidationException::withMessages([
+                'account_id' => __('sales::validation.group_takes_no_money', ['name' => $account->name()]),
+            ]);
+        }
+
         $money = [StandardChart::CASH_IN_HAND, StandardChart::BANK_AND_MFS];
 
-        // সরাসরি ওই দুইটা খাত, নয়তো তাদের নিচের কোনো খাত
-        $isMoney = in_array($account->code, $money, true)
-            || Account::query()->whereKey($account->parent_id)->whereIn('code', $money)->exists();
+        // মাথা দুইটার নিচের কোনো খাত — মাথা নিজে নয় (উপরের নিয়ম)
+        $isMoney = Account::query()->whereKey($account->parent_id)->whereIn('code', $money)->exists();
 
         if (! $isMoney) {
             throw ValidationException::withMessages([

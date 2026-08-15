@@ -6,6 +6,7 @@ return [
     'locations' => 'Locations & routes',
     'units' => 'Units',
     'taxes' => 'Tax & VAT',
+    'payment_methods' => 'Payment methods',
     'payment_terms' => 'Payment terms',
     'price_lists' => 'Price lists',
     'party_types' => 'Party types',
