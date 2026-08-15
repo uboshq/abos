@@ -115,6 +115,41 @@ class WhichProductActuallyPaysTest extends TestCase
     }
 
     /**
+     * ভ্যাট মুনাফা নয়।
+     *
+     * ── কেন এটা সহজে চোখ এড়ায় ───────────────────────────────────────
+     * লাইনের `amount` = (পরিমাণ × দর) − ছাড় **+ ভ্যাট**। ওটাকেই
+     * "বিক্রয়" ধরলে ভ্যাটটা মুনাফায় ঢুকে পড়ে, অথচ ওটা সরকারের টাকা —
+     * আমরা কেবল আদায় করে জমা দিই। ফল: ৫% ভ্যাটওয়ালা পণ্য ৫% বেশি
+     * লাভজনক দেখাত, আর ওই ভুল তুলনার উপরেই দর ঠিক হত।
+     *
+     * প্রথম রূপে এই রিপোর্টে ঠিক ওই ভুলটাই ছিল।
+     */
+    public function test_vat_is_not_counted_as_profit(): void
+    {
+        $invoice = app(SalesInvoiceService::class)->create(
+            [
+                'customer_id' => Customer::query()->value('id'),
+                'warehouse_id' => Warehouse::query()->where('is_default', true)->value('id'),
+                'trx_date' => now()->toDateString(),
+            ],
+            [['product_id' => $this->cheap->id, 'qty' => '10', 'rate' => '100', 'tax' => '150']],
+        );
+
+        app(SalesInvoiceService::class)->confirm($invoice);
+        $invoice->lines()->update(['unit_cost' => '60']);
+
+        $row = $this->rows()[$this->nameOf($this->cheap)];
+
+        // ১,০০০ বিক্রয় (১৫০ ভ্যাট বাদে), ৬০০ ক্রয়মূল্য → ৪০০ মুনাফা
+        $this->assertSame(0, bccomp((string) $row['revenue'], '1000', 2),
+            "ভ্যাটটা বিক্রয়ে গোনা হয়েছে — {$row['revenue']}, ১,০০০ নয়।");
+        $this->assertSame(0, bccomp((string) $row['gross_profit'], '400', 2),
+            "ভ্যাটটা মুনাফায় গোনা হয়েছে — {$row['gross_profit']}, ৪০০ নয়।");
+        $this->assertSame(0, bccomp((string) $row['margin_percent'], '40', 2));
+    }
+
+    /**
      * মার্জিন শতাংশে — টাকার অঙ্ক একা যথেষ্ট নয়।
      *
      * ৪০০ টাকা লাভ ১,০০০ টাকার বিক্রিতে ৪০%; ১০,০০০ টাকার বিক্রিতে ৪%।

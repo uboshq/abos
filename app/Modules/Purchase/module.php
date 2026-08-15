@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Modules\Purchase\Dashboard\PurchaseWidgets;
+use App\Modules\Purchase\Integrity\PurchaseChecks;
 use App\Modules\Purchase\Models\Payment;
 use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Purchase\Models\PurchaseOrder;
@@ -142,6 +143,11 @@ return [
 
     'widgets' => [
         PurchaseWidgets::class,
+    ],
+
+    // ক্রয়ের কাগজ নিজের সাথে মেলে কি না — বিক্রয়ের একই দুইটা প্রশ্ন
+    'integrity' => [
+        PurchaseChecks::class,
     ],
 
     'settings' => [

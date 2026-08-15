@@ -21,6 +21,7 @@ return [
     'bank_book' => 'ব্যাংক বই',
     'ledger' => 'খতিয়ান',
     'trial_balance' => 'রেওয়ামিল',
+    'books_check' => 'খাতার যাচাই',
     'profit_loss' => 'লাভ-ক্ষতি হিসাব',
     'balance_sheet' => 'স্থিতিপত্র',
     'cash_flow' => 'নগদ প্রবাহ',

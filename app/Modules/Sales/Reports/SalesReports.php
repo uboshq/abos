@@ -257,16 +257,29 @@ final class SalesReports
                 // খাতায় বসা বিল — byCustomer()-এর একই কারণে
                 ->whereIn('i.status', DocumentStatus::POSTED)
                 ->groupBy('il.product_id', 'p.code', 'p.name_en', 'p.name_bn')
-                ->orderByRaw('SUM(il.amount - il.qty * il.unit_cost) desc')
+                ->orderByRaw('SUM(il.amount - il.tax - il.qty * il.unit_cost) desc')
                 ->select([
                     'il.product_id',
                     DB::raw("'".Product::drillSourceType()."' as source_type_literal"),
                     self::productName(),
                     DB::raw('SUM(il.qty) as qty'),
                     DB::raw('SUM(il.discount) as discount'),
-                    DB::raw('SUM(il.amount) as revenue'),
+
+                    /*
+                     * বিক্রয় — ভ্যাট বাদ দিয়ে।
+                     *
+                     * লাইনের `amount` = (পরিমাণ × দর) − ছাড় + ভ্যাট।
+                     * ভ্যাটটা কখনোই আমাদের আয় নয়, ওটা সরকারের টাকা যা
+                     * আমরা কেবল আদায় করে জমা দিই। না বাদ দিলে ভ্যাটটা
+                     * মুনাফা হিসেবে গোনা হত — অর্থাৎ ৫% ভ্যাটওয়ালা
+                     * পণ্যকে ৫% বেশি লাভজনক দেখাত, আর সেই ভুল তুলনার
+                     * উপর দাঁড়িয়েই দর ঠিক করা হত।
+                     *
+                     * গ্রাহকভিত্তিক রিপোর্টে নিয়মটা একই: `total − tax`।
+                     */
+                    DB::raw('SUM(il.amount - il.tax) as revenue'),
                     DB::raw('SUM(il.qty * il.unit_cost) as cost'),
-                    DB::raw('SUM(il.amount - il.qty * il.unit_cost) as gross_profit'),
+                    DB::raw('SUM(il.amount - il.tax - il.qty * il.unit_cost) as gross_profit'),
 
                     /*
                      * মার্জিন — টাকার অঙ্ক নয়, শতাংশ।
@@ -279,9 +292,9 @@ final class SalesReports
                      * শূন্য বিক্রয়ে ভাগ করা হয় না — শূন্য বিক্রয়ে মার্জিন
                      * বলে কিছু নেই, আর ডাটাবেজ ওখানে NULL দিত।
                      */
-                    DB::raw('CASE WHEN SUM(il.amount) = 0 THEN 0
-                             ELSE ROUND(SUM(il.amount - il.qty * il.unit_cost) * 100
-                                        / SUM(il.amount), 2) END as margin_percent'),
+                    DB::raw('CASE WHEN SUM(il.amount - il.tax) = 0 THEN 0
+                             ELSE ROUND(SUM(il.amount - il.tax - il.qty * il.unit_cost) * 100
+                                        / SUM(il.amount - il.tax), 2) END as margin_percent'),
                 ]),
             columns: [
                 [
