@@ -8,6 +8,7 @@ use App\Core\Services\SettingsService;
 use App\Core\Support\DocumentStatus;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\MasterData\Models\PaymentMethod;
+use App\Modules\Sales\Metrics\SalesMetrics;
 use App\Modules\Sales\Models\SalesInvoice;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -351,28 +352,21 @@ final class PosService
         return bcadd($value, '0', 4);
     }
 
-    /** আজ এই কাউন্টারে কত বিক্রি হয়েছে — পর্দার উপরে দেখানোর জন্য। */
+    /**
+     * আজ এই কাউন্টারে কত বিক্রি হয়েছে — পর্দার উপরে দেখানোর জন্য।
+     *
+     * ── কেন এখানে আর গোনা হয় না ─────────────────────────────────────
+     * আগে এই পদ্ধতিটা নিজের কোয়েরি চালাত, আর সেটাই একবার হোম পর্দার
+     * থেকে আলাদা উত্তর দিয়েছিল: এখানে খসড়াও গোনা হত। ক্রেতা টাকা
+     * আনতে গেছেন, বিলটা কাউন্টারে ঝুলছে, অথচ ক্যাশিয়ারের ঘরে ওই
+     * টাকাটা যোগ হয়ে বসে আছে — শিফট মেলানোর সময় হাতের নগদ কম পড়ত,
+     * আর কেউ বুঝত না কেন।
+     *
+     * সংজ্ঞাটা এখন `SalesMetrics`-এ, একবার। সংখ্যাটা এখানে কেবল
+     * চাওয়া হয়।
+     */
     public function todaysTotal(): string
     {
-        /*
-         * কেবল খাতায় বসা বিল — খসড়া নয়।
-         *
-         * ── আগে "বাতিল ছাড়া সব" গোনা হত ─────────────────────────────
-         * তাতে খসড়াও ঢুকত, আর বিল ধরে রাখার সুবিধাটা আসার পর সেটাই
-         * ফাঁদ হয়ে দাঁড়াত: ক্রেতা টাকা আনতে গেছেন, বিলটা কাউন্টারে
-         * ঝুলছে, অথচ ক্যাশিয়ারের "আজ কত বিক্রি" ঘরে ওই টাকাটা যোগ
-         * হয়ে বসে আছে। শিফট মেলানোর সময় হাতের নগদ কম পড়ত, আর কেউ
-         * বুঝত না কেন।
-         *
-         * নিয়মটা SalesInvoice::collectedAmount()-এর হুবহু নকল, আর
-         * সেটা ইচ্ছাকৃত — ওখানেও একবার ঠিক এই ভুলটাই ছিল।
-         */
-        $total = SalesInvoice::query()
-            ->whereDate('trx_date', now()->toDateString())
-            ->whereIn('status', [DocumentStatus::CONFIRMED, DocumentStatus::CLOSED])
-            ->where('created_by', auth()->id())
-            ->sum('total');
-
-        return (string) ($total ?: '0');
+        return SalesMetrics::salesTodayAtMyCounter()->value();
     }
 }

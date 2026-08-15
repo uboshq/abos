@@ -7,9 +7,10 @@ namespace App\Modules\Sales\Dashboard;
 use App\Core\Contracts\DashboardWidgets;
 use App\Core\Dashboard\Widget;
 use App\Core\Engines\Report\ReportEngine;
+use App\Core\Metrics\Metric;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
-use App\Modules\Sales\Models\Collection;
+use App\Modules\Sales\Metrics\SalesMetrics;
 use App\Modules\Sales\Models\SalesInvoice;
 use Illuminate\Support\Carbon;
 
@@ -34,45 +35,17 @@ final class SalesWidgets implements DashboardWidgets
         $monthStart = Carbon::today()->startOfMonth()->toDateString();
 
         return [
-            new Widget(
-                group: 'today',
-                label: __('sales::dashboard.sales_today'),
-                value: Money::format(self::invoiceTotal($today, $today), 2),
-                href: route('sales.invoice.index', ['from' => $today, 'to' => $today]),
-                permission: 'sales.invoice.view',
-                tone: 'money',
-                sort: 10,
-            ),
+            self::money(SalesMetrics::salesToday(), 'today', 10,
+                route('sales.invoice.index', ['from' => $today, 'to' => $today])),
 
-            new Widget(
-                group: 'today',
-                label: __('sales::dashboard.collected_today'),
-                value: Money::format(self::collectionTotal($today, $today), 2),
-                href: route('sales.collection.index', ['from' => $today, 'to' => $today]),
-                permission: 'sales.collection.view',
-                tone: 'money',
-                sort: 20,
-            ),
+            self::money(SalesMetrics::collectedToday(), 'today', 20,
+                route('sales.collection.index', ['from' => $today, 'to' => $today])),
 
-            new Widget(
-                group: 'month',
-                label: __('sales::dashboard.sales_this_month'),
-                value: Money::format(self::invoiceTotal($monthStart, $today), 2),
-                href: route('sales.invoice.index', ['from' => $monthStart, 'to' => $today]),
-                permission: 'sales.invoice.view',
-                tone: 'money',
-                sort: 10,
-            ),
+            self::money(SalesMetrics::salesThisMonth(), 'month', 10,
+                route('sales.invoice.index', ['from' => $monthStart, 'to' => $today])),
 
-            new Widget(
-                group: 'month',
-                label: __('sales::dashboard.collected_this_month'),
-                value: Money::format(self::collectionTotal($monthStart, $today), 2),
-                href: route('sales.collection.index', ['from' => $monthStart, 'to' => $today]),
-                permission: 'sales.collection.view',
-                tone: 'money',
-                sort: 20,
-            ),
+            self::money(SalesMetrics::collectedThisMonth(), 'month', 20,
+                route('sales.collection.index', ['from' => $monthStart, 'to' => $today])),
 
             /*
              * খসড়া বিল — কেউ শুরু করে শেষ করেনি।
@@ -114,25 +87,26 @@ final class SalesWidgets implements DashboardWidgets
     }
 
     /**
-     * বাতিল বাদে বিলের মোট।
+     * একটা ঘোষিত সংখ্যাকে হোম পর্দার একটা ঘরে বসানো।
      *
-     * খসড়াও বাদ: খসড়া বিল এখনো বিক্রয় নয়, আর ওটা যোগ করলে হোম পর্দার
-     * সংখ্যা আর বিক্রয় খাতার সংখ্যা আলাদা হয়ে যেত।
+     * ── কেন উইজেট নিজে গোনে না ──────────────────────────────────────
+     * আগে গুনত, আর কাউন্টারও আলাদা করে গুনত — একবার তারা দুইটা আলাদা
+     * উত্তর দিয়েছিল। এখন প্রশ্নটার উত্তর এক জায়গা থেকেই আসে, আর
+     * সংজ্ঞাটাও সঙ্গে আসে, তাই ঘরটার উপর মাউস রাখলে দেখা যায় কী গোনা
+     * হয়েছে — যে সংখ্যার সংজ্ঞা লুকানো, দুইজন মানুষ তার দুই অর্থ করে।
      */
-    private static function invoiceTotal(string $from, string $to): string
+    private static function money(Metric $metric, string $group, int $sort, string $href): Widget
     {
-        return Money::of(SalesInvoice::query()
-            ->whereIn('status', [DocumentStatus::CONFIRMED, DocumentStatus::CLOSED])
-            ->whereBetween('trx_date', [$from, $to])
-            ->sum('total'));
-    }
-
-    private static function collectionTotal(string $from, string $to): string
-    {
-        return Money::of(Collection::query()
-            ->whereIn('status', [DocumentStatus::CONFIRMED, DocumentStatus::CLOSED])
-            ->whereBetween('trx_date', [$from, $to])
-            ->sum('amount'));
+        return new Widget(
+            group: $group,
+            label: $metric->label,
+            value: Money::format($metric->value(), $metric->scale),
+            href: $href,
+            permission: $metric->permission,
+            tone: 'money',
+            sort: $sort,
+            hint: $metric->definition(),
+        );
     }
 
     /**

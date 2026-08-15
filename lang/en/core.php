@@ -11,6 +11,22 @@ return [
         'closed' => 'Closed',
     ],
 
+    /*
+     * What a figure means — shown beside the figure itself.
+     *
+     * A number whose definition is hidden gets two readings from two
+     * people. Whether "today's sales" counts drafts, and whether the
+     * date is the paper's or the typist's, is exactly where two screens
+     * once gave two answers.
+     */
+    'metric' => [
+        'definition' => 'Counts :statuses documents · dated by :date · :scale decimal places · rounded :rounding',
+        'by_transaction_date' => 'transaction date',
+        'by_entry_date' => 'entry date',
+        'round_per_row' => 'per row',
+        'round_at_total' => 'once at the total',
+    ],
+
     'drill' => [
         'unavailable' => ':type — the source document is no longer available',
         'view_source' => 'View source',

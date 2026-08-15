@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Modules\Sales\Dashboard\SalesWidgets;
 use App\Modules\Sales\Events\InvoiceConfirmed;
+use App\Modules\Sales\Metrics\SalesMetrics;
 use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesInvoice;
@@ -211,6 +212,18 @@ return [
     // হোম পর্দার সংখ্যাগুলো — কোর জিজ্ঞেস করে, মডিউল উত্তর দেয়
     'widgets' => [
         SalesWidgets::class,
+    ],
+
+    /*
+     * সংখ্যাগুলোর সংজ্ঞা — কে কী গোনে, তার একমাত্র তালিকা।
+     *
+     * "আজকের বিক্রয়" এই মডিউলেই তিন জায়গায় লাগে: হোম পর্দা, কাউন্টার,
+     * রিপোর্ট। প্রত্যেকে নিজে গুনলে একদিন তিনটা আলাদা হয় — আর ঠিক তাই
+     * হয়েছিল, কাউন্টারের ঘরটা খসড়াও গুনত। এখন সংজ্ঞা এক জায়গায়, আর
+     * সংখ্যার পাশে সেটা দেখাও যায়।
+     */
+    'metrics' => [
+        SalesMetrics::class,
     ],
 
     /*
