@@ -7,7 +7,6 @@ namespace App\Modules\Sales\Panels;
 use App\Core\Contracts\ContributesFacts;
 use App\Core\Panels\Fact;
 use App\Core\Support\DateFormat;
-use App\Core\Support\DocumentStatus;
 use App\Modules\Sales\Models\SalesInvoice;
 
 /**
@@ -40,7 +39,7 @@ final class SalesFacts implements ContributesFacts
          */
         $date = SalesInvoice::query()
             ->where('customer_id', $id)
-            ->whereIn('status', [DocumentStatus::CONFIRMED, DocumentStatus::CLOSED])
+            ->posted()
             ->max('trx_date');
 
         if ($date === null) {

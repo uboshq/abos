@@ -38,10 +38,16 @@ trait HasDocumentStatus
         return $query->where('status', DocumentStatus::CANCELLED);
     }
 
-    /** হিসাবে গোনা হবে এমন ডকুমেন্ট — ড্রাফট ও বাতিল বাদ। */
+    /**
+     * হিসাবে গোনা হবে এমন ডকুমেন্ট — ড্রাফট ও বাতিল বাদ।
+     *
+     * তালিকাটা `DocumentStatus::POSTED`-এ, এখানে নয়: একই নিয়ম সংজ্ঞা
+     * বলার সময়ও লাগে (`Metric`), আর দুই জায়গায় দুইবার লিখলে একদিন
+     * দুইটা আলাদা হয়ে যেত — গতবার ঠিক তাই হয়েছিল।
+     */
     public function scopePosted(Builder $query): Builder
     {
-        return $query->whereIn('status', [DocumentStatus::CONFIRMED, DocumentStatus::CLOSED]);
+        return $query->whereIn('status', DocumentStatus::POSTED);
     }
 
     public function isDraft(): bool

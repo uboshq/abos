@@ -7,6 +7,7 @@ namespace App\Core\Module;
 use App\Core\Contracts\ContributesFacts;
 use App\Core\Contracts\DashboardWidgets;
 use App\Core\Contracts\Importer;
+use App\Core\Contracts\ProvidesMetrics;
 use App\Core\Contracts\ProvisionsCompany;
 use App\Core\Events\DomainEvent;
 use InvalidArgumentException;
@@ -60,6 +61,19 @@ final class ModuleDefinition
          * @var list<class-string>
          */
         public readonly array $widgets,
+
+        /**
+         * সংখ্যার সংজ্ঞা সরবরাহকারীরা — ProvidesMetrics বাস্তবায়ন করে।
+         *
+         * ── কেন উইজেট থেকে আলাদা ────────────────────────────────────
+         * উইজেট একটা **পর্দার ঘর**; মেট্রিক একটা **সংজ্ঞা**। একই সংখ্যা
+         * হোম পর্দায়, কাউন্টারে, আর রিপোর্টে লাগে — উইজেটের ভেতরে
+         * রাখলে বাকি দুই জায়গা নিজেরা আবার গুনত, আর গতবার ঠিক তাই
+         * হয়ে দুইটা আলাদা উত্তর বেরিয়েছিল।
+         *
+         * @var list<class-string>
+         */
+        public readonly array $metrics,
 
         /**
          * যে কাজগুলোয় এই মডিউল অনুমোদন চাইতে পারে — কাজ => লেবেল কী।
@@ -252,6 +266,7 @@ final class ModuleDefinition
             settings: array_values($raw['settings'] ?? []),
             reports: self::validateReports($raw['reports'] ?? [], $path),
             widgets: self::validateWidgets($raw['widgets'] ?? [], $raw['permissions'] ?? [], $path),
+            metrics: self::validateMetrics($raw['metrics'] ?? [], $path),
             approvals: self::validateApprovals($raw['approvals'] ?? [], $path),
             customFields: self::validateCustomFields(
                 $raw['custom_fields'] ?? [],
@@ -397,6 +412,35 @@ final class ModuleDefinition
         }
 
         return $validated;
+    }
+
+    /**
+     * সংখ্যার সংজ্ঞা সরবরাহকারীরা — ক্লাসটা আছে কি না, চুক্তিটা মানে কি না।
+     *
+     * ভুল নাম ধরা না পড়লে সংজ্ঞাটা কোথাও নিবন্ধিত হত না, আর যে পর্দা
+     * ওটা চাইত সে "No metric declared" পেত — বুট-টাইমের ভুল, ব্যবহারের
+     * সময় নয়।
+     *
+     * @param  list<mixed>  $metrics
+     * @return list<class-string<ProvidesMetrics>>
+     */
+    private static function validateMetrics(array $metrics, string $path): array
+    {
+        foreach ($metrics as $class) {
+            if (! is_string($class) || ! class_exists($class)) {
+                throw new InvalidArgumentException(
+                    "{$path}: metric provider '".(is_string($class) ? $class : gettype($class))."' does not exist."
+                );
+            }
+
+            if (! is_subclass_of($class, ProvidesMetrics::class)) {
+                throw new InvalidArgumentException(
+                    "{$path}: metric provider {$class} must implement the ProvidesMetrics contract."
+                );
+            }
+        }
+
+        return array_values($metrics);
     }
 
     /**
