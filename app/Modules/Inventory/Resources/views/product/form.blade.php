@@ -53,13 +53,30 @@
                             :value="old('barcode', $product->barcode)"
                             :hint="__('inventory::message.barcode_hint')" />
 
+                {{--
+                    ব্র্যান্ড ও শ্রেণি — বাছাই, টাইপ করা নয়।
+
+                    আগে দুইটাই মুক্ত লেখার ঘর ছিল, আর তাতে একই ব্র্যান্ড
+                    কয়েক বানানে বসত ("Nestle", "nestle", "নেসলে")। রোজকার
+                    কাজে কেউ টের পেত না — পাতায় লেখাটা ঠিকই দেখাত। টের
+                    পাওয়া যেত ব্র্যান্ড ধরে বিক্রয় খুললে: এক ব্র্যান্ড চার
+                    সারিতে ভাগ, প্রতিটার অঙ্ক আসলের এক-চতুর্থাংশ।
+
+                    তালিকায় না থাকলে সেটিংস থেকে যোগ করতে হয়, আর সেটাই
+                    ঠিক: নতুন একটা ব্র্যান্ড বসানো একটা সিদ্ধান্ত, টাইপো
+                    নয়।
+                --}}
                 @if ($brandOn)
-                    <x-ui.field name="brand" :label="__('inventory::field.brand')"
-                                :value="old('brand', $product->brand)" />
+                    <x-ui.select name="brand_id" :label="__('inventory::field.brand')"
+                                 :options="$brands->mapWithKeys(fn ($b) => [$b->id => $b->name()])"
+                                 :selected="$product->brand_id"
+                                 placeholder="-" />
                 @endif
 
-                <x-ui.field name="category" :label="__('inventory::field.category')"
-                            :value="old('category', $product->category)" />
+                <x-ui.select name="category_id" :label="__('inventory::field.category')"
+                             :options="$categories->mapWithKeys(fn ($c) => [$c->id => $c->name()])"
+                             :selected="$product->category_id"
+                             placeholder="-" />
 
                 <x-ui.select name="unit_id" :label="__('inventory::field.unit')"
                              :options="$units->mapWithKeys(fn ($u) => [$u->id => $u->name()])"

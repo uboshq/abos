@@ -15,6 +15,7 @@ return [
     'undelivered' => 'Delivered, Not Invoiced',
     'by_customer' => 'Sales by Customer',
     'by_product' => 'Profit by Product',
+    'by_brand' => 'Sales by Brand',
     'pos' => 'Counter (POS)',
     'direct' => 'Direct Sales',
     'returns' => 'Sales Returns',

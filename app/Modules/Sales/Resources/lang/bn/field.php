@@ -42,6 +42,7 @@ return [
     'revenue' => 'বিক্রয়',
     'cost' => 'ক্রয়মূল্য',
     'margin_percent' => 'মার্জিন %',
+    'product_count' => 'পণ্য সংখ্যা',
     'deliver_on' => 'দেওয়ার তারিখ',
     'vehicle_no' => 'গাড়ি নম্বর',
     'driver_name' => 'চালকের নাম',

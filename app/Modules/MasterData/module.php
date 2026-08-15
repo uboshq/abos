@@ -48,6 +48,17 @@ return [
             ['label' => 'master_data::menu.units', 'route' => 'master_data.unit.index', 'permission' => 'master_data.view'],
             ['label' => 'master_data::menu.taxes', 'route' => 'master_data.tax.index', 'permission' => 'master_data.view'],
             ['label' => 'master_data::menu.payment_methods', 'route' => 'master_data.payment_method.index', 'permission' => 'master_data.view'],
+
+            /*
+             * ব্র্যান্ড ও শ্রেণি — আগে পণ্যের ফর্মে মুক্ত লেখা ছিল।
+             *
+             * সুইচের পেছনে নয়: `inventory.brand_enabled` অন্য মডিউলের
+             * সেটিং, আর এক মডিউল অন্যের সুইচ দিয়ে নিজের মেনু আটকালে
+             * সুইচটা বন্ধ থাকলে সারিটা চিরকাল অদৃশ্য থাকত। ব্র্যান্ড না
+             * ব্যবহার করলে তালিকাটা খালি, আর পর্দাই সেটা বলে দেয়।
+             */
+            ['label' => 'master_data::menu.brands', 'route' => 'master_data.brand.index', 'permission' => 'master_data.view'],
+            ['label' => 'master_data::menu.product_categories', 'route' => 'master_data.product_category.index', 'permission' => 'master_data.view'],
             ['label' => 'master_data::menu.payment_terms', 'route' => 'master_data.term.index', 'permission' => 'master_data.view'],
             ['label' => 'master_data::menu.price_lists', 'route' => 'master_data.price_list.index', 'permission' => 'master_data.view'],
             ['label' => 'master_data::menu.party_types', 'route' => 'master_data.party_type.index', 'permission' => 'master_data.view'],

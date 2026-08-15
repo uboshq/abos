@@ -31,8 +31,17 @@ class ProductRequest extends FormRequest
             'name_en' => ['required', 'string', 'max:191'],
             'name_bn' => ['nullable', 'string', 'max:191'],
             'barcode' => ['nullable', 'string', 'max:64'],
-            'brand' => ['nullable', 'string', 'max:120'],
-            'category' => ['nullable', 'string', 'max:120'],
+            /*
+             * ব্র্যান্ড ও শ্রেণি এখন সারির চাবি, লেখা নয়।
+             *
+             * `exists` কোম্পানি ধরে যাচাই করে — নাহলে অন্য কোম্পানির
+             * একটা ব্র্যান্ডের id পাঠিয়ে দিলে সেটা বসে যেত, আর তখন
+             * দুই কোম্পানির তালিকা একে অন্যের সাথে জড়িয়ে যেত।
+             */
+            'brand_id' => ['nullable', 'integer',
+                Rule::exists('mdm_brands', 'id')->where('company_id', $companyId)],
+            'category_id' => ['nullable', 'integer',
+                Rule::exists('mdm_product_categories', 'id')->where('company_id', $companyId)],
 
             'unit_id' => ['nullable', 'integer',
                 Rule::exists('mdm_units', 'id')->where('company_id', $companyId)],

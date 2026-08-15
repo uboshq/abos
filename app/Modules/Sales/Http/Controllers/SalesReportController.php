@@ -24,6 +24,7 @@ class SalesReportController extends Controller implements HasMiddleware
         'uninvoiced' => 'sales.uninvoiced',
         'by-customer' => 'sales.by_customer',
         'by-product' => 'sales.by_product',
+        'by-brand' => 'sales.by_brand',
     ];
 
     public function __construct(

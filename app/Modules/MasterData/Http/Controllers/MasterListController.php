@@ -10,6 +10,7 @@ use App\Core\Services\SettingsService;
 use App\Core\Support\CodeFromName;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\MasterData\Models\Brand;
 use App\Modules\MasterData\Models\Currency;
 use App\Modules\MasterData\Models\Department;
 use App\Modules\MasterData\Models\Designation;
@@ -18,6 +19,7 @@ use App\Modules\MasterData\Models\PartyType;
 use App\Modules\MasterData\Models\PaymentMethod;
 use App\Modules\MasterData\Models\PaymentTerm;
 use App\Modules\MasterData\Models\PriceList;
+use App\Modules\MasterData\Models\ProductCategory;
 use App\Modules\MasterData\Models\ReasonCode;
 use App\Modules\MasterData\Models\Tax;
 use App\Modules\MasterData\Models\Unit;
@@ -60,6 +62,30 @@ class MasterListController extends Controller implements HasMiddleware
      * @var array<string, array<string, mixed>>
      */
     private const KINDS = [
+        /*
+         * ব্র্যান্ড ও শ্রেণি — বাড়তি কোনো ঘর নেই, কেবল নাম।
+         *
+         * আগে দুইটাই পণ্যের ফর্মে মুক্ত লেখা ছিল, আর তাতে একই ব্র্যান্ড
+         * কয়েক বানানে বসত ("Nestle", "nestle", "নেসলে")। রোজকার কাজে
+         * কেউ টের পেত না; টের পাওয়া যেত ব্র্যান্ড ধরে বিক্রয় খুললে —
+         * এক ব্র্যান্ড চার সারিতে ভাগ হয়ে যেত।
+         */
+        'brands' => [
+            'model' => Brand::class,
+            'route' => 'brand',
+            'title' => 'master_data::menu.brands',
+            'fields' => [],
+            'columns' => [],
+        ],
+
+        'product-categories' => [
+            'model' => ProductCategory::class,
+            'route' => 'product_category',
+            'title' => 'master_data::menu.product_categories',
+            'fields' => [],
+            'columns' => [],
+        ],
+
         'units' => [
             'model' => Unit::class,
             'route' => 'unit',
