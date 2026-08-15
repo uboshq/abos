@@ -45,7 +45,7 @@ class SalesReportController extends Controller implements HasMiddleware
 
         $result = $this->reports->run(
             $key,
-            $request->only(['from', 'to', 'branch_id']),
+            $request->only(['from', 'to', 'branch_id', 'top', 'compare']),
             page: max(1, (int) $request->query('page', 1)),
         );
 

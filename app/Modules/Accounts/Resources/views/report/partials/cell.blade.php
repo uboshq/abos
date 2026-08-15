@@ -18,6 +18,24 @@
             ? \App\Core\Support\Money::format($value) : '' }}
         @break
 
+    @case (\App\Core\Engines\Report\ReportColumn::PERCENT)
+        {{--
+            খালি মানে শূন্য নয়।
+
+            আগের সময়ে সারিটাই ছিল না — নতুন একটা ক্রেতা, নতুন একটা পণ্য।
+            শতাংশে সেটা অসীম, আর "০%" লিখলে মিথ্যা বলা হত: ০% মানে
+            "একই রইল", আর এখানে ব্যাপারটা ঠিক উল্টো।
+        --}}
+        @if ($value === null || $value === '')
+            <span class="text-(--color-ink-muted)">{{ __('core.report.new_in_period') }}</span>
+        @else
+            {{-- "+" বসানো হয় না: একই ছকে "অবদান %" আর "পরিবর্তন %" দুইটাই
+                 বসে, আর অবদানের গায়ে যোগ চিহ্ন অর্থহীন। কমা দেখাতে
+                 বিয়োগ চিহ্নটাই যথেষ্ট, আর লেবেলটা বলে দেয় কোনটা কী --}}
+            {{ \App\Core\Support\Money::format($value, 2) }}%
+        @endif
+        @break
+
     @case (\App\Core\Engines\Report\ReportColumn::DATE)
         {{ \App\Core\Support\DateFormat::format($value) }}
         @break

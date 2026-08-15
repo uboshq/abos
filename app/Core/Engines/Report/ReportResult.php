@@ -27,7 +27,31 @@ final class ReportResult
         public readonly int $page,
         public readonly int $perPage,
         public readonly array $filters,
+
+        /**
+         * কোন সময়ের সাথে তুলনা চলছে — চাওয়া না হলে null।
+         *
+         * @var array{key: string, from: string, to: string}|null
+         */
+        public readonly ?array $comparison = null,
+
+        /**
+         * ছাঁকা ছাড়া মোট কয়টা সারি ছিল।
+         *
+         * ── কেন এটা আলাদা করে রাখা ──────────────────────────────────
+         * "শুধু উপরের দশটা" চাইলে `totalRows` দশ হয়ে যায়, আর তখন
+         * পর্দা বলতে পারত না যে আসলে ২৪০টা সারি আছে। "২৪০-এর মধ্যে
+         * প্রথম ১০" আর "১০টা সারি" দুইটা আলাদা কথা, আর দ্বিতীয়টা
+         * পড়ে মানুষ ভাবত ওইটুকুই সব।
+         */
+        public readonly ?int $fullRowCount = null,
     ) {}
+
+    /** উপরের কয়টা সারি দেখানো হচ্ছে — পুরো তালিকা হলে false */
+    public function isTopOnly(): bool
+    {
+        return $this->fullRowCount !== null && $this->fullRowCount > $this->totalRows;
+    }
 
     /**
      * এই ব্যবহারকারী যে কলামগুলো দেখতে পাবেন — কলাম নেওয়ার একমাত্র পথ।
@@ -45,10 +69,82 @@ final class ReportResult
      */
     public function columnsFor(mixed $user): array
     {
-        return array_values(array_filter(
+        $columns = array_values(array_filter(
             $this->report->columns,
             fn (ReportColumn $column) => $column->visibleTo($user),
         ));
+
+        return [...$columns, ...$this->addedColumns($user)];
+    }
+
+    /**
+     * চাওয়া হলে যে কলামগুলো জুড়ে বসে — অবদান % ও তুলনা।
+     *
+     * ── কেন সংজ্ঞায় লেখা থাকে না ────────────────────────────────────
+     * এগুলো রিপোর্টের নিজের কলাম নয়, একটা **প্রশ্নের** কলাম: "কে আসল"
+     * বা "আগের চেয়ে কেমন"। ২২টা রিপোর্টের সংজ্ঞায় তিনটা করে বাড়তি
+     * কলাম লিখলে ৬৬ জায়গায় একই জিনিস থাকত, আর একদিন একটায় লেখা হত
+     * বাকিগুলোয় নয়।
+     *
+     * ── কেন এগুলোও অনুমতি মানে ──────────────────────────────────────
+     * অবদানের শতাংশ যে কলাম ধরে গোনা, সেটাই যদি ঢাকা থাকে তবে
+     * শতাংশটাও ঢাকা থাকতে হবে — মুনাফার ৪০% জানা থাকলে আর বিক্রয়
+     * জানা থাকলে মুনাফার অঙ্কটা এক ভাগেই বেরিয়ে আসে।
+     *
+     * @return list<ReportColumn>
+     */
+    private function addedColumns(mixed $user): array
+    {
+        $rank = $this->report->rankBy;
+
+        if ($rank === null) {
+            return [];
+        }
+
+        $ranked = null;
+
+        foreach ($this->report->columns as $column) {
+            if ($column->key === $rank) {
+                $ranked = $column;
+                break;
+            }
+        }
+
+        if ($ranked === null || ! $ranked->visibleTo($user)) {
+            return [];
+        }
+
+        $added = [];
+
+        if (array_key_exists('contribution_percent', $this->rows[0] ?? [])) {
+            $added[] = ReportColumn::fromArray([
+                'key' => 'contribution_percent',
+                'label' => 'core.report.contribution',
+                'type' => ReportColumn::PERCENT,
+                'total' => false,
+                'permission' => $ranked->permission,
+            ], count($this->report->columns));
+        }
+
+        if ($this->comparison !== null) {
+            $added[] = ReportColumn::fromArray([
+                'key' => 'previous_value',
+                'label' => 'core.report.compare_'.$this->comparison['key'],
+                'type' => ReportColumn::MONEY,
+                'total' => false,
+                'permission' => $ranked->permission,
+            ], count($this->report->columns) + 1);
+
+            $added[] = ReportColumn::fromArray([
+                'key' => 'change_percent',
+                'label' => 'core.report.change',
+                'type' => ReportColumn::PERCENT,
+                'total' => false,
+                'permission' => $ranked->permission,
+            ], count($this->report->columns) + 2);
+        }
+
+        return $added;
     }
 
     public function isEmpty(): bool

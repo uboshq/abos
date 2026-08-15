@@ -187,6 +187,20 @@ return [
         'badges' => 'Badges and status',
     ],
 
+    'report' => [
+        'contribution' => 'Share %',
+        'change' => 'Change %',
+        'compare_previous' => 'Same length before',
+        'compare_last_year' => 'Same period last year',
+        'compare' => 'Compare',
+        'compare_none' => 'No comparison',
+        'top' => 'Show top',
+        'top_all' => 'All rows',
+        'top_n' => 'Top :count',
+        'showing_top' => 'Top :count of :total — the rest are not in this list',
+        'new_in_period' => 'New',
+    ],
+
     'table' => [
         'code' => 'Code',
         'name' => 'Name',

@@ -15,6 +15,9 @@
 
     $filters = $result->filters;
 
+    $previous = \App\Core\Engines\Report\ReportEngine::COMPARE_PREVIOUS;
+    $lastYear = \App\Core\Engines\Report\ReportEngine::COMPARE_LAST_YEAR;
+
     /*
         কলাম আসে ব্যবহারকারী ধরে, সংজ্ঞা থেকে সরাসরি নয়।
 
@@ -119,11 +122,68 @@
                     </label>
                 @endif
 
+                {{--
+                    তুলনা ও "উপরের কয়টা" — কেবল যেসব রিপোর্টে প্রশ্নটার
+                    মানে আছে।
+
+                    দুইটাই `rankBy` থাকলে তবেই: "সবচেয়ে বড়" বলে কিছু না
+                    থাকলে উপরের দশটা মানে কিছুই নয়, আর জোড়া বাঁধার চাবি
+                    ছাড়া তুলনাও হয় না। ডে বুকে ঘর দুইটা তাই দেখাই যায় না।
+                --}}
+                @if ($report->rankBy !== null)
+                    <label>
+                        <span class="sr-only">{{ __('core.report.compare') }}</span>
+                        <select name="compare"
+                                class="h-9 rounded-(--radius-field) border border-(--color-border)
+                                       bg-(--color-surface-app) px-2 text-sm">
+                            <option value="">{{ __('core.report.compare_none') }}</option>
+                            @foreach ([$previous, $lastYear] as $option)
+                                <option value="{{ $option }}"
+                                        @selected(($filters['compare'] ?? null) === $option)>
+                                    {{ __('core.report.compare_'.$option) }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </label>
+
+                    <label>
+                        <span class="sr-only">{{ __('core.report.top') }}</span>
+                        <select name="top"
+                                class="h-9 rounded-(--radius-field) border border-(--color-border)
+                                       bg-(--color-surface-app) px-2 text-sm">
+                            <option value="">{{ __('core.report.top_all') }}</option>
+                            @foreach ([5, 10, 20, 50] as $n)
+                                <option value="{{ $n }}" @selected((int) ($filters['top'] ?? 0) === $n)>
+                                    {{ __('core.report.top_n', ['count' => $n]) }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </label>
+                @endif
+
                 {{-- জমা দেওয়ার বোতামটা এখানে ছিল, এখন টুলবারের ফিল্টার
                      প্যানেলের নিজেরই একটা আছে — দুইটা থাকলে একই সারিতে
                      দুইবার "খুঁজুন" দেখাত --}}
             </x-ui.toolbar>
         </form>
+
+        {{--
+            কতগুলো সারি বাদ পড়ল, সেটা লেখা থাকে।
+
+            চুপচাপ দশটা দেখালে তালিকাটা পড়ে মনে হত ওইটুকুই সব — আর
+            "২৪০-এর মধ্যে ১০" আর "১০টা সারি" দুইটা সম্পূর্ণ আলাদা কথা।
+            যোগফলের সারিটা কিন্তু পুরো ২৪০-এরই, তাই না লিখলে সংখ্যা দুইটা
+            মেলাতে গিয়ে কেউ ভাবত হিসাব ভুল।
+        --}}
+        @if ($result->isTopOnly())
+            <p class="border-b border-(--color-border) bg-(--color-surface-app) px-4 py-2 text-2xs
+                      text-(--color-ink-muted)">
+                {{ __('core.report.showing_top', [
+                    'count' => $result->totalRows,
+                    'total' => $result->fullRowCount,
+                ]) }}
+            </p>
+        @endif
 
         @if ($result->rows === [])
             <x-ui.empty-state :message="__('accounts::message.nothing_in_range')" />
