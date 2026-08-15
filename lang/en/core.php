@@ -201,6 +201,10 @@ return [
         'new_in_period' => 'New',
     ],
 
+    'export' => [
+        'someone_gone' => 'A removed user',
+    ],
+
     'table' => [
         'code' => 'Code',
         'name' => 'Name',

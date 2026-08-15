@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Core\Services\ExportJournal;
 use App\Core\Services\ListExport;
 use Closure;
 use Illuminate\Http\Request;
@@ -24,7 +25,10 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class ExportListing
 {
-    public function __construct(private readonly ListExport $export) {}
+    public function __construct(
+        private readonly ListExport $export,
+        private readonly ExportJournal $log,
+    ) {}
 
     public function handle(Request $request, Closure $next): Response
     {
@@ -63,6 +67,22 @@ class ExportListing
         if ($csv === null || $content === false) {
             return $response;
         }
+
+        /*
+         * খাতায় বসে ঠিক এখানেই — ফাইলটা সত্যিই বেরোনোর মুহূর্তে।
+         *
+         * ── কেন কন্ট্রোলারে নয় ──────────────────────────────────────
+         * বাইশটা কন্ট্রোলারে একটা করে লেখা মানে তেইশতমটায় কেউ ভুলবে,
+         * আর ঠিক ওই পর্দাটা দিয়েই ফাইল বেরোবে বিনা চিহ্নে। এখানে
+         * লিখলে ভোলার কোনো উপায় নেই।
+         *
+         * ── কেন উপরে নয়, এতটা নিচে ──────────────────────────────────
+         * উপরে বসালে সেই অনুরোধগুলোও খাতায় উঠত যেগুলোয় আসলে কিছু
+         * নামেইনি — অনুমতি নেই, বা পর্দায় কোনো তালিকাই নেই। তখন খাতা
+         * পড়ে মনে হত ফাইল গেছে, অথচ যায়নি — আর ভুল চিহ্ন কোনো চিহ্ন
+         * না থাকার চেয়ে খারাপ।
+         */
+        $this->log->wrote($this->export->rowCount());
 
         return response($csv, 200, [
             'Content-Type' => 'text/csv; charset=UTF-8',

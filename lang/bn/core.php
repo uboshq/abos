@@ -223,6 +223,10 @@ return [
         'new_in_period' => 'নতুন',
     ],
 
+    'export' => [
+        'someone_gone' => 'সরিয়ে ফেলা ব্যবহারকারী',
+    ],
+
     'table' => [
         'code' => 'কোড',
         'name' => 'নাম',

@@ -35,11 +35,31 @@ class ListExport
     private ?array $table = null;
 
     /**
+     * এই পর্দাটা রপ্তানি করতে দেয় না।
+     *
+     * ── কেন পতাকাটা লাগল ────────────────────────────────────────────
+     * টুলবারে `:export="false"` লিখলে বোতামটা লুকাত, কিন্তু ঠিকানায়
+     * `?export=csv` লাগিয়ে দিলে ফাইল ঠিকই নামত। অর্থাৎ সুইচটা ছিল
+     * **আড়াল, বাধা নয়** — হুবহু সেই ভুল যেটা বন্ধ করা পর্দাগুলোয়
+     * একবার ধরা পড়েছিল (৪০ নং)।
+     *
+     * ধরা পড়েছে রপ্তানির খাতা লিখতে গিয়ে: খাতাটা নিজেই নামানো যাচ্ছিল,
+     * আর যিনি নিজের চিহ্ন ঢাকতে চান তাঁর প্রথম কাজই সেটা।
+     */
+    private bool $refused = false;
+
+    /** এই পর্দায় রপ্তানি নেই — বোতামেও নয়, ঠিকানাতেও নয়। */
+    public function refuse(): void
+    {
+        $this->refused = true;
+    }
+
+    /**
      * এই রিকোয়েস্টে CSV চাওয়া হয়েছে কি না।
      */
     public function wanted(): bool
     {
-        return request()->query('export') === 'csv';
+        return ! $this->refused && request()->query('export') === 'csv';
     }
 
     /**
@@ -109,6 +129,10 @@ class ListExport
     public function reset(): void
     {
         $this->table = null;
+
+        // অস্বীকারটাও প্রতি অনুরোধে নতুন — নাহলে একটা রপ্তানি-বিহীন
+        // পর্দা দেখার পর পরের পর্দার রপ্তানিও নীরবে বন্ধ থাকত
+        $this->refused = false;
     }
 
     /**
@@ -151,6 +175,17 @@ class ListExport
     /**
      * ফাইলের নাম — রুট থেকে, তাই প্রতিটা পর্দার নিজের নাম।
      */
+    /**
+     * কয়টা সারি ফাইলে গেল — খাতার জন্য।
+     *
+     * দশ সারির একটা ফাইল আর দশ হাজার সারির ফাইল দুইটার মানে সম্পূর্ণ
+     * আলাদা, অথচ খাতায় দুইটাই "একটা রপ্তানি"।
+     */
+    public function rowCount(): int
+    {
+        return count($this->table['values'] ?? []);
+    }
+
     public function filename(): string
     {
         $route = (string) (request()->route()?->getName() ?? 'list');
