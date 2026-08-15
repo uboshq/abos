@@ -8,6 +8,7 @@ use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Models\AuditFieldChange;
 use App\Models\AuditTrail;
+use App\Models\ExportLog;
 use App\Models\IssuedNumber;
 use App\Models\LedgerEntry;
 use Illuminate\Database\Eloquent\Model;
@@ -72,6 +73,16 @@ final class AuditEngine
          */
         AuditTrail::class => 'auditing the audit would never terminate',
         AuditFieldChange::class => 'auditing the audit would never terminate',
+
+        /*
+         * রপ্তানির খাতা — নিজেই একটা খাতা।
+         *
+         * সারিগুলো কখনো সম্পাদনা হয় না (`updated_at` কলামই নেই), আর
+         * প্রতিটা সারি নিজেই একটা ঘটনার রেকর্ড। অডিট বসালে প্রতিটা
+         * রপ্তানিতে দুইটা সারি জমত — একটা খাতায়, একটা অডিটে — আর
+         * দ্বিতীয়টা প্রথমটার চেয়ে কম বলত।
+         */
+        ExportLog::class => 'a journal of its own, append-only and never edited',
 
         /*
          * খতিয়ান ও স্টকের চলাচল — দুইটাই append-only, কখনো সম্পাদনা

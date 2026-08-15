@@ -10,4 +10,6 @@ return [
     'system' => 'System',
     'read_only' => 'This page is read-only. No audit row can be edited or deleted — the models refuse it.',
     'count' => ':count changes',
+    'export_why' => 'Who took which list away, with which filters and how many rows. Nothing here can be written or removed.',
+    'nothing_exported' => 'Nobody took anything in this period.',
 ];

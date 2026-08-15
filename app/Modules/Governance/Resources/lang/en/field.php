@@ -19,4 +19,7 @@ return [
     'from' => 'From',
     'to' => 'To',
     'search' => 'Number or name',
+    'what_was_taken' => 'What was taken',
+    'rows' => 'Rows',
+    'filters' => 'Filters',
 ];

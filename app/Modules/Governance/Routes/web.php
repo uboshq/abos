@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Modules\Governance\Http\Controllers\AuditController;
+use App\Modules\Governance\Http\Controllers\ExportLogController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -26,4 +27,12 @@ Route::middleware('auth')->prefix('governance')->group(function () {
      */
     Route::get('/audit/{trail}/record', [AuditController::class, 'record'])
         ->whereNumber('trail')->name('audit.record');
+
+    /*
+     * রপ্তানির খাতা — কে কোন তালিকা নামিয়ে নিয়ে গেছে।
+     *
+     * অডিটের পাশেই, কারণ দুইটাই একই প্রশ্নের দুই দিক: একটা বলে কী
+     * বদলেছে, অন্যটা বলে কী বেরিয়ে গেছে।
+     */
+    Route::get('/exports', [ExportLogController::class, 'index'])->name('export.index');
 });

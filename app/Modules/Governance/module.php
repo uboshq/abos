@@ -31,6 +31,15 @@ return [
     'menu' => [
         'reports' => [
             ['label' => 'governance::menu.audit_trail', 'route' => 'governance.audit.index', 'permission' => 'governance.audit.view'],
+
+            /*
+             * রপ্তানির খাতা — অডিটের ঠিক পাশে।
+             *
+             * দুইটাই একই প্রশ্নের দুই দিক: একটা বলে কী বদলেছে, অন্যটা
+             * বলে কী বেরিয়ে গেছে। আলাদা জায়গায় রাখলে কেউ একটা দেখে
+             * ভাবত পুরো ছবিটা দেখা হয়ে গেছে।
+             */
+            ['label' => 'governance::menu.export_log', 'route' => 'governance.export.index', 'permission' => 'governance.audit.view'],
         ],
     ],
 
