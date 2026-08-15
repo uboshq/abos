@@ -7,6 +7,8 @@ return [
     'units' => 'Units',
     'taxes' => 'Tax & VAT',
     'payment_methods' => 'Payment methods',
+    'brands' => 'Brands',
+    'product_categories' => 'Product categories',
     'payment_terms' => 'Payment terms',
     'price_lists' => 'Price lists',
     'party_types' => 'Party types',

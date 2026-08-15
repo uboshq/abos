@@ -109,6 +109,13 @@ return [
                 'route_params' => ['slug' => 'by-product'], 'permission' => 'sales.report'],
 
             /*
+             * ব্র্যান্ড ধরে — দুইশো পণ্যের তালিকায় যা চোখে পড়ে না,
+             * বিশটা ব্র্যান্ডে পড়ে। আর দরকষাকষিটাও হয় ব্র্যান্ড ধরে।
+             */
+            ['label' => 'sales::menu.by_brand', 'route' => 'sales.report.show',
+                'route_params' => ['slug' => 'by-brand'], 'permission' => 'sales.report'],
+
+            /*
              * রিকল — এই লটটা কাদের কাছে গেছে।
              *
              * ── কেন সুইচের পেছনে নয় ─────────────────────────────────

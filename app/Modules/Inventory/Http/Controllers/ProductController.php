@@ -15,6 +15,8 @@ use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\StockMovement;
 use App\Modules\Inventory\Services\ProductService;
 use App\Modules\Inventory\Services\StockService;
+use App\Modules\MasterData\Models\Brand;
+use App\Modules\MasterData\Models\ProductCategory;
 use App\Modules\MasterData\Models\Tax;
 use App\Modules\MasterData\Models\Unit;
 use Illuminate\Contracts\Database\Query\Builder;
@@ -181,6 +183,8 @@ class ProductController extends Controller implements HasMiddleware
         return [
             'units' => Unit::query()->active()->orderBy('code')->get(),
             'taxes' => Tax::query()->active()->orderBy('code')->get(),
+            'brands' => Brand::query()->active()->orderBy('name_en')->get(),
+            'categories' => ProductCategory::query()->active()->orderBy('name_en')->get(),
             // ব্র্যান্ডের ঘরটা প্রতি-কোম্পানি সুইচে (নিয়ম ৭)
             'brandOn' => $this->settings->enabled('inventory.brand_enabled'),
         ];

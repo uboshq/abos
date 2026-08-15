@@ -7,8 +7,11 @@ namespace App\Modules\Inventory\Imports;
 use App\Core\Contracts\Importer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Services\ProductService;
+use App\Modules\MasterData\Models\Brand;
+use App\Modules\MasterData\Models\ProductCategory;
 use App\Modules\MasterData\Models\Tax;
 use App\Modules\MasterData\Models\Unit;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -121,14 +124,84 @@ final class ProductImporter implements Importer
             'name_en' => $row['name_en'],
             'name_bn' => $row['name_bn'] ?: null,
             'barcode' => $row['barcode'] ?: null,
-            'brand' => $row['brand'] ?: null,
-            'category' => $row['category'] ?: null,
+            /*
+             * ইমপোর্টেও ব্র্যান্ড এখন সারি — লেখা নয়।
+             *
+             * ── কেন ইমপোর্টে নতুন সারি তৈরি হয়, ফর্মে হয় না ─────────
+             * ফর্মে টাইপ করা মানে একজন মানুষ একবার ভুল বানান লিখতে
+             * পারেন, আর তালিকা থেকে বাছতে বললে সেটা আটকায়। CSV-তে
+             * দুই হাজার সারি আসে, আর তার মধ্যে একটা অচেনা ব্র্যান্ড
+             * থাকলে পুরো ফাইল আটকে দেওয়া মানে ইমপোর্টটাই অচল।
+             *
+             * তাই অচেনা নাম সারি হয়ে বসে, আর মালিক পরে সেটিংসে গিয়ে
+             * বানানভেদগুলো মিলিয়ে নেন। নামটা হারায় না, সেটাই আসল।
+             */
+            'brand_id' => $this->brand($row['brand'])?->id,
+            'category_id' => $this->category($row['category'])?->id,
             'unit_id' => $this->unit($row['unit'])?->id,
             'tax_id' => $this->tax($row['tax'])?->id,
             'purchase_price' => $row['purchase_price'] !== '' ? $row['purchase_price'] : 0,
             'sale_price' => $row['sale_price'] !== '' ? $row['sale_price'] : 0,
             'reorder_level' => $row['reorder_level'] !== '' ? $row['reorder_level'] : 0,
         ];
+    }
+
+    private function brand(string $value): ?Brand
+    {
+        return $this->namedRow(Brand::class, $value);
+    }
+
+    private function category(string $value): ?ProductCategory
+    {
+        return $this->namedRow(ProductCategory::class, $value);
+    }
+
+    /**
+     * নামে খুঁজি, না পেলে বানাই।
+     *
+     * খোঁজাটা কোড ও দুই ভাষার নামে — পুরনো খাতায় "NESTLE" থাকে, CSV-তে
+     * কেউ লেখেন "নেসলে"।
+     *
+     * ── কেন ইমপোর্টে নতুন সারি বানানো চলে, ফর্মে চলে না ─────────────
+     * CSV-তে দুই হাজার সারি আসে; তার একটায় অচেনা ব্র্যান্ড থাকলে পুরো
+     * ফাইল আটকে দেওয়া মানে ইমপোর্টটাই অচল। ফর্মে উল্টো — ওখানে একজন
+     * মানুষ একবারে একটা পণ্য লেখেন, আর তালিকা থেকে বাছতে বলা যায়।
+     *
+     * @param  class-string<Brand|ProductCategory>  $model
+     */
+    private function namedRow(string $model, string $value): Brand|ProductCategory|null
+    {
+        $value = trim($value);
+
+        if ($value === '') {
+            return null;
+        }
+
+        $found = $model::query()
+            ->where(fn ($q) => $q->where('code', $value)
+                ->orWhere('name_en', $value)
+                ->orWhere('name_bn', $value))
+            ->first();
+
+        if ($found !== null) {
+            return $found;
+        }
+
+        // কোডে ধাক্কা লাগলে সংখ্যা — মাইগ্রেশনের একই নিয়ম
+        $base = Str::limit(Str::upper(Str::slug($value, '-')) ?: 'X', 28, '');
+        $code = $base;
+        $n = 1;
+
+        while ($model::query()->where('code', $code)->exists()) {
+            $code = $base.'-'.(++$n);
+        }
+
+        return $model::query()->create([
+            'code' => $code,
+            'name_en' => $value,
+            'name_bn' => $value,
+            'is_active' => true,
+        ]);
     }
 
     private function unit(string $value): ?Unit

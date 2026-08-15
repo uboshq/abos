@@ -11,6 +11,8 @@ use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Contracts\Drillable;
 use App\Models\User;
+use App\Modules\MasterData\Models\Brand;
+use App\Modules\MasterData\Models\ProductCategory;
 use App\Modules\MasterData\Models\Tax;
 use App\Modules\MasterData\Models\Unit;
 use Illuminate\Database\Eloquent\Builder;
@@ -42,7 +44,7 @@ class Product extends Model implements Drillable
 
     protected $fillable = [
         'company_id', 'code', 'name_en', 'name_bn', 'barcode',
-        'brand', 'category', 'unit_id', 'tax_id',
+        'brand', 'category', 'brand_id', 'category_id', 'unit_id', 'tax_id',
         'purchase_price', 'sale_price', 'reorder_level',
         'status', 'is_active', 'created_by',
     ];
@@ -60,6 +62,24 @@ class Product extends Model implements Drillable
     public function unit(): BelongsTo
     {
         return $this->belongsTo(Unit::class, 'unit_id');
+    }
+
+    /*
+     * নামটা `brandRow`, `brand` নয়।
+     *
+     * পুরনো `brand` ঘরটা (মুক্ত লেখা) টেবিলে রয়ে গেছে — মুছে ফেললে
+     * বানানভেদগুলো জোড়া লাগানোর সময় আসল লেখাটা আর দেখা যেত না।
+     * সম্পর্কটার নাম `brand` রাখলে Eloquent ওই কলামটাই ঢেকে দিত, আর
+     * পুরনো মানটা পড়ার কোনো উপায় থাকত না।
+     */
+    public function brandRow(): BelongsTo
+    {
+        return $this->belongsTo(Brand::class, 'brand_id');
+    }
+
+    public function categoryRow(): BelongsTo
+    {
+        return $this->belongsTo(ProductCategory::class, 'category_id');
     }
 
     public function tax(): BelongsTo

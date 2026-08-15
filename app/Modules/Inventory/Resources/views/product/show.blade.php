@@ -77,8 +77,8 @@
             <dl class="grid gap-x-4 gap-y-2 sm:grid-cols-2">
                 @foreach ([
                     'inventory::field.barcode' => $product->barcode,
-                    'inventory::field.brand' => $product->brand,
-                    'inventory::field.category' => $product->category,
+                    'inventory::field.brand' => $product->brandRow?->name(),
+                    'inventory::field.category' => $product->categoryRow?->name(),
                     'inventory::field.unit' => $product->unit?->name(),
                     'inventory::field.tax' => $product->tax?->name(),
                 ] as $label => $value)

@@ -7,6 +7,8 @@ return [
     'units' => 'একক',
     'taxes' => 'কর ও ভ্যাট',
     'payment_methods' => 'টাকা নেওয়ার উপায়',
+    'brands' => 'ব্র্যান্ড',
+    'product_categories' => 'পণ্যের শ্রেণি',
     'payment_terms' => 'পরিশোধের শর্ত',
     'price_lists' => 'দর তালিকা',
     'party_types' => 'পক্ষের ধরন',

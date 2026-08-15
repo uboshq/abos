@@ -15,7 +15,7 @@ use Illuminate\Database\Query\Expression;
 use Illuminate\Support\Facades\DB;
 
 /**
- * বিক্রয়ের চারটা রিপোর্ট।
+ * বিক্রয়ের পাঁচটা রিপোর্ট।
  *
  * সাব-কোয়েরিগুলো কাঁচা SQL, প্লেসহোল্ডার ছাড়া — ক্রয়ের রিপোর্টে এই ভুলটা
  * একবার হয়েছিল: বিল্ডারের `?`-গুলো SELECT অংশে গিয়ে বাকি সব বাইন্ডিং এক
@@ -30,6 +30,7 @@ final class SalesReports
         $engine->register(self::undelivered());
         $engine->register(self::byCustomer());
         $engine->register(self::byProduct());
+        $engine->register(self::byBrand());
     }
 
     /** যে অর্ডারগুলোর মাল এখনো পুরো যায়নি। */
@@ -337,6 +338,98 @@ final class SalesReports
                     'permission' => 'sales.cost.view'],
             ],
         );
+    }
+
+    /**
+     * ব্র্যান্ড ধরে বিক্রয় ও মুনাফা।
+     *
+     * ── কেন এটা পণ্যভিত্তিক রিপোর্টের চেয়ে আলাদা প্রশ্ন ──────────────
+     * দুইশো পণ্যের তালিকায় কোনটা বাড়ছে আর কোনটা কমছে তা চোখে পড়ে না,
+     * কিন্তু বিশটা ব্র্যান্ডে পড়ে। আর দরকষাকষিটাও হয় ব্র্যান্ড ধরে:
+     * "এই কোম্পানির মাল আমরা বছরে কত তুলি" — সেই সংখ্যাটা ছাড়া
+     * পরিবেশক ছাড় চাইতে বসতে পারেন না।
+     *
+     * ── কেন এই রিপোর্টের আগে ব্র্যান্ডকে সারি বানাতে হলো ────────────
+     * `brand` ছিল মুক্ত লেখার একটা ঘর, তাই একই ব্র্যান্ড কয়েক বানানে
+     * বসত ("Nestle", "nestle", "নেসলে")। এই রিপোর্টটা তখন এক ব্র্যান্ডকে
+     * চার সারিতে ভাগ করে দেখাত, প্রতিটার অঙ্ক আসলের এক-চতুর্থাংশ, আর
+     * কোনো সারিই সত্যি নয় — অথচ পর্দাটা নিখুঁত দেখাত।
+     *
+     * ── ব্র্যান্ড ছাড়া পণ্যগুলোও থাকে ───────────────────────────────
+     * `leftJoin`, আর ব্র্যান্ডহীনগুলো একটা সারিতে জড়ো হয়। বাদ দিলে
+     * এই রিপোর্টের যোগফল আর "মোট বিক্রয়" আলাদা হত, আর সেই দুইটা সংখ্যা
+     * মেলাতে গিয়ে কেউ ভাবত কোথাও হিসাব ভুল।
+     */
+    public static function byBrand(): ReportDefinition
+    {
+        return new ReportDefinition(
+            key: 'sales.by_brand',
+            title: 'sales::menu.by_brand',
+            filters: ['date_range', 'branch'],
+            groupBy: 'brand_id',
+
+            // "সবচেয়ে বড়" মানে এখানে বিক্রয় — দরকষাকষির সংখ্যাটা ওটাই
+            rankBy: 'revenue',
+            query: fn (array $f) => DB::table('sal_invoice_lines as il')
+                ->join('sal_invoices as i', 'i.id', '=', 'il.sales_invoice_id')
+                ->join('inv_products as p', 'p.id', '=', 'il.product_id')
+                ->leftJoin('mdm_brands as b', 'b.id', '=', 'p.brand_id')
+                ->where('i.company_id', $f['company_id'])
+                ->when($f['branch_id'], fn ($q, $br) => $q->where('i.branch_id', $br))
+                ->whereBetween('i.trx_date', [$f['from'], $f['to']])
+                ->whereNull('i.deleted_at')
+                ->whereIn('i.status', DocumentStatus::POSTED)
+                ->groupBy('p.brand_id', 'b.name_en', 'b.name_bn')
+                ->orderByRaw('SUM(il.amount - il.tax) desc')
+                ->select([
+                    'p.brand_id',
+                    self::brandName(),
+                    DB::raw('COUNT(DISTINCT il.product_id) as product_count'),
+                    DB::raw('SUM(il.qty) as qty'),
+
+                    // ভ্যাট বাদ — ওটা সরকারের টাকা, আমাদের আয় নয়
+                    DB::raw('SUM(il.amount - il.tax) as revenue'),
+                    DB::raw('SUM(il.qty * il.unit_cost) as cost'),
+                    DB::raw('SUM(il.amount - il.tax - il.qty * il.unit_cost) as gross_profit'),
+                ]),
+            columns: [
+                ['key' => 'brand_name', 'label' => 'inventory::field.brand'],
+                ['key' => 'product_count', 'label' => 'sales::field.product_count'],
+                ['key' => 'qty', 'label' => 'sales::field.quantity', 'type' => ReportColumn::QUANTITY],
+                ['key' => 'revenue', 'label' => 'sales::field.revenue', 'type' => ReportColumn::MONEY],
+
+                // ক্রয়মূল্য ও মুনাফা অনুমতির পেছনে — নিয়ম ২৪
+                ['key' => 'cost', 'label' => 'sales::field.cost', 'type' => ReportColumn::MONEY,
+                    'permission' => 'sales.cost.view'],
+                ['key' => 'gross_profit', 'label' => 'sales::field.gross_profit', 'type' => ReportColumn::MONEY,
+                    'permission' => 'sales.cost.view'],
+            ],
+        );
+    }
+
+    /**
+     * ব্র্যান্ডের নাম — ব্র্যান্ড না থাকলে "ব্র্যান্ড ছাড়া"।
+     *
+     * খালি ঘর রাখলে সারিটা নামহীন দেখাত, আর ক্লিক করেও কিছু হত না। যে
+     * পণ্যগুলোর ব্র্যান্ড বসানো হয়নি, সেটা জানাটাও একটা কাজ — ওই সারিটা
+     * বড় হলে বোঝা যায় মাস্টার ডেটা অসম্পূর্ণ।
+     */
+    private static function brandName(): Expression
+    {
+        $name = app()->getLocale() === 'bn'
+            ? "COALESCE(NULLIF(b.name_bn, ''), b.name_en)"
+            : 'b.name_en';
+
+        /*
+         * লেখাটা ড্রাইভারকে দিয়েই উদ্ধৃত করানো, বাইন্ডিং নয়।
+         *
+         * SELECT অংশে `?` বসালে বাকি সব বাইন্ডিং এক ঘর সরে যায় — এই
+         * ফাইলের মাথায় লেখা ভুলটা ঠিক তাই ছিল। আর হাতে উদ্ধৃতি বসানো
+         * মানে বাংলা লেখায় একটা apostrophe থাকলেই SQL ভাঙত।
+         */
+        $none = DB::getPdo()->quote(__('sales::message.no_brand'));
+
+        return DB::raw("COALESCE({$name}, {$none}) as brand_name");
     }
 
     private static function productName(): Expression

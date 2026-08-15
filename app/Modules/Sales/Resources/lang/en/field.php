@@ -42,6 +42,7 @@ return [
     'revenue' => 'Revenue',
     'cost' => 'Cost of goods',
     'margin_percent' => 'Margin %',
+    'product_count' => 'Products',
     'deliver_on' => 'Deliver on',
     'vehicle_no' => 'Vehicle no',
     'driver_name' => 'Driver',
