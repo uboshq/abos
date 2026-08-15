@@ -14,6 +14,7 @@ return [
     'collections' => 'Collections',
     'undelivered' => 'Delivered, Not Invoiced',
     'by_customer' => 'Sales by Customer',
+    'by_product' => 'Profit by Product',
     'pos' => 'Counter (POS)',
     'direct' => 'Direct Sales',
     'returns' => 'Sales Returns',

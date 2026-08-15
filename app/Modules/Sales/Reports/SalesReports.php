@@ -8,13 +8,14 @@ use App\Core\Engines\Report\ReportColumn;
 use App\Core\Engines\Report\ReportDefinition;
 use App\Core\Engines\Report\ReportEngine;
 use App\Core\Support\DocumentStatus;
+use App\Modules\Inventory\Models\Product;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesOrder;
 use Illuminate\Database\Query\Expression;
 use Illuminate\Support\Facades\DB;
 
 /**
- * বিক্রয়ের তিনটা রিপোর্ট।
+ * বিক্রয়ের চারটা রিপোর্ট।
  *
  * সাব-কোয়েরিগুলো কাঁচা SQL, প্লেসহোল্ডার ছাড়া — ক্রয়ের রিপোর্টে এই ভুলটা
  * একবার হয়েছিল: বিল্ডারের `?`-গুলো SELECT অংশে গিয়ে বাকি সব বাইন্ডিং এক
@@ -28,6 +29,7 @@ final class SalesReports
         $engine->register(self::pendingOrders());
         $engine->register(self::undelivered());
         $engine->register(self::byCustomer());
+        $engine->register(self::byProduct());
     }
 
     /** যে অর্ডারগুলোর মাল এখনো পুরো যায়নি। */
@@ -162,7 +164,18 @@ final class SalesReports
                 ->when($f['branch_id'], fn ($q, $b) => $q->where('i.branch_id', $b))
                 ->whereBetween('i.trx_date', [$f['from'], $f['to']])
                 ->whereNull('i.deleted_at')
-                ->where('i.status', '<>', DocumentStatus::CANCELLED)
+                /*
+                 * খাতায় বসা বিল — খসড়া নয়।
+                 *
+                 * ── আগে "বাতিল ছাড়া সব" ছিল, আর সেটা ভুল উত্তর দিত ───
+                 * তাতে খসড়াও ঢুকত। কাউন্টারে ধরে রাখা একটা বিল — ক্রেতা
+                 * টাকা আনতে গেছেন — এই রিপোর্টে তাঁর নামে যোগ হয়ে বসে
+                 * থাকত, অথচ হোম পর্দা ওটা গুনত না। একই প্রশ্ন, দুইটা
+                 * উত্তর: "এই মাসে করিম সাহেব কত কিনেছেন" ড্যাশবোর্ডে এক,
+                 * রিপোর্টে আরেক। আর তার উপর মুনাফা হিসাব হত এমন বিল
+                 * ধরে যেটা এখনো বিক্রয়ই নয়।
+                 */
+                ->whereIn('i.status', DocumentStatus::POSTED)
                 ->groupBy('i.customer_id', 'cu.code', 'cu.name_en', 'cu.name_bn')
                 ->orderByRaw('SUM(i.total) desc')
                 ->select([
@@ -204,6 +217,97 @@ final class SalesReports
                  * কলাম ধরে আড়াল করলে দুইটার কোনোটাই ঘটে না।
                  */
                 ['key' => 'gross_profit', 'label' => 'sales::field.gross_profit', 'type' => ReportColumn::MONEY,
+                    'permission' => 'sales.cost.view'],
+            ],
+        );
+    }
+
+    /**
+     * কোন পণ্যে কত লাভ — লাইনের ভিত্তিতে।
+     *
+     * ── কেন এটা "কে কত কিনছে"-র চেয়ে আলাদা প্রশ্ন ────────────────────
+     * ক্রেতা ধরে মুনাফা বলে **কে** লাভজনক; পণ্য ধরে বলে **কী** লাভজনক।
+     * দ্বিতীয়টা ছাড়া সিদ্ধান্তগুলো নেওয়া যায় না: কোন পণ্যের দর বাড়াতে
+     * হবে, কোনটা তাকের জায়গা নিচ্ছে অথচ কিছু দিচ্ছে না, কোনটার ছাড়
+     * পুরো মার্জিনটাই খেয়ে ফেলেছে।
+     *
+     * ── কেন খরচটা লাইনে জমানো থাকে, আজকের দর থেকে নয় ────────────────
+     * `unit_cost` বিলের সময় বসে যায়। আজকের ক্রয়মূল্য দিয়ে গুনলে গত
+     * মাসের মুনাফা এই মাসে বদলে যেত — দাম বাড়লে পুরনো বিক্রয়ে হঠাৎ
+     * লোকসান দেখাত, অথচ ওই মালটা সস্তায় কেনাই ছিল।
+     *
+     * ── ঋণাত্মক মুনাফা লুকানো হয় না ─────────────────────────────────
+     * নিচেই সাজানো, কিন্তু বাদ নয়। যে পণ্যে লোকসান হচ্ছে সেটাই সবচেয়ে
+     * জরুরি সারি, আর সেটাই সবচেয়ে সহজে চোখ এড়ায়।
+     */
+    public static function byProduct(): ReportDefinition
+    {
+        return new ReportDefinition(
+            key: 'sales.by_product',
+            title: 'sales::menu.by_product',
+            filters: ['date_range', 'branch'],
+            groupBy: 'product_id',
+            query: fn (array $f) => DB::table('sal_invoice_lines as il')
+                ->join('sal_invoices as i', 'i.id', '=', 'il.sales_invoice_id')
+                ->join('inv_products as p', 'p.id', '=', 'il.product_id')
+                ->where('i.company_id', $f['company_id'])
+                ->when($f['branch_id'], fn ($q, $b) => $q->where('i.branch_id', $b))
+                ->whereBetween('i.trx_date', [$f['from'], $f['to']])
+                ->whereNull('i.deleted_at')
+                // খাতায় বসা বিল — byCustomer()-এর একই কারণে
+                ->whereIn('i.status', DocumentStatus::POSTED)
+                ->groupBy('il.product_id', 'p.code', 'p.name_en', 'p.name_bn')
+                ->orderByRaw('SUM(il.amount - il.qty * il.unit_cost) desc')
+                ->select([
+                    'il.product_id',
+                    DB::raw("'".Product::drillSourceType()."' as source_type_literal"),
+                    self::productName(),
+                    DB::raw('SUM(il.qty) as qty'),
+                    DB::raw('SUM(il.discount) as discount'),
+                    DB::raw('SUM(il.amount) as revenue'),
+                    DB::raw('SUM(il.qty * il.unit_cost) as cost'),
+                    DB::raw('SUM(il.amount - il.qty * il.unit_cost) as gross_profit'),
+
+                    /*
+                     * মার্জিন — টাকার অঙ্ক নয়, শতাংশ।
+                     *
+                     * দুইটাই লাগে: ৫০ টাকা লাভ ২০০ টাকার বিক্রিতে ভালো,
+                     * ৫,০০০ টাকার বিক্রিতে নয়। কেবল টাকার অঙ্ক দেখলে বড়
+                     * পণ্যগুলো সবসময় উপরে থাকত, আর যে ছোট পণ্যটা সবচেয়ে
+                     * বেশি লাভ দিচ্ছে সেটা চোখেই পড়ত না।
+                     *
+                     * শূন্য বিক্রয়ে ভাগ করা হয় না — শূন্য বিক্রয়ে মার্জিন
+                     * বলে কিছু নেই, আর ডাটাবেজ ওখানে NULL দিত।
+                     */
+                    DB::raw('CASE WHEN SUM(il.amount) = 0 THEN 0
+                             ELSE ROUND(SUM(il.amount - il.qty * il.unit_cost) * 100
+                                        / SUM(il.amount), 2) END as margin_percent'),
+                ]),
+            columns: [
+                [
+                    'key' => 'product_name',
+                    'label' => 'sales::field.product',
+                    'type' => ReportColumn::DOCUMENT,
+                    'source_type' => 'source_type_literal',
+                    'source_id' => 'product_id',
+                ],
+                ['key' => 'qty', 'label' => 'sales::field.quantity', 'type' => ReportColumn::QUANTITY],
+                ['key' => 'discount', 'label' => 'sales::field.discount', 'type' => ReportColumn::MONEY],
+                ['key' => 'revenue', 'label' => 'sales::field.revenue', 'type' => ReportColumn::MONEY],
+
+                /*
+                 * ক্রয়মূল্য, মুনাফা ও মার্জিন — তিনটাই অনুমতির পেছনে।
+                 *
+                 * বিক্রয়কর্মী দেখবেন কোন পণ্য কত বিকোচ্ছে; কত লাভ হচ্ছে
+                 * নয়। মার্জিনটাও ঢাকতে হয়, কারণ শতাংশ আর বিক্রয় জানা
+                 * থাকলে ক্রয়মূল্য এক ভাগেই বেরিয়ে আসে — একটা ঢেকে
+                 * অন্যটা খোলা রাখা মানে কিছুই না ঢাকা।
+                 */
+                ['key' => 'cost', 'label' => 'sales::field.cost', 'type' => ReportColumn::MONEY,
+                    'permission' => 'sales.cost.view'],
+                ['key' => 'gross_profit', 'label' => 'sales::field.gross_profit', 'type' => ReportColumn::MONEY,
+                    'permission' => 'sales.cost.view'],
+                ['key' => 'margin_percent', 'label' => 'sales::field.margin_percent',
                     'permission' => 'sales.cost.view'],
             ],
         );
