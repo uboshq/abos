@@ -3,6 +3,10 @@
 declare(strict_types=1);
 
 return [
+    'group_takes_no_money' => '":name" is a head, not an account — money posted there shows up in no balance. Pick one of the accounts under it.',
+    'no_cash_counter' => 'There is no cash counter yet. Open one first — without it there is no way to say whose custody the money went into.',
+    'unknown_payment_method' => 'That payment method was not found, or it has been switched off.',
+    'reference_required' => 'Money taken through :method needs its transaction number — without it there is no way to reconcile against the statement later.',
     'no_lines' => 'At least one line is needed — a document with no lines does nothing.',
 
     // Counter shifts

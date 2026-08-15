@@ -6,6 +6,7 @@ return [
     'locations' => 'এলাকা ও রুট',
     'units' => 'একক',
     'taxes' => 'কর ও ভ্যাট',
+    'payment_methods' => 'টাকা নেওয়ার উপায়',
     'payment_terms' => 'পরিশোধের শর্ত',
     'price_lists' => 'দর তালিকা',
     'party_types' => 'পক্ষের ধরন',

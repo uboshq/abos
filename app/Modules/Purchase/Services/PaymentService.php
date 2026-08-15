@@ -12,6 +12,7 @@ use App\Core\Support\Money;
 use App\Models\FinancialYear;
 use App\Models\IssuedNumber;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Purchase\Models\Payment;
 use App\Modules\Purchase\Models\PaymentLine;
@@ -41,6 +42,7 @@ final class PaymentService
     public function __construct(
         private readonly NumberSeriesEngine $numbers,
         private readonly PostingEngine $posting,
+        private readonly CashTillService $tills,
     ) {}
 
     /**
@@ -323,7 +325,7 @@ final class PaymentService
     private function resolveMoneyAccount(mixed $accountId): Account
     {
         $account = blank($accountId)
-            ? Account::query()->where('code', StandardChart::CASH_IN_HAND)->first()
+            ? $this->tills->ensurePrimaryTill()->account
             : Account::query()->whereKey((int) $accountId)->first();
 
         if ($account === null) {
@@ -332,10 +334,27 @@ final class PaymentService
             ]);
         }
 
+        /*
+         * গ্রুপ খাত থেকে টাকা বেরোয় না।
+         *
+         * ডিফল্ট ছিল ১১০১ "হাতে নগদ" — একটা মাথা, খাত নয়। ওখানে বসানো
+         * সারি কোনো ব্যালেন্সে দেখাত না, কারণ `Account::balanceOn()`
+         * গ্রুপের নিজের সারি গোনে না। ফলে সরবরাহকারীকে নগদে পরিশোধ
+         * করলে টাকাটা কোনো কাউন্টার থেকেই কমত না — না টিলে, না
+         * ড্যাশবোর্ডে, না দিনশেষের গণনায়।
+         *
+         * আদায়ের পথেও হুবহু একই ভুল ছিল; দুইটাই একসাথে সারানো, কারণ
+         * একটা সারালে অন্যটা রয়ে গেলে দুই দিক আর মিলত না।
+         */
+        if ($account->is_group) {
+            throw ValidationException::withMessages([
+                'account_id' => __('purchase::validation.group_takes_no_money', ['name' => $account->name()]),
+            ]);
+        }
+
         $money = [StandardChart::CASH_IN_HAND, StandardChart::BANK_AND_MFS];
 
-        $isMoney = in_array($account->code, $money, true)
-            || Account::query()->whereKey($account->parent_id)->whereIn('code', $money)->exists();
+        $isMoney = Account::query()->whereKey($account->parent_id)->whereIn('code', $money)->exists();
 
         if (! $isMoney) {
             throw ValidationException::withMessages([

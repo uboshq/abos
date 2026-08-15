@@ -6,9 +6,8 @@ namespace App\Modules\Sales\Services;
 
 use App\Core\Services\SettingsService;
 use App\Core\Support\DocumentStatus;
-use App\Modules\Accounts\Models\Account;
-use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Models\Customer;
+use App\Modules\MasterData\Models\PaymentMethod;
 use App\Modules\Sales\Models\SalesInvoice;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -190,12 +189,32 @@ final class PosService
             $change = bccomp($paid, $total, 4) > 0 ? bcsub($paid, $total, 4) : '0.0000';
 
             if (bccomp($applied, '0', 4) > 0) {
+                /*
+                 * টাকাটা কীভাবে এল — নগদ, বিকাশ, নাকি কার্ড।
+                 *
+                 * উপায়টা বাছা না থাকলে নগদ, কারণ কাউন্টারে বেশিরভাগ
+                 * বিক্রয় নগদেই আর প্রতিবার বাছতে বলা মানে দ্রুততা নষ্ট।
+                 */
+                $method = $this->paymentMethod($data['payment_method_id'] ?? null);
+
                 $collection = $this->collections->create(
                     [
                         'customer_id' => $customer->id,
-                        'account_id' => $data['account_id'] ?? $this->cashAccount()->id,
+                        /*
+                         * খাত না বললে কিছুই পাঠানো হয় না — আদায়ের সেবাই
+                         * প্রধান নগদ কাউন্টার বেছে নেয়।
+                         *
+                         * আগে এখানে নিজের একটা ডিফল্ট ছিল, আর সেটা
+                         * ছিল "হাতে নগদ" মাথাটা (১১০১) — গ্রুপ খাত।
+                         * ওখানে বসানো টাকা কোনো ব্যালেন্সে দেখাত না।
+                         * দুইটা জায়গায় দুইটা ডিফল্ট থাকলে একটা ভুল
+                         * হলে অন্যটা দেখে ধরা যায় না।
+                         */
+                        'account_id' => $method?->account_id ?? ($data['account_id'] ?? null),
                         'trx_date' => $data['trx_date'] ?? now()->toDateString(),
                         'amount' => $applied,
+                        'instrument' => $method?->name(),
+                        'instrument_no' => $this->reference($method, $data['reference'] ?? null),
                         'narration' => __('sales::message.pos_narration', ['no' => $invoice->document_no]),
                     ],
                     [['sales_invoice_id' => $invoice->id, 'amount' => $applied]],
@@ -264,17 +283,57 @@ final class PosService
         return $customer;
     }
 
-    private function cashAccount(): Account
+    /**
+     * বাছা উপায়টা — না বাছলে null, আর তখন নগদ ধরা হয়।
+     *
+     * নিষ্ক্রিয় উপায় বাছা যায় না: কেউ "কার্ড" বন্ধ করে দিলে সেটা আর
+     * নতুন বিক্রয়ে আসা উচিত নয়, অথচ পুরনো বিক্রয়গুলোয় থেকে যায়।
+     */
+    private function paymentMethod(mixed $id): ?PaymentMethod
     {
-        $account = Account::query()->where('code', StandardChart::CASH_IN_HAND)->first();
+        if (blank($id)) {
+            return null;
+        }
 
-        if ($account === null) {
+        $method = PaymentMethod::query()->active()->with('account')->find($id);
+
+        if ($method === null) {
             throw ValidationException::withMessages([
-                'account_id' => __('sales::validation.missing_account', ['code' => StandardChart::CASH_IN_HAND]),
+                'payment_method_id' => __('sales::validation.unknown_payment_method'),
             ]);
         }
 
-        return $account;
+        return $method;
+    }
+
+    /**
+     * লেনদেনের নম্বর — যে উপায়ে লাগে, কেবল সেখানে।
+     *
+     * ── কেন প্রতিটাতে নয় ────────────────────────────────────────────
+     * নগদের কোনো TrxID নেই। প্রতিটা বিক্রয়ে জোর করে চাইলে ক্যাশিয়ার
+     * `0` বসিয়ে এগিয়ে যেতেন, আর বানানো নম্বর কোনো নম্বর না থাকার
+     * চেয়ে খারাপ: বিকাশের বিবরণীর সাথে মেলানোর সময় ওটা দেখে সবাই
+     * ভাবে মিলে গেছে।
+     *
+     * ── কেন লাগলে ছাড় নেই ───────────────────────────────────────────
+     * বিকাশে নেওয়া টাকা TrxID ছাড়া পরে মেলানোই যায় না। কাউন্টারে
+     * ওটা লিখতে দুই সেকেন্ড; মাস শেষে খুঁজতে দুই দিন।
+     */
+    private function reference(?PaymentMethod $method, mixed $reference): ?string
+    {
+        $reference = trim((string) ($reference ?? ''));
+
+        if ($method === null || ! $method->needs_reference) {
+            return $reference === '' ? null : $reference;
+        }
+
+        if ($reference === '') {
+            throw ValidationException::withMessages([
+                'reference' => __('sales::validation.reference_required', ['method' => $method->name()]),
+            ]);
+        }
+
+        return $reference;
     }
 
     private function money(mixed $value): string

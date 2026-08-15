@@ -11,6 +11,7 @@ use App\Models\Company;
 use App\Models\LedgerEntry;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
@@ -79,6 +80,31 @@ class PosTest extends TestCase
         return app(PosService::class);
     }
 
+    /**
+     * নগদ কোথায় বসে — প্রধান নগদ কাউন্টারের খাতে, "হাতে নগদ" মাথায় নয়।
+     *
+     * ── এই পরীক্ষাগুলো আগে মাথাটাই দেখত ─────────────────────────────
+     * ১১০১ একটা গ্রুপ, আর গ্রুপে বসানো সারি কোনো ব্যালেন্সে দেখায় না
+     * (`Account::balanceOn()` গ্রুপের নিজের সারি গোনে না)। আদায় ঠিক
+     * ওখানেই টাকা বসাত, আর এই পরীক্ষাগুলো সেটাকেই সঠিক বলে ধরে রাখত।
+     *
+     * এখন টাকা যায় প্রধান কাউন্টারে — কারও হেফাজতে, আর দিনশেষের
+     * গণনায় মেলে।
+     */
+    private function cashTillAccount(): Account
+    {
+        return app(CashTillService::class)
+            ->ensurePrimaryTill()->account;
+    }
+
+    private function balanceOfAccount(Account $account): string
+    {
+        return LedgerEntry::query()->where('account_id', $account->id)->get()->reduce(
+            fn (string $sum, LedgerEntry $e) => bcadd($sum, bcsub((string) $e->debit, (string) $e->credit, 4), 4),
+            '0',
+        );
+    }
+
     private function balanceOf(string $code): string
     {
         $account = Account::query()->where('code', $code)->firstOrFail();
@@ -127,7 +153,7 @@ class PosTest extends TestCase
 
         // টাকা এসে গেছে, তাই পাওনা শূন্যে ফিরেছে
         $this->assertSame(0, bccomp($this->balanceOf(StandardChart::RECEIVABLE), '0', 4));
-        $this->assertSame(0, bccomp($this->balanceOf(StandardChart::CASH_IN_HAND), '200', 4));
+        $this->assertSame(0, bccomp($this->balanceOfAccount($this->cashTillAccount()), '200', 4));
 
         // বিক্রীত পণ্যের ব্যয় — সাধারণ বিলের মতোই
         $cost = bcmul('2', (string) $this->product->purchase_price, 4);
@@ -215,7 +241,7 @@ class PosTest extends TestCase
         $this->assertSame(0, bccomp($result['change'], '300', 4));
 
         // জমা হয়েছে কেবল বিলের সমান
-        $this->assertSame(0, bccomp($this->balanceOf(StandardChart::CASH_IN_HAND), '200', 4));
+        $this->assertSame(0, bccomp($this->balanceOfAccount($this->cashTillAccount()), '200', 4));
     }
 
     /**
