@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Services;
 
+use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Modules\Sales\Models\PrintJob;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 /**
  * রসিদের সারি — কাগজটা ছাপা হলো কি না, আর কতবার।
@@ -28,6 +30,8 @@ use Illuminate\Support\Facades\DB;
  */
 final class PrintQueue
 {
+    public function __construct(private readonly SettingsService $settings) {}
+
     /**
      * কাগজটা সারিতে তোলা — বিক্রয় শেষ হওয়ার মুহূর্তে।
      *
@@ -52,6 +56,58 @@ final class PrintQueue
                 'created_by' => auth()->id(),
             ],
         ));
+    }
+
+    /**
+     * আর কি ছাপা যাবে — নাকি সীমা পেরিয়ে গেছে।
+     *
+     * ── কেন সীমাটা লাগে ─────────────────────────────────────────────
+     * গোনা ও DUPLICATE ছাপ আগেই ছিল, কিন্তু দুইটাই **নিষ্ক্রিয়**: তারা
+     * বলে দেয় কাগজটা দ্বিতীয়বার ছাপা, কেউ আটকায় না। কর্মী চাইলে
+     * বিশবার ছাপতে পারতেন, আর প্রতিটাতেই DUPLICATE বসত — যেটা কেউ
+     * পড়ে না, কারণ সব কপিতেই লেখা।
+     *
+     * ── কেন ডিফল্টে সীমা নেই ────────────────────────────────────────
+     * শূন্য মানে অসীম, আর সেটাই ডিফল্ট। চালু ব্যবস্থায় হঠাৎ একটা সীমা
+     * বসালে যিনি রোজ তিনটা কপি ছাপেন তাঁর কাজ কাল সকালে থেমে যেত, আর
+     * তিনি ভাবতেন আপগ্রেডে কিছু ভেঙেছে। সংখ্যাটা মালিকের সিদ্ধান্ত —
+     * এক ডিপোর "যথেষ্ট" আরেকটার "কম"।
+     *
+     * ── কেন অনুমতি দিয়ে ছাড়ানো যায় ─────────────────────────────────
+     * প্রিন্টার কাগজ চিবিয়ে ফেলে, কালি ফুরিয়ে যায়, ক্রেতা কপি হারান।
+     * সীমাটা যদি কেউই ছাড়াতে না পারে, তবে বাস্তবে ওই কাগজটা আর
+     * কোনোদিন ছাপা যেত না — আর তখন কেউ বিলটা বাতিল করে নতুন বিল
+     * কাটতেন, যেটা অনেক বেশি ক্ষতিকর।
+     */
+    public function mayPrint(PrintJob $job): bool
+    {
+        $limit = (int) $this->settings->get('sales.reprint_limit', 0);
+
+        if ($limit <= 0 || $job->printed_count < $limit) {
+            return true;
+        }
+
+        return auth()->user()?->can('sales.reprint.override') === true;
+    }
+
+    /**
+     * সীমা পেরোলে থামাও।
+     *
+     * বার্তায় সংখ্যাটা থাকে, কারণ "আর ছাপা যাবে না" পড়ে কেউ বোঝে না
+     * কতবার হয়েছে বা কার কাছে গেলে হবে।
+     */
+    public function assertMayPrint(PrintJob $job): void
+    {
+        if ($this->mayPrint($job)) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'print' => __('sales::validation.reprint_limit_reached', [
+                'no' => $job->document_no ?: '',
+                'count' => $job->printed_count,
+            ]),
+        ]);
     }
 
     /**
