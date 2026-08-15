@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Modules\Accounts\Http\Controllers\AccountsDashboardController;
 use App\Modules\Accounts\Http\Controllers\AccountsSettingsController;
+use App\Modules\Accounts\Http\Controllers\BooksIntegrityController;
 use App\Modules\Accounts\Http\Controllers\CashCountController;
 use App\Modules\Accounts\Http\Controllers\CashTillController;
 use App\Modules\Accounts\Http\Controllers\ChartOfAccountsController;
@@ -131,6 +132,15 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
      * তারপর সেটা সরানোর কথা ওঠে।
      */
     Route::get('money-custody', MoneyCustodyController::class)->name('custody');
+
+    /*
+     * খাতা নিজেই মেলে কি না — চালিয়ে দেখা।
+     *
+     * পরীক্ষা বলে কোডটা ঠিক; এটা বলে **এই কোম্পানির আজকের খাতাটা**
+     * ঠিক। দুইটা আলাদা প্রশ্ন, আর কোড সারালে পুরনো সারিগুলো নিজে থেকে
+     * ঠিক হয় না।
+     */
+    Route::get('books-check', BooksIntegrityController::class)->name('integrity');
 
     Route::prefix('money-transfers')->name('transfer.')->group(function () {
         Route::get('/', [MoneyTransferController::class, 'index'])->name('index');

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Modules\Sales\Dashboard\SalesWidgets;
 use App\Modules\Sales\Events\InvoiceConfirmed;
+use App\Modules\Sales\Integrity\SalesChecks;
 use App\Modules\Sales\Metrics\SalesMetrics;
 use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\DeliveryChallan;
@@ -236,6 +237,17 @@ return [
      */
     'metrics' => [
         SalesMetrics::class,
+    ],
+
+    /*
+     * বিক্রয়ের কাগজ নিজের সাথে মেলে কি না।
+     *
+     * মোটটা জমানো থাকে, প্রতিবার নতুন করে গোনা হয় না — নাহলে প্রতিটা
+     * তালিকার পাতায় প্রতিটা বিলের সব লাইন টানতে হত। কিন্তু জমানো
+     * মানেই বাসি হওয়ার সুযোগ।
+     */
+    'integrity' => [
+        SalesChecks::class,
     ],
 
     /*

@@ -20,6 +20,7 @@ return [
     'bank_book' => 'Bank Book',
     'ledger' => 'Ledger',
     'trial_balance' => 'Trial Balance',
+    'books_check' => 'Books check',
     'profit_loss' => 'Profit & Loss',
     'balance_sheet' => 'Balance Sheet',
     'cash_flow' => 'Cash Flow',

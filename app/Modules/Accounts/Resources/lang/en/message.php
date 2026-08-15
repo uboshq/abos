@@ -98,4 +98,10 @@ return [
     'loan_settled' => 'Settled',
     'schedule_note' => 'Check this against the bank\'s paper. If it disagrees the loan has to be entered again — the wrong interest method (reducing or flat) changes the split in every instalment.',
     'cc_interest_note' => 'Take the figure from the bank statement rather than working it out here. The bank counts days its own way and the two will never agree to the paisa.',
+    'books_all_clear' => ':count checks ran, all of them clear',
+    'books_broken' => ':count checks found something',
+    'no_checks_for_you' => 'None of the checks are yours to run',
+    'check_passed' => 'Clear',
+    'check_failed' => '{1} 1 row does not match|[2,*] :count rows do not match',
+    'what_does_not_match' => 'What does not match',
 ];

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Module;
 
+use App\Core\Contracts\ChecksItsOwnBooks;
 use App\Core\Contracts\ContributesFacts;
 use App\Core\Contracts\DashboardWidgets;
 use App\Core\Contracts\Importer;
@@ -74,6 +75,18 @@ final class ModuleDefinition
          * @var list<class-string>
          */
         public readonly array $metrics,
+
+        /**
+         * খাতা যাচাইকারীরা — ChecksItsOwnBooks বাস্তবায়ন করে।
+         *
+         * ── কেন মডিউল বলে ───────────────────────────────────────────
+         * কোর জানে না বিলের মোট কীভাবে তৈরি হয়, বা লটের যোগফল কীসের
+         * সমান হওয়ার কথা। যে নিয়মটা লিখেছে সেই-ই কেবল বলতে পারে
+         * নিয়মটা ভেঙেছে কি না (সেকশন ১৯.৭)।
+         *
+         * @var list<class-string>
+         */
+        public readonly array $integrity,
 
         /**
          * যে কাজগুলোয় এই মডিউল অনুমোদন চাইতে পারে — কাজ => লেবেল কী।
@@ -267,6 +280,7 @@ final class ModuleDefinition
             reports: self::validateReports($raw['reports'] ?? [], $path),
             widgets: self::validateWidgets($raw['widgets'] ?? [], $raw['permissions'] ?? [], $path),
             metrics: self::validateMetrics($raw['metrics'] ?? [], $path),
+            integrity: self::validateIntegrity($raw['integrity'] ?? [], $path),
             approvals: self::validateApprovals($raw['approvals'] ?? [], $path),
             customFields: self::validateCustomFields(
                 $raw['custom_fields'] ?? [],
@@ -441,6 +455,35 @@ final class ModuleDefinition
         }
 
         return array_values($metrics);
+    }
+
+    /**
+     * খাতা যাচাইকারীরা — ক্লাসটা আছে কি না, চুক্তিটা মানে কি না।
+     *
+     * ভুল নাম ধরা না পড়লে যাচাইটা কোনোদিন চলত না, আর পর্দাটা "সব
+     * সবুজ" দেখাত — আর একটা যাচাই না-চলা আর তার পাশ করা পর্দায়
+     * দেখতে হুবহু এক।
+     *
+     * @param  list<mixed>  $checks
+     * @return list<class-string<ChecksItsOwnBooks>>
+     */
+    private static function validateIntegrity(array $checks, string $path): array
+    {
+        foreach ($checks as $class) {
+            if (! is_string($class) || ! class_exists($class)) {
+                throw new InvalidArgumentException(
+                    "{$path}: integrity provider '".(is_string($class) ? $class : gettype($class))."' does not exist."
+                );
+            }
+
+            if (! is_subclass_of($class, ChecksItsOwnBooks::class)) {
+                throw new InvalidArgumentException(
+                    "{$path}: integrity provider {$class} must implement the ChecksItsOwnBooks contract."
+                );
+            }
+        }
+
+        return array_values($checks);
     }
 
     /**

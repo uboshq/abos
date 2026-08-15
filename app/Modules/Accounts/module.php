@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 use App\Modules\Accounts\Dashboard\AccountsWidgets;
+use App\Modules\Accounts\Integrity\AccountsChecks;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CashCount;
 use App\Modules\Accounts\Models\CashTill;
@@ -93,6 +94,15 @@ return [
             ['label' => 'accounts::menu.inflow', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'inflow'], 'permission' => 'accounts.report'],
             ['label' => 'accounts::menu.ledger', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'ledger'], 'permission' => 'accounts.report'],
             ['label' => 'accounts::menu.trial_balance', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'trial-balance'], 'permission' => 'accounts.report'],
+
+            /*
+             * খাতা নিজেই মেলে কি না — রেওয়ামিলের ঠিক নিচে।
+             *
+             * ক্রমটা ইচ্ছাকৃত: রেওয়ামিল দেখে সন্দেহ হলে পরের সারিটাই
+             * বলে দেয় কোথায় ভেঙেছে। উপরে বসালে রোজকার রিপোর্টগুলোর
+             * আগে একটা পর্দা পড়ত যেটা বছরে কয়েকবার লাগে।
+             */
+            ['label' => 'accounts::menu.books_check', 'route' => 'accounts.integrity', 'permission' => 'accounts.report'],
             ['label' => 'accounts::menu.profit_loss', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'profit-loss'], 'permission' => 'accounts.report.final'],
             ['label' => 'accounts::menu.balance_sheet', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'balance-sheet'], 'permission' => 'accounts.report.final'],
             ['label' => 'accounts::menu.cash_flow', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'cash-flow'], 'permission' => 'accounts.report.final'],
@@ -212,6 +222,18 @@ return [
     // হোম পর্দার টাকার সংখ্যাগুলো
     'widgets' => [
         AccountsWidgets::class,
+    ],
+
+    /*
+     * খাতা নিজেই মেলে কি না — চালিয়ে দেখার যাচাই।
+     *
+     * পরীক্ষা বলে কোডটা ঠিক; এটা বলে **এই কোম্পানির আজকের খাতাটা**
+     * ঠিক। হাতে চালানো SQL, আধেক লেখা ট্রানজেকশন, বা সারানোর আগেই
+     * কিছু সারি লিখে ফেলা একটা বাগ — কোড সারালে পুরনো সারিগুলো নিজে
+     * থেকে ঠিক হয় না।
+     */
+    'integrity' => [
+        AccountsChecks::class,
     ],
 
     'settings' => [
