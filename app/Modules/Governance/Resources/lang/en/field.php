@@ -22,4 +22,10 @@ return [
     'what_was_taken' => 'What was taken',
     'rows' => 'Rows',
     'filters' => 'Filters',
+    'identifier' => 'What was typed',
+    'result' => 'Result',
+    'why' => 'Why',
+    'where_from' => 'From',
+    'device' => 'Device',
+    'last_seen' => 'Last seen',
 ];

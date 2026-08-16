@@ -22,4 +22,10 @@ return [
     'what_was_taken' => 'কী নামানো হয়েছে',
     'rows' => 'সারি',
     'filters' => 'ছাঁকনি',
+    'identifier' => 'যা লেখা হয়েছিল',
+    'result' => 'ফল',
+    'why' => 'কারণ',
+    'where_from' => 'কোথা থেকে',
+    'device' => 'যন্ত্র',
+    'last_seen' => 'শেষ দেখা',
 ];

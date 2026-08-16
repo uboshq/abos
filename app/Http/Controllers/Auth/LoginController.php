@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Auth;
 
+use App\Core\Services\LoginJournal;
 use App\Http\Controllers\Controller;
+use App\Models\LoginAttempt;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -26,6 +28,8 @@ use Illuminate\View\View;
  */
 class LoginController extends Controller
 {
+    public function __construct(private readonly LoginJournal $logins) {}
+
     public function show(): View
     {
         return view('auth.login');
@@ -49,6 +53,28 @@ class LoginController extends Controller
         $passwordOk = Hash::check($credentials['password'], $hash);
 
         if ($user === null || ! $passwordOk || ! $user->is_active) {
+            /*
+             * খাতায় আসল কারণটাই বসে, যদিও পর্দা তা বলে না।
+             *
+             * ── কেন দুইটা আলাদা ─────────────────────────────────────
+             * পর্দা তিনটা ক্ষেত্রেই একই বার্তা দেয়, নাহলে বার্তা পড়ে
+             * বা সময় মেপে কেউ ব্যবহারকারীর তালিকা বের করে ফেলত।
+             *
+             * কিন্তু নিরাপত্তা পর্যালোচনায় ঠিক ওই তফাতটাই দরকার:
+             * অচেনা নামে পঁচিশটা চেষ্টা মানে কেউ **নাম** আন্দাজ করছে;
+             * একটা চেনা নামে পঁচিশটা মানে কেউ **পাসওয়ার্ড** আন্দাজ
+             * করছে। দুইটা সম্পূর্ণ আলাদা ঘটনা, আর দুইটার ব্যবস্থাও।
+             */
+            $this->logins->failed(
+                $credentials['identifier'],
+                $user,
+                match (true) {
+                    $user === null => LoginAttempt::UNKNOWN,
+                    ! $passwordOk => LoginAttempt::WRONG_PASSWORD,
+                    default => LoginAttempt::INACTIVE,
+                },
+            );
+
             throw ValidationException::withMessages([
                 // এক বার্তা, সব ক্ষেত্রে। "এই নামে কেউ নেই" বললে
                 // ব্যবহারকারীর তালিকা বের করা যায়।
@@ -60,6 +86,15 @@ class LoginController extends Controller
         $request->session()->regenerate();
 
         $user->forceFill(['last_login_at' => now()])->save();
+
+        /*
+         * সফল ঢোকাটাও খাতায়।
+         *
+         * `last_login_at` কেবল **শেষ** বারটা রাখে — পরেরটা আগেরটাকে
+         * ঢেকে দেয়। তাই "গত সপ্তাহে ইনি কবে কবে ঢুকেছিলেন" প্রশ্নের
+         * উত্তর ওই ঘরটায় কোনোদিন ছিল না।
+         */
+        $this->logins->succeeded($credentials['identifier'], $user);
 
         return redirect()->intended(route('dashboard'));
     }
