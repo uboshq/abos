@@ -54,6 +54,14 @@
             লগ-আউটের ঠিক উপরে, কারণ প্রশ্ন দুইটা পাশাপাশি: "এখান থেকে
             বেরোব" আর "বাকি জায়গাগুলো থেকেও বেরোব"।
         --}}
+        {{-- দুই ধাপের লগইন — নিজের অ্যাকাউন্টের তালা, নিজের সিদ্ধান্ত --}}
+        <a href="{{ route('mfa') }}" role="menuitem"
+           class="flex min-h-(--spacing-touch) items-center gap-2 px-3 text-sm
+                  transition-colors hover:bg-(--color-surface-hover)">
+            <x-ui.icon name="lock" :size="16" />
+            {{ __('auth.mfa_title') }}
+        </a>
+
         <a href="{{ route('governance.session.index') }}" role="menuitem"
            class="flex min-h-(--spacing-touch) items-center gap-2 px-3 text-sm
                   transition-colors hover:bg-(--color-surface-hover)">

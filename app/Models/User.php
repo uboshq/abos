@@ -19,7 +19,13 @@ use RuntimeException;
 use Spatie\Permission\Traits\HasRoles;
 
 #[Fillable(['name', 'email', 'password', 'locale', 'theme', 'accent', 'is_active'])]
-#[Hidden(['password', 'remember_token'])]
+/*
+ * গোপন চাবি ও পুনরুদ্ধার কোড কোনো JSON বা লগে যায় না।
+ *
+ * একটা `dd($user)` বা একটা API রেসপন্সেই চাবিটা বেরিয়ে গেলে MFA
+ * শেষ — আর ওই ভুলটা ধরা পড়ত না, কারণ সবকিছু কাজ করতেই থাকত।
+ */
+#[Hidden(['password', 'remember_token', 'mfa_secret', 'mfa_recovery_codes'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
@@ -37,6 +43,22 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_active' => 'boolean',
             'last_login_at' => 'datetime',
+
+            /*
+             * গোপন চাবি ও পুনরুদ্ধার কোড — ডাটাবেজে এনক্রিপ্টেড।
+             *
+             * ── কেন `encrypted`, শুধু হ্যাশ নয় ──────────────────────
+             * TOTP-র চাবিটা যাচাইয়ের সময় **আসল রূপে** লাগে — ওটা দিয়েই
+             * কোড বানিয়ে মেলানো হয়, তাই হ্যাশ করা যায় না। কিন্তু সাদা
+             * রাখলে ডাটাবেজ ফাঁসে প্রতিটা চাবি বেরিয়ে যেত, আর তখন
+             * আক্রমণকারী নিজেই কোড বানিয়ে নিতেন — MFA থাকত নামেই।
+             *
+             * পুনরুদ্ধার কোডগুলো উল্টো: ওগুলো হ্যাশ করাই থাকে (নিচে
+             * `MfaService`), আর এই স্তরটা তার উপরে বাড়তি।
+             */
+            'mfa_secret' => 'encrypted',
+            'mfa_recovery_codes' => 'encrypted:array',
+            'mfa_confirmed_at' => 'datetime',
         ];
     }
 
