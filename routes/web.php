@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\AttachmentController;
+use App\Http\Controllers\MfaController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\WorkspaceController;
 use Illuminate\Support\Facades\Route;
@@ -38,6 +39,18 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/appearance', [WorkspaceController::class, 'appearance'])->name('appearance');
     Route::post('/appearance', [WorkspaceController::class, 'saveAppearance'])->name('appearance.save');
+
+    /*
+     * দুই ধাপের লগইন — নিজের অ্যাকাউন্টে, তাই নিজের পর্দা।
+     *
+     * প্রশাসকের হাতে দিলে সেটা "চালু করে দেওয়া" হত, আর যাঁর ফোনে অ্যাপ
+     * নেই তিনি নিজের ব্যবস্থা থেকে বাইরে থাকতেন। চেহারা বা প্রোফাইলের
+     * মতোই — নিজের সিদ্ধান্ত।
+     */
+    Route::get('/two-step', [MfaController::class, 'show'])->name('mfa');
+    Route::post('/two-step', [MfaController::class, 'begin'])->name('mfa.begin');
+    Route::post('/two-step/confirm', [MfaController::class, 'confirm'])->name('mfa.confirm');
+    Route::delete('/two-step', [MfaController::class, 'destroy'])->name('mfa.destroy');
 
     Route::post('/company/switch', [WorkspaceController::class, 'switchCompany'])->name('company.switch');
     Route::post('/branch/switch', [WorkspaceController::class, 'switchBranch'])->name('branch.switch');

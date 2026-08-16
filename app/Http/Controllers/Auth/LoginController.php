@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Auth;
 
+use App\Core\Security\MfaService;
 use App\Core\Services\LoginJournal;
 use App\Http\Controllers\Controller;
 use App\Models\LoginAttempt;
@@ -28,7 +29,10 @@ use Illuminate\View\View;
  */
 class LoginController extends Controller
 {
-    public function __construct(private readonly LoginJournal $logins) {}
+    public function __construct(
+        private readonly LoginJournal $logins,
+        private readonly MfaService $mfa,
+    ) {}
 
     public function show(): View
     {
@@ -80,6 +84,43 @@ class LoginController extends Controller
                 // ব্যবহারকারীর তালিকা বের করা যায়।
                 'identifier' => __('auth.failed'),
             ]);
+        }
+
+        /*
+         * দ্বিতীয় ধাপ — চালু থাকলে।
+         *
+         * ── কেন এখানে, লগইনের পরে নয় ────────────────────────────────
+         * `Auth::login()` ডাকার পর কোড চাইলে ওই মুহূর্তেই মানুষটা ঢুকে
+         * পড়েছেন — মাঝের একটা অনুরোধেই গোটা ব্যবস্থা খোলা। তাই কোড
+         * না মেলা পর্যন্ত লগইনটাই হয় না।
+         *
+         * ── কেন সেশনে user_id রাখা হয় না ────────────────────────────
+         * কোডের পাতায় যাওয়ার জন্য কে চেষ্টা করছেন তা মনে রাখতে হয়।
+         * সেশনে ব্যবহারকারীর id রাখলে সেটা কার্যত অর্ধেক লগইন — আর
+         * সেশন হাইজ্যাক করে কেউ ওই অবস্থাটা ব্যবহার করতে পারতেন।
+         * বদলে কেবল পরিচয়টা রাখা হয়, আর পাসওয়ার্ডটা দ্বিতীয় ধাপেও
+         * আবার যাচাই হয়।
+         */
+        if ($this->mfa->isOn($user)) {
+            $code = trim((string) $request->input('code'));
+
+            if ($code === '') {
+                $this->logins->failed($credentials['identifier'], $user, LoginAttempt::NEEDS_CODE);
+
+                return back()
+                    ->withInput($request->only('identifier', 'remember'))
+                    ->with('mfa', true)
+                    ->withErrors(['code' => __('auth.code_needed')]);
+            }
+
+            if (! $this->mfa->verify($user, $code)) {
+                $this->logins->failed($credentials['identifier'], $user, LoginAttempt::WRONG_CODE);
+
+                return back()
+                    ->withInput($request->only('identifier', 'remember'))
+                    ->with('mfa', true)
+                    ->withErrors(['code' => __('auth.code_wrong')]);
+            }
         }
 
         Auth::login($user, (bool) ($credentials['remember'] ?? false));

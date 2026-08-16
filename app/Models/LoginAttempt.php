@@ -35,6 +35,18 @@ class LoginAttempt extends Model
     /** অ্যাকাউন্ট বন্ধ — সরানো কর্মী এখনো চেষ্টা করছেন। */
     public const INACTIVE = 'inactive';
 
+    /**
+     * পাসওয়ার্ড ঠিক, কোড দেওয়া হয়নি।
+     *
+     * সাধারণত এটা নিরীহ — লগইনের পাতা দুই ধাপে, তাই প্রথম ধাপে কোড
+     * থাকেই না। কিন্তু একই নামে বারবার এটা মানে কেউ পাসওয়ার্ডটা
+     * পেয়ে গেছেন আর কোডে আটকে আছেন, আর সেটা জানা সবচেয়ে জরুরি।
+     */
+    public const NEEDS_CODE = 'needs_code';
+
+    /** পাসওয়ার্ড ঠিক, কোড ভুল — উপরেরটার চেয়েও জোরালো চিহ্ন। */
+    public const WRONG_CODE = 'wrong_code';
+
     protected $fillable = [
         'company_id', 'user_id', 'identifier', 'succeeded',
         'reason', 'ip_address', 'user_agent',

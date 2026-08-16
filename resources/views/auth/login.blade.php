@@ -221,6 +221,43 @@
                             </p>
                         </div>
 
+                        {{--
+                            দ্বিতীয় ধাপের কোড — কেবল যখন চাওয়া হয়েছে।
+
+                            ── কেন সবসময় দেখানো হয় না ──────────────────
+                            বেশিরভাগ ব্যবহারকারীর MFA চালু নেই। ঘরটা
+                            সবসময় থাকলে তাঁরা প্রতিবার ভাবতেন কিছু একটা
+                            লিখতে হবে, আর খালি রেখে জমা দিয়ে ভুল বার্তা
+                            পাওয়ার ভয় পেতেন।
+
+                            ── কেন `autofocus` ────────────────────────
+                            দ্বিতীয় ধাপে মানুষ ফোন হাতে নিয়ে দাঁড়ানো —
+                            কার্সার ঘরটাতেই থাকা উচিত, নাহলে তিনি ছয়টা
+                            অঙ্ক টাইপ করে দেখতেন কোথাও কিছু বসেনি।
+                        --}}
+                        @if (session('mfa') || $errors->has('code'))
+                            <div>
+                                <label for="code" class="mb-1 block text-sm font-medium text-(--color-ink)">
+                                    {{ __('auth.code') }}
+                                </label>
+
+                                <input id="code" name="code" type="text"
+                                       inputmode="numeric" autocomplete="one-time-code"
+                                       autofocus
+                                       class="num h-(--spacing-field) w-full rounded-(--radius-field)
+                                              border border-(--color-border) bg-(--color-surface-app)
+                                              px-3 text-center tracking-[0.3em]">
+
+                                <p class="mt-1 text-xs text-(--color-ink-muted)">
+                                    {{ __('auth.code_hint') }}
+                                </p>
+
+                                @error('code')
+                                    <p class="mt-1 text-xs text-(--color-danger)">{{ $message }}</p>
+                                @enderror
+                            </div>
+                        @endif
+
                         <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
                             <input type="checkbox" name="remember" value="1" class="size-4">
                             {{ __('auth.remember_device') }}
