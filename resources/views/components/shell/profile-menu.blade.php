@@ -42,6 +42,25 @@
             {{ __('core.appearance.title') }}
         </a>
 
+        {{--
+            কোথায় কোথায় লগইন আছি।
+
+            ── কেন এখানে, মেনুর ভেতরে নয় ────────────────────────────────
+            "আমি কোথায় কোথায় লগইন আছি" প্রতিটা ব্যবহারকারীর নিজের প্রশ্ন,
+            প্রশাসনিক নয় — চেহারা বা প্রোফাইলের মতোই। মডিউলের মেনুতে
+            রাখলে সেটার একটা অনুমতি লাগত, আর যাঁর সবচেয়ে বেশি দরকার —
+            যে কর্মী কাউন্টারে লগইন রেখে এসেছেন — তিনিই পৌঁছাতে পারতেন না।
+
+            লগ-আউটের ঠিক উপরে, কারণ প্রশ্ন দুইটা পাশাপাশি: "এখান থেকে
+            বেরোব" আর "বাকি জায়গাগুলো থেকেও বেরোব"।
+        --}}
+        <a href="{{ route('governance.session.index') }}" role="menuitem"
+           class="flex min-h-(--spacing-touch) items-center gap-2 px-3 text-sm
+                  transition-colors hover:bg-(--color-surface-hover)">
+            <x-ui.icon name="lock" :size="16" />
+            {{ __('governance::menu.my_sessions') }}
+        </a>
+
         <form method="POST" action="{{ route('logout') }}" class="border-t border-(--color-border)">
             @csrf
             <button type="submit" role="menuitem"

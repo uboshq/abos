@@ -40,6 +40,7 @@ return [
              * ভাবত পুরো ছবিটা দেখা হয়ে গেছে।
              */
             ['label' => 'governance::menu.export_log', 'route' => 'governance.export.index', 'permission' => 'governance.audit.view'],
+            ['label' => 'governance::menu.login_history', 'route' => 'governance.login.index', 'permission' => 'governance.audit.view'],
         ],
     ],
 

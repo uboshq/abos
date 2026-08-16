@@ -11,4 +11,7 @@ return [
     'cancelled' => 'Cancelled',
     'approved' => 'Approved',
     'rejected' => 'Rejected',
+    'end_session' => 'Sign it out',
+    'end_other_sessions' => 'Sign out everywhere else',
+    'only_failed' => 'Only failures',
 ];

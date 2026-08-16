@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use App\Modules\Governance\Http\Controllers\AuditController;
 use App\Modules\Governance\Http\Controllers\ExportLogController;
+use App\Modules\Governance\Http\Controllers\LoginHistoryController;
+use App\Modules\Governance\Http\Controllers\SessionController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -35,4 +37,26 @@ Route::middleware('auth')->prefix('governance')->group(function () {
      * বদলেছে, অন্যটা বলে কী বেরিয়ে গেছে।
      */
     Route::get('/exports', [ExportLogController::class, 'index'])->name('export.index');
+
+    /*
+     * ঢোকার খাতা — কে ঢুকল, আর কে ঢুকতে চেয়ে পারল না।
+     *
+     * অডিটের পাশে, কারণ প্রশ্নটা একই: "কে কী করেছে"। অডিট বলে বিলে কী
+     * বসেছে; এটা বলে লোকটা আদৌ ঢুকেছিল কি না।
+     */
+    Route::get('/logins', [LoginHistoryController::class, 'index'])->name('login.index');
+
+    /*
+     * নিজের খোলা সেশনগুলো — অনুমতি ছাড়া, কারণ এগুলো নিজেরই।
+     *
+     * ── কেন `governance.audit.view` লাগে না ─────────────────────────
+     * "আমি কোথায় কোথায় লগইন আছি" প্রতিটা ব্যবহারকারীর নিজের প্রশ্ন,
+     * প্রশাসনিক নয়। চাবির পেছনে রাখলে যাঁর সবচেয়ে বেশি দরকার — যে
+     * কর্মী কাউন্টারে লগইন রেখে এসেছেন — তিনিই পৌঁছাতে পারতেন না।
+     *
+     * কেবল নিজেরটাই দেখা যায় ও বন্ধ করা যায়; অন্যেরটা নয়।
+     */
+    Route::get('/my-sessions', [SessionController::class, 'index'])->name('session.index');
+    Route::delete('/my-sessions/others', [SessionController::class, 'destroyOthers'])->name('session.others');
+    Route::delete('/my-sessions/{id}', [SessionController::class, 'destroy'])->name('session.destroy');
 });
