@@ -62,35 +62,77 @@
          নোটিশ — ওটা পড়ার জিনিস), সেখানে লিংকও নেই: যে লিংক কোথাও নিয়ে
          যায় না সেটাই মৃত লিংক।
 
-         marquee বা স্ক্রল করা লেখা নয়: চলন্ত লেখা পড়তে চোখ ধাওয়া করতে
-         হয়, আর যে বার্তাটা সবচেয়ে জরুরি সেটাই সবচেয়ে কঠিন হয়ে ওঠে।
-         লম্বা হলে কেটে যায়, আর পুরোটা title-এ থাকে। --}}
-    <span class="flex min-w-0 flex-1 items-center gap-3 overflow-hidden">
-        @foreach ($notices as $notice)
-            @php
-                $tone = match ($notice['tone']) {
-                    'danger' => 'text-(--color-danger)',
-                    'pending' => 'text-(--color-badge-pending-ink)',
-                    default => 'text-(--color-badge-info-ink)',
-                };
-            @endphp
+         ── লেখাটা চলে, আর কেন ─────────────────────────────────────
+         মালিকের নির্দেশ: "footer e notice cholbe dms er moto"। আগে
+         এখানে স্থির ছিল, আর কারণটা এই মন্তব্যেই লেখা ছিল — সেটা ভুল
+         ছিল দুইভাবে: সিদ্ধান্তটা মালিকের, আর স্থির বারে দ্বিতীয়
+         নোটিশটা কেটে গিয়ে কেউ কোনোদিন দেখত না।
 
-            @if ($notice['url'])
-                <a href="{{ $notice['url'] }}"
-                   class="flex min-w-0 shrink-0 items-center gap-1.5 {{ $tone }} hover:underline"
-                   title="{{ $notice['text'] }}">
-                    <span class="size-1.5 shrink-0 rounded-full bg-current" aria-hidden="true"></span>
-                    <span class="truncate">{{ $notice['text'] }}</span>
-                </a>
-            @else
-                <span class="flex min-w-0 items-center gap-1.5 {{ $tone }}"
-                      title="{{ $notice['text'] }}">
-                    <span class="size-1.5 shrink-0 rounded-full bg-current" aria-hidden="true"></span>
-                    <span class="truncate">{{ $notice['text'] }}</span>
+         চলন্ত লেখার আসল আপত্তিগুলো সারানো হয়েছে, এড়ানো হয়নি:
+           • মাউস রাখলে থামে — যে সংখ্যা সরে যাচ্ছে সেটা কেউ ক্লিক
+             করতে পারে না
+           • `motion-safe:` — যিনি চলন্ত জিনিস বন্ধ রেখেছেন তাঁর
+             পর্দায় নড়ে না, তালিকাটা স্থিরই থাকে
+           • কিছু না থাকলে বারটা চুপ — "সব ঠিক আছে" ঘুরতে থাকলে দুই
+             সপ্তাহে মানুষ তাকানো বন্ধ করে দেয়
+
+         দুইটা কপি পাশাপাশি, এক কপির সমান সরে (-৫০%) — এতেই লুপটা
+         নির্বিঘ্ন: প্রথমটা যে মুহূর্তে বেরিয়ে যায়, দ্বিতীয়টা ঠিক
+         সেখানেই থাকে যেখানে প্রথমটা শুরু হয়েছিল। --}}
+    <div class="group relative hidden min-w-0 flex-1 overflow-hidden md:block">
+        <div class="inline-flex whitespace-nowrap will-change-transform
+                    motion-safe:animate-[abos-ticker_30s_linear_infinite]
+                    group-hover:[animation-play-state:paused]">
+            @for ($copy = 0; $copy < 2; $copy++)
+                <span class="inline-flex items-center gap-6 pe-12"
+                      @if ($copy === 1) aria-hidden="true" @endif>
+                    @foreach ($notices as $notice)
+                        @php
+                            $tone = match ($notice['tone']) {
+                                'danger' => 'text-(--color-danger)',
+                                'pending' => 'text-(--color-badge-pending-ink)',
+                                default => 'text-(--color-badge-info-ink)',
+                            };
+                        @endphp
+
+                        {{-- চলন্ত বারে `truncate` নেই — জায়গার সীমা আর
+                             নেই, পুরো বাক্যটাই ঘুরে আসে। ওটাই স্থির
+                             বারের সবচেয়ে বড় সমস্যা ছিল: দ্বিতীয়
+                             নোটিশটা কেটে গিয়ে কেউ কোনোদিন দেখত না। --}}
+                        @if ($notice['url'])
+                            <a href="{{ $notice['url'] }}"
+                               class="inline-flex items-center gap-1.5 {{ $tone }} hover:underline"
+                               @if ($copy === 1) tabindex="-1" @endif>
+                                <span class="size-1.5 rounded-full bg-current" aria-hidden="true"></span>
+                                {{ $notice['text'] }}
+                            </a>
+                        @else
+                            <span class="inline-flex items-center gap-1.5 {{ $tone }}">
+                                <span class="size-1.5 rounded-full bg-current" aria-hidden="true"></span>
+                                {{ $notice['text'] }}
+                            </span>
+                        @endif
+                    @endforeach
                 </span>
-            @endif
-        @endforeach
-    </span>
+            @endfor
+        </div>
+    </div>
+
+    {{--
+        চলাটার নিয়ম — এখানেই, বিশ্বজনীন স্টাইলশিটে নয়।
+
+        গোটা পণ্যে এটাই একমাত্র অ্যানিমেশন। একটা কম্পোনেন্টের জন্য
+        বিশ্বজনীন ফাইলে কীফ্রেম রাখলে সেটা কম্পোনেন্টটার চেয়েও বেশি
+        দিন বেঁচে থাকে, আর কেউ জানে না কেন আছে।
+    --}}
+    @once
+        <style>
+            @keyframes abos-ticker {
+                from { transform: translateX(0); }
+                to   { transform: translateX(-50%); }
+            }
+        </style>
+    @endonce
 
     @if ($year)
         <span class="shrink-0">{{ __('core.company.financial_year') }}: {{ $year->name }}</span>
