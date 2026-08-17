@@ -35,8 +35,8 @@ return [
              * থাকলে প্রশ্নটাই ওঠে না।
              */
             ['label' => 'system_admin::menu.companies', 'route' => 'system_admin.company.index', 'permission' => 'system_admin.company.manage'],
-            ['label' => 'system_admin::menu.users', 'route' => 'admin.users', 'permission' => 'system_admin.user.manage', 'planned' => true],
-            ['label' => 'system_admin::menu.roles', 'route' => 'admin.roles', 'permission' => 'system_admin.role.manage', 'planned' => true],
+            ['label' => 'system_admin::menu.users', 'route' => 'system_admin.user.index', 'permission' => 'system_admin.user.manage'],
+            ['label' => 'system_admin::menu.roles', 'route' => 'system_admin.role.index', 'permission' => 'system_admin.role.manage'],
             ['label' => 'system_admin::menu.financial_years', 'route' => 'admin.financial-years', 'permission' => 'system_admin.company.manage', 'planned' => true],
             ['label' => 'system_admin::menu.number_series', 'route' => 'admin.number-series', 'permission' => 'system_admin.company.manage', 'planned' => true],
         ],

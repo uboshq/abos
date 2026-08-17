@@ -6,13 +6,15 @@ use App\Modules\SystemAdmin\Http\Controllers\CompanyController;
 use App\Modules\SystemAdmin\Http\Controllers\ControlPanelController;
 use App\Modules\SystemAdmin\Http\Controllers\CustomFieldController;
 use App\Modules\SystemAdmin\Http\Controllers\ImportController;
+use App\Modules\SystemAdmin\Http\Controllers\RoleController;
+use App\Modules\SystemAdmin\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 /*
  * System Administration-এর রুট।
  *
- * ব্যবহারকারী, রোল ও ব্যাকআপের পর্দা এখনো লেখা হয়নি, আর module.php-তে
- * সেগুলো planned হিসেবেই আছে। মেনুতে মৃত সারি রাখা হয় না।
+ * ব্যাকআপের পর্দা এখনো লেখা হয়নি, আর module.php-তে সেটা planned
+ * হিসেবেই আছে। মেনুতে মৃত সারি রাখা হয় না।
  */
 
 Route::middleware('auth')->prefix('system')->group(function () {
@@ -36,6 +38,29 @@ Route::middleware('auth')->prefix('system')->group(function () {
             ->whereNumber('company')->name('branch.store');
         Route::post('/{company}/toggle', [CompanyController::class, 'toggle'])
             ->whereNumber('company')->name('toggle');
+    });
+
+    /*
+     * ব্যবহারকারী ও রোল।
+     *
+     * মোছার কোনো রুট নেই, দুইটাতেই — ব্যবহারকারীর নাম প্রতিটা বিলে ও
+     * অডিটের সারিতে বসে আছে, আর রোল মুছলে যাঁরা ওটা ধরে আছেন তাঁরা
+     * নীরবে সব অধিকার হারাতেন। নিষ্ক্রিয় করাই যথেষ্ট।
+     */
+    Route::prefix('users')->name('user.')->group(function () {
+        Route::get('/', [UserController::class, 'index'])->name('index');
+        Route::get('/create', [UserController::class, 'create'])->name('create');
+        Route::post('/', [UserController::class, 'store'])->name('store');
+        Route::get('/{user}/edit', [UserController::class, 'edit'])->whereNumber('user')->name('edit');
+        Route::put('/{user}', [UserController::class, 'update'])->whereNumber('user')->name('update');
+    });
+
+    Route::prefix('roles')->name('role.')->group(function () {
+        Route::get('/', [RoleController::class, 'index'])->name('index');
+        Route::get('/create', [RoleController::class, 'create'])->name('create');
+        Route::post('/', [RoleController::class, 'store'])->name('store');
+        Route::get('/{role}/edit', [RoleController::class, 'edit'])->whereNumber('role')->name('edit');
+        Route::put('/{role}', [RoleController::class, 'update'])->whereNumber('role')->name('update');
     });
 
     /*
