@@ -155,4 +155,10 @@ return [
     'pos_bill_not_found' => 'এই নম্বরের কোনো নিশ্চিত বিল পাওয়া যায়নি।',
     'collected_amount' => ':amount আদায়',
     'returned_amount' => ':amount ফেরত',
+    'shipment_created' => 'ট্রিপের কাগজ তৈরি হয়েছে — গাড়ি বেরোনোর সময় "রওনা" চাপুন।',
+    'shipment_updated' => 'ট্রিপের কাগজ সংশোধিত হয়েছে।',
+    'shipment_dispatched' => 'গাড়ি রওনা হয়েছে।',
+    'shipment_line_settled' => 'সারিটার হিসাব বুঝে নেওয়া হয়েছে।',
+    'shipment_closed' => 'ট্রিপ শেষ — সব চালানের হিসাব মিলেছে।',
+    'shipment_cancelled' => 'ট্রিপটি বাতিল হয়েছে; চালানগুলো আবার মুক্ত।',
 ];

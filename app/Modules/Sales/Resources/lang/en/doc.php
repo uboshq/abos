@@ -12,4 +12,5 @@ return [
     'gatepass' => 'Gate Pass',
     'delivery_order' => 'Delivery Order',
     'return' => 'Sales Return',
+    'shipment' => 'Shipment',
 ];

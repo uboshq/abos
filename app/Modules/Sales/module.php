@@ -12,6 +12,7 @@ use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Models\SalesOrder;
 use App\Modules\Sales\Models\SalesReturn;
+use App\Modules\Sales\Models\Shipment;
 use App\Modules\Sales\Panels\SalesFacts;
 use App\Modules\Sales\Reports\SalesReports;
 
@@ -70,6 +71,17 @@ return [
                 'setting' => 'sales.screen_orders'],
             ['label' => 'sales::menu.challans', 'route' => 'sales.challan.index', 'permission' => 'sales.challan.view',
                 'setting' => 'sales.screen_challans'],
+
+            /*
+             * শিপমেন্ট — চালানের ঠিক নিচে, একই সুইচের পেছনে নয়।
+             *
+             * যে ডিপো নিজের গাড়িতে মাল পাঠায় না, তার ট্রিপের পর্দাও
+             * লাগে না — তাই নিজের সুইচ। কিন্তু চালান বন্ধ থাকলে
+             * ট্রিপেরও মানে নেই, আর সেটা সুইচ নয়, বাস্তবতা: তালিকায়
+             * তোলার মতো কোনো চালানই থাকত না।
+             */
+            ['label' => 'sales::menu.shipments', 'route' => 'sales.shipment.index',
+                'permission' => 'sales.shipment.view', 'setting' => 'sales.screen_shipments'],
             ['label' => 'sales::menu.invoices', 'route' => 'sales.invoice.index', 'permission' => 'sales.invoice.view'],
             ['label' => 'sales::menu.collections', 'route' => 'sales.collection.index', 'permission' => 'sales.collection.view'],
             ['label' => 'sales::menu.returns', 'route' => 'sales.return.index', 'permission' => 'sales.return.view'],
@@ -145,6 +157,18 @@ return [
         'sales.challan.view',
         'sales.challan.create',
         'sales.challan.cancel',
+
+        /*
+         * ট্রিপের চাবি চালানের চাবি থেকে আলাদা।
+         *
+         * চালান লেখেন বিক্রয়ের লোক; গাড়ি কে চালাবে, কোন চালান কোন
+         * গাড়িতে উঠবে আর সন্ধ্যায় কী ফিরল — ওটা গুদামের কাজ। একই
+         * চাবিতে রাখলে হয় গুদামের লোককে চালান কাটার অধিকার দিতে হত,
+         * নয় বিক্রয়ের লোককে গাড়ির হিসাব বুঝে নিতে।
+         */
+        'sales.shipment.view',
+        'sales.shipment.create',
+        'sales.shipment.cancel',
         'sales.invoice.view',
         'sales.invoice.create',
         'sales.invoice.cancel',
@@ -196,6 +220,7 @@ return [
     'doc_types' => [
         'SO' => 'sales::doc.order',
         'DC' => 'sales::doc.challan',
+        'TRP' => 'sales::doc.shipment',
         'INV' => 'sales::doc.invoice',
         'COL' => 'sales::doc.collection',
         'SR' => 'sales::doc.return',
@@ -204,6 +229,7 @@ return [
     'drill_sources' => [
         'sales_order' => SalesOrder::class,
         'delivery_challan' => DeliveryChallan::class,
+        'shipment' => Shipment::class,
         'sales_invoice' => SalesInvoice::class,
         'collection' => Collection::class,
         'sales_return' => SalesReturn::class,
@@ -393,6 +419,15 @@ return [
             'default' => true,
             'group' => 'screens',
             'holds' => DeliveryChallan::class,
+        ],
+
+        [
+            'key' => 'sales.screen_shipments',
+            'label' => 'sales::settings.screen_shipments',
+            'type' => 'boolean',
+            'default' => true,
+            'group' => 'screens',
+            'holds' => Shipment::class,
         ],
 
         /*

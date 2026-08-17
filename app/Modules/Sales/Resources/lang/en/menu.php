@@ -22,4 +22,5 @@ return [
     'lot_trace' => 'Trace a lot (recall)',
     'shift' => 'Counter shift',
     'print_queue' => 'Papers not printed',
+    'shipments' => 'Shipments',
 ];
