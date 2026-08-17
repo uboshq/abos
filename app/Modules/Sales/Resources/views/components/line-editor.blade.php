@@ -50,6 +50,38 @@
             this.rows.splice(i, 1);
             if (this.rows.length === 0) this.add();
         },
+
+        /*
+         * চার্ট/বাল্ক শীট থেকে আসা সারিগুলো।
+         *
+         * ── কেন মিলিয়ে বসানো হয়, বদলে দেওয়া হয় না ──────────────────
+         * অর্ডার ধরে খোলা চালানে লাইনগুলো আগে থেকেই ভরা থাকে। শীট
+         * Apply করলে ওগুলো মুছে গেলে মানুষ ভাবতেন শীটটা কিছু নষ্ট
+         * করেছে — অথচ তিনি শুধু আরও কয়েকটা পণ্য যোগ করতে চেয়েছিলেন।
+         *
+         * একই পণ্য দুই জায়গায় থাকলে শীটের সংখ্যাটাই থাকে: শীটে তিনি
+         * সবে ওটা টাইপ করেছেন, আর নতুন কথাটাই শেষ কথা।
+         */
+        absorb(rows) {
+            for (const row of rows) {
+                const existing = this.rows.find(r => String(r.product_id) === String(row.product_id));
+
+                if (existing) {
+                    existing.qty = row.qty;
+                    existing.rate = row.rate || existing.rate;
+                    continue;
+                }
+
+                this.rows.push({
+                    product_id: String(row.product_id),
+                    qty: row.qty, rate: row.rate ?? '',
+                    discount: '', tax: '', link: '', unit_id: '',
+                });
+            }
+
+            // শুরুর খালি সারিটা — শীট থেকে আসার পর ওটা কেবল একটা ফাঁকা ঘর
+            this.rows = this.rows.filter(r => r.product_id !== '' || this.rows.length === 1);
+        },
         amount(row) {
             const base = (parseFloat(row.qty) || 0) * (parseFloat(row.rate) || 0);
             const net = base - (parseFloat(row.discount) || 0);
@@ -59,7 +91,8 @@
             return this.rows.reduce((sum, row) => sum + this.amount(row), 0);
         },
      }"
-     x-init="if (rows.length === 0) add()">
+     x-init="if (rows.length === 0) add()"
+     @bulk-applied.window="absorb($event.detail.rows)">
 
     <div class="table-responsive">
         <table class="table-cards w-full text-sm">

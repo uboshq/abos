@@ -14,6 +14,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Inventory\Services\StockService;
 use App\Modules\MasterData\Models\Vehicle;
 use App\Modules\Sales\Http\Requests\DeliveryChallanRequest;
 use App\Modules\Sales\Models\DeliveryChallan;
@@ -176,6 +177,21 @@ class DeliveryChallanController extends Controller implements HasMiddleware
             'customers' => Customer::query()->active()->orderBy('name_en')->get(),
             'warehouses' => Warehouse::query()->active()->orderBy('code')->get(),
             'products' => Product::query()->active()->with('unit')->orderBy('name_en')->get(),
+
+            /*
+             * গোটা ক্যাটালগের মজুদ — চার্ট/বাল্ক শীটের জন্য, এক কোয়েরিতে।
+             *
+             * পণ্য ধরে ধরে গুনলে চারশো পণ্যে চারশো কোয়েরি হত। তার চেয়েও
+             * বড় কথা, আলাদা মুহূর্তে গোনা সংখ্যাগুলো একে অন্যের সাথে
+             * না-ও মিলতে পারে — শীটটা একই মুহূর্তের ছবি হওয়া দরকার।
+             *
+             * গুদাম বাছার আগে ডিফল্ট গুদামের সংখ্যা, কারণ শীটটা ফর্ম
+             * খোলার সময়েই বসে; ভুল গুদামের সংখ্যা দেখানোর চেয়ে
+             * প্রতিষ্ঠানের প্রধান গুদামেরটা দেখানো কম বিভ্রান্তিকর।
+             */
+            'stock' => app(StockService::class)->statesForAll(
+                Warehouse::query()->where('is_default', true)->first()
+            ),
             'orders' => SalesOrder::query()->open()->with('customer')
                 ->orderByDesc('trx_date')->limit(200)->get(),
 
