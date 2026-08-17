@@ -72,7 +72,16 @@ class CustomerController extends Controller implements HasMiddleware
             ->when($request->boolean('inactive') === false, fn ($q) => $q->active())
             ->with('partyType')
             // বকেয়া সারির সাথেই আসে, নাহলে ৫০ সারিতে ৫০টা কোয়েরি
-            ->withOutstanding();
+            ->withOutstanding()
+
+            /*
+             * কেবল যাঁরা ধারের সীমা ছাড়িয়ে গেছেন।
+             *
+             * হোম পর্দার সারিটা এখানেই নিয়ে আসে, আর সংখ্যাটা ও এই
+             * তালিকাটা একই স্কোপ থেকে আসে (`overCreditLimit`) — তাই
+             * "৩ জন" দেখে ক্লিক করে চারজন পাওয়ার সুযোগ নেই।
+             */
+            ->when($request->boolean('over_limit'), fn ($q) => $q->overCreditLimit());
 
         $sort = $this->applySort($query, $request, $this->sorts());
 

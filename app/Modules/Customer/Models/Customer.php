@@ -259,6 +259,32 @@ class Customer extends Model implements Drillable
     }
 
     /**
+     * যাঁদের বকেয়া ধারের সীমা ছাড়িয়ে গেছে।
+     *
+     * ── কেন শূন্য সীমা বাদ ──────────────────────────────────────────
+     * শূন্য মানে সীমাহীন, "কিছুই বাকি রাখা যাবে না" নয় — ঠিক যেমন
+     * `wouldExceedCreditLimit()` ধরে। বাদ না দিলে সীমা না-বসানো
+     * প্রতিটা গ্রাহক এই তালিকায় এসে পড়তেন, আর তালিকাটা তখন কেউ
+     * খুলে দেখতেন না।
+     *
+     * ── কেন SQL-এ, PHP-তে নয় ────────────────────────────────────────
+     * সংখ্যাটা ড্যাশবোর্ডে গোনা হয় আর তালিকায় ছাঁকা হয়। দুই জায়গায়
+     * দুই রকম করে লিখলে একদিন দুইটা আলাদা উত্তর দিত — "৩ জন ছাড়িয়েছেন"
+     * দেখে ক্লিক করে চারজন পাওয়া।
+     */
+    public function scopeOverCreditLimit(Builder $query): Builder
+    {
+        $net = LedgerEntry::query()
+            ->selectRaw('COALESCE(SUM(debit) - SUM(credit), 0)')
+            ->whereColumn('ledger_entries.party_id', 'customers.id')
+            ->where('ledger_entries.party_type', self::drillSourceType());
+
+        return $query
+            ->where('credit_limit', '>', 0)
+            ->whereRaw('('.$net->toRawSql().') > customers.credit_limit');
+    }
+
+    /**
      * এই বিলটা করলে ক্রেডিট লিমিট ছাড়াবে কি না।
      *
      * লিমিট শূন্য মানে সীমাহীন, বন্ধ নয় — শূন্যকে "কিছুই বাকি রাখা যাবে না"
