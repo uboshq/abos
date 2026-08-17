@@ -12,4 +12,5 @@ return [
     'gatepass' => 'গেটপাস',
     'delivery_order' => 'ডেলিভারি অর্ডার',
     'return' => 'বিক্রয় ফেরত',
+    'shipment' => 'শিপমেন্ট',
 ];

@@ -30,4 +30,5 @@ return [
     'screen_orders' => 'Show the Sales Orders screen',
     'screen_challans' => 'Show the Delivery Challans screen',
     'reprint_limit' => 'How many times one paper may be printed (0 = no limit)',
+    'screen_shipments' => 'Show the Shipments screen',
 ];

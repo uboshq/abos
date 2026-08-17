@@ -14,6 +14,7 @@ use App\Modules\Sales\Http\Controllers\SalesPrintController;
 use App\Modules\Sales\Http\Controllers\SalesReportController;
 use App\Modules\Sales\Http\Controllers\SalesReturnController;
 use App\Modules\Sales\Http\Controllers\ShiftController;
+use App\Modules\Sales\Http\Controllers\ShipmentController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -85,6 +86,30 @@ Route::middleware('auth')->prefix('sales')->group(function () {
         Route::put('/{challan}', [DeliveryChallanController::class, 'update'])->whereNumber('challan')->name('update');
         Route::post('/{challan}/confirm', [DeliveryChallanController::class, 'confirm'])->whereNumber('challan')->name('confirm');
         Route::post('/{challan}/cancel', [DeliveryChallanController::class, 'cancel'])->whereNumber('challan')->name('cancel');
+    });
+
+    /*
+     * শিপমেন্ট — গাড়ির একটা দিন।
+     *
+     * `settle` সারি ধরে, তাই ট্রিপ ও সারি দুইটাই ঠিকানায় থাকে — আর
+     * কন্ট্রোলার মিলিয়ে দেখে সারিটা সত্যিই ওই ট্রিপের কি না, নাহলে
+     * অন্য ট্রিপের সারিতে হাত দেওয়া যেত।
+     */
+    Route::prefix('shipments')->name('shipment.')->group(function () {
+        Route::get('/', [ShipmentController::class, 'index'])->name('index');
+        Route::get('/create', [ShipmentController::class, 'create'])->name('create');
+        Route::post('/', [ShipmentController::class, 'store'])->name('store');
+        Route::get('/{shipment}', [ShipmentController::class, 'show'])->whereNumber('shipment')->name('show');
+        Route::get('/{shipment}/edit', [ShipmentController::class, 'edit'])->whereNumber('shipment')->name('edit');
+        Route::put('/{shipment}', [ShipmentController::class, 'update'])->whereNumber('shipment')->name('update');
+        Route::post('/{shipment}/dispatch', [ShipmentController::class, 'dispatch'])
+            ->whereNumber('shipment')->name('dispatch');
+        Route::post('/{shipment}/lines/{line}/settle', [ShipmentController::class, 'settle'])
+            ->whereNumber(['shipment', 'line'])->name('settle');
+        Route::post('/{shipment}/close', [ShipmentController::class, 'close'])
+            ->whereNumber('shipment')->name('close');
+        Route::post('/{shipment}/cancel', [ShipmentController::class, 'cancel'])
+            ->whereNumber('shipment')->name('cancel');
     });
 
     Route::prefix('invoices')->name('invoice.')->group(function () {

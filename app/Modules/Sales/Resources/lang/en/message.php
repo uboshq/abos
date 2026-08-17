@@ -155,4 +155,10 @@ return [
     'pos_bill_not_found' => 'No confirmed bill with that number was found.',
     'collected_amount' => ':amount collected',
     'returned_amount' => ':amount returned',
+    'shipment_created' => 'Trip sheet created — press Dispatch when the van leaves.',
+    'shipment_updated' => 'Trip sheet updated.',
+    'shipment_dispatched' => 'The van has left.',
+    'shipment_line_settled' => 'That row is settled.',
+    'shipment_closed' => 'Trip finished — every challan is accounted for.',
+    'shipment_cancelled' => 'The trip was cancelled; its challans are free again.',
 ];
