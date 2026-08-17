@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Modules\Inventory\Dashboard\InventoryWidgets;
+use App\Modules\Inventory\Imports\OpeningStockImporter;
 use App\Modules\Inventory\Imports\ProductImporter;
 use App\Modules\Inventory\Models\CostLayer;
 use App\Modules\Inventory\Models\CostLayerUse;
@@ -199,6 +200,15 @@ return [
 
     'imports' => [
         'product' => ProductImporter::class,
+
+        /*
+         * খোলা মজুদ — পণ্যের ইমপোর্টের পরে, আলাদা ফাইল।
+         *
+         * পণ্যের তালিকা অফিসে বসে তৈরি হয়, আর গোনা মজুদ গুদামে দাঁড়িয়ে।
+         * একই ফাইলে চাইলে কোনোটাই শেষ হত না — আর পণ্য না বসিয়ে মজুদ
+         * বসানোও যায় না, তাই ক্রমটাও এখানেই বলা।
+         */
+        'opening_stock' => OpeningStockImporter::class,
     ],
 
     'reports' => [

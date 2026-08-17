@@ -65,4 +65,7 @@ return [
     'issue_where_it_goes' => 'Where each reason posts',
     'issue_narration_hint' => 'Who took it, or why it was given — for a gift this matters.',
     'issue_cost_note' => 'Stock falls at cost, not at the selling price — nobody paid, so it is not a sale.',
+
+    // The movement row says where the figure came from — typed, or from a file
+    'opening_from_file' => 'Opening stock brought in from the old books',
 ];
