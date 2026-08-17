@@ -146,6 +146,15 @@ return [
              */
             ['label' => 'sales::menu.lot_trace', 'route' => 'sales.lot.trace',
                 'permission' => 'sales.challan.view'],
+
+            /*
+             * লক্ষ্যমাত্রা — প্রতিবেদনের ভাগে, লেনদেনে নয়।
+             *
+             * এখানে কোনো কাগজ তৈরি হয় না; মাসে একবার সংখ্যা বসে আর
+             * বাকি দিনগুলো দেখা হয় — সেটা প্রতিবেদনের স্বভাব।
+             */
+            ['label' => 'sales::target.title', 'route' => 'sales.target.index',
+                'permission' => 'sales.target.view'],
         ],
     ],
 
@@ -169,6 +178,14 @@ return [
         'sales.shipment.view',
         'sales.shipment.create',
         'sales.shipment.cancel',
+
+        /*
+         * টার্গেট দেখা আর বসানো — দুইটা আলাদা চাবি।
+         *
+         * নিজের টার্গেট নিজে বদলাতে পারলে ওটা আর টার্গেট নয়, ইচ্ছা।
+         */
+        'sales.target.view',
+        'sales.target.manage',
         'sales.invoice.view',
         'sales.invoice.create',
         'sales.invoice.cancel',
