@@ -49,6 +49,16 @@ return [
     'menu' => [
         'master' => [
             ['label' => 'inventory::menu.products', 'route' => 'inventory.product.index', 'permission' => 'inventory.product.view'],
+
+            /*
+             * লেবেল ছাপা — পণ্যের ঠিক নিচে।
+             *
+             * পণ্যের তালিকা থেকেই লোকে এখানে আসেন: মাল ঢুকল, নতুন
+             * পণ্য বসল, এবার গায়ে সাঁটার কাগজ চাই।
+             */
+            ['label' => 'inventory::label.title', 'route' => 'inventory.label.index',
+                'permission' => 'inventory.product.view'],
+
             ['label' => 'inventory::menu.warehouses', 'route' => 'inventory.warehouse.index', 'permission' => 'inventory.warehouse.view'],
         ],
         'transactions' => [
