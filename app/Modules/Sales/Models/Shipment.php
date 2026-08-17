@@ -12,7 +12,6 @@ use App\Core\Contracts\Drillable;
 use App\Core\Support\DocumentStatus;
 use App\Models\Branch;
 use App\Models\User;
-use App\Modules\Hr\Models\Employee;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\MasterData\Models\Location;
 use App\Modules\MasterData\Models\Vehicle;
@@ -44,7 +43,7 @@ class Shipment extends Model implements Drillable
     protected $fillable = [
         'company_id', 'branch_id', 'financial_year_id', 'document_no',
         'trx_date', 'warehouse_id', 'vehicle_id', 'vehicle_no',
-        'driver_employee_id', 'driver_name', 'helper_name',
+        'driver_name', 'helper_name',
         'route_location_id', 'opening_km', 'closing_km',
         'dispatched_at', 'returned_at',
         'status', 'narration', 'created_by',
@@ -78,11 +77,6 @@ class Shipment extends Model implements Drillable
         return $this->belongsTo(Vehicle::class);
     }
 
-    public function driver(): BelongsTo
-    {
-        return $this->belongsTo(Employee::class, 'driver_employee_id');
-    }
-
     public function route(): BelongsTo
     {
         return $this->belongsTo(Location::class, 'route_location_id');
@@ -110,10 +104,21 @@ class Shipment extends Model implements Drillable
         return $this->vehicle?->registration_no ?? (string) $this->vehicle_no;
     }
 
-    /** চালকের নাম — কর্মী হলে তালিকার নাম, নাহলে যা লেখা হয়েছিল। */
+    /**
+     * চালকের নাম।
+     *
+     * ── কেন কর্মী তালিকার সারি নয় ───────────────────────────────────
+     * প্রথমে `hr_employees`-এ FK ছিল, যাতে চালক ধরে যোগ করা যায়।
+     * সীমানার পরীক্ষা ধরল — বিক্রয় Hr-এর ভেতরে হাত দিচ্ছে, অঘোষিত।
+     * ঘোষণা করলে সেটা একটা মিথ্যা কথা হত: বিক্রয় করতে বেতনের খাতা
+     * লাগে না। আর ভাড়ার গাড়ির চালক কর্মীই নন।
+     *
+     * চালান ও গাড়ির মাস্টার দুইটাই চালককে নাম হিসেবেই রাখে; ট্রিপও
+     * তাই রাখে।
+     */
     public function driverName(): string
     {
-        return $this->driver?->name() ?? (string) $this->driver_name;
+        return (string) $this->driver_name;
     }
 
     /**

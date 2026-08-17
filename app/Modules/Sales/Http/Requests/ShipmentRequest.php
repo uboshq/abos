@@ -25,8 +25,6 @@ class ShipmentRequest extends FormRequest
                 Rule::exists('mdm_vehicles', 'id')->where('company_id', $companyId)],
             'vehicle_no' => ['nullable', 'string', 'max:64'],
 
-            'driver_employee_id' => ['nullable', 'integer',
-                Rule::exists('hr_employees', 'id')->where('company_id', $companyId)],
             'driver_name' => ['nullable', 'string', 'max:191'],
             'helper_name' => ['nullable', 'string', 'max:191'],
 
@@ -56,7 +54,7 @@ class ShipmentRequest extends FormRequest
     {
         return $this->safe()->only([
             'trx_date', 'warehouse_id', 'vehicle_id', 'vehicle_no',
-            'driver_employee_id', 'driver_name', 'helper_name',
+            'driver_name', 'helper_name',
             'route_location_id', 'opening_km', 'narration',
         ]);
     }
