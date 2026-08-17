@@ -13,6 +13,7 @@ use App\Modules\Sales\Http\Controllers\SalesOrderController;
 use App\Modules\Sales\Http\Controllers\SalesPrintController;
 use App\Modules\Sales\Http\Controllers\SalesReportController;
 use App\Modules\Sales\Http\Controllers\SalesReturnController;
+use App\Modules\Sales\Http\Controllers\SalesTargetController;
 use App\Modules\Sales\Http\Controllers\ShiftController;
 use App\Modules\Sales\Http\Controllers\ShipmentController;
 use Illuminate\Support\Facades\Route;
@@ -95,6 +96,18 @@ Route::middleware('auth')->prefix('sales')->group(function () {
      * কন্ট্রোলার মিলিয়ে দেখে সারিটা সত্যিই ওই ট্রিপের কি না, নাহলে
      * অন্য ট্রিপের সারিতে হাত দেওয়া যেত।
      */
+    /*
+     * লক্ষ্যমাত্রা — একটাই পর্দা, দেখা ও বসানো দুইটাই।
+     *
+     * দেখার চাবি আর বসানোর চাবি আলাদা: মালিক বসান, বিক্রয়কর্মী
+     * নিজেরটা দেখেন — নিজের টার্গেট নিজে বদলাতে পারলে ওটা আর
+     * টার্গেট থাকত না।
+     */
+    Route::prefix('targets')->name('target.')->group(function () {
+        Route::get('/', [SalesTargetController::class, 'index'])->name('index');
+        Route::post('/', [SalesTargetController::class, 'store'])->name('store');
+    });
+
     Route::prefix('shipments')->name('shipment.')->group(function () {
         Route::get('/', [ShipmentController::class, 'index'])->name('index');
         Route::get('/create', [ShipmentController::class, 'create'])->name('create');

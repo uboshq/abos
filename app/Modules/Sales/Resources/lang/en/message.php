@@ -161,4 +161,5 @@ return [
     'shipment_line_settled' => 'That row is settled.',
     'shipment_closed' => 'Trip finished — every challan is accounted for.',
     'shipment_cancelled' => 'The trip was cancelled; its challans are free again.',
+    'targets_saved' => 'Targets saved.',
 ];

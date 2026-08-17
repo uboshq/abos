@@ -111,6 +111,17 @@ class DemoSeeder extends Seeder
                 ->whereNotIn('name', [
                     'customer.credit_limit.override',
                     'sales.discount.override',
+
+                    /*
+                     * নিজের টার্গেট নিজে বসানো — এটাও সীমা অতিক্রম।
+                     *
+                     * ঠিক যে ফাঁদের কথা উপরে লেখা, সেটাই আবার ঘটেছিল:
+                     * Sales মডিউল `sales.target.manage` ঘোষণা করল, আর
+                     * ঢালাও `sales.%` নিয়মটা সেটা বিক্রয়কর্মীকে দিয়ে
+                     * দিল — কোনো ভুল বার্তা ছাড়াই। মাসের ২৮ তারিখে
+                     * সংখ্যাটা নামিয়ে দিলে অর্জন হঠাৎ ১২০% দেখাত।
+                     */
+                    'sales.target.manage',
                 ])
                 ->get()
         );

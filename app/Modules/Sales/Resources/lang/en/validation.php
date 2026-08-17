@@ -92,4 +92,5 @@ return [
     'goods_are_not_back_in_the_books' => 'The books still show these goods with the customer: :documents. Cancel the challan, or write a sales return if it was invoiced, and then the trip will close.',
     'the_meter_does_not_run_backwards' => 'The closing meter reads lower than the opening one — one of the two was typed wrong.',
     'warehouse_missing' => 'Choose the warehouse the van leaves from.',
+    'target_month_too_far' => 'A target cannot be set that far ahead — check the month is right.',
 ];
