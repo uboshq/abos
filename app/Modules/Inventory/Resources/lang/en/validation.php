@@ -56,4 +56,8 @@ return [
     'surplus_needs_rate' => 'Surplus found in a count needs a rate — only you know which consignment it came from, and without a rate it can never leave the shelf again.',
     'issue_needs_qty' => 'The quantity issued must be more than zero.',
     'issue_more_than_stock' => 'Only :have is on the shelf — no more than that can go out.',
+
+    // ── Opening stock, from a file ──────────────────────────────────
+    'opening_must_be_positive' => ':column must be more than zero — an opening of nothing, or at no cost, says nothing.',
+    'opening_already_set' => ':product already has opening stock in :warehouse. Twice in the file would double the stock, and both rows would look right.',
 ];
