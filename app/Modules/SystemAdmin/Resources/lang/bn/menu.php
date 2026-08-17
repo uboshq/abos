@@ -13,4 +13,5 @@ return [
     'login_history' => 'লগইন ইতিহাস',
     'control_panel' => 'কন্ট্রোল প্যানেল',
     'backup' => 'ব্যাকআপ',
+
 ];
