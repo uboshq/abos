@@ -127,9 +127,17 @@ class OneQuestionOneAnswerTest extends TestCase
             ->firstWhere('label', __('sales::dashboard.sales_today'));
 
         $this->assertNotNull($widget, 'হোম পর্দায় "আজকের বিক্রয়" ঘরটাই নেই।');
-        $this->assertNotNull($widget->hint, 'সংখ্যাটার পাশে কোনো সংজ্ঞা নেই।');
-        $this->assertStringContainsString(__('core.status.confirmed'), $widget->hint);
-        $this->assertStringNotContainsString(__('core.status.draft'), $widget->hint);
+
+        /*
+         * সংজ্ঞাটা `definition`-এ, `hint`-এ নয়।
+         *
+         * আগে দুইটাই এক ঘরে ছিল, আর তুলনার লেখা ("গত সোমবারের তুলনায়")
+         * বসাতে গিয়ে সংজ্ঞাটা নীরবে সরে গিয়েছিল — এই টেস্টটাই সেটা
+         * ধরেছে। এখন দুইটা আলাদা ঘর: সংজ্ঞা টুলটিপে, তুলনা পর্দায়।
+         */
+        $this->assertNotNull($widget->definition, 'সংখ্যাটার সংজ্ঞা নেই।');
+        $this->assertStringContainsString(__('core.status.confirmed'), $widget->definition);
+        $this->assertStringNotContainsString(__('core.status.draft'), $widget->definition);
         $this->assertSame(Money::format('300', 2), $widget->value);
     }
 

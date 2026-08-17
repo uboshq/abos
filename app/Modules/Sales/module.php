@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\Sales\Dashboard\SalesActivity;
 use App\Modules\Sales\Dashboard\SalesWidgets;
 use App\Modules\Sales\Events\InvoiceConfirmed;
 use App\Modules\Sales\Integrity\SalesChecks;
@@ -264,6 +265,16 @@ return [
      */
     'integrity' => [
         SalesChecks::class,
+    ],
+
+    /*
+     * "সদ্য কী হয়েছে" — বিক্রয়ের দিক থেকে।
+     *
+     * দিনের শুরুতে মালিকের প্রথম প্রশ্ন "আমি না থাকতে কী কী হলো"।
+     * আজ পর্যন্ত সেটার উত্তর পেতে চারটা তালিকা আলাদা করে খুলতে হত।
+     */
+    'activity' => [
+        SalesActivity::class,
     ],
 
     /*

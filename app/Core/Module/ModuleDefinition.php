@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Core\Module;
 
 use App\Core\Contracts\ChecksItsOwnBooks;
+use App\Core\Contracts\ContributesActivity;
 use App\Core\Contracts\ContributesFacts;
 use App\Core\Contracts\DashboardWidgets;
 use App\Core\Contracts\Importer;
@@ -87,6 +88,17 @@ final class ModuleDefinition
          * @var list<class-string>
          */
         public readonly array $integrity,
+
+        /**
+         * "সদ্য কী হয়েছে" বলার সরবরাহকারীরা — ContributesActivity।
+         *
+         * কোর যদি নিজে `audit_trails` পড়ে সাজাত, তাকে জানতে হত কোন
+         * ক্লাসের সারি কোন চাবির পেছনে — অর্থাৎ প্রতিটা মডিউলের নাম
+         * (সেকশন ১৯.৭)।
+         *
+         * @var list<class-string>
+         */
+        public readonly array $activity,
 
         /**
          * যে কাজগুলোয় এই মডিউল অনুমোদন চাইতে পারে — কাজ => লেবেল কী।
@@ -281,6 +293,7 @@ final class ModuleDefinition
             widgets: self::validateWidgets($raw['widgets'] ?? [], $raw['permissions'] ?? [], $path),
             metrics: self::validateMetrics($raw['metrics'] ?? [], $path),
             integrity: self::validateIntegrity($raw['integrity'] ?? [], $path),
+            activity: self::validateActivity($raw['activity'] ?? [], $path),
             approvals: self::validateApprovals($raw['approvals'] ?? [], $path),
             customFields: self::validateCustomFields(
                 $raw['custom_fields'] ?? [],
@@ -455,6 +468,34 @@ final class ModuleDefinition
         }
 
         return array_values($metrics);
+    }
+
+    /**
+     * ঘটনা-সরবরাহকারীরা — ক্লাসটা আছে কি না, চুক্তিটা মানে কি না।
+     *
+     * ভুল নাম ধরা না পড়লে ওই মডিউলের ঘটনাগুলো কোনোদিন তালিকায় আসত
+     * না, আর অনুপস্থিত একটা সারির অনুপস্থিতি কেউ খেয়াল করে না।
+     *
+     * @param  list<mixed>  $providers
+     * @return list<class-string<ContributesActivity>>
+     */
+    private static function validateActivity(array $providers, string $path): array
+    {
+        foreach ($providers as $class) {
+            if (! is_string($class) || ! class_exists($class)) {
+                throw new InvalidArgumentException(
+                    "{$path}: activity provider '".(is_string($class) ? $class : gettype($class))."' does not exist."
+                );
+            }
+
+            if (! is_subclass_of($class, ContributesActivity::class)) {
+                throw new InvalidArgumentException(
+                    "{$path}: activity provider {$class} must implement the ContributesActivity contract."
+                );
+            }
+        }
+
+        return array_values($providers);
     }
 
     /**

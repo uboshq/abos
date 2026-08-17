@@ -37,6 +37,7 @@ final class ApprovalWidgets implements DashboardWidgets
                 permission: 'approval.decide',
                 tone: $waiting > 0 ? 'warn' : 'neutral',
                 sort: 5,
+                icon: 'inbox',
             ),
 
             /*
@@ -56,6 +57,7 @@ final class ApprovalWidgets implements DashboardWidgets
                 permission: 'approval.view',
                 tone: 'neutral',
                 sort: 6,
+                icon: 'outbox',
             ),
         ];
     }

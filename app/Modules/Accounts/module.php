@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+use App\Modules\Accounts\Dashboard\AccountsActivity;
 use App\Modules\Accounts\Dashboard\AccountsWidgets;
 use App\Modules\Accounts\Integrity\AccountsChecks;
 use App\Modules\Accounts\Models\Account;
@@ -234,6 +235,11 @@ return [
      */
     'integrity' => [
         AccountsChecks::class,
+    ],
+
+    // "সদ্য কী হয়েছে" — টাকার দিক থেকে
+    'activity' => [
+        AccountsActivity::class,
     ],
 
     'settings' => [

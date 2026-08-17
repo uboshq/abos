@@ -13,6 +13,7 @@ use App\Core\Support\Money;
 use App\Modules\Sales\Metrics\SalesMetrics;
 use App\Modules\Sales\Models\SalesInvoice;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 /**
  * বিক্রয়ের সংখ্যাগুলো হোম পর্দায়।
@@ -34,18 +35,37 @@ final class SalesWidgets implements DashboardWidgets
         $today = Carbon::today()->toDateString();
         $monthStart = Carbon::today()->startOfMonth()->toDateString();
 
+        /*
+         * বছরটা অর্থবছর, ক্যালেন্ডার বছর নয়।
+         *
+         * ব্যবসার বছর জুলাই থেকে জুন। জানুয়ারি ধরে গুনলে পর্দার সংখ্যা
+         * আর হিসাবরক্ষকের সংখ্যা আলাদা হত।
+         */
+        $yearStart = auth()->user()?->currentCompany?->currentFinancialYear()?->starts_on?->toDateString()
+            ?? $monthStart;
+
         return [
             self::money(SalesMetrics::salesToday(), 'today', 10,
-                route('sales.invoice.index', ['from' => $today, 'to' => $today])),
+                route('sales.invoice.index', ['from' => $today, 'to' => $today]),
+                self::lastSevenDays('sal_invoices', 'total'), 'sales',
+                self::againstLastWeek('sal_invoices', 'total')),
 
             self::money(SalesMetrics::collectedToday(), 'today', 20,
-                route('sales.collection.index', ['from' => $today, 'to' => $today])),
+                route('sales.collection.index', ['from' => $today, 'to' => $today]),
+                self::lastSevenDays('sal_collections', 'amount'), 'inbox',
+                self::againstLastWeek('sal_collections', 'amount')),
 
             self::money(SalesMetrics::salesThisMonth(), 'month', 10,
                 route('sales.invoice.index', ['from' => $monthStart, 'to' => $today])),
 
             self::money(SalesMetrics::collectedThisMonth(), 'month', 20,
-                route('sales.collection.index', ['from' => $monthStart, 'to' => $today])),
+                route('sales.collection.index', ['from' => $monthStart, 'to' => $today]), [], 'inbox'),
+
+            self::money(SalesMetrics::salesThisYear(), 'year', 10,
+                route('sales.invoice.index', ['from' => $yearStart, 'to' => $today])),
+
+            self::money(SalesMetrics::collectedThisYear(), 'year', 20,
+                route('sales.collection.index', ['from' => $yearStart, 'to' => $today]), [], 'inbox'),
 
             /*
              * খসড়া বিল — কেউ শুরু করে শেষ করেনি।
@@ -61,7 +81,17 @@ final class SalesWidgets implements DashboardWidgets
                 href: route('sales.invoice.index', ['sort' => 'oldest']),
                 permission: 'sales.invoice.view',
                 tone: 'warn',
+
+                /*
+                 * সবচেয়ে পুরনোটা কত দিনের।
+                 *
+                 * "৩টা খসড়া বিল" আর "৩টা খসড়া বিল, সবচেয়ে পুরনোটা ১১
+                 * দিনের" — দ্বিতীয়টা পড়ে মানুষ আজই খোলে। সংখ্যাটা
+                 * বলে কত, বাক্যটা বলে কতটা জরুরি।
+                 */
+                hint: self::oldestDraftAge(),
                 sort: 10,
+                icon: 'sales',
             ),
 
             new Widget(
@@ -72,6 +102,7 @@ final class SalesWidgets implements DashboardWidgets
                 permission: 'sales.report',
                 tone: 'warn',
                 sort: 20,
+                icon: 'challan',
             ),
 
             new Widget(
@@ -82,6 +113,7 @@ final class SalesWidgets implements DashboardWidgets
                 permission: 'sales.report',
                 tone: 'neutral',
                 sort: 30,
+                icon: 'clock',
             ),
         ];
     }
@@ -95,7 +127,8 @@ final class SalesWidgets implements DashboardWidgets
      * সংজ্ঞাটাও সঙ্গে আসে, তাই ঘরটার উপর মাউস রাখলে দেখা যায় কী গোনা
      * হয়েছে — যে সংখ্যার সংজ্ঞা লুকানো, দুইজন মানুষ তার দুই অর্থ করে।
      */
-    private static function money(Metric $metric, string $group, int $sort, string $href): Widget
+    private static function money(Metric $metric, string $group, int $sort, string $href,
+        array $spark = [], string $icon = 'sales', ?array $against = null): Widget
     {
         return new Widget(
             group: $group,
@@ -105,8 +138,122 @@ final class SalesWidgets implements DashboardWidgets
             permission: $metric->permission,
             tone: 'money',
             sort: $sort,
-            hint: $metric->definition(),
+            hint: $against['hint'] ?? null,
+            delta: $against['delta'] ?? null,
+            definition: $metric->definition(),
+
+            /*
+             * লেবেলের আগে আইকন।
+             *
+             * চারটা কার্ড পাশাপাশি বসলে লেখাগুলো একই রকম দেখায়;
+             * আইকনটাই দূর থেকে বলে দেয় কোনটা বিক্রয়ের আর কোনটা
+             * আদায়ের — আর কাউন্টার থেকে ফিরে মালিক ওভাবেই তাকান।
+             */
+            icon: $icon,
+            spark: $spark,
         );
+    }
+
+    /**
+     * সবচেয়ে পুরনো খসড়া বিলটা কত দিনের — না থাকলে খালি।
+     */
+    private static function oldestDraftAge(): ?string
+    {
+        $oldest = SalesInvoice::query()
+            ->where('status', DocumentStatus::DRAFT)
+            ->min('trx_date');
+
+        if ($oldest === null) {
+            return null;
+        }
+
+        $days = Carbon::parse($oldest)->diffInDays(Carbon::today());
+
+        return __('core.dashboard.oldest_is', ['days' => (int) $days]);
+    }
+
+    /**
+     * আজকের সাথে গত সপ্তাহের একই বারের তুলনা।
+     *
+     * ── কেন গতকাল নয়, গত সপ্তাহের একই বার ───────────────────────────
+     * ডিপোর সপ্তাহে একটা ছক আছে: শুক্রবার বন্ধের কাছাকাছি, বৃহস্পতিবার
+     * ভরা। গতকালের সাথে তুলনা করলে প্রতি শনিবার "৮০% পড়ে গেছে" দেখাত,
+     * অথচ কিছুই ঘটেনি — আর দুই সপ্তাহে মানুষ সংখ্যাটা দেখা বন্ধ করত।
+     *
+     * একই বারের সাথে মিলিয়ে দেখলে ছকটা কাটা পড়ে, আর যা থাকে সেটাই
+     * সত্যিকারের বদল।
+     *
+     * ── আগের বার শূন্য হলে তুলনা নেই ────────────────────────────────
+     * শূন্য থেকে বাড়া শতাংশে অসীম। "নতুন" আর "১০০% বেড়েছে" এক কথা নয়,
+     * আর দ্বিতীয়টা লিখলে সেটা মিথ্যা।
+     *
+     * @return array{delta: ?string, hint: string}
+     */
+    private static function againstLastWeek(string $table, string $column): array
+    {
+        $today = Carbon::today();
+        $before = $today->copy()->subWeek();
+
+        $sum = fn (Carbon $day) => (string) (DB::table($table)
+            ->whereIn('status', DocumentStatus::POSTED)
+            ->whereNull('deleted_at')
+            ->whereDate('trx_date', $day->toDateString())
+            ->sum($column) ?: '0');
+
+        $now = $sum($today);
+        $then = $sum($before);
+
+        $hint = __('core.dashboard.against_last', [
+            'day' => $before->locale(app()->getLocale())->dayName,
+        ]);
+
+        if (bccomp($then, '0', 4) === 0) {
+            return ['delta' => null, 'hint' => $hint];
+        }
+
+        $change = bcdiv(bcmul(bcsub($now, $then, 4), '100', 6), $then, 1);
+
+        return [
+            'delta' => (bccomp($change, '0', 1) >= 0 ? '+' : '').$change.'%',
+            'hint' => $hint,
+        ];
+    }
+
+    /**
+     * শেষ সাত দিনের বিক্রয় — কার্ডের নিচের রেখাটা।
+     *
+     * ── কেন সাত, আর কেন দিন ধরে ─────────────────────────────────────
+     * সাত দিনে সপ্তাহের ছকটা একবার পুরো দেখা যায় — শুক্রবারে কম,
+     * বৃহস্পতিবারে বেশি। কম দিনে ছকটা ধরা পড়ত না, বেশি দিনে রেখাটা
+     * এত ঘন হত যে আজকের বিন্দুটাই আলাদা করা যেত না।
+     *
+     * ── কেন খালি দিনগুলোও থাকে ──────────────────────────────────────
+     * যেদিন কিছু বিক্রি হয়নি সেদিন শূন্য, আর রেখাটা মাটি ছোঁয়। বাদ
+     * দিলে সাত দিনের ছয়টা বিন্দু সমান দূরত্বে বসত আর বন্ধের দিনটা
+     * অদৃশ্য হয়ে যেত — অথচ ওটাই ছকের অর্ধেক ব্যাখ্যা।
+     *
+     * @return list<string>
+     */
+    private static function lastSevenDays(string $table, string $column): array
+    {
+        $from = Carbon::today()->subDays(6);
+
+        $byDay = DB::table($table)
+            ->whereIn('status', DocumentStatus::POSTED)
+            ->whereNull('deleted_at')
+            ->whereBetween('trx_date', [$from->toDateString(), Carbon::today()->toDateString()])
+            ->groupBy('trx_date')
+            ->pluck(DB::raw("COALESCE(SUM({$column}), 0)"), 'trx_date');
+
+        $series = [];
+
+        for ($i = 0; $i < 7; $i++) {
+            $day = $from->copy()->addDays($i)->toDateString();
+
+            $series[] = (string) ($byDay[$day] ?? '0');
+        }
+
+        return $series;
     }
 
     /**

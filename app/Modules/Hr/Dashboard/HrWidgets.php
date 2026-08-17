@@ -45,6 +45,7 @@ final class HrWidgets implements DashboardWidgets
                 permission: 'hr.leave.approve',
                 tone: 'warn',
                 sort: 95,
+                icon: 'calendar',
             ),
         ];
     }
