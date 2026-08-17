@@ -11,7 +11,6 @@ use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingsService;
 use App\Core\Support\DocumentStatus;
 use App\Http\Controllers\Controller;
-use App\Modules\Hr\Models\Employee;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\MasterData\Models\Location;
 use App\Modules\MasterData\Models\Vehicle;
@@ -54,7 +53,7 @@ class ShipmentController extends Controller implements HasMiddleware
     {
         $query = Shipment::query()
             ->search($request->query('q'))
-            ->with(['vehicle', 'driver', 'route'])
+            ->with(['vehicle', 'route'])
             ->withCount('lines')
             ->when(! $request->boolean('cancelled'),
                 fn ($q) => $q->where('status', '<>', DocumentStatus::CANCELLED));
@@ -102,7 +101,7 @@ class ShipmentController extends Controller implements HasMiddleware
     public function show(Request $request, Shipment $shipment): View
     {
         $shipment->load([
-            'lines.challan.customer', 'vehicle', 'driver', 'route', 'warehouse', 'creator',
+            'lines.challan.customer', 'vehicle', 'route', 'warehouse', 'creator',
         ]);
 
         return view('sales::shipment.show', [
@@ -213,7 +212,6 @@ class ShipmentController extends Controller implements HasMiddleware
                 ->limit(300)
                 ->get(),
             'warehouses' => Warehouse::query()->active()->orderBy('code')->get(),
-            'drivers' => Employee::query()->active()->orderBy('name_en')->get(),
             'routes' => Location::query()->active()->atLevel('route')->orderBy('name_en')->get(),
 
             /*

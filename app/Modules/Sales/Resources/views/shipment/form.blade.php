@@ -76,12 +76,6 @@
                 <x-ui.field name="vehicle_no" :label="__('sales::shipment.vehicle_no')"
                             :value="old('vehicle_no', $shipment->vehicle_no)" />
 
-                @if ($drivers->isNotEmpty())
-                    <x-ui.select name="driver_employee_id" :label="__('sales::shipment.driver')"
-                                 :options="$drivers->mapWithKeys(fn ($e) => [$e->id => $e->name()])"
-                                 :selected="old('driver_employee_id', $shipment->driver_employee_id)"
-                                 placeholder="-" />
-                @endif
 
                 <x-ui.field name="driver_name" :label="__('sales::shipment.driver_name')"
                             :value="old('driver_name', $shipment->driver_name)" />

@@ -444,7 +444,6 @@ final class ShipmentService
         return [
             'vehicle_id' => $data['vehicle_id'] ?? null,
             'vehicle_no' => $data['vehicle_no'] ?? null,
-            'driver_employee_id' => $data['driver_employee_id'] ?? null,
             'driver_name' => $data['driver_name'] ?? null,
             'helper_name' => $data['helper_name'] ?? null,
             'route_location_id' => $data['route_location_id'] ?? null,

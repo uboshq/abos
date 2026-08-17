@@ -29,7 +29,7 @@
             'render' => fn ($d) => $d->vehiclePlate(),
         ],
         [
-            'key' => 'driver_employee_id',
+            'key' => 'driver_name',
             'label' => __('sales::shipment.driver'),
             'render' => fn ($d) => $d->driverName(),
         ],
