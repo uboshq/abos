@@ -153,4 +153,6 @@ return [
     'pos_return' => 'Take back against a bill',
     'pos_refund_cash' => 'Refund the cash from the drawer',
     'pos_bill_not_found' => 'No confirmed bill with that number was found.',
+    'collected_amount' => ':amount collected',
+    'returned_amount' => ':amount returned',
 ];

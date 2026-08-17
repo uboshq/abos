@@ -134,7 +134,11 @@ return [
     'dashboard' => [
         'today' => 'Today',
         'this_month' => 'This month',
+        'this_year' => 'This year',
+        'against_last' => 'against last :day',
+        'oldest_is' => 'oldest is :days days old',
         'needs_doing' => 'Needs doing',
+        'just_happened' => 'Just happened',
         // The zero rows fold into one line — "looked, nothing there"
         'nothing_pending' => 'Nothing pending on one other thing|Nothing pending on :count other things',
         'nothing_to_show' => 'Nothing to show here — the figures come from the modules you have permission to open.',

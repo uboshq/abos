@@ -16,4 +16,6 @@ return [
     'draft_invoices' => 'খসড়া বিল',
     'uninvoiced_lines' => 'মাল গেছে, বিল হয়নি',
     'pending_order_lines' => 'অর্ডার আছে, মাল যায়নি',
+    'sales_this_year' => 'এই বছরের বিক্রয়',
+    'collected_this_year' => 'এই বছরের আদায়',
 ];

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Core\Dashboard\ActivityRegistry;
 use App\Core\Dashboard\DashboardRegistry;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\Accent;
@@ -23,6 +24,7 @@ class WorkspaceController extends Controller
     public function __construct(
         private readonly MenuBuilder $menu,
         private readonly DashboardRegistry $widgets,
+        private readonly ActivityRegistry $activity,
     ) {}
 
     /**
@@ -38,6 +40,16 @@ class WorkspaceController extends Controller
         return view('workspace.dashboard', [
             'menu' => $this->menu->forUser($request->user()),
             'groups' => $this->widgets->forUser($request->user()),
+
+            /*
+             * সদ্য যা হয়েছে — করণীয়ের পাশে।
+             *
+             * করণীয় বলে কী আটকে আছে; এটা বলে কী হয়ে গেছে। দিনের
+             * শুরুতে মালিকের প্রথম প্রশ্নটা দ্বিতীয়টাই — "আমি না
+             * থাকতে কী কী হলো"। আজ পর্যন্ত সেটার উত্তর পেতে বিক্রয়,
+             * আদায়, ক্রয় ও নগদ গণনার চারটা তালিকা আলাদা করে খুলতে হত।
+             */
+            'happenings' => $this->activity->forUser($request->user()),
         ]);
     }
 

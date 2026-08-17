@@ -98,6 +98,7 @@ final class AccountsWidgets implements DashboardWidgets
                 permission: 'accounts.view',
                 tone: 'warn',
                 sort: 40,
+                icon: 'receipt',
             ),
 
             /*
@@ -114,6 +115,7 @@ final class AccountsWidgets implements DashboardWidgets
                 permission: 'accounts.transfer.create',
                 tone: 'warn',
                 sort: 50,
+                icon: 'handover',
             ),
         ];
     }

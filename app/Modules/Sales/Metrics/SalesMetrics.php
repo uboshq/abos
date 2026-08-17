@@ -41,6 +41,8 @@ final class SalesMetrics implements ProvidesMetrics
             self::salesThisMonth(),
             self::collectedToday(),
             self::collectedThisMonth(),
+            self::salesThisYear(),
+            self::collectedThisYear(),
             self::salesTodayAtMyCounter(),
         ] as $metric) {
             $out[$metric->key] = $metric;
@@ -117,6 +119,65 @@ final class SalesMetrics implements ProvidesMetrics
             permission: 'sales.collection.view',
             value: fn () => self::collectionTotal($from, $to),
         );
+    }
+
+    /**
+     * চলতি অর্থবছরের বিক্রয়।
+     *
+     * ── কেন ক্যালেন্ডার বছর নয় ──────────────────────────────────────
+     * ব্যবসার বছর জুলাই থেকে জুন। জানুয়ারি ধরে গুনলে সংখ্যাটা হিসাবের
+     * খাতার সাথে মিলত না, আর মালিক দুইটা "এই বছর" নিয়ে বসতেন — একটা
+     * পর্দায়, একটা হিসাবরক্ষকের কাছে।
+     */
+    public static function salesThisYear(): Metric
+    {
+        [$from, $to] = self::financialYear();
+
+        return new Metric(
+            key: 'sales.year',
+            label: __('sales::dashboard.sales_this_year'),
+            statuses: DocumentStatus::POSTED,
+            dateField: Metric::BY_TRANSACTION_DATE,
+            scale: 2,
+            rounding: Metric::ROUND_AT_TOTAL,
+            permission: 'sales.invoice.view',
+            value: fn () => self::invoiceTotal($from, $to),
+        );
+    }
+
+    /** চলতি অর্থবছরের আদায়। */
+    public static function collectedThisYear(): Metric
+    {
+        [$from, $to] = self::financialYear();
+
+        return new Metric(
+            key: 'sales.collected_year',
+            label: __('sales::dashboard.collected_this_year'),
+            statuses: DocumentStatus::POSTED,
+            dateField: Metric::BY_TRANSACTION_DATE,
+            scale: 2,
+            rounding: Metric::ROUND_AT_TOTAL,
+            permission: 'sales.collection.view',
+            value: fn () => self::collectionTotal($from, $to),
+        );
+    }
+
+    /**
+     * চলতি অর্থবছরের দুই প্রান্ত।
+     *
+     * বছরটা কোম্পানির নিজের সারি থেকেই আসে — কোথাও জুলাই-জুন লেখা
+     * হয় না। কোনো বছর খোলা না থাকলে চলতি মাসটাই ধরা হয়, কারণ শূন্য
+     * দেখানোর চেয়ে কম দেখানো ভালো — আর নতুন কোম্পানিতে সেটাই সত্যি।
+     *
+     * @return array{0: string, 1: string}
+     */
+    private static function financialYear(): array
+    {
+        $year = auth()->user()?->currentCompany?->currentFinancialYear();
+
+        return $year === null
+            ? [Carbon::today()->startOfMonth()->toDateString(), Carbon::today()->toDateString()]
+            : [$year->starts_on->toDateString(), Carbon::today()->toDateString()];
     }
 
     /**

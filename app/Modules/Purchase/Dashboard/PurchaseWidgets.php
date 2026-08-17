@@ -55,6 +55,7 @@ final class PurchaseWidgets implements DashboardWidgets
                 permission: 'purchase.report',
                 tone: 'warn',
                 sort: 60,
+                icon: 'purchase',
             ),
 
             new Widget(
@@ -65,6 +66,7 @@ final class PurchaseWidgets implements DashboardWidgets
                 permission: 'purchase.report',
                 tone: 'neutral',
                 sort: 70,
+                icon: 'clock',
             ),
         ];
     }

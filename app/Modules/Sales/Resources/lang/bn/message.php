@@ -153,4 +153,6 @@ return [
     'pos_return' => 'বিল ধরে ফেরত',
     'pos_refund_cash' => 'ড্রয়ার থেকে টাকা ফেরত দিন',
     'pos_bill_not_found' => 'এই নম্বরের কোনো নিশ্চিত বিল পাওয়া যায়নি।',
+    'collected_amount' => ':amount আদায়',
+    'returned_amount' => ':amount ফেরত',
 ];
