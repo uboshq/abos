@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Modules\Inventory\Http\Controllers\BatchController;
+use App\Modules\Inventory\Http\Controllers\LabelController;
 use App\Modules\Inventory\Http\Controllers\OpeningStockController;
 use App\Modules\Inventory\Http\Controllers\ProductController;
 use App\Modules\Inventory\Http\Controllers\StockController;
@@ -21,6 +22,17 @@ use Illuminate\Support\Facades\Route;
  */
 
 Route::middleware('auth')->prefix('inventory')->group(function () {
+
+    /*
+     * লেবেল ছাপা — পণ্যের গায়ে সাঁটার কাগজ।
+     *
+     * GET, কারণ ছাপা কিছু বদলায় না আর নতুন ট্যাবে খোলা দরকার; বাছাটা
+     * ঠিকানায় থাকে বলে একই বাছাই আবার ছাপতে হলে রিফ্রেশই যথেষ্ট।
+     */
+    Route::prefix('labels')->name('label.')->group(function () {
+        Route::get('/', [LabelController::class, 'index'])->name('index');
+        Route::get('/print', [LabelController::class, 'print'])->name('print');
+    });
 
     Route::prefix('products')->name('product.')->group(function () {
         Route::get('/', [ProductController::class, 'index'])->name('index');
