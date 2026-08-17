@@ -9,6 +9,7 @@ declare(strict_types=1);
  * বাকি দশটা মডিউলের নমুনা — এখানে যা লেখা আছে, বাকিগুলোতেও ঠিক তাই থাকবে।
  */
 
+use App\Modules\Customer\Dashboard\CustomerWidgets;
 use App\Modules\Customer\Imports\CustomerImporter;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Customer\Reports\PartyReports;
@@ -101,6 +102,17 @@ return [
         PartyReports::class,
     ],
 
+    /*
+     * হোম পর্দার সতর্কতা — সীমা ছাড়ানো ধার ও মোট বকেয়া।
+     *
+     * উইজেট, আলাদা কোনো সতর্কবার্তার ব্যবস্থা নয়: রোজ আসা বার্তা দুই
+     * সপ্তাহে মানুষ পড়া বন্ধ করে দেয়, আর করণীয় সারিটা কেবল তখনই
+     * চোখে পড়ে যখন সত্যিই কিছু বাকি।
+     */
+    'widgets' => [
+        CustomerWidgets::class,
+    ],
+
     // Control Panel-এ যে সুইচগুলো দেখাবে — নিয়ম ৭।
     'settings' => [
         [
@@ -122,6 +134,36 @@ return [
             'label' => 'customer::settings.block_over_limit',
             'type' => 'boolean',
             'default' => true,
+            'group' => 'entry',
+        ],
+
+        /*
+         * সীমা ছাড়ানোর সতর্কতা — হোম পর্দার করণীয় সারিতে।
+         *
+         * `block_over_limit` আর এটা দুইটা আলাদা প্রশ্ন: প্রথমটা বলে
+         * সীমা ছাড়ানো বিল আটকাবে কি না, এটা বলে **যাঁরা ইতিমধ্যেই
+         * ছাড়িয়ে গেছেন** তাঁদের কথা মালিককে বলা হবে কি না। বিল আটকানো
+         * বন্ধ রেখেও কারা ছাড়িয়েছেন তা জানতে চাওয়া স্বাভাবিক।
+         */
+        [
+            'key' => 'customer.alert_over_limit',
+            'label' => 'customer::settings.alert_over_limit',
+            'type' => 'boolean',
+            'default' => true,
+            'group' => 'entry',
+        ],
+
+        /*
+         * মোট বকেয়ার সীমা — ০ মানে বন্ধ।
+         *
+         * শূন্যকে সীমা ধরলে সুইচটা চালু করা মাত্রই রোজ সতর্কতা আসত,
+         * কারণ বকেয়া সবসময়ই শূন্যের বেশি।
+         */
+        [
+            'key' => 'customer.alert_receivable_over',
+            'label' => 'customer::settings.alert_receivable_over',
+            'type' => 'integer',
+            'default' => 0,
             'group' => 'entry',
         ],
         [
