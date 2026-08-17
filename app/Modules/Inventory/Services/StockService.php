@@ -437,6 +437,59 @@ final class StockService
         ];
     }
 
+    /**
+     * গোটা ক্যাটালগের অবস্থা — একটা কোয়েরিতে।
+     *
+     * ── কেন এটা আলাদা করে লাগল ──────────────────────────────────────
+     * `statesFor()` একটা পণ্যের জন্য একটা কোয়েরি করে, আর সেটাই ঠিক
+     * যখন একটা পণ্যের পাতা খোলা হয়। কিন্তু চার্ট/বাল্ক DO-র শীটে
+     * চারশো পণ্য একসাথে বসে — তখন ওটা চারশো কোয়েরি, আর পাতাটা
+     * খুলতেই কয়েক সেকেন্ড।
+     *
+     * আরও একটা কারণ, যেটা গতির চেয়েও বড়: আলাদা আলাদা মুহূর্তে গোনা
+     * চারশো সংখ্যা একে অন্যের সাথে না-ও মিলতে পারে। এক কোয়েরিতে
+     * গুনলে গোটা শীটটা একই মুহূর্তের ছবি।
+     *
+     * @return array<int, array{floor: string, reserved: string, hold: string, available: string, free: string, free_reserved: string, free_available: string}>
+     */
+    public function statesForAll(?Warehouse $warehouse = null): array
+    {
+        $rows = StockMovement::query()
+            ->inWarehouse($warehouse?->id)
+            ->groupBy('product_id')
+            ->selectRaw('
+                product_id,
+                COALESCE(SUM(floor_change), 0) as floor,
+                COALESCE(SUM(reserved_change), 0) as reserved,
+                COALESCE(SUM(hold_change), 0) as hold,
+                COALESCE(SUM(free_change), 0) as free,
+                COALESCE(SUM(free_reserved_change), 0) as free_reserved
+            ')
+            ->get();
+
+        $states = [];
+
+        foreach ($rows as $row) {
+            $floor = (string) $row->floor;
+            $reserved = (string) $row->reserved;
+            $hold = (string) $row->hold;
+            $free = (string) $row->free;
+            $freeReserved = (string) $row->free_reserved;
+
+            $states[(int) $row->product_id] = [
+                'floor' => $floor,
+                'reserved' => $reserved,
+                'hold' => $hold,
+                'available' => bcsub(bcsub($floor, $reserved, 4), $hold, 4),
+                'free' => $free,
+                'free_reserved' => $freeReserved,
+                'free_available' => bcsub($free, $freeReserved, 4),
+            ];
+        }
+
+        return $states;
+    }
+
     /** তাকে থাকা ফ্রি মাল — বিক্রির মজুদের সাথে মেশে না। */
     public function freeQty(Product $product, ?Warehouse $warehouse = null): string
     {

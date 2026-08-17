@@ -106,7 +106,22 @@
         </section>
 
         <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
-            <h2 class="mb-3 font-semibold">{{ __('sales::message.lines') }}</h2>
+            <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <h2 class="font-semibold">{{ __('sales::message.lines') }}</h2>
+
+                {{--
+                    চার্ট / বাল্ক DO — গোটা ক্যাটালগ এক শীটে।
+
+                    ── কেন ফ্রি-র ঘরটা এখানে নেই ────────────────────────
+                    `sal_challan_lines`-এ `free_qty` কলামটা আছে, কিন্তু
+                    চালানের সেবা ওটা লেখে না আর নিশ্চিত করার সময় ফ্রি
+                    মাল নড়েও না। ঘরটা দেখালে মানুষ সংখ্যা লিখতেন আর
+                    সেটা নীরবে হারিয়ে যেত — ঠিক যে ফাঁদে ক্রয়ের
+                    free_qty পড়েছিল। সরাসরি বিক্রয়ে ঘরটা আছে, কারণ
+                    ওখানে পথটা শেষ পর্যন্ত আছে।
+                --}}
+                <x-sales::bulk-sheet :products="$products" :stock="$stock" :free-qty="false" />
+            </div>
 
             <x-sales::line-editor :products="$products" :lines="$existing"
                                   qty-field="delivered_qty"
