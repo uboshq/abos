@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Http\Requests;
 
+use App\Core\Services\PartyRegistry;
 use App\Core\Support\Money;
 use App\Modules\Accounts\Models\Voucher;
 use Illuminate\Foundation\Http\FormRequest;
@@ -27,6 +28,48 @@ class VoucherRequest extends FormRequest
     public function isJournal(): bool
     {
         return $this->input('type') === Voucher::JOURNAL;
+    }
+
+    /**
+     * পর্দার একটামাত্র "পক্ষ" ঘরটাকে ধরন ও নামে ভাগ করা।
+     *
+     * ── কেন পর্দায় একটা ঘর, অথচ খতিয়ানে দুইটা কলাম ────────────────
+     * দুইটা আলাদা ঘর দিলে একটা ভরে অন্যটা খালি রাখা যেত, আর খতিয়ানে
+     * একটা আধা-পক্ষ বসত — যাকে বকেয়ার রিপোর্ট কোনোদিন খুঁজে পেত না।
+     * একটা তালিকা থেকে বাছলে ওই ভুলটা করাই যায় না।
+     *
+     * ── কেন এখানে, কন্ট্রোলারে নয় ──────────────────────────────────
+     * কন্ট্রোলার জাবেদার সারিগুলো কাঁচা ইনপুট থেকে নেয়। এখানে ভাগ
+     * করলে যাচাই ও সংরক্ষণ **দুইটাই** একই ভাগ করা মান দেখে, তাই
+     * মাঝখানে ফাঁক থাকে না।
+     */
+    protected function prepareForValidation(): void
+    {
+        $lines = (array) $this->input('lines', []);
+
+        if ($lines === []) {
+            return;
+        }
+
+        foreach ($lines as $index => $line) {
+            if (! is_array($line) || ! array_key_exists('party', $line)) {
+                continue;
+            }
+
+            $picked = trim((string) $line['party']);
+            unset($lines[$index]['party']);
+
+            if ($picked === '' || ! str_contains($picked, ':')) {
+                continue;
+            }
+
+            [$type, $id] = explode(':', $picked, 2);
+
+            $lines[$index]['party_type'] = trim($type);
+            $lines[$index]['party_id'] = (int) $id;
+        }
+
+        $this->merge(['lines' => $lines]);
     }
 
     /** @return array<string, mixed> */
@@ -53,6 +96,29 @@ class VoucherRequest extends FormRequest
                 'lines.*.debit' => ['nullable', 'numeric', 'min:0'],
                 'lines.*.credit' => ['nullable', 'numeric', 'min:0'],
                 'lines.*.narration' => ['nullable', 'string', 'max:500'],
+
+                /*
+                 * সারি ধরে পক্ষ — এক ভাউচারে দুই পক্ষ বসানোর জন্য।
+                 *
+                 * ── কেন লাগে ─────────────────────────────────────────
+                 * পরিবেশকের রোজকার ঘটনা: ডিলার টাকাটা কোম্পানিকে
+                 * সরাসরি দিলেন। তখন এক এন্ট্রিতে **ডেবিট সরবরাহকারী,
+                 * ক্রেডিট ডিলার** — দুইটা আলাদা পক্ষ, একই ভাউচারে।
+                 * মাথার একটামাত্র পক্ষ দিয়ে ওটা লেখাই যেত না।
+                 *
+                 * ── কেন যাচাইটা এখানে ─────────────────────────────────
+                 * `VoucherService` ও `VoucherLine` লাইনের পক্ষ আগে
+                 * থেকেই বোঝে, আর কন্ট্রোলার জাবেদার সারিগুলো **কাঁচা
+                 * ইনপুট** থেকে নেয় (`$request->input('lines')`)। অর্থাৎ
+                 * ঘরটা পর্দায় না থাকলেও যে কেউ অনুরোধে
+                 * `lines[0][party_type]=whatever` পাঠিয়ে খতিয়ানে এমন
+                 * একটা পক্ষ বসিয়ে দিতে পারত যা কোনো রিপোর্ট চেনে না —
+                 * আর বকেয়াটা তখন কোথাও দেখা যেত না। নিয়ম ৪: প্রতিটা
+                 * ইনপুটে ভ্যালিডেশন।
+                 */
+                'lines.*.party_type' => ['nullable', 'string', 'max:32',
+                    Rule::in(app(PartyRegistry::class)->types())],
+                'lines.*.party_id' => ['nullable', 'integer'],
             ];
         }
 
@@ -99,6 +165,8 @@ class VoucherRequest extends FormRequest
                             __('accounts::validation.line_both_sides'));
                     }
 
+                    $this->checkParty($validator, $index, $line);
+
                     if ($hasMoney) {
                         $filled++;
                         $debit = bcadd($debit, $d, 4);
@@ -120,6 +188,39 @@ class VoucherRequest extends FormRequest
                 }
             },
         ];
+    }
+
+    /**
+     * সারির পক্ষটা সত্যিই আছে কি না, আর অর্ধেক লেখা নয় তো।
+     *
+     * ── কেন "অর্ধেক" আলাদা করে দেখা হয় ──────────────────────────────
+     * ধরন দিয়ে নাম না দিলে (বা উল্টোটা) খতিয়ানে একটা আধা-পক্ষ বসত।
+     * বকেয়ার রিপোর্ট `party_type` **আর** `party_id` দুইটা মিলিয়ে
+     * খোঁজে, তাই ওই সারিটা কোনো ডিলারের নামের নিচে আসত না — অথচ
+     * ভাউচারটা দেখতে ঠিকই থাকত, আর টাকাটা কার সেটা আর জানা যেত না।
+     *
+     * @param  array<string, mixed>  $line
+     */
+    private function checkParty(Validator $validator, int|string $index, array $line): void
+    {
+        $type = trim((string) ($line['party_type'] ?? ''));
+        $id = (int) ($line['party_id'] ?? 0);
+
+        if ($type === '' && $id === 0) {
+            return;
+        }
+
+        if ($type === '' || $id === 0) {
+            $validator->errors()->add("lines.{$index}.party_id",
+                __('accounts::validation.party_half_written'));
+
+            return;
+        }
+
+        if (! app(PartyRegistry::class)->exists($type, $id)) {
+            $validator->errors()->add("lines.{$index}.party_id",
+                __('accounts::validation.party_unknown'));
+        }
     }
 
     /** @return array<string, string> */

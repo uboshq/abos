@@ -10,4 +10,7 @@ return [
     'ageing' => 'Ageing',
     'settings' => 'Settings',
     'collection' => 'Collections by customer',
+
+    // What a customer is called when named as a party on a ledger line
+    'party' => 'Customer',
 ];

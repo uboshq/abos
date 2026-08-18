@@ -20,6 +20,8 @@
         'debit' => bccomp((string) $l->debit, '0', 4) > 0 ? $l->debit : '',
         'credit' => bccomp((string) $l->credit, '0', 4) > 0 ? $l->credit : '',
         'narration' => $l->narration,
+        'party_type' => $l->party_type,
+        'party_id' => $l->party_id,
     ])->all());
 
     $rows = max(5, count($existing) + 1);
@@ -87,6 +89,10 @@
                                 class="num px-3 py-2 text-start font-medium text-(--color-ink-muted)">
                                 {{ __('core.table.credit') }}
                             </th>
+                            <th scope="col" style="width: 14rem"
+                                class="px-3 py-2 text-start font-medium text-(--color-ink-muted)">
+                                {{ __('accounts::field.party') }}
+                            </th>
                             <th scope="col" class="hidden px-3 py-2 text-start font-medium
                                                    text-(--color-ink-muted) lg:table-cell">
                                 {{ __('core.table.narration') }}
@@ -128,6 +134,46 @@
                                                   border-(--color-border) bg-(--color-surface-card) px-2 text-end">
                                 </td>
 
+                                {{--
+                                    সারির পক্ষ — কার নামে টাকাটা বসবে।
+
+                                    ── কেন সারিতে, মাথায় নয় ───────────────
+                                    পরিবেশকের রোজকার ঘটনা: ডিলার টাকাটা
+                                    সরাসরি কোম্পানিকে দিলেন। তখন এক
+                                    ভাউচারে **দুইটা আলাদা পক্ষ** — ডেবিটে
+                                    সরবরাহকারী, ক্রেডিটে ডিলার। মাথার
+                                    একটামাত্র পক্ষ দিয়ে ওটা লেখাই যেত না।
+
+                                    ঐচ্ছিক, আর বেশিরভাগ জাবেদায় খালিই
+                                    থাকবে — খরচ বা সমন্বয়ের সারিতে কোনো
+                                    পক্ষ থাকে না।
+
+                                    ধরন ও নাম একসাথে একটাই ঘরে, কারণ
+                                    দুইটা আলাদা ঘর হলে একটা ভরে অন্যটা
+                                    খালি রাখা যেত — আর তখন খতিয়ানে একটা
+                                    আধা-পক্ষ বসত, যাকে কোনো রিপোর্ট
+                                    খুঁজে পেত না।
+                                --}}
+                                <td class="px-3 py-1.5">
+                                    <select name="lines[{{ $i }}][party]"
+                                            class="h-(--spacing-field) w-full rounded-(--radius-field)
+                                                   border border-(--color-border)
+                                                   bg-(--color-surface-card) px-2">
+                                        <option value="">—</option>
+                                        @foreach ($parties as $group)
+                                            <optgroup label="{{ $group['label'] }}">
+                                                @foreach ($group['options'] as $party)
+                                                    <option value="{{ $group['type'] }}:{{ $party['id'] }}"
+                                                            @selected(($line['party_type'] ?? null) === $group['type']
+                                                                && ($line['party_id'] ?? null) == $party['id'])>
+                                                        {{ $party['label'] }}
+                                                    </option>
+                                                @endforeach
+                                            </optgroup>
+                                        @endforeach
+                                    </select>
+                                </td>
+
                                 <td class="hidden px-3 py-1.5 lg:table-cell">
                                     <input type="text" name="lines[{{ $i }}][narration]"
                                            value="{{ $line['narration'] ?? '' }}"
@@ -143,6 +189,7 @@
                             <td class="px-3 py-2 text-end">{{ __('core.print.total') }}</td>
                             <td class="num px-3 py-2 text-end" x-text="format(debit)">0.00</td>
                             <td class="num px-3 py-2 text-end" x-text="format(credit)">0.00</td>
+                            <td class="px-3 py-2"></td>
                             <td class="hidden px-3 py-2 lg:table-cell">
                                 {{-- পার্থক্যটা দেখানো হয়, লুকানো হয় না: কত টাকা
                                      কম পড়ছে সেটা জানলে ভুলটা খুঁজে পাওয়া সহজ।

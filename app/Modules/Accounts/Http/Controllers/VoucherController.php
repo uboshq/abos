@@ -7,6 +7,7 @@ namespace App\Modules\Accounts\Http\Controllers;
 use App\Core\Concerns\SortsLists;
 use App\Core\Engines\Drill\DrillResolver;
 use App\Core\Services\MenuBuilder;
+use App\Core\Services\PartyRegistry;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Modules\Accounts\Http\Requests\VoucherRequest;
@@ -259,6 +260,15 @@ class VoucherController extends Controller implements HasMiddleware
         return [
             'moneyAccounts' => $money,
             'allAccounts' => $all,
+
+            /*
+             * জাবেদার সারিতে বাছার মতো পক্ষগুলো।
+             *
+             * তালিকাটা আসে মডিউলের নিজের ঘোষণা থেকে, তাই এই ফাইলে
+             * "গ্রাহক" বা "সরবরাহকারী" কথাটা লেখা নেই — নতুন কোনো
+             * পক্ষ যোগ হলে এখানে হাত পড়বে না (সেকশন ১৯.৭)।
+             */
+            'parties' => app(PartyRegistry::class)->forPicker(),
             'expenseAccounts' => $all->where('type', Account::EXPENSE)->values(),
             'incomeAccounts' => $all->where('type', Account::INCOME)->values(),
             'branches' => Branch::query()->active()->orderBy('name_en')->get(),

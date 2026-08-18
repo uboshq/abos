@@ -61,6 +61,11 @@ return [
         'supplier' => Supplier::class,
     ],
 
+    // খতিয়ানের সারিতে সরবরাহকারীর নামও বসতে পারে
+    'parties' => [
+        'supplier' => 'supplier::menu.party',
+    ],
+
     'custom_fields' => ['supplier'],
 
     // পুরনো খাতা থেকে আনা — ইমপোর্টের পর্দা এই ঘোষণা থেকেই সারিটা

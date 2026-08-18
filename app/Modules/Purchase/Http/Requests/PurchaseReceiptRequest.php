@@ -50,6 +50,14 @@ class PurchaseReceiptRequest extends FormRequest
                 Rule::exists('mdm_units', 'id')->where('company_id', $companyId)],
 
             'lines.*.rate' => ['required', 'numeric', 'min:0'],
+
+            /*
+             * বিক্রয়মূল্য — মাল আসার মুহূর্তেই।
+             *
+             * ঐচ্ছিক: খালি রাখা মানে "দাম বদলাচ্ছি না", আর পণ্যের আগের
+             * দামটাই টেকে। বিলে ও Direct Receive-এ নিয়মটা হুবহু একই।
+             */
+            'lines.*.sales_price' => ['nullable', 'numeric', 'min:0'],
             'lines.*.narration' => ['nullable', 'string', 'max:500'],
         ];
     }

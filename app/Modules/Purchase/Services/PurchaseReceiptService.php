@@ -143,6 +143,34 @@ final class PurchaseReceiptService
     /**
      * মাল বুঝে নেওয়া হলো — স্টক বাড়ে, দায় জন্মায়, একই ট্রানজেকশনে।
      */
+    /**
+     * নতুন বিক্রয়মূল্য পণ্যে বসানো — মাল বুঝে নেওয়ার মুহূর্তেই।
+     *
+     * ── কেন বিলের অপেক্ষা করা যায় না ────────────────────────────────
+     * ডিপোতে চালান আসে আগে, বিল পরে — কখনো সাতদিন পরে। ততক্ষণ মালটা
+     * তাকে থাকে **পুরনো দামে**, আর নতুন দরে কেনা মাল পুরনো দরে বিক্রি
+     * হয়ে যায়। ৪% মার্জিনের ব্যবসায় ওই কয়দিনেই মুনাফাটা মুছে যায়।
+     *
+     * ── null আর শূন্য এক নয় ─────────────────────────────────────────
+     * খালি রাখা মানে "দাম বদলাব না" — পণ্যের আগের দামটাই টেকে। শূন্য
+     * মানে "বিনামূল্যে"। দুইটা এক করে ফেললে দাম না বদলাতে চাওয়া
+     * প্রতিটা লাইন পণ্যটার দাম শূন্য করে দিত, আর প্রথম বিক্রিতেই পুরো
+     * ক্রয়মূল্য লোকসান দেখাত।
+     *
+     * নিয়মটা বিলের `applySalesPrices()`-এর হুবহু একই — ইচ্ছাকৃত। মাল
+     * কোন পথে ঢুকল তার উপর দাম নির্ভর করলে দুই পথে দুই দাম হত।
+     */
+    private function applySalesPrices(PurchaseReceipt $receipt): void
+    {
+        foreach ($receipt->lines as $line) {
+            if ($line->sales_price === null) {
+                continue;
+            }
+
+            $line->product->update(['sale_price' => $line->sales_price]);
+        }
+    }
+
     public function confirm(PurchaseReceipt $receipt): PurchaseReceipt
     {
         if ($receipt->status !== DocumentStatus::DRAFT) {
@@ -229,6 +257,8 @@ final class PurchaseReceiptService
                     date: $receipt->trx_date,
                 );
             }
+
+            $this->applySalesPrices($receipt);
 
             $this->postToLedger($receipt);
 
@@ -433,6 +463,21 @@ final class PurchaseReceiptService
                 'entered_qty' => $pack['entered_qty'],
                 'entered_unit_id' => $pack['entered_unit_id'],
                 'rate' => $rate,
+
+                /*
+                 * বিক্রয়মূল্যও এন্ট্রির একক থেকে নামে — ক্রয়দরের মতোই।
+                 *
+                 * না নামালে বাক্সে মাল বুঝে নেওয়ার দিন পণ্যের বিক্রয়মূল্য
+                 * বাক্সের দামে মাস্টারে বসত, আর পরদিন কাউন্টারে প্রতিটা
+                 * পিস বাক্সের দামে বিক্রি হত।
+                 *
+                 * খালি মানে null — "দাম বদলাব না"। শূন্য বসালে ওটা একটা
+                 * দাম হয়ে যেত।
+                 */
+                'sales_price' => ($line['sales_price'] ?? '') === '' || ($line['sales_price'] ?? null) === null
+                    ? null
+                    : $this->packed($product, '1', $pack['entered_unit_id'], $this->money($line['sales_price']))['rate'],
+
                 'amount' => $amount,
                 'line_no' => ++$lineNo,
                 'narration' => $line['narration'] ?? null,

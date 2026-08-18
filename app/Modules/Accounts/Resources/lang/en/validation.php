@@ -63,4 +63,8 @@ return [
     'loan_amount_positive' => 'The amount must be more than zero.',
     'loan_over_limit' => 'Only :available is left on the limit — no more than that can be drawn.',
     'instalment_already_paid' => 'This instalment has already been paid.',
+
+    // জাবেদার সারিতে পক্ষ — তিন কোণা সমন্বয়ের জন্য
+    'party_half_written' => 'A party needs both its kind and its name — otherwise there is no telling later whose money it was.',
+    'party_unknown' => 'That party could not be found.',
 ];
