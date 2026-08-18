@@ -162,4 +162,6 @@ return [
     'shipment_closed' => 'Trip finished — every challan is accounted for.',
     'shipment_cancelled' => 'The trip was cancelled; its challans are free again.',
     'targets_saved' => 'Targets saved.',
+
+    'pos_needs_approval' => 'This discount needs the manager. If they are beside you, let them type their own email and password — the sale then goes through at once.',
 ];

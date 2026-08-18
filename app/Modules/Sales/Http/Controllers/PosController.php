@@ -17,6 +17,7 @@ use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\PackBarcode;
 use App\Modules\MasterData\Models\PaymentMethod;
 use App\Modules\Sales\Models\SalesInvoice;
+use App\Modules\Sales\Services\CounterApproval;
 use App\Modules\Sales\Services\PosService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -50,6 +51,7 @@ class PosController extends Controller implements HasMiddleware
         private readonly PosService $pos,
         private readonly SettingsService $settings,
         private readonly MenuBuilder $menu,
+        private readonly CounterApproval $approvals,
     ) {}
 
     public static function middleware(): array
@@ -107,7 +109,45 @@ class PosController extends Controller implements HasMiddleware
              * সরালে অভ্যাসটাই ভেঙে যেত।
              */
             'resumed' => $this->resumedCart($request),
+
+            /*
+             * তোলা বিলটার নম্বর — "সম্পূর্ণ" চাপলে ওটাই শেষ হবে, নতুন
+             * একটা নয়। না থাকলে খালি, আর তখন আচরণ আগের মতোই।
+             */
+            'resumedId' => $this->resumedInvoice($request)?->id,
+
+            /*
+             * ছাড়ের অনুমোদনের ঘরটা কেবল তখনই, যখন সত্যিই অপেক্ষা করছে।
+             *
+             * সবসময় দেখালে কাউন্টারে রোজ একটা ইমেইল-পাসওয়ার্ডের বাক্স
+             * চোখে পড়ত, আর যা রোজ চোখে পড়ে মানুষ তা ভরে ফেলেন — তখন
+             * ম্যানেজারের পাসওয়ার্ড ক্যাশিয়ারের মুখস্থ হয়ে যেত।
+             */
+            'awaitingApproval' => $this->awaitingApproval($request),
         ]);
+    }
+
+    /** ঠিকানায় বলা খসড়াটা — থাকলে, আর সেটা এখনো খসড়া হলে। */
+    private function resumedInvoice(Request $request): ?SalesInvoice
+    {
+        $id = $request->integer('resume');
+
+        if ($id <= 0) {
+            return null;
+        }
+
+        return SalesInvoice::query()
+            ->where('status', DocumentStatus::DRAFT)
+            ->with('lines.product')
+            ->find($id);
+    }
+
+    /** তোলা বিলটার ছাড় ম্যানেজারের সিদ্ধান্তের অপেক্ষায় কি না। */
+    private function awaitingApproval(Request $request): bool
+    {
+        $invoice = $this->resumedInvoice($request);
+
+        return $invoice !== null && $this->approvals->pending($invoice, 'discount') !== null;
     }
 
     public function checkout(Request $request): RedirectResponse
@@ -129,12 +169,32 @@ class PosController extends Controller implements HasMiddleware
              * Enter চাপা দ্বিতীয় বিল বানায় না।
              */
             'idempotency_key' => ['nullable', 'string', 'max:64'],
+
+            /*
+             * তোলা বিলটার নম্বর — থাকলে ওটাই সম্পূর্ণ হয়।
+             *
+             * না পাঠালে আগের মতোই নতুন বিল, তাই পুরনো টিল বা পরীক্ষার
+             * কোড ভাঙে না।
+             */
+            'resumed_invoice_id' => ['nullable', 'integer',
+                Rule::exists('sal_invoices', 'id')->where('company_id', $companyId)],
             'lines' => ['required', 'array', 'min:1'],
             'lines.*.product_id' => ['required', 'integer',
                 Rule::exists('inv_products', 'id')->where('company_id', $companyId)],
             'lines.*.qty' => ['required', 'numeric', 'gt:0'],
             'lines.*.rate' => ['required', 'numeric', 'min:0'],
             'lines.*.discount' => ['nullable', 'numeric', 'min:0'],
+
+            /*
+             * ম্যানেজারের নিজের লগইন — ছাড় সীমা ছাড়ালে তবেই লাগে।
+             *
+             * ঐচ্ছিক, কারণ রোজকার বিক্রিতে এগুলো আসেই না। পাসওয়ার্ডটা
+             * কোথাও লেখা হয় না: `AuditEngine` `password` নামের ঘর
+             * কোনোদিন লগ করে না, আর ব্যর্থ হলে পুরনো ইনপুট ফেরত
+             * পাঠানোর সময়ও এটা বাদ যায় (`$request->except`)।
+             */
+            'approver_email' => ['nullable', 'string', 'email', 'max:255'],
+            'approver_password' => ['nullable', 'string', 'max:255'],
         ]);
 
         $result = $this->pos->checkout($data, $data['lines']);
@@ -164,16 +224,7 @@ class PosController extends Controller implements HasMiddleware
      */
     private function resumedCart(Request $request): array
     {
-        $id = $request->integer('resume');
-
-        if ($id <= 0) {
-            return [];
-        }
-
-        $invoice = SalesInvoice::query()
-            ->where('status', DocumentStatus::DRAFT)
-            ->with('lines.product')
-            ->find($id);
+        $invoice = $this->resumedInvoice($request);
 
         if ($invoice === null) {
             return [];
