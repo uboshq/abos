@@ -24,6 +24,11 @@
             'product_id' => (string) $l->product_id,
             'qty' => (string) $l->received_qty,
             'rate' => (string) $l->rate,
+
+            // খালি রাখা মানে "দাম বদলাব না" — তাই null-টা খালিই ফেরে,
+            // শূন্য নয়। শূন্য দেখালে সম্পাদনার সময় প্রতিটা লাইন পণ্যের
+            // দাম শূন্য করে দিত।
+            'sales_price' => $l->sales_price === null ? '' : (string) $l->sales_price,
             'discount' => '',
             'tax' => '',
             'link' => (string) ($l->purchase_order_line_id ?? ''),
@@ -101,7 +106,8 @@
                                      qty-field="received_qty"
                                      :link-field="$orderLines->isNotEmpty() ? 'purchase_order_line_id' : null"
                                      :link-options="$orderLines"
-                                     :show-discount="false" />
+                                     :show-discount="false"
+                                     show-sales-price />
         </section>
 
         <div class="flex flex-wrap gap-2">

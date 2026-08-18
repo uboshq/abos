@@ -102,4 +102,7 @@ return [
     'narration' => 'Particulars',
     'total_debit' => 'Total debit',
     'total_credit' => 'Total credit',
+
+    // জাবেদার সারিতে কার নামে টাকাটা বসবে
+    'party' => 'Party',
 ];

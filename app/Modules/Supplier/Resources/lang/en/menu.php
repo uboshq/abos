@@ -6,4 +6,6 @@ return [
     'suppliers' => 'Suppliers',
     'payable_list' => 'Payable List',
     'ageing' => 'Payable Ageing',
+
+    'party' => 'Supplier',
 ];

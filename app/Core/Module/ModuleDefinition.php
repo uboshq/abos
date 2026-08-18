@@ -199,6 +199,21 @@ final class ModuleDefinition
          * @var array<string, class-string>
          */
         public readonly array $imports,
+
+        /**
+         * খতিয়ানের সারিতে যাদের নাম বসতে পারে — গ্রাহক, সরবরাহকারী।
+         *
+         * ── কেন drill_sources-ই যথেষ্ট নয় ──────────────────────────
+         * বিল, চালান, ভাউচারও drill source, কিন্তু ওগুলো **পক্ষ** নয়।
+         * "কার কাছে পাওনা" প্রশ্নের উত্তর একটা বিল হতে পারে না। তাই
+         * মডিউল আলাদা করে বলে দেয় তার কোন কোন উৎস পক্ষ হিসেবে গোনা
+         * হবে, আর কোর নিজে থেকে কোনো মডিউলের নাম জানে না (সেকশন ১৯.৭)।
+         *
+         * চাবিটা drill source-এর নাম, মানটা লেবেলের অনুবাদ-কী।
+         *
+         * @var array<string, string>
+         */
+        public readonly array $parties,
         public readonly string $path,
         public readonly string $namespace,
     ) {}
@@ -306,6 +321,11 @@ final class ModuleDefinition
             facts: self::validateFacts($raw['facts'] ?? [], $path),
             provisions: self::validateProvisions($raw['provisions'] ?? [], $path),
             imports: self::validateImports($raw['imports'] ?? [], $path),
+            parties: self::validateParties(
+                $raw['parties'] ?? [],
+                $raw['drill_sources'] ?? [],
+                $path,
+            ),
             path: $path,
             namespace: $namespace,
         );
@@ -582,6 +602,40 @@ final class ModuleDefinition
         }
 
         return array_values($provisions);
+    }
+
+    /**
+     * পক্ষের ঘোষণা — বুট-টাইমেই যাচাই।
+     *
+     * ── কেন drill_sources-এর সাথে মেলানো হয় ─────────────────────────
+     * পক্ষের নাম আর ছবি দুইটাই আসে drill source থেকে। নামটা ভুল লিখলে
+     * (customers বনাম customer) ভাউচারের ফর্মে সারিটা দেখা যেত, বাছাও
+     * যেত — কিন্তু সেভ করার সময় খতিয়ানে এমন একটা `party_type` বসত
+     * যেটা কোনো রিপোর্ট চেনে না। **বকেয়াটা তখন কোথাও দেখা যেত না**,
+     * অথচ ভাউচারটা দেখতে ঠিকই থাকত।
+     *
+     * @param  array<string, mixed>  $parties
+     * @param  array<string, mixed>  $drillSources
+     * @return array<string, string>
+     */
+    private static function validateParties(array $parties, array $drillSources, string $path): array
+    {
+        foreach ($parties as $key => $label) {
+            if (! is_string($key) || ! array_key_exists($key, $drillSources)) {
+                throw new InvalidArgumentException(
+                    "{$path}: party '".(is_string($key) ? $key : gettype($key))
+                    ."' is not one of this module's drill_sources, so the ledger could never name it."
+                );
+            }
+
+            if (! is_string($label) || trim($label) === '') {
+                throw new InvalidArgumentException(
+                    "{$path}: party '{$key}' needs a label translation key — the voucher form has to call it something."
+                );
+            }
+        }
+
+        return $parties;
     }
 
     private static function validateImports(array $imports, string $path): array
