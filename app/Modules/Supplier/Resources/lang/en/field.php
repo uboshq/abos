@@ -38,4 +38,12 @@ return [
     'bucket_30' => '31–60 days',
     'bucket_60' => '61–90 days',
     'bucket_90' => '90+ days',
+
+    // কোম্পানির নিষ্পত্তির কাগজ
+    'goods_in' => 'Goods in',
+    'sold' => 'Their goods sold',
+    'cost_of_sold' => 'Cost of those goods',
+    'margin' => 'Margin',
+    'paid_to_them' => 'Paid to them',
+    'still_owed' => 'Still owed',
 ];

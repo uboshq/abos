@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
+use App\Modules\Supplier\Dashboard\SupplierWidgets;
 use App\Modules\Supplier\Imports\SupplierImporter;
 use App\Modules\Supplier\Models\Supplier;
 use App\Modules\Supplier\Reports\PartyReports;
+use App\Modules\Supplier\Reports\SettlementReport;
 
 /**
  * Supplier — প্ল্যান Phase 5।
@@ -41,6 +43,23 @@ return [
                 'route_params' => ['slug' => 'payable-list'], 'permission' => 'supplier.report'],
             ['label' => 'supplier::menu.ageing', 'route' => 'supplier.report.show',
                 'route_params' => ['slug' => 'ageing'], 'permission' => 'supplier.report'],
+
+            /*
+             * মাসের নিষ্পত্তি — পরিবেশক ডিপোর সবচেয়ে দরকারি কাগজ।
+             *
+             * ── কেন নিজের চাবি, `supplier.report` নয় ──────────────
+             * এই রিপোর্টের **প্রতিটা কলামই ক্রয়মূল্য বহন করে** — কত
+             * টাকার মাল এল, তার খরচ কত ছিল, মার্জিন কত। বকেয়ার
+             * তালিকা দেখতে পারা আর নিজের মার্জিন দেখতে পারা এক জিনিস
+             * নয়, তাই চাবিটাও আলাদা।
+             *
+             * প্রথমে এখানে `sales.cost.view` লেখা হয়েছিল, আর বুট-টাইমের
+             * পাহারা সেটা ধরল: এক মডিউল আরেক মডিউলের অনুমতি চাইলে ওটা
+             * কারও রোলে বসত না, আর সারিটা মালিকসহ সবার কাছেই অদৃশ্য
+             * থাকত (সেকশন ১৯.৭)।
+             */
+            ['label' => 'supplier::menu.settlement', 'route' => 'supplier.report.show',
+                'route_params' => ['slug' => 'settlement'], 'permission' => 'supplier.settlement.view'],
         ],
     ],
 
@@ -50,6 +69,9 @@ return [
         'supplier.update',
         'supplier.delete',
         'supplier.report',
+
+        // নিষ্পত্তির কাগজ — ক্রয়মূল্য ও মার্জিন দেখায়, তাই আলাদা
+        'supplier.settlement.view',
         'supplier.manage',
     ],
 
@@ -78,6 +100,15 @@ return [
     // কোনো কোর ফাইলে নাম লিখতে হয় না (সেকশন ১৯.৭)।
     'reports' => [
         PartyReports::class,
+        SettlementReport::class,
+    ],
+
+    /*
+     * হোম পর্দার দুইটা সংখ্যা — কোম্পানিকে কত দিতে হবে, আর এই মাসে
+     * মার্জিন কত। দুইটাই পরিবেশক ডিপোর রোজকার প্রশ্ন।
+     */
+    'widgets' => [
+        SupplierWidgets::class,
     ],
 
     'settings' => [
