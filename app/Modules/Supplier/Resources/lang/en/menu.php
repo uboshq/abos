@@ -8,4 +8,7 @@ return [
     'ageing' => 'Payable Ageing',
 
     'party' => 'Supplier',
+
+    // কোম্পানির নিষ্পত্তির কাগজ
+    'settlement' => 'Principal Settlement',
 ];
