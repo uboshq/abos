@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Services;
 
+use App\Core\Engines\Audit\AuditEngine;
 use App\Core\Services\SettingsService;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
@@ -50,6 +51,8 @@ final class PosService
         private readonly SalesReturnService $returns,
         private readonly VoucherService $vouchers,
         private readonly CashTillService $tills,
+        private readonly CounterApproval $counter,
+        private readonly AuditEngine $audit,
     ) {}
 
     /**
@@ -177,16 +180,47 @@ final class PosService
             return $this->result($already, $paid);
         }
 
-        return DB::transaction(function () use ($data, $lines, $customer, $paid, $key) {
-            $invoice = $this->invoices->create(
-                [
-                    'customer_id' => $customer->id,
-                    'warehouse_id' => $data['warehouse_id'] ?? null,
-                    'trx_date' => $data['trx_date'] ?? now()->toDateString(),
-                    'narration' => $data['narration'] ?? null,
-                ],
-                $lines,
-            );
+        /*
+         * খসড়াটা নিজের লেনদেনে বসে, আর সেখানেই থেমে যায় — ইচ্ছাকৃত।
+         *
+         * ── কী ভেঙেছিল ─────────────────────────────────────────────
+         * আগে তৈরি ও নিশ্চিত করা একই লেনদেনে ছিল। `SalesInvoiceService`
+         * ছাড়ের পাহারাটা **ইচ্ছাকৃতভাবে লেনদেনের বাইরে** ডাকে, যাতে
+         * ব্যতিক্রম ছুঁড়লেও অনুমোদনের অনুরোধটা থেকে যায় — কোডে মন্তব্য
+         * করে কারণটাও লেখা। কিন্তু কাউন্টার ওই দুইটাকে **নিজের** আরেকটা
+         * লেনদেনে মুড়ে রাখত, তাই সাবধানতাটা এক স্তর উপরে এসে অকেজো হয়ে
+         * যেত: অনুরোধের সারি রোল-ব্যাক, খসড়া বিলও রোল-ব্যাক।
+         *
+         * ফল ছিল একটা বন্ধ দরজা — ক্যাশিয়ার "ছাড় অনুমোদনের অপেক্ষায়"
+         * বার্তা পেতেন, মালিকের তালিকা ফাঁকাই থাকত, আর সীমা ছাড়ানো
+         * ছাড়ের বিক্রয়টা কোনোদিন হত না।
+         */
+        $invoice = DB::transaction(function () use ($data, $lines, $customer, $key) {
+            $head = [
+                'customer_id' => $customer->id,
+                'warehouse_id' => $data['warehouse_id'] ?? null,
+                'trx_date' => $data['trx_date'] ?? now()->toDateString(),
+                'narration' => $data['narration'] ?? null,
+            ];
+
+            /*
+             * তোলা বিলটা থাকলে সেটাই সম্পূর্ণ হয় — নতুন একটা নয়।
+             *
+             * ── কী ভেঙেছিল ─────────────────────────────────────────
+             * `resume()` কেবল কার্টটা পর্দায় ফিরিয়ে দিত, আর "সম্পূর্ণ"
+             * চাপলে কাউন্টার **আরেকটা নতুন খসড়া** বানাত। ফলে প্রতিটা
+             * ধরে-রাখা-তারপর-বেচা চক্রে খাতায় একটা মরা খসড়া থেকে যেত,
+             * আর তার নম্বরটাও খরচ হয়ে যেত — বিলের তালিকায় ফাঁক।
+             *
+             * ছাড়ের অনুমোদনেও এটাই লাগে: অনুরোধটা বসে একটা নির্দিষ্ট
+             * কাগজের গায়ে। নতুন খসড়া বানালে ম্যানেজারের দেওয়া সম্মতি
+             * পুরনো কাগজে পড়ে থাকত, আর নতুনটা আবার অনুমোদন চাইত।
+             */
+            $resumed = $this->draftToFinish($data['resumed_invoice_id'] ?? null);
+
+            $invoice = $resumed !== null
+                ? $this->invoices->update($resumed, $head, $lines)
+                : $this->invoices->create($head, $lines);
 
             /*
              * চাবিটা বিলের গায়ে বসে, আর ইনডেক্সই আসল পাহারা।
@@ -199,6 +233,46 @@ final class PosService
                 $invoice->forceFill(['idempotency_key' => $key])->save();
             }
 
+            return $invoice;
+        });
+
+        /*
+         * ছাড়ের পাহারা — কোনো লেনদেনের ভেতরে নয়।
+         *
+         * এখানে আটকালে খসড়াটা খাতায় থেকে যায় আর অনুরোধটা ম্যানেজারের
+         * তালিকায় ওঠে। অনুমোদনের পর ক্যাশিয়ার বিলটা তুলে (`resume`)
+         * আবার বেচতে পারেন — কার্ট নতুন করে টাইপ করতে হয় না।
+         */
+        try {
+            $this->invoices->assertDiscountApproved($invoice);
+        } catch (ValidationException $blocked) {
+            /*
+             * ম্যানেজার পাশে দাঁড়িয়ে থাকলে এখানেই মিটে যায়।
+             *
+             * প্রথম ডাকটাই অনুরোধের সারিটা তৈরি করে — তাই অনুমোদনের
+             * আগে ওটা ডাকা লাগেই। ম্যানেজার সম্মতি দিলে দ্বিতীয় ডাকটা
+             * নিঃশব্দে পার হয়ে যায়, আর ক্রেতাকে অপেক্ষা করতে হয় না।
+             *
+             * পরিচয় না দিলে আগের আচরণই — বিলটা খসড়া হয়ে অপেক্ষা করে।
+             */
+            if (! $this->approveAtCounter($data, $invoice)) {
+                /*
+                 * ম্যানেজার পাশে নেই — বিলটা কাউন্টারে ঝুলিয়ে রাখা হয়।
+                 *
+                 * না ঝুলালে খসড়াটা থাকত ঠিকই, কিন্তু কাউন্টারের পর্দায়
+                 * তার কোনো চিহ্ন থাকত না — ক্যাশিয়ার ভাবতেন সব হারিয়ে
+                 * গেছে আর পুরো কার্ট আবার টাইপ করতেন। ঝুলানো তালিকায়
+                 * উঠলে অনুমোদনের পর "তুলুন" চেপেই শেষ করা যায়।
+                 */
+                $invoice->forceFill(['parked_at' => now()])->save();
+
+                throw $blocked;
+            }
+
+            $this->invoices->assertDiscountApproved($invoice);
+        }
+
+        return DB::transaction(function () use ($data, $customer, $paid, $invoice) {
             $invoice = $this->invoices->confirm($invoice);
 
             $total = (string) $invoice->total;
@@ -559,6 +633,73 @@ final class PosService
      *
      * @return array{invoice: SalesInvoice, change: string}
      */
+    /**
+     * পর্দা যে খসড়াটার কথা বলছে — যদি সেটা সত্যিই শেষ করার মতো হয়।
+     *
+     * নিশ্চিত হওয়া বা বাতিল বিল এখানে ফেরে না; ফিরলে ক্যাশিয়ার একই
+     * বিলের টাকা দ্বিতীয়বার নিতেন। কোম্পানির স্কোপ মডেলেই বসানো, তাই
+     * অন্য কোম্পানির নম্বর দিলে কিছুই পাওয়া যায় না।
+     */
+    private function draftToFinish(mixed $id): ?SalesInvoice
+    {
+        $id = (int) ($id ?: 0);
+
+        if ($id <= 0) {
+            return null;
+        }
+
+        return SalesInvoice::query()
+            ->where('status', DocumentStatus::DRAFT)
+            ->find($id);
+    }
+
+    /**
+     * ম্যানেজারের নিজের লগইন এলে ছাড়টা এখানেই অনুমোদন হয়।
+     *
+     * ফেরত `false` মানে কেউ পরিচয় দেননি — তখন কিছুই বদলায় না আর
+     * বিলটা আগের মতোই খসড়া হয়ে অনুমোদনের অপেক্ষা করে। পরিচয় ভুল হলে
+     * `CounterApproval` নিজেই বার্তা ছুঁড়ে দেয়, কারণ ভুল পাসওয়ার্ড আর
+     * "কেউ দেননি" এক জিনিস নয় — প্রথমটা ক্যাশিয়ারকে জানানো দরকার।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function approveAtCounter(array $data, SalesInvoice $invoice): bool
+    {
+        $email = trim((string) ($data['approver_email'] ?? ''));
+        $password = (string) ($data['approver_password'] ?? '');
+
+        if ($email === '' || $password === '') {
+            return false;
+        }
+
+        $approval = $this->counter->pending($invoice, 'discount');
+
+        if ($approval === null) {
+            return false;
+        }
+
+        $approver = $this->counter->decide(
+            $approval,
+            $email,
+            $password,
+            __('sales::validation.approved_at_counter', ['name' => auth()->user()?->name ?? '']),
+        );
+
+        /*
+         * অডিটে বসে বিলের গায়ে, অনুমোদনের সারির পাশাপাশি।
+         *
+         * সারিটা বলে কে সম্মতি দিলেন। বিলের অডিট বলে **এই কাগজটার সাথে
+         * কী ঘটেছিল** — আর বিল ধরে ইতিহাস দেখার সময় মানুষ ওটাই খোলেন।
+         */
+        $this->audit->recordAction(
+            $invoice,
+            'discount_approved',
+            $approver->name,
+        );
+
+        return true;
+    }
+
     private function result(SalesInvoice $invoice, string $paid): array
     {
         $total = (string) $invoice->total;

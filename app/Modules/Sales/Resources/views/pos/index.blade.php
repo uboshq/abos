@@ -195,6 +195,16 @@
 
             <input type="hidden" name="warehouse_id" value="{{ $warehouse?->id }}">
 
+            {{--
+                তোলা বিলটার নম্বর — "সম্পূর্ণ" চাপলে ওটাই শেষ হবে।
+
+                না পাঠালে কাউন্টার নতুন একটা খসড়া বানাত, আর তোলা
+                বিলটা মরা কাগজ হয়ে খাতায় পড়ে থাকত — নম্বরসহ।
+            --}}
+            @if ($resumedId)
+                <input type="hidden" name="resumed_invoice_id" value="{{ $resumedId }}">
+            @endif
+
             <div class="space-y-3 rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card) p-3">
 
@@ -417,6 +427,48 @@
                         <span class="num font-semibold" x-text="money(Number(paid) - total)"></span>
                     </div>
                 </div>
+
+                {{--
+                    ছাড়ের অনুমোদন — ম্যানেজার কাউন্টারে দাঁড়িয়েই দেন।
+
+                    ── কেন নিজের লগইন, ভাগ করা PIN নয় ──────────────────
+                    ভাগ করা PIN দুইদিনেই সবাই জেনে যায়। তখন অডিটে
+                    ম্যানেজারের নাম বসে অথচ কাজটা কর্মীর — আর যে
+                    জিনিসটার জন্য পুরো অনুমোদন ব্যবস্থাটা, সেটাই তখন
+                    মিথ্যা সাক্ষী হয়ে দাঁড়ায়।
+
+                    ঘরটা কেবল তখনই আসে যখন সত্যিই একটা ছাড় সিদ্ধান্তের
+                    অপেক্ষায়। রোজ চোখের সামনে থাকলে ক্যাশিয়ার একদিন
+                    ম্যানেজারের পাসওয়ার্ডটা মুখস্থ করে ফেলতেন।
+                --}}
+                @if ($awaitingApproval)
+                    <div class="space-y-2 rounded-(--radius-field) border
+                                border-(--color-badge-warning-ink)/30
+                                bg-(--color-badge-warning-bg) p-3">
+                        <p class="text-2xs text-(--color-badge-warning-ink)">
+                            {{ __('sales::message.pos_needs_approval') }}
+                        </p>
+
+                        <input type="email" name="approver_email" autocomplete="off"
+                               placeholder="{{ __('sales::field.approver_email') }}"
+                               value="{{ old('approver_email') }}"
+                               class="h-10 w-full rounded-(--radius-field) border border-(--color-border)
+                                      bg-(--color-surface-app) px-3 text-sm">
+
+                        {{--
+                            পাসওয়ার্ডে `old()` নেই — ইচ্ছাকৃত।
+
+                            ব্যর্থ হলে পুরনো ইনপুট ফেরত আসে, আর এখানে
+                            লিখলে ম্যানেজারের পাসওয়ার্ড পর্দায় বসানো
+                            থাকত পরের ক্যাশিয়ারের জন্যও। সার্ভারেও
+                            ঘরটা ফ্ল্যাশ হয় না (bootstrap/app.php)।
+                        --}}
+                        <input type="password" name="approver_password" autocomplete="new-password"
+                               placeholder="{{ __('sales::field.approver_password') }}"
+                               class="h-10 w-full rounded-(--radius-field) border border-(--color-border)
+                                      bg-(--color-surface-app) px-3 text-sm">
+                    </div>
+                @endif
 
                 <x-ui.button type="submit" tone="primary" class="w-full"
                              ::disabled="lines.length === 0"

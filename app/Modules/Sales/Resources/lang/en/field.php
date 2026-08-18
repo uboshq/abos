@@ -130,4 +130,8 @@ return [
     'paper' => 'Paper',
     'print_failure' => 'What went wrong',
     'cash' => 'Cash',
+
+    // কাউন্টারে ছাড়ের অনুমোদন — ম্যানেজারের নিজের লগইন
+    'approver_email' => "Manager's email",
+    'approver_password' => "Manager's password",
 ];

@@ -98,4 +98,19 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*'),
         );
+
+        /*
+         * ভ্যালিডেশন ব্যর্থ হলে ইনপুট সেশনে ফ্ল্যাশ হয় — পাসওয়ার্ড ছাড়া।
+         *
+         * Laravel নিজে থেকে `password` ও `password_confirmation` বাদ
+         * দেয়। কাউন্টারে ম্যানেজারের অনুমোদনের ঘরটার নাম
+         * `approver_password`, যা ওই তালিকায় পড়ে না — অর্থাৎ ভুল
+         * পাসওয়ার্ড টাইপ হলে **সেটা হুবহু সেশনে গিয়ে বসত**, আর
+         * সেশন ফাইল/টেবিল যাঁরা দেখতে পান তাঁরা পড়তে পারতেন।
+         *
+         * নামটা `password` রাখলে এই লাইনটা লাগত না, কিন্তু তখন
+         * লগইন ফর্মের ঘরের সাথে নাম মিলে যেত — একই পাতায় দুইটা
+         * আলাদা অর্থের `password`।
+         */
+        $exceptions->dontFlash(['approver_password']);
     })->create();
