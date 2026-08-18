@@ -27,4 +27,7 @@ return [
     'settings' => 'Settings',
     'loans' => 'Loans',
     'inflow' => 'Money In',
+
+    // মাস বন্ধ ও খোলা
+    'periods' => 'Close a Month',
 ];

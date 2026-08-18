@@ -82,7 +82,30 @@ class DemoSeeder extends Seeder
         $roles['owner']->syncPermissions(Permission::all());
 
         $roles['accountant']->syncPermissions(
-            Permission::query()->where('name', 'like', 'accounts.%')->get()
+            Permission::query()
+                ->where('name', 'like', 'accounts.%')
+
+                /*
+                 * সীমা অতিক্রমের অনুমতিগুলো হিসাবরক্ষকের নয়।
+                 *
+                 * ── এটা তৃতীয়বার ঘটল ────────────────────────────────
+                 * নিচে বিক্রয়কর্মীর ঘরে দুইবার এই ফাঁদটার কথা লেখা আছে
+                 * (`sales.discount.override`, `sales.target.manage`), আর
+                 * আজ ঠিক একই জিনিস এখানে হলো: `accounts.backdate.override`
+                 * ঘোষিত হওয়ামাত্র ঢালাও `accounts.%` নিয়মটা সেটা
+                 * হিসাবরক্ষককে **দিয়ে দিল** — কোনো ভুল বার্তা ছাড়াই।
+                 * ধরা পড়ল কেবল একটা টেস্টে, যেখানে তাঁর ৪০ দিন আগের
+                 * এন্ট্রি আটকানোর কথা ছিল আর আটকায়নি।
+                 *
+                 * দুইটাই সীমা অতিক্রম: একটা রোজকার জানালা ডিঙায়, আরেকটা
+                 * বন্ধ করা মাস খোলে। যিনি রোজ ভাউচার লেখেন তাঁর হাতে
+                 * নিজের কাজের পাহারা খোলার চাবি থাকা উচিত নয়।
+                 */
+                ->whereNotIn('name', [
+                    'accounts.backdate.override',
+                    'accounts.period.reopen',
+                ])
+                ->get()
         );
 
         $roles['salesman']->syncPermissions(

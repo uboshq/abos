@@ -105,4 +105,11 @@ return [
 
     // জাবেদার সারিতে কার নামে টাকাটা বসবে
     'party' => 'Party',
+
+    // মাস বন্ধ ও খোলা
+    'month' => 'Month',
+    'closed' => 'Closed',
+    'open' => 'Open',
+    'reason' => 'Reason',
+    'reopen_reason' => 'Reason for reopening (required)',
 ];

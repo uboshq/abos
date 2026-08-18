@@ -12,6 +12,7 @@ use App\Modules\Accounts\Http\Controllers\LoanController;
 use App\Modules\Accounts\Http\Controllers\MoneyCustodyController;
 use App\Modules\Accounts\Http\Controllers\MoneyTransferController;
 use App\Modules\Accounts\Http\Controllers\MoneyTransferPrintController;
+use App\Modules\Accounts\Http\Controllers\PeriodLockController;
 use App\Modules\Accounts\Http\Controllers\ReportController;
 use App\Modules\Accounts\Http\Controllers\VoucherController;
 use App\Modules\Accounts\Http\Controllers\VoucherPrintController;
@@ -178,6 +179,19 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
         Route::get('/', [YearEndController::class, 'index'])->name('index');
         Route::post('/{year}/close', [YearEndController::class, 'close'])
             ->whereNumber('year')->name('close');
+    });
+
+    /*
+     * মাস বন্ধ করা ও খোলা।
+     *
+     * খোলার রুটটা তালার সারিটাই ধরে (`{lock}`), মাস-বছর নয় — যে মাস
+     * বন্ধই নয় তাকে খোলার অনুরোধ তখন রুট-স্তরেই ৪০৪ হয়।
+     */
+    Route::prefix('periods')->name('period.')->group(function () {
+        Route::get('/', [PeriodLockController::class, 'index'])->name('index');
+        Route::post('/close', [PeriodLockController::class, 'close'])->name('close');
+        Route::post('/{lock}/reopen', [PeriodLockController::class, 'reopen'])
+            ->whereNumber('lock')->name('reopen');
     });
 
     Route::prefix('cash-counts')->name('count.')->group(function () {

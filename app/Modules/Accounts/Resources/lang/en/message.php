@@ -104,4 +104,9 @@ return [
     'check_passed' => 'Clear',
     'check_failed' => '{1} 1 row does not match|[2,*] :count rows do not match',
     'what_does_not_match' => 'What does not match',
+
+    // মাস বন্ধ ও খোলা
+    'period_note' => 'Once the month’s reports have gone out, close it — then its figures can no longer change.',
+    'period_closed' => ':month has been closed.',
+    'period_reopened' => ':month has been reopened.',
 ];
