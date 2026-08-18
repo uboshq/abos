@@ -17,7 +17,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ __('auth.sign_in') }} — ABOS</title>
+    <title>{{ __('auth.sign_in') }} — ADI | ABOS</title>
     <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
@@ -69,7 +69,7 @@
                         করা হয়েছে, আর অক্ষরের চারপাশের আভাটা রাখা হয়েছে
                         — শক্ত করে কেটে ফেললে কিনারায় একটা রেখা থাকত।
                     --}}
-                    <img src="{{ asset('brand/abos-lockup-dark.png') }}"
+                    <img src="{{ asset('brand/adi-abos-lockup-dark.png') }}"
                          alt="{{ __('core.brand.full_name') }}"
                          width="720" height="263" class="mb-5 w-64 max-w-full">
 

@@ -336,17 +336,22 @@ class ShellTest extends TestCase
          * পরীক্ষাটাই দাবি করে ওটা `--color-surface-card`, অর্থাৎ সাদা।
          * দুইটা পরীক্ষা পরস্পরবিরোধী ছিল, আর এটা ভুলটাকেই পাহারা দিচ্ছিল।
          *
-         * `-dark` মানে "গাঢ় জমিনের জন্য আঁকা": ওটার ক্রোম-রুপালি প্রান্ত
-         * সাদার উপর পড়ে সস্তা WordArt-এর মতো দেখায়। মালিক ছবি পাঠিয়ে
-         * ধরিয়ে দেন, ১৪ আগস্ট।
+         * `-dark` মানে "গাঢ় জমিনের জন্য আঁকা", আর সাদা মাথায় ওটা বসালে
+         * অক্ষরগুলোই ধুয়ে যায়। মালিক ছবি পাঠিয়ে ধরিয়ে দেন, ১৪ আগস্ট।
+         *
+         * ── নাম বদলেছে, নিয়ম বদলায়নি ────────────────────────────────
+         * ADI | ABOS পরিচয়ে ওয়ার্ডমার্কটা এখন পূর্ণ লকআপ
+         * (`adi-abos-lockup.png`), আর তার গাঢ়-জমিনের জোড়াটা
+         * `adi-abos-lockup-dark.png`। ফাইলের নাম বদলেছে; কোন জমিনে
+         * কোনটা বসবে সেই ভুলটা আগের মতোই সম্ভব, তাই পাহারাটাও থাকল।
          */
-        $this->assertStringContainsString('abos-wordmark-transparent.png', $markup);
-        $this->assertStringNotContainsString('abos-wordmark-dark.png', $markup,
-            'সাদা মাথায় গাঢ়-জমিনের ওয়ার্ডমার্ক বসেছে — ক্রোম প্রান্তটা ধুয়ে যাবে।');
+        $this->assertStringContainsString('adi-abos-lockup.png', $markup);
+        $this->assertStringNotContainsString('adi-abos-lockup-dark.png', $markup,
+            'সাদা মাথায় গাঢ়-জমিনের লকআপ বসেছে — অক্ষরগুলো ধুয়ে যাবে।');
         $this->assertStringContainsString('object-contain', $markup);
 
-        // সরু সাইডবারে (৪৪px) ওয়ার্ডমার্ক ধরে না, তাই সেখানে শুধু মার্ক।
-        $this->assertStringContainsString('abos-icon-transparent.png', $markup);
+        // সরু সাইডবারে (৪৪px) লকআপ ধরে না, তাই সেখানে শুধু মার্ক।
+        $this->assertStringContainsString('adi-icon-transparent.png', $markup);
 
         // স্ক্রিন রিডারের জন্য পূর্ণরূপটা লেখা হিসেবেও থাকে — একটা ছবির
         // alt="ABOS" পড়ে শোনালে পূর্ণরূপটা হারিয়ে যেত।

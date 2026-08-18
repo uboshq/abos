@@ -169,11 +169,14 @@ return [
 
     'brand' => [
         'developed_by' => 'Developed by Al-Amin Shuvo',
-        'full_name' => 'All Business Operating System',
-        'tagline' => 'Built Around Your Business.',
+        'full_name' => 'A Business Operating System',
+        'tagline' => 'Simple to Run. Powerful to Grow.',
         'powered_by' => 'Powered by',
         /* Not translated: a company's name is its name. */
         'powered_by_name' => 'UNIVER BANGLADESH',
+        /* The house the product now carries the name of. */
+        'house' => 'ADI',
+        'name' => 'ADI | ABOS',
         /* Nor is a company's own slogan, for the same reason. */
         'powered_by_slogan' => 'Empowering Tomorrow',
     ],
