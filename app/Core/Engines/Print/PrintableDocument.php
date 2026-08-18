@@ -47,13 +47,6 @@ final class PrintableDocument
     ) {}
 
     /**
-     * টাকার অঙ্ক থেকে কথায় বসিয়ে একটা কপি।
-     *
-     * টেমপ্লেটে না করে এখানে, কারণ ভাষাটা ছাপার ভাষা — ব্যবহারকারীর চলতি
-     * ভাষা নয়। PrintEngine ছাপার সময় লোকেল বদলে দেয়, তাই DTO তৈরির
-     * মুহূর্তে ডাকলে ভুল ভাষায় বসত।
-     */
-    /**
      * উপরের সতর্কবার্তাটা বদলে একটা কপি — যেমন "DUPLICATE"।
      *
      * ── কেন নতুন কপি, বসিয়ে দেওয়া নয় ────────────────────────────────
@@ -62,14 +55,29 @@ final class PrintableDocument
      * যায় যখন দেখা হয় এই কাগজ আগে ছাপা হয়েছিল কি না — অর্থাৎ DTO
      * বানানোর পরে। তাই বদল নয়, নতুন একটা কপি।
      *
-     * আগেরটা থাকলে সেটাই থাকে: খসড়ার "চূড়ান্ত নয়" লেখাটা DUPLICATE-এর
-     * চেয়ে বেশি জরুরি — খসড়া দিয়ে কেউ টাকা চাইতে গেলে সেটা বড় ভুল।
+     * একই বার্তা দুইবার বসে না, কিন্তু আলাদা বার্তাগুলো সবই থাকে —
+     * কারণটা নিচে।
      */
     public function withNotice(?string $notice): self
     {
-        if ($this->notice !== null || $notice === null) {
+        if ($notice === null || in_array($notice, $this->notices(), true)) {
             return $this;
         }
+
+        /*
+         * আগেরটা থাকলে নতুনটা তার **পাশে** বসে, জায়গায় নয়।
+         *
+         * ── কী ভুল হচ্ছিল ───────────────────────────────────────────
+         * আগে প্রথম বার্তাটাই থেকে যেত আর পরেরগুলো নীরবে হারাত। গেটপাসে
+         * তৈরির সময়েই "দাম লেখা নেই" বসে, তাই **বাতিল করা চালানের
+         * গেটপাসে "বাতিল" কথাটা কোনোদিন উঠত না** — আর ওই কাগজটাই
+         * দেখিয়ে গেট থেকে মাল বেরোয়। DUPLICATE-ও একই কারণে হারাত।
+         *
+         * একটা কাগজের একাধিক কথা বলার থাকতে পারে: "বাতিল", "দাম লেখা
+         * নেই", "DUPLICATE" — তিনটাই সত্যি, আর তিনটাই পাঠকের জানা
+         * দরকার। তাই বার্তা একটা নয়, তালিকা।
+         */
+        $stacked = [...$this->notices(), $notice];
 
         return new self(
             title: $this->title,
@@ -80,10 +88,31 @@ final class PrintableDocument
             showMoney: $this->showMoney,
             amountInWords: $this->amountInWords,
             narration: $this->narration,
-            notice: $notice,
+            notice: implode(' · ', $stacked),
         );
     }
 
+    /**
+     * কাগজের বার্তাগুলো — আলাদা আলাদা।
+     *
+     * @return list<string>
+     */
+    public function notices(): array
+    {
+        if ($this->notice === null || trim($this->notice) === '') {
+            return [];
+        }
+
+        return array_values(array_filter(array_map('trim', explode(' · ', $this->notice))));
+    }
+
+    /**
+     * টাকার অঙ্ক থেকে কথায় বসিয়ে একটা কপি।
+     *
+     * টেমপ্লেটে না করে এখানে, কারণ ভাষাটা ছাপার ভাষা — ব্যবহারকারীর চলতি
+     * ভাষা নয়। PrintEngine ছাপার সময় লোকেল বদলে দেয়, তাই DTO তৈরির
+     * মুহূর্তে ডাকলে ভুল ভাষায় বসত।
+     */
     public function withWordsFor(string $amount, string $locale): self
     {
         return new self(
