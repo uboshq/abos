@@ -37,9 +37,19 @@
 /* ─────────────────────────────────────────────────────────────────
    ফন্ট — নিজেদের সার্ভার থেকে, CDN থেকে নয় (সেকশন ১৭.৪)।
 
-   ── ব্র্যান্ড গাইডলাইন ৫ নং ─────────────────────────────────────
-   শিরোনামে Montserrat, লেখায় Inter, বাংলায় Hind Siliguri। Poppins
-   বিদায় নিয়েছে — ওটা ব্র্যান্ডের সিদ্ধান্ত ছিল না।
+   ── ADI | ABOS ব্র্যান্ড শিট ─────────────────────────────────────
+   শিরোনামে **Poppins**, লেখায় Inter, বাংলায় Hind Siliguri।
+
+   Poppins একবার সরানো হয়েছিল, আর কারণটা কমিটে লেখা ছিল: "ওটা
+   ব্র্যান্ডের সিদ্ধান্ত ছিল না"। এখন ADI | ABOS-এর নিজের শিটে
+   টাইপফেস হিসেবে Poppins-ই লেখা (Bold · SemiBold · Medium · Regular
+   · Light), অর্থাৎ এবার সেটা **ব্র্যান্ডেরই সিদ্ধান্ত**। ফাইলগুলো
+   নতুন করে নামানো হয়নি — git-এর ইতিহাস থেকেই ফিরেছে, তাই ওজন ও
+   subset আগের মতোই।
+
+   Montserrat রয়ে গেল ফাইলে, কিন্তু আর ব্যবহার হয় না — সরানোটা
+   আলাদা কাজ, আর একই কমিটে দুইটা জিনিস বদলালে কোনটা কী ভাঙল তা বলা
+   যেত না।
 
    Inter আগে থেকেই --font-numeric-এ লেখা ছিল, অথচ ফাইলটা কখনো
    বসানো হয়নি: হিসাবের প্রতিটা সংখ্যা এতদিন ব্রাউজারের নিজের
@@ -52,6 +62,35 @@
    unicode-range দিয়ে ভাগ করা: ইংরেজি ইন্টারফেসে বাংলা ফাইলটা
    (~৭২KB প্রতি ওজন) নামেই না।
    ───────────────────────────────────────────────────────────────── */
+
+@font-face {
+    font-family: 'Poppins';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('/fonts/poppins-400.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Poppins';
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url('/fonts/poppins-500.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Poppins';
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url('/fonts/poppins-600.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Poppins';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('/fonts/poppins-700.woff2') format('woff2');
+}
 
 @font-face {
     font-family: 'Inter';

@@ -101,7 +101,7 @@
                class="grid w-(--spacing-sidebar-icon) shrink-0 place-items-center bg-(--color-brand-900)"
                title="{{ __('core.brand.full_name') }}">
                 <span class="grid size-10 place-items-center overflow-hidden rounded-[11px] bg-white">
-                    <img src="{{ asset('brand/abos-icon-transparent.png') }}" alt=""
+                    <img src="{{ asset('brand/adi-icon-transparent.png') }}" alt=""
                          aria-hidden="true" class="size-7 object-contain">
                 </span>
             </a>
@@ -137,7 +137,7 @@
                  কোণে বসে থাকে না — ব্র্যান্ডের ঘরে ব্র্যান্ডটাই প্রধান। --}}
             <span class="hidden w-full min-w-0 flex-col items-stretch gap-1.5"
                   :class="$store.sidebar.collapsed ? '' : 'lg:flex'">
-                <img src="{{ asset('brand/abos-wordmark-transparent.png') }}" alt="ABOS"
+                <img src="{{ asset('brand/adi-abos-lockup.png') }}" alt="ADI | ABOS"
                      class="h-auto w-full object-contain object-left">
 
                 {{--

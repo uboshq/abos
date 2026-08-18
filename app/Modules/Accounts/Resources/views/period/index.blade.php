@@ -54,7 +54,7 @@
                             {{ __('accounts::field.reason') }}
                         </th>
                         <th scope="col" class="px-3 py-2 text-end font-medium text-(--color-ink-muted)">
-                            {{ __('core.table.action') }}
+                            {{ __('core.table.actions') }}
                         </th>
                     </tr>
                 </thead>
