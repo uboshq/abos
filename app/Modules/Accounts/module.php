@@ -111,6 +111,7 @@ return [
         'settings' => [
             // বছর সমাপনী রোজকার কাজ নয়, তাই সেটিংসের সাথে — আর অনুমতিও
             // চূড়ান্ত হিসাবের, কারণ এটা বছরের ফল চূড়ান্ত করে দেয়
+            ['label' => 'accounts::menu.periods', 'route' => 'accounts.period.index', 'permission' => 'accounts.period.close'],
             ['label' => 'accounts::menu.year_end', 'route' => 'accounts.year_end.index', 'permission' => 'accounts.report.final'],
             ['label' => 'accounts::menu.settings', 'route' => 'accounts.settings', 'permission' => 'accounts.manage'],
         ],
@@ -125,7 +126,31 @@ return [
         'accounts.voucher.update',
         'accounts.voucher.delete',
         'accounts.voucher.approve',
-        'accounts.voucher.backdate',
+
+        /*
+         * পেছনের তারিখে এন্ট্রি — জানালার বাইরেও।
+         *
+         * ── নামটা বদলানো হয়েছে, আর কেন ─────────────────────────────
+         * আগে এটার নাম ছিল `accounts.voucher.backdate`, আর সেটা
+         * **কোথাও ব্যবহার হত না** — ঘোষিত, অথচ মৃত। এখন তালাটা সত্যি
+         * (`OpenPeriod`), আর সেটা কেবল ভাউচার নয়, বিক্রয়-ক্রয়-বেতন
+         * সব কাগজেই খাটে। তাই নামেও "voucher" থাকা মিথ্যা হত।
+         *
+         * এটা মাসের তালা ডিঙাতে পারে না — সেটা ইচ্ছাকৃত। এটা কেবল
+         * রোজকার জানালাটা খোলে, যাতে পুরনো বিল বসানোর দায়িত্ব যাঁর,
+         * তিনি তারিখ বদলে না লিখে সত্যি তারিখটাই লিখতে পারেন।
+         */
+        'accounts.backdate.override',
+
+        /*
+         * মাস বন্ধ করা আর খোলা — দুইটা আলাদা চাবি।
+         *
+         * বন্ধ করা রোজকার শৃঙ্খলা; খোলা একটা ব্যতিক্রম। এক চাবি হলে
+         * তালাটা আর তালা নয় — এক মুহূর্তের জন্য খুলে এন্ট্রি বসিয়ে
+         * আবার বন্ধ করে দেওয়া যেত।
+         */
+        'accounts.period.close',
+        'accounts.period.reopen',
         'accounts.report',
         'accounts.report.final',
         'accounts.till.view',

@@ -36,4 +36,8 @@ return [
     'pay_instalment' => 'পরিশোধ',
     'expand_all' => 'সব খুলুন',
     'collapse_all' => 'সব বন্ধ করুন',
+
+    // মাস বন্ধ ও খোলা
+    'close_month' => 'মাসটা বন্ধ করুন',
+    'reopen' => 'খুলুন',
 ];

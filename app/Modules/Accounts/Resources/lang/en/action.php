@@ -36,4 +36,8 @@ return [
     'pay_instalment' => 'Pay',
     'expand_all' => 'Expand all',
     'collapse_all' => 'Collapse all',
+
+    // মাস বন্ধ ও খোলা
+    'close_month' => 'Close the month',
+    'reopen' => 'Reopen',
 ];

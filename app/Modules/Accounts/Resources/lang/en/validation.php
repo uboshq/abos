@@ -67,4 +67,7 @@ return [
     // জাবেদার সারিতে পক্ষ — তিন কোণা সমন্বয়ের জন্য
     'party_half_written' => 'A party needs both its kind and its name — otherwise there is no telling later whose money it was.',
     'party_unknown' => 'That party could not be found.',
+
+    // মাস বন্ধ ও খোলা
+    'cannot_close_this_month' => 'This month cannot be closed — today’s sales would stop.',
 ];

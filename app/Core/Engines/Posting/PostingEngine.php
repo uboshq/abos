@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Engines\Posting;
 
+use App\Core\Services\OpenPeriod;
 use App\Core\Support\CompanyContext;
 use App\Models\FinancialYear;
 use App\Models\LedgerEntry;
@@ -20,6 +21,10 @@ use Illuminate\Support\Facades\DB;
  */
 final class PostingEngine
 {
+    public function __construct(
+        private readonly OpenPeriod $period,
+    ) {}
+
     /**
      * একটা ডকুমেন্টের সব হিসাব একসাথে বসানো।
      *
@@ -40,6 +45,20 @@ final class PostingEngine
         }
 
         $trxDate = $trxDate instanceof Carbon ? $trxDate : Carbon::parse($trxDate);
+
+        /*
+         * বন্ধ মাস ও পেছনের জানালা — এক দরজার ঠিক ভেতরে।
+         *
+         * ── কেন এখানে, প্রতিটা সার্ভিসে নয় ──────────────────────────
+         * খতিয়ানে লেখার পথ একটাই, আর সেটাই এই ফাংশন। প্রতিটা মডিউলে
+         * আলাদা করে পাহারা বসালে একদিন কোনো একটা নতুন কাগজ ওটা বসাতে
+         * ভুলে যেত — আর ভুলটা ধরা পড়ত বছর শেষে, বন্ধ মাসে একটা এন্ট্রি
+         * দেখে।
+         *
+         * অর্থবছরের তালাটা ঠিক নিচেই (`resolveFinancialYear`), আর
+         * তিনটা স্তর একসাথেই সত্যি: বছর, মাস, আর কত দিন পেছনে।
+         */
+        $this->period->assertOpen($trxDate);
 
         $financialYear = $this->resolveFinancialYear($trxDate);
         $this->assertBalanced($lines, $sourceType, $sourceId);
@@ -121,6 +140,17 @@ final class PostingEngine
         }
 
         $reversalDate = $reversalDate instanceof Carbon ? $reversalDate : Carbon::parse($reversalDate);
+
+        /*
+         * উল্টো এন্ট্রিও বন্ধ মাসে বসে না।
+         *
+         * এটা বাতিল করাকে আটকায় না — বাতিলের তারিখ সাধারণত আজ, আর আজকের
+         * মাস খোলা। আটকায় কেবল **বন্ধ মাসের ভেতরে** উল্টো এন্ট্রি বসানো,
+         * কারণ সেটা ছাপা হয়ে যাওয়া হিসাব বদলে দিত — আর তালার পুরো
+         * উদ্দেশ্যই তাই।
+         */
+        $this->period->assertOpen($reversalDate);
+
         $financialYear = $this->resolveFinancialYear($reversalDate);
         $userId = $userId ?? auth()->id();
 
