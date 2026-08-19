@@ -46,4 +46,12 @@ return [
     'margin' => 'Margin',
     'paid_to_them' => 'Paid to them',
     'still_owed' => 'Still owed',
+
+    // পুঁজির উপর ফেরত
+    'capital_advance' => 'Money with the mill',
+    'capital_claims' => 'Commission claimed',
+    'capital_stock' => 'Goods on the shelf',
+    'capital_dealer' => 'Dealer dues (apportioned)',
+    'capital_total' => 'Capital tied up',
+    'return_percent' => 'Annual return %',
 ];

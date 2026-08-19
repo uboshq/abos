@@ -11,4 +11,7 @@ return [
 
     // কোম্পানির নিষ্পত্তির কাগজ
     'settlement' => 'Principal Settlement',
+
+    // পুঁজির উপর ফেরত
+    'return_on_capital' => 'Return on capital',
 ];
