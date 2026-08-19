@@ -120,8 +120,16 @@
                 </select>
             </label>
 
+            {{--
+                আমাদের কোন ব্যাংক হিসাবে টাকাটা বসবে।
+
+                উপরের "ব্যাংকের নাম" ঘরটা আলাদা জিনিস — ওটা চেকটা **কোন
+                ব্যাংকের**, অর্থাৎ যিনি চেক দিয়েছেন তাঁর ব্যাংক। দুইটাতেই
+                একই লেবেল বসানো ছিল, আর পর্দায় পাশাপাশি দুইটা "ব্যাংকের
+                নাম" দেখে বোঝার উপায় ছিল না কোনটা কী।
+            --}}
             <label class="flex flex-col gap-1 md:col-span-2">
-                <span class="text-sm font-medium">{{ __('accounts::field.bank_name') }}</span>
+                <span class="text-sm font-medium">{{ __('accounts::field.deposit_into') }}</span>
                 <select name="bank_account_id"
                         class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border)
                                bg-(--color-surface-app) px-2">
