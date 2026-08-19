@@ -46,4 +46,12 @@ return [
     'margin' => 'মার্জিন',
     'paid_to_them' => 'কোম্পানিকে দেওয়া',
     'still_owed' => 'এখনো দিতে হবে',
+
+    // পুঁজির উপর ফেরত
+    'capital_advance' => 'মিলের কাছে টাকা',
+    'capital_claims' => 'কমিশনের দাবি',
+    'capital_stock' => 'শেলফের মাল',
+    'capital_dealer' => 'ডিলারের বাকি (ভাগ করে)',
+    'capital_total' => 'আটকে থাকা পুঁজি',
+    'return_percent' => 'বছরে ফেরত %',
 ];

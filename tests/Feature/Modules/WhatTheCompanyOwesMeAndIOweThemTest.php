@@ -8,7 +8,10 @@ use App\Core\Engines\Report\ReportEngine;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\User;
+use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Accounts\Services\VoucherService;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
@@ -282,5 +285,114 @@ class WhatTheCompanyOwesMeAndIOweThemTest extends TestCase
     public function test_the_widgets_stay_quiet_when_there_is_nothing(): void
     {
         $this->assertSame([], SupplierWidgets::widgets());
+    }
+
+    // ── পুঁজির উপর ফেরত ─────────────────────────────────────────────
+
+    /** @return array<int, object> */
+    private function returns(): array
+    {
+        $result = app(ReportEngine::class)->run('supplier.return_on_capital', [
+            'from' => now()->startOfYear()->toDateString(),
+            'to' => now()->endOfYear()->toDateString(),
+        ]);
+
+        $rows = [];
+
+        foreach ($result->rows as $row) {
+            $row = (object) $row;
+            $rows[(int) $row->supplier_id] = $row;
+        }
+
+        return $rows;
+    }
+
+    /**
+     * আটকে থাকা পুঁজির টুকরোগুলো আলাদা করে দেখা যায়।
+     *
+     * ১০টা @ ১০০ কেনা = ১,০০০ টাকার মাল ঢুকল, দেনাও ১,০০০।
+     * ২টা @ ১২০ বিক্রি = খরচ ২০০ বেরোল, শেলফে রইল ৮০০।
+     *
+     * মিলের কাছে আমাদের কোনো টাকা নেই (উল্টো আমরা দেনা), তাই ওই ঘর
+     * শূন্য — আর সেটাই ঠিক: দেনা পুঁজি নয়।
+     */
+    public function test_the_pieces_of_tied_up_capital(): void
+    {
+        $tofan = $this->product('CAP-1');
+
+        $this->receive($this->alin, $tofan, '10', '100');
+        $this->sell($tofan, '2', '120');
+
+        $row = $this->returns()[$this->alin->id] ?? null;
+
+        $this->assertNotNull($row, 'পুঁজির রিপোর্টে মিলের সারিটাই নেই।');
+
+        $this->assertSame(0, bccomp((string) $row->stock, '800', 2),
+            'শেলফে পড়ে থাকা মালের দাম ভুল — ৮টা × ১০০ হওয়ার কথা।');
+
+        $this->assertSame(0, bccomp((string) $row->advance, '0', 2),
+            'মিলের কাছে টাকা নেই, তবু অঙ্ক বসেছে।');
+
+        $this->assertSame(0, bccomp((string) $row->margin, '40', 2),
+            'মার্জিনের অঙ্কটা ভুল — ২৪০ − ২০০।');
+    }
+
+    /**
+     * অগ্রিম দিলে সেটা আটকে থাকা পুঁজি হিসেবে দেখা যায়।
+     *
+     * ২০ লাখ দিয়ে ব্যবসা শুরু করার গল্পটাই এটা: টাকাটা মিলের কাছে
+     * বসে আছে, আর ওটাই পুঁজির সবচেয়ে বড় টুকরো।
+     */
+    public function test_an_advance_shows_up_as_capital(): void
+    {
+        app(VoucherService::class)->post(
+            app(VoucherService::class)->create(
+                ['type' => Voucher::JOURNAL,
+                    'trx_date' => now()->toDateString()],
+                [
+                    ['account_id' => StandardChart::find(StandardChart::PAYABLE)->id,
+                        'party_type' => 'supplier', 'party_id' => $this->alin->id, 'debit' => '2000000'],
+                    /*
+                     * টিলের খাত, "হাতে নগদ" (১১০১) নয় — ওটা গ্রুপ, আর
+                     * গ্রুপে সরাসরি লেনদেন বসে না। কোডেও এই ফাঁদটার
+                     * কথা লেখা আছে।
+                     */
+                    ['account_id' => app(CashTillService::class)->ensurePrimaryTill()->account->id,
+                        'credit' => '2000000'],
+                ],
+            ),
+        );
+
+        $row = $this->returns()[$this->alin->id] ?? null;
+
+        $this->assertNotNull($row);
+        $this->assertSame(0, bccomp((string) $row->advance, '2000000', 2),
+            'মিলের কাছে দেওয়া ২০ লাখ পুঁজি হিসেবে দেখা যাচ্ছে না।');
+    }
+
+    /**
+     * ফেরতের শতাংশটা পুঁজির উপর, বিক্রয়ের উপর নয়।
+     *
+     * ── কেন এটাই আসল সংখ্যা ─────────────────────────────────────────
+     * ৪% বলে বিক্রির উপর কত। কিন্তু একই ৪% মার্জিনে যদি দ্বিগুণ পুঁজি
+     * আটকে থাকে, ফেরত অর্ধেক হয়ে যায় — অথচ ৪% সংখ্যাটা এক থাকে।
+     */
+    public function test_the_return_is_counted_on_the_capital(): void
+    {
+        $tofan = $this->product('CAP-2');
+
+        $this->receive($this->alin, $tofan, '10', '100');
+        $this->sell($tofan, '10', '120');
+
+        $row = $this->returns()[$this->alin->id] ?? null;
+
+        $this->assertNotNull($row);
+
+        // মার্জিন ২০০, আর পুঁজি = ডিলারের বাকির ভাগ (মাল সবই বিক্রি)
+        $this->assertGreaterThan(0, (float) $row->capital,
+            'সব মাল বিক্রি হয়ে গেলেও ডিলারের বাকিটা পুঁজি হিসেবে বসেনি।');
+
+        $this->assertGreaterThan(0, (float) $row->return_percent,
+            'ফেরতের শতাংশটা গোনাই হয়নি।');
     }
 }

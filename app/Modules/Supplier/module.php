@@ -6,6 +6,7 @@ use App\Modules\Supplier\Dashboard\SupplierWidgets;
 use App\Modules\Supplier\Imports\SupplierImporter;
 use App\Modules\Supplier\Models\Supplier;
 use App\Modules\Supplier\Reports\PartyReports;
+use App\Modules\Supplier\Reports\ReturnOnCapitalReport;
 use App\Modules\Supplier\Reports\SettlementReport;
 
 /**
@@ -60,6 +61,15 @@ return [
              */
             ['label' => 'supplier::menu.settlement', 'route' => 'supplier.report.show',
                 'route_params' => ['slug' => 'settlement'], 'permission' => 'supplier.settlement.view'],
+
+            /*
+             * পুঁজির উপর ফেরত — নিষ্পত্তির ঠিক পাশে, আর একই চাবিতে।
+             *
+             * দুইটাই একই প্রশ্নের দুই অর্ধেক: নিষ্পত্তি বলে "এই মাসে কত
+             * এল", আর এটা বলে "ওই টাকা খেটে বছরে কত আনছে"।
+             */
+            ['label' => 'supplier::menu.return_on_capital', 'route' => 'supplier.report.show',
+                'route_params' => ['slug' => 'return-on-capital'], 'permission' => 'supplier.settlement.view'],
         ],
     ],
 
@@ -101,6 +111,7 @@ return [
     'reports' => [
         PartyReports::class,
         SettlementReport::class,
+        ReturnOnCapitalReport::class,
     ],
 
     /*
