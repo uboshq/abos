@@ -10,6 +10,7 @@ use App\Core\Concerns\HasDocumentStatus;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Contracts\Drillable;
+use App\Core\Services\SettingsService;
 use App\Models\Branch;
 use App\Models\LedgerEntry;
 use App\Models\User;
@@ -279,6 +280,17 @@ class Customer extends Model implements Drillable
             ->whereColumn('ledger_entries.party_id', 'customers.id')
             ->where('ledger_entries.party_type', self::drillSourceType());
 
+        /*
+         * শূন্য লিমিটওয়ালারা এখানে আসেন কেবল সুইচ চালু থাকলে।
+         *
+         * সুইচ বন্ধ থাকলে শূন্য মানে সীমাহীন, তাই তাঁরা কেউই "সীমা
+         * ছাড়িয়েছেন" নন। চালু থাকলে যাঁদের এক পয়সাও বকেয়া আছে
+         * তাঁরা সবাই ছাড়িয়েছেন — কারণ সীমাটাই শূন্য।
+         */
+        if (app(SettingsService::class)->enabled('customer.zero_limit_blocks')) {
+            return $query->whereRaw('('.$net->toRawSql().') > customers.credit_limit');
+        }
+
         return $query
             ->where('credit_limit', '>', 0)
             ->whereRaw('('.$net->toRawSql().') > customers.credit_limit');
@@ -287,16 +299,32 @@ class Customer extends Model implements Drillable
     /**
      * এই বিলটা করলে ক্রেডিট লিমিট ছাড়াবে কি না।
      *
-     * লিমিট শূন্য মানে সীমাহীন, বন্ধ নয় — শূন্যকে "কিছুই বাকি রাখা যাবে না"
-     * ধরলে নতুন গ্রাহকের প্রথম বিলটাই আটকে যেত।
+     * ── শূন্যের অর্থ দুই রকম, আর সেটা মালিকের সুইচে ──────────────────
+     * ডিফল্টে **শূন্য মানে সীমাহীন**। কারণটা পুরনো, আর এখনো সত্যি:
+     * শূন্যকে "কিছুই বাকি নয়" ধরলে যাঁদের লিমিট বসানোই হয়নি তাঁরা
+     * সবাই আটকে যেতেন — নতুন গ্রাহকের প্রথম বিলটাও।
+     *
+     * `customer.zero_limit_blocks` চালু করলে **শূন্য মানে শূন্য**: বাকি
+     * কিছুই নয়, হয় আগে টাকা নয় নগদে বিল। সুইচটা ডিফল্ট বন্ধ, আর
+     * মালিক নিজের বেছে নেওয়া দিনে টিপবেন — "কাদের লিমিট নেই" তালিকা
+     * দেখে লিমিট বসানোর পর।
+     *
+     * সুইচ ছাড়া নিয়মটা উল্টে দিলে পরদিন সকালেই ডিপো অচল হত।
      */
     public function wouldExceedCreditLimit(string $additional): bool
     {
-        if (bccomp((string) $this->credit_limit, '0', 4) === 0) {
-            return false;
+        $limit = (string) $this->credit_limit;
+
+        if (bccomp($limit, '0', 4) === 0) {
+            if (! app(SettingsService::class)->enabled('customer.zero_limit_blocks')) {
+                return false;
+            }
+
+            // শূন্য মানে শূন্য — বকেয়া থাকুক বা না থাকুক, নতুন বাকি নয়
+            return bccomp(bcadd($this->outstanding(), $additional, 4), '0', 4) > 0;
         }
 
-        return bccomp(bcadd($this->outstanding(), $additional, 4), (string) $this->credit_limit, 4) > 0;
+        return bccomp(bcadd($this->outstanding(), $additional, 4), $limit, 4) > 0;
     }
 
     // ── Drillable — নিয়ম ১ ────────────────────────────────────────────

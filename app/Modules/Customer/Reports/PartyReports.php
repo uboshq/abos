@@ -40,6 +40,7 @@ final class PartyReports
     {
         $engine->register(self::dueList());
         $engine->register(self::ageing());
+        $engine->register(self::noCreditLimit());
         $engine->register(self::collection());
     }
 
@@ -102,6 +103,67 @@ final class PartyReports
                  * পিছিয়েছেন, দুইটা সংখ্যা মাথায় বিয়োগ না করেই।
                  */
                 ['key' => 'movement', 'label' => 'customer::field.net_change', 'type' => ReportColumn::MONEY],
+            ],
+        );
+    }
+
+    /**
+     * কাদের ধারের সীমা বসানো নেই।
+     *
+     * ── কেন এই তালিকাটা সুইচের আগে দরকার ────────────────────────────
+     * `customer.zero_limit_blocks` চালু করলে **শূন্য মানে শূন্য** হয়ে
+     * যায় — বাকিতে কিছুই যাবে না। কিন্তু যাঁদের লিমিট কেউ কোনোদিন
+     * বসায়নি তাঁদেরও লিমিট শূন্য, আর তাঁদের মধ্যে বড় ডিলারও থাকেন
+     * যাঁদের সত্যিই বাকি দিতে হয়।
+     *
+     * সুইচটা টেপার আগে এই তালিকা দেখে লিমিট বসিয়ে নিতে হয়, নাহলে
+     * পরদিন সকালেই ভালো খদ্দেরও আটকে যাবেন। **এটাই সুইচটার সাথে
+     * জোড়া কাগজ।**
+     *
+     * বকেয়ার কলামটা সাথেই, কারণ যাঁর কাছে এখনই টাকা আটকে আছে তাঁর
+     * লিমিটটা আগে বসানো দরকার।
+     */
+    public static function noCreditLimit(): ReportDefinition
+    {
+        return new ReportDefinition(
+            key: 'customer.no_limit',
+            title: 'customer::menu.no_limit',
+            filters: ['branch'],
+            groupBy: 'id',
+            query: fn (array $f) => DB::table('customers')
+                ->leftJoinSub(
+                    DB::table('ledger_entries')
+                        ->where('company_id', $f['company_id'])
+                        ->where('party_type', Customer::drillSourceType())
+                        ->groupBy('party_id')
+                        ->select(['party_id', DB::raw('SUM(debit) - SUM(credit) as due')]),
+                    'l', 'l.party_id', '=', 'customers.id',
+                )
+                ->where('customers.company_id', $f['company_id'])
+                ->whereNull('customers.deleted_at')
+                ->where('customers.is_active', true)
+                ->where(fn ($q) => $q->whereNull('customers.credit_limit')
+                    ->orWhere('customers.credit_limit', '<=', 0))
+
+                // যাঁর কাছে সবচেয়ে বেশি টাকা আটকে, তাঁর সারি আগে
+                ->orderByRaw('COALESCE(l.due, 0) DESC')
+                ->select([
+                    'customers.id',
+                    self::customerName(),
+                    DB::raw("'".Customer::drillSourceType()."' as party_type_literal"),
+                    'customers.credit_days',
+                    DB::raw('COALESCE(l.due, 0) as outstanding'),
+                ]),
+            columns: [
+                [
+                    'key' => 'customer_name',
+                    'label' => 'customer::field.name',
+                    'type' => ReportColumn::DOCUMENT,
+                    'source_type' => 'party_type_literal',
+                    'source_id' => 'id',
+                ],
+                ['key' => 'credit_days', 'label' => 'customer::field.credit_days', 'type' => ReportColumn::TEXT],
+                ['key' => 'outstanding', 'label' => 'customer::field.outstanding', 'type' => ReportColumn::MONEY],
             ],
         );
     }

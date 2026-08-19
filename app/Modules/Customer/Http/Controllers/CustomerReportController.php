@@ -42,6 +42,15 @@ class CustomerReportController extends Controller implements HasMiddleware
         'collection' => 'customer.collection',
 
         'due-list' => 'customer.due_list',
+
+        /*
+         * কাদের লিমিট নেই — "শূন্য মানে শূন্য" সুইচের জোড়া কাগজ।
+         *
+         * সারিটা যোগ করার সাথে সাথেই এই ঘরে না বসালে উপরের ইতিহাসটাই
+         * আবার ঘটত: মেনুতে সারি, ইঞ্জিনে রিপোর্ট, অথচ ক্লিক করলে ৪০৪।
+         * এবারও প্রথম চালেই ধরা পড়েছে।
+         */
+        'no-limit' => 'customer.no_limit',
         'ageing' => 'customer.ageing',
     ];
 

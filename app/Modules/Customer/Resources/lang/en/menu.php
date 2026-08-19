@@ -13,4 +13,5 @@ return [
 
     // What a customer is called when named as a party on a ledger line
     'party' => 'Customer',
+    'no_limit' => 'Who has no credit limit',
 ];
