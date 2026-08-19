@@ -51,20 +51,6 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('sales::menu.collections') }}</x-slot:title>
 
-    <x-slot:header>
-        <x-ui.page-header
-            :title="__('sales::menu.collections')"
-            :subtitle="__('sales::message.collection_note')">
-            <x-slot:actions>
-                @can('create', \App\Modules\Sales\Models\Collection::class)
-                    <x-ui.button tone="primary" icon="plus" :href="route('sales.collection.create')">
-                        {{ __('sales::action.new_collection') }}
-                    </x-ui.button>
-                @endcan
-            </x-slot:actions>
-        </x-ui.page-header>
-    </x-slot:header>
-
     @if (session('saved'))
         <div role="status"
              class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm
@@ -75,9 +61,16 @@
 
     <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
-            <x-ui.toolbar
+            <x-ui.toolbar :title="__('sales::menu.collections')" :count="__('sales::message.collection_note')"
                 :columns="$columns" :search-placeholder="__('sales::message.collection_search')"
                           :sort="$sortOptions">
+        <x-slot:actions>
+            @can('create', \App\Modules\Sales\Models\Collection::class)
+                    <x-ui.button tone="primary" icon="plus" :href="route('sales.collection.create')">
+                        {{ __('sales::action.new_collection') }}
+                    </x-ui.button>
+                @endcan
+        </x-slot:actions>
                 <x-ui.date-range :dates="$dates" />
 
                 <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">

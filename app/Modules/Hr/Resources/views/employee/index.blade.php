@@ -24,20 +24,6 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('hr::menu.employees') }}</x-slot:title>
 
-    <x-slot:header>
-        <x-ui.page-header
-            :title="__('hr::menu.employees')"
-            :subtitle="trans_choice('core.count.records', $employees->total(), ['count' => $employees->total()])">
-            <x-slot:actions>
-                @can('hr.employee.manage')
-                    <x-ui.button tone="primary" icon="plus" :href="route('hr.employee.create')">
-                        {{ __('hr::action.new_employee') }}
-                    </x-ui.button>
-                @endcan
-            </x-slot:actions>
-        </x-ui.page-header>
-    </x-slot:header>
-
     @if (session('saved'))
         <div role="status"
              class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm
@@ -48,9 +34,16 @@
 
     <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
-            <x-ui.toolbar
+            <x-ui.toolbar :title="__('hr::menu.employees')" :count="trans_choice('core.count.records', $employees->total(), ['count' => $employees->total()])"
                 :columns="$columns" :sort="$sortOptions"
                           :search-placeholder="__('hr::field.name')">
+        <x-slot:actions>
+            @can('hr.employee.manage')
+                    <x-ui.button tone="primary" icon="plus" :href="route('hr.employee.create')">
+                        {{ __('hr::action.new_employee') }}
+                    </x-ui.button>
+                @endcan
+        </x-slot:actions>
                 <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
                     <input type="checkbox" name="left" value="1" @checked($showLeft) class="size-4">
                     {{ __('hr::action.show_left') }}

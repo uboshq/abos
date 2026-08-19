@@ -10,16 +10,6 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('core.components.title') }}</x-slot:title>
 
-    <x-slot:header>
-        <x-ui.page-header :title="__('core.components.title')"
-                          :subtitle="__('core.components.subtitle')">
-            <x-slot:actions>
-                <x-ui.button tone="secondary" icon="refresh">{{ __('core.action.history') }}</x-ui.button>
-                <x-ui.button tone="primary" icon="plus">{{ __('core.action.create') }}</x-ui.button>
-            </x-slot:actions>
-        </x-ui.page-header>
-    </x-slot:header>
-
     <div class="space-y-4">
 
         {{-- বাটন --}}
@@ -46,7 +36,12 @@
 
         {{-- টেবিল --}}
         <section class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-            <x-ui.toolbar />
+            <x-ui.toolbar :title="__('core.components.title')" :count="__('core.components.subtitle')">
+        <x-slot:actions>
+            <x-ui.button tone="secondary" icon="refresh">{{ __('core.action.history') }}</x-ui.button>
+                <x-ui.button tone="primary" icon="plus">{{ __('core.action.create') }}</x-ui.button>
+        </x-slot:actions>
+        </x-ui.toolbar>
 
             <x-ui.table
                 :columns="[

@@ -86,23 +86,37 @@
             ]),
         ],
     ];
+
+    /*
+     * এই পাতার যোগ — গোটা তালিকার নয়।
+     *
+     * ── কেন যোগফলটা দরকার ────────────────────────────────────────────
+     * গুদামে মিলিয়ে নেওয়ার সময় প্রশ্নটা হয় "সব মিলিয়ে কত ধরা আছে",
+     * আর এতদিন সেটা চোখে গুনতে হত। ছয়টা সারিতে সহজ, ত্রিশটায় নয়।
+     *
+     * ── কেন পাতা ধরে, মোট নয় ─────────────────────────────────────────
+     * `$products` একটা paginator — হাতে যা আছে তা কেবল এই পাতার সারি।
+     * গোটা তালিকার যোগ চাইলে আলাদা একটা কোয়েরি লাগত, আর সেটা এখান
+     * থেকে করলে প্রতিটা পাতায় একটা বাড়তি গোনা হত। শিরোনামে "এই পাতায়"
+     * লেখা থাকে, তাই সংখ্যাটা কী বলছে তা নিয়ে সন্দেহ থাকে না।
+     */
+    $sum = fn (callable $pick) => \App\Core\Support\Money::format(
+        collect($products->items())->reduce(
+            fn (string $carry, $p) => bcadd($carry, (string) $pick($p), 4),
+            '0',
+        ),
+    );
+
+    $totals = [
+        'floor' => $sum(fn ($p) => $p->floor_total),
+        'reserved' => $sum(fn ($p) => $p->reserved_total),
+        'hold' => $sum(fn ($p) => $p->hold_total),
+        'available' => $sum(fn ($p) => $available($p)),
+    ];
 @endphp
 
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('inventory::menu.stock') }}</x-slot:title>
-
-    <x-slot:header>
-        <x-ui.page-header :title="__('inventory::menu.stock')"
-                          :subtitle="__('inventory::message.stock_math')">
-            <x-slot:actions>
-                @can('inventory.stock.adjust')
-                    <x-ui.button tone="secondary" :href="route('inventory.stock.adjust')">
-                        {{ __('inventory::menu.adjust') }}
-                    </x-ui.button>
-                @endcan
-            </x-slot:actions>
-        </x-ui.page-header>
-    </x-slot:header>
 
     @if (session('saved'))
         <div role="status"
@@ -114,9 +128,16 @@
 
     <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
-            <x-ui.toolbar
+            <x-ui.toolbar :title="__('inventory::menu.stock')" :count="__('inventory::message.stock_math')"
                 :columns="$columns" :search-placeholder="__('inventory::message.search_placeholder')"
                           :sort="$sortOptions">
+        <x-slot:actions>
+            @can('inventory.stock.adjust')
+                    <x-ui.button tone="secondary" :href="route('inventory.stock.adjust')">
+                        {{ __('inventory::menu.adjust') }}
+                    </x-ui.button>
+                @endcan
+        </x-slot:actions>
                 <label class="flex items-center gap-2 text-sm">
                     <span class="sr-only">{{ __('inventory::field.warehouse') }}</span>
                     <select name="warehouse_id"
@@ -135,7 +156,8 @@
             :empty="$q ? __('core.empty.no_results') : __('inventory::message.none_yet')"
             :rows="$products"
             :compact="request()->boolean('compact')"
-            :columns="$columns" />
+            :columns="$columns"
+            :totals="$totals" />
 
         @if ($products->hasPages())
             <div class="border-t border-(--color-border) px-3 py-2">{{ $products->links() }}</div>

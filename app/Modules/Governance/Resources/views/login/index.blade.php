@@ -48,12 +48,6 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('governance::menu.login_history') }}</x-slot:title>
 
-    <x-slot:header>
-        <x-ui.page-header
-            :title="__('governance::menu.login_history')"
-            :subtitle="trans_choice('core.count.records', $rows->total(), ['count' => $rows->total()])" />
-    </x-slot:header>
-
     <p class="mb-4 rounded-(--radius-field) bg-(--color-surface-hover) px-3 py-2 text-2xs
               text-(--color-ink-muted)">
         {{ __('governance::message.login_why') }}
@@ -80,7 +74,7 @@
     <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
             {{-- খাতাটা নিজে রপ্তানি হয় না — রপ্তানির খাতার একই কারণে --}}
-            <x-ui.toolbar :export="false" :search="false">
+            <x-ui.toolbar :title="__('governance::menu.login_history')" :count="trans_choice('core.count.records', $rows->total(), ['count' => $rows->total()])" :export="false" :search="false">
                 <select name="user" aria-label="{{ __('governance::field.who') }}"
                         class="h-9 rounded-(--radius-field) border border-(--color-border)
                                bg-(--color-surface-app) px-2 text-sm">

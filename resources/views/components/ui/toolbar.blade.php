@@ -17,6 +17,25 @@
     'share' => true,
     'print' => true,
     'refresh' => true,
+
+    /*
+     * পর্দার শিরোনাম ও গোনা — এখন টুলবারের নিজের।
+     *
+     * ── কেন এগুলো এখানে এল ───────────────────────────────────────────
+     * আগে শিরোনামটা থাকত `x-ui.page-header`-এ, টুলবারের **উপরে**, আর
+     * সাথে পাতার নিজের প্যাডিং। ফলে তালিকায় পৌঁছাতে চারটা স্তর পার
+     * হতে হত: ব্রেডক্রাম্ব → শিরোনাম → উপশিরোনাম → ছাঁকনির কার্ড →
+     * টেবিলের হেডার। ছক শুরু হত উপর থেকে প্রায় ৫০০px-এ।
+     *
+     * D365-এ গ্রিড শুরু হয় ~১২০px-এ: কমান্ড বার আর দৃশ্যের সারি —
+     * দুইটাই সরু, আর দুইটার পরেই তথ্য।
+     *
+     * শিরোনামটা টুলবারে আনায় স্তর দুইটা এক হলো, আর তালিকা অনেকটা
+     * উপরে উঠে এল।
+     */
+    'title' => null,
+    'subtitle' => null,
+    'count' => null,
 ])
 
 {{--
@@ -104,10 +123,47 @@
         ->filter(fn ($value) => $value !== '' && $value !== null);
 @endphp
 
+{{-- flex-col — দুইটা সারির ক্রম CSS ঠিক করে, তাই `order-1` ও `order-2`
+     কাজ করে (নিচের ব্যাখ্যা দেখুন) --}}
 <div x-data="{ filtersOpen: {{ $hasFilters && $screenFilters->isNotEmpty() ? 'true' : 'false' }} }"
-     {{ $attributes->merge(['class' => 'border-b border-(--color-border) bg-(--color-surface-card)']) }}>
+     {{ $attributes->merge(['class' => 'flex flex-col border-b border-(--color-border) bg-(--color-surface-card)']) }}>
 
-    <div class="flex flex-wrap items-center gap-2 px-3 py-2">
+    {{--
+        দৃশ্যের সারি — শিরোনাম · গোনা · ছাঁকনি · খোঁজা · সাজানো।
+
+        `order-2` — এই ব্লকটা লেখা আছে আগে, কিন্তু দেখা যায় পরে।
+
+        ── কেন CSS-এর ক্রম, HTML-এর নয় ────────────────────────────────
+        ডানের সরঞ্জামগুলো (দৃশ্য, ঘনত্ব, কলাম, রপ্তানি, শেয়ার, ছাপা,
+        রিফ্রেশ) প্রায় আড়াইশো লাইনের একটা ব্লক, আর ওগুলোর জায়গা
+        কমান্ড বারে — এই সারির আগে। ব্লকটা হাতে তুলে উপরে বসাতে গেলে
+        ভেতরের Alpine স্টেট, x-cloak আর ড্রপডাউনের সম্পর্কগুলো ছুঁতে
+        হত, আর তার একটাও ভাঙলে বোতাম দেখতে ঠিকই থাকত অথচ কাজ করত না।
+
+        `order` দিয়ে সরালে HTML অটুট থাকে, কেবল দেখার ক্রম বদলায় —
+        আর ট্যাব-অর্ডার HTML-এর ক্রমই মানে, তাই কীবোর্ডে শিরোনাম-ঘর
+        আগে আসে, যা ঠিকই আছে।
+    --}}
+    <div class="order-2 flex flex-wrap items-center gap-2 px-3 py-2">
+
+        {{-- দৃশ্যের শিরোনাম — নাম, আর পাশে কত সারি।
+
+             ▾ চিহ্নটা বলে এটা একটা **দৃশ্য**, স্থির নাম নয়: সংরক্ষিত
+             ছাঁকনি বদলালে নামটাও বদলায়। --}}
+        @if ($title)
+            <h1 class="flex shrink-0 items-center gap-1.5 text-lg font-semibold text-(--color-ink)">
+                {{ $title }}
+                <svg viewBox="0 0 20 20" aria-hidden="true"
+                     class="size-3.5 fill-none stroke-(--color-ink-muted)" stroke-width="1.6">
+                    <path d="M5.6 8.2 10 12.4l4.4-4.2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </h1>
+
+            @if ($count !== null || $subtitle)
+                <span class="tabular shrink-0 border-s border-(--color-border) ps-3 text-sm
+                             text-(--color-ink-muted)">{{ $count ?? $subtitle }}</span>
+            @endif
+        @endif
 
         {{-- Filter By — লেখা সহ, বাঁ প্রান্তে।
 
@@ -168,6 +224,30 @@
                 </select>
             </label>
         @endif
+
+    </div>
+
+    {{--
+        কমান্ড বার — একটাই সারি, আর এই পর্দার সব কাজ ওখানেই।
+
+        ── কেন বোতাম আর শিরোনামের পাশে নয় ─────────────────────────────
+        আগে "নতুন ডিলার" বসত শিরোনামের ডানে (page-header-এ), আর রপ্তানি
+        ও ছাপা বসত টুলবারের ডানে — একই ধরনের জিনিস দুই জায়গায়, দুই
+        চেহারায়। ফলে প্রতিটা পর্দায় বোতাম কোথায় তা আলাদা করে খুঁজতে হত।
+
+        এখন একটাই ক্রম, সব পর্দায়: নতুন — তারপর এই কাগজে যা করা যায় —
+        তারপর ডানে দৃশ্য, ঘনত্ব, কলাম, রপ্তানি, শেয়ার, ছাপা, রিফ্রেশ।
+
+        ফলে মানুষ **জায়গাটা** শেখে, বোতামটা নয়।
+    --}}
+    <div class="order-1 flex flex-wrap items-center gap-1 border-b border-(--color-border) px-2 py-1.5">
+        @isset($actions)
+            {{-- cmd-actions — এখানকার বোতামগুলো ৩২px, ফর্মের ৪৮px নয়।
+                 নিয়মটা app.css-এ, আর কেন স্তরের বাইরে তা ওখানে লেখা। --}}
+            <div class="cmd-actions flex flex-wrap items-center gap-1">
+                {{ $actions }}
+            </div>
+        @endisset
 
         <div class="print-hide ms-auto flex items-center gap-1">
 
@@ -431,10 +511,15 @@
     {{-- স্ক্রিনের নিজস্ব ফিল্টার — একটাই সারিতে, টেবিলের উপরে
          (সেকশন ১৫.৮), Filter By বোতামের নিচে। --}}
     @if ($hasFilters)
+        {{-- order-3 — বাকি দুইটা সারির নিচে।
+
+             ফ্লেক্সে যার `order` লেখা নেই সে ০ ধরে, আর ০ সবসময় ১-এর
+             আগে। ক্লাসটা না দিলে ছাঁকনির প্যানেলটা কমান্ড বারেরও উপরে
+             উঠে যেত — অর্থাৎ ছাঁকনি খুললেই পর্দাটা উল্টে যেত। --}}
         <div id="toolbar-filters"
              x-show="filtersOpen"
              x-cloak
-             class="flex flex-wrap items-center gap-2 border-t border-(--color-border)
+             class="order-3 flex flex-wrap items-center gap-2 border-t border-(--color-border)
                     bg-(--color-surface-app) px-3 py-2">
             {{ $slot }}
 

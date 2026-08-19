@@ -43,20 +43,6 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('accounts::menu.cash_tills') }}</x-slot:title>
 
-    <x-slot:header>
-        <x-ui.page-header
-            :title="__('accounts::menu.cash_tills')"
-            :subtitle="__('accounts::message.till_total', ['amount' => \App\Core\Support\Money::format($total)])">
-            <x-slot:actions>
-                @can('create', \App\Modules\Accounts\Models\CashTill::class)
-                    <x-ui.button tone="primary" icon="plus" :href="route('accounts.till.create')">
-                        {{ __('accounts::action.new_till') }}
-                    </x-ui.button>
-                @endcan
-            </x-slot:actions>
-        </x-ui.page-header>
-    </x-slot:header>
-
     @if (session('saved'))
         <div role="status"
              class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm
@@ -79,9 +65,16 @@
 
     <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
-            <x-ui.toolbar
+            <x-ui.toolbar :title="__('accounts::menu.cash_tills')" :count="__('accounts::message.till_total', ['amount' => \App\Core\Support\Money::format($total)])"
                 :sort="$sortOptions"
                 :columns="$columns">
+        <x-slot:actions>
+            @can('create', \App\Modules\Accounts\Models\CashTill::class)
+                    <x-ui.button tone="primary" icon="plus" :href="route('accounts.till.create')">
+                        {{ __('accounts::action.new_till') }}
+                    </x-ui.button>
+                @endcan
+        </x-slot:actions>
                 <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
                     <input type="checkbox" name="inactive" value="1" @checked($showInactive) class="size-4">
                     {{ __('accounts::action.show_closed') }}

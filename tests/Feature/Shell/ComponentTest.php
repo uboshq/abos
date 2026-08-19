@@ -70,7 +70,18 @@ class ComponentTest extends TestCase
 
         // হিসাবের কলামে দশমিক বিন্দু এক লাইনে না থাকলে চোখে যোগফল
         // মেলানো যায় না।
-        $response->assertSee('class="px-3 align-middle py-2.5 num"', false);
+        $response->assertSee('class="px-3 align-middle num"', false);
+
+        /*
+         * সারির উচ্চতা প্যাডিং থেকে নয়, টোকেন থেকে।
+         *
+         * আগে এখানে `py-2.5` ছিল। প্যাডিং দিয়ে উচ্চতা ঠিক করলে যে ঘরে
+         * দুই লাইন লেখা (নাম + কোড) সেই সারিটা লম্বা হয়ে যায়, আর ছকটা
+         * অসম দেখায় — এক সারি ৪০px, পাশেরটা ৫৬।
+         *
+         * টোকেনটা পাহারায় রাখা, কারণ মাপটা এক জায়গায় থাকাই পুরো কথা।
+         */
+        $response->assertSee('style="height: var(--row-height)"', false);
     }
 
     public function test_the_table_falls_back_to_an_empty_state_rather_than_an_empty_box(): void

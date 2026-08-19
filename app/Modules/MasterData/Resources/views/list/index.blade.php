@@ -10,21 +10,6 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __($spec['title']) }}</x-slot:title>
 
-    <x-slot:header>
-        <x-ui.page-header
-            :title="__($spec['title'])"
-            :subtitle="trans_choice('master_data::message.count', $records->count(), ['count' => $records->count()])">
-            <x-slot:actions>
-                @can('master_data.manage')
-                    <x-ui.button tone="primary" icon="plus"
-                                 :href="route('master_data.' . $spec['route'] . '.create')">
-                        {{ __('master_data::action.new') }}
-                    </x-ui.button>
-                @endcan
-            </x-slot:actions>
-        </x-ui.page-header>
-    </x-slot:header>
-
     @if (session('saved'))
         <div role="status"
              class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm
@@ -71,7 +56,15 @@
 
     <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
-            <x-ui.toolbar :sort="$sortOptions">
+            <x-ui.toolbar :title="__($spec['title'])" :count="trans_choice('master_data::message.count', $records->count(), ['count' => $records->count()])" :sort="$sortOptions">
+        <x-slot:actions>
+            @can('master_data.manage')
+                    <x-ui.button tone="primary" icon="plus"
+                                 :href="route('master_data.' . $spec['route'] . '.create')">
+                        {{ __('master_data::action.new') }}
+                    </x-ui.button>
+                @endcan
+        </x-slot:actions>
                 <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
                     <input type="checkbox" name="inactive" value="1" @checked(request()->boolean('inactive')) class="size-4">
                     {{ __('master_data::action.show_inactive') }}

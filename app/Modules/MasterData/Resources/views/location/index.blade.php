@@ -23,22 +23,6 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('master_data::menu.locations') }}</x-slot:title>
 
-    <x-slot:header>
-        <x-ui.page-header
-            :title="__('master_data::menu.locations')"
-            :subtitle="collect($ladder)->map(fn ($level) => __('master_data::level.' . $level))->implode(' › ')">
-            <x-slot:actions>
-                @can('master_data.manage')
-                    @if ($total > 0)
-                        <x-ui.button tone="primary" icon="plus" :href="route('master_data.location.create')">
-                            {{ __('master_data::action.new') }}
-                        </x-ui.button>
-                    @endif
-                @endcan
-            </x-slot:actions>
-        </x-ui.page-header>
-    </x-slot:header>
-
     @if (session('saved'))
         <div role="status"
              class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm
@@ -89,8 +73,17 @@
         <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">
             <form method="GET" class="contents">
-                <x-ui.toolbar
+                <x-ui.toolbar :title="__('master_data::menu.locations')" :count="collect($ladder)->map(fn ($level) => __('master_data::level.' . $level))->implode(' › ')"
                 :columns="$columns">
+        <x-slot:actions>
+            @can('master_data.manage')
+                    @if ($total > 0)
+                        <x-ui.button tone="primary" icon="plus" :href="route('master_data.location.create')">
+                            {{ __('master_data::action.new') }}
+                        </x-ui.button>
+                    @endif
+                @endcan
+        </x-slot:actions>
                     <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
                         <input type="checkbox" name="inactive" value="1" @checked($showInactive) class="size-4">
                         {{ __('master_data::action.show_inactive') }}

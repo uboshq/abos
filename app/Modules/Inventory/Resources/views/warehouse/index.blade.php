@@ -18,20 +18,6 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('inventory::menu.warehouses') }}</x-slot:title>
 
-    <x-slot:header>
-        <x-ui.page-header
-            :title="__('inventory::menu.warehouses')"
-            :subtitle="trans_choice('inventory::message.warehouse_count', $warehouses->total(), ['count' => $warehouses->total()])">
-            <x-slot:actions>
-                @can('create', \App\Modules\Inventory\Models\Warehouse::class)
-                    <x-ui.button tone="primary" icon="plus" :href="route('inventory.warehouse.create')">
-                        {{ __('inventory::action.new_warehouse') }}
-                    </x-ui.button>
-                @endcan
-            </x-slot:actions>
-        </x-ui.page-header>
-    </x-slot:header>
-
     @if (session('saved'))
         <div role="status"
              class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm
@@ -42,9 +28,16 @@
 
     <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
-            <x-ui.toolbar
+            <x-ui.toolbar :title="__('inventory::menu.warehouses')" :count="trans_choice('inventory::message.warehouse_count', $warehouses->total(), ['count' => $warehouses->total()])"
                 :columns="$columns" :search-placeholder="__('inventory::message.warehouse_search')"
                           :sort="$sortOptions">
+        <x-slot:actions>
+            @can('create', \App\Modules\Inventory\Models\Warehouse::class)
+                    <x-ui.button tone="primary" icon="plus" :href="route('inventory.warehouse.create')">
+                        {{ __('inventory::action.new_warehouse') }}
+                    </x-ui.button>
+                @endcan
+        </x-slot:actions>
                 <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
                     <input type="checkbox" name="inactive" value="1" @checked($showInactive) class="size-4">
                     {{ __('inventory::action.show_inactive') }}
