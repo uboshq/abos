@@ -112,4 +112,19 @@ return [
     'open' => 'খোলা',
     'reason' => 'কারণ',
     'reopen_reason' => 'খোলার কারণ (বাধ্যতামূলক)',
+
+    // চেকের খাতা
+    'cheque_no' => 'চেক নম্বর',
+    'cheque_date' => 'চেকের তারিখ',
+    'cheque_received' => 'গৃহীত',
+    'cheque_issued' => 'ইস্যু করা',
+    'cheque_direction' => 'দিক',
+    'cheque_pending' => 'হাতে',
+    'cheque_deposited' => 'জমা দেওয়া',
+    'cheque_cleared' => 'পাশ',
+    'cheque_bounced' => 'ফেরত',
+    'cheque_cancelled' => 'বাতিল',
+    'bounce_reason' => 'ফেরতের কারণ',
+    'cheques_open_total' => 'এখনো ঝুলে থাকা চেক',
+    'cheques_ripe' => 'তারিখ পেরিয়েছে, এখনো ঝুলছে',
 ];

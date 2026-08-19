@@ -30,4 +30,7 @@ return [
 
     // মাস বন্ধ ও খোলা
     'periods' => 'Close a Month',
+
+    // চেকের খাতা
+    'cheques' => 'Cheque register',
 ];

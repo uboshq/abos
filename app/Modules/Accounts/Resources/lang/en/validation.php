@@ -70,4 +70,12 @@ return [
 
     // মাস বন্ধ ও খোলা
     'cannot_close_this_month' => 'This month cannot be closed — today’s sales would stop.',
+
+    // চেকের খাতা
+    'cheque_direction' => 'Say whether the cheque was received or issued.',
+    'cheque_needs_amount' => 'A cheque needs an amount above zero.',
+    'cheque_needs_bank' => 'Say which bank account the money lands in.',
+    'cheque_already_decided' => 'Cheque :no has already been decided.',
+    'bounce_needs_reason' => 'Say why it bounced — "no funds" and "signature mismatch" are not the same thing.',
+    'chart_not_installed' => 'The chart of accounts has not been installed yet.',
 ];

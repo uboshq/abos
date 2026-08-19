@@ -40,4 +40,9 @@ return [
     // মাস বন্ধ ও খোলা
     'close_month' => 'মাসটা বন্ধ করুন',
     'reopen' => 'খুলুন',
+
+    // চেকের খাতা
+    'cheque_deposit' => 'জমা দিলাম',
+    'cheque_clear' => 'পাশ হয়েছে',
+    'cheque_bounce' => 'ফেরত এসেছে',
 ];

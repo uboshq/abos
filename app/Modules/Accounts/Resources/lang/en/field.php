@@ -112,4 +112,19 @@ return [
     'open' => 'Open',
     'reason' => 'Reason',
     'reopen_reason' => 'Reason for reopening (required)',
+
+    // চেকের খাতা
+    'cheque_no' => 'Cheque no',
+    'cheque_date' => 'Cheque date',
+    'cheque_received' => 'Received',
+    'cheque_issued' => 'Issued',
+    'cheque_direction' => 'Direction',
+    'cheque_pending' => 'In hand',
+    'cheque_deposited' => 'Deposited',
+    'cheque_cleared' => 'Cleared',
+    'cheque_bounced' => 'Bounced',
+    'cheque_cancelled' => 'Cancelled',
+    'bounce_reason' => 'Why it bounced',
+    'cheques_open_total' => 'Cheques still outstanding',
+    'cheques_ripe' => 'Past their date, still open',
 ];
