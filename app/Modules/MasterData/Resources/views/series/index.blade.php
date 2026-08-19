@@ -75,7 +75,7 @@
                             {{ __('master_data::field.format') }}
                         </th>
                         <th scope="col" style="width: 6rem"
-                            class="num px-3 py-2 text-start font-medium text-(--color-ink-muted)">
+                            class="num px-3 py-2 text-end font-medium text-(--color-ink-muted)">
                             {{ __('master_data::field.padding') }}
                         </th>
                         <th scope="col" style="width: 8rem"
