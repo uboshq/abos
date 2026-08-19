@@ -8,6 +8,7 @@ use App\Modules\Sales\Events\InvoiceConfirmed;
 use App\Modules\Sales\Integrity\SalesChecks;
 use App\Modules\Sales\Metrics\SalesMetrics;
 use App\Modules\Sales\Models\Collection;
+use App\Modules\Sales\Models\CommissionClaim;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Models\SalesOrder;
@@ -155,6 +156,14 @@ return [
              */
             ['label' => 'sales::target.title', 'route' => 'sales.target.index',
                 'permission' => 'sales.target.view'],
+
+            /*
+             * ডিলারের কমিশন — লক্ষ্যমাত্রার পাশে।
+             *
+             * দুইটাই মাস ধরে দেখা হয়, আর দুইটাই মাস শেষে মেলানো হয়।
+             */
+            ['label' => 'sales::menu.commission', 'route' => 'sales.commission.index',
+                'permission' => 'sales.commission.view'],
         ],
     ],
 
@@ -186,6 +195,17 @@ return [
          */
         'sales.target.view',
         'sales.target.manage',
+
+        /*
+         * ডিলারের কমিশন — দেখা, দেওয়া, আর সীমা ছাড়ানো।
+         *
+         * সীমা ছাড়ানোর চাবিটা আলাদা, আর ঢালাও `sales.%` নিয়মে যেন
+         * বিক্রয়কর্মীর হাতে না পড়ে সেজন্য সিডারের বাদ-তালিকাতেও আছে।
+         * এই ফাঁদটা এই প্রকল্পে তিনবার ধরা পড়েছে।
+         */
+        'sales.commission.view',
+        'sales.commission.manage',
+        'sales.commission.override',
         'sales.invoice.view',
         'sales.invoice.create',
         'sales.invoice.cancel',
@@ -241,9 +261,11 @@ return [
         'INV' => 'sales::doc.invoice',
         'COL' => 'sales::doc.collection',
         'SR' => 'sales::doc.return',
+        'CMC' => 'sales::doc.commission',
     ],
 
     'drill_sources' => [
+        'commission_claim' => CommissionClaim::class,
         'sales_order' => SalesOrder::class,
         'delivery_challan' => DeliveryChallan::class,
         'shipment' => Shipment::class,
@@ -360,6 +382,33 @@ return [
             'type' => 'boolean',
             'default' => false,
             'group' => 'entry',
+        ],
+        [
+            /*
+             * কমিশনের টাকার সীমা — এর উপরে গেলে আটকায়।
+             *
+             * শূন্য মানে "সীমা নেই"। দুইটা সীমাই লাগে: শতাংশ মাত্র ২%
+             * হলেও অঙ্কটা ৫ লাখ হতে পারে, আর তখন শতাংশের সীমা কিছুই
+             * ধরত না।
+             */
+            'key' => 'sales.commission_max_amount',
+            'label' => 'sales::settings.commission_max_amount',
+            'type' => 'number',
+            'default' => 5000,
+            'group' => 'limits',
+        ],
+        [
+            /*
+             * কমিশনের হারের সীমা — বিলের অঙ্কের শতাংশে।
+             *
+             * ৫০% কমিশনও বৈধ; সীমাটা নিষেধ নয়, কেবল "কাউকে দেখে সই
+             * করতে হবে" বলার উপায়।
+             */
+            'key' => 'sales.commission_max_percent',
+            'label' => 'sales::settings.commission_max_percent',
+            'type' => 'number',
+            'default' => 10,
+            'group' => 'limits',
         ],
         [
             /*

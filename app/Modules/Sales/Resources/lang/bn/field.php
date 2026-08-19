@@ -134,4 +134,15 @@ return [
     // কাউন্টারে ছাড়ের অনুমোদন — ম্যানেজারের নিজের লগইন
     'approver_email' => 'ম্যানেজারের ইমেইল',
     'approver_password' => 'ম্যানেজারের পাসওয়ার্ড',
+
+    // ডিলারের কমিশন
+    'commission_base' => 'ভিত্তি',
+    'commission_percent' => 'হার %',
+    'commission_flat' => 'থোক টাকা',
+    'commission_rate' => 'হার',
+    'commission_pending' => 'অপেক্ষায়',
+    'commission_settled' => 'সমন্বয় হয়েছে',
+    'commission_rejected' => 'মানা হয়নি',
+    'commission_pending_total' => 'কোম্পানির কাছে দাবি, এখনো বাকি',
+    'commission_reject_reason' => 'কেন মানা হলো না',
 ];

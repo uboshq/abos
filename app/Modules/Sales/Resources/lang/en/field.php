@@ -134,4 +134,15 @@ return [
     // কাউন্টারে ছাড়ের অনুমোদন — ম্যানেজারের নিজের লগইন
     'approver_email' => "Manager's email",
     'approver_password' => "Manager's password",
+
+    // ডিলারের কমিশন
+    'commission_base' => 'Base',
+    'commission_percent' => 'Rate %',
+    'commission_flat' => 'Flat amount',
+    'commission_rate' => 'Rate',
+    'commission_pending' => 'Pending',
+    'commission_settled' => 'Settled',
+    'commission_rejected' => 'Refused',
+    'commission_pending_total' => 'Claimed and still outstanding',
+    'commission_reject_reason' => 'Why it was refused',
 ];

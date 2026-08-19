@@ -23,4 +23,7 @@ return [
     'shift' => 'Counter shift',
     'print_queue' => 'Papers not printed',
     'shipments' => 'Shipments',
+
+    // ডিলারের কমিশন
+    'commission' => 'Dealer commission',
 ];

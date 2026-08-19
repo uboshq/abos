@@ -164,6 +164,27 @@ final class StandardChart implements ProvisionsCompany
 
     public const EMPLOYEE_ADVANCE = '1131';
 
+    /**
+     * ডিলারকে দেওয়া কমিশন, যা কোম্পানির কাছে দাবি — একটা **সম্পদ**।
+     *
+     * ── কেন ছাড় নয় ─────────────────────────────────────────────────
+     * টাকাটা ডিপোর পকেট থেকে যাচ্ছে না, কোম্পানির পকেট থেকে — ডিপো
+     * কেবল আগে দিয়ে দিচ্ছে। ছাড় হিসেবে লিখলে বিক্রয় কমে যেত, আর ৪%
+     * মার্জিনের ব্যবসায় ৫% কমিশন মানে খাতা বলত **লোকসানে বেচছি** —
+     * অথচ কোম্পানির কাছে পাওনাটা কোথাও দেখা যেত না।
+     */
+    public const COMMISSION_CLAIM = '1150';
+
+    /**
+     * যে দাবিটা কোম্পানি মানল না।
+     *
+     * ── কেন এই খাতটা থাকতেই হবে ────────────────────────────────────
+     * প্রত্যাখ্যাত দাবি সম্পদ নয়, খরচ। এই পথটা না থাকলে অনাদায়ী
+     * দাবিগুলো বছরের পর বছর সম্পদ হয়ে বসে থাকত, আর ব্যালেন্স শিট
+     * এমন একটা পাওনা দেখাত যা কেউ কোনোদিন দেবে না।
+     */
+    public const COMMISSION_WRITTEN_OFF = '5215';
+
     /** @var list<string> */
     public const SYSTEM_CODES = [
         self::CASH_IN_HAND, self::BANK_AND_MFS, self::CASH_IN_TRANSIT,
@@ -175,6 +196,7 @@ final class StandardChart implements ProvisionsCompany
         self::DISCOUNT_GIVEN,
         self::SALARY_EXPENSE, self::SALARY_PAYABLE,
         self::PROVIDENT_FUND_PAYABLE, self::EMPLOYEE_ADVANCE,
+        self::COMMISSION_CLAIM, self::COMMISSION_WRITTEN_OFF,
     ];
 
     public function __construct(private readonly AccountService $accounts) {}
@@ -324,6 +346,16 @@ final class StandardChart implements ProvisionsCompany
             ['1131', 'Advance to Employees', 'কর্মীর অগ্রিম', $A, '1100', false, []],
             ['1140', 'Security Deposits', 'জামানত', $A, '1100', false, []],
 
+            /*
+             * ডিলারকে দেওয়া কমিশন — কোম্পানির কাছে দাবি।
+             *
+             * প্রাপ্য হিসাবের (১১১০) পাশে, কিন্তু আলাদা: ওটা ডিলারের
+             * কাছে পাওনা, এটা কোম্পানির কাছে। এক খাতে মিশিয়ে দিলে
+             * বকেয়ার তালিকায় ডিলারের নামে এমন টাকা দেখাত যা আসলে
+             * কোম্পানির দেওয়ার কথা।
+             */
+            ['1150', 'Commission Claimable', 'কোম্পানির কাছে কমিশনের দাবি', $A, '1100', false, []],
+
             ['1200', 'Fixed Assets', 'স্থায়ী সম্পদ', $A, '1000', true, []],
             ['1201', 'Furniture & Fixtures', 'আসবাবপত্র', $A, '1200', false, []],
             ['1202', 'Vehicles', 'যানবাহন', $A, '1200', false, []],
@@ -391,6 +423,7 @@ final class StandardChart implements ProvisionsCompany
             ['5206', 'Repair & Maintenance', 'মেরামত ও রক্ষণাবেক্ষণ', $X, '5200', false, []],
             ['5207', 'Office Supplies', 'অফিস সরঞ্জাম', $X, '5200', false, []],
             ['5208', 'Entertainment', 'আপ্যায়ন', $X, '5200', false, []],
+            ['5215', 'Commission Written Off', 'প্রত্যাখ্যাত কমিশন', $X, '5200', false, []],
             ['5209', 'Marketing & Promotion', 'বিপণন ও প্রচার', $X, '5200', false, []],
             ['5210', 'Bank Charges', 'ব্যাংক চার্জ', $X, '5200', false, []],
             ['5211', 'Mobile Banking Charges', 'মোবাইল ব্যাংকিং চার্জ', $X, '5200', false, []],
