@@ -28,7 +28,7 @@ final class PostingEngine
     /**
      * একটা ডকুমেন্টের সব হিসাব একসাথে বসানো।
      *
-     * @param  list<array{account_id: int, debit?: string|float|int, credit?: string|float|int, party_type?: string, party_id?: int, narration?: string, source_line_id?: int, branch_id?: int}>  $lines
+     * @param  list<array{account_id: int, debit?: string|float|int, credit?: string|float|int, party_type?: string, party_id?: int, cost_center_id?: int, narration?: string, source_line_id?: int, branch_id?: int}>  $lines
      * @return list<LedgerEntry>
      */
     public function post(
@@ -96,6 +96,17 @@ final class PostingEngine
                     'account_id' => $line['account_id'],
                     'party_type' => $line['party_type'] ?? null,
                     'party_id' => $line['party_id'] ?? null,
+
+                    /*
+                     * খরচের কেন্দ্র — সারিতে, ডকুমেন্টের মাথায় নয়।
+                     *
+                     * একটা ভাউচারে দুই রুটের খরচ থাকতে পারে। মাথায়
+                     * রাখলে ওটা লিখতে দুইটা ভাউচার লাগত, আর মানুষ তখন
+                     * একটাতেই লিখে দিতেন — আর রুট ধরে খরচের হিসাব
+                     * নীরবে ভুল হত।
+                     */
+                    'cost_center_id' => $line['cost_center_id'] ?? null,
+
                     'trx_date' => $trxDate->toDateString(),
                     'debit' => $debit,
                     'credit' => $credit,
@@ -169,6 +180,7 @@ final class PostingEngine
                     'account_id' => $entry->account_id,
                     'party_type' => $entry->party_type,
                     'party_id' => $entry->party_id,
+                    'cost_center_id' => $entry->cost_center_id,
                     'trx_date' => $reversalDate->toDateString(),
                     // পক্ষ উল্টে যায় — যা ডেবিট ছিল তা ক্রেডিট হয়
                     'debit' => $entry->credit,

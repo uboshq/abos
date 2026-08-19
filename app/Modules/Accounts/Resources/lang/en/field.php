@@ -127,4 +127,9 @@ return [
     'bounce_reason' => 'Why it bounced',
     'cheques_open_total' => 'Cheques still outstanding',
     'cheques_ripe' => 'Past their date, still open',
+    'cost_center' => 'Cost centre',
+    'no_cost_center' => '(no cost centre)',
+    'spent' => 'Spent',
+    'earned' => 'Earned',
+    'net' => 'Net',
 ];

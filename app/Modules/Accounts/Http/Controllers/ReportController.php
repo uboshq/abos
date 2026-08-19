@@ -37,6 +37,15 @@ class ReportController extends Controller implements HasMiddleware
      */
     private const SLUGS = [
         'day-book' => 'accounts.day_book',
+
+        /*
+         * কোন কেন্দ্রে কত — রুট ধরে খরচ ও আয়।
+         *
+         * সারিটা এখানেই বসানো হলো, মেনুতে যোগ করার একই মুহূর্তে। উপরে
+         * ঠিক এই ভুলটার ইতিহাস লেখা আছে, আর গতকাল সরবরাহকারীর দুইটা
+         * রিপোর্টেও একই জিনিস ঘটেছিল।
+         */
+        'by-cost-centre' => 'accounts.by_cost_centre',
         'cash-book' => 'accounts.cash_book',
         'bank-book' => 'accounts.bank_book',
 

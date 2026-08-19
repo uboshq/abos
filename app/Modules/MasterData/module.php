@@ -64,6 +64,15 @@ return [
             ['label' => 'master_data::menu.party_types', 'route' => 'master_data.party_type.index', 'permission' => 'master_data.view'],
             ['label' => 'master_data::menu.reason_codes', 'route' => 'master_data.reason.index', 'permission' => 'master_data.view'],
 
+            /*
+             * খরচের কেন্দ্র — কোন রুটে কত খরচ।
+             *
+             * খাত বলে কী খরচ, কেন্দ্র বলে কোথায়। ৪% মার্জিনের ব্যবসায়
+             * একটা রুটের খরচ তার মার্জিনের চেয়ে বেশি হওয়া সম্ভব, আর
+             * মোট হিসাবে সেটা দেখাই যায় না।
+             */
+            ['label' => 'master_data::menu.cost_centers', 'route' => 'master_data.cost_center.index', 'permission' => 'master_data.view'],
+
             // প্রতিষ্ঠানের গড়ন — কর্মীর তালিকা এই তিনটার উপর দাঁড়ায়
             ['label' => 'master_data::menu.departments', 'route' => 'master_data.department.index', 'permission' => 'master_data.view'],
             ['label' => 'master_data::menu.designations', 'route' => 'master_data.designation.index', 'permission' => 'master_data.view'],

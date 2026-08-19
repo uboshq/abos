@@ -14,6 +14,7 @@ use App\Modules\Accounts\Http\Requests\VoucherRequest;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\VoucherService;
+use App\Modules\MasterData\Models\CostCenter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -269,6 +270,14 @@ class VoucherController extends Controller implements HasMiddleware
              * পক্ষ যোগ হলে এখানে হাত পড়বে না (সেকশন ১৯.৭)।
              */
             'parties' => app(PartyRegistry::class)->forPicker(),
+
+            /*
+             * খরচের কেন্দ্রগুলো — কোনোটা না থাকলে কলামটাই আসে না।
+             *
+             * যে ডিপো রুট ধরে খরচ দেখে না, তার প্রতিটা জাবেদায় একটা
+             * খালি ঘর জায়গা নিত আর কিছুই বলত না।
+             */
+            'costCenters' => CostCenter::query()->active()->orderBy('code')->get(),
             'expenseAccounts' => $all->where('type', Account::EXPENSE)->values(),
             'incomeAccounts' => $all->where('type', Account::INCOME)->values(),
             'branches' => Branch::query()->active()->orderBy('name_en')->get(),

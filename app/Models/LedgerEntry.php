@@ -26,6 +26,7 @@ class LedgerEntry extends Model
     use HasPublicId;
 
     protected $fillable = [
+        'cost_center_id',
         'company_id', 'branch_id', 'financial_year_id', 'account_id',
         'party_type', 'party_id', 'trx_date', 'debit', 'credit',
         'source_type', 'source_id', 'source_line_id', 'document_no',

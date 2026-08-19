@@ -21,4 +21,5 @@ return [
     'departments' => 'বিভাগ',
     'designations' => 'পদবি',
     'employment_types' => 'নিয়োগের ধরন',
+    'cost_centers' => 'খরচের কেন্দ্র',
 ];

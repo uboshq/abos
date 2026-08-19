@@ -34,6 +34,7 @@ final class CoreReports
         $engine->register(self::balanceSheet());
         $engine->register(self::cashFlow());
         $engine->register(self::inflow());
+        $engine->register(self::byCostCentre());
     }
 
     /**
@@ -466,5 +467,78 @@ final class CoreReports
             "COALESCE(CONCAT(accounts.code, ' — ', {$name}), CONCAT('#', ledger_entries.account_id)) "
             .'as account_name'
         );
+    }
+
+    /**
+     * কোন কেন্দ্রে কত খরচ — আর সেখান থেকে কত এল।
+     *
+     * ── কোন প্রশ্নের উত্তর ──────────────────────────────────────────
+     * *"নেত্রকোনার রুটে মাসে কত খরচ হয়, আর ওখান থেকে কত আসে?"*
+     *
+     * ৪% মার্জিনের ব্যবসায় একটা রুটের খরচ তার আয়ের চেয়ে বেশি হওয়া
+     * খুবই সম্ভব — আর মোট হিসাবে সেটা দেখাই যায় না, কারণ অন্য রুটগুলো
+     * টেনে নেয়। **কোনটা টানছে আর কোনটা ডোবাচ্ছে**, এই পাতাটা সেটাই
+     * বলে।
+     *
+     * ── কেন্দ্রহীন সারিগুলো আলাদা করে দেখানো হয় ──────────────────────
+     * যে খরচে কেউ কেন্দ্র বসায়নি সেটা "(কেন্দ্র বসানো হয়নি)" নামে
+     * নিজের সারিতে আসে। বাদ দিলে যোগফল মিলত না, আর মালিক ভাবতেন
+     * খরচটা কম। সারিটা বড় হলে সেটাই সবচেয়ে দরকারি খবর: **অভ্যাসটা
+     * এখনো গড়ে ওঠেনি।**
+     */
+    public static function byCostCentre(): ReportDefinition
+    {
+        return new ReportDefinition(
+            key: 'accounts.by_cost_centre',
+            title: 'accounts::menu.by_cost_centre',
+            filters: ['date_range', 'branch'],
+            groupBy: 'cost_center_id',
+            query: fn (array $f) => DB::table('ledger_entries')
+                ->join('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
+                ->leftJoin('mdm_cost_centers as c', 'c.id', '=', 'ledger_entries.cost_center_id')
+                ->where('ledger_entries.company_id', $f['company_id'])
+                ->whereBetween('ledger_entries.trx_date', [$f['from'], $f['to']])
+                ->when($f['branch_id'], fn ($q, $branch) => $q->where('ledger_entries.branch_id', $branch))
+
+                /*
+                 * কেবল আয় ও ব্যয় — সম্পদ ও দায় নয়।
+                 *
+                 * "রুটে কত খরচ" প্রশ্নে ব্যাংক থেকে টাকা তোলার সারিটার
+                 * কোনো জায়গা নেই; ওটা টাকা সরানো, খরচ নয়।
+                 */
+                ->whereIn('accounts.type', [Account::EXPENSE, Account::INCOME])
+                ->groupBy('ledger_entries.cost_center_id', 'c.code', 'c.name_en', 'c.name_bn')
+                ->orderByRaw('SUM(CASE WHEN accounts.type = ? THEN ledger_entries.debit - ledger_entries.credit ELSE 0 END) DESC', [Account::EXPENSE])
+                ->select([
+                    'ledger_entries.cost_center_id',
+                    DB::raw(self::costCentreName()),
+                    DB::raw('SUM(CASE WHEN accounts.type = '.DB::getPdo()->quote(Account::EXPENSE)
+                        .' THEN ledger_entries.debit - ledger_entries.credit ELSE 0 END) as spent'),
+                    DB::raw('SUM(CASE WHEN accounts.type = '.DB::getPdo()->quote(Account::INCOME)
+                        .' THEN ledger_entries.credit - ledger_entries.debit ELSE 0 END) as earned'),
+                    DB::raw('SUM(CASE WHEN accounts.type = '.DB::getPdo()->quote(Account::INCOME)
+                        .' THEN ledger_entries.credit - ledger_entries.debit ELSE 0 END)'
+                        .' - SUM(CASE WHEN accounts.type = '.DB::getPdo()->quote(Account::EXPENSE)
+                        .' THEN ledger_entries.debit - ledger_entries.credit ELSE 0 END) as net'),
+                ]),
+            columns: [
+                ['key' => 'centre_name', 'label' => 'accounts::field.cost_center', 'type' => ReportColumn::TEXT],
+                ['key' => 'spent', 'label' => 'accounts::field.spent', 'type' => ReportColumn::MONEY],
+                ['key' => 'earned', 'label' => 'accounts::field.earned', 'type' => ReportColumn::MONEY],
+                ['key' => 'net', 'label' => 'accounts::field.net', 'type' => ReportColumn::MONEY],
+            ],
+        );
+    }
+
+    /** কেন্দ্রের নাম — বসানো না থাকলে সেটাও একটা নাম। */
+    private static function costCentreName(): string
+    {
+        $column = app()->getLocale() === 'bn'
+            ? "COALESCE(NULLIF(c.name_bn, ''), c.name_en)"
+            : 'c.name_en';
+
+        $none = DB::getPdo()->quote(__('accounts::field.no_cost_center'));
+
+        return "COALESCE({$column}, {$none}) as centre_name";
     }
 }
