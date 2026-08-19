@@ -15,6 +15,7 @@ use App\Modules\Accounts\Services\VoucherService;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Purchase\Dashboard\PurchaseWidgets;
 use App\Modules\Purchase\Services\PurchaseReceiptService;
 use App\Modules\Sales\Services\SalesInvoiceService;
 use App\Modules\Supplier\Dashboard\SupplierWidgets;
@@ -116,7 +117,7 @@ class WhatTheCompanyOwesMeAndIOweThemTest extends TestCase
     /** @return array<int, object> সরবরাহকারীর id ধরে সারিগুলো */
     private function settlement(): array
     {
-        $result = app(ReportEngine::class)->run('supplier.settlement', [
+        $result = app(ReportEngine::class)->run('purchase.settlement', [
             'from' => now()->startOfMonth()->toDateString(),
             'to' => now()->endOfMonth()->toDateString(),
         ]);
@@ -273,8 +274,15 @@ class WhatTheCompanyOwesMeAndIOweThemTest extends TestCase
         $this->receive($this->alin, $tofan, '10', '172.54');
         $this->sell($tofan, '4', '179.44');
 
-        $margin = collect(SupplierWidgets::widgets())
-            ->firstWhere('label', __('supplier::widget.margin_this_month'));
+        /*
+         * উইজেটটা PurchaseWidgets-এ, SupplierWidgets-এ নয়।
+         *
+         * ওটা `sal_invoices` পড়ে আর ক্রয়মূল্য খুলে দেখায় — দুইটাই
+         * Supplier-এর নাগালের বাইরে। নিষ্পত্তির রিপোর্টের সাথেই ওটা
+         * Purchase-এ গেছে।
+         */
+        $margin = collect(PurchaseWidgets::widgets())
+            ->firstWhere('label', __('purchase::widget.margin_this_month'));
 
         $this->assertNotNull($margin, 'মার্জিনের উইজেটটাই নেই।');
         $this->assertStringContainsString('4.00', (string) $margin->hint,
@@ -292,7 +300,7 @@ class WhatTheCompanyOwesMeAndIOweThemTest extends TestCase
     /** @return array<int, object> */
     private function returns(): array
     {
-        $result = app(ReportEngine::class)->run('supplier.return_on_capital', [
+        $result = app(ReportEngine::class)->run('purchase.return_on_capital', [
             'from' => now()->startOfYear()->toDateString(),
             'to' => now()->endOfYear()->toDateString(),
         ]);

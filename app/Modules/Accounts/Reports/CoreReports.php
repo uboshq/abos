@@ -495,7 +495,7 @@ final class CoreReports
             groupBy: 'cost_center_id',
             query: fn (array $f) => DB::table('ledger_entries')
                 ->join('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
-                ->leftJoin('mdm_cost_centers as c', 'c.id', '=', 'ledger_entries.cost_center_id')
+                ->leftJoin('acc_cost_centers as c', 'c.id', '=', 'ledger_entries.cost_center_id')
                 ->where('ledger_entries.company_id', $f['company_id'])
                 ->whereBetween('ledger_entries.trx_date', [$f['from'], $f['to']])
                 ->when($f['branch_id'], fn ($q, $branch) => $q->where('ledger_entries.branch_id', $branch))

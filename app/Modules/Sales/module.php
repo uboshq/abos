@@ -52,7 +52,19 @@ return [
 
     'version' => '1.0.0',
 
-    'depends_on' => ['master_data', 'accounts', 'inventory', 'customer'],
+    /*
+     * `supplier`-টা যোগ হয়েছে কমিশনের দাবির জন্য।
+     *
+     * ডিপো আগে ডিলারকে কমিশন দেয়, পরে মিলের কাছে দাবি করে —
+     * তাই প্রতিটা দাবির গায়ে কোন মিলের কাছে দাবি, সেটা লেখা থাকেই
+     * (`supplier_id`)। এটা লুকানো ছিল না, ঘোষণা করা ছিল না — ধরেছে
+     * `BoundariesTest`।
+     *
+     * এতদিন ঘোষণা করা যেতও না: Supplier-এর দুইটা রিপোর্ট বিক্রয়ের
+     * নাম জানত, অর্থাৎ সিন্ধুকটা চক্র হয়ে যেত। ওই দুইটা এখন
+     * Purchase-এ, তাই এদিকটা পরিষ্কার।
+     */
+    'depends_on' => ['master_data', 'accounts', 'inventory', 'customer', 'supplier'],
 
     'menu' => [
         'transactions' => [

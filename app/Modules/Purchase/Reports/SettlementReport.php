@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\Supplier\Reports;
+namespace App\Modules\Purchase\Reports;
 
 use App\Core\Engines\Report\ReportColumn;
 use App\Core\Engines\Report\ReportDefinition;
@@ -54,7 +54,7 @@ final class SettlementReport
     public static function definition(): ReportDefinition
     {
         return new ReportDefinition(
-            key: 'supplier.settlement',
+            key: 'purchase.settlement',
             title: 'supplier::menu.settlement',
             filters: ['date_range', 'branch'],
             groupBy: 'supplier_id',

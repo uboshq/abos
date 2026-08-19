@@ -10,7 +10,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
-use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\View\View;
 
 /**
@@ -22,12 +21,30 @@ use Illuminate\View\View;
 class PurchaseReportController extends Controller implements HasMiddleware
 {
     /**
-     * @var array<string, string>
+     * slug → [রিপোর্টের কী, যে চাবি লাগে]।
+     *
+     * ── চাবিটা এখানে কেন, রুটে নয় ────────────────────────────
+     * আগে রুটটা সব স্লাগের জন্য একটাই চাবি চাইত: `purchase.report`।
+     * তাতে নিষ্পত্তির সারিটা মেনুতে চাইত `purchase.settlement.view`, আর
+     * রুট চাইত `purchase.report` — যাঁর একটা আছে অন্যটা নেই, তিনি
+     * রোজ নিজের পর্দায় সারিটা দেখতেন আর ক্লিক করলে ৪০৩ পেতেন।
+     * ধরেছে `TheMenuAsksWhatTheRouteAsksTest`।
+     *
+     * এখানে রাখার কারণ, রিপোর্টগুলো একটাই রুট ভাগ করে —
+     * রুটে বসানো মানে প্রতিটা রিপোর্টের জন্য আলাদা রুট।
+     *
+     * @var array<string, array{key: string, permission: string}>
      */
     private const SLUGS = [
-        'pending-orders' => 'purchase.pending_orders',
-        'uninvoiced' => 'purchase.uninvoiced',
-        'by-supplier' => 'purchase.by_supplier',
+        'pending-orders' => ['key' => 'purchase.pending_orders', 'permission' => 'purchase.report'],
+        'uninvoiced' => ['key' => 'purchase.uninvoiced', 'permission' => 'purchase.report'],
+        'by-supplier' => ['key' => 'purchase.by_supplier', 'permission' => 'purchase.report'],
+
+        /*
+         * দুইটাই ক্রয়মূল্য ও মার্জিন খুলে দেখায়, তাই নিজের চাবি।
+         */
+        'settlement' => ['key' => 'purchase.settlement', 'permission' => 'purchase.settlement.view'],
+        'return-on-capital' => ['key' => 'purchase.return_on_capital', 'permission' => 'purchase.settlement.view'],
     ];
 
     public function __construct(
@@ -37,14 +54,20 @@ class PurchaseReportController extends Controller implements HasMiddleware
 
     public static function middleware(): array
     {
-        return [new Middleware('can:purchase.report')];
+        /*
+         * রুটে সবার জন্য একটা চাবি নেই — প্রতিটা স্লাগ নিজেরটা
+         * চায়, `show()`-এ। `auth` রুট-গোষ্ঠীতেই আছে।
+         */
+        return [];
     }
 
     public function show(Request $request, string $slug): View
     {
         abort_unless(isset(self::SLUGS[$slug]), 404);
 
-        $key = self::SLUGS[$slug];
+        $this->authorize(self::SLUGS[$slug]['permission']);
+
+        $key = self::SLUGS[$slug]['key'];
         $definition = $this->reports->get($key);
 
         $result = $this->reports->run(

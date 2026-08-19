@@ -2,11 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\Supplier\Reports;
+namespace App\Modules\Purchase\Reports;
 
 use App\Core\Engines\Report\ReportColumn;
 use App\Core\Engines\Report\ReportDefinition;
 use App\Core\Engines\Report\ReportEngine;
+use App\Core\Support\Money;
 use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Purchase\Models\PurchaseReceipt;
 use App\Modules\Sales\Models\SalesInvoice;
@@ -58,7 +59,7 @@ final class ReturnOnCapitalReport
     public static function byPrincipal(): ReportDefinition
     {
         return new ReportDefinition(
-            key: 'supplier.return_on_capital',
+            key: 'purchase.return_on_capital',
             title: 'supplier::menu.return_on_capital',
             filters: ['date_range', 'branch'],
             groupBy: 'supplier_id',
@@ -99,7 +100,12 @@ final class ReturnOnCapitalReport
          * পরিসরের দিন গুনে বছরে টেনে নেওয়া হয়।
          */
         $days = max(1, Carbon::parse($from)->diffInDays(Carbon::parse($to)) + 1);
-        $annualise = 365 / $days;
+
+        /*
+         * অনুপাতটা bcmath-এ, float-এ নয় — এটা সরাসরি SQL-এ
+         * বসে আর মার্জিনকে গুণ করে।
+         */
+        $annualise = bcdiv('365', (string) $days, 6);
 
         // ডিলারের মোট বাকি — ভাগ করে বসানোর জন্য
         $dealerDue = (string) (DB::table('ledger_entries')
@@ -109,7 +115,21 @@ final class ReturnOnCapitalReport
             ->selectRaw('COALESCE(SUM(debit) - SUM(credit), 0) as due')
             ->value('due') ?? '0');
 
-        $dealerDue = bccomp($dealerDue, '0', 4) > 0 ? $dealerDue : '0';
+        /*
+         * শূন্যের নিচে নামালে শূন্য — আগাম নেওয়া ডিলারের টাকা
+         * পুঁজি কমায় না।
+         *
+         * ── কেন `(float)` নয় ───────────────────────────────────
+         * আগে অঙ্কটা SQL-এ বসানোর আগে `(float)` করা হত — সংখ্যাই
+         * বসছে নিশ্চিত করতে। কিন্তু ডিলারের মোট বাকি কোটি টাকার
+         * ঘরে যায়, আর float-এ ওই অঙ্ক পয়সার ঘরে নড়ে — তারপর সেটা
+         * প্রতিটা মিলের ভাগে গুণ হয়। `MoneyIsNeverAFloatTest` ধরেছে।
+         *
+         * `Money::of()` সংখ্যাটাকে স্বাভাবিক দশমিক লেখায় এনে দেয়,
+         * তাই সরাসরি বসানো নিরাপদ — অঙ্কটা আসে SUM() থেকে,
+         * ব্যবহারকারীর লেখা থেকে নয়।
+         */
+        $dealerDue = Money::of(bccomp($dealerDue, '0', 4) > 0 ? $dealerDue : '0');
 
         return DB::table('suppliers')
             ->where('suppliers.company_id', $company)
@@ -141,13 +161,13 @@ final class ReturnOnCapitalReport
                  * দিয়ে ভাগ পড়ত।
                  */
                 DB::raw('CASE WHEN tc.total_cost > 0
-                    THEN '.(float) $dealerDue.' * COALESCE(tr.cost, 0) / tc.total_cost
+                    THEN '.$dealerDue.' * COALESCE(tr.cost, 0) / tc.total_cost
                     ELSE 0 END as dealer_share'),
 
                 DB::raw('GREATEST(COALESCE(ad.advance, 0), 0) + COALESCE(cl.claims, 0)
                     + COALESCE(st.stock, 0)
                     + CASE WHEN tc.total_cost > 0
-                        THEN '.(float) $dealerDue.' * COALESCE(tr.cost, 0) / tc.total_cost
+                        THEN '.$dealerDue.' * COALESCE(tr.cost, 0) / tc.total_cost
                         ELSE 0 END as capital'),
 
                 DB::raw('COALESCE(tr.margin, 0) as margin'),
@@ -162,13 +182,13 @@ final class ReturnOnCapitalReport
                 DB::raw('CASE WHEN (GREATEST(COALESCE(ad.advance, 0), 0) + COALESCE(cl.claims, 0)
                         + COALESCE(st.stock, 0)
                         + CASE WHEN tc.total_cost > 0
-                            THEN '.(float) $dealerDue.' * COALESCE(tr.cost, 0) / tc.total_cost
+                            THEN '.$dealerDue.' * COALESCE(tr.cost, 0) / tc.total_cost
                             ELSE 0 END) > 0
                     THEN ROUND(COALESCE(tr.margin, 0) * '.$annualise.' * 100
                         / (GREATEST(COALESCE(ad.advance, 0), 0) + COALESCE(cl.claims, 0)
                             + COALESCE(st.stock, 0)
                             + CASE WHEN tc.total_cost > 0
-                                THEN '.(float) $dealerDue.' * COALESCE(tr.cost, 0) / tc.total_cost
+                                THEN '.$dealerDue.' * COALESCE(tr.cost, 0) / tc.total_cost
                                 ELSE 0 END), 2)
                     ELSE 0 END as return_percent'),
             ]);
