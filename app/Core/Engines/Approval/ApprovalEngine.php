@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Engines\Approval;
 
+use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Models\Approval;
 use App\Models\ApprovalDecision;
@@ -239,9 +240,28 @@ final class ApprovalEngine
             return false;
         }
 
-        // নিজের অনুরোধ নিজে অনুমোদন করা যায় না। এটা না থাকলে পুরো
-        // অনুমোদন ব্যবস্থাটাই সাজানো — যে ছাড় চায় সে নিজেই দিয়ে দেয়।
-        if ($approval->requested_by === $user->id) {
+        /*
+         * নিজের অনুরোধ নিজে অনুমোদন — কেবল সীমার নিচে।
+         *
+         * ── কেন নিয়মটা একেবারে কঠোর নয় ──────────────────────────────
+         * "কখনোই নয়" বড় অঙ্কে ঠিক: যে ছাড় চায় সে-ই যদি দেয়, তবে পুরো
+         * ব্যবস্থাটাই সাজানো। কিন্তু ছোট অঙ্কে ওটা কাজ থামায় — এক
+         * টাকার চায়ের বিল দ্বিতীয় একজনের সইয়ের অপেক্ষায় বসে থাকলে
+         * বাস্তবে চা-টা কেউ নিজের পকেট থেকে কিনে ফেলেন, আর খাতা নীরবে
+         * দিনের সাথে মেলা বন্ধ করে।
+         *
+         * তাই সীমা (`approval.self_limit`): এর নিচে নিজে সই করা যায়,
+         * এতে বা এর উপরে অন্য কাউকে লাগে।
+         *
+         * ── ডিফল্ট শূন্য, অর্থাৎ আজকের আচরণ অবিকল ────────────────────
+         * মালিক সংখ্যাটা না বসানো পর্যন্ত কিছুই বদলায় না। নিয়ম শিথিল
+         * করার সিদ্ধান্তটা তাঁর, কোডের নয়।
+         *
+         * অঙ্ক না জানা থাকলেও (`amount` খালি) নিজে সই করা যায় না:
+         * কত টাকা জানা নেই মানে সীমার নিচে কি না তাও জানা নেই, আর
+         * সন্দেহে কড়া দিকটাই নিরাপদ।
+         */
+        if ($approval->requested_by === $user->id && ! $this->withinSelfLimit($approval)) {
             return false;
         }
 
@@ -255,6 +275,29 @@ final class ApprovalEngine
         }
 
         return $step->contains(fn ($s) => $s->allows($user));
+    }
+
+    /**
+     * অনুরোধটা নিজে সই করার মতো ছোট কি না।
+     *
+     * সীমা শূন্য বা বসানো না থাকলে উত্তর সবসময় "না" — অর্থাৎ পুরনো
+     * কঠোর নিয়ম। এটাই ডিফল্ট, আর ইচ্ছাকৃত।
+     */
+    private function withinSelfLimit(Approval $approval): bool
+    {
+        $limit = (string) (app(SettingsService::class)->get('approval.self_limit') ?? '0');
+
+        if (bccomp($limit, '0', 4) <= 0) {
+            return false;
+        }
+
+        $amount = (string) ($approval->amount ?? '');
+
+        if ($amount === '') {
+            return false;
+        }
+
+        return bccomp($amount, $limit, 4) < 0;
     }
 
     private function flowFor(string $module, string $action, ?Model $document): ?ApprovalFlow

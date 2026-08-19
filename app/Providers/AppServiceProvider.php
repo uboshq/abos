@@ -5,8 +5,12 @@ namespace App\Providers;
 use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Services\ListExport;
 use App\Core\Services\SettingsService;
+use App\Core\Support\CompanyContext;
+use App\Models\User;
+use App\Models\UserPermissionOverride;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -16,6 +20,51 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        /*
+         * ── কেন `register()`-এ, `boot()`-এ নয় ───────────────────────
+         * প্রথমে এটা `boot()`-এ বসানো ছিল, আর **কেড়ে নেওয়াটা কাজ
+         * করছিল না**। কারণ Spatie নিজেও একটা `Gate::before` বসায় যেটা
+         * অনুমতি থাকলে `true` ফেরায়, আর Laravel প্রথম non-null উত্তরেই
+         * থেমে যায়। প্যাকেজের provider অ্যাপের আগে boot হয়, তাই তার
+         * "হ্যাঁ" আমাদের "না"-র আগে পৌঁছে যেত।
+         *
+         * `register()` সব boot-এর আগে চলে, তাই আমাদেরটাই প্রথম — আর
+         * ব্যতিক্রম শেষ কথা বলতে পারে।
+         *
+         * ধরা পড়েছে টেস্টে, প্রথম চালেই: রোলের দেওয়া অনুমতিটা কাড়ার
+         * পরেও ব্যবহারকারী সেটা করতে পারছিলেন।
+         */
+        /*
+         * একজনের ব্যতিক্রম — রোলের সিদ্ধান্তের উপরে।
+         *
+         * ── কেন `before`, `after` নয় ────────────────────────────────
+         * `Gate::before` চললে বাকি সব যাচাই থেমে যায়, আর সেটাই দরকার:
+         * "না" বলা ব্যতিক্রমটাকে রোলের "হ্যাঁ"-কে হারাতে হবে। `after`
+         * দিয়ে কেবল যোগ করা যেত, কাড়া যেত না — আর কাড়াটাই এই
+         * ব্যবস্থার অর্ধেক কাজ।
+         *
+         * `null` ফেরত মানে "আমার কিছু বলার নেই" — তখন স্বাভাবিক নিয়মেই
+         * সিদ্ধান্ত হয়। তাই ব্যতিক্রম না থাকলে এই হুকটার কোনো প্রভাবই
+         * নেই।
+         *
+         * ── কেন কোম্পানি ধরে ───────────────────────────────────────
+         * একই মানুষ দুই কোম্পানিতে কাজ করতে পারেন, আর এক কোম্পানির
+         * ব্যতিক্রম অন্যটায় খাটার কথা নয়। প্রসঙ্গ বসানো না থাকলে
+         * (কনসোল, সিডার) কিছুই খোঁজা হয় না।
+         */
+        Gate::before(function (User $user, string $ability) {
+            if (CompanyContext::id() === null) {
+                return null;
+            }
+
+            $override = UserPermissionOverride::query()
+                ->where('user_id', $user->id)
+                ->where('permission', $ability)
+                ->first();
+
+            return $override?->granted;
+        });
+
         /*
          * সেটিং পড়ার সেবাটা একটাই — প্রতি অনুরোধে একবার।
          *
