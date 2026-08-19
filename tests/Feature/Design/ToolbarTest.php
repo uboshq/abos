@@ -162,8 +162,21 @@ class ToolbarTest extends TestCase
         $roomy = $this->actingAs($this->user)->get(route('supplier.index'))->getContent();
         $tight = $this->actingAs($this->user)->get(route('supplier.index', ['compact' => 1]))->getContent();
 
-        $this->assertStringContainsString('py-2.5', $roomy);
-        $this->assertStringContainsString('py-1.5', $tight);
+        /*
+         * মাপটা এখন টোকেন থেকে, প্যাডিং থেকে নয়।
+         *
+         * আগে এখানে `py-2.5` ও `py-1.5` খোঁজা হত। প্যাডিং দিয়ে
+         * উচ্চতা ঠিক করলে যে ঘরে দুই লাইন লেখা (নাম + কোড) সেই সারিটা
+         * লম্বা হয়ে যায়, আর ছকটা অসম দেখায় — এক সারি ৪০px, পাশেরটা ৫৬।
+         *
+         * পরীক্ষাটার কাজ বদলায়নি: ঘনত্বের সুইচ সত্যিই সারি ছোট
+         * করে কি না — কেবল মাপটা এখন এক জায়গায় লেখা।
+         */
+        $this->assertStringContainsString('var(--row-height)', $roomy);
+        $this->assertStringContainsString('var(--row-height-dense)', $tight);
+
+        // উল্টোটাও সত্য হতে হবে — নাহলে দুইটাই ডিফল্ট দিলেও পাশ করত
+        $this->assertStringNotContainsString('var(--row-height-dense)', $roomy);
     }
 
     // ── খোঁজার ঘর বলে দেয় কী দিয়ে খোঁজা যায় ───────────────────────────
