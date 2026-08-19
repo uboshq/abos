@@ -40,4 +40,8 @@ return [
     'split_payment' => 'ভাগ করে দিন',
     'add_payment_row' => 'আরেকটা উপায়',
     'take_back' => 'ফেরত নিন',
+
+    // ডিলারের কমিশন
+    'commission_settle' => 'মেনেছে',
+    'commission_reject' => 'মানেনি',
 ];

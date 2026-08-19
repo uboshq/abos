@@ -164,4 +164,14 @@ return [
     'targets_saved' => 'Targets saved.',
 
     'pos_needs_approval' => 'This discount needs the manager. If they are beside you, let them type their own email and password — the sale then goes through at once.',
+
+    // ডিলারের কমিশন — কোম্পানির কাছে দাবি
+    'commission_claim_on' => 'Commission for :name',
+    'commission_saved' => 'Commission recorded — :no.',
+    'commission_settled' => 'Adjusted against the principal.',
+    'commission_rejected' => 'The claim has been written off.',
+
+    // ডিলারের কমিশন
+    'commission_note' => 'Commission given to a dealer is claimed back from the principal — it is not your discount, so it never touches your margin.',
+    'no_commissions' => 'No commission has been recorded yet.',
 ];

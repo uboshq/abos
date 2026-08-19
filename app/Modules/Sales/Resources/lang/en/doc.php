@@ -13,4 +13,7 @@ return [
     'delivery_order' => 'Delivery Order',
     'return' => 'Sales Return',
     'shipment' => 'Shipment',
+
+    // ডিলারের কমিশন — কোম্পানির কাছে দাবি
+    'commission' => 'Commission claim',
 ];

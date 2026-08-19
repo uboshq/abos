@@ -31,4 +31,8 @@ return [
     'screen_challans' => 'Show the Delivery Challans screen',
     'reprint_limit' => 'How many times one paper may be printed (0 = no limit)',
     'screen_shipments' => 'Show the Shipments screen',
+
+    // ডিলারের কমিশন — কোম্পানির কাছে দাবি
+    'commission_max_amount' => 'Highest commission in taka (0 = no limit)',
+    'commission_max_percent' => 'Highest commission rate % (0 = no limit)',
 ];

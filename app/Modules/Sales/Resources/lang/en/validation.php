@@ -97,4 +97,11 @@ return [
     'the_meter_does_not_run_backwards' => 'The closing meter reads lower than the opening one — one of the two was typed wrong.',
     'warehouse_missing' => 'Choose the warehouse the van leaves from.',
     'target_month_too_far' => 'A target cannot be set that far ahead — check the month is right.',
+
+    // ডিলারের কমিশন — কোম্পানির কাছে দাবি
+    'commission_needs_a_figure' => 'A commission needs either a rate or an amount.',
+    'commission_over_amount' => 'This commission is over :limit. It cannot be entered without approval.',
+    'commission_over_percent' => 'This commission is over :limit%. It cannot be entered without approval.',
+    'commission_already_decided' => ':no has already been decided.',
+    'rejection_needs_reason' => 'Say why it was refused — in six months this is the only answer there will be.',
 ];

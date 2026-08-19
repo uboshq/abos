@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Modules\Sales\Http\Controllers\CollectionController;
+use App\Modules\Sales\Http\Controllers\CommissionClaimController;
 use App\Modules\Sales\Http\Controllers\DeliveryChallanController;
 use App\Modules\Sales\Http\Controllers\DirectSaleController;
 use App\Modules\Sales\Http\Controllers\LotTraceController;
@@ -103,6 +104,21 @@ Route::middleware('auth')->prefix('sales')->group(function () {
      * নিজেরটা দেখেন — নিজের টার্গেট নিজে বদলাতে পারলে ওটা আর
      * টার্গেট থাকত না।
      */
+    /*
+     * ডিলারের কমিশন — কোম্পানির কাছে দাবি।
+     *
+     * তালিকাই প্রধান পর্দা, তাই আলাদা create/show নেই: বসানো হয়
+     * তালিকার উপরের ফর্ম থেকে, আর সিদ্ধান্ত সারি থেকেই।
+     */
+    Route::prefix('commissions')->name('commission.')->group(function () {
+        Route::get('/', [CommissionClaimController::class, 'index'])->name('index');
+        Route::post('/', [CommissionClaimController::class, 'store'])->name('store');
+        Route::post('/{claim}/settle', [CommissionClaimController::class, 'settle'])
+            ->whereNumber('claim')->name('settle');
+        Route::post('/{claim}/reject', [CommissionClaimController::class, 'reject'])
+            ->whereNumber('claim')->name('reject');
+    });
+
     Route::prefix('targets')->name('target.')->group(function () {
         Route::get('/', [SalesTargetController::class, 'index'])->name('index');
         Route::post('/', [SalesTargetController::class, 'store'])->name('store');
