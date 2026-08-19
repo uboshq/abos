@@ -10,6 +10,8 @@ use App\Modules\Purchase\Models\PurchaseOrder;
 use App\Modules\Purchase\Models\PurchaseReceipt;
 use App\Modules\Purchase\Models\PurchaseReturn;
 use App\Modules\Purchase\Reports\PurchaseReports;
+use App\Modules\Purchase\Reports\ReturnOnCapitalReport;
+use App\Modules\Purchase\Reports\SettlementReport;
 
 /**
  * Purchase — প্ল্যান Phase 7।
@@ -51,7 +53,23 @@ return [
     'version' => '1.0.0',
 
     // মাল স্টকে বসে, দায় খাতায় বসে, আর সরবরাহকারী ছাড়া ক্রয় হয় না
-    'depends_on' => ['master_data', 'accounts', 'inventory', 'supplier'],
+    /*
+     * `sales`-টা যোগ হয়েছে নিষ্পত্তি ও পুঁজির রিপোর্টের জন্য।
+     *
+     * ── কেন রিপোর্ট দুইটা এখানে, Supplier-এ নয় ──────────────────────
+     * দুইটাই ক্রয়ের নথি (`pur_receipts`, `pur_bills`), ব্যয়-স্তর আর
+     * বিক্রয়-চালান একসাথে জোড় লাগায় — "এই মিলের কত টাকার মাল এল, তার
+     * কতটা বিক্রি হলো, মার্জিন কত"।
+     *
+     * প্রথমে ওগুলো Supplier-এ লেখা হয়েছিল, আর `BoundariesTest` ধরল:
+     * supplier → purchase একটা **চক্র**, কারণ প্রতিটা ক্রয়ই সরবরাহকারীর
+     * নাম ধরে — purchase → supplier সরানোর কোনো উপায় নেই। চক্র হলে
+     * `ModuleRegistry` বুট-টাইমেই থেমে যায়, তাই ঘোষণা করাও যেত না।
+     *
+     * উল্টো দিকটায় কোনো চক্র নেই: sales ক্রয়ের নাম জানে না। তাই
+     * চার মডিউলের নামই যে জানতে পারে, রিপোর্ট দুইটা তারই।
+     */
+    'depends_on' => ['master_data', 'accounts', 'inventory', 'supplier', 'sales'],
 
     'menu' => [
         'transactions' => [
@@ -72,6 +90,27 @@ return [
                 'route_params' => ['slug' => 'uninvoiced'], 'permission' => 'purchase.report'],
             ['label' => 'purchase::menu.by_supplier', 'route' => 'purchase.report.show',
                 'route_params' => ['slug' => 'by-supplier'], 'permission' => 'purchase.report'],
+
+            /*
+             * মাসের নিষ্পত্তি — পরিবেশক ডিপোর সবচেয়ে দরকারি কাগজ।
+             *
+             * ── কেন নিজের চাবি, `purchase.report` নয় ────────────────
+             * এই রিপোর্টের **প্রতিটা কলামই ক্রয়মূল্য বহন করে** — কত
+             * টাকার মাল এল, তার খরচ কত ছিল, মার্জিন কত। বকেয়ার তালিকা
+             * দেখতে পারা আর নিজের মার্জিন দেখতে পারা এক জিনিস নয়, তাই
+             * চাবিটাও আলাদা।
+             */
+            ['label' => 'supplier::menu.settlement', 'route' => 'purchase.report.show',
+                'route_params' => ['slug' => 'settlement'], 'permission' => 'purchase.settlement.view'],
+
+            /*
+             * পুঁজির উপর ফেরত — নিষ্পত্তির ঠিক পাশে, আর একই চাবিতে।
+             *
+             * দুইটাই একই প্রশ্নের দুই অর্ধেক: নিষ্পত্তি বলে "এই মাসে কত
+             * এল", আর এটা বলে "ওই টাকা খেটে বছরে কত আনছে"।
+             */
+            ['label' => 'supplier::menu.return_on_capital', 'route' => 'purchase.report.show',
+                'route_params' => ['slug' => 'return-on-capital'], 'permission' => 'purchase.settlement.view'],
         ],
     ],
 
@@ -110,6 +149,16 @@ return [
         'purchase.return.cancel',
 
         'purchase.report',
+
+        /*
+         * মার্জিন দেখার চাবি — বকেয়া দেখার চাবির চেয়ে আলাদা।
+         *
+         * নিষ্পত্তি ও পুঁজির রিপোর্ট দুইটাই ক্রয়মূল্য খুলে দেখায়। যিনি
+         * বকেয়ার তালিকা দেখেন তিনি ডিপোর মার্জিনও দেখে ফেলবেন — এমনটা
+         * হওয়ার কথা নয়।
+         */
+        'purchase.settlement.view',
+
         'purchase.manage',
     ],
 
@@ -139,6 +188,8 @@ return [
 
     'reports' => [
         PurchaseReports::class,
+        SettlementReport::class,
+        ReturnOnCapitalReport::class,
     ],
 
     'widgets' => [

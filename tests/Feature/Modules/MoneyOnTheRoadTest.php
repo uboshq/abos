@@ -7,6 +7,7 @@ namespace Tests\Feature\Modules;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\LedgerEntry;
+use App\Models\PeriodLock;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CashTill;
@@ -193,6 +194,85 @@ class MoneyOnTheRoadTest extends TestCase
         $this->assertSame('20000.0000', $this->from->fresh()->balance());
         $this->assertSame('0.0000', $this->to->fresh()->balance());
         $this->assertSame('0.0000', $this->transitBalance());
+    }
+
+    // ── পথে থাকার দিনগুলো ───────────────────────────────────────────
+
+    /**
+     * মাঝের দিনগুলোয় টাকাটা পথেই থাকে।
+     *
+     * ── কী ভাঙা ছিল ─────────────────────────────────────────────────
+     * গ্রহণের পা-টাও **হস্তান্তরের তারিখে** বসত। ফলে ১০ তারিখে দেওয়া
+     * আর ১৪ তারিখে পাওয়া টাকাটা ১১, ১২, ১৩ তারিখে কারও হিসাবেই থাকত
+     * না — না দাতার, না গ্রহীতার, না পথের। "পথের টাকা" খাতটা কোনোদিন
+     * কোনো তারিখে শূন্যের বেশি হত না, অথচ ওই খাতটার গোটা কাজই হলো
+     * "টাকাটা এখন পথে" বলা।
+     *
+     * ওই ভুলে এই পরীক্ষাটা পাস করত না: কালকের ব্যালেন্স শূন্য দেখাত।
+     */
+    public function test_the_money_stays_on_the_road_on_the_days_between(): void
+    {
+        $transfer = $this->service()->initiate([
+            'from_till_id' => $this->from->id,
+            'to_till_id' => $this->to->id,
+            'amount' => '12000',
+            'trx_date' => now()->subDays(4)->toDateString(),
+        ]);
+
+        $this->service()->confirm($transfer);
+
+        $this->assertSame('12000.0000', StandardChart::find(StandardChart::CASH_IN_TRANSIT)
+            ->balanceOn(now()->subDay()->toDateString()),
+            'মাঝের দিনে টাকাটা পথে নেই — অথচ তখনো কেউ ওটা পায়নি।');
+
+        $this->assertSame('0.0000', $this->transitBalance(),
+            'গ্রহণের পরেও টাকাটা পথে রয়ে গেছে।');
+
+        $this->assertSame('12000.0000', $this->to->fresh()->balance(),
+            'গ্রহণের পরেও টাকাটা গ্রহীতার হিসাবে ওঠেনি।');
+
+        $this->assertSame('0.0000', $this->to->fresh()
+            ->balance(now()->subDay()->toDateString()),
+            'পাওয়ার আগেই টাকাটা গ্রহীতার হিসাবে বসে গেছে।');
+    }
+
+    /**
+     * বন্ধ মাস টাকাটাকে পথে আটকে রাখতে পারে না।
+     *
+     * ── কেন এটা নিছক তারিখের খুঁটিনাটি নয় ──────────────────────────
+     * হিসাবরক্ষক ভ্যাটের জন্য জুন বন্ধ করলে জুনের হস্তান্তর গ্রহীতা আর
+     * **কোনোদিন** "পেলাম" বলতে পারতেন না — পোস্টিং জুনের তারিখ চাইত,
+     * আর তালাটা ওটা ফিরিয়ে দিত। টাকাটা পথের খাতে চিরকাল আটকে থাকত,
+     * আর ওটা নামানোর কোনো পর্দাই নেই।
+     *
+     * ধরা পড়েছিল ঠিক এভাবেই: দাতা মালিক (পেছনের তারিখের ছাড় আছে),
+     * গ্রহীতা হিসাবরক্ষক (নেই)।
+     */
+    public function test_a_closed_month_does_not_trap_the_money_on_the_road(): void
+    {
+        $handover = now()->subMonthNoOverflow();
+
+        $transfer = $this->service()->initiate([
+            'from_till_id' => $this->from->id,
+            'to_till_id' => $this->to->id,
+            'amount' => '12000',
+            'trx_date' => $handover->toDateString(),
+        ]);
+
+        PeriodLock::query()->create([
+            'company_id' => $this->company->id,
+            'year' => (int) $handover->year,
+            'month' => (int) $handover->month,
+            'reason' => 'ভ্যাট দাখিল হয়ে গেছে',
+            'locked_at' => now(),
+        ]);
+
+        $this->service()->confirm($transfer);
+
+        $this->assertTrue($transfer->fresh()->isConfirmed(),
+            'বন্ধ মাসে দেওয়া টাকা আজ আর গ্রহণ করা যাচ্ছে না — ওটা পথে আটকে গেল।');
+
+        $this->assertSame('12000.0000', $this->to->fresh()->balance());
     }
 
     // ── খাতা মেলে ───────────────────────────────────────────────────

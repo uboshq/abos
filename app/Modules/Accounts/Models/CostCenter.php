@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\MasterData\Models;
+namespace App\Modules\Accounts\Models;
 
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasActiveState;
@@ -35,6 +35,20 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  *
  * এক করে ফেললে লোকেশনের গাছে এমন সব সারি ঢুকত যেগুলো কোনো জায়গাই নয়,
  * আর গ্রাহকের ঠিকানা বাছার তালিকায় "অফিস" দেখা যেত।
+ *
+ * ── কেন MasterData-তে নয়, এখানে ──────────────────────────────────────
+ * প্রথমে এটা MasterData-তে বসানো হয়েছিল — "কোম্পানির সম্পাদনাযোগ্য
+ * তালিকা" ভেবে। কিন্তু কেন্দ্রটা বসে **খতিয়ানের সারিতে**
+ * (`ledger_entries.cost_center_id`) আর **ভাউচারের লাইনে**
+ * (`voucher_lines.cost_center_id`), আর একে পড়ে হিসাবেরই রিপোর্ট
+ * (`accounts.by_cost_centre`)। ওটা হিসাবের মাত্রা, মাস্টার ডেটা নয়।
+ *
+ * সীমানার দিক থেকেও এটাই একমাত্র পথ: MasterData accounts-এর উপর
+ * দাঁড়ায়, তাই accounts MasterData-র ভেতরে হাত দিলে চক্র হত আর
+ * `ModuleRegistry` বুট-টাইমেই থেমে যেত। ধরেছে `BoundariesTest`।
+ *
+ * তালিকাটা সম্পাদনা করার **পর্দাটা** MasterData-তেই থাকে — ওদিকের
+ * নির্ভরতাটা ঘোষিত, তাই ওতে কোনো সমস্যা নেই।
  */
 class CostCenter extends Model implements Drillable
 {
@@ -46,7 +60,7 @@ class CostCenter extends Model implements Drillable
     use IsMasterRecord;
     use SoftDeletes;
 
-    protected $table = 'mdm_cost_centers';
+    protected $table = 'acc_cost_centers';
 
     protected $fillable = [
         'company_id', 'code', 'name_en', 'name_bn', 'is_active', 'created_by',

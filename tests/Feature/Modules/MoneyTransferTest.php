@@ -78,7 +78,7 @@ class MoneyTransferTest extends TestCase
     private function start(string $amount = '5000.00', array $overrides = []): MoneyTransfer
     {
         return $this->service()->initiate([
-            'trx_date' => '2026-08-10',
+            'trx_date' => now()->subDays(2)->toDateString(),
             'from_till_id' => $this->from->id,
             'to_till_id' => $this->to->id,
             'given_by' => $this->giver->id,
@@ -171,7 +171,7 @@ class MoneyTransferTest extends TestCase
         $this->expectException(ValidationException::class);
 
         $this->service()->initiate([
-            'trx_date' => '2026-08-10',
+            'trx_date' => now()->subDays(2)->toDateString(),
             'from_till_id' => $this->from->id,
             'amount' => '1000.00',
         ]);
@@ -205,7 +205,7 @@ class MoneyTransferTest extends TestCase
         ]);
 
         $transfer = $this->service()->initiate([
-            'trx_date' => '2026-08-10',
+            'trx_date' => now()->subDays(2)->toDateString(),
             'from_till_id' => $this->from->id,
             'to_account_id' => $bank->id,
             'amount' => '8000.00',
@@ -270,7 +270,7 @@ class MoneyTransferTest extends TestCase
     {
         $this->actingAs($this->giver)
             ->post(route('accounts.transfer.store'), [
-                'trx_date' => '2026-08-10',
+                'trx_date' => now()->subDays(2)->toDateString(),
                 'from_till_id' => $this->from->id,
                 'destination' => 'till:'.$this->to->id,
                 'amount' => '2000.00',

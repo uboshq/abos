@@ -40,7 +40,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('mdm_cost_centers', function (Blueprint $table): void {
+        Schema::create('acc_cost_centers', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
 
@@ -70,7 +70,7 @@ return new class extends Migration
              * উধাও হয় না। খতিয়ানের কোনো সারি কোনো কারণেই হারাতে পারে না।
              */
             $table->foreignId('cost_center_id')->nullable()->after('party_id')
-                ->constrained('mdm_cost_centers')->nullOnDelete();
+                ->constrained('acc_cost_centers')->nullOnDelete();
 
             $table->index(['company_id', 'cost_center_id', 'trx_date'], 'ledger_cost_center_idx');
         });
@@ -83,6 +83,6 @@ return new class extends Migration
             $table->dropConstrainedForeignId('cost_center_id');
         });
 
-        Schema::dropIfExists('mdm_cost_centers');
+        Schema::dropIfExists('acc_cost_centers');
     }
 };

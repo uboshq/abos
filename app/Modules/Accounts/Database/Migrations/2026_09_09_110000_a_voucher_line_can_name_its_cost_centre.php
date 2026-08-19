@@ -22,7 +22,7 @@ return new class extends Migration
     {
         Schema::table('voucher_lines', function (Blueprint $table): void {
             $table->foreignId('cost_center_id')->nullable()->after('party_id')
-                ->constrained('mdm_cost_centers')->nullOnDelete();
+                ->constrained('acc_cost_centers')->nullOnDelete();
         });
     }
 
