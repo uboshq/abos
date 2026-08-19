@@ -72,20 +72,6 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('customer::menu.customers') }}</x-slot:title>
 
-    <x-slot:header>
-        <x-ui.page-header
-            :title="__('customer::menu.customers')"
-            :subtitle="trans_choice('customer::message.count', $customers->total(), ['count' => $customers->total()])">
-            <x-slot:actions>
-                @can('create', \App\Modules\Customer\Models\Customer::class)
-                    <x-ui.button tone="primary" icon="plus" :href="route('customer.create')">
-                        {{ __('customer::action.new') }}
-                    </x-ui.button>
-                @endcan
-            </x-slot:actions>
-        </x-ui.page-header>
-    </x-slot:header>
-
     @if (session('saved'))
         <div role="status"
              class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm
@@ -96,11 +82,18 @@
 
     <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
-            <x-ui.toolbar
+            <x-ui.toolbar :title="__('customer::menu.customers')" :count="trans_choice('customer::message.count', $customers->total(), ['count' => $customers->total()])"
                 :columns="$columns"
                 :search-placeholder="__('customer::message.search_placeholder')"
                 :sort="$sortOptions"
                 view>
+        <x-slot:actions>
+            @can('create', \App\Modules\Customer\Models\Customer::class)
+                    <x-ui.button tone="primary" icon="plus" :href="route('customer.create')">
+                        {{ __('customer::action.new') }}
+                    </x-ui.button>
+                @endcan
+        </x-slot:actions>
                 {{-- নিষ্ক্রিয় গ্রাহকও দেখা যাবে, কিন্তু ডিফল্টে নয়: তালিকাটা
                      রোজকার কাজের, আর নিষ্ক্রিয়রা সেখানে শুধু ভিড় বাড়ায়। --}}
                 <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">

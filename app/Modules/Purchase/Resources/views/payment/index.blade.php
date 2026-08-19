@@ -25,20 +25,6 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('purchase::menu.payments') }}</x-slot:title>
 
-    <x-slot:header>
-        <x-ui.page-header
-            :title="__('purchase::menu.payments')"
-            :subtitle="trans_choice('core.count.records', $payments->total(), ['count' => $payments->total()])">
-            <x-slot:actions>
-                @can('purchase.payment.create')
-                    <x-ui.button tone="primary" icon="plus" :href="route('purchase.payment.create')">
-                        {{ __('purchase::action.new_payment') }}
-                    </x-ui.button>
-                @endcan
-            </x-slot:actions>
-        </x-ui.page-header>
-    </x-slot:header>
-
     @if (session('saved'))
         <div role="status"
              class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm
@@ -49,9 +35,16 @@
 
     <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
-            <x-ui.toolbar
+            <x-ui.toolbar :title="__('purchase::menu.payments')" :count="trans_choice('core.count.records', $payments->total(), ['count' => $payments->total()])"
                 :columns="$columns" :search-placeholder="__('purchase::message.payment_search')"
                           :sort="$sortOptions">
+        <x-slot:actions>
+            @can('purchase.payment.create')
+                    <x-ui.button tone="primary" icon="plus" :href="route('purchase.payment.create')">
+                        {{ __('purchase::action.new_payment') }}
+                    </x-ui.button>
+                @endcan
+        </x-slot:actions>
                 <x-ui.date-range :dates="$dates" />
 
                 <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">

@@ -235,6 +235,7 @@ return [
     ],
 
     'table' => [
+        'page_total' => 'এই পাতায়',
         'code' => 'কোড',
         'name' => 'নাম',
         'actions' => 'কাজ',

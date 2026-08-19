@@ -21,21 +21,6 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('hr::menu.leave') }}</x-slot:title>
 
-    <x-slot:header>
-        <x-ui.page-header :title="__('hr::menu.leave')">
-            <x-slot:actions>
-                @can('hr.leave.manage')
-                    <x-ui.button :href="route('hr.leave_type.index')">
-                        {{ __('hr::menu.leave_types') }}
-                    </x-ui.button>
-                    <x-ui.button tone="primary" icon="plus" :href="route('hr.leave.create')">
-                        {{ __('hr::action.apply_leave') }}
-                    </x-ui.button>
-                @endcan
-            </x-slot:actions>
-        </x-ui.page-header>
-    </x-slot:header>
-
     @if (session('saved'))
         <div role="status"
              class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm
@@ -58,9 +43,19 @@
 
     <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
-            <x-ui.toolbar
+            <x-ui.toolbar :title="__('hr::menu.leave')"
                 :sort="$sortOptions"
                 :columns="$columns" :search="false">
+        <x-slot:actions>
+            @can('hr.leave.manage')
+                    <x-ui.button :href="route('hr.leave_type.index')">
+                        {{ __('hr::menu.leave_types') }}
+                    </x-ui.button>
+                    <x-ui.button tone="primary" icon="plus" :href="route('hr.leave.create')">
+                        {{ __('hr::action.apply_leave') }}
+                    </x-ui.button>
+                @endcan
+        </x-slot:actions>
                 <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
                     <input type="checkbox" name="pending" value="1" @checked($onlyPending) class="size-4">
                     {{ __('hr::action.only_pending') }}

@@ -49,20 +49,6 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('supplier::menu.suppliers') }}</x-slot:title>
 
-    <x-slot:header>
-        <x-ui.page-header
-            :title="__('supplier::menu.suppliers')"
-            :subtitle="trans_choice('supplier::message.count', $suppliers->total(), ['count' => $suppliers->total()])">
-            <x-slot:actions>
-                @can('create', \App\Modules\Supplier\Models\Supplier::class)
-                    <x-ui.button tone="primary" icon="plus" :href="route('supplier.create')">
-                        {{ __('supplier::action.new') }}
-                    </x-ui.button>
-                @endcan
-            </x-slot:actions>
-        </x-ui.page-header>
-    </x-slot:header>
-
     @if (session('saved'))
         <div role="status"
              class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm
@@ -73,11 +59,18 @@
 
     <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
-            <x-ui.toolbar
+            <x-ui.toolbar :title="__('supplier::menu.suppliers')" :count="trans_choice('supplier::message.count', $suppliers->total(), ['count' => $suppliers->total()])"
                 :columns="$columns"
                 :search-placeholder="__('supplier::message.search_placeholder')"
                 :sort="$sortOptions"
                 view>
+        <x-slot:actions>
+            @can('create', \App\Modules\Supplier\Models\Supplier::class)
+                    <x-ui.button tone="primary" icon="plus" :href="route('supplier.create')">
+                        {{ __('supplier::action.new') }}
+                    </x-ui.button>
+                @endcan
+        </x-slot:actions>
                 {{-- নিষ্ক্রিয়রাও দেখা যাবে, কিন্তু ডিফল্টে নয়: তালিকাটা
                      রোজকার কাজের, আর নিষ্ক্রিয়রা সেখানে শুধু ভিড় বাড়ায়। --}}
                 <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">

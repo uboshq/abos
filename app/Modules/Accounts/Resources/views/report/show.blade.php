@@ -44,15 +44,9 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __($report->title) }}</x-slot:title>
 
-    <x-slot:header>
-        <x-ui.page-header
-            :title="__($report->title)"
-            :subtitle="trans_choice('accounts::message.row_count', $result->totalRows, ['count' => $result->totalRows])" />
-    </x-slot:header>
-
     <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
-            <x-ui.toolbar :search="false">
+            <x-ui.toolbar :title="__($report->title)" :count="trans_choice('accounts::message.row_count', $result->totalRows, ['count' => $result->totalRows])" :search="false">
                 @if ($report->hasFilter('date_range'))
                     {{--
                         জেরের রিপোর্টে "কবে থেকে" বলে কিছু নেই।

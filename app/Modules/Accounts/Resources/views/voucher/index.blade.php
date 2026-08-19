@@ -22,20 +22,6 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('accounts::voucher.' . $type) }}</x-slot:title>
 
-    <x-slot:header>
-        <x-ui.page-header
-            :title="__('accounts::voucher.' . $type)"
-            :subtitle="trans_choice('accounts::message.voucher_count', $vouchers->total(), ['count' => $vouchers->total()])">
-            <x-slot:actions>
-                @can('accounts.voucher.create')
-                    <x-ui.button tone="primary" icon="plus" :href="route('accounts.voucher.create', $type)">
-                        {{ __('accounts::action.new_voucher') }}
-                    </x-ui.button>
-                @endcan
-            </x-slot:actions>
-        </x-ui.page-header>
-    </x-slot:header>
-
     @if (session('saved'))
         <div role="status"
              class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm
@@ -46,9 +32,16 @@
 
     <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
-            <x-ui.toolbar
+            <x-ui.toolbar :title="__('accounts::voucher.' . $type)" :count="trans_choice('accounts::message.voucher_count', $vouchers->total(), ['count' => $vouchers->total()])"
                 :sort="$sortOptions"
                 :columns="$columns">
+        <x-slot:actions>
+            @can('accounts.voucher.create')
+                    <x-ui.button tone="primary" icon="plus" :href="route('accounts.voucher.create', $type)">
+                        {{ __('accounts::action.new_voucher') }}
+                    </x-ui.button>
+                @endcan
+        </x-slot:actions>
                 {{-- তারিখের পরিসর — ভাউচারের তালিকায় এটাই সবচেয়ে বেশি
                      ব্যবহৃত ফিল্টার, তাই লুকানো নয় --}}
                 <x-ui.date name="from"

@@ -57,20 +57,6 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('sales::shipment.title') }}</x-slot:title>
 
-    <x-slot:header>
-        <x-ui.page-header
-            :title="__('sales::shipment.title')"
-            :subtitle="__('sales::shipment.subtitle')">
-            <x-slot:actions>
-                @can('create', \App\Modules\Sales\Models\Shipment::class)
-                    <x-ui.button tone="primary" icon="plus" :href="route('sales.shipment.create')">
-                        {{ __('sales::shipment.new') }}
-                    </x-ui.button>
-                @endcan
-            </x-slot:actions>
-        </x-ui.page-header>
-    </x-slot:header>
-
     @if (session('saved'))
         <div role="status"
              class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm
@@ -81,9 +67,16 @@
 
     <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
-            <x-ui.toolbar
+            <x-ui.toolbar :title="__('sales::shipment.title')" :count="__('sales::shipment.subtitle')"
                 :columns="$columns" :search-placeholder="__('sales::shipment.subtitle')"
                 :sort="$sortOptions">
+        <x-slot:actions>
+            @can('create', \App\Modules\Sales\Models\Shipment::class)
+                    <x-ui.button tone="primary" icon="plus" :href="route('sales.shipment.create')">
+                        {{ __('sales::shipment.new') }}
+                    </x-ui.button>
+                @endcan
+        </x-slot:actions>
                 <x-ui.date-range :dates="$dates" />
 
                 <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">

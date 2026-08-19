@@ -44,20 +44,6 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('purchase::menu.orders') }}</x-slot:title>
 
-    <x-slot:header>
-        <x-ui.page-header
-            :title="__('purchase::menu.orders')"
-            :subtitle="__('purchase::message.order_note')">
-            <x-slot:actions>
-                @can('create', \App\Modules\Purchase\Models\PurchaseOrder::class)
-                    <x-ui.button tone="primary" icon="plus" :href="route('purchase.order.create')">
-                        {{ __('purchase::action.new_order') }}
-                    </x-ui.button>
-                @endcan
-            </x-slot:actions>
-        </x-ui.page-header>
-    </x-slot:header>
-
     @if (session('saved'))
         <div role="status"
              class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm
@@ -68,9 +54,16 @@
 
     <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
-            <x-ui.toolbar
+            <x-ui.toolbar :title="__('purchase::menu.orders')" :count="__('purchase::message.order_note')"
                 :columns="$columns" :search-placeholder="__('purchase::message.order_search')"
                           :sort="$sortOptions">
+        <x-slot:actions>
+            @can('create', \App\Modules\Purchase\Models\PurchaseOrder::class)
+                    <x-ui.button tone="primary" icon="plus" :href="route('purchase.order.create')">
+                        {{ __('purchase::action.new_order') }}
+                    </x-ui.button>
+                @endcan
+        </x-slot:actions>
                 <x-ui.date-range :dates="$dates" />
 
                 <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">

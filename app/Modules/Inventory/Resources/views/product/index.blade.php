@@ -56,20 +56,6 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('inventory::menu.products') }}</x-slot:title>
 
-    <x-slot:header>
-        <x-ui.page-header
-            :title="__('inventory::menu.products')"
-            :subtitle="trans_choice('inventory::message.count', $products->total(), ['count' => $products->total()])">
-            <x-slot:actions>
-                @can('create', \App\Modules\Inventory\Models\Product::class)
-                    <x-ui.button tone="primary" icon="plus" :href="route('inventory.product.create')">
-                        {{ __('inventory::action.new_product') }}
-                    </x-ui.button>
-                @endcan
-            </x-slot:actions>
-        </x-ui.page-header>
-    </x-slot:header>
-
     @if (session('saved'))
         <div role="status"
              class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm
@@ -80,11 +66,18 @@
 
     <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
-            <x-ui.toolbar
+            <x-ui.toolbar :title="__('inventory::menu.products')" :count="trans_choice('inventory::message.count', $products->total(), ['count' => $products->total()])"
                 :search-placeholder="__('inventory::message.search_placeholder')"
                 :sort="$sortOptions"
                 :columns="$columns"
                 view>
+        <x-slot:actions>
+            @can('create', \App\Modules\Inventory\Models\Product::class)
+                    <x-ui.button tone="primary" icon="plus" :href="route('inventory.product.create')">
+                        {{ __('inventory::action.new_product') }}
+                    </x-ui.button>
+                @endcan
+        </x-slot:actions>
                 <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
                     <input type="checkbox" name="inactive" value="1" @checked($showInactive) class="size-4">
                     {{ __('inventory::action.show_inactive') }}

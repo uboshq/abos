@@ -24,12 +24,6 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('governance::menu.audit_trail') }}</x-slot:title>
 
-    <x-slot:header>
-        <x-ui.page-header
-            :title="__('governance::menu.audit_trail')"
-            :subtitle="trans_choice('core.count.records', $trails->total(), ['count' => $trails->total()])" />
-    </x-slot:header>
-
     <p class="mb-4 rounded-(--radius-field) bg-(--color-surface-hover) px-3 py-2 text-2xs
               text-(--color-ink-muted)">
         {{ __('governance::message.read_only') }}
@@ -48,7 +42,7 @@
             প্যানেলে; খোঁজার ঘরটা টুলবারের নিজের।
         --}}
         <form method="GET" class="contents">
-            <x-ui.toolbar
+            <x-ui.toolbar :title="__('governance::menu.audit_trail')" :count="trans_choice('core.count.records', $trails->total(), ['count' => $trails->total()])"
                 :sort="$sortOptions"
                 :columns="$columns" :search-placeholder="__('governance::label.search_hint')">
                 <select name="user" aria-label="{{ __('governance::field.who') }}"

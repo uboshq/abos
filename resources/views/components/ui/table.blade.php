@@ -11,7 +11,14 @@
 @else
     <div class="table-responsive">
         <table @class(['table-cards w-full border-collapse text-sm', 'as-cards' => $grid])>
-            <thead>
+            {{--
+                আঠালো হেডার — সারি স্ক্রল করলেও কলামের নাম থাকে।
+
+                পঞ্চাশ সারির তালিকায় নিচে নামলে কলামের নাম উপরে হারিয়ে
+                যেত, আর তখন তৃতীয় সংখ্যাটা "বাকি" না "৯০+ দিন" তা মনে
+                করে নিতে হত। D365, Fiori, Oracle — তিনটাতেই হেডার আটকানো।
+            --}}
+            <thead class="sticky top-0 z-[2]">
                 <tr class="border-b border-(--color-border) bg-(--color-surface-app)">
                     @foreach ($normalised as $column)
                         {{--
@@ -54,11 +61,14 @@
                     <tr class="border-b border-(--color-border) transition-colors hover:bg-(--color-surface-hover)">
                         @foreach ($normalised as $column)
                             {{-- data-label ছাড়া মোবাইলে এই ঘরটা অর্থহীন হয়ে যায় --}}
+                            {{-- উচ্চতা টোকেন থেকে — ৪৪px, ঘন দৃশ্যে ৩৬px।
+                                 প্যাডিং দিয়ে ঠিক করলে যে ঘরে দুই লাইন
+                                 লেখা (নাম + কোড) সেই সারিটা লম্বা হয়ে
+                                 যেত, আর ছকটা অসম দেখাত। --}}
                             <td data-label="{{ $column['label'] }}"
+                                style="height: var({{ $compact ? '--row-height-dense' : '--row-height' }})"
                                 @class([
                                     'px-3 align-middle',
-                                    'py-1.5' => $compact,
-                                    'py-2.5' => ! $compact,
                                     'num' => $column['numeric'],
                                 ])>
                                 {{-- $loop->parent — ভেতরের লুপটা কলামের,
@@ -70,6 +80,31 @@
                     </tr>
                 @endforeach
             </tbody>
+
+            {{-- পাতার যোগফল — যে পর্দা দেয় শুধু সে-ই দেখায়।
+
+                 আঠালো, তাই লম্বা তালিকাতেও সংখ্যাটা চোখের সামনে থাকে;
+                 কোন কলামের যোগ তা বোঝা যায় কারণ ওটা ঠিক নিজের কলামেই
+                 বসে। --}}
+            @if ($totals !== [])
+                <tfoot class="sticky bottom-0 z-[1]">
+                    <tr class="border-t border-(--color-border-strong) bg-(--color-surface-app)
+                               font-semibold text-(--color-ink)">
+                        @foreach ($normalised as $i => $column)
+                            <td @class([
+                                    'px-3 py-2',
+                                    'num' => $column['numeric'],
+                                ])>
+                                @if ($i === 0)
+                                    <span class="text-(--color-ink-muted)">{{ __('core.table.page_total') }}</span>
+                                @else
+                                    {{ $totals[$column['key']] ?? '' }}
+                                @endif
+                            </td>
+                        @endforeach
+                    </tr>
+                </tfoot>
+            @endif
         </table>
     </div>
 @endif

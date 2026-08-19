@@ -213,6 +213,7 @@ return [
     ],
 
     'table' => [
+        'page_total' => 'This page',
         'code' => 'Code',
         'name' => 'Name',
         'actions' => 'Actions',
