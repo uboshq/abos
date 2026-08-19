@@ -10,14 +10,14 @@
 
     onchange-এ ফর্ম জমা: তারিখ বাছাইয়ের পর আলাদা করে "খুঁজুন" চাপতে হয় না।
 --}}
-<input type="date" name="from" value="{{ $dates['from'] ?? '' }}"
-       aria-label="{{ __('core.table.from_date') }}"
-       onchange="this.form.submit()"
-       class="h-9 rounded-(--radius-field) border border-(--color-border)
-              bg-(--color-surface-app) px-2 text-sm">
+<x-ui.date name="from"
+           value="{{ $dates['from'] ?? '' }}"
+           aria-label="{{ __('core.table.from_date') }}"
+           :submit-on-change="true"
+           class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
 
-<input type="date" name="to" value="{{ $dates['to'] ?? '' }}"
-       aria-label="{{ __('core.table.to_date') }}"
-       onchange="this.form.submit()"
-       class="h-9 rounded-(--radius-field) border border-(--color-border)
-              bg-(--color-surface-app) px-2 text-sm">
+<x-ui.date name="to"
+            value="{{ $dates['to'] ?? '' }}"
+            aria-label="{{ __('core.table.to_date') }}"
+            :submit-on-change="true"
+            class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />

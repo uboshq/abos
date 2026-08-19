@@ -84,16 +84,16 @@
                     @endforeach
                 </select>
 
-                <input type="date" name="from" value="{{ $filters['from'] ?? '' }}"
-                       aria-label="{{ __('governance::field.from') }}"
-                       class="h-9 rounded-(--radius-field) border border-(--color-border)
-                              bg-(--color-surface-app) px-2 text-sm">
+                <x-ui.date name="from"
+                            value="{{ $filters['from'] ?? '' }}"
+                            aria-label="{{ __('governance::field.from') }}"
+                            class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
 
-                <input type="date" name="to" value="{{ $filters['to'] ?? '' }}"
-                       aria-label="{{ __('governance::field.to') }}"
-                       class="h-9 rounded-(--radius-field) border border-(--color-border)
-                              bg-(--color-surface-app) px-2 text-sm">
-            </x-ui.toolbar>
+                <x-ui.date name="to"
+                            value="{{ $filters['to'] ?? '' }}"
+                            aria-label="{{ __('governance::field.to') }}"
+                            class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
+                            </x-ui.toolbar>
         </form>
 
         <x-ui.table

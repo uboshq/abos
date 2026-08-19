@@ -42,10 +42,10 @@
             <label class="block">
                 <span class="mb-1 block text-2xs font-semibold uppercase tracking-wide
                              text-(--color-ink-muted)">{{ __('hr::field.trx_date') }}</span>
-                <input type="date" name="trx_date" value="{{ old('trx_date') }}"
-                       class="w-full rounded-(--radius-field) border border-(--color-border)
-                              bg-(--color-surface) px-2 py-1.5 text-sm">
-            </label>
+                <x-ui.date name="trx_date"
+                           value="{{ old('trx_date') }}"
+                           class="w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface) px-2 py-1.5 text-sm" />
+                           </label>
 
             <x-ui.button type="submit" tone="primary">{{ __('hr::action.build') }}</x-ui.button>
         </div>

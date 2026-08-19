@@ -71,22 +71,22 @@
                     @unless ($report->isAsOfDate())
                         <label class="flex items-center gap-2 text-sm">
                             <span class="sr-only">{{ __('accounts::field.from_date') }}</span>
-                            <input type="date" name="from" value="{{ $filters['from'] ?? '' }}"
-                                   class="h-9 rounded-(--radius-field) border border-(--color-border)
-                                          bg-(--color-surface-app) px-2 text-sm">
-                        </label>
-                    @endunless
+                            <x-ui.date name="from"
+                                       value="{{ $filters['from'] ?? '' }}"
+                                       class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
+                                       </label>
+                                       @endunless
 
                     <label class="flex items-center gap-2 text-sm">
                         @if ($report->isAsOfDate())
                             <span class="text-(--color-ink-muted)">{{ __('accounts::field.as_on') }}</span>
                         @endif
                         <span class="sr-only">{{ __('accounts::field.to_date') }}</span>
-                        <input type="date" name="to" value="{{ $filters['to'] ?? '' }}"
-                               class="h-9 rounded-(--radius-field) border border-(--color-border)
-                                      bg-(--color-surface-app) px-2 text-sm">
-                    </label>
-                @endif
+                        <x-ui.date name="to"
+                                   value="{{ $filters['to'] ?? '' }}"
+                                   class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
+                                   </label>
+                                   @endif
 
                 @if ($accounts->isNotEmpty())
                     <label class="min-w-0 flex-1 sm:max-w-xs">

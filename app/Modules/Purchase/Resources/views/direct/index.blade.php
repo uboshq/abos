@@ -89,13 +89,12 @@
                         <span class="mb-1 block text-2xs text-(--color-ink-muted)">
                             {{ __('purchase::field.trx_date') }}
                         </span>
-                        <input type="date" name="trx_date"
-                               value="{{ old('trx_date', now()->toDateString()) }}"
-                               class="h-(--spacing-field) w-full rounded-(--radius-field) border
-                                      border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
-                    </label>
-                </div>
-            </section>
+                        <x-ui.date name="trx_date"
+                                   :value="old('trx_date', now()->toDateString())"
+                                   class="w-full text-sm" />
+                                   </label>
+                                   </div>
+                                   </section>
 
             {{-- ── এন্ট্রি স্ট্রিপ ───────────────────────────────────── --}}
             <section class="rounded-(--radius-card) border border-(--color-border)

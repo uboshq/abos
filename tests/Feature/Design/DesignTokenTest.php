@@ -193,10 +193,67 @@ class DesignTokenTest extends TestCase
         // সেকশন ১৬.৮
         $this->assertSame('64px', $this->value('spacing-header'));
         $this->assertSame('48px', $this->value('spacing-field'));
-        $this->assertSame('12px', $this->value('radius-field'));
-        $this->assertSame('20px', $this->value('radius-card'));
         $this->assertSame('460px', $this->value('spacing-login-card'));
         $this->assertSame('44px', $this->value('spacing-logo'));
+    }
+
+    /**
+     * কোণা ছোট — ২০/১২px থেকে ৮/৬px।
+     *
+     * ── এই পরীক্ষাটা আগে ২০px দাবি করত ────────────────────────
+     * ২০px একটা কার্ডে নরম দেখায়। কিন্তু ড্যাশবোর্ডে ছয়টা কার্ড
+     * পাশাপাশি বসলে কোনটা কোথায় শেষ তা চোখে ধরে না — সারিটা গদির
+     * মতো দেখায়, ছকের মতো নয়। D365, Fiori, Oracle, Odoo — চারটাই
+     * ৪–৮-এ থাকে।
+     *
+     * মাপটা পাহারায় রাখা হলো, কারণ এটা এমন একটা সংখ্যা যেটা
+     * পরের জন "একটু নরম লাগুক" ভেবে বাড়িয়ে দিতে পারেন — আর
+     * তখন গোটা অ্যাপ একসাথে বদলায়, কেউ না জেনে।
+     */
+    public function test_corners_stay_small_enough_to_read_as_a_grid(): void
+    {
+        $this->assertSame('8px', $this->value('radius-card'),
+            'কার্ডের কোণা ৮পিক্সেল থাকার কথা — বড় হলে পাশাপাশি কার্ডগুলো মিলে যায়।');
+        $this->assertSame('6px', $this->value('radius-field'));
+        $this->assertSame('999px', $this->value('radius-badge'),
+            'ব্যাজ গোলই থাকে — ওটা ঘর নয়, চিহ্ন।');
+    }
+
+    /**
+     * ফাঁকের একটাই সিঁড়ি — ৪ · ৮ · ১২ · ১৬ · ২৪।
+     *
+     * ── কেন পাহারা লাগে ─────────────────────────────────────────────
+     * সিঁড়িটা না থাকলে প্রতিটা পর্দায় হাতে সংখ্যা বসে: এক কার্ডে ১৪,
+     * পাশেরটায় ২০, তৃতীয়টায় ১১। আলাদা করে কোনোটাই চোখে পড়ে না, অথচ
+     * গোটা পর্দা অগোছালো লাগে — আর কেউ বলতে পারে না ঠিক কী গোলমাল।
+     */
+    public function test_there_is_one_spacing_scale_and_only_one(): void
+    {
+        $this->assertSame('4px', $this->value('space-1'));
+        $this->assertSame('8px', $this->value('space-2'));
+        $this->assertSame('12px', $this->value('space-3'));
+        $this->assertSame('16px', $this->value('space-4'));
+        $this->assertSame('24px', $this->value('space-6'));
+
+        /*
+         * `value()` দিয়ে "নেই" যাচাই করা যায় না — ওটা নিজেই টোকেন
+         * থাকার দাবি করে। তাই কাঁচা লেখাতেই খোঁজা।
+         */
+        $this->assertDoesNotMatchRegularExpression('/--space-5\s*:/', $this->tokens,
+            'পাঁচটার বেশি ধাপ না — ছয় নম্বরটা বসলেই পরেরজন "এটা ১৪ না ১৬" ভাববেন।');
+    }
+
+    /**
+     * কার্ড ভাসে না — ছায়া শুধু যা সত্যিই পাতার উপরে।
+     *
+     * ছয়টা কার্ড সবগুলোই ভাসলে "ভাসা" কথাটার আর কোনো মানে থাকে না;
+     * পর্দাটা শুধু অস্থির দেখায়। হেয়ারলাইন বর্ডারই যথেষ্ট।
+     */
+    public function test_cards_do_not_float(): void
+    {
+        $this->assertSame('none', $this->value('shadow-card'));
+        $this->assertNotSame('none', $this->value('shadow-overlay'),
+            'মোডাল ও ড্রপডাউন সতিয়েই পাতার উপরে — ওদের ছায়াটা তথ্য।');
     }
 
     public function test_touch_targets_are_at_least_44px(): void

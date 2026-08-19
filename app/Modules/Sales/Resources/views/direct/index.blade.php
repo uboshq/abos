@@ -68,10 +68,10 @@
                     <label class="block">
                         <span class="mb-1 block text-2xs font-semibold uppercase tracking-wide
                                      text-(--color-ink-muted)">{{ __('sales::field.challan_date') }}</span>
-                        <input type="date" name="trx_date" value="{{ old('trx_date', now()->toDateString()) }}"
-                               class="h-8 w-full rounded-(--radius-field) border border-(--color-border)
-                                      bg-(--color-surface-app) px-2 text-sm">
-                    </label>
+                        <x-ui.date name="trx_date"
+                                   :value="old('trx_date', now()->toDateString())"
+                                   class="w-full text-sm" />
+                                   </label>
 
                     {{-- বিলের নম্বর নিশ্চিত করার সময় বসে — সিরিজ থেকে।
 

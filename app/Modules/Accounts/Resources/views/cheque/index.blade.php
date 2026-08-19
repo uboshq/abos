@@ -92,10 +92,9 @@
             --}}
             <label class="flex flex-col gap-1">
                 <span class="text-sm font-medium">{{ __('accounts::field.cheque_date') }}</span>
-                <input type="date" name="cheque_date" required value="{{ old('cheque_date', now()->toDateString()) }}"
-                       class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border)
-                              bg-(--color-surface-app) px-2">
-            </label>
+                <x-ui.date name="cheque_date" :required="true"
+                           :value="old('cheque_date', now()->toDateString())" />
+                           </label>
 
             <label class="flex flex-col gap-1">
                 <span class="text-sm font-medium">{{ __('accounts::field.amount') }}</span>

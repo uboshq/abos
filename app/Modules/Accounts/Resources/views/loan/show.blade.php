@@ -238,11 +238,9 @@
                                                     <span class="mb-1 block text-2xs text-(--color-ink-muted)">
                                                         {{ __('accounts::field.date') }}
                                                     </span>
-                                                    <input type="date" name="trx_date"
-                                                           value="{{ $row->due_date?->toDateString() }}"
-                                                           class="h-(--spacing-field) rounded-(--radius-field) border
-                                                                  border-(--color-border) bg-(--color-surface-card) px-3">
-                                                </label>
+                                                    <x-ui.date name="trx_date"
+                                                               :value="$row->due_date?->toDateString()" />
+                                                               </label>
 
                                                 {{-- ব্যাংক সূচির চেয়ে কম-বেশি কাটলে এই ঘরটা।
                                                      খালি রাখলে সূচির অঙ্কই বসে — সাধারণত সেটাই
@@ -349,9 +347,9 @@
                             @endforeach
                         </select>
 
-                        <input type="date" name="trx_date" value="{{ now()->toDateString() }}"
-                               class="h-(--spacing-field) w-full rounded-(--radius-field) border
-                                      border-(--color-border) bg-(--color-surface-card) px-3">
+                        <x-ui.date name="trx_date"
+                                    :value="now()->toDateString()"
+                                    class="w-full" />
 
                         <x-ui.button type="submit" tone="primary" class="w-full">
                             {{ __('accounts::action.draw_down') }}
@@ -376,9 +374,9 @@
                             @endforeach
                         </select>
 
-                        <input type="date" name="trx_date" value="{{ now()->toDateString() }}"
-                               class="h-(--spacing-field) w-full rounded-(--radius-field) border
-                                      border-(--color-border) bg-(--color-surface-card) px-3">
+                        <x-ui.date name="trx_date"
+                                    :value="now()->toDateString()"
+                                    class="w-full" />
 
                         <x-ui.button type="submit" tone="secondary" class="w-full">
                             {{ __('accounts::action.repay') }}
@@ -398,9 +396,9 @@
                                       border-(--color-border) bg-(--color-surface-card) px-3 text-end
                                       font-(family-name:--font-numeric)">
 
-                        <input type="date" name="trx_date" value="{{ now()->toDateString() }}"
-                               class="h-(--spacing-field) w-full rounded-(--radius-field) border
-                                      border-(--color-border) bg-(--color-surface-card) px-3">
+                        <x-ui.date name="trx_date"
+                                    :value="now()->toDateString()"
+                                    class="w-full" />
 
                         <x-ui.button type="submit" tone="secondary" class="w-full">
                             {{ __('accounts::action.charge_interest') }}

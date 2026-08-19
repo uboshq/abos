@@ -23,21 +23,49 @@
     কলামে দশমিক বিন্দু এক লাইনে থাকে।
 --}}
 @php
-    $zero = bccomp((string) ($value === '' || $value === null ? 0 : $value), '0', 4) === 0;
+    $raw = (string) ($value === '' || $value === null ? 0 : $value);
+    $zero = bccomp($raw, '0', 4) === 0;
+
+    /*
+     * ঋণাত্মক অঙ্ক চোখে আলাদা — নাহলে উল্টো জেরটা ধরা পড়ে না।
+     *
+     * ── কী ভাঙা ছিল ─────────────────────────────────────────────────
+     * গ্রাহক তালিকায় `-50,000.00` আর `13,550.00` **একই নীল রঙে** বসত।
+     * প্রথমটা মানে ওই ডিলার অগ্রিম দিয়ে রেখেছেন, দ্বিতীয়টা মানে তিনি
+     * টাকা পাওনা রেখেছেন — সম্পূর্ণ উল্টো দুইটা কথা, একই চেহারায়।
+     *
+     * মালিক তালিকাটা স্ক্যান করেন, প্রতিটা সংখ্যার আগে বিয়োগ চিহ্ন আছে
+     * কি না তা পড়েন না। এক পলকে ভুল বোঝার সবচেয়ে সহজ জায়গা এটাই।
+     *
+     * ── কেন এখানে, প্রতিটা পর্দায় নয় ────────────────────────────────
+     * টাকার প্রতিটা অঙ্ক এই কম্পোনেন্ট দিয়েই যায়। এখানে একবার বসালে
+     * তালিকা, রিপোর্ট, ড্যাশবোর্ড — সব একসাথে ঠিক হয়, আর পরের নতুন
+     * পর্দাটাও প্রথম দিন থেকেই ঠিক থাকে।
+     *
+     * ── কেন `tone` দেওয়া থাকলে ছোঁয়া হয় না ─────────────────────────
+     * ডাকা জায়গাটা রং বলে দিলে সেটাই শেষ কথা — যেমন "এই কলামটা পুরোটাই
+     * সবুজ"। তার উপরে লাল বসালে পর্দাটা নিজের সাথে তর্ক করত।
+     */
+    $negative = bccomp($raw, '0', 4) < 0;
 
     $text = $blankOnZero && $zero
         ? ''
         : number_format((float) $value, $decimals);
 
-    $classes = trim('num '.($tone !== null ? "text-(--color-{$tone})" : ''));
+    $classes = trim('num '.match (true) {
+        $tone !== null => "text-(--color-{$tone})",
+        $negative => 'text-(--color-danger)',
+        default => '',
+    });
 @endphp
 
 @if ($href !== null && $text !== '')
     <a href="{{ $href }}"
        {{ $attributes->class([
            $classes,
-           'text-(--color-brand-500) underline-offset-2 hover:underline' => $tone === null,
-           'underline-offset-2 hover:underline' => $tone !== null,
+           // লিংকেও ঋণাত্মক লালই থাকে — নীলটা ওটাকে চাপা দিত
+           'text-(--color-brand-500) underline-offset-2 hover:underline' => $tone === null && ! $negative,
+           'underline-offset-2 hover:underline' => $tone !== null || $negative,
        ]) }}>{{ $text }}</a>
 @else
     <span {{ $attributes->class([$classes]) }}>{{ $text }}</span>

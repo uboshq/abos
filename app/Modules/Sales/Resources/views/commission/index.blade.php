@@ -55,10 +55,9 @@
 
             <label class="flex flex-col gap-1">
                 <span class="text-sm font-medium">{{ __('accounts::field.date') }}</span>
-                <input type="date" name="trx_date" value="{{ old('trx_date', now()->toDateString()) }}"
-                       class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border)
-                              bg-(--color-surface-app) px-2">
-            </label>
+                <x-ui.date name="trx_date"
+                           :value="old('trx_date', now()->toDateString())" />
+                           </label>
 
             <label class="flex flex-col gap-1">
                 <span class="text-sm font-medium">{{ __('customer::menu.party') }}</span>
