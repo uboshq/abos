@@ -132,4 +132,5 @@ return [
     'spent' => 'Spent',
     'earned' => 'Earned',
     'net' => 'Net',
+    'deposit_into' => 'Deposit into',
 ];
