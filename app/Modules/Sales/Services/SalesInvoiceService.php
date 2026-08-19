@@ -10,6 +10,7 @@ use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
+use App\Core\Support\Money;
 use App\Models\Approval;
 use App\Models\FinancialYear;
 use App\Models\IssuedNumber;
@@ -60,6 +61,44 @@ final class SalesInvoiceService
         private readonly SettingsService $settings,
         private readonly ApprovalEngine $approvals,
     ) {}
+
+    /**
+     * ধারের সীমা ছাড়িয়ে গেলে বিলটা বসে না।
+     *
+     * ── কেন নগদ বিক্রি আটকায় না ─────────────────────────────────────
+     * সীমাটা **বাকির** সীমা। টাকা হাতে দিয়ে মাল নিলে কারও ধার বাড়ে
+     * না, তাই ওখানে সীমার কোনো ভূমিকা নেই। বকেয়া থেকে বিলের অঙ্কটা
+     * ধরেই দেখা হয়, আর আদায়টা বসে বিলের পরে — তাই নগদ বিক্রিতেও
+     * এক মুহূর্তের জন্য পাওনা জন্মায়। সেটা সামলাতে সেটিংটা
+     * (`block_over_limit`) বন্ধ রাখার পথ খোলা আছে।
+     */
+    private function assertWithinCreditLimit(SalesInvoice $invoice): void
+    {
+        if (! $this->settings->enabled('customer.credit_limit_enabled')) {
+            return;
+        }
+
+        if (! $this->settings->enabled('customer.block_over_limit')) {
+            return;
+        }
+
+        $customer = $invoice->customer;
+
+        if ($customer === null || ! $customer->wouldExceedCreditLimit((string) $invoice->total)) {
+            return;
+        }
+
+        if (auth()->user()?->can('customer.credit_limit.override') === true) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'customer_id' => __('sales::validation.over_credit_limit', [
+                'customer' => $customer->name(),
+                'limit' => Money::format($customer->credit_limit),
+            ]),
+        ]);
+    }
 
     /**
      * ছাড়ের অনুমোদন — নিশ্চিত করার আগে।
@@ -223,6 +262,20 @@ final class SalesInvoiceService
          * সাথে সাথে মুছে যেত, আর অনুমোদনকারীর তালিকায় কোনোদিন কিছু
          * আসত না।
          */
+        /*
+         * ধারের সীমা — মাল বেরোনোর ঠিক আগে।
+         *
+         * ── কী ভাঙা ছিল ─────────────────────────────────────────────
+         * সীমাটা দেখা হত **কেবল বিক্রয় আদেশে**। কিন্তু ডিপোতে বেশিরভাগ
+         * বিল আদেশ ছাড়াই হয় — কাউন্টারে, সরাসরি বিক্রয়ে, বা চালান
+         * থেকে। ফলে যে গ্রাহকের সীমা পেরিয়ে গেছে তাঁকেও দিব্যি বাকিতে
+         * মাল দেওয়া যেত, আর সীমাটা কেবল ওই এক পথেই সত্যি ছিল।
+         *
+         * এখানেই দেখা হয়, কারণ **এখানেই মাল বেরোয় আর পাওনা জন্মায়** —
+         * খসড়া বিলে কারও কিছু যায় আসে না।
+         */
+        $this->assertWithinCreditLimit($invoice);
+
         $this->assertDiscountApproved($invoice);
 
         return DB::transaction(function () use ($invoice) {

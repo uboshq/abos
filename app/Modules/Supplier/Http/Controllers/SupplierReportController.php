@@ -34,6 +34,17 @@ class SupplierReportController extends Controller implements HasMiddleware
     private const SLUGS = [
         'payable-list' => 'supplier.payable_list',
         'ageing' => 'supplier.ageing',
+
+        /*
+         * মাসের নিষ্পত্তি ও পুঁজির উপর ফেরত।
+         *
+         * দুইটাই মেনুতে বসানো হয়েছিল, ইঞ্জিনেও নিবন্ধিত — অথচ এই ঘরে
+         * সারি না থাকায় ক্লিক করলে ৪০৪। ঠিক এই ভুলটা Customer মডিউলেও
+         * হয়েছিল, আর তখনই `ModuleMenuTest` লেখা হয়েছিল। **আজ সেটাই
+         * দুইটা রিপোর্ট ধরল** — মানুষের চোখে পড়ার আগেই।
+         */
+        'settlement' => 'supplier.settlement',
+        'return-on-capital' => 'supplier.return_on_capital',
     ];
 
     public function __construct(
