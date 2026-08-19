@@ -54,6 +54,23 @@
         @endif
     </label>
 
+    @if ($type === 'date')
+        {{--
+            তারিখ ব্রাউজারের নিজের ঘরে যায় না।
+
+            `<input type="date">` তার লেখাটা **লোকেল ধরে** আঁকে, আর ওটা
+            বদলানোর কোনো API নেই — না CSS, না অ্যাট্রিবিউট। এই কম্পিউটারে
+            en-US থাকায় ১৯ আগস্ট দেখাত `08/19/2026`, অথচ বাকি সব জায়গায়
+            `17-08-2026`। `05/06` পড়া যায় দুইভাবে, আর দুইটাই বৈধ তারিখ —
+            তাই ভুলটা খাতা থেকে ধরাই যায় না।
+
+            এখানে ধরায় বলে ৪২টা ফর্ম একসাথে ঠিক হলো, একটাও না ছুঁয়ে।
+        --}}
+        <x-ui.date :name="$name" :id="$name" :value="$value"
+                   :required="$required" :readonly="$readonly"
+                   :hasError="$hasError" :describedBy="$describedBy ?: null"
+                   {{ $attributes }} />
+    @else
     <input id="{{ $name }}"
            name="{{ $name }}"
            type="{{ $type }}"
@@ -74,6 +91,7 @@
                'border-(--color-danger)' => $hasError,
                'border-(--color-border)' => ! $hasError,
            ]) }}>
+    @endif
 
     @if ($hint)
         <p id="{{ $name }}-hint" class="mt-1 text-2xs text-(--color-ink-muted)">{{ $hint }}</p>

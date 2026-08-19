@@ -84,11 +84,10 @@
                         <label class="block">
                             <span class="mb-1 block text-2xs font-semibold uppercase tracking-wide
                                          text-(--color-ink-muted)">{{ __('master_data::field.effective_from') }}</span>
-                            <input type="date" name="effective_from" required
-                                   value="{{ old('effective_from', now()->toDateString()) }}"
-                                   class="w-full rounded-(--radius-field) border border-(--color-border)
-                                          bg-(--color-surface) px-2 py-1.5 text-sm">
-                        </label>
+                            <x-ui.date name="effective_from" :required="true"
+                                       :value="old('effective_from', now()->toDateString())"
+                                       class="w-full text-sm" />
+                                       </label>
 
                         <label class="block">
                             <span class="mb-1 block text-2xs font-semibold uppercase tracking-wide

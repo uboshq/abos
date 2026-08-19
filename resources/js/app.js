@@ -1,5 +1,6 @@
 import Alpine from 'alpinejs'
 import { reprice } from './pricing.js'
+import { abosDate } from './date.js'
 
 /*
  * Alpine শুধু ছোট UI ইন্টারঅ্যাকশনে — ড্রপডাউন, পাসওয়ার্ড দেখানো, ট্যাব
@@ -35,6 +36,16 @@ window.abos = { reprice }
  * সেটিং নয়। সার্ভারে রাখলে প্রতিটা ক্লিকে একটা রিকোয়েস্ট যেত।
  */
 document.addEventListener('alpine:init', () => {
+    /*
+     * তারিখের ঘর — দিন-মাস-বছর, সব কম্পিউটারে এক।
+     *
+     * ব্রাউজারের নিজের `type="date"` তার লোকেল ধরে আঁকে, আর সেটা বদলানোর
+     * কোনো API নেই। এই কম্পিউটারে ১৯ আগস্ট দেখাত `08/19/2026`। `05/06`
+     * পড়া যায় দুইভাবে — আর দুইটাই বৈধ তারিখ, তাই ভুলটা খাতা থেকে ধরাই
+     * যায় না। অঙ্কটা `date.js`-এ, তাই তার পরীক্ষা আছে।
+     */
+    Alpine.data('abosDate', abosDate)
+
     Alpine.store('sidebar', {
         collapsed: localStorage.getItem('abos.sidebar') === 'collapsed',
 

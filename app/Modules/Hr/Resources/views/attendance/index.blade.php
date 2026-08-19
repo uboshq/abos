@@ -45,10 +45,10 @@
         <label class="block">
             <span class="mb-1 block text-2xs font-semibold uppercase tracking-wide
                          text-(--color-ink-muted)">{{ __('hr::field.work_date') }}</span>
-            <input type="date" name="date" value="{{ $date->toDateString() }}"
-                   onchange="this.form.submit()"
-                   class="rounded-(--radius-field) border border-(--color-border)
-                          bg-(--color-surface) px-2 py-1.5 text-sm">
+            <x-ui.date name="date"
+                       :value="$date->toDateString()"
+                       :submit-on-change="true"
+                       class="text-sm" />
         </label>
     </form>
 

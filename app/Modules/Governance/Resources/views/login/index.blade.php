@@ -100,18 +100,18 @@
 
                 <label>
                     <span class="sr-only">{{ __('core.table.from_date') }}</span>
-                    <input type="date" name="from" value="{{ request('from') }}"
-                           class="h-9 rounded-(--radius-field) border border-(--color-border)
-                                  bg-(--color-surface-app) px-2 text-sm">
-                </label>
+                    <x-ui.date name="from"
+                               value="{{ request('from') }}"
+                               class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
+                               </label>
 
                 <label>
                     <span class="sr-only">{{ __('core.table.to_date') }}</span>
-                    <input type="date" name="to" value="{{ request('to') }}"
-                           class="h-9 rounded-(--radius-field) border border-(--color-border)
-                                  bg-(--color-surface-app) px-2 text-sm">
-                </label>
-            </x-ui.toolbar>
+                    <x-ui.date name="to"
+                               value="{{ request('to') }}"
+                               class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
+                               </label>
+                               </x-ui.toolbar>
         </form>
 
         @if ($rows->isEmpty())

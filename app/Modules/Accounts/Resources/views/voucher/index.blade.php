@@ -51,17 +51,17 @@
                 :columns="$columns">
                 {{-- তারিখের পরিসর — ভাউচারের তালিকায় এটাই সবচেয়ে বেশি
                      ব্যবহৃত ফিল্টার, তাই লুকানো নয় --}}
-                <input type="date" name="from" value="{{ request('from') }}"
-                       aria-label="{{ __('accounts::field.from_date') }}"
-                       onchange="this.form.submit()"
-                       class="h-9 rounded-(--radius-field) border border-(--color-border)
-                              bg-(--color-surface-app) px-2 text-sm">
-                <input type="date" name="to" value="{{ request('to') }}"
-                       aria-label="{{ __('accounts::field.to_date') }}"
-                       onchange="this.form.submit()"
-                       class="h-9 rounded-(--radius-field) border border-(--color-border)
-                              bg-(--color-surface-app) px-2 text-sm">
-            </x-ui.toolbar>
+                <x-ui.date name="from"
+                           value="{{ request('from') }}"
+                           aria-label="{{ __('accounts::field.from_date') }}"
+                           :submit-on-change="true"
+                           class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
+                           <x-ui.date name="to"
+                           value="{{ request('to') }}"
+                           aria-label="{{ __('accounts::field.to_date') }}"
+                           :submit-on-change="true"
+                           class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
+                           </x-ui.toolbar>
         </form>
 
         <x-ui.table
