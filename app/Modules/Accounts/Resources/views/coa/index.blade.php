@@ -132,7 +132,7 @@
                                     {{ __('accounts::field.type') }}
                                 </th>
                                 <th scope="col" style="width: 11rem"
-                                    class="num px-3 py-2 text-start font-medium text-(--color-ink-muted)">
+                                    class="num px-3 py-2 text-end font-medium text-(--color-ink-muted)">
                                     {{ __('accounts::field.balance') }}
                                 </th>
                                 <th scope="col" style="width: 6rem" class="px-3 py-2"

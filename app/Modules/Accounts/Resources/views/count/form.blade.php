@@ -69,14 +69,14 @@
                     <thead>
                         <tr class="border-b border-(--color-border) bg-(--color-surface-app)">
                             <th scope="col" style="width: 8rem"
-                                class="num px-3 py-2 text-start font-medium text-(--color-ink-muted)">
+                                class="num px-3 py-2 text-end font-medium text-(--color-ink-muted)">
                                 {{ __('accounts::field.note') }}
                             </th>
                             <th scope="col" style="width: 9rem"
-                                class="num px-3 py-2 text-start font-medium text-(--color-ink-muted)">
+                                class="num px-3 py-2 text-end font-medium text-(--color-ink-muted)">
                                 {{ __('accounts::field.pieces') }}
                             </th>
-                            <th scope="col" class="num px-3 py-2 text-start font-medium text-(--color-ink-muted)">
+                            <th scope="col" class="num px-3 py-2 text-end font-medium text-(--color-ink-muted)">
                                 {{ __('accounts::field.amount') }}
                             </th>
                         </tr>

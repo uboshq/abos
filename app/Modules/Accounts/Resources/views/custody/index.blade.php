@@ -74,7 +74,7 @@
                             ['label' => __('accounts::custody.sent'), 'num' => true, 'w' => '140px'],
                         ] as $head)
                             <th @class([
-                                    'px-3 py-2 text-start font-medium text-(--color-ink-muted) whitespace-nowrap',
+                                    'px-3 py-2 text-end font-medium text-(--color-ink-muted) whitespace-nowrap',
                                     'num' => $head['num'],
                                 ])
                                 @if ($head['w']) style="width: {{ $head['w'] }}" @endif

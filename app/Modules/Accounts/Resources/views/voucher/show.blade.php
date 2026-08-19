@@ -172,11 +172,11 @@
                             {{ __('core.table.narration') }}
                         </th>
                         <th scope="col" style="width: 10rem"
-                            class="num px-3 py-2 text-start font-medium text-(--color-ink-muted)">
+                            class="num px-3 py-2 text-end font-medium text-(--color-ink-muted)">
                             {{ __('core.table.debit') }}
                         </th>
                         <th scope="col" style="width: 10rem"
-                            class="num px-3 py-2 text-start font-medium text-(--color-ink-muted)">
+                            class="num px-3 py-2 text-end font-medium text-(--color-ink-muted)">
                             {{ __('core.table.credit') }}
                         </th>
                     </tr>

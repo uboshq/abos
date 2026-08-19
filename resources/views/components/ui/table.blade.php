@@ -14,9 +14,32 @@
             <thead>
                 <tr class="border-b border-(--color-border) bg-(--color-surface-app)">
                     @foreach ($normalised as $column)
+                        {{--
+                            সংখ্যার কলামে শিরোনামও ডানে।
+
+                            ── কী আঁকাবাঁকা লাগছিল ─────────────────────────
+                            এখানে সব শিরোনামে `text-start` লেখা ছিল, অথচ
+                            সংখ্যাগুলো ডানে বসে। ফলে "তাকে" শিরোনামটা
+                            কলামের বাঁ ধারে, আর তার সংখ্যাগুলো ডান ধারে —
+                            দুইটা আলাদা খাড়া রেখা, প্রতিটা কলামে। চারটা
+                            সংখ্যার কলাম মানে আটটা রেখা, আর পুরো ছকটা
+                            আঁকাবাঁকা দেখায়।
+
+                            ── কেন CSS-এর নিয়মটা কাজ করছিল না ────────────
+                            `app.css`-এ `th.num { text-align: right }` আগে
+                            থেকেই ছিল, কিন্তু ওটা **base স্তরে**। Tailwind-এর
+                            `text-start` utility স্তরে, আর utility সবসময়
+                            base-কে হারায়। নিয়মটা লেখা ছিল, কোনোদিন
+                            খাটেনি — শ্রেণীটা ভুল জায়গায় বসানোর কারণে।
+
+                            তাই সিদ্ধান্তটা এখানেই: সংখ্যা হলে `text-end`,
+                            নাহলে `text-start`। দুইটা নিয়ম আর একে অন্যের
+                            সাথে লড়ে না।
+                        --}}
                         <th @class([
-                                'px-3 py-2 text-start font-medium text-(--color-ink-muted) whitespace-nowrap',
-                                'num' => $column['numeric'],
+                                'px-3 py-2 font-medium text-(--color-ink-muted) whitespace-nowrap',
+                                'text-end num' => $column['numeric'],
+                                'text-start' => ! $column['numeric'],
                             ])
                             @if ($column['width']) style="width: {{ $column['width'] }}" @endif
                             scope="col">

@@ -195,7 +195,7 @@
                             @foreach ($columns as $column)
                                 <th scope="col"
                                     @class([
-                                        'px-3 py-2 text-start font-medium text-(--color-ink-muted)',
+                                        'px-3 py-2 text-end font-medium text-(--color-ink-muted)',
                                         'num' => in_array($column->type, [$money], true),
                                         'whitespace-nowrap' => $column->type === $date,
                                     ])
