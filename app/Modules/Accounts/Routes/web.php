@@ -8,6 +8,7 @@ use App\Modules\Accounts\Http\Controllers\BooksIntegrityController;
 use App\Modules\Accounts\Http\Controllers\CashCountController;
 use App\Modules\Accounts\Http\Controllers\CashTillController;
 use App\Modules\Accounts\Http\Controllers\ChartOfAccountsController;
+use App\Modules\Accounts\Http\Controllers\ChequeController;
 use App\Modules\Accounts\Http\Controllers\LoanController;
 use App\Modules\Accounts\Http\Controllers\MoneyCustodyController;
 use App\Modules\Accounts\Http\Controllers\MoneyTransferController;
@@ -187,6 +188,24 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
      * খোলার রুটটা তালার সারিটাই ধরে (`{lock}`), মাস-বছর নয় — যে মাস
      * বন্ধই নয় তাকে খোলার অনুরোধ তখন রুট-স্তরেই ৪০৪ হয়।
      */
+    /*
+     * চেকের খাতা।
+     *
+     * তালিকাই প্রধান পর্দা — বসানো হয় উপরের ফর্ম থেকে, আর জমা/পাশ/
+     * ফেরত তিনটাই সারি থেকে। আলাদা পাতায় পাঠালে প্রতিটা সিদ্ধান্তে
+     * যাওয়া-আসা করতে হত, আর দিনে দশটা চেকে সেটা অসহ্য।
+     */
+    Route::prefix('cheques')->name('cheque.')->group(function () {
+        Route::get('/', [ChequeController::class, 'index'])->name('index');
+        Route::post('/', [ChequeController::class, 'store'])->name('store');
+        Route::post('/{cheque}/deposit', [ChequeController::class, 'deposit'])
+            ->whereNumber('cheque')->name('deposit');
+        Route::post('/{cheque}/clear', [ChequeController::class, 'clear'])
+            ->whereNumber('cheque')->name('clear');
+        Route::post('/{cheque}/bounce', [ChequeController::class, 'bounce'])
+            ->whereNumber('cheque')->name('bounce');
+    });
+
     Route::prefix('periods')->name('period.')->group(function () {
         Route::get('/', [PeriodLockController::class, 'index'])->name('index');
         Route::post('/close', [PeriodLockController::class, 'close'])->name('close');

@@ -109,4 +109,12 @@ return [
     'period_note' => 'Once the month’s reports have gone out, close it — then its figures can no longer change.',
     'period_closed' => ':month has been closed.',
     'period_reopened' => ':month has been reopened.',
+
+    // চেকের খাতা
+    'cheque_note' => 'A cheque in hand is not money yet — nothing reaches the bank until it clears.',
+    'cheque_saved' => 'Cheque :no is on the books.',
+    'cheque_deposited' => 'Marked as deposited.',
+    'cheque_cleared' => 'Cleared — the money is in the bank now.',
+    'cheque_bounced' => 'The bounce has been recorded.',
+    'no_cheques' => 'No cheques yet.',
 ];

@@ -45,6 +45,25 @@ final class StandardChart implements ProvisionsCompany
     /** পথের টাকা — দেওয়া হয়েছে, এখনো গ্রহণ হয়নি। কারও হাতে নেই। */
     public const CASH_IN_TRANSIT = '1103';
 
+    /**
+     * হাতে আসা চেক, যা এখনো পাশ হয়নি।
+     *
+     * ── কেন ব্যাংকে নয় ─────────────────────────────────────────────
+     * চেক হাতে পাওয়া আর টাকা পাওয়া এক জিনিস নয়। সরাসরি ব্যাংকে
+     * বসালে ব্যাংক ব্যালেন্স এমন টাকা দেখাত যা এখনো আসেইনি, আর চেক
+     * ফেরত এলে সেটা **ব্যাংকে কোনোদিন ছিলই না** — অথচ খাতা বলত ছিল।
+     */
+    public const CHEQUES_IN_HAND = '1104';
+
+    /**
+     * নিজের দেওয়া চেক, যা এখনো ভাঙানো হয়নি।
+     *
+     * টাকাটা ব্যাংক থেকে যায় ভাঙানোর দিন, দেওয়ার দিন নয়। দেওয়ার
+     * দিনেই ব্যাংক কমিয়ে দিলে ব্যাংক-মিলকরণে প্রতিটা অভাঙা চেক
+     * একটা অমিল হয়ে দাঁড়াত।
+     */
+    public const CHEQUES_ISSUED = '2115';
+
     public const RECEIVABLE = '1110';
 
     public const INVENTORY = '1120';
@@ -188,6 +207,7 @@ final class StandardChart implements ProvisionsCompany
     /** @var list<string> */
     public const SYSTEM_CODES = [
         self::CASH_IN_HAND, self::BANK_AND_MFS, self::CASH_IN_TRANSIT,
+        self::CHEQUES_IN_HAND, self::CHEQUES_ISSUED,
         self::RECEIVABLE, self::INVENTORY,
         self::PAYABLE, self::VAT_PAYABLE, self::GOODS_RECEIVED_NOT_INVOICED,
         self::RETAINED_EARNINGS,
@@ -330,6 +350,7 @@ final class StandardChart implements ProvisionsCompany
              */
             ['1103', 'Cash in Transit', 'পথের টাকা', $A, '1100', false, []],
 
+            ['1104', 'Cheques in Hand', 'হাতে চেক', $A, '1100', false, []],
             ['1110', 'Accounts Receivable', 'প্রাপ্য হিসাব', $A, '1100', false, []],
 
             ['1120', 'Inventory', 'মজুদ পণ্য', $A, '1100', false, []],
@@ -370,6 +391,7 @@ final class StandardChart implements ProvisionsCompany
             ['2000', 'Liabilities', 'দায়', $L, null, true, []],
             ['2100', 'Current Liabilities', 'চলতি দায়', $L, '2000', true, []],
             ['2110', 'Accounts Payable', 'প্রদেয় হিসাব', $L, '2100', false, []],
+            ['2115', 'Cheques Issued, Not Presented', 'দেওয়া চেক, এখনো ভাঙানো হয়নি', $L, '2100', false, []],
             ['2120', 'VAT Payable', 'প্রদেয় ভ্যাট', $L, '2100', false, []],
             ['2130', 'Salary Payable', 'প্রদেয় বেতন', $L, '2100', false, []],
 

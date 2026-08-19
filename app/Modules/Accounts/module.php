@@ -7,6 +7,7 @@ use App\Modules\Accounts\Integrity\AccountsChecks;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CashCount;
 use App\Modules\Accounts\Models\CashTill;
+use App\Modules\Accounts\Models\Cheque;
 use App\Modules\Accounts\Models\Loan;
 use App\Modules\Accounts\Models\LoanInstalment;
 use App\Modules\Accounts\Models\LoanMovement;
@@ -111,6 +112,13 @@ return [
         'settings' => [
             // বছর সমাপনী রোজকার কাজ নয়, তাই সেটিংসের সাথে — আর অনুমতিও
             // চূড়ান্ত হিসাবের, কারণ এটা বছরের ফল চূড়ান্ত করে দেয়
+            /*
+             * চেকের খাতা — লেনদেনের ঘরে, কারণ ওটা রোজকার কাজ।
+             *
+             * "আজ কোন চেকগুলো পাশ হওয়ার কথা" প্রশ্নটা প্রতিদিন সকালে
+             * ওঠে, বছরে একবার নয়।
+             */
+            ['label' => 'accounts::menu.cheques', 'route' => 'accounts.cheque.index', 'permission' => 'accounts.cheque.view'],
             ['label' => 'accounts::menu.periods', 'route' => 'accounts.period.index', 'permission' => 'accounts.period.close'],
             ['label' => 'accounts::menu.year_end', 'route' => 'accounts.year_end.index', 'permission' => 'accounts.report.final'],
             ['label' => 'accounts::menu.settings', 'route' => 'accounts.settings', 'permission' => 'accounts.manage'],
@@ -149,6 +157,9 @@ return [
          * তালাটা আর তালা নয় — এক মুহূর্তের জন্য খুলে এন্ট্রি বসিয়ে
          * আবার বন্ধ করে দেওয়া যেত।
          */
+        'accounts.cheque.view',
+        'accounts.cheque.manage',
+
         'accounts.period.close',
         'accounts.period.reopen',
         'accounts.report',
@@ -172,6 +183,7 @@ return [
     ],
 
     'doc_types' => [
+        'CHQ' => 'accounts::doc.cheque',
         'RV' => 'accounts::doc.receipt_voucher',
         'PV' => 'accounts::doc.payment_voucher',
         'EV' => 'accounts::doc.expense_voucher',
@@ -205,6 +217,7 @@ return [
      * এখানে লেখার দরকার নেই, DrillResolver উপসর্গটা ছেঁটে নেয়।
      */
     'drill_sources' => [
+        'cheque' => Cheque::class,
         'account' => Account::class,
         'cash_till' => CashTill::class,
         'receipt_voucher' => Voucher::class,

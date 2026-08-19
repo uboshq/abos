@@ -12,4 +12,7 @@ return [
     'cash_count' => 'Cash Count',
     'till_code' => 'Cash Till Code',
     'loan' => 'Loan',
+
+    // চেকের খাতা
+    'cheque' => 'Cheque',
 ];
