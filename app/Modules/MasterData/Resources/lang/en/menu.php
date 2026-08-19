@@ -21,4 +21,5 @@ return [
     'departments' => 'Departments',
     'designations' => 'Designations',
     'employment_types' => 'Employment Types',
+    'cost_centers' => 'Cost centres',
 ];

@@ -127,4 +127,9 @@ return [
     'bounce_reason' => 'ফেরতের কারণ',
     'cheques_open_total' => 'এখনো ঝুলে থাকা চেক',
     'cheques_ripe' => 'তারিখ পেরিয়েছে, এখনো ঝুলছে',
+    'cost_center' => 'খরচের কেন্দ্র',
+    'no_cost_center' => '(কেন্দ্র বসানো হয়নি)',
+    'spent' => 'খরচ',
+    'earned' => 'আয়',
+    'net' => 'নিট',
 ];

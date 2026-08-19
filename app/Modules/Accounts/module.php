@@ -93,7 +93,13 @@ return [
             ['label' => 'accounts::menu.bank_book', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'bank-book'], 'permission' => 'accounts.report'],
 
             // "আজ কত টাকা ঢুকল" — নগদ বই বলে কোন ড্রয়ারে, এটা বলে কোন কাগজে
-            ['label' => 'accounts::menu.inflow', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'inflow'], 'permission' => 'accounts.report'],
+            ['label' => 'accounts::menu.inflow', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'inflow'],
+
+                /*
+             * কোন কেন্দ্রে কত — "কোন রুট লাভজনক" প্রশ্নের কাগজ।
+             */
+                ['label' => 'accounts::menu.by_cost_centre', 'route' => 'accounts.report.show',
+                    'route_params' => ['slug' => 'by-cost-centre'], 'permission' => 'accounts.report'], 'permission' => 'accounts.report'],
             ['label' => 'accounts::menu.ledger', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'ledger'], 'permission' => 'accounts.report'],
             ['label' => 'accounts::menu.trial_balance', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'trial-balance'], 'permission' => 'accounts.report'],
 

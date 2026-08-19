@@ -11,6 +11,7 @@ use App\Core\Support\CodeFromName;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\MasterData\Models\Brand;
+use App\Modules\MasterData\Models\CostCenter;
 use App\Modules\MasterData\Models\Currency;
 use App\Modules\MasterData\Models\Department;
 use App\Modules\MasterData\Models\Designation;
@@ -70,6 +71,20 @@ class MasterListController extends Controller implements HasMiddleware
          * কেউ টের পেত না; টের পাওয়া যেত ব্র্যান্ড ধরে বিক্রয় খুললে —
          * এক ব্র্যান্ড চার সারিতে ভাগ হয়ে যেত।
          */
+        /*
+         * খরচের কেন্দ্র — "নেত্রকোনা রুট", "গুদাম", "অফিস"।
+         *
+         * খাত বলে কী খরচ হয়েছে, কেন্দ্র বলে কোথায়। দুইটা মিলিয়ে তবেই
+         * "কোন রুট লাভজনক" প্রশ্নের উত্তর হয়।
+         */
+        'cost-centers' => [
+            'model' => CostCenter::class,
+            'route' => 'cost_center',
+            'title' => 'master_data::menu.cost_centers',
+            'fields' => [],
+            'columns' => [],
+        ],
+
         'brands' => [
             'model' => Brand::class,
             'route' => 'brand',

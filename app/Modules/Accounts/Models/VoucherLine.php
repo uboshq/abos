@@ -24,7 +24,7 @@ class VoucherLine extends Model
     use IsAudited;
 
     protected $fillable = [
-        'voucher_id', 'account_id', 'party_type', 'party_id',
+        'voucher_id', 'account_id', 'party_type', 'party_id', 'cost_center_id',
         'debit', 'credit', 'narration', 'sort_order',
     ];
 

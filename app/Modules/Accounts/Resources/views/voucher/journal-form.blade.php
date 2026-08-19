@@ -22,6 +22,7 @@
         'narration' => $l->narration,
         'party_type' => $l->party_type,
         'party_id' => $l->party_id,
+        'cost_center_id' => $l->cost_center_id,
     ])->all());
 
     $rows = max(5, count($existing) + 1);
@@ -93,6 +94,12 @@
                                 class="px-3 py-2 text-start font-medium text-(--color-ink-muted)">
                                 {{ __('accounts::field.party') }}
                             </th>
+                            @if ($costCenters->isNotEmpty())
+                                <th scope="col" style="width: 11rem"
+                                    class="px-3 py-2 text-start font-medium text-(--color-ink-muted)">
+                                    {{ __('accounts::field.cost_center') }}
+                                </th>
+                            @endif
                             <th scope="col" class="hidden px-3 py-2 text-start font-medium
                                                    text-(--color-ink-muted) lg:table-cell">
                                 {{ __('core.table.narration') }}
@@ -174,6 +181,31 @@
                                     </select>
                                 </td>
 
+                                {{--
+                                    খরচের কেন্দ্র — কোন রুটের খরচ।
+
+                                    কলামটা কেবল তখনই আসে যখন অন্তত একটা
+                                    কেন্দ্র বসানো আছে। কেউ কেন্দ্র ব্যবহার
+                                    না করলে প্রতিটা জাবেদায় একটা খালি ঘর
+                                    জায়গা নিত আর কিছু বলত না।
+                                --}}
+                                @if ($costCenters->isNotEmpty())
+                                    <td class="px-3 py-1.5">
+                                        <select name="lines[{{ $i }}][cost_center_id]"
+                                                class="h-(--spacing-field) w-full rounded-(--radius-field)
+                                                       border border-(--color-border)
+                                                       bg-(--color-surface-card) px-2">
+                                            <option value="">—</option>
+                                            @foreach ($costCenters as $centre)
+                                                <option value="{{ $centre->id }}"
+                                                        @selected(($line['cost_center_id'] ?? null) == $centre->id)>
+                                                    {{ $centre->name() }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </td>
+                                @endif
+
                                 <td class="hidden px-3 py-1.5 lg:table-cell">
                                     <input type="text" name="lines[{{ $i }}][narration]"
                                            value="{{ $line['narration'] ?? '' }}"
@@ -190,6 +222,9 @@
                             <td class="num px-3 py-2 text-end" x-text="format(debit)">0.00</td>
                             <td class="num px-3 py-2 text-end" x-text="format(credit)">0.00</td>
                             <td class="px-3 py-2"></td>
+                            @if ($costCenters->isNotEmpty())
+                                <td class="px-3 py-2"></td>
+                            @endif
                             <td class="hidden px-3 py-2 lg:table-cell">
                                 {{-- পার্থক্যটা দেখানো হয়, লুকানো হয় না: কত টাকা
                                      কম পড়ছে সেটা জানলে ভুলটা খুঁজে পাওয়া সহজ।
