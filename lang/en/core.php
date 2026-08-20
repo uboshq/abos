@@ -442,4 +442,13 @@ return [
         'confirm_hint' => 'If this really is a different business, tick the box and save again.',
         'allow' => 'This is a different business',
     ],
+
+    // বিজ্ঞপ্তি — একজনের জন্য একটা খবর
+    'notify' => [
+        'title' => 'For you',
+        'none' => 'Nothing new.',
+        'mark_all' => 'Mark all read',
+        'approval_approved' => 'Approved: :document',
+        'approval_rejected' => 'Turned down: :document',
+    ],
 ];
