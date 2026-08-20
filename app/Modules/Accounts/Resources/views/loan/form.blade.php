@@ -68,6 +68,39 @@
                                x-model="kind" class="size-4">
                         {{ __('accounts::field.loan_cc') }}
                     </label>
+
+                    <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
+                        <input type="radio" name="kind" value="{{ \App\Modules\Accounts\Models\Loan::HAND }}"
+                               x-model="kind" class="size-4">
+                        {{ __('accounts::field.loan_hand') }}
+                    </label>
+                </div>
+            </fieldset>
+
+            {{--
+                দিক — কেবল হাতধারে।
+
+                ব্যাংক ঋণ সবসময় নেওয়া; কেউ ব্যাংককে ধার দেয় না। তাই
+                ঘরটা ওখানে দেখানোই হয় না, আর দেখালে প্রতিবার একটা
+                অর্থহীন সিদ্ধান্ত চাইত।
+            --}}
+            <fieldset class="mt-3" x-show="kind === 'hand'" x-cloak>
+                <legend class="mb-1 block text-sm font-medium">{{ __('accounts::field.loan_direction') }}</legend>
+
+                <div class="flex flex-wrap gap-4">
+                    <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
+                        <input type="radio" name="direction" value="{{ \App\Modules\Accounts\Models\Loan::TAKEN }}"
+                               @checked(old('direction', \App\Modules\Accounts\Models\Loan::TAKEN) === \App\Modules\Accounts\Models\Loan::TAKEN)
+                               class="size-4">
+                        {{ __('accounts::field.loan_taken') }}
+                    </label>
+
+                    <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
+                        <input type="radio" name="direction" value="{{ \App\Modules\Accounts\Models\Loan::GIVEN }}"
+                               @checked(old('direction') === \App\Modules\Accounts\Models\Loan::GIVEN)
+                               class="size-4">
+                        {{ __('accounts::field.loan_given') }}
+                    </label>
                 </div>
             </fieldset>
         </section>
@@ -113,6 +146,19 @@
                                 :value="old('first_instalment_on')" />
                 </div>
 
+                {{--
+                    হাতধারের একমাত্র সময়সীমা।
+
+                    কিস্তির সূচি নেই বলে দেরি ধরার আর কোনো উপায় নেই।
+                    খালি রাখা যায়: কেউ তারিখ না বললে কথা ভাঙার প্রশ্নও
+                    ওঠে না।
+                --}}
+                <div x-show="kind === 'hand'" x-cloak>
+                    <x-ui.field name="due_on" type="date"
+                                :label="__('accounts::field.loan_due_on')"
+                                :value="old('due_on')" />
+                </div>
+
                 <label class="block" x-show="kind === 'term'">
                     <span class="mb-1 block text-sm font-medium">{{ __('accounts::field.interest_method') }}</span>
                     <select name="interest_method"
@@ -146,13 +192,13 @@
             <div class="grid gap-3 sm:grid-cols-2">
                 <label class="block">
                     <span class="mb-1 block text-sm font-medium">{{ __('accounts::field.liability_account') }}</span>
-                    <select name="liability_account_id" required
+                    <select name="principal_account_id" required
                             class="h-(--spacing-field) w-full rounded-(--radius-field) border
                                    border-(--color-border) bg-(--color-surface-card) px-3">
                         <option value="">—</option>
-                        @foreach ($liabilityAccounts as $account)
+                        @foreach ($principalAccounts as $account)
                             <option value="{{ $account->id }}"
-                                    @selected(old('liability_account_id') == $account->id)>
+                                    @selected(old('principal_account_id') == $account->id)>
                                 {{ $account->code }} — {{ $account->name() }}
                             </option>
                         @endforeach
@@ -175,7 +221,17 @@
                 </label>
 
                 {{-- টার্ম লোনেই কেবল: টাকাটা এখনই ঢোকে --}}
-                <label class="block" x-show="kind === 'term'">
+                {{--
+                    টাকাটা কোথায় ঢুকল, বা কোথা থেকে বেরোল।
+
+                    হাতধারেও লাগে: ওখানেও পুরো টাকা একবারেই নড়ে। ঘরটা
+                    না থাকলে দাখিলাই বসত না — ধারটা খাতায় থাকত অথচ
+                    টাকাটা কোথাও নড়ত না, আর নগদ মিলত না।
+
+                    CC-তে লাগে না, কারণ সীমা মঞ্জুর হওয়া আর টাকা তোলা
+                    দুইটা আলাদা ঘটনা।
+                --}}
+                <label class="block" x-show="kind === 'term' || kind === 'hand'">
                     <span class="mb-1 block text-sm font-medium">{{ __('accounts::field.into_account') }}</span>
                     <select name="into_account_id"
                             class="h-(--spacing-field) w-full rounded-(--radius-field) border

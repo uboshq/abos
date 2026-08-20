@@ -92,7 +92,7 @@ class LoanController extends Controller implements HasMiddleware
         return view('accounts::loan.form', [
             'menu' => $this->menu->forUser($request->user()),
             'loan' => $loan,
-            'liabilityAccounts' => $this->accountsUnder('2200'),
+            'principalAccounts' => $this->accountsUnder('2200'),
             'interestAccounts' => $this->postableAccounts(Account::EXPENSE),
             'moneyAccounts' => $this->moneyAccounts(),
         ]);
@@ -103,11 +103,28 @@ class LoanController extends Controller implements HasMiddleware
         $data = $request->validate([
             'lender' => ['required', 'string', 'max:160'],
             'account_no' => ['nullable', 'string', 'max:64'],
-            'kind' => ['required', Rule::in([Loan::TERM, Loan::CC])],
+            'kind' => ['required', Rule::in([Loan::TERM, Loan::CC, Loan::HAND])],
+
+            /*
+             * দিক — কেবল হাতধারে অর্থবহ।
+             *
+             * ব্যাংক ঋণ সবসময় নেওয়া; কেউ ব্যাংককে ধার দেয় না। তাই
+             * ঘরটা ফর্মে শুধু হাতধার বাছলে দেখা যায়, আর না এলে ডিফল্ট
+             * `taken` — যেটা আজ পর্যন্ত সব সারির সত্যি।
+             */
+            'direction' => ['nullable', Rule::in([Loan::TAKEN, Loan::GIVEN])],
+
+            /*
+             * ফেরতের কথা দেওয়া তারিখ — হাতধারের একমাত্র সময়সীমা।
+             *
+             * কিস্তির সূচি নেই বলে দেরি ধরার আর কোনো উপায় নেই। খালি
+             * রাখা যায়: কেউ তারিখ না বললে কথা ভাঙার প্রশ্নও ওঠে না।
+             */
+            'due_on' => ['nullable', 'date'],
             'sanctioned' => ['required', 'numeric', 'gt:0'],
             'interest_rate' => ['required', 'numeric', 'min:0', 'max:100'],
             'start_date' => ['required', 'date'],
-            'liability_account_id' => ['required', 'integer', 'exists:accounts,id'],
+            'principal_account_id' => ['required', 'integer', 'exists:accounts,id'],
             'interest_account_id' => ['required', 'integer', 'exists:accounts,id'],
             'security' => ['nullable', 'string', 'max:500'],
             'narration' => ['nullable', 'string', 'max:500'],
@@ -135,23 +152,40 @@ class LoanController extends Controller implements HasMiddleware
             ]);
         }
 
+        /*
+         * হাতধারেও টাকাটা কোথায় গেল বা কোথা থেকে এল সেটা লাগে।
+         *
+         * টার্ম লোনের মতোই পুরো টাকা একবারেই নড়ে, তাই ঘরটা ছাড়া
+         * দাখিলাটাই বসত না — ধারটা খাতায় থাকত অথচ টাকাটা কোথাও নড়ত
+         * না, আর নগদ মিলত না।
+         */
+        if ($data['kind'] === Loan::HAND) {
+            $request->validate(['into_account_id' => ['required']]);
+        }
+
         $loan = $this->loans->create(
             data: [
                 'lender' => $data['lender'],
                 'account_no' => $data['account_no'] ?? null,
                 'kind' => $data['kind'],
+                'direction' => $data['kind'] === Loan::HAND
+                    ? ($data['direction'] ?? Loan::TAKEN)
+                    : Loan::TAKEN,
+                'due_on' => $data['kind'] === Loan::HAND ? ($data['due_on'] ?? null) : null,
                 'interest_method' => $data['kind'] === Loan::TERM ? $data['interest_method'] : null,
                 'sanctioned' => $data['sanctioned'],
                 'interest_rate' => $data['interest_rate'],
                 'tenure_months' => $data['kind'] === Loan::TERM ? $data['tenure_months'] : null,
                 'start_date' => $data['start_date'],
                 'first_instalment_on' => $data['first_instalment_on'] ?? $data['start_date'],
-                'liability_account_id' => $data['liability_account_id'],
+                'principal_account_id' => $data['principal_account_id'],
                 'interest_account_id' => $data['interest_account_id'],
                 'security' => $data['security'] ?? null,
                 'narration' => $data['narration'] ?? null,
             ],
-            intoAccountId: $data['kind'] === Loan::TERM ? (int) $data['into_account_id'] : null,
+            intoAccountId: in_array($data['kind'], [Loan::TERM, Loan::HAND], true)
+                ? (int) $data['into_account_id']
+                : null,
         );
 
         return redirect()
@@ -163,7 +197,7 @@ class LoanController extends Controller implements HasMiddleware
     {
         return view('accounts::loan.show', [
             'menu' => $this->menu->forUser($request->user()),
-            'loan' => $loan->load('instalments', 'movements.counterAccount', 'liabilityAccount', 'interestAccount'),
+            'loan' => $loan->load('instalments', 'movements.counterAccount', 'principalAccount', 'interestAccount'),
             'moneyAccounts' => $this->moneyAccounts(),
         ]);
     }

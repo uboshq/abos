@@ -58,6 +58,22 @@ final class LoanService
                 'created_by' => auth()->id(),
             ]);
 
+            /*
+             * হাতধারে টাকাটা একবারেই নড়ে, কিন্তু কোনো সূচি হয় না।
+             *
+             * টার্ম লোনের মতোই "মঞ্জুরির দিনেই পুরো টাকা", তাই দাখিলা
+             * এখানেই বসে। কিন্তু `buildSchedule()` ডাকা হয় না — হাতধারে
+             * কিস্তি নেই, আর শূন্য কিস্তির একটা সূচি বানালে পর্দায়
+             * একটা খালি টেবিল বসে থাকত, যা কিছুই বলে না।
+             */
+            if ($loan->isHandLoan()) {
+                if ($intoAccountId !== null) {
+                    $this->drawDown($loan, (string) $loan->sanctioned, $intoAccountId, $loan->start_date);
+                }
+
+                return $loan->fresh();
+            }
+
             if ($loan->isTerm()) {
                 $this->buildSchedule($loan);
 
@@ -112,15 +128,28 @@ final class LoanService
 
         $movement = $this->movement($loan, LoanMovement::DRAW, $amount, $date, $intoAccountId);
 
-        // টাকা এল (সম্পদ ডেবিট), দায় জন্মাল (ক্রেডিট)
+        /*
+         * নেওয়া ধারে: টাকা এল (সম্পদ ডেবিট), দায় জন্মাল (ক্রেডিট)।
+         *
+         * দেওয়া ধারে ঠিক উল্টো — টাকা বেরোল, আর পাওনা জন্মাল। একই
+         * দাখিলা দুই দিকেই বসালে দেওয়া টাকাটা খাতায় দায় হয়ে বসত,
+         * অর্থাৎ যাঁকে ধার দিলাম তাঁকেই আমাদের পাওনাদার দেখাত।
+         */
+        $lines = $loan->isGiven()
+            ? [
+                ['account_id' => $loan->principal_account_id, 'debit' => $amount],
+                ['account_id' => $intoAccountId, 'credit' => $amount],
+            ]
+            : [
+                ['account_id' => $intoAccountId, 'debit' => $amount],
+                ['account_id' => $loan->principal_account_id, 'credit' => $amount],
+            ];
+
         $this->posting->post(
             sourceType: LoanMovement::drillSourceType(),
             sourceId: $movement->id,
             trxDate: $movement->trx_date->toDateString(),
-            lines: [
-                ['account_id' => $intoAccountId, 'debit' => $amount],
-                ['account_id' => $loan->liability_account_id, 'credit' => $amount],
-            ],
+            lines: $lines,
             documentNo: $movement->document_no,
         );
     }
@@ -174,7 +203,7 @@ final class LoanService
                 sourceId: $instalment->id,
                 trxDate: $this->dateFor($date),
                 lines: [
-                    ['account_id' => $loan->liability_account_id, 'debit' => $principal],
+                    ['account_id' => $loan->principal_account_id, 'debit' => $principal],
                     ['account_id' => $loan->interest_account_id, 'debit' => $interest],
                     ['account_id' => $fromAccountId, 'credit' => $paid],
                 ],
@@ -206,14 +235,25 @@ final class LoanService
 
         $movement = $this->movement($loan, LoanMovement::REPAY, $amount, $date, $fromAccountId);
 
+        /*
+         * নেওয়া ধারে পরিশোধ মানে দায় কমা; দেওয়া ধারে "পরিশোধ" মানে
+         * টাকা ফেরত আসা, অর্থাৎ পাওনা কমা আর নগদ বাড়া।
+         */
+        $lines = $loan->isGiven()
+            ? [
+                ['account_id' => $fromAccountId, 'debit' => $amount],
+                ['account_id' => $loan->principal_account_id, 'credit' => $amount],
+            ]
+            : [
+                ['account_id' => $loan->principal_account_id, 'debit' => $amount],
+                ['account_id' => $fromAccountId, 'credit' => $amount],
+            ];
+
         $this->posting->post(
             sourceType: LoanMovement::drillSourceType(),
             sourceId: $movement->id,
             trxDate: $movement->trx_date->toDateString(),
-            lines: [
-                ['account_id' => $loan->liability_account_id, 'debit' => $amount],
-                ['account_id' => $fromAccountId, 'credit' => $amount],
-            ],
+            lines: $lines,
             documentNo: $movement->document_no,
         );
     }
@@ -242,7 +282,7 @@ final class LoanService
             trxDate: $movement->trx_date->toDateString(),
             lines: [
                 ['account_id' => $loan->interest_account_id, 'debit' => $amount],
-                ['account_id' => $loan->liability_account_id, 'credit' => $amount],
+                ['account_id' => $loan->principal_account_id, 'credit' => $amount],
             ],
             documentNo: $movement->document_no,
         );

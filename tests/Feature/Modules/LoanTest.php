@@ -68,7 +68,7 @@ class LoanTest extends TestCase
         return app(LoanService::class);
     }
 
-    private function liabilityAccount(): Account
+    private function principalAccount(): Account
     {
         return Account::query()->where('code', '2210')->firstOrFail();
     }
@@ -105,7 +105,7 @@ class LoanTest extends TestCase
     private function liabilityFromLedger(): string
     {
         return LedgerEntry::query()
-            ->where('account_id', $this->liabilityAccount()->id)
+            ->where('account_id', $this->principalAccount()->id)
             ->get()
             ->reduce(
                 fn (string $sum, LedgerEntry $e) => bcadd($sum, bcsub((string) $e->credit, (string) $e->debit, 4), 4),
@@ -126,7 +126,7 @@ class LoanTest extends TestCase
                 'tenure_months' => 36,
                 'start_date' => '2026-07-01',
                 'first_instalment_on' => '2026-08-01',
-                'liability_account_id' => $this->liabilityAccount()->id,
+                'principal_account_id' => $this->principalAccount()->id,
                 'interest_account_id' => $this->interestAccount()->id,
                 ...$overrides,
             ],
@@ -143,7 +143,7 @@ class LoanTest extends TestCase
             'sanctioned' => '500000',
             'interest_rate' => '13.5',
             'start_date' => '2026-07-01',
-            'liability_account_id' => $this->liabilityAccount()->id,
+            'principal_account_id' => $this->principalAccount()->id,
             'interest_account_id' => $this->interestAccount()->id,
             ...$overrides,
         ]);
@@ -269,7 +269,7 @@ class LoanTest extends TestCase
         $this->assertSame(0, bccomp($loan->outstanding(), '0', 4));
         $this->assertSame(0, bccomp($loan->available(), '500000', 4));
         $this->assertCount(0, $loan->instalments);
-        $this->assertSame(0, LedgerEntry::query()->where('account_id', $this->liabilityAccount()->id)->count());
+        $this->assertSame(0, LedgerEntry::query()->where('account_id', $this->principalAccount()->id)->count());
     }
 
     public function test_drawing_and_repaying_a_cc_moves_the_outstanding_both_ways(): void
@@ -360,7 +360,7 @@ class LoanTest extends TestCase
                 'tenure_months' => 12,
                 'start_date' => '2026-07-01',
                 'first_instalment_on' => '2026-08-01',
-                'liability_account_id' => $this->liabilityAccount()->id,
+                'principal_account_id' => $this->principalAccount()->id,
                 'interest_account_id' => $this->interestAccount()->id,
                 'into_account_id' => $this->moneyAccount()->id,
             ])
@@ -405,7 +405,7 @@ class LoanTest extends TestCase
                 'interest_rate' => '10',
                 'tenure_months' => 12,
                 'start_date' => '2026-08-01',
-                'liability_account_id' => $this->liabilityAccount()->id,
+                'principal_account_id' => $this->principalAccount()->id,
                 'interest_account_id' => $this->interestAccount()->id,
                 'into_account_id' => $this->moneyAccount()->id,
             ])
@@ -432,7 +432,7 @@ class LoanTest extends TestCase
                 'interest_rate' => '9',
                 'tenure_months' => 12,
                 'start_date' => '2026-07-01',
-                'liability_account_id' => $this->liabilityAccount()->id,
+                'principal_account_id' => $this->principalAccount()->id,
                 'interest_account_id' => $this->interestAccount()->id,
             ])
             ->assertSessionHasErrors('into_account_id');
@@ -449,7 +449,7 @@ class LoanTest extends TestCase
                 'sanctioned' => '400000',
                 'interest_rate' => '13',
                 'start_date' => '2026-07-01',
-                'liability_account_id' => $this->liabilityAccount()->id,
+                'principal_account_id' => $this->principalAccount()->id,
                 'interest_account_id' => $this->interestAccount()->id,
             ])
             ->assertSessionHasNoErrors()
