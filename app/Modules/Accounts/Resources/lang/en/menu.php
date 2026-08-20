@@ -33,5 +33,6 @@ return [
 
     // চেকের খাতা
     'cheques' => 'Cheque register',
+    'reconciliations' => 'Bank reconciliation',
     'by_cost_centre' => 'By cost centre',
 ];

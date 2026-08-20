@@ -34,5 +34,6 @@ return [
 
     // চেকের খাতা
     'cheques' => 'চেকের খাতা',
+    'reconciliations' => 'ব্যাংক মিলকরণ',
     'by_cost_centre' => 'কোন কেন্দ্রে কত',
 ];

@@ -125,6 +125,7 @@ return [
              * ওঠে, বছরে একবার নয়।
              */
             ['label' => 'accounts::menu.cheques', 'route' => 'accounts.cheque.index', 'permission' => 'accounts.cheque.view'],
+            ['label' => 'accounts::menu.reconciliations', 'route' => 'accounts.reconciliation.index', 'permission' => 'accounts.reconciliation.view'],
             ['label' => 'accounts::menu.periods', 'route' => 'accounts.period.index', 'permission' => 'accounts.period.close'],
             ['label' => 'accounts::menu.year_end', 'route' => 'accounts.year_end.index', 'permission' => 'accounts.report.final'],
             ['label' => 'accounts::menu.settings', 'route' => 'accounts.settings', 'permission' => 'accounts.manage'],
@@ -165,6 +166,18 @@ return [
          */
         'accounts.cheque.view',
         'accounts.cheque.manage',
+
+        /*
+         * মিলকরণেও তিনটা চাবি, আর কারণটা মাস বন্ধ করার মতোই।
+         *
+         * দেখা আর মেলানো আলাদা, কারণ মেলানো একটা দাবি: "আমি ব্যাংকের
+         * কাগজের সাথে মিলিয়ে দেখেছি"। আর খোলা তৃতীয় চাবি, কারণ বন্ধ
+         * করা মিলকরণ খোলা মানে গত মাসের বন্ধ করা অঙ্কটা আবার নড়ানো —
+         * এক চাবি হলে যিনি মেলান তিনিই নিজের কাজ মুছে ফেলতে পারতেন।
+         */
+        'accounts.reconciliation.view',
+        'accounts.reconciliation.manage',
+        'accounts.reconciliation.reopen',
 
         'accounts.period.close',
         'accounts.period.reopen',
