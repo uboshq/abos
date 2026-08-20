@@ -9,6 +9,57 @@
     তফাতের ঘরটা কেবল শূন্য হলেই সবুজ। "প্রায় মিলে গেছে" বলে কিছু নেই —
     দুই টাকার তফাতও একটা এন্ট্রি ভুল হওয়ার প্রমাণ।
 --}}
+@php
+    /*
+        কলাম ধরে, স্লটে নয় — কম্পোনেন্ট স্লট পড়ে না।
+
+        টিকের ঘরটা একটা ইনপুট, আর ওটা ফর্মের ভেতরে থাকতেই হবে
+        (`name="lines[]"`)। তাই টেবিলটা ফর্মের ভেতরে বসে, আর ঘরটা
+        একটা partial হয়ে `render` ক্লোজার থেকে আসে।
+    */
+    $locked = $recon->isConfirmed();
+
+    $columns = [
+        [
+            'key' => 'tick',
+            'label' => __('accounts::recon.seen_by_bank'),
+            'width' => '7rem',
+            'render' => fn ($l) => view('accounts::reconciliation.partials.tick',
+                ['line' => $l, 'locked' => $locked]),
+        ],
+        [
+            'key' => 'date',
+            'label' => __('accounts::recon.date'),
+            'width' => '9rem',
+            'render' => fn ($l) => $l->voucher?->trx_date?->format('d M Y'),
+        ],
+        [
+            'key' => 'document',
+            'label' => __('accounts::recon.document'),
+            'render' => fn ($l) => $l->voucher?->document_no,
+        ],
+        [
+            'key' => 'narration',
+            'label' => __('accounts::recon.narration_col'),
+            'render' => fn ($l) => $l->narration ?? $l->voucher?->narration,
+        ],
+        [
+            'key' => 'debit',
+            'label' => __('accounts::recon.paid_in'),
+            'numeric' => true,
+            'width' => '10rem',
+            'render' => fn ($l) => view('accounts::reconciliation.partials.money', ['value' => $l->debit]),
+        ],
+        [
+            'key' => 'credit',
+            'label' => __('accounts::recon.paid_out'),
+            'numeric' => true,
+            'width' => '10rem',
+            'render' => fn ($l) => view('accounts::reconciliation.partials.money', ['value' => $l->credit]),
+        ],
+    ];
+@endphp
+
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('accounts::recon.title') }}</x-slot:title>
 
@@ -68,82 +119,47 @@
         <p class="mb-4 text-sm text-(--color-ink-muted)">{{ __('accounts::recon.does_not_agree_hint') }}</p>
     @endif
 
-    @if ($lines->isEmpty())
-        <x-ui.empty-state :message="__('accounts::recon.empty_lines')" />
-    @else
-        <form method="POST" action="{{ route('accounts.reconciliation.mark', $recon) }}">
-            @csrf
+    <form method="POST" action="{{ route('accounts.reconciliation.mark', $recon) }}">
+        @csrf
 
-            <x-ui.table :columns="[
-                ['label' => __('accounts::recon.seen_by_bank')],
-                ['label' => __('accounts::recon.date')],
-                ['label' => __('accounts::recon.document')],
-                ['label' => __('accounts::recon.narration_col')],
-                ['label' => __('accounts::recon.paid_in'), 'numeric' => true],
-                ['label' => __('accounts::recon.paid_out'), 'numeric' => true],
-            ]">
-                @foreach ($lines as $line)
-                    <tr class="border-t border-(--color-border)">
-                        <td class="px-3 align-middle" data-label="{{ __('accounts::recon.seen_by_bank') }}">
-                            <input type="checkbox" name="lines[]" value="{{ $line->id }}"
-                                   @checked($line->reconciliation_id !== null)
-                                   @disabled($recon->isConfirmed())
-                                   class="size-4 rounded border-(--color-border)">
-                        </td>
-                        <td class="px-3 align-middle" data-label="{{ __('accounts::recon.date') }}">
-                            {{ $line->voucher?->trx_date?->format('d M Y') }}
-                        </td>
-                        <td class="px-3 align-middle" data-label="{{ __('accounts::recon.document') }}">
-                            {{ $line->voucher?->document_no }}
-                        </td>
-                        <td class="px-3 align-middle" data-label="{{ __('accounts::recon.narration_col') }}">
-                            {{ $line->narration ?? $line->voucher?->narration }}
-                        </td>
-                        <td class="px-3 text-end align-middle num" data-label="{{ __('accounts::recon.paid_in') }}">
-                            <x-ui.amount :value="$line->debit" :blankOnZero="true" />
-                        </td>
-                        <td class="px-3 text-end align-middle num" data-label="{{ __('accounts::recon.paid_out') }}">
-                            <x-ui.amount :value="$line->credit" :blankOnZero="true" />
-                        </td>
-                    </tr>
-                @endforeach
-            </x-ui.table>
+        <x-ui.table :rows="$lines"
+                    :columns="$columns"
+                    :empty="__('accounts::recon.empty_lines')" />
 
-            <div class="mt-4 flex flex-wrap gap-2">
-                @if ($recon->isDraft())
-                    @can('accounts.reconciliation.manage')
-                        <x-ui.button type="submit">{{ __('accounts::recon.save_ticks') }}</x-ui.button>
-                    @endcan
-                @endif
-            </div>
-        </form>
+        @if ($recon->isDraft() && $lines->isNotEmpty())
+            @can('accounts.reconciliation.manage')
+                <div class="mt-4">
+                    <x-ui.button type="submit">{{ __('accounts::recon.save_ticks') }}</x-ui.button>
+                </div>
+            @endcan
+        @endif
+    </form>
 
-        <div class="mt-3 flex flex-wrap gap-2">
-            @if ($recon->isDraft())
-                @can('accounts.reconciliation.manage')
-                    {{--
-                        বন্ধ করার বোতামটা তফাত শূন্য না হলে থাকে না।
-
-                        সার্ভারেও একই পাহারা আছে, আর সেটাই আসল পাহারা;
-                        এটা কেবল যাতে কেউ চেপে ভুল বার্তা না পান।
-                    --}}
-                    @if ($summary['agrees'])
-                        <form method="POST" action="{{ route('accounts.reconciliation.confirm', $recon) }}">
-                            @csrf
-                            <x-ui.button type="submit" tone="primary">
-                                {{ __('accounts::recon.confirm') }}
-                            </x-ui.button>
-                        </form>
-                    @endif
-                @endcan
-            @else
-                @can('accounts.reconciliation.reopen')
-                    <form method="POST" action="{{ route('accounts.reconciliation.reopen', $recon) }}">
+    <div class="mt-3 flex flex-wrap gap-2">
+        @if ($recon->isDraft())
+            @can('accounts.reconciliation.manage')
+                {{--
+                    বন্ধ করার বোতামটা তফাত শূন্য না হলে থাকে না।
+                    সার্ভারেও একই পাহারা আছে, আর সেটাই আসল পাহারা;
+                    এটা কেবল যাতে কেউ চেপে ভুল বার্তা না পান।
+                --}}
+                @if ($summary['agrees'])
+                    <form method="POST" action="{{ route('accounts.reconciliation.confirm', $recon) }}">
                         @csrf
-                        <x-ui.button type="submit">{{ __('accounts::recon.reopen') }}</x-ui.button>
+                        <x-ui.button type="submit" tone="primary">
+                            {{ __('accounts::recon.confirm') }}
+                        </x-ui.button>
                     </form>
-                @endcan
-            @endif
-        </div>
-    @endif
+                @endif
+            @endcan
+        @else
+            @can('accounts.reconciliation.reopen')
+                <form method="POST" action="{{ route('accounts.reconciliation.reopen', $recon) }}">
+                    @csrf
+                    <x-ui.button type="submit">{{ __('accounts::recon.reopen') }}</x-ui.button>
+                </form>
+            @endcan
+        @endif
+    </div>
+
 </x-layouts.app>

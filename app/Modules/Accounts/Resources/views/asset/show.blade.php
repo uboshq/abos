@@ -5,6 +5,23 @@
     পাতার আসল কাজ: "গত জুনেরটা কি বসানো হয়েছিল" প্রশ্নের উত্তর আর
     কোথাও নেই।
 --}}
+@php
+    /* কলাম ধরে, স্লটে নয় — কম্পোনেন্ট স্লট পড়ে না। */
+    $columns = [
+        [
+            'key' => 'period_end',
+            'label' => __('accounts::asset.period'),
+            'render' => fn ($e) => $e->period_end?->format('M Y'),
+        ],
+        [
+            'key' => 'amount',
+            'label' => __('accounts::asset.amount'),
+            'numeric' => true,
+            'render' => fn ($e) => view('accounts::asset.partials.amount', ['value' => $e->amount]),
+        ],
+    ];
+@endphp
+
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ $asset->name }}</x-slot:title>
 
@@ -89,23 +106,8 @@
         @endcan
     @endif
 
-    @if ($asset->depreciation->isEmpty())
-        <x-ui.empty-state :message="__('accounts::asset.empty_entries')" />
-    @else
-        <x-ui.table :columns="[
-            ['label' => __('accounts::asset.period')],
-            ['label' => __('accounts::asset.amount'), 'numeric' => true],
-        ]">
-            @foreach ($asset->depreciation as $entry)
-                <tr class="border-t border-(--color-border)">
-                    <td class="px-3 align-middle" data-label="{{ __('accounts::asset.period') }}">
-                        {{ $entry->period_end?->format('M Y') }}
-                    </td>
-                    <td class="px-3 text-end align-middle num" data-label="{{ __('accounts::asset.amount') }}">
-                        <x-ui.amount :value="$entry->amount" />
-                    </td>
-                </tr>
-            @endforeach
-        </x-ui.table>
-    @endif
+    <x-ui.table :rows="$asset->depreciation"
+                :columns="$columns"
+                :empty="__('accounts::asset.empty_entries')" />
+
 </x-layouts.app>

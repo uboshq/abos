@@ -4,7 +4,50 @@
     মাস শেষে প্রথম প্রশ্নটা "কোন হিসাবের কোন মাস মেলানো হয়েছে, আর কোনটা
     বাকি" — তাই তালিকাটাই প্রধান পর্দা, আর নতুন মিলকরণ শুরু করার ফর্মটা
     উপরে, চেকের খাতার মতোই।
+
+    ── কলামগুলো এখানে, স্লটে নয় ─────────────────────────────────────────
+    প্রথম লেখায় `<x-ui.table>`-এর ভেতরে হাতে `<tr>` বসানো ছিল। কম্পোনেন্ট
+    স্লট পড়েই না — সে `:rows` আর `:columns` থেকে নিজে সারি আঁকে, আর
+    প্রতিটা কলামে `key` ও `label` দুইটাই চায়।
+
+    ফলে পর্দাটা **খালি অবস্থায় ঠিক চলত** (তখন `@if` টেবিলটা এড়িয়ে যায়),
+    আর প্রথম মিলকরণটা তৈরি হওয়ামাত্র ৫০০ দিত। ওরকম ভুল সবচেয়ে খারাপ:
+    ডেমোতে ধরা পড়ে না, ধরা পড়ে প্রথম আসল ব্যবহারকারীর হাতে।
 --}}
+@php
+    $columns = [
+        [
+            'key' => 'bank',
+            'label' => __('accounts::recon.bank_account'),
+            'render' => fn ($r) => view('accounts::reconciliation.partials.bank', ['recon' => $r]),
+        ],
+        [
+            'key' => 'statement_date',
+            'label' => __('accounts::recon.statement_date'),
+            'width' => '9rem',
+            'render' => fn ($r) => $r->statement_date?->format('d M Y'),
+        ],
+        [
+            'key' => 'statement_balance',
+            'label' => __('accounts::recon.statement_balance'),
+            'numeric' => true,
+            'width' => '11rem',
+            'render' => fn ($r) => view('accounts::reconciliation.partials.amount', ['value' => $r->statement_balance]),
+        ],
+        [
+            'key' => 'status',
+            'label' => __('accounts::recon.status'),
+            'width' => '9rem',
+            'render' => fn ($r) => view('accounts::reconciliation.partials.status', ['recon' => $r]),
+        ],
+        [
+            'key' => 'confirmed_by',
+            'label' => __('accounts::recon.confirmed_by'),
+            'render' => fn ($r) => $r->confirmer?->name ?? '—',
+        ],
+    ];
+@endphp
+
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('accounts::recon.title') }}</x-slot:title>
 
@@ -79,43 +122,9 @@
         </form>
     @endcan
 
-    @if ($reconciliations->isEmpty())
-        <x-ui.empty-state :message="__('accounts::recon.empty')" />
-    @else
-        <x-ui.table :columns="[
-            ['label' => __('accounts::recon.bank_account')],
-            ['label' => __('accounts::recon.statement_date')],
-            ['label' => __('accounts::recon.statement_balance'), 'numeric' => true],
-            ['label' => __('accounts::recon.status')],
-            ['label' => __('accounts::recon.confirmed_by')],
-        ]">
-            @foreach ($reconciliations as $recon)
-                <tr class="border-t border-(--color-border)">
-                    <td class="px-3 align-middle" data-label="{{ __('accounts::recon.bank_account') }}">
-                        <a href="{{ route('accounts.reconciliation.show', $recon) }}"
-                           class="text-(--color-brand-500) hover:underline">
-                            {{ $recon->bankAccount?->label() }}
-                        </a>
-                    </td>
-                    <td class="px-3 align-middle" data-label="{{ __('accounts::recon.statement_date') }}">
-                        {{ $recon->statement_date?->format('d M Y') }}
-                    </td>
-                    <td class="px-3 text-end align-middle num"
-                        data-label="{{ __('accounts::recon.statement_balance') }}">
-                        <x-ui.amount :value="$recon->statement_balance" />
-                    </td>
-                    <td class="px-3 align-middle" data-label="{{ __('accounts::recon.status') }}">
-                        <x-ui.badge :tone="$recon->isConfirmed() ? 'success' : 'neutral'">
-                            {{ $recon->isConfirmed() ? __('accounts::recon.confirmed') : __('accounts::recon.draft') }}
-                        </x-ui.badge>
-                    </td>
-                    <td class="px-3 align-middle" data-label="{{ __('accounts::recon.confirmed_by') }}">
-                        {{ $recon->confirmer?->name ?? '—' }}
-                    </td>
-                </tr>
-            @endforeach
-        </x-ui.table>
+    <x-ui.table :rows="$reconciliations"
+                :columns="$columns"
+                :empty="__('accounts::recon.empty')" />
 
-        {{ $reconciliations->links() }}
-    @endif
+    {{ $reconciliations->links() }}
 </x-layouts.app>
