@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Supplier\Services;
 
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
+use App\Core\Services\DuplicateGuard;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
@@ -38,6 +39,7 @@ final class SupplierService
     {
         $this->assertBanglaNameIfRequired($data);
         $this->assertBinIfRequired($data);
+        $this->assertNotADuplicate($data);
 
         return DB::transaction(function () use ($data) {
             // কোড না দিলে সিরিজ থেকে — নম্বর ইস্যু ট্রানজেকশনের ভেতরে,
@@ -98,6 +100,7 @@ final class SupplierService
     {
         $this->assertBanglaNameIfRequired($data, $supplier);
         $this->assertBinIfRequired($data, $supplier);
+        $this->assertNotADuplicate($data, $supplier->id);
 
         if (isset($data['code']) && trim((string) $data['code']) !== $supplier->code) {
             $this->assertCodeIsFree(trim((string) $data['code']), $supplier->id);
@@ -190,6 +193,53 @@ final class SupplierService
         if (blank($value)) {
             throw ValidationException::withMessages([
                 'bin' => __('supplier::validation.bin_required'),
+            ]);
+        }
+    }
+
+    /**
+     * এই সরবরাহকারী কি আগে থেকেই খাতায় আছেন।
+     *
+     * গ্রাহকের মতোই নিয়ম, আর কারণও এক: এক পক্ষের দুইটা সারি হলে দেনা
+     * দুই ভাগ হয়ে যায়, আর কেউ জানে না মোট কত দিতে হবে।
+     *
+     * সরবরাহকারীতে ফোন দুই ঘরে থাকতে পারে — প্রতিষ্ঠানের নম্বর, আর
+     * যোগাযোগের মানুষের নম্বর। দুইটাই দেখা হয়, কারণ ছোট সরবরাহকারীর
+     * বেলায় ওই দুইটা প্রায়ই একই নম্বর।
+     *
+     * গ্রাহকের মতোই `$data` রেফারেন্সে — `allow_duplicate` একটা সিদ্ধান্তের
+     * ঘর, সরবরাহকারীর কোনো কলাম নয়, তাই যাচাইয়ের পরেই মুছে ফেলা হয়।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function assertNotADuplicate(array &$data, ?int $exceptId = null): void
+    {
+        $guard = app(DuplicateGuard::class);
+
+        $allowed = (bool) ($data['allow_duplicate'] ?? false);
+        unset($data['allow_duplicate']);
+
+        $guard->assertPhoneIsFree(
+            Supplier::class,
+            ['phone', 'contact_phone'],
+            $data['phone'] ?? null,
+            $exceptId,
+        );
+
+        if ($allowed) {
+            return;
+        }
+
+        $matches = $guard->nameMatches(
+            Supplier::class,
+            ['name_en', 'name_bn'],
+            $data['name_en'] ?? null,
+            $exceptId,
+        );
+
+        if ($matches->isNotEmpty()) {
+            throw ValidationException::withMessages([
+                'name_en' => __('core.duplicate.name_matches').' '.__('core.duplicate.confirm_hint'),
             ]);
         }
     }

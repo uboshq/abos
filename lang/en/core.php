@@ -434,4 +434,12 @@ return [
         'no_reason' => 'no reason given',
         'too_far_back' => 'An entry cannot be dated more than :days days back. The earliest date allowed is :date.',
     ],
+
+    // নকল ঠেকানো — একই পক্ষ দুইবার ঢোকা
+    'duplicate' => [
+        'phone_taken' => 'That phone number already belongs to :name (:code). Two rows for one party split their dues in half.',
+        'name_matches' => 'A party with this name already exists — check before you go on.',
+        'confirm_hint' => 'If this really is a different business, tick the box and save again.',
+        'allow' => 'This is a different business',
+    ],
 ];
