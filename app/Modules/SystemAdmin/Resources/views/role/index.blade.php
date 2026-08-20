@@ -7,6 +7,35 @@
     কেটে দিলে পরের ডিপ্লয়েই ফিরে আসত — অর্থাৎ বোতামটা একটা মিথ্যা
     প্রতিশ্রুতি দিত।
 --}}
+@php
+    /* কলাম ধরে — `x-ui.table` স্লট পড়ে না, সারি আসে :rows থেকে। */
+    $columns = [
+        [
+            'key' => 'name',
+            'label' => __('system_admin::field.role_name'),
+            'render' => fn ($r) => $r->name,
+        ],
+        [
+            'key' => 'permissions_count',
+            'label' => __('system_admin::field.permission_count'),
+            'numeric' => true,
+            'width' => '10rem',
+        ],
+        [
+            'key' => 'users_count',
+            'label' => __('system_admin::field.user_count'),
+            'numeric' => true,
+            'width' => '9rem',
+        ],
+        [
+            'key' => 'actions',
+            'label' => __('core.table.actions'),
+            'render' => fn ($r) => view('system_admin::role.partials.actions',
+                ['role' => $r, 'ownerRole' => $ownerRole]),
+        ],
+    ];
+@endphp
+
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('system_admin::menu.roles') }}</x-slot:title>
 
@@ -38,38 +67,8 @@
         </div>
     @endif
 
-    <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <table class="w-full text-sm">
-            <thead class="border-b border-(--color-border) text-start text-(--color-ink-muted)">
-                <tr>
-                    <th class="p-2 text-start font-medium">{{ __('system_admin::field.role_name') }}</th>
-                    <th class="p-2 text-end font-medium">{{ __('system_admin::field.permission_count') }}</th>
-                    <th class="p-2 text-end font-medium">{{ __('system_admin::field.user_count') }}</th>
-                    <th class="p-2 text-start font-medium">{{ __('core.table.actions') }}</th>
-                </tr>
-            </thead>
+    <x-ui.table :rows="$roles"
+                :columns="$columns"
+                :empty="__('core.empty.no_results')" />
 
-            <tbody>
-                @foreach ($roles as $role)
-                    <tr class="border-b border-(--color-border) last:border-b-0">
-                        <td class="p-2 font-medium">{{ $role->name }}</td>
-                        <td class="tabular p-2 text-end">{{ $role->permissions_count }}</td>
-                        <td class="tabular p-2 text-end">{{ $role->users_count }}</td>
-                        <td class="p-2">
-                            @if ($role->name === $ownerRole)
-                                <span class="text-(--color-ink-muted)">
-                                    {{ __('system_admin::message.owner_role_fixed') }}
-                                </span>
-                            @else
-                                <a href="{{ route('system_admin.role.edit', $role) }}"
-                                   class="text-(--color-brand-500) underline-offset-2 hover:underline">
-                                    {{ __('core.action.edit') }}
-                                </a>
-                            @endif
-                        </td>
-                    </tr>
-                @endforeach
-            </tbody>
-        </table>
-    </div>
 </x-layouts.app>

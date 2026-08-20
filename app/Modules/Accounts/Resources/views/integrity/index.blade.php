@@ -11,6 +11,27 @@
     "trial balance mismatch" পড়ে তিনি বুঝবেন না এটা জরুরি না
     উপেক্ষণীয় — আর না বুঝলে লাল সারিটা দেখা আর না দেখা একই।
 --}}
+@php
+    /*
+        কলাম ধরে — `x-ui.table` স্লট পড়ে না, সারি আসে :rows থেকে।
+
+        এই পর্দায় টেবিলটা প্রতিটা ভাঙা পরীক্ষার নিচে আলাদা করে বসে,
+        তাই কলামের সংজ্ঞা একবার লিখে সবগুলোয় ব্যবহার করা হয়।
+    */
+    $findingColumns = [
+        [
+            'key' => 'what',
+            'label' => __('core.table.document'),
+            'render' => fn ($f) => view('accounts::integrity.partials.what', ['finding' => $f]),
+        ],
+        [
+            'key' => 'detail',
+            'label' => __('accounts::message.what_does_not_match'),
+            'numeric' => true,
+        ],
+    ];
+@endphp
+
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('accounts::menu.books_check') }}</x-slot:title>
 
@@ -67,43 +88,9 @@
                             {{ $check->whenBroken }}
                         </p>
 
-                        <div class="overflow-x-auto">
-                            <table class="w-full border-collapse text-sm">
-                                <thead>
-                                    <tr class="border-b border-(--color-border) bg-(--color-surface-app)">
-                                        <th scope="col" class="px-4 py-2 text-start font-medium text-(--color-ink-muted)">
-                                            {{ __('core.table.document') }}
-                                        </th>
-                                        <th scope="col" class="px-4 py-2 text-start font-medium text-(--color-ink-muted)">
-                                            {{ __('accounts::message.what_does_not_match') }}
-                                        </th>
-                                    </tr>
-                                </thead>
+                        <x-ui.table :rows="$result['findings']"
+                                    :columns="$findingColumns" />
 
-                                <tbody>
-                                    @foreach ($result['findings'] as $finding)
-                                        <tr class="border-b border-(--color-border) transition-colors
-                                                   hover:bg-(--color-surface-hover)">
-                                            <td class="px-4 py-2 align-middle">
-                                                {{-- নিয়ম ১: প্রতিটা সারি তার উৎসে নিয়ে যায়, আর
-                                                     এখানে সেটাই সবচেয়ে জরুরি — সংখ্যাটা দেখার
-                                                     জন্য নয়, সারানোর জন্য --}}
-                                                @if ($finding->isDrillable())
-                                                    <x-ui.drill :source="$finding->sourceType" :id="$finding->sourceId">
-                                                        {{ $finding->what }}
-                                                    </x-ui.drill>
-                                                @else
-                                                    {{ $finding->what }}
-                                                @endif
-                                            </td>
-                                            <td class="px-4 py-2 align-middle num text-(--color-ink-muted)">
-                                                {{ $finding->detail }}
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
                     @endunless
                 </section>
             @endforeach

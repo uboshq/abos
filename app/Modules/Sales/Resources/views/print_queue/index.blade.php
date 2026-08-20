@@ -9,6 +9,43 @@
     তাই প্রতিটা সারি ছাপার পাতাটার দিকে একটা লিংক। কাগজ সত্যিই বেরোলে
     ওই পাতাটাই গোনাটা বাড়ায়, প্রথমবারের মতোই।
 --}}
+@php
+    /* কলাম ধরে — `x-ui.table` স্লট পড়ে না, সারি আসে :rows থেকে। */
+    $columns = [
+        [
+            'key' => 'document_no',
+            'label' => __('core.table.document'),
+            'render' => fn ($j) => $j->document_no ?: '—',
+        ],
+        [
+            'key' => 'paper',
+            'label' => __('sales::field.paper'),
+            'width' => '7rem',
+        ],
+        [
+            'key' => 'status',
+            'label' => __('sales::field.status'),
+            'width' => '9rem',
+            'render' => fn ($j) => view('sales::print_queue.partials.status', ['job' => $j]),
+        ],
+        /*
+            ব্যর্থতার কারণটা দেখানো হয়, লুকানো হয় না। "কাগজ ফুরিয়েছে"
+            আর "প্রিন্টার বন্ধ" দুইটা আলাদা কাজ চায়, আর কর্মী সেটা
+            জানলে দ্বিতীয়বার একই ভুল করেন না।
+        */
+        [
+            'key' => 'failure',
+            'label' => __('sales::field.print_failure'),
+            'render' => fn ($j) => $j->failure ?: '—',
+        ],
+        [
+            'key' => 'actions',
+            'label' => '',
+            'render' => fn ($j) => view('sales::print_queue.partials.actions', ['job' => $j]),
+        ],
+    ];
+@endphp
+
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('sales::menu.print_queue') }}</x-slot:title>
 
@@ -32,56 +69,9 @@
         --}}
         <x-ui.empty-state icon="printer" :message="__('sales::message.print_queue_empty')" />
     @else
-        <div class="overflow-x-auto rounded-(--radius-card) border border-(--color-border)">
-            <table class="w-full text-sm">
-                <thead class="bg-(--color-surface-app) text-start">
-                    <tr>
-                        <th class="px-3 py-2 text-start">{{ __('core.table.document') }}</th>
-                        <th class="px-3 py-2 text-start">{{ __('sales::field.paper') }}</th>
-                        <th class="px-3 py-2 text-start">{{ __('sales::field.status') }}</th>
-                        <th class="px-3 py-2 text-start">{{ __('sales::field.print_failure') }}</th>
-                        <th class="px-3 py-2"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach ($jobs as $job)
-                        <tr class="border-t border-(--color-border)">
-                            <td class="px-3 py-2 font-medium">{{ $job->document_no ?: '—' }}</td>
-                            <td class="px-3 py-2">{{ $job->paper }}</td>
-                            <td class="px-3 py-2">
-                                <x-ui.badge :tone="$job->status === \App\Modules\Sales\Models\PrintJob::FAILED ? 'danger' : 'warn'">
-                                    {{ __('sales::message.print_'.$job->status) }}
-                                </x-ui.badge>
-                            </td>
+        <x-ui.table :rows="$jobs"
+                    :columns="$columns"
+                    :empty="__('core.empty.no_results')" />
 
-                            {{--
-                                ব্যর্থতার কারণটা দেখানো হয়, লুকানো হয় না।
-                                "কাগজ ফুরিয়েছে" আর "প্রিন্টার বন্ধ" দুইটা
-                                আলাদা কাজ চায়, আর কর্মী সেটা জানলে দ্বিতীয়বার
-                                একই ভুল করেন না।
-                            --}}
-                            <td class="px-3 py-2 text-(--color-ink-muted)">{{ $job->failure ?: '—' }}</td>
-
-                            <td class="px-3 py-2 text-end whitespace-nowrap">
-                                @if ($job->printUrl() !== null)
-                                    <a class="text-(--color-link) underline"
-                                       href="{{ $job->printUrl() }}" target="_blank" rel="noopener">
-                                        {{ __('sales::action.print_again') }}
-                                    </a>
-                                @endif
-
-                                <form method="POST" class="ms-3 inline"
-                                      action="{{ route('sales.print_queue.settle', ['job' => $job->id]) }}">
-                                    @csrf
-                                    <button type="submit" class="text-(--color-ink-muted) underline">
-                                        {{ __('sales::action.print_settled') }}
-                                    </button>
-                                </form>
-                            </td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </div>
     @endif
 </x-layouts.app>
