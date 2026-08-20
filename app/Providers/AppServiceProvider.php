@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Core\Engines\Approval\ApprovalEngine;
+use App\Core\Services\DataScope;
 use App\Core\Services\ListExport;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
@@ -104,6 +105,27 @@ class AppServiceProvider extends ServiceProvider
          * মালিক ছক বদলালে সেটা সাথে সাথেই কার্যকর হওয়া দরকার।
          */
         $this->app->scoped(ApprovalEngine::class);
+
+        /*
+         * কে কোন সারি দেখবেন — অনুরোধ প্রতি একটা।
+         *
+         * ── বাঁধন না থাকলে ক্লাসটা যা প্রতিশ্রুতি দেয় তা করত না ─────
+         * `DataScope` নিজের ভেতরে সীমাগুলো জমিয়ে রাখে, কারণ একটা পাতায়
+         * বিশটা মডেল কোয়েরি হতে পারে আর প্রতিটাতে জিজ্ঞেস করলে বিশটা
+         * একই কোয়েরি যেত।
+         *
+         * বাঁধন ছাড়া প্রতিটা `app(DataScope::class)` নতুন খালি ক্যাশ
+         * বানাত — অর্থাৎ জমানোটা কখনো কাজই করত না, আর `forget()`
+         * অন্য একটা বস্তুর ক্যাশ মুছত।
+         *
+         * ধরা পড়েছে টেস্টে: অনুমতি বসানোর পরেও `allows()` পুরনো উত্তর
+         * দিচ্ছিল, কারণ যে বস্তুটা ভুলেছিল সে আর যে উত্তর দিচ্ছিল সে
+         * এক ছিল না।
+         *
+         * scoped, singleton নয়: পরের অনুরোধে আগের ব্যবহারকারীর সীমা
+         * ধরে রাখা চলবে না — ওটা ঠিক উল্টো দিকের নিরাপত্তা-ফুটো হত।
+         */
+        $this->app->scoped(DataScope::class);
     }
 
     /**
