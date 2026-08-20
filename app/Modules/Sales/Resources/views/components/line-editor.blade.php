@@ -122,7 +122,7 @@
                         <td class="p-1" data-label="{{ __('sales::field.product') }}">
                             <select :name="`lines[${i}][product_id]`" x-model="row.product_id" required
                                     @change="row.unit_id = ''"
-                                    class="h-9 w-full rounded-(--radius-field) border border-(--color-border)
+                                    class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                                            bg-(--color-surface-card) px-2">
                                 <option value="">-</option>
                                 @foreach ($products as $product)
@@ -134,7 +134,7 @@
                         @if ($linkField)
                             <td class="p-1" data-label="{{ __('sales::field.'.($linkField === 'purchase_order_line_id' ? 'order' : 'receipt')) }}">
                                 <select :name="`lines[${i}][{{ $linkField }}]`" x-model="row.link"
-                                        class="h-9 w-full rounded-(--radius-field) border border-(--color-border)
+                                        class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                                                bg-(--color-surface-card) px-2">
                                     <option value="">-</option>
                                     @foreach ($linkOptions as $value => $label)
@@ -147,7 +147,7 @@
                         <td class="p-1" data-label="{{ __('sales::field.quantity') }}">
                             <input type="number" step="0.01" inputmode="decimal" required
                                    :name="`lines[${i}][{{ $qtyField }}]`" x-model="row.qty"
-                                   class="num h-9 w-full sm:w-28 rounded-(--radius-field) border border-(--color-border)
+                                   class="num h-(--spacing-field-compact) w-full sm:w-28 rounded-(--radius-field) border border-(--color-border)
                                           bg-(--color-surface-card) px-2 text-end">
                         </td>
 
@@ -167,7 +167,7 @@
                             <td class="p-1" data-label="{{ __('sales::field.unit') }}">
                                 <select :name="`lines[${i}][unit_id]`" x-model="row.unit_id"
                                         x-show="unitsFor(row).length > 0"
-                                        class="h-9 w-full sm:w-28 rounded-(--radius-field) border border-(--color-border)
+                                        class="h-(--spacing-field-compact) w-full sm:w-28 rounded-(--radius-field) border border-(--color-border)
                                                bg-(--color-surface-card) px-2">
                                     <option value="">-</option>
                                     <template x-for="unit in unitsFor(row)" :key="unit.id">
@@ -180,7 +180,7 @@
                         <td class="p-1" data-label="{{ __('sales::field.rate') }}">
                             <input type="number" step="0.0001" inputmode="decimal" required
                                    :name="`lines[${i}][rate]`" x-model="row.rate"
-                                   class="num h-9 w-full sm:w-28 rounded-(--radius-field) border border-(--color-border)
+                                   class="num h-(--spacing-field-compact) w-full sm:w-28 rounded-(--radius-field) border border-(--color-border)
                                           bg-(--color-surface-card) px-2 text-end">
                         </td>
 
@@ -188,13 +188,13 @@
                             <td class="p-1" data-label="{{ __('sales::field.discount') }}">
                                 <input type="number" step="0.01" inputmode="decimal"
                                        :name="`lines[${i}][discount]`" x-model="row.discount"
-                                       class="num h-9 w-full sm:w-24 rounded-(--radius-field) border border-(--color-border)
+                                       class="num h-(--spacing-field-compact) w-full sm:w-24 rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-card) px-2 text-end">
                             </td>
                             <td class="p-1" data-label="{{ __('sales::field.tax') }}">
                                 <input type="number" step="0.01" inputmode="decimal"
                                        :name="`lines[${i}][tax]`" x-model="row.tax"
-                                       class="num h-9 w-full sm:w-24 rounded-(--radius-field) border border-(--color-border)
+                                       class="num h-(--spacing-field-compact) w-full sm:w-24 rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-card) px-2 text-end">
                             </td>
                         @endif

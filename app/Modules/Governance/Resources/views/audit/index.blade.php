@@ -46,7 +46,7 @@
                 :sort="$sortOptions"
                 :columns="$columns" :search-placeholder="__('governance::label.search_hint')">
                 <select name="user" aria-label="{{ __('governance::field.who') }}"
-                        class="h-9 rounded-(--radius-field) border border-(--color-border)
+                        class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
                                bg-(--color-surface-app) px-2 text-sm">
                     <option value="">{{ __('governance::label.all_users') }}</option>
                     @foreach ($users as $user)
@@ -57,7 +57,7 @@
                 </select>
 
                 <select name="action" aria-label="{{ __('governance::field.action') }}"
-                        class="h-9 rounded-(--radius-field) border border-(--color-border)
+                        class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
                                bg-(--color-surface-app) px-2 text-sm">
                     <option value="">{{ __('governance::label.all_actions') }}</option>
                     @foreach ($actions as $action)
@@ -68,7 +68,7 @@
                 </select>
 
                 <select name="module" aria-label="{{ __('governance::field.module') }}"
-                        class="h-9 rounded-(--radius-field) border border-(--color-border)
+                        class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
                                bg-(--color-surface-app) px-2 text-sm">
                     <option value="">{{ __('governance::label.all_modules') }}</option>
                     @foreach ($modules as $code => $label)
@@ -81,12 +81,12 @@
                 <x-ui.date name="from"
                             value="{{ $filters['from'] ?? '' }}"
                             aria-label="{{ __('governance::field.from') }}"
-                            class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
+                            class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
 
                 <x-ui.date name="to"
                             value="{{ $filters['to'] ?? '' }}"
                             aria-label="{{ __('governance::field.to') }}"
-                            class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
+                            class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
                             </x-ui.toolbar>
         </form>
 

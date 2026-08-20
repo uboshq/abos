@@ -76,7 +76,7 @@
             {{-- খাতাটা নিজে রপ্তানি হয় না — রপ্তানির খাতার একই কারণে --}}
             <x-ui.toolbar :title="__('governance::menu.login_history')" :count="trans_choice('core.count.records', $rows->total(), ['count' => $rows->total()])" :export="false" :search="false">
                 <select name="user" aria-label="{{ __('governance::field.who') }}"
-                        class="h-9 rounded-(--radius-field) border border-(--color-border)
+                        class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
                                bg-(--color-surface-app) px-2 text-sm">
                     <option value="">{{ __('governance::field.who') }}</option>
                     @foreach ($users as $user)
@@ -96,14 +96,14 @@
                     <span class="sr-only">{{ __('core.table.from_date') }}</span>
                     <x-ui.date name="from"
                                value="{{ request('from') }}"
-                               class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
+                               class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
                                </label>
 
                 <label>
                     <span class="sr-only">{{ __('core.table.to_date') }}</span>
                     <x-ui.date name="to"
                                value="{{ request('to') }}"
-                               class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
+                               class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
                                </label>
                                </x-ui.toolbar>
         </form>

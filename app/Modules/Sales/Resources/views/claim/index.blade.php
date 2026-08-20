@@ -107,11 +107,11 @@
                                         <input type="number" step="0.01" name="amount"
                                                value="{{ $claim->amount }}"
                                                title="{{ __('sales::portal.received') }}"
-                                               class="num h-9 w-28 rounded-(--radius-field) border
+                                               class="num h-(--spacing-field-compact) w-28 rounded-(--radius-field) border
                                                       border-(--color-border) bg-(--color-surface-app) px-2 text-end">
 
                                         <select name="account_id" required
-                                                class="h-9 rounded-(--radius-field) border
+                                                class="h-(--spacing-field-compact) rounded-(--radius-field) border
                                                        border-(--color-border) bg-(--color-surface-app) px-2">
                                             @foreach ($moneyAccounts as $account)
                                                 <option value="{{ $account->id }}"
@@ -131,7 +131,7 @@
                                         @csrf
                                         <input type="text" name="decision_reason" required
                                                placeholder="{{ __('sales::portal.reason') }}"
-                                               class="h-9 w-40 rounded-(--radius-field) border
+                                               class="h-(--spacing-field-compact) w-40 rounded-(--radius-field) border
                                                       border-(--color-border) bg-(--color-surface-app) px-2">
                                         <x-ui.button type="submit">
                                             {{ __('sales::portal.reject') }}

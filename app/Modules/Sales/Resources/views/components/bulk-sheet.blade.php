@@ -175,11 +175,11 @@
         <div class="flex flex-wrap items-center gap-2 border-b border-(--color-border)
                     bg-(--color-surface-card) px-4 py-2">
             <input type="search" x-model="search" placeholder="{{ __('sales::bulk.search') }}"
-                   class="h-9 min-w-40 flex-1 rounded-(--radius-field) border border-(--color-border)
+                   class="h-(--spacing-field-compact) min-w-40 flex-1 rounded-(--radius-field) border border-(--color-border)
                           bg-(--color-surface-card) px-2 text-sm">
 
             <select x-model="filter" aria-label="{{ __('core.toolbar.filter') }}"
-                    class="h-9 rounded-(--radius-field) border border-(--color-border)
+                    class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
                            bg-(--color-surface-card) px-2 text-sm">
                 <option value="all">{{ __('sales::bulk.filter_all') }}</option>
                 <option value="in_stock">{{ __('sales::bulk.filter_in_stock') }}</option>
@@ -187,7 +187,7 @@
             </select>
 
             <select x-model="sort" aria-label="{{ __('core.toolbar.sort_by') }}"
-                    class="h-9 rounded-(--radius-field) border border-(--color-border)
+                    class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
                            bg-(--color-surface-card) px-2 text-sm">
                 <option value="name">{{ __('sales::bulk.sort_name') }}</option>
                 <option value="available">{{ __('sales::bulk.sort_available') }}</option>
@@ -232,7 +232,7 @@
                             <td class="px-1 py-1">
                                 <input type="number" step="0.01" inputmode="decimal" min="0"
                                        x-model="box(row.id).qty"
-                                       class="num h-8 w-20 rounded-(--radius-field) border border-(--color-border)
+                                       class="num h-(--spacing-field-dense) w-20 rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-card) px-1.5 text-end">
                             </td>
 
@@ -240,7 +240,7 @@
                                 <td class="px-1 py-1">
                                     <input type="number" step="0.01" inputmode="decimal" min="0"
                                            x-model="box(row.id).free"
-                                           class="num h-8 w-20 rounded-(--radius-field) border border-(--color-border)
+                                           class="num h-(--spacing-field-dense) w-20 rounded-(--radius-field) border border-(--color-border)
                                                   bg-(--color-surface-card) px-1.5 text-end">
                                 </td>
                             @endif

@@ -303,21 +303,21 @@
                                     <td class="px-2 py-1.5">
                                         <input type="number" step="0.01" inputmode="decimal"
                                                :name="`lines[${index}][qty]`" x-model="line.qty"
-                                               class="num h-8 w-20 rounded-(--radius-field) border
+                                               class="num h-(--spacing-field-dense) w-20 rounded-(--radius-field) border
                                                       border-(--color-border) bg-(--color-surface-card) px-1 text-end">
                                     </td>
                                     @if ($show['free_qty'])
                                         <td class="px-2 py-1.5">
                                             <input type="number" step="0.01" inputmode="decimal"
                                                    :name="`lines[${index}][free_qty]`" x-model="line.free_qty"
-                                                   class="num h-8 w-20 rounded-(--radius-field) border
+                                                   class="num h-(--spacing-field-dense) w-20 rounded-(--radius-field) border
                                                           border-(--color-border) bg-(--color-surface-card) px-1 text-end">
                                         </td>
                                     @endif
                                     <td class="px-2 py-1.5">
                                         <input type="number" step="0.01" inputmode="decimal"
                                                :name="`lines[${index}][rate]`" x-model="line.rate"
-                                               class="num h-8 w-24 rounded-(--radius-field) border
+                                               class="num h-(--spacing-field-dense) w-24 rounded-(--radius-field) border
                                                       border-(--color-border) bg-(--color-surface-card) px-1 text-end">
                                     </td>
                                     <td class="num px-2 py-1.5 text-end text-(--color-ink-muted)"
@@ -326,7 +326,7 @@
                                         <td class="px-2 py-1.5">
                                             <input type="number" step="0.01" inputmode="decimal"
                                                    :name="`lines[${index}][discount]`" x-model="line.discount"
-                                                   class="num h-8 w-20 rounded-(--radius-field) border
+                                                   class="num h-(--spacing-field-dense) w-20 rounded-(--radius-field) border
                                                           border-(--color-border) bg-(--color-surface-card) px-1 text-end">
                                         </td>
                                     @endif
@@ -334,7 +334,7 @@
                                         <td class="px-2 py-1.5">
                                             <input type="number" step="0.01" inputmode="decimal"
                                                    :name="`lines[${index}][tax]`" x-model="line.tax"
-                                                   class="num h-8 w-20 rounded-(--radius-field) border
+                                                   class="num h-(--spacing-field-dense) w-20 rounded-(--radius-field) border
                                                           border-(--color-border) bg-(--color-surface-card) px-1 text-end">
                                         </td>
                                     @endif

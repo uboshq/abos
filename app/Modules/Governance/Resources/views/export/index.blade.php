@@ -52,7 +52,7 @@
             --}}
             <x-ui.toolbar :title="__('governance::menu.export_log')" :count="trans_choice('core.count.records', $rows->total(), ['count' => $rows->total()])" :export="false" :search="false">
                 <select name="user" aria-label="{{ __('governance::field.who') }}"
-                        class="h-9 rounded-(--radius-field) border border-(--color-border)
+                        class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
                                bg-(--color-surface-app) px-2 text-sm">
                     <option value="">{{ __('governance::field.who') }}</option>
                     @foreach ($users as $user)
@@ -63,7 +63,7 @@
                 </select>
 
                 <select name="route" aria-label="{{ __('governance::field.what_was_taken') }}"
-                        class="h-9 rounded-(--radius-field) border border-(--color-border)
+                        class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
                                bg-(--color-surface-app) px-2 text-sm">
                     <option value="">{{ __('governance::field.what_was_taken') }}</option>
                     @foreach ($routes as $route)
@@ -75,14 +75,14 @@
                     <span class="sr-only">{{ __('core.table.from_date') }}</span>
                     <x-ui.date name="from"
                                value="{{ request('from') }}"
-                               class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
+                               class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
                                </label>
 
                 <label class="flex items-center gap-1 text-sm">
                     <span class="sr-only">{{ __('core.table.to_date') }}</span>
                     <x-ui.date name="to"
                                value="{{ request('to') }}"
-                               class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
+                               class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
                                </label>
                                </x-ui.toolbar>
         </form>

@@ -26,7 +26,7 @@
                     <label class="text-sm">
                         <span class="mb-1 block text-(--color-ink-muted)">{{ __('sales::target.month') }}</span>
                         <input type="month" name="month" value="{{ $month->format('Y-m') }}"
-                               class="h-9 rounded-(--radius-field) border border-(--color-border)
+                               class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
                                       bg-(--color-surface-card) px-2">
                     </label>
                     <x-ui.button type="submit" tone="secondary">{{ __('core.action.apply') }}</x-ui.button>
@@ -77,7 +77,7 @@
                                     <input type="number" step="0.01" min="0" inputmode="decimal"
                                            name="amount[{{ $row['user']->id }}]"
                                            value="{{ $row['target'] !== null ? rtrim(rtrim($row['target'], '0'), '.') : '' }}"
-                                           class="num h-9 w-32 rounded-(--radius-field) border border-(--color-border)
+                                           class="num h-(--spacing-field-compact) w-32 rounded-(--radius-field) border border-(--color-border)
                                                   bg-(--color-surface-card) px-2 text-end">
                                 @else
                                     <span class="tabular">

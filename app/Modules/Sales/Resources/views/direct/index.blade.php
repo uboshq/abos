@@ -82,7 +82,7 @@
                         <span class="mb-1 block text-2xs font-semibold uppercase tracking-wide
                                      text-(--color-ink-muted)">{{ __('sales::field.inv_number') }}</span>
                         <input type="text" disabled value="{{ __('sales::field.on_confirm') }}"
-                               class="h-8 w-full rounded-(--radius-field) border border-(--color-border)
+                               class="h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
                                       bg-(--color-surface-app) px-2 text-sm text-(--color-ink-muted)">
                     </label>
 
@@ -91,7 +91,7 @@
                                      text-(--color-ink-muted)">{{ __('sales::field.credit_period') }}</span>
                         <input type="number" min="0" max="365" name="credit_period_days" x-model="creditDays"
                                placeholder="{{ __('sales::field.days') }}"
-                               class="num h-8 w-full rounded-(--radius-field) border border-(--color-border)
+                               class="num h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
                                       bg-(--color-surface-app) px-2 text-sm">
                     </label>
 
@@ -100,7 +100,7 @@
                             <span class="mb-1 block text-2xs font-semibold uppercase tracking-wide
                                          text-(--color-ink-muted)">{{ __('sales::field.do_no') }}</span>
                             <input type="text" name="do_no" placeholder="{{ __('sales::field.optional') }}"
-                                   class="h-8 w-full rounded-(--radius-field) border border-(--color-border)
+                                   class="h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
                                           bg-(--color-surface-app) px-2 text-sm">
                         </label>
                     @endif
@@ -110,7 +110,7 @@
                             <span class="mb-1 block text-2xs font-semibold uppercase tracking-wide
                                          text-(--color-ink-muted)">{{ __('sales::field.warehouse') }}</span>
                             <select name="warehouse_id"
-                                    class="h-8 w-full rounded-(--radius-field) border border-(--color-border)
+                                    class="h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
                                            bg-(--color-surface-app) px-2 text-sm">
                                 @foreach ($warehouses as $w)
                                     <option value="{{ $w->id }}" @selected($warehouse?->id === $w->id)>
@@ -151,7 +151,7 @@
                                    x-init="$nextTick(() => $refs.search.focus())"
                                    @keydown.enter.prevent="pickFirst()"
                                    placeholder="{{ __('sales::message.type_or_pick') }}"
-                                   class="h-11 w-full rounded-(--radius-field) border border-(--color-border)
+                                   class="h-(--spacing-counter) w-full rounded-(--radius-field) border border-(--color-border)
                                           bg-(--color-surface-app) ps-9 pe-3 text-lg">
                         </label>
 
@@ -194,26 +194,26 @@
                         <div class="mt-3 grid gap-2 grid-cols-2 @xl:grid-cols-5">
                             <x-sales::entry-field label="sales::field.qty">
                                 <input type="number" step="0.01" min="0" x-model="entry.qty"
-                                       class="num h-8 w-full rounded-(--radius-field) border border-(--color-border)
+                                       class="num h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-app) px-2 text-end text-sm">
                             </x-sales::entry-field>
 
                             <x-sales::entry-field label="sales::field.uom">
                                 <input type="text" readonly :value="picked?.unit || ''"
-                                       class="h-8 w-full rounded-(--radius-field) border border-(--color-border)
+                                       class="h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-app) px-2 text-sm text-(--color-ink-muted)">
                             </x-sales::entry-field>
 
                             @if ($show['free_qty'])
                                 <x-sales::entry-field label="sales::field.free_qty">
                                     <input type="number" step="0.01" min="0" x-model="entry.freeQty"
-                                           class="num h-8 w-full rounded-(--radius-field) border border-(--color-border)
+                                           class="num h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
                                                   bg-(--color-surface-app) px-2 text-end text-sm">
                                 </x-sales::entry-field>
 
                                 <x-sales::entry-field label="sales::field.uom">
                                     <input type="text" readonly :value="picked?.unit || ''"
-                                           class="h-8 w-full rounded-(--radius-field) border border-(--color-border)
+                                           class="h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
                                                   bg-(--color-surface-app) px-2 text-sm text-(--color-ink-muted)">
                                 </x-sales::entry-field>
                             @endif
@@ -224,7 +224,7 @@
                                  থেকে ভুল সংখ্যক মাল বেরোত। --}}
                             <x-sales::entry-field label="sales::field.total_qty">
                                 <input type="text" readonly :value="qty(entryTotalQty)"
-                                       class="num h-8 w-full rounded-(--radius-field) border border-(--color-border)
+                                       class="num h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-app) px-2 text-end text-sm font-semibold">
                             </x-sales::entry-field>
                         </div>
@@ -233,20 +233,20 @@
                         <div class="mt-2 grid gap-2 grid-cols-2 @xl:grid-cols-5">
                             <x-sales::entry-field label="sales::field.sales_rate">
                                 <input type="number" step="0.0001" min="0" x-model="entry.rate"
-                                       class="num h-8 w-full rounded-(--radius-field) border border-(--color-border)
+                                       class="num h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-app) px-2 text-end text-sm">
                             </x-sales::entry-field>
 
                             <x-sales::entry-field label="sales::field.total_amount">
                                 <input type="text" readonly :value="money(entryBase)"
-                                       class="num h-8 w-full rounded-(--radius-field) border border-(--color-border)
+                                       class="num h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-app) px-2 text-end text-sm">
                             </x-sales::entry-field>
 
                             @if ($show['line_discount'])
                                 <x-sales::entry-field label="sales::field.discount_pct">
                                     <input type="number" step="0.01" min="0" max="100" x-model="entry.discountPercent"
-                                           class="num h-8 w-full rounded-(--radius-field) border border-(--color-border)
+                                           class="num h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
                                                   bg-(--color-surface-app) px-2 text-end text-sm">
                                 </x-sales::entry-field>
                             @endif
@@ -254,14 +254,14 @@
                             @if ($vatEnabled)
                                 <x-sales::entry-field label="sales::field.vat">
                                     <input type="text" readonly :value="money(entryVat)"
-                                           class="num h-8 w-full rounded-(--radius-field) border border-(--color-border)
+                                           class="num h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
                                                   bg-(--color-surface-app) px-2 text-end text-sm">
                                 </x-sales::entry-field>
                             @endif
 
                             <x-sales::entry-field label="sales::field.net_value">
                                 <input type="text" readonly :value="money(entryNet)"
-                                       class="num h-8 w-full rounded-(--radius-field) border border-(--color-border)
+                                       class="num h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-app) px-2 text-end text-sm font-semibold">
                             </x-sales::entry-field>
                         </div>
@@ -390,14 +390,14 @@
                                     <td class="p-1 text-end" data-label="{{ __('sales::field.unit_price') }}">
                                         <input type="number" step="0.0001" min="0" x-model="line.rate"
                                                :name="`lines[${i}][rate]`"
-                                               class="num h-8 w-full sm:w-24 rounded-(--radius-field) border
+                                               class="num h-(--spacing-field-dense) w-full sm:w-24 rounded-(--radius-field) border
                                                       border-(--color-border) bg-(--color-surface-app) px-2 text-end">
                                     </td>
 
                                     <td class="p-1 text-end" data-label="{{ __('sales::field.quantity') }}">
                                         <input type="number" step="0.01" min="0.01" x-model="line.qty"
                                                :name="`lines[${i}][qty]`"
-                                               class="num h-8 w-full sm:w-20 rounded-(--radius-field) border
+                                               class="num h-(--spacing-field-dense) w-full sm:w-20 rounded-(--radius-field) border
                                                       border-(--color-border) bg-(--color-surface-app) px-2 text-end">
                                     </td>
 
@@ -405,7 +405,7 @@
                                         <td class="p-1 text-end" data-label="{{ __('sales::field.free_unit') }}">
                                             <input type="number" step="0.01" min="0" x-model="line.freeQty"
                                                    :name="`lines[${i}][free_qty]`"
-                                                   class="num h-8 w-full sm:w-20 rounded-(--radius-field) border
+                                                   class="num h-(--spacing-field-dense) w-full sm:w-20 rounded-(--radius-field) border
                                                           border-(--color-border) bg-(--color-surface-app) px-2 text-end">
                                         </td>
                                     @endif
@@ -418,7 +418,7 @@
                                             <input type="number" step="0.01" min="0" max="100"
                                                    x-model="line.discountPercent"
                                                    :name="`lines[${i}][discount_percent]`"
-                                                   class="num h-8 w-full sm:w-20 rounded-(--radius-field) border
+                                                   class="num h-(--spacing-field-dense) w-full sm:w-20 rounded-(--radius-field) border
                                                           border-(--color-border) bg-(--color-surface-app) px-2 text-end">
                                         </td>
                                     @endif
@@ -482,7 +482,7 @@
                                         <td class="p-1" data-label="{{ __('sales::field.gift_for') }}">
                                             <select x-model="gift.againstProductId"
                                                     :name="`gifts[${i}][against_product_id]`"
-                                                    class="h-8 w-full rounded-(--radius-field) border
+                                                    class="h-(--spacing-field-dense) w-full rounded-(--radius-field) border
                                                            border-(--color-border) bg-(--color-surface-app) px-2">
                                                 <option value="">-</option>
                                                 <template x-for="line in lines" :key="line.key">
@@ -502,7 +502,7 @@
                                                  তুলত — আর কাউন্টারের পাতা দিনে কয়েকশো বার
                                                  খোলা হয়। --}}
                                             <select x-model="gift.productId" :name="`gifts[${i}][product_id]`"
-                                                    class="h-8 w-full rounded-(--radius-field) border
+                                                    class="h-(--spacing-field-dense) w-full rounded-(--radius-field) border
                                                            border-(--color-border) bg-(--color-surface-app) px-2">
                                                 <option value="">-</option>
                                                 <template x-for="p in catalogue" :key="p.id">
@@ -514,13 +514,13 @@
                                         <td class="p-1 text-end" data-label="{{ __('sales::field.quantity') }}">
                                             <input type="number" step="0.01" min="0" x-model="gift.qty"
                                                    :name="`gifts[${i}][qty]`"
-                                                   class="num h-8 w-full sm:w-20 rounded-(--radius-field) border
+                                                   class="num h-(--spacing-field-dense) w-full sm:w-20 rounded-(--radius-field) border
                                                           border-(--color-border) bg-(--color-surface-app) px-2 text-end">
                                         </td>
 
                                         <td class="p-1" data-label="{{ __('sales::field.remarks') }}">
                                             <input type="text" x-model="gift.remarks" :name="`gifts[${i}][remarks]`"
-                                                   class="h-8 w-full rounded-(--radius-field) border
+                                                   class="h-(--spacing-field-dense) w-full rounded-(--radius-field) border
                                                           border-(--color-border) bg-(--color-surface-app) px-2">
                                         </td>
 
@@ -556,7 +556,7 @@
                         <path d="M10 2a8 8 0 1 0 4.9 14.3l5.4 5.4 1.4-1.4-5.4-5.4A8 8 0 0 0 10 2Zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12Z"/>
                     </svg>
                     <select name="customer_id" x-model="customerId"
-                            class="h-9 w-full rounded-(--radius-field) border border-(--color-border)
+                            class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                                    bg-(--color-surface-app) ps-8 pe-2 text-sm">
                         @foreach ($customers as $customer)
                             <option value="{{ $customer->id }}" @selected($customer->id === $walkinId)>
@@ -591,7 +591,7 @@
                 <x-sales::panel-row :label="__('sales::field.discount_amount')">
                     <input type="number" step="0.01" min="0" name="discount_amount" x-model="discountAmount"
                            placeholder="{{ __('sales::field.amount_or_pct') }}"
-                           class="num h-7 w-24 rounded-(--radius-field) border border-(--color-border)
+                           class="num h-(--spacing-inline) w-24 rounded-(--radius-field) border border-(--color-border)
                                   bg-(--color-surface-app) px-1 text-end">
                 </x-sales::panel-row>
 
@@ -604,7 +604,7 @@
                 @if ($show['expense'])
                     <x-sales::panel-row :label="__('sales::field.expense')">
                         <input type="number" step="0.01" min="0" name="expense_amount" x-model="expenseAmount"
-                               class="num h-7 w-24 rounded-(--radius-field) border border-(--color-border)
+                               class="num h-(--spacing-inline) w-24 rounded-(--radius-field) border border-(--color-border)
                                       bg-(--color-surface-app) px-1 text-end">
                     </x-sales::panel-row>
                 @endif
@@ -612,7 +612,7 @@
                 @if ($show['rounding'])
                     <x-sales::panel-row :label="__('sales::field.rounding')">
                         <input type="number" step="0.01" min="0" name="rounding_amount" x-model="roundingAmount"
-                               class="num h-7 w-24 rounded-(--radius-field) border border-(--color-border)
+                               class="num h-(--spacing-inline) w-24 rounded-(--radius-field) border border-(--color-border)
                                       bg-(--color-surface-app) px-1 text-end">
                     </x-sales::panel-row>
                 @endif
@@ -631,7 +631,7 @@
                 @if ($show['deposit'])
                     <x-sales::panel-row :label="__('sales::field.received_deposit')">
                         <input type="number" step="0.01" min="0" name="deposit" x-model="deposit"
-                               class="num h-7 w-24 rounded-(--radius-field) border border-(--color-border)
+                               class="num h-(--spacing-inline) w-24 rounded-(--radius-field) border border-(--color-border)
                                       bg-(--color-surface-app) px-1 text-end">
                     </x-sales::panel-row>
                 @endif
