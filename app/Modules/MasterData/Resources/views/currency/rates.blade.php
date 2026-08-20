@@ -95,7 +95,7 @@
                             <input type="number" step="0.000001" min="0.000001" name="rate" required
                                    value="{{ old('rate') }}"
                                    class="num w-full rounded-(--radius-field) border border-(--color-border)
-                                          bg-(--color-surface) px-2 py-1.5 text-sm text-end">
+                                          bg-(--color-surface-app) px-2 py-1.5 text-sm text-end">
                         </label>
 
                         <label class="block">
@@ -104,7 +104,7 @@
                             <input type="text" name="source" value="{{ old('source') }}"
                                    placeholder="{{ __('master_data::field.rate_source_hint') }}"
                                    class="w-full rounded-(--radius-field) border border-(--color-border)
-                                          bg-(--color-surface) px-2 py-1.5 text-sm">
+                                          bg-(--color-surface-app) px-2 py-1.5 text-sm">
                         </label>
 
                         <x-ui.button type="submit" tone="primary">

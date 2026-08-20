@@ -7,6 +7,40 @@
     প্রতিটা সংখ্যা তার উৎসে নিয়ে যায় (নিয়ম ১)। যে সংখ্যা ক্লিক করা যায়
     না সেটা বিশ্বাস করতে হয়, যাচাই করা যায় না।
 --}}
+@php
+    /*
+        কলাম ধরে — `x-ui.table` স্লট পড়ে না, সারি আসে :rows থেকে।
+
+        ── আগের সিদ্ধান্তটা বদলাল কেন ──────────────────────────────────
+        এই টেবিলটা ইচ্ছে করে হাতে লেখা ছিল, আর কারণ ছিল তিনটা: ঘরগুলো
+        সাধারণ লেখা নয় (ব্যাজ, ম্লান শূন্য), আর শেষে একটা সারি যেটা
+        কোনো রেকর্ড নয়।
+
+        তিনটার একটাও আর টেকে না। ব্যাজ ও রং এখন `render` ক্লোজার থেকে
+        আসে, আর শেষ সারিটার জন্য কম্পোনেন্টে `totalsLabel` যোগ করা
+        হয়েছে — কারণ ওই সারিটা যোগফল নয়, ওটা বলে "এই টাকা এই মুহূর্তে
+        কারও হেফাজতে নেই"।
+
+        আর কারণটা আজ আলাদা: হাতে লেখা টেবিল **থিম মানে না**।
+    */
+    $columns = [
+        ['key' => 'code', 'label' => __('core.table.code'), 'width' => '110px',
+         'render' => fn ($r) => view('accounts::custody.partials.code', ['row' => $r])],
+        ['key' => 'name', 'label' => __('core.table.name'),
+         'render' => fn ($r) => view('accounts::custody.partials.name', ['row' => $r])],
+        ['key' => 'kind', 'label' => __('accounts::custody.kind'), 'width' => '120px',
+         'render' => fn ($r) => $r['kind']],
+        ['key' => 'holder', 'label' => __('accounts::custody.holder'), 'width' => '190px',
+         'render' => fn ($r) => view('accounts::custody.partials.holder', ['row' => $r])],
+        ['key' => 'balance', 'label' => __('accounts::custody.balance'),
+         'numeric' => true, 'width' => '160px',
+         'render' => fn ($r) => $r['balance']],
+        ['key' => 'sent', 'label' => __('accounts::custody.sent'),
+         'numeric' => true, 'width' => '140px',
+         'render' => fn ($r) => view('accounts::custody.partials.sent', ['row' => $r])],
+    ];
+@endphp
+
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('accounts::custody.title') }}</x-slot:title>
 
@@ -62,115 +96,13 @@
     <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                 bg-(--color-surface-card) shadow-(--shadow-card)">
         <div class="table-responsive">
-            <table class="table-cards w-full border-collapse text-sm">
-                <thead>
-                    <tr class="border-b border-(--color-border) bg-(--color-surface-app)">
-                        @foreach ([
-                            ['label' => __('core.table.code'), 'num' => false, 'w' => '110px'],
-                            ['label' => __('core.table.name'), 'num' => false, 'w' => null],
-                            ['label' => __('accounts::custody.kind'), 'num' => false, 'w' => '120px'],
-                            ['label' => __('accounts::custody.holder'), 'num' => false, 'w' => '190px'],
-                            ['label' => __('accounts::custody.balance'), 'num' => true, 'w' => '160px'],
-                            ['label' => __('accounts::custody.sent'), 'num' => true, 'w' => '140px'],
-                        ] as $head)
-                            <th @class([
-                                    'px-3 py-2 text-end font-medium text-(--color-ink-muted) whitespace-nowrap',
-                                    'num' => $head['num'],
-                                ])
-                                @if ($head['w']) style="width: {{ $head['w'] }}" @endif
-                                scope="col">{{ $head['label'] }}</th>
-                        @endforeach
-                    </tr>
-                </thead>
-
-                <tbody>
-                    @foreach ($rows as $row)
-                        <tr class="border-b border-(--color-border) transition-colors
-                                   hover:bg-(--color-surface-hover)">
-                            <td data-label="{{ __('core.table.code') }}" class="px-3 py-2.5 align-middle">
-                                <a href="{{ $row['url'] }}"
-                                   class="font-medium text-(--color-brand-600) hover:underline">
-                                    {{ $row['code'] }}
-                                </a>
-                            </td>
-
-                            <td data-label="{{ __('core.table.name') }}" class="px-3 py-2.5 align-middle">
-                                {{ $row['name'] }}
-                                @if ($row['primary'])
-                                    <span class="ms-1 text-2xs text-(--color-ink-muted)">
-                                        {{ __('accounts::custody.primary') }}
-                                    </span>
-                                @endif
-                            </td>
-
-                            <td data-label="{{ __('accounts::custody.kind') }}"
-                                class="px-3 py-2.5 align-middle text-(--color-ink-muted)">
-                                {{ $row['kind'] }}
-                            </td>
-
-                            {{-- হেফাজতকারীহীন নগদ কাউন্টার — এটাই এই পর্দার
-                                 সবচেয়ে কাজের ঘর।
-
-                                 কারও নাম না থাকলে টাকাটা কার্যত অভিভাবকহীন:
-                                 ঘাটতি হলে কেউ দায়ী নয়, আর কেউ দায়ী না হলে
-                                 ঘাটতি নিয়ে কেউ প্রশ্নও করে না। খালি ঘর রেখে
-                                 দিলে ওটা চোখেই পড়ত না, তাই লেখা হয়। --}}
-                            <td data-label="{{ __('accounts::custody.holder') }}"
-                                class="px-3 py-2.5 align-middle">
-                                @if ($row['holder'])
-                                    {{ $row['holder'] }}
-                                @elseif ($row['kind'] === __('accounts::custody.kind_bank'))
-                                    <span class="text-(--color-ink-disabled)">—</span>
-                                @else
-                                    <span class="inline-flex items-center gap-1 rounded-full
-                                                 bg-(--color-badge-warning-bg) px-2 py-0.5 text-2xs
-                                                 font-semibold text-(--color-badge-warning-ink)">
-                                        <x-ui.icon name="help" :size="12" />
-                                        {{ __('accounts::custody.nobody') }}
-                                    </span>
-                                @endif
-                            </td>
-
-                            <td data-label="{{ __('accounts::custody.balance') }}"
-                                class="num px-3 py-2.5 align-middle font-medium">
-                                {{ $row['balance'] }}
-                            </td>
-
-                            {{-- পথে পাঠানো — শূন্য হলে ম্লান, কারণ শূন্যটা
-                                 কোনো খবর নয়; খবরটা হলো "করিমের পাঠানো
-                                 ১২,০০০ এখনো কেউ নেয়নি"। --}}
-                            <td data-label="{{ __('accounts::custody.sent') }}"
-                                @class([
-                                    'num px-3 py-2.5 align-middle',
-                                    'text-(--color-ink-disabled)' => ! preg_match('/[1-9১-৯]/u', $row['sent']),
-                                ])>
-                                {{ $row['sent'] }}
-                            </td>
-                        </tr>
-                    @endforeach
-
-                    {{-- ── শেষ সারি: পথের টাকা ─────────────────────────
-                         এটা কারও নামের পাশে বসে না, আর সেটাই পুরো কথা।
-                         টাকাটা ড্রয়ার ছেড়েছে, কেউ এখনো নেয়নি — অর্থাৎ
-                         এই মুহূর্তে ওটা কারও হেফাজতে নেই। --}}
-                    <tr class="border-t-2 border-(--color-border) bg-(--color-surface-app)">
-                        <td class="px-3 py-2.5 align-middle text-(--color-ink-muted)">
-                            {{ \App\Modules\Accounts\Services\StandardChart::CASH_IN_TRANSIT }}
-                        </td>
-                        <td class="px-3 py-2.5 align-middle font-medium">
-                            {{ __('accounts::custody.on_the_road') }}
-                        </td>
-                        <td class="px-3 py-2.5 align-middle text-(--color-ink-muted)">
-                            {{ __('accounts::custody.kind_transit') }}
-                        </td>
-                        <td class="px-3 py-2.5 align-middle text-(--color-ink-muted)">
-                            {{ __('accounts::custody.nobody_holds_it') }}
-                        </td>
-                        <td class="num px-3 py-2.5 align-middle font-semibold">{{ $transit }}</td>
-                        <td class="num px-3 py-2.5 align-middle text-(--color-ink-disabled)">—</td>
-                    </tr>
-                </tbody>
-            </table>
+            {{-- শেষ সারিটা কারও নামের পাশে বসে না, আর সেটাই পুরো কথা:
+                 টাকাটা ড্রয়ার ছেড়েছে, কেউ এখনো নেয়নি। --}}
+            <x-ui.table :rows="$rows"
+                        :columns="$columns"
+                        :totals="['balance' => $transit]"
+                        :totalsLabel="__('accounts::custody.on_the_road')"
+                        :empty="__('core.empty.no_results')" />
         </div>
     </div>
 

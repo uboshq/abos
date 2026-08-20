@@ -139,23 +139,23 @@
                  x-init="if (rows.length === 0) add()">
 
                 <div class="table-responsive">
-                    <table class="table-cards w-full text-sm">
-                        <thead class="border-b border-(--color-border) text-start text-(--color-ink-muted)">
+                    <table class="ui-lines table-cards w-full text-sm">
+                        <thead>
                             <tr>
-                                <th class="p-2 text-start font-medium">{{ __('sales::field.product') }}</th>
-                                <th class="p-2 text-end font-medium">{{ __('sales::field.quantity') }}</th>
-                                <th class="p-2 text-end font-medium">{{ __('sales::field.rate') }}</th>
-                                <th class="p-2 text-end font-medium">{{ __('sales::field.tax') }}</th>
-                                <th class="p-2 text-start font-medium">{{ __('sales::field.not_sellable') }}</th>
-                                <th class="p-2 text-end font-medium">{{ __('sales::field.amount') }}</th>
-                                <th class="p-2"><span class="sr-only">{{ __('sales::action.remove_line') }}</span></th>
+                                <th class="text-start">{{ __('sales::field.product') }}</th>
+                                <th class="text-end">{{ __('sales::field.quantity') }}</th>
+                                <th class="text-end">{{ __('sales::field.rate') }}</th>
+                                <th class="text-end">{{ __('sales::field.tax') }}</th>
+                                <th class="text-start">{{ __('sales::field.not_sellable') }}</th>
+                                <th class="text-end">{{ __('sales::field.amount') }}</th>
+                                <th><span class="sr-only">{{ __('sales::action.remove_line') }}</span></th>
                             </tr>
                         </thead>
 
                         <tbody>
                             <template x-for="(row, i) in rows" :key="i">
                                 <tr class="border-b border-(--color-border)">
-                                    <td class="p-1" data-label="{{ __('sales::field.product') }}">
+                                    <td class="cell-input" data-label="{{ __('sales::field.product') }}">
                                         <select :name="`lines[${i}][product_id]`" x-model="row.product_id"
                                                 class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                                                        bg-(--color-surface-card) px-2">
@@ -169,7 +169,7 @@
                                                x-model="row.sales_invoice_line_id">
                                     </td>
 
-                                    <td class="p-1" data-label="{{ __('sales::field.quantity') }}">
+                                    <td class="cell-input" data-label="{{ __('sales::field.quantity') }}">
                                         <input type="number" step="0.01" inputmode="decimal"
                                                :name="`lines[${i}][qty]`" x-model="row.qty"
                                                class="num h-(--spacing-field-compact) w-full sm:w-24 rounded-(--radius-field)
@@ -177,7 +177,7 @@
                                                       bg-(--color-surface-card) px-2 text-end">
                                     </td>
 
-                                    <td class="p-1" data-label="{{ __('sales::field.rate') }}">
+                                    <td class="cell-input" data-label="{{ __('sales::field.rate') }}">
                                         <input type="number" step="0.01" inputmode="decimal"
                                                :name="`lines[${i}][rate]`" x-model="row.rate"
                                                class="num h-(--spacing-field-compact) w-full sm:w-24 rounded-(--radius-field)
@@ -185,7 +185,7 @@
                                                       bg-(--color-surface-card) px-2 text-end">
                                     </td>
 
-                                    <td class="p-1" data-label="{{ __('sales::field.tax') }}">
+                                    <td class="cell-input" data-label="{{ __('sales::field.tax') }}">
                                         <input type="number" step="0.01" inputmode="decimal"
                                                :name="`lines[${i}][tax]`" x-model="row.tax"
                                                class="num h-(--spacing-field-compact) w-full sm:w-24 rounded-(--radius-field)
@@ -195,16 +195,16 @@
 
                                     {{-- আবার বেচা যাবে না — টিক দিলে মালটা গুদামে
                                          ঢুকবে কিন্তু Hold-এ থাকবে --}}
-                                    <td class="p-1" data-label="{{ __('sales::field.not_sellable') }}">
+                                    <td class="cell-input" data-label="{{ __('sales::field.not_sellable') }}">
                                         <input type="hidden" :name="`lines[${i}][to_hold]`" value="0">
                                         <input type="checkbox" :name="`lines[${i}][to_hold]`" value="1"
                                                x-model="row.to_hold" class="size-4">
                                     </td>
 
-                                    <td class="num p-1 text-end" data-label="{{ __('sales::field.amount') }}"
+                                    <td class="num cell-input" data-label="{{ __('sales::field.amount') }}"
                                         x-text="amount(row).toFixed(2)"></td>
 
-                                    <td class="p-1 text-end">
+                                    <td class="cell-input text-end">
                                         <button type="button" @click="remove(i)"
                                                 class="rounded-(--radius-field) px-2 py-1 text-(--color-ink-muted)
                                                        hover:bg-(--color-surface-hover)">
@@ -217,8 +217,8 @@
 
                         <tfoot>
                             <tr>
-                                <td colspan="5" class="p-2 text-end font-medium">{{ __('sales::field.total') }}</td>
-                                <td class="num p-2 text-end font-semibold" x-text="total.toFixed(2)"></td>
+                                <td colspan="5" class="cell text-end font-medium">{{ __('sales::field.total') }}</td>
+                                <td class="num cell font-semibold" x-text="total.toFixed(2)"></td>
                                 <td></td>
                             </tr>
                         </tfoot>

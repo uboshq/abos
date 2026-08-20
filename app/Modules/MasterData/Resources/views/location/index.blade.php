@@ -105,23 +105,21 @@
                     :columns="$columns" />
             @elseif (! $tooManyToShow)
                 <div class="overflow-x-auto">
-                    <table class="w-full border-collapse text-sm">
+                    <table class="ui-grid">
                         <thead>
-                            <tr class="border-b border-(--color-border) bg-(--color-surface-app)">
-                                <th scope="col" class="px-3 py-2 text-start font-medium text-(--color-ink-muted)">
+                            <tr>
+                                <th scope="col">
                                     {{ __('master_data::field.name') }}
                                 </th>
                                 <th scope="col" style="width: 9rem"
-                                    class="hidden px-3 py-2 text-start font-medium
-                                           text-(--color-ink-muted) sm:table-cell">
+                                    class="hidden sm:table-cell">
                                     {{ __('master_data::field.level') }}
                                 </th>
                                 <th scope="col" style="width: 11rem"
-                                    class="hidden px-3 py-2 text-start font-medium
-                                           text-(--color-ink-muted) lg:table-cell">
+                                    class="hidden lg:table-cell">
                                     {{ __('master_data::field.assigned_to') }}
                                 </th>
-                                <th scope="col" style="width: 5rem" class="px-3 py-2"
+                                <th scope="col" style="width: 5rem" 
                                     aria-label="{{ __('master_data::action.new') }}"></th>
                             </tr>
                         </thead>

@@ -56,49 +56,49 @@
 
     <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <div class="overflow-x-auto">
-            <table class="w-full border-collapse text-sm">
+            <table class="ui-grid">
                 <thead>
-                    <tr class="border-b border-(--color-border) bg-(--color-surface-app)">
-                        <th scope="col" class="px-3 py-2 text-start font-medium text-(--color-ink-muted)">
+                    <tr>
+                        <th scope="col">
                             {{ __('master_data::field.doc_type') }}
                         </th>
                         <th scope="col" style="width: 8rem"
-                            class="px-3 py-2 text-start font-medium text-(--color-ink-muted)">
+>
                             {{ __('master_data::field.prefix') }}
                         </th>
                         <th scope="col" style="width: 7rem"
-                            class="px-3 py-2 text-start font-medium text-(--color-ink-muted)">
+>
                             {{ __('master_data::field.suffix') }}
                         </th>
                         <th scope="col" style="width: 16rem"
-                            class="px-3 py-2 text-start font-medium text-(--color-ink-muted)">
+>
                             {{ __('master_data::field.format') }}
                         </th>
                         <th scope="col" style="width: 6rem"
-                            class="num px-3 py-2 text-end font-medium text-(--color-ink-muted)">
+                            class="num">
                             {{ __('master_data::field.padding') }}
                         </th>
                         <th scope="col" style="width: 8rem"
-                            class="px-3 py-2 text-start font-medium text-(--color-ink-muted)">
+>
                             {{ __('master_data::field.reset_yearly') }}
                         </th>
                         <th scope="col" style="width: 13rem"
-                            class="px-3 py-2 text-start font-medium text-(--color-ink-muted)">
+>
                             {{ __('master_data::field.sample') }}
                         </th>
-                        <th scope="col" style="width: 7rem" class="px-3 py-2"></th>
+                        <th scope="col" style="width: 7rem"></th>
                     </tr>
                 </thead>
 
                 <tbody>
                     @foreach ($series as $row)
-                        <tr class="border-b border-(--color-border)">
+                        <tr>
                             <form method="POST" action="{{ route('master_data.series.update', $row) }}"
                                   class="contents">
                                 @csrf
                                 @method('PUT')
 
-                                <td class="px-3 py-2">
+                                <td>
                                     <span class="block">
                                         {{ isset($labels[$row->doc_type]) ? __($labels[$row->doc_type]) : $row->doc_type }}
                                     </span>
@@ -107,7 +107,7 @@
                                     </span>
                                 </td>
 
-                                <td class="px-3 py-2">
+                                <td>
                                     <span class="sr-only">{{ __('master_data::field.prefix') }}</span>
                                     <input type="text" name="prefix" value="{{ $row->prefix }}"
                                            aria-label="{{ __('master_data::field.prefix') }}"
@@ -115,21 +115,21 @@
                                                   border-(--color-border) bg-(--color-surface-card) px-2">
                                 </td>
 
-                                <td class="px-3 py-2">
+                                <td>
                                     <input type="text" name="suffix" value="{{ $row->suffix }}"
                                            aria-label="{{ __('master_data::field.suffix') }}"
                                            class="h-(--spacing-field) w-full rounded-(--radius-field) border
                                                   border-(--color-border) bg-(--color-surface-card) px-2">
                                 </td>
 
-                                <td class="px-3 py-2">
+                                <td>
                                     <input type="text" name="format" value="{{ $row->format }}"
                                            aria-label="{{ __('master_data::field.format') }}"
                                            class="num h-(--spacing-field) w-full rounded-(--radius-field) border
                                                   border-(--color-border) bg-(--color-surface-card) px-2 text-2xs">
                                 </td>
 
-                                <td class="px-3 py-2">
+                                <td>
                                     <input type="number" name="padding" value="{{ $row->padding }}"
                                            min="1" max="12" inputmode="numeric"
                                            aria-label="{{ __('master_data::field.padding') }}"
@@ -137,7 +137,7 @@
                                                   border-(--color-border) bg-(--color-surface-card) px-2 text-end">
                                 </td>
 
-                                <td class="px-3 py-2">
+                                <td>
                                     <label class="flex min-h-(--spacing-touch) items-center gap-2">
                                         <input type="checkbox" name="reset_yearly" value="1"
                                                @checked($row->reset_yearly) class="size-4">
@@ -153,13 +153,13 @@
                                      হত, অথচ ছকটা অন্য কিছু হলে নমুনাটা মিথ্যা
                                      বলত — ব্যবহারকারী একটা দেখে সেভ করতেন, আর
                                      ডকুমেন্টে বসত অন্যটা। --}}
-                                <td class="px-3 py-2">
+                                <td>
                                     <span class="num text-2xs text-(--color-ink-muted)">
                                         {{ $engine->preview($row) }}
                                     </span>
                                 </td>
 
-                                <td class="px-3 py-2 text-end">
+                                <td class="text-end">
                                     <button type="submit"
                                             class="rounded-(--radius-field) px-2 py-1 text-2xs text-(--color-brand-500)
                                                    transition-colors hover:bg-(--color-surface-hover)">

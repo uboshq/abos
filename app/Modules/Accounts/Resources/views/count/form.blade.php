@@ -65,18 +65,18 @@
             </h2>
 
             <div class="overflow-x-auto">
-                <table class="w-full border-collapse text-sm">
+                <table class="ui-grid">
                     <thead>
-                        <tr class="border-b border-(--color-border) bg-(--color-surface-app)">
+                        <tr>
                             <th scope="col" style="width: 8rem"
-                                class="num px-3 py-2 text-end font-medium text-(--color-ink-muted)">
+                                class="num">
                                 {{ __('accounts::field.note') }}
                             </th>
                             <th scope="col" style="width: 9rem"
-                                class="num px-3 py-2 text-end font-medium text-(--color-ink-muted)">
+                                class="num">
                                 {{ __('accounts::field.pieces') }}
                             </th>
-                            <th scope="col" class="num px-3 py-2 text-end font-medium text-(--color-ink-muted)">
+                            <th scope="col" class="num">
                                 {{ __('accounts::field.amount') }}
                             </th>
                         </tr>
@@ -84,10 +84,10 @@
 
                     <tbody>
                         @foreach ($notes as $note)
-                            <tr class="border-b border-(--color-border)">
-                                <td class="num px-3 py-1.5 font-medium">{{ number_format($note) }}</td>
+                            <tr>
+                                <td class="num tight font-medium">{{ number_format($note) }}</td>
 
-                                <td class="px-3 py-1.5">
+                                <td class="tight">
                                     {{-- x-model, DOM ঘেঁটে নয় — কারণটা নিচের স্ক্রিপ্টে লেখা --}}
                                     <input type="number" min="0" step="1" inputmode="numeric"
                                            name="counts[{{ $note }}]"
@@ -98,7 +98,7 @@
                                                   border-(--color-border) bg-(--color-surface-card) px-2 text-end">
                                 </td>
 
-                                <td class="num px-3 py-1.5 text-(--color-ink-muted)"
+                                <td class="num tight text-(--color-ink-muted)"
                                     x-text="format(lineOf({{ $note }}))">0.00</td>
                             </tr>
                         @endforeach
@@ -106,9 +106,9 @@
 
                     <tfoot>
                         <tr class="bg-(--color-surface-app) font-semibold">
-                            <td class="px-3 py-2">{{ __('core.print.total') }}</td>
-                            <td class="num px-3 py-2" x-text="pieces">0</td>
-                            <td class="num px-3 py-2" x-text="format(total)">0.00</td>
+                            <td>{{ __('core.print.total') }}</td>
+                            <td class="num" x-text="pieces">0</td>
+                            <td class="num" x-text="format(total)">0.00</td>
                         </tr>
                     </tfoot>
                 </table>

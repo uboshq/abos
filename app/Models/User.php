@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 use Spatie\Permission\Traits\HasRoles;
 
-#[Fillable(['name', 'email', 'password', 'locale', 'theme', 'accent', 'is_active'])]
+#[Fillable(['name', 'email', 'password', 'locale', 'theme', 'ui', 'accent', 'is_active'])]
 /*
  * গোপন চাবি ও পুনরুদ্ধার কোড কোনো JSON বা লগে যায় না।
  *

@@ -20,6 +20,22 @@
     $needsReference = $bankAccount !== null && blank($voucher->instrument_no);
 @endphp
 
+@php
+    /* কলাম ধরে — `x-ui.table` স্লট পড়ে না, সারি আসে :rows থেকে। */
+    $columns = [
+        ['key' => 'account', 'label' => __('core.print.account'),
+         'render' => fn ($l) => view('accounts::voucher.partials.account', ['line' => $l])],
+        ['key' => 'narration', 'label' => __('core.table.narration'),
+         'render' => fn ($l) => $l->narration],
+        ['key' => 'debit', 'label' => __('core.table.debit'), 'numeric' => true, 'width' => '11rem',
+         'render' => fn ($l) => bccomp((string) $l->debit, '0', 4) > 0
+             ? \App\Core\Support\Money::format($l->debit) : ''],
+        ['key' => 'credit', 'label' => __('core.table.credit'), 'numeric' => true, 'width' => '11rem',
+         'render' => fn ($l) => bccomp((string) $l->credit, '0', 4) > 0
+             ? \App\Core\Support\Money::format($l->credit) : ''],
+    ];
+@endphp
+
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ $voucher->document_no }}</x-slot:title>
 
@@ -161,62 +177,14 @@
         </h2>
 
         <div class="overflow-x-auto">
-            <table class="w-full border-collapse text-sm">
-                <thead>
-                    <tr class="border-b border-(--color-border) bg-(--color-surface-app)">
-                        <th scope="col" class="px-3 py-2 text-start font-medium text-(--color-ink-muted)">
-                            {{ __('core.print.account') }}
-                        </th>
-                        <th scope="col" class="hidden px-3 py-2 text-start font-medium
-                                               text-(--color-ink-muted) lg:table-cell">
-                            {{ __('core.table.narration') }}
-                        </th>
-                        <th scope="col" style="width: 10rem"
-                            class="num px-3 py-2 text-end font-medium text-(--color-ink-muted)">
-                            {{ __('core.table.debit') }}
-                        </th>
-                        <th scope="col" style="width: 10rem"
-                            class="num px-3 py-2 text-end font-medium text-(--color-ink-muted)">
-                            {{ __('core.table.credit') }}
-                        </th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    @foreach ($voucher->lines as $line)
-                        <tr class="border-b border-(--color-border)">
-                            <td class="px-3 py-2">
-                                {{-- খাতটা ক্লিকযোগ্য — নিয়ম ১ --}}
-                                <a href="{{ route('accounts.coa.show', $line->account) }}"
-                                   class="text-(--color-brand-500) underline-offset-2 hover:underline">
-                                    {{ $line->account->label() }}
-                                </a>
-                            </td>
-                            <td class="hidden px-3 py-2 text-(--color-ink-muted) lg:table-cell">
-                                {{ $line->narration }}
-                            </td>
-                            <td class="num px-3 py-2">
-                                {{ bccomp((string) $line->debit, '0', 4) > 0
-                                    ? \App\Core\Support\Money::format($line->debit) : '' }}
-                            </td>
-                            <td class="num px-3 py-2">
-                                {{ bccomp((string) $line->credit, '0', 4) > 0
-                                    ? \App\Core\Support\Money::format($line->credit) : '' }}
-                            </td>
-                        </tr>
-                    @endforeach
-                </tbody>
-
-                <tfoot>
-                    <tr class="bg-(--color-surface-app) font-semibold">
-                        <td class="px-3 py-2 text-end lg:hidden">{{ __('core.print.total') }}</td>
-                        <td class="hidden px-3 py-2 lg:table-cell"></td>
-                        <td class="hidden px-3 py-2 text-end lg:table-cell">{{ __('core.print.total') }}</td>
-                        <td class="num px-3 py-2">{{ \App\Core\Support\Money::format($totals['debit']) }}</td>
-                        <td class="num px-3 py-2">{{ \App\Core\Support\Money::format($totals['credit']) }}</td>
-                    </tr>
-                </tfoot>
-            </table>
+        <x-ui.table :rows="$voucher->lines"
+                    :columns="$columns"
+                    :totals="[
+                        'debit' => \App\Core\Support\Money::format($totals['debit']),
+                        'credit' => \App\Core\Support\Money::format($totals['credit']),
+                    ]"
+                    :totalsLabel="__('core.print.total')"
+                    :empty="__('core.empty.no_results')" />
         </div>
     </section>
 </x-layouts.app>

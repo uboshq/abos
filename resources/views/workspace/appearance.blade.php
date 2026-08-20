@@ -24,6 +24,31 @@
     <form method="POST" action="{{ route('appearance.save') }}" class="space-y-4">
         @csrf
 
+        {{--
+            চেহারা — সবার আগে, আর কারণটা ক্রমেই লেখা।
+
+            এই একটা বাছাই বাকি সবগুলোকে ঘিরে রাখে: চেহারা বদলালে
+            অ্যাকসেন্ট একই রংয়েও অন্যরকম বসে, ঘনত্ব বদলায়, ধার বদলায়।
+            রং আগে বেছে তারপর চেহারা বদলালে মানুষটাকে দুইবার বাছতে
+            হত।
+        --}}
+        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+            <h2 class="font-semibold">{{ __('core.appearance.ui') }}</h2>
+            <p class="mt-0.5 mb-3 max-w-(--spacing-prose-max) text-sm text-(--color-ink-muted)">
+                {{ __('core.appearance.ui_note') }}
+            </p>
+
+            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                @foreach ($uis as $key => $ui)
+                    @include('workspace.partials.ui-card', [
+                        'key' => $key,
+                        'ui' => $ui,
+                        'selected' => $key === $current['ui'],
+                    ])
+                @endforeach
+            </div>
+        </section>
+
         {{-- রং --}}
         <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="font-semibold">{{ __('core.appearance.accent') }}</h2>

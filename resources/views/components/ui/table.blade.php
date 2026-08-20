@@ -10,7 +10,11 @@
     <x-ui.empty-state :message="$empty" />
 @else
     <div class="table-responsive">
-        <table @class(['table-cards w-full border-collapse text-sm', 'as-cards' => $grid])>
+        <table @class([
+            'ui-list table-cards w-full border-collapse text-sm',
+            'as-cards' => $grid,
+            'is-dense' => $compact,
+        ])>
             {{--
                 আঠালো হেডার — সারি স্ক্রল করলেও কলামের নাম থাকে।
 
@@ -19,7 +23,7 @@
                 করে নিতে হত। D365, Fiori, Oracle — তিনটাতেই হেডার আটকানো।
             --}}
             <thead class="sticky top-0 z-[2]">
-                <tr class="border-b border-(--color-border) bg-(--color-surface-app)">
+                <tr class="border-b border-(--color-border)">
                     @foreach ($normalised as $column)
                         {{--
                             সংখ্যার কলামে শিরোনামও ডানে।
@@ -44,7 +48,6 @@
                             সাথে লড়ে না।
                         --}}
                         <th @class([
-                                'px-3 py-2 font-medium text-(--color-ink-muted) whitespace-nowrap',
                                 'text-end num' => $column['numeric'],
                                 'text-start' => ! $column['numeric'],
                             ])
@@ -58,19 +61,20 @@
 
             <tbody>
                 @foreach ($items as $row)
-                    <tr class="border-b border-(--color-border) transition-colors hover:bg-(--color-surface-hover)">
+                    <tr class="border-b border-(--color-border)">
                         @foreach ($normalised as $column)
                             {{-- data-label ছাড়া মোবাইলে এই ঘরটা অর্থহীন হয়ে যায় --}}
-                            {{-- উচ্চতা টোকেন থেকে — ৪৪px, ঘন দৃশ্যে ৩৬px।
-                                 প্যাডিং দিয়ে ঠিক করলে যে ঘরে দুই লাইন
-                                 লেখা (নাম + কোড) সেই সারিটা লম্বা হয়ে
-                                 যেত, আর ছকটা অসম দেখাত। --}}
+                            {{-- উচ্চতা, প্যাডিং ও রং এখানে নেই — সবটা
+                                 `.table-cards`-এর নিয়মে, app.css-এ।
+
+                                 এখানে utility হিসেবে লেখা থাকলে কোনো
+                                 থিম ওগুলো ছুঁতে পারত না: Tailwind-এর
+                                 utility সব @layer-কে হারায়। তখন থিম
+                                 বদলে রং বদলাত, আর ঘনত্ব ও ধার আগের
+                                 মতোই বসে থাকত — অর্ধেক বদল, যেটা কোনো
+                                 বদল না হওয়ার চেয়ে খারাপ দেখায়। --}}
                             <td data-label="{{ $column['label'] }}"
-                                style="height: var({{ $compact ? '--row-height-dense' : '--row-height' }})"
-                                @class([
-                                    'px-3 align-middle',
-                                    'num' => $column['numeric'],
-                                ])>
+                                @class(['num' => $column['numeric']])>
                                 {{-- $loop->parent — ভেতরের লুপটা কলামের,
                                      বাইরেরটা সারির, আর ক্রম নম্বর চাই
                                      সারিরটাই --}}
@@ -88,15 +92,11 @@
                  বসে। --}}
             @if ($totals !== [])
                 <tfoot class="sticky bottom-0 z-[1]">
-                    <tr class="border-t border-(--color-border-strong) bg-(--color-surface-app)
-                               font-semibold text-(--color-ink)">
+                    <tr>
                         @foreach ($normalised as $i => $column)
-                            <td @class([
-                                    'px-3 py-2',
-                                    'num' => $column['numeric'],
-                                ])>
+                            <td @class(['num' => $column['numeric']])>
                                 @if ($i === 0)
-                                    <span class="text-(--color-ink-muted)">{{ __('core.table.page_total') }}</span>
+                                    <span class="text-(--color-ink-muted)">{{ $totalsLabel ?? __('core.table.page_total') }}</span>
                                 @else
                                     {{ $totals[$column['key']] ?? '' }}
                                 @endif

@@ -95,31 +95,31 @@
      @bulk-applied.window="absorb($event.detail.rows)">
 
     <div class="table-responsive">
-        <table class="table-cards w-full text-sm">
-            <thead class="border-b border-(--color-border) text-start text-(--color-ink-muted)">
+        <table class="ui-lines table-cards w-full text-sm">
+            <thead>
                 <tr>
-                    <th class="p-2 text-start font-medium">{{ __('sales::field.product') }}</th>
+                    <th class="text-start">{{ __('sales::field.product') }}</th>
                     @if ($linkField)
-                        <th class="p-2 text-start font-medium">{{ __('sales::field.'.($linkField === 'purchase_order_line_id' ? 'order' : 'receipt')) }}</th>
+                        <th class="text-start">{{ __('sales::field.'.($linkField === 'purchase_order_line_id' ? 'order' : 'receipt')) }}</th>
                     @endif
-                    <th class="p-2 text-end font-medium">{{ __('sales::field.quantity') }}</th>
+                    <th class="text-end">{{ __('sales::field.quantity') }}</th>
                     @if ($packs !== [])
-                        <th class="p-2 text-start font-medium">{{ __('sales::field.unit') }}</th>
+                        <th class="text-start">{{ __('sales::field.unit') }}</th>
                     @endif
-                    <th class="p-2 text-end font-medium">{{ __('sales::field.rate') }}</th>
+                    <th class="text-end">{{ __('sales::field.rate') }}</th>
                     @if ($showDiscount)
-                        <th class="p-2 text-end font-medium">{{ __('sales::field.discount') }}</th>
-                        <th class="p-2 text-end font-medium">{{ __('sales::field.tax') }}</th>
+                        <th class="text-end">{{ __('sales::field.discount') }}</th>
+                        <th class="text-end">{{ __('sales::field.tax') }}</th>
                     @endif
-                    <th class="p-2 text-end font-medium">{{ __('sales::field.amount') }}</th>
-                    <th class="p-2"><span class="sr-only">{{ __('sales::action.remove_line') }}</span></th>
+                    <th class="text-end">{{ __('sales::field.amount') }}</th>
+                    <th><span class="sr-only">{{ __('sales::action.remove_line') }}</span></th>
                 </tr>
             </thead>
 
             <tbody>
                 <template x-for="(row, i) in rows" :key="i">
                     <tr class="border-b border-(--color-border)">
-                        <td class="p-1" data-label="{{ __('sales::field.product') }}">
+                        <td class="cell-input" data-label="{{ __('sales::field.product') }}">
                             <select :name="`lines[${i}][product_id]`" x-model="row.product_id" required
                                     @change="row.unit_id = ''"
                                     class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
@@ -132,7 +132,7 @@
                         </td>
 
                         @if ($linkField)
-                            <td class="p-1" data-label="{{ __('sales::field.'.($linkField === 'purchase_order_line_id' ? 'order' : 'receipt')) }}">
+                            <td class="cell-input" data-label="{{ __('sales::field.'.($linkField === 'purchase_order_line_id' ? 'order' : 'receipt')) }}">
                                 <select :name="`lines[${i}][{{ $linkField }}]`" x-model="row.link"
                                         class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                                                bg-(--color-surface-card) px-2">
@@ -144,7 +144,7 @@
                             </td>
                         @endif
 
-                        <td class="p-1" data-label="{{ __('sales::field.quantity') }}">
+                        <td class="cell-input" data-label="{{ __('sales::field.quantity') }}">
                             <input type="number" step="0.01" inputmode="decimal" required
                                    :name="`lines[${i}][{{ $qtyField }}]`" x-model="row.qty"
                                    class="num h-(--spacing-field-compact) w-full sm:w-28 rounded-(--radius-field) border border-(--color-border)
@@ -164,7 +164,7 @@
                                 নতুন পণ্যের সিঁড়িতে না-ও থাকতে পারে, আর তখন
                                 সার্ভার অনুরোধটা ফিরিয়ে দিত।
                             --}}
-                            <td class="p-1" data-label="{{ __('sales::field.unit') }}">
+                            <td class="cell-input" data-label="{{ __('sales::field.unit') }}">
                                 <select :name="`lines[${i}][unit_id]`" x-model="row.unit_id"
                                         x-show="unitsFor(row).length > 0"
                                         class="h-(--spacing-field-compact) w-full sm:w-28 rounded-(--radius-field) border border-(--color-border)
@@ -177,7 +177,7 @@
                             </td>
                         @endif
 
-                        <td class="p-1" data-label="{{ __('sales::field.rate') }}">
+                        <td class="cell-input" data-label="{{ __('sales::field.rate') }}">
                             <input type="number" step="0.0001" inputmode="decimal" required
                                    :name="`lines[${i}][rate]`" x-model="row.rate"
                                    class="num h-(--spacing-field-compact) w-full sm:w-28 rounded-(--radius-field) border border-(--color-border)
@@ -185,13 +185,13 @@
                         </td>
 
                         @if ($showDiscount)
-                            <td class="p-1" data-label="{{ __('sales::field.discount') }}">
+                            <td class="cell-input" data-label="{{ __('sales::field.discount') }}">
                                 <input type="number" step="0.01" inputmode="decimal"
                                        :name="`lines[${i}][discount]`" x-model="row.discount"
                                        class="num h-(--spacing-field-compact) w-full sm:w-24 rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-card) px-2 text-end">
                             </td>
-                            <td class="p-1" data-label="{{ __('sales::field.tax') }}">
+                            <td class="cell-input" data-label="{{ __('sales::field.tax') }}">
                                 <input type="number" step="0.01" inputmode="decimal"
                                        :name="`lines[${i}][tax]`" x-model="row.tax"
                                        class="num h-(--spacing-field-compact) w-full sm:w-24 rounded-(--radius-field) border border-(--color-border)
@@ -199,10 +199,10 @@
                             </td>
                         @endif
 
-                        <td class="num p-2 text-end" data-label="{{ __('sales::field.amount') }}"
+                        <td class="num cell" data-label="{{ __('sales::field.amount') }}"
                             x-text="amount(row).toFixed(2)"></td>
 
-                        <td class="p-1 text-end">
+                        <td class="cell-input text-end">
                             <button type="button" @click="remove(i)"
                                     class="rounded-(--radius-field) px-2 py-1 text-(--color-ink-muted)
                                            hover:bg-(--color-surface-hover)">
@@ -217,11 +217,11 @@
                 <tr>
                     {{-- এককের ঘরটা এলে মোটের সারিও এক ঘর পিছিয়ে বসে, নাহলে
                          যোগফলটা টাকার কলামের নিচ থেকে সরে যেত --}}
-                    <td class="p-2 text-end font-medium"
+                    <td class="cell text-end font-medium"
                         colspan="{{ ($showDiscount ? 5 : 3) + ($linkField ? 1 : 0) + ($packs !== [] ? 1 : 0) }}">
                         {{ __('sales::field.total') }}
                     </td>
-                    <td class="num p-2 text-end font-semibold" x-text="total.toFixed(2)"></td>
+                    <td class="num cell font-semibold" x-text="total.toFixed(2)"></td>
                     <td></td>
                 </tr>
             </tfoot>

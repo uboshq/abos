@@ -14,7 +14,7 @@
 @endphp
 
 <tr class="border-b border-(--color-border) transition-colors hover:bg-(--color-surface-hover)">
-    <td class="px-3 py-2">
+    <td>
         <span class="flex items-center gap-2" style="padding-inline-start: {{ $indent }}rem">
             {{-- গ্রুপ আর সাধারণ খাত এক নজরে আলাদা: গ্রুপ মোটা হরফে, আর
                  তার আগে একটা রেখা — নাহলে ইন্ডেন্ট গুনে বুঝতে হত --}}
@@ -45,19 +45,19 @@
         </span>
     </td>
 
-    <td class="hidden px-3 py-2 whitespace-nowrap text-(--color-ink-muted) sm:table-cell">
+    <td class="hidden whitespace-nowrap text-(--color-ink-muted) sm:table-cell">
         {{ __('accounts::type.' . $account->type) }}
     </td>
 
     {{-- গ্রুপের ব্যালেন্সও দেখানো হয় — সেটাই তার নিচের সবার যোগফল, আর
          না দেখালে "চলতি সম্পদ কত" প্রশ্নের উত্তর পর্দায় থাকত না --}}
-    <td @class(['num px-3 py-2', 'font-semibold' => $account->is_group])>
+    <td @class(['num', 'font-semibold' => $account->is_group])>
         {{-- অঙ্কটাই লিংক — নিয়ম ১। খাতের পাতায় ঠিক সেই এন্ট্রিগুলো
              আছে যেগুলো যোগ হয়ে এই সংখ্যাটা হয়েছে। --}}
         <x-ui.amount :value="$balance" :href="route('accounts.coa.show', $account)" />
     </td>
 
-    <td class="px-3 py-2 text-end">
+    <td class="text-end">
         @if ($account->is_group)
             @can('create', \App\Modules\Accounts\Models\Account::class)
                 {{-- এই মাথার নিচেই নতুন খাত — বাবা আগে থেকে বাছা থাকে --}}

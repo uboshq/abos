@@ -11,6 +11,25 @@
     রিকলের মুহূর্তে পরের কাজটাই ফোন করা। নম্বরটা না থাকলে প্রতিটা নামের
     জন্য গ্রাহকের পাতা খুলতে হত — তিরিশজন গ্রাহকে তিরিশবার।
 --}}
+@php
+    /* কলাম ধরে — `x-ui.table` স্লট পড়ে না, সারি আসে :rows থেকে। */
+    $columns = [
+        ['key' => 'trx_date', 'label' => __('sales::field.date'), 'width' => '9rem',
+         'render' => fn ($r) => \App\Core\Support\DateFormat::format($r->trx_date)],
+        ['key' => 'document_no', 'label' => __('sales::doc.challan'),
+         'render' => fn ($r) => view('sales::lot.partials.challan', ['row' => $r])],
+        ['key' => 'customer', 'label' => __('sales::field.customer'),
+         'render' => fn ($r) => app()->getLocale() === 'bn' && $r->customer_bn
+             ? $r->customer_bn : $r->customer_en],
+        ['key' => 'phone', 'label' => __('inventory::field.phone'), 'width' => '10rem',
+         'render' => fn ($r) => view('sales::lot.partials.phone', ['row' => $r])],
+        ['key' => 'qty', 'label' => __('sales::field.quantity'), 'numeric' => true,
+         'width' => '8rem',
+         // পিছনের শূন্য কাটা — ৫.০০০ নয়, ৫
+         'render' => fn ($r) => rtrim(rtrim((string) $r->qty, '0'), '.')],
+    ];
+@endphp
+
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('sales::menu.lot_trace') }}</x-slot:title>
 
@@ -84,52 +103,9 @@
         @else
             <div class="table-responsive rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card)">
-                <table class="table-cards w-full text-sm">
-                    <thead class="border-b border-(--color-border) text-start text-(--color-ink-muted)">
-                        <tr>
-                            <th class="p-2 text-start font-medium">{{ __('sales::field.date') }}</th>
-                            <th class="p-2 text-start font-medium">{{ __('sales::doc.challan') }}</th>
-                            <th class="p-2 text-start font-medium">{{ __('sales::field.customer') }}</th>
-                            <th class="p-2 text-start font-medium">{{ __('inventory::field.phone') }}</th>
-                            <th class="p-2 text-end font-medium">{{ __('sales::field.quantity') }}</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        @foreach ($recipients as $row)
-                            <tr class="border-b border-(--color-border)">
-                                <td class="p-2" data-label="{{ __('sales::field.date') }}">
-                                    {{ \App\Core\Support\DateFormat::format($row->trx_date) }}
-                                </td>
-
-                                {{-- চালানের নম্বরটা ক্লিকযোগ্য — নিয়ম ১:
-                                     প্রতিটা সংখ্যা তার উৎসে নিয়ে যায় --}}
-                                <td class="p-2" data-label="{{ __('sales::doc.challan') }}">
-                                    <a href="{{ route('sales.challan.show', ['challan' => $row->challan_id]) }}"
-                                       class="text-(--color-brand-700) hover:underline">
-                                        {{ $row->document_no }}
-                                    </a>
-                                </td>
-
-                                <td class="p-2" data-label="{{ __('sales::field.customer') }}">
-                                    {{ app()->getLocale() === 'bn' && $row->customer_bn ? $row->customer_bn : $row->customer_en }}
-                                </td>
-
-                                <td class="p-2" data-label="{{ __('inventory::field.phone') }}">
-                                    @if ($row->customer_phone)
-                                        <a href="tel:{{ $row->customer_phone }}" class="num hover:underline">
-                                            {{ $row->customer_phone }}
-                                        </a>
-                                    @endif
-                                </td>
-
-                                <td class="num p-2 text-end" data-label="{{ __('sales::field.quantity') }}">
-                                    {{ rtrim(rtrim((string) $row->qty, '0'), '.') }}
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+        <x-ui.table :rows="$recipients"
+                    :columns="$columns"
+                    :empty="__('core.empty.no_results')" />
             </div>
         @endif
     @endif

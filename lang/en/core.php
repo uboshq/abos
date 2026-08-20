@@ -168,6 +168,8 @@ return [
     'appearance' => [
         'title' => 'Appearance',
         'subtitle' => 'Your own colour, theme and language — not a company setting',
+        'ui' => 'How the ERP looks',
+        'ui_note' => 'Whatever you pick here, the whole of ABOS becomes — every screen, every list. Not a colour change: five are exact copies of real ERPs, two are ABOS own designs.',
         'accent' => 'Colour',
         'accent_note' => 'A fixed set rather than a free picker: each one has had its contrast checked, so no choice leaves a button unreadable.',
         'theme' => 'Theme',
@@ -185,6 +187,29 @@ return [
         'violet' => 'Violet',
         'emerald' => 'Emerald',
         'slate' => 'Slate',
+    ],
+
+    /* The names stay in English in both languages — they are identities,
+       not labels. A colleague says "go to Apps" on the phone, and both
+       ends need to hear the same word. */
+    'ui' => [
+        'classic' => 'Classic',
+        'classic_blurb' => 'Exactly what you see today. A copy of nothing.',
+        'tiles' => 'Tiles',
+        'tiles_blurb' => 'A page of tiles, round buttons, cool blue.',
+        'suite' => 'Suite',
+        'suite_blurb' => 'Dense rows, narrow type — a lot on one screen.',
+        'apps' => 'Apps',
+        'apps_blurb' => 'Aubergine header, open lists, soft edges.',
+        'dynamic' => 'Dynamic',
+        'dynamic_blurb' => 'Command bar on top, dense grids, an office feel.',
+        'redwood' => 'Redwood',
+        'redwood_blurb' => 'Brick header, rounded cards, plenty of air.',
+        'rose' => 'Rose',
+        'rose_blurb' => 'An ABOS original — warm red, gentle edges.',
+        'navy' => 'Navy',
+        'navy_blurb' => 'An ABOS original — deep blue, dense and quiet.',
+        'like' => 'Like :erp',
     ],
 
     'components' => [

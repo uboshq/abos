@@ -12,7 +12,7 @@
 @endphp
 
 <tr class="border-b border-(--color-border) transition-colors hover:bg-(--color-surface-hover)">
-    <td class="px-3 py-2">
+    <td>
         <span class="flex items-center gap-2" style="padding-inline-start: {{ $depth * 1.25 }}rem">
             @if ($location->children->isNotEmpty())
                 <span aria-hidden="true" class="text-(--color-ink-placeholder)">▾</span>
@@ -36,16 +36,16 @@
         </span>
     </td>
 
-    <td class="hidden px-3 py-2 whitespace-nowrap text-(--color-ink-muted) sm:table-cell">
+    <td class="hidden whitespace-nowrap text-(--color-ink-muted) sm:table-cell">
         {{ __('master_data::level.' . $location->level) }}
     </td>
 
     {{-- রুটে কে যায় — রোজকার কাজে এই কলামটাই সবচেয়ে বেশি দেখা হয় --}}
-    <td class="hidden px-3 py-2 text-(--color-ink-muted) lg:table-cell">
+    <td class="hidden text-(--color-ink-muted) lg:table-cell">
         {{ $location->assignee?->name ?? '' }}
     </td>
 
-    <td class="px-3 py-2 text-end">
+    <td class="text-end">
         @if ($childLevel !== null)
             @can('master_data.manage')
                 <a href="{{ route('master_data.location.create', ['level' => $childLevel, 'parent' => $location->id]) }}"

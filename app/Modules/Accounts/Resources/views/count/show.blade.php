@@ -5,6 +5,30 @@
     যে জাবেদাটা বসেছে সেটাও ক্লিকযোগ্য (নিয়ম ১) — নাহলে "টাকাটা কোথায়
     গেল" প্রশ্নের উত্তর পর্দায় থাকত না।
 --}}
+@php
+    /*
+        কলাম ধরে — `x-ui.table` স্লট পড়ে না, সারি আসে :rows থেকে।
+
+        `$notes` একটা মানচিত্র (নোটের মান => কয়টা), আর কম্পোনেন্ট
+        সারিগুলো মান হিসেবে ঘোরে — চাবিটা হারিয়ে যেত। তাই আগে
+        সারিগুলোকে অ্যারের তালিকা করে নেওয়া হয়।
+    */
+    $noteRows = collect($notes)
+        ->map(fn ($qty, $note) => ['note' => $note, 'qty' => $qty])
+        ->values();
+
+    $columns = [
+        ['key' => 'note', 'label' => __('accounts::field.note'), 'numeric' => true,
+         'render' => fn ($r) => number_format($r['note'])],
+        ['key' => 'qty', 'label' => __('accounts::field.pieces'), 'numeric' => true,
+         'render' => fn ($r) => number_format($r['qty'])],
+        // সারির অঙ্কটা নিচের মোটে যায়, তাই গুণটাও bcmath-এ
+        ['key' => 'amount', 'label' => __('accounts::field.amount'), 'numeric' => true,
+         'render' => fn ($r) => \App\Core\Support\Money::format(
+             bcmul((string) $r['note'], (string) $r['qty'], 4))],
+    ];
+@endphp
+
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ $count->document_no }}</x-slot:title>
 
@@ -95,38 +119,14 @@
             @if ($notes === [])
                 <x-ui.empty-state :message="__('accounts::message.no_notes_recorded')" />
             @else
-                <table class="w-full border-collapse text-sm">
-                    <thead>
-                        <tr class="border-b border-(--color-border) bg-(--color-surface-app)">
-                            <th scope="col" class="num px-3 py-2 text-end font-medium text-(--color-ink-muted)">
-                                {{ __('accounts::field.note') }}
-                            </th>
-                            <th scope="col" class="num px-3 py-2 text-end font-medium text-(--color-ink-muted)">
-                                {{ __('accounts::field.pieces') }}
-                            </th>
-                            <th scope="col" class="num px-3 py-2 text-end font-medium text-(--color-ink-muted)">
-                                {{ __('accounts::field.amount') }}
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($notes as $note => $qty)
-                            <tr class="border-b border-(--color-border)">
-                                <td class="num px-3 py-2 font-medium">{{ number_format($note) }}</td>
-                                <td class="num px-3 py-2">{{ number_format($qty) }}</td>
-                                {{-- সারির অঙ্কটা নিচের মোটে যায়, তাই গুণটাও bcmath-এ --}}
-                                <td class="num px-3 py-2">{{ \App\Core\Support\Money::format(bcmul((string) $note, (string) $qty, 4)) }}</td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                    <tfoot>
-                        <tr class="bg-(--color-surface-app) font-semibold">
-                            <td class="px-3 py-2">{{ __('core.print.total') }}</td>
-                            <td class="num px-3 py-2">{{ number_format(array_sum($notes)) }}</td>
-                            <td class="num px-3 py-2">{{ \App\Core\Support\Money::format($count->counted_amount) }}</td>
-                        </tr>
-                    </tfoot>
-                </table>
+                <x-ui.table :rows="$noteRows"
+                            :columns="$columns"
+                            :totals="[
+                                'qty' => number_format(array_sum($notes)),
+                                'amount' => \App\Core\Support\Money::format($count->counted_amount),
+                            ]"
+                            :totalsLabel="__('core.print.total')"
+                            :empty="__('core.empty.no_results')" />
             @endif
         </section>
 

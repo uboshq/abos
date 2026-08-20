@@ -6,6 +6,23 @@
     বন্ধ করি। তিনটা আলাদা পাতা বানালে "আমার শিফটটা কোথায়" প্রশ্নের
     উত্তর প্রতিবার আলাদা হত।
 --}}
+@php
+    /* কলাম ধরে — `x-ui.table` স্লট পড়ে না, সারি আসে :rows থেকে। */
+    $columns = [
+        ['key' => 'till', 'label' => __('sales::field.till'),
+         'render' => fn ($r) => $r->till?->name()],
+        ['key' => 'user', 'label' => __('sales::field.user'),
+         'render' => fn ($r) => $r->user?->name],
+        ['key' => 'time', 'label' => __('sales::field.time'), 'width' => '9rem',
+         'render' => fn ($r) => $r->opened_at?->format('H:i').'-'.$r->closed_at?->format('H:i')],
+        ['key' => 'counted', 'label' => __('sales::message.shift_counted'),
+         'numeric' => true, 'width' => '11rem',
+         'render' => fn ($r) => \App\Core\Support\Money::format($r->closing_counted)],
+        ['key' => 'view', 'label' => '', 'width' => '6rem',
+         'render' => fn ($r) => view('sales::shift.partials.view', ['row' => $r])],
+    ];
+@endphp
+
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('sales::menu.shift') }}</x-slot:title>
 
@@ -131,38 +148,9 @@
 
         <div class="table-responsive rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">
-            <table class="table-cards w-full text-sm">
-                <thead class="border-b border-(--color-border) text-start text-(--color-ink-muted)">
-                    <tr>
-                        <th class="p-2 text-start font-medium">{{ __('sales::field.till') }}</th>
-                        <th class="p-2 text-start font-medium">{{ __('sales::field.user') }}</th>
-                        <th class="p-2 text-start font-medium">{{ __('sales::field.time') }}</th>
-                        <th class="p-2 text-end font-medium">{{ __('sales::message.shift_counted') }}</th>
-                        <th class="p-2"><span class="sr-only">{{ __('core.action.view') }}</span></th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    @foreach ($closed as $row)
-                        <tr class="border-b border-(--color-border)">
-                            <td class="p-2" data-label="{{ __('sales::field.till') }}">{{ $row->till?->name() }}</td>
-                            <td class="p-2" data-label="{{ __('sales::field.user') }}">{{ $row->user?->name }}</td>
-                            <td class="p-2" data-label="{{ __('sales::field.time') }}">
-                                {{ $row->opened_at?->format('H:i') }}–{{ $row->closed_at?->format('H:i') }}
-                            </td>
-                            <td class="num p-2 text-end" data-label="{{ __('sales::message.shift_counted') }}">
-                                {{ \App\Core\Support\Money::format($row->closing_counted) }}
-                            </td>
-                            <td class="p-2 text-end">
-                                <a href="{{ route('sales.shift.show', ['shift' => $row->id]) }}"
-                                   class="text-(--color-brand-700) hover:underline">
-                                    {{ __('core.action.view') }}
-                                </a>
-                            </td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
+        <x-ui.table :rows="$closed"
+                    :columns="$columns"
+                    :empty="__('core.empty.no_results')" />
         </div>
     @endif
 </x-layouts.app>

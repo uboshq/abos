@@ -355,46 +355,46 @@
             <section class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                             bg-(--color-surface-card)">
                 <div class="table-responsive">
-                    <table class="table-cards w-full text-sm">
-                        <thead class="border-b border-(--color-border) text-(--color-ink-muted)">
+                    <table class="ui-lines table-cards w-full text-sm">
+                        <thead>
                             <tr>
-                                <th class="p-2 text-start font-medium">{{ __('sales::field.sl') }}</th>
-                                <th class="p-2 text-start font-medium">{{ __('sales::field.item_name') }}</th>
-                                <th class="p-2 text-end font-medium">{{ __('sales::field.unit_price') }}</th>
-                                <th class="p-2 text-end font-medium">{{ __('sales::field.quantity') }}</th>
+                                <th class="text-start">{{ __('sales::field.sl') }}</th>
+                                <th class="text-start">{{ __('sales::field.item_name') }}</th>
+                                <th class="text-end">{{ __('sales::field.unit_price') }}</th>
+                                <th class="text-end">{{ __('sales::field.quantity') }}</th>
                                 @if ($show['free_qty'])
-                                    <th class="p-2 text-end font-medium">{{ __('sales::field.free_unit') }}</th>
+                                    <th class="text-end">{{ __('sales::field.free_unit') }}</th>
                                 @endif
-                                <th class="p-2 text-end font-medium">{{ __('sales::field.total_qty') }}</th>
+                                <th class="text-end">{{ __('sales::field.total_qty') }}</th>
                                 @if ($show['line_discount'])
-                                    <th class="p-2 text-end font-medium">{{ __('sales::field.dis') }}</th>
+                                    <th class="text-end">{{ __('sales::field.dis') }}</th>
                                 @endif
                                 @if ($vatEnabled)
-                                    <th class="p-2 text-end font-medium">{{ __('sales::field.vat') }}</th>
+                                    <th class="text-end">{{ __('sales::field.vat') }}</th>
                                 @endif
-                                <th class="p-2 text-end font-medium">{{ __('sales::field.amount') }}</th>
-                                <th class="p-2"><span class="sr-only">{{ __('sales::action.remove_line') }}</span></th>
+                                <th class="text-end">{{ __('sales::field.amount') }}</th>
+                                <th><span class="sr-only">{{ __('sales::action.remove_line') }}</span></th>
                             </tr>
                         </thead>
 
                         <tbody>
                             <template x-for="(line, i) in lines" :key="line.key">
                                 <tr class="border-b border-(--color-border)">
-                                    <td class="p-2" x-text="i + 1"></td>
+                                    <td class="cell" x-text="i + 1"></td>
 
-                                    <td class="p-2" data-label="{{ __('sales::field.item_name') }}">
+                                    <td class="cell" data-label="{{ __('sales::field.item_name') }}">
                                         <span x-text="line.name"></span>
                                         <input type="hidden" :name="`lines[${i}][product_id]`" :value="line.id">
                                     </td>
 
-                                    <td class="p-1 text-end" data-label="{{ __('sales::field.unit_price') }}">
+                                    <td class="cell-input text-end" data-label="{{ __('sales::field.unit_price') }}">
                                         <input type="number" step="0.0001" min="0" x-model="line.rate"
                                                :name="`lines[${i}][rate]`"
                                                class="num h-(--spacing-field-dense) w-full sm:w-24 rounded-(--radius-field) border
                                                       border-(--color-border) bg-(--color-surface-app) px-2 text-end">
                                     </td>
 
-                                    <td class="p-1 text-end" data-label="{{ __('sales::field.quantity') }}">
+                                    <td class="cell-input text-end" data-label="{{ __('sales::field.quantity') }}">
                                         <input type="number" step="0.01" min="0.01" x-model="line.qty"
                                                :name="`lines[${i}][qty]`"
                                                class="num h-(--spacing-field-dense) w-full sm:w-20 rounded-(--radius-field) border
@@ -402,7 +402,7 @@
                                     </td>
 
                                     @if ($show['free_qty'])
-                                        <td class="p-1 text-end" data-label="{{ __('sales::field.free_unit') }}">
+                                        <td class="cell-input text-end" data-label="{{ __('sales::field.free_unit') }}">
                                             <input type="number" step="0.01" min="0" x-model="line.freeQty"
                                                    :name="`lines[${i}][free_qty]`"
                                                    class="num h-(--spacing-field-dense) w-full sm:w-20 rounded-(--radius-field) border
@@ -410,11 +410,11 @@
                                         </td>
                                     @endif
 
-                                    <td class="num p-2 text-end" data-label="{{ __('sales::field.total_qty') }}"
+                                    <td class="num cell" data-label="{{ __('sales::field.total_qty') }}"
                                         x-text="qty(Number(line.qty || 0) + Number(line.freeQty || 0))"></td>
 
                                     @if ($show['line_discount'])
-                                        <td class="p-1 text-end" data-label="{{ __('sales::field.dis') }}">
+                                        <td class="cell-input text-end" data-label="{{ __('sales::field.dis') }}">
                                             <input type="number" step="0.01" min="0" max="100"
                                                    x-model="line.discountPercent"
                                                    :name="`lines[${i}][discount_percent]`"
@@ -424,14 +424,14 @@
                                     @endif
 
                                     @if ($vatEnabled)
-                                        <td class="num p-2 text-end" data-label="{{ __('sales::field.vat') }}"
+                                        <td class="num cell" data-label="{{ __('sales::field.vat') }}"
                                             x-text="money(lineVat(line))"></td>
                                     @endif
 
-                                    <td class="num p-2 text-end font-medium" data-label="{{ __('sales::field.amount') }}"
+                                    <td class="num cell font-medium" data-label="{{ __('sales::field.amount') }}"
                                         x-text="money(lineNet(line))"></td>
 
-                                    <td class="p-1 text-end">
+                                    <td class="cell-input text-end">
                                         <button type="button" @click="lines.splice(i, 1)"
                                                 aria-label="{{ __('sales::action.remove_line') }}"
                                                 class="rounded-(--radius-field) px-2 py-1 text-(--color-ink-muted)
@@ -462,24 +462,24 @@
                     </h2>
 
                     <div class="table-responsive">
-                        <table class="table-cards w-full text-sm">
-                            <thead class="border-b border-(--color-border) text-(--color-ink-muted)">
+                        <table class="ui-lines table-cards w-full text-sm">
+                            <thead>
                                 <tr>
-                                    <th class="p-2 text-start font-medium">{{ __('sales::field.sl') }}</th>
-                                    <th class="p-2 text-start font-medium">{{ __('sales::field.gift_for') }}</th>
-                                    <th class="p-2 text-start font-medium">{{ __('sales::field.item_name') }}</th>
-                                    <th class="p-2 text-end font-medium">{{ __('sales::field.quantity') }}</th>
-                                    <th class="p-2 text-start font-medium">{{ __('sales::field.remarks') }}</th>
-                                    <th class="p-2"><span class="sr-only">{{ __('sales::action.remove_line') }}</span></th>
+                                    <th class="text-start">{{ __('sales::field.sl') }}</th>
+                                    <th class="text-start">{{ __('sales::field.gift_for') }}</th>
+                                    <th class="text-start">{{ __('sales::field.item_name') }}</th>
+                                    <th class="text-end">{{ __('sales::field.quantity') }}</th>
+                                    <th class="text-start">{{ __('sales::field.remarks') }}</th>
+                                    <th><span class="sr-only">{{ __('sales::action.remove_line') }}</span></th>
                                 </tr>
                             </thead>
 
                             <tbody>
                                 <template x-for="(gift, i) in gifts" :key="gift.key">
                                     <tr class="border-b border-(--color-border)">
-                                        <td class="p-2" x-text="i + 1"></td>
+                                        <td class="cell" x-text="i + 1"></td>
 
-                                        <td class="p-1" data-label="{{ __('sales::field.gift_for') }}">
+                                        <td class="cell-input" data-label="{{ __('sales::field.gift_for') }}">
                                             <select x-model="gift.againstProductId"
                                                     :name="`gifts[${i}][against_product_id]`"
                                                     class="h-(--spacing-field-dense) w-full rounded-(--radius-field) border
@@ -491,7 +491,7 @@
                                             </select>
                                         </td>
 
-                                        <td class="p-1" data-label="{{ __('sales::field.item_name') }}">
+                                        <td class="cell-input" data-label="{{ __('sales::field.item_name') }}">
                                             {{-- পণ্যতালিকা এখানে সার্ভার থেকে আবার আঁকা হয় না।
 
                                                  উপরে ওই একই তালিকা JSON হিসেবে চলে গেছে
@@ -511,20 +511,20 @@
                                             </select>
                                         </td>
 
-                                        <td class="p-1 text-end" data-label="{{ __('sales::field.quantity') }}">
+                                        <td class="cell-input text-end" data-label="{{ __('sales::field.quantity') }}">
                                             <input type="number" step="0.01" min="0" x-model="gift.qty"
                                                    :name="`gifts[${i}][qty]`"
                                                    class="num h-(--spacing-field-dense) w-full sm:w-20 rounded-(--radius-field) border
                                                           border-(--color-border) bg-(--color-surface-app) px-2 text-end">
                                         </td>
 
-                                        <td class="p-1" data-label="{{ __('sales::field.remarks') }}">
+                                        <td class="cell-input" data-label="{{ __('sales::field.remarks') }}">
                                             <input type="text" x-model="gift.remarks" :name="`gifts[${i}][remarks]`"
                                                    class="h-(--spacing-field-dense) w-full rounded-(--radius-field) border
                                                           border-(--color-border) bg-(--color-surface-app) px-2">
                                         </td>
 
-                                        <td class="p-1 text-end">
+                                        <td class="cell-input text-end">
                                             <button type="button" @click="gifts.splice(i, 1)"
                                                     aria-label="{{ __('sales::action.remove_line') }}"
                                                     class="rounded-(--radius-field) px-2 py-1 text-(--color-ink-muted)

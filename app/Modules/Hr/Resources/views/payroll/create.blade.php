@@ -34,7 +34,7 @@
                              text-(--color-ink-muted)">{{ __('hr::field.month') }}</span>
                 <input type="month" name="month" required value="{{ old('month', $month) }}"
                        class="w-full rounded-(--radius-field) border border-(--color-border)
-                              bg-(--color-surface) px-2 py-1.5 text-sm">
+                              bg-(--color-surface-app) px-2 py-1.5 text-sm">
             </label>
 
             {{-- খরচের তারিখ আলাদা: বেতন জুনের, কিন্তু খরচটা কোন দিনে বসবে
@@ -44,7 +44,7 @@
                              text-(--color-ink-muted)">{{ __('hr::field.trx_date') }}</span>
                 <x-ui.date name="trx_date"
                            value="{{ old('trx_date') }}"
-                           class="w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface) px-2 py-1.5 text-sm" />
+                           class="w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 py-1.5 text-sm" />
                            </label>
 
             <x-ui.button type="submit" tone="primary">{{ __('hr::action.build') }}</x-ui.button>

@@ -68,27 +68,27 @@
                     {{ __('hr::message.attendance_note') }}
                 </p>
 
-                <table class="w-full text-sm">
+                <table class="ui-grid is-dense w-full text-sm">
                     <thead class="border-b border-(--color-border) text-2xs uppercase
                                   tracking-wide text-(--color-ink-muted)">
                         <tr>
-                            <th class="p-2 text-start font-medium">{{ __('hr::field.code') }}</th>
-                            <th class="p-2 text-start font-medium">{{ __('hr::field.name') }}</th>
-                            <th class="p-2 text-start font-medium">{{ __('hr::field.attendance_status') }}</th>
-                            <th class="p-2 text-center font-medium">{{ __('hr::field.is_late') }}</th>
-                            <th class="p-2 text-start font-medium">{{ __('hr::field.remarks') }}</th>
+                            <th class="text-start">{{ __('hr::field.code') }}</th>
+                            <th class="text-start">{{ __('hr::field.name') }}</th>
+                            <th class="text-start">{{ __('hr::field.attendance_status') }}</th>
+                            <th class="text-center">{{ __('hr::field.is_late') }}</th>
+                            <th class="text-start">{{ __('hr::field.remarks') }}</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach ($employees as $employee)
                             @php $row = $existing->get($employee->id); @endphp
                             <tr class="border-b border-(--color-border)">
-                                <td class="num p-2">{{ $employee->code }}</td>
-                                <td class="p-2">{{ $employee->name() }}</td>
-                                <td class="p-2">
+                                <td class="num">{{ $employee->code }}</td>
+                                <td>{{ $employee->name() }}</td>
+                                <td>
                                     <select name="rows[{{ $employee->id }}][status]"
                                             class="rounded-(--radius-field) border border-(--color-border)
-                                                   bg-(--color-surface) px-2 py-1.5 text-sm">
+                                                   bg-(--color-surface-app) px-2 py-1.5 text-sm">
                                         <option value="">—</option>
                                         @foreach ($statuses as $status)
                                             <option value="{{ $status }}"
@@ -98,15 +98,15 @@
                                         @endforeach
                                     </select>
                                 </td>
-                                <td class="p-2 text-center">
+                                <td class="text-center">
                                     <input type="checkbox" name="rows[{{ $employee->id }}][is_late]" value="1"
                                            @checked($row?->is_late) class="size-4">
                                 </td>
-                                <td class="p-2">
+                                <td>
                                     <input type="text" name="rows[{{ $employee->id }}][remarks]"
                                            value="{{ $row?->remarks }}"
                                            class="w-full rounded-(--radius-field) border border-(--color-border)
-                                                  bg-(--color-surface) px-2 py-1.5 text-sm">
+                                                  bg-(--color-surface-app) px-2 py-1.5 text-sm">
                                 </td>
                             </tr>
                         @endforeach

@@ -5,6 +5,19 @@
     শেষে পুরো ইতিহাস। পুরনো সারি সম্পাদনার কোনো পথ নেই — সেটাই
     ইচ্ছাকৃত, কারণ গত মাসের বেতনশিট গত মাসের অঙ্কেই থাকতে হবে।
 --}}
+@php
+    /* কলাম ধরে — `x-ui.table` স্লট পড়ে না, সারি আসে :rows থেকে। */
+    $columns = [
+        ['key' => 'name', 'label' => __('hr::field.name'),
+         'render' => fn ($h) => view('hr::employee.partials.head', ['head' => $h])],
+        ['key' => 'calculation', 'label' => __('hr::field.calculation'),
+         'render' => fn ($h) => __('hr::kind.'.$h->calculation)],
+        ['key' => 'amount', 'label' => __('hr::field.amount'), 'numeric' => true, 'width' => '11rem',
+         'render' => fn ($h) => view('hr::employee.partials.amount',
+             ['head' => $h, 'components' => $components])],
+    ];
+@endphp
+
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ $employee->name() }}</x-slot:title>
 
@@ -66,44 +79,9 @@
                         <p class="text-2xs text-(--color-ink-muted)">{{ __('hr::message.salary_note') }}</p>
                     </div>
 
-                    <table class="w-full text-sm">
-                        <thead class="border-b border-(--color-border) text-2xs uppercase
-                                      tracking-wide text-(--color-ink-muted)">
-                            <tr>
-                                <th class="p-2 text-start font-medium">{{ __('hr::field.name') }}</th>
-                                <th class="p-2 text-start font-medium">{{ __('hr::field.calculation') }}</th>
-                                <th class="p-2 text-end font-medium">{{ __('hr::field.amount') }}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach ($heads as $head)
-                                @php
-                                    $current = collect($components)->firstWhere('head.id', $head->id);
-                                @endphp
-                                <tr class="border-b border-(--color-border)">
-                                    <td class="p-2">
-                                        {{ $head->name() }}
-                                        @unless ($head->isEarning())
-                                            <span class="text-2xs text-(--color-ink-muted)">
-                                                ({{ __('hr::kind.deduction') }})
-                                            </span>
-                                        @endunless
-                                    </td>
-                                    <td class="p-2 text-2xs text-(--color-ink-muted)">
-                                        {{ __('hr::kind.' . $head->calculation) }}
-                                    </td>
-                                    <td class="p-2 text-end">
-                                        <input type="number" step="0.0001" min="0"
-                                               name="amounts[{{ $head->id }}]"
-                                               value="{{ old('amounts.' . $head->id) }}"
-                                               placeholder="{{ $current ? \App\Core\Support\Money::format($current['amount']) : '—' }}"
-                                               class="num w-32 rounded-(--radius-field) border border-(--color-border)
-                                                      bg-(--color-surface) px-2 py-1.5 text-end text-sm">
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+        <x-ui.table :rows="$heads"
+                    :columns="$columns"
+                    :empty="__('core.empty.no_results')" />
 
                     <div class="mt-3 flex justify-end">
                         <x-ui.button type="submit" tone="primary">{{ __('hr::action.save') }}</x-ui.button>

@@ -268,62 +268,62 @@
             <section class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                             bg-(--color-surface-card)">
                 <div class="overflow-x-auto">
-                    <table class="w-full text-sm">
+                    <table class="ui-grid is-compact w-full text-sm">
                         <thead class="bg-(--color-surface-sunken) text-2xs text-(--color-ink-muted)">
                             <tr>
-                                <th class="px-2 py-2 text-start">{{ __('core.table.serial') }}</th>
-                                <th class="px-2 py-2 text-start">{{ __('purchase::field.product') }}</th>
-                                <th class="px-2 py-2 text-end">{{ __('purchase::field.qty') }}</th>
+                                <th class="text-start">{{ __('core.table.serial') }}</th>
+                                <th class="text-start">{{ __('purchase::field.product') }}</th>
+                                <th class="text-end">{{ __('purchase::field.qty') }}</th>
                                 @if ($show['free_qty'])
-                                    <th class="px-2 py-2 text-end">{{ __('purchase::field.free_qty') }}</th>
+                                    <th class="text-end">{{ __('purchase::field.free_qty') }}</th>
                                 @endif
-                                <th class="px-2 py-2 text-end">{{ __('purchase::field.rate') }}</th>
-                                <th class="px-2 py-2 text-end">{{ __('purchase::field.sales_price') }}</th>
+                                <th class="text-end">{{ __('purchase::field.rate') }}</th>
+                                <th class="text-end">{{ __('purchase::field.sales_price') }}</th>
                                 @if ($show['line_discount'])
-                                    <th class="px-2 py-2 text-end">{{ __('purchase::field.discount') }}</th>
+                                    <th class="text-end">{{ __('purchase::field.discount') }}</th>
                                 @endif
                                 @if ($show['vat'])
-                                    <th class="px-2 py-2 text-end">{{ __('purchase::field.tax') }}</th>
+                                    <th class="text-end">{{ __('purchase::field.tax') }}</th>
                                 @endif
-                                <th class="px-2 py-2 text-end">{{ __('purchase::field.line_total') }}</th>
-                                <th class="px-2 py-2"><span class="sr-only">{{ __('core.table.actions') }}</span></th>
+                                <th class="text-end">{{ __('purchase::field.line_total') }}</th>
+                                <th><span class="sr-only">{{ __('core.table.actions') }}</span></th>
                             </tr>
                         </thead>
 
                         <tbody>
                             <template x-for="(line, index) in lines" :key="line.key">
                                 <tr class="border-t border-(--color-border)">
-                                    <td class="num px-2 py-1.5" x-text="index + 1"></td>
-                                    <td class="px-2 py-1.5">
+                                    <td class="num" x-text="index + 1"></td>
+                                    <td>
                                         <span x-text="line.name"></span>
                                         <input type="hidden" :name="`lines[${index}][product_id]`" :value="line.id">
                                         <input type="hidden" :name="`lines[${index}][sales_price]`"
                                                :value="line.sales_price">
                                     </td>
-                                    <td class="px-2 py-1.5">
+                                    <td>
                                         <input type="number" step="0.01" inputmode="decimal"
                                                :name="`lines[${index}][qty]`" x-model="line.qty"
                                                class="num h-(--spacing-field-dense) w-20 rounded-(--radius-field) border
                                                       border-(--color-border) bg-(--color-surface-card) px-1 text-end">
                                     </td>
                                     @if ($show['free_qty'])
-                                        <td class="px-2 py-1.5">
+                                        <td>
                                             <input type="number" step="0.01" inputmode="decimal"
                                                    :name="`lines[${index}][free_qty]`" x-model="line.free_qty"
                                                    class="num h-(--spacing-field-dense) w-20 rounded-(--radius-field) border
                                                           border-(--color-border) bg-(--color-surface-card) px-1 text-end">
                                         </td>
                                     @endif
-                                    <td class="px-2 py-1.5">
+                                    <td>
                                         <input type="number" step="0.01" inputmode="decimal"
                                                :name="`lines[${index}][rate]`" x-model="line.rate"
                                                class="num h-(--spacing-field-dense) w-24 rounded-(--radius-field) border
                                                       border-(--color-border) bg-(--color-surface-card) px-1 text-end">
                                     </td>
-                                    <td class="num px-2 py-1.5 text-end text-(--color-ink-muted)"
+                                    <td class="num text-(--color-ink-muted)"
                                         x-text="line.sales_price ? money(line.sales_price) : '—'"></td>
                                     @if ($show['line_discount'])
-                                        <td class="px-2 py-1.5">
+                                        <td>
                                             <input type="number" step="0.01" inputmode="decimal"
                                                    :name="`lines[${index}][discount]`" x-model="line.discount"
                                                    class="num h-(--spacing-field-dense) w-20 rounded-(--radius-field) border
@@ -331,15 +331,15 @@
                                         </td>
                                     @endif
                                     @if ($show['vat'])
-                                        <td class="px-2 py-1.5">
+                                        <td>
                                             <input type="number" step="0.01" inputmode="decimal"
                                                    :name="`lines[${index}][tax]`" x-model="line.tax"
                                                    class="num h-(--spacing-field-dense) w-20 rounded-(--radius-field) border
                                                           border-(--color-border) bg-(--color-surface-card) px-1 text-end">
                                         </td>
                                     @endif
-                                    <td class="num px-2 py-1.5 text-end font-medium" x-text="money(lineNet(line))"></td>
-                                    <td class="px-2 py-1.5 text-end">
+                                    <td class="num font-medium" x-text="money(lineNet(line))"></td>
+                                    <td class="text-end">
                                         <button type="button" @click="lines.splice(index, 1)"
                                                 class="rounded-(--radius-field) px-2 py-1 text-(--color-danger)"
                                                 aria-label="{{ __('purchase::action.clear_line') }}">&times;</button>

@@ -1,0 +1,331 @@
+/* ═════════════════════════════════════════════════════════════════
+   আটটা চেহারা — টোকেনের আটটা সেট।
+
+   ── এই ফাইলটা যা করে, আর যা করে না ──────────────────────────────
+   করে: টোকেন নতুন করে বলা। রং, ধারের গোলাই, সারির উচ্চতা, ঘরের
+   প্যাডিং — যেগুলোর উপর গোটা ERP দাঁড়িয়ে আছে।
+
+   করে না: কোনো পর্দার কথা জানা। এখানে একটাও স্ক্রিনের নাম নেই, আর
+   কোনোদিন থাকবে না। পর্দাগুলো টোকেন পড়ে, আর টোকেন এখান থেকে আসে —
+   এটাই "একটা বাছাই, দুইশো বাহান্নটা পর্দা" কাজ করার একমাত্র কারণ।
+
+   ── কেন [data-ui], :root[data-ui] নয় ────────────────────────────
+   :root[data-theme='dark'] এর নির্দিষ্টতা (০,২,০)। :root[data-ui]
+   লিখলে সেটাও (০,২,০) হত, আর এই ফাইলটা পরে বসে বলে **সে জিতত** —
+   অর্থাৎ Apps বাছলে গাঢ় থিমে পটভূমি সাদা হয়ে যেত।
+
+   [data-ui] (০,১,০) ইচ্ছাকৃতভাবে দুর্বল: গাঢ় থিম সবসময় পৃষ্ঠতল
+   জিতে নেয়, আর চেহারা দেয় বাকিটা — ধার, ঘনত্ব, সাইডবারের রং।
+   কোনো চেহারার গাঢ় রূপে আলাদা কিছু লাগলে সেটা নিচে, তিনটা
+   নির্বাচকের নিয়মে (০,৩,০)।
+
+   ── অ্যাকসেন্ট আর চেহারা আলাদা, আর সেটা ইচ্ছাকৃত ─────────────────
+   --color-brand-* এখানে কেউ ছোঁয় না। ওটা ব্যবহারকারীর অ্যাকসেন্ট,
+   আর সেটা <html style="…"> এ ইনলাইন বসে — সব নিয়মকে হারায়।
+
+   ভাগটা এরকম: **চেহারা মানে খোলস** (সাইডবার, মাথা, ধার, ঘনত্ব),
+   **অ্যাকসেন্ট মানে কাজের রং** (বোতাম, লিংক, নির্বাচন)। এক করে
+   দিলে যিনি Apps এর বেগুনি খোলস চান অথচ সবুজ বোতাম চান, তাঁর একটা
+   পছন্দ হারিয়ে যেত।
+   ═════════════════════════════════════════════════════════════════ */
+
+/* ─────────────────────────────────────────────────────────────────
+   Tiles — SAP Fiori 3.
+
+   ফিওরির চিহ্ন তিনটা: গাঢ় নীলচে-ধূসর শেল বার, ঠান্ডা ধূসর জমিন, আর
+   সাদা টাইল। ধার সামান্য — ৪px ঘরে, ৮px টাইলে; ফিওরি গোল নয়, শান্ত।
+   ───────────────────────────────────────────────────────────────── */
+[data-ui='tiles'] {
+    --color-surface-app: #f5f6f7;
+    --color-surface-card: #ffffff;
+    --color-surface-muted: #eaecee;
+    --color-surface-sunken: #eaecee;
+    --color-surface-hover: #ebf5fe;
+    --color-surface-selected: #e3f0fc;
+    --color-border: #d9d9d9;
+    --color-border-strong: #b3b3b3;
+
+    --color-ink: #32363a;
+    --color-ink-body: #32363a;
+    --color-ink-muted: #6a6d70;
+
+    --color-sidebar: #354a5f;
+    --color-sidebar-hover: #46617c;
+    --color-sidebar-active: #0a6ed1;
+    --color-sidebar-border: #2b3c4d;
+    --color-sidebar-icon: #d9e2ea;
+
+    --radius-field: 4px;
+    --radius-card: 8px;
+    --radius-badge: 4px;
+
+    --row-height: 44px;
+    --row-height-dense: 36px;
+    --grid-pad-x: 12px;
+    --grid-pad-y: 8px;
+
+    /* ফিওরির শেল বার সরু — ৪৪px, বরাবরই */
+    --spacing-header: 44px;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Suite — Oracle NetSuite.
+
+   নেটস্যুটের পরিচয় ঘনত্ব। কোনাগুলো প্রায় কাটা (২px), সারি ছোট, আর
+   এক পর্দায় যতটা সম্ভব ঢোকানো হয় — যাঁরা সারাদিন এতে কাজ করেন তাঁরা
+   ঠিক এটার জন্যই একে বেছে নেন।
+   ───────────────────────────────────────────────────────────────── */
+[data-ui='suite'] {
+    --color-surface-app: #f2f2f2;
+    --color-surface-card: #ffffff;
+    --color-surface-muted: #e8e8e8;
+    --color-surface-sunken: #e8e8e8;
+    --color-surface-hover: #eef5f2;
+    --color-surface-selected: #dcece5;
+    --color-border: #c8c8c8;
+    --color-border-strong: #9c9c9c;
+
+    --color-ink: #1f2b28;
+    --color-ink-body: #2f3b38;
+    --color-ink-muted: #5e6b67;
+
+    --color-sidebar: #1f2b28;
+    --color-sidebar-hover: #33413d;
+    --color-sidebar-active: #125740;
+    --color-sidebar-border: #16201e;
+    --color-sidebar-icon: #cfdad6;
+
+    --radius-field: 2px;
+    --radius-card: 2px;
+    --radius-badge: 2px;
+
+    --row-height: 32px;
+    --row-height-dense: 28px;
+    --grid-pad-x: 8px;
+    --grid-pad-y: 4px;
+    --grid-pad-y-tight: 3px;
+    --lines-pad: 6px;
+    --lines-pad-input: 3px;
+    --spacing-header: 52px;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Apps — Odoo.
+
+   ওডুর বেগুনি (#714b67) গোটা সফটওয়্যারের পরিচয়। তালিকা খোলা, ধার
+   নরম কিন্তু ছোট, আর জমিনটা প্রায় সাদা — ওডু ছায়া দিয়ে নয়, ফাঁকা
+   জায়গা দিয়ে আলাদা করে।
+   ───────────────────────────────────────────────────────────────── */
+[data-ui='apps'] {
+    --color-surface-app: #f9f9f9;
+    --color-surface-card: #ffffff;
+    --color-surface-muted: #f0f0f0;
+    --color-surface-sunken: #f0f0f0;
+    --color-surface-hover: #f3eef2;
+    --color-surface-selected: #ece3ea;
+    --color-border: #dee2e6;
+    --color-border-strong: #b9c0c7;
+
+    --color-ink: #374151;
+    --color-ink-body: #4b5563;
+    --color-ink-muted: #6b7280;
+
+    --color-sidebar: #714b67;
+    --color-sidebar-hover: #8a5e7e;
+    --color-sidebar-active: #017e84;
+    --color-sidebar-border: #5c3d53;
+    --color-sidebar-icon: #e7dbe4;
+
+    --radius-field: 4px;
+    --radius-card: 6px;
+
+    /* ওডুর ব্যাজ গুলি-আকৃতির */
+    --radius-badge: 12px;
+
+    --row-height: 40px;
+    --row-height-dense: 34px;
+    --grid-pad-x: 14px;
+    --grid-pad-y: 8px;
+    --spacing-header: 46px;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Dynamic — Microsoft Dynamics 365 (Fluent)।
+
+   ফ্লুয়েন্টের ধার প্রায় নেই (২px), জমিন উষ্ণ-ধূসর (#faf9f8), আর ছক
+   ঘন — D365 এর কাজের পর্দা তথ্যঘন হওয়ার জন্যই বানানো।
+   ───────────────────────────────────────────────────────────────── */
+[data-ui='dynamic'] {
+    --color-surface-app: #faf9f8;
+    --color-surface-card: #ffffff;
+    --color-surface-muted: #f3f2f1;
+    --color-surface-sunken: #f3f2f1;
+    --color-surface-hover: #eff6fc;
+    --color-surface-selected: #deecf9;
+    --color-border: #edebe9;
+    --color-border-strong: #c8c6c4;
+
+    --color-ink: #242424;
+    --color-ink-body: #323130;
+    --color-ink-muted: #605e5c;
+
+    --color-sidebar: #1b3a57;
+    --color-sidebar-hover: #24506f;
+    --color-sidebar-active: #0078d4;
+    --color-sidebar-border: #143047;
+    --color-sidebar-icon: #d6e4ef;
+
+    --radius-field: 2px;
+    --radius-card: 4px;
+    --radius-badge: 2px;
+
+    --row-height: 36px;
+    --row-height-dense: 32px;
+    --grid-pad-x: 10px;
+    --grid-pad-y: 6px;
+    --grid-pad-y-tight: 4px;
+    --spacing-header: 48px;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Redwood — Oracle Fusion Cloud.
+
+   রেডউডের দুইটা চিহ্ন: ইটরঙা (#c74634) আর **ফাঁকা জায়গা**। কার্ড বড়
+   গোলাইয়ের, সারি লম্বা, জমিন উষ্ণ অফ-হোয়াইট। এটাই আটটার মধ্যে
+   সবচেয়ে খোলা চেহারা — আর সেটা ইচ্ছাকৃত, নাহলে নকলটা নকল হত না।
+   ───────────────────────────────────────────────────────────────── */
+[data-ui='redwood'] {
+    --color-surface-app: #f8f7f5;
+    --color-surface-card: #ffffff;
+    --color-surface-muted: #f1efec;
+    --color-surface-sunken: #f1efec;
+    --color-surface-hover: #f6efed;
+    --color-surface-selected: #f7e6e2;
+    --color-border: #e4e1dd;
+    --color-border-strong: #c2bdb6;
+
+    --color-ink: #161513;
+    --color-ink-body: #2f2d2a;
+    --color-ink-muted: #5a5751;
+
+    --color-sidebar: #161513;
+    --color-sidebar-hover: #2f2d2a;
+    --color-sidebar-active: #c74634;
+    --color-sidebar-border: #000000;
+    --color-sidebar-icon: #ddd9d3;
+
+    --radius-field: 6px;
+    --radius-card: 12px;
+    --radius-badge: 999px;
+
+    --row-height: 48px;
+    --row-height-dense: 40px;
+    --grid-pad-x: 16px;
+    --grid-pad-y: 10px;
+    --spacing-header: 64px;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Rose — ABOS এর নিজের।
+
+   কারও নকল নয়, তাই এখানে ধার নরম আর রংটা উষ্ণ। ডিপোর সন্ধ্যাবেলার
+   আলোয় এই জমিনটা চোখে কম লাগে — নীল পর্দার চেয়ে।
+   ───────────────────────────────────────────────────────────────── */
+[data-ui='rose'] {
+    --color-surface-app: #fdf6f7;
+    --color-surface-card: #ffffff;
+    --color-surface-muted: #f9ecef;
+    --color-surface-sunken: #f9ecef;
+    --color-surface-hover: #fceff2;
+    --color-surface-selected: #fbe0e6;
+    --color-border: #f0dfe3;
+    --color-border-strong: #d8b8c0;
+
+    --color-ink: #1f1417;
+    --color-ink-body: #3d2b30;
+    --color-ink-muted: #6d545b;
+
+    --color-sidebar: #7f1d33;
+    --color-sidebar-hover: #9a2842;
+    --color-sidebar-active: #be123c;
+    --color-sidebar-border: #66162a;
+    --color-sidebar-icon: #f2d7de;
+
+    --radius-field: 8px;
+    --radius-card: 12px;
+    --radius-badge: 999px;
+
+    --row-height: 44px;
+    --row-height-dense: 36px;
+    --grid-pad-x: 14px;
+    --grid-pad-y: 9px;
+    --spacing-header: 60px;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Navy — ABOS এর নিজের, ঘন রূপ।
+
+   রোজের উল্টো দিক: ঠান্ডা, ঘন, চুপচাপ। যাঁরা সারাদিন এন্ট্রি করেন
+   তাঁদের জন্য — এক পর্দায় বেশি সারি, কম রং।
+   ───────────────────────────────────────────────────────────────── */
+[data-ui='navy'] {
+    --color-surface-app: #f4f6fa;
+    --color-surface-card: #ffffff;
+    --color-surface-muted: #e9edf5;
+    --color-surface-sunken: #e9edf5;
+    --color-surface-hover: #eaf0fb;
+    --color-surface-selected: #dce6f8;
+    --color-border: #d8dfea;
+    --color-border-strong: #a9b6cb;
+
+    --color-ink: #0b1220;
+    --color-ink-body: #1f2937;
+    --color-ink-muted: #4b5875;
+
+    --color-sidebar: #0b1220;
+    --color-sidebar-hover: #1c2a45;
+    --color-sidebar-active: #1e3a8a;
+    --color-sidebar-border: #060b14;
+    --color-sidebar-icon: #cbd6ea;
+
+    --radius-field: 4px;
+    --radius-card: 6px;
+    --radius-badge: 4px;
+
+    --row-height: 36px;
+    --row-height-dense: 30px;
+    --grid-pad-x: 10px;
+    --grid-pad-y: 5px;
+    --grid-pad-y-tight: 4px;
+    --lines-pad: 6px;
+    --spacing-header: 56px;
+}
+
+/* ═════════════════════════════════════════════════════════════════
+   গাঢ় থিমে চেহারার নিজস্ব সুর।
+
+   পৃষ্ঠতল আর কালি গাঢ় থিমই ঠিক করে (উপরে কারণটা লেখা), তাই এখানে
+   কেবল সেটুকু যেটুকু গাঢ় জমিনে ভেঙে যেত।
+
+   ── কী ভাঙত ─────────────────────────────────────────────────────
+   সাইডবারের রংগুলো হালকা থিমের জন্য বাছা। রেডউডের সাইডবার #161513 —
+   গাঢ় থিমের #020617 জমিনে ওটা প্রায় মিশে যায়, আর সাইডবার আছে কি
+   নেই বোঝা যায় না। তাই গাঢ়তে ওগুলো এক ধাপ উপরে ওঠে।
+   ═════════════════════════════════════════════════════════════════ */
+:root[data-theme='dark'][data-ui='redwood'] {
+    --color-sidebar: #2a2724;
+    --color-sidebar-hover: #3d3934;
+    --color-sidebar-border: #141210;
+}
+
+:root[data-theme='dark'][data-ui='navy'] {
+    --color-sidebar: #131c2e;
+    --color-sidebar-hover: #22314e;
+    --color-sidebar-border: #0a101c;
+}
+
+:root[data-theme='dark'][data-ui='suite'] {
+    --color-sidebar: #26332f;
+    --color-sidebar-hover: #37473f;
+    --color-sidebar-border: #182320;
+}

@@ -101,7 +101,7 @@
                                          text-(--color-ink-muted)">{{ __('hr::action.cancel_run') }}</span>
                             <input type="text" name="reason" required
                                    class="w-full rounded-(--radius-field) border border-(--color-border)
-                                          bg-(--color-surface) px-2 py-1.5 text-sm">
+                                          bg-(--color-surface-app) px-2 py-1.5 text-sm">
                         </label>
                         <x-ui.button class="mt-2" type="submit">{{ __('hr::action.cancel_run') }}</x-ui.button>
                     </form>

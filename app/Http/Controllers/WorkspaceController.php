@@ -8,6 +8,7 @@ use App\Core\Dashboard\ActivityRegistry;
 use App\Core\Dashboard\DashboardRegistry;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\Accent;
+use App\Core\Support\Ui;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -135,9 +136,11 @@ class WorkspaceController extends Controller
         return view('workspace.appearance', [
             'menu' => $this->menu->forUser($user),
             'accents' => Accent::all(),
+            'uis' => Ui::all(),
             'current' => [
                 'accent' => $user->accent ?? Accent::DEFAULT,
                 'theme' => $user->theme ?? 'light',
+                'ui' => Ui::clean($user->ui),
                 'locale' => $user->locale ?? config('app.locale'),
             ],
         ]);
@@ -150,6 +153,16 @@ class WorkspaceController extends Controller
             // কারণ একটা অপঠনযোগ্য রঙে সেভ বোতামটাই হারিয়ে যায়।
             'accent' => ['required', 'string', Rule::in(Accent::keys())],
             'theme' => ['required', 'string', 'in:light,dark'],
+            /*
+             * তালিকার বাইরের কোনো চেহারা নেওয়া হয় না।
+             *
+             * `Ui::clean()` অচেনা মান পেলে চুপচাপ ক্লাসিক ধরে, আর
+             * পড়ার সময় ওটাই ঠিক। কিন্তু **লেখার** সময় চুপ থাকা ভুল:
+             * ব্যবহারকারী কিছু একটা বাছলেন, সেভ চাপলেন, আর ফিরে এসে
+             * দেখলেন অন্য কিছু বসে আছে — কেন, তা কোথাও লেখা নেই।
+             * তাই এখানে যাচাই ব্যর্থ হয়ে বার্তা দেয়।
+             */
+            'ui' => ['required', 'string', Rule::in(Ui::keys())],
             'locale' => ['required', 'string', 'in:bn,en'],
         ]);
 
