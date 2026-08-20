@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Engines\Approval;
 
+use App\Core\Services\NotificationService;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Models\Approval;
@@ -13,6 +14,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Route;
 use RuntimeException;
 
 /**
@@ -142,6 +144,8 @@ final class ApprovalEngine
                 'decided_at' => now(),
             ]);
 
+            $this->tell($approval, 'approved');
+
             return $approval->fresh();
         });
     }
@@ -172,8 +176,50 @@ final class ApprovalEngine
                 'decided_at' => now(),
             ]);
 
+            $this->tell($approval, 'rejected', $remarks);
+
             return $approval->fresh();
         });
+    }
+
+    /**
+     * অনুরোধকারীকে ফলটা জানানো।
+     *
+     * ── কেন এটা ইঞ্জিনের ভেতরে, কন্ট্রোলারে নয় ──────────────────────
+     * সিদ্ধান্ত কেবল Approval Centre-এর পর্দা থেকে আসে না — ভবিষ্যতে
+     * API থেকে, ইমপোর্ট থেকে, বা কোনো নির্ধারিত কাজ থেকেও আসতে পারে।
+     * খবরটা কন্ট্রোলারে বসালে ওই পথগুলোতে নীরব থাকত, আর "কখনো কখনো
+     * খবর আসে" ব্যবস্থাটা খবর না আসার চেয়েও খারাপ: মানুষ তখন ঘণ্টার
+     * উপর ভরসা করেন, অথচ ভরসাটা সবসময় খাটে না।
+     *
+     * ── প্রত্যাখ্যানের কারণটা খবরের সাথেই যায় ────────────────────────
+     * "আপনার দাবি বাতিল" শুনে মানুষ ফোন করেন কারণ জানতে। কারণটা সাথে
+     * থাকলে ফোনটা লাগে না — আর অনুমোদনের ব্যবস্থা ফোনে চললে ওটা আর
+     * ব্যবস্থা থাকে না।
+     */
+    private function tell(Approval $approval, string $outcome, ?string $remarks = null): void
+    {
+        $requester = $approval->requested_by;
+
+        if ($requester === null) {
+            return;
+        }
+
+        app(NotificationService::class)->send(
+            $requester,
+            'approval.'.$outcome,
+            __('core.notify.approval_'.$outcome, [
+                /*
+                 * কাগজের নম্বর `approvals`-এ নেই, তাই মডিউল ও কাজের নাম।
+                 *
+                 * অনুবাদ করা নামই যায় ("বিক্রয় · ছাড়"), কাঁচা কী নয় —
+                 * ব্যবহারকারী `sales.discount` দেখে কিছু বোঝেন না।
+                 */
+                'document' => $this->documentLabel($approval),
+            ]),
+            $remarks,
+            Route::has('approval.inbox.index') ? route('approval.inbox.index') : null,
+        );
     }
 
     /** অনুরোধকারী নিজে প্রত্যাহার করলে। */
@@ -202,6 +248,24 @@ final class ApprovalEngine
      * তাই যে সেবা পাহারা বসায় সে আগে এটা দেখে নেয়: সিদ্ধান্ত হয়ে
      * থাকলে সেই সিদ্ধান্তটাই মানা হয়, নতুন অনুরোধ নয়।
      */
+    /**
+     * বিজ্ঞপ্তিতে কাগজটাকে কী বলে ডাকা হবে।
+     *
+     * অনুবাদ থাকলে সেটাই, নাহলে কাঁচা নামটাই — অনুপস্থিত অনুবাদের
+     * জায়গায় `core.module.sales` লেখা দেখানোর চেয়ে `sales` ভালো।
+     */
+    private function documentLabel(Approval $approval): string
+    {
+        $module = __('core.module.'.$approval->module);
+        $action = __('core.approval.action.'.$approval->action);
+
+        return trim(
+            (str_starts_with($module, 'core.') ? $approval->module : $module)
+            .' · '.
+            (str_starts_with($action, 'core.') ? $approval->action : $action)
+        );
+    }
+
     public function latestFor(Model $document, string $action): ?Approval
     {
         return Approval::query()

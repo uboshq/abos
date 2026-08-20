@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\MfaController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\WorkspaceController;
 use Illuminate\Support\Facades\Route;
@@ -31,6 +32,17 @@ Route::middleware('auth')->group(function () {
         ->whereNumber('attachment')->name('attachment.download');
     Route::delete('/attachments/{attachment}', [AttachmentController::class, 'destroy'])
         ->whereNumber('attachment')->name('attachment.destroy');
+
+    /*
+     * বিজ্ঞপ্তি — নিজের কোনো পাতা নেই, কেবল খোলা ও পড়া।
+     *
+     * খবরটা যেখানে নিয়ে যাওয়ার কথা সেখানেই নিয়ে যায়; "বিজ্ঞপ্তির
+     * তালিকা" নামে আলাদা পাতা বানালে সেটা আরেকটা ইনবক্স হত।
+     */
+    Route::get('/notifications/{notification}', [NotificationController::class, 'open'])
+        ->whereNumber('notification')->name('notifications.open');
+    Route::post('/notifications/read-all', [NotificationController::class, 'readAll'])
+        ->name('notifications.read-all');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile');
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
