@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Modules\Accounts\Http\Controllers\AccountsDashboardController;
 use App\Modules\Accounts\Http\Controllers\AccountsSettingsController;
+use App\Modules\Accounts\Http\Controllers\BankReconciliationController;
 use App\Modules\Accounts\Http\Controllers\BooksIntegrityController;
 use App\Modules\Accounts\Http\Controllers\CashCountController;
 use App\Modules\Accounts\Http\Controllers\CashTillController;
@@ -204,6 +205,25 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
             ->whereNumber('cheque')->name('clear');
         Route::post('/{cheque}/bounce', [ChequeController::class, 'bounce'])
             ->whereNumber('cheque')->name('bounce');
+    });
+
+    /*
+     * ব্যাংক মিলকরণ।
+     *
+     * চেকের মতো এক পাতায় নয়: ওখানে সিদ্ধান্ত সারিপ্রতি, এখানে সিদ্ধান্ত
+     * পুরো কাগজটা নিয়ে। তাই তালিকা আর কাজের পর্দা আলাদা।
+     */
+    Route::prefix('reconciliations')->name('reconciliation.')->group(function () {
+        Route::get('/', [BankReconciliationController::class, 'index'])->name('index');
+        Route::post('/', [BankReconciliationController::class, 'store'])->name('store');
+        Route::get('/{reconciliation}', [BankReconciliationController::class, 'show'])
+            ->whereNumber('reconciliation')->name('show');
+        Route::post('/{reconciliation}/mark', [BankReconciliationController::class, 'mark'])
+            ->whereNumber('reconciliation')->name('mark');
+        Route::post('/{reconciliation}/confirm', [BankReconciliationController::class, 'confirm'])
+            ->whereNumber('reconciliation')->name('confirm');
+        Route::post('/{reconciliation}/reopen', [BankReconciliationController::class, 'reopen'])
+            ->whereNumber('reconciliation')->name('reopen');
     });
 
     Route::prefix('periods')->name('period.')->group(function () {

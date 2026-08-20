@@ -6,6 +6,7 @@ namespace App\Modules\Accounts\Models;
 
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -23,6 +24,14 @@ class VoucherLine extends Model
     use HasPublicId;
     use IsAudited;
 
+    /*
+     * `reconciliation_id` ইচ্ছা করে এখানে নেই।
+     *
+     * টিক-চিহ্নটা কখনো ফর্ম থেকে আসে না, আসে কেবল BankReconciliationService
+     * থেকে — যেখানে তারিখ ও অবস্থার পাহারা বসানো আছে। fillable-এ রাখলে
+     * একটা ভাউচার সংরক্ষণের অনুরোধই নিজের লাইনটা "ব্যাংকে দেখা গেছে"
+     * বলে দাবি করতে পারত, আর মিলকরণের পুরো মানেটাই মিথ্যা হয়ে যেত।
+     */
     protected $fillable = [
         'voucher_id', 'account_id', 'party_type', 'party_id', 'cost_center_id',
         'debit', 'credit', 'narration', 'sort_order',
@@ -45,6 +54,18 @@ class VoucherLine extends Model
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);
+    }
+
+    /** কোন মিলকরণে এই সারিতে টিক পড়েছে — null মানে ব্যাংক এখনো দেখেনি। */
+    public function reconciliation(): BelongsTo
+    {
+        return $this->belongsTo(BankReconciliation::class, 'reconciliation_id');
+    }
+
+    /** ব্যাংক এখনো যেগুলো দেখেনি। @param  Builder<self>  $query */
+    public function scopeUnreconciled(Builder $query): Builder
+    {
+        return $query->whereNull('reconciliation_id');
     }
 
     /** এই সারিতে টাকার অঙ্ক — যেদিকেই থাকুক। */
