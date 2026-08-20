@@ -10,6 +10,7 @@ use App\Modules\Accounts\Http\Controllers\CashCountController;
 use App\Modules\Accounts\Http\Controllers\CashTillController;
 use App\Modules\Accounts\Http\Controllers\ChartOfAccountsController;
 use App\Modules\Accounts\Http\Controllers\ChequeController;
+use App\Modules\Accounts\Http\Controllers\FixedAssetController;
 use App\Modules\Accounts\Http\Controllers\LoanController;
 use App\Modules\Accounts\Http\Controllers\MoneyCustodyController;
 use App\Modules\Accounts\Http\Controllers\MoneyTransferController;
@@ -224,6 +225,22 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
             ->whereNumber('reconciliation')->name('confirm');
         Route::post('/{reconciliation}/reopen', [BankReconciliationController::class, 'reopen'])
             ->whereNumber('reconciliation')->name('reopen');
+    });
+
+    /*
+     * স্থায়ী সম্পদ ও অবচয়।
+     *
+     * মাস শেষের দৌড়টা তালিকার রুটেই (POST /assets/depreciate), আলাদা
+     * পর্দায় নয় — ওটা একটা বোতাম, একটা পাতা নয়।
+     */
+    Route::prefix('assets')->name('asset.')->group(function () {
+        Route::get('/', [FixedAssetController::class, 'index'])->name('index');
+        Route::post('/', [FixedAssetController::class, 'store'])->name('store');
+        Route::post('/depreciate', [FixedAssetController::class, 'depreciate'])->name('depreciate');
+        Route::get('/{asset}', [FixedAssetController::class, 'show'])
+            ->whereNumber('asset')->name('show');
+        Route::post('/{asset}/dispose', [FixedAssetController::class, 'dispose'])
+            ->whereNumber('asset')->name('dispose');
     });
 
     Route::prefix('periods')->name('period.')->group(function () {
