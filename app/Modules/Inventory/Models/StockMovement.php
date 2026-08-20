@@ -6,6 +6,7 @@ namespace App\Modules\Inventory\Models;
 
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
+use App\Core\Concerns\ScopedToUserBranch;
 use App\Core\Engines\Drill\DrillResolver;
 use App\Models\Branch;
 use App\Models\User;
@@ -31,6 +32,7 @@ class StockMovement extends Model
     use BelongsToCompany;
     use HasFactory;
     use HasPublicId;
+    use ScopedToUserBranch;
 
     protected $table = 'inv_stock_movements';
 
