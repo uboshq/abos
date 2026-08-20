@@ -9,11 +9,49 @@
     তালিকাটা খুলত না।
 --}}
 @php
-    $tone = fn (string $status) => match ($status) {
-        'accepted' => 'success',
-        'rejected' => 'danger',
-        default => 'pending',
-    };
+    /*
+        কলাম ধরে, স্লটে নয় — `x-ui.table` স্লট পড়ে না, আর প্রতিটা
+        কলামে `key` ও `label` দুইটাই চায়। প্রথম লেখায় ভেতরে হাতে
+        `<tr>` বসানো ছিল, ফলে পাতাটা খালি অবস্থায় ঠিক চলত আর প্রথম
+        দাবিটা আসামাত্র ৫০০ দিত।
+    */
+    $columns = [
+        [
+            'key' => 'dealer',
+            'label' => __('sales::portal.dealer'),
+            'render' => fn ($c) => view('sales::claim.partials.dealer', ['claim' => $c]),
+        ],
+        [
+            'key' => 'claimed_on',
+            'label' => __('sales::portal.claimed_on'),
+            'width' => '9rem',
+            'render' => fn ($c) => $c->claimed_on?->format('d M Y'),
+        ],
+        [
+            'key' => 'amount',
+            'label' => __('sales::portal.claimed'),
+            'numeric' => true,
+            'width' => '10rem',
+            'render' => fn ($c) => view('sales::claim.partials.amount', ['value' => $c->amount]),
+        ],
+        [
+            'key' => 'reference',
+            'label' => __('sales::portal.reference'),
+            'render' => fn ($c) => $c->reference ?? '—',
+        ],
+        [
+            'key' => 'status',
+            'label' => __('sales::portal.status'),
+            'width' => '9rem',
+            'render' => fn ($c) => view('sales::claim.partials.status', ['claim' => $c]),
+        ],
+        [
+            'key' => 'decide',
+            'label' => '',
+            'render' => fn ($c) => view('sales::claim.partials.decide',
+                ['claim' => $c, 'moneyAccounts' => $moneyAccounts]),
+        ],
+    ];
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -63,90 +101,10 @@
         </a>
     </div>
 
-    @if ($claims->isEmpty())
-        <x-ui.empty-state :message="__('sales::portal.empty')" />
-    @else
-        <x-ui.table :columns="[
-            ['label' => __('sales::portal.dealer')],
-            ['label' => __('sales::portal.claimed_on')],
-            ['label' => __('sales::portal.claimed'), 'numeric' => true],
-            ['label' => __('sales::portal.reference')],
-            ['label' => __('sales::portal.status')],
-            ['label' => ''],
-        ]">
-            @foreach ($claims as $claim)
-                <tr class="border-t border-(--color-border)">
-                    <td class="px-3 align-middle" data-label="{{ __('sales::portal.dealer') }}">
-                        {{ $claim->customer?->name_bn ?: $claim->customer?->name_en }}
-                        <span class="block text-2xs text-(--color-ink-muted)">{{ $claim->customer?->code }}</span>
-                    </td>
-                    <td class="px-3 align-middle" data-label="{{ __('sales::portal.claimed_on') }}">
-                        {{ $claim->claimed_on?->format('d M Y') }}
-                    </td>
-                    <td class="px-3 text-end align-middle num" data-label="{{ __('sales::portal.claimed') }}">
-                        <x-ui.amount :value="$claim->amount" />
-                    </td>
-                    <td class="px-3 align-middle" data-label="{{ __('sales::portal.reference') }}">
-                        {{ $claim->reference ?? '—' }}
-                    </td>
-                    <td class="px-3 align-middle" data-label="{{ __('sales::portal.status') }}">
-                        <x-ui.badge :tone="$tone($claim->status)">
-                            {{ __('sales::portal.'.$claim->status) }}
-                        </x-ui.badge>
-                    </td>
-                    <td class="px-3 align-middle">
-                        @if ($claim->isPending())
-                            @can('sales.claim.decide')
-                                <div class="flex flex-wrap items-end gap-2">
-                                    <form method="POST" action="{{ route('sales.claim.accept', $claim) }}"
-                                          class="flex flex-wrap items-end gap-2">
-                                        @csrf
+    <x-ui.table :rows="$claims"
+                :columns="$columns"
+                :empty="__('sales::portal.empty')" />
 
-                                        {{-- ডিলার যা বলেছেন সেটাই ডিফল্ট, কিন্তু বদলানো যায়:
-                                             ব্যাংক চার্জ কেটে নিলে অঙ্কটা আলাদা হয়। --}}
-                                        <input type="number" step="0.01" name="amount"
-                                               value="{{ $claim->amount }}"
-                                               title="{{ __('sales::portal.received') }}"
-                                               class="num h-(--spacing-field-compact) w-28 rounded-(--radius-field) border
-                                                      border-(--color-border) bg-(--color-surface-app) px-2 text-end">
+    {{ $claims->links() }}
 
-                                        <select name="account_id" required
-                                                class="h-(--spacing-field-compact) rounded-(--radius-field) border
-                                                       border-(--color-border) bg-(--color-surface-app) px-2">
-                                            @foreach ($moneyAccounts as $account)
-                                                <option value="{{ $account->id }}"
-                                                        @selected($claim->bank_account_id === $account->id)>
-                                                    {{ $account->label() }}
-                                                </option>
-                                            @endforeach
-                                        </select>
-
-                                        <x-ui.button type="submit" tone="primary">
-                                            {{ __('sales::portal.accept') }}
-                                        </x-ui.button>
-                                    </form>
-
-                                    <form method="POST" action="{{ route('sales.claim.reject', $claim) }}"
-                                          class="flex flex-wrap items-end gap-2">
-                                        @csrf
-                                        <input type="text" name="decision_reason" required
-                                               placeholder="{{ __('sales::portal.reason') }}"
-                                               class="h-(--spacing-field-compact) w-40 rounded-(--radius-field) border
-                                                      border-(--color-border) bg-(--color-surface-app) px-2">
-                                        <x-ui.button type="submit">
-                                            {{ __('sales::portal.reject') }}
-                                        </x-ui.button>
-                                    </form>
-                                </div>
-                            @endcan
-                        @elseif ($claim->decision_reason)
-                            <span class="text-2xs text-(--color-ink-muted)">{{ $claim->decision_reason }}</span>
-                        @endif
-                    </td>
-                </tr>
-            @endforeach
-        </x-ui.table>
-
-        {{ $claims->links() }}
-    @endif
 </x-layouts.app>

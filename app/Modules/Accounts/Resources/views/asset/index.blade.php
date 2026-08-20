@@ -5,6 +5,62 @@
     সাথে মানুষের দেখা হয় মাসে একবার, আর তখন কাজটা একটাই: গত মাসের
     অবচয় বসানো। তালিকাটা তার পরের প্রশ্ন।
 --}}
+@php
+    /*
+        কলামগুলো এখানে, স্লটে নয়।
+
+        `x-ui.table` স্লট পড়ে না — সে `:rows` আর `:columns` থেকে নিজে
+        সারি আঁকে, আর প্রতিটা কলামে `key` ও `label` দুইটাই চায়। প্রথম
+        লেখায় ভেতরে হাতে `<tr>` বসানো ছিল, ফলে পর্দাটা খালি অবস্থায়
+        ঠিক চলত আর প্রথম সম্পদ যোগ হওয়ামাত্র ৫০০ দিত।
+    */
+    $columns = [
+        [
+            'key' => 'name',
+            'label' => __('accounts::asset.name'),
+            'render' => fn ($a) => view('accounts::asset.partials.name', ['asset' => $a]),
+        ],
+        [
+            'key' => 'account',
+            'label' => __('accounts::asset.account'),
+            'render' => fn ($a) => $a->assetAccount?->label(),
+        ],
+        [
+            'key' => 'acquired_on',
+            'label' => __('accounts::asset.acquired_on'),
+            'width' => '9rem',
+            'render' => fn ($a) => $a->acquired_on?->format('d M Y'),
+        ],
+        [
+            'key' => 'cost',
+            'label' => __('accounts::asset.cost'),
+            'numeric' => true,
+            'width' => '10rem',
+            'render' => fn ($a) => view('accounts::asset.partials.amount', ['value' => $a->cost]),
+        ],
+        [
+            'key' => 'accumulated',
+            'label' => __('accounts::asset.accumulated'),
+            'numeric' => true,
+            'width' => '10rem',
+            'render' => fn ($a) => view('accounts::asset.partials.amount', ['value' => $a->accumulated()]),
+        ],
+        [
+            'key' => 'book_value',
+            'label' => __('accounts::asset.book_value'),
+            'numeric' => true,
+            'width' => '10rem',
+            'render' => fn ($a) => view('accounts::asset.partials.amount', ['value' => $a->bookValue()]),
+        ],
+        [
+            'key' => 'status',
+            'label' => __('accounts::asset.status'),
+            'width' => '8rem',
+            'render' => fn ($a) => view('accounts::asset.partials.status', ['asset' => $a]),
+        ],
+    ];
+@endphp
+
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('accounts::asset.title') }}</x-slot:title>
 
@@ -139,48 +195,9 @@
         </form>
     @endcan
 
-    @if ($assets->isEmpty())
-        <x-ui.empty-state :message="__('accounts::asset.empty')" />
-    @else
-        <x-ui.table :columns="[
-            ['label' => __('accounts::asset.name')],
-            ['label' => __('accounts::asset.account')],
-            ['label' => __('accounts::asset.acquired_on')],
-            ['label' => __('accounts::asset.cost'), 'numeric' => true],
-            ['label' => __('accounts::asset.accumulated'), 'numeric' => true],
-            ['label' => __('accounts::asset.book_value'), 'numeric' => true],
-            ['label' => __('accounts::asset.status')],
-        ]">
-            @foreach ($assets as $item)
-                <tr class="border-t border-(--color-border)">
-                    <td class="px-3 align-middle" data-label="{{ __('accounts::asset.name') }}">
-                        <a href="{{ route('accounts.asset.show', $item) }}"
-                           class="text-(--color-brand-500) hover:underline">{{ $item->name }}</a>
-                    </td>
-                    <td class="px-3 align-middle" data-label="{{ __('accounts::asset.account') }}">
-                        {{ $item->assetAccount?->label() }}
-                    </td>
-                    <td class="px-3 align-middle" data-label="{{ __('accounts::asset.acquired_on') }}">
-                        {{ $item->acquired_on?->format('d M Y') }}
-                    </td>
-                    <td class="px-3 text-end align-middle num" data-label="{{ __('accounts::asset.cost') }}">
-                        <x-ui.amount :value="$item->cost" />
-                    </td>
-                    <td class="px-3 text-end align-middle num" data-label="{{ __('accounts::asset.accumulated') }}">
-                        <x-ui.amount :value="$item->accumulated()" />
-                    </td>
-                    <td class="px-3 text-end align-middle num" data-label="{{ __('accounts::asset.book_value') }}">
-                        <x-ui.amount :value="$item->bookValue()" />
-                    </td>
-                    <td class="px-3 align-middle" data-label="{{ __('accounts::asset.status') }}">
-                        <x-ui.badge :tone="$item->isActive() ? 'success' : 'neutral'">
-                            {{ $item->isActive() ? __('accounts::asset.active') : __('accounts::asset.disposed') }}
-                        </x-ui.badge>
-                    </td>
-                </tr>
-            @endforeach
-        </x-ui.table>
+    <x-ui.table :rows="$assets"
+                :columns="$columns"
+                :empty="__('accounts::asset.empty')" />
 
-        {{ $assets->links() }}
-    @endif
+    {{ $assets->links() }}
 </x-layouts.app>
