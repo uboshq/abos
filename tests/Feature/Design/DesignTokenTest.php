@@ -166,7 +166,7 @@ class DesignTokenTest extends TestCase
 
     public function test_gold_is_never_offered_as_text_on_a_light_surface(): void
     {
-        // সাদায় ১.৬৩ — অচল। টোকেনটা আছে শুধু লোগো ও গাঢ় ব্যাকগ্রাউন্ডের জন্য,
+        // সাদায় ১.৭৯ — অচল। টোকেনটা আছে শুধু লোগো ও গাঢ় ব্যাকগ্রাউন্ডের জন্য,
         // আর সেটা মন্তব্যে লেখা থাকতে হবে যাতে কেউ ভুল জায়গায় না বসায়।
         $ratio = $this->contrast($this->value('color-brand-gold'), '#ffffff');
 
