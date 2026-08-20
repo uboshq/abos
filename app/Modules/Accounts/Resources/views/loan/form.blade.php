@@ -74,6 +74,20 @@
                                x-model="kind" class="size-4">
                         {{ __('accounts::field.loan_hand') }}
                     </label>
+
+                    {{-- FD ও DPS টাকা রাখা, নেওয়া নয় — তাই দিকের ঘরটা
+                         ওদের জন্য দেখানো হয় না, সংজ্ঞাতেই বসে আছে। --}}
+                    <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
+                        <input type="radio" name="kind" value="{{ \App\Modules\Accounts\Models\Loan::FD }}"
+                               x-model="kind" class="size-4">
+                        {{ __('accounts::field.loan_fd') }}
+                    </label>
+
+                    <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
+                        <input type="radio" name="kind" value="{{ \App\Modules\Accounts\Models\Loan::DPS }}"
+                               x-model="kind" class="size-4">
+                        {{ __('accounts::field.loan_dps') }}
+                    </label>
                 </div>
             </fieldset>
 
@@ -158,6 +172,37 @@
                                 :label="__('accounts::field.loan_due_on')"
                                 :value="old('due_on')" />
                 </div>
+
+                {{-- মেয়াদ শেষের তারিখ — প্রতিশ্রুতি নয়, চুক্তি। --}}
+                <div x-show="kind === 'fd' || kind === 'dps'" x-cloak>
+                    <x-ui.field name="matures_on" type="date"
+                                :label="__('accounts::field.loan_matures_on')"
+                                :value="old('matures_on')" />
+                </div>
+
+                {{--
+                    এই FD কোন ঋণের পেছনে বাঁধা।
+
+                    খালি রাখলে FD-টা হাতের টাকা। বাঁধা থাকলে তালিকায়
+                    "আছে" দেখাবে ঠিকই, কিন্তু ভাঙানো যাবে না — আর ওই
+                    টাকার উপর ভরসা করে নেওয়া সিদ্ধান্তই সবচেয়ে দামি ভুল।
+                --}}
+                <label class="block" x-show="kind === 'fd'" x-cloak>
+                    <span class="mb-1 block text-sm font-medium">
+                        {{ __('accounts::field.loan_pledged_against') }}
+                    </span>
+                    <select name="pledged_against_id"
+                            class="h-(--spacing-field) w-full rounded-(--radius-field) border
+                                   border-(--color-border) bg-(--color-surface-card) px-3">
+                        <option value="">{{ __('accounts::field.loan_not_pledged') }}</option>
+                        @foreach ($openLoans as $open)
+                            <option value="{{ $open->id }}"
+                                    @selected(old('pledged_against_id') == $open->id)>
+                                {{ $open->lender }} — {{ $open->document_no }}
+                            </option>
+                        @endforeach
+                    </select>
+                </label>
 
                 <label class="block" x-show="kind === 'term'">
                     <span class="mb-1 block text-sm font-medium">{{ __('accounts::field.interest_method') }}</span>
