@@ -6,6 +6,43 @@
     লগইনের খাতায় বসে আছে। মুছে ফেললে ওই সব কাগজে "কে করেছিল" প্রশ্নের
     উত্তর হারায়। নিষ্ক্রিয় করা যায় — তখন আর ঢোকা যায় না, ইতিহাস থাকে।
 --}}
+@php
+    /* কলাম ধরে — `x-ui.table` স্লট পড়ে না, সারি আসে :rows থেকে। */
+    $columns = [
+        [
+            'key' => 'name',
+            'label' => __('system_admin::field.user_name'),
+            'render' => fn ($u) => view('system_admin::user.partials.name', ['user' => $u]),
+        ],
+        [
+            'key' => 'email',
+            'label' => __('core.profile.email'),
+        ],
+        [
+            'key' => 'roles',
+            'label' => __('system_admin::field.roles'),
+            'render' => fn ($u) => $u->roles->pluck('name')->implode(', ') ?: '-',
+        ],
+        [
+            'key' => 'companies',
+            'label' => __('core.company.company'),
+            'render' => fn ($u) => $u->companies->map(fn ($c) => $c->code)->implode(', ') ?: '-',
+        ],
+        [
+            'key' => 'last_login_at',
+            'label' => __('system_admin::field.last_login'),
+            'render' => fn ($u) => $u->last_login_at
+                ? \App\Core\Support\DateFormat::format($u->last_login_at)
+                : '-',
+        ],
+        [
+            'key' => 'actions',
+            'label' => __('core.table.actions'),
+            'render' => fn ($u) => view('system_admin::user.partials.edit', ['user' => $u]),
+        ],
+    ];
+@endphp
+
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('system_admin::menu.users') }}</x-slot:title>
 
@@ -29,50 +66,10 @@
         </div>
     @endif
 
-    <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <table class="w-full text-sm">
-            <thead class="border-b border-(--color-border) text-start text-(--color-ink-muted)">
-                <tr>
-                    <th class="p-2 text-start font-medium">{{ __('system_admin::field.user_name') }}</th>
-                    <th class="p-2 text-start font-medium">{{ __('core.profile.email') }}</th>
-                    <th class="p-2 text-start font-medium">{{ __('system_admin::field.roles') }}</th>
-                    <th class="p-2 text-start font-medium">{{ __('core.company.company') }}</th>
-                    <th class="p-2 text-start font-medium">{{ __('system_admin::field.last_login') }}</th>
-                    <th class="p-2 text-start font-medium">{{ __('core.table.actions') }}</th>
-                </tr>
-            </thead>
+    <x-ui.table :rows="$users"
+                :columns="$columns"
+                :empty="__('core.empty.no_results')" />
 
-            <tbody>
-                @foreach ($users as $user)
-                    <tr class="border-b border-(--color-border) last:border-b-0">
-                        <td class="p-2">
-                            {{ $user->name }}
-                            @unless ($user->is_active)
-                                <span class="ms-1 rounded-full bg-(--color-badge-warning-bg) px-2 py-0.5
-                                             text-2xs text-(--color-badge-warning-ink)">
-                                    {{ __('core.state.inactive') }}
-                                </span>
-                            @endunless
-                        </td>
-                        <td class="p-2">{{ $user->email }}</td>
-                        <td class="p-2">{{ $user->roles->pluck('name')->implode(', ') ?: '-' }}</td>
-                        <td class="p-2">{{ $user->companies->map(fn ($c) => $c->code)->implode(', ') ?: '-' }}</td>
-                        <td class="p-2 text-(--color-ink-muted)">
-                            {{ $user->last_login_at ? \App\Core\Support\DateFormat::format($user->last_login_at) : '-' }}
-                        </td>
-                        <td class="p-2">
-                            <a href="{{ route('system_admin.user.edit', $user) }}"
-                               class="text-(--color-brand-500) underline-offset-2 hover:underline">
-                                {{ __('core.action.edit') }}
-                            </a>
-                        </td>
-                    </tr>
-                @endforeach
-            </tbody>
-        </table>
+    {{ $users->links() }}
 
-        @if ($users->hasPages())
-            <div class="border-t border-(--color-border) px-3 py-2">{{ $users->links() }}</div>
-        @endif
-    </div>
 </x-layouts.app>
