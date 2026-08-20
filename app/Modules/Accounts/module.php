@@ -126,6 +126,7 @@ return [
              */
             ['label' => 'accounts::menu.cheques', 'route' => 'accounts.cheque.index', 'permission' => 'accounts.cheque.view'],
             ['label' => 'accounts::menu.reconciliations', 'route' => 'accounts.reconciliation.index', 'permission' => 'accounts.reconciliation.view'],
+            ['label' => 'accounts::menu.assets', 'route' => 'accounts.asset.index', 'permission' => 'accounts.asset.view'],
             ['label' => 'accounts::menu.periods', 'route' => 'accounts.period.index', 'permission' => 'accounts.period.close'],
             ['label' => 'accounts::menu.year_end', 'route' => 'accounts.year_end.index', 'permission' => 'accounts.report.final'],
             ['label' => 'accounts::menu.settings', 'route' => 'accounts.settings', 'permission' => 'accounts.manage'],
@@ -175,6 +176,15 @@ return [
          * করা মিলকরণ খোলা মানে গত মাসের বন্ধ করা অঙ্কটা আবার নড়ানো —
          * এক চাবি হলে যিনি মেলান তিনিই নিজের কাজ মুছে ফেলতে পারতেন।
          */
+        /*
+         * সম্পদের খাতা দেখা আর অবচয় চালানো — দুইটা আলাদা চাবি।
+         *
+         * দেখা রোজকার; চালানো মাসে একবার, আর ওটা খতিয়ানে সারি বসায়।
+         * এক চাবি হলে যে কেউ যেকোনো দিন অবচয় বসিয়ে দিতে পারতেন।
+         */
+        'accounts.asset.view',
+        'accounts.asset.manage',
+
         'accounts.reconciliation.view',
         'accounts.reconciliation.manage',
         'accounts.reconciliation.reopen',
@@ -222,6 +232,9 @@ return [
 
         // ঋণ — LN-2026-2027-0001
         'LN' => 'accounts::doc.loan',
+
+        // স্থায়ী সম্পদ — FA-2026-2027-0001
+        'FA' => 'accounts::doc.fixed_asset',
     ],
 
     /*

@@ -12,6 +12,7 @@ return [
     'cash_count' => 'Cash Count',
     'till_code' => 'Cash Till Code',
     'loan' => 'Loan',
+    'fixed_asset' => 'Fixed asset',
 
     // চেকের খাতা
     'cheque' => 'Cheque',
