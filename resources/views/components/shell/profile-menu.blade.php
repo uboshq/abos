@@ -15,7 +15,7 @@
          x-cloak
          @click.outside="open = false"
          role="menu"
-         class="absolute end-0 top-full z-40 mt-1 w-56 rounded-(--radius-field) border
+         class="pops-onto-page absolute end-0 top-full z-40 mt-1 w-56 rounded-(--radius-field) border
                 border-(--color-border) bg-(--color-surface-card) py-1 shadow-(--shadow-overlay)">
 
         <div class="flex items-center gap-2 border-b border-(--color-border) px-3 py-2">

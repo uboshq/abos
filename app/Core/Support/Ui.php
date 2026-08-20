@@ -31,7 +31,7 @@ final class Ui
     /**
      * @return array<string, array{
      *     label: string, blurb: string, imitates: ?string,
-     *     density: string, swatch: string, ink: string,
+     *     density: string, nav: string, swatch: string, ink: string,
      * }>
      */
     public static function all(): array
@@ -48,6 +48,7 @@ final class Ui
                 'label' => 'core.ui.classic',
                 'blurb' => 'core.ui.classic_blurb',
                 'imitates' => null,
+                'nav' => 'rail',
                 'density' => 'comfortable',
                 'swatch' => '#2563eb',
                 'ink' => '#0f172a',
@@ -56,6 +57,7 @@ final class Ui
                 'label' => 'core.ui.tiles',
                 'blurb' => 'core.ui.tiles_blurb',
                 'imitates' => 'SAP Fiori',
+                'nav' => 'top',
                 'density' => 'comfortable',
                 'swatch' => '#0a6ed1',
                 'ink' => '#32363a',
@@ -64,6 +66,7 @@ final class Ui
                 'label' => 'core.ui.suite',
                 'blurb' => 'core.ui.suite_blurb',
                 'imitates' => 'Oracle NetSuite',
+                'nav' => 'top',
                 'density' => 'dense',
                 'swatch' => '#125740',
                 'ink' => '#1f2b28',
@@ -72,6 +75,7 @@ final class Ui
                 'label' => 'core.ui.apps',
                 'blurb' => 'core.ui.apps_blurb',
                 'imitates' => 'Odoo',
+                'nav' => 'top',
                 'density' => 'comfortable',
                 'swatch' => '#714b67',
                 'ink' => '#374151',
@@ -80,6 +84,7 @@ final class Ui
                 'label' => 'core.ui.dynamic',
                 'blurb' => 'core.ui.dynamic_blurb',
                 'imitates' => 'Microsoft Dynamics 365',
+                'nav' => 'rail',
                 'density' => 'dense',
                 'swatch' => '#0078d4',
                 'ink' => '#242424',
@@ -88,6 +93,7 @@ final class Ui
                 'label' => 'core.ui.redwood',
                 'blurb' => 'core.ui.redwood_blurb',
                 'imitates' => 'Oracle Fusion Cloud',
+                'nav' => 'top',
                 'density' => 'comfortable',
                 'swatch' => '#c74634',
                 'ink' => '#161513',
@@ -103,6 +109,7 @@ final class Ui
                 'label' => 'core.ui.rose',
                 'blurb' => 'core.ui.rose_blurb',
                 'imitates' => null,
+                'nav' => 'rail',
                 'density' => 'comfortable',
                 'swatch' => '#be123c',
                 'ink' => '#1f1417',
@@ -111,11 +118,34 @@ final class Ui
                 'label' => 'core.ui.navy',
                 'blurb' => 'core.ui.navy_blurb',
                 'imitates' => null,
+                'nav' => 'rail',
                 'density' => 'dense',
                 'swatch' => '#1e3a8a',
                 'ink' => '#0b1220',
             ],
         ];
+    }
+
+    /**
+     * এই চেহারায় মেনুটা কোথায় বসে — বাঁয়ে রেলে, না উপরের পটিতে।
+     *
+     * ── কেন এটা টোকেন দিয়ে হয় না ────────────────────────────────────
+     * রং, ধার, ঘনত্ব — সবই CSS-এর কথা, তাই টোকেনেই হয়ে যায়। কিন্তু
+     * মেনুটা বাঁয়ে না উপরে, সেটা CSS-এর কথা নয়: বাঁয়ের রেল আর উপরের
+     * পটি দুইটা আলাদা markup, আলাদা জায়গা, আলাদা আচরণ।
+     *
+     * তাই এই একটাই জিনিস চেহারা থেকে **PHP-তে** আসে, আর শেল সেটা
+     * দেখে ঠিক করে কোন partial-টা আঁকবে।
+     *
+     * ── কারা উপরে রাখে, আর কেন ──────────────────────────────────────
+     * পাঁচটা নকলের চারটাই: Odoo (অ্যাপ-মেনু), Fiori (শেল বার),
+     * NetSuite (আড়াআড়ি মেনু), Fusion (উপরের পটি)। D365 বাঁয়ে একটা
+     * nav pane রাখে, তাই সে রেলেই থাকে — আর ABOS-এর নিজের তিনটা
+     * চেহারাও, কারণ রেলটাই ABOS-এর চেনা রূপ।
+     */
+    public static function nav(?string $key): string
+    {
+        return self::all()[self::clean($key)]['nav'];
     }
 
     /** @return list<string> */

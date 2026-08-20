@@ -50,6 +50,21 @@
     --color-ink-muted: #6a6d70;
 
     --color-sidebar: #354a5f;
+    --color-topbar: #354a5f;
+    --color-topnav: #ffffff;
+    --color-topnav-ink: #32363a;
+    --color-topnav-ink-muted: #6a6d70;
+    --color-topnav-border: #d9d9d9;
+    --color-topnav-hover: #ebf5fe;
+    --color-topnav-selected: #e3f0fc;
+
+    --color-topbar-ink: #ffffff;
+    --color-topbar-ink-muted: #c8d4de;
+    --color-topbar-border: #2b3c4d;
+    --color-topbar-hover: #46617c;
+    --color-topbar-field: #2b3c4d;
+
+    --color-sidebar-panel: #eef0f2;
     --color-sidebar-hover: #46617c;
     --color-sidebar-active: #0a6ed1;
     --color-sidebar-border: #2b3c4d;
@@ -65,7 +80,7 @@
     --grid-pad-y: 8px;
 
     /* ফিওরির শেল বার সরু — ৪৪px, বরাবরই */
-    --spacing-header: 44px;
+    --spacing-header: 56px;
 }
 
 /* ─────────────────────────────────────────────────────────────────
@@ -90,6 +105,21 @@
     --color-ink-muted: #5e6b67;
 
     --color-sidebar: #1f2b28;
+    --color-topbar: #1f2b28;
+    --color-topnav: #2f3b38;
+    --color-topnav-ink: #ffffff;
+    --color-topnav-ink-muted: #c2cec9;
+    --color-topnav-border: #16201e;
+    --color-topnav-hover: #3f4f4a;
+    --color-topnav-selected: #125740;
+
+    --color-topbar-ink: #ffffff;
+    --color-topbar-ink-muted: #c2cec9;
+    --color-topbar-border: #16201e;
+    --color-topbar-hover: #33413d;
+    --color-topbar-field: #16201e;
+
+    --color-sidebar-panel: #eaeaea;
     --color-sidebar-hover: #33413d;
     --color-sidebar-active: #125740;
     --color-sidebar-border: #16201e;
@@ -106,7 +136,7 @@
     --grid-pad-y-tight: 3px;
     --lines-pad: 6px;
     --lines-pad-input: 3px;
-    --spacing-header: 52px;
+    --spacing-header: 56px;
 }
 
 /* ─────────────────────────────────────────────────────────────────
@@ -131,6 +161,21 @@
     --color-ink-muted: #6b7280;
 
     --color-sidebar: #714b67;
+    --color-topbar: #714b67;
+    --color-topnav: #ffffff;
+    --color-topnav-ink: #374151;
+    --color-topnav-ink-muted: #6b7280;
+    --color-topnav-border: #dee2e6;
+    --color-topnav-hover: #f3eef2;
+    --color-topnav-selected: #ece3ea;
+
+    --color-topbar-ink: #ffffff;
+    --color-topbar-ink-muted: #e0cfda;
+    --color-topbar-border: #5c3d53;
+    --color-topbar-hover: #8a5e7e;
+    --color-topbar-field: #5c3d53;
+
+    --color-sidebar-panel: #f3eef2;
     --color-sidebar-hover: #8a5e7e;
     --color-sidebar-active: #017e84;
     --color-sidebar-border: #5c3d53;
@@ -146,7 +191,7 @@
     --row-height-dense: 34px;
     --grid-pad-x: 14px;
     --grid-pad-y: 8px;
-    --spacing-header: 46px;
+    --spacing-header: 56px;
 }
 
 /* ─────────────────────────────────────────────────────────────────
@@ -170,6 +215,14 @@
     --color-ink-muted: #605e5c;
 
     --color-sidebar: #1b3a57;
+    --color-topbar: #0b2a45;
+    --color-topbar-ink: #ffffff;
+    --color-topbar-ink-muted: #c6d8e6;
+    --color-topbar-border: #082033;
+    --color-topbar-hover: #17415f;
+    --color-topbar-field: #082033;
+
+    --color-sidebar-panel: #f3f2f1;
     --color-sidebar-hover: #24506f;
     --color-sidebar-active: #0078d4;
     --color-sidebar-border: #143047;
@@ -184,7 +237,7 @@
     --grid-pad-x: 10px;
     --grid-pad-y: 6px;
     --grid-pad-y-tight: 4px;
-    --spacing-header: 48px;
+    --spacing-header: 56px;
 }
 
 /* ─────────────────────────────────────────────────────────────────
@@ -209,6 +262,21 @@
     --color-ink-muted: #5a5751;
 
     --color-sidebar: #161513;
+    --color-topbar: #161513;
+    --color-topnav: #ffffff;
+    --color-topnav-ink: #161513;
+    --color-topnav-ink-muted: #5a5751;
+    --color-topnav-border: #e4e1dd;
+    --color-topnav-hover: #f6efed;
+    --color-topnav-selected: #f7e6e2;
+
+    --color-topbar-ink: #ffffff;
+    --color-topbar-ink-muted: #c9c5be;
+    --color-topbar-border: #000000;
+    --color-topbar-hover: #2f2d2a;
+    --color-topbar-field: #2f2d2a;
+
+    --color-sidebar-panel: #f1efec;
     --color-sidebar-hover: #2f2d2a;
     --color-sidebar-active: #c74634;
     --color-sidebar-border: #000000;
@@ -246,6 +314,14 @@
     --color-ink-muted: #6d545b;
 
     --color-sidebar: #7f1d33;
+    --color-topbar: #7f1d33;
+    --color-topbar-ink: #ffffff;
+    --color-topbar-ink-muted: #eec9d1;
+    --color-topbar-border: #66162a;
+    --color-topbar-hover: #9a2842;
+    --color-topbar-field: #66162a;
+
+    --color-sidebar-panel: #faeef1;
     --color-sidebar-hover: #9a2842;
     --color-sidebar-active: #be123c;
     --color-sidebar-border: #66162a;
@@ -283,6 +359,14 @@
     --color-ink-muted: #4b5875;
 
     --color-sidebar: #0b1220;
+    --color-topbar: #0b1220;
+    --color-topbar-ink: #ffffff;
+    --color-topbar-ink-muted: #b9c6df;
+    --color-topbar-border: #060b14;
+    --color-topbar-hover: #1c2a45;
+    --color-topbar-field: #1c2a45;
+
+    --color-sidebar-panel: #e9edf5;
     --color-sidebar-hover: #1c2a45;
     --color-sidebar-active: #1e3a8a;
     --color-sidebar-border: #060b14;
@@ -300,6 +384,23 @@
     --lines-pad: 6px;
     --spacing-header: 56px;
 }
+
+/* ─────────────────────────────────────────────────────────────────
+   মাথার উচ্চতার একটা মেঝে আছে — ৫৬px।
+
+   ── কী ভেঙেছিল ─────────────────────────────────────────────────
+   আসল ERP-গুলোর শেল বার সরু: Fiori ৪৪px, Odoo ৪৬। প্রথমে হুবহু সেটাই
+   বসানো হয়েছিল, আর ছবি তুলে দেখা গেল কোম্পানির নামটা বারের উপরে
+   কেটে গেছে।
+
+   কারণ ABOS-এর টপবারে **দুই লাইন** বসে: কোম্পানি আর শাখা। ওদের
+   বারে বসে এক লাইন। নকলটা ওখানে থামে — নাহলে "ট্রেড ডিপো" লেখাটাই
+   পড়া যেত না, আর একটা ডিপোতে দুইটা প্রতিষ্ঠান চললে কোনটায় কাজ
+   হচ্ছে তা বোঝার উপায় থাকত না।
+
+   অর্থাৎ উচ্চতাটা এখনো চেহারা ধরে বদলায় (৫৬ থেকে ৬৪), কেবল নিচে
+   একটা মেঝে আছে — আর মেঝেটা সাজসজ্জার নয়, তথ্যের।
+   ───────────────────────────────────────────────────────────────── */
 
 /* ═════════════════════════════════════════════════════════════════
    গাঢ় থিমে চেহারার নিজস্ব সুর।
