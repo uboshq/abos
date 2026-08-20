@@ -637,6 +637,60 @@
 }
 
 /* ─────────────────────────────────────────────────────────────────
+   টপবারের ভেতরে কালিটা টপবারের।
+
+   ── কেন প্রতিটা সন্তানে হাতে না লিখে এভাবে ───────────────────────
+   টপবারে বসে সাতটা আলাদা কম্পোনেন্ট: কোম্পানি বদল, খোঁজা, তৈরি
+   করুন, ঘণ্টা, ভাষা, থিম, প্রোফাইল। প্রত্যেকে `text-(--color-ink-muted)`
+   জাতীয় **পাতার** টোকেন ব্যবহার করে, আর সেটাই ঠিক — ওরা জানে না
+   ওরা কোথায় বসবে।
+
+   Odoo-র বেগুনি বারে ওই কালিটা পড়াই যেত না। প্রতিটা সন্তানে হাতে
+   `--color-topbar-ink` বসানো যেত, কিন্তু তাতে দুইটা সমস্যা: সাতটা
+   ফাইল বদলাতে হত, আর **অষ্টম কম্পোনেন্টটা** যেদিন কেউ যোগ করবেন
+   সেদিন সে আবার পাতার কালিই আনবে — আর কেউ ধরতে পারবে না কেন
+   লেখাটা মিলিয়ে গেছে।
+
+   কাস্টম প্রপার্টি উত্তরাধিকারসূত্রে নামে। তাই নামটা এখানে একবার
+   ঘুরিয়ে দিলে হেডারের ভেতরের **সবাই** — আজকের সাতজন আর কালকের
+   অষ্টমজন — নিজে থেকেই ঠিক কালি পায়।
+
+   ── কেন স্তরের বাইরে ────────────────────────────────────────────
+   এগুলো কাস্টম প্রপার্টি, ইউটিলিটির সাথে লড়াই নেই — কিন্তু নিয়মটা
+   `@layer`-এর ভেতরে থাকলে কোনো চেহারার নিজের নিয়ম এটাকে হারাতে
+   পারত না। বাইরে রাখলে দুইপক্ষই সমান জমিনে দাঁড়ায়।
+   ───────────────────────────────────────────────────────────────── */
+.topbar {
+    --color-ink: var(--color-topbar-ink);
+    --color-ink-body: var(--color-topbar-ink);
+    --color-ink-muted: var(--color-topbar-ink-muted);
+    --color-ink-placeholder: var(--color-topbar-ink-muted);
+    --color-border: var(--color-topbar-border);
+    --color-border-strong: var(--color-topbar-ink-muted);
+    --color-surface-hover: var(--color-topbar-hover);
+    --color-surface-app: var(--color-topbar-field);
+    --color-surface-card: var(--color-topbar);
+}
+
+/* ── ভাসমান প্যানেলগুলো ব্যতিক্রম ─────────────────────────────────
+   প্রোফাইল মেনু আর কোম্পানি বদলের তালিকা টপবার থেকে **ঝোলে**, কিন্তু
+   বসে পাতার উপরে। উত্তরাধিকার ওগুলোকেও গাঢ় করে দিত, আর তখন সাদা
+   পাতার উপর একটা গাঢ় বাক্স ভেসে থাকত — যেটা কোনো ERP করে না।
+
+   তাই নামগুলো এখানে আবার আসলটার দিকে ফিরিয়ে দেওয়া হয়। */
+.topbar .pops-onto-page {
+    --color-ink: var(--color-page-ink);
+    --color-ink-body: var(--color-page-ink-body);
+    --color-ink-muted: var(--color-page-ink-muted);
+    --color-ink-placeholder: var(--color-page-ink-placeholder);
+    --color-border: var(--color-page-border);
+    --color-border-strong: var(--color-page-border-strong);
+    --color-surface-hover: var(--color-page-surface-hover);
+    --color-surface-app: var(--color-page-surface-app);
+    --color-surface-card: var(--color-page-surface-card);
+}
+
+/* ─────────────────────────────────────────────────────────────────
    ছাপা — পর্দার তালিকা ও রিপোর্ট কাগজে
 
    টুলবারের Print বোতামটা window.print() ডাকে, অর্থাৎ যা পর্দায় আছে

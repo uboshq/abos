@@ -195,7 +195,7 @@
                  স্ক্রলের দরকার পড়ে না; খুব ছোট উচ্চতায় বাইরের `aside`
                  নিজেই স্ক্রল করে। --}}
             <nav class="flex w-(--spacing-sidebar-icon) shrink-0 flex-col items-center gap-1.5
-                        overflow-visible border-e border-black/10 bg-(--color-brand-900) py-2"
+                        overflow-visible border-e border-black/10 bg-(--color-sidebar) py-2"
                  aria-label="{{ __('core.a11y.module_navigation') }}">
 
                 {{-- ড্যাশবোর্ড — রেলের সবার উপরে, মডিউলগুলোর আগে।
@@ -348,7 +348,7 @@
                  ডানের কনটেন্ট এলাকাও সাদা কার্ডে ভরা, আর প্যানেলও সাদা
                  হলে দুইটার মাঝের সীমানাটা কেবল ১px রেখা হয়ে দাঁড়াত। --}}
             <div class="menu-panel hidden min-w-0 flex-1 flex-col border-e border-(--color-border)
-                        bg-(--color-surface-app) lg:flex"
+                        bg-(--color-sidebar-panel) lg:flex"
                  x-show="! $store.sidebar.collapsed">
 
                 @if ($activeModule)

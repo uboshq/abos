@@ -91,7 +91,7 @@
              x-cloak
              @click.outside="open = false"
              role="menu"
-             class="absolute start-0 top-full z-40 mt-1 w-72 overflow-hidden rounded-(--radius-card) border
+             class="pops-onto-page absolute start-0 top-full z-40 mt-1 w-72 overflow-hidden rounded-(--radius-card) border
                     border-(--color-border) bg-(--color-surface-card) py-1 shadow-(--shadow-overlay)">
 
             {{-- ── কোম্পানি ── --}}

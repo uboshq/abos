@@ -87,7 +87,7 @@
         </svg>
 
         @if ($pending > 0)
-            <span class="absolute -end-0.5 -top-0.5 flex min-w-4 items-center justify-center rounded-full
+            <span class="pops-onto-page absolute -end-0.5 -top-0.5 flex min-w-4 items-center justify-center rounded-full
                          bg-(--color-danger) px-1 text-[10px] font-semibold leading-4 text-white">
                 {{ $pending }}
             </span>

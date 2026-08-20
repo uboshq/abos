@@ -48,7 +48,7 @@
     </button>
 
     <div x-show="open" x-cloak x-transition.opacity
-         class="absolute end-0 z-30 mt-1 w-56 overflow-hidden rounded-(--radius-card)
+         class="pops-onto-page absolute end-0 z-30 mt-1 w-56 overflow-hidden rounded-(--radius-card)
                 border border-(--color-border) bg-(--color-surface-card) shadow-lg">
         @forelse ($entries as $entry)
             <a href="{{ route($entry['route']) }}"

@@ -19,8 +19,8 @@
     $branch = $user?->currentBranch;
 @endphp
 
-<header class="sticky top-0 z-30 flex h-(--spacing-header) shrink-0 items-center gap-2
-               border-b border-(--color-border) bg-(--color-surface-card) px-3 md:px-5">
+<header class="topbar sticky top-0 z-30 flex h-(--spacing-header) shrink-0 items-center gap-2
+               border-b border-(--color-topbar-border) bg-(--color-topbar) px-3 md:px-5">
 
     {{-- মোবাইলে সাইডবার নেই, তাই লোগোটা এখানে দেখা যায় --}}
     <img src="{{ asset('brand/adi-icon-64.png') }}" alt="ADI | ABOS"
@@ -48,8 +48,8 @@
     <button type="button"
             @click="$store.sidebar.toggle()"
             class="hidden size-9 shrink-0 items-center justify-center rounded-(--radius-field)
-                   border border-(--color-border) text-(--color-ink-muted) transition-colors
-                   hover:bg-(--color-surface-app) hover:text-(--color-ink) md:flex"
+                   border border-(--color-topbar-border) text-(--color-topbar-ink-muted) transition-colors
+                   hover:bg-(--color-topbar-hover) hover:text-(--color-topbar-ink) md:flex"
             :aria-expanded="$store.sidebar.collapsed ? 'false' : 'true'"
             :aria-label="$store.sidebar.collapsed
                 ? '{{ __('core.a11y.expand_sidebar') }}'
@@ -68,7 +68,7 @@
             <x-shell.company-switcher :company="$company" :branch="$branch" />
         </div>
 
-        <span class="hidden h-8 w-px shrink-0 bg-(--color-border) sm:block" aria-hidden="true"></span>
+        <span class="hidden h-8 w-px shrink-0 bg-(--color-topbar-border) sm:block" aria-hidden="true"></span>
     @endif
 
     {{-- Ctrl+K — সেকশন ১৫.৩। মোবাইলে শুধু আইকন, বড় স্ক্রিনে পূর্ণ বাক্স। --}}
@@ -86,9 +86,9 @@
             @click="$dispatch('open-command-center')"
             title="{{ __('core.action.search_anything') }} (Ctrl K)"
             class="flex min-h-(--spacing-touch) min-w-0 flex-1 items-center gap-2 rounded-(--radius-field)
-                   border border-(--color-border) bg-(--color-surface-app) px-3
-                   text-start text-(--color-ink-placeholder) transition-colors
-                   hover:border-(--color-border-strong) sm:max-w-36">
+                   border border-(--color-topbar-border) bg-(--color-topbar-field) px-3
+                   text-start text-(--color-topbar-ink-muted) transition-colors
+                   hover:border-(--color-topbar-ink-muted) sm:max-w-36">
         <svg viewBox="0 0 24 24" class="size-(--spacing-icon) shrink-0 fill-current" aria-hidden="true">
             <path d="M10 2a8 8 0 1 0 4.9 14.3l5.4 5.4 1.4-1.4-5.4-5.4A8 8 0 0 0 10 2Zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12Z"/>
         </svg>
@@ -123,8 +123,8 @@
             @csrf
             <button type="submit" name="locale" value="{{ app()->getLocale() === 'bn' ? 'en' : 'bn' }}"
                     class="flex h-(--spacing-touch) items-center gap-1.5 rounded-(--radius-field) px-2
-                           text-sm font-medium text-(--color-ink-muted) transition-colors
-                           hover:bg-(--color-surface-hover) hover:text-(--color-ink)"
+                           text-sm font-medium text-(--color-topbar-ink-muted) transition-colors
+                           hover:bg-(--color-topbar-hover) hover:text-(--color-topbar-ink)"
                     title="{{ __('core.action.switch_language') }}">
                 <x-ui.icon name="globe" :size="18" />
                 {{ app()->getLocale() === 'bn' ? 'EN' : 'বাং' }}
@@ -144,11 +144,11 @@
              সেটাই হয়। --}}
         @if ($user)
             <span class="hidden min-w-0 text-end lg:block">
-                <span class="block max-w-40 truncate text-sm font-medium text-(--color-ink)">
+                <span class="block max-w-40 truncate text-sm font-medium text-(--color-topbar-ink)">
                     {{ $user->name }}
                 </span>
                 @if ($role = $user->getRoleNames()->first())
-                    <span class="block max-w-40 truncate text-2xs text-(--color-ink-muted)">
+                    <span class="block max-w-40 truncate text-2xs text-(--color-topbar-ink-muted)">
                         {{ __('core.role.'.$role) }}
                     </span>
                 @endif
