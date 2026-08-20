@@ -176,6 +176,8 @@ return [
              */
             ['label' => 'sales::menu.commission', 'route' => 'sales.commission.index',
                 'permission' => 'sales.commission.view'],
+            ['label' => 'sales::menu.deposit_claims', 'route' => 'sales.claim.index',
+                'permission' => 'sales.claim.view'],
         ],
     ],
 
@@ -215,6 +217,15 @@ return [
          * বিক্রয়কর্মীর হাতে না পড়ে সেজন্য সিডারের বাদ-তালিকাতেও আছে।
          * এই ফাঁদটা এই প্রকল্পে তিনবার ধরা পড়েছে।
          */
+        /*
+         * জমার দাবি — দেখা আর সিদ্ধান্ত দেওয়া আলাদা।
+         *
+         * দেখা রোজকার; গ্রহণ করা মানে খাতায় টাকা বসানো। এক চাবি হলে
+         * যে কেউ তালিকা খুলে সব দাবি গ্রহণ করে দিতে পারতেন।
+         */
+        'sales.claim.view',
+        'sales.claim.decide',
+
         'sales.commission.view',
         'sales.commission.manage',
         'sales.commission.override',

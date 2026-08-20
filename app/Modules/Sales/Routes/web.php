@@ -5,8 +5,10 @@ declare(strict_types=1);
 use App\Modules\Sales\Http\Controllers\CollectionController;
 use App\Modules\Sales\Http\Controllers\CommissionClaimController;
 use App\Modules\Sales\Http\Controllers\DeliveryChallanController;
+use App\Modules\Sales\Http\Controllers\DepositClaimController;
 use App\Modules\Sales\Http\Controllers\DirectSaleController;
 use App\Modules\Sales\Http\Controllers\LotTraceController;
+use App\Modules\Sales\Http\Controllers\PortalController;
 use App\Modules\Sales\Http\Controllers\PosController;
 use App\Modules\Sales\Http\Controllers\PrintQueueController;
 use App\Modules\Sales\Http\Controllers\SalesInvoiceController;
@@ -110,6 +112,20 @@ Route::middleware('auth')->prefix('sales')->group(function () {
      * তালিকাই প্রধান পর্দা, তাই আলাদা create/show নেই: বসানো হয়
      * তালিকার উপরের ফর্ম থেকে, আর সিদ্ধান্ত সারি থেকেই।
      */
+    /*
+     * ডিলারদের তোলা জমার দাবি — ডিপোর দিক।
+     *
+     * সিদ্ধান্ত সারি থেকেই, আলাদা পাতায় নয়: দিনে বিশটা দাবি যাচাই
+     * করতে গিয়ে প্রতিটার জন্য যাওয়া-আসা করলে কেউ আর তালিকাটা খুলত না।
+     */
+    Route::prefix('deposit-claims')->name('claim.')->group(function () {
+        Route::get('/', [DepositClaimController::class, 'index'])->name('index');
+        Route::post('/{claim}/accept', [DepositClaimController::class, 'accept'])
+            ->whereNumber('claim')->name('accept');
+        Route::post('/{claim}/reject', [DepositClaimController::class, 'reject'])
+            ->whereNumber('claim')->name('reject');
+    });
+
     Route::prefix('commissions')->name('commission.')->group(function () {
         Route::get('/', [CommissionClaimController::class, 'index'])->name('index');
         Route::post('/', [CommissionClaimController::class, 'store'])->name('store');
@@ -233,4 +249,26 @@ Route::middleware('auth')->prefix('sales')->group(function () {
     });
 
     Route::get('/reports/{slug}', [SalesReportController::class, 'show'])->name('report.show');
+});
+
+/*
+ * গ্রাহক পোর্টাল — বাইরের মানুষ, তাই `auth` গ্রুপের বাইরে।
+ *
+ * উপসর্গ `sales` নয়, `portal`: ডিলার "বিক্রয় মডিউল" চেনেন না, তিনি
+ * চেনেন "আমার পাতা"। আর ঠিকানাটা ছোট হলে ফোনে লিখতেও সহজ।
+ */
+Route::prefix('portal')->name('portal.')->group(function () {
+    Route::middleware('guest:portal')->group(function () {
+        Route::get('/login', [PortalController::class, 'showLogin'])->name('login');
+        Route::post('/login', [PortalController::class, 'login'])->name('login.attempt');
+    });
+
+    Route::middleware('auth:portal')->group(function () {
+        Route::get('/', [PortalController::class, 'home'])->name('home');
+        Route::post('/logout', [PortalController::class, 'logout'])->name('logout');
+        Route::get('/claims/new', [PortalController::class, 'showClaim'])->name('claim.create');
+        Route::post('/claims', [PortalController::class, 'storeClaim'])->name('claim.store');
+        Route::get('/claims/{claim}', [PortalController::class, 'showOwnClaim'])
+            ->whereNumber('claim')->name('claim.show');
+    });
 });

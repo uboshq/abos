@@ -26,4 +26,5 @@ return [
 
     // ডিলারের কমিশন
     'commission' => 'Dealer commission',
+    'deposit_claims' => 'Deposit claims',
 ];

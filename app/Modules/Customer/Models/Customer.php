@@ -16,6 +16,8 @@ use App\Models\LedgerEntry;
 use App\Models\User;
 use App\Modules\MasterData\Models\Location;
 use App\Modules\MasterData\Models\PartyType;
+use Illuminate\Auth\Authenticatable;
+use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -30,8 +32,20 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * ব্যবহার করা হচ্ছে: company scope, status, drill-down, নম্বর সিরিজ,
  * সেটিংস, অনুমতি। কোথাও কিছু আলাদা করে লিখতে হলে সেটাই ভিত্তির ফাঁক।
  */
-class Customer extends Model implements Drillable
+/*
+ * পোর্টালে ঢোকার জন্য গ্রাহক নিজেই প্রমাণীকরণযোগ্য।
+ *
+ * ── কেন আলাদা টেবিল নয় ──────────────────────────────────────────────
+ * যিনি ঢোকেন তিনিই গ্রাহক। মাঝখানে একটা "পোর্টাল ব্যবহারকারী" টেবিল
+ * বসালে "কোন লগইন কোন ডিলারের" প্রশ্নটা একটা জোড়ের উপর নির্ভর করত,
+ * আর ওই জোড়ে একদিন ভুল হত — আর সেই একটা ভুলে এক ডিলার আরেকজনের
+ * খাতা দেখে ফেলতেন।
+ *
+ * এখানে ভুল হওয়ার জায়গাই নেই: সারিটাই ডিলার।
+ */
+class Customer extends Model implements AuthenticatableContract, Drillable
 {
+    use Authenticatable;
     use BelongsToCompany;
     use HasActiveState;
     use HasDocumentStatus;
@@ -47,6 +61,44 @@ class Customer extends Model implements Drillable
         'receivable_account_id', 'status', 'is_active', 'created_by',
     ];
 
+    /*
+     * পাসওয়ার্ডটা কখনো `fillable`-এ নয়।
+     *
+     * গ্রাহক তৈরি বা সম্পাদনার ফর্ম থেকে ওটা বসানো যাবে না; বসে কেবল
+     * পোর্টাল সার্ভিস থেকে, hash করে। fillable-এ থাকলে একটা সাধারণ
+     * সম্পাদনার অনুরোধেই কেউ অন্যের পোর্টাল পাসওয়ার্ড বদলে দিতে
+     * পারতেন।
+     */
+    protected $hidden = ['portal_password', 'remember_token'];
+
+    /**
+     * পাসওয়ার্ডের ঘরটা `password` নয়, `portal_password`।
+     *
+     * ── কেন নামটা আলাদা ─────────────────────────────────────────────
+     * `customers` টেবিলটা প্রথমে একটা মাস্টার ডাটার টেবিল, তারপর একটা
+     * লগইনের টেবিল। `password` নামে একটা ঘর বসালে গ্রাহকের রপ্তানি,
+     * ইমপোর্ট আর API-তে ওটা নীরবে ঘুরে বেড়াত, আর কেউ না কেউ একদিন
+     * সেটা দেখে ফেলত।
+     *
+     * ── এই দুইটা পদ্ধতি না থাকলে যা হত ──────────────────────────────
+     * `Authenticatable` ট্রেইট ডিফল্টে `$this->password` খোঁজে, যেটা
+     * এখানে সবসময় null। ফলে `attempt()` **কখনোই সফল হত না** — সঠিক
+     * পাসওয়ার্ডেও নয়। আর ব্যর্থতাটা নীরব: পর্দা কেবল বলত "কোড আর
+     * পাসওয়ার্ড মিলছে না", আর কেউ ধরতে পারত না দোষটা কোথায়।
+     *
+     * ধরা পড়েছে টেস্টে — লগইন সফল দেখাচ্ছিল, অথচ গার্ডে কোনো
+     * ব্যবহারকারী বসছিল না।
+     */
+    public function getAuthPasswordName(): string
+    {
+        return 'portal_password';
+    }
+
+    public function getAuthPassword(): string
+    {
+        return (string) $this->portal_password;
+    }
+
     protected function casts(): array
     {
         return [
@@ -54,6 +106,9 @@ class Customer extends Model implements Drillable
             'credit_days' => 'integer',
             'opening_balance' => 'decimal:4',
             'opening_date' => 'date',
+            'portal_enabled' => 'boolean',
+            'portal_last_login_at' => 'datetime',
+            'portal_password' => 'hashed',
             'is_active' => 'boolean',
         ];
     }
