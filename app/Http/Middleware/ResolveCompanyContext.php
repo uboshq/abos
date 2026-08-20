@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Core\Services\DataScope;
 use App\Core\Support\CompanyContext;
 use App\Models\FinancialYear;
 use App\Models\User;
+use App\Models\UserDataScope;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -68,6 +70,25 @@ class ResolveCompanyContext
         }
 
         CompanyContext::set($companyId, $user->current_branch_id);
+
+        /*
+         * কে কোন সারি দেখবেন — এখানেই একবার, অনুরোধের শুরুতে।
+         *
+         * ── কেন আগেভাগে, অলসভাবে নয় ─────────────────────────────────
+         * `ScopedToUserBranch` প্রথম যে কোয়েরিতে লাগে সেখানেই সীমাটা
+         * খোঁজে। খরচ একই — অনুরোধপ্রতি একটা কোয়েরি, কারণ `DataScope`
+         * scoped। কিন্তু **কখন** সেটা ঘটবে তা অনিশ্চিত: যে কোনো
+         * কোয়েরির ঠিক আগে।
+         *
+         * ২০ আগস্ট সেটা কামড়েছে। `TheWholeCatalogueAsOneSheetTest`
+         * মাপে "গোটা ক্যাটালগ একটাই কোয়েরিতে" — আর সীমার খোঁজটা ঠিক
+         * ওই মাপা ব্লকের ভেতরে পড়ে দুইটা হয়ে গিয়েছিল। কোডটা ধীর
+         * হয়নি; কেবল খরচটা অন্য কারো হিসাবে গিয়ে বসেছিল।
+         *
+         * এখানে বসালে খরচটা যেখানকার সেখানেই থাকে, আর পরের কেউ
+         * কোয়েরি গুনতে গিয়ে একই ফাঁদে পড়ে না।
+         */
+        app(DataScope::class)->idsFor($user, UserDataScope::BRANCH);
 
         // অর্থবছর প্রসঙ্গে বসানো হয় স্কোপ বসার পরে — নাহলে FinancialYear-এর
         // নিজের কোম্পানি-স্কোপ কিছুই খুঁজে পেত না।

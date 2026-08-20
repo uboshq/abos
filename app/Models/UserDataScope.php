@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Core\Concerns\BelongsToCompany;
+use App\Core\Concerns\HasPublicId;
+use App\Core\Concerns\IsAudited;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -17,6 +19,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class UserDataScope extends Model
 {
     use BelongsToCompany;
+    use HasPublicId;
+    use IsAudited;
 
     /** শাখা — বেশিরভাগ কাগজে এই ঘরটাই আছে। */
     public const BRANCH = 'branch';
