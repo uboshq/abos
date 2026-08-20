@@ -51,7 +51,7 @@
     `z` টপবারের চেয়ে এক ধাপ কম, যাতে টপবারের ড্রপডাউনগুলো এর উপর দিয়ে
     খোলে, নিচে চাপা না পড়ে।
 --}}
-<div class="sticky top-(--spacing-header) z-20 flex h-9 shrink-0 items-center gap-2
+<div class="sticky top-(--spacing-header) z-20 flex h-(--spacing-field-compact) shrink-0 items-center gap-2
             border-b border-(--color-border) bg-(--color-surface-card) px-3 md:px-5 print-hide">
 
     <nav class="flex min-w-0 items-center gap-1.5 text-xs text-(--color-ink-muted)"

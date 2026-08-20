@@ -141,7 +141,7 @@
                 <label class="flex items-center gap-2 text-sm">
                     <span class="sr-only">{{ __('inventory::field.warehouse') }}</span>
                     <select name="warehouse_id"
-                            class="h-9 rounded-(--radius-field) border border-(--color-border)
+                            class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
                                    bg-(--color-surface-app) px-2 text-sm">
                         <option value="">{{ __('inventory::field.warehouse') }}</option>
                         @foreach ($warehouses as $w)

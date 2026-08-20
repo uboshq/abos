@@ -392,7 +392,7 @@
                             <input type="search"
                                    x-model="filter"
                                    placeholder="{{ __('core.a11y.filter_this_menu', ['module' => $activeModule['label']]) }}"
-                                   class="h-8 w-full rounded-(--radius-field) border border-(--color-border)
+                                   class="h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
                                           bg-(--color-surface-card) ps-8 pe-2 text-sm">
                         </label>
                     @endif
@@ -435,7 +435,7 @@
                                 <a @if ($item['url']) href="{{ $item['url'] }}" @endif
                                    x-show="filter === '' || {{ Js::from(mb_strtolower($item['label'])) }}.includes(filter.toLowerCase().trim())"
                                    @class([
-                                       'flex min-h-9 items-center gap-2 rounded-(--radius-field) px-2.5 text-sm transition-colors',
+                                       'flex min-h-(--spacing-field-compact) items-center gap-2 rounded-(--radius-field) px-2.5 text-sm transition-colors',
                                        'bg-(--color-brand-500) font-semibold text-(--color-ink-inverse) shadow-sm' => $item['active'],
                                        'text-(--color-ink-body) hover:bg-(--color-surface-hover)' => ! $item['active'] && $item['url'],
                                        'cursor-not-allowed text-(--color-ink-disabled)' => ! $item['url'],

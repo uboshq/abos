@@ -48,12 +48,12 @@
                            value="{{ request('from') }}"
                            aria-label="{{ __('accounts::field.from_date') }}"
                            :submit-on-change="true"
-                           class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
+                           class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
                            <x-ui.date name="to"
                            value="{{ request('to') }}"
                            aria-label="{{ __('accounts::field.to_date') }}"
                            :submit-on-change="true"
-                           class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
+                           class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
                            </x-ui.toolbar>
         </form>
 

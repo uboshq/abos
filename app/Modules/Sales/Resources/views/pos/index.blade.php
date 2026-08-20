@@ -134,7 +134,7 @@
                            x-init="$nextTick(() => $refs.search.focus())"
                            @keydown.enter.prevent="takeFirst()"
                            placeholder="{{ __('sales::message.pos_search') }}"
-                           class="h-12 w-full rounded-(--radius-field) border border-(--color-border)
+                           class="h-(--spacing-field) w-full rounded-(--radius-field) border border-(--color-border)
                                   bg-(--color-surface-app) px-4 text-base">
                 </label>
 
@@ -249,7 +249,7 @@
                                 <input type="number" step="0.01" min="0.01"
                                        x-model="line.qty"
                                        :name="`lines[${i}][qty]`"
-                                       class="num h-8 w-20 rounded-(--radius-field) border border-(--color-border)
+                                       class="num h-(--spacing-field-dense) w-20 rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-app) px-2 text-end text-sm">
 
                                 <button type="button" @click="line.qty = Number(line.qty) + 1"
@@ -259,7 +259,7 @@
                                 <input type="number" step="0.01" min="0"
                                        x-model="line.rate"
                                        :name="`lines[${i}][rate]`"
-                                       class="num ms-auto h-8 w-24 rounded-(--radius-field) border
+                                       class="num ms-auto h-(--spacing-field-dense) w-24 rounded-(--radius-field) border
                                               border-(--color-border) bg-(--color-surface-app) px-2 text-end text-sm">
 
                                 <input type="hidden" :name="`lines[${i}][product_id]`" :value="line.id">
@@ -290,7 +290,7 @@
                                        x-model="line.discount"
                                        :max="lineBase(line)"
                                        :name="`lines[${i}][discount]`"
-                                       class="num ms-auto h-8 w-24 rounded-(--radius-field) border
+                                       class="num ms-auto h-(--spacing-field-dense) w-24 rounded-(--radius-field) border
                                               border-(--color-border) bg-(--color-surface-app) px-2 text-end text-sm">
                             </div>
                         </div>
@@ -328,7 +328,7 @@
                            x-model="paid"
                            x-ref="paid"
                            @keydown.enter.prevent="lines.length > 0 && $el.form.requestSubmit($refs.checkout)"
-                           class="num h-11 w-full rounded-(--radius-field) border border-(--color-border)
+                           class="num h-(--spacing-counter) w-full rounded-(--radius-field) border border-(--color-border)
                                   bg-(--color-surface-app) px-3 text-end text-lg">
 
                     {{-- দ্রুত টাকার বোতাম — কাউন্টারে সবচেয়ে বেশি যা দেওয়া হয় --}}
@@ -372,7 +372,7 @@
                                 <div class="flex items-center gap-1">
                                     <select :name="`payments[${p}][payment_method_id]`"
                                             x-model="part.method_id"
-                                            class="h-9 min-w-0 flex-1 rounded-(--radius-field) border
+                                            class="h-(--spacing-field-compact) min-w-0 flex-1 rounded-(--radius-field) border
                                                    border-(--color-border) bg-(--color-surface-app) px-2 text-sm">
                                         <option value="">{{ __('sales::field.cash') }}</option>
                                         @foreach ($methods as $method)
@@ -383,7 +383,7 @@
                                     <input type="number" step="0.01" min="0"
                                            x-model="part.amount"
                                            :name="`payments[${p}][amount]`"
-                                           class="num h-9 w-24 rounded-(--radius-field) border
+                                           class="num h-(--spacing-field-compact) w-24 rounded-(--radius-field) border
                                                   border-(--color-border) bg-(--color-surface-app)
                                                   px-2 text-end text-sm">
 
@@ -392,7 +392,7 @@
                                            x-model="part.reference"
                                            :name="`payments[${p}][reference]`"
                                            :placeholder="'{{ __('sales::field.instrument_no') }}'"
-                                           class="h-9 w-28 rounded-(--radius-field) border
+                                           class="h-(--spacing-field-compact) w-28 rounded-(--radius-field) border
                                                   border-(--color-border) bg-(--color-surface-app) px-2 text-sm">
 
                                     <button type="button" @click="payments.splice(p, 1)"
@@ -452,7 +452,7 @@
                         <input type="email" name="approver_email" autocomplete="off"
                                placeholder="{{ __('sales::field.approver_email') }}"
                                value="{{ old('approver_email') }}"
-                               class="h-10 w-full rounded-(--radius-field) border border-(--color-border)
+                               class="h-(--spacing-counter-sm) w-full rounded-(--radius-field) border border-(--color-border)
                                       bg-(--color-surface-app) px-3 text-sm">
 
                         {{--
@@ -465,7 +465,7 @@
                         --}}
                         <input type="password" name="approver_password" autocomplete="new-password"
                                placeholder="{{ __('sales::field.approver_password') }}"
-                               class="h-10 w-full rounded-(--radius-field) border border-(--color-border)
+                               class="h-(--spacing-counter-sm) w-full rounded-(--radius-field) border border-(--color-border)
                                       bg-(--color-surface-app) px-3 text-sm">
                     </div>
                 @endif
@@ -557,7 +557,7 @@
                            x-ref="billNo"
                            @keydown.enter.prevent="findBill()"
                            :placeholder="'{{ __('sales::field.inv_number') }}'"
-                           class="h-10 min-w-0 flex-1 rounded-(--radius-field) border border-(--color-border)
+                           class="h-(--spacing-counter-sm) min-w-0 flex-1 rounded-(--radius-field) border border-(--color-border)
                                   bg-(--color-surface-app) px-3 text-sm">
 
                     <button type="button" @click="findBill()"
@@ -588,7 +588,7 @@
                                     <input type="number" step="0.01" min="0" :max="roomOn(line)"
                                            x-model="line.take"
                                            :name="`lines[${i}][qty]`"
-                                           class="num h-9 w-20 rounded-(--radius-field) border
+                                           class="num h-(--spacing-field-compact) w-20 rounded-(--radius-field) border
                                                   border-(--color-border) bg-(--color-surface-app)
                                                   px-2 text-end text-sm">
 

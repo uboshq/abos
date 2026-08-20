@@ -67,7 +67,7 @@
                             <span class="sr-only">{{ __('accounts::field.from_date') }}</span>
                             <x-ui.date name="from"
                                        value="{{ $filters['from'] ?? '' }}"
-                                       class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
+                                       class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
                                        </label>
                                        @endunless
 
@@ -78,7 +78,7 @@
                         <span class="sr-only">{{ __('accounts::field.to_date') }}</span>
                         <x-ui.date name="to"
                                    value="{{ $filters['to'] ?? '' }}"
-                                   class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
+                                   class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
                                    </label>
                                    @endif
 
@@ -86,7 +86,7 @@
                     <label class="min-w-0 flex-1 sm:max-w-xs">
                         <span class="sr-only">{{ __('core.print.account') }}</span>
                         <select name="account_id"
-                                class="h-9 w-full rounded-(--radius-field) border border-(--color-border)
+                                class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                                        bg-(--color-surface-app) px-2 text-sm">
                             <option value="">{{ __('core.print.account') }} — {{ __('core.action.more') }}</option>
                             @foreach ($accounts as $account)
@@ -103,7 +103,7 @@
                     <label>
                         <span class="sr-only">{{ __('core.company.branch') }}</span>
                         <select name="branch_id"
-                                class="h-9 rounded-(--radius-field) border border-(--color-border)
+                                class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
                                        bg-(--color-surface-app) px-2 text-sm">
                             <option value="">{{ __('core.company.branch') }}</option>
                             @foreach ($branches as $branch)
@@ -128,7 +128,7 @@
                     <label>
                         <span class="sr-only">{{ __('core.report.compare') }}</span>
                         <select name="compare"
-                                class="h-9 rounded-(--radius-field) border border-(--color-border)
+                                class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
                                        bg-(--color-surface-app) px-2 text-sm">
                             <option value="">{{ __('core.report.compare_none') }}</option>
                             @foreach ([$previous, $lastYear] as $option)
@@ -143,7 +143,7 @@
                     <label>
                         <span class="sr-only">{{ __('core.report.top') }}</span>
                         <select name="top"
-                                class="h-9 rounded-(--radius-field) border border-(--color-border)
+                                class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
                                        bg-(--color-surface-app) px-2 text-sm">
                             <option value="">{{ __('core.report.top_all') }}</option>
                             @foreach ([5, 10, 20, 50] as $n)

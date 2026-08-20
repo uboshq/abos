@@ -109,7 +109,7 @@
                         <label class="flex items-center gap-2 text-xs text-(--color-ink-muted)">
                             {{ __('core.company.branch') }}
                             <select name="default_branch[{{ $company->id }}]"
-                                    class="h-9 rounded-(--radius-field) border border-(--color-border)
+                                    class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
                                            bg-(--color-surface-card) px-2 text-sm">
                                 <option value="">-</option>
                                 @foreach ($branches[$company->id] ?? [] as $branch)

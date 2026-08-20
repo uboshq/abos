@@ -629,8 +629,10 @@
    কোনো @layer-এর ভেতরে নয়, আর কারণটা এখানেই লেখা রইল।
    ───────────────────────────────────────────────────────────────────── */
 .cmd-actions :is(a, button) {
-    min-height: 32px;
-    height: 32px;
+    /* মাপটা টোকেন থেকে — নাহলে কোনো থিম এটা বদলাতে পারত না,
+       আর ঘন থিমে কমান্ড বারটা একা আগের উচ্চতায় বসে থাকত। */
+    min-height: var(--spacing-command);
+    height: var(--spacing-command);
     padding-inline: 10px;
     border-radius: 6px;
     font-size: 13px;

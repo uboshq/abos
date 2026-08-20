@@ -199,7 +199,7 @@
                      মোবাইল নম্বর দিয়েও যে খোঁজা যায় তা কখনো জানে না। --}}
                 <input type="search" name="q" value="{{ request('q') }}"
                        placeholder="{{ $searchPlaceholder ?? __('core.action.search') }}"
-                       class="h-9 w-full rounded-(--radius-field) border border-(--color-border)
+                       class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                               bg-(--color-surface-app) ps-8 pe-3 text-sm">
                 <svg viewBox="0 0 24 24" aria-hidden="true"
                      class="pointer-events-none absolute start-2 top-1/2 size-4 -translate-y-1/2
@@ -216,7 +216,7 @@
             <label class="flex items-center gap-2 text-sm">
                 <span class="whitespace-nowrap text-(--color-ink-muted)">{{ __('core.toolbar.sort_by') }}</span>
                 <select name="sort" onchange="this.form.submit()"
-                        class="h-9 rounded-(--radius-field) border border-(--color-border)
+                        class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
                                bg-(--color-surface-app) px-2 text-sm">
                     @foreach ($sort as $value => $label)
                         <option value="{{ $value }}" @selected($currentSort === (string) $value)>{{ $label }}</option>

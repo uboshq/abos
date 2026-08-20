@@ -138,7 +138,7 @@
                                 <tr class="border-b border-(--color-border)">
                                     <td class="p-1" data-label="{{ __('purchase::field.product') }}">
                                         <select :name="`lines[${i}][product_id]`" x-model="row.product_id"
-                                                class="h-9 w-full rounded-(--radius-field) border border-(--color-border)
+                                                class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                                                        bg-(--color-surface-card) px-2">
                                             <option value="">-</option>
                                             @foreach ($products as $product)
@@ -156,7 +156,7 @@
                                     <td class="p-1" data-label="{{ __('purchase::field.quantity') }}">
                                         <input type="number" step="0.01" inputmode="decimal"
                                                :name="`lines[${i}][qty]`" x-model="row.qty"
-                                               class="num h-9 w-full sm:w-24 rounded-(--radius-field)
+                                               class="num h-(--spacing-field-compact) w-full sm:w-24 rounded-(--radius-field)
                                                       border border-(--color-border)
                                                       bg-(--color-surface-card) px-2 text-end">
                                     </td>
@@ -164,7 +164,7 @@
                                     <td class="p-1" data-label="{{ __('purchase::field.rate') }}">
                                         <input type="number" step="0.01" inputmode="decimal"
                                                :name="`lines[${i}][rate]`" x-model="row.rate"
-                                               class="num h-9 w-full sm:w-24 rounded-(--radius-field)
+                                               class="num h-(--spacing-field-compact) w-full sm:w-24 rounded-(--radius-field)
                                                       border border-(--color-border)
                                                       bg-(--color-surface-card) px-2 text-end">
                                     </td>
@@ -172,7 +172,7 @@
                                     <td class="p-1" data-label="{{ __('purchase::field.tax') }}">
                                         <input type="number" step="0.01" inputmode="decimal"
                                                :name="`lines[${i}][tax]`" x-model="row.tax"
-                                               class="num h-9 w-full sm:w-24 rounded-(--radius-field)
+                                               class="num h-(--spacing-field-compact) w-full sm:w-24 rounded-(--radius-field)
                                                       border border-(--color-border)
                                                       bg-(--color-surface-card) px-2 text-end">
                                     </td>

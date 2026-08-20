@@ -14,10 +14,10 @@
            value="{{ $dates['from'] ?? '' }}"
            aria-label="{{ __('core.table.from_date') }}"
            :submit-on-change="true"
-           class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
+           class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
 
 <x-ui.date name="to"
             value="{{ $dates['to'] ?? '' }}"
             aria-label="{{ __('core.table.to_date') }}"
             :submit-on-change="true"
-            class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
+            class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
