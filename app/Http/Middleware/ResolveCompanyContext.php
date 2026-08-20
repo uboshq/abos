@@ -6,6 +6,7 @@ namespace App\Http\Middleware;
 
 use App\Core\Support\CompanyContext;
 use App\Models\FinancialYear;
+use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -28,6 +29,23 @@ class ResolveCompanyContext
         if ($user === null) {
             CompanyContext::clear();
 
+            return $next($request);
+        }
+
+        /*
+         * এই মিডলওয়্যারটা কর্মীর জন্য, ডিলারের জন্য নয়।
+         *
+         * ── কেন যাচাইটা দরকার হলো ───────────────────────────────────
+         * গ্রাহক পোর্টাল আসার পর `$request->user()` একটা `Customer`-ও
+         * হতে পারে। কিন্তু নিচের পুরো যুক্তিটা `User`-এর জিনিস ধরে
+         * নিয়েছে: `companies()`, `canAccessCompany()`, `switchCompany()`
+         * — ডিলারের কোনোটাই নেই, আর থাকার কথাও নয়।
+         *
+         * কর্মী একাধিক কোম্পানিতে থাকতে পারেন, তাই তাঁর একটা "চলতি
+         * কোম্পানি" বাছাই লাগে। ডিলার একটাই কোম্পানির, আর প্রসঙ্গটা
+         * তাঁর নিজের সারি থেকেই আসে (PortalController::dealer)।
+         */
+        if (! $user instanceof User) {
             return $next($request);
         }
 

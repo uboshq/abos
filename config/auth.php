@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Modules\Customer\Models\Customer;
 
 return [
 
@@ -42,6 +43,20 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+
+        /*
+         * গ্রাহক পোর্টাল — বাইরের মানুষ।
+         *
+         * আলাদা গার্ড, কারণ আলাদা সেশন কুকি ও আলাদা প্রবেশপথ দরকার।
+         * এক গার্ডে দুই ধরনের মানুষ রাখলে একজন কর্মী আর একজন ডিলার
+         * একই `auth()->user()`-এ আসতেন, আর প্রতিটা অনুমতি-যাচাইয়ে
+         * তখন "ইনি কে" প্রশ্নটা আবার করতে হত — আর কোথাও না কোথাও
+         * করা হত না।
+         */
+        'portal' => [
+            'driver' => 'session',
+            'provider' => 'customers',
+        ],
     ],
 
     /*
@@ -62,6 +77,11 @@ return [
     */
 
     'providers' => [
+        'customers' => [
+            'driver' => 'eloquent',
+            'model' => Customer::class,
+        ],
+
         'users' => [
             'driver' => 'eloquent',
             'model' => env('AUTH_MODEL', User::class),
