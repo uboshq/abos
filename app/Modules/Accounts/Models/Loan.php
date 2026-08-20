@@ -47,6 +47,17 @@ class Loan extends Model implements Drillable
      */
     public const HAND = 'hand';
 
+    /**
+     * FD — নির্দিষ্ট টাকা ব্যাংকে রাখা, নির্দিষ্ট মেয়াদে, নির্দিষ্ট সুদে।
+     *
+     * উল্টো করে দেখলে এটা ব্যাংককে দেওয়া একটা টার্ম লোন, তাই ঘরগুলোও
+     * একই। সুদটা কেবল উল্টো দিকে যায়: খরচ নয়, আয়।
+     */
+    public const FD = 'fd';
+
+    /** DPS — একই জিনিস, কেবল টাকাটা মাসে মাসে জমে। */
+    public const DPS = 'dps';
+
     /** ধারটা আমরা নিয়েছি — দায়। */
     public const TAKEN = 'taken';
 
@@ -59,6 +70,7 @@ class Loan extends Model implements Drillable
         'company_id', 'branch_id', 'document_no', 'lender', 'account_no',
         'kind', 'direction', 'interest_method', 'sanctioned', 'interest_rate',
         'tenure_months', 'start_date', 'first_instalment_on', 'due_on',
+        'matures_on', 'pledged_against_id',
         'principal_account_id', 'interest_account_id',
         'security', 'narration', 'status', 'created_by',
     ];
@@ -71,6 +83,7 @@ class Loan extends Model implements Drillable
             'start_date' => 'date',
             'first_instalment_on' => 'date',
             'due_on' => 'date',
+            'matures_on' => 'date',
         ];
     }
 
@@ -112,6 +125,43 @@ class Loan extends Model implements Drillable
     public function isHandLoan(): bool
     {
         return $this->kind === self::HAND;
+    }
+
+    /** FD বা DPS — ব্যাংকে রাখা টাকা। */
+    public function isDeposit(): bool
+    {
+        return in_array($this->kind, [self::FD, self::DPS], true);
+    }
+
+    /** যে ঋণের বিপরীতে এই FD বাঁধা। */
+    public function pledgedAgainst(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'pledged_against_id');
+    }
+
+    /** এই ঋণের বিপরীতে যে জমাগুলো বাঁধা আছে। */
+    public function pledges(): HasMany
+    {
+        return $this->hasMany(self::class, 'pledged_against_id');
+    }
+
+    /**
+     * টাকাটা আছে, কিন্তু হাতে নেই।
+     *
+     * বাঁধা FD তালিকায় "আছে" দেখায়, অথচ ঋণ শোধ না হওয়া পর্যন্ত ওটা
+     * ভাঙানো যায় না। এই পার্থক্যটা না বললে কেউ দরকারের দিনে ওই টাকার
+     * উপর ভরসা করে সিদ্ধান্ত নেবেন — আর ওটাই সবচেয়ে দামি ভুল।
+     *
+     * ঋণটা শোধ হয়ে গেলে বাঁধনও খোলে: বন্ধক থাকে দায়ের জন্য, আর দায়
+     * না থাকলে বন্ধকেরও কারণ থাকে না।
+     */
+    public function isLocked(): bool
+    {
+        if ($this->pledged_against_id === null) {
+            return false;
+        }
+
+        return ! (bool) $this->pledgedAgainst?->isSettled();
     }
 
     /**
@@ -194,7 +244,16 @@ class Loan extends Model implements Drillable
             '0',
         );
 
-        return $this->isGiven() ? $balance : bcmul($balance, '-1', 4);
+        /*
+         * `bcmul(..., 4)` মাপটাও বসিয়ে দেয়, তাই দুই দিকেই সেটাই ব্যবহার
+         * করা হয় — কেবল গুণকটা আলাদা।
+         *
+         * দেওয়া ধারে আগে সরাসরি `$balance` ফেরত দেওয়া হচ্ছিল, আর তাতে
+         * কোনো সারি না থাকলে '0' আসত, নেওয়ায় '0.0000'। একই পদ্ধতি দুই
+         * রকম মাপের লেখা ফেরত দিলে তুলনা ও ছাপা দুই জায়গাতেই একদিন
+         * ভাঙে।
+         */
+        return bcmul($balance, $this->isGiven() ? '1' : '-1', 4);
     }
 
     /** CC-তে সীমার আর কতটা খালি। */
