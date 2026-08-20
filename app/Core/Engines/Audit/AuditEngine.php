@@ -11,6 +11,7 @@ use App\Models\AuditTrail;
 use App\Models\ExportLog;
 use App\Models\IssuedNumber;
 use App\Models\LedgerEntry;
+use App\Models\Notification;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
@@ -83,6 +84,20 @@ final class AuditEngine
          * দ্বিতীয়টা প্রথমটার চেয়ে কম বলত।
          */
         ExportLog::class => 'a journal of its own, append-only and never edited',
+
+        /*
+         * বিজ্ঞপ্তি — একটা ঘটনার প্রতিধ্বনি, ঘটনা নয়।
+         *
+         * প্রতিটা বিজ্ঞপ্তির পেছনে একটা আসল ঘটনা আছে যেটা নিজের
+         * জায়গায় নিরীক্ষিত: অনুমোদন, প্রত্যাখ্যান, বাতিল। প্রতিধ্বনির
+         * নিরীক্ষা রাখা মানে একই ঘটনা দুইবার লেখা, আর দ্বিতীয় লেখাটা
+         * প্রথমটার চেয়ে কম বলে — ওতে কেবল "কাকে জানানো হয়েছিল"
+         * থাকে, "কী ঘটেছিল" থাকে না।
+         *
+         * সারিগুলো সম্পাদনাও হয় না; একটাই বদল ঘটে (`read_at`), আর
+         * "কে কখন খবরটা পড়েছেন" নিরীক্ষার প্রশ্ন নয়।
+         */
+        Notification::class => 'an echo of an event that is already audited where it happened',
 
         /*
          * খতিয়ান ও স্টকের চলাচল — দুইটাই append-only, কখনো সম্পাদনা

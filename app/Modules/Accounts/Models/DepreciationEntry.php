@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Accounts\Models;
 
 use App\Core\Concerns\BelongsToCompany;
+use App\Core\Concerns\HasPublicId;
+use App\Core\Concerns\IsAudited;
 use App\Core\Contracts\Drillable;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
@@ -20,6 +22,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class DepreciationEntry extends Model implements Drillable
 {
     use BelongsToCompany;
+    use HasPublicId;
+    use IsAudited;
 
     protected $table = 'acc_depreciation_entries';
 

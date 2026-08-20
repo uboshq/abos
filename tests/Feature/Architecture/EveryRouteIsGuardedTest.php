@@ -42,6 +42,30 @@ class EveryRouteIsGuardedTest extends TestCase
         'up' => 'স্বাস্থ্য পরীক্ষা — লগইন থাকার আগেই উত্তর দিতে হয়, আর ডেটার কিছুই বলে না',
         'login' => 'দরজাটাই',
         'login.store' => 'দরজাটাই; এখানে চাবির বদলে throttle',
+        'sales.portal.login' => 'ডিলারের দরজা — গ্রাহক পোর্টালের লগইন পর্দা',
+        'sales.portal.login.attempt' => 'ডিলারের দরজা; এখানেও চাবির বদলে throttle',
+    ];
+
+    /**
+     * ডিলারের পোর্টাল — লগইন লাগে, কিন্তু কোনো অনুমতি নয়।
+     *
+     * ── কেন এগুলো আলাদা তালিকায় ─────────────────────────────────────
+     * ডিলার কর্মী নন; তাঁর কোনো রোল বা অনুমতি নেই, আর থাকার কথাও নয়।
+     * পোর্টালের দেয়ালটা অনুমতির নয়, **মালিকানার**: প্রতিটা পদ্ধতি
+     * `Auth::guard('portal')->user()` থেকে ডিলারকে বের করে, আর কোনো
+     * আইডি URL থেকে নেয় না। যেটা নেয় (দাবির পাতা), সেখানে
+     * `$claim->customer_id !== $dealer->id` হাতে যাচাই হয়।
+     *
+     * ANY_SIGNED_IN_USER-এ না রাখার কারণ: ওই তালিকাটা **কর্মীর নিজের
+     * জিনিস** নিয়ে, আর ওখানে ডিলার ঢোকালে দুইটা আলাদা ধারণা এক নামে
+     * মিশে যেত।
+     */
+    private const DEALER_PORTAL = [
+        'sales.portal.home' => 'নিজের বকেয়া ও বিল',
+        'sales.portal.logout' => 'বেরোনোর দরজা',
+        'sales.portal.claim.create' => 'নিজের জমার দাবি তোলার ফর্ম',
+        'sales.portal.claim.store' => 'নিজের জমার দাবি',
+        'sales.portal.claim.show' => 'নিজের দাবি — মালিকানা কন্ট্রোলারে যাচাই হয়',
     ];
 
     /**
@@ -65,6 +89,15 @@ class EveryRouteIsGuardedTest extends TestCase
         'locale.switch' => 'নিজের ভাষা',
         'company.switch' => 'কোন কোম্পানিতে ঢুকবেন — তালিকাটা নিজেই তাঁর নিজের কোম্পানিগুলোয় সীমিত',
         'branch.switch' => 'কোন শাখা — একই কারণ',
+
+        /*
+         * নিজের খবর। মালিকানা কন্ট্রোলারে যাচাই হয়
+         * (`markRead()` অন্যের সারিতে false ফেরায়), তাই আলাদা চাবির
+         * দরকার নেই — আর চাবি বসালে প্রতিটা নতুন কর্মীকে "নিজের ঘণ্টা
+         * দেখার" অনুমতি আলাদা করে দিতে হত।
+         */
+        'notifications.open' => 'নিজের খবর — মালিকানা কন্ট্রোলারে যাচাই হয়',
+        'notifications.read-all' => 'নিজের ঘণ্টা খালি করা',
         'components' => 'নকশার নমুনা পাতা, কোনো ডেটা নেই',
 
         /*
@@ -115,7 +148,23 @@ class EveryRouteIsGuardedTest extends TestCase
                 continue;
             }
 
-            if (! in_array('auth', $route->gatherMiddleware(), true)) {
+            /*
+             * `auth` অথবা `auth:<গার্ড>` — দুইটাই পাহারা।
+             *
+             * আগে কেবল হুবহু 'auth' খোঁজা হত। গ্রাহক পোর্টাল আসার পর
+             * ওর রুটগুলো `auth:portal` ব্যবহার করে, আর সেগুলো ঠিকই
+             * পাহারায় — অথচ পরীক্ষা ওদের "খোলা" বলত।
+             *
+             * ওই সাতটাকে OPEN_TO_THE_WORLD-এ ফেলে দেওয়া সহজ ছিল, কিন্তু
+             * সেটা **মিথ্যা** হত: পাঁচটায় সত্যিই লগইন লাগে। ছাড়ের
+             * তালিকায় মিথ্যা কারণ বসানোর চেয়ে পাহারাটা ঠিক করাই সৎ।
+             */
+            $guarded = array_filter(
+                $route->gatherMiddleware(),
+                fn ($m) => is_string($m) && ($m === 'auth' || str_starts_with($m, 'auth:')),
+            );
+
+            if ($guarded === []) {
                 $open[] = $name.'  ['.$route->methods()[0].' '.$route->uri().']';
             }
         }
@@ -140,7 +189,8 @@ class EveryRouteIsGuardedTest extends TestCase
             $name = $route->getName() ?? $route->uri();
 
             if (array_key_exists($name, self::OPEN_TO_THE_WORLD)
-                || array_key_exists($name, self::ANY_SIGNED_IN_USER)) {
+                || array_key_exists($name, self::ANY_SIGNED_IN_USER)
+                || array_key_exists($name, self::DEALER_PORTAL)) {
                 continue;
             }
 

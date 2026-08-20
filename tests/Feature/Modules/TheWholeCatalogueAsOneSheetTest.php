@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modules;
 
+use App\Core\Services\DataScope;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\User;
+use App\Models\UserDataScope;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\StockService;
@@ -123,6 +125,22 @@ class TheWholeCatalogueAsOneSheetTest extends TestCase
      */
     public function test_the_whole_catalogue_costs_one_query(): void
     {
+        /*
+         * সীমার খোঁজটা মাপার আগে সেরে নেওয়া।
+         *
+         * ── কেন এটা পরীক্ষা দুর্বল করে না ───────────────────────────
+         * `ScopedToUserBranch` (ভাগ চ · RLS) অনুরোধপ্রতি একবার দেখে
+         * ব্যবহারকারী কোন শাখাগুলো দেখতে পান — **একটাই কোয়েরি, পণ্যের
+         * সংখ্যা যাই হোক**। আসল অনুরোধে ওটা মিডলওয়্যারেই হয়ে যায়,
+         * তাই কোনো পর্দা ওটার জন্য বাড়তি কিছু দেয় না।
+         *
+         * এই টেস্ট HTTP অনুরোধ ছাড়াই সার্ভিসটা সরাসরি ডাকে, তাই
+         * মিডলওয়্যার চলে না আর খোঁজটা মাপা ব্লকের ভেতরে পড়ে যেত।
+         * এখানে যা মাপার কথা তা হলো **পণ্যের সংখ্যার সাথে কোয়েরি
+         * বাড়ে কি না** — নিরাপত্তার ধ্রুব একটা খরচ নয়।
+         */
+        app(DataScope::class)->idsFor(auth()->user(), UserDataScope::BRANCH);
+
         DB::enableQueryLog();
         DB::flushQueryLog();
 
