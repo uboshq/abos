@@ -110,25 +110,24 @@
                 @endif
             @elseif (! $tooManyToShow)
                 <div class="overflow-x-auto">
-                    <table class="w-full border-collapse text-sm">
+                    <table class="ui-grid">
                         <thead>
-                            <tr class="border-b border-(--color-border) bg-(--color-surface-app)">
-                                <th scope="col" class="px-3 py-2 text-start font-medium text-(--color-ink-muted)">
+                            <tr>
+                                <th scope="col">
                                     {{ __('accounts::field.name') }}
                                 </th>
                                 {{-- ধরন কলামটা ছোট পর্দায় নেই: গাছে খাতটা
                                      কোথায় বসেছে সেটাই ধরন বলে দেয়, আর ৩৭৫px-এ
                                      নাম ও ব্যালেন্স দুটোই বেশি জরুরি। --}}
                                 <th scope="col" style="width: 8rem"
-                                    class="hidden px-3 py-2 text-start font-medium whitespace-nowrap
-                                           text-(--color-ink-muted) sm:table-cell">
+                                    class="hidden whitespace-nowrap sm:table-cell">
                                     {{ __('accounts::field.type') }}
                                 </th>
                                 <th scope="col" style="width: 11rem"
-                                    class="num px-3 py-2 text-end font-medium text-(--color-ink-muted)">
+                                    class="num">
                                     {{ __('accounts::field.balance') }}
                                 </th>
-                                <th scope="col" style="width: 6rem" class="px-3 py-2"
+                                <th scope="col" style="width: 6rem" 
                                     aria-label="{{ __('accounts::action.new_account') }}"></th>
                             </tr>
                         </thead>

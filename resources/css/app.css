@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import './tokens.css';
+@import './themes.css';
 
 /* ─────────────────────────────────────────────────────────────────
    ক্লাসগুলো কোথায় খুঁজবে — প্রতিটা জায়গা নাম ধরে লেখা।
@@ -423,9 +424,201 @@
             border: 0;
         }
 
+        /* ── কেন এই নিয়মগুলো `.ui-list`-এ, `.table-cards`-এ নয় ──────
+           `.table-cards` মানে শুধু "মোবাইলে কার্ড হবে", আর সেটা হাতে
+           লেখা লাইন-এডিটরগুলোও ব্যবহার করে। ওদের ঘরে ইনপুট বসে, তাই
+           প্যাডিং ইচ্ছাকৃতভাবে সরু (`p-1`) আর উচ্চতা ইনপুট ঠিক করে।
+
+           নিয়মগুলো `.table-cards`-এ বাঁধলে ওই ছয়টা এডিটরের সারি
+           নীরবে ৪৪px-এ ঠেলে যেত — কেউ চায়নি এমন একটা বদল, যেটা
+           কেবল লাইন যোগ করলে চোখে পড়ত। তাই শেয়ার্ড তালিকা
+           কম্পোনেন্ট নিজের নাম নিয়ে আসে। */
+        .ui-list:not(.as-cards) td {
+            padding-block: 0;
+            padding-inline: var(--grid-pad-x);
+            height: var(--row-height);
+            vertical-align: middle;
+        }
+
+        /* ঘন দৃশ্য — আগে এটা blade-এ `style="height: …"` ছিল।
+
+           ইনলাইন স্টাইল সব স্তর, সব ইউটিলিটি, এমনকি `!important`-ও
+           হারায়। অর্থাৎ উচ্চতাটা টোকেন থেকে আসলেও **নিয়মটা** কোনো
+           থিম ছুঁতে পারত না — ঘন থিম চাইলেও সারিটা ৪৪px-এই বসে থাকত।
+           ক্লাস হলে থিম নিজের নিয়ম লিখতে পারে। */
+        .ui-list.is-dense:not(.as-cards) td {
+            height: var(--row-height-dense);
+        }
+
+        .ui-list:not(.as-cards) thead tr {
+            background: var(--color-surface-app);
+        }
+
+        .ui-list:not(.as-cards) th {
+            padding: var(--grid-pad-y) var(--grid-pad-x);
+            font-weight: 500;
+            color: var(--color-ink-muted);
+            white-space: nowrap;
+        }
+
+        .ui-list:not(.as-cards) tbody tr {
+            transition: background-color 150ms;
+        }
+
+        .ui-list:not(.as-cards) tbody tr:hover {
+            background: var(--color-surface-hover);
+        }
+
+        .ui-list:not(.as-cards) tfoot tr {
+            border-top: 1px solid var(--color-border-strong);
+            border-bottom: 0;
+            background: var(--color-surface-app);
+            font-weight: 600;
+            color: var(--color-ink);
+        }
+
+        /* ── লাইন-এডিটর ─────────────────────────────────────────
+           `.ui-list`-এর মতোই, কিন্তু নিজের মাপে: ঘরে ইনপুট বসে।
+           নিয়মগুলো ডেস্কটপ ব্লকের ভেতরে, কারণ ছোট পর্দায় এই ছকও
+           কার্ড হয়ে যায় আর তখন প্যাডিং `.table-cards` ঠিক করে। */
+        .ui-lines:not(.as-cards) thead {
+            border-bottom: 1px solid var(--color-border);
+            color: var(--color-ink-muted);
+        }
+
+        .ui-lines:not(.as-cards) th {
+            padding: var(--lines-pad);
+            font-weight: 500;
+        }
+
+        .ui-lines:not(.as-cards) td.cell {
+            padding: var(--lines-pad);
+        }
+
+        .ui-lines:not(.as-cards) td.cell-input {
+            padding: var(--lines-pad-input);
+        }
+
+        .ui-list:not(.as-cards) tfoot td {
+            padding-block: var(--grid-pad-y);
+            height: auto;
+        }
+
         .table-cards:not(.as-cards) td::before {
             content: none;
         }
+    }
+
+    /* ─────────────────────────────────────────────────────────────
+       সম্পাদনার ছক — যে টেবিলের ঘরে ইনপুট বসে।
+
+       ── কেন এটা `.table-cards` নয় ────────────────────────────────
+       তালিকা পড়ার জিনিস, ছক লেখার জিনিস। মোবাইলে তালিকার সারি কার্ড
+       হয়ে যায় আর সেটাই ঠিক — কিন্তু ছকের সারি কার্ড হলে একটা লাইনের
+       পরিমাণ, দর ও টাকা তিনটা আলাদা কার্ডে ছড়িয়ে যেত, আর যোগফল
+       মেলানো অসম্ভব হত। ছক পাশে স্ক্রল করে, ভেঙে যায় না।
+
+       ── কেন ক্লাস, প্রতিটা ঘরে utility নয় ────────────────────────
+       সতেরোটা ছকে `px-3 py-2 border-b border-(--color-border)` হাতে
+       লেখা ছিল। ওটা কাজ করত, কিন্তু থিম বদলালে বদলাত না — Tailwind-এর
+       utility সব `@layer`-কে হারায়, তাই কোনো থিমের নিয়ম ওতে পৌঁছত না।
+
+       ফলে "Apps বাছলে সবটা Odoo হবে" প্রতিশ্রুতিটা সতেরো জায়গায়
+       নীরবে ভাঙত: তালিকাগুলো থিম মানত, আর ছকগুলো আগের চেহারায় বসে
+       থাকত। একই পর্দায় দুই যুগ।
+       ───────────────────────────────────────────────────────────── */
+    .ui-grid {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.875rem;
+    }
+
+    .ui-grid thead tr {
+        border-bottom: 1px solid var(--color-border);
+        background: var(--color-surface-app);
+    }
+
+    .ui-grid th {
+        padding: var(--grid-pad-y-head, var(--grid-pad-y)) var(--grid-pad-x);
+        font-weight: 500;
+        color: var(--color-ink-muted);
+        text-align: start;
+        white-space: nowrap;
+    }
+
+    /* সংখ্যার কলামে শিরোনামও ডানে — নাহলে শিরোনাম বাঁ ধারে আর
+       সংখ্যা ডান ধারে, প্রতি কলামে দুইটা খাড়া রেখা। */
+    .ui-grid th.num,
+    .ui-grid td.num {
+        text-align: end;
+    }
+
+    .ui-grid tbody tr {
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    .ui-grid td {
+        padding: var(--grid-pad-y) var(--grid-pad-x);
+        vertical-align: middle;
+    }
+
+    /* ─────────────────────────────────────────────────────────────
+       ছকের চার রকম ঘনত্ব।
+
+       ── কেন চারটা, একটা নয় ───────────────────────────────────────
+       সব ছক এক ঘনত্বে বসে না, আর সেটা খামখেয়াল নয়। হাজিরার ছকে এক
+       সারিতে একজন মানুষ; বাল্ক-শিটে এক সারিতে একটা পণ্য আর নয়টা
+       কলাম, যেগুলো একসাথে চোখে পড়া দরকার। একই প্যাডিং দিলে হয়
+       হাজিরা দমবন্ধ লাগত, নয় শিটটা পর্দার বাইরে যেত।
+
+       ── কেন এগুলো কেবল কাস্টম প্রপার্টি বদলায় ─────────────────────
+       নিয়মগুলো একবারই লেখা (`.ui-grid th/td`), আর প্রতিটা রূপ শুধু
+       দুইটা সংখ্যা নতুন করে বলে। ফলে থিম যখন `--grid-pad-*` বদলায়
+       তখন চারটা রূপই একসাথে সরে — কেউ পিছিয়ে থাকে না।
+
+       মাপগুলো হুবহু আগেরটাই: এই বদলে একটা পিক্সেলও নড়েনি, কেবল
+       সংখ্যাগুলো পর্দা থেকে টোকেনে সরে এসেছে।
+       ───────────────────────────────────────────────────────────── */
+    .ui-grid.is-dense {          /* হাজিরা — আগে `p-2` */
+        --grid-pad-x: 8px;
+        --grid-pad-y: 8px;
+    }
+
+    .ui-grid.is-compact {        /* সরাসরি ক্রয় — আগে `px-2 py-1.5` */
+        --grid-pad-x: 8px;
+        --grid-pad-y: 6px;
+        --grid-pad-y-head: 8px;
+    }
+
+    .ui-grid.is-sheet {          /* বাল্ক-শিট — আগে `px-1 py-1` */
+        --grid-pad-x: 4px;
+        --grid-pad-y: 4px;
+        --grid-pad-y-head: 6px;
+    }
+
+    /* শিটের প্রথম কলামগুলো একটু চওড়া — ওখানে নাম বসে, সংখ্যা নয় */
+    .ui-grid.is-sheet .pad-wide {
+        padding-inline: var(--lines-pad);
+    }
+
+    .ui-grid.is-flush {          /* পালার সারাংশ — আগে `py-2`, ধারে প্যাডিং নেই */
+        --grid-pad-x: 0;
+        --grid-pad-y: 8px;
+    }
+
+    /* ইনপুটের সারি — `tight`।
+
+       আগে এটা প্রতিটা ঘরে `py-1.5` হয়ে লেখা থাকত, অর্থাৎ থিমের
+       নাগালের বাইরে। এখন নামটা বলে **কেন** সরু, আর মাপটা টোকেনে। */
+    .ui-grid .tight {
+        padding-block: var(--grid-pad-y-tight);
+    }
+
+    .ui-grid tfoot tr {
+        border-top: 1px solid var(--color-border-strong);
+        background: var(--color-surface-app);
+        font-weight: 600;
+        color: var(--color-ink);
     }
 
     /* কার্ড ভিউতে বড় পর্দায় কয়েকটা কার্ড পাশাপাশি — একটা কার্ডের

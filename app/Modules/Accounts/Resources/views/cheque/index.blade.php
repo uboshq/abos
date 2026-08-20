@@ -5,6 +5,26 @@
     তারিখ পেরিয়ে গেছে। দ্বিতীয়টাই রোজ সকালে দেখার জিনিস — আগাম
     তারিখের চেক ফেলে রাখা স্বাভাবিক, তারিখ পেরোনোর পরেও ফেলে রাখা নয়।
 --}}
+@php
+    /* কলাম ধরে — `x-ui.table` স্লট পড়ে না, সারি আসে :rows থেকে। */
+    $columns = [
+        ['key' => 'cheque_no', 'label' => __('accounts::field.cheque_no'),
+         'render' => fn ($c) => view('accounts::cheque.partials.no', ['cheque' => $c])],
+        ['key' => 'cheque_date', 'label' => __('accounts::field.cheque_date'), 'width' => '9rem',
+         'render' => fn ($c) => view('accounts::cheque.partials.date', ['cheque' => $c])],
+        ['key' => 'bank_name', 'label' => __('accounts::field.bank_name'),
+         'render' => fn ($c) => $c->bank_name ?: '—'],
+        ['key' => 'amount', 'label' => __('accounts::field.amount'),
+         'numeric' => true, 'width' => '11rem',
+         'render' => fn ($c) => \App\Core\Support\Money::format($c->amount)],
+        ['key' => 'state', 'label' => __('accounts::field.state'), 'width' => '11rem',
+         'render' => fn ($c) => view('accounts::cheque.partials.state', ['cheque' => $c])],
+        ['key' => 'actions', 'label' => __('core.table.actions'),
+         'render' => fn ($c) => view('accounts::cheque.partials.actions',
+             ['cheque' => $c, 'banks' => $banks])],
+    ];
+@endphp
+
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('accounts::menu.cheques') }}</x-slot:title>
 
@@ -159,132 +179,9 @@
     @else
         <div class="overflow-x-auto rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">
-            <table class="w-full text-sm">
-                <thead>
-                    <tr class="border-b border-(--color-border) bg-(--color-surface-app)">
-                        <th scope="col" class="px-3 py-2 text-start font-medium text-(--color-ink-muted)">
-                            {{ __('accounts::field.cheque_no') }}
-                        </th>
-                        <th scope="col" class="px-3 py-2 text-start font-medium text-(--color-ink-muted)">
-                            {{ __('accounts::field.cheque_date') }}
-                        </th>
-                        <th scope="col" class="px-3 py-2 text-start font-medium text-(--color-ink-muted)">
-                            {{ __('accounts::field.bank_name') }}
-                        </th>
-                        <th scope="col" class="num px-3 py-2 text-end font-medium text-(--color-ink-muted)">
-                            {{ __('accounts::field.amount') }}
-                        </th>
-                        <th scope="col" class="px-3 py-2 text-start font-medium text-(--color-ink-muted)">
-                            {{ __('accounts::field.state') }}
-                        </th>
-                        <th scope="col" class="px-3 py-2 text-end font-medium text-(--color-ink-muted)">
-                            {{ __('core.table.actions') }}
-                        </th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    @foreach ($cheques as $cheque)
-                        @php
-                            $overdue = $cheque->isOpen()
-                                && $cheque->cheque_date?->isBefore(now()->startOfDay());
-
-                            $badge = match ($cheque->status) {
-                                \App\Modules\Accounts\Models\Cheque::CLEARED => 'success',
-                                \App\Modules\Accounts\Models\Cheque::BOUNCED,
-                                \App\Modules\Accounts\Models\Cheque::CANCELLED => 'danger',
-                                \App\Modules\Accounts\Models\Cheque::DEPOSITED => 'info',
-                                default => 'pending',
-                            };
-                        @endphp
-
-                        <tr class="border-b border-(--color-border)">
-                            <td class="px-3 py-2 font-medium">
-                                {{ $cheque->cheque_no }}
-                                <span class="block text-2xs text-(--color-ink-muted)">
-                                    {{ __('accounts::field.cheque_'.$cheque->direction) }}
-                                </span>
-                            </td>
-
-                            <td @class(['px-3 py-2', 'font-semibold text-(--color-danger)' => $overdue])>
-                                {{ $cheque->cheque_date?->format('d M Y') }}
-                            </td>
-
-                            <td class="px-3 py-2">{{ $cheque->bank_name ?: '—' }}</td>
-
-                            <td class="num px-3 py-2 text-end font-medium">
-                                {{ \App\Core\Support\Money::format($cheque->amount) }}
-                            </td>
-
-                            <td class="px-3 py-2">
-                                <span class="rounded-(--radius-field) bg-(--color-badge-{{ $badge }}-bg)
-                                             px-2 py-0.5 text-2xs text-(--color-badge-{{ $badge }}-ink)">
-                                    {{ __('accounts::field.cheque_'.$cheque->status) }}
-                                </span>
-
-                                @if ($cheque->bounce_reason)
-                                    <p class="mt-0.5 text-2xs text-(--color-ink-muted)">{{ $cheque->bounce_reason }}</p>
-                                @endif
-                            </td>
-
-                            <td class="px-3 py-2 text-end">
-                                @if ($cheque->isOpen())
-                                    @can('accounts.cheque.manage')
-                                        <div class="flex flex-wrap items-center justify-end gap-2">
-                                            @if ($cheque->status === \App\Modules\Accounts\Models\Cheque::PENDING)
-                                                <form method="POST"
-                                                      action="{{ route('accounts.cheque.deposit', $cheque) }}">
-                                                    @csrf
-                                                    <x-ui.button type="submit" tone="secondary">
-                                                        {{ __('accounts::action.cheque_deposit') }}
-                                                    </x-ui.button>
-                                                </form>
-                                            @endif
-
-                                            <form method="POST"
-                                                  action="{{ route('accounts.cheque.clear', $cheque) }}"
-                                                  class="flex items-center gap-1">
-                                                @csrf
-                                                @if (! $cheque->bank_account_id)
-                                                    <select name="bank_account_id" required
-                                                            class="h-(--spacing-field) rounded-(--radius-field)
-                                                                   border border-(--color-border)
-                                                                   bg-(--color-surface-app) px-2">
-                                                        @foreach ($banks as $bank)
-                                                            <option value="{{ $bank->id }}">{{ $bank->label() }}</option>
-                                                        @endforeach
-                                                    </select>
-                                                @endif
-                                                <x-ui.button type="submit" tone="primary">
-                                                    {{ __('accounts::action.cheque_clear') }}
-                                                </x-ui.button>
-                                            </form>
-
-                                            <form method="POST"
-                                                  action="{{ route('accounts.cheque.bounce', $cheque) }}"
-                                                  class="flex items-center gap-1">
-                                                @csrf
-                                                <input type="text" name="bounce_reason" required minlength="3"
-                                                       placeholder="{{ __('accounts::field.bounce_reason') }}"
-                                                       class="h-(--spacing-field) w-44 rounded-(--radius-field)
-                                                              border border-(--color-border)
-                                                              bg-(--color-surface-app) px-2">
-                                                <x-ui.button type="submit" tone="secondary">
-                                                    {{ __('accounts::action.cheque_bounce') }}
-                                                </x-ui.button>
-                                            </form>
-                                        </div>
-                                    @endcan
-                                @else
-                                    <span class="text-2xs text-(--color-ink-muted)">
-                                        {{ $cheque->cleared_on?->format('d M Y') }}
-                                    </span>
-                                @endif
-                            </td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
+        <x-ui.table :rows="$cheques"
+                    :columns="$columns"
+                    :empty="__('accounts::message.no_cheques')" />
         </div>
 
         <div class="mt-3">{{ $cheques->links() }}</div>

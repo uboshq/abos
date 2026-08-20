@@ -199,37 +199,37 @@
         </div>
 
         <div class="min-h-0 flex-1 overflow-auto">
-            <table class="w-full text-sm">
+            <table class="ui-grid is-sheet w-full text-sm">
                 <thead class="sticky top-0 z-10 bg-(--color-surface-card) text-2xs
                               uppercase text-(--color-ink-muted) shadow-sm">
                     <tr>
-                        <th class="px-2 py-1.5 text-start font-semibold">{{ __('sales::field.product') }}</th>
-                        <th class="px-1 py-1.5 text-end font-semibold">{{ __('sales::field.quantity') }}</th>
+                        <th class="pad-wide text-start font-semibold">{{ __('sales::field.product') }}</th>
+                        <th class="text-end font-semibold">{{ __('sales::field.quantity') }}</th>
                         @if ($freeQty)
-                            <th class="px-1 py-1.5 text-end font-semibold">{{ __('sales::bulk.free') }}</th>
+                            <th class="text-end font-semibold">{{ __('sales::bulk.free') }}</th>
                         @endif
-                        <th class="px-1 py-1.5 text-end font-semibold">{{ __('sales::bulk.available') }}</th>
+                        <th class="text-end font-semibold">{{ __('sales::bulk.available') }}</th>
                         {{-- বাকি অবস্থাগুলো ডেস্কের জন্য। ফোনে ওগুলো থাকলে
                              প্রতিটা সারি আড়াআড়ি স্ক্রল হত, আর ওভাবেই মানুষ
                              ভুল সারিতে পরিমাণ লেখেন। --}}
-                        <th class="hidden px-1 py-1.5 text-end font-semibold lg:table-cell">{{ __('sales::bulk.floor') }}</th>
-                        <th class="hidden px-1 py-1.5 text-end font-semibold lg:table-cell">{{ __('sales::bulk.reserved') }}</th>
-                        <th class="hidden px-1 py-1.5 text-end font-semibold lg:table-cell">{{ __('sales::bulk.hold') }}</th>
-                        <th class="hidden px-1 py-1.5 text-end font-semibold lg:table-cell">{{ __('sales::field.rate') }}</th>
-                        <th class="hidden px-2 py-1.5 text-end font-semibold lg:table-cell">{{ __('sales::field.amount') }}</th>
+                        <th class="hidden text-end font-semibold lg:table-cell">{{ __('sales::bulk.floor') }}</th>
+                        <th class="hidden text-end font-semibold lg:table-cell">{{ __('sales::bulk.reserved') }}</th>
+                        <th class="hidden text-end font-semibold lg:table-cell">{{ __('sales::bulk.hold') }}</th>
+                        <th class="hidden text-end font-semibold lg:table-cell">{{ __('sales::field.rate') }}</th>
+                        <th class="pad-wide hidden text-end font-semibold lg:table-cell">{{ __('sales::field.amount') }}</th>
                     </tr>
                 </thead>
 
                 <tbody class="divide-y divide-(--color-border)">
                     <template x-for="row in visible" :key="row.id">
                         <tr :class="hasSomething(row.id) ? 'bg-(--color-surface-hover)' : ''">
-                            <td class="px-2 py-1">
+                            <td class="pad-wide">
                                 <span class="text-(--color-ink-muted)" x-text="row.code"></span>
                                 <span x-text="' ' + row.name"></span>
                                 <span class="text-2xs text-(--color-ink-muted)" x-text="row.unit ? ' · ' + row.unit : ''"></span>
                             </td>
 
-                            <td class="px-1 py-1">
+                            <td>
                                 <input type="number" step="0.01" inputmode="decimal" min="0"
                                        x-model="box(row.id).qty"
                                        class="num h-(--spacing-field-dense) w-20 rounded-(--radius-field) border border-(--color-border)
@@ -237,7 +237,7 @@
                             </td>
 
                             @if ($freeQty)
-                                <td class="px-1 py-1">
+                                <td>
                                     <input type="number" step="0.01" inputmode="decimal" min="0"
                                            x-model="box(row.id).free"
                                            class="num h-(--spacing-field-dense) w-20 rounded-(--radius-field) border border-(--color-border)
@@ -245,12 +245,12 @@
                                 </td>
                             @endif
 
-                            <td class="num px-1 py-1 text-end" x-text="row.available"></td>
-                            <td class="num hidden px-1 py-1 text-end lg:table-cell" x-text="row.floor"></td>
-                            <td class="num hidden px-1 py-1 text-end lg:table-cell" x-text="row.reserved"></td>
-                            <td class="num hidden px-1 py-1 text-end lg:table-cell" x-text="row.hold"></td>
-                            <td class="num hidden px-1 py-1 text-end lg:table-cell" x-text="row.rate"></td>
-                            <td class="num hidden px-2 py-1 text-end lg:table-cell"
+                            <td class="num" x-text="row.available"></td>
+                            <td class="num hidden lg:table-cell" x-text="row.floor"></td>
+                            <td class="num hidden lg:table-cell" x-text="row.reserved"></td>
+                            <td class="num hidden lg:table-cell" x-text="row.hold"></td>
+                            <td class="num hidden lg:table-cell" x-text="row.rate"></td>
+                            <td class="num pad-wide hidden lg:table-cell"
                                 x-text="(num(box(row.id).qty) * num(row.rate)).toFixed(2)"></td>
                         </tr>
                     </template>

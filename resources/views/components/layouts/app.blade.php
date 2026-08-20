@@ -10,6 +10,15 @@
      আগে ডিফল্ট রঙে আঁকা হত, তারপর বদলাত — প্রতিটা লোডে একবার ঝলকানি। --}}
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}"
       data-theme="{{ auth()->user()?->theme ?? 'light' }}"
+      {{-- আটটা চেহারার যেটা বাছা, সেটা এখানে — একটাই জায়গা।
+
+           পাতার কোনো অংশ জানে না সে কোন চেহারায় আছে, আর জানার কথাও
+           নয়: যা বদলায় তা টোকেন, পাতার কোড নয়। এই একটা attribute
+           থেকেই CSS পুরো টোকেন-সেটটা বেছে নেয়।
+
+           সার্ভারেই বসে, JavaScript-এ নয় — নাহলে প্রতিটা লোডে পাতাটা
+           আগে ক্লাসিক হয়ে আঁকা হত, তারপর বদলাত। --}}
+      data-ui="{{ \App\Core\Support\Ui::clean(auth()->user()?->ui) }}"
       style="{{ \App\Core\Support\Accent::styleFor(auth()->user()?->accent ?? \App\Core\Support\Accent::DEFAULT) }}">
 <head>
     <meta charset="utf-8">

@@ -95,19 +95,19 @@
                  x-init="if (rows.length === 0) add()">
 
                 <div class="table-responsive">
-                    <table class="table-cards w-full text-sm">
-                        <thead class="border-b border-(--color-border) text-start text-(--color-ink-muted)">
+                    <table class="ui-lines table-cards w-full text-sm">
+                        <thead>
                             <tr>
-                                <th class="p-2 text-start font-medium">{{ __('sales::field.invoice') }}</th>
-                                <th class="p-2 text-end font-medium">{{ __('sales::field.amount') }}</th>
-                                <th class="p-2"><span class="sr-only">{{ __('sales::action.remove_line') }}</span></th>
+                                <th class="text-start">{{ __('sales::field.invoice') }}</th>
+                                <th class="text-end">{{ __('sales::field.amount') }}</th>
+                                <th><span class="sr-only">{{ __('sales::action.remove_line') }}</span></th>
                             </tr>
                         </thead>
 
                         <tbody>
                             <template x-for="(row, i) in rows" :key="i">
                                 <tr class="border-b border-(--color-border)">
-                                    <td class="p-1" data-label="{{ __('sales::field.invoice') }}">
+                                    <td class="cell-input" data-label="{{ __('sales::field.invoice') }}">
                                         <select :name="`lines[${i}][sales_invoice_id]`" x-model="row.sales_invoice_id"
                                                 class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                                                        bg-(--color-surface-card) px-2">
@@ -119,14 +119,14 @@
                                             @endforeach
                                         </select>
                                     </td>
-                                    <td class="p-1" data-label="{{ __('sales::field.amount') }}">
+                                    <td class="cell-input" data-label="{{ __('sales::field.amount') }}">
                                         <input type="number" step="0.01" inputmode="decimal"
                                                :name="`lines[${i}][amount]`" x-model="row.amount"
                                                class="num h-(--spacing-field-compact) w-full sm:w-32 rounded-(--radius-field)
                                                       border border-(--color-border)
                                                       bg-(--color-surface-card) px-2 text-end">
                                     </td>
-                                    <td class="p-1 text-end">
+                                    <td class="cell-input text-end">
                                         <button type="button" @click="remove(i)"
                                                 class="rounded-(--radius-field) px-2 py-1 text-(--color-ink-muted)
                                                        hover:bg-(--color-surface-hover)">
@@ -139,8 +139,8 @@
 
                         <tfoot>
                             <tr>
-                                <td class="p-2 text-end font-medium">{{ __('sales::field.total') }}</td>
-                                <td class="num p-2 text-end font-semibold" x-text="allocated.toFixed(2)"></td>
+                                <td class="cell text-end font-medium">{{ __('sales::field.total') }}</td>
+                                <td class="num cell font-semibold" x-text="allocated.toFixed(2)"></td>
                                 <td></td>
                             </tr>
                         </tfoot>

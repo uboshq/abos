@@ -5,6 +5,29 @@
     ধরে ধরে বলেন কোনটা মানা হলো — তাই সিদ্ধান্তের বোতাম দুইটা সারিতেই,
     আলাদা পাতায় নয়।
 --}}
+@php
+    /* কলাম ধরে — `x-ui.table` স্লট পড়ে না, সারি আসে :rows থেকে। */
+    $columns = [
+        ['key' => 'document_no', 'label' => __('core.print.document_no')],
+        ['key' => 'trx_date', 'label' => __('accounts::field.date'), 'width' => '9rem',
+         'render' => fn ($c) => $c->trx_date?->format('d M Y')],
+        ['key' => 'customer', 'label' => __('customer::menu.party'),
+         'render' => fn ($c) => $c->customer?->name()],
+        ['key' => 'supplier', 'label' => __('supplier::menu.party'),
+         'render' => fn ($c) => $c->supplier?->name()],
+        ['key' => 'rate', 'label' => __('sales::field.commission_rate'),
+         'numeric' => true, 'width' => '9rem',
+         'render' => fn ($c) => $c->describeRate()],
+        ['key' => 'amount', 'label' => __('accounts::field.amount'),
+         'numeric' => true, 'width' => '11rem',
+         'render' => fn ($c) => \App\Core\Support\Money::format($c->amount)],
+        ['key' => 'state', 'label' => __('accounts::field.state'), 'width' => '11rem',
+         'render' => fn ($c) => view('sales::commission.partials.state', ['claim' => $c])],
+        ['key' => 'actions', 'label' => __('core.table.actions'),
+         'render' => fn ($c) => view('sales::commission.partials.actions', ['claim' => $c])],
+    ];
+@endphp
+
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('sales::menu.commission') }}</x-slot:title>
 
@@ -132,113 +155,9 @@
     @else
         <div class="overflow-x-auto rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">
-            <table class="w-full text-sm">
-                <thead>
-                    <tr class="border-b border-(--color-border) bg-(--color-surface-app)">
-                        <th scope="col" class="px-3 py-2 text-start font-medium text-(--color-ink-muted)">
-                            {{ __('core.print.document_no') }}
-                        </th>
-                        <th scope="col" class="px-3 py-2 text-start font-medium text-(--color-ink-muted)">
-                            {{ __('accounts::field.date') }}
-                        </th>
-                        <th scope="col" class="px-3 py-2 text-start font-medium text-(--color-ink-muted)">
-                            {{ __('customer::menu.party') }}
-                        </th>
-                        <th scope="col" class="px-3 py-2 text-start font-medium text-(--color-ink-muted)">
-                            {{ __('supplier::menu.party') }}
-                        </th>
-                        <th scope="col" class="num px-3 py-2 text-end font-medium text-(--color-ink-muted)">
-                            {{ __('sales::field.commission_rate') }}
-                        </th>
-                        <th scope="col" class="num px-3 py-2 text-end font-medium text-(--color-ink-muted)">
-                            {{ __('accounts::field.amount') }}
-                        </th>
-                        <th scope="col" class="px-3 py-2 text-start font-medium text-(--color-ink-muted)">
-                            {{ __('accounts::field.state') }}
-                        </th>
-                        <th scope="col" class="px-3 py-2 text-end font-medium text-(--color-ink-muted)">
-                            {{ __('core.table.actions') }}
-                        </th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    @foreach ($claims as $claim)
-                        <tr class="border-b border-(--color-border)">
-                            <td class="px-3 py-2 font-medium">{{ $claim->document_no }}</td>
-                            <td class="px-3 py-2">{{ $claim->trx_date?->format('d M Y') }}</td>
-                            <td class="px-3 py-2">{{ $claim->customer?->name() }}</td>
-                            <td class="px-3 py-2">{{ $claim->supplier?->name() }}</td>
-                            <td class="num px-3 py-2 text-end">{{ $claim->describeRate() }}</td>
-                            <td class="num px-3 py-2 text-end font-medium">
-                                {{ \App\Core\Support\Money::format($claim->amount) }}
-                            </td>
-
-                            <td class="px-3 py-2">
-                                @php
-                                    $badge = match ($claim->status) {
-                                        \App\Modules\Sales\Models\CommissionClaim::SETTLED => 'success',
-                                        \App\Modules\Sales\Models\CommissionClaim::REJECTED => 'danger',
-                                        default => 'pending',
-                                    };
-                                @endphp
-
-                                <span class="rounded-(--radius-field) bg-(--color-badge-{{ $badge }}-bg)
-                                             px-2 py-0.5 text-2xs text-(--color-badge-{{ $badge }}-ink)">
-                                    {{ __('sales::field.commission_'.$claim->status) }}
-                                </span>
-
-                                @if ($claim->decision_reason)
-                                    <p class="mt-0.5 text-2xs text-(--color-ink-muted)">
-                                        {{ $claim->decision_reason }}
-                                    </p>
-                                @endif
-                            </td>
-
-                            <td class="px-3 py-2 text-end">
-                                @if ($claim->isPending())
-                                    @can('sales.commission.manage')
-                                        <div class="flex flex-wrap items-center justify-end gap-2">
-                                            <form method="POST"
-                                                  action="{{ route('sales.commission.settle', $claim) }}">
-                                                @csrf
-                                                <x-ui.button type="submit" tone="primary">
-                                                    {{ __('sales::action.commission_settle') }}
-                                                </x-ui.button>
-                                            </form>
-
-                                            {{--
-                                                না মানার কারণটা এখানেই চাওয়া হয়।
-
-                                                একটা পাওনা খরচ হয়ে যাওয়া মানে টাকাটা
-                                                আর আসবে না; ছয় মাস পরে "কেন" প্রশ্নের
-                                                উত্তর কেবল এই ঘরেই থাকে।
-                                            --}}
-                                            <form method="POST"
-                                                  action="{{ route('sales.commission.reject', $claim) }}"
-                                                  class="flex items-center gap-2">
-                                                @csrf
-                                                <input type="text" name="decision_reason" required minlength="3"
-                                                       placeholder="{{ __('sales::field.commission_reject_reason') }}"
-                                                       class="h-(--spacing-field) w-48 rounded-(--radius-field)
-                                                              border border-(--color-border)
-                                                              bg-(--color-surface-app) px-2">
-                                                <x-ui.button type="submit" tone="secondary">
-                                                    {{ __('sales::action.commission_reject') }}
-                                                </x-ui.button>
-                                            </form>
-                                        </div>
-                                    @endcan
-                                @else
-                                    <span class="text-2xs text-(--color-ink-muted)">
-                                        {{ $claim->decided_on?->format('d M Y') }}
-                                    </span>
-                                @endif
-                            </td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
+        <x-ui.table :rows="$claims"
+                    :columns="$columns"
+                    :empty="__('core.empty.no_results')" />
         </div>
 
         <div class="mt-3">{{ $claims->links() }}</div>

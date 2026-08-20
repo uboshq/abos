@@ -74,19 +74,19 @@
                  x-init="if (rows.length === 0) add()">
 
                 <div class="table-responsive">
-                    <table class="table-cards w-full text-sm">
-                        <thead class="border-b border-(--color-border) text-start text-(--color-ink-muted)">
+                    <table class="ui-lines table-cards w-full text-sm">
+                        <thead>
                             <tr>
-                                <th class="p-2 text-start font-medium">{{ __('inventory::field.product') }}</th>
-                                <th class="p-2 text-end font-medium">{{ __('inventory::field.quantity') }}</th>
-                                <th class="p-2"><span class="sr-only">{{ __('inventory::action.remove_line') }}</span></th>
+                                <th class="text-start">{{ __('inventory::field.product') }}</th>
+                                <th class="text-end">{{ __('inventory::field.quantity') }}</th>
+                                <th><span class="sr-only">{{ __('inventory::action.remove_line') }}</span></th>
                             </tr>
                         </thead>
 
                         <tbody>
                             <template x-for="(row, i) in rows" :key="i">
                                 <tr class="border-b border-(--color-border)">
-                                    <td class="p-1" data-label="{{ __('inventory::field.product') }}">
+                                    <td class="cell-input" data-label="{{ __('inventory::field.product') }}">
                                         <select :name="`lines[${i}][product_id]`" x-model="row.product_id"
                                                 class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                                                        bg-(--color-surface-card) px-2">
@@ -97,7 +97,7 @@
                                         </select>
                                     </td>
 
-                                    <td class="p-1" data-label="{{ __('inventory::field.quantity') }}">
+                                    <td class="cell-input" data-label="{{ __('inventory::field.quantity') }}">
                                         <input type="number" step="0.01" inputmode="decimal"
                                                :name="`lines[${i}][qty]`" x-model="row.qty"
                                                class="num h-(--spacing-field-compact) w-full sm:w-28 rounded-(--radius-field)
@@ -105,7 +105,7 @@
                                                       bg-(--color-surface-card) px-2 text-end">
                                     </td>
 
-                                    <td class="p-1 text-end">
+                                    <td class="cell-input text-end">
                                         <button type="button" @click="remove(i)"
                                                 class="rounded-(--radius-field) px-2 py-1 text-(--color-ink-muted)
                                                        hover:bg-(--color-surface-hover)">

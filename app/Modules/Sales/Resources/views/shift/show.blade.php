@@ -32,7 +32,7 @@
             · {{ __('sales::message.shift_bills') }}: <span class="num">{{ $figures['bills'] }}</span>
         </p>
 
-        <table class="w-full text-sm">
+        <table class="ui-grid is-flush w-full text-sm">
             <tbody>
                 @foreach ([
                     'shift_opening' => $figures['opening'],
@@ -40,19 +40,19 @@
                     'shift_cash_out' => $figures['cash_out'],
                 ] as $label => $value)
                     <tr class="border-b border-(--color-border)">
-                        <td class="py-2">{{ __('sales::message.'.$label) }}</td>
-                        <td class="num py-2 text-end">{{ \App\Core\Support\Money::format($value) }}</td>
+                        <td>{{ __('sales::message.'.$label) }}</td>
+                        <td class="num">{{ \App\Core\Support\Money::format($value) }}</td>
                     </tr>
                 @endforeach
 
                 <tr class="border-b border-(--color-border) font-medium">
-                    <td class="py-2">{{ __('sales::message.shift_expected') }}</td>
-                    <td class="num py-2 text-end">{{ \App\Core\Support\Money::format($figures['expected']) }}</td>
+                    <td>{{ __('sales::message.shift_expected') }}</td>
+                    <td class="num">{{ \App\Core\Support\Money::format($figures['expected']) }}</td>
                 </tr>
 
                 <tr class="border-b border-(--color-border) font-medium">
-                    <td class="py-2">{{ __('sales::message.shift_counted') }}</td>
-                    <td class="num py-2 text-end">{{ \App\Core\Support\Money::format($figures['counted']) }}</td>
+                    <td>{{ __('sales::message.shift_counted') }}</td>
+                    <td class="num">{{ \App\Core\Support\Money::format($figures['counted']) }}</td>
                 </tr>
             </tbody>
         </table>

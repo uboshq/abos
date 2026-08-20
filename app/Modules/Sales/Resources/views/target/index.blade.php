@@ -16,6 +16,40 @@
     $canManage = auth()->user()?->can('sales.target.manage') ?? false;
 @endphp
 
+@php
+    /* কলাম ধরে — `x-ui.table` স্লট পড়ে না, সারি আসে :rows থেকে। */
+    $columns = [
+        [
+            'key' => 'who',
+            'label' => __('sales::target.who'),
+            'render' => fn ($r) => $r['user']->name,
+        ],
+        [
+            'key' => 'target',
+            'label' => __('sales::target.target'),
+            'numeric' => true,
+            'width' => '11rem',
+            'render' => fn ($r) => view('sales::target.partials.target',
+                ['row' => $r, 'canManage' => $canManage]),
+        ],
+        [
+            'key' => 'achieved',
+            'label' => __('sales::target.achieved'),
+            'numeric' => true,
+            'width' => '11rem',
+            'render' => fn ($r) => view('sales::target.partials.achieved',
+                ['row' => $r, 'month' => $month]),
+        ],
+        [
+            'key' => 'percent',
+            'label' => __('sales::target.percent'),
+            'numeric' => true,
+            'width' => '8rem',
+            'render' => fn ($r) => view('sales::target.partials.percent', ['row' => $r]),
+        ],
+    ];
+@endphp
+
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('sales::target.title') }}</x-slot:title>
 
@@ -57,66 +91,9 @@
 
         <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">
-            <table class="w-full text-sm">
-                <thead class="border-b border-(--color-border) text-(--color-ink-muted)">
-                    <tr>
-                        <th class="p-2 text-start font-medium">{{ __('sales::target.who') }}</th>
-                        <th class="p-2 text-end font-medium">{{ __('sales::target.target') }}</th>
-                        <th class="p-2 text-end font-medium">{{ __('sales::target.achieved') }}</th>
-                        <th class="p-2 text-end font-medium">{{ __('sales::target.percent') }}</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    @forelse ($rows as $row)
-                        <tr class="border-b border-(--color-border) last:border-b-0">
-                            <td class="p-2">{{ $row['user']->name }}</td>
-
-                            <td class="p-1 text-end">
-                                @if ($canManage)
-                                    <input type="number" step="0.01" min="0" inputmode="decimal"
-                                           name="amount[{{ $row['user']->id }}]"
-                                           value="{{ $row['target'] !== null ? rtrim(rtrim($row['target'], '0'), '.') : '' }}"
-                                           class="num h-(--spacing-field-compact) w-32 rounded-(--radius-field) border border-(--color-border)
-                                                  bg-(--color-surface-card) px-2 text-end">
-                                @else
-                                    <span class="tabular">
-                                        {{ $row['target'] === null ? '—' : Money::format($row['target']) }}
-                                    </span>
-                                @endif
-                            </td>
-
-                            <td class="tabular p-2 text-end">
-                                <a href="{{ route('sales.invoice.index', [
-                                        'from' => $month->toDateString(),
-                                        'to' => $month->copy()->endOfMonth()->toDateString(),
-                                   ]) }}"
-                                   class="text-(--color-brand-500) underline-offset-2 hover:underline">
-                                    {{ Money::format($row['achieved']) }}
-                                </a>
-                            </td>
-
-                            {{-- টার্গেট না থাকলে ড্যাশ, শূন্য নয়: "টার্গেট নেই" আর
-                                 "০% হয়েছে" দুইটা আলাদা কথা, আর দ্বিতীয়টা অন্যায়। --}}
-                            <td @class([
-                                'tabular p-2 text-end font-medium',
-                                'text-(--color-badge-success-ink)' =>
-                                    $row['percent'] !== null && bccomp($row['percent'], '100', 1) >= 0,
-                                'text-(--color-badge-warning-ink)' =>
-                                    $row['percent'] !== null && bccomp($row['percent'], '100', 1) < 0,
-                            ])>
-                                {{ $row['percent'] === null ? '—' : $row['percent'].'%' }}
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="4" class="px-3 py-6 text-center text-(--color-ink-muted)">
-                                {{ __('sales::target.nobody_sells') }}
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
+        <x-ui.table :rows="$rows"
+                    :columns="$columns"
+                    :empty="__('sales::target.nobody_sells')" />
         </div>
 
         @if ($canManage && $rows !== [])

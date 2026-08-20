@@ -76,32 +76,31 @@
         <section class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card)">
             <div class="overflow-x-auto">
-                <table class="w-full border-collapse text-sm">
+                <table class="ui-grid">
                     <thead>
-                        <tr class="border-b border-(--color-border) bg-(--color-surface-app)">
-                            <th scope="col" class="px-3 py-2 text-start font-medium text-(--color-ink-muted)">
+                        <tr>
+                            <th scope="col">
                                 {{ __('core.print.account') }}
                             </th>
                             <th scope="col" style="width: 10rem"
-                                class="num px-3 py-2 text-end font-medium text-(--color-ink-muted)">
+                                class="num">
                                 {{ __('core.table.debit') }}
                             </th>
                             <th scope="col" style="width: 10rem"
-                                class="num px-3 py-2 text-end font-medium text-(--color-ink-muted)">
+                                class="num">
                                 {{ __('core.table.credit') }}
                             </th>
                             <th scope="col" style="width: 14rem"
-                                class="px-3 py-2 text-start font-medium text-(--color-ink-muted)">
+>
                                 {{ __('accounts::field.party') }}
                             </th>
                             @if ($costCenters->isNotEmpty())
                                 <th scope="col" style="width: 11rem"
-                                    class="px-3 py-2 text-start font-medium text-(--color-ink-muted)">
+>
                                     {{ __('accounts::field.cost_center') }}
                                 </th>
                             @endif
-                            <th scope="col" class="hidden px-3 py-2 text-start font-medium
-                                                   text-(--color-ink-muted) lg:table-cell">
+                            <th scope="col" class="hidden lg:table-cell">
                                 {{ __('core.table.narration') }}
                             </th>
                         </tr>
@@ -110,8 +109,8 @@
                     <tbody>
                         @for ($i = 0; $i < $rows; $i++)
                             @php $line = $existing[$i] ?? [] @endphp
-                            <tr class="border-b border-(--color-border)">
-                                <td class="px-3 py-1.5">
+                            <tr>
+                                <td class="tight">
                                     <select name="lines[{{ $i }}][account_id]"
                                             class="h-(--spacing-field) w-full min-w-48 rounded-(--radius-field)
                                                    border border-(--color-border) bg-(--color-surface-card) px-2">
@@ -125,7 +124,7 @@
                                     </select>
                                 </td>
 
-                                <td class="px-3 py-1.5">
+                                <td class="tight">
                                     <input type="number" step="0.01" inputmode="decimal"
                                            name="lines[{{ $i }}][debit]" value="{{ $line['debit'] ?? '' }}"
                                            @input="recount()"
@@ -133,7 +132,7 @@
                                                   border-(--color-border) bg-(--color-surface-card) px-2 text-end">
                                 </td>
 
-                                <td class="px-3 py-1.5">
+                                <td class="tight">
                                     <input type="number" step="0.01" inputmode="decimal"
                                            name="lines[{{ $i }}][credit]" value="{{ $line['credit'] ?? '' }}"
                                            @input="recount()"
@@ -161,7 +160,7 @@
                                     আধা-পক্ষ বসত, যাকে কোনো রিপোর্ট
                                     খুঁজে পেত না।
                                 --}}
-                                <td class="px-3 py-1.5">
+                                <td class="tight">
                                     <select name="lines[{{ $i }}][party]"
                                             class="h-(--spacing-field) w-full rounded-(--radius-field)
                                                    border border-(--color-border)
@@ -190,7 +189,7 @@
                                     জায়গা নিত আর কিছু বলত না।
                                 --}}
                                 @if ($costCenters->isNotEmpty())
-                                    <td class="px-3 py-1.5">
+                                    <td class="tight">
                                         <select name="lines[{{ $i }}][cost_center_id]"
                                                 class="h-(--spacing-field) w-full rounded-(--radius-field)
                                                        border border-(--color-border)
@@ -206,7 +205,7 @@
                                     </td>
                                 @endif
 
-                                <td class="hidden px-3 py-1.5 lg:table-cell">
+                                <td class="tight hidden lg:table-cell">
                                     <input type="text" name="lines[{{ $i }}][narration]"
                                            value="{{ $line['narration'] ?? '' }}"
                                            class="h-(--spacing-field) w-full rounded-(--radius-field) border
@@ -218,14 +217,14 @@
 
                     <tfoot>
                         <tr class="bg-(--color-surface-app) font-semibold">
-                            <td class="px-3 py-2 text-end">{{ __('core.print.total') }}</td>
-                            <td class="num px-3 py-2 text-end" x-text="format(debit)">0.00</td>
-                            <td class="num px-3 py-2 text-end" x-text="format(credit)">0.00</td>
-                            <td class="px-3 py-2"></td>
+                            <td class="text-end">{{ __('core.print.total') }}</td>
+                            <td class="num" x-text="format(debit)">0.00</td>
+                            <td class="num" x-text="format(credit)">0.00</td>
+                            <td></td>
                             @if ($costCenters->isNotEmpty())
-                                <td class="px-3 py-2"></td>
+                                <td></td>
                             @endif
-                            <td class="hidden px-3 py-2 lg:table-cell">
+                            <td class="hidden lg:table-cell">
                                 {{-- পার্থক্যটা দেখানো হয়, লুকানো হয় না: কত টাকা
                                      কম পড়ছে সেটা জানলে ভুলটা খুঁজে পাওয়া সহজ।
 

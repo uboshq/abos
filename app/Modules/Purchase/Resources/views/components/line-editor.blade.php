@@ -91,36 +91,36 @@
      x-init="if (rows.length === 0) add()">
 
     <div class="table-responsive">
-        <table class="table-cards w-full text-sm">
-            <thead class="border-b border-(--color-border) text-start text-(--color-ink-muted)">
+        <table class="ui-lines table-cards w-full text-sm">
+            <thead>
                 <tr>
-                    <th class="p-2 text-start font-medium">{{ __('purchase::field.product') }}</th>
+                    <th class="text-start">{{ __('purchase::field.product') }}</th>
                     @if ($linkField)
-                        <th class="p-2 text-start font-medium">{{ __('purchase::field.'.($linkField === 'purchase_order_line_id' ? 'order' : 'receipt')) }}</th>
+                        <th class="text-start">{{ __('purchase::field.'.($linkField === 'purchase_order_line_id' ? 'order' : 'receipt')) }}</th>
                     @endif
-                    <th class="p-2 text-end font-medium">{{ __('purchase::field.quantity') }}</th>
+                    <th class="text-end">{{ __('purchase::field.quantity') }}</th>
                     @if ($packs !== [])
-                        <th class="p-2 text-start font-medium">{{ __('purchase::field.unit') }}</th>
+                        <th class="text-start">{{ __('purchase::field.unit') }}</th>
                     @endif
-                    <th class="p-2 text-end font-medium">{{ __('purchase::field.rate') }}</th>
+                    <th class="text-end">{{ __('purchase::field.rate') }}</th>
                     @if ($showSalesPrice)
-                        <th class="p-2 text-end font-medium">{{ __('purchase::field.sales_price') }}</th>
-                        <th class="p-2 text-end font-medium">{{ __('purchase::field.markup') }}</th>
-                        <th class="p-2 text-end font-medium">{{ __('purchase::field.margin') }}</th>
+                        <th class="text-end">{{ __('purchase::field.sales_price') }}</th>
+                        <th class="text-end">{{ __('purchase::field.markup') }}</th>
+                        <th class="text-end">{{ __('purchase::field.margin') }}</th>
                     @endif
                     @if ($showDiscount)
-                        <th class="p-2 text-end font-medium">{{ __('purchase::field.discount') }}</th>
-                        <th class="p-2 text-end font-medium">{{ __('purchase::field.tax') }}</th>
+                        <th class="text-end">{{ __('purchase::field.discount') }}</th>
+                        <th class="text-end">{{ __('purchase::field.tax') }}</th>
                     @endif
-                    <th class="p-2 text-end font-medium">{{ __('purchase::field.amount') }}</th>
-                    <th class="p-2"><span class="sr-only">{{ __('purchase::action.remove_line') }}</span></th>
+                    <th class="text-end">{{ __('purchase::field.amount') }}</th>
+                    <th><span class="sr-only">{{ __('purchase::action.remove_line') }}</span></th>
                 </tr>
             </thead>
 
             <tbody>
                 <template x-for="(row, i) in rows" :key="i">
                     <tr class="border-b border-(--color-border)">
-                        <td class="p-1" data-label="{{ __('purchase::field.product') }}">
+                        <td class="cell-input" data-label="{{ __('purchase::field.product') }}">
                             <select :name="`lines[${i}][product_id]`" x-model="row.product_id" required
                                     @change="row.unit_id = ''"
                                     class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
@@ -133,7 +133,7 @@
                         </td>
 
                         @if ($linkField)
-                            <td class="p-1" data-label="{{ __('purchase::field.'.($linkField === 'purchase_order_line_id' ? 'order' : 'receipt')) }}">
+                            <td class="cell-input" data-label="{{ __('purchase::field.'.($linkField === 'purchase_order_line_id' ? 'order' : 'receipt')) }}">
                                 <select :name="`lines[${i}][{{ $linkField }}]`" x-model="row.link"
                                         class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                                                bg-(--color-surface-card) px-2">
@@ -145,7 +145,7 @@
                             </td>
                         @endif
 
-                        <td class="p-1" data-label="{{ __('purchase::field.quantity') }}">
+                        <td class="cell-input" data-label="{{ __('purchase::field.quantity') }}">
                             <input type="number" step="0.01" inputmode="decimal" required
                                    :name="`lines[${i}][{{ $qtyField }}]`" x-model="row.qty"
                                    class="num h-(--spacing-field-compact) w-full sm:w-28 rounded-(--radius-field) border border-(--color-border)
@@ -164,7 +164,7 @@
                                 লেখা হয়; সার্ভার তিনটাকেই একসাথে নামায়, তাই
                                 পর্দার markup আর খাতার markup এক থাকে।
                             --}}
-                            <td class="p-1" data-label="{{ __('purchase::field.unit') }}">
+                            <td class="cell-input" data-label="{{ __('purchase::field.unit') }}">
                                 <select :name="`lines[${i}][unit_id]`" x-model="row.unit_id"
                                         x-show="unitsFor(row).length > 0"
                                         class="h-(--spacing-field-compact) w-full sm:w-28 rounded-(--radius-field) border border-(--color-border)
@@ -177,7 +177,7 @@
                             </td>
                         @endif
 
-                        <td class="p-1" data-label="{{ __('purchase::field.rate') }}">
+                        <td class="cell-input" data-label="{{ __('purchase::field.rate') }}">
                             <input type="number" step="0.0001" inputmode="decimal" required
                                    :name="`lines[${i}][rate]`" x-model="row.rate"
                                    @input="priced(row, 'rate')"
@@ -193,20 +193,20 @@
                                 জিনিস দুই জায়গায় জমা রাখলে একদিন আলাদা
                                 হবেই, আর তখন কোনটা সত্যি বলার উপায় থাকে না।
                             --}}
-                            <td class="p-1" data-label="{{ __('purchase::field.sales_price') }}">
+                            <td class="cell-input" data-label="{{ __('purchase::field.sales_price') }}">
                                 <input type="number" step="0.01" min="0" inputmode="decimal"
                                        :name="`lines[${i}][sales_price]`" x-model="row.sales_price"
                                        @input="priced(row, 'sales_price')"
                                        class="num h-(--spacing-field-compact) w-full sm:w-28 rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-card) px-2 text-end">
                             </td>
-                            <td class="p-1" data-label="{{ __('purchase::field.markup') }}">
+                            <td class="cell-input" data-label="{{ __('purchase::field.markup') }}">
                                 <input type="number" step="0.01" inputmode="decimal"
                                        x-model="row.markup" @input="priced(row, 'markup')"
                                        class="num h-(--spacing-field-compact) w-full sm:w-20 rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-card) px-2 text-end">
                             </td>
-                            <td class="p-1" data-label="{{ __('purchase::field.margin') }}">
+                            <td class="cell-input" data-label="{{ __('purchase::field.margin') }}">
                                 <input type="number" step="0.01" inputmode="decimal"
                                        x-model="row.margin" @input="priced(row, 'margin')"
                                        class="num h-(--spacing-field-compact) w-full sm:w-20 rounded-(--radius-field) border border-(--color-border)
@@ -215,13 +215,13 @@
                         @endif
 
                         @if ($showDiscount)
-                            <td class="p-1" data-label="{{ __('purchase::field.discount') }}">
+                            <td class="cell-input" data-label="{{ __('purchase::field.discount') }}">
                                 <input type="number" step="0.01" inputmode="decimal"
                                        :name="`lines[${i}][discount]`" x-model="row.discount"
                                        class="num h-(--spacing-field-compact) w-full sm:w-24 rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-card) px-2 text-end">
                             </td>
-                            <td class="p-1" data-label="{{ __('purchase::field.tax') }}">
+                            <td class="cell-input" data-label="{{ __('purchase::field.tax') }}">
                                 <input type="number" step="0.01" inputmode="decimal"
                                        :name="`lines[${i}][tax]`" x-model="row.tax"
                                        class="num h-(--spacing-field-compact) w-full sm:w-24 rounded-(--radius-field) border border-(--color-border)
@@ -229,10 +229,10 @@
                             </td>
                         @endif
 
-                        <td class="num p-2 text-end" data-label="{{ __('purchase::field.amount') }}"
+                        <td class="num cell" data-label="{{ __('purchase::field.amount') }}"
                             x-text="amount(row).toFixed(2)"></td>
 
-                        <td class="p-1 text-end">
+                        <td class="cell-input text-end">
                             <button type="button" @click="remove(i)"
                                     class="rounded-(--radius-field) px-2 py-1 text-(--color-ink-muted)
                                            hover:bg-(--color-surface-hover)">
@@ -245,11 +245,11 @@
 
             <tfoot>
                 <tr>
-                    <td class="p-2 text-end font-medium"
+                    <td class="cell text-end font-medium"
                         colspan="{{ ($showDiscount ? 5 : 3) + ($linkField ? 1 : 0) + ($showSalesPrice ? 3 : 0) + ($packs !== [] ? 1 : 0) }}">
                         {{ __('purchase::field.total') }}
                     </td>
-                    <td class="num p-2 text-end font-semibold" x-text="total.toFixed(2)"></td>
+                    <td class="num cell font-semibold" x-text="total.toFixed(2)"></td>
                     <td></td>
                 </tr>
             </tfoot>

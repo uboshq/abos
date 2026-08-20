@@ -14,6 +14,30 @@
     টাকা বসার সুযোগ তৈরি হত। তাই সারিটার নিচেই ঘরগুলো খোলে, আর যে
     সারির বোতাম চাপা হয়েছে সেটার নম্বরই ফর্মের ঠিকানায় থাকে।
 --}}
+@php
+    /*
+        নড়াচড়ার তালিকার কলাম।
+
+        উপরের কিস্তির টেবিলটা এখানে আসেনি, আর কারণটা কম্পোনেন্টের সীমা:
+        ওখানে প্রতিটা সারির নিজের `<tbody x-data>` আছে — সারি খুলে
+        বিস্তারিত দেখানোর জন্য। `x-ui.table` এক tbody-তে এক সারি আঁকে,
+        তাই খোলা-বন্ধ সারি ওর পক্ষে সম্ভব নয়। ওটা কম্পোনেন্টের ফাঁক,
+        পর্দার দোষ নয়।
+    */
+    $movementColumns = [
+        ['key' => 'document_no', 'label' => __('core.print.document_no')],
+        ['key' => 'trx_date', 'label' => __('accounts::field.date'), 'width' => '8rem',
+         'render' => fn ($m) => $m->trx_date?->format('d/m/Y')],
+        ['key' => 'type', 'label' => __('accounts::field.type'), 'width' => '9rem',
+         'render' => fn ($m) => $m->label()],
+        ['key' => 'account', 'label' => __('core.print.account'),
+         'render' => fn ($m) => view('accounts::loan.partials.counter', ['movement' => $m])],
+        ['key' => 'amount', 'label' => __('accounts::field.amount'),
+         'numeric' => true, 'width' => '11rem',
+         'render' => fn ($m) => \App\Core\Support\Money::format($m->amount)],
+    ];
+@endphp
+
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ $loan->lender }} — {{ $loan->document_no }}</x-slot:title>
 
@@ -157,16 +181,16 @@
             </div>
 
             <div class="overflow-x-auto">
-                <table class="w-full text-sm">
+                <table class="ui-grid">
                     <thead class="bg-(--color-surface-sunken) text-2xs text-(--color-ink-muted)">
                         <tr>
-                            <th class="px-3 py-2 text-start">{{ __('accounts::field.instalment_no') }}</th>
-                            <th class="px-3 py-2 text-start">{{ __('accounts::field.due_date') }}</th>
-                            <th class="px-3 py-2 text-end">{{ __('accounts::field.principal') }}</th>
-                            <th class="px-3 py-2 text-end">{{ __('accounts::field.interest') }}</th>
-                            <th class="px-3 py-2 text-end">{{ __('accounts::field.instalment_total') }}</th>
-                            <th class="px-3 py-2 text-start">{{ __('accounts::field.state') }}</th>
-                            <th class="px-3 py-2"><span class="sr-only">{{ __('core.table.actions') }}</span></th>
+                            <th class="text-start">{{ __('accounts::field.instalment_no') }}</th>
+                            <th class="text-start">{{ __('accounts::field.due_date') }}</th>
+                            <th class="text-end">{{ __('accounts::field.principal') }}</th>
+                            <th class="text-end">{{ __('accounts::field.interest') }}</th>
+                            <th class="text-end">{{ __('accounts::field.instalment_total') }}</th>
+                            <th class="text-start">{{ __('accounts::field.state') }}</th>
+                            <th><span class="sr-only">{{ __('core.table.actions') }}</span></th>
                         </tr>
                     </thead>
 
@@ -176,14 +200,14 @@
                         <tbody x-data="{ open: false }"
                                class="border-t border-(--color-border)">
                             <tr @class(['bg-(--color-badge-danger-bg)' => $row->isOverdue()])>
-                                <td class="num px-3 py-2">{{ $row->no }}</td>
-                                <td class="px-3 py-2">{{ $row->due_date?->format('d/m/Y') }}</td>
-                                <td class="num px-3 py-2 text-end">{{ \App\Core\Support\Money::format($row->principal) }}</td>
-                                <td class="num px-3 py-2 text-end">{{ \App\Core\Support\Money::format($row->interest) }}</td>
-                                <td class="num px-3 py-2 text-end font-medium">
+                                <td class="num">{{ $row->no }}</td>
+                                <td>{{ $row->due_date?->format('d/m/Y') }}</td>
+                                <td class="num">{{ \App\Core\Support\Money::format($row->principal) }}</td>
+                                <td class="num">{{ \App\Core\Support\Money::format($row->interest) }}</td>
+                                <td class="num font-medium">
                                     {{ \App\Core\Support\Money::format($row->total()) }}
                                 </td>
-                                <td class="px-3 py-2">
+                                <td>
                                     @if ($row->isPaid())
                                         <x-ui.badge tone="success">{{ __('accounts::state.paid') }}</x-ui.badge>
                                         @if ($row->paid_on)
@@ -197,7 +221,7 @@
                                         <x-ui.badge tone="draft">{{ __('accounts::state.due') }}</x-ui.badge>
                                     @endif
                                 </td>
-                                <td class="px-3 py-2 text-end">
+                                <td class="text-end">
                                     @can('accounts.loan.manage')
                                         @unless ($row->isPaid())
                                             <button type="button" @click="open = ! open"
@@ -283,39 +307,9 @@
             </div>
 
             <div class="overflow-x-auto">
-                <table class="w-full text-sm">
-                    <thead class="bg-(--color-surface-sunken) text-2xs text-(--color-ink-muted)">
-                        <tr>
-                            <th class="px-3 py-2 text-start">{{ __('core.print.document_no') }}</th>
-                            <th class="px-3 py-2 text-start">{{ __('accounts::field.date') }}</th>
-                            <th class="px-3 py-2 text-start">{{ __('accounts::field.type') }}</th>
-                            <th class="px-3 py-2 text-start">{{ __('core.print.account') }}</th>
-                            <th class="px-3 py-2 text-end">{{ __('accounts::field.amount') }}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($loan->movements as $movement)
-                            <tr class="border-t border-(--color-border)">
-                                <td class="px-3 py-2">{{ $movement->document_no }}</td>
-                                <td class="px-3 py-2">{{ $movement->trx_date?->format('d/m/Y') }}</td>
-                                <td class="px-3 py-2">{{ $movement->label() }}</td>
-                                <td class="px-3 py-2">
-                                    @if ($movement->counterAccount)
-                                        <a href="{{ route('accounts.coa.show', $movement->counterAccount) }}"
-                                           class="text-(--color-brand-500) underline-offset-2 hover:underline">
-                                            {{ $movement->counterAccount->label() }}
-                                        </a>
-                                    @else
-                                        —
-                                    @endif
-                                </td>
-                                <td class="num px-3 py-2 text-end">
-                                    {{ \App\Core\Support\Money::format($movement->amount) }}
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+                <x-ui.table :rows="$loan->movements"
+                            :columns="$movementColumns"
+                            :empty="__('core.empty.no_results')" />
             </div>
         </section>
     @endif

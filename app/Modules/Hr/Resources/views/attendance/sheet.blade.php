@@ -35,7 +35,7 @@
             <input type="month" name="month" value="{{ $month->format('Y-m') }}"
                    onchange="this.form.submit()"
                    class="rounded-(--radius-field) border border-(--color-border)
-                          bg-(--color-surface) px-2 py-1.5 text-sm">
+                          bg-(--color-surface-app) px-2 py-1.5 text-sm">
         </label>
     </form>
 

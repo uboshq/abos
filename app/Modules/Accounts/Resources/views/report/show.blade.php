@@ -183,13 +183,12 @@
             <x-ui.empty-state :message="__('accounts::message.nothing_in_range')" />
         @else
             <div class="overflow-x-auto">
-                <table class="w-full border-collapse text-sm">
+                <table class="ui-grid">
                     <thead>
-                        <tr class="border-b border-(--color-border) bg-(--color-surface-app)">
+                        <tr>
                             @foreach ($columns as $column)
                                 <th scope="col"
                                     @class([
-                                        'px-3 py-2 text-end font-medium text-(--color-ink-muted)',
                                         'num' => in_array($column->type, [$money], true),
                                         'whitespace-nowrap' => $column->type === $date,
                                     ])
@@ -202,11 +201,10 @@
 
                     <tbody>
                         @foreach ($result->rows as $row)
-                            <tr class="border-b border-(--color-border) transition-colors
-                                       hover:bg-(--color-surface-hover)">
+                            <tr class="transition-colors hover:bg-(--color-surface-hover)">
                                 @foreach ($columns as $column)
                                     <td @class([
-                                        'px-3 py-2 align-middle',
+                                        'align-middle',
                                         'num' => in_array($column->type, [$money], true),
                                         'whitespace-nowrap' => $column->type === $date,
                                     ])>
@@ -221,9 +219,9 @@
                     </tbody>
 
                     <tfoot>
-                        <tr class="bg-(--color-surface-app) font-semibold">
+                        <tr>
                             @foreach ($columns as $index => $column)
-                                <td @class(['px-3 py-2', 'num' => in_array($column->type, [$money], true)])>
+                                <td @class(['num' => in_array($column->type, [$money], true)])>
                                     @if ($index === 0)
                                         {{ __('core.print.total') }}
                                     @elseif ($column->total && isset($result->totals[$column->key]))

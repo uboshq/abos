@@ -20,7 +20,7 @@
                 <input type="text" name="remarks" required
                        placeholder="{{ __('hr::field.reason') }}"
                        class="w-24 rounded-(--radius-field) border border-(--color-border)
-                              bg-(--color-surface) px-1.5 py-1 text-2xs">
+                              bg-(--color-surface-app) px-1.5 py-1 text-2xs">
                 <button type="submit"
                         class="rounded-(--radius-field) px-2 py-1 text-2xs text-(--color-ink-muted)
                                transition-colors hover:bg-(--color-surface-hover)">

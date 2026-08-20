@@ -163,20 +163,41 @@ class ToolbarTest extends TestCase
         $tight = $this->actingAs($this->user)->get(route('supplier.index', ['compact' => 1]))->getContent();
 
         /*
-         * মাপটা এখন টোকেন থেকে, প্যাডিং থেকে নয়।
+         * মাপটা টোকেন থেকে, আর নিয়মটা এখন **ক্লাস** থেকে।
          *
-         * আগে এখানে `py-2.5` ও `py-1.5` খোঁজা হত। প্যাডিং দিয়ে
+         * ── কেন দুইবার বদলাল ────────────────────────────────────────
+         * প্রথমে এখানে `py-2.5` ও `py-1.5` খোঁজা হত। প্যাডিং দিয়ে
          * উচ্চতা ঠিক করলে যে ঘরে দুই লাইন লেখা (নাম + কোড) সেই সারিটা
-         * লম্বা হয়ে যায়, আর ছকটা অসম দেখায় — এক সারি ৪০px, পাশেরটা ৫৬।
+         * লম্বা হয়ে যেত — এক সারি ৪০px, পাশেরটা ৫৬।
          *
-         * পরীক্ষাটার কাজ বদলায়নি: ঘনত্বের সুইচ সত্যিই সারি ছোট
-         * করে কি না — কেবল মাপটা এখন এক জায়গায় লেখা।
+         * তারপর মাপটা টোকেনে গেল, কিন্তু বসত `style="height: var(…)"`
+         * হিসেবে — ইনলাইন। ইনলাইন স্টাইল সব স্তর, সব ইউটিলিটি, এমনকি
+         * `!important`-ও হারায়। অর্থাৎ সংখ্যাটা টোকেনে থাকলেও
+         * **নিয়মটা** কোনো চেহারা ছুঁতে পারত না: Suite (NetSuite) ঘন
+         * সারি চাইলেও তালিকাগুলো ৪৪px-এই বসে থাকত।
+         *
+         * এখন ক্লাস — `.ui-list.is-dense` — আর নিয়মটা app.css-এ।
+         * চেহারা চাইলে নিজের নিয়ম লিখতে পারে।
+         *
+         * পরীক্ষাটার কাজ তিনবারই এক: ঘনত্বের সুইচ সত্যিই সারি ছোট
+         * করে কি না।
          */
-        $this->assertStringContainsString('var(--row-height)', $roomy);
-        $this->assertStringContainsString('var(--row-height-dense)', $tight);
+        $this->assertStringNotContainsString('is-dense', $roomy);
+        $this->assertStringContainsString('is-dense', $tight);
 
-        // উল্টোটাও সত্য হতে হবে — নাহলে দুইটাই ডিফল্ট দিলেও পাশ করত
-        $this->assertStringNotContainsString('var(--row-height-dense)', $roomy);
+        /*
+         * ক্লাসটা থাকাই যথেষ্ট নয় — নিয়মটাও থাকতে হবে।
+         *
+         * ক্লাস আর CSS আলাদা ফাইলে। একজন `is-dense` বসাল, আরেকজন
+         * নিয়মটা মুছে দিল — HTML-এ ক্লাসটা তখনও থাকে, পরীক্ষাটা পাশ
+         * করে, আর সারি একটুও ছোট হয় না। ঠিক সেই চেনা ফাঁদ: যে পাহারা
+         * জিনিসটা না থাকলেও পাশ করে।
+         */
+        $css = (string) file_get_contents(base_path('resources/css/app.css'));
+
+        $this->assertStringContainsString('.ui-list.is-dense', $css,
+            'is-dense ক্লাসটা বসে, কিন্তু ওর কোনো নিয়ম নেই — সারি ছোট হবে না।');
+        $this->assertStringContainsString('var(--row-height-dense)', $css);
     }
 
     // ── খোঁজার ঘর বলে দেয় কী দিয়ে খোঁজা যায় ───────────────────────────
