@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Customer\Services;
 
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
+use App\Core\Services\DuplicateGuard;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
@@ -35,6 +36,7 @@ final class CustomerService
     public function create(array $data): Customer
     {
         $this->assertBanglaNameIfRequired($data);
+        $this->assertNotADuplicate($data);
 
         return DB::transaction(function () use ($data) {
             // কোড না দিলে সিরিজ থেকে — নম্বর ইস্যু ট্রানজেকশনের ভেতরে,
@@ -98,6 +100,7 @@ final class CustomerService
     public function update(Customer $customer, array $data): Customer
     {
         $this->assertBanglaNameIfRequired($data, $customer);
+        $this->assertNotADuplicate($data, $customer->id);
 
         if (isset($data['code']) && $data['code'] !== $customer->code) {
             $this->assertCodeIsFree($data['code'], $customer->id);
@@ -168,6 +171,51 @@ final class CustomerService
         if (blank($bangla)) {
             throw ValidationException::withMessages([
                 'name_bn' => __('customer::validation.bn_name_required'),
+            ]);
+        }
+    }
+
+    /**
+     * এই গ্রাহকটা কি আগে থেকেই খাতায় আছেন।
+     *
+     * ফোন মিললে আটকায় — একই নম্বর মানে প্রায় নিশ্চিতভাবে একই মানুষ, আর
+     * দুইটা সারি হলে তাঁর বকেয়া দুই ভাগ হয়ে যায়, কেউ মোট পাওনা জানে না।
+     *
+     * নাম মিললে আটকায় না, কেবল বলে। "রহিম স্টোর" নামে দুই বাজারে দুইটা
+     * আলাদা দোকান সত্যিই থাকতে পারে; ওটা আটকালে সৎ ব্যবহারকারী কাজই
+     * করতে পারতেন না। তিনি `allow_duplicate` টিক দিয়ে এগোতে পারেন, আর
+     * সেই সিদ্ধান্তটা সারিতে বসে থাকে।
+     *
+     * `$data` রেফারেন্সে নেওয়া, কারণ শেষে `allow_duplicate` মুছে ফেলতে
+     * হয়। ওটা একটা সিদ্ধান্তের ঘর, গ্রাহকের কোনো কলাম নয় — রেখে দিলে
+     * `Customer::create()` mass-assignment-এ ছুঁড়ে ফেলত, আর প্রতিটা
+     * জেনেশুনে বসানো নকল সেভ হওয়ার আগেই ভেঙে পড়ত।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function assertNotADuplicate(array &$data, ?int $exceptId = null): void
+    {
+        $guard = app(DuplicateGuard::class);
+
+        $allowed = (bool) ($data['allow_duplicate'] ?? false);
+        unset($data['allow_duplicate']);
+
+        $guard->assertPhoneIsFree(Customer::class, ['phone'], $data['phone'] ?? null, $exceptId);
+
+        if ($allowed) {
+            return;
+        }
+
+        $matches = $guard->nameMatches(
+            Customer::class,
+            ['name_en', 'name_bn'],
+            $data['name_en'] ?? null,
+            $exceptId,
+        );
+
+        if ($matches->isNotEmpty()) {
+            throw ValidationException::withMessages([
+                'name_en' => __('core.duplicate.name_matches').' '.__('core.duplicate.confirm_hint'),
             ]);
         }
     }

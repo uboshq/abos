@@ -63,7 +63,16 @@ class CustomerTest extends TestCase
     public function test_a_blank_code_comes_from_the_number_series(): void
     {
         $first = $this->make();
-        $second = $this->make(['name_en' => 'Rahim Traders']);
+
+        /*
+         * নামটা "Rahim Traders" ছিল, আর ওটা DemoSeeder-এ আগে থেকেই
+         * আছে। নকল-পাহারা বসার পর এই টেস্ট লাল হয়ে যায় — ঠিকই, কারণ
+         * ওটা সত্যিই একটা নকল নাম ছিল।
+         *
+         * এখানকার প্রশ্নটা নাম নিয়ে নয়, নম্বর সিরিজ নিয়ে; তাই নামটা
+         * এমন কিছুতে বদলানো হলো যা ডেমো ডাটায় নেই।
+         */
+        $second = $this->make(['name_en' => 'Nabanna Distribution']);
 
         $this->assertNotSame($first->code, $second->code);
         $this->assertStringStartsWith('CUS-', $first->code);

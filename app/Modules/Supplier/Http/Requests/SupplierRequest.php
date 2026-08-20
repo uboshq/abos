@@ -36,6 +36,15 @@ class SupplierRequest extends FormRequest
             'name_bn' => ['nullable', 'string', 'max:191'],
 
             'phone' => ['nullable', 'string', 'max:32'],
+            /*
+             * নকল হলেও এগোনোর ইচ্ছা।
+             *
+             * নামের মিল আটকানো হয় না, কেবল দেখানো হয় — তাই এই ঘরটা
+             * দরকার, নাহলে "রহিম স্টোর" নামে দ্বিতীয় দোকানটা কোনোদিন
+             * খোলাই যেত না। টিকটা সার্ভিস পর্যন্ত না পৌঁছালে পাহারাটা
+             * পাহারা থাকত না, দেয়াল হয়ে যেত।
+             */
+            'allow_duplicate' => ['nullable', 'boolean'],
             'email' => ['nullable', 'email', 'max:191'],
             'address_en' => ['nullable', 'string', 'max:500'],
             'address_bn' => ['nullable', 'string', 'max:500'],
