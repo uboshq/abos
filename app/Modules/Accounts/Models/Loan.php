@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
 /**
  * একটা ঋণ — টার্ম লোন বা CC।
@@ -37,13 +38,28 @@ class Loan extends Model implements Drillable
     /** একটা সীমা, তার ভেতরে যত খুশি তোলা-জমা। */
     public const CC = 'cc';
 
+    /**
+     * হাতধার — কাগজবিহীন ধার।
+     *
+     * কিস্তি নেই, সুদ সাধারণত শূন্য, আর ফেরতের তারিখটা একটা কথা:
+     * "ঈদের আগে দিয়ে দেব"। তবু টাকাটা সত্যিকারের টাকা, আর খাতায় না
+     * থাকলে বছর শেষে পুঁজির হিসাবটা ওই পরিমাণ ভুল হয়।
+     */
+    public const HAND = 'hand';
+
+    /** ধারটা আমরা নিয়েছি — দায়। */
+    public const TAKEN = 'taken';
+
+    /** ধারটা আমরা দিয়েছি — পাওনা, দায় নয়। */
+    public const GIVEN = 'given';
+
     protected $table = 'acc_loans';
 
     protected $fillable = [
         'company_id', 'branch_id', 'document_no', 'lender', 'account_no',
-        'kind', 'interest_method', 'sanctioned', 'interest_rate',
-        'tenure_months', 'start_date', 'first_instalment_on',
-        'liability_account_id', 'interest_account_id',
+        'kind', 'direction', 'interest_method', 'sanctioned', 'interest_rate',
+        'tenure_months', 'start_date', 'first_instalment_on', 'due_on',
+        'principal_account_id', 'interest_account_id',
         'security', 'narration', 'status', 'created_by',
     ];
 
@@ -54,6 +70,7 @@ class Loan extends Model implements Drillable
             'interest_rate' => 'decimal:4',
             'start_date' => 'date',
             'first_instalment_on' => 'date',
+            'due_on' => 'date',
         ];
     }
 
@@ -67,9 +84,9 @@ class Loan extends Model implements Drillable
         return $this->hasMany(LoanMovement::class)->orderBy('trx_date')->orderBy('id');
     }
 
-    public function liabilityAccount(): BelongsTo
+    public function principalAccount(): BelongsTo
     {
-        return $this->belongsTo(Account::class, 'liability_account_id');
+        return $this->belongsTo(Account::class, 'principal_account_id');
     }
 
     public function interestAccount(): BelongsTo
@@ -92,6 +109,43 @@ class Loan extends Model implements Drillable
         return $this->kind === self::CC;
     }
 
+    public function isHandLoan(): bool
+    {
+        return $this->kind === self::HAND;
+    }
+
+    /**
+     * ধারটা আমরা দিয়েছি, নিইনি।
+     *
+     * এটাই ঠিক করে দেয় টাকাটা ব্যালেন্স শিটের কোন পাশে বসবে, আর
+     * খতিয়ানে ডেবিট-ক্রেডিট কোন দিকে যাবে। ভুল হলে দুইবার ভুল হয়:
+     * পাওনা দায় হয়ে বসে, আর মোট দায় ঠিক দ্বিগুণ পরিমাণ বেশি দেখায়।
+     */
+    public function isGiven(): bool
+    {
+        return $this->direction === self::GIVEN;
+    }
+
+    /**
+     * ফেরতের কথা দেওয়া তারিখ পেরিয়ে গেছে, অথচ টাকাটা এখনো বাকি।
+     *
+     * হাতধারে এটাই একমাত্র সতর্কতা — কিস্তির সূচি নেই বলে অন্য কোনো
+     * ভাবে দেরি ধরা পড়ে না। তারিখ না থাকলে দেরিও নেই: কেউ তারিখ
+     * বলেননি মানে কথা ভাঙেননি।
+     */
+    public function isOverdue(?Carbon $asOf = null): bool
+    {
+        if ($this->due_on === null) {
+            return false;
+        }
+
+        if (bccomp($this->outstanding(), '0', 4) <= 0) {
+            return false;
+        }
+
+        return $this->due_on->lessThan($asOf ?? Carbon::today());
+    }
+
     /**
      * এখন কত বাকি — খতিয়ান থেকে, আলাদা কোনো কলাম থেকে নয়।
      *
@@ -103,6 +157,12 @@ class Loan extends Model implements Drillable
      *
      * দায় ক্রেডিট প্রকৃতির, তাই ডেবিট − ক্রেডিট ঋণাত্মক আসে; বকেয়া
      * হিসেবে পড়তে চিহ্নটা উল্টে দেওয়া হয়।
+     *
+     * ── দেওয়া ধারে চিহ্নটা উল্টো ────────────────────────────────────
+     * হাতধার দেওয়া হলে খাতটা সম্পদ, দায় নয়: টাকা দেওয়ার সময় ওটা
+     * ডেবিট হয়, তাই ডেবিট − ক্রেডিট এমনিতেই ধনাত্মক আসে। তখন আবার
+     * উল্টে দিলে বকেয়া ঋণাত্মক দেখাত, আর "কে কত ফেরত দেবে" তালিকায়
+     * প্রতিটা পাওনা মাইনাস চিহ্ন নিয়ে বসত।
      */
     public function outstanding(): string
     {
@@ -113,7 +173,7 @@ class Loan extends Model implements Drillable
          * তার দায় খুঁজতে হয় তার ডকুমেন্টগুলোর মধ্য দিয়ে।
          */
         $entries = LedgerEntry::query()
-            ->where('account_id', $this->liability_account_id)
+            ->where('account_id', $this->principal_account_id)
             ->where(function ($q) {
                 $q->where(function ($m) {
                     $m->where('source_type', LoanMovement::drillSourceType())
@@ -134,7 +194,7 @@ class Loan extends Model implements Drillable
             '0',
         );
 
-        return bcmul($balance, '-1', 4);
+        return $this->isGiven() ? $balance : bcmul($balance, '-1', 4);
     }
 
     /** CC-তে সীমার আর কতটা খালি। */

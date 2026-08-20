@@ -76,13 +76,13 @@
             {{-- খতিয়ানের খাতটা ক্লিকযোগ্য — নিয়ম ১: প্রতিটা সংখ্যা থেকে
                  তার উৎসে যাওয়া যাবে --}}
             <p class="num mt-1 text-2xl font-semibold">
-                <a href="{{ route('accounts.coa.show', $loan->liabilityAccount) }}"
+                <a href="{{ route('accounts.coa.show', $loan->principalAccount) }}"
                    class="text-(--color-brand-500) underline-offset-2 hover:underline">
                     {{ \App\Core\Support\Money::format($loan->outstanding()) }}
                 </a>
             </p>
             <p class="mt-2 text-2xs text-(--color-ink-muted)">
-                {{ $loan->liabilityAccount->label() }}
+                {{ $loan->principalAccount->label() }}
             </p>
         </section>
 
