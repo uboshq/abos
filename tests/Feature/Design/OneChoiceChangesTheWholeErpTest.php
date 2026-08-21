@@ -227,6 +227,64 @@ class OneChoiceChangesTheWholeErpTest extends TestCase
         $this->assertArrayHasKey('top', $seen, 'কোনো চেহারাই উপরের মেনু ব্যবহার করে না — শেলটা মৃত কোড।');
     }
 
+    /**
+     * এই পর্দার কাজগুলোও জায়গা বদলায় — পাতার ভেতরে, না নিজের পটিতে।
+     *
+     * ── কেন এটা `nav`-এর মতোই একটা আলাদা পাহারা দাবি করে ─────────────
+     * দুইটাই markup-এর সিদ্ধান্ত, আর দুইটাই একটা `@if`। `@if` ভুল হলে
+     * পাতা ভাঙে না — কেবল দুইটার একটা কখনো আঁকা হয় না, আর সেটা কেউ
+     * খেয়াল করে না যতক্ষণ না কেউ ওই চেহারাটা বাছেন।
+     *
+     * ── কেন পর্দাটা `suppliers/create` ───────────────────────────────
+     * পাহারাটার জন্য এমন একটা পাতা দরকার যেটা সত্যিই `header` স্লট
+     * ব্যবহার করে। অনেক তালিকা করে না — ওদের শিরোনাম টুলবারেই থাকে —
+     * আর ওরকম একটা পাতা ধরলে দুইটা চেহারাতেই "পটির বাইরে কিছু নেই"
+     * সত্য হত, আর পরীক্ষাটা কিছুই প্রমাণ না করেই পাশ করত।
+     */
+    public function test_the_page_actions_move_between_the_page_and_a_bar_of_their_own(): void
+    {
+        $seen = [];
+
+        foreach (Ui::keys() as $look) {
+            $this->user->forceFill(['ui' => $look])->save();
+
+            $html = (string) $this->actingAs($this->user)
+                ->get(route('supplier.create'))->getContent();
+
+            $where = Ui::commands($look);
+            $seen[$where] = true;
+
+            $this->assertContains($where, ['bar', 'inline'],
+                "চেহারা {$look}-এর commands অচেনা: {$where}");
+
+            /*
+             * `<main>`-এর আগে শিরোনামটা আছে কি না — সেটাই পুরো পার্থক্য।
+             *
+             * পটিটা `<main>`-এর বাইরে বসে বলেই সে লেখার কলামের সীমা
+             * ছাড়িয়ে পুরো চওড়া হতে পারে। ভেতরে থাকলে সে কলামের
+             * ভেতরেই আটকা, আর "পুরো-চওড়া" কথাটার মানে থাকে না।
+             */
+            $beforeMain = substr($html, 0, (int) strpos($html, '<main'));
+            $titleIsOutside = str_contains($beforeMain, '<h1');
+
+            if ($where === 'bar') {
+                $this->assertTrue($titleIsOutside,
+                    "{$look} কাজের পটি চায়, কিন্তু শিরোনামটা এখনো <main>-এর ভেতরে।");
+            } else {
+                $this->assertFalse($titleIsOutside,
+                    "{$look} পাতার ভেতরে চায়, কিন্তু শিরোনামটা <main>-এর বাইরে চলে গেছে।");
+            }
+
+            // কোনো অবস্থাতেই দুইবার নয় — একই শিরোনাম দুই জায়গায় থাকলে
+            // স্ক্রিন রিডার দুইবার পড়ত, আর চোখেও দুইবার দেখা যেত।
+            $this->assertSame(1, substr_count($html, '<h1'),
+                "{$look}-এ শিরোনামটা একবারের বেশি আঁকা হয়েছে।");
+        }
+
+        $this->assertArrayHasKey('bar', $seen, 'কোনো চেহারাই কাজের পটি ব্যবহার করে না — শাখাটা মৃত কোড।');
+        $this->assertArrayHasKey('inline', $seen, 'কোনো চেহারাই পাতার ভেতরে রাখে না।');
+    }
+
     /** বাছাইয়ের পর্দায় আটটাই দেখা যায় — একটাও লুকানো নয়। */
     public function test_the_chooser_offers_every_look(): void
     {
