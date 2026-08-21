@@ -143,15 +143,12 @@
              একটা কম্পিউটার কয়েকজন ভাগ করে ব্যবহার করেন — ডিপোতে ঠিক
              সেটাই হয়। --}}
         @if ($user)
-            <span class="hidden min-w-0 text-end lg:block">
-                <span class="block max-w-40 truncate text-sm font-medium text-(--color-topbar-ink)">
-                    {{ $user->name }}
-                </span>
-                @if ($role = $user->getRoleNames()->first())
-                    <span class="block max-w-40 truncate text-2xs text-(--color-topbar-ink-muted)">
-                        {{ __('core.role.'.$role) }}
-                    </span>
-                @endif
+            {{-- নাম ও ভূমিকা এক লাইনে, বন্ধনীতে — কোম্পানির ব্লকের মতোই।
+                 "Al-Amin Shuvo (মালিক)"। দুই লাইন হলে টপবার ৫৬px-এর
+                 নিচে নামত না, আর ওদের শেল বার ৪৪। --}}
+            <span class="hidden max-w-56 min-w-0 truncate text-end text-sm font-medium
+                         text-(--color-topbar-ink) lg:block">
+                {{ $user->name }}@if ($role = $user->getRoleNames()->first())<span class="font-normal text-(--color-topbar-ink-muted)"> ({{ __('core.role.'.$role) }})</span>@endif
             </span>
         @endif
 
