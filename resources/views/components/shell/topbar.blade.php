@@ -1,3 +1,5 @@
+@props(['menu' => []])
+
 {{--
     টপ নেভিগেশন — সেকশন ১৫.১।
 
@@ -21,6 +23,10 @@
 
 <header class="topbar sticky top-0 z-30 flex h-(--spacing-header) shrink-0 items-center gap-2
                border-b border-(--color-topbar-border) bg-(--color-topbar) px-3 md:px-5">
+
+    {{-- রূপের নিজের অংশ — Odoo-র লঞ্চার, D365-এর ওয়াফল, ইত্যাদি।
+         যে রূপের কিছু নেই তার জন্য এটা কিছুই আঁকে না। --}}
+    <x-shell.chrome region="topbar-start" :menu="$menu ?? []" />
 
     {{-- মোবাইলে সাইডবার নেই, তাই লোগোটা এখানে দেখা যায় --}}
     <img src="{{ asset('brand/adi-icon-64.png') }}" alt="ADI | ABOS"
