@@ -125,8 +125,12 @@
 
 {{-- flex-col — দুইটা সারির ক্রম CSS ঠিক করে, তাই `order-1` ও `order-2`
      কাজ করে (নিচের ব্যাখ্যা দেখুন) --}}
+{{-- দুইটা `class` অ্যাট্রিবিউট লেখা যাবে না — ব্রাউজার প্রথমটাই নেয়
+     আর দ্বিতীয়টা চুপচাপ ফেলে দেয়। একবার ঠিক এভাবেই টুলবারের জমিন
+     উধাও হয়েছিল, আর পর্দায় সেটা ধরা পড়েনি; computed value পড়ে ধরা
+     পড়েছে। নামটা তাই merge-এর ভেতরেই। --}}
 <div x-data="{ filtersOpen: {{ $hasFilters && $screenFilters->isNotEmpty() ? 'true' : 'false' }} }"
-     {{ $attributes->merge(['class' => 'flex flex-col border-b border-(--color-border) bg-(--color-toolbar)']) }}>
+     {{ $attributes->merge(['class' => 'toolbar-view flex flex-col border-b border-(--color-border) bg-(--color-toolbar)']) }}>
 
     {{--
         দৃশ্যের সারি — শিরোনাম · গোনা · ছাঁকনি · খোঁজা · সাজানো।

@@ -52,6 +52,9 @@ PART_URL = {
     # পেজার কেবল একাধিক পাতা থাকলে আঁকা হয় — তিনটা সরবরাহকারীতে
     # হয় না। খাতার তালিকায় পঁয়ষট্টিটা সারি, তাই ওখানে প্রমাণ হয়।
     "dynamic": {"process-bar": "|/purchase/orders"},
+    "tiles": {"launchpad": "|/purchase/orders",
+              "tile-kpi": "|/purchase/orders",
+              },
     "classic": {"stage-strip": "|/purchase/orders",
                 "kpi-strip": "|/purchase/orders"},
 }
@@ -102,20 +105,24 @@ PARTS = {
     "tiles": [
         ("shell-bar", "[data-shell-bar]",
          "৪৪px শেল বার — বাঁয়ে হ্যামবার্গার, মাঝে শিরোনাম ও উপশিরোনাম"),
-        ("launchpad", "[data-launchpad]",
-         "কাজের টালির পাতা — প্রতিটায় সংখ্যা"),
-        ("tile-kpi", "[data-tile-kpi]",
-         "টালির ভেতরে বড় হালকা সংখ্যা, রং কেবল অবস্থায়"),
-        ("filter-bar", "[data-filter-bar]",
-         "সাদা ছাঁকনির পটি — চিপ ও Adapt Filters"),
-        ("list-report", "[data-list-report]",
+        # ধাপগুলো এখানে আলাদা টালি — জোড়া পটি নয়। একই কম্পোনেন্ট,
+        # ভিন্ন চেহারা, তাই প্রমাণটা computed style ধরে।
+        ("launchpad", ".stage-strip", "gap", "8px",
+         "কাজের টালির পাতা — ঘরগুলোর মাঝে ফাঁক"),
+        ("tile-kpi", ".stage-strip .stage", "border-radius", "4px",
+         "প্রতিটা টালির নিজের ধার ও গোল কোণ"),
+        # বাকিগুলো markup নয়, স্টাইল — তাই প্রমাণ computed value ধরে।
+        # এলিমেন্ট-যাচাই করলে একটা খালি `data-` চিহ্নেই পাশ করা যেত।
+        ("filter-bar", ".toolbar-view", "background-color", "rgb(255, 255, 255)",
+         "সাদা ছাঁকনির পটি — ফিওরিতে টুলবার কার্ডের সাদা"),
+        ("list-report", ".ui-list", "border-collapse", "collapse",
          "কার্ডে ঘেরা তালিকা — শিরোনাম, গোনা, বোতাম"),
-        ("fiori-buttons", "[data-fiori-button]",
-         "রেখা-টানা নীল বোতাম, ভরাটটা কেবল প্রধান কাজে"),
-        ("status-dot", "[data-status-dot]",
-         "অবস্থা = ফোঁটা + লেখা, ব্যাজ নয়"),
-        ("footer-bar", "[data-fiori-footer]",
-         "ফিওরির নিচের বার — ডানে প্রধান কাজ"),
+        ("fiori-buttons", ".cmd-actions a, .cmd-actions button", "border-radius", "4px",
+         "রেখা-টানা বোতাম, ফিওরির ৪px কোণে"),
+        ("status-dot", "[data-state-pill]", "background-color", "rgba(0, 0, 0, 0)",
+         "অবস্থা = রঙিন ফোঁটা + একই রঙের লেখা, ভরাট পিল নয়"),
+        ("footer-bar", "[data-footer]", "background-color", "rgb(245, 246, 247)",
+         "ফিওরির নিচের বার — শেলের ধূসরে"),
     ],
 
     # ─────────────────────────────────────────────────────────────────

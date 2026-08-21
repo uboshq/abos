@@ -4,7 +4,7 @@
 সারি থাকা পর্দায় দেখা হয় (`/suppliers`), খালি পাতায় নয়: খালি তালিকা
 কেবল খালি পথটাই প্রমাণ করে।
 """
-import importlib.util, io, os, subprocess, sys, pathlib
+import importlib.util, io, os, re, subprocess, sys, pathlib
 
 # বাংলা লেখা উইন্ডোজের কনসোলে — cp1252 ওগুলো লিখতে পারে না
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
@@ -56,6 +56,36 @@ SPEC = {
 }
 NAV = {"classic":"top","tiles":"top","suite":"top","apps":"top",
        "dynamic":"rail","redwood":"rail","rose":"rail","navy":"rail"}
+
+
+def same_colour(got, want):
+    """রঙের দুইটা লেখা এক জিনিস বোঝাচ্ছে কি না।
+
+    ── কেন এটা লাগল ───────────────────────────────────────────────────
+    `color-mix()` ব্যবহার করলে ব্রাউজার computed value দেয়
+    `color(srgb 0 0 0 / 0)` রূপে, আর সাধারণ রঙে দেয় `rgba(0, 0, 0, 0)`।
+    দুইটা **একই রং**, কেবল লেখার ধরন আলাদা।
+
+    অক্ষরে অক্ষরে মেলালে ওটা "গরমিল" বলত — আর সেটা মিথ্যা রায়: জিনিসটা
+    ঠিকই আছে, যাচাই বুঝতে পারছে না। তাই সংখ্যায় নামিয়ে মেলানো হয়।
+    """
+    def nums(v):
+        return [round(float(x), 3) for x in re.findall(r"[\d.]+", v)]
+
+    a, b = nums(got), nums(want)
+    if len(a) == 3:
+        a.append(1.0)
+    if len(b) == 3:
+        b.append(1.0)
+    # srgb রূপে মান ০–১, rgb রূপে ০–২৫৫ — দুইটাকেই ০–১-এ আনা
+    if "srgb" in got:
+        a = [round(x * 255, 0) if i < 3 else x for i, x in enumerate(a)]
+    if "srgb" in want:
+        b = [round(x * 255, 0) if i < 3 else x for i, x in enumerate(b)]
+    # সম্পূর্ণ স্বচ্ছ হলে রং অর্থহীন
+    if len(a) == 4 and len(b) == 4 and a[3] == 0 and b[3] == 0:
+        return True
+    return a == b
 
 
 def norm(v):
@@ -144,7 +174,8 @@ with sync_playwright() as p:
                 got = pg.evaluate(
                     "a => { const e = document.querySelector(a[0]);"
                     " return e ? getComputedStyle(e)[a[1]] : 'নেই'; }", [sel, prop])
-                ok = got == want
+                ok = got == want or (
+                    ("rgb" in want or "color(" in want) and same_colour(got, want))
             if not ok:
                 missing_parts += 1
                 print("           %-15s %-22s — %s" % (name, got, why))
