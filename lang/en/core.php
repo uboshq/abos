@@ -202,6 +202,7 @@ return [
        not labels. A colleague says "go to Apps" on the phone, and both
        ends need to hear the same word. */
     'ui' => [
+        'area_switch' => 'Change area',
         'launcher' => 'Pick an app',
         'launcher_search' => 'Search apps…',
         'classic' => 'Classic',
@@ -249,6 +250,7 @@ return [
     ],
 
     'table' => [
+        'range' => ':from - :to of :total',
         'page_total' => 'This page',
         'code' => 'Code',
         'name' => 'Name',

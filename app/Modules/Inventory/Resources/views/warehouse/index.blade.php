@@ -51,8 +51,6 @@
             :compact="request()->boolean('compact')"
             :columns="$columns" />
 
-        @if ($warehouses->hasPages())
-            <div class="border-t border-(--color-border) px-3 py-2">{{ $warehouses->links() }}</div>
-        @endif
+        <x-ui.pager :rows="$warehouses" />
     </div>
 </x-layouts.app>

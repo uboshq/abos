@@ -223,6 +223,7 @@ return [
      * খোঁজার সময়ও মিলত না।
      */
     'ui' => [
+        'area_switch' => 'এলাকা বদলান',
         'launcher' => 'অ্যাপ বাছুন',
         'launcher_search' => 'অ্যাপ খুঁজুন…',
         'classic' => 'Classic',
@@ -276,6 +277,7 @@ return [
     ],
 
     'table' => [
+        'range' => ':from - :to / :total',
         'page_total' => 'এই পাতায়',
         'code' => 'কোড',
         'name' => 'নাম',

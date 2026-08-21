@@ -86,8 +86,6 @@
             :compact="request()->boolean('compact')"
             :columns="$columns" />
 
-        @if ($collections->hasPages())
-            <div class="border-t border-(--color-border) px-3 py-2">{{ $collections->links() }}</div>
-        @endif
+        <x-ui.pager :rows="$collections" />
     </div>
 </x-layouts.app>

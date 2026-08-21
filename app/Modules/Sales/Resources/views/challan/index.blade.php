@@ -86,8 +86,6 @@
             :compact="request()->boolean('compact')"
             :columns="$columns" />
 
-        @if ($challans->hasPages())
-            <div class="border-t border-(--color-border) px-3 py-2">{{ $challans->links() }}</div>
-        @endif
+        <x-ui.pager :rows="$challans" />
     </div>
 </x-layouts.app>

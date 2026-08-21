@@ -71,6 +71,11 @@
                     {{ __('purchase::action.show_cancelled') }}
                 </label>
             </x-ui.toolbar>
+
+            {{-- ধাপের স্ট্রিপ — কয়টা কোথায় আটকে, আর কত টাকার।
+                 কোন রূপে কেমন দেখাবে সেটা CSS ঠিক করে: D365-এ শেভরন,
+                 খতিয়ানে চৌকো ঘর। কথাটা সব রূপেই এক। --}}
+            <x-ui.stage-strip :stages="$stages" class="m-3" />
         </form>
 
         <x-ui.table
@@ -79,8 +84,6 @@
             :compact="request()->boolean('compact')"
             :columns="$columns" />
 
-        @if ($orders->hasPages())
-            <div class="border-t border-(--color-border) px-3 py-2">{{ $orders->links() }}</div>
-        @endif
+        <x-ui.pager :rows="$orders" />
     </div>
 </x-layouts.app>

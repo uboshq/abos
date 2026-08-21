@@ -96,8 +96,6 @@
             :rows="$trails"
             :columns="$columns" />
 
-        @if ($trails->hasPages())
-            <div class="border-t border-(--color-border) px-3 py-2">{{ $trails->links() }}</div>
-        @endif
+        <x-ui.pager :rows="$trails" />
     </div>
 </x-layouts.app>

@@ -63,8 +63,6 @@
             :rows="$vouchers"
             :columns="$columns" />
 
-        @if ($vouchers->hasPages())
-            <div class="border-t border-(--color-border) px-3 py-2">{{ $vouchers->links() }}</div>
-        @endif
+        <x-ui.pager :rows="$vouchers" />
     </div>
 </x-layouts.app>

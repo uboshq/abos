@@ -98,10 +98,6 @@
             :grid="request('view') === 'grid'"
             :columns="$columns" />
 
-        @if ($suppliers->hasPages())
-            <div class="border-t border-(--color-border) px-3 py-2">
-                {{ $suppliers->links() }}
-            </div>
-        @endif
+        <x-ui.pager :rows="$suppliers" />
     </div>
 </x-layouts.app>

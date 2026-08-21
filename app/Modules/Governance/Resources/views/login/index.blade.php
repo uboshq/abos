@@ -115,7 +115,5 @@
         @endif
     </div>
 
-    @if ($rows->hasPages())
-        <div class="mt-4">{{ $rows->links() }}</div>
-    @endif
+    <x-ui.pager :rows="$rows" />
 </x-layouts.app>

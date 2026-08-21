@@ -54,8 +54,6 @@
             :rows="$counts"
             :columns="$columns" />
 
-        @if ($counts->hasPages())
-            <div class="border-t border-(--color-border) px-3 py-2">{{ $counts->links() }}</div>
-        @endif
+        <x-ui.pager :rows="$counts" />
     </div>
 </x-layouts.app>

@@ -46,6 +46,14 @@
 # খালি তালিকা কেবল খালি পথটাই প্রমাণ করে।
 PART_URL = {
     "apps": {"facet-chips": "?type=distributor"},
+
+    # ধাপের স্ট্রিপ তালিকার সারাংশ — সরবরাহকারীর কোনো ধাপ নেই, ক্রয়
+    # আদেশের আছে। ভুল পাতায় খুঁজলে "নেই" আসত, আর সেটা মিথ্যা রায় হত।
+    # পেজার কেবল একাধিক পাতা থাকলে আঁকা হয় — তিনটা সরবরাহকারীতে
+    # হয় না। খাতার তালিকায় পঁয়ষট্টিটা সারি, তাই ওখানে প্রমাণ হয়।
+    "dynamic": {"process-bar": "|/purchase/orders"},
+    "classic": {"stage-strip": "|/purchase/orders",
+                "kpi-strip": "|/purchase/orders"},
 }
 
 # দুই রকম সারি:
@@ -142,13 +150,13 @@ PARTS = {
          "প্যানেলের **একদম নিচে** এলাকা বদলের বোতাম"),
         ("command-bar", "[data-command-bar]",
          "আইকনসহ সরু কমান্ড বার, ভাগ করা"),
+        ("process-bar", "[data-stage-strip]",
+         "শেভরন — কোন ধাপে কতটা, done/now/bad"),
         ("view-selector", "[data-view-selector]",
          "তালিকার নামটাই একটা ড্রপডাউন"),
         ("quick-find", "[data-quick-find]",
          "ডানে চৌকো Quick find ঘর"),
-        ("process-bar", "[data-process-bar]",
-         "শেভরন — কোন ধাপে কতটা, done/now/bad"),
-        ("pager", "[data-d365-pager]",
+        ("pager", "[data-pager]",
          "নিচে ১-৩/৩ সহ পাতার তীর"),
     ],
 

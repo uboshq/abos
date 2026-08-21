@@ -39,8 +39,6 @@
                  'render' => fn ($a) => view('approval::inbox.partials.open', ['approval' => $a])],
             ]" />
 
-        @if ($approvals->hasPages())
-            <div class="border-t border-(--color-border) px-3 py-2">{{ $approvals->links() }}</div>
-        @endif
+        <x-ui.pager :rows="$approvals" />
     </div>
 </x-layouts.app>

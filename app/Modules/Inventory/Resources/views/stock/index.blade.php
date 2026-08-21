@@ -159,8 +159,6 @@
             :columns="$columns"
             :totals="$totals" />
 
-        @if ($products->hasPages())
-            <div class="border-t border-(--color-border) px-3 py-2">{{ $products->links() }}</div>
-        @endif
+        <x-ui.pager :rows="$products" />
     </div>
 </x-layouts.app>
