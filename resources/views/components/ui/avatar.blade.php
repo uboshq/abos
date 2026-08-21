@@ -25,11 +25,11 @@
     <img src="{{ $url }}" alt=""
          {{ $attributes->class([$classes, 'shrink-0 rounded-full object-cover']) }}>
 @else
-    <span aria-hidden="true"
+    <span aria-hidden="true" data-avatar
           {{ $attributes->class([
               $classes,
               'flex shrink-0 items-center justify-center rounded-full',
-              'bg-(--color-brand-700) font-semibold text-(--color-ink-inverse)',
+              'bg-(--color-avatar) font-semibold text-(--color-avatar-ink)',
           ]) }}>
         {{ $user?->initial() ?? '?' }}
     </span>

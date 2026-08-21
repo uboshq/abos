@@ -330,6 +330,19 @@
     --color-topnav-selected: #f3edf2;
     --color-toolbar: #ffffff;
 
+    /* ওডুর অ্যাভাটার উল্টো — সাদা চাকতি, বেগুনি অক্ষর */
+    --color-avatar: #f5eff3;
+    --color-avatar-ink: #714b67;
+
+    /* ওডুর কলাম-শিরোনাম: ছোট, বড়-হাতের, ফাঁক দেওয়া */
+    --table-head-transform: uppercase;
+    --table-head-spacing: 0.05em;
+
+    /* ওডুর ফুটার নেই — আমাদেরটা যতটা সম্ভব নিঃশব্দ */
+    --color-footer: #fbf9fb;
+    --color-footer-ink: #8a7f90;
+    --color-footer-border: #e5dee3;
+
     --color-sidebar: #714b67;
     --color-sidebar-panel: #fbf9fb;
     --color-sidebar-hover: #8a5e7e;

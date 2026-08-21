@@ -379,6 +379,33 @@
 
     --color-toolbar: var(--color-surface-card);
 
+    /* অ্যাভাটার — ছবি না থাকলে অক্ষরের চাকতি।
+
+       আগে `--color-brand-700` হার্ডকোড ছিল, তাই ওটা সবসময় অ্যাকসেন্টের
+       গাঢ় ধাপ হত। ওডুতে অ্যাভাটার **সাদা চাকতি, বেগুনি অক্ষর** — উল্টো।
+       রূপ ঠিক করতে পারলেই সেটা সম্ভব। */
+    --color-avatar: var(--color-brand-700);
+    --color-avatar-ink: var(--color-ink-inverse);
+
+    /* ফুটার (স্ট্যাটাস বার)।
+
+       ── কেন এর কথাগুলো রূপ ধরে বদলায় না ──────────────────────────
+       আসল ERP-গুলোর ফুটারে অর্থবছর বা "দুই দিন ব্যাকআপ হয়নি" লেখা
+       নেই। আমাদের আছে, আর সেটা থাকবে: একটা ডিপো যেদিন ডিস্ক হারায়,
+       ওই লাইনটাই একমাত্র আগাম সতর্কতা ছিল।
+
+       রূপ বদলায় তার **চেহারা** — জমিন, কালি, ধার। কথাগুলো নয়। */
+    --color-footer: var(--color-surface-card);
+    --color-footer-ink: var(--color-ink-muted);
+    --color-footer-border: var(--color-border);
+
+    /* ছকের শিরোনামের অক্ষর।
+
+       ওডুতে কলামের নাম ছোট, বড়-হাতের, ফাঁক দেওয়া — ওটাই তার ছকের
+       সবচেয়ে চেনা চিহ্ন। বাকি রূপে সাধারণ, তাই ডিফল্ট `none`। */
+    --table-head-transform: none;
+    --table-head-spacing: 0;
+
     --color-table-head: var(--color-surface-app);
     --color-table-head-ink: var(--color-ink-muted);
 

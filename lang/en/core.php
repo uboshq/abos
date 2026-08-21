@@ -379,6 +379,7 @@ return [
     'no' => 'No',
 
     'toolbar' => [
+        'remove_filter' => 'Remove this filter',
         'columns' => 'Columns',
         'columns_note' => 'Untick them all and the table shows every column — an empty table helps nobody.',
         'export' => 'Export',
