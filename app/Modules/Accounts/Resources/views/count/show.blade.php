@@ -13,6 +13,20 @@
         সারিগুলো মান হিসেবে ঘোরে — চাবিটা হারিয়ে যেত। তাই আগে
         সারিগুলোকে অ্যারের তালিকা করে নেওয়া হয়।
     */
+    /*
+        নোটগুলো মডেল থেকে, কন্ট্রোলার থেকে নয়।
+
+        ── কী ভেঙেছিল ─────────────────────────────────────────────
+        কলামগুলো উপরে তোলার সময় এখানে `$notes` লেখা হয়েছিল, ধরে
+        নিয়ে যে ভেরিয়েবলটা আসে। কিন্তু ওটা আসত না — `count.show`
+        কন্ট্রোলার থেকে কেবল `$count` পায়, আর আগের লেখায় নোটগুলো
+        টেবিলের ঠিক উপরে `$count->countedNotes()` থেকে নেওয়া হত।
+
+        পাতাটা তাই ৫০০ দিত — অথচ কেবল **অনুমোদনের পরে**, যখন
+        গণনাটা সত্যিই খোলা হয়। খালি অবস্থায় নয়।
+    */
+    $notes = $count->countedNotes();
+
     $noteRows = collect($notes)
         ->map(fn ($qty, $note) => ['note' => $note, 'qty' => $qty])
         ->values();
@@ -113,8 +127,6 @@
             <h2 class="border-b border-(--color-border) px-4 py-3 font-semibold">
                 {{ __('accounts::section.notes') }}
             </h2>
-
-            @php $notes = $count->countedNotes() @endphp
 
             @if ($notes === [])
                 <x-ui.empty-state :message="__('accounts::message.no_notes_recorded')" />
