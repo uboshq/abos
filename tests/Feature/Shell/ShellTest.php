@@ -313,10 +313,29 @@ class ShellTest extends TestCase
         $this->assertGreaterThan((int) $h[1], (int) $p[1],
             'প্লেটটা টপবারের সমান বা ছোট — লকআপটা আবার কোণে চেপে বসবে।');
 
-        // রং দুইটাই এক
-        foreach ([$sidebar, $topbar] as $markup) {
-            $this->assertStringContainsString('bg-(--color-surface-card)', $markup);
-        }
+        /*
+         * রং দুইটাই এক — কিন্তু নামটা আর এক নয়।
+         *
+         * ── কী বদলেছে, আর কেন দাবিটাও বদলাতে হল ──────────────────────
+         * টপবার এখন `--color-topbar` পরে, `--color-surface-card` নয়।
+         * কারণ আটটা চেহারার পাঁচটার পরিচয় ওই উপরের বারেই থাকে —
+         * Odoo-র বেগুনি, Fiori-র নীলচে-ধূসর, Redwood-এর প্রায়-কালো।
+         * বারটা কার্ডের সাদায় বাঁধা থাকলে নকলগুলো চেনা যেত না।
+         *
+         * পরীক্ষাটার আসল দাবি ছিল **"উপরের-বাঁ কোণটা এক পাটাতন"** —
+         * প্লেট আর বার একই রঙে। ক্লাসিকে সেটা এখনো সত্য, কারণ
+         * `--color-topbar`-এর ডিফল্ট হুবহু `var(--color-surface-card)`।
+         *
+         * তাই দাবিটা এখানে দুই ভাগে: বারটা টোকেন পরে (স্থির রং নয়),
+         * আর ক্লাসিকে সেই টোকেনটা প্লেটের রঙেই দেখায়।
+         */
+        $this->assertStringContainsString('bg-(--color-surface-card)', $sidebar);
+        $this->assertStringContainsString('bg-(--color-topbar)', $topbar);
+
+        $this->assertMatchesRegularExpression(
+            '/--color-topbar:\s*var\(--color-surface-card\)/', (string) $tokens,
+            'ক্লাসিকে টপবার আর ব্র্যান্ড প্লেট আলাদা রঙে বসছে — কোণটা দুই পাটাতন।',
+        );
     }
 
     public function test_the_full_product_name_is_never_shown_clipped(): void
