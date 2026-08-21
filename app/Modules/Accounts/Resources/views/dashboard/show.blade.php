@@ -107,7 +107,7 @@
         {{-- কার কাছে কত — ড্যাশবোর্ডে এই প্রশ্নটাই সবচেয়ে বেশি করা হয় --}}
         <section class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card) lg:col-span-2">
-            <h2 class="border-b border-(--color-border) px-4 py-3 font-semibold">
+            <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-3 font-semibold">
                 {{ __('accounts::menu.cash_tills') }}
             </h2>
 

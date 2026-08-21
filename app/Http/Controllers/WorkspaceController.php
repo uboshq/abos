@@ -174,8 +174,35 @@ class WorkspaceController extends Controller
              * ফেলো" নয়।
              */
             'ui' => ['sometimes', 'string', Rule::in(Ui::keys())],
+            /*
+             * রূপের সাথে রং — বাক্সে টিক থাকলে।
+             *
+             * ── কেন এটা চেকবক্স, চুপচাপ নয় ───────────────────────────
+             * প্রতিটা রূপের একটা মানানসই রং আছে (Odoo-র বেগুনি,
+             * ক্লাসিকের অ্যাম্বার)। চুপচাপ বসিয়ে দিলে যিনি ইচ্ছে করে
+             * সবুজ বেছে রেখেছিলেন, রূপ বদলানোর পর তাঁর সবুজ হারিয়ে
+             * যেত — আর কেন, তা কোথাও লেখা থাকত না।
+             *
+             * তাই বাছাইটা দৃশ্যমান: বাক্সে টিক থাকলে রূপের নিজের রং
+             * বসে, টিক তুললে আপনার রংই থাকে।
+             */
+            'match_accent' => ['sometimes', 'boolean'],
             'locale' => ['required', 'string', 'in:bn,en'],
         ]);
+
+        /*
+         * রূপের রং বসানোর কাজটা যাচাইয়ের পরে, সেভের আগে।
+         *
+         * `match_accent` নিজে কোনো কলাম নয় — ওটা একটা নির্দেশ, তাই
+         * বাদ দিয়ে তার ফলটা `accent`-এ লেখা হয়। নাহলে Eloquent
+         * অস্তিত্বহীন একটা কলামে লিখতে গিয়ে ভাঙত।
+         */
+        $matchAccent = (bool) ($validated['match_accent'] ?? false);
+        unset($validated['match_accent']);
+
+        if ($matchAccent && isset($validated['ui'])) {
+            $validated['accent'] = Ui::accent($validated['ui']);
+        }
 
         $request->user()->forceFill($validated)->save();
 

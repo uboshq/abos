@@ -97,7 +97,7 @@
         @forelse ($fields as $entity => $rows)
             <section class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                             bg-(--color-surface-card)">
-                <h2 class="border-b border-(--color-border) px-4 py-3 font-semibold">
+                <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-3 font-semibold">
                     {{ __('core.source.'.$entity) }}
                 </h2>
 

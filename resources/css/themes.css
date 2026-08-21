@@ -53,6 +53,7 @@
     --color-surface-hover: #fdf3df;    /* --hover */
     --color-surface-selected: #f5f2ec; /* --strip */
     --color-toolbar: #f5f2ec;          /* --strip */
+    --color-section-head: #efebe2;     /* --boxh */
 
     /* অবস্থার রং — নমুনার --ok/--warn/--bad আর তাদের জমিন।
 
@@ -139,375 +140,523 @@
 /* ─────────────────────────────────────────────────────────────────
    Tiles — SAP Fiori 3.
 
-   ফিওরির চিহ্ন তিনটা: গাঢ় নীলচে-ধূসর শেল বার, ঠান্ডা ধূসর জমিন, আর
-   সাদা টাইল। ধার সামান্য — ৪px ঘরে, ৮px টাইলে; ফিওরি গোল নয়, শান্ত।
+   নমুনার `.t-tiles` থেকে হুবহু। ফিওরির চিহ্ন: গাঢ় নীলচে-ধূসর শেল বার,
+   ঠান্ডা ধূসর জমিন, সাদা টাইল, আর সারি ৩২px — মাঝারি ঘনত্ব।
+   
+   আগের লেখায় সারি ৪৪px ছিল, অর্থাৎ ফিওরির চেয়ে এক-তৃতীয়াংশ বেশি
+   জায়গা নিত। রংগুলো ঠিক ছিল, ঘনত্বটা ছিল না।
    ───────────────────────────────────────────────────────────────── */
 [data-ui='tiles'] {
     --color-surface-app: #f5f6f7;
     --color-surface-card: #ffffff;
-    --color-surface-muted: #eaecee;
-    --color-surface-sunken: #eaecee;
-    --color-surface-hover: #ebf5fe;
-    --color-surface-selected: #e3f0fc;
-    --color-border: #d9d9d9;
-    --color-border-strong: #b3b3b3;
+    --color-surface-muted: #f5f6f7;
+    --color-surface-sunken: #f5f6f7;
+    --color-surface-hover: #eaf2fb;
+    --color-surface-selected: #eaf2fb;
+    --color-border: #e5e5e5;
+    --color-border-strong: #c8cdd3;
 
     --color-ink: #32363a;
     --color-ink-body: #32363a;
     --color-ink-muted: #6a6d70;
+    --color-link: #0a6ed1;
 
-    --color-sidebar: #354a5f;
+    --color-table-head: #f5f6f7;
+    --color-table-head-ink: #6a6d70;
+    --color-cell-line: transparent;
+
     --color-topbar: #354a5f;
-    --color-topnav: #ffffff;
-    --color-topnav-ink: #32363a;
-    --color-topnav-ink-muted: #6a6d70;
-    --color-topnav-border: #d9d9d9;
-    --color-topnav-hover: #ebf5fe;
-    --color-topnav-selected: #e3f0fc;
-
     --color-topbar-ink: #ffffff;
     --color-topbar-ink-muted: #c8d4de;
     --color-topbar-border: #2b3c4d;
     --color-topbar-hover: #46617c;
     --color-topbar-field: #2b3c4d;
 
-    --color-sidebar-panel: #eef0f2;
+    --color-topnav: #ffffff;
+    --color-topnav-ink: #32363a;
+    --color-topnav-ink-muted: #6a6d70;
+    --color-topnav-border: #e5e5e5;
+    --color-topnav-hover: #eaf2fb;
+    --color-topnav-selected: #eaf2fb;
+    --color-toolbar: #ffffff;
+
+    --color-sidebar: #354a5f;
+    --color-sidebar-panel: #f5f6f7;
     --color-sidebar-hover: #46617c;
     --color-sidebar-active: #0a6ed1;
     --color-sidebar-border: #2b3c4d;
     --color-sidebar-icon: #d9e2ea;
 
+    --color-badge-success-bg: #e8f5ec;
+    --color-badge-success-ink: #107e3e;
+    --color-badge-pending-bg: #fdf0e3;
+    --color-badge-pending-ink: #b45c07;     /* #E9730C সাদায় ৩.১, তাই এক ধাপ গাঢ় */
+    --color-badge-warning-bg: #fdf0e3;
+    --color-badge-warning-ink: #b45c07;
+    --color-badge-danger-bg: #fbe6e6;
+    --color-badge-danger-ink: #bb0000;
+    --color-state-on: #107e3e;
+
     --radius-field: 4px;
-    --radius-card: 8px;
+    --radius-card: 4px;
     --radius-badge: 4px;
+    --radius-pill: 4px;
 
-    --row-height: 44px;
-    --row-height-dense: 36px;
+    --row-height: 32px;
+    --row-height-dense: 28px;
     --grid-pad-x: 12px;
-    --grid-pad-y: 8px;
-
-    /* ফিওরির শেল বার সরু — ৪৪px, বরাবরই */
+    --grid-pad-y: 7px;
+    --font-size-table: 13px;
     --spacing-header: 56px;
 }
 
 /* ─────────────────────────────────────────────────────────────────
    Suite — Oracle NetSuite.
 
-   নেটস্যুটের পরিচয় ঘনত্ব। কোনাগুলো প্রায় কাটা (২px), সারি ছোট, আর
-   এক পর্দায় যতটা সম্ভব ঢোকানো হয় — যাঁরা সারাদিন এতে কাজ করেন তাঁরা
-   ঠিক এটার জন্যই একে বেছে নেন।
+   নমুনার `.t-suite` থেকে হুবহু, আর আগের লেখাটা এখানে **পুরো ভুল** ছিল:
+   NetSuite-এর ব্রান্ড-সবুজ (#125740) ধরা হয়েছিল, অথচ ওদের পর্দার
+   চিহ্ন নেভি হেডার (#2E4B6B) আর তার নিচে ক্যারেটওয়ালা মেনু (#3C5F84)।
+   
+   আটটার মধ্যে ঘনত্বে দ্বিতীয়: সারি ২৪px, হরফ ১১px।
    ───────────────────────────────────────────────────────────────── */
 [data-ui='suite'] {
-    --color-surface-app: #f2f2f2;
+    --color-surface-app: #f0f0f0;
     --color-surface-card: #ffffff;
-    --color-surface-muted: #e8e8e8;
-    --color-surface-sunken: #e8e8e8;
-    --color-surface-hover: #eef5f2;
-    --color-surface-selected: #dcece5;
-    --color-border: #c8c8c8;
-    --color-border-strong: #9c9c9c;
+    --color-surface-muted: #e4e9ee;
+    --color-surface-sunken: #e4e9ee;
+    --color-surface-hover: #fff8dc;
+    --color-surface-selected: #d9e1e9;
+    --color-border: #c3ccd5;
+    --color-border-strong: #a9b6c2;
 
-    --color-ink: #1f2b28;
-    --color-ink-body: #2f3b38;
-    --color-ink-muted: #5e6b67;
+    --color-ink: #333333;
+    --color-ink-body: #333333;
+    --color-ink-muted: #666666;
+    --color-link: #1b62a5;
 
-    --color-sidebar: #1f2b28;
-    --color-topbar: #1f2b28;
-    --color-topnav: #2f3b38;
-    --color-topnav-ink: #ffffff;
-    --color-topnav-ink-muted: #c2cec9;
-    --color-topnav-border: #16201e;
-    --color-topnav-hover: #3f4f4a;
-    --color-topnav-selected: #125740;
+    --color-table-head: #d9e1e9;
+    --color-table-head-ink: #22303f;
+    --color-row-alt: #f5f7f9;
+    --color-cell-line: #edeff2;
 
+    --color-topbar: #2e4b6b;
     --color-topbar-ink: #ffffff;
-    --color-topbar-ink-muted: #c2cec9;
-    --color-topbar-border: #16201e;
-    --color-topbar-hover: #33413d;
-    --color-topbar-field: #16201e;
+    --color-topbar-ink-muted: #c6d4e2;
+    --color-topbar-border: #24405e;
+    --color-topbar-hover: #4e7ba6;
+    --color-topbar-field: #24405e;
 
-    --color-sidebar-panel: #eaeaea;
-    --color-sidebar-hover: #33413d;
-    --color-sidebar-active: #125740;
-    --color-sidebar-border: #16201e;
-    --color-sidebar-icon: #cfdad6;
+    --color-topnav: #3c5f84;
+    --color-topnav-ink: #2e4b6b;
+    --color-topnav-ink-muted: #eaf0f6;
+    --color-topnav-border: #24405e;
+    --color-topnav-hover: #4e7ba6;
+    --color-topnav-selected: #f0f0f0;
+    --color-toolbar: #e4e9ee;
+
+    --color-sidebar: #2e4b6b;
+    --color-sidebar-panel: #e4e9ee;
+    --color-sidebar-hover: #4e7ba6;
+    --color-sidebar-active: #1b62a5;
+    --color-sidebar-border: #24405e;
+    --color-sidebar-icon: #d9e1e9;
+
+    --color-badge-success-bg: #e6f2ea;
+    --color-badge-success-ink: #1a7a3c;
+    --color-badge-pending-bg: #fbf2df;
+    --color-badge-pending-ink: #9a6100;
+    --color-badge-warning-bg: #fbf2df;
+    --color-badge-warning-ink: #9a6100;
+    --color-badge-danger-bg: #f8e8e6;
+    --color-badge-danger-ink: #b02a1b;
+    --color-state-on: #1a7a3c;
 
     --radius-field: 2px;
-    --radius-card: 2px;
+    --radius-card: 0;
     --radius-badge: 2px;
+    --radius-pill: 2px;
 
-    --row-height: 32px;
-    --row-height-dense: 28px;
+    --row-height: 24px;
+    --row-height-dense: 22px;
     --grid-pad-x: 8px;
-    --grid-pad-y: 4px;
-    --grid-pad-y-tight: 3px;
+    --grid-pad-y: 3px;
+    --grid-pad-y-head: 4px;
     --lines-pad: 6px;
-    --lines-pad-input: 3px;
+    --lines-pad-input: 2px;
+    --font-size-table: 11px;
     --spacing-header: 56px;
 }
 
 /* ─────────────────────────────────────────────────────────────────
    Apps — Odoo.
 
-   ওডুর বেগুনি (#714b67) গোটা সফটওয়্যারের পরিচয়। তালিকা খোলা, ধার
-   নরম কিন্তু ছোট, আর জমিনটা প্রায় সাদা — ওডু ছায়া দিয়ে নয়, ফাঁকা
-   জায়গা দিয়ে আলাদা করে।
+   নমুনার `.t-odoo` থেকে হুবহু। বেগুনি বারটা (#714B67) ঠিক ছিল, বাকিটা
+   নয়: কালি ছিল ধূসর-নীল (#374151), অথচ ওডুর কালি প্রায় কালো-বেগুনি
+   (#1F1B24), আর ম্লান রংটাও বেগুনি-ঘেঁষা (#8A7F90) — ধূসর নয়।
+   
+   সারি ৪৪px, কিন্তু মাথা সরু: ওডুর ছক খোলা, অথচ তার শিরোনাম ছোট।
    ───────────────────────────────────────────────────────────────── */
 [data-ui='apps'] {
-    --color-surface-app: #f9f9f9;
+    --color-surface-app: #ffffff;
     --color-surface-card: #ffffff;
-    --color-surface-muted: #f0f0f0;
-    --color-surface-sunken: #f0f0f0;
-    --color-surface-hover: #f3eef2;
-    --color-surface-selected: #ece3ea;
-    --color-border: #dee2e6;
-    --color-border-strong: #b9c0c7;
+    --color-surface-muted: #fbf9fb;
+    --color-surface-sunken: #ffffff;
+    --color-surface-hover: #fbf9fb;
+    --color-surface-selected: #f3edf2;
+    --color-border: #e5dee3;
+    --color-border-strong: #dfcfda;
 
-    --color-ink: #374151;
-    --color-ink-body: #4b5563;
-    --color-ink-muted: #6b7280;
+    --color-ink: #1f1b24;
+    --color-ink-body: #1f1b24;
+    --color-ink-muted: #8a7f90;
+    --color-link: #5b3c54;
 
-    --color-sidebar: #714b67;
+    --color-table-head: #ffffff;
+    --color-table-head-ink: #8a7f90;
+    --color-cell-line: transparent;
+
     --color-topbar: #714b67;
-    --color-topnav: #ffffff;
-    --color-topnav-ink: #374151;
-    --color-topnav-ink-muted: #6b7280;
-    --color-topnav-border: #dee2e6;
-    --color-topnav-hover: #f3eef2;
-    --color-topnav-selected: #ece3ea;
-
-    --color-topbar-ink: #ffffff;
+    --color-topbar-ink: #f5eff3;
     --color-topbar-ink-muted: #e0cfda;
     --color-topbar-border: #5c3d53;
     --color-topbar-hover: #8a5e7e;
     --color-topbar-field: #5c3d53;
 
-    --color-sidebar-panel: #f3eef2;
+    --color-topnav: #ffffff;
+    --color-topnav-ink: #1f1b24;
+    --color-topnav-ink-muted: #8a7f90;
+    --color-topnav-border: #e5dee3;
+    --color-topnav-hover: #fbf9fb;
+    --color-topnav-selected: #f3edf2;
+    --color-toolbar: #ffffff;
+
+    --color-sidebar: #714b67;
+    --color-sidebar-panel: #fbf9fb;
     --color-sidebar-hover: #8a5e7e;
-    --color-sidebar-active: #017e84;
+    --color-sidebar-active: #5b3c54;
     --color-sidebar-border: #5c3d53;
     --color-sidebar-icon: #e7dbe4;
 
-    --radius-field: 4px;
+    --color-badge-success-bg: #e7f4ec;
+    --color-badge-success-ink: #1b7a47;
+    --color-badge-pending-bg: #fbf0dc;
+    --color-badge-pending-ink: #8a6100;
+    --color-badge-warning-bg: #fbf0dc;
+    --color-badge-warning-ink: #8a6100;
+    --color-badge-danger-bg: #f9e8e5;
+    --color-badge-danger-ink: #a32a18;
+    --color-state-on: #1b7a47;
+
+    --radius-field: 6px;
     --radius-card: 6px;
+    --radius-badge: 999px;
+    --radius-pill: 999px;
 
-    /* ওডুর ব্যাজ গুলি-আকৃতির */
-    --radius-badge: 12px;
-
-    --row-height: 40px;
-    --row-height-dense: 34px;
-    --grid-pad-x: 14px;
+    --row-height: 44px;
+    --row-height-dense: 36px;
+    --grid-pad-x: 12px;
     --grid-pad-y: 8px;
+    --grid-pad-y-head: 6px;
+    --font-size-table: 13px;
     --spacing-header: 56px;
 }
 
 /* ─────────────────────────────────────────────────────────────────
-   Dynamic — Microsoft Dynamics 365 (Fluent)।
+   Dynamic — Microsoft Dynamics 365 (Fluent).
 
-   ফ্লুয়েন্টের ধার প্রায় নেই (২px), জমিন উষ্ণ-ধূসর (#faf9f8), আর ছক
-   ঘন — D365 এর কাজের পর্দা তথ্যঘন হওয়ার জন্যই বানানো।
+   নমুনার `.t-dyn` থেকে হুবহু। নেভিটা ছিল #1b3a57, নমুনায় আরও গাঢ়
+   #0B2A4A; সারি ছিল ৩৫px, নমুনায় ৪৪px।
+   
+   D365 ঘন **ছকে** নয়, ঘন **তথ্যে**: সারি লম্বা, কিন্তু ধার প্রায় নেই
+   আর জমিন প্রায় সাদা, তাই এক পর্দায় অনেক কলাম ধরে।
    ───────────────────────────────────────────────────────────────── */
 [data-ui='dynamic'] {
-    --color-surface-app: #faf9f8;
+    --color-surface-app: #ffffff;
     --color-surface-card: #ffffff;
-    --color-surface-muted: #f3f2f1;
-    --color-surface-sunken: #f3f2f1;
-    --color-surface-hover: #eff6fc;
-    --color-surface-selected: #deecf9;
-    --color-border: #edebe9;
+    --color-surface-muted: #f5f5f5;
+    --color-surface-sunken: #faf9f8;
+    --color-surface-hover: #f3f9fd;
+    --color-surface-selected: #edebe9;
+    --color-border: #e1e1e1;
     --color-border-strong: #c8c6c4;
 
-    --color-ink: #242424;
-    --color-ink-body: #323130;
-    --color-ink-muted: #605e5c;
+    --color-ink: #161a1f;
+    --color-ink-body: #3b3a39;
+    --color-ink-muted: #616161;
+    --color-link: #0f6cbd;
 
-    --color-sidebar: #1b3a57;
-    --color-topbar: #0b2a45;
+    --color-table-head: #ffffff;
+    --color-table-head-ink: #3b3a39;
+    --color-cell-line: transparent;
+
+    --color-topbar: #0b2a4a;
     --color-topbar-ink: #ffffff;
     --color-topbar-ink-muted: #c6d8e6;
     --color-topbar-border: #082033;
     --color-topbar-hover: #17415f;
     --color-topbar-field: #082033;
 
-    --color-sidebar-panel: #f3f2f1;
-    --color-sidebar-hover: #24506f;
-    --color-sidebar-active: #0078d4;
-    --color-sidebar-border: #143047;
+    --color-topnav: #ffffff;
+    --color-topnav-ink: #161a1f;
+    --color-topnav-ink-muted: #616161;
+    --color-topnav-border: #e1e1e1;
+    --color-topnav-hover: #f3f2f1;
+    --color-topnav-selected: #edebe9;
+    --color-toolbar: #ffffff;
+
+    --color-sidebar: #0b2a4a;
+    --color-sidebar-panel: #f5f5f5;
+    --color-sidebar-hover: #17415f;
+    --color-sidebar-active: #0b2a4a;
+    --color-sidebar-border: #082033;
     --color-sidebar-icon: #d6e4ef;
 
-    --radius-field: 2px;
-    --radius-card: 4px;
-    --radius-badge: 2px;
+    --color-badge-success-bg: #e7f3e7;
+    --color-badge-success-ink: #107c10;
+    --color-badge-pending-bg: #fbf1e0;
+    --color-badge-pending-ink: #8a5a00;
+    --color-badge-warning-bg: #fbf1e0;
+    --color-badge-warning-ink: #8a5a00;
+    --color-badge-danger-bg: #fde7e9;
+    --color-badge-danger-ink: #a4262c;
+    --color-state-on: #107c10;
 
-    --row-height: 36px;
-    --row-height-dense: 32px;
-    --grid-pad-x: 10px;
-    --grid-pad-y: 6px;
-    --grid-pad-y-tight: 4px;
+    --radius-field: 2px;
+    --radius-card: 2px;
+    --radius-badge: 2px;
+    --radius-pill: 2px;
+
+    --row-height: 44px;
+    --row-height-dense: 36px;
+    --grid-pad-x: 12px;
+    --grid-pad-y: 8px;
+    --font-size-table: 12.5px;
     --spacing-header: 56px;
 }
 
 /* ─────────────────────────────────────────────────────────────────
    Redwood — Oracle Fusion Cloud.
 
-   রেডউডের দুইটা চিহ্ন: ইটরঙা (#c74634) আর **ফাঁকা জায়গা**। কার্ড বড়
-   গোলাইয়ের, সারি লম্বা, জমিন উষ্ণ অফ-হোয়াইট। এটাই আটটার মধ্যে
-   সবচেয়ে খোলা চেহারা — আর সেটা ইচ্ছাকৃত, নাহলে নকলটা নকল হত না।
+   নমুনার `.t-canvas` থেকে হুবহু, আর এখানেও আগের লেখাটা **উল্টো** ছিল:
+   মাথাটা গাঢ় (#161513) করা হয়েছিল, অথচ নমুনার মাথা **হালকা ক্রিম**
+   (#FFFDFB), আর ইটরঙা রংটা থাকে উপরের ৪px পটিতে ও কাজের বোতামে।
+   
+   নেভিগেশনও বাঁয়ে — নমুনার springboard ২১২px, উপরে নয়।
+   
+   আটটার মধ্যে সবচেয়ে খোলা: সারি ৫px, কার্ডের কোণ ১৫px, বোতাম গুলি-
+   আকৃতির। জমিন উষ্ণ ধূসর (#F5F4F2), সাদা নয় — কার্ডগুলো তার উপরে
+   প্রায়-সাদা (#FFFDFB) হয়ে ভাসে।
    ───────────────────────────────────────────────────────────────── */
 [data-ui='redwood'] {
-    --color-surface-app: #f8f7f5;
-    --color-surface-card: #ffffff;
+    --color-surface-app: #f5f4f2;
+    --color-surface-card: #fffdfb;
     --color-surface-muted: #f1efec;
-    --color-surface-sunken: #f1efec;
-    --color-surface-hover: #f6efed;
-    --color-surface-selected: #f7e6e2;
-    --color-border: #e4e1dd;
-    --color-border-strong: #c2bdb6;
+    --color-surface-sunken: #f9f7f4;
+    --color-surface-hover: #faf8f5;
+    --color-surface-selected: #efece7;
+    --color-border: #e6e2dc;
+    --color-border-strong: #d9d4cc;
 
     --color-ink: #161513;
-    --color-ink-body: #2f2d2a;
-    --color-ink-muted: #5a5751;
+    --color-ink-body: #161513;
+    --color-ink-muted: #8a8681;
+    --color-link: #0b5a9e;
 
-    --color-sidebar: #161513;
-    --color-topbar: #161513;
-    --color-topnav: #ffffff;
+    --color-table-head: transparent;
+    --color-table-head-ink: #8a8681;
+    --color-cell-line: transparent;
+
+    --color-topbar: #fffdfb;
+    --color-topbar-ink: #161513;
+    --color-topbar-ink-muted: #5c5a57;
+    --color-topbar-border: #e6e2dc;
+    --color-topbar-hover: #f1efec;
+    --color-topbar-field: #f5f4f2;
+
+    --color-topnav: #fffdfb;
     --color-topnav-ink: #161513;
-    --color-topnav-ink-muted: #5a5751;
-    --color-topnav-border: #e4e1dd;
-    --color-topnav-hover: #f6efed;
+    --color-topnav-ink-muted: #8a8681;
+    --color-topnav-border: #e6e2dc;
+    --color-topnav-hover: #f1efec;
     --color-topnav-selected: #f7e6e2;
+    --color-toolbar: #fffdfb;
 
-    --color-topbar-ink: #ffffff;
-    --color-topbar-ink-muted: #c9c5be;
-    --color-topbar-border: #000000;
-    --color-topbar-hover: #2f2d2a;
-    --color-topbar-field: #2f2d2a;
-
-    --color-sidebar-panel: #f1efec;
-    --color-sidebar-hover: #2f2d2a;
+    --color-sidebar: #f5f4f2;
+    --color-sidebar-panel: #f5f4f2;
+    --color-sidebar-hover: #efece7;
     --color-sidebar-active: #c74634;
-    --color-sidebar-border: #000000;
-    --color-sidebar-icon: #ddd9d3;
+    --color-sidebar-border: #e6e2dc;
+    --color-sidebar-icon: #8a8681;
 
-    --radius-field: 6px;
-    --radius-card: 12px;
+    --color-badge-success-bg: #e8f1eb;
+    --color-badge-success-ink: #146b3a;
+    --color-badge-pending-bg: #fbf1e0;
+    --color-badge-pending-ink: #9a5b00;
+    --color-badge-warning-bg: #fbf1e0;
+    --color-badge-warning-ink: #9a5b00;
+    --color-badge-danger-bg: #f9e7e4;
+    --color-badge-danger-ink: #a93a2b;      /* #C74634 সাদায় ৩.৮ */
+    --color-state-on: #146b3a;
+
+    --radius-field: 999px;
+    --radius-card: 16px;
     --radius-badge: 999px;
+    --radius-pill: 999px;
 
-    --row-height: 48px;
-    --row-height-dense: 40px;
-    --grid-pad-x: 16px;
+    --row-height: 52px;
+    --row-height-dense: 44px;
+    --grid-pad-x: 12px;
     --grid-pad-y: 10px;
-    --spacing-header: 64px;
-}
-
-/* ─────────────────────────────────────────────────────────────────
-   Rose — ABOS এর নিজের।
-
-   কারও নকল নয়, তাই এখানে ধার নরম আর রংটা উষ্ণ। ডিপোর সন্ধ্যাবেলার
-   আলোয় এই জমিনটা চোখে কম লাগে — নীল পর্দার চেয়ে।
-   ───────────────────────────────────────────────────────────────── */
-[data-ui='rose'] {
-    --color-surface-app: #fdf6f7;
-    --color-surface-card: #ffffff;
-    --color-surface-muted: #f9ecef;
-    --color-surface-sunken: #f9ecef;
-    --color-surface-hover: #fceff2;
-    --color-surface-selected: #fbe0e6;
-    --color-border: #f0dfe3;
-    --color-border-strong: #d8b8c0;
-
-    --color-ink: #1f1417;
-    --color-ink-body: #3d2b30;
-    --color-ink-muted: #6d545b;
-
-    --color-sidebar: #7f1d33;
-    --color-topbar: #7f1d33;
-    --color-topbar-ink: #ffffff;
-    --color-topbar-ink-muted: #eec9d1;
-    --color-topbar-border: #66162a;
-    --color-topbar-hover: #9a2842;
-    --color-topbar-field: #66162a;
-
-    --color-sidebar-panel: #faeef1;
-    --color-sidebar-hover: #9a2842;
-    --color-sidebar-active: #be123c;
-    --color-sidebar-border: #66162a;
-    --color-sidebar-icon: #f2d7de;
-
-    --radius-field: 8px;
-    --radius-card: 12px;
-    --radius-badge: 999px;
-
-    --row-height: 44px;
-    --row-height-dense: 36px;
-    --grid-pad-x: 14px;
-    --grid-pad-y: 9px;
-    --spacing-header: 60px;
-}
-
-/* ─────────────────────────────────────────────────────────────────
-   Navy — ABOS এর নিজের, ঘন রূপ।
-
-   রোজের উল্টো দিক: ঠান্ডা, ঘন, চুপচাপ। যাঁরা সারাদিন এন্ট্রি করেন
-   তাঁদের জন্য — এক পর্দায় বেশি সারি, কম রং।
-   ───────────────────────────────────────────────────────────────── */
-[data-ui='navy'] {
-    --color-surface-app: #f4f6fa;
-    --color-surface-card: #ffffff;
-    --color-surface-muted: #e9edf5;
-    --color-surface-sunken: #e9edf5;
-    --color-surface-hover: #eaf0fb;
-    --color-surface-selected: #dce6f8;
-    --color-border: #d8dfea;
-    --color-border-strong: #a9b6cb;
-
-    --color-ink: #0b1220;
-    --color-ink-body: #1f2937;
-    --color-ink-muted: #4b5875;
-
-    --color-sidebar: #0b1220;
-    --color-topbar: #0b1220;
-    --color-topbar-ink: #ffffff;
-    --color-topbar-ink-muted: #b9c6df;
-    --color-topbar-border: #060b14;
-    --color-topbar-hover: #1c2a45;
-    --color-topbar-field: #1c2a45;
-
-    --color-sidebar-panel: #e9edf5;
-    --color-sidebar-hover: #1c2a45;
-    --color-sidebar-active: #1e3a8a;
-    --color-sidebar-border: #060b14;
-    --color-sidebar-icon: #cbd6ea;
-
-    --radius-field: 4px;
-    --radius-card: 6px;
-    --radius-badge: 4px;
-
-    --row-height: 36px;
-    --row-height-dense: 30px;
-    --grid-pad-x: 10px;
-    --grid-pad-y: 5px;
-    --grid-pad-y-tight: 4px;
-    --lines-pad: 6px;
+    --font-size-table: 13px;
     --spacing-header: 56px;
 }
 
 /* ─────────────────────────────────────────────────────────────────
-   মাথার উচ্চতার একটা মেঝে আছে — ৫৬px।
+   Rose — Ava-র টোকেন থেকে।
 
-   ── কী ভেঙেছিল ─────────────────────────────────────────────────
-   আসল ERP-গুলোর শেল বার সরু: Fiori ৪৪px, Odoo ৪৬। প্রথমে হুবহু সেটাই
-   বসানো হয়েছিল, আর ছবি তুলে দেখা গেল কোম্পানির নামটা বারের উপরে
-   কেটে গেছে।
-
-   কারণ ABOS-এর টপবারে **দুই লাইন** বসে: কোম্পানি আর শাখা। ওদের
-   বারে বসে এক লাইন। নকলটা ওখানে থামে — নাহলে "ট্রেড ডিপো" লেখাটাই
-   পড়া যেত না, আর একটা ডিপোতে দুইটা প্রতিষ্ঠান চললে কোনটায় কাজ
-   হচ্ছে তা বোঝার উপায় থাকত না।
-
-   অর্থাৎ উচ্চতাটা এখনো চেহারা ধরে বদলায় (৫৬ থেকে ৬৪), কেবল নিচে
-   একটা মেঝে আছে — আর মেঝেটা সাজসজ্জার নয়, তথ্যের।
+   নমুনার `.t-ava` থেকে হুবহু, আর এখানেও রেলটা **উল্টো** ছিল: গাঢ়
+   গোলাপি (#7f1d33) করা হয়েছিল, অথচ নমুনার রেল **হালকা** (#F6F8FB)
+   আর গোলাপি রংটা থাকে সক্রিয় সারিতে (#FFF1F6 / #9D1249) ও বোতামে।
+   
+   গোলাপি কখনো সংখ্যার পেছনে বসে না — ওটা পরিচয়ের রং, অবস্থার নয়।
    ───────────────────────────────────────────────────────────────── */
+[data-ui='rose'] {
+    --color-surface-app: #ffffff;
+    --color-surface-card: #ffffff;
+    --color-surface-muted: #f6f8fb;
+    --color-surface-sunken: #f6f8fb;
+    --color-surface-hover: #fafbfd;
+    --color-surface-selected: #fff1f6;
+    --color-border: #d9e1ec;
+    --color-border-strong: #b9c6d8;
+
+    --color-ink: #1b2430;
+    --color-ink-body: #1b2430;
+    --color-ink-muted: #5b6575;
+    --color-link: #9d1249;
+
+    --color-table-head: #f6f8fb;
+    --color-table-head-ink: #5b6575;
+    --color-cell-line: transparent;
+
+    --color-topbar: #ffffff;
+    --color-topbar-ink: #1b2430;
+    --color-topbar-ink-muted: #5b6575;
+    --color-topbar-border: #d9e1ec;
+    --color-topbar-hover: #eef2f8;
+    --color-topbar-field: #f6f8fb;
+
+    --color-topnav: #ffffff;
+    --color-topnav-ink: #9d1249;
+    --color-topnav-ink-muted: #5b6575;
+    --color-topnav-border: #d9e1ec;
+    --color-topnav-hover: #eef2f8;
+    --color-topnav-selected: #fff1f6;
+    --color-toolbar: #ffffff;
+
+    --color-sidebar: #f6f8fb;
+    --color-sidebar-panel: #f6f8fb;
+    --color-sidebar-hover: #eef2f8;
+    --color-sidebar-active: #c2185b;
+    --color-sidebar-border: #d9e1ec;
+    --color-sidebar-icon: #5b6575;
+
+    --color-badge-success-bg: #e9f6ef;
+    --color-badge-success-ink: #116b3d;
+    --color-badge-pending-bg: #fdf3e3;
+    --color-badge-pending-ink: #7d5005;
+    --color-badge-warning-bg: #fdf3e3;
+    --color-badge-warning-ink: #7d5005;
+    --color-badge-danger-bg: #fbe9ec;
+    --color-badge-danger-ink: #b4243c;
+    --color-state-on: #116b3d;
+
+    --radius-field: 8px;
+    --radius-card: 12px;
+    --radius-badge: 999px;
+    --radius-pill: 999px;
+
+    --row-height: 44px;
+    --row-height-dense: 36px;
+    --grid-pad-x: 12px;
+    --grid-pad-y: 8px;
+    --font-size-table: 13px;
+    --spacing-header: 56px;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Navy — ABOS-এর নিজেরটা, আর এটাই ডিফল্ট।
+
+   নমুনার `.t-abos` থেকে হুবহু। নমুনায় এই রূপটাই "আজকের ABOS" — গাঢ়
+   নেভি রেল (#08132B), নীল কাজ (#1565C0), আর সোনা (#F5B800) **কেবল
+   অলঙ্কার**: লোগোর ফোঁটা, চলতি সারির ধার, রেলের নিচের রেখা।
+   টেবিল, সংখ্যা বা অবস্থায় সোনা কখনো নয় — প্রকল্পের লেখা নিয়ম।
+   
+   আগের লেখায় সারি ৩৫px ছিল; নমুনায় ৪৪px।
+   ───────────────────────────────────────────────────────────────── */
+[data-ui='navy'] {
+    --color-surface-app: #f2f6fc;
+    --color-surface-card: #ffffff;
+    --color-surface-muted: #f8fafc;
+    --color-surface-sunken: #f8fafc;
+    --color-surface-hover: #f2f6fc;
+    --color-surface-selected: #e2ecfa;
+    --color-border: #e5e7eb;
+    --color-border-strong: #cbd5e1;
+
+    --color-ink: #0f172a;
+    --color-ink-body: #0f172a;
+    --color-ink-muted: #64748b;
+    --color-link: #1565c0;
+
+    --color-table-head: #f8fafc;
+    --color-table-head-ink: #475569;
+    --color-cell-line: transparent;
+
+    --color-topbar: #ffffff;
+    --color-topbar-ink: #0f172a;
+    --color-topbar-ink-muted: #475569;
+    --color-topbar-border: #e5e7eb;
+    --color-topbar-hover: #f2f6fc;
+    --color-topbar-field: #f8fafc;
+
+    --color-topnav: #ffffff;
+    --color-topnav-ink: #0f172a;
+    --color-topnav-ink-muted: #475569;
+    --color-topnav-border: #e5e7eb;
+    --color-topnav-hover: #f2f6fc;
+    --color-topnav-selected: #e2ecfa;
+    --color-toolbar: #ffffff;
+
+    --color-sidebar: #08132b;
+    --color-sidebar-panel: #f2f6fc;
+    --color-sidebar-hover: #0e1c3a;
+    --color-sidebar-active: #f5b800;
+    --color-sidebar-border: #0e1c3a;
+    --color-sidebar-icon: #94a3b8;
+
+    --color-badge-success-bg: #ecfdf5;
+    --color-badge-success-ink: #047857;
+    --color-badge-pending-bg: #fff7ed;
+    --color-badge-pending-ink: #9a3412;
+    --color-badge-warning-bg: #fff7ed;
+    --color-badge-warning-ink: #9a3412;
+    --color-badge-danger-bg: #fef2f2;
+    --color-badge-danger-ink: #b91c1c;
+    --color-state-on: #047857;
+
+    --radius-field: 6px;
+    --radius-card: 8px;
+    --radius-badge: 6px;
+    --radius-pill: 6px;
+
+    --row-height: 44px;
+    --row-height-dense: 36px;
+    --grid-pad-x: 12px;
+    --grid-pad-y: 7px;
+    --font-size-table: 12.5px;
+    --spacing-header: 56px;
+}
 
 /* ═════════════════════════════════════════════════════════════════
    গাঢ় থিমে চেহারার নিজস্ব সুর।
@@ -516,24 +665,67 @@
    কেবল সেটুকু যেটুকু গাঢ় জমিনে ভেঙে যেত।
 
    ── কী ভাঙত ─────────────────────────────────────────────────────
-   সাইডবারের রংগুলো হালকা থিমের জন্য বাছা। রেডউডের সাইডবার #161513 —
-   গাঢ় থিমের #020617 জমিনে ওটা প্রায় মিশে যায়, আর সাইডবার আছে কি
-   নেই বোঝা যায় না। তাই গাঢ়তে ওগুলো এক ধাপ উপরে ওঠে।
+   আটটার অর্ধেকের মাথা ও পটি এখন **হালকা** — Redwood-এর ক্রিম মাথা,
+   Rose-এর সাদা বার, Tiles ও D365-এর সাদা মেনু-পটি, Navy-র সাদা
+   টপবার। গাঢ় থিমে ওগুলো হুবহু থেকে গেলে সাদা পটির নিচে গাঢ় পাতা
+   বসত, আর পটির লেখা মিলিয়ে যেত — কারণ গাঢ় থিম কালির টোকেন বদলায়,
+   পটির রং নয়।
+
+   ছকের মাথাও তাই: ক্লাসিকের #5E6B78 বা Suite-এর #D9E1E9 গাঢ় পাতায়
+   একা জ্বলজ্বল করত। আর ডোরাকাটা সারি গাঢ় জমিনে পড়াই যায় না।
    ═════════════════════════════════════════════════════════════════ */
-:root[data-theme='dark'][data-ui='redwood'] {
-    --color-sidebar: #2a2724;
-    --color-sidebar-hover: #3d3934;
-    --color-sidebar-border: #141210;
+:root[data-theme='dark'] {
+    --color-topbar: #0f172a;
+    --color-topbar-ink: #f8fafc;
+    --color-topbar-ink-muted: #cbd5e1;
+    --color-topbar-border: #1e293b;
+    --color-topbar-hover: #1e293b;
+    --color-topbar-field: #1e293b;
+
+    --color-topnav: #0f172a;
+    --color-topnav-ink: #f8fafc;
+    --color-topnav-ink-muted: #cbd5e1;
+    --color-topnav-border: #1e293b;
+    --color-topnav-hover: #1e293b;
+    --color-topnav-selected: #1e3a8a;
+
+    --color-toolbar: #111827;
+    --color-table-head: #0f172a;
+    --color-table-head-ink: #cbd5e1;
+    --color-row-alt: transparent;
+    --color-cell-line: transparent;
 }
 
+/* যে রেলগুলো হালকা ছিল, গাঢ় থিমে তারাও নামে */
+:root[data-theme='dark']:is([data-ui='rose'], [data-ui='redwood']) {
+    --color-sidebar: #0f172a;
+    --color-sidebar-panel: #0b1220;
+    --color-sidebar-hover: #1e293b;
+    --color-sidebar-border: #1e293b;
+    --color-sidebar-icon: #cbd5e1;
+}
+
+/* D365-এর সাইট ম্যাপ প্যানেলটাও হালকা ছিল */
+:root[data-theme='dark'][data-ui='dynamic'] {
+    --color-sidebar-panel: #0b1220;
+}
+
+/* নেভির রেল আগে থেকেই গাঢ়; গাঢ় থিমে আর এক ধাপ নিচে,
+   নাহলে পাতার জমিনের সাথে মিশে যায় */
 :root[data-theme='dark'][data-ui='navy'] {
-    --color-sidebar: #131c2e;
-    --color-sidebar-hover: #22314e;
-    --color-sidebar-border: #0a101c;
+    --color-sidebar: #050b18;
+    --color-sidebar-hover: #0e1c3a;
+    --color-sidebar-border: #0e1c3a;
 }
 
-:root[data-theme='dark'][data-ui='suite'] {
-    --color-sidebar: #26332f;
-    --color-sidebar-hover: #37473f;
-    --color-sidebar-border: #182320;
+/* ক্লাসিকের অ্যাম্বার মেনু-পটি গাঢ় থিমেও থাকে — ওটাই তার পরিচয়,
+   আর গাঢ় জমিনে অ্যাম্বার আরও ভালো পড়া যায় */
+:root[data-theme='dark'][data-ui='classic'] {
+    --color-topbar: #1a242e;
+    --color-topnav: #23303c;
+    --color-topnav-ink: #1a1a1a;
+    --color-topnav-ink-muted: #dde4ea;
+    --color-topnav-selected: #e08c1a;
+    --color-topnav-hover: #33424f;
+    --color-toolbar: #111827;
 }

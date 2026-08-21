@@ -81,7 +81,7 @@
             @if ($approval->decisions->isNotEmpty())
                 <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                             bg-(--color-surface-card)">
-                    <h2 class="border-b border-(--color-border) px-3 py-2 text-sm font-semibold">
+                    <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-3 py-2 text-sm font-semibold">
                         {{ __('approval::field.decisions') }}
                     </h2>
 
