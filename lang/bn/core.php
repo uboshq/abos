@@ -205,7 +205,7 @@ return [
         'emerald' => 'সবুজ',
         'slate' => 'ধূসর',
         'amber' => 'অ্যাম্বার',
-        'aubergine' => 'বেগুনি',
+        'aubergine' => 'অবার্জিন',
         'brick' => 'ইটরঙা',
         'crimson' => 'গাঢ় গোলাপি',
         'fiori' => 'ফিওরি নীল',

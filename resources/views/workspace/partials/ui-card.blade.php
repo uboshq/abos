@@ -24,14 +24,39 @@
 ])>
     <input type="radio" name="ui" value="{{ $key }}" @checked($selected) class="sr-only">
 
-    {{-- নমুনাটা — বাঁয়ে সাইডবার, উপরে টপবার, তারপর সারি।
-         রংদুইটা এই চেহারারই, তাই ছবিটা মিথ্যা বলে না। --}}
+    {{--
+        নমুনাটা — রং, ঘনত্ব, **আর মেনু কোথায়**।
+
+        ── প্রথম লেখায় ছবিটা মিথ্যা বলত ────────────────────────────
+        প্রতিটা কার্ডে বাঁয়ে একটা রেল আঁকা হত, অথচ আটটার চারটায়
+        (Classic · Tiles · Suite · Apps) রেল **নেই** — মেনু উপরে।
+        অর্থাৎ ছবিটা ওই চারটার সবচেয়ে বড় তফাতটাই লুকিয়ে রাখত, আর
+        বাছার পর মানুষ অন্য জিনিস পেতেন।
+
+        একটা নমুনার একমাত্র কাজ সত্যি বলা। রং ঠিক অথচ বিন্যাস ভুল
+        হলে ওটা নমুনা নয়, সাজসজ্জা।
+    --}}
     <span class="flex h-24 overflow-hidden rounded-(--radius-field) ring-1 ring-black/10"
           style="background: #fff" aria-hidden="true">
-        <span class="w-1/5 shrink-0" style="background: {{ $ui['ink'] }}"></span>
+
+        @if ($ui['nav'] === 'rail')
+            <span class="w-1/5 shrink-0" style="background: {{ $ui['ink'] }}"></span>
+        @endif
 
         <span class="flex min-w-0 flex-1 flex-col">
             <span class="h-3 shrink-0" style="background: {{ $ui['swatch'] }}"></span>
+
+            {{-- মেনু উপরে হলে বারের নিচে আরেকটা সরু পটি — ওটাই
+                 নেভিগেশন, আর ওটা থাকা মানেই বাঁয়ে কিছু নেই। --}}
+            @if ($ui['nav'] === 'top')
+                <span class="flex h-2 shrink-0 items-stretch gap-px px-0.5"
+                      style="background: {{ $ui['ink'] }}">
+                    @for ($i = 0; $i < 5; $i++)
+                        <span class="block flex-1"
+                              style="background: {{ $i === 1 ? $ui['swatch'] : 'transparent' }}"></span>
+                    @endfor
+                </span>
+            @endif
 
             <span class="flex flex-1 flex-col justify-start gap-px p-1">
                 @for ($i = 0; $i < $rows; $i++)
