@@ -149,9 +149,7 @@
                      'render' => fn ($e) => \App\Core\Support\Money::format($e->running_balance)],
                 ]" />
 
-            @if ($entries->hasPages())
-                <div class="border-t border-(--color-border) px-3 py-2">{{ $entries->links() }}</div>
-            @endif
+            <x-ui.pager :rows="$entries" />
         </section>
     @endif
 </x-layouts.app>

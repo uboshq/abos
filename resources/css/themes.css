@@ -135,6 +135,8 @@
     --lines-pad-input: 3px;
     --font-size-table: 12.5px;
     --spacing-header: 34px;
+    --topbar-control-h: 26px;
+    --topbar-label: none;
 }
 
 /* ─────────────────────────────────────────────────────────────────
@@ -208,6 +210,8 @@
     --grid-pad-y: 7px;
     --font-size-table: 13px;
     --spacing-header: 44px;
+    --topbar-control-h: 32px;
+    --topbar-label: none;
 }
 
 /* ─────────────────────────────────────────────────────────────────
@@ -285,6 +289,8 @@
     --lines-pad-input: 2px;
     --font-size-table: 11px;
     --spacing-header: 36px;
+    --topbar-control-h: 28px;
+    --topbar-label: none;
 }
 
 /* ─────────────────────────────────────────────────────────────────
@@ -372,6 +378,8 @@
     --grid-pad-y-head: 6px;
     --font-size-table: 13px;
     --spacing-header: 46px;
+    --topbar-control-h: 32px;
+    --topbar-label: none;
 }
 
 /* ─────────────────────────────────────────────────────────────────
@@ -417,6 +425,11 @@
     --color-topnav-selected: #edebe9;
     --color-toolbar: #ffffff;
 
+    /* D365-এর business process flow — সত্যিকারের শেভরন।
+       ডান ধারে কোণা, বাঁ ধারে খাঁজ, আর ঘরগুলো একটু ওভারল্যাপ করে। */
+    --stage-clip: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%, 12px 50%);
+    --stage-overlap: -10px;
+
     --color-sidebar: #0b2a4a;
     --color-sidebar-panel: #f5f5f5;
     --color-sidebar-hover: #17415f;
@@ -445,6 +458,8 @@
     --grid-pad-y: 8px;
     --font-size-table: 12.5px;
     --spacing-header: 44px;
+    --topbar-control-h: 32px;
+    --topbar-label: none;
 }
 
 /* ─────────────────────────────────────────────────────────────────

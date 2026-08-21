@@ -80,8 +80,6 @@
             :compact="request()->boolean('compact')"
             :columns="$columns" />
 
-        @if ($orders->hasPages())
-            <div class="border-t border-(--color-border) px-3 py-2">{{ $orders->links() }}</div>
-        @endif
+        <x-ui.pager :rows="$orders" />
     </div>
 </x-layouts.app>

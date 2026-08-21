@@ -129,9 +129,11 @@ with sync_playwright() as p:
             name = part[0]
 
             # যে অংশটা কেবল একটা অবস্থায় দেখা যায়, তার জন্য সেই ঠিকানায় যাওয়া
+            # "?..." = একই পাতায় ছাঁকনিসহ · "|/path" = অন্য পাতা
             extra = PART_URL.get(look, {}).get(name)
             if extra:
-                pg.goto(BASE + "/suppliers" + extra, wait_until="networkidle")
+                where = extra[1:] if extra.startswith("|") else "/suppliers" + extra
+                pg.goto(BASE + where, wait_until="networkidle")
 
             if len(part) == 3:                      # এলিমেন্টটা থাকতে হবে
                 name, sel, why = part

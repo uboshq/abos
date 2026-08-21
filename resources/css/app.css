@@ -530,6 +530,55 @@
     }
 
     /* ─────────────────────────────────────────────────────────────
+       ধাপের স্ট্রিপ — কাগজটা কোন ধাপে।
+
+       ── কেন এখানে, প্রতিটা রূপে আলাদা করে নয় ─────────────────────
+       D365 এটাকে শেভরনে আঁকে, খতিয়ান চৌকো ঘরে। দুইটার **কাঠামো এক** —
+       পাশাপাশি ঘর, প্রতিটায় লেখা · গোনা · টাকা। কেবল ধারটা আলাদা।
+
+       তাই এক জায়গায় নিয়মটা, আর `--stage-clip` টোকেনে আকৃতি। শেভরন
+       চাইলে রূপ ওই একটা টোকেন বদলায়, গোটা markup নয়।
+       ───────────────────────────────────────────────────────────── */
+    .stage-strip {
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-card);
+        background: var(--color-surface-card);
+    }
+
+    .stage-strip .stage {
+        background: var(--color-row-alt, transparent);
+        border-inline-end: 1px solid var(--color-border);
+        clip-path: var(--stage-clip, none);
+        margin-inline-end: var(--stage-overlap, 0);
+    }
+
+    .stage-strip .stage:last-child {
+        border-inline-end: 0;
+        margin-inline-end: 0;
+    }
+
+    /* পেরিয়ে আসা · এখানে · আটকে — রং একা নয়, লেখাও থাকে */
+    .stage-strip .is-done {
+        background: var(--color-badge-success-bg);
+        color: var(--color-badge-success-ink);
+    }
+
+    .stage-strip .is-now {
+        background: var(--color-stage-now, var(--color-brand-500));
+        color: var(--color-stage-now-ink, var(--color-brand-ink));
+    }
+
+    .stage-strip .is-now .text-\(--color-ink-muted\) {
+        color: inherit;
+        opacity: .85;
+    }
+
+    .stage-strip .is-bad {
+        background: var(--color-badge-danger-bg);
+        color: var(--color-badge-danger-ink);
+    }
+
+    /* ─────────────────────────────────────────────────────────────
        সম্পাদনার ছক — যে টেবিলের ঘরে ইনপুট বসে।
 
        ── কেন এটা `.table-cards` নয় ────────────────────────────────
@@ -882,6 +931,56 @@
 
 @media (prefers-reduced-motion: reduce) {
     .rail-flyout { transition: none; }
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   টপবারের ভেতরের নিয়ন্ত্রণ — বারের উচ্চতার সাথে মাপ মেলানো।
+
+   ── কী ভাঙল ────────────────────────────────────────────────────────
+   মাথার উচ্চতা আসল মাপে নামানোর পর (Fiori ৪৪, NetSuite ৩৬, খতিয়ান ৩৪)
+   ভেতরের বোতামগুলো আগের মতোই ৪৪px চেয়ে বসে রইল — `min-h-(--spacing-touch)`।
+   ফল: ৪৪px বারে ৪৪px বোতাম, প্যাডিং ধরে ৫২px দরকার, আর "তৈরি করুন"
+   দুই লাইনে ভেঙে গেল। ছবি তুলে ধরা পড়ল, কোড পড়ে নয়।
+
+   ── কেন ৩২px, আর কেন টাচ টার্গেটের নিয়ম এখানে খাটে না ───────────────
+   ৪৪px ন্যূনতম টাচ টার্গেট (সেকশন ২০.৫) — কিন্তু সেটা **আঙুলের** জন্য,
+   আর ছোট পর্দায় টপবারের এই বোতামগুলো এমনিতেই থাকে না (`hidden md:flex`)।
+   বড় পর্দায় ওখানে মাউস চলে, আর D365, Fiori, Odoo তিনটাই ~৩২px রাখে।
+
+   মোবাইলে মাপটা ফিরে আসে — নিচের মিডিয়া কোয়েরি।
+
+   ── কেন স্তরের বাইরে ───────────────────────────────────────────────
+   মাপ আসে Tailwind-এর utility থেকে, আর utility সব `@layer`-কে হারায়।
+   `.cmd-actions`-এর ঠিক একই কারণ, আর ঠিক একই সমাধান।
+   ───────────────────────────────────────────────────────────────── */
+.topbar {
+    flex-wrap: nowrap;
+}
+
+/* সরু বারে বোতামের লেখা বাদ, কেবল আইকন।
+
+   ── কেন এটা তথ্য হারানো নয় ─────────────────────────────────────────
+   D365 নিজে "+ New" টপবারে রাখেই না — ওটা কমান্ড বারে থাকে। ৩৪–৪৪px
+   বারে লেখাসহ বোতাম ঢোকাতে গেলে হয় লেখা ভেঙে দুই লাইন হয়, নয় নাম
+   কেটে যায়; দুইটাই খারাপ।
+
+   বোতামটার `aria-label` ও `title` থাকে, তাই স্ক্রিন রিডার ও মাউস
+   দুইজনেই নামটা পায় — কেবল চোখে কম জায়গা নেয়। */
+.topbar .topbar-label {
+    display: var(--topbar-label, inline);
+}
+
+.topbar :is(a, button):not(.pops-onto-page a, .pops-onto-page button) {
+    min-height: var(--topbar-control-h, 36px);
+    height: var(--topbar-control-h, 36px);
+}
+
+/* ছোট পর্দায় আঙুলই একমাত্র উপায় */
+@media (max-width: 767px) {
+    .topbar :is(a, button) {
+        min-height: var(--spacing-touch);
+        height: auto;
+    }
 }
 
 /* ─────────────────────────────────────────────────────────────────────

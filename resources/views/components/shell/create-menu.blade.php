@@ -41,7 +41,7 @@
         <svg viewBox="0 0 24 24" aria-hidden="true" class="size-4 shrink-0 fill-current">
             <path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6V5Z"/>
         </svg>
-        <span class="hidden sm:inline">{{ __('core.action.create') }}</span>
+        <span class="topbar-label hidden sm:inline">{{ __('core.action.create') }}</span>
         <svg viewBox="0 0 24 24" aria-hidden="true" class="size-3 shrink-0 fill-current opacity-70">
             <path d="M7 10l5 5 5-5H7Z"/>
         </svg>

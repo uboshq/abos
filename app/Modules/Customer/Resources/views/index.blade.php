@@ -123,10 +123,6 @@
             --}}
             :columns="$columns" />
 
-        @if ($customers->hasPages())
-            <div class="border-t border-(--color-border) px-3 py-2">
-                {{ $customers->links() }}
-            </div>
-        @endif
+        <x-ui.pager :rows="$customers" />
     </div>
 </x-layouts.app>

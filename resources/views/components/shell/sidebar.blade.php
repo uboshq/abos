@@ -347,7 +347,8 @@
                  জমিনটা খাঁটি সাদা নয়, এক ধাপ হালকা টিন্ট (surface-app):
                  ডানের কনটেন্ট এলাকাও সাদা কার্ডে ভরা, আর প্যানেলও সাদা
                  হলে দুইটার মাঝের সীমানাটা কেবল ১px রেখা হয়ে দাঁড়াত। --}}
-            <div class="menu-panel hidden min-w-0 flex-1 flex-col border-e border-(--color-border)
+            <div data-site-map
+                 class="menu-panel hidden min-w-0 flex-1 flex-col border-e border-(--color-border)
                         bg-(--color-sidebar-panel) lg:flex"
                  x-show="! $store.sidebar.collapsed">
 
@@ -447,6 +448,11 @@
                             @endforeach
                         @endforeach
                     </nav>
+
+                    {{-- রূপের নিজের নিচের অংশ — D365-এর এলাকা বদলের
+                         বোতাম প্যানেলের একদম নিচে বসে। যে রূপের কিছু
+                         নেই তার জন্য এটা কিছুই আঁকে না। --}}
+                    <x-shell.chrome region="rail-foot" :menu="$menu ?? []" />
                 @endif
             </div>
         </div>

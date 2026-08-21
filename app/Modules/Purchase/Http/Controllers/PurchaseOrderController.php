@@ -9,6 +9,7 @@ use App\Core\Concerns\FiltersByDate;
 use App\Core\Concerns\SortsLists;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\DocumentStatus;
+use App\Core\Support\Money;
 use App\Http\Controllers\Controller;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
@@ -16,6 +17,7 @@ use App\Modules\Purchase\Http\Requests\PurchaseOrderRequest;
 use App\Modules\Purchase\Models\PurchaseOrder;
 use App\Modules\Purchase\Services\PurchaseOrderService;
 use App\Modules\Supplier\Models\Supplier;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -67,12 +69,68 @@ class PurchaseOrderController extends Controller implements HasMiddleware
         return view('purchase::order.index', [
             'menu' => $this->menu->forUser($request->user()),
             'orders' => $query->paginate(50)->withQueryString(),
+            /*
+             * ধাপের সারাংশ — কয়টা কোথায়, আর কত টাকার।
+             *
+             * "৩টা খসড়া" কাউকে নাড়ায় না। "৩টা খসড়া · ৮,৫৫,০০০ টাকা"
+             * নাড়ায়। গোনা একটা তথ্য; টাকা হলো **কারণ** কেউ উঠে গিয়ে
+             * ওটা দেখবেন কি না।
+             */
+            'stages' => $this->stageSummary($query),
             'q' => $request->query('q'),
             'dates' => $dates,
             'sort' => $sort,
             'sortOptions' => $this->sortLabels(),
             'showCancelled' => $request->boolean('cancelled'),
         ]);
+    }
+
+    /**
+     * তালিকার উপরের ধাপগুলো — চোখের সামনের সারিগুলোরই সারাংশ।
+     *
+     * ── কেন `$query`-র ক্লোন, নতুন কোয়েরি নয় ─────────────────────────
+     * নতুন করে গুনলে সারাংশটা হত গোটা খাতার, আর নিচের তালিকা কেবল এই
+     * তারিখ-সীমার। উপরে এক সংখ্যা, নিচে আরেক তালিকা — কেউ মেলাতে
+     * পারতেন না, আর ধরেও নিতেন সারি হারিয়ে গেছে।
+     *
+     * `reorder()` — উপরের `orderBy` GROUP BY-এর সাথে যায় না।
+     *
+     * @return list<array{label: string, count: string, amount: string, state: string|null}>
+     */
+    private function stageSummary(Builder $query): array
+    {
+        $rows = (clone $query)
+            ->reorder()
+            ->selectRaw('status, COUNT(*) AS n, COALESCE(SUM(total), 0) AS amount')
+            ->groupBy('status')
+            ->get()
+            ->keyBy('status');
+
+        $stages = [
+            [DocumentStatus::DRAFT, 'core.status.draft', 'bad'],
+            [DocumentStatus::CONFIRMED, 'core.status.confirmed', 'now'],
+            [DocumentStatus::CLOSED, 'core.status.closed', 'done'],
+        ];
+
+        return collect($stages)
+            ->map(function (array $stage) use ($rows): array {
+                $count = (int) ($rows[$stage[0]]->n ?? 0);
+
+                return [
+                    'label' => __($stage[1]),
+                    'count' => (string) $count,
+                    'amount' => Money::format((string) ($rows[$stage[0]]->amount ?? '0')),
+                    /*
+                     * শূন্য ধাপে কোনো রং নেই।
+                     *
+                     * "কিছুই আটকে নেই" আর "তিনটা আটকে আছে" এক রঙে
+                     * দেখালে ধাপটার কোনো মানে থাকত না — আর খসড়ার ঘরটা
+                     * সবসময় লাল থাকলে কেউ আর ওটা দেখত না।
+                     */
+                    'state' => $count > 0 ? $stage[2] : null,
+                ];
+            })
+            ->all();
     }
 
     public function create(Request $request): View

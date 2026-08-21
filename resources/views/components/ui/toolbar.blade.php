@@ -151,7 +151,8 @@
              ▾ চিহ্নটা বলে এটা একটা **দৃশ্য**, স্থির নাম নয়: সংরক্ষিত
              ছাঁকনি বদলালে নামটাও বদলায়। --}}
         @if ($title)
-            <h1 class="flex shrink-0 items-center gap-1.5 text-lg font-semibold text-(--color-ink)">
+            <h1 data-view-selector
+                class="flex shrink-0 items-center gap-1.5 text-lg font-semibold text-(--color-ink)">
                 {{ $title }}
                 <svg viewBox="0 0 20 20" aria-hidden="true"
                      class="size-3.5 fill-none stroke-(--color-ink-muted)" stroke-width="1.6">
@@ -236,7 +237,7 @@
                 <input type="search" name="q" value="{{ request('q') }}"
                        placeholder="{{ $searchPlaceholder ?? __('core.action.search') }}"
                        class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
-                              bg-(--color-surface-app) ps-8 pe-3 text-sm">
+                              bg-(--color-surface-app) ps-8 pe-3 text-sm" data-quick-find>
                 <svg viewBox="0 0 24 24" aria-hidden="true"
                      class="pointer-events-none absolute start-2 top-1/2 size-4 -translate-y-1/2
                             fill-(--color-ink-muted)">
@@ -280,7 +281,7 @@
         @isset($actions)
             {{-- cmd-actions — এখানকার বোতামগুলো ৩২px, ফর্মের ৪৮px নয়।
                  নিয়মটা app.css-এ, আর কেন স্তরের বাইরে তা ওখানে লেখা। --}}
-            <div class="cmd-actions flex flex-wrap items-center gap-1">
+            <div data-command-bar class="cmd-actions flex flex-wrap items-center gap-1">
                 {{ $actions }}
             </div>
         @endisset

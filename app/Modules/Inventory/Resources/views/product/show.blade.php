@@ -137,8 +137,6 @@
                  'render' => fn ($m) => \App\Core\Support\Money::isZero($m->hold_change) ? '' : \App\Core\Support\Money::format($m->hold_change)],
             ]" />
 
-        @if ($movements->hasPages())
-            <div class="border-t border-(--color-border) px-3 py-2">{{ $movements->links() }}</div>
-        @endif
+        <x-ui.pager :rows="$movements" />
     </section>
 </x-layouts.app>
