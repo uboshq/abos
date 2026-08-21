@@ -30,6 +30,113 @@
    ═════════════════════════════════════════════════════════════════ */
 
 /* ─────────────────────────────────────────────────────────────────
+   Classic — "খতিয়ান রূপ", মালিকের নমুনা ধরে হুবহু।
+
+   ── এটা "আজকের ABOS" নয় ─────────────────────────────────────────
+   প্রথমে ক্লাসিক মানে ধরা হয়েছিল "যা আছে তাই" — কোনো টোকেন বদলায় না।
+   নমুনা দেখার পর সেটা ভুল প্রমাণ হল: নমুনার ক্লাসিক একটা **আলাদা,
+   সম্পূর্ণ নকশা** — উপরে টানা মেনু, অ্যাম্বার সক্রিয় ট্যাব, ডোরাকাটা
+   সারি, ২৬px উচ্চতা, ধারালো কোণ। আর "আজকের ABOS" নমুনায় Navy।
+
+   ── কেন এটা আটটার মধ্যে সবচেয়ে ঘন ───────────────────────────────
+   ২৬px সারি আর ১২.৫px হরফে এক পর্দায় প্রায় দ্বিগুণ সারি ধরে। ডিপোর
+   কাজে ওটাই আসল লাভ — যিনি রোজ তিনশো লাইন তোলেন, তাঁর কাছে দ্বিগুণ
+   সারি মানে অর্ধেক স্ক্রল।
+
+   প্রতিটা মান নমুনার `:root` থেকে হুবহু নেওয়া, আন্দাজে নয়।
+   ───────────────────────────────────────────────────────────────── */
+[data-ui='classic'] {
+    --color-surface-app: #edeae3;      /* --pg */
+    --color-surface-card: #ffffff;     /* --pap */
+    --color-surface-muted: #efebe2;    /* --boxh */
+    --color-surface-sunken: #efebe2;
+    --color-surface-hover: #fdf3df;    /* --hover */
+    --color-surface-selected: #f5f2ec; /* --strip */
+    --color-toolbar: #f5f2ec;          /* --strip */
+
+    /* অবস্থার রং — নমুনার --ok/--warn/--bad আর তাদের জমিন।
+
+       জমিনগুলো স্বচ্ছ করা হয়নি ইচ্ছাকৃতভাবে: এই একই টোকেন ছোট
+       ব্যাজেও বসে, আবার পুরো একটা সতর্কবার্তার বাক্সেও। স্বচ্ছ
+       করলে খতিয়ানের সতর্কবার্তা আবার সাদার উপর সাদা হয়ে যেত —
+       ঠিক যে বাগটা গতকাল সারানো হয়েছে। */
+    --color-badge-success-bg: #eaf2ec;
+    --color-badge-success-ink: #1b6e3c;
+    --color-badge-pending-bg: #fbf1dc;
+    --color-badge-pending-ink: #9a5b00;
+    --color-badge-warning-bg: #fbf1dc;
+    --color-badge-warning-ink: #9a5b00;
+    --color-badge-danger-bg: #f8e9e6;
+    --color-badge-danger-ink: #a32a18;
+    --color-badge-draft-bg: #efebe2;
+    --color-badge-draft-ink: #5c574c;
+    --color-badge-info-bg: #e8eef6;
+    --color-badge-info-ink: #1d4e89;
+
+    /* চালু/বন্ধ সুইচের রং — নমুনার `--ok` ও `--bad`।
+
+       ডিফল্টের `#12c979` উজ্জ্বল সবুজ, আর বেইজ জমিনে ওটা একা
+       জ্বলজ্বল করে — আটটার মধ্যে কেবল এই রূপেই বেমানান লাগে।
+       নমুনার সবুজটা গাঢ়, আর ওটাই এখানে ঠিক। */
+    --color-state-on: #1b6e3c;
+    --color-state-off: #8c8778;
+    --color-border: #c9c2b4;           /* --box */
+    --color-border-strong: #a79e8c;    /* tfoot-এর উপরের রেখা */
+
+    --color-ink: #1a1a1a;
+    --color-ink-body: #1a1a1a;
+    --color-ink-muted: #5c574c;        /* --dim */
+    --color-link: #1d4e89;             /* --lnk */
+
+    /* ছকের মাথা গাঢ়, সাদা লেখায় — পুরোনো ধাঁচের চিহ্ন */
+    --color-table-head: #5e6b78;       /* --th */
+    --color-table-head-ink: #ffffff;
+    --color-row-alt: #fbfaf6;          /* --zebra */
+    --color-cell-line: #efece4;        /* --cellv */
+
+    /* উপরের দুইটা পটি — গাঢ় মাথা, তার নিচে মেনু */
+    --color-topbar: #23303c;           /* --top */
+    --color-topbar-ink: #e9edf1;
+    --color-topbar-ink-muted: #b9c4cf;
+    --color-topbar-border: #1a242e;
+    --color-topbar-hover: #33424f;
+    --color-topbar-field: #33424f;
+
+    --color-topnav: #33424f;           /* --menu */
+    --color-topnav-ink: #1a1a1a;       /* অ্যাম্বার ট্যাবের উপরের লেখা */
+    --color-topnav-ink-muted: #dde4ea;
+    --color-topnav-border: #23303c;
+    --color-topnav-hover: #415264;     /* --menu-h */
+    --color-topnav-selected: #e08c1a;  /* --amber */
+
+    /* সাইডবার নেই, কিন্তু মানগুলো রইল — কেউ ভবিষ্যতে রেলে ফেরালে
+       যেন রংহীন না হয়ে যায়। */
+    --color-sidebar: #23303c;
+    --color-sidebar-panel: #f5f2ec;
+    --color-sidebar-hover: #415264;
+    --color-sidebar-active: #e08c1a;
+    --color-sidebar-border: #1a242e;
+    --color-sidebar-icon: #dde4ea;
+
+    /* ধারালো — নমুনায় বোতামে ২px, বাক্সে কিছুই নয় */
+    --radius-field: 2px;
+    --radius-card: 0;
+    --radius-badge: 2px;
+    --radius-pill: 2px;
+
+    /* সবচেয়ে ঘন: ২৬px সারি, ১২.৫px হরফ */
+    --row-height: 26px;
+    --row-height-dense: 24px;
+    --grid-pad-x: 10px;
+    --grid-pad-y: 4px;
+    --grid-pad-y-tight: 3px;
+    --lines-pad: 6px;
+    --lines-pad-input: 3px;
+    --font-size-table: 12.5px;
+    --spacing-header: 56px;
+}
+
+/* ─────────────────────────────────────────────────────────────────
    Tiles — SAP Fiori 3.
 
    ফিওরির চিহ্ন তিনটা: গাঢ় নীলচে-ধূসর শেল বার, ঠান্ডা ধূসর জমিন, আর

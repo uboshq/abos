@@ -126,7 +126,7 @@
 {{-- flex-col — দুইটা সারির ক্রম CSS ঠিক করে, তাই `order-1` ও `order-2`
      কাজ করে (নিচের ব্যাখ্যা দেখুন) --}}
 <div x-data="{ filtersOpen: {{ $hasFilters && $screenFilters->isNotEmpty() ? 'true' : 'false' }} }"
-     {{ $attributes->merge(['class' => 'flex flex-col border-b border-(--color-border) bg-(--color-surface-card)']) }}>
+     {{ $attributes->merge(['class' => 'flex flex-col border-b border-(--color-border) bg-(--color-toolbar)']) }}>
 
     {{--
         দৃশ্যের সারি — শিরোনাম · গোনা · ছাঁকনি · খোঁজা · সাজানো।

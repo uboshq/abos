@@ -433,6 +433,10 @@
            নীরবে ৪৪px-এ ঠেলে যেত — কেউ চায়নি এমন একটা বদল, যেটা
            কেবল লাইন যোগ করলে চোখে পড়ত। তাই শেয়ার্ড তালিকা
            কম্পোনেন্ট নিজের নাম নিয়ে আসে। */
+        .ui-list:not(.as-cards) {
+            font-size: var(--font-size-table);
+        }
+
         .ui-list:not(.as-cards) td {
             padding-block: 0;
             padding-inline: var(--grid-pad-x);
@@ -451,13 +455,27 @@
         }
 
         .ui-list:not(.as-cards) thead tr {
-            background: var(--color-surface-app);
+            background: var(--color-table-head);
+        }
+
+        .ui-list:not(.as-cards) th {
+            color: var(--color-table-head-ink);
+        }
+
+        /* এক সারি ছেড়ে এক — ডিফল্টে স্বচ্ছ, তাই কিছুই বদলায় না */
+        .ui-list:not(.as-cards) tbody tr:nth-child(odd) td {
+            background: var(--color-row-alt);
+        }
+
+        /* খাড়া ধার — hover যেন ওটাকে ঢেকে না দেয়, তাই td-তে */
+        .ui-list:not(.as-cards) td:not(:last-child),
+        .ui-list:not(.as-cards) th:not(:last-child) {
+            border-right: 1px solid var(--color-cell-line);
         }
 
         .ui-list:not(.as-cards) th {
             padding: var(--grid-pad-y) var(--grid-pad-x);
             font-weight: 500;
-            color: var(--color-ink-muted);
             white-space: nowrap;
         }
 
@@ -530,18 +548,22 @@
     .ui-grid {
         width: 100%;
         border-collapse: collapse;
-        font-size: 0.875rem;
+        font-size: var(--font-size-table);
     }
 
     .ui-grid thead tr {
         border-bottom: 1px solid var(--color-border);
-        background: var(--color-surface-app);
+        background: var(--color-table-head);
+    }
+
+    .ui-grid tbody tr:nth-child(odd) td {
+        background: var(--color-row-alt);
     }
 
     .ui-grid th {
         padding: var(--grid-pad-y-head, var(--grid-pad-y)) var(--grid-pad-x);
         font-weight: 500;
-        color: var(--color-ink-muted);
+        color: var(--color-table-head-ink);
         text-align: start;
         white-space: nowrap;
     }

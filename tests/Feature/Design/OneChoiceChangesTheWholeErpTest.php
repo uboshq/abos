@@ -88,10 +88,18 @@ class OneChoiceChangesTheWholeErpTest extends TestCase
     {
         $this->user->forceFill(['ui' => 'odoo'])->save();
 
+        /*
+         * ফেরার জায়গাটা ABOS-এর নিজেরটা, ক্লাসিক নয়।
+         *
+         * ভুল মান মানে "কোনো বাছাই নেই", আর বাছাই না থাকলে যা দেখানোর
+         * কথা সেটাই দেখানো হয় — `Ui::DEFAULT`। নামটা হাতে লেখা হয়নি,
+         * নাহলে ডিফল্ট বদলানোর দিন এই পরীক্ষাটা ভাঙত অথচ আচরণ ঠিকই
+         * থাকত।
+         */
         $this->actingAs($this->user)
             ->get(route('dashboard'))
             ->assertOk()
-            ->assertSee('data-ui="classic"', false)
+            ->assertSee('data-ui="'.Ui::DEFAULT.'"', false)
             ->assertDontSee('data-ui="odoo"', false);
     }
 
@@ -117,8 +125,14 @@ class OneChoiceChangesTheWholeErpTest extends TestCase
              *
              * ক্লাসিক মানে "কোনো টোকেন বদলায় না" — `:root`-এ যা লেখা
              * আছে হুবহু তাই। ওর একটা ব্লক থাকলে সেটা আর ক্লাসিক থাকত না।
+             *
+             * ── কেন `BARE`, `DEFAULT` নয় ────────────────────────────
+             * আগে এখানে `DEFAULT` লেখা ছিল, আর তখন দুইটাই ক্লাসিক
+             * ছিল বলে কাজ করত। ডিফল্ট নেভি হওয়ার পর ওই লাইনটা
+             * নেভিকে ছাড় দিত (যার ব্লক আছে) আর ক্লাসিকের কাছে ব্লক
+             * চাইত (যার থাকার কথা নয়) — একই লাইনে দুইটা ভুল।
              */
-            if ($look === Ui::DEFAULT) {
+            if ($look === Ui::BARE) {
                 continue;
             }
 
@@ -148,7 +162,7 @@ class OneChoiceChangesTheWholeErpTest extends TestCase
         $thin = [];
 
         foreach (Ui::keys() as $look) {
-            if ($look === Ui::DEFAULT) {
+            if ($look === Ui::BARE) {
                 continue;
             }
 
