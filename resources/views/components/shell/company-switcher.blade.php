@@ -58,23 +58,27 @@
                  class="h-10 w-auto max-w-32 shrink-0 object-contain" aria-hidden="true">
         @endif
 
-        <span class="min-w-0 text-start">
-            <span class="block max-w-40 truncate text-sm font-semibold text-(--color-ink)">
-                {{ $company->name() }}
-            </span>
+        {{--
+            কোম্পানি ও শাখা **এক লাইনে**, বন্ধনীতে।
 
-            {{-- শাখাটা পিল-ব্যাজে, সাধারণ লেখায় নয়।
+            ── কেন দুই লাইন থেকে সরে আসা ────────────────────────────────
+            আগে নামটা উপরে আর শাখাটা নিচে পিল-ব্যাজে বসত। যুক্তি ছিল
+            "ব্যাজ বলে এটা বদলানো যায়" — আর ওটা ভুল ছিল না, কিন্তু দাম
+            ছিল দুই লাইন, অর্থাৎ ৫৬px মাথা।
 
-                 নামের নিচে ধূসর এক লাইন হলে ওটা ঠিকানার মতো দেখাত — পড়ার
-                 জিনিস, বদলানোর নয়। ব্যাজটা বলে এটা একটা অবস্থা, আর অবস্থা
-                 বদলানো যায়। --}}
-            @if ($branch)
-                <span class="mt-0.5 inline-block max-w-40 truncate rounded-full
-                             bg-(--color-brand-50) px-2 py-0.5 text-2xs font-medium
-                             text-(--color-brand-700)">
-                    {{ $branch->name() }}
-                </span>
-            @endif
+            আসল ERP-গুলোর শেল বার এক লাইনের: Fiori ৪৪px, Odoo ৪৬। দুই
+            লাইনের কারণে আমাদের মাথা কোনোদিন ওদের মাপে নামতে পারত না,
+            আর নকলটা ওখানেই আটকে যেত।
+
+            মালিকের সমাধান, ২১ আগস্ট: পাশাপাশি লিখে বন্ধনীতে —
+            "ট্রেড ডিপো (প্রধান ময়মনসিংহ)"। তথ্য একটাও হারায়নি, উচ্চতা
+            অর্ধেক, আর বন্ধনীটা নিজেই বলে ভেতরেরটা বাইরেরটার অংশ।
+
+            শাখার রংটা ম্লান রাখা — নাম আগে পড়া হোক, শাখা তার পরে।
+        --}}
+        <span class="min-w-0 max-w-64 truncate text-start text-sm font-semibold
+                     text-(--color-ink)">
+            {{ $company->name() }}@if ($branch)<span class="font-normal text-(--color-ink-muted)"> ({{ $branch->name() }})</span>@endif
         </span>
 
         @if ($canSwitch)
