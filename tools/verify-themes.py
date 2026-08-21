@@ -4,7 +4,10 @@
 সারি থাকা পর্দায় দেখা হয় (`/suppliers`), খালি পাতায় নয়: খালি তালিকা
 কেবল খালি পথটাই প্রমাণ করে।
 """
-import subprocess, sys, pathlib
+import importlib.util, io, os, subprocess, sys, pathlib
+
+# বাংলা লেখা উইন্ডোজের কনসোলে — cp1252 ওগুলো লিখতে পারে না
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 from playwright.sync_api import sync_playwright
 
 BASE = "http://127.0.0.1:8081"
@@ -62,7 +65,25 @@ def norm(v):
     return v
 
 
+# প্রতিটা রূপের চিহ্ন-অংশ — আসল ERP-তে যা দেখে ওটাকে চেনা যায়।
+#
+# ── কেন এটা এখানে থাকতেই হবে ──────────────────────────────────────────
+# ২১ আগস্ট এই স্ক্রিপ্টটা "১০৩/১০৩ মিলেছে, শূন্য গরমিল" বলেছিল, আর তার
+# ভিত্তিতে আটটা রূপ শেষ বলে রিপোর্ট করা হয়েছিল। অথচ Odoo-র অ্যাপ লঞ্চার,
+# D365-এর শেভরন বার, Fiori-র লঞ্চপ্যাড — একটাও ছিল না।
+#
+# স্ক্রিপ্টটা মিথ্যা বলেনি; সে যা মাপত তাতে সবই মিলেছিল। **সে ওগুলো
+# খুঁজতই না।** যে পাহারা অনুপস্থিত জিনিসটা দেখতে পায় না, সে সবসময়
+# "হয়ে গেছে" বলবে — আর এবার ফাঁদে পড়েছিলাম আমি নিজেই।
+_spec = importlib.util.spec_from_file_location(
+    "theme_parts",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "theme-parts.py"))
+_parts = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_parts)
+PARTS = _parts.PARTS
+
 bad_total = 0
+missing_parts = 0
 with sync_playwright() as p:
     b = p.chromium.launch()
     pg = b.new_page(viewport={"width": 1440, "height": 900})
@@ -102,10 +123,22 @@ with sync_playwright() as p:
         for k, want, g in bad:
             print("           %-26s want=%-9s got=%s" % (k, want, g))
 
+        # চিহ্ন-অংশ — রং মিললেই নকল হয় না
+        for name, sel, why in PARTS.get(look, []):
+            if not pg.evaluate("s => !!document.querySelector(s)", sel):
+                missing_parts += 1
+                print("           %-14s অনুপস্থিত — %s" % (name, why))
+
         pg.screenshot(path=str(OUT / (look + ".png")))
 
     subprocess.run(["php", "artisan", "tinker", "--execute", TPL % ("navy", "navy")],
                    cwd=r"E:\ABOS\abos", capture_output=True, timeout=180)
     b.close()
 
-print("\ntotal mismatches:", bad_total)
+print()
+print("মানের গরমিল       :", bad_total)
+print("অনুপস্থিত চিহ্ন-অংশ :", missing_parts, "/", sum(len(v) for v in PARTS.values()))
+
+# একটাও বাকি থাকলে অসফল — "১০৩/১০৩ মিলেছে" বলে শেষ ঘোষণা করার
+# সুযোগটা এখানেই বন্ধ।
+sys.exit(1 if (bad_total or missing_parts) else 0)
