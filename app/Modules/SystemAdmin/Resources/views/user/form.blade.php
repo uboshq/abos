@@ -41,7 +41,7 @@
             </div>
         @endif
 
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 <x-ui.field name="name" :label="__('system_admin::field.user_name')"
                             :value="old('name', $user->name)" required />
@@ -71,7 +71,7 @@
             </div>
         </section>
 
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="font-semibold">{{ __('system_admin::field.roles') }}</h2>
 
             {{-- রোল ব্যবহারকারী ধরে, কোম্পানি ধরে নয় — আর সেটা লিখে
@@ -91,7 +91,7 @@
             </div>
         </section>
 
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="font-semibold">{{ __('core.company.company') }}</h2>
             <p class="mt-1 text-xs text-(--color-ink-muted)">{{ __('system_admin::message.company_access_note') }}</p>
 

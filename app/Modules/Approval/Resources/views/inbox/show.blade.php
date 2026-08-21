@@ -27,7 +27,7 @@
 
     <div class="grid gap-4 lg:grid-cols-3">
         <div class="space-y-4 lg:col-span-2">
-            <div class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+            <div data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
                 <dl class="grid gap-3 sm:grid-cols-2">
                     <div>
                         <dt class="text-2xs uppercase tracking-wide text-(--color-ink-muted)">
@@ -79,7 +79,7 @@
                  শুধু চূড়ান্ত অবস্থা রাখলে "তিন নম্বর স্তরে আটকে ছিল কেন"
                  প্রশ্নের উত্তর কখনো পাওয়া যেত না। --}}
             @if ($approval->decisions->isNotEmpty())
-                <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
+                <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                             bg-(--color-surface-card)">
                     <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-3 py-2 text-sm font-semibold">
                         {{ __('approval::field.decisions') }}

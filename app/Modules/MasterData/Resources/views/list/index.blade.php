@@ -34,7 +34,7 @@
         {{-- খালি তালিকা — এখান থেকেই শুরু। একক, কর, শর্ত ও কারণ কোড
              ছাড়া প্রথম বিলটাই লেখা যায় না, তাই "নিজে বানান" বলাটা
              কাজ ঠেলে দেওয়া। --}}
-        <div class="mb-4 rounded-(--radius-card) border border-(--color-border)
+        <div data-boxed class="mb-4 rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card) p-8 text-center">
             <h2 class="text-lg font-semibold">{{ __('master_data::message.empty_lists') }}</h2>
 
@@ -54,7 +54,7 @@
         </div>
     @endif
 
-    <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+    <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
             <x-ui.toolbar :title="__($spec['title'])" :count="trans_choice('master_data::message.count', $records->count(), ['count' => $records->count()])" :sort="$sortOptions">
         <x-slot:actions>

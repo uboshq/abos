@@ -43,7 +43,7 @@
         {{-- খালি ছক — এখান থেকেই শুরু। একটা খালি টেবিল দেখিয়ে
              "নতুন খাত" বোতাম দিলে ব্যবহারকারীকে চল্লিশটা খাত হাতে
              লিখতে বলা হত, আর সেই ছকটা প্রায় নিশ্চিতভাবে ভুল হত। --}}
-        <div class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-8 text-center">
+        <div data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-8 text-center">
             <h2 class="text-lg font-semibold">{{ __('accounts::message.chart_empty') }}</h2>
 
             <p class="mx-auto mt-2 max-w-(--spacing-prose-max) text-sm text-(--color-ink-muted)">
@@ -69,7 +69,7 @@
             @endcan
         </div>
     @else
-        <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
+        <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">
             <form method="GET" class="contents">
                 <x-ui.toolbar :title="__('accounts::menu.chart_of_accounts')" :count="trans_choice('accounts::message.count', $total, ['count' => $total])"

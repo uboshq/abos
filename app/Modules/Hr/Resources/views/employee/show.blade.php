@@ -34,7 +34,7 @@
     @endif
 
     <div class="grid gap-4 lg:grid-cols-2">
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <dl class="space-y-2 text-sm">
                 @foreach ([
                     'hr::field.department' => $employee->department?->name(),
@@ -58,7 +58,7 @@
         </section>
 
         @can('hr.salary.view')
-            <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+            <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
                 <h2 class="mb-3 font-semibold">{{ __('hr::action.salary') }}</h2>
 
                 @if ($components === [])

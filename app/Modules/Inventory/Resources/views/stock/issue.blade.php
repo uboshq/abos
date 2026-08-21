@@ -44,7 +44,7 @@
     @endif
 
     <div class="grid gap-4 lg:grid-cols-[1fr_20rem]">
-        <section class="rounded-(--radius-card) border border-(--color-border)
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card) p-4">
             <form method="POST" action="{{ route('inventory.stock.issue.store') }}" class="space-y-3">
                 @csrf

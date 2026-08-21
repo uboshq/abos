@@ -58,7 +58,7 @@
             </div>
         @endif
 
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <div class="grid gap-3 sm:grid-cols-3">
                 <x-ui.field name="trx_date" type="date" :label="__('accounts::field.date')"
                             :value="old('trx_date', $voucher->trx_date?->format('Y-m-d') ?? now()->format('Y-m-d'))"
@@ -73,7 +73,7 @@
             </div>
         </section>
 
-        <section class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
+        <section data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card)">
             <div class="overflow-x-auto">
                 <table class="ui-grid">

@@ -54,7 +54,7 @@
             </div>
         @endif
 
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <x-ui.field name="trx_date" type="date" :label="__('sales::field.date')"
                             :value="old('trx_date', $shipment->trx_date?->toDateString() ?? now()->toDateString())"
@@ -101,7 +101,7 @@
             </div>
         </section>
 
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="font-semibold">{{ __('sales::shipment.challans') }}</h2>
             <p class="mt-1 text-xs text-(--color-ink-muted)">{{ __('sales::shipment.challans_hint') }}</p>
 

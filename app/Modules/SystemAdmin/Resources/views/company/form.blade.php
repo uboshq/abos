@@ -53,7 +53,7 @@
         @csrf
         @unless ($isNew) @method('PUT') @endunless
 
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="mb-3 font-semibold">{{ __('master_data::section.identity') }}</h2>
 
             <div class="grid gap-3 sm:grid-cols-2">
@@ -98,7 +98,7 @@
         </section>
 
         @if ($isNew)
-            <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+            <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
                 <h2 class="mb-1 font-semibold">{{ __('system_admin::field.main_branch') }}</h2>
                 <p class="mb-3 max-w-(--spacing-prose-max) text-sm text-(--color-ink-muted)">
                     {{ __('system_admin::message.main_branch_note') }}
@@ -116,7 +116,7 @@
                 </div>
             </section>
 
-            <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+            <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
                 <h2 class="mb-1 font-semibold">{{ __('system_admin::field.financial_year') }}</h2>
                 <p class="mb-3 max-w-(--spacing-prose-max) text-sm text-(--color-ink-muted)">
                     {{ __('system_admin::message.financial_year_note') }}
@@ -146,7 +146,7 @@
     @unless ($isNew)
         {{-- শাখাগুলো কোম্পানির পাতাতেই — আলাদা পাতায় রাখলে প্রথম
              প্রশ্নটাই হত "কোন কোম্পানির শাখা?" --}}
-        <section class="mt-4 rounded-(--radius-card) border border-(--color-border)
+        <section data-boxed class="mt-4 rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card) p-4">
             <h2 class="mb-3 font-semibold">{{ __('system_admin::menu.branches') }}</h2>
 

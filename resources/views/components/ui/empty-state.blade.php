@@ -18,7 +18,9 @@
     ফাঁকা তালিকা মানে ব্যবহারকারী আটকে গেছে। শুধু "কিছু নেই" লিখলে সে জানে
     না এরপর কী করতে হবে। তাই অন্তত একটা করণীয় থাকতে হবে — slot-এ বোতাম দিন।
 --}}
-<div {{ $attributes->merge(['class' => 'flex flex-col items-center justify-center px-6 py-12 text-center']) }}>
+{{-- `data-msg` — এটাও একটা বার্তা, আর রূপ ধরে তার কোণ বদলায়:
+     খতিয়ানে ধারালো, রেডউডে ১৬px গোল। --}}
+<div data-msg {{ $attributes->merge(['class' => 'flex flex-col items-center justify-center rounded-(--radius-card) px-6 py-12 text-center']) }}>
     {{-- disabled-এর ধূসর, muted নয়: এটা তথ্য নয়, জায়গাটা ভরে রাখা --}}
     <x-ui.icon :name="$icon" :size="40" class="mb-3 text-(--color-ink-disabled)" />
 

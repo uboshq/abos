@@ -88,7 +88,7 @@
     </script>
 </head>
 
-<body class="min-h-dvh">
+<body class="flex min-h-dvh flex-col">
     {{-- মোবাইলে সাইডবার লুকানো থাকে; এই লিংকটা কি-বোর্ড ব্যবহারকারীকে
          সরাসরি কাজের জায়গায় নিয়ে যায় (সেকশন ১৫.২০)। --}}
     <a href="#main"
@@ -127,7 +127,10 @@
         $commandPlacement = \App\Core\Support\Ui::commands(auth()->user()?->ui);
     @endphp
 
-    <div class="flex min-h-dvh">
+    {{-- সবকিছুর উপরে — Redwood-এর ৪px ইটরঙা পটি। --}}
+    <x-shell.chrome region="above-all" :menu="$menu ?? []" />
+
+    <div class="flex min-h-dvh flex-1">
         @if ($navPlacement === 'rail')
             <x-shell.sidebar :menu="$menu ?? []" />
         @endif
@@ -180,6 +183,10 @@
                 </div>
             @endif
 
+            {{-- রূপের নিজের পাতা-মাথা — NetSuite-এর নেভি শিরোনাম।
+                 যে রূপের কিছু নেই তার জন্য কিছুই আঁকে না। --}}
+            <x-shell.chrome region="page-head" :menu="$menu ?? []" />
+
             {{--
                 কাজের পটি — কেবল যে চেহারাগুলো ওটা চায়।
 
@@ -198,8 +205,9 @@
             --}}
             @if ($commandPlacement === 'bar')
                 @isset($header)
-                    <div class="shrink-0 border-b border-(--color-border)
-                                bg-(--color-surface-card) px-3 py-2 md:px-5 print-hide">
+                    <div data-command-strip
+                         class="shrink-0 border-b border-(--color-border)
+                                bg-(--color-toolbar) px-3 py-2 md:px-5 print-hide">
                         {{ $header }}
                     </div>
                 @endisset

@@ -33,7 +33,7 @@
         </div>
     @endif
 
-    <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+    <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
             <x-ui.toolbar :title="__('inventory::menu.transfers')" :count="trans_choice('core.count.records', $transfers->total(), ['count' => $transfers->total()])"
                 :columns="$columns" :search-placeholder="__('inventory::message.transfer_search')"

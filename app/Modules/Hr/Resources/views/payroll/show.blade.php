@@ -57,7 +57,7 @@
                 'hr::field.deductions' => \App\Core\Support\Money::format($run->deduction_total),
                 'hr::field.net' => \App\Core\Support\Money::format($run->net_total),
             ] as $label => $value)
-                <div class="rounded-(--radius-card) border border-(--color-border)
+                <div data-boxed class="rounded-(--radius-card) border border-(--color-border)
                             bg-(--color-surface-card) p-3">
                     <p class="text-2xs font-semibold uppercase tracking-wide text-(--color-ink-muted)">
                         {{ __($label) }}
@@ -110,7 +110,7 @@
         @endcan
     </div>
 
-    <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+    <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <x-ui.table
             :empty="__('hr::message.no_runs')"
             :rows="$run->payslips"

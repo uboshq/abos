@@ -65,7 +65,7 @@
          না দেখালে হাতে হাতে দেওয়া টাকা সপ্তাহখানেক অগৃহীত পড়ে থাকে,
          আর তখন দুই ধাপের হস্তান্তর নিছক একটা বাড়তি বোতাম হয়ে যায়। --}}
     @if ($waitingForMe->isNotEmpty())
-        <div class="mb-4 rounded-(--radius-card) border border-(--color-badge-warning-bg)
+        <div data-msg class="mb-4 rounded-(--radius-card) border border-(--color-badge-warning-bg)
                     bg-(--color-badge-warning-bg) p-4">
             <p class="flex items-center gap-2 text-sm font-semibold text-(--color-badge-warning-ink)">
                 <x-ui.icon name="handover" :size="18" />
@@ -93,7 +93,7 @@
          "পথে" ম্লান, আর শেষে একটা যোগফলের সারি যেটা কোনো রেকর্ড নয়।
          শেয়ার্ড কম্পোনেন্টে এই তিনটা শর্ত জুড়লে বাকি চল্লিশটা তালিকাও
          ওগুলো বইত (§১৯.৮)। টোকেন ও মাপ হুবহু একই। --}}
-    <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
+    <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                 bg-(--color-surface-card) shadow-(--shadow-card)">
         <div class="table-responsive">
             {{-- শেষ সারিটা কারও নামের পাশে বসে না, আর সেটাই পুরো কথা:
@@ -128,7 +128,7 @@
             {{ __('accounts::custody.on_the_road_detail') }}
         </h2>
 
-        <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
+        <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card) shadow-(--shadow-card)">
             @foreach ($onTheRoad as $transfer)
                 <a href="{{ route('accounts.transfer.show', $transfer) }}"

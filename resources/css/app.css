@@ -1021,11 +1021,50 @@
    CSS-এর নিয়ম: **স্তরবিহীন ঘোষণা সব স্তরকে হারায়।** তাই এটা ইচ্ছাকৃতভাবে
    কোনো @layer-এর ভেতরে নয়, আর কারণটা এখানেই লেখা রইল।
    ───────────────────────────────────────────────────────────────────── */
+/* সোনার সরু রেখা — Rose-এর একমাত্র অলঙ্কার।
+   গ্রেডিয়েন্টটা ব্র্যান্ডের শিটেরই তিনটা ধাপ। */
+.gold-hairline {
+    height: var(--gold-hairline-h);
+    background: linear-gradient(100deg, var(--color-brand-gold-deep),
+                var(--color-brand-gold-bright) 45%, var(--color-brand-500));
+}
+
+/* বাঁ প্যানেলের আইটেম।
+
+   বেশিরভাগ রূপে এটা একটা সাধারণ সারি, সামান্য গোল কোণে। Redwood-এ
+   একটা টালি: ১২px গোল, আর চলতিটা ছায়াসহ সাদা কার্ড হয়ে ভাসে।
+
+   দুইটা markup নয়, দুইটা টোকেন — নাহলে সাইডবারের সারির কোডটা প্রতি
+   রূপে একবার করে লিখতে হত। */
+.rail-item {
+    border-radius: var(--rail-item-radius);
+}
+
+.rail-item[aria-current],
+.rail-item.is-active {
+    box-shadow: var(--rail-item-shadow);
+}
+
+/* নেটস্যুটের মেনুতে প্রতিটা আইটেমের পাশে একটা নিচমুখী ক্যারেট —
+   ওটাই বলে ভেতরে আরও আছে। CSS-এর ত্রিভুজ, কারণ প্রতিটা রূপের markup-এ
+   একটা করে SVG বসালে সাতটা রূপে সাতবার লিখতে হত। */
+.topnav [data-nav-item]::after {
+    content: var(--topnav-caret);
+    display: inline-block;
+    margin-inline-start: 5px;
+    border-inline: 3px solid transparent;
+    border-top: 4px solid currentColor;
+    opacity: .75;
+}
+
 .cmd-actions :is(a, button) {
     /* মাপটা টোকেন থেকে — নাহলে কোনো থিম এটা বদলাতে পারত না,
        আর ঘন থিমে কমান্ড বারটা একা আগের উচ্চতায় বসে থাকত। */
     min-height: var(--spacing-command);
     height: var(--spacing-command);
+    /* নেটস্যুটের বোতাম সমতল নয় — উপরে হালকা, নিচে গাঢ়। ডিফল্টে
+       `none`, তাই বাকি সাত রূপে কিছুই বদলায় না। */
+    background-image: var(--cmd-gradient);
     padding-inline: 10px;
     /* কোণটা টোকেন থেকে — নাহলে ফিওরির ৪px বা NetSuite-এর ৩px
        কোনোদিন বসত না, আর কমান্ড বারটা একা আগের কোণে থেকে যেত। */

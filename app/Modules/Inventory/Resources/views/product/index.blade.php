@@ -64,7 +64,7 @@
         </div>
     @endif
 
-    <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+    <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
             <x-ui.toolbar :title="__('inventory::menu.products')" :count="trans_choice('inventory::message.count', $products->total(), ['count' => $products->total()])"
                 :search-placeholder="__('inventory::message.search_placeholder')"

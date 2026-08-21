@@ -22,7 +22,7 @@
     </x-slot:header>
 
     <div class="grid gap-4 lg:grid-cols-[22rem_1fr]">
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <dl class="space-y-2 text-sm">
                 @foreach ([
                     'governance::field.who' => $trail->user?->name ?? __('governance::message.system'),
@@ -55,7 +55,7 @@
             @endif
         </section>
 
-        <section class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
+        <section data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card)">
             <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-2 font-semibold">
                 {{ __('governance::field.changes') }}

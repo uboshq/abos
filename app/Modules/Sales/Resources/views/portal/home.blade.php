@@ -5,7 +5,7 @@
     সংখ্যা দেখতে। বাকি সব তার ব্যাখ্যা।
 --}}
 <x-sales::portal.layout :dealer="$dealer">
-    <div class="mb-5 rounded-(--radius-card) border border-(--color-border)
+    <div data-boxed class="mb-5 rounded-(--radius-card) border border-(--color-border)
                 bg-(--color-surface-card) px-4 py-4">
         <p class="text-2xs uppercase tracking-wide text-(--color-ink-muted)">
             {{ __('sales::portal.due') }}

@@ -13,7 +13,7 @@
     <div class="space-y-4">
 
         {{-- বাটন --}}
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="mb-3 font-semibold">{{ __('core.components.buttons') }}</h2>
             <div class="flex flex-wrap gap-2">
                 @foreach (['primary', 'success', 'warning', 'danger', 'secondary', 'ghost'] as $tone)
@@ -23,7 +23,7 @@
         </section>
 
         {{-- ব্যাজ --}}
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="mb-3 font-semibold">{{ __('core.components.badges') }}</h2>
             <div class="flex flex-wrap items-center gap-2">
                 @foreach (\App\Core\Support\DocumentStatus::all() as $status)
@@ -35,7 +35,7 @@
         </section>
 
         {{-- টেবিল --}}
-        <section class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+        <section data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
             <x-ui.toolbar :title="__('core.components.title')" :count="__('core.components.subtitle')">
         <x-slot:actions>
             <x-ui.button tone="secondary" icon="refresh">{{ __('core.action.history') }}</x-ui.button>
@@ -55,7 +55,7 @@
         </section>
 
         {{-- ফাঁকা অবস্থা --}}
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
             <x-ui.empty-state>
                 <x-ui.button tone="primary">{{ __('core.action.create') }}</x-ui.button>
                 <x-ui.button tone="secondary">{{ __('core.action.help') }}</x-ui.button>

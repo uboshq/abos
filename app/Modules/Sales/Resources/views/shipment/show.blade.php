@@ -58,7 +58,7 @@
     @endif
 
     <div class="space-y-4">
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <dl class="grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-4">
                 @foreach ([
                     'sales::field.date' => \App\Core\Support\DateFormat::format($shipment->trx_date),
@@ -96,7 +96,7 @@
             @endif
         </section>
 
-        <section class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
+        <section data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card)">
             <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-3 font-semibold">
                 {{ __('sales::shipment.loaded') }}
@@ -163,7 +163,7 @@
 
         @if ($onTheRoad)
             @can('create', \App\Modules\Sales\Models\Shipment::class)
-                <section class="rounded-(--radius-card) border border-(--color-border)
+                <section data-boxed class="rounded-(--radius-card) border border-(--color-border)
                                 bg-(--color-surface-card) p-4">
                     <h2 class="mb-3 font-semibold">{{ __('sales::shipment.close') }}</h2>
 

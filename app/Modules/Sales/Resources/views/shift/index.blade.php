@@ -98,7 +98,7 @@
                 'shift_cash_out' => $figures['cash_out'],
                 'shift_expected' => $figures['expected'],
             ] as $label => $value)
-                <div class="rounded-(--radius-card) border border-(--color-border)
+                <div data-boxed class="rounded-(--radius-card) border border-(--color-border)
                             bg-(--color-surface-card) p-4">
                     <div class="text-sm text-(--color-ink-muted)">{{ __('sales::message.'.$label) }}</div>
                     <div class="num mt-1 text-xl font-semibold">{{ \App\Core\Support\Money::format($value) }}</div>
@@ -146,7 +146,7 @@
     @if ($closed->isNotEmpty())
         <h2 class="mt-6 mb-2 text-sm font-semibold">{{ __('sales::message.shift_today') }}</h2>
 
-        <div class="table-responsive rounded-(--radius-card) border border-(--color-border)
+        <div data-boxed class="table-responsive rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">
         <x-ui.table :rows="$closed"
                     :columns="$columns"

@@ -39,7 +39,7 @@
         </label>
     </form>
 
-    <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+    <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <x-ui.table
             :empty="__('hr::message.no_employees_for_day')"
             :rows="$rows"

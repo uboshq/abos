@@ -80,7 +80,7 @@
         </div>
     @endif
 
-    <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+    <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
             <x-ui.toolbar :title="__('customer::menu.customers')" :count="trans_choice('customer::message.count', $customers->total(), ['count' => $customers->total()])"
                 :columns="$columns"

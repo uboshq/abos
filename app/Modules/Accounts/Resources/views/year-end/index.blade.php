@@ -39,7 +39,7 @@
         <div class="grid gap-4 lg:grid-cols-3">
 
             {{-- কী ঘটবে --}}
-            <section class="rounded-(--radius-card) border border-(--color-border)
+            <section data-boxed class="rounded-(--radius-card) border border-(--color-border)
                             bg-(--color-surface-card) p-4 lg:col-span-2">
                 <h2 class="mb-3 font-semibold">
                     {{ __('accounts::field.closing_year') }}: {{ $year->name }}
@@ -92,7 +92,7 @@
             </section>
 
             {{-- পরের বছর --}}
-            <section class="rounded-(--radius-card) border border-(--color-border)
+            <section data-boxed class="rounded-(--radius-card) border border-(--color-border)
                             bg-(--color-surface-card) p-4">
                 <h2 class="mb-3 font-semibold">{{ __('accounts::field.next_year') }}</h2>
 
@@ -136,7 +136,7 @@
     @endif
 
     {{-- সব বছর --}}
-    <section class="mt-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
+    <section data-boxed class="mt-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">
         <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-3 font-semibold">
             {{ __('accounts::field.financial_years') }}

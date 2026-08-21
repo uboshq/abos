@@ -39,7 +39,7 @@
         </div>
     @endif
 
-    <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+    <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
         <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
             <h2 class="font-semibold">{{ __('master_data::field.path') }}</h2>
 
@@ -69,7 +69,7 @@
     </section>
 
     @if ($childLevel !== null)
-        <section class="mt-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
+        <section data-boxed class="mt-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card)">
             <div class="flex flex-wrap items-center justify-between gap-2 border-b border-(--color-border) px-4 py-3">
                 <h2 class="font-semibold">{{ __('master_data::level.' . $childLevel) }}</h2>

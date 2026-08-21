@@ -57,7 +57,7 @@
             ['accounts::asset.book_value', $asset->bookValue()],
             ['accounts::asset.next_month', $nextAmount],
         ] as [$label, $value])
-            <div class="rounded-(--radius-card) border border-(--color-border)
+            <div data-boxed class="rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card) px-4 py-3">
                 <p class="text-2xs uppercase tracking-wide text-(--color-ink-muted)">{{ __($label) }}</p>
                 <p class="num text-xl font-semibold">{{ \App\Core\Support\Money::format($value) }}</p>

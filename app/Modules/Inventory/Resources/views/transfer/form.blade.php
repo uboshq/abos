@@ -42,7 +42,7 @@
             </div>
         @endif
 
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 <x-ui.select name="from_warehouse_id" :label="__('inventory::field.from_warehouse')"
                              :options="$warehouses->mapWithKeys(fn ($w) => [$w->id => $w->name()])"
@@ -63,7 +63,7 @@
             </div>
         </section>
 
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="mb-3 font-semibold">{{ __('inventory::message.lines') }}</h2>
 
             <div x-data="{

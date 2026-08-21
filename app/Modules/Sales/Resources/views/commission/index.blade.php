@@ -62,7 +62,7 @@
         মাস শেষে কোম্পানির লোককে বলা প্রথম সংখ্যাটা এটাই, তাই উপরে,
         আর বড় করে।
     --}}
-    <div class="mb-4 rounded-(--radius-card) border border-(--color-border)
+    <div data-boxed class="mb-4 rounded-(--radius-card) border border-(--color-border)
                 bg-(--color-surface-card) px-4 py-3">
         <p class="text-2xs uppercase tracking-wide text-(--color-ink-muted)">
             {{ __('sales::field.commission_pending_total') }}
@@ -153,7 +153,7 @@
     @if ($claims->isEmpty())
         <x-ui.empty-state :message="__('sales::message.no_commissions')" />
     @else
-        <div class="overflow-x-auto rounded-(--radius-card) border border-(--color-border)
+        <div data-boxed class="overflow-x-auto rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">
         <x-ui.table :rows="$claims"
                     :columns="$columns"

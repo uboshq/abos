@@ -44,12 +44,12 @@
          এগোনোর আগেই সেটা বলা হয় — ফর্ম দেখিয়ে পরে "কীসের সাপেক্ষে"
          প্রশ্ন তোলা মানে ব্যবহারকারীকে ঘোরানো। --}}
     @if ($base === null)
-        <div class="mb-4 rounded-(--radius-card) border border-(--color-border)
+        <div data-boxed class="mb-4 rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card) p-6 text-center text-sm text-(--color-ink-muted)">
             {{ __('master_data::message.no_base_currency') }}
         </div>
     @elseif ($currency->is_default)
-        <div class="mb-4 rounded-(--radius-card) border border-(--color-border)
+        <div data-boxed class="mb-4 rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card) p-6 text-center text-sm text-(--color-ink-muted)">
             {{ __('master_data::message.base_currency_rate_is_one', ['code' => $currency->code]) }}
         </div>
@@ -57,7 +57,7 @@
         <div class="mb-4 grid gap-4 lg:grid-cols-[20rem_1fr]">
 
             {{-- আজকের কার্যকর হার --}}
-            <div class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+            <div data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
                 <p class="text-2xs font-semibold uppercase tracking-wide text-(--color-ink-muted)">
                     {{ __('master_data::field.rate_today') }}
                 </p>
@@ -120,7 +120,7 @@
         </div>
     @endif
 
-    <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+    <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <x-ui.table
             :empty="__('master_data::message.no_rate_yet')"
             :rows="$rates"

@@ -35,7 +35,7 @@
     <div class="max-w-2xl space-y-4">
 
         {{-- ছবি --}}
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="font-semibold">{{ __('core.profile.photo') }}</h2>
             <p class="mt-0.5 mb-3 max-w-(--spacing-prose-max) text-sm text-(--color-ink-muted)">
                 {{ __('core.profile.photo_note', ['mb' => $maxMb]) }}
@@ -88,7 +88,7 @@
             @csrf
             @method('PUT')
 
-            <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+            <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
                 <h2 class="mb-3 font-semibold">{{ __('core.profile.identity') }}</h2>
 
                 <div class="grid gap-3 sm:grid-cols-2">

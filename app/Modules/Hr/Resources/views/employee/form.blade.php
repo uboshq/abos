@@ -33,7 +33,7 @@
         @if ($employee->exists) @method('PUT') @endif
 
         {{-- পরিচয় --}}
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <div class="grid gap-3 md:grid-cols-3">
                 {{-- খালি রাখলে কোডটা নিজে বসে (মালিকের নির্দেশ)। ঘরটা
                      থাকে, কারণ পুরনো খাতার কর্মী নম্বর ধরে রাখতে হতে পারে। --}}
@@ -57,7 +57,7 @@
         </section>
 
         {{-- কাজ --}}
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <div class="grid gap-3 md:grid-cols-3">
                 <x-ui.select name="branch_id" :label="__('hr::field.branch')"
                              :options="$branches->mapWithKeys(fn ($b) => [$b->id => $b->name()])"
@@ -83,7 +83,7 @@
              ব্যাংকের ঘরগুলো সবসময় দেখানো হয়, নগদ বেছে নিলেও: একজন
              কর্মীর পথ বছরে একবার বদলায়, আর ঘরগুলো লুকিয়ে রাখলে পথ
              বদলানোর দিনে সেগুলো আবার ভরতে হত। --}}
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <div class="grid gap-3 md:grid-cols-3">
                 <x-ui.select name="payment_method" :label="__('hr::field.payment_method')"
                              :options="collect($paymentMethods)->mapWithKeys(fn ($m) => [$m => __('hr::kind.' . $m)])"

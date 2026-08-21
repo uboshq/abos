@@ -26,7 +26,7 @@
         @csrf
         @if ($head->exists) @method('PUT') @endif
 
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <div class="grid gap-3 md:grid-cols-2">
                 <x-ui.field name="code" :label="__('hr::field.code')"
                             :value="old('code', $head->code)"

@@ -36,7 +36,7 @@
     @enderror
 
     @if ($flows->isEmpty())
-        <div class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-6">
+        <div data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-6">
             <p class="text-sm font-medium">{{ __('approval::message.no_flows') }}</p>
             <p class="mt-1 max-w-(--spacing-prose-max) text-sm text-(--color-ink-muted)">
                 {{ __('approval::message.no_flows_hint') }}
@@ -45,7 +45,7 @@
     @else
         <div class="space-y-3">
             @foreach ($flows as $flow)
-                <div class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+                <div data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div>
                             <p class="font-medium">

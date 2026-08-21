@@ -52,7 +52,7 @@
         <div class="min-w-0 space-y-3">
 
             {{-- ── ডকুমেন্ট স্ট্রিপ ──────────────────────────────────── --}}
-            <section class="rounded-(--radius-card) border-t-2 border-(--color-success)
+            <section data-boxed class="rounded-(--radius-card) border-t-2 border-(--color-success)
                             border-x border-b border-(--color-border)
                             bg-(--color-surface-card) p-3">
                 {{-- পাঁচটা ঘরই এক সারিতে, আর ঘরগুলো সরু।
@@ -130,7 +130,7 @@
             </section>
 
             {{-- ── এন্ট্রি এলাকা ─────────────────────────────────────── --}}
-            <section class="rounded-(--radius-card) border border-(--color-border)
+            <section data-boxed class="rounded-(--radius-card) border border-(--color-border)
                             bg-(--color-surface-card) p-3">
                 <div class="grid gap-3 lg:grid-cols-[1fr_13rem_9rem]">
 
@@ -352,7 +352,7 @@
             </section>
 
             {{-- ── কার্ট ────────────────────────────────────────────── --}}
-            <section class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
+            <section data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                             bg-(--color-surface-card)">
                 <div class="table-responsive">
                     <table class="ui-lines table-cards w-full text-sm">

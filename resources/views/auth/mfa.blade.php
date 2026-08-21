@@ -44,7 +44,7 @@
 
         @if (! $on && ! $secret)
             {{-- ── বন্ধ ───────────────────────────────────────────── --}}
-            <div class="rounded-(--radius-card) border border-(--color-border)
+            <div data-boxed class="rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card) p-4">
                 <p class="text-sm">{{ __('auth.mfa_why') }}</p>
 
@@ -60,7 +60,7 @@
 
         @elseif (! $on)
             {{-- ── বসানো চলছে ─────────────────────────────────────── --}}
-            <div class="rounded-(--radius-card) border border-(--color-border)
+            <div data-boxed class="rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card) p-4">
                 <h2 class="font-medium">{{ __('auth.mfa_step_one') }}</h2>
                 <p class="mt-1 text-2xs text-(--color-ink-muted)">{{ __('auth.mfa_step_one_note') }}</p>
@@ -104,7 +104,7 @@
 
         @else
             {{-- ── চালু ───────────────────────────────────────────── --}}
-            <div class="rounded-(--radius-card) border border-(--color-border)
+            <div data-boxed class="rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card) p-4">
                 <p class="flex items-center gap-2 text-sm">
                     <span class="text-(--color-success)"><x-ui.icon name="check-circle" :size="18" /></span>

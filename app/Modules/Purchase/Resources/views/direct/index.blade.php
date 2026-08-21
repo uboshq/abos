@@ -39,7 +39,7 @@
         <div class="min-w-0 space-y-3">
 
             {{-- ── ডকুমেন্ট স্ট্রিপ ──────────────────────────────────── --}}
-            <section class="rounded-(--radius-card) border-t-2 border-(--color-brand-500)
+            <section data-boxed class="rounded-(--radius-card) border-t-2 border-(--color-brand-500)
                             border-x border-b border-(--color-border)
                             bg-(--color-surface-card) p-3">
                 <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
@@ -97,7 +97,7 @@
                                    </section>
 
             {{-- ── এন্ট্রি স্ট্রিপ ───────────────────────────────────── --}}
-            <section class="rounded-(--radius-card) border border-(--color-border)
+            <section data-boxed class="rounded-(--radius-card) border border-(--color-border)
                             bg-(--color-surface-card) p-3">
                 <div class="relative">
                     <input type="text" x-model="term" x-ref="search"
@@ -265,7 +265,7 @@
             </section>
 
             {{-- ── কার্ট ─────────────────────────────────────────────── --}}
-            <section class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
+            <section data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                             bg-(--color-surface-card)">
                 <div class="overflow-x-auto">
                     <table class="ui-grid is-compact w-full text-sm">
@@ -360,7 +360,7 @@
 
         {{-- ══ ডান কলাম: যোগফল ════════════════════════════════════════ --}}
         <aside class="space-y-3">
-            <section class="rounded-(--radius-card) border border-(--color-border)
+            <section data-boxed class="rounded-(--radius-card) border border-(--color-border)
                             bg-(--color-surface-card) p-3">
                 <dl class="space-y-1.5 text-sm">
                     <div class="flex justify-between">
@@ -415,7 +415,7 @@
                 </div>
             </section>
 
-            <section class="rounded-(--radius-card) border border-(--color-border)
+            <section data-boxed class="rounded-(--radius-card) border border-(--color-border)
                             bg-(--color-surface-card) p-3 text-2xs text-(--color-ink-muted)">
                 <div class="flex justify-between">
                     <span>{{ __('purchase::field.total_item') }}</span>

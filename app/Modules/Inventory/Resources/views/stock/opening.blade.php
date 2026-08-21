@@ -37,7 +37,7 @@
 
     <div class="grid gap-4 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
 
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="mb-1 font-semibold">{{ __('inventory::menu.opening') }}</h2>
             <p class="mb-3 max-w-(--spacing-prose-max) text-sm text-(--color-ink-muted)">
                 {{ __('inventory::message.opening_note') }}
@@ -93,7 +93,7 @@
             </form>
         </section>
 
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
             <div class="flex items-baseline justify-between border-b border-(--color-border) px-4 py-3">
                 <h2 class="font-semibold">{{ __('inventory::message.opening_total') }}</h2>
                 <span class="num font-semibold">{{ \App\Core\Support\Money::format($total) }}</span>

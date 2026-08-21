@@ -32,7 +32,7 @@
             রং আগে বেছে তারপর চেহারা বদলালে মানুষটাকে দুইবার বাছতে
             হত।
         --}}
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="font-semibold">{{ __('core.appearance.ui') }}</h2>
             <p class="mt-0.5 mb-3 max-w-(--spacing-prose-max) text-sm text-(--color-ink-muted)">
                 {{ __('core.appearance.ui_note') }}
@@ -64,7 +64,7 @@
         </section>
 
         {{-- রং --}}
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="font-semibold">{{ __('core.appearance.accent') }}</h2>
             <p class="mt-0.5 mb-3 max-w-(--spacing-prose-max) text-sm text-(--color-ink-muted)">
                 {{ __('core.appearance.accent_note') }}
@@ -96,7 +96,7 @@
         </section>
 
         {{-- থিম --}}
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="font-semibold">{{ __('core.appearance.theme') }}</h2>
             <p class="mt-0.5 mb-3 max-w-(--spacing-prose-max) text-sm text-(--color-ink-muted)">
                 {{ __('core.appearance.theme_note') }}
@@ -120,7 +120,7 @@
         </section>
 
         {{-- ভাষা — এখানেও, কারণ ব্যবহারকারী "চেহারা"-তেই এটা খোঁজে --}}
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="font-semibold">{{ __('core.appearance.language') }}</h2>
 
             <div class="mt-3 flex flex-wrap gap-2">

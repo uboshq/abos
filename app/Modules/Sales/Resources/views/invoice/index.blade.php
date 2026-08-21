@@ -59,7 +59,7 @@
         </div>
     @endif
 
-    <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+    <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
             <x-ui.toolbar :title="__('sales::menu.invoices')" :count="__('sales::message.invoice_note')"
                 :columns="$columns" :search-placeholder="__('sales::message.invoice_search')"

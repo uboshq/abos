@@ -47,7 +47,7 @@
     @if ($canInstallDefaults)
         {{-- খালি তালিকা — এখান থেকেই শুরু। এই খাতগুলো ছাড়া কারও বেতনই
              বসানো যায় না, তাই "নিজে বানান" বলাটা কাজ ঠেলে দেওয়া। --}}
-        <div class="mb-4 rounded-(--radius-card) border border-(--color-border)
+        <div data-boxed class="mb-4 rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card) p-8 text-center">
             <h2 class="text-lg font-semibold">{{ __('hr::message.empty_heads') }}</h2>
 
@@ -64,7 +64,7 @@
         </div>
     @endif
 
-    <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+    <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
             <x-ui.toolbar :title="__('hr::menu.salary_heads')"
                 :sort="$sortOptions"

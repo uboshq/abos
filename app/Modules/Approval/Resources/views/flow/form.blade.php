@@ -33,7 +33,7 @@
             </div>
         @endif
 
-        <div class="grid gap-3 rounded-(--radius-card) border border-(--color-border)
+        <div data-boxed class="grid gap-3 rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card) p-4 sm:grid-cols-2">
             <label class="block">
                 <span class="mb-1 block text-2xs uppercase tracking-wide text-(--color-ink-muted)">
@@ -85,7 +85,7 @@
             </label>
         </div>
 
-        <div class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <div data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="mb-3 text-sm font-semibold">{{ __('approval::field.steps') }}</h2>
 
             @php

@@ -126,7 +126,7 @@
     @endif
 
     <div class="grid gap-4 lg:grid-cols-3">
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="text-sm font-medium text-(--color-ink-muted)">{{ __('accounts::field.amount') }}</h2>
             <p class="num mt-1 text-2xl font-semibold">{{ \App\Core\Support\Money::format($voucher->amount) }}</p>
 
@@ -135,7 +135,7 @@
             </div>
         </section>
 
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4
                         lg:col-span-2">
             <h2 class="mb-3 font-semibold">{{ __('accounts::section.details') }}</h2>
 
@@ -170,7 +170,7 @@
         </section>
     </div>
 
-    <section class="mt-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
+    <section data-boxed class="mt-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">
         <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-3 font-semibold">
             {{ __('accounts::section.entries') }}

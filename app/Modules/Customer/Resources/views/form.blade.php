@@ -39,7 +39,7 @@
             </div>
         @endif
 
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="mb-3 font-semibold">{{ __('customer::section.identity') }}</h2>
 
             <div class="grid gap-3 sm:grid-cols-2">
@@ -91,7 +91,7 @@
             </div>
         </section>
 
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="mb-3 font-semibold">{{ __('customer::section.address') }}</h2>
 
             <div class="grid gap-3 sm:grid-cols-2">
@@ -118,7 +118,7 @@
         </section>
 
         @if ($creditLimitOn)
-            <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+            <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
                 <h2 class="mb-3 font-semibold">{{ __('customer::section.credit') }}</h2>
 
                 <div class="grid gap-3 sm:grid-cols-2">
@@ -136,7 +136,7 @@
         @endif
 
         @if ($isNew)
-            <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+            <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
                 <h2 class="mb-1 font-semibold">{{ __('customer::section.opening') }}</h2>
                 {{-- খোলা ব্যালেন্স শুধু তৈরির সময়: পরে বদলালে লেজার ও
                      তালিকা দুই রকম বলত। বদলাতে হলে জাবেদা ভাউচার। --}}

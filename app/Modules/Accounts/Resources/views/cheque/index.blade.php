@@ -54,7 +54,7 @@
     @endif
 
     <div class="mb-4 grid gap-3 sm:grid-cols-2">
-        <div class="rounded-(--radius-card) border border-(--color-border)
+        <div data-boxed class="rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card) px-4 py-3">
             <p class="text-2xs uppercase tracking-wide text-(--color-ink-muted)">
                 {{ __('accounts::field.cheques_open_total') }}
@@ -177,7 +177,7 @@
     @if ($cheques->isEmpty())
         <x-ui.empty-state :message="__('accounts::message.no_cheques')" />
     @else
-        <div class="overflow-x-auto rounded-(--radius-card) border border-(--color-border)
+        <div data-boxed class="overflow-x-auto rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">
         <x-ui.table :rows="$cheques"
                     :columns="$columns"
