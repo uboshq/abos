@@ -64,7 +64,8 @@ final class Ui
     /**
      * @return array<string, array{
      *     label: string, blurb: string, imitates: ?string,
-     *     density: string, nav: string, commands: string, swatch: string, ink: string,
+     *     density: string, nav: string, commands: string, accent: string,
+     *     swatch: string, ink: string,
      * }>
      */
     public static function all(): array
@@ -87,6 +88,7 @@ final class Ui
                 'label' => 'core.ui.navy',
                 'blurb' => 'core.ui.navy_blurb',
                 'imitates' => null,
+                'accent' => 'blue',
                 'commands' => 'inline',
                 'nav' => 'rail',
                 'density' => 'dense',
@@ -97,6 +99,7 @@ final class Ui
                 'label' => 'core.ui.rose',
                 'blurb' => 'core.ui.rose_blurb',
                 'imitates' => null,
+                'accent' => 'crimson',
                 'commands' => 'inline',
                 'nav' => 'rail',
                 'density' => 'comfortable',
@@ -107,6 +110,7 @@ final class Ui
                 'label' => 'core.ui.tiles',
                 'blurb' => 'core.ui.tiles_blurb',
                 'imitates' => 'SAP Fiori',
+                'accent' => 'fiori',
                 'commands' => 'bar',
                 'nav' => 'top',
                 'density' => 'comfortable',
@@ -117,6 +121,7 @@ final class Ui
                 'label' => 'core.ui.suite',
                 'blurb' => 'core.ui.suite_blurb',
                 'imitates' => 'Oracle NetSuite',
+                'accent' => 'netsuite',
                 'commands' => 'bar',
                 'nav' => 'top',
                 'density' => 'dense',
@@ -127,6 +132,7 @@ final class Ui
                 'label' => 'core.ui.apps',
                 'blurb' => 'core.ui.apps_blurb',
                 'imitates' => 'Odoo',
+                'accent' => 'aubergine',
                 'commands' => 'inline',
                 'nav' => 'top',
                 'density' => 'comfortable',
@@ -137,6 +143,7 @@ final class Ui
                 'label' => 'core.ui.dynamic',
                 'blurb' => 'core.ui.dynamic_blurb',
                 'imitates' => 'Microsoft Dynamics 365',
+                'accent' => 'fluent',
                 'commands' => 'bar',
                 'nav' => 'rail',
                 'density' => 'dense',
@@ -147,8 +154,9 @@ final class Ui
                 'label' => 'core.ui.redwood',
                 'blurb' => 'core.ui.redwood_blurb',
                 'imitates' => 'Oracle Fusion Cloud',
+                'accent' => 'brick',
                 'commands' => 'inline',
-                'nav' => 'top',
+                'nav' => 'rail',
                 'density' => 'comfortable',
                 'swatch' => '#c74634',
                 'ink' => '#161513',
@@ -157,6 +165,7 @@ final class Ui
                 'label' => 'core.ui.classic',
                 'blurb' => 'core.ui.classic_blurb',
                 'imitates' => null,
+                'accent' => 'amber',
                 'commands' => 'bar',
                 'nav' => 'top',
                 'density' => 'dense',
@@ -209,6 +218,24 @@ final class Ui
     public static function commands(?string $key): string
     {
         return self::all()[self::clean($key)]['commands'];
+    }
+
+    /**
+     * এই চেহারার সাথে যে রংটা মানায়।
+     *
+     * ── সুপারিশ, চাপিয়ে দেওয়া নয় ────────────────────────────────────
+     * চেহারা খোলসটা ঠিক করে, অ্যাকসেন্ট কাজের রং — দুইটা আলাদা বাছাই,
+     * আর দুইটাই ব্যবহারকারীর। কিন্তু নকলগুলো তাদের নিজের রঙেই চেনা
+     * যায়: Odoo-র বেগুনি বোতাম, ক্লাসিকের অ্যাম্বার। রূপ বাছার সময়
+     * তাই এই রংটা বসে যায়, আর ব্যবহারকারী তখনই অন্যটা বাছতে পারেন।
+     *
+     * চাপিয়ে দিলে চেহারার পাতার রঙের সারিটা মৃত হয়ে যেত; কিছুই না
+     * করলে Apps বাছার পর বেগুনি খোলসে নীল বোতাম বসত। সুপারিশটা
+     * দুইটার মাঝের সৎ উত্তর।
+     */
+    public static function accent(?string $key): string
+    {
+        return self::all()[self::clean($key)]['accent'];
     }
 
     /** @return list<string> */

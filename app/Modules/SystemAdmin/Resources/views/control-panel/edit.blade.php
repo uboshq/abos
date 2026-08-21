@@ -34,7 +34,7 @@
             @foreach ($modules as $module)
                 <section class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                                 bg-(--color-surface-card)">
-                    <h2 class="border-b border-(--color-border) px-4 py-3 font-semibold">
+                    <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-3 font-semibold">
                         {{ $module['label'] }}
                     </h2>
 

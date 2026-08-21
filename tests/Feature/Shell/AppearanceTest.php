@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Shell;
 
 use App\Core\Support\Accent;
+use App\Core\Support\Ui;
 use App\Models\User;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -51,19 +52,38 @@ class AppearanceTest extends TestCase
         return ($light + 0.05) / ($dark + 0.05);
     }
 
-    public function test_every_offered_colour_keeps_white_button_text_readable(): void
+    public function test_every_offered_colour_keeps_its_button_text_readable(): void
     {
         foreach (Accent::all() as $key => $accent) {
+            /*
+             * কালিটা রংটাই বলে — "সাদা" ধরে নেওয়া হয় না।
+             *
+             * ── দাবিটা কেন বদলাল, আর কেন এটা শিথিল করা নয় ────────────
+             * আগে এখানে সরাসরি সাদা (255 255 255) বসানো ছিল। দাবিটা
+             * ঠিকই ছিল — **বোতামের লেখা পড়া যেতে হবে** — কিন্তু
+             * "সাদা" শব্দটা ছিল একটা বাস্তবায়নের নাম, দাবির অংশ নয়।
+             *
+             * ফল: তালিকায় কেবল সেইসব রংই রাখা যেত যাদের উপরে সাদা
+             * পড়া যায়। অ্যাম্বার (#E08C1A, সাদার সাথে ২.৬৫:১) কোনোদিন
+             * ঢুকতে পারত না — অথচ কালো লেখায় ওটা অনেক উপরে, আর নমুনা
+             * নিজেই ওখানে কালো লেখা (#1A1A1A) ব্যবহার করেছে।
+             *
+             * এখন প্রতিটা রং নিজের কালি ঘোষণা করে আর পাহারাটা সেটার
+             * বিরুদ্ধেই মাপে। সীমা একই — ৪.৫:১, AA। শিথিল হয়নি,
+             * কেবল সত্যিকারের প্রশ্নটা জিজ্ঞেস করছে।
+             */
+            $ink = array_map('intval', explode(' ', $accent['ink']));
+
             foreach (['600', '700'] as $step) {
-                $ratio = $this->contrast($accent['scale'][$step], [255, 255, 255]);
+                $ratio = $this->contrast($accent['scale'][$step], $ink);
 
                 // এটাই নির্দিষ্ট তালিকা রাখার কারণ। মুক্ত পিকারে কেউ এমন
-                // হলুদ বাছত যাতে সাদা লেখা মিলিয়ে যায় — আর যে বোতামটা
+                // হলুদ বাছত যাতে লেখা মিলিয়ে যায় — আর যে বোতামটা
                 // তখন পড়া যেত না, সেটাই ইনভয়েস সেভ করার বোতাম।
                 $this->assertGreaterThanOrEqual(
                     4.5,
                     $ratio,
-                    sprintf('%s-%s is %.2f:1 against white text.', $key, $step, $ratio),
+                    sprintf('%s-%s is %.2f:1 against its own ink.', $key, $step, $ratio),
                 );
             }
         }
@@ -148,5 +168,25 @@ class AppearanceTest extends TestCase
         $style = Accent::styleFor('a-colour-that-was-removed');
 
         $this->assertStringContainsString('--accent-600:', $style);
+    }
+
+    /**
+     * প্রতিটা চেহারার সুপারিশ করা রংটা সত্যিই তালিকায় আছে।
+     *
+     * ── এটা না থাকলে যা ঘটত ─────────────────────────────────────────
+     * `Ui::accent()` একটা চাবি ফেরত দেয়, আর `Accent::get()` অচেনা
+     * চাবিতে ব্যতিক্রম ছোঁড়ে। অর্থাৎ কেউ একটা চেহারায় ভুল বানানে রং
+     * লিখলে চেহারার পাতা **সেভ করার সময়** ৫০০ দিত — আর কেবল তখনই,
+     * যখন কেউ ওই রূপটা টিক দিয়ে বেছে সেভ চাপতেন।
+     */
+    public function test_every_look_recommends_a_colour_that_exists(): void
+    {
+        foreach (Ui::keys() as $look) {
+            $this->assertArrayHasKey(
+                Ui::accent($look),
+                Accent::all(),
+                "চেহারা {$look} এমন একটা রং সুপারিশ করে যেটা তালিকায় নেই।",
+            );
+        }
     }
 }

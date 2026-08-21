@@ -38,6 +38,20 @@
                 {{ __('core.appearance.ui_note') }}
             </p>
 
+            {{--
+                রূপের নিজের রং — টিক দিলে বসে।
+
+                ডিফল্টে টিক দেওয়া, কারণ বেশিরভাগ মানুষ রূপটা বাছেন
+                "ওই ERP-র মতো দেখতে চাই" বলে, আর ওই ERP-র রংটাই তার
+                অর্ধেক। যিনি নিজের রং ঠিক করে রেখেছেন, তিনি টিক তুলে
+                দেবেন — আর তখন নিচের রঙের সারিটাই শেষ কথা।
+            --}}
+            <label class="mb-3 inline-flex items-center gap-2 text-sm">
+                <input type="checkbox" name="match_accent" value="1" checked
+                       class="size-4 rounded-(--radius-field) border-(--color-border)">
+                <span>{{ __('core.appearance.match_accent') }}</span>
+            </label>
+
             <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 @foreach ($uis as $key => $ui)
                     @include('workspace.partials.ui-card', [

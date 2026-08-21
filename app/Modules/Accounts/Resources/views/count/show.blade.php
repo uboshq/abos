@@ -124,7 +124,7 @@
     <div class="mt-4 grid gap-4 lg:grid-cols-3">
         <section class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card) lg:col-span-2">
-            <h2 class="border-b border-(--color-border) px-4 py-3 font-semibold">
+            <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-3 font-semibold">
                 {{ __('accounts::section.notes') }}
             </h2>
 
