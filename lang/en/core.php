@@ -194,7 +194,7 @@ return [
        ends need to hear the same word. */
     'ui' => [
         'classic' => 'Classic',
-        'classic_blurb' => 'Exactly what you see today. A copy of nothing.',
+        'classic_blurb' => 'Menu across the top, striped rows, amber. The densest of the eight.',
         'tiles' => 'Tiles',
         'tiles_blurb' => 'A page of tiles, round buttons, cool blue.',
         'suite' => 'Suite',

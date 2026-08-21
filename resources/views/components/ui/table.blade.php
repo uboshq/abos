@@ -11,7 +11,7 @@
 @else
     <div class="table-responsive">
         <table @class([
-            'ui-list table-cards w-full border-collapse text-sm',
+            'ui-list table-cards w-full border-collapse',
             'as-cards' => $grid,
             'is-dense' => $compact,
         ])>
