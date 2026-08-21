@@ -160,9 +160,45 @@
             </h1>
 
             @if ($count !== null || $subtitle)
-                <span class="tabular shrink-0 border-s border-(--color-border) ps-3 text-sm
+                <span data-record-count
+                      class="tabular shrink-0 border-s border-(--color-border) ps-3 text-sm
                              text-(--color-ink-muted)">{{ $count ?? $subtitle }}</span>
             @endif
+        @endif
+
+        {{--
+            সক্রিয় ছাঁকনিগুলো — সরানো-যায় এমন পিল।
+
+            ── কেন এটা সব রূপেই থাকে, কেবল Odoo-তে নয় ──────────────────
+            ওডুর চিহ্ন হল এই চিপগুলো খোঁজার ঘরের ভেতরে বসে। কিন্তু
+            "কোন ছাঁকনি এখন চালু আছে" — এটা সাজসজ্জা নয়, তথ্য।
+
+            আগে ছাঁকনি চালু থাকলে তালিকা ছোট হয়ে যেত আর পর্দায় কোথাও
+            লেখা থাকত না কেন। মানুষ তখন ভাবতেন সারিগুলো হারিয়ে গেছে।
+            ওই বিভ্রান্তিটা বাকি সাত রূপেও একইভাবে ঘটত, তাই চিপগুলো
+            সবার জন্য — **চেহারাটা** রূপ ধরে বদলায়, থাকা-না-থাকা নয়।
+
+            ফুটারের ব্যাকআপ-সতর্কতার মতোই যুক্তি: যেটা ব্যবসার দরকার,
+            সেটা নকলের জন্য বাদ যায় না।
+        --}}
+        @if ($screenFilters->isNotEmpty())
+            <span class="flex flex-wrap items-center gap-1">
+                @foreach ($screenFilters as $key => $value)
+                    <a data-facet
+                       href="{{ url()->current().'?'.http_build_query(collect(request()->query())->except([$key, 'page'])->all()) }}"
+                       class="inline-flex items-center gap-1.5 rounded-(--radius-pill)
+                              bg-(--color-surface-selected) px-2.5 py-0.5 text-2xs font-medium
+                              text-(--color-ink-body) transition-colors
+                              hover:bg-(--color-surface-hover)"
+                       title="{{ __('core.toolbar.remove_filter') }}">
+                        <span class="truncate">{{ is_array($value) ? implode(', ', $value) : $value }}</span>
+                        <svg viewBox="0 0 24 24" class="size-3 shrink-0 fill-current opacity-60"
+                             aria-hidden="true">
+                            <path d="m12 10.6 5.3-5.3 1.4 1.4-5.3 5.3 5.3 5.3-1.4 1.4-5.3-5.3-5.3 5.3-1.4-1.4 5.3-5.3-5.3-5.3 1.4-1.4z"/>
+                        </svg>
+                    </a>
+                @endforeach
+            </span>
         @endif
 
         {{-- Filter By — লেখা সহ, বাঁ প্রান্তে।
@@ -260,7 +296,8 @@
                     {{ __('core.toolbar.view') }}
                 </span>
 
-                <span class="hidden overflow-hidden rounded-(--radius-field) border
+                <span data-view-switch
+                      class="hidden overflow-hidden rounded-(--radius-field) border
                              border-(--color-border) sm:inline-flex">
                     @foreach ([
                         'list' => 'M4 6h16v2H4V6Zm0 5h16v2H4v-2Zm0 5h16v2H4v-2Z',

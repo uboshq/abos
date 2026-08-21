@@ -81,6 +81,7 @@ _spec = importlib.util.spec_from_file_location(
 _parts = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_parts)
 PARTS = _parts.PARTS
+PART_URL = getattr(_parts, 'PART_URL', {})
 
 bad_total = 0
 missing_parts = 0
@@ -124,10 +125,30 @@ with sync_playwright() as p:
             print("           %-26s want=%-9s got=%s" % (k, want, g))
 
         # চিহ্ন-অংশ — রং মিললেই নকল হয় না
-        for name, sel, why in PARTS.get(look, []):
-            if not pg.evaluate("s => !!document.querySelector(s)", sel):
+        for part in PARTS.get(look, []):
+            name = part[0]
+
+            # যে অংশটা কেবল একটা অবস্থায় দেখা যায়, তার জন্য সেই ঠিকানায় যাওয়া
+            extra = PART_URL.get(look, {}).get(name)
+            if extra:
+                pg.goto(BASE + "/suppliers" + extra, wait_until="networkidle")
+
+            if len(part) == 3:                      # এলিমেন্টটা থাকতে হবে
+                name, sel, why = part
+                ok = pg.evaluate("s => !!document.querySelector(s)", sel)
+                got = "নেই"
+            else:                                   # computed style মিলতে হবে
+                name, sel, prop, want, why = part
+                got = pg.evaluate(
+                    "a => { const e = document.querySelector(a[0]);"
+                    " return e ? getComputedStyle(e)[a[1]] : 'নেই'; }", [sel, prop])
+                ok = got == want
+            if not ok:
                 missing_parts += 1
-                print("           %-14s অনুপস্থিত — %s" % (name, why))
+                print("           %-15s %-22s — %s" % (name, got, why))
+
+            if extra:                               # পরেরটার জন্য স্বাভাবিক পাতায় ফেরা
+                pg.goto(BASE + "/suppliers", wait_until="networkidle")
 
         pg.screenshot(path=str(OUT / (look + ".png")))
 

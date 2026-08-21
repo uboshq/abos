@@ -477,6 +477,8 @@
             padding: var(--grid-pad-y) var(--grid-pad-x);
             font-weight: 500;
             white-space: nowrap;
+            text-transform: var(--table-head-transform);
+            letter-spacing: var(--table-head-spacing);
         }
 
         .ui-list:not(.as-cards) tbody tr {
@@ -563,6 +565,8 @@
     .ui-grid th {
         padding: var(--grid-pad-y-head, var(--grid-pad-y)) var(--grid-pad-x);
         font-weight: 500;
+        text-transform: var(--table-head-transform);
+        letter-spacing: var(--table-head-spacing);
         color: var(--color-table-head-ink);
         text-align: start;
         white-space: nowrap;
