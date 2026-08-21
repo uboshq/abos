@@ -100,8 +100,22 @@
                  টাকাটা ড্রয়ার ছেড়েছে, কেউ এখনো নেয়নি। --}}
             <x-ui.table :rows="$rows"
                         :columns="$columns"
-                        :totals="['balance' => $transit]"
-                        :totalsLabel="__('accounts::custody.on_the_road')"
+                        {{-- শেষ সারিটার প্রতিটা ঘর ভরা, আর সেটা ইচ্ছাকৃত।
+
+                             প্রথম রূপান্তরে শুধু `balance` দেওয়া হয়েছিল, তাই
+                             "কে ধরে আছে" কলামটা ফাঁকা পড়ে থাকত। অথচ পুরো
+                             সারিটার অস্তিত্বের কারণই ওই ঘরটা: টাকাটা ড্রয়ার
+                             ছেড়েছে, কেউ এখনো নেয়নি — অর্থাৎ ওটা এই মুহূর্তে
+                             কারও হেফাজতে নেই। ফাঁকা ঘর দেখে মনে হত তথ্যটা
+                             জানা নেই, অথচ তথ্যটাই হল "কারও কাছে নেই"। --}}
+                        :totals="[
+                            'name' => __('accounts::custody.on_the_road'),
+                            'kind' => __('accounts::custody.kind_transit'),
+                            'holder' => __('accounts::custody.nobody_holds_it'),
+                            'balance' => $transit,
+                            'sent' => '—',
+                        ]"
+                        :totalsLabel="\App\Modules\Accounts\Services\StandardChart::CASH_IN_TRANSIT"
                         :empty="__('core.empty.no_results')" />
         </div>
     </div>
