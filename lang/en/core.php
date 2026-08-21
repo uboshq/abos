@@ -63,6 +63,7 @@ return [
     ],
 
     'action' => [
+        'close' => 'Close',
         'create' => 'Create',
         'apply' => 'Apply',
         'save' => 'Save',
@@ -201,6 +202,8 @@ return [
        not labels. A colleague says "go to Apps" on the phone, and both
        ends need to hear the same word. */
     'ui' => [
+        'launcher' => 'Pick an app',
+        'launcher_search' => 'Search apps…',
         'classic' => 'Classic',
         'classic_blurb' => 'Menu across the top, striped rows, amber. The densest of the eight.',
         'tiles' => 'Tiles',

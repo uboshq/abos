@@ -133,7 +133,7 @@
         @endif
 
         <div class="flex min-w-0 flex-1 flex-col">
-            <x-shell.topbar />
+            <x-shell.topbar :menu="$menu ?? []" />
 
             @if ($navPlacement === 'top')
                 <x-shell.topnav :menu="$menu ?? []" />
@@ -228,6 +228,10 @@
          থেকে। ভেতরের কলামে রাখলে সাইডবারের ডান পাশ থেকে শুরু হত, আর
          কনটেন্টের সাথে স্ক্রল করে চোখের বাইরে চলে যেত — অথচ কোন কোম্পানি
          ও কোন অর্থবছরে কাজ হচ্ছে সেটা সবসময় দেখা যাওয়ার কথা। --}}
+    {{-- রূপের নিজের ভাসমান অংশ — Odoo-র পুরো-পর্দার লঞ্চার শিট।
+         লেআউটের একদম বাইরে, কারণ ওটা গোটা পাতা ঢাকে। --}}
+    <x-shell.chrome region="overlay" :menu="$menu ?? []" />
+
     <x-shell.statusbar />
 
     <x-shell.bottom-nav :menu="$menu ?? []" />
