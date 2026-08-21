@@ -399,6 +399,7 @@
 
     /* কমান্ড বারের বোতামে গ্রেডিয়েন্ট (নেটস্যুট) — ডিফল্টে সমতল */
     --cmd-gradient: none;
+    --cmd-gradient-primary: none;
 
     --state-fill: 1;
 
