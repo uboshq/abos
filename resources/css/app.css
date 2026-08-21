@@ -543,6 +543,27 @@
         border: 1px solid var(--color-border);
         border-radius: var(--radius-card);
         background: var(--color-surface-card);
+        gap: var(--stage-gap);
+    }
+
+    /* টালি রূপ — Fiori। জোড়া লাগানো পটির বদলে আলাদা কার্ড, তাই
+       বাইরের ধার ও জমিন উঠে যায় আর প্রতিটা ঘর নিজেরটা পায়।
+
+       `--stage-tile` শূন্য হলে নিচের নিয়মগুলো কিছুই করে না — একটা
+       টোকেন দিয়ে দুইটা আলাদা চেহারা, দুইটা markup নয়। */
+    .stage-strip:has(.stage) {
+        border-width: calc(1px * (1 - var(--stage-tile)));
+        background: color-mix(in srgb, var(--color-surface-card)
+                    calc(100% * (1 - var(--stage-tile))), transparent);
+    }
+
+    .stage-strip .stage {
+        border-width: calc(1px * var(--stage-tile));
+        border-style: solid;
+        border-color: var(--color-border);
+        border-radius: calc(var(--radius-card) * var(--stage-tile));
+        background-color: color-mix(in srgb, var(--color-surface-card)
+                          calc(100% * var(--stage-tile)), transparent);
     }
 
     .stage-strip .stage {
@@ -1006,7 +1027,9 @@
     min-height: var(--spacing-command);
     height: var(--spacing-command);
     padding-inline: 10px;
-    border-radius: 6px;
+    /* কোণটা টোকেন থেকে — নাহলে ফিওরির ৪px বা NetSuite-এর ৩px
+       কোনোদিন বসত না, আর কমান্ড বারটা একা আগের কোণে থেকে যেত। */
+    border-radius: var(--radius-field);
     font-size: 13px;
     gap: 6px;
 }

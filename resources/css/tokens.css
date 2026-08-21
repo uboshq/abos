@@ -385,6 +385,12 @@
     --topbar-label: inline;
     --topbar-control-h: 36px;
 
+    /* ধাপগুলো জোড়া লাগানো (ডিফল্ট) না আলাদা টালি (Fiori) */
+    /* অবস্থার পিল ভরাট (১) না ফোঁটা+লেখা (০) — Fiori শূন্য চায় */
+    --state-fill: 1;
+
+    --stage-gap: 0;
+    --stage-tile: 0;
     --stage-clip: none;
     --stage-overlap: 0;
 
