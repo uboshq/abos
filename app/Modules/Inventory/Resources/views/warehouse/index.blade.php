@@ -26,7 +26,7 @@
         </div>
     @endif
 
-    <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+    <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
             <x-ui.toolbar :title="__('inventory::menu.warehouses')" :count="trans_choice('inventory::message.warehouse_count', $warehouses->total(), ['count' => $warehouses->total()])"
                 :columns="$columns" :search-placeholder="__('inventory::message.warehouse_search')"

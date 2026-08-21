@@ -21,7 +21,7 @@
     </x-slot:header>
 
     @if ($draftVouchers > 0 || $pendingTransfers > 0)
-        <section class="mb-4 rounded-(--radius-card) border border-(--color-warning)
+        <section data-boxed class="mb-4 rounded-(--radius-card) border border-(--color-warning)
                         bg-(--color-badge-warning-bg) p-4">
             <h2 class="font-semibold text-(--color-badge-warning-ink)">
                 {{ __('accounts::message.needs_attention') }}
@@ -69,7 +69,7 @@
 
     <div class="mt-4 grid gap-4 lg:grid-cols-3">
         {{-- এই মাসের আয় ও খরচ — লাভ-লোকসানের এক নজর --}}
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="mb-3 font-semibold">{{ __('accounts::menu.profit_loss') }}</h2>
 
             <dl class="space-y-2">
@@ -105,7 +105,7 @@
         </section>
 
         {{-- কার কাছে কত — ড্যাশবোর্ডে এই প্রশ্নটাই সবচেয়ে বেশি করা হয় --}}
-        <section class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
+        <section data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card) lg:col-span-2">
             <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-3 font-semibold">
                 {{ __('accounts::menu.cash_tills') }}

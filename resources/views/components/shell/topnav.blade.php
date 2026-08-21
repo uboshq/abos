@@ -81,7 +81,7 @@
         @endphp
 
         <div class="relative shrink-0" x-data="{ open: false }" @click.outside="open = false">
-            <button type="button"
+            <button type="button" data-nav-item
                     @click="open = ! open"
                     @keydown.escape.window="open = false"
                     :aria-expanded="open ? 'true' : 'false'"

@@ -36,7 +36,7 @@
     @endif
 
     @if ($canInstallDefaults)
-        <div class="mb-4 rounded-(--radius-card) border border-(--color-border)
+        <div data-boxed class="mb-4 rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card) p-8 text-center">
             <h2 class="text-lg font-semibold">{{ __('hr::message.empty_leave_types') }}</h2>
 
@@ -52,7 +52,7 @@
     @endif
 
     <div class="grid gap-4 lg:grid-cols-[1fr_20rem]">
-        <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
+        <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">
             <x-ui.table
                 :empty="__('hr::message.no_leave_types')"

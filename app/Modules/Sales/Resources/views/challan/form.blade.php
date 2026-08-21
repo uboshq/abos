@@ -62,7 +62,7 @@
             </div>
         @endif
 
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <x-ui.select name="sales_order_id" :label="__('sales::field.order')"
                              :options="$orders->mapWithKeys(fn ($o) => [$o->id => $o->document_no . ' - ' . $o->customer?->name()])"
@@ -105,7 +105,7 @@
             </div>
         </section>
 
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <h2 class="font-semibold">{{ __('sales::message.lines') }}</h2>
 

@@ -76,7 +76,7 @@
     @endif
 
     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="text-sm font-medium text-(--color-ink-muted)">
                 {{ $loan->isTerm() ? __('accounts::field.sanctioned') : __('accounts::field.cc_limit') }}
             </h2>
@@ -93,7 +93,7 @@
             </p>
         </section>
 
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="text-sm font-medium text-(--color-ink-muted)">
                 {{ __('accounts::message.loan_outstanding') }}
             </h2>
@@ -111,7 +111,7 @@
         </section>
 
         @if ($loan->isCc())
-            <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+            <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
                 <h2 class="text-sm font-medium text-(--color-ink-muted)">
                     {{ __('accounts::message.loan_available') }}
                 </h2>
@@ -120,7 +120,7 @@
         @endif
     </div>
 
-    <section class="mt-4 rounded-(--radius-card) border border-(--color-border)
+    <section data-boxed class="mt-4 rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card) p-4">
         <h2 class="mb-3 font-semibold">{{ __('accounts::section.details') }}</h2>
 
@@ -171,7 +171,7 @@
     </section>
 
     @if ($loan->isTerm())
-        <section class="mt-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
+        <section data-boxed class="mt-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card)">
             <div class="border-b border-(--color-border) p-4">
                 <h2 class="font-semibold">{{ __('accounts::section.schedule') }}</h2>
@@ -300,7 +300,7 @@
              নম্বর সহ। উপরের "বকেয়া" সংখ্যাটা ঠিক এই সারিগুলো আর
              কিস্তিগুলো মিলিয়েই আসে, তাই সেগুলো দেখতে না পেলে সংখ্যাটা
              বিশ্বাস করা ছাড়া উপায় থাকত না। --}}
-        <section class="mt-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
+        <section data-boxed class="mt-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card)">
             <div class="border-b border-(--color-border) p-4">
                 <h2 class="font-semibold">{{ __('accounts::section.entries') }}</h2>
@@ -318,7 +318,7 @@
         @if ($loan->isCc())
             {{-- CC-তে সারা বছর তিনটা কাজই বারবার হয়: তোলা, জমা, আর
                  মাসের সুদ। তাই তিনটাই পাশাপাশি, একটাও মেনুর ভেতরে নয়। --}}
-            <section class="mt-4 rounded-(--radius-card) border border-(--color-border)
+            <section data-boxed class="mt-4 rounded-(--radius-card) border border-(--color-border)
                             bg-(--color-surface-card) p-4">
                 <h2 class="mb-3 font-semibold">{{ __('accounts::section.loan_movement') }}</h2>
 

@@ -55,7 +55,7 @@
 
     <div class="grid gap-4 lg:grid-cols-3">
 
-        <section class="rounded-(--radius-card) border border-(--color-border)
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card) p-4">
             <form method="POST" enctype="multipart/form-data"
                   action="{{ route('system_admin.import.check') }}"
@@ -103,7 +103,7 @@
         </section>
 
         {{-- যাচাইয়ের ফল --}}
-        <section class="rounded-(--radius-card) border border-(--color-border)
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card) lg:col-span-2">
             @if (! $checked)
                 <x-ui.empty-state :message="__('core.import.note')" />

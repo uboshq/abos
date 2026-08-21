@@ -66,7 +66,7 @@
     @if ($batch !== null)
         {{-- দুইটা সংখ্যা, দুইটা করণীয় --}}
         <div class="mb-4 grid gap-3 sm:grid-cols-2">
-            <div class="rounded-(--radius-card) border border-(--color-border)
+            <div data-boxed class="rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card) p-4">
                 <div class="text-sm text-(--color-ink-muted)">{{ __('sales::message.trace_on_hand') }}</div>
                 <div class="num mt-1 text-2xl font-semibold">{{ rtrim(rtrim($onHand, '0'), '.') ?: '0' }}</div>
@@ -75,7 +75,7 @@
                 </p>
             </div>
 
-            <div class="rounded-(--radius-card) border border-(--color-border)
+            <div data-boxed class="rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card) p-4">
                 <div class="text-sm text-(--color-ink-muted)">{{ __('sales::message.trace_gone') }}</div>
                 <div class="num mt-1 text-2xl font-semibold">
@@ -101,7 +101,7 @@
                 {{ __('sales::message.trace_nobody') }}
             </p>
         @else
-            <div class="table-responsive rounded-(--radius-card) border border-(--color-border)
+            <div data-boxed class="table-responsive rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card)">
         <x-ui.table :rows="$recipients"
                     :columns="$columns"

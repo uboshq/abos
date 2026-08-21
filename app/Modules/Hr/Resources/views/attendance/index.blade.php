@@ -53,7 +53,7 @@
     </form>
 
     @if ($employees->isEmpty())
-        <div class="rounded-(--radius-card) border border-(--color-border)
+        <div data-boxed class="rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card) p-8 text-center text-sm text-(--color-ink-muted)">
             {{ __('hr::message.no_employees_for_day') }}
         </div>
@@ -62,7 +62,7 @@
             @csrf
             <input type="hidden" name="work_date" value="{{ $date->toDateString() }}">
 
-            <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
+            <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card)">
                 <p class="border-b border-(--color-border) px-4 py-2 text-2xs text-(--color-ink-muted)">
                     {{ __('hr::message.attendance_note') }}

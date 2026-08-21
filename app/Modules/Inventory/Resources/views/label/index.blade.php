@@ -18,7 +18,7 @@
           x-data="{ chosen: 0 }"
           class="space-y-4">
 
-        <section class="rounded-(--radius-card) border border-(--color-border)
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card) p-4">
             <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <x-ui.field name="copies" type="number" min="1" max="200"
@@ -44,7 +44,7 @@
             <p class="mt-2 text-xs text-(--color-ink-muted)">{{ __('inventory::label.price_note') }}</p>
         </section>
 
-        <section class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
+        <section data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card)">
             <div class="flex flex-wrap items-center justify-between gap-2 border-b border-(--color-border) px-4 py-2">
                 <h2 class="font-semibold">{{ __('inventory::label.which_products') }}</h2>

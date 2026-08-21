@@ -33,7 +33,7 @@
         </div>
     @endif
 
-    <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+    <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
             <x-ui.toolbar :title="__('purchase::menu.payments')" :count="trans_choice('core.count.records', $payments->total(), ['count' => $payments->total()])"
                 :columns="$columns" :search-placeholder="__('purchase::message.payment_search')"

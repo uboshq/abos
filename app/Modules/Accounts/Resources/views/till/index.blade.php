@@ -63,7 +63,7 @@
         </div>
     @endif
 
-    <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+    <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
             <x-ui.toolbar :title="__('accounts::menu.cash_tills')" :count="__('accounts::message.till_total', ['amount' => \App\Core\Support\Money::format($total)])"
                 :sort="$sortOptions"

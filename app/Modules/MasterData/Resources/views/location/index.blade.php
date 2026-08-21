@@ -47,7 +47,7 @@
         {{-- খালি তালিকা — দেশ ও বিভাগ সবার জন্য এক, তাই ওগুলো হাতে
              লিখতে বলার মানে নেই। ভুল বানানে ঢুকলে পরে রিপোর্টে দুইটা
              "ময়মনসিংহ" দেখা যেত। --}}
-        <div class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-8 text-center">
+        <div data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-8 text-center">
             <h2 class="text-lg font-semibold">{{ __('master_data::message.empty_locations') }}</h2>
 
             <p class="mx-auto mt-2 max-w-(--spacing-prose-max) text-sm text-(--color-ink-muted)">
@@ -70,7 +70,7 @@
             @endcan
         </div>
     @else
-        <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
+        <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">
             <form method="GET" class="contents">
                 <x-ui.toolbar :title="__('master_data::menu.locations')" :count="collect($ladder)->map(fn ($level) => __('master_data::level.' . $level))->implode(' › ')"

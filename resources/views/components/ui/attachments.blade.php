@@ -30,7 +30,7 @@
     $canAttach = auth()->user()?->can('create', $document::class) ?? false;
 @endphp
 
-<section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+<section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
     <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-3 font-semibold">
         {{ __('core.attachment.title') }}
     </h2>

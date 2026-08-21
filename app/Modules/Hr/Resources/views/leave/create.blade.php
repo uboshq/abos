@@ -26,7 +26,7 @@
     @endif
 
     @if ($types->isEmpty())
-        <div class="rounded-(--radius-card) border border-(--color-border)
+        <div data-boxed class="rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card) p-8 text-center">
             <h2 class="text-lg font-semibold">{{ __('hr::message.empty_leave_types') }}</h2>
             <x-ui.button class="mt-4" tone="primary" :href="route('hr.leave_type.index')">

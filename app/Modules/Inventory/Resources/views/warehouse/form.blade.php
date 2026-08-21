@@ -30,7 +30,7 @@
             </div>
         @endif
 
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <div class="grid gap-3 sm:grid-cols-2">
                 {{-- কোড খালি রাখলে নিজে বসে (মালিকের নির্দেশ)। ঘরটা
                      তবু থাকে: পুরনো হিসাব থেকে আসা গুদামের কোড কাগজপত্রে

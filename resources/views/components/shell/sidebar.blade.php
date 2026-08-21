@@ -302,7 +302,7 @@
                             <span class="sr-only">{{ $module['label'] }}</span>
                         </a>
 
-                        <div class="rail-flyout invisible absolute start-full top-0 z-50 ms-1 w-60
+                        <div data-boxed class="rail-flyout invisible absolute start-full top-0 z-50 ms-1 w-60
                                     rounded-(--radius-card) border border-(--color-border)
                                     bg-(--color-surface-card) py-1.5 opacity-0 shadow-lg
                                     group-hover/rail:visible group-hover/rail:opacity-100
@@ -351,6 +351,8 @@
                  class="menu-panel hidden min-w-0 flex-1 flex-col border-e border-(--color-border)
                         bg-(--color-sidebar-panel) lg:flex"
                  x-show="! $store.sidebar.collapsed">
+
+                <x-shell.chrome region="rail-head" :menu="$menu ?? []" />
 
                 @if ($activeModule)
                     {{-- এই তালিকাটা ছাঁকা — গোটা সিস্টেম খোঁজা নয়।
@@ -436,7 +438,7 @@
                                 <a @if ($item['url']) href="{{ $item['url'] }}" @endif
                                    x-show="filter === '' || {{ Js::from(mb_strtolower($item['label'])) }}.includes(filter.toLowerCase().trim())"
                                    @class([
-                                       'flex min-h-(--spacing-field-compact) items-center gap-2 rounded-(--radius-field) px-2.5 text-sm transition-colors',
+                                       'rail-item flex min-h-(--spacing-field-compact) items-center gap-2 px-2.5 text-sm transition-colors',
                                        'bg-(--color-brand-500) font-semibold text-(--color-ink-inverse) shadow-sm' => $item['active'],
                                        'text-(--color-ink-body) hover:bg-(--color-surface-hover)' => ! $item['active'] && $item['url'],
                                        'cursor-not-allowed text-(--color-ink-disabled)' => ! $item['url'],

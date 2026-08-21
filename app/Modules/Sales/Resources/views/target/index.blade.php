@@ -89,7 +89,7 @@
         @csrf
         <input type="hidden" name="month" value="{{ $month->toDateString() }}">
 
-        <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
+        <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">
         <x-ui.table :rows="$rows"
                     :columns="$columns"

@@ -39,7 +39,7 @@
             </div>
         @endif
 
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="mb-3 font-semibold">{{ __('supplier::section.identity') }}</h2>
 
             <div class="grid gap-3 sm:grid-cols-2">
@@ -64,7 +64,7 @@
             </div>
         </section>
 
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="mb-1 font-semibold">{{ __('supplier::section.contact') }}</h2>
             <p class="mb-3 max-w-(--spacing-prose-max) text-sm text-(--color-ink-muted)">
                 {{ __('supplier::message.contact_hint') }}
@@ -87,7 +87,7 @@
             </div>
         </section>
 
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="mb-3 font-semibold">{{ __('supplier::section.address') }}</h2>
 
             <div class="grid gap-3 sm:grid-cols-2">
@@ -103,7 +103,7 @@
             </div>
         </section>
 
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="mb-1 font-semibold">{{ __('supplier::section.tax') }}</h2>
             <p class="mb-3 max-w-(--spacing-prose-max) text-sm text-(--color-ink-muted)">
                 {{ __('supplier::message.bin_hint') }}
@@ -119,7 +119,7 @@
             </div>
         </section>
 
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="mb-3 font-semibold">{{ __('supplier::section.credit') }}</h2>
 
             <div class="grid gap-3 sm:grid-cols-2">
@@ -144,7 +144,7 @@
         </section>
 
         @if ($isNew)
-            <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+            <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
                 <h2 class="mb-1 font-semibold">{{ __('supplier::section.opening') }}</h2>
                 {{-- খোলা ব্যালেন্স শুধু তৈরির সময়: পরে বদলালে লেজার ও
                      তালিকা দুই রকম বলত। বদলাতে হলে জাবেদা ভাউচার। --}}

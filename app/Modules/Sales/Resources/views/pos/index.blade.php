@@ -51,7 +51,7 @@
         জায়গা নেয় আর কিছু বলে না।
     --}}
     @if ($parked->isNotEmpty())
-        <div class="mb-4 rounded-(--radius-card) border border-(--color-border)
+        <div data-boxed class="mb-4 rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card) p-3">
             <h2 class="mb-2 text-sm font-semibold">{{ __('sales::message.pos_parked_bills') }}</h2>
 
@@ -125,7 +125,7 @@
 
         {{-- ── বাঁ দিক: খোঁজা ও পণ্য ───────────────────────────────── --}}
         <section class="space-y-3">
-            <div class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-3">
+            <div data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-3">
                 <label class="block">
                     <span class="sr-only">{{ __('sales::message.pos_search') }}</span>
                     <input type="search"
@@ -205,7 +205,7 @@
                 <input type="hidden" name="resumed_invoice_id" value="{{ $resumedId }}">
             @endif
 
-            <div class="space-y-3 rounded-(--radius-card) border border-(--color-border)
+            <div data-boxed class="space-y-3 rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card) p-3">
 
                 <x-ui.select name="customer_id" :label="__('sales::field.customer')"

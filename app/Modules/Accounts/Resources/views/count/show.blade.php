@@ -87,12 +87,12 @@
     @endif
 
     <div class="grid gap-4 sm:grid-cols-3">
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="text-sm font-medium text-(--color-ink-muted)">{{ __('accounts::field.counted') }}</h2>
             <p class="num mt-1 text-2xl font-semibold">{{ \App\Core\Support\Money::format($count->counted_amount) }}</p>
         </section>
 
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="text-sm font-medium text-(--color-ink-muted)">{{ __('accounts::field.expected') }}</h2>
             <p class="num mt-1 text-2xl font-semibold">{{ \App\Core\Support\Money::format($count->expected_amount) }}</p>
         </section>
@@ -122,7 +122,7 @@
     </div>
 
     <div class="mt-4 grid gap-4 lg:grid-cols-3">
-        <section class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
+        <section data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card) lg:col-span-2">
             <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-3 font-semibold">
                 {{ __('accounts::section.notes') }}
@@ -142,7 +142,7 @@
             @endif
         </section>
 
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <div class="mb-3 flex items-center justify-between gap-2">
                 <h2 class="font-semibold">{{ __('accounts::section.details') }}</h2>
                 @include('accounts::count.partials.status', ['count' => $count])

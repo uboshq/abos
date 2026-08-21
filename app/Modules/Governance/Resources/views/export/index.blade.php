@@ -38,7 +38,7 @@
         {{ __('governance::message.export_why') }}
     </p>
 
-    <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+    <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
             {{--
                 রপ্তানির খাতাটা নিজে রপ্তানি হয় না।

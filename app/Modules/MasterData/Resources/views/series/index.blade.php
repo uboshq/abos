@@ -38,7 +38,7 @@
 
     {{-- কী কী চিহ্ন লেখা যায় তা দেখানো হয়। না দেখালে ব্যবহারকারী
          অনুমান করতেন, আর ভুল চিহ্ন হুবহু নম্বরে বসে যেত। --}}
-    <div class="mb-4 rounded-(--radius-card) border border-(--color-border)
+    <div data-boxed class="mb-4 rounded-(--radius-card) border border-(--color-border)
                 bg-(--color-surface-card) p-4">
         <p class="mb-2 max-w-(--spacing-prose-max) text-sm text-(--color-ink-muted)">
             {{ __('master_data::message.series_placeholders') }}
@@ -54,7 +54,7 @@
         </dl>
     </div>
 
-    <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+    <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <div class="overflow-x-auto">
             <table class="ui-grid">
                 <thead>

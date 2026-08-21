@@ -37,7 +37,7 @@
         {{ __('accounts::message.loan_note') }}
     </p>
 
-    <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
+    <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                 bg-(--color-surface-card)">
         <x-ui.table
             :empty="__('accounts::message.no_loans')"

@@ -426,7 +426,7 @@
         <section>
             <h2 class="mb-2 text-sm font-semibold text-(--color-ink-muted)">{{ $titles['todo'] }}</h2>
 
-            <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
+            <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card) shadow-(--shadow-card)">
                 @foreach ($waiting as $widget)
                     <a href="{{ $widget->href }}"
@@ -503,7 +503,7 @@
                 {{ __('core.dashboard.just_happened') }}
             </h2>
 
-            <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
+            <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card) shadow-(--shadow-card)">
                 @foreach ($happenings as $happening)
                     {{--

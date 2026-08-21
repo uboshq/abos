@@ -53,7 +53,7 @@
                     $ok = $result['ok'];
                 @endphp
 
-                <section class="overflow-hidden rounded-(--radius-card) border
+                <section data-boxed class="overflow-hidden rounded-(--radius-card) border
                                 {{ $ok ? 'border-(--color-border)' : 'border-(--color-danger)' }}
                                 bg-(--color-surface-card)">
 

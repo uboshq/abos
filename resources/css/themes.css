@@ -304,6 +304,11 @@
     --spacing-header: 36px;
     --topbar-control-h: 28px;
     --topbar-label: none;
+
+    /* নেটস্যুটের চিহ্ন: মেনুতে ক্যারেট, বোতামে গ্রেডিয়েন্ট */
+    --topnav-caret: "";
+    --cmd-gradient: linear-gradient(#fdfdfd, #e4e8ec);
+    --spacing-command: 22px;
 }
 
 /* ─────────────────────────────────────────────────────────────────
@@ -550,6 +555,16 @@
     --grid-pad-y: 10px;
     --font-size-table: 13px;
     --spacing-header: 56px;
+    --topbar-control-h: 34px;
+
+    /* স্প্রিংবোর্ডের টালি — ১২px গোল, চলতিটা ছায়াসহ সাদা কার্ড */
+    --rail-item-radius: 12px;
+    --rail-item-shadow: 0 1px 3px rgb(22 21 19 / 0.09);
+
+    /* ফুটার উষ্ণ ক্রিমে */
+    --color-footer: #fffdfb;
+    --color-footer-ink: #8a8681;
+    --color-footer-border: #e6e2dc;
 }
 
 /* ─────────────────────────────────────────────────────────────────
@@ -623,6 +638,7 @@
     --grid-pad-y: 8px;
     --font-size-table: 13px;
     --spacing-header: 56px;
+    --gold-hairline-h: 2px;
 }
 
 /* ─────────────────────────────────────────────────────────────────

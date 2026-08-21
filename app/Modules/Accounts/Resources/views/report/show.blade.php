@@ -44,7 +44,7 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __($report->title) }}</x-slot:title>
 
-    <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+    <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
             <x-ui.toolbar :title="__($report->title)" :count="trans_choice('accounts::message.row_count', $result->totalRows, ['count' => $result->totalRows])" :search="false">
                 @if ($report->hasFilter('date_range'))

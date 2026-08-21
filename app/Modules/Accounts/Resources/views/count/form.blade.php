@@ -34,7 +34,7 @@
             </div>
         @endif
 
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <div class="grid gap-3 sm:grid-cols-2">
                 <label class="block">
                     <span class="mb-1 block text-sm font-medium">
@@ -58,7 +58,7 @@
             </div>
         </section>
 
-        <section class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
+        <section data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card)">
             <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-3 font-semibold">
                 {{ __('accounts::section.notes') }}
@@ -115,7 +115,7 @@
             </div>
         </section>
 
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <label class="block">
                 <span class="mb-1 block text-sm font-medium">{{ __('core.table.narration') }}</span>
                 <input type="text" name="narration" value="{{ old('narration') }}"

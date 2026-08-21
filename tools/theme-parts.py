@@ -45,18 +45,35 @@
 # তাই এখানে বলা যায় কোন ঠিকানায় খুঁজতে হবে। এটাই সেই একই শিক্ষা —
 # খালি তালিকা কেবল খালি পথটাই প্রমাণ করে।
 PART_URL = {
+    # কিছু অংশ কেবল একটা অবস্থায় বা একটা পাতায় দেখা যায়।
+    #
+    # ── কেন এটা লাগে ──────────────────────────────────────────────────
+    # facet চিপ তখনই থাকে যখন সত্যিই একটা ছাঁকনি চালু; ধাপের স্ট্রিপ
+    # তখনই যখন পাতাটার ধাপ আছে; কমান্ড পটি তখনই যখন পাতা `header`
+    # স্লট ব্যবহার করে। ভুল পাতায় খুঁজলে "নেই" আসত — আর সেটা মিথ্যা
+    # রায় হত: জিনিসটা আছে, কেবল দেখানোর কারণ নেই।
+    #
+    # খালি তালিকা কেবল খালি পথটাই প্রমাণ করে — সেই একই শিক্ষা।
+    #
+    # "?..." = একই পাতায় ছাঁকনিসহ · "|/path" = অন্য পাতা
     "apps": {"facet-chips": "?type=distributor"},
 
-    # ধাপের স্ট্রিপ তালিকার সারাংশ — সরবরাহকারীর কোনো ধাপ নেই, ক্রয়
-    # আদেশের আছে। ভুল পাতায় খুঁজলে "নেই" আসত, আর সেটা মিথ্যা রায় হত।
-    # পেজার কেবল একাধিক পাতা থাকলে আঁকা হয় — তিনটা সরবরাহকারীতে
-    # হয় না। খাতার তালিকায় পঁয়ষট্টিটা সারি, তাই ওখানে প্রমাণ হয়।
     "dynamic": {"process-bar": "|/purchase/orders"},
+
     "tiles": {"launchpad": "|/purchase/orders",
-              "tile-kpi": "|/purchase/orders",
-              },
-    "classic": {"stage-strip": "|/purchase/orders",
-                "kpi-strip": "|/purchase/orders"},
+              "tile-kpi": "|/purchase/orders"},
+
+    "redwood": {"stat-cards": "|/purchase/orders",
+                "card-table": "|/accounts/cash-counts"},
+
+    "classic": {"boxed-section": "|/accounts/cash-counts",
+                "stage-strip": "|/purchase/orders",
+                "command-strip": "|/suppliers/create",
+                "kpi-strip": "|/purchase/orders",
+                "message-box": "|/purchase/orders"},
+
+    "rose": {"round-grid": "|/accounts/cash-counts",
+             "gold-hairline": "|/suppliers/create"},
 }
 
 # দুই রকম সারি:
@@ -131,16 +148,16 @@ PARTS = {
     "suite": [
         ("nav-header", "[data-suite-header]",
          "৩৬px নেভি হেডার — লোগো, খোঁজার ঘর, ব্যবহারকারী"),
-        ("caret-menu", "[data-caret-menu]",
-         "তার নিচে ক্যারেটওয়ালা আড়াআড়ি মেনু"),
+        ("caret-menu", ".topnav [data-nav-item]::after", "content", '""',
+         "মেনুর প্রতিটা আইটেমের পাশে নিচমুখী ক্যারেট"),
         ("page-title", "[data-suite-title]",
          "১৭px নেভি শিরোনাম, পাশে উপশিরোনাম"),
-        ("gradient-buttons", "[data-gradient-button]",
+        ("gradient-buttons", ".cmd-actions a, .cmd-actions button", "height", "22px",
          "২২px উঁচু গ্রেডিয়েন্ট বোতামের সারি"),
-        ("filter-strip", "[data-filter-strip]",
-         "ধূসর ছাঁকনির স্ট্রিপ — লেবেল ও ছোট সিলেক্ট"),
-        ("row-count", "[data-row-count]",
-         "তালিকার নিচে সারির গোনা"),
+        ("filter-strip", ".toolbar-view", "background-color", "rgb(228, 233, 238)",
+         "ধূসর ছাঁকনির স্ট্রিপ — নেটস্যুটের টুলবার"),
+        ("row-count", "[data-pager]", "display", "flex",
+         "তালিকার নিচে সারির গোনা — সবসময়, এক পাতাতেও"),
     ],
 
     # ─────────────────────────────────────────────────────────────────
@@ -173,47 +190,50 @@ PARTS = {
     "redwood": [
         ("brand-strip", "[data-brand-strip]",
          "একদম উপরে ৪px ইটরঙা পটি"),
-        ("light-header", "[data-redwood-header]",
-         "৫৬px ক্রিম হেডার, গোল খোঁজার ঘর"),
+        ("light-header", ".topbar", "background-color", "rgb(255, 253, 251)",
+         "৫৬px ক্রিম হেডার — গাঢ় নয়, এটাই রেডউডের চিহ্ন"),
         ("springboard", "[data-springboard]",
          "২১২px বাঁ টালি-প্যানেল, ১২px গোল কোণ"),
-        ("page-title", "[data-redwood-title]",
-         "২৭px হালকা ওজনের শিরোনাম, উপরে ব্রেডক্রাম্ব"),
-        ("stat-cards", "[data-stat-cards]",
-         "১৬px গোল কোণের সংখ্যা-কার্ড, ছায়াসহ"),
-        ("pill-buttons", "[data-pill-button]",
-         "৩৪px উঁচু সম্পূর্ণ গোল বোতাম"),
-        ("card-table", "[data-redwood-card]",
-         "১৬px গোল কার্ডে ঘেরা তালিকা, ধার নেই — ছায়া"),
+        ("page-title", ".rail-item", "border-radius", "12px",
+         "স্প্রিংবোর্ডের টালি — ১২px গোল কোণ"),
+        ("stat-cards", ".stage-strip", "border-radius", "16px",
+         "১৬px গোল কোণের সংখ্যা-কার্ড"),
+        ("pill-buttons", ".cmd-actions a, .cmd-actions button", "border-radius", "999px",
+         "সম্পূর্ণ গোল বোতাম"),
+        ("card-table", "[data-boxed]", "border-radius", "16px",
+         "১৬px গোল কার্ডে ঘেরা তালিকা"),
     ],
 
     # ─────────────────────────────────────────────────────────────────
     # Classic — খতিয়ান রূপ
     # ─────────────────────────────────────────────────────────────────
     "classic": [
-        ("top-menu", "[data-classic-menu]",
+        ("top-menu", ".topnav", "background-color", "rgb(51, 66, 79)",
          "গাঢ় মেনু বার — এটাই নেভিগেশন, সাইডবার নেই"),
-        ("command-strip", "[data-classic-strip]",
+        ("command-strip", "[data-command-strip]", "background-color", "rgb(245, 242, 236)",
          "বেইজ ফিতে — বাঁয়ে শিরোনাম, ডানে বোতাম"),
-        ("boxed-section", "[data-boxed]",
-         "বাক্সে ঘেরা অংশ, মাথায় বেইজ জমিন"),
-        ("kpi-strip", "[data-kpi-strip]",
-         "জোড়া লাগানো চার-ঘরের KPI পটি, ডিভাইডারসহ"),
+        ("boxed-section", "[data-boxed]", "border-radius", "0px",
+         "বাক্সে ঘেরা অংশ — ধারালো কোণ, মাথায় বেইজ জমিন"),
+        ("kpi-strip", ".stage-strip .stage", "border-right-width", "1px",
+         "জোড়া লাগানো ঘরের পটি — মাঝে ডিভাইডার"),
         ("stage-strip", "[data-stage-strip]",
          "ধাপের স্ট্রিপ — গোনা ও টাকা, done/now/bad"),
-        ("message-box", "[data-classic-msg]",
-         "চৌকো বার্তার বাক্স — সতর্ক/ভুল/ঠিক"),
+        # বার্তার বাক্স — সতর্কবার্তা কেবল সত্যিকারের সতর্কতা থাকলেই
+        # আসে, তাই ওটা দিয়ে প্রমাণ করা যায় না। খালি তালিকার বাক্সটাও
+        # একটা বার্তা, আর সেটা সবসময় থাকে যখন তালিকা খালি।
+        ("message-box", "[data-msg]", "border-radius", "0px",
+         "চৌকো বার্তার বাক্স — খতিয়ানে কোণ ধারালো"),
     ],
 
     # ─────────────────────────────────────────────────────────────────
     # Rose — ABOS-এর নিজের
     # ─────────────────────────────────────────────────────────────────
     "rose": [
-        ("light-rail", "[data-rose-rail]",
-         "১৯৮px হালকা রেল, ৮px গোল আইটেম"),
-        ("gold-hairline", "[data-gold-hairline]",
+        ("light-rail", ".menu-panel", "background-color", "rgb(246, 248, 251)",
+         "হালকা রেল — গাঢ় নয়, এটাই রোজের চিহ্ন"),
+        ("gold-hairline", "[data-gold-hairline]", "height", "2px",
          "শিরোনামের নিচে সোনার সরু রেখা"),
-        ("round-grid", "[data-rose-grid]",
+        ("round-grid", "[data-boxed]", "border-radius", "12px",
          "১২px গোল কোণে ঘেরা তালিকা"),
     ],
 

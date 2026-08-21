@@ -34,7 +34,7 @@
     <div class="grid gap-4 lg:grid-cols-2">
 
         {{-- গণনা ও সমন্বয় --}}
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="mb-1 font-semibold">{{ __('inventory::menu.adjust') }}</h2>
             <p class="mb-3 max-w-(--spacing-prose-max) text-sm text-(--color-ink-muted)">
                 {{ __('inventory::message.adjust_note') }}
@@ -88,7 +88,7 @@
         </section>
 
         {{-- আটকানো ও ছাড়া --}}
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="mb-1 font-semibold">{{ __('inventory::action.hold') }}</h2>
             <p class="mb-3 max-w-(--spacing-prose-max) text-sm text-(--color-ink-muted)">
                 {{ __('inventory::message.hold_note') }}

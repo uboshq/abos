@@ -52,7 +52,7 @@
     @endif
 
     @if ($heads->isEmpty())
-        <div class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-8 text-center">
+        <div data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-8 text-center">
             <h2 class="text-lg font-semibold">{{ __('hr::message.empty_heads') }}</h2>
             <p class="mx-auto mt-2 max-w-(--spacing-prose-max) text-sm text-(--color-ink-muted)">
                 {{ __('hr::message.empty_heads_note') }}
@@ -126,7 +126,7 @@
         </div>
 
         {{-- পুরো ইতিহাস — কে কবে কোন অঙ্ক বসিয়েছিল --}}
-        <div class="mt-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
+        <div data-boxed class="mt-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">
             <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-2 font-semibold">
                 {{ __('hr::message.history') }}

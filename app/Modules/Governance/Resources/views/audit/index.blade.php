@@ -29,7 +29,7 @@
         {{ __('governance::message.read_only') }}
     </p>
 
-    <div class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+    <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         {{--
             ছাঁকনিগুলো শেয়ার্ড টুলবারের ভেতরে, নিজের ফর্মে নয়।
 

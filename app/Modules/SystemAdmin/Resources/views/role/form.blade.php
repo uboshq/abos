@@ -38,7 +38,7 @@
             </div>
         @endif
 
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <div class="max-w-md">
                 <x-ui.field name="name" :label="__('system_admin::field.role_name')"
                             :value="old('name', $role->name)"
@@ -47,7 +47,7 @@
         </section>
 
         @foreach ($grouped as $module => $permissions)
-            <section class="rounded-(--radius-card) border border-(--color-border)
+            <section data-boxed class="rounded-(--radius-card) border border-(--color-border)
                             bg-(--color-surface-card) p-4">
                 <h2 class="font-semibold">{{ $moduleNames[$module] ?? $module }}</h2>
 

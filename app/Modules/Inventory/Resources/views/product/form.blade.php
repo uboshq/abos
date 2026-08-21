@@ -34,7 +34,7 @@
             </div>
         @endif
 
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="mb-3 font-semibold">{{ __('inventory::section.identity') }}</h2>
 
             <div class="grid gap-3 sm:grid-cols-2">
@@ -90,7 +90,7 @@
             </div>
         </section>
 
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="mb-3 font-semibold">{{ __('inventory::section.pricing') }}</h2>
 
             <div class="grid gap-3 sm:grid-cols-3">

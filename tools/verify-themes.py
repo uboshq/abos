@@ -118,11 +118,14 @@ missing_parts = 0
 with sync_playwright() as p:
     b = p.chromium.launch()
     pg = b.new_page(viewport={"width": 1440, "height": 900})
+    pg.set_default_timeout(120000)
     pg.goto(BASE + "/login", wait_until="domcontentloaded")
     pg.fill("input[name=identifier]", "owner@abos.test")
     pg.fill("input[name=password]", "password")
-    pg.click("button[type=submit]")
-    pg.wait_for_load_state("networkidle")
+    # প্রথম অনুরোধে ব্লেড কম্পাইল হয়, তাই লগইনটা ধীর হতে পারে —
+    # navigation-এর অপেক্ষা আলাদা করে, নাহলে ক্লিকই টাইমআউট করে
+    pg.click("button[type=submit]", no_wait_after=True)
+    pg.wait_for_url("**/", timeout=120000)
 
     for look, spec in SPEC.items():
         subprocess.run(["php", "artisan", "tinker", "--execute", TPL % (look, look)],
@@ -171,9 +174,18 @@ with sync_playwright() as p:
                 got = "নেই"
             else:                                   # computed style মিলতে হবে
                 name, sel, prop, want, why = part
+                # `sel::after` লিখলে ছদ্ম-এলিমেন্টটাই মাপা হয় — CSS-এ
+                # আঁকা ক্যারেট বা পটির মতো জিনিস অন্যভাবে প্রমাণ করা যায় না
+                pseudo = None
+                target = sel
+                for suffix in ("::after", "::before"):
+                    if sel.endswith(suffix):
+                        pseudo, target = suffix, sel[: -len(suffix)]
+                        break
                 got = pg.evaluate(
                     "a => { const e = document.querySelector(a[0]);"
-                    " return e ? getComputedStyle(e)[a[1]] : 'নেই'; }", [sel, prop])
+                    " return e ? getComputedStyle(e, a[2])[a[1]] : 'নেই'; }",
+                    [target, prop, pseudo])
                 ok = got == want or (
                     ("rgb" in want or "color(" in want) and same_colour(got, want))
             if not ok:

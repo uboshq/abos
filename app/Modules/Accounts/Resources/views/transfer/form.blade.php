@@ -35,7 +35,7 @@
             </div>
         @endif
 
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <div class="grid gap-3 sm:grid-cols-2">
                 <x-ui.field name="trx_date" type="date" :label="__('accounts::field.date')"
                             :value="old('trx_date', now()->format('Y-m-d'))" required />
@@ -46,7 +46,7 @@
             </div>
         </section>
 
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="mb-3 font-semibold">{{ __('accounts::section.hand_over') }}</h2>
 
             <div class="grid gap-3 sm:grid-cols-2">
@@ -85,7 +85,7 @@
             </div>
         </section>
 
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="mb-3 font-semibold">{{ __('accounts::section.receive') }}</h2>
 
             <div class="grid gap-3 sm:grid-cols-2">

@@ -58,7 +58,7 @@
     <div class="grid gap-4 lg:grid-cols-3">
 
         {{-- প্রদেয় --}}
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="text-sm font-medium text-(--color-ink-muted)">
                 {{ __('supplier::field.payable') }}
             </h2>
@@ -98,7 +98,7 @@
         </section>
 
         {{-- পরিচয় --}}
-        <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4
                         lg:col-span-2">
             <div class="mb-3 flex items-center justify-between gap-2">
                 <h2 class="font-semibold">{{ __('supplier::section.identity') }}</h2>

@@ -30,7 +30,7 @@
         @method('PUT')
 
         @foreach ($groups as $group => $settings)
-            <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+            <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
                 <h2 class="mb-3 font-semibold">{{ __('accounts::settings_group.' . $group) }}</h2>
 
                 <div class="space-y-3">
