@@ -11,7 +11,7 @@
 --}}
 @php
     $tones = [
-        'primary' => 'bg-(--color-brand-500) text-(--color-brand-ink) hover:bg-(--color-brand-600)',
+        'primary' => 'is-primary bg-(--color-brand-500) text-(--color-brand-ink) hover:bg-(--color-brand-600)',
         'success' => 'bg-(--color-success) text-(--color-ink-inverse) hover:bg-(--color-success-hover)',
         'warning' => 'bg-(--color-warning) text-(--color-warning-ink) hover:bg-(--color-warning-hover) hover:text-(--color-ink-inverse)',
         'danger' => 'bg-(--color-danger) text-(--color-ink-inverse) hover:bg-(--color-danger-hover)',

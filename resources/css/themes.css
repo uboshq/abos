@@ -137,6 +137,7 @@
     --spacing-header: 34px;
     --topbar-control-h: 26px;
     --topbar-label: none;
+    --cmd-font: 12px;
 }
 
 /* ─────────────────────────────────────────────────────────────────
@@ -304,10 +305,12 @@
     --spacing-header: 36px;
     --topbar-control-h: 28px;
     --topbar-label: none;
+    --cmd-font: 11px;
 
     /* নেটস্যুটের চিহ্ন: মেনুতে ক্যারেট, বোতামে গ্রেডিয়েন্ট */
     --topnav-caret: "";
     --cmd-gradient: linear-gradient(#fdfdfd, #e4e8ec);
+    --cmd-gradient-primary: linear-gradient(#4e7ba6, #2e4b6b);
     --spacing-command: 22px;
 }
 
