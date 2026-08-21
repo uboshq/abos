@@ -113,6 +113,18 @@
          * আগের মতোই কেবল `$slot`-এ বসে।
          */
         $navPlacement = \App\Core\Support\Ui::nav(auth()->user()?->ui);
+
+        /*
+         * এই পর্দার শিরোনাম ও বোতামগুলো কোথায় বসে।
+         *
+         * `bar` — পুরো-চওড়া একটা পটিতে, পাতার কলামের বাইরে (D365,
+         * Fiori, NetSuite)। `inline` — পাতার ভেতরে, লেখার সাথে এক
+         * প্রান্তে (Odoo, Redwood, আর ABOS-এর নিজের তিনটা)।
+         *
+         * ১০৪টা পর্দা আগের মতোই `header` স্লটে পাঠায়; কেবল সেটা
+         * কোথায় আঁকা হবে তা এখানে ঠিক হয়।
+         */
+        $commandPlacement = \App\Core\Support\Ui::commands(auth()->user()?->ui);
     @endphp
 
     <div class="flex min-h-dvh">
@@ -168,6 +180,31 @@
                 </div>
             @endif
 
+            {{--
+                কাজের পটি — কেবল যে চেহারাগুলো ওটা চায়।
+
+                ── কেন এটা `<main>`-এর বাইরে ────────────────────────────
+                ভেতরে রাখলে ওটা `max-w-(--spacing-content-max)` কলামের
+                ভেতরেই বসত, আর তখন "পুরো-চওড়া" কথাটার কোনো মানে থাকত না।
+                D365-এর কমান্ড বার পর্দার এক ধার থেকে আরেক ধার পর্যন্ত
+                যায় — সেটাই তাকে chrome বানায়, কনটেন্ট নয়।
+
+                ── আঠালো নয়, ইচ্ছাকৃতভাবে ───────────────────────────────
+                উপরে ইতিমধ্যেই দুইটা আঠালো পটি (টপবার ও ব্রেডক্রাম্ব)।
+                তৃতীয়টা আটকালে ছোট ল্যাপটপে প্রায় ১৬০px স্থায়ীভাবে চলে
+                যেত, আর যে তালিকা দেখতে মানুষ এসেছেন সেটার জন্য থাকত
+                বাকিটুকু। ঘন চেহারাগুলোই এই পটিটা চায় — ওদের ব্যবহারকারী
+                সারি গুনছেন, তাই জায়গাটা তাঁদেরই বেশি দরকার।
+            --}}
+            @if ($commandPlacement === 'bar')
+                @isset($header)
+                    <div class="shrink-0 border-b border-(--color-border)
+                                bg-(--color-surface-card) px-3 py-2 md:px-5 print-hide">
+                        {{ $header }}
+                    </div>
+                @endisset
+            @endif
+
             <main id="main"
                   class="min-w-0 flex-1 px-3 pt-4 pb-[calc(var(--spacing-bottom-nav)+1.5rem)]
                          md:px-5 md:pb-[calc(var(--spacing-status-bar)+1.5rem)] lg:px-6"
@@ -175,9 +212,11 @@
                 {{-- কনটেন্টের সর্বোচ্চ প্রস্থ — সেকশন ২০.১। বড় স্ক্রিনে
                      টেনে লম্বা নয়; জায়গা বাড়লে কলাম বাড়ে, লাইন নয়। --}}
                 <div class="mx-auto w-full max-w-(--spacing-content-max)">
-                    @isset($header)
-                        <div class="mb-4">{{ $header }}</div>
-                    @endisset
+                    @if ($commandPlacement !== 'bar')
+                        @isset($header)
+                            <div class="mb-4">{{ $header }}</div>
+                        @endisset
+                    @endif
 
                     {{ $slot }}
                 </div>

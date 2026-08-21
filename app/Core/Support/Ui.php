@@ -31,7 +31,7 @@ final class Ui
     /**
      * @return array<string, array{
      *     label: string, blurb: string, imitates: ?string,
-     *     density: string, nav: string, swatch: string, ink: string,
+     *     density: string, nav: string, commands: string, swatch: string, ink: string,
      * }>
      */
     public static function all(): array
@@ -48,6 +48,7 @@ final class Ui
                 'label' => 'core.ui.classic',
                 'blurb' => 'core.ui.classic_blurb',
                 'imitates' => null,
+                'commands' => 'inline',
                 'nav' => 'rail',
                 'density' => 'comfortable',
                 'swatch' => '#2563eb',
@@ -57,6 +58,7 @@ final class Ui
                 'label' => 'core.ui.tiles',
                 'blurb' => 'core.ui.tiles_blurb',
                 'imitates' => 'SAP Fiori',
+                'commands' => 'bar',
                 'nav' => 'top',
                 'density' => 'comfortable',
                 'swatch' => '#0a6ed1',
@@ -66,6 +68,7 @@ final class Ui
                 'label' => 'core.ui.suite',
                 'blurb' => 'core.ui.suite_blurb',
                 'imitates' => 'Oracle NetSuite',
+                'commands' => 'bar',
                 'nav' => 'top',
                 'density' => 'dense',
                 'swatch' => '#125740',
@@ -75,6 +78,7 @@ final class Ui
                 'label' => 'core.ui.apps',
                 'blurb' => 'core.ui.apps_blurb',
                 'imitates' => 'Odoo',
+                'commands' => 'inline',
                 'nav' => 'top',
                 'density' => 'comfortable',
                 'swatch' => '#714b67',
@@ -84,6 +88,7 @@ final class Ui
                 'label' => 'core.ui.dynamic',
                 'blurb' => 'core.ui.dynamic_blurb',
                 'imitates' => 'Microsoft Dynamics 365',
+                'commands' => 'bar',
                 'nav' => 'rail',
                 'density' => 'dense',
                 'swatch' => '#0078d4',
@@ -93,6 +98,7 @@ final class Ui
                 'label' => 'core.ui.redwood',
                 'blurb' => 'core.ui.redwood_blurb',
                 'imitates' => 'Oracle Fusion Cloud',
+                'commands' => 'inline',
                 'nav' => 'top',
                 'density' => 'comfortable',
                 'swatch' => '#c74634',
@@ -109,6 +115,7 @@ final class Ui
                 'label' => 'core.ui.rose',
                 'blurb' => 'core.ui.rose_blurb',
                 'imitates' => null,
+                'commands' => 'inline',
                 'nav' => 'rail',
                 'density' => 'comfortable',
                 'swatch' => '#be123c',
@@ -118,6 +125,7 @@ final class Ui
                 'label' => 'core.ui.navy',
                 'blurb' => 'core.ui.navy_blurb',
                 'imitates' => null,
+                'commands' => 'inline',
                 'nav' => 'rail',
                 'density' => 'dense',
                 'swatch' => '#1e3a8a',
@@ -146,6 +154,29 @@ final class Ui
     public static function nav(?string $key): string
     {
         return self::all()[self::clean($key)]['nav'];
+    }
+
+    /**
+     * এই পর্দার কাজগুলো কোথায় বসে — পাতার ভেতরে, না নিজের একটা পটিতে।
+     *
+     * ── কেন এটাও PHP-তে, `nav()`-এর মতোই ────────────────────────────
+     * একই কারণে: জায়গা markup-এর কথা। D365 ও Fiori শিরোনাম ও বোতাম
+     * একটা **পুরো-চওড়া পটিতে** রাখে, পাতার লেখার কলামের বাইরে; Odoo
+     * ও Redwood ওগুলো পাতার ভেতরেই রাখে, লেখার সাথে এক প্রান্তে।
+     *
+     * CSS দিয়ে একটা এলিমেন্টকে তার কলামের বাইরে বের করা যায় না —
+     * ওটা DOM-এ কোথায় বসে তার উপর নির্ভর করে।
+     *
+     * ── পাতাগুলোকে কিছু বদলাতে হয়নি, আর সেটাই আসল কথা ───────────────
+     * ১০৪টা পর্দা তাদের শিরোনাম ও বোতাম `header` স্লটে পাঠায়, আগেও
+     * পাঠাত। কেবল **শেল** ঠিক করে ওই স্লটটা কোথায় আঁকা হবে।
+     *
+     * এটাই "জায়গাটা শেলের সিদ্ধান্ত, পাতার নয়" — আর প্রমাণটা হল
+     * এই বদলে একটাও পর্দার ফাইল ছোঁয়া লাগেনি।
+     */
+    public static function commands(?string $key): string
+    {
+        return self::all()[self::clean($key)]['commands'];
     }
 
     /** @return list<string> */
