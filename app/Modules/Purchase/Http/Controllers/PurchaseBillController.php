@@ -93,11 +93,39 @@ class PurchaseBillController extends Controller implements HasMiddleware
          */
         $order = $receipt === null ? $this->chosenOrder($request) : null;
 
+        /*
+         * আদেশ চাওয়া হয়েছিল, অথচ পাওয়া গেল না — কারণটা বলা হয়।
+         *
+         * ── কী ভাঙা ছিল ─────────────────────────────────────────────
+         * `chosenOrder()` নীরবে `null` ফেরাত। ফলে খসড়া আদেশের আইডি
+         * নিয়ে এলে ফর্মটা **সম্পূর্ণ খালি** আসত — সরবরাহকারী নেই,
+         * লাইন নেই, কোনো বার্তাও নেই।
+         *
+         * আদেশের পাতা খসড়ায় লিংকটা দেখায় না, তাই ওখান থেকে এই
+         * অবস্থায় পৌঁছানো যায় না। কিন্তু বুকমার্ক, ব্রাউজারের পেছনে
+         * যাওয়া, বা কাউকে পাঠানো একটা লিংক — তিনটাতেই পৌঁছানো যায়।
+         * আর তখন পর্দাটা দেখতে ভাঙা লাগে, অথচ নিয়মটা ঠিকই কাজ করছে।
+         *
+         * মালিকের রিপোর্ট, ২২ আগস্ট: "PO থেকে সরাসরি Bill-এ গেলে ফর্ম
+         * খালি আসে"। নিশ্চিত আদেশে ভরে; খসড়ায় খালি — নীরবে।
+         */
+        $askedFor = $request->integer('purchase_order_id');
+        $why = null;
+
+        if ($receipt === null && $askedFor > 0 && $order === null) {
+            $draft = PurchaseOrder::query()->find($askedFor);
+
+            $why = $draft !== null
+                ? __('purchase::message.order_not_confirmed', ['no' => $draft->document_no])
+                : __('purchase::message.order_not_found');
+        }
+
         return view('purchase::bill.form', [
             'menu' => $this->menu->forUser($request->user()),
             'bill' => new PurchaseBill(['trx_date' => now()->toDateString()]),
             'receipt' => $receipt,
             'order' => $order,
+            'why' => $why,
             'receipts' => PurchaseReceipt::query()
                 ->where('status', DocumentStatus::CONFIRMED)
                 ->with('supplier')->orderByDesc('trx_date')->limit(200)->get(),

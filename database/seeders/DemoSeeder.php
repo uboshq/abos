@@ -28,6 +28,7 @@ use App\Modules\MasterData\Services\LocationService;
 use App\Modules\Supplier\Services\SupplierService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -42,6 +43,7 @@ class DemoSeeder extends Seeder
 {
     public function run(): void
     {
+        $this->putLogosWhereTheRowsSayTheyAre();
         $alpha = Company::create([
             'code' => 'TDEPOT',
             'name_en' => 'Trade Depot',
@@ -613,5 +615,52 @@ class DemoSeeder extends Seeder
         $user->assignRole($role);
 
         return $user;
+    }
+
+    /**
+     * লোগোর ফাইলগুলো সেখানে বসানো, যেখানে সারিগুলো বলে সেগুলো আছে।
+     *
+     * ── কী ভাঙা ছিল ─────────────────────────────────────────────────
+     * সিডার `logo_path` বসাত (`logos/Trade Depot.png`), কিন্তু ফাইলটা
+     * বসাত না। ফাইলটা ছিল কেবল যে মেশিনে একদিন হাতে আপলোড করা
+     * হয়েছিল সেখানে — আর `storage/app/public/*` gitignored, তাই
+     * সার্ভারে কোনোদিন পৌঁছাত না।
+     *
+     * ফল: `Company::logoData()` চুপচাপ `null` ফেরাত, আর **A4 ছাপায়
+     * লোগো বসত না**। মালিকের রিপোর্ট, ২২ আগস্ট: "A4 ছাপায় লোগো
+     * ভাঙা"। কোডে কিছুই ভাঙা ছিল না — ছবিটাই ছিল না।
+     *
+     * ── কেন ফাইলগুলো এখন রিপোতে ────────────────────────────────────
+     * সিডার একটা পথ ঘোষণা করলে সেই পথে সত্যিই কিছু থাকা তার নিজের
+     * দায়িত্ব। নাহলে সিডারটা একটা মিথ্যা বলে, আর মিথ্যাটা ধরা পড়ে
+     * ছাপার কাগজে — ছাপা হয়ে যাওয়ার পরে।
+     *
+     * ── কেন `copy`, `move` নয় ──────────────────────────────────────
+     * উৎসটা রিপোর নিজের ফাইল। সরিয়ে নিলে দ্বিতীয়বার সিড করা যেত না।
+     */
+    private function putLogosWhereTheRowsSayTheyAre(): void
+    {
+        $from = database_path('seeders/assets/logos');
+
+        if (! is_dir($from)) {
+            return;
+        }
+
+        foreach (glob($from.DIRECTORY_SEPARATOR.'*.png') ?: [] as $file) {
+            $target = 'logos/'.basename($file);
+
+            /*
+             * আগে থেকে থাকলে ছোঁয়া হয় না।
+             *
+             * চালু সার্ভারে কোম্পানি নিজের আসল লোগো আপলোড করে থাকতে
+             * পারে। সিড করলেই সেটা ডেমোর ছবি দিয়ে চাপা পড়লে ছাপার
+             * কাগজে অন্য কারো লোগো বসত।
+             */
+            if (Storage::disk('public')->exists($target)) {
+                continue;
+            }
+
+            Storage::disk('public')->put($target, (string) file_get_contents($file));
+        }
     }
 }

@@ -89,6 +89,118 @@ class AppearanceTest extends TestCase
         }
     }
 
+    /**
+     * গাঢ় জমিনেও ব্যবহারকারীর নিজের রং, আর সেটা পড়া যায়।
+     *
+     * ── কী ভাঙা ছিল ─────────────────────────────────────────────────
+     * `tokens.css`-এর গাঢ় ব্লকে `--color-brand-500: #3b82f6` হার্ডকোড
+     * ছিল। ফলে গাঢ় সুইচ টিপলে **পনেরোটা রংই এক নীল হয়ে যেত** —
+     * যিনি সবুজ বেছেছিলেন তিনি রাতে নীল পেতেন।
+     *
+     * নকলের জন্য সেটা আরও খারাপ: Odoo রূপে অবার্জিন মাথার পাশে নীল
+     * বোতাম বসত, Salesforce-এ নেভি মাথার পাশে অন্য নীল। এক পর্দায়
+     * দুই ব্র্যান্ড।
+     *
+     * ── দুইটা সীমা, আর দুইটাই আলাদা কারণে ───────────────────────────
+     * · **লেখা বনাম বোতাম ≥ ৪.৫:১** — নাহলে বোতামের লেখা পড়া যায় না
+     * · **বোতাম বনাম পাতা ≥ ৩:১** (WCAG ১.৪.১১) — নাহলে গাঢ় জমিনে
+     *   বোতামের কিনারাটাই মিলিয়ে যায়, আর মানুষ বুঝতে পারেন না
+     *   ওখানে টেপার মতো কিছু আছে
+     *
+     * দ্বিতীয়টা ভুলে যাওয়া সহজ, কারণ লেখা পড়া যায় বলে সব ঠিক মনে হয়।
+     *
+     * সবচেয়ে গাঢ় কার্ডটা ধরে মাপা (Linear-এর #17181B) — ওটা পেরোলে
+     * বাকি নয়টা রূপেও পেরোয়।
+     */
+    public function test_the_dark_screen_keeps_the_chosen_colour_and_stays_readable(): void
+    {
+        // Linear-এর কার্ড — দশটার মধ্যে সবচেয়ে গাঢ়
+        $darkestCard = [23, 24, 27];
+
+        foreach (Accent::all() as $key => $accent) {
+            $this->assertArrayHasKey('dark', $accent, "{$key}-এর গাঢ় ধাপ ঘোষণা করা নেই।");
+            $this->assertArrayHasKey('dark_ink', $accent, "{$key}-এর গাঢ় কালি ঘোষণা করা নেই।");
+
+            $onPage = $this->contrast($accent['dark'], $darkestCard);
+
+            $this->assertGreaterThanOrEqual(3.0, $onPage, sprintf(
+                '%s-এর গাঢ় ধাপ পাতার সাথে %.2f:১ — বোতামের কিনারা মিলিয়ে যাবে।',
+                $key, $onPage,
+            ));
+
+            $ink = array_map('intval', explode(' ', (string) $accent['dark_ink']));
+            $onButton = $this->contrast($accent['dark'], $ink);
+
+            $this->assertGreaterThanOrEqual(4.5, $onButton, sprintf(
+                '%s-এর গাঢ় বোতামে লেখা %.2f:১ — পড়া যাবে না।',
+                $key, $onButton,
+            ));
+        }
+    }
+
+    /**
+     * গাঢ় ধাপটা যেন অন্য একটা রং হয়ে না যায়।
+     *
+     * ── কেন এই দ্বিতীয় পাহারাটা লাগে ─────────────────────────────────
+     * উপরের পরীক্ষাটা কেবল কনট্রাস্ট মাপে। কেউ অবার্জিনের গাঢ় ধাপে
+     * সবুজ বসিয়ে দিলে ওটা দুইটা সীমাই পেরোত, আর পরীক্ষা সবুজ থাকত —
+     * অথচ Odoo রূপে রাতে সবুজ বোতাম।
+     *
+     * তাই দাবিটা রঙের **চরিত্র** ধরে: গাঢ় ধাপটা হয় হুবহু ৫০০, নয়তো
+     * ৫০০-এর একই hue-তে কেবল উজ্জ্বলতর। পনেরোটার এগারোটা হুবহু;
+     * বাকি চারটায় (ইন্ডিগো · ভায়োলেট · অবার্জিন · নেটস্যুট) ৩:১
+     * পেতে সামান্য তুলতে হয়েছে।
+     */
+    public function test_the_dark_step_is_the_same_colour_only_brighter(): void
+    {
+        foreach (Accent::all() as $key => $accent) {
+            [$r, $g, $b] = array_map('intval', explode(' ', $accent['scale']['500']));
+            [$dr, $dg, $db] = array_map('intval', explode(' ', (string) $accent['dark']));
+
+            if ([$r, $g, $b] === [$dr, $dg, $db]) {
+                continue;   // হুবহু ৫০০ — এগারোটা এখানেই থামে
+            }
+
+            /*
+             * Hue মেলানো হয় ডিগ্রিতে, চ্যানেল ধরে নয়।
+             *
+             * চ্যানেল ধরে মিলালে "লাল বেড়েছে" ধরনের দাবি করতে হত, আর
+             * উজ্জ্বল করলে তিনটা চ্যানেলই বাড়ে — দাবিটা তখন কিছুই
+             * প্রমাণ করত না।
+             */
+            $hue = function (int $r, int $g, int $b): float {
+                $max = max($r, $g, $b) / 255;
+                $min = min($r, $g, $b) / 255;
+                $d = $max - $min;
+
+                if ($d < 0.0001) {
+                    return 0.0;
+                }
+
+                $h = match ($max) {
+                    $r / 255 => fmod((($g - $b) / 255 / $d) + 6, 6),
+                    $g / 255 => (($b - $r) / 255 / $d) + 2,
+                    default => (($r - $g) / 255 / $d) + 4,
+                };
+
+                return $h * 60;
+            };
+
+            $drift = abs($hue($r, $g, $b) - $hue($dr, $dg, $db));
+            $drift = min($drift, 360 - $drift);
+
+            $this->assertLessThanOrEqual(6.0, $drift, sprintf(
+                '%s-এর গাঢ় ধাপ %.1f° সরে গেছে — উজ্জ্বল নয়, অন্য রং।', $key, $drift,
+            ));
+
+            $this->assertGreaterThan(
+                $r + $g + $b,
+                $dr + $dg + $db,
+                "{$key}-এর গাঢ় ধাপ ৫০০-এর চেয়ে উজ্জ্বল নয়।",
+            );
+        }
+    }
+
     public function test_the_colour_is_applied_on_the_server_not_in_javascript(): void
     {
         $this->owner()->forceFill(['accent' => 'emerald'])->save();

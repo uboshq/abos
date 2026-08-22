@@ -354,6 +354,8 @@ return [
         'approvals_later' => 'Approvals — the screen arrives with the module that raises them.',
         'title' => 'Needs attention',
         'none' => 'Nothing needs attention.',
+        'backup_no_mirror' => 'Backups and the books sit on one disk — lose it and you lose both. Set a second destination.',
+        'backup_mirror_stale' => 'Nothing has reached the second destination for two days — the copy has stopped.',
         'backup_stale' => 'No backup for over two days — nothing could be recovered if the disk fails.',
         'awaiting_decision' => '{1} 1 waiting for a decision|[2,*] :count waiting for a decision',
 

@@ -65,4 +65,6 @@ return [
     'last_rate' => 'Last rate',
     'no_lines_yet' => 'No products added yet.',
     'paid_more_confirm' => 'This pays more than the invoice. The extra stays as an advance with the supplier. Continue?',
+    'order_not_confirmed' => ':no is still a draft — no bill can be raised against it yet. Open the order, confirm it, then come back.',
+    'order_not_found' => 'That order could not be found. The blank form below is yours to fill by hand if you want.',
 ];

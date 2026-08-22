@@ -9,6 +9,7 @@ use App\Core\Concerns\HasActiveState;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Concerns\IsMasterRecord;
+use App\Core\Concerns\ScopedToUserWarehouse;
 use App\Core\Contracts\Drillable;
 use App\Models\Branch;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -31,7 +32,20 @@ class Warehouse extends Model implements Drillable
     use HasPublicId;
     use IsAudited;
     use IsMasterRecord;
+    use ScopedToUserWarehouse;
     use SoftDeletes;
+
+    /**
+     * গুদামের নিজের তালিকায় ঘরটা `id`, `warehouse_id` নয়।
+     *
+     * এই একটা লাইন না থাকলে সীমাবদ্ধ ব্যবহারকারীর গুদামের
+     * তালিকা ও প্রতিটা ড্রপডাউন সব গুদামই দেখাত — আর ছাঁকনিটা
+     * কেবল মজুদের সংখ্যায় খাটত, নামের তালিকায় নয়।
+     */
+    public function warehouseScopeColumn(): string
+    {
+        return 'id';
+    }
 
     protected $table = 'inv_warehouses';
 
