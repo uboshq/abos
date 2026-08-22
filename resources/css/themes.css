@@ -1055,3 +1055,439 @@
     --color-sidebar-panel: #0e0f11;
     --color-footer: #0e0f11;
 }
+/* ==== গাঢ় রূপ, তৈরি করা — হাতে লিখবেন না ==== */
+
+/* ═════════════════════════════════════════════════════════════════
+   গাঢ় থিমে প্রতিটা রূপ নিজেরটাই ধরে রাখে।
+
+   ── কী ভাঙা ছিল ─────────────────────────────────────────────────
+   ফাইলের মাথায় লেখা আছে: `[data-ui]` ইচ্ছাকৃতভাবে (০,১,০), যাতে
+   `:root[data-theme='dark']` (০,২,০) পৃষ্ঠতল জিতে নেয়। যুক্তিটা ছিল
+   "চেহারা দেয় ধার, ঘনত্ব, সাইডবারের রং — বাকিটা গাঢ় থিমের"।
+
+   ব্রাউজারে মেপে দেখা গেল সেটা যথেষ্ট নয়। গাঢ় সুইচ টিপলে **দশটার
+   মধ্যে নয়টার মাথা এক নেভিতে মিলে যেত** — Odoo-র অবার্জিন,
+   Salesforce-এর #032D60, Fiori-র #354A5F, সব `rgb(15,23,42)`।
+   অর্থাৎ যে জিনিসটা রূপ চেনায় সেটাই গাঢ় মোডে উধাও।
+
+   আর নকলটা ওখানেই ভাঙত: SAP, Microsoft ও Salesforce-এর নিজেদেরই
+   গাঢ় থিম আছে (Horizon Dark, Fluent 2 Dark, Salesforce Dark), আর
+   ওগুলো একটাও ABOS-এর সাধারণ গাঢ় নয়।
+
+   ── কেন তিনটা নির্বাচক ──────────────────────────────────────────
+   `:root[data-theme='dark'][data-ui='x']` = (০,৩,০), তাই গাঢ় থিমের
+   (০,২,০) নিয়মটা হারায়। এটাই মাথায় লেখা সেই ছাড় — Linear-এর জন্য
+   একবার নেওয়া হয়েছিল, আর কারণটা একই।
+
+   ── মানগুলো কোথা থেকে ───────────────────────────────────────────
+   যেখানে পণ্যের নিজের গাঢ় থিম প্রকাশ্য, সেখান থেকেই হুবহু। যেখানে
+   নেই (NetSuite), সেই রূপের হালকা প্যালেট একই সুরে নামানো।
+
+   যে ERP গাঢ় মোডেও ব্র্যান্ডের মাথা রাখে — Odoo, D365, Salesforce —
+   তাদের মাথা এখানেও অপরিবর্তিত। SAP নিজের শেল গাঢ় করে, তাই তারটা
+   গাঢ় হয়।
+
+   প্রতিটা জোড়ার কনট্রাস্ট বসানোর **আগে** মাপা: কালি/জমিন, ফিকে/কার্ড,
+   লিংক/কার্ড, মাথার কালি — নয়টার সবগুলোই ৪.৫:১-এর উপরে।
+   ═════════════════════════════════════════════════════════════════ */
+
+
+/* Navy — ABOS-এর নিজের — গভীর নীল, দিনের রূপের সরাসরি রাত */
+:root[data-theme='dark'][data-ui='navy'] {
+    --color-surface-app: #0a101c;
+    --color-surface-card: #111a2b;
+    --color-surface-muted: #0e1626;
+    --color-surface-sunken: #0e1626;
+    --color-surface-hover: #16213a;
+    --color-surface-selected: #1b2b49;
+    --color-border: #1e2a3d;
+    --color-border-strong: #2b3b55;
+    --color-ink: #e6ecf5;
+    --color-ink-body: #e6ecf5;
+    --color-ink-muted: #93a5bf;
+    --color-link: #7fb2f5;
+    --color-topbar: #0d1626;
+    --color-topbar-ink: #e6ecf5;
+    --color-sidebar: #070c15;
+    --color-sidebar-panel: #0c1422;
+    --color-sidebar-border: #1e2a3d;
+    --color-footer: #0a101c;
+    --color-footer-ink: #93a5bf;
+    --color-footer-border: #1e2a3d;
+    --color-topnav: #0c1422;
+    --color-topnav-ink: #e6ecf5;
+    --color-topnav-ink-muted: #93a5bf;
+    --color-topnav-border: #1e2a3d;
+    --color-topnav-hover: #16213a;
+    --color-topnav-selected: #1b2b49;
+    --color-toolbar: #111a2b;
+    --color-cell-line: #1e2a3d;
+    --color-row-alt: #0e1626;
+    --color-table-head: #0e1626;
+    --color-table-head-ink: #93a5bf;
+
+    /* রূপের নিজের রংটা গাঢ়েও অপরিবর্তিত — ওটাই তার নাম */
+    --color-sidebar-active: #3b82f6;
+    --color-sidebar-icon: #93a5bf;
+    --color-topbar-ink-muted: #93a5bf;
+    --color-topbar-border: #1e2a3d;
+    --color-topbar-hover: #16213a;
+    --color-topbar-field: #16213a;
+}
+
+/* Rose — ABOS-এর নিজের — উষ্ণ গোলাপি, সোনার রেখা টিকে থাকে */
+:root[data-theme='dark'][data-ui='rose'] {
+    --color-surface-app: #170e13;
+    --color-surface-card: #1f141a;
+    --color-surface-muted: #1b1116;
+    --color-surface-sunken: #1b1116;
+    --color-surface-hover: #271923;
+    --color-surface-selected: #33202c;
+    --color-border: #31212a;
+    --color-border-strong: #452e3a;
+    --color-ink: #f7eaf0;
+    --color-ink-body: #f7eaf0;
+    --color-ink-muted: #bb9aa6;
+    --color-link: #f08bb0;
+    --color-topbar: #1f141a;
+    --color-topbar-ink: #f7eaf0;
+    --color-sidebar: #140c11;
+    --color-sidebar-panel: #1a1015;
+    --color-sidebar-border: #31212a;
+    --color-footer: #170e13;
+    --color-footer-ink: #bb9aa6;
+    --color-footer-border: #31212a;
+    --color-topnav: #1a1015;
+    --color-topnav-ink: #f7eaf0;
+    --color-topnav-ink-muted: #bb9aa6;
+    --color-topnav-border: #31212a;
+    --color-topnav-hover: #271923;
+    --color-topnav-selected: #33202c;
+    --color-toolbar: #1f141a;
+    --color-cell-line: #31212a;
+    --color-row-alt: #1b1116;
+    --color-table-head: #1b1116;
+    --color-table-head-ink: #bb9aa6;
+
+    /* রূপের নিজের রংটা গাঢ়েও অপরিবর্তিত — ওটাই তার নাম */
+    --color-sidebar-active: #c2185b;
+    --color-sidebar-icon: #bb9aa6;
+    --color-topbar-ink-muted: #bb9aa6;
+    --color-topbar-border: #31212a;
+    --color-topbar-hover: #271923;
+    --color-topbar-field: #271923;
+}
+
+/* Tiles — SAP Horizon Dark — SAP-এর নিজের গাঢ় থিম, শেল #12171C */
+:root[data-theme='dark'][data-ui='tiles'] {
+    --color-surface-app: #12171c;
+    --color-surface-card: #2b3138;
+    --color-surface-muted: #1d232a;
+    --color-surface-sunken: #1d232a;
+    --color-surface-hover: #333a42;
+    --color-surface-selected: #22344a;
+    --color-border: #3a4149;
+    --color-border-strong: #4a525b;
+    --color-ink: #eaecee;
+    --color-ink-body: #eaecee;
+    --color-ink-muted: #a9b4be;
+    --color-link: #7ab8ff;
+    --color-topbar: #1d232a;
+    --color-topbar-ink: #eaecee;
+    --color-sidebar: #12171c;
+    --color-sidebar-panel: #1d232a;
+    --color-sidebar-border: #3a4149;
+    --color-footer: #12171c;
+    --color-footer-ink: #a9b4be;
+    --color-footer-border: #3a4149;
+    --color-topnav: #1d232a;
+    --color-topnav-ink: #eaecee;
+    --color-topnav-ink-muted: #a9b4be;
+    --color-topnav-border: #3a4149;
+    --color-topnav-hover: #333a42;
+    --color-topnav-selected: #22344a;
+    --color-toolbar: #2b3138;
+    --color-cell-line: #3a4149;
+    --color-row-alt: #1d232a;
+    --color-table-head: #1d232a;
+    --color-table-head-ink: #a9b4be;
+
+    /* রূপের নিজের রংটা গাঢ়েও অপরিবর্তিত — ওটাই তার নাম */
+    --color-sidebar-active: #0a6ed1;
+    --color-sidebar-icon: #a9b4be;
+    --color-topbar-ink-muted: #a9b4be;
+    --color-topbar-border: #3a4149;
+    --color-topbar-hover: #333a42;
+    --color-topbar-field: #333a42;
+}
+
+/* Suite — NetSuite-এর নেভি, গাঢ়ে নামানো — মাথা নেভিই থাকে */
+:root[data-theme='dark'][data-ui='suite'] {
+    --color-surface-app: #141d26;
+    --color-surface-card: #1e2a36;
+    --color-surface-muted: #18222c;
+    --color-surface-sunken: #18222c;
+    --color-surface-hover: #26343f;
+    --color-surface-selected: #1f3a52;
+    --color-border: #31424f;
+    --color-border-strong: #42566a;
+    --color-ink: #e3e9ef;
+    --color-ink-body: #e3e9ef;
+    --color-ink-muted: #a0aebc;
+    --color-link: #77b6ee;
+    --color-topbar: #16202b;
+    --color-topbar-ink: #e3e9ef;
+    --color-sidebar: #101820;
+    --color-sidebar-panel: #18222c;
+    --color-sidebar-border: #31424f;
+    --color-footer: #141d26;
+    --color-footer-ink: #a0aebc;
+    --color-footer-border: #31424f;
+    --color-topnav: #18222c;
+    --color-topnav-ink: #e3e9ef;
+    --color-topnav-ink-muted: #a0aebc;
+    --color-topnav-border: #31424f;
+    --color-topnav-hover: #26343f;
+    --color-topnav-selected: #1f3a52;
+    --color-toolbar: #1e2a36;
+    --color-cell-line: #31424f;
+    --color-row-alt: #18222c;
+    --color-table-head: #18222c;
+    --color-table-head-ink: #a0aebc;
+
+    /* রূপের নিজের রংটা গাঢ়েও অপরিবর্তিত — ওটাই তার নাম */
+    --color-sidebar-active: #1b62a5;
+    --color-sidebar-icon: #a0aebc;
+    --color-topbar-ink-muted: #a0aebc;
+    --color-topbar-border: #31424f;
+    --color-topbar-hover: #26343f;
+    --color-topbar-field: #26343f;
+}
+
+/* Apps — Odoo Dark — মাথা অবার্জিনই থাকে, ওটাই তার পরিচয় */
+:root[data-theme='dark'][data-ui='apps'] {
+    --color-surface-app: #1b171a;
+    --color-surface-card: #242024;
+    --color-surface-muted: #201c20;
+    --color-surface-sunken: #201c20;
+    --color-surface-hover: #2d272d;
+    --color-surface-selected: #332931;
+    --color-border: #39323a;
+    --color-border-strong: #4c424d;
+    --color-ink: #e9e4e9;
+    --color-ink-body: #e9e4e9;
+    --color-ink-muted: #b0a4ae;
+    --color-link: #d8a7c8;
+    --color-topbar: #714b67;
+    --color-topbar-ink: #ffffff;
+    --color-sidebar: #171316;
+    --color-sidebar-panel: #201c20;
+    --color-sidebar-border: #39323a;
+    --color-footer: #1b171a;
+    --color-footer-ink: #b0a4ae;
+    --color-footer-border: #39323a;
+    --color-topnav: #201c20;
+    --color-topnav-ink: #e9e4e9;
+    --color-topnav-ink-muted: #b0a4ae;
+    --color-topnav-border: #39323a;
+    --color-topnav-hover: #2d272d;
+    --color-topnav-selected: #332931;
+    --color-toolbar: #242024;
+    --color-cell-line: #39323a;
+    --color-row-alt: #201c20;
+    --color-table-head: #201c20;
+    --color-table-head-ink: #b0a4ae;
+
+    /* রূপের নিজের রংটা গাঢ়েও অপরিবর্তিত — ওটাই তার নাম */
+    --color-sidebar-active: #714b67;
+    --color-sidebar-icon: #b0a4ae;
+    --color-topbar-ink-muted: #b0a4ae;
+    --color-topbar-border: #39323a;
+    --color-topbar-hover: #2d272d;
+    --color-topbar-field: #2d272d;
+
+    /* আগের প্যাচে যা ছিল — হারালে এই রূপের পরিচয়ই যেত */
+    --color-topnav: #242024;
+}
+
+/* Dynamic — Fluent 2 Dark — Microsoft-এর নিজের ধাপ, মাথা নীলই থাকে */
+:root[data-theme='dark'][data-ui='dynamic'] {
+    --color-surface-app: #141414;
+    --color-surface-card: #292929;
+    --color-surface-muted: #1f1f1f;
+    --color-surface-sunken: #1f1f1f;
+    --color-surface-hover: #333333;
+    --color-surface-selected: #12314f;
+    --color-border: #3d3d3d;
+    --color-border-strong: #525252;
+    --color-ink: #f5f5f5;
+    --color-ink-body: #f5f5f5;
+    --color-ink-muted: #adadad;
+    --color-link: #479ef5;
+    --color-topbar: #0b2a4a;
+    --color-topbar-ink: #ffffff;
+    --color-sidebar: #0f0f0f;
+    --color-sidebar-panel: #1f1f1f;
+    --color-sidebar-border: #3d3d3d;
+    --color-footer: #141414;
+    --color-footer-ink: #adadad;
+    --color-footer-border: #3d3d3d;
+    --color-topnav: #1f1f1f;
+    --color-topnav-ink: #f5f5f5;
+    --color-topnav-ink-muted: #adadad;
+    --color-topnav-border: #3d3d3d;
+    --color-topnav-hover: #333333;
+    --color-topnav-selected: #12314f;
+    --color-toolbar: #292929;
+    --color-cell-line: #3d3d3d;
+    --color-row-alt: #1f1f1f;
+    --color-table-head: #1f1f1f;
+    --color-table-head-ink: #adadad;
+
+    /* রূপের নিজের রংটা গাঢ়েও অপরিবর্তিত — ওটাই তার নাম */
+    --color-sidebar-active: #0f6cbd;
+    --color-sidebar-icon: #adadad;
+    --color-topbar-ink-muted: #adadad;
+    --color-topbar-border: #3d3d3d;
+    --color-topbar-hover: #333333;
+    --color-topbar-field: #333333;
+}
+
+/* Redwood — Oracle Redwood Dark — উপরের ইটরঙা পটি টিকে থাকে */
+:root[data-theme='dark'][data-ui='redwood'] {
+    --color-surface-app: #161513;
+    --color-surface-card: #201f1d;
+    --color-surface-muted: #1b1a18;
+    --color-surface-sunken: #1b1a18;
+    --color-surface-hover: #2a2926;
+    --color-surface-selected: #33201c;
+    --color-border: #332f2b;
+    --color-border-strong: #474139;
+    --color-ink: #f2efe9;
+    --color-ink-body: #f2efe9;
+    --color-ink-muted: #a8a198;
+    --color-link: #e08a76;
+    --color-topbar: #201f1d;
+    --color-topbar-ink: #f2efe9;
+    --color-sidebar: #131210;
+    --color-sidebar-panel: #1b1a18;
+    --color-sidebar-border: #332f2b;
+    --color-footer: #161513;
+    --color-footer-ink: #a8a198;
+    --color-footer-border: #332f2b;
+    --color-topnav: #1b1a18;
+    --color-topnav-ink: #f2efe9;
+    --color-topnav-ink-muted: #a8a198;
+    --color-topnav-border: #332f2b;
+    --color-topnav-hover: #2a2926;
+    --color-topnav-selected: #33201c;
+    --color-toolbar: #201f1d;
+    --color-cell-line: #332f2b;
+    --color-row-alt: #1b1a18;
+    --color-table-head: #1b1a18;
+    --color-table-head-ink: #a8a198;
+
+    /* রূপের নিজের রংটা গাঢ়েও অপরিবর্তিত — ওটাই তার নাম */
+    --color-sidebar-active: #c74634;
+    --color-sidebar-icon: #a8a198;
+    --color-topbar-ink-muted: #a8a198;
+    --color-topbar-border: #332f2b;
+    --color-topbar-hover: #2a2926;
+    --color-topbar-field: #2a2926;
+}
+
+/* Salesforce — Salesforce Dark — প্রতিষ্ঠানের বার নেভিই থাকে */
+:root[data-theme='dark'][data-ui='salesforce'] {
+    --color-surface-app: #181818;
+    --color-surface-card: #242424;
+    --color-surface-muted: #1f1f1f;
+    --color-surface-sunken: #1f1f1f;
+    --color-surface-hover: #2e2e2e;
+    --color-surface-selected: #10314f;
+    --color-border: #3e3e3c;
+    --color-border-strong: #514f4d;
+    --color-ink: #f3f3f3;
+    --color-ink-body: #f3f3f3;
+    --color-ink-muted: #b0b0ae;
+    --color-link: #57a3fd;
+    --color-topbar: #032d60;
+    --color-topbar-ink: #ffffff;
+    --color-sidebar: #032d60;
+    --color-sidebar-panel: #1f1f1f;
+    --color-sidebar-border: #3e3e3c;
+    --color-footer: #032d60;
+    --color-footer-ink: #b0b0ae;
+    --color-footer-border: #3e3e3c;
+    --color-topnav: #1f1f1f;
+    --color-topnav-ink: #f3f3f3;
+    --color-topnav-ink-muted: #b0b0ae;
+    --color-topnav-border: #3e3e3c;
+    --color-topnav-hover: #2e2e2e;
+    --color-topnav-selected: #10314f;
+    --color-toolbar: #242424;
+    --color-cell-line: #3e3e3c;
+    --color-row-alt: #1f1f1f;
+    --color-table-head: #1f1f1f;
+    --color-table-head-ink: #b0b0ae;
+
+    /* রূপের নিজের রংটা গাঢ়েও অপরিবর্তিত — ওটাই তার নাম */
+    --color-sidebar-active: #0176d3;
+    --color-sidebar-icon: #b0b0ae;
+    --color-topbar-ink-muted: #b0b0ae;
+    --color-topbar-border: #3e3e3c;
+    --color-topbar-hover: #2e2e2e;
+    --color-topbar-field: #2e2e2e;
+
+    /* আগের প্যাচে যা ছিল — হারালে এই রূপের পরিচয়ই যেত */
+    --color-topnav: #242424;
+}
+
+/* Classic — খতিয়ান — ABOS-এর নিজের নকশা, অ্যাম্বার টিকে থাকে */
+:root[data-theme='dark'][data-ui='classic'] {
+    --color-surface-app: #171c22;
+    --color-surface-card: #1e242c;
+    --color-surface-muted: #1a2027;
+    --color-surface-sunken: #1a2027;
+    --color-surface-hover: #262e37;
+    --color-surface-selected: #33291a;
+    --color-border: #2c343d;
+    --color-border-strong: #3d4752;
+    --color-ink: #e8e4da;
+    --color-ink-body: #e8e4da;
+    --color-ink-muted: #a1a9b3;
+    --color-link: #79b4f0;
+    --color-topbar: #1a242e;
+    --color-topbar-ink: #e8e4da;
+    --color-sidebar: #12161b;
+    --color-sidebar-panel: #1a2027;
+    --color-sidebar-border: #2c343d;
+    --color-footer: #171c22;
+    --color-footer-ink: #a1a9b3;
+    --color-footer-border: #2c343d;
+    --color-topnav: #1a2027;
+    --color-topnav-ink: #e8e4da;
+    --color-topnav-ink-muted: #a1a9b3;
+    --color-topnav-border: #2c343d;
+    --color-topnav-hover: #262e37;
+    --color-topnav-selected: #33291a;
+    --color-toolbar: #1e242c;
+    --color-cell-line: #2c343d;
+    --color-row-alt: #1a2027;
+    --color-table-head: #1a2027;
+    --color-table-head-ink: #a1a9b3;
+
+    /* রূপের নিজের রংটা গাঢ়েও অপরিবর্তিত — ওটাই তার নাম */
+    --color-sidebar-active: #e08c1a;
+    --color-sidebar-icon: #a1a9b3;
+    --color-topbar-ink-muted: #a1a9b3;
+    --color-topbar-border: #2c343d;
+    --color-topbar-hover: #262e37;
+    --color-topbar-field: #262e37;
+
+    /* আগের প্যাচে যা ছিল — হারালে এই রূপের পরিচয়ই যেত */
+    --color-topnav: #23303c;
+    --color-topnav-ink: #1a1a1a;
+    --color-topnav-ink-muted: #dde4ea;
+    --color-topnav-selected: #e08c1a;
+    --color-topnav-hover: #33424f;
+}

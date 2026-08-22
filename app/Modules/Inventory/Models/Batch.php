@@ -7,6 +7,7 @@ namespace App\Modules\Inventory\Models;
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Core\Concerns\ScopedToUserWarehouse;
 use App\Core\Contracts\Drillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -43,6 +44,7 @@ class Batch extends Model implements Drillable
      * তাই পুরনো আর নতুন মান দুইটাই রাখা হয়।
      */
     use IsAudited;
+    use ScopedToUserWarehouse;
     use SoftDeletes;
 
     protected $table = 'inv_batches';

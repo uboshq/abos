@@ -31,4 +31,5 @@ return [
     'scope_note' => 'What they may see. Tick nothing and they see every branch of this company. Tick some and they see only those (papers with no branch are always visible).',
     'scope_no_branches' => 'This company has no branches.',
     'scope_none' => 'No limit',
+    'scope_house_note' => 'Warehouse limit. Tick nothing and they see stock in every warehouse. Tick some and they see only those.',
 ];

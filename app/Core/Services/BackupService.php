@@ -167,6 +167,47 @@ final class BackupService
         return array_values($files);
     }
 
+    /**
+     * দ্বিতীয় গন্তব্যটা কোথায় — বসানো না থাকলে null।
+     *
+     * ── কেন এটা বাইরে থেকে জিজ্ঞেস করা যেতে হয় ─────────────────────
+     * `mirror()` private, আর সেটাই ঠিক: কপি করা এই সেবার নিজের কাজ।
+     * কিন্তু "দ্বিতীয় গন্তব্য বসানো আছে কি না" প্রশ্নটা কপি করার নয়,
+     * **পাহারার** — আর ওই পাহারাটা `StatusNotices` দেয়।
+     */
+    public function mirrorPath(): ?string
+    {
+        $mirror = config('abos.backup.mirror');
+
+        return blank($mirror) ? null : (string) $mirror;
+    }
+
+    /**
+     * দ্বিতীয় গন্তব্যের সবচেয়ে নতুন ডাম্প — নেই বা গন্তব্যই না থাকলে null।
+     *
+     * ── কেন কেবল "বসানো আছে কি না" যথেষ্ট নয় ───────────────────────
+     * গন্তব্যটা বসানো থাকলেও কপি থেমে যেতে পারে — পেনড্রাইভ খুলে
+     * নেওয়া হয়েছে, নেটওয়ার্ক ড্রাইভ আর মাউন্ট হয় না, ডিস্ক ভরে গেছে।
+     * তিনটাই নীরব: `run()` ব্যতিক্রম ছোঁড়ে, কিন্তু সেটা কেবল ওই
+     * রাতের লগে থাকে, আর সকালে কেউ লগ পড়ে না।
+     *
+     * তাই প্রশ্নটা ফোল্ডার ধরে: **ওখানে টাটকা কিছু আছে কি?**
+     */
+    public function latestMirror(): ?string
+    {
+        $mirror = $this->mirrorPath();
+
+        if ($mirror === null || ! is_dir($mirror)) {
+            return null;
+        }
+
+        $files = glob(rtrim($mirror, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR.'abos-*.sql.gz') ?: [];
+
+        sort($files);
+
+        return $files === [] ? null : $files[array_key_last($files)];
+    }
+
     private function directory(): string
     {
         $path = (string) config('abos.backup.path');

@@ -100,6 +100,20 @@
         @csrf
         @unless ($isNew) @method('PUT') @endunless
 
+        {{--
+            আদেশটা চাওয়া হয়েছিল, কিন্তু ব্যবহার করা গেল না।
+
+            আগে এই অবস্থায় ফর্মটা নীরবে খালি আসত — সরবরাহকারী নেই,
+            লাইন নেই, কোনো ব্যাখ্যাও নেই। পর্দাটা ভাঙা লাগত, অথচ
+            নিয়মটা ঠিকই কাজ করছিল: খসড়া আদেশের বিপরীতে বিল হয় না।
+        --}}
+        @isset($why)
+            <div role="status"
+                 class="rounded-(--radius-field) bg-(--color-badge-warning-bg) px-3 py-2 text-sm
+                        text-(--color-badge-warning-ink)">
+                {{ $why }}
+            </div>
+        @endisset
         @if ($errors->any())
             <div role="alert"
                  class="rounded-(--radius-field) bg-(--color-badge-danger-bg) px-3 py-2 text-sm

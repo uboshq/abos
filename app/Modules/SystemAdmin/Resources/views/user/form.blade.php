@@ -165,6 +165,41 @@
                                 @endforelse
                             </div>
                         </div>
+
+                        {{--
+                            গুদামের সীমা — শাখার পাশে, আলাদা দেয়াল।
+
+                            ── কেন শাখাই যথেষ্ট নয় ─────────────────────────────
+                            শাখা বলে কোন অফিসের কাগজ; গুদাম বলে কোন তাকের মাল।
+                            ময়মনসিংহের একজন স্টোরকিপার শাখার সব বিল দেখতে
+                            পারেন, কিন্তু তাঁর কাজ একটাই গুদামে — বাকি গুদামের
+                            মজুদ তিনি মেলাতেও পারবেন না।
+
+                            ঘরগুলো কেবল তখনই, যখন কোম্পানিতে গুদাম আছে।
+                        --}}
+                        @if (($warehouses[$company->id] ?? collect())->isNotEmpty())
+                            <div class="hidden w-full peer-has-[:checked]:block">
+                                <p class="text-2xs text-(--color-ink-muted)">
+                                    {{ __('system_admin::message.scope_house_note') }}
+                                </p>
+
+                                <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+                                    @foreach ($warehouses[$company->id] as $house)
+                                        <label class="flex items-center gap-2 text-xs">
+                                            <input type="checkbox"
+                                                   name="warehouse_scope[{{ $company->id }}][]"
+                                                   value="{{ $house->id }}" class="size-4"
+                                                   @checked(in_array((int) $house->id,
+                                                       collect(old("warehouse_scope.{$company->id}",
+                                                           $houseScopes[$company->id] ?? []))
+                                                           ->map(fn ($id) => (int) $id)->all(), true))>
+                                            <span>{{ $house->code }}</span>
+                                            <span class="text-(--color-ink-muted)">{{ $house->name() }}</span>
+                                        </label>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
                     </div>
                 @endforeach
             </div>

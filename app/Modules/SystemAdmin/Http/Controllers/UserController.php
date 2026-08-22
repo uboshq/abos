@@ -13,6 +13,8 @@ use App\Models\Branch;
 use App\Models\Company;
 use App\Models\User;
 use App\Models\UserDataScope;
+use App\Modules\Inventory\Models\Warehouse;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -72,6 +74,7 @@ class UserController extends Controller implements HasMiddleware
             'menu' => $this->menu->forUser($request->user()),
             'user' => new User(['is_active' => true, 'locale' => 'bn']),
             'scopes' => [],
+            'houseScopes' => [],
             ...$this->formData(),
         ]);
     }
@@ -104,7 +107,8 @@ class UserController extends Controller implements HasMiddleware
         return view('system_admin::user.form', [
             'menu' => $this->menu->forUser($request->user()),
             'user' => $user->load(['roles', 'companies']),
-            'scopes' => $this->scopesOf($user),
+            'scopes' => $this->scopesOf($user, UserDataScope::BRANCH),
+            'houseScopes' => $this->scopesOf($user, UserDataScope::WAREHOUSE),
             ...$this->formData(),
         ]);
     }
@@ -229,27 +233,44 @@ class UserController extends Controller implements HasMiddleware
          * থাকলে কেবল চলতি কোম্পানিরটা মুছত ও বসত, আর বাকিগুলো নীরবে
          * পুরনো থেকে যেত।
          */
+        /*
+         * দুই ধরনের সীমা একসাথে — শাখা আর গুদাম।
+         *
+         * ── কেন একই পদ্ধতিতে ────────────────────────────────────────
+         * দুইটার নিয়ম হুবহু এক: কিছু না বাছলে সীমা নেই, বাছলে কেবল
+         * বাছাইগুলো, আর কেবল সেই কোম্পানিগুলোতে যেগুলোতে মানুষটা
+         * ঢুকতে পারেন। আলাদা দুইটা পদ্ধতি লিখলে একদিন একটায় নিয়ম
+         * বদলাত আর অন্যটায় থাকত না — আর ফলটা হত "বেশি দেখা", কোনো
+         * ভুল বার্তা ছাড়াই।
+         */
+        $kinds = [
+            UserDataScope::BRANCH => 'branch_scope',
+            UserDataScope::WAREHOUSE => 'warehouse_scope',
+        ];
+
         UserDataScope::query()
             ->withoutGlobalScopes()
             ->where('user_id', $user->id)
             ->whereIn('company_id', $companyIds)
-            ->where('scope_type', UserDataScope::BRANCH)
+            ->whereIn('scope_type', array_keys($kinds))
             ->delete();
 
         $rows = [];
 
         foreach ($companyIds as $companyId) {
-            foreach ($data['branch_scope'][$companyId] ?? [] as $branchId) {
-                $rows[] = [
-                    'public_id' => (string) Str::uuid7(),
-                    'company_id' => $companyId,
-                    'user_id' => $user->id,
-                    'scope_type' => UserDataScope::BRANCH,
-                    'scope_id' => (int) $branchId,
-                    'created_by' => auth()->id(),
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ];
+            foreach ($kinds as $type => $field) {
+                foreach ($data[$field][$companyId] ?? [] as $scopeId) {
+                    $rows[] = [
+                        'public_id' => (string) Str::uuid7(),
+                        'company_id' => $companyId,
+                        'user_id' => $user->id,
+                        'scope_type' => $type,
+                        'scope_id' => (int) $scopeId,
+                        'created_by' => auth()->id(),
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
+                }
             }
         }
 
@@ -285,11 +306,25 @@ class UserController extends Controller implements HasMiddleware
      */
     private function scopeSummary(User $user, array $companyIds): string
     {
+        return trim(implode(' · ', array_filter([
+            $this->summaryOf($user, $companyIds, UserDataScope::BRANCH, Branch::class),
+            $this->summaryOf($user, $companyIds, UserDataScope::WAREHOUSE, Warehouse::class),
+        ])));
+    }
+
+    /**
+     * এক ধরনের সীমা এক লাইনে — কোড ধরে, আইডি ধরে নয়।
+     *
+     * @param  list<int>  $companyIds
+     * @param  class-string<Model>  $model
+     */
+    private function summaryOf(User $user, array $companyIds, string $type, string $model): string
+    {
         $ids = UserDataScope::query()
             ->withoutGlobalScopes()
             ->where('user_id', $user->id)
             ->whereIn('company_id', $companyIds)
-            ->where('scope_type', UserDataScope::BRANCH)
+            ->where('scope_type', $type)
             ->pluck('scope_id')
             ->all();
 
@@ -297,7 +332,7 @@ class UserController extends Controller implements HasMiddleware
             return '';
         }
 
-        return Branch::query()
+        return $model::query()
             ->withoutGlobalScopes()
             ->whereIn('id', $ids)
             ->orderBy('code')
@@ -388,6 +423,9 @@ class UserController extends Controller implements HasMiddleware
             'branch_scope' => ['nullable', 'array'],
             'branch_scope.*' => ['nullable', 'array'],
             'branch_scope.*.*' => ['integer'],
+            'warehouse_scope' => ['nullable', 'array'],
+            'warehouse_scope.*' => ['nullable', 'array'],
+            'warehouse_scope.*.*' => ['integer'],
             'default_branch.*' => ['nullable', 'integer'],
         ]);
     }
@@ -400,12 +438,12 @@ class UserController extends Controller implements HasMiddleware
      *
      * @return array<int, list<int>>
      */
-    private function scopesOf(User $user): array
+    private function scopesOf(User $user, string $type): array
     {
         return UserDataScope::query()
             ->withoutGlobalScopes()
             ->where('user_id', $user->id)
-            ->where('scope_type', UserDataScope::BRANCH)
+            ->where('scope_type', $type)
             ->get(['company_id', 'scope_id'])
             ->groupBy('company_id')
             ->map(fn ($rows) => $rows->pluck('scope_id')->map(fn ($id) => (int) $id)->all())
@@ -433,6 +471,23 @@ class UserController extends Controller implements HasMiddleware
                 $company->id => CompanyContext::forCompany(
                     $company->id,
                     fn () => Branch::query()->orderBy('code')->get(),
+                ),
+            ]),
+
+            /*
+             * গুদামের তালিকাও কোম্পানি ধরে, শাখার মতোই।
+             *
+             * `withoutGlobalScopes()` লাগে **দুইবার**: টেন্যান্ট স্কোপের
+             * জন্য (`forCompany` সেটা সামলায়) আর নিজের গুদাম-স্কোপের
+             * জন্য। দ্বিতীয়টা না দিলে যিনি নিজে সীমাবদ্ধ তিনি অন্যের
+             * সীমা বসাতে গিয়ে কেবল নিজের গুদামগুলোই দেখতেন — আর
+             * বাকিগুলো নীরবে উধাও।
+             */
+            'warehouses' => $companies->mapWithKeys(fn (Company $company) => [
+                $company->id => CompanyContext::forCompany(
+                    $company->id,
+                    fn () => Warehouse::query()->withoutGlobalScope('user-warehouse')
+                        ->orderBy('code')->get(),
                 ),
             ]),
         ];
