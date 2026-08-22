@@ -508,7 +508,7 @@ insert into `branches` ... PurchaseTest::test_a_partial_bill_leaves_the_rest_pen
 |----|-----|
 | **CRM আলাদা Domain হিসেবে** | Sales-এ ইতিমধ্যেই Leads, Quotations, Salespersons আছে; CRM-এ আবার Leads, Contacts, Accounts, Pipeline। এটা সরাসরি "Zero Duplicate Master Data"-র বিপরীত — Contacts আর Customer এক জিনিস হবে না, দুইটা তালিকা হবে। **সিদ্ধান্ত: Leads ও Pipeline Sales-এর ভেতরে; CRM আলাদা Domain নয়।** |
 | **Manufacturing (BOM, Routing, Work Centers, Quality, Maintenance)** | চারটা প্রতিষ্ঠানই পরিবেশক/ডিপো — কেউ উৎপাদন করে না। এটা একটা পূর্ণ MRP, কয়েক মাসের কাজ, আজ শূন্য গ্রাহক। **v9 থেকে বাদ**, ভবিষ্যতে আলাদা পণ্য-সিদ্ধান্ত। |
-| **Voice Search · AI Search · Smart Search** | Search-এর আটটা রূপের মধ্যে দরকার তিনটা: Global, Saved, আর Barcode/QR (POS-এর জন্য অপরিহার্য)। বাকিগুলো LAN বাক্সে সাজসজ্জা। |
+| **Voice Search · AI Search · Smart Search** | Search-এর দশটা রূপের মধ্যে দরকার তিনটা: Global, Saved, আর Barcode/QR (POS-এর জন্য অপরিহার্য)। বাকিগুলো LAN বাক্সে সাজসজ্জা। |
 | **GraphQL · EDI** | REST + webhook যথেষ্ট। GraphQL মানে দ্বিতীয় একটা API পৃষ্ঠ চিরকাল রক্ষণাবেক্ষণ করা; EDI-র বাংলাদেশি প্রতিপক্ষ নেই। **গ্রাহক চাওয়ার আগে নয়।** |
 | **Profit Centers** | Cost Center-ই আসল দরকার (রুট বা ডেলিভারি প্রতি খরচ)। এই আকারের ব্যবসায় দুইটা মাত্রা রাখলে দুইটাই ভুল ট্যাগ হয়। **Cost Center হ্যাঁ, Profit Center পরে।** |
 | **Data Warehouse** | একটা সার্ভারে আলাদা warehouse মানে একই ডেটা দুইবার, আর সিঙ্ক না মেলার ঝুঁকি। ঠিক ইনডেক্স + রাতের materialized summary যথেষ্ট। |
