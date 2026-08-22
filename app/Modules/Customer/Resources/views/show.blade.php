@@ -137,6 +137,94 @@
         </section>
     </div>
 
+    {{-- ডিলার পোর্টালের চাবি --}}
+    @can('managePortal', $customer)
+        <section data-portal class="mt-4 rounded-(--radius-card) border border-(--color-border)
+                        bg-(--color-surface-card) p-4">
+            <div class="mb-1 flex flex-wrap items-center gap-2">
+                <h2 class="font-semibold">{{ __('customer::section.portal') }}</h2>
+                <x-ui.badge :tone="$customer->portal_enabled ? 'success' : 'draft'">
+                    {{ __($customer->portal_enabled
+                        ? 'customer::state.portal_on'
+                        : 'customer::state.portal_off') }}
+                </x-ui.badge>
+            </div>
+
+            <p class="text-xs text-(--color-ink-muted)">{{ __('customer::message.portal_note') }}</p>
+
+            @if ($customer->portal_enabled)
+                {{-- চালু থাকলে দুইটা তথ্যই কাজে লাগে: কোডটা ডিলারকে বলতে
+                     হয়, আর শেষ ঢোকার সময় দেখে বোঝা যায় তিনি সত্যিই
+                     পাতাটা ব্যবহার করছেন কি না। --}}
+                <dl class="mt-3 grid gap-x-4 gap-y-2 sm:grid-cols-2">
+                    <div>
+                        <dt class="text-2xs text-(--color-ink-muted)">
+                            {{ __('customer::field.portal_code') }}
+                        </dt>
+                        <dd class="num text-sm font-medium">{{ $customer->code }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-2xs text-(--color-ink-muted)">
+                            {{ __('customer::field.portal_last_login') }}
+                        </dt>
+                        <dd class="text-sm">
+                            @if ($customer->portal_last_login_at)
+                                <span class="num">{{ \App\Core\Support\DateFormat::formatWithTime($customer->portal_last_login_at) }}</span>
+                            @else
+                                <span class="text-(--color-ink-muted)">
+                                    {{ __('customer::message.portal_never') }}
+                                </span>
+                            @endif
+                        </dd>
+                    </div>
+                </dl>
+            @endif
+
+            <div class="mt-4 grid gap-4 lg:grid-cols-3">
+                {{-- পাসওয়ার্ড বসানোর ফর্ম — চালু করা আর বদলানো একই ফর্ম,
+                     কারণ মালিকের দিক থেকে কাজটা একই: "একটা পাসওয়ার্ড
+                     দিলাম"। --}}
+                <form method="POST" action="{{ route('customer.portal.store', $customer) }}"
+                      class="grid gap-3 sm:grid-cols-2 lg:col-span-2">
+                    @csrf
+
+                    <x-ui.field name="password" type="password" required
+                                autocomplete="new-password"
+                                :label="__('customer::field.portal_password')"
+                                :hint="__('customer::message.portal_password_hint')" />
+
+                    {{-- দ্বিতীয়বার লেখানো হয়, কারণ পাসওয়ার্ডটা আর কোথাও
+                         দেখা যায় না। টাইপো হলে মালিক ডিলারকে একটা ভুল
+                         পাসওয়ার্ড বলতেন, আর দুইজনেই ভাবতেন পোর্টালটা
+                         নষ্ট। --}}
+                    <x-ui.field name="password_confirmation" type="password" required
+                                autocomplete="new-password"
+                                :label="__('customer::field.portal_password_again')" />
+
+                    <div class="sm:col-span-2">
+                        <x-ui.button type="submit" tone="primary">
+                            {{ __($customer->portal_enabled
+                                ? 'customer::action.portal_reset'
+                                : 'customer::action.portal_enable') }}
+                        </x-ui.button>
+                    </div>
+                </form>
+
+                @if ($customer->portal_enabled)
+                    <form method="POST" action="{{ route('customer.portal.destroy', $customer) }}"
+                          onsubmit="return confirm('{{ __('customer::message.portal_disable_confirm') }}')"
+                          class="flex items-end">
+                        @csrf
+                        @method('DELETE')
+                        <x-ui.button type="submit" tone="secondary">
+                            {{ __('customer::action.portal_disable') }}
+                        </x-ui.button>
+                    </form>
+                @endif
+            </div>
+        </section>
+    @endcan
+
     {{-- লেনদেন — অঙ্কটা কোথা থেকে এল (নিয়ম ১) --}}
     <section id="transactions" class="mt-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">

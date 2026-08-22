@@ -14,4 +14,10 @@ return [
     'end_session' => 'বের করে দিন',
     'end_other_sessions' => 'বাকি সব জায়গা থেকে বেরোন',
     'only_failed' => 'কেবল ব্যর্থ',
+    'portal_enabled' => 'পোর্টাল চালু',
+    'portal_disabled' => 'পোর্টাল বন্ধ',
+    'portal_password_set' => 'পোর্টালের পাসওয়ার্ড বসানো',
+    'password_set' => 'পাসওয়ার্ড বসানো',
+    'roles_changed' => 'রোল বদল',
+    'scopes_changed' => 'দেখার সীমা বদল',
 ];

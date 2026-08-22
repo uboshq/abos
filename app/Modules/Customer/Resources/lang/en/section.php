@@ -8,4 +8,5 @@ return [
     'credit' => 'Credit',
     'opening' => 'Opening balance',
     'transactions' => 'Transactions',
+    'portal' => 'Dealer portal',
 ];

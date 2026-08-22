@@ -99,7 +99,8 @@
                 @foreach ($companies as $company)
                     <div class="flex flex-wrap items-center gap-3 rounded-(--radius-field)
                                 border border-(--color-border) px-3 py-2 text-sm">
-                        <label class="flex min-h-(--spacing-touch) flex-1 items-center gap-2">
+                        {{-- `peer` — নিচের সীমার ঘরগুলো এই টিকটার উপর নির্ভর করে --}}
+                        <label class="peer flex min-h-(--spacing-touch) flex-1 items-center gap-2">
                             <input type="checkbox" name="companies[]" value="{{ $company->id }}" class="size-4"
                                    @checked(in_array($company->id, $chosenCompanies, true))>
                             <span class="font-medium">{{ $company->code }}</span>
@@ -122,6 +123,48 @@
                                 @endforeach
                             </select>
                         </label>
+
+                        {{--
+                            দেখার সীমা — কোম্পানির ভেতরের দেয়াল (ভাগ চ)।
+
+                            ── কেন কোম্পানির ঘরটা টিক না থাকলে এটা দেখা যায় না ──
+                            সীমা বসে কেবল সেই কোম্পানিগুলোতে যেগুলোতে মানুষটা
+                            ঢুকতে পারেন — যে কোম্পানিতে তিনি নেই, সেখানে "কোন
+                            শাখা দেখবেন" প্রশ্নটার কোনো মানে নেই।
+
+                            আগে ঘরগুলো তবু দেখা যেত। কেউ টিক দিয়ে সংরক্ষণ
+                            করতেন, সারিটা বসত না, আর ফিরে এসে টিকটা উধাও —
+                            কোনো ভুলের বার্তা ছাড়াই। ধরা পড়েছে ব্রাউজারে।
+
+                            CSS-এ, JavaScript-এ নয়: টিকটা তোলার সাথে সাথেই
+                            ঘরগুলো মিলিয়ে যায়, সংরক্ষণের অপেক্ষা ছাড়া।
+                        --}}
+                        <div class="hidden w-full border-t border-(--color-border) pt-2
+                                    peer-has-[:checked]:block">
+                            <p class="text-2xs text-(--color-ink-muted)">
+                                {{ __('system_admin::message.scope_note') }}
+                            </p>
+
+                            <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+                                @forelse ($branches[$company->id] ?? [] as $branch)
+                                    <label class="flex items-center gap-2 text-xs">
+                                        <input type="checkbox"
+                                               name="branch_scope[{{ $company->id }}][]"
+                                               value="{{ $branch->id }}" class="size-4"
+                                               @checked(in_array((int) $branch->id,
+                                                   collect(old("branch_scope.{$company->id}",
+                                                       $scopes[$company->id] ?? []))
+                                                       ->map(fn ($id) => (int) $id)->all(), true))>
+                                        <span>{{ $branch->code }}</span>
+                                        <span class="text-(--color-ink-muted)">{{ $branch->name() }}</span>
+                                    </label>
+                                @empty
+                                    <span class="text-2xs text-(--color-ink-muted)">
+                                        {{ __('system_admin::message.scope_no_branches') }}
+                                    </span>
+                                @endforelse
+                            </div>
+                        </div>
                     </div>
                 @endforeach
             </div>

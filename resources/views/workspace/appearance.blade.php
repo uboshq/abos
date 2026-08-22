@@ -72,12 +72,14 @@
 
             <div class="flex flex-wrap gap-2">
                 @foreach ($accents as $key => $accent)
-                    <label @class([
-                        'flex min-h-(--spacing-touch) cursor-pointer items-center gap-2 rounded-(--radius-field)',
-                        'border px-3 transition-colors',
-                        'border-(--color-brand-500) bg-(--color-surface-selected)' => $key === $current['accent'],
-                        'border-(--color-border) hover:bg-(--color-surface-hover)' => $key !== $current['accent'],
-                    ])>
+                    <label class="group flex min-h-(--spacing-touch) cursor-pointer select-none items-center gap-2
+                                  rounded-(--radius-field) border border-(--color-border) px-3 transition-colors
+                                  hover:bg-(--color-surface-hover)
+                                  has-[:checked]:border-(--color-brand-500)
+                                  has-[:checked]:bg-(--color-surface-selected)
+                                  has-[:focus-visible]:outline-2
+                                  has-[:focus-visible]:outline-offset-2
+                                  has-[:focus-visible]:outline-(--color-brand-500)">
                         <input type="radio" name="accent" value="{{ $key }}"
                                @checked($key === $current['accent'])
                                class="sr-only">
@@ -87,9 +89,8 @@
 
                         <span class="text-sm">{{ __($accent['label']) }}</span>
 
-                        @if ($key === $current['accent'])
-                            <span class="text-(--color-brand-500)" aria-hidden="true">✓</span>
-                        @endif
+                        <span class="hidden text-(--color-brand-500) group-has-[:checked]:inline"
+                              aria-hidden="true">✓</span>
                     </label>
                 @endforeach
             </div>
@@ -104,12 +105,14 @@
 
             <div class="flex flex-wrap gap-2">
                 @foreach (['light', 'dark'] as $theme)
-                    <label @class([
-                        'flex min-h-(--spacing-touch) cursor-pointer items-center gap-2 rounded-(--radius-field)',
-                        'border px-4 transition-colors',
-                        'border-(--color-brand-500) bg-(--color-surface-selected)' => $theme === $current['theme'],
-                        'border-(--color-border) hover:bg-(--color-surface-hover)' => $theme !== $current['theme'],
-                    ])>
+                    <label class="group flex min-h-(--spacing-touch) cursor-pointer select-none items-center gap-2
+                                  rounded-(--radius-field) border border-(--color-border) px-4 transition-colors
+                                  hover:bg-(--color-surface-hover)
+                                  has-[:checked]:border-(--color-brand-500)
+                                  has-[:checked]:bg-(--color-surface-selected)
+                                  has-[:focus-visible]:outline-2
+                                  has-[:focus-visible]:outline-offset-2
+                                  has-[:focus-visible]:outline-(--color-brand-500)">
                         <input type="radio" name="theme" value="{{ $theme }}"
                                @checked($theme === $current['theme'])
                                class="sr-only">
@@ -125,12 +128,14 @@
 
             <div class="mt-3 flex flex-wrap gap-2">
                 @foreach (['bn' => 'বাংলা', 'en' => 'English'] as $code => $label)
-                    <label @class([
-                        'flex min-h-(--spacing-touch) cursor-pointer items-center gap-2 rounded-(--radius-field)',
-                        'border px-4 transition-colors',
-                        'border-(--color-brand-500) bg-(--color-surface-selected)' => $code === $current['locale'],
-                        'border-(--color-border) hover:bg-(--color-surface-hover)' => $code !== $current['locale'],
-                    ])>
+                    <label class="group flex min-h-(--spacing-touch) cursor-pointer select-none items-center gap-2
+                                  rounded-(--radius-field) border border-(--color-border) px-4 transition-colors
+                                  hover:bg-(--color-surface-hover)
+                                  has-[:checked]:border-(--color-brand-500)
+                                  has-[:checked]:bg-(--color-surface-selected)
+                                  has-[:focus-visible]:outline-2
+                                  has-[:focus-visible]:outline-offset-2
+                                  has-[:focus-visible]:outline-(--color-brand-500)">
                         <input type="radio" name="locale" value="{{ $code }}"
                                @checked($code === $current['locale'])
                                class="sr-only">

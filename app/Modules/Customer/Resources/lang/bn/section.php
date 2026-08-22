@@ -8,4 +8,5 @@ return [
     'credit' => 'ক্রেডিট',
     'opening' => 'খোলা ব্যালেন্স',
     'transactions' => 'লেনদেন',
+    'portal' => 'ডিলার পোর্টাল',
 ];

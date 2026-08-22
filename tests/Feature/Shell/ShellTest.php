@@ -361,12 +361,36 @@ class ShellTest extends TestCase
          * ── নাম বদলেছে, নিয়ম বদলায়নি ────────────────────────────────
          * ADI | ABOS পরিচয়ে ওয়ার্ডমার্কটা এখন পূর্ণ লকআপ
          * (`adi-abos-lockup.png`), আর তার গাঢ়-জমিনের জোড়াটা
-         * `adi-abos-lockup-dark.png`। ফাইলের নাম বদলেছে; কোন জমিনে
-         * কোনটা বসবে সেই ভুলটা আগের মতোই সম্ভব, তাই পাহারাটাও থাকল।
+         * `adi-abos-lockup-dark.png`।
+         *
+         * ── দাবিটা কেন আর "গাঢ়টা কখনো নয়" নয় ───────────────────────
+         * Linear আসার আগে প্যানেলটা **সবসময়** সাদা ছিল, তাই নিয়মটা
+         * সহজ ছিল: গাঢ় ফাইলটার নামই যেন এখানে না থাকে।
+         *
+         * Linear-এর প্যানেল প্রায়-কালো (#0E0F11)। সেখানে সাদা-জমিনের
+         * লকআপটা বসলে গাঢ় নীল অক্ষরগুলো কালোয় মিলিয়ে যেত — ঠিক
+         * উল্টো দিক থেকে একই ভুল।
+         *
+         * তাই দাবিটা কড়া থাকল, কেবল সঠিক জায়গায়: গাঢ় ফাইলটা
+         * ব্যবহার করা যাবে **শুধু** `Ui::panelIsDark()`-এর শর্তে।
+         * কেউ ওটা শর্ত ছাড়া বসালে এই পরীক্ষাটাই ভাঙে, আর ১৪ আগস্টের
+         * ভুলটা আবার ফিরতে পারে না।
          */
         $this->assertStringContainsString('adi-abos-lockup.png', $markup);
-        $this->assertStringNotContainsString('adi-abos-lockup-dark.png', $markup,
-            'সাদা মাথায় গাঢ়-জমিনের লকআপ বসেছে — অক্ষরগুলো ধুয়ে যাবে।');
+
+        if (str_contains($markup, 'adi-abos-lockup-dark.png')) {
+            $this->assertMatchesRegularExpression(
+                '/panelIsDark.{0,120}adi-abos-lockup-dark\.png/s',
+                $markup,
+                'গাঢ়-জমিনের লকআপটা শর্ত ছাড়া বসেছে — সাদা মাথায় অক্ষরগুলো ধুয়ে যাবে।',
+            );
+
+            $this->assertMatchesRegularExpression(
+                '/adi-abos-lockup-dark\.png.{0,120}adi-abos-lockup\.png/s',
+                $markup,
+                'শর্তের অন্য দিকে সাদা-জমিনের লকআপটা নেই — হালকা প্যানেলে ব্র্যান্ডই থাকত না।',
+            );
+        }
         $this->assertStringContainsString('object-contain', $markup);
 
         // সরু সাইডবারে (৪৪px) লকআপ ধরে না, তাই সেখানে শুধু মার্ক।

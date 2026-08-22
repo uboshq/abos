@@ -35,4 +35,9 @@ return [
     'billed_in_period' => 'Billed',
     'collected_in_period' => 'Collected',
     'net_change' => 'Net change',
+    'portal_state' => 'State',
+    'portal_code' => 'Login code',
+    'portal_last_login' => 'Last signed in',
+    'portal_password' => 'Password',
+    'portal_password_again' => 'Password again',
 ];

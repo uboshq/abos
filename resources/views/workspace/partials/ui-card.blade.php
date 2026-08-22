@@ -17,11 +17,32 @@
     $rowGap = $ui['density'] === 'dense' ? 3 : 5;
 @endphp
 
-<label @class([
-    'group flex cursor-pointer flex-col gap-2 rounded-(--radius-card) border p-3 transition-colors',
-    'border-(--color-brand-500) bg-(--color-surface-selected)' => $selected,
-    'border-(--color-border) hover:bg-(--color-surface-hover)' => ! $selected,
-])>
+{{--
+    বাছাইয়ের ছাপটা রেডিও থেকে, সার্ভার থেকে নয়।
+
+    ── কী ভাঙা ছিল ─────────────────────────────────────────────────
+    ক্লাসগুলো `$selected` দেখে বসত, আর `$selected` আসত সার্ভার
+    থেকে। রেডিওটা `sr-only`, অর্থাৎ চোখে পড়ে না। ফলে কার্ডে ক্লিক
+    করলে রেডিওটা ঠিকই বাছা হত, কিন্তু **পর্দায় একটুও কিছু বদলাত
+    না** — বর্ডার একই, ✓ একই জায়গায়।
+
+    ব্যবহারকারীর কাছে সেটা "মাউস কাজ করছে না"। তিনি আবার ক্লিক
+    করেন, আবার কিছু হয় না, তৃতীয়বারে লেখাটা সিলেক্ট হয়ে যায়।
+    সংরক্ষণ টিপলে বদলটা ঘটত — কিন্তু ততক্ষণে তিনি ধরে নিয়েছেন
+    পাতাটা ভাঙা, আর টেপেনই না।
+
+    `has-[:checked]` ব্যবহারকারীর ক্লিকের সাথে সাথেই ছাপটা বসায়,
+    আর সার্ভারের `@checked` প্রথম রেন্ডারেই ঠিক কার্ডটা বেছে রাখে —
+    তাই দুইটা উৎস আর আলাদা কথা বলে না।
+--}}
+<label class="group flex cursor-pointer select-none flex-col gap-2 rounded-(--radius-card)
+              border border-(--color-border) p-3 transition-colors
+              hover:bg-(--color-surface-hover)
+              has-[:checked]:border-(--color-brand-500)
+              has-[:checked]:bg-(--color-surface-selected)
+              has-[:focus-visible]:outline-2
+              has-[:focus-visible]:outline-offset-2
+              has-[:focus-visible]:outline-(--color-brand-500)">
     <input type="radio" name="ui" value="{{ $key }}" @checked($selected) class="sr-only">
 
     {{--
@@ -70,9 +91,10 @@
     <span class="flex items-center gap-2">
         <span class="text-sm font-medium">{{ __($ui['label']) }}</span>
 
-        @if ($selected)
-            <span class="text-(--color-brand-500)" aria-hidden="true">✓</span>
-        @endif
+        {{-- ✓ সবসময় আঁকা থাকে, কেবল বাছা অবস্থায় দেখা যায় — নাহলে
+             ওটা বসানোর জন্য আরেকটা সার্ভার রেন্ডার লাগত। --}}
+        <span class="hidden text-(--color-brand-500) group-has-[:checked]:inline"
+              aria-hidden="true">✓</span>
     </span>
 
     {{-- কোনটা কার নকল — এটাই এখানকার সবচেয়ে কাজের তথ্য।

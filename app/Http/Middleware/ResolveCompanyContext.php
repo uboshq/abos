@@ -29,6 +29,28 @@ class ResolveCompanyContext
         $user = $request->user();
 
         if ($user === null) {
+            /*
+             * কর্মী নেই — ডিলার আছেন কি?
+             *
+             * ── কেন প্রসঙ্গটা এখানেই বসাতে হয় ──────────────────────
+             * ডিলারের অনুরোধেও কোম্পানি লাগে, আর কেবল কন্ট্রোলারে
+             * বসালে দেরি হয়ে যায়: `RefuseSwitchedOffScreens` তার
+             * আগেই চলে আর কোম্পানির সুইচ পড়তে যায়। প্রসঙ্গ না
+             * থাকলে সে কোম্পানিহীন ডিফল্ট সুইচটা পড়ত — অর্থাৎ
+             * এক কোম্পানির বন্ধ করা পর্দা অন্য কোম্পানির ডিলারের
+             * কাছে খোলা থাকত।
+             *
+             * বাছাই বলে কিছু নেই: ডিলার একটাই কোম্পানির, আর
+             * প্রসঙ্গটা তাঁর নিজের সারি থেকেই আসে।
+             */
+            $dealer = $request->user('portal');
+
+            if ($dealer !== null) {
+                CompanyContext::set($dealer->company_id, $dealer->branch_id);
+
+                return $next($request);
+            }
+
             CompanyContext::clear();
 
             return $next($request);

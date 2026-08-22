@@ -14,6 +14,7 @@ use App\Modules\Sales\Services\DepositClaimService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -67,23 +68,47 @@ class PortalController extends Controller
         ]);
 
         /*
-         * কোড ধরে খোঁজা, ইমেইল নয়।
+         * প্রার্থীরা — কোড ধরে, ইমেইল নয়।
          *
          * ডিলারের ইমেইল প্রায়ই থাকে না, আর থাকলেও ভাগাভাগি করা।
          * কোডটা (CUS-0007) বিলের উপরে ছাপা থাকে, তাই ডিলারের হাতেই
-         * থাকে — আর ওটা কোম্পানির ভেতরে অনন্য।
+         * থাকে।
+         *
+         * ── কেন `first()` নয়, `get()` ───────────────────────────────
+         * কোডটা কোম্পানির **ভেতরে** অনন্য, সবার মধ্যে নয়। দুইটা
+         * কোম্পানিরই CUS-0001 থাকতে পারে, আর `first()` তখন যেকোনো
+         * একটা তুলে আনত — অর্থাৎ দ্বিতীয় কোম্পানির ডিলার সঠিক
+         * পাসওয়ার্ড দিয়েও ঢুকতে পারতেন না, কারণ যাচাইটা হত অন্য
+         * কারো hash-এর সাথে।
          */
-        $customer = Customer::query()
+        $candidates = Customer::query()
             ->withoutGlobalScopes()
             ->where('code', $data['code'])
             ->where('portal_enabled', true)
-            ->first();
+            ->get();
 
-        if ($customer === null || ! Auth::guard('portal')->attempt([
-            'code' => $data['code'],
-            'password' => $data['password'],
-            'portal_enabled' => true,
-        ])) {
+        /*
+         * `attempt()` নয়, নিজে মিলিয়ে দেখা — আর কারণটা তিক্ত।
+         *
+         * ── কী ভাঙা ছিল ─────────────────────────────────────────────
+         * `Auth::guard('portal')->attempt()` ভেতরে `Customer::query()`
+         * চালায় — গ্লোবাল স্কোপসহ। এটা অতিথির অনুরোধ, তাই তখনো কোনো
+         * কোম্পানি বসানো নেই, আর `BelongsToCompany` ঠিক কাজটাই করত:
+         * ব্যতিক্রম ছুঁড়ত। ফলে **প্রতিটা** ডিলার লগইনে ৫০০ আসত।
+         *
+         * টেস্টে ধরা পড়েনি, আর সেটাই সবচেয়ে জরুরি অংশ: টেস্টের
+         * `setUp()`-এ `CompanyContext::set()` ডাকা হয়, আর ওটা স্ট্যাটিক
+         * — তাই টেস্টের ভেতরের প্রতিটা অনুরোধে প্রসঙ্গটা বসানোই থাকত।
+         * আসল ব্রাউজারে কখনো থাকে না। পাহারাটা পাশ করত ঠিক যে
+         * পরিস্থিতিতে ফিচারটা কাজই করত না।
+         *
+         * ধরা পড়েছে ব্রাউজারে, লাইভে দেওয়ার আগে।
+         */
+        $customer = $candidates->first(fn (Customer $c) => Hash::check(
+            $data['password'], (string) $c->portal_password,
+        ));
+
+        if ($customer === null) {
             /*
              * একটাই বার্তা, দুইটা ভুলের জন্য।
              *
@@ -96,6 +121,16 @@ class PortalController extends Controller
             ]);
         }
 
+        /*
+         * প্রসঙ্গটা ডিলারের নিজের সারি থেকে, লগইন করানোর **আগে**।
+         *
+         * `login()` ব্যবহারকারীকে সেশনে বসায় আর ইভেন্ট ছাড়ে; ওই
+         * ইভেন্টের শ্রোতা কেউ টেন্যান্ট ডাটা ছুঁলে প্রসঙ্গ ছাড়া আবার
+         * সেই একই ব্যতিক্রম আসত।
+         */
+        CompanyContext::set($customer->company_id, $customer->branch_id);
+
+        Auth::guard('portal')->login($customer);
         $customer->forceFill(['portal_last_login_at' => now()])->saveQuietly();
         $request->session()->regenerate();
 

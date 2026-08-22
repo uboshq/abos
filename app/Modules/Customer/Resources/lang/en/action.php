@@ -9,4 +9,7 @@ return [
     'statement' => 'Statement',
     'deactivate' => 'Deactivate',
     'activate' => 'Activate',
+    'portal_enable' => 'Open the portal',
+    'portal_reset' => 'Set a new password',
+    'portal_disable' => 'Close it',
 ];

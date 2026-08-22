@@ -66,4 +66,5 @@ return [
     'only_pending' => 'Waiting',
     'show_all' => 'All',
     'empty' => 'Nothing waiting.',
+    'closed' => 'Your portal is closed. Please contact the depot.',
 ];

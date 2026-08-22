@@ -21,6 +21,14 @@ TPL = ("App" + B + "Models" + B + "User::where('email','owner@abos.test')"
 
 # নমুনার মান — artifact 4b0e0e40 (আটটা রূপ) ও fed36f24 (ক্লাসিক)
 SPEC = {
+ "salesforce": {"--color-brand-ink":"rgb(255 255 255 / 1)","--color-section-head":"transparent","--color-surface-app":"#f3f3f3","--color-topbar":"#032d60","--color-topnav":"#ffffff",
+             "--color-ink":"#181818","--color-ink-muted":"#706e6b","--color-border":"#dddbda",
+             "--color-link":"#0176d3","--color-table-head":"#fafaf9","--row-height":"36px",
+             "--font-size-table":"13px","--radius-field":"4px","--radius-card":"4px"},
+ "linear":  {"--color-brand-ink":"rgb(255 255 255 / 1)","--color-section-head":"transparent","--color-surface-app":"#0e0f11","--color-surface-card":"#17181b","--color-topbar":"#0e0f11",
+             "--color-ink":"#eeeef0","--color-ink-muted":"#8a8f98","--color-border":"#26272b",
+             "--color-link":"#98a0e8","--color-sidebar":"#0e0f11","--row-height":"36px",
+             "--font-size-table":"13px","--radius-field":"6px","--radius-card":"8px"},
  "classic": {"--color-section-head":"#efebe2","--color-brand-ink":"rgb(26 26 26 / 1)","--color-surface-app":"#edeae3","--color-topbar":"#23303c","--color-topnav":"#33424f",
              "--color-topnav-selected":"#e08c1a","--color-table-head":"#5e6b78","--color-row-alt":"#fbfaf6",
              "--color-surface-hover":"#fdf3df","--color-link":"#1d4e89","--row-height":"26px",
@@ -54,8 +62,8 @@ SPEC = {
              "--color-border":"#e5e7eb","--color-table-head":"#f8fafc","--row-height":"44px",
              "--font-size-table":"12.5px","--radius-field":"6px","--radius-card":"8px"},
 }
-NAV = {"classic":"top","tiles":"top","suite":"top","apps":"top",
-       "dynamic":"rail","redwood":"rail","rose":"rail","navy":"rail"}
+NAV = {"classic":"top","tiles":"top","suite":"top","apps":"top","salesforce":"top",
+       "dynamic":"rail","redwood":"rail","rose":"rail","navy":"rail","linear":"rail"}
 
 
 def same_colour(got, want):

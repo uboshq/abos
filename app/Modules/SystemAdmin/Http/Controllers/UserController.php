@@ -5,17 +5,20 @@ declare(strict_types=1);
 namespace App\Modules\SystemAdmin\Http\Controllers;
 
 use App\Core\Engines\Audit\AuditEngine;
+use App\Core\Services\DataScope;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\User;
+use App\Models\UserDataScope;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -68,6 +71,7 @@ class UserController extends Controller implements HasMiddleware
         return view('system_admin::user.form', [
             'menu' => $this->menu->forUser($request->user()),
             'user' => new User(['is_active' => true, 'locale' => 'bn']),
+            'scopes' => [],
             ...$this->formData(),
         ]);
     }
@@ -100,6 +104,7 @@ class UserController extends Controller implements HasMiddleware
         return view('system_admin::user.form', [
             'menu' => $this->menu->forUser($request->user()),
             'user' => $user->load(['roles', 'companies']),
+            'scopes' => $this->scopesOf($user),
             ...$this->formData(),
         ]);
     }
@@ -181,6 +186,123 @@ class UserController extends Controller implements HasMiddleware
         }
 
         $user->companies()->sync($companies);
+
+        $this->applyScopes($user, $data);
+    }
+
+    /**
+     * দেখার সীমা — কোম্পানির ভেতরে কোন শাখাগুলো (ভাগ চ, RLS)।
+     *
+     * ── কেন সারি না থাকা মানে "সব দেখা যায়" ────────────────────────
+     * `UserDataScope` নিজে তাই বলে, আর মাইগ্রেশনে কারণটা লেখা: উল্টো
+     * ধরলে ফিচারটা চালু হওয়ার মুহূর্তে সবাই অন্ধ হয়ে যেতেন। পর্দাটাও
+     * তাই কোনো "সব" ঘর দেখায় না — কিছু না বাছাই মানেই সব।
+     *
+     * ── কেন `sync()` নয়, মুছে-বসানো ─────────────────────────────────
+     * এটা সম্পর্ক নয়, তিনটা কলামের সারি (company_id, scope_type,
+     * scope_id)। এক কোম্পানির সীমা বদলাতে গিয়ে অন্য কোম্পানিরটা
+     * মুছে ফেলা যাবে না, তাই মোছার কোয়েরিটা কেবল যে কোম্পানিগুলো
+     * ফর্মে এসেছে তাদের মধ্যেই সীমাবদ্ধ।
+     *
+     * ── কেন খাতায় আলাদা করে ওঠে ─────────────────────────────────────
+     * সারিগুলো ব্যবহারকারীর নিজের সারিতে নয়, আলাদা টেবিলে — রোলের
+     * মতোই। ফলে ব্যবহারকারীর অডিট এটা দেখে না, অথচ "কে কার দেখার
+     * সীমা তুলে দিল" প্রশ্নটা রোল বদলের মতোই বড়।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function applyScopes(User $user, array $data): void
+    {
+        $companyIds = collect($data['companies'] ?? [])->map(fn ($id) => (int) $id)->all();
+
+        if ($companyIds === []) {
+            return;
+        }
+
+        $before = $this->scopeSummary($user, $companyIds);
+
+        /*
+         * `withoutGlobalScopes()` — এই পর্দা কোম্পানির বাইরে কাজ করে।
+         *
+         * একজন ব্যবহারকারী একাধিক কোম্পানিতে থাকতে পারেন, আর সিস্টেম
+         * অ্যাডমিন সবগুলোর সীমা একসাথে বসান। টেন্যান্ট স্কোপ চালু
+         * থাকলে কেবল চলতি কোম্পানিরটা মুছত ও বসত, আর বাকিগুলো নীরবে
+         * পুরনো থেকে যেত।
+         */
+        UserDataScope::query()
+            ->withoutGlobalScopes()
+            ->where('user_id', $user->id)
+            ->whereIn('company_id', $companyIds)
+            ->where('scope_type', UserDataScope::BRANCH)
+            ->delete();
+
+        $rows = [];
+
+        foreach ($companyIds as $companyId) {
+            foreach ($data['branch_scope'][$companyId] ?? [] as $branchId) {
+                $rows[] = [
+                    'public_id' => (string) Str::uuid7(),
+                    'company_id' => $companyId,
+                    'user_id' => $user->id,
+                    'scope_type' => UserDataScope::BRANCH,
+                    'scope_id' => (int) $branchId,
+                    'created_by' => auth()->id(),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+            }
+        }
+
+        if ($rows !== []) {
+            UserDataScope::query()->insert($rows);
+        }
+
+        $after = $this->scopeSummary($user, $companyIds);
+
+        if ($before !== $after) {
+            $this->audit->recordAction($user, 'scopes_changed',
+                ($before ?: __('system_admin::message.scope_none')).' → '
+                .($after ?: __('system_admin::message.scope_none')));
+        }
+
+        /*
+         * ক্যাশটা অনুরোধ-জীবনকালের, আর এই অনুরোধেই সীমা বদলেছে।
+         *
+         * না ভুললে সেভ করার ঠিক পরের রিডাইরেক্টে পুরনো সীমা খাটত —
+         * অর্থাৎ নিজের সীমা বসিয়ে সেভ করলে পর্দা এখনো সব দেখাত, আর
+         * ব্যবহারকারী ভাবতেন সেভ হয়নি।
+         */
+        app(DataScope::class)->forget();
+    }
+
+    /**
+     * সীমাটা এক লাইনে — খাতায় লেখার জন্য।
+     *
+     * আইডি নয়, শাখার কোড: ছয় মাস পরে অডিট পড়তে গিয়ে "৪, ৭" কিছুই
+     * বলে না, আর ততদিনে শাখাটার নাম বদলে থাকতে পারে।
+     *
+     * @param  list<int>  $companyIds
+     */
+    private function scopeSummary(User $user, array $companyIds): string
+    {
+        $ids = UserDataScope::query()
+            ->withoutGlobalScopes()
+            ->where('user_id', $user->id)
+            ->whereIn('company_id', $companyIds)
+            ->where('scope_type', UserDataScope::BRANCH)
+            ->pluck('scope_id')
+            ->all();
+
+        if ($ids === []) {
+            return '';
+        }
+
+        return Branch::query()
+            ->withoutGlobalScopes()
+            ->whereIn('id', $ids)
+            ->orderBy('code')
+            ->pluck('code')
+            ->implode(', ');
     }
 
     /**
@@ -253,8 +375,41 @@ class UserController extends Controller implements HasMiddleware
             'companies' => ['required', 'array', 'min:1'],
             'companies.*' => [Rule::exists('companies', 'id')],
             'default_branch' => ['nullable', 'array'],
+
+            /*
+             * দেখার সীমা — কোম্পানি প্রতি শাখার আইডির তালিকা।
+             *
+             * `exists` যাচাই ইচ্ছাকৃতভাবে নেই: শাখায় টেন্যান্ট স্কোপ বসানো,
+             * তাই নিয়মটা কেবল চলতি কোম্পানির শাখা চিনত আর অন্য কোম্পানির
+             * বৈধ শাখাকেও ভুল বলত। বেঠিক আইডি এলে সারিটা বসে কিন্তু কোনো
+             * শাখার সাথে মেলে না — ফল হয় "কিছুই দেখা যায় না", অর্থাৎ
+             * বেশি দেখা নয়, কম দেখা।
+             */
+            'branch_scope' => ['nullable', 'array'],
+            'branch_scope.*' => ['nullable', 'array'],
+            'branch_scope.*.*' => ['integer'],
             'default_branch.*' => ['nullable', 'integer'],
         ]);
+    }
+
+    /**
+     * এই ব্যবহারকারীর বসানো সীমা — কোম্পানি ধরে সাজানো।
+     *
+     * খালি অ্যারে মানে কোনো সীমা নেই, অর্থাৎ সব দেখা যায় — পর্দায়
+     * কোনো ঘরে টিক থাকে না, আর সেটাই সঠিক ছবি।
+     *
+     * @return array<int, list<int>>
+     */
+    private function scopesOf(User $user): array
+    {
+        return UserDataScope::query()
+            ->withoutGlobalScopes()
+            ->where('user_id', $user->id)
+            ->where('scope_type', UserDataScope::BRANCH)
+            ->get(['company_id', 'scope_id'])
+            ->groupBy('company_id')
+            ->map(fn ($rows) => $rows->pluck('scope_id')->map(fn ($id) => (int) $id)->all())
+            ->all();
     }
 
     /**
