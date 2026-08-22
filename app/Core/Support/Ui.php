@@ -94,6 +94,7 @@ final class Ui
                 'density' => 'dense',
                 'swatch' => '#1e3a8a',
                 'ink' => '#0b1220',
+                'panel' => 'light',
             ],
             'rose' => [
                 'label' => 'core.ui.rose',
@@ -105,6 +106,7 @@ final class Ui
                 'density' => 'comfortable',
                 'swatch' => '#be123c',
                 'ink' => '#1f1417',
+                'panel' => 'light',
             ],
             'tiles' => [
                 'label' => 'core.ui.tiles',
@@ -116,6 +118,7 @@ final class Ui
                 'density' => 'comfortable',
                 'swatch' => '#0a6ed1',
                 'ink' => '#32363a',
+                'panel' => 'light',
             ],
             'suite' => [
                 'label' => 'core.ui.suite',
@@ -127,6 +130,7 @@ final class Ui
                 'density' => 'dense',
                 'swatch' => '#125740',
                 'ink' => '#1f2b28',
+                'panel' => 'light',
             ],
             'apps' => [
                 'label' => 'core.ui.apps',
@@ -138,6 +142,7 @@ final class Ui
                 'density' => 'comfortable',
                 'swatch' => '#714b67',
                 'ink' => '#374151',
+                'panel' => 'light',
             ],
             'dynamic' => [
                 'label' => 'core.ui.dynamic',
@@ -149,6 +154,7 @@ final class Ui
                 'density' => 'dense',
                 'swatch' => '#0078d4',
                 'ink' => '#242424',
+                'panel' => 'light',
             ],
             'redwood' => [
                 'label' => 'core.ui.redwood',
@@ -160,6 +166,59 @@ final class Ui
                 'density' => 'comfortable',
                 'swatch' => '#c74634',
                 'ink' => '#161513',
+                'panel' => 'light',
+            ],
+            /*
+             * Salesforce Lightning — নকলের ষষ্ঠটা।
+             *
+             * ── এর নিজের চিহ্নটা রঙে নয়, একটা বারে ────────────────
+             * Lightning-এর গাঢ় নেভি মাথা আর নীল বোতাম দেখে অনেক
+             * ERP-ই চেনা যায়। যেটা কেবল Salesforce-এরই আছে, সেটা
+             * হলো পর্দার **একদম নিচে সাঁটা ইউটিলিটি বার** — আর
+             * এখানকার আর কোনো রূপে ওটা নেই।
+             *
+             * তার সাথে App Launcher (২×২ গোল চারকোনা, ড্রপডাউন —
+             * পুরো পর্দা নয়) আর চলতি মডিউলের পর্দাগুলোর ট্যাব সারি।
+             */
+            'salesforce' => [
+                'label' => 'core.ui.salesforce',
+                'blurb' => 'core.ui.salesforce_blurb',
+                'imitates' => 'Salesforce Lightning',
+                'accent' => 'salesforce',
+                'commands' => 'inline',
+                'nav' => 'top',
+                'density' => 'comfortable',
+                'swatch' => '#0176d3',
+                'ink' => '#032d60',
+                'panel' => 'light',
+            ],
+            /*
+             * Linear — ইচ্ছাকৃতভাবে গাঢ়, আর সেটাই তার পরিচয়।
+             *
+             * ── কেন এটা "গাঢ় থিম" নয় ───────────────────────────────
+             * বাকি সবগুলো রূপ হালকা, আর গাঢ় থিমটা আলাদা একটা সুইচ।
+             * Linear-এর বেলায় ওটা চলে না: Linear মানেই প্রায়-কালো
+             * পর্দা, তার উপর একটাই ইন্ডিগো। হালকা রূপ বানিয়ে তাতে
+             * গাঢ় সুইচ জুড়লে যেটা দাঁড়াত সেটা Linear নয়।
+             *
+             * তাই এই রূপটা নিজেই গাঢ়, দুই থিমেই — themes.css-এ
+             * তিন-নির্বাচকের নিয়মে (০,৩,০) গাঢ় থিমেও নিজেরটাই
+             * ধরে রাখে।
+             *
+             * খোলসটা প্রায় নেই: মাথা স্বচ্ছ, কোনো সীমানা নেই,
+             * আইকনগুলো আধা-ফিকে যতক্ষণ না হাত যায়। কার্ডে ছায়া নেই।
+             */
+            'linear' => [
+                'label' => 'core.ui.linear',
+                'blurb' => 'core.ui.linear_blurb',
+                'imitates' => 'Linear',
+                'accent' => 'linear',
+                'commands' => 'inline',
+                'nav' => 'rail',
+                'density' => 'dense',
+                'swatch' => '#5e6ad2',
+                'ink' => '#0e0f11',
+                'panel' => 'dark',
             ],
             'classic' => [
                 'label' => 'core.ui.classic',
@@ -171,6 +230,7 @@ final class Ui
                 'density' => 'dense',
                 'swatch' => '#e08c1a',
                 'ink' => '#23303c',
+                'panel' => 'light',
             ],
         ];
     }
@@ -192,6 +252,27 @@ final class Ui
      * nav pane রাখে, তাই সে রেলেই থাকে — আর ABOS-এর নিজের তিনটা
      * চেহারাও, কারণ রেলটাই ABOS-এর চেনা রূপ।
      */
+    /**
+     * সাইডবারের প্যানেলটা হালকা না গাঢ় — লোগো বাছার জন্য।
+     *
+     * ── কেন এটা CSS-এ করা যায় না ────────────────────────────────
+     * লকআপটা একটা PNG, দুইটা ভার্সনে: গাঢ় নীল অক্ষরের (হালকা
+     * জমিনের জন্য) আর হালকা অক্ষরের (`-dark`, গাঢ় জমিনের জন্য)।
+     * CSS দিয়ে <img>-এর src বদলানো যায় না।
+     *
+     * Linear-এর প্যানেল প্রায়-কালো, তাই সেখানে গাঢ় নীল অক্ষরের
+     * ছবিটা একটা কালো চৌকো হয়ে বসত — ব্র্যান্ডের ঘরে ব্র্যান্ডটাই
+     * অদৃশ্য।
+     *
+     * সাইডবার কোন রূপ চলছে তা জানে না, কেবল প্যানেলটা গাঢ় কি না
+     * তা জিজ্ঞেস করে — তাই কাল আরেকটা গাঢ় রূপ এলে সে নিজেই ঠিক
+     * ছবিটা পাবে।
+     */
+    public static function panelIsDark(?string $key): bool
+    {
+        return (self::all()[self::clean($key)]['panel'] ?? 'light') === 'dark';
+    }
+
     public static function nav(?string $key): string
     {
         return self::all()[self::clean($key)]['nav'];

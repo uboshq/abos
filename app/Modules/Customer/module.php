@@ -81,6 +81,7 @@ return [
         'customer.report',
         'customer.manage',
         'customer.credit_limit.override',
+        'customer.portal',
     ],
 
     // Number Series engine এগুলো থেকে prefix/counter সেটআপ তৈরি করবে।

@@ -7,6 +7,7 @@ namespace App\Providers;
 use App\Core\Engines\Report\ReportEngine;
 use App\Core\Events\EventRegistry;
 use App\Core\Module\ModuleRegistry;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 
@@ -45,6 +46,25 @@ class ModuleServiceProvider extends ServiceProvider
             // মডিউলের রিপোর্ট যোগ করতে কোর ফাইলে নাম লিখতে হয় না।
             foreach ($module->reports as $provider) {
                 $provider::registerAll($reports);
+            }
+
+            /*
+             * মডিউলের নিজের লগইন-প্রোভাইডার।
+             *
+             * ── কেন কোর ক্লাসের নামটা জানে না ───────────────────────
+             * ডিলারের গার্ডের একটা নিজস্ব প্রোভাইডার দরকার (কারণটা
+             * `DealerProvider`-এ লেখা)। প্রথমে সেটা
+             * `AppServiceProvider`-এ নিবন্ধন করা হয়েছিল, আর সাথে
+             * সাথেই `BoundariesTest` ধরল: কোর একটা মডিউলের ক্লাসের
+             * নাম জেনে ফেলেছে (§১৯.৭)।
+             *
+             * এখন নামটা module.php-তে, আর কোর কেবল পড়ে — রিপোর্ট ও
+             * শ্রোতাদের মতোই।
+             */
+            foreach ($module->authProviders as $name => $class) {
+                Auth::provider($name, fn ($app, array $config) => new $class(
+                    $app['hash'], $config['model'],
+                ));
             }
         }
     }

@@ -1,5 +1,5 @@
 /* ═════════════════════════════════════════════════════════════════
-   আটটা চেহারা — টোকেনের আটটা সেট।
+   দশটা চেহারা — টোকেনের দশটা সেট।
 
    ── এই ফাইলটা যা করে, আর যা করে না ──────────────────────────────
    করে: টোকেন নতুন করে বলা। রং, ধারের গোলাই, সারির উচ্চতা, ঘরের
@@ -807,4 +807,251 @@
     --color-topnav-selected: #e08c1a;
     --color-topnav-hover: #33424f;
     --color-toolbar: #111827;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Salesforce — Lightning Design System, Ava-র টোকেন থেকে।
+
+   ── কী নকল করা হচ্ছে ────────────────────────────────────────────
+   Lightning-এর গাঢ় নেভি মাথা (#032D60), তার নিচে **সাদা** অ্যাপ-ট্যাব
+   সারি, ধূসর পাতা (#F3F3F3), সাদা কার্ড, আর ৪px ধার — SLDS-এর নিজের
+   মাপ, ৮ বা ১৬ নয়।
+
+   ── কেন মাথা গাঢ় অথচ ট্যাবের সারি সাদা ──────────────────────────
+   Salesforce-এর দুইটা আলাদা বার: উপরেরটা গোটা প্রতিষ্ঠানের (অ্যাপ
+   লঞ্চার, খোঁজা, প্রোফাইল), নিচেরটা **চলতি অ্যাপের**। রং দিয়েই দুইটা
+   আলাদা করা হয়, আর সেটাই তাকে অন্য নীল ERP থেকে আলাদা করে।
+   ───────────────────────────────────────────────────────────────── */
+[data-ui='salesforce'] {
+    --color-section-head: transparent;
+    --color-surface-app: #f3f3f3;
+    --color-surface-card: #ffffff;
+    --color-surface-muted: #f2f2f2;
+    --color-surface-sunken: #f2f2f2;
+    --color-surface-hover: #f3f9fe;
+    --color-surface-selected: #ecf5fd;
+    --color-border: #dddbda;
+    --color-border-strong: #c9c7c5;
+
+    --color-ink: #181818;
+    --color-ink-body: #181818;
+    --color-ink-muted: #706e6b;
+    --color-link: #0176d3;
+
+    --color-table-head: #fafaf9;
+    --color-table-head-ink: #514f4d;
+    --color-cell-line: #dddbda;
+    --color-row-alt: #ffffff;
+
+    /* গোটা প্রতিষ্ঠানের বার — গাঢ় নেভি */
+    --color-topbar: #032d60;
+    --color-topbar-ink: #ffffff;
+    --color-topbar-ink-muted: rgb(255 255 255 / 0.75);
+    --color-topbar-border: rgb(0 0 0 / 0.2);
+    --color-topbar-hover: rgb(255 255 255 / 0.14);
+    --color-topbar-field: rgb(255 255 255 / 0.14);
+
+    /* চলতি অ্যাপের বার — সাদা, চলতি ট্যাবে নীল দাগ */
+    --color-topnav: #ffffff;
+    --color-topnav-ink: #181818;
+    --color-topnav-ink-muted: #706e6b;
+    --color-topnav-border: #dddbda;
+    --color-topnav-hover: #f3f3f3;
+    --color-topnav-selected: #ecf5fd;
+    --topnav-caret: none;
+    --color-toolbar: #ffffff;
+
+    --color-sidebar: #032d60;
+    --color-sidebar-panel: #032d60;
+    --color-sidebar-hover: rgb(255 255 255 / 0.1);
+    --color-sidebar-active: #0176d3;
+    --color-sidebar-border: rgb(0 0 0 / 0.25);
+    --color-sidebar-icon: rgb(255 255 255 / 0.75);
+
+    --color-badge-success-bg: #e3f7e8;
+    --color-badge-success-ink: #196b3a;
+    --color-badge-pending-bg: #fdf3e3;
+    --color-badge-pending-ink: #8c4b02;
+    --color-badge-warning-bg: #fdf3e3;
+    --color-badge-warning-ink: #8c4b02;
+    --color-badge-danger-bg: #fdeaea;
+    --color-badge-danger-ink: #a4262c;
+    --color-state-on: #196b3a;
+
+    /* SLDS-এর নিজের ৪px — ৮ বা ১৬ নয়, আর সেটাই তাকে চেনায় */
+    --radius-field: 4px;
+    --radius-card: 4px;
+    --radius-badge: 4px;
+    --radius-pill: 999px;
+
+    --row-height: 36px;
+    --row-height-dense: 30px;
+    --grid-pad-x: 12px;
+    --grid-pad-y: 8px;
+    --font-size-table: 13px;
+    --spacing-header: 48px;
+    --topbar-control-h: 32px;
+
+    --color-footer: #032d60;
+    --color-footer-ink: rgb(255 255 255 / 0.75);
+    --color-footer-border: rgb(0 0 0 / 0.25);
+}
+
+
+/* ─────────────────────────────────────────────────────────────────
+   Linear — ইচ্ছাকৃতভাবে গাঢ়, আর সেটাই তার পরিচয়।
+
+   ── কেন এটা "গাঢ় থিম" নয় ──────────────────────────────────────
+   বাকি নয়টা রূপ হালকা, আর গাঢ় থিমটা আলাদা একটা সুইচ। Linear-এর
+   বেলায় ওটা চলে না: Linear মানেই প্রায়-কালো পর্দা, তার উপর একটাই
+   ইন্ডিগো। হালকা রূপ বানিয়ে তাতে গাঢ় সুইচ জুড়লে যেটা দাঁড়াত সেটা
+   Linear নয় — সেটা "একটা ERP, গাঢ় মোডে"।
+
+   ── কেন খোলসটা প্রায় নেই ────────────────────────────────────────
+   মাথা পাতার সাথে মিশে থাকে, কোনো সীমানা নেই, কার্ডে ছায়া নেই।
+   Linear-এর নকশার মূল কথাই হলো chrome যত কম দেখা যায় ততই ভালো —
+   কাজটা দেখা যাক, বাক্সগুলো নয়।
+   ───────────────────────────────────────────────────────────────── */
+[data-ui='linear'] {
+    --color-section-head: transparent;
+    --color-surface-app: #0e0f11;
+    --color-surface-card: #17181b;
+    --color-surface-muted: #1c1d21;
+    --color-surface-sunken: #1c1d21;
+    --color-surface-hover: #1c1d21;
+    --color-surface-selected: #22232b;
+    --color-border: #26272b;
+    --color-border-strong: #35363b;
+
+    --color-ink: #eeeef0;
+    --color-ink-body: #eeeef0;
+    --color-ink-muted: #8a8f98;
+    --color-link: #98a0e8;
+
+    --color-table-head: transparent;
+    --color-table-head-ink: #8a8f98;
+    --color-cell-line: #26272b;
+    --color-row-alt: transparent;
+
+    /* মাথাটা পাতার সাথেই মিশে যায় — কোনো সীমানা নেই */
+    --color-topbar: #0e0f11;
+    --color-topbar-ink: #eeeef0;
+    --color-topbar-ink-muted: #8a8f98;
+    --color-topbar-border: transparent;
+    --color-topbar-hover: #1c1d21;
+    --color-topbar-field: #1c1d21;
+
+    --color-topnav: #0e0f11;
+    --color-topnav-ink: #eeeef0;
+    --color-topnav-ink-muted: #8a8f98;
+    --color-topnav-border: transparent;
+    --color-topnav-hover: #1c1d21;
+    --color-topnav-selected: #22232b;
+    --color-toolbar: #0e0f11;
+
+    --color-sidebar: #0e0f11;
+    --color-sidebar-panel: #0e0f11;
+    --color-sidebar-hover: #1c1d21;
+    --color-sidebar-active: #5e6ad2;
+    --color-sidebar-border: #26272b;
+    --color-sidebar-icon: #8a8f98;
+
+    /* গাঢ় জমিনে ব্যাজ — কালি হালকা, জমিন গভীর */
+    --color-badge-success-bg: #122c1d;
+    --color-badge-success-ink: #6ee7a0;
+    --color-badge-pending-bg: #2f2510;
+    --color-badge-pending-ink: #fbbf4a;
+    --color-badge-warning-bg: #2f2510;
+    --color-badge-warning-ink: #fbbf4a;
+    --color-badge-danger-bg: #33191b;
+    --color-badge-danger-ink: #f78c8c;
+    --color-badge-info-bg: #1a1d38;
+    --color-badge-info-ink: #a5b0f2;
+    --color-badge-draft-bg: #1c1d21;
+    --color-badge-draft-ink: #b0b4bb;
+    --color-badge-inventory-bg: #10262b;
+    --color-badge-inventory-ink: #6fd6e4;
+    --color-state-on: #6ee7a0;
+
+    --radius-field: 6px;
+    --radius-card: 8px;
+    --radius-badge: 6px;
+    --radius-pill: 999px;
+
+    --row-height: 36px;
+    --row-height-dense: 32px;
+    --grid-pad-x: 10px;
+    --grid-pad-y: 6px;
+    --font-size-table: 13px;
+    --spacing-header: 48px;
+    --topbar-control-h: 28px;
+
+    /*
+     * মডিউলের রেল একরঙা — Linear-এ রঙিন আইকন বলে কিছু নেই।
+     *
+     * ── কেন এই তেরোটা লাইন সত্যিই দরকার ──────────────────────────
+     * রেলের টাইলগুলো `--color-module-{code}` থেকে রং নেয়, আর ওগুলো
+     * :root-এ বসানো — নীল, এমারেল্ড, অ্যাম্বার, সায়ান, রোজ, কমলা।
+     * বাকি নয়টা রূপে ওটাই ঠিক: রেলে কোনো লেখা নেই, তাই রংটাই
+     * মডিউল চেনায়।
+     *
+     * Linear-এ ওটা তার সবচেয়ে বড় নিয়মটাই ভাঙে: গোটা পর্দা ধূসর-
+     * কালো, আর কথা বলে **একটাই** ইন্ডিগো। ব্রাউজারে খুলে দেখা গেল
+     * বাঁ পাশে ছয় রঙের একটা মালা ঝুলছে — বাকিটা যতই নিখুঁত হোক,
+     * ওই কলামটাই বলে দিত এটা Linear নয়।
+     *
+     * তাই সবগুলো এক নিঃশব্দ ধূসরে; চলতিটা ইন্ডিগো হয়
+     * `--color-sidebar-active` থেকে, আলাদা করে বলার দরকার নেই।
+     */
+    --color-module-dashboard: #2a2b30;
+    --color-module-accounts: #2a2b30;
+    --color-module-sales: #2a2b30;
+    --color-module-purchase: #2a2b30;
+    --color-module-inventory: #2a2b30;
+    --color-module-customer: #2a2b30;
+    --color-module-supplier: #2a2b30;
+    --color-module-hr: #2a2b30;
+    --color-module-approval: #2a2b30;
+    --color-module-master_data: #2a2b30;
+    --color-module-reports: #2a2b30;
+    --color-module-governance: #2a2b30;
+    --color-module-system_admin: #2a2b30;
+    /* রেলের আইটেম — ৬px গোল, কোনো ছায়া নয় */
+    --rail-item-radius: 6px;
+    --rail-item-shadow: none;
+
+    --color-footer: #0e0f11;
+    --color-footer-ink: #8a8f98;
+    --color-footer-border: #26272b;
+}
+
+/*
+   গাঢ় থিমেও Linear নিজেরটাই ধরে রাখে।
+
+   ── কেন তিনটা নির্বাচক লাগল ─────────────────────────────────────
+   ফাইলের মাথায় লেখা আছে: [data-ui] ইচ্ছাকৃতভাবে (০,১,০), যাতে
+   :root[data-theme='dark'] (০,২,০) সবসময় পৃষ্ঠতল জিতে নেয়। বাকি
+   নয়টা রূপের জন্য ওটাই ঠিক।
+
+   Linear-এ উল্টো: তার নিজের ধূসরগুলোই তার পরিচয়। গাঢ় সুইচ টিপলে
+   ABOS-এর সাধারণ গাঢ় রং এসে বসত, আর নকলটা ওখানেই ভাঙত। তাই এই
+   একটা ক্ষেত্রে (০,৩,০) — ঠিক যে ছাড়টার কথা মাথায় লেখা আছে।
+*/
+:root[data-theme='dark'][data-ui='linear'] {
+    --color-surface-app: #0e0f11;
+    --color-surface-card: #17181b;
+    --color-surface-muted: #1c1d21;
+    --color-surface-sunken: #1c1d21;
+    --color-surface-hover: #1c1d21;
+    --color-surface-selected: #22232b;
+    --color-border: #26272b;
+    --color-border-strong: #35363b;
+    --color-ink: #eeeef0;
+    --color-ink-body: #eeeef0;
+    --color-ink-muted: #8a8f98;
+    --color-topbar: #0e0f11;
+    --color-topbar-ink: #eeeef0;
+    --color-sidebar: #0e0f11;
+    --color-sidebar-panel: #0e0f11;
+    --color-footer: #0e0f11;
 }

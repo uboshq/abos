@@ -72,6 +72,29 @@ class Customer extends Model implements AuthenticatableContract, Drillable
     protected $hidden = ['portal_password', 'remember_token'];
 
     /**
+     * অডিটে যা কখনো বসবে না।
+     *
+     * ── কেন hash-টাও নয় ────────────────────────────────────────────
+     * bcrypt hash পড়ে পাসওয়ার্ড বলা যায় না, তাই প্রথমে মনে হয়
+     * ওটা লিখে রাখায় ক্ষতি নেই। কিন্তু নিরীক্ষার পর্দা যিনি দেখতে
+     * পান তিনি তখন প্রতিটা ডিলারের hash হাতে পান — আর অফলাইনে
+     * hash ভাঙা যায়, সময় নিয়ে, কেউ না জেনে।
+     *
+     * কোরের `NEVER_LOGGED` তালিকায় `password` আছে, কিন্তু ঘরটার নাম
+     * এখানে `portal_password` (কেন, তা নিচে লেখা) — তাই ওই তালিকাটা
+     * একে চেনে না। মডেলকেই বলতে হয়।
+     *
+     * ঘটনাটা হারায় না: `CustomerPortalService` কাজটা আলাদা করে
+     * খাতায় তোলে, মান ছাড়া।
+     *
+     * @return list<string>
+     */
+    public function auditIgnores(): array
+    {
+        return ['portal_password'];
+    }
+
+    /**
      * পাসওয়ার্ডের ঘরটা `password` নয়, `portal_password`।
      *
      * ── কেন নামটা আলাদা ─────────────────────────────────────────────

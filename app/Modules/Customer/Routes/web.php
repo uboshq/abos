@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Modules\Customer\Http\Controllers\CustomerController;
+use App\Modules\Customer\Http\Controllers\CustomerPortalController;
 use App\Modules\Customer\Http\Controllers\CustomerReportController;
 use Illuminate\Support\Facades\Route;
 
@@ -47,4 +48,18 @@ Route::middleware('auth')->prefix('customers')->group(function () {
      */
     Route::post('/{customer}/activate', [CustomerController::class, 'activate'])
         ->whereNumber('customer')->name('activate');
+
+    /*
+     * পোর্টালের চাবি — গ্রাহকের নিজের রুট নয়, আলাদা কন্ট্রোলারে।
+     *
+     * ── কেন `update`-এর সাথে জোড়া নয় ───────────────────────────────
+     * বাকি রুটগুলো `customer.update` অনুমতিতে চলে। এই দুইটা চলে
+     * `customer.portal`-এ, কারণ কাজটা আলাদা: এতে বাইরের একজন মানুষ
+     * ইন্টারনেট থেকে ভেতরের সংখ্যা দেখার অধিকার পান। এক অনুমতিতে
+     * রাখলে ডাটা এন্ট্রির লোকও চাবি বিলি করতে পারতেন।
+     */
+    Route::post('/{customer}/portal', [CustomerPortalController::class, 'store'])
+        ->whereNumber('customer')->name('portal.store');
+    Route::delete('/{customer}/portal', [CustomerPortalController::class, 'destroy'])
+        ->whereNumber('customer')->name('portal.destroy');
 });

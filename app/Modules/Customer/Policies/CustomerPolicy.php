@@ -52,4 +52,18 @@ class CustomerPolicy
     {
         return $user->can('customer.credit_limit.override');
     }
+
+    /**
+     * ডিলারকে নিজের পাতার চাবি দেওয়া বা কেড়ে নেওয়া।
+     *
+     * ── কেন `customer.update` যথেষ্ট নয় ─────────────────────────────
+     * সম্পাদনার অনুমতি থাকে ডাটা এন্ট্রির লোকের কাছে — ফোন নম্বর
+     * শোধরানো, ঠিকানা বদলানো। চাবি দেওয়া অন্য জিনিস: এতে বাইরের
+     * একজন মানুষ ইন্টারনেট থেকে নিজের বকেয়া দেখতে পান। ওই
+     * সিদ্ধান্তটা মালিকের, আর তাই আলাদা চাবি।
+     */
+    public function managePortal(User $user, Customer $customer): bool
+    {
+        return $user->can('customer.portal');
+    }
 }

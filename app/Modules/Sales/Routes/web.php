@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Middleware\EnsurePortalStillOpen;
 use App\Modules\Sales\Http\Controllers\CollectionController;
 use App\Modules\Sales\Http\Controllers\CommissionClaimController;
 use App\Modules\Sales\Http\Controllers\DeliveryChallanController;
@@ -260,10 +261,24 @@ Route::middleware('auth')->prefix('sales')->group(function () {
 Route::prefix('portal')->name('portal.')->group(function () {
     Route::middleware('guest:portal')->group(function () {
         Route::get('/login', [PortalController::class, 'showLogin'])->name('login');
-        Route::post('/login', [PortalController::class, 'login'])->name('login.attempt');
+
+        /*
+         * বাইরের দরজায় একটা তালা — মিনিটে পাঁচবার।
+         *
+         * ── কেন কর্মীর লগইনে যা লাগে না, এখানে লাগে ─────────────────
+         * কর্মীর লগইন অফিসের ভেতরের ব্যাপার। এই পাতাটা ইন্টারনেটে
+         * খোলা, আর লগইনের নামটা গোপন কিছু নয় — কোডটা প্রতিটা বিলের
+         * উপরে ছাপা থাকে। CUS-0001 থেকে CUS-9999 পর্যন্ত ধরে ধরে
+         * চেষ্টা করাটা তাই আন্দাজ নয়, তালিকা মিলিয়ে দেখা।
+         *
+         * সীমা ছাড়া একটা স্ক্রিপ্ট রাতভর চললে দুর্বল পাসওয়ার্ডওয়ালা
+         * ডিলারের খাতা খুলে যেত, আর কোনো চিহ্নও থাকত না।
+         */
+        Route::post('/login', [PortalController::class, 'login'])
+            ->middleware('throttle:5,1')->name('login.attempt');
     });
 
-    Route::middleware('auth:portal')->group(function () {
+    Route::middleware(['auth:portal', EnsurePortalStillOpen::class])->group(function () {
         Route::get('/', [PortalController::class, 'home'])->name('home');
         Route::post('/logout', [PortalController::class, 'logout'])->name('logout');
         Route::get('/claims/new', [PortalController::class, 'showClaim'])->name('claim.create');

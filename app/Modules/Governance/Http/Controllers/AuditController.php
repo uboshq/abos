@@ -67,7 +67,28 @@ class AuditController extends Controller implements HasMiddleware
             'trails' => $query->paginate(60)->withQueryString(),
             'sortOptions' => $this->sortLabels(),
             'sort' => $sort,
-            'actions' => AuditTrail::ACTIONS,
+            /*
+             * ছাঁকনির কাজের তালিকা খাতা থেকেই আসে, স্থির তালিকা থেকে নয়।
+             *
+             * ── কেন `AuditTrail::ACTIONS` যথেষ্ট ছিল না ─────────────────
+             * ওই ধ্রুবকটায় আটটা সাধারণ কাজ আছে — তৈরি, সম্পাদনা, বাতিল।
+             * কিন্তু মডিউলরা নিজেদের কাজ লেখে: `roles_changed`,
+             * `password_set`, `portal_enabled`। সারিগুলো তালিকায় দেখাত,
+             * অথচ ছেঁকে বের করা যেত না — আর ঠিক ওগুলোই খোঁজা হয়।
+             * "কে কার পাসওয়ার্ড বদলেছিল" প্রশ্নে তখন ছয় হাজার সারি
+             * হাতে ঘেঁটে দেখতে হত।
+             *
+             * কোরের তালিকায় নাম যোগ করাই সহজ ছিল, কিন্তু তাতে কোর
+             * মডিউলের শব্দ চিনে ফেলত (§১৯.৭) — আর পরের মডিউলটা আবার
+             * ভুলে যেত। ব্যবহারকারীর ছাঁকনিটা ঠিক এই যুক্তিতেই খাতা
+             * থেকে আসে (নিচে)।
+             */
+            'actions' => AuditTrail::query()
+                ->select('action')
+                ->distinct()
+                ->orderBy('action')
+                ->pluck('action')
+                ->all(),
             'modules' => $this->moduleOptions(),
 
             /*

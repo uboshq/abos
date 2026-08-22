@@ -77,8 +77,16 @@ return [
     */
 
     'providers' => [
+        /*
+         * ড্রাইভার `dealers`, `eloquent` নয় — আর কারণটা জরুরি।
+         *
+         * সাধারণ eloquent প্রোভাইডার সেশন থেকে ডিলার তোলার সময়
+         * `Customer::query()` চালায় গ্লোবাল স্কোপসহ, অথচ ওই কোয়েরিটা
+         * কোম্পানি বসার আগে চলে। ফলে পোর্টালের প্রতিটা অনুরোধে ৫০০
+         * আসত। পুরো ব্যাখ্যা `App\Modules\Sales\Auth\DealerProvider`-এ।
+         */
         'customers' => [
-            'driver' => 'eloquent',
+            'driver' => 'dealers',
             'model' => Customer::class,
         ],
 

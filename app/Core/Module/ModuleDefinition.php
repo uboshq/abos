@@ -12,6 +12,7 @@ use App\Core\Contracts\Importer;
 use App\Core\Contracts\ProvidesMetrics;
 use App\Core\Contracts\ProvisionsCompany;
 use App\Core\Events\DomainEvent;
+use Illuminate\Contracts\Auth\UserProvider;
 use InvalidArgumentException;
 
 /**
@@ -189,6 +190,22 @@ final class ModuleDefinition
          * @var list<class-string<ProvisionsCompany>>
          */
         public readonly array $provisions,
+        /**
+         * এই মডিউলের নিজের লগইন-প্রোভাইডার — নাম => ক্লাস।
+         *
+         * ── কেন কোরে নয় ─────────────────────────────────────────────
+         * ডিলারের গার্ডের একটা নিজস্ব প্রোভাইডার লাগে, কারণ সেশন থেকে
+         * ডিলার তোলার কোয়েরিটা কোম্পানি বসার **আগে** চলে। ওটা
+         * `AppServiceProvider`-এ নিবন্ধন করতে গিয়ে §১৯.৭ ভাঙল: কোর
+         * Sales মডিউলের একটা ক্লাসের নাম জেনে ফেলল, আর সীমানার
+         * পরীক্ষাটা সাথে সাথে ধরল।
+         *
+         * এখন মডিউল নিজে বলে, কোর কেবল নামটা পড়ে নিবন্ধন করে —
+         * ঘটনা, রিপোর্ট বা ইমপোর্টের মতোই।
+         *
+         * @var array<string, class-string<UserProvider>>
+         */
+        public readonly array $authProviders,
 
         /**
          * পুরনো খাতা থেকে কী কী আনা যায়।
@@ -320,6 +337,7 @@ final class ModuleDefinition
             listeners: self::validateListeners($raw['listeners'] ?? [], $path),
             facts: self::validateFacts($raw['facts'] ?? [], $path),
             provisions: self::validateProvisions($raw['provisions'] ?? [], $path),
+            authProviders: self::validateAuthProviders($raw['auth_providers'] ?? [], $path),
             imports: self::validateImports($raw['imports'] ?? [], $path),
             parties: self::validateParties(
                 $raw['parties'] ?? [],
@@ -585,6 +603,40 @@ final class ModuleDefinition
      * @param  list<mixed>  $provisions
      * @return list<class-string<ProvisionsCompany>>
      */
+    /**
+     * লগইন-প্রোভাইডারগুলো সত্যিই আছে কি না — বুট-টাইমে।
+     *
+     * এখানে না ধরলে ভুলটা ধরা পড়ত কেবল যখন কেউ লগইন করার চেষ্টা
+     * করতেন — অর্থাৎ ঠিক সেই মুহূর্তে যখন তিনি কিছুই করতে পারছেন না।
+     *
+     * @param  array<mixed, mixed>  $providers
+     * @return array<string, class-string<UserProvider>>
+     */
+    private static function validateAuthProviders(array $providers, string $path): array
+    {
+        foreach ($providers as $name => $class) {
+            if (! is_string($name) || $name === '') {
+                throw new InvalidArgumentException(
+                    "{$path}: an auth provider needs a name."
+                );
+            }
+
+            if (! is_string($class) || ! class_exists($class)) {
+                throw new InvalidArgumentException(
+                    "{$path}: auth provider '".(is_string($class) ? $class : gettype($class))."' does not exist."
+                );
+            }
+
+            if (! is_subclass_of($class, UserProvider::class)) {
+                throw new InvalidArgumentException(
+                    "{$path}: auth provider {$class} must implement the UserProvider contract."
+                );
+            }
+        }
+
+        return $providers;
+    }
+
     private static function validateProvisions(array $provisions, string $path): array
     {
         foreach ($provisions as $class) {

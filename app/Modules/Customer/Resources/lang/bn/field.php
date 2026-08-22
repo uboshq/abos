@@ -35,4 +35,9 @@ return [
     'billed_in_period' => 'এ সময়ে বিক্রয়',
     'collected_in_period' => 'এ সময়ে আদায়',
     'net_change' => 'নিট পরিবর্তন',
+    'portal_state' => 'অবস্থা',
+    'portal_code' => 'লগইন কোড',
+    'portal_last_login' => 'শেষ ঢুকেছেন',
+    'portal_password' => 'পাসওয়ার্ড',
+    'portal_password_again' => 'পাসওয়ার্ড আবার',
 ];

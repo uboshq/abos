@@ -1,3 +1,5 @@
+@use('App\Core\Support\Ui')
+
 @props(['menu' => []])
 
 {{--
@@ -137,7 +139,12 @@
                  কোণে বসে থাকে না — ব্র্যান্ডের ঘরে ব্র্যান্ডটাই প্রধান। --}}
             <span class="hidden w-full min-w-0 flex-col items-stretch gap-1.5"
                   :class="$store.sidebar.collapsed ? '' : 'lg:flex'">
-                <img src="{{ asset('brand/adi-abos-lockup.png') }}" alt="ADI | ABOS"
+                {{-- গাঢ় প্যানেলে হালকা অক্ষরের ভার্সনটা — নাহলে গাঢ় নীল
+                     অক্ষরগুলো প্রায়-কালো জমিনে মিলিয়ে যায়, আর ব্র্যান্ডের
+                     ঘরে ব্র্যান্ডটাই অদৃশ্য হয়। --}}
+                <img src="{{ asset(Ui::panelIsDark(auth()->user()?->ui)
+                        ? 'brand/adi-abos-lockup-dark.png'
+                        : 'brand/adi-abos-lockup.png') }}" alt="ADI | ABOS"
                      class="h-auto w-full object-contain object-left">
 
                 {{--

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\Sales\Auth\DealerProvider;
 use App\Modules\Sales\Dashboard\SalesActivity;
 use App\Modules\Sales\Dashboard\SalesWidgets;
 use App\Modules\Sales\Events\InvoiceConfirmed;
@@ -651,5 +652,15 @@ return [
             'default' => false,
             'group' => 'entry',
         ],
+    ],
+
+    /*
+     * ডিলারের গার্ড সেশন থেকে গ্রাহককে তোলে কোম্পানি বসার আগে,
+     * তাই ওই একটামাত্র কোয়েরি টেন্যান্ট ছাঁকনির বাইরে চলতে হয়।
+     * পুরো ব্যাখ্যা `DealerProvider`-এ; config/auth.php-র
+     * `customers` প্রোভাইডার এই নামটাই ব্যবহার করে।
+     */
+    'auth_providers' => [
+        'dealers' => DealerProvider::class,
     ],
 ];
