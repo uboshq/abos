@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\SystemAdmin\Http\Controllers;
 
 use App\Core\Engines\Audit\AuditEngine;
+use App\Core\Module\ModuleRegistry;
 use App\Core\Services\DataScope;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
@@ -13,7 +14,6 @@ use App\Models\Branch;
 use App\Models\Company;
 use App\Models\User;
 use App\Models\UserDataScope;
-use App\Modules\Inventory\Models\Warehouse;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -108,7 +108,8 @@ class UserController extends Controller implements HasMiddleware
             'menu' => $this->menu->forUser($request->user()),
             'user' => $user->load(['roles', 'companies']),
             'scopes' => $this->scopesOf($user, UserDataScope::BRANCH),
-            'houseScopes' => $this->scopesOf($user, UserDataScope::WAREHOUSE),
+            'houseScopes' => collect(array_keys($this->scopeKinds()))
+                ->mapWithKeys(fn (string $t) => [$t => $this->scopesOf($user, $t)])->all(),
             ...$this->formData(),
         ]);
     }
@@ -243,10 +244,11 @@ class UserController extends Controller implements HasMiddleware
          * বদলাত আর অন্যটায় থাকত না — আর ফলটা হত "বেশি দেখা", কোনো
          * ভুল বার্তা ছাড়াই।
          */
-        $kinds = [
-            UserDataScope::BRANCH => 'branch_scope',
-            UserDataScope::WAREHOUSE => 'warehouse_scope',
-        ];
+        $kinds = [UserDataScope::BRANCH => 'branch_scope'];
+
+        foreach (array_keys($this->scopeKinds()) as $type) {
+            $kinds[$type] = $type.'_scope';
+        }
 
         UserDataScope::query()
             ->withoutGlobalScopes()
@@ -308,7 +310,12 @@ class UserController extends Controller implements HasMiddleware
     {
         return trim(implode(' · ', array_filter([
             $this->summaryOf($user, $companyIds, UserDataScope::BRANCH, Branch::class),
-            $this->summaryOf($user, $companyIds, UserDataScope::WAREHOUSE, Warehouse::class),
+            ...array_map(
+                fn (string $type) => $this->summaryOf(
+                    $user, $companyIds, $type, $this->scopeKinds()[$type]['model'],
+                ),
+                array_keys($this->scopeKinds()),
+            ),
         ])));
     }
 
@@ -451,6 +458,28 @@ class UserController extends Controller implements HasMiddleware
     }
 
     /**
+     * শাখা ছাড়া আর কী কী ধরনের সীমা বসানো যায়।
+     *
+     * শাখাটা কোরের নিজের ধারণা, তাই ওটা আলাদা করে হাতে লেখা।
+     * বাকিগুলো মডিউলের — আজ কেবল গুদাম, কাল টেরিটরি হতে পারে, আর
+     * তখন এই ফাইলে কিছুই বদলাতে হবে না।
+     *
+     * @return array<string, array{model: class-string, label: string}>
+     */
+    private function scopeKinds(): array
+    {
+        $kinds = [];
+
+        foreach (app(ModuleRegistry::class)->all() as $module) {
+            foreach ($module->dataScopes as $type => $spec) {
+                $kinds[$type] = $spec;
+            }
+        }
+
+        return $kinds;
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function formData(): array
@@ -483,11 +512,28 @@ class UserController extends Controller implements HasMiddleware
              * সীমা বসাতে গিয়ে কেবল নিজের গুদামগুলোই দেখতেন — আর
              * বাকিগুলো নীরবে উধাও।
              */
-            'warehouses' => $companies->mapWithKeys(fn (Company $company) => [
+            /*
+             * শাখা ছাড়া বাকি সীমাগুলো — মডিউলরা নিজেরা ঘোষণা করে।
+             *
+             * ── কেন `Warehouse::class` এখানে লেখা নেই ────────────────
+             * লিখলে system_admin চিরকাল Inventory ছাড়া চলত না, আর
+             * `BoundariesTest` ঠিক সেটাই ধরেছিল (§১৯.৭)। মজুদ মডিউল
+             * নিজে `data_scopes`-এ বলে সে গুদামের সীমা দিতে পারে;
+             * এই পর্দা কেবল তালিকাটা পড়ে।
+             *
+             * মজুদ মডিউল না থাকলে তালিকাটা খালি, আর গুদামের ঘরগুলোই
+             * বসে না — সেটাই সঠিক আচরণ, কোনো ভুল বার্তা নয়।
+             */
+            'scopeKinds' => $this->scopeKinds(),
+
+            'scopeChoices' => $companies->mapWithKeys(fn (Company $company) => [
                 $company->id => CompanyContext::forCompany(
                     $company->id,
-                    fn () => Warehouse::query()->withoutGlobalScope('user-warehouse')
-                        ->orderBy('code')->get(),
+                    fn () => collect($this->scopeKinds())->map(
+                        fn (array $kind) => $kind['model']::query()
+                            ->withoutGlobalScope('user-warehouse')
+                            ->orderBy('code')->get(),
+                    ),
                 ),
             ]),
         ];

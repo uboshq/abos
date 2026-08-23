@@ -32,4 +32,5 @@ return [
     'scope_no_branches' => 'This company has no branches.',
     'scope_none' => 'No limit',
     'scope_house_note' => 'Warehouse limit. Tick nothing and they see stock in every warehouse. Tick some and they see only those.',
+    'scope_kind_note' => 'Which :kind they may see. Tick nothing and they see them all.',
 ];
