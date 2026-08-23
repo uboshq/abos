@@ -27,3 +27,7 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 /storage/tmp
+
+# Python-এর নিজের ক্যাশ — tools/-এর স্ক্রিপ্টগুলো চালালে তৈরি হয়।
+# এটা কমিটে থাকলে প্রতিবার স্ক্রিপ্ট চালানোই একটা "পরিবর্তন" দেখাত।
+/tools/__pycache__/
