@@ -70,7 +70,11 @@ PART_URL = {
                 "stage-strip": "|/purchase/orders",
                 "command-strip": "|/suppliers/create",
                 "kpi-strip": "|/purchase/orders",
-                "message-box": "|/purchase/orders"},
+                # খালি তালিকার বার্তাটা — ছাঁকনি দিয়ে খালি করা, তালিকা
+                # খালি থাকার ভরসায় নয়। ২৩ আগস্ট যাচাইয়ের জন্য দুইটা
+                # আদেশ বানানোর পর এই অংশটা "নেই" দেখাচ্ছিল — অংশটা
+                # ছিলই, কেবল দেখানোর কারণ ফুরিয়ে গিয়েছিল।
+                "message-box": "|/purchase/orders?q=zzz-nothing-matches"},
 
     "rose": {"round-grid": "|/accounts/cash-counts",
              "gold-hairline": "|/suppliers/create"},
