@@ -231,6 +231,29 @@ final class ModuleDefinition
          * @var array<string, string>
          */
         public readonly array $parties,
+        /**
+         * এই মডিউল কোন ধরনের "দেখার সীমা" দিতে পারে — ভাগ চ (RLS)।
+         *
+         * ── কেন কোর নিজে জানতে পারে না ──────────────────────────────
+         * শাখার সীমা কোরের নিজের, কারণ শাখা কোরের ধারণা। গুদামের সীমা
+         * নয়: গুদাম মজুদ মডিউলের জিনিস।
+         *
+         * ব্যবহারকারীর পর্দাটা SystemAdmin-এ, আর সে গুদামের নামগুলো
+         * দেখাতে চায়। সরাসরি `Warehouse::class` আমদানি করলে
+         * system_admin চিরকাল Inventory ছাড়া চলত না — আর
+         * `BoundariesTest` সাথে সাথেই ধরেছে (§১৯.৭)।
+         *
+         * `depends_on`-এ লিখে দেওয়া যেত, কিন্তু সেটা মিথ্যা হত:
+         * ব্যবহারকারী ব্যবস্থাপনা মজুদ ছাড়াই চলে। তাই উল্টো দিক —
+         * **মজুদ নিজে বলে** সে একটা সীমা দিতে পারে, আর পর্দাটা কেবল
+         * তালিকাটা পড়ে। মজুদ মডিউল না থাকলে ঘরগুলোই বসে না।
+         *
+         * চাবিটা `UserDataScope`-এর ধরন (`warehouse`), মানটা মডেল ও
+         * লেবেলের অনুবাদ-কী।
+         *
+         * @var array<string, array{model: class-string, label: string}>
+         */
+        public readonly array $dataScopes,
         public readonly string $path,
         public readonly string $namespace,
     ) {}
@@ -338,6 +361,7 @@ final class ModuleDefinition
             facts: self::validateFacts($raw['facts'] ?? [], $path),
             provisions: self::validateProvisions($raw['provisions'] ?? [], $path),
             authProviders: self::validateAuthProviders($raw['auth_providers'] ?? [], $path),
+            dataScopes: self::validateDataScopes($raw['data_scopes'] ?? [], $path),
             imports: self::validateImports($raw['imports'] ?? [], $path),
             parties: self::validateParties(
                 $raw['parties'] ?? [],
@@ -612,6 +636,35 @@ final class ModuleDefinition
      * @param  array<mixed, mixed>  $providers
      * @return array<string, class-string<UserProvider>>
      */
+    /**
+     * দেখার সীমার ঘোষণাগুলো — বুট-টাইমে যাচাই।
+     *
+     * @param  array<mixed, mixed>  $scopes
+     * @return array<string, array{model: class-string, label: string}>
+     */
+    private static function validateDataScopes(array $scopes, string $path): array
+    {
+        foreach ($scopes as $type => $spec) {
+            if (! is_string($type) || $type === '') {
+                throw new InvalidArgumentException("{$path}: a data scope needs a type.");
+            }
+
+            if (! is_array($spec) || ! isset($spec['model'], $spec['label'])) {
+                throw new InvalidArgumentException(
+                    "{$path}: data scope '{$type}' needs a model and a label."
+                );
+            }
+
+            if (! is_string($spec['model']) || ! class_exists($spec['model'])) {
+                throw new InvalidArgumentException(
+                    "{$path}: data scope '{$type}' names a model that does not exist."
+                );
+            }
+        }
+
+        return $scopes;
+    }
+
     private static function validateAuthProviders(array $providers, string $path): array
     {
         foreach ($providers as $name => $class) {

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Models\UserDataScope;
 use App\Modules\Inventory\Dashboard\InventoryWidgets;
 use App\Modules\Inventory\Imports\OpeningStockImporter;
 use App\Modules\Inventory\Imports\ProductImporter;
@@ -287,6 +288,26 @@ return [
             'type' => 'boolean',
             'default' => true,
             'group' => 'entry',
+        ],
+    ],
+
+    /*
+     * মজুদ একটা "দেখার সীমা" দিতে পারে — গুদাম ধরে (ভাগ চ)।
+     *
+     * ── কেন এই ঘোষণাটা এখানে, ব্যবহারকারীর পর্দায় নয় ───────────────
+     * পর্দাটা SystemAdmin-এ, আর সে গুদামের নামগুলো দেখাতে চায়।
+     * সরাসরি `Warehouse::class` আমদানি করলে system_admin চিরকাল
+     * Inventory ছাড়া চলত না — `BoundariesTest` সাথে সাথেই ধরেছে।
+     *
+     * `depends_on`-এ লিখে দেওয়া যেত, কিন্তু সেটা মিথ্যা: ব্যবহারকারী
+     * ব্যবস্থাপনা মজুদ ছাড়াই চলে। তাই উল্টো দিক — মজুদ নিজে বলে সে
+     * কী দিতে পারে, আর পর্দাটা কেবল তালিকাটা পড়ে। মজুদ না থাকলে
+     * গুদামের ঘরগুলোই বসে না, আর সেটাই সঠিক আচরণ।
+     */
+    'data_scopes' => [
+        UserDataScope::WAREHOUSE => [
+            'model' => Warehouse::class,
+            'label' => 'inventory::field.warehouse',
         ],
     ],
 ];

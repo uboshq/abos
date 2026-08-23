@@ -177,29 +177,48 @@
 
                             ঘরগুলো কেবল তখনই, যখন কোম্পানিতে গুদাম আছে।
                         --}}
-                        @if (($warehouses[$company->id] ?? collect())->isNotEmpty())
-                            <div class="hidden w-full peer-has-[:checked]:block">
-                                <p class="text-2xs text-(--color-ink-muted)">
-                                    {{ __('system_admin::message.scope_house_note') }}
-                                </p>
+                        {{--
+                            শাখা ছাড়া বাকি সীমাগুলো — মডিউলরা যা ঘোষণা করেছে।
 
-                                <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1">
-                                    @foreach ($warehouses[$company->id] as $house)
-                                        <label class="flex items-center gap-2 text-xs">
-                                            <input type="checkbox"
-                                                   name="warehouse_scope[{{ $company->id }}][]"
-                                                   value="{{ $house->id }}" class="size-4"
-                                                   @checked(in_array((int) $house->id,
-                                                       collect(old("warehouse_scope.{$company->id}",
-                                                           $houseScopes[$company->id] ?? []))
-                                                           ->map(fn ($id) => (int) $id)->all(), true))>
-                                            <span>{{ $house->code }}</span>
-                                            <span class="text-(--color-ink-muted)">{{ $house->name() }}</span>
-                                        </label>
-                                    @endforeach
+                            ── কেন এখানে "গুদাম" শব্দটা লেখা নেই ─────────────────
+                            লিখলে এই পর্দাটা মজুদ মডিউলের নাম জেনে ফেলত, আর
+                            §১৯.৭ ভাঙত। মডিউল নিজে `data_scopes`-এ বলে সে কী
+                            দিতে পারে; পর্দাটা কেবল তালিকাটা ঘুরে দেখে।
+
+                            আজ কেবল গুদাম। কাল টেরিটরি এলে এই ফাইলে কিছুই
+                            বদলাতে হবে না — ঘরগুলো নিজে থেকেই বসবে।
+                        --}}
+                        @foreach ($scopeKinds as $type => $kind)
+                            @php
+                                $choices = $scopeChoices[$company->id][$type] ?? collect();
+                            @endphp
+
+                            @if ($choices->isNotEmpty())
+                                <div class="hidden w-full peer-has-[:checked]:block">
+                                    <p class="text-2xs text-(--color-ink-muted)">
+                                        {{ __('system_admin::message.scope_kind_note', [
+                                            'kind' => __($kind['label']),
+                                        ]) }}
+                                    </p>
+
+                                    <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+                                        @foreach ($choices as $choice)
+                                            <label class="flex items-center gap-2 text-xs">
+                                                <input type="checkbox"
+                                                       name="{{ $type }}_scope[{{ $company->id }}][]"
+                                                       value="{{ $choice->id }}" class="size-4"
+                                                       @checked(in_array((int) $choice->id,
+                                                           collect(old("{$type}_scope.{$company->id}",
+                                                               $houseScopes[$type][$company->id] ?? []))
+                                                               ->map(fn ($id) => (int) $id)->all(), true))>
+                                                <span>{{ $choice->code }}</span>
+                                                <span class="text-(--color-ink-muted)">{{ $choice->name() }}</span>
+                                            </label>
+                                        @endforeach
+                                    </div>
                                 </div>
-                            </div>
-                        @endif
+                            @endif
+                        @endforeach
                     </div>
                 @endforeach
             </div>
