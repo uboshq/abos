@@ -61,6 +61,7 @@ class TheBackupSatOnOneDiskTest extends TestCase
 
         config()->set('abos.backup.path', $this->main);
         config()->set('abos.backup.mirror', null);
+        $this->forgetLedger();
 
         // মূল ব্যাকআপটা টাটকা — নাহলে অন্য নোটিশটা এসে ভিড় করত
         $this->dump($this->main);
@@ -70,8 +71,28 @@ class TheBackupSatOnOneDiskTest extends TestCase
     {
         File::deleteDirectory($this->main);
         File::deleteDirectory($this->mirror);
+        $this->forgetLedger();
 
         parent::tearDown();
+    }
+
+    /**
+     * শেষ সফল কপির কাগজটা — যেটা রাতের ব্যাকআপ লেখে।
+     *
+     * পরীক্ষাটা ফোল্ডার ভরে না, কারণ পাহারাটাও ফোল্ডার দেখে না।
+     * দূরের পথ ছোঁয়া হয় কেবল রাতে; ফুটার কেবল এই কাগজটা পড়ে।
+     */
+    private function ledger(string $when): void
+    {
+        File::put(storage_path('app/backup-mirror.json'), (string) json_encode([
+            'at' => now()->parse($when)->toIso8601String(),
+            'target' => $this->mirror,
+        ]));
+    }
+
+    private function forgetLedger(): void
+    {
+        File::delete(storage_path('app/backup-mirror.json'));
     }
 
     /** আজকের তারিখে একটা নকল ডাম্প। */
@@ -120,7 +141,7 @@ class TheBackupSatOnOneDiskTest extends TestCase
     public function test_a_second_destination_that_works_says_nothing(): void
     {
         config()->set('abos.backup.mirror', $this->mirror);
-        $this->dump($this->mirror);
+        $this->ledger('now');
 
         $said = $this->notices();
 
@@ -141,7 +162,7 @@ class TheBackupSatOnOneDiskTest extends TestCase
     public function test_a_destination_that_stopped_receiving_is_a_different_message(): void
     {
         config()->set('abos.backup.mirror', $this->mirror);
-        $this->dump($this->mirror, '-5 days');
+        $this->ledger('-5 days');
 
         $said = $this->notices();
 
@@ -149,12 +170,35 @@ class TheBackupSatOnOneDiskTest extends TestCase
         $this->assertNotContains(__('core.notice.backup_no_mirror'), $said);
     }
 
-    /** খালি গন্তব্যও থেমে যাওয়া — ফোল্ডারটা আছে, ভেতরে কিছু নেই। */
-    public function test_an_empty_destination_counts_as_stopped(): void
+    /**
+     * কোনোদিন কপি হয়নি — সেটাও থেমে যাওয়া।
+     *
+     * গন্তব্যটা বসানো হয়েছে, কিন্তু একটা রাতও পেরোয়নি বা প্রতিটা
+     * চেষ্টাই ব্যর্থ হয়েছে। দুইটার ফল এক: ওখানে কিছু নেই।
+     */
+    public function test_a_destination_that_never_received_counts_as_stopped(): void
     {
         config()->set('abos.backup.mirror', $this->mirror);
 
         $this->assertContains(__('core.notice.backup_mirror_stale'), $this->notices());
+    }
+
+    /**
+     * ফুটার দূরের পথটা ছোঁয় না।
+     *
+     * মিরর একটা নেটওয়ার্ক ড্রাইভ হলে, আর সেটা মাউন্ট না থাকলে,
+     * `is_dir()` কয়েক সেকেন্ড ঝুলে থাকে — আর ওটা প্রতিটা পাতায়।
+     * তাই এমন একটা পথ বসিয়ে দেখা হয় যা থাকতেই পারে না: পাহারাটা
+     * তবু উত্তর দেয়, কারণ সে ফোল্ডার নয়, নিজের ডিস্কের কাগজ পড়ে।
+     */
+    public function test_the_footer_never_reaches_for_the_far_away_path(): void
+    {
+        config()->set('abos.backup.mirror', '//no-such-host/no-such-share/abos');
+
+        $said = $this->notices();
+
+        $this->assertContains(__('core.notice.backup_mirror_stale'), $said);
+        $this->assertNotContains(__('core.notice.backup_no_mirror'), $said);
     }
 
     /**
@@ -172,9 +216,14 @@ class TheBackupSatOnOneDiskTest extends TestCase
         $this->assertNull($backups->latestMirror());
 
         config()->set('abos.backup.mirror', $this->mirror);
-        $file = $this->dump($this->mirror);
 
         $this->assertSame($this->mirror, $backups->mirrorPath());
-        $this->assertSame($file, $backups->latestMirror());
+
+        $this->assertNull($backups->mirroredAt(), 'কপি হওয়ার আগেই কাগজটা কিছু বলছে।');
+
+        $this->ledger('now');
+
+        $this->assertNotNull($backups->mirroredAt());
+        $this->assertTrue($backups->mirroredAt()->isToday());
     }
 }

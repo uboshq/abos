@@ -43,10 +43,14 @@ final class BackupService
             );
         }
 
+        $mirrored = $this->mirror($file);
+
+        $this->rememberMirror($mirrored, $at);
+
         return [
             'file' => $file,
             'bytes' => (int) filesize($file),
-            'mirrored' => $this->mirror($file),
+            'mirrored' => $mirrored,
         ];
     }
 
@@ -165,6 +169,64 @@ final class BackupService
         sort($files);
 
         return array_values($files);
+    }
+
+    /**
+     * দ্বিতীয় গন্তব্যে শেষ কবে কিছু পৌঁছেছিল — স্থানীয় একটা কাগজে।
+     *
+     * ── কেন এই কাগজটা লাগে ──────────────────────────────────────────
+     * পাহারাটা (`StatusNotices`) জিজ্ঞেস করে "মিররে টাটকা কিছু আছে
+     * কি?", আর সহজ উত্তর হত ফোল্ডারটা দেখে নেওয়া। কিন্তু মিরর হতে
+     * পারে একটা নেটওয়ার্ক ড্রাইভ, আর মাউন্ট না থাকলে `is_dir()`
+     * কয়েক সেকেন্ড ঝুলে থাকে।
+     *
+     * ওটা বসে **প্রতিটা পাতার ফুটারে**। অর্থাৎ ড্রাইভটা একদিন উধাও
+     * হলে গোটা ERP ধীর হয়ে যেত, আর কারণটা কেউ খুঁজে পেত না — কারণ
+     * ভুল কিছু ঘটছে না, কেবল অপেক্ষা।
+     *
+     * তাই দূরের পথটা ছোঁয়া হয় কেবল রাতে, ব্যাকআপ নেওয়ার সময় — আর
+     * ফলটা এখানে লেখা থাকে। ওয়েব অনুরোধ কেবল এই ছোট ফাইলটা পড়ে,
+     * যেটা সবসময় নিজের ডিস্কে।
+     */
+    private function rememberMirror(?string $target, Carbon $at): void
+    {
+        if ($target === null) {
+            return;
+        }
+
+        @file_put_contents($this->mirrorLedger(), (string) json_encode([
+            'at' => $at->toIso8601String(),
+            'target' => $target,
+        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+    }
+
+    /**
+     * শেষ সফল কপিটা কখন হয়েছিল — জানা না থাকলে null।
+     */
+    public function mirroredAt(): ?Carbon
+    {
+        $ledger = $this->mirrorLedger();
+
+        if (! is_file($ledger)) {
+            return null;
+        }
+
+        $said = json_decode((string) @file_get_contents($ledger), true);
+
+        if (! is_array($said) || ! isset($said['at'])) {
+            return null;
+        }
+
+        try {
+            return Carbon::parse((string) $said['at']);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private function mirrorLedger(): string
+    {
+        return storage_path('app'.DIRECTORY_SEPARATOR.'backup-mirror.json');
     }
 
     /**
