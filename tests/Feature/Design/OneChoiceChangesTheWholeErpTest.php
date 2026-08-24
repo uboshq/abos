@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Design;
 
+use App\Core\Support\LookRegistry;
 use App\Core\Support\Ui;
 use App\Models\User;
 use Database\Seeders\DemoSeeder;
@@ -115,34 +116,46 @@ class OneChoiceChangesTheWholeErpTest extends TestCase
      */
     public function test_every_look_has_a_token_set_of_its_own(): void
     {
-        $css = (string) file_get_contents(base_path('resources/css/themes.css'));
-
+        /*
+         * উৎসটা এখন রেজিস্ট্রি, স্টাইলশিট নয়।
+         *
+         * ── কেন বদলাতে হলো ──────────────────────────────────────────
+         * থিম ইঞ্জিনের ধাপ ১-এ টোকেনগুলো `themes.css` থেকে
+         * `Looks/*.php`-তে সরেছে, আর CSS ব্লকগুলো উঠে গেছে। ফাইলটা
+         * পড়তে থাকা এই পাহারা তখন দশটা রূপের সবগুলোকেই "শূন্য টোকেন"
+         * বলছিল।
+         *
+         * দাবিটা একটুও বদলায়নি — প্রতিটা রূপের নিজের টোকেন-সেট থাকতে
+         * হবে। কেবল সেটটা এখন অন্য জায়গায় থাকে।
+         */
         $without = [];
 
         foreach (Ui::keys() as $look) {
             /*
-             * ক্লাসিক বাদ, আর এই বাদটাই তার সংজ্ঞা।
+             * ক্লাসিকও বাদ যায় না — আর সেই ছাড়টাই ইঞ্জিনের সাথে উঠেছে।
              *
-             * ক্লাসিক মানে "কোনো টোকেন বদলায় না" — `:root`-এ যা লেখা
-             * আছে হুবহু তাই। ওর একটা ব্লক থাকলে সেটা আর ক্লাসিক থাকত না।
+             * ── কেন আগে ছাড় ছিল ─────────────────────────────────────
+             * ক্লাসিক মানে ছিল "কোনো টোকেন বদলায় না" — `:root`-এ যা
+             * লেখা হুবহু তাই। তাই তার কোনো ব্লক ছিল না, আর ব্লক চাওয়া
+             * মানেই ছিল ভুল চাওয়া। ওটার নাম ছিল `Ui::BARE`।
              *
-             * ── কেন `BARE`, `DEFAULT` নয় ────────────────────────────
-             * আগে এখানে `DEFAULT` লেখা ছিল, আর তখন দুইটাই ক্লাসিক
-             * ছিল বলে কাজ করত। ডিফল্ট নেভি হওয়ার পর ওই লাইনটা
-             * নেভিকে ছাড় দিত (যার ব্লক আছে) আর ক্লাসিকের কাছে ব্লক
-             * চাইত (যার থাকার কথা নয়) — একই লাইনে দুইটা ভুল।
+             * ── কেন আর নেই ──────────────────────────────────────────
+             * মালিকের নমুনা দেখার পর ক্লাসিক একটা **আলাদা, সম্পূর্ণ
+             * নকশা** হয়ে গেছে — খতিয়ান রূপ, উপরে টানা মেনু, অ্যাম্বার
+             * সক্রিয় ট্যাব, ২৬px সারি। আজ তার নিজের ৬৬টা টোকেন।
+             *
+             * ছাড়টা তবু বসে ছিল, আর তার একমাত্র ফল ছিল: দশটার মধ্যে
+             * ক্লাসিককে **কেউ পরীক্ষাই করত না**। ধ্রুবকটা একটা এমন
+             * জগতের কথা বলছিল যেটা আর নেই।
              */
-            if ($look === Ui::BARE) {
-                continue;
-            }
 
-            if (! str_contains($css, "[data-ui='{$look}']")) {
+            if (LookRegistry::of($look)['light'] === []) {
                 $without[] = $look;
             }
         }
 
         $this->assertSame([], $without, implode("\n", [
-            'এই চেহারাগুলো Ui::all()-এ আছে, কিন্তু themes.css-এ ওদের',
+            'এই চেহারাগুলো Ui::all()-এ আছে, কিন্তু Looks/-এ ওদের',
             'কোনো টোকেন-সেট নেই। পর্দায় বাছা যাবে, সেভও হবে, আর',
             'দেখতে হুবহু ক্লাসিকের মতোই থাকবে — কেউ বুঝতে পারবেন না কেন।',
             ...$without,
@@ -158,17 +171,10 @@ class OneChoiceChangesTheWholeErpTest extends TestCase
      */
     public function test_no_token_set_is_an_empty_shell(): void
     {
-        $css = (string) file_get_contents(base_path('resources/css/themes.css'));
         $thin = [];
 
         foreach (Ui::keys() as $look) {
-            if ($look === Ui::BARE) {
-                continue;
-            }
-
-            preg_match("/\[data-ui='{$look}'\]\s*\{(.*?)\}/s", $css, $m);
-
-            $count = substr_count($m[1] ?? '', '--');
+            $count = count(LookRegistry::of($look)['light']);
 
             /*
              * বারোটা কেন।
