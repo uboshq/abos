@@ -498,4 +498,14 @@ return [
         'approval_approved' => 'Approved: :document',
         'approval_rejected' => 'Turned down: :document',
     ],
+    'look' => [
+        'wrong_kind' => ':name wants a :wants and got :value.',
+        'kind_colour' => 'colour',
+        'kind_length' => 'measurement',
+        'kind_number' => 'number',
+        'unknown_token' => ':name — no token by that name. Check the spelling; a wrong name does nothing, quietly.',
+        'empty_token' => ':name has no value.',
+        'not_a_length' => ':name wants a measurement (44px, say), and got :value.',
+        'not_a_colour' => ':name wants a colour and got a measurement — :value.',
+    ],
 ];
