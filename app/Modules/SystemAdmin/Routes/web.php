@@ -6,6 +6,7 @@ use App\Modules\SystemAdmin\Http\Controllers\CompanyController;
 use App\Modules\SystemAdmin\Http\Controllers\ControlPanelController;
 use App\Modules\SystemAdmin\Http\Controllers\CustomFieldController;
 use App\Modules\SystemAdmin\Http\Controllers\ImportController;
+use App\Modules\SystemAdmin\Http\Controllers\LookController;
 use App\Modules\SystemAdmin\Http\Controllers\RoleController;
 use App\Modules\SystemAdmin\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -61,6 +62,35 @@ Route::middleware('auth')->prefix('system')->group(function () {
         Route::post('/', [RoleController::class, 'store'])->name('store');
         Route::get('/{role}/edit', [RoleController::class, 'edit'])->whereNumber('role')->name('edit');
         Route::put('/{role}', [RoleController::class, 'update'])->whereNumber('role')->name('update');
+    });
+
+    /*
+     * কোম্পানির নিজের রূপ — থিম ইঞ্জিনের ধাপ ৩।
+     *
+     * ── মোছার রুট নেই, আর এখানে কারণটা আলাদা ─────────────────────────
+     * অন্য পর্দাগুলোয় মোছা হয় না কারণ কাগজপত্র সারিটার নাম ধরে আছে।
+     * এখানে কারণটা হলো: একটা রূপ মুছলে যাঁরা ওটা পরে আছেন তাঁদের
+     * পর্দা ওই মুহূর্তে বদলে যেত, আর কেউ জানত না কেন। রূপ পুরনো হয়,
+     * ব্যবহার বন্ধ হয় — কিন্তু সারিটা থাকে।
+     *
+     * ── প্রিভিউ POST, GET নয় ─────────────────────────────────────────
+     * প্রিভিউ সেশন বদলায়, তাই ওটা একটা কাজ — দেখা নয়। GET রাখলে
+     * উপরের speculationrules ব্লকটা মাউস ছোঁয়া মাত্র প্রিভিউ চালু
+     * করে দিত, আর ব্যবহারকারী কিছু না করেই গোটা ERP অন্য রঙে দেখতেন।
+     */
+    Route::prefix('looks')->name('look.')->group(function () {
+        Route::get('/', [LookController::class, 'index'])->name('index');
+        Route::get('/create', [LookController::class, 'create'])->name('create');
+        Route::post('/', [LookController::class, 'store'])->name('store');
+        Route::post('/preview/stop', [LookController::class, 'previewStop'])->name('preview.stop');
+        Route::get('/{skin}/edit', [LookController::class, 'edit'])->whereNumber('skin')->name('edit');
+        Route::put('/{skin}', [LookController::class, 'update'])->whereNumber('skin')->name('update');
+        Route::post('/{skin}/publish', [LookController::class, 'publish'])
+            ->whereNumber('skin')->name('publish');
+        Route::post('/{skin}/preview', [LookController::class, 'preview'])
+            ->whereNumber('skin')->name('preview');
+        Route::post('/{skin}/revert/{version}', [LookController::class, 'revert'])
+            ->whereNumber('skin')->whereNumber('version')->name('revert');
     });
 
     /*

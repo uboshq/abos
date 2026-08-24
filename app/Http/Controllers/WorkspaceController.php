@@ -8,7 +8,9 @@ use App\Core\Dashboard\ActivityRegistry;
 use App\Core\Dashboard\DashboardRegistry;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\Accent;
+use App\Core\Support\LookRegistry;
 use App\Core\Support\Ui;
+use App\Models\LookSkin;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -137,6 +139,19 @@ class WorkspaceController extends Controller
             'menu' => $this->menu->forUser($user),
             'accents' => Accent::all(),
             'uis' => Ui::all(),
+
+            /*
+             * কোম্পানির নিজের রূপগুলো — কেবল প্রকাশিতগুলো।
+             *
+             * ── কেন এটা লাগল ────────────────────────────────────────
+             * ধাপ ৩-এ Control Panel-এ রূপ বানানো যায়, কিন্তু বাছাইয়ের
+             * পর্দায় ছিল কেবল দশটা কোড-রূপ। ফলে একটা কোম্পানি নিজের
+             * রূপ বানাতে পারত আর **কেউ সেটা পরতে পারত না** —
+             * ডাটাবেজে হাত না দিয়ে।
+             *
+             * যে ফিচার চালু করা যায় না, সেটা শেষ হয়নি।
+             */
+            'skins' => LookSkin::query()->published()->orderBy('name')->get(),
             'current' => [
                 'accent' => $user->accent ?? Accent::DEFAULT,
                 'theme' => $user->theme ?? 'light',
@@ -173,7 +188,18 @@ class WorkspaceController extends Controller
              * থাকে — কারণ "পাঠাইনি" মানে "বদলাতে চাই না", "মুছে
              * ফেলো" নয়।
              */
-            'ui' => ['sometimes', 'string', Rule::in(Ui::keys())],
+            /*
+             * কোড-রূপের নাম, নয়তো কোম্পানির একটা **প্রকাশিত** রূপের
+             * `public_id` — দুইটাই এই একটা ঘরে বসে।
+             *
+             * খসড়া তালিকায় নেই, তাই বাছা যায় না। কেউ হাতে একটা খসড়ার
+             * id পাঠালে যাচাই ফেরায় — প্রকাশের গেটটা এভাবেই একমাত্র
+             * দরজা থাকে।
+             */
+            'ui' => ['sometimes', 'string', Rule::in([
+                ...Ui::keys(),
+                ...LookSkin::query()->published()->pluck('public_id')->all(),
+            ])],
             /*
              * রূপের সাথে রং — বাক্সে টিক থাকলে।
              *
@@ -201,7 +227,15 @@ class WorkspaceController extends Controller
         unset($validated['match_accent']);
 
         if ($matchAccent && isset($validated['ui'])) {
-            $validated['accent'] = Ui::accent($validated['ui']);
+            /*
+             * রূপের নিজের রং — স্কিন হলে তার গোড়ার কোড-রূপের রং।
+             *
+             * `Ui::accent()`-কে সরাসরি একটা `public_id` দিলে সে
+             * ডিফল্ট নীলে নামত। ফলে Odoo-র উপর দাঁড়ানো একটা রূপ
+             * বেছে "রূপের রংটাও বসুক" টিক দিলে অবার্জিনের বদলে নীল
+             * বসত — টিকটা ভুল কাজ করত, চুপচাপ।
+             */
+            $validated['accent'] = Ui::accent(LookRegistry::lookFor($validated['ui']));
         }
 
         $request->user()->forceFill($validated)->save();
