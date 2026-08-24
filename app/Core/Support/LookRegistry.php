@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Support;
 
+use App\Models\LookSkin;
 use RuntimeException;
 
 /**
@@ -98,6 +99,48 @@ final class LookRegistry
     }
 
     /**
+     * ব্যবহারকারী যা বেছেছেন — কোড-রূপ, নাকি কোম্পানির নিজের স্কিন।
+     *
+     * ── স্তরগুলো ─────────────────────────────────────────────────────
+     * সিস্টেম → কোম্পানি → ব্যবহারকারী। ব্যবহারকারীর `ui` ঘরে হয়
+     * একটা কোড-রূপের নাম (`navy`), নয় একটা স্কিনের `public_id`।
+     *
+     * ── কেন একই ঘরে দুইটা জিনিস ─────────────────────────────────────
+     * আলাদা ঘর রাখলে প্রতিটা পাতায় "কোনটা ভরা" জিজ্ঞেস করতে হত, আর
+     * দুইটাই ভরা থাকলে কোনটা জেতে সেই নিয়মও লিখতে হত। একটা ঘরে
+     * একটাই উত্তর — আর UUID আর `navy` কখনো একরকম দেখায় না।
+     *
+     * ── অচেনা হলে ডিফল্ট, ব্যতিক্রম নয় ──────────────────────────────
+     * স্কিনটা মুছে ফেলা হলে বা অন্য কোম্পানির হলে ব্যবহারকারী ডিফল্ট
+     * রূপে নামেন। পাতা ভাঙে না — একটা রঙের ভুলে কেউ কাজ থামাতে
+     * পারবে না।
+     *
+     * @return array<string, string>
+     */
+    public static function forUser(?string $chosen, string $theme = 'light'): array
+    {
+        $skin = self::skin($chosen);
+
+        return $skin?->tokens($theme) ?? self::tokens(Ui::clean($chosen), $theme);
+    }
+
+    /**
+     * বাছাইটা একটা প্রকাশিত স্কিন কি না।
+     *
+     * খসড়া ইচ্ছাকৃতভাবে বাদ: যে রূপ এখনো গেট পাশ করেনি সেটা কারো
+     * পর্দায় পৌঁছাতে পারবে না, এমনকি যিনি বানাচ্ছেন তাঁরও নয় —
+     * তাঁর জন্য প্রিভিউ আছে (ধাপ ৩)।
+     */
+    public static function skin(?string $chosen): ?LookSkin
+    {
+        if ($chosen === null || ! str_contains($chosen, '-')) {
+            return null;   // `navy`-তে হাইফেন নেই, UUID-তে আছে
+        }
+
+        return LookSkin::query()->published()->where('public_id', $chosen)->first();
+    }
+
+    /**
      * সংকলক — একটা রূপ ও থিমের টোকেনগুলো, `<html style="…">`-এ বসার মতো।
      *
      * ── কেন ইনলাইন, একটা CSS ফাইল নয় ────────────────────────────────
@@ -123,6 +166,23 @@ final class LookRegistry
      * ওগুলো `tokens.css`-এর ডিফল্ট থেকে নামে, হালকা বা গাঢ় যেটাই
      * চলুক।
      */
+    /**
+     * ব্যবহারকারীর বাছাই ধরে সংকলন — কোড-রূপ বা স্কিন, যেটাই হোক।
+     *
+     * পাতার ব্লেড এটাই ডাকে, কারণ সে জানে না মানুষটা কোনটা বেছেছেন,
+     * আর জানার কথাও নয়।
+     */
+    public static function styleForUser(?string $chosen, string $theme = 'light'): string
+    {
+        $css = '';
+
+        foreach (self::forUser($chosen, $theme) as $name => $value) {
+            $css .= $name.':'.$value.';';
+        }
+
+        return $css;
+    }
+
     public static function styleFor(string $look, string $theme = 'light'): string
     {
         $css = '';

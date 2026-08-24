@@ -37,7 +37,7 @@
           একটা ভুল করলে রং নীরবে অন্যটা হয়ে যেত। মিলিয়ে দেওয়াটা এখন
           সার্ভারে হয়, তাই লড়াইটাই আর নেই।
       --}}
-      style="{{ \App\Core\Support\Accent::styleFor(auth()->user()?->accent ?? \App\Core\Support\Accent::DEFAULT) }}{{ \App\Core\Support\LookRegistry::styleFor(\App\Core\Support\Ui::clean(auth()->user()?->ui), auth()->user()?->theme ?? 'light') }}">
+      style="{{ \App\Core\Support\Accent::styleFor(auth()->user()?->accent ?? \App\Core\Support\Accent::DEFAULT) }}{{ \App\Core\Support\LookRegistry::styleForUser(auth()->user()?->ui, auth()->user()?->theme ?? 'light') }}">
 <head>
     <meta charset="utf-8">
 
