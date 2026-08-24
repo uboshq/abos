@@ -29,7 +29,6 @@ declare(strict_types=1);
 
 return [
     'light' => [
-
         '--color-badge-danger-bg' => '#fdeaea',
         '--color-badge-danger-ink' => '#a4262c',
         '--color-badge-pending-bg' => '#fdf3e3',

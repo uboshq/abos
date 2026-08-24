@@ -29,7 +29,6 @@ declare(strict_types=1);
 
 return [
     'light' => [
-
         '--cmd-font' => '12px',
         '--color-badge-danger-bg' => '#f8e9e6',
         '--color-badge-danger-ink' => '#a32a18',
