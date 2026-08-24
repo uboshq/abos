@@ -515,6 +515,7 @@ return [
         'approval_rejected' => 'ফেরত দেওয়া হয়েছে: :document',
     ],
     'look' => [
+        'too_faint' => ':ink আর :on-এর মধ্যে কনট্রাস্ট মাত্র :ratio:১ — অন্তত :need:১ লাগে, নাহলে লেখাটা পড়া যাবে না।',
         'wrong_kind' => ':name একটা :wants চায়, পেয়েছে :value।',
         'kind_colour' => 'রং',
         'kind_length' => 'মাপ',
