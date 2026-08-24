@@ -499,6 +499,7 @@ return [
         'approval_rejected' => 'Turned down: :document',
     ],
     'look' => [
+        'too_faint' => ':ink on :on is only :ratio:1 — it needs at least :need:1 or the text cannot be read.',
         'wrong_kind' => ':name wants a :wants and got :value.',
         'kind_colour' => 'colour',
         'kind_length' => 'measurement',
