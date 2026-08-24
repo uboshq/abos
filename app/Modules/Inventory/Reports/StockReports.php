@@ -9,6 +9,7 @@ use App\Core\Engines\Report\ReportDefinition;
 use App\Core\Engines\Report\ReportEngine;
 use App\Modules\Inventory\Models\Product;
 use Illuminate\Database\Query\Expression;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -72,7 +73,30 @@ final class StockReports
                     'b.batch_no',
                     'b.mrp',
                     DB::raw('COALESCE(SUM(m.floor_change), 0) as on_hand'),
-                    DB::raw('DATEDIFF(b.expiry_date, CURDATE()) as days_left'),
+                ])
+                /*
+                 * "আজ" কোনটা, সেটা ডাটাবেজকে জিজ্ঞেস করা হয় না।
+                 *
+                 * আগে লেখা ছিল `DATEDIFF(b.expiry_date, CURDATE())`।
+                 * MySQL-এর `CURDATE()` উত্তর দেয় **ডাটাবেজ সার্ভারের**
+                 * ঘড়ি ধরে, অ্যাপের ঘড়ি ধরে নয় — আর দুইটা এক হওয়ার
+                 * কোনো নিশ্চয়তা কোথাও লেখা নেই।
+                 *
+                 * ২৫/৮/২০২৬-এ লাইভে দুইটা সত্যিই আলাদা ছিল: অ্যাপ চলত
+                 * UTC-তে (২৪ তারিখ), MySQL চলত মেশিনের ঘড়িতে (২৫)।
+                 * ফলে এই একটা কলাম গোটা অ্যাপের চেয়ে এক দিন এগিয়ে
+                 * থাকত — আজ মেয়াদ শেষ হওয়া লট দেখাত "১ দিন বাকি"।
+                 *
+                 * অ্যাপের ঘড়ি ঢাকায় সরানোয় আজ দুইটা মিলে গেছে, কিন্তু
+                 * মিলেছে **কাকতালীয়ভাবে** — MySQL এই মেশিনেই চলে বলে।
+                 * ডাটাবেজ একদিন ম্যানেজড হোস্টে গেলে (যেখানে ডিফল্ট
+                 * UTC) ফাঁকটা নীরবে ফিরে আসত, আর মেয়াদের হিসাবে এক
+                 * দিনের ভুল মানে ফেরত পাঠানোর সুযোগ হাতছাড়া।
+                 *
+                 * তাই তারিখটা অ্যাপ থেকেই বাঁধা হয়। একটা ঘড়ি, একটা উত্তর।
+                 */
+                ->selectRaw('DATEDIFF(b.expiry_date, ?) as days_left', [
+                    Carbon::today()->toDateString(),
                 ]),
             columns: [
                 ['key' => 'expiry_date', 'label' => 'inventory::field.expiry_date', 'type' => ReportColumn::DATE, 'width' => '7rem'],
