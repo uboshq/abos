@@ -49,6 +49,7 @@ return [
                 'permission' => 'system_admin.import.manage'],
             ['label' => 'system_admin::menu.control_panel', 'route' => 'system_admin.control-panel', 'permission' => 'system_admin.settings.manage'],
             ['label' => 'core.custom_field.title', 'route' => 'system_admin.custom_field.index', 'permission' => 'system_admin.settings.manage'],
+            ['label' => 'core.look.title', 'route' => 'system_admin.look.index', 'permission' => 'system_admin.look.manage'],
             ['label' => 'system_admin::menu.backup', 'route' => 'admin.backup', 'permission' => 'system_admin.backup.manage', 'planned' => true],
         ],
     ],
@@ -58,6 +59,14 @@ return [
         'system_admin.user.manage',
         'system_admin.role.manage',
         'system_admin.settings.manage',
+        /*
+         * রূপের নিজের অনুমতি, সাধারণ সেটিংসের সাথে নয়।
+         *
+         * এটাই একমাত্র সেটিং যা **সবার পর্দা** এক মুহূর্তে বদলে দেয়,
+         * আর ভুল হলে কেউ কাজ করতে পারেন না। যিনি ছাপার কাগজ বা
+         * তারিখের ছক ঠিক করেন, তাঁকে ওই ক্ষমতাটাও দিতে হবে এমন নয়।
+         */
+        'system_admin.look.manage',
         // ইমপোর্টের নিজের অনুমতি: একসাথে দুই হাজার সারি বসানো সেটিংস
         // বদলানোর চেয়ে ভিন্ন ক্ষমতা, আর ভুল ফাইল দিলে ফল অনেক বড়
         'system_admin.import.manage',
