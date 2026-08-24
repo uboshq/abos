@@ -514,4 +514,14 @@ return [
         'approval_approved' => 'অনুমোদিত: :document',
         'approval_rejected' => 'ফেরত দেওয়া হয়েছে: :document',
     ],
+    'look' => [
+        'wrong_kind' => ':name একটা :wants চায়, পেয়েছে :value।',
+        'kind_colour' => 'রং',
+        'kind_length' => 'মাপ',
+        'kind_number' => 'সংখ্যা',
+        'unknown_token' => ':name — এই নামে কোনো টোকেন নেই। বানানটা দেখুন; ভুল নাম নীরবে কিছুই করে না।',
+        'empty_token' => ':name-এর মান খালি।',
+        'not_a_length' => ':name একটা মাপ চায় (যেমন 44px), পেয়েছে :value।',
+        'not_a_colour' => ':name একটা রং চায়, পেয়েছে একটা মাপ — :value।',
+    ],
 ];
