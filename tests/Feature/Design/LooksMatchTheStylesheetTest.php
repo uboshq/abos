@@ -135,7 +135,20 @@ class LooksMatchTheStylesheetTest extends TestCase
         foreach ($blocks as [, $selector, $body]) {
             $selector = trim((string) preg_replace('/\s+/', ' ', $selector));
 
-            preg_match_all('/(--[a-z0-9-]+)\s*:\s*([^;]+);/', $body, $pairs, PREG_SET_ORDER);
+            /*
+             * নামে আন্ডারস্কোরও থাকতে পারে।
+             *
+             * ── এটা কীভাবে ফাঁকি দিয়েছিল ────────────────────────────
+             * প্রথম লেখায় ছিল `--[a-z0-9-]+`, আর তাতে
+             * `--color-module-master_data` ও `--color-module-system_admin`
+             * বাদ পড়ত। ফাঁকিটা ধরা পড়েনি কারণ **আহরণের স্ক্রিপ্টেও
+             * একই regex ছিল** — দুই দিক একই দিকে অন্ধ, তাই মিলিয়ে
+             * দেখাটা পাশ করত আর দুইটা টোকেন নীরবে হারিয়ে যেত।
+             *
+             * এই প্রকল্পের সবচেয়ে বারবার ফেরা ফাঁদ: পাহারা আর যাকে
+             * পাহারা দেওয়ার কথা, দুইজনেরই একই ভুল।
+             */
+            preg_match_all('/(--[a-zA-Z0-9_-]+)\s*:\s*([^;]+);/', $body, $pairs, PREG_SET_ORDER);
 
             $tokens = [];
 

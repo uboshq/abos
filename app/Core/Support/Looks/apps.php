@@ -29,7 +29,6 @@ declare(strict_types=1);
 
 return [
     'light' => [
-
         '--color-avatar' => '#f5eff3',
         '--color-avatar-ink' => '#714b67',
         '--color-badge-danger-bg' => '#f9e8e5',

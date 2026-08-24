@@ -29,7 +29,6 @@ declare(strict_types=1);
 
 return [
     'light' => [
-
         '--color-badge-danger-bg' => '#33191b',
         '--color-badge-danger-ink' => '#f78c8c',
         '--color-badge-draft-bg' => '#1c1d21',
@@ -61,10 +60,12 @@ return [
         '--color-module-governance' => '#2a2b30',
         '--color-module-hr' => '#2a2b30',
         '--color-module-inventory' => '#2a2b30',
+        '--color-module-master_data' => '#2a2b30',
         '--color-module-purchase' => '#2a2b30',
         '--color-module-reports' => '#2a2b30',
         '--color-module-sales' => '#2a2b30',
         '--color-module-supplier' => '#2a2b30',
+        '--color-module-system_admin' => '#2a2b30',
         '--color-row-alt' => 'transparent',
         '--color-section-head' => 'transparent',
         '--color-sidebar' => '#0e0f11',

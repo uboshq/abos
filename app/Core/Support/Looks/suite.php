@@ -29,7 +29,6 @@ declare(strict_types=1);
 
 return [
     'light' => [
-
         '--cmd-font' => '11px',
         '--cmd-gradient' => 'linear-gradient(#fdfdfd, #e4e8ec)',
         '--cmd-gradient-primary' => 'linear-gradient(#4e7ba6, #2e4b6b)',
