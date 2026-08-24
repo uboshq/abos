@@ -26,20 +26,38 @@ use Illuminate\Support\Facades\Schema;
  * UUID ৩৬। ৬৪ রাখা হলো যাতে ভবিষ্যতে উপসর্গওয়ালা কোনো চাবি এলে
  * (`skin:…`) আবার মাইগ্রেশন লিখতে না হয় — ঘর চওড়া করা সস্তা, আর
  * সংকীর্ণ ঘরের ভুলটা নীরব।
+ *
+ * ── `default('navy')` কেন বারবার লিখতে হয় ────────────────────────────
+ * এই ফাইলের প্রথম লেখায় ছিল কেবল `->string('ui', 64)->nullable()`,
+ * আর তাতেই ঘরটা `NOT NULL DEFAULT 'navy'` থেকে নীরবে `NULL` হয়ে গেল।
+ *
+ * কারণ `->change()` ঘরটা **সম্পূর্ণ নতুন করে লেখে** — যা আবার বলা
+ * হয়নি, তা মুছে যায়। এখানে মুছেছিল দুইটা জিনিস: NOT NULL, আর
+ * ডিফল্ট `navy`। শুধু চওড়া করতে চেয়ে আসলে তিনটা জিনিস বদলে ফেলা।
+ *
+ * দাম দুই জায়গায়:
+ *
+ *   · নতুন ব্যবহারকারীর `ui` নাল হলো, আর "একটা অচেনা রূপ বাছলে
+ *     ডিফল্টে নামে" পরীক্ষাটা `'navy'`-র বদলে `null` পেল
+ *   · রোলব্যাকে পুরনো `NOT NULL` ঘরে নাল সারি ফেরত দিতে গিয়ে MySQL
+ *     *"Data truncated"* — একটা সম্পূর্ণ সুইট রানে ২২৭টা ত্রুটি
+ *
+ * তাই মাপ বদলানোর সময়ও পুরো সংজ্ঞাটা লেখা হয়: চওড়া করার কাজ যেন
+ * চওড়া করার বেশি কিছু না করে।
  */
 return new class extends Migration
 {
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->string('ui', 64)->nullable()->change();
+            $table->string('ui', 64)->default('navy')->change();
         });
     }
 
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->string('ui', 32)->nullable()->change();
+            $table->string('ui', 16)->default('navy')->change();
         });
     }
 };
