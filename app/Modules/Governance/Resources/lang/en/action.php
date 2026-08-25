@@ -20,4 +20,8 @@ return [
     'password_set' => 'Password set',
     'roles_changed' => 'Roles changed',
     'scopes_changed' => 'Data scope changed',
+    'look_published' => 'Look published',
+    'look_reverted' => 'Look reverted',
+    'reopened' => 'Reopened',
+    'discount_approved' => 'Discount approved',
 ];
