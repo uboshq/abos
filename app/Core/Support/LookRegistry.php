@@ -121,7 +121,14 @@ final class LookRegistry
     {
         $skin = self::skin($chosen);
 
-        return $skin?->tokens($theme) ?? self::tokens(Ui::clean($chosen), $theme);
+        /*
+         * প্রকাশিতটা, খসড়াটা নয় — ধাপ ৩-এ যোগ হওয়া পার্থক্য।
+         *
+         * আগে এখানে `tokens()` ছিল, অর্থাৎ সম্পাদকের কাজের কপি। তাতে
+         * কেউ সম্পাদনা শুরু করা মাত্র গোটা ডিপোর পর্দা বদলে যেত —
+         * অর্ধেক লেখা একটা রূপ নিয়ে সবাই কাজ করতেন।
+         */
+        return $skin?->liveTokens($theme) ?? self::tokens(Ui::clean($chosen), $theme);
     }
 
     /**
@@ -181,6 +188,40 @@ final class LookRegistry
         }
 
         return $css;
+    }
+
+    /**
+     * খোলসটা কোন কোড-রূপের — বাছাইটা স্কিন হোক বা কোড-রূপ।
+     *
+     * ── কেন এটা `Ui::clean()` নয় ────────────────────────────────────
+     * `Ui::clean()` কেবল নামের তালিকা মেলায়, তাই একটা `public_id`
+     * পেলে সে ডিফল্টে নামে। ফলে Odoo-র উপর দাঁড়ানো কোম্পানির রূপ
+     * Odoo-র রং নিয়ে Navy-র খোলসে বসত — মেনু ভুল জায়গায়, শিরোনাম
+     * ভুল জায়গায়।
+     *
+     * রংটা ঠিক দেখে মানুষ ধরে নিতেন নকলটা কাজ করছে, আর গড়নটা কেন
+     * মেলে না সেটা কেউ ব্যাখ্যা করতে পারত না।
+     */
+    public static function lookFor(?string $chosen): string
+    {
+        if ($chosen === null || ! str_contains($chosen, '-')) {
+            return Ui::clean($chosen);
+        }
+
+        /*
+         * এখানে খসড়াও গোনা হয়, `skin()`-এর মতো কেবল প্রকাশিতটা নয়।
+         *
+         * `skin()` জিজ্ঞেস করে "মানুষ কী **দেখবেন**" — খসড়া সেখানে
+         * ঢোকে না। এটা জিজ্ঞেস করে "খোলসটার **গড়ন** কী", আর একটা
+         * খসড়ারও গড়ন আছে।
+         *
+         * পার্থক্যটা প্রিভিউয়ে ধরা পড়ে: খসড়া বাদ দিলে Odoo-র উপর
+         * দাঁড়ানো একটা অপ্রকাশিত রূপ প্রিভিউতে Odoo-র রং নিয়ে Navy-র
+         * খোলসে বসত — অর্থাৎ প্রিভিউটাই মিথ্যা বলত, ঠিক যে জায়গায়
+         * সত্যি বলাটা তার একমাত্র কাজ।
+         */
+        return LookSkin::query()->where('public_id', $chosen)->first()?->rootLook()
+            ?? Ui::clean($chosen);
     }
 
     public static function styleFor(string $look, string $theme = 'light'): string
