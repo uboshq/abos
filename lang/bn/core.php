@@ -50,6 +50,8 @@ return [
         'loan' => 'ঋণ',
         'loan_movement' => 'ঋণের লেনদেন',
         'loan_instalment' => 'ঋণের কিস্তি',
+        'product' => 'পণ্য',
+        'supplier' => 'সরবরাহকারী',
     ],
 
     'posting' => [

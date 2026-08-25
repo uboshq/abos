@@ -46,6 +46,8 @@ return [
         'loan' => 'Loan',
         'loan_movement' => 'Loan Movement',
         'loan_instalment' => 'Loan Instalment',
+        'product' => 'Product',
+        'supplier' => 'Supplier',
     ],
 
     'posting' => [

@@ -8,4 +8,6 @@ return [
     'stock_adjustment' => 'স্টক সমন্বয়',
     'cancellation' => 'বাতিল',
     'discount' => 'ছাড়',
+    'hold' => 'স্টক আটকে রাখা',
+    'stock_issue' => 'স্টক ইস্যু',
 ];

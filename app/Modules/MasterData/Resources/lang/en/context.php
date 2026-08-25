@@ -8,4 +8,6 @@ return [
     'stock_adjustment' => 'Stock adjustment',
     'cancellation' => 'Cancellation',
     'discount' => 'Discount',
+    'hold' => 'Stock hold',
+    'stock_issue' => 'Stock issue',
 ];
