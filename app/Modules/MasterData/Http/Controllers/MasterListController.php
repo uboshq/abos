@@ -307,9 +307,25 @@ class MasterListController extends Controller implements HasMiddleware
             'kind' => $kind,
             'spec' => $spec,
             'records' => $records,
-            // সব তালিকা খালি হলে "প্রমিত তালিকা বসান" দেখানো হয় —
-            // একটাও খালি না হলে নয়, নাহলে বোতামটা কিছুই করত না
-            'canInstallDefaults' => $records->isEmpty() && ! $request->boolean('inactive'),
+            /*
+             * "প্রমিত তালিকা বসান" কেবল সেখানেই, যেখানে বসানোর মতো
+             * কিছু আছে।
+             *
+             * ── কী ভাঙা ছিল ────────────────────────────────────────
+             * শর্তটা ছিল শুধু `$records->isEmpty()` — অর্থাৎ **যেকোনো**
+             * খালি তালিকায় বোতামটা উঠত। কিন্তু `installDefaults()`
+             * বসায় ছয়টা তালিকা, আর পর্দাটা দেখায় সতেরোটা।
+             *
+             * ফলে Brands-এর মতো খালি পর্দায় লেখা উঠত "তালিকাগুলো
+             * এখনো খালি — একক, কর, শর্ত ও কারণ কোড ছাড়া প্রথম বিলটাই
+             * লেখা যায় না", অথচ ওই তিনটাই ভরা। বার্তাটা মিথ্যা, আর
+             * বোতামে চাপলে কিছুই হত না।
+             *
+             * নিয়মটা কোডের উপরের মন্তব্যেই লেখা ছিল। মন্তব্য নিয়ম নয়।
+             */
+            'canInstallDefaults' => $records->isEmpty()
+                && in_array($spec['kind'], MasterListService::HAS_DEFAULTS, true)
+                && ! $request->boolean('inactive'),
             'q' => $request->query('q'),
             'options' => $this->options(),
             'sortOptions' => $this->sortLabels(),
