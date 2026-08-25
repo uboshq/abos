@@ -63,6 +63,50 @@
             </div>
         </section>
 
+        {{--
+            কোম্পানির নিজের রূপ — থাকলে তবেই।
+
+            ── কেন আলাদা একটা ভাগ, একই গ্রিডে মিশিয়ে নয় ─────────────────
+            দশটা কোড-রূপ আমাদের লেখা ও অপরিবর্তনীয়; এগুলো কোম্পানির
+            নিজের, আর কাল বদলে যেতে পারে। এক গ্রিডে মিশিয়ে দিলে মানুষ
+            বুঝতেন না কোনটা কোনটা — আর "আমাদেরটা কে বদলাল" প্রশ্নের
+            উত্তর খুঁজতে গিয়ে দশটা কার্ড ঘেঁটে দেখতেন।
+
+            ── কেন খালি থাকলে ভাগটাই থাকে না ─────────────────────────────
+            বেশিরভাগ কোম্পানি কোনোদিন নিজের রূপ বানাবে না। একটা খালি
+            শিরোনাম রেখে দিলে প্রতিটা ব্যবহারকারী প্রতিবার একটা
+            অনুপস্থিত জিনিস পড়তেন।
+        --}}
+        @if ($skins->isNotEmpty())
+            <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+                <h2 class="font-semibold">{{ __('core.look.title') }}</h2>
+                <p class="mt-0.5 mb-3 max-w-(--spacing-prose-max) text-sm text-(--color-ink-muted)">
+                    {{ __('core.look.mine_note') }}
+                </p>
+
+                <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    @foreach ($skins as $skin)
+                        {{-- নমুনার গড়নটা গোড়ার কোড-রূপ থেকে — ঘনত্ব ও মেনুর
+                             জায়গা ওখান থেকেই নামে। নাম ও ব্লার্ব তার নিজের। --}}
+                        @include('workspace.partials.ui-card', [
+                            'key' => $skin->public_id,
+                            'ui' => array_replace(
+                                \App\Core\Support\Ui::all()[$skin->rootLook()],
+                                [
+                                    'label' => $skin->name,
+                                    'blurb' => __('core.look.stands_on', [
+                                        'name' => __('core.ui.'.$skin->rootLook()),
+                                    ]),
+                                    'imitates' => null,
+                                ],
+                            ),
+                            'selected' => $skin->public_id === $current['ui'],
+                        ])
+                    @endforeach
+                </div>
+            </section>
+        @endif
+
         {{-- রং --}}
         <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="font-semibold">{{ __('core.appearance.accent') }}</h2>

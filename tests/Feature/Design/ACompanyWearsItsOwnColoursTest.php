@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Design;
 
+use App\Core\Services\LookSkinService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\LookRegistry;
 use App\Models\Company;
@@ -47,15 +48,29 @@ class ACompanyWearsItsOwnColoursTest extends TestCase
         $this->owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
     }
 
-    /** Navy-র উপর দাঁড়ানো একটা স্কিন, কেবল দুইটা বদল নিয়ে। */
-    private function skin(array $light = [], string $parent = 'navy', bool $publish = true): LookSkin
+    /**
+     * Navy-র উপর দাঁড়ানো একটা স্কিন, কেবল দুইটা বদল নিয়ে।
+     *
+     * ── কেন সবগুলো খসড়া ─────────────────────────────────────────────
+     * এই ফাইলের প্রায় প্রতিটা পরীক্ষা **উত্তরাধিকার** মাপে, প্রকাশ নয়:
+     * সে জিজ্ঞেস করে `tokens()` চেইন ধরে কী নামায়। খসড়াতেই ওটার
+     * উত্তর পাওয়া যায়।
+     *
+     * প্রথম লেখায় এখানে `published_at` **হাতে** বসানো হত। ধাপ ৩-এ
+     * ওটা আর যথেষ্ট নয় — প্রকাশ মানে একটা সংস্করণের সারি, আর হাতে
+     * বসানো তারিখটা তখন একটা মিথ্যা অবস্থা তৈরি করত: "প্রকাশিত",
+     * অথচ দেখানোর মতো কিছুই নেই।
+     *
+     * তাই ফিক্সচারটা যা, সে তাই বলে। যেখানে সত্যিই প্রকাশ দরকার,
+     * সেখানে সেবাটাই ডাকা হয় — গেট সমেত।
+     */
+    private function skin(array $light = [], string $parent = 'navy'): LookSkin
     {
         return LookSkin::query()->create([
             'company_id' => $this->company->id,
             'name' => 'পরীক্ষার রূপ '.uniqid(),
             'parent' => $parent,
             'tokens' => ['light' => $light, 'dark' => []],
-            'published_at' => $publish ? now() : null,
             'created_by' => $this->owner->id,
         ]);
     }
@@ -144,7 +159,7 @@ class ACompanyWearsItsOwnColoursTest extends TestCase
      */
     public function test_a_draft_never_reaches_a_screen(): void
     {
-        $skin = $this->skin(['--color-surface-app' => '#101010'], publish: false);
+        $skin = $this->skin(['--color-surface-app' => '#101010']);
 
         $this->assertNull(LookRegistry::skin($skin->public_id));
 
@@ -182,11 +197,11 @@ class ACompanyWearsItsOwnColoursTest extends TestCase
         $faint = $this->skin([
             '--color-ink' => '#f0f0f0',
             '--color-surface-app' => '#ffffff',
-        ], publish: false);
+        ]);
 
         $this->assertNotSame([], $faint->complaints(), 'ফিকে লেখা পার হয়ে যাচ্ছে।');
 
-        $typo = $this->skin(['--color-surfase-app' => '#ffffff'], publish: false);
+        $typo = $this->skin(['--color-surfase-app' => '#ffffff']);
 
         $this->assertNotSame([], $typo->complaints(), 'বানান ভুল পার হয়ে যাচ্ছে।');
 
@@ -201,7 +216,7 @@ class ACompanyWearsItsOwnColoursTest extends TestCase
          * উত্তরাধিকারের সবচেয়ে সাধারণ ফাঁদ এটাই: একটা টোকেন বদলালে
          * তার জোড়াটাও বদলাতে হয়, আর মানুষ ওটা ভুলে যান।
          */
-        $halfDone = $this->skin(['--color-surface-app' => '#101010'], publish: false);
+        $halfDone = $this->skin(['--color-surface-app' => '#101010']);
 
         $this->assertNotSame([], $halfDone->complaints(),
             'জমিন গাঢ় হয়েছে অথচ কালি হালকা হয়নি — গেটের আটকানোর কথা।');
@@ -210,21 +225,30 @@ class ACompanyWearsItsOwnColoursTest extends TestCase
         $whole = $this->skin([
             '--color-surface-app' => '#101010',
             '--color-ink' => '#f5f5f5',
-        ], publish: false);
+        ]);
 
         $this->assertSame([], $whole->complaints(), 'সঠিক রূপ আটকে যাচ্ছে।');
     }
 
-    /** পাতায় স্কিনের টোকেনগুলোই নামে। */
+    /**
+     * পাতায় স্কিনের টোকেনগুলোই নামে।
+     *
+     * ── কেন এখানে সত্যিই প্রকাশ করতে হয় ──────────────────────────────
+     * বাকি পরীক্ষাগুলো খসড়া নিয়ে চলে, কারণ ওরা চেইনটা মাপে। এটা
+     * মাপে **পাতা** — আর পাতা সবসময় প্রকাশিত সংস্করণটাই পরে।
+     * খসড়া পরলে সম্পাদনা শুরু করা মাত্র গোটা ডিপোর রং বদলাত।
+     */
     public function test_the_page_wears_the_skin(): void
     {
-        $skin = $this->skin(['--color-surface-app' => '#101010']);
+        $skin = $this->skin(['--color-brand-500' => '#1d4ed8']);
+
+        app(LookSkinService::class)->publish($skin, null, $this->owner->id);
 
         $this->owner->forceFill(['ui' => $skin->public_id])->save();
 
         $this->actingAs($this->owner)
             ->get(route('dashboard'))
             ->assertOk()
-            ->assertSee('--color-surface-app:#101010', false);
+            ->assertSee('--color-brand-500:#1d4ed8', false);
     }
 }

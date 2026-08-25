@@ -18,7 +18,7 @@
            attribute-টা থেকে যাচ্ছে যদিও টোকেনগুলো এখন ইনলাইনে আসে —
            কারণ কিছু নিয়ম রূপ ধরে বসে যা টোকেন নয় (খোলসের markup,
            রেলের আইটেমের গড়ন), আর পরীক্ষাগুলোও এটা ধরেই মেলায়। --}}
-      data-ui="{{ \App\Core\Support\Ui::clean(auth()->user()?->ui) }}"
+      data-ui="{{ \App\Core\Support\LookRegistry::lookFor(\App\Core\Support\LookPreview::orChosen(auth()->user()?->ui)) }}"
 
       {{--
           চলতি রূপের টোকেনগুলো — সার্ভারে বাছাই করে, কেবল একটার।
@@ -37,7 +37,7 @@
           একটা ভুল করলে রং নীরবে অন্যটা হয়ে যেত। মিলিয়ে দেওয়াটা এখন
           সার্ভারে হয়, তাই লড়াইটাই আর নেই।
       --}}
-      style="{{ \App\Core\Support\Accent::styleFor(auth()->user()?->accent ?? \App\Core\Support\Accent::DEFAULT) }}{{ \App\Core\Support\LookRegistry::styleForUser(auth()->user()?->ui, auth()->user()?->theme ?? 'light') }}">
+      style="{{ \App\Core\Support\Accent::styleFor(auth()->user()?->accent ?? \App\Core\Support\Accent::DEFAULT) }}{{ \App\Core\Support\LookPreview::style(auth()->user()?->theme ?? 'light') ?? \App\Core\Support\LookRegistry::styleForUser(auth()->user()?->ui, auth()->user()?->theme ?? 'light') }}">
 <head>
     <meta charset="utf-8">
 
@@ -130,7 +130,18 @@
          * ভেতরের ২৫২টা পাতার একটাও এই লাইনটার কথা জানে না — ওরা
          * আগের মতোই কেবল `$slot`-এ বসে।
          */
-        $navPlacement = \App\Core\Support\Ui::nav(auth()->user()?->ui);
+        /*
+         * খোলসটা কোন কোড-রূপের — স্কিন হলে তার গোড়ার রূপটা।
+         *
+         * `Ui::nav()`-কে সরাসরি `ui` ঘরটা দিলে একটা `public_id` পেয়ে
+         * সে ডিফল্টে নামত, আর Odoo-র উপর দাঁড়ানো কোম্পানির রূপ
+         * Odoo-র রং নিয়ে Navy-র খোলসে বসত।
+         */
+        $shellLook = \App\Core\Support\LookRegistry::lookFor(
+            \App\Core\Support\LookPreview::orChosen(auth()->user()?->ui)
+        );
+
+        $navPlacement = \App\Core\Support\Ui::nav($shellLook);
 
         /*
          * এই পর্দার শিরোনাম ও বোতামগুলো কোথায় বসে।
@@ -142,8 +153,12 @@
          * ১০৪টা পর্দা আগের মতোই `header` স্লটে পাঠায়; কেবল সেটা
          * কোথায় আঁকা হবে তা এখানে ঠিক হয়।
          */
-        $commandPlacement = \App\Core\Support\Ui::commands(auth()->user()?->ui);
+        $commandPlacement = \App\Core\Support\Ui::commands($shellLook);
     @endphp
+
+    {{-- প্রিভিউয়ের পটি সবার আগে — Redwood-এর ইটরঙা পটিরও উপরে, কারণ
+         "আপনি যা দেখছেন সেটা আসল নয়" কথাটা রূপের সাজসজ্জার চেয়ে বড়। --}}
+    <x-shell.preview-bar />
 
     {{-- সবকিছুর উপরে — Redwood-এর ৪px ইটরঙা পটি। --}}
     <x-shell.chrome region="above-all" :menu="$menu ?? []" />
