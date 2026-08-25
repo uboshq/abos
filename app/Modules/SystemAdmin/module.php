@@ -37,12 +37,33 @@ return [
             ['label' => 'system_admin::menu.companies', 'route' => 'system_admin.company.index', 'permission' => 'system_admin.company.manage'],
             ['label' => 'system_admin::menu.users', 'route' => 'system_admin.user.index', 'permission' => 'system_admin.user.manage'],
             ['label' => 'system_admin::menu.roles', 'route' => 'system_admin.role.index', 'permission' => 'system_admin.role.manage'],
-            ['label' => 'system_admin::menu.financial_years', 'route' => 'admin.financial-years', 'permission' => 'system_admin.company.manage', 'planned' => true],
-            ['label' => 'system_admin::menu.number_series', 'route' => 'admin.number-series', 'permission' => 'system_admin.company.manage', 'planned' => true],
         ],
+        /*
+         * নিরীক্ষার পর্দাগুলো এখানে নেই — Governance-এ আছে।
+         *
+         * ── কী সরানো হলো, আর কেন ────────────────────────────────────
+         * এখানে চারটা সারি `planned` হিসেবে ঘোষিত ছিল: কার্যক্রমের
+         * খাতা, লগইনের ইতিহাস, অর্থবছর, নম্বর সিরিজ। চারটাই
+         * **ইতিমধ্যে তৈরি** — কেবল অন্য মডিউলে:
+         *
+         *   কার্যক্রমের খাতা → governance.audit.index
+         *   লগইনের ইতিহাস   → governance.login.index
+         *   অর্থবছর          → accounts.year_end.index
+         *   নম্বর সিরিজ      → master_data.series.index
+         *
+         * সারিগুলো ছিল পড়ে থাকা প্রতিশ্রুতি: কাজটা অন্য নামে শিপ
+         * হওয়ার পর এখানকার ঘোষণাটা মুছতে ভুলে গেছে।
+         *
+         * ── কেন লিংক না বসিয়ে সরানো হলো ─────────────────────────────
+         * এক পর্দা দুই মেনুতে থাকলে "কোনটা আসল" প্রশ্ন ওঠে, আর একটা
+         * বদলালে অন্যটা পুরনো থেকে যায়। এক পর্দা, এক মালিক।
+         *
+         * ── আর `planned`-এর মেয়াদ নেই, সেটাই আসল রোগ ─────────────────
+         * পতাকাটা `ModuleMenuTest`-কে বলে "রুট নেই, স্বাভাবিক" — যা
+         * লেখার সপ্তাহে সত্যি আর তারপর চিরকাল মিথ্যা। পাঁচটার চারটাই
+         * বাসি ছিল, কেউ টের পায়নি।
+         */
         'reports' => [
-            ['label' => 'system_admin::menu.activity_log', 'route' => 'admin.activity', 'permission' => 'system_admin.audit.view', 'planned' => true],
-            ['label' => 'system_admin::menu.login_history', 'route' => 'admin.logins', 'permission' => 'system_admin.audit.view', 'planned' => true],
         ],
         'settings' => [
             ['label' => 'core.import.title', 'route' => 'system_admin.import.index',
