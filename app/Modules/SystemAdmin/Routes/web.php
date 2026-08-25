@@ -83,10 +83,21 @@ Route::middleware('auth')->prefix('system')->group(function () {
         Route::get('/create', [LookController::class, 'create'])->name('create');
         Route::post('/', [LookController::class, 'store'])->name('store');
         Route::post('/preview/stop', [LookController::class, 'previewStop'])->name('preview.stop');
+
+        /*
+         * আমদানি — POST, কারণ এটা একটা সারি বসায়।
+         *
+         * রপ্তানি GET, আর সেটাও ঠিক: সে কিছু বদলায় না। তবে পাতাটার
+         * speculationrules ব্লকে ডাউনলোড-লিংকগুলো আগেই বাদ দেওয়া আছে
+         * (`[download]`), তাই মাউস ছোঁয়া মাত্র ফাইলটা নেমে আসে না।
+         */
+        Route::post('/import', [LookController::class, 'import'])->name('import');
         Route::get('/{skin}/edit', [LookController::class, 'edit'])->whereNumber('skin')->name('edit');
         Route::put('/{skin}', [LookController::class, 'update'])->whereNumber('skin')->name('update');
         Route::post('/{skin}/publish', [LookController::class, 'publish'])
             ->whereNumber('skin')->name('publish');
+        Route::get('/{skin}/export', [LookController::class, 'export'])
+            ->whereNumber('skin')->name('export');
         Route::post('/{skin}/preview', [LookController::class, 'preview'])
             ->whereNumber('skin')->name('preview');
         Route::post('/{skin}/revert/{version}', [LookController::class, 'revert'])
