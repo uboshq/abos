@@ -486,7 +486,27 @@ class MasterListController extends Controller implements HasMiddleware
      * @param  array<string, mixed>  $spec
      * @return array<string, mixed>
      */
-    private function validated(Request $request, array $spec, ?int $id = null): array
+    /**
+     * @param  int|string|null  $id  সম্পাদনার সময় নিজের সারিটা — কোডের অনন্যতা মেলানোর জন্য
+     *
+     * ── কেন `?int` নয় ───────────────────────────────────────────────
+     * ঘরটা আগে `?int` ছিল, আর `update()` তাকে দিত রুটের প্যারামিটার —
+     * যা HTTP-তে **সবসময় স্ট্রিং**। `declare(strict_types=1)` চালু
+     * থাকায় PHP ওটাকে int-এ বদলায় না, ছুঁড়ে দেয়:
+     *
+     *     Argument #3 ($id) must be of type ?int, string given
+     *
+     * ফল: **সতেরোটা মাস্টার তালিকার প্রতিটাতেই সম্পাদনা ৫০০**। শুধু
+     * সংরক্ষণের পথ, তাই তালিকা ও ফর্ম দিব্যি খুলত — ভাঙত সেভ চাপার পর।
+     *
+     * ধরা পড়েছে ২৫ আগস্ট ২০২৬, bKash-এর পেমেন্ট মেথডটা খাতের সাথে
+     * বাঁধতে গিয়ে।
+     *
+     * জোর করে `(int)` কাস্ট করা যেত, কিন্তু সেটা মিথ্যা: `$id` এখানে
+     * কেবল `whereKeyNot()`-এ যায়, আর সে দুইটাই নেয়। তাই ঘরটা যা আসে
+     * তাই বলে।
+     */
+    private function validated(Request $request, array $spec, int|string|null $id = null): array
     {
         $rules = [
             /*
