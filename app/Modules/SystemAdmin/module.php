@@ -50,7 +50,7 @@ return [
             ['label' => 'system_admin::menu.control_panel', 'route' => 'system_admin.control-panel', 'permission' => 'system_admin.settings.manage'],
             ['label' => 'core.custom_field.title', 'route' => 'system_admin.custom_field.index', 'permission' => 'system_admin.settings.manage'],
             ['label' => 'core.look.title', 'route' => 'system_admin.look.index', 'permission' => 'system_admin.look.manage'],
-            ['label' => 'system_admin::menu.backup', 'route' => 'admin.backup', 'permission' => 'system_admin.backup.manage', 'planned' => true],
+            ['label' => 'system_admin::menu.backup', 'route' => 'system_admin.backup.index', 'permission' => 'system_admin.backup.manage'],
         ],
     ],
 

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\SystemAdmin\Http\Controllers\BackupController;
 use App\Modules\SystemAdmin\Http\Controllers\CompanyController;
 use App\Modules\SystemAdmin\Http\Controllers\ControlPanelController;
 use App\Modules\SystemAdmin\Http\Controllers\CustomFieldController;
@@ -19,6 +20,17 @@ use Illuminate\Support\Facades\Route;
  */
 
 Route::middleware('auth')->prefix('system')->group(function () {
+    /*
+     * ব্যাকআপ — দেখা যায়, নেওয়া যায়, ফিরিয়ে আনা যায় না।
+     *
+     * ফিরিয়ে আনার রুট ইচ্ছাকৃতভাবে নেই। `BackupService::restore()`
+     * আছে, কিন্তু ফিরিয়ে আনা মানে আজকের সব কাজ মুছে ফেলা — একটা ভুল
+     * ক্লিকের দাম গোটা দিনের বই। ওটা কমান্ড লাইনের কাজ, আর পর্দায়
+     * থাকে কেবল নির্দেশটা।
+     */
+    Route::get('/backups', [BackupController::class, 'index'])->name('backup.index');
+    Route::post('/backups', [BackupController::class, 'store'])->name('backup.store');
+
     Route::get('/control-panel', [ControlPanelController::class, 'edit'])->name('control-panel');
     Route::put('/control-panel', [ControlPanelController::class, 'update'])->name('control-panel.update');
 

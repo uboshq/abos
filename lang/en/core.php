@@ -184,6 +184,28 @@ return [
         'saved' => 'Saved.',
     ],
 
+    'backup' => [
+        'title' => 'Backups',
+        'subtitle' => 'What is taken every night — when the last one was, where it sits, and how to bring it back',
+        'newest' => 'Newest backup',
+        'none_yet' => 'No backup yet',
+        'take_now' => 'Take one now',
+        'taken' => 'Backup taken — :name (:size).',
+        'failed' => 'The backup could not be taken: :reason',
+        'mirror' => 'Second destination',
+        'no_mirror' => 'Not set',
+        'no_mirror_how' => 'The books and the backups sit on one disk. Lose it and you lose both. Set ABOS_BACKUP_MIRROR in .env to another disk or drive.',
+        'never_mirrored' => 'Set, but nothing has been copied',
+        'how_it_runs' => 'How it runs',
+        'every_night_at' => 'Every night at',
+        'kept_for' => 'Kept for',
+        'days' => '{1} :count day|[2,*] :count days',
+        'folder' => 'Where they sit',
+        'restore' => 'Bringing one back',
+        'restore_note' => "Restoring wipes today's work, so there is no button for it. Run the command below on the server — and it is better done with someone beside you who knows what is happening.",
+        'all_of_them' => 'All of them',
+    ],
+
     'accent' => [
         'blue' => 'Blue',
         'teal' => 'Teal',
