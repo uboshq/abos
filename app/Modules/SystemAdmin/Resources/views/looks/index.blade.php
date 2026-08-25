@@ -17,6 +17,24 @@
         <x-ui.page-header :title="__('core.look.title')"
                           :subtitle="__('core.look.subtitle')">
             <x-slot:actions>
+                {{--
+                    আমদানি — ফাইল বাছাই আর পাঠানো এক ধাপে।
+
+                    আলাদা একটা "আমদানি" পাতা বানানো হয়নি: ওখানে
+                    দেখানোর মতো কিছুই থাকত না, কেবল একটা ফাইলের ঘর।
+                    একটা পাতা যেখানে একটাই ঘর, সেটা একটা ধাপ বাড়ানো।
+                --}}
+                <form method="POST" action="{{ route('system_admin.look.import') }}"
+                      enctype="multipart/form-data" class="flex items-center gap-2">
+                    @csrf
+                    <input type="file" name="file" accept=".json,application/json" required
+                           aria-label="{{ __('core.look.import') }}"
+                           class="max-w-56 text-sm file:mr-2 file:rounded-(--radius-field)
+                                  file:border file:border-(--color-border) file:bg-(--color-surface-app)
+                                  file:px-3 file:py-1.5 file:text-sm">
+                    <x-ui.button type="submit" tone="secondary">{{ __('core.look.import') }}</x-ui.button>
+                </form>
+
                 <x-ui.button :href="route('system_admin.look.create')" tone="primary">
                     {{ __('core.look.new') }}
                 </x-ui.button>

@@ -23,6 +23,14 @@
                           :subtitle="__('core.look.subtitle')">
             <x-slot:actions>
                 @if ($skin->exists)
+                    {{-- `download` — নাহলে ব্রাউজার JSON-টা পর্দায় খুলে
+                         বসত, আর prefetch-এর নিয়মও এই attribute দেখেই
+                         লিংকটা বাদ দেয় --}}
+                    <x-ui.button :href="route('system_admin.look.export', $skin)"
+                                 tone="secondary" download>
+                        {{ __('core.look.export') }}
+                    </x-ui.button>
+
                     <form method="POST" action="{{ route('system_admin.look.preview', $skin) }}">
                         @csrf
                         <x-ui.button type="submit" tone="secondary">{{ __('core.look.preview') }}</x-ui.button>

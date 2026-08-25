@@ -6,6 +6,7 @@ namespace App\Modules\SystemAdmin\Http\Controllers;
 
 use App\Core\Services\LookSkinService;
 use App\Core\Services\MenuBuilder;
+use App\Core\Support\LookFile;
 use App\Core\Support\LookPreview;
 use App\Core\Support\LookSchema;
 use App\Core\Support\Ui;
@@ -14,6 +15,7 @@ use App\Models\LookSkin;
 use App\Models\LookSkinVersion;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Validation\Rule;
@@ -149,6 +151,81 @@ class LookController extends Controller implements HasMiddleware
         LookPreview::stop();
 
         return back()->with('saved', __('core.look.preview_stopped'));
+    }
+
+    /**
+     * রূপটা একটা ফাইল হয়ে নেমে আসে।
+     *
+     * ── কেন রপ্তানির খাতায় (`ExportJournal`) তোলা হয় না ───────────────
+     * ওই খাতাটা রাখা হয় কারণ একটা তালিকার রপ্তানিতে ক্রয়মূল্য ও
+     * গ্রাহকের তথ্য বেরিয়ে যায়। রূপের ফাইলে **কোনো ব্যবসায়িক তথ্য
+     * নেই** — কেবল রঙের কোড। ওটাকেও খাতায় তুললে খাতাটা এমন সারিতে
+     * ভরে যেত যেগুলো কোনো প্রশ্নের উত্তর দেয় না, আর যেগুলো সত্যিই
+     * দেয় সেগুলো খুঁজে পাওয়া কঠিন হত।
+     */
+    public function export(LookSkin $skin): Response
+    {
+        $said = LookFile::from($skin);
+
+        /*
+         * ফাইলের নামে `public_id`-র প্রথম আটটা অক্ষর।
+         *
+         * নামটা বাংলায় হতে পারে, আর কিছু ব্রাউজার ও উইন্ডোজের ফাইল
+         * ম্যানেজার তাতে অদ্ভুত আচরণ করে। রূপের নামটা ফাইলের ভিতরেই
+         * আছে, তাই ফাইলের নামটা কেবল আলাদা করতে পারলেই যথেষ্ট।
+         */
+        $file = 'abos-look-'.substr((string) $skin->public_id, 0, 8).'.json';
+
+        return response(
+            (string) json_encode($said, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            200,
+            [
+                'Content-Type' => 'application/json; charset=UTF-8',
+                'Content-Disposition' => 'attachment; filename="'.$file.'"',
+            ],
+        );
+    }
+
+    /**
+     * একটা ফাইল থেকে নতুন খসড়া রূপ।
+     *
+     * ── কেন সবসময় নতুন, কখনো "উপরে বসানো" নয় ─────────────────────────
+     * একই নামের রূপ থাকলে ফাইলটা তার উপরে বসিয়ে দেওয়া যেত। বসানো
+     * হয় না: তাতে কারো কয়েক সপ্তাহের কাজ এক ক্লিকে মুছে যেত, আর
+     * ফাইলটা ঠিক না ভুল সেটা বসানোর **পরে** জানা যেত।
+     *
+     * নতুন একটা খসড়া বসে, নাম আলাদা হয়, আর দুইটা পাশাপাশি রেখে
+     * মিলিয়ে দেখা যায়। পুরনোটা মুছতে চাইলে সেটা আলাদা সিদ্ধান্ত।
+     */
+    public function import(Request $request): RedirectResponse
+    {
+        $request->validate([
+            /*
+             * `mimes` নয়, `extensions`— JSON ফাইলের MIME টাইপ
+             * ব্রাউজার ও অপারেটিং সিস্টেম ভেদে `application/json`,
+             * `text/plain`, এমনকি `application/octet-stream` হয়। ওটা
+             * ধরে আটকালে ঠিক ফাইলও অর্ধেক মেশিনে ফেরত যেত।
+             *
+             * নিরাপত্তা এখান থেকে আসে না — আসে `LookFile`-এর যাচাই
+             * থেকে, যা প্রতিটা নাম ও মান স্কিমার সাথে মেলায়।
+             */
+            'file' => ['required', 'file', 'extensions:json', 'max:512'],
+        ]);
+
+        $said = json_decode(
+            (string) $request->file('file')->get(),
+            true,
+        );
+
+        if (! is_array($said)) {
+            return back()->withErrors(['file' => __('core.look.file_not_json')]);
+        }
+
+        $skin = LookFile::into($said, $request->user()->id);
+
+        return redirect()
+            ->route('system_admin.look.edit', $skin)
+            ->with('saved', __('core.look.imported_ok', ['name' => $skin->name]));
     }
 
     private function form(Request $request, LookSkin $skin): View
