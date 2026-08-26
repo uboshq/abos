@@ -423,7 +423,21 @@
             $quiet = $todo->reject($pending);
         @endphp
 
-        <section>
+        {{-- `min-w-0` — নাহলে grid-এর ঘরটা নিজের লেখার চেয়ে ছোট হতে পারে না।
+
+             ── কী ভাঙা ছিল ─────────────────────────────────────────────
+             grid ও flex দুইটাতেই ঘরের ন্যূনতম প্রস্থ ডিফল্টে `auto`,
+             অর্থাৎ **ভিতরের সবচেয়ে লম্বা লেখাটাই মেঝে**। ভিতরের
+             লাইনগুলোয় `truncate` আছে, কিন্তু সেটা কাটে ঘরটা ছোট হতে
+             পারলে — আর ঘরটাই ছোট হতে পারত না।
+
+             ফল: ৩৭৫px ফোনে এই দুইটা ভাগ ৪৩৭px চওড়া হয়ে বসত, আর গোটা
+             ড্যাশবোর্ড পাশে গড়াত। "আজ" ভাগটা ঠিক ছিল, কারণ ওটা এই
+             grid-এর ভিতরে নয়।
+
+             টপবারে ঠিক এই নিয়মটাই আগে লেখা আছে — সেখানে flex, এখানে
+             grid, কারণ একই। --}}
+        <section class="min-w-0">
             <h2 class="mb-2 text-sm font-semibold text-(--color-ink-muted)">{{ $titles['todo'] }}</h2>
 
             <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
@@ -498,7 +512,7 @@
         কার্ড পাশের করণীয় তালিকাটাকে অর্ধেক করে দিত, কোনো তথ্য না দিয়ে।
     --}}
     @if ($happenings !== [])
-        <section>
+        <section class="min-w-0">
             <h2 class="mb-2 text-sm font-semibold text-(--color-ink-muted)">
                 {{ __('core.dashboard.just_happened') }}
             </h2>
