@@ -47,7 +47,8 @@ class SessionController extends Controller
                 'id' => $row->id,
                 'ip' => $row->ip_address,
                 'agent' => $this->readable($row->user_agent),
-                'seen' => Carbon::createFromTimestamp($row->last_activity),
+                // ঘড়িটা স্পষ্ট করে — নাহলে "শেষ দেখা" ছয় ঘণ্টা আগে দেখাত
+                'seen' => Carbon::createFromTimestamp($row->last_activity, config('app.timezone')),
                 'mine' => $row->id === $request->session()->getId(),
             ]);
 

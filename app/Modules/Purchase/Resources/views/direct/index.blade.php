@@ -140,18 +140,36 @@
 
                      সরাসরি বিক্রয়ের পর্দা শুরু থেকেই x-show ব্যবহার করে;
                      এটাও তা-ই করে। --}}
+                {{--
+                    `picked` নাল থাকতে পারে, তাই ভিতরের প্রতিটা পড়া
+                    `picked?.` দিয়ে।
+
+                    ── কী ভাঙা ছিল ─────────────────────────────────────
+                    `x-show` উপাদানটা **লুকায়**, কিন্তু Alpine ভিতরের
+                    অভিব্যক্তিগুলো তবু মূল্যায়ন করে। শুরুতে `picked`
+                    নাল, তাই পাতা খোলা মাত্রই কনসোলে:
+
+                        Cannot read properties of null (reading 'name')
+
+                    পর্দায় কিছু ভাঙত না, তাই কেউ টের পেত না। কিন্তু
+                    ত্রুটিতে ভরা কনসোল **আসল ত্রুটিকে ঢেকে দেয়** — আর
+                    ওটাই এই বাগের আসল দাম।
+
+                    ধরা পড়েছে ২৬ আগস্ট ২০২৬, লাইভের ১৪৪টা পর্দা ঘুরে
+                    কনসোল পড়ে — কোনো মানুষের চোখে নয়।
+                --}}
                 <div x-show="picked" x-cloak>
                     <div class="mt-3">
                         <div class="mb-2 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-                            <span class="font-semibold" x-text="picked.name"></span>
+                            <span class="font-semibold" x-text="picked?.name"></span>
                             <span class="text-2xs text-(--color-ink-muted)">
                                 {{ __('purchase::message.on_hand') }}:
-                                <span class="num" x-text="qty(picked.on_hand)"></span>
+                                <span class="num" x-text="qty(picked?.on_hand)"></span>
                             </span>
                             {{-- শেষ কত দামে কেনা হয়েছিল — নতুন দর এর সাথেই মেলানো হয় --}}
-                            <span class="text-2xs text-(--color-ink-muted)" x-show="picked.last_rate > 0">
+                            <span class="text-2xs text-(--color-ink-muted)" x-show="picked?.last_rate > 0">
                                 {{ __('purchase::message.last_rate') }}:
-                                <span class="num" x-text="money(picked.last_rate)"></span>
+                                <span class="num" x-text="money(picked?.last_rate)"></span>
                             </span>
                         </div>
 

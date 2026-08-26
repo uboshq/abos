@@ -206,7 +206,7 @@ final class StatusNotices
         $latest = app(BackupService::class)->latest();
 
         $stale = $latest === null
-            || Carbon::createFromTimestamp(filemtime($latest))->lt(now()->subDays(2));
+            || Carbon::createFromTimestamp(filemtime($latest), config('app.timezone'))->lt(now()->subDays(2));
 
         if (! $stale) {
             return null;

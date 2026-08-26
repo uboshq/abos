@@ -136,7 +136,12 @@ final class BackupService
         $removed = [];
 
         foreach ($this->all() as $file) {
-            if (Carbon::createFromTimestamp(filemtime($file))->lt($cutoff)) {
+            /*
+             * তুলনাটা মুহূর্ত ধরে, তাই ঘড়ি না বললেও ফল একই। তবু বলা
+             * হয়: একই ফাইলে দুই রকম নিয়ম থাকলে পরেরজন ভুলটা কপি করে
+             * এমন জায়গায় বসান যেখানে ফলটা দেখানো হয়।
+             */
+            if (Carbon::createFromTimestamp(filemtime($file), config('app.timezone'))->lt($cutoff)) {
                 @unlink($file);
                 $removed[] = $file;
             }
