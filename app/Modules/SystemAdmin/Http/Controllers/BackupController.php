@@ -66,7 +66,21 @@ class BackupController extends Controller implements HasMiddleware
                 ->map(fn (string $path) => [
                     'name' => basename($path),
                     'bytes' => is_file($path) ? (int) filesize($path) : 0,
-                    'at' => is_file($path) ? Carbon::createFromTimestamp(filemtime($path)) : null,
+                    /*
+                     * ঘড়িটা স্পষ্ট করে বলা — `createFromTimestamp()`
+                     * কিছু না বললে **UTC** ধরে, অ্যাপের ঘড়ি নয়।
+                     *
+                     * ফল ছিল: ২৬ আগস্ট ভোর ০২:৩০-এর ডাম্পটা পর্দায়
+                     * দেখাত "২৫/০৮ ০৮:৩০ PM" — ছয় ঘণ্টা আগে, আর
+                     * ফাইলের নামের সাথেও মিলত না।
+                     *
+                     * ঠিক এই শ্রেণির ভুলই আজ সকালে গোটা অ্যাপে পাওয়া
+                     * গেছে; এটা তারই পঞ্চম চেহারা, আর এবার আমার
+                     * নিজের লেখা পর্দায়।
+                     */
+                    'at' => is_file($path)
+                        ? Carbon::createFromTimestamp(filemtime($path), config('app.timezone'))
+                        : null,
                 ])
                 ->sortByDesc('name')
                 ->values(),
