@@ -31,9 +31,16 @@ use Tests\TestCase;
 class TheProfileButtonWasOffTheEdgeOfThePhoneTest extends TestCase
 {
     /**
-     * ভাষা ও থিমের শর্টকাট ছোট পর্দায় লুকানো থাকে।
+     * ভাষা ও থিমের শর্টকাট ছোট পর্দায় লুকানো থাকে — **১২৮০px-এর নিচে**।
      *
-     * দুইটা মিলে ৯৮px — ঠিক যতটা কমালে প্রোফাইলের বোতামটা পর্দায় ফেরে।
+     * ── কেন সংখ্যাটা নাম ধরে নয় ──────────────────────────────────────
+     * প্রথমে `xl:` লেখা হয়েছিল, ১২৮০ ভেবে। কিন্তু এই প্রকল্পে
+     * `--breakpoint-xl` = **১৪৪০px**। ফলে সুইচ দুইটা ১৪৪০-এর নিচে
+     * সবখানে হারিয়ে গিয়েছিল — **১৩৬৬×৭৬৮-এও**, সবচেয়ে সাধারণ
+     * ল্যাপটপের মাপে। মালিক ধরেছেন "থিম বদলায় না" বলে; আসলে বোতামটাই
+     * ছিল না।
+     *
+     * ১২৮০ মাপা মান: ওই প্রস্থেই উপচে পড়া প্রথম শূন্য হয়।
      */
     public function test_the_two_shortcuts_step_aside_on_a_small_screen(): void
     {
@@ -42,13 +49,13 @@ class TheProfileButtonWasOffTheEdgeOfThePhoneTest extends TestCase
         );
 
         $this->assertStringContainsString(
-            'class="hidden xl:contents"',
+            'class="hidden min-[1280px]:contents"',
             $topbar,
             'ভাষার সুইচটা আর ছোট পর্দায় লুকানো নেই — ৩৭৫px-এ প্রোফাইলের বোতাম আবার পর্দার বাইরে যাবে।',
         );
 
         $this->assertStringContainsString(
-            '<span class="hidden xl:contents">',
+            '<span class="hidden min-[1280px]:contents">',
             $topbar,
             'থিমের সুইচটা আর ছোট পর্দায় লুকানো নেই।',
         );
