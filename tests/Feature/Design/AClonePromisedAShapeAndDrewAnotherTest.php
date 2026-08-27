@@ -327,6 +327,61 @@ class AClonePromisedAShapeAndDrewAnotherTest extends TestCase
         ]));
     }
 
+    /**
+     * চেহারার পাতা সত্যি কথাই বলে — কোনটা সাজ বদলায়, কোনটা কেবল রং।
+     *
+     * ── কেন এই দাবিটা আলাদা করে দরকার ────────────────────────────────
+     * পর্দায় লেখা থাকে "এগুলো বাছলে মেনু ও বারের গড়নই বদলাবে"। ওই
+     * কথাটা যদি ভুল দলে বসা কোনো রূপ সম্পর্কে বলা হয়, তবে পর্দাটা
+     * **আত্মবিশ্বাসের সাথে মিথ্যা বলে** — আর সেটা কিছু না লেখার চেয়ে
+     * খারাপ।
+     *
+     * ── ঠিক এই ভুলটা লেখার সময় একবার হয়েছিল ─────────────────────────
+     * প্রথম নিয়মে কেবল ঘোষিত চতুষ্টয় মেলানো হত, আর তাতে **Redwood**
+     * "কেবল রং" দলে পড়ত — অথচ সে ইটরঙা পটি আর স্প্রিংবোর্ড আঁকে।
+     * ধরা পড়েছিল লেখার আগে হিসাব কষে, পর্দায় দেখে নয়।
+     *
+     * এই পরীক্ষাটা তাই দুই দিক থেকেই দেখে: যে রূপ নিজস্ব markup আঁকে
+     * সে অবশ্যই "সাজ বদলায়" দলে, আর যে দলে "কেবল রং" লেখা আছে তার
+     * পর্দা ডিফল্টের সাথে হুবহু এক কঙ্কাল দেখাবে।
+     */
+    public function test_the_appearance_page_tells_the_truth_about_each_look(): void
+    {
+        $wrong = [];
+
+        foreach (Ui::keys() as $look) {
+            $claimsShape = Ui::changesArrangement($look);
+            $hasOwnMarkup = self::SIGNATURE[$look] !== [];
+            $sameSkeleton = Ui::nav($look) === Ui::nav(Ui::DEFAULT);
+
+            if ($hasOwnMarkup && ! $claimsShape) {
+                $wrong[] = "{$look} — নিজস্ব markup আঁকে, অথচ 'কেবল রং' দলে";
+            }
+
+            if (! $claimsShape && ! $sameSkeleton) {
+                $wrong[] = "{$look} — কঙ্কাল ডিফল্টের চেয়ে আলাদা, অথচ 'কেবল রং' দলে";
+            }
+        }
+
+        $this->assertSame([], $wrong, implode("\n", [
+            'চেহারার পাতা ভুল কথা বলবে:',
+            ...$wrong,
+        ]));
+
+        /*
+         * দুইটা দলেই কেউ না কেউ আছে।
+         *
+         * এটা না থাকলে দশটাই এক দলে পড়লেও উপরের দাবিগুলো পাশ করত, আর
+         * পর্দায় একটা শিরোনামের নিচে কিছুই থাকত না। সেই চেনা ফাঁদ:
+         * যে পাহারা জিনিসটা না থাকলেও সবুজ।
+         */
+        $shape = array_filter(Ui::keys(), static fn (string $l): bool => Ui::changesArrangement($l));
+        $colour = array_filter(Ui::keys(), static fn (string $l): bool => ! Ui::changesArrangement($l));
+
+        $this->assertNotSame([], $shape, 'কোনো রূপই সাজ বদলায় না — ভাগটাই অর্থহীন।');
+        $this->assertNotSame([], $colour, 'সব রূপই সাজ বদলায় — "কেবল রং" শিরোনামটা খালি থাকবে।');
+    }
+
     /** এক রূপে ড্যাশবোর্ডের রেন্ডার করা HTML। */
     private function shellFor(string $look): string
     {
