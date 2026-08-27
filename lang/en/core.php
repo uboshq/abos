@@ -436,6 +436,24 @@ return [
         'freeze' => 'Freeze',
     ],
 
+    /* Saved views — a person's own filters, kept under a name. */
+    'view' => [
+        'views' => 'Views',
+        'all_rows' => 'All rows',
+        'save_current' => 'Save this view',
+        'name_placeholder' => 'Name it — e.g. "Overdue, Mymensingh"',
+        'set_as_default' => 'Open this screen with it',
+        'is_default' => 'This one opens by default',
+        'make_default' => 'Open this screen with it',
+        'remove' => 'Delete this view',
+        'confirm_remove' => 'Delete ":name". Its filters will no longer be saved.',
+        'saved' => 'Saved ":name".',
+        'default_set' => 'This screen will now open with ":name".',
+        'removed' => 'Deleted ":name".',
+        'unknown_screen' => 'There is no screen by that name.',
+        'screen_needs_a_record' => 'This screen opens for one particular record, so it has no view to save.',
+    ],
+
     'empty' => [
         'nothing_here' => 'Nothing here yet',
         'no_results' => 'Nothing matched that search',

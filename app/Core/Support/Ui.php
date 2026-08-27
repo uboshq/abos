@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Core\Support;
 
 /**
- * আটটা চেহারা — ব্যবহারকারী যেটা বাছেন, গোটা ERP সেটাই হয়ে যায়।
+ * দশটা চেহারা — ব্যবহারকারী যেটা বাছেন, গোটা ERP সেটাই হয়ে যায়।
  *
  * ── এটা "স্কিন" নয় ──────────────────────────────────────────────────
  * পর্দার রং বদলানো নয়। Apps বাছলে দুইশো বাহান্নটা পর্দাই Odoo-র মতো
@@ -19,10 +19,18 @@ namespace App\Core\Support;
  * নিয়মটা (দলের ধরন, পক্ষের ধরন) ওইসব জিনিসের জন্য যেগুলো কেবল সারি;
  * এটা সারি নয়, এটা কোড।
  *
- * ── চারটা হুবহু নকল ─────────────────────────────────────────────────
- * Tiles · Suite · Apps · Dynamic · Redwood — পাঁচটাই সত্যিকারের ERP-র
- * নকল, আন্দাজে নয়। কোনটা কার, সেটা প্রতিটার `imitates`-এ লেখা, আর
- * নকলটা যাচাই করা যায় বলেই নামটা এখানে থাকা দরকার।
+ * ── সাতটা হুবহু নকল ─────────────────────────────────────────────────
+ * Tiles · Suite · Apps · Dynamic · Redwood · Salesforce · Linear —
+ * সাতটাই সত্যিকারের পণ্যের নকল, আন্দাজে নয়। কোনটা কার, সেটা প্রতিটার
+ * `imitates`-এ লেখা, আর নকলটা যাচাই করা যায় বলেই নামটা এখানে থাকা
+ * দরকার।
+ *
+ * ── "যাচাই করা যায়" কথাটা ২৭ অগাস্ট ২০২৬ পর্যন্ত সত্যি ছিল না ────────
+ * `imitates`-এ নাম লেখা থাকত, কিন্তু কোনো পরীক্ষা মিলিয়ে দেখত না যে
+ * নকলটা সত্যিই আঁকা হচ্ছে। টোকেন সবসময় উপস্থিত, তাই একটা রূপ
+ * প্রতিশ্রুতি দিয়ে অন্য জিনিস এঁকেও সবুজ থাকত।
+ *
+ * এখন দেখে: [[AClonePromisedAShapeAndDrewAnotherTest]]।
  */
 final class Ui
 {
@@ -47,8 +55,8 @@ final class Ui
     /**
      * @return array<string, array{
      *     label: string, blurb: string, imitates: ?string,
-     *     density: string, nav: string, commands: string, accent: string,
-     *     swatch: string, ink: string,
+     *     density: string, nav: string, commands: string, filters: string,
+     *     views: string, accent: string, swatch: string, ink: string,
      * }>
      */
     public static function all(): array
@@ -73,6 +81,8 @@ final class Ui
                 'imitates' => null,
                 'accent' => 'blue',
                 'commands' => 'inline',
+                'filters' => 'toggle',
+                'views' => 'title',
                 'nav' => 'rail',
                 'density' => 'dense',
                 'swatch' => '#1e3a8a',
@@ -85,6 +95,8 @@ final class Ui
                 'imitates' => null,
                 'accent' => 'crimson',
                 'commands' => 'inline',
+                'filters' => 'toggle',
+                'views' => 'title',
                 'nav' => 'rail',
                 'density' => 'comfortable',
                 'swatch' => '#be123c',
@@ -97,6 +109,8 @@ final class Ui
                 'imitates' => 'SAP Fiori',
                 'accent' => 'fiori',
                 'commands' => 'bar',
+                'filters' => 'bar',
+                'views' => 'title',
                 'nav' => 'top',
                 'density' => 'comfortable',
                 'swatch' => '#0a6ed1',
@@ -109,6 +123,8 @@ final class Ui
                 'imitates' => 'Oracle NetSuite',
                 'accent' => 'netsuite',
                 'commands' => 'bar',
+                'filters' => 'toggle',
+                'views' => 'title',
                 'nav' => 'top',
                 'density' => 'dense',
                 'swatch' => '#125740',
@@ -121,6 +137,8 @@ final class Ui
                 'imitates' => 'Odoo',
                 'accent' => 'aubergine',
                 'commands' => 'inline',
+                'filters' => 'toggle',
+                'views' => 'title',
                 'nav' => 'top',
                 'density' => 'comfortable',
                 'swatch' => '#714b67',
@@ -133,6 +151,8 @@ final class Ui
                 'imitates' => 'Microsoft Dynamics 365',
                 'accent' => 'fluent',
                 'commands' => 'bar',
+                'filters' => 'toggle',
+                'views' => 'dropdown',
                 'nav' => 'rail',
                 'density' => 'dense',
                 'swatch' => '#0078d4',
@@ -145,6 +165,8 @@ final class Ui
                 'imitates' => 'Oracle Fusion Cloud',
                 'accent' => 'brick',
                 'commands' => 'inline',
+                'filters' => 'toggle',
+                'views' => 'title',
                 'nav' => 'rail',
                 'density' => 'comfortable',
                 'swatch' => '#c74634',
@@ -169,6 +191,8 @@ final class Ui
                 'imitates' => 'Salesforce Lightning',
                 'accent' => 'salesforce',
                 'commands' => 'inline',
+                'filters' => 'toggle',
+                'views' => 'title',
                 'nav' => 'top',
                 'density' => 'comfortable',
                 'swatch' => '#0176d3',
@@ -190,6 +214,21 @@ final class Ui
              *
              * খোলসটা প্রায় নেই: মাথা স্বচ্ছ, কোনো সীমানা নেই,
              * আইকনগুলো আধা-ফিকে যতক্ষণ না হাত যায়। কার্ডে ছায়া নেই।
+             *
+             * ── `quiet`, `rail` নয় — আর এটা ২৭ অগাস্টে শোধরানো ────────
+             * এই রূপটা এতদিন `rail` ঘোষণা করত, ফলে বাঁয়ে তালিকা **আর
+             * উপরে টপবার** — দুইটাই বসত। কিন্তু Linear-এর গোটা পরিচয়ই
+             * ওই বারটা **না থাকা**: পাতা পর্দার একদম উপর থেকে শুরু হয়।
+             *
+             * অর্থাৎ দশটা রূপের মধ্যে একমাত্র এটাই তার আসলটার উল্টো
+             * করছিল, আর সেটা ধরা পড়েছিল লাইভে দশটা রূপ পরে দেখে —
+             * কোনো পরীক্ষায় নয়, কারণ কোনো পরীক্ষা কঙ্কালের দিকে
+             * তাকাত না। এখন তাকায়:
+             * [[AClonePromisedAShapeAndDrewAnotherTest]]।
+             *
+             * বারের নিয়ন্ত্রণগুলো হারায়নি — ভাষা, চেহারা, প্রোফাইল,
+             * ঘণ্টা সবই সাইডবারের পায়ে নেমে এসেছে, ঠিক যেমন Linear-এ
+             * হয়। **কিছু মুছে ফেলা হয়নি, জায়গা বদলেছে।**
              */
             'linear' => [
                 'label' => 'core.ui.linear',
@@ -197,7 +236,9 @@ final class Ui
                 'imitates' => 'Linear',
                 'accent' => 'linear',
                 'commands' => 'inline',
-                'nav' => 'rail',
+                'filters' => 'toggle',
+                'views' => 'title',
+                'nav' => 'quiet',
                 'density' => 'dense',
                 'swatch' => '#5e6ad2',
                 'ink' => '#0e0f11',
@@ -209,6 +250,8 @@ final class Ui
                 'imitates' => null,
                 'accent' => 'amber',
                 'commands' => 'bar',
+                'filters' => 'toggle',
+                'views' => 'title',
                 'nav' => 'top',
                 'density' => 'dense',
                 'swatch' => '#e08c1a',
@@ -282,6 +325,56 @@ final class Ui
     public static function commands(?string $key): string
     {
         return self::all()[self::clean($key)]['commands'];
+    }
+
+    /**
+     * ছাঁকনিগুলো নিজে থেকে দেখা যায়, না বোতামে খোলে।
+     *
+     * ── `toggle` — Filter By বোতাম, তারপর প্যানেল ─────────────────────
+     * ন'টা রূপের ধরন। ছাঁকনি বেশিরভাগ সময় দরকার হয় না, তাই জায়গাটা
+     * তালিকাকে দেওয়া হয় আর প্যানেলটা চাইলে খোলে।
+     *
+     * ── `bar` — পটিটা সবসময় খোলা ─────────────────────────────────────
+     * কেবল Fiori। আর এটাই ফিওরির তালিকার পর্দার সবচেয়ে চেনা জিনিস:
+     * উপরে ছাঁকনির একটা স্থায়ী পটি, তার নিচে ছক। SAP-তে ছাঁকনি
+     * লুকানো থাকে না — ওটা পর্দার অংশ, আর ব্যবহারকারী আগে ছাঁকনি
+     * ভরেন, তারপর তালিকা দেখেন।
+     *
+     * বারটা লুকিয়ে কেবল রং বদলালে যা দাঁড়ায় সেটা Fiori নয়।
+     *
+     * ── কেন এটা টোকেনে হয় না ─────────────────────────────────────────
+     * `x-show` দিয়ে লুকানো-দেখানো আচরণ, CSS নয়। প্যানেলটা শুরুতেই
+     * খোলা থাকবে কি না — সেটা Alpine-এর প্রাথমিক অবস্থার কথা, আর
+     * ওটা markup-এ লেখা হয়।
+     */
+    public static function filters(?string $key): string
+    {
+        return self::all()[self::clean($key)]['filters'];
+    }
+
+    /**
+     * তালিকার শিরোনামটা কেবল শিরোনাম, না নিজেই একটা ড্রপডাউন।
+     *
+     * ── `title` — শিরোনাম শিরোনামই ────────────────────────────────────
+     * ন'টা রূপের ধরন। সংরক্ষিত দৃশ্য বাছার বোতামটা তখন টুলবারের ডানে
+     * বসে, বাকি নিয়ন্ত্রণগুলোর সাথে।
+     *
+     * ── `dropdown` — শিরোনামই তালিকা ──────────────────────────────────
+     * কেবল Dynamics 365। D365-এর তালিকার পর্দার সবচেয়ে চেনা জিনিসটাই
+     * এটা: উপরে বাঁয়ে লেখা "Active Accounts ⌄", আর ওটাতে ক্লিক করলেই
+     * দৃশ্যের তালিকা নামে। শিরোনামটা **নাম নয়, নিয়ন্ত্রণ**।
+     *
+     * ── কেন এই মাত্রাটা সবার শেষে যোগ হলো ────────────────────────────
+     * ২৭ অগাস্ট ২০২৬-এ প্রথমে এটা বাদ দেওয়া হয়েছিল, আর কারণটা লিখেও
+     * রাখা হয়েছিল: ড্রপডাউনে **রাখার মতো কিছু** ছিল না। সংরক্ষিত দৃশ্য
+     * বলে কোনো জিনিসই ছিল না, তাই ওটা হত একটাই আইটেমের মৃত বোতাম।
+     *
+     * পরে জিনিসটা বানানো হলো ([[SavedView]]), আর তখন চেহারাটারও মানে
+     * দাঁড়াল। ক্রমটা উল্টো হলে ফলটা হত একটা সুন্দর দেখতে খালি মেনু।
+     */
+    public static function views(?string $key): string
+    {
+        return self::all()[self::clean($key)]['views'];
     }
 
     /**

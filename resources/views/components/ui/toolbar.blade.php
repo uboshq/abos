@@ -83,6 +83,39 @@
     $hasFilters = $filter && trim($slot->toHtml()) !== '';
 
     /*
+     * ছাঁকনির পটিটা শুরুতেই খোলা থাকবে কি না।
+     *
+     * ── কেন এটা রূপের সিদ্ধান্ত ──────────────────────────────────────
+     * Fiori-র তালিকার পর্দায় ছাঁকনি লুকানো থাকে না — উপরে একটা স্থায়ী
+     * পটি, তার নিচে ছক। ব্যবহারকারী আগে ছাঁকনি ভরেন, তারপর তালিকা
+     * দেখেন। ওই ক্রমটাই SAP চেনার সবচেয়ে বড় সূত্র, আর সেটা রং দিয়ে
+     * আনা যায় না — ওটা Alpine-এর প্রাথমিক অবস্থার কথা।
+     *
+     * বাকি ন'টা রূপে ছাঁকনি বোতামে খোলে, কারণ ওখানে জায়গাটা তালিকার।
+     *
+     * ── আগে থেকে চালু ছাঁকনি থাকলে সব রূপেই খোলা ─────────────────────
+     * নিচের শর্তটা `||` — কেউ ছাঁকনি দেওয়া একটা লিংক খুললে প্যানেলটা
+     * এমনিতেই খোলা থাকে, নাহলে "সারিগুলো কম কেন" প্রশ্নের উত্তর পর্দায়
+     * থাকত না। রূপের নিয়মটা ওটার বদলে বসে না, সাথে যোগ হয়।
+     */
+    $shellLook = \App\Core\Support\LookRegistry::lookFor(
+        \App\Core\Support\LookPreview::orChosen(auth()->user()?->ui)
+    );
+
+    $filtersAlwaysOpen = \App\Core\Support\Ui::filters($shellLook) === 'bar';
+
+    /*
+     * সংরক্ষিত দৃশ্যের নিয়ন্ত্রণটা কোথায় বসে।
+     *
+     * `dropdown` — শিরোনামটাই বোতাম (D365)। `title` — শিরোনাম কেবল
+     * শিরোনাম, আর বোতামটা ডানের নিয়ন্ত্রণগুলোর সাথে।
+     *
+     * জিনিসটা দুই ক্ষেত্রেই এক (`x-ui.view-menu`); কেবল জায়গা আলাদা —
+     * ঠিক যেভাবে `stage-strip` D365-এ শেভরন আর Fiori-তে টালি হয়।
+     */
+    $viewMode = \App\Core\Support\Ui::views($shellLook);
+
+    /*
      * Which columns are showing.
      *
      * In the query string, not in a cookie or a table of preferences: it
@@ -129,7 +162,7 @@
      আর দ্বিতীয়টা চুপচাপ ফেলে দেয়। একবার ঠিক এভাবেই টুলবারের জমিন
      উধাও হয়েছিল, আর পর্দায় সেটা ধরা পড়েনি; computed value পড়ে ধরা
      পড়েছে। নামটা তাই merge-এর ভেতরেই। --}}
-<div x-data="{ filtersOpen: {{ $hasFilters && $screenFilters->isNotEmpty() ? 'true' : 'false' }} }"
+<div x-data="{ filtersOpen: {{ $hasFilters && ($filtersAlwaysOpen || $screenFilters->isNotEmpty()) ? 'true' : 'false' }} }"
      {{ $attributes->merge(['class' => 'toolbar-view flex flex-col border-b border-(--color-border) bg-(--color-toolbar)']) }}>
 
     {{--
@@ -152,17 +185,25 @@
 
         {{-- দৃশ্যের শিরোনাম — নাম, আর পাশে কত সারি।
 
-             ▾ চিহ্নটা বলে এটা একটা **দৃশ্য**, স্থির নাম নয়: সংরক্ষিত
-             ছাঁকনি বদলালে নামটাও বদলায়। --}}
+             ── এখানে একটা মৃত বোতাম ছিল ────────────────────────────────
+             আগে শিরোনামের পাশে একটা `▾` চিহ্ন আঁকা হত, আর পাশের মন্তব্যে
+             লেখা ছিল "চিহ্নটা বলে এটা একটা দৃশ্য"। কিন্তু ওর পেছনে কোনো
+             মেনু ছিল না — দশটা রূপের একটাতেও ক্লিক করে কিছু হত না।
+
+             এখন D365-এ শিরোনামটাই সত্যিকারের ড্রপডাউন (`x-ui.view-menu`),
+             আর বাকি ন'টায় চিহ্নটা একেবারেই নেই — শিরোনাম কেবল শিরোনাম,
+             আর দৃশ্য বাছার বোতামটা নিচে ডান দিকের নিয়ন্ত্রণগুলোর সাথে। --}}
         @if ($title)
-            <h1 data-view-selector
-                class="flex shrink-0 items-center gap-1.5 text-lg font-semibold text-(--color-ink)">
-                {{ $title }}
-                <svg viewBox="0 0 20 20" aria-hidden="true"
-                     class="size-3.5 fill-none stroke-(--color-ink-muted)" stroke-width="1.6">
-                    <path d="M5.6 8.2 10 12.4l4.4-4.2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-            </h1>
+            @if ($viewMode === 'dropdown')
+                <h1 class="contents">
+                    <x-ui.view-menu :label="$title" mode="heading" />
+                </h1>
+            @else
+                <h1 data-view-selector
+                    class="shrink-0 truncate text-lg font-semibold text-(--color-ink)">
+                    {{ $title }}
+                </h1>
+            @endif
 
             @if ($count !== null || $subtitle)
                 <span data-record-count
@@ -546,6 +587,14 @@
                     </svg>
                     <span class="hidden xl:inline">{{ __('core.toolbar.refresh') }}</span>
                 </button>
+            @endif
+
+            {{-- সংরক্ষিত দৃশ্য — ন'টা রূপে এখানে।
+
+                 D365-এ এটা শিরোনামেই বসে (উপরে), তাই সেখানে দুইবার
+                 দেখানো হয় না। --}}
+            @if ($viewMode !== 'dropdown')
+                <x-ui.view-menu mode="button" />
             @endif
         </div>
     </div>
