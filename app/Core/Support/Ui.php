@@ -85,6 +85,7 @@ final class Ui
                 'filters' => 'toggle',
                 'views' => 'title',
                 'record' => 'facts',
+                'sections' => 'plain',
                 'nav' => 'rail',
                 'density' => 'dense',
                 'swatch' => '#1e3a8a',
@@ -100,6 +101,7 @@ final class Ui
                 'filters' => 'toggle',
                 'views' => 'title',
                 'record' => 'facts',
+                'sections' => 'plain',
                 'nav' => 'rail',
                 'density' => 'comfortable',
                 'swatch' => '#be123c',
@@ -115,6 +117,7 @@ final class Ui
                 'filters' => 'bar',
                 'views' => 'title',
                 'record' => 'facts',
+                'sections' => 'anchors',
                 'nav' => 'top',
                 'density' => 'comfortable',
                 'swatch' => '#0a6ed1',
@@ -130,6 +133,7 @@ final class Ui
                 'filters' => 'toggle',
                 'views' => 'title',
                 'record' => 'facts',
+                'sections' => 'plain',
                 'nav' => 'top',
                 'density' => 'dense',
                 'swatch' => '#125740',
@@ -145,6 +149,7 @@ final class Ui
                 'filters' => 'toggle',
                 'views' => 'title',
                 'record' => 'smartbuttons',
+                'sections' => 'plain',
                 'nav' => 'top',
                 'density' => 'comfortable',
                 'swatch' => '#714b67',
@@ -160,6 +165,7 @@ final class Ui
                 'filters' => 'toggle',
                 'views' => 'dropdown',
                 'record' => 'facts',
+                'sections' => 'plain',
                 'nav' => 'rail',
                 'density' => 'dense',
                 'swatch' => '#0078d4',
@@ -175,6 +181,7 @@ final class Ui
                 'filters' => 'toggle',
                 'views' => 'title',
                 'record' => 'facts',
+                'sections' => 'plain',
                 'nav' => 'rail',
                 'density' => 'comfortable',
                 'swatch' => '#c74634',
@@ -202,6 +209,7 @@ final class Ui
                 'filters' => 'toggle',
                 'views' => 'title',
                 'record' => 'facts',
+                'sections' => 'plain',
                 'nav' => 'top',
                 'density' => 'comfortable',
                 'swatch' => '#0176d3',
@@ -248,6 +256,7 @@ final class Ui
                 'filters' => 'toggle',
                 'views' => 'title',
                 'record' => 'facts',
+                'sections' => 'plain',
                 'nav' => 'quiet',
                 'density' => 'dense',
                 'swatch' => '#5e6ad2',
@@ -263,6 +272,7 @@ final class Ui
                 'filters' => 'toggle',
                 'views' => 'title',
                 'record' => 'facts',
+                'sections' => 'plain',
                 'nav' => 'top',
                 'density' => 'dense',
                 'swatch' => '#e08c1a',
@@ -410,6 +420,31 @@ final class Ui
     public static function record(?string $key): string
     {
         return self::all()[self::clean($key)]['record'];
+    }
+
+    /**
+     * লম্বা রেকর্ডের ভেতরে চলাফেরা কীভাবে হয়।
+     *
+     * ── `plain` — স্ক্রল করেই ─────────────────────────────────────────
+     * ন'টা রূপের ধরন। পাতাটা উপর থেকে নিচে পড়া হয়, আর সেটাই যথেষ্ট।
+     *
+     * ── `anchors` — ফিওরির object page ────────────────────────────────
+     * কেবল SAP Fiori। লম্বা রেকর্ডের মাথায় একটা সরু পটি বসে যাতে
+     * পাতার প্রতিটা অংশের নাম থাকে, আর নামে ক্লিক করলে ওই অংশে চলে
+     * যায় — পাতা না ছেড়েই।
+     *
+     * ফিওরির object page-এর এটাই সবচেয়ে চেনা জিনিস, আর একটা বিশ-হাত
+     * লম্বা চালানের পাতায় এটা সাজসজ্জা নয়, কাজের।
+     *
+     * ── কেন এটা `record`-এর সাথে এক করা হয়নি ─────────────────────────
+     * দুইটা আলাদা প্রশ্ন। `record` বলে **অন্য মডিউলের তথ্য** কোথায়
+     * বসবে; এটা বলে **এই পাতার নিজের অংশগুলোর** ভেতরে কীভাবে চলাচল
+     * হবে। ফিওরি প্রথমটায় ন'জনের সাথে একমত, দ্বিতীয়টায় একা — এক
+     * করলে ওই দুইটা সিদ্ধান্ত আর আলাদা করা যেত না।
+     */
+    public static function sections(?string $key): string
+    {
+        return self::all()[self::clean($key)]['sections'];
     }
 
     /**
