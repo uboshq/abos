@@ -124,6 +124,9 @@ return [
     // What sales has to say about a customer — shown on the customer's page,
     // contributed from here (see SalesFacts)
     'last_purchase' => 'Last purchase',
+
+    /* A tile on the customer's page — a smart button in Odoo, a fact row elsewhere. */
+    'invoice_count' => 'Invoices',
     'user' => 'User',
     'time' => 'Time',
     'till' => 'Drawer',

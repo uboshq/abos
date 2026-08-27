@@ -34,6 +34,12 @@
         </x-ui.page-header>
     </x-slot:header>
 
+    {{-- ওডুর smart buttons — রেকর্ডের একদম মাথায়, শিরোনামের ঠিক নিচে।
+
+         বাকি ন'টা রূপে এখানে কিছুই আঁকা হয় না; ওখানে একই তথ্য নিচের
+         ঘরগুলোর সাথে সারি হিসেবে বসে। জায়গাটা রূপের সিদ্ধান্ত, পাতার নয়। --}}
+    <x-ui.record-facts :facts="$facts" region="head" />
+
     @if (session('saved'))
         <div role="status"
              class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm
@@ -120,19 +126,12 @@
 
                 {{-- বাকি মডিউলরা এই গ্রাহক সম্পর্কে যা জানে — "শেষ কেনা
                      কবে" বিক্রয়ের কথা, গ্রাহকের নয়। এই পাতা জানে না কে
-                     কী দিল, শুধু জিজ্ঞেস করে। --}}
-                @foreach ($facts as $fact)
-                    <div>
-                        <dt class="text-2xs text-(--color-ink-muted)">{{ __($fact->label) }}</dt>
-                        <dd class="text-sm">
-                            @if ($fact->url)
-                                <a href="{{ $fact->url }}" class="underline">{{ $fact->value }}</a>
-                            @else
-                                {{ $fact->value }}
-                            @endif
-                        </dd>
-                    </div>
-                @endforeach
+                     কী দিল, শুধু জিজ্ঞেস করে।
+
+                     আঁকার দায়িত্ব কম্পোনেন্টের: ওডুতে এগুলো রেকর্ডের
+                     মাথায় smart buttons হয় (উপরে `head` অঞ্চল), বাকি
+                     রূপে এখানেই তথ্যের সারি। --}}
+                <x-ui.record-facts :facts="$facts" region="body" />
             </dl>
         </section>
     </div>

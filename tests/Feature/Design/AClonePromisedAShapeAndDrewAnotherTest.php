@@ -382,6 +382,47 @@ class AClonePromisedAShapeAndDrewAnotherTest extends TestCase
         $this->assertNotSame([], $colour, 'সব রূপই সাজ বদলায় — "কেবল রং" শিরোনামটা খালি থাকবে।');
     }
 
+    /**
+     * বাছাইয়ের পাতায় প্রতিটা রূপ নিজের নামেই বসে।
+     *
+     * ── কেন এটা আলাদা করে দেখতে হয় ──────────────────────────────────
+     * কার্ডগুলো দুই দলে ভাগ করার পর `groupBy()` মূল চাবিগুলো ফেলে দিয়ে
+     * ০,১,২… বসিয়েছিল। চাবিটাই রূপের নাম, আর সেটাই রেডিওর `value` —
+     * তাই দশটা রেডিওর মান হয়ে গিয়েছিল সংখ্যা, আর **কোনো রূপই আর বাছাই
+     * করা যেত না**। সেভ করলে `clean()` সবটাকে চুপচাপ ডিফল্টে নামাত।
+     *
+     * পাতাটা দেখতে নিখুঁত ছিল — দুইটা শিরোনাম, ৮ ও ২টা কার্ড, সব রং
+     * ঠিক। শিরোনাম বা কার্ড গুনে ওটা ধরা যেত না; ধরা পড়েছে ব্রাউজারে
+     * একটা নির্দিষ্ট রেডিও খুঁজতে গিয়ে।
+     *
+     * তাই পাহারাটা চেহারা দেখে না, **মান** দেখে।
+     */
+    public function test_every_look_can_actually_be_chosen(): void
+    {
+        $html = (string) $this->get(route('appearance'))->assertOk()->getContent();
+
+        $offered = [];
+
+        if (preg_match_all('~<input[^>]*name="ui"[^>]*value="([^"]*)"~i', $html, $m) > 0) {
+            $offered = $m[1];
+        }
+
+        $missing = array_values(array_diff(Ui::keys(), $offered));
+        $strange = array_values(array_diff($offered, Ui::keys()));
+
+        $this->assertSame([], $missing, implode("\n", [
+            'এই রূপগুলোর কোনো রেডিও পাতায় নেই, তাই বাছাই করা যায় না:',
+            ...$missing,
+        ]));
+
+        $this->assertSame([], $strange, implode("\n", [
+            'পাতায় এমন মানের রেডিও আছে যা কোনো রূপ নয়:',
+            ...$strange,
+            '',
+            'সম্ভবত groupBy() মূল চাবিগুলো ফেলে দিয়েছে — preserveKeys: true দিন।',
+        ]));
+    }
+
     /** এক রূপে ড্যাশবোর্ডের রেন্ডার করা HTML। */
     private function shellFor(string $look): string
     {

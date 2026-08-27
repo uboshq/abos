@@ -56,7 +56,8 @@ final class Ui
      * @return array<string, array{
      *     label: string, blurb: string, imitates: ?string,
      *     density: string, nav: string, commands: string, filters: string,
-     *     views: string, accent: string, swatch: string, ink: string,
+     *     views: string, record: string, accent: string, swatch: string,
+     *     ink: string,
      * }>
      */
     public static function all(): array
@@ -83,6 +84,7 @@ final class Ui
                 'commands' => 'inline',
                 'filters' => 'toggle',
                 'views' => 'title',
+                'record' => 'facts',
                 'nav' => 'rail',
                 'density' => 'dense',
                 'swatch' => '#1e3a8a',
@@ -97,6 +99,7 @@ final class Ui
                 'commands' => 'inline',
                 'filters' => 'toggle',
                 'views' => 'title',
+                'record' => 'facts',
                 'nav' => 'rail',
                 'density' => 'comfortable',
                 'swatch' => '#be123c',
@@ -111,6 +114,7 @@ final class Ui
                 'commands' => 'bar',
                 'filters' => 'bar',
                 'views' => 'title',
+                'record' => 'facts',
                 'nav' => 'top',
                 'density' => 'comfortable',
                 'swatch' => '#0a6ed1',
@@ -125,6 +129,7 @@ final class Ui
                 'commands' => 'bar',
                 'filters' => 'toggle',
                 'views' => 'title',
+                'record' => 'facts',
                 'nav' => 'top',
                 'density' => 'dense',
                 'swatch' => '#125740',
@@ -139,6 +144,7 @@ final class Ui
                 'commands' => 'inline',
                 'filters' => 'toggle',
                 'views' => 'title',
+                'record' => 'smartbuttons',
                 'nav' => 'top',
                 'density' => 'comfortable',
                 'swatch' => '#714b67',
@@ -153,6 +159,7 @@ final class Ui
                 'commands' => 'bar',
                 'filters' => 'toggle',
                 'views' => 'dropdown',
+                'record' => 'facts',
                 'nav' => 'rail',
                 'density' => 'dense',
                 'swatch' => '#0078d4',
@@ -167,6 +174,7 @@ final class Ui
                 'commands' => 'inline',
                 'filters' => 'toggle',
                 'views' => 'title',
+                'record' => 'facts',
                 'nav' => 'rail',
                 'density' => 'comfortable',
                 'swatch' => '#c74634',
@@ -193,6 +201,7 @@ final class Ui
                 'commands' => 'inline',
                 'filters' => 'toggle',
                 'views' => 'title',
+                'record' => 'facts',
                 'nav' => 'top',
                 'density' => 'comfortable',
                 'swatch' => '#0176d3',
@@ -238,6 +247,7 @@ final class Ui
                 'commands' => 'inline',
                 'filters' => 'toggle',
                 'views' => 'title',
+                'record' => 'facts',
                 'nav' => 'quiet',
                 'density' => 'dense',
                 'swatch' => '#5e6ad2',
@@ -252,6 +262,7 @@ final class Ui
                 'commands' => 'bar',
                 'filters' => 'toggle',
                 'views' => 'title',
+                'record' => 'facts',
                 'nav' => 'top',
                 'density' => 'dense',
                 'swatch' => '#e08c1a',
@@ -375,6 +386,30 @@ final class Ui
     public static function views(?string $key): string
     {
         return self::all()[self::clean($key)]['views'];
+    }
+
+    /**
+     * রেকর্ডের পাতায় অন্য মডিউলের তথ্যগুলো কীভাবে বসে।
+     *
+     * ── `facts` — তথ্যের সারি ─────────────────────────────────────────
+     * ন'টা রূপের ধরন। "শেষ কেনা · ১২ আগস্ট" পাতার বাকি ঘরগুলোর সাথেই
+     * বসে, কারণ ওটা তথ্য — নিয়ন্ত্রণ নয়।
+     *
+     * ── `smartbuttons` — ওডুর নিজের জিনিস ─────────────────────────────
+     * কেবল Odoo। রেকর্ডের **মাথায়** একসারি ঘর: বড় করে সংখ্যা, নিচে
+     * ছোট করে নাম, আর ক্লিক করলে ওই তালিকায় নিয়ে যায়। "৩টা চালান"
+     * দেখে সরাসরি চালানের তালিকায় পৌঁছানো — এটাই ওডুর রেকর্ড-পাতার
+     * সবচেয়ে চেনা জিনিস, আর CSS দিয়ে ওটা আনা যায় না: ঘরগুলো পাতার
+     * **অন্য জায়গায়** বসে।
+     *
+     * ── যেটার ঠিকানা নেই, সেটা বোতাম নয় ──────────────────────────────
+     * সব তথ্যের ঠিকানা থাকে না। smartbuttons মোডেও ওগুলো একই মাপের ঘর
+     * পায়, কিন্তু বোতামের চেহারা পায় না — নাহলে পর্দায় আবার একটা
+     * মৃত বোতাম তৈরি হত, আর আজ সারাদিন ঠিক ওগুলোই সরানো হয়েছে।
+     */
+    public static function record(?string $key): string
+    {
+        return self::all()[self::clean($key)]['record'];
     }
 
     /**
