@@ -220,7 +220,19 @@ class OneChoiceChangesTheWholeErpTest extends TestCase
             $where = Ui::nav($look);
             $seen[$where] = true;
 
-            $this->assertContains($where, ['rail', 'top'], "চেহারা {$look}-এর nav অচেনা: {$where}");
+            /*
+             * `quiet` তৃতীয় বিন্যাস, আর সে যোগ হয়েছে ২৭ অগাস্ট ২০২৬-এ।
+             *
+             * ── মেনুর হিসাবে সে রেলের দলে ────────────────────────────
+             * Linear-এর পরিচয় উপরের বারটা **না থাকা**, কিন্তু বাঁয়ের
+             * তালিকাটা থাকে। তাই "মেনু কোথায়" প্রশ্নে তার উত্তর রেলের
+             * মতোই; তফাতটা মেনুতে নয়, টপবারে — আর ওটা দেখে
+             * [[AClonePromisedAShapeAndDrewAnotherTest]]।
+             *
+             * এই পাহারাটা ওই দিন লাল হয়েছিল ("nav অচেনা: quiet"), আর
+             * সেটা ঠিকই হয়েছিল: নতুন বিন্যাস চুপচাপ ঢুকে পড়া উচিত নয়।
+             */
+            $this->assertContains($where, ['rail', 'top', 'quiet'], "চেহারা {$look}-এর nav অচেনা: {$where}");
 
             if ($where === 'top') {
                 $this->assertStringContainsString('class="topnav', $html,
@@ -245,6 +257,7 @@ class OneChoiceChangesTheWholeErpTest extends TestCase
          */
         $this->assertArrayHasKey('rail', $seen, 'কোনো চেহারাই বাঁয়ের রেল ব্যবহার করে না।');
         $this->assertArrayHasKey('top', $seen, 'কোনো চেহারাই উপরের মেনু ব্যবহার করে না — শেলটা মৃত কোড।');
+        $this->assertArrayHasKey('quiet', $seen, 'কোনো চেহারাই quiet ব্যবহার করে না — তৃতীয় কঙ্কালটা মৃত কোড।');
     }
 
     /**
