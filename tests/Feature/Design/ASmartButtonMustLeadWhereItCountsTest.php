@@ -246,6 +246,49 @@ class ASmartButtonMustLeadWhereItCountsTest extends TestCase
     }
 
     /**
+     * নোঙর-পটি কেবল ফিওরিতে, আর কেবল রেকর্ডের পাতায়।
+     *
+     * ── কেন দুইটা শর্তই দেখা হয় ─────────────────────────────────────
+     * পটিটা লেআউটে বসানো, অর্থাৎ প্রতিটা পাতাই তার পাশ দিয়ে যায়।
+     * ফিওরি ছাড়া অন্য রূপে বসলে ওটা আর নকল থাকে না; আর তালিকার পাতায়
+     * বসলে ওটা অর্থহীন — এক অংশের পাতায় নোঙর যেখানে আছি সেখানেই
+     * নিয়ে যায়।
+     *
+     * দ্বিতীয় শর্তটা markup দিয়ে নয়, আচরণ দিয়ে সামলানো (`x-show`),
+     * তাই এখানে দেখা হয় পটিটা **পৌঁছেছে** কি না; সে সত্যিই লুকায়
+     * কি না সেটা ব্রাউজারে মাপা।
+     */
+    public function test_only_fiori_gets_the_anchor_strip(): void
+    {
+        $wrong = [];
+
+        foreach (Ui::keys() as $look) {
+            $this->user->forceFill(['ui' => $look])->save();
+
+            $body = (string) $this->get(route('customer.show', $this->busy))
+                ->assertOk()
+                ->getContent();
+
+            $has = str_contains($body, 'data-anchor-nav');
+            $wants = Ui::sections($look) === 'anchors';
+
+            if ($has !== $wants) {
+                $wrong[] = sprintf(
+                    '%s — পটিটা %s, অথচ %s',
+                    $look,
+                    $has ? 'আছে' : 'নেই',
+                    $wants ? 'থাকার কথা' : 'না থাকার কথা',
+                );
+            }
+        }
+
+        $this->assertSame([], $wrong, implode("\n", [
+            'নোঙর-পটি ভুল রূপে:',
+            ...$wrong,
+        ]));
+    }
+
+    /**
      * একটা তালিকার পাতায় কয়টা তথ্যের সারি।
      *
      * ── কেন `<tbody>` আলাদা করে বের করা হয় ──────────────────────────
