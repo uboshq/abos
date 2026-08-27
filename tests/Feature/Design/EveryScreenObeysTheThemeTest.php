@@ -4,13 +4,15 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Design;
 
+use App\Core\Support\Ui;
 use Tests\TestCase;
 
 /**
  * প্রতিটা পর্দা থিম মানবে — আজ, আর ছয় সপ্তাহ পরেও।
  *
  * ── এই পরীক্ষাটা কীসের বিরুদ্ধে ──────────────────────────────────────
- * ABOS আটটা চেহারা পাচ্ছে (docs/Plan — আটটা থিম.md)। চেহারা বদলায়
+ * ABOS-এর দশটা চেহারা (docs/Plan — আটটা থিম.md, যেটা আটটা নিয়ে শুরু
+ * হয়েছিল)। চেহারা বদলায়
  * টোকেন আর শেল ধরে, তাই কোনো পর্দাকে কিছু জানতে হয় না — **যদি** পর্দাটা
  * টোকেনই ব্যবহার করে।
  *
@@ -67,13 +69,26 @@ class EveryScreenObeysTheThemeTest extends TestCase
     ];
 
     /**
-     * থিমের আটটা নাম। কোনো পর্দায় এগুলোর একটাও থাকবে না।
+     * রূপগুলোর নাম। কোনো পর্দায় এগুলোর একটাও থাকবে না।
      *
-     * @var list<string>
+     * ── কেন তালিকাটা আর হাতে লেখা নয় ────────────────────────────────
+     * এখানে আটটা নাম হাতে লেখা ছিল, আর সেই আটটা লেখার পর দুইটা নতুন
+     * রূপ যোগ হয়েছে — `linear` আর `salesforce`। ওরা তালিকার বাইরে
+     * থেকে গিয়েছিল, তাই কোনো পর্দা ওই দুইটার নাম হাতে বসালে এই
+     * পাহারাটা সেটা **দেখতেই পেত না**।
+     *
+     * ধরা পড়েছিল ২৭ অগাস্ট ২০২৬-এ, দশটা রূপ লাইভে গুনতে গিয়ে।
+     *
+     * এখন উৎসটা `Ui::keys()` — অর্থাৎ রূপ যোগ হলে পাহারাও নিজে থেকেই
+     * তাকে চেনে। একই কারণে
+     * [[AClonePromisedAShapeAndDrewAnotherTest]]-ও হাতের তালিকা রাখে না।
+     *
+     * @return list<string>
      */
-    private const THEMES = [
-        'classic', 'tiles', 'suite', 'apps', 'dynamic', 'rose', 'navy', 'redwood',
-    ];
+    private function themes(): array
+    {
+        return Ui::keys();
+    }
 
     /** @return array<string, string> path => source */
     private function blades(): array
@@ -209,7 +224,7 @@ class EveryScreenObeysTheThemeTest extends TestCase
     public function test_no_screen_knows_which_theme_it_is_in(): void
     {
         $offenders = [];
-        $pattern = '/\$ui\b|[\'"](?:'.implode('|', self::THEMES).')[\'"]/';
+        $pattern = '/\$ui\b|[\'"](?:'.implode('|', $this->themes()).')[\'"]/';
 
         foreach ($this->blades() as $path => $source) {
             if ($this->isAllowed($path, self::THEME_AWARE)) {

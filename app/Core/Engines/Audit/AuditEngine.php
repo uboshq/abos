@@ -12,6 +12,7 @@ use App\Models\ExportLog;
 use App\Models\IssuedNumber;
 use App\Models\LedgerEntry;
 use App\Models\Notification;
+use App\Models\SavedView;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
@@ -112,6 +113,19 @@ final class AuditEngine
          * একটা সারি বসে, আর সেই ডকুমেন্টটা এমনিতেই অডিটেড।
          */
         IssuedNumber::class => 'machine bookkeeping for document numbers',
+
+        /*
+         * সংরক্ষিত দৃশ্য — ব্যক্তিগত সুবিধা, ব্যবসার তথ্য নয়।
+         *
+         * একটা দৃশ্য কেবল একটা ঠিকানা মনে রাখে: "পণ্যের তালিকা,
+         * ব্র্যান্ড ৩, বকেয়া"। কেউ তাঁর নিজের ছাঁকনির নাম বদলালে বইয়ের
+         * কিছুই বদলায় না।
+         *
+         * অডিট বসালে দুইটা ক্ষতি হত। একজনের দিনে দশবার ছাঁকনি বদলানোর
+         * ইতিহাস আসল বদলগুলোকে চাপা দিত; আর "কে কী দেখেছেন" নিরীক্ষার
+         * প্রশ্নই নয় — নিরীক্ষার প্রশ্ন "কে কী বদলেছেন"।
+         */
+        SavedView::class => 'a private convenience, not business data — it only remembers an address',
     ];
 
     /**

@@ -6,6 +6,7 @@ use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\MfaController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SavedViewController;
 use App\Http\Controllers\WorkspaceController;
 use Illuminate\Support\Facades\Route;
 
@@ -63,6 +64,21 @@ Route::middleware('auth')->group(function () {
     Route::post('/two-step', [MfaController::class, 'begin'])->name('mfa.begin');
     Route::post('/two-step/confirm', [MfaController::class, 'confirm'])->name('mfa.confirm');
     Route::delete('/two-step', [MfaController::class, 'destroy'])->name('mfa.destroy');
+
+    /*
+     * সংরক্ষিত দৃশ্য — নিজের ছাঁকনি, নাম দিয়ে রাখা।
+     *
+     * চেহারা, ভাষা বা প্রোফাইলের মতোই ব্যক্তিগত পছন্দ, তাই শেলের রুট।
+     * একটা দৃশ্য যেকোনো তালিকার পর্দার হতে পারে, তাই কোনো একটা মডিউলের
+     * ভেতরে রাখলে ওটা ভুল জায়গা হত — ঠিক কাগজপত্রের মতোই।
+     *
+     * `index` নেই, আর সেটা ইচ্ছাকৃত — কারণটা কন্ট্রোলারে লেখা।
+     */
+    Route::post('/views', [SavedViewController::class, 'store'])->name('views.store');
+    Route::post('/views/{savedView}/default', [SavedViewController::class, 'makeDefault'])
+        ->whereNumber('savedView')->name('views.default');
+    Route::delete('/views/{savedView}', [SavedViewController::class, 'destroy'])
+        ->whereNumber('savedView')->name('views.destroy');
 
     Route::post('/company/switch', [WorkspaceController::class, 'switchCompany'])->name('company.switch');
     Route::post('/branch/switch', [WorkspaceController::class, 'switchBranch'])->name('branch.switch');
