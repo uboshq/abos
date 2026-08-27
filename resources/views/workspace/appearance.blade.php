@@ -52,15 +52,54 @@
                 <span>{{ __('core.appearance.match_accent') }}</span>
             </label>
 
-            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                @foreach ($uis as $key => $ui)
-                    @include('workspace.partials.ui-card', [
-                        'key' => $key,
-                        'ui' => $ui,
-                        'selected' => $key === $current['ui'],
-                    ])
-                @endforeach
-            </div>
+            {{--
+                দুইটা দল — যেগুলো বিন্যাস বদলায়, আর যেগুলো কেবল রং।
+
+                ── কেন ভাগটা দরকার ─────────────────────────────────────
+                আগে দশটা কার্ড এক গ্রিডে বসত, আর দেখে বোঝার উপায় ছিল না
+                কোনটা কী করবে। Navy বাছলে কেবল রং বদলায়; Apps বাছলে গোটা
+                শেলটাই — সাইডবার উধাও, উপরে বেগুনি বার, লঞ্চার শিট।
+
+                দুইটাকে একইভাবে দেখানো মানে বাছাইটা আন্দাজে করানো। কেউ
+                "একটু অন্য রং চাই" ভেবে Apps বেছে ফেলতেন, আর গোটা ERP
+                অচেনা হয়ে যেত।
+
+                ── দলটা কোথা থেকে আসে ──────────────────────────────────
+                `Ui::changesArrangement()` — হাতে লেখা কোনো তালিকা নয়।
+                নতুন রূপ যোগ হলে সে নিজে থেকেই ঠিক দলে বসে।
+            --}}
+            @php
+                $grouped = collect($uis)->groupBy(
+                    fn ($ui, $key) => \App\Core\Support\Ui::changesArrangement($key) ? 'shape' : 'colour',
+                );
+            @endphp
+
+            @foreach (['shape', 'colour'] as $band)
+                @php $group = $grouped->get($band); @endphp
+
+                {{-- দলটা খালি থাকলে শিরোনামটাও থাকে না — একটা খালি
+                     শিরোনাম প্রতিবার একটা অনুপস্থিত জিনিস পড়ায়। --}}
+                @if ($group?->isNotEmpty())
+                    <h3 class="mt-4 mb-1 text-2xs font-semibold tracking-wide
+                               text-(--color-ink-muted) uppercase first:mt-0">
+                        {{ __('core.appearance.band_'.$band) }}
+                    </h3>
+
+                    <p class="mb-3 max-w-(--spacing-prose-max) text-2xs text-(--color-ink-muted)">
+                        {{ __('core.appearance.band_'.$band.'_note') }}
+                    </p>
+
+                    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                        @foreach ($group as $key => $ui)
+                            @include('workspace.partials.ui-card', [
+                                'key' => $key,
+                                'ui' => $ui,
+                                'selected' => $key === $current['ui'],
+                            ])
+                        @endforeach
+                    </div>
+                @endif
+            @endforeach
         </section>
 
         {{--

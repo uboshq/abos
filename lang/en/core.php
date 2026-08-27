@@ -182,6 +182,11 @@ return [
         'dark' => 'Dark',
         'language' => 'Language',
         'saved' => 'Saved.',
+
+        'band_shape' => 'Different arrangements',
+        'band_shape_note' => 'These change where the menu, the bars and the lists sit — not just the colour.',
+        'band_colour' => 'Same arrangement, different colour',
+        'band_colour_note' => 'These lay the screen out the same way — the rail, the same row height. Only the colours differ.',
     ],
 
     'backup' => [
