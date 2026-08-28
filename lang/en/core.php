@@ -72,6 +72,7 @@ return [
         'close' => 'Close',
         'create' => 'Create',
         'apply' => 'Apply',
+        'discard' => 'Discard',
         'save' => 'Save',
         'edit' => 'Edit',
         'view' => 'View',
