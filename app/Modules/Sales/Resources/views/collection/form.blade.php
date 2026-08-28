@@ -79,6 +79,12 @@
                              :options="$customers->mapWithKeys(fn ($c) => [$c->id => $c->name()])"
                              :selected="$invoice?->customer_id ?? $collection->customer_id"
                              placeholder="-" required
+                             {{-- নিজের `x-data` লাগে: Alpine কেবল `x-data`-র
+                                  ভেতরের এলিমেন্টগুলোই পড়ে। বাইরের মোড়কটা
+                                  তুলে দেওয়ায় `@change` কোথাও বাঁধাই হয়নি —
+                                  পর্দায় কোনো ভুল দেখা যেত না, কেবল বিলের
+                                  তালিকা চিরকাল খালি থাকত। --}}
+                             x-data
                              @change="$dispatch('customer-picked', $event.target.value)" />
 
                 <x-ui.select name="account_id" :label="__('sales::field.account')"
