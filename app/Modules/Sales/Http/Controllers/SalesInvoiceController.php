@@ -9,6 +9,7 @@ use App\Core\Concerns\FiltersByDate;
 use App\Core\Concerns\SortsLists;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\DocumentStatus;
+use App\Core\Support\ProcessBand;
 use App\Http\Controllers\Controller;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
@@ -74,6 +75,28 @@ class SalesInvoiceController extends Controller implements HasMiddleware
             ->when(! $request->boolean('cancelled'),
                 fn ($q) => $q->where('status', '<>', DocumentStatus::CANCELLED));
 
+        /*
+         * ধাপের পটির কোয়েরিটা **অবস্থার ছাঁকনি বসানোর আগে**।
+         *
+         * তীরগুলো বাকি সব ছাঁকনি মানে — তারিখ, গ্রাহক, খোঁজা — কিন্তু
+         * অবস্থারটা নয়। নাহলে "খসড়া" বেছে নেওয়ার পর তীরগুলো দেখাত
+         * খসড়া ৩১ আর বাকি সব শূন্য, অর্থাৎ পটিটা তার নিজের কাজটাই
+         * করত না: কোথায় কতটা জমে আছে সেটা দেখানো।
+         */
+        $bandBase = clone $query;
+
+        /*
+         * অবস্থা ধরে ছাঁকা — এই প্যারামিটারটা এসেছে ধাপের পটির সাথে,
+         * ২৯ আগস্ট ২০২৬। তীরে ক্লিক করলে ওই ধাপের কাগজগুলোই থাকে।
+         */
+        $stage = (string) $request->query('stage', '');
+
+        if (in_array($stage, DocumentStatus::ALL, true)) {
+            $query->where('status', $stage);
+        } else {
+            $stage = '';
+        }
+
         // তারিখের পরিসর — হোম পর্দার "আজকের বিক্রয়" ঠিক এখানেই নামে
         $dates = $this->applyDateRange($query, $request);
 
@@ -92,6 +115,23 @@ class SalesInvoiceController extends Controller implements HasMiddleware
             'sort' => $sort,
             'sortOptions' => $this->sortLabels(),
             'showCancelled' => $request->boolean('cancelled'),
+            'stage' => $stage,
+            /*
+             * পটিটা কেবল `dynamic` রূপে আঁকা হয়, কিন্তু হিসাবটা এখানেই
+             * হয় — কন্ট্রোলার জানে না কে কোন রূপে বসে আছেন, আর জানার
+             * দরকারও নেই। খরচ চারটা হালকা `count`/`sum`।
+             */
+            'processBand' => ProcessBand::forStatuses(
+                $bandBase,
+                [
+                    ['status' => DocumentStatus::DRAFT, 'label' => __('core.status.draft')],
+                    ['status' => DocumentStatus::CONFIRMED, 'label' => __('core.status.confirmed')],
+                    ['status' => DocumentStatus::CLOSED, 'label' => __('core.status.closed')],
+                ],
+                'sales.invoice.index',
+                $request->except(['stage', 'page']),
+                $stage !== '' ? $stage : null,
+            ),
         ]);
     }
 

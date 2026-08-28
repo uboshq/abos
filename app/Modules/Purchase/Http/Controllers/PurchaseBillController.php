@@ -9,6 +9,7 @@ use App\Core\Concerns\FiltersByDate;
 use App\Core\Concerns\SortsLists;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\DocumentStatus;
+use App\Core\Support\ProcessBand;
 use App\Http\Controllers\Controller;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Purchase\Http\Requests\PurchaseBillRequest;
@@ -54,6 +55,18 @@ class PurchaseBillController extends Controller implements HasMiddleware
             ->when(! $request->boolean('cancelled'),
                 fn ($q) => $q->where('status', '<>', DocumentStatus::CANCELLED));
 
+        // ধাপের পটির হিসাব অবস্থার ছাঁকনির আগে — কারণটা
+        // [[ProcessBand::forStatuses()]]-এ লেখা
+        $bandBase = clone $query;
+
+        $stage = (string) $request->query('stage', '');
+
+        if (in_array($stage, DocumentStatus::ALL, true)) {
+            $query->where('status', $stage);
+        } else {
+            $stage = '';
+        }
+
         $dates = $this->applyDateRange($query, $request);
 
         $sort = $this->applySort($query, $request, [
@@ -71,6 +84,18 @@ class PurchaseBillController extends Controller implements HasMiddleware
             'sort' => $sort,
             'sortOptions' => $this->sortLabels(),
             'showCancelled' => $request->boolean('cancelled'),
+            'stage' => $stage,
+            'processBand' => ProcessBand::forStatuses(
+                $bandBase,
+                [
+                    ['status' => DocumentStatus::DRAFT, 'label' => __('core.status.draft')],
+                    ['status' => DocumentStatus::CONFIRMED, 'label' => __('core.status.confirmed')],
+                    ['status' => DocumentStatus::CLOSED, 'label' => __('core.status.closed')],
+                ],
+                'purchase.bill.index',
+                $request->except(['stage', 'page']),
+                $stage !== '' ? $stage : null,
+            ),
         ]);
     }
 

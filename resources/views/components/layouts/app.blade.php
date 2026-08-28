@@ -167,6 +167,15 @@
          * না। কারণগুলো [[Ui::topnav()]]-এ।
          */
         $topnavShape = \App\Core\Support\Ui::topnav($shellLook);
+
+        /*
+         * কাগজের ধাপের পটি — কেবল যে রূপ ওটা চায়, আর যে পর্দা ধাপ
+         * পাঠিয়েছে, দুইটা একসাথে হলে।
+         *
+         * পর্দা ধাপ না পাঠালে কিছুই আঁকা হয় না — একটা খালি পটি
+         * "কিছু লোড হয়নি" বলে পড়ে, আর প্রতিটা তালিকায় ধাপ থাকেও না।
+         */
+        $bandShape = \App\Core\Support\Ui::band($shellLook);
     @endphp
 
     {{-- প্রিভিউয়ের পটি সবার আগে — Redwood-এর ইটরঙা পটিরও উপরে, কারণ
@@ -214,6 +223,10 @@
 
             @if ($topnavShape !== 'none')
                 <x-shell.topnav :menu="$menu ?? []" :shape="$topnavShape" />
+            @endif
+
+            @if ($bandShape === 'chevrons')
+                <x-shell.process-band :stages="$processBand ?? []" />
             @endif
 
             {{-- পথের বার — টপবার পুরো অ্যাপের, এটা এই পর্দার। কেন দুইটা

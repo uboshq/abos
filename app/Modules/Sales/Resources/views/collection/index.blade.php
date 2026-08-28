@@ -48,7 +48,7 @@
     ];
 @endphp
 
-<x-layouts.app :menu="$menu">
+<x-layouts.app :menu="$menu" :process-band="$processBand ?? []">
     <x-slot:title>{{ __('sales::menu.collections') }}</x-slot:title>
 
     @if (session('saved'))
