@@ -80,6 +80,31 @@ class TheBillBelongedToSomebodyElseTest extends TestCase
             'সেভ টেপার পর "বিলটা অন্য গ্রাহকের" — ঠিক সেই একত্রিশ বার।',
         ]));
 
+        /*
+         * ── আর শোনার ঘরটা যেন সত্যিই শোনে ───────────────────────────
+         * প্রথম সারাইয়ের পর `@change` markup-এ ছিল, পরীক্ষাও সবুজ
+         * ছিল, আর তবু তালিকা খালিই থাকত। কারণ Alpine কেবল `x-data`-র
+         * ভেতরের এলিমেন্ট পড়ে — আর ওই `select`-টার উপরে কোনো
+         * `x-data` ছিল না, তাই শোনার কথাটা কখনো বাঁধাই হয়নি।
+         *
+         * পর্দায় কোনো ভুল দেখা যেত না। শুধু গ্রাহক বাছলে কিছুই হত
+         * না — অর্থাৎ ঠিক আগের সমস্যাটাই, নতুন কোড দিয়ে।
+         */
+        $select = null;
+
+        if (preg_match('/<select[^>]*name="customer_id"[^>]*>/s', $html, $m) === 1) {
+            $select = $m[0];
+        }
+
+        $this->assertNotNull($select, 'গ্রাহকের ঘরটাই পাওয়া যায়নি।');
+
+        $this->assertStringContainsString('x-data', (string) $select, implode("\n", [
+            'গ্রাহকের ঘরে `@change` আছে কিন্তু `x-data` নেই।',
+            '',
+            'Alpine `x-data`-র বাইরের কোনো এলিমেন্ট পড়ে না, তাই ওই',
+            'শোনার কথাটা মৃত — বিলের তালিকা চিরকাল খালি থাকবে।',
+        ]));
+
         $this->assertStringNotContainsString('@foreach ($openInvoices', $html);
         $this->assertSame(1, substr_count($html, 'x-for="o in mine"'),
             'বিলের তালিকা আর ছাঁকা তালিকা থেকে আঁকা হচ্ছে না।');

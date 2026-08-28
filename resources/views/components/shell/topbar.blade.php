@@ -84,7 +84,21 @@
         সীমানাসহ, কারণ এটা একটা বোতাম: পাশের লোগো ও কোম্পানির ব্লক
         দুইটাই লিংক, আর সীমানা ছাড়া তিনটাই একই রকম লাগত।
     --}}
+    {{-- নিজের `x-data` — নাহলে Alpine এই বোতামটা পড়েই না।
+
+         ── কতদিন ধরে এটা কাজ করেনি, কেউ জানে না ─────────────────────
+         `$store` ব্যবহার করলেই Alpine এলিমেন্টটা পড়বে, এমন নয়। সে
+         কেবল `x-data`-র ভেতরের এলিমেন্টে ডিরেক্টিভ বাঁধে, আর টপবারে
+         এই বোতামের উপরে কোনো `x-data` ছিল না।
+
+         ফলে তিনটাই মৃত ছিল: ক্লিক, `:aria-expanded`, আর
+         `:aria-label` — অর্থাৎ স্ক্রিন রিডারে বোতামটার কোনো নামও
+         ছিল না। পর্দায় কিছুই ভুল দেখাত না; টিপলে কিছু হত না।
+
+         ধরা পড়েছে [[AListenerNobodyEverBoundTest]]-এ, ২৯ আগস্ট
+         ২০২৬ — আদায়ের পর্দায় ঠিক একই ভুল করার পর পাহারাটা লেখা হয়। --}}
     <button type="button"
+            x-data
             @click="$store.sidebar.toggle()"
             class="hidden size-9 shrink-0 items-center justify-center rounded-(--radius-field)
                    border border-(--color-topbar-border) text-(--color-topbar-ink-muted) transition-colors
