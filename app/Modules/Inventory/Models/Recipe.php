@@ -61,6 +61,13 @@ class Recipe extends Model
     {
         return [
             'is_active' => 'boolean',
+
+            /*
+             * ফলনটা decimal, নাহলে string হয়ে ফেরে আর কেউ `+`
+             * লিখলেই PHP float বানিয়ে ফেলে — আর float-এ ১০/৩
+             * কোনোদিন ঠিক হয় না ([[MoneyIsNeverAFloatTest]])।
+             */
+            'yield_qty' => 'decimal:4',
         ];
     }
 

@@ -90,6 +90,16 @@ return [
             ['label' => 'inventory::menu.issue', 'route' => 'inventory.stock.issue', 'permission' => 'inventory.stock.adjust'],
             ['label' => 'inventory::menu.opening', 'route' => 'inventory.stock.opening', 'permission' => 'inventory.stock.opening'],
             ['label' => 'inventory::menu.transfers', 'route' => 'inventory.transfer.index', 'permission' => 'inventory.transfer.view'],
+
+            /*
+             * রান্না — লেনদেনে, রেসিপির পাশে নয়।
+             *
+             * রেসিপি একটা নিয়ম, বছরে দুইবার বদলায়। রান্না একটা ঘটনা,
+             * রোজ সকালে ঘটে। এক মেনুতে রাখলে রোজকার কাজটা মাস্টার
+             * ডাটার সাথে মিশে যেত।
+             */
+            ['label' => 'inventory::menu.production', 'route' => 'inventory.production.index',
+                'permission' => 'inventory.production.view'],
         ],
         'reports' => [
             ['label' => 'inventory::menu.stock_ledger', 'route' => 'inventory.report.show',
@@ -145,6 +155,19 @@ return [
         'inventory.recipe.delete',
 
         /*
+         * রান্নার চাবি তিনটা, আর নিশ্চিত করাটা আলাদা।
+         *
+         * খসড়া লেখা নিরীহ — কিছুই নড়ে না। নিশ্চিত করা মানে গুদাম থেকে
+         * মাল বেরিয়ে যাওয়া, আর সেটা মজুদ সমন্বয়ের সমান ক্ষমতা।
+         *
+         * এক চাবিতে রাখলে যিনি রোজ হাঁড়ির হিসাব লেখেন তিনিই স্টক
+         * নামাতে পারতেন, আর ভুল সংখ্যা সাথে সাথেই খাতায় বসত।
+         */
+        'inventory.production.view',
+        'inventory.production.create',
+        'inventory.production.confirm',
+
+        /*
          * লটের ছাপা দাম বদলানো — বিক্রয়ের অনুমতির সাথে নয়।
          *
          * MRP বাড়ে-কমে, তাই ঘরটা তালাবদ্ধ রাখা যায় না (মালিকের কথা,
@@ -184,6 +207,9 @@ return [
         'PRD' => 'inventory::doc.product_code',
         'ADJ' => 'inventory::doc.adjustment',
         'STF' => 'inventory::doc.transfer',
+
+        /* রান্না — হাঁড়ির উৎপাদন। */
+        'CKG' => 'inventory::doc.production',
 
         /*
          * গুদামের কোডও সিরিজ থেকে — মালিকের নির্দেশ (২০২৬-০৮-০৭):

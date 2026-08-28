@@ -11,4 +11,7 @@ return [
 
     'recipe_head' => 'Dish and yield',
     'recipe_lines' => 'Ingredients',
+
+    'production_head' => 'The cooking',
+    'production_used' => 'What went in',
 ];

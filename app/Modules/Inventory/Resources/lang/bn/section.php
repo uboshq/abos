@@ -11,4 +11,7 @@ return [
 
     'recipe_head' => 'খাবার ও ফলন',
     'recipe_lines' => 'উপকরণ',
+
+    'production_head' => 'রান্নার কাগজ',
+    'production_used' => 'যা যা গেল',
 ];

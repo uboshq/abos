@@ -26,4 +26,7 @@ return [
     'new_recipe' => 'New recipe',
     'add_ingredient' => 'Add an ingredient',
     'remove_ingredient' => 'Remove this ingredient',
+
+    'new_production' => 'New cooking',
+    'confirm_production' => 'Confirm',
 ];

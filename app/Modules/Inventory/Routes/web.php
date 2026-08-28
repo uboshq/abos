@@ -6,6 +6,7 @@ use App\Modules\Inventory\Http\Controllers\BatchController;
 use App\Modules\Inventory\Http\Controllers\LabelController;
 use App\Modules\Inventory\Http\Controllers\OpeningStockController;
 use App\Modules\Inventory\Http\Controllers\ProductController;
+use App\Modules\Inventory\Http\Controllers\ProductionController;
 use App\Modules\Inventory\Http\Controllers\RecipeController;
 use App\Modules\Inventory\Http\Controllers\StockController;
 use App\Modules\Inventory\Http\Controllers\StockPrintController;
@@ -147,6 +148,24 @@ Route::middleware('auth')->prefix('inventory')->group(function () {
             ->whereNumber('recipe')->name('destroy');
         Route::post('/{recipe}/activate', [RecipeController::class, 'activate'])
             ->whereNumber('recipe')->name('activate');
+    });
+
+    /*
+     * রান্না — হাঁড়ির উৎপাদন।
+     *
+     * `confirm` আলাদা একটা POST, কারণ ওটাই আসল ঘটনা: খসড়া লেখা নিরীহ,
+     * নিশ্চিত করা মানে গুদাম থেকে মাল বেরিয়ে যাওয়া।
+     */
+    Route::prefix('cookings')->name('production.')->group(function () {
+        Route::get('/', [ProductionController::class, 'index'])->name('index');
+        Route::get('/create', [ProductionController::class, 'create'])->name('create');
+        Route::post('/', [ProductionController::class, 'store'])->name('store');
+        Route::get('/{production}', [ProductionController::class, 'show'])
+            ->whereNumber('production')->name('show');
+        Route::post('/{production}/confirm', [ProductionController::class, 'confirm'])
+            ->whereNumber('production')->name('confirm');
+        Route::delete('/{production}', [ProductionController::class, 'destroy'])
+            ->whereNumber('production')->name('destroy');
     });
 
     Route::get('/reports/{slug}', [StockReportController::class, 'show'])->name('report.show');

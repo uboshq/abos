@@ -68,4 +68,13 @@ return [
     'recipe_search' => 'Search by dish name or code',
     'recipe_active_hint' => 'Active — this recipe is the one a sale will use',
     'any_kind' => 'Any kind',
+
+    /* Batch cooking. */
+    'made' => 'How many made',
+    'made_hint' => 'How many were actually made today — not the recipe yield. A 50-plate pot can give 47.',
+    'production_recipe_hint' => 'Only recipes cooked in a batch — made-to-order ingredients come off at the sale.',
+    'production_search' => 'Paper number or dish name',
+    'cost_total' => 'Total cost',
+    'cost_per_unit' => 'Cost each',
+    'cost' => 'Cost',
 ];

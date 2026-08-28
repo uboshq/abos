@@ -79,4 +79,14 @@ return [
     'recipe_lines_note' => 'Amounts are for the yield above, not for one plate. With waste, more leaves the store than is used, and the right-hand column shows how much.',
     'no_recipes' => 'No recipes yet',
     'no_recipes_note' => 'Without a recipe a cooked dish takes no ingredients when sold, and the store figures drift.',
+
+    /* Batch cooking. */
+    'production_subtitle' => 'Which recipe, and how many came out today — ingredients and cost follow from that',
+    'production_count' => 'One cooking|:count cookings',
+    'production_saved' => 'Kept as a draft — nothing moves in the store until it is confirmed.',
+    'production_confirmed' => 'Confirmed — the ingredients came off and the dish went on the shelf.',
+    'production_removed' => 'The draft was removed.',
+    'no_productions' => 'No cooking papers yet',
+    'no_batch_recipes' => 'No recipe is cooked in a batch',
+    'no_batch_recipes_note' => 'Make a recipe first and set it to "cooked in a batch". Made-to-order dishes need no paper here — their ingredients come off at the sale.',
 ];
