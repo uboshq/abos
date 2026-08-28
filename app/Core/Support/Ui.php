@@ -55,7 +55,7 @@ final class Ui
     /**
      * @return array<string, array{
      *     label: string, blurb: string, imitates: ?string,
-     *     density: string, nav: string, topnav: string, commands: string, filters: string,
+     *     density: string, nav: string, topnav: string, band: string, commands: string, filters: string,
      *     views: string, record: string, accent: string, swatch: string,
      *     ink: string,
      * }>
@@ -88,6 +88,7 @@ final class Ui
                 'sections' => 'plain',
                 'nav' => 'rail',
                 'topnav' => 'none',
+                'band' => 'none',
                 'density' => 'dense',
                 'swatch' => '#1e3a8a',
                 'ink' => '#0b1220',
@@ -105,6 +106,7 @@ final class Ui
                 'sections' => 'plain',
                 'nav' => 'rail',
                 'topnav' => 'none',
+                'band' => 'none',
                 'density' => 'comfortable',
                 'swatch' => '#be123c',
                 'ink' => '#1f1417',
@@ -122,6 +124,7 @@ final class Ui
                 'sections' => 'anchors',
                 'nav' => 'top',
                 'topnav' => 'modules',
+                'band' => 'none',
                 'density' => 'comfortable',
                 'swatch' => '#0a6ed1',
                 'ink' => '#32363a',
@@ -139,6 +142,7 @@ final class Ui
                 'sections' => 'plain',
                 'nav' => 'top',
                 'topnav' => 'modules',
+                'band' => 'none',
                 'density' => 'dense',
                 'swatch' => '#125740',
                 'ink' => '#1f2b28',
@@ -156,6 +160,7 @@ final class Ui
                 'sections' => 'plain',
                 'nav' => 'top',
                 'topnav' => 'sections',
+                'band' => 'none',
                 'density' => 'comfortable',
                 'swatch' => '#714b67',
                 'ink' => '#374151',
@@ -173,6 +178,7 @@ final class Ui
                 'sections' => 'plain',
                 'nav' => 'rail',
                 'topnav' => 'none',
+                'band' => 'chevrons',
                 'density' => 'dense',
                 'swatch' => '#0078d4',
                 'ink' => '#242424',
@@ -190,6 +196,7 @@ final class Ui
                 'sections' => 'plain',
                 'nav' => 'rail',
                 'topnav' => 'none',
+                'band' => 'none',
                 'density' => 'comfortable',
                 'swatch' => '#c74634',
                 'ink' => '#161513',
@@ -219,6 +226,7 @@ final class Ui
                 'sections' => 'plain',
                 'nav' => 'top',
                 'topnav' => 'none',
+                'band' => 'none',
                 'density' => 'comfortable',
                 'swatch' => '#0176d3',
                 'ink' => '#032d60',
@@ -267,6 +275,7 @@ final class Ui
                 'sections' => 'plain',
                 'nav' => 'quiet',
                 'topnav' => 'none',
+                'band' => 'none',
                 'density' => 'dense',
                 'swatch' => '#5e6ad2',
                 'ink' => '#0e0f11',
@@ -284,6 +293,7 @@ final class Ui
                 'sections' => 'plain',
                 'nav' => 'top',
                 'topnav' => 'modules',
+                'band' => 'none',
                 'density' => 'dense',
                 'swatch' => '#e08c1a',
                 'ink' => '#23303c',
@@ -369,6 +379,27 @@ final class Ui
     public static function topnav(?string $key): string
     {
         return self::all()[self::clean($key)]['topnav'];
+    }
+
+    /**
+     * কাগজের ধাপগুলো উপরে একটা পটিতে দেখানো হয় কি না।
+     *
+     * ── কেন কেবল `dynamic`-এ ────────────────────────────────────────
+     * শেভরন ব্যান্ড Dynamics 365-এর নিজস্ব — DMS-এর রূপের ঘোষণাতেও
+     * ওটাই `dynamic`-এর signature বলে লেখা: "a real chevron bar
+     * (clip-path, not borders) carrying a count and a total per stage"।
+     *
+     * ২৯ আগস্ট ২০২৬-এ মালিক বললেন নকলটা ঠিক হয়নি। মিলিয়ে দেখা গেল
+     * রং ও কাঠামো ঠিকই ছিল — নেভি হেডার, Fluent-এর `#F5F5F5` সাইট
+     * ম্যাপ, নিচে এরিয়া-সুইচার — **কেবল তীরগুলোই ছিল না**, আর ওটাই
+     * D365 দেখলে চোখে পড়ে।
+     *
+     * অন্য রূপে বসালে ওটা আর নকল থাকত না, সাজসজ্জা হয়ে যেত: Odoo বা
+     * Fiori-তে এমন কোনো পটি নেই।
+     */
+    public static function band(?string $key): string
+    {
+        return self::all()[self::clean($key)]['band'];
     }
 
     /**

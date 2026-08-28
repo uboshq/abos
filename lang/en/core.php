@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 /** Core strings, English. Every key here must also exist in lang/bn/core.php — rule 9. */
 return [
+    'band' => [
+        'process' => 'Where the papers stand',
+    ],
+
     'status' => [
         'draft' => 'Draft',
         'confirmed' => 'Confirmed',
