@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Design;
 
+use App\Core\Module\ModuleRegistry;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\File;
 use Tests\TestCase;
@@ -56,8 +57,20 @@ class IconSetTest extends TestCase
 
     public function test_the_set_draws_every_name_it_is_asked_for(): void
     {
-        // সেটের ভেতরের একটা নমুনা — মডিউল, কাজ ও টাকা তিন ভাগ থেকেই
-        foreach (['dashboard', 'accounts', 'plus', 'printer', 'wallet', 'handover'] as $name) {
+        /*
+         * কেবল **কাজের** আইকন — মডিউলেরগুলো আর আঁকা নয়।
+         *
+         * ── কেন নিয়মটা বদলাল, ২৮ আগস্ট ২০২৬ ─────────────────────────
+         * মডিউলের চিহ্ন এখন ইমোজি। মালিক দুইটা পণ্য পাশাপাশি রেখে
+         * দেখেছেন: ১৮px-এ একটা গুদামের আউটলাইন আর একটা বাক্সের
+         * আউটলাইন একই ধূসর চতুর্ভুজ, আর এই মেনুতে এগারোটা মডিউল।
+         *
+         * কিন্তু **কাজের বোতাম আঁকাই থাকে** — যোগ, ছাপা, ছাঁকনি।
+         * ওখানে "চেনা যাওয়া"-র সমস্যা নেই, আর ইমোজির টুলবার পড়ে
+         * চ্যাট-উইন্ডোর মতো। নিচের `test_module_marks_are_emoji_and_unique`
+         * উল্টো দিকটা পাহারা দেয়।
+         */
+        foreach (['plus', 'printer', 'wallet', 'handover', 'search', 'refresh'] as $name) {
             $svg = Blade::render('<x-ui.icon name="'.$name.'" />');
 
             $this->assertStringContainsString('<svg', $svg, "{$name}: কিছুই আঁকা হয়নি");
@@ -111,20 +124,36 @@ class IconSetTest extends TestCase
     }
 
     /**
-     * পর্দায় ইমোজি নয়।
+     * ইমোজি কেবল আইকন সেটের ভেতরে — পর্দার কোথাও ছড়ানো নয়।
      *
-     * ইমোজি আমাদের আঁকা নয় — Windows-এর 🔔 আর Android-এর 🔔 এক ছবি নয়,
-     * তাই একই পর্দা দুই মেশিনে দুই রকম দেখায়। আর ওরা পর্দার কালি নেয়
-     * না, তাই ডার্ক থিমে একই উজ্জ্বল রঙে থেকে যায়।
+     * ── নিয়মটা বদলেছে, কিন্তু আলগা হয়নি ────────────────────────────
+     * আগে নিয়ম ছিল "পর্দায় ইমোজি নয়", আর কারণটা এখনো সত্যি: ইমোজি
+     * আমাদের আঁকা নয়, Windows-এর 🔔 আর Android-এর 🔔 এক ছবি নয়, আর
+     * ওরা পর্দার কালি নেয় না।
      *
-     * তালিকাটা যা আসলে বসানো ছিল তাই: টপবারের ✅ 🔔 🌐, পাসওয়ার্ডের 👁।
+     * ২৮ আগস্ট ২০২৬-এ মালিক মডিউলের চিহ্নের জন্য ইমোজি বেছেছেন —
+     * ১৮px-এ এগারোটা আউটলাইন একই ধূসর চতুর্ভুজ, আর সেখানে চেনা যাওয়া
+     * সঙ্গতির চেয়ে বড়।
+     *
+     * কিন্তু ছাড়টা **একটাই ফাইলে**: `ui/icon.blade.php`। ওখানে
+     * ইমোজিগুলো একটা তালিকায় বসে, নাম ধরে ডাকা হয়, আর একবার বদলালে
+     * সবখানে বদলায়।
+     *
+     * বাকি পর্দায় নিষেধ আগের মতোই কড়া। কেউ একটা বোতামে সরাসরি 🔔
+     * টাইপ করলে সেটা আবার সেই পুরনো সমস্যা — ছড়ানো ইমোজি, যার কোনো
+     * নাম নেই আর যেটা বদলাতে হলে খুঁজে বেড়াতে হয়।
      */
-    public function test_no_emoji_is_used_as_an_icon(): void
+    public function test_no_emoji_is_typed_straight_into_a_screen(): void
     {
         $banned = ['✅', '🔔', '🌐', '👁', '🔍', '⚙', '📊', '🏠', '❌', '⚠'];
         $offenders = [];
 
         foreach ($this->blades() as $path) {
+            // সেটের নিজের ফাইলই একমাত্র জায়গা যেখানে ইমোজি বসে
+            if (basename($path) === 'icon.blade.php') {
+                continue;
+            }
+
             $body = $this->markupOf($path);
 
             foreach ($banned as $emoji) {
@@ -134,7 +163,74 @@ class IconSetTest extends TestCase
             }
         }
 
-        $this->assertSame([], $offenders,
-            "পর্দায় ইমোজি বসেছে; এগুলো x-ui.icon-এর নাম হওয়ার কথা:\n".implode("\n", $offenders));
+        $this->assertSame([], $offenders, implode('
+', [
+            'পর্দায় সরাসরি ইমোজি টাইপ করা হয়েছে:',
+            ...$offenders,
+            '',
+            'মডিউলের চিহ্ন হলে ui/icon.blade.php-এর তালিকায় নাম দিয়ে বসান;',
+            'কাজের বোতাম হলে ওটার একটা আঁকা লাগবে।',
+        ]));
+    }
+
+    /**
+     * প্রতিটা মডিউলের চিহ্ন আছে, আর **কোনো দুইটা এক নয়**।
+     *
+     * ── কেন অনন্যতাটাই আসল দাবি ─────────────────────────────────────
+     * দুইটা মডিউলে একই ইমোজি থাকলে সেটা চিহ্ন না থাকার চেয়েও খারাপ —
+     * চোখ ভুল জিনিস শেখে, আর মানুষ ক্রয়ে ক্লিক করতে গিয়ে বিক্রয়ে
+     * চলে যান।
+     *
+     * ইমোজি বাছার পুরো যুক্তিটাই "না পড়েই আলাদা করা যায়"। দুইটা এক
+     * হলে ওই যুক্তিটাই ভেঙে যায়, আর তখন আঁকাগুলোই ভালো ছিল।
+     */
+    public function test_module_marks_are_emoji_and_unique(): void
+    {
+        $modules = collect(app(ModuleRegistry::class)->all())
+            ->map(fn ($m) => $m->code)
+            ->push('dashboard')
+            ->all();
+
+        $marks = [];
+        $missing = [];
+
+        foreach ($modules as $code) {
+            $html = trim(Blade::render(
+                '<x-ui.icon name="'.$code.'" />'
+            ));
+
+            if ($html === '') {
+                $missing[] = $code;
+
+                continue;
+            }
+
+            // মোড়কের ভেতরের অক্ষরটাই চিহ্ন
+            $glyph = trim(strip_tags($html));
+
+            $marks[$glyph][] = $code;
+        }
+
+        $this->assertSame([], $missing, implode('
+', [
+            'এই মডিউলগুলোর কোনো চিহ্ন নেই — মেনুতে সারিটা খালি বসবে:',
+            ...$missing,
+            '',
+            'ui/icon.blade.php-এর $glyphs তালিকায় একটা সারি যোগ করুন।',
+        ]));
+
+        $shared = array_filter($marks, fn (array $codes) => count($codes) > 1);
+
+        $this->assertSame([], $shared, implode('
+', [
+            'একই চিহ্ন একাধিক মডিউলে:',
+            ...array_map(
+                fn (string $g, array $codes) => "  {$g} — ".implode(', ', $codes),
+                array_keys($shared),
+                $shared,
+            ),
+            '',
+            'দুইটা মডিউলে এক চিহ্ন মানে চোখ ভুল জিনিস শেখে।',
+        ]));
     }
 }

@@ -484,10 +484,16 @@ class ShellTest extends TestCase
         foreach ($modules as $module) {
             $code = $module['code'];
 
-            // ১ · আঁকাটা আছে, আর ফাঁকা নয়
-            $svg = Blade::render('<x-ui.icon name="'.$module['icon'].'" />');
-            $this->assertStringContainsString('<svg', $svg, "{$code}: রেলে ফাঁকা ঘর বসবে।");
-            $drawings[$code] = $svg;
+            /*
+             * ১ · চিহ্নটা আছে, আর ফাঁকা নয়।
+             *
+             * `<svg` নয় — ২৮ আগস্ট ২০২৬ থেকে মডিউলের চিহ্ন ইমোজি,
+             * কাজেরগুলো আঁকা। এখানকার দাবিটা কখনোই "SVG" ছিল না,
+             * ছিল "রেলে ফাঁকা ঘর বসে না"।
+             */
+            $mark = trim(Blade::render('<x-ui.icon name="'.$module['icon'].'" />'));
+            $this->assertNotSame('', $mark, "{$code}: রেলে ফাঁকা ঘর বসবে।");
+            $drawings[$code] = $mark;
 
             // ২ · রঙের টোকেনটা আছে — নাম হুবহু মডিউলের কোড
             $this->assertMatchesRegularExpression(
