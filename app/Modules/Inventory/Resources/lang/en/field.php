@@ -51,4 +51,21 @@ return [
     'batch_no' => 'Lot no.',
     'mrp' => 'Printed price',
     'phone' => 'Phone',
+
+    /* Recipes — what a dish is made of. */
+    'dish' => 'Dish',
+    'ingredient' => 'Ingredient',
+    'ingredients' => 'Ingredients',
+    'recipe_kind' => 'Cooked',
+    'recipe_kind_hint' => 'Made to order takes the ingredients at the sale; cooked in a batch takes them when the batch is made.',
+    'recipe_to_order' => 'Made to order',
+    'recipe_batch' => 'Cooked in a batch',
+    'yield' => 'Yield',
+    'yield_hint' => 'How many one cooking makes. A 50-plate pot is 50 — then write the ingredient amounts for 50 plates.',
+    'qty_used' => 'Used in cooking',
+    'waste_pct' => 'Waste %',
+    'qty_from_store' => 'Taken from store',
+    'recipe_search' => 'Search by dish name or code',
+    'recipe_active_hint' => 'Active — this recipe is the one a sale will use',
+    'any_kind' => 'Any kind',
 ];

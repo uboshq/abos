@@ -6,6 +6,7 @@ use App\Modules\Inventory\Http\Controllers\BatchController;
 use App\Modules\Inventory\Http\Controllers\LabelController;
 use App\Modules\Inventory\Http\Controllers\OpeningStockController;
 use App\Modules\Inventory\Http\Controllers\ProductController;
+use App\Modules\Inventory\Http\Controllers\RecipeController;
 use App\Modules\Inventory\Http\Controllers\StockController;
 use App\Modules\Inventory\Http\Controllers\StockPrintController;
 use App\Modules\Inventory\Http\Controllers\StockReportController;
@@ -120,6 +121,32 @@ Route::middleware('auth')->prefix('inventory')->group(function () {
             ->whereNumber('transfer')->name('receive');
         Route::post('/{transfer}/cancel', [StockTransferController::class, 'cancel'])
             ->whereNumber('transfer')->name('cancel');
+    });
+
+    /*
+     * রেসিপি — কোন খাবার কী দিয়ে তৈরি।
+     *
+     * ── কেন ইনভেন্টরির রুটে, বিক্রয়ের নয় ────────────────────────────
+     * রেসিপি বিক্রির কথা নয়, **স্টকের** কথা। একই রেসিপি বিক্রিতে লাগে,
+     * উৎপাদনে লাগে, খরচের রিপোর্টে লাগে। বিক্রয়ে রাখলে উৎপাদনকে
+     * বিক্রয়ের উপর নির্ভর করতে হত — অথচ হাঁড়ি চড়ানোর সাথে বিক্রির
+     * কোনো সম্পর্ক নেই।
+     *
+     * `whereNumber` — পণ্যের রুটে যে কারণে (উপরে লেখা): নাহলে
+     * `/recipes/create`-কে একটা id ভেবে বাইন্ডিং ৪০৪ দিত।
+     */
+    Route::prefix('recipes')->name('recipe.')->group(function () {
+        Route::get('/', [RecipeController::class, 'index'])->name('index');
+        Route::get('/create', [RecipeController::class, 'create'])->name('create');
+        Route::post('/', [RecipeController::class, 'store'])->name('store');
+        Route::get('/{recipe}/edit', [RecipeController::class, 'edit'])
+            ->whereNumber('recipe')->name('edit');
+        Route::put('/{recipe}', [RecipeController::class, 'update'])
+            ->whereNumber('recipe')->name('update');
+        Route::delete('/{recipe}', [RecipeController::class, 'destroy'])
+            ->whereNumber('recipe')->name('destroy');
+        Route::post('/{recipe}/activate', [RecipeController::class, 'activate'])
+            ->whereNumber('recipe')->name('activate');
     });
 
     Route::get('/reports/{slug}', [StockReportController::class, 'show'])->name('report.show');

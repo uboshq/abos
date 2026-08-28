@@ -15,4 +15,6 @@ return [
     'on_the_way' => 'On the way first',
     'recent' => 'Newest first',
     'oldest' => 'Oldest first',
+
+    'dish' => 'Dish name',
 ];

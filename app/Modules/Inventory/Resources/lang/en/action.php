@@ -21,4 +21,9 @@ return [
     'show_cancelled' => 'Show cancelled too',
     'issue' => 'Issue stock',
     'trace' => 'Trace',
+
+    /* Recipes. */
+    'new_recipe' => 'New recipe',
+    'add_ingredient' => 'Add an ingredient',
+    'remove_ingredient' => 'Remove this ingredient',
 ];

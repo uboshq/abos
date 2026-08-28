@@ -17,9 +17,11 @@ use App\Models\IssuedNumber;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Inventory\Models\Product;
+use App\Modules\Inventory\Models\Recipe;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\CostLayerService;
 use App\Modules\Inventory\Services\ReadsPackedQuantities;
+use App\Modules\Inventory\Services\RecipeService;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\Sales\Events\InvoiceConfirmed;
 use App\Modules\Sales\Models\DeliveryChallanLine;
@@ -57,6 +59,7 @@ final class SalesInvoiceService
         private readonly NumberSeriesEngine $numbers,
         private readonly PostingEngine $posting,
         private readonly StockService $stock,
+        private readonly RecipeService $recipes,
         private readonly CostLayerService $costs,
         private readonly SettingsService $settings,
         private readonly ApprovalEngine $approvals,
@@ -292,6 +295,39 @@ final class SalesInvoiceService
                 }
 
                 $warehouse = $invoice->warehouse ?? $this->defaultWarehouse();
+
+                /*
+                 * রান্না করা খাবার — পণ্যটা নয়, তার উপকরণগুলো কমে।
+                 *
+                 * ── কেন এখানে, আর কেন `continue` ─────────────────────
+                 * "চিকেন বিরিয়ানি" নামে কিছু গুদামে ঢোকে না, তাই তার
+                 * নিজের কোনো স্টক নেই। তার সারিতে সাধারণ নিয়মে স্টক
+                 * কমাতে গেলে ঋণাত্মক স্টক তৈরি হত — একটা জিনিসের, যা
+                 * কোনোদিন কেনাই হয়নি।
+                 *
+                 * ── হাঁড়িতে-রান্না এখানে আসে না ──────────────────────
+                 * `consumesOnSale()` কেবল `to_order`-এ সত্যি। হাঁড়ির
+                 * খাবার একটা সত্যিকারের স্টক-আইটেম — উৎপাদনের সময় সে
+                 * গুদামে ঢোকে — তাই তার বিক্রি নিচের সাধারণ পথেই যায়,
+                 * আর সেটাই ঠিক। দুই জায়গায় কমালে চাল দুইবার খরচ হত।
+                 */
+                if ($this->recipes->consumesOnSale($line->product)) {
+                    $recipe = $this->recipes->forProduct($line->product);
+
+                    $this->assertRecipeCanBeCooked($line->product, $recipe, $warehouse, (string) $line->qty);
+
+                    $this->recipes->consume(
+                        recipe: $recipe,
+                        servings: (string) $line->qty,
+                        warehouse: $warehouse,
+                        sourceType: SalesInvoice::STOCK_SOURCE,
+                        sourceId: $invoice->id,
+                        date: $invoice->trx_date,
+                        documentNo: $invoice->document_no,
+                    );
+
+                    continue;
+                }
 
                 $this->assertEnoughToSell($line->product, $warehouse, (string) $line->qty);
 
@@ -555,6 +591,29 @@ final class SalesInvoiceService
         $cost = '0';
 
         foreach ($invoice->lines as $line) {
+            /*
+             * রান্না করা খাবারের খরচ তার **উপকরণের** স্তর থেকে।
+             *
+             * ── কেন খাবারটার নিজের স্তর নেই ─────────────────────────
+             * FIFO স্তর জন্মায় মাল কেনার সময়। "চিকেন বিরিয়ানি" কোনোদিন
+             * কেনা হয়নি, তাই তার কোনো স্তরও নেই — আর না থাকাটাই ঠিক।
+             *
+             * এই যাচাইটা না বসিয়ে প্রথমবার চালাতে গিয়ে বিলটাই আটকে
+             * গিয়েছিল: "ক্রয়মূল্যের হিসাব নেই"। পাহারাটা ঠিকই বলেছিল —
+             * শুধু প্রশ্নটা ভুল পণ্যকে করা হচ্ছিল।
+             *
+             * ── কেন নতুন কোনো দর হিসাব করা হয়নি ─────────────────────
+             * উপকরণগুলো একটু আগেই `RecipeService` দিয়ে বেরিয়েছে, আর
+             * ওদের স্তর টানলে দর ওখান থেকেই আসে। রেসিপিতে আলাদা দর
+             * রাখলে ৭ আগস্টের সেই ভুলটাই ফিরত — মাল ঢুকত এক দামে,
+             * বেরোত আরেক দামে।
+             */
+            if ($this->recipes->consumesOnSale($line->product)) {
+                $cost = bcadd($cost, $this->cookedCost($invoice, $line), 4);
+
+                continue;
+            }
+
             $taken = $this->costs->issue(
                 product: $line->product,
                 qty: (string) $line->qty,
@@ -582,6 +641,52 @@ final class SalesInvoiceService
 
         $invoice->update(['cost_of_goods' => $cost]);
         $invoice->refresh();
+    }
+
+    /**
+     * রান্না করা খাবারের এক সারির খরচ — উপকরণের FIFO স্তর টেনে।
+     *
+     * ── কেন প্রতিটা উপকরণে আলাদা করে ডাকা হয় ────────────────────────
+     * FIFO মানে "যেটা আগে ঢুকেছে সেটা আগে বেরোয়", আর প্রতিটা উপকরণের
+     * নিজের ঢোকার ইতিহাস আলাদা। চাল তিন দামে তিনবার কেনা হতে পারে,
+     * মাংস একবার। একটা গড় দর বসালে ওই ইতিহাসটাই হারাত।
+     *
+     * ── সারির `unit_cost` কেন প্লেট ধরে ─────────────────────────────
+     * উপকরণগুলোর খরচ যোগ হয়ে দাঁড়ায় গোটা সারির খরচ; তাকে প্লেটের
+     * সংখ্যা দিয়ে ভাগ করলে পাওয়া যায় **এক প্লেটে কত টাকার মাল গেল**।
+     * ওটাই খাদ্য-খরচের রিপোর্টের মূল সংখ্যা, আর ওটা সারিতেই লেখা
+     * থাকলে রিপোর্টকে আর হিসাব কষতে হয় না।
+     */
+    private function cookedCost(SalesInvoice $invoice, SalesInvoiceLine $line): string
+    {
+        $recipe = $this->recipes->forProduct($line->product);
+
+        if ($recipe === null) {
+            return '0';
+        }
+
+        $cost = '0';
+
+        foreach ($this->recipes->needsFor($recipe, (string) $line->qty) as $need) {
+            $taken = $this->costs->issue(
+                product: $need['product'],
+                qty: $need['qty'],
+                sourceType: SalesInvoice::STOCK_SOURCE,
+                sourceId: $invoice->id,
+                documentNo: $invoice->document_no,
+                date: $invoice->trx_date,
+            );
+
+            $cost = bcadd($cost, $taken['cost'], 4);
+        }
+
+        $line->update([
+            'unit_cost' => bccomp((string) $line->qty, '0', 4) > 0
+                ? bcdiv($cost, (string) $line->qty, 4)
+                : '0',
+        ]);
+
+        return $cost;
     }
 
     private function resolveChallanLine(
@@ -701,6 +806,59 @@ final class SalesInvoiceService
                     'available' => rtrim(rtrim($available, '0'), '.'),
                 ]),
             ]);
+        }
+    }
+
+    /**
+     * রেসিপিটা সত্যিই রান্না করা যায় কি না — বিক্রির আগেই।
+     *
+     * ── কেন নীরবে বিক্রি হতে দেওয়া যায় না ────────────────────────────
+     * পরিকল্পনায় এটাই ধাপ ১-এর প্রথম শর্ত: "অসম্পূর্ণ রেসিপির খাবার
+     * বিক্রি হলে বলতে হবে"।
+     *
+     * উপকরণ ছাড়া রেসিপি মানে বিক্রিতে **কিছুই কমে না**। বিল ছাপে, টাকা
+     * আসে, পর্দায় কোনো ভুল দেখায় না — আর গুদামের হিসাব নীরবে ভুল হতে
+     * থাকে। ধরা পড়ে মাসের শেষে, যখন আর বলা যায় না কোন দিনের কোন
+     * বিক্রিতে গোলমাল হয়েছিল।
+     *
+     * ── কেন উপকরণের স্টকও এখানেই দেখা হয় ────────────────────────────
+     * `RecipeService::consume()` ডাকলে `StockService` প্রতিটা উপকরণে
+     * আলাদা করে বাধা দিত, আর বার্তাটা হত "চাল কম" — অথচ কাউন্টারে
+     * বসা মানুষ চাল বেচছেন না, বিরিয়ানি বেচছেন।
+     *
+     * এখানে দেখায় বার্তাটা হয় "বিরিয়ানি বানানোর মতো চাল নেই", আর
+     * সেটাই তাঁর কাজের ভাষা।
+     */
+    private function assertRecipeCanBeCooked(
+        Product $dish,
+        ?Recipe $recipe,
+        ?Warehouse $warehouse,
+        string $servings,
+    ): void {
+        if ($recipe === null || $recipe->lines->isEmpty()) {
+            throw ValidationException::withMessages([
+                'lines' => __('sales::validation.recipe_incomplete', [
+                    'product' => $dish->name(),
+                ]),
+            ]);
+        }
+
+        if ($warehouse === null) {
+            return;
+        }
+
+        foreach ($this->recipes->needsFor($recipe, $servings) as $need) {
+            $available = $this->stock->availableQty($need['product'], $warehouse);
+
+            if (bccomp($available, $need['qty'], 4) < 0) {
+                throw ValidationException::withMessages([
+                    'lines' => __('sales::validation.not_enough_to_cook', [
+                        'product' => $dish->name(),
+                        'ingredient' => $need['product']->name(),
+                        'available' => rtrim(rtrim($available, '0'), '.'),
+                    ]),
+                ]);
+            }
         }
     }
 
