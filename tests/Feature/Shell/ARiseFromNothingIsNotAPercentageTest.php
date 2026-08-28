@@ -195,7 +195,17 @@ class ARiseFromNothingIsNotAPercentageTest extends TestCase
      * প্রতিটা নাম সত্যিই সেটে আছে।
      *
      * অচেনা নাম দিলে কম্পোনেন্ট চুপ করে কিছুই আঁকে না। তাই নাম বসিয়ে
-     * দিলেই ঘরটা ভরে যায় না — এখানে সত্যিই SVG বেরোয় কি না দেখা হয়।
+     * দিলেই ঘরটা ভরে যায় না — এখানে সত্যিই কিছু বেরোয় কি না দেখা হয়।
+     *
+     * ── কেন দাবিটা `<svg` থেকে সরে এল, ২৮ আগস্ট ২০২৬ ────────────────
+     * মডিউলের চিহ্ন এখন ইমোজি, কাজেরগুলো আঁকা — দুইটা আলাদা markup।
+     * `<svg` খুঁজলে এই পাহারা মডিউলের নামগুলোকে "নেই" বলত, অথচ ওরা
+     * ঠিকই আঁকা হচ্ছে।
+     *
+     * আসল দাবিটা কখনোই "SVG" ছিল না; ছিল **"ঘরটা খালি থাকে না"**।
+     * সেটাই লেখা হলো, আর তাতে পাহারাটা markup বদলালেও টিকে যায়।
+     *
+     * কোনটা ইমোজি আর কোনটা আঁকা — সেই নিয়মটা [[IconSetTest]]-এর কাজ।
      */
     public function test_the_icon_names_are_ones_the_set_actually_has(): void
     {
@@ -209,9 +219,9 @@ class ARiseFromNothingIsNotAPercentageTest extends TestCase
                     continue;
                 }
 
-                $svg = Blade::render('<x-ui.icon :name="$name" />', ['name' => $widget->icon]);
+                $drawn = trim(Blade::render('<x-ui.icon :name="$name" />', ['name' => $widget->icon]));
 
-                $this->assertStringContainsString('<svg', $svg,
+                $this->assertNotSame('', $drawn,
                     "\"{$widget->icon}\" নামের কোনো আইকন সেটে নেই — ঘরটা নীরবে খালি থাকত।");
 
                 $checked++;
