@@ -17,6 +17,30 @@
         ])->all();
 
     $existing = old('lines', $rows);
+
+    /*
+     * খোলা বিলগুলো JS-এর হাতে — **গ্রাহকের নম্বরসহ**।
+     *
+     * ── কী ভাঙা ছিল, ২৯ আগস্ট ২০২৬ ─────────────────────────────────
+     * লাইভে ৩২ জন গ্রাহকের কাছ থেকে টাকা নিতে গিয়ে ৩১ বার এসেছে
+     * **"বিলটা অন্য গ্রাহকের।"** কারণ তালিকাটা ছিল সব গ্রাহকের সব
+     * খোলা বিলের, আর গ্রাহক বদলালেও ওটা বদলাত না।
+     *
+     * সার্ভার ঠিকই আটকাত — কিন্তু ভুল পছন্দটা আগে **দেখানোই** হত।
+     * ডিপোতে ৩২ জন গ্রাহক আর শয়ে শয়ে বিল; ওই তালিকা থেকে ঠিক বিলটা
+     * খুঁজে বের করা এক জিনিস, আর ভুলটা বেছে সেভ টিপে ফেরত আসা আরেক।
+     *
+     * ── কেন সার্ভারে না গিয়ে এখানেই ছাঁকা ──────────────────────────
+     * বিলগুলো ইতিমধ্যেই পাতায় আছে। গ্রাহক বদলালে সার্ভারে যাওয়া মানে
+     * প্রতিটা বাছাইয়ে একটা করে অনুরোধ, আর ডিপোর লাইনে দাঁড়ানো
+     * মানুষের সামনে ওই অপেক্ষাটা টের পাওয়া যায়।
+     */
+    $openList = $openInvoices->map(fn ($open) => [
+        'id' => (string) $open->id,
+        'customer_id' => (string) $open->customer_id,
+        'label' => $open->document_no.' — '.\App\Core\Support\Money::format($open->dueAmount()),
+        'due' => (string) $open->dueAmount(),
+    ])->values();
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -48,10 +72,14 @@
 
         <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                {{-- গ্রাহক বদলালে বিলের তালিকাও বদলায়, আর বাছা বিলটা মুছে
+                     যায় — নাহলে আগের গ্রাহকের বিলটা বাছা অবস্থায় থেকে
+                     যেত আর সেভের সময় ফেরত আসত। --}}
                 <x-ui.select name="customer_id" :label="__('sales::field.customer')"
                              :options="$customers->mapWithKeys(fn ($c) => [$c->id => $c->name()])"
                              :selected="$invoice?->customer_id ?? $collection->customer_id"
-                             placeholder="-" required />
+                             placeholder="-" required
+                             @change="$dispatch('customer-picked', $event.target.value)" />
 
                 <x-ui.select name="account_id" :label="__('sales::field.account')"
                              :options="$accounts->mapWithKeys(fn ($a) => [$a->id => $a->name()])"
@@ -85,13 +113,41 @@
             <h2 class="mb-3 font-semibold">{{ __('sales::message.lines') }}</h2>
 
             <div x-data="{
+                    /*
+                     * গ্রাহকের নম্বরটা এখানেই রাখা, বাইরের কোনো
+                     * `x-data` থেকে ধার করা নয়।
+                     *
+                     * Alpine-এ ভেতরের কম্পোনেন্ট বাইরেরটার ঘর পড়তে
+                     * পারে, কিন্তু সেটা নির্ভর করে স্কোপ-চেইনের উপর —
+                     * আর একদিন কেউ মাঝখানে আরেকটা `x-data` বসালে
+                     * তালিকাটা নীরবে খালি হয়ে যেত। ঘটনাটা নিজের সাথে
+                     * নম্বরটা বয়ে আনে, তাই মাঝখানে কী আছে তাতে কিছু
+                     * আসে যায় না।
+                     */
+                    customerId: {{ Illuminate\Support\Js::from((string) old('customer_id', $invoice?->customer_id ?? $collection->customer_id ?? '')) }},
                     rows: {{ Illuminate\Support\Js::from($existing) }},
+                    open: {{ Illuminate\Support\Js::from($openList) }},
                     add() { this.rows.push({ sales_invoice_id: '', amount: '' }); },
                     remove(i) { this.rows.splice(i, 1); if (this.rows.length === 0) this.add(); },
+                    /* এই গ্রাহকের বিলগুলোই — গ্রাহক না বাছা থাকলে কিছুই নয়,
+                       কারণ কার টাকা তা না জেনে বিল বাছার কোনো মানে নেই। */
+                    get mine() {
+                        return this.customerId
+                            ? this.open.filter(o => o.customer_id === String(this.customerId))
+                            : [];
+                    },
+                    /* বিল বাছলে তার বকেয়াটাই বসে — মানুষ প্রায় সবসময়
+                       পুরোটাই নেন, আর টাইপ করা মানে টাইপের ভুল। */
+                    fillDue(row) {
+                        const found = this.open.find(o => o.id === String(row.sales_invoice_id));
+                        if (found) { row.amount = found.due; }
+                    },
                     get allocated() {
                         return this.rows.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
                     },
                  }"
+                 @customer-picked.window="customerId = $event.detail;
+                                          rows.forEach(r => { r.sales_invoice_id = ''; r.amount = ''; })"
                  x-init="if (rows.length === 0) add()">
 
                 <div class="table-responsive">
@@ -109,14 +165,13 @@
                                 <tr class="border-b border-(--color-border)">
                                     <td class="cell-input" data-label="{{ __('sales::field.invoice') }}">
                                         <select :name="`lines[${i}][sales_invoice_id]`" x-model="row.sales_invoice_id"
+                                                @change="fillDue(row)"
                                                 class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                                                        bg-(--color-surface-card) px-2">
                                             <option value="">-</option>
-                                            @foreach ($openInvoices as $open)
-                                                <option value="{{ $open->id }}">
-                                                    {{ $open->document_no }} — {{ \App\Core\Support\Money::format($open->dueAmount()) }}
-                                                </option>
-                                            @endforeach
+                                            <template x-for="o in mine" :key="o.id">
+                                                <option :value="o.id" x-text="o.label"></option>
+                                            </template>
                                         </select>
                                     </td>
                                     <td class="cell-input" data-label="{{ __('sales::field.amount') }}">
