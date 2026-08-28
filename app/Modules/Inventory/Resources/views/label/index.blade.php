@@ -72,7 +72,43 @@
             </div>
         </section>
 
-        <div class="flex flex-wrap items-center gap-2">
+        {{--
+            বাছাই চলাকালীন ছাপার বোতামটা সাথে সাথে থাকে।
+
+            ── কেন, ২৯ আগস্ট ২০২৬ ──────────────────────────────────────
+            চেহারার পাতার "দুই ধাপ" সারানোর পর গোটা পণ্যে একই রোগ খুঁজে
+            দেখা হয়েছিল। ১২৭টা পর্দার মধ্যে দুইটা ধরা পড়ে, আর এটা তার
+            একটা: এখানে ৬১টা পণ্যের ঘর, আর বাছতে বাছতে ছাপার বোতামটা
+            পর্দা থেকে অনেক দূরে চলে যায়।
+
+            তাই বোতামটা নিচে সাঁটা থাকে, আর সাথে কয়টা বাছা হয়েছে সেটাও
+            — নাহলে একশোটা ঘরের মাঝখানে গুনে রাখা যায় না।
+
+            কিছু বাছা না থাকলে পটিটা নেই: ছাপার মতো কিছু না থাকলে
+            "ছাপুন" লেখা একটা পটি ভেসে থাকার কোনো কারণ নেই।
+        --}}
+        <div x-show="chosen > 0" x-cloak
+             class="fixed inset-x-0 bottom-(--spacing-bottom-nav) z-40 border-t border-(--color-border)
+                    bg-(--color-surface-card) px-4 py-3 shadow-lg md:bottom-0">
+            <div class="mx-auto flex max-w-5xl flex-wrap items-center gap-3">
+                <span class="text-sm">
+                    <span class="num font-semibold" x-text="chosen"></span>
+                    {{ __('inventory::label.chosen') }}
+                </span>
+
+                <span class="flex-1"></span>
+
+                <span class="text-xs text-(--color-ink-muted)">
+                    {{ __('inventory::label.opens_in_new_tab') }}
+                </span>
+
+                <x-ui.button type="submit" tone="primary" icon="printer">
+                    {{ __('core.print.print') }}
+                </x-ui.button>
+            </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 pb-16">
             <x-ui.button type="submit" tone="primary" icon="printer" ::disabled="chosen === 0">
                 {{ __('core.print.print') }}
             </x-ui.button>

@@ -13,4 +13,5 @@ return [
     'price_note' => 'In a dealer warehouse the price differs by customer, so this is off by default. Tick it for shelf labels.',
     'own_code' => 'its own code',
     'opens_in_new_tab' => 'Opens in a new tab.',
+    'chosen' => 'chosen',
 ];

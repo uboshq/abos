@@ -26,8 +26,40 @@
     @if ($modules === [])
         <x-ui.empty-state :message="__('system_admin::message.no_switches')" />
     @else
+        {{--
+            তিপ্পান্নটা সুইচ, আর সংরক্ষণ বোতামটা পর্দার বাইরে।
+
+            ── কেন এই পটিটা লাগল, ২৯ আগস্ট ২০২৬ ────────────────────────
+            মালিক তিন দিন ধরে বলেছিলেন চেহারার পাতায় "থিম বদলায় না",
+            আর আসল কারণ ছিল দুই ধাপ: বাছাই, তারপর নিচে নেমে সংরক্ষণ
+            খোঁজা। ওটা সারানোর পর গোটা পণ্যে একই রোগ আর কোথায় আছে তা
+            মেপে দেখা হলো — ১২৭টা পর্দার মধ্যে দুইটা, আর তার একটা এই।
+
+            এখানে ৫৩টা সুইচ, আর শেষ সুইচ থেকে সংরক্ষণ বোতাম **৫৫৯px
+            নিচে** — অর্থাৎ যে সুইচটা টিপছেন, সেখান থেকে বোতামটা দেখাই
+            যায় না।
+
+            ── তবু ক্লিকে-সংরক্ষণ কেন নয় ───────────────────────────────
+            চেহারার পাতায় প্রতিটা বাছাই ক্লিকেই বসে, আর সেটাই ঠিক:
+            ওখানে একটা বাছাই একটা সিদ্ধান্ত।
+
+            এখানে নয়। সেটিংস দলবেঁধে চলে — "ভ্যাট চালু" আর "ভ্যাটের
+            হার" একসাথে বদলাতে হয়, আর মাঝপথে সেভ হয়ে গেলে কিছুক্ষণের
+            জন্য কোম্পানির হিসাব ভুল থাকত। তাই বদলগুলো জমে, আর পটিটা
+            গুনে বলে কয়টা জমেছে।
+        --}}
         <form method="POST" action="{{ route('system_admin.control-panel.update') }}"
-              class="max-w-3xl space-y-4">
+              x-data="{
+                  changed: {},
+                  get count() { return Object.keys(this.changed).length; },
+                  touch(el) {
+                      const now = el.type === 'checkbox' ? (el.checked ? '1' : '') : el.value;
+                      if (now === el.dataset.was) { delete this.changed[el.name]; }
+                      else { this.changed[el.name] = true; }
+                  },
+              }"
+              @change="touch($event.target)"
+              class="max-w-3xl space-y-4 pb-20">
             @csrf
             @method('PUT')
 
@@ -69,6 +101,7 @@
                                             <label class="flex min-h-(--spacing-touch) items-start gap-2 text-sm">
                                                 <input type="checkbox" name="settings[{{ $setting['key'] }}]"
                                                        value="1" @checked($setting['value'])
+                                                       data-was="{{ $setting['value'] ? '1' : '' }}"
                                                        class="mt-1 size-4">
                                                 <span>{{ __($setting['label']) }}</span>
                                             </label>
@@ -92,6 +125,7 @@
                                                     {{ __($setting['label']) }}
                                                 </span>
                                                 <select name="settings[{{ $setting['key'] }}]"
+                                                        data-was="{{ $setting['value'] }}"
                                                         class="h-(--spacing-field) w-full max-w-56 rounded-(--radius-field)
                                                                border border-(--color-border) bg-(--color-surface-card) px-3">
                                                     @foreach (is_callable($setting['options']) ? call_user_func($setting['options']) : $setting['options'] as $value => $sample)
@@ -125,6 +159,31 @@
                     </div>
                 </section>
             @endforeach
+
+            {{-- বদল না হলে পটিটা নেই। "সংরক্ষণ" লেখা একটা পটি সবসময়
+                 ভেসে থাকলে ওটা আসবাব হয়ে যায়, আর কেউ পড়ে না। --}}
+            <div x-show="count > 0" x-cloak
+                 class="fixed inset-x-0 bottom-(--spacing-bottom-nav) z-40 border-t border-(--color-border)
+                        bg-(--color-surface-card) px-4 py-3 shadow-lg md:bottom-0">
+                <div class="mx-auto flex max-w-3xl items-center gap-3">
+                    <span class="text-sm">
+                        <span class="num font-semibold" x-text="count"></span>
+                        {{ __('system_admin::message.unsaved') }}
+                    </span>
+
+                    <span class="flex-1"></span>
+
+                    {{-- ফিরিয়ে দেওয়া মানে পাতাটা আবার আনা: সার্ভারের
+                         মানটাই সত্যি, আর হাতে ফেরত বসাতে গেলে
+                         দুইজায়গায় দুই হিসাব থাকত। --}}
+                    <x-ui.button type="button" tone="secondary" x-data
+                                 @click="window.location.reload()">
+                        {{ __('core.action.discard') }}
+                    </x-ui.button>
+
+                    <x-ui.button type="submit" tone="primary">{{ __('core.action.save') }}</x-ui.button>
+                </div>
+            </div>
 
             <x-ui.button type="submit" tone="primary">{{ __('core.action.save') }}</x-ui.button>
         </form>
