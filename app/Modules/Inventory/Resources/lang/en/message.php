@@ -68,4 +68,15 @@ return [
 
     // The movement row says where the figure came from — typed, or from a file
     'opening_from_file' => 'Opening stock brought in from the old books',
+
+    /* Recipes. */
+    'recipe_subtitle' => 'What each dish is made of — a sale takes these off the shelf',
+    'recipe_count' => 'One recipe|:count recipes',
+    'recipe_saved' => 'The recipe was saved.',
+    'recipe_deactivated' => 'The recipe is off — past sales keep their history.',
+    'recipe_activated' => 'The recipe is active again.',
+    'recipe_has_no_lines' => 'No ingredients — selling this dish takes nothing off the shelf.',
+    'recipe_lines_note' => 'Amounts are for the yield above, not for one plate. With waste, more leaves the store than is used, and the right-hand column shows how much.',
+    'no_recipes' => 'No recipes yet',
+    'no_recipes_note' => 'Without a recipe a cooked dish takes no ingredients when sold, and the store figures drift.',
 ];

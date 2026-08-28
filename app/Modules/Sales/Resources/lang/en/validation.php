@@ -49,6 +49,10 @@ return [
     'over_returned' => 'Only :room more can come back against :no.',
 
     'missing_account' => 'Account :code is missing from the chart — the chart has not been installed.',
+    /* Cooked dishes — cannot be sold without ingredients, or stock silently drifts. */
+    'recipe_incomplete' => ':product has no ingredients in its recipe. Without them the sale takes nothing off the shelf, and the store figures drift.',
+    'not_enough_to_cook' => 'Not enough :ingredient to make :product — :available left.',
+
     'not_enough_available' => 'Only :available of :product can be sold. Switch this check off in the Control Panel to take the order anyway.',
     'over_credit_limit' => 'The credit limit for :customer is :limit and this order goes past it.',
     'unknown_challan_line' => 'That challan line is not in this company list.',

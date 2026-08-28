@@ -21,4 +21,9 @@ return [
     'show_cancelled' => 'বাতিলগুলোও দেখাও',
     'issue' => 'মাল বের করুন',
     'trace' => 'খুঁজুন',
+
+    /* রেসিপি। */
+    'new_recipe' => 'নতুন রেসিপি',
+    'add_ingredient' => 'উপকরণ যোগ করুন',
+    'remove_ingredient' => 'উপকরণটি সরান',
 ];

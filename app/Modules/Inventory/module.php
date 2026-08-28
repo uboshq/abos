@@ -62,6 +62,19 @@ return [
                 'permission' => 'inventory.product.view'],
 
             ['label' => 'inventory::menu.warehouses', 'route' => 'inventory.warehouse.index', 'permission' => 'inventory.warehouse.view'],
+
+            /*
+             * রেসিপি — মাস্টারে, লেনদেনে নয়।
+             *
+             * একটা রেসিপি লেনদেন নয়; ওটা একটা **নিয়ম**, যেটা একবার
+             * লিখে রাখা হয় আর তারপর প্রতিটা বিক্রিতে কাজে লাগে —
+             * পণ্যের একক বা ভ্যাটের হারের মতোই।
+             *
+             * লেনদেনের মেনুতে রাখলে লোকে রোজ ওখানে যেতেন, আর যেটা
+             * বছরে দুইবার বদলায় সেটা রোজকার কাজের সাথে মিশে যেত।
+             */
+            ['label' => 'inventory::menu.recipes', 'route' => 'inventory.recipe.index',
+                'permission' => 'inventory.recipe.view'],
         ],
         'transactions' => [
             ['label' => 'inventory::menu.stock', 'route' => 'inventory.stock.index', 'permission' => 'inventory.stock.view'],
@@ -113,6 +126,23 @@ return [
         'inventory.stock.view',
         'inventory.stock.adjust',
         'inventory.stock.hold',
+
+        /*
+         * রেসিপির নিজের চাবি — পণ্যের সাথে নয়।
+         *
+         * ── কেন আলাদা ──────────────────────────────────────────────
+         * পণ্য দেখার অনুমতি অনেকের থাকে; রেসিপি **বদলানোর** অনুমতি
+         * অল্প কয়েকজনের থাকা উচিত। একটা লাইনে "৫ কেজি চাল" বদলে
+         * "৩ কেজি" করে দিলে প্রতিটা বিক্রিতে দুই কেজি চাল খাতায় থেকে
+         * যাবে যা বাস্তবে নেই — আর ভুলটা নীরব।
+         *
+         * পণ্যের চাবির সাথে জুড়ে দিলে যে কেউ পণ্য সম্পাদনা করতে পারেন
+         * তিনি রেসিপিও বদলাতে পারতেন, আর ওই দুইটা এক দায়িত্ব নয়।
+         */
+        'inventory.recipe.view',
+        'inventory.recipe.create',
+        'inventory.recipe.update',
+        'inventory.recipe.delete',
 
         /*
          * লটের ছাপা দাম বদলানো — বিক্রয়ের অনুমতির সাথে নয়।

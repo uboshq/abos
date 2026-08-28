@@ -8,4 +8,7 @@ return [
     'stock' => 'Stock',
     'movements' => 'Movements',
     'address' => 'Address',
+
+    'recipe_head' => 'Dish and yield',
+    'recipe_lines' => 'Ingredients',
 ];

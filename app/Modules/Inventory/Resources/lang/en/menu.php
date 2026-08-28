@@ -15,4 +15,7 @@ return [
     'issue' => 'Stock Issue',
     'expiring' => 'Expiring Soon',
     'trace' => 'Trace a lot (recall)',
+
+    /* Recipes sit under master data — a rule, not a transaction. */
+    'recipes' => 'Recipes',
 ];

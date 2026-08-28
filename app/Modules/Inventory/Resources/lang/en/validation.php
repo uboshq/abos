@@ -60,4 +60,10 @@ return [
     // ── Opening stock, from a file ──────────────────────────────────
     'opening_must_be_positive' => ':column must be more than zero — an opening of nothing, or at no cost, says nothing.',
     'opening_already_set' => ':product already has opening stock in :warehouse. Twice in the file would double the stock, and both rows would look right.',
+
+    /* Recipes — every mistake here lands straight in the store figures. */
+    'recipe_needs_lines' => 'Add at least one ingredient. Without them the sale takes nothing off the shelf.',
+    'recipe_self_reference' => 'A dish cannot be its own ingredient.',
+    'recipe_duplicate_line' => 'The same ingredient twice is not allowed — raise the amount instead.',
+    'recipe_waste_too_high' => 'Waste must be under 100%, or nothing survives.',
 ];
