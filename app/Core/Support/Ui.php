@@ -55,7 +55,7 @@ final class Ui
     /**
      * @return array<string, array{
      *     label: string, blurb: string, imitates: ?string,
-     *     density: string, nav: string, commands: string, filters: string,
+     *     density: string, nav: string, topnav: string, commands: string, filters: string,
      *     views: string, record: string, accent: string, swatch: string,
      *     ink: string,
      * }>
@@ -87,6 +87,7 @@ final class Ui
                 'record' => 'facts',
                 'sections' => 'plain',
                 'nav' => 'rail',
+                'topnav' => 'none',
                 'density' => 'dense',
                 'swatch' => '#1e3a8a',
                 'ink' => '#0b1220',
@@ -103,6 +104,7 @@ final class Ui
                 'record' => 'facts',
                 'sections' => 'plain',
                 'nav' => 'rail',
+                'topnav' => 'none',
                 'density' => 'comfortable',
                 'swatch' => '#be123c',
                 'ink' => '#1f1417',
@@ -119,6 +121,7 @@ final class Ui
                 'record' => 'facts',
                 'sections' => 'anchors',
                 'nav' => 'top',
+                'topnav' => 'modules',
                 'density' => 'comfortable',
                 'swatch' => '#0a6ed1',
                 'ink' => '#32363a',
@@ -135,6 +138,7 @@ final class Ui
                 'record' => 'facts',
                 'sections' => 'plain',
                 'nav' => 'top',
+                'topnav' => 'modules',
                 'density' => 'dense',
                 'swatch' => '#125740',
                 'ink' => '#1f2b28',
@@ -151,6 +155,7 @@ final class Ui
                 'record' => 'smartbuttons',
                 'sections' => 'plain',
                 'nav' => 'top',
+                'topnav' => 'sections',
                 'density' => 'comfortable',
                 'swatch' => '#714b67',
                 'ink' => '#374151',
@@ -167,6 +172,7 @@ final class Ui
                 'record' => 'facts',
                 'sections' => 'plain',
                 'nav' => 'rail',
+                'topnav' => 'none',
                 'density' => 'dense',
                 'swatch' => '#0078d4',
                 'ink' => '#242424',
@@ -183,6 +189,7 @@ final class Ui
                 'record' => 'facts',
                 'sections' => 'plain',
                 'nav' => 'rail',
+                'topnav' => 'none',
                 'density' => 'comfortable',
                 'swatch' => '#c74634',
                 'ink' => '#161513',
@@ -211,6 +218,7 @@ final class Ui
                 'record' => 'facts',
                 'sections' => 'plain',
                 'nav' => 'top',
+                'topnav' => 'none',
                 'density' => 'comfortable',
                 'swatch' => '#0176d3',
                 'ink' => '#032d60',
@@ -258,6 +266,7 @@ final class Ui
                 'record' => 'facts',
                 'sections' => 'plain',
                 'nav' => 'quiet',
+                'topnav' => 'none',
                 'density' => 'dense',
                 'swatch' => '#5e6ad2',
                 'ink' => '#0e0f11',
@@ -274,6 +283,7 @@ final class Ui
                 'record' => 'facts',
                 'sections' => 'plain',
                 'nav' => 'top',
+                'topnav' => 'modules',
                 'density' => 'dense',
                 'swatch' => '#e08c1a',
                 'ink' => '#23303c',
@@ -323,6 +333,42 @@ final class Ui
     public static function nav(?string $key): string
     {
         return self::all()[self::clean($key)]['nav'];
+    }
+
+    /**
+     * উপরের দ্বিতীয় পটিতে কী বসে — মডিউলের তালিকা, না চলতি মডিউলের মেনু।
+     *
+     * ── কেন এটা একটা মাত্রা, একটা `if` নয় ───────────────────────────
+     * ২৮ আগস্ট ২০২৬-এ মালিক স্ক্রিনশট পাঠিয়ে বলেছেন: *"ekhane menu
+     * asar kotha modiule asteche"*। ঠিকই বলেছেন। `apps` মানে Odoo, আর
+     * Odoo-তে ওই পটিতে থাকে **চলতি অ্যাপের নিজের মেনু** — Customers,
+     * Vendors, Reporting, Configuration। অ্যাপের তালিকা থাকে ওয়াফলের
+     * পিছনে, আর ওটা আমাদেরও আছে (`data-app-launcher`)। আমরা দুইটা
+     * উল্টে বসিয়েছিলাম, ফলে মডিউলের নাম দুই জায়গায় আর মেনু কোথাও না।
+     *
+     * ── কিন্তু সবগুলোর উত্তর এক নয় ──────────────────────────────────
+     * NetSuite-এর উপরের পটি **সত্যিই** মডিউলের তালিকা (Activities ·
+     * Transactions · Lists · Reports), আর Fiori-তে মডিউল বদলের আর
+     * কোনো পথ নেই। ওদের জন্য `modules`-ই সঠিক — একই কোডে একটা `if
+     * ($look === 'apps')` বসালে ওই সত্যিটা হারিয়ে যেত, আর পরের যে কেউ
+     * ভাবতেন এটা খামখেয়াল।
+     *
+     * তিনটা মান:
+     *
+     * - `modules`  — এগারোটা মডিউল আড়াআড়ি, প্রতিটার নিচে তার তালিকা।
+     *                Fiori · NetSuite · ক্লাসিক।
+     * - `sections` — চলতি মডিউলের ছয়টা ভাগ (মাস্টার · লেনদেন · অনুমোদন
+     *                · প্রতিবেদন · সেটিংস)। Odoo।
+     * - `none`     — পটিটাই নেই। রেল-রূপগুলো (মেনু বাঁয়ে), আর
+     *                Salesforce — ওর নিজের শেল ইতিমধ্যেই অবজেক্ট-ট্যাব
+     *                আঁকে (`data-sf-apptabs`), তাই দ্বিতীয় একটা পটি
+     *                হত Lightning-এ যা নেই তাই।
+     *
+     * `none` ঘোষণা করা রূপে পটিটা **আঁকাই হয় না** — খালি বসে থাকে না।
+     */
+    public static function topnav(?string $key): string
+    {
+        return self::all()[self::clean($key)]['topnav'];
     }
 
     /**

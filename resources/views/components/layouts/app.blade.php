@@ -154,6 +154,19 @@
          * কোথায় আঁকা হবে তা এখানে ঠিক হয়।
          */
         $commandPlacement = \App\Core\Support\Ui::commands($shellLook);
+
+        /*
+         * উপরের দ্বিতীয় পটিতে কী বসে — আর আদৌ বসে কি না।
+         *
+         * আগে শর্তটা ছিল `$navPlacement === 'top'`, অর্থাৎ "মেনু উপরে
+         * হলেই মডিউলের তালিকা"। তাতে Salesforce-এ **দুইটা** পটি বসত:
+         * আমাদের মডিউল-তালিকা, আর ওর নিজের অবজেক্ট-ট্যাব — যেটা
+         * Lightning-এ কখনো হয় না।
+         *
+         * এখন প্রতিটা রূপ নিজে বলে দেয়, আর `none` মানে পটিটা আঁকাই হয়
+         * না। কারণগুলো [[Ui::topnav()]]-এ।
+         */
+        $topnavShape = \App\Core\Support\Ui::topnav($shellLook);
     @endphp
 
     {{-- প্রিভিউয়ের পটি সবার আগে — Redwood-এর ইটরঙা পটিরও উপরে, কারণ
@@ -199,8 +212,8 @@
                 <x-shell.topbar :menu="$menu ?? []" />
             @endif
 
-            @if ($navPlacement === 'top')
-                <x-shell.topnav :menu="$menu ?? []" />
+            @if ($topnavShape !== 'none')
+                <x-shell.topnav :menu="$menu ?? []" :shape="$topnavShape" />
             @endif
 
             {{-- পথের বার — টপবার পুরো অ্যাপের, এটা এই পর্দার। কেন দুইটা

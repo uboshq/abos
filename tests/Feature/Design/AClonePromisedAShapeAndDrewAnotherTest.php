@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Design;
 
+use App\Core\Module\ModuleRegistry;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\Ui;
 use App\Models\Company;
 use App\Models\User;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\File;
 use Tests\TestCase;
 
 /**
@@ -248,7 +250,21 @@ class AClonePromisedAShapeAndDrewAnotherTest extends TestCase
 
             $body = $this->shellFor($look);
 
-            foreach (self::SKELETON[$nav] as $part => $expected) {
+            /*
+             * উপরের পটিটা কঙ্কালের ধ্রুবক অংশ নয়, ২৮ আগস্ট ২০২৬ থেকে।
+             *
+             * আগে `top` মানেই ছিল "পটি আছে"। Salesforce-ও `top`,
+             * অথচ Lightning-এ ওই পটি নেই — ওর নিজের শেল অবজেক্ট-ট্যাব
+             * আঁকে (`data-sf-apptabs`), আর দুইটা একসাথে বসত।
+             *
+             * তাই দাবিটা এখন রূপের নিজের ঘোষণা থেকে আসে। `none` মানে
+             * পটিটা **থাকা চলবে না** — অর্থাৎ পরীক্ষাটা দুই দিকেই
+             * কড়া, আগের মতোই।
+             */
+            $skeleton = self::SKELETON[$nav];
+            $skeleton['topnav'] = Ui::topnav($look) !== 'none';
+
+            foreach ($skeleton as $part => $expected) {
                 $seen = str_contains($body, self::PART[$part]);
 
                 if ($seen !== $expected) {
@@ -271,6 +287,194 @@ class AClonePromisedAShapeAndDrewAnotherTest extends TestCase
             'একটা অংশ না আঁকা হলে তার ভেতরের অঞ্চলগুলোও কেউ ডাকে না —',
             'ফলে ওই রূপের স্বাক্ষরও নিঃশব্দে হারায়।',
         ]));
+    }
+
+    /**
+     * প্রতিটা রূপের উপরের পটিটা **সেই পণ্যের মতো**, আমাদের সুবিধামতো নয়।
+     *
+     * ── কেন উপরের পরীক্ষাটা একা যথেষ্ট ছিল না ────────────────────────
+     * পরের পরীক্ষাটা কেবল দেখে "যা ঘোষণা করা, তাই আঁকা"। সেটা যন্ত্রটা
+     * পাহারা দেয়, **বাছাইটা নয়**। প্রমাণ: `apps`-এর ঘোষণা `sections`
+     * থেকে `modules`-এ ফিরিয়ে দিয়ে চালানো হয়েছিল — পরীক্ষাটা সবুজই
+     * থাকল, অথচ ওটাই ছিল ঠিক সেই ভুল যেটা নিয়ে মালিক স্ক্রিনশট
+     * পাঠিয়েছেন।
+     *
+     * অর্থাৎ ফিরে যাওয়ার পথটা খোলা ছিল। এই তালিকাটা সেটাই বন্ধ করে:
+     * এখানে দাবিটা আসল পণ্যগুলোর, আর কারণ প্রতিটার পাশে লেখা।
+     *
+     * তালিকাটা হাতে লেখা, কিন্তু **রূপগুলো `Ui::keys()` থেকে** — তাই
+     * এগারোতম রূপ যোগ করলে সে ঘোষণা না করা পর্যন্ত লাল থাকবে।
+     */
+    public function test_each_clone_puts_in_the_strip_what_that_product_puts_there(): void
+    {
+        $expected = [
+            /* Odoo — উপরে অ্যাপের নাম, নিচের পটিতে সেই অ্যাপের মেনু।
+               অ্যাপ বদলায় ওয়াফল দিয়ে (`data-app-launcher`)। */
+            'apps' => 'sections',
+
+            /* NetSuite — উপরের পটিটাই কেন্দ্রগুলোর তালিকা (Activities ·
+               Transactions · Lists · Reports)। ওখানে মডিউলই সঠিক। */
+            'suite' => 'modules',
+
+            /* Fiori — লঞ্চপ্যাড ছাড়া মডিউল বদলের আর কোনো পথ নেই, আর
+               আমাদের `tiles`-এ লঞ্চপ্যাড নেই। পটি সরালে মানুষ আটকে
+               যেতেন। */
+            'tiles' => 'modules',
+
+            /* Lightning — ওয়াফল + চলতি অ্যাপের অবজেক্ট-ট্যাব, আর ট্যাবগুলো
+               ওর নিজের শেলই আঁকে (`data-sf-apptabs`)। দ্বিতীয় একটা পটি
+               Lightning-এ নেই। */
+            'salesforce' => 'none',
+
+            /* ABOS-এর নিজেরটা — মেনু বাঁয়ের রেলে, উপরে পটি নেই। */
+            'navy' => 'none',
+            'rose' => 'none',
+            'dynamic' => 'none',
+            'redwood' => 'none',
+            'linear' => 'none',
+
+            /* ক্লাসিক কারও নকল নয় — টোকেনের মূল সেট, মেনু উপরে। */
+            'classic' => 'modules',
+        ];
+
+        $wrong = [];
+
+        foreach (Ui::keys() as $look) {
+            $this->assertArrayHasKey($look, $expected, implode("\n", [
+                "রূপ {$look}-এর উপরের পটি নিয়ে কোনো সিদ্ধান্ত লেখা নেই।",
+                '',
+                'ওটা কোন পণ্যের নকল, আর সেই পণ্যের উপরের পটিতে কী থাকে —',
+                'সেটা ঠিক করে এই তালিকায় একটা সারি বসান।',
+            ]));
+
+            if (Ui::topnav($look) !== $expected[$look]) {
+                $wrong[] = sprintf('%s — ঘোষণা %s, থাকার কথা %s',
+                    $look, Ui::topnav($look), $expected[$look]);
+            }
+        }
+
+        $this->assertSame([], $wrong, implode("\n", [
+            'একটা রূপের উপরের পটি আসল পণ্যের সাথে আর মিলছে না:',
+            ...$wrong,
+        ]));
+    }
+
+    /**
+     * পটিতে যা বসার কথা তাই বসে — মডিউল, না চলতি মডিউলের মেনু।
+     *
+     * ── কেন এই পরীক্ষাটা লেখা হলো ────────────────────────────────────
+     * ২৮ আগস্ট ২০২৬-এ মালিক স্ক্রিনশট পাঠিয়েছেন: উপরে বাঁয়ে লেখা
+     * "হিসাব ও অর্থ", আর ঠিক নিচের পটিতে এগারোটা **মডিউল**। তাঁর কথা —
+     * *"ekhane menu asar kotha modiule asteche"*।
+     *
+     * কোনো পরীক্ষা লাল হয়নি, কারণ কোনো পরীক্ষা কখনো জিজ্ঞেসই করেনি
+     * ওই পটিতে কী থাকার কথা। রং মিলত, উচ্চতা মিলত, `data-nav-item`
+     * থাকত — সব সবুজ, আর জিনিসটা ভুল।
+     *
+     * দাবিটা তাই বিষয়বস্তুর উপর, চিহ্নের উপর নয়: `sections` ঘোষণা করা
+     * রূপে **অন্য মডিউলের নাম পটিতে থাকতে পারবে না**।
+     */
+    public function test_the_top_strip_carries_what_the_look_declared(): void
+    {
+        $wrong = [];
+
+        foreach (Ui::keys() as $look) {
+            $shape = Ui::topnav($look);
+
+            $this->assertContains($shape, ['modules', 'sections', 'none'],
+                "রূপ {$look} অচেনা topnav ঘোষণা করেছে: '{$shape}'");
+
+            if ($shape === 'none') {
+                continue;
+            }
+
+            $body = $this->shellFor($look);
+
+            $labels = collect(app(ModuleRegistry::class)->all())
+                ->map(fn ($m) => $m->label())
+                ->values();
+
+            $strip = $this->stripOf($body);
+
+            if ($shape === 'sections') {
+                $found = $labels->filter(fn (string $label) => str_contains($strip, $label));
+
+                if ($found->isNotEmpty()) {
+                    $wrong[] = "{$look} (sections) — পটিতে অন্য মডিউলের নাম: ".$found->join(', ');
+                }
+            }
+
+            if ($shape === 'modules') {
+                $missing = $labels->reject(fn (string $label) => str_contains($strip, $label));
+
+                if ($missing->isNotEmpty()) {
+                    $wrong[] = "{$look} (modules) — পটিতে নেই: ".$missing->join(', ');
+                }
+            }
+        }
+
+        $this->assertSame([], $wrong, implode("\n", [
+            'উপরের পটিতে ভুল জিনিস বসেছে:',
+            ...$wrong,
+            '',
+            'Odoo-তে ওই পটি চলতি অ্যাপের মেনু, NetSuite-এ মডিউলের তালিকা।',
+            'কোনটা কী, সেটা Ui::topnav()-এ ঘোষণা করা।',
+        ]));
+    }
+
+    /**
+     * খোলা তালিকাটা যেন স্ক্রল-পটির ভেতরে কাটা না পড়ে।
+     *
+     * ── কেন একটা CSS ক্লাসের উপর পরীক্ষা ─────────────────────────────
+     * সাধারণত ক্লাসের নাম পরীক্ষা করা বাজে অভ্যাস — ওটা বাস্তবায়নের
+     * খুঁটিনাটি। এখানে নয়: `fixed` বনাম `absolute` এখানে সাজসজ্জা নয়,
+     * **কাজ করা বনাম না করা**।
+     *
+     * পটিতে `overflow-x-auto` আছে (এগারোটা মডিউল সরু পর্দায় ধরে না),
+     * আর CSS-এ `overflow-x: auto` দিলে `overflow-y`-ও `auto` হয়ে যায়।
+     * তাই `absolute` তালিকাটা ৪১px পটির ভেতরেই কাটা পড়ত — DOM-এ ৬২৮px,
+     * পর্দায় শূন্য। মালিক একাধিক পিসিতে দেখেছেন: "kaj korena, skin hang
+     * kore"।
+     *
+     * কেউ `fixed` ফিরিয়ে `absolute` করলে ঠিক ওই দিনটাই ফিরে আসবে, আর
+     * রঙের কোনো পরীক্ষা সেটা ধরবে না।
+     */
+    public function test_the_open_list_is_not_trapped_inside_the_scrolling_strip(): void
+    {
+        $markup = File::get(resource_path('views/components/shell/topnav.blade.php'));
+
+        /* মন্তব্যে `absolute` শব্দটা আছে — ব্যাখ্যায়। markup-এ নেই। */
+        $markup = (string) preg_replace('/\{\{--.*?--\}\}/su', '', $markup);
+        $markup = (string) preg_replace('/\/\*.*?\*\//su', '', $markup);
+
+        $this->assertStringContainsString('overflow-x-auto', $markup,
+            'পটিটা আর স্ক্রল করে না — তাহলে এই পরীক্ষার কারণটাও বদলে গেছে, আবার পড়ুন।');
+
+        $this->assertStringNotContainsString('absolute', $markup, implode("\n", [
+            'উপরের পটির তালিকা আবার `absolute` হয়েছে।',
+            '',
+            'পটিতে overflow-x-auto আছে, তাই overflow-y-ও auto — তালিকাটা',
+            'পটির ৪১px উচ্চতায় কাটা পড়বে আর ক্লিক করলে কিছুই দেখা যাবে না।',
+        ]));
+
+        $this->assertStringContainsString('fixed z-50', $markup,
+            'তালিকাটা আর fixed নয় — স্ক্রল-পটির বাইরে আঁকা না হলে ওটা কাটা পড়ে।');
+    }
+
+    /**
+     * পটির অংশটুকু — ভেতরের পাতা বাদ দিয়ে।
+     *
+     * পুরো HTML-এ প্রতিটা মডিউলের নাম থাকেই (ওয়াফল, bottom nav,
+     * সাইডবারের রেল), তাই গোটা পাতায় খুঁজলে `sections`-এর দাবিটা
+     * কখনো সবুজ হত না।
+     */
+    private function stripOf(string $body): string
+    {
+        if (! preg_match('/<nav class="topnav.*?<\/nav>/su', $body, $m)) {
+            return '';
+        }
+
+        return $m[0];
     }
 
     /**

@@ -235,8 +235,26 @@ class OneChoiceChangesTheWholeErpTest extends TestCase
             $this->assertContains($where, ['rail', 'top', 'quiet'], "চেহারা {$look}-এর nav অচেনা: {$where}");
 
             if ($where === 'top') {
-                $this->assertStringContainsString('class="topnav', $html,
-                    "{$look} উপরে মেনু চায়, কিন্তু পর্দায় উপরের পটিটা নেই।");
+                /*
+                 * উপরে মেনু মানেই আমাদের পটিটা নয়, ২৮ আগস্ট ২০২৬ থেকে।
+                 *
+                 * Salesforce-ও `top`, কিন্তু Lightning-এ দ্বিতীয় কোনো
+                 * পটি নেই — ওয়াফল আর চলতি অ্যাপের অবজেক্ট-ট্যাব, ব্যস।
+                 * ওর নিজের শেলই ট্যাবগুলো আঁকে, তাই আমাদের পটিটাও বসলে
+                 * একই পর্দায় দুইটা বসত।
+                 *
+                 * দাবিটা তাই রূপের নিজের ঘোষণা থেকে — কারণগুলো
+                 * [[Ui::topnav()]]-এ, আর `none` মানে পটিটা **থাকা
+                 * চলবে না**।
+                 */
+                if (Ui::topnav($look) === 'none') {
+                    $this->assertStringNotContainsString('class="topnav', $html,
+                        "{$look} বলেছে উপরের পটি নেই, অথচ পটিটা আঁকা হয়েছে।");
+                } else {
+                    $this->assertStringContainsString('class="topnav', $html,
+                        "{$look} উপরে মেনু চায়, কিন্তু পর্দায় উপরের পটিটা নেই।");
+                }
+
                 $this->assertStringNotContainsString('rail-flyout', $html,
                     "{$look}-এ বাঁয়ের রেলও রয়ে গেছে — একই পর্দায় দুইটা মেনু।");
             } else {
