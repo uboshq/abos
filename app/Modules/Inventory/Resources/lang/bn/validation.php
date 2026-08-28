@@ -72,4 +72,11 @@ return [
     'recipe_self_reference' => 'খাবার নিজেই নিজের উপকরণ হতে পারে না।',
     'recipe_duplicate_line' => 'একই উপকরণ দুইবার দেওয়া যাবে না — দরকার হলে পরিমাণ বাড়ান।',
     'recipe_waste_too_high' => 'অপচয় ১০০%-এর কম হতে হবে, নাহলে কিছুই টেকে না।',
+
+    /* হাঁড়ির রান্না। */
+    'production_not_draft' => 'এই কাগজটা আগেই নিশ্চিত হয়ে গেছে — আবার করলে উপকরণ দুইবার কমত।',
+    'production_needs_warehouse' => 'কোন গুদাম থেকে উপকরণ যাবে সেটা বলতে হবে।',
+    'production_recipe_empty' => ':product-এর রেসিপিতে কোনো উপকরণ নেই — রান্না করলে শূন্য থেকে মাল তৈরি হত।',
+    'production_recipe_no_yield' => 'রেসিপির ফলন শূন্য — এক রান্নায় কয়টা হয় সেটা না জানলে হিসাব হয় না।',
+    'production_not_enough' => ':product রাঁধার মতো :ingredient নেই — আছে :available।',
 ];

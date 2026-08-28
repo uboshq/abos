@@ -41,6 +41,22 @@ class RecipeLine extends Model
         'company_id', 'recipe_id', 'product_id', 'qty', 'waste_pct', 'sort',
     ];
 
+    /**
+     * পরিমাণ ও অপচয় — দুইটাই decimal।
+     *
+     * এই দুইটা সংখ্যাই ঠিক করে গুদাম থেকে কতটা বেরোবে। float হয়ে
+     * গেলে ভুলটা প্রতিটা রান্নায় জমত, আর সবসময় এক দিকে।
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'qty' => 'decimal:4',
+            'waste_pct' => 'decimal:4',
+        ];
+    }
+
     public function recipe(): BelongsTo
     {
         return $this->belongsTo(Recipe::class);

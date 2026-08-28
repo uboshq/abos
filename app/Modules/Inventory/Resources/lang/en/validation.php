@@ -66,4 +66,11 @@ return [
     'recipe_self_reference' => 'A dish cannot be its own ingredient.',
     'recipe_duplicate_line' => 'The same ingredient twice is not allowed — raise the amount instead.',
     'recipe_waste_too_high' => 'Waste must be under 100%, or nothing survives.',
+
+    /* Batch cooking. */
+    'production_not_draft' => 'This paper is already confirmed — doing it again would take the ingredients twice.',
+    'production_needs_warehouse' => 'Say which store the ingredients come from.',
+    'production_recipe_empty' => 'The recipe for :product has no ingredients — cooking it would make food out of nothing.',
+    'production_recipe_no_yield' => 'The recipe yields nothing — without knowing how many one cooking makes there is no arithmetic.',
+    'production_not_enough' => 'Not enough :ingredient to cook :product — :available left.',
 ];

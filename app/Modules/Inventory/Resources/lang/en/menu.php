@@ -18,4 +18,5 @@ return [
 
     /* Recipes sit under master data — a rule, not a transaction. */
     'recipes' => 'Recipes',
+    'production' => 'Cooking',
 ];

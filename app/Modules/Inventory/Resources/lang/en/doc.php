@@ -7,4 +7,5 @@ return [
     'adjustment' => 'Stock Adjustment',
     'transfer' => 'Stock Transfer',
     'warehouse_code' => 'Warehouse Code',
+    'production' => 'Cooking',
 ];

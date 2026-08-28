@@ -26,4 +26,7 @@ return [
     'new_recipe' => 'নতুন রেসিপি',
     'add_ingredient' => 'উপকরণ যোগ করুন',
     'remove_ingredient' => 'উপকরণটি সরান',
+
+    'new_production' => 'নতুন রান্না',
+    'confirm_production' => 'নিশ্চিত করুন',
 ];
