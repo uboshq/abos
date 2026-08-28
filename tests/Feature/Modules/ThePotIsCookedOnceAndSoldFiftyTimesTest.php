@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modules;
 
+use App\Core\Engines\Report\ReportEngine;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\User;
@@ -250,6 +251,85 @@ class ThePotIsCookedOnceAndSoldFiftyTimesTest extends TestCase
             ->viewData('recipes');
 
         $this->assertSame([], $offered, 'অর্ডারে-রান্না রেসিপি রান্নার পর্দায় আসার কথা নয়।');
+    }
+
+    /**
+     * খাদ্য-খরচের রিপোর্ট সত্যি বলে।
+     *
+     * ── কেন এই সংখ্যাটার ভুল হওয়া সবচেয়ে বিপজ্জনক ───────────────────
+     * রেস্টুরেন্টে সিদ্ধান্ত এই একটা শতাংশের উপরেই হয়: দাম বাড়াব কি না,
+     * রেসিপি হালকা করব কি না, ওই পদটা মেনু থেকে তুলে দেব কি না।
+     *
+     * ভুল সংখ্যা কোনো ত্রুটি দেখায় না — কেবল ভুল সিদ্ধান্ত আনে, আর
+     * সেটা ধরা পড়ে অনেক পরে।
+     *
+     * ── অঙ্কটা হাতে মিলিয়ে দেখা ─────────────────────────────────────
+     * ৫০ প্লেটের হাঁড়িতে ১৮০০ টাকার মাল → প্রতি প্লেট ৩৬।
+     * ৩ প্লেট বিক্রি @ ২৫০ → বিক্রয় ৭৫০, উপকরণ ১০৮।
+     * ১০৮ ÷ ৭৫০ = **১৪.৪%**।
+     */
+    public function test_the_food_cost_report_tells_the_truth(): void
+    {
+        $this->cook('50');
+        $this->sell($this->biryani, '3');
+
+        $rows = app(ReportEngine::class)
+            ->run('inventory.food_cost', [
+                'from' => now()->subDay()->toDateString(),
+                'to' => now()->addDay()->toDateString(),
+            ]);
+
+        /* সারিগুলো অ্যারে, বস্তু নয় — `ReportResult::$rows` তাই ঘোষণা করে। */
+        $row = $rows->rows[0] ?? null;
+
+        $this->assertNotNull($row, 'রিপোর্টে একটাও সারি নেই — অথচ রান্না করা খাবার বিক্রি হয়েছে।');
+
+        /*
+         * `bccomp`, `assertSame` নয় — সংখ্যাটা মেলানো হয়, লেখাটা নয়।
+         *
+         * SQL-এর `SUM()` দশমিকের ঘর বাড়িয়ে ফেরত দেয়: `108.00000000`,
+         * `108.0000` নয়। প্রথম লেখায় লেখা ধরে মেলানো হয়েছিল আর টেস্ট
+         * লাল হয়েছিল — অথচ **অঙ্কটা ঠিকই ছিল**।
+         *
+         * টাকার তুলনা লেখা ধরে করলে একদিন ঠিক উল্টোটাও ঘটে: দুইটা
+         * আলাদা সংখ্যা একই লেখায় মিলে যায়।
+         */
+        $this->assertSame(0, bccomp('750', (string) $row['revenue'], 4));
+        $this->assertSame(0, bccomp('108', (string) $row['food_cost'], 4));
+        $this->assertSame(0, bccomp('14.40', (string) $row['food_cost_pct'], 2));
+    }
+
+    /**
+     * রেসিপি নেই এমন পণ্য এই রিপোর্টে আসে না।
+     *
+     * চালের "খাদ্য-খরচ" মানে কেবল ক্রয়মূল্য, আর ওটা মুনাফার রিপোর্টেই
+     * আছে। এখানে এলে গড়টা অর্থহীন হত — প্রায় ১০০% খরচের সারিগুলো
+     * রান্না করা খাবারের সংখ্যাকে চাপা দিত।
+     */
+    public function test_a_product_without_a_recipe_stays_out_of_it(): void
+    {
+        $this->cook('50');
+        $this->sell($this->biryani, '3');
+        $this->sell($this->rice, '2');
+
+        $rows = app(ReportEngine::class)
+            ->run('inventory.food_cost', [
+                'from' => now()->subDay()->toDateString(),
+                'to' => now()->addDay()->toDateString(),
+            ]);
+
+        /*
+         * নামের ঘরটা `CODE - Name` আকারে আসে (`productName()`), কেবল
+         * নাম নয় — তাই মেলানোটা "ভেতরে আছে কি না" ধরে।
+         */
+        $names = implode(' | ', array_column($rows->rows, 'product_name'));
+
+        $this->assertStringContainsString('Chicken Biryani', $names);
+        $this->assertStringNotContainsString(
+            'Rice',
+            $names,
+            'রেসিপিহীন পণ্য খাদ্য-খরচের রিপোর্টে আসার কথা নয়।',
+        );
     }
 
     // ── সাজানোর সাহায্য ──────────────────────────────────────────────

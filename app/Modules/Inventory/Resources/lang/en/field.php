@@ -77,4 +77,10 @@ return [
     'cost_total' => 'Total cost',
     'cost_per_unit' => 'Cost each',
     'cost' => 'Cost',
+
+    /* Food cost report. */
+    'sold' => 'Sold',
+    'revenue' => 'Revenue',
+    'food_cost' => 'Ingredient cost',
+    'food_cost_pct' => 'Food cost %',
 ];

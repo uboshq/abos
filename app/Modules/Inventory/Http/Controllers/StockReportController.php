@@ -28,6 +28,10 @@ class StockReportController extends Controller implements HasMiddleware
         'stock-ledger' => 'inventory.stock_ledger',
         'stock-summary' => 'inventory.stock_summary',
         'hold' => 'inventory.hold',
+
+        /* খাদ্য-খরচ — রান্না করা খাবারের প্রশ্ন, মজুদের নয়,
+           কিন্তু উত্তরটা মজুদের সংখ্যা থেকেই আসে। */
+        'food-cost' => 'inventory.food_cost',
     ];
 
     public function __construct(

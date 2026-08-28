@@ -26,6 +26,7 @@ final class StockReports
         $engine->register(self::stockSummary());
         $engine->register(self::holdReport());
         $engine->register(self::expiring());
+        $engine->register(self::foodCost());
     }
 
     /**
@@ -275,5 +276,96 @@ final class StockReports
             : 'r.name_en';
 
         return DB::raw("COALESCE({$name}, '?') as reason_name");
+    }
+
+    /**
+     * খাদ্য-খরচ — বিক্রয়মূল্যের কত অংশ উপকরণে গেল।
+     *
+     * ── কেন এটাই রেস্টুরেন্টের সবচেয়ে দরকারি সংখ্যা ──────────────────
+     * একটা দোকানে মুনাফা দেখা যায় বিক্রি বিয়োগ ক্রয়ে। রেস্টুরেন্টে
+     * "ক্রয়" বলে কিছু নেই — বিরিয়ানি কেনা হয় না, রান্না হয়। তাই
+     * প্রশ্নটা হয়ে দাঁড়ায়: **২৫০ টাকার প্লেটে কত টাকার মাল গেল?**
+     *
+     * ওই শতাংশটাই সিদ্ধান্তের ভিত্তি। ৩০% মানে ভালো চলছে; ৫০% মানে হয়
+     * দাম কম, নয় রেসিপি ভারী, নয় রান্নাঘরে মাল নষ্ট হচ্ছে। সংখ্যাটা
+     * না থাকলে তিনটার কোনোটাই চোখে পড়ে না — কেবল মাস শেষে মুনাফা কম
+     * দেখায়, আর কেউ বলতে পারে না কেন।
+     *
+     * ── কেন সংখ্যাটা বিক্রয় থেকেই আসে, রান্না থেকে নয় ────────────────
+     * রান্নার কাগজ বলে এক হাঁড়িতে কত গেল। কিন্তু ওই হাঁড়ির সব প্লেট
+     * বিক্রি না-ও হতে পারে — সন্ধ্যায় দশ প্লেট নষ্ট হতে পারে।
+     *
+     * খাদ্য-খরচ মাপা হয় **যা বিক্রি হয়েছে** তার উপরে: বিলের লাইনে
+     * বসানো `unit_cost` (যা FIFO স্তর থেকে এসেছে) বনাম ওই লাইনের
+     * বিক্রয়মূল্য। নষ্ট হওয়া প্লেট ওখানে নেই, আর থাকাও উচিত নয় —
+     * ওটা অন্য প্রশ্ন, আর তার উত্তর মজুদ সমন্বয়ে।
+     *
+     * ── কেন কেবল রেসিপিওয়ালা পণ্য ───────────────────────────────────
+     * চাল বা কোকের বোতলের "খাদ্য-খরচ" মানে কেবল ক্রয়মূল্য, আর ওটা
+     * মুনাফার রিপোর্টেই আছে। এই পর্দাটা রান্না করা খাবারের প্রশ্নের
+     * উত্তর দেয়, তাই যাদের রেসিপি আছে কেবল তারাই আসে।
+     */
+    public static function foodCost(): ReportDefinition
+    {
+        return new ReportDefinition(
+            key: 'inventory.food_cost',
+            title: 'inventory::menu.food_cost',
+            filters: ['date_range', 'branch'],
+            groupBy: 'product_id',
+            query: fn (array $f) => DB::table('sal_invoice_lines as l')
+                ->join('sal_invoices as i', 'i.id', '=', 'l.sales_invoice_id')
+                ->join('inv_products as p', 'p.id', '=', 'l.product_id')
+                /*
+                 * `join`, `leftJoin` নয় — রেসিপি নেই এমন পণ্য বাদ।
+                 *
+                 * বাদ না দিলে তালিকায় চাল-ডাল-কোক সবই আসত, আর তাদের
+                 * "খাদ্য-খরচ" হত ১০০%-এর কাছাকাছি (ক্রয়মূল্য ÷ বিক্রয়মূল্য)।
+                 * তখন গড়টা অর্থহীন হত।
+                 */
+                ->join('inv_recipes as r', function ($join) {
+                    $join->on('r.product_id', '=', 'l.product_id')
+                        ->whereNull('r.deleted_at');
+                })
+                ->where('i.company_id', $f['company_id'])
+                ->when($f['branch_id'], fn ($q, $b) => $q->where('i.branch_id', $b))
+                ->whereBetween('i.trx_date', [$f['from'], $f['to']])
+                // বাতিল বিল গোনা হয় না — ওগুলো ঘটেইনি
+                ->where('i.status', '<>', 'cancelled')
+                ->groupBy('l.product_id', 'p.code', 'p.name_en', 'p.name_bn')
+                ->havingRaw('SUM(l.qty) > 0')
+                ->orderByRaw('SUM(l.amount) DESC')
+                ->select([
+                    'l.product_id',
+                    self::productName(),
+                    DB::raw("'".Product::drillSourceType()."' as party_type_literal"),
+                    DB::raw('SUM(l.qty) as sold'),
+                    DB::raw('SUM(l.amount) as revenue'),
+                    DB::raw('SUM(l.qty * l.unit_cost) as food_cost'),
+                    /*
+                     * শতাংশটা SQL-এ, PHP-তে নয়।
+                     *
+                     * রিপোর্ট ইঞ্জিন সারিগুলো সরাসরি ছকে পাঠায়; PHP-তে
+                     * হিসাব করলে রপ্তানি ও ছাপায় ঘরটা খালি যেত।
+                     *
+                     * `NULLIF` — বিক্রয় শূন্য হলে ভাগ করা যায় না। শূন্য
+                     * বিক্রয়ে খাদ্য-খরচের শতাংশ বলে কিছু নেই, তাই ঘরটা
+                     * খালি থাকে; শূন্য লিখলে ওটা "চমৎকার" বলে পড়া হত।
+                     */
+                    DB::raw('ROUND(SUM(l.qty * l.unit_cost) / NULLIF(SUM(l.amount), 0) * 100, 2) as food_cost_pct'),
+                ]),
+            columns: [
+                [
+                    'key' => 'product_name',
+                    'label' => 'inventory::field.dish',
+                    'type' => ReportColumn::DOCUMENT,
+                    'source_type' => 'party_type_literal',
+                    'source_id' => 'product_id',
+                ],
+                ['key' => 'sold', 'label' => 'inventory::field.sold', 'type' => ReportColumn::QUANTITY],
+                ['key' => 'revenue', 'label' => 'inventory::field.revenue', 'type' => ReportColumn::MONEY],
+                ['key' => 'food_cost', 'label' => 'inventory::field.food_cost', 'type' => ReportColumn::MONEY],
+                ['key' => 'food_cost_pct', 'label' => 'inventory::field.food_cost_pct', 'type' => ReportColumn::PERCENT],
+            ],
+        );
     }
 }
