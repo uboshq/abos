@@ -225,7 +225,7 @@
     @endcan
 
     {{-- লেনদেন — অঙ্কটা কোথা থেকে এল (নিয়ম ১) --}}
-    <section id="transactions" class="mt-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
+    <section id="transactions" class="scroll-mt-24 mt-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">
         <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-3 font-semibold">
             {{ __('customer::section.transactions') }}

@@ -113,7 +113,7 @@
 
     {{-- চলাচল — সংখ্যাগুলো কোথা থেকে এল (নিয়ম ১) --}}
     <section id="movements"
-             class="mt-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
+             class="scroll-mt-24 mt-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">
         <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-3 font-semibold">
             {{ __('inventory::section.movements') }}

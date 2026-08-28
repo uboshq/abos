@@ -21,7 +21,7 @@
                      // অঙ্কটাই লিংক — নিয়ম ১
                      'render' => fn ($a) => $a->is_group ? '' : view('ui.amount-link', [
                          'value' => $balances[$a->id] ?? 0,
-                         'href' => route('accounts.coa.show', $a),
+                         'href' => route('accounts.coa.show', $a).'#transactions',
                      ])],
                     ['key' => 'is_active', 'label' => __('accounts::field.state'), 'width' => '7rem',
                      'render' => fn ($a) => view('accounts::coa.partials.state', ['account' => $a])],

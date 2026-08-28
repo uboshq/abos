@@ -13,6 +13,7 @@ use App\Modules\Customer\Services\CustomerService;
 use App\Modules\Supplier\Services\SupplierService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\File;
 use Tests\TestCase;
 
 /**
@@ -57,7 +58,7 @@ class FigureLinksTest extends TestCase
 
         $html = $this->actingAs($this->user)->get(route('supplier.index'))->getContent();
 
-        $this->assertFigureIsLinked($html, '12,500.00', route('supplier.show', $supplier));
+        $this->assertFigureIsLinked($html, '12,500.00', route('supplier.show', $supplier).'#transactions');
     }
 
     public function test_the_outstanding_figure_on_the_customer_list_is_a_link(): void
@@ -72,7 +73,7 @@ class FigureLinksTest extends TestCase
 
         $html = $this->actingAs($this->user)->get(route('customer.index'))->getContent();
 
-        $this->assertFigureIsLinked($html, '9,800.00', route('customer.show', $customer));
+        $this->assertFigureIsLinked($html, '9,800.00', route('customer.show', $customer).'#transactions');
     }
 
     /**
@@ -87,13 +88,28 @@ class FigureLinksTest extends TestCase
 
         $account = Account::query()->postable()->firstOrFail();
 
-        $html = $this->actingAs($this->user)->get(route('accounts.coa.index'))->getContent();
+        $html = (string) $this->actingAs($this->user)->get(route('accounts.coa.index'))->getContent();
 
         $this->assertStringContainsString(
             route('accounts.coa.show', $account),
             $html,
             'ছকের তালিকায় খাতের পাতার লিংক নেই।',
         );
+
+        /*
+         * ── আর ব্যালেন্সটা এন্ট্রিগুলোর কাছেই নামায় ─────────────────
+         * এই দাবিটা রেন্ডার করা পাতায় করা যায় না: সদ্য বসানো ছকের
+         * প্রতিটা খাত শূন্য, আর শূন্য অঙ্ক ইচ্ছাকৃতভাবে লিংকই হয় না।
+         * অর্থাৎ পরীক্ষাটা তখন ডাটা সাজানোর উপর দাঁড়াত, দাবির উপর নয়।
+         *
+         * যেটা সত্যিই ভেঙেছিল সেটা markup — টুকরাটা লেখাই হয়নি। তাই
+         * দাবিটা সেখানেই, আর গন্তব্যে টুকরাটা আছে কি না সেটা দেখে
+         * [[test_where_a_list_figure_points_actually_exists_there]]।
+         */
+        $source = File::get(base_path('app/Modules/Accounts/Resources/views/coa/index.blade.php'));
+
+        $this->assertStringContainsString("accounts.coa.show', \$a).'#transactions'", $source,
+            'ছকের ব্যালেন্স খাতের পাতার মাথায় নামায় — এন্ট্রিগুলোর কাছে নয়।');
     }
 
     /**
@@ -116,6 +132,57 @@ class FigureLinksTest extends TestCase
 
         $this->assertStringContainsString('href="#transactions"', $html);
         $this->assertStringContainsString('id="transactions"', $html, 'লিংকটা যেখানে যায় সেই জায়গাটাই নেই।');
+    }
+
+    /**
+     * তালিকার লিংক যে টুকরায় যায়, গন্তব্যের পাতায় সেই টুকরাটা আছে।
+     *
+     * ── কেন দুই পাতা একসাথে মাপা ─────────────────────────────────────
+     * তালিকা জানে না গন্তব্যে কী আছে, আর গন্তব্য জানে না কেউ তার দিকে
+     * টুকরা ধরে আসছে। মাঝখানে কোনো সংযোগ নেই, তাই কেউ `id` বদলালে বা
+     * ছকটা অন্য পাতায় সরালে **কোনো পরীক্ষা লাল হত না** — ক্লিকটা শুধু
+     * নিঃশব্দে পাতার মাথায় নামত, ঠিক এখনকার মতোই।
+     *
+     * তিনটা তালিকাই একসাথে দেখা হয়, কারণ ভুলটা একটায় ঢুকলে বাকি
+     * দুইটাতেও ঢোকে — একই নকশা, একই কপি-পেস্ট।
+     */
+    public function test_where_a_list_figure_points_actually_exists_there(): void
+    {
+        app(StandardChart::class)->install();
+
+        $customer = app(CustomerService::class)->create([
+            'name_en' => 'Anchor Target', 'credit_limit' => 0, 'credit_days' => 0,
+            'opening_balance' => '3300.0000', 'opening_date' => '2026-07-01',
+        ]);
+
+        $supplier = app(SupplierService::class)->create([
+            'name_en' => 'Anchor Target', 'credit_limit' => 0, 'credit_days' => 0,
+            'opening_balance' => '4400.0000', 'opening_date' => '2026-07-01',
+        ]);
+
+        $pages = [
+            'গ্রাহক' => route('customer.show', $customer),
+            'সরবরাহকারী' => route('supplier.show', $supplier),
+            'হিসাবের খাত' => route('accounts.coa.show', Account::query()->postable()->firstOrFail()),
+        ];
+
+        $missing = [];
+
+        foreach ($pages as $what => $url) {
+            $body = (string) $this->actingAs($this->user)->get($url)->getContent();
+
+            if (! str_contains($body, 'id="transactions"')) {
+                $missing[] = "{$what} — {$url}-এ #transactions নেই";
+            }
+        }
+
+        $this->assertSame([], $missing, implode("\n", [
+            'তালিকার অঙ্ক যেখানে নামানোর কথা, সেই জায়গাটাই নেই:',
+            ...$missing,
+            '',
+            'টুকরাটা কোথাও না গেলে ক্লিকটা চুপচাপ পাতার মাথায় নামে —',
+            'দেখতে কাজের, আসলে নিয়ম ১ ভাঙা।',
+        ]));
     }
 
     /**
@@ -158,5 +225,24 @@ class FigureLinksTest extends TestCase
             $html,
             "অঙ্কটা ({$figure}) লিংক নয় — নিয়ম ১ বলে প্রতিটা সংখ্যা থেকে উৎসে যাওয়া যাবে।",
         );
+
+        /*
+         * ── আর লিংকটা যেন **নথিগুলোর কাছে** নামায় ────────────────────
+         * ২৮ আগস্ট ২০২৬ পর্যন্ত এই পরীক্ষাটা কেবল দেখত অঙ্কটা লিংক কি
+         * না, আর সেটাই দুর্বল আচরণটাকে পাকা করে রেখেছিল: গ্রাহকের
+         * বকেয়া যেত `/customers/10`-এ — **নামের লিংক যেখানে যায়, ঠিক
+         * সেখানেই**। মালিক জিজ্ঞেস করেছেন "ক্লিক করলে কী আসার কথা, কী
+         * আসছে?", আর সেটাই ধরা পড়ল।
+         *
+         * নিয়ম ১-এর দাবি লিংক থাকা নয়, **উৎসে পৌঁছানো**। তাই টুকরাটা
+         * এখান থেকেই দাবি করা হয় — নাহলে কেউ কাল আবার টুকরাটা মুছে
+         * দিলে পরীক্ষা সবুজই থাকত।
+         */
+        $this->assertStringContainsString('#', $href, implode("\n", [
+            "অঙ্কটার লিংকে কোনো টুকরা নেই: {$href}",
+            '',
+            'ব্যালেন্সের লিংক রেকর্ডের পাতার মাথায় নামালে ওটা নামের',
+            'লিংকের সমান — সংখ্যাটা নিজে কিছুই যোগ করে না।',
+        ]));
     }
 }
