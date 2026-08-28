@@ -34,7 +34,7 @@
             // না, তিনি সংখ্যাটা দেখে জানতে চান এটা কোথা থেকে এল।
             'render' => fn ($s) => view('ui.amount-link', [
                 'value' => $s->payable(),
-                'href' => route('supplier.show', $s),
+                'href' => route('supplier.show', $s).'#transactions',
             ]),
         ],
         [

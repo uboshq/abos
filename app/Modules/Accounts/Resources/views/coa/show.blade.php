@@ -104,7 +104,7 @@
     </div>
 
     @if ($account->is_group)
-        <section id="transactions" class="mt-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
+        <section id="transactions" class="scroll-mt-24 mt-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card)">
             <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-3 font-semibold">
                 {{ __('accounts::menu.chart_of_accounts') }}
@@ -126,7 +126,16 @@
                 ]" />
         </section>
     @else
-        <section data-boxed class="mt-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
+        {{-- ── নোঙরটা এখানেও লাগে, আর সেটা ছিল না ─────────────────────
+             উপরের বড় অঙ্কটা `#transactions`-এ যায়, কিন্তু আইডিটা বসানো
+             ছিল কেবল **গ্রুপ** খাতের শাখায় — যে শাখায় এন্ট্রিই থাকে না,
+             সন্তান খাতের তালিকা থাকে।
+
+             ফলে যে খাতে সত্যিকারের এন্ট্রি আছে, ঠিক সেখানেই লিংকটা
+             কোথাও যেত না: ক্লিক করলে কিছুই হত না। দুই শাখাতেই একই
+             আইডি, কারণ দুই ক্ষেত্রেই প্রশ্নটা এক — "এই সংখ্যাটা কোথা
+             থেকে এল"। গ্রুপে উত্তর তার সন্তানেরা, পোস্টেবলে এন্ট্রিগুলো। --}}
+        <section id="transactions" data-boxed class="scroll-mt-24 mt-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card)">
             <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-3 font-semibold">
                 {{ __('accounts::section.entries') }}
