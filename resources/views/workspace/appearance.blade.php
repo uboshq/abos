@@ -180,7 +180,8 @@
                                   has-[:focus-visible]:outline-(--color-brand-500)">
                         <input type="radio" name="accent" value="{{ $key }}"
                                @checked($key === $current['accent'])
-                               class="sr-only">
+                               class="sr-only"
+                               onchange="this.form.requestSubmit()">
 
                         <span class="size-5 shrink-0 rounded-full ring-1 ring-black/10"
                               style="background: {{ $accent['swatch'] }}" aria-hidden="true"></span>
@@ -213,7 +214,8 @@
                                   has-[:focus-visible]:outline-(--color-brand-500)">
                         <input type="radio" name="theme" value="{{ $theme }}"
                                @checked($theme === $current['theme'])
-                               class="sr-only">
+                               class="sr-only"
+                               onchange="this.form.requestSubmit()">
                         <span class="text-sm">{{ __('core.appearance.' . $theme) }}</span>
                     </label>
                 @endforeach
@@ -236,13 +238,20 @@
                                   has-[:focus-visible]:outline-(--color-brand-500)">
                         <input type="radio" name="locale" value="{{ $code }}"
                                @checked($code === $current['locale'])
-                               class="sr-only">
+                               class="sr-only"
+                               onchange="this.form.requestSubmit()">
                         <span class="text-sm">{{ $label }}</span>
                     </label>
                 @endforeach
             </div>
         </section>
 
+        {{-- বোতামটা থাকে, কিন্তু আর একমাত্র পথ নয়।
+
+             প্রতিটা বাছাই এখন ক্লিকেই বসে যায় (Ava যেমন করে)। বোতামটা
+             রাখা হয়েছে দুই কারণে: JavaScript বন্ধ থাকলে এটাই একমাত্র
+             উপায়, আর অভ্যাসে যিনি সংরক্ষণ খোঁজেন তিনি যেন খালি হাতে
+             না ফেরেন। --}}
         <x-ui.button type="submit" tone="primary">{{ __('core.action.save') }}</x-ui.button>
     </form>
 </x-layouts.app>
