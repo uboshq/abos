@@ -132,7 +132,17 @@ class KitchenBoardController extends Controller implements HasMiddleware
                 'id' => $t->id,
                 'no' => $t->document_no,
                 'dish' => $t->product?->name(),
-                'qty' => (float) $t->qty,
+                /*
+                 * পরিমাণটা লেখা হিসেবে যায়, সংখ্যা হিসেবে নয়।
+                 *
+                 * `(float)` লেখা ছিল, আর [[MoneyIsNeverAFloatTest]] ধরল।
+                 * প্লেটের সংখ্যা টাকা নয় ঠিকই, কিন্তু নিয়মটা ঘর ধরে
+                 * চলে না — চললে পরের জনকে প্রতিবার ভাবতে হত "এটা কি
+                 * টাকা", আর একদিন ভুল হত।
+                 *
+                 * পর্দার JS এটা দিয়ে কোনো হিসাব করে না, কেবল দেখায়।
+                 */
+                'qty' => rtrim(rtrim((string) $t->qty, '0'), '.'),
                 'state' => $t->state,
                 'waiting' => $t->waitingMinutes(),
                 'note' => $t->note,

@@ -7,6 +7,7 @@ use App\Modules\Sales\Dashboard\SalesActivity;
 use App\Modules\Sales\Dashboard\SalesWidgets;
 use App\Modules\Sales\Events\InvoiceConfirmed;
 use App\Modules\Sales\Integrity\SalesChecks;
+use App\Modules\Sales\Listeners\SendTheOrderToTheKitchen;
 use App\Modules\Sales\Metrics\SalesMetrics;
 use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\CommissionClaim;
@@ -314,6 +315,26 @@ return [
      */
     'events' => [
         InvoiceConfirmed::class,
+    ],
+
+    /*
+     * নিজের ঘটনা নিজেই শোনা — রান্নাঘরের টিকিট।
+     *
+     * ── কেন `confirm()`-এর ভেতরে নয় ─────────────────────────────────
+     * টিকিটটা বিলের অংশ নয়। রান্নাঘরের সার্ভিস ব্যতিক্রম ছুড়লে বিলটা
+     * ফিরে যাওয়া উচিত নয় — খাবারের অর্ডার আটকে দেওয়া আর টাকার হিসাব
+     * ভুল হওয়া এক জিনিস নয়।
+     *
+     * ── কেন এটা মজুদে ছিল না, আর এখানে এল ───────────────────────────
+     * প্রথমে শ্রোতাটা `Inventory/Listeners/`-এ লেখা হয়েছিল, এই ভুল
+     * ধারণায় যে মজুদ বিক্রয়কে চেনে। চেনে না — মজুদের `depends_on`-এ
+     * বিক্রয় নেই, আর [[BoundariesTest]] সেটাই ধরল। উল্টো ঘোষণাটা
+     * চক্র বানাত, আর রেজিস্ট্রি বুট-টাইমেই ছুড়ে ফেলত।
+     *
+     * নির্ভরতার তীর যেদিকে সত্যি, ফাইলটাও সেদিকে।
+     */
+    'listeners' => [
+        InvoiceConfirmed::class => [SendTheOrderToTheKitchen::class],
     ],
 
     /*
