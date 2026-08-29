@@ -70,7 +70,7 @@ class TwoThousandInBkashAndTheRestInCashTest extends TestCase
             'code' => '1102-BKASH',
             'name_en' => 'bKash Merchant',
             'name_bn' => 'বিকাশ মার্চেন্ট',
-            'parent_id' => StandardChart::find(StandardChart::BANK_AND_MFS)->id,
+            'parent_id' => StandardChart::find(StandardChart::BANK)->id,
             'type' => Account::ASSET,
             'nature' => Account::DEBIT,
             'is_bank' => true,

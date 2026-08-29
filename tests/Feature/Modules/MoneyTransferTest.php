@@ -196,7 +196,7 @@ class MoneyTransferTest extends TestCase
             'code' => '1102-DEP',
             'name_en' => 'Deposit Bank',
             'name_bn' => 'জমা ব্যাংক',
-            'parent_id' => StandardChart::find(StandardChart::BANK_AND_MFS)->id,
+            'parent_id' => StandardChart::find(StandardChart::BANK)->id,
             'type' => Account::ASSET,
             'nature' => Account::DEBIT,
             'is_bank' => true,

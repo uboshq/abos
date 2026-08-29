@@ -73,7 +73,7 @@ class VoucherTest extends TestCase
             'code' => '1102-TEST',
             'name_en' => 'Test Bank',
             'name_bn' => 'পরীক্ষা ব্যাংক',
-            'parent_id' => StandardChart::find(StandardChart::BANK_AND_MFS)->id,
+            'parent_id' => StandardChart::find(StandardChart::BANK)->id,
             'type' => Account::ASSET,
             'nature' => Account::DEBIT,
             'is_bank' => true,

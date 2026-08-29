@@ -167,7 +167,7 @@ class PaymentController extends Controller implements HasMiddleware
      */
     private function formData(): array
     {
-        $moneyCodes = [StandardChart::CASH_IN_HAND, StandardChart::BANK_AND_MFS];
+        $moneyCodes = StandardChart::MONEY_PARENTS;
 
         return [
             'suppliers' => Supplier::query()->active()->orderBy('name_en')->get(),

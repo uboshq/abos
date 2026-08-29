@@ -64,7 +64,7 @@ class TheNewListsSurviveTheirFirstRowTest extends TestCase
             'code' => '1102-FIRSTROW',
             'name_en' => 'City Bank',
             'name_bn' => 'সিটি ব্যাংক',
-            'parent_id' => StandardChart::find(StandardChart::BANK_AND_MFS)->id,
+            'parent_id' => StandardChart::find(StandardChart::BANK)->id,
             'type' => Account::ASSET,
             'nature' => Account::DEBIT,
             'is_bank' => true,

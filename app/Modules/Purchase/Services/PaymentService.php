@@ -352,7 +352,7 @@ final class PaymentService
             ]);
         }
 
-        $money = [StandardChart::CASH_IN_HAND, StandardChart::BANK_AND_MFS];
+        $money = StandardChart::MONEY_PARENTS;
 
         $isMoney = Account::query()->whereKey($account->parent_id)->whereIn('code', $money)->exists();
 

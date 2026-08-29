@@ -363,7 +363,7 @@ final class CollectionService
             ]);
         }
 
-        $money = [StandardChart::CASH_IN_HAND, StandardChart::BANK_AND_MFS];
+        $money = StandardChart::MONEY_PARENTS;
 
         // মাথা দুইটার নিচের কোনো খাত — মাথা নিজে নয় (উপরের নিয়ম)
         $isMoney = Account::query()->whereKey($account->parent_id)->whereIn('code', $money)->exists();

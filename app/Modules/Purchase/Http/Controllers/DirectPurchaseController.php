@@ -152,7 +152,7 @@ class DirectPurchaseController extends Controller implements HasMiddleware
     private function moneyAccounts()
     {
         $heads = Account::query()
-            ->whereIn('code', [StandardChart::CASH_IN_HAND, StandardChart::BANK_AND_MFS])
+            ->whereIn('code', StandardChart::MONEY_PARENTS)
             ->pluck('id');
 
         return Account::query()

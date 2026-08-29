@@ -78,7 +78,7 @@ class BankMoneyIsBookedOnceTest extends TestCase
             'code' => $code,
             'name_en' => $en,
             'name_bn' => $bn,
-            'parent_id' => StandardChart::find(StandardChart::BANK_AND_MFS)->id,
+            'parent_id' => StandardChart::find(StandardChart::BANK)->id,
             'type' => Account::ASSET,
             'nature' => Account::DEBIT,
             'is_bank' => true,
