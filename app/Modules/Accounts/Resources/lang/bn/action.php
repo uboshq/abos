@@ -45,5 +45,4 @@ return [
     'cheque_deposit' => 'জমা দিলাম',
     'cheque_clear' => 'পাশ হয়েছে',
     'cheque_bounce' => 'ফেরত এসেছে',
-    'money_arrived' => 'টাকা এসেছে',
 ];

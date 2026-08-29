@@ -13,5 +13,4 @@ return [
     'due' => 'Due',
     'paid' => 'Paid',
     'overdue' => 'Overdue',
-    'posted' => 'Posted',
 ];

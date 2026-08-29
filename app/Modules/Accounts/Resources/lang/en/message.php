@@ -117,10 +117,4 @@ return [
     'cheque_cleared' => 'Cleared — the money is in the bank now.',
     'cheque_bounced' => 'The bounce has been recorded.',
     'no_cheques' => 'No cheques yet.',
-    'capital_note' => 'Who put money in, what they took back, and where that leaves each of them',
-    'recorded_then_posted' => 'Recorded when agreed, posted when the money actually arrives — usually different days',
-    'no_capital_yet' => 'Nothing recorded yet',
-    'capital_recorded' => ':no recorded',
-    'capital_posted' => ':no posted',
-    'capital_narration' => ':who — capital (:no)',
 ];

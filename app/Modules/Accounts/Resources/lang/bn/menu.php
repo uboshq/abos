@@ -37,5 +37,4 @@ return [
     'reconciliations' => 'ব্যাংক মিলকরণ',
     'assets' => 'স্থায়ী সম্পদ',
     'by_cost_centre' => 'কোন কেন্দ্রে কত',
-    'capital' => 'মূলধন ও বিনিয়োগ',
 ];

@@ -42,10 +42,6 @@ return [
         ],
         'master' => [
             ['label' => 'accounts::menu.chart_of_accounts', 'route' => 'accounts.coa.index', 'permission' => 'accounts.coa.view'],
-            /* মূলধন মাস্টারে, লেনদেনে নয়: এটা একবার বসে, তারপর কদাচিৎ
-               ছোঁয়া হয় — আর ব্যবসার প্রথম কাজ বলে চোখের সামনেই থাকা
-               দরকার। */
-            ['label' => 'accounts::menu.capital', 'route' => 'accounts.capital.index', 'permission' => 'accounts.capital.view'],
             ['label' => 'accounts::menu.cash_tills', 'route' => 'accounts.till.index', 'permission' => 'accounts.till.view'],
 
             /*
@@ -138,13 +134,6 @@ return [
     ],
 
     'permissions' => [
-        /* মূলধন — দেখা, লেখা, আর খাতায় বসানো আলাদা তিনটা ক্ষমতা।
-           যে কেরানি সারি লিখতে পারেন, তাঁর খাতায় বসানোর ক্ষমতা
-           থাকার দরকার নেই। */
-        'accounts.capital.view',
-        'accounts.capital.create',
-        'accounts.capital.post',
-
         'accounts.view',
         'accounts.manage',
         'accounts.coa.view',
@@ -224,7 +213,6 @@ return [
 
     'doc_types' => [
         'CHQ' => 'accounts::doc.cheque',
-        'CAP' => 'accounts::doc.capital',
         'RV' => 'accounts::doc.receipt_voucher',
         'PV' => 'accounts::doc.payment_voucher',
         'EV' => 'accounts::doc.expense_voucher',

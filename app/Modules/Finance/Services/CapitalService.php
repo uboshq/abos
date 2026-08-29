@@ -2,13 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\Accounts\Services;
+namespace App\Modules\Finance\Services;
 
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Support\CompanyContext;
 use App\Modules\Accounts\Models\Account;
-use App\Modules\Accounts\Models\CapitalEntry;
 use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Accounts\Services\VoucherService;
+use App\Modules\Finance\Models\CapitalEntry;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -78,13 +80,13 @@ final class CapitalService
     {
         if ($entry->status === CapitalEntry::POSTED) {
             throw ValidationException::withMessages([
-                'status' => __('accounts::validation.capital_already_posted', ['no' => $entry->document_no]),
+                'status' => __('finance::validation.capital_already_posted', ['no' => $entry->document_no]),
             ]);
         }
 
         if ($into->is_group) {
             throw ValidationException::withMessages([
-                'received_into_account_id' => __('accounts::validation.not_a_postable_account'),
+                'received_into_account_id' => __('finance::validation.not_a_postable_account'),
             ]);
         }
 
@@ -98,7 +100,7 @@ final class CapitalService
                     'type' => Voucher::RECEIPT,
                     'trx_date' => $entry->trx_date->toDateString(),
                     'narration' => $entry->narration
-                        ?? __('accounts::message.capital_narration', [
+                        ?? __('finance::message.capital_narration', [
                             'who' => $entry->contributor_name,
                             'no' => $entry->document_no,
                         ]),
@@ -191,19 +193,19 @@ final class CapitalService
     {
         if (! in_array($data['contributor_type'] ?? '', CapitalEntry::WHO, true)) {
             throw ValidationException::withMessages([
-                'contributor_type' => __('accounts::validation.unknown_contributor_type'),
+                'contributor_type' => __('finance::validation.unknown_contributor_type'),
             ]);
         }
 
         if (! in_array($data['entry_type'] ?? '', CapitalEntry::KINDS, true)) {
             throw ValidationException::withMessages([
-                'entry_type' => __('accounts::validation.unknown_capital_kind'),
+                'entry_type' => __('finance::validation.unknown_capital_kind'),
             ]);
         }
 
         if (bccomp((string) ($data['amount'] ?? '0'), '0', 4) <= 0) {
             throw ValidationException::withMessages([
-                'amount' => __('accounts::validation.capital_must_be_positive'),
+                'amount' => __('finance::validation.capital_must_be_positive'),
             ]);
         }
     }
