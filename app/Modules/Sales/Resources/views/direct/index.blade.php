@@ -676,48 +676,45 @@
 
             </div>
 
-            {{-- নমুনার ছয়টা বোতাম।
+            {{-- ছয়টা কাজ, আর ছয়টাই সত্যি।
 
-                 ── কেন এগুলো এখানে, যদিও সব কাজ এখনো তৈরি হয়নি ──────────
-                 জায়গাটা ধরে রাখা: কাজগুলো এলে কোথায় বসবে তা আগেই ঠিক থাকে,
-                 আর ব্যবহারকারী দুই পণ্যের মাঝে গিয়ে একই বিন্যাস পান।
+                 ── ২৯ আগস্ট ২০২৬ পর্যন্ত চারটা কেবল "আসছে" বলত ────────
+                 জায়গাটা ধরে রাখার যুক্তিতে বোতামগুলো বসানো ছিল, আর চাপলে
+                 একটা হলুদ বার্তা আসত। যুক্তিটা খারাপ ছিল না — চুপচাপ
+                 কিছু-না-করার চেয়ে "আসছে" বলা ভালো।
 
-                 তবে চুপচাপ কিছু-না-করা নয়। যে বোতাম চাপা যায় অথচ কিছুই হয়
-                 না, সেটাই সবচেয়ে খারাপ স্টাব — মানুষ ভাবে সিস্টেম নষ্ট।
-                 তাই চাপলে পরিষ্কার করে বলা হয় জিনিসটা আসছে।
+                 কিন্তু মালিক নাম ধরে ছয়টাই চেয়েছেন, আর নিয়ম হলো স্টাব
+                 নয়। তাই প্রতিটার নিজের প্যানেল, আর প্রতিটার ঘর সার্ভারে
+                 গিয়ে বসে।
 
-                 খরচ ও জমা দুইটা সত্যিই কাজ করে — ওগুলোর ঘর এই প্যানেলেই
-                 আছে, তাই বোতামটা সেখানেই নিয়ে যায়। --}}
+                 ── কেন প্যানেল, আলাদা পাতা নয় ─────────────────────────
+                 কাউন্টারে দাঁড়ানো লোক পাতা বদলাতে পারেন না — কার্টটা
+                 সামনে থাকতে হয়। একটা পাতা ছেড়ে গেলে ফিরে এসে আবার সব
+                 টাইপ করতে হত। --}}
             <div class="grid grid-cols-2 gap-1 border-t border-(--color-border) p-3">
                 @foreach (array_filter([
-                    ['key' => 'chart_bulk_do', 'action' => null, 'show' => true],
-                    ['key' => 'expense', 'action' => 'expense_amount', 'show' => $show['expense']],
-                    ['key' => 'transportation', 'action' => null, 'show' => true],
-                    ['key' => 'shipment', 'action' => null, 'show' => true],
-                    ['key' => 'add_deposit', 'action' => 'deposit', 'show' => $show['deposit']],
-                    ['key' => 'add_note', 'action' => null, 'show' => true],
+                    ['key' => 'chart_bulk_do', 'panel' => 'bulk', 'show' => true],
+                    ['key' => 'expense', 'panel' => 'expense', 'show' => $show['expense']],
+                    ['key' => 'transportation', 'panel' => 'transport', 'show' => $show['transport']],
+                    ['key' => 'shipment', 'panel' => 'shipment', 'show' => $show['shipment']],
+                    ['key' => 'add_deposit', 'panel' => 'deposit', 'show' => $show['deposit']],
+                    ['key' => 'add_note', 'panel' => 'note', 'show' => true],
                 ], fn (array $b) => $b['show']) as $button)
                     <button type="button"
-                            @if ($button['action'])
-                                @click="focusField('{{ $button['action'] }}')"
-                            @else
-                                @click="upcoming = @js(__('sales::action.'.$button['key']))"
-                            @endif
-                            @class([
-                                'rounded-(--radius-field) border border-(--color-border) px-2 py-1.5 text-2xs',
-                                'transition-colors hover:bg-(--color-surface-hover)',
-                                'text-(--color-ink-muted)' => $button['action'] === null,
-                            ])>
+                            @click="panel = (panel === '{{ $button['panel'] }}' ? '' : '{{ $button['panel'] }}')"
+                            :class="panel === '{{ $button['panel'] }}'
+                                ? 'bg-(--color-surface-selected) border-(--color-brand-500) font-semibold'
+                                : 'hover:bg-(--color-surface-hover)'"
+                            class="rounded-(--radius-field) border border-(--color-border) px-2 py-1.5
+                                   text-2xs transition-colors">
                         {{ __('sales::action.'.$button['key']) }}
                     </button>
                 @endforeach
             </div>
 
-            <p x-show="upcoming" x-cloak
-               class="mx-3 rounded-(--radius-field) bg-(--color-badge-pending-bg) px-2 py-1 text-2xs
-                      text-(--color-badge-pending-ink)">
-                <span x-text="upcoming"></span> — {{ __('sales::message.upcoming') }}
-            </p>
+            {{-- একবারে একটাই প্যানেল খোলে: ডান কলামটা সরু, আর দুইটা খোলা
+                 থাকলে কার্টের সংখ্যাগুলো পর্দা থেকে নেমে যেত। --}}
+            @include('sales::direct.partials.panels')
 
             {{-- বোতাম --}}
             <div class="space-y-2 p-3">
@@ -759,7 +756,20 @@
                     expenseAmount: '',
                     roundingAmount: '',
                     deposit: '',
-                    upcoming: '',
+                    panel: '',
+                    depositMethod: 'cash',
+
+                    /*
+                     * চার্ট / বাল্ক DO — পণ্যের আইডি ধরে পরিমাণ।
+                     *
+                     * একটা সাদামাটা অবজেক্ট, তালিকা নয়: চার্ট থেকে টুকতে
+                     * গিয়ে একই পণ্যে দুইবার সংখ্যা বসানো হয়ই, আর তালিকা
+                     * হলে দুইটা সারি জমত। আইডিতে বসালে দ্বিতীয়বারেরটা
+                     * প্রথমটার উপরেই বসে।
+                     */
+                    bulk: {},
+                    bulkQuery: '',
+
                     nextKey: 1,
 
                     get visible() {
@@ -812,6 +822,69 @@
                        নমুনায় ঘরটা নিজে থেকেই ভরে, হাতে লেখা যায় না। */
                     get entryTotalQty() {
                         return (Number(this.entry.qty) || 0) + (Number(this.entry.freeQty) || 0);
+                    },
+
+                    /* ছাঁকা তালিকা — খালি খোঁজায় গোটা তালিকা, কারণ
+                       চার্ট থেকে টোকার সময় মানুষ উপর থেকে নিচে যান। */
+                    get bulkList() {
+                        const t = this.bulkQuery.trim().toLowerCase();
+
+                        return t === ''
+                            ? this.catalogue
+                            : this.catalogue.filter(p =>
+                                p.name.toLowerCase().includes(t)
+                                || p.code.toLowerCase().includes(t));
+                    },
+
+                    get bulkChosen() {
+                        return Object.values(this.bulk)
+                            .filter(v => parseFloat(v) > 0).length;
+                    },
+
+                    /*
+                     * শিট থেকে কার্টে।
+                     *
+                     * ── কেন দর পণ্যের নিজেরটাই ─────────────────────────
+                     * বাল্ক শিটে দরের ঘর নেই: চল্লিশ লাইনে চল্লিশটা দর
+                     * টাইপ করা মানে চল্লিশটা ভুলের সুযোগ, আর চার্টের
+                     * অর্ডারে দর প্রায় সবসময় তালিকার দরই। আলাদা দর
+                     * লাগলে সারিটা কার্টে গিয়ে বদলানো যায় — ওখানে
+                     * একটা করে, চোখের সামনে।
+                     */
+                    addBulk() {
+                        Object.entries(this.bulk).forEach(([id, qty]) => {
+                            const n = parseFloat(qty);
+                            if (! (n > 0)) { return; }
+
+                            const p = this.catalogue.find(c => String(c.id) === String(id));
+                            if (! p) { return; }
+
+                            /* একই পণ্য কার্টে থাকলে সারি বাড়ে না,
+                               পরিমাণ বাড়ে — নাহলে এক পণ্যে দুই সারি,
+                               আর কাগজে দুইবার নাম। */
+                            const already = this.lines.find(l => l.id === p.id);
+
+                            if (already) {
+                                already.qty = String((parseFloat(already.qty) || 0) + n);
+
+                                return;
+                            }
+
+                            this.lines.push({
+                                key: this.nextKey++,
+                                id: p.id,
+                                name: p.name,
+                                unit: p.unit,
+                                vatRate: p.vatRate || 0,
+                                qty: String(n),
+                                freeQty: '',
+                                rate: String(p.rate || p.price || 0),
+                                discountPercent: '',
+                            });
+                        });
+
+                        this.bulk = {};
+                        this.panel = '';
                     },
 
                     addToCart() {
@@ -928,7 +1001,6 @@
                        কিছুই ফোকাস হত না, নীরবে। জাবেদা ও নগদ গণনার
                        পর্দায় এই একই ভুল দুইটা ফিচার মেরে রেখেছিল। */
                     focusField(name) {
-                        this.upcoming = '';
                         const el = this.$root.querySelector(`[name="${name}"]`);
                         if (el) { el.focus(); el.select?.(); }
                     },

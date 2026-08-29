@@ -576,6 +576,27 @@ return [
             'default' => true,
             'group' => 'entry',
         ],
+        /*
+         * পরিবহন ও চালান-গন্তব্য — সরাসরি বিক্রয়ের পর্দার দুইটা প্যানেল।
+         *
+         * যে ডিপো কাউন্টার থেকে হাতে হাতে মাল দেয় তার কাছে গাড়ি, চালক
+         * বা ঠিকানার কোনো মানে নেই — প্রতিটা চালানে দুইটা বোতাম পার
+         * করতে হত। নিয়ম ৭: প্রতিটা ঐচ্ছিক ঘরের নিজের সুইচ।
+         */
+        [
+            'key' => 'sales.field_transport',
+            'label' => 'sales::settings.field_transport',
+            'type' => 'boolean',
+            'default' => true,
+            'group' => 'entry',
+        ],
+        [
+            'key' => 'sales.field_shipment',
+            'label' => 'sales::settings.field_shipment',
+            'type' => 'boolean',
+            'default' => true,
+            'group' => 'entry',
+        ],
         [
             'key' => 'sales.field_credit_limit',
             'label' => 'sales::settings.field_credit_limit',
