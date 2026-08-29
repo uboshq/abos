@@ -30,4 +30,5 @@ return [
     'no_base_currency' => 'Make one currency the default first — that is the base your books are kept in, and every other rate is measured against it.',
     'base_currency_rate_is_one' => ':code is the company\'s own currency, so its rate is always 1 — there is nothing to enter.',
     'rate_meaning' => 'The rate reads: 1 :code equals this many :base. The date is when the rate starts applying — until the next one is entered.',
+    'nothing_to_choose_yet' => 'Nothing to choose yet — add a cash till or a bank account first',
 ];

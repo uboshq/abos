@@ -131,6 +131,17 @@ class MasterListController extends Controller implements HasMiddleware
          *
          * খাতটা বাধ্যতামূলক, আর সেটাই সারিটার একমাত্র কাজ: POS ওই খাত
          * দেখেই টাকা বসায়। খাত ছাড়া সারিটা কিছুই বলে না।
+         *
+         * ── এই মন্তব্যটা জানত, কোডটা জানত না — ২৯ আগস্ট ২০২৬ ────────
+         * উপরের লাইনটা প্রথম দিন থেকেই লেখা ছিল, অথচ ঘরটার কোনো
+         * `rules` ছিল না — অর্থাৎ যাচাইয়ে ওটা `nullable`। ডাটাবেজে
+         * কলামটা `NOT NULL`, তাই নাম লিখে Save চাপলেই **HTTP 500**।
+         *
+         * HP-র ২৫ আগস্টের রিপোর্ট এটাকে "সবচেয়ে বড় খোলা সমস্যা" বলেছে,
+         * আর মালিক নিজে লাইভে "bKash" বসাতে গিয়ে এতেই আটকেছিলেন।
+         *
+         * শিক্ষাটা মন্তব্য লেখার নয় — **মন্তব্য যা দাবি করে, কোডকে
+         * সেটা বলতে হবে।** নিচের `rules` লাইনটাই সেই কথা।
          */
         'payment-methods' => [
             'model' => PaymentMethod::class,
@@ -138,7 +149,7 @@ class MasterListController extends Controller implements HasMiddleware
             'title' => 'master_data::menu.payment_methods',
             'fields' => [
                 'account_id' => ['type' => 'select', 'label' => 'master_data::field.money_account',
-                    'options' => 'money_accounts'],
+                    'options' => 'money_accounts', 'rules' => ['required']],
                 'needs_reference' => ['type' => 'switch', 'label' => 'master_data::field.needs_reference'],
                 'fee_percent' => ['type' => 'number', 'label' => 'master_data::field.fee_percent', 'step' => '0.0001'],
             ],
@@ -182,7 +193,17 @@ class MasterListController extends Controller implements HasMiddleware
             'route' => 'reason',
             'title' => 'master_data::menu.reason_codes',
             'fields' => [
-                'context' => ['type' => 'select', 'label' => 'master_data::field.context', 'options' => 'contexts', 'labels' => 'context'],
+                /*
+                 * প্রসঙ্গটা বাধ্যতামূলক — একই কারণে যে কারণে খাতটা।
+                 *
+                 * "কোথায় খাটবে" না বললে সারিটা কোনো ড্রপডাউনেই ওঠে না,
+                 * আর ডাটাবেজে কলামটা `NOT NULL` — তাই খালি রেখে Save
+                 * চাপলে ৫০০। ধরা পড়েছে ২৯ আগস্ট ২০২৬-এ, নতুন পাহারাটা
+                 * ([[HalfAFormShouldNeverBeAServerErrorTest]]) বসানোর
+                 * প্রথম দৌড়েই — HP-র রিপোর্টে এটার নামই ছিল না।
+                 */
+                'context' => ['type' => 'select', 'label' => 'master_data::field.context',
+                    'options' => 'contexts', 'labels' => 'context', 'rules' => ['required']],
                 'returns_to_stock' => ['type' => 'switch', 'label' => 'master_data::field.returns_to_stock'],
                 'needs_approval' => ['type' => 'switch', 'label' => 'master_data::field.needs_approval'],
             ],

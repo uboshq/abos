@@ -99,18 +99,41 @@
                             </label>
 
                         @elseif ($field['type'] === 'select')
+                            @php
+                                $list = $options[$field['options']] ?? [];
+                                $needed = in_array('required', $field['rules'] ?? [], true);
+                            @endphp
+
                             <label class="block">
-                                <span class="mb-1 block text-sm font-medium">{{ __($field['label']) }}</span>
+                                <span class="mb-1 block text-sm font-medium">
+                                    {{ __($field['label']) }}
+                                    @if ($needed)
+                                        <span class="text-(--color-danger)" aria-hidden="true">*</span>
+                                        <span class="sr-only">({{ __('core.form.required') }})</span>
+                                    @endif
+                                </span>
+
+                                {{-- ── খালি তালিকা কেন আলাদা করে বলা হয় ─────────────────
+                                     ২৯ আগস্ট ২০২৬-এ পেমেন্ট পদ্ধতির খাতটা বাধ্যতামূলক করা
+                                     হলো, কারণ খালি রাখলে ৫০০ আসত। কিন্তু একেবারে নতুন
+                                     কোম্পানিতে কোনো টিল বা ব্যাংক হিসাবই থাকে না — তখন
+                                     ড্রপডাউনটা খালি, আর "এই ঘরটা লাগবে" বার্তাটা পড়ে
+                                     ব্যবহারকারী এমন একটা তালিকার দিকে তাকাতেন যাতে বাছার
+                                     কিছুই নেই।
+                                     ৫০০-কে একটা নিঃশব্দ অচলাবস্থায় বদলে দেওয়া সারানো নয়। --}}
+                                @if ($needed && count($list) === 0)
+                                    <p class="mb-1 rounded-(--radius-field) bg-(--color-badge-pending-bg)
+                                              px-2 py-1 text-2xs text-(--color-badge-pending-ink)">
+                                        {{ __('master_data::message.nothing_to_choose_yet') }}
+                                    </p>
+                                @endif
+
                                 <select name="{{ $name }}"
                                         class="h-(--spacing-field) w-full rounded-(--radius-field) border
                                                border-(--color-border) bg-(--color-surface-card) px-3">
                                     <option value="">—</option>
 
-                                    @php
-                                        $source = $field['options'];
-                                        $list = $options[$source] ?? [];
-                                        $selected = old($name, $record->{$name});
-                                    @endphp
+                                    @php $selected = old($name, $record->{$name}); @endphp
 
                                     @if ($field['labels'] ?? false)
                                         {{-- ধ্রুবকের তালিকা — অনুবাদ হয়ে আসে, কাঁচা কোড নয়।
