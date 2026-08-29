@@ -37,4 +37,12 @@ return [
     'hand_loan_we_owe' => 'We have to pay',
     'hand_loan_clear' => 'Nothing outstanding',
     'hand_loan_is_not_a_loan' => 'No instalments, no interest, nothing signed — but the money is the business\'s, so it goes in the books',
+    'withdrawal_note' => 'Who took money out of the business, and how much they may take in a month',
+    'withdrawal_recorded' => ':no recorded',
+    'withdrawal_posted' => ':no is in the books',
+    'withdrawal_cap_set' => 'Monthly cap set for :who',
+    'withdrawal_narration' => ':who — withdrawal (:no)',
+    'no_withdrawal_yet' => 'No withdrawals recorded yet',
+    'withdrawal_is_not_an_expense' => 'A withdrawal is not an expense — it is the owner taking their own money, so it lowers capital',
+    'cap_can_be_changed_here' => 'Over the cap the service refuses; if more is needed, change the cap here — it cannot be passed silently',
 ];

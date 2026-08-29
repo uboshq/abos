@@ -37,4 +37,12 @@ return [
     'hand_loan_we_owe' => 'আমাদের দিতে হবে',
     'hand_loan_clear' => 'হিসাব সমান',
     'hand_loan_is_not_a_loan' => 'কিস্তি নেই, সুদ নেই, কাগজ নেই — তবু টাকাটা ব্যবসার, তাই খাতায় বসে',
+    'withdrawal_note' => 'কে ব্যবসা থেকে কত নিলেন — আর মাসে কতটা নিতে পারবেন',
+    'withdrawal_recorded' => ':no লেখা হয়েছে',
+    'withdrawal_posted' => ':no খাতায় বসেছে',
+    'withdrawal_cap_set' => ':who-এর মাসিক সীমা বসানো হয়েছে',
+    'withdrawal_narration' => ':who — উত্তোলন (:no)',
+    'no_withdrawal_yet' => 'এখনো কোনো উত্তোলন লেখা হয়নি',
+    'withdrawal_is_not_an_expense' => 'উত্তোলন খরচ নয় — মালিকের নিজের টাকা নিয়ে যাওয়া, তাই মূলধন কমে',
+    'cap_can_be_changed_here' => 'সীমা পেরোলে সেবাই আটকাবে; বেশি লাগলে সীমাটা এখানেই বদলান — নিঃশব্দে পেরোনো যায় না',
 ];

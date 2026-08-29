@@ -10,4 +10,5 @@ return [
     'deposit_savings' => 'সঞ্চয়পত্র',
     'deposit_bond' => 'বন্ড',
     'hand_loan' => 'হাতধার',
+    'withdrawal' => 'উত্তোলন',
 ];

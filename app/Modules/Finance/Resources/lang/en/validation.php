@@ -22,4 +22,9 @@ return [
     'hand_loan_amount_positive' => 'The amount must be more than zero — for the other direction, record it as the other direction',
     'hand_loan_not_clear' => ':amount is still outstanding — it cannot be settled until that is zero',
     'hand_loan_already_settled' => ':who is already settled',
+    'withdrawal_needs_a_name' => 'Say who is taking the money',
+    'withdrawal_must_be_positive' => 'The amount must be more than zero',
+    'withdrawal_already_posted' => ':no is already in the books',
+    'withdrawal_awaits_approval' => ':no is still waiting for approval — the money cannot move before that',
+    'withdrawal_over_cap' => 'The monthly cap is :cap — only :left is left this month. Change the cap if more is needed',
 ];

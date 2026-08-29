@@ -22,4 +22,9 @@ return [
     'hand_loan_amount_positive' => 'অঙ্কটা শূন্যের বেশি হতে হবে — উল্টো দিকে গেলে সেটাকে উল্টো দিক হিসেবেই লিখুন',
     'hand_loan_not_clear' => 'এখনো :amount বাকি — শূন্য না হলে চুকে গেছে বলা যায় না',
     'hand_loan_already_settled' => ':who-এর হিসাব আগেই চুকে গেছে',
+    'withdrawal_needs_a_name' => 'কে তুলছেন, সেটা লিখতে হবে',
+    'withdrawal_must_be_positive' => 'অঙ্কটা শূন্যের বেশি হতে হবে',
+    'withdrawal_already_posted' => ':no আগেই খাতায় বসেছে',
+    'withdrawal_awaits_approval' => ':no এখনো অনুমোদনের অপেক্ষায় — অনুমোদনের আগে টাকা যাবে না',
+    'withdrawal_over_cap' => 'মাসিক সীমা :cap — এই মাসে আর :left তোলা যাবে। বেশি লাগলে সীমাটা বদলান',
 ];
