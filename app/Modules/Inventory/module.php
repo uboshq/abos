@@ -98,6 +98,8 @@ return [
              * রোজ সকালে ঘটে। এক মেনুতে রাখলে রোজকার কাজটা মাস্টার
              * ডাটার সাথে মিশে যেত।
              */
+            ['label' => 'inventory::menu.kitchen_board', 'route' => 'inventory.kitchen.index',
+                'permission' => 'inventory.recipe.view'],
             ['label' => 'inventory::menu.production', 'route' => 'inventory.production.index',
                 'permission' => 'inventory.production.view'],
         ],

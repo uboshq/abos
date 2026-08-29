@@ -85,4 +85,6 @@ return [
     'food_cost_pct' => 'Food cost %',
     /* The paper's number — first column on transfer and cooking lists. */
     'document_no' => 'Number',
+    'portions_possible' => 'Portions possible',
+    'limiting' => 'What runs out first',
 ];
