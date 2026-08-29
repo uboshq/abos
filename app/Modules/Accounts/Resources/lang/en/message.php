@@ -117,4 +117,5 @@ return [
     'cheque_cleared' => 'Cleared — the money is in the bank now.',
     'cheque_bounced' => 'The bounce has been recorded.',
     'no_cheques' => 'No cheques yet.',
+    'opening_narration' => 'Opening balance — :account',
 ];

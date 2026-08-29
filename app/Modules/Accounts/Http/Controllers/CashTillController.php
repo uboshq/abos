@@ -146,7 +146,8 @@ class CashTillController extends Controller implements HasMiddleware
                 ->get(),
             fn (LedgerEntry $e) => $e->debit,
             fn (LedgerEntry $e) => $e->credit,
-            (string) $till->account->opening_balance,
+            /* খোলার জের এখন খতিয়ানের প্রথম সারি — শুরুর মান শূন্য */
+            '0',
         );
 
         $running = new RunningBalance($opening);
@@ -229,11 +230,8 @@ class CashTillController extends Controller implements HasMiddleware
         foreach ($tills as $till) {
             $row = $sums[$till->account_id] ?? null;
 
-            $out[$till->id] = bcadd(
-                (string) $till->account->opening_balance,
-                bcsub((string) ($row->d ?? 0), (string) ($row->c ?? 0), 4),
-                4,
-            );
+            /* খোলার জের খতিয়ানেই — এখানে যোগ করলে দ্বিগুণ */
+            $out[$till->id] = bcsub((string) ($row->d ?? 0), (string) ($row->c ?? 0), 4);
         }
 
         return $out;

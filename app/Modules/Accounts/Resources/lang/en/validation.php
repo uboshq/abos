@@ -78,4 +78,5 @@ return [
     'cheque_already_decided' => 'Cheque :no has already been decided.',
     'bounce_needs_reason' => 'Say why it bounced — "no funds" and "signature mismatch" are not the same thing.',
     'chart_not_installed' => 'The chart of accounts has not been installed yet.',
+    'opening_head_missing' => 'The chart has no account :code (Opening Balance Equity)',
 ];

@@ -171,8 +171,8 @@ final class AccountsWidgets implements DashboardWidgets
             ->selectRaw('COALESCE(SUM(debit), 0) as d, COALESCE(SUM(credit), 0) as c')
             ->first();
 
-        $opening = Account::query()->whereIn('id', $accountIds)->sum('opening_balance');
-
-        return bcadd((string) $opening, bcsub((string) ($row->d ?? 0), (string) ($row->c ?? 0), 4), 4);
+        /* খোলার জের এখন খতিয়ানেই — এখানে যোগ করলে দ্বিগুণ হত
+           ([[OpeningBalanceService]], ২৯ আগস্ট ২০২৬) */
+        return bcsub((string) ($row->d ?? 0), (string) ($row->c ?? 0), 4);
     }
 }

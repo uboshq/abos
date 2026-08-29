@@ -94,9 +94,9 @@ class AccountsDashboardController extends Controller implements HasMiddleware
             ->selectRaw('COALESCE(SUM(debit), 0) as d, COALESCE(SUM(credit), 0) as c')
             ->first();
 
-        $opening = Account::query()->whereIn('id', $accountIds)->sum('opening_balance');
-
-        return bcadd((string) $opening, bcsub((string) ($row->d ?? 0), (string) ($row->c ?? 0), 4), 4);
+        /* খোলার জের এখন খতিয়ানেই — এখানে যোগ করলে দ্বিগুণ হত
+           ([[OpeningBalanceService]], ২৯ আগস্ট ২০২৬) */
+        return bcsub((string) ($row->d ?? 0), (string) ($row->c ?? 0), 4);
     }
 
     private function balanceOfCode(string $code): string
@@ -143,11 +143,8 @@ class AccountsDashboardController extends Controller implements HasMiddleware
         foreach ($tills as $till) {
             $row = $sums[$till->account_id] ?? null;
 
-            $out[$till->id] = bcadd(
-                (string) $till->account->opening_balance,
-                bcsub((string) ($row->d ?? 0), (string) ($row->c ?? 0), 4),
-                4,
-            );
+            /* খোলার জের খতিয়ানেই বসে গেছে — আর যোগ করার নেই */
+            $out[$till->id] = bcsub((string) ($row->d ?? 0), (string) ($row->c ?? 0), 4);
         }
 
         return $out;
