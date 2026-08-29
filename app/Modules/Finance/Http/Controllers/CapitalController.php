@@ -65,10 +65,8 @@ class CapitalController extends Controller implements HasMiddleware
              */
             'accounts' => Account::query()
                 ->where('is_group', false)
-                ->whereIn('parent_id', Account::query()->whereIn('code', [
-                    StandardChart::CASH_IN_HAND,
-                    StandardChart::BANK_AND_MFS,
-                ])->select('id'))
+                ->whereIn('parent_id', Account::query()
+                    ->whereIn('code', StandardChart::MONEY_PARENTS)->select('id'))
                 ->orderBy('code')->get(),
         ]);
     }

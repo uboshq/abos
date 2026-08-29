@@ -68,7 +68,7 @@ class AccountReportsTest extends TestCase
             'code' => '1102-RPT',
             'name_en' => 'Report Bank',
             'name_bn' => 'রিপোর্ট ব্যাংক',
-            'parent_id' => StandardChart::find(StandardChart::BANK_AND_MFS)->id,
+            'parent_id' => StandardChart::find(StandardChart::BANK)->id,
             'type' => Account::ASSET,
             'nature' => Account::DEBIT,
             'is_bank' => true,

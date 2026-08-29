@@ -40,7 +40,41 @@ final class StandardChart implements ProvisionsCompany
     /** যে খাতগুলো অন্য মডিউল কোড ধরে খোঁজে — মুছা বা ধরন বদলানো যায় না। */
     public const CASH_IN_HAND = '1101';
 
-    public const BANK_AND_MFS = '1102';
+    /**
+     * ব্যাংক — MFS নয়।
+     *
+     * ── কেন দুইটা আলাদা মাথা, ৩০ আগস্ট ২০২৬ ─────────────────────────
+     * আগে একটাই মাথা ছিল, "Bank & Mobile Money", আর যুক্তি লেখা ছিল
+     * "MFS হিসাবের দিক থেকে ব্যাংকের মতোই আচরণ করে"। মালিক ধরিয়ে
+     * দিলেন যে ওটা টেকে না, আর তিনি ঠিক:
+     *
+     *   • **বিকাশ ক্যাশ-আউটে চার্জ কাটে, ব্যাংক কাটে না।** ওই চার্জটা
+     *     আলাদা খাতে না গেলে বছরে কত গেল তা কেউ জানে না।
+     *   • মিলকরণের কাগজ আলাদা — ব্যাংকের বিবরণী, MFS-এর অ্যাপের লগ।
+     *   • সেটেলমেন্টের সময় আলাদা।
+     *
+     * এক মাথায় থাকলে "ব্যাংকে কত আছে" সংখ্যাটাই মিথ্যা বলত।
+     */
+    public const BANK = '1102';
+
+    /** মোবাইল ব্যাংকিং — বিকাশ, নগদ, রকেট, উপায়। */
+    public const MOBILE_MONEY = '1105';
+
+    /**
+     * টাকার তিনটা মাথা — যেখান থেকে টাকা আসে বা যায়।
+     *
+     * ── কেন একটা নামওয়ালা তালিকা ────────────────────────────────────
+     * নয় জায়গায় `[CASH_IN_HAND, BANK_AND_MFS]` জোড়াটা হাতে লেখা ছিল —
+     * আদায়, পরিশোধ, মূলধন, জমা, ঋণ, সরাসরি ক্রয়। MFS আলাদা করার সময়
+     * নয়টার একটাতে তৃতীয় কোডটা বসাতে ভুলে গেলে ওই পর্দায় বিকাশের
+     * হিসাবগুলো নীরবে হারিয়ে যেত — আর কেউ টের পেত কেবল টাকা তুলতে
+     * গিয়ে।
+     *
+     * এখন চতুর্থ কোনো ধরন এলে বদলাতে হবে একটাই লাইন।
+     *
+     * @var list<string>
+     */
+    public const MONEY_PARENTS = [self::CASH_IN_HAND, self::BANK, self::MOBILE_MONEY];
 
     /** পথের টাকা — দেওয়া হয়েছে, এখনো গ্রহণ হয়নি। কারও হাতে নেই। */
     public const CASH_IN_TRANSIT = '1103';
@@ -268,7 +302,7 @@ final class StandardChart implements ProvisionsCompany
 
     /** @var list<string> */
     public const SYSTEM_CODES = [
-        self::CASH_IN_HAND, self::BANK_AND_MFS, self::CASH_IN_TRANSIT,
+        self::CASH_IN_HAND, self::BANK, self::MOBILE_MONEY, self::CASH_IN_TRANSIT,
         self::CHEQUES_IN_HAND, self::CHEQUES_ISSUED,
         self::RECEIVABLE, self::INVENTORY,
         self::PAYABLE, self::VAT_PAYABLE, self::GOODS_RECEIVED_NOT_INVOICED,
@@ -384,9 +418,17 @@ final class StandardChart implements ProvisionsCompany
             // দরকার। CashTill প্রতিটা টিলের জন্য এর নিচে খাত বানায়।
             ['1101', 'Cash in Hand', 'হাতে নগদ', $A, '1100', true, []],
 
-            // ব্যাংক ও বিকাশ/নগদ/রকেট একই মাথার নিচে: MFS হিসাবের
-            // দিক থেকে ব্যাংকের মতোই আচরণ করে — জমা, উত্তোলন, বিবরণী।
-            ['1102', 'Bank & Mobile Money', 'ব্যাংক ও মোবাইল ব্যাংকিং', $A, '1100', true, []],
+            ['1102', 'Bank', 'ব্যাংক', $A, '1100', true, []],
+
+            /*
+             * মোবাইল ব্যাংকিং — ব্যাংক থেকে আলাদা মাথা।
+             *
+             * এক মাথায় ছিল, আর মালিক ধরিয়ে দিলেন কেন ওটা ভুল: MFS
+             * ক্যাশ-আউটে চার্জ কাটে, মিলকরণের কাগজ আলাদা, সেটেলমেন্টের
+             * সময়ও আলাদা। মিশিয়ে রাখলে "ব্যাংকে কত আছে" সংখ্যাটাই
+             * মিথ্যা হত।
+             */
+            ['1105', 'Mobile Money (MFS)', 'মোবাইল ব্যাংকিং (MFS)', $A, '1100', true, []],
 
             /*
              * পথের টাকা — দেওয়া হয়েছে, এখনো কেউ গ্রহণ করেনি।
@@ -525,6 +567,7 @@ final class StandardChart implements ProvisionsCompany
             ['5215', 'Commission Written Off', 'প্রত্যাখ্যাত কমিশন', $X, '5200', false, []],
             ['5209', 'Marketing & Promotion', 'বিপণন ও প্রচার', $X, '5200', false, []],
             ['5210', 'Bank Charges', 'ব্যাংক চার্জ', $X, '5200', false, []],
+
             ['5211', 'Mobile Banking Charges', 'মোবাইল ব্যাংকিং চার্জ', $X, '5200', false, []],
             ['5212', 'Depreciation', 'অবচয়', $X, '5200', false, []],
             ['5213', 'Government Fees & Licences', 'সরকারি ফি ও লাইসেন্স', $X, '5200', false, []],

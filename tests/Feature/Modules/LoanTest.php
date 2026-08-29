@@ -90,7 +90,7 @@ class LoanTest extends TestCase
             ['code' => '1102-01'],
             [
                 'company_id' => $this->company->id,
-                'parent_id' => Account::query()->where('code', StandardChart::BANK_AND_MFS)->value('id'),
+                'parent_id' => Account::query()->where('code', StandardChart::BANK)->value('id'),
                 'name_en' => 'Sonali Bank CD',
                 'name_bn' => 'সোনালী ব্যাংক চলতি',
                 'type' => Account::ASSET,

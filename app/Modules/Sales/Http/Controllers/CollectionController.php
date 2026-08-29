@@ -209,11 +209,9 @@ class CollectionController extends Controller implements HasMiddleware
         return [
             'customers' => Customer::query()->active()->orderBy('name_en')->get(),
             'accounts' => Account::query()
-                ->whereIn('code', [StandardChart::CASH_IN_HAND,
-                    StandardChart::BANK_AND_MFS])
+                ->whereIn('code', StandardChart::MONEY_PARENTS)
                 ->orWhereIn('parent_id', Account::query()
-                    ->whereIn('code', [StandardChart::CASH_IN_HAND,
-                        StandardChart::BANK_AND_MFS])->select('id'))
+                    ->whereIn('code', StandardChart::MONEY_PARENTS)->select('id'))
                 ->orderBy('code')->get(),
             // withCollected — পর্দায় প্রতিটা বিলের পাশে বাকি টাকা লেখা
             // থাকে, আর সেটা বিলপ্রতি একটা করে যোগফল চালাত

@@ -60,7 +60,7 @@ class OneNumberOneSourceTest extends TestCase
 
     private function openAnAccount(string $opening): Account
     {
-        $parent = Account::query()->where('code', StandardChart::BANK_AND_MFS)->firstOrFail();
+        $parent = Account::query()->where('code', StandardChart::BANK)->firstOrFail();
 
         return app(AccountService::class)->create([
             'code' => '1102-TEST',
@@ -196,7 +196,7 @@ class OneNumberOneSourceTest extends TestCase
      */
     public function test_no_opening_no_entry(): void
     {
-        $parent = Account::query()->where('code', StandardChart::BANK_AND_MFS)->firstOrFail();
+        $parent = Account::query()->where('code', StandardChart::BANK)->firstOrFail();
 
         $account = app(AccountService::class)->create([
             'code' => '1102-ZERO',

@@ -60,7 +60,7 @@ class TheBankStatementAndTheLedgerNeverAgreedTest extends TestCase
             'code' => '1102-CITY',
             'name_en' => 'City Bank',
             'name_bn' => 'সিটি ব্যাংক',
-            'parent_id' => StandardChart::find(StandardChart::BANK_AND_MFS)->id,
+            'parent_id' => StandardChart::find(StandardChart::BANK)->id,
             'type' => Account::ASSET,
             'nature' => Account::DEBIT,
             'is_bank' => true,
