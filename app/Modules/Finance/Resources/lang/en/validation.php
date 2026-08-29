@@ -15,4 +15,6 @@ return [
     'deposit_takes_no_instalment' => 'This deposit takes no instalments',
     'deposit_already_closed' => ':no is already closed',
     'chart_head_missing' => 'The chart has no account :code',
+    'deposit_already_cancelled' => ':no is already cancelled',
+    'cancel_reason_needed' => 'Say why you are cancelling it',
 ];

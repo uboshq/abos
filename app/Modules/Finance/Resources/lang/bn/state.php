@@ -7,4 +7,5 @@ return [
     'active' => 'চালু',
     'closed' => 'শেষ',
     'overdue' => 'মেয়াদ পেরিয়েছে',
+    'cancelled' => 'বাতিল',
 ];

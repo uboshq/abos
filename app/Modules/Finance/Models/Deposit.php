@@ -62,7 +62,18 @@ class Deposit extends Model
 
     public const ACTIVE = 'active';
 
+    /** মেয়াদ শেষ বা ভাঙা হয়েছে — একটা ব্যবসায়িক ঘটনা */
     public const CLOSED = 'closed';
+
+    /**
+     * ভুল করে বসানো হয়েছিল — উল্টো দাখিলা, সারিটা থেকে যায়।
+     *
+     * ── কেন এটা `CLOSED` থেকে আলাদা ─────────────────────────────────
+     * ভাঙা মানে ব্যাংক টাকা ফেরত দিয়েছে; বাতিল মানে জমাটা কোনোদিন
+     * ছিলই না। এক অবস্থায় মেলালে "কত টাকা ফেরত এসেছে" রিপোর্টে এমন
+     * টাকা যোগ হত যা কেউ কোনোদিন পায়নি।
+     */
+    public const CANCELLED = 'cancelled';
 
     protected $table = 'fin_deposits';
 
@@ -72,7 +83,7 @@ class Deposit extends Model
         'profit_rate', 'return_word', 'opened_on', 'matures_on',
         'instalment_amount', 'instalment_day', 'payout_account_id', 'account_id',
         'funded_from_account_id', 'pledged_to_loan_id', 'status', 'closed_on',
-        'note', 'created_by',
+        'note', 'cancel_reason', 'cancelled_at', 'cancelled_by', 'created_by',
     ];
 
     /** @return array<string, string> */
@@ -85,6 +96,7 @@ class Deposit extends Model
             'opened_on' => 'date',
             'matures_on' => 'date',
             'closed_on' => 'date',
+            'cancelled_at' => 'datetime',
         ];
     }
 
@@ -113,6 +125,18 @@ class Deposit extends Model
     public function scopeOpen(Builder $query): void
     {
         $query->where('status', self::ACTIVE);
+    }
+
+    /**
+     * বাতিল হওয়া জমা কোনো যোগফলে গোনা হয় না।
+     *
+     * সারিটা তালিকায় থাকে — অডিটে প্রশ্ন উঠলে উত্তরটা লাগে — কিন্তু
+     * "কত টাকা সরিয়ে রাখা আছে" সংখ্যায় ওটা শূন্য, কারণ ওই টাকাটা
+     * কোনোদিন কোথাও যায়নি।
+     */
+    public function isCancelled(): bool
+    {
+        return $this->status === self::CANCELLED;
     }
 
     /**

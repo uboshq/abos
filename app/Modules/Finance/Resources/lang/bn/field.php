@@ -52,4 +52,6 @@ return [
     'note' => 'মন্তব্য',
     'movement' => 'চলাচল',
     'choose' => 'বেছে নিন',
+    'cancel_reason' => 'কেন বাতিল',
+    'cancelled_note' => 'বাতিলের কারণ',
 ];

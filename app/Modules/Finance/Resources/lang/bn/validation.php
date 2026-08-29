@@ -15,4 +15,6 @@ return [
     'deposit_takes_no_instalment' => 'এই জমায় কিস্তি হয় না',
     'deposit_already_closed' => ':no আগেই শেষ হয়েছে',
     'chart_head_missing' => 'হিসাবের ছকে :code খাতটা নেই',
+    'deposit_already_cancelled' => ':no আগেই বাতিল হয়েছে',
+    'cancel_reason_needed' => 'কেন বাতিল করছেন সেটা লিখতে হবে',
 ];

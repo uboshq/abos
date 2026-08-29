@@ -45,6 +45,7 @@ class DepositController extends Controller implements HasMiddleware
             new Middleware('can:finance.deposit.view', only: ['index', 'show']),
             new Middleware('can:finance.deposit.create', only: ['store']),
             new Middleware('can:finance.deposit.move', only: ['movement', 'close']),
+            new Middleware('can:finance.deposit.cancel', only: ['cancel']),
         ];
     }
 
@@ -180,6 +181,25 @@ class DepositController extends Controller implements HasMiddleware
         $this->deposits->close($deposit, $data);
 
         return back()->with('saved', __('finance::message.deposit_closed', ['no' => $deposit->document_no]));
+    }
+
+    /**
+     * ভুল করে বসানো হয়েছিল — পুরোটা ফিরিয়ে নাও।
+     *
+     * কারণটা বাধ্যতামূলক, আর সেটা সেবাও দ্বিতীয়বার দেখে: ছয় মাস পর
+     * বাতিল সারিটা দেখে কেউ জানতে চাইবেন কী হয়েছিল।
+     */
+    public function cancel(Request $request, string $issuer, Deposit $deposit): RedirectResponse
+    {
+        $data = $request->validate([
+            'cancel_reason' => ['required', 'string', 'min:3', 'max:500'],
+        ]);
+
+        $this->deposits->cancel($deposit, $data['cancel_reason']);
+
+        return back()->with('saved', __('finance::message.deposit_cancelled', [
+            'no' => $deposit->document_no,
+        ]));
     }
 
     /**

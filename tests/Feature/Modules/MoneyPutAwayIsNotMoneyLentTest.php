@@ -421,4 +421,130 @@ class MoneyPutAwayIsNotMoneyLentTest extends TestCase
             'deposit' => $made->id,
         ]));
     }
+
+    /**
+     * ভুল করে বসানো জমা ফিরিয়ে নিলে খাতা যেখানে ছিল সেখানেই ফেরে।
+     *
+     * ── কেন এই পথটা লাগল ────────────────────────────────────────────
+     * লাইভে পর্দাটা যাচাই করতে গিয়ে একটা সত্যিকারের FD খুলতে হলো, আর
+     * তারপর দেখা গেল ওটা তোলার কোনো উপায় নেই। "ভাঙুন" চাপলে দ্বিতীয়
+     * একটা ভাউচার বসত — অর্থাৎ ভুলের সংখ্যা এক থেকে দুই।
+     */
+    public function test_a_deposit_entered_by_mistake_leaves_the_books_where_they_were(): void
+    {
+        $before = $this->ledger(StandardChart::DEPOSITS_AND_INVESTMENTS);
+
+        $fd = $this->open('FDR', Deposit::BUSINESS, '200000');
+
+        $this->assertSame(0, bccomp(
+            bcsub($this->ledger(StandardChart::DEPOSITS_AND_INVESTMENTS)['debit'], $before['debit'], 4),
+            '200000', 4), 'জমাটা খাতায় বসেইনি — বাকি পরীক্ষার মানে নেই।');
+
+        $this->service()->cancel($fd, 'পর্দা যাচাইয়ের জন্য বসানো হয়েছিল');
+
+        $after = $this->ledger(StandardChart::DEPOSITS_AND_INVESTMENTS);
+
+        $this->assertSame(0, bccomp(bcsub($after['debit'], $after['credit'], 4),
+            bcsub($before['debit'], $before['credit'], 4), 4),
+            'বাতিলের পরেও খাতে টাকাটা রয়ে গেছে।');
+
+        $this->assertSame(Deposit::CANCELLED, $fd->fresh()->status);
+    }
+
+    /**
+     * সারিটা মুছে যায় না — নিয়ম ৫।
+     *
+     * ছয় মাস পর অডিটে "১১৬০ খাতে ২ লাখ ঢুকে বেরোল কেন" প্রশ্নটা উঠবে,
+     * আর উত্তরটা এই সারিতেই লেখা থাকতে হবে।
+     */
+    public function test_a_cancelled_deposit_keeps_its_row_and_its_reason(): void
+    {
+        $fd = $this->open('FDR', Deposit::BUSINESS, '50000');
+
+        $this->service()->cancel($fd, 'গ্রাহকের নাম ভুল ছিল');
+
+        $again = Deposit::query()->find($fd->id);
+
+        $this->assertNotNull($again, 'বাতিল সারিটা মুছে গেছে।');
+        $this->assertSame('গ্রাহকের নাম ভুল ছিল', $again->cancel_reason);
+        $this->assertNotNull($again->cancelled_at);
+    }
+
+    /**
+     * বাতিল হওয়া টাকা "কত সরিয়ে রাখা আছে" যোগফলে গোনা হয় না।
+     */
+    public function test_a_cancelled_deposit_counts_for_nothing(): void
+    {
+        $keep = $this->open('FDR', Deposit::BUSINESS, '300000');
+        $oops = $this->open('FDR', Deposit::BUSINESS, '900000', ['institution' => 'ভুল ব্যাংক']);
+
+        $this->service()->cancel($oops, 'দুইবার বসে গিয়েছিল');
+
+        $this->assertSame(0, bccomp($this->service()->standing()['business'], '300000', 4),
+            'বাতিল জমাটা এখনো যোগফলে আছে।');
+
+        $this->assertSame(Deposit::ACTIVE, $keep->fresh()->status);
+    }
+
+    /**
+     * বাতিলের পরে আর কিছু করা যায় না, আর বার্তাটা আলাদা।
+     *
+     * "আগেই শেষ হয়েছে" আর "আগেই বাতিল হয়েছে" দুইটা আলাদা কথা: প্রথমটায়
+     * করার কিছু নেই, দ্বিতীয়টায় সম্ভবত নতুন করে ঠিক সারিটা বসাতে হবে।
+     */
+    public function test_nothing_more_happens_to_a_cancelled_deposit(): void
+    {
+        $fd = $this->open('FDR', Deposit::BUSINESS, '40000');
+        $this->service()->cancel($fd, 'ভুল');
+
+        $this->expectException(ValidationException::class);
+
+        $this->service()->close($fd->fresh(), [
+            'amount' => '40000',
+            'moved_on' => now()->toDateString(),
+            'money_account_id' => $this->cash()->id,
+        ]);
+    }
+
+    /**
+     * কারণ ছাড়া বাতিল হয় না।
+     */
+    public function test_cancelling_needs_a_reason(): void
+    {
+        $fd = $this->open('FDR', Deposit::BUSINESS, '10000');
+
+        $this->expectException(ValidationException::class);
+
+        $this->service()->cancel($fd, '   ');
+    }
+
+    /**
+     * কিস্তি দেওয়ার পরেও ফেরানো যায় — সব ভাউচারই ফেরে।
+     *
+     * ভুলটা প্রথম দিনেই ধরা পড়ে না। DPS-এ তিন মাস কিস্তি দেওয়ার পর
+     * বোঝা গেল হিসাব নম্বরটাই অন্য কারও — তখন তিনটা ভাউচারই ফিরতে হবে,
+     * কেবল প্রথমটা নয়।
+     */
+    public function test_every_voucher_comes_back_not_just_the_first(): void
+    {
+        $before = $this->ledger(StandardChart::DEPOSITS_AND_INVESTMENTS);
+
+        $dps = $this->open('DPS', Deposit::BUSINESS, '5000', ['instalment_amount' => '5000']);
+
+        foreach ([1, 2] as $ignored) {
+            $this->service()->instalment($dps->fresh(), [
+                'amount' => '5000',
+                'moved_on' => now()->toDateString(),
+                'money_account_id' => $this->cash()->id,
+            ]);
+        }
+
+        $this->service()->cancel($dps->fresh(), 'হিসাব নম্বর অন্য কারও');
+
+        $after = $this->ledger(StandardChart::DEPOSITS_AND_INVESTMENTS);
+
+        $this->assertSame(0, bccomp(bcsub($after['debit'], $after['credit'], 4),
+            bcsub($before['debit'], $before['credit'], 4), 4),
+            'কিস্তির ভাউচারগুলো ফেরেনি — খাতায় টাকা রয়ে গেছে।');
+    }
 }
