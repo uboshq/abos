@@ -158,7 +158,17 @@ final class BankReconciliationService
          * শুরু করেছে, তার প্রথম মিলকরণ কোনোদিন মিলত না, আর কারণটা কেউ
          * খুঁজে পেত না।
          */
-        $ledger = bcadd($ledger, $this->openingWithin($recon), 4);
+        /*
+         * ── খোলার জের এখানে আর যোগ হয় না, ২৯ আগস্ট ২০২৬ ─────────────
+         * জেরটা এখন সত্যিকারের দাখিলা হয়ে খতিয়ানেই বসে
+         * ([[OpeningBalanceService]]), তাই উপরের যোগফলে ওটা ইতিমধ্যেই
+         * আছে — আবার যোগ করলে "আমাদের খাতা বলে" সংখ্যাটা ঠিক জেরের
+         * পরিমাণ বেশি দেখাত।
+         *
+         * HP-র রিপোর্টে এই পর্দার দুইটা সংখ্যা "ব্যাখ্যাহীন" বলা
+         * হয়েছিল, আর সম্ভাব্য কারণ হিসেবে জেরের বাগটাকেই সন্দেহ করা
+         * হয়েছিল — সন্দেহটা ঠিক ছিল।
+         */
 
         $statement = (string) $recon->statement_balance;
         $expected = bcadd(bcsub($statement, $deposits, 4), $cheques, 4);
@@ -173,20 +183,6 @@ final class BankReconciliationService
             'difference' => $difference,
             'agrees' => bccomp($difference, '0', 4) === 0,
         ];
-    }
-
-    /** হিসাবের খোলা জের, যদি খোলার তারিখ কাগজের তারিখের মধ্যে পড়ে। */
-    private function openingWithin(BankReconciliation $recon): string
-    {
-        $account = $recon->bankAccount;
-
-        if ($account === null || $account->opening_date === null) {
-            return '0';
-        }
-
-        return $account->opening_date->lessThanOrEqualTo($recon->statement_date)
-            ? (string) $account->opening_balance
-            : '0';
     }
 
     /**

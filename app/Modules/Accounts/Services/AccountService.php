@@ -21,6 +21,21 @@ use Illuminate\Validation\ValidationException;
  */
 final class AccountService
 {
+    /*
+     * ── কেন সেবাটা এখানে ইনজেক্ট করা হয় না, লেজি করে নেওয়া হয় ─────
+     * `OpeningBalanceService` `PostingEngine` চায়, আর সেটা টানলে
+     * প্রমিত ছক বসানোর সময় একটা চক্র হত: ছক বসাতে `AccountService`
+     * লাগে, আর পোস্টিং ইঞ্জিন বুট হতে ছকের খাত খোঁজে।
+     *
+     * জেরটা কেবল তখনই লাগে যখন সংখ্যাটা শূন্যের বেশি — অর্থাৎ প্রায়
+     * কখনোই নয়। তাই দরকারের মুহূর্তে কনটেইনার থেকে নেওয়াই সস্তা ও
+     * নিরাপদ।
+     */
+    private function openings(): OpeningBalanceService
+    {
+        return app(OpeningBalanceService::class);
+    }
+
     /**
      * @param  array<string, mixed>  $data
      */
@@ -33,7 +48,7 @@ final class AccountService
 
             $this->assertCodeIsFree((string) $data['code']);
 
-            return Account::create([
+            $account = Account::create([
                 ...$data,
                 'code' => trim((string) $data['code']),
                 'type' => $type,
@@ -50,6 +65,19 @@ final class AccountService
                 // কিন্তু সিডারে গার্ড বন্ধ থাকে, আর তখন ইনসার্টটাই ভাঙত।
                 'created_by' => auth()->id(),
             ]);
+
+            /*
+             * ঘোষিত জেরটা এখানেই খাতায় বসে।
+             *
+             * ── কেন তৈরির সাথেই, পরে নয় ─────────────────────────────
+             * আগে সংখ্যাটা কেবল কলামে বসত, আর [[Account::balanceOn()]]
+             * সেটা কোডে যোগ করত। রিপোর্টগুলো খতিয়ান পড়ে, তাই খাতের
+             * পাতা ৮০,০০০ দেখাত আর ট্রায়াল ব্যালেন্স ৩০,০০০ — এক
+             * সংখ্যার দুই উৎস, দুই উত্তর। ২৯ আগস্ট ২০২৬-এ HP ধরেছে।
+             */
+            $this->openings()->forAccount($account);
+
+            return $account;
         });
     }
 

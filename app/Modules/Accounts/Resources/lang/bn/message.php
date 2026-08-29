@@ -125,4 +125,5 @@ return [
     'cheque_cleared' => 'পাশ হয়েছে — টাকাটা এখন ব্যাংকে।',
     'cheque_bounced' => 'ফেরত বসানো হয়েছে।',
     'no_cheques' => 'এখনো কোনো চেক ওঠেনি।',
+    'opening_narration' => 'খোলার জের — :account',
 ];

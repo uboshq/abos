@@ -78,4 +78,5 @@ return [
     'cheque_already_decided' => 'চেক :no নিয়ে সিদ্ধান্ত হয়ে গেছে।',
     'bounce_needs_reason' => 'কেন ফেরত এল সেটা লিখতে হবে — "তহবিল নেই" আর "সই মেলেনি" এক কথা নয়।',
     'chart_not_installed' => 'হিসাবের ছকটা এখনো বসানো হয়নি।',
+    'opening_head_missing' => 'হিসাবের ছকে :code (খোলার জের) খাতটা নেই',
 ];

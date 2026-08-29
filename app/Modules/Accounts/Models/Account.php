@@ -188,35 +188,17 @@ class Account extends Model implements Drillable
             ->selectRaw('COALESCE(SUM(debit), 0) as d, COALESCE(SUM(credit), 0) as c')
             ->first();
 
-        $signed = bcsub((string) ($row->d ?? 0), (string) ($row->c ?? 0), 4);
-        $opening = $this->openingWithin($upto);
-
-        $net = bcadd($opening, $signed, 4);
+        /*
+         * ── খোলার জের এখানে আর যোগ হয় না, ২৯ আগস্ট ২০২৬ ────────────
+         * আগে `openingWithin()` দিয়ে সংখ্যাটা কোডে যোগ করা হত, অথচ
+         * ট্রায়াল ব্যালেন্স ও স্থিতিপত্র সরাসরি খতিয়ান পড়ে — তাই
+         * একই খাতের ব্যালেন্স দুই পর্দায় দুই রকম আসত। এখন জেরটা
+         * সত্যিকারের দাখিলা হয়ে খতিয়ানেই বসে
+         * ([[OpeningBalanceService]]), আর এখানে যোগ করলে দ্বিগুণ হত।
+         */
+        $net = bcsub((string) ($row->d ?? 0), (string) ($row->c ?? 0), 4);
 
         return $this->nature === self::CREDIT ? bcmul($net, '-1', 4) : $net;
-    }
-
-    /**
-     * খোলা ব্যালেন্স হিসাবে ধরা হবে কি না।
-     *
-     * তারিখ দেওয়া থাকলে খোলার তারিখের পরের রিপোর্টেই কেবল ধরা হয় —
-     * নাহলে ব্যবসা শুরুর আগের একটা রিপোর্টেও খোলা ব্যালেন্স দেখা যেত।
-     */
-    private function openingWithin(?string $upto): string
-    {
-        $opening = (string) $this->opening_balance;
-
-        if (bccomp($opening, '0', 4) === 0) {
-            return '0';
-        }
-
-        if ($upto !== null && $this->opening_date !== null && $this->opening_date->gt($upto)) {
-            return '0';
-        }
-
-        // সংরক্ষিত হয় স্বাভাবিক দিকে ধনাত্মক হিসেবে; এখানে ডেবিট-ধনাত্মক
-        // চিহ্নে ফেরানো হয়, কারণ উপরের হিসাবটা ওই চিহ্নেই চলে।
-        return $this->nature === self::CREDIT ? bcmul($opening, '-1', 4) : $opening;
     }
 
     /** এই খাতে কোনো এন্ট্রি বসেছে কি না — মোছার আগে দেখা হয়। */

@@ -10,6 +10,7 @@ use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\FinancialYear;
 use App\Models\LedgerEntry;
+use App\Modules\Accounts\Models\Account;
 use Illuminate\Support\Carbon;
 
 /**
@@ -34,6 +35,15 @@ final class OpeningBalanceService
 {
     /** এই দাখিলাগুলোর নিজস্ব ধরন — ড্রিল-ডাউনে পক্ষের পাতাতেই ফেরে। */
     public const SOURCE_SUFFIX = ':opening';
+
+    /**
+     * ছকের খাতের নিজের জের — পক্ষ নয়, তাই নিজের একটা "ধরন"।
+     *
+     * পক্ষের ধরনগুলো (`customer`, `supplier`) আসে ডাকার জায়গা থেকে;
+     * এখানে পক্ষ বলে কিছু নেই, খাতটাই বিষয়। নামটা ধ্রুবক, কারণ
+     * পুরনো সারি খুঁজতে [[PostMissingOpenings]]-ও একই নাম ব্যবহার করে।
+     */
+    public const ACCOUNT_SOURCE = 'account';
 
     public function __construct(private readonly PostingEngine $posting) {}
 
@@ -136,6 +146,79 @@ final class OpeningBalanceService
                 ['account_id' => $equity->id, 'credit' => $amount, 'narration' => $narration],
             ],
             documentNo: $documentNo,
+        );
+    }
+
+    /**
+     * ছকের একটা খাতের নিজের খোলা ব্যালেন্স — খাতায়, কেবল কলামে নয়।
+     *
+     * ── কী ভাঙা ছিল, ২৯ আগস্ট ২০২৬ ─────────────────────────────────
+     * গ্রাহক, সরবরাহকারী আর মজুদ — তিনটার খোলা ব্যালেন্সই এই সেবার
+     * মধ্য দিয়ে খাতায় যেত। **হিসাবের ছকের নিজের খাতগুলো যেত না।**
+     * ওদের জেরটা `accounts.opening_balance` কলামে বসে থাকত, আর
+     * `Account::balanceOn()` সেটা কোডে যোগ করত।
+     *
+     * ফল, HP-র রিপোর্ট থেকে হুবহু: ব্যাংকের পাতা ৮০,০০০ দেখাত,
+     * ট্রায়াল ব্যালেন্স ও স্থিতিপত্র ৩০,০০০। এই ফাইলের মাথায় লেখা
+     * রোগটাই — "দুইটা সংখ্যা দুই জায়গা থেকে এলে একদিন আলাদা হবেই" —
+     * কেবল অন্য একটা দরজা দিয়ে ফিরে এসেছিল।
+     *
+     * ── কেন এখানে, নতুন কোনো সেবায় নয় ──────────────────────────────
+     * প্রথমে আলাদা একটা সেবা লিখতে গিয়েছিলাম, আর তাতে বিপরীত দিকটা
+     * একটা নতুন "খোলার জের" খাতে যেত। সেটা ভুল হত: তখন একই ঘটনা দুই
+     * ইকুইটি খাতে ভাগ হয়ে যেত — পক্ষের জের ৩৩০০-এ, খাতের জের ৩৪০০-এ।
+     * এই ফাইলটাই আগে থেকে বলে দিয়েছে কেন ৩৩০০-ই ঠিক প্রতিপক্ষ।
+     *
+     * @return list<LedgerEntry>
+     */
+    public function forAccount(Account $account): array
+    {
+        $amount = (string) $account->opening_balance;
+
+        if (bccomp($amount, '0', 4) === 0 || $account->is_group) {
+            return [];
+        }
+
+        if ($this->exists(self::ACCOUNT_SOURCE, $account->id)) {
+            return [];
+        }
+
+        $equity = StandardChart::find(StandardChart::RETAINED_EARNINGS);
+
+        if ($equity === null) {
+            throw new PostingException(
+                'Opening balances need the standard chart — install it before opening accounts with a balance.'
+            );
+        }
+
+        /*
+         * চিহ্নটা খাতের স্বাভাবিক দিক থেকে, ডাকার জায়গা থেকে নয়।
+         *
+         * কলামে সংখ্যাটা সবসময় ধনাত্মক আর স্বাভাবিক দিকে — সম্পদে
+         * ডেবিট, দায়ে ক্রেডিট। সিদ্ধান্তটা এখানেই একবার, ঠিক যে
+         * কারণে `forReceivable`/`forPayable` দুইটা আলাদা পদ্ধতি।
+         */
+        $accountIsDebit = $account->nature !== Account::CREDIT;
+
+        $narration = $this->narration();
+
+        return $this->posting->post(
+            sourceType: self::ACCOUNT_SOURCE.self::SOURCE_SUFFIX,
+            sourceId: $account->id,
+            trxDate: $this->dateFor($account->opening_date),
+            lines: [
+                [
+                    'account_id' => $account->id,
+                    'narration' => $narration,
+                    $accountIsDebit ? 'debit' : 'credit' => $amount,
+                ],
+                [
+                    'account_id' => $equity->id,
+                    'narration' => $narration,
+                    $accountIsDebit ? 'credit' : 'debit' => $amount,
+                ],
+            ],
+            documentNo: $account->code,
         );
     }
 

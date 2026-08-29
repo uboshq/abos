@@ -12,6 +12,7 @@ use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\MoneyTransferService;
+use App\Modules\Accounts\Services\OpeningBalanceService;
 use App\Modules\Accounts\Services\StandardChart;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -55,6 +56,21 @@ class MoneyAndCustodyTest extends TestCase
             'opening_balance' => '20000',
             'opening_date' => '2026-07-01',
         ]);
+
+        /*
+         * ── কেন কলামে বসিয়েই থামা যায় না, ২৯ আগস্ট ২০২৬ ───────────────
+         * আগে `Account::balanceOn()` কলামটা কোডে যোগ করত, তাই কেবল
+         * `update()` করলেই টিলে টাকা দেখাত। কিন্তু ট্রায়াল ব্যালেন্স ও
+         * স্থিতিপত্র খতিয়ান পড়ে — তারা ওই টাকাটা কোনোদিন দেখত না, আর
+         * সেটাই HP-র ধরা বাগ।
+         *
+         * এখন জেরটা সত্যিকারের দাখিলা। পরীক্ষাটাও তাই সেই পথেই যায় —
+         * ঠিক যেভাবে পুরনো সারিগুলোর জন্য ডিপ্লয়ের কমান্ডটা যায়
+         * ([[PostMissingOpenings]])।
+         */
+        app(OpeningBalanceService::class)->forAccount(
+            Account::query()->findOrFail($this->till->account_id),
+        );
     }
 
     private function screen()

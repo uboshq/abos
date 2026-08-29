@@ -129,7 +129,15 @@ class ChartOfAccountsController extends Controller implements HasMiddleware
 
         $page = max(1, (int) $request->query('page', 1));
 
-        $opening = (string) $account->opening_balance;
+        /*
+         * চলমান জের শূন্য থেকে শুরু।
+         *
+         * খোলার জের এখন খতিয়ানের প্রথম সারিটাই ([[OpeningBalanceService]]),
+         * তাই এখানে আবার শুরুর মান হিসেবে বসালে প্রতিটা সারিতে সংখ্যাটা
+         * দ্বিগুণ হত। HP-র অভিযোগটাই ছিল উল্টোটা: তালিকায় জেরের কোনো
+         * লাইন নেই অথচ চলমান জের সরাসরি লাফ দেয় — এখন লাইনটাই আছে।
+         */
+        $opening = '0';
 
         if ($page > 1) {
             $opening = RunningBalance::sumOf(
@@ -257,10 +265,8 @@ class ChartOfAccountsController extends Controller implements HasMiddleware
 
             $signed = bcsub((string) ($row->d ?? 0), (string) ($row->c ?? 0), 4);
 
-            $opening = (string) $account->opening_balance;
-            $opening = $account->nature === Account::CREDIT ? bcmul($opening, '-1', 4) : $opening;
-
-            $own[$account->id] = bcadd($opening, $signed, 4);
+            /* খোলার জের খতিয়ানেই আছে — এখানে আবার যোগ করলে দ্বিগুণ */
+            $own[$account->id] = $signed;
         }
 
         // সন্তানের যোগফল বাবার ঘরে — নিচ থেকে উপরে, তাই কোড অনুসারে
