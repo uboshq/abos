@@ -87,4 +87,5 @@ return [
     'document_no' => 'নম্বর',
     'portions_possible' => 'কয় প্লেট হবে',
     'limiting' => 'কোনটা আটকাচ্ছে',
+    'minutes' => 'মি',
 ];

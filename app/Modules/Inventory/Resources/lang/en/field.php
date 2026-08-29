@@ -87,4 +87,5 @@ return [
     'document_no' => 'Number',
     'portions_possible' => 'Portions possible',
     'limiting' => 'What runs out first',
+    'minutes' => 'm',
 ];

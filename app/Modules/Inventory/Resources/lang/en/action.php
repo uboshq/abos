@@ -29,4 +29,7 @@ return [
 
     'new_production' => 'New cooking',
     'confirm_production' => 'Confirm',
+    'start_cooking' => 'Start cooking',
+    'mark_ready' => 'Ready',
+    'mark_served' => 'Served',
 ];

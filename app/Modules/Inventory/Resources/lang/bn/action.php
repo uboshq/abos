@@ -29,4 +29,7 @@ return [
 
     'new_production' => 'নতুন রান্না',
     'confirm_production' => 'নিশ্চিত করুন',
+    'start_cooking' => 'রান্না শুরু',
+    'mark_ready' => 'হয়েছে',
+    'mark_served' => 'দেওয়া হয়েছে',
 ];

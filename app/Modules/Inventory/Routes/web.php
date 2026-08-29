@@ -162,6 +162,18 @@ Route::middleware('auth')->prefix('inventory')->group(function () {
     Route::prefix('kitchen')->name('kitchen.')->group(function () {
         Route::get('/', [KitchenBoardController::class, 'index'])->name('index');
         Route::get('/refresh', [KitchenBoardController::class, 'refresh'])->name('refresh');
+
+        /*
+         * রান্নাঘরের পর্দা ও তার টিকিট — ধাপ ৪।
+         *
+         * `advance` একটাই ঠিকানা, গন্তব্যটা অনুরোধে আসে: চারটা অবস্থার
+         * জন্য চারটা রুট বানালে ধাপের নিয়মটা রুটের তালিকায় ছড়িয়ে যেত,
+         * আর ওটা এক জায়গায় থাকা দরকার।
+         */
+        Route::get('/tickets', [KitchenBoardController::class, 'tickets'])->name('tickets');
+        Route::get('/tickets/feed', [KitchenBoardController::class, 'ticketFeed'])->name('feed');
+        Route::post('/tickets/{ticket}', [KitchenBoardController::class, 'advance'])
+            ->whereNumber('ticket')->name('advance');
     });
 
     /*

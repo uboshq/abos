@@ -6,14 +6,18 @@ namespace App\Modules\Inventory\Http\Controllers;
 
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
+use App\Modules\Inventory\Models\KitchenTicket;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Recipe;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Inventory\Services\KitchenTicketService;
 use App\Modules\Inventory\Services\RecipeService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 /**
@@ -61,6 +65,7 @@ class KitchenBoardController extends Controller implements HasMiddleware
     public function __construct(
         private readonly MenuBuilder $menu,
         private readonly RecipeService $recipes,
+        private readonly KitchenTicketService $tickets,
     ) {}
 
     public function index(Request $request): View
@@ -95,6 +100,73 @@ class KitchenBoardController extends Controller implements HasMiddleware
                 $this->dishes($request),
             ),
         ]);
+    }
+
+    /**
+     * রান্নাঘরের পর্দা — যে অর্ডারগুলো এখনো দেওয়া হয়নি।
+     *
+     * ── কেন পুরনোটা আগে ─────────────────────────────────────────────
+     * যেটা সবচেয়ে বেশিক্ষণ বসে আছে, সেই খদ্দের সবচেয়ে বেশি অপেক্ষা
+     * করছেন। ব্যস্ত সময়ে পর্দায় ত্রিশটা কার্ড, আর নতুনটা আগে দেখালে
+     * পুরনোটা নিচে নেমে গিয়ে ভুলেই যাওয়া হত।
+     */
+    public function tickets(Request $request): View
+    {
+        return view('inventory::kitchen.tickets', [
+            'menu' => $this->menu->forUser($request->user()),
+            'tickets' => $this->openTickets(),
+        ]);
+    }
+
+    /**
+     * একই তালিকা JSON-এ — পর্দাটা প্রতি দশ সেকেন্ডে এটাই ডাকে।
+     *
+     * বোর্ডের চেয়ে ঘন ঘন, কারণ প্রশ্নটা আলাদা: "আর কয় প্লেট হবে"
+     * মিনিটে বদলায়, "নতুন অর্ডার এসেছে কি না" সেকেন্ডে।
+     */
+    public function ticketFeed(): JsonResponse
+    {
+        return response()->json([
+            'at' => now()->format('H:i:s'),
+            'tickets' => $this->openTickets()->map(fn (KitchenTicket $t) => [
+                'id' => $t->id,
+                'no' => $t->document_no,
+                'dish' => $t->product?->name(),
+                'qty' => (float) $t->qty,
+                'state' => $t->state,
+                'waiting' => $t->waitingMinutes(),
+                'note' => $t->note,
+            ])->values(),
+        ]);
+    }
+
+    /**
+     * টিকিটটা পরের ধাপে।
+     *
+     * ── কেন POST, আর কেন গন্তব্যটা অনুরোধে আসে ──────────────────────
+     * চারটা অবস্থার জন্য চারটা ঠিকানা বানালে রুটের তালিকা ফুলত, আর
+     * ধাপের নিয়মটা রুটে ছড়িয়ে যেত। নিয়মটা এক জায়গায় থাকে
+     * ([[KitchenTicketService::advance()]]), আর ওটাই লাফ দেওয়া আটকায়।
+     */
+    public function advance(Request $request, KitchenTicket $ticket): RedirectResponse
+    {
+        $to = (string) $request->input('to');
+
+        abort_unless(in_array($to, KitchenTicket::STATES, true), 422);
+
+        $this->tickets->advance($ticket, $to);
+
+        return back();
+    }
+
+    /** @return Collection<int, KitchenTicket> */
+    private function openTickets()
+    {
+        return KitchenTicket::query()
+            ->with('product')
+            ->open()
+            ->orderBy('placed_at')
+            ->get();
     }
 
     private function warehouse(Request $request): ?Warehouse
