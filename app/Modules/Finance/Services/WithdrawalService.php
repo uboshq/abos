@@ -8,6 +8,7 @@ use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
+use App\Core\Support\Money;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
@@ -301,10 +302,17 @@ final class WithdrawalService
         $after = bcadd((string) $already, $amount, 4);
 
         if (bccomp($after, (string) $cap, 4) > 0) {
+            /*
+             * অঙ্ক দুইটা সাজিয়ে — কাঁচা `10000.0000` নয়।
+             *
+             * এটা একটা প্রত্যাখ্যানের বার্তা, আর প্রত্যাখ্যান পড়েই
+             * মানুষ ঠিক করেন পরে কী করবেন। চারটা দশমিক আর কমা ছাড়া
+             * সংখ্যা পড়তে গিয়ে থামতে হলে বার্তাটা তার কাজ করে না।
+             */
             throw ValidationException::withMessages([
                 'amount' => __('finance::validation.withdrawal_over_cap', [
-                    'cap' => (string) $cap,
-                    'left' => bcsub((string) $cap, (string) $already, 4),
+                    'cap' => Money::format((string) $cap),
+                    'left' => Money::format(bcsub((string) $cap, (string) $already, 4)),
                 ]),
             ]);
         }
