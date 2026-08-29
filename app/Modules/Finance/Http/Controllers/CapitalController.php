@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\Accounts\Http\Controllers;
+namespace App\Modules\Finance\Http\Controllers;
 
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounts\Models\Account;
-use App\Modules\Accounts\Models\CapitalEntry;
-use App\Modules\Accounts\Services\CapitalService;
 use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Finance\Models\CapitalEntry;
+use App\Modules\Finance\Services\CapitalService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -35,15 +35,15 @@ class CapitalController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('can:accounts.capital.view', only: ['index']),
-            new Middleware('can:accounts.capital.create', only: ['store']),
-            new Middleware('can:accounts.capital.post', only: ['post']),
+            new Middleware('can:finance.capital.view', only: ['index']),
+            new Middleware('can:finance.capital.create', only: ['store']),
+            new Middleware('can:finance.capital.post', only: ['post']),
         ];
     }
 
     public function index(Request $request): View
     {
-        return view('accounts::capital.index', [
+        return view('finance::capital.index', [
             'menu' => $this->menu->forUser($request->user()),
             'entries' => CapitalEntry::query()->with('account')
                 ->orderByDesc('trx_date')->orderByDesc('id')->paginate(50),
@@ -87,8 +87,8 @@ class CapitalController extends Controller implements HasMiddleware
 
         $entry = $this->capital->record($data);
 
-        return redirect()->route('accounts.capital.index')
-            ->with('saved', __('accounts::message.capital_recorded', ['no' => $entry->document_no]));
+        return redirect()->route('finance.capital.index')
+            ->with('saved', __('finance::message.capital_recorded', ['no' => $entry->document_no]));
     }
 
     /**
@@ -106,6 +106,6 @@ class CapitalController extends Controller implements HasMiddleware
 
         $this->capital->post($entry, Account::query()->findOrFail($data['received_into_account_id']));
 
-        return back()->with('saved', __('accounts::message.capital_posted', ['no' => $entry->document_no]));
+        return back()->with('saved', __('finance::message.capital_posted', ['no' => $entry->document_no]));
     }
 }

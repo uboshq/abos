@@ -8,9 +8,9 @@ use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
-use App\Modules\Accounts\Models\CapitalEntry;
-use App\Modules\Accounts\Services\CapitalService;
 use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Finance\Models\CapitalEntry;
+use App\Modules\Finance\Services\CapitalService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -199,23 +199,23 @@ class TheFirstThingABusinessDoesHadNoScreenTest extends TestCase
      */
     public function test_the_screen_records_and_posts(): void
     {
-        $this->get(route('accounts.capital.index'))->assertOk();
+        $this->get(route('finance.capital.index'))->assertOk();
 
-        $this->post(route('accounts.capital.store'), [
+        $this->post(route('finance.capital.store'), [
             'contributor_name' => 'Rahim',
             'contributor_type' => CapitalEntry::PARTNER,
             'entry_type' => CapitalEntry::INVESTMENT,
             'trx_date' => now()->toDateString(),
             'amount' => '250000',
             'share_percent' => '40',
-        ])->assertRedirect(route('accounts.capital.index'));
+        ])->assertRedirect(route('finance.capital.index'));
 
         $entry = CapitalEntry::query()->where('contributor_name', 'Rahim')->firstOrFail();
 
         $this->assertSame(CapitalEntry::INVESTMENT, $entry->entry_type);
         $this->assertSame(0, bccomp((string) $entry->share_percent, '40', 4));
 
-        $this->post(route('accounts.capital.post', $entry), [
+        $this->post(route('finance.capital.post', $entry), [
             'received_into_account_id' => $this->cashAccount()->id,
         ])->assertRedirect();
 

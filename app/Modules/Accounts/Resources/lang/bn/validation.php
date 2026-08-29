@@ -78,9 +78,4 @@ return [
     'cheque_already_decided' => 'চেক :no নিয়ে সিদ্ধান্ত হয়ে গেছে।',
     'bounce_needs_reason' => 'কেন ফেরত এল সেটা লিখতে হবে — "তহবিল নেই" আর "সই মেলেনি" এক কথা নয়।',
     'chart_not_installed' => 'হিসাবের ছকটা এখনো বসানো হয়নি।',
-    'capital_already_posted' => ':no আগেই খাতায় বসেছে',
-    'not_a_postable_account' => 'এটা একটা মাথা, খাত নয়',
-    'unknown_contributor_type' => 'অচেনা পরিচয়',
-    'unknown_capital_kind' => 'অচেনা ধরন',
-    'capital_must_be_positive' => 'অঙ্কটা শূন্যের বেশি হতে হবে',
 ];

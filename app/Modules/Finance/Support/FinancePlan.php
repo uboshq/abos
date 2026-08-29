@@ -1,0 +1,454 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Finance\Support;
+
+use Illuminate\Support\Facades\Route;
+
+/**
+ * ফিন্যান্স মডিউলের পুরো পরিকল্পনা — যা হয়েছে আর যা বাকি, এক পাতায়।
+ *
+ * ── কেন এই ফাইলটা, ২৯ আগস্ট ২০২৬ ─────────────────────────────────────
+ * মালিক তেত্রিশ বিভাগের পূর্ণাঙ্গ Finance পরিকল্পনা দিয়ে বললেন: **কিছুই
+ * বাদ দেওয়া যাবে না**, প্ল্যানের বাইরে যা আছে তাও থাকবে, আর গোটাটা আগে
+ * চোখের সামনে থাকা চাই — *"দেখলে বুঝা যাবে আমি কোন কাজটা করছি আর কোনটা
+ * করি নাই, তখন দেখে দেখে ইমপ্লিমেন্ট করবা"*।
+ *
+ * ── কেন মেনুতে দুইশো মৃত সারি নয় ─────────────────────────────────────
+ * প্রথম ভাবনা ছিল প্রতিটা লাইনের জন্য একটা করে মেনু সারি বসানো। ওটা
+ * করলে দুইশোটা বোতাম বসত যার একটাও কিছু করে না — আর সরাসরি বিক্রয়ের
+ * পর্দায় ঠিক ওই জিনিসটাই আজ সকালে সারানো হয়েছে (চারটা বোতাম কেবল
+ * "আসছে" বলত)। তার উপর [[ModuleMenuTest]] প্রতিটা মেনু সারি খুলে দেখে,
+ * আর দুইশোটা ভাঙা সারিতে ওটা লাল হয়ে থাকত।
+ *
+ * একটা **মানচিত্র** ওই দুইটার কোনোটাই নয়: এটা একটা সৎ তালিকা। যেটা
+ * হয়েছে তার লিংক আছে আর ক্লিক করলে আসল পর্দা খোলে; যেটা হয়নি তার পাশে
+ * লেখা "বাকি"। কোনো বোতাম মিথ্যা বলে না।
+ *
+ * ── কেন তালিকাটা মিথ্যা বলতে পারে না ─────────────────────────────────
+ * প্রতিটা "হয়েছে" লাইনে একটা রুটের নাম লেখা, আর
+ * [[TheFinanceMapCannotLieTest]] প্রতিটা নাম রুটের তালিকায় মিলিয়ে দেখে।
+ * কেউ একটা পর্দা মুছে ফেললে মানচিত্র লাল হয়, আর "হয়েছে" লেখা একটা লাইন
+ * ফাঁকা জায়গায় নিয়ে যাওয়ার আগেই ধরা পড়ে।
+ */
+final class FinancePlan
+{
+    /**
+     * তেত্রিশ বিভাগ, প্রতিটার লাইনগুলোসহ।
+     *
+     * প্রতিটা লাইন: `[বাংলা নাম, রুট বা নাল, টীকা বা নাল]`
+     *   • রুট থাকা মানে **হয়েছে** — ক্লিক করলে আসল পর্দা।
+     *   • রুট নাল মানে **বাকি** — টীকায় লেখা কেন বা কোথায় আছে।
+     *
+     * @return list<array{no: string, title: string, items: list<array{0: string, 1: ?string, 2: ?string}>}>
+     */
+    public static function sections(): array
+    {
+        return [
+            [
+                'no' => '১',
+                'title' => 'ফিন্যান্স ড্যাশবোর্ড',
+                'items' => [
+                    ['হিসাবের ড্যাশবোর্ড', 'accounts.dashboard', null],
+                    ['নগদ ও ব্যাংকের অবস্থান', 'accounts.custody', null],
+                    ['বকেয়ার সংক্ষেপ', 'customer.report.show:due-list', null],
+                    ['দেনার সংক্ষেপ', 'supplier.report.show:payable-list', null],
+                    ['CFO ড্যাশবোর্ড', null, 'বাকি — Financial Health ও Liquidity Score'],
+                    ['ঝুঁকির ড্যাশবোর্ড', null, 'বাকি'],
+                    ['বাজেটের অবস্থা', null, 'বাকি — §১৬ বাজেট আগে লাগবে'],
+                    ['ট্রেজারি সংক্ষেপ', null, 'বাকি — বহু-কোম্পানি হলে'],
+                    ['অপেক্ষমাণ অনুমোদন', 'approval.inbox.index', 'অনুমোদন কেন্দ্র থেকে'],
+                ],
+            ],
+            [
+                'no' => '২',
+                'title' => 'ফিন্যান্স কন্ট্রোল সেন্টার',
+                'items' => [
+                    ['হিসাবের সততা যাচাই', 'accounts.integrity', 'খাতা নিজে নিজে মেলে কি না'],
+                    ['ব্যাংক মিলকরণ', 'accounts.reconciliation.index', null],
+                    ['পিরিয়ডের অবস্থা', 'accounts.period.index', null],
+                    ['পোস্টিং মনিটর', null, 'বাকি'],
+                    ['ব্যতিক্রম ও ভুলের সারি', null, 'বাকি'],
+                    ['ইন্টিগ্রেশন মনিটর', null, 'বাকি — ইঞ্জিন Platform Management-এ'],
+                ],
+            ],
+            [
+                'no' => '৩',
+                'title' => 'ফিন্যান্স কনফিগারেশন',
+                'items' => [
+                    ['হিসাবের ছক', 'accounts.coa.index', null],
+                    ['খাতের মাথা ও দল', 'accounts.coa.index', 'একই পর্দায়'],
+                    ['খরচের কেন্দ্র', 'master_data.cost_center.index', null],
+                    ['অর্থবছর', null, 'বাকি — সিস্টেম প্রশাসনে কোম্পানির সেটআপে'],
+                    ['নম্বর সিরিজ', 'master_data.series.index', null],
+                    ['করের ছক', 'master_data.tax.index', null],
+                    ['হিসাবের সেটিংস', 'accounts.settings', null],
+                    ['মুনাফা কেন্দ্র ও সেগমেন্ট', null, 'বাকি'],
+                    ['মুদ্রা ও বিনিময় হার', null, 'বাকি — একাধিক মুদ্রা লাগলে'],
+                    ['স্বয়ংক্রিয় পোস্টিং ম্যাপিং', null, 'বাকি'],
+                    ['অনুমোদনের নিয়ম', 'approval.inbox.index', 'অনুমোদন কেন্দ্র থেকে'],
+                ],
+            ],
+            [
+                'no' => '৪',
+                'title' => 'সাধারণ খতিয়ান (GL)',
+                'items' => [
+                    ['খতিয়ান', 'accounts.report.show:ledger', null],
+                    ['রেওয়ামিল', 'accounts.report.show:trial-balance', null],
+                    ['দৈনিক খতিয়ান', 'accounts.report.show:day-book', null],
+                    ['বছর শেষ', 'accounts.year_end.index', null],
+                    ['পিরিয়ড বন্ধ ও খোলা', 'accounts.period.index', null],
+                    ['খোলা ব্যালেন্স', 'inventory.stock.opening', 'মজুদের খোলা ব্যালেন্স'],
+                    ['খাত বিশ্লেষণ', null, 'বাকি'],
+                ],
+            ],
+            [
+                'no' => '৫',
+                'title' => 'প্রাপ্য (AR)',
+                'items' => [
+                    ['গ্রাহকের খতিয়ান', 'customer.index', 'গ্রাহকের পাতায় লেনদেন'],
+                    ['বকেয়ার তালিকা', 'customer.report.show:due-list', null],
+                    ['বকেয়ার বয়স', 'customer.report.show:ageing', null],
+                    ['কে কত দিল', 'customer.report.show:collection', null],
+                    ['কাদের লিমিট নেই', 'customer.report.show:no-limit', null],
+                    ['আদায়ের তালিকা', 'sales.collection.index', null],
+                    ['অগ্রিম আদায়', null, 'বাকি'],
+                ],
+            ],
+            [
+                'no' => '৬',
+                'title' => 'দেনা (AP)',
+                'items' => [
+                    ['সরবরাহকারীর খতিয়ান', 'supplier.index', null],
+                    ['দেনার তালিকা', 'supplier.report.show:payable-list', null],
+                    ['দেনার বয়স', 'supplier.report.show:ageing', null],
+                    ['পরিশোধ', 'purchase.payment.index', null],
+                    ['পরিশোধের সময়সূচি', null, 'বাকি'],
+                    ['ট্রান্সপোর্ট ও শ্রমিকের খতিয়ান', null, 'বাকি — ডিপোর বিশেষ খতিয়ান'],
+                ],
+            ],
+            [
+                'no' => '৭',
+                'title' => 'ভাউচার',
+                'items' => [
+                    ['আদায় ভাউচার', 'accounts.voucher.index:receipt', null],
+                    ['পরিশোধ ভাউচার', 'accounts.voucher.index:payment', null],
+                    ['জাবেদা ভাউচার', 'accounts.voucher.index:journal', null],
+                    ['কন্ট্রা ভাউচার', 'accounts.voucher.index:contra', null],
+                    ['খরচ ভাউচার', 'accounts.voucher.index:expense', null],
+                    ['উত্তোলন ভাউচার', null, 'বাকি — §১৩'],
+                    ['ডেবিট ও ক্রেডিট নোট', null, 'বাকি'],
+                    ['ভাউচারের ইতিহাস ও অডিট', 'governance.audit.index', 'অডিট ট্রেইল থেকে'],
+                ],
+            ],
+            [
+                'no' => '৮',
+                'title' => 'নগদ ব্যবস্থাপনা',
+                'items' => [
+                    ['ক্যাশ বই', 'accounts.report.show:cash-book', null],
+                    ['ক্যাশ টিল', 'accounts.till.index', null],
+                    ['নগদ গণনা', 'accounts.count.index', null],
+                    ['টাকা হস্তান্তর', 'accounts.transfer.index', null],
+                    ['টাকা ও হেফাজত', 'accounts.custody', null],
+                    ['নগদের পূর্বাভাস', null, 'বাকি'],
+                ],
+            ],
+            [
+                'no' => '৯',
+                'title' => 'ব্যাংক ব্যবস্থাপনা',
+                'items' => [
+                    ['ব্যাংক বই', 'accounts.report.show:bank-book', null],
+                    ['চেক রেজিস্টার', 'accounts.cheque.index', 'জমা · পাস · ফেরত'],
+                    ['ব্যাংক মিলকরণ', 'accounts.reconciliation.index', null],
+                    ['ব্যাংকে-ব্যাংকে হস্তান্তর', 'accounts.transfer.index', 'কন্ট্রা'],
+                    ['ব্যাংক স্টেটমেন্ট আমদানি', null, 'বাকি'],
+                    ['ব্যাংক চার্জ', null, 'বাকি'],
+                ],
+            ],
+            [
+                'no' => '১০',
+                'title' => 'আয় ব্যবস্থাপনা',
+                'items' => [
+                    ['বিক্রয়ের আয় বিশ্লেষণ', 'sales.report.show:by-product', null],
+                    ['গ্রাহকভিত্তিক আয়', 'sales.report.show:by-customer', null],
+                    ['ব্র্যান্ডভিত্তিক আয়', 'sales.report.show:by-brand', null],
+                    ['আয়ের শ্রেণি', null, 'বাকি'],
+                    ['বিক্রয় ছাড়া অন্য আয়', null, 'বাকি — ভাড়া, কমিশন, বাতিল মাল'],
+                ],
+            ],
+            [
+                'no' => '১১',
+                'title' => 'খরচ ব্যবস্থাপনা',
+                'items' => [
+                    ['খরচ ভাউচার', 'accounts.voucher.index:expense', null],
+                    ['খরচের কেন্দ্র', 'master_data.cost_center.index', null],
+                    ['কোন কেন্দ্রে কত', 'accounts.report.show:by-cost-centre', null],
+                    ['খরচের শ্রেণি', null, 'বাকি — ভাড়া · শ্রমিক · জ্বালানি · মেরামত'],
+                    ['খরচের অনুমোদন', 'approval.inbox.index', 'অনুমোদন কেন্দ্র থেকে'],
+                ],
+            ],
+            [
+                'no' => '১২',
+                'title' => 'মূলধন ও বিনিয়োগ',
+                'items' => [
+                    ['মূলধন ও বিনিয়োগ', 'finance.capital.index', '২৯ আগস্ট ২০২৬-এ হয়েছে'],
+                    ['কে কোথায় দাঁড়িয়ে', 'finance.capital.index', 'একই পর্দায়'],
+                    ['বিনিয়োগের রিটার্ন', null, 'বাকি'],
+                    ['লাভ ভাগাভাগি', null, 'বাকি — অংশীদারি হলে'],
+                ],
+            ],
+            [
+                'no' => '১৩',
+                'title' => 'উত্তোলন ব্যবস্থাপনা',
+                'items' => [
+                    ['মালিক ও অংশীদারের উত্তোলন', null, '**পরের কাজ** — খাত ৩২০০ আছে, পর্দা নেই'],
+                    ['উত্তোলনের অনুরোধ ও অনুমোদন', null, 'বাকি'],
+                    ['উত্তোলনের সীমা', null, 'টেবিল বসানো আছে, পর্দা বাকি'],
+                    ['উত্তোলন বনাম লাভ/মূলধন মিলকরণ', null, 'বাকি'],
+                    ['ব্যক্তিভিত্তিক উত্তোলন বিবরণী', null, 'বাকি'],
+                ],
+            ],
+            [
+                'no' => '১৪',
+                'title' => 'ঋণ ও লিজ',
+                'items' => [
+                    ['ঋণের তালিকা', 'accounts.loan.index', null],
+                    ['ঋণ বিতরণ', 'accounts.loan.create', null],
+                    ['কিস্তির সূচি ও পরিশোধ', 'accounts.loan.index', null],
+                    ['সুদের হিসাব', 'accounts.loan.index', null],
+                    ['লিজ', null, 'বাকি'],
+                ],
+            ],
+            [
+                'no' => '১৫',
+                'title' => 'স্থায়ী সম্পদ',
+                'items' => [
+                    ['সম্পদের তালিকা', 'accounts.asset.index', null],
+                    ['অবচয়', 'accounts.asset.index', null],
+                    ['সম্পদ অবসান', 'accounts.asset.index', null],
+                    ['সম্পদ স্থানান্তর', null, 'বাকি'],
+                ],
+            ],
+            [
+                'no' => '১৬',
+                'title' => 'বাজেট',
+                'items' => [
+                    ['বাজেট পরিকল্পনা', null, 'বাকি'],
+                    ['বাজেট বনাম প্রকৃত', null, 'বাকি'],
+                    ['বিভাগভিত্তিক বাজেট', null, 'বাকি'],
+                ],
+            ],
+            [
+                'no' => '১৭',
+                'title' => 'ব্যয় হিসাব',
+                'items' => [
+                    ['কোন কেন্দ্রে কত', 'accounts.report.show:by-cost-centre', null],
+                    ['পণ্যের খরচ', 'inventory.report.show:stock-summary', 'ভারিত গড়'],
+                    ['কোন রুট চলে', 'sales.report.show:by-customer', null],
+                ],
+            ],
+            [
+                'no' => '১৮',
+                'title' => 'প্রকল্প হিসাব',
+                'items' => [
+                    ['প্রকল্পভিত্তিক খতিয়ান', null, 'ডিপোতে ঐচ্ছিক — বহু-প্রকল্প হলে'],
+                ],
+            ],
+            [
+                'no' => '১৯',
+                'title' => 'কর ও ভ্যাট',
+                'items' => [
+                    ['করের ছক', 'master_data.tax.index', null],
+                    ['করের হিসাব ও পোস্টিং', 'accounts.report.show:ledger', 'বিলেই বসে'],
+                    ['মুশক চালান', null, 'বাকি'],
+                    ['NBR রিপোর্টিং', null, 'বাকি'],
+                ],
+            ],
+            [
+                'no' => '২০',
+                'title' => 'ট্রেজারি',
+                'items' => [
+                    ['তহবিল পরিকল্পনা', null, 'বাকি'],
+                    ['উদ্বৃত্ত তহবিলের বিনিয়োগ', null, 'বাকি'],
+                ],
+            ],
+            [
+                'no' => '২১',
+                'title' => 'আন্তঃকোম্পানি',
+                'items' => [
+                    ['শাখার মধ্যে স্থানান্তর', 'inventory.transfer.index', 'মালের স্থানান্তর'],
+                    ['আন্তঃকোম্পানি মিলকরণ', null, 'বাকি — বহু-কোম্পানি হলে'],
+                ],
+            ],
+            [
+                'no' => '২২',
+                'title' => 'একীভূত বিবরণী',
+                'items' => [
+                    ['গ্রুপের একীভূত হিসাব', null, 'বাকি — বহু-কোম্পানি হলে'],
+                ],
+            ],
+            [
+                'no' => '২৩',
+                'title' => 'পরিকল্পনা ও বিশ্লেষণ',
+                'items' => [
+                    ['পূর্বাভাস ও দৃশ্যকল্প', null, 'বাকি'],
+                ],
+            ],
+            [
+                'no' => '২৪',
+                'title' => 'মাস ও বছর শেষ',
+                'items' => [
+                    ['পিরিয়ড বন্ধ', 'accounts.period.index', null],
+                    ['বছর শেষ', 'accounts.year_end.index', null],
+                    ['মাস-শেষের চেকলিস্ট', null, 'বাকি'],
+                ],
+            ],
+            [
+                'no' => '২৫',
+                'title' => 'ফিন্যান্স গভর্ন্যান্স',
+                'items' => [
+                    ['অডিট ট্রেইল', 'governance.audit.index', 'পুরনো ও নতুন মানসহ'],
+                    ['কে কী পারে', 'system_admin.role.index', 'রোল ও অনুমতি'],
+                    ['নীতি ব্যবস্থাপনা', null, 'বাকি'],
+                ],
+            ],
+            [
+                'no' => '২৬',
+                'title' => 'ফিন্যান্স ইন্টিগ্রেশন',
+                'items' => [
+                    ['বিক্রয় → খাতা', 'accounts.report.show:ledger', 'বিল নিশ্চিত হলেই'],
+                    ['ক্রয় → খাতা', 'accounts.report.show:ledger', 'বিল নিশ্চিত হলেই'],
+                    ['মজুদ → খাতা', 'accounts.report.show:ledger', 'মাল নড়লেই'],
+                    ['ব্যাংক ও কর API', null, 'বাকি — Platform Management-এ'],
+                ],
+            ],
+            [
+                'no' => '২৭',
+                'title' => 'AI ফিন্যান্স',
+                'items' => [
+                    ['OCR, স্মার্ট পোস্টিং, জালিয়াতি ধরা', null, 'ধাপ ৩ — ঐচ্ছিক, নিজের সার্ভারে'],
+                ],
+            ],
+            [
+                'no' => '২৮',
+                'title' => 'কমপ্লায়েন্স ও অডিট',
+                'items' => [
+                    ['অডিট ট্রেইল', 'governance.audit.index', null],
+                    ['হিসাবের সততা যাচাই', 'accounts.integrity', null],
+                    ['রপ্তানির লগ', 'governance.export.index', 'কে কী নামিয়েছে'],
+                    ['কাগজ সংরক্ষণ নীতি', null, 'বাকি'],
+                ],
+            ],
+            [
+                'no' => '২৯',
+                'title' => 'রিপোর্ট',
+                'items' => [
+                    ['দৈনিক খতিয়ান', 'accounts.report.show:day-book', null],
+                    ['ক্যাশ বই', 'accounts.report.show:cash-book', null],
+                    ['ব্যাংক বই', 'accounts.report.show:bank-book', null],
+                    ['খতিয়ান', 'accounts.report.show:ledger', null],
+                    ['রেওয়ামিল', 'accounts.report.show:trial-balance', null],
+                    ['লাভ-ক্ষতি', 'accounts.report.show:profit-loss', null],
+                    ['স্থিতিপত্র', 'accounts.report.show:balance-sheet', null],
+                    ['নগদ প্রবাহ', 'accounts.report.show:cash-flow', null],
+                    ['আদায়ের তালিকা', 'accounts.report.show:inflow', null],
+                    ['কোন কেন্দ্রে কত', 'accounts.report.show:by-cost-centre', null],
+                    ['উত্তোলনের রিপোর্ট', null, 'বাকি — §১৩'],
+                    ['বাজেটের রিপোর্ট', null, 'বাকি — §১৬'],
+                ],
+            ],
+            [
+                'no' => '৩০',
+                'title' => 'অ্যানালিটিক্স',
+                'items' => [
+                    ['ফিন্যান্সের মেট্রিক', null, 'ইঞ্জিন Analytics & BI-তে'],
+                ],
+            ],
+            [
+                'no' => '৩১',
+                'title' => 'পর্যবেক্ষণ',
+                'items' => [
+                    ['হিসাবের সততা যাচাই', 'accounts.integrity', null],
+                    ['ব্যর্থ পোস্টিংয়ের সারি', null, 'বাকি'],
+                    ['পটভূমির কাজ ও সতর্কতা', null, 'বাকি'],
+                ],
+            ],
+            [
+                'no' => '৩২',
+                'title' => 'সেটিংস',
+                'items' => [
+                    ['হিসাবের সেটিংস', 'accounts.settings', null],
+                    ['কন্ট্রোল প্যানেল', 'system_admin.control-panel', 'প্রতিটা ঘরের সুইচ'],
+                    ['বিজ্ঞপ্তির সেটিংস', null, 'বাকি'],
+                ],
+            ],
+            [
+                'no' => '৩৩',
+                'title' => 'সহায়ক কাজ',
+                'items' => [
+                    ['আমদানি ও রপ্তানি', 'governance.export.index', null],
+                    ['ব্যালেন্স আবার গোনা', 'accounts.integrity', null],
+                    ['নম্বর সিরিজ মেলানো', null, '`abos:catch-up-numbers` — কমান্ড আছে, পর্দা নেই'],
+                    ['ডুপ্লিকেট খোঁজা ও মেরামত', null, 'বাকি'],
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * এই লাইনটার ঠিকানা — না থাকলে নাল।
+     *
+     * ── কেন `:` দিয়ে প্যারামিটার ─────────────────────────────────────
+     * রিপোর্টগুলো একটাই রুট, স্লাগ বদলায় (`accounts.report.show:ledger`)।
+     * প্রতিটার জন্য আলাদা রুট বানানোর চেয়ে এক জায়গায় লিখে এখানে ভাগ
+     * করে নেওয়া সস্তা, আর তালিকাটাও পড়া যায়।
+     */
+    public static function urlFor(?string $route): ?string
+    {
+        if ($route === null) {
+            return null;
+        }
+
+        [$name, $param] = array_pad(explode(':', $route, 2), 2, null);
+
+        if (! Route::has($name)) {
+            return null;
+        }
+
+        return match (true) {
+            $param === null => route($name),
+            str_ends_with($name, 'report.show') => route($name, ['slug' => $param]),
+            str_ends_with($name, 'voucher.index') => route($name, ['type' => $param]),
+            default => route($name, [$param]),
+        };
+    }
+
+    /**
+     * কয়টা হয়েছে, কয়টা বাকি।
+     *
+     * ── কেন লাইন গোনা হয়, বিভাগ নয় ──────────────────────────────────
+     * বিভাগ গুনলে "৩৩-এর ১৬" শোনায় ভালো, কিন্তু একটা বিভাগে দশটা লাইন
+     * আর অন্যটায় একটা। লাইন গুনলে সংখ্যাটা সত্যিকারের কাজের অনুপাত
+     * বলে — আর ওটাই মালিক জানতে চেয়েছেন।
+     *
+     * @return array{done: int, total: int}
+     */
+    public static function tally(): array
+    {
+        $done = 0;
+        $total = 0;
+
+        foreach (self::sections() as $section) {
+            foreach ($section['items'] as $item) {
+                $total++;
+
+                if ($item[1] !== null && self::urlFor($item[1]) !== null) {
+                    $done++;
+                }
+            }
+        }
+
+        return ['done' => $done, 'total' => $total];
+    }
+}

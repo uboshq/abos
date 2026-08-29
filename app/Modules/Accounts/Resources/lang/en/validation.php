@@ -78,9 +78,4 @@ return [
     'cheque_already_decided' => 'Cheque :no has already been decided.',
     'bounce_needs_reason' => 'Say why it bounced — "no funds" and "signature mismatch" are not the same thing.',
     'chart_not_installed' => 'The chart of accounts has not been installed yet.',
-    'capital_already_posted' => ':no is already posted',
-    'not_a_postable_account' => 'That is a heading, not an account',
-    'unknown_contributor_type' => 'Unknown contributor type',
-    'unknown_capital_kind' => 'Unknown kind',
-    'capital_must_be_positive' => 'The amount must be more than zero',
 ];
