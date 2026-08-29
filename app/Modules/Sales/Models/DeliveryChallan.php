@@ -48,6 +48,10 @@ class DeliveryChallan extends Model implements Drillable
         'vehicle_id', 'vehicle_no', 'driver_name', 'do_no', 'total',
         'discount_amount', 'expense_amount', 'rounding_amount',
         'deposit_amount', 'credit_period_days',
+
+        /* ছয়টা বোতামের ঘর — সরাসরি বিক্রয়ের পর্দা, ২৯ আগস্ট ২০২৬ */
+        'expense_narration', 'carrier_name', 'transport_cost',
+        'ship_to', 'ship_date', 'deposit_method', 'deposit_ref',
         'status', 'narration', 'created_by',
         'cancelled_by', 'cancelled_at', 'cancel_reason',
     ];
@@ -55,6 +59,10 @@ class DeliveryChallan extends Model implements Drillable
     protected function casts(): array
     {
         return [
+            /* টাকা float নয় — [[MoneyIsNeverAFloatTest]] */
+            'transport_cost' => 'decimal:4',
+            'ship_date' => 'date',
+
             'trx_date' => 'date',
             'cancelled_at' => 'datetime',
             'total' => 'decimal:4',

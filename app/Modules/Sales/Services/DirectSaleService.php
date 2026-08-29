@@ -210,6 +210,34 @@ final class DirectSaleService
             'rounding_amount' => $this->money($data['rounding_amount'] ?? '0'),
             'deposit_amount' => $this->money($data['deposit'] ?? '0'),
             'credit_period_days' => $data['credit_period_days'] ?? null,
+
+            /*
+             * ছয়টা বোতামের ঘরগুলো — ২৯ আগস্ট ২০২৬।
+             *
+             * ── কেন `?: null`, `?? null` নয় ──────────────────────────
+             * ফর্ম খালি ঘরও পাঠায়, খালি স্ট্রিং হিসেবে। `??` কেবল
+             * অনুপস্থিত হলে ধরত, তাই ডাটাবেজে খালি স্ট্রিং বসত — আর
+             * তখন "লেখা হয়নি" আর "ফাঁকা লেখা হয়েছে" আলাদা করা যেত না।
+             */
+            'expense_narration' => ($data['expense_narration'] ?? '') ?: null,
+            'carrier_name' => ($data['carrier_name'] ?? '') ?: null,
+            'transport_cost' => ($data['transport_cost'] ?? '') !== ''
+                ? $this->money($data['transport_cost'])
+                : null,
+            'ship_to' => ($data['ship_to'] ?? '') ?: null,
+            'ship_date' => ($data['ship_date'] ?? '') ?: null,
+
+            /*
+             * জমার ধরন কেবল টাকা এলেই লেখা হয়।
+             *
+             * বাছাইয়ের ঘরটার ডিফল্ট "নগদ", তাই টাকা না নিয়েও প্রতিটা
+             * চালানে "নগদ" বসে যেত — আর রিপোর্টে হাজারটা শূন্য টাকার
+             * নগদ জমা দেখা যেত।
+             */
+            'deposit_method' => bccomp($this->money($data['deposit'] ?? '0'), '0', 4) > 0
+                ? (($data['deposit_method'] ?? '') ?: null)
+                : null,
+            'deposit_ref' => ($data['deposit_ref'] ?? '') ?: null,
         ]);
 
         // ফ্রি পরিমাণ ও লাইনের ছাড় — ক্রম ধরে, কারণ লাইনগুলো ওই ক্রমেই বসেছে

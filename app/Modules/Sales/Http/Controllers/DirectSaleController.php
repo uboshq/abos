@@ -92,6 +92,8 @@ class DirectSaleController extends Controller implements HasMiddleware
                 'rounding' => $this->settings->get('sales.field_rounding', true),
                 'do_no' => $this->settings->get('sales.field_do_no', true),
                 'deposit' => $this->settings->get('sales.field_deposit', true),
+                'transport' => $this->settings->get('sales.field_transport', true),
+                'shipment' => $this->settings->get('sales.field_shipment', true),
                 'credit_limit' => $this->settings->get('sales.field_credit_limit', true),
                 'vat' => $this->settings->get('master_data.tax_enabled', true),
                 'warehouse_select' => $this->settings->get('sales.field_warehouse_select', true),
@@ -120,6 +122,46 @@ class DirectSaleController extends Controller implements HasMiddleware
             'credit_period_days' => ['nullable', 'integer', 'min:0', 'max:365'],
             'discount_amount' => ['nullable', 'numeric', 'min:0'],
             'expense_amount' => ['nullable', 'numeric', 'min:0'],
+            /*
+             * খরচটা কীসের — টাকার অঙ্কের পাশে বাধ্যতামূলক নয়, কিন্তু
+             * থাকলে কাগজে ছাপা হয়।
+             *
+             * ── কেন অঙ্ক থাকলে কারণটাও চাওয়া হয় ──────────────────────
+             * "খরচ ২০০" এক মাস পরে কারও কোনো কাজে আসে না। ওটা ভাড়া ছিল,
+             * না হাম্মালি, না নাশতা — জানার একমাত্র সময় এখনই, যখন যিনি
+             * টাকাটা দিয়েছেন তিনি সামনেই দাঁড়ানো।
+             */
+            'expense_narration' => ['nullable', 'string', 'max:191',
+                'required_with:expense_amount'],
+
+            /*
+             * পরিবহন — গাড়ি ও চালক আগে থেকেই ছিল, ভাড়াটা ছিল না।
+             *
+             * ভাড়াটা খরচের ঘরে ঢুকিয়ে দেওয়া যেত, কিন্তু তাতে "এই চালানে
+             * পরিবহনে কত গেল" প্রশ্নের উত্তর আর আলাদা করে পাওয়া যেত না —
+             * আর রুটপ্রতি খরচ বের করার একমাত্র উপায় ওটাই।
+             */
+            'carrier_name' => ['nullable', 'string', 'max:191'],
+            'transport_cost' => ['nullable', 'numeric', 'min:0'],
+
+            /*
+             * চালানটা কোথায় যাচ্ছে।
+             *
+             * গ্রাহকের ঠিকানা মাস্টারে আছে, কিন্তু মাল সবসময় সেখানে যায়
+             * না — দোকান এক জায়গায়, গুদাম আরেক জায়গায়, আর মাঝে মাঝে
+             * সরাসরি বাজারে। কাগজে ভুল ঠিকানা ছাপা মানে গাড়ি ভুল জায়গায়।
+             */
+            'ship_to' => ['nullable', 'string', 'max:191'],
+            'ship_date' => ['nullable', 'date'],
+
+            /*
+             * কাউন্টারে নেওয়া টাকার বিবরণ — অঙ্কটা আগে থেকেই ছিল।
+             *
+             * নগদ ছাড়া অন্য কিছুতে (চেক, বিকাশ) নম্বর ছাড়া টাকাটা আর
+             * খুঁজে পাওয়া যায় না, আর ব্যাংকের কাগজের সাথে মেলানোও যায় না।
+             */
+            'deposit_method' => ['nullable', 'string', 'max:32'],
+            'deposit_ref' => ['nullable', 'string', 'max:64'],
             'rounding_amount' => ['nullable', 'numeric', 'min:0'],
             'deposit' => ['nullable', 'numeric', 'min:0'],
             'narration' => ['nullable', 'string', 'max:500'],
