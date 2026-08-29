@@ -45,4 +45,5 @@ return [
     'cheque_deposit' => 'Deposited',
     'cheque_clear' => 'Cleared',
     'cheque_bounce' => 'Bounced',
+    'money_arrived' => 'Money arrived',
 ];
