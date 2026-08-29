@@ -88,6 +88,16 @@ Route::middleware('auth')->prefix('finance')->group(function () {
 
         Route::post('/{issuer}/{deposit}/close', [DepositController::class, 'close'])
             ->whereIn('issuer', DepositKind::ISSUERS)->whereNumber('deposit')->name('close');
+
+        /*
+         * ভুল এন্ট্রি ফিরিয়ে নেওয়া — `close` থেকে আলাদা পথ।
+         *
+         * একই পথে রাখলে একটা পতাকা দিয়ে দুইটা আলাদা ঘটনা আলাদা করতে
+         * হত, আর অনুমতিও এক হয়ে যেত। ভাঙা রোজকার কাজ; ভুল ফেরানো
+         * খাতায় হাত দেওয়া।
+         */
+        Route::post('/{issuer}/{deposit}/cancel', [DepositController::class, 'cancel'])
+            ->whereIn('issuer', DepositKind::ISSUERS)->whereNumber('deposit')->name('cancel');
     });
 });
 

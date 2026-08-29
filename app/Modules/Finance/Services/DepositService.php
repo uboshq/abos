@@ -246,6 +246,70 @@ final class DepositService
     }
 
     /**
+     * ভুল করে বসানো হয়েছিল — পুরোটা ফিরিয়ে নাও।
+     *
+     * ── কেন এটা "ভাঙা" নয় ───────────────────────────────────────────
+     * ভাঙা একটা **ব্যবসায়িক ঘটনা**: ব্যাংক টাকা ফেরত দিয়েছে, আর সেটার
+     * নিজের দাখিলা হয়। ভুল এন্ট্রিতে ব্যাংক কিছুই দেয়নি — জমাটা
+     * কোনোদিন ছিলই না। ভাঙা দিয়ে সারালে খাতায় দুইটা মিথ্যা ঘটনা বসত:
+     * একটা জমা যা হয়নি, আর একটা ফেরত যা আসেনি।
+     *
+     * ── কেন প্রতিটা ভাউচার আলাদা করে বাতিল ──────────────────────────
+     * [[VoucherService::cancel()]] নিজেই উল্টো দাখিলা লেখে আর কাগজটা
+     * বাতিল চিহ্নিত করে। এখানে হাতে একটা বিপরীত ভাউচার বানালে সেই
+     * যুক্তিটা দুই জায়গায় থাকত, আর একদিন একটা বদলাত।
+     *
+     * ── কেন সারিটা থেকে যায় ─────────────────────────────────────────
+     * নিয়ম ৫। মুছে ফেললে ছয় মাস পর "১১৬০ খাতে ২ লাখ ঢুকে বেরোল কেন"
+     * প্রশ্নের উত্তরটা আর কোথাও থাকত না।
+     */
+    public function cancel(Deposit $deposit, string $reason): Deposit
+    {
+        if ($deposit->isCancelled()) {
+            throw ValidationException::withMessages([
+                'status' => __('finance::validation.deposit_already_cancelled', [
+                    'no' => $deposit->document_no,
+                ]),
+            ]);
+        }
+
+        if (trim($reason) === '') {
+            throw ValidationException::withMessages([
+                'cancel_reason' => __('finance::validation.cancel_reason_needed'),
+            ]);
+        }
+
+        return DB::transaction(function () use ($deposit, $reason) {
+            foreach ($deposit->movements()->with('voucher')->get() as $movement) {
+                $voucher = $movement->voucher;
+
+                /*
+                 * আগেই বাতিল হয়ে থাকতে পারে — কেউ হিসাবের পর্দা থেকে
+                 * ভাউচারটা বাতিল করে থাকলে। তখন আবার বাতিল করলে সেবা
+                 * ব্যতিক্রম ছুড়ত, আর গোটা কাজটা থেমে যেত অর্ধেক পথে।
+                 */
+                if ($voucher === null || $voucher->isCancelled()) {
+                    continue;
+                }
+
+                $this->vouchers->cancel($voucher, __('finance::message.deposit_cancel_narration', [
+                    'no' => $deposit->document_no,
+                    'why' => $reason,
+                ]));
+            }
+
+            $deposit->forceFill([
+                'status' => Deposit::CANCELLED,
+                'cancel_reason' => trim($reason),
+                'cancelled_at' => now(),
+                'cancelled_by' => auth()->id(),
+            ])->save();
+
+            return $deposit->fresh();
+        });
+    }
+
+    /**
      * কত টাকা সরিয়ে রাখা আছে — ব্যবসার আর মালিকের, আলাদা।
      *
      * ── কেন দুইটা যোগ একসাথে করা যায় না ────────────────────────────
@@ -376,8 +440,23 @@ final class DepositService
         return $account;
     }
 
+    /**
+     * চালু না হলে আর কিছু করা যায় না।
+     *
+     * বাতিল আর চুকে যাওয়া — দুইটার বার্তা আলাদা, কারণ ব্যবহারকারীর
+     * পরের পদক্ষেপও আলাদা: চুকে যাওয়াটায় করার কিছু নেই, বাতিলটায়
+     * সম্ভবত নতুন করে ঠিক সারিটা বসাতে হবে।
+     */
     private function assertOpen(Deposit $deposit): void
     {
+        if ($deposit->isCancelled()) {
+            throw ValidationException::withMessages([
+                'status' => __('finance::validation.deposit_already_cancelled', [
+                    'no' => $deposit->document_no,
+                ]),
+            ]);
+        }
+
         if ($deposit->status !== Deposit::ACTIVE) {
             throw ValidationException::withMessages([
                 'status' => __('finance::validation.deposit_already_closed', ['no' => $deposit->document_no]),

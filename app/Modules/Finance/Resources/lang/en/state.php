@@ -7,4 +7,5 @@ return [
     'active' => 'Active',
     'closed' => 'Closed',
     'overdue' => 'Past maturity',
+    'cancelled' => 'Cancelled',
 ];

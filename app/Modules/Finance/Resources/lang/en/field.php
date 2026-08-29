@@ -52,4 +52,6 @@ return [
     'note' => 'Note',
     'movement' => 'Movement',
     'choose' => 'Choose one',
+    'cancel_reason' => 'Why cancel it',
+    'cancelled_note' => 'Reason for cancelling',
 ];

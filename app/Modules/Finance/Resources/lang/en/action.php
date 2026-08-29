@@ -8,4 +8,5 @@ return [
     'add_instalment' => 'Pay instalment',
     'take_payout' => 'Take payout',
     'close_deposit' => 'Close it',
+    'cancel_deposit' => 'Entered by mistake — cancel it',
 ];

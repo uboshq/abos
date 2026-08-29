@@ -24,4 +24,7 @@ return [
     'deposit_payout_narration' => 'Deposit payout :no — :where',
     'deposit_closed_narration' => 'Deposit closed :no — :where',
     'owner_held_is_drawing' => 'Held in the owner name, the money leaves as a drawing, not a business asset',
+    'deposit_cancelled' => ':no cancelled — the ledger entries have been reversed',
+    'deposit_cancel_narration' => 'Deposit cancelled :no — :why',
+    'cancel_is_not_closing' => 'Closing means the bank paid it back; cancelling means it never existed',
 ];

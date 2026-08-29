@@ -112,6 +112,14 @@ return [
         'finance.deposit.view',
         'finance.deposit.create',
         'finance.deposit.move',
+
+        /*
+         * বাতিল আলাদা চাবি — আর সবচেয়ে কড়াটা।
+         *
+         * ভাঙা রোজকার কাজ; বাতিল মানে খাতার দাখিলা ফিরিয়ে নেওয়া।
+         * ক্যাশিয়ার প্রথমটা করতে পারেন, দ্বিতীয়টা নয়।
+         */
+        'finance.deposit.cancel',
     ],
 
     /*

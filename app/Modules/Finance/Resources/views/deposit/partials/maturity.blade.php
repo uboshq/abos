@@ -8,7 +8,11 @@
      "২০২৭-০৩-১৪" পড়ে কেউ মাথায় হিসাব করে না। মেয়াদোত্তীর্ণ FD ব্যাংকে
      পড়ে থাকে আর সাধারণ সঞ্চয়ী হারে সুদ পায় — প্রতিদিন টাকা হারায়।
      সংখ্যাটা লাল হলে চোখ নিজেই থামে। --}}
-@if ($deposit->status === \App\Modules\Finance\Models\Deposit::CLOSED)
+@if ($deposit->isCancelled())
+    {{-- বাতিল হলে মেয়াদের তারিখটা অর্থহীন — ওটা এমন একটা ভবিষ্যৎ যা
+         কোনোদিন আসবে না। দেখালে তালিকায় সারিটা চালু বলে ভুল হত। --}}
+    <span class="text-2xs text-(--color-badge-danger-ink)">{{ __('finance::state.cancelled') }}</span>
+@elseif ($deposit->status === \App\Modules\Finance\Models\Deposit::CLOSED)
     <span class="text-2xs text-(--color-ink-muted)">
         {{ __('finance::state.closed') }}
         @if ($deposit->closed_on) · {{ \App\Core\Support\DateFormat::format($deposit->closed_on) }} @endif

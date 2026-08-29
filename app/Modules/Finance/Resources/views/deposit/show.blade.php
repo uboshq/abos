@@ -101,6 +101,21 @@
                 {{ $d->note }}
             </p>
         @endif
+
+        {{-- বাতিল হলে কারণটা এখানেই, উপরে — ছয় মাস পর কেউ সারিটা খুলে
+             প্রথমেই জানতে চাইবেন কী হয়েছিল। --}}
+        @if ($d->isCancelled())
+            <div class="mt-3 flex flex-wrap items-center gap-2 border-t border-(--color-border) pt-3">
+                <x-ui.badge tone="danger">{{ __('finance::state.cancelled') }}</x-ui.badge>
+
+                <span class="text-sm text-(--color-ink-muted)">
+                    {{ $d->cancel_reason }}
+                    @if ($d->cancelled_at)
+                        · {{ \App\Core\Support\DateFormat::format($d->cancelled_at) }}
+                    @endif
+                </span>
+            </div>
+        @endif
     </section>
 
     @if ($isOpen)
@@ -194,6 +209,44 @@
                 </form>
             </section>
         </div>
+    @endif
+
+    {{-- ── ভুল হয়েছে ─────────────────────────────────────────────────
+         ভাঙার প্যানেলের নিচে, আলাদা করে, আর লাল নয় — কারণ এটা রোজকার
+         কাজ নয় আর চোখে পড়ার মতো করে রাখলে কেউ একদিন ভুল করে চাপবেন।
+
+         ── কেন এটা "ভাঙুন" নয় ────────────────────────────────────────
+         ভাঙা মানে ব্যাংক টাকা ফেরত দিয়েছে — একটা সত্যিকারের ঘটনা,
+         নিজের দাখিলাসহ। ভুল এন্ট্রিতে ব্যাংক কিছুই দেয়নি। ভাঙা দিয়ে
+         সারালে খাতায় দুইটা মিথ্যা বসত: একটা জমা যা হয়নি, আর একটা
+         ফেরত যা আসেনি। --}}
+    @if ($isOpen && auth()->user()?->can('finance.deposit.cancel'))
+        <section data-boxed
+                 class="mb-4 rounded-(--radius-card) border border-(--color-border)
+                        bg-(--color-surface-card) p-4">
+            <h2 class="mb-1 font-semibold">{{ __('finance::action.cancel_deposit') }}</h2>
+
+            <p class="mb-3 text-2xs text-(--color-ink-muted)">
+                {{ __('finance::message.cancel_is_not_closing') }}
+            </p>
+
+            <form method="POST"
+                  action="{{ route('finance.deposit.cancel',
+                      ['issuer' => $issuer, 'deposit' => $d->id]) }}"
+                  class="flex flex-wrap items-end gap-3">
+                @csrf
+
+                <div class="min-w-60 flex-1">
+                    <x-ui.field name="cancel_reason" required
+                                :label="__('finance::field.cancel_reason')"
+                                :value="old('cancel_reason')" />
+                </div>
+
+                <x-ui.button type="submit" tone="secondary">
+                    {{ __('core.action.cancel') }}
+                </x-ui.button>
+            </form>
+        </section>
     @endif
 
     {{-- ── যা যা হয়েছে ───────────────────────────────────────────────

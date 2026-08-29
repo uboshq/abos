@@ -24,4 +24,7 @@ return [
     'deposit_payout_narration' => 'জমার মুনাফা :no — :where',
     'deposit_closed_narration' => 'জমা শেষ :no — :where',
     'owner_held_is_drawing' => 'মালিকের নামে রাখলে টাকাটা উত্তোলন হিসেবে যায়, ব্যবসার সম্পদ নয়',
+    'deposit_cancelled' => ':no বাতিল হয়েছে — খাতার দাখিলা ফিরিয়ে নেওয়া হয়েছে',
+    'deposit_cancel_narration' => 'জমা বাতিল :no — :why',
+    'cancel_is_not_closing' => 'ভাঙা মানে ব্যাংক টাকা ফেরত দিয়েছে; বাতিল মানে জমাটা কোনোদিন ছিলই না',
 ];
