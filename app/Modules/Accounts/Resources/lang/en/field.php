@@ -143,4 +143,11 @@ return [
     'earned' => 'Earned',
     'net' => 'Net',
     'deposit_into' => 'Deposit into',
+    'as_of' => 'As of',
+    'all_branches' => 'All branches',
+    'assets' => 'Assets',
+    'liabilities_and_equity' => 'Liabilities & Equity',
+    'total_assets' => 'Total assets',
+    'total_funding' => 'Total liabilities & equity',
+    'profit_this_year' => 'Profit this year',
 ];

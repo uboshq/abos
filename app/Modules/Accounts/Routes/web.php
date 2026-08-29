@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Modules\Accounts\Http\Controllers\AccountsDashboardController;
 use App\Modules\Accounts\Http\Controllers\AccountsSettingsController;
+use App\Modules\Accounts\Http\Controllers\BalanceSheetController;
 use App\Modules\Accounts\Http\Controllers\BankReconciliationController;
 use App\Modules\Accounts\Http\Controllers\BooksIntegrityController;
 use App\Modules\Accounts\Http\Controllers\CashCountController;
@@ -169,6 +170,19 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
      * ঠিকানায় engine-এর ভেতরের কী নয়, পড়ার মতো নাম: /reports/day-book।
      * ভেতরের কী বদলালে বুকমার্ক ভাঙত।
      */
+    /*
+     * স্থিতিপত্র — সাধারণ রিপোর্টের পথের **আগে**, ইচ্ছাকৃতভাবে।
+     *
+     * নিচের `/reports/{slug}` যেকোনো slug ধরে, তাই এটা পরে বসালে
+     * কোনোদিন ডাকা হত না। ক্রমটাই এখানে নিয়ম।
+     *
+     * ── কেন আলাদা পাতা ──────────────────────────────────────────────
+     * রিপোর্ট-ইঞ্জিন সাধারণ টেবিল আঁকে; স্থিতিপত্র বিবৃতি — দুই পক্ষ,
+     * ভেতরে ভাগ, উপমোট, আর শেষে সমতার দাবি।
+     */
+    Route::get('/reports/balance-sheet', [BalanceSheetController::class, 'show'])
+        ->name('balance_sheet');
+
     Route::get('/reports/{slug}', [ReportController::class, 'show'])->name('report.show');
 
     /*
