@@ -17,4 +17,9 @@ return [
     'chart_head_missing' => 'The chart has no account :code',
     'deposit_already_cancelled' => ':no is already cancelled',
     'cancel_reason_needed' => 'Say why you are cancelling it',
+    'hand_loan_needs_a_name' => 'Say whose account this is',
+    'hand_loan_which_way' => 'Say whether the money went out or came in',
+    'hand_loan_amount_positive' => 'The amount must be more than zero — for the other direction, record it as the other direction',
+    'hand_loan_not_clear' => ':amount is still outstanding — it cannot be settled until that is zero',
+    'hand_loan_already_settled' => ':who is already settled',
 ];

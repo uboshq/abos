@@ -9,4 +9,6 @@ return [
     'take_payout' => 'মুনাফা তুলুন',
     'close_deposit' => 'ভাঙুন / মেয়াদ শেষ',
     'cancel_deposit' => 'ভুল হয়েছে — বাতিল করুন',
+    'record_movement' => 'লিখুন',
+    'mark_settled' => 'চুকে গেছে',
 ];

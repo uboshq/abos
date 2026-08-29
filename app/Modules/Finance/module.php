@@ -85,6 +85,16 @@ return [
             ['label' => 'finance::menu.deposit_bond', 'route' => 'finance.deposit.index',
                 'route_params' => ['issuer' => 'bond'],
                 'permission' => 'finance.deposit.view'],
+
+            /*
+             * হাতধার — নিজের সারি, জমার নিচে।
+             *
+             * মালিকের নির্দেশে ঋণ থেকে সম্পূর্ণ আলাদা। ঋণের সারিটা
+             * হিসাব মডিউলে থাকে, আর সেটা ব্যাংকের ঋণের জন্য — কাগজ,
+             * কিস্তি, সুদ। এটা তার কিছুই নয়।
+             */
+            ['label' => 'finance::menu.hand_loan', 'route' => 'finance.hand_loan.index',
+                'permission' => 'finance.hand_loan.view'],
         ],
     ],
 
@@ -120,6 +130,16 @@ return [
          * ক্যাশিয়ার প্রথমটা করতে পারেন, দ্বিতীয়টা নয়।
          */
         'finance.deposit.cancel',
+
+        /*
+         * হাতধার — দেখা, খোলা, আর টাকা নাড়ানো।
+         *
+         * দেখাটা আলাদা রাখা জরুরি: কে কার কাছে কত ধার নিয়েছে সেটা
+         * ব্যক্তিগত তথ্য, আর ডিপোর সব কর্মীর সেটা জানার দরকার নেই।
+         */
+        'finance.hand_loan.view',
+        'finance.hand_loan.create',
+        'finance.hand_loan.move',
     ],
 
     /*
