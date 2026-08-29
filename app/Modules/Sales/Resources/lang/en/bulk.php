@@ -20,6 +20,6 @@ return [
     'free' => 'Free',
     'total_amount' => 'Total amount',
     'total_items' => 'Items',
-    'total_free' => 'Free total',
+    'total_free' => 'Free in this sheet',
     'nothing_until_apply' => 'Nothing reaches the document until you press Apply.',
 ];

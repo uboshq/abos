@@ -14,54 +14,6 @@
 <div x-show="panel" x-cloak
      class="border-t border-(--color-border) bg-(--color-surface-sunken) p-3">
 
-    {{-- ── চার্ট / বাল্ক DO ───────────────────────────────────────────
-         ডিলারের মাসের অর্ডার ছাপা চার্ট থেকে চল্লিশ লাইন। একটা একটা
-         করে খুঁজে বের করা মানে চল্লিশবার থামা — তাই গোটা তালিকাটাই
-         একসাথে, পরিমাণের ঘরসহ।
-
-         যেগুলোতে পরিমাণ বসেছে কেবল সেগুলোই কার্টে যায়; বাকিগুলো ছোঁয়াই
-         হয় না। --}}
-    <div x-show="panel === 'bulk'" x-cloak>
-        <div class="mb-2 flex items-center gap-2">
-            <input type="search" x-model="bulkQuery"
-                   placeholder="{{ __('sales::message.type_or_pick') }}"
-                   class="h-8 flex-1 rounded-(--radius-field) border border-(--color-border)
-                          bg-(--color-surface-card) px-2 text-2xs">
-
-            <span class="num text-2xs text-(--color-ink-muted)"
-                  x-text="bulkChosen + ' {{ __('sales::field.items') }}'"></span>
-        </div>
-
-        <div class="max-h-64 overflow-y-auto rounded-(--radius-field) border border-(--color-border)
-                    bg-(--color-surface-card)">
-            <template x-for="p in bulkList" :key="p.id">
-                <div class="flex items-center gap-2 border-b border-(--color-border) px-2 py-1 last:border-0">
-                    <span class="min-w-0 flex-1 truncate text-2xs" x-text="p.name"></span>
-
-                    {{-- মজুদটা পাশেই: চার্ট থেকে টুকতে গিয়ে যা নেই তা
-                         লিখে ফেলা সবচেয়ে সহজ ভুল। --}}
-                    <span class="num text-2xs text-(--color-ink-muted)" x-text="p.available"></span>
-
-                    <input type="number" step="0.01" min="0"
-                           x-model="bulk[p.id]"
-                           class="num h-7 w-16 rounded-(--radius-field) border border-(--color-border)
-                                  bg-(--color-surface-card) px-1 text-end text-2xs">
-                </div>
-            </template>
-        </div>
-
-        <div class="mt-2 flex gap-2">
-            <x-ui.button type="button" tone="primary" class="flex-1"
-                         ::disabled="bulkChosen === 0" @click="addBulk()">
-                {{ __('sales::action.add_to_cart') }}
-            </x-ui.button>
-
-            <x-ui.button type="button" tone="secondary" @click="bulk = {}">
-                {{ __('core.action.discard') }}
-            </x-ui.button>
-        </div>
-    </div>
-
     {{-- ── খরচ ────────────────────────────────────────────────────────
          অঙ্কটা আগে থেকেই ছিল, কারণটা ছিল না। "খরচ ২০০" এক মাস পরে কারও
          কাজে আসে না — ওটা ভাড়া ছিল না হাম্মালি, জানার একমাত্র সময় এখনই। --}}

@@ -12,6 +12,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Inventory\Services\StockService;
 use App\Modules\Sales\Services\DirectSaleService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -67,6 +68,20 @@ class DirectSaleController extends Controller implements HasMiddleware
         return view('sales::direct.index', [
             'menu' => $this->menu->forUser($request->user()),
             'products' => $this->catalogue($warehouse),
+
+            /*
+             * চার্ট / বাল্ক DO-র শীটের জন্য — আসল পণ্য ও তাদের মজুদ।
+             *
+             * ── কেন উপরের `catalogue()`-টা এখানে চলে না ──────────────
+             * ওটা কাউন্টারের স্ট্রিপের জন্য বানানো সাদামাটা অবজেক্ট,
+             * আর শীটটা মডেল চায় (`$product->name()`, `unit`,
+             * `sale_price`)। দুইটার একটাকে অন্যটার মতো সাজানোর চেয়ে
+             * দুইটাই নিজের জিনিস পাঠানো সস্তা — আর শীটটা চালানের
+             * ফর্মেও ঠিক এই দুইটাই পায়, তাই একই কম্পোনেন্ট দুই পর্দায়
+             * একই আচরণ করে।
+             */
+            'sheetProducts' => Product::query()->active()->with('unit')->orderBy('name_en')->get(),
+            'sheetStock' => app(StockService::class)->statesForAll($warehouse),
             'customers' => $customers,
             'customerTerms' => $customers->mapWithKeys(fn (Customer $c) => [$c->id => [
                 'limit' => (float) $c->credit_limit,

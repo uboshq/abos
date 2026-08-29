@@ -45,6 +45,7 @@
 
     <form method="POST" action="{{ route('sales.direct.store') }}"
           x-data="directSale({{ Illuminate\Support\Js::from($products) }}, {{ Illuminate\Support\Js::from($customerTerms) }}, {{ $walkinId }}, {{ $vatEnabled ? 'true' : 'false' }})"
+          @bulk-applied.window="absorbBulk($event.detail.rows)"
           class="grid gap-3 xl:grid-cols-[1fr_17rem]">
         @csrf
 
@@ -691,9 +692,27 @@
                  কাউন্টারে দাঁড়ানো লোক পাতা বদলাতে পারেন না — কার্টটা
                  সামনে থাকতে হয়। একটা পাতা ছেড়ে গেলে ফিরে এসে আবার সব
                  টাইপ করতে হত। --}}
+            {{-- চার্ট / বাল্ক DO — এই কম্পোনেন্টটা আগে থেকেই ছিল।
+
+                 ── আর আমি প্রথমে ওটার একটা নিকৃষ্ট নকল বানিয়েছিলাম ─────
+                 ২৯ আগস্ট ২০২৬-এ ছয়টা বোতাম সত্যি করতে গিয়ে এই প্যানেলে
+                 একটা ছোট শিট লিখেছিলাম: কেবল নাম, মজুদ আর পরিমাণ, সরু
+                 ডান কলামের ভেতরে। মালিক DMS-এর শিটটা দেখতে বললেন, আর
+                 তখনই দেখা গেল ABOS-এ ঠিক ওই জিনিসটাই আগে থেকেই আছে —
+                 চালানের ফর্মে বসানো, পুরো পর্দা জুড়ে, যোগফল-ছাঁকনি-
+                 সাজানো-ফ্রি পরিমাণসহ।
+
+                 দুইটা শিট মানে দুই জায়গায় একই অঙ্ক, আর একদিন একটা
+                 বদলাত অন্যটা থাকত। নকলটা মুছে আসলটাই বসানো হয়েছে।
+
+                 নিজের বোতাম নিজেই আঁকে, তাই নিচের ছয়ের তালিকায় ওটা
+                 আর নেই। --}}
+            <div class="border-t border-(--color-border) p-3">
+                <x-sales::bulk-sheet :products="$sheetProducts" :stock="$sheetStock" :free-qty="$show['free_qty']" />
+            </div>
+
             <div class="grid grid-cols-2 gap-1 border-t border-(--color-border) p-3">
                 @foreach (array_filter([
-                    ['key' => 'chart_bulk_do', 'panel' => 'bulk', 'show' => true],
                     ['key' => 'expense', 'panel' => 'expense', 'show' => $show['expense']],
                     ['key' => 'transportation', 'panel' => 'transport', 'show' => $show['transport']],
                     ['key' => 'shipment', 'panel' => 'shipment', 'show' => $show['shipment']],
@@ -759,17 +778,6 @@
                     panel: '',
                     depositMethod: 'cash',
 
-                    /*
-                     * চার্ট / বাল্ক DO — পণ্যের আইডি ধরে পরিমাণ।
-                     *
-                     * একটা সাদামাটা অবজেক্ট, তালিকা নয়: চার্ট থেকে টুকতে
-                     * গিয়ে একই পণ্যে দুইবার সংখ্যা বসানো হয়ই, আর তালিকা
-                     * হলে দুইটা সারি জমত। আইডিতে বসালে দ্বিতীয়বারেরটা
-                     * প্রথমটার উপরেই বসে।
-                     */
-                    bulk: {},
-                    bulkQuery: '',
-
                     nextKey: 1,
 
                     get visible() {
@@ -824,48 +832,30 @@
                         return (Number(this.entry.qty) || 0) + (Number(this.entry.freeQty) || 0);
                     },
 
-                    /* ছাঁকা তালিকা — খালি খোঁজায় গোটা তালিকা, কারণ
-                       চার্ট থেকে টোকার সময় মানুষ উপর থেকে নিচে যান। */
-                    get bulkList() {
-                        const t = this.bulkQuery.trim().toLowerCase();
-
-                        return t === ''
-                            ? this.catalogue
-                            : this.catalogue.filter(p =>
-                                p.name.toLowerCase().includes(t)
-                                || p.code.toLowerCase().includes(t));
-                    },
-
-                    get bulkChosen() {
-                        return Object.values(this.bulk)
-                            .filter(v => parseFloat(v) > 0).length;
-                    },
-
                     /*
-                     * শিট থেকে কার্টে।
+                     * শিট থেকে আসা সারিগুলো কার্টে।
                      *
-                     * ── কেন দর পণ্যের নিজেরটাই ─────────────────────────
-                     * বাল্ক শিটে দরের ঘর নেই: চল্লিশ লাইনে চল্লিশটা দর
-                     * টাইপ করা মানে চল্লিশটা ভুলের সুযোগ, আর চার্টের
-                     * অর্ডারে দর প্রায় সবসময় তালিকার দরই। আলাদা দর
-                     * লাগলে সারিটা কার্টে গিয়ে বদলানো যায় — ওখানে
-                     * একটা করে, চোখের সামনে।
+                     * ── কেন ইভেন্ট, সরাসরি ডাকা নয় ────────────────────
+                     * শিটটা জানে না কে শুনছে — তাই একই শিট চালানে,
+                     * সরাসরি বিক্রয়ে আর ক্রয়েও বসে। তিনটা কপি থাকলে
+                     * একদিন একটার অঙ্ক বদলাত, বাকি দুইটা থাকত।
+                     *
+                     * ── একই পণ্য দুইবার এলে সারি বাড়ে না ──────────────
+                     * পরিমাণ বাড়ে। নাহলে এক পণ্যে দুই সারি, আর কাগজে
+                     * একই নাম দুইবার।
                      */
-                    addBulk() {
-                        Object.entries(this.bulk).forEach(([id, qty]) => {
-                            const n = parseFloat(qty);
-                            if (! (n > 0)) { return; }
-
-                            const p = this.catalogue.find(c => String(c.id) === String(id));
+                    absorbBulk(rows) {
+                        (rows || []).forEach(row => {
+                            const p = this.catalogue.find(c => String(c.id) === String(row.product_id));
                             if (! p) { return; }
 
-                            /* একই পণ্য কার্টে থাকলে সারি বাড়ে না,
-                               পরিমাণ বাড়ে — নাহলে এক পণ্যে দুই সারি,
-                               আর কাগজে দুইবার নাম। */
                             const already = this.lines.find(l => l.id === p.id);
 
                             if (already) {
-                                already.qty = String((parseFloat(already.qty) || 0) + n);
+                                already.qty = String((parseFloat(already.qty) || 0)
+                                    + (parseFloat(row.qty) || 0));
+                                already.freeQty = String((parseFloat(already.freeQty) || 0)
+                                    + (parseFloat(row.free_qty) || 0)) || '';
 
                                 return;
                             }
@@ -876,14 +866,13 @@
                                 name: p.name,
                                 unit: p.unit,
                                 vatRate: p.vatRate || 0,
-                                qty: String(n),
-                                freeQty: '',
-                                rate: String(p.rate || p.price || 0),
+                                qty: String(row.qty || '0'),
+                                freeQty: row.free_qty || '',
+                                rate: String(row.rate || p.rate || 0),
                                 discountPercent: '',
                             });
                         });
 
-                        this.bulk = {};
                         this.panel = '';
                     },
 

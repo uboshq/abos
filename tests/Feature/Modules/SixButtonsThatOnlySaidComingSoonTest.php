@@ -99,7 +99,15 @@ class SixButtonsThatOnlySaidComingSoonTest extends TestCase
         $html = $this->markup();
 
         $fields = [
-            'চার্ট / বাল্ক DO' => 'addBulk()',
+            /*
+             * শীটটা নিজের কম্পোনেন্ট — চালানের ফর্মেও একই।
+             *
+             * প্রথমে এখানে একটা আলাদা ছোট শিট লেখা হয়েছিল, আর মালিক
+             * DMS-এরটা দেখতে বলায় ধরা পড়ল ABOS-এ ওটা আগে থেকেই আছে।
+             * দুইটা শিট মানে দুই জায়গায় একই অঙ্ক; নকলটা মুছে আসলটাই
+             * বসানো হয়েছে, আর সারিগুলো আসে `bulk-applied` ইভেন্টে।
+             */
+            'চার্ট / বাল্ক DO' => 'absorbBulk($event.detail.rows)',
             'খরচ' => 'name="expense_narration"',
             'পরিবহন' => 'name="transport_cost"',
             'চালান কোথায়' => 'name="ship_to"',
