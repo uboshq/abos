@@ -57,6 +57,11 @@ return [
             ['label' => 'finance::menu.capital', 'route' => 'finance.capital.index',
                 'permission' => 'finance.capital.view'],
         ],
+
+        'transactions' => [
+            ['label' => 'finance::menu.expense', 'route' => 'finance.expense.index',
+                'permission' => 'finance.expense.view'],
+        ],
     ],
 
     'permissions' => [
@@ -68,6 +73,9 @@ return [
         'finance.capital.view',
         'finance.capital.create',
         'finance.capital.post',
+
+        /* খরচ দেখা — লেখা হয় ভাউচারে, তাই লেখার অনুমতি ওখানেই */
+        'finance.expense.view',
     ],
 
     /*

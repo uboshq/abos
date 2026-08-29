@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Modules\Finance\Http\Controllers\CapitalController;
+use App\Modules\Finance\Http\Controllers\ExpenseController;
 use App\Modules\Finance\Http\Controllers\PlanController;
 use Illuminate\Support\Facades\Route;
 
@@ -22,6 +23,14 @@ use Illuminate\Support\Facades\Route;
  */
 Route::middleware('auth')->prefix('finance')->group(function () {
     Route::get('/plan', [PlanController::class, 'index'])->name('plan');
+
+    /*
+     * খরচ — কোন খাতে কত গেল।
+     *
+     * লেখার পথ নেই: খরচ লেখা হয় ভাউচারেই। দুইটা পথ থাকলে দুইটার
+     * যাচাই একদিন আলাদা হয়ে যেত।
+     */
+    Route::get('/expenses', [ExpenseController::class, 'index'])->name('expense.index');
 
     /*
      * মূলধন ও বিনিয়োগ।
