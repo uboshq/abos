@@ -6,6 +6,7 @@ namespace Tests\Feature\Modules;
 
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
+use App\Core\Support\Money;
 use App\Models\Company;
 use App\Models\LedgerEntry;
 use App\Models\User;
@@ -146,8 +147,15 @@ class TheOwnerTookMoneyAndNobodyWroteItDownTest extends TestCase
         } catch (ValidationException $e) {
             $message = implode(' ', $e->validator->errors()->all());
 
-            $this->assertStringContainsString('3000', $message,
-                'বার্তাটা বলছে না আর কতটা তোলা যাবে।');
+            /*
+             * সাজানো অঙ্কটা খোঁজা হয়, কাঁচাটা নয়।
+             *
+             * লাইভে দেখা গেল বার্তায় `10000.0000` লেখা — টাকার অঙ্ক
+             * এভাবে পড়তে দেওয়া যায় না, বিশেষত প্রত্যাখ্যানের বার্তায়,
+             * কারণ ওটা পড়েই মানুষ ঠিক করেন পরে কী করবেন।
+             */
+            $this->assertStringContainsString(Money::format('3000'), $message,
+                'বার্তাটা বলছে না আর কতটা তোলা যাবে — বা কাঁচা সংখ্যা দেখাচ্ছে।');
         }
     }
 
