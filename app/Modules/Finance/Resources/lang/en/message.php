@@ -11,4 +11,6 @@ return [
     'capital_narration' => ':who — capital (:no)',
     'plan_note' => 'The thirty three sections — what is built and what is not',
     'lines_done' => 'lines built',
+    'expense_note' => 'What went where, and whether it is more or less than the period before',
+    'no_expense_yet' => 'No expense in this period',
 ];
