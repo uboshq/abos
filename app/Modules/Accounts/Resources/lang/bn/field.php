@@ -143,4 +143,11 @@ return [
     'earned' => 'আয়',
     'net' => 'নিট',
     'deposit_into' => 'কোন হিসাবে জমা হবে',
+    'as_of' => 'কোন দিন পর্যন্ত',
+    'all_branches' => 'সব শাখা',
+    'assets' => 'সম্পদ',
+    'liabilities_and_equity' => 'দায় ও মূলধন',
+    'total_assets' => 'মোট সম্পদ',
+    'total_funding' => 'মোট দায় ও মূলধন',
+    'profit_this_year' => 'চলতি বছরের লাভ/ক্ষতি',
 ];

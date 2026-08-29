@@ -118,4 +118,8 @@ return [
     'cheque_bounced' => 'The bounce has been recorded.',
     'no_cheques' => 'No cheques yet.',
     'opening_narration' => 'Opening balance — :account',
+    'balance_sheet_as_of' => 'As of :date — where the business stands',
+    'sheet_agrees' => 'It balances — assets = liabilities + equity',
+    'sheet_does_not_agree' => 'It does not balance — the gap is :gap',
+    'branch_sheet_may_not_agree' => 'A single branch rarely balances: capital, loans and bank accounts belong to the company, not to one branch',
 ];

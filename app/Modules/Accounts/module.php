@@ -112,7 +112,14 @@ return [
              */
             ['label' => 'accounts::menu.books_check', 'route' => 'accounts.integrity', 'permission' => 'accounts.report'],
             ['label' => 'accounts::menu.profit_loss', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'profit-loss'], 'permission' => 'accounts.report.final'],
-            ['label' => 'accounts::menu.balance_sheet', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'balance-sheet'], 'permission' => 'accounts.report.final'],
+            /*
+             * স্থিতিপত্রের নিজের রুট — সাধারণ রিপোর্টের slug নয়।
+             *
+             * ওটা রিপোর্ট-ইঞ্জিনের সাধারণ টেবিল আঁকত: ডেবিট/ক্রেডিট
+             * কলাম, সমতল তালিকা, উপমোট ছাড়া, দায়ের সারি ছাড়া, আর
+             * মোট শূন্য না হয়ে। মালিক ৩০ আগস্ট ২০২৬-এ ধরিয়ে দিলেন।
+             */
+            ['label' => 'accounts::menu.balance_sheet', 'route' => 'accounts.balance_sheet', 'permission' => 'accounts.report.final'],
             ['label' => 'accounts::menu.cash_flow', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'cash-flow'], 'permission' => 'accounts.report.final'],
         ],
         'settings' => [

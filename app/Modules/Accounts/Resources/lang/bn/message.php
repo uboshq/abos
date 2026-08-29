@@ -126,4 +126,8 @@ return [
     'cheque_bounced' => 'ফেরত বসানো হয়েছে।',
     'no_cheques' => 'এখনো কোনো চেক ওঠেনি।',
     'opening_narration' => 'খোলার জের — :account',
+    'balance_sheet_as_of' => ':date পর্যন্ত — ব্যবসা কোথায় দাঁড়িয়ে',
+    'sheet_agrees' => 'খাতা মেলে — সম্পদ = দায় + মূলধন',
+    'sheet_does_not_agree' => 'খাতা মিলছে না — পার্থক্য :gap',
+    'branch_sheet_may_not_agree' => 'এক শাখার স্থিতিপত্র সচরাচর মেলে না: মূলধন, ঋণ ও ব্যাংক কোম্পানির, কোনো এক শাখার নয়',
 ];
