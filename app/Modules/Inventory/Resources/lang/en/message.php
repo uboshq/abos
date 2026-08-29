@@ -89,4 +89,7 @@ return [
     'no_productions' => 'No cooking papers yet',
     'no_batch_recipes' => 'No recipe is cooked in a batch',
     'no_batch_recipes_note' => 'Make a recipe first and set it to "cooked in a batch". Made-to-order dishes need no paper here — their ingredients come off at the sale.',
+    'kitchen_note' => 'Counted from the ingredients — how many more can still be sold',
+    'checked_at' => 'Checked at',
+    'not_refreshing' => 'Not refreshing',
 ];

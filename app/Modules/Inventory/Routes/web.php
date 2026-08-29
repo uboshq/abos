@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Modules\Inventory\Http\Controllers\BatchController;
+use App\Modules\Inventory\Http\Controllers\KitchenBoardController;
 use App\Modules\Inventory\Http\Controllers\LabelController;
 use App\Modules\Inventory\Http\Controllers\OpeningStockController;
 use App\Modules\Inventory\Http\Controllers\ProductController;
@@ -148,6 +149,19 @@ Route::middleware('auth')->prefix('inventory')->group(function () {
             ->whereNumber('recipe')->name('destroy');
         Route::post('/{recipe}/activate', [RecipeController::class, 'activate'])
             ->whereNumber('recipe')->name('activate');
+    });
+
+    /*
+     * রান্নাঘরের বোর্ড — এখন আর কী কী বানানো যাবে।
+     *
+     * `refresh` একই প্রশ্নের JSON উত্তর, আর একই সেশন ও একই অনুমতিতে
+     * চলে: একটা পাতা নিজের সংখ্যাটা আবার আনার জন্য bearer টোকেন
+     * বানানো মানে XSS-এর সামনে একটা সত্যিকারের টোকেন রেখে দেওয়া,
+     * কোনো লাভ ছাড়াই।
+     */
+    Route::prefix('kitchen')->name('kitchen.')->group(function () {
+        Route::get('/', [KitchenBoardController::class, 'index'])->name('index');
+        Route::get('/refresh', [KitchenBoardController::class, 'refresh'])->name('refresh');
     });
 
     /*

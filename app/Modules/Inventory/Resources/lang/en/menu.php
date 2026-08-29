@@ -20,4 +20,5 @@ return [
     'recipes' => 'Recipes',
     'production' => 'Cooking',
     'food_cost' => 'Food cost',
+    'kitchen_board' => 'Kitchen board',
 ];
