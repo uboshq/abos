@@ -12,6 +12,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Inventory\Services\RecipeService;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\Sales\Services\DirectSaleService;
 use Illuminate\Http\RedirectResponse;
@@ -45,6 +46,7 @@ class DirectSaleController extends Controller implements HasMiddleware
         private readonly DirectSaleService $sales,
         private readonly SettingsService $settings,
         private readonly MenuBuilder $menu,
+        private readonly RecipeService $recipes,
     ) {}
 
     public static function middleware(): array
@@ -244,12 +246,18 @@ class DirectSaleController extends Controller implements HasMiddleware
             ->orderBy('name_en')
             ->limit(self::INLINE_CATALOGUE_LIMIT)
             ->get()
-            ->map(function (Product $p) {
-                $available = bcsub(
+            ->map(function (Product $p) use ($warehouse) {
+                /*
+                 * খাবারের উত্তরটা আলাদা — কারণটা
+                 * [[RecipeService::sellableQty()]]-এ। POS-ও ঠিক এই
+                 * ডাকটাই করে, তাই দুই কাউন্টারে একই খাবারের পাশে
+                 * দুইটা সংখ্যা বসে না।
+                 */
+                $available = $this->recipes->sellableQty($p, bcsub(
                     bcsub((string) $p->floor_total, (string) $p->reserved_total, 4),
                     (string) $p->hold_total,
                     4,
-                );
+                ), $warehouse);
 
                 return (object) [
                     'id' => $p->id,

@@ -15,6 +15,7 @@ use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\PackBarcode;
+use App\Modules\Inventory\Services\RecipeService;
 use App\Modules\MasterData\Models\PaymentMethod;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Services\CounterApproval;
@@ -52,6 +53,7 @@ class PosController extends Controller implements HasMiddleware
         private readonly SettingsService $settings,
         private readonly MenuBuilder $menu,
         private readonly CounterApproval $approvals,
+        private readonly RecipeService $recipes,
     ) {}
 
     public static function middleware(): array
@@ -493,12 +495,43 @@ class PosController extends Controller implements HasMiddleware
                 'unit' => $p->unit?->name() ?? '',
                 'rate' => (string) $p->sale_price,
                 'barcode' => (string) $p->barcode,
-                'available' => bcsub(
-                    bcsub((string) $p->floor_total, (string) $p->reserved_total, 4),
-                    (string) $p->hold_total,
-                    4,
-                ),
+                'available' => $this->sellable($p, $warehouse),
             ]);
+    }
+
+    /**
+     * এই পণ্যের আর কয়টা বেচা যাবে।
+     *
+     * ── কেন খাবারের উত্তরটা আলাদা, ২৯ আগস্ট ২০২৬ ─────────────────────
+     * অর্ডারে-রান্না খাবারের **নিজের কোনো মজুদ নেই** — বিরিয়ানি রান্না
+     * হয় অর্ডার পাওয়ার পর। মেঝে − ধরা − আটকানো কষলে উত্তর সবসময় শূন্য,
+     * তাই কাউন্টারে বিরিয়ানির পাশে "০" বসে থাকত যদিও চাল, মাংস ও তেল
+     * দিয়ে চল্লিশ প্লেট হয়।
+     *
+     * ক্যাশিয়ার তখন হয় বেচেন না, নয় সন্দেহ নিয়ে বেচেন — আর দুইটাই
+     * খারাপ। উত্তরটা উপকরণ থেকেই আসে ([[RecipeService::portionsPossible()]])।
+     *
+     * ── কেন হাঁড়ির খাবারে নয় ────────────────────────────────────────
+     * সকালে হাঁড়ি চড়ানো হয়েছে, বারো প্লেট হয়েছে, আর সারাদিন ওই বারোটাই
+     * বিক্রি হয়। উপকরণ তখন আর প্রশ্ন নয় — ওগুলো সকালেই খরচ হয়ে গেছে।
+     * উপকরণ ধরে গুনলে যা রান্নাই হয়নি তা বেচা যেত।
+     *
+     * ── কেন বিস্কুটের হিসাব ছোঁয়া হয়নি ─────────────────────────────
+     * রেসিপির প্রশ্নটা সবার জন্য করলে চারশো পণ্যে চারশোটা কোয়েরি হত,
+     * আর যাদের রেসিপি নেই তাদের উত্তরও পাল্টাত না। `consumesOnSale()`
+     * একবারেই বলে দেয় প্রশ্নটা প্রাসঙ্গিক কি না।
+     */
+    private function sellable(Product $product, ?Warehouse $warehouse): string
+    {
+        return $this->recipes->sellableQty(
+            $product,
+            bcsub(
+                bcsub((string) $product->floor_total, (string) $product->reserved_total, 4),
+                (string) $product->hold_total,
+                4,
+            ),
+            $warehouse,
+        );
     }
 
     private function warehouse(Request $request): ?Warehouse
