@@ -8,6 +8,7 @@ use App\Core\Module\ModuleDefinition;
 use App\Core\Module\ModuleRegistry;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
 
 /**
  * সাইডবারের মেনু — module.php থেকে, হাতে লেখা তালিকা থেকে নয়।
@@ -37,6 +38,15 @@ final class MenuBuilder
     public function forUser(?User $user): array
     {
         $menu = [];
+
+        /*
+         * এই অনুরোধের রুটটা কি নিজেই কোনো মেনু সারি?
+         *
+         * উত্তরটা একবারই বের করা হয়, কারণ পরিবারের নিয়মটা
+         * ([[MenuBuilder::onThisScreen()]]) কেবল তখনই খাটে যখন কোনো
+         * সারি হুবহু মেলেনি।
+         */
+        $exact = $this->aRowOwnsThisRoute();
 
         foreach ($this->registry->all() as $module) {
             if (! $this->moduleEnabled($module)) {
@@ -98,7 +108,7 @@ final class MenuBuilder
                         'label' => __($item['label']),
                         'route' => $item['route'],
                         'url' => route($item['route'], $params),
-                        'active' => request()->routeIs($item['route'])
+                        'active' => $this->onThisScreen($item['route'], $exact)
                             && $this->paramsMatch($params),
                     ];
                 }
@@ -145,6 +155,64 @@ final class MenuBuilder
         }
 
         return $ordered;
+    }
+
+    /**
+     * সারিটা কি এই পর্দার — নাকি এই পর্দার **তালিকার** সারি।
+     *
+     * ── কী ভাঙা ছিল, ২৯ আগস্ট ২০২৬ ──────────────────────────────────
+     * নিয়মটা ছিল কেবল `routeIs($item['route'])`। ফলে তালিকার পাতায় সারি
+     * জ্বলত, কিন্তু একটা রেকর্ডে ঢুকলেই নিভে যেত — আর তার সাথে
+     * breadcrumb-ও, কারণ পথটা এই `active` পতাকা থেকেই তৈরি হয়
+     * ([[shell/crumbbar]])।
+     *
+     * ব্রাউজারে ধরা পড়ল: `/accounts/vouchers/1`-এ পথ ছিল কেবল
+     * "ড্যাশবোর্ড" — মডিউলের নামটাও নেই। অর্থাৎ প্রতিটা রেকর্ড পাতায়
+     * ব্যবহারকারী "আমি কোথায়" প্রশ্নের উত্তর হারাতেন, আর "উপরে ফেরা"র
+     * লিংকটাও।
+     *
+     * ── নিয়মটা কেন এত সরু ───────────────────────────────────────────
+     * শুধু "একই উপসর্গ" বললে এক পরিবারের দুইটা সারি একসাথে জ্বলত —
+     * পণ্যের তালিকা আর লেবেল ছাপা, দুইটাই `inventory.product.*`।
+     *
+     * তাই দুইটা শর্ত: (১) সারিটা `.index`, অর্থাৎ ওটাই ওই পরিবারের
+     * তালিকা, আর (২) এই রুটটা নিজে কোনো মেনু সারি নয় — কারণ তাহলে
+     * ওটাই জ্বলা উচিত, তার তালিকা নয়।
+     */
+    private function onThisScreen(string $route, bool $exact): bool
+    {
+        if (request()->routeIs($route)) {
+            return true;
+        }
+
+        if ($exact || ! str_ends_with($route, '.index')) {
+            return false;
+        }
+
+        return request()->routeIs(Str::beforeLast($route, '.').'.*');
+    }
+
+    /**
+     * এই অনুরোধের রুটটা কি হুবহু কোনো মেনু সারির রুট।
+     *
+     * অনুমতি বা সুইচ দেখা হয় না ইচ্ছাকৃতভাবে: প্রশ্নটা "এই পর্দার নিজের
+     * সারি আছে কি না", "এই ব্যবহারকারী সেটা দেখতে পান কি না" নয়। নাহলে
+     * যে ব্যবহারকারী তালিকা দেখতে পান না, তাঁর কাছে রেকর্ড পাতাটা
+     * তালিকার সারি হিসেবে জ্বলত।
+     */
+    private function aRowOwnsThisRoute(): bool
+    {
+        foreach ($this->registry->all() as $module) {
+            foreach ($module->menu as $items) {
+                foreach ($items as $item) {
+                    if (isset($item['route']) && request()->routeIs($item['route'])) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
     }
 
     /**

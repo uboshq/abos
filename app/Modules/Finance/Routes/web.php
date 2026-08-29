@@ -3,8 +3,10 @@
 declare(strict_types=1);
 
 use App\Modules\Finance\Http\Controllers\CapitalController;
+use App\Modules\Finance\Http\Controllers\DepositController;
 use App\Modules\Finance\Http\Controllers\ExpenseController;
 use App\Modules\Finance\Http\Controllers\PlanController;
+use App\Modules\Finance\Models\DepositKind;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -44,6 +46,49 @@ Route::middleware('auth')->prefix('finance')->group(function () {
         Route::post('/{entry}/post', [CapitalController::class, 'post'])
             ->whereNumber('entry')->name('post');
     });
+
+    /*
+     * সঞ্চয় ও বিনিয়োগ — এক পর্দা, তিনটা ঠিকানা।
+     *
+     * ── কেন ইস্যুয়ারটা পথের অংশ, প্রশ্নচিহ্নের পরে নয় ────────────────
+     * মেনু কোন সারিটা সক্রিয় তা রুটের প্যারামিটার মিলিয়ে বলে
+     * ([[MenuBuilder::paramsMatch()]])। কোয়েরি স্ট্রিং হলে তিনটা সারিই
+     * একসাথে সক্রিয় দেখাত, আর ব্যবহারকারী জানত না সে কোথায় আছে।
+     */
+    /*
+     * ── কেন প্রতিটা ঠিকানায় ইস্যুয়ারটা থেকে যায়, রেকর্ডের পাতাতেও ────
+     * মেনুর সারিটা সক্রিয় থাকে ইস্যুয়ার মিললে। একটা FD খুলে ভেতরে
+     * ঢুকলে যদি প্যারামিটারটা হারিয়ে যেত, বাঁ পাশের মেনুতে "ব্যাংক
+     * আমানত" নিভে যেত — আর ব্যবহারকারী জানত না সে কোথায় আছে।
+     */
+    Route::prefix('deposits')->name('deposit.')->group(function () {
+        Route::get('/{issuer}', [DepositController::class, 'index'])
+            ->whereIn('issuer', DepositKind::ISSUERS)->name('index');
+
+        Route::post('/{issuer}', [DepositController::class, 'store'])
+            ->whereIn('issuer', DepositKind::ISSUERS)->name('store');
+
+        /*
+         * একটা জমার নিজের পাতা।
+         *
+         * ── কেন তালিকার ঘরে কাজগুলো নয় ─────────────────────────────
+         * কিস্তি দিতে চাই তারিখ, টাকা আর কোন খাত — তিনটা ঘর। ওগুলো
+         * তালিকার শেষ কলামে গুঁজলে কলামটা এত সরু হত যে ছোট পর্দায়
+         * একটার ঘাড়ে আরেকটা পড়ত, আর টেবিলের স্ক্রলার প্যানেলটা
+         * কেটে দিত — টপ-নেভে ঠিক এই ভুলটাই ধরা পড়েছিল।
+         *
+         * আর চলাচলের ইতিহাসটাও এখানেই: প্রতিটা সংখ্যা তার ভাউচারে
+         * নামায় (নিয়ম ১), আর তালিকার একটা ঘরে ষাটটা কিস্তি ধরত না।
+         */
+        Route::get('/{issuer}/{deposit}', [DepositController::class, 'show'])
+            ->whereIn('issuer', DepositKind::ISSUERS)->whereNumber('deposit')->name('show');
+
+        Route::post('/{issuer}/{deposit}/movement', [DepositController::class, 'movement'])
+            ->whereIn('issuer', DepositKind::ISSUERS)->whereNumber('deposit')->name('movement');
+
+        Route::post('/{issuer}/{deposit}/close', [DepositController::class, 'close'])
+            ->whereIn('issuer', DepositKind::ISSUERS)->whereNumber('deposit')->name('close');
+    });
 });
 
 /*
@@ -55,4 +100,13 @@ Route::middleware('auth')->prefix('finance')->group(function () {
  * মডিউল ভাগ হওয়ায় সরেছে, আর ব্রাউজারের ক্যাশে চিরকাল বসিয়ে রাখার
  * মতো কিছু নয়।
  */
-Route::middleware('auth')->get('/accounts/capital', fn () => redirect()->route('finance.capital.index'));
+/*
+ * নামটা স্পষ্ট, ইচ্ছাকৃতভাবে।
+ *
+ * নাম না দিলে প্রদানকারীর উপসর্গটাই পুরো নাম হয়ে যেত — `finance.` —
+ * আর [[EveryRouteIsGuardedTest]]-এর তালিকায় ওটা এমন একটা এন্ট্রি হত
+ * যার মানে পরের জন বুঝত না।
+ */
+Route::middleware('auth')
+    ->get('/accounts/capital', fn () => redirect()->route('finance.capital.index'))
+    ->name('capital.moved');

@@ -22,7 +22,7 @@
         <label class="block">
             <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::field.expense') }}</span>
             <input type="number" step="0.01" min="0" name="expense_amount" x-model="expenseAmount"
-                   class="num h-8 w-full rounded-(--radius-field) border border-(--color-border)
+                   class="num h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                           bg-(--color-surface-card) px-2 text-end text-2xs">
         </label>
 
@@ -30,7 +30,7 @@
             <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::field.expense_for') }}</span>
             <input type="text" name="expense_narration" maxlength="191"
                    placeholder="{{ __('sales::field.expense_for_hint') }}"
-                   class="h-8 w-full rounded-(--radius-field) border border-(--color-border)
+                   class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                           bg-(--color-surface-card) px-2 text-2xs">
         </label>
     </div>
@@ -45,28 +45,28 @@
         <label class="block">
             <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::field.carrier') }}</span>
             <input type="text" name="carrier_name" maxlength="191"
-                   class="h-8 w-full rounded-(--radius-field) border border-(--color-border)
+                   class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                           bg-(--color-surface-card) px-2 text-2xs">
         </label>
 
         <label class="block">
             <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::field.transport_cost') }}</span>
             <input type="number" step="0.01" min="0" name="transport_cost"
-                   class="num h-8 w-full rounded-(--radius-field) border border-(--color-border)
+                   class="num h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                           bg-(--color-surface-card) px-2 text-end text-2xs">
         </label>
 
         <label class="block">
             <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::field.vehicle_no') }}</span>
             <input type="text" name="vehicle_no" maxlength="64"
-                   class="h-8 w-full rounded-(--radius-field) border border-(--color-border)
+                   class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                           bg-(--color-surface-card) px-2 text-2xs">
         </label>
 
         <label class="block">
             <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::field.driver_name') }}</span>
             <input type="text" name="driver_name" maxlength="191"
-                   class="h-8 w-full rounded-(--radius-field) border border-(--color-border)
+                   class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                           bg-(--color-surface-card) px-2 text-2xs">
         </label>
     </div>
@@ -83,15 +83,16 @@
             <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::field.ship_to') }}</span>
             <input type="text" name="ship_to" maxlength="191"
                    placeholder="{{ __('sales::field.ship_to_hint') }}"
-                   class="h-8 w-full rounded-(--radius-field) border border-(--color-border)
+                   class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                           bg-(--color-surface-card) px-2 text-2xs">
         </label>
 
         <label class="block">
             <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::field.ship_date') }}</span>
-            <input type="date" name="ship_date"
-                   class="h-8 w-full rounded-(--radius-field) border border-(--color-border)
-                          bg-(--color-surface-card) px-2 text-2xs">
+            {{-- ব্রাউজারের নিজের তারিখের ঘর নয়: ওটা নিজের লোকেল ধরে
+                 আঁকে, আর en-US-এ ০৫/০৬ মানে ৬ মে, বাংলাদেশে ৫ জুন —
+                 দুইটাই বৈধ, তাই ভুলটা খাতা থেকে ধরা যায় না। --}}
+            <x-ui.date name="ship_date" />
         </label>
     </div>
 
@@ -106,7 +107,7 @@
         <label class="block">
             <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::field.received_deposit') }}</span>
             <input type="number" step="0.01" min="0" name="deposit" x-model="deposit"
-                   class="num h-8 w-full rounded-(--radius-field) border border-(--color-border)
+                   class="num h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                           bg-(--color-surface-card) px-2 text-end text-2xs">
         </label>
 
@@ -114,7 +115,7 @@
             <label class="block">
                 <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::field.deposit_method') }}</span>
                 <select name="deposit_method" x-model="depositMethod"
-                        class="h-8 w-full rounded-(--radius-field) border border-(--color-border)
+                        class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                                bg-(--color-surface-card) px-2 text-2xs">
                     <option value="cash">{{ __('sales::field.cash') }}</option>
                     <option value="cheque">{{ __('sales::field.cheque') }}</option>
@@ -128,7 +129,7 @@
             <label class="block" x-show="depositMethod !== 'cash'" x-cloak>
                 <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::field.deposit_ref') }}</span>
                 <input type="text" name="deposit_ref" maxlength="64"
-                       class="h-8 w-full rounded-(--radius-field) border border-(--color-border)
+                       class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                               bg-(--color-surface-card) px-2 text-2xs">
             </label>
         </div>

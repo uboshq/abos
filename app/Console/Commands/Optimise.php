@@ -89,6 +89,15 @@ class Optimise extends Command
          */
         $this->call('abos:sync-chart');
 
+        /*
+         * জমার ধরনগুলোও — তৃতীয়বার একই ভুল না করার জন্য।
+         *
+         * ছক আর অনুমতি দুইবার শিখিয়েছে: যে তালিকা কেবল কোম্পানি তৈরির
+         * সময় বসে, সেটা চলমান কোম্পানিতে কোনোদিন পৌঁছায় না। ফল —
+         * খালি ড্রপডাউন, আর ব্যবহারকারী ভাবেন পর্দাটা নষ্ট।
+         */
+        $this->call('abos:sync-deposit-kinds');
+
         foreach (['config:cache', 'event:cache', 'route:cache', 'view:cache'] as $command) {
             $this->call($command);
         }

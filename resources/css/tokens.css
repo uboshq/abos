@@ -810,6 +810,7 @@
 :root {
     --color-module-dashboard: #2563eb;    /* নীল */
     --color-module-accounts: #4f46e5;     /* ইন্ডিগো */
+    --color-module-finance: #0369a1;      /* গাঢ় আকাশি — হিসাবের পাশে, তবু আলাদা */
     --color-module-sales: #10b981;        /* এমারেল্ড */
     --color-module-purchase: #f59e0b;     /* অ্যাম্বার */
     --color-module-inventory: #06b6d4;    /* সায়ান */
