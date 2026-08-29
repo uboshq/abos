@@ -6,6 +6,7 @@ use App\Models\UserDataScope;
 use App\Modules\Inventory\Dashboard\InventoryWidgets;
 use App\Modules\Inventory\Imports\OpeningStockImporter;
 use App\Modules\Inventory\Imports\ProductImporter;
+use App\Modules\Inventory\Listeners\SendTheOrderToTheKitchen;
 use App\Modules\Inventory\Models\CostLayer;
 use App\Modules\Inventory\Models\CostLayerUse;
 use App\Modules\Inventory\Models\Product;
@@ -13,6 +14,7 @@ use App\Modules\Inventory\Models\StockMovement;
 use App\Modules\Inventory\Models\StockTransfer;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Reports\StockReports;
+use App\Modules\Sales\Events\InvoiceConfirmed;
 
 /**
  * Inventory — প্ল্যান Phase 6।
@@ -100,6 +102,8 @@ return [
              */
             ['label' => 'inventory::menu.kitchen_board', 'route' => 'inventory.kitchen.index',
                 'permission' => 'inventory.recipe.view'],
+            ['label' => 'inventory::menu.kitchen_tickets', 'route' => 'inventory.kitchen.tickets',
+                'permission' => 'inventory.recipe.view'],
             ['label' => 'inventory::menu.production', 'route' => 'inventory.production.index',
                 'permission' => 'inventory.production.view'],
         ],
@@ -135,6 +139,18 @@ return [
 
             // রিকলের পর্দাটা বিক্রয়ের মেনুতে — উত্তরটা গ্রাহকের তালিকা
         ],
+    ],
+
+    /*
+     * বিক্রয়ের ঘটনা শোনা — রান্নাঘরের টিকিট।
+     *
+     * ── কেন এদিক থেকে ───────────────────────────────────────────────
+     * বিক্রয়ের ভেতরে লিখলে Sales-কে রান্নাঘরের কথা জানতে হত, আর তখন
+     * Sales → Inventory → Sales একটা চক্র হত। এদিক থেকে শুনলে কোনো
+     * নতুন নির্ভরতা লাগে না: Inventory বিক্রয়কে আগে থেকেই চেনে।
+     */
+    'listeners' => [
+        InvoiceConfirmed::class => [SendTheOrderToTheKitchen::class],
     ],
 
     'permissions' => [

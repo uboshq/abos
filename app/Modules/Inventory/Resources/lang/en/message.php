@@ -92,4 +92,7 @@ return [
     'kitchen_note' => 'Counted from the ingredients — how many more can still be sold',
     'checked_at' => 'Checked at',
     'not_refreshing' => 'Not refreshing',
+    'tickets_note' => 'Orders not yet served — the oldest first',
+    'kitchen_quiet' => 'Nothing waiting',
+    'ticket_wrong_step' => 'That step cannot be taken from here',
 ];

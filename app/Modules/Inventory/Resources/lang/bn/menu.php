@@ -21,4 +21,5 @@ return [
     'production' => 'রান্না',
     'food_cost' => 'খাদ্য-খরচ',
     'kitchen_board' => 'রান্নাঘরের বোর্ড',
+    'kitchen_tickets' => 'রান্নাঘরের পর্দা',
 ];
