@@ -6,6 +6,7 @@ use App\Modules\Accounts\Http\Controllers\AccountsDashboardController;
 use App\Modules\Accounts\Http\Controllers\AccountsSettingsController;
 use App\Modules\Accounts\Http\Controllers\BankReconciliationController;
 use App\Modules\Accounts\Http\Controllers\BooksIntegrityController;
+use App\Modules\Accounts\Http\Controllers\CapitalController;
 use App\Modules\Accounts\Http\Controllers\CashCountController;
 use App\Modules\Accounts\Http\Controllers\CashTillController;
 use App\Modules\Accounts\Http\Controllers\ChartOfAccountsController;
@@ -101,6 +102,19 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
      * {voucher} রুটগুলো ধরন ছাড়া, কারণ একটা ভাউচার নিজেই জানে সে কোন
      * ধরনের — ঠিকানায় ধরনটা আবার লিখলে দুইটা অমিল হতে পারত।
      */
+    /*
+     * মূলধন ও বিনিয়োগ — ব্যবসার প্রথম ধাপ।
+     *
+     * `post` আলাদা একটা POST, কারণ ওটাই আসল ঘটনা: লিখে রাখা নিরীহ,
+     * পোস্ট করা মানে খাতায় টাকা বসে যাওয়া।
+     */
+    Route::prefix('capital')->name('capital.')->group(function () {
+        Route::get('/', [CapitalController::class, 'index'])->name('index');
+        Route::post('/', [CapitalController::class, 'store'])->name('store');
+        Route::post('/{entry}/post', [CapitalController::class, 'post'])
+            ->whereNumber('entry')->name('post');
+    });
+
     Route::prefix('vouchers')->name('voucher.')->group(function () {
         Route::get('/{voucher}', [VoucherController::class, 'show'])
             ->whereNumber('voucher')->name('show');

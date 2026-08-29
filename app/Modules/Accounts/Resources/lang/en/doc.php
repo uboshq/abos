@@ -16,4 +16,5 @@ return [
 
     // চেকের খাতা
     'cheque' => 'Cheque',
+    'capital' => 'Capital',
 ];
