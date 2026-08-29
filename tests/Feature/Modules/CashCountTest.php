@@ -13,6 +13,7 @@ use App\Modules\Accounts\Models\CashCount;
 use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Services\CashCountService;
 use App\Modules\Accounts\Services\CashTillService;
+use App\Modules\Accounts\Services\OpeningBalanceService;
 use App\Modules\Accounts\Services\StandardChart;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -57,6 +58,20 @@ class CashCountTest extends TestCase
             'opening_balance' => '10000',
             'opening_date' => '2026-07-01',
         ]);
+
+        /*
+         * ── কলামে বসিয়েই থামা যায় না, ৩০ আগস্ট ২০২৬ ──────────────────
+         * আগে `Account::balanceOn()` কলামটা কোডে যোগ করত, তাই কেবল
+         * `update()` করলেই খাতে টাকা দেখাত। কিন্তু রিপোর্টগুলো খতিয়ান
+         * পড়ে — তারা ওই টাকাটা কোনোদিন দেখত না, আর সেটাই HP-র ধরা বাগ
+         * ([[OneNumberOneSourceTest]])।
+         *
+         * এখন জেরটা সত্যিকারের দাখিলা, তাই পরীক্ষাটাও সেই পথেই যায় —
+         * ঠিক যেভাবে পুরনো সারিগুলোর জন্য ডিপ্লয়ের কমান্ডটা যায়।
+         */
+        app(OpeningBalanceService::class)->forAccount(
+            Account::query()->findOrFail($this->till->account_id),
+        );
     }
 
     private function service(): CashCountService
