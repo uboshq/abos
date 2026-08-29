@@ -7,6 +7,7 @@ use App\Modules\Finance\Http\Controllers\DepositController;
 use App\Modules\Finance\Http\Controllers\ExpenseController;
 use App\Modules\Finance\Http\Controllers\HandLoanController;
 use App\Modules\Finance\Http\Controllers\PlanController;
+use App\Modules\Finance\Http\Controllers\WithdrawalController;
 use App\Modules\Finance\Models\DepositKind;
 use Illuminate\Support\Facades\Route;
 
@@ -62,6 +63,23 @@ Route::middleware('auth')->prefix('finance')->group(function () {
      * ঢুকলে যদি প্যারামিটারটা হারিয়ে যেত, বাঁ পাশের মেনুতে "ব্যাংক
      * আমানত" নিভে যেত — আর ব্যবহারকারী জানত না সে কোথায় আছে।
      */
+    /*
+     * উত্তোলন — মালিক/অংশীদারের টাকা তোলা।
+     *
+     * ── কেন `cap` আলাদা POST, একই পর্দায় ────────────────────────────
+     * সীমা বদলানো উত্তোলন লেখার চেয়ে কড়া ক্ষমতা: যে কেরানি উত্তোলন
+     * লিখতে পারেন, তাঁর সীমা বদলানোর ক্ষমতা থাকার কথা নয়। আলাদা
+     * পথ মানে আলাদা চাবি।
+     */
+    Route::prefix('withdrawals')->name('withdrawal.')->group(function () {
+        Route::get('/', [WithdrawalController::class, 'index'])->name('index');
+        Route::post('/', [WithdrawalController::class, 'store'])->name('store');
+        Route::post('/cap', [WithdrawalController::class, 'cap'])->name('cap');
+
+        Route::post('/{withdrawal}/post', [WithdrawalController::class, 'post'])
+            ->whereNumber('withdrawal')->name('post');
+    });
+
     /*
      * হাতধার — নিজের মেনু, নিজের পূর্ণাঙ্গ হিসাব।
      *

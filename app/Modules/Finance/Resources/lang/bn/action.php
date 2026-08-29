@@ -11,4 +11,5 @@ return [
     'cancel_deposit' => 'ভুল হয়েছে — বাতিল করুন',
     'record_movement' => 'লিখুন',
     'mark_settled' => 'চুকে গেছে',
+    'money_taken' => 'টাকা গেছে',
 ];

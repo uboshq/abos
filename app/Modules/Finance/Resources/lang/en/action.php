@@ -11,4 +11,5 @@ return [
     'cancel_deposit' => 'Entered by mistake — cancel it',
     'record_movement' => 'Record it',
     'mark_settled' => 'Mark settled',
+    'money_taken' => 'Money went out',
 ];

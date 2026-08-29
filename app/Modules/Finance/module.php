@@ -95,6 +95,16 @@ return [
              */
             ['label' => 'finance::menu.hand_loan', 'route' => 'finance.hand_loan.index',
                 'permission' => 'finance.hand_loan.view'],
+
+            /*
+             * উত্তোলন — মূলধনের উল্টো দিক, তাই ওটার কাছেই।
+             *
+             * মূলধনের পর্দা বলে কে কত দিয়েছেন; এটা বলে কে কত নিয়েছেন।
+             * দুইটা এক পাতায় রাখা যেত, কিন্তু উত্তোলনে অনুমোদন ও
+             * মাসিক সীমা আছে — মূলধনে নেই।
+             */
+            ['label' => 'finance::menu.withdrawal', 'route' => 'finance.withdrawal.index',
+                'permission' => 'finance.withdrawal.view'],
         ],
     ],
 
@@ -140,6 +150,18 @@ return [
         'finance.hand_loan.view',
         'finance.hand_loan.create',
         'finance.hand_loan.move',
+
+        /*
+         * উত্তোলন — চারটা ক্ষমতা, আর `cap` সবচেয়ে কড়া।
+         *
+         * সীমা বদলানো মানে নিয়মটাই বদলানো। যে কেরানি উত্তোলন লিখতে
+         * পারেন তাঁর ওই ক্ষমতা থাকার কথা নয় — নাহলে সীমাটা কেবল
+         * একটা সাজানো সংখ্যা।
+         */
+        'finance.withdrawal.view',
+        'finance.withdrawal.create',
+        'finance.withdrawal.post',
+        'finance.withdrawal.cap',
     ],
 
     /*
@@ -163,6 +185,9 @@ return [
     'doc_types' => [
         'CAP' => 'finance::doc.capital',
         'DEP' => 'finance::doc.deposit',
+
+        /* উত্তোলন — নিজের নম্বর, কারণ অনুমোদনে এটাই পরিচয় */
+        'WDR' => 'finance::doc.withdrawal',
     ],
 
     'reports' => [],
