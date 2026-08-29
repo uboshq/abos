@@ -96,6 +96,20 @@ class CollectionController extends Controller implements HasMiddleware
                 'sales.collection.index',
                 $request->except(['stage', 'page']),
                 $stage !== '' ? $stage : null,
+                /*
+                 * আদায়ের টাকার কলামটা `amount`, `total` নয়।
+                 *
+                 * ── কী ভাঙল, ২৯ আগস্ট ২০২৬ ───────────────────────────
+                 * ডিফল্ট `total` ধরে নেওয়ায় লাইভে `/sales/collections`
+                 * ৫০০ দিচ্ছিল — "Unknown column 'total'"। বাকি তিনটা
+                 * কাগজে `total` আছে বলে ওখানে ধরা পড়েনি।
+                 *
+                 * সুইট এটা ধরেছিল ([[ModuleMenuTest]] — "মেনুতে দেখা
+                 * যাচ্ছে, ক্লিক করলে ভাঙে"), কিন্তু আমি সুইট চালানোর
+                 * **আগেই** ডিপ্লয় করে ফেলেছিলাম। পাহারাটা কাজ করেছে;
+                 * আমি ওটাকে কাজ করার সুযোগ দিইনি।
+                 */
+                'amount',
             ),
         ]);
     }
