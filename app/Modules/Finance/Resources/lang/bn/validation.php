@@ -17,4 +17,9 @@ return [
     'chart_head_missing' => 'হিসাবের ছকে :code খাতটা নেই',
     'deposit_already_cancelled' => ':no আগেই বাতিল হয়েছে',
     'cancel_reason_needed' => 'কেন বাতিল করছেন সেটা লিখতে হবে',
+    'hand_loan_needs_a_name' => 'কার সাথে, সেটা লিখতে হবে',
+    'hand_loan_which_way' => 'টাকাটা গেল না এল, সেটা বলতে হবে',
+    'hand_loan_amount_positive' => 'অঙ্কটা শূন্যের বেশি হতে হবে — উল্টো দিকে গেলে সেটাকে উল্টো দিক হিসেবেই লিখুন',
+    'hand_loan_not_clear' => 'এখনো :amount বাকি — শূন্য না হলে চুকে গেছে বলা যায় না',
+    'hand_loan_already_settled' => ':who-এর হিসাব আগেই চুকে গেছে',
 ];

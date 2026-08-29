@@ -9,4 +9,6 @@ return [
     'take_payout' => 'Take payout',
     'close_deposit' => 'Close it',
     'cancel_deposit' => 'Entered by mistake — cancel it',
+    'record_movement' => 'Record it',
+    'mark_settled' => 'Mark settled',
 ];

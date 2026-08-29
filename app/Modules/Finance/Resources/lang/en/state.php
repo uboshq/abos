@@ -8,4 +8,5 @@ return [
     'closed' => 'Closed',
     'overdue' => 'Past maturity',
     'cancelled' => 'Cancelled',
+    'settled' => 'Settled',
 ];

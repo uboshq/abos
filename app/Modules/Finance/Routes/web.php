@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Modules\Finance\Http\Controllers\CapitalController;
 use App\Modules\Finance\Http\Controllers\DepositController;
 use App\Modules\Finance\Http\Controllers\ExpenseController;
+use App\Modules\Finance\Http\Controllers\HandLoanController;
 use App\Modules\Finance\Http\Controllers\PlanController;
 use App\Modules\Finance\Models\DepositKind;
 use Illuminate\Support\Facades\Route;
@@ -61,6 +62,27 @@ Route::middleware('auth')->prefix('finance')->group(function () {
      * ঢুকলে যদি প্যারামিটারটা হারিয়ে যেত, বাঁ পাশের মেনুতে "ব্যাংক
      * আমানত" নিভে যেত — আর ব্যবহারকারী জানত না সে কোথায় আছে।
      */
+    /*
+     * হাতধার — নিজের মেনু, নিজের পূর্ণাঙ্গ হিসাব।
+     *
+     * মালিকের নির্দেশ: *"hand loan আলাদা মেনু করো মানে পূর্ণাঙ্গ হিসাব
+     * আলাদা"*। ঋণের ফর্মে এটা একটা `kind` ছিল, আর HP-র রিপোর্টে ওই
+     * ব্যবস্থার ফলটাই ধরা পড়েছে: "Hand loan" বাছলে সেভ হত "CC" হিসেবে।
+     */
+    Route::prefix('hand-loans')->name('hand_loan.')->group(function () {
+        Route::get('/', [HandLoanController::class, 'index'])->name('index');
+        Route::post('/', [HandLoanController::class, 'store'])->name('store');
+
+        Route::get('/{handLoan}', [HandLoanController::class, 'show'])
+            ->whereNumber('handLoan')->name('show');
+
+        Route::post('/{handLoan}/move', [HandLoanController::class, 'move'])
+            ->whereNumber('handLoan')->name('move');
+
+        Route::post('/{handLoan}/settle', [HandLoanController::class, 'settle'])
+            ->whereNumber('handLoan')->name('settle');
+    });
+
     Route::prefix('deposits')->name('deposit.')->group(function () {
         Route::get('/{issuer}', [DepositController::class, 'index'])
             ->whereIn('issuer', DepositKind::ISSUERS)->name('index');

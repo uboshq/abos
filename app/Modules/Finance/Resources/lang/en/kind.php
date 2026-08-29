@@ -11,4 +11,6 @@ return [
     'closed' => 'Closed',
     'at_maturity' => 'Profit at maturity',
     'periodic_payout' => 'Regular payout',
+    'out' => 'Given',
+    'in' => 'Received',
 ];

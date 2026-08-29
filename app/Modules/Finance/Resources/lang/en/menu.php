@@ -9,4 +9,5 @@ return [
     'deposit_bank' => 'Bank Deposits',
     'deposit_savings' => 'Savings Certificates',
     'deposit_bond' => 'Bonds',
+    'hand_loan' => 'Hand Loans',
 ];

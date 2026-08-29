@@ -8,4 +8,5 @@ return [
     'closed' => 'শেষ',
     'overdue' => 'মেয়াদ পেরিয়েছে',
     'cancelled' => 'বাতিল',
+    'settled' => 'চুকে গেছে',
 ];
