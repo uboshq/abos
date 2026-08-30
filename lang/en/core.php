@@ -347,6 +347,16 @@ return [
 
         // A cancelled paper looks exactly like a valid one; the line is the only difference
         'cancelled_notice' => 'CANCELLED — this document has been cancelled and is not valid',
+
+        /*
+         * জলছাপের লেখাটা আলাদা, আর ছোট -- ইচ্ছাকৃত।
+         *
+         * উপরের বাক্সে পুরো বাক্যটা যায় ("এই কাগজটি বাতিল করা হয়েছে,
+         * এর কোনো মূল্য নেই")। জলছাপ কোনাকুনি গোটা পাতা জুড়ে বসে, তাই
+         * সেখানে লম্বা বাক্য দিলে অক্ষরগুলো এত ছোট হত যে কিছুই পড়া
+         * যেত না -- আর পড়া না গেলে জলছাপের কোনো মানে নেই।
+         */
+        'cancelled_watermark' => 'CANCELLED',
         'print' => 'Print',
         'choose_paper' => 'Choose paper',
         'show_vendor_credit' => 'Show "Powered by ABOS" on printouts',

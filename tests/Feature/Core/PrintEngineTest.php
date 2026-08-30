@@ -81,6 +81,55 @@ class PrintEngineTest extends TestCase
         ];
     }
 
+    /**
+     * জলছাপ চাইলে PDF বড় হয় — কিছু একটা সত্যিই বসেছে।
+     *
+     * ── কেন মাপ ধরে, লেখা ধরে নয় ────────────────────────────────────
+     * PDF-এর ভেতরে লেখা সংকুচিত (Flate) আর ফন্ট অনুযায়ী সাবসেট করা,
+     * তাই "বাতিল" শব্দটা কাঁচা বাইটে খুঁজে পাওয়া যায় না — বাংলা তো
+     * নয়ই। কিন্তু জলছাপ প্রতিটা পাতায় একটা আলাদা বস্তু যোগ করে, আর
+     * সেটা মাপে ধরা পড়ে।
+     *
+     * ভুল দিকটা এখানেই বিপজ্জনক: কেউ যদি `watermark:` লাইনটা কোনোদিন
+     * ফেলে দেয়, দুইটা PDF **হুবহু সমান মাপের** হত, আর এই পরীক্ষা লাল
+     * হত।
+     */
+    public function test_asking_for_a_watermark_changes_the_pdf(): void
+    {
+        $plain = $this->engine->render('voucher', $this->voucher(), PaperSize::A4);
+
+        $marked = $this->engine->render(
+            'voucher', $this->voucher(), PaperSize::A4, watermark: 'বাতিল',
+        );
+
+        $this->assertStringStartsWith('%PDF-', $marked);
+
+        $this->assertGreaterThan(strlen($plain), strlen($marked),
+            'জলছাপ চাওয়ার পরেও PDF-টা হুবহু আগের মাপের — অর্থাৎ কিছুই বসেনি।');
+    }
+
+    /**
+     * থার্মাল কাগজে জলছাপ বসে না।
+     *
+     * ── কেন ─────────────────────────────────────────────────────────
+     * রোল প্রিন্টার তাপ দিয়ে ছাপে — ধূসর বলে কিছু নেই, সব কালো। জলছাপ
+     * বসালে ওটা লেখার উপর দিয়েই যেত আর রসিদটা পড়াই যেত না। ৫৮mm
+     * কাগজে উপরের বাক্সটা এড়ানোরও উপায় নেই, তাই ওটাই যথেষ্ট।
+     */
+    public function test_a_thermal_receipt_gets_no_watermark(): void
+    {
+        foreach ([PaperSize::THERMAL_58, PaperSize::THERMAL_80] as $paper) {
+            $plain = $this->engine->render('voucher', $this->voucher(), $paper);
+
+            $marked = $this->engine->render(
+                'voucher', $this->voucher(), $paper, watermark: 'বাতিল',
+            );
+
+            $this->assertSame(strlen($plain), strlen($marked),
+                "{$paper}: তাপীয় রসিদেও জলছাপ বসেছে — ওখানে ওটা লেখা ঢেকে দেয়।");
+        }
+    }
+
     public function test_every_paper_size_produces_a_pdf(): void
     {
         foreach (PaperSize::all() as $paper) {
