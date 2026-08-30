@@ -437,7 +437,9 @@ class SalesPrintController extends Controller implements HasMiddleware
          * বড়জোর দুইবার দাবি করা যায়, বাতিল কাগজ নিয়ে মাল নেওয়া যায়।
          * খসড়ার সাথে সংঘর্ষ নেই — খসড়া আর বাতিল একসাথে হয় না।
          */
-        if (($document?->status ?? null) === DocumentStatus::CANCELLED) {
+        $cancelled = ($document?->status ?? null) === DocumentStatus::CANCELLED;
+
+        if ($cancelled) {
             $doc = $doc->withNotice(__('core.print.cancelled_notice'));
         }
 
@@ -478,6 +480,13 @@ class SalesPrintController extends Controller implements HasMiddleware
                 'title' => $doc->title.' '.$documentNo,
             ],
             paper: $paper,
+
+            /*
+             * বাতিল বিলের গায়ে কোনাকুনি জলছাপ -- উপরের বাক্সের সাথে,
+             * তার বদলে নয়। কারণটা [[PrintEngine::toPdf()]]-এ লেখা:
+             * বাক্স কেটে ফেলা যায়, জলছাপ যায় না।
+             */
+            watermark: $cancelled ? __('core.print.cancelled_watermark') : null,
         );
 
         if ($job !== null) {

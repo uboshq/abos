@@ -85,6 +85,8 @@ class VoucherPrintController extends Controller implements HasMiddleware
                 'notice' => $voucher->isCancelled() ? __('accounts::print.cancelled') : null,
             ],
             paper: $paper,
+
+            watermark: $this->watermarkFor($voucher),
         );
 
         return response($pdf, 200, [
@@ -168,6 +170,34 @@ class VoucherPrintController extends Controller implements HasMiddleware
         );
 
         return [$this->money($debit), $this->money($credit)];
+    }
+
+    /**
+     * বাতিল কাগজের গায়ে কোনাকুনি জলছাপ, ৩০ আগস্ট ২০২৬।
+     *
+     * ── কেন উপরের বাক্সটা যথেষ্ট ছিল না ─────────────────────────────
+     * বাতিল ভাউচারে উপরে একটা বাক্সে "বাতিল" লেখা ওঠে, আর সেটা
+     * ১৪ আগস্ট HP-র ধরা একটা ভুলের সমাধান ছিল।
+     *
+     * বাক্সটা কাগজের একটা কোণে থাকে: ভাঁজ করলে ঢাকা পড়ে, ফটোকপিতে
+     * কেটে ফেলা যায়, আর উপরের অংশটুকু বাদ দিয়ে স্ক্যান করলে বাকিটা
+     * হুবহু বৈধ একটা রসিদ। সমাধানটা এক ভাঁজ দূরে ছিল।
+     *
+     * জলছাপ সংখ্যাগুলোর উপর দিয়ে যায়, তাই কেটে বাদ দিলে সংখ্যাগুলোও
+     * যায়। বাক্সটাও থাকে — দুইটা দুই কাজ করে: বাক্স পড়ে বোঝায়,
+     * জলছাপ নকল করা আটকায়।
+     *
+     * ── কেন এটা নিজের মেথড ──────────────────────────────────────────
+     * সিদ্ধান্তটা `render()`-এর ভেতরে লেখা ছিল, আর তখন পরীক্ষা করার
+     * একমাত্র উপায় ছিল দুইটা PDF-এর মাপ মেলানো। ওটা **সবুজ কিন্তু
+     * অন্ধ** হয়ে গিয়েছিল: বাতিল করলে উপরের বাক্সটাও যোগ হয়, তাই
+     * জলছাপ সরিয়ে দিলেও PDF বড়ই থাকত আর পরীক্ষা পাস করত।
+     *
+     * এখন সিদ্ধান্তটা নিজেই দেখা যায়, তাই ভুলটাও দেখা যায়।
+     */
+    private function watermarkFor(Voucher $voucher): ?string
+    {
+        return $voucher->isCancelled() ? __('core.print.cancelled_watermark') : null;
     }
 
     /**

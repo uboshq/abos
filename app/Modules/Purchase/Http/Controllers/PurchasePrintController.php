@@ -249,7 +249,9 @@ class PurchasePrintController extends Controller implements HasMiddleware
          * বা ফেরতের কাগজ ছাপলে হুবহু বৈধ একটা কাগজ বেরোত, আর সেটা
          * দেখিয়ে সরবরাহকারীর কাছে দাবি করা যেত।
          */
-        if (($document?->status ?? null) === DocumentStatus::CANCELLED) {
+        $cancelled = ($document?->status ?? null) === DocumentStatus::CANCELLED;
+
+        if ($cancelled) {
             $doc = $doc->withNotice(__('core.print.cancelled_notice'));
         }
 
@@ -260,6 +262,13 @@ class PurchasePrintController extends Controller implements HasMiddleware
                 'title' => $doc->title.' '.$documentNo,
             ],
             paper: $paper,
+
+            /*
+             * বাতিল ক্রয় বিলের গায়েও -- বাতিল কাগজ দেখিয়ে
+             * সরবরাহকারীর কাছে দাবি করা যেত, আর উপরের বাক্সটা কেটে
+             * ফেলা যায়।
+             */
+            watermark: $cancelled ? __('core.print.cancelled_watermark') : null,
         );
 
         return response($pdf, 200, [

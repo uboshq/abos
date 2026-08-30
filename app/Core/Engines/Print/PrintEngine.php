@@ -42,6 +42,7 @@ final class PrintEngine
         string $paper = PaperSize::A4,
         ?string $locale = null,
         ?Company $company = null,
+        ?string $watermark = null,
     ): string {
         $size = PaperSize::of($paper);
         $locale = $locale ?? app()->getLocale();
@@ -67,7 +68,7 @@ final class PrintEngine
             app()->setLocale($previous);
         }
 
-        return $this->toPdf($html, $size, $data['title'] ?? $template);
+        return $this->toPdf($html, $size, $data['title'] ?? $template, $watermark);
     }
 
     /**
@@ -132,13 +133,54 @@ final class PrintEngine
         return $this->write($this->newMpdf($size, max($used, 40)), $html, $title);
     }
 
-    private function toPdf(string $html, PaperSize $size, string $title): string
+    private function toPdf(string $html, PaperSize $size, string $title, ?string $watermark = null): string
     {
         if ($size->isThermal) {
+            /*
+             * থার্মালে জলছাপ নয়।
+             *
+             * রোল প্রিন্টার তাপ দিয়ে ছাপে -- ধূসর বলে কিছু নেই, সব
+             * কালো। জলছাপ বসালে ওটা লেখার উপর দিয়েই যেত আর কাগজটা
+             * পড়াই যেত না। উপরের বাক্সটা ওখানেও থাকে, আর ৫৮mm কাগজে
+             * ওটাই যথেষ্ট -- এত ছোট কাগজে বাক্সটা এড়ানোর উপায় নেই।
+             */
             return $this->toThermalPdf($html, $size, $title);
         }
 
-        return $this->write($this->newMpdf($size), $html, $title);
+        $mpdf = $this->newMpdf($size);
+
+        if ($watermark !== null && $watermark !== '') {
+            /*
+             * বাতিল কাগজের গায়ে কোনাকুনি জলছাপ।
+             *
+             * ---- কেন উপরের বাক্সটা যথেষ্ট নয়, ৩০ আগস্ট ২০২৬ ----
+             * বাতিল ভাউচারে উপরে একটা বাক্সে "বাতিল" লেখা ওঠে, আর
+             * সেটা ১৪ আগস্ট HP-র ধরা একটা ভুলের সমাধান ছিল।
+             *
+             * কিন্তু উপরের একটা বাক্স কাগজের **একটা কোণে** থাকে: ভাঁজ
+             * করলে ঢাকা পড়ে, ফটোকপিতে কেটে ফেলা যায়, আর স্ক্যান করে
+             * উপরের অংশটুকু বাদ দিলে বাকিটা হুবহু বৈধ একটা কাগজ।
+             *
+             * জলছাপ লেখার **উপর দিয়ে** যায়, তাই কেটে বাদ দিলে
+             * সংখ্যাগুলোও যায়। ওটাই আসল পার্থক্য।
+             *
+             * mPDF-এর নিজের ব্যবস্থা ব্যবহার করা হয়, CSS ঘুরিয়ে নয় --
+             * ঘোরানো লেখা mPDF-এ পাতার প্রবাহ নষ্ট করে, আর জলছাপটা
+             * তখন সারির মাঝখানে জায়গা দখল করত।
+             */
+            $mpdf->SetWatermarkText($watermark);
+            $mpdf->showWatermarkText = true;
+
+            /*
+             * হালকা, কিন্তু অস্বীকার করার মতো নয়।
+             *
+             * mPDF-এর ডিফল্ট এত ফিকে যে ফটোকপিতে হারিয়ে যায়, আর
+             * হারানো জলছাপ না-থাকার সমান।
+             */
+            $mpdf->watermarkTextAlpha = 0.12;
+        }
+
+        return $this->write($mpdf, $html, $title);
     }
 
     /**
