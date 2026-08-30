@@ -200,6 +200,23 @@ class Deposit extends Model
             return false;
         }
 
-        return ! (bool) $this->pledgedToLoan?->isSettled();
+        $loan = $this->pledgedToLoan;
+
+        if ($loan === null) {
+            return false;
+        }
+
+        /*
+         * ঘোরানো সীমায় আজকের ব্যালেন্স উত্তর নয়।
+         *
+         * সিসিতে টাকা রোজ ওঠে-নামে, আর শূন্যেও নামে -- ওটাই তার
+         * স্বভাব। ব্যাংক প্রতিবার FD ফেরত দেয় না; জামানত থাকে সীমাটার
+         * বিপরীতে ([[Loan::isRevolving()]])।
+         */
+        if ($loan->isRevolving()) {
+            return true;
+        }
+
+        return ! $loan->isSettled();
     }
 }
