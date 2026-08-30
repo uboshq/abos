@@ -65,13 +65,21 @@ final class PartyReports
         return new ReportDefinition(
             key: 'customer.collection',
             title: 'customer::menu.collection',
-            filters: ['date_range', 'branch'],
+            filters: ['date_range', 'branch', 'party_type'],
             groupBy: 'party_id',
             query: fn (array $f) => DB::table('ledger_entries')
                 ->join('customers', 'customers.id', '=', 'ledger_entries.party_id')
                 ->where('ledger_entries.company_id', $f['company_id'])
                 ->where('ledger_entries.party_type', Customer::drillSourceType())
                 ->when($f['branch_id'], fn ($q, $branch) => $q->where('ledger_entries.branch_id', $branch))
+                /*
+                 * পক্ষের ধরন ধরে ছাঁকা — "ডিলারদের কত বকেয়া, পাইকারদের কত"।
+                 *
+                 * ধরনটা খোলা তালিকা, তাই কোম্পানি নতুন একটা ধরন যোগ
+                 * করলেই তার খতিয়ান পেয়ে যায় — কোড ছোঁয়া ছাড়াই।
+                 */
+                ->when($f['party_type_id'] ?? null,
+                    fn ($q, $type) => $q->where('customers.party_type_id', $type))
                 ->whereBetween('ledger_entries.trx_date', [$f['from'], $f['to']])
                 ->groupBy('ledger_entries.party_id', 'customers.code', 'customers.name_en', 'customers.name_bn')
                 // যে গ্রাহকের এই সময়ে কিছুই হয়নি তাঁর সারি শুধু ভিড় বাড়ায়
@@ -179,13 +187,21 @@ final class PartyReports
         return new ReportDefinition(
             key: 'customer.due_list',
             title: 'customer::menu.due_list',
-            filters: ['date_range', 'branch'],
+            filters: ['date_range', 'branch', 'party_type'],
             groupBy: 'party_id',
             query: fn (array $f) => DB::table('ledger_entries')
                 ->join('customers', 'customers.id', '=', 'ledger_entries.party_id')
                 ->where('ledger_entries.company_id', $f['company_id'])
                 ->where('ledger_entries.party_type', Customer::drillSourceType())
                 ->when($f['branch_id'], fn ($q, $branch) => $q->where('ledger_entries.branch_id', $branch))
+                /*
+                 * পক্ষের ধরন ধরে ছাঁকা — "ডিলারদের কত বকেয়া, পাইকারদের কত"।
+                 *
+                 * ধরনটা খোলা তালিকা, তাই কোম্পানি নতুন একটা ধরন যোগ
+                 * করলেই তার খতিয়ান পেয়ে যায় — কোড ছোঁয়া ছাড়াই।
+                 */
+                ->when($f['party_type_id'] ?? null,
+                    fn ($q, $type) => $q->where('customers.party_type_id', $type))
                 // শুরুর তারিখ ধরা হয় না: বকেয়া একটা মুহূর্তের অবস্থা,
                 // পরিসরের নয় — "কত দিন থেকে বাকি" প্রশ্নটা ageing-এর
                 ->where('ledger_entries.trx_date', '<=', $f['to'])
@@ -231,7 +247,7 @@ final class PartyReports
         return new ReportDefinition(
             key: 'customer.ageing',
             title: 'customer::menu.ageing',
-            filters: ['date_range', 'branch'],
+            filters: ['date_range', 'branch', 'party_type'],
             groupBy: 'party_id',
             query: function (array $f) {
                 $asOf = Carbon::parse($f['to']);
@@ -261,6 +277,9 @@ final class PartyReports
                     ->where('ledger_entries.company_id', $f['company_id'])
                     ->where('ledger_entries.party_type', Customer::drillSourceType())
                     ->when($f['branch_id'], fn ($q, $branch) => $q->where('ledger_entries.branch_id', $branch))
+                    /* একই ছাঁকনি — প্রশ্নটা এখানেও একই */
+                    ->when($f['party_type_id'] ?? null,
+                        fn ($q, $type) => $q->where('customers.party_type_id', $type))
                     ->where('ledger_entries.trx_date', '<=', $f['to'])
                     ->groupBy('ledger_entries.party_id', 'customers.code', 'customers.name_en', 'customers.name_bn')
                     ->havingRaw('SUM(ledger_entries.debit) - SUM(ledger_entries.credit) <> 0')

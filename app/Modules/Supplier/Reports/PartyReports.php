@@ -49,13 +49,25 @@ final class PartyReports
         return new ReportDefinition(
             key: 'supplier.payable_list',
             title: 'supplier::menu.payable_list',
-            filters: ['date_range', 'branch'],
+            filters: ['date_range', 'branch', 'party_type'],
             groupBy: 'party_id',
             query: fn (array $f) => DB::table('ledger_entries')
                 ->join('suppliers', 'suppliers.id', '=', 'ledger_entries.party_id')
                 ->where('ledger_entries.company_id', $f['company_id'])
                 ->where('ledger_entries.party_type', Supplier::drillSourceType())
                 ->when($f['branch_id'], fn ($q, $branch) => $q->where('ledger_entries.branch_id', $branch))
+                /*
+                 * পক্ষের ধরন ধরে ছাঁকা — "ট্রান্সপোর্টারদের কত দিতে হবে"।
+                 *
+                 * পরিকল্পনায় ডিপোর ছয়টা বিশেষ খতিয়ান চাওয়া হয়েছিল —
+                 * ভাড়া গাড়ি, ট্রান্সপোর্ট ভেন্ডর, শ্রমিক ঠিকাদার, দালাল।
+                 * ওরা সবাই **পক্ষ**, আর পক্ষের ধরন আগে থেকেই একটা খোলা
+                 * তালিকা। ছয়টা আলাদা পর্দা বানালে সপ্তম ধরনটার দিন আবার
+                 * কোড লিখতে হত; ছাঁকনি হলে কোম্পানি নিজে একটা ধরন যোগ
+                 * করলেই তার খতিয়ান পেয়ে যায়।
+                 */
+                ->when($f['party_type_id'] ?? null,
+                    fn ($q, $type) => $q->where('suppliers.party_type_id', $type))
                 // শুরুর তারিখ ধরা হয় না: বকেয়া একটা মুহূর্তের অবস্থা,
                 // পরিসরের নয় — "কত দিন থেকে বাকি" প্রশ্নটা ageing-এর
                 ->where('ledger_entries.trx_date', '<=', $f['to'])
@@ -100,7 +112,7 @@ final class PartyReports
         return new ReportDefinition(
             key: 'supplier.ageing',
             title: 'supplier::menu.ageing',
-            filters: ['date_range', 'branch'],
+            filters: ['date_range', 'branch', 'party_type'],
             groupBy: 'party_id',
             query: function (array $f) {
                 $asOf = Carbon::parse($f['to']);
@@ -130,6 +142,9 @@ final class PartyReports
                     ->where('ledger_entries.company_id', $f['company_id'])
                     ->where('ledger_entries.party_type', Supplier::drillSourceType())
                     ->when($f['branch_id'], fn ($q, $branch) => $q->where('ledger_entries.branch_id', $branch))
+                    /* একই ছাঁকনি — বয়সের তালিকাতেও প্রশ্নটা একই */
+                    ->when($f['party_type_id'] ?? null,
+                        fn ($q, $type) => $q->where('suppliers.party_type_id', $type))
                     ->where('ledger_entries.trx_date', '<=', $f['to'])
                     ->groupBy('ledger_entries.party_id', 'suppliers.code', 'suppliers.name_en', 'suppliers.name_bn')
                     ->havingRaw('SUM(ledger_entries.credit) - SUM(ledger_entries.debit) <> 0')

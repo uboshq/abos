@@ -9,6 +9,7 @@ use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\MasterData\Models\PartyType;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
@@ -118,6 +119,17 @@ class ReportController extends Controller implements HasMiddleware
                 : collect(),
             'accounts' => $definition->hasFilter('account')
                 ? Account::query()->postable()->active()->orderBy('code')->get()
+                : collect(),
+
+            /*
+             * পক্ষের ধরনের ছাঁকনি — কেবল যে রিপোর্ট চেয়েছে তার জন্য।
+             *
+             * ঘোষণা না করলে তালিকাটা খালি যায়, আর পর্দা ঘরটাই আঁকে না।
+             * সব রিপোর্টে জোর করে বসালে মজুদের রিপোর্টেও "পক্ষের ধরন"
+             * ড্রপডাউন বসত, যেখানে প্রশ্নটার কোনো মানে নেই।
+             */
+            'partyTypes' => $definition->hasFilter('party_type')
+                ? PartyType::query()->active()->orderBy('code')->get()
                 : collect(),
         ]);
     }

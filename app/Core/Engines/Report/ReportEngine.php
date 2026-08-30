@@ -340,6 +340,15 @@ final class ReportEngine
         $filters['company_id'] = CompanyContext::id();
         $filters['branch_id'] = $filters['branch_id'] ?? null;
 
+        /*
+         * ঘরটা সবসময় থাকে, খালি হলেও।
+         *
+         * না থাকলে যে রিপোর্ট এটা ব্যবহার করে সেটা `undefined index`-এ
+         * ভাঙত ঠিক তখন, যখন কেউ ছাঁকনিটা ছোঁয়নি — অর্থাৎ সবচেয়ে
+         * সাধারণ ব্যবহারেই। `branch_id` ঠিক একই কারণে এখানে আছে।
+         */
+        $filters['party_type_id'] = $filters['party_type_id'] ?? null;
+
         return $filters;
     }
 
