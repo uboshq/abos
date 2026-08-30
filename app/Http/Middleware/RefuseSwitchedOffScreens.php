@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Middleware;
 
 use App\Core\Module\ModuleRegistry;
+use App\Core\Services\MenuSwitches;
 use App\Core\Services\SettingsService;
 use Closure;
 use Illuminate\Http\Request;
@@ -49,9 +50,13 @@ final class RefuseSwitchedOffScreens
     /** @var list<array{route: string, params: array<string, mixed>, setting: string}>|null */
     private ?array $exact = null;
 
+    /** @var array<string, string> উপসর্গ => গ্রুপের সুইচের কী */
+    private array $groupOf = [];
+
     public function __construct(
         private readonly ModuleRegistry $registry,
         private readonly SettingsService $settings,
+        private readonly MenuSwitches $switches,
     ) {}
 
     public function handle(Request $request, Closure $next): Response
@@ -95,6 +100,21 @@ final class RefuseSwitchedOffScreens
             if (str_starts_with($name, $module->code.'.')
                 && ! $this->settings->get($module->code.'.enabled', true)) {
                 return $module->code.'.enabled';
+            }
+        }
+
+        /*
+         * তারপর গ্রুপ (সাবমডিউল) — সারির নিজের সুইচের **আগে**।
+         *
+         * ── কেন আগে ────────────────────────────────────────────────
+         * স্তরগুলোর ক্রম মেনু আঁকার সময় যা ([[MenuSwitches::itemIsOn()]]),
+         * এখানেও ঠিক তা-ই হতে হবে। উল্টো হলে গ্রুপ বন্ধ অথচ সারির নিজের
+         * সুইচ চালু — এমন হলে পর্দাটা মেনু থেকে উধাও, কিন্তু ঠিকানা
+         * দিলে দিব্যি খুলত। ওটাই "আড়াল, বাধা নয়" ভুলটা।
+         */
+        foreach ($this->groupOf as $prefix => $groupKey) {
+            if (str_starts_with($name, $prefix) && ! $this->settings->get($groupKey, true)) {
+                return $groupKey;
             }
         }
 
@@ -151,31 +171,54 @@ final class RefuseSwitchedOffScreens
         $this->exact = [];
 
         foreach ($this->registry->all() as $module) {
-            foreach ($module->menu as $items) {
+            foreach ($module->menu as $group => $items) {
                 foreach ($items as $item) {
-                    if (! isset($item['setting'], $item['route'])) {
+                    if (! isset($item['route'])) {
                         continue;
                     }
 
+                    /*
+                     * ── কেন প্রতিটা সারির কী এখন নিয়ম ধরে, ৩০ আগস্ট ২০২৬ ──
+                     * আগে কেবল যারা `setting` ঘোষণা করেছিল তারাই এই
+                     * মানচিত্রে আসত — একশোর বেশি সারির মধ্যে কয়েকটা।
+                     * বাকিগুলোর সুইচই ছিল না, তাই বন্ধ করার প্রশ্নও ছিল না।
+                     *
+                     * এখন কী-টা [[MenuSwitches]] বানায়, তাই কন্ট্রোল
+                     * প্যানেলে বন্ধ করা যেকোনো সারির ঠিকানাও ৪০৪ দেয় —
+                     * নাহলে সুইচটা আড়াল হত, বাধা নয়, ঠিক যে ভুলটা
+                     * ১৩ আগস্ট ধরা পড়েছিল।
+                     */
+                    $setting = $this->switches->forItem($item);
                     $params = $item['route_params'] ?? [];
+
+                    /*
+                     * গ্রুপের মানচিত্রটা **প্যারামিটার দেখার আগে** —
+                     * নাহলে যে গ্রুপে কেবল প্যারামিটারওয়ালা সারি আছে
+                     * (পাঁচ ধরনের ভাউচার) সেটা এখানে কখনো নথিভুক্তই হত
+                     * না, আর তার সুইচ বন্ধ করলে ঠিকানাগুলো খোলাই থাকত।
+                     */
+                    $dot = strrpos($item['route'], '.');
+
+                    if ($dot !== false) {
+                        $this->groupOf[substr($item['route'], 0, $dot + 1)]
+                            = $this->switches->forGroup($module->code, (string) $group);
+                    }
 
                     if ($params !== []) {
                         $this->exact[] = [
                             'route' => $item['route'],
                             'params' => $params,
-                            'setting' => $item['setting'],
+                            'setting' => $setting,
                         ];
 
                         continue;
                     }
 
-                    $dot = strrpos($item['route'], '.');
-
                     if ($dot === false) {
                         continue;
                     }
 
-                    $this->prefixes[substr($item['route'], 0, $dot + 1)] = $item['setting'];
+                    $this->prefixes[substr($item['route'], 0, $dot + 1)] = $setting;
                 }
             }
         }

@@ -27,7 +27,10 @@ final class SettingsService
     /** @var array<string, array{type: string, default: mixed, module: string, group: string, label: string}>|null */
     private ?array $definitions = null;
 
-    public function __construct(private readonly ModuleRegistry $registry) {}
+    public function __construct(
+        private readonly ModuleRegistry $registry,
+        private readonly MenuSwitches $switches,
+    ) {}
 
     /**
      * সব মডিউলের ঘোষিত সেটিং — Control Panel-এর স্ক্রিন এটা থেকেই তৈরি হয়।
@@ -79,7 +82,87 @@ final class SettingsService
             }
         }
 
-        return $this->definitions = $definitions;
+        return $this->definitions = $definitions + $this->menuSwitches($definitions);
+    }
+
+    /**
+     * মেনুর সুইচগুলো — কোনো মডিউল ঘোষণা করে না, নিয়ম ধরে তৈরি।
+     *
+     * ── কেন এগুলোও এখানে আসে, ৩০ আগস্ট ২০২৬ ─────────────────────────
+     * `set()` অচেনা কী ফিরিয়ে দেয়, আর সেটা ঠিক: অচেনা কী মানে প্রায়
+     * সবসময় টাইপো, আর নীরবে বসে গেলে ব্যবস্থায় এমন সুইচ থাকত যা কোনো
+     * কোড কোনোদিন পড়ে না।
+     *
+     * কিন্তু মেনুর একশোর বেশি কী নিয়ম ধরে তৈরি ([[MenuSwitches]])।
+     * পাহারাটা পাশ কাটিয়ে গেলে টাইপো ধরার শক্তিটাই চলে যেত, তাই
+     * উল্টোটা করা হলো — কী-গুলোকে **চেনানো** হলো।
+     *
+     * ── কেন `+`, আর `array_merge` নয় ─────────────────────────────────
+     * কিছু সারি নিজের সুইচ ঘোষণা করে, আর সেটা একটা সারির চেয়ে বড় কিছু
+     * নিয়ন্ত্রণ করে (এক ঘোষণায় গাড়ি আর গাড়ির ধরন দুইটাই)। `+` ঘোষিতটাকে
+     * অক্ষত রাখে; `array_merge` ওটাকে চাপা দিত, আর তখন ঘোষণার
+     * লেবেল-ডিফল্ট সব হারাত।
+     *
+     * @param  array<string, array<string, mixed>>  $declared
+     * @return array<string, array{type: string, default: mixed, module: string, group: string, label: string, menu: bool}>
+     */
+    private function menuSwitches(array $declared): array
+    {
+        $out = [];
+
+        foreach ($this->switches->tree() as $module) {
+            $rows = [[
+                'key' => $module['key'],
+                'label' => $module['label'],
+                'group' => 'module',
+            ]];
+
+            foreach ($module['groups'] as $group) {
+                $rows[] = [
+                    'key' => $group['key'],
+                    'label' => $group['name'],
+                    'group' => 'group',
+                ];
+
+                foreach ($group['items'] as $item) {
+                    $rows[] = [
+                        'key' => $item['key'],
+                        'label' => $item['label'],
+                        'group' => 'item',
+                    ];
+                }
+            }
+
+            foreach ($rows as $row) {
+                if (isset($declared[$row['key']]) || isset($out[$row['key']])) {
+                    continue;
+                }
+
+                $out[$row['key']] = [
+                    'type' => 'boolean',
+
+                    /*
+                     * ডিফল্ট চালু — নতুন পর্দা নিজে থেকেই দেখা যায়।
+                     *
+                     * উল্টো হলে প্রতিটা নতুন পর্দা ডেলিভারির দিন
+                     * অদৃশ্য থাকত, আর কেউ জানত না যে ওটা এসেছে।
+                     */
+                    'default' => true,
+                    'module' => $module['code'],
+                    'group' => $row['group'],
+                    'label' => $row['label'],
+                    'holds' => null,
+
+                    /*
+                     * এই চিহ্নটা কন্ট্রোল প্যানেলের জন্য: মেনুর সুইচ
+                     * নিজের ছকে দেখানো হয়, মডিউলের সেটিংস কার্ডে নয়।
+                     */
+                    'menu' => true,
+                ];
+            }
+        }
+
+        return $out;
     }
 
     public function get(string $key, mixed $fallback = null): mixed
