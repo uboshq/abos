@@ -24,9 +24,20 @@
          আর দায় না থাকলে বন্ধকেরও কারণ থাকে না
          ([[Deposit::isLocked()]])। --}}
     @if ($deposit->isLocked())
-        <span class="mt-0.5 inline-flex w-fit rounded-(--radius-field) bg-(--color-badge-warning-bg)
-                     px-2 py-0.5 text-2xs text-(--color-badge-warning-ink)">
-            {{ __('finance::state.pledged', ['loan' => $deposit->pledgedToLoan->document_no]) }}
+        {{-- ছোট লেখা, পুরো কথাটা title-এ।
+
+             ---- কেন, ৩০ আগস্ট ২০২৬ ----
+             প্রথমে পুরো বাক্যটাই ব্যাজে ছিল, আর লাইভে দেখা গেল সরু
+             "কোথায়" কলামে ওটা চার লাইনে ভেঙে সারিটাকে তিন গুণ লম্বা
+             করে দিচ্ছে -- এক সারির জন্য গোটা পর্দা নষ্ট।
+
+             তাই ব্যাজে থাকে যেটুকু এক নজরে লাগে ("বাঁধা" + কোন ধার),
+             আর পুরো কথাটা মাউস রাখলে। --}}
+        <span title="{{ __('finance::state.pledged', ['loan' => $deposit->pledgedToLoan->document_no]) }}"
+              class="mt-0.5 inline-flex w-fit whitespace-nowrap rounded-(--radius-field)
+                     bg-(--color-badge-warning-bg) px-2 py-0.5 text-2xs
+                     text-(--color-badge-warning-ink)">
+            {{ __('finance::state.pledged_short') }} · {{ $deposit->pledgedToLoan->document_no }}
         </span>
     @endif
 </span>
