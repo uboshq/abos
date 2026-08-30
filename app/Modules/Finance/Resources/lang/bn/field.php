@@ -78,4 +78,6 @@ return [
     'income_from_sales' => 'বিক্রয় থেকে',
     'income_not_from_sales' => 'বিক্রয় ছাড়া',
     'income_all' => 'মোট আয়',
+    'pledged_to_loan' => 'যে ধারের বিপরীতে বন্ধক',
+    'not_pledged' => 'বাঁধা নেই — ভাঙানো যায়',
 ];

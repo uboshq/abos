@@ -177,6 +177,32 @@
                              :selected="old('payout_account_id')" />
             </div>
 
+            {{-- কোন ধারের বিপরীতে বন্ধক।
+
+                 ---- কেন ঘরটা এখানে এল, ৩০ আগস্ট ২০২৬ ----
+                 ঘরটা ছিল ঋণের ফর্মে, কারণ FD তখন ঋণেরই একটা ধরন ছিল।
+                 FD জমার পর্দায় চলে আসায় ঘরটাও সাথে এল -- নাহলে দরজা
+                 বন্ধ করতে গিয়ে "আমার FD-টা ঋণের বিপরীতে বাঁধা" কথাটা
+                 বলার জায়গাই থাকত না, আর ওটা পরিষ্কার করা হত না,
+                 ক্ষমতা হারানো হত।
+
+                 খালি রাখলে জমাটা হাতের টাকা। বাঁধা থাকলে তালিকায়
+                 "আছে" দেখাবে ঠিকই, কিন্তু ভাঙানো যাবে না।
+
+                 ---- কেন কেবল ব্যবসার জমায় ----
+                 মালিক নিজের নামে যেটা রেখেছেন সেটা ব্যবসার সম্পদ নয়,
+                 তাই ব্যবসার ধারের জামানত হিসেবে ওটা দেখানো মানে এমন
+                 কিছু গুনে ফেলা যা ব্যবসার নয়। --}}
+            @if ($pledgeableLoans->isNotEmpty())
+                <div x-cloak x-show="heldBy === 'business'" class="sm:col-span-2">
+                    <x-ui.select name="pledged_to_loan_id"
+                                 :label="__('finance::field.pledged_to_loan')"
+                                 :options="$pledgeableLoans->mapWithKeys(fn ($l) => [$l->id => $l->lender.' — '.$l->document_no])"
+                                 :placeholder="__('finance::field.not_pledged')"
+                                 :selected="old('pledged_to_loan_id')" />
+                </div>
+            @endif
+
             <div class="sm:col-span-2 xl:col-span-3">
                 <x-ui.field name="note" :label="__('finance::field.note')" :value="old('note')" />
             </div>

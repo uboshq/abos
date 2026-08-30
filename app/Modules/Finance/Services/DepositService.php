@@ -86,6 +86,20 @@ final class DepositService
                 'payout_account_id' => $kind->paysOut() ? ($data['payout_account_id'] ?? null) : null,
                 'account_id' => $this->assetHead($data['held_by'])->id,
                 'funded_from_account_id' => $from->id,
+
+                /*
+                 * কোন ধারের বিপরীতে বন্ধক -- খালি হলে জমাটা হাতের টাকা।
+                 *
+                 * ---- কেন মালিকের নিজের জমায় বন্ধক বসে না ----
+                 * মালিক নিজের নামে যেটা রেখেছেন সেটা ব্যবসার সম্পদ নয়
+                 * ([[Deposit::isBusinessAsset()]]), তাই ব্যবসার ধারের
+                 * বিপরীতে ওটা বাঁধা দেখানো মানে ব্যবসার জামানত হিসেবে
+                 * এমন কিছু গোনা যা ব্যবসার নয়।
+                 */
+                'pledged_to_loan_id' => ($data['held_by'] === Deposit::BUSINESS)
+                    ? (($data['pledged_to_loan_id'] ?? '') ?: null)
+                    : null,
+
                 'status' => Deposit::ACTIVE,
                 'created_by' => auth()->id(),
             ]);

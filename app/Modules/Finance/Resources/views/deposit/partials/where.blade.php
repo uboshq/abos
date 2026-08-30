@@ -12,4 +12,21 @@
             {{ collect([$deposit->branch_name, $deposit->reference_no])->filter()->implode(' · ') }}
         </span>
     @endif
+
+    {{-- বাঁধা থাকলে সেটা বলা হয়, চুপ থাকা হয় না।
+
+         ---- কেন এটা তালিকাতেই ----
+         বাঁধা জমা তালিকায় "আছে" দেখায়, অথচ ধার শোধ না হওয়া পর্যন্ত
+         ভাঙানো যায় না। পার্থক্যটা না বললে কেউ দরকারের দিনে ওই টাকার
+         উপর ভরসা করে সিদ্ধান্ত নেবেন -- আর ওটাই সবচেয়ে দামি ভুল।
+
+         ধারটা শোধ হয়ে গেলে লেখাটাও চলে যায়: বন্ধক থাকে দায়ের জন্য,
+         আর দায় না থাকলে বন্ধকেরও কারণ থাকে না
+         ([[Deposit::isLocked()]])। --}}
+    @if ($deposit->isLocked())
+        <span class="mt-0.5 inline-flex w-fit rounded-(--radius-field) bg-(--color-badge-warning-bg)
+                     px-2 py-0.5 text-2xs text-(--color-badge-warning-ink)">
+            {{ __('finance::state.pledged', ['loan' => $deposit->pledgedToLoan->document_no]) }}
+        </span>
+    @endif
 </span>

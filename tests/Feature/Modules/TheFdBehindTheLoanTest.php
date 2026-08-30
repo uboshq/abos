@@ -6,32 +6,45 @@ namespace Tests\Feature\Modules;
 
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
-use App\Models\LedgerEntry;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Loan;
 use App\Modules\Accounts\Services\LoanService;
 use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Finance\Models\Deposit;
+use App\Modules\Finance\Models\DepositKind;
+use App\Modules\Finance\Services\DepositKindInstaller;
+use App\Modules\Finance\Services\DepositService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * ব্যাংকে রাখা টাকা, আর ঋণের পেছনে বাঁধা FD।
+ * ঋণের পেছনে বাঁধা FD — এখন জমার পর্দা থেকে।
  *
- * ── কেন FD-ও একটা ঋণ ────────────────────────────────────────────────
- * FD মানে আমরা ব্যাংককে টাকা ধার দিয়েছি নির্দিষ্ট মেয়াদে, নির্দিষ্ট
- * সুদে। DPS একই জিনিস, কেবল টাকাটা মাসে মাসে যায়। দুইটাই
- * `direction = given` — তাই `acc_loans`-এই বসে, আর সুদ-খতিয়ান-বকেয়ার
- * পুরো যন্ত্রটা আবার লিখতে হয় না।
+ * ── এই ফাইলটা আগে কী পাহারা দিত ──────────────────────────────────────
+ * FD ছিল `acc_loans`-এর একটা ধরন। যুক্তিটা খারাপ ছিল না: FD মানে আমরা
+ * ব্যাংককে টাকা ধার দিয়েছি নির্দিষ্ট মেয়াদে নির্দিষ্ট সুদে, তাই
+ * সুদ-খতিয়ান-বকেয়ার পুরো যন্ত্রটা আবার লিখতে হয়নি।
  *
- * ── সবচেয়ে দামি ভুলটা যেখানে ────────────────────────────────────────
+ * ── কেন সেটা বদলাল, ৩০ আগস্ট ২০২৬ ────────────────────────────────────
+ * জমা নিজের পর্দা পাওয়ার পর ব্যাংকে টাকা রাখার **দুইটা দরজা** হয়ে
+ * গেল। দুই দরজা মানে দুই হিসাব: একজন ঋণের পাতা খুলে যোগ করেন, আরেকজন
+ * জমার পাতা — দুইজনের সংখ্যা মেলে না, আর কোনটা সত্যি তা বলার উপায়
+ * থাকে না। মালিক তাই ঋণের দরজাটা বন্ধ করতে বললেন।
+ *
+ * ── কিন্তু সবচেয়ে দামি কথাটা রয়ে গেছে ────────────────────────────────
  * ব্যাংক প্রায়ই ঋণ দেয় FD বন্ধক রেখে। কাগজে দুইটা আলাদা জিনিস — একটা
  * সম্পদ, একটা দায়। কিন্তু ওই FD-র টাকাটা আমাদের হাতে নেই: ঋণ শোধ না
  * হওয়া পর্যন্ত ভাঙানো যায় না।
  *
  * সম্পর্কটা না রাখলে তালিকায় FD-টা "আছে" দেখাত, আর কেউ দরকারের দিনে
- * ধরে নিত ওটা ভাঙিয়ে ফেলা যাবে।
+ * ধরে নিত ওটা ভাঙিয়ে ফেলা যাবে। তাই বন্ধনটা জমার সাথে সাথেই এসেছে,
+ * আর এই ফাইলটা এখন **দুইটা** জিনিস পাহারা দেয়: দরজাটা সত্যিই বন্ধ,
+ * আর বন্ধনটা সত্যিই টিকে আছে।
+ *
+ * টাকা নড়াচড়া, কিস্তি, মেয়াদ ভাঙা — ওসব জমার নিজের ফাইলে
+ * ([[MoneyPutAwayIsNotMoneyLentTest]])। এখানে কেবল যা এই বদলটার নিজের।
  */
 class TheFdBehindTheLoanTest extends TestCase
 {
@@ -49,54 +62,12 @@ class TheFdBehindTheLoanTest extends TestCase
         $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
 
         app(StandardChart::class)->install();
+        app(DepositKindInstaller::class)->install();
     }
 
-    private function money(): Account
+    private function cash(): Account
     {
-        return Account::query()->firstOrCreate(
-            ['code' => '1101-FD'],
-            [
-                'company_id' => $this->company->id,
-                'parent_id' => StandardChart::find(StandardChart::CASH_IN_HAND)->id,
-                'name_en' => 'Main till',
-                'name_bn' => 'প্রধান ক্যাশ',
-                'type' => Account::ASSET,
-                'nature' => Account::DEBIT,
-                'is_cash' => true,
-            ],
-        );
-    }
-
-    /** FD-র নিজের খাত — সম্পদ। */
-    private function deposit(): Account
-    {
-        return Account::query()->firstOrCreate(
-            ['code' => '1150-FD'],
-            [
-                'company_id' => $this->company->id,
-                'parent_id' => null,
-                'name_en' => 'Fixed deposits',
-                'name_bn' => 'স্থায়ী আমানত',
-                'type' => Account::ASSET,
-                'nature' => Account::DEBIT,
-            ],
-        );
-    }
-
-    /** সুদ আয়ের খাত — খরচ নয়। */
-    private function interestIncome(): Account
-    {
-        return Account::query()->firstOrCreate(
-            ['code' => '4900-INT'],
-            [
-                'company_id' => $this->company->id,
-                'parent_id' => null,
-                'name_en' => 'Interest income',
-                'name_bn' => 'সুদ আয়',
-                'type' => Account::INCOME,
-                'nature' => Account::CREDIT,
-            ],
-        );
+        return Account::query()->postable()->where('name_en', 'like', '%Cash%')->firstOrFail();
     }
 
     private function payable(): Account
@@ -109,28 +80,10 @@ class TheFdBehindTheLoanTest extends TestCase
         return Account::query()->where('type', Account::EXPENSE)->postable()->orderBy('code')->firstOrFail();
     }
 
-    private function fd(string $amount, ?int $pledgedAgainst = null): Loan
-    {
-        return app(LoanService::class)->create(
-            data: [
-                'lender' => 'Sonali Bank',
-                'kind' => Loan::FD,
-                'direction' => Loan::GIVEN,
-                'sanctioned' => $amount,
-                'interest_rate' => '9',
-                'start_date' => '2026-08-01',
-                'matures_on' => '2027-08-01',
-                'pledged_against_id' => $pledgedAgainst,
-                'principal_account_id' => $this->deposit()->id,
-                'interest_account_id' => $this->interestIncome()->id,
-            ],
-            intoAccountId: $this->money()->id,
-        );
-    }
-
+    /** একটা নেওয়া ব্যাংক-ঋণ, টাকা তোলা সহ। */
     private function bankLoan(string $amount): Loan
     {
-        return app(LoanService::class)->create(
+        $loan = app(LoanService::class)->create(
             data: [
                 'lender' => 'Sonali Bank',
                 'kind' => Loan::CC,
@@ -141,130 +94,97 @@ class TheFdBehindTheLoanTest extends TestCase
                 'interest_account_id' => $this->interestExpense()->id,
             ],
         );
+
+        app(LoanService::class)->drawDown($loan, $amount, $this->cash()->id, '2026-08-02');
+
+        return $loan;
     }
 
-    /* ── FD নিজে ────────────────────────────────────────────────── */
-
-    public function test_money_put_into_an_fd_leaves_the_till(): void
+    private function fd(string $amount, ?int $pledgedTo = null, string $heldBy = Deposit::BUSINESS): Deposit
     {
-        $fd = $this->fd('200000');
-
-        $this->assertTrue($fd->isDeposit());
-        $this->assertTrue($fd->isGiven());
-
-        $out = LedgerEntry::query()->where('account_id', $this->money()->id)->sum('credit');
-        $this->assertSame('200000.0000', (string) $out);
-
-        $in = LedgerEntry::query()->where('account_id', $this->deposit()->id)->sum('debit');
-        $this->assertSame('200000.0000', (string) $in);
+        return app(DepositService::class)->open([
+            'kind_id' => DepositKind::query()->where('code', 'FDR')->firstOrFail()->id,
+            'institution' => 'সোনালী ব্যাংক',
+            'held_by' => $heldBy,
+            'principal' => $amount,
+            'return_word' => 'interest',
+            'opened_on' => '2026-08-01',
+            'matures_on' => '2027-08-01',
+            'funded_from_account_id' => $this->cash()->id,
+            'pledged_to_loan_id' => $pledgedTo,
+        ]);
     }
 
-    public function test_an_fd_has_no_instalment_schedule(): void
+    /* ── দরজাটা বন্ধ ────────────────────────────────────────────── */
+
+    /**
+     * ঋণের ফর্ম আর FD বা DPS নেয় না।
+     *
+     * ── কেন এটা সবচেয়ে জরুরি পরীক্ষা ────────────────────────────────
+     * `kind` কলামটা একটা সাধারণ string — ডাটাবেজ `'fd'` লিখতে বাধা
+     * দেয় না। ধরনটা কোড থেকে সরিয়ে দিলেও যাচাইয়ের নিয়মে থেকে গেলে
+     * পুরনো একটা বুকমার্ক, একটা ইমপোর্ট, বা কারও খোলা রাখা ট্যাব
+     * দিব্যি একটা FD-সারি বসিয়ে দিত — আর ওটা কোনো পর্দাতেই দেখা যেত
+     * না, কারণ ঋণের তালিকা ওটাকে চেনে না আর জমার তালিকা ওটাকে খোঁজে
+     * না। টাকাটা খাতায় থাকত, চোখের বাইরে।
+     */
+    public function test_the_loan_form_no_longer_takes_a_deposit(): void
     {
-        $this->assertSame(0, $this->fd('200000')->instalments()->count());
+        foreach (['fd', 'dps'] as $kind) {
+            $this->post(route('accounts.loan.store'), [
+                'lender' => 'Sonali Bank',
+                'kind' => $kind,
+                'sanctioned' => '200000',
+                'interest_rate' => '9',
+                'start_date' => '2026-08-01',
+                'principal_account_id' => $this->payable()->id,
+                'interest_account_id' => $this->interestExpense()->id,
+                'into_account_id' => $this->cash()->id,
+            ])->assertSessionHasErrors('kind');
+        }
+
+        $this->assertSame(0, Loan::query()->whereIn('kind', ['fd', 'dps'])->count(),
+            'ঋণের টেবিলে একটা জমা বসে গেছে — দরজাটা তাহলে খোলাই আছে।');
     }
 
     /**
-     * FD-র সুদ আয়, খরচ নয়।
+     * ঋণের পর্দায় জমার ঘরগুলোও আর নেই।
      *
-     * দাখিলা উল্টো না বসালে পাওয়া সুদটা খরচ হয়ে বসত, আর মুনাফা দুইবার
-     * কমত: একবার আয়টা না দেখিয়ে, আরেকবার ওটাকে খরচ দেখিয়ে।
+     * নিয়ম সরিয়ে ঘরটা রেখে দিলে ব্যবহারকারী ওটা ভরে Save চাপতেন আর
+     * একটা যাচাই-ভুল পেতেন — অর্থাৎ পর্দা একটা কাজ করতে বলছে যেটা
+     * সে নিজেই নেয় না।
      */
-    public function test_interest_on_an_fd_is_income_not_expense(): void
+    public function test_the_loan_screen_offers_no_deposit_fields(): void
     {
-        $fd = $this->fd('200000');
+        $html = (string) $this->get(route('accounts.loan.create'))->assertOk()->getContent();
 
-        app(LoanService::class)->chargeInterest($fd, '18000', '2026-12-31');
-
-        $income = LedgerEntry::query()->where('account_id', $this->interestIncome()->id)->sum('credit');
-        $this->assertSame('18000.0000', (string) $income);
-
-        $wrongSide = LedgerEntry::query()->where('account_id', $this->interestIncome()->id)->sum('debit');
-        $this->assertSame('0.0000', (string) $wrongSide,
-            'FD-র সুদ খরচের দিকে বসেছে — ওটা আয়।');
-
-        // সুদটা টাকার সাথেই জমেছে
-        $this->assertSame('218000.0000', $fd->refresh()->outstanding());
+        $this->assertStringNotContainsString('name="pledged_against_id"', $html,
+            'ঋণের ফর্মে এখনো বন্ধকের ঘর আছে।');
+        $this->assertStringNotContainsString('value="fd"', $html);
+        $this->assertStringNotContainsString('value="dps"', $html);
     }
 
-    public function test_breaking_an_fd_brings_the_money_back(): void
-    {
-        $fd = $this->fd('200000');
+    /* ── বন্ধনটা টিকে আছে ───────────────────────────────────────── */
 
-        app(LoanService::class)->repay($fd, '200000', $this->money()->id, '2026-12-31');
-
-        $this->assertSame('0.0000', $fd->refresh()->outstanding());
-
-        $back = LedgerEntry::query()->where('account_id', $this->money()->id)->sum('debit');
-        $this->assertSame('200000.0000', (string) $back);
-    }
-
-    /* ── DPS ────────────────────────────────────────────────────── */
-
-    /**
-     * DPS-এ শুরুর দিনে কিছুই নড়ে না।
-     *
-     * টাকাটা মাসে মাসে যায়। শুরুতেই পুরোটা বসিয়ে দিলে খাতা বলত আমরা
-     * আজই সবটা জমা দিয়ে ফেলেছি — অথচ প্রথম কিস্তিটাও তখনো যায়নি।
-     */
-    public function test_a_dps_moves_no_money_on_the_day_it_opens(): void
-    {
-        $dps = app(LoanService::class)->create(
-            data: [
-                'lender' => 'Sonali Bank',
-                'kind' => Loan::DPS,
-                'sanctioned' => '120000',
-                'interest_rate' => '9',
-                'start_date' => '2026-08-01',
-                'matures_on' => '2031-08-01',
-                'principal_account_id' => $this->deposit()->id,
-                'interest_account_id' => $this->interestIncome()->id,
-            ],
-            intoAccountId: $this->money()->id,
-        );
-
-        $this->assertSame(Loan::GIVEN, $dps->direction);
-        $this->assertSame('0.0000', $dps->outstanding());
-        $this->assertSame(0, LedgerEntry::query()->where('account_id', $this->deposit()->id)->count());
-    }
-
-    public function test_each_dps_instalment_is_its_own_event(): void
-    {
-        $dps = app(LoanService::class)->create(
-            data: [
-                'lender' => 'Sonali Bank',
-                'kind' => Loan::DPS,
-                'sanctioned' => '120000',
-                'interest_rate' => '9',
-                'start_date' => '2026-08-01',
-                'principal_account_id' => $this->deposit()->id,
-                'interest_account_id' => $this->interestIncome()->id,
-            ],
-        );
-
-        app(LoanService::class)->drawDown($dps, '2000', $this->money()->id, '2026-08-01');
-        app(LoanService::class)->drawDown($dps, '2000', $this->money()->id, '2026-09-01');
-
-        $this->assertSame('4000.0000', $dps->refresh()->outstanding());
-    }
-
-    /* ── বাঁধা FD ───────────────────────────────────────────────── */
-
+    /** বাঁধা না থাকলে জমাটা হাতের টাকা। */
     public function test_an_unpledged_fd_is_money_we_can_reach(): void
     {
         $this->assertFalse($this->fd('200000')->isLocked());
     }
 
+    /**
+     * চালু ঋণের বিপরীতে বাঁধা FD হাতের টাকা নয়।
+     */
     public function test_an_fd_pledged_against_a_live_loan_is_out_of_reach(): void
     {
         $loan = $this->bankLoan('300000');
-        app(LoanService::class)->drawDown($loan, '300000', $this->money()->id, '2026-08-02');
 
         $fd = $this->fd('200000', $loan->id);
 
         $this->assertTrue($fd->isLocked(),
             'বাঁধা FD-টাকে হাতের টাকা দেখাচ্ছে — অথচ ঋণ শোধ না হলে ওটা ভাঙানো যায় না।');
-        $this->assertSame($loan->id, $fd->pledgedAgainst->id);
+
+        $this->assertSame($loan->id, $fd->pledgedToLoan->id);
     }
 
     /**
@@ -277,25 +197,68 @@ class TheFdBehindTheLoanTest extends TestCase
     public function test_paying_off_the_loan_frees_the_fd(): void
     {
         $loan = $this->bankLoan('300000');
-        app(LoanService::class)->drawDown($loan, '300000', $this->money()->id, '2026-08-02');
 
         $fd = $this->fd('200000', $loan->id);
         $this->assertTrue($fd->isLocked());
 
-        app(LoanService::class)->repay($loan, '300000', $this->money()->id, '2026-09-01');
+        app(LoanService::class)->repay($loan, '300000', $this->cash()->id, '2026-09-01');
 
         $this->assertFalse($fd->refresh()->isLocked());
     }
 
-    /** একটা ঋণের বিপরীতে একাধিক FD বাঁধা থাকতে পারে। */
+    /** একটা ঋণের বিপরীতে একাধিক জমা বাঁধা থাকতে পারে। */
     public function test_a_loan_can_have_more_than_one_fd_behind_it(): void
     {
         $loan = $this->bankLoan('500000');
-        app(LoanService::class)->drawDown($loan, '500000', $this->money()->id, '2026-08-02');
 
         $this->fd('200000', $loan->id);
         $this->fd('150000', $loan->id);
 
-        $this->assertSame(2, $loan->refresh()->pledges()->count());
+        /*
+         * গোনাটা জমার দিক থেকে, ঋণ থেকে নয়।
+         *
+         * accounts কারও উপর নির্ভর করে না, তাই [[Loan]] থেকে
+         * [[Deposit]]-এর দিকে তাকানো যায় না -- তাকালে মডিউলের ক্রমটাই
+         * উল্টে যেত।
+         */
+        $this->assertSame(2, Deposit::query()->where('pledged_to_loan_id', $loan->id)->count());
+    }
+
+    /**
+     * মালিকের নিজের নামের জমা ব্যবসার ধারের জামানত হয় না।
+     *
+     * ── কেন ─────────────────────────────────────────────────────────
+     * মালিক নিজের নামে যেটা রেখেছেন সেটা ব্যবসার সম্পদ নয় — খাতায় ওটা
+     * উত্তোলন। ব্যবসার ধারের বিপরীতে ওটা বাঁধা দেখানো মানে জামানত
+     * হিসেবে এমন কিছু গোনা যা ব্যবসার নয়, আর ব্যাংকের কাছে দেওয়া
+     * হিসাবটাই তখন ভুল হত।
+     */
+    public function test_a_deposit_in_the_owners_name_is_never_pledged_to_the_firm(): void
+    {
+        $loan = $this->bankLoan('300000');
+
+        $own = $this->fd('200000', $loan->id, Deposit::OWNER);
+
+        $this->assertNull($own->pledged_to_loan_id,
+            'মালিকের নিজের জমাটা ব্যবসার ধারের জামানত হয়ে বসেছে।');
+
+        $this->assertFalse($own->isLocked());
+    }
+
+    /**
+     * পর্দাটা বন্ধনটা বলে, চুপ থাকে না।
+     *
+     * উপরের পরীক্ষাগুলো মডেল দেখে; এটা দেখে **পাতাটা**। বাঁধা অবস্থাটা
+     * কেবল কোডে থাকলে ব্যবহারকারীর কাছে ওটা নেই — আর সিদ্ধান্তটা তো
+     * তিনিই নেন।
+     */
+    public function test_the_list_says_which_loan_holds_the_deposit(): void
+    {
+        $loan = $this->bankLoan('300000');
+        $this->fd('200000', $loan->id);
+
+        $this->get(route('finance.deposit.index', ['issuer' => 'bank']))
+            ->assertOk()
+            ->assertSee($loan->document_no);
     }
 }

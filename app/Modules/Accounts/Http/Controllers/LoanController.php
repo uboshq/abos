@@ -97,18 +97,10 @@ class LoanController extends Controller implements HasMiddleware
             'moneyAccounts' => $this->moneyAccounts(),
 
             /*
-             * যে ঋণগুলোর পেছনে একটা FD বাঁধা যেতে পারে।
-             *
-             * কেবল নেওয়া ঋণ: নিজের দেওয়া টাকার পেছনে নিজের FD বাঁধার
-             * কোনো মানে নেই। আর FD বা DPS নিজেও তালিকায় আসে না —
-             * নাহলে একটা FD আরেকটা FD-র পেছনে বাঁধা যেত, আর "টাকাটা
-             * কোথায় আটকে" প্রশ্নের উত্তর একটা বৃত্ত হয়ে যেত।
+             * বন্ধক রাখার তালিকাটা এখানে ছিল, ৩০ আগস্ট ২০২৬-এ
+             * [[DepositController]]-এ চলে গেছে -- FD-র সাথেই, কারণ
+             * বন্ধন এখন জমা থেকে ধারের দিকে, ধার থেকে ধারে নয়।
              */
-            'openLoans' => Loan::query()
-                ->where('direction', Loan::TAKEN)
-                ->whereIn('kind', [Loan::TERM, Loan::CC])
-                ->orderByDesc('id')
-                ->get(),
         ]);
     }
 
@@ -117,7 +109,7 @@ class LoanController extends Controller implements HasMiddleware
         $data = $request->validate([
             'lender' => ['required', 'string', 'max:160'],
             'account_no' => ['nullable', 'string', 'max:64'],
-            'kind' => ['required', Rule::in([Loan::TERM, Loan::CC, Loan::HAND, Loan::FD, Loan::DPS])],
+            'kind' => ['required', Rule::in([Loan::TERM, Loan::CC, Loan::HAND])],
 
             /*
              * দিক — কেবল হাতধারে অর্থবহ।
@@ -150,7 +142,6 @@ class LoanController extends Controller implements HasMiddleware
              * বাঁধা FD তালিকায় "আছে" দেখায়, অথচ ভাঙানো যায় না — আর
              * ওই টাকার উপর ভরসা করে নেওয়া সিদ্ধান্তই সবচেয়ে দামি ভুল।
              */
-            'pledged_against_id' => ['nullable', 'integer', 'exists:acc_loans,id'],
             'sanctioned' => ['required', 'numeric', 'gt:0'],
             'interest_rate' => ['required', 'numeric', 'min:0', 'max:100'],
             'start_date' => ['required', 'date'],
@@ -189,7 +180,7 @@ class LoanController extends Controller implements HasMiddleware
          * দাখিলাটাই বসত না — ধারটা খাতায় থাকত অথচ টাকাটা কোথাও নড়ত
          * না, আর নগদ মিলত না।
          */
-        if (in_array($data['kind'], [Loan::HAND, Loan::FD], true)) {
+        if ($data['kind'] === Loan::HAND) {
             $request->validate(['into_account_id' => ['required']]);
         }
 
@@ -206,12 +197,11 @@ class LoanController extends Controller implements HasMiddleware
                  */
                 'direction' => $data['direction'] ?? null,
                 'due_on' => $data['kind'] === Loan::HAND ? ($data['due_on'] ?? null) : null,
-                'matures_on' => in_array($data['kind'], [Loan::FD, Loan::DPS], true)
-                    ? ($data['matures_on'] ?? null)
-                    : null,
-                'pledged_against_id' => $data['kind'] === Loan::FD
-                    ? ($data['pledged_against_id'] ?? null)
-                    : null,
+                /*
+                  * ব্যাংকে রাখা টাকার ঘরগুলো (মেয়াদ, বন্ধক) এখানে ছিল,
+                  * ৩০ আগস্ট ২০২৬-এ সরানো হলো -- জমার নিজের পর্দা আছে
+                  * ([[DepositController]]), আর দুই দরজা রাখা যায় না।
+                  */
                 'interest_method' => $data['kind'] === Loan::TERM ? $data['interest_method'] : null,
                 'sanctioned' => $data['sanctioned'],
                 'interest_rate' => $data['interest_rate'],
@@ -223,7 +213,7 @@ class LoanController extends Controller implements HasMiddleware
                 'security' => $data['security'] ?? null,
                 'narration' => $data['narration'] ?? null,
             ],
-            intoAccountId: in_array($data['kind'], [Loan::TERM, Loan::HAND, Loan::FD], true)
+            intoAccountId: in_array($data['kind'], [Loan::TERM, Loan::HAND], true)
                 ? (int) $data['into_account_id']
                 : null,
         );
