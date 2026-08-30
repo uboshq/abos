@@ -174,4 +174,18 @@ return [
     // ডিলারের কমিশন
     'commission_note' => 'Commission given to a dealer is claimed back from the principal — it is not your discount, so it never touches your margin.',
     'no_commissions' => 'No commission has been recorded yet.',
+    'commission_nothing_charged' => 'Nothing was charged on this invoice.',
+    'commission_no_scheme' => 'No scheme was live on :date.',
+    'commission_no_rule_matched' => 'A scheme is live, but no band covers this amount — check that the top band is left open.',
+    'scheme_note' => 'Who earns what — the rule is written here, not carried in someone’s head.',
+    'scheme_created' => 'Scheme :code created. Now add its bands.',
+    'scheme_rule_added' => 'Band added.',
+    'scheme_activated' => 'Scheme is live — invoices will earn from now on.',
+    'scheme_cancelled' => 'Scheme stopped.',
+    'scheme_no_band' => 'No band has been set — a scheme with no band pays nothing.',
+    'no_scheme' => 'No schemes yet.',
+    'scheme_lapsed_note' => 'Past its end date — this scheme no longer earns on any invoice, even though it still reads as live.',
+    'scheme_basis_hint' => 'On money or on quantity — the bands are counted in the same unit.',
+    'leave_top_band_open' => 'Leave this empty on the highest band, or the biggest sale of the year earns nothing.',
+    'fixed_beats_rate' => 'A fixed amount wins; the rate is then ignored.',
 ];

@@ -176,6 +176,15 @@ return [
              *
              * দুইটাই মাস ধরে দেখা হয়, আর দুইটাই মাস শেষে মেলানো হয়।
              */
+            /*
+             * স্কিম — কমিশনের ঠিক আগে, আর সেটাই ক্রম।
+             *
+             * স্কিম বলে হার কত হওয়ার কথা; কমিশনের দাবি বলে কত সত্যিই
+             * দেওয়া হলো। আগে কেবল দ্বিতীয়টা ছিল, তাই "এই হারটা কে ঠিক
+             * করল" প্রশ্নের উত্তর ছিল একজন মানুষের স্মৃতি।
+             */
+            ['label' => 'sales::menu.schemes', 'route' => 'sales.scheme.index',
+                'permission' => 'sales.scheme.view'],
             ['label' => 'sales::menu.commission', 'route' => 'sales.commission.index',
                 'permission' => 'sales.commission.view'],
             ['label' => 'sales::menu.deposit_claims', 'route' => 'sales.claim.index',
@@ -228,6 +237,8 @@ return [
         'sales.claim.view',
         'sales.claim.decide',
 
+        'sales.scheme.view',
+        'sales.scheme.manage',
         'sales.commission.view',
         'sales.commission.manage',
         'sales.commission.override',
