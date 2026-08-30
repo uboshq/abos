@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Shell;
 
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 /**
@@ -43,7 +44,7 @@ class AlpineHandlersHaveAScopeTest extends TestCase
         foreach ($this->bladeFiles() as $file) {
             $source = file_get_contents($file);
 
-            if ($source === false || str_contains($source, 'x-data')) {
+            if ($source === false || $this->hasScope($source)) {
                 continue;
             }
 
@@ -65,9 +66,35 @@ class AlpineHandlersHaveAScopeTest extends TestCase
                 }
             }
 
-            if ($found !== []) {
-                $offenders[] = $this->relative($file).' → '.implode(', ', array_unique($found));
+            if ($found === []) {
+                continue;
             }
+
+            /*
+             * পার্শিয়ালের `x-data` তাকে যে ডাকে তার কাছে থাকতে পারে।
+             *
+             * ---- কেন এই ছাড়টা লাগল, ৩০ আগস্ট ২০২৬ ----
+             * পরীক্ষাটা এক ফাইল ধরে ধরে পড়ে, কিন্তু Blade-এর
+             * `@include` রানটাইমে ফাইলটাকে ডাকার জায়গার **ভেতরে**
+             * বসিয়ে দেয়। তাই একটা পার্শিয়ালে `x-model` থাকলেও তার
+             * নিজের `x-data` লাগে না -- যে ফর্মটা তাকে ডাকে তার
+             * থাকলেই যথেষ্ট, আর ব্রাউজারে সেটা কাজও করে।
+             *
+             * ছাড়টা না দিলে পরীক্ষাটা মিথ্যা অভিযোগ করত, আর মিথ্যা
+             * অভিযোগ করা পাহারা কিছুদিনের মধ্যে বন্ধই করে দেওয়া হয় --
+             * তারপর সে আর আসল ভুলটাও ধরে না।
+             *
+             * ---- আর ছাড়টা যেন ফাঁক না হয় ----
+             * **সব** ডাকার জায়গায় `x-data` থাকতে হবে। একটাতেও না
+             * থাকলে ওই পথে গিয়ে জিনিসটা নীরবে মরত, আর সেটাই মূল
+             * ভুলটা। ডাকার জায়গা একটাও না থাকলেও অভিযোগ -- তখন
+             * পার্শিয়ালটা কেউ ব্যবহারই করে না।
+             */
+            if ($this->everyIncluderHasScope($file)) {
+                continue;
+            }
+
+            $offenders[] = $this->relative($file).' → '.implode(', ', array_unique($found));
         }
 
         $this->assertSame([], $offenders, implode("\n", [
@@ -195,6 +222,99 @@ class AlpineHandlersHaveAScopeTest extends TestCase
     }
 
     /** @return list<string> */
+    /**
+     * সত্যিকারের `x-data` অ্যাট্রিবিউট আছে কি না — মন্তব্যে লেখা নাম নয়।
+     *
+     * ---- কেন এই পার্থক্যটা লাগল, ৩০ আগস্ট ২০২৬ ----
+     * প্রথমে কেবল `str_contains($source, 'x-data')` দেখা হত। কিন্তু
+     * এই রেপোর ব্লেড ফাইলগুলোয় মন্তব্যে প্রায়ই `x-data`-র কথা লেখা
+     * থাকে ("একটা x-data মোড়ক দিন")।
+     *
+     * ফল: ছাড়টা ফাঁক হয়ে গিয়েছিল। ডাকার জায়গা থেকে আসল
+     * অ্যাট্রিবিউটটা সরিয়ে দিয়ে পরীক্ষা চালালাম -- **সবুজই থাকল**,
+     * কারণ মন্তব্যের শব্দটা তখনো ওখানে। ইচ্ছা করে ভেঙে দেখতে গিয়েই
+     * ধরা পড়ল।
+     *
+     * ---- কেন `=` খোঁজা চলে না ----
+     * প্রথমে `x-data=` খোঁজা হয়েছিল। কিন্তু Alpine-এ `x-data` একা
+     * লিখলেও চলে (`<div x-data>` মানে খালি স্কোপ), আর এই রেপোতেই
+     * অনেক ফাইল ওভাবে লেখা -- একষট্টিটা ফাইল হঠাৎ অভিযুক্ত হয়ে গেল।
+     *
+     * আসল পার্থক্যটা `=` নয়, **জায়গা**: বাক্যগুলো ব্লেড-মন্তব্যের
+     * ভেতরে থাকে, অ্যাট্রিবিউট থাকে বাইরে। তাই মন্তব্য ছেঁটে নিয়ে
+     * তারপর খোঁজা হয় -- ওটাই সত্যিকারের নিয়ম, আর ওটাই কড়া দিকেও
+     * ভুল করে না।
+     */
+    private function hasScope(string $source): bool
+    {
+        $code = preg_replace('/\{\{--.*?--\}\}/s', '', $source) ?? $source;
+
+        return str_contains($code, 'x-data');
+    }
+
+    /**
+     * এই পার্শিয়ালটাকে যারা ডাকে, তাদের সবার কি `x-data` আছে?
+     *
+     * নামটা ফাইলের পথ থেকেই বানানো হয় -- `.../views/a/b.blade.php`
+     * হয় `a.b`, আর মডিউলের হলে `code::a.b`। দুইটা রূপই খোঁজা হয়,
+     * কারণ মডিউলের ভেতর থেকে ছোট নামেও ডাকা যায়।
+     */
+    private function everyIncluderHasScope(string $file): bool
+    {
+        $name = $this->viewName($file);
+
+        if ($name === null) {
+            return false;
+        }
+
+        $includers = [];
+
+        foreach ($this->bladeFiles() as $other) {
+            if ($other === $file) {
+                continue;
+            }
+
+            $source = file_get_contents($other);
+
+            if ($source === false) {
+                continue;
+            }
+
+            foreach ([$name['full'], $name['short']] as $candidate) {
+                if ($candidate !== null && str_contains($source, "'".$candidate."'")) {
+                    $includers[$other] = $this->hasScope($source);
+
+                    break;
+                }
+            }
+        }
+
+        return $includers !== [] && ! in_array(false, $includers, true);
+    }
+
+    /**
+     * ফাইলের পথ থেকে ভিউয়ের নাম।
+     *
+     * @return array{full: ?string, short: string}|null
+     */
+    private function viewName(string $file): ?array
+    {
+        $path = str_replace(DIRECTORY_SEPARATOR, '/', $file);
+
+        if (preg_match('#/app/Modules/([^/]+)/Resources/views/(.+)\.blade\.php$#', $path, $m)) {
+            $code = Str::snake($m[1]);
+            $short = str_replace('/', '.', $m[2]);
+
+            return ['full' => $code.'::'.$short, 'short' => $short];
+        }
+
+        if (preg_match('#/resources/views/(.+)\.blade\.php$#', $path, $m)) {
+            return ['full' => null, 'short' => str_replace('/', '.', $m[1])];
+        }
+
+        return null;
+    }
+
     private function bladeFiles(): array
     {
         $files = [];

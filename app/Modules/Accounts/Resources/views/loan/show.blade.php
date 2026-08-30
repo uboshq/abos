@@ -44,8 +44,10 @@
     <x-slot:header>
         <x-ui.page-header :title="$loan->lender" :subtitle="$loan->document_no">
             <x-slot:actions>
+                {{-- নামটা মডেল থেকে -- "টার্ম নয় মানেই সিসি" নিয়মটা
+                     হাতধারকে চুপচাপ সিসি বানিয়ে দিত ([[Loan::kindLabel()]])। --}}
                 <x-ui.badge :tone="$loan->isTerm() ? 'info' : 'inventory'">
-                    {{ $loan->isTerm() ? __('accounts::field.loan_term') : __('accounts::field.loan_cc') }}
+                    {{ $loan->kindLabel() }}
                 </x-ui.badge>
 
                 @if ($loan->isSettled())
