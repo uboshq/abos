@@ -48,11 +48,20 @@ class ControlPanelTest extends TestCase
     }
 
     /**
-     * প্রতিটা ঘোষিত সুইচ এখানে আছে।
+     * প্রতিটা ঘোষিত সুইচ কোনো না কোনো ট্যাবে আছে।
      *
      * তালিকাটা রেজিস্ট্রি থেকে নেওয়া, হাতে লেখা তালিকা থেকে নয় — নতুন
      * মডিউল বা নতুন সুইচ যোগ হলে সেটাও এই পরীক্ষায় ধরা পড়বে, আর
      * পরীক্ষাটা হালনাগাদ করতে হবে না।
+     *
+     * ── ট্যাব আসার পর, ৩০ আগস্ট ২০২৬ ────────────────────────────────
+     * আগে দাবিটা ছিল "সবগুলো **এই পাতায়** আছে"। এখন প্রতিটা মডিউলের
+     * নিজের ট্যাব, তাই পরীক্ষাটাও ট্যাব ধরে হাঁটে।
+     *
+     * আর এভাবেই দাবিটা বরং **শক্ত হলো**: ট্যাবের তালিকাটা যদি কোনো
+     * মডিউল বাদ দেয়, তার সুইচগুলো কোনো ট্যাবেই মিলবে না — অর্থাৎ
+     * এটা এখন "কিছু হারায়নি" আর "ট্যাবগুলো সবটা ঢাকে" দুইটাই পাহারা
+     * দেয়।
      */
     public function test_every_switch_any_module_declares_appears_here(): void
     {
@@ -60,15 +69,35 @@ class ControlPanelTest extends TestCase
 
         $this->assertGreaterThan(0, count($declared), 'No module declares any setting at all.');
 
-        $response = $this->get(route('system_admin.control-panel'))->assertOk();
+        $first = $this->get(route('system_admin.control-panel'))->assertOk();
+
+        $pages = [(string) $first->getContent()];
+
+        foreach ($first->viewData('tabs') as $tab) {
+            $pages[] = (string) $this->get(route('system_admin.control-panel', ['tab' => $tab['key']]))
+                ->assertOk()->getContent();
+        }
+
+        $everything = implode('', $pages);
 
         foreach ($declared as $key => $definition) {
-            $response->assertSee("settings[{$key}]", false);
+            /*
+             * মেনুর সুইচগুলো নিয়ম ধরে তৈরি, ঘোষিত নয় — ওদের নিজের
+             * ছক আছে আর নিজের পরীক্ষা
+             * ([[EveryMenuRowHasItsOwnSwitchTest]])।
+             */
+            if ($definition['menu'] ?? false) {
+                continue;
+            }
+
+            $this->assertStringContainsString("settings[{$key}]", $everything,
+                "ঘোষিত সুইচ {$key} কোনো ট্যাবেই নেই।");
 
             // লেবেলটা escape করেই যাচাই: কিছু লেবেলে উদ্ধৃতি চিহ্ন আছে
             // ("Powered by ABOS"), আর Blade সেটা &quot; করে দেয় — কাঁচা
             // স্ট্রিং খুঁজলে ওই একটাই বাদ পড়ত
-            $response->assertSee(__($definition['label']));
+            $this->assertStringContainsString(e(__($definition['label'])), $everything,
+                "ঘোষিত সুইচ {$key}-এর লেবেল কোনো ট্যাবেই নেই।");
         }
     }
 
@@ -93,7 +122,24 @@ class ControlPanelTest extends TestCase
         $this->assertTrue($settings->enabled('customer.credit_limit_enabled'));
         $this->assertSame(7, $settings->get('accounts.backdate_days'));
 
+        /*
+         * `scope[]` — ফর্ম কোন সুইচগুলো বহন করছে, ৩০ আগস্ট ২০২৬।
+         *
+         * ট্যাব আসার আগে সব সুইচ এক পাতায় থাকত, তাই "অনুপস্থিত" মানে
+         * নিশ্চিতভাবেই "টিক তুলে দেওয়া হয়েছে"। এখন একটা পাঠানোয় কেবল
+         * একটা ট্যাবের ঘর থাকে, তাই ফর্মকে বলে দিতে হয় সে কী বহন
+         * করছে — নাহলে অন্য ট্যাবের সুইচগুলোও "অনুপস্থিত" পড়ে বন্ধ
+         * হয়ে যেত। একবার সত্যিই ৩৪টা বন্ধ হয়েছিল।
+         *
+         * ক্রেডিট লিমিট scope-এ আছে কিন্তু settings-এ নেই — সেটাই
+         * "টিক তুলে দেওয়া হয়েছে"।
+         */
         $this->put(route('system_admin.control-panel.update'), [
+            'scope' => [
+                'customer.credit_limit_enabled',
+                'accounts.backdate_days',
+                'master_data.region_enabled',
+            ],
             'settings' => [
                 // ক্রেডিট লিমিটের চেকবক্স অনুপস্থিত — মানে বন্ধ
                 'accounts.backdate_days' => 21,
@@ -134,6 +180,7 @@ class ControlPanelTest extends TestCase
         $this->assertContains('sales.direct.create', $names());
 
         $this->put(route('system_admin.control-panel.update'), [
+            'scope' => ['sales.screen_direct'],
             'settings' => ['sales.screen_direct' => '0'],
         ])->assertRedirect()->assertSessionHasNoErrors();
 
@@ -176,6 +223,7 @@ class ControlPanelTest extends TestCase
         $this->assertTrue(SalesOrder::query()->exists());
 
         $this->put(route('system_admin.control-panel.update'), [
+            'scope' => ['sales.screen_orders'],
             'settings' => ['sales.screen_orders' => '0'],
         ])->assertSessionHasErrors('settings');
 
@@ -195,6 +243,7 @@ class ControlPanelTest extends TestCase
     public function test_the_two_screens_never_disagree(): void
     {
         $this->put(route('system_admin.control-panel.update'), [
+            'scope' => ['accounts.backdate_days'],
             'settings' => ['accounts.backdate_days' => 45],
         ])->assertRedirect();
 
@@ -206,6 +255,7 @@ class ControlPanelTest extends TestCase
     public function test_one_company_never_changes_anothers_switches(): void
     {
         $this->put(route('system_admin.control-panel.update'), [
+            'scope' => ['accounts.backdate_days'],
             'settings' => ['accounts.backdate_days' => 60],
         ])->assertRedirect();
 

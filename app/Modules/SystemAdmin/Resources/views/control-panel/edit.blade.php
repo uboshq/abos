@@ -23,7 +23,39 @@
         </div>
     @endif
 
-    @if ($modules === [])
+    {{-- ── ট্যাব, ৩০ আগস্ট ২০২৬ ────────────────────────────────────────
+         মালিকের কথা: "এত লম্বা জিনিস Ctrl+F কইরা খুঁইজা বাইর করতে হবে না,
+         প্রত্যেকটা জিনিস আলাদা আলাদা রাখ।"
+
+         তিপ্পান্নটা সুইচ এক পাতায় ছিল, আর এখন যোগ হচ্ছে একশোর বেশি মেনু
+         সারি। এক পাতায় দেড়শো সুইচ মানে কেউ কিছু খুঁজে পায় না, তাই কেউ
+         কিছু বদলায়ও না — জিনিসটা থাকা আর না থাকা সমান।
+
+         ট্যাবগুলো লিংক, JS নয়: প্রতিটার নিজের ঠিকানা থাকে, তাই কেউ
+         "মজুদের সুইচগুলো" বুকমার্ক করে রাখতে পারেন, আর ফিরে গেলে একই
+         জায়গায় ফেরে। --}}
+    <nav class="mb-4 flex flex-wrap gap-1 border-b border-(--color-border) print-hide"
+         aria-label="{{ __('system_admin::menu.control_panel') }}">
+        @foreach ($tabs as $one)
+            <a href="{{ route('system_admin.control-panel', ['tab' => $one['key']]) }}"
+               @class([
+                   'min-h-(--spacing-touch) rounded-t-(--radius-field) px-3 py-2 text-sm transition-colors',
+                   'border-b-2 border-(--color-brand-600) font-semibold' => $tab === $one['key'],
+                   'text-(--color-ink-muted) hover:bg-(--color-surface-hover)' => $tab !== $one['key'],
+               ])
+               @if ($tab === $one['key']) aria-current="page" @endif>
+                {{ $one['label'] }}
+            </a>
+        @endforeach
+    </nav>
+
+    {{-- খালি-অবস্থা এখন গাছটাও হিসেবে ধরে।
+
+         আগে শর্তটা ছিল শুধু `$modules === []` — অর্থাৎ কোনো মডিউল
+         সেটিং ঘোষণা না করলে গোটা ফর্মটাই, মেনুর সুইচসহ, উধাও হয়ে যেত।
+         আজ কোনো না কোনো মডিউল সেটিং ঘোষণা করে বলে সেটা ধরা পড়ত না,
+         আর একদিন কেউ শেষ ঘোষণাটা সরালে পুরো পর্দাটা খালি দেখাত। --}}
+    @if ($modules === [] && $tree === [])
         <x-ui.empty-state :message="__('system_admin::message.no_switches')" />
     @else
         {{--
@@ -50,6 +82,16 @@
         --}}
         <form method="POST" action="{{ route('system_admin.control-panel.update') }}"
               x-data="{
+                  /*
+                   * কোন সুইচ এখন চালু — কেবল দেখানোর জন্য।
+                   *
+                   * মডিউল বা সাবমডিউল বন্ধ করলে ভেতরেরগুলো সাথে সাথে
+                   * ম্লান হয়ে যায়, সেভ করার আগেই। নাহলে ব্যবহারকারী
+                   * মডিউল বন্ধ করে ভেতরের একটা সারি চালু দেখে ভাবতেন
+                   * ওটা তবু কাজ করবে — অথচ সার্ভার উপরের স্তরটাই
+                   * আগে দেখে ([[MenuSwitches::itemIsOn()]])।
+                   */
+                  on: {{ Js::from($switchState ?? []) }},
                   changed: {},
                   get count() { return Object.keys(this.changed).length; },
                   touch(el) {
@@ -63,7 +105,17 @@
             @csrf
             @method('PUT')
 
+            {{-- মেনুর সুইচ — প্রথম ট্যাবে মডিউলগুলো, মডিউলের ট্যাবে তার
+                 নিজের গ্রুপ ও সারি। কোনটা কতটুকু সেটা কন্ট্রোলার ঠিক করে
+                 ([[ControlPanelController::treeFor()]]); ব্লেড যা পেয়েছে
+                 তা-ই আঁকে। --}}
+            @include($tab === 'switches'
+                ? 'system_admin::control-panel.partials.modules'
+                : 'system_admin::control-panel.partials.tree')
+
             @foreach ($modules as $module)
+                @continue ($tab !== $module['code'])
+
                 <section data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                                 bg-(--color-surface-card)">
                     <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-3 font-semibold">
@@ -97,6 +149,16 @@
 
                                 <div class="space-y-3">
                                     @foreach ($settings as $setting)
+                                        {{-- ফর্মটা নিজে বলে দেয় সে কোন সুইচগুলো বহন করছে।
+
+                                             ── কেন লাগল, ৩০ আগস্ট ২০২৬ ────────────────────
+                                             সার্ভার "চেকবক্স অনুপস্থিত" মানে "বন্ধ" ধরে, আর ট্যাব
+                                             আসার পর একটা পাঠানোয় কেবল একটা ট্যাবের ঘর থাকে।
+                                             এই লাইনটা ছাড়া হিসাব ট্যাব সংরক্ষণ করলেই অন্য ছয়
+                                             মডিউলের ৩৪টা সেটিং নীরবে বন্ধ হয়ে যেত — ৩০ আগস্ট
+                                             ব্রাউজারে সত্যিই একবার হয়েছিল। --}}
+                                        <input type="hidden" name="scope[]" value="{{ $setting['key'] }}">
+
                                         @if ($setting['type'] === 'boolean')
                                             <label class="flex min-h-(--spacing-touch) items-start gap-2 text-sm">
                                                 <input type="checkbox" name="settings[{{ $setting['key'] }}]"
