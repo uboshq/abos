@@ -124,6 +124,38 @@ class TwoNoticesAboutTheSameSilenceTest extends TestCase
      *
      * এখন দুইটাতেই **রূপ** শব্দটা আছে, তাই কোনটা কী তা নাম দেখেই বোঝা যায়।
      */
+    /**
+     * আমদানির ঘরটা ব্রাউজারের নিজের বোতাম দেখায় না।
+     *
+     * ---- কেন নাম বদলানোই যথেষ্ট ছিল না, ৩০ আগস্ট ২০২৬ ----
+     * উপরের পরীক্ষাটা রিপোর্টটাকে **নামের** সমস্যা ধরে সারিয়েছিল, আর
+     * সেটাও একটা আসল সমস্যা ছিল।
+     *
+     * কিন্তু লাইভে পর্দাটা খুলে দেখা গেল আরেকটা কপি রয়েই গেছে, আর
+     * সেটা আমাদের লেখা নয়: `<input type="file">` খোলা থাকলে ব্রাউজার
+     * নিজেই একটা বোতাম আঁকে -- **"Choose File / No file chosen"**,
+     * ইংরেজিতে, আর আমাদের কোনো স্টাইল ছাড়াই।
+     *
+     * অর্থাৎ পাশাপাশি দুইটা কন্ট্রোল একই কথা বলত। পাঠকের চোখে ওটাই
+     * "বোতামটা দুইবার" -- আর সেটাই HP লিখেছিলেন।
+     *
+     * ---- কেন `sr-only` খোঁজা হয় ----
+     * ঘরটা লুকানো থাকলে ব্রাউজার তার বোতামও আঁকে না, আর `<label>`-টাই
+     * একমাত্র দৃশ্যমান কন্ট্রোল। ওটা ফিরে খোলা হলে ইংরেজি বোতামটাও
+     * ফিরত, তাই পাহারাটা ওখানেই।
+     */
+    public function test_the_import_control_is_ours_alone(): void
+    {
+        $html = (string) $this->get(route('system_admin.look.index'))->assertOk()->getContent();
+
+        $this->assertMatchesRegularExpression('/<input[^>]*type="file"[^>]*class="sr-only"/', $html,
+            'ফাইলের ঘরটা লুকানো নেই — ব্রাউজার তার নিজের ইংরেজি বোতামটাও আঁকবে, '
+            .'আর পাশাপাশি দুইটা কন্ট্রোল একই কথা বলবে।');
+
+        $this->assertSame(1, substr_count($html, __('core.look.import')),
+            'আমদানির লেখাটা একাধিকবার আছে — একটাই কন্ট্রোল, একটাই নাম।');
+    }
+
     public function test_the_look_file_buttons_do_not_read_like_the_data_import_screen(): void
     {
         foreach (['bn', 'en'] as $locale) {

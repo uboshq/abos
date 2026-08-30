@@ -78,13 +78,26 @@
 
          দুইটা কপি পাশাপাশি, এক কপির সমান সরে (-৫০%) — এতেই লুপটা
          নির্বিঘ্ন: প্রথমটা যে মুহূর্তে বেরিয়ে যায়, দ্বিতীয়টা ঠিক
-         সেখানেই থাকে যেখানে প্রথমটা শুরু হয়েছিল। --}}
+         সেখানেই থাকে যেখানে প্রথমটা শুরু হয়েছিল।
+
+         ── কেন প্রতিটা কপি অন্তত পর্দার সমান চওড়া, ৩০ আগস্ট ২০২৬ ──
+         নোটিশ যখন একটা বা দুইটা, কপি দুইটা এত ছোট হত যে **দুইটাই
+         একসাথে চোখের সামনে থাকত** — অর্থাৎ একই বাক্য পাশাপাশি দুইবার:
+
+           ● ব্যাকআপ ও খাতা একই ডিস্কে…  ● ব্যাকআপ ও খাতা একই ডিস্কে…
+
+         HP ২৫ আগস্ট এটাকে "ফুটারের বার্তা দুইবার" বলে রিপোর্ট করেছেন,
+         আর ঠিকই করেছেন: পাঠকের কাছে ওটা লুপের কৌশল নয়, একটা ভুল।
+
+         `min-w-full` দিলে দ্বিতীয় কপিটা শুরুতেই পর্দার বাইরে থাকে,
+         আর প্রথমটা বেরিয়ে যেতে যেতে ভেতরে আসে — যেভাবে চলন্ত লেখা
+         পড়ার কথা। --}}
     <div class="group relative hidden min-w-0 flex-1 overflow-hidden md:block">
         <div class="inline-flex whitespace-nowrap will-change-transform
                     motion-safe:animate-[abos-ticker_30s_linear_infinite]
                     group-hover:[animation-play-state:paused]">
             @for ($copy = 0; $copy < 2; $copy++)
-                <span class="inline-flex items-center gap-6 pe-12"
+                <span class="inline-flex min-w-full items-center gap-6 pe-12"
                       @if ($copy === 1) aria-hidden="true" @endif>
                     @foreach ($notices as $notice)
                         @php

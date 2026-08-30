@@ -69,6 +69,7 @@ return [
     ],
 
     'action' => [
+        'refresh' => 'Refresh',
         'close' => 'Close',
         'create' => 'Create',
         'apply' => 'Apply',

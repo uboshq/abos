@@ -25,14 +25,38 @@
                     একটা পাতা যেখানে একটাই ঘর, সেটা একটা ধাপ বাড়ানো।
                 --}}
                 <form method="POST" action="{{ route('system_admin.look.import') }}"
-                      enctype="multipart/form-data" class="flex items-center gap-2">
+                      enctype="multipart/form-data">
                     @csrf
-                    <input type="file" name="file" accept=".json,application/json" required
-                           aria-label="{{ __('core.look.import') }}"
-                           class="max-w-56 text-sm file:mr-2 file:rounded-(--radius-field)
-                                  file:border file:border-(--color-border) file:bg-(--color-surface-app)
-                                  file:px-3 file:py-1.5 file:text-sm">
-                    <x-ui.button type="submit" tone="secondary">{{ __('core.look.import') }}</x-ui.button>
+
+                    {{-- ঘরটা লুকানো, লেবেলটাই বোতাম।
+
+                         ── কেন, ৩০ আগস্ট ২০২৬ ──────────────────────────
+                         আগে `<input type="file">` খোলা ছিল, আর তার পাশে
+                         আমাদের বোতাম। ব্রাউজার ওই ইনপুটের নিজের বোতামটাও
+                         আঁকে — **"Choose File / No file chosen"**,
+                         ইংরেজিতে, আর আমাদের স্টাইল ছাড়াই (`file:`
+                         ইউটিলিটিগুলো ওখানে পৌঁছয়নি)।
+
+                         ফলে পাশাপাশি দুইটা কন্ট্রোল একই কথা বলত, একটা
+                         ইংরেজিতে। HP ২৫ আগস্ট এটাকে "বোতামটা দুইবার
+                         রেন্ডার হচ্ছে" বলে রিপোর্ট করেছেন — আর পাঠকের
+                         চোখে ঠিক তাই। তখন নামটা বদলে সারানোর চেষ্টা
+                         হয়েছিল, কিন্তু ইংরেজি বোতামটা রয়েই গিয়েছিল।
+
+                         এখন একটাই কন্ট্রোল, একটাই লেখা, আর সেটা বাংলায়।
+                         ফাইল বাছার সাথে সাথেই পাঠানো হয় — বাছাইয়ের পর
+                         দ্বিতীয় একটা ক্লিক চাওয়ার কারণ নেই। --}}
+                    <label class="inline-flex min-h-(--spacing-touch) cursor-pointer items-center
+                                  rounded-(--radius-field) border border-(--color-border)
+                                  bg-(--color-surface-card) px-3 text-sm font-medium
+                                  hover:bg-(--color-surface-hover)
+                                  focus-within:outline focus-within:outline-2
+                                  focus-within:outline-offset-2">
+                        {{ __('core.look.import') }}
+
+                        <input type="file" name="file" accept=".json,application/json" required
+                               onchange="this.form.submit()" class="sr-only">
+                    </label>
                 </form>
 
                 <x-ui.button :href="route('system_admin.look.create')" tone="primary">

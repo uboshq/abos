@@ -133,6 +133,36 @@ class Loan extends Model implements Drillable
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    /**
+     * এই ধারটার নাম -- পর্দায় যা দেখানো হবে।
+     *
+     * ---- কী ভাঙা ছিল, ৩০ আগস্ট ২০২৬ ----
+     * তালিকা আর বিস্তারিত পাতা দুইটাতেই লেখা ছিল
+     * `isTerm() ? "টার্ম" : "সিসি"` -- অর্থাৎ **টার্ম নয় মানেই সিসি**।
+     *
+     * ধরন যখন দুইটা ছিল তখন কথাটা সত্যি ছিল। হাতধার যোগ হওয়ার পর সে
+     * চুপচাপ "সিসি" হয়ে গেল: সেভ ঠিকই হত, কিন্তু তালিকা মিথ্যা বলত।
+     * HP ২৯ আগস্ট ধরে -- "Hand loan সিলেক্ট করলে Cash credit দেখায়"।
+     *
+     * ---- কেন নামটা এখানে, পর্দায় নয় ----
+     * দুই পর্দায় দুইবার লেখা ছিল, আর তাই ভুলটাও দুইবার। এখানে থাকলে
+     * নতুন ধরনের দিন একটাই জায়গা বদলাতে হয়।
+     *
+     * ---- কেন অচেনা ধরনে কাঁচা নামটাই ----
+     * ডিফল্ট হিসেবে চেনা কোনো নাম দিলে ভুলটা আবার ফিরত: নতুন একটা
+     * ধরন নীরবে অন্য কারও নাম পরে বসত। কাঁচা `kind` দেখলে চোখে লাগে,
+     * আর চোখে লাগাটাই এখানে কাজের।
+     */
+    public function kindLabel(): string
+    {
+        return match ($this->kind) {
+            self::TERM => __('accounts::field.loan_term'),
+            self::CC => __('accounts::field.loan_cc'),
+            self::HAND => __('accounts::field.loan_hand'),
+            default => (string) $this->kind,
+        };
+    }
+
     public function isTerm(): bool
     {
         return $this->kind === self::TERM;

@@ -51,9 +51,7 @@
                 ['key' => 'lender', 'label' => __('accounts::field.lender'),
                  'render' => fn ($l) => $l->lender],
                 ['key' => 'kind', 'label' => __('accounts::field.loan_kind'), 'width' => '9rem',
-                 'render' => fn ($l) => $l->isTerm()
-                     ? __('accounts::field.loan_term')
-                     : __('accounts::field.loan_cc')],
+                 'render' => fn ($l) => $l->kindLabel()],
                 ['key' => 'sanctioned', 'label' => __('accounts::field.sanctioned'),
                  'numeric' => true, 'width' => '10rem',
                  'render' => fn ($l) => \App\Core\Support\Money::format($l->sanctioned)],
