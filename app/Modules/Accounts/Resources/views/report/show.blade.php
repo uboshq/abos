@@ -117,6 +117,36 @@
                 @endif
 
                 {{--
+                    পক্ষের ধরন — "ট্রান্সপোর্টারদের কত দিতে হবে"।
+
+                    ── কেন ছয়টা আলাদা খতিয়ান নয় ─────────────────────
+                    পরিকল্পনায় লেখা ছিল ডিপোর ছয়টা বিশেষ খতিয়ান — ভাড়া
+                    গাড়ি, ট্রান্সপোর্ট ভেন্ডর, শ্রমিক ঠিকাদার, দালাল…
+                    কিন্তু ওরা সবাই **পক্ষ**, আর পক্ষের ধরন আগে থেকেই
+                    একটা খোলা তালিকা।
+
+                    ছয়টা আলাদা পর্দা বানালে সপ্তম ধরনটার দিন আবার কোড
+                    লিখতে হত। ছাঁকনি হলে কোম্পানি নিজে একটা ধরন যোগ
+                    করলেই তার খতিয়ান পেয়ে যায় — কোড ছোঁয়া ছাড়াই।
+                --}}
+                @if ($partyTypes->isNotEmpty())
+                    <label>
+                        <span class="sr-only">{{ __('master_data::menu.party_types') }}</span>
+                        <select name="party_type_id"
+                                class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
+                                       bg-(--color-surface-app) px-2 text-sm">
+                            <option value="">{{ __('master_data::menu.party_types') }}</option>
+                            @foreach ($partyTypes as $type)
+                                <option value="{{ $type->id }}"
+                                        @selected(($filters['party_type_id'] ?? null) == $type->id)>
+                                    {{ $type->name() }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </label>
+                @endif
+
+                {{--
                     তুলনা ও "উপরের কয়টা" — কেবল যেসব রিপোর্টে প্রশ্নটার
                     মানে আছে।
 

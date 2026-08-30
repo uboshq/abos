@@ -8,6 +8,7 @@ use App\Core\Engines\Report\ReportEngine;
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
+use App\Modules\MasterData\Models\PartyType;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
@@ -55,7 +56,7 @@ class SupplierReportController extends Controller implements HasMiddleware
 
         $result = $this->reports->run(
             $key,
-            $request->only(['from', 'to', 'branch_id', 'top', 'compare']),
+            $request->only(['from', 'to', 'branch_id', 'party_type_id', 'top', 'compare']),
             page: max(1, (int) $request->query('page', 1)),
         );
 
@@ -68,6 +69,16 @@ class SupplierReportController extends Controller implements HasMiddleware
                 ? Branch::query()->active()->orderBy('name_en')->get()
                 : collect(),
             'accounts' => collect(),
+            /*
+             * পক্ষের ধরনের ছাঁকনি — কেবল যে রিপোর্ট চেয়েছে তার জন্য।
+             *
+             * ঘোষণা না করলে তালিকাটা খালি যায়, আর পর্দা ঘরটাই আঁকে না।
+             * সব রিপোর্টে জোর করে বসালে মজুদের রিপোর্টেও "পক্ষের ধরন"
+             * ড্রপডাউন বসত, যেখানে প্রশ্নটার কোনো মানে নেই।
+             */
+            'partyTypes' => $definition->hasFilter('party_type')
+                ? PartyType::query()->active()->orderBy('code')->get()
+                : collect(),
         ]);
     }
 }
