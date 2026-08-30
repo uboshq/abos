@@ -122,4 +122,5 @@ return [
     'sheet_agrees' => 'It balances — assets = liabilities + equity',
     'sheet_does_not_agree' => 'It does not balance — the gap is :gap',
     'branch_sheet_may_not_agree' => 'A single branch rarely balances: capital, loans and bank accounts belong to the company, not to one branch',
+    'instrument_no_when_bank' => 'Needed when a bank or MFS account is involved — without it there is no way to reconcile later.',
 ];
