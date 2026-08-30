@@ -7,6 +7,7 @@ namespace App\Modules\Finance\Http\Controllers;
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\Loan;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Finance\Models\Deposit;
 use App\Modules\Finance\Models\DepositKind;
@@ -79,6 +80,28 @@ class DepositController extends Controller implements HasMiddleware
                 ->orderBy('sort')->get(),
 
             'accounts' => $this->moneyAccounts(),
+
+            /*
+             * যে ধারগুলোর পেছনে একটা জমা বন্ধক রাখা যেতে পারে।
+             *
+             * ---- কেন তালিকাটা এখানে এল, ৩০ আগস্ট ২০২৬ ----
+             * ঘরটা ছিল ঋণের ফর্মে, কারণ FD তখন ঋণেরই একটা ধরন ছিল।
+             * FD জমার পর্দায় চলে আসায় ঘরটাও সাথে এল -- নাহলে দরজা
+             * বন্ধ করতে গিয়ে "আমার FD-টা ঋণের বিপরীতে বাঁধা" কথাটা
+             * বলার জায়গাই থাকত না।
+             *
+             * কেবল **নেওয়া** ব্যাংক-ধার: নিজের দেওয়া টাকার পেছনে
+             * নিজের জমা বাঁধার কোনো মানে নেই, আর হাতধারে কেউ FD বন্ধক
+             * চায় না -- ওটার সমস্ত ব্যাপারই কাগজবিহীন।
+             *
+             * শর্তটা ঋণের ফর্ম থেকে হুবহু আনা, যাতে ঘরটা জায়গা বদলে
+             * নিয়মও বদলে না ফেলে।
+             */
+            'pledgeableLoans' => Loan::query()
+                ->where('direction', Loan::TAKEN)
+                ->whereIn('kind', [Loan::TERM, Loan::CC])
+                ->orderByDesc('id')
+                ->get(),
         ]);
     }
 
@@ -100,6 +123,16 @@ class DepositController extends Controller implements HasMiddleware
             'instalment_day' => ['nullable', 'integer', 'min:1', 'max:28'],
             'payout_account_id' => ['nullable', 'integer', 'exists:accounts,id'],
             'funded_from_account_id' => ['required', 'integer', 'exists:accounts,id'],
+
+            /*
+             * কোন ধারের বিপরীতে বন্ধক -- খালি রাখলে জমাটা হাতের টাকা।
+             *
+             * বাঁধা থাকলে তালিকায় "আছে" দেখাবে ঠিকই, কিন্তু ভাঙানো
+             * যাবে না ([[Deposit::isLocked()]]) -- আর ওই টাকার উপর
+             * ভরসা করে নেওয়া সিদ্ধান্তই সবচেয়ে দামি ভুল।
+             */
+            'pledged_to_loan_id' => ['nullable', 'integer', 'exists:acc_loans,id'],
+
             'note' => ['nullable', 'string', 'max:500'],
         ]);
 

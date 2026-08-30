@@ -78,4 +78,6 @@ return [
     'income_from_sales' => 'From sales',
     'income_not_from_sales' => 'Not from sales',
     'income_all' => 'Total income',
+    'pledged_to_loan' => 'Pledged against',
+    'not_pledged' => 'Not pledged — can be broken',
 ];

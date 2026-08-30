@@ -8,6 +8,7 @@ use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\Loan;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -163,5 +164,42 @@ class Deposit extends Model
         return $this->matures_on === null
             ? null
             : (int) now()->startOfDay()->diffInDays($this->matures_on, false);
+    }
+
+    /**
+     * যে ঋণের বিপরীতে এই জমাটা বন্ধক।
+     *
+     * ---- কেন এটা এখানে এল, ৩০ আগস্ট ২০২৬ ----
+     * আগে FD ছিল `acc_loans`-এর একটা ধরন, আর বন্ধনটা ছিল ঋণ থেকে
+     * ঋণে (`pledged_against_id`)। জমা নিজের পর্দা পাওয়ার পর ব্যাংকে
+     * টাকা রাখার দুইটা দরজা হয়ে গেল, আর মালিক সেটাই বন্ধ করতে বললেন।
+     *
+     * বন্ধনটা তাই সাথে আসছে -- নাহলে একটা দরজা বন্ধ করতে গিয়ে "আমার
+     * FD-টা ঋণের বিপরীতে বাঁধা" কথাটা বলার জায়গাই থাকত না, আর ওটা
+     * পরিষ্কার করা নয়, ক্ষমতা হারানো।
+     */
+    public function pledgedToLoan(): BelongsTo
+    {
+        return $this->belongsTo(Loan::class, 'pledged_to_loan_id');
+    }
+
+    /**
+     * টাকাটা আছে, কিন্তু হাতে নেই।
+     *
+     * ---- কেন এটা আলাদা করে বলা লাগে ----
+     * বাঁধা জমা তালিকায় "আছে" দেখায়, অথচ ঋণ শোধ না হওয়া পর্যন্ত ওটা
+     * ভাঙানো যায় না। পার্থক্যটা না বললে কেউ দরকারের দিনে ওই টাকার
+     * উপর ভরসা করে সিদ্ধান্ত নেবেন -- আর ওটাই সবচেয়ে দামি ভুল।
+     *
+     * ঋণটা শোধ হয়ে গেলে বাঁধনও খোলে: বন্ধক থাকে দায়ের জন্য, আর দায়
+     * না থাকলে বন্ধকেরও কারণ থাকে না।
+     */
+    public function isLocked(): bool
+    {
+        if ($this->pledged_to_loan_id === null) {
+            return false;
+        }
+
+        return ! (bool) $this->pledgedToLoan?->isSettled();
     }
 }

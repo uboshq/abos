@@ -47,16 +47,25 @@ class Loan extends Model implements Drillable
      */
     public const HAND = 'hand';
 
-    /**
-     * FD — নির্দিষ্ট টাকা ব্যাংকে রাখা, নির্দিষ্ট মেয়াদে, নির্দিষ্ট সুদে।
+    /*
+     * ---- FD আর DPS এখানে ছিল, ৩০ আগস্ট ২০২৬-এ সরানো হলো ----
      *
-     * উল্টো করে দেখলে এটা ব্যাংককে দেওয়া একটা টার্ম লোন, তাই ঘরগুলোও
-     * একই। সুদটা কেবল উল্টো দিকে যায়: খরচ নয়, আয়।
+     * যুক্তিটা ঠিকই ছিল: উল্টো করে দেখলে FD হলো ব্যাংককে দেওয়া একটা
+     * টার্ম লোন, তাই ঘরগুলোও এক। ওই মিলটা দেখে ব্যাংকে রাখা টাকা
+     * ঋণের টেবিলেই বসানো হয়েছিল।
+     *
+     * কিন্তু জমার নিজের পর্দা হওয়ার পর ব্যাংকে টাকা রাখার **দুইটা
+     * দরজা** হয়ে গেল, আর দুই দরজা মানে দুই হিসাব: একজন ঋণের পাতা
+     * খুলে যোগ করেন, আরেকজন জমার পাতা -- দুইজনের সংখ্যা মেলে না, আর
+     * কোনটা সত্যি তা বলার উপায় থাকে না।
+     *
+     * বন্ধকের ব্যাপারটাও সাথে গেছে: [[Deposit::pledgedToLoan()]] আর
+     * [[Deposit::isLocked()]]। ওটা না নিলে দরজা বন্ধ করাটা পরিষ্কার
+     * করা হত না, ক্ষমতা হারানো হত।
+     *
+     * সরানোর আগে লাইভের চার কোম্পানিতেই দেখা হয়েছে -- একটাও `fd` বা
+     * `dps` সারি ছিল না, তাই কোনো কাগজ অনাথ হয়নি।
      */
-    public const FD = 'fd';
-
-    /** DPS — একই জিনিস, কেবল টাকাটা মাসে মাসে জমে। */
-    public const DPS = 'dps';
 
     /** ধারটা আমরা নিয়েছি — দায়। */
     public const TAKEN = 'taken';
@@ -70,7 +79,19 @@ class Loan extends Model implements Drillable
         'company_id', 'branch_id', 'document_no', 'lender', 'account_no',
         'kind', 'direction', 'interest_method', 'sanctioned', 'interest_rate',
         'tenure_months', 'start_date', 'first_instalment_on', 'due_on',
-        'matures_on', 'pledged_against_id',
+        'matures_on',
+
+        /*
+         * `pledged_against_id` কলামটা টেবিলে আছে, কিন্তু আর ভরা হয় না।
+         *
+         * ৩০ আগস্ট ২০২৬-এ বন্ধনটা জমার দিকে গেছে
+         * ([[Deposit::pledged_to_loan_id]])। কলামটা ফেলে দেওয়া হয়নি
+         * কারণ ওটা ফেলতে গেলে বিদেশি চাবিটাও ফেলতে হত, আর লাইভে
+         * কোনো সারিতে ওটা ভরা নেই -- অর্থাৎ ফেলার তাড়া নেই, আর
+         * মাইগ্রেশন কম মানে ফেরার পথও সহজ।
+         *
+         * এখানে না থাকায় ওটা আর ভরা যায় না, আর সেটাই আসল কথা।
+         */
         'principal_account_id', 'interest_account_id',
         'security', 'narration', 'status', 'created_by',
     ];
@@ -127,42 +148,19 @@ class Loan extends Model implements Drillable
         return $this->kind === self::HAND;
     }
 
-    /** FD বা DPS — ব্যাংকে রাখা টাকা। */
-    public function isDeposit(): bool
-    {
-        return in_array($this->kind, [self::FD, self::DPS], true);
-    }
-
-    /** যে ঋণের বিপরীতে এই FD বাঁধা। */
-    public function pledgedAgainst(): BelongsTo
-    {
-        return $this->belongsTo(self::class, 'pledged_against_id');
-    }
-
-    /** এই ঋণের বিপরীতে যে জমাগুলো বাঁধা আছে। */
-    public function pledges(): HasMany
-    {
-        return $this->hasMany(self::class, 'pledged_against_id');
-    }
-
-    /**
-     * টাকাটা আছে, কিন্তু হাতে নেই।
+    /*
+     * ---- "এই ঋণের বিপরীতে কী কী বাঁধা" এখানে নেই, আর সেটা ইচ্ছাকৃত ----
      *
-     * বাঁধা FD তালিকায় "আছে" দেখায়, অথচ ঋণ শোধ না হওয়া পর্যন্ত ওটা
-     * ভাঙানো যায় না। এই পার্থক্যটা না বললে কেউ দরকারের দিনে ওই টাকার
-     * উপর ভরসা করে সিদ্ধান্ত নেবেন — আর ওটাই সবচেয়ে দামি ভুল।
+     * বন্ধনটা এখন জমার দিক থেকে ([[Deposit::pledged_to_loan_id]]), তাই
+     * এখানে একটা `hasMany(Deposit::class)` লিখতে ইচ্ছা করেছিল।
      *
-     * ঋণটা শোধ হয়ে গেলে বাঁধনও খোলে: বন্ধক থাকে দায়ের জন্য, আর দায়
-     * না থাকলে বন্ধকেরও কারণ থাকে না।
+     * কিন্তু accounts কারও উপর নির্ভর করে না -- `depends_on` ফাঁকা, আর
+     * বাকি সবাই এর উপর দাঁড়ায় (module.php)। এখান থেকে finance-এর
+     * দিকে তাকালে তীরটা উল্টো হত, আর মডিউলের ক্রমটাই অর্থ হারাত।
+     *
+     * তাই প্রশ্নটা যে করে সে-ই জমার দিক থেকে করে:
+     * `Deposit::where('pledged_to_loan_id', $loan->id)`।
      */
-    public function isLocked(): bool
-    {
-        if ($this->pledged_against_id === null) {
-            return false;
-        }
-
-        return ! (bool) $this->pledgedAgainst?->isSettled();
-    }
 
     /**
      * ধারটা আমরা দিয়েছি, নিইনি।
