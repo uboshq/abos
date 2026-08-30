@@ -44,4 +44,7 @@ return [
     // ডিলারের কমিশন
     'commission_settle' => 'Accepted',
     'commission_reject' => 'Refused',
+    'new_scheme' => 'New scheme',
+    'add_band' => 'Add a band',
+    'activate_scheme' => 'Activate',
 ];

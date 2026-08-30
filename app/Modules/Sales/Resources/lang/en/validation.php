@@ -108,4 +108,7 @@ return [
     'commission_over_percent' => 'This commission is over :limit%. It cannot be entered without approval.',
     'commission_already_decided' => ':no has already been decided.',
     'rejection_needs_reason' => 'Say why it was refused — in six months this is the only answer there will be.',
+    'scheme_has_no_rule' => 'No rate has been set — a scheme with no rate pays nothing.',
+    'scheme_top_band_closed' => "The top band is closed for: :roles. Leave the last band's upper limit empty, or the biggest sale of the year earns nothing.",
+    'scheme_is_live' => "A live scheme's rates cannot be changed — changing them would change what earlier invoices earned. Stop it and write a new one.",
 ];

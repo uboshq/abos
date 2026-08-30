@@ -44,4 +44,7 @@ return [
     // ডিলারের কমিশন
     'commission_settle' => 'মেনেছে',
     'commission_reject' => 'মানেনি',
+    'new_scheme' => 'নতুন স্কিম',
+    'add_band' => 'ধাপ যোগ করুন',
+    'activate_scheme' => 'চালু করুন',
 ];

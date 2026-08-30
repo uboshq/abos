@@ -18,6 +18,7 @@ use App\Modules\Sales\Http\Controllers\SalesPrintController;
 use App\Modules\Sales\Http\Controllers\SalesReportController;
 use App\Modules\Sales\Http\Controllers\SalesReturnController;
 use App\Modules\Sales\Http\Controllers\SalesTargetController;
+use App\Modules\Sales\Http\Controllers\SchemeController;
 use App\Modules\Sales\Http\Controllers\ShiftController;
 use App\Modules\Sales\Http\Controllers\ShipmentController;
 use Illuminate\Support\Facades\Route;
@@ -125,6 +126,29 @@ Route::middleware('auth')->prefix('sales')->group(function () {
             ->whereNumber('claim')->name('accept');
         Route::post('/{claim}/reject', [DepositClaimController::class, 'reject'])
             ->whereNumber('claim')->name('reject');
+    });
+
+    /*
+     * স্কিম — কমিশনের নিয়ম যেখানে লেখা থাকে।
+     *
+     * ধাপগুলো স্কিমের নিজের পাতায় বসে ও মুছে, তাই ওদের রুট স্কিমের
+     * নিচেই — নাহলে একটা ধাপ কোন স্কিমের তা ঠিকানা দেখে বলা যেত না।
+     */
+    Route::prefix('schemes')->name('scheme.')->group(function () {
+        Route::get('/', [SchemeController::class, 'index'])->name('index');
+        Route::post('/', [SchemeController::class, 'store'])->name('store');
+        Route::get('/{scheme}', [SchemeController::class, 'show'])
+            ->whereNumber('scheme')->name('show');
+        Route::put('/{scheme}', [SchemeController::class, 'update'])
+            ->whereNumber('scheme')->name('update');
+        Route::post('/{scheme}/rules', [SchemeController::class, 'addRule'])
+            ->whereNumber('scheme')->name('rule.add');
+        Route::delete('/{scheme}/rules/{rule}', [SchemeController::class, 'removeRule'])
+            ->whereNumber('scheme')->whereNumber('rule')->name('rule.remove');
+        Route::post('/{scheme}/activate', [SchemeController::class, 'activate'])
+            ->whereNumber('scheme')->name('activate');
+        Route::post('/{scheme}/cancel', [SchemeController::class, 'cancel'])
+            ->whereNumber('scheme')->name('cancel');
     });
 
     Route::prefix('commissions')->name('commission.')->group(function () {
