@@ -19,6 +19,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 /**
@@ -129,8 +130,6 @@ class VoucherController extends Controller implements HasMiddleware
         $data = $request->validated();
         $data['type'] = $type;
 
-        $voucher = $this->vouchers->create($data, $this->linesFrom($request, $type));
-
         /*
          * সেভ করলেই পোস্ট, দুই ধাপ নয়।
          *
@@ -138,10 +137,30 @@ class VoucherController extends Controller implements HasMiddleware
          * পড়ে থাকত যেগুলো কোনো হিসাবে নেই, আর কেউ জানত না সেগুলো ভুলে
          * যাওয়া নাকি ইচ্ছাকৃত। খসড়া রাখার দরকার হলে "খসড়া রাখুন"
          * বোতামটা আলাদা করে চাপতে হয়।
+         *
+         * ---- কেন দুইটা এক লেনদেনে, ৩০ আগস্ট ২০২৬ ----
+         * আগে `create()` নিজের লেনদেনে কমিট হত, তারপর `post()` চলত।
+         * পোস্টিং আটকালে (ব্যাংকের লেনদেন নম্বর নেই) ব্যতিক্রমটা
+         * ফর্মে ফিরত, কিন্তু **খসড়াটা রয়ে যেত**।
+         *
+         * ব্যবহারকারী একটা ভুল-বার্তা দেখতেন যা বলে কিছুই হয়নি, আর
+         * তালিকায় পড়ে থাকত একটা ভাউচার। HP-র ভাষায়: "নিঃশব্দে Draft
+         * সেভ হয়ে যায়"। বারবার চেষ্টা করলে একগাদা অসম্পূর্ণ খসড়া --
+         * ঠিক যে জিনিসটা উপরের নিয়মটা এড়াতে চায়।
+         *
+         * এখন দুইটাই এক লেনদেনে: পোস্ট না হলে খসড়াও নেই, আর
+         * বার্তাটা যা বলে বাস্তবেও তাই। "খসড়া রাখুন" চাপলে খসড়াই
+         * থাকে -- ওটা তখন ইচ্ছাকৃত, আর ইচ্ছাকৃতটা লুকানো নয়।
          */
-        if (! $request->boolean('save_as_draft')) {
-            $this->vouchers->post($voucher);
-        }
+        $voucher = DB::transaction(function () use ($request, $data, $type) {
+            $voucher = $this->vouchers->create($data, $this->linesFrom($request, $type));
+
+            if (! $request->boolean('save_as_draft')) {
+                $this->vouchers->post($voucher);
+            }
+
+            return $voucher;
+        });
 
         return redirect()
             ->route('accounts.voucher.show', $voucher)

@@ -64,12 +64,32 @@
                             :value="old('trx_date', $voucher->trx_date?->format('Y-m-d') ?? now()->format('Y-m-d'))"
                             required />
 
-                <label class="block sm:col-span-2">
+                <label class="block">
                     <span class="mb-1 block text-sm font-medium">{{ __('core.table.narration') }}</span>
                     <input type="text" name="narration" value="{{ old('narration', $voucher->narration) }}"
                            class="h-(--spacing-field) w-full rounded-(--radius-field) border
                                   border-(--color-border) bg-(--color-surface-card) px-3">
                 </label>
+
+                {{-- ব্যাংক/MFS লেনদেন নম্বর।
+
+                     ---- কেন ঘরটা এখানে লাগল, ৩০ আগস্ট ২০২৬ ----
+                     জাবেদার সারিতে একটা ব্যাংক-খাত থাকলে পোস্ট করার
+                     সময় নম্বরটা বাধ্যতামূলক ([[VoucherService::
+                     assertBankReferenceIsFree()]]) -- কারণ ভুল নম্বর
+                     কোনো নম্বর না থাকার চেয়ে খারাপ।
+
+                     কিন্তু এই ফর্মে ঘরটাই ছিল না। ফলে ব্যাংক ছুঁলে
+                     "সংরক্ষণ ও পোস্ট" প্রতিবারই ব্যর্থ হত, আর পর্দা
+                     এমন একটা জিনিস চাইত যেটা দেওয়ার জায়গাই সে দেয়নি।
+                     HP ২৯ আগস্ট ধরেছেন।
+
+                     আদায়-পরিশোধের ফর্মে ঘরটা প্রথম দিন থেকেই ছিল;
+                     জাবেদা আলাদা টেমপ্লেট বলে বাদ পড়েছিল। --}}
+                <x-ui.field name="instrument_no"
+                            :label="__('accounts::field.instrument_no')"
+                            :hint="__('accounts::message.instrument_no_when_bank')"
+                            :value="old('instrument_no', $voucher->instrument_no)" />
             </div>
         </section>
 
