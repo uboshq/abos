@@ -17,4 +17,5 @@ return [
      * exactly one follow-up question and the row should answer it.
      */
     'pledged' => 'Pledged against :loan — cannot be broken',
+    'pledged_short' => 'Pledged',
 ];
