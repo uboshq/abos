@@ -6,6 +6,7 @@ use App\Modules\Finance\Http\Controllers\CapitalController;
 use App\Modules\Finance\Http\Controllers\DepositController;
 use App\Modules\Finance\Http\Controllers\ExpenseController;
 use App\Modules\Finance\Http\Controllers\HandLoanController;
+use App\Modules\Finance\Http\Controllers\IncomeController;
 use App\Modules\Finance\Http\Controllers\PlanController;
 use App\Modules\Finance\Http\Controllers\WithdrawalController;
 use App\Modules\Finance\Models\DepositKind;
@@ -35,6 +36,14 @@ Route::middleware('auth')->prefix('finance')->group(function () {
      * যাচাই একদিন আলাদা হয়ে যেত।
      */
     Route::get('/expenses', [ExpenseController::class, 'index'])->name('expense.index');
+
+    /*
+     * আয় — খরচের আয়না, একই প্রশ্ন উল্টো দিক থেকে।
+     *
+     * লেখার পথ নেই, খরচের মতোই: আয় বসে বিক্রয়ের বিলে বা ভাউচারে।
+     * দুইটা পথ থাকলে দুইটার যাচাই একদিন আলাদা হয়ে যেত।
+     */
+    Route::get('/income', [IncomeController::class, 'index'])->name('income.index');
 
     /*
      * মূলধন ও বিনিয়োগ।
