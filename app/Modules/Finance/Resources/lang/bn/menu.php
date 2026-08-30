@@ -11,4 +11,5 @@ return [
     'deposit_bond' => 'বন্ড',
     'hand_loan' => 'হাতধার',
     'withdrawal' => 'উত্তোলন',
+    'income' => 'আয়',
 ];

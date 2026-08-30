@@ -75,4 +75,7 @@ return [
     'set_a_cap' => 'মাসিক সীমা বসান',
     'withdrawals_list' => 'যা যা তোলা হয়েছে',
     'no_cap' => 'সীমা নেই',
+    'income_from_sales' => 'বিক্রয় থেকে',
+    'income_not_from_sales' => 'বিক্রয় ছাড়া',
+    'income_all' => 'মোট আয়',
 ];

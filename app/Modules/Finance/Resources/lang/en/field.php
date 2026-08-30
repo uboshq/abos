@@ -75,4 +75,7 @@ return [
     'set_a_cap' => 'Set a monthly cap',
     'withdrawals_list' => 'What has been taken',
     'no_cap' => 'No cap',
+    'income_from_sales' => 'From sales',
+    'income_not_from_sales' => 'Not from sales',
+    'income_all' => 'Total income',
 ];

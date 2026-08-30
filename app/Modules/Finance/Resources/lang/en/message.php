@@ -45,4 +45,6 @@ return [
     'no_withdrawal_yet' => 'No withdrawals recorded yet',
     'withdrawal_is_not_an_expense' => 'A withdrawal is not an expense — it is the owner taking their own money, so it lowers capital',
     'cap_can_be_changed_here' => 'Over the cap the service refuses; if more is needed, change the cap here — it cannot be passed silently',
+    'income_note' => 'What came in, by head — and how much of it was not from selling',
+    'no_income_yet' => 'No income in this period',
 ];

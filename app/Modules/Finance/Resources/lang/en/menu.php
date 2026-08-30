@@ -11,4 +11,5 @@ return [
     'deposit_bond' => 'Bonds',
     'hand_loan' => 'Hand Loans',
     'withdrawal' => 'Withdrawals',
+    'income' => 'Income',
 ];

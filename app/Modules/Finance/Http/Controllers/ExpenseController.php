@@ -5,15 +5,14 @@ declare(strict_types=1);
 namespace App\Modules\Finance\Http\Controllers;
 
 use App\Core\Services\MenuBuilder;
-use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Finance\Services\HeadTotals;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
-use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 /**
@@ -93,64 +92,21 @@ class ExpenseController extends Controller implements HasMiddleware
     /**
      * খাত ধরে খরচ — এই সময়ে কত, আর তার আগের সমান সময়ে কত।
      *
-     * ── কেন আগের সময়টাও ─────────────────────────────────────────────
-     * "জ্বালানিতে ১২,৪০০" একা কিছু বলে না। "গত মাসে ছিল ৮,১০০" বলার
-     * পরেই সংখ্যাটা একটা প্রশ্ন হয়ে ওঠে, আর ওই প্রশ্নটাই খরচ কমানোর
-     * একমাত্র শুরু।
-     *
-     * ── কেন খতিয়ান থেকে, ভাউচার থেকে নয় ────────────────────────────
-     * একই খাতে খরচ আসে অন্য পথেও — ক্রয় বিলের হাম্মালি, চালানের ভাড়া।
-     * ভাউচার গুনলে ওগুলো বাদ পড়ত, আর ম্যানেজার এমন একটা সংখ্যা দেখতেন
-     * যা খাতার সাথে মেলে না।
+     * ── কেন হিসাবটা এখানে নয়, ভাগ করা সেবায় ────────────────────────
+     * আয়ের পর্দা বানাতে গিয়ে দেখা গেল প্রশ্নটা হুবহু এক — কেবল মাথা
+     * আর চিহ্ন আলাদা। কপি করে বসালে একদিন একটায় সংশোধন হত অন্যটায়
+     * নয়, আর তখন একই ব্যবসার আয় ও খরচ দুই নিয়মে গোনা হত।
      *
      * @return list<array{account: Account, now: string, before: string}>
      */
     private function heads(string $from, string $to): array
     {
-        $operating = Account::query()->where('code', StandardChart::OPERATING_EXPENSES)->first();
-
-        if ($operating === null) {
-            return [];
-        }
-
-        $accounts = Account::query()
-            ->where('parent_id', $operating->id)
-            ->orderBy('code')
-            ->get();
-
-        $span = max(1, now()->parse($from)->diffInDays(now()->parse($to)) + 1);
-        $prevFrom = now()->parse($from)->subDays($span)->toDateString();
-        $prevTo = now()->parse($from)->subDay()->toDateString();
-
-        $sum = fn (Account $a, string $s, string $e): string => (string) (DB::table('ledger_entries')
-            ->where('company_id', CompanyContext::id())
-            ->where('account_id', $a->id)
-            ->whereBetween('trx_date', [$s, $e])
-            ->selectRaw('COALESCE(SUM(debit) - SUM(credit), 0) as net')
-            ->value('net') ?: '0');
-
-        $rows = [];
-
-        foreach ($accounts as $account) {
-            $now = $sum($account, $from, $to);
-            $before = $sum($account, $prevFrom, $prevTo);
-
-            /*
-             * যে খাতে দুই সময়েই কিছু যায়নি সেটা দেখানো হয় না।
-             *
-             * ষোলোটা খাতের বেশিরভাগ একটা ডিপোতে সারা বছরেও ছোঁয়া হয়
-             * না। সবগুলো দেখালে পর্দাটা শূন্যে ভরে যেত, আর যেটা সত্যিই
-             * বেড়েছে সেটা তার মধ্যে হারাত।
-             */
-            if (bccomp($now, '0', 4) === 0 && bccomp($before, '0', 4) === 0) {
-                continue;
-            }
-
-            $rows[] = ['account' => $account, 'now' => $now, 'before' => $before];
-        }
-
-        usort($rows, fn (array $a, array $b) => bccomp($b['now'], $a['now'], 4));
-
-        return $rows;
+        return app(HeadTotals::class)->forParent(
+            StandardChart::OPERATING_EXPENSES,
+            $from,
+            $to,
+            /* খরচ ডেবিটে বাড়ে */
+            debitPositive: true,
+        );
     }
 }
