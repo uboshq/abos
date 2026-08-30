@@ -80,24 +80,32 @@ class TheFdBehindTheLoanTest extends TestCase
         return Account::query()->where('type', Account::EXPENSE)->postable()->orderBy('code')->firstOrFail();
     }
 
-    /** একটা নেওয়া ব্যাংক-ঋণ, টাকা তোলা সহ। */
-    private function bankLoan(string $amount): Loan
+    /**
+     * একটা নেওয়া ব্যাংক-ঋণ, টাকা তোলা সহ।
+     *
+     * ---- কেন টার্ম, সিসি নয় ----
+     * "শোধ করলে বাঁধন খোলে" পরীক্ষাটা সিসি দিয়ে লেখা ছিল, আর সেটা
+     * ভুল উত্তর দিত: সিসিতে ব্যালেন্স শূন্যে নামা মানে সীমাটা শেষ নয়
+     * ([[Loan::isRevolving()]])। টার্ম লোনে শোধ মানে সত্যিই শেষ।
+     */
+    private function bankLoan(string $amount, string $kind = Loan::TERM): Loan
     {
         $loan = app(LoanService::class)->create(
             data: [
                 'lender' => 'Sonali Bank',
-                'kind' => Loan::CC,
+                'kind' => $kind,
                 'sanctioned' => $amount,
                 'interest_rate' => '12',
+                'tenure_months' => 12,
+                'interest_method' => 'flat',
                 'start_date' => '2026-08-01',
                 'principal_account_id' => $this->payable()->id,
                 'interest_account_id' => $this->interestExpense()->id,
             ],
+            intoAccountId: $this->cash()->id,
         );
 
-        app(LoanService::class)->drawDown($loan, $amount, $this->cash()->id, '2026-08-02');
-
-        return $loan;
+        return $loan->refresh();
     }
 
     private function fd(string $amount, ?int $pledgedTo = null, string $heldBy = Deposit::BUSINESS): Deposit
@@ -204,6 +212,41 @@ class TheFdBehindTheLoanTest extends TestCase
         app(LoanService::class)->repay($loan, '300000', $this->cash()->id, '2026-09-01');
 
         $this->assertFalse($fd->refresh()->isLocked());
+    }
+
+    /**
+     * ঘোরানো সীমায় আজ শূন্য থাকলেও জামানত ছাড়া পায় না।
+     *
+     * ---- কেন এটার নিজের পরীক্ষা, ৩০ আগস্ট ২০২৬ ----
+     * লাইভে ধরা পড়ল: একটা সিসি সীমা খুলে তার বিপরীতে FD বন্ধক রাখার
+     * পর তালিকা বলল **"ভাঙানো যায়"** -- কারণ সেদিন সীমা থেকে কিছু
+     * তোলা ছিল না, তাই বকেয়া শূন্য, তাই "চুকে গেছে"।
+     *
+     * সিসিতে ব্যালেন্স রোজ শূন্যে নামে, ওটাই তার স্বভাব। ব্যাংক
+     * প্রতিবার FD ফেরত দেয় না।
+     *
+     * ভুলটা এদিকেই ভয়ানক: মিথ্যা "ভাঙানো যায়" পড়ে কেউ ওই টাকার উপর
+     * ভরসা করে সিদ্ধান্ত নেন, আর ব্যাংকে গিয়ে জানতে পারেন যায় না।
+     */
+    public function test_an_undrawn_credit_line_still_holds_the_deposit(): void
+    {
+        $cc = app(LoanService::class)->create(
+            data: [
+                'lender' => 'Sonali Bank',
+                'kind' => Loan::CC,
+                'sanctioned' => '300000',
+                'interest_rate' => '12',
+                'start_date' => '2026-08-01',
+                'principal_account_id' => $this->payable()->id,
+                'interest_account_id' => $this->interestExpense()->id,
+            ],
+        );
+
+        $this->assertSame(0, bccomp($cc->outstanding(), '0', 4),
+            'পরীক্ষার শর্তই ভাঙল — সীমা থেকে কিছু তোলা হয়ে গেছে।');
+
+        $this->assertTrue($this->fd('200000', $cc->id)->isLocked(),
+            'সীমা থেকে আজ কিছু তোলা নেই বলে বাঁধা FD-টাকে হাতের টাকা দেখাচ্ছে।');
     }
 
     /** একটা ঋণের বিপরীতে একাধিক জমা বাঁধা থাকতে পারে। */
