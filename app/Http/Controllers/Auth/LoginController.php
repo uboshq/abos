@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Auth;
 
+use App\Core\Security\LoginLock;
 use App\Core\Security\MfaService;
 use App\Core\Services\LoginJournal;
 use App\Http\Controllers\Controller;
@@ -32,6 +33,7 @@ class LoginController extends Controller
     public function __construct(
         private readonly LoginJournal $logins,
         private readonly MfaService $mfa,
+        private readonly LoginLock $lock,
     ) {}
 
     public function show(): View
@@ -46,6 +48,26 @@ class LoginController extends Controller
             'password' => ['required', 'string'],
             'remember' => ['nullable', 'boolean'],
         ]);
+
+        /*
+         * এই পরিচয়ে কি এখন তালা পড়ে আছে?
+         *
+         * ── কেন পাসওয়ার্ড যাচাইয়ের আগে ─────────────────────────────
+         * পরে বসালে তালাবদ্ধ অবস্থাতেও প্রতিটা চেষ্টায় একটা bcrypt
+         * যাচাই চলত — অর্থাৎ আক্রমণকারী তালা টপকাতে না পারলেও
+         * সার্ভারের CPU খরচ করাতে পারতেন।
+         *
+         * ── কেন ব্যবহারকারী খোঁজার আগেও ────────────────────────────
+         * তালা টাইপ করা নামের উপর, অ্যাকাউন্টের উপর নয় — নাহলে "তালা
+         * পড়ল কি না" দেখেই বোঝা যেত নামটা আসল কি না।
+         */
+        if (($minutes = $this->lock->locked($credentials['identifier'])) !== null) {
+            $this->logins->failed($credentials['identifier'], null, LoginAttempt::LOCKED);
+
+            throw ValidationException::withMessages([
+                'identifier' => __('auth.locked', ['minutes' => $minutes]),
+            ]);
+        }
 
         $user = $this->findUser($credentials['identifier']);
 
