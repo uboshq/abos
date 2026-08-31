@@ -27,6 +27,7 @@ return [
     'supplier_challan_no' => 'Supplier\'s challan no',
     'supplier_bill_no' => 'Supplier\'s bill no',
     'narration' => 'Narration',
+    'notes' => 'Notes',
     'status' => 'Status',
     'order' => 'Purchase order',
     'receipt' => 'Receipt',

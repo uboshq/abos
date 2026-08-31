@@ -89,6 +89,7 @@ return [
         'history' => 'ইতিহাস',
         'help' => 'সাহায্য',
         'cancel' => 'বাতিল',
+        'delete' => 'মুছুন',
         'search' => 'খুঁজুন',
         'search_anything' => 'যেকোনো কিছু খুঁজুন…',
         'switch_language' => 'ভাষা বদলান',

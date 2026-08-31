@@ -13,6 +13,7 @@ use App\Modules\Accounts\Models\MoneyTransfer;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\MoneyTransferService;
+use App\Modules\Accounts\Services\OpeningBalanceService;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\VoucherService;
 use Database\Seeders\DemoSeeder;
@@ -65,10 +66,8 @@ class AccountsShellTest extends TestCase
         $main = $tills->ensurePrimaryTill();
         $rider = $tills->create(['code' => 'RIDER-A', 'name_en' => 'Rider A', 'name_bn' => 'রাইডার']);
 
-        Account::query()->whereKey($main->account_id)
-            ->update(['opening_balance' => '12000', 'opening_date' => '2026-07-01']);
-        Account::query()->whereKey($rider->account_id)
-            ->update(['opening_balance' => '3500', 'opening_date' => '2026-07-01']);
+        $this->open($main->account_id, '12000');
+        $this->open($rider->account_id, '3500');
 
         $this->get(route('accounts.dashboard'))
             ->assertOk()
@@ -106,8 +105,7 @@ class AccountsShellTest extends TestCase
     {
         $till = app(CashTillService::class)->ensurePrimaryTill();
 
-        Account::query()->whereKey($till->account_id)
-            ->update(['opening_balance' => '20000', 'opening_date' => '2026-07-01']);
+        $this->open($till->account_id, '20000');
 
         // একটা খসড়া ভাউচার — কোনো হিসাবে নেই
         $vouchers = app(VoucherService::class);
@@ -253,5 +251,26 @@ class AccountsShellTest extends TestCase
 
         $this->get(route('accounts.settings'))->assertForbidden();
         $this->put(route('accounts.settings.update'), ['settings' => []])->assertForbidden();
+    }
+
+    /**
+     * একটা খাতে খোলার জের — কলামে বসিয়ে **আর খতিয়ানে পাঠিয়ে**।
+     *
+     * ── কেন দুইটা ধাপ, ৩১ আগস্ট ২০২৬ ────────────────────────────────
+     * খোলার জের এখন খতিয়ানের প্রথম সারি, আর [[Account::balanceOn()]]
+     * কেবল খতিয়ান গোনে — `opening_balance` কলামটা সে দেখেই না। কলামটা
+     * এখন কেবল **ঘোষণা**, ব্যালেন্স নয়।
+     *
+     * ওই বদলের পর এই পরীক্ষাগুলো হালনাগাদ হয়নি, তাই টিলের ব্যালেন্স
+     * শূন্য থাকত আর ড্যাশবোর্ডের সংখ্যা মিলত না। কোডের দোষ ছিল না।
+     */
+    private function open(int $accountId, string $amount): void
+    {
+        Account::query()->whereKey($accountId)
+            ->update(['opening_balance' => $amount, 'opening_date' => '2026-07-01']);
+
+        app(OpeningBalanceService::class)->forAccount(
+            Account::query()->findOrFail($accountId)
+        );
     }
 }
