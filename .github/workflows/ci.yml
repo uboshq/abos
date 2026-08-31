@@ -26,6 +26,26 @@ jobs:
   gate:
     runs-on: ubuntu-latest
 
+    # ── এই একটা লাইন না থাকায় CI পাঁচটা রান ধরে কিছুই যাচাই করেনি ──────
+    #
+    # `.env` রিপোতে থাকে না (থাকার কথাও নয়), আর `config/app.php`-এ লেখা
+    # `env('APP_ENV', 'production')` — অর্থাৎ ডিফল্টই **production**।
+    #
+    # `migrate:fresh` ধ্বংসাত্মক কমান্ড, তাই Laravel প্রোডাকশনে সেটা
+    # চালানোর আগে জিজ্ঞেস করে; `--no-interaction`-এ উত্তর দেওয়ার কেউ নেই,
+    # তাই সে **বাতিল** করে আর exit 1 দেয়। লগে কোনো ব্যতিক্রম নেই, কেবল
+    # "APPLICATION IN PRODUCTION · Command cancelled" — আর ওই দুই লাইন
+    # দেখে ভুলটা ধরা কঠিন, কারণ কিছু ভাঙেনি, কিছু চলেইনি।
+    #
+    # ফল: ৩০ আগস্ট ২০২৬ পর্যন্ত টানা পাঁচটা রান লাল, আর প্রতিটাই থেমেছে
+    # **টেস্ট শুরু হওয়ার আগেই**। গেটটা তখন কেবল Pint আর npm build দেখত;
+    # ২,১৪৭টা পরীক্ষার একটাও চলেনি। ৩১ আগস্ট ২০২৬-এ ধরা পড়ল।
+    #
+    # phpunit.xml নিজে `APP_ENV=testing` বসায়, কিন্তু সেটা কেবল টেস্ট
+    # প্রসেসের ভিতরে — মাইগ্রেশনের ধাপ আলাদা প্রসেস, সে ওটা দেখে না।
+    env:
+      APP_ENV: testing
+
     services:
       mysql:
         # MySQL, not sqlite, and this is not a preference.
@@ -91,7 +111,9 @@ jobs:
         # against a database that already has the previous shape is a
         # migration that will fail on the first new company, and that is
         # exactly the case nobody tests by hand.
-        run: php artisan migrate:fresh --seed --no-interaction
+        # --force দ্বিতীয় বেড়া: APP_ENV কোনোদিন আবার হারিয়ে গেলেও
+        # কমান্ডটা তখন থেমে না গিয়ে চলবে, আর গেট আসল কাজটা করতে পারবে
+        run: php artisan migrate:fresh --seed --force --no-interaction
         env:
           DB_CONNECTION: mysql
           DB_HOST: 127.0.0.1
@@ -123,7 +145,8 @@ jobs:
         # A `down()` nobody has ever run is not a rollback plan, it is a
         # hope. The one time it is needed is the one time there is no
         # time to find out it was never written.
-        run: php artisan migrate:rollback --step=5 --no-interaction
+        # একই কারণে --force — rollback-ও ধ্বংসাত্মক কমান্ড
+        run: php artisan migrate:rollback --step=5 --force --no-interaction
         env:
           DB_CONNECTION: mysql
           DB_HOST: 127.0.0.1
