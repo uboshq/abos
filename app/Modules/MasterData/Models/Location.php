@@ -203,10 +203,37 @@ class Location extends Model implements Drillable
      */
     public function selfAndDescendants(): Collection
     {
+        /*
+         * এক কোয়েরিতে সবাই — গাছ বেয়ে ধাপে ধাপে নয়।
+         *
+         * সম্পাদনার পর্দা এটাকে ডাকে ("নিজে ও নিজের নিচের কেউ বাবা হতে
+         * পারে না")। আগে প্রতিটা ধাপে একটা কোয়েরি যেত, আর এলাকার মই
+         * সাতটা ধাপ গভীর — দেশ খুলতে গেলে শাখা যত, কোয়েরিও তত।
+         * [[Account::selfAndDescendants()]]-এ একই সমস্যা, একই সমাধান।
+         */
+        $pool = $this->relationLoaded('children')
+            ? null
+            : static::query()->select(['id', 'parent_id'])->get()->groupBy('parent_id');
+
+        return $this->gather($pool);
+    }
+
+    /**
+     * নিজে ও নিচের সবাই — আগে থেকে আনা তালিকা ধরে।
+     *
+     * @param  \Illuminate\Support\Collection<int|string, Collection<int, self>>|null  $pool
+     * @return Collection<int, self>
+     */
+    private function gather(?\Illuminate\Support\Collection $pool): Collection
+    {
         $all = new Collection([$this]);
 
-        foreach ($this->children as $child) {
-            $all = $all->merge($child->selfAndDescendants());
+        $children = $pool === null
+            ? $this->children
+            : ($pool->get($this->getKey()) ?? new Collection);
+
+        foreach ($children as $child) {
+            $all = $all->merge($child->gather($pool));
         }
 
         return $all;

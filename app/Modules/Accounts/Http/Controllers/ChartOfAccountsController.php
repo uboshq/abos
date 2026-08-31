@@ -155,12 +155,39 @@ class ChartOfAccountsController extends Controller implements HasMiddleware
 
         $account->withRunningBalance($entries->getCollection(), $opening);
 
+        /*
+         * গ্রুপ খাতের নিচের ধাপগুলো আগে থেকে আনা।
+         *
+         * ── কেন ────────────────────────────────────────────────────
+         * [[Account::balanceOn()]] গ্রুপের বেলায় সন্তানদের জের যোগ করে,
+         * আর সন্তান নিজেও গ্রুপ হলে আবার নিচে নামে। আগে থেকে না আনলে
+         * প্রতিটা ধাপে আলাদা কোয়েরি যেত — মাথার খাতে ২২৯টা সারির ছক
+         * মানে দুইশোর বেশি কোয়েরি, আর পাতাটা ধীরে খোলা ছাড়া কোনো
+         * লক্ষণ থাকত না। ধরা পড়েছে preventLazyLoading চালু করার পর,
+         * ৩১ আগস্ট ২০২৬-এ পর্দা খুলে।
+         *
+         * চারটা ধাপ, কারণ ছকটা চার ধাপ গভীর (মাপা)। ধাপ ধরে আনলে
+         * Eloquent প্রতি ধাপে একটাই কোয়েরি করে, খাত যত বেশিই হোক।
+         *
+         * ── যা এতে সারে না, আর সেটা লিখে রাখা ──────────────────────
+         * জেরটা তবু প্রতিটা পাতা-খাতের জন্য আলাদা করে গোনা হয়। পুরো
+         * সাবট্রির জন্য একটাই যোগফল-কোয়েরি করা যেত, কিন্তু তাতে চিহ্ন
+         * ঠিক রাখার নিয়মটা বদলাতে হয় (প্রতিটা খাত নিজের প্রকৃতি ধরে
+         * চিহ্ন ঠিক করে), আর টাকার অঙ্কের নিয়ম এভাবে একা বদলানো ঠিক নয়।
+         * ওটা আলাদা সিদ্ধান্ত।
+         */
+        if ($account->is_group) {
+            $account->load('children.children.children.children');
+        }
+
         return view('accounts::coa.show', [
             'menu' => $this->menu->forUser($request->user()),
             'account' => $account,
             'entries' => $entries,
             'balance' => $account->balanceOn(),
-            'children' => $account->is_group ? $account->children()->get() : new Collection,
+            // আগে থেকে আনা সন্তানগুলোই — `children()->get()` লিখলে নতুন
+            // মডেল আসত, আর তাদের জের গুনতে গিয়ে আবার নিচে নামা শুরু হত
+            'children' => $account->is_group ? $account->children : new Collection,
         ]);
     }
 
@@ -168,7 +195,7 @@ class ChartOfAccountsController extends Controller implements HasMiddleware
     {
         return view('accounts::coa.form', [
             'menu' => $this->menu->forUser($request->user()),
-            'account' => $account,
+            'account' => $account->load('parent'),
             // নিজে ও নিজের নিচের কেউ বাবা হতে পারে না — তালিকা থেকেই
             // বাদ, নাহলে ব্যবহারকারী বাছার পর ভুলের বার্তা পেত
             'parents' => $this->groupOptions(exclude: $account->selfAndDescendants()->pluck('id')->all()),

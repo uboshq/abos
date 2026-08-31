@@ -300,10 +300,42 @@ class Account extends Model implements Drillable
      */
     public function selfAndDescendants(): Collection
     {
+        /*
+         * সম্পর্ক আগে থেকে আনা থাকলে সেটাই — নাহলে এক কোয়েরিতে সবাই।
+         *
+         * ── আগে যা হত ───────────────────────────────────────────────
+         * `$this->children` ধরে নিচে নামা হত, আর প্রতিটা ধাপে একটা করে
+         * কোয়েরি যেত। সম্পাদনার পর্দা এটাকেই ডাকে ("নিজে ও নিজের নিচের
+         * কেউ বাবা হতে পারে না"), তাই মাথার একটা খাত খুলতে গেলে ছকের
+         * গভীরতা যত, কোয়েরিও তত — আর কোনো লক্ষণ নেই, শুধু পাতা ধীরে খোলে।
+         *
+         * এখন কোম্পানির সব খাত একবারে এনে স্মৃতিতে গাছ বানানো হয়:
+         * দুইশো সারির ছকে একটাই কোয়েরি। ধরা পড়েছে preventLazyLoading
+         * চালু করার পর, ৩১ আগস্ট ২০২৬-এ পর্দা খুলে।
+         */
+        $pool = $this->relationLoaded('children')
+            ? null
+            : static::query()->select(['id', 'parent_id'])->get()->groupBy('parent_id');
+
+        return $this->gather($pool);
+    }
+
+    /**
+     * নিজে ও নিচের সবাই — আগে থেকে আনা তালিকা ধরে।
+     *
+     * @param  \Illuminate\Support\Collection<int|string, Collection<int, self>>|null  $pool
+     * @return Collection<int, self>
+     */
+    private function gather(?\Illuminate\Support\Collection $pool): Collection
+    {
         $all = new Collection([$this]);
 
-        foreach ($this->children as $child) {
-            $all = $all->merge($child->selfAndDescendants());
+        $children = $pool === null
+            ? $this->children
+            : ($pool->get($this->getKey()) ?? new Collection);
+
+        foreach ($children as $child) {
+            $all = $all->merge($child->gather($pool));
         }
 
         return $all;
