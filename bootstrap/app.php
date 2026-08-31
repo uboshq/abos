@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\ContentSecurityPolicy;
 use App\Http\Middleware\ExportListing;
 use App\Http\Middleware\NormalizeUnicodeInput;
 use App\Http\Middleware\RefuseSwitchedOffScreens;
@@ -82,6 +83,16 @@ return Application::configure(basePath: dirname(__DIR__))
              * ভিউ রেন্ডার হওয়ার পরে কাজ করে, তাই সবার শেষে।
              */
             ExportListing::class,
+
+            /*
+             * পাতা কোথা থেকে জিনিস আনতে পারবে — উত্তরের হেডারে।
+             *
+             * সবার শেষে, কারণ এটা কেবল একটা হেডার বসায় আর তার জন্য
+             * উত্তরটা তৈরি হয়ে যাওয়া দরকার। লাইভে HSTS ও বাকি তিনটা
+             * হেডার আগে থেকেই ছিল; ৩১ আগস্ট ২০২৬-এ দেখা গেল CSP-টাই
+             * কেবল নেই।
+             */
+            ContentSecurityPolicy::class,
         ]);
 
         /*
