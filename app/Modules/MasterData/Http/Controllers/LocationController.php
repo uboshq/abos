@@ -50,6 +50,14 @@ class LocationController extends Controller implements HasMiddleware
 
         $query = Location::query()
             ->when(! $showInactive, fn ($b) => $b->active())
+            /*
+             * দায়িত্বে কে — সারির সাথেই।
+             *
+             * গাছটা কয়েকশো সারি পর্যন্ত এক পাতায় আঁকা হয়, আর প্রতিটা
+             * সারিতে নামটা দেখানো হয়। আলাদা করে আনলে ওখানেই কয়েকশো
+             * বাড়তি কোয়েরি — আর পাতাটা ধীরে খোলা ছাড়া কোনো লক্ষণ থাকত না।
+             */
+            ->with('assignee')
             ->orderBy('code');
 
         $total = (clone $query)->count();
@@ -98,7 +106,11 @@ class LocationController extends Controller implements HasMiddleware
     {
         return view('master_data::location.show', [
             'menu' => $this->menu->forUser($request->user()),
-            'location' => $location->load(['parent', 'assignee', 'children']),
+            /*
+             * সন্তানদের দায়িত্বপ্রাপ্তও একসাথে — পর্দাটা প্রতিটা সন্তানের
+             * পাশে নামটা দেখায়, তাই আলাদা করে আনলে সন্তান যত, কোয়েরিও তত।
+             */
+            'location' => $location->load(['parent', 'assignee', 'children.assignee']),
             'childLevel' => Location::childLevelOf($location->level),
         ]);
     }
@@ -107,7 +119,8 @@ class LocationController extends Controller implements HasMiddleware
     {
         return view('master_data::location.form', [
             'menu' => $this->menu->forUser($request->user()),
-            'location' => $location,
+            // দায়িত্বপ্রাপ্ত কে — ফর্মে আগে থেকে বাছা থাকে, তাই সাথেই আসুক
+            'location' => $location->load('assignee'),
             'ladder' => Location::activeLadder(),
             // নিজে ও নিজের নিচের কেউ বাবা হতে পারে না — তালিকা থেকেই বাদ
             'parents' => $this->parentOptions(
