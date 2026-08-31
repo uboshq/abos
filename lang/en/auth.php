@@ -10,6 +10,7 @@ return [
      */
     'failed' => 'Incorrect username or password.',
     'throttle' => 'Too many attempts. Try again in :seconds seconds.',
+    'locked' => 'Too many failed attempts. Try again in :minutes minutes.',
 
     'welcome_back' => 'Welcome back',
     'sign_in_to_workspace' => 'Sign in to your workspace',

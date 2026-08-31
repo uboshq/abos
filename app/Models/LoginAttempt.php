@@ -47,6 +47,16 @@ class LoginAttempt extends Model
     /** পাসওয়ার্ড ঠিক, কোড ভুল — উপরেরটার চেয়েও জোরালো চিহ্ন। */
     public const WRONG_CODE = 'wrong_code';
 
+    /**
+     * তালা পড়েছিল, তাই চেষ্টাটা যাচাই পর্যন্তই পৌঁছায়নি ([[LoginLock]])।
+     *
+     * এটা নিজে গোনায় ধরা হয় না — নাহলে তালাবদ্ধ অবস্থায় প্রতিটা চেষ্টা
+     * তালাটাকে আরও লম্বা করত, আর একবার আটকে গেলে দিনভর আর খুলত না।
+     * তবু খাতায় লেখা থাকে, কারণ তালা পড়ার পরেও চেষ্টা চলতে থাকা মানে
+     * ওটা মানুষের ভুল নয়, একটা যন্ত্র।
+     */
+    public const LOCKED = 'locked';
+
     protected $fillable = [
         'company_id', 'user_id', 'identifier', 'succeeded',
         'reason', 'ip_address', 'user_agent',
