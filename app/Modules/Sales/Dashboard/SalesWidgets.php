@@ -8,6 +8,7 @@ use App\Core\Contracts\DashboardWidgets;
 use App\Core\Dashboard\Widget;
 use App\Core\Engines\Report\ReportEngine;
 use App\Core\Metrics\Metric;
+use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Modules\Sales\Metrics\SalesMetrics;
@@ -194,7 +195,17 @@ final class SalesWidgets implements DashboardWidgets
         $today = Carbon::today();
         $before = $today->copy()->subWeek();
 
+        /*
+         * কোম্পানির ছাঁকনি হাতে — DB::table() গ্লোবাল স্কোপ মানে না।
+         *
+         * ৩১ আগস্ট ২০২৬-এ ধরা পড়েছে: এই দুইটা ফাংশন ছাঁকনি ছাড়া চলত, তাই
+         * এক কোম্পানির মালিক ড্যাশবোর্ডে **সব কোম্পানির** বিক্রি একসাথে
+         * দেখতেন। [[TenantIsolationTest]] ধরেনি কারণ সে Eloquent-এর
+         * গ্লোবাল স্কোপ পরীক্ষা করে, আর DB::table() ঠিক সেটাই এড়ায়।
+         * পাহারা: [[EveryRawQueryNamesItsCompanyTest]]।
+         */
         $sum = fn (Carbon $day) => (string) (DB::table($table)
+            ->where('company_id', CompanyContext::id())
             ->whereIn('status', DocumentStatus::POSTED)
             ->whereNull('deleted_at')
             ->whereDate('trx_date', $day->toDateString())
@@ -238,7 +249,9 @@ final class SalesWidgets implements DashboardWidgets
     {
         $from = Carbon::today()->subDays(6);
 
+        // কোম্পানির ছাঁকনি হাতে — কারণ উপরের `againstLastWeek()`-এ লেখা
         $byDay = DB::table($table)
+            ->where('company_id', CompanyContext::id())
             ->whereIn('status', DocumentStatus::POSTED)
             ->whereNull('deleted_at')
             ->whereBetween('trx_date', [$from->toDateString(), Carbon::today()->toDateString()])
