@@ -22,6 +22,7 @@ use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Spatie\Permission\Models\Role;
@@ -405,8 +406,24 @@ class UserController extends Controller implements HasMiddleware
              * আট অক্ষর — কারণ এই লগইনের পেছনে টাকার খাতা, আর ছোট
              * পাসওয়ার্ড আন্দাজ করা যায়। কী লেখা হলো তা কোথাও দেখানো
              * বা লেখা হয় না; ভুলে গেলে আবার বসাতে হয়।
+             *
+             * ── কেবল দৈর্ঘ্য যথেষ্ট নয়, ৩১ আগস্ট ২০২৬ ────────────────
+             * আগে নিয়ম ছিল শুধু `min:8`, তাই `12345678` বা `password`
+             * দুইটাই চলত। লগইনে পাহারা একটাই স্তরের (IP ধরে মিনিটে
+             * দশবার), আর অ্যাকাউন্ট ধরে কোনো লক নেই — অর্থাৎ দুর্বল
+             * পাসওয়ার্ড ধরার দ্বিতীয় কোনো জাল নেই।
+             *
+             * অক্ষর **আর** সংখ্যা চাওয়া হয়, বড়-ছোট হরফ নয়: ডিপোর
+             * কর্মীরা অনেকে বাংলা কিবোর্ডে টাইপ করেন, আর জটিল নিয়ম
+             * বসালে পাসওয়ার্ড কাগজে লেখা শুরু হয় — তখন নিয়মটা
+             * নিরাপত্তা বাড়ায় না, কমায়।
              */
-            'password' => [$user === null ? 'required' : 'nullable', 'string', 'min:8', 'max:191'],
+            'password' => [
+                $user === null ? 'required' : 'nullable',
+                'string',
+                'max:191',
+                Password::min(8)->letters()->numbers(),
+            ],
 
             'locale' => ['required', Rule::in(['bn', 'en'])],
             'is_active' => ['nullable', 'boolean'],
