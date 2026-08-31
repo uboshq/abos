@@ -27,6 +27,7 @@ return [
     'supplier_challan_no' => 'সরবরাহকারীর চালান নম্বর',
     'supplier_bill_no' => 'সরবরাহকারীর বিল নম্বর',
     'narration' => 'বিবরণ',
+    'notes' => 'মন্তব্য',
     'status' => 'অবস্থা',
     'order' => 'ক্রয় আদেশ',
     'receipt' => 'চালান',

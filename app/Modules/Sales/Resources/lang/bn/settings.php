@@ -37,4 +37,8 @@ return [
     'commission_max_percent' => 'কমিশনের সর্বোচ্চ হার % (০ = সীমা নেই)',
     'field_transport' => 'পরিবহনের ঘর (গাড়ি · চালক · ভাড়া)',
     'field_shipment' => 'চালান কোথায় যাবে',
+    'price_tolerance_percent' => 'মান দাম থেকে কত শতাংশ সরা যাবে',
+    'price_policy' => 'সীমা ছাড়ালে কী হবে',
+    'price_policy_below' => 'মান দামের নিচে বেচলেও নিয়মটা খাটবে',
+    'price_policy_above' => 'মান দামের উপরে বেচলেও নিয়মটা খাটবে',
 ];

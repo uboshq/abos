@@ -85,6 +85,7 @@ return [
         'history' => 'History',
         'help' => 'Help',
         'cancel' => 'Cancel',
+        'delete' => 'Delete',
         'search' => 'Search',
         'search_anything' => 'Search anything…',
         'switch_language' => 'Switch language',

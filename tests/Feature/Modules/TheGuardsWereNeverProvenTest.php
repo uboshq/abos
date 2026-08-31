@@ -62,7 +62,7 @@ class TheGuardsWereNeverProvenTest extends TestCase
         return array_merge([
             'name' => 'Rahim Salesman',
             'email' => 'rahim@abos.test',
-            'password' => 'a-long-enough-secret',
+            'password' => 'a-long-enough-secret-9',
             'locale' => 'bn',
             'is_active' => '1',
             'roles' => ['salesman'],
@@ -82,6 +82,40 @@ class TheGuardsWereNeverProvenTest extends TestCase
             ->assertSee($this->owner->name);
     }
 
+    /**
+     * পাসওয়ার্ডে কেবল দৈর্ঘ্য যথেষ্ট নয় — অক্ষর ও সংখ্যা দুইটাই লাগে।
+     *
+     * ── কেন এই পরীক্ষাটা আছে ────────────────────────────────────────
+     * নিয়মটা ৩১ আগস্ট ২০২৬-এ বসানো হয়েছে, আর নিয়ম বসানো মানে কিছু
+     * প্রমাণ হয় না — কেউ একদিন `Password::min(8)` লিখে বাকিটা মুছে
+     * দিলে কোনো পরীক্ষা লাল হত না, আর `12345678` আবার চলত।
+     *
+     * এই লগইনের পিছনে টাকার খাতা, আর পাহারা এক স্তরের: IP ধরে মিনিটে
+     * দশবার, তার উপরে অ্যাকাউন্ট ধরে তালা ([[LoginLock]])। দুর্বল
+     * পাসওয়ার্ড ধরার তৃতীয় কোনো জাল নেই।
+     */
+    public function test_a_password_without_a_number_is_refused(): void
+    {
+        $this->actingAs($this->owner)
+            ->post(route('system_admin.user.store'), $this->form([
+                'password' => 'onlylettershere',
+            ]))
+            ->assertSessionHasErrors('password');
+
+        $this->assertNull(User::query()->where('email', 'rahim@abos.test')->first(),
+            'নিয়ম ভাঙা পাসওয়ার্ডে ব্যবহারকারী তৈরি হওয়া উচিত নয়।');
+    }
+
+    /** ছোট পাসওয়ার্ডও নয় — সংখ্যা থাকলেও। */
+    public function test_a_short_password_is_refused(): void
+    {
+        $this->actingAs($this->owner)
+            ->post(route('system_admin.user.store'), $this->form([
+                'password' => 'ab1',
+            ]))
+            ->assertSessionHasErrors('password');
+    }
+
     /** পর্দা দিয়ে সত্যিই একজন ব্যবহারকারী তৈরি হয়, আর তিনি ঢুকতে পারেন। */
     public function test_a_user_made_here_can_actually_sign_in(): void
     {
@@ -92,7 +126,7 @@ class TheGuardsWereNeverProvenTest extends TestCase
         $rahim = User::query()->where('email', 'rahim@abos.test')->first();
 
         $this->assertNotNull($rahim, 'ব্যবহারকারী তৈরি হয়নি।');
-        $this->assertTrue(Hash::check('a-long-enough-secret', $rahim->password),
+        $this->assertTrue(Hash::check('a-long-enough-secret-9', $rahim->password),
             'পাসওয়ার্ডটা হ্যাশ হয়ে বসেনি — লগইন করা যেত না।');
         $this->assertTrue($rahim->hasRole('salesman'));
         $this->assertTrue($rahim->companies->contains($this->company->id),
@@ -288,7 +322,7 @@ class TheGuardsWereNeverProvenTest extends TestCase
         $this->actingAs($this->owner)->put(route('system_admin.user.update', $rahim), [
             'name' => $rahim->name,
             'email' => $rahim->email,
-            'password' => 'another-long-secret',
+            'password' => 'another-long-secret-7',
             'locale' => 'bn',
             'is_active' => '1',
             'roles' => ['salesman'],

@@ -14,6 +14,7 @@ use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Models\MoneyTransfer;
 use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\MoneyTransferService;
+use App\Modules\Accounts\Services\OpeningBalanceService;
 use App\Modules\Accounts\Services\StandardChart;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -320,5 +321,21 @@ class MoneyTransferTest extends TestCase
             'opening_balance' => $amount,
             'opening_date' => '2026-07-01',
         ]);
+        /*
+         * কলামে বসানোই যথেষ্ট নয় — জেরটা খতিয়ানে বসাতে হয়।
+         *
+         * ── কেন এটা যোগ করতে হলো, ৩১ আগস্ট ২০২৬ ─────────────────────
+         * খোলার জের এখন **খতিয়ানের প্রথম সারি**, আর
+         * [[Account::balanceOn()]] কেবল খতিয়ান গোনে — `opening_balance`
+         * কলামটা সে দেখেই না। কলামটা এখন কেবল **ঘোষণা**, ব্যালেন্স নয়।
+         *
+         * ওই বদলের পর এই সহায়কটা হালনাগাদ হয়নি, তাই টিলে টাকা বসত না
+         * আর "হাতে আছে মাত্র ০.০০ টাকা" বলে সব হস্তান্তর আটকে যেত।
+         * কোডের দোষ ছিল না; সহায়কটা বাসি ছিল।
+         */
+        app(OpeningBalanceService::class)->forAccount(
+            Account::query()->findOrFail($till->account_id)
+        );
+
     }
 }
