@@ -557,7 +557,8 @@ final class PurchaseBillService
                 ? $this->resolveOrderLine($bill, $line['purchase_order_line_id'] ?? null, $productId)
                 : null;
 
-            $figures = $this->lineFigures($qty, $rate, $line['discount'] ?? '0', $line['tax'] ?? '0');
+            // ভ্যাট না পাঠালে পণ্যের নিজের হার থেকে গোনা
+            $figures = $this->lineFigures($qty, $rate, $line['discount'] ?? '0', $line['tax'] ?? null, $product->tax);
 
             /*
              * ফ্রি পরিমাণ — একই সারির একই এককে, তাই একই রূপান্তরে।

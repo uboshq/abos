@@ -275,6 +275,16 @@ class DirectSaleController extends Controller implements HasMiddleware
                      */
                     'vatRate' => (float) ($p->tax?->rate ?? 0),
 
+                    /*
+                     * দামের ভেতরের ভ্যাট — পর্দাকে বলে দিতে হয়।
+                     *
+                     * সার্ভার ভেতরের ভ্যাটে মোট বাড়ায় না (দরেই ওটা আছে),
+                     * কিন্তু পর্দা না জানলে সে যোগ করে দিত — আর তখন
+                     * বিক্রেতার চোখের সামনের সংখ্যা আর বিলের সংখ্যা
+                     * আলাদা হত। ঠিক এই দূরত্বটাই ৩১ আগস্টে ধরা পড়েছে।
+                     */
+                    'vatInclusive' => (bool) ($p->tax?->is_inclusive ?? false),
+
                     // ক্রয়মূল্য — ভেতরের কথা, তাই পর্দায় বোতামের পেছনে
                     'cost' => (float) $p->purchase_price,
 

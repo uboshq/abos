@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Purchase\Services;
 
+use App\Modules\MasterData\Models\Tax;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -27,7 +28,7 @@ trait CalculatesLineTotals
      *
      * @return array{base: string, discount: string, tax: string, amount: string}
      */
-    private function lineFigures(string $qty, string $rate, mixed $discount, mixed $tax): array
+    private function lineFigures(string $qty, string $rate, mixed $discount, mixed $tax, ?Tax $standard = null): array
     {
         $base = bcmul($qty, $rate, 4);
         $discount = $this->money($discount);
@@ -39,13 +40,32 @@ trait CalculatesLineTotals
         }
 
         $net = bcsub($base, $discount, 4);
-        $tax = $this->money($tax);
+
+        /*
+         * বিক্রয়ের নিয়মটাই এখানেও — [[CalculatesSalesLines::lineFigures()]]।
+         *
+         * অঙ্কটা অনুপস্থিত থাকলে পণ্যের নিজের হার থেকে গোনা, দেওয়া থাকলে
+         * সেটাই মানা। ক্রয়ের পর্দাগুলোয় ভ্যাটের ঘর সত্যিই আছে, তাই এখানে
+         * দ্বিতীয় পথটাই বেশি চলে — কিন্তু নিয়ম দুই দিকে আলাদা রাখলে
+         * একই পণ্যের ক্রয় ও বিক্রয়ে দুই রকম ভ্যাট বসত, আর কেউ বলতে
+         * পারত না কোনটা ঠিক।
+         *
+         * দামের ভেতরের ভ্যাটে মোট বাড়ে না; দরেই ওটা আছে।
+         */
+        $inclusive = false;
+
+        if ($tax === null || $tax === '') {
+            $tax = $standard?->amountOn($net) ?? '0.0000';
+            $inclusive = (bool) $standard?->is_inclusive;
+        } else {
+            $tax = $this->money($tax);
+        }
 
         return [
             'base' => $base,
             'discount' => $discount,
             'tax' => $tax,
-            'amount' => bcadd($net, $tax, 4),
+            'amount' => $inclusive ? $net : bcadd($net, $tax, 4),
         ];
     }
 

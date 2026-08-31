@@ -242,7 +242,9 @@ final class SalesOrderService
             $qty = $pack['qty'];
             $rate = $pack['rate'];
 
-            $figures = $this->lineFigures($qty, $rate, $line['discount'] ?? '0', $line['tax'] ?? '0');
+            // ভ্যাট না পাঠালে পণ্যের নিজের হার থেকে গোনা — `?? '0'` লিখলে
+            // "পাঠায়নি" আর "শূন্য বসিয়েছে" এক হয়ে যেত
+            $figures = $this->lineFigures($qty, $rate, $line['discount'] ?? '0', $line['tax'] ?? null, $product->tax);
 
             SalesOrderLine::create([
                 'sales_order_id' => $order->id,

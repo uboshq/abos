@@ -25,6 +25,7 @@ use App\Modules\Inventory\Services\RecipeService;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\Sales\Events\InvoiceConfirmed;
 use App\Modules\Sales\Models\DeliveryChallanLine;
+use App\Modules\Sales\Models\PricingRule;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Models\SalesInvoiceLine;
 use Illuminate\Support\Carbon;
@@ -498,6 +499,17 @@ final class SalesInvoiceService
         $invoice->lines()->delete();
 
         $totals = ['subtotal' => '0', 'discount' => '0', 'tax' => '0', 'total' => '0'];
+
+        /*
+         * দামের নীতিটা একবার পড়া হয়, প্রতিটা সারিতে নয়।
+         *
+         * সারি ধরে ধরে পড়লে পঞ্চাশ সারির বিলে পঞ্চাশটা প্রশ্ন যেত,
+         * আর উত্তরটা প্রতিবার একই।
+         */
+        $pricing = PricingRule::current();
+
+        /** @var list<string> $warnings */
+        $warnings = [];
         $cost = '0';
         $lineNo = 0;
 
@@ -525,7 +537,46 @@ final class SalesInvoiceService
 
             $challanLine = $this->resolveChallanLine($invoice, $line['delivery_challan_line_id'] ?? null, $productId, $qty);
 
-            $figures = $this->lineFigures($qty, $rate, $line['discount'] ?? '0', $line['tax'] ?? '0');
+            // ভ্যাট না পাঠালে পণ্যের নিজের হার থেকে গোনা — কাউন্টারের পর্দা
+            // ভ্যাট দেখাত কিন্তু কখনো পাঠাত না, আর বিলে বসত শূন্য
+            $figures = $this->lineFigures($qty, $rate, $line['discount'] ?? '0', $line['tax'] ?? null, $product->tax);
+
+            /*
+             * দরটা মান দাম থেকে কতটা সরে আছে — নীতিটা যা বলে।
+             *
+             * ---- কেন এখানে, ছাড়ের অনুমোদনের পাশে নয় ----
+             * ছাড়ের অনুমোদন দেখে **বিলের** ছাড়ের ঘরটা। কিন্তু দর কমিয়ে
+             * লেখলে ছাড়ের ঘর খালিই থাকে, আর পাহারাটা কিছুই দেখে না —
+             * অথচ টাকাটা একইভাবে যায়। ওটাই আজকের ভোঁতা নিয়মের ফাঁক:
+             * লোকে ছাড় না দিয়ে দর কমিয়ে লেখে, আর খাতায় ছাড়টা আর
+             * দেখাই যায় না।
+             *
+             * তাই সরে যাওয়াটা মাপা হয় **সারির দরে**, মান দামের সাথে।
+             */
+            $drift = $pricing->verdictOn($rate, (string) ($product->sale_price ?? '0'));
+
+            if ($drift === PricingRule::BLOCK) {
+                throw ValidationException::withMessages([
+                    'lines' => __('sales::validation.price_out_of_range', [
+                        'product' => $product->name(),
+                        'tolerance' => rtrim(rtrim((string) $pricing->tolerance, '0'), '.'),
+                    ]),
+                ]);
+            }
+
+            if ($drift === PricingRule::WARN) {
+                /*
+                 * সতর্কতা বিল আটকায় না, কিন্তু হারিয়েও যায় না।
+                 *
+                 * পর্দায় দেখিয়ে ফেলে দিলে কেউ পরে বলতে পারত না কোন
+                 * সারিতে সতর্কতা এসেছিল। সারির বিবরণে লেখা থাকলে
+                 * ছয় মাস পরেও কাগজ দেখেই বোঝা যায়।
+                 */
+                $warnings[] = __('sales::validation.price_out_of_range', [
+                    'product' => $product->name(),
+                    'tolerance' => rtrim(rtrim((string) $pricing->tolerance, '0'), '.'),
+                ]);
+            }
 
             /*
              * খসড়ায় দরটা শূন্য — আসলটা বসে confirm-এ, স্তর থেকে টেনে।
@@ -565,6 +616,16 @@ final class SalesInvoiceService
         }
 
         $invoice->update([...$totals, 'cost_of_goods' => $cost]);
+
+        /*
+         * সতর্কতাগুলো সেশনে — বিলটা বসেছে, কিন্তু কথাটা বলা দরকার।
+         *
+         * ব্যতিক্রম ছুঁড়লে বিলটা বসত না, আর সেটা "সতর্কতা" নয়,
+         * "আটকানো" — ওটার জন্য আলাদা নীতি আছে।
+         */
+        if ($warnings !== []) {
+            session()->flash('price_warnings', array_values(array_unique($warnings)));
+        }
     }
 
     /**
