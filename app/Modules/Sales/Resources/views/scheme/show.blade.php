@@ -112,7 +112,9 @@
                             </td>
 
                             <td class="num" data-label="{{ __('sales::field.commission_rate') }}">
-                                @if ($rule->fixed_amount !== null && (float) $rule->fixed_amount > 0)
+                                {{-- bccomp, (float) নয়: fixed_amount একটা DECIMAL(18,4), আর
+                                     float-এ নিলে ০.০০০১ টাকার নিয়মও "শূন্য" হয়ে যেত। --}}
+                                @if ($rule->fixed_amount !== null && bccomp((string) $rule->fixed_amount, '0', 4) > 0)
                                     {{ \App\Core\Support\Money::format($rule->fixed_amount) }}
                                 @else
                                     {{ rtrim(rtrim((string) $rule->rate_percent, '0'), '.') }}%
