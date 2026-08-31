@@ -9,7 +9,6 @@ use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Modules\Accounts\Models\Account;
-use App\Modules\MasterData\Models\PartyType;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
@@ -122,15 +121,28 @@ class ReportController extends Controller implements HasMiddleware
                 : collect(),
 
             /*
-             * পক্ষের ধরনের ছাঁকনি — কেবল যে রিপোর্ট চেয়েছে তার জন্য।
+             * পক্ষের ধরনের ছাঁকনি — এই পর্দায় সবসময় খালি, আর সেটাই ঠিক।
              *
-             * ঘোষণা না করলে তালিকাটা খালি যায়, আর পর্দা ঘরটাই আঁকে না।
-             * সব রিপোর্টে জোর করে বসালে মজুদের রিপোর্টেও "পক্ষের ধরন"
-             * ড্রপডাউন বসত, যেখানে প্রশ্নটার কোনো মানে নেই।
+             * ── কেন খালি ────────────────────────────────────────────
+             * ভিউটা ছয়টা মডিউল শেয়ার করে, আর ছাঁকনিটা সত্যিই লাগে
+             * Customer ও Supplier-এর রিপোর্টে। এখানকার আটটা রিপোর্টের
+             * একটাও `party_type` ছাঁকনি ঘোষণা করে না (CoreReports),
+             * তাই তালিকাটা কোনোদিনই আঁকা হয় না।
+             *
+             * ── কেন এখানে PartyType ডাকা যায় না ─────────────────────
+             * ওটা MasterData-র মডেল, আর MasterData নিজেই accounts-এর
+             * উপর দাঁড়ায়। এখানে `depends_on`-এ master_data লিখলে
+             * accounts → master_data → accounts চক্র হত, আর
+             * ModuleRegistry::sortByDependency() বুট-টাইমেই ব্যতিক্রম
+             * ছুঁড়ত — অর্থাৎ পুরো অ্যাপ দাঁড়াত না।
+             *
+             * যে মডিউলের রিপোর্টে ছাঁকনিটা আছে সে নিজেই তালিকাটা দেয়
+             * (CustomerReportController, SupplierReportController), আর
+             * তারা দুইজনেই master_data-কে নির্ভরতা বলে ঘোষণা করে।
+             * এখানে কোনোদিন ছাঁকনিটা লাগলে ওটাও ঐভাবেই আসবে —
+             * ধার করা import দিয়ে নয়। পাহারা: [[BoundariesTest]]।
              */
-            'partyTypes' => $definition->hasFilter('party_type')
-                ? PartyType::query()->active()->orderBy('code')->get()
-                : collect(),
+            'partyTypes' => collect(),
         ]);
     }
 }
