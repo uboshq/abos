@@ -177,12 +177,15 @@ final class PurchaseOrderService
 
             $this->assertProductExists($productId);
 
+            $product = Product::query()->findOrFail($productId);
+
             // "২ বাক্স @ ৮০০" — পরিমাণ আর দর একসাথে পণ্যের এককে নামে
-            $pack = $this->packed(Product::query()->findOrFail($productId), $qty, $line['unit_id'] ?? null, $rate);
+            $pack = $this->packed($product, $qty, $line['unit_id'] ?? null, $rate);
             $qty = $pack['qty'];
             $rate = $pack['rate'];
 
-            $figures = $this->lineFigures($qty, $rate, $line['discount'] ?? '0', $line['tax'] ?? '0');
+            // ভ্যাট না পাঠালে পণ্যের নিজের হার থেকে গোনা
+            $figures = $this->lineFigures($qty, $rate, $line['discount'] ?? '0', $line['tax'] ?? null, $product->tax);
 
             PurchaseOrderLine::create([
                 'purchase_order_id' => $order->id,

@@ -819,11 +819,13 @@
 
                     get entryVat() {
                         if (! this.vatEnabled || ! this.picked) return 0;
-                        return this.entryAfterDiscount * Number(this.picked.vatRate || 0) / 100;
+                        return this.vatOn(this.entryAfterDiscount, this.picked);
                     },
 
                     get entryNet() {
-                        return this.entryAfterDiscount + this.entryVat;
+                        return this.picked && this.picked.vatInclusive
+                            ? this.entryAfterDiscount
+                            : this.entryAfterDiscount + this.entryVat;
                     },
 
                     /* বিক্রয় + ফ্রি — গুদাম থেকে মোট যতটা বেরোবে।
@@ -866,6 +868,7 @@
                                 name: p.name,
                                 unit: p.unit,
                                 vatRate: p.vatRate || 0,
+                                vatInclusive: !! p.vatInclusive,
                                 qty: String(row.qty || '0'),
                                 freeQty: row.free_qty || '',
                                 rate: String(row.rate || p.rate || 0),
@@ -885,6 +888,7 @@
                             name: this.picked.name,
                             unit: this.picked.unit,
                             vatRate: this.picked.vatRate || 0,
+                            vatInclusive: !! this.picked.vatInclusive,
                             qty: this.entry.qty || '1',
                             freeQty: this.entry.freeQty || '',
                             rate: this.entry.rate || '0',
@@ -932,13 +936,37 @@
                             - this.lineBase(line) * (Number(line.discountPercent) || 0) / 100;
                     },
 
+                    /*
+                     * ভ্যাট — সার্ভারের নিয়মেই, দুই রকম।
+                     *
+                     * বাইরের ভ্যাট দরের উপরে বসে; ভেতরের ভ্যাট দরের ভেতরেই
+                     * আছে, তাই ওটা মোট বাড়ায় না — কেবল কতটুকু কর তা আলাদা
+                     * করে দেখায়। আগে দুইটাই যোগ করা হত, আর ভেতরের বেলায়
+                     * পর্দার সংখ্যা বিলের চেয়ে বেশি দেখাত।
+                     *
+                     * অঙ্কটা এখানে কেবল **দেখানোর** জন্য; খাতায় যেটা বসে
+                     * সেটা সার্ভার নিজে গোনে (CalculatesSalesLines)।
+                     */
+                    vatOn(net, item) {
+                        if (! this.vatEnabled || ! item) return 0;
+
+                        const rate = Number(item.vatRate || 0) / 100;
+
+                        if (! rate) return 0;
+
+                        return item.vatInclusive
+                            ? net - (net / (1 + rate))
+                            : net * rate;
+                    },
+
                     lineVat(line) {
-                        if (! this.vatEnabled) return 0;
-                        return this.lineAfterDiscount(line) * Number(line.vatRate || 0) / 100;
+                        return this.vatOn(this.lineAfterDiscount(line), line);
                     },
 
                     lineNet(line) {
-                        return this.lineAfterDiscount(line) + this.lineVat(line);
+                        return line.vatInclusive
+                            ? this.lineAfterDiscount(line)
+                            : this.lineAfterDiscount(line) + this.lineVat(line);
                     },
 
                     get subTotal() {
@@ -949,8 +977,15 @@
                         return this.lines.reduce((s, l) => s + this.lineVat(l), 0);
                     },
 
+                    /*
+                     * সারির নিট যোগ করা, subTotal + vatTotal নয়।
+                     *
+                     * ভেতরের ভ্যাটে দ্বিতীয় হিসাবটা দুইবার কর যোগ করত।
+                     * সারি ধরে গুনলে দুই ধরনের ভ্যাট একসাথে থাকা বিলেও
+                     * সংখ্যাটা ঠিক থাকে।
+                     */
                     get grossTotal() {
-                        return this.subTotal + this.vatTotal;
+                        return this.lines.reduce((s, l) => s + this.lineNet(l), 0);
                     },
 
                     get netPayable() {

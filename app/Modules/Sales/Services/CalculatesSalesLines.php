@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Services;
 
+use App\Modules\MasterData\Models\Tax;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -27,7 +28,7 @@ trait CalculatesSalesLines
      *
      * @return array{base: string, discount: string, tax: string, amount: string}
      */
-    private function lineFigures(string $qty, string $rate, mixed $discount, mixed $tax): array
+    private function lineFigures(string $qty, string $rate, mixed $discount, mixed $tax, ?Tax $standard = null): array
     {
         $base = bcmul($qty, $rate, 4);
         $discount = $this->money($discount);
@@ -39,13 +40,46 @@ trait CalculatesSalesLines
         }
 
         $net = bcsub($base, $discount, 4);
-        $tax = $this->money($tax);
+
+        /*
+         * ভ্যাট কোথা থেকে আসে — আর কেন দুইটা পথ।
+         *
+         * ── কী ভাঙা ছিল, ৩১ আগস্ট ২০২৬ ──────────────────────────────
+         * আগে এখানে কেবল `$this->money($tax)` ছিল, অর্থাৎ **যে যা
+         * পাঠিয়েছে তাই**। সরাসরি বিক্রয়ের পর্দা ভ্যাট গুনে "নিট প্রদেয়"-তে
+         * যোগ করত আর বিক্রেতা ভ্যাটসহ টাকাটাই নিতেন — কিন্তু ওই ঘরটার
+         * HTML-এ কোনো `name=` ছিল না, তাই সংখ্যাটা **কখনো সার্ভারে
+         * পৌঁছাত না**। বিলে ভ্যাট বসত শূন্য, জমা মোটের চেয়ে বেশি হয়ে
+         * "ফেরত" হয়ে যেত, আর ড্রয়ার মিলত না।
+         *
+         * ── এখন নিয়মটা ────────────────────────────────────────────
+         * অঙ্কটা **অনুপস্থিত** থাকলে পণ্যের নিজের করের হার থেকে গোনা হয়।
+         * অঙ্কটা **দেওয়া** থাকলে সেটাই মানা হয় — নথির পর্দাগুলোয় ঘরটা
+         * সত্যিই আছে, আর সেখানে হাতে লেখা মান বদলে দেওয়া মানে
+         * ব্যবহারকারীর টাইপ করা সংখ্যা নীরবে উড়িয়ে দেওয়া।
+         *
+         * শূন্য "অনুপস্থিত" নয়: কেউ ইচ্ছা করে ০ লিখলে সেটা একটা
+         * সিদ্ধান্ত, আর সেটা মানা হয়।
+         *
+         * ── দামের ভেতরের ভ্যাট ─────────────────────────────────────
+         * `amount = net + tax` লিখলে ভেতরের ভ্যাটে **দুইবার** ভ্যাট বসত।
+         * ভেতরের বেলায় দরেই ওটা আছে, তাই মোট বাড়ে না — কেবল কতটুকু কর
+         * তা আলাদা করে খাতায় ওঠে।
+         */
+        $inclusive = false;
+
+        if ($tax === null || $tax === '') {
+            $tax = $standard?->amountOn($net) ?? '0.0000';
+            $inclusive = (bool) $standard?->is_inclusive;
+        } else {
+            $tax = $this->money($tax);
+        }
 
         return [
             'base' => $base,
             'discount' => $discount,
             'tax' => $tax,
-            'amount' => bcadd($net, $tax, 4),
+            'amount' => $inclusive ? $net : bcadd($net, $tax, 4),
         ];
     }
 
