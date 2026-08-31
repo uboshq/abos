@@ -8,8 +8,10 @@ use App\Core\Services\OpenPeriod;
 use App\Core\Support\CompanyContext;
 use App\Models\FinancialYear;
 use App\Models\LedgerEntry;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * হিসাবের খাতায় লেখার একমাত্র পথ — প্ল্যান সেকশন ২.২, প্রথম engine।
@@ -68,6 +70,15 @@ final class PostingEngine
         $userId = $userId ?? auth()->id();
 
         return DB::transaction(function () use ($lines, $sourceType, $sourceId, $trxDate, $documentNo, $branchId, $userId, $financialYear) {
+            /*
+             * উপরের `assertNotAlreadyPosted()` ভদ্রতা; আসল পাহারা এটা।
+             *
+             * ওটা লেনদেনের বাইরে চলে, তাই দুইটা রিকোয়েস্ট একসাথে এলে
+             * দুইজনেই "বসেনি" দেখে। এই সারিটা লেনদেনের ভেতরে বসে, আর
+             * দ্বিতীয়জন unique key-তে ধাক্কা খেয়ে পুরো লেনদেন ফিরিয়ে দেয়।
+             */
+            $this->claim($sourceType, $sourceId, $userId);
+
             $created = [];
 
             foreach ($lines as $index => $line) {
@@ -170,6 +181,10 @@ final class PostingEngine
         $this->assertNotAlreadyPosted($reversalType, $sourceId);
 
         return DB::transaction(function () use ($original, $reversalType, $sourceId, $reversalDate, $financialYear, $reason, $userId) {
+            // উল্টো এন্ট্রিও একবারই — দুইবার বাতিল করলে হিসাব উল্টোদিকে
+            // দ্বিগুণ হত, আর সেটাও রেওয়ামিল মেলা অবস্থাতেই
+            $this->claim($reversalType, $sourceId, $userId);
+
             $created = [];
 
             foreach ($original as $entry) {
@@ -232,6 +247,41 @@ final class PostingEngine
      * বাস্তবে এটা ঘটে সরল কারণে: ব্যবহারকারী Save-এ দুইবার ক্লিক করে, বা
      * নেটওয়ার্ক ধীর হলে রিকোয়েস্ট দুইবার যায়।
      */
+    /**
+     * ডকুমেন্টটার নাম প্রহরী-টেবিলে লিখে রাখা — লেনদেনের ভেতরে।
+     *
+     * ── কেন এটা লাগল ────────────────────────────────────────────────
+     * `assertNotAlreadyPosted()` একটা check-then-act: দেখা আর বসানোর
+     * মাঝখানে অন্য কেউ ঢুকে পড়তে পারে। সেটা কল্পনা নয় — Save-এ দুইবার
+     * ক্লিক বা ব্রাউজারের পুনরায় পাঠানোই যথেষ্ট।
+     *
+     * এই সারিটা বসে ঠিক ওই লেনদেনে যেটা খতিয়ানের সারিগুলো বসায়, আর
+     * টেবিলে `(company_id, source_type, source_id)` unique। তাই
+     * দ্বিতীয়জন এখানেই থামে, আর তার কিছুই বসে না।
+     *
+     * ── কেন ব্যতিক্রমটা অনুবাদ করা হয় ───────────────────────────────
+     * কাঁচা duplicate-key বার্তাটা ডাকা কোডের কাছে অর্থহীন। একই
+     * PostingException ছুঁড়লে দুইটা পথই — ভদ্র চেক আর ডাটাবেজের
+     * পাহারা — ডাকা কোডের কাছে একরকম দেখায়।
+     */
+    private function claim(string $sourceType, int $sourceId, ?int $userId): void
+    {
+        try {
+            DB::table('posted_documents')->insert([
+                'public_id' => (string) Str::uuid(),
+                'company_id' => CompanyContext::id(),
+                'source_type' => $sourceType,
+                'source_id' => $sourceId,
+                'posted_at' => now(),
+                'posted_by' => $userId,
+            ]);
+        } catch (UniqueConstraintViolationException) {
+            throw new PostingException(
+                "{$sourceType}#{$sourceId} is already in the ledger. Reverse it before posting again."
+            );
+        }
+    }
+
     private function assertNotAlreadyPosted(string $sourceType, int $sourceId): void
     {
         $exists = LedgerEntry::query()
