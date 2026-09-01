@@ -4,29 +4,40 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Models;
 
-use App\Core\Concerns\HasPublicId;
-use App\Core\Concerns\IsAudited;
-use App\Core\Support\CompanyContext;
-use App\Models\User;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Core\Services\SettingsService;
 
 /**
  * মান দাম থেকে কতটা সরা যাবে, আর সরলে কী।
  *
- * ── কেন সারি না থাকাও একটা উত্তর ──────────────────────────────────────
- * যে কোম্পানি কোনোদিন সীমা বসায়নি, সে কাউকে থামাতে বলেনি। [[forCompany()]]
- * তাই সবসময় একটা নিয়ম ফেরত দেয় — সারি না থাকলে "সব চলবে", আর সেটা
- * একটা সত্যিকারের নীতি, নিয়মের অনুপস্থিতি নয়।
+ * ── আজকের নিয়মটা ভোঁতা ছিল ───────────────────────────────────────────
+ * ABOS-এ **যেকোনো** ছাড়েই অনুমোদন লাগত — দশ টাকার ছাড়েও, দশ হাজারেরও
+ * ([[SalesInvoiceService::assertDiscountApproved()]])।
  *
- * অনুপস্থিতিকে সবচেয়ে কড়া নিয়ম ধরে নিলে আপগ্রেডের দিন সকালে প্রতিটা
- * কাউন্টার থেমে যেত।
+ * ফল দুইদিকেই খারাপ। কাউন্টারে পাঁচ টাকার ছাড় দিতে গিয়ে বিল আটকে থাকে,
+ * তাই লোকে ছাড় দেওয়াই বন্ধ করে — বা আরও খারাপ, **দর কমিয়ে লেখে** যাতে
+ * ছাড়ের ঘরটা ছুঁতে না হয়। তখন খাতায় ছাড়টা আর দেখাই যায় না, আর "আমরা
+ * কত ছাড় দিলাম" প্রশ্নের উত্তর মিথ্যা হয়ে যায়।
+ *
+ * এই নিয়মটা তাই মাপে **সারির দর**, ছাড়ের ঘর নয় — দর কমিয়ে লেখার পথটাই
+ * বন্ধ করে।
+ *
+ * ── কেন নিজের টেবিল নয় ───────────────────────────────────────────────
+ * প্রথমে একটা `sal_pricing_rules` টেবিল বানানো হয়েছিল, DMS-এর গড়ন দেখে
+ * (ওদের কন্ট্রোল প্যানেল টেবিল-নির্ভর)। কিন্তু ABOS-এ ব্যবস্থাটা আগে
+ * থেকেই আছে: মডিউল নিজের সেটিং ঘোষণা করে, আর সেগুলো কন্ট্রোল প্যানেলে
+ * নিজে থেকেই আসে।
+ *
+ * টেবিল রাখলে একই জিনিসের দুইটা জায়গা হত — একটা কন্ট্রোল প্যানেলে,
+ * একটা নিজের পর্দায় — আর কোনটা মানা হবে তা বলা যেত না। টেবিলটা তাই
+ * ফেলে দেওয়া হয়েছে, ডিপ্লয়ের আগেই।
+ *
+ * ── কেন সীমা না বসানোও একটা উত্তর ─────────────────────────────────────
+ * যে কোম্পানি কোনোদিন সীমা বসায়নি, সে কাউকে থামাতে বলেনি। ডিফল্ট তাই
+ * "সব চলবে" — অনুপস্থিতিকে সবচেয়ে কড়া নিয়ম ধরে নিলে আপগ্রেডের দিন
+ * সকালে প্রতিটা কাউন্টার থেমে যেত।
  */
-class PricingRule extends Model
+final class PricingRule
 {
-    use HasPublicId;
-    use IsAudited;
-
     /** কিছুই না — শুধু খাতায় লেখা থাকে। */
     public const ALLOW = 'allow';
 
@@ -36,45 +47,37 @@ class PricingRule extends Model
     /** সারিটাই নেওয়া হয় না। */
     public const BLOCK = 'block';
 
-    protected $table = 'sal_pricing_rules';
+    public const TOLERANCE = 'sales.price_tolerance_percent';
 
-    protected $fillable = [
-        'company_id', 'tolerance_percent', 'policy',
-        'applies_below', 'applies_above', 'updated_by',
-    ];
+    public const POLICY = 'sales.price_policy';
 
-    protected function casts(): array
-    {
-        return [
-            'tolerance_percent' => 'decimal:4',
-            'applies_below' => 'boolean',
-            'applies_above' => 'boolean',
-        ];
-    }
+    public const BELOW = 'sales.price_policy_below';
 
-    public function editor(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'updated_by');
-    }
+    public const ABOVE = 'sales.price_policy_above';
+
+    private function __construct(
+        public readonly string $tolerance,
+        public readonly string $policy,
+        public readonly bool $appliesBelow,
+        public readonly bool $appliesAbove,
+    ) {}
 
     /**
-     * এই কোম্পানির নিয়ম — সারি না থাকলেও একটা উত্তর।
+     * এই কোম্পানির নীতি — সেটিংস থেকে, একবার।
      *
-     * সংরক্ষণ করা হয় না, কেবল বানানো হয়: একটা পর্দা "এখন নীতি কী"
-     * জিজ্ঞেস করলেই ডাটাবেজে সারি বসে যাওয়ার কোনো কারণ নেই।
+     * সারি ধরে ধরে পড়লে পঞ্চাশ সারির বিলে পঞ্চাশবার একই প্রশ্ন যেত,
+     * আর উত্তরটা প্রতিবার একই।
      */
-    public static function forCompany(?int $companyId = null): self
+    public static function current(?SettingsService $settings = null): self
     {
-        $companyId ??= CompanyContext::id();
+        $settings ??= app(SettingsService::class);
 
-        return static::query()->where('company_id', $companyId)->first()
-            ?? new self([
-                'company_id' => $companyId,
-                'tolerance_percent' => '0',
-                'policy' => self::ALLOW,
-                'applies_below' => true,
-                'applies_above' => true,
-            ]);
+        return new self(
+            tolerance: (string) $settings->get(self::TOLERANCE, 0),
+            policy: (string) $settings->get(self::POLICY, self::ALLOW),
+            appliesBelow: (bool) $settings->get(self::BELOW, true),
+            appliesAbove: (bool) $settings->get(self::ABOVE, true),
+        );
     }
 
     /**
@@ -90,7 +93,8 @@ class PricingRule extends Model
              * মান দাম না জানা থাকলে সরে যাওয়া মাপা যায় না।
              *
              * শূন্যকে মান ধরে নিলে প্রতিটা দরই "অসীম শতাংশ উপরে" হত,
-             * আর আটকানোর নীতিতে কোনো বিলই কাটা যেত না।
+             * আর আটকানোর নীতিতে কোনো বিলই কাটা যেত না -- অর্থাৎ যে
+             * পণ্যের দাম বসানো হয়নি সেটা আর কোনোদিন বেচা যেত না।
              */
             return null;
         }
@@ -104,6 +108,13 @@ class PricingRule extends Model
      * ── কেন সহনসীমার ভেতরে থাকলে নীতিটাই দেখা হয় না ─────────────────
      * সীমাটার পুরো কাজই হলো "এতটুকু সরা স্বাভাবিক" বলা। ভেতরে থেকেও
      * সতর্কতা এলে সতর্কতাটা রোজ আসত, আর রোজ আসা সতর্কতা কেউ পড়ে না।
+     *
+     * ── কেন নিচে আর উপরে আলাদা ──────────────────────────────────────
+     * মান দামের **নিচে** বেচলে টাকা যায়; **উপরে** বেচলে গ্রাহক যায়।
+     * কিছু ডিপো কেবল প্রথমটা পাহারা দেয় -- দ্বিতীয়টা তাদের কাছে
+     * বিক্রয়কর্মীর কৃতিত্ব। এক সুইচ রাখলে যাঁরা কেবল নিচেরটা আটকাতে
+     * চান তাঁদের উপরেরটাও সইতে হত, আর তখন তাঁরা পুরো নিয়মটাই বন্ধ
+     * করে দিতেন।
      */
     public function verdictOn(string $rate, string $standard): string
     {
@@ -119,13 +130,11 @@ class PricingRule extends Model
 
         $below = bccomp($drift, '0', 4) < 0;
 
-        if (($below && ! $this->applies_below) || (! $below && ! $this->applies_above)) {
+        if (($below && ! $this->appliesBelow) || (! $below && ! $this->appliesAbove)) {
             return self::ALLOW;
         }
 
-        $distance = ltrim($drift, '-');
-
-        return bccomp($distance, (string) $this->tolerance_percent, 4) > 0
+        return bccomp(ltrim($drift, '-'), $this->tolerance, 4) > 0
             ? $this->policy
             : self::ALLOW;
     }

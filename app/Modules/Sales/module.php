@@ -412,6 +412,68 @@ return [
     ],
 
     'settings' => [
+        /*
+         * দাম কতটা সরতে পারে, আর সরলে কী।
+         *
+         * ---- কেন এটা লাগল, ৩০ আগস্ট ২০২৬ ----
+         * আজকের নিয়মটা ভোঁতা: **যেকোনো** ছাড়েই অনুমোদন লাগে -- দশ
+         * টাকার ছাড়েও, দশ হাজারেরও।
+         *
+         * ফল দুইদিকেই খারাপ। কাউন্টারে পাঁচ টাকার ছাড় দিতে গিয়ে বিল
+         * আটকে থাকে, তাই লোকে ছাড় দেওয়াই বন্ধ করে -- বা আরও খারাপ,
+         * **দর কমিয়ে লেখে** যাতে ছাড়ের ঘরটা ছুঁতে না হয়। তখন খাতায়
+         * ছাড়টা আর দেখাই যায় না।
+         *
+         * এই নিয়মটা মাপে সারির **দর**, ছাড়ের ঘর নয় -- দর কমিয়ে লেখার
+         * পথটাই বন্ধ করে।
+         */
+        [
+            'key' => 'sales.price_tolerance_percent',
+            'label' => 'sales::settings.price_tolerance_percent',
+            'type' => 'integer',
+            'default' => 0,
+            'group' => 'entry',
+        ],
+        [
+            /*
+             * ডিফল্ট "সব চলবে"।
+             *
+             * যে কোম্পানি কোনোদিন সীমা বসায়নি, সে কাউকে থামাতে বলেনি।
+             * কড়া ডিফল্ট দিলে আপগ্রেডের দিন সকালে প্রতিটা কাউন্টার
+             * থেমে যেত -- আর কেউ জানত না কেন।
+             */
+            'key' => 'sales.price_policy',
+            'label' => 'sales::settings.price_policy',
+            'type' => 'string',
+            'default' => 'allow',
+            'group' => 'entry',
+            'options' => [
+                'allow' => 'sales::price_policy.allow',
+                'warn' => 'sales::price_policy.warn',
+                'block' => 'sales::price_policy.block',
+            ],
+        ],
+        [
+            /*
+             * নিচে আর উপরে আলাদা সুইচ।
+             *
+             * মান দামের নিচে বেচলে টাকা যায়; উপরে বেচলে গ্রাহক যায়।
+             * কিছু ডিপো কেবল প্রথমটা পাহারা দেয় -- দ্বিতীয়টা তাদের
+             * কাছে বিক্রয়কর্মীর কৃতিত্ব।
+             */
+            'key' => 'sales.price_policy_below',
+            'label' => 'sales::settings.price_policy_below',
+            'type' => 'boolean',
+            'default' => true,
+            'group' => 'entry',
+        ],
+        [
+            'key' => 'sales.price_policy_above',
+            'label' => 'sales::settings.price_policy_above',
+            'type' => 'boolean',
+            'default' => true,
+            'group' => 'entry',
+        ],
         [
             /*
              * অর্ডার নিশ্চিত হলে মাল ধরে রাখা হবে কি না।
