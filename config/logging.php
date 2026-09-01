@@ -52,9 +52,17 @@ return [
 
     'channels' => [
 
+        /*
+         * ডিফল্ট `daily`, `single` নয় — ১ সেপ্টেম্বর ২০২৬।
+         *
+         * `single` একটাই ফাইলে লিখতে থাকে, চিরকাল। ছয় মাস চললে ওটা
+         * এত বড় হয় যে খোলাই যায় না, আর তখন লগ থাকা আর না থাকা এক।
+         * দিন ধরে ভাগ করলে "গতকাল কী হয়েছিল" প্রশ্নটার উত্তর এক
+         * ফাইলেই থাকে, আর পুরনোগুলো নিজে থেকেই মুছে যায়।
+         */
         'stack' => [
             'driver' => 'stack',
-            'channels' => explode(',', (string) env('LOG_STACK', 'single')),
+            'channels' => explode(',', (string) env('LOG_STACK', 'daily')),
             'ignore_exceptions' => false,
         ],
 
@@ -69,7 +77,13 @@ return [
             'driver' => 'daily',
             'path' => storage_path('logs/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
-            'days' => env('LOG_DAILY_DAYS', 14),
+            /*
+             * ত্রিশ দিন, চৌদ্দ নয়।
+             *
+             * "গত মাসে একটা গোলমাল হয়েছিল" — এই বাক্যটা দিয়েই বেশিরভাগ
+             * খোঁজা শুরু হয়, আর চৌদ্দ দিনে ততদিনে ফাইলটা মুছে গেছে।
+             */
+            'days' => env('LOG_DAILY_DAYS', 30),
             'replace_placeholders' => true,
         ],
 

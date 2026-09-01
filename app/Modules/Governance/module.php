@@ -43,6 +43,15 @@ return [
              */
             ['label' => 'governance::menu.export_log', 'route' => 'governance.export.index', 'permission' => 'governance.audit.view'],
             ['label' => 'governance::menu.login_history', 'route' => 'governance.login.index', 'permission' => 'governance.audit.view'],
+
+            /*
+             * ভুলের খাতা — বাকি তিনটার পাশে, কিন্তু নিজের চাবিতে।
+             *
+             * তিনটাই একই প্রশ্নের ভিন্ন দিক: কী বদলেছে, কী বেরিয়েছে,
+             * কে ঢুকেছে। চতুর্থটা বলে **কী ভেঙেছে** — আর এতদিন সেই
+             * প্রশ্নটার কোনো উত্তরই কোথাও ছিল না।
+             */
+            ['label' => 'governance::menu.error_log', 'route' => 'governance.error.index', 'permission' => 'governance.error.view'],
         ],
     ],
 
@@ -55,6 +64,15 @@ return [
          * এই পর্দাটা সব একসাথে দেখায়, তাই এটার নিজের চাবি লাগে।
          */
         'governance.audit.view',
+
+        /*
+         * ভুলের খাতার চাবি — অডিটের চেয়ে আলাদা, আর ইচ্ছাকৃতভাবে।
+         *
+         * অডিট ব্যবসার ভাষায় কথা বলে: কোন বিলে ছাড় বসল, কার বেতন কত
+         * হল। ভুলের খাতা ভিতরের গড়ন দেখায় — ফাইলের পথ, লাইন নম্বর,
+         * স্ট্যাক ট্রেস। হিসাবরক্ষকের প্রথমটা দরকার, দ্বিতীয়টা নয়।
+         */
+        'governance.error.view',
     ],
 
     /*

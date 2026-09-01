@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Modules\Governance\Http\Controllers\AuditController;
+use App\Modules\Governance\Http\Controllers\ErrorLogController;
 use App\Modules\Governance\Http\Controllers\ExportLogController;
 use App\Modules\Governance\Http\Controllers\LoginHistoryController;
 use App\Modules\Governance\Http\Controllers\SessionController;
@@ -45,6 +46,20 @@ Route::middleware('auth')->prefix('governance')->group(function () {
      * বসেছে; এটা বলে লোকটা আদৌ ঢুকেছিল কি না।
      */
     Route::get('/logins', [LoginHistoryController::class, 'index'])->name('login.index');
+
+    /*
+     * ভুলের খাতা — ব্যবস্থাটা নিজে যা লিখে রাখে।
+     *
+     * ── কেন নিজের চাবি ──────────────────────────────────────────────
+     * অডিট বলে কে কী বদলেছে; এটা দেখায় ফাইলের পথ, লাইন নম্বর আর
+     * স্ট্যাক ট্রেস। দুইটা আলাদা প্রশ্ন, আর দ্বিতীয়টা সবার দেখার নয়।
+     *
+     * "দেখেছি" বলা যায়, মোছা যায় না — মুছতে দিলে যে ভুলটা কেউ বুঝতে
+     * পারেনি সেটাই সবার আগে মুছে যেত।
+     */
+    Route::get('/errors', [ErrorLogController::class, 'index'])->name('error.index');
+    Route::post('/errors/{error}/seen', [ErrorLogController::class, 'acknowledge'])
+        ->whereNumber('error')->name('error.acknowledge');
 
     /*
      * নিজের খোলা সেশনগুলো — অনুমতি ছাড়া, কারণ এগুলো নিজেরই।

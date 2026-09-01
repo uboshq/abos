@@ -14,6 +14,8 @@ return [
     'end_session' => 'Sign it out',
     'end_other_sessions' => 'Sign out everywhere else',
     'only_failed' => 'Only failures',
+    'mark_seen' => 'Seen',
+    'show_seen_too' => 'Include seen',
     'portal_enabled' => 'Portal opened',
     'portal_disabled' => 'Portal closed',
     'portal_password_set' => 'Portal password set',
