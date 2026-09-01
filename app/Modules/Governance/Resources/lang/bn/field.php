@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 return [
     'when' => 'কখন',
+    'what_broke' => 'কী ভেঙেছে',
+    'where_in_code' => 'কোথায়',
+    'how_many_times' => 'কতবার',
     'who' => 'কে',
     'action' => 'কাজ',
     'record' => 'রেকর্ড',

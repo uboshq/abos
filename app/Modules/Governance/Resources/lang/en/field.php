@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 return [
     'when' => 'When',
+    'what_broke' => 'What broke',
+    'where_in_code' => 'Where',
+    'how_many_times' => 'Times',
     'who' => 'Who',
     'action' => 'Action',
     'record' => 'Record',

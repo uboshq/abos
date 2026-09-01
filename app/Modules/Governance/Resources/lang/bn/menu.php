@@ -6,5 +6,6 @@ return [
     'audit_trail' => 'অডিট ট্রেইল',
     'export_log' => 'রপ্তানির খাতা',
     'login_history' => 'ঢোকার খাতা',
+    'error_log' => 'কী ভেঙেছে',
     'my_sessions' => 'আমার লগইনগুলো',
 ];

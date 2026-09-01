@@ -1,5 +1,6 @@
 <?php
 
+use App\Core\Services\ErrorJournal;
 use App\Http\Middleware\ContentSecurityPolicy;
 use App\Http\Middleware\ExportListing;
 use App\Http\Middleware\NormalizeUnicodeInput;
@@ -123,6 +124,30 @@ return Application::configure(basePath: dirname(__DIR__))
         );
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        /*
+         * ভাঙলে কেউ যেন জানতে পারে — ১ সেপ্টেম্বর ২০২৬।
+         *
+         * ── কী ছিল না ───────────────────────────────────────────────
+         * এই অ্যাপে `Log::` কল ছিল ছয়টা, error tracking শূন্য। কিছু
+         * ভাঙলে ব্যবহারকারী একটা ৫০০ দেখতেন আর তারপর নীরবতা — কোথাও
+         * কোনো চিহ্ন নয়।
+         *
+         * ৩১ আগস্টের নিরীক্ষায় ছয়টা জিনিস নীরবে ভাঙা পাওয়া গেছে, আর
+         * সবচেয়ে জোরালোটা: ডিপ্লয়ের পর **লাইভে বিল কাটা প্রায় দুই
+         * ঘণ্টা ভাঙা ছিল**, আর জানা গেছে দৈবক্রমে।
+         *
+         * ── কেন `report`, `render` নয় ───────────────────────────────
+         * `report` চলে ভুলটা ব্যবহারকারীর পর্দায় যাওয়ার আগে, আর
+         * প্রতিটা ভুলে একবার — API হোক বা পর্দা, কনসোল হোক বা ওয়েব।
+         * `render`-এ বসালে কেবল যেগুলোর পাতা আঁকা হয় সেগুলোই লেখা হত।
+         *
+         * খাতাটা নিজে কখনো ছোঁড়ে না ([[ErrorJournal::record()]]) —
+         * ভুল লিখতে গিয়ে দ্বিতীয় ভুল হলে আসলটাই ঢাকা পড়ত।
+         */
+        $exceptions->report(function (Throwable $e): void {
+            app(ErrorJournal::class)->record($e);
+        });
+
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*'),
         );
