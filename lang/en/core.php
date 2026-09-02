@@ -68,6 +68,16 @@ return [
         'settings' => 'Settings',
     ],
 
+    /* Sidebar sections — the level ABOVE a module. Not to be confused with
+       `menu.*`, which is the six groups INSIDE one module. `top` carries no
+       heading, so it has no key here. See lang/bn/core.php. */
+    'nav_section' => [
+        'finance' => 'Finance',
+        'business' => 'Business',
+        'people' => 'People & Governance',
+        'system' => 'System',
+    ],
+
     'action' => [
         'refresh' => 'Refresh',
         'close' => 'Close',
@@ -335,6 +345,11 @@ return [
         'in_words' => 'In words',
         'phone' => 'Phone',
         'printed_at' => 'Printed',
+
+        // ⚠️ The hotline is written in both languages, each in its own
+        //    digits. Change it here AND in bn/core.php.
+        'vendor_line' => 'Powered by UNIVER BANGLADESH',
+        'hotline' => 'Hotline 01911048185',
         'prepared_by' => 'Prepared by',
         'approved_by' => 'Approved by',
         'received_by' => 'Received by',
@@ -373,7 +388,7 @@ return [
         'cancelled_watermark' => 'CANCELLED',
         'print' => 'Print',
         'choose_paper' => 'Choose paper',
-        'show_vendor_credit' => 'Show "Powered by ABOS" on printouts',
+        'show_vendor_credit' => 'Show "Powered by UNIVER BANGLADESH" and the hotline on printouts',
     ],
 
     'role' => [

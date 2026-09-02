@@ -34,8 +34,27 @@ class ModuleRegistryTest extends TestCase
         parent::tearDown();
     }
 
+    /**
+     * নকল module.php — যা পরীক্ষা করা হচ্ছে সেটুকু বাদে সবই ডিফল্ট।
+     *
+     * ── কেন `nav` এখানে আপনা থেকে বসে ────────────────────────────────
+     * এই ফাইলের বেশিরভাগ টেস্ট রেজিস্ট্রির **খোঁজা ও সাজানো** নিয়ে —
+     * নির্ভরতার চক্র, অনুপস্থিত নির্ভরতা, একই কোড দুইবার। ২ সেপ্টেম্বর
+     * ২০২৬-এ `nav` বাধ্যতামূলক হওয়ার পর ওই পাঁচটা টেস্ট **নিজেদের বিষয়
+     * ছোঁয়ার আগেই** থেমে যাচ্ছিল: চক্রের টেস্ট চক্রে পৌঁছানোর আগেই
+     * nav-এর অভাবে ছুঁড়ে ফেলত।
+     *
+     * তাই ডিফল্টটা এখানে, `writeModule()`-এ — এক জায়গায়। যে টেস্ট
+     * সত্যিই nav পরীক্ষা করে সে নিজের `nav` পাঠায় (বা ইচ্ছে করে বাদ
+     * দিতে `fromArray()` সরাসরি ডাকে), আর বাকিরা নিজেদের প্রশ্নেই থাকে।
+     *
+     * ⚠️ এটা নিয়মটা নরম করা নয়: নিয়মটার পাহারায় আছে এই ফাইলেরই
+     * `test_a_module_that_does_not_say_where_it_belongs_is_refused()`।
+     */
     private function writeModule(string $folder, array $definition): void
     {
+        $definition['nav'] ??= ['section' => 'business', 'order' => 10];
+
         $dir = $this->tmp.DIRECTORY_SEPARATOR.$folder;
         mkdir($dir, 0777, true);
         file_put_contents($dir.DIRECTORY_SEPARATOR.'module.php', '<?php return '.var_export($definition, true).';');
@@ -215,12 +234,68 @@ class ModuleRegistryTest extends TestCase
     public function test_a_module_shows_its_name_in_the_readers_language(): void
     {
         $definition = ModuleDefinition::fromArray(
-            ['code' => 'sales', 'name' => ['en' => 'Sales', 'bn' => 'বিক্রয়']],
+            [
+                'code' => 'sales',
+                'name' => ['en' => 'Sales', 'bn' => 'বিক্রয়'],
+                'nav' => ['section' => 'business', 'order' => 50],
+            ],
             'test/module.php',
             'App\\Modules\\Sales',
         );
 
         $this->assertSame('বিক্রয়', $definition->label('bn'));
         $this->assertSame('Sales', $definition->label('en'));
+    }
+
+    public function test_a_module_that_does_not_say_where_it_belongs_is_refused(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches("/needs 'nav'/");
+
+        /*
+         * ঘোষণা না থাকলে ডিফল্ট বসিয়ে দেওয়া যেত, আর সেটাই ফাঁদ: মডিউলটা
+         * চুপচাপ কোনো দলের সবচেয়ে নিচে গিয়ে বসত আর কেউ জানত না ওটা
+         * ভুল জায়গায়। ফাঁকা মেনু চোখে পড়ে, ভুল জায়গার মেনু পড়ে না।
+         */
+        ModuleDefinition::fromArray(
+            ['code' => 'sales', 'name' => ['en' => 'Sales', 'bn' => 'বিক্রয়']],
+            'test/module.php',
+            'App\\Modules\\Sales',
+        );
+    }
+
+    public function test_an_unknown_nav_section_is_refused(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('/unknown nav section/');
+
+        // নতুন একটা দল মানে পুরো পণ্যটা কীভাবে ভাগ হবে সেই সিদ্ধান্ত —
+        // ওটা একটা মডিউলের একার নেওয়ার কথা নয়।
+        ModuleDefinition::fromArray(
+            [
+                'code' => 'sales',
+                'name' => ['en' => 'Sales', 'bn' => 'বিক্রয়'],
+                'nav' => ['section' => 'favourites', 'order' => 10],
+            ],
+            'test/module.php',
+            'App\\Modules\\Sales',
+        );
+    }
+
+    public function test_a_nav_order_written_as_text_is_refused(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('/nav order must be an integer/');
+
+        // '10' আর '9' পাশাপাশি রাখলে টেক্সট হিসেবে '10' আগে আসত।
+        ModuleDefinition::fromArray(
+            [
+                'code' => 'sales',
+                'name' => ['en' => 'Sales', 'bn' => 'বিক্রয়'],
+                'nav' => ['section' => 'business', 'order' => '10'],
+            ],
+            'test/module.php',
+            'App\\Modules\\Sales',
+        );
     }
 }

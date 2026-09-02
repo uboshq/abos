@@ -69,6 +69,12 @@
                 'label' => __('core.menu.'.$group),
                 'icon' => null,
                 'accent' => null,
+                /*
+                 * এই আকারে সারিগুলো **একটা মডিউলের ভেতরের** ছয়টা ভাগ,
+                 * মডিউল নয় — তাই সাইডবারের দলগুলো এখানে খাটে না।
+                 * `null` মানে কোনো ভাগরেখা আঁকা হবে না।
+                 */
+                'section' => null,
                 'items' => array_values($items),
                 'active' => collect($items)->contains('active', true),
             ];
@@ -79,11 +85,27 @@
                 'label' => $module['label'],
                 'icon' => $module['icon'],
                 'accent' => $module['code'],
+                'section' => $module['section'],
                 'items' => collect($module['groups'])->flatten(1)->values()->all(),
                 'active' => $activeModule && $module['code'] === $activeModule['code'],
             ];
         }
     }
+
+    /*
+     * দলের ভাগরেখা — খাড়া, লেখা নয়।
+     *
+     * ── কেন এখানে শিরোনাম লেখা হয় না ─────────────────────────────
+     * এই পটিটা আড়াআড়ি, আর তাতে ইতিমধ্যেই বারোটা মডিউল বসে —
+     * `overflow-x-auto` আছে কারণ ল্যাপটপের পর্দাতেও ওগুলো ধরে না।
+     * চারটা শিরোনাম যোগ করলে ("অর্থ ও হিসাব", "মানুষ ও নিয়ন্ত্রণ")
+     * প্রতিটা মডিউল আরও ডানে সরত, আর শেষ কয়েকটা পর্দার বাইরে
+     * চলে যেত — অর্থাৎ **ভাগ দেখাতে গিয়ে জিনিসটাই লুকিয়ে যেত**।
+     *
+     * সাইডবারে একই সিদ্ধান্ত, একই কারণে: রেখা দেখায়, `aria-label`
+     * বলে। জায়গাটাই এখানে আসল সীমা, পছন্দ নয়।
+     */
+    $shownSection = null;
 @endphp
 
 {{-- একটাও সারি না থাকলে পটিটাই আঁকা হয় না — খালি একটা বর্ডার
@@ -139,6 +161,21 @@
         বা জানালা বদলালে তালিকা বন্ধ — নাহলে ওটা বাতাসে ঝুলে থাকত।
     --}}
     @foreach ($entries as $entry)
+        @php
+            $opensSection = $entry['section'] !== null && $entry['section'] !== $shownSection;
+            $shownSection = $entry['section'];
+
+            // `top` দলটার কোনো নাম নেই, তাই তার আগে কোনো রেখাও নয়।
+            $sectionLabel = ($opensSection && $entry['section'] !== 'top')
+                ? __('core.nav_section.'.$entry['section'])
+                : null;
+        @endphp
+
+        @if ($sectionLabel)
+            <div role="separator" aria-label="{{ $sectionLabel }}"
+                 class="mx-1.5 h-5 w-px shrink-0 bg-(--color-topnav-border)"></div>
+        @endif
+
         @php
             /*
              * এক সারির ভাগে তালিকা লাগে না — সরাসরি লিংক।

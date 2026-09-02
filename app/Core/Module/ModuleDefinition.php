@@ -30,6 +30,29 @@ final class ModuleDefinition
     /** সব মডিউলে একই ছয়-ভাগ প্যাটার্ন — প্ল্যান সেকশন ১৫.২ */
     public const MENU_GROUPS = ['dashboard', 'master', 'transactions', 'approval', 'reports', 'settings'];
 
+    /**
+     * সাইডবারের দলগুলো, উপর থেকে নিচে — মালিকের দেওয়া কাঠামো, ২ সেপ্টেম্বর ২০২৬।
+     *
+     * ── কেন এটা `depends_on`-এর ক্রম নয় ──────────────────────────────────
+     * এতদিন সাইডবারের ক্রম আসত [[ModuleRegistry::sortByDependency()]] থেকে,
+     * অর্থাৎ **কে কার আগে তৈরি হতে হবে** সেই ক্রম থেকে। ওটা মেশিনের
+     * প্রশ্নের উত্তর, মানুষের নয়। ফল: হিসাব আর অর্থ দুই প্রান্তে ছিটকে
+     * যেত, আর ক্রয় বসত বিক্রয়ের পরে — যদিও কাজের ক্রমে ক্রয় আগে।
+     *
+     * নির্ভরতার ক্রমটা **রয়ে গেছে, অক্ষত** — মাইগ্রেশন আর বুট ওটাতেই চলে।
+     * এটা তার পাশে বসা দ্বিতীয় একটা ক্রম, শুধু চোখের জন্য।
+     *
+     * ── `top` মানে শিরোনামহীন ─────────────────────────────────────────
+     * প্রথম দলটার কোনো শিরোনাম নেই। ড্যাশবোর্ড আর মাস্টার ডাটা কোনো
+     * ব্যবসায়িক বিভাগের অধীন নয় — ওরা সবার উপরে, নাম ছাড়া।
+     *
+     * ── কেন কোরে মডিউলের নাম নেই ──────────────────────────────────────
+     * এখানে `['accounts', 'finance', …]` লিখলে সহজ হত, কিন্তু তাহলে
+     * ১৩তম মডিউল যোগ করতে কোর ফাইল খুলতে হত — সেকশন ১৯.৭ ঠিক সেটাই
+     * নিষেধ করে। প্রতিটা মডিউল নিজে বলে সে কোথায় বসবে; কোর শুধু সাজায়।
+     */
+    public const NAV_SECTIONS = ['top', 'finance', 'business', 'people', 'system'];
+
     private function __construct(
         public readonly string $code,
         /** @var array{en: string, bn: string} */
@@ -39,6 +62,12 @@ final class ModuleDefinition
         public readonly array $dependsOn,
         /** @var array<string, list<array{label: string, route: string, icon?: string, permission?: string}>> */
         public readonly array $menu,
+        /**
+         * সাইডবারে এই মডিউলটা কোন দলে, আর সেই দলে কত নম্বরে।
+         *
+         * @var array{section: string, order: int}
+         */
+        public readonly array $nav,
         /** @var list<string> */
         public readonly array $permissions,
         /** @var array<string, string> prefix => label */
@@ -366,6 +395,7 @@ final class ModuleDefinition
             version: (string) ($raw['version'] ?? '1.0.0'),
             dependsOn: array_values($raw['depends_on'] ?? []),
             menu: $menu,
+            nav: self::validateNav($raw['nav'] ?? null, $path),
             permissions: array_values($raw['permissions'] ?? []),
             docTypes: $raw['doc_types'] ?? [],
             drillSources: $raw['drill_sources'] ?? [],
@@ -426,6 +456,55 @@ final class ModuleDefinition
      * @param  array<class-string, string>  $exempt
      * @return array<class-string, string>
      */
+    /**
+     * সাইডবারে কোথায় বসবে — বাধ্যতামূলক, ডিফল্ট নেই।
+     *
+     * ── কেন ডিফল্ট রাখা হয়নি ─────────────────────────────────────────
+     * `'section' => 'business', 'order' => 999` জাতীয় একটা ডিফল্ট বসানো
+     * সহজ ছিল, আর সেটাই ফাঁদ: তেরোতম মডিউলটা তখন **কোনো ভুলের বার্তা
+     * ছাড়াই** BUSINESS-এর সবচেয়ে নিচে গিয়ে বসত। যে লিখেছে সে জানত না,
+     * যে দেখেছে সে ভাবত ওটাই ঠিক জায়গা।
+     *
+     * এই ক্লাসের নিজের ভূমিকাতেই লেখা আছে কেন এটা ছুঁড়ে ফেলে: *"ভুল
+     * বানানো module.php বুট-টাইমেই ধরা পড়া দরকার, ছয় মাস পরে একটা ফাঁকা
+     * মেনু দেখে নয়।"* একটা ভুল জায়গায় বসা মেনু ফাঁকা মেনুর চেয়ে খারাপ,
+     * কারণ ফাঁকাটা অন্তত চোখে পড়ে।
+     *
+     * ── `order` কেন ১০, ২০, ৩০ ────────────────────────────────────────
+     * মাঝখানে নতুন মডিউল ঢোকাতে গিয়ে যেন বাকি সবগুলোর সংখ্যা বদলাতে না
+     * হয়। ফাঁক না রাখলে একটা মডিউল যোগ করা মানে পাঁচটা ফাইলে হাত দেওয়া,
+     * আর প্রতিটা হাত একটা করে সুযোগ ভুল করার।
+     *
+     * @return array{section: string, order: int}
+     */
+    private static function validateNav(mixed $nav, string $path): array
+    {
+        if (! is_array($nav) || ! isset($nav['section'], $nav['order'])) {
+            throw new InvalidArgumentException(
+                "{$path}: every module needs 'nav' => ['section' => …, 'order' => …]. Without it the sidebar "
+                .'would fall back to dependency order, which is what the modules need to boot — not what a '
+                .'person reading the menu needs. Sections: '.implode(', ', self::NAV_SECTIONS).'.'
+            );
+        }
+
+        if (! in_array($nav['section'], self::NAV_SECTIONS, true)) {
+            throw new InvalidArgumentException(
+                "{$path}: unknown nav section '{$nav['section']}'. Allowed: ".implode(', ', self::NAV_SECTIONS)
+                .'. A new section is a decision about how the whole product is grouped, so it belongs here, '
+                .'not in one module.'
+            );
+        }
+
+        if (! is_int($nav['order'])) {
+            throw new InvalidArgumentException(
+                "{$path}: nav order must be an integer — got ".get_debug_type($nav['order']).'. A string sorts '
+                .'as text, so "10" would come before "9".'
+            );
+        }
+
+        return ['section' => (string) $nav['section'], 'order' => $nav['order']];
+    }
+
     private static function validateAuditExempt(array $exempt, string $path): array
     {
         foreach ($exempt as $class => $reason) {
