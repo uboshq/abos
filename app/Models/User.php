@@ -15,7 +15,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
-use RuntimeException;
+use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Traits\HasRoles;
 
 #[Fillable(['name', 'email', 'password', 'locale', 'theme', 'ui', 'accent', 'is_active'])]
@@ -131,10 +131,35 @@ class User extends Authenticatable
      */
     public function switchCompany(int $companyId, ?int $branchId = null): void
     {
+        /*
+         * অস্বীকারটা ব্যবহারকারীর ভাষায়, ভাঙা ৫০০ পাতায় নয়।
+         *
+         * ── কী ভাঙা ছিল (২ সেপ্টেম্বর ২০২৬) ─────────────────────────
+         * এখানে `RuntimeException` ছিল, অর্থাৎ পর্দায় একটা ৫০০। কিন্তু
+         * এটা ব্যবস্থার ভুল নয় — **এটা স্বাভাবিক ঘটনা**: কারও ট্যাব
+         * খোলা ছিল, ইতিমধ্যে তাঁকে ওই কোম্পানি থেকে সরিয়ে দেওয়া
+         * হয়েছে, আর তিনি পুরনো তালিকা থেকেই বেছেছেন।
+         *
+         * তিনি দেখতেন "কিছু একটা ভেঙে গেছে", অথচ আসল কথাটা ছিল
+         * "আপনার আর ওখানে ঢোকার অধিকার নেই" — দুইটা সম্পূর্ণ আলাদা
+         * খবর, আর দ্বিতীয়টা তিনি নিজে সামলাতে পারতেন।
+         *
+         * ── কেন `ValidationException`, `abort(403)` নয় ──────────────
+         * ৪০৩ একটা খালি ত্রুটি-পাতা; ব্যবহারকারী যেখানে ছিলেন সেখান
+         * থেকে ছিটকে যেতেন। ValidationException তাঁকে ওই পাতাতেই রাখে
+         * আর ঘরের পাশে কারণটা লেখে — আর সেটাই তিনি করতে পারেন এমন
+         * কাজের (রিফ্রেশ করে আবার বাছা) সবচেয়ে কাছের জায়গা।
+         *
+         * ── একটা পার্শ্বফল, যেটা কাম্য ──────────────────────────────
+         * `ValidationException` [[ErrorJournal]]-এর "ভুল নয়" তালিকায়
+         * পড়ে। আগে প্রতিটা বাসি ট্যাব ভুলের খাতায় একটা সারি বসাত —
+         * অর্থাৎ যে খাতাটা আসল ভাঙন দেখানোর জন্য, সেটাই ভরে যেত
+         * ব্যবস্থা ঠিক কাজ করার প্রমাণে।
+         */
         if (! $this->canAccessCompany($companyId)) {
-            throw new RuntimeException(
-                "User {$this->id} has no access to company {$companyId}."
-            );
+            throw ValidationException::withMessages([
+                'company_id' => __('core.company.no_access'),
+            ]);
         }
 
         $company = Company::query()->findOrFail($companyId);
@@ -146,9 +171,9 @@ class User extends Authenticatable
                 ->exists();
 
             if (! $belongs) {
-                throw new RuntimeException(
-                    "Branch {$branchId} does not belong to company {$companyId}."
-                );
+                throw ValidationException::withMessages([
+                    'branch_id' => __('core.company.branch_elsewhere'),
+                ]);
             }
         } else {
             $pivotBranch = $this->companies()->whereKey($companyId)->first()?->pivot->default_branch_id;

@@ -9,6 +9,7 @@ use App\Models\Branch;
 use App\Models\Company;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 /**
@@ -129,7 +130,18 @@ class TenantIsolationTest extends TestCase
 
         $user->companies()->attach($this->alpha->id);
 
-        $this->expectException(\RuntimeException::class);
+        /*
+         * ২ সেপ্টেম্বর ২০২৬-এ দাবিটা বদলেছে — শিথিল হয়নি।
+         *
+         * আগে এখানে `RuntimeException` উঠত, অর্থাৎ পর্দায় একটা ৫০০।
+         * কিন্তু এটা ব্যবস্থার ভুল নয়: কারও ট্যাব খোলা ছিল, ইতিমধ্যে
+         * তাঁকে ওই কোম্পানি থেকে সরানো হয়েছে, আর তিনি পুরনো তালিকা
+         * থেকেই বেছেছেন। তিনি দেখতেন "কিছু ভেঙে গেছে", অথচ কথাটা ছিল
+         * "আপনার আর ওখানে ঢোকার অধিকার নেই"।
+         *
+         * **দেয়ালটা একই জায়গায়** — কেবল অস্বীকারটা ব্যবহারকারীর ভাষায়।
+         */
+        $this->expectException(ValidationException::class);
         $user->switchCompany($this->beta->id);
     }
 

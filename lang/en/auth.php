@@ -13,6 +13,16 @@ return [
     'locked' => 'Too many failed attempts. Try again in :minutes minutes.',
 
     'welcome_back' => 'Welcome back',
+
+    /* Greeting by time of day, on the quiet door (/signin). */
+    /* Link back to the full page from the quiet door. */
+    'about_abos' => 'About ABOS',
+
+    'greeting' => [
+        'morning' => 'Good morning',
+        'afternoon' => 'Good afternoon',
+        'evening' => 'Good evening',
+    ],
     'sign_in_to_workspace' => 'Sign in to your workspace',
     'sign_in' => 'Sign in',
     'authenticating' => 'Authenticating…',
