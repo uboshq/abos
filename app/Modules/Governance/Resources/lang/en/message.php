@@ -34,4 +34,8 @@ return [
     'other_sessions_ended' => 'Every other place has been signed out.',
     'unknown_device' => 'Unknown device',
     'only_here' => 'You are only logged in on this device.',
+    'did_not_exist_yet' => 'This record did not exist yet on :on.',
+    'was_already_deleted' => 'This record was already deleted on :on.',
+    'history_starts_late' => 'History for this row begins on :on. Anything before that is not in the audit, so fields that were never changed cannot be reported.',
+    'built_from_changes' => 'Built from :applied events up to that moment; :later more happened after it.',
 ];

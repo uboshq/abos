@@ -31,4 +31,8 @@ return [
     'where_from' => 'From',
     'device' => 'Device',
     'last_seen' => 'Last seen',
+    'as_on' => 'As on',
+    'the_field' => 'Field',
+    'value_then' => 'Value that day',
+    'how_sure' => 'How certain',
 ];

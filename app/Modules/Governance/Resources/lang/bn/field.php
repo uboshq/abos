@@ -31,4 +31,8 @@ return [
     'where_from' => 'কোথা থেকে',
     'device' => 'যন্ত্র',
     'last_seen' => 'শেষ দেখা',
+    'as_on' => 'যে তারিখে',
+    'the_field' => 'ঘর',
+    'value_then' => 'ওইদিনের মান',
+    'how_sure' => 'কতটা নিশ্চিত',
 ];

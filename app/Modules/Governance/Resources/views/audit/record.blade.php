@@ -14,6 +14,17 @@
             :title="$trail->title()"
             :subtitle="$trail->moduleLabel() . ' · ' . trans_choice('core.count.records', $history->total(), ['count' => $history->total()])">
             <x-slot:actions>
+                {{--
+                    সময়যন্ত্রের দরজা।
+
+                    এই পাতাটাই ওটার স্বাভাবিক জায়গা: এখানে এসে মানুষ
+                    ইতিমধ্যে একটা নির্দিষ্ট কাগজের কথা ভাবছেন, আর পরের
+                    প্রশ্নটা প্রায়ই "তাহলে ওইদিন এটা কেমন ছিল"।
+                --}}
+                <x-ui.button :href="route('governance.audit.at', $trail->id)">
+                    {{ __('governance::label.time_machine') }}
+                </x-ui.button>
+
                 <x-ui.button :href="route('governance.audit.index')">
                     {{ __('governance::label.back_to_trail') }}
                 </x-ui.button>
