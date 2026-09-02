@@ -79,6 +79,7 @@ return [
     ],
 
     'action' => [
+        'see_all' => 'See all',
         'refresh' => 'Refresh',
         'close' => 'Close',
         'create' => 'Create',
@@ -152,6 +153,7 @@ return [
     ],
 
     'dashboard' => [
+        'across_the_business' => 'Across the business',
         'today' => 'Today',
         'this_month' => 'This month',
         'this_year' => 'This year',

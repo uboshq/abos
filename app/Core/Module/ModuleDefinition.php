@@ -9,6 +9,7 @@ use App\Core\Contracts\ContributesActivity;
 use App\Core\Contracts\ContributesFacts;
 use App\Core\Contracts\DashboardWidgets;
 use App\Core\Contracts\Importer;
+use App\Core\Contracts\ProvidesDashboard;
 use App\Core\Contracts\ProvidesMetrics;
 use App\Core\Contracts\ProvisionsCompany;
 use App\Core\Events\DomainEvent;
@@ -106,6 +107,7 @@ final class ModuleDefinition
          * @var list<class-string>
          */
         public readonly array $metrics,
+
 
         /**
          * খাতা যাচাইকারীরা — ChecksItsOwnBooks বাস্তবায়ন করে।
@@ -311,6 +313,21 @@ final class ModuleDefinition
         public readonly array $dataScopes,
         public readonly string $path,
         public readonly string $namespace,
+        /**
+         * এই মডিউলের ড্যাশবোর্ড কে ঘোষণা করে — [[ProvidesDashboard]]।
+         *
+         * ── কেন একটা, তালিকা নয় ─────────────────────────────────────
+         * উইজেট আর মেট্রিক তালিকা, কারণ একটা মডিউল বহু সংখ্যা দিতে
+         * পারে। কিন্তু ড্যাশবোর্ড **একটা পর্দা** — দুইটা ঘোষণা করলে
+         * কোনটা খুলবে সেই প্রশ্নের কোনো ভালো উত্তর নেই, আর কোর নিজে
+         * বেছে নিলে সেটা হত কোরের ব্যবসায়িক সিদ্ধান্ত।
+         *
+         * `null` মানে এই মডিউলের কোনো ড্যাশবোর্ড নেই, আর সেটা বৈধ:
+         * কিছু মডিউল (মাস্টার ডাটা) তালিকা ছাড়া কিছুই নয়।
+         *
+         * @var class-string|null
+         */
+        public readonly ?string $dashboard = null,
     ) {}
 
     /**
@@ -403,6 +420,7 @@ final class ModuleDefinition
             reports: self::validateReports($raw['reports'] ?? [], $path),
             widgets: self::validateWidgets($raw['widgets'] ?? [], $raw['permissions'] ?? [], $path),
             metrics: self::validateMetrics($raw['metrics'] ?? [], $path),
+            dashboard: self::validateDashboard($raw['dashboard'] ?? null, $path),
             integrity: self::validateIntegrity($raw['integrity'] ?? [], $path),
             activity: self::validateActivity($raw['activity'] ?? [], $path),
             approvals: self::validateApprovals($raw['approvals'] ?? [], $path),
@@ -671,6 +689,37 @@ final class ModuleDefinition
      * @param  list<mixed>  $metrics
      * @return list<class-string<ProvidesMetrics>>
      */
+    /**
+     * ড্যাশবোর্ডের সরবরাহকারী — ক্লাসটা আছে কি না, চুক্তিটা মানে কি না।
+     *
+     * ── কেন বুট-টাইমে, চলার সময় নয় ──────────────────────────────────
+     * ভুল বানানো একটা ক্লাসের নাম চলার সময় ধরা পড়লে সেটা ধরা পড়ত
+     * তখনই যখন কেউ পর্দাটা খুলতেন — অর্থাৎ **গ্রাহকের সামনে**। এখানে
+     * ধরা পড়লে অ্যাপ ওঠেই না, আর যিনি লিখেছেন তিনিই দেখেন।
+     *
+     * @return class-string<ProvidesDashboard>|null
+     */
+    private static function validateDashboard(mixed $class, string $path): ?string
+    {
+        if ($class === null) {
+            return null;
+        }
+
+        if (! is_string($class) || ! class_exists($class)) {
+            throw new InvalidArgumentException(
+                "{$path}: dashboard provider '".(is_string($class) ? $class : gettype($class))."' does not exist."
+            );
+        }
+
+        if (! is_subclass_of($class, ProvidesDashboard::class)) {
+            throw new InvalidArgumentException(
+                "{$path}: dashboard provider {$class} must implement the ProvidesDashboard contract."
+            );
+        }
+
+        return $class;
+    }
+
     private static function validateMetrics(array $metrics, string $path): array
     {
         foreach ($metrics as $class) {

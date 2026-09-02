@@ -7,6 +7,7 @@ use App\Http\Controllers\MfaController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SavedViewController;
+use App\Http\Controllers\ModuleDashboardController;
 use App\Http\Controllers\WorkspaceController;
 use Illuminate\Support\Facades\Route;
 
@@ -19,6 +20,20 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth')->group(function () {
     Route::get('/', [WorkspaceController::class, 'dashboard'])->name('dashboard');
+
+    /*
+     * মডিউলের নিজস্ব ড্যাশবোর্ড — মালিকের নির্দেশ, ২ সেপ্টেম্বর ২০২৬।
+     *
+     * ── কেন `/dashboard/{module}`, `/inventory/dashboard` নয় ────────
+     * দ্বিতীয়টা দেখতে সুন্দর, কিন্তু তাতে বারোটা মডিউলের রুট ফাইলে
+     * বারোটা প্রায়-একই লাইন লিখতে হত, আর নতুন মডিউল ওটা লিখতে ভুলে
+     * গেলে ড্যাশবোর্ডটা **নীরবে থাকত না**।
+     *
+     * এখানে রুট একটাই, আর মডিউল কেবল `module.php`-তে ঘোষণা করে।
+     * অনুমতি ইঞ্জিন দেখে, সংখ্যা ধরে ধরে।
+     */
+    Route::get('/dashboard/{module}', [ModuleDashboardController::class, 'show'])
+        ->name('module.dashboard');
     Route::get('/components', [WorkspaceController::class, 'components'])->name('components');
 
     /*
