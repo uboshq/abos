@@ -15,6 +15,7 @@ declare(strict_types=1);
  * অডিট বদলানো গেলে অডিট বলে কিছু থাকে না — আর সেই নিষেধটা মডেলেই
  * বসানো, তাই এই পর্দা দিয়ে চেষ্টা করলেও কিছু হত না।
  */
+use App\Modules\Governance\Dashboard\GovernanceDashboard;
 use App\Modules\Governance\Integrity\GovernanceChecks;
 
 return [
@@ -40,7 +41,7 @@ return [
     // কারও উপর নির্ভর করে না: অডিট কোরের ইঞ্জিন, কোনো মডিউলের নয়
     'depends_on' => [],
 
-    'dashboard' => \App\Modules\Governance\Dashboard\GovernanceDashboard::class,
+    'dashboard' => GovernanceDashboard::class,
 
     'menu' => [
         'dashboard' => [

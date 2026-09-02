@@ -57,13 +57,13 @@ final class InventoryDashboard implements ProvidesDashboard
                     label: __('inventory::action.adjust'),
                     href: route('inventory.stock.adjust'),
                     permission: 'inventory.stock.adjust',
-                    icon: 'inventory',
+                    icon: 'scale',
                 ),
                 new Tile(
                     label: __('inventory::action.new_transfer'),
                     href: route('inventory.transfer.create'),
                     permission: 'inventory.transfer.create',
-                    icon: 'transfer',
+                    icon: 'swap',
                 ),
                 new Tile(
                     label: __('inventory::action.new_product'),
@@ -75,7 +75,7 @@ final class InventoryDashboard implements ProvidesDashboard
                     label: __('inventory::menu.stock'),
                     href: route('inventory.stock.overview'),
                     permission: 'inventory.stock.view',
-                    icon: 'report',
+                    icon: 'reports',
                 ),
             ],
 

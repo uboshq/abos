@@ -56,7 +56,7 @@ final class AccountsWidgets implements DashboardWidgets
                 permission: 'accounts.till.view',
                 tone: 'money',
                 sort: 30,
-                icon: 'accounts',
+                icon: 'wallet',
                 parts: [
                     __('accounts::dashboard.cash_in_hand') => Money::format(self::cashInHand()),
                     __('accounts::dashboard.bank_balance') => Money::format(self::bankBalance()),

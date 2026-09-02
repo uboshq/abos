@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\MasterData\Dashboard\MasterDataDashboard;
 use App\Modules\MasterData\Models\Currency;
 use App\Modules\MasterData\Models\Department;
 use App\Modules\MasterData\Models\Designation;
@@ -52,7 +53,7 @@ return [
     // হিসাবের খাত লাগে — দর ও ট্যাক্স শেষমেশ কোন খাতে বসবে তা জানতে
     'depends_on' => ['accounts'],
 
-    'dashboard' => \App\Modules\MasterData\Dashboard\MasterDataDashboard::class,
+    'dashboard' => MasterDataDashboard::class,
 
     'menu' => [
         'dashboard' => [

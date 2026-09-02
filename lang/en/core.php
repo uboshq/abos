@@ -66,6 +66,10 @@ return [
         'approval' => 'Approval',
         'reports' => 'Reports',
         'settings' => 'Settings',
+
+        /* A dimmed row reads the same whether it means "not for you" or
+           "not built yet" — only the words tell them apart (3 Sep 2026) */
+        'coming_soon' => 'Coming soon',
     ],
 
     /* Sidebar sections — the level ABOVE a module. Not to be confused with

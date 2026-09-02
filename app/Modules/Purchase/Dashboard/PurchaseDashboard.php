@@ -36,13 +36,13 @@ final class PurchaseDashboard implements ProvidesDashboard
 
             tiles: [
                 new Tile(label: __('purchase::action.new_bill'), href: route('purchase.bill.create'),
-                    permission: 'purchase.bill.create', icon: 'purchase'),
+                    permission: 'purchase.bill.create', icon: 'receipt'),
                 new Tile(label: __('purchase::action.new_order'), href: route('purchase.order.create'),
                     permission: 'purchase.order.create', icon: 'plus'),
                 new Tile(label: __('purchase::menu.payments'), href: route('purchase.payment.index'),
-                    permission: 'purchase.payment.view', icon: 'money'),
+                    permission: 'purchase.payment.view', icon: 'cash'),
                 new Tile(label: __('purchase::menu.bills'), href: route('purchase.bill.index'),
-                    permission: 'purchase.bill.view', icon: 'report'),
+                    permission: 'purchase.bill.view', icon: 'reports'),
             ],
 
             stats: [

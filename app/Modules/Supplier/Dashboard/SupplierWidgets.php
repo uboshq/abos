@@ -65,7 +65,7 @@ final class SupplierWidgets implements DashboardWidgets
             tone: 'warn',
             hint: __('supplier::widget.owed_hint'),
             sort: 20,
-            icon: 'purchase',
+            icon: 'handover',
         );
     }
 }

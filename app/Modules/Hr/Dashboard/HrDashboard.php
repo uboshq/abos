@@ -34,13 +34,17 @@ final class HrDashboard implements ProvidesDashboard
 
             tiles: [
                 new Tile(label: __('hr::action.new_employee'), href: route('hr.employee.create'),
-                    permission: 'hr.employee.create', icon: 'people'),
+                    /* ⚠️ `hr.employee.create` বলে কোনো অনুমতি নেই — এই মডিউলে
+                       তৈরি-সম্পাদনা-মোছা তিনটাই `manage`। ভুল নামটা কাউকে
+                       ৪০৩ দিত না, বরং **টাইলটাই কারও কাছে দেখাত না**, আর
+                       তাই কেউ অভিযোগও করত না (৩ সেপ্টেম্বর ২০২৬) */
+                    permission: 'hr.employee.manage', icon: 'plus'),
                 new Tile(label: __('hr::menu.attendance'), href: route('hr.attendance.index'),
-                    permission: 'hr.attendance.view', icon: 'check'),
+                    permission: 'hr.attendance.view', icon: 'check-circle'),
                 new Tile(label: __('hr::menu.leave'), href: route('hr.leave.index'),
-                    permission: 'hr.leave.view', icon: 'plus'),
+                    permission: 'hr.leave.view', icon: 'calendar'),
                 new Tile(label: __('hr::menu.payroll'), href: route('hr.payroll.index'),
-                    permission: 'hr.payroll.view', icon: 'money'),
+                    permission: 'hr.payroll.view', icon: 'cash'),
             ],
 
             stats: [

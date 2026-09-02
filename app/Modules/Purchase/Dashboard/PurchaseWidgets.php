@@ -57,7 +57,7 @@ final class PurchaseWidgets implements DashboardWidgets
                 permission: 'purchase.report',
                 tone: 'warn',
                 sort: 60,
-                icon: 'purchase',
+                icon: 'challan',
             ),
 
             new Widget(
@@ -143,7 +143,7 @@ final class PurchaseWidgets implements DashboardWidgets
             tone: 'money',
             hint: $percent === null ? null : __('purchase::widget.margin_hint', ['percent' => $percent]),
             sort: 40,
-            icon: 'purchase',
+            icon: 'scale',
             parts: [
                 __('supplier::field.sold') => Money::format($sold),
                 __('supplier::field.cost_of_sold') => Money::format($cost),

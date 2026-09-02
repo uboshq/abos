@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\Purchase\Dashboard\PurchaseDashboard;
 use App\Modules\Purchase\Dashboard\PurchaseWidgets;
 use App\Modules\Purchase\Integrity\PurchaseChecks;
 use App\Modules\Purchase\Models\Payment;
@@ -207,7 +208,7 @@ return [
         ReturnOnCapitalReport::class,
     ],
 
-    'dashboard' => \App\Modules\Purchase\Dashboard\PurchaseDashboard::class,
+    'dashboard' => PurchaseDashboard::class,
 
     'widgets' => [
         PurchaseWidgets::class,

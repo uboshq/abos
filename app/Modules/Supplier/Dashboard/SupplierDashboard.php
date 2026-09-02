@@ -30,9 +30,9 @@ final class SupplierDashboard implements ProvidesDashboard
 
             tiles: [
                 new Tile(label: __('supplier::action.new'), href: route('supplier.create'),
-                    permission: 'supplier.create', icon: 'people'),
+                    permission: 'supplier.create', icon: 'plus'),
                 new Tile(label: __('supplier::menu.suppliers'), href: route('supplier.index'),
-                    permission: 'supplier.view', icon: 'report'),
+                    permission: 'supplier.view', icon: 'reports'),
             ],
 
             stats: [

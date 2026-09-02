@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 use App\Modules\Accounts\Dashboard\AccountsActivity;
+use App\Modules\Accounts\Dashboard\AccountsDashboard;
 use App\Modules\Accounts\Dashboard\AccountsWidgets;
 use App\Modules\Accounts\Integrity\AccountsChecks;
 use App\Modules\Accounts\Models\Account;
@@ -60,9 +61,12 @@ return [
 
     'depends_on' => [],
 
+    'dashboard' => AccountsDashboard::class,
+
     'menu' => [
         'dashboard' => [
-            ['label' => 'accounts::menu.dashboard', 'route' => 'accounts.dashboard', 'permission' => 'accounts.view'],
+            ['label' => 'accounts::dashboard.title', 'route' => 'module.dashboard',
+                'route_params' => ['module' => 'accounts'], 'permission' => 'accounts.view'],
         ],
         'master' => [
             ['label' => 'accounts::menu.chart_of_accounts', 'route' => 'accounts.coa.index', 'permission' => 'accounts.coa.view'],

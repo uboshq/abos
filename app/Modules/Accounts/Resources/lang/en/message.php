@@ -123,4 +123,10 @@ return [
     'sheet_does_not_agree' => 'It does not balance — the gap is :gap',
     'branch_sheet_may_not_agree' => 'A single branch rarely balances: capital, loans and bank accounts belong to the company, not to one branch',
     'instrument_no_when_bank' => 'Needed when a bank or MFS account is involved — without it there is no way to reconcile later.',
+
+    /* The cash-count activity line — AccountsActivity asked for both of
+       these, and neither existed in either language, so the raw key
+       showed on screen (found 3 September 2026) */
+    'count_matched' => 'The cash count matched',
+    'count_off_by' => 'The cash count was off by :amount',
 ];

@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+use App\Modules\Finance\Dashboard\FinanceDashboard;
 
 /**
  * অর্থ — টাকা কোথা থেকে আসে, কোথায় থাকে, কোথায় যায়, আর কার।
@@ -53,7 +54,7 @@ return [
      */
     'depends_on' => ['accounts', 'master_data'],
 
-    'dashboard' => \App\Modules\Finance\Dashboard\FinanceDashboard::class,
+    'dashboard' => FinanceDashboard::class,
 
     'menu' => [
         'dashboard' => [

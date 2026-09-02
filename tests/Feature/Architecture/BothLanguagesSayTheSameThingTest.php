@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Architecture;
 
 use App\Core\Module\ModuleRegistry;
+use Illuminate\Support\Facades\File;
 use Tests\TestCase;
 
 /**
@@ -129,6 +130,67 @@ class BothLanguagesSayTheSameThingTest extends TestCase
 
         $this->assertSame([], $empty,
             "এই লেখাগুলোর অনুবাদ খালি — পর্দায় ফাঁকা ঘর বসবে:\n".implode("\n", $empty));
+    }
+
+    /**
+     * কোড যে চাবি চায়, তার শব্দ আছে তো?
+     *
+     * ── উপরের দুইটা পরীক্ষার ফাঁক ────────────────────────────────────
+     * প্রথমটা দেখে **দুই ভাষায় একই চাবি আছে কি না**, দ্বিতীয়টা দেখে
+     * **মান খালি কি না**। কিন্তু একটা চাবি যদি **কোনো ভাষাতেই না
+     * থাকে**, দুইটাই চুপ — কারণ অনুপস্থিতিটা তখন প্রতিসম।
+     *
+     * ঠিক সেভাবেই আটটা চাবি লুকিয়ে ছিল (৩ সেপ্টেম্বর ২০২৬)। Laravel
+     * অচেনা চাবির বদলে **চাবিটাই ছাপে**, তাই পর্দায় দেখা যেত
+     * `system_admin::menu.backups`, `sales::sort.latest`,
+     * `master_data::validation.default_cannot_be_deactivated` —
+     * ব্যবহারকারীর কাছে যা নিছক আবর্জনা। একটা ধরা পড়েছিল স্ক্রিনশট
+     * দেখে; বাকি সাতটা এই মাপটা লিখে।
+     *
+     * ── কেন `[,)]` লাগে ─────────────────────────────────────────────
+     * `__('restaurant::state.'.$t->state)` — এখানে উদ্ধৃতির ভেতরটা
+     * চাবি নয়, **চাবির শুরু**। বন্ধনী বা কমা না খুঁজলে এই জোড়া-লাগানো
+     * চাবিগুলোকেই "নেই" বলা হত, আর পরীক্ষাটা ছয়টা মিথ্যা অভিযোগ নিয়ে
+     * শুরু হত — তারপর কেউ ওটাকে বিশ্বাস করত না।
+     */
+    public function test_every_key_the_code_asks_for_has_words_in_it(): void
+    {
+        $missing = [];
+        $seen = 0;
+
+        foreach (File::allFiles(base_path('app')) as $file) {
+            if (! str_ends_with($file->getFilename(), '.php')) {
+                continue;
+            }
+
+            preg_match_all(
+                "/__\('([a-z_]+::[a-z_.]+[a-z_])'\s*[,)]/",
+                File::get($file->getPathname()),
+                $found,
+            );
+
+            foreach (array_unique($found[1]) as $key) {
+                $seen++;
+
+                foreach (self::LANGUAGES as $language) {
+                    if (__($key, [], $language) === $key) {
+                        $missing[] = "{$file->getFilename()}  [{$language}]  {$key}";
+                    }
+                }
+            }
+        }
+
+        // মাপটা নিজেই ভেঙে গেলে যেন চুপচাপ সবুজ না থাকে
+        $this->assertGreaterThan(2000, $seen, 'চাবিই পড়া যায়নি — regex বদলে গেছে?');
+
+        $missing = array_values(array_unique($missing));
+        sort($missing);
+
+        $this->assertSame([], $missing, implode("\n", array_merge(
+            ['কোড এই চাবিগুলো চায়, কিন্তু কোনো ভাষাতেই শব্দ নেই —',
+                'পর্দায় চাবিটাই দেখা যাবে:'],
+            $missing,
+        )));
     }
 
     /** @return array<string, string> module code => lang directory */

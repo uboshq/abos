@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\UserDataScope;
+use App\Modules\Inventory\Dashboard\InventoryDashboard;
 use App\Modules\Inventory\Dashboard\InventoryWidgets;
 use App\Modules\Inventory\Imports\OpeningStockImporter;
 use App\Modules\Inventory\Imports\ProductImporter;
@@ -331,7 +332,7 @@ return [
      * একটাই, তালিকা নয়: ড্যাশবোর্ড একটা পর্দা, আর দুইটা ঘোষণা করলে
      * কোনটা খুলবে তার কোনো ভালো উত্তর নেই।
      */
-    'dashboard' => \App\Modules\Inventory\Dashboard\InventoryDashboard::class,
+    'dashboard' => InventoryDashboard::class,
 
     'widgets' => [
         InventoryWidgets::class,

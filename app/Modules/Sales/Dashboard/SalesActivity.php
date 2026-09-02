@@ -57,7 +57,7 @@ final class SalesActivity implements ContributesActivity
                 when: $invoice->updated_at ?? $invoice->created_at,
                 title: $invoice->document_no.' · '.Money::format((string) $invoice->total, 2),
                 subtitle: $invoice->customer?->name() ?? '',
-                icon: 'sales',
+                icon: 'receipt',
                 permission: 'sales.invoice.view',
                 tone: 'money',
                 sourceType: SalesInvoice::drillSourceType(),

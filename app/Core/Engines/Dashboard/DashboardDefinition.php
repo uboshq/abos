@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Engines\Dashboard;
 
+use App\Core\Dashboard\Widget;
 use InvalidArgumentException;
 
 /**
@@ -25,7 +26,7 @@ final class DashboardDefinition
      * @param  list<Series|Breakdown>  $panels
      * @param  list<Listing>  $listings
      * @param  list<Tile>  $tiles
-     * @param  list<\App\Core\Dashboard\Widget>  $reminders
+     * @param  list<Widget>  $reminders
      */
     public function __construct(
         public readonly string $title,

@@ -31,12 +31,12 @@ final class GovernanceDashboard implements ProvidesDashboard
             subtitle: __('governance::dashboard.subtitle'),
 
             tiles: [
-                new Tile(label: __('governance::menu.audit'), href: route('governance.audit.index'),
-                    permission: 'governance.audit.view', icon: 'shield'),
-                new Tile(label: __('governance::menu.logins'), href: route('governance.login.index'),
-                    permission: 'governance.audit.view', icon: 'people'),
-                new Tile(label: __('governance::menu.exports'), href: route('governance.export.index'),
-                    permission: 'governance.audit.view', icon: 'report'),
+                new Tile(label: __('governance::menu.audit_trail'), href: route('governance.audit.index'),
+                    permission: 'governance.audit.view', icon: 'eye'),
+                new Tile(label: __('governance::menu.login_history'), href: route('governance.login.index'),
+                    permission: 'governance.audit.view', icon: 'lock'),
+                new Tile(label: __('governance::menu.export_log'), href: route('governance.export.index'),
+                    permission: 'governance.audit.view', icon: 'download'),
             ],
 
             stats: [

@@ -35,7 +35,28 @@ class IconSetTest extends TestCase
      */
     private function markupOf(string $path): string
     {
-        return (string) preg_replace('/\{\{--.*?--\}\}/su', '', File::get($path));
+        $source = File::get($path);
+
+        // Blade-এর মন্তব্য
+        $source = (string) preg_replace('/\{\{--.*?--\}\}/su', '', $source);
+
+        /*
+         * PHP-র ব্লক মন্তব্যও — `@php`-র ভেতরে আর `@props`-এর ডকব্লকে।
+         *
+         * ── কেন এটা যোগ করতে হলো, ৩ সেপ্টেম্বর ২০২৬ ──────────────────
+         * উপরের লাইনটা কেবল `{{-- --}}` ছাঁটত, তাই PHP-র ব্লক মন্তব্যে
+         * একটা সতর্কতা-চিহ্ন লিখলেই পরীক্ষাটা "পর্দায় ইমোজি টাইপ করা
+         * হয়েছে" বলে ভাঙত — অথচ ওই লেখা ব্রাউজারে কোনোদিন যায় না।
+         *
+         * এটা পাহারা আলগা করা নয়; এই ফাইলের নিজের ব্যাখ্যাই বলে
+         * **মন্তব্য অপরাধ নয়** — "মন্তব্য না ছাঁটলে এই পরীক্ষা নিজের
+         * ব্যাখ্যাটাকেই অপরাধ বলে ধরত, আর তখন লেখা বন্ধ করে দিতে হত"।
+         * এতদিন সেটা কেবল এক রকমের মন্তব্যে খাটত।
+         *
+         * `//` ছাঁটা হয় না, ইচ্ছাকৃতভাবে: `https://…`-এর ভেতরেও ওটা
+         * আছে, আর তখন অর্ধেক পর্দা মুছে যেত।
+         */
+        return (string) preg_replace('#/\*.*?\*/#su', '', $source);
     }
 
     /** @return list<string> প্রতিটা ব্লেড ফাইলের পথ */
@@ -93,6 +114,65 @@ class IconSetTest extends TestCase
     public function test_an_unknown_name_draws_nothing_instead_of_failing(): void
     {
         $this->assertSame('', trim(Blade::render('<x-ui.icon name="no-such-thing" />')));
+    }
+
+    /**
+     * ...কিন্তু আমরা যে নামগুলো পাঠাই, সেগুলো সত্যি হতে হবে।
+     *
+     * ── উপরের নিয়মটার উল্টো পিঠ ─────────────────────────────────────
+     * অচেনা নামে পাতা না ভাঙা একটা **দয়া**, আর দয়াটা ঠিক আছে: একটা
+     * ভুল নামের জন্য গোটা পর্দা নামিয়ে দেওয়ার মানে নেই।
+     *
+     * কিন্তু ঠিক ওই দয়াটার কারণেই ভুল নাম **নীরব**। ৩ সেপ্টেম্বর
+     * ২০২৬-এ ধরা পড়ল ড্যাশবোর্ডের **২৬টা টাইল কিছুই আঁকছে না** —
+     * `report`, `people`, `money`, `check`, `shield`, `transfer`,
+     * `ledger` — একটাও সেটে ছিল না। সবগুলো পরীক্ষা সবুজ ছিল, কারণ
+     * "কিছু না আঁকা"-ই ঘোষিত আচরণ।
+     *
+     * চোখে ধরা পড়েছিল স্ক্রিনশট দেখে: প্রথম টাইলে ছবি, পরের তিনটায়
+     * ফাঁকা। **কোনো টেস্ট নয়, একটা ছবি।** তাই এই পরীক্ষাটা।
+     *
+     * PHP-তে লেখা নামগুলো দেখা হয় (`icon: 'x'`) — ব্লেডে লেখাগুলো
+     * নিচের `test_no_screen_passes_a_typed_character_as_an_icon`
+     * ইতিমধ্যেই ছোঁয়, আর সেখানে নামটা বেশিরভাগ সময় চলক।
+     */
+    public function test_every_name_we_actually_pass_exists_in_the_set(): void
+    {
+        /* `[a-z_-]` — আন্ডারস্কোরটা বাদ দিলে `master_data`, `system_admin`
+           আর `check_circle` সেটের বাইরে পড়ে যায়, আর পরীক্ষাটা ঠিক
+           সেগুলোকেই "নেই" বলত */
+        preg_match_all(
+            "/^\s+'([a-z_-]+)' =>/m",
+            $this->markupOf(resource_path('views/components/ui/icon.blade.php')),
+            $found,
+        );
+
+        $set = array_flip($found[1]);
+
+        $this->assertGreaterThan(30, count($set), 'সেটটাই পড়া যায়নি — regex বদলে গেছে?');
+
+        $missing = [];
+
+        foreach (File::allFiles(base_path('app')) as $file) {
+            if (! str_ends_with($file->getFilename(), '.php')) {
+                continue;
+            }
+
+            preg_match_all("/icon:\s*'([a-z_-]+)'/", File::get($file->getPathname()), $used);
+
+            foreach ($used[1] as $name) {
+                if (! isset($set[$name])) {
+                    $missing[] = $file->getFilename().": '{$name}'";
+                }
+            }
+        }
+
+        $this->assertSame([], array_values(array_unique($missing)), implode("\n", array_merge(
+            ['এই নামগুলো আইকন সেটে নেই — পর্দায় ওখানে কিছুই আঁকা হবে না,',
+                'আর কোনো ত্রুটিও দেখা যাবে না:'],
+            array_unique($missing),
+            ['সেটের নামগুলো: '.implode(', ', array_keys($set))],
+        )));
     }
 
     /**

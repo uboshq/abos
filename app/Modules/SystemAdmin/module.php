@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Core\Support\DateFormat;
+use App\Modules\SystemAdmin\Dashboard\SystemAdminDashboard;
 
 /**
  * System Administration — কোম্পানি, শাখা, ব্যবহারকারী, Control Panel।
@@ -34,7 +35,7 @@ return [
 
     'depends_on' => [],
 
-    'dashboard' => \App\Modules\SystemAdmin\Dashboard\SystemAdminDashboard::class,
+    'dashboard' => SystemAdminDashboard::class,
 
     'menu' => [
         'dashboard' => [

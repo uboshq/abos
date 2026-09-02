@@ -14,6 +14,9 @@ return [
     'served' => 'Served',
     'served_hint' => 'Finished so far',
     'on_the_pass' => 'On the pass now',
+    /* The panel above counts how many are in each state; this list shows
+       which ones — the same title on both made it read as a duplicate */
+    'waiting_now' => 'Waiting right now',
     'nothing_cooking' => 'Nothing is cooking.',
     'ticket' => 'Ticket',
     'state' => 'State',

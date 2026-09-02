@@ -38,7 +38,7 @@ final class InventoryWidgets implements DashboardWidgets
                 permission: 'inventory.stock.view',
                 tone: 'warn',
                 sort: 80,
-                icon: 'inventory',
+                icon: 'alert-triangle',
             ),
 
             new Widget(

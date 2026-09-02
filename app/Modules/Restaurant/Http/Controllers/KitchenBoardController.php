@@ -6,12 +6,12 @@ namespace App\Modules\Restaurant\Http\Controllers;
 
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
-use App\Modules\Restaurant\Models\KitchenTicket;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Recipe;
 use App\Modules\Inventory\Models\Warehouse;
-use App\Modules\Restaurant\Services\KitchenTicketService;
 use App\Modules\Inventory\Services\RecipeService;
+use App\Modules\Restaurant\Models\KitchenTicket;
+use App\Modules\Restaurant\Services\KitchenTicketService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;

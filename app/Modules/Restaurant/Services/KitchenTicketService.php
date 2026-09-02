@@ -5,8 +5,13 @@ declare(strict_types=1);
 namespace App\Modules\Restaurant\Services;
 
 use App\Core\Support\CompanyContext;
-use App\Modules\Restaurant\Models\KitchenTicket;
 use App\Modules\Inventory\Models\Product;
+/* ⚠️ রেসিপি মজুদের জিনিস, রেস্টুরেন্টের নয় — আর এই লাইনটা না থাকলে
+   PHP নিজের namespace-এ খোঁজে। ফাইলটা যখন মজুদের ভেতরে ছিল তখন
+   `use` লাগত না; সরানোর পর লেগেছে, আর অভাবটা ধরা পড়েছিল কেবল
+   পর্দা খুলে — কম্পাইলে নয় (২ সেপ্টেম্বর ২০২৬) */
+use App\Modules\Inventory\Services\RecipeService;
+use App\Modules\Restaurant\Models\KitchenTicket;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
