@@ -34,7 +34,14 @@ return [
 
     'depends_on' => [],
 
+    'dashboard' => \App\Modules\SystemAdmin\Dashboard\SystemAdminDashboard::class,
+
     'menu' => [
+        'dashboard' => [
+            ['label' => 'system_admin::dashboard.title', 'route' => 'module.dashboard',
+                'route_params' => ['module' => 'system_admin'], 'permission' => 'system_admin.settings.manage'],
+        ],
+
         'master' => [
             /*
              * কোম্পানি ও শাখা — একটাই পর্দা, দুইটা নয়।

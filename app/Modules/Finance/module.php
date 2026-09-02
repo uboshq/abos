@@ -53,7 +53,14 @@ return [
      */
     'depends_on' => ['accounts', 'master_data'],
 
+    'dashboard' => \App\Modules\Finance\Dashboard\FinanceDashboard::class,
+
     'menu' => [
+        'dashboard' => [
+            ['label' => 'finance::dashboard.title', 'route' => 'module.dashboard',
+                'route_params' => ['module' => 'finance'], 'permission' => 'finance.capital.view'],
+        ],
+
         'master' => [
             /*
              * মানচিত্র সবার আগে।

@@ -40,7 +40,14 @@ return [
     // কারও উপর নির্ভর করে না: অডিট কোরের ইঞ্জিন, কোনো মডিউলের নয়
     'depends_on' => [],
 
+    'dashboard' => \App\Modules\Governance\Dashboard\GovernanceDashboard::class,
+
     'menu' => [
+        'dashboard' => [
+            ['label' => 'governance::dashboard.title', 'route' => 'module.dashboard',
+                'route_params' => ['module' => 'governance'], 'permission' => 'governance.audit.view'],
+        ],
+
         'reports' => [
             ['label' => 'governance::menu.audit_trail', 'route' => 'governance.audit.index', 'permission' => 'governance.audit.view'],
 

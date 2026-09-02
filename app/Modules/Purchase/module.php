@@ -82,6 +82,11 @@ return [
     'depends_on' => ['master_data', 'accounts', 'inventory', 'supplier', 'sales'],
 
     'menu' => [
+        'dashboard' => [
+            ['label' => 'purchase::dashboard.title', 'route' => 'module.dashboard',
+                'route_params' => ['module' => 'purchase'], 'permission' => 'purchase.bill.view'],
+        ],
+
         'transactions' => [
             ['label' => 'purchase::menu.direct', 'route' => 'purchase.direct.create', 'permission' => 'purchase.bill.create',
                 'setting' => 'purchase.screen_direct'],
@@ -201,6 +206,8 @@ return [
         SettlementReport::class,
         ReturnOnCapitalReport::class,
     ],
+
+    'dashboard' => \App\Modules\Purchase\Dashboard\PurchaseDashboard::class,
 
     'widgets' => [
         PurchaseWidgets::class,

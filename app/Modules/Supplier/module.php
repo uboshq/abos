@@ -44,6 +44,11 @@ return [
     'depends_on' => ['accounts', 'master_data'],
 
     'menu' => [
+        'dashboard' => [
+            ['label' => 'supplier::dashboard.title', 'route' => 'module.dashboard',
+                'route_params' => ['module' => 'supplier'], 'permission' => 'supplier.view'],
+        ],
+
         'master' => [
             ['label' => 'supplier::menu.suppliers', 'route' => 'supplier.index', 'permission' => 'supplier.view'],
         ],
@@ -95,6 +100,8 @@ return [
      * হোম পর্দার দুইটা সংখ্যা — কোম্পানিকে কত দিতে হবে, আর এই মাসে
      * মার্জিন কত। দুইটাই পরিবেশক ডিপোর রোজকার প্রশ্ন।
      */
+    'dashboard' => \App\Modules\Supplier\Dashboard\SupplierDashboard::class,
+
     'widgets' => [
         SupplierWidgets::class,
     ],

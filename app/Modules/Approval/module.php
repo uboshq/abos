@@ -48,6 +48,11 @@ return [
     'depends_on' => [],
 
     'menu' => [
+        'dashboard' => [
+            ['label' => 'approval::dashboard.title', 'route' => 'module.dashboard',
+                'route_params' => ['module' => 'approval'], 'permission' => 'approval.view'],
+        ],
+
         'approval' => [
             ['label' => 'approval::menu.inbox', 'route' => 'approval.inbox.index', 'permission' => 'approval.decide'],
             ['label' => 'approval::menu.mine', 'route' => 'approval.inbox.mine', 'permission' => 'approval.view'],
@@ -70,6 +75,8 @@ return [
         'approval.decide',
         'approval.flow.manage',
     ],
+
+    'dashboard' => \App\Modules\Approval\Dashboard\ApprovalDashboard::class,
 
     'widgets' => [
         ApprovalWidgets::class,
