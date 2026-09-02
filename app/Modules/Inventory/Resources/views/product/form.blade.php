@@ -95,9 +95,23 @@
 
             <div class="grid gap-3 sm:grid-cols-3">
                 {{-- inputmode="decimal" — টাকার ঘরে ফোনে সংখ্যার কী-বোর্ড --}}
-                <x-ui.field name="purchase_price" type="number" step="0.01" inputmode="decimal"
-                            :label="__('inventory::field.purchase_price')"
-                            :value="old('purchase_price', $product->purchase_price)" numeric />
+                {{--
+                    ক্রয়মূল্যের ঘরটা কেবল যাঁর দেখার কথা তাঁর জন্য।
+
+                    ── কেন ঘরটা তুলে দিলে দরটা মুছে যায় না ────────────
+                    অনুপস্থিত ঘর মানে অনুরোধে ওই চাবিটা নেই, আর
+                    [[ProductService::update()]] `$product->update($data)`
+                    ডাকে — অনুপস্থিত চাবি ছোঁয়াই হয় না। তাই আগের দরটা
+                    যেমন ছিল তেমনই থাকে।
+
+                    লেখার দিকটাও বন্ধ ([[ProductRequest]]) — নাহলে
+                    ঘরটা না দেখেও একটা POST বানিয়ে দর বদলে দেওয়া যেত।
+                --}}
+                @if (\App\Core\Security\FieldSecurity::visible($product, 'purchase_price'))
+                    <x-ui.field name="purchase_price" type="number" step="0.01" inputmode="decimal"
+                                :label="__('inventory::field.purchase_price')"
+                                :value="old('purchase_price', $product->purchase_price)" numeric />
+                @endif
 
                 <x-ui.field name="sale_price" type="number" step="0.01" inputmode="decimal"
                             :label="__('inventory::field.sale_price')"

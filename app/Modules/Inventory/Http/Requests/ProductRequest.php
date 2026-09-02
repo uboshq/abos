@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Inventory\Http\Requests;
 
+use App\Core\Security\FieldSecurity;
 use App\Core\Support\CompanyContext;
+use App\Modules\Inventory\Models\Product;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -22,6 +24,29 @@ class ProductRequest extends FormRequest
     }
 
     /** @return array<string, mixed> */
+    /**
+     * ক্রয়মূল্য দেখার অনুমতি না থাকলে অঙ্কটা এখানেই ঝরে যায়।
+     *
+     * ── কেন কেবল লুকানো যথেষ্ট নয় ───────────────────────────────────
+     * ফর্ম থেকে ঘরটা তুলে দিলে পর্দায় আর দেখা যায় না — কিন্তু একটা
+     * হাতে বানানো POST-এ `purchase_price` পাঠিয়ে দিলে সেটা দিব্যি
+     * সংরক্ষিত হত। **যে ঘর কেউ দেখতে পান না, সেটা তিনি বদলাতেও
+     * পারবেন না** — নাহলে পাহারাটা কেবল পর্দার সাজ।
+     *
+     * ── কেন ব্যতিক্রম নয়, ছেঁটে ফেলা ────────────────────────────────
+     * ভুল বার্তা দিলে ফর্মটা আটকে যেত, আর ব্যবহারকারী বুঝতেন না তিনি
+     * কী ভুল করেছেন — তিনি তো ঘরটা দেখেনইনি। ঘরটা অনুপস্থিত থাকলে
+     * [[ProductService::update()]] সেটা ছোঁয় না, আর আগের দরটা যেমন
+     * ছিল তেমনই থাকে।
+     */
+    protected function prepareForValidation(): void
+    {
+        if (! FieldSecurity::visible(
+            Product::class, 'purchase_price')) {
+            $this->request->remove('purchase_price');
+        }
+    }
+
     public function rules(): array
     {
         $companyId = CompanyContext::id();

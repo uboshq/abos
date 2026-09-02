@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Hr\Http\Controllers;
 
 use App\Core\Concerns\SortsLists;
+use App\Core\Security\FieldSecurity;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
@@ -158,6 +159,24 @@ class EmployeeController extends Controller implements HasMiddleware
     private function validated(Request $request, ?Employee $employee = null): array
     {
         $companyId = CompanyContext::id();
+
+        /*
+         * পরিচয়ের ঘরগুলো দেখার অনুমতি না থাকলে সেগুলো এখানেই ঝরে যায়।
+         *
+         * ── কেন কেবল ফর্ম থেকে তুলে দেওয়া যথেষ্ট নয় ─────────────────
+         * ফর্মে ঘরটা না থাকলেও একটা হাতে বানানো POST-এ `national_id`
+         * পাঠিয়ে দেওয়া যায় — আর তাতে **কেউ না দেখেই একজনের জাতীয়
+         * পরিচয়পত্রের নম্বর বদলে দিতে পারতেন**, যেটা ফাঁসের চেয়েও
+         * খারাপ: ভুল তথ্যটা তখন খাতায় বসে থাকে।
+         *
+         * অনুপস্থিত চাবি `$employee->update($data)` ছোঁয় না, তাই
+         * আগের মানটা যেমন ছিল তেমনই থাকে।
+         */
+        foreach (['national_id', 'bank_account_no', 'bank_routing_no', 'mfs_number'] as $guarded) {
+            if (! FieldSecurity::visible(Employee::class, $guarded)) {
+                $request->request->remove($guarded);
+            }
+        }
 
         return $request->validate([
             // খালি রাখলে সিরিজ থেকে বসে — EmployeeService::create() দেখুন

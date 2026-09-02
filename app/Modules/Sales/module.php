@@ -13,6 +13,7 @@ use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\CommissionClaim;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesInvoice;
+use App\Modules\Sales\Models\SalesInvoiceLine;
 use App\Modules\Sales\Models\SalesOrder;
 use App\Modules\Sales\Models\SalesReturn;
 use App\Modules\Sales\Models\Shipment;
@@ -778,4 +779,27 @@ return [
     'auth_providers' => [
         'dealers' => DealerProvider::class,
     ],
+    /*
+     * যে ঘরগুলো সবাই দেখবে না।
+     *
+     * `cost_of_goods` আগে থেকেই ঢাকা ছিল, কিন্তু **হাতে লেখা একটা
+     * শর্ত দিয়ে** — বিলের পর্দায় একটা `can()`। সেটা কাজ করত ঠিকই,
+     * কিন্তু পরের পর্দাটা লেখার দিনে কেউ ওই লাইনটা কপি করতে ভুলে
+     * গেলে ঘরটা নীরবে খুলে যেত, আর কোনো পরীক্ষা কিছু বলত না।
+     *
+     * এখন ঘোষণাটা এখানে, আর একটা পাহারা মিলিয়ে দেখে
+     * ([[NoSensitiveFieldIsPrintedInTheOpenTest]])।
+     *
+     * সারির `unit_cost`ও এখানে: বিলের মোট ব্যয় ঢেকে সারির ব্যয় খোলা
+     * রাখলে যোগ করলেই পুরোটা বেরিয়ে আসত।
+     */
+    'sensitive_fields' => [
+        SalesInvoice::class => [
+            'cost_of_goods' => 'sales.cost.view',
+        ],
+        SalesInvoiceLine::class => [
+            'unit_cost' => 'sales.cost.view',
+        ],
+    ],
+
 ];

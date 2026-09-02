@@ -96,15 +96,38 @@
                         bg-(--color-surface-card) p-4">
             <h2 class="mb-3 font-semibold">{{ __('inventory::section.pricing') }}</h2>
 
+            {{--
+                ক্রয়মূল্য সবার জন্য নয়।
+
+                ── কী ভাঙা ছিল (২ সেপ্টেম্বর ২০২৬) ─────────────────────
+                এই তিনটা ঘর একসাথে ছাপা হত, কোনো পাহারা ছাড়াই। যিনি
+                পণ্য দেখতে পান — কার্যত সবাই — তিনি প্রতিটা পণ্য কত
+                দামে কেনা হয়েছে তা দেখতে পেতেন।
+
+                বিক্রির সময় প্রথম প্রশ্নটা ঠিক এটাই, আর উত্তরটা ছিল
+                "হ্যাঁ"।
+
+                ── কেন ঘরটা লুকানো হয় না, ঢাকা হয় ─────────────────────
+                সারিটা তুলে দিলে একজন ভাবতেন ক্রয়মূল্য বসানোই হয়নি,
+                আর মাস্টার "ঠিক" করতে গিয়ে হয়তো নতুন একটা দর বসিয়ে
+                দিতেন। চিহ্নটা বলে **আছে, কিন্তু আপনার জন্য নয়**।
+            --}}
             <dl class="space-y-2">
                 @foreach ([
-                    'inventory::field.purchase_price' => $product->purchase_price,
-                    'inventory::field.sale_price' => $product->sale_price,
-                    'inventory::field.reorder_level' => $product->reorder_level,
-                ] as $label => $value)
+                    'inventory::field.purchase_price' => ['purchase_price', $product->purchase_price],
+                    'inventory::field.sale_price' => [null, $product->sale_price],
+                    'inventory::field.reorder_level' => [null, $product->reorder_level],
+                ] as $label => [$guarded, $value])
                     <div class="flex items-baseline justify-between gap-3">
                         <dt class="text-sm text-(--color-ink-muted)">{{ __($label) }}</dt>
-                        <dd class="num font-medium">{{ \App\Core\Support\Money::format($value) }}</dd>
+                        <dd class="num font-medium">
+                            @if ($guarded && ! \App\Core\Security\FieldSecurity::visible($product, $guarded))
+                                <span class="text-(--color-ink-muted)"
+                                      title="{{ __('core.field.hidden') }}">{{ \App\Core\Security\FieldSecurity::mask() }}</span>
+                            @else
+                                {{ \App\Core\Support\Money::format($value) }}
+                            @endif
+                        </dd>
                     </div>
                 @endforeach
             </dl>

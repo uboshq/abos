@@ -520,6 +520,11 @@ return [
         'financial_year' => 'Financial year',
     ],
 
+    /* Explains the mask on a hidden field, on hover. */
+    'field' => [
+        'hidden' => 'You do not have permission to see this field.',
+    ],
+
     'form' => [
         'required' => 'required',
         'optional' => 'optional',
