@@ -38,6 +38,19 @@ class PublicIdTest extends TestCase
         'migrations', 'cache', 'cache_locks', 'jobs', 'job_batches',
         'failed_jobs', 'sessions', 'password_reset_tokens',
         'model_has_permissions', 'model_has_roles', 'role_has_permissions',
+
+        /*
+         * Sanctum-এর নিজের টেবিল, মোবাইল অ্যাপের টোকেনের জন্য
+         * (২ সেপ্টেম্বর ২০২৬)। মাইগ্রেশনটা প্যাকেজের ভেতর থেকে আসে,
+         * তাই `publicId()` যোগ করার জায়গা আমাদের হাতে নেই — করতে হলে
+         * প্যাকেজের মাইগ্রেশন publish করে রিপোতে টেনে আনতে হত, আর
+         * তখন Sanctum আপডেট হলে আমাদের কপিটা পিছিয়ে থাকত।
+         *
+         * আর দরকারও নেই: বাইরের কী লাগে সেই সারিগুলোর যেগুলো API-তে
+         * নাম ধরে চাওয়া হয়। একটা টোকেনের সারি কেউ কখনো নাম ধরে চায়
+         * না — টোকেনটা নিজেই তার একমাত্র পরিচয়, আর সেটা ক্রমিক নয়।
+         */
+        'personal_access_tokens',
     ];
 
     /**

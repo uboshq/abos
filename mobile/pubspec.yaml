@@ -1,0 +1,55 @@
+name: abos_mobile
+description: >
+  ABOS Mobile — the offline-first client. This directory currently holds the
+  synchronisation core and nothing else: no screens, no business features.
+  Those are the mobile team's work; this is the machinery underneath them.
+publish_to: "none"
+
+# Starts at 0.1.0 with an explicit +1 versionCode. The +N is not decoration:
+# without it Flutter defaults every build to versionCode 1, and the Android
+# package installer refuses an "upgrade" whose versionCode is not greater --
+# which is exactly the path a phone in a shop takes in the morning. A plain
+# counter that only ever goes up, never derived from the version name.
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # HTTP, with an interceptor chain -- the access-token attach and the
+  # single-flight refresh in core/api_client both need one.
+  dio: ^5.5.0
+
+  # The offline queue and the reference cache. Hive rather than sqflite for
+  # these two: both are key/value by nature (a queued change by its own id, a
+  # cached record by "$entityType:$entityId"), and neither is ever queried by
+  # anything but its key. A relational store here would be a schema to migrate
+  # for no question it can answer that this cannot.
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+
+  # What makes the queue drain by itself. Without this, a rep who walked back
+  # into coverage would still have to open the app and press something.
+  connectivity_plus: ^6.0.5
+
+  # Tokens, the device id and the Hive encryption key live in the platform
+  # keystore (Android EncryptedSharedPreferences / iOS Keychain) -- never in
+  # Hive or SharedPreferences, which are plain files inside the app sandbox
+  # and are read in clear text on a rooted device or out of a backup.
+  flutter_secure_storage: ^9.2.2
+
+  # Drains the queue while the app is closed. Android's WorkManager refuses
+  # any periodic task under 15 minutes, so 15 is the floor the platform
+  # allows, not a cadence anybody chose.
+  workmanager: ^0.10.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
