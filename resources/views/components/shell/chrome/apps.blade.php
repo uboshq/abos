@@ -90,11 +90,55 @@
             </label>
         </div>
 
+        {{--
+            লঞ্চারে দলের শিরোনাম আসল লেখাতেই — এখানে জায়গা আছে।
+
+            ── কেন এখানে লেখা, অথচ রেলে ও পটিতে শুধু রেখা ─────────────
+            এটা একটা পূর্ণ পাতা, ছয় কলামের গ্রিড। সাইডবারের রেল ৫৬px
+            চওড়া আর টপনাভ ইতিমধ্যেই আড়াআড়ি স্ক্রল করে — ওখানে শিরোনাম
+            মানে জিনিসটাই পর্দার বাইরে ঠেলে দেওয়া। **সীমাটা জায়গার,
+            নীতির নয়**, তাই যেখানে জায়গা আছে সেখানে পুরো নামটাই থাকে।
+
+            ── খোঁজার সাথে শিরোনাম মিলিয়ে রাখা ───────────────────────
+            এই পাতায় একটা ফিল্টার আছে (`x-show` প্রতিটা টাইলে)। শিরোনামে
+            একই শর্ত না বসালে **"গ্রাহক" লিখলে খালি "অর্থ ও হিসাব"
+            শিরোনামটা ঝুলে থাকত**, নিচে একটাও টাইল ছাড়া।
+
+            তাই প্রতিটা শিরোনাম নিজের দলের মডিউল-নামগুলো নিয়ে ঘোরে, আর
+            তার একটাও না মিললে নিজেও সরে যায়। `Js::from()` তালিকাটা
+            নিরাপদে JSON করে — হাতে উদ্ধৃতি বসালে বাংলা নামের কোনো
+            অ্যাপোস্ট্রফি স্ক্রিপ্টটাই ভেঙে দিত।
+        --}}
         <div class="mx-auto mt-8 grid max-w-4xl grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6">
+            @php $shownSection = null; @endphp
+
             @foreach ($menu as $module)
                 @php
                     $first = collect($module['groups'])->flatten(1)->firstWhere('url', '!==', null);
+
+                    $opensSection = $module['section'] !== $shownSection;
+                    $shownSection = $module['section'];
+
+                    $sectionLabel = ($opensSection && $module['section'] !== 'top')
+                        ? __('core.nav_section.'.$module['section'])
+                        : null;
+
+                    $sectionNames = $sectionLabel === null ? [] : collect($menu)
+                        ->where('section', $module['section'])
+                        ->map(fn (array $m): string => Str::lower($m['label']))
+                        ->values()
+                        ->all();
                 @endphp
+
+                @if ($sectionLabel)
+                    <p class="col-span-full mt-4 border-b border-(--color-border) pb-1 text-2xs
+                              font-semibold uppercase tracking-wide text-(--color-ink-muted)
+                              first:mt-0"
+                       x-show="!q || {{ Js::from($sectionNames) }}.some(n => n.includes(q.toLowerCase()))">
+                        {{ $sectionLabel }}
+                    </p>
+                @endif
+
                 <a @if ($first) href="{{ $first['url'] }}" @endif
                    x-show="!q || '{{ Str::lower($module['label']) }}'.includes(q.toLowerCase())"
                    class="flex flex-col items-center gap-2 rounded-(--radius-card) p-3

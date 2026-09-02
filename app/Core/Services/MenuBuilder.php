@@ -34,7 +34,7 @@ final class MenuBuilder
      * একটা ধূসর মেনু আইটেম ব্যবহারকারীকে শুধু জানায় সে কী পারে না, আর
      * প্রতিবার ক্লিক করে সেটা আবিষ্কার করে।
      *
-     * @return list<array{code: string, label: string, icon: string, groups: array<string, list<array{label: string, route: string, url: ?string, active: bool}>>}>
+     * @return list<array{code: string, label: string, icon: string, section: string, order: int, groups: array<string, list<array{label: string, route: string, url: ?string, active: bool}>>}>
      */
     public function forUser(?User $user): array
     {
@@ -132,9 +132,43 @@ final class MenuBuilder
                 'code' => $module->code,
                 'label' => $module->label(),
                 'icon' => $module->code,
+                'section' => $module->nav['section'],
+                'order' => $module->nav['order'],
                 'groups' => $this->inFixedOrder($groups),
             ];
         }
+
+        return $this->inNavOrder($menu);
+    }
+
+    /**
+     * মডিউলগুলো মালিকের দেওয়া ক্রমে — দল, তারপর দলের ভেতরের নম্বর।
+     *
+     * ── কেন এখানে সাজানো, রেজিস্ট্রিতে নয় ────────────────────────────
+     * [[ModuleRegistry::all()]] নির্ভরতার ক্রমে দেয়, আর সেটা **ঠিকই
+     * আছে** — মাইগ্রেশন, ইভেন্ট নিবন্ধন আর বুট ওই ক্রমেই চলতে হয়।
+     * ওখানে হাত দিলে মেনু সুন্দর হত আর বুট ভাঙত।
+     *
+     * তাই সাজানোটা এখানে, একদম শেষে: রেজিস্ট্রি মেশিনের প্রশ্নের উত্তর
+     * দেয়, MenuBuilder মানুষের।
+     *
+     * ── অসম্পূর্ণ দল নিয়ে চিন্তা নেই ─────────────────────────────────
+     * অনুমতি বা সুইচের কারণে একটা গোটা দল খালি হয়ে যেতে পারে (যেমন
+     * বিক্রয়কর্মী FINANCE-এর কিছুই দেখেন না)। তখন ওই দলের কোনো মডিউলই
+     * `$menu`-তে আসে না, তাই শিরোনামটাও আঁকা হয় না — [[shell.sidebar]]
+     * শিরোনাম বসায় **যা আছে তার উপর**, আগে থেকে ঠিক করা তালিকার উপর নয়।
+     *
+     * @param  list<array<string, mixed>>  $menu
+     * @return list<array<string, mixed>>
+     */
+    private function inNavOrder(array $menu): array
+    {
+        $sections = array_flip(ModuleDefinition::NAV_SECTIONS);
+
+        usort($menu, function (array $a, array $b) use ($sections): int {
+            return [$sections[$a['section']], $a['order'], $a['code']]
+                <=> [$sections[$b['section']], $b['order'], $b['code']];
+        });
 
         return $menu;
     }

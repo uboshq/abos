@@ -39,6 +39,25 @@
         ?? collect($menu)->first(
             fn ($m) => str_starts_with($routeName, $m['code'].'.'),
         )
+        /*
+         * শেষ ভরসা — প্রথম **কাজের** মডিউল, তালিকার প্রথমটা নয়।
+         *
+         * ── কী ভাঙতে যাচ্ছিল, ২ সেপ্টেম্বর ২০২৬ ──────────────────────
+         * এখানে আগে শুধু `$menu[0]` ছিল, আর সেটা কাজ করত কারণ
+         * নির্ভরতার ক্রমে হিসাব প্রথমে আসত। মালিকের নতুন ক্রমে প্রথম
+         * মডিউল **মাস্টার ডাটা**, তাই ড্যাশবোর্ডে ঢুকলেই পাশে খুলত
+         * একক-ব্র্যান্ড-কারণ কোডের তালিকা — যেগুলো বছরে কয়েকবার লাগে।
+         *
+         * অর্থাৎ ক্রম বদলানোর অদেখা মূল্য: প্রতিদিন সকালে সবাই ভুল
+         * প্যানেল দেখতেন। মেনুর ক্রম বদলেছে, কিন্তু **"দিন শুরু হয়
+         * কোথায়" প্রশ্নের উত্তর বদলায়নি**।
+         *
+         * `top` দলটা এখানে ঠিক সেই কারণেই বাদ: ওতে বসে সেইসব জিনিস
+         * যেগুলো কোনো ব্যবসায়িক বিভাগের অধীন নয় — রেফারেন্স ডাটা,
+         * রোজকার কাজ নয়। কোনো মডিউলের নাম লেখা হয়নি (§১৯.৭), শুধু
+         * দলের নামটা।
+         */
+        ?? collect($menu)->first(fn ($m) => $m['section'] !== 'top')
         ?? ($menu[0] ?? null);
 @endphp
 
@@ -238,11 +257,53 @@
                     <span class="sr-only">{{ __('core.menu.dashboard') }}</span>
                 </a>
 
+                {{--
+                    দলের ভাগরেখা — মালিকের দেওয়া কাঠামো, ২ সেপ্টেম্বর ২০২৬।
+
+                    ── কেন রেখা, লেখা নয় ───────────────────────────────
+                    রেলটা ৫৬px চওড়া আর তাতে কোনো লেখাই নেই — বারোটা
+                    টাইল, ব্যস। "অর্থ ও হিসাব" এখানে লিখতে গেলে হয়
+                    টাইলগুলো ছোট করতে হত, নয় রেলটা চওড়া করতে হত, আর
+                    দুইটাই পুরো বিন্যাসটা বদলে দিত।
+
+                    তাই দলটা **দেখা যায় ফাঁক দিয়ে**, আর তার **নামটা
+                    পড়া যায় হোভারে** — flyout-এর মাথায় "ব্যবসা › গ্রাহক"।
+                    পর্দা-পাঠক নামটা পায় `aria-label` থেকে, তাই যিনি
+                    দেখেন না তাঁর কাছেও ভাগটা লুকানো থাকে না।
+
+                    ── কেন শুধু `<hr>` নয় ─────────────────────────────
+                    `role="separator"` + `aria-label` না দিলে ওটা নিছক
+                    সাজ হত, আর পর্দা-পাঠকে বারোটা মডিউল একটানা শোনা যেত।
+
+                    ── `top` দলে রেখা নেই ─────────────────────────────
+                    ড্যাশবোর্ডের লিংকটার নিজেরই একটা `border-b` আছে,
+                    তাই ওখানে আরেকটা রেখা মানে পরপর দুইটা দাগ।
+
+                    ── অনুপস্থিত দল ────────────────────────────────────
+                    বিক্রয়কর্মী FINANCE-এর কিছুই দেখেন না, তাই তাঁর
+                    মেনুতে ওই দলের কোনো মডিউলই আসে না। রেখাটা বসে
+                    **যা আছে তার উপর** (`$shownSection` বদলালে), আগে
+                    থেকে ঠিক করা তালিকার উপর নয় — নাহলে খালি দলের
+                    শিরোনাম আঁকা হত।
+                --}}
+                @php $shownSection = null; @endphp
+
                 @foreach ($menu as $module)
                     @php
                         $isActive = $activeModule && $module['code'] === $activeModule['code'];
                         $first = collect($module['groups'])->flatten(1)->firstWhere('url', '!==', null);
+
+                        $opensSection = $module['section'] !== $shownSection;
+                        $shownSection = $module['section'];
+                        $sectionLabel = $module['section'] === 'top'
+                            ? null
+                            : __('core.nav_section.'.$module['section']);
                     @endphp
+
+                    @if ($opensSection && $sectionLabel)
+                        <div role="separator" aria-label="{{ $sectionLabel }}"
+                             class="my-1 h-px w-7 shrink-0 bg-white/20"></div>
+                    @endif
 
                     {{--
                         প্রতিটা মডিউল নিজের রঙের টাইলে।
@@ -325,7 +386,20 @@
                                       aria-hidden="true">
                                     <x-ui.icon :name="$module['icon']" :size="14" />
                                 </span>
-                                <span class="truncate text-sm font-semibold">{{ $module['label'] }}</span>
+
+                                {{-- দলের নামটা এখানেই পড়া যায় — রেলে
+                                     লেখার জায়গা নেই, কিন্তু হোভার করলে
+                                     "কোন বিভাগের ভেতরে আছি" প্রশ্নের
+                                     উত্তর দরকার হয়। `min-w-0` না দিলে
+                                     `truncate` কাজ করত না। --}}
+                                <span class="min-w-0">
+                                    @if ($sectionLabel)
+                                        <span class="block truncate text-2xs uppercase tracking-wide
+                                                     text-(--color-ink-muted)">{{ $sectionLabel }}</span>
+                                    @endif
+
+                                    <span class="block truncate text-sm font-semibold">{{ $module['label'] }}</span>
+                                </span>
                             </div>
 
                             <div class="max-h-[70vh] overflow-y-auto">
@@ -354,7 +428,13 @@
                  জমিনটা খাঁটি সাদা নয়, এক ধাপ হালকা টিন্ট (surface-app):
                  ডানের কনটেন্ট এলাকাও সাদা কার্ডে ভরা, আর প্যানেলও সাদা
                  হলে দুইটার মাঝের সীমানাটা কেবল ১px রেখা হয়ে দাঁড়াত। --}}
+            {{-- `data-active-module` — কোন মডিউলের তালিকা খুলে আছে।
+
+                 টেস্টের জন্য, আর ইচ্ছাকৃতভাবে **কোড**, নাম নয়: নামটা
+                 ভাষার সাথে বদলায় আর মেনুর সারিতেও একই শব্দ থাকে, তাই
+                 নাম ধরে খুঁজলে গার্ডটা হয় ভঙ্গুর হত নয় সবসময় সবুজ। --}}
             <div data-site-map
+                 @if ($activeModule) data-active-module="{{ $activeModule['code'] }}" @endif
                  class="menu-panel hidden min-w-0 flex-1 flex-col border-e border-(--color-border)
                         bg-(--color-sidebar-panel) lg:flex"
                  x-show="! $store.sidebar.collapsed">
