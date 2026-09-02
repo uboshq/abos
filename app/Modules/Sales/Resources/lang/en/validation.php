@@ -8,6 +8,7 @@ return [
     'unknown_payment_method' => 'That payment method was not found, or it has been switched off.',
     'reference_required' => 'Money taken through :method needs its transaction number — without it there is no way to reconcile against the statement later.',
     'no_lines' => 'At least one line is needed — a document with no lines does nothing.',
+    'invoice_no_taken' => 'Invoice :no already exists — give it a different number.',
 
     // Counter shifts
     'till_already_open' => 'A shift is already open on :till. Two people answerable for one drawer means nobody is — close the other one first.',

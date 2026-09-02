@@ -405,7 +405,9 @@ class MasterListController extends Controller implements HasMiddleware
     {
         $spec = $this->spec($kind);
 
-        $this->lists->create($spec['model'], $this->validated($request, $spec));
+        // `$kind` পাঠানো হয় কারণ প্রচলিত কোডের অভিধান তালিকাভেদে আলাদা —
+        // একক জানে `Kilogram` মানে `KG`, ব্র্যান্ড ওরকম কিছু জানে না।
+        $this->lists->create($spec['model'], $this->validated($request, $spec), $kind);
 
         return redirect()
             ->route('master_data.'.$spec['route'].'.index')
@@ -608,22 +610,27 @@ class MasterListController extends Controller implements HasMiddleware
         }
 
         /*
-         * কোড খালি হলে নামটাই কোড হয়ে বসে।
+         * কোড খালি হলে নামটাই কোড হয়ে বসে — কিন্তু **সম্পাদনার সময়ই কেবল**।
          *
-         * যাচাইয়ের পরে, কারণ নামটা তখনই নিশ্চিতভাবে আছে — আগে করলে
-         * নাম ছাড়া অনুরোধে খালি নাম থেকে খালি কোড বানানোর চেষ্টা হত।
+         * ── কেন তৈরির সময়েরটা এখান থেকে সরল (২ সেপ্টেম্বর ২০২৬) ──────
+         * নিয়মটা এখন [[MasterListService::create()]]-এ, অর্থাৎ যেখানে
+         * সারিটা সত্যিই তৈরি হয়। এখানে রাখলে **শুধু এই ফর্মটা** সুবিধা
+         * পেত — আমদানি, সিডার আর ভবিষ্যতের API কোড ছাড়া সারি বানাতে
+         * গিয়ে আটকে যেত, আর কারণটা খুঁজতে কেউ কন্ট্রোলারে তাকাত না।
          *
-         * সম্পাদনার সময় নিজের সারিটা বাদ, নইলে কোড না বদলে সেভ করলেই
-         * নিজের কোডটাকে "নেওয়া হয়ে গেছে" ধরে CAR2 বসিয়ে দিত।
+         * সার্ভিসে সরানোয় একটা জিনিস বাড়তি পাওয়া গেছে: সেখানে তালিকার
+         * `kind` জানা যায়, তাই প্রচলিত কোডের অভিধান খাটানো যায় —
+         * `Kilogram` → `KG`, এখানকার নিয়মে যেটা `KIL` হত।
+         *
+         * সম্পাদনার পথটা এখানেই থাকে, কারণ ওখানে নিজের সারিটা বাদ দিতে
+         * হয়: নইলে কোড না বদলে সেভ করলেই নিজের কোডটাকে "নেওয়া হয়ে গেছে"
+         * ধরে CAR2 বসিয়ে দিত।
          */
-        if (($data['code'] ?? '') === '') {
-            $scope = $spec['model']::query();
-
-            if ($id !== null) {
-                $scope->whereKeyNot($id);
-            }
-
-            $data['code'] = CodeFromName::forQuery((string) $data['name_en'], $scope);
+        if (($data['code'] ?? '') === '' && $id !== null) {
+            $data['code'] = CodeFromName::forQuery(
+                (string) $data['name_en'],
+                $spec['model']::query()->whereKeyNot($id),
+            );
         }
 
         return $data;

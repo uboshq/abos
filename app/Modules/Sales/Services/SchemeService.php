@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Services;
 
+use App\Core\Engines\Coding\CodeSuggester;
 use App\Core\Support\CompanyContext;
 use App\Modules\Sales\Models\CommissionRule;
 use App\Modules\Sales\Models\Scheme;
@@ -26,6 +27,22 @@ final class SchemeService
      */
     public function create(array $data): Scheme
     {
+        /*
+         * কোড না লিখলে নামের সংক্ষেপ — মালিকের নিয়ম, ২ সেপ্টেম্বর ২০২৬।
+         *
+         * স্কিমের কোড কাগজে ও কথায় চলে ("EID25 চলছে"), তাই এখানেও
+         * সিরিজ নয়, নাম। ইংরেজি নাম খালি হলে `SCH` উপসর্গ, যাতে ঘরটা
+         * কখনো খালি না থাকে।
+         */
+        if (trim((string) ($data['code'] ?? '')) === '') {
+            $data['code'] = app(CodeSuggester::class)->fromName(
+                Scheme::class,
+                $data['name_en'] ?? ($data['name'] ?? null),
+                [],
+                'SCH',
+            );
+        }
+
         return DB::transaction(fn () => Scheme::query()->create([
             ...$data,
             'company_id' => CompanyContext::id(),

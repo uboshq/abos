@@ -14,6 +14,7 @@ use App\Modules\Inventory\Services\StockService;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\DeliveryChallanGiftLine;
 use App\Modules\Sales\Models\SalesInvoice;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -101,6 +102,8 @@ final class DirectSaleService
                     'warehouse_id' => $warehouse->id,
                     'trx_date' => $data['trx_date'] ?? now()->toDateString(),
                     'due_on' => $this->dueOn($data, $customer),
+                    // হাতে লেখা নম্বর — খালি হলে সিরিজ নিজেই দেবে
+                    'document_no' => trim((string) ($data['invoice_no'] ?? '')) ?: null,
                     'narration' => $data['narration'] ?? null,
                 ],
                 $this->invoiceLines($challan),
@@ -388,6 +391,23 @@ final class DirectSaleService
      */
     private function dueOn(array $data, Customer $customer): ?string
     {
+        /*
+         * নির্দিষ্ট তারিখ লেখা থাকলে সেটাই — দিনের সংখ্যা নয়।
+         *
+         * ── কেন তারিখটা জেতে (৩ সেপ্টেম্বর ২০২৬) ──────────────────────
+         * পর্দায় দুইটা ঘর: "কত দিন" আর "কোন তারিখে"। দুইটাই লেখা থাকতে
+         * পারে, কারণ একটা লিখলে অন্যটা নিজে থেকে বসে যায়।
+         *
+         * সংঘর্ষে তারিখটা জেতে, কারণ **ওটাই মানুষটা যা বলেছিলেন**।
+         * "১৫ তারিখে দেব" থেকে দিনের সংখ্যা বের করা যায়, কিন্তু ফেরত
+         * এসে দিন থেকে তারিখ গুনলে ব্যাক-ডেটেড বিলে ভুল দিনে পড়ত।
+         */
+        $on = trim((string) ($data['due_on'] ?? ''));
+
+        if ($on !== '') {
+            return Carbon::parse($on)->toDateString();
+        }
+
         $days = $data['credit_period_days'] ?? null;
 
         if ($days === null || $days === '') {
@@ -396,8 +416,17 @@ final class DirectSaleService
 
         $days = (int) $days;
 
+        /*
+         * গোনা শুরু হয় **বিলের তারিখ থেকে**, আজ থেকে নয়।
+         *
+         * আগে `now()` ছিল, আর সেটা কেবল আজকের বিলে ঠিক উত্তর দিত।
+         * গতকালের একটা বিল ৩০ দিনের মেয়াদে তুললে মেয়াদটা একদিন বেশি
+         * পেত — প্রতিটা ব্যাক-ডেটেড বিলে, নীরবে।
+         */
+        $from = Carbon::parse($data['trx_date'] ?? now());
+
         return $days > 0
-            ? now()->addDays($days)->toDateString()
+            ? $from->copy()->addDays($days)->toDateString()
             : null;
     }
 

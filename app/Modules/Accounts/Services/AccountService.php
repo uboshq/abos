@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Services;
 
+use App\Core\Engines\Coding\CodeSuggester;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Modules\Accounts\Models\Account;
@@ -46,11 +47,36 @@ final class AccountService
 
             $type = $this->resolveType($data, $parent);
 
-            $this->assertCodeIsFree((string) $data['code']);
+            $code = trim((string) ($data['code'] ?? ''));
+
+            /*
+             * কোড না লিখলে নিজে থেকে বসে — মালিকের নিয়ম, ২ সেপ্টেম্বর ২০২৬।
+             *
+             * ── কেন সিরিজ নয়, কেন `ACC-0001` নয় ────────────────────
+             * হিসাবের কোড একটা সংখ্যা নয়, **একটা ঠিকানা**: প্রথম অঙ্ক
+             * বলে সম্পদ না দায় না আয় না ব্যয়, পরেরগুলো বলে কোন শাখায়।
+             * অভিজ্ঞ হিসাবরক্ষক ওই কাঠামো ধরেই খাতা পড়েন — `1000`
+             * সম্পদ, `1100` চলতি সম্পদ, `1101` হাতে নগদ।
+             *
+             * `ACC-0007` দিলে কোডটা আর কিছুই বলে না, শুধু গোনে; আর
+             * প্রতিবেদনগুলো কোড ধরে সাজে বলে খাতাটা এলোমেলো দেখাত।
+             *
+             * তাই [[CodeSuggester::underParent()]] — অভিভাবকের নিচে
+             * ভাইদের ধাপ মেপে পরের খালি নম্বর।
+             */
+            if ($code === '') {
+                $code = app(CodeSuggester::class)->underParent(
+                    Account::class,
+                    $parent,
+                    (bool) ($data['is_group'] ?? false),
+                );
+            }
+
+            $this->assertCodeIsFree($code);
 
             $account = Account::create([
                 ...$data,
-                'code' => trim((string) $data['code']),
+                'code' => $code,
                 'type' => $type,
                 'nature' => $data['nature'] ?? Account::defaultNatureFor($type),
                 'is_group' => (bool) ($data['is_group'] ?? false),
@@ -87,7 +113,10 @@ final class AccountService
     public function update(Account $account, array $data): Account
     {
         return DB::transaction(function () use ($account, $data) {
-            if (isset($data['code']) && trim((string) $data['code']) !== $account->code) {
+            // ফাঁকা মানে "বদলাবেন না" — ঘরটা আর `required` নয়, তাই
+            // ফাঁকা কোড এখন সত্যিই আসতে পারে
+            if (trim((string) ($data['code'] ?? '')) !== ''
+                && trim((string) $data['code']) !== $account->code) {
                 $this->assertNotSystem($account, 'code');
                 $this->assertCodeIsFree(trim((string) $data['code']), $account->id);
             }
@@ -133,7 +162,9 @@ final class AccountService
 
             $account->update([
                 ...$data,
-                'code' => isset($data['code']) ? trim((string) $data['code']) : $account->code,
+                'code' => trim((string) ($data['code'] ?? '')) !== ''
+                    ? trim((string) $data['code'])
+                    : $account->code,
                 'type' => $type,
                 'nature' => $data['nature'] ?? $account->nature,
                 'is_group' => $wantsGroup,

@@ -193,7 +193,8 @@ class SchemeController extends Controller implements HasMiddleware
     private function validated(Request $request, ?int $ignore = null): array
     {
         $data = $request->validate([
-            'code' => ['required', 'string', 'max:40',
+            // খালি রাখা যায় — [[SchemeService::create()]] তখন নাম থেকে বসায়
+            'code' => ['nullable', 'string', 'max:40',
                 Rule::unique('sal_schemes', 'code')->ignore($ignore)->whereNull('deleted_at')],
             'name' => ['required', 'string', 'max:160'],
             'basis' => ['required', Rule::in([Scheme::VALUE, Scheme::VOLUME, Scheme::SLAB])],

@@ -197,7 +197,34 @@ final class SalesInvoiceService
             $trxDate = Carbon::parse($data['trx_date'] ?? now());
             $year = $this->resolveFinancialYear($trxDate);
 
-            $documentNo = $this->numbers->next('INV');
+            /*
+             * নম্বরটা হাতে লেখা হলে সেটাই — মালিকের নির্দেশ, ৩ সেপ্টেম্বর ২০২৬।
+             *
+             * ── কেন সিরিজটা তখন ছোঁয়া হয় না ────────────────────────────
+             * কেউ নিজের নম্বর দিলে `next()` ডাকা মানে সিরিজের একটা নম্বর
+             * খরচ হয়ে যাওয়া, অথচ ওটা কোথাও ব্যবহারই হত না — সিরিজে একটা
+             * ফাঁক, প্রতিটা হাতে-লেখা বিলে একটা করে।
+             *
+             * ⚠️ অনন্যতা এখানেই দেখা হয়, আর ট্রানজেকশনের **ভেতরে**:
+             * বাইরে দেখলে দুইটা কাউন্টার একই নম্বর নিয়ে দুইজনেই পাশ করে
+             * যেত। তবু শেষ পাহারা ডাটাবেসের ইউনিক ইনডেক্স — এই যাচাইটা
+             * কেবল মানুষকে একটা পড়ার মতো বার্তা দেয়, ৫০০ পাতার বদলে।
+             */
+            $given = trim((string) ($data['document_no'] ?? ''));
+
+            if ($given !== '') {
+                $taken = SalesInvoice::query()
+                    ->where('document_no', $given)
+                    ->exists();
+
+                if ($taken) {
+                    throw ValidationException::withMessages([
+                        'invoice_no' => __('sales::validation.invoice_no_taken', ['no' => $given]),
+                    ]);
+                }
+            }
+
+            $documentNo = $given !== '' ? $given : $this->numbers->next('INV');
 
             $invoice = SalesInvoice::create([
                 'company_id' => CompanyContext::id(),

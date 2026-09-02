@@ -22,4 +22,8 @@ return [
     'rate_must_be_positive' => 'The rate must be greater than zero.',
     'in_use_cannot_delete' => 'Used in :where, so it cannot be deleted.',
     'default_cannot_delete' => 'This is the default, so it cannot be deleted. Make another one the default first.',
+    /* WarehouseService asked for this one and it had never been written,
+       so switching off a default warehouse showed the raw key instead of
+       the reason (found 3 September 2026) */
+    'default_cannot_be_deactivated' => 'This is the default, so it cannot be switched off. Make another one the default first.',
 ];

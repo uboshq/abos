@@ -63,7 +63,9 @@
                          পুরনো কাগজ আর নতুন খাতা দুইটা আলাদা প্রতিষ্ঠানের
                          মতো দেখাত। --}}
                     <x-ui.field name="code" :label="__('master_data::field.code')"
-                                :value="old('code')" required />
+                                :value="old('code')"
+                                :placeholder="__('core.create.code_auto')"
+                                :hint="__('core.create.code_auto_hint')" />
                 @endif
 
                 <x-ui.field name="name_en" :label="__('master_data::field.name_en')"

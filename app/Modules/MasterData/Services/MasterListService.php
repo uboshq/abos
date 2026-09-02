@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\MasterData\Services;
 
 use App\Core\Contracts\ProvisionsCompany;
+use App\Core\Engines\Coding\CodeSuggester;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\MasterData\Models\Currency;
@@ -18,6 +19,7 @@ use App\Modules\MasterData\Models\ReasonCode;
 use App\Modules\MasterData\Models\Tax;
 use App\Modules\MasterData\Models\Unit;
 use App\Modules\MasterData\Models\VehicleType;
+use App\Modules\MasterData\Support\CodeConventions;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -45,14 +47,42 @@ final class MasterListService implements ProvisionsCompany
         $this->installDefaults();
     }
 
+    public function __construct(
+        private readonly CodeSuggester $codes,
+    ) {}
+
     /**
      * @param  class-string<Model>  $model
      * @param  array<string, mixed>  $data
+     * @param  string  $kind  URL-এ যে নামে তালিকাটা চেনা যায় — `units`, `currencies`
      */
-    public function create(string $model, array $data): Model
+    public function create(string $model, array $data, string $kind = ''): Model
     {
-        return DB::transaction(function () use ($model, $data) {
+        return DB::transaction(function () use ($model, $data, $kind) {
             $code = trim((string) ($data['code'] ?? ''));
+
+            /*
+             * কোড না লিখলে নিজে থেকে বসে — মালিকের নিয়ম, ২ সেপ্টেম্বর ২০২৬।
+             *
+             * ── কেন সিরিজ নয় ─────────────────────────────────────
+             * এখানে `UNIT-0001` বসানো নিষেধ, আর কারণটা কাগজে: এককের
+             * কোড চালানে ছাপা হয়। নামটাই উৎস — `Kilogram` → `KG`,
+             * `Value Added Tax` → `VAT`। যেগুলোর প্রচলিত রূপ নিয়মে আসে
+             * না ([[CodeConventions]]) সেগুলো অভিধান থেকে।
+             *
+             * ── ইংরেজি নামটাই কেন ───────────────────────────────────
+             * কোড ASCII, আর বাংলা নাম থেকে ASCII সংক্ষেপ বের হয় না।
+             * ইংরেজি নামও খালি থাকলে তালিকার নিজের নাম উপসর্গ হয়
+             * (`units` → `UNI`), যাতে ঘরটা কখনো খালি না থাকে।
+             */
+            if ($code === '') {
+                $code = $this->codes->fromName(
+                    $model,
+                    $data['name_en'] ?? null,
+                    CodeConventions::forKind($kind),
+                    $kind === '' ? null : substr($kind, 0, 3),
+                );
+            }
 
             $this->assertCodeIsFree($model, $code);
 
@@ -98,7 +128,18 @@ final class MasterListService implements ProvisionsCompany
     public function update(Model $record, array $data): Model
     {
         return DB::transaction(function () use ($record, $data) {
-            $code = isset($data['code']) ? trim((string) $data['code']) : $record->code;
+            /*
+             * সম্পাদনায় ফাঁকা মানে "বদলাবেন না", "মুছে দিন" নয়।
+             *
+             * ── কেন এই লাইনটা লাগল (২ সেপ্টেম্বর ২০২৬) ────────────
+             * ঘরটা থেকে `required` তুলে নেওয়ার আগে ফাঁকা কোড ফর্ম
+             * থেকেই আসতে পারত না। এখন পারে — আর তখন `trim('')` গিয়ে
+             * **কোডটা মুছে দিত**, নীরবে। তৈরির সময় ফাঁকা মানে "তুমি
+             * বসাও", সম্পাদনার সময় ফাঁকা মানে "হাত দিও না"।
+             */
+            $code = trim((string) ($data['code'] ?? '')) !== ''
+                ? trim((string) $data['code'])
+                : $record->code;
 
             if ($code !== $record->code) {
                 $this->assertCodeIsFree($record::class, $code, $record->getKey());

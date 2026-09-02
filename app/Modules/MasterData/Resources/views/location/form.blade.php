@@ -50,7 +50,9 @@
 
             <div class="grid gap-3 sm:grid-cols-2">
                 <x-ui.field name="code" :label="__('master_data::field.code')"
-                            :value="old('code', $location->code)" required />
+                            :value="old('code', $location->code)"
+                            :placeholder="__('core.create.code_auto')"
+                            :hint="__('core.create.code_auto_hint')" />
 
                 <x-ui.field name="name_en" :label="__('master_data::field.name_en')"
                             :value="old('name_en', $location->name_en)" required />
