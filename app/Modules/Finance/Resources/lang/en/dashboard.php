@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'title' => 'Dashboard',
-    'subtitle' => 'The owner's money — what came in, what went out',
+    'subtitle' => 'The money put in — what came in, what went out',
     'capital_in' => 'Capital in',
     'capital_in_hint' => 'Put in by owners and partners',
     'withdrawn' => 'Withdrawn',

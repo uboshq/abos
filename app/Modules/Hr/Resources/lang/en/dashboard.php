@@ -10,7 +10,7 @@ return [
     'subtitle' => 'People and payroll — where things stand',
     'employees' => 'Employees',
     'employees_hint' => 'Everyone on the books',
-    'present_hint' => 'Marked present on today's sheet',
+    'present_hint' => 'Marked present on the sheet for today',
     'pending_leave' => 'Leave awaiting a decision',
     'pending_leave_hint' => 'Someone is waiting to know whether to come in tomorrow',
     'payroll_runs' => 'Payroll runs',
