@@ -16,6 +16,19 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
+/*
+ * টোকেন — মোবাইল অ্যাপের জন্য, ২ সেপ্টেম্বর ২০২৬।
+ *
+ * ── কেন Sanctum, JWT নয় ─────────────────────────────────────────────
+ * একটাই কারণ, আর সেটা ব্যবসার: **হারানো ফোন**। Sanctum-এর টোকেন
+ * ডাটাবেজের একটা সারি, তাই সারিটা মুছলেই ওই ফোন তৎক্ষণাৎ বাইরে। JWT
+ * বাতিল করা যায় না — মেয়াদ শেষ না হওয়া পর্যন্ত সেটা বৈধ থাকে, আর
+ * ডিপোর ফোন হারায়।
+ *
+ * দাম: প্রতি অনুরোধে একটা বাড়তি DB পড়া। "ফোনটা এখনই বন্ধ করো" বলতে
+ * পারার তুলনায় সেটা সস্তা।
+ */
+use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
 #[Fillable(['name', 'email', 'password', 'locale', 'theme', 'ui', 'accent', 'is_active'])]
@@ -29,7 +42,7 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, HasPublicId, HasRoles, Notifiable, SoftDeletes;
+    use HasApiTokens, HasFactory, HasPublicId, HasRoles, Notifiable, SoftDeletes;
 
     /**
      * Get the attributes that should be cast.
