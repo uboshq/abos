@@ -70,7 +70,7 @@ final class CustomerWidgets implements DashboardWidgets
             permission: 'customer.view',
             tone: $count > 0 ? 'warn' : 'neutral',
             sort: 60,
-            icon: 'customer',
+            icon: 'alert-triangle',
         );
     }
 

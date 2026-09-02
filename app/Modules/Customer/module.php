@@ -9,6 +9,7 @@ declare(strict_types=1);
  * বাকি দশটা মডিউলের নমুনা — এখানে যা লেখা আছে, বাকিগুলোতেও ঠিক তাই থাকবে।
  */
 
+use App\Modules\Customer\Dashboard\CustomerDashboard;
 use App\Modules\Customer\Dashboard\CustomerWidgets;
 use App\Modules\Customer\Imports\CustomerImporter;
 use App\Modules\Customer\Models\Customer;
@@ -146,7 +147,7 @@ return [
      * সপ্তাহে মানুষ পড়া বন্ধ করে দেয়, আর করণীয় সারিটা কেবল তখনই
      * চোখে পড়ে যখন সত্যিই কিছু বাকি।
      */
-    'dashboard' => \App\Modules\Customer\Dashboard\CustomerDashboard::class,
+    'dashboard' => CustomerDashboard::class,
 
     'widgets' => [
         CustomerWidgets::class,

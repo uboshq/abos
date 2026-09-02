@@ -41,11 +41,11 @@ final class MasterDataDashboard implements ProvidesDashboard
                 new Tile(label: __('master_data::menu.units'), href: route('master_data.unit.index'),
                     permission: 'master_data.view', icon: 'settings'),
                 new Tile(label: __('master_data::menu.taxes'), href: route('master_data.tax.index'),
-                    permission: 'master_data.view', icon: 'accounts'),
-                new Tile(label: __('master_data::menu.categories'), href: route('master_data.product_category.index'),
-                    permission: 'master_data.view', icon: 'inventory'),
+                    permission: 'master_data.view', icon: 'scale'),
+                new Tile(label: __('master_data::menu.product_categories'), href: route('master_data.product_category.index'),
+                    permission: 'master_data.view', icon: 'list'),
                 new Tile(label: __('master_data::menu.locations'), href: route('master_data.location.index'),
-                    permission: 'master_data.view', icon: 'report'),
+                    permission: 'master_data.view', icon: 'globe'),
             ],
 
             stats: [
@@ -73,7 +73,7 @@ final class MasterDataDashboard implements ProvidesDashboard
                 ),
 
                 new Stat(
-                    label: __('master_data::menu.categories'),
+                    label: __('master_data::menu.product_categories'),
                     value: (string) ProductCategory::query()->count(),
                     hint: __('master_data::dashboard.categories_hint'),
                     href: route('master_data.product_category.index'),
@@ -92,7 +92,7 @@ final class MasterDataDashboard implements ProvidesDashboard
                     label: __('master_data::dashboard.how_full'),
                     parts: [
                         ['label' => __('master_data::menu.units'), 'value' => (string) Unit::query()->count()],
-                        ['label' => __('master_data::menu.categories'), 'value' => (string) ProductCategory::query()->count()],
+                        ['label' => __('master_data::menu.product_categories'), 'value' => (string) ProductCategory::query()->count()],
                         ['label' => __('master_data::menu.brands'), 'value' => (string) Brand::query()->count()],
                         ['label' => __('master_data::menu.taxes'), 'value' => (string) Tax::query()->count()],
                     ],

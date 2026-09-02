@@ -89,8 +89,15 @@
             fn ($m) => str_starts_with($route, $m['code'].'.'),
         ) ?? ($menu[0] ?? null);
 
+        /* ⚠️ `url` নেই এমন সারি ট্যাব হতে পারে না — `href=""` মানে
+           পাতাটা নিজেকেই আবার খোলে, আর ব্যবহারকারী ভাবেন কিছুই হলো না।
+           এখনো-তৈরি-হয়নি সারিগুলো তালিকায় দেখা যায় (সেখানে "শীঘ্রই"
+           লেখা বসে), কিন্তু ট্যাব-বারে জায়গা পায় না (৩ সেপ্টেম্বর ২০২৬) */
         $tabs = $current
-            ? collect($current['groups'])->flatten(1)->take(8)
+            ? collect($current['groups'])->flatten(1)
+                ->filter(fn ($row) => ($row['url'] ?? null) !== null)
+                ->values()
+                ->take(8)
             : collect();
     @endphp
 

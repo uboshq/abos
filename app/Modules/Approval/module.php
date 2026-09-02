@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\Approval\Dashboard\ApprovalDashboard;
 use App\Modules\Approval\Dashboard\ApprovalWidgets;
 
 /**
@@ -76,7 +77,7 @@ return [
         'approval.flow.manage',
     ],
 
-    'dashboard' => \App\Modules\Approval\Dashboard\ApprovalDashboard::class,
+    'dashboard' => ApprovalDashboard::class,
 
     'widgets' => [
         ApprovalWidgets::class,

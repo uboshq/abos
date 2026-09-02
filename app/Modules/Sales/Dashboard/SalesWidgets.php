@@ -48,7 +48,10 @@ final class SalesWidgets implements DashboardWidgets
         return [
             self::money(SalesMetrics::salesToday(), 'today', 10,
                 route('sales.invoice.index', ['from' => $today, 'to' => $today]),
-                self::lastSevenDays('sal_invoices', 'total'), 'sales',
+                /* আঁকা আইকন, মডিউলের ইমোজি নয় — পাশের কার্ডগুলোয়
+                   `inbox`/`challan` বসে, আর এক সারিতে একটা রঙিন ইমোজি
+                   বাকিদের থেকে আলাদা হয়ে চোখে লাগত (৩ সেপ্টেম্বর ২০২৬) */
+                self::lastSevenDays('sal_invoices', 'total'), 'receipt',
                 self::againstLastWeek('sal_invoices', 'total')),
 
             self::money(SalesMetrics::collectedToday(), 'today', 20,
@@ -92,7 +95,7 @@ final class SalesWidgets implements DashboardWidgets
                  */
                 hint: self::oldestDraftAge(),
                 sort: 10,
-                icon: 'sales',
+                icon: 'edit',
             ),
 
             new Widget(

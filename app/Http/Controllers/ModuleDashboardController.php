@@ -44,6 +44,24 @@ class ModuleDashboardController extends Controller
         }
 
         $user = $request->user();
+
+        /*
+         * ── দরজাটাও বন্ধ, কেবল সংখ্যাগুলো নয় ─────────────────────────
+         * ইঞ্জিন চাবিহীন সংখ্যা ঢাকে আর চাবিহীন টাইল বাদ দেয়। কিন্তু
+         * **পাতাটা নিজে** ৩১ আগস্ট পর্যন্ত যেকোনো লগইন-করা মানুষের
+         * জন্য খোলা ছিল: মেনুতে সারিটা না দেখলেও ঠিকানা টাইপ করলেই
+         * শিরোনাম, উপশিরোনাম আর কাঠামোটা দেখা যেত।
+         *
+         * `EveryRouteIsGuardedTest` সেটা ধরেছে (২ সেপ্টেম্বর ২০২৬)।
+         * চাবিটা মডিউলের নিজের মেনু-সারি থেকে আসে, তাই কোর এখানেও
+         * কোনো মডিউলের নাম জানে না (§১৯.৭)।
+         */
+        $permission = $this->engine->permissionFor($module);
+
+        abort_if($permission === null, 403);
+
+        $this->authorize($permission);
+
         $dashboard = $this->engine->for($module, $user);
 
         return view('dashboard.module', [

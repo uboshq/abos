@@ -14,6 +14,7 @@ use App\Core\Engines\Dashboard\Tile;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Modules\Sales\Metrics\SalesMetrics;
+use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\SalesInvoice;
 use Illuminate\Support\Carbon;
 
@@ -45,7 +46,7 @@ final class SalesDashboard implements ProvidesDashboard
                     label: __('sales::action.new_invoice'),
                     href: route('sales.invoice.create'),
                     permission: 'sales.invoice.create',
-                    icon: 'sales',
+                    icon: 'receipt',
                 ),
                 new Tile(
                     label: __('sales::action.new_order'),
@@ -57,13 +58,13 @@ final class SalesDashboard implements ProvidesDashboard
                     label: __('sales::action.new_collection'),
                     href: route('sales.collection.create'),
                     permission: 'sales.collection.create',
-                    icon: 'money',
+                    icon: 'cash',
                 ),
                 new Tile(
                     label: __('sales::menu.invoices'),
                     href: route('sales.invoice.index'),
                     permission: 'sales.invoice.view',
-                    icon: 'report',
+                    icon: 'reports',
                 ),
             ],
 
@@ -182,7 +183,7 @@ final class SalesDashboard implements ProvidesDashboard
             $out[] = [
                 'label' => $cursor->translatedFormat('M'),
                 'first' => (string) $billed,
-                'second' => (string) \App\Modules\Sales\Models\Collection::query()
+                'second' => (string) Collection::query()
                     ->whereBetween('trx_date', [$from, $to])
                     ->sum('amount'),
             ];

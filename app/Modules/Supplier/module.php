@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\Supplier\Dashboard\SupplierDashboard;
 use App\Modules\Supplier\Dashboard\SupplierWidgets;
 use App\Modules\Supplier\Imports\SupplierImporter;
 use App\Modules\Supplier\Models\Supplier;
@@ -100,7 +101,7 @@ return [
      * হোম পর্দার দুইটা সংখ্যা — কোম্পানিকে কত দিতে হবে, আর এই মাসে
      * মার্জিন কত। দুইটাই পরিবেশক ডিপোর রোজকার প্রশ্ন।
      */
-    'dashboard' => \App\Modules\Supplier\Dashboard\SupplierDashboard::class,
+    'dashboard' => SupplierDashboard::class,
 
     'widgets' => [
         SupplierWidgets::class,

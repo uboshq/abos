@@ -533,6 +533,27 @@
                                    @if (! $item['url']) aria-disabled="true" @endif
                                    @if ($item['active']) aria-current="page" @endif>
                                     <span class="min-w-0 truncate">{{ $item['label'] }}</span>
+
+                                    {{-- "শীঘ্রই" — ঘড়ি, লেখা নয়।
+
+                                         প্রথমে এখানে "Coming soon" লেখা একটা
+                                         চিপ বসানো হয়েছিল, আর ছবিতে দেখা গেল
+                                         চিপটা লেবেলের জায়গা খেয়ে ফেলেছে:
+                                         "টেবিল ও ফ্লোর" হয়ে গিয়েছিল "Tab…"।
+                                         **যে মেনু পড়া যায় না, সেটা মেনু নয়** —
+                                         আর সারিগুলো দেখানোই তো উদ্দেশ্য ছিল।
+
+                                         ঘড়িটা ~১৬px নেয়, চিপটা নিত ~৯০px।
+                                         শব্দটা `title` ও পর্দাপাঠকের জন্য
+                                         থাকে, তাই অর্থটা হারায় না
+                                         (৩ সেপ্টেম্বর ২০২৬)। --}}
+                                    @if ($item['planned'] ?? false)
+                                        <span class="ml-auto shrink-0 text-(--color-ink-disabled)"
+                                              title="{{ __('core.menu.coming_soon') }}">
+                                            <x-ui.icon name="clock" :size="14" />
+                                            <span class="sr-only">{{ __('core.menu.coming_soon') }}</span>
+                                        </span>
+                                    @endif
                                 </a>
                             @endforeach
                         @endforeach

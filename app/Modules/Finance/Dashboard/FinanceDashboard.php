@@ -32,9 +32,9 @@ final class FinanceDashboard implements ProvidesDashboard
 
             tiles: [
                 new Tile(label: __('finance::menu.capital'), href: route('finance.capital.index'),
-                    permission: 'finance.capital.view', icon: 'money'),
-                new Tile(label: __('finance::menu.withdrawals'), href: route('finance.withdrawal.index'),
-                    permission: 'finance.withdrawal.view', icon: 'report'),
+                    permission: 'finance.capital.view', icon: 'cash'),
+                new Tile(label: __('finance::menu.withdrawal'), href: route('finance.withdrawal.index'),
+                    permission: 'finance.withdrawal.view', icon: 'reports'),
             ],
 
             stats: [

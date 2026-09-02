@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\Hr\Dashboard\HrDashboard;
 use App\Modules\Hr\Dashboard\HrWidgets;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\PayrollRun;
@@ -148,7 +149,7 @@ return [
         'payroll_run' => PayrollRun::class,
     ],
 
-    'dashboard' => \App\Modules\Hr\Dashboard\HrDashboard::class,
+    'dashboard' => HrDashboard::class,
 
     'widgets' => [
         HrWidgets::class,

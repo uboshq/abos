@@ -49,13 +49,13 @@ final class RestaurantDashboard implements ProvidesDashboard
                     label: __('restaurant::menu.kitchen_board'),
                     href: route('restaurant.kitchen.index'),
                     permission: 'restaurant.kitchen.view',
-                    icon: 'inventory',
+                    icon: 'grid',
                 ),
                 new Tile(
                     label: __('restaurant::menu.kot'),
                     href: route('restaurant.kitchen.tickets'),
                     permission: 'restaurant.kitchen.view',
-                    icon: 'report',
+                    icon: 'reports',
                 ),
             ],
 
@@ -120,8 +120,12 @@ final class RestaurantDashboard implements ProvidesDashboard
             ],
 
             listings: [
+                /* ⚠️ উপরের ভাগটার নাম নয়। দুইটা ঘরে একই শিরোনাম বসলে
+                   পর্দাটা দেখে মনে হয় একই জিনিস দুইবার — অথচ উপরেরটা
+                   **গোনা** (কয়টা কোন অবস্থায়), আর এটা **কারা**
+                   (৩ সেপ্টেম্বর ২০২৬-এ ছবি দেখে ধরা পড়ে) */
                 new Listing(
-                    label: __('restaurant::dashboard.on_the_pass'),
+                    label: __('restaurant::dashboard.waiting_now'),
                     columns: [
                         ['key' => 'doc', 'label' => __('restaurant::dashboard.ticket'), 'width' => '10rem',
                             'render' => fn ($t) => $t->document_no],

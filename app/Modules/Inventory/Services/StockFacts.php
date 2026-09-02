@@ -9,6 +9,7 @@ use App\Core\Support\CompanyContext;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\StockMovement;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -88,7 +89,7 @@ final class StockFacts
     /**
      * ফুরিয়ে আসা পণ্যগুলো, সবচেয়ে জরুরিটা আগে।
      *
-     * @return \Illuminate\Support\Collection<int, Product>
+     * @return Collection<int, Product>
      */
     public function lowStock(int $limit = 8)
     {
@@ -213,7 +214,7 @@ final class StockFacts
     /**
      * সদ্য যা নড়েছে।
      *
-     * @return \Illuminate\Support\Collection<int, StockMovement>
+     * @return Collection<int, StockMovement>
      */
     public function recentMovements(int $limit = 8)
     {
@@ -270,7 +271,7 @@ final class StockFacts
      * জিনিসগুলোই উঠত, আর যেটা নিয়ে সত্যিই কিছু করার আছে সেটা নিচে
      * পড়ে থাকত।
      *
-     * @return \Illuminate\Support\Collection<int, Product>
+     * @return Collection<int, Product>
      */
     public function stagnant(int $days, int $limit = 8)
     {

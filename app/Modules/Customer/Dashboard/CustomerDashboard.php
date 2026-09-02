@@ -35,9 +35,9 @@ final class CustomerDashboard implements ProvidesDashboard
 
             tiles: [
                 new Tile(label: __('customer::action.new'), href: route('customer.create'),
-                    permission: 'customer.create', icon: 'people'),
+                    permission: 'customer.create', icon: 'plus'),
                 new Tile(label: __('customer::menu.customers'), href: route('customer.index'),
-                    permission: 'customer.view', icon: 'report'),
+                    permission: 'customer.view', icon: 'reports'),
             ],
 
             stats: [

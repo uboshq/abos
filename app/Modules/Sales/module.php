@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Modules\Sales\Auth\DealerProvider;
 use App\Modules\Sales\Dashboard\SalesActivity;
+use App\Modules\Sales\Dashboard\SalesDashboard;
 use App\Modules\Sales\Dashboard\SalesWidgets;
 use App\Modules\Sales\Events\InvoiceConfirmed;
 use App\Modules\Sales\Integrity\SalesChecks;
@@ -380,7 +381,7 @@ return [
     ],
 
     // হোম পর্দার সংখ্যাগুলো — কোর জিজ্ঞেস করে, মডিউল উত্তর দেয়
-    'dashboard' => \App\Modules\Sales\Dashboard\SalesDashboard::class,
+    'dashboard' => SalesDashboard::class,
 
     'widgets' => [
         SalesWidgets::class,

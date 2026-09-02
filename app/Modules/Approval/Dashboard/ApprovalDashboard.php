@@ -29,7 +29,7 @@ final class ApprovalDashboard implements ProvidesDashboard
 
             tiles: [
                 new Tile(label: __('approval::menu.inbox'), href: route('approval.inbox.index'),
-                    permission: 'approval.view', icon: 'check'),
+                    permission: 'approval.view', icon: 'inbox'),
                 new Tile(label: __('approval::menu.flows'), href: route('approval.flow.index'),
                     permission: 'approval.flow.manage', icon: 'settings'),
             ],

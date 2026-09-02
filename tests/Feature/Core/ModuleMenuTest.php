@@ -163,8 +163,26 @@ class ModuleMenuTest extends TestCase
         )));
     }
 
-    /** পরিকল্পিত সারিগুলো সত্যিই কোনো ব্যবহারকারীর মেনুতে যায় না। */
-    public function test_planned_items_never_reach_a_rendered_menu(): void
+    /**
+     * পরিকল্পিত সারি দেখা যায়, কিন্তু **কোথাও নিয়ে যায় না**।
+     *
+     * ── নিয়মটা ৩ সেপ্টেম্বর ২০২৬-এ উল্টেছে ───────────────────────────
+     * আগে এই পরীক্ষা দাবি করত planned সারি মেনুতে **আসেই না**। মালিক
+     * রেস্টুরেন্ট মডিউলের জন্য উল্টোটা চেয়েছেন: *"eigulo shudu fontend
+     * menute rako Coming soon diye"* — সারিগুলো দেখানোই উদ্দেশ্য, কী কী
+     * আসছে তা জানানোর জন্য।
+     *
+     * ── কিন্তু যেটা পাহারা দেওয়া দরকার ছিল, সেটা এখনো দেওয়া হচ্ছে ───
+     * আসল বিপদ কখনোই "সারিটা দেখা যাচ্ছে" ছিল না — বিপদ ছিল **ক্লিক
+     * করলে কী হয়**। রুটটা নেই, তাই `route()` ডাকলে ব্যতিক্রম, আর
+     * `href=""` বসলে পাতাটা নিজেকেই আবার খুলত।
+     *
+     * তাই দাবিটা এখন দুইটা: planned সারির `url` **সবসময় `null`**, আর
+     * যে সারির `url` আছে তার রুটও সত্যিই আছে। প্রথমটা না থাকলে একটা
+     * মরা লিংক মেনুতে বসত; দ্বিতীয়টা না থাকলে পতাকা নামাতে ভুলে গেলে
+     * ধরা পড়ত না।
+     */
+    public function test_planned_items_are_shown_but_never_lead_anywhere(): void
     {
         $planned = [];
 
@@ -191,15 +209,42 @@ class ModuleMenuTest extends TestCase
         $user->givePermissionTo(Permission::all());
 
         $rendered = collect(app(MenuBuilder::class)->forUser($user->fresh()))
-            ->flatMap(fn (array $module) => collect($module['groups'])->flatten(1))
+            ->flatMap(fn (array $module) => collect($module['groups'])->flatten(1));
+
+        /*
+         * ── প্রথম দাবি: planned সারি কোথাও নিয়ে যায় না ──────────────
+         * এটাই আসল পাহারা। `url` থেকে গেলে মেনুতে একটা মরা লিংক বসত,
+         * আর সেটা "শীঘ্রই" লেখা থাকা সত্ত্বেও ক্লিক করা যেত।
+         */
+        $clickable = $rendered
+            ->filter(fn (array $row) => in_array($row['route'], $planned, true))
+            ->filter(fn (array $row) => $row['url'] !== null)
             ->pluck('route')
+            ->values()
             ->all();
 
-        $this->assertSame([], array_values(array_intersect($planned, $rendered)));
+        $this->assertSame([], $clickable, implode("\n", array_merge(
+            ['এই সারিগুলো এখনো তৈরি হয়নি, তবু ক্লিক করা যায়:'],
+            $clickable,
+        )));
 
-        // আর যা দেখানো হচ্ছে তার প্রতিটাই সত্যিকারের রুট
-        foreach ($rendered as $route) {
-            $this->assertTrue(Route::has($route), "মেনুতে {$route} আছে অথচ রুট নেই।");
+        /*
+         * ── দ্বিতীয় দাবি: দেখানোই যদি হয়, তবে সারিটা দেখা যাক ───────
+         * উপরের দাবিটা একা রাখলে "সব সারি বাদ দাও" লিখেও পাস করানো
+         * যেত — আর তখন মালিকের চাওয়া জিনিসটাই আবার হারাত।
+         */
+        $shown = $rendered->pluck('route')->all();
+
+        $this->assertSame(
+            [], array_values(array_diff($planned, $shown)),
+            'পরিকল্পিত সারিগুলো মেনুতে দেখা যাওয়ার কথা ("শীঘ্রই" লেখা নিয়ে), কিন্তু যায়নি।',
+        );
+
+        // আর যে সারিতে ঠিকানা আছে, তার রুটও সত্যিই আছে
+        foreach ($rendered as $row) {
+            if ($row['url'] !== null) {
+                $this->assertTrue(Route::has($row['route']), "মেনুতে {$row['route']} আছে অথচ রুট নেই।");
+            }
         }
     }
 

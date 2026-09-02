@@ -44,6 +44,15 @@ use Symfony\Component\HttpFoundation\Response;
  */
 final class RefuseSwitchedOffScreens
 {
+    /**
+     * কোরের নিজের রুট, কোনো মডিউলের নয়।
+     *
+     * বারোটা মডিউলের ড্যাশবোর্ড একই কন্ট্রোলার আঁকে, আর কোন মডিউলের
+     * তা বলে ঠিকানার `{module}` অংশ। নামটা এখানে লেখা §১৯.৭ ভাঙে না —
+     * এটা কোরের নিজের রুটের নাম, কোনো মডিউলের নাম নয়।
+     */
+    private const CORE_MODULE_DASHBOARD = 'module.dashboard';
+
     /** @var array<string, string>|null উপসর্গ => সুইচের কী */
     private ?array $prefixes = null;
 
@@ -94,10 +103,27 @@ final class RefuseSwitchedOffScreens
     {
         $this->build();
 
+        /*
+         * ── কোরের শেয়ার করা রুট কোন মডিউলের, তা ঠিকানা বলে ────────────
+         * `module.dashboard` বারোটা মডিউলের ড্যাশবোর্ড একই কন্ট্রোলারে
+         * আঁকে, তাই নামটা কোনো মডিউলের উপসর্গ বহন করে না। নিচের
+         * `str_starts_with()` তখন কোনোদিন মিলত না, আর **বন্ধ মডিউলের
+         * ড্যাশবোর্ডও ঠিকানা দিলে খুলে যেত** (৩ সেপ্টেম্বর ২০২৬)।
+         *
+         * মডিউলের নামটা ঠিকানার `{module}` অংশ থেকেই আসে, তাই কোরে
+         * কোনো মডিউলের নাম লেখা থাকে না (§১৯.৭)।
+         *
+         * নামটা কেবল **এই দুইটা লুপের জন্য** বদলানো হয়; নিচের `exact`
+         * তালিকা ঘোষিত নামেই খোঁজে, কারণ সেখানে প্যারামিটারও মেলানো হয়।
+         */
+        $scoped = $name === self::CORE_MODULE_DASHBOARD && is_string($params['module'] ?? null)
+            ? $params['module'].'.dashboard'
+            : $name;
+
         // মডিউলের নিজের সুইচ আগে: পুরো মডিউল বন্ধ থাকলে ভেতরের সারির
         // সুইচ কী বলছে তা অবান্তর (সেকশন ১৯.৫)।
         foreach ($this->registry->all() as $module) {
-            if (str_starts_with($name, $module->code.'.')
+            if (str_starts_with($scoped, $module->code.'.')
                 && ! $this->settings->get($module->code.'.enabled', true)) {
                 return $module->code.'.enabled';
             }
@@ -113,7 +139,7 @@ final class RefuseSwitchedOffScreens
          * দিলে দিব্যি খুলত। ওটাই "আড়াল, বাধা নয়" ভুলটা।
          */
         foreach ($this->groupOf as $prefix => $groupKey) {
-            if (str_starts_with($name, $prefix) && ! $this->settings->get($groupKey, true)) {
+            if (str_starts_with($scoped, $prefix) && ! $this->settings->get($groupKey, true)) {
                 return $groupKey;
             }
         }
@@ -133,7 +159,7 @@ final class RefuseSwitchedOffScreens
         $best = null;
 
         foreach ($this->prefixes as $prefix => $setting) {
-            if (str_starts_with($name, $prefix)
+            if (str_starts_with($scoped, $prefix)
                 && ($best === null || strlen($prefix) > strlen($best[0]))) {
                 $best = [$prefix, $setting];
             }
@@ -199,9 +225,29 @@ final class RefuseSwitchedOffScreens
                      */
                     $dot = strrpos($item['route'], '.');
 
+                    /*
+                     * ── গ্রুপের উপসর্গ কেবল নিজের মডিউলের হলে ──────────
+                     * উপসর্গটা রুটের নাম থেকে কাটা হয়, আর কোরের শেয়ার
+                     * করা রুটে (`module.dashboard` — বারোটা মডিউলের
+                     * একটাই কন্ট্রোলার) সেটা দাঁড়ায় `module.`, যা কোনো
+                     * মডিউলেরই নয়।
+                     *
+                     * ফলে তেরোটা মডিউল একই চাবিতে লিখত আর **শেষজন
+                     * জিতত**: কোনো এক কোম্পানি যদি ওই একটা মডিউলের
+                     * ড্যাশবোর্ড-গ্রুপ বন্ধ করত, **সব মডিউলের**
+                     * ড্যাশবোর্ড ৪০৪ দিত (৩ সেপ্টেম্বর ২০২৬)।
+                     *
+                     * শর্তটা সাধারণ, `module.dashboard`-এর জন্য বিশেষ
+                     * নয়: যে উপসর্গ মডিউলের নিজের নামে শুরু হয় না,
+                     * সেটা তার গ্রুপের চাবি হতে পারে না।
+                     */
                     if ($dot !== false) {
-                        $this->groupOf[substr($item['route'], 0, $dot + 1)]
-                            = $this->switches->forGroup($module->code, (string) $group);
+                        $prefix = substr($item['route'], 0, $dot + 1);
+
+                        if (str_starts_with($prefix, $module->code.'.')) {
+                            $this->groupOf[$prefix]
+                                = $this->switches->forGroup($module->code, (string) $group);
+                        }
                     }
 
                     if ($params !== []) {
