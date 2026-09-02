@@ -59,6 +59,25 @@ class Employee extends Model implements Drillable
             'joining_date' => 'date',
             'leaving_date' => 'date',
             'is_active' => 'boolean',
+
+            /*
+             * পরিচয় ও টাকা পাঠানোর তথ্য — ডাটাবেজেও ঢাকা।
+             *
+             * ── কেন পর্দার তালাটা যথেষ্ট নয় ─────────────────────────
+             * [[FieldSecurity]] ঠিক করে কে পর্দায় দেখবে। কিন্তু একটা
+             * ব্যাকআপ ফাইল, একটা `mysql` প্রম্পট বা phpMyAdmin — তিনটার
+             * যেকোনোটাই ওই তালাটার পাশ দিয়ে যায়। **ডাম্পটা কারও হাতে
+             * পড়লে প্রতিটা কর্মীর পরিচয়পত্র পড়া যেত।**
+             *
+             * ── দাম ────────────────────────────────────────────────
+             * এনক্রিপ্টেড ঘরে `LIKE` চলে না, তাই খোঁজার জন্য আলাদা
+             * `national_id_hash` ([[scopeSearch]])। আর APP_KEY হারালে
+             * মানগুলোও হারায় — **চাবিটা এখন ব্যাকআপের অংশ**।
+             */
+            'national_id' => 'encrypted',
+            'bank_account_no' => 'encrypted',
+            'bank_routing_no' => 'encrypted',
+            'mfs_number' => 'encrypted',
         ];
     }
 
@@ -145,6 +164,41 @@ class Employee extends Model implements Drillable
                 ->orWhereDate('leaving_date', '>=', $monthEnd->copy()->startOfMonth()->toDateString()));
     }
 
+    /**
+     * পরিচয়পত্রের ছাপটা মডেলেই বসে, সেবায় নয়।
+     *
+     * ── কেন এখানে ───────────────────────────────────────────────────
+     * সেবায় বসালে সিডার, ইমপোর্ট বা টিঙ্কার থেকে বসানো একটা কর্মীর
+     * ছাপ থাকত না, আর তাঁকে NID দিয়ে **কোনোদিন খুঁজে পাওয়া যেত না** —
+     * কোনো ভুল ছাড়াই, কেবল ফলাফলে অনুপস্থিত। ঠিক এই কারণেই এই রিপোতে
+     * অডিটও মডেলের ঘটনা থেকে লেখা হয়।
+     */
+    protected static function booted(): void
+    {
+        static::saving(function (self $employee): void {
+            if (! $employee->isDirty('national_id')) {
+                return;
+            }
+
+            $value = (string) ($employee->national_id ?? '');
+
+            $employee->national_id_hash = $value === '' ? null : self::blindIndex($value);
+        });
+    }
+
+    /**
+     * খোঁজার জন্য নির্ধারিত ছাপ — মেলানোর জন্য, খোলার জন্য নয়।
+     *
+     * ফাঁকা ও ড্যাশ ফেলে দেওয়া হয়: কেউ "১২৩৪ ৫৬৭৮" লিখলে আর
+     * "১২৩৪৫৬৭৮" লিখলে একই কর্মী পাওয়া উচিত।
+     */
+    public static function blindIndex(string $value): string
+    {
+        $clean = preg_replace('/[\s\-]+/u', '', trim($value)) ?? '';
+
+        return hash_hmac('sha256', $clean, (string) config('app.key'));
+    }
+
     /** নাম, কোড, মোবাইল বা পরিচয়পত্র — যেটা মনে আছে সেটা দিয়েই। */
     public function scopeSearch(Builder $query, ?string $term): Builder
     {
@@ -154,12 +208,26 @@ class Employee extends Model implements Drillable
 
         $like = '%'.str_replace(['%', '_'], ['\%', '\_'], trim($term)).'%';
 
-        return $query->where(function (Builder $q) use ($like) {
+        return $query->where(function (Builder $q) use ($like, $term) {
             $q->where('code', 'like', $like)
                 ->orWhere('name_en', 'like', $like)
                 ->orWhere('name_bn', 'like', $like)
                 ->orWhere('mobile', 'like', $like)
-                ->orWhere('national_id', 'like', $like);
+                /*
+                 * পরিচয়পত্র মেলে হুবহু, `LIKE`-এ নয়।
+                 *
+                 * ── কেন বদলাতে হলো ─────────────────────────────────
+                 * ঘরটা এখন এনক্রিপ্টেড, আর একই সংখ্যা প্রতিবার আলাদা
+                 * ciphertext হয় (প্রতিবার নতুন IV) — তাই `LIKE` মেলানোর
+                 * মতো কিছুই থাকে না। ওটা রেখে দিলে খোঁজাটা **চুপচাপ
+                 * কখনো কিছু পেত না**, আর কেউ বলত "কর্মীটা নেই"।
+                 *
+                 * ── কী হারাল ───────────────────────────────────────
+                 * আংশিক খোঁজা — শেষ চার সংখ্যা লিখে আর পাওয়া যাবে না।
+                 * পুরো নম্বরে পাওয়া যাবে, আর বাস্তবে কার্ড দেখে বা কপি
+                 * করে এভাবেই খোঁজা হয়। এটাই এনক্রিপশনের ঘোষিত দাম।
+                 */
+                ->orWhere('national_id_hash', self::blindIndex($term));
         });
     }
 
