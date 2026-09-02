@@ -26,7 +26,7 @@ trait CalculatesLineTotals
      * ছাড় ভ্যাটের আগে বসে — ছাড়ের পরের টাকার উপরেই ভ্যাট, কারণ সরকারকে
      * যা নেওয়া হয়নি তার উপর ভ্যাট দিতে হয় না।
      *
-     * @return array{base: string, discount: string, tax: string, amount: string}
+     * @return array{base: string, discount: string, tax: string, tax_variance: ?string, amount: string}
      */
     private function lineFigures(string $qty, string $rate, mixed $discount, mixed $tax, ?Tax $standard = null): array
     {
@@ -53,18 +53,44 @@ trait CalculatesLineTotals
          * দামের ভেতরের ভ্যাটে মোট বাড়ে না; দরেই ওটা আছে।
          */
         $inclusive = false;
+        $variance = null;
 
         if ($tax === null || $tax === '') {
             $tax = $standard?->amountOn($net) ?? '0.0000';
             $inclusive = (bool) $standard?->is_inclusive;
         } else {
             $tax = $this->money($tax);
+
+            /*
+             * হাতে দেওয়া অঙ্কটা হারের অঙ্ক থেকে কতটা সরে আছে।
+             *
+             * ── কেন বদলে দেওয়া হয় না, কেবল লেখা হয় ─────────────────
+             * নথির পর্দায় ঘরটা সত্যিই আছে, আর সেখানে টাইপ করা সংখ্যা
+             * নীরবে উড়িয়ে দেওয়া মানে ব্যবহারকারীর সিদ্ধান্ত মুছে ফেলা।
+             * ছাড়েরও সীমা আছে, ভ্যাটের নেই — আর সেটাই ছিল ফাঁক:
+             * **কেউ বদলে দিলে কোথাও কোনো চিহ্ন থাকত না।**
+             *
+             * এখন সংখ্যাটা মানা হয়, কিন্তু পার্থক্যটা সারিতে বসে।
+             * ছাড়ও থাকে, হিসাবও থাকে।
+             *
+             * ── কেন `$standard` না থাকলে কিছু নয় ───────────────────
+             * পণ্যের কোনো হার বসানো না থাকলে "সরে যাওয়া" কথাটারই মানে
+             * নেই — কোথা থেকে সরল? তখন `null` মানে "মাপার কিছু ছিল না"।
+             */
+            if ($standard !== null) {
+                $expected = $standard->amountOn($net);
+
+                if (bccomp($tax, $expected, 4) !== 0) {
+                    $variance = bcsub($tax, $expected, 4);
+                }
+            }
         }
 
         return [
             'base' => $base,
             'discount' => $discount,
             'tax' => $tax,
+            'tax_variance' => $variance,
             'amount' => $inclusive ? $net : bcadd($net, $tax, 4),
         ];
     }

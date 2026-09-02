@@ -93,6 +93,28 @@
                     ['key' => 'amount', 'label' => __('sales::field.amount'),
                      'numeric' => true, 'width' => '9rem',
                      'render' => fn ($l) => \App\Core\Support\Money::format($l->amount)],
+
+                    /*
+                     * নিয়মের বাইরে যাওয়া সংখ্যাগুলো — আলাদা একটা ঘরে।
+                     *
+                     * ── কেন দর ও ভ্যাটের ঘরে ঢোকানো হয়নি ────────────
+                     * ওই দুইটা সংখ্যার ঘর, আর সংখ্যার ঘরে অক্ষর ঢুকলে
+                     * উপরে-নিচে মিলিয়ে পড়া যায় না — এই তালিকার পুরো
+                     * কাজটাই তো মিলিয়ে পড়া।
+                     *
+                     * ── কেন বেশিরভাগ সারিতে খালি, আর সেটাই ঠিক ───────
+                     * ব্যতিক্রম দুর্লভ। রোজ ভরা থাকলে কেউ পড়ত না —
+                     * খালি থাকে বলেই যেদিন কিছু লেখা থাকে সেদিন চোখে পড়ে।
+                     */
+                    ['key' => 'off_rule', 'label' => __('sales::field.off_rule'), 'width' => '11rem',
+                     'render' => fn ($l) => implode(' · ', array_filter([
+                         $l->price_variance === null ? null : __('sales::field.off_standard_price', [
+                             'pct' => \App\Core\Support\Money::format($l->price_variance, 2),
+                         ]),
+                         $l->tax_variance === null ? null : __('sales::field.off_standard_tax', [
+                             'amount' => \App\Core\Support\Money::format($l->tax_variance),
+                         ]),
+                     ]))],
                 ]" />
 
             {{--
