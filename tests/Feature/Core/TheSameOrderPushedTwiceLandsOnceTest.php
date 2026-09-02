@@ -197,10 +197,53 @@ class TheSameOrderPushedTwiceLandsOnceTest extends TestCase
         $this->assertCount(count($first['records']), $again['records']);
         $this->assertNull($this->sync()->lastSync('phone-a', 'customer'));
 
+        $this->travel(2)->minutes();
         $this->sync()->recordSuccessfulPull('phone-a', 'customer');
 
         $this->assertNotNull($this->sync()->lastSync('phone-a', 'customer'));
+
+        /*
+         * ⚠️ এক মিনিট এগিয়ে, তারপর খালি।
+         *
+         * ওয়াটারমার্ক এগোনোর পরেও সাথে সাথে পুল করলে **শেষ এক মিনিটের
+         * রেকর্ডগুলো আবার আসে**, ইচ্ছাকৃতভাবে — দেখুন
+         * [[SyncService::cursorFor()]]। ওই ওভারল্যাপটা না থাকলে একটা
+         * চলতি লেনদেনের সারি (যা লেখা হয়ে গেছে কিন্তু commit হয়নি)
+         * কার্সারের পিছনে পড়ে চিরতরে হারাত।
+         *
+         * তাই "আর কিছু বাকি নেই" প্রমাণ করতে ঘড়িটা ওভারল্যাপের বাইরে
+         * নিয়ে **তারপর** ওয়াটারমার্ক বসাতে হয় — উপরে সেটাই করা হয়েছে।
+         * পরে এগোলে লাভ নেই: ওয়াটারমার্ক অতীতে বসা থাকে, ঘড়ি এগোলেও
+         * সে নড়ে না।
+         */
         $this->assertSame([], $this->sync()->pull($this->salesman, 'phone-a', 'customer', 100)['records']);
+    }
+
+    /**
+     * ⚠️ ওয়াটারমার্ক ছুরির ধার নয় — শেষ এক মিনিট আবার পাঠানো হয়।
+     *
+     * ── কোন ভুলটা এটা ঠেকায় ─────────────────────────────────────────
+     * `created_at` বসে INSERT-এর মুহূর্তে, কিন্তু সারিটা অন্য সংযোগের
+     * চোখে পড়ে **COMMIT-এর পরে**। একটা বিল পোস্ট হতে ৪০০ মিলিসেকেন্ড
+     * লাগলে সিঙ্ক মাঝখানে পড়ে কিছুই দেখে না, কার্সার এগিয়ে যায়, আর
+     * ওই সারিগুলো **কোনোদিন পাঠানো হয় না** — কোনো ত্রুটি ছাড়াই।
+     *
+     * খরচটা গুটিকয় পুনরাবৃত্ত সারি, আর ফোনের ক্যাশ সেটা নিজে থেকেই
+     * সামলায়: `entityType:entityId` ধরে বসায়, তাই একই রেকর্ড দ্বিতীয়বার
+     * এলে একই ঘরে একই মান বসে।
+     */
+    public function test_the_last_minute_is_sent_again_on_purpose(): void
+    {
+        $this->sync()->pull($this->salesman, 'phone-a', 'customer', 100);
+        $this->sync()->recordSuccessfulPull('phone-a', 'customer');
+
+        // ওভারল্যাপের ভেতরে — সদ্য তৈরি ডেমো সারিগুলো আবার আসবে
+        $inside = $this->sync()->pull($this->salesman, 'phone-a', 'customer', 100);
+
+        $this->assertNotEmpty(
+            $inside['records'],
+            'ওভারল্যাপটা নেই — একটা চলতি লেনদেনের সারি কার্সারের পিছনে পড়ে চিরতরে হারাত।',
+        );
     }
 
     /**

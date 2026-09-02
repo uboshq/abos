@@ -12,6 +12,8 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Middleware\SubstituteBindings;
+use Laravel\Sanctum\Http\Middleware\CheckAbilities;
+use Laravel\Sanctum\Http\Middleware\CheckForAnyAbility;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -63,6 +65,29 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->encryptCookies(except: [LoginController::RETURNING]);
 
         $middleware->trustProxies(at: '*');
+
+        /*
+         * টোকেনের ability — মোবাইল অ্যাপের দুই-টোকেন ব্যবস্থার ভিত্তি
+         * (২ সেপ্টেম্বর ২০২৬)।
+         *
+         * ── কেন এটা নিবন্ধন করতেই হয় ───────────────────────────────
+         * Sanctum এই দুইটা মিডলওয়্যার সাথে আনে কিন্তু **নিজে থেকে নাম
+         * দেয় না**। নাম না দিলে `abilities:sync` লেখা রুটটা বুট-টাইমেই
+         * "Target class [abilities] does not exist" বলে থামত — যা অন্তত
+         * জোরে ভাঙত, নীরবে নয়।
+         *
+         * ── কেন এটা ছাড়া পুরো ব্যবস্থাটা অর্থহীন ────────────────────
+         * `auth:sanctum` **যেকোনো** বৈধ টোকেন মেনে নেয়, refresh টোকেনও।
+         * ability না দেখলে চুরি যাওয়া একটা refresh টোকেন দিয়েই সরাসরি
+         * সিঙ্কের সব দরজা খোলা যেত, আর access টোকেনের ৩০ মিনিটের ছোট
+         * মেয়াদটার কোনো মানেই থাকত না।
+         *
+         * `abilities` = সবগুলো লাগবে · `ability` = যেকোনো একটা।
+         */
+        $middleware->alias([
+            'abilities' => CheckAbilities::class,
+            'ability' => CheckForAnyAbility::class,
+        ]);
 
         /*
          * লগইন না থাকলে কাকে কোথায় পাঠানো হবে।
