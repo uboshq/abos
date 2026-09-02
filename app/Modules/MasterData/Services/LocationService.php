@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\MasterData\Services;
 
+use App\Core\Engines\Coding\CodeSuggester;
 use App\Core\Support\CompanyContext;
 use App\Modules\MasterData\Models\Location;
 use Illuminate\Support\Facades\DB;
@@ -26,11 +27,30 @@ final class LocationService
             $level = $this->assertLevel($data['level'] ?? null);
             $parent = $this->resolveParent($data['parent_id'] ?? null, $level);
 
-            $this->assertCodeIsFree(trim((string) $data['code']));
+            $code = trim((string) ($data['code'] ?? ''));
+
+            /*
+             * কোড না লিখলে নামের সংক্ষেপ — মালিকের নিয়ম, ২ সেপ্টেম্বর ২০২৬।
+             *
+             * এলাকার কোড মানুষ পড়ে ও মুখে বলে ("নেত্রকোনা রুট → NET"),
+             * তাই এখানেও সিরিজ নয়, নাম। ধাপের নামটা উপসর্গ হিসেবে যায়
+             * (`territory` → `TER`), যাতে ইংরেজি নাম খালি থাকলেও ঘরটা
+             * খালি না থাকে — [[LocationLadder]]-এর সাতটা ধাপেই।
+             */
+            if ($code === '') {
+                $code = app(CodeSuggester::class)->fromName(
+                    Location::class,
+                    $data['name_en'] ?? null,
+                    [],
+                    substr($level, 0, 3),
+                );
+            }
+
+            $this->assertCodeIsFree($code);
 
             return Location::create([
                 ...$data,
-                'code' => trim((string) $data['code']),
+                'code' => $code,
                 'level' => $level,
                 'parent_id' => $parent?->id,
                 'is_active' => $data['is_active'] ?? true,
@@ -45,7 +65,9 @@ final class LocationService
     public function update(Location $location, array $data): Location
     {
         return DB::transaction(function () use ($location, $data) {
-            if (isset($data['code']) && trim((string) $data['code']) !== $location->code) {
+            // ফাঁকা মানে "বদলাবেন না" — উপরে দেখুন, একই কারণ
+            if (trim((string) ($data['code'] ?? '')) !== ''
+                && trim((string) $data['code']) !== $location->code) {
                 $this->assertCodeIsFree(trim((string) $data['code']), $location->id);
             }
 
@@ -70,6 +92,15 @@ final class LocationService
                 $location->level,
                 $location,
             );
+
+            /*
+             * ফাঁকা কোড `$data`-তেই থেকে যেত আর নিচের spread ওটা বসিয়ে
+             * **কোডটা মুছে দিত** — নীরবে। উপরের শর্তটা কেবল "খালি নয়
+             * এমন কোড অন্য কারো কি না" দেখে; মুছে ফেলাটা আটকায় না।
+             */
+            if (trim((string) ($data['code'] ?? '')) === '') {
+                unset($data['code']);
+            }
 
             $location->update([...$data, 'parent_id' => $parent?->id]);
 

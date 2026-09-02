@@ -6,6 +6,7 @@ namespace App\Modules\SystemAdmin\Http\Controllers;
 
 use App\Core\Services\CompanyProvisioner;
 use App\Core\Services\MenuBuilder;
+use App\Core\Support\CodeFromName;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
@@ -90,7 +91,14 @@ class CompanyController extends Controller implements HasMiddleware
     public function store(Request $request, CompanyProvisioner $provisioner): RedirectResponse
     {
         $data = $request->validate([
-            'code' => ['required', 'string', 'max:16', 'alpha_dash', Rule::unique('companies', 'code')],
+            /*
+             * খালি রাখা যায় — নাম থেকে বসে (২ সেপ্টেম্বর ২০২৬)।
+             *
+             * কোম্পানির কোড লগইনের পর্দায় ও প্রতিটা ডকুমেন্ট নম্বরে
+             * বসে, তাই ওটা পড়ার মতো হওয়া দরকার — `Trade Depot` →
+             * `TRA`, `CMP-0002` নয়।
+             */
+            'code' => ['nullable', 'string', 'max:16', 'alpha_dash', Rule::unique('companies', 'code')],
             'name_en' => ['required', 'string', 'max:160'],
             'name_bn' => ['nullable', 'string', 'max:160'],
             'legal_name' => ['nullable', 'string', 'max:191'],
@@ -102,7 +110,8 @@ class CompanyController extends Controller implements HasMiddleware
             'tin' => ['nullable', 'string', 'max:32'],
 
             // প্রধান শাখা — কোম্পানির সাথেই, পরে নয়
-            'branch_code' => ['required', 'string', 'max:16', 'alpha_dash'],
+            // শাখার কোডও — খালি হলে শাখার নাম থেকে
+            'branch_code' => ['nullable', 'string', 'max:16', 'alpha_dash'],
             'branch_name_en' => ['required', 'string', 'max:160'],
             'branch_name_bn' => ['nullable', 'string', 'max:160'],
 
@@ -111,9 +120,29 @@ class CompanyController extends Controller implements HasMiddleware
             'year_ends_on' => ['required', 'date', 'after:year_starts_on'],
         ]);
 
+        /*
+         * কোড না লিখলে নাম থেকে — মালিকের নিয়ম, ২ সেপ্টেম্বর ২০২৬।
+         *
+         * ⚠️ কোম্পানির কোড টেন্যান্টের সীমার **বাইরে** অনন্য হতে হয়,
+         * কারণ তখনো কোনো কোম্পানি প্রসঙ্গ নেই — এটাই তো প্রথম কোম্পানি
+         * বানানোর মুহূর্ত। তাই [[CodeSuggester]] নয়,
+         * [[CodeFromName::forQuery()]] সরাসরি: স্কোপটা এখানে গোটা
+         * টেবিল, আর সেটা এখানে **ইচ্ছাকৃত**।
+         */
+        $companyCode = trim((string) ($data['code'] ?? '')) !== ''
+            ? strtoupper($data['code'])
+            : CodeFromName::forQuery($data['name_en'], Company::query());
+
+        $branchCode = trim((string) ($data['branch_code'] ?? '')) !== ''
+            ? strtoupper($data['branch_code'])
+            : CodeFromName::forQuery(
+                $data['branch_name_en'],
+                Branch::query()->withoutGlobalScopes(),
+            );
+
         $company = $provisioner->create(
             data: [
-                'code' => strtoupper($data['code']),
+                'code' => $companyCode,
                 'name_en' => $data['name_en'],
                 'name_bn' => $data['name_bn'] ?? null,
                 'legal_name' => $data['legal_name'] ?? null,
@@ -125,7 +154,7 @@ class CompanyController extends Controller implements HasMiddleware
                 'tin' => $data['tin'] ?? null,
             ],
             branch: [
-                'code' => strtoupper($data['branch_code']),
+                'code' => $branchCode,
                 'name_en' => $data['branch_name_en'],
                 'name_bn' => $data['branch_name_bn'] ?? null,
                 'is_default' => true,

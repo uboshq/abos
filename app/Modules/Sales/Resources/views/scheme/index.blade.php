@@ -74,7 +74,8 @@
                   class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 @csrf
 
-                <x-ui.field name="code" :label="__('sales::field.scheme_code')" required
+                <x-ui.field name="code" :label="__('sales::field.scheme_code')"
+                            :placeholder="__('core.create.code_auto')"
                             :value="old('code')" />
 
                 <x-ui.field name="name" :label="__('core.table.name')" required

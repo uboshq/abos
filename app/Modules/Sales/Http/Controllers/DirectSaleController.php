@@ -4,16 +4,19 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Http\Controllers;
 
+use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\Money;
 use App\Http\Controllers\Controller;
+use App\Models\NumberSeries;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\RecipeService;
 use App\Modules\Inventory\Services\StockService;
+use App\Modules\MasterData\Models\PaymentTerm;
 use App\Modules\Sales\Services\DirectSaleService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -65,7 +68,13 @@ class DirectSaleController extends Controller implements HasMiddleware
          * ছয়জনের ডেমোতে সেটা চোখে পড়ে না, তিন হাজার গ্রাহকের ডিপোতে
          * কাউন্টারের পাতা খোলা মানেই তিন হাজার কোয়েরি।
          */
-        $customers = Customer::query()->active()->withOutstanding()->orderBy('name_en')->get();
+        /*
+         * `with('location')` — নাহলে উপরের লকআপে এলাকার নাম চাইতে গিয়ে
+         * গ্রাহকপ্রতি একটা করে কোয়েরি হত। ঠিক যে N+1-টা `withOutstanding()`
+         * দিয়ে বন্ধ করা হয়েছিল, সেটাই পাশের দরজা দিয়ে ফিরে আসত।
+         */
+        $customers = Customer::query()->active()->with('location')
+            ->withOutstanding()->orderBy('name_en')->get();
 
         return view('sales::direct.index', [
             'menu' => $this->menu->forUser($request->user()),
@@ -85,14 +94,84 @@ class DirectSaleController extends Controller implements HasMiddleware
             'sheetProducts' => Product::query()->active()->with('unit')->orderBy('name_en')->get(),
             'sheetStock' => app(StockService::class)->statesForAll($warehouse),
             'customers' => $customers,
+            /*
+             * পরিচয়ের ঘরগুলোও যায় — শুধু শর্ত নয় (২ সেপ্টেম্বর ২০২৬)।
+             *
+             * ── কেন ─────────────────────────────────────────────────
+             * ক্রেতা এখন একটা ড্রপডাউনের এক লাইন নয়, একটা **পরিচয়ের
+             * খণ্ড**: নাম, এলাকার চিপ, ফোন, ঠিকানা। মালিকের পাঠানো
+             * NEXUS-এর নমুনা ঠিক তাই, আর কারণটা কাউন্টারের কাজেই —
+             * মাল ছাড়ার আগে যিনি দাঁড়িয়ে আছেন তাঁর দোকানটা চেনা
+             * দরকার, শুধু নামটা নয়।
+             *
+             * ঘরগুলো এখানেই বসে, ব্রাউজারে আলাদা করে খোঁজা হয় না:
+             * তালিকাটা একবারই যায়, আর ক্রেতা বদলালে নতুন কোনো
+             * অনুরোধ লাগে না।
+             *
+             * `location` — এলাকার নামটা, আইডি নয়। NEXUS-এ একবার কাঁচা
+             * UUID ছাপা হয়েছিল ওই চিপে, আর একটা চিপ যেটা বলতে পারে না
+             * দোকানটা কোথায়, সেটা জায়গাটুকুরও যোগ্য নয়।
+             */
             'customerTerms' => $customers->mapWithKeys(fn (Customer $c) => [$c->id => [
                 'limit' => (float) $c->credit_limit,
                 'due' => (float) $c->outstanding(),
                 'days' => (int) $c->credit_days,
+                'name' => $c->name(),
+                'code' => (string) $c->code,
+                'phone' => (string) ($c->phone ?? ''),
+                'address' => (string) ($c->address() ?? ''),
+                'location' => (string) ($c->location?->name() ?? ''),
             ]]),
             'warehouses' => Warehouse::query()->active()->orderBy('code')->get(),
             'warehouse' => $warehouse,
             'walkinId' => (int) $this->settings->get('sales.walkin_customer_id', 0),
+
+            /*
+             * বিলের পরের নম্বরটা — দেখানোর জন্য, খরচ করার জন্য নয়।
+             *
+             * ── কেন `preview()`, `next()` নয় (৩ সেপ্টেম্বর ২০২৬) ────────
+             * মালিক চেয়েছেন নম্বরটা পর্দাতেই দেখা যাক আর দরকারে বদলানো
+             * যাক। `next()` ডাকলে সেটা হত, কিন্তু **পাতা খোলামাত্র একটা
+             * নম্বর খরচ হয়ে যেত** — কেউ শুধু দেখে চলে গেলেও। দিনের শেষে
+             * সিরিজে ফাঁক, আর নিরীক্ষায় "৪৭ নম্বর বিলটা কোথায়" প্রশ্নের
+             * কোনো উত্তর নেই।
+             *
+             * `preview()` কেবল পড়ে — তালা নেয় না, কিছু বাড়ায় না। আসল
+             * নম্বরটা বসে সংরক্ষণের ট্রানজেকশনের ভেতরে।
+             *
+             * ⚠️ দুইজন একসাথে কাউন্টার খুললে দুইজনেই একই নম্বর দেখবেন,
+             * আর সেটা ঠিক আছে: যিনি আগে সেভ করবেন তিনি ওটা পাবেন,
+             * পরেরজন পরেরটা। ভুল হত দেখানো নম্বরটাকে প্রতিশ্রুতি ভাবলে।
+             *
+             * সিরিজ না থাকলে খালি — ঘরটা তখন "নিশ্চিত করলে" লেখা
+             * placeholder দেখায়, অর্থাৎ আগের আচরণেই ফেরে।
+             */
+            'invoicePreview' => $this->invoicePreview(),
+
+            /*
+             * বাকির শর্তগুলো — মাস্টার ডাটা থেকে, হাতে লেখা তালিকা থেকে নয়।
+             *
+             * ── কেন (৩ সেপ্টেম্বর ২০২৬) ────────────────────────────────
+             * মালিক চেয়েছেন দুইটা ঘরের বদলে একটা ড্রপডাউন। তালিকাটা
+             * এখানে `['৭ দিন', '১৫ দিন', '৩০ দিন']` লিখে দেওয়া যেত, আর
+             * সেটা হত ঠিক সেই ভুল যেটা তিনি বারবার বারণ করেছেন: "কোন
+             * কোন ধরনের জিনিস" এমন প্রতিটা তালিকা কোম্পানির নিজের
+             * বাড়ানোর কথা, কোডে বাঁধা থাকার কথা নয়।
+             *
+             * `mdm_payment_terms` ঠিক সেই তালিকা, আর সেটা মাস্টার
+             * ডাটার পর্দা থেকে সম্পাদনা করা যায়। কেউ "৪৫ দিন" যোগ
+             * করলে সেটা পরের দিনই কাউন্টারের ড্রপডাউনে দেখা যাবে,
+             * কাউকে কিছু ছাড়াতে হবে না।
+             */
+            'paymentTerms' => PaymentTerm::query()
+                ->where('is_active', true)
+                ->orderBy('days')
+                ->get(['id', 'code', 'name_en', 'name_bn', 'days'])
+                ->map(fn (PaymentTerm $t): array => [
+                    'days' => (int) $t->days,
+                    'label' => $t->name(),
+                ])
+                ->values(),
 
             /*
              * ঘরগুলো কোম্পানি চাইলে বন্ধ করতে পারে (নিয়ম ৭)।
@@ -137,6 +216,26 @@ class DirectSaleController extends Controller implements HasMiddleware
             'vehicle_no' => ['nullable', 'string', 'max:64'],
             'driver_name' => ['nullable', 'string', 'max:191'],
             'credit_period_days' => ['nullable', 'integer', 'min:0', 'max:365'],
+
+            /*
+             * মেয়াদের দ্বিতীয় মুখ — নির্দিষ্ট তারিখ (৩ সেপ্টেম্বর ২০২৬)।
+             *
+             * `after_or_equal:trx_date` — বিলের আগের তারিখে পরিশোধের
+             * মেয়াদ শেষ হতে পারে না। ওটা বসতে দিলে বকেয়ার বয়সের
+             * প্রতিবেদন প্রথম দিন থেকেই মেয়াদোত্তীর্ণ দেখাত।
+             */
+            'due_on' => ['nullable', 'date', 'after_or_equal:trx_date'],
+
+            /*
+             * বিলের নম্বর হাতে লেখা — মালিকের নির্দেশ।
+             *
+             * ⚠️ `unique` এখানে বসানো হয়নি, ইচ্ছাকৃতভাবে। যাচাই আর
+             * সংরক্ষণের মাঝে এক মুহূর্তের ফাঁক থাকে, আর দুইটা কাউন্টার
+             * একসাথে একই নম্বর লিখলে দুইটাই ওই যাচাই পাশ করে বেরিয়ে
+             * যেত। আসল পাহারা ডাটাবেসের ইউনিক ইনডেক্সে —
+             * [[SalesInvoiceService]] সেটা ট্রানজেকশনের ভেতরে ধরে।
+             */
+            'invoice_no' => ['nullable', 'string', 'max:32'],
             'discount_amount' => ['nullable', 'numeric', 'min:0'],
             'expense_amount' => ['nullable', 'numeric', 'min:0'],
             /*
@@ -306,5 +405,18 @@ class DirectSaleController extends Controller implements HasMiddleware
         return $id > 0
             ? Warehouse::query()->find($id)
             : Warehouse::query()->where('is_default', true)->active()->first();
+    }
+
+    /** সিরিজের পরের নম্বর, কেবল দেখানোর জন্য — [[NumberSeriesEngine::preview()]]. */
+    private function invoicePreview(): string
+    {
+        $series = NumberSeries::query()
+            ->where('company_id', CompanyContext::id())
+            ->where('doc_type', 'INV')
+            ->where('is_active', true)
+            ->orderByRaw('branch_id IS NULL')
+            ->first();
+
+        return $series === null ? '' : app(NumberSeriesEngine::class)->preview($series);
     }
 }

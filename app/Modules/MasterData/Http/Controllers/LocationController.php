@@ -162,7 +162,8 @@ class LocationController extends Controller implements HasMiddleware
     private function validated(Request $request, bool $editing = false): array
     {
         return $request->validate([
-            'code' => ['required', 'string', 'max:32'],
+            // খালি রাখা যায় — [[LocationService::create()]] তখন নাম থেকে বসায়
+            'code' => ['nullable', 'string', 'max:32'],
             'name_en' => ['required', 'string', 'max:120'],
             'name_bn' => ['nullable', 'string', 'max:120'],
             'level' => [$editing ? 'nullable' : 'required', 'string'],

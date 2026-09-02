@@ -448,7 +448,23 @@ class DirectSaleTest extends TestCase
             'sales.field_rounding' => __('sales::field.rounding'),
             'sales.field_deposit' => __('sales::field.received_deposit'),
             'sales.field_credit_limit' => __('sales::field.credit_limit'),
-            'sales.field_warehouse_select' => __('sales::field.warehouse'),
+            /*
+             * ⚠️ `sales.field_warehouse_select` এখানে আর নেই — ৩ সেপ্টেম্বর ২০২৬।
+             *
+             * মালিক গুদামের ঘরটা কাউন্টার থেকে তুলে দিতে বলেছেন, আর
+             * কারণটা তাঁর নিজের ভাষায়: **"বিল একটাই হয়, গুদামে গুদামে
+             * বিল হয় না"**। কাগজটা এক গুদাম থেকেই বেরোয়; মাল অন্য
+             * গুদামে থাকলে আগে স্টক স্থানান্তর, তারপর বিক্রি।
+             *
+             * গুদামটা এখনো যায় — লুকানো ঘরে, কাউন্টারের নিজের গুদাম —
+             * নাহলে স্টক লেজার আর গুদামের যোগফল আলাদা হয়ে যেত। কিন্তু
+             * **বাছার কিছু নেই**, তাই সুইচটারও লুকানোর কিছু নেই।
+             *
+             * সুইচটা `module.php`-তে রয়ে গেছে, মুছিনি — সেটিং মোছা
+             * মালিকের সিদ্ধান্ত, আর তাঁকে জিজ্ঞেস করা আছে। সারিটা এখান
+             * থেকে সরানো হয়েছে যাতে গার্ডটা এমন কিছু দাবি না করে যা
+             * পর্দায় আর নেই; সুইচটা ফিরে এলে সারিটাও ফিরবে।
+             */
             'sales.field_sub_total' => __('sales::field.sub_total_no_vat'),
             'sales.field_total_item' => __('sales::field.total_item'),
             'sales.field_sales_qty' => __('sales::field.total_sales_qty'),

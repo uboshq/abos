@@ -55,8 +55,13 @@
             <h2 class="mb-3 font-semibold">{{ __('accounts::section.identity') }}</h2>
 
             <div class="grid gap-3 sm:grid-cols-2">
+                {{-- `required` নেই — ফাঁকা রাখলে অভিভাবক খাতের নিচে পরের
+                     খালি নম্বর বসে ([[CodeSuggester::underParent()]])। ১০১০
+                     একটা ঠিকানা, তাই সিরিজ নয়, কাঠামো। --}}
                 <x-ui.field name="code" :label="__('accounts::field.code')"
-                                   :value="old('code', $account->code)" required
+                                   :value="old('code', $account->code)"
+                                   :placeholder="__('core.create.code_auto')"
+                                   :hint="__('core.create.code_auto_hint')"
                                    :readonly="$locked" numeric />
 
                 <x-ui.field name="name_en" :label="__('accounts::field.name_en')"
