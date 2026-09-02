@@ -12,4 +12,7 @@ return [
     'full_history' => 'Full history of this record',
     'back_to_trail' => '← Audit trail',
     'open_record' => 'Open record',
+    'as_it_stood_on' => 'As it stood on :on',
+    'show_that_day' => 'Show that day',
+    'time_machine' => 'How it looked then',
 ];

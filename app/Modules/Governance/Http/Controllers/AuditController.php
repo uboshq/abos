@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Governance\Http\Controllers;
 
 use App\Core\Concerns\SortsLists;
+use App\Core\Engines\Audit\TimeMachine;
 use App\Core\Module\ModuleRegistry;
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
@@ -143,6 +144,52 @@ class AuditController extends Controller implements HasMiddleware
             'history' => $history,
             'record' => $entry->auditable(),
         ]);
+    }
+
+    /**
+     * সময়যন্ত্র — "ওইদিন এই কাগজটা কেমন ছিল"।
+     *
+     * ── কেন তারিখটা এখানে বাঁধা হয় ──────────────────────────────────
+     * `?on=` যা খুশি হতে পারে — মানুষের হাতে লেখা, বুকমার্ক করা, বা
+     * পুরনো একটা লিংক। পার্স করতে না পারলে **আজকের দিন** ধরা হয়, আর
+     * সেটাই নিরাপদ ডিফল্ট: আজকের অবস্থা দেখানো কোনো মিথ্যা বলে না।
+     *
+     * ── আর দিনের শেষ মুহূর্ত কেন ────────────────────────────────────
+     * "১৫ জুন কেমন ছিল" প্রশ্নের স্বাভাবিক অর্থ *"১৫ জুন দিনটা শেষে"*,
+     * দিনের প্রথম সেকেন্ডে নয়। মধ্যরাত ধরলে ওইদিনের প্রতিটা পরিবর্তন
+     * বাদ পড়ত, আর উত্তরটা হত আগের দিনের — নীরবে, একদিন ভুল।
+     */
+    public function at(Request $request, int $trail, TimeMachine $machine): View
+    {
+        $entry = AuditTrail::query()->findOrFail($trail);
+
+        $on = $this->momentAsked($request);
+
+        return view('governance::audit.at', [
+            'menu' => $this->menu->forUser($request->user()),
+            'trail' => $entry,
+            'record' => $entry->auditable(),
+            'on' => $on,
+            'state' => $machine->at($entry->auditable_type, $entry->auditable_id, $on),
+        ]);
+    }
+
+    /**
+     * কোন মুহূর্তটা জানতে চাওয়া হয়েছে।
+     */
+    private function momentAsked(Request $request): Carbon
+    {
+        $asked = (string) $request->query('on', '');
+
+        if ($asked === '') {
+            return Carbon::now();
+        }
+
+        try {
+            return Carbon::parse($asked)->endOfDay();
+        } catch (\Throwable) {
+            return Carbon::now();
+        }
     }
 
     /**

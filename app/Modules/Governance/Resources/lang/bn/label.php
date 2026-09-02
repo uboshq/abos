@@ -14,4 +14,7 @@ return [
     'full_history' => 'এই রেকর্ডের পুরো ইতিহাস',
     'back_to_trail' => '← অডিট ট্রেইল',
     'open_record' => 'রেকর্ডে যান',
+    'as_it_stood_on' => ':on তারিখে যেমন ছিল',
+    'show_that_day' => 'ওইদিনটা দেখান',
+    'time_machine' => 'ওইদিন কেমন ছিল',
 ];
