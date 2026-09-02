@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Core\Dashboard\ActivityRegistry;
 use App\Core\Dashboard\DashboardRegistry;
+use App\Core\Engines\Dashboard\DashboardEngine;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\Accent;
 use App\Core\Support\LookRegistry;
@@ -27,6 +28,7 @@ class WorkspaceController extends Controller
     public function __construct(
         private readonly MenuBuilder $menu,
         private readonly DashboardRegistry $widgets,
+        private readonly DashboardEngine $engine,
         private readonly ActivityRegistry $activity,
     ) {}
 
@@ -43,6 +45,18 @@ class WorkspaceController extends Controller
         return view('workspace.dashboard', [
             'menu' => $this->menu->forUser($request->user()),
             'groups' => $this->widgets->forUser($request->user()),
+
+            /*
+             * ── গোটা ব্যবসার এক সারি ─────────────────────────────────
+             * প্রতিটা মডিউলের মাথার সংখ্যাটা, পাশাপাশি। মালিকের
+             * নির্দেশ, ২ সেপ্টেম্বর ২০২৬: Home-এ একটা **কেন্দ্রীয়**
+             * ড্যাশবোর্ড থাকবে, সব নিয়ে।
+             *
+             * মডিউলের নিজের পর্দা গভীর — এক বিষয়ের ছয়টা সংখ্যা। এটা
+             * চওড়া — বারো বিষয়ের একটা করে, আর কোথায় নামতে হবে সেই
+             * সিদ্ধান্ত।
+             */
+            'overall' => $this->engine->overall($request->user()),
 
             /*
              * সদ্য যা হয়েছে — করণীয়ের পাশে।

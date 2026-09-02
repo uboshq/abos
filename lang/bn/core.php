@@ -95,6 +95,7 @@ return [
     ],
 
     'action' => [
+        'see_all' => 'সব দেখুন',
         'refresh' => 'নতুন করে দেখুন',
         'close' => 'বন্ধ করুন',
         'create' => 'তৈরি করুন',
@@ -180,6 +181,7 @@ return [
     ],
 
     'dashboard' => [
+        'across_the_business' => 'গোটা ব্যবসা',
         'today' => 'আজ',
         'this_month' => 'এই মাসে',
         'this_year' => 'এই বছর',
