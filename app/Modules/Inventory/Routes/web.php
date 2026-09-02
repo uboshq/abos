@@ -3,13 +3,13 @@
 declare(strict_types=1);
 
 use App\Modules\Inventory\Http\Controllers\BatchController;
-use App\Modules\Inventory\Http\Controllers\KitchenBoardController;
 use App\Modules\Inventory\Http\Controllers\LabelController;
 use App\Modules\Inventory\Http\Controllers\OpeningStockController;
 use App\Modules\Inventory\Http\Controllers\ProductController;
 use App\Modules\Inventory\Http\Controllers\ProductionController;
 use App\Modules\Inventory\Http\Controllers\RecipeController;
 use App\Modules\Inventory\Http\Controllers\StockController;
+use App\Modules\Inventory\Http\Controllers\StockOverviewController;
 use App\Modules\Inventory\Http\Controllers\StockPrintController;
 use App\Modules\Inventory\Http\Controllers\StockReportController;
 use App\Modules\Inventory\Http\Controllers\StockTransferController;
@@ -63,6 +63,15 @@ Route::middleware('auth')->prefix('inventory')->group(function () {
     });
 
     Route::prefix('stock')->name('stock.')->group(function () {
+        /*
+         * এক নজরে গুদাম — স্টকের নিজের সারাংশ।
+         *
+         * মডিউলের ড্যাশবোর্ড আলাদা (`dashboard/{module}`, কোরের
+         * ইঞ্জিন থেকে)। এটা তার চেয়ে সংকীর্ণ ও গভীর: কেবল মজুদ,
+         * কিন্তু গুদাম ধরে ছাঁকা যায়।
+         */
+        Route::get('/overview', [StockOverviewController::class, 'index'])->name('overview');
+
         Route::get('/', [StockController::class, 'index'])->name('index');
         Route::get('/adjust', [StockController::class, 'adjust'])->name('adjust');
         Route::post('/adjust', [StockController::class, 'storeAdjustment'])->name('adjust.store');
@@ -159,22 +168,6 @@ Route::middleware('auth')->prefix('inventory')->group(function () {
      * বানানো মানে XSS-এর সামনে একটা সত্যিকারের টোকেন রেখে দেওয়া,
      * কোনো লাভ ছাড়াই।
      */
-    Route::prefix('kitchen')->name('kitchen.')->group(function () {
-        Route::get('/', [KitchenBoardController::class, 'index'])->name('index');
-        Route::get('/refresh', [KitchenBoardController::class, 'refresh'])->name('refresh');
-
-        /*
-         * রান্নাঘরের পর্দা ও তার টিকিট — ধাপ ৪।
-         *
-         * `advance` একটাই ঠিকানা, গন্তব্যটা অনুরোধে আসে: চারটা অবস্থার
-         * জন্য চারটা রুট বানালে ধাপের নিয়মটা রুটের তালিকায় ছড়িয়ে যেত,
-         * আর ওটা এক জায়গায় থাকা দরকার।
-         */
-        Route::get('/tickets', [KitchenBoardController::class, 'tickets'])->name('tickets');
-        Route::get('/tickets/feed', [KitchenBoardController::class, 'ticketFeed'])->name('feed');
-        Route::post('/tickets/{ticket}', [KitchenBoardController::class, 'advance'])
-            ->whereNumber('ticket')->name('advance');
-    });
 
     /*
      * রান্না — হাঁড়ির উৎপাদন।

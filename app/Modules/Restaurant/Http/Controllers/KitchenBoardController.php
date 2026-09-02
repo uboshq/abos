@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\Inventory\Http\Controllers;
+namespace App\Modules\Restaurant\Http\Controllers;
 
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
-use App\Modules\Inventory\Models\KitchenTicket;
+use App\Modules\Restaurant\Models\KitchenTicket;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Recipe;
 use App\Modules\Inventory\Models\Warehouse;
-use App\Modules\Inventory\Services\KitchenTicketService;
+use App\Modules\Restaurant\Services\KitchenTicketService;
 use App\Modules\Inventory\Services\RecipeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -70,7 +70,7 @@ class KitchenBoardController extends Controller implements HasMiddleware
 
     public function index(Request $request): View
     {
-        return view('inventory::kitchen.index', [
+        return view('restaurant::kitchen.index', [
             'menu' => $this->menu->forUser($request->user()),
             'warehouses' => Warehouse::query()->orderBy('name_en')->get(),
             'warehouse' => $this->warehouse($request),
@@ -112,7 +112,7 @@ class KitchenBoardController extends Controller implements HasMiddleware
      */
     public function tickets(Request $request): View
     {
-        return view('inventory::kitchen.tickets', [
+        return view('restaurant::kitchen.tickets', [
             'menu' => $this->menu->forUser($request->user()),
             'tickets' => $this->openTickets(),
         ]);

@@ -59,6 +59,20 @@ return [
     'depends_on' => ['master_data', 'accounts'],
 
     'menu' => [
+        /*
+         * ড্যাশবোর্ড — মডিউলের প্রথম সারি।
+         *
+         * ── কেন `route_params` লাগে ─────────────────────────────────
+         * রুটটা কোরের একটাই (`dashboard/{module}`), তাই কোন মডিউলের
+         * ড্যাশবোর্ড সেটা মডিউলকেই বলতে হয়। প্রতিটা মডিউলের আলাদা
+         * রুট বানালে এই লাইনটা লাগত না, কিন্তু তখন বারোটা রুট ফাইলে
+         * বারোটা প্রায়-একই লাইন থাকত।
+         */
+        'dashboard' => [
+            ['label' => 'inventory::dashboard.title', 'route' => 'module.dashboard',
+                'route_params' => ['module' => 'inventory'], 'permission' => 'inventory.stock.view'],
+        ],
+
         'master' => [
             ['label' => 'inventory::menu.products', 'route' => 'inventory.product.index', 'permission' => 'inventory.product.view'],
 
@@ -108,10 +122,6 @@ return [
              * রোজ সকালে ঘটে। এক মেনুতে রাখলে রোজকার কাজটা মাস্টার
              * ডাটার সাথে মিশে যেত।
              */
-            ['label' => 'inventory::menu.kitchen_board', 'route' => 'inventory.kitchen.index',
-                'permission' => 'inventory.recipe.view'],
-            ['label' => 'inventory::menu.kitchen_tickets', 'route' => 'inventory.kitchen.tickets',
-                'permission' => 'inventory.recipe.view'],
             ['label' => 'inventory::menu.production', 'route' => 'inventory.production.index',
                 'permission' => 'inventory.production.view'],
         ],
@@ -314,6 +324,14 @@ return [
     'reports' => [
         StockReports::class,
     ],
+
+    /*
+     * এই মডিউলের ড্যাশবোর্ড — কোরের [[DashboardEngine]] এটাই ডাকে।
+     *
+     * একটাই, তালিকা নয়: ড্যাশবোর্ড একটা পর্দা, আর দুইটা ঘোষণা করলে
+     * কোনটা খুলবে তার কোনো ভালো উত্তর নেই।
+     */
+    'dashboard' => \App\Modules\Inventory\Dashboard\InventoryDashboard::class,
 
     'widgets' => [
         InventoryWidgets::class,

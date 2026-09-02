@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\Inventory\Services;
+namespace App\Modules\Restaurant\Services;
 
 use App\Core\Support\CompanyContext;
-use App\Modules\Inventory\Models\KitchenTicket;
+use App\Modules\Restaurant\Models\KitchenTicket;
 use App\Modules\Inventory\Models\Product;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;

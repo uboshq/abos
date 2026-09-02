@@ -7,7 +7,6 @@ use App\Modules\Sales\Dashboard\SalesActivity;
 use App\Modules\Sales\Dashboard\SalesWidgets;
 use App\Modules\Sales\Events\InvoiceConfirmed;
 use App\Modules\Sales\Integrity\SalesChecks;
-use App\Modules\Sales\Listeners\SendTheOrderToTheKitchen;
 use App\Modules\Sales\Metrics\SalesMetrics;
 use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\CommissionClaim;
@@ -80,6 +79,11 @@ return [
     'depends_on' => ['master_data', 'accounts', 'inventory', 'customer', 'supplier'],
 
     'menu' => [
+        'dashboard' => [
+            ['label' => 'sales::dashboard.title', 'route' => 'module.dashboard',
+                'route_params' => ['module' => 'sales'], 'permission' => 'sales.invoice.view'],
+        ],
+
         'transactions' => [
             ['label' => 'sales::menu.pos', 'route' => 'sales.pos.index', 'permission' => 'sales.pos',
                 'setting' => 'sales.screen_pos'],
@@ -355,9 +359,13 @@ return [
      *
      * নির্ভরতার তীর যেদিকে সত্যি, ফাইলটাও সেদিকে।
      */
-    'listeners' => [
-        InvoiceConfirmed::class => [SendTheOrderToTheKitchen::class],
-    ],
+    /*
+     * ⚠️ রান্নাঘরের শ্রোতাটা এখানে ছিল, এখন রেস্টুরেন্ট মডিউলে
+     * (২ সেপ্টেম্বর ২০২৬)। রান্নাঘর মজুদের ভেতরে থাকার সময় এটা
+     * বিক্রয়ে থাকাই ঠিক ছিল — বিক্রয় মজুদকে চেনে। এখন রান্নাঘর
+     * রেস্টুরেন্টে, আর রেস্টুরেন্ট বিক্রয়কে চেনে, তাই শ্রোতাটাও
+     * সেখানে। **বিক্রয় রেস্টুরেন্টকে চেনে না, চেনার দরকারও নেই।**
+     */
 
     /*
      * গ্রাহকের পাতায় বিক্রয়ের বক্তব্য — "শেষ কেনা কবে"।
@@ -372,6 +380,8 @@ return [
     ],
 
     // হোম পর্দার সংখ্যাগুলো — কোর জিজ্ঞেস করে, মডিউল উত্তর দেয়
+    'dashboard' => \App\Modules\Sales\Dashboard\SalesDashboard::class,
+
     'widgets' => [
         SalesWidgets::class,
     ],
