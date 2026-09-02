@@ -55,13 +55,46 @@
 
         {{-- ব্র্যান্ড — চিহ্ন, শব্দ, তারপর একটা দাগ --}}
         <div class="mb-7 text-center">
-            <img src="{{ asset('brand/abos-icon-transparent.png') }}"
-                 alt="" aria-hidden="true"
-                 width="512" height="456" class="mx-auto mb-4 h-14 w-auto">
+            {{--
+                লোগোটাই পূর্ণ পাতায় ফেরার পথ।
 
-            <img src="{{ asset('brand/abos-wordmark-transparent.png') }}"
-                 alt="{{ __('core.brand.name') }}"
-                 width="556" height="198" class="mx-auto h-9 w-auto">
+                ── কেন পথটা থাকতেই হবে ──────────────────────────────
+                একবার ঢোকার পর ব্রাউজারে চিহ্ন বসে যায়, আর `/login`
+                তখন এখানেই ফেরত পাঠায়। কোনো পথ না থাকলে **পূর্ণ
+                পাতাটায় আর কোনোদিন পৌঁছানোই যেত না** — আর যে পাতা কেউ
+                দেখে না, সেটা একদিন নীরবে ভেঙে পড়ে থাকে।
+
+                `?full` ওখানকার ফেরত-পাঠানোটা এড়ায়।
+
+                ── কেন লেখাটা সরল (২ সেপ্টেম্বর ২০২৬) ───────────────
+                আগে পাদটীকার সবচেয়ে নিচে "ABOS সম্পর্কে জানুন" লেখা
+                একটা লিংক ছিল। মালিক ওটা বাদ দিতে বলেছেন — কিন্তু
+                **আপত্তিটা ছিল লেখাটার, দরজাটার নয়**: শান্ত পাতাটার
+                পুরো কারণই "কম", আর ওই বাক্যটা নিজের অস্তিত্ব ব্যাখ্যা
+                করে বেড়াচ্ছিল।
+
+                লোগো নিজেই সেই কাজটা করে, একটা শব্দও না লিখে। আর
+                লোগোয় চাপ দিলে ঘরের পরিচয়ে ফেরা — মানুষ এমনিতেই আশা
+                করেন।
+
+                ── কেন wordmark-এর `alt` লিংকের নাম ─────────────────
+                চিহ্নটা `aria-hidden`, তাই পর্দা-পাঠক লিংকটার নাম পায়
+                wordmark-এর `alt` থেকে — "ABOS"। `title` তার সাথে
+                যোগ করে **কোথায় নিয়ে যাবে**, যেটা শুধু নাম বলে না।
+            --}}
+            <a href="{{ route('login', ['full' => 1]) }}"
+               title="{{ __('auth.about_abos') }}"
+               class="mx-auto block w-fit rounded-(--radius-field) transition-opacity hover:opacity-80
+                      focus-visible:outline-2 focus-visible:outline-offset-4
+                      focus-visible:outline-(--color-brand-600)">
+                <img src="{{ asset('brand/abos-icon-transparent.png') }}"
+                     alt="" aria-hidden="true"
+                     width="512" height="456" class="mx-auto mb-4 h-14 w-auto">
+
+                <img src="{{ asset('brand/abos-wordmark-transparent.png') }}"
+                     alt="{{ __('core.brand.name') }}"
+                     width="556" height="198" class="mx-auto h-9 w-auto">
+            </a>
 
             {{-- সোনালি চুল-দাগ — মাঝ থেকে দুই দিকে মিলিয়ে যায় --}}
             <div class="mx-auto mt-5 h-px w-28"
@@ -119,44 +152,63 @@
             নিচে। তিনটাই থাকতে হবে — সংস্করণটা সবচেয়ে বেশি কাজে লাগে
             যখন কেউ ফোন থেকে সমস্যার কথা বলেন।
         --}}
-        <footer class="mt-7 text-center text-2xs text-(--color-ink-muted)">
-            <div class="flex items-center justify-center gap-2">
-                <span>{{ __('core.brand.powered_by') }}</span>
+        {{--
+            পাদটীকা এখন একটা তলের উপর, কার্ডের সমান চওড়া।
 
-                <img src="{{ asset('brand/univer-mark.png') }}" alt="" aria-hidden="true"
-                     class="size-6 shrink-0 object-contain">
+            ── কেন বাক্স (২ সেপ্টেম্বর ২০২৬) ────────────────────────────
+            আগে লেখাগুলো খোলা জমিনে ভাসত, আর কার্ডের নিচে চার লাইন ধূসর
+            লেখা **পাতা শেষ হওয়ার পর ফেলে রাখা কিছু** মনে হত। একই
+            প্রস্থের একটা তল দিলে ওগুলো নকশার অংশ হয়ে যায় — কার্ড আর
+            পাদটীকা একই কলামে দাঁড়ায়।
 
-                <span class="font-medium tracking-wide text-(--color-ink)">
-                    {{ __('core.brand.powered_by_name') }}
-                </span>
+            তলটা `surface-card` নয়, `surface-muted` — নাহলে দুইটা সাদা
+            বাক্স পাশাপাশি বসত আর চোখ ঠিক করতে পারত না **কোনটায় কাজ**।
+        --}}
+        <footer class="mt-7">
+            <div class="rounded-2xl border border-(--color-border) bg-(--color-surface-muted)
+                        px-5 py-4 text-center text-2xs text-(--color-ink-muted)">
+
+                {{--
+                    UNIVER-এর লকআপ — চিহ্ন বাঁয়ে, নাম আর স্লোগান ডানে।
+
+                    ── কেন গঠনটা বদলাল ──────────────────────────────
+                    আগে তিনটা জিনিস এক সারিতে ছিল আর স্লোগানটা পুরো
+                    সারির নিচে মাঝখানে — অর্থাৎ স্লোগানটা "Powered by"
+                    কথাটারও নিচে পড়ত, যেন ওটা ABOS-এর স্লোগান।
+                    **কিন্তু "Empowering Tomorrow" UNIVER-এর কথা**, তাই
+                    ওটা UNIVER-এর নামের নিচেই বসতে হবে, আর নামের বাঁ
+                    কিনারায় মিলে — মালিকের পাঠানো ছবিটা ঠিক তাই।
+
+                    `items-center` চিহ্নটাকে দুই লাইনের ব্লকের মাঝ
+                    বরাবর রাখে; `text-start` ব্লকটাকে বাঁয়ে মেলায়,
+                    বাইরের `text-center` থাকা সত্ত্বেও।
+                --}}
+                <div class="flex items-center justify-center gap-2">
+                    <span>{{ __('core.brand.powered_by') }}</span>
+
+                    {{-- aria-hidden — নামটা পাশেই লেখা, পর্দা-পাঠক
+                         যেন একই কথা দুবার না বলে --}}
+                    <img src="{{ asset('brand/univer-mark.png') }}" alt="" aria-hidden="true"
+                         class="size-8 shrink-0 object-contain">
+
+                    <span class="text-start leading-tight">
+                        <span class="block font-medium tracking-wide text-(--color-ink)">
+                            {{ __('core.brand.powered_by_name') }}
+                        </span>
+
+                        <span class="block text-(--color-brand-gold-deep)">
+                            {{ __('core.brand.powered_by_slogan') }}
+                        </span>
+                    </span>
+                </div>
+
+                {{-- হালকা ভাগরেখা — উপরে কে বানাল, নিচে কী চলছে --}}
+                <div class="mx-auto my-3 h-px w-16 bg-(--color-border)"></div>
+
+                <p>{{ __('core.brand.developed_by') }}</p>
+
+                <p class="mt-1">{{ __('core.brand.name') }} · v{{ config('app.version', '0.1.0') }}</p>
             </div>
-
-            <p class="mt-1.5 text-(--color-brand-gold-deep)">
-                {{ __('core.brand.powered_by_slogan') }}
-            </p>
-
-            <p class="mt-3">{{ __('core.brand.developed_by') }}</p>
-
-            <p class="mt-1">{{ __('core.brand.name') }} · v{{ config('app.version', '0.1.0') }}</p>
-
-            {{--
-                পূর্ণ পাতায় ফেরার পথ।
-
-                ── কেন এটা থাকতেই হবে ──────────────────────────────────
-                একবার ঢোকার পর ব্রাউজারে চিহ্ন বসে যায়, আর `/login`
-                তখন এখানেই ফেরত পাঠায়। এই লিংকটা না থাকলে **পূর্ণ
-                পাতাটায় আর কোনোদিন পৌঁছানোই যেত না** — আর যে পাতা কেউ
-                দেখে না, সেটা একদিন নীরবে ভেঙে পড়ে থাকে।
-
-                `?full` ওখানকার ফেরত-পাঠানোটা এড়ায়।
-            --}}
-            <p class="mt-3">
-                <a href="{{ route('login', ['full' => 1]) }}"
-                   class="underline decoration-dotted underline-offset-2
-                          transition-colors hover:text-(--color-ink)">
-                    {{ __('auth.about_abos') }}
-                </a>
-            </p>
         </footer>
     </div>
 </body>

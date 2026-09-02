@@ -139,22 +139,38 @@
                     <div class="mt-6 border-t border-white/15 pt-4 text-2xs text-white/70">
                         <p>{{ __('core.brand.developed_by') }}</p>
 
+                        {{--
+                            স্লোগানটা নামের নিচে, সারির নিচে নয়।
+
+                            ── কেন (২ সেপ্টেম্বর ২০২৬) ──────────────────
+                            আলাদা `<p>` হিসেবে থাকলে "Empowering
+                            Tomorrow" পুরো সারির নিচে পড়ত — "Powered
+                            by" কথাটারও নিচে — আর তখন ওটাকে ABOS-এর
+                            স্লোগান মনে হত। **ওটা UNIVER-এর কথা**,
+                            তাই UNIVER-এর নামের নিচেই।
+
+                            শান্ত দরজাতেও (`auth.signin`) হুবহু এই
+                            গঠন। দুইটা দরজায় একই লকআপ দুই রকম দেখালে
+                            যেটা কম ব্যবহার হয় সেটাই পিছিয়ে থাকত।
+                        --}}
                         <div class="mt-2 flex items-center gap-2">
                             <span>{{ __('core.brand.powered_by') }}</span>
 
                             {{-- aria-hidden — নামটা পাশেই লেখা, পর্দা-পাঠক
                                  যেন একই কথা দুবার না বলে --}}
                             <img src="{{ asset('brand/univer-mark.png') }}" alt="" aria-hidden="true"
-                                 class="size-7 shrink-0 object-contain">
+                                 class="size-8 shrink-0 object-contain">
 
-                            <span class="font-medium tracking-wide text-white">
-                                {{ __('core.brand.powered_by_name') }}
+                            <span class="leading-tight">
+                                <span class="block font-medium tracking-wide text-white">
+                                    {{ __('core.brand.powered_by_name') }}
+                                </span>
+
+                                <span class="block text-(--color-brand-gold)">
+                                    {{ __('core.brand.powered_by_slogan') }}
+                                </span>
                             </span>
                         </div>
-
-                        <p class="mt-1 text-(--color-brand-gold)">
-                            {{ __('core.brand.powered_by_slogan') }}
-                        </p>
 
                         <p class="mt-3 text-white/50">v{{ config('app.version', '0.1.0') }}</p>
                     </div>
