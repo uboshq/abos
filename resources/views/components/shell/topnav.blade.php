@@ -112,7 +112,7 @@
     <a href="{{ route('dashboard') }}"
        class="me-2 grid size-8 shrink-0 place-items-center overflow-hidden rounded-[9px] bg-white"
        title="{{ __('core.brand.full_name') }}">
-        <img src="{{ asset('brand/adi-icon-transparent.png') }}" alt=""
+        <img src="{{ asset('brand/abos-icon-transparent.png') }}" alt=""
              aria-hidden="true" class="size-6 object-contain">
     </a>
 

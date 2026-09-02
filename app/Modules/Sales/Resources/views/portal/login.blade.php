@@ -14,7 +14,7 @@
 </head>
 <body class="grid min-h-screen place-items-center bg-(--color-surface-app) px-4 text-(--color-ink)">
     <div class="w-full max-w-sm">
-        <img src="{{ asset('brand/adi-abos-lockup.png') }}" alt="ADI | ABOS"
+        <img src="{{ asset('brand/abos-lockup.png') }}" alt="ABOS"
              class="mx-auto mb-6 h-12 w-auto">
 
         <form method="POST" action="{{ route('sales.portal.login.attempt') }}"

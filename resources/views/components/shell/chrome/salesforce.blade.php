@@ -61,7 +61,7 @@
        class="hidden shrink-0 items-center gap-2 pe-2 text-(--color-topbar-ink) sm:flex"
        title="{{ __('core.brand.full_name') }}">
         <span class="grid size-6 shrink-0 place-items-center overflow-hidden rounded-[2px] bg-white">
-            <img src="{{ asset('brand/adi-icon-transparent.png') }}" alt=""
+            <img src="{{ asset('brand/abos-icon-transparent.png') }}" alt=""
                  aria-hidden="true" class="size-5 object-contain">
         </span>
         <span class="text-sm font-bold">{{ __('core.brand.name') }}</span>

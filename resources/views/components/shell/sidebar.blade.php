@@ -103,7 +103,7 @@
                class="grid w-(--spacing-sidebar-icon) shrink-0 place-items-center bg-(--color-brand-900)"
                title="{{ __('core.brand.full_name') }}">
                 <span class="grid size-10 place-items-center overflow-hidden rounded-[11px] bg-white">
-                    <img src="{{ asset('brand/adi-icon-transparent.png') }}" alt=""
+                    <img src="{{ asset('brand/abos-icon-transparent.png') }}" alt=""
                          aria-hidden="true" class="size-7 object-contain">
                 </span>
             </a>
@@ -143,8 +143,8 @@
                      অক্ষরগুলো প্রায়-কালো জমিনে মিলিয়ে যায়, আর ব্র্যান্ডের
                      ঘরে ব্র্যান্ডটাই অদৃশ্য হয়। --}}
                 <img src="{{ asset(Ui::panelIsDark(auth()->user()?->ui)
-                        ? 'brand/adi-abos-lockup-dark.png'
-                        : 'brand/adi-abos-lockup.png') }}" alt="ADI | ABOS"
+                        ? 'brand/abos-lockup-dark.png'
+                        : 'brand/abos-lockup.png') }}" alt="ABOS"
                      class="h-auto w-full object-contain object-left">
 
                 {{--
