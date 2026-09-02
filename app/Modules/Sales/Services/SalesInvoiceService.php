@@ -16,6 +16,7 @@ use App\Models\FinancialYear;
 use App\Models\IssuedNumber;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Recipe;
 use App\Modules\Inventory\Models\Warehouse;
@@ -30,6 +31,7 @@ use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Models\SalesInvoiceLine;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -92,7 +94,19 @@ final class SalesInvoiceService
             return;
         }
 
-        if (auth()->user()?->can('customer.credit_limit.override') === true) {
+        /*
+         * নিয়মটা এখানে লেখা নেই — [[CustomerPolicy::overrideCreditLimit()]]-এ।
+         *
+         * ── কেন সরানো হলো ───────────────────────────────────────────
+         * একই সিদ্ধান্ত তিন জায়গায় লেখা ছিল: এখানে, ক্রয়াদেশের সেবায়,
+         * আর নীতিতে। নীতিরটা **কেউ ডাকত না**, আর তিনটার মধ্যে একটা
+         * ইতিমধ্যেই ভুল চাবি ধরেছিল — ক্রয়াদেশে `sales.discount.override`
+         * দেখা হত, ফলে ছাড় অনুমোদনকারী ধারের সীমাও পার করাতে পারতেন।
+         *
+         * ওটা তিন জায়গায় লেখার স্বাভাবিক পরিণতি। একটা ঘর থাকলে
+         * ভুলটা এক জায়গায় থাকত, আর ধরাও পড়ত এক জায়গায়।
+         */
+        if (Gate::allows('overrideCreditLimit', Customer::class)) {
             return;
         }
 
