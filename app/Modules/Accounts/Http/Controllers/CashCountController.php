@@ -101,7 +101,7 @@ class CashCountController extends Controller implements HasMiddleware
     {
         $validated = $request->validate([
             'cash_till_id' => ['required', 'integer'],
-            'trx_date' => ['required', 'date'],
+            'trx_date' => ['required', 'date', 'before_or_equal:today'],
             'narration' => ['nullable', 'string', 'max:500'],
             'counts' => ['required', 'array'],
             'counts.*' => ['nullable', 'integer', 'min:0'],

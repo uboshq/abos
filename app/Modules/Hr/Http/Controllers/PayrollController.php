@@ -57,7 +57,7 @@ class PayrollController extends Controller implements HasMiddleware
     {
         $data = $request->validate([
             'month' => ['required', 'date_format:Y-m'],
-            'trx_date' => ['nullable', 'date'],
+            'trx_date' => ['nullable', 'date', 'before_or_equal:today'],
         ]);
 
         $run = $this->payroll->build($data['month'].'-01', $data['trx_date'] ?? null);

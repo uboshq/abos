@@ -77,7 +77,7 @@ class CapitalController extends Controller implements HasMiddleware
             'contributor_name' => ['required', 'string', 'max:191'],
             'contributor_type' => ['required', 'string', 'in:'.implode(',', CapitalEntry::WHO)],
             'entry_type' => ['required', 'string', 'in:'.implode(',', CapitalEntry::KINDS)],
-            'trx_date' => ['required', 'date'],
+            'trx_date' => ['required', 'date', 'before_or_equal:today'],
             'amount' => ['required', 'numeric', 'gt:0'],
             'share_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'narration' => ['nullable', 'string', 'max:500'],

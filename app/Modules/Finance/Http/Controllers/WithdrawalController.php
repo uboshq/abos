@@ -64,7 +64,7 @@ class WithdrawalController extends Controller implements HasMiddleware
         $data = $request->validate([
             'contributor_name' => ['required', 'string', 'max:191'],
             'amount' => ['required', 'numeric', 'gt:0'],
-            'trx_date' => ['required', 'date'],
+            'trx_date' => ['required', 'date', 'before_or_equal:today'],
             'reason' => ['nullable', 'string', 'max:500'],
         ]);
 

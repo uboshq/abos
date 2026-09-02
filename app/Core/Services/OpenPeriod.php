@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Services;
 
+use App\Core\Support\CompanyContext;
 use App\Models\PeriodLock;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
@@ -90,15 +91,57 @@ final class OpenPeriod
         return true;
     }
 
+    /**
+     * এক অনুরোধে একই মাসের উত্তর একবারই খোঁজা হয়।
+     *
+     * ── কেন এটা ২ সেপ্টেম্বর ২০২৬-এ লাগল ────────────────────────────
+     * আগে `assertOpen()` ডাকা হত **ডকুমেন্টপ্রতি একবার**, খতিয়ানে বসার
+     * মুখে। আজ তালাটা [[StockService::move()]]-এও বসেছে, আর সেটা
+     * ডাকা হয় **সারিপ্রতি একবার** — লট ধরা পণ্যে তারও বেশি। ৫০ সারির
+     * একটা বিলে এটা ৫০+ বার একই প্রশ্ন একই উত্তরের জন্য।
+     *
+     * ঠিক এই আকারটাই এই রিপো আগে ছয়বার সারিয়েছে (৩১ আগস্ট, N+1)।
+     * নতুন পাহারা বসাতে গিয়ে নতুন N+1 রেখে যাওয়া হত।
+     *
+     * ── বাসি হওয়ার প্রশ্নটা ─────────────────────────────────────────
+     * এক অনুরোধের মাঝখানে কেউ মাসটা বন্ধ করলে ক্যাশটা পুরনো উত্তর
+     * দেবে। **সেটাই কাম্য:** একই ডকুমেন্টের অর্ধেক সারি "খোলা" ধরে আর
+     * বাকি অর্ধেক "বন্ধ" ধরে বসলে ফলটা দুইটার যেকোনোটার চেয়েও খারাপ —
+     * একটা আধা-লেখা দলিল, যার কোনো অবস্থাই সত্যি নয়।
+     */
+    private array $locks = [];
+
     /** এই তারিখটা কোনো বন্ধ মাসের ভেতরে পড়ে কি না। */
     public function lockOn(Carbon|string $date): ?PeriodLock
     {
         $date = $date instanceof Carbon ? $date : Carbon::parse($date);
 
-        return PeriodLock::query()
-            ->where('year', (int) $date->year)
-            ->where('month', (int) $date->month)
-            ->first();
+        /*
+         * চাবিতে কোম্পানিও আছে।
+         *
+         * `PeriodLock` টেন্যান্ট-ছাঁকা ([[BelongsToCompany]]), তাই একই
+         * বছর-মাসের উত্তর কোম্পানিভেদে আলাদা। কেবল `Y-m` দিয়ে চাবি
+         * বানালে ইমপোর্ট বা কনসোলের যে কাজটা কোম্পানি বদলে বদলে চলে,
+         * সেটা প্রথম কোম্পানির উত্তর বাকিদের গায়ে বসিয়ে দিত।
+         */
+        $key = CompanyContext::id().'|'.$date->format('Y-m');
+
+        /*
+         * `??=` নয়, `array_key_exists` — আর পার্থক্যটা এখানে সবকিছু।
+         *
+         * প্রায় প্রতিটা তারিখের উত্তর **`null`** (মাসটা খোলা)। `??=`
+         * null-কে "নেই" ধরে, তাই ঠিক সেই স্বাভাবিক ক্ষেত্রেই ক্যাশটা
+         * কোনোদিন কাজ করত না — অর্থাৎ N+1 থেকেই যেত, আর কোডটা দেখে
+         * মনে হত সারানো হয়ে গেছে।
+         */
+        if (! array_key_exists($key, $this->locks)) {
+            $this->locks[$key] = PeriodLock::query()
+                ->where('year', (int) $date->year)
+                ->where('month', (int) $date->month)
+                ->first();
+        }
+
+        return $this->locks[$key];
     }
 
     /**

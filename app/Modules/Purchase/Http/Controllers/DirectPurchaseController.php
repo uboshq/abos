@@ -85,7 +85,7 @@ class DirectPurchaseController extends Controller implements HasMiddleware
                 Rule::exists('suppliers', 'id')->where('company_id', $companyId)],
             'warehouse_id' => ['nullable', 'integer',
                 Rule::exists('inv_warehouses', 'id')->where('company_id', $companyId)],
-            'trx_date' => ['nullable', 'date'],
+            'trx_date' => ['nullable', 'date', 'before_or_equal:today'],
             'supplier_bill_no' => ['nullable', 'string', 'max:64'],
             'due_on' => ['nullable', 'date'],
             'narration' => ['nullable', 'string', 'max:500'],

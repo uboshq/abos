@@ -16,7 +16,7 @@ class ShipmentRequest extends FormRequest
         $companyId = CompanyContext::id();
 
         return [
-            'trx_date' => ['required', 'date'],
+            'trx_date' => ['required', 'date', 'before_or_equal:today'],
             'warehouse_id' => ['required', 'integer',
                 Rule::exists('inv_warehouses', 'id')->where('company_id', $companyId)],
 
