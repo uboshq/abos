@@ -13,6 +13,10 @@ use App\Models\IssuedNumber;
 use App\Models\LedgerEntry;
 use App\Models\Notification;
 use App\Models\SavedView;
+use App\Models\SyncChange;
+use App\Models\SyncConflict;
+use App\Models\SyncDevice;
+use App\Models\SyncState;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
@@ -138,6 +142,31 @@ final class AuditEngine
          * প্রশ্নই নয় — নিরীক্ষার প্রশ্ন "কে কী বদলেছেন"।
          */
         SavedView::class => 'a private convenience, not business data — it only remembers an address',
+
+        /*
+         * ফোনের সাথে কথা বলার বইখাতা — ২ সেপ্টেম্বর ২০২৬।
+         *
+         * চারটাই **যন্ত্রের নিজের হিসাব**, মানুষের সিদ্ধান্ত নয়। একটা
+         * সিঙ্ক পাসে এই সারিগুলো কয়েকশোবার লেখা ও বদলায়: প্রতিটা
+         * কলে ডিভাইসের `last_seen_at`, প্রতিটা মডিউলে ওয়াটারমার্ক,
+         * প্রতিটা পুশে একটা করে সারি।
+         *
+         * অডিটে তুললে `audit_trails` **এদের দিয়েই ভরে যেত**, আর আসল
+         * ব্যবসার বদলগুলো তার নিচে চাপা পড়ত — অর্থাৎ খাতাটা ঠিক যে
+         * কাজের জন্য বানানো, সেটাই আর করতে পারত না।
+         *
+         * আর যেটা সত্যিই নিরীক্ষার প্রশ্ন — **কে কী পাঠাল, কখন, আর
+         * তার কী হলো** — সেটা `sync_changes`-এ নিজেই পুরোটা লেখা আছে,
+         * প্রত্যাখ্যানের কারণ সহ। ওটা নিজেই একটা অডিট।
+         *
+         * (একই ছাড় স্থাপত্যের পাহারাতেও লেখা আছে —
+         * `EveryChangeableRowRemembersWhoChangedItTest`। দুইটা তালিকা,
+         * একই নিয়ম; একটাতে লিখে অন্যটা ভুলে গেলে সুইট লাল হয়।)
+         */
+        SyncDevice::class => 'a handset identity and its last contact — changes on every call, decides nothing',
+        SyncState::class => 'the watermark: a machine bookmark that moves on every sync',
+        SyncChange::class => 'the phone push journal itself — append-only, and it IS the audit',
+        SyncConflict::class => 'an event; who settled it and when are written on the row itself',
     ];
 
     /**

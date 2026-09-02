@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\SyncController;
 use App\Http\Middleware\ResolveCompanyContext;
 use Illuminate\Support\Facades\Route;
@@ -41,8 +42,52 @@ use Illuminate\Support\Facades\Route;
 | `EveryRouteIsGuardedTest`-এ এই সিদ্ধান্তটা কারণসহ লেখা আছে।
 */
 
+/*
+ * ── ঢোকার দরজা — লগইনের আগে, তাই `auth` ছাড়া ──────────────────────
+ *
+ * ⚠️ **throttle এখানে বাধ্যতামূলক**, আর ওয়েবের দরজার চেয়ে ঢিলা নয়।
+ * ওয়েবে `throttle:10,1`; এখানে কম হলে আক্রমণকারী কেবল এই দরজাটাই
+ * ব্যবহার করতেন, আর তালা দুইটার একটাতে মানে তালা নেই।
+ *
+ * যাচাইয়ের বাকি সবকিছু — নামের উপর তালা, ডামি হ্যাশ, MFA,
+ * `login_history` — [[CredentialCheck]]-এ, ওয়েবের দরজার সাথে ভাগ করা।
+ */
+Route::prefix('v1/auth')
+    ->middleware('throttle:10,1')
+    ->name('api.auth.')
+    ->group(function (): void {
+        Route::post('/login', [AuthController::class, 'login'])->name('login');
+
+        /*
+         * নবায়ন `abilities:refresh` চায়, `sync` নয় — আর এটাই পুরো
+         * দুই-টোকেন ব্যবস্থাটার ভিত্তি। `auth:sanctum` একা **যেকোনো**
+         * বৈধ টোকেন মেনে নেয়, তাই ability ছাড়া একটা access টোকেন
+         * দিয়েই নিজেকে চিরকাল নবায়ন করা যেত।
+         */
+        Route::post('/refresh', [AuthController::class, 'refresh'])
+            ->middleware(['auth:sanctum', 'abilities:'.AuthController::REFRESH])
+            ->name('refresh');
+
+        Route::post('/logout', [AuthController::class, 'logout'])
+            ->middleware('auth:sanctum')
+            ->name('logout');
+    });
+
 Route::prefix('v1')
-    ->middleware(['auth:sanctum', ResolveCompanyContext::class])
+    ->middleware([
+        'auth:sanctum',
+
+        /*
+         * ⚠️ `abilities:sync` — refresh টোকেন এখানে ঢুকতে পারবে না।
+         *
+         * এটা না থাকলে চুরি যাওয়া একটা refresh টোকেন দিয়েই সরাসরি
+         * সিঙ্কের সব দরজা খোলা যেত, আর access টোকেনের ছোট মেয়াদটার
+         * পুরো মানেই থাকত না।
+         */
+        'abilities:'.AuthController::ACCESS,
+
+        ResolveCompanyContext::class,
+    ])
     ->name('api.')
     ->group(function (): void {
 
