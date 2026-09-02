@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Core\Integrity\IntegrityRegistry;
+use App\Core\Security\LedgerChain;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use Illuminate\Console\Command;
@@ -86,6 +87,53 @@ class BooksCheck extends Command
         CompanyContext::set($company->id, $company->defaultBranch()?->id);
 
         $broken = 0;
+
+        /*
+         * চেইনটা আগে — কারণ ওটা ভাঙা থাকলে বাকি সব যাচাই অর্থহীন।
+         *
+         * ── কেন এখানে, আলাদা কমান্ডে নয় ─────────────────────────────
+         * `infra/deploy.sh` প্রতিবার `abos:books-check` চালায়। এখানে
+         * বসালে **প্রতিটা ডিপ্লয়ে চেইনটা যাচাই হয়** — বিনামূল্যে।
+         * আলাদা কমান্ডে রাখলে সেটা চালানো মনে রাখার উপর নির্ভর করত,
+         * আর এই ধরনের কমান্ড ঠিক ততদিনই চলে যতদিন কেউ মনে রাখে।
+         *
+         * ── ভাঙা মানে কী ────────────────────────────────────────────
+         * সারিগুলো একে অপরের ছাপ ধরে রাখে, তাই একটা ভাঙা মানে
+         * **কেউ অ্যাপের বাইরে দিয়ে খতিয়ান বদলেছে**। আর তখন কোন
+         * সারিতে ভেঙেছে সেটাই সবচেয়ে দামি তথ্য: তার আগেরগুলো অক্ষত।
+         */
+        $chain = LedgerChain::verify($company->id);
+
+        if (! $chain['ok']) {
+            $broken++;
+
+            /*
+             * দুইটা আলাদা ঘটনা, দুইটা আলাদা বাক্য।
+             *
+             * একটায় একটা অঙ্ক বদলেছে আর কোথায় বদলেছে তা জানা যায়;
+             * অন্যটায় **শেষ থেকে সারি সরানো হয়েছে**, আর তখন দেখানোর
+             * মতো কোনো ভাঙা সারি নেই — যেটা নেই সেটাই ভাঙা। একই
+             * বার্তা দিলে দ্বিতীয়টায় `#0` ছাপা হত, আর যিনি পড়তেন
+             * তিনি ভুল জায়গায় খুঁজতেন।
+             */
+            $message = $chain['reason'] === LedgerChain::TAIL
+                ? sprintf(
+                    'খতিয়ানের শেষ দিক থেকে সারি সরানো হয়েছে — %s। বাকি সারিগুলো নিজেদের মধ্যে '
+                    .'মেলে, কিন্তু সংখ্যাটা মেলে না: মাথায় %d, খতিয়ানে %d। ব্যাকআপের সাথে মিলিয়ে দেখুন।',
+                    $company->code,
+                    (int) $chain['expected'],
+                    (int) $chain['checked'],
+                )
+                : sprintf(
+                    'খতিয়ানের চেইন ভেঙেছে — %s · সারি #%d-এ। এর আগের সারিগুলো অক্ষত। '
+                    .'কেউ অ্যাপের বাইরে দিয়ে খাতা বদলেছে, নাহলে APP_KEY বদলে গেছে।',
+                    $company->code,
+                    (int) $chain['broken_at'],
+                );
+
+            $this->error($message);
+            logger()->critical($message, ['company' => $company->code, 'entry' => $chain['broken_at']]);
+        }
 
         try {
             foreach ($registry->all() as $check) {
