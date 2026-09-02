@@ -15,6 +15,7 @@ use App\Models\User;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 /**
@@ -94,7 +95,15 @@ class ShellTest extends TestCase
     {
         // disabled বোতাম ফর্ম সাবমিট করে না। দ্বিতীয় ক্লিক ঠেকাতে হলে
         // pointer-events, disabled নয়।
-        $markup = $this->codeOf(resource_path('views/auth/login.blade.php'));
+        /*
+         * ফাইলটা বদলেছে ২ সেপ্টেম্বর ২০২৬ — দাবিটা নয়।
+         *
+         * ABOS-এর এখন দুইটা দরজা (`/login` পরিচয়ের, `/signin` কাজের),
+         * আর ফর্মটা দুইটার মাঝে ভাগ করা একটাই ফাইল। বোতামটা তাই
+         * এখন এখানে, আর **এখানেই একবার পরীক্ষা করলে দুইটা দরজাই ঢাকা
+         * পড়ে** — আগে দুই জায়গায় দেখতে হত, আর একটা বাদ পড়া সহজ ছিল।
+         */
+        $markup = $this->codeOf(resource_path('views/auth/_form.blade.php'));
 
         $this->assertStringNotContainsString(':disabled="busy"', $markup);
         $this->assertStringContainsString('pointer-events-none', $markup);
@@ -242,10 +251,18 @@ class ShellTest extends TestCase
         $beta = Company::query()->where('code', 'FMART')->firstOrFail();
         $before = $salesman->current_company_id;
 
-        // withoutExceptionHandling ছাড়া Laravel ব্যতিক্রমটাকে একটা ৫০০
-        // রেসপন্সে বদলে দেয়, আর expectException কিছুই দেখে না।
+        /*
+         * দাবিটা বদলেছে ২ সেপ্টেম্বর ২০২৬ — দেয়ালটা নয়।
+         *
+         * আগে `RuntimeException` উঠত, অর্থাৎ ব্যবহারকারী একটা ভাঙা
+         * ৫০০ পাতা দেখতেন। কিন্তু এটা ব্যবস্থার ভুল নয় — এটা "আপনার
+         * ওখানে ঢোকার অধিকার নেই"। এখন সেটাই বলা হয়, তাঁর ভাষায়।
+         *
+         * নিচের `finally`-র দাবিটাই আসল, আর সেটা একই আছে:
+         * **কোম্পানি বদলায়নি।**
+         */
         $this->withoutExceptionHandling();
-        $this->expectException(\RuntimeException::class);
+        $this->expectException(ValidationException::class);
 
         try {
             $this->actingAs($salesman)->post('/company/switch', ['company_id' => $beta->id]);
@@ -358,10 +375,15 @@ class ShellTest extends TestCase
          * `-dark` মানে "গাঢ় জমিনের জন্য আঁকা", আর সাদা মাথায় ওটা বসালে
          * অক্ষরগুলোই ধুয়ে যায়। মালিক ছবি পাঠিয়ে ধরিয়ে দেন, ১৪ আগস্ট।
          *
-         * ── নাম বদলেছে, নিয়ম বদলায়নি ────────────────────────────────
-         * ADI | ABOS পরিচয়ে ওয়ার্ডমার্কটা এখন পূর্ণ লকআপ
-         * (`adi-abos-lockup.png`), আর তার গাঢ়-জমিনের জোড়াটা
-         * `adi-abos-lockup-dark.png`।
+         * ── নাম দুইবার বদলেছে, নিয়ম একবারও নয় ───────────────────────
+         * প্রথমে ওয়ার্ডমার্ক থেকে পূর্ণ লকআপ। তারপর ২ সেপ্টেম্বর ২০২৬-এ
+         * মালিকের সিদ্ধান্তে **ADI কোথাও রইল না, শুধু ABOS** — তাই
+         * ফাইলগুলোর নাম এখন `abos-lockup.png` আর তার গাঢ়-জমিনের
+         * জোড়া `abos-lockup-dark.png`।
+         *
+         * দাবিটা প্রতিবারই একই থেকেছে, কেবল ফাইলের নাম বদলেছে — আর
+         * সেটাই ঠিক: নিয়মটা ব্র্যান্ডের নাম নিয়ে নয়, **কোন জমিনে কোন
+         * রূপ** তা নিয়ে।
          *
          * ── দাবিটা কেন আর "গাঢ়টা কখনো নয়" নয় ───────────────────────
          * Linear আসার আগে প্যানেলটা **সবসময়** সাদা ছিল, তাই নিয়মটা
@@ -376,17 +398,17 @@ class ShellTest extends TestCase
          * কেউ ওটা শর্ত ছাড়া বসালে এই পরীক্ষাটাই ভাঙে, আর ১৪ আগস্টের
          * ভুলটা আবার ফিরতে পারে না।
          */
-        $this->assertStringContainsString('adi-abos-lockup.png', $markup);
+        $this->assertStringContainsString('abos-lockup.png', $markup);
 
-        if (str_contains($markup, 'adi-abos-lockup-dark.png')) {
+        if (str_contains($markup, 'abos-lockup-dark.png')) {
             $this->assertMatchesRegularExpression(
-                '/panelIsDark.{0,120}adi-abos-lockup-dark\.png/s',
+                '/panelIsDark.{0,120}abos-lockup-dark\.png/s',
                 $markup,
                 'গাঢ়-জমিনের লকআপটা শর্ত ছাড়া বসেছে — সাদা মাথায় অক্ষরগুলো ধুয়ে যাবে।',
             );
 
             $this->assertMatchesRegularExpression(
-                '/adi-abos-lockup-dark\.png.{0,120}adi-abos-lockup\.png/s',
+                '/abos-lockup-dark\.png.{0,120}abos-lockup\.png/s',
                 $markup,
                 'শর্তের অন্য দিকে সাদা-জমিনের লকআপটা নেই — হালকা প্যানেলে ব্র্যান্ডই থাকত না।',
             );
@@ -394,7 +416,7 @@ class ShellTest extends TestCase
         $this->assertStringContainsString('object-contain', $markup);
 
         // সরু সাইডবারে (৪৪px) লকআপ ধরে না, তাই সেখানে শুধু মার্ক।
-        $this->assertStringContainsString('adi-icon-transparent.png', $markup);
+        $this->assertStringContainsString('abos-icon-transparent.png', $markup);
 
         // স্ক্রিন রিডারের জন্য পূর্ণরূপটা লেখা হিসেবেও থাকে — একটা ছবির
         // alt="ABOS" পড়ে শোনালে পূর্ণরূপটা হারিয়ে যেত।

@@ -168,9 +168,19 @@ return [
         'powered_by' => 'Powered by',
         /* Not translated: a company's name is its name. */
         'powered_by_name' => 'UNIVER BANGLADESH',
-        /* The house the product now carries the name of. */
-        'house' => 'ADI',
-        'name' => 'ADI | ABOS',
+        /*
+         * পণ্যের নাম — শুধু ABOS।
+         *
+         * ── কেন বদলাল (২ সেপ্টেম্বর ২০২৬) ───────────────────────────
+         * এতদিন লেখা ছিল `ADI | ABOS`, আর সেটা পর্দায় তিন জায়গায়
+         * দেখাত। মালিকের সিদ্ধান্ত: ADI কোথাও থাকবে না, শুধু ABOS —
+         * পণ্যটা নিজের নামেই বিক্রি হবে।
+         *
+         * `house` ঘরটা রাখা হয়েছে, মুছে দেওয়া হয়নি: অনুপস্থিত চাবি
+         * খুঁজতে গিয়ে পাতা ভাঙার চেয়ে একটা সঠিক মান রাখা ভালো।
+         */
+        'house' => 'ABOS',
+        'name' => 'ABOS',
         /* Nor is a company's own slogan, for the same reason. */
         'powered_by_slogan' => 'Empowering Tomorrow',
     ],
@@ -219,6 +229,8 @@ return [
     ],
 
     'accent' => [
+        /* ABOS own colour, taken from the logo. First in the list. */
+        'abos' => 'ABOS teal',
         'blue' => 'Blue',
         'teal' => 'Teal',
         'indigo' => 'Indigo',
@@ -261,8 +273,8 @@ return [
         'linear_blurb' => 'A near-black screen, one indigo, almost no chrome at all.',
         'rose' => 'Rose',
         'rose_blurb' => 'An ABOS original — warm red, gentle edges.',
-        'navy' => 'Navy',
-        'navy_blurb' => 'An ABOS original — deep blue, dense and quiet.',
+        'navy' => 'ABOS',
+        'navy_blurb' => 'An ABOS original — the brand teal, dense and quiet.',
         'like' => 'Like :erp',
     ],
 

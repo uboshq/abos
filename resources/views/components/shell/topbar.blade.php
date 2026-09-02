@@ -62,7 +62,7 @@
     <x-shell.chrome region="topbar-start" :menu="$menu ?? []" />
 
     {{-- মোবাইলে সাইডবার নেই, তাই লোগোটা এখানে দেখা যায় --}}
-    <img src="{{ asset('brand/adi-icon-64.png') }}" alt="ADI | ABOS"
+    <img src="{{ asset('brand/abos-icon-64.png') }}" alt="ABOS"
          class="size-8 shrink-0 md:hidden">
 
     {{--
