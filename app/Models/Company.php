@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Core\Concerns\HasPublicId;
+use App\Core\Concerns\IsAudited;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -17,11 +18,18 @@ use Illuminate\Support\Facades\Storage;
  *
  * এই মডেলে BelongsToCompany নেই, স্বাভাবিকভাবেই: কোম্পানি নিজেই সেই স্কোপের
  * উৎস, তাই নিজের উপর স্কোপ বসালে চক্র তৈরি হত।
+ *
+ * ── অডিট কেন (২ সেপ্টেম্বর ২০২৬) ─────────────────────────────────────
+ * এতদিন এই মডেলে অডিট ছিল না। অথচ এখানে যা বদলায় তার প্রায় সবই
+ * প্রতিষ্ঠানের পরিচয় বা আইনি তথ্য — **BIN, TIN, আইনি নাম, মুদ্রা**, আর
+ * সবচেয়ে বড়টা **`is_active`**: ওই একটা ঘর মিথ্যা হলে একটা গোটা
+ * প্রতিষ্ঠান বন্ধ হয়ে যায়, আর কে করল তার কোনো চিহ্ন থাকত না।
  */
 class Company extends Model
 {
     use HasFactory;
     use HasPublicId;
+    use IsAudited;
     use SoftDeletes;
 
     protected $fillable = [
@@ -33,6 +41,30 @@ class Company extends Model
     protected function casts(): array
     {
         return ['is_active' => 'boolean'];
+    }
+
+    /**
+     * অডিটের সারিটা কোন কোম্পানির খাতায় বসবে — নিজেরটায়।
+     *
+     * বাকি সব মডেল নিজের `company_id` ঘর থেকে উত্তর দেয়; কোম্পানির
+     * সেই ঘরটা নেই, আর চলতি প্রসঙ্গ ধরে নিলে প্ল্যাটফর্ম-প্রশাসকের
+     * করা সম্পাদনা **ভুল প্রতিষ্ঠানের খাতায়** বসত।
+     */
+    public function auditCompanyId(): ?int
+    {
+        return $this->id;
+    }
+
+    /**
+     * কোম্পানির নিজের সম্পাদনা কোনো শাখার নয়।
+     *
+     * শাখাগুলো এরই সন্তান; বাবার ঘটনাকে একটা সন্তানের নামে লেখা মানে
+     * অর্ধেক সত্য। আর সিডারে কোম্পানি তৈরি হয় শাখার আগে, তাই চলতি
+     * প্রসঙ্গের শাখাটা তখনো থাকেই না।
+     */
+    public function auditBranchId(): ?int
+    {
+        return null;
     }
 
     public function branches(): HasMany
