@@ -463,7 +463,7 @@ class AClonePromisedAShapeAndDrewAnotherTest extends TestCase
             $strip = $this->stripOf($body);
 
             if ($shape === 'sections') {
-                $found = $labels->filter(fn (string $label) => str_contains($strip, $label));
+                $found = $labels->filter(fn (string $label) => $this->stripCarriesLabel($strip, $label));
 
                 if ($found->isNotEmpty()) {
                     $wrong[] = "{$look} (sections) — পটিতে অন্য মডিউলের নাম: ".$found->join(', ');
@@ -471,7 +471,7 @@ class AClonePromisedAShapeAndDrewAnotherTest extends TestCase
             }
 
             if ($shape === 'modules') {
-                $missing = $labels->reject(fn (string $label) => str_contains($strip, $label));
+                $missing = $labels->reject(fn (string $label) => $this->stripCarriesLabel($strip, $label));
 
                 if ($missing->isNotEmpty()) {
                     $wrong[] = "{$look} (modules) — পটিতে নেই: ".$missing->join(', ');
@@ -534,6 +534,42 @@ class AClonePromisedAShapeAndDrewAnotherTest extends TestCase
      * সাইডবারের রেল), তাই গোটা পাতায় খুঁজলে `sections`-এর দাবিটা
      * কখনো সবুজ হত না।
      */
+    /**
+     * পটিতে এই নামটা **একটা সারি হিসেবে** বসেছে কি না।
+     *
+     * ── কেন সাবস্ট্রিং নয়, আর কী ভাঙল ───────────────────────────────
+     * আগে এটা `str_contains($strip, $label)` ছিল — কাঁচা HTML-এ
+     * সাবস্ট্রিং খোঁজা। **২ সেপ্টেম্বর ২০২৬-এ সেটা মিথ্যা লাল দিল।**
+     *
+     * ওই দিন মালিকের নির্দেশে Accounts মডিউলের নাম `"হিসাব ও অর্থ"`
+     * থেকে `"হিসাব"` হয় (অর্থ ২৯ আগস্টে আলাদা মডিউল হয়েছিল, নামটা
+     * বদলানো হয়নি)। আর ওই মডিউলের নিজের মেনুতে আছে —
+     *
+     *     হিসাব ড্যাশবোর্ড · হিসাব তালিকা · লাভ-ক্ষতি হিসাব
+     *
+     * তিনটারই ভেতরে `"হিসাব"` আছে, তাই পরীক্ষাটা বলল পটিতে অন্য
+     * মডিউলের নাম বসেছে — অথচ পটিতে বসেছিল **ওই মডিউলের নিজের মেনু**,
+     * যা `sections` রূপে ঠিক যা বসার কথা।
+     *
+     * ── ⚠️ আর এতে পুরনো সবুজটার মানেও বদলে যায় ──────────────────────
+     * পুরনো নামটা লম্বা ছিল বলে কোনো মেনু-সারির ভেতরে পড়ত না। অর্থাৎ
+     * পরীক্ষাটা এতদিন সবুজ ছিল **নামের দৈর্ঘ্যের ভাগ্যে**, দাবিটা
+     * যাচাই করে নয়। যেকোনো ছোট মডিউল-নাম একই মিথ্যা লাল দিত।
+     *
+     * ── এখন যা মেলানো হয় ───────────────────────────────────────────
+     * নামটা একটা `<span>`-এর **পুরো লেখা** কি না। পটির প্রতিটা সারি
+     * ওভাবেই আঁকা হয় (`topnav.blade.php`), আর `"হিসাব তালিকা"` লেখা
+     * একটা সারি `>হিসাব</span>` হয় না।
+     *
+     * দাবিটা হুবহু আগের: *পটিতে মডিউলের নাম সারি হিসেবে বসবে না*।
+     * বদলেছে কেবল মাপার যন্ত্রটা — আর ইচ্ছে করে ভেঙে দেখা হয়েছে যে
+     * সত্যিই মডিউলের তালিকা বসালে এটা এখনো লাল হয়।
+     */
+    private function stripCarriesLabel(string $strip, string $label): bool
+    {
+        return str_contains($strip, '>'.$label.'</span>');
+    }
+
     private function stripOf(string $body): string
     {
         if (! preg_match('/<nav class="topnav.*?<\/nav>/su', $body, $m)) {
