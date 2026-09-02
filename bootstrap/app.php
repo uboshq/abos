@@ -1,6 +1,7 @@
 <?php
 
 use App\Core\Services\ErrorJournal;
+use App\Http\Controllers\Auth\LoginController;
 use App\Http\Middleware\ContentSecurityPolicy;
 use App\Http\Middleware\ExportListing;
 use App\Http\Middleware\NormalizeUnicodeInput;
@@ -45,6 +46,21 @@ return Application::configure(basePath: dirname(__DIR__))
          * অডিট ট্রেইলে ভুল ঠিকানা লেখা থাকত। সেদিন এখানে প্রক্সির
          * ঠিকানাটা লিখতে হবে।
          */
+        /*
+         * দুই দরজার চিহ্নটা এনক্রিপ্ট করা হয় না।
+         *
+         * ── কেন ─────────────────────────────────────────────────────
+         * কুকিটায় আছে কেবল `1` — "এই ব্রাউজার থেকে কেউ আগে ঢুকেছে"।
+         * কে, কবে, কোন কোম্পানি — কিছুই নয়। **গোপন নয় এমন জিনিস
+         * এনক্রিপ্ট করলে নিরাপত্তা বাড়ে না, কেবল দেখা বন্ধ হয়** — আর
+         * তখন "আমি সবসময় বিক্রির পাতাটাই পাই কেন" ধরনের অভিযোগে
+         * ব্রাউজারের কুকি খুলে কিছুই বোঝা যেত না।
+         *
+         * উল্টো ঝুঁকিটাও ছোট: কেউ হাতে বসিয়ে দিলে সে কেবল **কম**
+         * দেখবে, বেশি নয়। কোনো দরজা এতে খোলে না।
+         */
+        $middleware->encryptCookies(except: [LoginController::RETURNING]);
+
         $middleware->trustProxies(at: '*');
 
         /*

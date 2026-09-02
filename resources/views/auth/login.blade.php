@@ -13,11 +13,28 @@
     কাজের কোনো টেবিল বা ফর্মে এই নকশা যায় না।
 --}}
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="light">
+{{--
+    ABOS-এর নিজের রংটা এখানেই বসে — ২ সেপ্টেম্বর ২০২৬।
+
+    ── কী ভাঙা ছিল ──────────────────────────────────────────────────
+    ভেতরের পর্দাগুলো `app.blade.php`-এ [[Accent::styleFor]] বসায়, কিন্তু
+    লগইনের নিজের `<html>` আলাদা — সে কিছুই বসাত না। ফলে রংগুলো আসত
+    `tokens.css`-এর ফলব্যাক থেকে, আর সেগুলো **হার্ডকোড করা নীল**।
+
+    ফল: ABOS-এর নিজের লোগোর ঠিক পাশে একটা সাধারণ নীল বোতাম — আর এটাই
+    সেই পর্দা যেটা গ্রাহক সবার আগে দেখেন।
+
+    ── কেন `Accent::DEFAULT`, হাতে লেখা রং নয় ───────────────────────
+    এখানে `#087F91` লিখে দিলে ব্র্যান্ড বদলানোর দিন **দুই জায়গায়**
+    বদলাতে হত, আর একটা বাদ পড়লে কেউ টের পেত না। ডিফল্টটা পড়লে
+    উৎস একটাই থাকে।
+--}}
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="light"
+      style="{{ \App\Core\Support\Accent::styleFor(\App\Core\Support\Accent::DEFAULT) }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ __('auth.sign_in') }} — ADI | ABOS</title>
+    <title>{{ __('auth.sign_in') }} — ABOS</title>
     <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
@@ -69,9 +86,25 @@
                         করা হয়েছে, আর অক্ষরের চারপাশের আভাটা রাখা হয়েছে
                         — শক্ত করে কেটে ফেললে কিনারায় একটা রেখা থাকত।
                     --}}
-                    <img src="{{ asset('brand/adi-abos-lockup-dark.png') }}"
+                    {{--
+                        লকআপটা তার **নিজের রঙে**, সাদা করা রূপে নয়।
+
+                        ── কেন এখানে টিয়াটাই চলে ───────────────────────
+                        প্যানেলের জমিন এখন ব্র্যান্ডের গাঢ় টিয়া
+                        (#06323C), আর লোগোর উজ্জ্বল টিয়া (#08B8C8) তার
+                        উপরে ৬.৫:১ — পড়তে কোনো অসুবিধা নেই।
+
+                        আগে এখানে সাদা রূপটা ছিল, কারণ জমিনটা ছিল গাঢ়
+                        **নীল** — সেখানে টিয়া লোগো নিজের রং হারাত। জমিন
+                        বদলে যাওয়ায় কারণটাও আর নেই, আর মালিকের চাওয়াও
+                        তা-ই: লোগো তার আসল রঙে।
+
+                        সাদা রূপটা মুছে ফেলা হয়নি — সাইডবারের গাঢ়
+                        প্যানেলে ওটাই এখনো লাগে।
+                    --}}
+                    <img src="{{ asset('brand/abos-lockup.png') }}"
                          alt="{{ __('core.brand.full_name') }}"
-                         width="720" height="263" class="mb-5 w-64 max-w-full">
+                         width="806" height="258" class="mb-5 w-64 max-w-full">
 
                     <h1 class="text-lg font-semibold">{{ __('core.brand.full_name') }}</h1>
 
@@ -154,128 +187,39 @@
                         </a>
                     </div>
 
-                    <h2 class="text-xl font-semibold text-(--color-ink)">{{ __('auth.welcome_back') }}</h2>
-                    <p class="mt-1 text-sm text-(--color-ink-muted)">{{ __('auth.sign_in_to_workspace') }}</p>
+                    {{--
+                        এই দরজায় ঘর নেই, একটাই বোতাম।
 
-                    @if ($errors->any())
-                        <div role="alert"
-                             class="mt-4 rounded-(--radius-field) bg-(--color-badge-danger-bg) px-3 py-2
-                                    text-sm text-(--color-badge-danger-ink)">
-                            {{ $errors->first() }}
-                        </div>
-                    @endif
+                        ── কেন ফর্মটা সরানো হলো (২ সেপ্টেম্বর ২০২৬) ──────
+                        এই পাতাটার কাজ **পরিচয় করানো**, কাজ করানো নয়।
+                        যিনি ABOS প্রথমবার দেখছেন, তাঁকে একই সাথে
+                        "এটা কী" আর "ঢোকো" — দুইটা বলা মানে দুইটাই
+                        আধাআধি বলা।
 
-                    {{-- ডাবল ক্লিক ঠেকানো form-এর submit ইভেন্টে, বোতামে নয়।
+                        ফর্মটা মুছে যায়নি, সরেছে: শান্ত দরজায়
+                        ([[auth.signin]]) সেটাই একমাত্র জিনিস, আর
+                        ফাইলটাও একটাই ([[auth._form]])।
 
-                         আগে বোতামে :disabled="busy" ছিল, আর Alpine ক্লিকের
-                         মুহূর্তেই সেটা প্রয়োগ করত — নিষ্ক্রিয় বোতাম ফর্ম সাবমিট
-                         করে না, তাই লগইন কাজই করত না। ব্রাউজারে চালিয়ে দেখতে
-                         গিয়ে ধরা পড়েছে; কোড পড়ে ধরা পড়ত না। --}}
-                    <form method="POST" action="{{ route('login.store') }}"
-                          x-data="{ busy: false }"
-                          @submit="busy ? $event.preventDefault() : (busy = true)"
-                          class="mt-6 space-y-4">
-                        @csrf
+                        NEXUS-এর `/welcome` ঠিক এভাবেই কাজ করে, আর
+                        মালিক সেটা দেখে ABOS-এও চেয়েছেন।
+                    --}}
+                    <h2 class="text-xl font-semibold text-(--color-ink)">{{ __('core.brand.name') }}</h2>
 
-                        <div>
-                            <label for="identifier" class="mb-1 block text-sm font-medium text-(--color-ink)">
-                                {{ __('auth.identifier') }}
-                            </label>
-                            {{-- autocomplete ছাড়া "Password Manager Support" কথাটা
-                                 লেখা থাকলেও বাস্তবে কাজ করে না (সেকশন ১৬.৭) --}}
-                            <input id="identifier" name="identifier" type="text"
-                                   value="{{ old('identifier') }}"
-                                   autocomplete="username" required autofocus
-                                   class="h-(--spacing-field) w-full rounded-(--radius-field) border
-                                          border-(--color-border) bg-(--color-surface-card) px-3
-                                          text-(--color-ink)">
-                        </div>
+                    <p class="mt-1 text-sm text-(--color-ink-muted)">
+                        {{ __('core.brand.full_name') }}
+                    </p>
 
-                        <div x-data="{ show: false, caps: false }">
-                            <label for="password" class="mb-1 block text-sm font-medium text-(--color-ink)">
-                                {{ __('auth.password') }}
-                            </label>
-                            <div class="relative">
-                                <input id="password" name="password"
-                                       :type="show ? 'text' : 'password'"
-                                       autocomplete="current-password" required
-                                       @keyup="caps = $event.getModifierState && $event.getModifierState('CapsLock')"
-                                       class="h-(--spacing-field) w-full rounded-(--radius-field) border
-                                              border-(--color-border) bg-(--color-surface-card) px-3 pe-12
-                                              text-(--color-ink)">
-                                <button type="button" @click="show = !show"
-                                        class="absolute inset-y-0 end-0 flex w-12 items-center justify-center
-                                               text-(--color-ink-muted)"
-                                        :aria-label="show ? '{{ __('auth.hide_password') }}' : '{{ __('auth.show_password') }}'">
-                                    {{-- দুইটা আলাদা আঁকা, একটা ঘুরিয়ে নয়: কাটা-চোখ
-                                         মানে "এখন লুকানো", আর সেটা চোখের উপর একটা
-                                         দাগ — ইমোজিতে ওই দ্বিতীয় অবস্থাটা ছিলই না,
-                                         তাই বোতামটা চাপার পর কিছু বদলাত না। --}}
-                                    <span x-show="! show"><x-ui.icon name="eye" :size="18" /></span>
-                                    <span x-show="show" x-cloak><x-ui.icon name="eye_off" :size="18" /></span>
-                                </button>
-                            </div>
-                            <p x-show="caps" x-cloak
-                               class="mt-1 text-xs text-(--color-badge-pending-ink)">
-                                {{ __('auth.caps_lock_on') }}
-                            </p>
-                        </div>
+                    <p class="mt-3 text-sm text-(--color-ink)">
+                        {{ __('core.brand.tagline') }}
+                    </p>
 
-                        {{--
-                            দ্বিতীয় ধাপের কোড — কেবল যখন চাওয়া হয়েছে।
-
-                            ── কেন সবসময় দেখানো হয় না ──────────────────
-                            বেশিরভাগ ব্যবহারকারীর MFA চালু নেই। ঘরটা
-                            সবসময় থাকলে তাঁরা প্রতিবার ভাবতেন কিছু একটা
-                            লিখতে হবে, আর খালি রেখে জমা দিয়ে ভুল বার্তা
-                            পাওয়ার ভয় পেতেন।
-
-                            ── কেন `autofocus` ────────────────────────
-                            দ্বিতীয় ধাপে মানুষ ফোন হাতে নিয়ে দাঁড়ানো —
-                            কার্সার ঘরটাতেই থাকা উচিত, নাহলে তিনি ছয়টা
-                            অঙ্ক টাইপ করে দেখতেন কোথাও কিছু বসেনি।
-                        --}}
-                        @if (session('mfa') || $errors->has('code'))
-                            <div>
-                                <label for="code" class="mb-1 block text-sm font-medium text-(--color-ink)">
-                                    {{ __('auth.code') }}
-                                </label>
-
-                                <input id="code" name="code" type="text"
-                                       inputmode="numeric" autocomplete="one-time-code"
-                                       autofocus
-                                       class="num h-(--spacing-field) w-full rounded-(--radius-field)
-                                              border border-(--color-border) bg-(--color-surface-app)
-                                              px-3 text-center tracking-[0.3em]">
-
-                                <p class="mt-1 text-xs text-(--color-ink-muted)">
-                                    {{ __('auth.code_hint') }}
-                                </p>
-
-                                @error('code')
-                                    <p class="mt-1 text-xs text-(--color-danger)">{{ $message }}</p>
-                                @enderror
-                            </div>
-                        @endif
-
-                        <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
-                            <input type="checkbox" name="remember" value="1" class="size-4">
-                            {{ __('auth.remember_device') }}
-                        </label>
-
-                        {{-- দ্বিতীয় ক্লিক pointer-events দিয়ে আটকানো, disabled
-                             দিয়ে নয় — নাহলে প্রথম ক্লিকটাও হারিয়ে যায়
-                             (সেকশন ১৬.৩)। --}}
-                        <button type="submit"
-                                :aria-busy="busy"
-                                :class="busy && 'pointer-events-none opacity-70'"
-                                class="h-(--spacing-field) w-full rounded-(--radius-field)
-                                       bg-(--color-brand-500) font-medium text-(--color-ink-inverse)
-                                       transition-colors hover:bg-(--color-brand-600)">
-                            <span x-show="!busy">{{ __('auth.sign_in') }}</span>
-                            <span x-show="busy" x-cloak>{{ __('auth.authenticating') }}</span>
-                        </button>
-                    </form>
+                    <a href="{{ route('login.calm') }}"
+                       class="mt-6 flex h-(--spacing-field) w-full items-center justify-center gap-2
+                              rounded-(--radius-field) bg-(--color-brand-600) font-medium
+                              text-(--color-brand-ink) transition-colors hover:bg-(--color-brand-700)">
+                        {{ __('auth.sign_in') }}
+                        <span aria-hidden="true">→</span>
+                    </a>
 
                     {{-- Passkey / Microsoft / Google — V1-এ দেখানো হয় না
                          (সেকশন ১৬.৪): অকার্যকর বোতাম ব্যবহারকারীকে হতাশ করে। --}}
