@@ -157,12 +157,12 @@ class TheFigureOnThePhoneWouldHaveGoneStaleTest extends TestCase
      */
     public function test_the_cost_price_never_reaches_a_phone_without_the_key(): void
     {
-        $this->salesman->givePermissionTo('inventory.product.view');
-        $this->salesman->forgetCachedPermissions();
+        $withoutCostKey = $this->productPayloads($this->salesman);
 
-        $withoutCostKey = $this->productPayloads($this->salesman->fresh());
-
-        $this->assertNotEmpty($withoutCostKey, 'পণ্য দেখার চাবি দেওয়া হয়েছে — তালিকা আসার কথা।');
+        $this->assertNotEmpty(
+            $withoutCostKey,
+            'বিক্রয়কর্মীর রোলে inventory.product.view আছে (মালিকের সিদ্ধান্ত) — তালিকা আসার কথা।',
+        );
 
         foreach ($withoutCostKey as $payload) {
             $this->assertArrayNotHasKey('purchasePrice', $payload);
@@ -185,14 +185,49 @@ class TheFigureOnThePhoneWouldHaveGoneStaleTest extends TestCase
     }
 
     /**
-     * ⚠️ যাঁর পণ্য দেখার চাবিই নেই, তিনি কিছুই পান না।
+     * ⚠️ চাবি কেড়ে নিলে তালিকাটাও যায় — অর্থাৎ ছাঁকনিটা সত্যিই চলছে।
      *
-     * ডেমোর বিক্রয়কর্মীর অবস্থা ঠিক এটাই, আর সেটা দুর্ঘটনা নয় — রোলটা
-     * `sales.%` আর `customer.%` ছাড়া কিছু দেয় না।
+     * এটা না থাকলে উপরের পরীক্ষাটা অন্ধ হত: তালিকা আসছে দেখে ধরে নেওয়া
+     * যেত অনুমতিটা কাজ করছে, অথচ হয়তো হ্যান্ডলার কারো অনুমতিই দেখছে না।
      */
-    public function test_a_role_without_the_product_key_gets_no_products(): void
+    public function test_taking_the_product_key_away_empties_the_list(): void
     {
-        $this->assertSame([], $this->productPayloads($this->salesman));
+        $this->salesman->roles()->detach();
+        $this->salesman->revokePermissionTo('inventory.product.view');
+        $this->salesman->forgetCachedPermissions();
+
+        $this->assertSame([], $this->productPayloads($this->salesman->fresh()));
+    }
+
+    /**
+     * ⚠️ মালিকের সিদ্ধান্ত, হুবহু — ২ সেপ্টেম্বর ২০২৬।
+     *
+     * *"বিক্রয়কর্মী ডিলার শুধু পণ্যের তালিকা দেখবেন, ক্রয়মূল্য দেখবেন
+     * না, স্টকও দেখতে পারবে না।"*
+     *
+     * ── কেন এটা আলাদা একটা পরীক্ষা ──────────────────────────────────
+     * তিনটা জিনিস একসাথে ধরে রাখে, আর তিনটাই ভাঙতে পারে **একটাই
+     * অসাবধান লাইনে**: `DemoSeeder`-এ `inventory.product.view`-এর বদলে
+     * কেউ `inventory.%` লিখলে বিক্রয়কর্মী ওই মুহূর্তেই ক্রয়মূল্য আর
+     * মজুদ দুইটাই পেয়ে যাবেন — কোনো ভুল বার্তা ছাড়াই।
+     *
+     * ওই ফাঁদে এই রিপো ইতিমধ্যে **পাঁচবার** পড়েছে (DemoSeeder-এর
+     * মন্তব্যগুলো দেখুন), আর প্রতিবারই ধরা পড়েছে অনেক পরে। এবার
+     * সিদ্ধান্তটাই একটা পরীক্ষা হয়ে থাকল।
+     */
+    public function test_the_salesman_sees_products_but_not_cost_and_not_stock(): void
+    {
+        $products = $this->productPayloads($this->salesman);
+
+        $this->assertNotEmpty($products, 'পণ্যের তালিকা — হ্যাঁ।');
+        $this->assertArrayNotHasKey('purchasePrice', $products[0], 'ক্রয়মূল্য — না।');
+
+        $stock = array_filter(
+            $this->sync()->pull($this->salesman, 'phone-s', 'inventory', 500)['records'],
+            fn (array $record) => $record['entityType'] === 'StockOnHand',
+        );
+
+        $this->assertSame([], $stock, 'মজুদ — না। রোলে inventory.stock.view নেই, আর থাকার কথাও নয়।');
     }
 
     /**
