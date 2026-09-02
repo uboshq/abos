@@ -18,6 +18,11 @@ return [
     'tax' => 'VAT',
     'total' => 'Total',
     'rate' => 'Rate',
+
+    /* Values that sit outside a rule — written on the line itself. */
+    'off_rule' => 'Outside the rule',
+    'off_standard_price' => 'rate :pct%',
+    'off_standard_tax' => 'VAT :amount',
     'quantity' => 'Quantity',
     'amount' => 'Amount',
     'document_no' => 'Number',

@@ -23,7 +23,7 @@ class SalesInvoiceLine extends Model
     protected $fillable = [
         'sales_invoice_id', 'product_id', 'delivery_challan_line_id',
         'qty', 'entered_qty', 'entered_unit_id',
-        'rate', 'discount', 'tax', 'amount', 'unit_cost',
+        'rate', 'price_variance', 'discount', 'tax', 'tax_variance', 'amount', 'unit_cost',
         'line_no', 'narration',
     ];
 
@@ -37,6 +37,15 @@ class SalesInvoiceLine extends Model
             'tax' => 'decimal:4',
             'amount' => 'decimal:4',
             'unit_cost' => 'decimal:4',
+            /*
+             * ব্যতিক্রমের সংখ্যাগুলোও টাকা — তাই decimal, string নয়।
+             *
+             * cast না দিলে মানটা string হয়ে ফিরত, আর কেউ দুইটা সারির
+             * পার্থক্য যোগ করতে গেলে PHP ওটাকে float বানিয়ে ফেলত।
+             * এই রিপোতে টাকা কোনোদিন float হয় না ([[MoneyIsNeverAFloatTest]])।
+             */
+            'price_variance' => 'decimal:4',
+            'tax_variance' => 'decimal:4',
         ];
     }
 

@@ -553,7 +553,18 @@ final class SalesInvoiceService
              *
              * তাই সরে যাওয়াটা মাপা হয় **সারির দরে**, মান দামের সাথে।
              */
-            $drift = $pricing->verdictOn($rate, (string) ($product->sale_price ?? '0'));
+            $standardPrice = (string) ($product->sale_price ?? '0');
+
+            /*
+             * প্রতিটা সারিতে নতুন করে শূন্য — লুপের বাইরে নয়।
+             *
+             * না করলে আগের সারির শতাংশটা পরের সারিতেও বসে যেত: এক
+             * পণ্যে দর সরেছে, তার পরের পণ্যে সরেনি, অথচ দুইটাতেই একই
+             * ব্যতিক্রম লেখা থাকত। **চোখে ধরা পড়ত না, কারণ সংখ্যাটা
+             * বিশ্বাসযোগ্যই দেখাত।**
+             */
+            $priceVariance = null;
+            $drift = $pricing->verdictOn($rate, $standardPrice);
 
             if ($drift === PricingRule::BLOCK) {
                 throw ValidationException::withMessages([
@@ -576,6 +587,19 @@ final class SalesInvoiceService
                     'product' => $product->name(),
                     'tolerance' => rtrim(rtrim((string) $pricing->tolerance, '0'), '.'),
                 ]);
+
+                /*
+                 * আর সতর্কতাটা সারিতেও বসে — এবার সত্যিই।
+                 *
+                 * উপরের মন্তব্যটা বছরখানেক ধরে দাবি করত "সারির বিবরণে
+                 * লেখা থাকলে ছয় মাস পরেও কাগজ দেখেই বোঝা যায়", অথচ
+                 * নিচের `session()->flash()` ওটাকে **পরের এক পাতা**
+                 * পর্যন্ত বাঁচাত। এখন দাবিটা সত্যি।
+                 *
+                 * শতাংশটাই রাখা হয়, বাক্য নয় — ছয় মাস পরে পাঠক
+                 * ইংরেজিতেও পড়তে পারেন, আর সংখ্যা ছাঁকাও যায়।
+                 */
+                $priceVariance = $pricing->driftOf($rate, $standardPrice);
             }
 
             /*
@@ -603,8 +627,10 @@ final class SalesInvoiceService
                 'entered_qty' => $pack['entered_qty'],
                 'entered_unit_id' => $pack['entered_unit_id'],
                 'rate' => $rate,
+                'price_variance' => $priceVariance,
                 'discount' => $figures['discount'],
                 'tax' => $figures['tax'],
+                'tax_variance' => $figures['tax_variance'],
                 'amount' => $figures['amount'],
                 'unit_cost' => $unitCost,
                 'line_no' => ++$lineNo,

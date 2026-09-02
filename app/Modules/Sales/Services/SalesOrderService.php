@@ -255,6 +255,7 @@ final class SalesOrderService
                 'rate' => $rate,
                 'discount' => $figures['discount'],
                 'tax' => $figures['tax'],
+                'tax_variance' => $figures['tax_variance'],
                 'amount' => $figures['amount'],
                 'line_no' => ++$lineNo,
                 'narration' => $line['narration'] ?? null,

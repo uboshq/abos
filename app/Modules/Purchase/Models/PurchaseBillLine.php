@@ -26,7 +26,7 @@ class PurchaseBillLine extends Model
         'purchase_bill_id', 'product_id', 'purchase_receipt_line_id', 'purchase_order_line_id',
         'qty', 'free_qty', 'entered_qty', 'entered_unit_id',
         'batch_no', 'expiry_date', 'mrp',
-        'rate', 'sales_price', 'discount', 'tax', 'amount', 'line_no', 'narration',
+        'rate', 'sales_price', 'discount', 'tax', 'tax_variance', 'amount', 'line_no', 'narration',
     ];
 
     protected function casts(): array
@@ -47,6 +47,15 @@ class PurchaseBillLine extends Model
             'discount' => 'decimal:4',
             'tax' => 'decimal:4',
             'amount' => 'decimal:4',
+
+            /*
+             * ব্যতিক্রমের সংখ্যাটাও টাকা — তাই decimal, string নয়।
+             *
+             * cast না দিলে মানটা string হয়ে ফিরত, আর কেউ যোগ করতে
+             * গেলে PHP ওটাকে float বানিয়ে ফেলত। এই রিপোতে টাকা
+             * কোনোদিন float হয় না ([[MoneyIsNeverAFloatTest]])।
+             */
+            'tax_variance' => 'decimal:4',
         ];
     }
 
