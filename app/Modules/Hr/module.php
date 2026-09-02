@@ -44,6 +44,11 @@ return [
     'depends_on' => ['accounts', 'master_data'],
 
     'menu' => [
+        'dashboard' => [
+            ['label' => 'hr::dashboard.title', 'route' => 'module.dashboard',
+                'route_params' => ['module' => 'hr'], 'permission' => 'hr.employee.view'],
+        ],
+
         'master' => [
             ['label' => 'hr::menu.employees', 'route' => 'hr.employee.index', 'permission' => 'hr.employee.view'],
             ['label' => 'hr::menu.salary_heads', 'route' => 'hr.salary_head.index', 'permission' => 'hr.salary.manage'],
@@ -142,6 +147,8 @@ return [
         'employee' => Employee::class,
         'payroll_run' => PayrollRun::class,
     ],
+
+    'dashboard' => \App\Modules\Hr\Dashboard\HrDashboard::class,
 
     'widgets' => [
         HrWidgets::class,

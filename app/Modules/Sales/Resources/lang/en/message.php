@@ -99,6 +99,7 @@ return [
     'gift_none' => 'No gifts.',
     'type_or_pick' => 'Type or pick an item…',
     'search_customer' => 'Search customer…',
+    'no_customer_match' => 'No customer matches that.',
     'pick_an_item' => 'Pick an item',
     'upcoming' => 'coming soon',
     // Recall — where did this lot go

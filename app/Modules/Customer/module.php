@@ -57,6 +57,11 @@ return [
      * পাহারা দেয় — ঘোষিত রুট না থাকলে টেস্ট ভাঙে।
      */
     'menu' => [
+        'dashboard' => [
+            ['label' => 'customer::dashboard.title', 'route' => 'module.dashboard',
+                'route_params' => ['module' => 'customer'], 'permission' => 'customer.view'],
+        ],
+
         'master' => [
             ['label' => 'customer::menu.customers', 'route' => 'customer.index', 'permission' => 'customer.view'],
         ],
@@ -141,6 +146,8 @@ return [
      * সপ্তাহে মানুষ পড়া বন্ধ করে দেয়, আর করণীয় সারিটা কেবল তখনই
      * চোখে পড়ে যখন সত্যিই কিছু বাকি।
      */
+    'dashboard' => \App\Modules\Customer\Dashboard\CustomerDashboard::class,
+
     'widgets' => [
         CustomerWidgets::class,
     ],

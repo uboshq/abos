@@ -52,7 +52,14 @@ return [
     // হিসাবের খাত লাগে — দর ও ট্যাক্স শেষমেশ কোন খাতে বসবে তা জানতে
     'depends_on' => ['accounts'],
 
+    'dashboard' => \App\Modules\MasterData\Dashboard\MasterDataDashboard::class,
+
     'menu' => [
+        'dashboard' => [
+            ['label' => 'master_data::dashboard.title', 'route' => 'module.dashboard',
+                'route_params' => ['module' => 'master_data'], 'permission' => 'master_data.view'],
+        ],
+
         'master' => [
             ['label' => 'master_data::menu.locations', 'route' => 'master_data.location.index', 'permission' => 'master_data.view'],
             ['label' => 'master_data::menu.units', 'route' => 'master_data.unit.index', 'permission' => 'master_data.view'],
