@@ -75,7 +75,7 @@
                 আর কাগজের পরিচয় দেওয়ার ঠিক পরেই প্রথম কাজটা — পণ্য বাছা —
                 চোখের সামনে আসে।
             --}}
-            <div class="grid gap-3 lg:grid-cols-[1fr_13rem_9rem] lg:items-start">
+            <div class="grid gap-3 lg:grid-cols-[1fr_11rem] 2xl:grid-cols-[1fr_13rem_9rem] lg:items-start">
 
             {{-- বাঁ কলাম: কাগজের পরিচয় → পণ্য খোঁজা → লাইনের ঘর --}}
             <div class="min-w-0 space-y-3">
@@ -105,7 +105,11 @@
                          জায়গা থাকলে ৩৪rem-এ পাঁচটাই এক সারিতে। --}}
                     {{-- একই কারণ, একই সারাই — উপরের ঘরগুলোও স্থির মাপে --}}
                     <div class="flex flex-wrap gap-1.5">
-                        <label class="w-28 shrink-0">
+                        {{-- পুরো তারিখটা দেখা যেতে হবে — মালিকের কথা,
+                             ৩ সেপ্টেম্বর ২০২৬: "০৩-০৯-২০:" পর্যন্ত দেখিয়ে
+                             বছরটা কেটে যাচ্ছিল, আর একটা কাটা তারিখ পড়ে
+                             কেউ নিশ্চিত হতে পারেন না কোন বছরের কাগজ। --}}
+                        <label class="w-40 shrink-0">
                             <span class="mb-0.5 block text-2xs font-semibold uppercase tracking-wide
                                          text-(--color-ink-muted)">{{ __('sales::field.challan_date') }}</span>
                             <x-ui.date name="trx_date"
@@ -318,7 +322,7 @@
                             থাকে যিনি মাউস ধরে আছেন তাঁর জন্য।
                         --}}
                         <div class="flex items-start gap-3">
-                            <button type="button" @click="pickerOpen = ! pickerOpen"
+                            <button type="button" @click="pickerOpen ? pickerOpen = false : openPicker()"
                                     :aria-expanded="pickerOpen ? 'true' : 'false'"
                                     :class="pickerOpen
                                         ? 'border-(--color-brand-600) bg-(--color-brand-600) text-(--color-brand-ink)'
@@ -337,33 +341,56 @@
                             </button>
 
                             <div class="min-w-0 flex-1">
-                                {{-- বাছা হয়ে গেলে নামটাই থাকে; না হলে
-                                     লেখাটা নিজেই বোতাম, ঠিক NEXUS-এর মতো --}}
-                                <label class="block">
+                                {{--
+                                    ঘরটা লুকানো থাকে — চিহ্নে চাপলে খোলে।
+
+                                    ── মালিকের কথা (৩ সেপ্টেম্বর ২০২৬) ────────
+                                    *"Search icon e click korle search bar
+                                    open hobe, select er por dane bosbe"*।
+
+                                    আগে ঘরটা সবসময় খোলা থাকত আর বাছা পণ্যের
+                                    নামটা তার **placeholder**-এ বসত। ওটা দুই
+                                    দিক থেকেই ভুল ছিল: খালি একটা ইনপুট বাক্স
+                                    দেখে বোঝা যেত না কিছু বাছা হয়েছে কিনা,
+                                    আর নামটা placeholder-এ থাকায় সেটা টাইপ
+                                    শুরু করলেই উধাও হয়ে যেত।
+
+                                    এখন দুইটা অবস্থা, আর কোনোটাই দ্ব্যর্থ নয়:
+
+                                      বন্ধ  → চিহ্নের পাশে বাছা পণ্যের নাম
+                                              (বা "পণ্য বাছুন" লেখা বোতাম)
+                                      খোলা → লেখার ঘর, ফোকাস সহ
+
+                                    ── কেন `x-init`-এর অটো-ফোকাস গেল ─────────
+                                    ঘরটা এখন লুকানো, আর লুকানো ঘরে ফোকাস
+                                    দেওয়া যায় না। ফোকাসটা এখন খোলার সাথে
+                                    যায় (`openPicker()`), যেখানে ওটার মানে
+                                    আছে।
+                                --}}
+                                <div x-show="! pickerOpen" x-cloak>
+                                    <button type="button" @click="openPicker()"
+                                            class="block w-full truncate rounded-(--radius-field) border
+                                                   border-transparent px-3 py-2 text-start text-xl font-semibold
+                                                   transition-colors hover:border-(--color-border)"
+                                            :class="picked ? 'text-(--color-ink)' : 'text-(--color-ink-muted)'"
+                                            x-text="picked?.name || @js(__('sales::message.type_or_pick'))">
+                                    </button>
+                                </div>
+
+                                <label class="block" x-show="pickerOpen" x-cloak>
                                     <span class="sr-only">{{ __('sales::message.type_or_pick') }}</span>
                                     <input type="search" x-model="term" x-ref="search"
-                                           x-init="$nextTick(() => $refs.search.focus())"
-                                           {{-- লেখা শুরু করলে খোলে, ফোকাসেই নয়।
-
-                                                `@focus` বসানো ছিল, আর ঘরটা
-                                                `x-init`-এ নিজেই ফোকাস নেয় —
-                                                ফলে পাতা খোলামাত্র তালিকাটা
-                                                খোলা থাকত আর চিহ্নটা ✕ দেখাত,
-                                                যেন কিছু একটা চলছে। --}}
-                                           @input="pickerOpen = true"
                                            @keydown.enter.prevent="pickFirst()"
                                            @keydown.escape="pickerOpen = false"
-                                           :placeholder="picked?.name || @js(__('sales::message.type_or_pick'))"
-                                           :class="picked && term === ''
-                                               ? 'placeholder:text-(--color-ink) placeholder:font-semibold'
-                                               : 'placeholder:text-(--color-ink-muted) placeholder:font-semibold'"
+                                           placeholder="{{ __('sales::message.type_or_pick') }}"
                                            class="h-11 w-full truncate rounded-(--radius-field) border
                                                   border-(--color-border) bg-(--color-surface-app)
-                                                  px-3 text-xl font-semibold">
+                                                  px-3 text-xl font-semibold
+                                                  placeholder:font-semibold placeholder:text-(--color-ink-muted)">
                                 </label>
 
                                 <p class="mt-0.5 text-2xs text-(--color-ink-muted)"
-                                   x-show="picked" x-cloak x-text="picked?.code"></p>
+                                   x-show="picked && ! pickerOpen" x-cloak x-text="picked?.code"></p>
                             </div>
                         </div>
 
@@ -389,7 +416,7 @@
                         </div>
 
                         {{-- খোঁজার ফল --}}
-                        <div class="mt-2 max-h-40 space-y-0.5 overflow-y-auto" x-show="term.trim() !== ''" x-cloak>
+                        <div class="mt-2 max-h-40 space-y-0.5 overflow-y-auto" x-show="pickerOpen && term.trim() !== ''" x-cloak>
                             <template x-for="p in visible" :key="p.id">
                                 <button type="button" @click="pick(p)"
                                         class="flex w-full items-baseline justify-between gap-2 rounded-(--radius-field)
@@ -421,27 +448,45 @@
                             কমলে নিচে নেমে যায়। ফোনেও তাই কিছু ভাঙে না।
                         --}}
                         {{-- প্রথম সারি: পরিমাণ · একক · ফ্রি · একক · মোট --}}
-                        <div class="mt-3 flex flex-wrap gap-2">
-                            <x-sales::entry-field label="sales::field.qty" width="w-28">
+                        {{-- পাঁচ কলাম, আর উপরে একটা সীমা।
+
+                         ── কেন `flex` থেকে `grid` (৩ সেপ্টেম্বর ২০২৬) ──────
+                         মালিক দুইটা কথা বলেছেন যেগুলো একসাথে মেলানো দরকার:
+                         **"সব এক লাইনে"** আর **"ঘরগুলো যেন না বাড়ে"**।
+
+                         `flex-wrap` + স্থির প্রস্থ প্রথমটা দিতে পারে না:
+                         পর্দা সরু হলেই সারি ভেঙে যায়, আর কত ঘর ধরবে তা
+                         পর্দার প্রস্থের উপর নির্ভর করে। মাপা গেছে ১৫০০px-এ
+                         পাঁচটার মধ্যে চারটা ধরত।
+
+                         `grid-cols-5` **সবসময় পাঁচটাই** রাখে — জায়গা কম
+                         হলে ঘরগুলো ছোট হয়, সারি ভাঙে না। আর `max-w-3xl`
+                         নিশ্চিত করে জায়গা বেশি হলেও ঘরগুলো একটা মাপের পরে
+                         আর বাড়ে না — দ্বিতীয় কথাটা এখানেই রক্ষা পায়।
+
+                         ⚠️ ফোনে পাঁচ কলাম মানে ঘরপ্রতি ৬০px — সংখ্যাও ধরে
+                         না। তাই সেখানে দুই, ট্যাবলেটে তিন। --}}
+                    <div class="mt-3 grid max-w-3xl gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+                            <x-sales::entry-field label="sales::field.qty" width="w-full">
                                 <input type="number" step="0.01" min="0" x-model="entry.qty"
                                        class="num h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-app) px-2 text-end text-sm">
                             </x-sales::entry-field>
 
-                            <x-sales::entry-field label="sales::field.uom" width="w-28">
+                            <x-sales::entry-field label="sales::field.uom" width="w-full">
                                 <input type="text" readonly :value="picked?.unit || ''"
                                        class="h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-app) px-2 text-sm text-(--color-ink-muted)">
                             </x-sales::entry-field>
 
                             @if ($show['free_qty'])
-                                <x-sales::entry-field label="sales::field.free_qty" width="w-28">
+                                <x-sales::entry-field label="sales::field.free_qty" width="w-full">
                                     <input type="number" step="0.01" min="0" x-model="entry.freeQty"
                                            class="num h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
                                                   bg-(--color-surface-app) px-2 text-end text-sm">
                                 </x-sales::entry-field>
 
-                                <x-sales::entry-field label="sales::field.uom" width="w-28">
+                                <x-sales::entry-field label="sales::field.uom" width="w-full">
                                     <input type="text" readonly :value="picked?.unit || ''"
                                            class="h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
                                                   bg-(--color-surface-app) px-2 text-sm text-(--color-ink-muted)">
@@ -452,7 +497,7 @@
 
                                  হাতে লিখতে দিলে কেউ ভুল যোগ করত, আর গুদাম
                                  থেকে ভুল সংখ্যক মাল বেরোত। --}}
-                            <x-sales::entry-field label="sales::field.total_qty" width="w-28">
+                            <x-sales::entry-field label="sales::field.total_qty" width="w-full">
                                 <input type="text" readonly :value="qty(entryTotalQty)"
                                        class="num h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-app) px-2 text-end text-sm font-semibold">
@@ -460,21 +505,22 @@
                         </div>
 
                         {{-- দ্বিতীয় সারি: দর · মোট টাকা · ছাড় · ভ্যাট · নিট --}}
-                        <div class="mt-2 flex flex-wrap gap-2">
-                            <x-sales::entry-field label="sales::field.sales_rate" width="w-36">
+                        {{-- দ্বিতীয় সারি, একই নিয়মে --}}
+                    <div class="mt-2 grid max-w-3xl gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+                            <x-sales::entry-field label="sales::field.sales_rate" width="w-full">
                                 <input type="number" step="0.0001" min="0" x-model="entry.rate"
                                        class="num h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-app) px-2 text-end text-sm">
                             </x-sales::entry-field>
 
-                            <x-sales::entry-field label="sales::field.total_amount" width="w-36">
+                            <x-sales::entry-field label="sales::field.total_amount" width="w-full">
                                 <input type="text" readonly :value="money(entryBase)"
                                        class="num h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-app) px-2 text-end text-sm">
                             </x-sales::entry-field>
 
                             @if ($show['line_discount'])
-                                <x-sales::entry-field label="sales::field.discount_pct" width="w-28">
+                                <x-sales::entry-field label="sales::field.discount_pct" width="w-full">
                                     <input type="number" step="0.01" min="0" max="100" x-model="entry.discountPercent"
                                            class="num h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
                                                   bg-(--color-surface-app) px-2 text-end text-sm">
@@ -482,14 +528,14 @@
                             @endif
 
                             @if ($vatEnabled)
-                                <x-sales::entry-field label="sales::field.vat" width="w-28">
+                                <x-sales::entry-field label="sales::field.vat" width="w-full">
                                     <input type="text" readonly :value="money(entryVat)"
                                            class="num h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
                                                   bg-(--color-surface-app) px-2 text-end text-sm">
                                 </x-sales::entry-field>
                             @endif
 
-                            <x-sales::entry-field label="sales::field.net_value" width="w-36">
+                            <x-sales::entry-field label="sales::field.net_value" width="w-full">
                                 <input type="text" readonly :value="money(entryNet)"
                                        class="num h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-app) px-2 text-end text-sm font-semibold">
@@ -570,8 +616,24 @@
 
 
                     {{-- ডান: পণ্যের ছবির জায়গা --}}
+                    {{-- ছবির ঘরটা কেবল খুব চওড়া পর্দায় — ৩ সেপ্টেম্বর ২০২৬।
+
+                         ── কেন ─────────────────────────────────────────────
+                         এটা পর্দার একমাত্র **সাজসজ্জা**: বাছা পণ্যের একটা
+                         ছবি বসার জায়গা, আর আজ ওখানে কেবল একটা বাক্সের
+                         আইকন। কিন্তু ওটা ৯rem জায়গা নেয়, আর সেই জায়গাটা
+                         আসে বাঁ কলাম থেকে।
+
+                         মেপে দেখা গেছে ১৫০০px পর্দায় বাঁ কলাম দাঁড়ায়
+                         **৩৫৫px** — দশটা ঘর তখন দুইয়ে দুইয়ে পাঁচ সারি।
+                         মালিক চেয়েছেন পাঁচটাই এক লাইনে, আর তার জন্য
+                         ~৬০০px লাগে।
+
+                         তাই সাজসজ্জাটা `2xl`-এ (১৫৩৬px+) সরল, যেখানে
+                         জায়গা সত্যিই আছে। ⚠️ কাজের ঘর সাজসজ্জার কাছে
+                         জায়গা হারাবে না — উল্টোটা। --}}
                     <div class="hidden items-center justify-center rounded-(--radius-card)
-                                border border-(--color-border) p-3 lg:flex">
+                                border border-(--color-border) p-3 2xl:flex">
                         <div class="text-center">
                             <svg viewBox="0 0 24 24" aria-hidden="true"
                                  class="mx-auto size-12 fill-(--color-ink-muted)/40">
@@ -1225,6 +1287,20 @@
                     pickFirstCustomer() {
                         const first = this.customerMatches[0];
                         if (first) this.chooseCustomer(first.id);
+                    },
+
+                    /*
+                     * চিহ্নে চাপলে ঘরটা খোলে, আর সাথে সাথেই ফোকাস।
+                     *
+                     * `$nextTick` ছাড়া চলত না: `x-show` ঘরটাকে ওই মুহূর্তে
+                     * এখনো `display:none`-এ রাখে, আর লুকানো ঘরে ফোকাস দিলে
+                     * ব্রাউজার নীরবে কিছুই করে না — বোতামে চাপ দিয়ে মানুষ
+                     * টাইপ শুরু করতেন আর কোথাও কিছু বসত না।
+                     */
+                    openPicker() {
+                        this.pickerOpen = true;
+                        this.term = '';
+                        this.$nextTick(() => this.$refs.search?.focus());
                     },
 
                     pick(product) {
