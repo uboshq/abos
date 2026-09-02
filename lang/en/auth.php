@@ -34,6 +34,9 @@ return [
     'caps_lock_on' => 'Caps Lock is on',
     'remember_device' => 'Remember this device',
     'forgot_password' => 'Forgot password?',
+    /* Honest, not decorative: MAIL_MAILER=log here and on live, so no
+       reset mail can leave the building yet. See lang/bn/auth.php. */
+    'coming_soon' => 'Coming soon',
 
     'highlight' => [
         'multi_company' => 'Multi company',

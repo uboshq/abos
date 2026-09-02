@@ -115,10 +115,43 @@
                         </div>
                     @endif
 
-                    <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
-                        <input type="checkbox" name="remember" value="1" class="size-4">
-                        {{ __('auth.remember_device') }}
-                    </label>
+                    {{--
+                        মনে-রাখা আর ভুলে-যাওয়া — এক লাইনে, দুই প্রান্তে।
+
+                        ── কেন লিংক নয়, লেখা ────────────────────────
+                        পাসওয়ার্ড রিসেট এখনো নেই, আর কারণটা কোডের নয়:
+                        `MAIL_MAILER=log` — এই মেশিনে আর লাইভ **দুই
+                        জায়গাতেই**। ABOS থেকে আজ পর্যন্ত একটাও ইমেইল
+                        বাইরে যায় না।
+
+                        তাই `<a>` বসানো হয়নি। বসালে মানুষ চাপ দিতেন,
+                        "ইমেইল পাঠানো হয়েছে" পড়তেন, আর ইনবক্স খুলে
+                        অপেক্ষা করতেন যে চিঠি কোনোদিন আসবে না।
+                        **কথাটা সৎভাবে বলে রাখা ভালো।**
+
+                        ── কেন flex-wrap ────────────────────────────
+                        বাংলায় "এই ডিভাইসটি মনে রাখুন" + "পাসওয়ার্ড
+                        ভুলে গেছেন?" + ব্যাজ ৩৭৫px-এ এক লাইনে ধরে না।
+                        wrap থাকলে ব্যাজটা নিচে নেমে যায়; `ms-auto`
+                        দুই অবস্থাতেই ওটাকে ডান প্রান্তে রাখে।
+                    --}}
+                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
+                            <input type="checkbox" name="remember" value="1" class="size-4">
+                            {{ __('auth.remember_device') }}
+                        </label>
+
+                        <span class="ms-auto flex shrink-0 items-center gap-1.5 text-xs
+                                     text-(--color-ink-muted)"
+                              aria-disabled="true">
+                            {{ __('auth.forgot_password') }}
+
+                            <span class="rounded-full border border-(--color-border)
+                                         bg-(--color-surface-muted) px-1.5 py-px text-2xs">
+                                {{ __('auth.coming_soon') }}
+                            </span>
+                        </span>
+                    </div>
 
                     {{-- দ্বিতীয় ক্লিক pointer-events দিয়ে আটকানো, disabled
                          দিয়ে নয় — নাহলে প্রথম ক্লিকটাও হারিয়ে যায়
