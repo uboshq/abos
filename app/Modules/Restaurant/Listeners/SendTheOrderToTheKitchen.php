@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\Sales\Listeners;
+namespace App\Modules\Restaurant\Listeners;
 
 use App\Modules\Inventory\Models\Product;
-use App\Modules\Inventory\Services\KitchenTicketService;
+use App\Modules\Restaurant\Services\KitchenTicketService;
 use App\Modules\Sales\Events\InvoiceConfirmed;
 use App\Modules\Sales\Models\SalesInvoice;
 
