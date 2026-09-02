@@ -143,6 +143,32 @@ final class ModuleDefinition
         public readonly array $auditExempt,
 
         /**
+         * যে ঘরগুলো সবাই দেখতে পাবে না — আর কোন অনুমতির পেছনে।
+         *
+         * ── কেন পর্দার অনুমতি যথেষ্ট নয় ─────────────────────────────
+         * রুটের অনুমতি বলে **কে পাতাটা খুলতে পারবে**। কিন্তু বিক্রির
+         * সময় প্রশ্নটা অন্য: *"আমার সেলসম্যান কি ক্রয়মূল্য দেখতে
+         * পাবে?"* তিনি পণ্যের পাতা দেখতে পারেন — দেখতেই হবে, নাহলে
+         * বিক্রি করবেন কী করে — কিন্তু ওই একটা ঘর তাঁর নয়।
+         *
+         * পাতাটাই বন্ধ করে দেওয়া উত্তর নয়। ঘরটা বন্ধ করা উত্তর।
+         *
+         * ── কেন মডিউল নিজে বলে ──────────────────────────────────────
+         * অডিটের ব্যতিক্রমের মতোই কারণে: কোর যদি জানে "মজুদ মডিউলের
+         * Product-এ purchase_price আছে", তবে ওই মডিউল ছাড়া কোর চলে না
+         * (§১৯.৭)।
+         *
+         * ── অনুমতিটা এই মডিউলেরই হতে হয় ────────────────────────────
+         * অন্য মডিউলের অনুমতির নাম লিখতে দিলে একটা টাইপো **নীরবে
+         * পাহারাটা তুলে দিত** — অস্তিত্বহীন অনুমতি কারও থাকে না, তাই
+         * ঘরটা সবার কাছে লুকানো থাকত, আর কেউ বলত না। উল্টোটা আরও
+         * খারাপ হত যদি ডিফল্ট "দেখা যাবে" হত।
+         *
+         * @var array<class-string, array<string, string>>
+         */
+        public readonly array $sensitiveFields,
+
+        /**
          * এই মডিউল যে ঘটনাগুলো ঘোষণা করে — একটা চুক্তি, একটা তালিকা নয়।
          *
          * এখানে যা লেখা, অন্য মডিউল তার উপর নির্ভর করতে পারে। যা লেখা
@@ -356,6 +382,11 @@ final class ModuleDefinition
                 $path,
             ),
             auditExempt: self::validateAuditExempt($raw['audit_exempt'] ?? [], $path),
+            sensitiveFields: self::validateSensitiveFields(
+                $raw['sensitive_fields'] ?? [],
+                $raw['permissions'] ?? [],
+                $path,
+            ),
             events: self::validateEvents($raw['events'] ?? [], $path),
             listeners: self::validateListeners($raw['listeners'] ?? [], $path),
             facts: self::validateFacts($raw['facts'] ?? [], $path),
@@ -412,6 +443,54 @@ final class ModuleDefinition
         }
 
         return $exempt;
+    }
+
+    /**
+     * সংবেদনশীল ঘরের ঘোষণা যাচাই।
+     *
+     * তিনটা জিনিস দেখা হয়, আর তিনটাই বুট-টাইমে — কারণ এই ভুলগুলোর
+     * একটাও চলার সময় নিজেকে দেখায় না। ভুল অনুমতির নাম মানে ঘরটা
+     * **সবার কাছে লুকানো**, আর কেউ অভিযোগ করে না; ভুল ক্লাসের নাম
+     * মানে পাহারাটা কোনোদিন চলেই না, আর সেটাও নীরব।
+     *
+     * @param  array<string, mixed>  $fields
+     * @param  list<string>  $permissions
+     * @return array<class-string, array<string, string>>
+     */
+    private static function validateSensitiveFields(array $fields, array $permissions, string $path): array
+    {
+        foreach ($fields as $class => $map) {
+            if (! is_string($class) || ! class_exists($class)) {
+                throw new InvalidArgumentException(
+                    "{$path}: sensitive_fields names '".(is_string($class) ? $class : gettype($class))."', which does not exist."
+                );
+            }
+
+            if (! is_array($map) || $map === []) {
+                throw new InvalidArgumentException(
+                    "{$path}: sensitive_fields {$class} needs a field => permission map."
+                );
+            }
+
+            foreach ($map as $field => $permission) {
+                if (! is_string($field) || trim($field) === '') {
+                    throw new InvalidArgumentException(
+                        "{$path}: sensitive_fields {$class} has a field name that is not a string."
+                    );
+                }
+
+                if (! is_string($permission) || ! in_array($permission, $permissions, true)) {
+                    throw new InvalidArgumentException(
+                        "{$path}: sensitive_fields {$class}.{$field} is guarded by '"
+                        .(is_string($permission) ? $permission : gettype($permission))
+                        ."', which this module does not declare. A permission nobody holds hides the "
+                        .'field from everyone, silently.'
+                    );
+                }
+            }
+        }
+
+        return $fields;
     }
 
     /**

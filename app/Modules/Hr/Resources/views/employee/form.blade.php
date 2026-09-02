@@ -51,8 +51,18 @@
                             :value="old('mobile', $employee->mobile)" />
                 <x-ui.field name="email" type="email" :label="__('hr::field.email')"
                             :value="old('email', $employee->email)" />
-                <x-ui.field name="national_id" :label="__('hr::field.national_id')"
-                            :value="old('national_id', $employee->national_id)" />
+                {{--
+                    পরিচয়ের ঘরগুলো কেবল যাঁর দেখার কথা তাঁর জন্য।
+
+                    ঘরটা না থাকলে অনুরোধে চাবিটাও থাকে না, আর
+                    `$employee->update($data)` অনুপস্থিত চাবি ছোঁয় না —
+                    তাই আগের মানটা মুছে যায় না। লেখার দিকটাও বন্ধ
+                    ([[EmployeeController::validated()]])।
+                --}}
+                @if (\App\Core\Security\FieldSecurity::visible($employee, 'national_id'))
+                    <x-ui.field name="national_id" :label="__('hr::field.national_id')"
+                                :value="old('national_id', $employee->national_id)" />
+                @endif
             </div>
         </section>
 
@@ -94,12 +104,14 @@
                             :value="old('bank_branch', $employee->bank_branch)" />
                 <x-ui.field name="bank_account_name" :label="__('hr::field.bank_account_name')"
                             :value="old('bank_account_name', $employee->bank_account_name)" />
-                <x-ui.field name="bank_account_no" :label="__('hr::field.bank_account_no')"
-                            :value="old('bank_account_no', $employee->bank_account_no)" />
-                <x-ui.field name="bank_routing_no" :label="__('hr::field.bank_routing_no')"
-                            :value="old('bank_routing_no', $employee->bank_routing_no)" />
-                <x-ui.field name="mfs_number" :label="__('hr::field.mfs_number')"
-                            :value="old('mfs_number', $employee->mfs_number)" />
+                @if (\App\Core\Security\FieldSecurity::visible($employee, 'bank_account_no'))
+                    <x-ui.field name="bank_account_no" :label="__('hr::field.bank_account_no')"
+                                :value="old('bank_account_no', $employee->bank_account_no)" />
+                    <x-ui.field name="bank_routing_no" :label="__('hr::field.bank_routing_no')"
+                                :value="old('bank_routing_no', $employee->bank_routing_no)" />
+                    <x-ui.field name="mfs_number" :label="__('hr::field.mfs_number')"
+                                :value="old('mfs_number', $employee->mfs_number)" />
+                @endif
             </div>
         </section>
 

@@ -44,10 +44,13 @@
                     'hr::field.joining_date' => $employee->joining_date?->format('d M Y'),
                     'hr::field.leaving_date' => $employee->leaving_date?->format('d M Y'),
                     'hr::field.mobile' => $employee->mobile,
-                    'hr::field.national_id' => $employee->national_id,
+                    'hr::field.national_id' => \App\Core\Security\FieldSecurity::show(
+                        $employee, 'national_id', $employee->national_id),
                     'hr::field.payment_method' => __('hr::kind.' . $employee->payment_method),
-                    'hr::field.bank_account_no' => $employee->bank_account_no,
-                    'hr::field.mfs_number' => $employee->mfs_number,
+                    'hr::field.bank_account_no' => \App\Core\Security\FieldSecurity::show(
+                        $employee, 'bank_account_no', $employee->bank_account_no),
+                    'hr::field.mfs_number' => \App\Core\Security\FieldSecurity::show(
+                        $employee, 'mfs_number', $employee->mfs_number),
                 ] as $label => $value)
                     <div class="flex items-center justify-between gap-2">
                         <dt class="text-(--color-ink-muted)">{{ __($label) }}</dt>

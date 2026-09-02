@@ -114,9 +114,19 @@
                          ? $r->warehouse_bn : $r->warehouse_en],
                     ['key' => 'qty', 'label' => __('inventory::field.quantity'), 'numeric' => true, 'width' => '7rem',
                      'render' => fn ($r) => \App\Core\Support\Money::format($r->qty)],
+                    /*
+                     * খোলা মজুদের দর — অন্য নামে ক্রয়মূল্য।
+                     *
+                     * পণ্যের পাতায় ক্রয়মূল্য ঢেকে এখানে খোলা রাখলে
+                     * পাহারাটা অলংকার হত: এক পর্দায় বন্ধ, অন্যটায়
+                     * একই সংখ্যা।
+                     */
                     ['key' => 'unit_cost', 'label' => __('inventory::field.opening_rate'),
                      'numeric' => true, 'width' => '8rem',
-                     'render' => fn ($r) => \App\Core\Support\Money::format($r->unit_cost)],
+                     'render' => fn ($r) => \App\Core\Security\FieldSecurity::visible(
+                         \App\Modules\Inventory\Models\StockMovement::class, 'unit_cost')
+                         ? \App\Core\Support\Money::format($r->unit_cost)
+                         : \App\Core\Security\FieldSecurity::mask()],
                     ['key' => 'value', 'label' => __('inventory::field.opening_value'),
                      'numeric' => true, 'width' => '9rem',
                      'render' => fn ($r) => \App\Core\Support\Money::format($r->value)],
