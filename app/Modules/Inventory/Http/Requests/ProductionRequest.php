@@ -41,7 +41,7 @@ class ProductionRequest extends FormRequest
                 Rule::exists('inv_warehouses', 'id')->where('company_id', $company),
             ],
 
-            'trx_date' => ['required', 'date'],
+            'trx_date' => ['required', 'date', 'before_or_equal:today'],
 
             /*
              * কয় প্লেট হলো — শূন্যের বেশি হতেই হবে।

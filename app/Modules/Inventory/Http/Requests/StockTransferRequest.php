@@ -25,7 +25,7 @@ class StockTransferRequest extends FormRequest
                 Rule::exists('inv_warehouses', 'id')->where('company_id', $companyId)],
             'to_warehouse_id' => ['required', 'integer',
                 Rule::exists('inv_warehouses', 'id')->where('company_id', $companyId)],
-            'trx_date' => ['required', 'date'],
+            'trx_date' => ['required', 'date', 'before_or_equal:today'],
             'narration' => ['nullable', 'string', 'max:500'],
 
             'lines' => ['required', 'array', 'min:1'],

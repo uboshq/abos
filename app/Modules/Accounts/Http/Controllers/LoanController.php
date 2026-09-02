@@ -238,7 +238,7 @@ class LoanController extends Controller implements HasMiddleware
         $data = $request->validate([
             'amount' => ['required', 'numeric', 'gt:0'],
             'into_account_id' => ['required', 'integer', 'exists:accounts,id'],
-            'trx_date' => ['nullable', 'date'],
+            'trx_date' => ['nullable', 'date', 'before_or_equal:today'],
         ]);
 
         $this->loans->drawDown(
@@ -261,7 +261,7 @@ class LoanController extends Controller implements HasMiddleware
 
         $data = $request->validate([
             'from_account_id' => ['required', 'integer', 'exists:accounts,id'],
-            'trx_date' => ['nullable', 'date'],
+            'trx_date' => ['nullable', 'date', 'before_or_equal:today'],
 
             /*
              * ব্যাংক কখনো সূচির চেয়ে কম-বেশি কাটে (জরিমানা, ছাড়)।
@@ -289,7 +289,7 @@ class LoanController extends Controller implements HasMiddleware
         $data = $request->validate([
             'amount' => ['required', 'numeric', 'gt:0'],
             'from_account_id' => ['required', 'integer', 'exists:accounts,id'],
-            'trx_date' => ['nullable', 'date'],
+            'trx_date' => ['nullable', 'date', 'before_or_equal:today'],
         ]);
 
         $this->loans->repay(
@@ -317,7 +317,7 @@ class LoanController extends Controller implements HasMiddleware
     {
         $data = $request->validate([
             'amount' => ['required', 'numeric', 'gt:0'],
-            'trx_date' => ['nullable', 'date'],
+            'trx_date' => ['nullable', 'date', 'before_or_equal:today'],
         ]);
 
         $this->loans->chargeInterest($loan, (string) $data['amount'], $data['trx_date'] ?? null);

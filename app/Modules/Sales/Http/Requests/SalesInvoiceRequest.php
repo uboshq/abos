@@ -20,7 +20,7 @@ class SalesInvoiceRequest extends FormRequest
                 Rule::exists('customers', 'id')->where('company_id', $companyId)],
             'warehouse_id' => ['nullable', 'integer',
                 Rule::exists('inv_warehouses', 'id')->where('company_id', $companyId)],
-            'trx_date' => ['required', 'date'],
+            'trx_date' => ['required', 'date', 'before_or_equal:today'],
             'due_on' => ['nullable', 'date', 'after_or_equal:trx_date'],
             'narration' => ['nullable', 'string', 'max:500'],
 

@@ -83,7 +83,7 @@ class OpeningStockController extends Controller implements HasMiddleware
              * কাগজ নেই, তাই দরটা মানুষকেই বলতে হয়।
              */
             'unit_cost' => ['required', 'numeric', 'gt:0'],
-            'trx_date' => ['nullable', 'date'],
+            'trx_date' => ['nullable', 'date', 'before_or_equal:today'],
             'narration' => ['nullable', 'string', 'max:500'],
         ]);
 

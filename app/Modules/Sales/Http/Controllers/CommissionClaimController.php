@@ -100,7 +100,7 @@ class CommissionClaimController extends Controller implements HasMiddleware
         $companyId = CompanyContext::id();
 
         $data = $request->validate([
-            'trx_date' => ['required', 'date'],
+            'trx_date' => ['required', 'date', 'before_or_equal:today'],
             'customer_id' => ['required', 'integer',
                 Rule::exists('customers', 'id')->where('company_id', $companyId)],
             'supplier_id' => ['required', 'integer',

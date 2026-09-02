@@ -26,7 +26,7 @@ class SalesReturnRequest extends FormRequest
                 Rule::exists('sal_invoices', 'id')->where('company_id', $companyId)],
             'reason_code_id' => ['nullable', 'integer',
                 Rule::exists('mdm_reason_codes', 'id')->where('company_id', $companyId)],
-            'trx_date' => ['required', 'date'],
+            'trx_date' => ['required', 'date', 'before_or_equal:today'],
             'narration' => ['nullable', 'string', 'max:500'],
 
             'lines' => ['required', 'array', 'min:1'],

@@ -77,7 +77,7 @@ class VoucherRequest extends FormRequest
     {
         $rules = [
             'type' => ['required', Rule::in(Voucher::TYPES)],
-            'trx_date' => ['required', 'date'],
+            'trx_date' => ['required', 'date', 'before_or_equal:today'],
             'narration' => ['nullable', 'string', 'max:500'],
             'branch_id' => ['nullable', 'integer'],
 

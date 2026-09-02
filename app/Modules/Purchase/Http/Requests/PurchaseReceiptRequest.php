@@ -24,7 +24,7 @@ class PurchaseReceiptRequest extends FormRequest
                 Rule::exists('inv_warehouses', 'id')->where('company_id', $companyId)],
             'purchase_order_id' => ['nullable', 'integer',
                 Rule::exists('pur_orders', 'id')->where('company_id', $companyId)],
-            'trx_date' => ['required', 'date'],
+            'trx_date' => ['required', 'date', 'before_or_equal:today'],
             'supplier_challan_no' => ['nullable', 'string', 'max:64'],
             'narration' => ['nullable', 'string', 'max:500'],
 

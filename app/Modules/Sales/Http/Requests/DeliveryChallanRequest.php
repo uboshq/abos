@@ -22,7 +22,7 @@ class DeliveryChallanRequest extends FormRequest
                 Rule::exists('inv_warehouses', 'id')->where('company_id', $companyId)],
             'sales_order_id' => ['nullable', 'integer',
                 Rule::exists('sal_orders', 'id')->where('company_id', $companyId)],
-            'trx_date' => ['required', 'date'],
+            'trx_date' => ['required', 'date', 'before_or_equal:today'],
             /*
              * বহরের গাড়ি হলে id, বাইরের গাড়ি হলে শুধু লেখা নম্বর।
              *

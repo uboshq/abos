@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Inventory\Services;
 
+use App\Core\Services\OpenPeriod;
 use App\Core\Support\CompanyContext;
 use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Product;
@@ -34,6 +35,8 @@ use Illuminate\Validation\ValidationException;
  */
 final class StockService
 {
+    public function __construct(private readonly OpenPeriod $period) {}
+
     /** সমন্বয়ের উৎস — ড্রিল-ডাউনে চেনা যায়। */
     public const ADJUSTMENT = 'stock_adjustment';
 
@@ -72,6 +75,42 @@ final class StockService
         ?Batch $batch = null,
     ): StockMovement {
         $this->assertSomethingMoves($floor, $reserved, $hold, $free, $freeReserved);
+
+        /*
+         * বন্ধ মাসে মালও নড়বে না — ১ সেপ্টেম্বর ২০২৬।
+         *
+         * ── কী ভাঙা ছিল ─────────────────────────────────────────────
+         * [[OpenPeriod::assertOpen()]] ডাকা হত কেবল টাকার পথে
+         * ([[PostingEngine]], আর তার উপরে দাঁড়ানো সার্ভিসগুলো)। মালের
+         * এই দরজাটা তিনটা নিয়ম দেখত — শূন্য চলাচল নয় · তাকে যা নেই তা
+         * যাবে না · ফ্রি ভাণ্ডারে যা নেই তা যাবে না — **মাসের তালা
+         * দেখত না**, অথচ নিচেই `trx_date` বসিয়ে দিত।
+         *
+         * বেশিরভাগ পথে ধরা পড়ত না, কারণ বিল-ক্রয়-ফেরত একই
+         * `DB::transaction`-এ খতিয়ানেও যায়, আর তালাটা সেখানেই ছুঁড়ত।
+         * **যে পথগুলো খতিয়ানে যায় না, সেগুলোই খোলা ছিল:** গুদাম বদল,
+         * উৎপাদন, আর মাল আটকানো/ছাড়া।
+         *
+         * ফল: অগাস্ট বন্ধ করে রিপোর্ট পাঠানোর পরেও অগাস্টের তারিখে
+         * একটা গুদাম-বদল ঢোকানো যেত। খাতা স্থির থাকত, মাল নড়ত — আর
+         * অগাস্টের স্টক রিপোর্ট পরদিন অন্য সংখ্যা দেখাত।
+         *
+         * ── কেন কোনো ছাড়ের তালিকা নেই ───────────────────────────────
+         * প্রথমে ভেবেছিলাম সংরক্ষণ (`reserved`) ছাড় পাবে আর বাতিলের
+         * পথগুলো আটকে যাবে। মেপে দেখা গেল দুইটাই অপ্রয়োজনীয়:
+         * **বাতিল ও ফেরতের প্রতিটা ডাক ইতিমধ্যেই `date: now()` পাঠায়**
+         * (StockTransfer ২১৩·২৩২·২৮২, SalesOrder ২০১, …), ঠিক যেমন
+         * PostingEngine উল্টো এন্ট্রি আজকের তারিখে লেখে। তাই নিয়মটা
+         * ব্যতিক্রমহীন রাখা গেল, আর ব্যতিক্রমহীন নিয়মই একমাত্র নিয়ম
+         * যেটা ছয় মাস পরও কেউ ভুল বোঝে না।
+         *
+         * ── জানালাটা এখানে কাকে আটকায় না ────────────────────────────
+         * `assertOpen()` মাসের তালার সাথে পেছনের-তারিখের জানালাটাও
+         * দেখে, কিন্তু [[OpenPeriod::windowDays()]] লগইন ছাড়া চলা কোড
+         * ও `accounts.backdate.override` — দুইটাকেই ছেড়ে দেয়। তাই
+         * সিডার, ইমপোর্ট আর খোলা মজুদ আগের মতোই বসে।
+         */
+        $this->period->assertOpen($date ?? now());
 
         return DB::transaction(function () use (
             $product, $warehouse, $sourceType, $sourceId,

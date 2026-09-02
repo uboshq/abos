@@ -291,7 +291,7 @@ class StockController extends Controller implements HasMiddleware
             'reason_code_id' => ['required', 'integer',
                 Rule::exists('mdm_reason_codes', 'id')->where('company_id', $companyId)],
             $qtyField => ['required', 'numeric'],
-            'trx_date' => ['nullable', 'date'],
+            'trx_date' => ['nullable', 'date', 'before_or_equal:today'],
             'narration' => ['nullable', 'string', 'max:500'],
 
             /*

@@ -110,7 +110,7 @@ class MoneyTransferController extends Controller implements HasMiddleware
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'trx_date' => ['required', 'date'],
+            'trx_date' => ['required', 'date', 'before_or_equal:today'],
             'from_till_id' => ['required', 'integer'],
             // একটাই ঘর, দুই ধরনের গন্তব্য — "till:3" বা "account:12"
             'destination' => ['required', 'string', 'regex:/^(till|account):\d+$/'],

@@ -69,7 +69,7 @@ class DepositClaimController extends Controller implements HasMiddleware
              * তাই তফাতটাও পরে দেখা যায়।
              */
             'amount' => ['nullable', 'numeric', 'gt:0'],
-            'trx_date' => ['nullable', 'date'],
+            'trx_date' => ['nullable', 'date', 'before_or_equal:today'],
         ]);
 
         $this->claims->accept($claim, (int) $data['account_id'], [

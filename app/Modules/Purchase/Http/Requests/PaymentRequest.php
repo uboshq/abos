@@ -24,7 +24,7 @@ class PaymentRequest extends FormRequest
                 Rule::exists('suppliers', 'id')->where('company_id', $companyId)],
             'account_id' => ['required', 'integer',
                 Rule::exists('accounts', 'id')->where('company_id', $companyId)],
-            'trx_date' => ['required', 'date'],
+            'trx_date' => ['required', 'date', 'before_or_equal:today'],
             'amount' => ['required', 'numeric', 'gt:0'],
             'instrument' => ['nullable', 'string', 'max:32'],
             'instrument_no' => ['nullable', 'string', 'max:64'],

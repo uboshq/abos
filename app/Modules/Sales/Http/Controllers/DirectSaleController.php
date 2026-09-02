@@ -132,7 +132,7 @@ class DirectSaleController extends Controller implements HasMiddleware
                 Rule::exists('customers', 'id')->where('company_id', $companyId)],
             'warehouse_id' => ['nullable', 'integer',
                 Rule::exists('inv_warehouses', 'id')->where('company_id', $companyId)],
-            'trx_date' => ['nullable', 'date'],
+            'trx_date' => ['nullable', 'date', 'before_or_equal:today'],
             'do_no' => ['nullable', 'string', 'max:64'],
             'vehicle_no' => ['nullable', 'string', 'max:64'],
             'driver_name' => ['nullable', 'string', 'max:191'],

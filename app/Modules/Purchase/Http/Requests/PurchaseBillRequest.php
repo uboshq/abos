@@ -32,7 +32,7 @@ class PurchaseBillRequest extends FormRequest
             'warehouse_id' => ['nullable', 'integer',
                 Rule::exists('inv_warehouses', 'id')->where('company_id', $companyId)],
 
-            'trx_date' => ['required', 'date'],
+            'trx_date' => ['required', 'date', 'before_or_equal:today'],
             'due_on' => ['nullable', 'date', 'after_or_equal:trx_date'],
             'supplier_bill_no' => ['nullable', 'string', 'max:64'],
             'narration' => ['nullable', 'string', 'max:500'],
