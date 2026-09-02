@@ -46,6 +46,18 @@ final class AuditEngine
      *
      * @var list<string>
      */
+    /**
+     * এনক্রিপ্টেড ঘরের বদলে যা লেখা হয়।
+     *
+     * ── কেন মান নয়, আর কেন ঘরটাও বাদ যায় না ─────────────────────────
+     * ঘরটা পুরোপুরি বাদ দিলে **কে কখন কারও পরিচয়পত্র বদলেছে তা আর
+     * জানাই যেত না** — অথচ ওটাই নিরীক্ষার আসল প্রশ্ন। মান লিখলে উল্টো
+     * বিপদ: এনক্রিপশনটাই অর্থহীন হত।
+     *
+     * তাই ঘটনাটা থাকে, মানটা থাকে না।
+     */
+    public const HIDDEN = '••••';
+
     public const NEVER_LOGGED = [
         'password', 'remember_token', 'api_token', 'two_factor_secret',
         'two_factor_recovery_codes', 'created_at', 'updated_at',
@@ -263,7 +275,9 @@ final class AuditEngine
                 continue;
             }
 
-            $changes[$field] = [$subject->getOriginal($field), $new];
+            $changes[$field] = $this->encrypted($subject, $field)
+                ? [self::HIDDEN, self::HIDDEN]
+                : [$subject->getOriginal($field), $new];
         }
 
         return $changes;
@@ -287,7 +301,9 @@ final class AuditEngine
                 continue;
             }
 
-            $changes[$field] = [null, $value];
+            $changes[$field] = $this->encrypted($subject, $field)
+                ? [null, self::HIDDEN]
+                : [null, $value];
         }
 
         return $changes;
@@ -314,6 +330,23 @@ final class AuditEngine
             DocumentStatus::CANCELLED => AuditTrail::CANCELLED,
             default => null,
         };
+    }
+
+    /**
+     * এই ঘরটা মডেলে এনক্রিপ্ট করা কি না।
+     *
+     * ── কেন cast দেখে, তালিকা দেখে নয় ───────────────────────────────
+     * প্রতিটা এনক্রিপ্টেড ঘরের নাম এখানে হাতে লিখলে সেটা একদিন
+     * পিছিয়ে পড়ত: কেউ নতুন একটা ঘর এনক্রিপ্ট করত, এখানে যোগ করতে
+     * ভুলে যেত, আর **অডিট চুপচাপ সেটার মান খোলা লিখে রাখত** —
+     * অর্থাৎ এনক্রিপশনটা বসানোর দিনেই ফুটো হয়ে যেত।
+     *
+     * cast দেখলে নিয়মটা নিজে থেকেই চলে: যে ঘর এনক্রিপ্টেড, তার মান
+     * অডিটে যায় না। **কিছু মনে রাখতে হয় না।**
+     */
+    private function encrypted(Model $subject, string $field): bool
+    {
+        return str_starts_with((string) ($subject->getCasts()[$field] ?? ''), 'encrypted');
     }
 
     private function companyIdFor(Model $subject): ?int

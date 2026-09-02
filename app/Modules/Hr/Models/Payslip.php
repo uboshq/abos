@@ -40,6 +40,15 @@ class Payslip extends Model
     protected function casts(): array
     {
         return [
+            /*
+             * বেতন পাঠানোর তথ্য — কর্মীর সারি থেকে এখানে কপি হয়, তাই
+             * এনক্রিপশনও সাথে আসতে হয়। এক জায়গায় ঢেকে অন্য জায়গায়
+             * খোলা রাখলে ঢাকাটা কেবল কাগজে থাকত।
+             */
+            'bank_account_no' => 'encrypted',
+            'bank_routing_no' => 'encrypted',
+            'mfs_number' => 'encrypted',
+
             'gross' => 'decimal:4',
             'deductions' => 'decimal:4',
             'net' => 'decimal:4',
