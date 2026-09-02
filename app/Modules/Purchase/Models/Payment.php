@@ -8,6 +8,7 @@ use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasDocumentStatus;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Core\Concerns\ScopedToUserBranch;
 use App\Core\Contracts\Drillable;
 use App\Models\Branch;
 use App\Models\User;
@@ -31,6 +32,7 @@ class Payment extends Model implements Drillable
     use HasDocumentStatus;
     use HasPublicId;
     use IsAudited;
+    use ScopedToUserBranch;
     use SoftDeletes;
 
     protected $table = 'pur_payments';

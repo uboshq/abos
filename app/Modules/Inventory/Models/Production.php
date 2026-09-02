@@ -8,6 +8,7 @@ use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasDocumentStatus;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Core\Concerns\ScopedToUserBranch;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -36,6 +37,7 @@ class Production extends Model
     use HasFactory;
     use HasPublicId;
     use IsAudited;
+    use ScopedToUserBranch;
     use SoftDeletes;
 
     /** নম্বরের সিরিজ — "রান্না"। */

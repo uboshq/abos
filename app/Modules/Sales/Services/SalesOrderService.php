@@ -11,6 +11,7 @@ use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Models\FinancialYear;
 use App\Models\IssuedNumber;
+use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\ReadsPackedQuantities;
@@ -19,6 +20,7 @@ use App\Modules\Sales\Models\SalesOrder;
 use App\Modules\Sales\Models\SalesOrderLine;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -317,7 +319,13 @@ final class SalesOrderService
          * সিডারে বিক্রয়কর্মীর বাদ-তালিকায় দুইটাই আলাদা করে লেখা, অর্থাৎ
          * ইচ্ছাটাও চিরকাল এটাই ছিল।
          */
-        if (auth()->user()?->can('customer.credit_limit.override')) {
+        /*
+         * আর এখন নিয়মটা এই ফাইলে নেই — [[CustomerPolicy::overrideCreditLimit()]]।
+         *
+         * উপরের ঘটনাটাই কারণ: তিন জায়গায় লেখা একটা নিয়ম একদিন দুই
+         * রকম হয়ে যায়, আর কোনটা আসল তা কেউ বলতে পারে না।
+         */
+        if (Gate::allows('overrideCreditLimit', Customer::class)) {
             return;
         }
 
