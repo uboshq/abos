@@ -165,7 +165,7 @@ final class AuditEngine
         $write = function () use ($subject, $action, $changes, $reason, $companyId) {
             $trail = AuditTrail::create([
                 'company_id' => $companyId,
-                'branch_id' => $this->branchIdFor($subject),
+                'branch_id' => $this->branchIdFor($subject, $companyId),
                 'user_id' => auth()->id(),
                 'action' => $action,
                 'auditable_type' => $subject::class,
@@ -318,16 +318,71 @@ final class AuditEngine
 
     private function companyIdFor(Model $subject): ?int
     {
+        /*
+         * মডেল নিজে বলতে পারলে তার কথাই চূড়ান্ত।
+         *
+         * ── কেন এই হুকটা লাগল (২ সেপ্টেম্বর ২০২৬) ───────────────────
+         * প্রায় প্রতিটা টেবিলে `company_id` আছে, তাই নিচের লাইনটাই
+         * যথেষ্ট ছিল। ব্যতিক্রম [[Company]] নিজে — সে-ই তো টেন্যান্সির
+         * উৎস, তার নিজের `company_id` নেই।
+         *
+         * ওটা ছাড়া কোম্পানির নিজের সম্পাদনা চলতি প্রসঙ্গের উপর ভর
+         * করত, আর প্ল্যাটফর্ম-প্রশাসক এক কোম্পানিতে বসে অন্যটার তথ্য
+         * বদলালে **সারিটা ভুল কোম্পানির খাতায় বসত** — অর্থাৎ যে
+         * প্রতিষ্ঠানের তথ্য বদলাল, তার পর্দায় কিছুই দেখা যেত না।
+         */
+        if (method_exists($subject, 'auditCompanyId')) {
+            return $subject->auditCompanyId();
+        }
+
         $own = $subject->getAttribute('company_id');
 
         return $own === null ? CompanyContext::id() : (int) $own;
     }
 
-    private function branchIdFor(Model $subject): ?int
+    private function branchIdFor(Model $subject, ?int $companyId): ?int
     {
+        /*
+         * মডেল নিজে বলতে পারলে তার কথাই চূড়ান্ত।
+         *
+         * ── কেন এটা লাগল (২ সেপ্টেম্বর ২০২৬, সুইট চালিয়ে) ───────────
+         * [[Company]]-র কোনো শাখা নেই — সে-ই তো শাখাগুলোর মালিক। কিন্তু
+         * নিচের লাইনটা চলতি প্রসঙ্গের শাখাটা বসাত, আর সিডারে কোম্পানি
+         * তৈরি হয় **শাখার আগে**। ফলে সারিটা এমন একটা শাখার দিকে
+         * ইশারা করত যার তখনো অস্তিত্ব নেই, আর বিদেশি চাবি সেটা মানেনি।
+         *
+         * একা চালালে ধরা পড়ত না: `CompanyContext` স্ট্যাটিক, তাই
+         * **আগের টেস্টের প্রসঙ্গ পরেরটায় রয়ে যেত** — আর তিনটা টেস্ট
+         * কেবল পুরো সুইটে লাল হত। ওই অস্থিরতাটাই আসল বিপদ ছিল।
+         */
+        if (method_exists($subject, 'auditBranchId')) {
+            return $subject->auditBranchId();
+        }
+
         $own = $subject->getAttribute('branch_id');
 
-        return $own === null ? CompanyContext::branchId() : (int) $own;
+        if ($own !== null) {
+            return (int) $own;
+        }
+
+        /*
+         * চলতি শাখাটা কেবল তখনই প্রযোজ্য যখন সারিটাও চলতি কোম্পানির।
+         *
+         * ── কী ভাঙা ছিল (২ সেপ্টেম্বর ২০২৬) ─────────────────────────
+         * আগে শর্ত ছাড়াই `CompanyContext::branchId()` বসত। ফলে যে
+         * সারির কোম্পানি আলাদা, তারও শাখা হিসেবে **অন্য কোম্পানির
+         * শাখা** বসে যেত — একটা সারি যার কোম্পানি আর শাখা দুইটা আলাদা
+         * প্রতিষ্ঠানের।
+         *
+         * [[Company]]-তে অডিট বসাতেই জিনিসটা ধরা পড়ল, আর ধরা পড়ল
+         * সবচেয়ে জোরে সম্ভব উপায়ে: **সিডার চলল না**, কারণ কোম্পানি
+         * তৈরির মুহূর্তে ওই শাখাটার অস্তিত্বই ছিল না, আর বিদেশি
+         * চাবি সেটা মেনে নেয়নি।
+         *
+         * চুপচাপ ভুল সারি লেখার চেয়ে এভাবে ভাঙাই ভালো ছিল — ভুল
+         * সারিগুলো কেউ কোনোদিন খেয়াল করত না।
+         */
+        return $companyId === CompanyContext::id() ? CompanyContext::branchId() : null;
     }
 
     private function documentNoFor(Model $subject): ?string
