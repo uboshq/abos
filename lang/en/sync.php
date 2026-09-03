@@ -22,6 +22,7 @@ return [
     'unknown_entity_type' => 'The server does not know this kind of entry (:type). The app may need updating.',
 
     'not_allowed_offline' => 'Only orders can be written without a network (not :type). Come back into coverage and do this again.',
+    'push_needs_permission' => 'You are not allowed to send this kind of entry. Ask the office to grant it, then try again — nothing was recorded.',
 
     'refused_without_reason' => 'The server did not accept this, and did not say why. Tell the office.',
 
