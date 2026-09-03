@@ -240,6 +240,31 @@ class MoneyIsNeverAFloatTest extends TestCase
         'app/Modules/Sales/Http/Controllers/DirectSaleController.php' => 'ব্রাউজারে পাঠানো মান — POS পর্দার JS',
         'app/Modules/Sales/Http/Requests/CollectionRequest.php' => 'তুলনা — খালি সারি ছাঁকা',
         'app/Modules/Sales/Http/Requests/SalesReturnRequest.php' => 'তুলনা — খালি সারি ছাঁকা',
+
+        /*
+         * ── ছবি আঁকার সংখ্যা, খাতার নয় (৪ সেপ্টেম্বর ২০২৬) ───────────
+         *
+         * নিচের প্রতিটা `(float)` একটা **ভাগ করার হর** বা **শতাংশ**
+         * তৈরি করে, যেটা শেষে একটা বারের উচ্চতা হয়। কোনোটাই কোনো
+         * কাগজে, খাতায় বা রিপোর্টে বসে না।
+         *
+         * ⭐ চিনে নেওয়ার সহজ চিহ্ন: **তিনটাই শূন্য হলে ১ ফেরায়।** টাকার
+         * কোনো মোট কখনো "শূন্য হলে ১" হয় না — কিন্তু ভাগ করার হর হতেই
+         * হয়, নাহলে সব মান শূন্যের দিনে পর্দাটা ৫০০ দিত। ⓘ "কিছুই
+         * নড়েনি" একটা বৈধ অবস্থা, ত্রুটি নয়।
+         *
+         * ⚠️ আর এখানে bcmath বসানো ভুল হত: bcmath দেয় স্ট্রিং, আর
+         * `max()` ও CSS-এর শতাংশের অঙ্কে ওটা আবার float-এ ফিরত —
+         * অর্থাৎ একই কাজ, কেবল এক ধাপ ঘুরে, আর কোডটা পড়া কঠিন হত।
+         *
+         * ⓘ একই ফাইলগুলোর টাকার ঘরগুলো float ছোঁয় না — মজুদের মূল্য
+         * এখন `Money::format()` দিয়ে ছাপা হয় (৪ সেপ্টেম্বর, এই কাজেই)।
+         */
+        'app/Core/Engines/Dashboard/Breakdown.php' => 'ভাগের মোট — বারের প্রস্থের হর, শূন্য হলে ১',
+        'app/Core/Engines/Dashboard/Series.php' => 'গ্রাফের সর্বোচ্চ — মাপনির হর, শূন্য হলে ১',
+        'app/Core/Engines/Dashboard/Stat.php' => 'শতাংশ বদল — দেখানোর সংখ্যা, আর গতকাল ০ হলে null',
+        'app/Core/Engines/Dashboard/DashboardEngine.php' => 'তুলনা — লেখাটায় সব সংখ্যা শূন্য কি না',
+        'app/Modules/Inventory/Resources/views/stock/overview.blade.php' => 'বারের উচ্চতা ও শতাংশ — CSS-এর জন্য',
     ];
 
     /**

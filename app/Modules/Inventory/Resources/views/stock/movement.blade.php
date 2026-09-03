@@ -77,15 +77,15 @@
                     {{ __('inventory::analysis.empty') }}
                 </p>
             @else
-                <table class="w-full text-sm">
+                <table class="ui-list w-full text-sm">
                     <thead>
                         <tr class="border-b border-(--color-border) text-left text-(--color-ink-muted)">
-                            <th class="px-4 py-2.5">{{ __('inventory::analysis.product') }}</th>
-                            <th class="px-4 py-2.5 text-right">{{ __('inventory::analysis.available') }}</th>
+                            <th >{{ __('inventory::analysis.product') }}</th>
+                            <th class="text-right">{{ __('inventory::analysis.available') }}</th>
                             @if ($showsCost)
-                                <th class="px-4 py-2.5 text-right">{{ __('inventory::analysis.value_stuck') }}</th>
+                                <th class="text-right">{{ __('inventory::analysis.value_stuck') }}</th>
                             @endif
-                            <th class="px-4 py-2.5 text-right">
+                            <th class="text-right">
                                 {{ $type === 'fast' ? __('inventory::analysis.sold') : __('inventory::analysis.moves') }}
                             </th>
                         </tr>
@@ -101,22 +101,22 @@
                                     : null;
                             @endphp
                             <tr class="border-b border-(--color-border)/60">
-                                <td class="px-4 py-2.5">
+                                <td >
                                     <a href="{{ route('inventory.product.show', $p) }}"
                                        class="font-medium text-(--color-ink) hover:text-(--color-primary)">
                                         {{ $p->name() }}
                                     </a>
                                     <span class="block text-2xs text-(--color-ink-muted)">{{ $p->code }}</span>
                                 </td>
-                                <td class="num px-4 py-2.5 text-right text-(--color-ink)">
+                                <td class="num text-right text-(--color-ink)">
                                     {{ rtrim(rtrim($qty, '0'), '.') }} {{ $p->unit?->code }}
                                 </td>
                                 @if ($showsCost)
-                                    <td class="num px-4 py-2.5 text-right text-(--color-ink)">
-                                        ৳{{ number_format((float) $value, 2) }}
+                                    <td class="num text-right text-(--color-ink)">
+                                        ৳{{ \App\Core\Support\Money::format($value) }}
                                     </td>
                                 @endif
-                                <td class="num px-4 py-2.5 text-right text-(--color-ink-muted)">
+                                <td class="num text-right text-(--color-ink-muted)">
                                     {{ $type === 'fast' ? ($p->sold_moves ?? 0) : ($p->touches ?? 0) }}
                                 </td>
                             </tr>
