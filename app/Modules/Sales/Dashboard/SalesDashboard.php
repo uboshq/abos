@@ -154,7 +154,7 @@ final class SalesDashboard implements ProvidesDashboard
     private static function outstanding(): string
     {
         return (string) SalesInvoice::query()
-            ->whereIn('status', DocumentStatus::POSTED)
+            ->posted()
             ->sum('total');
     }
 
@@ -176,7 +176,7 @@ final class SalesDashboard implements ProvidesDashboard
             $to = $cursor->copy()->endOfMonth()->toDateString();
 
             $billed = SalesInvoice::query()
-                ->whereIn('status', DocumentStatus::POSTED)
+                ->posted()
                 ->whereBetween('trx_date', [$from, $to])
                 ->sum('total');
 
@@ -214,7 +214,7 @@ final class SalesDashboard implements ProvidesDashboard
 
         $out = [];
 
-        foreach ([DocumentStatus::DRAFT, DocumentStatus::CONFIRMED, DocumentStatus::CLOSED] as $status) {
+        foreach (DocumentStatus::STAGES as $status) {
             $out[] = [
                 'label' => __('core.status.'.$status),
                 'value' => (string) ($rows[$status] ?? 0),
@@ -228,7 +228,7 @@ final class SalesDashboard implements ProvidesDashboard
     private static function biggestDues()
     {
         return SalesInvoice::query()
-            ->whereIn('status', DocumentStatus::POSTED)
+            ->posted()
             ->with('customer')
             ->orderByDesc('total')
             ->limit(8)

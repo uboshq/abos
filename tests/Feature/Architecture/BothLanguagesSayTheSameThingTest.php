@@ -6,6 +6,7 @@ namespace Tests\Feature\Architecture;
 
 use App\Core\Module\ModuleRegistry;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Lang;
 use Tests\TestCase;
 
 /**
@@ -92,6 +93,32 @@ class BothLanguagesSayTheSameThingTest extends TestCase
         foreach (self::LANGUAGES as $language) {
             foreach (array_diff(self::LANGUAGES, [$language]) as $other) {
                 foreach (array_diff($keys[$language], $keys[$other]) as $key) {
+                    /*
+                     * ⚠️ ফাইলে না থাকা আর পর্দায় কাঁচা চাবি ছাপা — এক জিনিস নয়।
+                     *
+                     * `lang/` ফোল্ডারের কিছু নামস্থান **লারাভেলের নিজের**:
+                     * `validation.required`-এর ইংরেজি বাক্যটা ফ্রেমওয়ার্কের
+                     * ভেতরেই লেখা আছে। বাংলা নেই, তাই বাংলাটা আমাদের লিখতেই
+                     * হয় — কিন্তু তার মানে এই নয় যে ইংরেজিটাও **আবার** লিখতে
+                     * হবে।
+                     *
+                     * ⚠️ লিখলে ৫৭টা বাক্য ফ্রেমওয়ার্কের কপি হয়ে বসে থাকত, আর
+                     * পরের আপগ্রেডে ওগুলো নীরবে পুরনো হয়ে যেত — পাহারাটা তখন
+                     * সবুজ থাকত, অথচ লেখাগুলো ভুল।
+                     *
+                     * তাই প্রশ্নটা বদলে গেল: *"ফাইলে আছে কি"* নয়,
+                     * **"পর্দায় সত্যিই শব্দ আসে কি"**। `Lang::has()` ঠিক
+                     * সেটাই মাপে — ফ্রেমওয়ার্কের ফাইলসহ।
+                     *
+                     * ⓘ পাহারাটা এতে দুর্বল হয়নি, **সরাসরি** হয়েছে: যে চাবির
+                     * কোনো ভাষাতেই শব্দ নেই সে আগের মতোই ধরা পড়ে। মডিউলের
+                     * পরীক্ষাটায় এই ছাড় নেই, আর থাকার দরকারও নেই —
+                     * `sales::`-এর পেছনে কোনো ফ্রেমওয়ার্ক দাঁড়িয়ে নেই।
+                     */
+                    if (Lang::has($key, $other)) {
+                        continue;
+                    }
+
                     $problems[] = "core: {$key} — {$language}-এ আছে, {$other}-এ নেই";
                 }
             }
