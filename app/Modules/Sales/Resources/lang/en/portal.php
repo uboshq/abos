@@ -67,4 +67,23 @@ return [
     'show_all' => 'All',
     'empty' => 'Nothing waiting.',
     'closed' => 'Your portal is closed. Please contact the depot.',
+
+    // The ledger page — the full answer to "how much do I owe".
+    'ledger_title' => 'My ledger',
+    'from' => 'From',
+    'to' => 'To',
+    'show' => 'Show',
+    'date' => 'Date',
+    'particulars' => 'Particulars',
+    'debit' => 'Debit',
+    'credit' => 'Credit',
+    'balance' => 'Balance',
+    'opening' => 'Opening balance',
+    'no_entries' => 'No entries in this period.',
+    'credit_limit' => 'Credit limit',
+
+    // A limit of 0 does not mean "used up": it means cash or advance only.
+    // Printing "0" would read as "your credit is finished" and start the
+    // phone call this portal exists to prevent.
+    'cash_only' => 'Cash / advance',
 ];

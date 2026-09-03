@@ -7,6 +7,7 @@ namespace Tests\Feature\Modules;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Models\Company;
+use App\Models\LedgerEntry;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
@@ -324,5 +325,164 @@ class TheDealerCouldNeverSeeHisOwnLedgerTest extends TestCase
         $this->assertNull($rejected->collection_id);
         $this->assertSame($before, Collection::query()->count());
         $this->assertSame('ব্যাংকের কাগজে পাওয়া যায়নি', $rejected->decision_reason);
+    }
+
+    /* ── নিজের খতিয়ান ───────────────────────────────────────────── */
+
+    /**
+     * খতিয়ানের একটা সারি — সরাসরি, কারণ এখানে প্রশ্নটা **দেখানো**, বসানো নয়।
+     *
+     * ⓘ ভাউচার দিয়ে বসালে টেস্টটা পোস্টিং-ইঞ্জিনেরও পরীক্ষা হয়ে যেত, আর
+     * ওটা অন্য ফাইলের কাজ ([[EveryVoucherBalancesTest]])। এখানে কেবল
+     * খতিয়ানের পাতাটা মাপা হচ্ছে।
+     */
+    private function entry(Customer $dealer, string $on, string $debit, string $credit): LedgerEntry
+    {
+        return LedgerEntry::query()->create([
+            'company_id' => $this->company->id,
+            'branch_id' => $this->company->defaultBranch()?->id,
+
+            /*
+             * ⚠️ অর্থবছরটা বাধ্যতামূলক, আর ডাটাবেসেই — কলামটার কোনো
+             * ডিফল্ট নেই।
+             *
+             * ⓘ এটা প্রথম রানে ধরা পড়েছে (৩ সেপ্টেম্বর ২০২৬), আর
+             * ভালোই হয়েছে: **কোন বছরের সারি** সেটা না জেনে খতিয়ান
+             * লেখা যায় না, আর বছর-শেষের কাজগুলো ঠিক ওই কলামটা ধরেই
+             * চলে। ডিফল্ট থাকলে ভুল বছরে সারি বসত, নীরবে।
+             */
+            'financial_year_id' => \App\Models\FinancialYear::query()
+                ->where('is_current', true)->value('id'),
+
+            'account_id' => StandardChart::find(StandardChart::RECEIVABLE)->id,
+
+            /*
+             * ⚠️ `source_type` ও `source_id` — দুইটাই বাধ্যতামূলক, আর
+             * ডাটাবেসেই (nullable নয়, ডিফল্টও নেই)।
+             *
+             * ⭐ এটা একটা নকশার সিদ্ধান্ত, খুঁতখুঁতে যাচাই নয়: **প্রতিটা
+             * খতিয়ান-সারি বলতে বাধ্য সে কোন কাগজ থেকে এল**। ওটাই
+             * `LedgerEntry::drill()`-এর ভিত্তি, আর ওটাই এই রিপোর ১ নম্বর
+             * নিয়ম — প্রতিটা সংখ্যা তার উৎসে নিয়ে যায়।
+             *
+             * ডিফল্ট থাকলে উৎসহীন সারি বসত, আর ছয় মাস পর কেউ একটা
+             * অঙ্কে ক্লিক করে কোথাও পৌঁছাত না।
+             *
+             * ⓘ এখানে `collection` বেছে নেওয়া হয়েছে কারণ ডিলারের
+             * খতিয়ানে ডেবিট আসে বিল থেকে আর ক্রেডিট আসে আদায় থেকে —
+             * টেস্টের জন্য একটাই ধরন যথেষ্ট, আর সারিটা তখনো সৎ থাকে।
+             */
+            'source_type' => 'collection',
+            'source_id' => 1,
+
+            'trx_date' => $on,
+            'party_type' => 'customer',
+            'party_id' => $dealer->id,
+            'debit' => $debit,
+            'credit' => $credit,
+            'narration' => 'test',
+        ]);
+    }
+
+    /**
+     * ⭐ দুই পথে গোনা এক সংখ্যা — এই ফাইলের সবচেয়ে দামি পাহারা।
+     *
+     * খতিয়ানের শেষ সারির জের আর `Customer::outstanding()` **দুইটা আলাদা
+     * কোয়েরি, আলাদা কোড**। মিলতে বাধ্য, আর না মিললে **একটা মিথ্যা বলছে**
+     * — কিন্তু কোনটা তা পর্দা দেখে বোঝার উপায় নেই।
+     *
+     * ⚠️ ৩ সেপ্টেম্বর ২০২৬-এ ঠিক এই ধরনের একটা গরমিল ধরা পড়েছে: সরাসরি
+     * বিক্রয়ের পর্দা বলছিল বকেয়া ২০.১০, খাতা বলছিল ১৭০ — কাগজ-পর্যায়ের
+     * ছাড় ও খরচ বিলে যাচ্ছিল না। **এই নিয়মটাই ওটা ধরত।**
+     */
+    public function test_the_last_balance_matches_the_outstanding_figure(): void
+    {
+        $this->entry($this->karim, '2026-08-01', '100000', '0');
+        $this->entry($this->karim, '2026-08-05', '0', '30000');
+
+        $this->actingAs($this->karim, 'portal')
+            ->get(route('sales.portal.ledger'))
+            ->assertOk()
+            ->assertSee(\App\Core\Support\Money::format('70000.0000'));
+
+        $this->assertSame(
+            \App\Core\Support\Money::format($this->karim->fresh()->outstanding()),
+            \App\Core\Support\Money::format('70000.0000'),
+            'খতিয়ানের জের আর বকেয়ার হিসাব আলাদা হয়ে গেছে — একটা মিথ্যা বলছে।',
+        );
+    }
+
+    /**
+     * ⚠️ এক ডিলারের পাতায় অন্যজনের একটাও সারি নেই।
+     *
+     * বাইরের মানুষ লগইন করেন বলেই এটাই এই মডিউলের একমাত্র সত্যিকারের
+     * ঝুঁকি। **সংখ্যা মেলানো যথেষ্ট নয়** — করিমের জের ঠিক থাকলেও রহিমের
+     * একটা সারি পাতায় থাকতে পারে; তাই সারিটাও খোঁজা হয়।
+     */
+    public function test_one_dealer_never_sees_another_dealers_entries(): void
+    {
+        $this->entry($this->karim, '2026-08-01', '1000', '0');
+        $this->entry($this->rahim, '2026-08-02', '777777', '0');
+
+        $this->actingAs($this->karim, 'portal')
+            ->get(route('sales.portal.ledger'))
+            ->assertOk()
+            ->assertSee(\App\Core\Support\Money::format('1000.0000'))
+            ->assertDontSee(\App\Core\Support\Money::format('777777.0000'));
+    }
+
+    /**
+     * তারিখে ছাঁকলে আগের জের ধরা হয়।
+     *
+     * ⚠️ না ধরলে জের শূন্য থেকে শুরু হত, আর ডিলার পড়তেন **"আমার কোনো
+     * বকেয়া ছিল না"** — যেটা প্রায় সবসময়ই মিথ্যা, আর ঠিক ওই ভুল ধারণা
+     * থেকেই ফোনটা আসে।
+     */
+    public function test_filtering_by_date_still_counts_what_came_before(): void
+    {
+        $this->entry($this->karim, '2026-07-01', '50000', '0');
+        $this->entry($this->karim, '2026-08-10', '20000', '0');
+
+        $this->actingAs($this->karim, 'portal')
+            ->get(route('sales.portal.ledger', ['from' => '2026-08-01', 'to' => '2026-08-31']))
+            ->assertOk()
+            // আগের ৫০,০০০ খোলার জেরে, আর শেষ জের ৭০,০০০
+            ->assertSee(\App\Core\Support\Money::format('50000.0000'))
+            ->assertSee(\App\Core\Support\Money::format('70000.0000'));
+    }
+
+    /**
+     * ⚠️ ক্রেডিট-সীমার সুইচ বন্ধ থাকলে পর্দায় সীমার কথাই নেই।
+     *
+     * "০" দেখালে ডিলার পড়তেন তাঁর সীমা শেষ, তারপর ফোন করতেন — অর্থাৎ
+     * এই পোর্টালের গোটা উদ্দেশ্যের উল্টো।
+     */
+    public function test_the_credit_limit_is_hidden_when_the_company_does_not_use_it(): void
+    {
+        app(\App\Core\Services\SettingsService::class)
+            ->set('customer.credit_limit_enabled', false);
+
+        $this->actingAs($this->karim, 'portal')
+            ->get(route('sales.portal.ledger'))
+            ->assertOk()
+            ->assertDontSee(__('sales::portal.credit_limit'));
+    }
+
+    /** সীমা ০ মানে "শেষ" নয় — "নগদ/অগ্রিম"। */
+    public function test_a_zero_limit_reads_as_cash_only_not_as_zero(): void
+    {
+        app(\App\Core\Services\SettingsService::class)
+            ->set('customer.credit_limit_enabled', true);
+
+        $this->actingAs($this->karim, 'portal')
+            ->get(route('sales.portal.ledger'))
+            ->assertOk()
+            ->assertSee(__('sales::portal.cash_only'));
+    }
+
+    /** লগইন ছাড়া খতিয়ান খোলা যায় না। */
+    public function test_the_ledger_is_closed_to_anyone_not_signed_in(): void
+    {
+        $this->get(route('sales.portal.ledger'))->assertRedirect(route('sales.portal.login'));
     }
 }
