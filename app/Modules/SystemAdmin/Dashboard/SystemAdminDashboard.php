@@ -41,7 +41,7 @@ final class SystemAdminDashboard implements ProvidesDashboard
                     permission: 'system_admin.user.manage', icon: 'people'),
                 new Tile(label: __('system_admin::menu.roles'), href: route('system_admin.role.index'),
                     permission: 'system_admin.role.manage', icon: 'lock'),
-                new Tile(label: __('system_admin::menu.backup'), href: route('system_admin.backup.index'),
+                new Tile(label: __('system_admin::menu.backup'), href: route('backup.index'),
                     permission: 'system_admin.settings.manage', icon: 'drawer'),
                 new Tile(label: __('system_admin::menu.control_panel'), href: route('system_admin.control-panel'),
                     permission: 'system_admin.settings.manage', icon: 'settings'),
@@ -60,7 +60,7 @@ final class SystemAdminDashboard implements ProvidesDashboard
                         ? __('system_admin::dashboard.never')
                         : __('system_admin::dashboard.days_ago', ['days' => $backup]),
                     hint: __('system_admin::dashboard.last_backup_hint'),
-                    href: route('system_admin.backup.index'),
+                    href: route('backup.index'),
                     tone: ($backup === null || $backup > 1) ? Stat::BAD : Stat::GOOD,
                 ),
 
@@ -131,6 +131,25 @@ final class SystemAdminDashboard implements ProvidesDashboard
             }
         }
 
-        return $newest === null ? null : Carbon::createFromTimestamp($newest)->diffInDays(Carbon::now());
+        if ($newest === null) {
+            return null;
+        }
+
+        /*
+         * ⚠️ `(int)` — Carbon 3-এ `diffInDays()` **float** ফেরত দেয়
+         * (`3.0000086…`), আর এই পদ্ধতির ঘোষিত ধরন `?int`। ফলে যেখানে
+         * একটাও ব্যাকআপ ফাইল আছে সেখানে TypeError, আর **গোটা পাতা ৫০০**।
+         *
+         * ── কেন এটা এই মেশিনে ধরা পড়েনি ─────────────────────────────
+         * এখানে `ABOS_BACKUP_PATH` ফাঁকা, তাই উপরের `null` শাখাতেই
+         * ফেরত চলে যেত — এই লাইনটা কোনোদিন চলেনি। **লাইভে ৭৩টা ফাইল
+         * আছে**, তাই ওখানে প্রতিবার চলত।
+         *
+         * অর্থাৎ বাগটা কেবল ওই মেশিনেই দেখা দিত যেখানে জিনিসটা
+         * **কাজ করছে** — আর সেটাই সবচেয়ে খারাপ ধরনের বাগ।
+         * A3 একটা ফেলনা ডাটাবেসে সত্যিকারের ইনস্টল করে হেঁটে ধরেছে
+         * (৩ সেপ্টেম্বর ২০২৬)।
+         */
+        return (int) Carbon::createFromTimestamp($newest)->diffInDays(Carbon::now());
     }
 }
