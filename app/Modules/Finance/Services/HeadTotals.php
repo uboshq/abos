@@ -99,4 +99,58 @@ final class HeadTotals
 
         return (string) ($net ?: '0');
     }
+
+    /**
+     * শীর্ষ কয়টা খাত, **একটাই কোয়েরিতে** — ড্যাশবোর্ডের জন্য।
+     *
+     * ── কেন `forParent()` এখানে খাটে না ──────────────────────────────
+     * সে প্রতিটা খাতে **দুইবার** ডাটাবেসে যায় (চলতি ও আগের সময়কাল),
+     * কারণ খরচের পাতায় তুলনার তীরটা দরকার। ⚠️ মেপে দেখা: ২১টা খাতে
+     * **৪৪টা কোয়েরি**।
+     *
+     * খরচের পাতায় ওটা ঠিক আছে — কেউ দিনে একবার খোলেন। কিন্তু
+     * ড্যাশবোর্ড রোজ, বারবার খোলা হয়, আর সেখানে এটাই সেই ধীরতা যার
+     * **একটাও ধীর কোয়েরি নেই**, তবু পাতাটা ধীর।
+     *
+     * ⓘ `forParent()` অপরিবর্তিত রাখা হয়েছে — খরচের পাতার আচরণ বদলানোর
+     * কোনো কারণ নেই, আর তুলনার তীরটাও ওখানেই দরকার।
+     *
+     * @return list<array{label: string, amount: string}>
+     */
+    public function topUnder(string $parentCode, string $from, string $to, int $limit = 6): array
+    {
+        $parent = Account::query()->where('code', $parentCode)->first();
+
+        if ($parent === null) {
+            return [];
+        }
+
+        $rows = DB::table('ledger_entries as l')
+            ->join('accounts as a', 'a.id', '=', 'l.account_id')
+            ->where('a.parent_id', $parent->id)
+            /*
+             * ⚠️ `DB::table()` মডেলের গ্লোবাল স্কোপ **এড়িয়ে যায়**, তাই
+             * কোম্পানিটা হাতে বসানো — ঠিক যেভাবে `sum()`-এও বসানো আছে।
+             *
+             * বাবার খাতটা কোম্পানি-স্কোপড বলে সন্তানেরাও এই কোম্পানিরই,
+             * কিন্তু খতিয়ানের সারিতে ভরসা করা যায় না: **বহু-টেন্যান্টে
+             * বিচ্ছিন্নতা সুবিধা নয়, আইনি বাধ্যবাধকতা।**
+             */
+            ->where('l.company_id', CompanyContext::id())
+            ->whereBetween('l.trx_date', [$from, $to])
+            ->groupBy('a.id', 'a.name_en', 'a.name_bn')
+            ->selectRaw('a.name_en, a.name_bn, COALESCE(SUM(l.debit) - SUM(l.credit), 0) as net')
+            ->havingRaw('net > 0')
+            ->orderByDesc('net')
+            ->limit($limit)
+            ->get();
+
+        return $rows->map(fn ($row) => [
+            // নামটা ভাষা অনুযায়ী — `Account::name()`-এর মতোই
+            'label' => app()->getLocale() === 'bn' && ($row->name_bn ?? '') !== ''
+                ? (string) $row->name_bn
+                : (string) $row->name_en,
+            'amount' => bcadd((string) $row->net, '0', 4),
+        ])->all();
+    }
 }

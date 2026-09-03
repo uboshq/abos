@@ -3,6 +3,15 @@
 declare(strict_types=1);
 
 return [
+
+    // চারটা দরজা ও খরচের ভাগ — ৪ সেপ্টেম্বর ২০২৬
+    'pending_approvals' => 'Waiting for approval',
+    'expense_heads' => 'Expense heads',
+    'product_costing' => 'Product costing',
+    'who_approves_what' => 'Who approves what',
+    'where_money_went' => 'Where the money went this month',
+    'where_money_went_hint' => 'The six biggest expense heads — click for the full list',
+
     'title' => 'Dashboard',
     'subtitle' => 'The money put in — what came in, what went out',
     'capital_in' => 'Capital in',

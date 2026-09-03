@@ -6,13 +6,17 @@ namespace App\Modules\Finance\Dashboard;
 
 use App\Core\Contracts\ProvidesDashboard;
 use App\Core\Engines\Dashboard\DashboardDefinition;
+use App\Core\Engines\Dashboard\Breakdown;
 use App\Core\Engines\Dashboard\Listing;
 use App\Core\Engines\Dashboard\Stat;
 use App\Core\Engines\Dashboard\Tile;
 use App\Core\Support\Money;
+use Illuminate\Support\Facades\Route;
+use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Finance\Models\CapitalEntry;
 use App\Modules\Finance\Models\Deposit;
 use App\Modules\Finance\Models\Withdrawal;
+use App\Modules\Finance\Services\HeadTotals;
 
 /**
  * অর্থ মডিউলের ড্যাশবোর্ড।
@@ -26,16 +30,75 @@ final class FinanceDashboard implements ProvidesDashboard
 {
     public static function dashboard(): DashboardDefinition
     {
+        $expenseHeads = array_map(
+            fn (array $row) => [
+                'label' => $row['label'],
+                'value' => Money::format($row['amount']),
+            ],
+            app(HeadTotals::class)->topUnder(
+                StandardChart::OPERATING_EXPENSES,
+                now()->startOfMonth()->toDateString(),
+                now()->toDateString(),
+            ),
+        );
+
         return new DashboardDefinition(
             title: __('finance::dashboard.title'),
             subtitle: __('finance::dashboard.subtitle'),
 
-            tiles: [
+            /*
+             * ⚠️ `array_filter` — কারণ নিচের কয়েকটা টালি **অন্য মডিউলের
+             * পর্দায় যায়**, আর কোম্পানি ওই মডিউল বন্ধ রাখতে পারে।
+             *
+             * সরাসরি `route()` ডাকলে বন্ধ মডিউলে **গোটা অর্থের ড্যাশবোর্ড
+             * ৫০০** হত — অর্থাৎ একটা ঐচ্ছিক লিংকের জন্য নিজের পাতাটাই
+             * মরত। ⓘ পাহারাটা এটা ধরে
+             * ([[EveryModuleDashboardHasItsOwnDoorTest]]), আর ঠিকই ধরে।
+             */
+            tiles: array_values(array_filter([
                 new Tile(label: __('finance::menu.capital'), href: route('finance.capital.index'),
                     permission: 'finance.capital.view', icon: 'cash'),
                 new Tile(label: __('finance::menu.withdrawal'), href: route('finance.withdrawal.index'),
                     permission: 'finance.withdrawal.view', icon: 'reports'),
-            ],
+
+                /*
+                 * ── চারটা দরজা, ৪ সেপ্টেম্বর ২০২৬ ───────────────────
+                 *
+                 * চারটাই এমন জিনিস যার **ইঞ্জিন আগে থেকেই ছিল, কিন্তু
+                 * অর্থের পাতা থেকে যাওয়ার পথ ছিল না**। CFO রোজ এই
+                 * পাতাটা খোলেন; তাঁকে অনুমোদন দেখতে অনুমোদনের মডিউলে,
+                 * খরচের খাত দেখতে খরচের পাতায়, আর পণ্যের খরচ দেখতে
+                 * মজুদে — তিন জায়গায় যেতে হত।
+                 *
+                 * ⓘ নতুন কোনো ইঞ্জিন এখানে বানানো হয়নি, একটাও নয়।
+                 */
+                Route::has('approval.inbox.index')
+                    ? new Tile(label: __('finance::dashboard.pending_approvals'),
+                        href: route('approval.inbox.index'),
+                        permission: 'approval.decide', icon: 'check-circle')
+                    : null,
+
+                new Tile(label: __('finance::dashboard.expense_heads'),
+                    href: route('finance.expense.index'),
+                    permission: 'finance.expense.view', icon: 'reports'),
+
+                /*
+                 * ⚠️ পণ্যের খরচ **অনুমতির পিছনে** — `inventory.cost.view`।
+                 * এই একই তালা আজ সকালে পণ্যের তালিকা ও চলাচলের পর্দায়
+                 * বসানো হয়েছে; দরজাটা খোলা রাখলে ওই দুইটার মানেই থাকত না।
+                 */
+                Route::has('inventory.stock.movement')
+                    ? new Tile(label: __('finance::dashboard.product_costing'),
+                        href: route('inventory.stock.movement', ['type' => 'slow']),
+                        permission: 'inventory.cost.view', icon: 'box')
+                    : null,
+
+                Route::has('approval.flow.index')
+                    ? new Tile(label: __('finance::dashboard.who_approves_what'),
+                        href: route('approval.flow.index'),
+                        permission: 'approval.flow.manage', icon: 'shield')
+                    : null,
+            ])),
 
             stats: [
                 new Stat(
@@ -73,6 +136,44 @@ final class FinanceDashboard implements ProvidesDashboard
                     href: route('finance.capital.index'),
                 ),
             ],
+
+            panels: array_values(array_filter([
+                /*
+                 * ── এই মাসে টাকা কোন খাতে গেল ───────────────────────
+                 *
+                 * ⭐ সংখ্যাটা আজ প্রথমবার সত্যিকারের কথা বলে। আগে
+                 * পরিবহনের পুরো খরচ **একটা তালে** দেখাত ("জ্বালানি ও
+                 * পরিবহন"), তাই *"গাড়ির ভাড়ায় কত গেল"* জিজ্ঞেস করার
+                 * উপায়ই ছিল না। আজ খাতটা পাঁচ ভাগে ভাঙা হয়েছে।
+                 *
+                 * ⓘ ইঞ্জিনটা নতুন নয় — [[HeadTotals]] খরচের পাতায়
+                 * আগে থেকেই এটা করত। এখানে কেবল **দরজাটা** বসানো হলো।
+                 *
+                 * ⚠️ শীর্ষ ছয়টাই, পুরো তালিকা নয়: বিশটা খাতের তালিকা
+                 * পড়তে কেউ থামেন না, আর তখন ভাগটা কোনো কাজেই আসত না।
+                 */
+                /*
+                 * ⚠️ খরচ না থাকলে ভাগটাই বসে না — `Breakdown` **খালি
+                 * অংশ পেলে ব্যতিক্রম ছোঁড়ে**, আর তাতে গোটা পাতা ৫০০।
+                 *
+                 * ── কেন এটা প্রায় ফাঁকি দিয়ে বেরিয়ে যাচ্ছিল ─────────
+                 * এই মেশিনের ডাটাবেসে চলতি মাসে একটা খরচ বসানো ছিল,
+                 * তাই পাতাটা দিব্যি খুলত। **নতুন কোম্পানির প্রথম মাসে
+                 * খরচ থাকে না** — সেখানে অর্থের ড্যাশবোর্ড প্রথম দিন
+                 * থেকেই ৫০০ দিত, আর কেউ বুঝত না কেন।
+                 *
+                 * ⓘ ধরেছে [[EveryModuleDashboardHasItsOwnDoorTest]] —
+                 * ফেলনা ডাটাবেসে, যেখানে খরচ ছিল না।
+                 */
+                $expenseHeads === [] ? null : new Breakdown(
+                    label: __('finance::dashboard.where_money_went'),
+                    // ⓘ `forParent()` নিজেই বড় থেকে ছোট সাজিয়ে দেয়, তাই এখানে
+                    // আবার সাজানো হয় না — দুইবার সাজালে একদিন দুইটা নিয়ম
+                    // আলাদা হয়ে যেত
+                    parts: $expenseHeads,
+                    hint: __('finance::dashboard.where_money_went_hint'),
+                ),
+            ])),
 
             listings: [
                 new Listing(
