@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\Customer\Http\Controllers\ConductController;
 use App\Modules\Customer\Http\Controllers\CustomerController;
 use App\Modules\Customer\Http\Controllers\CustomerPortalController;
 use App\Modules\Customer\Http\Controllers\CustomerReportController;
@@ -30,6 +31,14 @@ Route::middleware('auth')->prefix('customers')->group(function () {
      */
     Route::get('/reports/{slug}', [CustomerReportController::class, 'show'])->name('report.show');
 
+    /*
+     * আচরণ নামানো — কোড দিয়ে, তাই {customer}-এর আগে ও স্থির পথে।
+     * "conduct" সংখ্যা নয় বলে {customer} (whereNumber) এটাকে গিলত না,
+     * তবু স্পষ্টতার জন্য উপরে।
+     */
+    Route::post('/conduct/{conduct}/retire', [ConductController::class, 'retire'])
+        ->whereNumber('conduct')->name('conduct.retire');
+
     Route::get('/{customer}', [CustomerController::class, 'show'])
         ->whereNumber('customer')->name('show');
     Route::get('/{customer}/edit', [CustomerController::class, 'edit'])
@@ -48,6 +57,10 @@ Route::middleware('auth')->prefix('customers')->group(function () {
      */
     Route::post('/{customer}/activate', [CustomerController::class, 'activate'])
         ->whereNumber('customer')->name('activate');
+
+    // পার্টির আচরণ লেখা — গ্রাহকের পাতা থেকে
+    Route::post('/{customer}/conduct', [ConductController::class, 'store'])
+        ->whereNumber('customer')->name('conduct.store');
 
     /*
      * পোর্টালের চাবি — গ্রাহকের নিজের রুট নয়, আলাদা কন্ট্রোলারে।

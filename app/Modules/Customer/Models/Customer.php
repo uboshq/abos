@@ -14,6 +14,7 @@ use App\Core\Services\SettingsService;
 use App\Models\Branch;
 use App\Models\LedgerEntry;
 use App\Models\User;
+use App\Modules\Customer\Support\ConductType;
 use App\Modules\MasterData\Models\Location;
 use App\Modules\MasterData\Models\PartyType;
 use Illuminate\Auth\Authenticatable;
@@ -22,7 +23,9 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Collection;
 
 /**
  * একজন গ্রাহক।
@@ -168,6 +171,49 @@ class Customer extends Model implements AuthenticatableContract, Drillable
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /** সব আচরণ-নোট — চলমান ও নামানো, নতুন আগে (গ্রাহকের পাতার ইতিহাসে)। */
+    public function conductNotes(): HasMany
+    {
+        return $this->hasMany(CustomerConduct::class)->latest('recorded_at');
+    }
+
+    /**
+     * চলমান পতাকা — সরাসরি বিক্রয়ে এটাই EAGER-LOAD করা হয়।
+     *
+     * সম্পর্ক (কোয়েরি নয়) বলেই `Customer::with('activeConductNotes')` দিয়ে
+     * সব গ্রাহকের পতাকা এক কোয়েরিতে ওঠে — ৯১ পার্টি, ৯১ রিকোয়েস্ট নয়।
+     */
+    public function activeConductNotes(): HasMany
+    {
+        return $this->hasMany(CustomerConduct::class)
+            ->where('is_active', true)
+            ->latest('recorded_at');
+    }
+
+    /**
+     * চলমান আচরণ, চিপ আঁকার জন্য — গুরুত্বের ক্রমে: ঝুঁকি আগে, তারপর
+     * লক্ষণীয়, ভালো শেষে।
+     *
+     * কাউন্টারে দাঁড়িয়ে "চেক ফেরত গেছে" জানাটা "দ্রুত নামায়"-এর চেয়ে
+     * জরুরি, তাই ঝুঁকি আগে। label/severity ভান্ডার ([[ConductType]])
+     * থেকে গোনা — লোড করা সম্পর্কের উপর, তাই বাড়তি কোনো কোয়েরি নেই।
+     *
+     * @return Collection<int, array{label: string, severity: string, recorded_at: \Illuminate\Support\Carbon|null}>
+     */
+    public function activeConduct(?string $locale = null): Collection
+    {
+        $rank = [ConductType::RISK => 0, ConductType::NOTICE => 1, ConductType::GOOD => 2];
+
+        return $this->activeConductNotes
+            ->map(fn (CustomerConduct $note): array => [
+                'label' => $note->label($locale),
+                'severity' => $note->severity(),
+                'recorded_at' => $note->recorded_at,
+            ])
+            ->sortBy(fn (array $row): int => $rank[$row['severity']] ?? 1)
+            ->values();
     }
 
     /** ব্যবহারকারীর ভাষায় নাম — বাংলা না থাকলে ইংরেজি (সেকশন ১৮.৩)। */
