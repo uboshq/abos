@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Services;
 
+use App\Core\Contracts\ProvisionsCompany;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
@@ -20,12 +21,53 @@ use Illuminate\Validation\ValidationException;
  * দুইটা আলাদা করে বানাতে দিলে কেউ খাত ছাড়া টিল বানাত, আর তখন ওই টিলের
  * টাকা লেজারে কোথাও থাকত না।
  */
-final class CashTillService
+final class CashTillService implements ProvisionsCompany
 {
     public function __construct(
         private readonly AccountService $accounts,
         private readonly NumberSeriesEngine $numbers,
     ) {}
+
+    /**
+     * নতুন কোম্পানির প্রথম নগদ কাউন্টার।
+     *
+     * ── কোন ঘটনা থেকে এটা এলো (৩ সেপ্টেম্বর ২০২৬) ────────────────────
+     * লাইভে একদম শূন্য একটা কোম্পানিতে হাতে-কলমে পুরো চক্র চালাতে গিয়ে
+     * ধরা পড়ল: **মাল বেচা যায়, বিল ছাপা যায়, কিন্তু টাকা আদায় করা যায়
+     * না।** আদায়ের পর্দায় "টাকা কোথায় ঢুকল" ঘরে তিনটা বিকল্প আসত —
+     * ১১০১ হাতে নগদ · ১১০২ ব্যাংক · ১১০৫ MFS — আর **তিনটাই প্রত্যাখ্যাত**
+     * হত: *"একটা মাথা, খাত নয় — নিচের একটা খাত বাছুন"*।
+     *
+     * নিচে কিছুই ছিল না। **ব্যবস্থাটা এমন জিনিস বাছতে বলত যা তালিকায়
+     * নেই**, আর ক্রেতা ভাবতেন পর্দাটাই ভাঙা।
+     *
+     * ── কেন সারাইটা এখানে, ড্রপডাউনে নয় ─────────────────────────────
+     * ড্রপডাউন থেকে মাথাগুলো বাদ দিলে তালিকাটা **খালি** হত — সৎ, কিন্তু
+     * তবু আটকে থাকা। **আসল অভাবটা কাউন্টারের**, বিকল্পের নয়।
+     *
+     * ⚠️ যে দোকান টাকা নেয় না, এমন দোকান নেই। তাই একটা নগদ কাউন্টার
+     * অনুমান নয় — **প্রতিটা ব্যবসার সত্য**। ব্যাংক বা MFS আলাদা কথা:
+     * ওগুলোর নম্বর ও শাখা কেবল ক্রেতাই জানেন, তাই ওগুলো বসানো হয় না।
+     *
+     * Odoo নতুন কোম্পানিতে একটা Cash journal বসায়, D365 একটা default
+     * cash account — একই কারণে, আর দুইটাই বদলানো যায়।
+     *
+     * ── এটা "সেট করা", "ধ্রুবক" নয় ──────────────────────────────────
+     * সারিটা সাধারণ টিল, তালা দেওয়া কিছু নয়: নাম বদলানো যায়, আরও
+     * কাউন্টার যোগ করা যায়, বন্ধও করা যায়। কেবল **শুরুটা** দেওয়া হচ্ছে।
+     */
+    public function provisionCompany(): void
+    {
+        if (CashTill::query()->exists()) {
+            return;
+        }
+
+        $this->create([
+            'name_en' => 'Main Counter',
+            'name_bn' => 'প্রধান কাউন্টার',
+            'is_primary' => true,
+        ]);
+    }
 
     /**
      * @param  array<string, mixed>  $data
