@@ -30,8 +30,41 @@
          ছিলই না — আর ওটা ছাড়া "এই রুটে কত খরচ হলো" প্রশ্নের উত্তর নেই। --}}
     @if ($show['transport'])
     <div x-show="panel === 'transport'" x-cloak class="grid grid-cols-2 gap-2">
-        <label class="block">
+        {{--
+            ── বাহক — তালিকা থেকে, নয়তো হাতে লেখা ──────────────────────
+
+            ⚠️ এতদিন এখানে কেবল **নাম লেখার একটা ঘর** ছিল, তাই চালানের
+            `carrier_id` কখনো বসতই না — আর ভাড়ার দাখিলাটা কোনো পক্ষ পেত না।
+
+            ⭐ মালিকের কথা (৪ সেপ্টেম্বর ২০২৬): *"transporter-এর সাথে হিসাব
+            হবে"* — অর্থাৎ ভাড়াটা তার খাতায় **পাওনা** হয়ে জমে, মাস শেষে
+            মেটে। নাম লেখা থাকলে সেই খতিয়ানটাই দাঁড়ায় না।
+
+            ── কেন লেখার ঘরটা তবু রইল ─────────────────────────────────
+            ⓘ বহরের বাইরের **একবারের গাড়ির** কোনো চলতি হিসাব থাকে না —
+            টাকা ওই দিনই মেটে। তখন নামটাই যথেষ্ট, আর ভাড়াটা সাধারণ
+            প্রদেয়তে যায়। ⭐ একই গাড়ি তিনবার এলে ব্যবহারকারী তাকে পক্ষ
+            বানিয়ে নেবেন — **সিদ্ধান্তটা তাঁর, কোডের নয়।**
+
+            ⓘ পণ্যের ব্র্যান্ডেও হুবহু এই জোড়াটাই আছে: বাছাই + মুক্ত লেখা।
+        --}}
+        <label class="block" x-show="carriers.length > 0" x-cloak>
             <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::field.carrier') }}</span>
+            <select name="carrier_id" x-model="carrierId"
+                    class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
+                           bg-(--color-surface-card) px-2 text-2xs">
+                <option value="" disabled hidden>{{ __('sales::field.choose') }}</option>
+                <option value="">{{ __('sales::field.carrier_not_listed') }}</option>
+                <template x-for="c in carriers" :key="c.id">
+                    <option :value="c.id" x-text="c.label"></option>
+                </template>
+            </select>
+        </label>
+
+        {{-- ⓘ তালিকা খালি থাকলে (কেউ এখনো পরিবহনকারী বানাননি) ঘরটা
+             সবসময় দেখা যায়, নাহলে কেবল "তালিকায় নেই" বাছলে। --}}
+        <label class="block" x-show="carriers.length === 0 || carrierId === ''" x-cloak>
+            <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::field.carrier_name') }}</span>
             <input type="text" name="carrier_name" maxlength="191"
                    class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                           bg-(--color-surface-card) px-2 text-2xs">
