@@ -1763,7 +1763,14 @@
                                     <th class="text-start font-medium">{{ __('sales::field.deposit_method') }}</th>
                                     <th class="text-start font-medium">{{ __('sales::field.account') }}</th>
                                     <th class="text-start font-medium">{{ __('sales::field.deposit_ref') }}</th>
-                                    <th class="text-start font-medium">{{ __('sales::field.remarks') }}</th>
+                                    {{-- ⚠️ "বিবরণ", "মন্তব্য" নয় — মালিকের সিদ্ধান্ত
+                                         (৪ সেপ্টেম্বর ২০২৬)। লেখাটা
+                                         `collections.narration`-এ বসে, আদায়ের
+                                         কাগজে ছাপা হয়, আর খতিয়ানের সারিতে যায় —
+                                         অর্থাৎ ওটা হিসাবের বক্তব্য, পাশের নোট নয়।
+                                         ⓘ এক কলামের দুইটা নাম হলে রিপোর্টে ওরা
+                                         মিলত না। --}}
+                                    <th class="text-start font-medium">{{ __('sales::field.narration') }}</th>
                                     <th class="text-end font-medium">{{ __('sales::field.amount') }}</th>
                                     <th></th>
                                 </tr>
