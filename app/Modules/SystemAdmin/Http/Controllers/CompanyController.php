@@ -16,6 +16,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 /**
@@ -140,6 +141,37 @@ class CompanyController extends Controller implements HasMiddleware
                 Branch::query()->withoutGlobalScopes(),
             );
 
+        /*
+         * ⚠️ নাম থেকে কোড না বসলে **থামা** — খালি স্ট্রিং সংরক্ষণ নয়।
+         *
+         * ── কী ঘটত ───────────────────────────────────────────────────
+         * `CodeFromName::base()` ইংরেজি অক্ষর ছাড়া সব ফেলে দেয় (তার
+         * নিজের মন্তব্যে: "বাংলা নামে কিছুই টেকে না")। তাই পুরো বাংলা
+         * নাম দিয়ে কোডের ঘর খালি রাখলে সে **খালি স্ট্রিং** ফেরত দিত,
+         * আর সেটা নীরবে বসে যেত।
+         *
+         * কোথাও কিছু ভাঙত না। শুধু কোম্পানির কোড প্রতিটা ডকুমেন্ট
+         * নম্বরে বসে, তাই **প্রতিটা চালান-বিলের নম্বর একটা হাইফেন দিয়ে
+         * শুরু হত** — আর ধরা পড়ত ছয় মাস পর, যখন নম্বরগুলো আর বদলানো
+         * যায় না।
+         *
+         * ── কেন কোড বানানোর চেষ্টা করা হয় না ─────────────────────────
+         * মালিকের সিদ্ধান্ত, ৩ সেপ্টেম্বর ২০২৬: **"কোনো কোড বাংলাতে
+         * দেওয়ার দরকার নাই"** — কোড সবসময় ইংরেজি অক্ষরে, কারণ ওটা
+         * রিপোর্ট, ছাপা আর রপ্তানির ফাইলে যায়। বাংলা নাম থেকে ASCII
+         * সংক্ষেপ বানানো যায় না, আর `CMP-0001` বসানোও নিষেধ। তাই
+         * একমাত্র সৎ পথ: **মানুষকে কোডটা জিজ্ঞেস করা**।
+         *
+         * ── কেন এটা এখানে নতুন করে লেখা ──────────────────────────────
+         * নিয়মটা রিপোতে আগে থেকেই আছে আর ঠিকভাবেই লেখা —
+         * [[MasterListService::assertCodeIsFree()]] খালি কোডে
+         * `ValidationException` ছোঁড়ে। **শুধু এই কন্ট্রোলারটাই ওটা
+         * মানত না** (৩ সেপ্টেম্বর ২০২৬-এ গুনে দেখা: বাকি চারটা ব্যবহারই
+         * সুরক্ষিত)।
+         */
+        $this->assertCodeExists($companyCode, 'code', $data['name_en']);
+        $this->assertCodeExists($branchCode, 'branch_code', $data['branch_name_en']);
+
         $company = $provisioner->create(
             data: [
                 'code' => $companyCode,
@@ -177,6 +209,27 @@ class CompanyController extends Controller implements HasMiddleware
         return redirect()
             ->route('system_admin.company.index')
             ->with('saved', __('system_admin::message.company_created', ['name' => $company->name()]));
+    }
+
+    /**
+     * কোডটা সত্যিই বসেছে কি — না বসলে কারণসহ থামা।
+     *
+     * ── কেন বার্তাটা নামটা ফেরত বলে ──────────────────────────────────
+     * "কোড দিতে হবে" পড়ে মানুষ ভাবেন ঘরটা বাধ্যতামূলক, অথচ পাশের
+     * কোম্পানিটা কোড ছাড়াই খুলেছিল। **নিয়মটা ঘরের নয়, নামের** — তাই
+     * বার্তায় নামটা দেখিয়ে বলা হয় কেন এই নামটা থেকে কোড বসল না।
+     *
+     * @throws ValidationException
+     */
+    private function assertCodeExists(string $code, string $field, string $name): void
+    {
+        if ($code !== '') {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            $field => __('system_admin::validation.code_needs_latin', ['name' => $name]),
+        ]);
     }
 
     public function edit(Request $request, Company $company): View

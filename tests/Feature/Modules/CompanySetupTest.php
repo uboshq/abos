@@ -284,4 +284,71 @@ class CompanySetupTest extends TestCase
             ->get(route('system_admin.company.index'))
             ->assertForbidden();
     }
+
+    /**
+     * পুরো বাংলা নাম, কোডের ঘর খালি — কোডটা চাওয়া হয়, বানানো নয়।
+     *
+     * ── কী ঘটত এই পাহারাটা ছাড়া ─────────────────────────────────────
+     * `CodeFromName::base()` ইংরেজি অক্ষর ছাড়া সব ফেলে দেয়, তাই সে
+     * **খালি স্ট্রিং** ফেরত দিত আর সেটাই নীরবে বসে যেত। কোনো ব্যতিক্রম
+     * নেই, কোনো ত্রুটি নেই — শুধু কোম্পানির কোড ফাঁকা, আর ওই কোড বসে
+     * **প্রতিটা ডকুমেন্টের নম্বরে**।
+     *
+     * ⓘ মালিকের সিদ্ধান্ত, ৩ সেপ্টেম্বর ২০২৬: *"কোনো কোড বাংলাতে
+     * দেওয়ার দরকার নাই"* — কোড সবসময় ইংরেজি, তাই একমাত্র সৎ পথ
+     * মানুষকে জিজ্ঞেস করা।
+     */
+    public function test_a_bangla_name_with_no_code_is_asked_for_one(): void
+    {
+        $before = Company::query()->count();
+
+        $this->post(route('system_admin.company.store'), [
+            'name_en' => 'রহিম ডিস্ট্রিবিউশন',
+            'branch_name_en' => 'Head Office',
+            'year_name' => '2026-2027',
+            'year_starts_on' => '2026-07-01',
+            'year_ends_on' => '2027-06-30',
+        ])->assertSessionHasErrors('code');
+
+        // কিছুই বসেনি — অর্ধেক কোম্পানি পড়ে থাকা সবচেয়ে খারাপ ফল
+        $this->assertSame($before, Company::query()->count());
+    }
+
+    /** শাখার নামেও একই নিয়ম — নাহলে অর্ধেক পাহারা। */
+    public function test_a_bangla_branch_name_with_no_code_is_asked_for_one(): void
+    {
+        $before = Company::query()->count();
+
+        $this->post(route('system_admin.company.store'), [
+            'name_en' => 'Rahim Distribution',
+            'branch_name_en' => 'প্রধান কার্যালয়',
+            'year_name' => '2026-2027',
+            'year_starts_on' => '2026-07-01',
+            'year_ends_on' => '2027-06-30',
+        ])->assertSessionHasErrors('branch_code');
+
+        $this->assertSame($before, Company::query()->count());
+    }
+
+    /**
+     * ⚠️ আর বাংলা নাম নিজে কোনো সমস্যা নয় — কোডটা লিখে দিলেই চলে।
+     *
+     * এই টেস্টটা না থাকলে উপরের দুইটা পাহারা "বাংলা নাম নিষিদ্ধ" হয়েও
+     * সবুজ থাকত, আর সেটা মালিকের সিদ্ধান্তের উল্টো: নিষেধটা **কোডে**,
+     * নামে নয়।
+     */
+    public function test_a_bangla_name_works_perfectly_well_with_a_code(): void
+    {
+        $this->post(route('system_admin.company.store'), [
+            'code' => 'RAHIM',
+            'name_en' => 'রহিম ডিস্ট্রিবিউশন',
+            'branch_code' => 'MAIN',
+            'branch_name_en' => 'প্রধান কার্যালয়',
+            'year_name' => '2026-2027',
+            'year_starts_on' => '2026-07-01',
+            'year_ends_on' => '2027-06-30',
+        ])->assertRedirect();
+
+        $this->assertSame('RAHIM', Company::query()->where('name_en', 'রহিম ডিস্ট্রিবিউশন')->value('code'));
+    }
 }
