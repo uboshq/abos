@@ -95,4 +95,12 @@ return [
     'tickets_note' => 'Orders not yet served — the oldest first',
     'kitchen_quiet' => 'Nothing waiting',
     'ticket_wrong_step' => 'That step cannot be taken from here',
+
+    // Pricing — markup and margin are two different numbers
+    'markup_hint' => 'How much is added on top of cost',
+    'margin_hint' => 'What share of the sale price is profit',
+
+    // Product image
+    'image_label' => 'Choose an image',
+    'image_hint' => 'JPEG · PNG · WebP · up to 2 MB',
 ];

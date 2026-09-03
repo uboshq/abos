@@ -21,34 +21,112 @@
         [
             'key' => 'code',
             'label' => __('inventory::field.code'),
-            'width' => '13rem',
+            'width' => '8rem',
             'render' => fn ($p) => view('inventory::partials.code-link', ['product' => $p]),
+        ],
+        [
+            'key' => 'brand_id',
+            'label' => __('inventory::field.brand'),
+            'width' => '7rem',
+            /*
+             * সংযুক্ত ব্র্যান্ড, না থাকলে পুরনো মুক্ত-লেখাটা।
+             *
+             * ⚠️ `brandRow`, `brand` নয় — `brand` টেবিলের একটা কলামের
+             * নামও, আর সম্পর্কের নাম এক হলে Eloquent ওটা ঢেকে দিত
+             * (কারণটা মডেলে লেখা)।
+             *
+             * fallback-টা জরুরি: যে সারিগুলো তালিকা আসার আগে হাতে লেখা
+             * হয়েছিল, তাদের `brand_id` নেই কিন্তু নামটা আছে। কেবল
+             * সম্পর্কটা দেখালে ওই সারিগুলো খালি দেখাত — আর সেটা
+             * "ডেটা হারিয়ে গেছে" বলে পড়া হত।
+             */
+            'render' => fn ($p) => $p->brandRow?->name() ?? $p->brand,
         ],
         [
             'key' => 'name_en',
             'label' => __('inventory::field.name'),
-            'width' => '20rem',
+            'width' => '13rem',
             'render' => fn ($p) => $p->name(),
         ],
-        ['key' => 'barcode', 'label' => __('inventory::field.barcode'), 'width' => '10rem'],
+        ['key' => 'barcode', 'label' => __('inventory::field.barcode'), 'width' => '8rem'],
+        [
+            'key' => 'category_id',
+            'label' => __('inventory::field.category'),
+            'width' => '7rem',
+            'render' => fn ($p) => $p->categoryRow?->name() ?? $p->category,
+        ],
         [
             'key' => 'unit_id',
             'label' => __('inventory::field.unit'),
-            'width' => '7rem',
+            'width' => '4.5rem',
             'render' => fn ($p) => $p->unit?->name(),
+        ],
+        [
+            'key' => 'purchase_price',
+            'label' => __('inventory::field.purchase_price'),
+            'numeric' => true,
+            'width' => '6.5rem',
+            'render' => fn ($p) => \App\Core\Support\Money::format($p->purchase_price),
         ],
         [
             'key' => 'sale_price',
             'label' => __('inventory::field.sale_price'),
             'numeric' => true,
-            'width' => '9rem',
+            'width' => '6.5rem',
             'render' => fn ($p) => \App\Core\Support\Money::format($p->sale_price),
+        ],
+        /*
+         * মার্জিন ও মার্কআপ — সংরক্ষিত নয়, প্রতিবার হিসাব করা।
+         *
+         * সূত্র দুইটা [[Margin]]-এ, আর সেখানেই একমাত্র জায়গা: তালিকা ও
+         * ফর্ম দুই জায়গায় আলাদা করে লিখলে একদিন একটা বদলাত আর অন্যটা
+         * পুরনো সূত্রে থেকে যেত — একই পণ্যে দুই পর্দায় দুই সংখ্যা।
+         *
+         * ⚠️ `null` আর `0` এক জিনিস নয়, আর তালিকায় আলাদা দেখাতেই হবে:
+         *
+         *     null  →  "—"   হিসাবই করা যায় না (ভাগের নিচে শূন্য)
+         *     0     →  "০%"  হিসাব হয়েছে, লাভ নেই
+         *
+         * একটাকে অন্যটা দেখালে "দর বসানোই হয়নি" আর "দরে লাভ নেই" —
+         * এই দুইটা আলাদা অবস্থা এক দেখাত, আর মালিক ভুল পণ্যটার পিছনে
+         * সময় দিতেন।
+         *
+         * তাই null যাচাইটা আগে — `(float) null` = 0, অর্থাৎ চেক না করলে
+         * "হিসাব করা যায় না" নীরবে "০%" হয়ে যেত।
+         */
+        [
+            'key' => 'margin',
+            'label' => __('inventory::field.margin'),
+            'numeric' => true,
+            'width' => '5rem',
+            'render' => function ($p) {
+                $v = \App\Modules\Inventory\Support\Margin::margin($p->purchase_price, $p->sale_price);
+
+                return $v === null ? '—' : \App\Core\Support\Money::format($v).'%';
+            },
+        ],
+        [
+            'key' => 'markup',
+            'label' => __('inventory::field.markup'),
+            'numeric' => true,
+            'width' => '5rem',
+            'render' => function ($p) {
+                $v = \App\Modules\Inventory\Support\Margin::markup($p->purchase_price, $p->sale_price);
+
+                return $v === null ? '—' : \App\Core\Support\Money::format($v).'%';
+            },
         ],
         [
             'key' => 'is_active',
             'label' => __('inventory::field.state'),
-            'width' => '7rem',
+            'width' => '5.5rem',
             'render' => fn ($p) => view('inventory::partials.state-badge', ['record' => $p]),
+        ],
+        [
+            'key' => 'actions',
+            'label' => __('core.table.actions'),
+            'width' => '3.5rem',
+            'render' => fn ($p) => view('inventory::partials.product-actions', ['product' => $p]),
         ],
     ];
 @endphp

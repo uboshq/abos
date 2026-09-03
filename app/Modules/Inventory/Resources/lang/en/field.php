@@ -14,6 +14,8 @@ return [
     'tax' => 'VAT',
     'purchase_price' => 'Purchase price',
     'sale_price' => 'Sale price',
+    'margin' => 'Margin',
+    'markup' => 'Markup',
     'reorder_level' => 'Reorder level',
     'product' => 'Product',
     'warehouse' => 'Warehouse',
