@@ -34,6 +34,7 @@ return [
 
     // ডিলারের কমিশন — কোম্পানির কাছে দাবি
     'commission_max_amount' => 'Highest commission in taka (0 = no limit)',
+    'rounding_max' => 'Largest rounding in taka (0 = no limit)',
     'commission_max_percent' => 'Highest commission rate % (0 = no limit)',
     'field_transport' => 'Transport panel (vehicle · driver · fare)',
     'field_shipment' => 'Shipment panel',

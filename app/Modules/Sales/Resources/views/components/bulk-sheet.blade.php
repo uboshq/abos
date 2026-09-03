@@ -22,6 +22,20 @@
     'products',
     'stock' => [],
     'freeQty' => false,
+
+    /*
+     * খোলার বোতামের চেহারা — ডাকা জায়গা ঠিক করে দিতে পারে।
+     *
+     * ── কেন এই prop লাগল (৩ সেপ্টেম্বর ২০২৬) ─────────────────────────
+     * সরাসরি বিক্রয়ে ছয়টা বোতাম এক সারিতে বসে, আর মালিক চেয়েছেন **ছয়টাই
+     * এক মাপে, আর প্রতিটার আলাদা রঙ**। এই কম্পোনেন্টটা নিজের বোতাম নিজে
+     * আঁকে, তাই বাইরের নিয়ম না জানলে **ওটা একাই আলাদা দেখাত** — আর ঠিক
+     * সেটাই হয়েছিল: "চার্ট" বোতামটা বাকি পাঁচটার চেয়ে সরু ছিল।
+     *
+     * ⚠️ ডিফল্টটা আগের মতোই, তাই বাকি পর্দাগুলো (চালানের ফর্ম) অপরিবর্তিত।
+     */
+    'buttonClass' => 'rounded-(--radius-field) border border-(--color-border) px-3 py-1.5 text-sm
+                      transition-colors hover:bg-(--color-surface-hover)',
 ])
 
 @php
@@ -141,9 +155,7 @@
         },
      }">
 
-    <button type="button" @click="open = true"
-            class="rounded-(--radius-field) border border-(--color-border) px-3 py-1.5 text-sm
-                   transition-colors hover:bg-(--color-surface-hover)">
+    <button type="button" @click="open = true" class="{{ $buttonClass }}">
         {{ __('sales::bulk.open') }}
     </button>
 
