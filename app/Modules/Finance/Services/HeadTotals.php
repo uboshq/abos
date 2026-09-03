@@ -125,9 +125,49 @@ final class HeadTotals
             return [];
         }
 
+        /*
+         * ⚠️ **পুরো বংশ, এক ধাপ নয়।**
+         *
+         * আজ ৫২০০-এর নিচে সবগুলোই পাতা। কিন্তু ছকটা ক্রেতা নিজে
+         * বাড়াতে পারেন — যেদিন কেউ "গাড়ির ভাড়া → ট্রাক ভাড়া · পিকআপ
+         * ভাড়া" বানাবেন, সেদিন দাখিলা বসবে নাতির ঘরে, আর এক ধাপ দেখা
+         * কোয়েরিতে **ওই টাকাটা তালিকা থেকে পুরোপুরি হারিয়ে যেত** —
+         * কম দেখাত না, একেবারেই দেখাত না।
+         *
+         * ⓘ কিন্তু দেখানো হয় **খাতের নামে**, নাতির নামে নয়: তালিকাটার
+         * শিরোনাম "খরচের খাত", আর খাত মানে ৫২০০-এর সরাসরি সন্তান।
+         * নাতির টাকা তার নিজের খাতে উঠে আসে — তাই তালিকাটা স্থির থাকে,
+         * আর কোনো টাকা হারায় না।
+         */
+        $family = $parent->selfAndDescendants()->keyBy('id');
+
+        // নাতি → তার খাত (৫২০০-এর সরাসরি সন্তান)
+        $headOf = [];
+
+        foreach ($family as $node) {
+            if ($node->id === $parent->id) {
+                continue;
+            }
+
+            $walk = $node;
+
+            // ৩২ ধাপের সীমা — চক্র থাকলে থেমে যেতে হবে, `Account`-এর মতোই
+            for ($depth = 0; $depth < 32 && $walk->parent_id !== $parent->id; $depth++) {
+                $up = $family->get($walk->parent_id);
+
+                if ($up === null) {
+                    break;
+                }
+
+                $walk = $up;
+            }
+
+            $headOf[$node->id] = $walk->id;
+        }
+
         $rows = DB::table('ledger_entries as l')
             ->join('accounts as a', 'a.id', '=', 'l.account_id')
-            ->where('a.parent_id', $parent->id)
+            ->whereIn('a.id', array_keys($headOf))
             /*
              * ⚠️ `DB::table()` মডেলের গ্লোবাল স্কোপ **এড়িয়ে যায়**, তাই
              * কোম্পানিটা হাতে বসানো — ঠিক যেভাবে `sum()`-এও বসানো আছে।
@@ -138,19 +178,48 @@ final class HeadTotals
              */
             ->where('l.company_id', CompanyContext::id())
             ->whereBetween('l.trx_date', [$from, $to])
-            ->groupBy('a.id', 'a.name_en', 'a.name_bn')
-            ->selectRaw('a.name_en, a.name_bn, COALESCE(SUM(l.debit) - SUM(l.credit), 0) as net')
-            ->havingRaw('net > 0')
-            ->orderByDesc('net')
-            ->limit($limit)
+            ->groupBy('a.id')
+            ->selectRaw('a.id, COALESCE(SUM(l.debit) - SUM(l.credit), 0) as net')
             ->get();
 
-        return $rows->map(fn ($row) => [
-            // নামটা ভাষা অনুযায়ী — `Account::name()`-এর মতোই
-            'label' => app()->getLocale() === 'bn' && ($row->name_bn ?? '') !== ''
-                ? (string) $row->name_bn
-                : (string) $row->name_en,
-            'amount' => bcadd((string) $row->net, '0', 4),
-        ])->all();
+        // নাতির টাকা তার খাতে তোলা — তাই যোগটা এখানে, SQL-এ নয়
+        $byHead = [];
+
+        foreach ($rows as $row) {
+            $head = $headOf[$row->id] ?? null;
+
+            if ($head === null) {
+                continue;
+            }
+
+            $byHead[$head] = bcadd($byHead[$head] ?? '0', (string) $row->net, 4);
+        }
+
+        // শূন্য বা ঋণাত্মক খাত তালিকায় আসে না — "কোথায় গেল" প্রশ্নের উত্তর নয়
+        $byHead = array_filter($byHead, fn (string $net) => bccomp($net, '0', 4) > 0);
+
+        arsort($byHead);
+
+        $top = array_slice($byHead, 0, $limit, true);
+
+        /*
+         * নামগুলো আলাদা করে, **একবারেই**।
+         *
+         * ⓘ `selfAndDescendants()` কেবল `id` ও `parent_id` আনে (সে
+         * গাছটা বানানোর জন্যই ডাকা), তাই ওখানে নাম নেই। শীর্ষ ছয়টার
+         * নাম একটা কোয়েরিতে আনা হয় — প্রতি সারিতে ডাকলে ছয়টা কোয়েরি হত।
+         */
+        $names = Account::query()->whereIn('id', array_keys($top))->get()->keyBy('id');
+
+        $out = [];
+
+        foreach ($top as $id => $net) {
+            $out[] = [
+                'label' => $names->get($id)?->name() ?? '—',
+                'amount' => $net,
+            ];
+        }
+
+        return $out;
     }
 }
