@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\MeController;
 use App\Http\Controllers\Api\SyncController;
 use App\Http\Middleware\ResolveCompanyContext;
 use Illuminate\Support\Facades\Route;
@@ -71,6 +72,48 @@ Route::prefix('v1/auth')
         Route::post('/logout', [AuthController::class, 'logout'])
             ->middleware('auth:sanctum')
             ->name('logout');
+    });
+
+/*
+ * অ্যাপের নিজের দরজা — সিঙ্ক নয়।
+ *
+ * ── কেন আলাদা গ্রুপ, নিচের গ্রুপের ভিতরে নয় ─────────────────────────
+ * নিচের গ্রুপটা `abilities:sync` চায়। `/me` ওখানে বসালে **সিঙ্ক নয়
+ * এমন একটা দরজা সিঙ্কের চাবি চাইত** — আজ কাজ করত, কিন্তু কাল অ্যাপের
+ * প্রতিটা নতুন দরজা (মেনু, প্রোফাইল, বিজ্ঞপ্তি) একই ভুল নামে বসত, আর
+ * তখন `sync` নামটার আর কোনো মানে থাকত না।
+ *
+ * ⓘ চাবিটা নাম দিয়ে বসানো গেছে কারণ মেপে দেখা গেছে খরচ কম: `ACCESS`
+ * ধ্রুবকটা ছিল মাত্র দুই জায়গায়, আর ফোনের কোডে বা টেস্টে নামটা কোথাও
+ * হাতে লেখা নেই। **সস্তা হলে ঠিক নামটাই বসানো উচিত।**
+ *
+ * ⚠️ দুইটা চাবিই একই access টোকেনে বসে (`AuthController::login()`),
+ * তাই ফোনকে দুইটা টোকেন রাখতে হয় না — কিন্তু refresh টোকেনে
+ * কোনোটাই নেই, তাই চুরি যাওয়া refresh টোকেনে এই দরজাও খোলে না।
+ */
+Route::prefix('v1')
+    ->middleware([
+        'auth:sanctum',
+        'abilities:'.AuthController::APP,
+        ResolveCompanyContext::class,
+    ])
+    ->name('api.')
+    ->group(function (): void {
+    /*
+     * "আমি কে, আর আমি কী দেখব" — অ্যাপের প্রথম প্রশ্ন।
+     *
+     * ── কেন কোনো `can:` চাবি নেই ────────────────────────────────
+     * এই দরজাটা কোনো ব্যবসার ডেটা দেয় না; সে কেবল বলে **তুমি কে**।
+     * আলাদা অনুমতি চাওয়া মানে ঢুকতে পারা মানুষকে নিজের নাম জানতে
+     * বাধা দেওয়া — ঠিক যে কারণে `logout` আর `profile`-এও চাবি নেই।
+     *
+     * ⓘ পাহারা তবু আছে, আর দুইটা: `auth:sanctum` (কে), আর গ্রুপের
+     * `abilities:` (কোন টোকেন)। refresh টোকেনে এটা খোলে না।
+     *
+     * ⚠️ এখানে যা যায় তা **কী দেখানো যাবে**, "কী করা যাবে" নয় —
+     * প্রতিটা দরজা নিজে নিজের অনুমতি দেখে ([[MeController]])।
+     */
+    Route::get('/me', MeController::class)->name('me');
     });
 
 Route::prefix('v1')
