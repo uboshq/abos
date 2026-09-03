@@ -12,7 +12,9 @@ use App\Core\Support\Money;
 use App\Models\FinancialYear;
 use App\Models\IssuedNumber;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\Cheque;
 use App\Modules\Accounts\Services\CashTillService;
+use App\Modules\Accounts\Services\ChequeService;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\CollectionLine;
@@ -39,6 +41,7 @@ final class CollectionService
         private readonly NumberSeriesEngine $numbers,
         private readonly PostingEngine $posting,
         private readonly CashTillService $tills,
+        private readonly ChequeService $cheques,
     ) {}
 
     /**
@@ -67,7 +70,10 @@ final class CollectionService
                 'financial_year_id' => $year->id,
                 'document_no' => $documentNo,
                 'customer_id' => $data['customer_id'],
-                'account_id' => $this->resolveMoneyAccount($data['account_id'] ?? null)->id,
+                'account_id' => $this->resolveMoneyAccount(
+                    $data['account_id'] ?? null,
+                    (bool) ($data['allows_holding'] ?? false),
+                )->id,
                 'trx_date' => $trxDate->toDateString(),
                 'amount' => $amount,
                 'instrument' => $data['instrument'] ?? null,
@@ -104,7 +110,10 @@ final class CollectionService
             $trxDate = Carbon::parse($data['trx_date'] ?? $collection->trx_date);
 
             $collection->update([
-                'account_id' => $this->resolveMoneyAccount($data['account_id'] ?? $collection->account_id)->id,
+                'account_id' => $this->resolveMoneyAccount(
+                    $data['account_id'] ?? $collection->account_id,
+                    (bool) ($data['allows_holding'] ?? false),
+                )->id,
                 'trx_date' => $trxDate->toDateString(),
                 'amount' => $this->money($data['amount'] ?? $collection->amount),
                 'instrument' => $data['instrument'] ?? null,
@@ -187,6 +196,35 @@ final class CollectionService
             ]);
 
             return $collection->fresh(['lines']);
+        });
+    }
+
+    /**
+     * আদায়ের কাগজে নেওয়া একটা চেক ফেরত এসেছে।
+     *
+     * ── কেন এটা এখানে, ChequeService-এ নয় ──────────────────────────────
+     * টাকাটা পোস্ট করেছিল আদায়ের কাগজ (Dr ১১০৪ / Cr গ্রাহক + CollectionLine),
+     * চেক নিজে নয়। তাই ফেরানোও সেখান থেকেই — কাগজটা বাতিল হলে দাখিলা উল্টে
+     * যায় (গ্রাহক আবার দেনাদার), আর তার CollectionLine আর posted() না থাকায়
+     * বিলের বকেয়া **নিজে থেকেই** ফিরে আসে ([[SalesInvoice::collectedAmount()]]
+     * কেবল posted আদায় গোনে)। উদ্বৃত্ত থাকলে সেই অগ্রিমও একসাথে ফেরে।
+     *
+     * ChequeService নিচের স্তর (Accounts), সে Sales-এর আদায় জানে না — তাই
+     * এই জোড়া লাগানোর কাজটা এখানে, আর চেকের সারিতে কেবল অবস্থাটা বসে।
+     */
+    public function bounceReceivedCheque(Cheque $cheque, string $reason): Cheque
+    {
+        if (! $cheque->postedByCollection()) {
+            throw ValidationException::withMessages([
+                'status' => __('sales::validation.cheque_not_from_receipt'),
+            ]);
+        }
+
+        return DB::transaction(function () use ($cheque, $reason) {
+            $collection = Collection::query()->findOrFail($cheque->collection_id);
+            $this->cancel($collection, $reason);
+
+            return $this->cheques->markBounced($cheque, $reason);
         });
     }
 
@@ -327,7 +365,14 @@ final class CollectionService
         return $this->tills->ensurePrimaryTill()->account;
     }
 
-    private function resolveMoneyAccount(mixed $accountId): Account
+    /**
+     * @param  bool  $allowHolding  চেক আদায়ের পথ ছাড়া সবসময় false — তখন কেবল
+     *                              মায়ের সন্তান খাত। true হলে holding-পাতাও
+     *                              (হাতে চেক ১১০৪) মেনে নেওয়া হয়। ⚠️ default
+     *                              false-ই সাধারণ আদায়কে ১১০৪ থেকে ঠেকায়:
+     *                              নাহলে কেউ চেক ছাড়াই ১১০৪-এ টাকা বসাতে পারতেন।
+     */
+    private function resolveMoneyAccount(mixed $accountId, bool $allowHolding = false): Account
     {
         $account = blank($accountId)
             ? $this->defaultCashAccount()
@@ -363,12 +408,20 @@ final class CollectionService
             ]);
         }
 
-        $money = StandardChart::MONEY_PARENTS;
+        // মায়ের সন্তান কোনো খাত — মাথা নিজে নয় (উপরের নিয়ম)
+        $isChildOfMother = Account::query()
+            ->whereKey($account->parent_id)
+            ->whereIn('code', StandardChart::MONEY_PARENTS)
+            ->exists();
 
-        // মাথা দুইটার নিচের কোনো খাত — মাথা নিজে নয় (উপরের নিয়ম)
-        $isMoney = Account::query()->whereKey($account->parent_id)->whereIn('code', $money)->exists();
+        /*
+         * টাকা ধরে এমন holding-পাতা (হাতে চেক ১১০৪) — কেবল যখন কলকারী
+         * স্পষ্টভাবে অনুমতি দেয় (চেক আদায়ের পথ)। সাধারণ আদায়ে $allowHolding
+         * false, তাই ১১০৪ তখনো "টাকার খাত নয়" — চেক ছাড়া ১১০৪-এ টাকা বসে না।
+         */
+        $isHoldingLeaf = $allowHolding && in_array($account->code, StandardChart::MONEY_HOLDING, true);
 
-        if (! $isMoney) {
+        if (! $isChildOfMother && ! $isHoldingLeaf) {
             throw ValidationException::withMessages([
                 'account_id' => __('sales::validation.not_a_money_account', ['name' => $account->name()]),
             ]);
