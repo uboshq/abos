@@ -411,8 +411,9 @@ final class StockFacts
             ->selectRaw('l.id, l.product_id, l.document_no, l.trx_date,
                          l.qty_remaining, l.unit_cost,
                          (l.qty_remaining * l.unit_cost) as value_stuck,
-                         DATEDIFF(CURDATE(), l.trx_date) as age_days,
-                         p.code as product_code, p.name_en, p.name_bn')
+                         DATEDIFF(?, l.trx_date) as age_days,
+                         p.code as product_code, p.name_en, p.name_bn',
+                [Carbon::today()->toDateString()])
             ->orderBy('l.trx_date') // পুরনো আগে
             ->limit($limit)
             ->get();
@@ -424,13 +425,30 @@ final class StockFacts
      */
     private function agingScope(int $minDays, ?int $maxDays)
     {
+        /*
+         * আজকের তারিখটা অ্যাপ থেকে, `CURDATE()` থেকে নয়।
+         *
+         * ── কেন এটা মজুদের ক্ষেত্রে বিশেষভাবে জরুরি ─────────────────
+         * ডাটাবেসের ঘড়ি অ্যাপের ঘড়ি নয়। দুইটা আলাদা টাইমজোনে বা
+         * আলাদা মেশিনে থাকলে **"৩০ দিনের পুরনো মাল" ভুল দিন থেকে গোনা
+         * হয়** — আর তখন একটা লট বাকেট বদলে ফেলে।
+         *
+         * ⚠️ ভুলটা এক দিনের, তাই চোখে পড়ে না — কিন্তু সীমানার ঠিক
+         * উপরে-নিচে থাকা লটগুলো একদিন এক বাকেটে, পরদিন অন্যটায় দেখা
+         * যায়, আর কেউ বুঝতে পারে না কেন সংখ্যাটা নড়ছে।
+         *
+         * ⓘ আর টেস্টে সময় জমিয়ে রাখা (`Carbon::setTestNow`) তখনই কাজ
+         * করে যখন তারিখটা অ্যাপ থেকে আসে — ডাটাবেস ওই জমাটা মানে না।
+         */
+        $today = Carbon::today()->toDateString();
+
         $q = DB::table('inv_cost_layers as l')
             ->where('l.company_id', CompanyContext::id())
             ->where('l.qty_remaining', '>', 0)
-            ->whereRaw('DATEDIFF(CURDATE(), l.trx_date) >= '.$minDays);
+            ->whereRaw('DATEDIFF(?, l.trx_date) >= ?', [$today, $minDays]);
 
         if ($maxDays !== null) {
-            $q->whereRaw('DATEDIFF(CURDATE(), l.trx_date) < '.$maxDays);
+            $q->whereRaw('DATEDIFF(?, l.trx_date) < ?', [$today, $maxDays]);
         }
 
         return $q;
