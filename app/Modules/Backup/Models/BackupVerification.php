@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Backup\Models;
 
+use App\Core\Concerns\HasPublicId;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -38,6 +39,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class BackupVerification extends Model
 {
+    /*
+     * ⚠️ বাকি তিনটা ব্যাকআপ-মডেলে ছিল, এটায় বাদ পড়েছিল — `PublicIdTest`
+     * ডিপ্লয়ের ঠিক আগে ধরেছে (৩ সেপ্টেম্বর ২০২৬)। এই রিপোতে ঠিকানায়
+     * ডাটাবেসের `id` কখনো যায় না, তাই প্রতিটা মডেলেই এটা লাগে।
+     */
+    use HasPublicId;
+
     protected $table = 'bak_verifications';
 
     /* ⚠️ `created_at`/`updated_at` নেই — `verified_at`ই সময়। দুইটা
