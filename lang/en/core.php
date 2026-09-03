@@ -227,6 +227,12 @@ return [
         'subtitle' => 'What is taken every night — when the last one was, where it sits, and how to bring it back',
         'newest' => 'Newest backup',
         'none_yet' => 'No backup yet',
+
+        /* ⚠️ Called in three places and written in neither language, so
+           live showed the raw key `core.backup.days_ago` where the number
+           belongs — on the Home card and the backup tile (3 Sep 2026,
+           caught by the HP's live check). */
+        'days_ago' => ':days days ago',
         'take_now' => 'Take one now',
         'taken' => 'Backup taken — :name (:size).',
         'failed' => 'The backup could not be taken: :reason',
@@ -319,11 +325,28 @@ return [
         'someone_gone' => 'A removed user',
     ],
 
+    /*
+     * ⚠️ Seven core keys were being asked for and written in neither
+     * language (3 Sep 2026). The worst three are refusals — a switched-off
+     * screen, and being denied a company or a branch. Exactly when someone
+     * needs a reason, they were shown a raw key instead.
+     *
+     * Caught by the guard that also reads plain dotted keys; the earlier
+     * one only counted namespaced ones, so these slipped through.
+     */
+    'message' => [
+        'screen_switched_off' => 'This screen is switched off for your company.',
+        'saved' => 'Saved.',
+        'deleted' => 'Deleted.',
+    ],
+
     'table' => [
         'range' => ':from - :to of :total',
         'page_total' => 'This page',
         'code' => 'Code',
         'name' => 'Name',
+        'type' => 'Type',
+        'size' => 'Size',
         'actions' => 'Actions',
         'serial' => 'SL#',
         'date' => 'Date',
@@ -539,6 +562,12 @@ return [
         'branch' => 'Branch',
         'branch_of' => 'Branch — :company',
         'stamped_with_branch' => 'Everything you enter is stamped with the branch you are in.',
+
+        /* ⚠️ Refusals. Without a reason people think the system is broken
+           and call support — and a customer running this on their own
+           server has nobody to call. */
+        'no_access' => 'You do not have access to this company.',
+        'branch_elsewhere' => 'That branch does not belong to your company.',
         'financial_year' => 'Financial year',
     ],
 
