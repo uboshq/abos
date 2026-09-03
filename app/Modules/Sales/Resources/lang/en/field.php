@@ -172,6 +172,11 @@ return [
      */
     'sales_rate' => 'Sales Price',
     'total_amount' => 'Total Amount',
+    /* The line's discount and the paper's discount were both just
+       "Discount", on the same screen. The field-switch guard caught it —
+       turning the line one off left the other behind — but the real
+       problem was that a reader could not tell them apart either. */
+    'line_discount' => 'Discount on this line',
     'discount_pct' => 'Discount %',
     'net_value' => 'Net Value',
     'vat' => 'VAT',

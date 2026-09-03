@@ -461,11 +461,28 @@ class DirectSaleTest extends TestCase
             'sales.field_do_no' => __('sales::field.do_no'),
             'sales.field_free_qty' => __('sales::field.free_qty'),
             'sales.field_gift' => __('sales::field.gift_item'),
-            'sales.field_line_discount' => __('sales::field.discount_pct'),
+            /*
+             * ⚠️ লেবেলটা বদলেছে — ৩ সেপ্টেম্বর ২০২৬ কাউন্টারের পর্দা নতুন
+             * করে সাজানোর সময়।
+             *
+             * লাইনের ছাড় এখন "এই লাইন" প্যানেলে বসে, আর ঘরটা টাকা বা
+             * শতাংশ **দুইটাই** নেয় — তাই "ছাড় %" নামটা আর সত্যি ছিল না,
+             * নামটা এখন শুধু "ছাড়"। ⓘ পাহারাটা লেবেল ধরে খোঁজে, তাই
+             * পুরনো চাবিটা আর কোথাও মিলত না।
+             */
+            'sales.field_line_discount' => __('sales::field.line_discount'),
             'sales.field_expense' => __('sales::field.expense'),
             'sales.field_rounding' => __('sales::field.rounding'),
             'sales.field_deposit' => __('sales::field.received_deposit'),
-            'sales.field_credit_limit' => __('sales::field.credit_limit'),
+            /*
+             * ⚠️ লেবেলটা বদলেছে — ৩ সেপ্টেম্বর ২০২৬, মালিকের নির্দেশে।
+             *
+             * ছাপা **সীমা** কাউন্টারে কোনো প্রশ্নের উত্তর দিত না; বিক্রেতার
+             * প্রশ্ন একটাই — *"এই পার্টিকে আর কত বাকিতে দেওয়া যাবে?"* — আর
+             * সেটা সীমা নয়, **সীমা বিয়োগ যা ইতিমধ্যে পাওনা**। সুইচটা একই,
+             * কেবল ঘরটার নাম আর অর্থ বদলেছে।
+             */
+            'sales.field_credit_limit' => __('sales::field.available_credit'),
             /*
              * ⚠️ `sales.field_warehouse_select` এখানে আর নেই — ৩ সেপ্টেম্বর ২০২৬।
              *

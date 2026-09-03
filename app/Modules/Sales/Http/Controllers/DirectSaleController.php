@@ -144,12 +144,25 @@ class DirectSaleController extends Controller implements HasMiddleware
             'depositMethods' => PaymentMethod::query()
                 ->active()
                 ->orderBy('code')
-                ->get(['id', 'code', 'name_en', 'name_bn', 'account_id', 'needs_reference'])
+                ->get()
                 ->map(fn (PaymentMethod $m): array => [
                     'id' => (string) $m->id,
                     'label' => $m->name(),
                     'accountId' => $m->account_id === null ? '' : (string) $m->account_id,
                     'needsReference' => (bool) $m->needs_reference,
+                    /*
+                     * ⚠️ ধরনটা এখনো নাও থাকতে পারে, আর সেটা ইচ্ছাকৃত।
+                     *
+                     * `kind` কলামটা যোগ হচ্ছে (নগদ · ব্যাংক · MFS · চেক), আর
+                     * ওটাই ঠিক করে দেবে খাতের তালিকায় কোনগুলো দেখা যাবে।
+                     * Eloquent অনুপস্থিত কলামে `null` ফেরায়, ব্যতিক্রম নয় —
+                     * তাই কলামটা আসার আগেও পর্দা ভাঙে না, কেবল ছাঁকনিটা
+                     * চুপ করে থাকে (সব খাত দেখায়)।
+                     *
+                     * ⓘ **এটা "method না বাছা"র চেয়ে আলাদা অবস্থা** — তখন
+                     * একটাও খাত দেখা যায় না, মালিকের নির্দেশমতো।
+                     */
+                    'kind' => $m->kind,
                 ])
                 ->values(),
 
@@ -158,10 +171,14 @@ class DirectSaleController extends Controller implements HasMiddleware
                 ->whereIn('parent_id', Account::query()
                     ->whereIn('code', StandardChart::MONEY_PARENTS)->select('id'))
                 ->orderBy('code')
-                ->get(['id', 'code', 'name_en', 'name_bn'])
+                ->with('parent:id,code')
+                ->get(['id', 'parent_id', 'code', 'name_en', 'name_bn'])
                 ->map(fn (Account $a): array => [
                     'id' => (string) $a->id,
                     'label' => $a->code.' · '.$a->name(),
+                    /* কোন মায়ের সন্তান — ছাঁকনিটা এটাই দেখে।
+                       ১১০১ নগদ · ১১০২ ব্যাংক · ১১০৫ মোবাইল মানি */
+                    'parent' => (string) ($a->parent?->code ?? ''),
                 ])
                 ->values(),
 

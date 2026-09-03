@@ -160,7 +160,7 @@
                            bg-(--color-surface-card) px-2 text-2xs">
                 {{-- ⓘ একই কারণে এখানেও — উপরের মন্তব্য দেখুন। --}}
                 <option value="" disabled hidden>{{ __('sales::field.choose') }}</option>
-                <template x-for="a in moneyAccounts" :key="a.id">
+                <template x-for="a in depositAccounts" :key="a.id">
                     <option :value="a.id" x-text="a.label"></option>
                 </template>
             </select>
