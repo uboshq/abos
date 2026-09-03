@@ -82,6 +82,8 @@ return [
          * বাসি ছিল, কেউ টের পায়নি।
          */
         'reports' => [
+            ['label' => 'system_admin::menu.report_schedules', 'route' => 'system_admin.reports.schedule.index',
+                'permission' => 'system_admin.reports.schedule'],
         ],
         'settings' => [
             ['label' => 'core.import.title', 'route' => 'system_admin.import.index',
@@ -134,6 +136,9 @@ return [
         'system_admin.import.manage',
         'system_admin.audit.view',
         'system_admin.backup.manage',
+        // নির্ধারিত রিপোর্টের সূচি বানানো ও চালানো — অন্য সেটিংস থেকে আলাদা,
+        // কারণ এটা ঠিক করে কার কাছে কোন ব্যবসায়িক সংখ্যা নিজে থেকে পৌঁছাবে
+        'system_admin.reports.schedule',
     ],
 
     'doc_types' => [],
