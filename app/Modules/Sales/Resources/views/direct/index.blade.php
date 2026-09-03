@@ -2127,6 +2127,21 @@
                     <span class="num" x-text="'৳' + money(invoiceDue)"></span>
                 </x-sales::panel-row>
 
+                {{-- ⚠️ বিলের চেয়ে বেশি নিলে সেটা পর্দায় বলতেই হবে।
+
+                     সারিটা কেবল তখনই দেখা যায় যখন সত্যিই উদ্বৃত্ত আছে —
+                     স্বাভাবিক চালানে একটা স্থায়ী শূন্যের সারি চোখের সামনে
+                     রাখার কোনো কারণ নেই।
+
+                     ⓘ সবুজ, লাল নয়: উদ্বৃত্ত জমা কোনো সমস্যা নয়, ওটা
+                     গ্রাহকের পাওনা — পরের চালানে কাটা যাবে। --}}
+                <template x-if="depositExcess > 0">
+                    <x-sales::panel-row :label="__('sales::field.kept_as_advance')">
+                        <span class="num font-semibold text-(--color-success)"
+                              x-text="'৳' + money(depositExcess)"></span>
+                    </x-sales::panel-row>
+                </template>
+
                 {{--
                     ── আগের হিসাব — নামটা চিহ্ন দেখে বদলায় ──────────────────
 
@@ -3446,8 +3461,32 @@
                         return due > 0 ? due : 0;
                     },
 
+                    /*
+                     * বিলের চেয়ে বেশি জমা — যেটুকু বেশি, সেটুকু অগ্রিম।
+                     *
+                     * ⚠️ মালিক ধরেছেন (৩ সেপ্টেম্বর ২০২৬): ৬০,৫৬৫ টাকার
+                     * বিলে ৫৬ লাখ জমা লিখলে পর্দা বলত **"বকেয়া ০"**, আর
+                     * বাকি টাকাটা নিয়ে **একটা শব্দও বলত না**। ক্যাশিয়ার
+                     * হাতে টাকা নিয়েছেন, অথচ পর্দা ভুলে গেছে।
+                     */
+                    get depositExcess() {
+                        const extra = this.deposit - this.netPayable;
+
+                        return extra > 0 ? extra : 0;
+                    },
+
+                    /*
+                     * ⚠️ `invoiceDue` নয়, না-কাটা সংখ্যাটা।
+                     *
+                     * `invoiceDue` শূন্যে থেমে যায় (একটা বিলে ঋণাত্মক
+                     * বকেয়ার মানে নেই)। কিন্তু **পক্ষের** হিসাবে উদ্বৃত্তটা
+                     * সত্যি — ওটা তাঁর অগ্রিম, আর পরের চালানে কাটা হবে।
+                     * তাই এখানে বাদ দিলে নিচের লাল/সবুজ বড়িটা মিথ্যা বলত।
+                     */
                     get outstanding() {
-                        return (Number(this.customer.due) || 0) + this.invoiceDue;
+                        return (Number(this.customer.due) || 0)
+                            + this.netPayable
+                            - this.deposit;
                     },
 
                     /*
