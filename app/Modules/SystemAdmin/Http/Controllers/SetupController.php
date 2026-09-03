@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Modules\SystemAdmin\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\MasterData\Services\MasterListService;
 use App\Modules\SystemAdmin\Services\FirstRun;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\View\View;
 
@@ -45,7 +47,18 @@ class SetupController extends Controller
     {
         abort_unless($this->firstRun->isOpen(), 404);
 
-        return view('system_admin::setup.index');
+        /*
+         * ঘর দুইটা ভরা অবস্থায় দেখানো হয়, খালি নয়।
+         *
+         * ⚠️ যিনি এই পাতাটা খুলছেন তিনি হিসাবরক্ষক নাও হতে পারেন —
+         * দোকানের মালিক নিজেই বসতে পারেন। "আপনার অর্থবছর কী?" প্রশ্নটা
+         * খালি ঘরে করলে তিনি থমকে যেতেন। বাংলাদেশের চলতি বছরটা আগে
+         * থেকে বসানো থাকে, আর যাঁর দরকার তিনি বদলে নেন।
+         */
+        return view('system_admin::setup.index', [
+            'year' => \App\Core\Services\CompanyProvisioner::currentBangladeshiYear(),
+            'currencies' => MasterListService::CURRENCIES,
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -92,6 +105,27 @@ class SetupController extends Controller
             'branch_name' => ['required', 'string', 'max:160', 'regex:/[A-Za-z]/'],
 
             'locale' => ['nullable', 'in:bn,en'],
+
+            /*
+             * ভিত্তি মুদ্রা — তালিকাটা [[MasterListService::CURRENCIES]] থেকে।
+             *
+             * এখানে হাতে লেখা হয় না, কারণ ওই তালিকাটাই নতুন কোম্পানিতে
+             * সারি হিসেবে বসে। দুই জায়গায় লিখলে ক্রেতা এমন একটা মুদ্রা
+             * বেছে ফেলতে পারতেন যেটা পরে বসেই না — আর তখন ভিত্তি মুদ্রা
+             * চুপচাপ টাকায় ফিরে যেত।
+             */
+            'currency' => ['nullable', Rule::in(array_column(MasterListService::CURRENCIES, 0))],
+
+            /*
+             * অর্থবছর — দুইটা একসাথে, নয়তো একটাও নয়।
+             *
+             * ⚠️ একটা দিলে আর অন্যটা না দিলে বছরটা অর্ধেক জানা থাকত, আর
+             * বাকি অর্ধেকটা ডিফল্ট থেকে আসত — অর্থাৎ ক্রেতা ভাবতেন
+             * তাঁর দেওয়া তারিখেই বছর শুরু, অথচ শেষটা জুন। তাই
+             * `required_with` দুই দিকেই।
+             */
+            'year_starts_on' => ['nullable', 'date', 'required_with:year_ends_on'],
+            'year_ends_on' => ['nullable', 'date', 'required_with:year_starts_on', 'after:year_starts_on'],
         ], [
             'company_name.regex' => __('system_admin::setup.needs_latin'),
             'branch_name.regex' => __('system_admin::setup.needs_latin'),

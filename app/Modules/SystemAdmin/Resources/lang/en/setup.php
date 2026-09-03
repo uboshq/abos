@@ -45,7 +45,19 @@ return [
      * and then every report would disagree with the tax authority — a
      * mistake that only shows up at year end.
      */
-    'year_note' => 'The financial year will be set July to June (the Bangladesh rule). It can be changed later if needed.',
+    'year_starts_on' => 'Financial year starts',
+    'year_ends_on' => 'Financial year ends',
+
+    /*
+     * ⚠️ This used to say "It can be changed later if needed" — which was
+     * not true. Nothing edits the dates of the current year; the year-end
+     * screen only creates the next one. A true warning beats a false
+     * reassurance, especially where the mistake cannot be undone.
+     */
+    'year_note' => "Bangladesh's current financial year (July–June) is filled in. ⚠️ If your first set of books starts mid-year — February to June, say — change the start date now. It cannot be changed later, because invoice and challan numbers are issued against this year.",
+
+    'currency' => 'Currency of the books',
+    'currency_note' => 'Every figure will be kept in this currency, and other currencies will be rated against it. More can be added later.',
 
     /*
      * Why Latin letters are needed — said on the screen, before the

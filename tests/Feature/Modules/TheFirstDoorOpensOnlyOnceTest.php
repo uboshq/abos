@@ -196,4 +196,129 @@ class TheFirstDoorOpensOnlyOnceTest extends TestCase
 
         $this->assertSame(0, User::query()->count());
     }
+
+    // ── অর্থবছর ও মুদ্রা, ৪ সেপ্টেম্বর ২০২৬ ────────────────────────────
+
+    /**
+     * কিছু না বললে বাংলাদেশের চলতি বছরটাই — আগের আচরণ অক্ষত।
+     */
+    public function test_the_year_falls_back_to_july_june_when_nothing_is_given(): void
+    {
+        $this->post('/setup', $this->form())->assertRedirect(route('dashboard'));
+
+        $company = Company::query()->firstOrFail();
+
+        CompanyContext::forCompany($company->id, function (): void {
+            $year = FinancialYear::query()->where('is_current', true)->firstOrFail();
+
+            $this->assertSame(7, $year->starts_on->month, 'ডিফল্ট বছরটা জুলাই থেকে শুরু হয়নি।');
+            $this->assertSame(6, $year->ends_on->month, 'ডিফল্ট বছরটা জুনে শেষ হয়নি।');
+        });
+    }
+
+    /**
+     * ছোট প্রথম বছর — যেটার জন্য ঘর দুইটা বসানো হয়েছে।
+     *
+     * ── কেন এটাই আসল পরীক্ষা ─────────────────────────────────────────
+     * *"একটা কোম্পানির প্রথম বছর কখনোই বারো মাস নয়।"* ফেব্রুয়ারিতে আসা
+     * ক্রেতার বই ফেব্রুয়ারি–জুন। আগে ঘর ছিল না, তাই জুলাই ১ বসত — আর
+     * খোলার জের পাঁচ মাস আগের তারিখে বসত, কারণ
+     * `OpeningBalanceService::dateFor()` বছরের প্রথম দিন ধরে।
+     *
+     * ⚠️ তাই assertion শুধু তারিখে থামে না — **জেরটা সত্যিই ওই দিনে বসে
+     * কিনা** সেটাও দেখা হয়। তারিখ ঠিক অথচ জের অন্য দিনে, এটাই হত নীরব
+     * ভুল।
+     */
+    public function test_a_short_first_year_is_taken_exactly_as_given(): void
+    {
+        /*
+         * তারিখগুলো **আজকের সাপেক্ষে**, স্থির নয়।
+         *
+         * ⚠️ প্রথমে এখানে '2026-02-01' → '2026-06-30' লেখা ছিল, আর টেস্টটা
+         * ৪০৪ দিত — কারণ ৪ সেপ্টেম্বরে ওই বছরটা **শেষ হয়ে গেছে**, আর
+         * চলতি বছর হিসেবে বসানো যায় না। স্থির তারিখ লিখলে টেস্টটা
+         * ক্যালেন্ডারের সাথে সাথে অর্থ বদলায়: আজ যা "চলতি", ছয় মাস পরে
+         * তা "অতীত"।
+         *
+         * বাস্তব দৃশ্যটাও এটাই — যিনি আজ ABOS-এ আসছেন তাঁর প্রথম বই আজ
+         * থেকে অর্থবছরের শেষ পর্যন্ত, বারো মাস নয়।
+         */
+        $starts = now()->startOfMonth();
+        $ends = $starts->copy()->addMonths(4)->endOfMonth();
+
+        $this->post('/setup', [
+            ...$this->form(),
+            'year_starts_on' => $starts->toDateString(),
+            'year_ends_on' => $ends->toDateString(),
+        ])->assertRedirect(route('dashboard'));
+
+        $company = Company::query()->firstOrFail();
+
+        CompanyContext::forCompany($company->id, function () use ($starts, $ends): void {
+            $year = FinancialYear::query()->where('is_current', true)->firstOrFail();
+
+            $this->assertSame($starts->toDateString(), $year->starts_on->toDateString());
+            $this->assertSame($ends->toDateString(), $year->ends_on->toDateString());
+
+            /* পাঁচ মাসের বছর — জুলাই থেকে শুরু হওয়া ডিফল্টটা নয় */
+            $this->assertNotSame(7, $year->starts_on->month);
+        });
+    }
+
+    /**
+     * অর্ধেক বছর গ্রহণ করা হয় না।
+     *
+     * শুরুটা দিয়ে শেষটা না দিলে বাকি অর্ধেক ডিফল্ট থেকে আসত — ক্রেতা
+     * ভাবতেন তাঁর দেওয়া তারিখেই বছর, অথচ শেষটা জুন।
+     */
+    public function test_half_a_year_is_refused(): void
+    {
+        $this->post('/setup', [...$this->form(), 'year_starts_on' => '2026-02-01'])
+            ->assertSessionHasErrors('year_ends_on');
+
+        $this->assertSame(0, User::query()->count());
+    }
+
+    /**
+     * বেছে নেওয়া মুদ্রাই খাতার ভিত্তি — কোম্পানির ঘরে **আর** তালিকায়।
+     *
+     * ⚠️ দুইটাই দেখা হয়, আর সেটাই এই পরীক্ষার কারণ: `companies.currency`
+     * ঘরটা আগে থেকেই ছিল কিন্তু **কেউ পড়ত না** — ভিত্তি মুদ্রা আলাদাভাবে
+     * `BDT` কোড ধরে বসানো হত। তখন পর্দায় পছন্দ নেওয়া হত আর বই চলত টাকায়।
+     * ঘরটা মিলিয়ে না দেখলে ওই স্টাবটাই ফিরে আসতে পারে।
+     */
+    public function test_the_chosen_currency_becomes_the_base_of_the_books(): void
+    {
+        $this->post('/setup', [...$this->form(), 'currency' => 'USD'])
+            ->assertRedirect(route('dashboard'));
+
+        $company = Company::query()->firstOrFail();
+        $this->assertSame('USD', $company->currency);
+
+        CompanyContext::forCompany($company->id, function (): void {
+            $base = \App\Modules\MasterData\Models\Currency::query()
+                ->where('is_default', true)
+                ->firstOrFail();
+
+            $this->assertSame(
+                'USD',
+                $base->code,
+                'কোম্পানির ঘরে USD, অথচ খাতার ভিত্তি মুদ্রা অন্য — দুই সূত্র দুই কথা বলছে।',
+            );
+        });
+    }
+
+    /**
+     * তালিকার বাইরের মুদ্রা নেওয়া হয় না।
+     *
+     * নিলে কোম্পানির ঘরে এমন একটা কোড বসত যার কোনো সারি কোনোদিন বসবে
+     * না, আর ভিত্তি মুদ্রা চুপচাপ টাকায় ফিরে যেত।
+     */
+    public function test_a_currency_nobody_seeds_is_refused(): void
+    {
+        $this->post('/setup', [...$this->form(), 'currency' => 'XYZ'])
+            ->assertSessionHasErrors('currency');
+
+        $this->assertSame(0, User::query()->count());
+    }
 }
