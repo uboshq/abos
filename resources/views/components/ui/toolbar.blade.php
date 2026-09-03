@@ -493,6 +493,24 @@
                                 {{ __('core.toolbar.export_csv_note') }}
                             </span>
                         </a>
+
+                        <a href="{{ url()->current().'?'.http_build_query(request()->query() + ['export' => 'xlsx']) }}"
+                           data-no-prefetch
+                           class="block px-3 py-2 text-sm hover:bg-(--color-surface-hover)">
+                            {{ __('core.toolbar.export_xlsx') }}
+                            <span class="block text-2xs text-(--color-ink-muted)">
+                                {{ __('core.toolbar.export_xlsx_note') }}
+                            </span>
+                        </a>
+
+                        <a href="{{ url()->current().'?'.http_build_query(request()->query() + ['export' => 'json']) }}"
+                           data-no-prefetch
+                           class="block px-3 py-2 text-sm hover:bg-(--color-surface-hover)">
+                            {{ __('core.toolbar.export_json') }}
+                            <span class="block text-2xs text-(--color-ink-muted)">
+                                {{ __('core.toolbar.export_json_note') }}
+                            </span>
+                        </a>
                         {{-- লেখা থাকা সত্ত্বেও aria-label — ComponentTest
                              ট্যাগের ভেতরটাই কেবল পড়ে, ভেতরের লেখা দেখে না,
                              তাই পাহারাটা টিকিয়ে রাখতে হলে দুটোই দরকার।

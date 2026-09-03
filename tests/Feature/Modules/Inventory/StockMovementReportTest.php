@@ -117,7 +117,23 @@ class StockMovementReportTest extends TestCase
 
     public function test_report_is_closed_to_a_user_without_report_permission(): void
     {
-        $stranger = User::factory()->create(['company_id' => $this->company->id]);
+        /*
+         * সদস্যপদ pivot-এ, `users`-এর কলামে নয়।
+         *
+         * ⚠️ আগে লেখা ছিল `User::factory()->create(['company_id' => …])`,
+         * অথচ `users` টেবিলে ওই কলামটা **নেই** (দুইটা ডাটাবেসেই মেপে দেখা,
+         * ৩ সেপ্টেম্বর ২০২৬)। ফলে পরীক্ষাটা SQL ত্রুটিতে ভেঙে পড়ত —
+         * error হিসেবে, ব্যর্থতা হিসেবে নয়।
+         *
+         * ⓘ ত্রুটির চেহারাটা ছিল হুবহু সেই বার্তা যেটা ওই দিন দুইটা সুইট
+         * একসাথে চলার সময়ও এসেছিল ("Unknown column company_id")। তাই এটাকে
+         * সংঘর্ষের আবর্জনা ভেবে পার করে দেওয়া সহজ ছিল — **কিন্তু এটা
+         * পরিষ্কার ডাটাবেসেও লাল হত।**
+         *
+         * এক কোম্পানিতে বসানোর নিয়মটা রিপোর বাকি টেস্টগুলোর মতোই।
+         */
+        $stranger = User::factory()->create();
+        $stranger->companies()->attach($this->company->id, ['is_active' => true]);
 
         $this->actingAs($stranger)
             ->get(route('inventory.stock.movement'))

@@ -282,10 +282,38 @@ class ToolbarTest extends TestCase
      */
     public function test_hiding_every_column_is_ignored(): void
     {
-        $all = 'code,name_en,barcode,unit_id,sale_price,is_active';
+        /*
+         * তালিকাটা পর্দা থেকেই নেওয়া, হাতে লেখা নয়।
+         *
+         * ── কেন, আর কীভাবে এটা একবার নীরবে অকেজো হয়ে গিয়েছিল ─────────
+         * এখানে ছয়টা কলামের নাম হাতে লেখা ছিল:
+         * `code,name_en,barcode,unit_id,sale_price,is_active`।
+         *
+         * ৩ সেপ্টেম্বর ২০২৬-এ পণ্যের তালিকায় কলাম ছয় থেকে বারো হয়।
+         * তখন ওই ছয়টা লুকালেও **আরও ছয়টা বাকি থেকে যেত** — অর্থাৎ
+         * "সব কলাম লুকানো" অবস্থাটাই আর তৈরি হত না, আর যে নিয়মটা এই
+         * পরীক্ষার পরখ করার কথা সেটা চালুই হত না। `code` সত্যিই লুকিয়ে
+         * যেত, আর পরীক্ষাটা লাল হত — অথচ **কোডে কিছুই ভাঙেনি**।
+         *
+         * ⚠️ হাতে আরও ছয়টা নাম যোগ করলে ভুলটা কেবল পিছিয়ে যেত:
+         * তেরোতম কলামের দিনে হুবহু একই ঘটনা ঘটত।
+         *
+         * টুলবারের Columns মেনু প্রতিটা কলামের জন্য একটা করে চেকবক্স
+         * আঁকে (`name="show[]"`), তাই **পর্দা নিজেই তার কলামের তালিকা
+         * বলে দেয়**। ওখান থেকে নিলে তালিকাটা কোনোদিন বাসি হয় না।
+         */
+        $url = route('inventory.product.index');
+
+        $all = implode(',', $this->columnKeysOn($url));
+
+        $this->assertGreaterThan(
+            1,
+            count($this->columnKeysOn($url)),
+            'পর্দায় একটার বেশি কলাম পাওয়া যায়নি — তাহলে "সব লুকানো" অবস্থাটাই পরখ করা হচ্ছে না।',
+        );
 
         $response = $this->actingAs($this->user)
-            ->get(route('inventory.product.index').'?hide='.$all)
+            ->get($url.'?hide='.$all)
             ->assertOk();
 
         $this->assertStringContainsString(
@@ -293,6 +321,24 @@ class ToolbarTest extends TestCase
             $this->tableHead($response->getContent()),
             'সব কলাম লুকানোর অনুরোধে টেবিলটা কলামহীন হয়ে গেছে।',
         );
+    }
+
+    /**
+     * পর্দাটা যে কলামগুলো ঘোষণা করে — টুলবারের Columns মেনু থেকে পড়া।
+     *
+     * ⓘ `show[]` নামের চেকবক্সগুলোই একমাত্র জায়গা যেখানে পর্দা তার
+     * কলামের **চাবিগুলো** ছাপে (শিরোনামে কেবল লেবেল থাকে, আর লেবেল
+     * ভাষা অনুযায়ী বদলায়)।
+     *
+     * @return list<string>
+     */
+    private function columnKeysOn(string $url): array
+    {
+        $html = $this->actingAs($this->user)->get($url)->assertOk()->getContent();
+
+        preg_match_all('/name="show\[\]"\s+value="([^"]+)"/', (string) $html, $m);
+
+        return array_values(array_unique($m[1]));
     }
 
     /** টেবিলের শিরোনামের অংশটুকু — বাকি পাতাটা বাদ। */
