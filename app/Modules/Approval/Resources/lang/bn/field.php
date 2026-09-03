@@ -5,6 +5,13 @@ declare(strict_types=1);
 return [
     'module' => 'মডিউল',
     'all_modules' => 'সব',
+    'decided_at' => 'সিদ্ধান্তের তারিখ',
+    'waiting_days' => 'কত দিন ধরে',
+    'took_days' => 'কত দিনে',
+    'approved_count' => 'অনুমোদন',
+    'rejected_count' => 'ফেরত',
+    'total_count' => 'মোট',
+    'avg_days' => 'গড় দিন',
     'action' => 'কাজ',
     'document' => 'ডকুমেন্ট',
     'document_type' => 'ডকুমেন্টের ধরন',

@@ -44,6 +44,27 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __($report->title) }}</x-slot:title>
 
+    {{--
+        রিপোর্টের নিজের একটা কথা — কেবল যে রিপোর্ট পাঠায়।
+
+        ── কেন এই ঘরটা লাগল ────────────────────────────────────────────
+        বেশিরভাগ রিপোর্টের প্রতিটা সারি একটা কাগজ, তাই সারিটা ক্লিকযোগ্য।
+        কিছু রিপোর্ট গণনা করে ("রহিম ১২টা অনুমোদন"), আর সেখানে ক্লিক করার
+        কিছু নেই। ⚠️ মানুষ তবু ক্লিক করবেন, আর কিছু না হলে ভাববেন পাতাটা
+        ভাঙা — **ভাঙা মনে হওয়াটা ভাঙার প্রায় সমান খরচের**।
+
+        তাই সীমাটা লুকানো হয় না, লেখা হয়, আর সাথে কাগজগুলো কোথায় আছে
+        সেটাও। ⓘ `@isset` বলে বাকি ছয়টা মডিউলের কিছুই বদলায় না — যে
+        পাঠায় না, তার পাতায় ঘরটাই আঁকা হয় না।
+    --}}
+    @isset($notice)
+        <div role="note"
+             class="mb-3 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app)
+                    px-3 py-2 text-sm text-(--color-ink-muted)">
+            {{ $notice }}
+        </div>
+    @endisset
+
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
             <x-ui.toolbar :title="__($report->title)" :count="trans_choice('accounts::message.row_count', $result->totalRows, ['count' => $result->totalRows])" :search="false">

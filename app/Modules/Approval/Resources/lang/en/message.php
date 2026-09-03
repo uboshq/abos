@@ -20,4 +20,13 @@ return [
     'level_of' => 'Level :current of :total',
     'not_your_turn' => 'You are not in the rule for this level.',
     'own_request' => 'You cannot approve your own request.',
+
+    /*
+     * A counting report has nothing to click — and it says so.
+     *
+     * Every other report's row is a document, so people learn to click.
+     * Here nothing would happen, and they would take the page for broken.
+     * So the limit and the way round it go in one line.
+     */
+    'report_counts_only' => 'These are counts, so there is nothing to open on a row. To see a particular request, go to "Waiting for me", or open the pending / approved / turned-down report — every row there opens.',
 ];

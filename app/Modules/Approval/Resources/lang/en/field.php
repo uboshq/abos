@@ -5,6 +5,13 @@ declare(strict_types=1);
 return [
     'module' => 'Module',
     'all_modules' => 'All',
+    'decided_at' => 'Decided on',
+    'waiting_days' => 'Days waiting',
+    'took_days' => 'Days taken',
+    'approved_count' => 'Approved',
+    'rejected_count' => 'Turned down',
+    'total_count' => 'Total',
+    'avg_days' => 'Avg days',
     'action' => 'Action',
     'document' => 'Document',
     'document_type' => 'Document type',
