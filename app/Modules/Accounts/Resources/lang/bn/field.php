@@ -13,6 +13,7 @@ return [
     'financial_years' => 'অর্থবছরগুলো',
     'type_year_to_confirm' => 'নিশ্চিত করতে লিখুন: :name',
     'code' => 'কোড',
+    'account_code' => 'হিসাব কোড',
     'name' => 'নাম',
     'name_en' => 'নাম (ইংরেজি)',
     'name_bn' => 'নাম (বাংলা)',

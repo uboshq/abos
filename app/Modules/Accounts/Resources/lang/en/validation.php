@@ -8,6 +8,7 @@ return [
     'year_has_drafts' => ':count draft vouchers are still unposted. Once the year closes they can never be posted — post or cancel them first.',
     'year_overlaps' => 'These dates overlap another financial year. With the same date in two years there is no way to say which one an entry belongs to.',
     'code_taken' => 'Another account already uses code :code.',
+    'import_group_no_opening' => 'A group account (:code) cannot hold an opening balance — put it on the accounts beneath it.',
     'unknown_type' => 'That is not a valid account type.',
     'parent_not_found' => 'That parent account was not found.',
     'parent_must_be_group' => 'An account that takes entries cannot hold other accounts. '
