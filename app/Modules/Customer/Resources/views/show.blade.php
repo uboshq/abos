@@ -136,6 +136,9 @@
         </section>
     </div>
 
+    {{-- পার্টির আচরণ — Status বলে না, কাউন্টারে যা জানা দরকার --}}
+    @include('customer::partials.conduct', ['customer' => $customer])
+
     {{-- ডিলার পোর্টালের চাবি --}}
     @can('managePortal', $customer)
         <section data-portal class="mt-4 rounded-(--radius-card) border border-(--color-border)

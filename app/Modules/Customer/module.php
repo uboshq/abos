@@ -98,6 +98,9 @@ return [
         'customer.manage',
         'customer.credit_limit.override',
         'customer.portal',
+
+        // পার্টির আচরণ — পতাকা তোলা ও নামানো, এক দায়িত্ব
+        'customer.conduct.manage',
     ],
 
     // Number Series engine এগুলো থেকে prefix/counter সেটআপ তৈরি করবে।
