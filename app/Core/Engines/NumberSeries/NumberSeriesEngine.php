@@ -238,6 +238,49 @@ final class NumberSeriesEngine
      * এখন নমুনা আর আসল নম্বর একই কোড থেকে আসে, তাই দুইটা আলাদা হতে
      * পারে না।
      */
+    /**
+     * পর্দা যে নম্বরটা আগে থেকে বসিয়ে রেখেছিল, সেটাই কি সিরিজের পরেরটা?
+     *
+     * ── কেন এই প্রশ্নটা দরকার হলো (৩ সেপ্টেম্বর ২০২৬) ────────────────
+     * ⚠️ কাউন্টারের পর্দায় বিলের নম্বরের ঘরটা **আগে থেকে ভরা থাকে**,
+     * `preview()` দিয়ে — আর ওটা সিরিজের পরের নম্বর। ব্যবহারকারী কিছু না
+     * বদলে সেভ করলে নম্বরটা "হাতে লেখা" হিসেবে গণ্য হত, তাই **সিরিজ এক
+     * ধাপও এগোত না**।
+     *
+     * ফল দিনের **দ্বিতীয় বিক্রয়েই**: পর্দা আবার সেই একই নম্বর বসাত।
+     * ঘরটা না ছুঁলে পড়া-যায় এমন বার্তা আসত ("নম্বরটা আগেই বসে গেছে"),
+     * আর ঘরটা খালি করলে `next()` ওই একই নম্বর ফিরিয়ে দিত — **ডাটাবেসের
+     * ইউনিক ইনডেক্সে ৫০০**। মাপা হয়েছে: `DC` ও `COL` সিরিজ এগোচ্ছিল,
+     * `INV` এক জায়গায় দাঁড়িয়ে ছিল।
+     *
+     * ── কেন "হাতে লেখা নম্বরে সিরিজ এগোয় না" নিয়মটা ঠিকই আছে ─────────
+     * ওটা ইচ্ছাকৃত, আর দরকারি: কেউ পুরনো কাগজের নম্বর বসালে সিরিজে
+     * ফাঁক পড়া উচিত নয়। ⭐ ভুলটা ছিল **পর্দার ভরে রাখা নম্বরকেও "হাতে
+     * লেখা" ভাবা** — ওটা তো সিরিজেরই নম্বর, কেবল আগেভাগে দেখানো।
+     *
+     * ⓘ তুলনাটা তৈরি স্ট্রিং ধরে, ক্রম-সংখ্যা ধরে নয় — ছকে শাখা বা
+     * বছর থাকতে পারে, আর তখন কেবল সংখ্যা মিলিয়ে সিদ্ধান্ত নেওয়া ভুল হত।
+     */
+    public function isNextNumber(string $docType, string $documentNo, ?int $branchId = null, ?Carbon $date = null): bool
+    {
+        $companyId = CompanyContext::id();
+
+        if ($companyId === null || trim($documentNo) === '') {
+            return false;
+        }
+
+        $date = $date ?? Carbon::today();
+        $branchId = $branchId ?? CompanyContext::branchId();
+        $financialYear = FinancialYear::forDate($date);
+
+        $series = $this->findSeries($companyId, $docType, $branchId, $financialYear?->id)
+            ?? $this->findSeries($companyId, $docType, null, $financialYear?->id)
+            ?? $this->findSeries($companyId, $docType, $branchId, null)
+            ?? $this->findSeries($companyId, $docType, null, null);
+
+        return $series !== null && $this->preview($series) === trim($documentNo);
+    }
+
     public function preview(NumberSeries $series, ?int $sequence = null): string
     {
         return $this->format(

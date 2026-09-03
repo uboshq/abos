@@ -65,7 +65,19 @@ class SalesPrintController extends Controller implements HasMiddleware
 
     public function invoice(Request $request, SalesInvoice $invoice): Response
     {
-        $invoice->load(['lines.product.unit', 'customer', 'branch']);
+        /*
+         * ⚠️ `lines.challanLine` — নইলে ছাপার পাতা ৫০০ দেয়।
+         *
+         * ── কী ঘটেছিল (মাপা, ৩ সেপ্টেম্বর ২০২৬) ─────────────────────
+         * `lotsForInvoice()` প্রতিটা লাইনের চালান-লাইন ধরে লট খোঁজে।
+         * সম্পর্কটা এখানে তোলা হত না, আর এই রিপোতে lazy loading **বন্ধ**
+         * (`Model::preventLazyLoading`) — তাই সরাসরি বিক্রয় নিশ্চিত করার
+         * পর ছাপার পাতায় গিয়ে `LazyLoadingViolationException`।
+         *
+         * ⭐ ধরা পড়েছে সত্যিকারের একটা বিক্রয় করে, কারণ পাহারাটা কেবল
+         * **চালান-সহ** বিলে জাগে — আর সেটাই কাউন্টারের একমাত্র পথ।
+         */
+        $invoice->load(['lines.product.unit', 'lines.challanLine', 'customer', 'branch']);
 
         $doc = new PrintableDocument(
             title: __('sales::doc.invoice'),
@@ -96,7 +108,19 @@ class SalesPrintController extends Controller implements HasMiddleware
      */
     public function draft(Request $request, SalesInvoice $invoice): Response
     {
-        $invoice->load(['lines.product.unit', 'customer', 'branch']);
+        /*
+         * ⚠️ `lines.challanLine` — নইলে ছাপার পাতা ৫০০ দেয়।
+         *
+         * ── কী ঘটেছিল (মাপা, ৩ সেপ্টেম্বর ২০২৬) ─────────────────────
+         * `lotsForInvoice()` প্রতিটা লাইনের চালান-লাইন ধরে লট খোঁজে।
+         * সম্পর্কটা এখানে তোলা হত না, আর এই রিপোতে lazy loading **বন্ধ**
+         * (`Model::preventLazyLoading`) — তাই সরাসরি বিক্রয় নিশ্চিত করার
+         * পর ছাপার পাতায় গিয়ে `LazyLoadingViolationException`।
+         *
+         * ⭐ ধরা পড়েছে সত্যিকারের একটা বিক্রয় করে, কারণ পাহারাটা কেবল
+         * **চালান-সহ** বিলে জাগে — আর সেটাই কাউন্টারের একমাত্র পথ।
+         */
+        $invoice->load(['lines.product.unit', 'lines.challanLine', 'customer', 'branch']);
 
         $doc = new PrintableDocument(
             title: __('sales::doc.invoice'),
