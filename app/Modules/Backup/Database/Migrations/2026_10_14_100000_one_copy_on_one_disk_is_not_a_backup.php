@@ -231,6 +231,18 @@ return new class extends Migration
          */
         Schema::create('bak_verifications', function (Blueprint $table) {
             $table->id();
+
+            /*
+             * ⚠️ এই লাইনটা বাদ পড়েছিল — বাকি তিনটা টেবিলে ছিল, এটায় নয়।
+             *
+             * `PublicIdTest` ধরেছে ডিপ্লয়ের ঠিক আগে (৩ সেপ্টেম্বর ২০২৬),
+             * আর ধরাটা জরুরি ছিল: এই রিপোতে **ঠিকানায় ডাটাবেসের id
+             * কখনো যায় না** — গেলে যে কেউ নম্বর বাড়িয়ে অন্য কোম্পানির
+             * সারি খুঁজত। তিনটায় থেকে চতুর্থটায় না থাকা মানে ভবিষ্যতে
+             * ওই একটা টেবিলই ব্যতিক্রম হয়ে বসে থাকত।
+             */
+            $table->char('public_id', 36)->nullable()->unique();
+
             $table->foreignId('run_id')->constrained('bak_runs')->cascadeOnDelete();
 
             $table->string('kind', 16);
