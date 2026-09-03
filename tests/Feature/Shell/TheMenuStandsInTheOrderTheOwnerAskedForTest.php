@@ -45,8 +45,25 @@ class TheMenuStandsInTheOrderTheOwnerAskedForTest extends TestCase
         ['finance', 'accounts'],
         ['finance', 'finance'],
 
-        ['business', 'customer'],
-        ['business', 'supplier'],
+        /*
+         * ── গ্রাহক ও সরবরাহকারী রেল থেকে উঠেছে, ৪ সেপ্টেম্বর ২০২৬ ──────
+         * এই দুইটা সারি ২ সেপ্টেম্বর মালিকের দেওয়া তালিকায় ছিল, business
+         * দলের একদম শুরুতে। তিনি নিজেই সরিয়েছেন, দুই দিন পরে:
+         *
+         *     *"customer modiule fontende sales er vitore dukaw, bakend
+         *     zemon ache temon thakbe, same vabe Supplier purches e dukaw"*
+         *
+         * অর্থাৎ মডিউল দুইটা মুছে যায়নি — তাদের সারিগুলো এখন বিক্রয় ও
+         * ক্রয়ের টাইলের ভেতরে, নিজেদের ব্যাকএন্ড অক্ষত রেখে
+         * (`nav.under`, [[MenuBuilder::settleGuestsIntoTheirHosts()]])।
+         *
+         * তাঁকে জিজ্ঞেস করা হয়েছিল দুই জায়গাতেই রাখা হবে কিনা; উত্তর ছিল
+         * **রেল থেকে পুরোপুরি উঠে যাবে** — একই সারি দুইবার দেখালে
+         * ব্যবহারকারী প্রতিবার ভাববেন কোনটা চাপবেন।
+         *
+         * নিচের `test_a_guest_module_sits_inside_its_host` পাহারা দেয় যে
+         * ওরা সত্যিই ভেতরে বসেছে, নীরবে হারিয়ে যায়নি।
+         */
         ['business', 'purchase'],
         ['business', 'inventory'],
         ['business', 'sales'],
@@ -117,12 +134,84 @@ class TheMenuStandsInTheOrderTheOwnerAskedForTest extends TestCase
             .'দুইটা আলাদা প্রশ্নের উত্তর — একটা মেশিনের, একটা মানুষের।',
         );
 
-        // তবু দুইটাতে একই বারোটা মডিউলই থাকতে হবে, নাহলে একটা কোথাও হারিয়েছে।
+        /*
+         * তবু দুইটাতে একই মডিউলগুলোই থাকতে হবে, নাহলে একটা কোথাও হারিয়েছে।
+         *
+         * রেলে এখন সবাই থাকে না: যারা `nav.under` দিয়ে অন্যের ভেতরে বসে
+         * তাদের নিজের টাইল নেই। তাই তুলনাটা রেল **আর** অতিথিদের নিয়ে —
+         * এতে "হারিয়ে গেছে" আর "ভেতরে বসেছে" আলাদা থাকে। প্রথমটা ভুল,
+         * দ্বিতীয়টা মালিকের সিদ্ধান্ত।
+         */
+        $guests = array_map(
+            static fn (ModuleDefinition $d): string => $d->code,
+            array_values(array_filter(
+                app(ModuleRegistry::class)->all(),
+                static fn (ModuleDefinition $d): bool => isset($d->nav['under']),
+            )),
+        );
+
         sort($boot);
-        $sortedHuman = $human;
+        $sortedHuman = array_merge($human, $guests);
         sort($sortedHuman);
 
         $this->assertSame($sortedHuman, $boot, 'দুইটা ক্রমে একই মডিউলগুলো নেই।');
+    }
+
+    /**
+     * অতিথি মডিউল সত্যিই আশ্রয়দাতার ভেতরে বসেছে — হারিয়ে যায়নি।
+     *
+     * ── কেন এই পাহারাটা দরকার ────────────────────────────────────────
+     * উপরের `AS_HE_ASKED` থেকে গ্রাহক ও সরবরাহকারী তুলে দেওয়া হয়েছে।
+     * ওই একটা বদল **নিজে থেকেই** সবুজ থাকত যদি মডিউল দুইটা রেল থেকে
+     * উধাও হয়ে যেত আর কোথাও না বসত — অর্থাৎ পর্দাগুলো আর কোনো মেনু
+     * থেকে খোলা যেত না, আর কোনো টেস্ট কিছু বলত না।
+     *
+     * তাই এখানে **উল্টো দিকটা** দেখা হয়: সারিগুলো আশ্রয়দাতার টাইলে
+     * আছে তো? আর অতিথির নিজের টাইলটা সত্যিই নেই তো?
+     */
+    public function test_a_guest_module_sits_inside_its_host(): void
+    {
+        $menu = app(MenuBuilder::class)->forUser($this->owner());
+        $codes = array_column($menu, 'code');
+
+        foreach (app(ModuleRegistry::class)->all() as $module) {
+            $host = $module->nav['under'] ?? null;
+
+            if ($host === null) {
+                continue;
+            }
+
+            $this->assertNotContains(
+                $module->code,
+                $codes,
+                "{$module->code} নিজের টাইল নিয়েই রেলে দাঁড়িয়ে আছে, অথচ তার nav.under বলছে "
+                ."সে {$host}-এর ভেতরে বসার কথা।",
+            );
+
+            $tile = collect($menu)->firstWhere('code', $host);
+
+            $this->assertNotNull(
+                $tile,
+                "{$module->code}-এর আশ্রয়দাতা {$host} মেনুতেই নেই, তাই তার সারিগুলো কোথাও বসেনি।",
+            );
+
+            $this->assertContains(
+                $module->code,
+                $tile['codes'],
+                "{$host}-এর টাইল {$module->code}-এর রুটগুলো নিজের বলে চেনে না, তাই ওই পাতাগুলোয় "
+                .'কোনো টাইলে "এখানে আছি" দাগ পড়বে না।',
+            );
+
+            /* সারিগুলো সত্যিই ঢুকেছে — কী-তে অতিথির কোড বসে। */
+            $carried = collect($tile['groups'])->keys()
+                ->filter(fn (string $key): bool => str_starts_with($key, $module->code.':'));
+
+            $this->assertNotEmpty(
+                $carried,
+                "{$host}-এর টাইলে {$module->code}-এর একটা সারিও নেই — মডিউলটা রেল থেকেও গেছে, "
+                .'ভেতরেও বসেনি।',
+            );
+        }
     }
 
     /**

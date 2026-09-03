@@ -34,7 +34,7 @@ final class MenuBuilder
      * একটা ধূসর মেনু আইটেম ব্যবহারকারীকে শুধু জানায় সে কী পারে না, আর
      * প্রতিবার ক্লিক করে সেটা আবিষ্কার করে।
      *
-     * @return list<array{code: string, label: string, icon: string, section: string, order: int, groups: array<string, list<array{label: string, route: string, url: ?string, active: bool}>>}>
+     * @return list<array{code: string, label: string, icon: string, section: string, order: int, under: ?string, codes: list<string>, groups: array<string, list<array{label: string, route: string, url: ?string, active: bool}>>}>
      */
     public function forUser(?User $user): array
     {
@@ -153,11 +153,109 @@ final class MenuBuilder
                 'icon' => $module->code,
                 'section' => $module->nav['section'],
                 'order' => $module->nav['order'],
+
+                /* কার ভেতরে বসবে — [[MenuBuilder::settleGuestsIntoTheirHosts()]]
+                   এটা দেখে সিদ্ধান্ত নেয়, তারপর কী-টা আর থাকে না। */
+                'under' => $module->nav['under'] ?? null,
+
+                /*
+                 * এই টাইলটা যে যে মডিউলের রুট ঢেকে রাখে — নিজেরটা, আর
+                 * ভেতরে বসা অতিথিদেরগুলো।
+                 *
+                 * শেলের আটটা চেহারা "আমি কোথায়" প্রশ্নের শেষ ভরসা হিসেবে
+                 * রুটের উপসর্গ দেখে। অতিথির টাইল রেলে নেই, তাই তার কোড
+                 * এখানে না থাকলে `customer.portal`-এর মতো পাতায় কোনো
+                 * টাইলেই দাগ পড়ত না।
+                 */
+                'codes' => [$module->code],
+
                 'groups' => $this->inFixedOrder($groups),
             ];
         }
 
-        return $this->inNavOrder($menu);
+        return $this->inNavOrder($this->settleGuestsIntoTheirHosts($menu));
+    }
+
+    /**
+     * অতিথি মডিউলের সারিগুলো আশ্রয়দাতার টাইলে বসায়, আর তার নিজের টাইল তুলে নেয়।
+     *
+     * ── কেন সারি সরে, ঘোষণা নয় ───────────────────────────────────────
+     * মালিকের শর্ত ছিল *"ব্যাকএন্ড যেমন আছে তেমন থাকবে"*। তাই
+     * `module.php`-র `menu` অ্যারে, অনুমতি, রুট, ড্যাশবোর্ড — কিছুই
+     * ছোঁয়া হয় না; কেবল **তৈরি হয়ে যাওয়া** সারিগুলো অন্য টাইলে জোড়া হয়।
+     *
+     * ফলে অনুমতিও মেশে না: প্রতিটা সারি আগেই তার নিজের `permission`
+     * দিয়ে ছাঁকা হয়ে এসেছে। যাঁর বিক্রয় আছে অথচ গ্রাহক নেই, তিনি
+     * বিক্রয়ের টাইলে গ্রাহকের একটা সারিও দেখবেন না।
+     *
+     * ── আশ্রয়দাতাকে না পেলে ──────────────────────────────────────────
+     * অতিথি **নিজের টাইলেই** থেকে যায়। আশ্রয়দাতা অনুপস্থিত থাকতে পারে
+     * তিনভাবে: কোডটা ভুল, মডিউলটা এই কোম্পানিতে বন্ধ, বা এই
+     * ব্যবহারকারীর সেখানে একটাও দৃশ্যমান সারি নেই। তিনটার কোনোটাই
+     * "গ্রাহকের পর্দাগুলো আর কোথাও থেকে খোলা যায় না" হওয়ার যোগ্য কারণ নয়।
+     *
+     * @param  list<array<string, mixed>>  $menu
+     * @return list<array<string, mixed>>
+     */
+    private function settleGuestsIntoTheirHosts(array $menu): array
+    {
+        $at = [];
+
+        foreach ($menu as $i => $entry) {
+            $at[$entry['code']] = $i;
+        }
+
+        $absorbed = [];
+
+        foreach ($menu as $i => $entry) {
+            if ($entry['under'] === null || ! isset($at[$entry['under']])) {
+                continue;
+            }
+
+            /*
+             * অতিথির আশ্রয়দাতা নিজেও অতিথি হতে পারে। তখন সারিগুলো
+             * সবচেয়ে বাইরের টাইলে যাওয়া উচিত, নাহলে ওরা এমন একটা
+             * টাইলে বসত যেটা নিজেই তুলে নেওয়া হচ্ছে — অর্থাৎ চুপচাপ
+             * হারিয়ে যেত। বৃত্ত হলে (ক ভেতরে খ, খ ভেতরে ক) লুপটা
+             * থামে আর দুইজনেই নিজের টাইলে থাকে।
+             */
+            $host = $at[$entry['under']];
+            $seen = [$i => true];
+
+            while ($menu[$host]['under'] !== null && isset($at[$menu[$host]['under']])) {
+                if (isset($seen[$host])) {
+                    continue 2;
+                }
+
+                $seen[$host] = true;
+                $host = $at[$menu[$host]['under']];
+            }
+
+            if ($host === $i) {
+                continue;
+            }
+
+            /*
+             * আশ্রয়দাতার নিজের সারির **পরে** — মালিকের সিদ্ধান্ত,
+             * ৪ সেপ্টেম্বর ২০২৬। রোজকার কাজ কাউন্টারে, তাই ওটাই আগে।
+             *
+             * কী-তে অতিথির কোড জুড়ে দেওয়া হয় যাতে দুইজনের `master`
+             * একে অপরকে চাপা না দেয়। নামটা পর্দায় আসে না — শেল
+             * `groups` সমতল করে পড়ে — এটা কেবল ক্রমের বালতি।
+             */
+            foreach ($entry['groups'] as $group => $rows) {
+                $menu[$host]['groups'][$entry['code'].':'.$group] = $rows;
+            }
+
+            $menu[$host]['codes'][] = $entry['code'];
+            $absorbed[$i] = true;
+        }
+
+        return array_values(array_filter(
+            $menu,
+            static fn (int $i): bool => ! isset($absorbed[$i]),
+            ARRAY_FILTER_USE_KEY,
+        ));
     }
 
     /**

@@ -40,7 +40,7 @@
         fn ($m) => collect($m['groups'])->flatten(1)->contains('active', true),
     )
         ?? collect($menu)->first(
-            fn ($m) => str_starts_with($routeName, $m['code'].'.'),
+            fn ($m) => collect($m['codes'])->contains(fn ($c) => str_starts_with($routeName, $c.'.')),
         )
         ?? ($menu[0] ?? null);
 

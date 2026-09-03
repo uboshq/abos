@@ -33,7 +33,17 @@ return [
      * দলগুলোর তালিকা আর কেন এটা `depends_on`-এর থেকে আলাদা:
      * [[ModuleDefinition::NAV_SECTIONS]].
      */
-    'nav' => ['section' => 'business', 'order' => 10],
+    /*
+     * ── বিক্রয়ের ভেতরে, ৪ সেপ্টেম্বর ২০২৬ ─────────────────────────────
+     * মালিকের নির্দেশ: *"customer modiule fontende sales er vitore
+     * dukaw, bakend zemon ache temon thakbe"*। তাই রেলে গ্রাহকের নিজের
+     * টাইল আর নেই — সারিগুলো বিক্রয়ের টাইলে, তার নিজের সারির পরে।
+     *
+     * নিচের `section` ও `order` মুছে ফেলা হয়নি ইচ্ছাকৃতভাবে: আশ্রয়দাতা
+     * কোনো কারণে না থাকলে ([[MenuBuilder::settleGuestsIntoTheirHosts()]])
+     * মডিউলটা নিজের টাইলে ফিরে আসে, আর তখন তার জায়গাটা জানা দরকার।
+     */
+    'nav' => ['section' => 'business', 'order' => 10, 'under' => 'sales'],
 
     // গ্রাহকের পাওনা হিসাবের খাতায় বসে, তাই accounts আগে তৈরি হতে হবে।
     /*
