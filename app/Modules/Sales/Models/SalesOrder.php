@@ -44,9 +44,9 @@ class SalesOrder extends Model implements Drillable
 
     protected $fillable = [
         'company_id', 'branch_id', 'financial_year_id', 'document_no',
-        'customer_id', 'warehouse_id', 'trx_date', 'deliver_on',
+        'customer_id', 'source', 'warehouse_id', 'trx_date', 'deliver_on',
         'subtotal', 'discount', 'tax', 'total',
-        'status', 'narration', 'created_by',
+        'status', 'narration', 'created_by', 'created_by_customer_id',
         'cancelled_by', 'cancelled_at', 'cancel_reason',
     ];
 

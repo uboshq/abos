@@ -39,6 +39,7 @@ class ReasonCode extends Model implements Drillable
     protected $fillable = [
         'company_id', 'code', 'name_en', 'name_bn',
         'context', 'account_id', 'returns_to_stock', 'needs_approval',
+        'visible_to_dealer',
         'is_active', 'created_by',
     ];
 
@@ -46,6 +47,7 @@ class ReasonCode extends Model implements Drillable
     {
         return [
             'returns_to_stock' => 'boolean',
+            'visible_to_dealer' => 'boolean',
             'needs_approval' => 'boolean',
             'is_active' => 'boolean',
         ];
