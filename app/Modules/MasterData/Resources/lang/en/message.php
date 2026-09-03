@@ -31,4 +31,6 @@ return [
     'base_currency_rate_is_one' => ':code is the company\'s own currency, so its rate is always 1 — there is nothing to enter.',
     'rate_meaning' => 'The rate reads: 1 :code equals this many :base. The date is when the rate starts applying — until the next one is entered.',
     'nothing_to_choose_yet' => 'Nothing to choose yet — add a cash till or a bank account first',
+    'allow_duplicate' => 'This really is a different entry — save it anyway',
+    'duplicate_overridden' => 'Saved despite a matching name — the duplicate warning was overridden.',
 ];

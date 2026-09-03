@@ -82,6 +82,22 @@
 
                 <x-ui.field name="name_bn" :label="__('master_data::field.name_bn')"
                             :value="old('name_bn', $record->name_bn)" />
+
+                {{--
+                    নকল নামে সতর্ক করে থামানো হলে এই টিকটাই এগোনোর একমাত্র পথ।
+
+                    ── কেন কেবল সতর্কতার পর ─────────────────────────────────────
+                    রোজকার কাজে ঘরটা দেখানোর দরকার নেই — দেখালে কেউ অভ্যাসবশে
+                    টিক দিয়ে রাখতেন আর পাহারাটাই অর্থহীন হত। নাম মিলে থামলে
+                    (name_en-এ ত্রুটি) তবেই আসে, আর টিক দিলে সিদ্ধান্তটা অডিটে বসে।
+                --}}
+                @if ($errors->has('name_en'))
+                    <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm sm:col-span-2">
+                        <input type="checkbox" name="allow_duplicate" value="1"
+                               @checked(old('allow_duplicate')) class="size-4">
+                        {{ __('master_data::message.allow_duplicate') }}
+                    </label>
+                @endif
             </div>
         </section>
 

@@ -374,12 +374,15 @@ class MasterDataTest extends TestCase
             'code' => 'T-G', 'name_en' => 'Gram', 'factor' => 1, 'allows_fraction' => true,
         ]);
 
+        // ⓘ নাম প্রমিত এককের থেকে আলাদা রাখা — নাহলে নতুন নকল-পাহারা
+        // ([[DuplicationEngine]]) seed করা "Kilogram"/"Bag"-এর সাথে মিলে
+        // থামাত। এই টেস্ট রূপান্তরের অঙ্ক দেখে, নাম নয়।
         $kg = $this->lists()->create(Unit::class, [
-            'code' => 'T-KG', 'name_en' => 'Kilogram', 'factor' => 1000, 'base_unit_id' => $gram->id,
+            'code' => 'T-KG', 'name_en' => 'Test Kilo', 'factor' => 1000, 'base_unit_id' => $gram->id,
         ]);
 
         $bag = $this->lists()->create(Unit::class, [
-            'code' => 'T-BAG', 'name_en' => 'Bag', 'factor' => 25, 'base_unit_id' => $kg->id,
+            'code' => 'T-BAG', 'name_en' => 'Test Sack', 'factor' => 25, 'base_unit_id' => $kg->id,
         ]);
 
         // ১ বস্তা = ২৫ কেজি = ২৫,০০০ গ্রাম — এক স্তরে থামলে ২৫ আসত
@@ -388,9 +391,10 @@ class MasterDataTest extends TestCase
 
     public function test_a_unit_cannot_be_its_own_base(): void
     {
-        $pcs = $this->lists()->create(Unit::class, ['code' => 'T-PCS', 'name_en' => 'Piece', 'factor' => 1]);
+        // নাম প্রমিত এককের থেকে আলাদা — নকল-পাহারা seed "Carton"-এ থামত
+        $pcs = $this->lists()->create(Unit::class, ['code' => 'T-PCS', 'name_en' => 'Test Piece', 'factor' => 1]);
         $ctn = $this->lists()->create(Unit::class, [
-            'code' => 'T-CTN', 'name_en' => 'Carton', 'factor' => 12, 'base_unit_id' => $pcs->id,
+            'code' => 'T-CTN', 'name_en' => 'Test Box', 'factor' => 12, 'base_unit_id' => $pcs->id,
         ]);
 
         $this->expectException(ValidationException::class);
@@ -411,8 +415,10 @@ class MasterDataTest extends TestCase
     #[DataProvider('taxCases')]
     public function test_tax_is_computed_the_right_way_round(bool $inclusive, string $amount, string $expected): void
     {
+        // নাম seed করা "VAT 15%"-এর থেকে আলাদা — নকল-পাহারা নয়তো থামাত;
+        // এই টেস্ট করের অঙ্ক দেখে, নাম নয়
         $tax = $this->lists()->create(Tax::class, [
-            'code' => 'V15', 'name_en' => 'VAT 15%', 'rate' => 15,
+            'code' => 'V15', 'name_en' => 'Test VAT rate', 'rate' => 15,
             'kind' => 'vat', 'is_inclusive' => $inclusive,
         ]);
 
