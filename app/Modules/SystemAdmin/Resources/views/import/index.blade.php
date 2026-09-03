@@ -26,6 +26,20 @@
 
     {{-- বসানোর ফল --}}
     @if ($result)
+        {{-- আংশিক ইমপোর্টের জোরালো সতর্কবার্তা — সংখ্যার আগে, লাল।
+             "৮ সফল, ২ ব্যর্থ" একটা পরিসংখ্যান; কিছু ইমপোর্ট (খোলার জের)
+             একটা দলিল, আর অর্ধেক দলিল নীরব ভুল। ImportController বার্তাটা
+             ঠিক করে দেয় — সাধারণ, নয়তো ইমপোর্টারের নিজের কড়া বার্তা। --}}
+        @if (! empty($result['warning']))
+            <div role="alert"
+                 class="mb-4 rounded-(--radius-card) border-2 border-(--color-danger)
+                        bg-(--color-surface-card) p-4">
+                <p class="font-semibold text-(--color-danger)">
+                    {{ $result['warning'] }}
+                </p>
+            </div>
+        @endif
+
         <div role="status"
              class="mb-4 rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card) p-4">

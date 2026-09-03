@@ -462,6 +462,7 @@ return [
         'not_a_date' => ':column is not a date — use day/month/year.',
         'unknown_value' => 'Could not match ":value" in :column.',
         'nothing_to_import' => 'No usable rows, so nothing was saved.',
+        'partial_warning' => 'Some rows did not load. Fix them and upload again — otherwise the import is incomplete.',
     ],
 
     'yes' => 'Yes',

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\SystemAdmin\Http\Controllers;
 
+use App\Core\Contracts\WarnsOnPartialImport;
 use App\Core\Services\ImportRunner;
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
@@ -94,7 +95,33 @@ class ImportController extends Controller implements HasMiddleware
             return back()->withErrors(['file' => __('core.import.nothing_to_import')]);
         }
 
-        return back()->with('import_result', ['kind' => $data['kind'], ...$result]);
+        /*
+         * কিছু সারি ব্যর্থ হলে জোরালো সতর্কবার্তা।
+         *
+         * "৮ সফল, ২ ব্যর্থ" একটা পরিসংখ্যান, সতর্কবার্তা নয় — পণ্যের
+         * তালিকায় ঠিক আছে, কিন্তু কিছু ইমপোর্ট একটা দলিল (খোলার জের),
+         * আর অর্ধেক দলিল মানে নীরব ভুল। সাধারণ বার্তা সব ইমপোর্টে; যে
+         * ইমপোর্টার নিজেকে দলিল বলে (WarnsOnPartialImport) তার নিজের কড়া
+         * বার্তা তাকে ছাপিয়ে যায়।
+         */
+        $warning = null;
+
+        if ($result['failed'] !== []) {
+            $warning = __('core.import.partial_warning');
+
+            $importer = app($this->imports->importerFor($data['kind']));
+
+            if ($importer instanceof WarnsOnPartialImport
+                && ($specific = $importer->partialWarning()) !== null) {
+                $warning = $specific;
+            }
+        }
+
+        return back()->with('import_result', [
+            'kind' => $data['kind'],
+            'warning' => $warning,
+            ...$result,
+        ]);
     }
 
     /**

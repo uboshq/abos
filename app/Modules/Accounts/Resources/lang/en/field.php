@@ -13,6 +13,7 @@ return [
     'financial_years' => 'Financial years',
     'type_year_to_confirm' => 'Type :name to confirm',
     'code' => 'Code',
+    'account_code' => 'Account code',
     'name' => 'Name',
     'name_en' => 'Name (English)',
     'name_bn' => 'Name (Bangla)',

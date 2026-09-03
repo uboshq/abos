@@ -349,6 +349,29 @@ final class AccountService
         }
     }
 
+    /**
+     * ইমপোর্টে বসানোর আগে যাচাই — কিছু সেভ না করে।
+     *
+     * "check()-এ সবুজ, import()-এ ব্যর্থ" ফাঁদ এড়াতে create()-এর
+     * পূর্বশর্তগুলোই এখানে চালানো হয় — অভিভাবক, ধরন, কোডের অনন্যতা —
+     * সেভ ছাড়া। নিয়মটা এক জায়গায় থাকে, তাই ইমপোর্ট আর হাতে-বসানো খাত
+     * কোনোদিন আলাদা নিয়মে চলে না (CustomerService::assertImportable-এর মতো)।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function assertImportable(array $data): void
+    {
+        $parent = $this->resolveParent($data['parent_id'] ?? null);
+
+        $this->resolveType($data, $parent);
+
+        $code = trim((string) ($data['code'] ?? ''));
+
+        if ($code !== '') {
+            $this->assertCodeIsFree($code);
+        }
+    }
+
     /** কোম্পানির প্রসঙ্গ আছে কি না — ছক বসানোর আগে দেখা হয়। */
     public function assertCompanyContext(): void
     {

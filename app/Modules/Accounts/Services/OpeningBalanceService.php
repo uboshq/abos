@@ -223,6 +223,36 @@ final class OpeningBalanceService
     }
 
     /**
+     * বিদ্যমান খাতে খোলার জের বসানো — কোড ধরে ইমপোর্টের জন্য।
+     *
+     * কেন আলাদা পদ্ধতি লাগল: create() খাত তৈরির সাথেই forAccount() ডাকে,
+     * আর update() খোলা ব্যালেন্স বদলাতে দেয় না — দুইটাই ইচ্ছাকৃত। ফলে ছক
+     * আগে তুলে পরে জের বসানোর, অর্থাৎ দুই ধাপের ইমপোর্টের, কোনো পথই ছিল না।
+     * এটা সেই পথ, আর কেবল যোগ: forAccount-সহ পুরনো পাঁচটা পদ্ধতির আচরণ
+     * অপরিবর্তিত।
+     *
+     * idempotent — exists() দিয়ে আগে-বসা জের দেখে থামে, খাতটা ছোঁয়ও না।
+     * তাই আংশিক ইমপোর্ট আবার চালালে বাকিটা সম্পূর্ণ হয়, দ্বিগুণ নয়।
+     *
+     * @return list<\App\Modules\Accounts\Models\LedgerEntry>
+     */
+    public function loadFor(Account $account, string $amount, Carbon|string|null $date = null): array
+    {
+        if ($this->exists(self::ACCOUNT_SOURCE, $account->id)) {
+            return [];
+        }
+
+        // opening_balance ও opening_date ঘরে থাকে (রেকর্ড হিসেবে), আর
+        // পোস্টিংটা forAccount করে — খতিয়ানই সত্য, কলামটা তার প্রতিধ্বনি।
+        $account->fill([
+            'opening_balance' => $amount,
+            'opening_date' => $date instanceof Carbon ? $date->toDateString() : $date,
+        ])->save();
+
+        return $this->forAccount($account);
+    }
+
+    /**
      * খোলা ব্যালেন্সের দাখিলা আছে কি না।
      *
      * সম্পাদনায় খোলা ব্যালেন্স বদলানো যায় না, তবু এটা দরকার: পুরনো
