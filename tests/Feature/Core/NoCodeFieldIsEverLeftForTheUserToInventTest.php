@@ -227,8 +227,10 @@ class NoCodeFieldIsEverLeftForTheUserToInventTest extends TestCase
      */
     public function test_a_code_you_type_yourself_is_the_one_that_is_kept(): void
     {
+        // নাম প্রমিত এককের থেকে আলাদা — নকল-পাহারা seed "Kilogram"-এ থামত;
+        // এই টেস্ট নিজে-লেখা কোড রাখা দেখে, নাম নয়
         $made = app(MasterListService::class)->create(Unit::class, [
-            'code' => 'MYOWN', 'name_en' => 'Kilogram', 'name_bn' => 'কেজি', 'factor' => 1,
+            'code' => 'MYOWN', 'name_en' => 'Test Weight', 'name_bn' => 'নমুনা ওজন', 'factor' => 1,
         ], 'units');
 
         $this->assertSame('MYOWN', $made->code);
@@ -248,8 +250,11 @@ class NoCodeFieldIsEverLeftForTheUserToInventTest extends TestCase
 
         $first = $lists->create(Unit::class,
             ['name_en' => 'Kilogram', 'name_bn' => 'কেজি', 'factor' => 1], 'units');
+        // ⓘ দ্বিতীয়টা ইচ্ছাকৃতভাবে একই নাম — এটাই এই টেস্টের বিষয় (কোড
+        // চুরি করে না)। নতুন নকল-পাহারা এমন একই নাম আটকায়, তাই allow_duplicate
+        // দিয়ে সিদ্ধান্তটা স্পষ্ট করে এগোনো।
         $second = $lists->create(Unit::class,
-            ['name_en' => 'Kilogram', 'name_bn' => 'কেজি বড়', 'factor' => 1], 'units');
+            ['name_en' => 'Kilogram', 'name_bn' => 'কেজি বড়', 'factor' => 1, 'allow_duplicate' => true], 'units');
 
         $this->assertSame('KG', $first->code);
         $this->assertNotSame($first->code, $second->code);
@@ -343,8 +348,10 @@ class NoCodeFieldIsEverLeftForTheUserToInventTest extends TestCase
     /** ইংরেজি নাম না থাকলেও ঘরটা খালি থাকে না — উপসর্গ বসে। */
     public function test_a_bangla_only_name_still_gets_a_code(): void
     {
+        // name_bn seed "Bag" (বস্তা)-এর থেকে আলাদা — নকল-পাহারা নয়তো থামাত;
+        // এই টেস্ট ইংরেজি নাম খালি হলে কোডের উপসর্গ দেখে
         $made = app(MasterListService::class)->create(Unit::class, [
-            'name_en' => '', 'name_bn' => 'বস্তা', 'factor' => 1,
+            'name_en' => '', 'name_bn' => 'নমুনা একক', 'factor' => 1,
         ], 'units');
 
         $this->assertNotEmpty($made->code);

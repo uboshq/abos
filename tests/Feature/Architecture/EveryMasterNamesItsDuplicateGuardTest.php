@@ -17,23 +17,7 @@ use App\Modules\Hr\Models\LeaveType;
 use App\Modules\Hr\Models\PayslipLine;
 use App\Modules\Hr\Models\SalaryHead;
 use App\Modules\Inventory\Models\Warehouse;
-use App\Modules\MasterData\Models\Brand;
-use App\Modules\MasterData\Models\Currency;
-use App\Modules\MasterData\Models\Department;
-use App\Modules\MasterData\Models\Designation;
-use App\Modules\MasterData\Models\EmploymentType;
 use App\Modules\MasterData\Models\Location;
-use App\Modules\MasterData\Models\PartyType;
-use App\Modules\MasterData\Models\PaymentMethod;
-use App\Modules\MasterData\Models\PaymentTerm;
-use App\Modules\MasterData\Models\PriceList;
-use App\Modules\MasterData\Models\ProductCategory;
-use App\Modules\MasterData\Models\ReasonCode;
-use App\Modules\MasterData\Models\Tax;
-use App\Modules\MasterData\Models\TransferMode;
-use App\Modules\MasterData\Models\Unit;
-use App\Modules\MasterData\Models\Vehicle;
-use App\Modules\MasterData\Models\VehicleType;
 use App\Modules\Supplier\Models\Supplier;
 use Illuminate\Support\Facades\File;
 use Tests\TestCase;
@@ -76,28 +60,25 @@ class EveryMasterNamesItsDuplicateGuardTest extends TestCase
         Customer::class => 'CustomerService নিজে DuplicateGuard ডাকে (ফোন হার্ড, নাম নরম)',
         Supplier::class => 'SupplierService নিজে DuplicateGuard ডাকে',
 
-        // গ · ব্যাকলগ — ফেজ ১খ-তে MasterListService/নিজ-সার্ভিসে দরজা বসবে
-        Brand::class => 'ব্যাকলগ ১খ — MasterListService',
-        ProductCategory::class => 'ব্যাকলগ ১খ — MasterListService',
-        Unit::class => 'ব্যাকলগ ১খ — MasterListService',
-        Tax::class => 'ব্যাকলগ ১খ — MasterListService',
-        PaymentTerm::class => 'ব্যাকলগ ১খ — MasterListService',
-        PartyType::class => 'ব্যাকলগ ১খ — MasterListService',
-        PriceList::class => 'ব্যাকলগ ১খ — MasterListService',
-        ReasonCode::class => 'ব্যাকলগ ১খ — MasterListService',
-        Currency::class => 'ব্যাকলগ ১খ — MasterListService',
-        Department::class => 'ব্যাকলগ ১খ — MasterListService',
-        Designation::class => 'ব্যাকলগ ১খ — MasterListService',
-        EmploymentType::class => 'ব্যাকলগ ১খ — MasterListService',
-        VehicleType::class => 'ব্যাকলগ ১খ — MasterListService',
-        TransferMode::class => 'ব্যাকলগ ১খ — MasterListService',
-        Vehicle::class => 'ব্যাকলগ ১খ — নিজ-সার্ভিস',
-        PaymentMethod::class => 'ব্যাকলগ ১খ — নিজ-সার্ভিস',
-        Location::class => 'ব্যাকলগ ১খ — LocationService (স্তরভিত্তিক)',
-        Warehouse::class => 'ব্যাকলগ ১খ — WarehouseService',
+        /*
+         * গ · ব্যাকলগ — নিজ-সার্ভিসে দরজা এখনো বসেনি।
+         *
+         * ⓘ MasterListService-এর ১৬টা মাস্টার (Brand · Unit · Tax · …) আর
+         * এখানে নেই — তাদের দরজা বসেছে ([[MasterListService::create()]] →
+         * DuplicationEngine), আর MasterData/module.php-এ `duplicates`-এ ঘোষিত।
+         */
+        Location::class => 'ব্যাকলগ — LocationService (স্তরভিত্তিক)',
+        Warehouse::class => 'ব্যাকলগ — WarehouseService',
         Account::class => 'ব্যাকলগ — Accounts মডিউল, নিজ-সার্ভিস',
         CashTill::class => 'ব্যাকলগ — Accounts মডিউল',
-        CostCenter::class => 'ব্যাকলগ — Accounts মডিউল',
+
+        /*
+         * ⏳ CostCenter — MasterListController-ই ম্যানেজ করে ও দরজা পেয়ে গেছে,
+         * কিন্তু মডেলটা Accounts-এর; ঘোষণা তার নিজের ফাইলে (Accounts/module.php)
+         * যাবে — মডেল যেখানে, নিয়ম সেখানে। ওই ফাইল এখন অন্য হাতে, ছাড়লে
+         * ঘোষণা সরে যাবে। **ভুলে বাদ নয়, অপেক্ষমাণ।**
+         */
+        CostCenter::class => 'অপেক্ষমাণ — ঘোষণা Accounts/module.php-এ যাবে (মডেল ওখানে)',
         DepositKind::class => 'ব্যাকলগ — Finance মডিউল',
         LeaveType::class => 'ব্যাকলগ — Hr মডিউল',
         SalaryHead::class => 'ব্যাকলগ — Hr মডিউল',

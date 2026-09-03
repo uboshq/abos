@@ -3,14 +3,17 @@
 declare(strict_types=1);
 
 use App\Modules\MasterData\Dashboard\MasterDataDashboard;
+use App\Modules\MasterData\Models\Brand;
 use App\Modules\MasterData\Models\Currency;
 use App\Modules\MasterData\Models\Department;
 use App\Modules\MasterData\Models\Designation;
 use App\Modules\MasterData\Models\EmploymentType;
 use App\Modules\MasterData\Models\Location;
 use App\Modules\MasterData\Models\PartyType;
+use App\Modules\MasterData\Models\PaymentMethod;
 use App\Modules\MasterData\Models\PaymentTerm;
 use App\Modules\MasterData\Models\PriceList;
+use App\Modules\MasterData\Models\ProductCategory;
 use App\Modules\MasterData\Models\ReasonCode;
 use App\Modules\MasterData\Models\Tax;
 use App\Modules\MasterData\Models\TransferMode;
@@ -163,6 +166,39 @@ return [
         'vehicle_type' => VehicleType::class,
         'vehicle' => Vehicle::class,
         'transfer_mode' => TransferMode::class,
+    ],
+
+    /*
+     * একই নামে দুইটা মাস্টার নয় — নাম মিললে DuplicationEngine সতর্ক করে থামে
+     * ([[MasterListService::create()]] দরজাটা ডাকে)। একটা ঘোষণা, আর
+     * MasterListController-এর প্রতিটা তালিকা ঢাকা পড়ে।
+     *
+     * ── কেন সবগুলো এখানে, যদিও Vehicle-এর plate ও Currency-র code আলাদাও অনন্য ──
+     * ওই অনন্যতাগুলো হুবহু-মিল ধরে (একই code দুইবার নয়)। কিন্তু ডুপ্লিকেট
+     * সাধারণত নামে আসে — "নেসলে" আর "Nestle", "চাল ৫০ কেজি" আর "চাল ৫০কেজি"।
+     * তাই নাম-পাহারা আলাদা, আর প্রতিটা তালিকার দরকার।
+     *
+     * ⚠️ CostCenter এখানে নেই — সে Accounts-এর নিজের মডেল, তার ঘোষণা
+     * Accounts/module.php-এ যাবে (মডেল যেখানে, নিয়ম সেখানে)। এখন ওই ফাইল
+     * অন্য হাতে; ততক্ষণ CostCenter গার্ডের EXEMPT-এ কারণসহ অপেক্ষমাণ।
+     */
+    'duplicates' => [
+        ['model' => Brand::class, 'name' => ['name_en', 'name_bn']],
+        ['model' => ProductCategory::class, 'name' => ['name_en', 'name_bn']],
+        ['model' => Unit::class, 'name' => ['name_en', 'name_bn']],
+        ['model' => Tax::class, 'name' => ['name_en', 'name_bn']],
+        ['model' => PaymentTerm::class, 'name' => ['name_en', 'name_bn']],
+        ['model' => PartyType::class, 'name' => ['name_en', 'name_bn']],
+        ['model' => PriceList::class, 'name' => ['name_en', 'name_bn']],
+        ['model' => ReasonCode::class, 'name' => ['name_en', 'name_bn']],
+        ['model' => Currency::class, 'name' => ['name_en', 'name_bn']],
+        ['model' => Department::class, 'name' => ['name_en', 'name_bn']],
+        ['model' => Designation::class, 'name' => ['name_en', 'name_bn']],
+        ['model' => EmploymentType::class, 'name' => ['name_en', 'name_bn']],
+        ['model' => VehicleType::class, 'name' => ['name_en', 'name_bn']],
+        ['model' => TransferMode::class, 'name' => ['name_en', 'name_bn']],
+        ['model' => Vehicle::class, 'name' => ['name_en', 'name_bn']],
+        ['model' => PaymentMethod::class, 'name' => ['name_en', 'name_bn']],
     ],
 
     'settings' => [

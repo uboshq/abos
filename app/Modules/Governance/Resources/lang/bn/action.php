@@ -26,4 +26,5 @@ return [
     'look_reverted' => 'রূপ ফেরানো',
     'reopened' => 'পুনরায় খোলা',
     'discount_approved' => 'ছাড় অনুমোদিত',
+    'overridden' => 'নকল অনুমোদিত',
 ];

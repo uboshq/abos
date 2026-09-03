@@ -6,6 +6,7 @@ namespace App\Modules\MasterData\Services;
 
 use App\Core\Contracts\ProvisionsCompany;
 use App\Core\Engines\Coding\CodeSuggester;
+use App\Core\Engines\Duplication\DuplicationEngine;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\MasterData\Models\Currency;
@@ -51,6 +52,7 @@ final class MasterListService implements ProvisionsCompany
 
     public function __construct(
         private readonly CodeSuggester $codes,
+        private readonly DuplicationEngine $duplicates,
     ) {}
 
     /**
@@ -61,6 +63,18 @@ final class MasterListService implements ProvisionsCompany
     public function create(string $model, array $data, string $kind = ''): Model
     {
         return DB::transaction(function () use ($model, $data, $kind) {
+            /*
+             * একই নামে দুইবার নয় — নাম মিললে [[DuplicationEngine]] সতর্ক করে
+             * থামে, আর `allow_duplicate` টিকে এগোতে দেয়। এক দরজা, আর
+             * MasterListController-এর প্রতিটা ঘোষিত তালিকা এতে ঢাকা পড়ে।
+             *
+             * ⚠️ override নীরব নয়: কেউ জোর করে ডুপ্লিকেট বসালে সেটা অডিটে বসে
+             * ("কে বসাল" পরে জানা যায়)। তাই টিকটা check()-এর আগে পড়া হয় —
+             * check() ওটা $data থেকে মুছে দেয়।
+             */
+            $overridden = (bool) ($data['allow_duplicate'] ?? false);
+            $this->duplicates->check($model, $data);
+
             $code = trim((string) ($data['code'] ?? ''));
 
             /*
@@ -120,6 +134,11 @@ final class MasterListService implements ProvisionsCompany
 
             $this->afterSave($record, $data);
 
+            // জোর করে ডুপ্লিকেট বসানো হলে অডিটে চিহ্ন — নীরব নয়
+            if ($overridden) {
+                $record->auditAction('overridden', __('master_data::message.duplicate_overridden'));
+            }
+
             return $record->fresh();
         });
     }
@@ -130,6 +149,10 @@ final class MasterListService implements ProvisionsCompany
     public function update(Model $record, array $data): Model
     {
         return DB::transaction(function () use ($record, $data) {
+            // নাম বদলে আরেকটার সাথে মিলে গেলেও একই পাহারা — নিজেকে বাদ দিয়ে
+            $overridden = (bool) ($data['allow_duplicate'] ?? false);
+            $this->duplicates->check($record::class, $data, $record->getKey());
+
             /*
              * সম্পাদনায় ফাঁকা মানে "বদলাবেন না", "মুছে দিন" নয়।
              *
@@ -158,6 +181,10 @@ final class MasterListService implements ProvisionsCompany
 
             if ($wantsDefault) {
                 $record->makeDefault();
+            }
+
+            if ($overridden) {
+                $record->auditAction('overridden', __('master_data::message.duplicate_overridden'));
             }
 
             return $record->fresh();

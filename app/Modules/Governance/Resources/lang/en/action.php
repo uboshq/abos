@@ -26,4 +26,5 @@ return [
     'look_reverted' => 'Look reverted',
     'reopened' => 'Reopened',
     'discount_approved' => 'Discount approved',
+    'overridden' => 'Duplicate allowed',
 ];

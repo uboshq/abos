@@ -573,6 +573,10 @@ class MasterListController extends Controller implements HasMiddleware
             'name_en' => ['required', 'string', 'max:120'],
             'name_bn' => ['nullable', 'string', 'max:120'],
             'is_default' => ['nullable', 'boolean'],
+
+            // নকল-সতর্কতা পেরিয়ে যাওয়ার সিদ্ধান্ত — DuplicationEngine পড়ে ও
+            // মুছে দেয়; সারিতে বসে না
+            'allow_duplicate' => ['nullable', 'boolean'],
         ];
 
         $switches = [];
@@ -607,7 +611,10 @@ class MasterListController extends Controller implements HasMiddleware
         // চেকবক্স না দেখালে ব্রাউজার কিছুই পাঠায় না — তখন "মিথ্যা" আর
         // "দেওয়া হয়নি" আলাদা করা যায় না, আর সম্পাদনায় সুইচটা নিজে
         // থেকে বন্ধ হয়ে যেত
-        $request->merge($switches + ['is_default' => $request->boolean('is_default')]);
+        $request->merge($switches + [
+            'is_default' => $request->boolean('is_default'),
+            'allow_duplicate' => $request->boolean('allow_duplicate'),
+        ]);
 
         $data = $request->validate($rules);
 
