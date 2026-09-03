@@ -22,6 +22,7 @@ use App\Modules\Inventory\Services\StockService;
 use App\Modules\MasterData\Models\PaymentMethod;
 use App\Modules\MasterData\Models\PaymentTerm;
 use App\Modules\Sales\Services\DirectSaleService;
+use App\Modules\Supplier\Models\Supplier;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -163,6 +164,32 @@ class DirectSaleController extends Controller implements HasMiddleware
                      * একটাও খাত দেখা যায় না, মালিকের নির্দেশমতো।
                      */
                     'kind' => $m->kind,
+                ])
+                ->values(),
+
+            /*
+             * ── বাহকের তালিকা — পরিবহনকারী ও ভাড়ার গাড়ি ────────────────
+             *
+             * ⚠️ এতদিন পর্দায় কেবল **নাম লেখার একটা ঘর** ছিল, তাই
+             * `sal_challans.carrier_id` কখনো বসতই না — আর তখন ভাড়ার
+             * দাখিলাটা কোনো পক্ষ পেত না।
+             *
+             * ⭐ কিন্তু মালিকের চাওয়া ঠিক তার উল্টো: *"transporter-এর সাথে
+             * হিসাব হবে"* — অর্থাৎ ভাড়াটা তার খাতায় **পাওনা** হয়ে জমবে,
+             * মাস শেষে মিটবে। নাম লেখা থাকলে খতিয়ানই দাঁড়ায় না।
+             *
+             * ⓘ ছাঁকনিটা পক্ষের **ধরন** ধরে — পরিবহনকারী ও ভাড়ার গাড়ি।
+             * দুইটাই সেটিংসের সারি, তাই কোডে কোনো নাম লেখা নেই: কোড দিয়ে
+             * খোঁজা হয়, আর কোম্পানি চাইলে আরও ধরন যোগ করতে পারে।
+             */
+            'carriers' => Supplier::query()
+                ->active()
+                ->whereHas('partyType', fn ($q) => $q->whereIn('code', ['TRANSPORT', 'RENTAL']))
+                ->orderBy('name_en')
+                ->get(['id', 'code', 'name_en', 'name_bn'])
+                ->map(fn (Supplier $s): array => [
+                    'id' => (string) $s->id,
+                    'label' => $s->name(),
                 ])
                 ->values(),
 
@@ -392,6 +419,13 @@ class DirectSaleController extends Controller implements HasMiddleware
              * আর রুটপ্রতি খরচ বের করার একমাত্র উপায় ওটাই।
              */
             'carrier_name' => ['nullable', 'string', 'max:191'],
+            /*
+             * ⓘ বাহক বাছাই ঐচ্ছিক, আর সেটাই ঠিক: বহরের বাইরের একবারের
+             * গাড়ির কোনো চলতি হিসাব থাকে না — টাকা ওই দিনই মেটে। তখন
+             * নামটাই যথেষ্ট, আর ভাড়াটা সাধারণ প্রদেয়তে যায়।
+             */
+            'carrier_id' => ['nullable', 'integer',
+                Rule::exists('suppliers', 'id')->where('company_id', $companyId)],
             'transport_cost' => ['nullable', 'numeric', 'min:0'],
 
             /*

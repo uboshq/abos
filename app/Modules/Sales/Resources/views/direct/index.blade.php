@@ -2509,6 +2509,8 @@
                         reference: '', refDate: '', narration: '',
                     },
                     panel: '',
+                    carriers: @js($carriers),
+                    carrierId: '',
                     depositMethods: @js($depositMethods),
                     moneyAccounts: @js($moneyAccounts),
 

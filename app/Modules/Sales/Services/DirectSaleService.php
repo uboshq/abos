@@ -294,6 +294,17 @@ final class DirectSaleService
              * তখন "লেখা হয়নি" আর "ফাঁকা লেখা হয়েছে" আলাদা করা যেত না।
              */
             'expense_narration' => ($data['expense_narration'] ?? '') ?: null,
+            /*
+             * ⓘ দুইটাই রাখা হয়, আর দুইটার কাজ আলাদা।
+             *
+             * `carrier_id` থাকলে ভাড়াটা **তার খাতায় পাওনা** হয়ে জমে —
+             * মাস শেষে মেটানোর জন্য। না থাকলে (একবারের ভাড়ার গাড়ি) নামটাই
+             * কাগজে থাকে, আর ভাড়া সাধারণ প্রদেয়তে যায়।
+             *
+             * ⚠️ নামটা মুছে ফেলা হয় না পক্ষ বাছলেও — কাগজে কী ছাপা হয়েছিল
+             * সেটা কাগজেরই কথা, আর পক্ষের নাম পরে বদলাতে পারে।
+             */
+            'carrier_id' => ($data['carrier_id'] ?? '') ?: null,
             'carrier_name' => ($data['carrier_name'] ?? '') ?: null,
             'transport_cost' => ($data['transport_cost'] ?? '') !== ''
                 ? $this->money($data['transport_cost'])
