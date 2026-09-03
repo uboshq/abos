@@ -35,6 +35,20 @@ use Illuminate\Validation\ValidationException;
 final class DuplicateGuard
 {
     /**
+     * বাংলা অঙ্ক → ASCII অঙ্ক — "চাল ৫০" আর "চাল 50" যেন এক নাম হয়।
+     *
+     * ⚠️ প্রতিটা অঙ্ক আলাদা ভাঁজ হয়, তাই ৫০→50 আর ২৫→25 — দুইটা কখনো
+     * এক হয় না। এটাই জরুরি: "৫০ কেজি" আর "২৫ কেজি" সত্যিই আলাদা পণ্য,
+     * আর ওদের এক করে ফেললে সৎ ব্যবহারকারী কাজই করতে পারতেন না।
+     *
+     * @var array<string, string>
+     */
+    private const BENGALI_DIGITS = [
+        '০' => '0', '১' => '1', '২' => '2', '৩' => '3', '৪' => '4',
+        '৫' => '5', '৬' => '6', '৭' => '7', '৮' => '8', '৯' => '9',
+    ];
+
+    /**
      * নামের তুলনাযোগ্য রূপ।
      *
      * বড়-ছোট হাতের অক্ষর, বাড়তি ফাঁক, আর যতিচিহ্ন সরানো হয়। এগুলোই
@@ -54,6 +68,9 @@ final class DuplicateGuard
     public static function normaliseName(?string $name): string
     {
         $value = mb_strtolower(trim((string) $name));
+
+        // বাংলা অঙ্ককে ASCII করা — "৫০" আর "50" এক, কিন্তু "৫০" ও "২৫" আলাদা
+        $value = strtr($value, self::BENGALI_DIGITS);
 
         // যতিচিহ্ন সরানোর *আগে* — নাহলে স্ল্যাশটাই থাকত না
         $value = preg_replace('/^\s*(m\/s\.?|messrs\.?)\s*/u', '', $value) ?? $value;

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Inventory\Services;
 
+use App\Core\Engines\Duplication\DuplicationEngine;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Support\DocumentStatus;
 use App\Models\IssuedNumber;
@@ -19,13 +20,20 @@ use Illuminate\Validation\ValidationException;
  */
 final class ProductService
 {
-    public function __construct(private readonly NumberSeriesEngine $numbers) {}
+    public function __construct(
+        private readonly NumberSeriesEngine $numbers,
+        private readonly DuplicationEngine $duplicates,
+    ) {}
 
     /**
      * @param  array<string, mixed>  $data
      */
     public function create(array $data): Product
     {
+        // একই নামে দুইবার পণ্য নয় — নাম মিললে সতর্ক করে থামে, allow_duplicate
+        // দিলে এগোয়। এই দরজাটাই এতদিন ছিল না, তাই লাইভে জোড়া পণ্য বসেছিল।
+        $this->duplicates->check(Product::class, $data);
+
         $this->assertImportable($data);
 
         return DB::transaction(function () use ($data) {
@@ -62,6 +70,9 @@ final class ProductService
      */
     public function update(Product $product, array $data): Product
     {
+        // নাম বদলে আরেকটা পণ্যের নকল হয়ে গেলেও একই পাহারা; নিজের সারি বাদ
+        $this->duplicates->check(Product::class, $data, $product->id);
+
         if (isset($data['code']) && trim((string) $data['code']) !== $product->code) {
             $this->assertCodeIsFree(trim((string) $data['code']), $product->id);
         }
