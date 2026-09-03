@@ -147,7 +147,15 @@ class DemoSeeder extends Seeder
                      *
                      * তাই একটা নাম, আর ষষ্ঠবার ফাঁদটায় পা না দিয়ে।
                      */
-                    ->orWhere('name', 'inventory.product.view'))
+                    ->orWhere('name', 'inventory.product.view')
+
+                    /*
+                     * নিজের হাজিরা — মাঠকর্মী ফোন থেকে নেট ছাড়াই দেন
+                     * ([[AttendanceSync]])। এটা সরু চাবি (`hr.attendance.self`),
+                     * `hr.%` ঢালাও নয়: ঢালাও দিলে সে গোটা দলের হাজিরা ও
+                     * বেতনও দেখে ফেলত। একটা নাম, ঠিক যেমন পণ্যের তালিকা।
+                     */
+                    ->orWhere('name', 'hr.attendance.self'))
                 /*
                  * সীমা অতিক্রমের অনুমতিগুলো বিক্রয়কর্মীর নেই — সেটাই
                  * অনুমোদন চাওয়ার কারণ।
