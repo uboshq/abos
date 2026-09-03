@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Core\Services;
 
 use App\Core\Contracts\Importer;
+use App\Core\Contracts\RefusesAPartialImport;
 use App\Core\Module\ModuleRegistry;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -104,7 +105,13 @@ final class ImportRunner
      * ফিরিয়ে নেওয়ার মানে হয় না, আর পুরোটা এক ট্রানজেকশনে রাখলে দুই
      * হাজার সারির লক অনেকক্ষণ ধরে থাকত।
      *
-     * @return array{imported: int, failed: list<array{line: int, error: string}>}
+     * ── একটা ব্যতিক্রম, আর কেন ───────────────────────────────────────
+     * ইমপোর্টার [[RefusesAPartialImport]] ঘোষণা করলে উপরের যুক্তিটা
+     * উল্টে যায়: সেখানে ফাইলটা তালিকা নয়, **দলিল**। খোলার জেরের অর্ধেক
+     * বসলে বই নীরবে ভুল হয়ে যায়, আর কোন সারিগুলো ঢুকেছিল সেটা পরে বের
+     * করাই আসল কষ্ট। তাই ওদের জন্য **সব, নয়তো কিছুই না**।
+     *
+     * @return array{imported: int, failed: list<array{line: int, error: string}>, refused?: string}
      */
     public function run(string $key, UploadedFile $file): array
     {
@@ -112,6 +119,10 @@ final class ImportRunner
         $importer = app($class);
 
         $parsed = $this->read($file, $class::columns());
+
+        if ($importer instanceof RefusesAPartialImport) {
+            return $this->runAllOrNothing($importer, $class, $parsed['rows']);
+        }
 
         $imported = 0;
         $failed = [];
@@ -138,6 +149,78 @@ final class ImportRunner
         }
 
         return ['imported' => $imported, 'failed' => $failed];
+    }
+
+    /**
+     * সব বসে, নয়তো একটাও না।
+     *
+     * ── দুই ধাপ, আর কেন একটা নয় ──────────────────────────────────────
+     * প্রথমে **গোটা ফাইলটা যাচাই**, কিছু না লিখে। তারপর, সব ঠিক থাকলে,
+     * একটাই ট্রানজেকশনে বসানো।
+     *
+     * ধাপ দুইটা আলাদা রাখার একটাই কারণ, আর সেটা ব্যবহারকারীর: যাচাই
+     * থামিয়ে দিলে তিনি **প্রথম** ভুলটা জানতেন, তারপর সেটা শুধরে আবার
+     * পাঠাতেন, আর দ্বিতীয়টা জানতেন। পাঁচটা ভুলের ফাইল মানে পাঁচবার।
+     * এখানে পুরো তালিকাটা একবারেই আসে — ঠিক যেমন শুকনো দৌড়
+     * ([[ImportRunner::check()]]) দেয়।
+     *
+     * ⚠️ লেখার ধাপে কেউ ব্যর্থ হলে (যাচাই যা ধরতে পারে না — লক, বিদেশি
+     * চাবি, একই সাথে অন্য কেউ) **পুরোটা ফিরে যায়**। তখন `imported` শূন্য,
+     * আর ব্যর্থ সারিটার নাম বলা থাকে।
+     *
+     * @param  array<int, array<string, string>>  $rows
+     * @param  class-string<Importer>  $class
+     * @return array{imported: int, failed: list<array{line: int, error: string}>, refused?: string}
+     */
+    private function runAllOrNothing(
+        Importer&RefusesAPartialImport $importer,
+        string $class,
+        array $rows,
+    ): array {
+        $failed = [];
+
+        foreach ($rows as $line => $data) {
+            $errors = $this->missingRequired($class::columns(), $data);
+
+            if ($errors === []) {
+                $errors = $importer->check($data);
+            }
+
+            if ($errors !== []) {
+                $failed[] = ['line' => $line, 'error' => implode(' · ', $errors)];
+            }
+        }
+
+        if ($failed !== []) {
+            return ['imported' => 0, 'failed' => $failed, 'refused' => $importer->refusalNotice()];
+        }
+
+        try {
+            $imported = DB::transaction(function () use ($importer, $rows): int {
+                $done = 0;
+
+                foreach ($rows as $data) {
+                    $importer->import($data);
+                    $done++;
+                }
+
+                return $done;
+            });
+        } catch (\Throwable $e) {
+            /*
+             * একটা সারি ভাঙল, তাই ট্রানজেকশনটা নিজেই সব ফিরিয়ে নিয়েছে।
+             * কোন সারিতে ভাঙল সেটা আর জানা যায় না — লুপটা ভেতরে, আর
+             * গণনাটাও ফিরে গেছে। ⚠️ তাই বার্তায় সারির নম্বর দাবি করা
+             * হয় না: ভুল নম্বর বলার চেয়ে না বলা ভালো।
+             */
+            return [
+                'imported' => 0,
+                'failed' => [['line' => 0, 'error' => $e->getMessage()]],
+                'refused' => $importer->refusalNotice(),
+            ];
+        }
+
+        return ['imported' => $imported, 'failed' => []];
     }
 
     /**

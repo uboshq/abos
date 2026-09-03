@@ -11,4 +11,11 @@ return [
     // sheet wrong while the trial balance still ties, and no one sees it. Points
     // to Books check rather than running it (that walks the whole ledger).
     'opening_partial_warning' => '⚠️ Opening balances loaded only in part, so the books do not balance — the balance sheet will be wrong. Fix the remaining rows and upload again, then run Accounts → Books check.',
+
+    /*
+     * Nothing is written now instead of writing half, so the message
+     * changed with it: the one above reports damage, this one reports
+     * that none was done.
+     */
+    'opening_refused' => 'Nothing was loaded — opening balances go in whole or not at all. Half of them would leave the books out of balance, and working out which rows went in is the hard part. Fix the rows listed below and upload again; nothing in your system has changed yet.',
 ];

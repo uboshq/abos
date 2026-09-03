@@ -115,6 +115,19 @@ class ImportController extends Controller implements HasMiddleware
                 && ($specific = $importer->partialWarning()) !== null) {
                 $warning = $specific;
             }
+
+            /*
+             * ⚠️ যে ইমপোর্টার আংশিক বসতেই দেয় না, তার বার্তা সবার উপরে।
+             *
+             * উপরের দুইটা বার্তাই ধরে নেয় কিছু সারি বসে গেছে — "৮ সফল, ২
+             * ব্যর্থ"। এখানে **একটাও বসেনি**, আর সেটা না বললে ব্যবহারকারী
+             * উল্টো ভয় পেতেন: ভাবতেন অর্ধেক ঢুকে গেছে, আর কোনগুলো ঢুকল
+             * তা খুঁজতে বসতেন — যা এই নিয়মটার ঠিক উল্টো ফল।
+             * [[ImportRunner::runAllOrNothing()]] বার্তাটা নিজেই দেয়।
+             */
+            if (isset($result['refused'])) {
+                $warning = $result['refused'];
+            }
         }
 
         return back()->with('import_result', [

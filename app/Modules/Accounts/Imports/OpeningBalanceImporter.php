@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Accounts\Imports;
 
 use App\Core\Contracts\Importer;
-use App\Core\Contracts\WarnsOnPartialImport;
+use App\Core\Contracts\RefusesAPartialImport;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\OpeningBalanceService;
 use Illuminate\Support\Carbon;
@@ -19,15 +19,25 @@ use Illuminate\Support\Carbon;
  *
  * ⚠️ খোলার জের একটা **দলিল, তালিকা নয়**। অর্ধেক বসলে খতিয়ান মেলে
  * (প্রতিটা সারি RETAINED_EARNINGS-এর বিপরীতে সেল্ফ-ব্যালেন্সড), কিন্তু
- * স্থিতিপত্র ভুল — আর সেটা কেউ চোখে দেখে না। তাই `WarnsOnPartialImport`:
- * কিছু সারি ব্যর্থ হলে ফলাফলে জোরালো বার্তা।
+ * স্থিতিপত্র ভুল — আর সেটা কেউ চোখে দেখে না।
  *
- * idempotent — `loadFor()` `exists()` দিয়ে আগে-বসা জের দেখে থামে, তাই
- * আংশিক ইমপোর্ট আবার চালালে বাকিটা সম্পূর্ণ হয়, দ্বিগুণ নয়। এই কারণেই
- * check()-এ "আগে জের বসেছে" ভুল হিসেবে ধরা হয় না: ধরলে পুনরায় চালানোর
- * সময় হয়ে-যাওয়া সারিগুলো "ব্যর্থ" দেখাত, আর সতর্কবার্তা মিথ্যা বাজত।
+ * ── কেন সতর্কবার্তা থেকে অস্বীকারে, ৪ সেপ্টেম্বর ২০২৬ ─────────────────
+ * আগে এখানে `WarnsOnPartialImport` ছিল: সারি বাদ পড়লে ফলাফলের পর্দায়
+ * একটা জোরালো বার্তা। সমস্যাটা ঠিক ধরা ছিল, উত্তরটা দুর্বল — কারণ এই
+ * ইমপোর্টটা চলে **নতুন কোম্পানির প্রথম দিনে**, যখন একের পর এক ফাইল
+ * উঠছে আর পর্দায় বার্তার ভিড়। ঠিক তখনই মানুষ সবচেয়ে কম পড়েন।
+ *
+ * এখন [[RefusesAPartialImport]] — একটা সারি ভুল হলে **একটাও বসে না**।
+ * ⓘ নিষ্ঠুর নয়, কারণ শুকনো দৌড় ([[ImportRunner::check()]]) আগেই প্রতিটা
+ * ভুল একসাথে দেখায়; ব্যবহারকারী পুরো তালিকা দেখে ফাইল শুধরে আসেন।
+ *
+ * idempotent — `loadFor()` `exists()` দিয়ে আগে-বসা জের দেখে থামে। এখন
+ * আর আংশিক অবস্থা তৈরিই হয় না, তবু গুণটা কাজে লাগে: ফিরিয়ে দেওয়া
+ * ফাইলটা শুধরে আবার তুললে দ্বিগুণ হওয়ার ভয় নেই। এই কারণেই check()-এ
+ * "আগে জের বসেছে" ভুল হিসেবে ধরা হয় না — ধরলে পুনরায় তোলার সময়
+ * হয়ে-যাওয়া সারিগুলো গোটা ফাইলটাকে আটকে দিত।
  */
-final class OpeningBalanceImporter implements Importer, WarnsOnPartialImport
+final class OpeningBalanceImporter implements Importer, RefusesAPartialImport
 {
     public function __construct(private readonly OpeningBalanceService $openings) {}
 
@@ -105,9 +115,9 @@ final class OpeningBalanceImporter implements Importer, WarnsOnPartialImport
         );
     }
 
-    public function partialWarning(): ?string
+    public function refusalNotice(): string
     {
-        return __('accounts::import.opening_partial_warning');
+        return __('accounts::import.opening_refused');
     }
 
     private function account(string $code): ?Account
