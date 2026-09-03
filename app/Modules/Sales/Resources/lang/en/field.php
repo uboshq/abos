@@ -56,7 +56,20 @@ return [
     'invoice' => 'Invoice',
     'collected' => 'Collected',
     'due' => 'Due',
-    'account' => 'Money went to',
+    /*
+     * ⚠️ "Money went to" ছিল, "Received into" হলো — মালিকের নির্দেশ
+     * (৪ সেপ্টেম্বর ২০২৬)।
+     *
+     * ⭐ চাবিটা ছয় জায়গায় ব্যবহার হয়, আর ছয়টাই **টাকা আসার** কাগজ:
+     * আদায়ের ফর্ম, তালিকা, রেকর্ড, ছাপা, আর সরাসরি বিক্রয়ের জমা।
+     * তাই একটাই নাম যথেষ্ট, আর সেটাই ঠিক — এক জিনিসের দুইটা নাম হলে
+     * রিপোর্টে ওরা মেলে না।
+     *
+     * ⓘ "went to" শব্দটা দিক বলত না — টাকা কোথাও গেলে সেটা প্রদানও
+     * হতে পারে। "Received into" বলে দেয় টাকাটা **এসেছে**, আর কোন
+     * খাতে এসেছে।
+     */
+    'account' => 'Received into',
     'instrument' => 'Instrument',
     'instrument_no' => 'Cheque / reference no',
     'instrument_date' => 'Cheque date',
