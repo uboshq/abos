@@ -138,11 +138,28 @@ final class DirectSaleService
             $left = $applied;
 
             foreach ($rows as $row) {
-                if (bccomp($left, '0', 4) <= 0) {
-                    break;
-                }
-
-                $take = bccomp($row['amount'], $left, 4) > 0 ? $left : $row['amount'];
+                /*
+                 * ⚠️ বরাদ্দ থামে, **টাকা থামে না**।
+                 *
+                 * ── কী ভুল ছিল (মালিক ধরেছেন, ৩ সেপ্টেম্বর ২০২৬) ────────
+                 * ৬০,৫৬৫ টাকার বিলে ৫৬ লাখ জমা নিলে পর্দা বলত "বকেয়া ০",
+                 * আর **বাকি ৫৬ লাখ কোথাও থাকত না** — না পর্দায়, না খাতায়।
+                 * আগে সারিগুলো বিলের মোট পর্যন্ত কেটে থেমে যেত, তাই
+                 * ক্যাশিয়ার হাতে যে টাকা নিয়েছেন তার একটা অংশ **কোনো
+                 * কাগজেই লেখা হত না**।
+                 *
+                 * ── এখন ────────────────────────────────────────────────
+                 * প্রতিটা সারির **পুরো টাকা** আদায়ের কাগজে বসে; কেবল
+                 * **বিলে বরাদ্দটা** সীমিত। উদ্বৃত্তটা তখন গ্রাহকের খাতায়
+                 * **অগ্রিম** হয়ে থাকে — আর ঠিক ওটাই ডিপোর স্বাভাবিক ঘটনা:
+                 * ডিলার আগাম টাকা দিয়ে যান, পরের চালানে কাটা হয়।
+                 *
+                 * ⓘ `CollectionService` এটা আগে থেকেই সমর্থন করে — সে
+                 * কেবল দেখে বরাদ্দ **টাকার বেশি নয়**; কম হলে আপত্তি নেই।
+                 */
+                $take = bccomp($left, '0', 4) > 0
+                    ? (bccomp($row['amount'], $left, 4) > 0 ? $left : $row['amount'])
+                    : '0.0000';
 
                 $this->collections->confirm($this->collections->create(
                     [
@@ -160,12 +177,15 @@ final class DirectSaleService
                         'instrument' => $row['instrument'],
                         'instrument_no' => $row['reference'],
                         'instrument_date' => $row['ref_date'],
-                        'amount' => $take,
+                        'amount' => $row['amount'],
                         'narration' => $row['narration'] ?? __('sales::message.direct_narration', [
                             'no' => $challan->document_no,
                         ]),
                     ],
-                    [['sales_invoice_id' => $invoice->id, 'amount' => $take]],
+                    // বরাদ্দ শূন্য হলে কোনো লাইন নয় — পুরোটাই অগ্রিম
+                    bccomp($take, '0', 4) > 0
+                        ? [['sales_invoice_id' => $invoice->id, 'amount' => $take]]
+                        : [],
                 ));
 
                 $left = bcsub($left, $take, 4);

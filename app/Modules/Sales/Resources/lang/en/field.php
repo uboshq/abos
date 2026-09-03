@@ -85,6 +85,8 @@ return [
     'previous_advance' => 'Previous Advance',
     'due' => 'Due',
     'advance' => 'Advance',
+    /* More paid than the bill — the rest stays to the customer's credit. */
+    'kept_as_advance' => 'Kept as advance',
 
     'available_short' => 'Available',
     'main_stock' => 'Main Stock',
