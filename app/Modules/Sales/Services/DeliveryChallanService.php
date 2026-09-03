@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Modules\Sales\Services;
 
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
+use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Models\FinancialYear;
+use App\Models\LedgerEntry;
 use App\Models\IssuedNumber;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\StockMovement;
@@ -19,6 +21,7 @@ use App\Modules\Inventory\Services\StockService;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\DeliveryChallanLine;
 use App\Modules\Sales\Models\SalesOrder;
+use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Sales\Models\SalesOrderLine;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -51,6 +54,9 @@ final class DeliveryChallanService
         private readonly PrintedPriceCeiling $ceiling,
 
         private readonly SettingsService $settings,
+
+        // গাড়ির ভাড়া খাতায় বসানোর জন্য — নিচে postTransportCost()
+        private readonly PostingEngine $posting,
     ) {}
 
     /**
@@ -191,6 +197,8 @@ final class DeliveryChallanService
                 $this->assertWithinPrintedPrice($line, $movements);
             }
 
+            $this->postTransportCost($challan);
+
             $challan->update(['status' => DocumentStatus::CONFIRMED]);
 
             return $challan->fresh(['lines']);
@@ -216,6 +224,38 @@ final class DeliveryChallanService
 
         return DB::transaction(function () use ($challan, $reason, $date) {
             if ($challan->status === DocumentStatus::CONFIRMED) {
+                /*
+                 * গাড়ির ভাড়ার দাখিলাও ফেরে।
+                 *
+                 * ⚠️ না ফিরলে পরিবহনকারীর খাতায় **একটা পাওনা বসে থাকত
+                 * যার কোনো চালান নেই** — আর সেটা ধরা পড়ত মাস শেষে
+                 * মেলানোর সময়, কারণ ছাড়াই। তিনি টাকা চাইতেন, আমরা
+                 * কাগজ খুঁজে পেতাম না।
+                 *
+                 * ⓘ `reverse()` উল্টো সারি বসায়, মূল সারি মোছে না —
+                 * নিয়ম ৫ ও [[NoHardDeleteGuard]] অনুযায়ী। তাই বাতিল
+                 * চালানের ইতিহাসও খতিয়ানে থেকে যায়।
+                 *
+                 * ⚠️ আগে যাচাই করা **বাধ্যতামূলক**: `reverse()` কিছু না
+                 * পেলে `PostingException` ছোঁড়ে। বেশিরভাগ চালানে পরিবহন
+                 * খরচ থাকেই না, তাই যাচাই ছাড়া ডাকলে **ওই চালানগুলোর
+                 * বাতিলই ভেঙে যেত** — আর ভুলটা দেখা দিত কেবল বাতিলের
+                 * মুহূর্তে, অর্থাৎ যখন ব্যবহারকারী তাড়াহুড়োয় আছেন।
+                 */
+                $hasPosting = LedgerEntry::query()
+                    ->where('source_type', DeliveryChallan::STOCK_SOURCE)
+                    ->where('source_id', $challan->id)
+                    ->exists();
+
+                if ($hasPosting) {
+                    $this->posting->reverse(
+                        sourceType: DeliveryChallan::STOCK_SOURCE,
+                        sourceId: $challan->id,
+                        reversalDate: $date,
+                        reason: $reason,
+                    );
+                }
+
                 /*
                  * মাল ফেরে যে লট থেকে বেরিয়েছিল সেই লটেই।
                  *
@@ -370,6 +410,97 @@ final class DeliveryChallanService
     /**
      * এই লাইনের বিপরীতে কতটুকু ধরা এখনো ছাড়া যায়।
      */
+    /**
+     * গাড়ির ভাড়া খাতায় বসানো — চালান নিশ্চিত হওয়ার মুহূর্তে।
+     *
+     * ── কী ভাঙা ছিল ─────────────────────────────────────────────────
+     * `transport_cost` চালানের ঘরে লেখা হত, আর **সেখানেই থেমে যেত** —
+     * কোনো ভাউচার নয়, কোনো খাত নয়। অর্থাৎ পরিবহনের খরচ লাভ-ক্ষতিতে
+     * আসতই না, আর **মুনাফা ঠিক ওই পরিমাণ বেশি দেখাত**।
+     *
+     * ⚠️ এটা রিপোর্টের ফাঁক নয়, হিসাবের ভুল।
+     *
+     * ── দাখিলাটা কেন এই আকারে ───────────────────────────────────────
+     * মালিকের কথা (৪ সেপ্টেম্বর ২০২৬): *"চালানে বসালেও সেটা expense-এ
+     * যাবে, আর transporter-এর সাথে হিসাব হবে"*।
+     *
+     *     Dr গাড়ির ভাড়া (৫২১৭)     — খরচটা আজই ঘটেছে
+     *     Cr পরিবহনকারীর প্রদেয়      — টাকা আজ দেওয়া হয়নি
+     *
+     * `Cr নগদ` লিখলে ধরে নেওয়া হত টাকাটা ওই দিনই মিটেছে — যা ডিপোতে
+     * সত্যি নয়। **পরিবহনকারীর সাথে হিসাব চলতি**, মাসে একবার মেটে।
+     *
+     * ── পক্ষ বাছা না থাকলে ──────────────────────────────────────────
+     * তখন `Cr নগদ`, আর এটাই "একবারের গাড়ি"র ক্ষেত্র: যে গাড়ি একবার
+     * আসে তার সাথে চলতি হিসাব থাকে না, টাকা ওই দিনই মেটে।
+     *
+     * ⓘ তখন খতিয়ানের সুবিধাটা পাওয়া যায় না — আর সেটাই ব্যবহারকারীকে
+     * পক্ষ বাছতে উৎসাহ দেবে, **বাধ্য না করে**।
+     *
+     * ── কেন `confirm()`-এ, `create()`-এ নয় ──────────────────────────
+     * খসড়া চালান বদলায় ও মুছে যায়; খসড়ায় দাখিলা লিখলে খাতায় এমন খরচ
+     * বসত যার কোনো চালান নেই। আর সরাসরি বিক্রয়ের পথে `transport_cost`
+     * বসে `create()`-এর **পরে** (stampExtras), তাই `confirm()`-ই একমাত্র
+     * মুহূর্ত যেখানে সংখ্যাটা নিশ্চিতভাবে আছে।
+     */
+    private function postTransportCost(DeliveryChallan $challan): void
+    {
+        $cost = (string) ($challan->transport_cost ?? '0');
+
+        // খালি বা শূন্য হলে কোনো দাখিলা নয় — শূন্য টাকার ভাউচার
+        // খতিয়ান ভরিয়ে দিত, আর কিছুই বোঝাত না
+        if ($cost === '' || bccomp($cost, '0', 4) <= 0) {
+            return;
+        }
+
+        $expense = StandardChart::find(StandardChart::VEHICLE_HIRE);
+
+        /*
+         * খাতটা না থাকলে চুপচাপ ছেড়ে দেওয়া — চালান আটকানো নয়।
+         *
+         * ⚠️ এমন হতে পারে কেবল যদি কোম্পানি খাতটা নিজে মুছে ফেলে থাকে।
+         * তখন মাল আটকে রাখার চেয়ে খরচটা না লেখা কম ক্ষতি — মাল তো
+         * সত্যিই বেরিয়ে যাচ্ছে, আর সেটা আটকানো ব্যবসা থামায়।
+         */
+        if ($expense === null) {
+            return;
+        }
+
+        $carrierId = $challan->carrier_id;
+
+        $credit = $carrierId !== null
+            ? StandardChart::find(StandardChart::PAYABLE)
+            : StandardChart::find(StandardChart::CASH_IN_HAND);
+
+        if ($credit === null) {
+            return;
+        }
+
+        $narration = __('sales::message.transport_for_challan', ['no' => $challan->document_no]);
+
+        $this->posting->post(
+            sourceType: DeliveryChallan::STOCK_SOURCE,
+            sourceId: $challan->id,
+            trxDate: $challan->trx_date,
+            lines: [
+                [
+                    'account_id' => $expense->id,
+                    'debit' => $cost,
+                    'narration' => $narration,
+                ],
+                [
+                    'account_id' => $credit->id,
+                    'credit' => $cost,
+                    // পক্ষ থাকলে তাঁর খতিয়ানে বসে; নগদের ক্ষেত্রে পক্ষ নেই
+                    'party_type' => $carrierId !== null ? 'supplier' : null,
+                    'party_id' => $carrierId,
+                    'narration' => $narration,
+                ],
+            ],
+            documentNo: $challan->document_no,
+        );
+    }
+
     private function releasableQty(SalesOrderLine $orderLine, string $qty): string
     {
         // এই চালানের নিজের সারিগুলো এখনো স্টকে বসেনি, তাই আগেরগুলো গোনা

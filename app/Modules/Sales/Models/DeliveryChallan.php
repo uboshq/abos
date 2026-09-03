@@ -52,7 +52,7 @@ class DeliveryChallan extends Model implements Drillable
         'deposit_amount', 'credit_period_days',
 
         /* ছয়টা বোতামের ঘর — সরাসরি বিক্রয়ের পর্দা, ২৯ আগস্ট ২০২৬ */
-        'expense_narration', 'carrier_name', 'transport_cost',
+        'expense_narration', 'carrier_name', 'carrier_id', 'transport_cost',
         'ship_to', 'ship_date', 'deposit_method', 'deposit_ref',
         'status', 'narration', 'created_by',
         'cancelled_by', 'cancelled_at', 'cancel_reason',
