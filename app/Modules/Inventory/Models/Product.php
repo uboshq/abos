@@ -10,6 +10,7 @@ use App\Core\Concerns\HasDocumentStatus;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Contracts\Drillable;
+use App\Models\Attachment;
 use App\Models\User;
 use App\Modules\MasterData\Models\Brand;
 use App\Modules\MasterData\Models\ProductCategory;
@@ -43,7 +44,7 @@ class Product extends Model implements Drillable
     protected $table = 'inv_products';
 
     protected $fillable = [
-        'company_id', 'code', 'name_en', 'name_bn', 'barcode',
+        'company_id', 'code', 'name_en', 'name_bn', 'barcode', 'primary_image_id',
         'brand', 'category', 'brand_id', 'category_id', 'unit_id', 'tax_id',
         'purchase_price', 'sale_price', 'reorder_level',
         'status', 'is_active', 'created_by',
@@ -62,6 +63,25 @@ class Product extends Model implements Drillable
     public function unit(): BelongsTo
     {
         return $this->belongsTo(Unit::class, 'unit_id');
+    }
+
+    /**
+     * পণ্যের মুখ — তালিকায় ও কাউন্টারে যেটা দেখা যায়।
+     *
+     * ── কেন এটা "প্রধান ছবি", "ছবি" নয় ──────────────────────────────
+     * একটা পণ্যের একাধিক ছবি থাকতে পারে (সামনে, লেবেল, কার্টন), আর
+     * সেগুলো থাকে [[AttachmentEngine]]-এ। এই সম্পর্কটা কেবল বলে
+     * **কোনটা মুখ**। বাকিগুলো পেতে হলে কাগজপত্রের সাধারণ পথ।
+     *
+     * ⓘ ছবিটা `storage/app/private`-এ, আর দেখা যায় কেবল
+     * [[AttachmentController::download()]] দিয়ে — সে আগে অনুমতি
+     * যাচাই করে। তাই `<img src>` ওই রুটেই যায়, কোনো public পথে নয়:
+     * public হলে URL অনুমান করেই অন্য কোম্পানির লোক পণ্যের ছবি দেখতে
+     * পারতেন।
+     */
+    public function primaryImage(): BelongsTo
+    {
+        return $this->belongsTo(Attachment::class, 'primary_image_id');
     }
 
     /*

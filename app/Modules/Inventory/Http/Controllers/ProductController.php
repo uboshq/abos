@@ -11,6 +11,7 @@ use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingsService;
 use App\Http\Controllers\Controller;
 use App\Modules\Inventory\Http\Requests\ProductRequest;
+use App\Modules\Inventory\Services\ProductImageService;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\StockMovement;
 use App\Modules\Inventory\Services\ProductService;
@@ -24,6 +25,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 /**
@@ -43,6 +45,7 @@ class ProductController extends Controller implements HasMiddleware
         private readonly StockService $stock,
         private readonly MenuBuilder $menu,
         private readonly SettingsService $settings,
+        private readonly ProductImageService $images,
     ) {}
 
     public static function middleware(): array
@@ -58,7 +61,18 @@ class ProductController extends Controller implements HasMiddleware
         $query = Product::query()
             ->search($request->query('q'))
             ->when(! $request->boolean('inactive'), fn ($q) => $q->active())
-            ->with('unit');
+            /*
+             * ব্র্যান্ড ও শ্রেণি তালিকায় দেখানো হয়, তাই এখানেই আনা।
+             *
+             * ⚠️ নামগুলো `brandRow`/`categoryRow`, `brand`/`category` নয় —
+             * পুরনো মুক্ত-লেখা ঘর দুইটা টেবিলে রয়ে গেছে আর সম্পর্কের নাম
+             * এক হলে Eloquent ওগুলো ঢেকে দিত (মডেলে কারণটা লেখা)।
+             *
+             * এই লাইনটা না থাকলে ৬টা পণ্যে কিছুই বোঝা যেত না, কিন্তু
+             * প্রতি সারিতে দুইটা করে বাড়তি query হত — ৫০ সারির পাতায়
+             * ১০১টা। পাতাটা মরত কেবল আসল গ্রাহকের ডেটায় গিয়ে।
+             */
+            ->with(['unit', 'brandRow', 'categoryRow']);
 
         $sort = $this->applySort($query, $request, $this->sorts());
 
@@ -91,6 +105,8 @@ class ProductController extends Controller implements HasMiddleware
         // কোম্পানির নিজের যোগ করা ঘরগুলো — সেবার বাইরে, কারণ সেবা
         // ওগুলোর অস্তিত্বই জানে না
         app(CustomFieldService::class)->save($product, $request->input('custom', []));
+
+        $this->saveImage($request, $product);
 
         return redirect()
             ->route('inventory.product.show', $product)
@@ -131,9 +147,63 @@ class ProductController extends Controller implements HasMiddleware
 
         app(CustomFieldService::class)->save($product, $request->input('custom', []));
 
+        $this->saveImage($request, $product);
+
         return redirect()
             ->route('inventory.product.show', $product)
             ->with('saved', __('inventory::message.updated'));
+    }
+
+    /**
+     * ছবি এলে রাখা — না এলে কিছুই না।
+     *
+     * ── কেন যাচাইটা এখানে, `ProductRequest`-এ নয় ─────────────────────
+     * ⚠️ **এটা আদর্শ জায়গা নয়, আর সেটা স্বীকার করাই ভালো।** পণ্যের বাকি
+     * সব নিয়ম Request-এ; এটাও ওখানেই থাকা উচিত। ৩ সেপ্টেম্বর ২০২৬-এ
+     * ওই ফাইলটা অন্য একটা কাজে অকমিটেড অবস্থায় ছিল, আর একই ফাইলে
+     * দুইজন লেখার চেয়ে সাময়িকভাবে এখানে রাখা কম ঝুঁকির।
+     *
+     * **ওই কাজটা কমিট হলে এটা `ProductRequest`-এ সরানোর কথা।**
+     *
+     * ── কেন ছবি না এলে কিছুই হয় না ──────────────────────────────────
+     * সম্পাদনার ফর্মে ছবির ঘরটা প্রতিবার ভরা থাকে না — মানুষ দাম বদলাতে
+     * এসে ছবিতে হাত দেন না। ঘরটা খালি মানে "বদলাব না", **"সরিয়ে দাও"
+     * নয়**। উল্টোটা ধরলে প্রতিবার দাম বদলালেই ছবি হারিয়ে যেত।
+     */
+    private function saveImage(Request $request, Product $product): void
+    {
+        if (! $request->hasFile('product_image')) {
+            return;
+        }
+
+        /*
+         * তিনটা যাচাই, আর তিনটাই আলাদা প্রশ্নের উত্তর:
+         *
+         *   file    সত্যিই একটা ফাইল এসেছে, ভাঙা আপলোড নয়
+         *   mimes   নামের এক্সটেনশন কী বলে
+         *   max     আকার — কিলোবাইটে, তাই ভাগ করতে হয়
+         *
+         * ⚠️ কিন্তু `mimes` **ব্রাউজারের পাঠানো তথ্য দেখে**, আর ওটা
+         * ক্লায়েন্ট লেখে — যে কেউ `evil.php`-কে `image/png` বলে পাঠাতে
+         * পারেন। তাই নিচে আরেকটা যাচাই, যেটা **ফাইলের ভিতরটা পড়ে**।
+         */
+        $request->validate([
+            'product_image' => [
+                'file',
+                'mimes:jpeg,jpg,png,webp',
+                'max:'.(int) (ProductImageService::MAX_BYTES / 1024),
+            ],
+        ]);
+
+        $file = $request->file('product_image');
+
+        if (! $this->images->looksLikeAnImage($file)) {
+            throw ValidationException::withMessages([
+                'product_image' => __('inventory::validation.image_only'),
+            ]);
+        }
+
+        $this->images->replace($product, $file, $request->user()?->id);
     }
 
     /** মোছা নয়, নিষ্ক্রিয় করা — নিয়ম ৫। */
