@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'reconciled_on' => 'Last reconciled: :date',
+
     'deposits_all_hint' => 'Every deposit, across bank, national savings and bonds. To open a new one, go to that issuer’s own page.',
 
     'capital_note' => 'Who put money in, what they took back, and where that leaves each of them',

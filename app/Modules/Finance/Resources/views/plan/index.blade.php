@@ -38,6 +38,23 @@
             <span class="flex-1"></span>
 
             <span class="num text-lg font-semibold">{{ $pct }}%</span>
+
+            {{--
+                শেষ কবে হাতে মিলিয়ে দেখা হয়েছে।
+
+                ⚠️ পাহারাগুলো **মরা লিংক** আর **হারানো দরজা** ধরে, কিন্তু
+                একটা লাইন "বাকি" লেখা থেকে যাওয়া ধরতে পারে না — কাজটা
+                হয়ে যাওয়ার পরেও। ৪ সেপ্টেম্বর ২০২৬-এ দুইবার ঠিক সেটাই
+                পাওয়া গেছে।
+
+                ⭐ তারিখটা তাই এখানে, চোখের সামনে: **ছয় মাসের পুরনো তারিখ
+                নিজেই বলে দেয় সংখ্যাটা কতটা বিশ্বাস করা যায়।**
+            --}}
+            <span class="text-2xs text-(--color-ink-muted)">
+                {{ __('finance::message.reconciled_on', [
+                    'date' => \App\Core\Support\DateFormat::format(\App\Modules\Finance\Support\FinancePlan::RECONCILED_ON),
+                ]) }}
+            </span>
         </div>
 
         <div class="mt-2 h-2 overflow-hidden rounded-full bg-(--color-surface-sunken)">
