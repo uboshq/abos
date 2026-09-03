@@ -24,6 +24,7 @@ use App\Modules\Inventory\Services\CostLayerService;
 use App\Modules\Inventory\Services\ReadsPackedQuantities;
 use App\Modules\Inventory\Services\RecipeService;
 use App\Modules\Inventory\Services\StockService;
+use App\Modules\Sales\Services\ParkedStockReservation;
 use App\Modules\Sales\Events\InvoiceConfirmed;
 use App\Modules\Sales\Models\DeliveryChallanLine;
 use App\Modules\Sales\Models\PricingRule;
@@ -317,6 +318,27 @@ final class SalesInvoiceService
         }
 
         /*
+         * ⚠️ ধরে রাখা বিল হলে আটকানো মালটা আগে ছাড়ো।
+         *
+         * নিচে `floor` কমানো হয় — মাল সত্যিই বেরিয়ে যায়। সংরক্ষণটা
+         * তখনো রয়ে গেলে হিসাবটা দাঁড়াত:
+         *
+         *   floor      −১০   বিক্রি হয়ে গেছে
+         *   reserved   +১০   রয়ে গেছে
+         *   available  −২০   ← যা কোনোদিন সত্যি ছিল না
+         *
+         * অর্থাৎ **মাল বিক্রি হয়ে যাওয়ার পরেও আটকে থাকত, চিরকাল** —
+         * আর কেউ ধরতে পারত না, কারণ কোথাও কিছু ভাঙত না; কেবল
+         * "বিক্রয়যোগ্য" সংখ্যাটা রোজ একটু একটু করে মিথ্যা হত।
+         *
+         * ⓘ শর্তটা `parked_at`-এ, কারণ সংরক্ষণটা কেবল ধরে রাখা বিলেই
+         * বসে ([[ParkedStockReservation]])।
+         */
+        if ($invoice->parked_at !== null) {
+            app(ParkedStockReservation::class)->release($invoice);
+        }
+
+        /*
          * লেনদেনের বাইরে, ইচ্ছাকৃতভাবে।
          *
          * ভেতরে রাখলে ব্যতিক্রমটা অনুরোধের সারিটাও রোল-ব্যাক করত —
@@ -442,6 +464,18 @@ final class SalesInvoiceService
         $invoice->loadMissing(['lines.product', 'lines.challanLine', 'warehouse']);
 
         $this->assertNotCollected($invoice);
+
+        /*
+         * বাতিল হলে আটকানো মাল ছাড়া পায় — মালিকের নিয়মের অন্য অর্ধেক
+         * ("যতক্ষণ না cancel করছি")।
+         *
+         * ⓘ এটা নিচের লেনদেনের **বাইরে** নয়, উপরে — কারণ নিচের ব্লকটা
+         * কেবল CONFIRMED বিলের স্টক ফেরায়, আর ধরে রাখা বিল DRAFT
+         * অবস্থায় থাকে। দুইটা আলাদা প্রশ্ন, তাই আলাদা জায়গা।
+         */
+        if ($invoice->parked_at !== null) {
+            app(ParkedStockReservation::class)->release($invoice);
+        }
 
         $date = $onDate === null ? now() : Carbon::parse($onDate);
 

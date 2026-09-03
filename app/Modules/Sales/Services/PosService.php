@@ -16,6 +16,7 @@ use App\Modules\Customer\Models\Customer;
 use App\Modules\MasterData\Models\PaymentMethod;
 use App\Modules\Sales\Metrics\SalesMetrics;
 use App\Modules\Sales\Models\SalesInvoice;
+use App\Modules\Sales\Services\ParkedStockReservation;
 use App\Modules\Sales\Models\SalesInvoiceLine;
 use App\Modules\Sales\Models\SalesReturn;
 use App\Modules\Sales\Models\SalesReturnLine;
@@ -86,6 +87,19 @@ final class PosService
 
             $invoice->forceFill(['parked_at' => now()])->save();
 
+            /*
+             * ⚠️ মাল আটকানো — মালিকের শর্ত, ৩ সেপ্টেম্বর ২০২৬।
+             *
+             * এটা না থাকলে দুইটা কাউন্টার একই শেষ কার্টনটা একই সাথে
+             * বিক্রি করতে পারত: একজনের বিল ঝুলে আছে, অন্যজন বেচে
+             * দিলেন, আর প্রথমজন ফিরে এসে দেখেন মাল নেই।
+             *
+             * ⓘ `Reserved`, `Hold` নয় — কারণ [[ParkedStockReservation]]-এ
+             * লেখা। দুইটাই `available` থেকে বাদ যায়, কিন্তু `Hold`
+             * একটা কারণ-কোড দাবি করে আর ধরে রাখা বিল কোনো "কারণ" নয়।
+             */
+            app(ParkedStockReservation::class)->reserve($invoice->fresh(['lines.product'])); 
+
             return $invoice->fresh(['lines']);
         });
     }
@@ -130,6 +144,13 @@ final class PosService
             ]);
         }
 
+        /*
+         * ⓘ আটকানো **বহাল থাকে** — মালিকের সিদ্ধান্ত: মাল ছাড়া পায়
+         * কেবল বিলটা বাতিল বা নিশ্চিত হলে ("যতক্ষণ না cancel করছি")।
+         *
+         * ফিরিয়ে আনা মানে কেবল বিলটা আবার সম্পাদনাযোগ্য হওয়া; ক্রেতা
+         * তখনো কাউন্টারে দাঁড়িয়ে, আর মালটা তাঁরই জন্য রাখা।
+         */
         $invoice->forceFill(['parked_at' => null])->save();
 
         return $invoice->fresh(['lines']);
