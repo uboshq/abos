@@ -51,6 +51,24 @@ class AuthController extends Controller
 
     public const ACCESS = 'sync';
 
+    /*
+     * অ্যাপের নিজের দরজা — সিঙ্ক নয়।
+     *
+     * ── কেন `sync` চাবিটা এখানে ব্যবহার করা হয়নি ────────────────────
+     * `/me` কোনো ব্যবসার ডেটা আনে না; সে কেবল বলে **"তুমি কে, তুমি কী
+     * দেখবে"**। ওটাকে `abilities:sync` দাবি করালে আজ কাজ করত, কিন্তু
+     * কাল অ্যাপের প্রতিটা নতুন দরজা (মেনু, প্রোফাইল, বিজ্ঞপ্তি) একই
+     * ভুল নামে বসত — আর তখন `sync` নামটার আর কোনো মানে থাকত না।
+     *
+     * ⓘ নামটা বদলানো সস্তা ছিল, তাই বদলানো হয়েছে: মেপে দেখা গেছে
+     * `ACCESS` ধ্রুবকটা মাত্র দুই জায়গায় (এখানে আর `routes/api.php`),
+     * টেস্টে বা ফোনের কোডে কোথাও হাতে লেখা নেই।
+     *
+     * ⚠️ দুইটাই access টোকেনে বসে, refresh টোকেনে নয় — তাই চুরি যাওয়া
+     * একটা refresh টোকেন দিয়ে অ্যাপের দরজাও খোলা যায় না।
+     */
+    public const APP = 'app';
+
     public const REFRESH = 'refresh';
 
     public function __construct(
@@ -245,7 +263,15 @@ class AuthController extends Controller
 
         $access = $user->createToken(
             $this->tokenName($deviceId, self::ACCESS),
-            [self::ACCESS],
+
+            /*
+             * একটাই access টোকেন, দুইটা চাবি।
+             *
+             * ⓘ আলাদা টোকেন দিলে ফোনকে দুইটা রাখতে ও দুইটাই নবায়ন
+             * করতে হত, আর একটার মেয়াদ শেষ হলে অ্যাপের অর্ধেক কাজ
+             * করত — অর্ধেক না-করা সবচেয়ে বিভ্রান্তিকর অবস্থা।
+             */
+            [self::ACCESS, self::APP],
             now()->addMinutes(self::ACCESS_MINUTES),
         );
 
