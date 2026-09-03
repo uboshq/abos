@@ -10,6 +10,8 @@ return [
     'stock_ledger' => 'মজুদের খতিয়ান',
     'stock_summary' => 'মজুদের সারাংশ',
     'hold_report' => 'আটকানো মাল',
+    'stock_movement' => 'মরা ও ধীরগতির মাল',
+    'stock_age' => 'স্টকের বয়স',
     'transfers' => 'স্টক স্থানান্তর',
     'opening' => 'খোলা মজুদ',
     'issue' => 'স্টক ইস্যু',
