@@ -49,7 +49,13 @@ class ChequeController extends Controller implements HasMiddleware
     {
         $query = Cheque::query()
             ->when($request->query('status'), fn ($q, $s) => $q->where('status', $s))
-            ->when($request->query('direction'), fn ($q, $d) => $q->where('direction', $d));
+            ->when($request->query('direction'), fn ($q, $d) => $q->where('direction', $d))
+            /*
+             * উপরের দুইটা সংখ্যা (ঝুলন্ত মোট · তারিখ-পেরোনো) ক্লিক করে ঠিক
+             * ওই চেকগুলোই দেখা যায় — মালিকের নিয়ম: প্রতিটা সংখ্যা থেকে উৎসে।
+             */
+            ->when($request->query('filter') === 'open', fn ($q) => $q->open())
+            ->when($request->query('filter') === 'ripe', fn ($q) => $q->ripe());
 
         $sort = $this->applySort($query, $request, $this->sorts());
 

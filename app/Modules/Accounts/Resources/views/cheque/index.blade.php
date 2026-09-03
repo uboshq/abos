@@ -53,17 +53,20 @@
         </div>
     @endif
 
+    {{-- দুইটা সংখ্যাই ক্লিকযোগ্য — চাপলে ঠিক ওই চেকগুলোর তালিকা (মালিকের
+         নিয়ম: প্রতিটা সংখ্যা থেকে উৎসে যাওয়া যাবে)। --}}
     <div class="mb-4 grid gap-3 sm:grid-cols-2">
-        <div data-boxed class="rounded-(--radius-card) border border-(--color-border)
-                    bg-(--color-surface-card) px-4 py-3">
+        <a href="{{ route('accounts.cheque.index', ['filter' => 'open']) }}"
+           data-boxed class="block rounded-(--radius-card) border border-(--color-border)
+                    bg-(--color-surface-card) px-4 py-3 transition hover:border-(--color-brand-600)">
             <p class="text-2xs uppercase tracking-wide text-(--color-ink-muted)">
                 {{ __('accounts::field.cheques_open_total') }}
             </p>
             <p class="num text-2xl font-semibold">{{ \App\Core\Support\Money::format($openTotal) }}</p>
-        </div>
+        </a>
 
-        <div @class([
-            'rounded-(--radius-card) border px-4 py-3',
+        <a href="{{ route('accounts.cheque.index', ['filter' => 'ripe']) }}" @class([
+            'block rounded-(--radius-card) border px-4 py-3 transition hover:border-(--color-brand-600)',
             'border-(--color-border) bg-(--color-surface-card)' => $ripe === 0,
             'border-(--color-badge-danger-ink)/30 bg-(--color-badge-danger-bg)' => $ripe > 0,
         ])>
@@ -71,7 +74,7 @@
                 {{ __('accounts::field.cheques_ripe') }}
             </p>
             <p class="num text-2xl font-semibold">{{ $ripe }}</p>
-        </div>
+        </a>
     </div>
 
     @can('accounts.cheque.manage')

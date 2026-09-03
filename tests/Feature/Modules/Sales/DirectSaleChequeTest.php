@@ -150,6 +150,22 @@ class DirectSaleChequeTest extends TestCase
         $this->assertSame(Cheque::BOUNCED, $cheque->fresh()->status);
     }
 
+    /** ★ রেজিস্টারের "ফেরত" দরজা (HTTP) — সরাসরি-বিক্রয়ের চেক বাস্তবে ফেরানো যায়। */
+    public function test_the_register_bounce_door_reverses_the_sale(): void
+    {
+        $result = $this->sellByCheque();
+        $cheque = Cheque::query()->where('cheque_no', 'CHQ-77')->firstOrFail();
+
+        // চেকের খাতার bounce-বোতাম collection-চেকে এই Sales-দরজায় পোস্ট করে
+        $this->post(route('sales.collection.cheque_bounce', $cheque), ['bounce_reason' => 'returned unpaid'])
+            ->assertRedirect();
+
+        $this->assertSame(Cheque::BOUNCED, $cheque->fresh()->status);
+        $this->assertSame(0, bccomp($this->balanceOf(StandardChart::CHEQUES_IN_HAND), '0', 4));
+        $this->assertSame(0, bccomp($result['invoice']->fresh()->dueAmount(), '1000', 4),
+            'দরজা দিয়ে ফেরত দিলে বিল আবার বকেয়া হওয়ার কথা।');
+    }
+
     /** পাশ — টাকা ১১০৪ ছেড়ে ব্যাংকে যায়, বিল শোধই থাকে। */
     public function test_clearing_a_cheque_moves_the_money_to_the_bank(): void
     {

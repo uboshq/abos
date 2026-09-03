@@ -202,6 +202,10 @@ Route::middleware('auth')->prefix('sales')->group(function () {
         Route::put('/{collection}', [CollectionController::class, 'update'])->whereNumber('collection')->name('update');
         Route::post('/{collection}/confirm', [CollectionController::class, 'confirm'])->whereNumber('collection')->name('confirm');
         Route::post('/{collection}/cancel', [CollectionController::class, 'cancel'])->whereNumber('collection')->name('cancel');
+
+        // চেকের খাতা থেকে আদায়ে-পোস্ট-করা চেকের ফেরত — param চেক, collection নয়
+        Route::post('/cheque/{cheque}/bounce', [CollectionController::class, 'bounceCheque'])
+            ->whereNumber('cheque')->name('cheque_bounce');
     });
 
     /*

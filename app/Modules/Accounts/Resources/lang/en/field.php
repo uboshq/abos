@@ -122,6 +122,7 @@ return [
     // চেকের খাতা
     'cheque_no' => 'Cheque no',
     'cheque_date' => 'Cheque date',
+    'cheque_source' => 'From receipt →',
     'cheque_received' => 'Received',
     'cheque_issued' => 'Issued',
     'cheque_direction' => 'Direction',
