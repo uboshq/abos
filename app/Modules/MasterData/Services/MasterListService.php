@@ -450,7 +450,24 @@ final class MasterListService implements ProvisionsCompany
         $made = [];
 
         $made['units'] = $this->seed(Unit::class, [
-            ['PCS', 'Piece', 'পিস', ['factor' => 1]],
+            /*
+             * ⚠️ 'pcs', not 'Piece' — the owner's instruction (3 Sep 2026):
+             * *"Piece = pcs"*.
+             *
+             * The unit's name is not read on its own; it is read **after a
+             * number**, in the tightest row on the busiest screen —
+             * "Available 1775 pcs". A trade document has said "pcs" for a
+             * century, and the full word cost four extra characters in the
+             * one place where width is scarcest.
+             *
+             * ⓘ This is only the **starting** row a new company gets. Units
+             * are settings rows, so any buyer can rename it — which is why
+             * the change is here and not hardcoded on the screen.
+             *
+             * ⓘ The other five still carry full words; the owner named this
+             * one. Shortening the rest is his call, not a tidy-up.
+             */
+            ['PCS', 'pcs', 'পিস', ['factor' => 1]],
             ['DOZ', 'Dozen', 'ডজন', ['factor' => 12]],
             ['CTN', 'Carton', 'কার্টন', ['factor' => 1]],
             ['KG', 'Kilogram', 'কেজি', ['factor' => 1, 'allows_fraction' => true]],

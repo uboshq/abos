@@ -118,18 +118,74 @@
         <div class="flex h-(--spacing-brand-plate) shrink-0 border-b border-(--color-border)">
             {{-- রেলের ঘর — মার্কটা সাদা টাইলে, কারণ ওটা সাদা জমিনের
                  জন্য আঁকা; নেভির উপর সরাসরি বসালে নিজের নীল মিলিয়ে যেত। --}}
+            {{-- ⭐ লোগোই হোম — মালিকের সিদ্ধান্ত (৩ সেপ্টেম্বর ২০২৬):
+                 *"A লোগো শুধু ব্র্যান্ড, ক্লিক নেই — eta to kharap holo,
+                 ager tai valo chilo"*।
+
+                 ── কী দুইবার ছিল ───────────────────────────────────────
+                 ব্র্যান্ডের পাটাতন আর রেলের 🏠 টাইল — **একই গন্তব্য, দুইটা
+                 ঘর, একটা আরেকটার ঠিক উপরে**। মালিকের প্রশ্নটাই সবচেয়ে
+                 ধারালো ছিল: *"লোগোই যদি হোমের কাজ করে, তাহলে হোম বোতামের
+                 কাজ কী?"*
+
+                 ⭐ তাই টাইলটা গেল, লোগোটা রইল — SAP Fiori · D365 ·
+                 Salesforce · Odoo, চারটাতেই লোগোই হোম, আর রেলে আলাদা
+                 হোম-টাইল নেই। **রেল মডিউলের জায়গা, গন্তব্যের নয়।**
+
+                 ⚠️ কিন্তু টাইলটা দুইটা জিনিস দিত, আর দুইটাই এখানে আনা হলো
+                 — নাহলে এই ফাইলের পুরনো আপত্তিটা ফিরে আসত (*"লোগো যে একটা
+                 লিংক সেটা কেউ আন্দাজ করে না"*):
+
+                   ১. **ক্লিক করা যায় বোঝা** — hover-এ টাইলটা উঠে আসে
+                   ২. **আমি ড্যাশবোর্ডে আছি** — সেই সোনালি রিংটাই এখানে
+
+                 ⓘ আপত্তিটা সত্যি ছিল **যখন লোগোটা দেখতে নিষ্ক্রিয় ছিল**;
+                 hover ও tooltip থাকলে সেটা আর সত্যি নয়। --}}
+            @php
+                $onDashboard = request()->routeIs('dashboard');
+            @endphp
+
+            {{-- ⭐ "এখানে আছি" চিহ্নটা বাঁ প্রান্তে মোটা সোনালি দাগ —
+                 মালিকের নির্দেশ (৩ সেপ্টেম্বর ২০২৬): *"golden ring ta bame
+                 mota kore daw"*।
+
+                 ── কেন দাগ, কেবল রিং নয় ────────────────────────────────
+                 রিংটা টাইলের **চারপাশে সমান**, তাই চোখ ওটা দেখে টাইলের
+                 সাজ হিসেবে। ⚠️ রেলে বারোটা টাইল খাড়া সারিতে বসে, আর
+                 ওখানে চোখ **বাঁ কিনারা ধরে নিচে নামে** — তাই ওই কিনারায়
+                 একটা মোটা দাগই সবচেয়ে দ্রুত পড়া হয়। D365, Fiori,
+                 Salesforce — তিনটাতেই সক্রিয় সারির চিহ্ন ওই কিনারাতেই।
+
+                 ⚠️ রিংটা তুলে দেওয়া হয়েছে — মালিক দেখে বললেন সোনালি রিং
+                 আর সোনালি দাগ **একসাথে ভালো দেখায় না**, আর কথাটা ঠিক:
+                 একই রঙের দুইটা চিহ্ন একই টাইলে বসলে চোখ দুইবার থামে,
+                 আর কোনোটাই আর "চিহ্ন" থাকে না।
+
+                 ⓘ দাগটা কিনারা ঘেঁষে, পুরো উচ্চতায়, গোল কোণ ছাড়া —
+                 ওটা টাইলের সাজ নয়, **রেলের নিজের চিহ্ন**। --}}
             <a href="{{ route('dashboard') }}"
-               class="grid w-(--spacing-sidebar-icon) shrink-0 place-items-center bg-(--color-brand-900)"
-               title="{{ __('core.brand.full_name') }}">
-                <span class="grid size-10 place-items-center overflow-hidden rounded-[11px] bg-white">
+               @class([
+                   'relative grid w-(--spacing-sidebar-icon) shrink-0 place-items-center bg-(--color-brand-900)',
+                   'before:absolute before:inset-y-0 before:start-0 before:w-1
+                    before:bg-(--color-brand-gold)' => $onDashboard,
+               ])
+               @if ($onDashboard) aria-current="page" @endif
+               title="{{ __('core.menu.dashboard') }}">
+                <span @class([
+                          'grid size-10 place-items-center overflow-hidden rounded-[11px] bg-white transition-all',
+                          'shadow-lg' => $onDashboard,
+                          'hover:-translate-y-px hover:shadow-md' => ! $onDashboard,
+                      ])>
                     <img src="{{ asset('brand/abos-icon-transparent.png') }}" alt=""
                          aria-hidden="true" class="size-7 object-contain">
                 </span>
             </a>
 
+        {{-- ⓘ ওয়ার্ডমার্কের ঘরটাও একই গন্তব্যে — মানুষ লোগোর যেকোনো
+             অংশে চাপেন, চিহ্ন আর নাম আলাদা করে ভাবেন না। --}}
         <a href="{{ route('dashboard') }}"
-           class="flex min-w-0 flex-1 items-center gap-2
-                  bg-(--color-surface-card) transition-colors hover:bg-(--color-surface-app)"
+           class="flex min-w-0 flex-1 items-center gap-2 bg-(--color-surface-card)
+                  transition-colors hover:bg-(--color-surface-app)"
            :class="$store.sidebar.collapsed ? 'justify-center px-0' : 'px-2 lg:px-3'"
            title="{{ __('core.menu.dashboard') }}">
 
@@ -161,9 +217,30 @@
                 {{-- গাঢ় প্যানেলে হালকা অক্ষরের ভার্সনটা — নাহলে গাঢ় নীল
                      অক্ষরগুলো প্রায়-কালো জমিনে মিলিয়ে যায়, আর ব্র্যান্ডের
                      ঘরে ব্র্যান্ডটাই অদৃশ্য হয়। --}}
-                <img src="{{ asset(Ui::panelIsDark(auth()->user()?->ui)
-                        ? 'brand/abos-lockup-dark.png'
-                        : 'brand/abos-lockup.png') }}" alt="ABOS"
+                {{--
+                    ⚠️ ওয়ার্ডমার্ক, লকআপ নয় — মালিকের নির্দেশ (৩ সেপ্টেম্বর ২০২৬):
+                    *"duti mark kora jinis dabol … muche felo"*।
+
+                    ── কী ঘটছিল ────────────────────────────────────────────
+                    উপরের মন্তব্যে লেখা ছিল *"মার্কটা এখানে আর নেই — পাশের
+                    রেলের ঘরেই সেটা বসে"*। ⚠️ **কথাটা কোডের জন্য সত্যি ছিল,
+                    ছবির জন্য নয়:** `abos-lockup.png` **নিজেই** মার্ক +
+                    ওয়ার্ডমার্ক — অর্থাৎ "A" চিহ্নটা রেলের টাইলে একবার, আর
+                    তার ঠিক পাশে লকআপের ভিতরে দ্বিতীয়বার।
+
+                    ⭐ ডুপ্লিকেশনটা কোডে খুঁজে পাওয়া যেত না, কারণ ওটা
+                    **ছবির ভিতরে** — দুইটা আলাদা ফাইল, একই চিহ্ন।
+
+                    ── এখন ────────────────────────────────────────────────
+                    রেলের টাইলে চিহ্ন, পাশে কেবল **নাম**। গুটানো অবস্থায়
+                    ওয়ার্ডমার্ক লুকায় আর চিহ্নটা থাকে — তাই দুই অবস্থাতেই
+                    ব্র্যান্ড আছে, একবার করে।
+
+                    ⓘ একটাই ফাইল দুই থিমে: মেপে দেখা গেছে অক্ষরের রং
+                    rgb(2,163,186) — উজ্জ্বল টিল, সাদা ও নেভি দুইটার উপরেই
+                    পড়া যায়। তাই `-dark` ভাগটার আর দরকার নেই।
+                --}}
+                <img src="{{ asset('brand/abos-wordmark-transparent.png') }}" alt="ABOS"
                      class="h-auto w-full object-contain object-left">
 
                 {{--
@@ -224,38 +301,25 @@
                         overflow-visible border-e border-black/10 bg-(--color-sidebar) py-2"
                  aria-label="{{ __('core.a11y.module_navigation') }}">
 
-                {{-- ড্যাশবোর্ড — রেলের সবার উপরে, মডিউলগুলোর আগে।
+                {{-- ⚠️ ড্যাশবোর্ডের টাইলটা এখানে আর নেই — মালিকের সিদ্ধান্ত
+                     (৩ সেপ্টেম্বর ২০২৬): *"লোগোই যদি হোমের কাজ করে, তাহলে
+                     হোম বোতামের কাজ কী?"*
 
-                     আগে ওখানে যাওয়ার একমাত্র পথ ছিল লোগোতে ক্লিক করা।
-                     লোগো যে একটা লিংক সেটা কেউ আন্দাজ করে না — ফলে
-                     ড্যাশবোর্ড কার্যত লুকানো ছিল, অথচ সেটাই দিনের শুরুর
-                     পাতা।
+                     ── কেন এটাই ঠিক ─────────────────────────────────────
+                     ⭐ **রেল মডিউলের জায়গা, গন্তব্যের নয়।** বারোটা মডিউল
+                     টাইলের মাথায় একটা "হোম" বসলে ওটাই একমাত্র বেমানান ঘর,
+                     আর দুইটা ঘর একই জায়গায় নিয়ে গেলে ব্যবহারকারী প্রতিবার
+                     এক মুহূর্ত ভাবেন কোনটা চাপবেন — ভাবনাটার কোনো দাম নেই,
+                     কারণ ফল একই।
 
-                     মডিউলগুলো থেকে একটা রেখা দিয়ে আলাদা: এটা কোনো মডিউল
-                     নয়, এটা সবগুলোর উপরের পাতা। --}}
-                @php
-                    $onDashboard = request()->routeIs('dashboard');
-                @endphp
+                     SAP Fiori · D365 · Salesforce · Odoo — চারটাতেই লোগোই
+                     হোম, রেলে আলাদা হোম-টাইল নেই।
 
-                <a href="{{ route('dashboard') }}"
-                   @class([
-                       'relative mb-1 flex h-11 w-full items-center justify-center border-b border-white/15',
-                       'transition-transform hover:-translate-y-px' => ! $onDashboard,
-                   ])
-                   @if ($onDashboard) aria-current="page" @endif
-                   title="{{ __('core.menu.dashboard') }}">
-
-                    <span @class([
-                              'grid size-9 place-items-center rounded-[11px] text-white transition-shadow',
-                              'ring-2 ring-(--color-brand-gold) shadow-lg' => $onDashboard,
-                          ])
-                          style="background: var(--color-module-dashboard)"
-                          aria-hidden="true">
-                        <x-ui.icon name="dashboard" :size="19" />
-                    </span>
-
-                    <span class="sr-only">{{ __('core.menu.dashboard') }}</span>
-                </a>
+                     ⚠️ এই টাইলটা যোগ করা হয়েছিল কারণ *"লোগো যে একটা লিংক
+                     সেটা কেউ আন্দাজ করে না"* — আপত্তিটা সত্যি ছিল, তাই
+                     **ফেলে দেওয়া হয়নি, উপরে সরানো হয়েছে**: ব্র্যান্ডের
+                     টাইলে এখন hover-এ ওঠা, tooltip, আর ড্যাশবোর্ডে থাকলে
+                     সেই একই সোনালি রিং। --}}
 
                 {{--
                     দলের ভাগরেখা — মালিকের দেওয়া কাঠামো, ২ সেপ্টেম্বর ২০২৬।
@@ -351,16 +415,22 @@
                     --}}
                     <div class="group/rail relative w-full">
                         <a @if ($first) href="{{ $first['url'] }}" @endif
+                           {{-- ⓘ ব্র্যান্ডের টাইলের সাথে **একই চিহ্ন** — বাঁ
+                                কিনারায় মোটা সোনালি দাগ, ভিতরে পাতলা রিং।
+                                ⚠️ দুই জায়গায় দুই রকম "এখানে আছি" থাকলে
+                                চোখকে দুইটা নিয়ম শিখতে হত। --}}
                            @class([
                                'relative flex h-11 w-full items-center justify-center transition-transform',
                                'hover:-translate-y-px' => ! $isActive,
+                               'before:absolute before:inset-y-0 before:start-0 before:w-1
+                                before:bg-(--color-brand-gold)' => $isActive,
                            ])
                            @if ($isActive) aria-current="true" @endif
                            title="{{ $module['label'] }}">
 
                             <span @class([
                                       'grid size-9 place-items-center rounded-[11px] text-white transition-shadow',
-                                      'ring-2 ring-(--color-brand-gold) shadow-lg' => $isActive,
+                                      'shadow-lg' => $isActive,
                                   ])
                                   style="background: var(--color-module-{{ $module['code'] }}, var(--color-brand-600))"
                                   aria-hidden="true">
