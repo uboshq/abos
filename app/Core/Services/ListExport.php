@@ -54,12 +54,32 @@ class ListExport
         $this->refused = true;
     }
 
+    /** যে ফরম্যাটগুলো নামানো যায় — সবই এক ধরা-টেবিল থেকে। */
+    public const FORMATS = ['csv', 'xlsx', 'json'];
+
     /**
-     * এই রিকোয়েস্টে CSV চাওয়া হয়েছে কি না।
+     * এই অনুরোধে কোন ফরম্যাট — চাওয়া না হলে বা অচেনা হলে null।
+     */
+    public function format(): ?string
+    {
+        if ($this->refused) {
+            return null;
+        }
+
+        $format = (string) request()->query('export');
+
+        return in_array($format, self::FORMATS, true) ? $format : null;
+    }
+
+    /**
+     * এই রিকোয়েস্টে রপ্তানি চাওয়া হয়েছে কি না — যেকোনো চেনা ফরম্যাটে।
+     *
+     * আগে ছিল কেবল csv; এখন যেকোনো চেনা ফরম্যাট, যাতে টেবিলটা একইভাবে
+     * জমা পড়ে (capture) আর ফরম্যাটভেদে আলাদা ধরার পথ না লাগে।
      */
     public function wanted(): bool
     {
-        return ! $this->refused && request()->query('export') === 'csv';
+        return $this->format() !== null;
     }
 
     /**
@@ -173,6 +193,172 @@ class ListExport
     }
 
     /**
+     * JSON ফাইলের বিষয়বস্তু — না ধরলে null।
+     *
+     * ── কেন সারিগুলো অবজেক্ট, তালিকা নয় ─────────────────────────────
+     * `{"code":"…","name":"…"}` — কলামের চাবি ধরে, যাতে অন্য সিস্টেম
+     * কলামের ক্রম নয়, নাম ধরে পড়তে পারে। মান পর্দার মতোই লেখা (CSV/xlsx-এর
+     * সাথে এক), কারণ উৎস একটাই ধরা-টেবিল।
+     */
+    public function json(): ?string
+    {
+        if ($this->table === null) {
+            return null;
+        }
+
+        $keys = array_column($this->table['columns'], 'key');
+
+        $rows = array_map(
+            fn (array $row): array => array_combine($keys, $row),
+            $this->table['values'],
+        );
+
+        return json_encode([
+            'columns' => $this->table['columns'],
+            'rows' => $rows,
+            'total' => $this->table['total'] ?? count($rows),
+        ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR);
+    }
+
+    /**
+     * xlsx ফাইলের বাইট — না ধরলে null। কোনো লাইব্রেরি নয়, ZipArchive।
+     *
+     * ── কেন হাতে, লাইব্রেরি নয় ──────────────────────────────────────
+     * টেবিল-রিপোর্টের xlsx একটা বাঁধা, ছোট আকার: কয়েকটা XML-অংশ zip করা।
+     * এর জন্য একটা প্যাকেজ টানলে shared composer.lock বদলাত, আর নিয়মটা
+     * হলো কোনো paid/বাড়তি নির্ভরতা নয়। ext-zip আগে থেকেই আছে।
+     *
+     * ── দুইটা ফাঁদ, দুইটাই বন্ধ ──────────────────────────────────────
+     * ঘরের লেখা XML-এ escape না করলে একটা `&`-ওয়ালা নামেই ("R&D") ফাইল
+     * খুলবে না। আর CSV-র মতোই সূত্র-ইনজেকশন (`= + - @`) এখানেও আটকাতে হয়,
+     * কারণ Excel xlsx-এও ওই ঘরকে সূত্র ধরে চালায়।
+     */
+    public function xlsx(): ?string
+    {
+        if ($this->table === null) {
+            return null;
+        }
+
+        $sheet = $this->sheetXml();
+
+        $path = tempnam(sys_get_temp_dir(), 'abos_xlsx_');
+
+        if ($path === false) {
+            return null;
+        }
+
+        $zip = new \ZipArchive;
+        $zip->open($path, \ZipArchive::OVERWRITE);
+
+        foreach ($this->xlsxParts($sheet) as $name => $body) {
+            $zip->addFromString($name, $body);
+        }
+
+        $zip->close();
+
+        $bytes = file_get_contents($path);
+        @unlink($path);
+
+        return $bytes === false ? null : $bytes;
+    }
+
+    /**
+     * xlsx zip-এর স্থির অংশগুলো + শীট।
+     *
+     * শীটের নাম স্থির "Report" — রুট থেকে নিলে `: \ / ? * [ ]` বা ৩১-অক্ষরের
+     * সীমা ভেঙে ফাইলটা নষ্ট হতে পারত; নামটা ঘরের ডেটা নয়, তাই স্থির রাখাই নিরাপদ।
+     *
+     * @return array<string, string>
+     */
+    private function xlsxParts(string $sheet): array
+    {
+        $ns = 'http://schemas.openxmlformats.org/';
+
+        return [
+            '[Content_Types].xml' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                .'<Types xmlns="'.$ns.'package/2006/content-types">'
+                .'<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+                .'<Default Extension="xml" ContentType="application/xml"/>'
+                .'<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+                .'<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
+                .'</Types>',
+            '_rels/.rels' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                .'<Relationships xmlns="'.$ns.'package/2006/relationships">'
+                .'<Relationship Id="rId1" Type="'.$ns.'officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>'
+                .'</Relationships>',
+            'xl/workbook.xml' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                .'<workbook xmlns="'.$ns.'spreadsheetml/2006/main" xmlns:r="'.$ns.'officeDocument/2006/relationships">'
+                .'<sheets><sheet name="Report" sheetId="1" r:id="rId1"/></sheets></workbook>',
+            'xl/_rels/workbook.xml.rels' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                .'<Relationships xmlns="'.$ns.'package/2006/relationships">'
+                .'<Relationship Id="rId1" Type="'.$ns.'officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'
+                .'</Relationships>',
+            'xl/worksheets/sheet1.xml' => $sheet,
+        ];
+    }
+
+    /** শীটের XML — শিরোনামের সারি, তারপর প্রতিটা সারি; সব ঘর inlineStr। */
+    private function sheetXml(): string
+    {
+        $ns = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main';
+
+        $rows = $this->xlsxRow(1, array_column($this->table['columns'], 'label'));
+
+        $r = 2;
+
+        foreach ($this->table['values'] as $value) {
+            $rows .= $this->xlsxRow($r++, $value);
+        }
+
+        return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            .'<worksheet xmlns="'.$ns.'"><sheetData>'.$rows.'</sheetData></worksheet>';
+    }
+
+    /**
+     * একটা সারি — প্রতিটা ঘর সূত্র-গার্ড করা, XML-এ escape করা inlineStr।
+     *
+     * @param  list<string>  $values
+     */
+    private function xlsxRow(int $r, array $values): string
+    {
+        $cells = '';
+
+        foreach (array_values($values) as $i => $value) {
+            $ref = $this->columnLetter($i).$r;
+            $text = $this->xmlText($this->formulaGuard($value));
+            $cells .= '<c r="'.$ref.'" t="inlineStr"><is><t xml:space="preserve">'.$text.'</t></is></c>';
+        }
+
+        return '<row r="'.$r.'">'.$cells.'</row>';
+    }
+
+    /** 0→A, 25→Z, 26→AA — কলামের অক্ষর, ২৬-ভিত্তিতে। */
+    private function columnLetter(int $index): string
+    {
+        $letter = '';
+
+        for ($n = $index + 1; $n > 0; $n = intdiv($n - 1, 26)) {
+            $letter = chr(65 + ($n - 1) % 26).$letter;
+        }
+
+        return $letter;
+    }
+
+    /**
+     * XML-এ বসানোর মতো লেখা — অবৈধ নিয়ন্ত্রণ-অক্ষর বাদ, তারপর escape।
+     *
+     * XML 1.0-তে `\x00`–`\x08` ইত্যাদি অবৈধ (ডাটাবেজের পুরনো সারিতে ঢুকে
+     * থাকতে পারে); একটা থাকলেই ফাইল খুলবে না। TAB·LF·CR রাখা হয়। তারপর
+     * `& < > " '` escape — নাহলে "R&D" নামেই ফাইল নষ্ট।
+     */
+    private function xmlText(string $value): string
+    {
+        $value = (string) preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F]/u', '', $value);
+
+        return htmlspecialchars($value, ENT_QUOTES | ENT_XML1, 'UTF-8');
+    }
+
+    /**
      * ফাইলের নাম — রুট থেকে, তাই প্রতিটা পর্দার নিজের নাম।
      */
     /**
@@ -189,8 +375,9 @@ class ListExport
     public function filename(): string
     {
         $route = (string) (request()->route()?->getName() ?? 'list');
+        $ext = $this->format() ?? 'csv';
 
-        return 'abos-'.str_replace('.', '-', $route).'-'.now()->format('Y-m-d').'.csv';
+        return 'abos-'.str_replace('.', '-', $route).'-'.now()->format('Y-m-d').'.'.$ext;
     }
 
     /**
@@ -204,28 +391,35 @@ class ListExport
     }
 
     /**
-     * একটা ঘর — মুড়ে দেওয়া, আর সূত্র হিসেবে চলতে না দেওয়া।
+     * একটা CSV ঘর — সূত্র-গার্ড করা, তারপর দরকারে মুড়ে দেওয়া।
      */
     private function field(string $value): string
     {
-        /*
-         * = + - @ দিয়ে শুরু হলে সামনে একটা উদ্ধৃতি।
-         *
-         * ── কেন ─────────────────────────────────────────────────────
-         * Excel ও LibreOffice ওই চারটা অক্ষরে শুরু হওয়া ঘরকে সূত্র ধরে
-         * চালায়। কেউ গ্রাহকের নামে =HYPERLINK(...) বা একটা কমান্ড
-         * লিখে রাখলে সেটা আমাদের CSV হয়ে অন্য কারো মেশিনে গিয়ে চলত —
-         * ডাটাবেজে নিরীহ একটা নাম, স্প্রেডশিটে একটা প্রোগ্রাম।
-         *
-         * TAB আর CR-ও ধরা হয়েছে, কারণ ওগুলো দিয়ে শুরু করলে কিছু
-         * সংস্করণ সামনের অক্ষরটা ফেলে দেয় আর তার পরেরটাই সূত্র হয়ে যায়।
-         */
-        if ($value !== '' && str_contains("=+-@\t\r", $value[0])) {
-            $value = "'".$value;
-        }
+        $value = $this->formulaGuard($value);
 
         if (preg_match('/[",\r\n]/', $value) === 1) {
             return '"'.str_replace('"', '""', $value).'"';
+        }
+
+        return $value;
+    }
+
+    /**
+     * = + - @ দিয়ে শুরু হলে সামনে একটা উদ্ধৃতি — CSV ও xlsx দুইটাতেই।
+     *
+     * ── কেন ─────────────────────────────────────────────────────────
+     * Excel ও LibreOffice ওই চারটা অক্ষরে শুরু হওয়া ঘরকে সূত্র ধরে চালায়
+     * (CSV আর xlsx দুইটাতেই)। কেউ গ্রাহকের নামে `=HYPERLINK(...)` বা একটা
+     * কমান্ড লিখে রাখলে সেটা আমাদের ফাইল হয়ে অন্য কারো মেশিনে গিয়ে চলত —
+     * ডাটাবেজে নিরীহ একটা নাম, স্প্রেডশিটে একটা প্রোগ্রাম।
+     *
+     * TAB আর CR-ও ধরা হয়, কারণ ওগুলো দিয়ে শুরু করলে কিছু সংস্করণ সামনের
+     * অক্ষরটা ফেলে দেয় আর তার পরেরটাই সূত্র হয়ে যায়।
+     */
+    private function formulaGuard(string $value): string
+    {
+        if ($value !== '' && str_contains("=+-@\t\r", $value[0])) {
+            return "'".$value;
         }
 
         return $value;
