@@ -18,13 +18,13 @@
                 <a href="{{ route('inventory.stock.age', ['bucket' => $b]) }}"
                    class="rounded-(--radius-card) border px-4 py-3
                           {{ $b === $bucket
-                             ? 'border-(--color-primary) bg-(--color-primary-bg)'
+                             ? 'border-(--color-brand-600) bg-(--color-brand-50)'
                              : 'border-(--color-border) bg-(--color-surface-card)' }}">
                     <span class="block text-xs text-(--color-ink-muted)">
                         {{ $b }} {{ __('inventory::analysis.days', ['count' => '']) }}
                     </span>
                     <span class="num block text-lg font-bold text-(--color-ink)">
-                        ৳{{ number_format((float) $totals[$b], 0) }}
+                        ৳{{ \App\Core\Support\Money::format($totals[$b], 0) }}
                     </span>
                 </a>
             @endforeach
@@ -37,33 +37,33 @@
                     {{ __('inventory::analysis.age_empty') }}
                 </p>
             @else
-                <table class="w-full text-sm">
+                <table class="ui-list w-full text-sm">
                     <thead>
                         <tr class="border-b border-(--color-border) text-left text-(--color-ink-muted)">
-                            <th class="px-4 py-2.5">{{ __('inventory::analysis.product') }}</th>
-                            <th class="px-4 py-2.5">{{ __('inventory::analysis.received') }}</th>
-                            <th class="px-4 py-2.5 text-right">{{ __('inventory::analysis.age_days_col') }}</th>
-                            <th class="px-4 py-2.5 text-right">{{ __('inventory::analysis.quantity') }}</th>
-                            <th class="px-4 py-2.5 text-right">{{ __('inventory::analysis.value_stuck') }}</th>
+                            <th >{{ __('inventory::analysis.product') }}</th>
+                            <th >{{ __('inventory::analysis.received') }}</th>
+                            <th class="text-right">{{ __('inventory::analysis.age_days_col') }}</th>
+                            <th class="text-right">{{ __('inventory::analysis.quantity') }}</th>
+                            <th class="text-right">{{ __('inventory::analysis.value_stuck') }}</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach ($layers as $l)
                             <tr class="border-b border-(--color-border)/60">
-                                <td class="px-4 py-2.5">
+                                <td >
                                     <a href="{{ route('inventory.product.show', $l->product_id) }}"
-                                       class="font-medium text-(--color-ink) hover:text-(--color-primary)">
+                                       class="font-medium text-(--color-ink) hover:text-(--color-brand-600)">
                                         {{ app()->getLocale() === 'bn' && $l->name_bn ? $l->name_bn : $l->name_en }}
                                     </a>
                                     <span class="block text-2xs text-(--color-ink-muted)">{{ $l->product_code }}</span>
                                 </td>
-                                <td class="num px-4 py-2.5 text-(--color-ink-soft)">{{ $l->trx_date }}</td>
-                                <td class="num px-4 py-2.5 text-right text-(--color-ink)">{{ (int) $l->age_days }}</td>
-                                <td class="num px-4 py-2.5 text-right text-(--color-ink)">
+                                <td class="num text-(--color-ink-muted)">{{ $l->trx_date }}</td>
+                                <td class="num text-right text-(--color-ink)">{{ (int) $l->age_days }}</td>
+                                <td class="num text-right text-(--color-ink)">
                                     {{ rtrim(rtrim((string) $l->qty_remaining, '0'), '.') }}
                                 </td>
-                                <td class="num px-4 py-2.5 text-right font-medium text-(--color-ink)">
-                                    ৳{{ number_format((float) $l->value_stuck, 2) }}
+                                <td class="num text-right font-medium text-(--color-ink)">
+                                    ৳{{ \App\Core\Support\Money::format($l->value_stuck) }}
                                 </td>
                             </tr>
                         @endforeach

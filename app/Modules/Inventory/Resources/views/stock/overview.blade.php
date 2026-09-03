@@ -105,7 +105,7 @@
                 $peak = collect($flow)->flatMap(fn ($m) => [(float) $m['in'], (float) $m['out']])->max() ?: 1;
             @endphp
 
-            <div class="flex items-end gap-4 px-4 pt-8 pb-2" style="height:200px">
+            <div class="flex items-end gap-4 px-4 pt-8 pb-2" style="height: var(--spacing-chart)">
                 @foreach ($flow as $month)
                     <div class="flex flex-1 items-end justify-center gap-1" style="height:100%">
                         <div class="w-1/2 rounded-t bg-(--color-brand-500)"
