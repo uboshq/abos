@@ -104,7 +104,7 @@
                         <h2 class="border-b border-(--color-border) px-4 py-3 text-xs font-semibold
                                    text-(--color-ink-muted)">{{ $panel->label }}</h2>
 
-                        <div class="flex items-end gap-4 px-4 pt-6 pb-2" style="height:190px">
+                        <div class="flex items-end gap-4 px-4 pt-6 pb-2" style="height: var(--spacing-chart)">
                             @foreach ($panel->points as $point)
                                 <div class="flex flex-1 items-end justify-center gap-1" style="height:100%">
                                     <div class="w-1/2 rounded-t bg-(--color-brand-500)"

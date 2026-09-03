@@ -239,7 +239,7 @@
                             @can('accounts.loan.manage')
                                 @unless ($row->isPaid())
                                     <tr x-show="open" x-cloak>
-                                        <td colspan="7" class="bg-(--color-surface-sunken) px-3 py-3">
+                                        <td colspan="7" class="bg-(--color-surface-sunken)">
                                             <form method="POST"
                                                   action="{{ route('accounts.loan.instalment.pay', [$loan->id, $row->id]) }}"
                                                   class="flex flex-wrap items-end gap-3">

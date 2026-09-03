@@ -142,7 +142,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-4 py-6 text-center text-(--color-ink-muted)">
+                            <td colspan="5" class="text-center text-(--color-ink-muted)">
                                 {{ __('sales::message.scheme_no_band') }}
                             </td>
                         </tr>

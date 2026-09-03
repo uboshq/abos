@@ -594,7 +594,7 @@
                                 :aria-expanded="customerPickerOpen ? 'true' : 'false'"
                                 :class="customerPickerOpen
                                     ? 'border-(--color-brand-600) bg-(--color-brand-600) text-(--color-brand-ink)'
-                                    : 'border-(--color-brand-300) bg-(--color-brand-50) text-(--color-brand-700) hover:bg-(--color-brand-100)'"
+                                    : 'border-(--color-brand-500) bg-(--color-brand-50) text-(--color-brand-700) hover:bg-(--color-brand-100)'"
                                 class="grid size-9 shrink-0 place-items-center rounded-(--radius-field)
                                        border-2 transition-colors">
                             <span class="sr-only">{{ __('sales::message.search_customer') }}</span>
@@ -676,7 +676,7 @@
                                      লম্বা পয়েন্টের নাম আগেই কাটা পড়ত। --}}
                                 <span x-show="customer.location" x-cloak
                                       class="inline-flex max-w-44 items-center truncate rounded-full
-                                             border border-(--color-brand-200) bg-(--color-brand-50)
+                                             border border-(--color-brand-100) bg-(--color-brand-50)
                                              px-2 py-0.5 text-xs font-medium text-(--color-brand-700)"
                                       x-text="customer.location"></span>
 
@@ -787,7 +787,7 @@
                     {{-- ছাঁকনি — টাইপের সাথে সাথে, আর বাছা হলেই বন্ধ --}}
                     <div x-show="customerPickerOpen" x-cloak
                          @keydown.escape="customerPickerOpen = false"
-                         class="mt-2 rounded-(--radius-field) border-2 border-(--color-brand-200)
+                         class="mt-2 rounded-(--radius-field) border-2 border-(--color-brand-100)
                                 bg-(--color-brand-50) p-1.5">
                         <input type="search" x-model="customerTerm"
                                x-effect="customerPickerOpen && $nextTick(() => $el.focus())"
@@ -894,7 +894,7 @@
                                     :aria-expanded="pickerOpen ? 'true' : 'false'"
                                     :class="pickerOpen
                                         ? 'border-(--color-brand-600) bg-(--color-brand-600) text-(--color-brand-ink)'
-                                        : 'border-(--color-brand-300) bg-(--color-brand-50) text-(--color-brand-700) hover:bg-(--color-brand-100)'"
+                                        : 'border-(--color-brand-500) bg-(--color-brand-50) text-(--color-brand-700) hover:bg-(--color-brand-100)'"
                                     class="grid size-11 shrink-0 place-items-center rounded-(--radius-card)
                                            border-2 transition-colors">
                                 <span class="sr-only">{{ __('sales::message.type_or_pick') }}</span>
@@ -1644,7 +1644,12 @@
                                     <tr class="border-b border-(--color-border) bg-(--color-badge-pending-bg)/40 text-2xs">
                                         <td class="cell text-end text-(--color-badge-pending-ink)">↳</td>
 
-                                        <td class="cell ps-4 text-(--color-badge-pending-ink)"
+                                        {{-- ⓘ ইন্ডেন্টটা টোকেন থেকে — হাতে লেখা একটা ধ্রুবক
+                                             ঘন থিমে একা আগের মাপে বসে থাকত, আর
+                                             উপহারের সারিটা মূল সারির সাথে আর
+                                             সারিবদ্ধ থাকত না। --}}
+                                        <td class="cell text-(--color-badge-pending-ink)"
+                                            style="padding-inline-start: calc(var(--grid-pad-x) * 2)"
                                             data-label="{{ __('sales::field.item_name') }}">
                                             🎁 <span x-text="(catalogue.find(p => String(p.id) === String(gift.productId)) || {}).name || ''"></span>
                                         </td>
@@ -2865,7 +2870,7 @@
                      * তারিখটা কম্পোনেন্টের ভেতরে বসানো।
                      *
                      * ── কেন সরাসরি `x-model` নয় ─────────────────────────
-                     * ঘরটা আর কাঁচা `<input type="date">` নয় — ব্রাউজার
+                     * ঘরটা আর ব্রাউজারের নিজের তারিখের ঘর নয় — সে
                      * ওটার লেখা নিজের লোকেলে আঁকত, আর `05/06` তখন ৫ জুন
                      * না ৬ মে বলার উপায় থাকত না (`x-ui.date` ঠিক এই
                      * কারণেই আছে)। কম্পোনেন্টটার নিজের Alpine স্কোপ আছে,

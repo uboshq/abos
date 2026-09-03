@@ -366,7 +366,7 @@
                             </template>
 
                             <tr x-show="lines.length === 0" x-cloak>
-                                <td colspan="10" class="px-3 py-6 text-center text-sm text-(--color-ink-muted)">
+                                <td colspan="10" class="text-center text-sm text-(--color-ink-muted)">
                                     {{ __('purchase::message.no_lines_yet') }}
                                 </td>
                             </tr>

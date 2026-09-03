@@ -45,8 +45,8 @@
                 <a href="{{ route('inventory.stock.movement', ['type' => $type, 'days' => $w]) }}"
                    class="rounded-(--radius-field) border px-3 py-1 font-medium
                           {{ $w === $days
-                             ? 'border-(--color-primary) bg-(--color-primary-bg) text-(--color-primary)'
-                             : 'border-(--color-border) text-(--color-ink-soft)' }}">
+                             ? 'border-(--color-brand-600) bg-(--color-brand-50) text-(--color-brand-600)'
+                             : 'border-(--color-border) text-(--color-ink-muted)' }}">
                     {{ trans_choice('inventory::analysis.days', $w, ['count' => $w]) }}
                 </a>
             @endforeach
@@ -58,7 +58,7 @@
                 <a href="{{ route('inventory.stock.movement', ['type' => $t, 'days' => $days]) }}"
                    class="flex items-center gap-2 rounded-(--radius-card) border px-4 py-2
                           {{ $t === $type
-                             ? 'border-(--color-primary) bg-(--color-primary-bg)'
+                             ? 'border-(--color-brand-600) bg-(--color-brand-50)'
                              : 'border-(--color-border) bg-(--color-surface-card)' }}">
                     <span class="text-sm font-semibold text-(--color-ink)">
                         {{ __('inventory::analysis.'.$t) }}
@@ -103,7 +103,7 @@
                             <tr class="border-b border-(--color-border)/60">
                                 <td >
                                     <a href="{{ route('inventory.product.show', $p) }}"
-                                       class="font-medium text-(--color-ink) hover:text-(--color-primary)">
+                                       class="font-medium text-(--color-ink) hover:text-(--color-brand-600)">
                                         {{ $p->name() }}
                                     </a>
                                     <span class="block text-2xs text-(--color-ink-muted)">{{ $p->code }}</span>

@@ -51,16 +51,22 @@
           class="mb-4 flex flex-wrap items-end gap-2">
         <label class="flex-1">
             <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::portal.from') }}</span>
-            <input type="date" name="from" value="{{ $from }}"
-                   class="h-(--spacing-field) w-full rounded-(--radius-field) border
-                          border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+            {{--
+                ⚠️ কাঁচা `<input type="date">` নয়।
+
+                ব্রাউজার ওটার ভেতরের লেখা **নিজের লোকেল ধরে** আঁকে, আর
+                CSS দিয়ে বদলানো যায় না — ফলে ইংরেজি (US) মেশিনে
+                ১৯ আগস্ট দেখাত `08/19/2026`, অথচ অ্যাপের বাকি সব
+                জায়গায় `19-08-2026`। ⓘ ডিলার তাঁর নিজের ফোনে এই পাতাটা
+                খোলেন, তাই লোকেল আমাদের হাতে নেই — এখানে ঝুঁকিটা
+                কর্মীর পর্দার চেয়ে বেশি।
+            --}}
+            <x-ui.date name="from" :value="$from" />
         </label>
 
         <label class="flex-1">
             <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::portal.to') }}</span>
-            <input type="date" name="to" value="{{ $to }}"
-                   class="h-(--spacing-field) w-full rounded-(--radius-field) border
-                          border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+            <x-ui.date name="to" :value="$to" />
         </label>
 
         <button type="submit"
@@ -76,14 +82,25 @@
         {{-- সরু পর্দায় টেবিল নিজের ভিতরে গড়ায়, পাতা নয় --}}
         <div class="overflow-x-auto rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">
-            <table class="w-full text-sm">
+            {{--
+                ⚠️ `ui-list` ক্লাসটা অলংকার নয় — ওটাই সারির উচ্চতা ও
+                ঘরের ফাঁক ঠিক করে, আর থিম বদলালে (ঘন/স্বাভাবিক) সেটার
+                সাথে বদলায়। ক্লাসটা না দিলে এই একটা টেবিল থিমের বাইরে
+                একা দাঁড়িয়ে থাকত।
+
+                ⓘ `x-ui.table` কম্পোনেন্টটা ব্যবহার করা হয়নি ইচ্ছাকৃতভাবে:
+                এখানে একটা **খোলার সারি** লাগে যেটা কোনো ডেটা-সারি নয়,
+                আর চলমান জেরের কলামটা আগের সারির উপর নির্ভর করে। ওটা
+                কলামের তালিকায় প্রকাশ করা যায় না।
+            --}}
+            <table class="ui-list w-full text-sm">
                 <thead class="bg-(--color-section-head) text-2xs uppercase text-(--color-ink-muted)">
                     <tr>
-                        <th class="px-3 py-2 text-start">{{ __('sales::portal.date') }}</th>
-                        <th class="px-3 py-2 text-start">{{ __('sales::portal.particulars') }}</th>
-                        <th class="px-3 py-2 text-end">{{ __('sales::portal.debit') }}</th>
-                        <th class="px-3 py-2 text-end">{{ __('sales::portal.credit') }}</th>
-                        <th class="px-3 py-2 text-end">{{ __('sales::portal.balance') }}</th>
+                        <th class="text-start">{{ __('sales::portal.date') }}</th>
+                        <th class="text-start">{{ __('sales::portal.particulars') }}</th>
+                        <th class="text-end">{{ __('sales::portal.debit') }}</th>
+                        <th class="text-end">{{ __('sales::portal.credit') }}</th>
+                        <th class="text-end">{{ __('sales::portal.balance') }}</th>
                     </tr>
                 </thead>
 
@@ -96,18 +113,18 @@
                         যেটা প্রায় সবসময়ই মিথ্যা।
                     --}}
                     <tr class="bg-(--color-surface-muted) text-(--color-ink-muted)">
-                        <td class="px-3 py-2">—</td>
-                        <td class="px-3 py-2">{{ __('sales::portal.opening') }}</td>
-                        <td class="px-3 py-2"></td>
-                        <td class="px-3 py-2"></td>
-                        <td class="num px-3 py-2 text-end">
+                        <td >—</td>
+                        <td >{{ __('sales::portal.opening') }}</td>
+                        <td ></td>
+                        <td ></td>
+                        <td class="num text-end">
                             {{ \App\Core\Support\Money::format($opening) }}
                         </td>
                     </tr>
 
                     @foreach ($rows as $row)
                         <tr>
-                            <td class="px-3 py-2 whitespace-nowrap">
+                            <td class="whitespace-nowrap">
                                 {{ \App\Core\Support\DateFormat::format($row->trx_date) }}
                             </td>
 
@@ -133,23 +150,23 @@
                                 তাই কোনো মডেল লোড করার দরকারই নেই — আর তাতে
                                 পঞ্চাশ সারিতে পঞ্চাশটা কোয়েরিও বাঁচে।
                             --}}
-                            <td class="px-3 py-2">
+                            <td >
                                 {{ $row->document_no ?: $row->narration }}
                             </td>
 
-                            <td class="num px-3 py-2 text-end">
+                            <td class="num text-end">
                                 @if (bccomp((string) $row->debit, '0', 4) > 0)
                                     {{ \App\Core\Support\Money::format($row->debit) }}
                                 @endif
                             </td>
 
-                            <td class="num px-3 py-2 text-end">
+                            <td class="num text-end">
                                 @if (bccomp((string) $row->credit, '0', 4) > 0)
                                     {{ \App\Core\Support\Money::format($row->credit) }}
                                 @endif
                             </td>
 
-                            <td class="num px-3 py-2 text-end font-medium">
+                            <td class="num text-end font-medium">
                                 {{ \App\Core\Support\Money::format($row->running_balance) }}
                             </td>
                         </tr>
