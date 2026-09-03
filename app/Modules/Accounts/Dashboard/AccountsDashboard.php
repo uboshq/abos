@@ -11,11 +11,13 @@ use App\Core\Engines\Dashboard\Listing;
 use App\Core\Engines\Dashboard\Stat;
 use App\Core\Engines\Dashboard\Tile;
 use App\Core\Support\Money;
+use Illuminate\Support\Facades\Route;
 use App\Modules\Accounts\Models\MoneyTransfer;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\AccountsFacts;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Models\Customer;
+use App\Modules\Supplier\Models\Supplier;
 
 /**
  * হিসাব মডিউলের ড্যাশবোর্ড — ইঞ্জিনের ছকে।
@@ -69,6 +71,27 @@ final class AccountsDashboard implements ProvidesDashboard
             ->map(fn (array $row) => (object) [
                 'id' => $row['party_id'],
                 'name' => $names[$row['party_id']]?->name() ?? '—',
+                'amount' => $row['amount'],
+            ])
+            ->values();
+
+        /*
+         * উল্টো দিকটাও — আমরা কাকে কত দিতে হবে।
+         *
+         * ⓘ মালিকের স্পেকে জোড়াটা একসাথে চাওয়া (*Top 10 Due
+         * Customers/Suppliers*)। গ্রাহকেরটা রোজকার প্রশ্ন, কিন্তু
+         * **মাসের শেষে প্রশ্নটা উল্টে যায়**: কার পাওনা মেটাতে হবে।
+         */
+        $topOwed = $facts->topDue('supplier', StandardChart::PAYABLE);
+        $supplierNames = Supplier::query()
+            ->whereIn('id', array_column($topOwed, 'party_id'))
+            ->get()
+            ->keyBy('id');
+
+        $owedRows = collect($topOwed)
+            ->map(fn (array $row) => (object) [
+                'id' => $row['party_id'],
+                'name' => $supplierNames[$row['party_id']]?->name() ?? '—',
                 'amount' => $row['amount'],
             ])
             ->values();
@@ -242,7 +265,35 @@ final class AccountsDashboard implements ProvidesDashboard
                     ],
                     rows: $dueRows,
                     empty: __('accounts::dashboard.nobody_owes'),
-                    href: route('accounts.report.show', ['slug' => 'receivable']),
+                    /*
+                     * ⚠️ দরজাটা গ্রাহকের **বয়সের রিপোর্টে**, হিসাবের
+                     * কোনো রিপোর্টে নয় — কারণ `accounts/reports/`-এ
+                     * `receivable` নামে কিছু **নেই** (ReportController-এর
+                     * SLUGS দেখা)। আগে ওটাই লেখা ছিল, আর সারিতে ক্লিক
+                     * করলে **৪০৪** আসত।
+                     *
+                     * ⓘ বয়সের হিসাব ওখানেই একবার লেখা — এখানে আবার
+                     * গুনলে দুইটা উত্তর তৈরি হত।
+                     */
+                    href: Route::has('customer.report.show')
+                        ? route('customer.report.show', ['slug' => 'ageing'])
+                        : null,
+                ),
+
+                new Listing(
+                    label: __('accounts::dashboard.top_owed'),
+                    columns: [
+                        ['key' => 'name', 'label' => __('accounts::dashboard.supplier'),
+                            'render' => fn ($r) => $r->name],
+                        ['key' => 'amount', 'label' => __('accounts::dashboard.amount'),
+                            'width' => '10rem', 'numeric' => true,
+                            'render' => fn ($r) => Money::format($r->amount)],
+                    ],
+                    rows: $owedRows,
+                    empty: __('accounts::dashboard.we_owe_nobody'),
+                    href: Route::has('supplier.report.show')
+                        ? route('supplier.report.show', ['slug' => 'ageing'])
+                        : null,
                 ),
 
                 new Listing(

@@ -12,6 +12,7 @@ use App\Core\Engines\Dashboard\Stat;
 use App\Core\Engines\Dashboard\Tile;
 use App\Core\Support\Money;
 use Illuminate\Support\Facades\Route;
+use App\Modules\Accounts\Services\AccountsFacts;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Finance\Models\CapitalEntry;
 use App\Modules\Finance\Models\Deposit;
@@ -41,6 +42,23 @@ final class FinanceDashboard implements ProvidesDashboard
                 now()->toDateString(),
             ),
         );
+
+        $facts = app(AccountsFacts::class);
+        $money = $facts->moneyPositions();
+
+        /*
+         * দরজাগুলো `Route::has()`-এর পিছনে — হিসাব, গ্রাহক বা
+         * সরবরাহকারী মডিউল বন্ধ থাকলে অর্থের পাতাটা যেন না মরে।
+         */
+        $cashBook = Route::has('accounts.report.show')
+            ? route('accounts.report.show', ['slug' => 'cash-book']) : null;
+        $bankBook = Route::has('accounts.report.show')
+            ? route('accounts.report.show', ['slug' => 'bank-book']) : null;
+        $custody = Route::has('accounts.custody') ? route('accounts.custody') : null;
+        $customerAgeing = Route::has('customer.report.show')
+            ? route('customer.report.show', ['slug' => 'ageing']) : null;
+        $supplierAgeing = Route::has('supplier.report.show')
+            ? route('supplier.report.show', ['slug' => 'ageing']) : null;
 
         return new DashboardDefinition(
             title: __('finance::dashboard.title'),
@@ -101,6 +119,66 @@ final class FinanceDashboard implements ProvidesDashboard
             ])),
 
             stats: [
+                /*
+                 * ── টাকার তিনটা অবস্থান, ৪ সেপ্টেম্বর ২০২৬ ──────────
+                 *
+                 * ⚠️ **MFS আলাদা, ব্যাংকের সাথে নয়** — বিকাশ ক্যাশ-আউটে
+                 * চার্জ কাটে, মিলকরণের কাগজ আলাদা, সেটেলমেন্টের সময়ও।
+                 * এক ঘরে দেখালে "ব্যাংকে কত আছে" সংখ্যাটাই মিথ্যা বলত।
+                 *
+                 * ⭐ আর মেপে একটা জিনিস বেরিয়েছে: `1105-BKASH`-এ
+                 * `is_bank`ও নেই, `is_cash`ও নেই — তাই আজ পর্যন্ত
+                 * **MFS-এর টাকা কোনো টালিতেই গোনা হত না**, না নগদে,
+                 * না ব্যাংকে। এই কোম্পানিতে সেটা ১,২৫০ টাকা।
+                 */
+                new Stat(
+                    label: __('finance::dashboard.cash_position'),
+                    value: Money::format($money['cash']),
+                    hint: __('finance::dashboard.cash_position_hint'),
+                    href: $cashBook,
+                    permission: 'accounts.view',
+                    tone: Stat::GOOD,
+                ),
+
+                new Stat(
+                    label: __('finance::dashboard.bank_position'),
+                    value: Money::format($money['bank']),
+                    hint: __('finance::dashboard.bank_position_hint'),
+                    href: $bankBook,
+                    permission: 'accounts.view',
+                ),
+
+                new Stat(
+                    label: __('finance::dashboard.mfs_position'),
+                    value: Money::format($money['mfs']),
+                    hint: __('finance::dashboard.mfs_position_hint'),
+                    href: $custody,
+                    permission: 'accounts.view',
+                ),
+
+                /*
+                 * ⓘ বয়সের ভাগটা এখানে গোনা হয় না — দরজাটা **যেখানে
+                 * ওটা একবার লেখা আছে** সেখানেই যায়। দুই জায়গায় দুইভাবে
+                 * গুনলে দুইটা উত্তর তৈরি হত, আর তখন কোনটা সত্যি তা কেউ
+                 * বলতে পারত না।
+                 */
+                new Stat(
+                    label: __('finance::dashboard.receivable_overview'),
+                    value: Money::format($facts->receivable()),
+                    hint: __('finance::dashboard.receivable_overview_hint'),
+                    href: $customerAgeing,
+                    permission: 'accounts.view',
+                ),
+
+                new Stat(
+                    label: __('finance::dashboard.payable_overview'),
+                    value: Money::format($facts->payable()),
+                    hint: __('finance::dashboard.payable_overview_hint'),
+                    href: $supplierAgeing,
+                    permission: 'accounts.view',
+                    tone: Stat::BAD,
+                ),
+
                 new Stat(
                     label: __('finance::dashboard.capital_in'),
                     value: Money::format(CapitalEntry::query()->where('entry_type', 'in')->sum('amount')),

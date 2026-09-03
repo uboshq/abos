@@ -3,6 +3,10 @@
 declare(strict_types=1);
 
 return [
+    'top_owed' => 'Who we owe the most',
+    'supplier' => 'Supplier',
+    'we_owe_nobody' => 'We owe nobody',
+
     'top_due' => 'Who owes the most',
     'customer' => 'Customer',
     'nobody_owes' => 'Nobody owes anything',

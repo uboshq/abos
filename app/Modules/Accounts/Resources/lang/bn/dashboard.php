@@ -3,6 +3,10 @@
 declare(strict_types=1);
 
 return [
+    'top_owed' => 'আমরা যাদের সবচেয়ে বেশি দেব',
+    'supplier' => 'সরবরাহকারী',
+    'we_owe_nobody' => 'কারও পাওনা নেই',
+
     'top_due' => 'সবচেয়ে বেশি বকেয়া যাদের',
     'customer' => 'গ্রাহক',
     'nobody_owes' => 'কারও কাছে বকেয়া নেই',

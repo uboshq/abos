@@ -197,13 +197,18 @@ final class AccountsFacts
      */
     public function outstandingLoan(): string
     {
-        $ids = Account::query()
-            ->whereIn('parent_id', Account::query()->where('code', '2200')->select('id'))
-            ->pluck('id');
+        $parent = Account::query()->where('code', '2200')->first();
 
-        if ($ids->isEmpty()) {
+        if ($parent === null) {
             return '0';
         }
+
+        /*
+         * ⚠️ পুরো বংশ, এক ধাপ নয় — [[assetValue]]-এ একই কারণ লেখা।
+         * কেউ "ব্যাংক ঋণ → সোনালী · ইসলামী" বানালে দাখিলা নাতির ঘরে
+         * বসত, আর ঋণের সংখ্যাটা নীরবে কম দেখাত।
+         */
+        $ids = $parent->selfAndDescendants()->pluck('id');
 
         $row = LedgerEntry::query()
             ->whereIn('account_id', $ids)
@@ -238,12 +243,29 @@ final class AccountsFacts
          * কেবল `1200` ও `1290` কোড ধরে খুঁজলে **কেবল অবচয়টাই আসত**, আর
          * সম্পদের মূল্য ঋণাত্মক দেখাত — মালিকের পাতায়।
          */
+        $parent = StandardChart::find(StandardChart::FIXED_ASSETS);
+
+        if ($parent === null) {
+            return '0';
+        }
+
+        /*
+         * ⚠️ **এক ধাপ নয়, পুরো বংশ** — আর কারণটা আজকের নয়, কালকের।
+         *
+         * আজ ১২০০-এর নিচে সবগুলোই পাতা (১২০১–১২০৪, ১২৯০)। কিন্তু এই
+         * ছকটা ক্রেতা **নিজে বাড়াতে পারেন** — মালিকের স্থায়ী নিয়ম।
+         * যেদিন কেউ "যানবাহন → ট্রাক ১, ট্রাক ২" বানাবেন, সেদিন দাখিলা
+         * বসবে **নাতির ঘরে**, আর এক ধাপ দেখা কোয়েরি সেটা দেখত না।
+         *
+         * ⚠️ তখন সম্পদের মূল্য **নীরবে কমে যেত** — কোনো ত্রুটি নয়,
+         * কোনো লাল টেস্ট নয়, কেবল মালিকের পাতায় একটা কম সংখ্যা।
+         *
+         * ⓘ ছকে তিন ধাপ **আজই আছে** (১১০১-CASH → ১১০১ → ১১০০), তাই
+         * নেস্টিং কল্পনা নয়। `selfAndDescendants()` নিজেই এক কোয়েরিতে
+         * পুরো গাছ আনে (Account:299)।
+         */
         $row = LedgerEntry::query()
-            ->whereIn('account_id', Account::query()
-                ->whereIn('parent_id', Account::query()
-                    ->where('code', StandardChart::FIXED_ASSETS)
-                    ->select('id'))
-                ->select('id'))
+            ->whereIn('account_id', $parent->selfAndDescendants()->pluck('id'))
             ->selectRaw('COALESCE(SUM(debit), 0) as d, COALESCE(SUM(credit), 0) as c')
             ->first();
 
@@ -293,5 +315,77 @@ final class AccountsFacts
             'party_id' => (int) $row->party_id,
             'amount' => bcadd((string) $row->amount, '0', 4),
         ])->all();
+    }
+
+    /**
+     * টাকার তিনটা অবস্থান — নগদ · ব্যাংক · MFS, **আলাদা করে**।
+     *
+     * ── কেন MFS ব্যাংকের সাথে মেশানো যায় না ─────────────────────────
+     * ⚠️ এই ভুলটা এই প্রকল্পে একবার হয়েছিল, আর মালিক ধরিয়ে দিয়েছিলেন
+     * ([[StandardChart::BANK]]-এর মন্তব্যে পুরো কারণ):
+     *
+     *   • **বিকাশ ক্যাশ-আউটে চার্জ কাটে, ব্যাংক কাটে না**
+     *   • মিলকরণের কাগজ আলাদা — ব্যাংকের বিবরণী বনাম অ্যাপের লগ
+     *   • সেটেলমেন্টের সময় আলাদা
+     *
+     * এক ঘরে দেখালে **"ব্যাংকে কত আছে" সংখ্যাটাই মিথ্যা বলত**।
+     *
+     * ── কেন `is_bank` পতাকা নয়, সাবট্রি ─────────────────────────────
+     * মেপে দেখা: `1105-BKASH`-এ `is_bank`ও নেই, `is_cash`ও নেই। তাই
+     * পতাকা ধরে গুনলে **MFS-এর টাকা কোনো টালিতেই আসত না** — না নগদে,
+     * না ব্যাংকে। সাবট্রি ধরলে তিনটাই নিজের জায়গায় বসে।
+     *
+     * ⓘ বংশধর ধরে, এক ধাপ নয় — [[assetValue]]-এ একই কারণ লেখা।
+     *
+     * @return array{cash: string, bank: string, mfs: string}
+     */
+    public function moneyPositions(): array
+    {
+        $parents = [
+            'cash' => StandardChart::CASH_IN_HAND,
+            'bank' => StandardChart::BANK,
+            'mfs' => StandardChart::MOBILE_MONEY,
+        ];
+
+        $ids = [];
+        $owner = [];
+
+        foreach ($parents as $key => $code) {
+            $parent = StandardChart::find($code);
+
+            if ($parent === null) {
+                continue;
+            }
+
+            foreach ($parent->selfAndDescendants()->pluck('id') as $id) {
+                $ids[] = $id;
+                $owner[$id] = $key;
+            }
+        }
+
+        if ($ids === []) {
+            return ['cash' => '0', 'bank' => '0', 'mfs' => '0'];
+        }
+
+        // একটাই কোয়েরি, খাত ধরে — তারপর তিনটা ঝুড়িতে ভাগ
+        $rows = LedgerEntry::query()
+            ->whereIn('account_id', $ids)
+            ->groupBy('account_id')
+            ->selectRaw('account_id, COALESCE(SUM(debit), 0) as d, COALESCE(SUM(credit), 0) as c')
+            ->get();
+
+        $out = ['cash' => '0', 'bank' => '0', 'mfs' => '0'];
+
+        foreach ($rows as $row) {
+            $key = $owner[$row->account_id] ?? null;
+
+            if ($key === null) {
+                continue;
+            }
+
+            $out[$key] = bcadd($out[$key], bcsub((string) $row->d, (string) $row->c, 4), 4);
+        }
+
+        return $out;
     }
 }
