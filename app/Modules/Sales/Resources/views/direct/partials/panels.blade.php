@@ -185,7 +185,9 @@
         </label>
 
         <label class="block">
-            <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::field.remarks') }}</span>
+            {{-- ⓘ "বিবরণ" — এটা আদায়ের ভাউচারের নিজের বিবরণ, পাশের নোট নয়।
+                 উপহারের লাইনে "মন্তব্য"-ই থাকল, কারণ ওটা কোনো দাখিলায় যায় না। --}}
+            <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::field.narration') }}</span>
             <input type="text" maxlength="191" x-model="depositDraft.narration"
                    class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                           bg-(--color-surface-card) px-2 text-2xs">
