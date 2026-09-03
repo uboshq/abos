@@ -144,4 +144,154 @@ final class AccountsFacts
 
         return $out;
     }
+
+    /**
+     * আজকের তিনটা সংখ্যা — **একটাই কোয়েরিতে**।
+     *
+     * ── কেন একসাথে, আলাদা তিনটা মেথড নয় ─────────────────────────────
+     * ⚠️ ড্যাশবোর্ডের প্রতিটা টালি একটা করে কোয়েরি হলে দশটা টালি মানে
+     * পাতা-লোডে দশটা কোয়েরি। আজ হাতেগোনা সারি, তাই কেউ টের পায় না —
+     * কিন্তু বছরখানেক পরে **ড্যাশবোর্ডই সবচেয়ে ধীর পাতা** হয়ে দাঁড়ায়,
+     * আর কারণটা কেউ খুঁজে পান না, কারণ কোনো একটা কোয়েরি ধীর নয়।
+     *
+     * তিনটাই একই দিনের একই খতিয়ান পড়ে, তাই একবার পড়াই যথেষ্ট।
+     *
+     * ── সংজ্ঞাগুলো ──────────────────────────────────────────────────
+     * আদায় = প্রাপ্য খাতে আজ যত **ক্রেডিট** — অর্থাৎ গ্রাহকের বকেয়া
+     *        যতটা কমল। নগদ বিক্রি এতে আসে না, কারণ ওখানে বকেয়াই তৈরি
+     *        হয়নি; ওটা বিক্রয়ের সংখ্যা, আদায়ের নয়।
+     * প্রদান = প্রদেয় খাতে আজ যত **ডেবিট** — আমরা যতটা মিটিয়ে দিলাম।
+     * খরচ   = ব্যয় ধরনের সব খাতে আজকের নিট ডেবিট।
+     *
+     * @return array{collection: string, payment: string, expense: string}
+     */
+    public function today(): array
+    {
+        $today = Carbon::today()->toDateString();
+
+        $row = LedgerEntry::query()
+            ->join('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
+            ->where('ledger_entries.trx_date', $today)
+            ->selectRaw(
+                'COALESCE(SUM(CASE WHEN accounts.code = ? THEN ledger_entries.credit ELSE 0 END), 0) as collection,'
+                .'COALESCE(SUM(CASE WHEN accounts.code = ? THEN ledger_entries.debit ELSE 0 END), 0) as payment,'
+                .'COALESCE(SUM(CASE WHEN accounts.type = ? THEN ledger_entries.debit - ledger_entries.credit ELSE 0 END), 0) as expense',
+                [StandardChart::RECEIVABLE, StandardChart::PAYABLE, Account::EXPENSE],
+            )
+            ->first();
+
+        return [
+            'collection' => bcadd((string) ($row->collection ?? 0), '0', 4),
+            'payment' => bcadd((string) ($row->payment ?? 0), '0', 4),
+            'expense' => bcadd((string) ($row->expense ?? 0), '0', 4),
+        ];
+    }
+
+    /**
+     * বকেয়া ঋণ — দীর্ঘমেয়াদি দায়ের গোটা ডালটা।
+     *
+     * ⓘ কোড ধরে নয়, **বাবার সন্তানেরা** ধরে: কোম্পানি নিজের ঋণের জন্য
+     * নতুন খাত বানালে (যেমন "গাড়ির ঋণ") সেটাও এখানে আসা উচিত। কেবল
+     * ২২১০ ও ২২২০ গুনলে ওই টাকাটা সংখ্যাটার বাইরে থেকে যেত, আর মালিক
+     * ভাবতেন ঋণ কম।
+     */
+    public function outstandingLoan(): string
+    {
+        $ids = Account::query()
+            ->whereIn('parent_id', Account::query()->where('code', '2200')->select('id'))
+            ->pluck('id');
+
+        if ($ids->isEmpty()) {
+            return '0';
+        }
+
+        $row = LedgerEntry::query()
+            ->whereIn('account_id', $ids)
+            ->selectRaw('COALESCE(SUM(credit), 0) as c, COALESCE(SUM(debit), 0) as d')
+            ->first();
+
+        // দায় ক্রেডিট প্রকৃতির — ক্রেডিট বাদ ডেবিটই আজকের বকেয়া
+        return bcsub((string) ($row->c ?? 0), (string) ($row->d ?? 0), 4);
+    }
+
+    /**
+     * সম্পদের বইমূল্য — মূল দাম বাদ জমা অবচয়।
+     *
+     * ⚠️ কেবল ১২০০ দেখালে সংখ্যাটা **বাড়িয়ে বলত**: পাঁচ বছরের পুরনো
+     * ট্রাক কেনা দামেই দেখাত। বইমূল্য মানে আজকের মূল্য, কেনার দিনের নয়।
+     */
+    public function assetValue(): string
+    {
+        /*
+         * ⚠️ দুইবার `balanceOfCode()` ডাকা হত — আর সেটা **৯টা কোয়েরি**
+         * নিত (মেপে দেখা): প্রতিটা `find()` একটা, আর প্রতিটা
+         * `balanceOn()` নিজের সন্তানদের হেঁটে দেখে।
+         *
+         * ⓘ একটা টালির জন্য নয়টা কোয়েরি — আর ড্যাশবোর্ডে টালি দশটা।
+         * এখানেই ধীর পাতা জন্মায়, একটাও ধীর কোয়েরি ছাড়াই।
+         */
+        /*
+         * ⚠️ `1200` নিজে একটা **গ্রুপ** — ওতে কোনো দাখিলা বসে না।
+         * আসল সংখ্যাগুলো তার সন্তানদের ঘরে: আসবাব · যানবাহন · যন্ত্রপাতি ·
+         * কম্পিউটার, আর জমা অবচয় (`1290`, ক্রেডিট প্রকৃতির)।
+         *
+         * কেবল `1200` ও `1290` কোড ধরে খুঁজলে **কেবল অবচয়টাই আসত**, আর
+         * সম্পদের মূল্য ঋণাত্মক দেখাত — মালিকের পাতায়।
+         */
+        $row = LedgerEntry::query()
+            ->whereIn('account_id', Account::query()
+                ->whereIn('parent_id', Account::query()
+                    ->where('code', StandardChart::FIXED_ASSETS)
+                    ->select('id'))
+                ->select('id'))
+            ->selectRaw('COALESCE(SUM(debit), 0) as d, COALESCE(SUM(credit), 0) as c')
+            ->first();
+
+        // মূল দাম ডেবিটে, জমা অবচয় ক্রেডিটে — বিয়োগেই বইমূল্য
+        return bcsub((string) ($row->d ?? 0), (string) ($row->c ?? 0), 4);
+    }
+
+    /**
+     * সবচেয়ে বেশি বকেয়া যাদের — গ্রাহক বা সরবরাহকারী।
+     *
+     * ⭐ **একটাই কোয়েরি**, পক্ষ ধরে গুচ্ছ করা। প্রতি পক্ষের জন্য আলাদা
+     * কোয়েরি করলে দশজনের তালিকায় দশবার ডাটাবেসে যেতে হত।
+     *
+     * ⚠️ নামটা এখানে আনা হয় না — খতিয়ান কেবল `party_type` ও `party_id`
+     * রাখে ([[CoreReports]]-এ একই কথা লেখা)। নাম দেখানোর সময় ডাকা পক্ষ
+     * **একবারেই** আনতে হবে, প্রতি সারিতে নয়।
+     *
+     * @return list<array{party_id: int, amount: string}>
+     */
+    public function topDue(string $partyType, string $accountCode, int $limit = 10): array
+    {
+        $account = StandardChart::find($accountCode);
+
+        if ($account === null) {
+            return [];
+        }
+
+        // প্রাপ্য ডেবিটে বাড়ে, প্রদেয় ক্রেডিটে — তাই দিকটা খাত থেকেই নেওয়া
+        $receivable = $accountCode === StandardChart::RECEIVABLE;
+
+        $rows = LedgerEntry::query()
+            ->where('account_id', $account->id)
+            ->where('party_type', $partyType)
+            ->whereNotNull('party_id')
+            ->groupBy('party_id')
+            ->selectRaw(
+                $receivable
+                    ? 'party_id, COALESCE(SUM(debit) - SUM(credit), 0) as amount'
+                    : 'party_id, COALESCE(SUM(credit) - SUM(debit), 0) as amount'
+            )
+            ->havingRaw('amount > 0')
+            ->orderByDesc('amount')
+            ->limit($limit)
+            ->get();
+
+        return $rows->map(fn ($row) => [
+            'party_id' => (int) $row->party_id,
+            'amount' => bcadd((string) $row->amount, '0', 4),
+        ])->all();
+    }
 }

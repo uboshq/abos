@@ -3,6 +3,15 @@
 declare(strict_types=1);
 
 return [
+
+    // চারটা দরজা ও খরচের ভাগ — ৪ সেপ্টেম্বর ২০২৬
+    'pending_approvals' => 'অপেক্ষমাণ অনুমোদন',
+    'expense_heads' => 'খরচের খাত',
+    'product_costing' => 'পণ্যের খরচ',
+    'who_approves_what' => 'কে কী অনুমোদন করেন',
+    'where_money_went' => 'এই মাসে টাকা কোথায় গেল',
+    'where_money_went_hint' => 'সবচেয়ে বেশি খরচের ছয়টা খাত — ক্লিক করলে পুরো তালিকা',
+
     'title' => 'ড্যাশবোর্ড',
     'subtitle' => 'মালিকের টাকা — কত ঢুকল, কত বেরোল',
     'capital_in' => 'মূলধন এসেছে',

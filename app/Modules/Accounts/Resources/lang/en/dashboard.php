@@ -3,6 +3,23 @@
 declare(strict_types=1);
 
 return [
+    'top_due' => 'Who owes the most',
+    'customer' => 'Customer',
+    'nobody_owes' => 'Nobody owes anything',
+
+
+    // Owner Dashboard-এর সংখ্যাগুলো — ৪ সেপ্টেম্বর ২০২৬
+    'today_collection' => 'Collected today',
+    'today_collection_hint' => 'Money received from customers today',
+    'today_payment' => 'Paid today',
+    'today_payment_hint' => 'Money paid to suppliers today',
+    'today_expense' => 'Spent today',
+    'today_expense_hint' => 'All expense heads for today',
+    'outstanding_loan' => 'Outstanding loan',
+    'outstanding_loan_hint' => 'What is still owed on long-term loans',
+    'asset_value' => 'Asset value',
+    'asset_value_hint' => 'Book value of fixed assets, after depreciation',
+
     'money_on_hand' => 'Money on hand',
     'in_transit' => 'In transit',
     'cash_in_hand' => 'Cash in hand',

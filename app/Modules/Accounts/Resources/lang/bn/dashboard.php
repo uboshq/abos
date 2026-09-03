@@ -3,6 +3,23 @@
 declare(strict_types=1);
 
 return [
+    'top_due' => 'সবচেয়ে বেশি বকেয়া যাদের',
+    'customer' => 'গ্রাহক',
+    'nobody_owes' => 'কারও কাছে বকেয়া নেই',
+
+
+    // Owner Dashboard-এর সংখ্যাগুলো — ৪ সেপ্টেম্বর ২০২৬
+    'today_collection' => 'আজকের আদায়',
+    'today_collection_hint' => 'আজ গ্রাহকদের কাছ থেকে যত টাকা এসেছে',
+    'today_payment' => 'আজকের প্রদান',
+    'today_payment_hint' => 'আজ সরবরাহকারীদের যত টাকা দেওয়া হয়েছে',
+    'today_expense' => 'আজকের খরচ',
+    'today_expense_hint' => 'আজকের সব খরচের খাত মিলিয়ে',
+    'outstanding_loan' => 'বকেয়া ঋণ',
+    'outstanding_loan_hint' => 'দীর্ঘমেয়াদি সব ঋণে আজ যত বাকি',
+    'asset_value' => 'সম্পদের মূল্য',
+    'asset_value_hint' => 'স্থায়ী সম্পদের বইমূল্য — অবচয় বাদ দিয়ে',
+
     'money_on_hand' => 'হাতে ও ব্যাংকে মোট',
     'in_transit' => 'পথে',
     'cash_in_hand' => 'হাতে নগদ',
