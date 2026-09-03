@@ -43,11 +43,52 @@ class DepositController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('can:finance.deposit.view', only: ['index', 'show']),
+            new Middleware('can:finance.deposit.view', only: ['index', 'show', 'all']),
             new Middleware('can:finance.deposit.create', only: ['store']),
             new Middleware('can:finance.deposit.move', only: ['movement', 'close']),
             new Middleware('can:finance.deposit.cancel', only: ['cancel']),
         ];
+    }
+
+    /**
+     * সব জমা — তিন ইস্যুকারী একসাথে।
+     *
+     * ── কেন এই পাতাটা লাগল ──────────────────────────────────────────
+     * অর্থের ড্যাশবোর্ডে "জমা" টালিটা **তিন ইস্যুকারীর যোগফল** দেখায়,
+     * অথচ নামার কোনো পাতা ছিল না — কারণ প্রতিটা পাতা একটা ইস্যুকারী
+     * চায়। তিনটার একটাকে দরজা বানালে **সংখ্যাটা এক জায়গায় দেখাত আর
+     * ক্লিক করলে অন্য জায়গায় নামত**।
+     *
+     * ⚠️ আর সেটা দরজা না থাকার চেয়ে খারাপ: দরজা না থাকলে মানুষ জানেন
+     * কিছু নেই; **ভুল দরজা থাকলে তাঁরা ভুল সংখ্যাটা বিশ্বাস করেন।**
+     *
+     * ── কেন এখানে তৈরির ফর্ম নেই ────────────────────────────────────
+     * নতুন জমা সবসময় কোনো একটা ইস্যুকারীর নামে খোলে, আর তার ধরনের
+     * তালিকাও ইস্যুকারী ধরে আলাদা (`DepositKind.issuer`)। এখানে ফর্ম
+     * বসালে আগে "কোন ব্যাংক না সঞ্চয়পত্র" জিজ্ঞেস করতে হত — অর্থাৎ
+     * ইস্যুকারীর পাতাটাই আবার।
+     *
+     * **এটা পড়ার পাতা**: কোথায় কত আছে দেখার, খোলার নয়।
+     */
+    public function all(Request $request): View
+    {
+        return view('finance::deposit.all', [
+            'menu' => $this->menu->forUser($request->user()),
+
+            /*
+             * ⚠️ ছাঁকনি নেই, ইচ্ছাকৃতভাবে — টালির সংখ্যার সাথে
+             * **হুবহু** মিলতে হবে। ডিফল্টে কোনো ইস্যুকারী ধরে নিলে
+             * পাতাটা কম দেখাত, আর সেটাই ছিল আসল আপত্তি।
+             */
+            'deposits' => Deposit::query()
+                ->with(['kind', 'movements'])
+                ->orderByRaw('CASE WHEN status = ? THEN 0 ELSE 1 END', [Deposit::ACTIVE])
+                ->orderByRaw('matures_on IS NULL')
+                ->orderBy('matures_on')
+                ->orderByDesc('id')
+                ->paginate(50)
+                ->withQueryString(),
+        ]);
     }
 
     public function index(Request $request, string $issuer): View

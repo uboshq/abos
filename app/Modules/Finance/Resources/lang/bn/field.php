@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'issuer' => 'ইস্যুকারী',
+
     'where_each_stands' => 'কে কোথায় দাঁড়িয়ে',
     'who' => 'কে',
     'as' => 'কী হিসেবে',

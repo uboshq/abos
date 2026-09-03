@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'deposits_all' => 'All deposits',
+
     'capital' => 'Capital & investment',
     'plan' => 'Finance map',
     'expense' => 'Expenses',
