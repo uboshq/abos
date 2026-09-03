@@ -136,7 +136,15 @@
             <select x-model="depositDraft.methodId" @change="pickDepositMethod()"
                     class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                            bg-(--color-surface-card) px-2 text-2xs">
-                <option value="">{{ __('sales::field.choose') }}</option>
+                {{-- ⚠️ `disabled hidden` — মালিকের প্রশ্ন (৪ সেপ্টেম্বর ২০২৬):
+                     *"Choose dropdown-এ এটা কেন থাকবে?"*
+
+                     ⓘ ঘরটা বন্ধ থাকলে "বেছে নিন" লেখাই দেখা যায়, কিন্তু
+                     তালিকা খুললে ওটা **বিকল্প হিসেবে আসে না** — কারণ ওটা
+                     কোনো উত্তর নয়, প্রশ্নটাই। খোলা তালিকায় ওটা রাখলে
+                     ব্যবহারকারী "বেছে নিন" বেছে নিতে পারতেন, আর ঘরটা
+                     আবার খালি হয়ে যেত। --}}
+                <option value="" disabled hidden>{{ __('sales::field.choose') }}</option>
                 <template x-for="m in depositMethods" :key="m.id">
                     <option :value="m.id" x-text="m.label"></option>
                 </template>
@@ -150,7 +158,8 @@
             <select x-model="depositDraft.accountId"
                     class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                            bg-(--color-surface-card) px-2 text-2xs">
-                <option value="">{{ __('sales::field.choose') }}</option>
+                {{-- ⓘ একই কারণে এখানেও — উপরের মন্তব্য দেখুন। --}}
+                <option value="" disabled hidden>{{ __('sales::field.choose') }}</option>
                 <template x-for="a in moneyAccounts" :key="a.id">
                     <option :value="a.id" x-text="a.label"></option>
                 </template>

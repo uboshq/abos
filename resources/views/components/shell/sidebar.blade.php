@@ -59,6 +59,27 @@
          */
         ?? collect($menu)->first(fn ($m) => $m['section'] !== 'top')
         ?? ($menu[0] ?? null);
+
+    /*
+     * ⚠️ "কোন প্যানেল খোলা" আর "আমি কোথায় আছি" — দুইটা আলাদা প্রশ্ন।
+     *
+     * ── কী ভুল দেখাচ্ছিল (মালিক ধরেছেন, ৪ সেপ্টেম্বর ২০২৬) ────────────
+     * উপরের `$activeModule`-এ **শেষ ভরসার ধাপ** আছে: কোনো মডিউল সক্রিয় না
+     * হলেও প্রথম কাজের মডিউলটার প্যানেল খুলে রাখা হয় — আর সেটা ঠিক,
+     * কারণ ড্যাশবোর্ডে পাশের প্যানেলটা খালি থাকলে জায়গাটা নষ্ট।
+     *
+     * ⚠️ কিন্তু ওই ভরসার মডিউলটাও **সোনালি দাগ** পেয়ে যাচ্ছিল। ফলে
+     * ড্যাশবোর্ডে **দুইটা দাগ একসাথে** — ব্র্যান্ডের টাইলে আর গ্রাহকের
+     * টাইলে। দুইটা "এখানে আছি" চিহ্ন মানে একটাও চিহ্ন নয়।
+     *
+     * ⓘ তাই দাগের জন্য আলাদা হিসাব: কেবল যখন সত্যিই কোনো সারি সক্রিয়,
+     * বা রুটের উপসর্গ মডিউলটার নাম বলে। ভরসার ধাপটা এখানে নেই।
+     */
+    $hereModule = collect($menu)->first(
+        fn ($m) => collect($m['groups'])->flatten(1)->contains('active', true),
+    ) ?? collect($menu)->first(
+        fn ($m) => str_starts_with($routeName, $m['code'].'.'),
+    );
 @endphp
 
 {{--
@@ -360,7 +381,8 @@
 
                 @foreach ($menu as $module)
                     @php
-                        $isActive = $activeModule && $module['code'] === $activeModule['code'];
+                        // ⚠️ `$hereModule`, `$activeModule` নয় — উপরের কারণটা দেখুন
+                        $isActive = $hereModule && $module['code'] === $hereModule['code'];
                         $first = collect($module['groups'])->flatten(1)->firstWhere('url', '!==', null);
 
                         $opensSection = $module['section'] !== $shownSection;
