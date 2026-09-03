@@ -160,6 +160,30 @@ return [
     'key_exact' => 'Exact amount',
     'key_checkout' => 'Complete the sale',
     'key_close' => 'Close',
+
+    /*
+     * Direct Sales shortcuts — deliberately the POS keys.
+     *
+     * ⚠️ Somebody who learned F8 = search on POS should not have to learn a
+     * second set here. At a counter the habit is the speed.
+     *
+     * ⓘ F4 is left free on purpose: on POS it parks a bill, and that action
+     * is coming to this screen too. Spending it now would mean taking it
+     * back later.
+     */
+    /*
+     * Out of stock — the centre-screen notice.
+     *
+     * ⚠️ The heading is three words on purpose: the customer is standing
+     * there and nobody reads a paragraph at a counter. What failed goes in
+     * the heading, what to do about it goes underneath.
+     */
+    'no_stock_title' => 'No stock',
+    'no_stock_hint' => 'This product cannot be sold right now. Receive stock and try again, or pick another product.',
+
+    'key_chart' => 'Chart Entry',
+    'key_add_line' => 'Add to cart',
+    'direct_keys' => 'Keyboard shortcuts',
     'pos_return' => 'Take back against a bill',
     'pos_refund_cash' => 'Refund the cash from the drawer',
     'pos_bill_not_found' => 'No confirmed bill with that number was found.',
