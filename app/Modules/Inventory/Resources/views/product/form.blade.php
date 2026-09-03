@@ -14,11 +14,14 @@
             :subtitle="$isNew ? __('inventory::message.code_auto') : $product->code" />
     </x-slot:header>
 
+    {{-- enctype বাধ্যতামূলক — ছাড়া থাকলে ব্রাউজার শুধু ফাইলের নাম পাঠায়,
+         সার্ভারে কোনো ত্রুটি হয় না, ছবিটা নীরবে হারায়। --}}
     <form method="POST"
+          enctype="multipart/form-data"
           action="{{ $isNew ? route('inventory.product.store') : route('inventory.product.update', $product) }}"
           x-data="{ busy: false }"
           @submit="busy ? $event.preventDefault() : (busy = true)"
-          class="max-w-3xl space-y-4">
+          class="max-w-6xl space-y-4">
         @csrf
         @unless ($isNew) @method('PUT') @endunless
 
@@ -34,6 +37,9 @@
             </div>
         @endif
 
+        {{-- ডান অর্ধেক আর খালি নয় — পরিচয় বাঁয়ে, দাম ও ছবি ডানে, পাশাপাশি।
+             চওড়া পর্দায় (lg = এই থিমে ~১২৮০px) দুই কলাম, সরু পর্দায় একটার নিচে একটা। --}}
+        <div class="grid items-start gap-4 lg:grid-cols-2">
         <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="mb-3 font-semibold">{{ __('inventory::section.identity') }}</h2>
 
@@ -90,39 +96,130 @@
             </div>
         </section>
 
-        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        {{-- ডান কলাম: দাম (মার্জিন/মার্কআপ) ও ছবি --}}
+        @php $showCost = \App\Core\Security\FieldSecurity::visible($product, 'purchase_price'); @endphp
+        <div class="space-y-4">
+
+        {{--
+            দাম — ক্রয়, বিক্রয়, আর দুইটা শতাংশ।
+
+            মার্কআপ = ক্রয়ের উপরে কত চড়ল · মার্জিন = বিক্রয়ের কত অংশ লাভ —
+            দুইটা আলাদা সংখ্যা। যেকোনো একটা ঘর লিখলে বাকিগুলো নিজে বসে।
+
+            ⚠️ শতাংশ দুইটা কোনো কলাম নয় — জমা পড়ে কেবল ক্রয় ও বিক্রয় দর।
+            কলামে বসালে দর একবার বদলানোর পর সংখ্যাটা পুরনো হয়ে তালিকা মিথ্যা
+            বলত। সূত্রটা একই bcmath-এ সার্ভারেও (App\Modules\Inventory\Support\
+            Margin) — তালিকা-পর্দা-ফর্ম সবাই এক জায়গা থেকে গোনে।
+
+            নিচের JS ওই সূত্রেরই যমজ; ব্যবহারকারী যে ঘরটা শেষ লিখলেন সেটাই
+            ধ্রুব, বাকিগুলো কেবল আঁকা — নাহলে ট্যাব চাপলেই সংখ্যা নাচত।
+        --}}
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4"
+                 @if ($showCost)
+                 x-data="{
+                     cost: '{{ old('purchase_price', $product->purchase_price) }}',
+                     sale: '{{ old('sale_price', $product->sale_price) }}',
+                     markup: '',
+                     margin: '',
+                     init() { this.fromPrices(); },
+                     n(v) { v = (v ?? '').toString().trim(); return v !== '' && !isNaN(v) ? parseFloat(v) : null; },
+                     fromPrices() {
+                         const c = this.n(this.cost), s = this.n(this.sale);
+                         this.markup = (c !== null && c > 0 && s !== null) ? ((s - c) / c * 100).toFixed(2) : '';
+                         this.margin = (s !== null && s > 0 && c !== null) ? ((s - c) / s * 100).toFixed(2) : '';
+                     },
+                     fromMarkup() {
+                         const c = this.n(this.cost), m = this.n(this.markup);
+                         if (c === null || c <= 0 || m === null || m <= -100) return;
+                         this.sale = (c * (100 + m) / 100).toFixed(4);
+                         const s = this.n(this.sale);
+                         this.margin = (s !== null && s > 0) ? ((s - c) / s * 100).toFixed(2) : '';
+                     },
+                     fromMargin() {
+                         const c = this.n(this.cost), m = this.n(this.margin);
+                         if (c === null || c <= 0 || m === null || m >= 100) return;
+                         this.sale = (c * 100 / (100 - m)).toFixed(4);
+                         const s = this.n(this.sale);
+                         this.markup = (s !== null && s > 0) ? ((s - c) / c * 100).toFixed(2) : '';
+                     }
+                 }"
+                 @endif>
             <h2 class="mb-3 font-semibold">{{ __('inventory::section.pricing') }}</h2>
 
-            <div class="grid gap-3 sm:grid-cols-3">
-                {{-- inputmode="decimal" — টাকার ঘরে ফোনে সংখ্যার কী-বোর্ড --}}
-                {{--
-                    ক্রয়মূল্যের ঘরটা কেবল যাঁর দেখার কথা তাঁর জন্য।
-
-                    ── কেন ঘরটা তুলে দিলে দরটা মুছে যায় না ────────────
-                    অনুপস্থিত ঘর মানে অনুরোধে ওই চাবিটা নেই, আর
-                    [[ProductService::update()]] `$product->update($data)`
-                    ডাকে — অনুপস্থিত চাবি ছোঁয়াই হয় না। তাই আগের দরটা
-                    যেমন ছিল তেমনই থাকে।
-
-                    লেখার দিকটাও বন্ধ ([[ProductRequest]]) — নাহলে
-                    ঘরটা না দেখেও একটা POST বানিয়ে দর বদলে দেওয়া যেত।
-                --}}
-                @if (\App\Core\Security\FieldSecurity::visible($product, 'purchase_price'))
-                    <x-ui.field name="purchase_price" type="number" step="0.01" inputmode="decimal"
+            @if ($showCost)
+                <div class="grid gap-3 sm:grid-cols-2">
+                    {{-- inputmode="decimal" — টাকার ঘরে ফোনে সংখ্যার কী-বোর্ড --}}
+                    <x-ui.field name="purchase_price" type="number" step="0.0001" inputmode="decimal"
                                 :label="__('inventory::field.purchase_price')"
-                                :value="old('purchase_price', $product->purchase_price)" numeric />
-                @endif
+                                :value="old('purchase_price', $product->purchase_price)"
+                                x-model="cost" @input="fromPrices()" numeric />
 
-                <x-ui.field name="sale_price" type="number" step="0.01" inputmode="decimal"
-                            :label="__('inventory::field.sale_price')"
-                            :value="old('sale_price', $product->sale_price)" numeric />
+                    <x-ui.field name="sale_price" type="number" step="0.0001" inputmode="decimal"
+                                :label="__('inventory::field.sale_price')"
+                                :value="old('sale_price', $product->sale_price)"
+                                x-model="sale" @input="fromPrices()" numeric />
 
-                <x-ui.field name="reorder_level" type="number" step="0.01" inputmode="decimal"
+                    {{-- markup_pct/margin_pct জমা পড়ে না — ProductRequest ওগুলো
+                         চেনে না, তাই validated() ছেঁটে ফেলে; শুধু হিসাবের ঘর। --}}
+                    <x-ui.field name="markup_pct" type="number" step="0.01" inputmode="decimal"
+                                :label="__('inventory::field.markup')"
+                                :hint="__('inventory::message.markup_hint')"
+                                x-model="markup" @input="fromMarkup()" numeric />
+
+                    <x-ui.field name="margin_pct" type="number" step="0.01" inputmode="decimal"
+                                :label="__('inventory::field.margin')"
+                                :hint="__('inventory::message.margin_hint')"
+                                x-model="margin" @input="fromMargin()" numeric />
+                </div>
+            @else
+                {{-- ক্রয় দর দেখার অনুমতি নেই — তখন মার্কআপ/মার্জিন অর্থহীন
+                     (ক্রয় ছাড়া গোনা যায় না), তাই কেবল বিক্রয় দর। --}}
+                <div class="grid gap-3 sm:grid-cols-2">
+                    <x-ui.field name="sale_price" type="number" step="0.0001" inputmode="decimal"
+                                :label="__('inventory::field.sale_price')"
+                                :value="old('sale_price', $product->sale_price)" numeric />
+                </div>
+            @endif
+
+            <div class="mt-3 sm:w-1/2">
+                <x-ui.field name="reorder_level" type="number" step="0.0001" inputmode="decimal"
                             :label="__('inventory::field.reorder_level')"
                             :value="old('reorder_level', $product->reorder_level)"
                             :hint="__('inventory::message.reorder_hint')" numeric />
             </div>
         </section>
+
+        {{-- পণ্যের ছবি — সংরক্ষণ ও যাচাই ব্যাকএন্ডে (A3)। এখানে কেবল ঘর;
+             নাম product_image, আর ফর্মে enctype (উপরে) — নাহলে নীরবে হারাত। --}}
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+            <h2 class="mb-3 font-semibold">{{ __('inventory::section.image') }}</h2>
+
+            {{-- বর্তমান ছবি — storage/app/private-এ, তাই attachment.download রুট
+                 দিয়ে (asset() নয়): ওই রুট আগে অনুমতি যাচাই করে, নাহলে URL অনুমান
+                 করেই অন্য কোম্পানির লোক ছবি দেখত (বহু-টেন্যান্ট)। সম্পর্কটা A3-এর। --}}
+            @if (! $isNew && $product->primaryImage)
+                <img src="{{ route('attachment.download', $product->primaryImage) }}"
+                     alt="{{ $product->name() }}"
+                     class="mb-3 h-32 w-32 rounded-(--radius-field) border border-(--color-border) object-cover" />
+            @endif
+
+            <label for="product_image" class="mb-1 block text-sm font-medium">
+                {{ __('inventory::message.image_label') }}
+            </label>
+            <input id="product_image" name="product_image" type="file"
+                   accept="image/jpeg,image/png,image/webp"
+                   class="w-full rounded-(--radius-field) border border-(--color-border)
+                          bg-(--color-surface-card) px-3 py-2 text-sm
+                          file:mr-3 file:rounded-(--radius-field) file:border-0
+                          file:bg-(--color-surface-app) file:px-3 file:py-1 file:text-sm" />
+            @error('product_image')
+                <p class="mt-1 text-2xs text-(--color-danger)">{{ $message }}</p>
+            @enderror
+            <p class="mt-1 text-2xs text-(--color-ink-muted)">{{ __('inventory::message.image_hint') }}</p>
+        </section>
+
+        </div>
+        </div>
 
         <x-ui.custom-fields :record="$product" />
 

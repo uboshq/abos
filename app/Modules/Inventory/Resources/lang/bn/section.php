@@ -8,6 +8,7 @@ return [
     'stock' => 'মজুদ',
     'movements' => 'চলাচল',
     'address' => 'ঠিকানা',
+    'image' => 'ছবি',
 
     'recipe_head' => 'খাবার ও ফলন',
     'recipe_lines' => 'উপকরণ',

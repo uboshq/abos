@@ -14,6 +14,8 @@ return [
     'tax' => 'ভ্যাট',
     'purchase_price' => 'ক্রয়মূল্য',
     'sale_price' => 'বিক্রয়মূল্য',
+    'margin' => 'মার্জিন',
+    'markup' => 'মার্কআপ',
     'reorder_level' => 'পুনঃক্রয়ের স্তর',
     'product' => 'পণ্য',
     'warehouse' => 'গুদাম',
