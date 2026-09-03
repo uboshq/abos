@@ -20,7 +20,22 @@
 --}}
 @php
     $pending = 0;
-    $hasScreen = \Illuminate\Support\Facades\Route::has('approvals');
+
+    /*
+     * ⚠️ এখানে আগে লেখা ছিল `Route::has('approvals')` — আর ওটা কোনোদিন
+     * সত্যি হয়নি।
+     *
+     * `approvals` পর্দাটার **ঠিকানা**, নাম নয়; নাম `approval.inbox.index`।
+     * ফলে পর্দাটা তৈরি হয়ে লাইভে যাওয়ার পরেও চিহ্নটা `span` হয়েই রইল —
+     * সংখ্যা দেখাত, কিন্তু চাপা যেত না। ⓘ কেউ ধরতে পারেনি কারণ **কিছুই
+     * ভাঙেনি**: ত্রুটি নেই, ৪০৪ নেই, শুধু একটা দরজা চুপচাপ বন্ধ।
+     *
+     * ⭐ অনুমতিটাও দেখা হয় — যিনি সিদ্ধান্ত নেন না, তাঁর জন্য দরজাটা
+     * খোলা রাখলে চাপার পর ৪০৩। **যে দরজা চাপা যায় অথচ ফিরিয়ে দেয়,
+     * সেটা বন্ধ দরজার চেয়েও খারাপ।**
+     */
+    $hasScreen = \Illuminate\Support\Facades\Route::has('approval.inbox.index')
+        && auth()->user()?->can('approval.decide');
 
     if (auth()->check() && \Illuminate\Support\Facades\Schema::hasTable('approvals')) {
         $pending = \Illuminate\Support\Facades\DB::table('approvals')
@@ -58,7 +73,7 @@
      * ভুলটা চোখে পড়ে না, কারণ সোর্সটা পড়তে ঠিকই দেখায়। এই বিল্ডে
      * অ্যাট্রিবিউটের ভেতরে ডিরেক্টিভ নিয়ে এটাই তৃতীয় ফাঁদ।
      */
-    $href = $hasScreen ? 'href="'.e(route('approvals')).'"' : '';
+    $href = $hasScreen ? 'href="'.e(route('approval.inbox.index')).'"' : '';
 @endphp
 
 <{{ $tag }} {!! $href !!}

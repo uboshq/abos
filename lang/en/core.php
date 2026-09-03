@@ -442,6 +442,24 @@ return [
         'nothing_yet' => 'Nothing to create yet — the modules that make records are not installed.',
 
         /*
+         * The ＋ menu rows — singular, not the name of a list.
+         *
+         * Menu labels are plural ("Invoices") because they lead to a list.
+         * One thing gets *made* from here, so the name is one thing.
+         */
+        'direct_sale' => 'Direct sale',
+        'sales_order' => 'Sales order',
+        'invoice' => 'Sales invoice',
+        'collection' => 'Collection',
+        'purchase_order' => 'Purchase order',
+        'purchase_bill' => 'Purchase bill',
+        'payment' => 'Payment',
+        'voucher' => 'Voucher',
+        'customer' => 'Customer',
+        'supplier' => 'Supplier',
+        'product' => 'Product',
+
+        /*
          * কোডের ঘরে যা লেখা থাকে, আর তার নিচের ছোট লাইনটা।
          *
          * ঘরটা ফাঁকা রাখা যায় বলেই এই দুইটা দরকার: placeholder না থাকলে
