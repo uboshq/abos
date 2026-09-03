@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Modules\Approval\Http\Controllers\ApprovalFlowController;
 use App\Modules\Approval\Http\Controllers\ApprovalInboxController;
+use App\Modules\Approval\Http\Controllers\ApprovalReportController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth')->prefix('approvals')->group(function () {
@@ -15,6 +16,14 @@ Route::middleware('auth')->prefix('approvals')->group(function () {
      */
     Route::get('/', [ApprovalInboxController::class, 'index'])->name('inbox.index');
     Route::get('/mine', [ApprovalInboxController::class, 'mine'])->name('inbox.mine');
+
+    /*
+     * রিপোর্ট — `{approval}` ধরার আগে, স্থির পথ আগে (সেকশন ১৯.৬)।
+     *
+     * নাহলে /approvals/reports-কে রাউটার একটা id ভাবত, আর "reports"
+     * নামের অনুরোধ খুঁজতে গিয়ে ৪০৪ দিত।
+     */
+    Route::get('/reports/{slug}', [ApprovalReportController::class, 'show'])->name('report.show');
 
     Route::get('/flows', [ApprovalFlowController::class, 'index'])->name('flow.index');
     Route::get('/flows/create', [ApprovalFlowController::class, 'create'])->name('flow.create');

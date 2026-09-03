@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 
+use App\Models\Approval;
 use App\Modules\Approval\Dashboard\ApprovalDashboard;
 use App\Modules\Approval\Dashboard\ApprovalWidgets;
+use App\Modules\Approval\Reports\ApprovalReports;
 
 /**
  * Approval Centre — প্ল্যানের Workflow, Sales-এর সাথে।
@@ -58,6 +60,25 @@ return [
             ['label' => 'approval::menu.inbox', 'route' => 'approval.inbox.index', 'permission' => 'approval.decide'],
             ['label' => 'approval::menu.mine', 'route' => 'approval.inbox.mine', 'permission' => 'approval.view'],
         ],
+        /*
+         * চারটা রিপোর্ট — §২.৮।
+         *
+         * ⚠️ slug-গুলো `ApprovalReportController::SLUGS`-এর সাথে হুবহু
+         * মিলতে হবে। ভুল লিখলে লিংকটা তৈরি হয়, পর্দায় দেখা যায়, আর
+         * চাপলে ৪০৪ — `route()` slug দেখেই না।
+         * ⓘ সেটা এখন `ALinkThatLooksAliveAndIsNotTest`-এ বাঁধা।
+         */
+        'reports' => [
+            ['label' => 'approval::menu.report_pending', 'route' => 'approval.report.show',
+                'route_params' => ['slug' => 'pending'], 'permission' => 'approval.report'],
+            ['label' => 'approval::menu.report_approved', 'route' => 'approval.report.show',
+                'route_params' => ['slug' => 'approved'], 'permission' => 'approval.report'],
+            ['label' => 'approval::menu.report_rejected', 'route' => 'approval.report.show',
+                'route_params' => ['slug' => 'rejected'], 'permission' => 'approval.report'],
+            ['label' => 'approval::menu.report_by_user', 'route' => 'approval.report.show',
+                'route_params' => ['slug' => 'by-user'], 'permission' => 'approval.report'],
+        ],
+
         'settings' => [
             ['label' => 'approval::menu.flows', 'route' => 'approval.flow.index', 'permission' => 'approval.flow.manage'],
         ],
@@ -75,6 +96,36 @@ return [
         'approval.view',
         'approval.decide',
         'approval.flow.manage',
+
+        /*
+         * রিপোর্ট দেখা — `decide` থেকে আলাদা, আর ইচ্ছাকৃতভাবে।
+         *
+         * সিদ্ধান্ত দেন যাঁরা ছকে আছেন, হাতেগোনা কয়েকজন। কিন্তু "কী কী
+         * ঝুলে আছে" আর "গত মাসে কে কয়টা সই দিলেন" — এই প্রশ্নগুলো
+         * নিরীক্ষক, হিসাবরক্ষক ও মালিকের, যাঁরা নিজে কিছু অনুমোদন করেন না।
+         *
+         * ⚠️ উল্টোটাও সত্যি: যিনি একটা ছকের একটা স্তরে আছেন, তাঁর
+         * **গোটা প্রতিষ্ঠানের** অনুমোদনের ইতিহাস দেখার কথা নয়।
+         */
+        'approval.report',
+    ],
+
+    // Report engine এগুলো boot-এ নিবন্ধন করে, তাই রিপোর্ট যোগ করতে
+    // কোনো কোর ফাইলে নাম লিখতে হয় না (সেকশন ১৯.৭)।
+    'reports' => [
+        ApprovalReports::class,
+    ],
+
+    /*
+     * অনুরোধটাই একটা গন্তব্য — নিয়ম ১।
+     *
+     * রিপোর্টের সারি থেকে ক্লিক করলে অনুরোধের পর্দা খোলে, যেখানে কাগজ ·
+     * স্তর · সিদ্ধান্তের ইতিহাস সবই আছে। ⓘ নিচের কাগজটায় সরাসরি নেওয়া
+     * হয় না: পাঠকের প্রশ্নটা তখন অনুমোদন নিয়ে, আর ওখান থেকে কাগজেও
+     * যাওয়া যায় — উল্টোটা নয় ([[Approval::drillRoute]])।
+     */
+    'drill_sources' => [
+        'approval' => Approval::class,
     ],
 
     'dashboard' => ApprovalDashboard::class,
