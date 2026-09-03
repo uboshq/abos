@@ -398,7 +398,18 @@ class ShellTest extends TestCase
          * কেউ ওটা শর্ত ছাড়া বসালে এই পরীক্ষাটাই ভাঙে, আর ১৪ আগস্টের
          * ভুলটা আবার ফিরতে পারে না।
          */
-        $this->assertStringContainsString('abos-lockup.png', $markup);
+        /*
+         * ⚠️ লকআপ নয়, ওয়ার্ডমার্ক — ৪ সেপ্টেম্বর ২০২৬।
+         *
+         * লকআপের ছবিটা **মার্ক + নাম** দুইটাই বহন করে, আর মার্কটা পাশের
+         * রেলের টাইলে এমনিতেই বসে। ফলে "A" চিহ্নটা পাশাপাশি **দুইবার**
+         * দেখা যেত — মালিক ধরিয়ে দেন। ⓘ ডুপ্লিকেশনটা কোডে খুঁজে পাওয়া
+         * যেত না, কারণ ওটা ছবির ভিতরে ছিল।
+         *
+         * ⭐ নিয়মটা এক চুলও বদলায়নি — কোন জমিনে কোন রূপ — কেবল ফাইলের
+         * নাম বদলেছে, আর সেটা এই পরীক্ষার ইতিহাসে তৃতীয়বার।
+         */
+        $this->assertStringContainsString('abos-wordmark-transparent.png', $markup);
 
         if (str_contains($markup, 'abos-lockup-dark.png')) {
             $this->assertMatchesRegularExpression(

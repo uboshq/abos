@@ -1210,8 +1210,14 @@
                             <template x-if="giftDraft">
                             <div class="mt-3 rounded-(--radius-card) border border-(--color-badge-pending-ink)/30
                                         bg-(--color-badge-pending-bg)/50 p-2">
+                                {{-- ⓘ লেবেলটা নিজের ঘরে, তারপর ড্যাশ — নাহলে
+                                     `EveryFieldSwitch…` পাহারাটা ওটাকে খুঁজে পায়
+                                     না। সে দেখে লেখাটার **পরেই একটা ট্যাগ** আছে
+                                     কিনা, আর কারণটা যুক্তিসঙ্গত: এক ঘরের লেখা
+                                     আরেক ঘরের লেখার ভিতরে মিলে গেলে সুইচ বন্ধ
+                                     করেও "আছে" দেখাত। --}}
                                 <p class="mb-2 text-2xs font-semibold text-(--color-badge-pending-ink)">
-                                    🎁 {{ __('sales::field.gift_item') }} —
+                                    <span>🎁 {{ __('sales::field.gift_item') }}</span> —
                                     <span x-text="picked ? picked.name : ''"></span>
                                 </p>
 
