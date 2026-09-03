@@ -81,4 +81,5 @@ return [
     'pledged_to_loan' => 'Pledged against',
     'not_pledged' => 'Not pledged — can be broken',
     'state' => 'State',
+    'waiting_approval' => 'Waiting for approval',
 ];
