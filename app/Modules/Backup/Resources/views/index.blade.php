@@ -156,23 +156,23 @@
             @endcan
 
             <div class="overflow-x-auto">
-                <table class="w-full text-sm">
+                <table class="ui-list w-full text-sm">
                     <thead>
                         <tr class="border-b border-(--color-border) text-start text-2xs
                                    uppercase tracking-wide text-(--color-ink-muted)">
-                            <th class="py-1 text-start">{{ __('core.table.name') }}</th>
-                            <th class="py-1 text-end">{{ __('core.table.size') }}</th>
-                            <th class="py-1 text-end"></th>
+                            <th class="text-start">{{ __('core.table.name') }}</th>
+                            <th class="text-end">{{ __('core.table.size') }}</th>
+                            <th class="text-end"></th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach ($files as $file)
                             <tr class="border-b border-(--color-border)/50">
-                                <td class="py-1 font-mono text-2xs">{{ $file['name'] }}</td>
-                                <td class="num py-1 text-end text-2xs">
+                                <td class="font-mono text-2xs">{{ $file['name'] }}</td>
+                                <td class="num text-end text-2xs">
                                     {{ number_format($file['bytes'] / 1024) }} KB
                                 </td>
-                                <td class="py-1 text-end">
+                                <td class="text-end">
                                     @can('backup.download')
                                         <a href="{{ route('backup.download', $file['name']) }}"
                                            class="text-2xs underline decoration-dotted underline-offset-2">

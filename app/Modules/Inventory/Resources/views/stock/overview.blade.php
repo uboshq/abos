@@ -37,7 +37,7 @@
         <a href="{{ route('inventory.stock.overview') }}"
            @class([
                'inline-flex h-(--spacing-field-compact) items-center rounded-full border px-3 text-xs',
-               'border-(--color-brand-300) bg-(--color-surface-hover) font-semibold text-(--color-brand-700)' => ! $warehouse,
+               'border-(--color-brand-500) bg-(--color-surface-hover) font-semibold text-(--color-brand-700)' => ! $warehouse,
                'border-(--color-border) text-(--color-ink-muted)' => (bool) $warehouse,
            ])>
             {{ __('inventory::overview.all_warehouses') }}
@@ -47,7 +47,7 @@
             <a href="{{ route('inventory.stock.overview', ['warehouse' => $house->id]) }}"
                @class([
                    'inline-flex h-(--spacing-field-compact) items-center rounded-full border px-3 text-xs',
-                   'border-(--color-brand-300) bg-(--color-surface-hover) font-semibold text-(--color-brand-700)' => $warehouse?->is($house),
+                   'border-(--color-brand-500) bg-(--color-surface-hover) font-semibold text-(--color-brand-700)' => $warehouse?->is($house),
                    'border-(--color-border) text-(--color-ink-muted)' => ! $warehouse?->is($house),
                ])>
                 {{ $house->name() }}
@@ -149,9 +149,9 @@
             <div class="space-y-3 p-4">
                 @foreach ([
                     ['available', $states['available'], 'bg-(--color-brand-500)'],
-                    ['reserved', $states['reserved'], 'bg-(--color-brand-300)'],
-                    ['hold', $states['hold'], 'bg-(--color-warning-400)'],
-                    ['floor', $states['floor'], 'bg-(--color-ink-subtle)'],
+                    ['reserved', $states['reserved'], 'bg-(--color-brand-500)'],
+                    ['hold', $states['hold'], 'bg-(--color-warning)'],
+                    ['floor', $states['floor'], 'bg-(--color-ink-muted)'],
                 ] as [$key, $qty, $colour])
                     @php
                         $floor = (float) $states['floor'] ?: 1;

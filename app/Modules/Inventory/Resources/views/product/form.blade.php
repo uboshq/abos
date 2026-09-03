@@ -200,7 +200,7 @@
             @if (! $isNew && $product->primaryImage)
                 <img src="{{ route('attachment.download', $product->primaryImage) }}"
                      alt="{{ $product->name() }}"
-                     class="mb-3 h-32 w-32 rounded-(--radius-field) border border-(--color-border) object-cover" />
+                     class="mb-3 size-(--spacing-thumb) rounded-(--radius-field) border border-(--color-border) object-cover" />
             @endif
 
             <label for="product_image" class="mb-1 block text-sm font-medium">
