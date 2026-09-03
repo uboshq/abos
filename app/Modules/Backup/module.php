@@ -135,4 +135,22 @@ return [
     'doc_types' => [],
     'drill_sources' => [],
     'settings' => [],
+
+    /*
+     * অডিটের ব্যতিক্রম — ব্যাকআপের নিজের খাতা।
+     *
+     * ⚠️ কারণটা এখানে নকল করা হয়নি, ইচ্ছাকৃতভাবে। পুরো ব্যাখ্যাটা এক
+     * জায়গায়:
+     *
+     *     tests/Feature/Architecture/EveryChangeableRowRemembersWhoChangedItTest.php
+     *
+     * দুই জায়গায় দুইবার লিখলে একদিন একটা বদলাত আর অন্যটা পুরনো কথা
+     * বলত — আর তখন কোনটা সত্যি তা বলার উপায় থাকত না।
+     *
+     * এক লাইনে: **সারিগুলো যন্ত্র লেখে, মানুষ নয়** — আর যেটা মানুষ
+     * বদলায় (গন্তব্য) সেটা অডিটে আছেই।
+     */
+    'audit_exempt' => [
+        \App\Modules\Backup\Models\BackupRun::class => 'যন্ত্রের নিজের খাতা — কারণ ও মাপ EveryChangeableRowRemembersWhoChangedItTest-এ',
+    ],
 ];
