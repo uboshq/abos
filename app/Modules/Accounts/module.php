@@ -17,6 +17,7 @@ use App\Modules\Accounts\Models\LoanMovement;
 use App\Modules\Accounts\Models\MoneyTransfer;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Reports\CoreReports;
+use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\StandardChart;
 
 /**
@@ -123,13 +124,20 @@ return [
             ['label' => 'accounts::menu.bank_book', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'bank-book'], 'permission' => 'accounts.report'],
 
             // "আজ কত টাকা ঢুকল" — নগদ বই বলে কোন ড্রয়ারে, এটা বলে কোন কাগজে
-            ['label' => 'accounts::menu.inflow', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'inflow'],
+            ['label' => 'accounts::menu.inflow', 'route' => 'accounts.report.show',
+                'route_params' => ['slug' => 'inflow'], 'permission' => 'accounts.report'],
 
-                /*
+            /*
              * কোন কেন্দ্রে কত — "কোন রুট লাভজনক" প্রশ্নের কাগজ।
+             *
+             * ⚠️ এই সারিটা একবার উপরের সারির **ভিতরে** ঢুকে গিয়েছিল —
+             * সহোদর নয়, নেস্টেড। `php -l` সবুজ ছিল, কারণ সিনট্যাক্স
+             * নিখুঁত; কেবল অর্থটা ভুল। ফল: রিপোর্টটার ইঞ্জিন ও রুট আছে,
+             * **কিন্তু মেনুতে দরজা নেই** — ঠিক যে ধরনের বাগ এই দল
+             * খুঁজে বেড়ায় (৩ সেপ্টেম্বর ২০২৬, A3 ফাইল পড়তে গিয়ে ধরে)।
              */
-                ['label' => 'accounts::menu.by_cost_centre', 'route' => 'accounts.report.show',
-                    'route_params' => ['slug' => 'by-cost-centre'], 'permission' => 'accounts.report'], 'permission' => 'accounts.report'],
+            ['label' => 'accounts::menu.by_cost_centre', 'route' => 'accounts.report.show',
+                'route_params' => ['slug' => 'by-cost-centre'], 'permission' => 'accounts.report'],
             ['label' => 'accounts::menu.ledger', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'ledger'], 'permission' => 'accounts.report'],
             ['label' => 'accounts::menu.trial_balance', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'trial-balance'], 'permission' => 'accounts.report'],
 
@@ -317,8 +325,15 @@ return [
      * মডিউলের নিজের, আর ক্রমটা depends_on থেকেই আসে — accounts কারও
      * উপর নির্ভর করে না, তাই সে সবার আগে চলে।
      */
+    /*
+     * ⚠️ ক্রমটা গুরুত্বপূর্ণ: ছকটা আগে, কাউন্টার তার পরে।
+     *
+     * কাউন্টারের খাত "১১০১ হাতে নগদ"-এর নিচে জন্মায়, তাই মাথাটা আগে
+     * থাকতে হয়। এই তালিকা যে ক্রমে লেখা, সেই ক্রমেই চলে।
+     */
     'provisions' => [
         StandardChart::class,
+        CashTillService::class,
     ],
 
     /*
