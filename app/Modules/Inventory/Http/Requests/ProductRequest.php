@@ -78,6 +78,10 @@ class ProductRequest extends FormRequest
             'reorder_level' => ['nullable', 'numeric', 'min:0'],
 
             'is_active' => ['nullable', 'boolean'],
+
+            // নামের নকল ধরা পড়লে ব্যবহারকারী টিক দিয়ে জেনেশুনে এগোন —
+            // গ্রাহক/সরবরাহকারীর মতোই। রেকর্ডের কলাম নয়, সার্ভিস মুছে ফেলে।
+            'allow_duplicate' => ['nullable', 'boolean'],
         ];
     }
 

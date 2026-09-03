@@ -75,6 +75,20 @@ final class ModuleDefinition
         public readonly array $docTypes,
         /** @var array<string, class-string> source_type => model */
         public readonly array $drillSources,
+        /**
+         * একই নাম দুইবার ঢোকা ঠেকানোর নিয়ম — কোন মডেল, কোন ঘরগুলো তুলনা হবে।
+         *
+         * ── কেন মডিউল বলে, ইঞ্জিন নয় ────────────────────────────────
+         * নকল-ঠেকানোর যন্ত্রটা কোরে ([[DuplicateGuard]]), কিন্তু কোন
+         * রেকর্ডে কোন ঘর তুলনা হবে সেটা মডিউল জানে — পণ্যের নাম
+         * `name_en`/`name_bn`, পক্ষের সাথে ফোনও। কোর সেই তালিকা রাখলে
+         * নতুন মাস্টার যোগ হলে কোর ফাইল খুলতে হত (সেকশন ১৯.৭)। মডিউল
+         * ঘোষণা করে বলেই [[DuplicationRegistry]] নিজে থেকে জেনে যায়,
+         * আর একটা গার্ড দাবি করতে পারে নাম-ওয়ালা প্রতিটা মাস্টার ঘোষিত।
+         *
+         * @var list<array{model: class-string, name: list<string>, phone?: list<string>}>
+         */
+        public readonly array $duplicates,
         /** @var list<array{key: string, label: string, type: string, default: mixed, group?: string}> */
         public readonly array $settings,
         /**
@@ -107,7 +121,6 @@ final class ModuleDefinition
          * @var list<class-string>
          */
         public readonly array $metrics,
-
 
         /**
          * খাতা যাচাইকারীরা — ChecksItsOwnBooks বাস্তবায়ন করে।
@@ -416,6 +429,7 @@ final class ModuleDefinition
             permissions: array_values($raw['permissions'] ?? []),
             docTypes: $raw['doc_types'] ?? [],
             drillSources: $raw['drill_sources'] ?? [],
+            duplicates: self::validateDuplicates($raw['duplicates'] ?? [], $path),
             settings: array_values($raw['settings'] ?? []),
             reports: self::validateReports($raw['reports'] ?? [], $path),
             widgets: self::validateWidgets($raw['widgets'] ?? [], $raw['permissions'] ?? [], $path),
@@ -1094,6 +1108,48 @@ final class ModuleDefinition
         }
 
         return array_values($reports);
+    }
+
+    /**
+     * নকল-ঠেকানোর ঘোষণা যাচাই — মডেল সত্যি, ঘরের তালিকা খালি নয়।
+     *
+     * ম্যালফর্মড এন্ট্রি (মডেল নেই, বা name ঘর নেই) এখানেই ধরা হয়, যাতে
+     * ভুলটা মডিউল লোডের সময় পথ-সহ বেরোয় — নকল-পরীক্ষার গভীরে গিয়ে নীরবে
+     * কিছু না-করা হয়ে নয়।
+     *
+     * @param  array<int, mixed>  $duplicates
+     * @return list<array{model: class-string, name: list<string>, phone?: list<string>}>
+     */
+    private static function validateDuplicates(array $duplicates, string $path): array
+    {
+        foreach ($duplicates as $rule) {
+            $model = is_array($rule) ? ($rule['model'] ?? null) : null;
+
+            if (! is_string($model) || ! class_exists($model)) {
+                throw new InvalidArgumentException(
+                    "{$path}: duplicate rule names a model that does not exist: "
+                    .(is_string($model) ? $model : gettype($model)).'.'
+                );
+            }
+
+            $names = $rule['name'] ?? [];
+
+            if (! is_array($names) || $names === [] || array_filter($names, 'is_string') !== $names) {
+                throw new InvalidArgumentException(
+                    "{$path}: duplicate rule for {$model} needs a non-empty 'name' list of columns to compare."
+                );
+            }
+
+            $phones = $rule['phone'] ?? [];
+
+            if (! is_array($phones) || array_filter($phones, 'is_string') !== $phones) {
+                throw new InvalidArgumentException(
+                    "{$path}: duplicate rule for {$model} has a 'phone' that is not a list of columns."
+                );
+            }
+        }
+
+        return array_values($duplicates);
     }
 
     /** ব্যবহারকারীর ভাষায় মডিউলের নাম। */
