@@ -7,6 +7,8 @@ namespace App\Modules\MasterData\Services;
 use App\Core\Contracts\ProvisionsCompany;
 use App\Core\Engines\Coding\CodeSuggester;
 use App\Core\Engines\Duplication\DuplicationEngine;
+use App\Core\Support\CompanyContext;
+use App\Models\Company;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\MasterData\Models\Currency;
@@ -39,6 +41,25 @@ use Illuminate\Validation\ValidationException;
  */
 final class MasterListService implements ProvisionsCompany
 {
+    /**
+     * যে মুদ্রাগুলো নতুন কোম্পানিতে বসে — কোড, ইংরেজি নাম, বাংলা নাম, বাকিটা।
+     *
+     * ── কেন এটা ধ্রুবক, আর ভিতরে লেখা অ্যারে নয় ──────────────────────
+     * সেটআপের পর্দাটাকেও এই তালিকাটা জানতে হয়: ক্রেতা প্রথম দিনে কোন
+     * মুদ্রায় খাতা রাখবেন তা বেছে নেন, অথচ তখনো একটাও `currencies` সারি
+     * নেই — কোম্পানিটাই তো তৈরি হয়নি। তালিকাটা দুই জায়গায় লিখলে একটায়
+     * নতুন মুদ্রা যোগ করে অন্যটায় ভুলে যাওয়া কেবল সময়ের ব্যাপার, আর
+     * তখন ক্রেতা এমন একটা মুদ্রা বাছতে পারতেন যেটা পরে বসেই না।
+     *
+     * @var list<array{0: string, 1: string, 2: string, 3: array<string, mixed>}>
+     */
+    public const CURRENCIES = [
+        ['BDT', 'Bangladeshi Taka', 'বাংলাদেশি টাকা', ['symbol' => '৳', 'decimal_places' => 2]],
+        ['USD', 'US Dollar', 'মার্কিন ডলার', ['symbol' => '$', 'decimal_places' => 2]],
+        ['EUR', 'Euro', 'ইউরো', ['symbol' => '€', 'decimal_places' => 2]],
+        ['INR', 'Indian Rupee', 'ভারতীয় রুপি', ['symbol' => '₹', 'decimal_places' => 2]],
+    ];
+
     /**
      * নতুন কোম্পানি হলে ডিফল্ট তালিকাগুলো বসে।
      *
@@ -666,18 +687,40 @@ final class MasterListService implements ProvisionsCompany
          *
          * টাকাই ডিফল্ট — ভিত্তি মুদ্রা, আর বাকি সবার হার এর সাপেক্ষে।
          */
-        $made['currencies'] = $this->seed(Currency::class, [
-            ['BDT', 'Bangladeshi Taka', 'বাংলাদেশি টাকা', ['symbol' => '৳', 'decimal_places' => 2]],
-            ['USD', 'US Dollar', 'মার্কিন ডলার', ['symbol' => '$', 'decimal_places' => 2]],
-            ['EUR', 'Euro', 'ইউরো', ['symbol' => '€', 'decimal_places' => 2]],
-            ['INR', 'Indian Rupee', 'ভারতীয় রুপি', ['symbol' => '₹', 'decimal_places' => 2]],
-        ]);
+        /*
+         * ভিত্তি মুদ্রা — কোম্পানি যেটা বলেছে, নাহলে টাকা।
+         *
+         * ── কেন কোম্পানির ঘরটা পড়া হয়, ৪ সেপ্টেম্বর ২০২৬ ─────────────
+         * `companies.currency` কলামটা শুরু থেকেই ছিল আর `'BDT'` ডিফল্ট
+         * নিয়ে বসত, কিন্তু **কেউ ওটা পড়ত না** — ভিত্তি মুদ্রা এখানে
+         * কোড ধরে খোঁজা হত। অর্থাৎ সেটআপে মুদ্রার ঘর বসালে সেটা এমন
+         * একটা কলামে লিখত যা কারও কাজে লাগে না: পর্দায় পছন্দ নেওয়া হত,
+         * আর বই চলত টাকায়। ঘরটা কাজ করত বলে মনে হত, করত না।
+         *
+         * এখন ওই কলামটাই সূত্র। ⚠️ আর এটা সাজসজ্জা নয় — প্রতিটা
+         * বিনিময় হার ভিত্তি মুদ্রার সাপেক্ষে বসে ([[Currency::rateOn()]]),
+         * তাই ভুল ভিত্তি মানে প্রতিটা রূপান্তর ভুল।
+         *
+         * ⚠️ চিহ্নটা `seed()`-কেই দেওয়া হয়, পরে শুধরে নয়। `seed()` নিজেই
+         * ডিফল্ট বসায় — কেউ `is_default` না বললে **প্রথম সারিটা**। তাই
+         * বসানোর পর "কেউ ডিফল্ট না থাকলে বসাব" লিখলে শর্তটা কোনোদিন
+         * সত্যি হত না, আর ভিত্তি চিরকাল টাকাই থাকত। ⓘ ঠিক এই ভুলটা
+         * প্রথমে লেখা হয়েছিল, আর টেস্ট ধরিয়ে দিয়েছে।
+         */
+        $wanted = Company::find(CompanyContext::id())?->currency ?: 'BDT';
 
-        $base = Currency::query()->where('code', 'BDT')->first();
+        $currencies = array_map(
+            static function (array $row) use ($wanted): array {
+                if ($row[0] === $wanted) {
+                    $row[3]['is_default'] = true;
+                }
 
-        if ($base !== null && ! Currency::query()->where('is_default', true)->exists()) {
-            $base->makeDefault();
-        }
+                return $row;
+            },
+            self::CURRENCIES,
+        );
+
+        $made['currencies'] = $this->seed(Currency::class, $currencies);
 
         /*
          * প্রতিষ্ঠানের গড়ন।

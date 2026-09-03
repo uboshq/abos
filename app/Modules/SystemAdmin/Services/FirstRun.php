@@ -10,6 +10,7 @@ use App\Core\Support\CodeFromName;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\User;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -191,6 +192,15 @@ final class FirstRun
                 [
                     'code' => $companyCode,
                     'name_en' => $data['company_name'],
+
+                    /*
+                     * ভিত্তি মুদ্রা — ক্রেতার পছন্দ, নাহলে টাকা।
+                     *
+                     * ⚠️ এই ঘরটা আজও `MasterListService` পড়ে ঠিক করে কোন
+                     * সারিটা `is_default` হবে, আর প্রতিটা বিনিময় হার তার
+                     * সাপেক্ষে বসে। অর্থাৎ এটা কেবল একটা লেবেল নয়।
+                     */
+                    'currency' => $data['currency'] ?? 'BDT',
                 ],
                 [
                     /*
@@ -212,12 +222,70 @@ final class FirstRun
                      */
                     'is_default' => true,
                 ],
-                CompanyProvisioner::currentBangladeshiYear(),
+                $this->firstYear($data),
             );
 
             $this->provisioner->grantAccess($company, $user);
 
             return $user;
         });
+    }
+
+    /**
+     * প্রথম অর্থবছর — ক্রেতার দেওয়া তারিখ, নাহলে বাংলাদেশি জুলাই-জুন।
+     *
+     * ── কেন ঘরটা লাগল, ৪ সেপ্টেম্বর ২০২৬ ─────────────────────────────
+     * আগে এখানে সরাসরি `currentBangladeshiYear()` বসত, আর পর্দায় লেখা
+     * ছিল ঘরটা ইচ্ছাকৃতভাবে নেই — যুক্তি ছিল "বাংলাদেশে ওটা জুলাই–জুন,
+     * ব্যতিক্রম নেই" আর "পরে বদলানোর পর্দা আছে"।
+     *
+     * ⚠️ **দ্বিতীয় কথাটা সত্যি নয়।** মেপে দেখা গেছে চলতি বছরের তারিখ
+     * বদলানোর কোনো পর্দা নেই: `YearEndController` কেবল **পরের** বছরটা
+     * বানায়। অর্থাৎ সেটআপে যা বসল, তা-ই চিরকালের।
+     *
+     * আর প্রথম কথাটাও যথেষ্ট নয়, দেশের কারণে নয় — **একটা কোম্পানির
+     * প্রথম বছর কখনোই বারো মাস নয়।** যিনি ফেব্রুয়ারিতে ABOS-এ আসছেন
+     * তাঁর প্রথম বইটা ফেব্রুয়ারি থেকে জুন। জুলাই ১ ধরে নিলে খোলার জের
+     * পাঁচ মাস আগের তারিখে বসে (`OpeningBalanceService::dateFor()`
+     * বছরের প্রথম দিন ধরে), আর সেই ভুল ধরা পড়ে বছর শেষে।
+     *
+     * ⛔ ফেরানোও যায় না — নম্বর সিরিজ অর্থবছর ধরে বসে
+     * (`NumberSeriesProvisioner`), তাই বছর বদলানো মানে ইতিমধ্যে ছাপা
+     * নম্বরগুলোর ভিত বদলানো।
+     *
+     * তাই ডিফল্টটা রইল, কিন্তু **দেখা যায় আর বদলানো যায়** — লুকানো
+     * ডিফল্ট আর দৃশ্যমান ডিফল্ট এক জিনিস নয়।
+     *
+     * @param  array<string, mixed>  $data
+     * @return array{name: string, starts_on: string, ends_on: string}
+     */
+    private function firstYear(array $data): array
+    {
+        $starts = $data['year_starts_on'] ?? null;
+        $ends = $data['year_ends_on'] ?? null;
+
+        if (! is_string($starts) || ! is_string($ends) || $starts === '' || $ends === '') {
+            return CompanyProvisioner::currentBangladeshiYear();
+        }
+
+        $from = Carbon::parse($starts);
+        $to = Carbon::parse($ends);
+
+        /*
+         * নামটা ক্রেতার কাছে চাওয়া হয় না — তারিখ থেকেই বসে।
+         *
+         * দুই বছরে ছড়ানো হলে "২০২৬-২০২৭", এক বছরের ভিতরে হলে শুধু
+         * "২০২৬"। ⓘ একটা ছোট প্রথম বছর (ফেব্রুয়ারি–জুন) তাই "২০২৬"
+         * হয়, "২০২৬-২০২৬" নয় — যেটা পড়লে মানুষ ভাবতেন কিছু ভুল হয়েছে।
+         */
+        $name = $from->year === $to->year
+            ? (string) $from->year
+            : $from->year.'-'.$to->year;
+
+        return [
+            'name' => $name,
+            'starts_on' => $from->toDateString(),
+            'ends_on' => $to->toDateString(),
+        ];
     }
 }

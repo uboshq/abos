@@ -224,19 +224,75 @@
                             </div>
                         </div>
 
-                        {{-- অর্থবছর ঘর হিসেবে নেই, ইচ্ছাকৃতভাবে।
+                        {{-- অর্থবছর ও মুদ্রা — ভরা অবস্থায়, লুকানো নয়।
 
-                             বাংলাদেশে ওটা জুলাই–জুন, ব্যতিক্রম নেই, আর
-                             `CompanyProvisioner::currentBangladeshiYear()`
-                             তারিখ দুইটা নিজেই বের করে। ঘর দিলে কেউ ক্যালেন্ডার
-                             বছর বসাতেন, আর তখন **প্রতিটা রিপোর্ট কর বিভাগের
-                             সাথে অমিল** হত — একটা ভুল যেটা ধরা পড়ে বছর শেষে।
-                             পরে বদলানোর পর্দা আছে। --}}
-                        <p class="flex items-start gap-2 rounded-(--radius-field)
-                                  bg-(--color-surface-muted) px-3 py-2 text-xs text-(--color-ink-muted)">
-                            <x-ui.icon name="help" :size="14" class="mt-px shrink-0" />
-                            <span>{{ __('system_admin::setup.year_note') }}</span>
+                             ── কেন ঘর দুইটা যোগ হলো, ৪ সেপ্টেম্বর ২০২৬ ──────
+                             এখানে আগে ঘর ছিল না, আর কারণ লেখা ছিল দুইটা:
+                             "বাংলাদেশে ওটা জুলাই–জুন, ব্যতিক্রম নেই" আর
+                             "পরে বদলানোর পর্দা আছে"।
+
+                             ⚠️ দ্বিতীয়টা মেপে দেখা গেছে **সত্যি নয়** — চলতি
+                             বছরের তারিখ বদলানোর কোনো পর্দা নেই, YearEndController
+                             কেবল পরের বছরটা বানায়। এখানে যা বসে তা-ই চিরকালের।
+
+                             আর প্রথমটার আসল ফাঁকটা দেশ নয়: **একটা কোম্পানির
+                             প্রথম বছর কখনোই বারো মাস নয়।** ফেব্রুয়ারিতে আসা
+                             ক্রেতার প্রথম বই ফেব্রুয়ারি–জুন; জুলাই ধরে নিলে
+                             খোলার জের পাঁচ মাস আগের তারিখে বসে।
+
+                             পুরনো আশঙ্কাটা (কেউ ক্যালেন্ডার বছর বসিয়ে ফেলবেন)
+                             ডিফল্ট দিয়েই সামলানো — ঘর দুইটা ভরা থাকে, কেবল
+                             যাঁর দরকার তিনি বদলান। --}}
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <div>
+                                <label for="year_starts_on" class="mb-1 block text-sm font-medium text-(--color-ink)">
+                                    {{ __('system_admin::setup.year_starts_on') }}
+                                </label>
+                                <input id="year_starts_on" name="year_starts_on" type="date"
+                                       value="{{ old('year_starts_on', $year['starts_on']) }}"
+                                       class="h-(--spacing-field) w-full rounded-(--radius-field) border
+                                              border-(--color-border) bg-(--color-surface-card) px-3
+                                              text-(--color-ink)">
+                            </div>
+
+                            <div>
+                                <label for="year_ends_on" class="mb-1 block text-sm font-medium text-(--color-ink)">
+                                    {{ __('system_admin::setup.year_ends_on') }}
+                                </label>
+                                <input id="year_ends_on" name="year_ends_on" type="date"
+                                       value="{{ old('year_ends_on', $year['ends_on']) }}"
+                                       class="h-(--spacing-field) w-full rounded-(--radius-field) border
+                                              border-(--color-border) bg-(--color-surface-card) px-3
+                                              text-(--color-ink)">
+                            </div>
+                        </div>
+
+                        {{-- ⚠️ "পরে বদলানো যায় না" কথাটা ঘরের নিচেই, ভুল হওয়ার
+                             আগে — এই পাতার বাকি নোটগুলোর মতোই কারণ সহ। --}}
+                        <p class="mt-1 text-xs text-(--color-ink-muted)">
+                            {{ __('system_admin::setup.year_note') }}
                         </p>
+
+                        <div>
+                            <label for="currency" class="mb-1 block text-sm font-medium text-(--color-ink)">
+                                {{ __('system_admin::setup.currency') }}
+                            </label>
+                            <select id="currency" name="currency"
+                                    class="h-(--spacing-field) w-full rounded-(--radius-field) border
+                                           border-(--color-border) bg-(--color-surface-card) px-3
+                                           text-(--color-ink)">
+                                @foreach ($currencies as $option)
+                                    <option value="{{ $option[0] }}"
+                                            @selected(old('currency', 'BDT') === $option[0])>
+                                        {{ app()->getLocale() === 'bn' ? $option[2] : $option[1] }}
+                                        ({{ $option[0] }})
+                                    </option>
+                                @endforeach
+                            </select>
+                            <p class="mt-1 text-xs text-(--color-ink-muted)">
+                                {{ __('system_admin::setup.currency_note') }}
+                            </p>
+                        </div>
                     </section>
 
                     <button type="submit"
