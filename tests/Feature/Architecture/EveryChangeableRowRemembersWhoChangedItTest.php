@@ -99,6 +99,10 @@ class EveryChangeableRowRemembersWhoChangedItTest extends TestCase
         // আছেই (`BackupDestination` ব্যবহার করে `IsAudited`)। ওখানেই
         // প্রশ্নটার মানে থাকে: একটা গন্তব্য মুছে ফেললে **কপি যাওয়া
         // নীরবে বন্ধ হয়ে যায়**, আর তখন কে মুছল সেটা জানা দরকার।
+        // ⓘ `BackupRun` **দুই জায়গায়** ঘোষণা করতে হয়: এখানে, আর
+        // `app/Modules/Backup/module.php`-এর `audit_exempt`-এ — কারণ
+        // `AuditTest` মডিউলের নিজের ঘোষণাটা পড়ে, এই তালিকাটা নয়।
+        // পুরো কারণটা এখানে; ওখানে কেবল এই ফাইলের দিকে ইশারা।
         'App\Modules\Backup\Models\BackupRun' => 'রাতের কাজ নিজে লেখে; কে চালাল তা triggered_by-তেই আছে',
         'App\Modules\Backup\Models\BackupVerification' => 'ফিরিয়ে আনার পরীক্ষার ফল — যন্ত্রের নিজের খাতা, শুধু যোগের',
     ];
