@@ -134,6 +134,14 @@ return [
             ['label' => 'inventory::menu.hold_report', 'route' => 'inventory.report.show',
                 'route_params' => ['slug' => 'hold'], 'permission' => 'inventory.report'],
 
+            // মরা · ধীর · দ্রুত চলা মাল — ড্যাশবোর্ডের সংখ্যার ড্রিল-ডাউন
+            ['label' => 'inventory::menu.stock_movement', 'route' => 'inventory.stock.movement',
+                'permission' => 'inventory.report'],
+
+            // স্টকের বয়স — কোন বাকেটে কত টাকা আটকে
+            ['label' => 'inventory::menu.stock_age', 'route' => 'inventory.stock.age',
+                'permission' => 'inventory.report'],
+
             /*
              * খাদ্য-খরচ — রেসিপির সুইচের পেছনে নয়, সবসময়ই।
              *
@@ -261,6 +269,9 @@ return [
         'PRD' => 'inventory::doc.product_code',
         'ADJ' => 'inventory::doc.adjustment',
         'STF' => 'inventory::doc.transfer',
+
+        /* মাল গোনা — SC-2026-2027-0001 */
+        'SC' => 'inventory::doc.stock_count',
 
         /* রান্না — হাঁড়ির উৎপাদন। */
         'CKG' => 'inventory::doc.production',

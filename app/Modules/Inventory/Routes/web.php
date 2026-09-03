@@ -8,6 +8,7 @@ use App\Modules\Inventory\Http\Controllers\OpeningStockController;
 use App\Modules\Inventory\Http\Controllers\ProductController;
 use App\Modules\Inventory\Http\Controllers\ProductionController;
 use App\Modules\Inventory\Http\Controllers\RecipeController;
+use App\Modules\Inventory\Http\Controllers\StockAnalysisController;
 use App\Modules\Inventory\Http\Controllers\StockController;
 use App\Modules\Inventory\Http\Controllers\StockOverviewController;
 use App\Modules\Inventory\Http\Controllers\StockPrintController;
@@ -71,6 +72,12 @@ Route::middleware('auth')->prefix('inventory')->group(function () {
          * কিন্তু গুদাম ধরে ছাঁকা যায়।
          */
         Route::get('/overview', [StockOverviewController::class, 'index'])->name('overview');
+
+        // মরা · ধীর · দ্রুত চলা মাল — ড্যাশবোর্ডের সংখ্যার ড্রিল-ডাউন তালিকা
+        Route::get('/movement', [StockAnalysisController::class, 'movement'])->name('movement');
+
+        // স্টকের বয়স — কোন বাকেটে কত টাকা আটকে (FIFO স্তর ধরে)
+        Route::get('/age', [StockAnalysisController::class, 'age'])->name('age');
 
         Route::get('/', [StockController::class, 'index'])->name('index');
         Route::get('/adjust', [StockController::class, 'adjust'])->name('adjust');

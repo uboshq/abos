@@ -263,6 +263,20 @@ final class StockFacts
     }
 
     /**
+     * বেরোচ্ছে না — আছে, কিন্তু জানালায় কিছুই বেরোয়নি (ধীর + নিশ্চল একসাথে)।
+     *
+     * stagnant() তালিকার হুবহু সংখ্যা-জোড়া: একই `out = 0` শর্ত, তাই
+     * "বেরোচ্ছে না ১২" ক্লিক করলে ঠিক ১২টাই দেখা যায়। ব্যবসায়িকভাবে এটাই
+     * সবচেয়ে কাজের ভাগ — ডিপোর টাকা ঠিক এখানে আটকে থাকে।
+     */
+    public function stagnantCount(int $days): int
+    {
+        return $this->onHandQuery()
+            ->whereRaw($this->movementSql($days, 'out').' = 0')
+            ->count();
+    }
+
+    /**
      * ধীরগতির ও নিশ্চল মালের তালিকা, সবচেয়ে বেশি টাকা আটকে থাকা আগে।
      *
      * ── কেন পরিমাণ নয়, আটকে থাকা টাকা ───────────────────────────────
@@ -284,6 +298,142 @@ final class StockFacts
             ->orderByRaw($this->availableSql().' * COALESCE(inv_products.purchase_price, 0) desc')
             ->limit($limit)
             ->get();
+    }
+
+    /**
+     * ধীরগতির মালের তালিকা — সংখ্যা slowMoving()-এর হুবহু একই শর্ত।
+     *
+     * ড্যাশবোর্ডে "ধীরগতি ৫" ক্লিক করলে ঠিক ওই পাঁচটাই দেখা যায়: predicate
+     * এক জায়গা থেকে (movementSql), তাই সংখ্যা আর তালিকা কোনোদিন আলাদা বলে না।
+     *
+     * @return Collection<int, Product>
+     */
+    public function slowMovingList(int $days, int $limit = 100)
+    {
+        return $this->onHandQuery()
+            ->whereRaw($this->movementSql($days, 'any').' > 0')
+            ->whereRaw($this->movementSql($days, 'out').' = 0')
+            ->with('unit')
+            ->select('inv_products.*')
+            ->selectRaw($this->availableSql().' as available_qty')
+            ->selectRaw($this->movementSql($days, 'any').' as touches')
+            ->orderByRaw($this->availableSql().' * COALESCE(inv_products.purchase_price, 0) desc')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
+     * নিশ্চল মালের তালিকা — সংখ্যা nonMoving()-এর হুবহু একই শর্ত।
+     *
+     * @return Collection<int, Product>
+     */
+    public function nonMovingList(int $days, int $limit = 100)
+    {
+        return $this->onHandQuery()
+            ->whereRaw($this->movementSql($days, 'any').' = 0')
+            ->with('unit')
+            ->select('inv_products.*')
+            ->selectRaw($this->availableSql().' as available_qty')
+            ->orderByRaw($this->availableSql().' * COALESCE(inv_products.purchase_price, 0) desc')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
+     * দ্রুতগতির মাল — আছে, আর জানালার ভেতরে বেরিয়েছে।
+     *
+     * ধীরগতি ও নিশ্চলের আয়না: ওরা বেরোয়নি, এরা বেরিয়েছে। একই onHandQuery
+     * আর movementSql, শুধু `out > 0`।
+     */
+    public function fastMoving(int $days): int
+    {
+        return $this->onHandQuery()
+            ->whereRaw($this->movementSql($days, 'out').' > 0')
+            ->count();
+    }
+
+    /**
+     * দ্রুতগতির মালের তালিকা — সবচেয়ে বেশি বেরিয়েছে আগে।
+     *
+     * @return Collection<int, Product>
+     */
+    public function fastMovingList(int $days, int $limit = 100)
+    {
+        return $this->onHandQuery()
+            ->whereRaw($this->movementSql($days, 'out').' > 0')
+            ->with('unit')
+            ->select('inv_products.*')
+            ->selectRaw($this->availableSql().' as available_qty')
+            ->selectRaw($this->movementSql($days, 'out').' as sold_moves')
+            ->orderByRaw($this->movementSql($days, 'out').' desc')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
+     * স্টকের বয়স — FIFO স্তর ধরে, প্রাপ্তির তারিখ থেকে। বাকেটে আটকে থাকা টাকা।
+     *
+     * ── কেন স্তর, "সর্বশেষ inbound" নয় ──────────────────────────────
+     * একটা পণ্য প্রতি সপ্তাহে নতুন এলেও পুরনো ইউনিট পড়ে থাকতে পারে।
+     * সর্বশেষ inbound ধরলে "বয়স ৩ দিন" দেখাত, অথচ কিছু মাল ৮ মাসের — ঠিক
+     * যেখানে টাকা আটকে, সেটাই লুকাত। inv_cost_layers-এর প্রতিটা স্তরের
+     * নিজের trx_date ও qty_remaining আছে, তাই বয়সটা আসল।
+     *
+     * ⚠️ এই রিপোর্ট স্তরে কেবল **পড়ে, লেখে না** — স্তরগুলো খরচের জন্য
+     * ([[CostLayerService]]); বয়সের সংজ্ঞা যেন খরচের সংজ্ঞা থেকে আলাদা না হয়।
+     *
+     * সংখ্যা (আটকে টাকা) আর তালিকা এক শর্ত (agingScope) থেকে — তাই বাকেটের
+     * অঙ্ক আর তার তালিকার যোগফল কখনো আলাদা বলে না।
+     *
+     * $minDays ≤ বয়স < $maxDays (maxDays null = খোলা, সবচেয়ে পুরনো বাকেট)।
+     */
+    public function agingValue(int $minDays, ?int $maxDays = null): string
+    {
+        $row = $this->agingScope($minDays, $maxDays)
+            ->selectRaw('COALESCE(SUM(l.qty_remaining * l.unit_cost), 0) as v')
+            ->first();
+
+        return bcadd((string) ($row->v ?? '0'), '0', 2);
+    }
+
+    /**
+     * বয়স-বাকেটের স্তর-তালিকা — সবচেয়ে পুরনো আগে, বয়স ও আটকে থাকা টাকাসহ।
+     *
+     * @return Collection<int, object>
+     */
+    public function agingLayers(int $minDays, ?int $maxDays = null, int $limit = 100): Collection
+    {
+        return $this->agingScope($minDays, $maxDays)
+            ->join('inv_products as p', function ($j) {
+                $j->on('p.id', '=', 'l.product_id')
+                    ->on('p.company_id', '=', 'l.company_id');
+            })
+            ->selectRaw('l.id, l.product_id, l.document_no, l.trx_date,
+                         l.qty_remaining, l.unit_cost,
+                         (l.qty_remaining * l.unit_cost) as value_stuck,
+                         DATEDIFF(CURDATE(), l.trx_date) as age_days,
+                         p.code as product_code, p.name_en, p.name_bn')
+            ->orderBy('l.trx_date') // পুরনো আগে
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
+     * বয়স-বাকেটের এক শর্ত — সংখ্যা ও তালিকা যেন কখনো আলাদা না হয়।
+     * শুধু যে স্তরে মাল এখনো পড়ে আছে (qty_remaining > 0)।
+     */
+    private function agingScope(int $minDays, ?int $maxDays)
+    {
+        $q = DB::table('inv_cost_layers as l')
+            ->where('l.company_id', CompanyContext::id())
+            ->where('l.qty_remaining', '>', 0)
+            ->whereRaw('DATEDIFF(CURDATE(), l.trx_date) >= '.$minDays);
+
+        if ($maxDays !== null) {
+            $q->whereRaw('DATEDIFF(CURDATE(), l.trx_date) < '.$maxDays);
+        }
+
+        return $q;
     }
 
     /**

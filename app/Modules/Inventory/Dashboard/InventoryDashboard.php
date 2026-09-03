@@ -106,11 +106,25 @@ final class InventoryDashboard implements ProvidesDashboard
                  * এক সংখ্যায় মিলিয়ে দিলে দুইটা আলাদা সিদ্ধান্ত একটা
                  * সংখ্যার পেছনে হারিয়ে যেত।
                  */
+                /*
+                 * ── সংখ্যাটা ঠিক ওই পণ্যগুলোতেই নিয়ে যায় ─────────────
+                 * ৩ সেপ্টেম্বর ২০২৬ পর্যন্ত এই দুইটা লিংক **গোটা স্টক
+                 * তালিকায়** নিয়ে যেত। অর্থাৎ "ধীর ৫" ক্লিক করলে ওই
+                 * পাঁচটা নয়, সব পণ্য দেখা যেত — সংখ্যাটা তখন বিশ্বাস
+                 * করতে হত, **যাচাই করা যেত না**।
+                 *
+                 * মালিকের স্থায়ী নিয়ম: প্রতিটা সংখ্যা তার উৎসে নিয়ে
+                 * যাবে। নিজের কোড খুলে দেখেই ধরা পড়ে।
+                 *
+                 * তালিকাটা আসে `StockFacts`-এর **একই predicate** থেকে
+                 * (`slowMovingList` ≡ `slowMoving`), তাই সংখ্যা ৫ মানে
+                 * তালিকাতেও ৫ — আর একটা টেস্ট ওই সমতাটা পাহারা দেয়।
+                 */
                 new Stat(
                     label: __('inventory::overview.slow_moving'),
                     value: (string) $facts->slowMoving($days),
                     hint: __('inventory::overview.slow_moving_hint').' · '.$window,
-                    href: route('inventory.stock.index'),
+                    href: route('inventory.stock.movement', ['type' => 'slow', 'days' => $days]),
                     tone: Stat::WARN,
                 ),
 
@@ -118,7 +132,7 @@ final class InventoryDashboard implements ProvidesDashboard
                     label: __('inventory::overview.non_moving'),
                     value: (string) $facts->nonMoving($days),
                     hint: __('inventory::overview.non_moving_hint').' · '.$window,
-                    href: route('inventory.stock.index'),
+                    href: route('inventory.stock.movement', ['type' => 'non', 'days' => $days]),
                     tone: Stat::BAD,
                 ),
 
@@ -210,7 +224,17 @@ final class InventoryDashboard implements ProvidesDashboard
                     ],
                     rows: $facts->stagnant($days),
                     empty: __('inventory::overview.nothing_stagnant'),
-                    href: route('inventory.stock.index'),
+                    /*
+                     * ⚠️ `stagnant`, `slow` নয়।
+                     *
+                     * `stagnant()` মাপে `out = 0` — অর্থাৎ **কিছুই
+                     * বেরোয়নি**। এতে দুই দলই পড়ে: যা ঢুকেছে কিন্তু
+                     * বিক্রি হয়নি, আর যা কেউ ছোঁয়নি। রিপোর্টের `slow`
+                     * ট্যাবে পাঠালে **তালিকা দেখাত এক জিনিস আর লিংক
+                     * নিয়ে যেত আরেকটায়** — ঠিক যে ভুলটা সারাতে এই
+                     * লিংকগুলো বদলানো হচ্ছে, সেটাই ছদ্মবেশে ফিরত।
+                     */
+                    href: route('inventory.stock.movement', ['type' => 'stagnant', 'days' => $days]),
                 ),
 
                 new Listing(

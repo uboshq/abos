@@ -73,4 +73,11 @@ return [
     'production_recipe_empty' => 'The recipe for :product has no ingredients — cooking it would make food out of nothing.',
     'production_recipe_no_yield' => 'The recipe yields nothing — without knowing how many one cooking makes there is no arithmetic.',
     'production_not_enough' => 'Not enough :ingredient to cook :product — :available left.',
+
+    /* Physical stock count — the book against the shelf. */
+    'count_warehouse_required' => 'Say which store is being counted — a count with no store cannot be matched against any book.',
+    'count_needs_lines' => 'Add at least one product with a counted quantity — an empty count says nothing.',
+    'count_product_missing' => 'One of the counted products no longer exists.',
+    'count_qty_negative' => 'A counted quantity cannot be less than zero — count what is there, or zero if the shelf is empty.',
+    'count_duplicate_product' => 'The same product appears twice — count it once and enter the total found.',
 ];
