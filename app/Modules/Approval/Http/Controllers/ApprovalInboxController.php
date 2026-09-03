@@ -39,11 +39,19 @@ class ApprovalInboxController extends Controller implements HasMiddleware
             new Middleware('can:approval.decide', only: ['index', 'approve', 'reject']),
 
             /*
-             * show দুই ধরনের মানুষ খোলেন — যিনি সিদ্ধান্ত দেবেন, আর
-             * যিনি অনুরোধ করেছেন। তাই এখানে কেবল "কিছু একটা অনুমতি
-             * আছে" দেখা হয়, আর কে কী করতে পারবেন সেটা পর্দাতেই ঠিক হয়।
+             * ⚠️ `show` এখানে নেই, আর সেটা ইচ্ছাকৃত।
+             *
+             * পাতাটা **তিন ধরনের** মানুষ খোলেন: যিনি অনুরোধ করেছেন,
+             * যিনি সিদ্ধান্ত দেবেন, আর যিনি নিরীক্ষা করেন
+             * (`approval.report` — রিপোর্টের সারি থেকে এসে)। একটামাত্র
+             * `can:` দিয়ে "এটা বা ওটা" বলা যায় না, আর `approval.view`
+             * বসিয়ে রাখলে **রিপোর্টের প্রতিটা সারি নিরীক্ষকের কাছে
+             * ৪০৩ দিত** — দেখতে জীবন্ত, চাপলে বন্ধ।
+             *
+             * তাই সীমাটা `show()`-এর ভেতরে, যেখানে তিনটা প্রশ্নের
+             * উত্তর আলাদাভাবে দেওয়া যায়।
              */
-            new Middleware('can:approval.view', only: ['show', 'withdraw']),
+            new Middleware('can:approval.view', only: ['withdraw']),
         ];
     }
 
@@ -124,20 +132,49 @@ class ApprovalInboxController extends Controller implements HasMiddleware
         $entry = Approval::query()->with(['requester', 'decisions.user'])->findOrFail($approval);
 
         /*
-         * অন্যের অনুরোধ, আর আমি সিদ্ধান্তের ছকেও নেই — তাহলে এটা আমার
-         * দেখার জিনিস নয়। ছাড়ের অঙ্ক আর গ্রাহকের নাম দুইটাই এখানে
-         * থাকে, তাই "লিংক জানলেই দেখা যায়" চলে না।
+         * ── তিনটা আলাদা প্রশ্ন, আর ওদের এক করা যাবে না ──────────────
+         *
+         *   পাতাটা খোলা যাবে?      নিজের · সিদ্ধান্তদাতা · নিরীক্ষক
+         *   কাগজটা দেখা যাবে?      নিজের · সিদ্ধান্তদাতা — নিরীক্ষক নয়
+         *   বোতাম চাপা যাবে?       কেবল সিদ্ধান্তদাতা
+         *
+         * ── কেন নিরীক্ষক কাগজটা দেখেন না ────────────────────────────
+         * `approval.report` দেয় অনুমোদনের **রেকর্ড** — কে চেয়েছে, কোন
+         * স্তরে, কে কী মন্তব্যে সিদ্ধান্ত দিয়েছেন। ওটা নিরীক্ষার জিনিস,
+         * আর ওই সংখ্যাগুলো রিপোর্টে এমনিতেই আছে।
+         *
+         * ⛔ কিন্তু নিচের কাগজটা আলাদা। `documentOf()` গোটা নথিটা তুলে
+         * আনে — ক্রয় বিল, উত্তোলন, **আর বেতনের রান**। রেকর্ডের সাথে
+         * ওটাও দিয়ে দিলে যে ম্যানেজারের `approval.report` আছে অথচ
+         * HR-এর কিছুই নেই, তিনি অনুমোদনের পাতা দিয়ে **বেতনের কাগজ**
+         * দেখে ফেলতেন — আর কোনো ত্রুটি আসত না।
+         *
+         * ⚠️ ধরাও পড়ত না: পরীক্ষা করা হত এমন একজনকে দিয়ে যাঁর দুইটা
+         * অনুমতিই আছে। **যাঁর অনুমতি নেই তাঁকে দিয়ে না দেখলে অনুমতির
+         * ফাঁক দেখা যায় না।**
          */
-        if ($entry->requested_by !== $user->id && ! $this->engine->canDecide($entry, $user)) {
-            abort(403);
-        }
+        $mine = $entry->requested_by === $user->id;
+        $canDecide = $this->engine->canDecide($entry, $user);
+        $auditing = $user->can('approval.report');
+
+        abort_unless($mine || $canDecide || $auditing, 403);
+
+        $mayReadDocument = $mine || $canDecide;
 
         return view('approval::inbox.show', [
             'menu' => $this->menu->forUser($user),
             'approval' => $entry,
             'labels' => $this->flows->labels(),
-            'document' => $this->documentOf($entry),
-            'canDecide' => $this->engine->canDecide($entry, $user),
+            'document' => $mayReadDocument ? $this->documentOf($entry) : null,
+
+            /*
+             * "নেই" আর "আপনার জন্য নয়" — পর্দাটা দুইটাকে এক দেখাতে
+             * পারে না, তাই আলাদা একটা পতাকা। খালি ঘর দেখে নিরীক্ষক
+             * ভাববেন কাগজটা মুছে গেছে, আর সেটা মিথ্যা।
+             */
+            'documentHidden' => ! $mayReadDocument,
+
+            'canDecide' => $canDecide,
         ]);
     }
 

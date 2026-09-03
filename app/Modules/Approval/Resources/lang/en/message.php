@@ -16,6 +16,7 @@ return [
 
     'threshold_hint' => 'Leave it empty and every one needs approval. Ask the owner to sign off a 50-taka discount and nobody follows the rule — and once it is skipped, the whole thing is decoration.',
     'document_gone' => 'The document is no longer there.',
+    'document_not_yours' => 'The document is there, but you do not have the permission to open it. What you see here is the approval record — who asked, at which level, and who decided what.',
     'awaiting' => 'Waiting for approval — the request has been sent.',
     'level_of' => 'Level :current of :total',
     'not_your_turn' => 'You are not in the rule for this level.',
