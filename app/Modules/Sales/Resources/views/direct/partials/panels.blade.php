@@ -11,31 +11,19 @@
     গাড়ি কোনটা ছিল, টাকাটা চেকে না বিকাশে — প্রতিটা আলাদা প্রশ্ন, আর
     আলাদা ঘরে বসলেই কেবল রিপোর্টে যোগ হয়।
 --}}
+
+    {{-- ⚠️ "খরচ"-এর প্যানেলটা এখান থেকে পুরো তুলে দেওয়া হয়েছে
+         (৩ সেপ্টেম্বর ২০২৬, মালিকের সিদ্ধান্ত)।
+
+         খরচের দুইটা ঘরই — টাকা আর "কীসের" — এখন ডান পাশের "এই চালান"
+         প্যানেলে। ⚠️ **এখানে আবার বসাবেন না**: একই `name` দুইবার থাকলে
+         ব্রাউজার দুইটা মান পাঠায়, আর সার্ভারে শেষেরটা জেতে — নীরবে,
+         কোনো ত্রুটি ছাড়াই।
+
+         ⓘ "খরচ" বোতামটাও সরাসরি বিক্রয়ের পর্দা থেকে গেছে, একই কারণে। --}}
 <div x-show="panel" x-cloak
-     class="border-t border-(--color-border) bg-(--color-surface-sunken) p-3">
-
-    {{-- ── খরচ ────────────────────────────────────────────────────────
-         অঙ্কটা আগে থেকেই ছিল, কারণটা ছিল না। "খরচ ২০০" এক মাস পরে কারও
-         কাজে আসে না — ওটা ভাড়া ছিল না হাম্মালি, জানার একমাত্র সময় এখনই। --}}
-    @if ($show['expense'])
-    <div x-show="panel === 'expense'" x-cloak class="space-y-2">
-        <label class="block">
-            <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::field.expense') }}</span>
-            <input type="number" step="0.01" min="0" name="expense_amount" x-model="expenseAmount"
-                   class="num h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
-                          bg-(--color-surface-card) px-2 text-end text-2xs">
-        </label>
-
-        <label class="block">
-            <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::field.expense_for') }}</span>
-            <input type="text" name="expense_narration" maxlength="191"
-                   placeholder="{{ __('sales::field.expense_for_hint') }}"
-                   class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
-                          bg-(--color-surface-card) px-2 text-2xs">
-        </label>
-    </div>
-
-    @endif
+     class="rounded-(--radius-card) border border-(--color-border)
+            bg-(--color-surface-sunken) p-3">
 
     {{-- ── পরিবহন ─────────────────────────────────────────────────────
          গাড়ি ও চালক আগে থেকেই ছিল, কিন্তু উপরের ঘরে লুকানো। ভাড়াটা

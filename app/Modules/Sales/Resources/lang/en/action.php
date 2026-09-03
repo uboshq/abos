@@ -24,9 +24,16 @@ return [
     'exact' => 'Exact',
     'add_to_cart' => 'Add to Cart',
     'clear_data' => 'Clear Data',
-    'clear_full' => 'Clear Full Data',
+    /*
+     * ⚠️ "Clear All", not "Clear Data" — the owner's decision (3 Sep 2026).
+     *
+     * The line-level button beside it already reads "Clear Data", and this
+     * one wipes the whole invoice, which cannot be undone. Two buttons with
+     * the same word for two different scopes is how a counter loses a bill.
+     */
+    'clear_full' => 'Clear All',
     'add_gift' => 'Add a gift',
-    'chart_bulk_do' => 'Chart / Bulk DO',
+    'chart_bulk_do' => 'Chart',
     'transportation' => 'Transportation',
     'shipment' => 'Shipment',
     'add_deposit' => 'Add Deposit',

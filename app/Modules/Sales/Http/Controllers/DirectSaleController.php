@@ -14,6 +14,7 @@ use App\Models\NumberSeries;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Inventory\Services\PackConversion;
 use App\Modules\Inventory\Services\RecipeService;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\MasterData\Models\PaymentTerm;
@@ -76,9 +77,38 @@ class DirectSaleController extends Controller implements HasMiddleware
         $customers = Customer::query()->active()->with('location')
             ->withOutstanding()->orderBy('name_en')->get();
 
+        // শীট আর প্যাকের ড্রপডাউন — একই তালিকা, তাই একবারই তোলা
+        $sheetProducts = Product::query()->active()->with('unit')->orderBy('name_en')->get();
+
         return view('sales::direct.index', [
             'menu' => $this->menu->forUser($request->user()),
             'products' => $this->catalogue($warehouse),
+
+            /*
+             * ── প্যাকের একক — "২ বাক্স @ ৮০০" ─────────────────────────
+             *
+             * ── কী বাদ পড়েছিল (মাপা ৩ সেপ্টেম্বর ২০২৬) ─────────────────
+             * প্যাক-এন্ট্রির পুরো ইঞ্জিন আগে থেকেই ছিল — বাক্স থেকে পিসে
+             * পরিমাণ ও **দর দুইটাই** নামে ([[PackConversion]]), কন্ট্রোল
+             * প্যানেলে সুইচ আছে, আর **ছয়টা ফর্মে ড্রপডাউনটা চলছেও**।
+             *
+             * ⚠️ **কেবল সরাসরি বিক্রয়ের পর্দাটাই বাদ পড়েছিল।** ওখানে
+             * এককের ঘরটা ছিল পড়ার-জন্য লেখা, পণ্যের নিজের একক দেখাত।
+             * ফলে কাউন্টারে দাঁড়িয়ে **"২ বাক্স" লেখার কোনো উপায় ছিল না** —
+             * বিক্রেতাকে মাথায় গুণে "২০০ পিস" লিখতে হত, আর দরটাও নিজে
+             * ভাগ করে বসাতে হত। ⚠️ ওখানেই ভুল হওয়ার আসল জায়গা।
+             *
+             * ── কেন সুইচের পেছনে ────────────────────────────────────────
+             * যে ব্যবসা এক এককেই বেচে, তার প্রতিটা সারিতে একটা বাড়তি
+             * ড্রপডাউন কেবল টাইপিং বাড়াত। সুইচ বন্ধ থাকলে খালি অ্যারে
+             * যায়, আর ঘরটা আগের মতোই পড়ার-জন্য থাকে।
+             *
+             * ⓘ `optionsFor()` **সব পণ্যের জন্য একবারে** তোলে — পণ্যপ্রতি
+             * একটা করে কোয়েরি নয়। দুই হাজার পণ্যের গুদামে ওটাই পার্থক্য।
+             */
+            'packs' => $this->settings->enabled('inventory.pack_entry_enabled')
+                ? app(PackConversion::class)->optionsFor($sheetProducts)
+                : [],
 
             /*
              * চার্ট / বাল্ক DO-র শীটের জন্য — আসল পণ্য ও তাদের মজুদ।
@@ -91,7 +121,7 @@ class DirectSaleController extends Controller implements HasMiddleware
              * ফর্মেও ঠিক এই দুইটাই পায়, তাই একই কম্পোনেন্ট দুই পর্দায়
              * একই আচরণ করে।
              */
-            'sheetProducts' => Product::query()->active()->with('unit')->orderBy('name_en')->get(),
+            'sheetProducts' => $sheetProducts,
             'sheetStock' => app(StockService::class)->statesForAll($warehouse),
             'customers' => $customers,
             /*
@@ -207,7 +237,28 @@ class DirectSaleController extends Controller implements HasMiddleware
         $companyId = CompanyContext::id();
 
         $data = $request->validate([
-            'customer_id' => ['nullable', 'integer',
+            /*
+             * ⚠️ ক্রেতা বাধ্যতামূলক — `nullable` ছিল, আর সেটা বিপজ্জনক ছিল।
+             *
+             * ── মালিকের নির্দেশ (৩ সেপ্টেম্বর ২০২৬) ────────────────────
+             * *"Walk-in Customer default bose thakte parbe na, ete vul
+             * hobe — karon eta POS na, eta depot/wholesale counter.
+             * Obosoi dekhe nishchit hoye party select korte hobe."*
+             *
+             * ── কেন ডিফল্ট ক্রেতা এখানে ভুল ────────────────────────────
+             * দোকানে খুচরা বিক্রিতে ক্রেতা কে তা জানার দরকার নেই — টাকা
+             * হাতে আসে, কাগজ শেষ। **ডিপো বা পাইকারিতে উল্টো**: মাল বাকিতে
+             * যায়, আর "কার নামে গেল" প্রশ্নটাই পুরো খাতার ভিত্তি।
+             *
+             * ঘরটা আগে থেকে ভরা থাকলে তাড়াহুড়োয় কেউ না দেখে এগিয়ে যেতেন,
+             * আর **পুরো একটা চালান ভুল পার্টির নামে বসে যেত** — টাকা আদায়
+             * হত অন্যজনের কাছ থেকে, বকেয়া দেখাত আরেকজনের।
+             *
+             * ⚠️ পর্দা থেকে ডিফল্ট তোলাই যথেষ্ট নয়। ঘরটা `nullable` থাকলে
+             * **ক্রেতাহীন চালান সার্ভার মেনেই নিত** — আর তখন কাগজটা কারও
+             * নামেই থাকত না, কোনো ভুলবার্তা ছাড়াই।
+             */
+            'customer_id' => ['required', 'integer',
                 Rule::exists('customers', 'id')->where('company_id', $companyId)],
             'warehouse_id' => ['nullable', 'integer',
                 Rule::exists('inv_warehouses', 'id')->where('company_id', $companyId)],
@@ -247,8 +298,19 @@ class DirectSaleController extends Controller implements HasMiddleware
              * না হাম্মালি, না নাশতা — জানার একমাত্র সময় এখনই, যখন যিনি
              * টাকাটা দিয়েছেন তিনি সামনেই দাঁড়ানো।
              */
+            /*
+             * ⚠️ `required_with` ছিল, আর সেটা ভুল ছিল (মাপা ৩ সেপ্টেম্বর ২০২৬)।
+             *
+             * `required_with:expense_amount` চালু হয় ঘরটা **উপস্থিত ও খালি
+             * নয়** হলে। খরচের ঘরে কেউ `0` লিখলে ওটা উপস্থিত আর খালি নয় —
+             * তাই **শূন্য খরচেও কারণ চাওয়া হত**, আর ব্যবহারকারী আটকে যেতেন
+             * এমন একটা ঘরে যেটা তাঁর দরকারই ছিল না।
+             *
+             * এখন শর্তটা **অঙ্কে**, উপস্থিতিতে নয়: টাকা গেলে কারণ লাগবে,
+             * না গেলে নয়।
+             */
             'expense_narration' => ['nullable', 'string', 'max:191',
-                'required_with:expense_amount'],
+                Rule::requiredIf(fn (): bool => (float) $request->input('expense_amount', 0) > 0)],
 
             /*
              * পরিবহন — গাড়ি ও চালক আগে থেকেই ছিল, ভাড়াটা ছিল না।
