@@ -70,6 +70,7 @@ return [
     'collection_updated' => 'আদায় হালনাগাদ হয়েছে।',
     'collection_confirmed' => 'টাকা খাতায় জমা হয়েছে, পাওনা কমেছে।',
     'collection_cancelled' => 'আদায় বাতিল হয়েছে।',
+    'cheque_bounced_via_receipt' => 'চেক :no ফেরত — আদায়ের কাগজ বাতিল হয়েছে, বিল আবার বকেয়া।',
     'no_challans' => 'এখনো কোনো চালান নেই।',
     'no_invoices' => 'এখনো কোনো বিল নেই।',
     'no_collections' => 'এখনো কোনো আদায় নেই।',

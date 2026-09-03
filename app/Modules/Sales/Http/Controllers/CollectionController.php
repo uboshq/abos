@@ -12,6 +12,7 @@ use App\Core\Support\DocumentStatus;
 use App\Core\Support\ProcessBand;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\Cheque;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Sales\Http\Requests\CollectionRequest;
@@ -43,7 +44,7 @@ class CollectionController extends Controller implements HasMiddleware
         return [
             ...static::resourcePermissions(Collection::class, 'collection'),
             new Middleware('can:sales.collection.create', only: ['confirm']),
-            new Middleware('can:sales.collection.cancel', only: ['cancel']),
+            new Middleware('can:sales.collection.cancel', only: ['cancel', 'bounceCheque']),
         ];
     }
 
@@ -184,6 +185,31 @@ class CollectionController extends Controller implements HasMiddleware
         return redirect()
             ->route('sales.collection.show', $collection)
             ->with('saved', __('sales::message.collection_cancelled'));
+    }
+
+    /**
+     * আদায়ের কাগজে নেওয়া একটা চেক ফেরত এসেছে — চেকের খাতা থেকে।
+     *
+     * ── কেন এটা Sales-এ, চেকের খাতা তো Accounts ──────────────────────────
+     * চেকের খাতা (accounts.cheque.*) Accounts-এর, কিন্তু ফেরতের কাজটা
+     * আদায়ের কাগজ বাতিল করা — সেটা Sales। Accounts নিচের স্তর, সে Sales-কে
+     * চেনে না, তাই চেকের খাতার bounce-বোতাম collection-চেকে **এই দরজায়**
+     * পোস্ট করে (view রুট-নাম চেনে, ক্লাস নয় — স্তর অক্ষত)।
+     *
+     * ── কেন `sales.collection.cancel` পারমিশন ────────────────────────────
+     * bounce ব্যাংকের দেওয়া তথ্য, cancel একটা সিদ্ধান্ত — শুনতে আলাদা।
+     * কিন্তু ফলটা হুবহু এক: আদায় বাতিল, গ্রাহক আবার দেনাদার। একই ফল মানে
+     * একই কর্তৃত্ব, তাই নতুন পারমিশন নয়।
+     */
+    public function bounceCheque(Request $request, Cheque $cheque): RedirectResponse
+    {
+        $reason = $request->validate([
+            'bounce_reason' => ['required', 'string', 'min:3', 'max:255'],
+        ])['bounce_reason'];
+
+        $this->service->bounceReceivedCheque($cheque, $reason);
+
+        return back()->with('saved', __('sales::message.cheque_bounced_via_receipt', ['no' => $cheque->cheque_no]));
     }
 
     /** বিল ধরে খোলা হলে ওই বিলের বকেয়াটাই আগে থেকে বসে। */

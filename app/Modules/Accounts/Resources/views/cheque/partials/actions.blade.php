@@ -33,17 +33,32 @@
                 </x-ui.button>
             </form>
 
-            <form method="POST" action="{{ route('accounts.cheque.bounce', $cheque) }}"
-                  class="flex items-center gap-1">
-                @csrf
-                <input type="text" name="bounce_reason" required minlength="3"
-                       placeholder="{{ __('accounts::field.bounce_reason') }}"
-                       class="h-(--spacing-field) w-44 rounded-(--radius-field) border
-                              border-(--color-border) bg-(--color-surface-app) px-2">
-                <x-ui.button type="submit" tone="secondary">
-                    {{ __('accounts::action.cheque_bounce') }}
-                </x-ui.button>
-            </form>
+            {{--
+                ফেরত — আদায়ে-পোস্ট-করা চেক (গ্রাহকের, সরাসরি বিক্রয়ের) হলে
+                টাকাটা পোস্ট করেছিল আদায়ের কাগজ, চেক নিজে নয়। তাই ওগুলোর
+                ফেরত যায় Sales-দরজায় (আদায় বাতিল হয়, বিল বকেয়া ফেরে)।
+                Accounts নিচের স্তর, Sales-কে চেনে না — view কেবল রুট-নাম চেনে।
+                বাকি (হাতে-তোলা/ক্রয়) চেক আগের মতোই ChequeService-এর পথে।
+            --}}
+            @php
+                $bounceRoute = $cheque->postedByCollection()
+                    ? route('sales.collection.cheque_bounce', $cheque)
+                    : route('accounts.cheque.bounce', $cheque);
+                $canBounce = ! $cheque->postedByCollection() || auth()->user()?->can('sales.collection.cancel');
+            @endphp
+
+            @if ($canBounce)
+                <form method="POST" action="{{ $bounceRoute }}" class="flex items-center gap-1">
+                    @csrf
+                    <input type="text" name="bounce_reason" required minlength="3"
+                           placeholder="{{ __('accounts::field.bounce_reason') }}"
+                           class="h-(--spacing-field) w-44 rounded-(--radius-field) border
+                                  border-(--color-border) bg-(--color-surface-app) px-2">
+                    <x-ui.button type="submit" tone="secondary">
+                        {{ __('accounts::action.cheque_bounce') }}
+                    </x-ui.button>
+                </form>
+            @endif
         </div>
     @endcan
 @else

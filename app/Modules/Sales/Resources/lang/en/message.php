@@ -70,6 +70,7 @@ return [
     'collection_updated' => 'Collection updated.',
     'collection_confirmed' => 'Money is in the books and the receivable is down.',
     'collection_cancelled' => 'Collection cancelled.',
+    'cheque_bounced_via_receipt' => 'Cheque :no bounced — the receipt was reversed and the bill is due again.',
     'no_challans' => 'No challans yet.',
     'no_invoices' => 'No invoices yet.',
     'no_collections' => 'No collections yet.',
