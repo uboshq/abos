@@ -11,6 +11,7 @@ use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\BatchAllocator;
 use App\Modules\Inventory\Services\ReadsPackedQuantities;
 use App\Modules\Inventory\Services\StockService;
+use App\Modules\MasterData\Models\PaymentMethod;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\DeliveryChallanGiftLine;
 use App\Modules\Sales\Models\SalesInvoice;
@@ -111,23 +112,63 @@ final class DirectSaleService
 
             $invoice = $this->invoices->confirm($invoice);
 
-            $deposit = $this->money($data['deposit'] ?? '0');
+            $rows = $this->depositRows($data);
+            $deposit = $this->depositTotal($data);
             $total = (string) $invoice->total;
 
             $applied = bccomp($deposit, $total, 4) > 0 ? $total : $deposit;
             $change = bccomp($deposit, $total, 4) > 0 ? bcsub($deposit, $total, 4) : '0.0000';
 
-            if (bccomp($applied, '0', 4) > 0) {
+            /*
+             * ── প্রতিটা জমা নিজের কাগজ, নিজের খাত ───────────────────────
+             *
+             * ⚠️ আগে সবটা **একটা** আদায়ের কাগজ হত, আর খাত না বলায়
+             * `CollectionService` প্রধান টিলের নগদ খাত ধরে নিত। ফলে
+             * গ্রাহক বিকাশে দিলেও খাতা বলত নগদ — মাস শেষে বিকাশের
+             * ব্যালেন্স মিলত না, আর কারণটা কোথাও লেখা থাকত না।
+             *
+             * ── কেন `$left` ধরে ধরে কাটা ────────────────────────────────
+             * বিলের চেয়ে বেশি জমা নেওয়া যায় (ফেরত দিতে হয়), কিন্তু
+             * **বিলের গায়ে বিলের চেয়ে বেশি বসানো যায় না** — বসালে
+             * বিলটা নিজেই ঋণাত্মক বকেয়া দেখাত। তাই সারিগুলো ক্রম ধরে
+             * ভরা হয়, আর যতটুকু বিলে ধরে ততটুকুই বসে; বাকিটা ফেরত।
+             *
+             * ⓘ ক্রমটা পর্দার ক্রম — যে জমা আগে বসানো হয়েছে, সেটাই আগে।
+             */
+            $left = $applied;
+
+            foreach ($rows as $row) {
+                if (bccomp($left, '0', 4) <= 0) {
+                    break;
+                }
+
+                $take = bccomp($row['amount'], $left, 4) > 0 ? $left : $row['amount'];
+
                 $this->collections->confirm($this->collections->create(
                     [
                         'customer_id' => $customer->id,
-                        'account_id' => $data['account_id'] ?? null,
+                        'account_id' => $row['account_id'],
+                        /*
+                         * ⚠️ টাকাটা **আজ** এসেছে; চেকের তারিখ আলাদা ঘর।
+                         *
+                         * "Ref Date" বলতে বিক্রেতা চেকের বা বিকাশের
+                         * লেনদেনের তারিখ বোঝেন — সেটা গতকালেরও হতে পারে।
+                         * ওটাকে `trx_date` বানালে **আদায়টা অন্য দিনে বসে
+                         * যেত**, আর দিনের ক্যাশ মিলত না।
+                         */
                         'trx_date' => $data['trx_date'] ?? now()->toDateString(),
-                        'amount' => $applied,
-                        'narration' => __('sales::message.direct_narration', ['no' => $challan->document_no]),
+                        'instrument' => $row['instrument'],
+                        'instrument_no' => $row['reference'],
+                        'instrument_date' => $row['ref_date'],
+                        'amount' => $take,
+                        'narration' => $row['narration'] ?? __('sales::message.direct_narration', [
+                            'no' => $challan->document_no,
+                        ]),
                     ],
-                    [['sales_invoice_id' => $invoice->id, 'amount' => $applied]],
+                    [['sales_invoice_id' => $invoice->id, 'amount' => $take]],
                 ));
+
+                $left = bcsub($left, $take, 4);
             }
 
             return [
@@ -210,8 +251,18 @@ final class DirectSaleService
             'do_no' => $data['do_no'] ?? null,
             'discount_amount' => $this->money($data['discount_amount'] ?? '0'),
             'expense_amount' => $this->money($data['expense_amount'] ?? '0'),
-            'rounding_amount' => $this->money($data['rounding_amount'] ?? '0'),
-            'deposit_amount' => $this->money($data['deposit'] ?? '0'),
+            /*
+             * ⚠️ রাউন্ডিং `money()` দিয়ে নয় — ওটা ঋণাত্মক প্রত্যাখ্যান করে।
+             *
+             * বাকি সব ঘরে ঋণাত্মক মানে ভুল: ঋণাত্মক ছাড়, ঋণাত্মক খরচ বা
+             * ঋণাত্মক জমার কোনো মানে নেই। **রাউন্ডিংই একমাত্র ব্যতিক্রম** —
+             * ওটার কাজই দুই দিকে পয়সা মেলানো।
+             *
+             * সীমাটা কন্ট্রোলারে দেখা হয় (কন্ট্রোল প্যানেলের সেটিং থেকে),
+             * তাই এখানে কেবল সংখ্যাটা নেওয়া।
+             */
+            'rounding_amount' => $this->signedMoney($data['rounding_amount'] ?? '0'),
+            'deposit_amount' => $this->depositTotal($data),
             'credit_period_days' => $data['credit_period_days'] ?? null,
 
             /*
@@ -237,7 +288,15 @@ final class DirectSaleService
              * চালানে "নগদ" বসে যেত — আর রিপোর্টে হাজারটা শূন্য টাকার
              * নগদ জমা দেখা যেত।
              */
-            'deposit_method' => bccomp($this->money($data['deposit'] ?? '0'), '0', 4) > 0
+            /*
+             * ⚠️ একাধিক জমা এলে চালানের গায়ে একটাই ধরন লেখা যায় না।
+             *
+             * ঘর দুইটা রয়ে গেছে পুরনো পথের জন্য, কিন্তু **সত্যটা এখন
+             * আদায়ের কাগজগুলোতে** — প্রতিটার নিজের উপায়, নিজের খাত,
+             * নিজের রেফারেন্স। একটা বিলে নগদ ৫,০০০ আর বিকাশ ১০,০০০ এলে
+             * এখানে "নগদ" লিখলে সেটা অর্ধেক মিথ্যা হত।
+             */
+            'deposit_method' => bccomp($this->depositTotal($data), '0', 4) > 0
                 ? (($data['deposit_method'] ?? '') ?: null)
                 : null,
             'deposit_ref' => ($data['deposit_ref'] ?? '') ?: null,
@@ -458,6 +517,126 @@ final class DirectSaleService
         }
 
         return $warehouse;
+    }
+
+    /**
+     * টাকার অঙ্ক, চিহ্নসহ — কেবল রাউন্ডিংয়ের জন্য।
+     *
+     * ── কেন আলাদা মেথড, `money()`-তে শর্ত যোগ করে নয় ────────────────────
+     * `money()` ছাড়, খরচ, জমা — সবাই ব্যবহার করে, আর ওদের ঋণাত্মক হওয়ার
+     * কোনো মানে নেই। ওখানে একটা "কখনো কখনো ঋণাত্মক চলবে" শর্ত বসালে
+     * **একদিন কেউ ভুল জায়গায় ওটা চালু করত**, আর ঋণাত্মক ছাড় মানে বিল
+     * বেড়ে যাওয়া — নীরবে।
+     *
+     * তাই ব্যতিক্রমটা নিজের নামেই থাকল: যে ডাকে সে জানে সে কী চাইছে।
+     */
+    private function signedMoney(mixed $value): string
+    {
+        $value = trim((string) ($value ?? ''));
+
+        if ($value === '' || ! is_numeric($value)) {
+            return '0.0000';
+        }
+
+        return bcadd($value, '0', 4);
+    }
+
+    /**
+     * জমার সারিগুলো — নতুন পথ, আর পুরনোটার সেতু।
+     *
+     * ── কেন দুইটা পথ ───────────────────────────────────────────────
+     * পর্দা এখন `deposits[]` পাঠায়, কিন্তু **পুরনো `deposit` ঘরটা এখনো
+     * অন্য জায়গা থেকে আসতে পারে** — এবং টেস্টও ওই আকারে লেখা। একটাকে
+     * আরেকটার আকারে অনুবাদ করে দিলে নিচের কোডে আর দুইটা পথ থাকে না,
+     * তাই ভুলের জায়গাও একটাই।
+     *
+     * ⚠️ দুইটা একসাথে এলে `deposits` জেতে — ওটাই বিস্তারিত, আর
+     * বিস্তারিতটাই সত্য।
+     *
+     * @param  array<string, mixed>  $data
+     * @return list<array{amount: string, account_id: mixed, instrument: ?string, reference: ?string, ref_date: ?string, narration: ?string}>
+     */
+    private function depositRows(array $data): array
+    {
+        $rows = [];
+
+        /*
+         * উপায়ের সারিগুলো একবারে তোলা — সারিপ্রতি একটা কোয়েরি নয়।
+         *
+         * ⚠️ কোড আর খাত **সার্ভারেই** বের করা হয়, পর্দা যা পাঠিয়েছে তা
+         * নয়। পর্দার পাঠানো নাম বিশ্বাস করলে যে কেউ অনুরোধ বানিয়ে
+         * "নগদ" লিখে বিকাশের খাতে টাকা বসিয়ে দিতে পারত।
+         */
+        $methods = PaymentMethod::query()
+            ->whereIn('id', collect($data['deposits'] ?? [])
+                ->pluck('payment_method_id')->filter()->unique()->all())
+            ->get(['id', 'code', 'account_id'])
+            ->keyBy('id');
+
+        foreach ($data['deposits'] ?? [] as $row) {
+            $amount = $this->money($row['amount'] ?? '0');
+
+            // খালি সারি পর্দাতেও বাদ যায়; এখানে দ্বিতীয় দরজা
+            if (bccomp($amount, '0', 4) <= 0) {
+                continue;
+            }
+
+            $method = $methods->get($row['payment_method_id'] ?? null);
+
+            $rows[] = [
+                'amount' => $amount,
+                /*
+                 * খাত বাছা না থাকলে উপায়ের নিজের খাত — আর সেটাও না
+                 * থাকলে `null`, যেটা `CollectionService` প্রধান টিলে
+                 * পাঠায়। ⓘ শেষ ধাপটা কেবল নগদের জন্য ঠিক, তাই উপায়ের
+                 * সারিতে খাত বসানো **সেটআপের কাজ**, কোডের নয়।
+                 */
+                'account_id' => ($row['account_id'] ?? null) ?: $method?->account_id,
+                'instrument' => $method?->code,
+                'reference' => ($row['reference'] ?? '') ?: null,
+                'ref_date' => ($row['ref_date'] ?? '') ?: null,
+                'narration' => ($row['narration'] ?? '') ?: null,
+            ];
+        }
+
+        if ($rows !== []) {
+            return $rows;
+        }
+
+        $single = $this->money($data['deposit'] ?? '0');
+
+        if (bccomp($single, '0', 4) <= 0) {
+            return [];
+        }
+
+        return [[
+            'amount' => $single,
+            'account_id' => $data['account_id'] ?? null,
+            'instrument' => ($data['deposit_method'] ?? '') ?: null,
+            'reference' => ($data['deposit_ref'] ?? '') ?: null,
+            'ref_date' => null,
+            'narration' => null,
+        ]];
+    }
+
+    /**
+     * সব জমার যোগফল — চালানের গায়ে যেটা বসে।
+     *
+     * ⓘ `depositRows()` দিয়েই গোনা হয়, আলাদা করে নয় — নইলে একদিন
+     * যোগফল আর কাগজগুলো আলাদা হয়ে যেত, আর কোনটা সত্যি তা বলার উপায়
+     * থাকত না।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function depositTotal(array $data): string
+    {
+        $sum = '0.0000';
+
+        foreach ($this->depositRows($data) as $row) {
+            $sum = bcadd($sum, $row['amount'], 4);
+        }
+
+        return $sum;
     }
 
     private function money(mixed $value): string

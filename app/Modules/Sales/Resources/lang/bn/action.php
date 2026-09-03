@@ -36,7 +36,7 @@ return [
     'draft_restore' => 'ফিরিয়ে আনুন',
     'draft_discard' => 'বাদ দিন',
     'add_gift' => 'উপহার যোগ করুন',
-    'chart_bulk_do' => 'চার্ট',
+    'chart_bulk_do' => 'চার্ট এন্ট্রি',
     'transportation' => 'পরিবহন',
     'shipment' => 'শিপমেন্ট',
     'add_deposit' => 'জমা যোগ',

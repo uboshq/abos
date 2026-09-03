@@ -33,7 +33,7 @@ return [
      */
     'clear_full' => 'Clear All',
     'add_gift' => 'Add a gift',
-    'chart_bulk_do' => 'Chart',
+    'chart_bulk_do' => 'Chart Entry',
     'transportation' => 'Transportation',
     'shipment' => 'Shipment',
     'add_deposit' => 'Add Deposit',
@@ -47,6 +47,18 @@ return [
     'split_payment' => 'Split the payment',
     'add_payment_row' => 'Another method',
     'take_back' => 'Take it back',
+
+    /*
+     * ⚠️ These two were written in Bangla only, and the guard caught it —
+     * on the English screen the buttons would have read
+     * "sales::action.draft_restore" and "sales::action.draft_discard".
+     *
+     * "OK / Cancel" was avoided on purpose in both languages: neither word
+     * says what the press does, and here one press either brings a whole
+     * unfinished invoice back or throws it away for good.
+     */
+    'draft_restore' => 'Bring it back',
+    'draft_discard' => 'Throw it away',
 
     // ডিলারের কমিশন
     'commission_settle' => 'Accepted',

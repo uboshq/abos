@@ -63,10 +63,40 @@ return [
     'cost_of_goods' => 'Cost of goods sold',
     'paid' => 'Paid',
     'change' => 'Change',
-    'available_short' => 'have',
+    /*
+     * ⚠️ Was "have", now "Available" (3 Sep 2026).
+     *
+     * "have" read as what is sitting in the warehouse, which this number is
+     * not: it is what is left after reserved and held are taken off — what
+     * can actually be sold right now. "Main Stock" sits beside it, and with
+     * two numbers so close nobody could tell which was which.
+     */
+    /*
+     * The previous figure and the total change their name with their sign
+     * (3 Sep 2026).
+     *
+     * ⚠️ "Balance" is a neutral word for a number that runs both ways. At a
+     * counter, "500" tells nobody whether the party owes it or is owed it —
+     * and getting that backwards costs money.
+     *
+     * So the figure is always shown positive and the direction is the label.
+     */
+    'previous_due' => 'Previous Due',
+    'previous_advance' => 'Previous Advance',
+    'due' => 'Due',
+    'advance' => 'Advance',
+
+    'available_short' => 'Available',
     'main_stock' => 'Main Stock',
+    'hold_short' => 'Hold',
     'free_stock' => 'Free Stock',
-    'free_available' => 'Free Available',
+    /* ⚠️ One word — the owner's instruction (3 Sep 2026): *"Free
+       Available = Free likho sudu"*. The figure sits in a row of five
+       stock numbers where every character costs width, and "Available"
+       was already the label of the number two places to its left —
+       repeating it made the eye compare two labels instead of reading
+       one. Free stock is only ever the free stock that is available. */
+    'free_available' => 'Free',
     'in_cart' => 'In cart',
     'do_no' => 'DO No.',
     'credit_period' => 'Credit Period',
@@ -87,6 +117,24 @@ return [
     'discount_amount' => 'Discount',
     'proprietor' => 'Proprietor',
     'credit_limit' => 'Credit Limit',
+
+    /*
+     * ⚠️ What the counter actually asks (owner, 3 Sep 2026):
+     * *"Credit Limit 75,000.00 bad ... address line ekdom dane thakbe
+     * Avelable Cr. Limit"*.
+     *
+     * The limit is a number from a contract; this is the number from the
+     * counter — the limit less everything the party already owes, this
+     * invoice included.
+     *
+     * 'Cr.' is kept short on purpose: the label sits at the far right of
+     * the address line and must not push the address into a second row.
+     */
+    'available_credit' => 'Available Cr. Limit :',
+
+    /* A limit of zero stops credit, not goods — so it is said in words,
+       never as "0", which reads as "nothing may be sold". */
+    'cash_only' => 'cash / advance',
     'reserved_short' => 'Reserved',
     'total_qty' => 'Total Qty',
     'challan_date' => 'Invoice Date',
@@ -188,12 +236,26 @@ return [
     'commission_reject_reason' => 'Why it was refused',
     'expense_for' => 'What the expense is for',
     'expense_for_hint' => 'Fare · loading · tea',
+
+    /*
+     * ⚠️ The question and the examples in one box (owner, 3 Sep 2026).
+     *
+     * They used to be split: the question in a label, the examples inside
+     * the field. The field now sits on its own row with no label, and the
+     * examples alone would say what it might look like without saying what
+     * is being asked for.
+     */
+    'expense_for_placeholder' => 'What the expense is for — fare, loading, tea',
     'carrier' => 'Carrier',
     'transport_cost' => 'Transport cost',
     'ship_to' => 'Ship to',
     'ship_to_hint' => 'Shop, store or market',
     'ship_date' => 'Ship date',
     'deposit_method' => 'Method',
+    /* ⓘ Not the cheque date — the reference's date. A bKash transaction
+       sits here too, and it is not a cheque. It may be yesterday's, which
+       is why it is not the collection date; that one is always today. */
+    'ref_date' => 'Ref. Date',
     'deposit_ref' => 'Reference',
     'cheque' => 'Cheque',
     'mfs' => 'Mobile banking',
