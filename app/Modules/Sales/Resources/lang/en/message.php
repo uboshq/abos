@@ -99,6 +99,15 @@ return [
     'gift_none' => 'No gifts.',
     'type_or_pick' => 'Type or pick an item…',
     'search_customer' => 'Search customer…',
+
+    /*
+     * An unfinished invoice, kept through a refresh or a power cut.
+     *
+     * ⚠️ A statement, not a question — the two buttons ask it. "Restore it?"
+     * would suggest the system wants to; the decision is wholly the user's,
+     * because the cost of the wrong one is a whole invoice.
+     */
+    'draft_found' => 'An unfinished invoice is waiting',
     'no_customer_match' => 'No customer matches that.',
     'pick_an_item' => 'Pick an item',
     'upcoming' => 'coming soon',

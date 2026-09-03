@@ -98,11 +98,32 @@ return [
     'optional' => 'optional',
     'qty' => 'Qty.',
     'uom' => 'UoM',
-    'sales_rate' => 'Sales Price/Rate',
+    /*
+     * ⚠️ One word, not two — the owner's instruction (3 Sep 2026):
+     * *"Sales Price/Rate — zekono ekta likho, hoy 'rate' noy 'sales price'"*.
+     *
+     * A slash between two words is a label that could not make up its mind,
+     * and it costs twice the width for no extra meaning. "Sales Price" is
+     * chosen because the field beside it in the cart already reads
+     * "Unit Price" — the same word for the same idea, in both places.
+     */
+    'sales_rate' => 'Sales Price',
     'total_amount' => 'Total Amount',
     'discount_pct' => 'Discount %',
     'net_value' => 'Net Value',
     'vat' => 'VAT',
+
+    /*
+     * Whole-document VAT override (3 Sep 2026). "Per product" is the default
+     * and the ordinary case; the override is for the invoice that genuinely
+     * is one rate — an export, an exempt customer, a rate agreed in writing.
+     */
+    'vat_per_product' => 'Per product',
+    'vat_per_product_hint' => 'Each line takes the rate its own product declares. Change this only when the whole invoice really is one rate.',
+    'vat_exclusive' => 'VAT added',
+    'vat_inclusive' => 'VAT included',
+    'vat_exempt' => 'No VAT',
+    'vat_rate_for_every_line' => 'This rate applies to every line on this invoice.',
     'this_line' => 'This Line',
     'gift' => 'Gift',
     'costing' => 'Costing',
@@ -114,7 +135,16 @@ return [
     'free_unit' => 'Free Unit',
     'dis' => 'Dis.',
     'this_challan' => 'This Challan',
-    'invoice_total' => 'Invoice Total Amount',
+    /*
+     * ⚠️ Short on purpose — the owner's instruction (3 Sep 2026):
+     * *"Invoice Total Amount → poriborton kore 'INV Total' likho"*.
+     *
+     * The label sits beside a large figure in a narrow panel, and three words
+     * cost a line break there. "Amount" said nothing the ৳ sign was not
+     * already saying, and "INV" is the same abbreviation the number field
+     * above it already uses.
+     */
+    'invoice_total' => 'INV Total',
     'sub_total_no_vat' => 'Sub Total (without VAT)',
     'amount_or_pct' => 'amount or %',
     'to_pay_on_this' => 'To pay on this challan',

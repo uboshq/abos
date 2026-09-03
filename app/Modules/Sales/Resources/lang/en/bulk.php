@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 /** Chart / Bulk DO — the whole catalogue as one sheet. Keys must match bn. */
 return [
-    'open' => 'Chart / Bulk DO',
+    'open' => 'Chart',
     'title' => 'The whole list as one sheet',
     'search' => 'Search products…',
     'filter_all' => 'All products',
