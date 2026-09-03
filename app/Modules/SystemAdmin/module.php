@@ -89,7 +89,30 @@ return [
             ['label' => 'system_admin::menu.control_panel', 'route' => 'system_admin.control-panel', 'permission' => 'system_admin.settings.manage'],
             ['label' => 'core.custom_field.title', 'route' => 'system_admin.custom_field.index', 'permission' => 'system_admin.settings.manage'],
             ['label' => 'core.look.title', 'route' => 'system_admin.look.index', 'permission' => 'system_admin.look.manage'],
-            ['label' => 'system_admin::menu.backup', 'route' => 'system_admin.backup.index', 'permission' => 'system_admin.backup.manage'],
+            /* ব্যাকআপের সারি সরেছে — এখন নিজের মডিউলে ([[Backup/module.php]]) */
+
+            /*
+             * ── প্রথম দরজার (`/setup`) কোনো সারি এখানে নেই, আর সেটা
+             *    ইচ্ছাকৃত (৩ সেপ্টেম্বর ২০২৬) ─────────────────────────
+             *
+             * সারিটা **চিরকাল মৃত** হত, আর যুক্তিটা বৃত্তাকার:
+             *
+             *   মেনু দেখতে হলে লগইন লাগে
+             *   → লগইন থাকা মানে অন্তত একজন ব্যবহারকারী আছেন
+             *   → ব্যবহারকারী থাকা মানে `/setup` ৪০৪ ([[SetupController]])
+             *
+             * অর্থাৎ যে মুহূর্তে কেউ সারিটা **দেখতে** পারতেন, ঠিক সেই
+             * মুহূর্তেই ওটা আর কোথাও নিয়ে যেত না — ১০০% ব্যবহারকারীর
+             * জন্য, ১০০% সময়। `ModuleMenuTest::test_every_menu_row_
+             * actually_opens()` ওটা ধরে লাল হত, আর ঠিকই হত।
+             *
+             * ⚠️ এটা ঠিক সেই রোগ যেটার কথা এই ফাইলের উপরেই লেখা আছে —
+             * "পড়ে থাকা প্রতিশ্রুতি"। `planned` পতাকা দিয়েও ঢাকা যেত
+             * না: পর্দাটা **আছে**, শুধু ওই দর্শকের জন্য নেই।
+             *
+             * দরজায় পৌঁছানোর পথ মেনু নয়, আর হওয়ার কথাও নয় — ইনস্টল
+             * করার পর ব্রাউজারে ঠিকানাটা খোলা, একবার।
+             */
         ],
     ],
 

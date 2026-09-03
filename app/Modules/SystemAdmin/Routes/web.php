@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-use App\Modules\SystemAdmin\Http\Controllers\BackupController;
 use App\Modules\SystemAdmin\Http\Controllers\CompanyController;
 use App\Modules\SystemAdmin\Http\Controllers\ControlPanelController;
 use App\Modules\SystemAdmin\Http\Controllers\CustomFieldController;
 use App\Modules\SystemAdmin\Http\Controllers\ImportController;
 use App\Modules\SystemAdmin\Http\Controllers\LookController;
 use App\Modules\SystemAdmin\Http\Controllers\RoleController;
+use App\Modules\SystemAdmin\Http\Controllers\SetupController;
 use App\Modules\SystemAdmin\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -19,17 +19,54 @@ use Illuminate\Support\Facades\Route;
  * হিসেবেই আছে। মেনুতে মৃত সারি রাখা হয় না।
  */
 
+/*
+ * প্রথম দরজা — একদম নতুন ইনস্টলের একমাত্র প্রবেশপথ।
+ *
+ * ── কেন এই দুইটা রুট `auth`-এর বাইরে ────────────────────────────────
+ * এটাই সেই মুহূর্ত যখন লগইন করার মতো কেউ নেই: `migrate` চলে গেছে,
+ * লগইনের পর্দা আসে, কিন্তু `users` টেবিল খালি আর ব্যবহারকারী বানানোর
+ * পর্দাটা `auth`-এর পিছনে। **লগইন করতে ব্যবহারকারী লাগে, ব্যবহারকারী
+ * বানাতে লগইন লাগে** — এই বৃত্তটা কাটার জন্যই দরজাটা।
+ *
+ * আমাদের সার্ভারে বিক্রি হলে ফাঁকটা কেউ টের পেত না, কারণ প্রথম
+ * ব্যবহারকারীটা হাতে বসিয়ে দেওয়া হয়। ক্রেতার নিজের সার্ভারে সেই
+ * লোকটাই নেই (৩ সেপ্টেম্বর ২০২৬-এর সিদ্ধান্ত: ABOS দুইভাবেই বিক্রি হয়)।
+ *
+ * ── পাহারা কোথায় ────────────────────────────────────────────────────
+ * চাবিতে নয়, সময়ে: একটাও ব্যবহারকারী বসে গেলে দুইটা রুটই ৪০৪
+ * ([[SetupController]])। আর দুইটা অনুরোধ একই মুহূর্তে এলে সেটা থামায়
+ * ডাটাবেস, `FirstRun::open()`-এর তালা ([[FirstRun]]) — throttle হারের
+ * সীমা, পারমাণবিকতা নয়।
+ *
+ * ⚠️ তবু throttle আছে, আর লগইনের সমান (`throttle:10,1`,
+ * `routes/auth.php:43`)। কারণ গার্ডের নিজের ভাষায়: **দুইটার একটাতে
+ * তালা মানে তালা নেই** — দরজা দুইটা হলে ঢিলাটাই ব্যবহার হয়।
+ *
+ * ── কেন `guest` মিডলওয়্যার নয় ───────────────────────────────────────
+ * `guest` লগইন-করা মানুষকে ড্যাশবোর্ডে ফেরত পাঠায়। কিন্তু এখানে
+ * লগইন-করা কেউ থাকতেই পারে না (থাকলে দরজাটা এমনিতেই ৪০৪), আর
+ * `store`-এর শেষে আমরা নিজেরাই `Auth::login()` করি — `guest` থাকলে
+ * সেই redirect-টাই আটকাত।
+ */
+Route::prefix('setup')->name('setup.')->group(function () {
+    Route::get('/', [SetupController::class, 'show'])->name('show');
+    Route::post('/', [SetupController::class, 'store'])
+        ->middleware('throttle:10,1')
+        ->name('store');
+});
+
 Route::middleware('auth')->prefix('system')->group(function () {
     /*
-     * ব্যাকআপ — দেখা যায়, নেওয়া যায়, ফিরিয়ে আনা যায় না।
+     * ব্যাকআপের দরজা এখান থেকে সরেছে — ৩ সেপ্টেম্বর ২০২৬।
      *
-     * ফিরিয়ে আনার রুট ইচ্ছাকৃতভাবে নেই। `BackupService::restore()`
-     * আছে, কিন্তু ফিরিয়ে আনা মানে আজকের সব কাজ মুছে ফেলা — একটা ভুল
-     * ক্লিকের দাম গোটা দিনের বই। ওটা কমান্ড লাইনের কাজ, আর পর্দায়
-     * থাকে কেবল নির্দেশটা।
+     * এখন `app/Modules/Backup/Routes/web.php`-এ, আর নাম
+     * `system_admin.backup.*` থেকে `backup.*`। উপসর্গটা
+     * [[ModuleServiceProvider]] বসায় ফোল্ডারের নাম থেকে
+     * (`->name($code.'.')`), তাই ফাইল সরালে নামও সরে।
+     *
+     * ⚠️ "ফিরিয়ে আনার রুট নেই" নিয়মটা নতুন মডিউলেও অক্ষত — ফিরিয়ে
+     * আনা মানে আজকের সব কাজ মুছে ফেলা, আর পর্দায় ভুল ক্লিক হয়।
      */
-    Route::get('/backups', [BackupController::class, 'index'])->name('backup.index');
-    Route::post('/backups', [BackupController::class, 'store'])->name('backup.store');
 
     Route::get('/control-panel', [ControlPanelController::class, 'edit'])->name('control-panel');
     Route::put('/control-panel', [ControlPanelController::class, 'update'])->name('control-panel.update');
