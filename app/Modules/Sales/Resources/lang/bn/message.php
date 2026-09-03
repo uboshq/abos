@@ -3,6 +3,10 @@
 declare(strict_types=1);
 
 return [
+
+    // চালান নিশ্চিত হলে খতিয়ানে যে বর্ণনাটা বসে
+    'transport_for_challan' => 'চালান :no-এর গাড়ির ভাড়া',
+
     'stock_in' => ':no — মাল গুদামে ঢুকল',
     'awaiting_bill' => ':no — মাল এসেছে, বিল আসেনি',
     'bill_clears_pending' => ':no — অপেক্ষমাণ দায় নিষ্পত্তি',
