@@ -57,10 +57,48 @@ class ApprovalInboxController extends Controller implements HasMiddleware
         // সবচেয়ে বেশিক্ষণ আটকে রেখেছে (ইঞ্জিনই ওই ক্রমে দেয়)
         $waiting = $this->engine->pendingFor($user);
 
+        /*
+         * মডিউল ধরে ছাঁকনি — §২.২।
+         *
+         * ── কেন গণনাটা তালিকা থেকেই, ডাটাবেস থেকে নয় ────────────────
+         * সারিগুলো ইতিমধ্যে হাতে আছে, তাই আলাদা একটা `count` কোয়েরি
+         * পাঠানো মানে একই প্রশ্ন দুইবার করা। ⓘ আর সংখ্যাটা তখন
+         * তালিকার সাথে **মিলতেও বাধ্য** — দুই জায়গা থেকে গুনলে একদিন
+         * চিপে ৫ আর তালিকায় ৪ দেখাত, আর কোনটা সত্যি তা বলার উপায়
+         * থাকত না।
+         *
+         * ⚠️ ছাঁকনিটা মূল তালিকা **কমায় না, বাছে** — চিপের সংখ্যাগুলো
+         * সবসময় পুরো তালিকার, নাহলে "ক্রয় ৫" বেছে নেওয়ার পর বাকি
+         * চিপগুলো শূন্য দেখাত।
+         */
+        $counts = $waiting->countBy('module');
+        $selected = trim((string) $request->query('module', ''));
+
+        $modules = [];
+
+        foreach ($this->flows->choices() as $code => $entry) {
+            if ($counts->has($code) || $code === $selected) {
+                $modules[$code] = ['label' => $entry['label'], 'count' => (int) $counts->get($code, 0)];
+            }
+        }
+
+        /*
+         * বেছে নেওয়া মডিউলটা ঘোষিত নয় — তবু ছাঁকনিটা মানা হয়।
+         *
+         * ফলে তালিকা খালি দেখাবে, আর সেটাই সৎ: পুরনো একটা লিংক ধরে
+         * এসে "সব" দেখলে মানুষ ভাবতেন ছাঁকনিটা কাজ করেনি।
+         */
+        if ($selected !== '') {
+            $waiting = $waiting->where('module', $selected)->values();
+        }
+
         return view('approval::inbox.index', [
             'menu' => $this->menu->forUser($user),
             'approvals' => $waiting,
             'labels' => $this->flows->labels(),
+            'modules' => $modules,
+            'selected' => $selected,
+            'total' => $counts->sum(),
         ]);
     }
 

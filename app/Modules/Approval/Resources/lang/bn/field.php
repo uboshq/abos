@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'module' => 'মডিউল',
+    'all_modules' => 'সব',
     'action' => 'কাজ',
     'document' => 'ডকুমেন্ট',
     'document_type' => 'ডকুমেন্টের ধরন',

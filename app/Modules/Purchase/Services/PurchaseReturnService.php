@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Purchase\Services;
 
+use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Support\CompanyContext;
@@ -51,6 +52,7 @@ final class PurchaseReturnService
         private readonly PostingEngine $posting,
         private readonly StockService $stock,
         private readonly CostLayerService $costs,
+        private readonly DocumentApproval $approvals,
     ) {}
 
     /**
@@ -149,6 +151,17 @@ final class PurchaseReturnService
             $this->assertWithinBilled($line);
             $this->assertEnoughInStock($line->product, $return->warehouse, (string) $line->qty);
         }
+
+        // মাল ফেরত মানে সরবরাহকারীর কাছে দায় কমে — ছক বসানো থাকলে
+        // সেটাও একটা সিদ্ধান্ত, আর সিদ্ধান্তে সই লাগে।
+        $this->approvals->assertClear(
+            document: $return,
+            module: 'purchase',
+            action: 'return',
+            field: 'status',
+            amount: (string) $return->total,
+            reason: $return->narration,
+        );
 
         return DB::transaction(function () use ($return) {
             foreach ($return->lines as $line) {

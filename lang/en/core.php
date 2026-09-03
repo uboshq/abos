@@ -644,6 +644,18 @@ return [
         'allow' => 'This is a different business',
     ],
 
+    /*
+     * A document held up by approval — what the user reads on screen.
+     *
+     * These are UI, not logs: the two lines have to say why nothing
+     * happened and what to do next. The reason for a refusal travels with
+     * the message, or the next step is a phone call.
+     */
+    'approval' => [
+        'awaiting' => 'This has gone for approval. It moves on once the approver decides.',
+        'rejected' => 'Approval was refused — :reason. Put that right, edit the document, and it can go again.',
+    ],
+
     // বিজ্ঞপ্তি — একজনের জন্য একটা খবর
     'notify' => [
         'title' => 'For you',

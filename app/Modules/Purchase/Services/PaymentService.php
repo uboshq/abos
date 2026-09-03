@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Purchase\Services;
 
+use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Support\CompanyContext;
@@ -43,6 +44,7 @@ final class PaymentService
         private readonly NumberSeriesEngine $numbers,
         private readonly PostingEngine $posting,
         private readonly CashTillService $tills,
+        private readonly DocumentApproval $approvals,
     ) {}
 
     /**
@@ -133,6 +135,16 @@ final class PaymentService
         }
 
         $this->assertStillFits($payment);
+
+        // টাকা বেরোনোর আগেই সই — ছক বসানো না থাকলে আগের মতোই চলে।
+        $this->approvals->assertClear(
+            document: $payment,
+            module: 'purchase',
+            action: 'payment',
+            field: 'status',
+            amount: (string) $payment->amount,
+            reason: $payment->narration,
+        );
 
         return DB::transaction(function () use ($payment) {
             $this->posting->post(
