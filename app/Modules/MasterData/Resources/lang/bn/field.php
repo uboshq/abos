@@ -17,6 +17,8 @@ return [
     'kind' => 'ধরন',
     'is_inclusive' => 'দামের ভেতরে',
     'money_account' => 'টাকা কোন খাতে বসবে',
+    'payment_kind' => 'ধরন',
+    'applies_kind' => 'কোন ধরনে চলে',
     'needs_reference' => 'লেনদেন নম্বর লাগে',
     'fee_percent' => 'ফি (%)',
     'account' => 'হিসাবের খাত',

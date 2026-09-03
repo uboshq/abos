@@ -30,6 +30,7 @@ use App\Modules\MasterData\Models\PriceList;
 use App\Modules\MasterData\Models\ProductCategory;
 use App\Modules\MasterData\Models\ReasonCode;
 use App\Modules\MasterData\Models\Tax;
+use App\Modules\MasterData\Models\TransferMode;
 use App\Modules\MasterData\Models\Unit;
 use App\Modules\MasterData\Models\Vehicle;
 use App\Modules\MasterData\Models\VehicleType;
@@ -89,6 +90,7 @@ class EveryMasterNamesItsDuplicateGuardTest extends TestCase
         Designation::class => 'ব্যাকলগ ১খ — MasterListService',
         EmploymentType::class => 'ব্যাকলগ ১খ — MasterListService',
         VehicleType::class => 'ব্যাকলগ ১খ — MasterListService',
+        TransferMode::class => 'ব্যাকলগ ১খ — MasterListService',
         Vehicle::class => 'ব্যাকলগ ১খ — নিজ-সার্ভিস',
         PaymentMethod::class => 'ব্যাকলগ ১খ — নিজ-সার্ভিস',
         Location::class => 'ব্যাকলগ ১খ — LocationService (স্তরভিত্তিক)',
