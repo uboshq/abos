@@ -304,6 +304,16 @@ Route::prefix('portal')->name('portal.')->group(function () {
 
     Route::middleware(['auth:portal', EnsurePortalStillOpen::class])->group(function () {
         Route::get('/', [PortalController::class, 'home'])->name('home');
+
+        /*
+         * নিজের খতিয়ান — "আমার কত বাকি" প্রশ্নের পূর্ণ উত্তর।
+         *
+         * ⓘ কোনো `{customer}` প্যারামিটার নেই, আর সেটাই এখানকার
+         * নিরাপত্তা: ডিলার আসে সেশন থেকে ([[PortalController::dealer()]]),
+         * ঠিকানা থেকে নয়। URL-এ একটা আইডি থাকলে একদিন কেউ সংখ্যাটা
+         * বদলে অন্যের খাতা দেখে ফেলতেন।
+         */
+        Route::get('/ledger', [PortalController::class, 'ledger'])->name('ledger');
         Route::post('/logout', [PortalController::class, 'logout'])->name('logout');
         Route::get('/claims/new', [PortalController::class, 'showClaim'])->name('claim.create');
         Route::post('/claims', [PortalController::class, 'storeClaim'])->name('claim.store');

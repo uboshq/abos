@@ -7,7 +7,9 @@ namespace App\Modules\Sales\Http\Controllers;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounts\Models\Account;
+use App\Core\Services\SettingsService;
 use App\Modules\Customer\Models\Customer;
+use App\Models\LedgerEntry;
 use App\Modules\Sales\Models\DepositClaim;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Services\DepositClaimService;
@@ -160,6 +162,133 @@ class PortalController extends Controller
                 ->limit(20)->get(),
             'claims' => $this->claims->forCustomer($dealer),
         ]);
+    }
+
+    /**
+     * ডিলারের নিজের খতিয়ান — "আমার কত বাকি" প্রশ্নের পূর্ণ উত্তর।
+     *
+     * ── কেন এই পাতাটা সবার আগে ───────────────────────────────────────
+     * মালিকের যুক্তি: ডিলার রোজ ফোন করে তিনটা জিনিস জিজ্ঞেস করেন, আর
+     * এটাই এক নম্বর। হোম পাতায় নিট সংখ্যাটা আছে, কিন্তু **"কেন এত"**
+     * প্রশ্নের উত্তর নেই — আর ওই প্রশ্নটাই ফোনটা করায়।
+     *
+     * ── কেন রিপোর্ট ইঞ্জিনের ledger রিপোর্ট ব্যবহার করা হয়নি ──────────
+     * ওটা কোম্পানি ও শাখা ধরে চলে, পার্টি ধরে নয় — আর এখানে **পার্টিই
+     * একমাত্র সীমা**। ওটাকে বাঁকানোর চেয়ে `scopeForParty()` সরাসরি
+     * ডাকা সৎ, আর স্কোপটা তখন এক লাইনে পড়া যায়।
+     */
+    public function ledger(Request $request): View
+    {
+        $dealer = $this->dealer();
+
+        [$from, $to] = $this->range($request);
+
+        /*
+         * ⚠️ `withoutGlobalScope('user-branch')` — ডিলারের কোনো শাখা নেই।
+         *
+         * ছাঁকনিটা কর্মীর জন্য বানানো ("আমি যে শাখায় বসি")। ডিলারের
+         * বেলায় ওটা থাকলে তিনি **নিজের অর্ধেক কাগজ দেখতেন না**, আর
+         * ব্যালান্স মিলত না — অথচ কোথাও কোনো ত্রুটি হত না।
+         *
+         * ⓘ উল্টো দিকে ভুল করলে অনেক খারাপ: `forParty` বাদ দিলে
+         * **অন্য ডিলারের সারি** চলে আসত। তাই দুইটা শর্তই সবসময়
+         * একসাথে, আর টেস্টে দুইজন ডিলার রাখা হয়েছে।
+         */
+        $scope = fn () => LedgerEntry::query()
+            ->withoutGlobalScope('user-branch')
+            ->forParty('customer', (int) $dealer->id);
+
+        /*
+         * খোলার ব্যালান্স — ছাঁকনির **আগের** সব সারির নিট।
+         *
+         * ⚠️ এটা না গুনলে ব্যালান্সের কলাম শূন্য থেকে শুরু হত, আর ডিলার
+         * পড়তেন "আমার কোনো বকেয়া ছিল না" — যেটা প্রায় সবসময়ই মিথ্যা।
+         *
+         * ── কেন কাটাকাটিটা তারিখেই, `id` ধরে নয় ──────────────────────
+         * ছাঁকনির সীমা একটা **তারিখ**, আর নিচের তালিকা নেয়
+         * `trx_date >= $from`. তাই "আগের" মানে হুবহু `trx_date < $from`
+         * — একই তারিখের সারিগুলো সব একদিকে যায়, কোনোটা দুইবার বা
+         * শূন্যবার গোনা হয় না।
+         *
+         * ⓘ `id` লাগত যদি সীমাটা একটা **সারি** হত (যেমন কার্সর দিয়ে
+         * পাতা ভাগ)। আজ সেটা নয়, আর কেউ ভবিষ্যতে কার্সর বসালে এই
+         * কাটাকাটিটাও তখন `id` ধরে করতে হবে — নইলে সীমানার তারিখের
+         * সারিগুলো গোনায় গোলমাল করবে।
+         */
+        $opening = (string) ($scope()
+            ->whereDate('trx_date', '<', $from)
+            ->selectRaw('COALESCE(SUM(debit) - SUM(credit), 0) as net')
+            ->value('net') ?? '0');
+
+        /*
+         * ⚠️ ক্রম দুইটা কলাম ধরে, আর দ্বিতীয়টা বাদ দেওয়া যাবে না।
+         *
+         * একই তারিখে তিনটা সারি থাকলে ডাটাবেস যেকোনো ক্রমে দিতে পারে।
+         * তখন **প্রতিবার পাতা খুললে চলমান ব্যালান্স আলাদা দেখাত**,
+         * অথচ একটা সংখ্যাও বদলায়নি — আর ডিলার ধরে নিতেন খাতা ভুল।
+         */
+        $rows = $scope()
+            ->whereDate('trx_date', '>=', $from)
+            ->whereDate('trx_date', '<=', $to)
+            ->orderBy('trx_date')->orderBy('id')
+            ->get();
+
+        return view('sales::portal.ledger', [
+            'dealer' => $dealer,
+            'from' => $from,
+            'to' => $to,
+            'opening' => $opening,
+            'rows' => $rows,
+            'closing' => $this->runningBalance($rows, $opening),
+
+            /*
+             * ⚠️ সীমাটা কেবল তখনই, যখন কোম্পানি সুইচটা চালু রেখেছে।
+             *
+             * বন্ধ থাকলে "০" দেখানো যাবে না: ডিলার পড়তেন **তাঁর সীমা
+             * শেষ**, তারপর ফোন করতেন — অর্থাৎ এই পোর্টালের গোটা
+             * উদ্দেশ্যের উল্টো। আর মালিকের নিয়ম অনুযায়ী সীমা ০ মানে
+             * "বাকিতে নয়", "মাল নয়" নয় — তাই লেখাটা "নগদ/অগ্রিম"।
+             */
+            'creditLimitOn' => app(SettingsService::class)->enabled('customer.credit_limit_enabled'),
+        ]);
+    }
+
+    /**
+     * প্রতিটা সারিতে চলমান ব্যালান্স বসিয়ে শেষেরটা ফেরত।
+     *
+     * ⓘ সংখ্যাগুলো `bcadd`/`bcsub` দিয়ে, float দিয়ে নয় — টাকার হিসাবে
+     * float ব্যবহার করলে হাজার সারির পর পয়সা হারায়, আর এই রিপোর নিয়মই
+     * তাই।
+     *
+     * @param  \Illuminate\Support\Collection<int, LedgerEntry>  $rows
+     */
+    private function runningBalance($rows, string $opening): string
+    {
+        $balance = $opening;
+
+        foreach ($rows as $row) {
+            $balance = bcsub(bcadd($balance, (string) $row->debit, 4), (string) $row->credit, 4);
+            $row->running_balance = $balance;
+        }
+
+        return $balance;
+    }
+
+    /**
+     * কোন সময়টা — না বললে চলতি অর্থবছর নয়, **সবটা**।
+     *
+     * ⓘ চেকলিস্ট বলে "Lifetime": ডিলার খতিয়ান খোলেন হিসাব মেলাতে, আর
+     * তখন মাঝপথে কাটা একটা তালিকা কোনো কাজে আসে না। ছাঁকনি আছে, কিন্তু
+     * ডিফল্ট নয়।
+     *
+     * @return array{0: string, 1: string}
+     */
+    private function range(Request $request): array
+    {
+        return [
+            (string) $request->query('from', '1970-01-01'),
+            (string) $request->query('to', now()->toDateString()),
+        ];
     }
 
     public function showClaim(): View
