@@ -11,4 +11,8 @@ declare(strict_types=1);
 
 return [
     'expense' => 'খরচের ভাউচার',
+    'receipt' => 'আদায় ভাউচার',
+    'payment' => 'পরিশোধ ভাউচার',
+    'journal' => 'জাবেদা ভাউচার',
+    'contra' => 'কন্ট্রা ভাউচার',
 ];

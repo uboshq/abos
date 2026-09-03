@@ -10,9 +10,12 @@ use App\Core\Support\CompanyContext;
 use App\Models\Approval;
 use App\Models\ApprovalDecision;
 use App\Models\ApprovalFlow;
+use App\Models\ApprovalFlowStep;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use RuntimeException;
@@ -31,11 +34,21 @@ use RuntimeException;
 final class ApprovalEngine
 {
     /**
-     * এই অনুরোধে যে ছকগুলো ইতিমধ্যে খোঁজা হয়েছে।
+     * কোম্পানির সব সক্রিয় ছক — এই অনুরোধে একবার তোলা।
      *
-     * @var array<string, ?ApprovalFlow>
+     * @var array<string, ApprovalFlow>|null
      */
-    private array $flowCache = [];
+    private ?array $flowCache = null;
+
+    /**
+     * ইনার রোলের আইডিগুলো — ব্যবহারকারী ধরে, একবার।
+     *
+     * @var array<int, list<int>>
+     */
+    private array $roleCache = [];
+
+    /** নিজে সই করার সীমা — সেটিংস একবারই জিজ্ঞেস করা হয়। */
+    private ?string $selfLimit = null;
 
     /**
      * অনুমোদন লাগবে কি না — লাগলে অনুরোধ তৈরি করে ফেরত দেয়, নাহলে null।
@@ -52,7 +65,7 @@ final class ApprovalEngine
         ?string $reason = null,
         ?int $userId = null,
     ): ?Approval {
-        $flow = $this->flowFor($module, $action, $document);
+        $flow = $this->flowFor($module, $action, class_basename($document));
 
         if ($flow === null || ! $flow->appliesTo($amount)) {
             return null;
@@ -112,7 +125,10 @@ final class ApprovalEngine
                 'decided_at' => now(),
             ]);
 
-            $flow = $this->flowFor($approval->module, $approval->action, null);
+            // ⚠️ অনুরোধের নিজের নথি-ধরন ধরে, `null` ধরে নয় — নাহলে
+            // নথি-নির্দিষ্ট ছকে বসা অনুরোধ ভুল ছকের স্তর গুনত, আর
+            // পরের স্তরটাই খুঁজে পেত না ([[flowOf]])।
+            $flow = $this->flowOf($approval);
             $steps = $flow?->steps ?? collect();
 
             $currentStep = $steps->firstWhere('level', $approval->current_level);
@@ -276,31 +292,161 @@ final class ApprovalEngine
             ->first();
     }
 
-    /** এই ব্যবহারকারীর অপেক্ষমাণ তালিকা — Approval Centre-এর queue। */
-    /** @return Collection<int, Approval> */
+    /**
+     * এই ব্যবহারকারীর অপেক্ষমাণ তালিকা — Approval Centre-এর queue।
+     *
+     * ── কেন ছাঁকনিটা SQL-এ, PHP-তে নয় ───────────────────────────────
+     * আগে কোম্পানির **সব** অপেক্ষমাণ অনুরোধ মেমরিতে তুলে তারপর একটা
+     * একটা করে `canDecide()` জিজ্ঞেস করা হত, আর প্রতিটা সারিতে দুইটা
+     * করে কোয়েরি যেত — একটা "ইনি কি এই স্তরে সই দিতে পারেন" (রোল
+     * দেখতে), আরেকটা "ইনি কি আগেই দিয়েছেন"। অর্থাৎ খরচটা সারির
+     * সংখ্যার সাথে বাড়ত।
+     *
+     * আজ অপেক্ষমাণ অনুরোধ হাতেগোনা, তাই কেউ টের পায় না। **কিন্তু এই
+     * তালিকাটা তিন জায়গা থেকে ডাকা হয়** — Inbox, হোম পর্দার উইজেট,
+     * আর স্ট্যাটাস বার — আর মডিউলগুলো একে একে অনুমোদন চাইতে শুরু করলে
+     * সারির সংখ্যাটাই বাড়বে। তখন "জোড়া দেওয়ার পর সব ধীর হয়ে গেল" বলে
+     * ভুল জায়গায় কারণ খোঁজা হত।
+     *
+     * ── এখন খরচটা সারির সংখ্যা থেকে স্বাধীন ─────────────────────────
+     * ছক, ধাপ আর রোল — তিনটাই একবার তোলা হয়, তা থেকে বেরোয় "ইনি কোন
+     * কাজের কোন স্তরে সই দিতে পারেন", আর বাকিটা একটাই কোয়েরি।
+     * ইনডেক্সটাও তৈরি ছিল: `approval_queue` (company, status, module)।
+     *
+     * ⚠️ নিয়মগুলো `canDecide()`-এর সাথে **অবিকল** এক থাকতে হবে — দুইটা
+     * আলাদা হয়ে গেলে ইনবক্স এমন সারি দেখাত যেটা খুলে সিদ্ধান্ত দেওয়া
+     * যায় না, বা উল্টোটা (আর উল্টোটা নীরব)। সেটা টেস্টে বাঁধা:
+     * [[TheInboxAgreesWithTheDecisionTest]]। দুইটাই ছক বাছে একই
+     * [[flowFor]] দিয়ে, নথির ধরনসহ।
+     *
+     * @return Collection<int, Approval>
+     */
     public function pendingFor(User $user): Collection
     {
-        return Approval::query()
+        $tuples = $this->decidableTuples($user);
+
+        // কোনো ছকেই ইনি নেই — একটা কোয়েরিও পাঠানোর দরকার নেই।
+        if ($tuples === []) {
+            return new Collection();
+        }
+
+        $query = Approval::query()
             ->pending()
             // অনুরোধকারীর নাম প্রতিটা সারিতে দেখানো হয়, তাই সাথেই আসে
             ->with('requester')
-            ->orderBy('requested_at')
-            ->get()
-            ->filter(fn (Approval $approval) => $this->canDecide($approval, $user))
-            ->values();
+            ->where(function (Builder $any) use ($tuples): void {
+                foreach ($tuples as [$module, $action, $type, $levels]) {
+                    $any->orWhere(function (Builder $one) use ($module, $action, $type, $levels): void {
+                        $one->where('module', $module)
+                            ->where('action', $action)
+                            // ⚠️ নথির ধরনটাও শর্তে, কারণ একই কাজে দুইটা
+                            // ছক থাকতে পারে — একটা নির্দিষ্ট নথির, একটা
+                            // সবার — আর দুইটায় অনুমোদনকারী আলাদা।
+                            ->where('approvable_type', $type)
+                            ->whereIn('current_level', $levels);
+                    });
+                }
+            })
+            // ইনি এই স্তরে আগেই সিদ্ধান্ত দিয়েছেন — আর দেখানোর কিছু নেই
+            ->whereNotExists(function (QueryBuilder $already) use ($user): void {
+                $already->selectRaw('1')
+                    ->from('approval_decisions')
+                    ->whereColumn('approval_decisions.approval_id', 'approvals.id')
+                    ->whereColumn('approval_decisions.level', 'approvals.current_level')
+                    ->where('approval_decisions.user_id', $user->id);
+            });
+
+        $this->exceptOwnBeyondLimit($query, $user);
+
+        return $query->orderBy('requested_at')->get();
+    }
+
+    /**
+     * নিজের অনুরোধ — কেবল সীমার নিচেরগুলো থাকবে।
+     *
+     * `canDecide()`-এর `withinSelfLimit()` নিয়মটাই, SQL-এ বলা। সীমা
+     * শূন্য বা বসানো না থাকলে নিজের একটা অনুরোধও নয় — পুরনো কঠোর
+     * নিয়ম, আর সেটাই ডিফল্ট।
+     */
+    private function exceptOwnBeyondLimit(Builder $query, User $user): void
+    {
+        $limit = $this->selfLimit();
+
+        if (bccomp($limit, '0', 4) <= 0) {
+            $query->where('requested_by', '!=', $user->id);
+
+            return;
+        }
+
+        $query->where(function (Builder $mine) use ($user, $limit): void {
+            $mine->where('requested_by', '!=', $user->id)
+                // অঙ্ক জানা না থাকলে সীমার নিচে কি না তাও জানা নেই —
+                // সন্দেহে কড়া দিকটাই, তাই `whereNotNull`।
+                ->orWhere(function (Builder $small) use ($limit): void {
+                    $small->whereNotNull('amount')->where('amount', '<', $limit);
+                });
+        });
+    }
+
+    /**
+     * ইনি কোন কাজের কোন ধরনের নথিতে, কোন স্তরে সই দিতে পারেন।
+     *
+     * ⭐ ছক বাছাই হয় [[flowFor]] দিয়ে — অর্থাৎ `canDecide()` যে নিয়মে
+     * বাছে, ঠিক সেই নিয়মে, নথির ধরনসহ। দুইটা আলাদা হলে ইনবক্স আর
+     * সিদ্ধান্তের দরজা দুই কথা বলত।
+     *
+     * @return list<array{0: string, 1: string, 2: string, 3: list<int>}>
+     *         module · action · approvable_type · যেসব স্তর ইনার
+     */
+    private function decidableTuples(User $user): array
+    {
+        /*
+         * অপেক্ষমাণ সারিগুলোতে কোন কোন ধরনের নথি আছে — একটা কোয়েরি।
+         *
+         * ── কেন ধরনগুলো ডাটাবেসকেই জিজ্ঞেস করা হয় ──────────────────
+         * কোন ছকটা চলবে তা নির্ভর করে নথির ধরনের উপর, আর ছকে ধরনটা
+         * লেখা থাকে সংক্ষিপ্ত নামে (`class_basename`) — `Voucher`,
+         * পুরো namespace নয়। উল্টো দিকে যাওয়া যায় না: `Voucher` থেকে
+         * পুরো শ্রেণির নাম বের করার কোনো নির্ভরযোগ্য উপায় নেই, কারণ
+         * দুই মডিউলে একই নামের শ্রেণি থাকতে পারে।
+         *
+         * তাই সোজা পথ: সারিতে যা যা ধরন আছে সেগুলোই তোলা হয় (একটা
+         * ছোট DISTINCT), আর প্রতিটার জন্য ছকটা মেমরিতেই বাছা হয়।
+         * সংখ্যাটা সারির সাথে বাড়ে না — ধরনের সাথে বাড়ে, আর ধরন
+         * হাতেগোনা।
+         */
+        $types = Approval::query()->pending()
+            ->select('module', 'action', 'approvable_type')
+            ->distinct()
+            ->get();
+
+        $tuples = [];
+
+        foreach ($types as $row) {
+            $levels = $this->levelsIn(
+                $this->flowFor($row->module, $row->action, class_basename((string) $row->approvable_type)),
+                $user,
+            );
+
+            if ($levels !== []) {
+                $tuples[] = [$row->module, $row->action, $row->approvable_type, $levels];
+            }
+        }
+
+        return $tuples;
     }
 
     public function canDecide(Approval $approval, User $user): bool
     {
-        $flow = $this->flowFor($approval->module, $approval->action, null);
+        /*
+         * ছক আছে, ওই স্তরে ধাপ আছে, আর ধাপটা ইনাকে অনুমতি দেয় —
+         * তিনটাই একসাথে এখানে। ⚠️ `pendingFor()` ঠিক এই দুইটা মেথডই
+         * ব্যবহার করে ([[flowOf]] · [[levelsIn]]), যাতে ইনবক্স আর এই
+         * প্রশ্নটা কখনো দুই কথা না বলে।
+         */
+        $levels = $this->levelsIn($this->flowOf($approval), $user);
 
-        if ($flow === null) {
-            return false;
-        }
-
-        $step = $flow->steps->where('level', $approval->current_level);
-
-        if ($step->isEmpty()) {
+        if (! in_array((int) $approval->current_level, $levels, true)) {
             return false;
         }
 
@@ -329,16 +475,10 @@ final class ApprovalEngine
             return false;
         }
 
-        $alreadyDecided = $approval->decisions()
+        return ! $approval->decisions()
             ->where('level', $approval->current_level)
             ->where('user_id', $user->id)
             ->exists();
-
-        if ($alreadyDecided) {
-            return false;
-        }
-
-        return $step->contains(fn ($s) => $s->allows($user));
     }
 
     /**
@@ -349,7 +489,7 @@ final class ApprovalEngine
      */
     private function withinSelfLimit(Approval $approval): bool
     {
-        $limit = (string) (app(SettingsService::class)->get('approval.self_limit') ?? '0');
+        $limit = $this->selfLimit();
 
         if (bccomp($limit, '0', 4) <= 0) {
             return false;
@@ -364,49 +504,138 @@ final class ApprovalEngine
         return bccomp($amount, $limit, 4) < 0;
     }
 
-    private function flowFor(string $module, string $action, ?Model $document): ?ApprovalFlow
+    /**
+     * সীমাটা অনুরোধ প্রতি একবার — সারি প্রতি একবার নয়।
+     *
+     * ইঞ্জিনটা `scoped`, তাই এই জমানোটা এক অনুরোধেই থাকে; মালিক সংখ্যাটা
+     * বদলালে পরের পাতাতেই কার্যকর হয়।
+     */
+    private function selfLimit(): string
     {
-        $documentType = $document !== null ? class_basename($document) : null;
+        return $this->selfLimit ??= (string) (app(SettingsService::class)->get('approval.self_limit') ?? '0');
+    }
 
-        /*
-         * একই অনুরোধের ভেতরে একই ছক বারবার খোঁজা হয় না।
-         *
-         * ── কেন এটা দরকার হলো ───────────────────────────────────────
-         * pendingFor() প্রতিটা অপেক্ষমাণ অনুরোধের জন্য canDecide() ডাকে,
-         * আর সেটা প্রতিবার ছক খোঁজে — বিশটা অনুরোধ মানে বিশটা কোয়েরি,
-         * আর তার সাথে বিশবার steps। ঘণ্টাটা এখন প্রতিটা পাতায় এই
-         * হিসাবটা করে, তাই খরচটা আর কোণে পড়ে থাকে না।
-         *
-         * অনুরোধের মধ্যে ছক বদলায় না: ছক সংরক্ষণ করলে পরের পাতাটা
-         * নতুন অনুরোধ, আর সেখানে ক্যাশটাও নতুন।
-         */
-        $key = $module.'|'.$action.'|'.($documentType ?? '');
-
-        if (array_key_exists($key, $this->flowCache)) {
-            return $this->flowCache[$key];
+    /**
+     * কোম্পানির সব সক্রিয় ছক — অনুরোধ প্রতি একবার, ধাপসহ।
+     *
+     * ── কেন সবগুলো একসাথে, চাহিদামতো একটা করে নয় ────────────────────
+     * আগে প্রতিটা `module.action` আলাদা কোয়েরিতে খোঁজা হত আর ফলটা
+     * জমিয়ে রাখা হত। কিন্তু `pendingFor()`-কে জানতে হয় **কোন কোন কাজে**
+     * এই মানুষটা সই দিতে পারেন — অর্থাৎ সবগুলোই লাগে। ছকের টেবিলটা
+     * ছোট (কাজপ্রতি একটা, কোম্পানিপ্রতি), তাই একবারে তুলে নেওয়াই সস্তা।
+     *
+     * ⓘ `BelongsToCompany` কোম্পানির সীমাটা নিজেই বসায়।
+     *
+     * @return array<string, ApprovalFlow>  "module|action|document_type"
+     */
+    private function flows(): array
+    {
+        if ($this->flowCache !== null) {
+            return $this->flowCache;
         }
 
-        $query = ApprovalFlow::query()
-            ->where('module', $module)
-            ->where('action', $action)
-            ->where('is_active', true);
+        $flows = [];
 
-        // ডকুমেন্ট-নির্দিষ্ট ছক আগে, না থাকলে মডিউল-ব্যাপী ছক
-        if ($documentType !== null) {
-            $specific = (clone $query)->where('document_type', $documentType)->first();
+        foreach (ApprovalFlow::query()->where('is_active', true)->with('steps')->get() as $flow) {
+            $flows[$flow->module.'|'.$flow->action.'|'.$flow->document_type] = $flow;
+        }
 
-            if ($specific !== null) {
-                return $this->flowCache[$key] = $specific;
+        return $this->flowCache = $flows;
+    }
+
+    /**
+     * এই কাজে কোন ছকটা চলবে।
+     *
+     * ⭐ ── একটাই নিয়ম, আর সেটা এখানেই ────────────────────────────────
+     * নথি-নির্দিষ্ট ছক আগে, না থাকলে মডিউল-ব্যাপী ছক। **তিন জায়গা এই
+     * একটা মেথডকেই জিজ্ঞেস করে** — অনুরোধ তৈরি, সিদ্ধান্তের অধিকার, আর
+     * ইনবক্সের তালিকা।
+     *
+     * ⚠️ ── আগে তা ছিল না, আর ফলটা নীরব ছিল ──────────────────────────
+     * `request()` নথিটা দিত, তাই সে নথি-নির্দিষ্ট ছক পেত ও অনুরোধ
+     * বানাত। কিন্তু `canDecide()` ও `approve()` নথিটা দিত না (`null`),
+     * তাই তারা কেবল মডিউল-ব্যাপী ছক খুঁজত। যে কোম্পানি **শুধু** একটা
+     * নথি-নির্দিষ্ট ছক বসাতেন — "বড় চালানের জন্য অনুমোদন" — তাঁর
+     * অনুরোধ তৈরি হত, অথচ কেউ কোনোদিন সিদ্ধান্ত দিতে পারতেন না।
+     * **কাগজটা চিরকাল ঝুলে থাকত, আর কেউ বুঝত না কেন।**
+     *
+     * ⛔ আমাদের কোনো ডাটাবেসে এটা ধরা পড়ত না — সব seeded ছক
+     * মডিউল-ব্যাপী। ধরা পড়ত ক্রেতার অফিসে, প্রথম নথি-নির্দিষ্ট ছকের দিন।
+     *
+     * ⓘ "সব ধরনে" মানে **খালি লেখা, NULL নয়** — NULL রাখলে unique index
+     * কাজ করত না (MySQL-এ NULL ≠ NULL), আর একই কাজে দুইটা ছক বসে যেত:
+     * একটা চলত, অন্যটা নীরবে মরে থাকত (V-মাইগ্রেশন ১১ আগস্ট)।
+     */
+    private function flowFor(string $module, string $action, ?string $documentType): ?ApprovalFlow
+    {
+        $flows = $this->flows();
+
+        if ($documentType !== null && isset($flows[$module.'|'.$action.'|'.$documentType])) {
+            return $flows[$module.'|'.$action.'|'.$documentType];
+        }
+
+        return $flows[$module.'|'.$action.'|'] ?? null;
+    }
+
+    /**
+     * একটা অনুরোধের জন্য কোন ছকটা চলবে।
+     *
+     * নথির ধরনটা অনুরোধের সারিতেই লেখা আছে (`approvable_type`), তাই
+     * সিদ্ধান্তের সময় নথিটা হাতে না থাকলেও **একই ছকে পৌঁছানো যায়** —
+     * আর সেটাই উপরের বাগটার সারাই।
+     */
+    private function flowOf(Approval $approval): ?ApprovalFlow
+    {
+        return $this->flowFor(
+            $approval->module,
+            $approval->action,
+            class_basename((string) $approval->approvable_type),
+        );
+    }
+
+    /**
+     * এই ছকের কোন কোন স্তরে এই মানুষটা সই দিতে পারেন।
+     *
+     * ⓘ পুরোটা মেমরিতে — ছক ও রোল দুইটাই একবার তোলা, তাই সারির সংখ্যা
+     * যতই হোক এখানে আর কোনো কোয়েরি যায় না।
+     *
+     * @return list<int>
+     */
+    private function levelsIn(?ApprovalFlow $flow, User $user): array
+    {
+        if ($flow === null) {
+            return [];
+        }
+
+        $roleIds = $this->roleIds($user);
+        $levels = [];
+
+        foreach ($flow->steps as $step) {
+            $mine = $step->approver_type === ApprovalFlowStep::BY_USER
+                ? (int) $step->approver_id === $user->id
+                : in_array((int) $step->approver_id, $roleIds, true);
+
+            if ($mine) {
+                $levels[] = (int) $step->level;
             }
         }
 
-        /*
-         * "সব ধরনে" মানে খালি লেখা, NULL নয়।
-         *
-         * NULL রাখলে unique index কাজ করত না (MySQL-এ NULL ≠ NULL), আর
-         * একই কাজে দুইটা ছক বসে যেত — একটা চলত, অন্যটা নীরবে মরে থাকত।
-         */
-        return $this->flowCache[$key] = $query->where('document_type', '')->first();
+        return array_values(array_unique($levels));
+    }
+
+    /**
+     * ইনার রোলগুলো — ব্যবহারকারী প্রতি একবার।
+     *
+     * `ApprovalFlowStep::allows()` প্রতিবার `$user->roles()` কোয়েরি করে।
+     * প্রতিটা সারির প্রতিটা ধাপে সেটা ডাকা মানে একই প্রশ্ন বারবার, তাই
+     * উত্তরটা এখানে একবার নিয়ে রাখা হয়। ⓘ `allows()` মুছে ফেলা হয়নি —
+     * একটা ধাপ ধরে প্রশ্ন করার জায়গা ওটাই, আর ফর্মগুলো সেটাই ব্যবহার করে।
+     *
+     * @return list<int>
+     */
+    private function roleIds(User $user): array
+    {
+        return $this->roleCache[$user->id] ??= array_map('intval', $user->roles->modelKeys());
     }
 
     private function assertPending(Approval $approval): void

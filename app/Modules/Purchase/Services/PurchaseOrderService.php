@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Purchase\Services;
 
+use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
@@ -30,7 +31,10 @@ final class PurchaseOrderService
     use CalculatesLineTotals;
     use ReadsPackedQuantities;
 
-    public function __construct(private readonly NumberSeriesEngine $numbers) {}
+    public function __construct(
+        private readonly NumberSeriesEngine $numbers,
+        private readonly DocumentApproval $approvals,
+    ) {}
 
     /**
      * @param  array<string, mixed>  $data
@@ -123,6 +127,22 @@ final class PurchaseOrderService
                 'lines' => __('purchase::validation.no_lines'),
             ]);
         }
+
+        /*
+         * অনুমোদন লাগে কি না — ছক বসানো না থাকলে কিছুই বদলায় না।
+         *
+         * ⚠️ পাহারাটা সেবার ভেতরে, কন্ট্রোলারে নয়: এই মেথডটা পর্দা ছাড়াও
+         * ডাকা হতে পারে (ইমপোর্ট · কমান্ড · ভবিষ্যতের API), আর কেবল
+         * একটা দরজায় পাহারা বসানো মানে বাকিগুলো খোলা রাখা।
+         */
+        $this->approvals->assertClear(
+            document: $order,
+            module: 'purchase',
+            action: 'order',
+            field: 'status',
+            amount: (string) $order->total,
+            reason: $order->narration,
+        );
 
         $order->update(['status' => DocumentStatus::CONFIRMED]);
 

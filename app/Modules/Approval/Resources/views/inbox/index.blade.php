@@ -22,6 +22,46 @@
         </div>
     @endif
 
+    {{--
+        মডিউল ধরে ছাঁকনি — §২.২।
+
+        ── কেন সংখ্যাটা চিপের গায়েই ────────────────────────────────────
+        "ক্রয়" লেখা একটা চিপ চেপে খালি তালিকা পাওয়ার চেয়ে খারাপ কিছু
+        নেই। সংখ্যাটা আগে থেকে দেখা গেলে মানুষ জানেন কোথায় কাজ আছে, আর
+        যেখানে কিছু নেই সেই চিপটা দেখানোই হয় না।
+
+        ── একটার বেশি মডিউল না থাকলে সারিটাই থাকে না ────────────────────
+        একটা মাত্র বিকল্পের ছাঁকনি ছাঁকে না, শুধু জায়গা নেয় — আর নতুন
+        প্রতিষ্ঠানে শুরুর দিনগুলোতে ঠিক তা-ই হত।
+    --}}
+    @if (count($modules) > 1)
+        <div class="mb-3 flex flex-wrap items-center gap-2" role="group"
+             aria-label="{{ __('approval::field.module') }}">
+            @php
+                $chip = 'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium
+                         transition-colors hover:bg-(--color-surface-hover)';
+                $on = 'border-(--color-border) bg-(--color-surface-selected) text-(--color-ink)';
+                $off = 'border-(--color-border) bg-(--color-surface-card) text-(--color-ink-body)';
+            @endphp
+
+            <a href="{{ route('approval.inbox.index') }}"
+               @class([$chip, $selected === '' ? $on : $off])
+               @if ($selected === '') aria-current="true" @endif>
+                {{ __('approval::field.all_modules') }}
+                <span class="text-(--color-ink-muted)">{{ $total }}</span>
+            </a>
+
+            @foreach ($modules as $code => $one)
+                <a href="{{ route('approval.inbox.index', ['module' => $code]) }}"
+                   @class([$chip, $selected === $code ? $on : $off])
+                   @if ($selected === $code) aria-current="true" @endif>
+                    {{ $one['label'] }}
+                    <span class="text-(--color-ink-muted)">{{ $one['count'] }}</span>
+                </a>
+            @endforeach
+        </div>
+    @endif
+
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <x-ui.table
             :empty="__('approval::message.nothing_waiting')"

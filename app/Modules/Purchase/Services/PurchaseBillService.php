@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Purchase\Services;
 
+use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Services\SettingsService;
@@ -61,6 +62,7 @@ final class PurchaseBillService
         private readonly StockService $stock,
         private readonly CostLayerService $costs,
         private readonly SettingsService $settings,
+        private readonly DocumentApproval $approvals,
     ) {}
 
     /**
@@ -163,6 +165,17 @@ final class PurchaseBillService
         if ($bill->lines->isEmpty()) {
             throw ValidationException::withMessages(['lines' => __('purchase::validation.no_lines')]);
         }
+
+        // ছক বসানো থাকলে সই আগে, খতিয়ান পরে — লেনদেনের বাইরে, কারণ
+        // অপেক্ষা করা মানে কিছুই না বসা, আধা-বসা নয়।
+        $this->approvals->assertClear(
+            document: $bill,
+            module: 'purchase',
+            action: 'bill',
+            field: 'status',
+            amount: (string) $bill->total,
+            reason: $bill->narration,
+        );
 
         return DB::transaction(function () use ($bill) {
             $this->bringInDirectLines($bill);

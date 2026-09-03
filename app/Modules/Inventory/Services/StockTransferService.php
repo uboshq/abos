@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Inventory\Services;
 
+use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
@@ -44,6 +45,7 @@ final class StockTransferService
     public function __construct(
         private readonly NumberSeriesEngine $numbers,
         private readonly StockService $stock,
+        private readonly DocumentApproval $approvals,
     ) {}
 
     /**
@@ -143,6 +145,23 @@ final class StockTransferService
         foreach ($transfer->lines as $line) {
             $this->assertEnoughAtSource($line->product, $transfer->fromWarehouse, (string) $line->qty);
         }
+
+        /*
+         * অনুমোদন লাগে কি না — ছক না বসালে আগের মতোই রওনা হয়।
+         *
+         * ⓘ অঙ্ক পাঠানো হয় না, আর সেটা ইচ্ছাকৃত: গুদাম বদলে টাকার
+         * অঙ্ক নেই, মাল কেবল এক তাক থেকে আরেক তাকে যায়। অঙ্ক `null`
+         * মানে সীমা যা-ই বসানো হোক, ছক থাকলে সই লাগবে
+         * (`ApprovalFlow::appliesTo`) — এখানে ওটাই ঠিক, কারণ প্রশ্নটা
+         * "কত টাকার" নয়, "মালটা সরানো উচিত কি না"।
+         */
+        $this->approvals->assertClear(
+            document: $transfer,
+            module: 'inventory',
+            action: 'transfer',
+            field: 'status',
+            reason: $transfer->narration,
+        );
 
         return DB::transaction(function () use ($transfer) {
             foreach ($transfer->lines as $line) {

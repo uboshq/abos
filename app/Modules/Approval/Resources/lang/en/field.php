@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'module' => 'Module',
+    'all_modules' => 'All',
     'action' => 'Action',
     'document' => 'Document',
     'document_type' => 'Document type',

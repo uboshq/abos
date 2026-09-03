@@ -202,6 +202,26 @@ return [
         'purchase_return' => PurchaseReturn::class,
     ],
 
+    /*
+     * অনুমোদন লাগতে পারে এমন কাজ — চারটাই "নিশ্চিত" করার মুহূর্তে।
+     *
+     * ⓘ খসড়া লেখা কেউ আটকায় না; আটকায় কেবল নিশ্চিত করা, কারণ ওখানেই
+     * দায় বা টাকা নড়ে। ক্রয়াদেশে খতিয়ানে কিছু বসে না ঠিকই, কিন্তু
+     * ওটাই সরবরাহকারীর কাছে দেওয়া কথা — আর কথাটা দেওয়ার আগেই সই লাগে।
+     *
+     * ⚠️ **এই সারিগুলো কারো আজকের কাজ থামায় না।** ছক না বসানো পর্যন্ত
+     * `ApprovalEngine::request()` `null` ফেরায় আর `confirm()` আগের মতোই
+     * চলে। কত টাকার উপরে সই লাগবে সেটা প্রতিটা কোম্পানি নিজে বসাবে —
+     * এক ডিপোর "বড় ক্রয়" আরেকটার রোজকার কাজ, তাই সংখ্যাটা কোডে থাকতে
+     * পারে না।
+     */
+    'approvals' => [
+        'order' => 'purchase::approval.order',
+        'bill' => 'purchase::approval.bill',
+        'payment' => 'purchase::approval.payment',
+        'return' => 'purchase::approval.return',
+    ],
+
     'reports' => [
         PurchaseReports::class,
         SettlementReport::class,

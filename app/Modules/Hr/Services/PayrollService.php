@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Hr\Services;
 
+use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Services\SettingsService;
@@ -43,6 +44,7 @@ final class PayrollService
         private readonly SettingsService $settings,
         private readonly PostingEngine $posting,
         private readonly NumberSeriesEngine $numbers,
+        private readonly DocumentApproval $approvals,
     ) {}
 
     /**
@@ -156,6 +158,23 @@ final class PayrollService
                 'status' => __('hr::validation.nothing_to_confirm'),
             ]);
         }
+
+        /*
+         * সই আগে, খতিয়ান পরে।
+         *
+         * অঙ্কটা `net_total` — মোট বেতন নয়, হাতে যা যাবে সেটা। ছকের
+         * সীমাটা মানুষ ওই সংখ্যাটা ধরেই ভাবেন ("দুই লাখের উপরে হলে
+         * আমাকে জিজ্ঞেস কোরো"), আর কর্তনের আগের সংখ্যাটা সবসময় বড় বলে
+         * সীমাটা নীরবে কড়া হয়ে যেত।
+         */
+        $this->approvals->assertClear(
+            document: $run,
+            module: 'hr',
+            action: 'payroll',
+            field: 'status',
+            amount: (string) $run->net_total,
+            reason: $run->narration,
+        );
 
         return DB::transaction(function () use ($run) {
             $lines = $this->ledgerLines($run);

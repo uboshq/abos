@@ -11,4 +11,8 @@ declare(strict_types=1);
 
 return [
     'expense' => 'Expense voucher',
+    'receipt' => 'Receipt voucher',
+    'payment' => 'Payment voucher',
+    'journal' => 'Journal voucher',
+    'contra' => 'Contra voucher',
 ];

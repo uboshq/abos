@@ -221,6 +221,30 @@ return [
         'WDR' => 'finance::doc.withdrawal',
     ],
 
+    /*
+     * অনুমোদন লাগতে পারে এমন কাজ।
+     *
+     * ⚠️ ── এই সারিটা না থাকায় উত্তোলনে অনুমোদন কোনোদিন চাওয়া হয়নি ──
+     * `WithdrawalService` শুরু থেকেই ইঞ্জিনকে ডাকে
+     * (`request(module: 'finance', action: 'withdrawal', …)`), কিন্তু
+     * `ApprovalFlowService::choices()` কেবল **ঘোষিত** কাজগুলো ছকের
+     * পর্দায় দেখায়, আর `assertKnownAction()` অঘোষিত কাজে ছক বসাতেই
+     * দেয় না। ফল: ছক তৈরি করার কোনো পথ ছিল না → `flowFor()` সবসময়
+     * `null` → `request()` সবসময় `null` → **টাকা বেরোনোর সময় কেউ
+     * কোনোদিন সই চায়নি।**
+     *
+     * আর কিছুই ভাঙত না বলে ধরাও পড়ত না: অনুমোদন না চাওয়া দেখতে হুবহু
+     * "এই কোম্পানি অনুমোদন চায় না"-র মতো। ধরা পড়েছে মেপে — কোড যে
+     * `module.action` চায়, তার প্রতিটা ঘোষিত কি না তা গুনে
+     * (`EveryApprovalAskedForCanBeConfiguredTest`)।
+     *
+     * ⓘ সারিটা কারো আজকের কাজ থামায় না — ছক না বসানো পর্যন্ত
+     * `request()` আগের মতোই `null` ফেরায়। এটা কেবল **দরজাটা খোলে**।
+     */
+    'approvals' => [
+        'withdrawal' => 'finance::approval.withdrawal',
+    ],
+
     'reports' => [],
 
     'events' => [],
