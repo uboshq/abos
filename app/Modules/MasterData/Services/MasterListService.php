@@ -13,6 +13,7 @@ use App\Modules\MasterData\Models\Department;
 use App\Modules\MasterData\Models\Designation;
 use App\Modules\MasterData\Models\EmploymentType;
 use App\Modules\MasterData\Models\PartyType;
+use App\Modules\MasterData\Models\PaymentMethod;
 use App\Modules\MasterData\Models\PaymentTerm;
 use App\Modules\MasterData\Models\PriceList;
 use App\Modules\MasterData\Models\ReasonCode;
@@ -424,13 +425,24 @@ final class MasterListService implements ProvisionsCompany
      * কোডের ঠিক উপরে মন্তব্যে নিয়মটা লেখাই ছিল — "একটাও খালি না হলে
      * নয়, নাহলে বোতামটা কিছুই করত না" — কিন্তু কোড সেটা মানত না।
      *
-     * ── যে পাঁচটা এখানে নেই ─────────────────────────────────────────
-     * `cost-centers`, `brands`, `product-categories`, `payment-methods`,
-     * `vehicles` — এগুলোর কোনো প্রমিত সারি নেই, আর থাকার কথাও নয়:
-     * ব্র্যান্ড, শ্রেণি ও খরচ-কেন্দ্র প্রতিটা ব্যবসার নিজের, আর
-     * পেমেন্ট মেথড কোন হিসাবের খাতে বসবে তা কোম্পানি ছাড়া কেউ জানে না।
+     * ── যে চারটা এখানে নেই ──────────────────────────────────────────
+     * `cost-centers`, `brands`, `product-categories`, `vehicles` —
+     * এগুলোর কোনো প্রমিত সারি নেই, আর থাকার কথাও নয়: ব্র্যান্ড, শ্রেণি
+     * ও খরচ-কেন্দ্র প্রতিটা ব্যবসার নিজের।
      *
-     * তাই ওই পাঁচটায় খালি অবস্থাই স্বাভাবিক, আর প্রস্তাবটা আসে না।
+     * তাই ওই চারটায় খালি অবস্থাই স্বাভাবিক, আর প্রস্তাবটা আসে না।
+     *
+     * ⚠️ **`payment-methods` এখানে ছিল, আর যুক্তিটা ছিল**: *"কোন হিসাবের
+     * খাতে বসবে তা কোম্পানি ছাড়া কেউ জানে না"*। আপত্তিটা ঠিক ছিল, কিন্তু
+     * উপসংহারটা নয় — ⭐ **উপায় আর খাত দুইটা আলাদা প্রশ্ন**: সারিটা বলে
+     * *টাকা কীভাবে এল*, খাত বলে *কোথায় গেল*। খাতটা খালি রেখে সারিগুলো
+     * দেওয়া যায়, আর কাউন্টারের পর্দা খাতটা নিজেই জিজ্ঞেস করে।
+     *
+     * ⚠️ খালি রাখার দাম মাপা গেছে (৪ সেপ্টেম্বর ২০২৬): সরাসরি বিক্রয়ের
+     * জমার ঘরে "Method" আর "Reference" **চিরকাল ফাঁকা** থাকত, কারণ
+     * বাছার মতো একটা সারিও নেই — অর্থাৎ চেকের নম্বর বা bKash-এর TrxID
+     * লেখার জায়গাই খুলত না, আর মাস শেষে ব্যাংকের কাগজের সাথে মেলানো
+     * যেত না।
      *
      * ── কেন এটা হাতে লেখা তালিকা, তবু নিরাপদ ────────────────────────
      * `AButtonThatOfferedToInstallNothingTest` ঘোষণাটা পড়ে না — সে
@@ -442,7 +454,7 @@ final class MasterListService implements ProvisionsCompany
     public const HAS_DEFAULTS = [
         'units', 'taxes', 'payment-terms', 'party-types', 'price-lists',
         'reason-codes', 'currencies', 'departments', 'designations',
-        'employment-types', 'vehicle-types',
+        'employment-types', 'vehicle-types', 'payment-methods',
     ];
 
     public function installDefaults(): array
@@ -473,6 +485,27 @@ final class MasterListService implements ProvisionsCompany
             ['KG', 'Kilogram', 'কেজি', ['factor' => 1, 'allows_fraction' => true]],
             ['LTR', 'Litre', 'লিটার', ['factor' => 1, 'allows_fraction' => true]],
             ['BAG', 'Bag', 'বস্তা', ['factor' => 1]],
+        ]);
+
+        /*
+         * টাকা কীভাবে এল — চারটা, আর এই চারটাই বাংলাদেশে যথেষ্ট শুরু।
+         *
+         * ⓘ `account_id` ইচ্ছাকৃতভাবে খালি: কোন হিসাবের খাতে বসবে সেটা
+         * কোম্পানির নিজের সিদ্ধান্ত, আর কাউন্টারের পর্দা প্রতিবার খাতটা
+         * জিজ্ঞেসও করে। সেটিংসে একবার বসিয়ে দিলে পর্দায় আপনা থেকে আসে।
+         *
+         * ⚠️ নগদ ছাড়া বাকি তিনটায় `needs_reference` — চেকের নম্বর,
+         * TrxID, বা ব্যাংকের রেফারেন্স ছাড়া **টাকাটা আর খুঁজে পাওয়া যায়
+         * না**, আর মাস শেষে ব্যাংকের কাগজের সাথে মেলানোও যায় না।
+         *
+         * ⓘ তালিকাটা খোলা — কোম্পানি bKash, নগদ, রকেট আলাদা করে যোগ
+         * করতে পারে; এগুলো সারি, কোডের ধ্রুবক নয়।
+         */
+        $made['payment-methods'] = $this->seed(PaymentMethod::class, [
+            ['CASH', 'Cash', 'নগদ', ['is_default' => true]],
+            ['CHQ', 'Cheque', 'চেক', ['needs_reference' => true]],
+            ['BANK', 'Bank transfer', 'ব্যাংক ট্রান্সফার', ['needs_reference' => true]],
+            ['MFS', 'Mobile banking', 'মোবাইল ব্যাংকিং', ['needs_reference' => true]],
         ]);
 
         $made['taxes'] = $this->seed(Tax::class, [

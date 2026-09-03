@@ -124,7 +124,7 @@
          class="grid items-end gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
         <label class="block">
             <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::field.ref_date') }}</span>
-            <x-ui.date name="deposit_ref_date" x-ref="depositDate" class="text-2xs" />
+            <x-ui.date name="deposit_ref_date" class="text-2xs" />
         </label>
 
         {{-- ⓘ উপায়ের তালিকাটা সেটিংসের সারি, আর নতুন কোম্পানিতে ওটা

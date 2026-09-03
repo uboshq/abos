@@ -1,6 +1,6 @@
 {{--
     ⚠️ এই ফাইলের কোনো মন্তব্যে **কম্পোনেন্টের ট্যাগ কোণ-বন্ধনীসহ লিখবেন না**
-    (`<x-ui.date>` নয়, `x-ui.date`) — Blade মন্তব্য ফেলে দেওয়ার **আগে**
+    (কোণ-বন্ধনী ছাড়া, যেমন `x-ui.date`) — Blade মন্তব্য ফেলে দেওয়ার **আগে**
     কম্পোনেন্টের ট্যাগ খোঁজে, তাই মন্তব্যের ভিতরের ট্যাগটাও সে **আসল খোলা
     ট্যাগ** ধরে নেয়। বন্ধ না পেলে সে বাকি পুরো ফাইলটা গিলে ফেলে, আর ভুলটা
     দেখা যায় একদম শেষে: *"unexpected end of file, expecting endif"* — যে
@@ -79,7 +79,7 @@
           --}}
           x-init="lookForDraft()"
           x-effect="saveDraft()"
-          @submit="dropDraft()"
+          @submit="parkDraft()"
 
           {{--
               ── কি-বোর্ডের শর্টকাট — POS-এর কী-গুলোই ─────────────────────
@@ -496,7 +496,7 @@
                                      ⓘ কম্পোনেন্টটা সার্ভারে ISO পাঠায় (লুকানো
                                      ঘরে), তাই `name` ছাড়া আর কিছু লাগেনি।
                                      `dueOn` Alpine-এর ঘরটা আর দরকার নেই। --}}
-                                <x-ui.date name="due_on" x-ref="dueDate" />
+                                <x-ui.date name="due_on" />
                             </label>
 
                             {{-- দিনের সংখ্যাটা সার্ভারে যায়, কিন্তু পর্দায় নয় —
@@ -2585,6 +2585,23 @@
                     /** পাতা খোলার সময় — আছে কিনা দেখা, নিজে থেকে ফেরানো নয়। */
                     lookForDraft() {
                         try {
+                            const parked = localStorage.getItem(this.draftKey + '.pending');
+
+                            if (parked) {
+                                localStorage.removeItem(this.draftKey + '.pending');
+
+                                /*
+                                 * ⚠️ সার্ভার ফিরিয়ে দিয়েছে — তাই প্রশ্ন নয়,
+                                 * সরাসরি ফিরিয়ে আনা। ব্যবহারকারী "নতুন
+                                 * চালান" চাননি, তিনি **এইটাই** পাঠিয়েছিলেন।
+                                 */
+                                if (@js($errors->any())) {
+                                    this.applyDraft(parked);
+
+                                    return;
+                                }
+                            }
+
                             const raw = localStorage.getItem(this.draftKey);
 
                             if (! raw) return;
@@ -2609,8 +2626,16 @@
                      * করে নিশ্চিত করে ফেলতেন। **ভুল ক্রেতার নামে ভুল মাল।**
                      */
                     restoreDraft() {
+                        this.applyDraft(localStorage.getItem(this.draftKey));
+                        this.draftFound = false;
+                    },
+
+                    /**
+                     * খসড়াটা পর্দায় বসানো — কোথা থেকে এল তা জানার দরকার নেই।
+                     */
+                    applyDraft(raw) {
                         try {
-                            const d = JSON.parse(localStorage.getItem(this.draftKey) || '{}');
+                            const d = JSON.parse(raw || '{}');
 
                             this.customerId = d.customerId ?? '';
                             this.creditTerm = d.creditTerm ?? '0';
@@ -2626,6 +2651,39 @@
                             this.nextKey = d.nextKey ?? (this.lines.length + 1);
                         } catch (e) {
                             // ভাঙা খসড়া — ফেরানোর চেয়ে বাদ দেওয়াই নিরাপদ
+                        }
+                    },
+
+                    /*
+                     * ── সাবমিটের সময় খসড়া মোছা হয় না, সরিয়ে রাখা হয় ────
+                     *
+                     * ⚠️ মালিকের কথা (৪ সেপ্টেম্বর ২০২৬): *"এই warning-এ
+                     * আমার সব entry হারিয়ে গেল, এটা তো বক্সে বসার কথা"*।
+                     *
+                     * ── যা ঘটত ──────────────────────────────────────────
+                     * `@submit` খসড়াটা **মুছে দিত**, আর তার পরেই সার্ভার
+                     * চালানটা ফিরিয়ে দিলে (মজুদ কম, নম্বর নেওয়া, যা-ই হোক)
+                     * পাতাটা খালি হয়ে ফিরত — **বিশ লাইনের কার্ট, ক্রেতা,
+                     * জমা, সব শেষ**। ভুলটা এক লাইনের, দামটা এক ঘণ্টার কাজ।
+                     *
+                     * ── এখন ────────────────────────────────────────────
+                     * খসড়াটা `.pending`-এ সরে যায়। পাতাটা আবার **ভুলের
+                     * বার্তাসহ** খুললে ওটা নিজে থেকেই ফিরে আসে — প্রশ্ন
+                     * ছাড়াই, কারণ ব্যবহারকারী কিছু হারাতে চাননি।
+                     *
+                     * ⓘ চালানটা পাকা হলে পাতাটা আর ফেরে না (ছাপায় চলে
+                     * যায়), তাই পরেরবার এখানে এলে `.pending` চুপচাপ মুছে
+                     * যায় — পুরনো একটা বিক্রি ফিরিয়ে আনার প্রশ্নই ওঠে না।
+                     */
+                    parkDraft() {
+                        try {
+                            const raw = localStorage.getItem(this.draftKey);
+
+                            if (raw) localStorage.setItem(this.draftKey + '.pending', raw);
+
+                            localStorage.removeItem(this.draftKey);
+                        } catch (e) {
+                            // localStorage বন্ধ — তখন আগের মতোই আচরণ
                         }
 
                         this.draftFound = false;
@@ -2806,7 +2864,7 @@
                      * সার্ভারের জন্য, `text` চোখের জন্য।
                      */
                     pushDueDate() {
-                        const el = this.$refs.dueDate;
+                        const el = this.dateBox('due_on');
 
                         if (! el || ! window.Alpine) return;
 
@@ -3405,15 +3463,32 @@
                         }
                     },
 
-                    /** তারিখের ঘরটার নিজের Alpine স্কোপ — সেখান থেকেই পড়া। */
+                    /*
+                     * ⚠️ `$refs` এখানে কাজ করে না, আর কারণটা সহজে মিস হয়।
+                     *
+                     * `x-ref` যে স্কোপে **থাকে** সেখানেই নিবন্ধিত হয়, আর
+                     * ঘরটা `x-ui.date` কম্পোনেন্টের নিজের `x-data="abosDate(...)"`
+                     * এর ভিতরে। তাই ফর্মের স্কোপ থেকে `$refs.depositDate`
+                     * **সবসময় undefined** — আর নীরবে: তারিখটা খালি যেত,
+                     * কোনো ত্রুটি ছাড়াই। মালিক তালিকায় ফাঁকা "Ref. Date"
+                     * দেখে ধরেছেন (৪ সেপ্টেম্বর ২০২৬)।
+                     *
+                     * ⓘ লুকানো ঘরটার `name` আছে, তাই ওটাই ধরার হাতল —
+                     * আর সেটাও কম্পোনেন্টের স্কোপের ভিতরে, তাই
+                     * `Alpine.$data()` ওই স্কোপটাই ফেরত দেয়।
+                     */
+                    dateBox(name) {
+                        return this.$root.querySelector(`input[name="${name}"]`);
+                    },
+
                     get depositRefDate() {
-                        const el = this.$refs.depositDate;
+                        const el = this.dateBox('deposit_ref_date');
 
                         return el && window.Alpine ? (window.Alpine.$data(el).iso || '') : '';
                     },
 
                     clearDepositDate() {
-                        const el = this.$refs.depositDate;
+                        const el = this.dateBox('deposit_ref_date');
 
                         if (! el || ! window.Alpine) return;
 
