@@ -161,13 +161,19 @@
                  একই রঙের দুইটা চিহ্ন একই টাইলে বসলে চোখ দুইবার থামে,
                  আর কোনোটাই আর "চিহ্ন" থাকে না।
 
-                 ⓘ দাগটা কিনারা ঘেঁষে, পুরো উচ্চতায়, গোল কোণ ছাড়া —
-                 ওটা টাইলের সাজ নয়, **রেলের নিজের চিহ্ন**। --}}
+                 ⓘ দাগটা কিনারা ঘেঁষে, গোল কোণ ছাড়া — ওটা টাইলের সাজ নয়,
+                 **রেলের নিজের চিহ্ন**।
+
+                 ⚠️ উচ্চতাটা মডিউলের টাইলের **হুবহু সমান** (`h-11`), পুরো
+                 পাটাতনের নয় — মালিকের নির্দেশ: *"etar moto 100% same
+                 koro"*। ব্র্যান্ডের ঘরটা মডিউলের ঘরের চেয়ে উঁচু, তাই
+                 `inset-y-0` দিলে একই দাগ এখানে লম্বা দেখাত, আর দুইটা
+                 "এখানে আছি" চিহ্ন দুই মাপের হয়ে যেত। --}}
             <a href="{{ route('dashboard') }}"
                @class([
                    'relative grid w-(--spacing-sidebar-icon) shrink-0 place-items-center bg-(--color-brand-900)',
-                   'before:absolute before:inset-y-0 before:start-0 before:w-1
-                    before:bg-(--color-brand-gold)' => $onDashboard,
+                   'before:absolute before:top-1/2 before:h-11 before:-translate-y-1/2
+                    before:start-0 before:w-1 before:bg-(--color-brand-gold)' => $onDashboard,
                ])
                @if ($onDashboard) aria-current="page" @endif
                title="{{ __('core.menu.dashboard') }}">
