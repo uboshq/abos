@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 return [
     'cash' => 'Cash',
-    'cheque' => 'Cheque',
+    'bank' => 'Bank',
     'mfs' => 'MFS',
-    'transfer' => 'Bank transfer',
-    'card' => 'Card',
+    'cheque' => 'Cheque',
 ];

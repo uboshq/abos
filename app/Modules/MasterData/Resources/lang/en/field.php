@@ -17,6 +17,8 @@ return [
     'kind' => 'Kind',
     'is_inclusive' => 'Included in price',
     'money_account' => 'Money goes to',
+    'payment_kind' => 'Kind',
+    'applies_kind' => 'Applies to',
     'needs_reference' => 'Needs a reference',
     'fee_percent' => 'Fee (%)',
     'account' => 'Account',

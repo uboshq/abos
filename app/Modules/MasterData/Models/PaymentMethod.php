@@ -42,8 +42,22 @@ class PaymentMethod extends Model implements Drillable
 
     protected $table = 'mdm_payment_methods';
 
+    /**
+     * টাকা কীভাবে এল — চার ধরন, Accounts-এর instrument taxonomy ও
+     * StandardChart-এর তিন মায়ের সাথেই এক শব্দভাণ্ডার (নগদ ১১০১ · ব্যাংক
+     * ১১০২ · MFS ১১০৫; চেক ব্যাংকেই বসে, তাই খাত নয়, কোড থেকে চেনা)।
+     *
+     * পর্দা এই ধরন দেখেই "যে খাতে জমা" তালিকা ছাঁকে: নগদে নগদের খাত,
+     * ব্যাংকে ব্যাংক হিসাব, MFS-এ মোবাইল মানি। সারি নয় — এটা সত্যিই বদ্ধ
+     * তালিকা, কারণ প্রতিটা ধরন হিসাবের একটা মায়ের সাথে বাঁধা; নতুন একটা
+     * ধরন মানে একটা নতুন মা, যা কোম্পানির সেটিংসের কাজ নয়।
+     *
+     * @var list<string>
+     */
+    public const KINDS = ['cash', 'bank', 'mfs', 'cheque'];
+
     protected $fillable = [
-        'company_id', 'code', 'name_en', 'name_bn',
+        'company_id', 'code', 'name_en', 'name_bn', 'kind',
         'account_id', 'needs_reference', 'fee_percent',
         'is_active', 'created_by',
     ];

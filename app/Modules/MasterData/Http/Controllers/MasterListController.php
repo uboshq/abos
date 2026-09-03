@@ -23,6 +23,7 @@ use App\Modules\MasterData\Models\PriceList;
 use App\Modules\MasterData\Models\ProductCategory;
 use App\Modules\MasterData\Models\ReasonCode;
 use App\Modules\MasterData\Models\Tax;
+use App\Modules\MasterData\Models\TransferMode;
 use App\Modules\MasterData\Models\Unit;
 use App\Modules\MasterData\Models\Vehicle;
 use App\Modules\MasterData\Models\VehicleType;
@@ -148,12 +149,36 @@ class MasterListController extends Controller implements HasMiddleware
             'route' => 'payment_method',
             'title' => 'master_data::menu.payment_methods',
             'fields' => [
+                /*
+                 * ধরন — কোন খাতে টাকা বসতে পারে তা এই ঘরই ঠিক করে দেয়,
+                 * তাই বাধ্যতামূলক। খালি রাখলে পর্দা সব টাকার খাত দেখাত
+                 * (নিরাপদ ছাড়), কিন্তু নতুন সারিতে ছাঁকনিটা তখন কাজ করত না।
+                 */
+                'kind' => ['type' => 'select', 'label' => 'master_data::field.payment_kind',
+                    'options' => 'payment_kinds', 'labels' => 'payment_kind', 'rules' => ['required']],
                 'account_id' => ['type' => 'select', 'label' => 'master_data::field.money_account',
                     'options' => 'money_accounts', 'rules' => ['required']],
                 'needs_reference' => ['type' => 'switch', 'label' => 'master_data::field.needs_reference'],
                 'fee_percent' => ['type' => 'number', 'label' => 'master_data::field.fee_percent', 'step' => '0.0001'],
             ],
-            'columns' => ['account_id', 'needs_reference', 'fee_percent'],
+            'columns' => ['kind', 'account_id', 'needs_reference', 'fee_percent'],
+        ],
+
+        /*
+         * টাকা কোন মাধ্যমে সরল — ONLINE, NPSB, BEFTN, RTGS।
+         *
+         * method বলে *কীসে* (ব্যাংক, MFS), মাধ্যম বলে *কোন চ্যানেলে*।
+         * `applies_to` বলে মাধ্যমটা কোন ধরনের সাথে যায় — খালি হলে সব ধরনে।
+         */
+        'transfer-modes' => [
+            'model' => TransferMode::class,
+            'route' => 'transfer_mode',
+            'title' => 'master_data::menu.transfer_modes',
+            'fields' => [
+                'applies_to' => ['type' => 'select', 'label' => 'master_data::field.applies_kind',
+                    'options' => 'payment_kinds', 'labels' => 'payment_kind'],
+            ],
+            'columns' => ['applies_to'],
         ],
 
         'payment-terms' => [
@@ -681,6 +706,7 @@ class MasterListController extends Controller implements HasMiddleware
              */
             'money_accounts' => Account::query()->money()->postable()->active()->orderBy('code')->get(),
             'tax_kinds' => Tax::KINDS,
+            'payment_kinds' => PaymentMethod::KINDS,
             'applies' => PartyType::APPLIES,
             'contexts' => ReasonCode::CONTEXTS,
             'vehicle_types' => VehicleType::query()->active()->orderBy('code')->get(),

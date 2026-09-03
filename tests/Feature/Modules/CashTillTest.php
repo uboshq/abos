@@ -221,10 +221,29 @@ class CashTillTest extends TestCase
     {
         $this->make();
 
+        $mine = CashTill::query()->pluck('id')->all();
+
         $other = Company::query()->where('code', 'FMART')->firstOrFail();
         CompanyContext::set($other->id, $other->defaultBranch()?->id);
 
-        $this->assertSame(0, CashTill::query()->count());
+        /*
+         * ⚠️ দাবিটা "শূন্য" ছিল, আর সেটা আর সত্যি নয় — ৪ সেপ্টেম্বর ২০২৬।
+         *
+         * প্রতিটা নতুন কোম্পানি এখন একটা "প্রধান কাউন্টার" টিল নিয়ে শুরু
+         * করে (`CashTillService::provisionCompany`), কারণ ওটা ছাড়া নতুন
+         * কোম্পানি **মাল বেচতে পারত কিন্তু টাকা নিতে পারত না**।
+         *
+         * ⭐ কিন্তু এই পরীক্ষাটার আসল দাবি "শূন্য" নয়, **বিচ্ছিন্নতা** —
+         * এক কোম্পানি অন্যের টিল দেখবে না। তাই সংখ্যা গোনার বদলে এখন
+         * পরিচয় মেলানো হয়।
+         *
+         * ⓘ এভাবে পাহারাটা **আরও কড়া** হলো — আগে দুইটা কোম্পানির টিল
+         * একসাথে দেখা গেলেও, যতক্ষণ গোনা শূন্য নয় ততক্ষণ ধরা পড়ত না।
+         */
+        $seen = CashTill::query()->pluck('id')->all();
+
+        $this->assertSame([], array_values(array_intersect($mine, $seen)),
+            'অন্য কোম্পানির পর্দায় নিজের টিল দেখা যাচ্ছে।');
     }
 
     // ── স্ক্রিন ও অনুমতি ───────────────────────────────────────────────

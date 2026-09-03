@@ -7,6 +7,7 @@ return [
     'units' => 'Units',
     'taxes' => 'Tax & VAT',
     'payment_methods' => 'Payment methods',
+    'transfer_modes' => 'Transfer modes',
     'brands' => 'Brands',
     'product_categories' => 'Product categories',
     'payment_terms' => 'Payment terms',

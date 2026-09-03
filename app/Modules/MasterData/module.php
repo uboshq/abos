@@ -13,6 +13,7 @@ use App\Modules\MasterData\Models\PaymentTerm;
 use App\Modules\MasterData\Models\PriceList;
 use App\Modules\MasterData\Models\ReasonCode;
 use App\Modules\MasterData\Models\Tax;
+use App\Modules\MasterData\Models\TransferMode;
 use App\Modules\MasterData\Models\Unit;
 use App\Modules\MasterData\Models\Vehicle;
 use App\Modules\MasterData\Models\VehicleType;
@@ -66,6 +67,7 @@ return [
             ['label' => 'master_data::menu.units', 'route' => 'master_data.unit.index', 'permission' => 'master_data.view'],
             ['label' => 'master_data::menu.taxes', 'route' => 'master_data.tax.index', 'permission' => 'master_data.view'],
             ['label' => 'master_data::menu.payment_methods', 'route' => 'master_data.payment_method.index', 'permission' => 'master_data.view'],
+            ['label' => 'master_data::menu.transfer_modes', 'route' => 'master_data.transfer_mode.index', 'permission' => 'master_data.view'],
 
             /*
              * ব্র্যান্ড ও শ্রেণি — আগে পণ্যের ফর্মে মুক্ত লেখা ছিল।
@@ -160,6 +162,7 @@ return [
         'employment_type' => EmploymentType::class,
         'vehicle_type' => VehicleType::class,
         'vehicle' => Vehicle::class,
+        'transfer_mode' => TransferMode::class,
     ],
 
     'settings' => [

@@ -18,6 +18,7 @@ use App\Modules\MasterData\Models\PaymentTerm;
 use App\Modules\MasterData\Models\PriceList;
 use App\Modules\MasterData\Models\ReasonCode;
 use App\Modules\MasterData\Models\Tax;
+use App\Modules\MasterData\Models\TransferMode;
 use App\Modules\MasterData\Models\Unit;
 use App\Modules\MasterData\Models\VehicleType;
 use App\Modules\MasterData\Support\CodeConventions;
@@ -454,7 +455,7 @@ final class MasterListService implements ProvisionsCompany
     public const HAS_DEFAULTS = [
         'units', 'taxes', 'payment-terms', 'party-types', 'price-lists',
         'reason-codes', 'currencies', 'departments', 'designations',
-        'employment-types', 'vehicle-types', 'payment-methods',
+        'employment-types', 'vehicle-types', 'payment-methods', 'transfer-modes',
     ];
 
     public function installDefaults(): array
@@ -502,10 +503,13 @@ final class MasterListService implements ProvisionsCompany
          * করতে পারে; এগুলো সারি, কোডের ধ্রুবক নয়।
          */
         $made['payment-methods'] = $this->seed(PaymentMethod::class, [
-            ['CASH', 'Cash', 'নগদ', ['is_default' => true]],
-            ['CHQ', 'Cheque', 'চেক', ['needs_reference' => true]],
-            ['BANK', 'Bank transfer', 'ব্যাংক ট্রান্সফার', ['needs_reference' => true]],
-            ['MFS', 'Mobile banking', 'মোবাইল ব্যাংকিং', ['needs_reference' => true]],
+            ['CASH', 'Cash', 'নগদ', ['kind' => 'cash', 'is_default' => true]],
+            ['CHQ', 'Cheque', 'চেক', ['kind' => 'cheque', 'needs_reference' => true]],
+            ['BANK', 'Bank transfer', 'ব্যাংক ট্রান্সফার', ['kind' => 'bank', 'needs_reference' => true]],
+            // ⓘ MFS — নামটা দুই ভাষাতেই "MFS" (acronym), বাংলা বানান নয়:
+            // বিকাশ-নগদের জগতে ওটা এভাবেই পড়া হয়, আর accounts::instrument-এর
+            // লেবেলটাও এখন এক (দুই জায়গায় দুই নাম হলে কাগজে অমিল হত)।
+            ['MFS', 'MFS', 'MFS', ['kind' => 'mfs', 'needs_reference' => true]],
         ]);
 
         $made['taxes'] = $this->seed(Tax::class, [
@@ -537,6 +541,28 @@ final class MasterListService implements ProvisionsCompany
             ['DEALER', 'Dealer', 'ডিলার', ['applies_to' => PartyType::CUSTOMER, 'is_default' => true]],
             ['INST', 'Institution', 'প্রতিষ্ঠান', ['applies_to' => PartyType::BOTH]],
             ['VENDOR', 'Vendor', 'সরবরাহকারী', ['applies_to' => PartyType::SUPPLIER]],
+
+            /*
+             * ডিপোর চারটা বিশেষ পক্ষ — ৪ সেপ্টেম্বর ২০২৬, মালিকের তালিকা।
+             *
+             * ── কেন এগুলো ধরন, আলাদা মডিউল নয় ───────────────────────
+             * চারজনই সরবরাহকারী: আমরা তাঁদের টাকা দিই, আর হিসাব চলতি —
+             * মাসে একবার মেটে। তাই খতিয়ান, বকেয়ার বয়স, drill — সবই
+             * সরবরাহকারীর যন্ত্রেই চলে। ⭐ কেবল **শ্রেণিটা** আলাদা,
+             * আর সেটা `suppliers.party_type_id` ধরেই ছাঁকা যায়
+             * ([[PartyReports]]-এ ছাঁকনি আগে থেকেই আছে)।
+             *
+             * ── পরিবহনকারীটা সবচেয়ে জরুরি ───────────────────────────
+             * চালান নিশ্চিত হলে গাড়ির ভাড়া **তাঁর খাতায় পাওনা** হিসেবে
+             * বসে (Dr ৫২১৭ / Cr প্রদেয়) — নগদে নয়, কারণ টাকাটা ওই দিন
+             * দেওয়া হয় না। মালিকের কথা: *"transporter-এর সাথে হিসাব হবে"*।
+             *
+             * ⓘ দালাল (BROKER) কমিশনে কাজ করেন, তাই তাঁর হিসাবও চলতি।
+             */
+            ['TRANSPORT', 'Transport Vendor', 'পরিবহনকারী', ['applies_to' => PartyType::SUPPLIER]],
+            ['RENTAL', 'Rental Vehicle', 'ভাড়ার গাড়ি', ['applies_to' => PartyType::SUPPLIER]],
+            ['LABOUR', 'Labour Contractor', 'হাম্মালি ঠিকাদার', ['applies_to' => PartyType::SUPPLIER]],
+            ['BROKER', 'Broker', 'দালাল', ['applies_to' => PartyType::SUPPLIER]],
         ]);
 
         $made['price_lists'] = $this->seed(PriceList::class, [
@@ -670,6 +696,22 @@ final class MasterListService implements ProvisionsCompany
             ['CNG', 'CNG / Auto', 'সিএনজি', []],
             ['RICKSHAW', 'Rickshaw Van', 'রিকশা ভ্যান', []],
             ['BOAT', 'Boat', 'নৌকা', []],
+        ]);
+
+        /*
+         * টাকা কোন মাধ্যমে সরল — বাংলাদেশের প্রচলিত ব্যাংক-চ্যানেলগুলো।
+         *
+         * ⓘ ছয়টাই `applies_to='bank'`: আজকের মাধ্যমগুলো ব্যাংকের। MFS-এর
+         * নিজের মাধ্যম (Send Money · Payment · Cash Out) কোম্পানি পরে
+         * `applies_to='mfs'` দিয়ে সারি যোগ করে নিতে পারে — তালিকা খোলা।
+         */
+        $made['transfer-modes'] = $this->seed(TransferMode::class, [
+            ['ONLINE', 'Online / In-house', 'অনলাইন / একই ব্যাংক', ['applies_to' => 'bank']],
+            ['NPSB', 'NPSB', 'এনপিএসবি', ['applies_to' => 'bank']],
+            ['BEFTN', 'BEFTN', 'বিইএফটিএন', ['applies_to' => 'bank']],
+            ['RTGS', 'RTGS', 'আরটিজিএস', ['applies_to' => 'bank']],
+            ['DEPOSIT', 'Cash / Cheque deposit', 'নগদ / চেক জমা', ['applies_to' => 'bank']],
+            ['PO_DD', 'Pay Order / Demand Draft', 'পে-অর্ডার / ডিমান্ড ড্রাফট', ['applies_to' => 'bank']],
         ]);
 
         $this->linkIssueReasonsToAccounts();
