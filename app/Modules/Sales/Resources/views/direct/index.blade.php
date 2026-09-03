@@ -1390,7 +1390,7 @@
                             {{-- ছাড় — এখানেই লেখা যায়, টাকায় বা শতাংশে --}}
                             @if ($show['line_discount'])
                                 <div class="flex items-center gap-2">
-                                    <dt class="text-(--color-ink-muted)">{{ __('sales::field.discount_amount') }}</dt>
+                                    <dt class="text-(--color-ink-muted)">{{ __('sales::field.line_discount') }}</dt>
                                     <dd class="flex flex-1 items-center gap-1">
                                         <input type="text" inputmode="decimal" x-model="entry.discountInput"
                                                placeholder="{{ __('sales::field.amount_or_pct') }}"
@@ -3430,6 +3430,41 @@
                         );
                     },
 
+                    /*
+                     * ── কোন খাতগুলো বাছা যাবে ────────────────────────────
+                     *
+                     * মালিকের নির্দেশ (৪ সেপ্টেম্বর ২০২৬): *"Method Cash হলে
+                     * Received into-তে cash account গুলো, Bank হলে bank
+                     * account, MFS হলে Mobile bank — আর method না select
+                     * করলে Received into-তে কিছু দেখাবে না"*।
+                     *
+                     * ⚠️ **তিনটা আলাদা অবস্থা, তিনটাই আলাদা উত্তর:**
+                     *
+                     *   উপায় বাছা হয়নি      →  একটাও খাত নয়
+                     *   উপায় বাছা, ধরন জানা  →  কেবল ওই মায়ের সন্তানরা
+                     *   উপায় বাছা, ধরন নেই   →  সব টাকার খাত
+                     *
+                     * ⭐ প্রথমটা কেন খালি: খাত বাছার আগে **টাকাটা কীভাবে
+                     * এল** সেটা জানা দরকার, নইলে বিকাশের টাকা নগদ ড্রয়ারে
+                     * বসে যেত — আজ সকালে ঠিক ওই ভুলটাই সারানো হয়েছে।
+                     *
+                     * ⓘ তৃতীয়টা নিরাপদ ছাড়: কোনো কোম্পানি যদি নিজের একটা
+                     * উপায় বানিয়ে ধরন না দেন, তাঁর কাজ আটকে যাবে না।
+                     */
+                    depositKindParents: { cash: '1101', bank: '1102', mfs: '1105', cheque: '1102' },
+
+                    get depositAccounts() {
+                        const method = this.depositMethodRow;
+
+                        if (! method) return [];
+
+                        const parent = this.depositKindParents[method.kind];
+
+                        if (! parent) return this.moneyAccounts;
+
+                        return this.moneyAccounts.filter(a => a.parent === parent);
+                    },
+
                     /** বাছা উপায়ের সারিটা — কোড, খাত, নম্বর লাগবে কিনা। */
                     get depositMethodRow() {
                         return this.depositMethods.find(
@@ -3475,6 +3510,18 @@
                      */
                     pickDepositMethod() {
                         this.depositDraft.accountId = this.depositMethodRow?.accountId || '';
+
+                        /*
+                         * ⚠️ উপায় বদলালে আগের খাতটা আর মানানসই না-ও হতে পারে।
+                         *
+                         * নগদ বেছে নগদের খাত বসানোর পর কেউ ব্যাংক বাছলে ঘরটা
+                         * **নগদের খাত ধরে বসে থাকত**, অথচ তালিকায় ওটা আর নেই।
+                         * পর্দায় দেখাত খালি, কিন্তু সার্ভারে যেত পুরনো মানটাই —
+                         * নীরবে, আর টাকা ভুল খাতে।
+                         */
+                        if (! this.depositAccounts.some(a => a.id === this.depositDraft.accountId)) {
+                            this.depositDraft.accountId = '';
+                        }
 
                         if (! this.depositNeedsReference) {
                             this.depositDraft.reference = '';
