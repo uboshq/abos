@@ -41,7 +41,7 @@
         $current = collect($menu)->first(
             fn ($m) => collect($m['groups'])->flatten(1)->contains('active', true),
         ) ?? collect($menu)->first(
-            fn ($m) => str_starts_with($route, $m['code'].'.'),
+            fn ($m) => collect($m['codes'])->contains(fn ($c) => str_starts_with($route, $c.'.')),
         ) ?? ($menu[0] ?? null);
     @endphp
 

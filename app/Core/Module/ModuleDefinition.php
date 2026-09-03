@@ -66,7 +66,12 @@ final class ModuleDefinition
         /**
          * সাইডবারে এই মডিউলটা কোন দলে, আর সেই দলে কত নম্বরে।
          *
-         * @var array{section: string, order: int}
+         * `under` থাকলে মডিউলটার নিজের টাইল আঁকা হয় না — তার সারিগুলো
+         * আশ্রয়দাতা মডিউলের টাইলের ভেতরে, তার নিজের সারির পরে বসে।
+         * ব্যাকএন্ডের কিছুই বদলায় না: রুট, অনুমতি, ড্যাশবোর্ড, ইমপোর্ট
+         * সবই যার যার মডিউলেই থাকে ([[MenuBuilder::forUser()]])।
+         *
+         * @var array{section: string, order: int, under?: string}
          */
         public readonly array $nav,
         /** @var list<string> */
@@ -425,7 +430,7 @@ final class ModuleDefinition
             version: (string) ($raw['version'] ?? '1.0.0'),
             dependsOn: array_values($raw['depends_on'] ?? []),
             menu: $menu,
-            nav: self::validateNav($raw['nav'] ?? null, $path),
+            nav: self::validateNav($raw['nav'] ?? null, $path, (string) ($raw['code'] ?? '')),
             permissions: array_values($raw['permissions'] ?? []),
             docTypes: $raw['doc_types'] ?? [],
             drillSources: $raw['drill_sources'] ?? [],
@@ -507,9 +512,28 @@ final class ModuleDefinition
      * হয়। ফাঁক না রাখলে একটা মডিউল যোগ করা মানে পাঁচটা ফাইলে হাত দেওয়া,
      * আর প্রতিটা হাত একটা করে সুযোগ ভুল করার।
      *
-     * @return array{section: string, order: int}
+     * ── `under` — সাইডবারে অন্য মডিউলের ভেতরে বসা ─────────────────────
+     * মালিকের সিদ্ধান্ত, ৪ সেপ্টেম্বর ২০২৬: গ্রাহক বিক্রয়ের ভেতরে,
+     * সরবরাহকারী ক্রয়ের ভেতরে। *"ব্যাকএন্ড যেমন আছে তেমন থাকবে।"*
+     *
+     * তাই এটা **কেবল সাইডবারের কথা**। মডিউলটা আগের মতোই নিজের রুট,
+     * নিজের অনুমতি, নিজের ড্যাশবোর্ড আর নিজের `menu` অ্যারে নিয়ে
+     * দাঁড়িয়ে থাকে — শুধু তার টাইলটা রেলে আঁকা হয় না।
+     *
+     * সারিগুলো Sales-এ তুলে দেওয়া যেত না: `:384` অনুযায়ী মেনু সারির
+     * অনুমতি ওই মডিউলের নিজের ঘোষিত হতে হয়, আর `:414` অনুযায়ী প্রতিটা
+     * অনুমতি মডিউল-কোড দিয়ে শুরু হতে হয়। Sales-এ `customer.view` লেখা
+     * মাত্র বুট ভাঙত; আর Sales-কে নতুন চাবি বানালে যাঁদের ওটা নেই
+     * তাঁরা সবাই পরদিন ৪০৩ পেতেন।
+     *
+     * আশ্রয়দাতা সত্যিই আছে কিনা তা এখানে যাচাই করা হয় না — একটা
+     * `module.php` পড়ার সময় বাকিরা এখনো পড়াই হয়নি। নামটা ভুল হলে
+     * [[MenuBuilder]] মডিউলটাকে **আগের মতো নিজের টাইলেই** রাখে, যাতে
+     * একটা টাইপোর দাম কখনোই "পর্দাগুলো আর কোথাও থেকে খোলা যায় না" না হয়।
+     *
+     * @return array{section: string, order: int, under?: string}
      */
-    private static function validateNav(mixed $nav, string $path): array
+    private static function validateNav(mixed $nav, string $path, string $code): array
     {
         if (! is_array($nav) || ! isset($nav['section'], $nav['order'])) {
             throw new InvalidArgumentException(
@@ -534,7 +558,28 @@ final class ModuleDefinition
             );
         }
 
-        return ['section' => (string) $nav['section'], 'order' => $nav['order']];
+        $validated = ['section' => (string) $nav['section'], 'order' => $nav['order']];
+
+        if (isset($nav['under'])) {
+            if (! is_string($nav['under']) || $nav['under'] === '') {
+                throw new InvalidArgumentException(
+                    "{$path}: nav 'under' must be the code of the module this one sits inside — got "
+                    .get_debug_type($nav['under']).'. It is a module code like the ones in every '
+                    ."module.php's 'code', not a label."
+                );
+            }
+
+            if ($nav['under'] === $code) {
+                throw new InvalidArgumentException(
+                    "{$path}: nav 'under' points at this module itself. A module cannot sit inside its own "
+                    .'tile, and the sidebar would have nowhere to draw its rows.'
+                );
+            }
+
+            $validated['under'] = $nav['under'];
+        }
+
+        return $validated;
     }
 
     private static function validateAuditExempt(array $exempt, string $path): array
