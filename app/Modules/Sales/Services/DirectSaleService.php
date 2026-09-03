@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Modules\Sales\Services;
 
 use App\Core\Services\SettingsService;
+use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Services\ChequeService;
+use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
@@ -49,6 +52,7 @@ final class DirectSaleService
         private readonly StockService $stock,
         private readonly SettingsService $settings,
         private readonly BatchAllocator $batches,
+        private readonly ChequeService $cheques,
     ) {}
 
     /**
@@ -161,10 +165,22 @@ final class DirectSaleService
                     ? (bccomp($row['amount'], $left, 4) > 0 ? $left : $row['amount'])
                     : '0.0000';
 
-                $this->collections->confirm($this->collections->create(
+                $isCheque = ($row['kind'] ?? null) === 'cheque';
+
+                /*
+                 * ⚠️ চেকের টাকা "হাতে চেক" (১১০৪)-এ বসে, নগদ/ব্যাংকে নয় —
+                 * পর্দা কোন খাত পাঠাল তা নির্বিশেষে সার্ভারই ঠিক করে (ঘরটা
+                 * চেকে লুকানো)। ১১০৪ সাধারণ picker-এ নেই, তাই `allows_holding`
+                 * স্পষ্ট অনুমতি দেয় — নইলে আদায় ওখানে টাকা বসাতে দিত না, আর
+                 * সেটাই সাধারণ আদায়কে চেক ছাড়া ১১০৪ থেকে দূরে রাখে।
+                 */
+                $accountId = $isCheque ? $this->chequesInHandAccount()->id : $row['account_id'];
+
+                $collection = $this->collections->confirm($this->collections->create(
                     [
                         'customer_id' => $customer->id,
-                        'account_id' => $row['account_id'],
+                        'account_id' => $accountId,
+                        'allows_holding' => $isCheque,
                         /*
                          * ⚠️ টাকাটা **আজ** এসেছে; চেকের তারিখ আলাদা ঘর।
                          *
@@ -187,6 +203,29 @@ final class DirectSaleService
                         ? [['sales_invoice_id' => $invoice->id, 'amount' => $take]]
                         : [],
                 ));
+
+                /*
+                 * চেক হলে রেজিস্টারে একটা সারি — অ-পোস্টিং, কারণ টাকাটা উপরের
+                 * আদায়ের কাগজ পোস্ট করেছে (Dr ১১০৪ / Cr গ্রাহক)। এই সারিটা
+                 * চেকের জীবন রাখে (পাশ · ফেরত · PDC রিপোর্ট · একই চেক দুইবার
+                 * নয়), আর `collection_id` দিয়ে ওই কাগজটার সাথে বাঁধা — ফেরত
+                 * এলে ঠিক ওটাই বাতিল করতে হবে।
+                 */
+                if ($isCheque) {
+                    $this->cheques->record([
+                        'collection_id' => $collection->id,
+                        'party_type' => 'customer',
+                        'party_id' => $customer->id,
+                        'cheque_no' => $row['reference'],
+                        'cheque_date' => $row['ref_date'],
+                        'bank_name' => $row['bank_name'] ?? null,
+                        'amount' => $row['amount'],
+                        'received_on' => $data['trx_date'] ?? now()->toDateString(),
+                        'narration' => __('sales::message.direct_narration', [
+                            'no' => $challan->document_no,
+                        ]),
+                    ]);
+                }
 
                 $left = bcsub($left, $take, 4);
             }
@@ -601,7 +640,7 @@ final class DirectSaleService
         $methods = PaymentMethod::query()
             ->whereIn('id', collect($data['deposits'] ?? [])
                 ->pluck('payment_method_id')->filter()->unique()->all())
-            ->get(['id', 'code', 'account_id'])
+            ->get(['id', 'code', 'account_id', 'kind'])
             ->keyBy('id');
 
         foreach ($data['deposits'] ?? [] as $row) {
@@ -623,9 +662,13 @@ final class DirectSaleService
                  * সারিতে খাত বসানো **সেটআপের কাজ**, কোডের নয়।
                  */
                 'account_id' => ($row['account_id'] ?? null) ?: $method?->account_id,
+                // ধরন — চেক হলে টাকা ১১০৪-এ যায় ও একটা রেজিস্টার-সারি হয়
+                'kind' => $method?->kind,
                 'instrument' => $method?->code,
                 'reference' => ($row['reference'] ?? '') ?: null,
                 'ref_date' => ($row['ref_date'] ?? '') ?: null,
+                // চেকের ব্যাংকের নাম — কেবল চেকের সারিতে অর্থপূর্ণ
+                'bank_name' => ($row['bank_name'] ?? '') ?: null,
                 'narration' => ($row['narration'] ?? '') ?: null,
             ];
         }
@@ -643,9 +686,13 @@ final class DirectSaleService
         return [[
             'amount' => $single,
             'account_id' => $data['account_id'] ?? null,
+            // পুরনো একক-জমার পথ — এখানে method_id নেই, তাই ধরন জানা যায় না;
+            // চেক-রেজিস্টার কেবল deposits[] সারিগুলো থেকে হয়
+            'kind' => null,
             'instrument' => ($data['deposit_method'] ?? '') ?: null,
             'reference' => ($data['deposit_ref'] ?? '') ?: null,
             'ref_date' => null,
+            'bank_name' => null,
             'narration' => null,
         ]];
     }
@@ -668,6 +715,28 @@ final class DirectSaleService
         }
 
         return $sum;
+    }
+
+    /**
+     * "হাতে চেক" (১১০৪) খাত — চেকের টাকা এখানেই বসে।
+     *
+     * প্রতিটা কোম্পানির ছকে StandardChart এটা বসায়, তাই সচরাচর পাওয়া
+     * যায়; না পেলে চুপ করে অন্য খাতে বসিয়ে দেওয়ার চেয়ে থেমে বলে দেওয়াই
+     * ভালো — নইলে চেকের টাকা ভুল জায়গায় গিয়ে রেওয়ামিল মিলত, কারণ বোঝা যেত না।
+     */
+    private function chequesInHandAccount(): Account
+    {
+        $account = Account::query()
+            ->where('code', StandardChart::CHEQUES_IN_HAND)
+            ->first();
+
+        if ($account === null) {
+            throw ValidationException::withMessages([
+                'deposits' => __('sales::validation.no_cheques_in_hand_account'),
+            ]);
+        }
+
+        return $account;
     }
 
     private function money(mixed $value): string

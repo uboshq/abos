@@ -99,6 +99,94 @@ final class ChequeService
     }
 
     /**
+     * চেক কেবল রেজিস্টারে তোলা — কোনো দাখিলা নয়।
+     *
+     * ── কেন পোস্ট করে না ────────────────────────────────────────────────
+     * কাউন্টারে গ্রাহকের চেক নিলে টাকার দাখিলাটা **আদায়ের কাগজ** করে
+     * (Dr ১১০৪ / Cr গ্রাহক + CollectionLine, যা থেকে বিলের বকেয়া গোনা হয়)।
+     * তাই এখানে আবার পোস্ট করলে টাকা দ্বিগুণ বসত। এই সারিটা শুধু চেকের
+     * **জীবন** রাখে — পাশ, ফেরত, PDC রিপোর্ট, আর একই চেক দুইবার নয়।
+     *
+     * `collection_id` ভরা থাকে বলেই [[Cheque::postedByCollection()]] সত্য,
+     * আর [[bounce()]] তখন নিজের পোস্টিং এড়িয়ে যায়।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function record(array $data): Cheque
+    {
+        $amount = Money::round($data['amount'] ?? '0', 4);
+
+        if (bccomp($amount, '0', 4) <= 0) {
+            throw ValidationException::withMessages([
+                'amount' => __('accounts::validation.cheque_needs_amount'),
+            ]);
+        }
+
+        $chequeNo = trim((string) ($data['cheque_no'] ?? ''));
+
+        if ($chequeNo === '' || ($data['cheque_date'] ?? null) === null) {
+            throw ValidationException::withMessages([
+                'cheque_no' => __('accounts::validation.cheque_needs_no'),
+            ]);
+        }
+
+        $bankName = $data['bank_name'] ?? null;
+
+        // একই চেক দুইবার নয় — DB-র unique পাহারার আগে বোধগম্য বার্তা
+        $exists = Cheque::query()
+            ->where('direction', Cheque::RECEIVED)
+            ->where('bank_name', $bankName)
+            ->where('cheque_no', $chequeNo)
+            ->exists();
+
+        if ($exists) {
+            throw ValidationException::withMessages([
+                'cheque_no' => __('accounts::validation.cheque_duplicate', ['no' => $chequeNo]),
+            ]);
+        }
+
+        return DB::transaction(fn (): Cheque => Cheque::query()->create([
+            'company_id' => CompanyContext::id(),
+            'branch_id' => CompanyContext::branchId(),
+            'document_no' => $this->numbers->next('CHQ'),
+            'direction' => Cheque::RECEIVED,
+            'cheque_date' => $data['cheque_date'],
+            'received_on' => $data['received_on'] ?? now()->toDateString(),
+            'cheque_no' => $chequeNo,
+            'bank_name' => $bankName,
+            'amount' => $amount,
+            'party_type' => $data['party_type'] ?? null,
+            'party_id' => $data['party_id'] ?? null,
+            'collection_id' => $data['collection_id'] ?? null,
+            'status' => Cheque::PENDING,
+            'narration' => $data['narration'] ?? null,
+            'created_by' => auth()->id(),
+        ]))->fresh();
+    }
+
+    /**
+     * ফেরত এসেছে বলে চিহ্ন — কিন্তু কোনো দাখিলা নয়।
+     *
+     * ── কেন এটা আলাদা, [[bounce()]] নয় ─────────────────────────────────
+     * আদায়ের কাগজে পোস্ট হওয়া চেকের টাকা ফেরে **আদায় বাতিলে** (Sales),
+     * এখানে নয়। তাই এই পদ্ধতিটা কেবল অবস্থাটা বসায় — টাকা যে পক্ষ পোস্ট
+     * করেছে সে-ই ফেরাবে। ক্রয়ের চেকে (collection_id খালি) `bounce()`
+     * ব্যবহার হয়, যা নিজেই পোস্ট করে।
+     */
+    public function markBounced(Cheque $cheque, string $reason): Cheque
+    {
+        $this->assertStatus($cheque, [Cheque::PENDING, Cheque::DEPOSITED]);
+
+        $cheque->update([
+            'status' => Cheque::BOUNCED,
+            'bounce_reason' => $reason,
+            'cleared_on' => null,
+        ]);
+
+        return $cheque->fresh();
+    }
+
+    /**
      * ব্যাংকে জমা দেওয়া হলো — খাতায় টাকা নড়ে না।
      *
      * ── কেন এখানে কোনো দাখিলা নেই ───────────────────────────────────
@@ -162,6 +250,20 @@ final class ChequeService
      */
     public function bounce(Cheque $cheque, string $reason, Carbon|string|null $onDate = null): Cheque
     {
+        /*
+         * ⚠️ আদায়ের কাগজ যে চেকের টাকা পোস্ট করেছে, তার ফেরত এখানে নয়।
+         *
+         * ওই টাকা ফেরে আদায় বাতিলে (Sales) — Dr গ্রাহক / Cr ১১০৪ + বিলের
+         * বকেয়া ফেরে। এখানে আবার পোস্ট করলে টাকা **দ্বিগুণ** কাটত। তাই
+         * চিহ্নটা (collection_id) দেখে সরাসরি থামানো — শর্তটা ডেটায়, মনে
+         * রাখার উপর নয়। status বসানো হয় [[markBounced()]] দিয়ে, Sales থেকে।
+         */
+        if ($cheque->postedByCollection()) {
+            throw ValidationException::withMessages([
+                'status' => __('accounts::validation.cheque_bounce_via_receipt', ['no' => $cheque->document_no]),
+            ]);
+        }
+
         $this->assertStatus($cheque, [Cheque::PENDING, Cheque::DEPOSITED]);
 
         if (trim($reason) === '') {

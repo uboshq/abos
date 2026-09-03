@@ -60,7 +60,7 @@ class Cheque extends Model implements Drillable
     protected $fillable = [
         'company_id', 'branch_id', 'document_no', 'direction',
         'cheque_date', 'received_on', 'cheque_no', 'bank_name', 'amount',
-        'party_type', 'party_id', 'bank_account_id',
+        'party_type', 'party_id', 'bank_account_id', 'collection_id',
         'status', 'deposited_on', 'cleared_on', 'bounce_reason',
         'narration', 'created_by',
     ];
@@ -95,6 +95,19 @@ class Cheque extends Model implements Drillable
     public function isOpen(): bool
     {
         return in_array($this->status, [self::PENDING, self::DEPOSITED], true);
+    }
+
+    /**
+     * টাকাটা আদায়ের কাগজ পোস্ট করেছে, চেক নিজে নয়।
+     *
+     * কাউন্টারে নেওয়া চেক (গ্রাহকের) এভাবে আসে — আদায়ের কাগজ Dr ১১০৪
+     * পোস্ট করে, আর এই সারিটা কেবল রেজিস্টার। তাই ফেরত/বাউন্সে
+     * `ChequeService` নিজের পোস্টিং করবে না — আদায়ের কাগজ বাতিলই টাকা
+     * ফেরায়। ক্রয়ের চেকে `collection_id` খালি, সেখানে ChequeService-ই পোস্টার।
+     */
+    public function postedByCollection(): bool
+    {
+        return $this->collection_id !== null;
     }
 
     /** @param  Builder<self>  $query */

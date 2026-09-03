@@ -73,6 +73,8 @@ return [
     'collection_must_be_positive' => 'A collection must be more than zero.',
     'unknown_account' => 'That account is not in this company chart.',
     'not_a_money_account' => ':name is not a cash or bank account — money does not land there.',
+    'cheque_not_from_receipt' => 'This cheque was not taken on a receipt — its bounce is handled differently.',
+    'no_cheques_in_hand_account' => 'This company has no "Cheques in Hand" account to hold the cheque.',
     'discount_awaiting' => 'This discount needs approval — the request has been sent. The invoice stays a draft; press Confirm again once it is approved.',
     'discount_rejected' => 'The discount was sent back. Lower it and confirm again.',
     'approver_unknown' => 'That email and password do not match.',
