@@ -50,7 +50,20 @@
                             {{ __('approval::field.document') }}
                         </dt>
                         <dd class="text-sm">
-                            @if ($document === null)
+                            {{--
+                                কাগজটা আছে, কিন্তু এই পাঠকের জন্য নয়।
+
+                                ⚠️ ── কেন লাইনটা লাগে ────────────────────────────
+                                ঘরটা খালি রাখলে নিরীক্ষক ভাববেন কাগজটা মুছে গেছে
+                                বা পাতাটা ভাঙা — আর দুইটাই মিথ্যা। কারণটা লেখা
+                                থাকলে তিনি জানেন জিনিসটা আছে, শুধু তাঁর চাবি নেই।
+
+                                ⓘ "নেই" আর "আপনি দেখতে পারবেন না" এক কথা নয়, আর
+                                পর্দার দুইটাকে এক দেখানো চলে না।
+                            --}}
+                            @if ($documentHidden)
+                                <span class="text-(--color-ink-muted)">{{ __('approval::message.document_not_yours') }}</span>
+                            @elseif ($document === null)
                                 <span class="text-(--color-ink-muted)">{{ __('approval::message.document_gone') }}</span>
                             @elseif (method_exists($document, 'drillRoute'))
                                 <a href="{{ route(...$document->drillRoute()) }}"
