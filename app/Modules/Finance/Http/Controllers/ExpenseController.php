@@ -6,13 +6,16 @@ namespace App\Modules\Finance\Http\Controllers;
 
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
+use App\Models\Approval;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Accounts\Services\VoucherApproval;
 use App\Modules\Finance\Services\HeadTotals;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 /**
@@ -64,11 +67,55 @@ class ExpenseController extends Controller implements HasMiddleware
             'from' => $from,
             'to' => $to,
             'heads' => $this->heads($from, $to),
+            'waiting' => $this->waiting(),
             'recent' => Voucher::query()
                 ->ofType(Voucher::EXPENSE)
                 ->orderByDesc('trx_date')->orderByDesc('id')
                 ->limit(20)->get(),
         ]);
+    }
+
+    /**
+     * অনুমোদনের অপেক্ষায় পড়ে থাকা খরচ।
+     *
+     * ── কেন এটা এই পর্দায় ───────────────────────────────────────────
+     * খাত ধরে যোগফলে এগুলো **নেই** — খসড়া খতিয়ানে বসেনি, তাই কোনো
+     * খাতে যোগও হয়নি। অর্থাৎ পর্দাটা বলছে "এই মাসে জ্বালানিতে এত গেল",
+     * আর পাশেই তিনটে জ্বালানির খরচ ঝুলে আছে যা কেউ দেখছে না।
+     *
+     * ⚠️ **সংখ্যাটা কম দেখানোর চেয়ে খারাপ কিছু নেই যদি না বলা হয় কেন।**
+     * ম্যানেজার মাসের খরচ দেখে সিদ্ধান্ত নেন; ঝুলে থাকাগুলো না দেখলে
+     * তিনি কম খরচ ধরে এগোতেন, আর মাস শেষে অনুমোদন হয়ে গেলে সংখ্যাটা
+     * হঠাৎ বেড়ে যেত।
+     *
+     * ── কেন Approval Centre-এ লিংক নয় ───────────────────────────────
+     * ইনবক্স কেবল **যিনি সিদ্ধান্ত দিতে পারেন** তাঁকে দেখায়। যে
+     * ম্যানেজার খরচটা লিখেছেন কিন্তু অনুমোদনকারী নন, তিনি ওখানে গিয়ে
+     * খালি পাতা পেতেন — একটা সংখ্যা যা কোথাও নিয়ে যায় না। তাই
+     * কাগজগুলো এখানেই, আর প্রতিটা সারি নিজের ভাউচারে নিয়ে যায় (নিয়ম ১)।
+     *
+     * ⓘ সময়সীমা ইচ্ছাকৃতভাবে **নেই**: ঝুলে থাকা খরচ যত পুরনো তত জরুরি,
+     * আর মাস বদলালে সেটা চোখের আড়ালে চলে যাওয়াই সবচেয়ে খারাপ ফল।
+     *
+     * @return Collection<int, Voucher>
+     */
+    private function waiting()
+    {
+        $ids = Approval::query()
+            ->where('approvable_type', Voucher::class)
+            ->where('module', VoucherApproval::MODULE)
+            ->where('action', Voucher::EXPENSE)
+            ->pending()
+            ->pluck('approvable_id');
+
+        if ($ids->isEmpty()) {
+            return collect();
+        }
+
+        return Voucher::query()
+            ->whereIn('id', $ids)
+            ->orderBy('trx_date')->orderBy('id')
+            ->get();
     }
 
     /**

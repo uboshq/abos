@@ -4,6 +4,8 @@ declare(strict_types=1);
 use App\Modules\Accounts\Dashboard\AccountsActivity;
 use App\Modules\Accounts\Dashboard\AccountsDashboard;
 use App\Modules\Accounts\Dashboard\AccountsWidgets;
+use App\Modules\Accounts\Imports\ChartOfAccountsImporter;
+use App\Modules\Accounts\Imports\OpeningBalanceImporter;
 use App\Modules\Accounts\Integrity\AccountsChecks;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CashCount;
@@ -317,6 +319,39 @@ return [
      */
     'provisions' => [
         StandardChart::class,
+    ],
+
+    /*
+     * পুরনো খাতা থেকে আনা — নতুন কোম্পানির সবচেয়ে কষ্টের দুই কাজ।
+     *
+     * ছক আগে, জের পরে — দুইটা আলাদা ইমপোর্টার, কারণ AccountService::create()
+     * খাত তৈরির সাথেই খোলার জের পোস্ট করে; এক ইমপোর্টারে দুইটা রাখলে
+     * ছক তোলার সময়ই জের বসে যেত, আর "আগে ছক, তারপর জের যাচাই করে বসাই"
+     * নিয়ন্ত্রণটা হারাত। ImportRunner বাকিটা করে — নমুনা CSV, check, run।
+     */
+    'imports' => [
+        'chart_of_accounts' => ChartOfAccountsImporter::class,
+        'opening_balance' => OpeningBalanceImporter::class,
+    ],
+
+    /*
+     * কোন কাজে অনুমোদন বসানো যাবে — ছকটা কোম্পানি নিজে বানায়।
+     *
+     * ── কেন খরচ, আর কেন কেবল খরচ ────────────────────────────────────
+     * খরচই একমাত্র ভাউচার যেটা রোজ লেখেন এমন একজন যিনি হিসাবরক্ষক নন —
+     * ডিপো ম্যানেজার ভাড়া, হাম্মালি, জ্বালানি, নাশতা লেখেন। টাকাটা
+     * প্রতিষ্ঠানের, আর সিদ্ধান্তটা একার। জাবেদা বা কন্ট্রা হিসাবরক্ষকের
+     * কাজ, আর সেখানে অনুমোদন বসানো মানে তাঁকে নিজের কাজেই আটকে দেওয়া।
+     *
+     * ⚠️ ঘোষণাটা কেবল **সম্ভাবনা** — অনুমোদন লাগবে কি না তা ঠিক হয়
+     * কোম্পানির নিজের ছকে (Approval Centre), আর কত টাকার উপরে তা-ও।
+     * ছক না বসালে `ApprovalEngine::request()` `null` ফেরত দেয় আর
+     * পোস্টিং আজকের মতোই চলে ([[VoucherApproval]])। **এই ফাইলের একটা
+     * সারি কারো আজকের কাজ থামায় না** — এক ডিপোর "বড় খরচ" আরেকটার
+     * রোজকার খরচ, তাই সংখ্যাটা কোডে থাকতে পারে না।
+     */
+    'approvals' => [
+        'expense' => 'accounts::approval.expense',
     ],
 
     // রিপোর্ট সরবরাহকারী — কোর নিজে থেকে ডেকে নেবে (সেকশন ১৯.৩)।

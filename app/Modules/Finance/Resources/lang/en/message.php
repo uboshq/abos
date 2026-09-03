@@ -47,4 +47,7 @@ return [
     'cap_can_be_changed_here' => 'Over the cap the service refuses; if more is needed, change the cap here — it cannot be passed silently',
     'income_note' => 'What came in, by head — and how much of it was not from selling',
     'no_income_yet' => 'No income in this period',
+    // Says what is NOT true first: these are not in the books, so the
+    // head totals above look smaller and nobody would know why.
+    'waiting_approval_note' => 'These are not in the books yet, so they are not counted in the head totals above. Once approved, posting the voucher adds them.',
 ];

@@ -49,6 +49,14 @@ return [
     'number_on_save' => 'Numbered when saved',
     'voucher_saved' => ':no saved.',
     'voucher_posted' => ':no posted to the ledger.',
+
+    // Says what has NOT happened first: the expense is not in the books
+    // yet, and somebody who does not know that writes it a second time.
+    'voucher_approval_pending' => ':no is held as a draft awaiting approval — it is not in the books yet. Once approved, press Post again and it will go in.',
+
+    // The reason travels with the refusal, so the next step is obvious:
+    // change the paper, then ask again.
+    'voucher_approval_rejected' => ':no was not approved — :reason. Correct the voucher and post again to raise a fresh request.',
     'voucher_cancelled' => ':no cancelled — a reversing entry was posted.',
     'cancel_reason_prompt' => 'Why is this being cancelled?',
     'this_is_cancelled' => 'This voucher has been cancelled.',

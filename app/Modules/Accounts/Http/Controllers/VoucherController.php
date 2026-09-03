@@ -9,11 +9,13 @@ use App\Core\Engines\Drill\DrillResolver;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\PartyRegistry;
 use App\Http\Controllers\Controller;
+use App\Models\Approval;
 use App\Models\Branch;
 use App\Modules\Accounts\Http\Requests\VoucherRequest;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CostCenter;
 use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Accounts\Services\VoucherApproval;
 use App\Modules\Accounts\Services\VoucherService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -39,6 +41,7 @@ class VoucherController extends Controller implements HasMiddleware
     public function __construct(
         private readonly VoucherService $vouchers,
         private readonly MenuBuilder $menu,
+        private readonly VoucherApproval $approvals,
     ) {}
 
     public static function middleware(): array
@@ -152,19 +155,36 @@ class VoucherController extends Controller implements HasMiddleware
          * বার্তাটা যা বলে বাস্তবেও তাই। "খসড়া রাখুন" চাপলে খসড়াই
          * থাকে -- ওটা তখন ইচ্ছাকৃত, আর ইচ্ছাকৃতটা লুকানো নয়।
          */
-        $voucher = DB::transaction(function () use ($request, $data, $type) {
+        [$voucher, $waiting] = DB::transaction(function () use ($request, $data, $type) {
             $voucher = $this->vouchers->create($data, $this->linesFrom($request, $type));
 
-            if (! $request->boolean('save_as_draft')) {
-                $this->vouchers->post($voucher);
+            if ($request->boolean('save_as_draft')) {
+                return [$voucher, false];
             }
 
-            return $voucher;
+            /*
+             * অনুমোদন লাগলে খসড়াই থাকে, আর অনুরোধটা এখানেই যায়।
+             *
+             * ---- কেন এখানেও, শুধু post() রুটে নয় (৩ সেপ্টেম্বর ২০২৬) ----
+             * উপরের নিয়ম অনুযায়ী "সেভ করলেই পোস্ট" -- অর্থাৎ খরচ লেখার
+             * **স্বাভাবিক পথটা এই লাইনটাই**, `post()` রুট নয় (ওটায়
+             * যাওয়া হয় কেবল খসড়া পরে বসাতে)। এখানে শর্তটা না বসালে
+             * অনুমোদনের ছক বসানো থাকা সত্ত্বেও রোজকার খরচগুলো নীরবে
+             * সরাসরি খতিয়ানে বসে যেত, আর ছকটা কেবল একটা কম-ব্যবহৃত
+             * দরজাতেই কাজ করত -- সবচেয়ে খারাপ ধরনের আধা-পাহারা।
+             */
+            if ($this->approvals->stopping($voucher) !== null) {
+                return [$voucher, true];
+            }
+
+            $this->vouchers->post($voucher);
+
+            return [$voucher, false];
         });
 
         return redirect()
             ->route('accounts.voucher.show', $voucher)
-            ->with('saved', __('accounts::message.voucher_saved', ['no' => $voucher->document_no]));
+            ->with(...$this->savedOrWaiting($voucher, $waiting));
     }
 
     public function show(Request $request, Voucher $voucher): View
@@ -200,13 +220,23 @@ class VoucherController extends Controller implements HasMiddleware
 
         $this->vouchers->update($voucher, $request->validated(), $this->linesFrom($request, $voucher->type));
 
+        $waiting = false;
+
         if (! $request->boolean('save_as_draft')) {
-            $this->vouchers->post($voucher->fresh());
+            $fresh = $voucher->fresh();
+
+            // সম্পাদনার পরেও একই শর্ত -- নাহলে একবার খসড়া রেখে তারপর
+            // সম্পাদনা করে পোস্ট করলেই পাহারাটা এড়ানো যেত।
+            if ($this->approvals->stopping($fresh) !== null) {
+                $waiting = true;
+            } else {
+                $this->vouchers->post($fresh);
+            }
         }
 
         return redirect()
             ->route('accounts.voucher.show', $voucher)
-            ->with('saved', __('accounts::message.voucher_saved', ['no' => $voucher->document_no]));
+            ->with(...$this->savedOrWaiting($voucher, $waiting));
     }
 
     /**
@@ -226,6 +256,30 @@ class VoucherController extends Controller implements HasMiddleware
             $voucher->forceFill(['instrument_no' => trim($validated['instrument_no'])])->save();
         }
 
+        /*
+         * অনুমোদন লাগে কি না — পোস্টের **আগে**, খতিয়ানে কিছু লেখার আগে।
+         *
+         * ── কেন এখানে, সার্ভিসের ভিতরে নয় ───────────────────────────
+         * `VoucherService::post()` ডাকা হয় সিডার, ইমপোর্ট আর অন্য
+         * সার্ভিস থেকেও — ওখানে বসালে ডেমো ডেটা বসানোই আটকে যেত, আর
+         * ইমপোর্ট করা দুই হাজার সারি অনুমোদনের অপেক্ষায় ঝুলে থাকত।
+         * অনুমোদন **মানুষের সিদ্ধান্তের** উপর বসে, যন্ত্রের উপর নয়,
+         * আর মানুষ আসে এই দরজা দিয়ে।
+         *
+         * ⚠️ নিচের `post()` আর তার ক্রম অস্পৃশ্য — এটা কেবল একটা শর্ত
+         * তার আগে, যা `null` হলে সবকিছু আজকের মতোই চলে।
+         */
+        $stopping = $this->approvals->stopping($voucher);
+
+        if ($stopping !== null) {
+            return back()->with('warning', $stopping->status === Approval::REJECTED
+                ? __('accounts::message.voucher_approval_rejected', [
+                    'no' => $voucher->document_no,
+                    'reason' => (string) $stopping->decisions()->latest('id')->value('remarks'),
+                ])
+                : __('accounts::message.voucher_approval_pending', ['no' => $voucher->document_no]));
+        }
+
         $this->vouchers->post($voucher);
 
         return back()->with('saved', __('accounts::message.voucher_posted', ['no' => $voucher->document_no]));
@@ -241,6 +295,24 @@ class VoucherController extends Controller implements HasMiddleware
         $this->vouchers->cancel($voucher, $validated['cancel_reason']);
 
         return back()->with('saved', __('accounts::message.voucher_cancelled', ['no' => $voucher->document_no]));
+    }
+
+    /**
+     * বার্তাটা কী হবে — বসে গেছে, নাকি অনুমোদনের অপেক্ষায়।
+     *
+     * ── কেন `saved` নয়, আলাদা একটা চাবি ─────────────────────────────
+     * "সংরক্ষিত হয়েছে" লিখে সবুজ দেখালে মানুষ ধরে নিতেন খরচটা খাতায়
+     * বসে গেছে — অথচ সেটা কেবল একটা খসড়া, অনুমোদনের অপেক্ষায়। মাস
+     * শেষে হিসাব না মিললে কেউ বুঝত না কেন। **যা হয়নি তা হয়েছে বলা
+     * সবচেয়ে দামি মিথ্যা**, আর এখানে দামটা টাকার।
+     *
+     * @return array{0: string, 1: string}
+     */
+    private function savedOrWaiting(Voucher $voucher, bool $waiting): array
+    {
+        return $waiting
+            ? ['warning', __('accounts::message.voucher_approval_pending', ['no' => $voucher->document_no])]
+            : ['saved', __('accounts::message.voucher_saved', ['no' => $voucher->document_no])];
     }
 
     /**

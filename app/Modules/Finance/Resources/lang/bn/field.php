@@ -81,4 +81,5 @@ return [
     'pledged_to_loan' => 'যে ধারের বিপরীতে বন্ধক',
     'not_pledged' => 'বাঁধা নেই — ভাঙানো যায়',
     'state' => 'অবস্থা',
+    'waiting_approval' => 'অনুমোদনের অপেক্ষায়',
 ];
