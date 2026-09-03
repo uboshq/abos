@@ -12,5 +12,6 @@ return [
     'activity_log' => 'Activity Log',
     'login_history' => 'Login History',
     'control_panel' => 'Control Panel',
+    'report_schedules' => 'Scheduled Reports',
     'backup' => 'Backup',
 ];

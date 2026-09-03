@@ -45,6 +45,26 @@ final class ReportExport
             return;
         }
 
+        self::into($export, $result, $columns);
+    }
+
+    /**
+     * শর্ত ছাড়া জমা — একটা দেওয়া ListExport-এ।
+     *
+     * ── কেন এটা আলাদা, wanted()-হীন ─────────────────────────────────
+     * capture() ব্রাউজারের `?export=` অনুরোধ ধরে চলে (wanted())। কিন্তু
+     * নির্ধারিত রিপোর্ট চলে ক্রনে, কোনো অনুরোধ নেই — তখন wanted() সবসময়
+     * মিথ্যা, আর ফাইলটাই তৈরি হত না। ক্রনের runner তাই সরাসরি এখানে ঢোকে,
+     * একটা নিজের ListExport নিয়ে।
+     *
+     * @param  list<ReportColumn>  $columns  `columnsFor()`-এর ফল
+     */
+    public static function into(ListExport $export, ReportResult $result, array $columns): void
+    {
+        if ($columns === []) {
+            return;
+        }
+
         $export->capture(
             array_map(
                 fn (ReportColumn $column): array => [

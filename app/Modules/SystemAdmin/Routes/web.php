@@ -7,6 +7,8 @@ use App\Modules\SystemAdmin\Http\Controllers\ControlPanelController;
 use App\Modules\SystemAdmin\Http\Controllers\CustomFieldController;
 use App\Modules\SystemAdmin\Http\Controllers\ImportController;
 use App\Modules\SystemAdmin\Http\Controllers\LookController;
+use App\Modules\SystemAdmin\Http\Controllers\ReportDownloadController;
+use App\Modules\SystemAdmin\Http\Controllers\ReportScheduleController;
 use App\Modules\SystemAdmin\Http\Controllers\RoleController;
 use App\Modules\SystemAdmin\Http\Controllers\SetupController;
 use App\Modules\SystemAdmin\Http\Controllers\UserController;
@@ -70,6 +72,29 @@ Route::middleware('auth')->prefix('system')->group(function () {
 
     Route::get('/control-panel', [ControlPanelController::class, 'edit'])->name('control-panel');
     Route::put('/control-panel', [ControlPanelController::class, 'update'])->name('control-panel.update');
+
+    /*
+     * নির্ধারিত রিপোর্ট — সূচি ব্যবস্থাপনা ও ফাইল নামানো।
+     *
+     * ব্যবস্থাপনার রুটগুলো `system_admin.reports.schedule` চাবিতে (can:);
+     * download আলাদা, কারণ প্রাপক ব্যবস্থাপক না-ও হতে পারেন — ওখানে
+     * অনুমতি রেকর্ড দেখে (ReportRunPolicy), স্থির চাবি নয়। মোছার রুট নেই:
+     * সূচি নিষ্ক্রিয় হয় (toggle), মোছে না — ইতিহাস অক্ষত।
+     */
+    Route::prefix('reports')->name('reports.')->group(function () {
+        Route::get('/schedules', [ReportScheduleController::class, 'index'])->name('schedule.index');
+        Route::get('/schedules/create', [ReportScheduleController::class, 'create'])->name('schedule.create');
+        Route::post('/schedules', [ReportScheduleController::class, 'store'])->name('schedule.store');
+        Route::get('/schedules/{schedule}/edit', [ReportScheduleController::class, 'edit'])
+            ->whereNumber('schedule')->name('schedule.edit');
+        Route::put('/schedules/{schedule}', [ReportScheduleController::class, 'update'])
+            ->whereNumber('schedule')->name('schedule.update');
+        Route::post('/schedules/{schedule}/toggle', [ReportScheduleController::class, 'toggle'])
+            ->whereNumber('schedule')->name('schedule.toggle');
+
+        Route::get('/runs/{run}/download', [ReportDownloadController::class, 'download'])
+            ->whereNumber('run')->name('download');
+    });
 
     /*
      * কোম্পানি ও শাখা।

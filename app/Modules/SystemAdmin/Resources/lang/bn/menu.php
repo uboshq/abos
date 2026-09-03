@@ -12,6 +12,7 @@ return [
     'activity_log' => 'কার্যক্রমের লগ',
     'login_history' => 'লগইন ইতিহাস',
     'control_panel' => 'কন্ট্রোল প্যানেল',
+    'report_schedules' => 'নির্ধারিত রিপোর্ট',
     'backup' => 'ব্যাকআপ',
 
 ];
