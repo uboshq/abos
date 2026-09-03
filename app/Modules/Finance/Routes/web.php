@@ -111,6 +111,14 @@ Route::middleware('auth')->prefix('finance')->group(function () {
     });
 
     Route::prefix('deposits')->name('deposit.')->group(function () {
+        /*
+         * সব জমা — ড্যাশবোর্ডের টালি এখানে নামে।
+         *
+         * ⓘ `/{issuer}`-এর সাথে সংঘর্ষ নেই: ওটা `whereIn(ISSUERS)` দিয়ে
+         * বাঁধা, তাই কেবল তিনটা নামই মানে।
+         */
+        Route::get('/', [DepositController::class, 'all'])->name('all');
+
         Route::get('/{issuer}', [DepositController::class, 'index'])
             ->whereIn('issuer', DepositKind::ISSUERS)->name('index');
 

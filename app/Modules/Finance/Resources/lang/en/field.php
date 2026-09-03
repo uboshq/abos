@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'issuer' => 'Issuer',
+
     'where_each_stands' => 'Where each stands',
     'who' => 'Who',
     'as' => 'As',
