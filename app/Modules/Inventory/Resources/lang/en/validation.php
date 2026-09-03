@@ -80,4 +80,9 @@ return [
     'count_product_missing' => 'One of the counted products no longer exists.',
     'count_qty_negative' => 'A counted quantity cannot be less than zero — count what is there, or zero if the shelf is empty.',
     'count_duplicate_product' => 'The same product appears twice — count it once and enter the total found.',
+
+    // Checked by reading the file, not its name: a client can call
+    // anything image/png, so the message says the file is not an image
+    // rather than that the type is wrong.
+    'image_only' => 'That file is not an image. Use JPEG, PNG or WebP — the right name is not enough if the contents are not an image.',
 ];
