@@ -11,12 +11,15 @@ use App\Core\Support\CompanyContext;
 use App\Core\Support\Money;
 use App\Http\Controllers\Controller;
 use App\Models\NumberSeries;
+use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\PackConversion;
 use App\Modules\Inventory\Services\RecipeService;
 use App\Modules\Inventory\Services\StockService;
+use App\Modules\MasterData\Models\PaymentMethod;
 use App\Modules\MasterData\Models\PaymentTerm;
 use App\Modules\Sales\Services\DirectSaleService;
 use Illuminate\Http\RedirectResponse;
@@ -109,6 +112,58 @@ class DirectSaleController extends Controller implements HasMiddleware
             'packs' => $this->settings->enabled('inventory.pack_entry_enabled')
                 ? app(PackConversion::class)->optionsFor($sheetProducts)
                 : [],
+
+            /*
+             * ── জমা নেওয়ার উপায়, আর টাকাটা কোন খাতে বসবে ───────────────
+             *
+             * মালিকের নির্দেশ (৩ সেপ্টেম্বর ২০২৬): *"Add deposit-এ Ref
+             * Date, Payment Method, into, Amount, Narration … Cash, MFS,
+             * Bank … একাধিক payment add করতে পারবে"*।
+             *
+             * ⚠️ **আজ পর্যন্ত যা হচ্ছিল, আর কেন ওটা টাকার ভুল:** ফর্মে
+             * খাতের কোনো ঘরই ছিল না, কন্ট্রোলার `account_id` নিতই না, আর
+             * `CollectionService` খালি পেলে **প্রধান টিলের নগদ খাত** ধরে
+             * নেয়। ফলে গ্রাহক বিকাশে দিলেও **খাতা বলত নগদ** — বিলের গায়ে
+             * `deposit_method` লেখা থাকত বটে, কিন্তু ওটা স্রেফ একটা শব্দ,
+             * খাত নয়। মাস শেষে বিকাশের ব্যালেন্স মিলত না, আর কেন মিলছে
+             * না তা কোথাও লেখা থাকত না।
+             *
+             * ── কেন দুইটা তালিকা, একটা নয় ──────────────────────────────
+             * উপায়ের সারিটা নিজের খাত বহন করে (`mdm_payment_methods.
+             * account_id`), তাই বেশিরভাগ সময় খাত বাছার দরকারই নেই — উপায়
+             * বাছলেই খাত বসে যায়।
+             *
+             * কিন্তু **এক উপায়ের একাধিক খাত থাকতে পারে**: "ব্যাংক" উপায়ে
+             * তিনটা ব্যাংক হিসাব। তাই খাতের ঘরটাও আছে, আগে থেকে ভরা —
+             * বদলাতে হলে বদলানো যায়।
+             *
+             * ⓘ শুধু **সন্তান** খাত, মাথা নয়: গ্রুপ খাতে টাকা বসে না
+             * (`CollectionService::resolveMoneyAccount` ওটা ফিরিয়ে দেয়),
+             * আর তিনটা মাথাই — নগদ · ব্যাংক · মোবাইল মানি।
+             */
+            'depositMethods' => PaymentMethod::query()
+                ->active()
+                ->orderBy('code')
+                ->get(['id', 'code', 'name_en', 'name_bn', 'account_id', 'needs_reference'])
+                ->map(fn (PaymentMethod $m): array => [
+                    'id' => (string) $m->id,
+                    'label' => $m->name(),
+                    'accountId' => $m->account_id === null ? '' : (string) $m->account_id,
+                    'needsReference' => (bool) $m->needs_reference,
+                ])
+                ->values(),
+
+            'moneyAccounts' => Account::query()
+                ->where('is_group', false)
+                ->whereIn('parent_id', Account::query()
+                    ->whereIn('code', StandardChart::MONEY_PARENTS)->select('id'))
+                ->orderBy('code')
+                ->get(['id', 'code', 'name_en', 'name_bn'])
+                ->map(fn (Account $a): array => [
+                    'id' => (string) $a->id,
+                    'label' => $a->code.' · '.$a->name(),
+                ])
+                ->values(),
 
             /*
              * চার্ট / বাল্ক DO-র শীটের জন্য — আসল পণ্য ও তাদের মজুদ।
@@ -340,8 +395,67 @@ class DirectSaleController extends Controller implements HasMiddleware
              */
             'deposit_method' => ['nullable', 'string', 'max:32'],
             'deposit_ref' => ['nullable', 'string', 'max:64'],
-            'rounding_amount' => ['nullable', 'numeric', 'min:0'],
+            /*
+             * ── রাউন্ডিং — দুই দিকে যায়, কিন্তু সীমার ভেতরে ─────────────
+             *
+             * ── কেন `min:0` তুলে দেওয়া হলো (৩ সেপ্টেম্বর ২০২৬) ──────────
+             * রাউন্ডিং **দুই দিকেই** যায়: ৪,৩০০.৪০-কে ৪,৩০০ করতে −০.৪০,
+             * আর ৪,২৯৯.৬০-কে ৪,৩০০ করতে +০.৪০। `min:0` থাকায় **অর্ধেক
+             * কাজটা করাই যেত না**, আর বিক্রেতা বাধ্য হয়ে ছাড়ের ঘরে বসাতেন
+             * — তখন ওটা রিপোর্টে ছাড় হিসেবে গোনা হত।
+             *
+             * ── আর সীমাটা কেন (মালিকের নির্দেশ) ─────────────────────────
+             * ⚠️ সীমা ছাড়া "রাউন্ডিং" ঘরটা **ছাড়ের পিছনের দরজা**: ওখানে
+             * ৪৩০ টাকাও বসানো যেত। ছাড়ের নিজের অনুমোদন, সীমা ও রিপোর্ট
+             * আছে; রাউন্ডিংয়ের কিছুই নেই — **যে ছাড় রাউন্ডিং সেজে যায়,
+             * সেটা কোনো রিপোর্টেই ধরা পড়ে না।**
+             *
+             * ⓘ সীমাটা কন্ট্রোল প্যানেলে (Sales → সীমা), শূন্য মানে সীমা নেই।
+             * ⚠️ পর্দার বাধাটা যথেষ্ট নয় — যে কেউ সরাসরি অনুরোধ পাঠাতে
+             * পারে, তাই আসল পাহারা এখানেই।
+             */
+            'rounding_amount' => ['nullable', 'numeric', function (string $attr, mixed $value, callable $fail) {
+                $max = (float) $this->settings->get('sales.rounding_max', 0);
+
+                if ($max > 0 && abs((float) $value) > $max) {
+                    $fail(__('sales::validation.rounding_over_limit', ['max' => $max]));
+                }
+            }],
             'deposit' => ['nullable', 'numeric', 'min:0'],
+
+            /*
+             * ── একাধিক জমা — প্রতিটার নিজের খাত ─────────────────────────
+             *
+             * ⭐ ইঞ্জিনটা নতুন নয়: POS-এ `payments[][...]` আগে থেকেই চলছে।
+             * এখানে ঘরগুলো একটু আলাদা (তারিখ ও বিবরণ লাগে, ফেরত লাগে না),
+             * তাই নামটাও আলাদা — কিন্তু ধরনটা এক।
+             *
+             * ⚠️ `gt:0` — শূন্য টাকার একটা জমার সারি মানে একটা **খালি
+             * আদায়ের কাগজ** খাতায় বসে যাওয়া, যেটা পরে কেউ ব্যাখ্যা করতে
+             * পারত না। খালি সারি পর্দাতেই বাদ যায়, আর সার্ভারও নেয় না।
+             *
+             * ⓘ `deposit` ঘরটা রয়ে গেছে, আর ইচ্ছে করেই: পুরনো পথে আসা
+             * অনুরোধ (এবং POS-এর মতো অন্য পর্দা) আগের মতোই চলবে। দুইটা
+             * একসাথে এলে `deposits`-ই সত্য, কারণ ওটাই বিস্তারিত।
+             */
+            'deposits' => ['nullable', 'array', 'max:20'],
+            'deposits.*.amount' => ['required', 'numeric', 'gt:0'],
+            'deposits.*.payment_method_id' => ['nullable', 'integer',
+                Rule::exists('mdm_payment_methods', 'id')->where('company_id', $companyId)],
+            /*
+             * ⚠️ খাত **বাধ্যতামূলক**, আর এটাই এই কাজের আসল সংশোধন।
+             *
+             * খালি রাখলে `CollectionService` প্রধান টিলের নগদ খাত ধরে নেয়
+             * — অর্থাৎ বিকাশের টাকা নীরবে নগদ হয়ে যেত। ⓘ পুরনো একঘরের
+             * পথটায় ওই ডিফল্ট এখনো আছে (নগদ বিক্রয়ে ওটাই ঠিক), কিন্তু
+             * যেখানে বিক্রেতা **উপায় বেছে দিচ্ছেন**, সেখানে অনুমান করা
+             * মানে তাঁর বাছাইটা ফেলে দেওয়া।
+             */
+            'deposits.*.account_id' => ['required', 'integer',
+                Rule::exists('accounts', 'id')->where('company_id', $companyId)],
+            'deposits.*.ref_date' => ['nullable', 'date'],
+            'deposits.*.reference' => ['nullable', 'string', 'max:64'],
+            'deposits.*.narration' => ['nullable', 'string', 'max:191'],
             'narration' => ['nullable', 'string', 'max:500'],
 
             'lines' => ['required', 'array', 'min:1'],

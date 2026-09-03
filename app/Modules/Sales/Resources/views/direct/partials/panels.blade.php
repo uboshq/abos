@@ -91,36 +91,98 @@
          টাকাটা আর খুঁজে পাওয়া যায় না, আর ব্যাংকের কাগজের সাথে মেলানোও
          যায় না। --}}
     @if ($show['deposit'])
+    {{--
+        ── জমা — একটা সারি বানাও, তালিকায় যোগ করো ──────────────────────
+
+        মালিকের নির্দেশ (৩ সেপ্টেম্বর ২০২৬): *"Add deposit-এ Ref Date,
+        Payment Method, into, Amount, Narration/Remarks, Add to Cart …
+        Payment Method Cash, MFS, Bank … এই list Item Chart-এর নিচে
+        বাম পাশে থাকবে, একাধিক payment add করতে পারবে"*।
+
+        ⭐ ইঞ্জিনটা নতুন নয় — POS-এ একাধিক পেমেন্ট আগে থেকেই চলছে
+        (`payments[][...]`)। এখানে ঘরগুলো একটু আলাদা, কারণ কাউন্টারের
+        জমায় **তারিখ ও বিবরণ** লাগে আর **ফেরত** লাগে না।
+
+        ⚠️ **আর যেটা এতদিন ভুল হচ্ছিল:** উপায় লেখা হত ঠিকই, কিন্তু
+        **টাকাটা সবসময় নগদ ড্রয়ারে বসত** — খাতের কোনো ঘরই ছিল না।
+        গ্রাহক বিকাশে দিলেও খাতা বলত নগদ, আর মাস শেষে বিকাশের ব্যালেন্স
+        মিলত না। এখন প্রতিটা জমা **নিজের খাতে** যায়।
+    --}}
     <div x-show="panel === 'deposit'" x-cloak class="space-y-2">
+        <div class="grid grid-cols-2 gap-2">
+            <label class="block">
+                <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::field.instrument_date') }}</span>
+                {{-- ⚠️ ব্রাউজারের নিজের তারিখের ঘর নয়।
+
+                     ওটা লেখাটা নিজের লোকেল ধরে আঁকে — `05/06` তখন ৫ জুন
+                     না ৬ মে, দুইটাই বৈধ, তাই ভুলটা খাতা থেকে ধরা যায় না।
+                     ⓘ মানটা `addDeposit()` কম্পোনেন্টের স্কোপ থেকে পড়ে,
+                     কারণ ওটার নিজের Alpine আছে (`depositRefDate`)। --}}
+                <x-ui.date name="deposit_ref_date" x-ref="depositDate" />
+            </label>
+
+            {{-- ⓘ উপায়ের তালিকাটা সেটিংসের সারি, আর নতুন কোম্পানিতে ওটা
+                 খালি থাকতে পারে। খালি হলে ঘরটাই দেখানো হয় না — একটা
+                 বিকল্পহীন ড্রপডাউন কেবল বিভ্রান্তি। জমা তখনও নেওয়া যায়,
+                 কারণ **আসল শর্ত খাত**, উপায় নয়। --}}
+            <label class="block" x-show="depositMethods.length > 0" x-cloak>
+                <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::field.deposit_method') }}</span>
+                <select x-model="depositDraft.methodId" @change="pickDepositMethod()"
+                        class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
+                               bg-(--color-surface-card) px-2 text-2xs">
+                    <option value="">{{ __('sales::field.choose') }}</option>
+                    <template x-for="m in depositMethods" :key="m.id">
+                        <option :value="m.id" x-text="m.label"></option>
+                    </template>
+                </select>
+            </label>
+        </div>
+
+        {{-- ⓘ খাতটা উপায় বাছলেই বসে যায়, কিন্তু তালাবদ্ধ নয় — এক
+             "ব্যাংক" উপায়ে তিনটা ব্যাংক হিসাব থাকতে পারে। --}}
         <label class="block">
-            <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::field.received_deposit') }}</span>
-            <input type="number" step="0.01" min="0" name="deposit" x-model="deposit"
-                   class="num h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
-                          bg-(--color-surface-card) px-2 text-end text-2xs">
+            <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::field.account') }}</span>
+            <select x-model="depositDraft.accountId"
+                    class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
+                           bg-(--color-surface-card) px-2 text-2xs">
+                <option value="">{{ __('sales::field.choose') }}</option>
+                <template x-for="a in moneyAccounts" :key="a.id">
+                    <option :value="a.id" x-text="a.label"></option>
+                </template>
+            </select>
         </label>
 
         <div class="grid grid-cols-2 gap-2">
             <label class="block">
-                <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::field.deposit_method') }}</span>
-                <select name="deposit_method" x-model="depositMethod"
-                        class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
-                               bg-(--color-surface-card) px-2 text-2xs">
-                    <option value="cash">{{ __('sales::field.cash') }}</option>
-                    <option value="cheque">{{ __('sales::field.cheque') }}</option>
-                    <option value="mfs">{{ __('sales::field.mfs') }}</option>
-                    <option value="bank">{{ __('sales::field.bank') }}</option>
-                </select>
+                <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::field.amount') }}</span>
+                <input type="number" step="0.01" min="0" x-model="depositDraft.amount"
+                       @keydown.enter.prevent="addDeposit()"
+                       class="num h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
+                              bg-(--color-surface-card) px-2 text-end text-2xs">
             </label>
 
-            {{-- নগদে নম্বর লাগে না, বাকি সবটায় লাগে। ঘরটা তখনই খোলে,
-                 নাহলে প্রতিটা নগদ বিক্রিতে একটা খালি ঘর পার হতে হত। --}}
-            <label class="block" x-show="depositMethod !== 'cash'" x-cloak>
+            {{-- ⚠️ নম্বরটা কেবল যে উপায়ে দরকার, আর তখন **বাধ্যতামূলক**:
+                 চেক বা বিকাশের টাকা নম্বর ছাড়া ব্যাংকের কাগজের সাথে
+                 মেলানো যায় না, আর ওই মেলানোটাই মাস শেষের কাজ। --}}
+            <label class="block" x-show="depositNeedsReference" x-cloak>
                 <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::field.deposit_ref') }}</span>
-                <input type="text" name="deposit_ref" maxlength="64"
+                <input type="text" maxlength="64" x-model="depositDraft.reference"
                        class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                               bg-(--color-surface-card) px-2 text-2xs">
             </label>
         </div>
+
+        <label class="block">
+            <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::field.remarks') }}</span>
+            <input type="text" maxlength="191" x-model="depositDraft.narration"
+                   class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
+                          bg-(--color-surface-card) px-2 text-2xs">
+        </label>
+
+        <x-ui.button type="button" tone="primary" class="w-full py-1.5"
+                     @click="addDeposit()" ::disabled="! depositReady">
+            {{ __('sales::action.add_to_cart') }}
+        </x-ui.button>
     </div>
 
     @endif
