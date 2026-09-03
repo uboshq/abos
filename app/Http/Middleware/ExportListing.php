@@ -56,7 +56,14 @@ class ExportListing
         // ভিউটা এখানেই রেন্ডার হয়, আর তাতেই টেবিলটা জমা পড়ে
         $content = $response->getContent();
 
-        $csv = $this->export->csv();
+        $format = $this->export->format();
+
+        // চাওয়া ফরম্যাট ধরে বিষয়বস্তু — উৎস একটাই ধরা-টেবিল
+        $body = match ($format) {
+            'xlsx' => $this->export->xlsx(),
+            'json' => $this->export->json(),
+            default => $this->export->csv(),
+        };
 
         /*
          * পর্দায় কোনো টেবিলই নেই — যেমন একটা ফর্ম বা ড্যাশবোর্ড।
@@ -64,7 +71,7 @@ class ExportListing
          * তখন পাতাটাই ফেরে। খালি ফাইল নামালে ব্যবহারকারী ভাবত ডেটা নেই,
          * অথচ আসলে ওই পর্দার রপ্তানি করার মতো তালিকাই নেই।
          */
-        if ($csv === null || $content === false) {
+        if ($body === null || $content === false) {
             return $response;
         }
 
@@ -84,8 +91,12 @@ class ExportListing
          */
         $this->log->wrote($this->export->rowCount());
 
-        return response($csv, 200, [
-            'Content-Type' => 'text/csv; charset=UTF-8',
+        return response($body, 200, [
+            'Content-Type' => match ($format) {
+                'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'json' => 'application/json; charset=UTF-8',
+                default => 'text/csv; charset=UTF-8',
+            },
             'Content-Disposition' => 'attachment; filename="'.$this->export->filename().'"',
 
             /*
