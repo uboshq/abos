@@ -94,6 +94,31 @@ final class PurchaseBillService
                 'trx_date' => $trxDate->toDateString(),
                 'due_on' => $data['due_on'] ?? null,
                 'supplier_bill_no' => $data['supplier_bill_no'] ?? null,
+
+                /*
+                 * ── যে গাড়িটা মাল নিয়ে এল ────────────────────────────
+                 *
+                 * ⓘ চারটাই ঐচ্ছিক — নিজের গাড়িতে মাল এলে ভাড়াও নেই,
+                 * বাহকও নেই।
+                 *
+                 * ⚠️ `carrier_id` আর `carrier_name` দুইটাই রাখা হয়:
+                 * নিয়মিত পরিবহনকারী একটা পক্ষ (তার খাতায় দেনা জমে),
+                 * কিন্তু একবারের ভাড়া গাড়িকে পক্ষ বানালে মাস্টার
+                 * তালিকা আবর্জনায় ভরে যেত — তখন নামটাই একমাত্র তথ্য।
+                 *
+                 * ⛔ ভাড়াটা এখানে **কেবল রাখা হয়**, এখনো ক্রয়মূল্যে
+                 * ঢোকে না। ওটা আলাদা কাজ (নকশা: *"আনার খরচ ও
+                 * ক্রয়মূল্য"*), আর ততদিন সংখ্যাটা কেবল কাগজে থাকে।
+                 * ⓘ অর্ধেক হিসাব বসিয়ে রাখার চেয়ে ঘরটা সৎভাবে খালি
+                 * থাকা ভালো — নাহলে কেউ ধরে নিতেন লাভের অঙ্কে ওটা ধরা
+                 * হয়েছে।
+                 */
+                'carrier_id' => $data['carrier_id'] ?? null,
+                'carrier_name' => $data['carrier_name'] ?? null,
+                'transport_cost' => $data['transport_cost'] ?? 0,
+                'vehicle_no' => $data['vehicle_no'] ?? null,
+                'driver_name' => $data['driver_name'] ?? null,
+
                 'narration' => $data['narration'] ?? null,
                 'status' => DocumentStatus::DRAFT,
                 'created_by' => auth()->id(),
@@ -359,8 +384,13 @@ final class PurchaseBillService
      * প্রধান গুদামও না থাকলে থামতে হয়। "যেকোনো একটা" বেছে নিলে মাল
      * এমন জায়গায় ঢুকত যেখানে কেউ খুঁজতে যাবে না, আর গণনার দিনে
      * পার্থক্যটা কোথা থেকে এল তার উত্তর থাকত না।
+     *
+     * ⓘ `public`, কারণ [[DirectPurchaseService]]-এর উপহারগুলোও ঠিক এই
+     * একই গুদামে ঢোকে। নিয়মটা ওখানে আবার লিখলে একদিন একটা কপি বদলাত
+     * আর অন্যটা বদলাত না — তখন বিলের মাল এক গুদামে আর তার উপহার আরেক
+     * গুদামে বসত, আর কারণটা কোথাও লেখা থাকত না।
      */
-    private function warehouseFor(PurchaseBill $bill): Warehouse
+    public function warehouseFor(PurchaseBill $bill): Warehouse
     {
         $warehouse = $bill->warehouse_id !== null
             ? Warehouse::query()->find($bill->warehouse_id)

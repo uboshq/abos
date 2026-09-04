@@ -53,6 +53,21 @@ Route::middleware('auth')->prefix('purchase')->group(function () {
     Route::prefix('direct')->name('direct.')->group(function () {
         Route::get('/', [DirectPurchaseController::class, 'create'])->name('create');
         Route::post('/', [DirectPurchaseController::class, 'store'])->name('store');
+
+        /*
+         * এই সরবরাহকারীর কাছ থেকে গতবারের দরগুলো — একবারে সব পণ্যের।
+         *
+         * ⚠️ কেন একটা আলাদা ঠিকানা লাগল: সরবরাহকারী বাছা হয় পাতা খোলার
+         * **পরে**, তাই পাতার সাথে পাঠানো যায় না। আর সব সরবরাহকারীর সব
+         * দর একসাথে পাঠানো মানে হাজার হাজার সারি, যার মধ্যে একজনেরটা
+         * ছাড়া বাকি সব অপ্রয়োজনীয়।
+         *
+         * ⓘ অনুমতি আসে কন্ট্রোলারের নিজের `can:purchase.bill.create`
+         * থেকে — যে পর্দাটা খুলতে পারেন, তিনিই কেবল এই সংখ্যাগুলো
+         * দেখতে পাবেন। দর কার কাছে কত, সেটা ব্যবসার গোপন কথা।
+         */
+        Route::get('/last-rates/{supplier}', [DirectPurchaseController::class, 'lastRates'])
+            ->whereNumber('supplier')->name('last_rates');
     });
 
     Route::prefix('orders')->name('order.')->group(function () {

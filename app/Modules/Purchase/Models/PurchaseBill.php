@@ -40,6 +40,17 @@ class PurchaseBill extends Model implements Drillable
     protected $fillable = [
         'company_id', 'branch_id', 'financial_year_id', 'document_no',
         'supplier_id', 'warehouse_id', 'trx_date', 'due_on', 'supplier_bill_no',
+
+        /*
+         * ⚠️ যে গাড়িটা মাল নিয়ে এল — পাঁচটাই এখানে থাকতেই হবে।
+         *
+         * `$fillable`-এ না থাকলে `create()` ঘরগুলো **নীরবে ফেলে দেয়**:
+         * কোনো ত্রুটি নয়, কোনো লাল টেস্ট নয়, কেবল বিলটা সেভ হয় আর
+         * ভাড়ার ঘরটা শূন্য থাকে। ⓘ পর্দা ঠিক, যাচাই ঠিক, মাইগ্রেশন
+         * ঠিক — তবু তথ্যটা হারিয়ে যেত।
+         */
+        'carrier_id', 'carrier_name', 'transport_cost', 'vehicle_no', 'driver_name',
+
         'subtotal', 'discount', 'tax', 'total',
         'status', 'narration', 'created_by',
         'cancelled_by', 'cancelled_at', 'cancel_reason',
@@ -55,12 +66,28 @@ class PurchaseBill extends Model implements Drillable
             'discount' => 'decimal:4',
             'tax' => 'decimal:4',
             'total' => 'decimal:4',
+
+            // ⓘ বাকি টাকার ঘরগুলোর সমান মাপ — নাহলে যোগ-বিয়োগে
+            // এক পয়সা করে হারাত, আর ধরা পড়ত মাস শেষে
+            'transport_cost' => 'decimal:4',
         ];
     }
 
     public function lines(): HasMany
     {
         return $this->hasMany(PurchaseBillLine::class)->orderBy('line_no');
+    }
+
+    /**
+     * মিল যা সাথে দিয়ে দিল — অন্য পণ্য, বিলের মোটে নেই।
+     *
+     * ⚠️ [[lines]]-এর সাথে মিশিয়ে ফেলা যাবে না। বিলের যোগফল কেবল
+     * `lines` থেকে আসে; এই সারিগুলোর কোনো দর নেই বলে তারা যোগ হয় না,
+     * অথচ গুদামে ঠিকই ঢোকে (ফ্রি ভাণ্ডারে)।
+     */
+    public function giftLines(): HasMany
+    {
+        return $this->hasMany(PurchaseBillGiftLine::class)->orderBy('line_no');
     }
 
     public function supplier(): BelongsTo

@@ -12,8 +12,11 @@ use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\MasterData\Models\PaymentMethod;
 use App\Modules\Purchase\Services\DirectPurchaseService;
+use App\Modules\Purchase\Services\LastPaidRate;
 use App\Modules\Supplier\Models\Supplier;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -43,6 +46,7 @@ class DirectPurchaseController extends Controller implements HasMiddleware
         private readonly DirectPurchaseService $purchases,
         private readonly SettingsService $settings,
         private readonly MenuBuilder $menu,
+        private readonly LastPaidRate $lastPaid,
     ) {}
 
     public static function middleware(): array
@@ -61,6 +65,56 @@ class DirectPurchaseController extends Controller implements HasMiddleware
             'warehouses' => Warehouse::query()->active()->orderBy('code')->get(),
             'warehouse' => $warehouse,
             'moneyAccounts' => $this->moneyAccounts(),
+
+            /*
+             * ── টাকা দেওয়ার উপায়গুলো ─────────────────────────────────
+             *
+             * তালিকাটা `mdm_payment_methods`-এর সারি, কোডের ধ্রুবক নয় —
+             * ক্রেতা নিজের উপায় যোগ করতে পারবেন (মালিকের স্থায়ী নিয়ম)।
+             *
+             * ⚠️ `kind` ঘরটাই সেতু: পরিশোধের `instrument` ওই মানই নেয়
+             * (cash · cheque · bank · mfs)। নতুন সারির `kind` চেনা
+             * মানগুলোর একটা না হলে "কীভাবে দেওয়া হলো" ঘরটা খালি যাবে।
+             *
+             * ⓘ `accountId` থাকলে পর্দা খাতটা আগেই বসিয়ে দেয় — কাউন্টারে
+             * প্রতিবার দুইটা ঘর ভরার বদলে একটা।
+             */
+            /*
+             * ── কে মালটা আনল ─────────────────────────────────────────
+             *
+             * ⚠️ কেবল নাম লেখার একটা ঘর যথেষ্ট নয়। মালিকের কথা:
+             * *"পরিবহনকারী মানে মাল আনার খরচ"* — অর্থাৎ ভাড়াটা তার
+             * খাতায় দেনা হয়ে জমবে আর মাস শেষে মিটবে। নাম লেখা থাকলে
+             * খতিয়ানই দাঁড়ায় না, আর *"এই পরিবহনকারীকে এই মাসে কত
+             * দিলাম"* প্রশ্নের উত্তর থাকে না।
+             *
+             * ⓘ ছাঁকনিটা পক্ষের **ধরনের কোড** ধরে, নাম ধরে নয় — তাই এই
+             * ফাইলে কোনো প্রতিষ্ঠানের নাম লেখা নেই, আর কোম্পানি চাইলে
+             * ধরনটা নিজে বাড়াতে পারে। বিক্রয়ের দিকেও হুবহু এটাই।
+             */
+            'carriers' => Supplier::query()
+                ->active()
+                ->whereHas('partyType', fn ($q) => $q->whereIn('code', ['TRANSPORT']))
+                ->orderBy('name_en')
+                ->get(['id', 'code', 'name_en', 'name_bn'])
+                ->map(fn (Supplier $carrier): array => [
+                    'id' => (string) $carrier->id,
+                    'label' => $carrier->name(),
+                ])
+                ->values(),
+
+            'depositMethods' => PaymentMethod::query()
+                ->active()
+                ->orderBy('code')
+                ->get()
+                ->map(fn (PaymentMethod $method): array => [
+                    'id' => (string) $method->id,
+                    'label' => $method->name(),
+                    'accountId' => $method->account_id === null ? '' : (string) $method->account_id,
+                    'needsReference' => (bool) $method->needs_reference,
+                    'kind' => $method->kind,
+                ])
+                ->values(),
 
             /*
              * ঘরগুলোর সুইচ — বিক্রয়ের পর্দার মতোই (নিয়ম ৭)।
@@ -101,6 +155,53 @@ class DirectPurchaseController extends Controller implements HasMiddleware
                 Rule::exists('accounts', 'id')->where('company_id', $companyId),
                 Rule::requiredIf(fn () => (float) $request->input('paid_now', 0) > 0)],
 
+            /*
+             * ── একাধিক জমা ───────────────────────────────────────────
+             *
+             * বাস্তবে এক বিলের টাকা এক পথে যায় না: কিছু নগদ, বাকিটা
+             * চেকে বা bKash-এ। উপরের একক ঘরটা ধরে নিত **একটাই উপায়**,
+             * তাই দ্বিতীয় পথটা কোথাও লেখাই হত না।
+             *
+             * ⓘ উপায়টা `mdm_payment_methods`-এর সারি, কোডের ধ্রুবক নয় —
+             * ক্রেতা নিজের উপায় যোগ করতে পারবেন। ⚠️ কিন্তু নতুন সারির
+             * `kind` অবশ্যই চেনা মানগুলোর একটা হতে হবে (cash · cheque ·
+             * bank · mfs), কারণ পরিশোধের `instrument` ওই মানই নেয় —
+             * নাহলে জমাটা নীরবে ব্যর্থ হত।
+             *
+             * ⚠️ পুরনো `paid_now` ঘরটা রয়ে গেল ইচ্ছে করেই: API, ইমপোর্ট
+             * আর সিডার ওটাই পাঠায়। দুইটা একসাথে এলে `deposits` জেতে —
+             * বিক্রয়ের দিকেও একই নিয়ম।
+             */
+            /*
+             * ── যে গাড়িটা মাল নিয়ে এল ────────────────────────────────
+             *
+             * সবগুলোই ঐচ্ছিক: নিজের গাড়িতে মাল এলে ভাড়াও নেই, বাহকও
+             * নেই। ⓘ কিন্তু ভাড়া লিখলে **কে আনল সেটা বলা দরকার** —
+             * নাহলে টাকাটা কার খাতায় দেনা হবে তা কেউ জানে না, আর
+             * পরিবহনকারীর হিসাব কোনোদিন মেলে না।
+             *
+             * ⚠️ `carrier_name` তবু আলাদা রাখা: একবারের ভাড়া গাড়িকে
+             * পক্ষ বানানোর দরকার নেই, আর তখন নামটাই একমাত্র তথ্য।
+             */
+            'carrier_id' => ['nullable', 'integer',
+                Rule::exists('suppliers', 'id')->where('company_id', $companyId),
+                Rule::requiredIf(fn () => (float) $request->input('transport_cost', 0) > 0
+                    && blank($request->input('carrier_name')))],
+            'carrier_name' => ['nullable', 'string', 'max:120'],
+            'transport_cost' => ['nullable', 'numeric', 'min:0'],
+            'vehicle_no' => ['nullable', 'string', 'max:40'],
+            'driver_name' => ['nullable', 'string', 'max:120'],
+
+            'deposits' => ['nullable', 'array', 'max:20'],
+            'deposits.*.amount' => ['required', 'numeric', 'gt:0'],
+            'deposits.*.payment_method_id' => ['required', 'integer',
+                Rule::exists('mdm_payment_methods', 'id')->where('company_id', $companyId)],
+            'deposits.*.account_id' => ['required', 'integer',
+                Rule::exists('accounts', 'id')->where('company_id', $companyId)],
+            'deposits.*.reference' => ['nullable', 'string', 'max:64'],
+            'deposits.*.ref_date' => ['nullable', 'date'],
+            'deposits.*.narration' => ['nullable', 'string', 'max:255'],
+
             'lines' => ['required', 'array', 'min:1'],
             'lines.*.product_id' => ['required', 'integer',
                 Rule::exists('inv_products', 'id')->where('company_id', $companyId)],
@@ -111,15 +212,60 @@ class DirectPurchaseController extends Controller implements HasMiddleware
             'lines.*.tax' => ['nullable', 'numeric', 'min:0'],
             'lines.*.sales_price' => ['nullable', 'numeric', 'min:0'],
             'lines.*.narration' => ['nullable', 'string', 'max:500'],
+
+            /*
+             * উপহার — মিল যা সাথে দিয়ে দিল।
+             *
+             * ⚠️ `lines`-এর মতো `required` নয়। বেশিরভাগ চালানে কোনো
+             * উপহার থাকে না, আর বাধ্যতামূলক করলে প্রতিটা সাধারণ ক্রয়
+             * আটকে যেত।
+             *
+             * ⓘ `against_product_id` ঐচ্ছিক: মিল একটা ক্যালেন্ডার বা
+             * ছাতাও পাঠাতে পারে যা কোনো নির্দিষ্ট পণ্যের সাথে নয়।
+             * বাধ্যতামূলক করলে ক্যাশিয়ার যেকোনো একটা বেছে নিতেন, আর
+             * তখন "কোন পণ্যের সাথে এল" প্রশ্নের উত্তরটা **ভুল** হত —
+             * খালি থাকার চেয়েও খারাপ।
+             */
+            'gifts' => ['nullable', 'array'],
+            'gifts.*.product_id' => ['required', 'integer',
+                Rule::exists('inv_products', 'id')->where('company_id', $companyId)],
+            'gifts.*.qty' => ['required', 'numeric', 'gt:0'],
+            'gifts.*.unit_id' => ['nullable', 'integer',
+                Rule::exists('mdm_units', 'id')->where('company_id', $companyId)],
+            'gifts.*.against_product_id' => ['nullable', 'integer',
+                Rule::exists('inv_products', 'id')->where('company_id', $companyId)],
+            'gifts.*.remarks' => ['nullable', 'string', 'max:191'],
         ]);
 
-        $result = $this->purchases->complete($data, $data['lines']);
+        $result = $this->purchases->complete($data, $data['lines'], $data['gifts'] ?? []);
 
         return redirect()
             ->route('purchase.bill.show', $result['bill']->id)
             ->with('saved', __('purchase::message.direct_done', [
                 'no' => $result['bill']->document_no,
             ]));
+    }
+
+    /**
+     * এই সরবরাহকারীর কাছ থেকে গতবারের দরগুলো।
+     *
+     * ── কেন পাতার সাথে যায় না ───────────────────────────────────────
+     * সরবরাহকারী বাছা হয় পাতা খোলার পরে, আর বাছাই বদলালে পুরো তালিকাটা
+     * বদলে যায়। পাতার সাথে পাঠাতে হলে **সব** সরবরাহকারীর **সব** পণ্যের
+     * দর পাঠাতে হত — হাজার হাজার সারি, যার একজনেরটা ছাড়া বাকি সব
+     * অপ্রয়োজনীয়।
+     *
+     * ── ⚠️ সরবরাহকারীটা এই কোম্পানিরই কি না ─────────────────────────
+     * রুট-বাঁধাই আইডি ধরে তুলে আনে, আর আইডিটা আসে ঠিকানা থেকে।
+     * `Supplier` কোম্পানির ছাঁকনির নিচে থাকলেও প্রশ্নটা এখানে হাতে
+     * দেখা হয়, কারণ **নীরব ভুলটা বেশি খরচের**: অন্য কোম্পানির দর দেখে
+     * ফেলা মানে ব্যবসার গোপন কথা ফাঁস, আর সেটা কোনো ত্রুটি ছাড়াই ঘটত।
+     */
+    public function lastRates(Supplier $supplier): JsonResponse
+    {
+        abort_if($supplier->company_id !== CompanyContext::id(), 404);
+
+        return response()->json($this->lastPaid->forSupplier((int) $supplier->id));
     }
 
     private function warehouse(Request $request): ?Warehouse
@@ -159,6 +305,12 @@ class DirectPurchaseController extends Controller implements HasMiddleware
             ->where(fn ($q) => $q->whereIn('parent_id', $heads)->orWhereIn('id', $heads))
             ->where('is_group', false)
             ->orderBy('code')
+            /*
+             * ⓘ মা-টা সাথেই আসে: জমার প্যানেল উপায় অনুযায়ী খাত ছাঁকে, আর
+             * ছাঁকনিটা মায়ের কোড দেখে (১১০১ নগদ · ১১০২ ব্যাংক · ১১০৫ MFS)।
+             * ⚠️ `preventLazyLoading` চালু, তাই এটা না আনলে পর্দাটা ভাঙত।
+             */
+            ->with('parent:id,code')
             ->get();
     }
 }

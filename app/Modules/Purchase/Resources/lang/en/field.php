@@ -5,6 +5,8 @@ declare(strict_types=1);
 return [
     'supplier' => 'Supplier',
     'product' => 'Product',
+    'gift' => 'Gift',
+    'gift_against' => 'Came with',
     'warehouse' => 'Warehouse',
     'branch' => 'Branch',
     'ordered' => 'Ordered',
@@ -59,4 +61,27 @@ return [
     'balance_due' => 'Balance due',
     'total_item' => 'Total items',
     'total_qty' => 'Total qty',
+
+    /*
+     * The payment panel — one bill, several ways of paying it.
+     *
+     * 'paid_how' is the empty option on the method list. It reads as a
+     * question because the list is not a filter: nothing can be added
+     * until it is answered.
+     */
+    'paid_how' => 'How was it paid',
+    'paid_total' => 'Paid now',
+    'reference' => 'Cheque / transaction no.',
+
+    /*
+     * Who brought the goods, and what the ride cost.
+     *
+     * The same four names as the sales side uses on a challan, on
+     * purpose: one word should mean one thing in both directions.
+     */
+    'carrier' => 'Who brought it',
+    'carrier_name' => 'Carrier name',
+    'transport_cost' => 'Freight',
+    'vehicle_no' => 'Vehicle no.',
+    'driver_name' => 'Driver',
 ];
