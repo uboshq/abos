@@ -6,6 +6,7 @@ import '../../features/auth/login_screen.dart';
 import '../../features/customers/customer_list_screen.dart';
 import '../../features/home/home_shell.dart';
 import '../../features/orders/new_order_screen.dart';
+import '../../features/orders/order_prefill.dart';
 import '../../features/orders/order_list_screen.dart';
 import '../../features/products/product_list_screen.dart';
 import '../../features/splash/splash_screen.dart';
@@ -74,7 +75,13 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: 'new-order',
-            builder: (context, state) => const NewOrderScreen(),
+            // `extra` carries an OrderPrefill only when opened from "নতুন
+            // করে লিখুন" on a rejected order (order_list_screen.dart /
+            // sync_status_screen.dart) — absent on the plain "নতুন অর্ডার"
+            // tile, which is the ordinary case.
+            builder: (context, state) => NewOrderScreen(
+              prefill: state.extra as OrderPrefill?,
+            ),
           ),
           GoRoute(
             path: 'orders',

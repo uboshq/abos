@@ -63,24 +63,42 @@ class _ProductListScreenState extends State<ProductListScreen> {
           ),
           if (_refreshing) const LinearProgressIndicator(),
           Expanded(
-            child: all.isEmpty && !_refreshing
-                ? const EmptyState(
-                    icon: Icons.inventory_2_outlined,
-                    title: 'এখনো কোনো পণ্য সিঙ্ক হয়নি',
-                    message: 'নিচে টেনে আবার চেষ্টা করুন।',
-                  )
-                : RefreshIndicator(
-                    onRefresh: _refresh,
-                    child: ListView.separated(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.md),
-                      itemCount: filtered.length,
-                      separatorBuilder: (_, __) =>
-                          const SizedBox(height: AppSpacing.xs),
-                      itemBuilder: (context, index) =>
-                          _ProductTile(product: filtered[index]),
-                    ),
-                  ),
+            // Always a RefreshIndicator, never a bare EmptyState — see
+            // CustomerListScreen's own comment: a RefreshIndicator needs a
+            // scrollable descendant to recognise the pull gesture at all, so
+            // the "নিচে টেনে" instruction on an empty first launch must not
+            // be the one case with nothing to pull.
+            child: RefreshIndicator(
+              onRefresh: _refresh,
+              child: all.isEmpty
+                  ? ListView(
+                      children: const [
+                        EmptyState(
+                          icon: Icons.inventory_2_outlined,
+                          title: 'এখনো কোনো পণ্য সিঙ্ক হয়নি',
+                          message: 'নিচে টেনে আবার চেষ্টা করুন।',
+                        ),
+                      ],
+                    )
+                  : filtered.isEmpty
+                      ? ListView(
+                          children: const [
+                            EmptyState(
+                              icon: Icons.search_off,
+                              title: 'কোনো মিল পাওয়া যায়নি',
+                            ),
+                          ],
+                        )
+                      : ListView.separated(
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                          itemCount: filtered.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: AppSpacing.xs),
+                          itemBuilder: (context, index) =>
+                              _ProductTile(product: filtered[index]),
+                        ),
+            ),
           ),
         ],
       ),

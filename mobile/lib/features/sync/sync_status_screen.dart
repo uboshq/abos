@@ -9,6 +9,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_status_pill.dart';
 import '../../core/widgets/empty_state.dart';
+import '../orders/rejected_order_card.dart';
 
 /// The screen the 4 September briefing calls the most important one this
 /// app has: "যা যায়নি" (what did not go up) is invisible everywhere else,
@@ -116,23 +117,9 @@ class _SyncStatusScreenState extends State<SyncStatusScreen> {
                       ),
                     )
                   else
-                    ...rejected.map((item) => Card(
-                          child: ListTile(
-                            leading: const AppStatusPill(
-                                label: 'ব্যর্থ', kind: AppStatusKind.danger),
-                            title: Text(syncEntityLabel(item.entityType)),
-                            subtitle: Text(item.reason),
-                            isThreeLine: true,
-                            trailing: IconButton(
-                              icon: const Icon(Icons.close),
-                              tooltip: 'বুঝেছি, সরিয়ে ফেলুন',
-                              onPressed: () async {
-                                await SyncEngine.instance
-                                    .dismissRejected(item.key);
-                                if (mounted) setState(() {});
-                              },
-                            ),
-                          ),
+                    ...rejected.map((item) => RejectedOrderCard(
+                          item: item,
+                          onDismissed: () => setState(() {}),
                         )),
                   const SizedBox(height: AppSpacing.md),
                   const _SectionHeader('শেষ সিঙ্ক'),

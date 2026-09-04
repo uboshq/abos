@@ -6,6 +6,7 @@ import '../../core/sync_engine/sync_engine.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_status_pill.dart';
 import '../../core/widgets/empty_state.dart';
+import 'rejected_order_card.dart';
 
 /// Three states an order taken on this phone can be in, all in one list
 /// rather than three screens: waiting for a connection, refused by the
@@ -81,22 +82,10 @@ class _OrderListScreenState extends State<OrderListScreen> {
                     ),
                   ],
                   if (rejected.isNotEmpty) ...[
-                    _SectionHeader('প্রত্যাখ্যাত (${rejected.length})'),
-                    ...rejected.map((item) => Card(
-                          child: ListTile(
-                            leading: const AppStatusPill(
-                                label: 'ব্যর্থ', kind: AppStatusKind.danger),
-                            title: Text(item.reason),
-                            trailing: IconButton(
-                              icon: const Icon(Icons.close),
-                              tooltip: 'বুঝেছি, সরিয়ে ফেলুন',
-                              onPressed: () async {
-                                await SyncEngine.instance
-                                    .dismissRejected(item.key);
-                                if (mounted) setState(() {});
-                              },
-                            ),
-                          ),
+                    _SectionHeader('যা যায়নি (${rejected.length})'),
+                    ...rejected.map((item) => RejectedOrderCard(
+                          item: item,
+                          onDismissed: () => setState(() {}),
                         )),
                   ],
                   if (synced.isNotEmpty) ...[

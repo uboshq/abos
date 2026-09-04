@@ -40,15 +40,23 @@ class _StockListScreenState extends State<StockListScreen> {
         children: [
           if (_refreshing) const LinearProgressIndicator(),
           Expanded(
-            child: all.isEmpty && !_refreshing
-                ? const EmptyState(
-                    icon: Icons.warehouse_outlined,
-                    title: 'এখনো কোনো মজুদ সিঙ্ক হয়নি',
-                    message: 'নিচে টেনে আবার চেষ্টা করুন।',
-                  )
-                : RefreshIndicator(
-                    onRefresh: _refresh,
-                    child: ListView.separated(
+            // Always a RefreshIndicator, never a bare EmptyState — see
+            // CustomerListScreen's own comment: without it, pulling down on
+            // an empty first launch does nothing, which is exactly the one
+            // moment this screen tells someone to do that.
+            child: RefreshIndicator(
+              onRefresh: _refresh,
+              child: all.isEmpty
+                  ? ListView(
+                      children: const [
+                        EmptyState(
+                          icon: Icons.warehouse_outlined,
+                          title: 'এখনো কোনো মজুদ সিঙ্ক হয়নি',
+                          message: 'নিচে টেনে আবার চেষ্টা করুন।',
+                        ),
+                      ],
+                    )
+                  : ListView.separated(
                       padding:
                           const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                       itemCount: all.length,
