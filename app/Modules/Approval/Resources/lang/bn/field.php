@@ -5,6 +5,8 @@ declare(strict_types=1);
 return [
     'module' => 'মডিউল',
     'all_modules' => 'সব',
+    'whose_inbox' => 'কার ইনবক্স',
+    'my_inbox' => 'আমার',
     'decided_at' => 'সিদ্ধান্তের তারিখ',
     'waiting_days' => 'কত দিন ধরে',
     'took_days' => 'কত দিনে',

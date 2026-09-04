@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Modules\Approval\Http\Controllers;
 
 use App\Core\Services\MenuBuilder;
+use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Models\ApprovalFlow;
 use App\Models\User;
 use App\Modules\Approval\Http\Requests\ApprovalFlowRequest;
 use App\Modules\Approval\Services\ApprovalFlowService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -100,9 +102,41 @@ class ApprovalFlowController extends Controller implements HasMiddleware
     private function approverNames(): array
     {
         return [
+            /*
+             * রোলে কোম্পানির ছাঁকনি নেই, আর সেটা ঠিক — মেপে দেখা হয়েছে।
+             *
+             * `roles` টেবিলে `company_id` নেই আর Spatie-র teams বন্ধ,
+             * অর্থাৎ রোলগুলো গোটা ইনস্টলেশনের, কোম্পানিভিত্তিক নয়।
+             * ⓘ পাশাপাশি দুইটা লাইনের একটায় ছাঁকনি আছে আর অন্যটায় নেই —
+             * সেটা ধরে নেওয়া যায় না, তাই লিখে রাখা।
+             */
             'role' => Role::query()->pluck('name', 'id')->all(),
-            'user' => User::query()->pluck('name', 'id')->all(),
+
+            'user' => $this->companyUsers()->pluck('name', 'id')->all(),
         ];
+    }
+
+    /**
+     * এই কোম্পানির ব্যবহারকারীরাই — বহু-টেন্যান্টে এটা সুবিধা নয়, শর্ত।
+     *
+     * ⚠️ ── কী ভাঙা ছিল ──────────────────────────────────────────────
+     * এখানে ছিল সরল `User::query()`, আর `User`-এ কোনো global scope নেই
+     * (একজন মানুষ একাধিক কোম্পানিতে থাকতে পারেন, তাই ওটা pivot-এ)।
+     * ফল: ছকের ফর্মে **অন্য কোম্পানির মানুষের নাম** দেখা যেত।
+     *
+     * ⛔ আর ক্ষতিটা নাম দেখার চেয়ে বড়: ওই তালিকা থেকে অন্য কোম্পানির
+     * কাউকে **অনুমোদনের ছকে বসিয়েও দেওয়া যেত**, আর তখন তাঁর কাছে এই
+     * কোম্পানির কাগজ সইয়ের জন্য যেত।
+     *
+     * ⓘ ছাঁচটা `CashTillController::holderOptions()`-এর — নতুন কিছু
+     * বানানো হয়নি, কারণ দুই রকম করলে তৃতীয় জায়গায় তৃতীয় রকম হয়।
+     *
+     * @return Builder<User>
+     */
+    private function companyUsers(): Builder
+    {
+        return User::query()
+            ->orderBy('name');
     }
 
     /** @return array<string, mixed> */
@@ -114,7 +148,9 @@ class ApprovalFlowController extends Controller implements HasMiddleware
 
             // ব্যক্তি ধরে ছক বসানো যায়, কিন্তু রোল ধরে বসানোই টেকে:
             // মানুষ চাকরি ছাড়েন, রোল থেকে যায়
-            'users' => User::query()->orderBy('name')->get(),
+            //
+            // ⚠️ এই কোম্পানির মানুষই — কারণটা [[companyUsers]]-এ
+            'users' => $this->companyUsers()->get(),
         ];
     }
 }

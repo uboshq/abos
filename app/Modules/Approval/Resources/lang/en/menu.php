@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'inbox' => 'Waiting for me',
     'mine' => 'My requests',
+    'inbox_of' => "Waiting for :name",
     'flows' => 'Approval rules',
 
     // The four reports of section 2.8

@@ -202,6 +202,40 @@ class EveryRouteIsGuardedTest extends TestCase
     ];
 
     /**
+     * পাহারা আছে, কিন্তু পদ্ধতির ভেতরে — আর কেন সেটা এখানে লিখতে হলো।
+     *
+     * ── এই গার্ড দুইটা আকার চেনে ────────────────────────────────────
+     * রুটে `can:`, অথবা পদ্ধতিতে `$this->authorize(...)`। নিচের দুইটা
+     * রুটের পাহারা **আসল**, কিন্তু তৃতীয় একটা আকারে: কন্ট্রোলারের
+     * ভেতরে `abort_unless(...)`, কারণ শর্তটা একটামাত্র অনুমতি নয়।
+     *
+     * ⚠️ ── কেন `authorize()`-এ বদলানো হয়নি ──────────────────────────
+     * শুধু গার্ডকে খুশি করতে বদলালে তিনটা আলাদা প্রশ্নকে একটা Gate-এ
+     * চাপাতে হত, আর কোডটা ঘোলা হত। **গার্ড বাস্তবতার সেবক, উল্টোটা নয়** —
+     * তাই কোড যেমন আছে তেমনই, আর ব্যতিক্রমটা কারণসহ ঘোষিত।
+     *
+     * ⓘ এটা `ANY_SIGNED_IN_USER` নয়: ওই তালিকার রুটগুলো লগইন করা
+     * **যে কারো** জন্য খোলে। এগুলো নয় — এগুলোয় চাবি লাগে, কেবল চাবিটা
+     * একটার বেশি হতে পারে।
+     */
+    private const GUARDED_INSIDE_THE_METHOD = [
+        /*
+         * ইনবক্স খোলেন দুই ধরনের মানুষ: যিনি সই দেন (`approval.decide`),
+         * আর যিনি দেখেন কার সইয়ে কী আটকে আছে (`approval.report` —
+         * ম্যানেজার, নিরীক্ষক, মালিক)। দ্বিতীয় দলের নিজের ইনবক্স খালি,
+         * তবু ব্যক্তি-ছাঁকনিটা তাঁদেরই দরকার।
+         */
+        'approval.inbox.index' => 'approval.decide অথবা approval.report — abort_unless() পদ্ধতির শুরুতে',
+
+        /*
+         * পাতাটায় তিনটা আলাদা প্রশ্ন, আর ওদের এক করা যায় না:
+         * পাতা খোলা (নিজের · সিদ্ধান্তদাতা · নিরীক্ষক) · কাগজ দেখা
+         * (নিরীক্ষক নয়) · বোতাম (কেবল সিদ্ধান্তদাতা)।
+         */
+        'approval.inbox.show' => 'নিজের অনুরোধ · সিদ্ধান্তদাতা · approval.report — তিনটা প্রশ্ন show()-এর ভেতরে',
+    ];
+
+    /**
      * লগইন লাগে, কিন্তু আলাদা অনুমতি নয় — আর কেন।
      *
      * সবগুলোরই একটা সাধারণ বৈশিষ্ট্য: এগুলো **ব্যবহারকারীর নিজের**
@@ -351,7 +385,8 @@ class EveryRouteIsGuardedTest extends TestCase
             if (array_key_exists($name, self::OPEN_TO_THE_WORLD)
                 || array_key_exists($name, self::ANY_SIGNED_IN_USER)
                 || array_key_exists($name, self::DEALER_PORTAL)
-                || array_key_exists($name, self::TOKEN_SYNC)) {
+                || array_key_exists($name, self::TOKEN_SYNC)
+                || array_key_exists($name, self::GUARDED_INSIDE_THE_METHOD)) {
                 continue;
             }
 
@@ -449,7 +484,13 @@ class EveryRouteIsGuardedTest extends TestCase
         }
 
         $stale = array_values(array_diff(
-            [...array_keys(self::OPEN_TO_THE_WORLD), ...array_keys(self::ANY_SIGNED_IN_USER)],
+            [
+                ...array_keys(self::OPEN_TO_THE_WORLD),
+                ...array_keys(self::ANY_SIGNED_IN_USER),
+                // ঘোষিত ব্যতিক্রমও বাসি হতে পারে — রুটটা মুছে গেলে
+                // নামটা এখানে পড়ে থাকত, আর পরের জন ভাবতেন পাহারা আছে
+                ...array_keys(self::GUARDED_INSIDE_THE_METHOD),
+            ],
             array_keys($known),
         ));
 
