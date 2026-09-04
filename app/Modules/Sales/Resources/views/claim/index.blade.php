@@ -1,5 +1,5 @@
 {{--
-    ডিপোর দিক — ডিলারদের তোলা দাবি।
+    ডিপোর দিক — গ্রাহকদের তোলা দাবি।
 
     ডিফল্টে কেবল অপেক্ষমাণ, কারণ এই পাতাটার একটাই কাজ: আজ কোনগুলো
     যাচাই করা বাকি। গৃহীত ও প্রত্যাখ্যাত দাবি ইতিহাস, আর ইতিহাস রোজ
@@ -17,9 +17,9 @@
     */
     $columns = [
         [
-            'key' => 'dealer',
-            'label' => __('sales::portal.dealer'),
-            'render' => fn ($c) => view('sales::claim.partials.dealer', ['claim' => $c]),
+            'key' => 'customer',
+            'label' => __('sales::portal.customer'),
+            'render' => fn ($c) => view('sales::claim.partials.customer', ['claim' => $c]),
         ],
         [
             'key' => 'claimed_on',

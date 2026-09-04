@@ -23,10 +23,10 @@ use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 /**
- * ডিলার নিজের খাতাটাই কোনোদিন দেখতে পেতেন না।
+ * গ্রাহক নিজের খাতাটাই কোনোদিন দেখতে পেতেন না।
  *
  * ── কী ভাঙা ছিল ─────────────────────────────────────────────────────
- * ডিলার নিজের বকেয়া জানতে ফোন করেন। টাকা জমা দিয়ে আবার ফোন করেন —
+ * গ্রাহক নিজের বকেয়া জানতে ফোন করেন। টাকা জমা দিয়ে আবার ফোন করেন —
  * "স্লিপটা পাঠালাম, দেখে নিয়েন"। ডিপোর কেউ একজন হোয়াটসঅ্যাপে ছবিটা
  * দেখে, খাতায় বসায়, বা ভুলে যায়।
  *
@@ -36,9 +36,9 @@ use Tests\TestCase;
  * ── এই ফাইলের সবচেয়ে জরুরি অংশ ──────────────────────────────────────
  * "অন্যের কিছু দেখা যায় না" পরীক্ষাগুলো। বাইরের মানুষকে লগইন দেওয়ার
  * মুহূর্তে ওটাই একমাত্র সত্যিকারের ঝুঁকি: একটা URL-এর সংখ্যা বদলে
- * অন্য ডিলারের খাতা দেখে ফেলা।
+ * অন্য গ্রাহকের খাতা দেখে ফেলা।
  */
-class TheDealerCouldNeverSeeHisOwnLedgerTest extends TestCase
+class TheCustomerCouldNeverSeeHisOwnLedgerTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -71,11 +71,11 @@ class TheDealerCouldNeverSeeHisOwnLedgerTest extends TestCase
             'is_bank' => true,
         ]);
 
-        $this->karim = $this->dealer('PORTAL-K', 'Karim Dealer');
-        $this->rahim = $this->dealer('PORTAL-R', 'Rahim Dealer');
+        $this->karim = $this->customer('PORTAL-K', 'Karim Customer');
+        $this->rahim = $this->customer('PORTAL-R', 'Rahim Customer');
     }
 
-    private function dealer(string $code, string $name): Customer
+    private function customer(string $code, string $name): Customer
     {
         $customer = Customer::query()->create([
             'company_id' => $this->company->id,
@@ -87,16 +87,16 @@ class TheDealerCouldNeverSeeHisOwnLedgerTest extends TestCase
         ]);
 
         $customer->forceFill([
-            'portal_password' => Hash::make('dealer-pass'),
+            'portal_password' => Hash::make('customer-pass'),
             'portal_enabled' => true,
         ])->save();
 
         return $customer;
     }
 
-    private function claimFor(Customer $dealer, string $amount = '50000', ?string $ref = 'TRX-1'): DepositClaim
+    private function claimFor(Customer $customer, string $amount = '50000', ?string $ref = 'TRX-1'): DepositClaim
     {
-        return app(DepositClaimService::class)->raise($dealer, [
+        return app(DepositClaimService::class)->raise($customer, [
             'claimed_on' => '2026-08-10',
             'amount' => $amount,
             'method' => DepositClaim::BANK,
@@ -107,11 +107,11 @@ class TheDealerCouldNeverSeeHisOwnLedgerTest extends TestCase
 
     /* ── লগইন ───────────────────────────────────────────────────── */
 
-    public function test_a_dealer_can_sign_in_with_the_code_from_his_bill(): void
+    public function test_a_customer_can_sign_in_with_the_code_from_his_bill(): void
     {
         $this->post(route('sales.portal.login.attempt'), [
             'code' => 'PORTAL-K',
-            'password' => 'dealer-pass',
+            'password' => 'customer-pass',
         ])->assertRedirect(route('sales.portal.home'));
 
         $this->assertAuthenticatedAs($this->karim, 'portal');
@@ -133,13 +133,13 @@ class TheDealerCouldNeverSeeHisOwnLedgerTest extends TestCase
      * সুইচটাই একমাত্র নিয়ন্ত্রণ: ডিপো যাঁকে দিতে চায় কেবল তিনিই ঢোকেন।
      * না দেখলে পাসওয়ার্ড বসানো প্রতিটা সারিই খোলা দরজা হত।
      */
-    public function test_a_dealer_whose_portal_is_off_cannot_get_in(): void
+    public function test_a_customer_whose_portal_is_off_cannot_get_in(): void
     {
         $this->karim->forceFill(['portal_enabled' => false])->save();
 
         $this->post(route('sales.portal.login.attempt'), [
             'code' => 'PORTAL-K',
-            'password' => 'dealer-pass',
+            'password' => 'customer-pass',
         ])->assertSessionHasErrors('code');
 
         $this->assertGuest('portal');
@@ -154,10 +154,10 @@ class TheDealerCouldNeverSeeHisOwnLedgerTest extends TestCase
      * কর্মীর লগইন পোর্টাল খোলে না।
      *
      * দুইটা আলাদা গার্ড, তাই একজনের সেশন অন্যটায় চলে না — আর সেটাই
-     * চাই: কর্মী পোর্টালে ঢুকলে "ইনি কোন ডিলার" প্রশ্নের কোনো উত্তর
-     * থাকত না, আর `$this->dealer()` যেকোনো কিছু ফেরত দিতে পারত।
+     * চাই: কর্মী পোর্টালে ঢুকলে "ইনি কোন গ্রাহক" প্রশ্নের কোনো উত্তর
+     * থাকত না, আর `$this->customer()` যেকোনো কিছু ফেরত দিতে পারত।
      */
-    public function test_a_staff_login_does_not_open_the_dealer_portal(): void
+    public function test_a_staff_login_does_not_open_the_customer_portal(): void
     {
         $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
 
@@ -167,12 +167,12 @@ class TheDealerCouldNeverSeeHisOwnLedgerTest extends TestCase
     /* ── দেয়ালটা ────────────────────────────────────────────────── */
 
     /**
-     * এক ডিলার আরেকজনের দাবি দেখতে পান না।
+     * এক গ্রাহক আরেকজনের দাবি দেখতে পান না।
      *
      * আইডিটা URL-এ, তাই সংখ্যাটা বদলে দেখার চেষ্টা করাই স্বাভাবিক
      * প্রথম আক্রমণ। মালিকানা হাতে যাচাই না করলে ওটাই কাজ করে যেত।
      */
-    public function test_one_dealer_cannot_open_another_dealers_claim(): void
+    public function test_one_customer_cannot_open_another_customers_claim(): void
     {
         $rahimsClaim = $this->claimFor($this->rahim, '30000', 'TRX-RAHIM');
 
@@ -181,7 +181,7 @@ class TheDealerCouldNeverSeeHisOwnLedgerTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_a_dealer_sees_only_his_own_claims_on_his_page(): void
+    public function test_a_customer_sees_only_his_own_claims_on_his_page(): void
     {
         $this->claimFor($this->karim, '50000', 'TRX-KARIM');
         $this->claimFor($this->rahim, '30000', 'TRX-RAHIM');
@@ -192,7 +192,7 @@ class TheDealerCouldNeverSeeHisOwnLedgerTest extends TestCase
         $this->assertSame('TRX-KARIM', $mine->first()->reference);
     }
 
-    public function test_a_dealer_can_open_his_own_claim(): void
+    public function test_a_customer_can_open_his_own_claim(): void
     {
         $claim = $this->claimFor($this->karim, '50000', 'TRX-KARIM');
 
@@ -274,9 +274,9 @@ class TheDealerCouldNeverSeeHisOwnLedgerTest extends TestCase
     }
 
     /**
-     * ব্যাংকে যা এসেছে তাই বসে, ডিলার যা বলেছেন তা নয়।
+     * ব্যাংকে যা এসেছে তাই বসে, গ্রাহক যা বলেছেন তা নয়।
      *
-     * ডিলার ৫০,০০০ লিখেছেন, ব্যাংক চার্জ কেটে এসেছে ৪৯,৯৫০ — ওরকম
+     * গ্রাহক ৫০,০০০ লিখেছেন, ব্যাংক চার্জ কেটে এসেছে ৪৯,৯৫০ — ওরকম
      * হয়ই। দাবির সারিটা অক্ষত থাকে, তাই তফাতটাও পরে দেখা যায়।
      */
     public function test_the_depot_can_correct_the_amount_before_accepting(): void
@@ -302,7 +302,7 @@ class TheDealerCouldNeverSeeHisOwnLedgerTest extends TestCase
         app(DepositClaimService::class)->reject($claim->refresh(), 'ব্যাংকে নেই');
     }
 
-    /** কারণ ছাড়া প্রত্যাখ্যান করা যায় না — নাহলে ডিলার আবার ফোন করবেন। */
+    /** কারণ ছাড়া প্রত্যাখ্যান করা যায় না — নাহলে গ্রাহক আবার ফোন করবেন। */
     public function test_a_rejection_needs_a_reason(): void
     {
         $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
@@ -336,7 +336,7 @@ class TheDealerCouldNeverSeeHisOwnLedgerTest extends TestCase
      * ওটা অন্য ফাইলের কাজ ([[EveryVoucherBalancesTest]])। এখানে কেবল
      * খতিয়ানের পাতাটা মাপা হচ্ছে।
      */
-    private function entry(Customer $dealer, string $on, string $debit, string $credit): LedgerEntry
+    private function entry(Customer $customer, string $on, string $debit, string $credit): LedgerEntry
     {
         return LedgerEntry::query()->create([
             'company_id' => $this->company->id,
@@ -368,7 +368,7 @@ class TheDealerCouldNeverSeeHisOwnLedgerTest extends TestCase
              * ডিফল্ট থাকলে উৎসহীন সারি বসত, আর ছয় মাস পর কেউ একটা
              * অঙ্কে ক্লিক করে কোথাও পৌঁছাত না।
              *
-             * ⓘ এখানে `collection` বেছে নেওয়া হয়েছে কারণ ডিলারের
+             * ⓘ এখানে `collection` বেছে নেওয়া হয়েছে কারণ গ্রাহকের
              * খতিয়ানে ডেবিট আসে বিল থেকে আর ক্রেডিট আসে আদায় থেকে —
              * টেস্টের জন্য একটাই ধরন যথেষ্ট, আর সারিটা তখনো সৎ থাকে।
              */
@@ -377,7 +377,7 @@ class TheDealerCouldNeverSeeHisOwnLedgerTest extends TestCase
 
             'trx_date' => $on,
             'party_type' => 'customer',
-            'party_id' => $dealer->id,
+            'party_id' => $customer->id,
             'debit' => $debit,
             'credit' => $credit,
             'narration' => 'test',
@@ -413,13 +413,13 @@ class TheDealerCouldNeverSeeHisOwnLedgerTest extends TestCase
     }
 
     /**
-     * ⚠️ এক ডিলারের পাতায় অন্যজনের একটাও সারি নেই।
+     * ⚠️ এক গ্রাহকের পাতায় অন্যজনের একটাও সারি নেই।
      *
      * বাইরের মানুষ লগইন করেন বলেই এটাই এই মডিউলের একমাত্র সত্যিকারের
      * ঝুঁকি। **সংখ্যা মেলানো যথেষ্ট নয়** — করিমের জের ঠিক থাকলেও রহিমের
      * একটা সারি পাতায় থাকতে পারে; তাই সারিটাও খোঁজা হয়।
      */
-    public function test_one_dealer_never_sees_another_dealers_entries(): void
+    public function test_one_customer_never_sees_another_customers_entries(): void
     {
         $this->entry($this->karim, '2026-08-01', '1000', '0');
         $this->entry($this->rahim, '2026-08-02', '777777', '0');
@@ -434,7 +434,7 @@ class TheDealerCouldNeverSeeHisOwnLedgerTest extends TestCase
     /**
      * তারিখে ছাঁকলে আগের জের ধরা হয়।
      *
-     * ⚠️ না ধরলে জের শূন্য থেকে শুরু হত, আর ডিলার পড়তেন **"আমার কোনো
+     * ⚠️ না ধরলে জের শূন্য থেকে শুরু হত, আর গ্রাহক পড়তেন **"আমার কোনো
      * বকেয়া ছিল না"** — যেটা প্রায় সবসময়ই মিথ্যা, আর ঠিক ওই ভুল ধারণা
      * থেকেই ফোনটা আসে।
      */
@@ -454,7 +454,7 @@ class TheDealerCouldNeverSeeHisOwnLedgerTest extends TestCase
     /**
      * ⚠️ ক্রেডিট-সীমার সুইচ বন্ধ থাকলে পর্দায় সীমার কথাই নেই।
      *
-     * "০" দেখালে ডিলার পড়তেন তাঁর সীমা শেষ, তারপর ফোন করতেন — অর্থাৎ
+     * "০" দেখালে গ্রাহক পড়তেন তাঁর সীমা শেষ, তারপর ফোন করতেন — অর্থাৎ
      * এই পোর্টালের গোটা উদ্দেশ্যের উল্টো।
      */
     public function test_the_credit_limit_is_hidden_when_the_company_does_not_use_it(): void

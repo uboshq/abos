@@ -17,7 +17,7 @@ use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 /**
- * এক ডিলার, দুইটা সারি, আর অর্ধেক বকেয়া।
+ * এক গ্রাহক, দুইটা সারি, আর অর্ধেক বকেয়া।
  *
  * ── কী ভাঙা ছিল ─────────────────────────────────────────────────────
  * গ্রাহক ও সরবরাহকারীতে অনন্য ছিল কেবল `code` — নাম নয়, ফোন নয়। ফলে
@@ -33,7 +33,7 @@ use Tests\TestCase;
  * একই নাম মানে সেটা নয় — "রহিম স্টোর" নামে দুই বাজারে দুইটা আলাদা দোকান
  * থাকতেই পারে, তাই দেখানো হয়, আটকানো হয় না।
  */
-class OneDealerTwoRowsAndHalfTheDuesTest extends TestCase
+class OneCustomerTwoRowsAndHalfTheDuesTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -52,7 +52,7 @@ class OneDealerTwoRowsAndHalfTheDuesTest extends TestCase
     }
 
     /** @param  array<string, mixed>  $extra */
-    private function dealer(string $name, ?string $phone = null, array $extra = []): Customer
+    private function customer(string $name, ?string $phone = null, array $extra = []): Customer
     {
         return $this->customers->create([
             'name_en' => $name,
@@ -98,8 +98,8 @@ class OneDealerTwoRowsAndHalfTheDuesTest extends TestCase
      */
     public function test_an_empty_phone_never_counts_as_a_duplicate(): void
     {
-        $this->dealer('First shop');
-        $second = $this->dealer('Second shop');
+        $this->customer('First shop');
+        $second = $this->customer('Second shop');
 
         $this->assertNotNull($second->id);
     }
@@ -108,26 +108,26 @@ class OneDealerTwoRowsAndHalfTheDuesTest extends TestCase
 
     public function test_the_same_phone_in_another_shape_is_refused(): void
     {
-        $this->dealer('Rahim Store', '01712345678');
+        $this->customer('Rahim Store', '01712345678');
 
         $this->expectException(ValidationException::class);
-        $this->dealer('Rahim Enterprise', '+8801712345678');
+        $this->customer('Rahim Enterprise', '+8801712345678');
     }
 
     public function test_the_same_name_is_shown_but_can_be_overridden(): void
     {
-        $this->dealer('Rahim Store', '01711111111');
+        $this->customer('Rahim Store', '01711111111');
 
         // প্রথম চেষ্টা আটকায় — ব্যবহারকারী যেন দেখেন
         try {
-            $this->dealer('rahim  store', '01722222222');
+            $this->customer('rahim  store', '01722222222');
             $this->fail('একই নামে দ্বিতীয় গ্রাহক নীরবে বসে গেছে।');
         } catch (ValidationException $e) {
             $this->assertArrayHasKey('name_en', $e->errors());
         }
 
         // জেনেশুনে এগোলে চলে
-        $second = $this->dealer('rahim  store', '01722222222', ['allow_duplicate' => true]);
+        $second = $this->customer('rahim  store', '01722222222', ['allow_duplicate' => true]);
 
         $this->assertNotNull($second->id);
         $this->assertSame(2, Customer::query()
@@ -143,9 +143,9 @@ class OneDealerTwoRowsAndHalfTheDuesTest extends TestCase
      */
     public function test_editing_a_row_does_not_trip_over_itself(): void
     {
-        $dealer = $this->dealer('Rahim Store', '01712345678');
+        $customer = $this->customer('Rahim Store', '01712345678');
 
-        $updated = $this->customers->update($dealer, [
+        $updated = $this->customers->update($customer, [
             'name_en' => 'Rahim Store',
             'phone' => '01712345678',
             'allow_duplicate' => true,
@@ -174,12 +174,12 @@ class OneDealerTwoRowsAndHalfTheDuesTest extends TestCase
      */
     public function test_another_company_is_not_a_duplicate(): void
     {
-        $this->dealer('Rahim Store', '01712345678');
+        $this->customer('Rahim Store', '01712345678');
 
         $other = Company::query()->where('code', 'FMART')->firstOrFail();
         CompanyContext::set($other->id, $other->defaultBranch()?->id);
 
-        $twin = $this->dealer('Rahim Store', '01712345678');
+        $twin = $this->customer('Rahim Store', '01712345678');
 
         $this->assertSame($other->id, $twin->company_id);
     }

@@ -2,7 +2,7 @@
     পোর্টালের নিজের খোল।
 
     অ্যাপের শেলটা ব্যবহার করা হয়নি ইচ্ছাকৃতভাবে: ওখানে মেনু, মডিউল,
-    কোম্পানি বাছাই, অনুমোদনের ঘণ্টা — ডিলারের কোনোটাই দরকার নেই, আর
+    কোম্পানি বাছাই, অনুমোদনের ঘণ্টা — গ্রাহকের কোনোটাই দরকার নেই, আর
     দেখালে তিনি ভাবতেন ভুল জায়গায় এসেছেন।
 
     তিনটা জিনিস: তাঁর নাম, বেরোনোর পথ, আর পাতাটা।
@@ -19,8 +19,8 @@
     <header class="border-b border-(--color-border) bg-(--color-surface-card)">
         <div class="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3">
             <div class="min-w-0">
-                <p class="truncate font-semibold">{{ $dealer->name_bn ?: $dealer->name_en }}</p>
-                <p class="text-2xs text-(--color-ink-muted)">{{ $dealer->code }}</p>
+                <p class="truncate font-semibold">{{ $customer->name_bn ?: $customer->name_en }}</p>
+                <p class="text-2xs text-(--color-ink-muted)">{{ $customer->code }}</p>
             </div>
 
             <form method="POST" action="{{ route('sales.portal.logout') }}">

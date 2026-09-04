@@ -5,7 +5,7 @@ declare(strict_types=1);
 /**
  * গ্রাহক পোর্টাল ও জমার দাবির ভাষা।
  *
- * এখানকার লেখা ডিলার পড়েন, কর্মী নন। তাই কোনো পরিভাষা নেই: "বকেয়া",
+ * এখানকার লেখা গ্রাহক পড়েন, কর্মী নন। তাই কোনো পরিভাষা নেই: "বকেয়া",
  * "জমা", "বিল" — যে শব্দগুলো তিনি এমনিতেই বলেন।
  */
 return [
@@ -46,17 +46,17 @@ return [
     'claim_raised' => 'Thank you — we will check it against the bank.',
     'accepted_message' => 'Accepted, and the collection is on the books.',
     'rejected_message' => 'Marked as not found.',
-    'from_claim' => 'From dealer claim :no',
+    'from_claim' => 'From customer claim :no',
 
     'amount_must_be_positive' => 'The amount has to be more than zero.',
     'not_in_the_future' => 'A deposit cannot be dated in the future.',
-    'reason_required' => 'Say why, so the dealer does not have to call.',
+    'reason_required' => 'Say why, so the customer does not have to call.',
     'already_decided' => 'This one has already been decided.',
 
     // ডিপোর দিক
     'desk_title' => 'Deposit claims',
-    'desk_subtitle' => 'What dealers say they have paid — check it against the bank before you accept.',
-    'dealer' => 'Dealer',
+    'desk_subtitle' => 'What customers say they have paid — check it against the bank before you accept.',
+    'customer' => 'Customer',
     'claimed' => 'They say',
     'received' => 'Actually received',
     'accept' => 'Accept',

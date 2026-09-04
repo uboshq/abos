@@ -12,7 +12,7 @@
                   class="flex flex-wrap items-end gap-2">
                 @csrf
 
-                {{-- ডিলার যা বলেছেন সেটাই ডিফল্ট, কিন্তু বদলানো যায়:
+                {{-- গ্রাহক যা বলেছেন সেটাই ডিফল্ট, কিন্তু বদলানো যায়:
                      ব্যাংক চার্জ কেটে নিলে অঙ্কটা আলাদা হয়। --}}
                 <input type="number" step="0.01" name="amount" value="{{ $claim->amount }}"
                        title="{{ __('sales::portal.received') }}"

@@ -20,31 +20,31 @@ use Tests\TestCase;
  * পোর্টালটা কাজ করত, কিন্তু কেউ ওটা খুলতে পারত না।
  *
  * ── কী ভাঙা ছিল ─────────────────────────────────────────────────────
- * ডিলারের পাতা, লগইন, দাবির ফর্ম — সবই তৈরি ছিল, আর টেস্টেও পাশ করত।
+ * গ্রাহকের পাতা, লগইন, দাবির ফর্ম — সবই তৈরি ছিল, আর টেস্টেও পাশ করত।
  * কিন্তু `portal_enabled` চালু করার কোনো পর্দা ছিল না। মালিক ABOS-এর
  * ভেতরে যেখানেই খুঁজুন, "পোর্টাল" শব্দটাই কোথাও ছিল না।
  *
  * অর্থাৎ ফিচারটা লেখা হয়েছিল, পরীক্ষা হয়েছিল, ডিপ্লয়ও হয়েছিল — আর
- * একজন ডিলারও কোনোদিন ঢুকতে পারতেন না। চালু করার একমাত্র পথ ছিল
+ * একজন গ্রাহকও কোনোদিন ঢুকতে পারতেন না। চালু করার একমাত্র পথ ছিল
  * `php artisan tinker`।
  *
  * ── এই ফাইলের সবচেয়ে জরুরি পরীক্ষা ──────────────────────────────────
  * দুইটা।
  *
  * এক: বিক্রয়কর্মী চাবি দিতে পারেন না। যিনি চাবি দিতে পারেন তিনি
- * যেকোনো ডিলারের পাসওয়ার্ড বসাতে পারেন — অর্থাৎ নিজের জানা একটা
- * পাসওয়ার্ড বসিয়ে সেই ডিলার সেজে ঢুকতে পারেন।
+ * যেকোনো গ্রাহকের পাসওয়ার্ড বসাতে পারেন — অর্থাৎ নিজের জানা একটা
+ * পাসওয়ার্ড বসিয়ে সেই গ্রাহক সেজে ঢুকতে পারেন।
  *
  * দুই: hash কোনোদিন নিরীক্ষার খাতায় বসে না। বসলে যিনি অডিটের পর্দা
- * দেখতে পান তিনি প্রতিটা ডিলারের hash হাতে পেতেন।
+ * দেখতে পান তিনি প্রতিটা গ্রাহকের hash হাতে পেতেন।
  */
-class NobodyCouldOpenTheDealersDoorTest extends TestCase
+class NobodyCouldOpenTheCustomersDoorTest extends TestCase
 {
     use RefreshDatabase;
 
     private Company $company;
 
-    private Customer $dealer;
+    private Customer $customer;
 
     private User $owner;
 
@@ -62,11 +62,11 @@ class NobodyCouldOpenTheDealersDoorTest extends TestCase
         $this->salesman = User::query()->whereHas('roles',
             fn ($q) => $q->where('name', 'salesman'))->firstOrFail();
 
-        $this->dealer = Customer::query()->create([
+        $this->customer = Customer::query()->create([
             'company_id' => $this->company->id,
             'branch_id' => $this->company->defaultBranch()?->id,
             'code' => 'DOOR-1',
-            'name_en' => 'Door Dealer',
+            'name_en' => 'Door Customer',
             'status' => DocumentStatus::CONFIRMED,
             'is_active' => true,
         ]);
@@ -83,27 +83,27 @@ class NobodyCouldOpenTheDealersDoorTest extends TestCase
     public function test_the_customer_page_offers_the_portal_key(): void
     {
         $this->actingAs($this->owner)
-            ->get(route('customer.show', $this->dealer))
+            ->get(route('customer.show', $this->customer))
             ->assertOk()
             ->assertSee('data-portal', false)
             ->assertSee(__('customer::action.portal_enable'));
     }
 
-    public function test_the_owner_opens_the_portal_and_the_dealer_gets_in(): void
+    public function test_the_owner_opens_the_portal_and_the_customer_gets_in(): void
     {
         $this->actingAs($this->owner)
-            ->post(route('customer.portal.store', $this->dealer), [
+            ->post(route('customer.portal.store', $this->customer), [
                 'password' => 'shop-pass-1',
                 'password_confirmation' => 'shop-pass-1',
             ])
-            ->assertRedirect(route('customer.show', $this->dealer));
+            ->assertRedirect(route('customer.show', $this->customer));
 
-        $this->assertTrue((bool) $this->dealer->fresh()->portal_enabled);
+        $this->assertTrue((bool) $this->customer->fresh()->portal_enabled);
 
         /*
          * সত্যিকারের লগইন দিয়ে যাচাই, কেবল কলামটা দেখে নয়।
          *
-         * কলামটা true হওয়া আর ডিলারের ঢুকতে পারা এক জিনিস নয়: hash
+         * কলামটা true হওয়া আর গ্রাহকের ঢুকতে পারা এক জিনিস নয়: hash
          * ভুল ঘরে বসলে বা `getAuthPasswordName()` কাজ না করলে কলামটা
          * ঠিকই true দেখাত আর লগইন তবু ব্যর্থ হত।
          */
@@ -120,10 +120,10 @@ class NobodyCouldOpenTheDealersDoorTest extends TestCase
         $this->enable('first-pass-1');
 
         $this->actingAs($this->owner)
-            ->post(route('customer.portal.store', $this->dealer), [
+            ->post(route('customer.portal.store', $this->customer), [
                 'password' => 'second-pass-1',
                 'password_confirmation' => 'second-pass-1',
-            ])->assertRedirect(route('customer.show', $this->dealer));
+            ])->assertRedirect(route('customer.show', $this->customer));
 
         auth()->guard('web')->logout();
 
@@ -139,22 +139,22 @@ class NobodyCouldOpenTheDealersDoorTest extends TestCase
     public function test_a_mistyped_confirmation_sets_nothing(): void
     {
         $this->actingAs($this->owner)
-            ->post(route('customer.portal.store', $this->dealer), [
+            ->post(route('customer.portal.store', $this->customer), [
                 'password' => 'shop-pass-1',
                 'password_confirmation' => 'shop-pass-2',
             ])->assertSessionHasErrors('password');
 
-        $this->assertFalse((bool) $this->dealer->fresh()->portal_enabled);
+        $this->assertFalse((bool) $this->customer->fresh()->portal_enabled);
     }
 
     public function test_a_short_password_is_refused(): void
     {
         $this->actingAs($this->owner)
-            ->post(route('customer.portal.store', $this->dealer), [
+            ->post(route('customer.portal.store', $this->customer), [
                 'password' => 'abc', 'password_confirmation' => 'abc',
             ])->assertSessionHasErrors('password');
 
-        $this->assertFalse((bool) $this->dealer->fresh()->portal_enabled);
+        $this->assertFalse((bool) $this->customer->fresh()->portal_enabled);
     }
 
     /* ── দরজাটা বন্ধও হয় ────────────────────────────────────────── */
@@ -164,8 +164,8 @@ class NobodyCouldOpenTheDealersDoorTest extends TestCase
         $this->enable();
 
         $this->actingAs($this->owner)
-            ->delete(route('customer.portal.destroy', $this->dealer))
-            ->assertRedirect(route('customer.show', $this->dealer));
+            ->delete(route('customer.portal.destroy', $this->customer))
+            ->assertRedirect(route('customer.show', $this->customer));
 
         auth()->guard('web')->logout();
 
@@ -183,7 +183,7 @@ class NobodyCouldOpenTheDealersDoorTest extends TestCase
      * চলতি সেশনে কিছুই করত না।
      *
      * ঠিক যে মুহূর্তে বন্ধ করাটা সবচেয়ে জরুরি — পাসওয়ার্ড ফাঁস, বা
-     * ডিলারের সাথে সম্পর্ক ছিন্ন — সেই মুহূর্তেই বোতামটা অকেজো হত,
+     * গ্রাহকের সাথে সম্পর্ক ছিন্ন — সেই মুহূর্তেই বোতামটা অকেজো হত,
      * অথচ পর্দা বলত কাজ হয়ে গেছে।
      */
     public function test_closing_the_portal_throws_out_whoever_is_already_inside(): void
@@ -197,7 +197,7 @@ class NobodyCouldOpenTheDealersDoorTest extends TestCase
         $this->get(route('sales.portal.home'))->assertOk();
 
         $this->actingAs($this->owner)
-            ->delete(route('customer.portal.destroy', $this->dealer));
+            ->delete(route('customer.portal.destroy', $this->customer));
 
         auth()->guard('web')->logout();
 
@@ -205,14 +205,14 @@ class NobodyCouldOpenTheDealersDoorTest extends TestCase
             ->assertRedirect(route('sales.portal.login'));
     }
 
-    public function test_reopening_needs_no_new_password_to_be_told_to_the_dealer(): void
+    public function test_reopening_needs_no_new_password_to_be_told_to_the_customer(): void
     {
         $this->enable();
 
-        $this->actingAs($this->owner)->delete(route('customer.portal.destroy', $this->dealer));
+        $this->actingAs($this->owner)->delete(route('customer.portal.destroy', $this->customer));
 
         // পুরনো hash রয়ে গেছে, তাই একই পাসওয়ার্ড দিয়ে আবার চালু করা যায়
-        $this->actingAs($this->owner)->post(route('customer.portal.store', $this->dealer), [
+        $this->actingAs($this->owner)->post(route('customer.portal.store', $this->customer), [
             'password' => 'shop-pass-1', 'password_confirmation' => 'shop-pass-1',
         ]);
 
@@ -237,17 +237,17 @@ class NobodyCouldOpenTheDealersDoorTest extends TestCase
         $this->assertFalse($this->salesman->can('customer.portal'));
 
         $this->actingAs($this->salesman)
-            ->post(route('customer.portal.store', $this->dealer), [
+            ->post(route('customer.portal.store', $this->customer), [
                 'password' => 'shop-pass-1', 'password_confirmation' => 'shop-pass-1',
             ])->assertForbidden();
 
-        $this->assertFalse((bool) $this->dealer->fresh()->portal_enabled);
+        $this->assertFalse((bool) $this->customer->fresh()->portal_enabled);
     }
 
     public function test_a_salesman_does_not_even_see_the_section(): void
     {
         $this->actingAs($this->salesman)
-            ->get(route('customer.show', $this->dealer))
+            ->get(route('customer.show', $this->customer))
             ->assertOk()
             ->assertDontSee('data-portal', false);
     }
@@ -257,10 +257,10 @@ class NobodyCouldOpenTheDealersDoorTest extends TestCase
         $this->enable();
 
         $this->actingAs($this->salesman)
-            ->delete(route('customer.portal.destroy', $this->dealer))
+            ->delete(route('customer.portal.destroy', $this->customer))
             ->assertForbidden();
 
-        $this->assertTrue((bool) $this->dealer->fresh()->portal_enabled);
+        $this->assertTrue((bool) $this->customer->fresh()->portal_enabled);
     }
 
     /* ── খাতায় কী ওঠে, আর কী ওঠে না ─────────────────────────────── */
@@ -269,7 +269,7 @@ class NobodyCouldOpenTheDealersDoorTest extends TestCase
      * পাসওয়ার্ডের hash কোনোদিন নিরীক্ষার খাতায় বসে না।
      *
      * bcrypt hash পড়ে পাসওয়ার্ড বলা যায় না, তাই প্রথমে মনে হয় ক্ষতি
-     * নেই। কিন্তু তখন খাতাটাই প্রতিটা ডিলারের hash-এর একটা তালিকা হয়ে
+     * নেই। কিন্তু তখন খাতাটাই প্রতিটা গ্রাহকের hash-এর একটা তালিকা হয়ে
      * যেত, আর অফলাইনে hash ভাঙা যায় — সময় নিয়ে, কেউ না জেনে।
      */
     public function test_the_password_hash_never_reaches_the_audit_book(): void
@@ -288,7 +288,7 @@ class NobodyCouldOpenTheDealersDoorTest extends TestCase
     /**
      * অথচ ঘটনাটা হারায় না — কে, কখন, কী করলেন।
      *
-     * "ডিলারের পাসওয়ার্ড কে বদলেছিল" — টাকার হিসাব নিয়ে ঝগড়ার দিন
+     * "গ্রাহকের পাসওয়ার্ড কে বদলেছিল" — টাকার হিসাব নিয়ে ঝগড়ার দিন
      * এটাই প্রথম প্রশ্ন। মান বাদ দিতে গিয়ে ঘটনাটাও বাদ পড়লে বাদ
      * দেওয়াটাই একটা নতুন ফাঁক হত।
      */
@@ -298,25 +298,25 @@ class NobodyCouldOpenTheDealersDoorTest extends TestCase
 
         $trail = AuditTrail::query()
             ->where('auditable_type', Customer::class)
-            ->where('auditable_id', $this->dealer->id)
+            ->where('auditable_id', $this->customer->id)
             ->where('action', 'portal_enabled')
             ->first();
 
         $this->assertNotNull($trail);
         $this->assertSame($this->owner->id, $trail->user_id);
 
-        $this->actingAs($this->owner)->post(route('customer.portal.store', $this->dealer), [
+        $this->actingAs($this->owner)->post(route('customer.portal.store', $this->customer), [
             'password' => 'another-pass-1', 'password_confirmation' => 'another-pass-1',
         ]);
 
         $this->assertSame(1, AuditTrail::query()
-            ->where('auditable_id', $this->dealer->id)
+            ->where('auditable_id', $this->customer->id)
             ->where('action', 'portal_password_set')->count());
 
-        $this->actingAs($this->owner)->delete(route('customer.portal.destroy', $this->dealer));
+        $this->actingAs($this->owner)->delete(route('customer.portal.destroy', $this->customer));
 
         $this->assertSame(1, AuditTrail::query()
-            ->where('auditable_id', $this->dealer->id)
+            ->where('auditable_id', $this->customer->id)
             ->where('action', 'portal_disabled')->count());
     }
 
@@ -341,15 +341,15 @@ class NobodyCouldOpenTheDealersDoorTest extends TestCase
     /* ── অতিথির অনুরোধে, প্রসঙ্গ ছাড়া ───────────────────────────── */
 
     /**
-     * ডিলার লগইন করতে পারেন যখন কোনো কোম্পানি বসানো **নেই**।
+     * গ্রাহক লগইন করতে পারেন যখন কোনো কোম্পানি বসানো **নেই**।
      *
      * ── কেন এই পরীক্ষাটা এই ফাইলের সবচেয়ে দামি ─────────────────────
-     * ডিলারের লগইন একটা অতিথির অনুরোধ — তখনো কেউ ঢোকেননি, তাই
+     * গ্রাহকের লগইন একটা অতিথির অনুরোধ — তখনো কেউ ঢোকেননি, তাই
      * `ResolveCompanyContext` কোনো কোম্পানি বসাতে পারে না।
      *
      * পুরনো কোড `Auth::guard('portal')->attempt()` ডাকত, আর ওটা ভেতরে
      * `Customer::query()` চালায় — গ্লোবাল স্কোপসহ। প্রসঙ্গ ছাড়া
-     * `BelongsToCompany` ব্যতিক্রম ছুঁড়ত, অর্থাৎ **প্রতিটা** ডিলার
+     * `BelongsToCompany` ব্যতিক্রম ছুঁড়ত, অর্থাৎ **প্রতিটা** গ্রাহক
      * লগইনে ৫০০ আসত।
      *
      * অথচ পোর্টালের সব টেস্ট পাশ করত। কারণ `setUp()`-এ
@@ -362,7 +362,7 @@ class NobodyCouldOpenTheDealersDoorTest extends TestCase
      *
      * ধরা পড়েছে ব্রাউজারে, লাইভে দেওয়ার আগে — টেস্টে নয়।
      */
-    public function test_a_dealer_signs_in_on_a_request_that_has_no_company_yet(): void
+    public function test_a_customer_signs_in_on_a_request_that_has_no_company_yet(): void
     {
         $this->enable();
 
@@ -382,7 +382,7 @@ class NobodyCouldOpenTheDealersDoorTest extends TestCase
      *
      * গ্রাহকের কোড কোম্পানির **ভেতরে** অনন্য, সবার মধ্যে নয়। পুরনো
      * কোড `first()` দিয়ে যেকোনো একটা সারি তুলত, তাই দ্বিতীয়
-     * কোম্পানির ডিলার সঠিক পাসওয়ার্ড দিয়েও ঢুকতে পারতেন না — যাচাইটা
+     * কোম্পানির গ্রাহক সঠিক পাসওয়ার্ড দিয়েও ঢুকতে পারতেন না — যাচাইটা
      * হত অন্য কারো hash-এর সাথে।
      */
     public function test_two_companies_may_share_a_code_without_shadowing_each_other(): void
@@ -392,7 +392,7 @@ class NobodyCouldOpenTheDealersDoorTest extends TestCase
         $beta = Company::query()->where('code', '!=', 'TDEPOT')->firstOrFail();
 
         /*
-         * বিটার ডিলার ও তার চাবি — বিটার নিজের প্রসঙ্গের ভেতরে।
+         * বিটার গ্রাহক ও তার চাবি — বিটার নিজের প্রসঙ্গের ভেতরে।
          *
          * HTTP দিয়ে করা যেত না, আর সেটাই ঠিক: মালিক এখন TDEPOT-এ বসা,
          * তাই রুট-মডেল বাইন্ডিং বিটার গ্রাহককে খুঁজেই পেত না (৪০৪)।
@@ -400,18 +400,18 @@ class NobodyCouldOpenTheDealersDoorTest extends TestCase
          * — এটা বাধা নয়, টেন্যান্ট আলাদা থাকার প্রমাণ।
          */
         $other = CompanyContext::forCompany($beta->id, function () use ($beta) {
-            $dealer = Customer::query()->create([
+            $customer = Customer::query()->create([
                 'company_id' => $beta->id,
                 'branch_id' => $beta->defaultBranch()?->id,
                 'code' => 'DOOR-1',
-                'name_en' => 'Same Code Dealer',
+                'name_en' => 'Same Code Customer',
                 'status' => DocumentStatus::CONFIRMED,
                 'is_active' => true,
             ]);
 
-            app(CustomerPortalService::class)->enable($dealer, 'other-pass-1');
+            app(CustomerPortalService::class)->enable($customer, 'other-pass-1');
 
-            return $dealer;
+            return $customer;
         });
 
         CompanyContext::clear();
@@ -429,7 +429,7 @@ class NobodyCouldOpenTheDealersDoorTest extends TestCase
      * লগইনের নামটা গোপন নয় — কোডটা প্রতিটা বিলের উপরে ছাপা। তাই
      * CUS-0001 থেকে ধরে ধরে চেষ্টা করা আন্দাজ নয়, তালিকা মিলিয়ে
      * দেখা। সীমা ছাড়া একটা স্ক্রিপ্ট রাতভর চললে দুর্বল পাসওয়ার্ডওয়ালা
-     * ডিলারের খাতা খুলে যেত, আর কোনো চিহ্নও থাকত না।
+     * গ্রাহকের খাতা খুলে যেত, আর কোনো চিহ্নও থাকত না।
      */
     public function test_guessing_in_a_loop_gets_shut_out(): void
     {
@@ -449,14 +449,14 @@ class NobodyCouldOpenTheDealersDoorTest extends TestCase
 
     private function enable(string $password = 'shop-pass-1'): void
     {
-        $this->actingAs($this->owner)->post(route('customer.portal.store', $this->dealer), [
+        $this->actingAs($this->owner)->post(route('customer.portal.store', $this->customer), [
             'password' => $password,
             'password_confirmation' => $password,
         ]);
 
-        $this->assertTrue((bool) $this->dealer->fresh()->portal_enabled);
+        $this->assertTrue((bool) $this->customer->fresh()->portal_enabled);
 
-        // পরের অনুরোধগুলো যেন ডিলার হিসেবে যায়, মালিক হিসেবে নয়
+        // পরের অনুরোধগুলো যেন গ্রাহক হিসেবে যায়, মালিক হিসেবে নয়
         auth()->guard('web')->logout();
     }
 }

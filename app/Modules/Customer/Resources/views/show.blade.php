@@ -139,7 +139,7 @@
     {{-- পার্টির আচরণ — Status বলে না, কাউন্টারে যা জানা দরকার --}}
     @include('customer::partials.conduct', ['customer' => $customer])
 
-    {{-- ডিলার পোর্টালের চাবি --}}
+    {{-- গ্রাহক পোর্টালের চাবি --}}
     @can('managePortal', $customer)
         <section data-portal class="mt-4 rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card) p-4">
@@ -155,7 +155,7 @@
             <p class="text-xs text-(--color-ink-muted)">{{ __('customer::message.portal_note') }}</p>
 
             @if ($customer->portal_enabled)
-                {{-- চালু থাকলে দুইটা তথ্যই কাজে লাগে: কোডটা ডিলারকে বলতে
+                {{-- চালু থাকলে দুইটা তথ্যই কাজে লাগে: কোডটা গ্রাহককে বলতে
                      হয়, আর শেষ ঢোকার সময় দেখে বোঝা যায় তিনি সত্যিই
                      পাতাটা ব্যবহার করছেন কি না। --}}
                 <dl class="mt-3 grid gap-x-4 gap-y-2 sm:grid-cols-2">
@@ -196,7 +196,7 @@
                                 :hint="__('customer::message.portal_password_hint')" />
 
                     {{-- দ্বিতীয়বার লেখানো হয়, কারণ পাসওয়ার্ডটা আর কোথাও
-                         দেখা যায় না। টাইপো হলে মালিক ডিলারকে একটা ভুল
+                         দেখা যায় না। টাইপো হলে মালিক গ্রাহককে একটা ভুল
                          পাসওয়ার্ড বলতেন, আর দুইজনেই ভাবতেন পোর্টালটা
                          নষ্ট। --}}
                     <x-ui.field name="password_confirmation" type="password" required
