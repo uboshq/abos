@@ -46,6 +46,20 @@ dependencies:
   # allows, not a cadence anybody chose.
   workmanager: ^0.10.0
 
+  # State management for the screens layer (main.dart, routing, every
+  # feature) — free/BSD, no account or API key. Matches the sibling Nexus
+  # mobile app's own choice, so one person can move between the two Flutter
+  # codebases without relearning a second pattern for the same job.
+  flutter_riverpod: ^2.5.1
+
+  # Declarative routing with an auth redirect guard (signed-out -> /login,
+  # signed-in -> the role's home) — free/MIT.
+  go_router: ^14.2.0
+
+  # Date formatting for the sync-status screen's "last synced" times —
+  # free/BSD, the official Dart team package.
+  intl: ^0.19.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
