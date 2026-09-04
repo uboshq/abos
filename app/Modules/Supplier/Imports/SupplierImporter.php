@@ -48,6 +48,10 @@ final class SupplierImporter implements Importer
             'party_type' => ['label' => 'supplier::field.party_type', 'required' => false],
             'payment_term' => ['label' => 'supplier::field.payment_term', 'required' => false],
             'credit_limit' => ['label' => 'supplier::field.credit_limit', 'required' => false],
+            // credit_days আগে ঘোষিতই ছিল না — তাই সারিতে যা-ই থাক, বসত
+            // সবসময় ০ (নিচে দেখুন)। হাতে বসানোর ফর্মে ঘরটা আছে, শুধু
+            // ইম্পোর্টে ছিল না; কলামটা যোগ করলে দুই পথ এক শর্ত পড়ে।
+            'credit_days' => ['label' => 'supplier::field.credit_days', 'required' => false],
             'opening_balance' => ['label' => 'supplier::field.opening_balance', 'required' => false],
             'opening_date' => ['label' => 'supplier::field.opening_date', 'required' => false],
         ];
@@ -71,6 +75,10 @@ final class SupplierImporter implements Importer
 
         if (filled($row['credit_limit']) && ! is_numeric($row['credit_limit'])) {
             $errors[] = __('core.import.not_a_number', ['column' => 'credit_limit']);
+        }
+
+        if (filled($row['credit_days']) && ! is_numeric($row['credit_days'])) {
+            $errors[] = __('core.import.not_a_number', ['column' => 'credit_days']);
         }
 
         if (filled($row['opening_date']) && $this->date($row['opening_date']) === null) {
@@ -145,7 +153,7 @@ final class SupplierImporter implements Importer
             'party_type_id' => $this->partyType($row['party_type'])?->id,
             'payment_term_id' => $this->paymentTerm($row['payment_term'])?->id,
             'credit_limit' => $row['credit_limit'] !== '' ? $row['credit_limit'] : 0,
-            'credit_days' => 0,
+            'credit_days' => $row['credit_days'] !== '' ? (int) $row['credit_days'] : 0,
             'opening_balance' => $row['opening_balance'] !== '' ? $row['opening_balance'] : 0,
             'opening_date' => $this->date($row['opening_date'])?->toDateString(),
         ];

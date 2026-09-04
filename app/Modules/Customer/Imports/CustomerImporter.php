@@ -139,7 +139,10 @@ final class CustomerImporter implements Importer
             // পুরনো খাতায় ঠিকানা একটাই থাকে, দুই ভাষায় নয় — যেটা আছে
             // সেটা ইংরেজির ঘরে বসে, আর ব্যবহারকারী পরে বাংলাটা যোগ করেন
             'address_en' => $row['address'] ?: null,
-            'party_type_id' => $this->partyType($row['party_type'])?->id,
+            // ধরন না দিলে ডিফল্টটাই (পরিবেশক) — নাহলে ইমপোর্ট করা হাজার
+            // গ্রাহক ধরনহীন বসত, আর ধরন ধরে রিপোর্ট তাঁদের কখনো গুনত না
+            'party_type_id' => $this->partyType($row['party_type'])?->id
+                ?? PartyType::query()->for(PartyType::CUSTOMER)->where('is_default', true)->value('id'),
             'payment_term_id' => $this->paymentTerm($row['payment_term'])?->id,
             'credit_limit' => $row['credit_limit'] !== '' ? $row['credit_limit'] : 0,
             'credit_days' => $row['credit_days'] !== '' ? (int) $row['credit_days'] : 0,
