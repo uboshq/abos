@@ -180,10 +180,14 @@ class MoneyAtTheCounterTest extends TestCase
     /** নগদে নম্বর চাওয়া হয় না — নগদের কোনো TrxID নেই। */
     public function test_cash_never_asks_for_a_reference(): void
     {
+        // ⓘ কোড seed-করা 'CASH' নয় — এই টেস্ট একটা নগদ-*ধরনের* উপায় নিয়ে
+        // কাজ করে, ঠিক seed-এর সারিটা নয়। 'CASH' দিলে company+code unique-এ
+        // সংঘর্ষ (TDEPOT-এ CASH আগেই আছে), আর firstOrCreate দিলে টেস্টটা
+        // seed-এর সারির উপর নির্ভরশীল হয়ে অর্থ নীরবে বদলাত।
         $cash = $this->method([
-            'code' => 'CASH',
-            'name_en' => 'Cash',
-            'name_bn' => 'নগদ',
+            'code' => 'CASH2',
+            'name_en' => 'Counter Cash',
+            'name_bn' => 'কাউন্টার নগদ',
             'account_id' => $this->cashAccount()->id,
             'needs_reference' => false,
         ]);
