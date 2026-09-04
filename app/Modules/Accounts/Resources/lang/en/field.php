@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'on_credit_option' => 'On credit — :account (creates a payable)',
+
     'closing_year' => 'Year being closed',
     'next_year' => 'Next year',
     'year_name' => 'Year name',

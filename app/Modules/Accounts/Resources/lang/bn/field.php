@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'on_credit_option' => 'বাকিতে — :account (দেনা তৈরি হবে)',
+
     'closing_year' => 'যে বছর বন্ধ হচ্ছে',
     'next_year' => 'পরের বছর',
     'year_name' => 'বছরের নাম',

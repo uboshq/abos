@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'credit_needs_a_party' => 'An expense on credit must say who it is owed to — otherwise money sits in payables with no owner.',
+
     'year_confirm_name' => 'Type ":name" exactly to confirm.',
     'year_already_closed' => 'This financial year is already closed.',
     'year_has_drafts' => ':count draft vouchers are still unposted. Once the year closes they can never be posted — post or cancel them first.',

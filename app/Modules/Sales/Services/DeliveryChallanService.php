@@ -468,8 +468,20 @@ final class DeliveryChallanService
 
         $carrierId = $challan->carrier_id;
 
+        /*
+         * ভাড়া বাকি থাকলে **পরিবহনের নিজের ঘরে** (২১১৬), সাধারণ প্রদেয়ে নয়।
+         *
+         * ── কেন আলাদা ঘর ────────────────────────────────────────────
+         * আগে এটা `PAYABLE`-এ যেত, অর্থাৎ ট্রাকের ভাড়া মিলের বিলের সাথে
+         * একই সংখ্যায় মিশে থাকত। তখন *"এই মাসে পরিবহনে কত দিতে বাকি"*
+         * প্রশ্নের উত্তর বের করার কোনো উপায় ছিল না — অথচ ডিপোতে ওটা
+         * রোজকার প্রশ্ন, আর দেনাটা সম্পূর্ণ আলাদা মানুষের কাছে।
+         *
+         * ⓘ দলটার (২১১০) মোট বদলায় না — খাতের যোগফল গোটা গাছ হাঁটে।
+         * বদলায় কেবল এইটুকু: ভেতরে কে কার কাছে দেনা, সেটা এখন পড়া যায়।
+         */
         $credit = $carrierId !== null
-            ? StandardChart::find(StandardChart::PAYABLE)
+            ? StandardChart::find(StandardChart::TRANSPORT_PAYABLE)
             : StandardChart::find(StandardChart::CASH_IN_HAND);
 
         if ($credit === null) {
