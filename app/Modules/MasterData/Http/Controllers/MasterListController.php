@@ -150,12 +150,18 @@ class MasterListController extends Controller implements HasMiddleware
             'title' => 'master_data::menu.payment_methods',
             'fields' => [
                 /*
-                 * ধরন — কোন খাতে টাকা বসতে পারে তা এই ঘরই ঠিক করে দেয়,
-                 * তাই বাধ্যতামূলক। খালি রাখলে পর্দা সব টাকার খাত দেখাত
-                 * (নিরাপদ ছাড়), কিন্তু নতুন সারিতে ছাঁকনিটা তখন কাজ করত না।
+                 * ধরন — কোন খাতে টাকা বসতে পারে তা এই ঘরই ছাঁকে (নগদ→নগদ,
+                 * MFS→বিকাশ)। কিন্তু **ঐচ্ছিক, বাধ্যতামূলক নয়**।
+                 *
+                 * ── কেন required নয় (৪ সেপ্টেম্বর, সুইট ধরিয়ে দিল) ────────────
+                 * required করলে দুইটা জিনিস ভাঙত: (১) কোম্পানি নিজের নতুন উপায়
+                 * (যেমন "কার্ড") যোগ করতে পারত না — অথচ প্রতিটা তালিকা ক্রেতা
+                 * বাড়াতে পারবেন (মালিকের নিয়ম); (২) খালি ধরন পর্দা এমনিতেই
+                 * সামলায় — তখন সব টাকার খাত দেখায় (নিরাপদ ছাড়)। তাই ধরন না দিলে
+                 * সারিটা "সাধারণ" হয়ে বসে, আর ছাঁকনি সব খাত দেখায়।
                  */
                 'kind' => ['type' => 'select', 'label' => 'master_data::field.payment_kind',
-                    'options' => 'payment_kinds', 'labels' => 'payment_kind', 'rules' => ['required']],
+                    'options' => 'payment_kinds', 'labels' => 'payment_kind'],
                 'account_id' => ['type' => 'select', 'label' => 'master_data::field.money_account',
                     'options' => 'money_accounts', 'rules' => ['required']],
                 'needs_reference' => ['type' => 'switch', 'label' => 'master_data::field.needs_reference'],
