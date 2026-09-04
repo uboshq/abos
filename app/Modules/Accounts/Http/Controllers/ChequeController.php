@@ -63,7 +63,8 @@ class ChequeController extends Controller implements HasMiddleware
             'menu' => $this->menu->forUser($request->user()),
             'cheques' => $query->paginate(50)->withQueryString(),
             'parties' => app(PartyRegistry::class)->forPicker(),
-            'banks' => Account::query()->where('is_bank', true)->active()->orderBy('code')->get(),
+            // ⚠️ `postable()` — দল বাদ; কারণটা [[BankReconciliationController]]-এ
+            'banks' => Account::query()->where('is_bank', true)->postable()->active()->orderBy('code')->get(),
             'status' => $request->query('status'),
             'direction' => $request->query('direction'),
             'sortOptions' => $this->sortLabels(),
