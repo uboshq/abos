@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Modules\Sales\Auth\DealerProvider;
+use App\Modules\Sales\Auth\CustomerProvider;
 use App\Modules\Sales\Dashboard\SalesActivity;
 use App\Modules\Sales\Dashboard\SalesDashboard;
 use App\Modules\Sales\Dashboard\SalesWidgets;
@@ -310,11 +310,13 @@ return [
      * নতুন ইনস্টলে কোন রোল বিক্রয়ের কোন অনুমতি নিয়ে শুরু করবে (§৫ রোল-টেবিল)।
      * শুরুর সারি, তালা নয় — ক্রেতা RoleController-এ বদলাতে পারেন।
      *
-     * SR (মাঠের বিক্রয়): অফলাইনে অর্ডার ও আদায় — মোবাইলের মূল কাজ।
+     * Field Sales (SR/SO/TSO/ASM — মাঠের বিক্রয়): অফলাইনে অর্ডার ও আদায়,
+     * মোবাইলের মূল কাজ। এক নমুনা-রোল, চারটা নকল নয় — ক্রেতা চাইলে পদভেদে
+     * আলাদা রোল বানাবেন (মালিকের নিয়ম: সারি, তালা নয়)।
      * Manager: দেখা ও রিপোর্ট, বানানো নয় (তদারকি; create কেরানির)।
      */
     'role_templates' => [
-        'SR' => [
+        'Field Sales' => [
             'sales.order.view', 'sales.order.create',
             'sales.collection.view', 'sales.collection.create',
         ],
@@ -833,13 +835,13 @@ return [
     ],
 
     /*
-     * ডিলারের গার্ড সেশন থেকে গ্রাহককে তোলে কোম্পানি বসার আগে,
+     * পোর্টালের গার্ড সেশন থেকে গ্রাহককে তোলে কোম্পানি বসার আগে,
      * তাই ওই একটামাত্র কোয়েরি টেন্যান্ট ছাঁকনির বাইরে চলতে হয়।
-     * পুরো ব্যাখ্যা `DealerProvider`-এ; config/auth.php-র
+     * পুরো ব্যাখ্যা `CustomerProvider`-এ; config/auth.php-র
      * `customers` প্রোভাইডার এই নামটাই ব্যবহার করে।
      */
     'auth_providers' => [
-        'dealers' => DealerProvider::class,
+        'customers' => CustomerProvider::class,
     ],
     /*
      * যে ঘরগুলো সবাই দেখবে না।

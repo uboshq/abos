@@ -115,10 +115,10 @@ return [
 
     /*
      * নতুন ইনস্টলে গ্রাহকের অনুমতি কোন রোলের (§৫)। শুরুর সারি, তালা নয়।
-     * SR: দোকান দেখা ও quick-create (অর্ডার নিতে)। Manager: দেখা ও রিপোর্ট।
+     * Field Sales: দোকান দেখা ও quick-create (অর্ডার নিতে)। Manager: দেখা ও রিপোর্ট।
      */
     'role_templates' => [
-        'SR' => ['customer.view', 'customer.create'],
+        'Field Sales' => ['customer.view', 'customer.create'],
         'Manager' => ['customer.view', 'customer.report'],
     ],
 

@@ -53,7 +53,7 @@ class ModuleServiceProvider extends ServiceProvider
              *
              * ── কেন কোর ক্লাসের নামটা জানে না ───────────────────────
              * ডিলারের গার্ডের একটা নিজস্ব প্রোভাইডার দরকার (কারণটা
-             * `DealerProvider`-এ লেখা)। প্রথমে সেটা
+             * `CustomerProvider`-এ লেখা)। প্রথমে সেটা
              * `AppServiceProvider`-এ নিবন্ধন করা হয়েছিল, আর সাথে
              * সাথেই `BoundariesTest` ধরল: কোর একটা মডিউলের ক্লাসের
              * নাম জেনে ফেলেছে (§১৯.৭)।
