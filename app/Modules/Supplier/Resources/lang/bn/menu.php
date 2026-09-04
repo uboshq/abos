@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'payment_schedule' => 'পরিশোধের সময়সূচি',
+
     'suppliers' => 'সরবরাহকারী তালিকা',
     'payable_list' => 'প্রদেয় তালিকা',
     'ageing' => 'প্রদেয়ের বয়স',

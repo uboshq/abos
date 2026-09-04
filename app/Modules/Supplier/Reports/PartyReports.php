@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Supplier\Reports;
 
 use App\Core\Engines\Report\ReportColumn;
+use App\Core\Support\DocumentStatus;
 use App\Core\Engines\Report\ReportDefinition;
 use App\Core\Engines\Report\ReportEngine;
 use App\Modules\Supplier\Models\Supplier;
@@ -36,6 +37,7 @@ final class PartyReports
     {
         $engine->register(self::payableList());
         $engine->register(self::ageing());
+        $engine->register(self::paymentSchedule());
     }
 
     /**
@@ -107,6 +109,118 @@ final class PartyReports
      * পরিশোধগুলো (ডেবিট) সবচেয়ে পুরনো ধাপ থেকে কাটা হয় — কাগজে-কলমেও
      * সেটাই নিয়ম, আর নাহলে পুরনো বকেয়া কখনো কমত না।
      */
+    /**
+     * পরিশোধের সময়সূচি — **"এই সপ্তাহে কার টাকা দিতে হবে"**।
+     *
+     * ── কেন এটা প্রদেয়ের তালিকা থেকে আলাদা ───────────────────────────
+     * [[payableList]] বলে **কার কাছে কত** — পক্ষ ধরে, খতিয়ান থেকে। ⓘ
+     * সেটা মাস শেষের প্রশ্ন।
+     *
+     * ⭐ রোজকার প্রশ্নটা অন্য: *"আজ-কাল কার টাকা দিতে হবে"* — আর তার
+     * উত্তর **বিল ধরে, তারিখ ধরে**। মেয়াদের তারিখ খতিয়ানে থাকেই না,
+     * থাকে বিলে (`pur_bills.due_on`) — তাই এই রিপোর্টটা বিল থেকে আসে।
+     *
+     * ── ⚠️ বকেয়ার সংজ্ঞা দুই জায়গায় — আর সেটা পাহারায় বাঁধা ──────────
+     * আসল সংজ্ঞা [[PurchaseBill::dueAmount]]: **মোট বাদ শোধ, ঋণাত্মক
+     * হলে শূন্য** (অতিরিক্ত শোধ বিলের বাকি নয়, সরবরাহকারীর অগ্রিম)।
+     *
+     * রিপোর্ট-ইঞ্জিন কলামে কেবল **চাবি** পড়ে, কোনো মেথড ডাকে না — তাই
+     * সংখ্যাটা SQL-এ গুনতেই হয়। ⛔ দুইটা সংজ্ঞা রাখা যায় না, তাই
+     * [[ThePaymentScheduleAgreesWithTheBillTest]] প্রতিটা বিলে দুইটা
+     * মিলিয়ে দেখে — **আলাদা হলে লাল**।
+     *
+     * ⓘ শোধ গোনার সময় কেবল `DocumentStatus::POSTED` অবস্থার পরিশোধ —
+     * হুবহু `Payment::posted()`-এর নিয়ম। বাতিল পরিশোধ বকেয়া কমায় না।
+     *
+     * ── ⚠️ তারিখহীন বিল লুকানো হয় না ────────────────────────────────
+     * `due_on` খালি থাকতে পারে (শর্ত বসানো হয়নি এমন বিল)। নীরবে বাদ
+     * দিলে **যোগফল প্রদেয়ের তালিকার সাথে মিলত না**, আর কেউ বুঝত না
+     * কেন — সবচেয়ে খারাপ ধরনের অমিল।
+     *
+     * তাই ওগুলো তালিকায় থাকে, তারিখের ঘর খালি নিয়ে, আর **সবার শেষে**:
+     * যার তারিখ নেই সে আজকের কাজ নয়, কিন্তু টাকাটা তো বাকিই।
+     */
+    public static function paymentSchedule(): ReportDefinition
+    {
+        return new ReportDefinition(
+            key: 'supplier.payment_schedule',
+            title: 'supplier::menu.payment_schedule',
+            filters: ['date_range', 'branch', 'party_type'],
+            query: function (array $f) {
+                /*
+                 * বিলপ্রতি শোধ — আলাদা সাব-কোয়েরিতে, যাতে সংখ্যাটা
+                 * ছাঁকনি ও কলাম **দুই জায়গাতেই** একই উৎস থেকে আসে।
+                 */
+                $paid = DB::table('pur_payment_lines as pl')
+                    ->join('pur_payments as p', 'p.id', '=', 'pl.payment_id')
+                    ->whereIn('p.status', DocumentStatus::POSTED)
+                    ->whereNull('p.deleted_at')
+                    ->groupBy('pl.purchase_bill_id')
+                    ->selectRaw('pl.purchase_bill_id, COALESCE(SUM(pl.amount), 0) as paid');
+
+                // GREATEST — [[PurchaseBill::dueAmount]]-এর ঋণাত্মক-ক্ল্যাম্প
+                $due = 'GREATEST(pur_bills.total - COALESCE(paid.paid, 0), 0)';
+
+                return DB::table('pur_bills')
+                    ->join('suppliers', 'suppliers.id', '=', 'pur_bills.supplier_id')
+                    ->leftJoinSub($paid, 'paid', 'paid.purchase_bill_id', '=', 'pur_bills.id')
+                    ->where('pur_bills.company_id', $f['company_id'])
+                    ->where('pur_bills.status', DocumentStatus::CONFIRMED)
+                    ->whereNull('pur_bills.deleted_at')
+                    ->when($f['branch_id'], fn ($q, $b) => $q->where('pur_bills.branch_id', $b))
+                    ->when(
+                        $f['party_type_id'] ?? null,
+                        fn ($q, $type) => $q->where('suppliers.party_type_id', $type)
+                    )
+
+                    /*
+                     * ⚠️ শুরুর তারিখ ধরা হয় না — বকেয়া একটা **মুহূর্তের
+                     * অবস্থা**, পরিসরের নয় ([[payableList]]-এ একই যুক্তি)।
+                     */
+                    ->where('pur_bills.trx_date', '<=', $f['to'])
+                    ->whereRaw($due.' > 0')
+
+                    /*
+                     * তারিখ আগে, তারিখহীনরা শেষে — MySQL-এ `NULL` ডিফল্টে
+                     * আগে আসে, তাই আলাদা করে পিছনে পাঠানো।
+                     */
+                    ->orderByRaw('pur_bills.due_on IS NULL')
+                    ->orderBy('pur_bills.due_on')
+                    ->orderBy('pur_bills.id')
+                    ->select([
+                        'pur_bills.due_on',
+                        'pur_bills.document_no',
+                        self::supplierName(),
+                        DB::raw("'".Supplier::drillSourceType()."' as party_type_literal"),
+                        'pur_bills.supplier_id as party_id',
+                        DB::raw($due.' as due_amount'),
+                    ]);
+            },
+            columns: [
+                [
+                    'key' => 'due_on',
+                    'label' => 'purchase::field.due_on',
+                    'type' => ReportColumn::DATE,
+                    'width' => '8rem',
+                ],
+                [
+                    'key' => 'document_no',
+                    'label' => 'core.print.document_no',
+                    'type' => ReportColumn::DOCUMENT,
+                    'width' => '10rem',
+                    'source_type' => 'party_type_literal',
+                    'source_id' => 'party_id',
+                ],
+                ['key' => 'supplier_name', 'label' => 'supplier::field.supplier'],
+                [
+                    'key' => 'due_amount',
+                    'label' => 'supplier::field.payable',
+                    'type' => ReportColumn::MONEY,
+                ],
+            ],
+        );
+    }
+
     public static function ageing(): ReportDefinition
     {
         return new ReportDefinition(

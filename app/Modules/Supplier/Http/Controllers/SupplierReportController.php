@@ -35,6 +35,15 @@ class SupplierReportController extends Controller implements HasMiddleware
     private const SLUGS = [
         'payable-list' => 'supplier.payable_list',
         'ageing' => 'supplier.ageing',
+
+        /*
+         * পরিশোধের সময়সূচি — "এই সপ্তাহে কার টাকা দিতে হবে"।
+         *
+         * ⓘ সারিটা এখানেই বসানো হলো, রিপোর্টটা লেখার একই মুহূর্তে।
+         * ⚠️ ভুলে গেলে পাতাটা ৪০৪ দিত, আর কারণ খুঁজে পাওয়া কঠিন হত —
+         * ঠিক সেটাই আজ দুইবার ঘটেছে (মরা slug)।
+         */
+        'payment-schedule' => 'supplier.payment_schedule',
     ];
 
     public function __construct(
