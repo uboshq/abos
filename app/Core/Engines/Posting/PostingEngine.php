@@ -64,6 +64,7 @@ final class PostingEngine
 
         $financialYear = $this->resolveFinancialYear($trxDate);
         $this->assertBalanced($lines, $sourceType, $sourceId);
+        $this->assertAccountsCanHoldMoney($lines, $sourceType, $sourceId);
         $this->assertNotAlreadyPosted($sourceType, $sourceId);
 
         $branchId = $branchId ?? CompanyContext::branchId();
@@ -238,6 +239,94 @@ final class PostingEngine
                 "{$sourceType}#{$sourceId} does not balance: debit {$debit} against credit {$credit}, "
                 ."a difference of {$difference}. Nothing was written."
             );
+        }
+    }
+
+    /**
+     * প্রতিটা সারির খাতটা সত্যিই টাকা ধরতে পারে কি না।
+     *
+     * ⛔ ── কী ভাঙা ছিল ───────────────────────────────────────────────
+     * এই ইঞ্জিন খাতটা নিয়ে **কিছুই দেখত না** — `account_id` যা আসত,
+     * হুবহু বসে যেত। তিনটা প্রশ্নের একটারও উত্তর নেওয়া হত না: খাতটা
+     * আছে কি · এই কোম্পানির কি · **দাখিলা ধরতে পারে কি**।
+     *
+     * ── কেন তৃতীয়টা সবচেয়ে বিপজ্জনক ─────────────────────────────────
+     * `Account::balanceOn()` একটা **দলের** ক্ষেত্রে কেবল সন্তানদের যোগ
+     * করে, দলের নিজের সারিগুলো নয়। তাই একটা দলে বসে যাওয়া টাকা —
+     *
+     *     খতিয়ানে সারিটা থাকে ✅   ·   কোনো যোগফলে আসে না ⛔
+     *
+     * ⚠️ **আর কোনো পাহারা এটা ধরত না।** `EveryVoucherBalances` সবুজ
+     * থাকে, কারণ **ডেবিট আর ক্রেডিট তো মিলছেই** — কেবল টাকাটা কোনো
+     * রিপোর্টে নেই। ⓘ নীরব ক্ষতির এর চেয়ে নিখুঁত রূপ কম।
+     *
+     * ── কেন ব্যতিক্রম, কেবল একটা টেস্ট-গার্ড নয় ─────────────────────
+     * টেস্ট **আমাদের কোড** পাহারা দেয়, **ক্রেতার চার্ট** নয়। একজন
+     * ক্রেতা নিজের ছকে একটা খাতকে দল বানিয়ে ফেললে আমাদের কোনো টেস্ট
+     * সেটা জানবে না — কিন্তু টাকাটা ঠিকই উধাও হবে।
+     *
+     * ── আর এটা কারো কাজ থামাবে না ───────────────────────────────────
+     * মেপে দেখা হয়েছে: **আজ কোনো বৈধ পথ দলে পোস্ট করে না।** প্রতিটা
+     * পোস্টিং-পথ হয় `->postable()` ছাঁকা তালিকা থেকে খাত নেয়, নয়
+     * `StandardChart::find(<পোস্টিং কোড>)` থেকে। ⭐ তাই ব্যতিক্রমটা
+     * কেবল **ভুল** কাজ থামায়, বৈধ কোনোটা নয়।
+     *
+     * ── কেন এক কোয়েরিতে ────────────────────────────────────────────
+     * সারিপ্রতি একটা করে খোঁজা মানে বিশ লাইনের ভাউচারে বিশটা কোয়েরি।
+     * ⓘ আজই আমরা ঠিক এই ধরনের একটা N+1 সারিয়েছি, তাই দ্বিতীয়টা
+     * বানানো হয়নি।
+     *
+     * @param  list<array<string, mixed>>  $lines
+     */
+    private function assertAccountsCanHoldMoney(array $lines, string $sourceType, int $sourceId): void
+    {
+        $wanted = array_values(array_unique(array_map(
+            static fn (array $line): int => (int) ($line['account_id'] ?? 0),
+            $lines,
+        )));
+
+        /*
+         * খাতগুলো এক কোয়েরিতে — আর টেবিলটা নাম ধরে, মডেল ধরে নয়।
+         *
+         * ⚠️ ── কেন `Account` মডেল ব্যবহার করা যায় না ─────────────────
+         * `Account` থাকে `App\Modules\Accounts`-এ, আর **কোর কোনো
+         * মডিউলের নাম জানে না** — নিয়মটা `BoundariesTest`-এ বাঁধা।
+         * ⓘ মডেলটা import করলে খতিয়ানের ইঞ্জিন চিরকাল Accounts মডিউল
+         * ছাড়া চলত না, অথচ ওটা কোরের সবচেয়ে নিচের স্তর।
+         *
+         * ⓘ `ledger_entries` টেবিলটাও এখানে নাম ধরেই লেখা হয় — একই কারণে।
+         *
+         * ── আর কোম্পানির সীমাটা স্পষ্ট, স্কোপের ভরসায় নয় ────────────
+         * মডেল ব্যবহার করলে global scope এমনিতেই ছাঁকত। কোয়েরি বিল্ডারে
+         * সেটা নেই, **আর সেটাই এখানে ভালো**: এই পাহারার একটা কাজই হলো
+         * *"খাতটা এই কোম্পানির তো?"* — আর ওই প্রশ্নের উত্তর একটা নীরব
+         * স্কোপের হাতে ছেড়ে দেওয়া চলে না।
+         */
+        $found = DB::table('accounts')
+            ->whereIn('id', $wanted)
+            ->where('company_id', CompanyContext::id())
+            ->get(['id', 'code', 'is_group'])
+            ->keyBy('id');
+
+        foreach ($lines as $index => $line) {
+            $id = (int) ($line['account_id'] ?? 0);
+            $account = $found->get($id);
+
+            if ($account === null) {
+                throw new PostingException(
+                    "Line {$index} of {$sourceType}#{$sourceId} points at account {$id}, which does not "
+                    .'exist in this company. Nothing was written.'
+                );
+            }
+
+            if ($account->is_group) {
+                throw new PostingException(
+                    "Line {$index} of {$sourceType}#{$sourceId} posts to {$account->code}, which is a group. "
+                    .'A group holds no entries of its own — its balance is the sum of its children — so the '
+                    .'money would sit in the ledger and appear in no report at all. Post to one of its '
+                    .'children instead. Nothing was written.'
+                );
+            }
         }
     }
 

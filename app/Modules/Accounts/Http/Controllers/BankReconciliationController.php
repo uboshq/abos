@@ -51,7 +51,19 @@ class BankReconciliationController extends Controller implements HasMiddleware
                 ->orderByDesc('statement_date')
                 ->paginate(50)
                 ->withQueryString(),
-            'banks' => Account::query()->where('is_bank', true)->active()->orderBy('code')->get(),
+            /*
+             * ⚠️ `postable()` — দল বাদ, নাহলে দলে দাখিলা বসানো যেত।
+             *
+             * ⓘ একটা দলে টাকা বসলে সেটা **কোনো রিপোর্টে আসে না**
+             * (`Account::balanceOn()` দলের নিজের সারি গোনে না), অথচ
+             * খতিয়ানে সারিটা থাকে। বাকি খাত-নির্বাচকগুলো এটা ছাঁকত,
+             * এই দুইটা (এখানে আর [[ChequeController]]) ভুলে গিয়েছিল।
+             *
+             * ⓘ `AccountRequest` দলকে `is_bank` হতে দেয় না, তাই তালিকাটা
+             * এমনিতেই খালি থাকার কথা — **কিন্তু ওটা কেবল ফর্মের পথ**;
+             * সিডার, ইমপোর্ট বা মাইগ্রেশন ওই যাচাই দিয়ে যায় না।
+             */
+            'banks' => Account::query()->where('is_bank', true)->postable()->active()->orderBy('code')->get(),
         ]);
     }
 
