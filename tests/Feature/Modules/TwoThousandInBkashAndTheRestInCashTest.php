@@ -85,12 +85,18 @@ class TwoThousandInBkashAndTheRestInCashTest extends TestCase
             'needs_reference' => true, 'is_active' => true,
         ]);
 
-        $this->cashMethod = PaymentMethod::query()->create([
-            'company_id' => $this->company->id,
-            'code' => 'CASH', 'name_en' => 'Cash', 'name_bn' => 'নগদ',
-            'account_id' => $this->tillAccount()->id,
-            'needs_reference' => false, 'is_active' => true,
-        ]);
+        // CASH ইতিমধ্যে installDefaults-এর seed-করা ডিফল্ট পদ্ধতি — নতুন
+        // দ্বিতীয় সারি নয়, সেই সারিটাকেই কাউন্টারের till-এ যুক্ত করি। এক
+        // কোম্পানিতে দুইটা "নগদ" পদ্ধতি বাস্তবে থাকে না, আর দ্বিতীয় CASH
+        // বসালে (company_id, code) unique কী ভেঙে পুরো ক্লাস লাল হত।
+        $this->cashMethod = PaymentMethod::query()->updateOrCreate(
+            ['company_id' => $this->company->id, 'code' => 'CASH'],
+            [
+                'name_en' => 'Cash', 'name_bn' => 'নগদ',
+                'account_id' => $this->tillAccount()->id,
+                'needs_reference' => false, 'is_active' => true,
+            ],
+        );
     }
 
     private function tillAccount(): Account

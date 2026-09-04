@@ -184,7 +184,9 @@ class DirectSaleController extends Controller implements HasMiddleware
              */
             'carriers' => Supplier::query()
                 ->active()
-                ->whereHas('partyType', fn ($q) => $q->whereIn('code', ['TRANSPORT', 'RENTAL']))
+                // RENTAL পক্ষের ধরনটা বাদ (৪ সেপ্টেম্বর, মালিকের চূড়ান্ত তালিকা) —
+                // ভাড়ার গাড়িও পরিবহনকারী, তাই আলাদা ধরন নয়। এখন শুধু TRANSPORT।
+                ->whereHas('partyType', fn ($q) => $q->whereIn('code', ['TRANSPORT']))
                 ->orderBy('name_en')
                 ->get(['id', 'code', 'name_en', 'name_bn'])
                 ->map(fn (Supplier $s): array => [

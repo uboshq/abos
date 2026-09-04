@@ -83,9 +83,12 @@
                      তালিকাও নেই। আগে এটা খোলা ইনপুট ছিল, আর তাতে একই
                      ধরন "পাইকারি", "পাইকারী", "wholesale" তিন বানানে
                      জমা হত — তারপর ধরন ধরে রিপোর্ট করা যেত না। --}}
+                {{-- নতুন গ্রাহকে ঘরটা খালি খোলে না — ডিফল্ট ধরনটা (পরিবেশক)
+                     আগে থেকে বাছা থাকে; নাহলে কেউ ভুলে খালি রেখে সেভ করতেন
+                     আর গ্রাহক ভুল শ্রেণিতে বসতেন। সম্পাদনায় নিজের ধরনটাই থাকে। --}}
                 <x-ui.select name="party_type_id" :label="__('customer::field.type')"
                              :options="$partyTypes->mapWithKeys(fn ($t) => [$t->id => $t->name()])"
-                             :selected="$customer->party_type_id"
+                             :selected="$customer->party_type_id ?? $partyTypes->firstWhere('is_default', true)?->id"
                              :hint="__('customer::message.type_hint')"
                              placeholder="—" />
             </div>
