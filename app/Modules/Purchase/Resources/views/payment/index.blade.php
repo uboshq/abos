@@ -61,5 +61,13 @@
             :columns="$columns" />
 
         <x-ui.pager :rows="$payments" />
+        {{-- তালিকার যোগফল — পর্দা কেবল **ঘোষণা করে**।
+
+             ⓘ দেখানো হবে কি না সেটা রূপ ঠিক করে ([[Ui::listFoot]]), তাই
+             এখানে কোনো রূপের নাম লেখা নেই। --}}
+        <x-ui.list-totals :totals="[
+            ['value' => __('core.list.rows', ['count' => number_format($totals['rows'])])],
+            ['label' => __('core.list.page_total'), 'value' => \App\Core\Support\Money::format($totals['money'])],
+        ]" />
     </div>
 </x-layouts.app>

@@ -94,11 +94,17 @@
              সেই কারণেই এখানে কোনো রূপের নাম লেখা নেই। যে রূপ চায় না,
              তার পাতায় এই ঘোষণাটা চুপচাপ পড়ে থাকে।
 
-             ⚠️ সংখ্যাগুলো **গোটা ছাঁকনির**, এই পাতার নয় — কন্ট্রোলারে
-             আলাদা করে গোনা। --}}
+             ⚠️ **সংখ্যাগুলো গোটা ছাঁকনির, এই পাতার নয়** — কন্ট্রোলারে
+             আলাদা করে গোনা (`clone $query`)।
+
+             ⓘ মালিকের নমুনায় লেখা ছিল *"এই পাতার মোট"*, আর শব্দটা
+             সেখান থেকেই নেওয়া। ⚠️ কিন্তু অঙ্কটা ইচ্ছে করে **ছাঁকনির**:
+             কেউ "এই মাস" ছেঁকে মোট জানতে চান, প্রথম পঞ্চাশটার মোট নয়।
+             ⛔ ৫০ সারির পাতায় ১২৪টা বিলের মোট দেখানোটাই দরকারি সংখ্যা;
+             পাতার যোগফল দেখালে পাতা বদলালেই "মোট" বদলে যেত। --}}
         <x-ui.list-totals :totals="[
-            ['label' => __('core.list.rows'), 'value' => number_format($totals['rows'])],
-            ['label' => __('sales::field.total'), 'value' => \App\Core\Support\Money::format($totals['money'])],
+            ['value' => __('core.list.rows', ['count' => number_format($totals['rows'])])],
+            ['label' => __('core.list.page_total'), 'value' => \App\Core\Support\Money::format($totals['money'])],
             ['label' => __('sales::field.collected'), 'value' => \App\Core\Support\Money::format($totals['collected']), 'tone' => 'ok'],
             ['label' => __('sales::field.due'), 'value' => \App\Core\Support\Money::format($totals['due']), 'tone' => 'bad'],
         ]" />

@@ -74,7 +74,8 @@ return [
 
     'list' => [
         // Row count in the totals bar — "124 rows"
-        'rows' => 'rows',
+        'rows' => ':count rows',
+        'page_total' => 'This page',
     ],
 
     'menu' => [
