@@ -44,8 +44,13 @@
                 $tone = $total['tone'] ?? 'ink';
             @endphp
 
+            {{-- ⓘ `label` ঐচ্ছিক। নমুনার প্রথম ঘরটা কেবল "১২৪টি সারি" —
+                 সেখানে লেবেল আর মান আলাদা নয়, এক টুকরো লেখা। ⚠️ লেবেল
+                 বাধ্যতামূলক করলে ওখানে একটা খালি ঘর বসত। --}}
             <span class="inline-flex items-baseline gap-1.5">
-                <span class="text-(--color-ink-muted)">{{ $total['label'] }}</span>
+                @isset($total['label'])
+                    <span class="text-(--color-ink-muted)">{{ $total['label'] }}</span>
+                @endisset
                 <span @class([
                     'num font-semibold',
                     'text-(--color-badge-success-ink)' => $tone === 'ok',

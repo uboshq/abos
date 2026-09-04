@@ -76,9 +76,24 @@ class PurchaseBillController extends Controller implements HasMiddleware
             'supplier' => fn ($q) => $q->orderBy('supplier_id')->orderByDesc('trx_date'),
         ]);
 
+        /*
+         * তালিকার যোগফল — **গোটা ছাঁকনির**, এই পাতার নয়।
+         *
+         * ⓘ `clone` লাগে কারণ `paginate()` কোয়েরিটা খেয়ে ফেলে; আর
+         * `reorder()` লাগে কারণ যোগফলে ক্রমের কোনো মানে নেই।
+         *
+         * ⚠️ দেখানো হবে কি না সেটা রূপ ঠিক করে ([[Ui::listFoot]]) —
+         * কন্ট্রোলার জানে না কে কোন রূপে বসে আছেন, জানার দরকারও নেই।
+         */
+        $totalled = (clone $query)->reorder();
+
         return view('purchase::bill.index', [
             'menu' => $this->menu->forUser($request->user()),
             'bills' => $query->paginate(50)->withQueryString(),
+            'totals' => [
+                'rows' => (clone $totalled)->count(),
+                'money' => (clone $totalled)->sum('total'),
+            ],
             'q' => $request->query('q'),
             'dates' => $dates,
             'sort' => $sort,
