@@ -510,6 +510,17 @@ return [
     'no' => 'No',
 
     'toolbar' => [
+        'filter_names' => [
+            'cancelled' => 'With cancelled',
+            'inactive' => 'With inactive',
+            'from' => 'From',
+            'to' => 'To',
+            'user' => 'User',
+            'only' => 'Only',
+        ],
+
+        'add_filter' => '+ Filter',
+
         'remove_filter' => 'Remove this filter',
         'columns' => 'Columns',
         'columns_note' => 'Untick them all and the table shows every column — an empty table helps nobody.',

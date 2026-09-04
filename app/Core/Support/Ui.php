@@ -734,7 +734,19 @@ final class Ui
      */
     public static function tabs(?string $key): string
     {
-        // ⏳ পড়বে `x-ui.stage-strip` — NX5-এর ভাগ, এখনো নয়
+        /*
+         * ⏳ পড়বে `x-ui.view-strip` — এখনো নয়।
+         *
+         * ⚠️ এখানে আগে `stage-strip` লেখা ছিল, আর **সেটা ভুল**। দুইটা
+         * সম্পূর্ণ আলাদা জিনিস, আর নিজেরাই তা বলে
+         * (`stage-strip.blade.php`-এর মাথায়):
+         *
+         *     stage-strip   কাগজের ধাপ · গোনা **ও টাকা**
+         *     view-strip    সংরক্ষিত দৃশ্য · গোনা · টাকা নেই
+         *
+         * ⓘ ট্যাবগুলো সংরক্ষিত দৃশ্যের দৃশ্যমান রূপ, কাগজের ধাপ নয় —
+         * তাই `view-strip`।
+         */
         return self::all()[self::clean($key)]['tabs'] ?? 'none';
     }
 
