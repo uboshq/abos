@@ -132,7 +132,7 @@ return [
      *
      * HR: কর্মী · হাজিরা · ছুটি। ⛔ `hr.payroll.view` ডিফল্টে নয় — ওটা বেতনের
      * অঙ্ক ও ব্যাংক-ফাইল খোলে; ক্রেতা চাইলে সচেতনভাবে যোগ করবেন। ⛔ salary.manage নয়।
-     * SR/Warehouse: কেবল নিজের হাজিরা (মোবাইলে sync)।
+     * Field Sales/Warehouse: কেবল নিজের হাজিরা (মোবাইলে sync)।
      */
     'role_templates' => [
         'HR' => [
@@ -140,7 +140,7 @@ return [
             'hr.attendance.view', 'hr.attendance.manage',
             'hr.leave.view', 'hr.leave.manage', 'hr.leave.approve',
         ],
-        'SR' => ['hr.attendance.self'],
+        'Field Sales' => ['hr.attendance.self'],
         'Warehouse' => ['hr.attendance.self'],
     ],
 
