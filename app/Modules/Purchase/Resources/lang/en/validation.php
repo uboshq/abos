@@ -9,6 +9,8 @@ return [
     'only_draft_edits' => ':no is not a draft — cancel it and make a new one to change a posted document.',
     'already_cancelled' => ':no was already cancelled.',
     'unknown_product' => 'That product is not in this company\'s list.',
+
+    'gift_needs_a_lot' => '":product" is lot-tracked. Taking it in without a lot number would make both expiry and recall wrong, and no purchase screen carries the lot fields yet — so a lot-tracked product cannot be taken as a gift for now.',
     'unknown_order' => 'That purchase order is not in this company\'s list.',
     'unknown_warehouse' => 'That warehouse is not in this company\'s list.',
     'unknown_receipt_line' => 'That receipt line is not in this company\'s list.',

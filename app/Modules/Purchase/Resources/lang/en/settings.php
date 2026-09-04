@@ -8,7 +8,7 @@ return [
     'over_receipt_percent' => 'Percent over the ordered quantity that may be received',
     'block_price_mismatch' => 'Block a bill whose value does not match the receipt',
 
-    'screen_direct' => 'Show the Direct Purchase Invoice screen',
+    'screen_direct' => 'Show the Direct Purchase screen',
     'screen_orders' => 'Show the Purchase Orders screen',
     'screen_receipts' => 'Show the Goods Receipt (GRN) screen',
 ];

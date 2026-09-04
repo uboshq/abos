@@ -63,8 +63,25 @@ return [
     'search_product' => 'Type a product name or code',
     'on_hand' => 'In stock',
     'last_rate' => 'Last rate',
+
+    'last_from_supplier' => 'Last from this supplier',
+    'first_from_supplier' => 'First time from this supplier',
     'no_lines_yet' => 'No products added yet.',
     'paid_more_confirm' => 'This pays more than the invoice. The extra stays as an advance with the supplier. Continue?',
     'order_not_confirmed' => ':no is still a draft — no bill can be raised against it yet. Open the order, confirm it, then come back.',
     'order_not_found' => 'That order could not be found. The blank form below is yours to fill by hand if you want.',
+
+    'draft_found' => 'An unfinished purchase is waiting',
+
+    'no_account_for_method' => 'No account of this kind is set up yet. Add one under the chart of accounts, then it will show here.',
+
+    /*
+     * The carrier list is empty on day one: no supplier is marked as a
+     * transport party yet. Saying so — and saying where to fix it — is
+     * the difference between a screen that looks broken and one that
+     * asks for something.
+     */
+    'no_carrier_party' => 'No transporter is on the party list yet. Mark a supplier as a transport party, or just type the name below.',
+    'transport_needs_carrier' => 'Freight is entered, but not who is owed it. Pick a transporter or type the name.',
+    'transport_not_in_cost_yet' => 'Recorded on the bill. It does not go into the item cost yet.',
 ];

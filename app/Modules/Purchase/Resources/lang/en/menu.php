@@ -11,5 +11,5 @@ return [
     'pending_orders' => 'Pending Orders',
     'uninvoiced' => 'Received, Not Invoiced',
     'by_supplier' => 'Purchases by Supplier',
-    'direct' => 'Direct Purchase Invoice',
+    'direct' => 'Direct Purchase',
 ];

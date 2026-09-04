@@ -137,21 +137,56 @@ class EveryRawQueryNamesItsCompanyTest extends TestCase
     private function rawQueriesIn(string $source): array
     {
         $found = [];
-        $offset = 0;
 
-        while (($at = strpos($source, 'DB::table(', $offset)) !== false) {
-            $offset = $at + 10;
+        /*
+         * ⚠️ দুইটা প্রবেশপথ, আর দ্বিতীয়টা ৪ সেপ্টেম্বর ২০২৬-এ যোগ হলো।
+         *
+         * পাহারাটা শুরুতে কেবল `DB::table(` খুঁজত। কিন্তু `DB::query()`
+         * ঠিক একই কাজ করে — Eloquent-এর পাশ দিয়ে, কোনো মডেল ছাড়া, তাই
+         * কোনো স্কোপ ছাড়া। অর্থাৎ `DB::query()->from('pur_bills')` লিখলে
+         * গোটা পাহারাটা **চুপ করে থাকত**, আর সেটাই ঠিক সেই টেন্যান্ট-ফাঁস
+         * যেটা আটকাতে এই ফাইলটা লেখা হয়েছিল।
+         *
+         * ⓘ ধরা পড়েছে একটা নতুন কোয়েরি লিখতে গিয়ে
+         * ([[App\Modules\Purchase\Services\LastPaidRate]]) — কোড পড়ে নয়,
+         * "আমারটা কি এই পাহারার আওতায় পড়ে?" প্রশ্নটা করে।
+         */
+        foreach (['DB::table(', 'DB::query('] as $entry) {
+            $offset = 0;
 
-            // টেবিলের নাম — উদ্ধৃতিতে লেখা থাকলে। চলক হলে null, আর তখন
-            // ছাড় দেওয়ার কোনো উপায় নেই: নামটা না জেনে বলা যায় না
-            // টেবিলটায় company_id আছে কি না
-            $table = null;
+            while (($at = strpos($source, $entry, $offset)) !== false) {
+                $offset = $at + strlen($entry);
 
-            if (preg_match('/\G\s*[\'"]([a-z0-9_]+)/i', $source, $m, 0, $offset) === 1) {
-                $table = $m[1];
+                /*
+                 * টেবিলের নাম — উদ্ধৃতিতে লেখা থাকলে। চলক হলে null, আর
+                 * তখন ছাড় দেওয়ার কোনো উপায় নেই: নামটা না জেনে বলা যায়
+                 * না টেবিলটায় company_id আছে কি না।
+                 */
+                $table = null;
+
+                if (preg_match('/\G\s*[\'"]([a-z0-9_]+)/i', $source, $m, 0, $offset) === 1) {
+                    $table = $m[1];
+                }
+
+                $code = $this->statementFrom($source, $at);
+
+                /*
+                 * ⭐ `fromSub()` ছাড় পায় — আর সেটা ফাঁক নয়, সংজ্ঞা।
+                 *
+                 * `fromSub()` কোনো **টেবিলের** নাম দেয় না, দেয় আরেকটা
+                 * কোয়েরির নাম — আর ছাঁকনিটা ওই ভিতরের কোয়েরিতেই বসে,
+                 * যেখানে এই পাহারাটা তাকে আলাদা করেই ধরে।
+                 *
+                 * ⚠️ এটা লিখে না রাখলে পরের জন `fromSub` দেখে ভাবতেন
+                 * এটা একটা ফাঁক, আর বন্ধ করতে গিয়ে তিনটা বৈধ ব্যবহার
+                 * ভাঙতেন (ReportEngine-এর দুইটা, LastPaidRate-এর একটা)।
+                 */
+                if ($table === null && str_contains($code, 'fromSub(')) {
+                    continue;
+                }
+
+                $found[] = ['table' => $table, 'code' => $code];
             }
-
-            $found[] = ['table' => $table, 'code' => $this->statementFrom($source, $at)];
         }
 
         return $found;
