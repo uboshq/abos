@@ -54,4 +54,10 @@ return [
     'unknown_order_line' => 'That order line was not found.',
     'order_other_supplier' => 'The order belongs to another supplier — one bill cannot mix suppliers.',
     'order_not_confirmed' => 'Order :no is not confirmed yet, so nothing can be billed against it.',
+
+    /*
+     * A cheque without a number cannot be matched to the bank statement,
+     * and three cheques to the same supplier become indistinguishable.
+     */
+    'cheque_needs_number' => 'A cheque needs its number. Write the number printed on the cheque.',
 ];

@@ -13,6 +13,7 @@ use App\Core\Contracts\Drillable;
 use App\Models\Branch;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\Cheque;
 use App\Modules\Supplier\Models\Supplier;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -41,6 +42,18 @@ class Payment extends Model implements Drillable
         'company_id', 'branch_id', 'financial_year_id', 'document_no',
         'supplier_id', 'account_id', 'trx_date', 'amount',
         'instrument', 'instrument_no', 'instrument_date',
+
+        /*
+         * ⓘ চেকে দেওয়া হলে কোন চেকটা — বাকি সব পরিশোধে `null`।
+         *
+         * ⚠️ `$fillable`-এ না থাকলে `create()` চাবিটা ফেলে দিত, আর
+         * পরিশোধ থেকে চেকে যাওয়ার পথটা চুপচাপ হারাত। ⓘ `local` ও
+         * `testing`-এ ওটা ব্যতিক্রম হয়ে ধরা পড়ে
+         * ([[AppServiceProvider]]), কিন্তু লাইভে নীরব — তাই ভরসা
+         * পরিবেশের উপর নয়, তালিকাটার উপর।
+         */
+        'cheque_id',
+
         'status', 'narration', 'created_by',
         'cancelled_by', 'cancelled_at', 'cancel_reason',
     ];
@@ -68,6 +81,18 @@ class Payment extends Model implements Drillable
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);
+    }
+
+    /**
+     * চেকে দেওয়া হলে কাগজটা — নাহলে `null`।
+     *
+     * ⓘ জোড়াটা এই দিকে বসে, চেকের টেবিলে নয়: **Accounts কারও উপর
+     * দাঁড়ায় না**, সবাই তার উপর দাঁড়ায়। `acc_cheques`-এ `payment_id`
+     * বসালে Accounts-কে Purchase-এর নাম জানতে হত।
+     */
+    public function cheque(): BelongsTo
+    {
+        return $this->belongsTo(Cheque::class);
     }
 
     public function branch(): BelongsTo
