@@ -5,6 +5,8 @@ declare(strict_types=1);
 return [
     'module' => 'Module',
     'all_modules' => 'All',
+    'whose_inbox' => 'Whose inbox',
+    'my_inbox' => 'Mine',
     'decided_at' => 'Decided on',
     'waiting_days' => 'Days waiting',
     'took_days' => 'Days taken',
