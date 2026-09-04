@@ -139,18 +139,26 @@ class PaymentMethodKindAndTransferModeTest extends TestCase
         }
     }
 
-    /** নতুন উপায় বানাতে ধরন বাধ্যতামূলক — খালি রাখলে সংরক্ষণ থামে। */
-    public function test_creating_a_payment_method_requires_a_kind(): void
+    /**
+     * ধরন ঐচ্ছিক — খালি রাখলেও উপায় বসে (তখন পর্দা সব টাকার খাত দেখায়);
+     * দিলে ধরনটা সংরক্ষিত হয়।
+     *
+     * ⓘ আগে required ছিল, কিন্তু তাতে কোম্পানি নিজের নতুন উপায় যোগ করতে
+     * পারত না (মালিকের নিয়ম: তালিকা ক্রেতা বাড়াবেন) — সুইট ধরিয়ে দিল।
+     */
+    public function test_a_payment_method_may_be_created_with_or_without_a_kind(): void
     {
         $account = $this->aMoneyAccount();
 
-        // ধরন ছাড়া — থামে
+        // ধরন ছাড়াই বসে — থামে না
         $this->post(route('master_data.payment_method.store'), [
-            'name_en' => 'Nagad',
+            'name_en' => 'Card Machine',
             'account_id' => $account->id,
-        ])->assertSessionHasErrors('kind');
+        ])->assertRedirect(route('master_data.payment_method.index'));
 
-        // ধরন দিয়ে — বসে
+        $this->assertNull(PaymentMethod::query()->where('name_en', 'Card Machine')->value('kind'));
+
+        // ধরন দিলে সেটাই বসে
         $this->post(route('master_data.payment_method.store'), [
             'name_en' => 'Nagad',
             'kind' => 'mfs',
