@@ -243,27 +243,31 @@
                              পুরনো আশঙ্কাটা (কেউ ক্যালেন্ডার বছর বসিয়ে ফেলবেন)
                              ডিফল্ট দিয়েই সামলানো — ঘর দুইটা ভরা থাকে, কেবল
                              যাঁর দরকার তিনি বদলান। --}}
+                        {{-- ⚠️ কাঁচা `<input type="date">` নয় — [[ui.date]]।
+
+                             ব্রাউজার নিজের লোকেল ধরে ঘরটা আঁকে, আর CSS
+                             দিয়ে সেটা বদলানো যায় না। en-US-এ `05/06` মানে
+                             ৬ মে, বাংলাদেশে ৫ জুন — **দুইটাই বৈধ তারিখ**,
+                             তাই ভুলটা পড়ে ধরা যায় না।
+
+                             ⚠️ আর এই পাতায় ফলটা সবচেয়ে বেশি: অর্থবছরটা
+                             পরে আর বদলানো যায় না, তাই এখানে মাস-দিন উল্টে
+                             বসলে সেটা চিরকালের। --}}
                         <div class="grid gap-4 sm:grid-cols-2">
                             <div>
                                 <label for="year_starts_on" class="mb-1 block text-sm font-medium text-(--color-ink)">
                                     {{ __('system_admin::setup.year_starts_on') }}
                                 </label>
-                                <input id="year_starts_on" name="year_starts_on" type="date"
-                                       value="{{ old('year_starts_on', $year['starts_on']) }}"
-                                       class="h-(--spacing-field) w-full rounded-(--radius-field) border
-                                              border-(--color-border) bg-(--color-surface-card) px-3
-                                              text-(--color-ink)">
+                                <x-ui.date name="year_starts_on"
+                                           :value="old('year_starts_on', $year['starts_on'])" />
                             </div>
 
                             <div>
                                 <label for="year_ends_on" class="mb-1 block text-sm font-medium text-(--color-ink)">
                                     {{ __('system_admin::setup.year_ends_on') }}
                                 </label>
-                                <input id="year_ends_on" name="year_ends_on" type="date"
-                                       value="{{ old('year_ends_on', $year['ends_on']) }}"
-                                       class="h-(--spacing-field) w-full rounded-(--radius-field) border
-                                              border-(--color-border) bg-(--color-surface-card) px-3
-                                              text-(--color-ink)">
+                                <x-ui.date name="year_ends_on"
+                                           :value="old('year_ends_on', $year['ends_on'])" />
                             </div>
                         </div>
 

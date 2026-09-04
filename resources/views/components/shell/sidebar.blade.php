@@ -381,7 +381,12 @@
 
                 @foreach ($menu as $module)
                     @php
-                        // ⚠️ `$hereModule`, `$activeModule` নয় — উপরের কারণটা দেখুন
+                        /* ⚠️ `$hereModule`, `$activeModule` নয় — উপরের কারণটা দেখুন।
+
+                           ⓘ এক-লাইনের মন্তব্যে নয়, ব্লক-মন্তব্যে: [[IconSetTest]]
+                           কেবল Blade-এর মন্তব্য আর PHP-র ব্লক-মন্তব্য ছাঁটে,
+                           দুই-স্ল্যাশেরটা নয় — তাই ওখানে লেখা সতর্কতা-চিহ্নটা
+                           "পর্দায় ইমোজি টাইপ করা হয়েছে" হিসেবে ধরা পড়ত। */
                         $isActive = $hereModule && $module['code'] === $hereModule['code'];
                         $first = collect($module['groups'])->flatten(1)->firstWhere('url', '!==', null);
 

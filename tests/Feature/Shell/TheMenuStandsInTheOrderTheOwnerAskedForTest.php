@@ -46,24 +46,18 @@ class TheMenuStandsInTheOrderTheOwnerAskedForTest extends TestCase
         ['finance', 'finance'],
 
         /*
-         * ── গ্রাহক ও সরবরাহকারী রেল থেকে উঠেছে, ৪ সেপ্টেম্বর ২০২৬ ──────
-         * এই দুইটা সারি ২ সেপ্টেম্বর মালিকের দেওয়া তালিকায় ছিল, business
-         * দলের একদম শুরুতে। তিনি নিজেই সরিয়েছেন, দুই দিন পরে:
+         * ── গেল, আর ফিরে এল — একই দিনে, ৪ সেপ্টেম্বর ২০২৬ ──────────────
+         * সকালে মালিক গ্রাহককে বিক্রয়ের ভেতরে আর সরবরাহকারীকে ক্রয়ের
+         * ভেতরে ঢোকাতে বলেছিলেন, আর এই দুইটা সারি তখন এখান থেকে উঠে
+         * গিয়েছিল। **বিকেলে তিনি নিজেই ফিরিয়ে নিয়েছেন** — *"আগের মতো
+         * বাইরেই রাখো, সেটাই মনে হয় ভালো।"*
          *
-         *     *"customer modiule fontende sales er vitore dukaw, bakend
-         *     zemon ache temon thakbe, same vabe Supplier purches e dukaw"*
-         *
-         * অর্থাৎ মডিউল দুইটা মুছে যায়নি — তাদের সারিগুলো এখন বিক্রয় ও
-         * ক্রয়ের টাইলের ভেতরে, নিজেদের ব্যাকএন্ড অক্ষত রেখে
-         * (`nav.under`, [[MenuBuilder::settleGuestsIntoTheirHosts()]])।
-         *
-         * তাঁকে জিজ্ঞেস করা হয়েছিল দুই জায়গাতেই রাখা হবে কিনা; উত্তর ছিল
-         * **রেল থেকে পুরোপুরি উঠে যাবে** — একই সারি দুইবার দেখালে
-         * ব্যবহারকারী প্রতিবার ভাববেন কোনটা চাপবেন।
-         *
-         * নিচের `test_a_guest_module_sits_inside_its_host` পাহারা দেয় যে
-         * ওরা সত্যিই ভেতরে বসেছে, নীরবে হারিয়ে যায়নি।
+         * তাই তালিকাটা আবার ২ সেপ্টেম্বরের রূপে। ⓘ ইতিহাসটা রাখা হলো
+         * কারণ `MenuBuilder`-এ ভেতরে বসানোর যন্ত্রটা এখনো আছে, আর ছয় মাস
+         * পরে কেউ ওটা দেখে ভাববেন তালিকাটা ভুল।
          */
+        ['business', 'customer'],
+        ['business', 'supplier'],
         ['business', 'purchase'],
         ['business', 'inventory'],
         ['business', 'sales'],
@@ -174,7 +168,32 @@ class TheMenuStandsInTheOrderTheOwnerAskedForTest extends TestCase
         $menu = app(MenuBuilder::class)->forUser($this->owner());
         $codes = array_column($menu, 'code');
 
-        foreach (app(ModuleRegistry::class)->all() as $module) {
+        $guests = array_filter(
+            app(ModuleRegistry::class)->all(),
+            static fn (ModuleDefinition $d): bool => isset($d->nav['under']),
+        );
+
+        /*
+         * ⚠️ আজ একটাও অতিথি নেই — মালিক ৪ সেপ্টেম্বর সিদ্ধান্ত ফিরিয়ে
+         * নিয়েছেন, তাই গ্রাহক ও সরবরাহকারী আবার নিজের টাইলে।
+         *
+         * ── কেন এটা চুপচাপ সবুজ হয় না ────────────────────────────────
+         * খালি তালিকার উপর চালানো লুপ **সবসময় পাস করে**, আর তখন এই
+         * ফাইলটা দেখে মনে হত পাহারাটা কাজ করছে। কেউ কাল আবার `under`
+         * বসালে সে ভাবত গার্ডটা তাকে দেখছে — অথচ ওটা মাস ছয়েক ধরে
+         * কিছুই দেখেনি।
+         *
+         * তাই জোরে বলে থামা: পাহারাটা আছে, কিন্তু আজ পাহারা দেওয়ার
+         * কিছু নেই।
+         */
+        if ($guests === []) {
+            $this->markTestSkipped(
+                'কোনো মডিউল nav.under ঘোষণা করে না, তাই ভেতরে বসার কিছু নেই। '
+                .'কেউ আবার under বসালে এই পরীক্ষাটা নিজে থেকেই জেগে উঠবে।'
+            );
+        }
+
+        foreach ($guests as $module) {
             $host = $module->nav['under'] ?? null;
 
             if ($host === null) {
