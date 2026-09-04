@@ -214,6 +214,28 @@ class DirectPurchaseController extends Controller implements HasMiddleware
             'lines.*.narration' => ['nullable', 'string', 'max:500'],
 
             /*
+             * লট · মেয়াদ · ছাপা দাম — লট ধরা পণ্যে লট নম্বরটা
+             * বাধ্যতামূলক, কিন্তু সেটা **এখানে** বলা যায় না: কোন পণ্য
+             * লট ধরে তা জানতে পণ্যটা দেখতে হয়।
+             *
+             * ⓘ শর্তটা তাই সেবা স্তরে ([[BatchService::receive]]), আর
+             * সেখানকার বার্তায় পণ্যের নামও থাকে — "কোন সারিতে" প্রশ্নের
+             * উত্তরসহ। ⚠️ ক্রয় বিল ও চালানের request দুইটাও হুবহু এই
+             * তিনটা নিয়ম ব্যবহার করে; এখানে না থাকায় সরাসরি ক্রয়ের
+             * পর্দা দিয়ে লট ধরা পণ্য কেনাই যেত না।
+             *
+             * ⓘ প্যাকের ঘরটাও এখানে যোগ হলো — কলাম দুইটা
+             * (`entered_qty`, `entered_unit_id`) আগে থেকেই আছে, আর বাকি
+             * চারটা ক্রয়-সেবা ওগুলো ব্যবহার করে; কেবল এই পর্দাটা
+             * কাউকে জিজ্ঞেস করত না।
+             */
+            'lines.*.batch_no' => ['nullable', 'string', 'max:60'],
+            'lines.*.expiry_date' => ['nullable', 'date'],
+            'lines.*.mrp' => ['nullable', 'numeric', 'min:0'],
+            'lines.*.unit_id' => ['nullable', 'integer',
+                Rule::exists('mdm_units', 'id')->where('company_id', $companyId)],
+
+            /*
              * উপহার — মিল যা সাথে দিয়ে দিল।
              *
              * ⚠️ `lines`-এর মতো `required` নয়। বেশিরভাগ চালানে কোনো

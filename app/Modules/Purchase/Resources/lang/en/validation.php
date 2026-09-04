@@ -10,7 +10,7 @@ return [
     'already_cancelled' => ':no was already cancelled.',
     'unknown_product' => 'That product is not in this company\'s list.',
 
-    'gift_needs_a_lot' => '":product" is lot-tracked. Taking it in without a lot number would make both expiry and recall wrong, and no purchase screen carries the lot fields yet — so a lot-tracked product cannot be taken as a gift for now.',
+    'gift_needs_a_lot' => '":product" is lot-tracked, and a gift row has no lot number field. Taking it in without one would make both expiry and recall wrong, so a lot-tracked product cannot be taken as a gift.',
     'unknown_order' => 'That purchase order is not in this company\'s list.',
     'unknown_warehouse' => 'That warehouse is not in this company\'s list.',
     'unknown_receipt_line' => 'That receipt line is not in this company\'s list.',

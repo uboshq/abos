@@ -16,6 +16,27 @@
     'linkOptions' => [],
     'showDiscount' => true,
     'showSalesPrice' => false,
+
+    /**
+     * এই কাগজটা কি লট রাখতে পারে।
+     *
+     * ── কেন এটা একটা প্রপ, কম্পোনেন্টের নিজের সিদ্ধান্ত নয় ───────────
+     * উত্তরটা নির্ভর করে **কোন টেবিলে সারিটা বসবে** তার উপর, আর
+     * কম্পোনেন্ট সেটা জানে না:
+     *
+     *   pur_receipt_lines · pur_bill_lines   batch_no · expiry_date · mrp আছে
+     *   pur_order_lines                      ⛔ একটাও নেই
+     *
+     * ⚠️ ডিফল্ট `false`, আর সেটাই নিরাপদ দিক: ভুলে গেলে ঘরটা **থাকে
+     * না**। উল্টো ডিফল্টে ভুলে গেলে ঘরটা **থাকত অথচ সেভ হত না** — আর
+     * সেটাই মৃত ঘর, যা এই রিপো টুলবারের ছয়টা বোতামে একবার দেখেছে।
+     *
+     * ⓘ প্রথমে এটা প্রপ ছাড়াই লেখা হয়েছিল, আর তখন ক্রয় **আদেশের**
+     * পর্দাতেও ঘর তিনটা বসে গিয়েছিল — যেখানে লট জানার কথাই নয় (মাল
+     * তো এখনো আসেনি), আর কলামও নেই। ⭐ ধরা পড়েছে ব্রাউজারে খুলে,
+     * কোড পড়ে নয়।
+     */
+    'lots' => false,
 ])
 
 @php
@@ -25,6 +46,20 @@
     $packs = app(App\Core\Services\SettingsService::class)->enabled('inventory.pack_entry_enabled')
         ? app(App\Modules\Inventory\Services\PackConversion::class)->optionsFor($products)
         : [];
+
+    /*
+     * লট ধরা পণ্যগুলোর আইডি — প্যাকের তালিকার মতোই।
+     *
+     * ── কেন ঘরগুলো শর্তসাপেক্ষে ─────────────────────────────────────
+     * ডিপোর চাল, ডাল আর সাবানে লট নেই আর কোনোদিন হবেও না। সবসময়
+     * দেখালে ওই পর্দাগুলোর প্রতিটা লাইনে তিনটা খালি ঘর পড়ে থাকত, আর
+     * মানুষ ওগুলোকে "ঐচ্ছিক আবর্জনা" পড়তে শিখত — তারপর ওষুধের লাইনেও
+     * এড়িয়ে যেত।
+     *
+     * ⓘ তালিকা খালি হলে কলাম তিনটা রেন্ডারই হয় না; ভরা থাকলে কলাম
+     * থাকে, কিন্তু ঘরগুলো কেবল সেই সারিতে দেখা যায় যার পণ্য লট ধরে।
+     */
+    $lotProducts = collect($products)->filter(fn ($p) => (bool) $p->track_batch)->pluck('id')->values();
 @endphp
 
 {{--
@@ -62,13 +97,27 @@
 <div x-data="{
         rows: {{ Illuminate\Support\Js::from($lines) }},
         packs: {{ Illuminate\Support\Js::from($packs) }},
+        lots: {{ Illuminate\Support\Js::from($lotProducts) }},
         unitsFor(row) {
             return this.packs[row.product_id] ?? [];
+        },
+
+        /*
+         * এই সারির পণ্য কি লট ধরে চলে।
+         *
+         * ⚠️ তুলনাটা String() দিয়ে: পণ্যের আইডি সার্ভার থেকে সংখ্যা
+         * হয়ে আসে, আর `<select>`-এর মান সবসময় স্ট্রিং। `===` দিলে
+         * কোনো সারিতেই ঘর তিনটা কখনো দেখা যেত না — আর পর্দা কিছু
+         * ভাঙত না, কেবল ওষুধ কেনা যেত না।
+         */
+        tracksLot(row) {
+            return this.lots.some(id => String(id) === String(row.product_id));
         },
         add() {
             this.rows.push({
                 product_id: '', qty: '', rate: '', discount: '', tax: '', link: '', unit_id: '',
                 sales_price: '', markup: '', margin: '', anchor: '',
+                batch_no: '', expiry_date: '', mrp: '',
             });
         },
         remove(i) {
@@ -102,6 +151,12 @@
                     @if ($packs !== [])
                         <th class="text-start">{{ __('purchase::field.unit') }}</th>
                     @endif
+                    @if ($lots && $lotProducts->isNotEmpty())
+                        <th class="text-start">{{ __('inventory::field.batch_no') }}</th>
+                        <th class="text-start">{{ __('inventory::field.expiry_date') }}</th>
+                        <th class="text-end">{{ __('inventory::field.mrp') }}</th>
+                    @endif
+
                     <th class="text-end">{{ __('purchase::field.rate') }}</th>
                     @if ($showSalesPrice)
                         <th class="text-end">{{ __('purchase::field.sales_price') }}</th>
@@ -174,6 +229,54 @@
                                         <option :value="unit.id" x-text="unit.label"></option>
                                     </template>
                                 </select>
+                            </td>
+                        @endif
+
+                        @if ($lots && $lotProducts->isNotEmpty())
+                            {{--
+                                লট · মেয়াদ · MRP — কেবল লট ধরা পণ্যের সারিতে।
+
+                                ── কেন এই তিনটা একসাথে ────────────────────────────
+                                লট নম্বরটা [[BatchService::receive]]-এ **বাধ্যতামূলক**,
+                                আর ওটা ছাড়া মালটা ঢোকেই না। মেয়াদ ও MRP ঐচ্ছিক,
+                                কিন্তু একই মুহূর্তে ছাড়া আর কখনো জানা যায় না —
+                                কার্টনটা তখন হাতে, পরে আর নয়।
+
+                                ⛔ `x-ui.date` ব্যবহার করা যায়নি: সে `name` একটা
+                                স্থির প্রপ হিসেবে নেয়, আর এখানে নামটা সারির ক্রম
+                                ধরে বাঁধা (`lines[${i}][…]`)। ⚠️ ফল: তারিখটা
+                                ব্রাউজারের নিজের ছকে আঁকা হয়, কোম্পানির ছকে নয় —
+                                একটা স্বীকৃত ফাঁক। ⓘ সঠিক সমাধান হলো
+                                `x-ui.date`-কে বাঁধা নাম নিতে শেখানো, আর সেটা
+                                কম্পোনেন্টের মালিকের কাজ।
+
+                                ⓘ মান হিসেবে ISO যায় (`type="date"` তাই দেয়), তাই
+                                সার্ভারে কোনো অস্পষ্টতা নেই — অস্পষ্টতা কেবল
+                                দেখায়।
+                            --}}
+                            <td class="cell-input" data-label="{{ __('inventory::field.batch_no') }}">
+                                <input type="text" maxlength="60"
+                                       x-show="tracksLot(row)"
+                                       :required="tracksLot(row)"
+                                       :name="`lines[${i}][batch_no]`" x-model="row.batch_no"
+                                       class="h-(--spacing-field-compact) w-full sm:w-28 rounded-(--radius-field) border
+                                              border-(--color-border) bg-(--color-surface-card) px-2">
+                            </td>
+
+                            <td class="cell-input" data-label="{{ __('inventory::field.expiry_date') }}">
+                                <input type="date"
+                                       x-show="tracksLot(row)"
+                                       :name="`lines[${i}][expiry_date]`" x-model="row.expiry_date"
+                                       class="h-(--spacing-field-compact) w-full sm:w-36 rounded-(--radius-field) border
+                                              border-(--color-border) bg-(--color-surface-card) px-2">
+                            </td>
+
+                            <td class="cell-input" data-label="{{ __('inventory::field.mrp') }}">
+                                <input type="number" step="0.01" inputmode="decimal" min="0"
+                                       x-show="tracksLot(row)"
+                                       :name="`lines[${i}][mrp]`" x-model="row.mrp"
+                                       class="num h-(--spacing-field-compact) w-full sm:w-24 rounded-(--radius-field) border
+                                              border-(--color-border) bg-(--color-surface-card) px-2 text-end">
                             </td>
                         @endif
 
