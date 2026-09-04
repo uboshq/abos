@@ -11,6 +11,7 @@ use App\Models\Approval;
 use App\Modules\Approval\Services\ApprovalFlowService;
 use Illuminate\Contracts\Database\Query\Expression;
 use Illuminate\Database\Query\Builder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -70,15 +71,31 @@ final class ApprovalReports
                     DB::raw("'".Approval::drillSourceType()."' as approval_source"),
                     self::whatLabel(),
                     DB::raw('users.name as requester'),
-                    /*
-                     * কত দিন ধরে ঝুলে আছে — এটাই এই রিপোর্টের আসল কথা।
-                     *
-                     * তারিখটা একা যথেষ্ট নয়: "১২ আগস্ট" দেখে কেউ মাথায়
-                     * বিয়োগ করেন না, আর ঠিক ওই বিয়োগটাই বলে দেয় কোনটা
-                     * ভুলে যাওয়া হয়েছে।
-                     */
-                    DB::raw('TIMESTAMPDIFF(DAY, approvals.requested_at, NOW()) as waiting_days'),
-                ]),
+                ])
+                /*
+                 * কত দিন ধরে ঝুলে আছে — এটাই এই রিপোর্টের আসল কথা।
+                 *
+                 * তারিখটা একা যথেষ্ট নয়: "১২ আগস্ট" দেখে কেউ মাথায় বিয়োগ
+                 * করেন না, আর ঠিক ওই বিয়োগটাই বলে দেয় কোনটা ভুলে যাওয়া
+                 * হয়েছে।
+                 *
+                 * ⚠️ ── "আজ" কোনটা, সেটা ডাটাবেসকে জিজ্ঞেস করা হয় না ──
+                 * এখানে প্রথমে `NOW()` লেখা ছিল, আর সেটা উত্তর দেয়
+                 * **ডাটাবেস সার্ভারের** ঘড়ি ধরে — অ্যাপ উত্তর দেয়
+                 * `config('app.timezone')` ধরে। দুইটা এক হওয়ার কোনো
+                 * নিশ্চয়তা কোথাও লেখা নেই, আর আলাদা হলে **"কত দিন" এক
+                 * দিন এদিক-ওদিক হয়** — নীরবে, কারণ সংখ্যাটা দেখতে
+                 * বিশ্বাসযোগ্যই থাকে।
+                 *
+                 * ⓘ `DATEDIFF`, `TIMESTAMPDIFF` নয়: মানুষ "কত দিন ধরে"
+                 * বলতে **ক্যালেন্ডারের দিন** বোঝেন, পূর্ণ ২৪ ঘণ্টার একক
+                 * নয়। গতকাল সন্ধ্যায় চাওয়া কাগজ আজ সকালে "০ দিন" নয়,
+                 * "১ দিন"।
+                 */
+                ->selectRaw(
+                    'DATEDIFF(?, approvals.requested_at) as waiting_days',
+                    [Carbon::today()->toDateString()]
+                ),
             columns: [
                 ['key' => 'requested_at', 'label' => 'approval::field.requested_at',
                     'type' => ReportColumn::DATE, 'width' => '9rem'],
