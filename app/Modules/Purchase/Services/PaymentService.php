@@ -13,7 +13,9 @@ use App\Core\Support\Money;
 use App\Models\FinancialYear;
 use App\Models\IssuedNumber;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\Cheque;
 use App\Modules\Accounts\Services\CashTillService;
+use App\Modules\Accounts\Services\ChequeService;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Purchase\Models\Payment;
 use App\Modules\Purchase\Models\PaymentLine;
@@ -40,11 +42,26 @@ use Illuminate\Validation\ValidationException;
  */
 final class PaymentService
 {
+    /**
+     * "চেক" — উপায়ের নাম, আর এটাই একমাত্র উপায় যেটা অন্য পথে যায়।
+     *
+     * ⓘ মানটা আসে `mdm_payment_methods.kind` থেকে, তাই ক্রেতা নতুন
+     * উপায় বানালেও এই শব্দটাই চেকের পথ খোলে।
+     */
+    private const CHEQUE = 'cheque';
+
     public function __construct(
         private readonly NumberSeriesEngine $numbers,
         private readonly PostingEngine $posting,
         private readonly CashTillService $tills,
         private readonly DocumentApproval $approvals,
+
+        /*
+         * ⓘ চেকের নিজের জীবন আছে — লেখা, ভাঙানো, ফেরত আসা। সেই তিনটা
+         * ধাপ [[ChequeService]] আগে থেকেই জানে, তাই এখানে দ্বিতীয় একটা
+         * বাস্তবায়ন লেখা হয়নি।
+         */
+        private readonly ChequeService $cheques,
     ) {}
 
     /**
@@ -147,6 +164,40 @@ final class PaymentService
         );
 
         return DB::transaction(function () use ($payment) {
+            /*
+             * ── চেকে দিলে টাকাটা এখনো যায়নি ──────────────────────────
+             *
+             * ⛔ আগে এখানে শর্ত ছিল না: `instrument` যা-ই হোক, দাখিলা
+             * বসত **Dr প্রদেয় / Cr যে খাত বাছা হয়েছে**। অর্থাৎ চেক
+             * লিখলেই ব্যাংক কমে যেত।
+             *
+             * ⚠️ কিন্তু চেক লেখা আর টাকা যাওয়া এক জিনিস নয়। কাগজটা
+             * তিন দিন পকেটে থাকতে পারে, ব্যাংকে গিয়ে ফেরতও আসতে পারে।
+             * ততক্ষণ ব্যাংকের খাতা **বাস্তবের চেয়ে কম** দেখাত।
+             *
+             * ⭐ ঠিক এই ভুলটা উল্টো দিকে একবার ধরা পড়েছে ও সারানো
+             * হয়েছে — গৃহীত চেক সরাসরি ব্যাংকে বসত (মাইগ্রেশন:
+             * *"হাতে চেক ইতিমধ্যেই ব্যাংকের টাকা ছিল"*)। ক্রয়ের দিকে
+             * একই ভুল রয়ে গিয়েছিল।
+             *
+             * ── কেন পরিশোধ নিজে কিছুই পোস্ট করে না ───────────────────
+             * ⛔ দুইটা একসাথে পোস্ট করলে **প্রদেয় দুইবার ডেবিট হত**:
+             *
+             *     পরিশোধ  Dr প্রদেয়  Cr খাত
+             *     চেক      Dr প্রদেয়  Cr ২১১৫
+             *
+             * তাই চেকের বেলায় পুরো দাখিলাটা চেকের কাগজে যায়, আর
+             * পরিশোধ কেবল **কাগজপত্রের হিসাব** রাখে।
+             *
+             * ⓘ `pur_payment_lines` তবু লেখা হয়, আর সেটা ঠিক: ওগুলো
+             * কোন বিলের বকেয়া কতটা মিটল তার হিসাব — **দাখিলা নয়**।
+             * বিলের "বাকি কত" ওই সারিগুলো থেকেই গোনা হয়, খতিয়ান থেকে
+             * নয়, তাই চেকের পথেও বকেয়া ঠিকঠাক কমে।
+             */
+            if ($payment->instrument === self::CHEQUE) {
+                return $this->settleByCheque($payment);
+            }
+
             $this->posting->post(
                 sourceType: Payment::drillSourceType(),
                 sourceId: $payment->id,
@@ -186,7 +237,22 @@ final class PaymentService
         $date = $onDate === null ? now() : Carbon::parse($onDate);
 
         return DB::transaction(function () use ($payment, $reason, $date) {
-            if ($payment->status === DocumentStatus::CONFIRMED) {
+            /*
+             * ⚠️ চেকে দেওয়া হয়ে থাকলে দাখিলাটা **চেকের কাগজে**, এখানে
+             * নয় — তাই এখানে উল্টো দাখিলা খুঁজলে কিছুই পাওয়া যেত না
+             * আর `reverse()` ব্যতিক্রম ছুড়ত।
+             *
+             * ⓘ চেক বাতিল করলে [[ChequeService::cancel]] নিজেই উল্টো
+             * দাখিলা বসায়, আর কাগজটাও বাতিল দেখায় — দুইটাই দরকার,
+             * কারণ চেকটা সত্যিই লেখা হয়েছিল।
+             */
+            if ($payment->status === DocumentStatus::CONFIRMED && $payment->cheque_id !== null) {
+                $cheque = $payment->cheque;
+
+                if ($cheque !== null && $cheque->status !== Cheque::CANCELLED) {
+                    $this->cheques->cancel($cheque, $reason, $date);
+                }
+            } elseif ($payment->status === DocumentStatus::CONFIRMED) {
                 /*
                  * উল্টো দাখিলা, মুছে ফেলা নয় (নিয়ম ৫)।
                  *
@@ -211,6 +277,63 @@ final class PaymentService
 
             return $payment->fresh(['lines']);
         });
+    }
+
+    /**
+     * চেকে পরিশোধ — কাগজটা লেখা হলো, টাকা এখনো যায়নি।
+     *
+     * ── দাখিলা কোথায় বসে ────────────────────────────────────────────
+     *
+     *     চেক লিখলাম   Dr প্রদেয় (সরবরাহকারী)   Cr ইস্যু করা চেক (২১১৫)
+     *     চেক ভাঙল     Dr ইস্যু করা চেক          Cr ব্যাংক
+     *     চেক ফেরত এল  Dr ইস্যু করা চেক          Cr প্রদেয়
+     *
+     * ⭐ প্রথম সারিটা এখানেই বসে ([[ChequeService::create]]), আর বাকি
+     * দুইটা চেকের রেজিস্টার থেকে — কারণ ওগুলো **পরে ঘটে**, আর কবে
+     * ঘটবে তা আজ কেউ জানে না।
+     *
+     * ⚠️ ব্যাংকের খাত (`account_id`) তবু রাখা হয়, আর সেটা অব্যবহৃত নয়:
+     * চেকটা কোন ব্যাংক থেকে লেখা হলো সেটা ভাঙানোর দিন লাগে, আর
+     * ব্যাংকে কতগুলো চেক ঝুলে আছে সেই প্রশ্নের উত্তরও ওখান থেকেই আসে।
+     *
+     * ⛔ নম্বর ছাড়া চেক হয় না — একই সরবরাহকারীকে তিনটা চেক দিলে
+     * নম্বরটাই একমাত্র পার্থক্য, আর ব্যাংকের কাগজের সাথে মেলাতেও ওটাই
+     * লাগে। ⓘ পর্দা নম্বরটা চায়, কিন্তু API বা ইমপোর্ট এড়িয়ে যেতে
+     * পারত, তাই পাহারাটা এখানেও।
+     */
+    private function settleByCheque(Payment $payment): Payment
+    {
+        if (blank($payment->instrument_no)) {
+            throw ValidationException::withMessages([
+                'instrument_no' => __('purchase::validation.cheque_needs_number'),
+            ]);
+        }
+
+        $cheque = $this->cheques->create([
+            'direction' => Cheque::ISSUED,
+
+            /*
+             * ⓘ চেকের গায়ে লেখা তারিখ — না দিলে পরিশোধের তারিখ।
+             * ⚠️ দুইটা আলাদা হতে পারে, আর সেটাই স্বাভাবিক: আজ লিখে
+             * আগামী সপ্তাহের তারিখ বসানো ডিপোতে রোজকার ঘটনা।
+             */
+            'cheque_date' => $payment->instrument_date ?? $payment->trx_date,
+            'received_on' => $payment->trx_date,
+            'cheque_no' => $payment->instrument_no,
+            'amount' => (string) $payment->amount,
+            'party_type' => 'supplier',
+            'party_id' => $payment->supplier_id,
+            'bank_account_id' => $payment->account_id,
+            'narration' => $payment->narration
+                ?? __('purchase::message.paid_against', ['no' => $payment->document_no]),
+        ]);
+
+        $payment->forceFill([
+            'cheque_id' => $cheque->id,
+            'status' => DocumentStatus::CONFIRMED,
+        ])->save();
+
+        return $payment->fresh(['lines', 'cheque']);
     }
 
     /**
