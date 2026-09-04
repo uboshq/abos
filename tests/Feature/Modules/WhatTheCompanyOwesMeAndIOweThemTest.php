@@ -16,6 +16,8 @@ use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Purchase\Dashboard\PurchaseWidgets;
+use App\Modules\Inventory\Services\StockService;
+use App\Modules\Purchase\Models\PurchaseReceipt;
 use App\Modules\Purchase\Services\PurchaseReceiptService;
 use App\Modules\Sales\Services\SalesInvoiceService;
 use App\Modules\Supplier\Dashboard\SupplierWidgets;
@@ -93,12 +95,27 @@ class WhatTheCompanyOwesMeAndIOweThemTest extends TestCase
     /** ওই কোম্পানির মাল গুদামে ঢোকানো — ডিপো প্রাইসে। */
     private function receive(Supplier $from, Product $product, string $qty, string $rate): void
     {
-        app(PurchaseReceiptService::class)->confirm(
+        $receipt = app(PurchaseReceiptService::class)->confirm(
             app(PurchaseReceiptService::class)->create(
                 ['supplier_id' => $from->id, 'warehouse_id' => $this->warehouse->id,
                     'trx_date' => now()->toDateString()],
                 [['product_id' => $product->id, 'received_qty' => $qty, 'rate' => $rate]],
             ),
+        );
+
+        /*
+         * আর গুদামে বুঝে নেওয়া — Stock Placement, ৪ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ এই হেল্পারের নামই "গুদামে ঢোকানো", আর এখন ঢোকানো দুইটা ধাপ:
+         * গাড়ি থেকে নামা, তারপর বুঝে নেওয়া। ⛔ দ্বিতীয়টা ছাড়া নিচের
+         * বিক্রয়গুলো "তাকে যথেষ্ট নেই" বলে আটকাবে।
+         */
+        app(StockService::class)->place(
+            product: $product,
+            warehouse: $this->warehouse,
+            qty: $qty,
+            sourceType: PurchaseReceipt::STOCK_SOURCE,
+            sourceId: $receipt->id,
         );
     }
 

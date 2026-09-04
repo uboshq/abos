@@ -13,6 +13,8 @@ use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Inventory\Services\StockService;
+use App\Modules\Purchase\Models\PurchaseReceipt;
 use App\Modules\Purchase\Services\PurchaseReceiptService;
 use App\Modules\Sales\Models\CommissionClaim;
 use App\Modules\Sales\Models\SalesInvoice;
@@ -85,12 +87,27 @@ class TheCommissionIPayFirstTest extends TestCase
             'is_active' => true,
         ]);
 
-        app(PurchaseReceiptService::class)->confirm(
+        $receipt = app(PurchaseReceiptService::class)->confirm(
             app(PurchaseReceiptService::class)->create(
                 ['supplier_id' => $this->principal->id, 'warehouse_id' => $this->warehouse->id,
                     'trx_date' => now()->toDateString()],
                 [['product_id' => $product->id, 'received_qty' => '10', 'rate' => '172.54']],
             ),
+        );
+
+        /*
+         * মালটা বুঝে নেওয়া হয় — Stock Placement, ৪ সেপ্টেম্বর ২০২৬।
+         *
+         * রিসিভ মানে গাড়ি থেকে নামল; বিক্রয়যোগ্য হতে হলে কাউকে বুঝে
+         * নিতে হয়। ⛔ এই লাইনটা ছাড়া নিচের বিক্রয়টা "তাকে যথেষ্ট নেই"
+         * বলে আটকাবে — অর্থাৎ ধাপটা আলংকারিক নয়।
+         */
+        app(StockService::class)->place(
+            product: $product,
+            warehouse: $this->warehouse,
+            qty: '10',
+            sourceType: PurchaseReceipt::STOCK_SOURCE,
+            sourceId: $receipt->id,
         );
 
         return app(SalesInvoiceService::class)->confirm(

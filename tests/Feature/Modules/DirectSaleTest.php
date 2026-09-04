@@ -18,6 +18,7 @@ use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\StockService;
+use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Purchase\Services\PurchaseBillService;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesInvoice;
@@ -110,6 +111,27 @@ class DirectSaleTest extends TestCase
         );
 
         app(PurchaseBillService::class)->confirm($bill);
+
+        /*
+         * আর মালটা বুঝে নেওয়া হয় — Stock Placement, ৪ সেপ্টেম্বর ২০২৬।
+         *
+         * ⚠️ এই হেল্পারের নিজের ব্যাখ্যাই বলে সে *"মালটা ঢোকে যে পথে
+         * সত্যিই ঢোকে"* — আর এখন সেই পথে একটা ধাপ বেড়েছে: গাড়ি থেকে
+         * নামা আর গুদামে বুঝে নেওয়া এক ঘটনা নয়। ধাপটা বাদ দিলে ফ্রি
+         * মাল ভাণ্ডারে ঢুকত না, আর নিচের বিক্রয়গুলো "ফ্রি মাল নেই"
+         * বলে আটকাত।
+         *
+         * ⛔ লাইনটা তুলে দিলে পরীক্ষাগুলো লাল হবে — সেটাই প্রমাণ যে
+         * ধাপটা সত্যিকারের।
+         */
+        app(StockService::class)->place(
+            product: $product,
+            warehouse: $this->warehouse,
+            qty: '1',
+            sourceType: PurchaseBill::STOCK_SOURCE,
+            sourceId: $bill->id,
+            freeQty: $qty,
+        );
     }
 
     /**
