@@ -21,6 +21,23 @@
 
     $classes = 'inline-flex min-h-(--spacing-touch) items-center justify-center gap-2 rounded-(--radius-field) '
         . 'px-4 text-sm font-medium transition-colors ' . ($tones[$tone] ?? $tones['secondary']);
+
+    /*
+     * পাতার প্রধান কাজটা কোনটা — কীবোর্ডের `N` এই নোঙরটাই খোঁজে।
+     *
+     * ── কেন এখানে, পর্দায় নয় ────────────────────────────────────────
+     * ⛔ ৭৫টা তালিকার পর্দায় হাতে একটা চিহ্ন বসানো যেত, আর তার তিনটা
+     * ফল হত: কেউ ভুলত, কেউ ভুল বোতামে বসাত, আর নতুন পর্দায় কেউ মনে
+     * রাখত না।
+     *
+     * ⭐ পর্দাগুলো **আগে থেকেই** বলে দিয়েছে কোনটা প্রধান —
+     * `tone="primary"`. তাই নোঙরটা সেখান থেকেই আসে, আর নতুন পর্দা
+     * কিছু না করেই পায়।
+     *
+     * ⚠️ একাধিক থাকলে JS প্রথমটা নেয়। ⓘ তালিকার পর্দায় প্রধান বোতাম
+     * একটাই — দুইটা থাকলে সেটা নকশারই প্রশ্ন, কীবোর্ডের নয়।
+     */
+    $anchor = $tone === 'primary' ? ['data-page-primary' => true] : [];
 @endphp
 
 {{-- আইকনটা এখন সেটের একটা নাম (`plus`), লেখা নয়।
@@ -30,12 +47,14 @@
      টাইপ করা অক্ষর। ওটা ফন্টের সাথে বদলাত, স্ট্রোকের পুরুত্ব বাকি আইকনের সাথে
      মিলত না, আর বাংলা ফন্টে আরেক রকম দেখাত। --}}
 @if ($href)
-    <a href="{{ $href }}" {{ $attributes->merge(['class' => $classes]) }}>
+    <a href="{{ $href }}" @foreach ($anchor as $k => $v) {{ $k }} @endforeach
+       {{ $attributes->merge(['class' => $classes]) }}>
         @if ($icon)<x-ui.icon :name="$icon" :size="17" />@endif
         {{ $slot }}
     </a>
 @else
     <button type="{{ $attributes->get('type', 'button') }}"
+            @foreach ($anchor as $k => $v) {{ $k }} @endforeach
             {{ $attributes->except('type')->merge(['class' => $classes]) }}>
         @if ($icon)<x-ui.icon :name="$icon" :size="17" />@endif
         {{ $slot }}

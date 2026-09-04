@@ -87,5 +87,20 @@
             :columns="$columns" />
 
         <x-ui.pager :rows="$invoices" />
+
+        {{-- তালিকার যোগফল — পর্দা কেবল **ঘোষণা করে**।
+
+             ⓘ দেখানো হবে কি না সেটা রূপ ঠিক করে ([[Ui::listFoot]]), আর
+             সেই কারণেই এখানে কোনো রূপের নাম লেখা নেই। যে রূপ চায় না,
+             তার পাতায় এই ঘোষণাটা চুপচাপ পড়ে থাকে।
+
+             ⚠️ সংখ্যাগুলো **গোটা ছাঁকনির**, এই পাতার নয় — কন্ট্রোলারে
+             আলাদা করে গোনা। --}}
+        <x-ui.list-totals :totals="[
+            ['label' => __('core.list.rows'), 'value' => number_format($totals['rows'])],
+            ['label' => __('sales::field.total'), 'value' => \App\Core\Support\Money::format($totals['money'])],
+            ['label' => __('sales::field.collected'), 'value' => \App\Core\Support\Money::format($totals['collected']), 'tone' => 'ok'],
+            ['label' => __('sales::field.due'), 'value' => \App\Core\Support\Money::format($totals['due']), 'tone' => 'bad'],
+        ]" />
     </div>
 </x-layouts.app>

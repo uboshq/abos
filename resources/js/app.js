@@ -1,6 +1,7 @@
 import Alpine from 'alpinejs'
 import { reprice } from './pricing.js'
 import { abosDate } from './date.js'
+import { listKeys } from './list-keys.js'
 
 /*
  * Alpine শুধু ছোট UI ইন্টারঅ্যাকশনে — ড্রপডাউন, পাসওয়ার্ড দেখানো, ট্যাব
@@ -55,6 +56,15 @@ document.addEventListener('alpine:init', () => {
         },
     })
 })
+
+/*
+ * তালিকার কীবোর্ড — কেবল যে রূপ চায়।
+ *
+ * ⓘ ফাইলটা নিজেই দেখে নেয় খোলস `data-look-hints` এঁকেছে কি না; না
+ * আঁকলে একটা শ্রোতাও বসে না। ⚠️ তাই অন্য ন'টা রূপে এটা যোগ করা আর না
+ * করা এক — আর সেটা মেপে দেখা যায়, বিশ্বাস করতে হয় না।
+ */
+listKeys()
 
 window.Alpine = Alpine
 Alpine.start()
