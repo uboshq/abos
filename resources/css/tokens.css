@@ -415,6 +415,37 @@
     --rail-item-radius: var(--radius-field);
     --rail-item-shadow: none;
 
+    /* বাঁ মেনুর সারির উচ্চতা ও হরফ।
+
+       ⚠️ ডিফল্ট মানগুলো **আজকের আচরণ হুবহু** — `--spacing-field-compact`
+       (৩৬px) আর `--text-sm`। অর্থাৎ এই দুইটা যোগ করায় কোনো রূপের
+       একটা পিক্সেলও নড়ে না; কেবল যে রূপ চায়, সে নিজের মান বসাতে
+       পারে।
+
+       ⓘ টুলবারের খোঁজার ঘরও `--spacing-field-compact` ব্যবহার করে,
+       তাই ওটা সরাসরি বদলানো যেত না — মেনু ছোট করতে গিয়ে খোঁজার ঘরও
+       ছোট হয়ে যেত। */
+    --rail-item-h: var(--spacing-field-compact);
+    --rail-item-font: var(--text-sm);
+
+    /* রেলের টাইল — মডিউলের রঙিন চৌকো।
+
+       ⚠️ ডিফল্ট মানগুলো আজকের আচরণ হুবহু: মডিউলের নিজের রং, ১১px
+       কোণ, সাদা আইকন। ⓘ যে রূপ টাইল চায় না (নমুনার ABOS), সে
+       `transparent` বসিয়ে দিলে কেবল আইকনটাই থাকে — ঠিক যেমন
+       `.rail a{color:#9FC4CC}`। */
+    --rail-tile-bg: var(--color-module-current, var(--color-brand-600));
+    --rail-tile-radius: 11px;
+    --rail-tile-ink: #ffffff;
+
+    /* চালু মেনু আইটেম — ডিফল্টে ভরাট পিল (আজকের আচরণ)।
+
+       ⓘ নমুনার ABOS হালকা ওয়াশ চায়: `background:var(--brand-wash);
+       color:var(--brand)` — ভরাট নয়, ছোপ। ⚠️ তাই দুইটা টোকেন, আর
+       ডিফল্ট মানে কারও কিছু বদলায় না। */
+    --rail-item-on-bg: var(--color-brand-500);
+    --rail-item-on-ink: var(--color-ink-inverse);
+
     --topnav-caret: none;
 
     /* কমান্ড বারের বোতামে গ্রেডিয়েন্ট (নেটস্যুট) — ডিফল্টে সমতল */
