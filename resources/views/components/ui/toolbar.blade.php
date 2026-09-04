@@ -36,6 +36,25 @@
     'title' => null,
     'subtitle' => null,
     'count' => null,
+
+    /**
+     * এই পর্দার ছাঁকনির ঘরগুলোর মানুষের-ভাষার নাম — ['warehouse_id' => 'গুদাম', …]।
+     *
+     * ── কেন লাগল ────────────────────────────────────────────────────
+     * সক্রিয় ছাঁকনির চিপে এতদিন উঠত query-র **কাঁচা মান**, আর এই রিপোর
+     * সবচেয়ে সাধারণ ছাঁকনি একটা চেকবক্স — তাই চিপে লেখা থাকত "1"।
+     * একটা চিপ যেটা বলে "1" তথ্য নয়, ধাঁধা।
+     *
+     * ⓘ ছয়টা সাধারণ নাম (cancelled · inactive · from · to · user · only)
+     * টুলবার নিজেই চেনে ([[core.toolbar.filter_names]]) — পঞ্চাশটা ঘরের
+     * সাঁইত্রিশটা ওতেই ঢাকা পড়ে। এই ঘরটা কেবল বাকিগুলোর জন্য।
+     *
+     * ⚠️ না দিলে আজকের আচরণ অটুট: নাম অজানা থাকলে চিপে মানটাই ওঠে।
+     * ⛔ অজানা নাম থেকে একটা লেবেল **বানানো হয় না** — `warehouse_id`-কে
+     * "Warehouse id" লিখলে বাংলা পর্দায় ইংরেজি শব্দ বসত, আর সেটা
+     * মালিকের ভাষার নিয়ম ভাঙত। অনুবাদ অনুমান করা যায় না।
+     */
+    'filterLabels' => [],
 ])
 
 {{--
@@ -102,7 +121,47 @@
         \App\Core\Support\LookPreview::orChosen(auth()->user()?->ui)
     );
 
-    $filtersAlwaysOpen = \App\Core\Support\Ui::filters($shellLook) === 'bar';
+    $filterMode = \App\Core\Support\Ui::filters($shellLook);
+
+    $filtersAlwaysOpen = $filterMode === 'bar';
+
+    /*
+     * চিপে কী লেখা উঠবে।
+     *
+     * ── তিনটা আলাদা ঘটনা, তিন রকম লেখা ──────────────────────────────
+     *   চেকবক্স (`cancelled=1`)   → শুধু নাম          "বাতিলসহ"
+     *   বাছাই/তারিখ               → নাম **ও** মান     "থেকে: ০১/০৯/২০২৬"
+     *   নাম অজানা                 → শুধু মান          (আজকের আচরণ)
+     *
+     * ⚠️ দ্বিতীয়টায় মানটা বাদ দেওয়া যায় না। "অবস্থা" লিখলে ব্যবহারকারী
+     * জানেন একটা অবস্থার ছাঁকনি চালু, কিন্তু **কোনটা** তা জানেন না — একটা
+     * ধাঁধার বদলে আরেকটা ধাঁধা।
+     *
+     * ⚠️ তারিখটা কোম্পানির নিজের ছকে যায় ([[DateFormat::format]]), কারণ
+     * `2026-09-01` কাঁচা মানটা কেউ পড়ে না — ওই সহায়কটাই ১১০ জায়গায়
+     * ব্যবহৃত, আর এটা ১১১তম।
+     */
+    $chipText = function (string $key, $value) use ($filterLabels): string {
+        $value = is_array($value) ? implode(', ', $value) : (string) $value;
+
+        $names = (array) __('core.toolbar.filter_names');
+        $name = $filterLabels[$key] ?? ($names[$key] ?? null);
+
+        if ($name === null) {
+            return $value;
+        }
+
+        // চালু চেকবক্স — মানটা ("1") দেখানোর কিছু নেই
+        if ($value === '1') {
+            return $name;
+        }
+
+        if (preg_match('/^\d{4}-\d{2}-\d{2}/', $value) === 1) {
+            $value = \App\Core\Support\DateFormat::format($value);
+        }
+
+        return $name.': '.$value;
+    };
 
     /*
      * সংরক্ষিত দৃশ্যের নিয়ন্ত্রণটা কোথায় বসে।
@@ -237,7 +296,19 @@
                               text-(--color-ink-body) transition-colors
                               hover:bg-(--color-surface-hover)"
                        title="{{ __('core.toolbar.remove_filter') }}">
-                        <span class="truncate">{{ is_array($value) ? implode(', ', $value) : $value }}</span>
+                        {{--
+                            ⚠️ এই লাইনটা **দশটা সাজেই** বদলেছে (৪ সেপ্টেম্বর ২০২৬),
+                            আর সেটা ইচ্ছাকৃত।
+
+                            "ন'টা সাজ ছোঁয়া যাবে না" নিয়মটা **চেহারার** কথা বলে,
+                            বাগের নয়। কেউ Odoo-র রূপ বেছে নিলে তাঁর চিপে "1" ওঠা
+                            Odoo-র চেহারা নয় — ওটা আমাদের বাগ, তাঁর রূপের গায়ে।
+
+                            ⓘ চিপগুলো এই ফাইলে সব রূপেই আছে, আর তার কারণও উপরে
+                            লেখা: "চেহারাটা রূপ ধরে বদলায়, থাকা-না-থাকা নয়।"
+                            লেখাটা পড়া না গেলে থাকা-না-থাকার প্রশ্নই ওঠে না।
+                        --}}
+                        <span class="truncate">{{ $chipText($key, $value) }}</span>
                         <svg viewBox="0 0 24 24" class="size-3 shrink-0 fill-current opacity-60"
                              aria-hidden="true">
                             <path d="m12 10.6 5.3-5.3 1.4 1.4-5.3 5.3 5.3 5.3-1.4 1.4-5.3-5.3-5.3 5.3-1.4-1.4 5.3-5.3-5.3-5.3 1.4-1.4z"/>
@@ -256,13 +327,44 @@
                     @click="filtersOpen = ! filtersOpen"
                     :aria-expanded="filtersOpen ? 'true' : 'false'"
                     aria-controls="toolbar-filters"
-                    class="flex min-h-(--spacing-touch) items-center gap-1.5 rounded-(--radius-field)
-                           border border-(--color-border) px-3 text-sm transition-colors
-                           hover:bg-(--color-surface-hover)">
-                <svg viewBox="0 0 24 24" aria-hidden="true" class="size-4 shrink-0 fill-current">
-                    <path d="M3 5h18v2l-7 7v5l-4 2v-7L3 7V5Z"/>
-                </svg>
-                {{ __('core.toolbar.filter') }}
+
+                    {{-- গার্ডের চিহ্ন — ক্লাসের নাম নয়, ঘোষণার চাবি ধরে।
+
+                         ⓘ [[TheOtherNineLooksStillDrawTheSame]] এটা খুঁজে দেখে
+                         chips মোডের গড়নটা সত্যিই বসেছে কিনা। ⚠️ ক্লাসের নাম
+                         ধরলে একদিন একটা Tailwind ক্লাস বদলাত আর পাহারাটা
+                         নীরবে অন্ধ হয়ে যেত। --}}
+                    @if ($filterMode === 'chips') data-look-chip @endif
+
+                    @class([
+                        'flex items-center gap-1.5 transition-colors hover:bg-(--color-surface-hover)',
+
+                        /*
+                         * chips মোড — বোতামটা চিপের চেহারা নেয়।
+                         *
+                         * ⓘ কাজটা এক (ছাঁকনির প্যানেল খোলা), কেবল চেহারা
+                         * আলাদা: সক্রিয় ছাঁকনিগুলো যেখানে গোল পিল হয়ে
+                         * বসে, সেখানে একটা চৌকো বোতাম বেমানান — চোখ
+                         * ওটাকে অন্য জাতের জিনিস পড়ে।
+                         *
+                         * ⚠️ মোডটা কম্পোনেন্ট নিজে জিজ্ঞেস করে
+                         * (`Ui::filters()`), পর্দা বলে দেয় না — নাহলে
+                         * ছত্রিশটা পর্দাকে সাজের নাম জানতে হত।
+                         */
+                        'rounded-(--radius-pill) border border-dashed border-(--color-border)
+                         px-2.5 py-0.5 text-2xs font-medium text-(--color-ink-muted)'
+                            => $filterMode === 'chips',
+
+                        'min-h-(--spacing-touch) rounded-(--radius-field)
+                         border border-(--color-border) px-3 text-sm'
+                            => $filterMode !== 'chips',
+                    ])>
+                @if ($filterMode !== 'chips')
+                    <svg viewBox="0 0 24 24" aria-hidden="true" class="size-4 shrink-0 fill-current">
+                        <path d="M3 5h18v2l-7 7v5l-4 2v-7L3 7V5Z"/>
+                    </svg>
+                @endif
+                {{ $filterMode === 'chips' ? __('core.toolbar.add_filter') : __('core.toolbar.filter') }}
             </button>
         @endif
 
