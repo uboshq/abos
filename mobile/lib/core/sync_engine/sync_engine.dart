@@ -38,6 +38,23 @@ class SyncEngine {
   static const String _queueBoxName = 'abos_sync_queue';
   static const String _statusRejected = 'REJECTED';
 
+  /// A rejected row a person has since replaced with a corrected retry (see
+  /// [markResolved]) — kept, not deleted, so a manager can still ask "how
+  /// many times did this shop's order get refused today". Deleting it the
+  /// moment it is dealt with would erase exactly the pattern (the same shop
+  /// rejected repeatedly) that signals a pricing or stock problem worth
+  /// noticing, rather than one unlucky order.
+  static const String _statusResolved = 'RESOLVED';
+
+  /// How long a resolved row is kept before [init] purges it — long enough
+  /// for a same-day or same-week manager check, short enough that this
+  /// device's storage does not grow forever from a queue whose whole design
+  /// elsewhere is "never silently drop a row". Unlike a REJECTED or pending
+  /// row, a RESOLVED one has already done its job (a person saw it and
+  /// acted), so aging it out is not the same risk as aging out a change
+  /// nobody has answered yet.
+  static const Duration _resolvedRetention = Duration(days: 30);
+
   Box<Map>? _queue;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
 
@@ -97,6 +114,28 @@ class SyncEngine {
             'ABOS sync: connectivity listener failed to start ($error) — auto-flush on reconnect stays off this run');
       }
     }
+
+    await _purgeOldResolved();
+  }
+
+  /// Drops resolved rows past [_resolvedRetention] — see that field's own
+  /// doc comment. Run once per [init] (once per app launch) rather than on
+  /// a timer: a rarely-opened phone purging a little late costs nothing, and
+  /// this file already has no background timer of its own to hang one off.
+  Future<void> _purgeOldResolved() async {
+    final box = _queue;
+    if (box == null) return;
+    final cutoff = DateTime.now().subtract(_resolvedRetention);
+    final toDelete = <dynamic>[];
+    for (final key in box.keys) {
+      final row = box.get(key);
+      if (row == null || row['status'] != _statusResolved) continue;
+      final resolvedAt = DateTime.tryParse(row['resolvedAt'] as String? ?? '');
+      if (resolvedAt == null || resolvedAt.isBefore(cutoff)) {
+        toDelete.add(key);
+      }
+    }
+    if (toDelete.isNotEmpty) await box.deleteAll(toDelete);
   }
 
   Future<void> dispose() async {
@@ -113,10 +152,14 @@ class SyncEngine {
   }
 
   /// Changes still waiting to reach the server — for the "N pending" badge.
-  /// Excludes rejected rows: those are done trying and are waiting on a
-  /// person, not on a connection.
-  int get pendingCount =>
-      _queue?.values.where((row) => row['status'] != _statusRejected).length ??
+  /// Excludes rejected and resolved rows alike: neither is waiting on a
+  /// connection any more, one on a person still and the other already dealt
+  /// with.
+  int get pendingCount => _queue?.values
+          .where((row) =>
+              row['status'] != _statusRejected &&
+              row['status'] != _statusResolved)
+          .length ??
       0;
 
   /// What the server would not accept, kept on the phone rather than deleted
@@ -138,6 +181,14 @@ class SyncEngine {
               key: key,
               entityType: row['entityType'] as String? ?? '',
               reason: row['reason'] as String? ?? 'অজানা কারণ',
+              // Opaque here too, same as the queue row itself — this file
+              // still does not decode a customer or an item out of it (see
+              // the class doc comment); a screen that knows what a
+              // SalesOrder payload looks like decodes it into "রহিম
+              // স্টোরের অর্ডার", this file never does.
+              payloadJson: row['payloadJson'] as String? ?? '{}',
+              enqueuedAt: DateTime.tryParse(row['enqueuedAt'] as String? ?? '') ??
+                  DateTime.now(),
             );
           })
           .whereType<RejectedChange>()
@@ -145,11 +196,54 @@ class SyncEngine {
 
   int get rejectedCount => rejectedItems.length;
 
-  /// A rep has seen the reason and dealt with it (re-entered it by hand, told
-  /// the shop) — clears the row so it does not sit in [rejectedItems] forever.
+  /// A rep has seen the reason and dealt with it **without** a replacement
+  /// this file knows about (told the shop no, handled it on paper) — clears
+  /// the row outright so it does not sit in [rejectedItems] forever.
+  ///
+  /// For the more common case — a corrected retry was actually queued — see
+  /// [markResolved] instead, which keeps the row rather than erasing it.
   Future<void> dismissRejected(dynamic key) async {
     await _queue?.delete(key);
   }
+
+  /// A rejected change has been replaced by a corrected retry — kept, not
+  /// deleted, unlike [dismissRejected]. See [_statusResolved]'s own doc
+  /// comment for why: the same shop's order failing repeatedly is a signal
+  /// (a stale price list, a credit-limit rule out of date) worth a manager
+  /// being able to count later, and deleting the row the moment someone acts
+  /// on it would erase that pattern along with the one row.
+  Future<void> markResolved(dynamic key) async {
+    final row = _queue?.get(key);
+    if (row == null) return;
+    await _queue!.put(key, <String, dynamic>{
+      ...row.cast<String, dynamic>(),
+      'status': _statusResolved,
+      'resolvedAt': DateTime.now().toIso8601String(),
+    });
+  }
+
+  /// Resolved rows not yet purged by [_purgeOldResolved] — for a future
+  /// "how many orders came back today" view. Reuses [RejectedChange]'s shape
+  /// since the fields that matter (which entity, the original reason, when
+  /// it was queued) are identical; [RejectedChange.reason] here is still the
+  /// *original* rejection reason, kept for exactly that later counting.
+  List<RejectedChange> get resolvedItems => (_queue?.keys ?? const Iterable.empty())
+      .map((key) {
+        final row = _queue!.get(key);
+        if (row == null || row['status'] != _statusResolved) return null;
+        return RejectedChange(
+          key: key,
+          entityType: row['entityType'] as String? ?? '',
+          reason: row['reason'] as String? ?? 'অজানা কারণ',
+          payloadJson: row['payloadJson'] as String? ?? '{}',
+          enqueuedAt:
+              DateTime.tryParse(row['enqueuedAt'] as String? ?? '') ?? DateTime.now(),
+        );
+      })
+      .whereType<RejectedChange>()
+      .toList();
+
+  int get resolvedCount => resolvedItems.length;
 
   /// Queue one offline create/update, then try to push immediately.
   ///
@@ -180,6 +274,11 @@ class SyncEngine {
       'payloadJson': jsonEncode(payload),
       'clientVersion': clientVersion,
       'attempts': 0,
+      // Local device time, for "কবে" on a rejected row — never sent to the
+      // server (the push body above is built fresh from the row's own
+      // fields in flush(), not from this map), so a clock a few minutes off
+      // costs nothing but a slightly-off display timestamp.
+      'enqueuedAt': DateTime.now().toIso8601String(),
     });
 
     await flush(module);
@@ -355,6 +454,8 @@ class RejectedChange {
     required this.key,
     required this.entityType,
     required this.reason,
+    required this.payloadJson,
+    required this.enqueuedAt,
   });
 
   /// The Hive key — opaque to callers, needed only to pass back to
@@ -362,4 +463,17 @@ class RejectedChange {
   final dynamic key;
   final String entityType;
   final String reason;
+
+  /// The change's own payload, exactly as it was queued — this is the
+  /// phone's own earlier write, not new data being exposed. Still opaque
+  /// here (a string, undecoded) for the same reason the queue row itself is:
+  /// this file does not know what a `SalesOrder` or a `Collection` looks
+  /// like. A screen that does — the "যা যায়নি" screen — decodes it to name
+  /// the customer and the items, rather than showing the raw JSON to a
+  /// person it means nothing to.
+  final String payloadJson;
+
+  /// When this device queued the change — device-local time (see
+  /// [SyncEngine.enqueue]'s own comment on why that is fine here).
+  final DateTime enqueuedAt;
 }

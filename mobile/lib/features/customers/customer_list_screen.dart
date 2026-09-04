@@ -62,35 +62,45 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
           ),
           if (_refreshing) const LinearProgressIndicator(),
           Expanded(
-            child: all.isEmpty && !_refreshing
-                ? const EmptyState(
-                    icon: Icons.people_outline,
-                    title: 'এখনো কোনো গ্রাহক সিঙ্ক হয়নি',
-                    message: 'নিচে টেনে আবার চেষ্টা করুন।',
-                  )
-                : RefreshIndicator(
-                    onRefresh: _refresh,
-                    child: filtered.isEmpty
-                        ? ListView(
-                            children: const [
-                              EmptyState(
-                                icon: Icons.search_off,
-                                title: 'কোনো মিল পাওয়া যায়নি',
-                              ),
-                            ],
-                          )
-                        : ListView.separated(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.md),
-                            itemCount: filtered.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: AppSpacing.xs),
-                            itemBuilder: (context, index) {
-                              final customer = filtered[index];
-                              return _CustomerTile(customer: customer);
-                            },
-                          ),
-                  ),
+            // Always a RefreshIndicator, never a bare EmptyState — a
+            // RefreshIndicator needs a scrollable descendant to recognise the
+            // pull gesture at all. Confirmed on a real device: the earlier
+            // version showed "নিচে টেনে আবার চেষ্টা করুন" on first launch (an
+            // empty cache) with no RefreshIndicator wrapping it, so the one
+            // instruction on screen did nothing when followed.
+            child: RefreshIndicator(
+              onRefresh: _refresh,
+              child: all.isEmpty
+                  ? ListView(
+                      children: const [
+                        EmptyState(
+                          icon: Icons.people_outline,
+                          title: 'এখনো কোনো গ্রাহক সিঙ্ক হয়নি',
+                          message: 'নিচে টেনে আবার চেষ্টা করুন।',
+                        ),
+                      ],
+                    )
+                  : filtered.isEmpty
+                      ? ListView(
+                          children: const [
+                            EmptyState(
+                              icon: Icons.search_off,
+                              title: 'কোনো মিল পাওয়া যায়নি',
+                            ),
+                          ],
+                        )
+                      : ListView.separated(
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                          itemCount: filtered.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: AppSpacing.xs),
+                          itemBuilder: (context, index) {
+                            final customer = filtered[index];
+                            return _CustomerTile(customer: customer);
+                          },
+                        ),
+            ),
           ),
         ],
       ),

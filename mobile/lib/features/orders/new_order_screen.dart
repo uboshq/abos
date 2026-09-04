@@ -5,6 +5,7 @@ import '../../core/sync_engine/sync_engine.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
+import 'order_prefill.dart';
 
 /// Takes an order with no signal required — see docs/Contract, §০ (owner's
 /// decision ১): this writes only a `SalesOrder` CREATE to the offline queue.
@@ -20,7 +21,12 @@ import '../../core/widgets/empty_state.dart';
 /// shape an order can take; if the real handler wants different keys, only
 /// [_submit]'s payload map changes, not the screen around it.
 class NewOrderScreen extends StatefulWidget {
-  const NewOrderScreen({super.key});
+  const NewOrderScreen({super.key, this.prefill});
+
+  /// Set when this screen was opened from "নতুন করে লিখুন" on a rejected
+  /// order — see [OrderPrefill]'s own doc comment for why this starts the
+  /// form rather than resubmitting anything automatically.
+  final OrderPrefill? prefill;
 
   @override
   State<NewOrderScreen> createState() => _NewOrderScreenState();
@@ -44,6 +50,24 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
   final Map<String, _CartLine> _cart = {};
   final _noteController = TextEditingController();
   bool _submitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final prefill = widget.prefill;
+    if (prefill == null) return;
+    // Best-effort: a product or the customer itself may since have dropped
+    // out of the local cache (a catalogue re-sync, a customer deactivated) —
+    // silently skipping a line that no longer resolves is preferable to a
+    // crash on a screen whose whole point is recovering from an earlier
+    // failure.
+    _customer = ReferenceCache.instance.get('Customer', prefill.customerId);
+    for (final (productId, quantity) in prefill.items) {
+      final product = ReferenceCache.instance.get('Product', productId);
+      if (product == null) continue;
+      _cart[productId] = _CartLine(product: product)..quantity = quantity;
+    }
+  }
 
   @override
   void dispose() {
@@ -112,6 +136,19 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
             'note': _noteController.text.trim(),
         },
       );
+      // Only now — the new order is genuinely queued. See OrderPrefill's own
+      // doc comment: someone who opened this screen from a rejected row and
+      // then backed out without submitting must still see that original
+      // rejection, unresolved.
+      //
+      // markResolved, not dismissRejected: this row is not merely dealt
+      // with, it is replaced by the retry just queued above — see
+      // SyncEngine.markResolved's own doc comment for why that distinction
+      // is kept rather than deleting the row outright.
+      final supersedes = widget.prefill?.supersedesRejectedKey;
+      if (supersedes != null) {
+        await SyncEngine.instance.markResolved(supersedes);
+      }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text(
