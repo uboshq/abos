@@ -3,7 +3,7 @@
 
     প্রত্যাখ্যাত হলে কারণটা এখানেই দেখা যায় — আর ওটাই ফোনটা এড়ায়।
 --}}
-<x-sales::portal.layout :dealer="$dealer">
+<x-sales::portal.layout :customer="$customer">
     <div data-boxed class="rounded-(--radius-card) border border-(--color-border)
                 bg-(--color-surface-card) p-4">
         <div class="mb-3 flex items-center justify-between gap-3">

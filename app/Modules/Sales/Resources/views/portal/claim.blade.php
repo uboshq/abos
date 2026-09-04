@@ -2,10 +2,10 @@
     জমার কথা জানানোর ফর্ম।
 
     উপরে একটা বাক্য যা সবচেয়ে জরুরি: এতে বকেয়া নিজে থেকে কমে না।
-    ওটা না বললে ডিলার পাঠিয়ে দিয়ে ধরে নিতেন কাজ শেষ, আর পরের বিলে
+    ওটা না বললে গ্রাহক পাঠিয়ে দিয়ে ধরে নিতেন কাজ শেষ, আর পরের বিলে
     বকেয়া দেখে তর্ক শুরু হত।
 --}}
-<x-sales::portal.layout :dealer="$dealer">
+<x-sales::portal.layout :customer="$customer">
     <h1 class="mb-1 text-lg font-semibold">{{ __('sales::portal.claim_title') }}</h1>
     <p class="mb-4 text-sm text-(--color-ink-muted)">{{ __('sales::portal.claim_hint') }}</p>
 

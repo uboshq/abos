@@ -154,9 +154,9 @@ class TheNewListsSurviveTheirFirstRowTest extends TestCase
 
     public function test_the_deposit_claim_list_survives_its_first_row(): void
     {
-        $dealer = Customer::query()->firstOrFail();
+        $customer = Customer::query()->firstOrFail();
 
-        app(DepositClaimService::class)->raise($dealer, [
+        app(DepositClaimService::class)->raise($customer, [
             'claimed_on' => '2026-08-10',
             'amount' => '50000',
             'method' => DepositClaim::BANK,

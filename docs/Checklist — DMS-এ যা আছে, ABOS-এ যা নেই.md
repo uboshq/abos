@@ -338,7 +338,7 @@ DMS-এ এর সঠিক রূপ দুই স্তরে:
 | ৭ | হাতধার · FD/DPS · ঋণের বিপরীতে FD | ✅ উপরে |
 | ৮ | স্থায়ী সম্পদ ও অবচয় | ✅ `FixedAssetService` · `TheVanWoreOutAndTheBooksNeverNoticedTest` |
 | ৯ | কে কোন সারি দেখবেন (RLS) | ✅ `ScopedToUserWarehouse` · `TheWallHadNoDoorTest` |
-| ১০ | গ্রাহক পোর্টাল ও জমার দাবি | ✅ `CustomerPortalService` · `NobodyCouldOpenTheDealersDoorTest` |
+| ১০ | গ্রাহক পোর্টাল ও জমার দাবি | ✅ `CustomerPortalService` · `NobodyCouldOpenTheCustomersDoorTest` |
 
 > **কেন এই ভাগটা আবার লেখা হলো (২৫ আগস্ট ২০২৬):** উপরের সারিগুলোয় লেখা
 > ছিল *"❌ কিছুই নয়"* আর *"সার্ভিস ও পরীক্ষা বাকি"*, অথচ তিনটাই সার্ভিস

@@ -18,12 +18,12 @@ use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 /**
- * ডিলার কী পড়তে পারবেন, আর অর্ডারটা কী মনে রাখে।
+ * গ্রাহক কী পড়তে পারবেন, আর অর্ডারটা কী মনে রাখে।
  *
  * ── কেন এই তিনটা কলাম একসাথে ─────────────────────────────────────────
  * তিনটাই একটা নীতির ফল — মালিকের কথা, ৩ সেপ্টেম্বর ২০২৬:
  *
- *   > "ডিলার শুধু তার হিসাব দেখবে।"
+ *   > "গ্রাহক শুধু তার হিসাব দেখবে।"
  *
  * অর্থাৎ পোর্টালের প্রতিটা পর্দার একটাই প্রশ্ন: **এই জিনিসটা কি তাঁর
  * নিজের?** মজুদ আমাদের, ক্রয়মূল্য আমাদের, প্রত্যাখ্যানের ভিতরের কারণ
@@ -37,7 +37,7 @@ use Tests\TestCase;
  *
  * তাই এখানে কলাম **আছে কি না** দেখা হয় না; দেখা হয় **কী আচরণ করে**।
  */
-class WhatTheDealerMayReadAndWhatTheOrderRemembersTest extends TestCase
+class WhatTheCustomerMayReadAndWhatTheOrderRemembersTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -87,11 +87,11 @@ class WhatTheDealerMayReadAndWhatTheOrderRemembersTest extends TestCase
      * ⭐ নতুন কারণ চুপচাপ লুকানো — আর এটাই সবচেয়ে জরুরি assertion।
      *
      * ডিফল্ট `true` হলে **মাইগ্রেশন চালানোর মুহূর্তে** আজকের প্রতিটা
-     * কারণ ডিলারের পর্দায় চলে আসত, কারো কিছু না করেই। তার মধ্যে
+     * কারণ গ্রাহকের পর্দায় চলে আসত, কারো কিছু না করেই। তার মধ্যে
      * একটাও যদি "মজুদ নেই" ধরনের হয়, সেটাই ফাঁস — আর মালিকের সাফ
-     * সিদ্ধান্ত হলো ডিলার মজুদ দেখবেন না।
+     * সিদ্ধান্ত হলো গ্রাহক মজুদ দেখবেন না।
      */
-    public function test_a_new_reason_is_hidden_from_the_dealer_until_somebody_says_otherwise(): void
+    public function test_a_new_reason_is_hidden_from_the_customer_until_somebody_says_otherwise(): void
     {
         $reason = ReasonCode::query()->create([
             'company_id' => $this->company->id,
@@ -100,7 +100,7 @@ class WhatTheDealerMayReadAndWhatTheOrderRemembersTest extends TestCase
             'context' => 'cancellation',
         ]);
 
-        $this->assertFalse($reason->fresh()->visible_to_dealer);
+        $this->assertFalse($reason->fresh()->visible_to_customer);
     }
 
     /**
@@ -119,8 +119,8 @@ class WhatTheDealerMayReadAndWhatTheOrderRemembersTest extends TestCase
 
         $this->assertSame(
             0,
-            ReasonCode::query()->where('visible_to_dealer', true)->count(),
-            'কোনো পুরনো কারণ ডিলারের জন্য খোলা হয়ে গেছে — মাইগ্রেশনেই ফাঁস।',
+            ReasonCode::query()->where('visible_to_customer', true)->count(),
+            'কোনো পুরনো কারণ গ্রাহকের জন্য খোলা হয়ে গেছে — মাইগ্রেশনেই ফাঁস।',
         );
     }
 
@@ -132,7 +132,7 @@ class WhatTheDealerMayReadAndWhatTheOrderRemembersTest extends TestCase
             'code' => 'CUSTNO',
             'name_en' => 'Customer changed their mind',
             'context' => 'cancellation',
-            'visible_to_dealer' => true,
+            'visible_to_customer' => true,
         ]);
 
         $hidden = ReasonCode::query()->create([
@@ -142,8 +142,8 @@ class WhatTheDealerMayReadAndWhatTheOrderRemembersTest extends TestCase
             'context' => 'cancellation',
         ]);
 
-        $this->assertTrue($shown->fresh()->visible_to_dealer);
-        $this->assertFalse($hidden->fresh()->visible_to_dealer);
+        $this->assertTrue($shown->fresh()->visible_to_customer);
+        $this->assertFalse($hidden->fresh()->visible_to_customer);
     }
 
     /* ── অর্ডার কোথা থেকে এল ─────────────────────────────────────── */
@@ -170,42 +170,42 @@ class WhatTheDealerMayReadAndWhatTheOrderRemembersTest extends TestCase
     }
 
     /**
-     * ⭐ পোর্টালের অর্ডার নাম বলতে পারে, যদিও ডিলার `users`-এ নেই।
+     * ⭐ পোর্টালের অর্ডার নাম বলতে পারে, যদিও গ্রাহক `users`-এ নেই।
      *
      * ⚠️ এটাই এই তিনটা কলামের আসল কারণ। `created_by` foreign key
-     * `users`-এ যায়, আর ডিলার `customers`-এ — তাই পোর্টাল থেকে আসা
+     * `users`-এ যায়, আর গ্রাহক `customers`-এ — তাই পোর্টাল থেকে আসা
      * অর্ডারে ওই ঘরটা **খালি থাকা ছাড়া উপায় নেই**।
      *
      * খালি ঘরের একটা ব্যাখ্যা থাকতে হবে, নইলে ছয় মাস পরে কেউ ধরে
      * নেবেন সারিটা সিডার থেকে এসেছে। **`source` সেই ব্যাখ্যা, আর
      * `created_by_customer_id` আসল উত্তর।**
      */
-    public function test_a_portal_order_names_the_dealer_even_though_he_is_not_a_user(): void
+    public function test_a_portal_order_names_the_customer_even_though_he_is_not_a_user(): void
     {
         $order = $this->order();
-        $dealer = $order->customer_id;
+        $customer = $order->customer_id;
 
         $order->forceFill([
             'source' => 'portal',
             'created_by' => null,
-            'created_by_customer_id' => $dealer,
+            'created_by_customer_id' => $customer,
         ])->save();
 
         $fresh = $order->fresh();
 
         $this->assertSame('portal', $fresh->source);
-        $this->assertNull($fresh->created_by, 'ডিলার users-এ নেই, তাই এই ঘরটা খালি থাকার কথা।');
-        $this->assertSame($dealer, $fresh->created_by_customer_id);
+        $this->assertNull($fresh->created_by, 'গ্রাহক users-এ নেই, তাই এই ঘরটা খালি থাকার কথা।');
+        $this->assertSame($customer, $fresh->created_by_customer_id);
     }
 
     /**
-     * ⚠️ ডিলার মুছলে অর্ডারটা মুছে যায় না।
+     * ⚠️ গ্রাহক মুছলে অর্ডারটা মুছে যায় না।
      *
-     * `cascade` হলে একজন ডিলার সরানোর সাথে তাঁর প্রতিটা অর্ডার,
+     * `cascade` হলে একজন গ্রাহক সরানোর সাথে তাঁর প্রতিটা অর্ডার,
      * বিক্রির ইতিহাস আর খতিয়ানের সূত্র মুছে যেত। এই রিপোতে কেউ মোছে
      * না (নিষ্ক্রিয় হয়), কিন্তু পাহারাটা ধারণার উপর ছাড়া যায় না।
      */
-    public function test_the_link_to_the_dealer_lets_go_instead_of_dragging_the_order_away(): void
+    public function test_the_link_to_the_customer_lets_go_instead_of_dragging_the_order_away(): void
     {
         $foreign = collect(Schema::getForeignKeys('sal_orders'))
             ->first(fn (array $k) => in_array('created_by_customer_id', $k['columns'], true));

@@ -1,10 +1,10 @@
 {{--
-    ডিলারের নিজের পাতা।
+    গ্রাহকের নিজের পাতা।
 
-    সবার উপরে বকেয়া, বড় করে — কারণ ডিলার এই পাতায় আসেন ওই একটা
+    সবার উপরে বকেয়া, বড় করে — কারণ গ্রাহক এই পাতায় আসেন ওই একটা
     সংখ্যা দেখতে। বাকি সব তার ব্যাখ্যা।
 --}}
-<x-sales::portal.layout :dealer="$dealer">
+<x-sales::portal.layout :customer="$customer">
     <div data-boxed class="mb-5 rounded-(--radius-card) border border-(--color-border)
                 bg-(--color-surface-card) px-4 py-4">
         <p class="text-2xs uppercase tracking-wide text-(--color-ink-muted)">
