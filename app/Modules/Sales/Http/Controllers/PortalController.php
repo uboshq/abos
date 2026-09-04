@@ -11,7 +11,7 @@ use App\Core\Services\SettingsService;
 use App\Modules\Customer\Models\Customer;
 use App\Models\LedgerEntry;
 use App\Modules\Sales\Models\DepositClaim;
-use App\Modules\Sales\Models\SalesInvoice;
+use App\Modules\Sales\Services\DealerPapers;
 use App\Modules\Sales\Services\DepositClaimService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -36,25 +36,24 @@ use Illuminate\View\View;
  */
 class PortalController extends Controller
 {
-    public function __construct(private readonly DepositClaimService $claims) {}
+    public function __construct(
+        private readonly DepositClaimService $claims,
+        private readonly DealerPapers $papers,
+    ) {}
 
-    /** যিনি ঢুকেছেন। */
+    /**
+     * যিনি ঢুকেছেন।
+     *
+     * ⭐ উত্তরটা এখন [[DealerPapers::dealer]] থেকে, এখানে হাতে লেখা নয়।
+     *
+     * আগে একই কথা দুই জায়গায় ছিল — গার্ড থেকে ব্যবহারকারী, তারপর
+     * `CompanyContext::set()`। **দুইটা কপি মানে একদিন একটা কপি বদলাবে
+     * আর অন্যটা বদলাবে না**; সেদিন কোনো ত্রুটি আসত না, শুধু দুইটা
+     * পাতা দুই রকম আচরণ করত।
+     */
     private function dealer(): Customer
     {
-        $customer = Auth::guard('portal')->user();
-
-        abort_if($customer === null, 403);
-
-        /*
-         * কোম্পানির প্রসঙ্গটা ডিলারের নিজের সারি থেকেই আসে।
-         *
-         * কর্মীর মতো "কোম্পানি বাছাই" বলে কিছু নেই — ডিলার একটাই
-         * কোম্পানির। প্রসঙ্গ না বসালে `BelongsToCompany` ওয়েব
-         * অনুরোধে ব্যতিক্রম ছুঁড়ত।
-         */
-        CompanyContext::set($customer->company_id, $customer->branch_id);
-
-        return $customer;
+        return $this->papers->dealer();
     }
 
     public function showLogin(): View
@@ -155,11 +154,7 @@ class PortalController extends Controller
         return view('sales::portal.home', [
             'dealer' => $dealer,
             'due' => $dealer->outstanding(),
-            'invoices' => SalesInvoice::query()
-                ->withoutGlobalScope('user-branch')
-                ->where('customer_id', $dealer->id)
-                ->orderByDesc('trx_date')->orderByDesc('id')
-                ->limit(20)->get(),
+            'invoices' => $this->papers->invoices(20),
             'claims' => $this->claims->forCustomer($dealer),
         ]);
     }
@@ -184,54 +179,17 @@ class PortalController extends Controller
         [$from, $to] = $this->range($request);
 
         /*
-         * ⚠️ `withoutGlobalScope('user-branch')` — ডিলারের কোনো শাখা নেই।
+         * ⭐ কোয়েরিগুলো এখন [[DealerPapers]]-এ, এখানে নয়।
          *
-         * ছাঁকনিটা কর্মীর জন্য বানানো ("আমি যে শাখায় বসি")। ডিলারের
-         * বেলায় ওটা থাকলে তিনি **নিজের অর্ধেক কাগজ দেখতেন না**, আর
-         * ব্যালান্স মিলত না — অথচ কোথাও কোনো ত্রুটি হত না।
+         * আগে এই পাতাটা নিজে শাখার ছাঁকনি সরাত আর নিজে পার্টি মেলাত —
+         * হোম পাতাটাও তাই করত, আলাদা করে। **একই কথা দুই জায়গায় হাতে
+         * লেখা**, আর প্রতিটা নতুন পাতায় আরেকবার লিখতে হত।
          *
-         * ⓘ উল্টো দিকে ভুল করলে অনেক খারাপ: `forParty` বাদ দিলে
-         * **অন্য ডিলারের সারি** চলে আসত। তাই দুইটা শর্তই সবসময়
-         * একসাথে, আর টেস্টে দুইজন ডিলার রাখা হয়েছে।
+         * ⚠️ সেবাটার কোনো পদ্ধতি "কার" জিজ্ঞেস করে না — ডিলার আসে
+         * গার্ড থেকে। তাই এখান থেকে ভুল আইডি পাঠানোর কোনো উপায়ই নেই।
          */
-        $scope = fn () => LedgerEntry::query()
-            ->withoutGlobalScope('user-branch')
-            ->forParty('customer', (int) $dealer->id);
-
-        /*
-         * খোলার ব্যালান্স — ছাঁকনির **আগের** সব সারির নিট।
-         *
-         * ⚠️ এটা না গুনলে ব্যালান্সের কলাম শূন্য থেকে শুরু হত, আর ডিলার
-         * পড়তেন "আমার কোনো বকেয়া ছিল না" — যেটা প্রায় সবসময়ই মিথ্যা।
-         *
-         * ── কেন কাটাকাটিটা তারিখেই, `id` ধরে নয় ──────────────────────
-         * ছাঁকনির সীমা একটা **তারিখ**, আর নিচের তালিকা নেয়
-         * `trx_date >= $from`. তাই "আগের" মানে হুবহু `trx_date < $from`
-         * — একই তারিখের সারিগুলো সব একদিকে যায়, কোনোটা দুইবার বা
-         * শূন্যবার গোনা হয় না।
-         *
-         * ⓘ `id` লাগত যদি সীমাটা একটা **সারি** হত (যেমন কার্সর দিয়ে
-         * পাতা ভাগ)। আজ সেটা নয়, আর কেউ ভবিষ্যতে কার্সর বসালে এই
-         * কাটাকাটিটাও তখন `id` ধরে করতে হবে — নইলে সীমানার তারিখের
-         * সারিগুলো গোনায় গোলমাল করবে।
-         */
-        $opening = (string) ($scope()
-            ->whereDate('trx_date', '<', $from)
-            ->selectRaw('COALESCE(SUM(debit) - SUM(credit), 0) as net')
-            ->value('net') ?? '0');
-
-        /*
-         * ⚠️ ক্রম দুইটা কলাম ধরে, আর দ্বিতীয়টা বাদ দেওয়া যাবে না।
-         *
-         * একই তারিখে তিনটা সারি থাকলে ডাটাবেস যেকোনো ক্রমে দিতে পারে।
-         * তখন **প্রতিবার পাতা খুললে চলমান ব্যালান্স আলাদা দেখাত**,
-         * অথচ একটা সংখ্যাও বদলায়নি — আর ডিলার ধরে নিতেন খাতা ভুল।
-         */
-        $rows = $scope()
-            ->whereDate('trx_date', '>=', $from)
-            ->whereDate('trx_date', '<=', $to)
-            ->orderBy('trx_date')->orderBy('id')
-            ->get();
+        $opening = $this->papers->openingBefore($from);
+        $rows = $this->papers->ledgerBetween($from, $to);
 
         return view('sales::portal.ledger', [
             'dealer' => $dealer,
