@@ -59,6 +59,18 @@ return [
     'paid_now' => 'Paid now',
     'paid_from' => 'Paid from',
     'balance_due' => 'Balance due',
+
+    // The owner's totals card — three separate rows, not one
+    //
+    // The next two are not on the screen yet: the fields were pulled
+    // because nothing carries them to the ledger (see the totals card
+    // in direct/index.blade). The words stay so the work returns whole.
+    'expense' => 'Expense',
+    'rounding' => 'Rounding',
+    'invoice_due' => 'Invoice Due',
+    'previous_due' => 'Previous Due',
+    'previous_advance' => 'Previous Advance',
+    'total_due' => 'DUE',
     'total_item' => 'Total items',
     'total_qty' => 'Total qty',
 

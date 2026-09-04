@@ -287,7 +287,31 @@ class DirectPurchaseController extends Controller implements HasMiddleware
     {
         abort_if($supplier->company_id !== CompanyContext::id(), 404);
 
-        return response()->json($this->lastPaid->forSupplier((int) $supplier->id));
+        return response()->json([
+            'rates' => $this->lastPaid->forSupplier((int) $supplier->id),
+
+            /*
+             * ⭐ ── আগের বকেয়া — এই দরজা দিয়েই, নতুন কোনোটা নয় ──────────
+             *
+             * পর্দাটা সরবরাহকারী বাছলেই এটাকে ডাকে, **আর যাচাই ব্যর্থ হয়ে
+             * পাতা ফিরে এলেও** (`init()`-এ আবার ডাকা হয়)। ⓘ অর্থাৎ
+             * দুইটা প্রবেশপথই আগে থেকে ঢাকা — নতুন একটা endpoint বানালে
+             * দ্বিতীয়টা ঢাকতে ভুলে যাওয়ার সম্ভাবনা ছিল।
+             *
+             * ⚠️ **তালিকার সাথে পাঠানো হয় না, আর সেটা ইচ্ছাকৃত:** পাতা
+             * খোলার সময় প্রতিটা সরবরাহকারীর বকেয়া গুনলে দুই হাজার সারিতে
+             * দুই হাজার হিসাব হত, অথচ ব্যবহারকারী একজনকেই বাছেন।
+             *
+             * ⛔ **সংখ্যাটা "আজ পর্যন্ত", আর এই পর্দায় সেটাই "আগের
+             * বকেয়া"** — কারণ এখানে কেবল নতুন বিল হয় (`create`/`store`),
+             * আর খসড়া বিল খতিয়ানে বসেই না। ⚠️ যেদিন এই পর্দায় পুরনো বিল
+             * সম্পাদনা করা যাবে, সেদিন `payable($upto)` লাগবে — নাহলে
+             * বিলটা নিজেকে গুনত আর `DUE` দ্বিগুণ দেখাত।
+             *
+             * ⓘ ঋণাত্মক মানে অগ্রিম — পর্দা লেবেলটাই বদলে দেয়।
+             */
+            'due' => (float) $supplier->payable(),
+        ]);
     }
 
     private function warehouse(Request $request): ?Warehouse
