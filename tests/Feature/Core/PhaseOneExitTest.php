@@ -198,13 +198,40 @@ class PhaseOneExitTest extends TestCase
         $menu = app(MenuBuilder::class)->forUser($owner);
         $this->assertNotEmpty($menu);
 
+        /*
+         * ⚠️ অতিথি মডিউলের সারিগুলো উপসর্গ নিয়ে আসে — `supplier:master`।
+         *
+         * ৪ সেপ্টেম্বর ২০২৬-এ গ্রাহক বিক্রয়ের ভেতরে আর সরবরাহকারী ক্রয়ের
+         * ভেতরে বসেছে, আর আশ্রয়দাতার তালিকায় অতিথির ভাগগুলো নিজের নাম
+         * ধরে ঢোকে। আগে এখানে গোটা তালিকাটা এক ধরে মেলানো হত, তাই
+         * উপসর্গওয়ালা চাবিগুলো MENU_GROUPS-এ না থাকায় পরীক্ষাটা লাল হত —
+         * **নিয়ম ভাঙার কারণে নয়, গড়ন বদলের কারণে।**
+         *
+         * ⭐ নিয়মটা যা পাহারা দেয় তা হলো **ক্রম**, সদস্যপদ নয়। তাই এখন
+         * প্রতিটা মালিকের ভাগগুলো আলাদা করে দেখা হয় — আশ্রয়দাতার নিজেরটা,
+         * আর প্রতিটা অতিথিরটা — আর প্রত্যেকের ভেতরে ক্রমটা ধরা থাকতে হয়।
+         * ⓘ এতে পাহারা দুর্বল হয়নি, বরং অতিথিদের উপরেও বসল।
+         */
         foreach ($menu as $module) {
-            $shown = array_keys($module['groups']);
+            $byOwner = [];
 
-            $this->assertSame(
-                array_values(array_intersect(ModuleDefinition::MENU_GROUPS, $shown)),
-                $shown,
-            );
+            foreach (array_keys($module['groups']) as $key) {
+                [$owner, $group] = str_contains($key, ':')
+                    ? explode(':', $key, 2)
+                    : ['', $key];
+
+                $byOwner[$owner][] = $group;
+            }
+
+            foreach ($byOwner as $owner => $shown) {
+                $this->assertSame(
+                    array_values(array_intersect(ModuleDefinition::MENU_GROUPS, $shown)),
+                    $shown,
+                    $owner === ''
+                        ? "{$module['code']} মডিউলের নিজের ভাগগুলো ক্রম ছেড়েছে।"
+                        : "{$module['code']}-এর ভেতরে বসা {$owner}-এর ভাগগুলো ক্রম ছেড়েছে।",
+                );
+            }
         }
     }
 
