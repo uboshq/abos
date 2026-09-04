@@ -59,6 +59,24 @@ return [
         'unbalanced' => 'Debit and credit do not match',
     ],
 
+    /*
+     * Keyboard hints — shown under a list in ABOS's own look.
+     *
+     * The words are deliberately short: the row has to fit on one line,
+     * and its job is to remind, not to explain.
+     */
+    'keys' => [
+        'search' => 'Search',
+        'new' => 'New',
+        'row' => 'Row',
+        'open' => 'Open',
+    ],
+
+    'list' => [
+        // Row count in the totals bar — "124 rows"
+        'rows' => 'rows',
+    ],
+
     'menu' => [
         'dashboard' => 'Dashboard',
         'master' => 'Master',

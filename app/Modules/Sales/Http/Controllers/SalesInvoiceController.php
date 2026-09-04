@@ -10,6 +10,7 @@ use App\Core\Concerns\SortsLists;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\ProcessBand;
+use App\Modules\Sales\Models\CollectionLine;
 use App\Http\Controllers\Controller;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
@@ -107,9 +108,52 @@ class SalesInvoiceController extends Controller implements HasMiddleware
             'customer' => fn ($q) => $q->orderBy('customer_id')->orderByDesc('trx_date'),
         ]);
 
+        /*
+         * ── তালিকার যোগফল ───────────────────────────────────────────
+         *
+         * ⚠️ **পাতার নয়, গোটা ছাঁকনির।** পঞ্চাশ সারির পাতায় "মোট"
+         * দেখালে সেটা মিথ্যা হত: ব্যবহারকারী "এই মাস" ছেঁকে মোট জানতে
+         * চান, প্রথম পঞ্চাশটার মোট নয়।
+         *
+         * ⓘ `clone` লাগে কারণ `paginate()` কোয়েরিটা খেয়ে ফেলে; আর
+         * `reorder()` লাগে কারণ যোগফলে ক্রমের কোনো মানে নেই।
+         *
+         * ── ⚠️ আদায়টা এই টেবিলে নেই ─────────────────────────────────
+         * বকেয়া কোনো কলাম নয় — `মোট − আদায়`, আর আদায় আসে আদায়ের
+         * সারি থেকে। ⛔ **কেবল খাতায় বসা আদায়**: খসড়া আদায় গুনলে
+         * বিলটা শোধ দেখাত আর তাগাদার তালিকা থেকে হারিয়ে যেত (ঠিক এই
+         * ভুলটা [[SalesInvoice::collectedAmount]]-এ একবার ঘটেছে)।
+         *
+         * ⓘ তাই শর্তটা হাতে লেখা হয়নি — মডেলের নিজের সম্পর্ক ও
+         * `posted()` স্কোপই ব্যবহার করা হয়েছে। শর্ত বদলালে দুই
+         * জায়গাতেই বদলাবে।
+         *
+         * ── ⓘ বকেয়াটা যোগফলের স্তরে বিয়োগ ───────────────────────────
+         * মালিকের নকশাও ঠিক এভাবেই গোনে: `৪২,১৮,৯৫০ − ৩১,০৪,২২০ =
+         * ১১,১৪,৭৩০`। ⚠️ কোনো বিলে বেশি আদায় হলে সেটা অন্যটার বকেয়া
+         * কমিয়ে দেবে — বিরল, আর সারি-ধরে গোনার দাম (প্রতি সারিতে
+         * একটা কোয়েরি) এর চেয়ে অনেক বেশি।
+         *
+         * ⓘ খরচ দুইটা হালকা কোয়েরি, ঠিক `processBand`-এর মতোই।
+         */
+        $totalled = (clone $query)->reorder();
+
+        $money = (clone $totalled)->sum('total');
+
+        $collected = CollectionLine::query()
+            ->whereHas('collection', fn ($q) => $q->posted())
+            ->whereIn('sales_invoice_id', (clone $totalled)->select('sal_invoices.id'))
+            ->sum('amount');
+
         return view('sales::invoice.index', [
             'menu' => $this->menu->forUser($request->user()),
             'invoices' => $query->paginate(50)->withQueryString(),
+            'totals' => [
+                'rows' => (clone $totalled)->count(),
+                'money' => $money,
+                'collected' => $collected,
+                'due' => max(bcsub((string) $money, (string) $collected, 4), '0'),
+            ],
             'q' => $request->query('q'),
             'dates' => $dates,
             'sort' => $sort,

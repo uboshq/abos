@@ -6,7 +6,8 @@ namespace Tests\Feature\Design;
 
 use App\Core\Support\Ui;
 use App\Models\User;
-use Illuminate\Support\Facades\Blade;
+use Database\Seeders\DemoSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
@@ -49,6 +50,14 @@ use Tests\TestCase;
  */
 final class TheOtherNineLooksStillDrawTheSameTest extends TestCase
 {
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(DemoSeeder::class);
+    }
+
     /**
      * নতুন গড়নগুলোর চিহ্ন।
      *
@@ -130,43 +139,37 @@ final class TheOtherNineLooksStillDrawTheSameTest extends TestCase
     }
 
     /**
-     * এই রূপে বসা একজনের চোখে একটা তালিকা।
+     * এই রূপে বসা একজনের চোখে একটা **আসল তালিকার পাতা**।
      *
-     * ⚠️ রূপটা ব্যবহারকারীর ঘরে বসে (`users.ui`), আর কম্পোনেন্টগুলো
-     * `auth()->user()` ধরেই জিজ্ঞেস করে — ছদ্মবেশ ছাড়া রেন্ডার করলে
-     * সবসময় ডিফল্ট রূপটাই আঁকা হত, আর পাহারাটা কিছুই মাপত না।
+     * ── ⛔ কেন `Blade::render` নয় ────────────────────────────────────
+     * প্রথমে কেবল দুইটা কম্পোনেন্ট রেন্ডার করা হত (`x-ui.toolbar` +
+     * `x-ui.table`)। ⚠️ চিপের চিহ্নটা ওতে ধরা পড়ত, কিন্তু **ফুটার আর
+     * কীবোর্ডের চিহ্ন কোনোদিন নয়** — ওগুলো কম্পোনেন্টে নেই, **খোলসে**
+     * (`shell/chrome/navy.blade.php`)।
      *
-     * ⓘ ঘরটা হাতে বসানো হয়, `new User([...])` দিয়ে নয়: `User`-এ
-     * `$fillable` নেই, আর পরীক্ষায় নীরবে-ফেলে-দেওয়া বন্ধ
-     * ([[AppServiceProvider]]) — তাই গণ-বরাদ্দ ব্যতিক্রম ছুড়ত।
+     * ⛔ ফল: চারটার দুইটা চিরকাল "ঘুমন্ত" দেখাত, আর ওই দুইটার জন্য
+     * পাহারাটা কিছুই মাপত না — অথচ অ্যাপে ওগুলো দিব্যি আঁকা হচ্ছে।
+     * ⓘ ধরা পড়েছে ব্রাউজারে বসানোর পর: পর্দায় দেখা যায়, গার্ড বলে নেই।
+     *
+     * ⭐ তাই এখন আসল অনুরোধ — লেআউট, খোলস, কম্পোনেন্ট, সব একসাথে।
+     * ⚠️ দাম: ডাটাবেস লাগে। ⓘ কিন্তু যে পাহারা অর্ধেক জিনিস দেখতেই
+     * পায় না, তার সস্তা হওয়ার কোনো মূল্য নেই।
      */
     private function listAs(string $look): string
     {
-        $user = new User;
-        $user->ui = $look;
-
-        $this->actingAs($user);
+        $owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
 
         /*
-         * ⚠️ টুলবারে **ছাঁকনির স্লট** দিতেই হবে।
-         *
-         * ⛔ প্রথমে স্লট ছাড়া ডাকা হয়েছিল, আর তখন `$hasFilters` মিথ্যা
-         * হত (`toolbar.blade.php:102`) — গোটা ছাঁকনির অংশটাই আঁকা হত
-         * না। ফলে চিপের চিহ্নটা **navy-তেও** আসত না, আর পাহারাটা
-         * চিরকাল "ঘুমন্ত" বলে স্কিপ করত: সবুজ, জীবিত, অন্ধ।
-         *
-         * ⓘ ধরা পড়েছে ইচ্ছে করে ফাঁস তৈরি করে — শর্তটা তুলে দিয়েও
-         * পাহারা লাল হয়নি, আর সেটাই বলে দিয়েছে হারনেসটাই ভুল।
+         * ⓘ ঘরটা হাতে বসানো হয়, `update([...])` দিয়ে নয়: `User`-এ
+         * `$fillable` নেই, আর পরীক্ষায় নীরবে-ফেলে-দেওয়া বন্ধ
+         * ([[AppServiceProvider]]) — তাই গণ-বরাদ্দ ব্যতিক্রম ছুড়ত।
          */
-        return Blade::render(
-            '<x-ui.toolbar :columns="$columns">'
-            .'<label><input type="checkbox" name="due"> Due</label>'
-            .'</x-ui.toolbar>'
-            .'<x-ui.table :rows="$rows" :columns="$columns" />',
-            [
-                'rows' => [(object) ['name' => 'SENTINEL']],
-                'columns' => [['key' => 'name', 'label' => 'Name']],
-            ],
-        );
+        $owner->ui = $look;
+        $owner->save();
+
+        return $this->actingAs($owner->fresh())
+            ->get(route('sales.invoice.index'))
+            ->assertOk()
+            ->getContent();
     }
 }
