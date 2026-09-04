@@ -461,11 +461,23 @@
                            @if ($isActive) aria-current="true" @endif
                            title="{{ $module['label'] }}">
 
+                            {{-- টাইলের রং, কোণ ও আইকনের রং — তিনটাই টোকেনে।
+
+                                 ⚠️ আগে তিনটাই এখানে হাতে লেখা ছিল (`rounded-[11px]`,
+                                 `text-white`, মডিউলের রং)। ⓘ ফলে যে রূপ টাইল চায় না
+                                 তার কোনো উপায় ছিল না — `@if ($look === 'navy')` লেখা
+                                 ছাড়া, আর সেটা নিষেধ।
+
+                                 ⭐ এখন রূপ নিজের মান বসায়: ডিফল্টে আজকের রঙিন টাইল,
+                                 ABOS-এর নমুনায় স্বচ্ছ — কেবল আইকনটাই থাকে। --}}
                             <span @class([
-                                      'grid size-9 place-items-center rounded-[11px] text-white transition-shadow',
+                                      'grid size-9 place-items-center transition-shadow',
                                       'shadow-lg' => $isActive,
                                   ])
-                                  style="background: var(--color-module-{{ $module['code'] }}, var(--color-brand-600))"
+                                  style="background: var(--rail-tile-bg);
+                                         border-radius: var(--rail-tile-radius);
+                                         color: var(--rail-tile-ink);
+                                         --color-module-current: var(--color-module-{{ $module['code'] }}, var(--color-brand-600))"
                                   aria-hidden="true">
                                 <x-ui.icon :name="$module['icon']" :size="19" />
                             </span>
@@ -628,8 +640,8 @@
                                 <a @if ($item['url']) href="{{ $item['url'] }}" @endif
                                    x-show="filter === '' || {{ Js::from(mb_strtolower($item['label'])) }}.includes(filter.toLowerCase().trim())"
                                    @class([
-                                       'rail-item flex min-h-(--spacing-field-compact) items-center gap-2 px-2.5 text-sm transition-colors',
-                                       'bg-(--color-brand-500) font-semibold text-(--color-ink-inverse) shadow-sm' => $item['active'],
+                                       'rail-item flex min-h-(--rail-item-h) items-center gap-2 px-2.5 text-(length:--rail-item-font) transition-colors',
+                                       'bg-(--rail-item-on-bg) font-semibold text-(--rail-item-on-ink)' => $item['active'],
                                        'text-(--color-ink-body) hover:bg-(--color-surface-hover)' => ! $item['active'] && $item['url'],
                                        'cursor-not-allowed text-(--color-ink-disabled)' => ! $item['url'],
                                    ])

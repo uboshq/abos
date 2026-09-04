@@ -37,35 +37,35 @@ return [
         '--color-badge-success-ink' => '#047857',
         '--color-badge-warning-bg' => '#fff7ed',
         '--color-badge-warning-ink' => '#9a3412',
-        '--color-border' => '#e5e7eb',
-        '--color-border-strong' => '#cbd5e1',
+        '--color-border' => '#e4ebef',
+        '--color-border-strong' => '#bce3ea',
         '--color-cell-line' => 'transparent',
-        '--color-ink' => '#0f172a',
-        '--color-ink-body' => '#0f172a',
-        '--color-ink-muted' => '#64748b',
+        '--color-ink' => '#0b1f33',
+        '--color-ink-body' => '#0b1f33',
+        '--color-ink-muted' => '#7a8b96',
         '--color-link' => '#1565c0',
-        '--color-sidebar' => '#08132b',
-        '--color-sidebar-active' => '#f5b800',
-        '--color-sidebar-border' => '#0e1c3a',
-        '--color-sidebar-hover' => '#0e1c3a',
-        '--color-sidebar-icon' => '#94a3b8',
-        '--color-sidebar-panel' => '#f2f6fc',
+        '--color-sidebar' => '#06323c',
+        '--color-sidebar-active' => '#08b8c8',
+        '--color-sidebar-border' => '#06323c',
+        '--color-sidebar-hover' => '#0a4351',
+        '--color-sidebar-icon' => '#9fc4cc',
+        '--color-sidebar-panel' => '#ffffff',
         '--color-state-on' => '#047857',
-        '--color-surface-app' => '#f2f6fc',
+        '--color-surface-app' => '#f5fafb',
         '--color-surface-card' => '#ffffff',
         '--color-surface-hover' => '#f2f6fc',
         '--color-surface-muted' => '#f8fafc',
         '--color-surface-selected' => '#e2ecfa',
-        '--color-surface-sunken' => '#f8fafc',
+        '--color-surface-sunken' => '#f1f5f7',
         '--color-table-head' => '#f8fafc',
-        '--color-table-head-ink' => '#475569',
+        '--color-table-head-ink' => '#41525e',
         '--color-toolbar' => '#ffffff',
         '--color-topbar' => '#ffffff',
-        '--color-topbar-border' => '#e5e7eb',
+        '--color-topbar-border' => '#e4ebef',
         '--color-topbar-field' => '#f8fafc',
         '--color-topbar-hover' => '#f2f6fc',
-        '--color-topbar-ink' => '#0f172a',
-        '--color-topbar-ink-muted' => '#475569',
+        '--color-topbar-ink' => '#0b1f33',
+        '--color-topbar-ink-muted' => '#41525e',
         '--color-topnav' => '#ffffff',
         '--color-topnav-border' => '#e5e7eb',
         '--color-topnav-hover' => '#f2f6fc',
@@ -76,7 +76,79 @@ return [
         '--grid-pad-x' => '12px',
         '--grid-pad-y' => '7px',
         '--radius-badge' => '6px',
-        '--radius-card' => '8px',
+        '--radius-card' => '10px',
+
+        /*
+         * বাঁ মেনুর মাপ — মালিকের নমুনা থেকে হুবহু
+         * (`E:\ABOSrand\design\_ui.css`: `.nav a{height:30px;
+         * font-size:12.5px}`)।
+         *
+         * ⚠️ এই অ্যাপে `1rem = 20px`, তাই ডিফল্ট `--text-sm`
+         * (0.8125rem) পর্দায় ১৬.২৫px হয় — নমুনার চেয়ে ঢের বড়। মানটা
+         * তাই px-এ লেখা, rem-এ নয়।
+         *
+         * ⓘ ঘর দুইটা `tokens.css`-এ ডিফল্ট নিয়ে বসানো, আর ডিফল্ট মানে
+         * আজকের আচরণ — তাই বাকি ন'টা রূপে একটা পিক্সেলও নড়েনি।
+         */
+
+        /*
+         * ── রেলের আইকন: রঙিন টাইল নয়, শান্ত এক রঙ ─────────────
+         *
+         * মালিকের নমুনা (`E:\ABOS\brand\design\_ui.css`):
+         * `.rail a{color:#9FC4CC}` — প্রতিটা আইকনের নিজের রং নেই,
+         * নিজের টালিও নেই। গাঢ় টিয়া জমিনে একটাই হালকা রং।
+         *
+         * ⚠️ আগে প্রতিটা মডিউলের নিজের রং ছিল — নীল, ইন্ডিগো,
+         * এমারেল্ড, অ্যাম্বার… ষোলোটা। ⓘ পুরনো মানগুলো ফেলে দেওয়া
+         * হয়নি, মালিকের নির্দেশে তুলে রাখা:
+         * `E:\ABOS\old icon\module-colours-as-of-2026-09-04.css`
+         *
+         * ⭐ কেন নমুনাটা এক রঙ চায়: ষোলোটা রং মানে চোখের জন্য
+         * ষোলোটা দাবি, আর তখন **চালু মডিউলটা** আলাদা করে চেনা
+         * যায় না। এক রঙে চালুটাই একমাত্র উজ্জ্বল জিনিস।
+         *
+         * ⓘ ঘরগুলো কেবল এই রূপে — বাকি ন'টা `tokens.css`-এর
+         * ডিফল্ট রংই পায়, তাই তাদের একটা পিক্সেলও নড়ে না।
+         */
+        '--color-module-dashboard' => '#0e4b59',
+        '--color-module-accounts' => '#0e4b59',
+        '--color-module-finance' => '#0e4b59',
+        '--color-module-sales' => '#0e4b59',
+        '--color-module-purchase' => '#0e4b59',
+        '--color-module-inventory' => '#0e4b59',
+        '--color-module-customer' => '#0e4b59',
+        '--color-module-supplier' => '#0e4b59',
+        '--color-module-hr' => '#0e4b59',
+        '--color-module-approval' => '#0e4b59',
+        '--color-module-master_data' => '#0e4b59',
+        '--color-module-reports' => '#0e4b59',
+        '--color-module-governance' => '#0e4b59',
+        '--color-module-system_admin' => '#0e4b59',
+        '--color-module-backup' => '#0e4b59',
+        '--color-module-restaurant' => '#0e4b59',
+        /*
+         * টাইল নেই — নমুনায় রেলের আইকন খালি জমিনে বসে।
+         *
+         * ⓘ `.rail a{width:40px;height:40px;border-radius:9px;
+         * color:#9FC4CC}` — চৌকো ভরাট নয়, কেবল আইকনের রং।
+         */
+        '--rail-tile-bg' => 'transparent',
+        '--rail-tile-radius' => '9px',
+        '--rail-tile-ink' => '#9fc4cc',
+
+        /*
+         * চালু আইটেম — ভরাট নয়, ছোপ।
+         *
+         * ⓘ নমুনা: `.nav a.on{background:var(--brand-wash);
+         * color:var(--brand)}` — অর্থাৎ হালকা টিয়া জমিনে গাঢ় টিয়া লেখা।
+         * ⚠️ ভরাট পিলে লেখাটা সাদা হয়ে যেত, আর পাশের সারিগুলোর সাথে
+         * তার সম্পর্কও ছিঁড়ে যেত।
+         */
+        '--rail-item-on-bg' => '#e6f5f8',
+        '--rail-item-on-ink' => '#087f91',
+
+        '--rail-item-h' => '30px',
+        '--rail-item-font' => '12.5px',
         '--radius-field' => '6px',
         '--radius-pill' => '6px',
         '--row-height' => '44px',
