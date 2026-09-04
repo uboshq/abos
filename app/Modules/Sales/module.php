@@ -306,6 +306,25 @@ return [
         'sales.manage',
     ],
 
+    /*
+     * নতুন ইনস্টলে কোন রোল বিক্রয়ের কোন অনুমতি নিয়ে শুরু করবে (§৫ রোল-টেবিল)।
+     * শুরুর সারি, তালা নয় — ক্রেতা RoleController-এ বদলাতে পারেন।
+     *
+     * SR (মাঠের বিক্রয়): অফলাইনে অর্ডার ও আদায় — মোবাইলের মূল কাজ।
+     * Manager: দেখা ও রিপোর্ট, বানানো নয় (তদারকি; create কেরানির)।
+     */
+    'role_templates' => [
+        'SR' => [
+            'sales.order.view', 'sales.order.create',
+            'sales.collection.view', 'sales.collection.create',
+        ],
+        'Manager' => [
+            'sales.order.view', 'sales.challan.view', 'sales.invoice.view',
+            'sales.collection.view', 'sales.return.view', 'sales.shipment.view',
+            'sales.report',
+        ],
+    ],
+
     'doc_types' => [
         'SO' => 'sales::doc.order',
         'DC' => 'sales::doc.challan',

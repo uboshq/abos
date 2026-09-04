@@ -195,6 +195,11 @@ return [
         'finance.withdrawal.cap',
     ],
 
+    /* নতুন ইনস্টলে (§৫): Manager অর্থের মূল দিকগুলো দেখা (বানানো/পোস্ট নয়)। */
+    'role_templates' => [
+        'Manager' => ['finance.expense.view', 'finance.income.view', 'finance.deposit.view'],
+    ],
+
     /*
      * নিজের নম্বর সিরিজ।
      *

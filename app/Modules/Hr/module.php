@@ -128,6 +128,23 @@ return [
     ],
 
     /*
+     * নতুন ইনস্টলে HR-এর অনুমতি, আর মাঠকর্মীর নিজের হাজিরা (§৫)।
+     *
+     * HR: কর্মী · হাজিরা · ছুটি। ⛔ `hr.payroll.view` ডিফল্টে নয় — ওটা বেতনের
+     * অঙ্ক ও ব্যাংক-ফাইল খোলে; ক্রেতা চাইলে সচেতনভাবে যোগ করবেন। ⛔ salary.manage নয়।
+     * SR/Warehouse: কেবল নিজের হাজিরা (মোবাইলে sync)।
+     */
+    'role_templates' => [
+        'HR' => [
+            'hr.employee.view', 'hr.employee.manage',
+            'hr.attendance.view', 'hr.attendance.manage',
+            'hr.leave.view', 'hr.leave.manage', 'hr.leave.approve',
+        ],
+        'SR' => ['hr.attendance.self'],
+        'Warehouse' => ['hr.attendance.self'],
+    ],
+
+    /*
      * অনুমোদন লাগতে পারে এমন কাজ।
      *
      * বেতনের রান নিশ্চিত করা — এক চাপে গোটা মাসের বেতন খতিয়ানে বসে যায়,

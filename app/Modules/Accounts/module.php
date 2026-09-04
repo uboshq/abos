@@ -256,6 +256,11 @@ return [
         'accounts.count.approve',
     ],
 
+    /* নতুন ইনস্টলে (§৫): Manager হিসাব দেখা ও রিপোর্ট (ভাউচার বানানো accountant-এর)। */
+    'role_templates' => [
+        'Manager' => ['accounts.view', 'accounts.report'],
+    ],
+
     'doc_types' => [
         'CHQ' => 'accounts::doc.cheque',
         'RV' => 'accounts::doc.receipt_voucher',

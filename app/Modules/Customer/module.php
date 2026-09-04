@@ -113,6 +113,15 @@ return [
         'customer.conduct.manage',
     ],
 
+    /*
+     * নতুন ইনস্টলে গ্রাহকের অনুমতি কোন রোলের (§৫)। শুরুর সারি, তালা নয়।
+     * SR: দোকান দেখা ও quick-create (অর্ডার নিতে)। Manager: দেখা ও রিপোর্ট।
+     */
+    'role_templates' => [
+        'SR' => ['customer.view', 'customer.create'],
+        'Manager' => ['customer.view', 'customer.report'],
+    ],
+
     // Number Series engine এগুলো থেকে prefix/counter সেটআপ তৈরি করবে।
     'doc_types' => [
         'CUS' => 'customer::doc.customer_code',

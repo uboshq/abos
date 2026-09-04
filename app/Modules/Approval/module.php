@@ -110,6 +110,14 @@ return [
         'approval.report',
     ],
 
+    /*
+     * নতুন ইনস্টলে (§৫): Manager-এর আসল ক্ষমতা — অনুমোদন। তদারকি ও সই,
+     * বানানো নয়; তাই decide + view (ইনবক্স দেখা ও সিদ্ধান্ত)।
+     */
+    'role_templates' => [
+        'Manager' => ['approval.decide', 'approval.view'],
+    ],
+
     // Report engine এগুলো boot-এ নিবন্ধন করে, তাই রিপোর্ট যোগ করতে
     // কোনো কোর ফাইলে নাম লিখতে হয় না (সেকশন ১৯.৭)।
     'reports' => [
