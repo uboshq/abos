@@ -75,6 +75,32 @@ class FreeGoodsTest extends TestCase
     }
 
     /**
+     * গুদামে মোট কত — বসানো ও বসার-অপেক্ষায়, দুইটা মিলে।
+     *
+     * ── কেন এই দুইটা হেল্পার লাগল, ৪ সেপ্টেম্বর ২০২৬ ─────────────────
+     * Stock Placement আসার পর ক্রয়ের মাল আর সরাসরি তাকে ওঠে না — আগে
+     * "বসেনি" ঘরে বসে, আর কেউ বুঝে নিলে তবে তাকে ওঠে।
+     *
+     * ⚠️ এই ফাইলের প্রশ্নটা **সেলযোগ্যতা নয়** — নামেই লেখা: *"ফ্রি মাল
+     * বিলের সাথে আসে"*, আর মন্তব্যে *"দুইটাই গুদামে ঢোকে, আলাদা
+     * ভাণ্ডারে"*। অর্থাৎ দাবিটা **মাল এসেছে ও ভাণ্ডার দুইটা আলাদা**।
+     *
+     * ⛔ তাই এখানে `place()` ডেকে দেওয়া হয়নি। ডাকলে টেস্টটা সবুজ হত,
+     * কিন্তু তখন সে বসানোর ধাপটাও পরীক্ষা করত — অথচ তার প্রশ্ন সেটা নয়।
+     * `on_hand` ধরে মাপায় দাবিটা **হুবহু আগের অর্থেই** থাকে।
+     */
+    private function onHandQty(): string
+    {
+        return $this->stock()->statesFor($this->product, $this->warehouse)['on_hand'];
+    }
+
+    /** ফ্রি ভাণ্ডারে মোট — একই কারণ, ফ্রি মালের দিকে। */
+    private function freeOnHandQty(): string
+    {
+        return $this->stock()->statesFor($this->product, $this->warehouse)['free_on_hand'];
+    }
+
+    /**
      * @param  list<array<string, mixed>>  $lines
      */
     private function bill(array $lines): PurchaseBill
@@ -104,13 +130,14 @@ class FreeGoodsTest extends TestCase
      */
     public function test_free_goods_arrive_with_the_bill(): void
     {
-        $floorBefore = $this->floorQty();
-        $freeBefore = $this->freeQty();
+        $onHandBefore = $this->onHandQty();
+        $freeBefore = $this->freeOnHandQty();
 
         app(PurchaseBillService::class)->confirm($this->bill([$this->line()]));
 
-        $this->assertSame(0, bccomp($this->floorQty(), bcadd($floorBefore, '100', 4), 4));
-        $this->assertSame(0, bccomp($this->freeQty(), bcadd($freeBefore, '10', 4), 4));
+        /* গুদামে ঢুকেছে — বসানো হোক বা না হোক, মালটা এখানেই আছে */
+        $this->assertSame(0, bccomp($this->onHandQty(), bcadd($onHandBefore, '100', 4), 4));
+        $this->assertSame(0, bccomp($this->freeOnHandQty(), bcadd($freeBefore, '10', 4), 4));
     }
 
     /**
@@ -163,7 +190,8 @@ class FreeGoodsTest extends TestCase
      */
     public function test_free_goods_arrive_with_the_receipt(): void
     {
-        $freeBefore = $this->freeQty();
+        /* "আসে" — তাই গুদামের মোট ধরে মাপা, বিক্রয়যোগ্যতা ধরে নয় */
+        $freeBefore = $this->freeOnHandQty();
 
         $receipt = app(PurchaseReceiptService::class)->create(
             [
@@ -176,7 +204,7 @@ class FreeGoodsTest extends TestCase
 
         app(PurchaseReceiptService::class)->confirm($receipt);
 
-        $this->assertSame(0, bccomp($this->freeQty(), bcadd($freeBefore, '5', 4), 4));
+        $this->assertSame(0, bccomp($this->freeOnHandQty(), bcadd($freeBefore, '5', 4), 4));
     }
 
     // ── বাতিল ────────────────────────────────────────────────────
@@ -190,15 +218,29 @@ class FreeGoodsTest extends TestCase
      */
     public function test_cancelling_a_bill_takes_the_goods_back(): void
     {
-        $floorBefore = $this->floorQty();
-        $freeBefore = $this->freeQty();
+        /*
+         * ⚠️ `floor`/`free` ধরে মাপলে এই পরীক্ষাটা **ভুল কারণে সবুজ** হত।
+         *
+         * Stock Placement-এর পর ক্রয়ের মাল আর তাকে ওঠে না, তাই বাতিলের
+         * পরেও `floor` আগের মতোই থাকত — **মাল ফিরুক বা না ফিরুক**।
+         * অর্থাৎ দাবিটা কিছুই প্রমাণ করত না।
+         *
+         * ⭐ `on_hand` ধরে মাপায় দাবিটা সত্যিকারের: মালটা গুদাম থেকে
+         * সত্যিই চলে গেছে, সে বসানো ছিল না বসার অপেক্ষায় — যেখানেই থাক।
+         */
+        $onHandBefore = $this->onHandQty();
+        $freeBefore = $this->freeOnHandQty();
 
         $bill = app(PurchaseBillService::class)->confirm($this->bill([$this->line()]));
 
+        // আগে প্রমাণ: মাল সত্যিই ঢুকেছিল, নইলে "ফিরে গেছে" অর্থহীন
+        $this->assertSame(0, bccomp($this->onHandQty(), bcadd($onHandBefore, '100', 4), 4),
+            'মালই ঢোকেনি — তাহলে বাতিলের দাবিটা এমনিতেই পাস করত।');
+
         app(PurchaseBillService::class)->cancel($bill, 'ভুল সরবরাহকারী');
 
-        $this->assertSame(0, bccomp($this->floorQty(), $floorBefore, 4), 'বিক্রয়ের মাল ফেরেনি');
-        $this->assertSame(0, bccomp($this->freeQty(), $freeBefore, 4), 'ফ্রি মাল ফেরেনি');
+        $this->assertSame(0, bccomp($this->onHandQty(), $onHandBefore, 4), 'বিক্রয়ের মাল ফেরেনি');
+        $this->assertSame(0, bccomp($this->freeOnHandQty(), $freeBefore, 4), 'ফ্রি মাল ফেরেনি');
         $this->assertSame(DocumentStatus::CANCELLED, $bill->fresh()->status);
     }
 
@@ -222,6 +264,25 @@ class FreeGoodsTest extends TestCase
     public function test_a_bill_whose_free_goods_are_gone_cannot_be_cancelled(): void
     {
         $bill = app(PurchaseBillService::class)->confirm($this->bill([$this->line(free: '10')]));
+
+        /*
+         * আগে মালটা বুঝে নেওয়া হয় — Stock Placement, ৪ সেপ্টেম্বর ২০২৬।
+         *
+         * ⚠️ এই ধাপটা ছাড়া নিচের "বেরিয়ে গেল" লাইনটাই ভাঙত: ফ্রি মাল
+         * এখন প্রথমে "বসেনি" ঘরে বসে, আর ভাণ্ডারে যা নেই তা দেওয়া যায় না।
+         *
+         * ⓘ পরীক্ষাটার প্রশ্ন **বাতিল নিয়ে**, বসানো নিয়ে নয় — তাই ধাপটা
+         * এখানে দৃশ্যপট তৈরির অংশ: মালটা সত্যিই তাকে উঠেছিল, তারপর
+         * বেরিয়ে গেছে, আর তাই আর ফেরানো যায় না।
+         */
+        $this->stock()->place(
+            product: $this->product,
+            warehouse: $this->warehouse,
+            qty: '100',
+            sourceType: PurchaseBill::STOCK_SOURCE,
+            sourceId: $bill->id,
+            freeQty: '10',
+        );
 
         // ফ্রি মালটা বেরিয়ে গেল
         $this->stock()->move(

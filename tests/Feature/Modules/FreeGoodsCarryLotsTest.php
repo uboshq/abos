@@ -11,6 +11,8 @@ use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Inventory\Services\StockService;
+use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Purchase\Services\PurchaseBillService;
 use App\Modules\Sales\Services\BatchTrace;
 use App\Modules\Sales\Services\DirectSaleService;
@@ -84,7 +86,33 @@ class FreeGoodsCarryLotsTest extends TestCase
 
         app(PurchaseBillService::class)->confirm($bill);
 
-        return Batch::query()->where('batch_no', $batchNo)->firstOrFail();
+        $batch = Batch::query()->where('batch_no', $batchNo)->firstOrFail();
+
+        /*
+         * মালটা বুঝে নেওয়া হয় — Stock Placement, ৪ সেপ্টেম্বর ২০২৬।
+         *
+         * ── কেন এই লাইনটা এখানে, আর কেন এটা "অপ্রয়োজনীয়" নয় ─────────
+         * ক্রয়ের মাল এখন সরাসরি তাকে ওঠে না; আগে "বসেনি" ঘরে বসে, আর
+         * কেউ বুঝে নিলে তবে বিক্রয়যোগ্য হয় — মালিকের নিয়ম।
+         *
+         * ⚠️ এই ফাইলের পরীক্ষাগুলো লট থেকে **বিক্রি** করে (FEFO, ফ্রি
+         * মাল, মেয়াদ)। তাই এখানে দাবিটা সত্যিই বিক্রয়যোগ্যতার, আর
+         * বসানোর ধাপটা ছাড়া সেগুলো বাস্তব প্রবাহই দেখাত না।
+         *
+         * ⛔ লাইনটা তুলে দিলে পরীক্ষাগুলো "তাকে যথেষ্ট নেই" বলে ভাঙবে —
+         * সেটাই প্রমাণ যে ধাপটা সত্যিকারের, আলংকারিক নয়।
+         */
+        app(StockService::class)->place(
+            product: $this->medicine,
+            warehouse: $this->warehouse,
+            qty: $qty,
+            sourceType: PurchaseBill::STOCK_SOURCE,
+            sourceId: $bill->id,
+            batch: $batch,
+            freeQty: $free,
+        );
+
+        return $batch->refresh();
     }
 
     /**

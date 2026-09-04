@@ -97,7 +97,17 @@ class GoodsNobodyTookInCannotBeSoldTest extends TestCase
             'বসানো হয়নি এমন মাল বিক্রয়যোগ্য হয়ে গেছে।',
         );
 
-        // ⭐ আর তাক থেকে ওই দশটা বের করতে গেলে থামে
+        /*
+         * ⭐ আর তাক থেকে ওই দশটা বের করতে গেলে থামে।
+         *
+         * ⚠️ তুলনাটা **তাকের** সংখ্যার সাথে, বিক্রয়যোগ্যের সাথে নয় —
+         * `assertEnoughOnFloor()` floor দেখে, আর floor সবসময় available-এর
+         * চেয়ে বড় বা সমান (ধরা ও আটকানো মাল তাকেই থাকে)। ⓘ প্রথমে
+         * available ধরে লিখেছিলাম, আর তাতে চাওয়াটা floor-এর ভিতরেই
+         * পড়ে যেত — ব্যতিক্রম উঠত না, আর পরীক্ষাটা ভুল কারণে লাল হত।
+         */
+        $onFloor = $this->stock()->floorQty($this->product, $this->warehouse);
+
         $this->expectException(ValidationException::class);
 
         $this->stock()->move(
@@ -105,7 +115,7 @@ class GoodsNobodyTookInCannotBeSoldTest extends TestCase
             warehouse: $this->warehouse,
             sourceType: 'sales_invoice',
             sourceId: 1,
-            floor: bcmul(bcadd($before, '1', 4), '-1', 4),
+            floor: bcmul(bcadd($onFloor, '1', 4), '-1', 4),
         );
     }
 

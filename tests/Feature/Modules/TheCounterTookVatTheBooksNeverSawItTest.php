@@ -10,7 +10,9 @@ use App\Models\User;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Inventory\Services\StockService;
 use App\Modules\MasterData\Models\Tax;
+use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Purchase\Services\PurchaseBillService;
 use App\Modules\Sales\Services\DirectSaleService;
 use App\Modules\Sales\Services\SalesInvoiceService;
@@ -101,6 +103,21 @@ class TheCounterTookVatTheBooksNeverSawItTest extends TestCase
         );
 
         app(PurchaseBillService::class)->confirm($bill);
+
+        /*
+         * আর মালটা বুঝে নেওয়া — Stock Placement, ৪ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ এই ফাইলের প্রশ্ন ভ্যাট নিয়ে, মজুদ নিয়ে নয় — কিন্তু ভ্যাট
+         * পরীক্ষা করতে হলে আগে কাউন্টারে বেচতে পারতে হবে। ⛔ ধাপটা ছাড়া
+         * বিক্রয়ই আটকাত, আর ভ্যাটের নিয়মটা কখনো পরীক্ষা হত না।
+         */
+        app(StockService::class)->place(
+            product: $this->product,
+            warehouse: $this->warehouse,
+            qty: $qty,
+            sourceType: PurchaseBill::STOCK_SOURCE,
+            sourceId: $bill->id,
+        );
     }
 
     /** @return array{challan: mixed, invoice: mixed, change: string} */

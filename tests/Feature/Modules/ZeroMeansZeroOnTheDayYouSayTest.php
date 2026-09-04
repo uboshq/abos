@@ -14,6 +14,8 @@ use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Inventory\Services\StockService;
+use App\Modules\Purchase\Models\PurchaseReceipt;
 use App\Modules\Purchase\Services\PurchaseReceiptService;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Services\SalesInvoiceService;
@@ -77,12 +79,28 @@ class ZeroMeansZeroOnTheDayYouSayTest extends TestCase
             'is_active' => true,
         ]);
 
-        app(PurchaseReceiptService::class)->confirm(
+        $receipt = app(PurchaseReceiptService::class)->confirm(
             app(PurchaseReceiptService::class)->create(
                 ['supplier_id' => Supplier::query()->value('id'), 'warehouse_id' => $this->warehouse->id,
                     'trx_date' => now()->toDateString()],
                 [['product_id' => $this->product->id, 'received_qty' => '100', 'rate' => '100']],
             ),
+        );
+
+        /*
+         * আর মালটা বুঝে নেওয়া — Stock Placement, ৪ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ এই ফাইলের প্রশ্ন ক্রেডিট সীমা নিয়ে, মজুদ নিয়ে নয় — কিন্তু
+         * সীমার পরীক্ষা করতে হলে আগে বেচতে পারতে হবে। ⛔ ধাপটা ছাড়া
+         * প্রতিটা বিক্রয় "তাকে যথেষ্ট নেই" বলে আটকাত, আর সীমার নিয়মটা
+         * কখনো পরীক্ষাই হত না — সবুজ, অথচ অন্ধ।
+         */
+        app(StockService::class)->place(
+            product: $this->product,
+            warehouse: $this->warehouse,
+            qty: '100',
+            sourceType: PurchaseReceipt::STOCK_SOURCE,
+            sourceId: $receipt->id,
         );
     }
 
