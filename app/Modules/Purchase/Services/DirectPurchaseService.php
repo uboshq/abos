@@ -116,6 +116,24 @@ final class DirectPurchaseService
             'qty' => (string) $line['qty'],
             'free_qty' => (string) ($line['free_qty'] ?? '0'),
             'rate' => (string) $line['rate'],
+
+            /*
+             * লটের তিনটা ঘর — এখান দিয়ে না গেলে পর্দার ঘরগুলো নীরবে
+             * হারাত।
+             *
+             * ⚠️ এই তালিকাটা একটা **ছাঁকনি**: যা এখানে লেখা নেই তা
+             * বিলের সারিতে পৌঁছায় না, আর কোথাও কোনো ত্রুটি হয় না।
+             * ⓘ পর্দায় ঘর, request-এ নিয়ম, কলাম টেবিলে — তিনটাই থাকা
+             * সত্ত্বেও এই এক লাইনের অভাবে লট নম্বরটা হারিয়ে যেত, আর
+             * তারপর `BatchService` বলত "লট নম্বর লাগবে"।
+             *
+             * ⓘ প্যাকের ঘরটাও একই কারণে — `unit_id` না গেলে
+             * [[ReadsPackedQuantities]] জানত না কোন প্যাকে লেখা হয়েছিল।
+             */
+            'batch_no' => $line['batch_no'] ?? null,
+            'expiry_date' => $line['expiry_date'] ?? null,
+            'mrp' => filled($line['mrp'] ?? null) ? (string) $line['mrp'] : null,
+            'unit_id' => $line['unit_id'] ?? null,
             'discount' => (string) ($line['discount'] ?? '0'),
             'tax' => (string) ($line['tax'] ?? '0'),
             'sales_price' => filled($line['sales_price'] ?? null) ? (string) $line['sales_price'] : null,

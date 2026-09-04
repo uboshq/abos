@@ -102,7 +102,7 @@
         <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="mb-3 font-semibold">{{ __('purchase::message.lines') }}</h2>
 
-            <x-purchase::line-editor :products="$products" :lines="$existing"
+            <x-purchase::line-editor lots :products="$products" :lines="$existing"
                                      qty-field="received_qty"
                                      :link-field="$orderLines->isNotEmpty() ? 'purchase_order_line_id' : null"
                                      :link-options="$orderLines"
