@@ -66,6 +66,15 @@ return [
                 'route_params' => ['slug' => 'payable-list'], 'permission' => 'supplier.report'],
             ['label' => 'supplier::menu.ageing', 'route' => 'supplier.report.show',
                 'route_params' => ['slug' => 'ageing'], 'permission' => 'supplier.report'],
+
+            /*
+             * পরিশোধের সময়সূচি — "এই সপ্তাহে কার টাকা দিতে হবে"।
+             *
+             * ⓘ বয়সের রিপোর্টের পাশে, কারণ প্রশ্ন দুইটা পাশাপাশি:
+             * **কত দিন ধরে বাকি** আর **কবে দিতে হবে**।
+             */
+            ['label' => 'supplier::menu.payment_schedule', 'route' => 'supplier.report.show',
+                'route_params' => ['slug' => 'payment-schedule'], 'permission' => 'supplier.report'],
         ],
     ],
 
@@ -76,6 +85,11 @@ return [
         'supplier.delete',
         'supplier.report',
         'supplier.manage',
+    ],
+
+    /* নতুন ইনস্টলে (§৫): Manager সরবরাহকারী দেখা ও রিপোর্ট (বানানো নয়)। */
+    'role_templates' => [
+        'Manager' => ['supplier.view', 'supplier.report'],
     ],
 
     'doc_types' => [

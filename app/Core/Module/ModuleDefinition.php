@@ -164,6 +164,23 @@ final class ModuleDefinition
         public readonly array $approvals,
 
         /**
+         * নতুন ইনস্টলে যে রোলগুলো এই মডিউলের কোন অনুমতি নিয়ে শুরু করবে।
+         *
+         * ── কেন মডিউল বলে, কেন্দ্র নয় ───────────────────────────────
+         * রোল cross-module (একজন Warehouse-কর্মী মজুদ, পণ্য ও নিজের হাজিরা
+         * ছোঁন), কিন্তু "আমার কোন অনুমতি কোন রোলের" সিদ্ধান্তটা মডিউলের নিজের।
+         * কেন্দ্রে লিখলে একটা ফাইল সব মডিউলের অনুমতির নাম জানত, আর Warehouse-এ
+         * `inventory.*` যোগ করতে ইনভেন্টরির লোককে অন্য ফাইল খুলতে হত (§১৯.৭)।
+         * [[RoleTemplateRegistry]] কেবল জোড়া লাগায়, কোনো মডিউলের নাম না জেনে।
+         *
+         * ⭐ এটা শুরুর সারি, তালা নয় — provision-এ রোলটা না থাকলে তবেই বসে;
+         * ক্রেতা পরে RoleController-এ বদলাতে/বাড়াতে পারেন।
+         *
+         * @var array<string, list<string>>  রোল-নাম => অনুমতির তালিকা
+         */
+        public readonly array $roleTemplates,
+
+        /**
          * যেসব রেকর্ডে কোম্পানি নিজের ঘর যোগ করতে পারে — drill source-এর নাম।
          *
          * ── কেন মডিউল বলে, সেটিংসের পর্দা নয় ────────────────────────
@@ -443,6 +460,11 @@ final class ModuleDefinition
             integrity: self::validateIntegrity($raw['integrity'] ?? [], $path),
             activity: self::validateActivity($raw['activity'] ?? [], $path),
             approvals: self::validateApprovals($raw['approvals'] ?? [], $path),
+            roleTemplates: self::validateRoleTemplates(
+                $raw['role_templates'] ?? [],
+                $raw['permissions'] ?? [],
+                $path,
+            ),
             customFields: self::validateCustomFields(
                 $raw['custom_fields'] ?? [],
                 $raw['drill_sources'] ?? [],
@@ -1084,6 +1106,49 @@ final class ModuleDefinition
         }
 
         return $approvals;
+    }
+
+    /**
+     * রোল-টেমপ্লেট — রোল-নাম => এই মডিউলের অনুমতির তালিকা।
+     *
+     * ⚠️ প্রতিটা অনুমতি এই মডিউলেই ঘোষিত হতে হবে। টাইপো বা অন্য মডিউলের
+     * নাম এখানে এলে বুট ভাঙে — আর সেটাই ঠিক, কারণ মডিউল কেবল নিজের অনুমতি
+     * কোনো রোলকে দেয় (§১৯.৭)। ভুলটা টেস্টে নয়, শুরুতেই ধরা পড়ুক।
+     *
+     * @param  array<string, mixed>  $templates
+     * @param  list<string>  $permissions  এই মডিউলের ঘোষিত অনুমতি
+     * @return array<string, list<string>>
+     */
+    private static function validateRoleTemplates(array $templates, array $permissions, string $path): array
+    {
+        $clean = [];
+
+        foreach ($templates as $role => $perms) {
+            if (! is_string($role) || trim($role) === '') {
+                throw new InvalidArgumentException(
+                    "{$path}: a role_templates key must be a non-empty role name."
+                );
+            }
+
+            if (! is_array($perms)) {
+                throw new InvalidArgumentException(
+                    "{$path}: role_templates['{$role}'] must be a list of this module's permissions."
+                );
+            }
+
+            foreach ($perms as $perm) {
+                if (! in_array($perm, $permissions, true)) {
+                    throw new InvalidArgumentException(
+                        "{$path}: role_templates['{$role}'] names '{$perm}', which this module does not declare. "
+                        .'A module gives only its own permissions to a role (§19.7).'
+                    );
+                }
+            }
+
+            $clean[$role] = array_values($perms);
+        }
+
+        return $clean;
     }
 
     /**

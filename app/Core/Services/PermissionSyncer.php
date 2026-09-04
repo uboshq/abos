@@ -30,7 +30,10 @@ final class PermissionSyncer
      */
     public const OWNER_ROLE = 'owner';
 
-    public function __construct(private readonly ModuleRegistry $registry) {}
+    public function __construct(
+        private readonly ModuleRegistry $registry,
+        private readonly RoleTemplateRegistry $templates,
+    ) {}
 
     /**
      * @return array{created: list<string>, existing: int, granted: int}
@@ -60,9 +63,62 @@ final class PermissionSyncer
 
         $granted = $this->keepOwnerComplete($guard);
 
+        $rolesCreated = $this->applyRoleTemplates($guard);
+
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
-        return ['created' => $missing, 'existing' => count($existing), 'granted' => $granted];
+        return [
+            'created' => $missing,
+            'existing' => count($existing),
+            'granted' => $granted,
+            'roles_created' => $rolesCreated,
+        ];
+    }
+
+    /**
+     * ডিফল্ট রোলগুলো — কেবল প্রথমবার, তারপর ক্রেতার হাতে।
+     *
+     * প্রতিটা টেমপ্লেট-রোল **না থাকলে তবেই** বসে ও তার অনুমতি পায়। থাকলে
+     * ছোঁয়া হয় না — নাহলে ক্রেতা রোলটা সম্পাদনা করার পর প্রতিটা sync তাঁর
+     * বদল নীরবে ফিরিয়ে দিত, আর টেমপ্লেট তখন তালা হয়ে যেত (শুরুর সারি নয়)।
+     *
+     * owner এখানে নেই — [[keepOwnerComplete()]] তাকে সবসময় পূর্ণ রাখে, আর
+     * তার সেটটা "সব", টেমপ্লেট নয়। কেবল সত্যিই তৈরি হওয়া অনুমতিই দেওয়া হয়:
+     * কোনো মডিউল বন্ধ থাকলে তার অনুমতি নেই, তাই সেটা চুপচাপ বাদ পড়ে।
+     *
+     * @return list<string> এবার যে রোলগুলো তৈরি হলো
+     */
+    private function applyRoleTemplates(string $guard): array
+    {
+        $created = [];
+
+        foreach ($this->templates->all() as $roleName => $permissions) {
+            if ($roleName === self::OWNER_ROLE) {
+                continue;
+            }
+
+            $exists = Role::query()
+                ->where('name', $roleName)
+                ->where('guard_name', $guard)
+                ->exists();
+
+            if ($exists) {
+                continue;
+            }
+
+            $role = Role::create(['name' => $roleName, 'guard_name' => $guard]);
+
+            $grantable = Permission::query()
+                ->where('guard_name', $guard)
+                ->whereIn('name', $permissions)
+                ->pluck('name')
+                ->all();
+
+            $role->givePermissionTo($grantable);
+            $created[] = $roleName;
+        }
+
+        return $created;
     }
 
     /**

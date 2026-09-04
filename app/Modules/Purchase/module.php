@@ -178,6 +178,14 @@ return [
         'purchase.manage',
     ],
 
+    /* নতুন ইনস্টলে (§৫): Manager ক্রয় দেখা ও রিপোর্ট (বানানো কেরানির)। */
+    'role_templates' => [
+        'Manager' => [
+            'purchase.order.view', 'purchase.receipt.view', 'purchase.bill.view',
+            'purchase.return.view', 'purchase.report',
+        ],
+    ],
+
     'doc_types' => [
         'PO' => 'purchase::doc.order',
         'GRN' => 'purchase::doc.receipt',

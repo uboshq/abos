@@ -265,6 +265,24 @@ return [
         'inventory.manage',
     ],
 
+    /*
+     * নতুন ইনস্টলে মজুদের অনুমতি কোন রোলের (§৫)। শুরুর সারি, তালা নয়।
+     *
+     * Warehouse: গুদামের পূর্ণ কাজ — মজুদ, ট্রান্সফার, পণ্য চেনা।
+     * SR: কেবল পণ্যের তালিকা (অর্ডার নিতে) — ⛔ মজুদ কখনো নয় (মালিকের নিয়ম)।
+     * Manager: মজুদ ও রিপোর্ট দেখা।
+     */
+    'role_templates' => [
+        'Warehouse' => [
+            'inventory.stock.view', 'inventory.stock.adjust', 'inventory.stock.hold',
+            'inventory.stock.opening',
+            'inventory.transfer.view', 'inventory.transfer.create', 'inventory.transfer.receive',
+            'inventory.product.view',
+        ],
+        'SR' => ['inventory.product.view'],
+        'Manager' => ['inventory.stock.view', 'inventory.report', 'inventory.product.view'],
+    ],
+
     'doc_types' => [
         'PRD' => 'inventory::doc.product_code',
         'ADJ' => 'inventory::doc.adjustment',
