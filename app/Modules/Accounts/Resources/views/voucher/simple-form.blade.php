@@ -16,8 +16,23 @@
         'money' => $moneyAccounts,
         'expense' => $expenseAccounts,
         'party_or_income' => $allAccounts,
+
+        /*
+         * খরচ: নগদে **বা** বাকিতে।
+         *
+         * ⚠️ দুইটা দল আলাদা রাখা হয়, এক তালিকায় মিশিয়ে নয় — কারণ
+         * দুইটার ফল **সম্পূর্ণ আলাদা**: একটায় টাকা এখনই যায়, অন্যটায়
+         * দেনা তৈরি হয়। মিশিয়ে দিলে ব্যবহারকারী তফাতটা দেখতেন না।
+         */
+        'money_or_credit' => $moneyAccounts->concat($creditAccounts ?? collect()),
         default => $allAccounts,
     };
+
+    /*
+     * বাকিতে খরচের খাতগুলোর id — ফর্মে দুইটা কাজে লাগে:
+     * দল আলাদা দেখানো, আর "বাকিতে বাছলে পক্ষ বাধ্যতামূলক" নিয়মটা।
+     */
+    $creditIds = collect($creditAccounts ?? [])->pluck('id')->map(fn ($id) => (int) $id)->all();
 
     // সম্পাদনার সময় দুইটা সারি থেকে দিক ফিরে পাওয়া — ডেবিটেরটা "to",
     // ক্রেডিটেরটা "from", ঠিক যেভাবে সেভ হয়েছিল
@@ -67,7 +82,12 @@
             </div>
         </section>
 
-        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4"
+                 x-data="{
+                     from: '{{ old('from_account_id', $creditLine?->account_id) }}',
+                     credit: @js($creditIds),
+                     get onCredit() { return this.credit.includes(Number(this.from)); },
+                 }">
             <div class="grid gap-3 sm:grid-cols-2">
                 {{-- from — টাকা যেখান থেকে এল --}}
                 <label class="block">
@@ -75,14 +95,16 @@
                         {{ __($sides['from']['label']) }}
                         <span class="text-(--color-danger)" aria-hidden="true">*</span>
                     </span>
-                    <select name="from_account_id" required
+                    <select name="from_account_id" required x-model="from"
                             class="h-(--spacing-field) w-full rounded-(--radius-field) border
                                    border-(--color-border) bg-(--color-surface-card) px-3">
                         <option value="">—</option>
                         @foreach ($optionsFor($sides['from']['source']) as $account)
                             <option value="{{ $account->id }}"
                                     @selected(old('from_account_id', $creditLine?->account_id) == $account->id)>
-                                {{ $account->label() }}
+                                {{ in_array((int) $account->id, $creditIds, true)
+                                    ? __('accounts::field.on_credit_option', ['account' => $account->label()])
+                                    : $account->label() }}
                             </option>
                         @endforeach
                     </select>
@@ -112,6 +134,74 @@
                         <span class="mt-1 block text-2xs text-(--color-danger)">{{ $message }}</span>
                     @enderror
                 </label>
+
+                {{--
+                    কাকে — ঐচ্ছিক, কিন্তু বাকিতে হলে বাধ্যতামূলক।
+                
+                    ── কেন ঘরটা লাগল ─────────────────────────────────────────
+                    পক্ষ বসালে টাকাটা **তাঁর খতিয়ানে** যায়, আর তখন পরিবহনকারী বা
+                    হাম্মালি ঠিকাদারের হিসাব নিজে থেকেই ভরে ওঠে। না বসালে খরচটা
+                    সরাসরি খাতে বসে — চা-নাস্তা বা রিকশাভাড়ায় "কাকে দিলাম" লেখার
+                    দরকার নেই।
+                
+                    ⛔ **কিন্তু বাকিতে হলে পক্ষ ছাড়া চলে না** — কারো কাছে দেনা হতে
+                    হলে "কার কাছে" জানতেই হবে। ⚠️ নাহলে প্রদেয়ের ঘরে একটা টাকা বসে
+                    থাকত **যার কোনো মালিক নেই**, আর "কাকে কত দিতে হবে" তালিকার
+                    যোগফল স্থিতিপত্রের সাথে মিলত না।
+                
+                    ⚠️ এখানে আগে লেখা ছিল *"ইঞ্জিনে কিছু যোগ করতে হয়নি — সারি
+                    হেডার থেকে উত্তরাধিকার পায়"*। **কথাটা ভুল ছিল, আর আমি
+                    যাচাই না করেই লিখেছিলাম।**
+
+                    মেপে দেখা গেছে [[VoucherService::replaceLines]] সারির পক্ষ
+                    নেয় কেবল `$line['party_type'] ?? null` থেকে — **হেডার থেকে
+                    কিছুই নামে না।** ⛔ ফলে বাকিতে খরচ লিখলে হেডারে পক্ষ বসত,
+                    কিন্তু প্রদেয়ের **সারিটা মালিকহীনই থাকত** — ঠিক যেটা উপরের
+                    বার্তাটা ঠেকানোর প্রতিশ্রুতি দেয়। ⚠️ আর বকেয়ার বয়স-রিপোর্ট
+                    ও "কাকে কত দিতে হবে" পড়ে **সারি থেকে**, হেডার থেকে নয়।
+
+                    ⓘ ইতিহাসটা রেখে দেওয়া হলো ইচ্ছে করেই: পরের জন যেন মন্তব্য
+                    বিশ্বাস করার আগে মেপে নেন।
+                --}}
+                <label class="mt-3 block">
+                    <span class="mb-1 block text-sm font-medium">
+                        {{ __('accounts::field.party') }}
+                        <span class="text-(--color-danger)" x-cloak x-show="onCredit" aria-hidden="true">*</span>
+                    </span>
+                    <select name="party"
+                            :required="onCredit"
+                            class="h-(--spacing-field) w-full rounded-(--radius-field) border
+                                   border-(--color-border) bg-(--color-surface-card) px-3">
+                        <option value="">—</option>
+                        @foreach ($parties as $group)
+                            <optgroup label="{{ $group['label'] }}">
+                                @foreach ($group['options'] as $party)
+                                    <option value="{{ $group['type'] }}:{{ $party['id'] }}"
+                                            @selected(old('party') === $group['type'].':'.$party['id']
+                                                || ($voucher->party_type === $group['type']
+                                                    && $voucher->party_id == $party['id']))>
+                                        {{ $party['label'] }}
+                                    </option>
+                                @endforeach
+                            </optgroup>
+                        @endforeach
+                    </select>
+                    @error('party')
+                        <span class="mt-1 block text-2xs text-(--color-danger)">{{ $message }}</span>
+                    @enderror
+                </label>
+
+                {{--
+                    ⭐ বাছার পর পর্দা বলে **কী ঘটতে যাচ্ছে**।
+                
+                    ⚠️ "কীভাবে" লেখা একটা তালিকা যথেষ্ট নয় — নগদে আর বাকিতে দুইটার
+                    ফল সম্পূর্ণ আলাদা, আর ব্যবহারকারী যেন বুঝে বাছেন।
+                --}}
+                <p x-cloak x-show="onCredit"
+                   class="mt-3 rounded-(--radius-field) bg-(--color-badge-pending-bg) px-3 py-2
+                          text-2xs text-(--color-badge-pending-ink)">
+                    {{ __('accounts::message.expense_on_credit') }}
+                </p>
             </div>
         </section>
 

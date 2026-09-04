@@ -15,6 +15,7 @@ use App\Modules\Accounts\Http\Requests\VoucherRequest;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CostCenter;
 use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\VoucherApproval;
 use App\Modules\Accounts\Services\VoucherService;
 use Illuminate\Http\RedirectResponse;
@@ -370,6 +371,53 @@ class VoucherController extends Controller implements HasMiddleware
              */
             'costCenters' => CostCenter::query()->active()->orderBy('code')->get(),
             'expenseAccounts' => $all->where('type', Account::EXPENSE)->values(),
+
+            /*
+             * বাকিতে খরচের অন্য পাশ — প্রদেয় হিসাব।
+             *
+             * ⓘ আলাদা তালিকা, যাতে ফর্মে দুইটা দল দেখানো যায়: "নগদে"
+             * আর "বাকিতে"। ⚠️ এক তালিকায় মিশিয়ে দিলে ব্যবহারকারী
+             * বুঝতেন না যে দুইটার ফল **সম্পূর্ণ আলাদা** — একটায় টাকা
+             * এখনই যায়, অন্যটায় দেনা তৈরি হয়।
+             */
+            'creditAccounts' => (function () use ($all) {
+                /*
+                 * ⚠️ ── `PAYABLE_GROUP`, `PAYABLE` নয় — আর পার্থক্যটা মনে রাখার মতো ──
+                 *
+                 * **কোড ধরে একটা খাত খুঁজলে `PAYABLE`; গোটা পরিবার চাইলে
+                 * `PAYABLE_GROUP`।** ⓘ যে পোস্ট করে সে একটা ঘর চায়; যে
+                 * তালিকা বা যাচাই করে সে পরিবার চায়।
+                 *
+                 * ⓘ এখানে আগে `PAYABLE` লেখা ছিল, আর তখন সেটা `2110`-ই
+                 * ছিল — অর্থাৎ কোডটা ঠিকই দল ধরে হাঁটত। প্রদেয় চার ঘরে
+                 * ভাগ হওয়ার দিন `PAYABLE` নেমে গেল `2111`-এ, আর এই
+                 * তালিকাটা **নীরবে চার থেকে এক** হয়ে গেল: পরিবহন ও
+                 * হাম্মালির দেনা ফর্ম থেকে অগম্য হয়ে পড়ল।
+                 */
+                $payable = StandardChart::find(StandardChart::PAYABLE_GROUP);
+
+                if ($payable === null) {
+                    return collect();
+                }
+
+                /*
+                 * ⚠️ `2110` নিজে একটা **গ্রুপ** — ওতে দাখিলা বসে না।
+                 * আসল খাতগুলো তার নিচে: পরিবহন · হাম্মালি · ব্যবসায়িক
+                 * সরবরাহকারী · সেবা।
+                 *
+                 * ⭐ আর এটাই ব্যবহারকারীর জন্য ভালো: "কোন প্রদেয়" বাছা
+                 * গেলে পরিবহনের দেনা আর হাম্মালির দেনা আলাদা থাকে, আর
+                 * স্থিতিপত্রে ওগুলো আলাদা সারি হয়।
+                 *
+                 * ⓘ বংশধর ধরে, এক ধাপ নয় — ছকটা ক্রেতা নিজে বাড়াতে
+                 * পারেন, আর তখন নাতির ঘরে বসানো খাত তালিকা থেকে
+                 * হারিয়ে যেত (একই ফাঁদ [[AccountsFacts::assetValue]]-এ
+                 * ধরা পড়েছিল)।
+                 */
+                $ids = $payable->selfAndDescendants()->pluck('id')->all();
+
+                return $all->whereIn('id', $ids)->values();
+            })(),
             'incomeAccounts' => $all->where('type', Account::INCOME)->values(),
             'branches' => Branch::query()->active()->orderBy('name_en')->get(),
 
@@ -413,8 +461,19 @@ class VoucherController extends Controller implements HasMiddleware
                 'from' => ['label' => 'accounts::field.paid_from', 'source' => 'money'],
                 'to' => ['label' => 'accounts::field.paid_to', 'source' => 'all'],
             ],
+            /*
+             * ── খরচ: নগদে, নাকি বাকিতে ──────────────────────────────
+             *
+             * ⚠️ আগে `from` কেবল টাকার খাত নিত — অর্থাৎ **প্রতিটা খরচ
+             * ধরে নেওয়া হত তখনই মেটানো হয়েছে**। হাম্মালির বিল বা
+             * দালালের কমিশন ডিপোতে মাসে একবার মেটে, তাই ওগুলো লেখাই
+             * যেত না।
+             *
+             * ⭐ খরচটা ঘটে **যেদিন কাজটা হয়**, টাকা দেওয়ার দিন নয়।
+             * বাকিতে লিখলে দায় বসে, আর মেটানোর দিন সেটা শোধ হয়।
+             */
             Voucher::EXPENSE => [
-                'from' => ['label' => 'accounts::field.paid_from', 'source' => 'money'],
+                'from' => ['label' => 'accounts::field.paid_from', 'source' => 'money_or_credit'],
                 'to' => ['label' => 'accounts::field.expense_head', 'source' => 'expense'],
             ],
             // দুই দিকেই টাকার খাত — এটাই কন্ট্রার সংজ্ঞা

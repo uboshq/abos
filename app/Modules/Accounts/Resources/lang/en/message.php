@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'expense_on_credit' => '⚠️ No money leaves now — this expense becomes a payable, to be settled later.',
+
     'chart_empty' => 'The chart of accounts is empty.',
     'chart_empty_note' => 'Install the standard chart to get going — it is built for Bangladeshi '
         .'distribution and retail. Deactivate whatever you do not need afterwards.',

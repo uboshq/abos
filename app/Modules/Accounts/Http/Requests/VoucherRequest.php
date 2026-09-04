@@ -6,7 +6,9 @@ namespace App\Modules\Accounts\Http\Requests;
 
 use App\Core\Services\PartyRegistry;
 use App\Core\Support\Money;
+use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Accounts\Services\StandardChart;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -45,6 +47,29 @@ class VoucherRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
+        /*
+         * হেডারের পক্ষ — সহজ ফর্মের `party` ঘরটা।
+         *
+         * ⓘ সারির পক্ষ নিচে ভাঙা হয়, একই `type:id` নিয়মে। হেডারেরটা
+         * এখানে, কারণ সহজ ফর্ম সারি পাঠায় না — সে দুইটা খাত ও একটা
+         * অঙ্ক পাঠায়, আর সারি দুইটা [[VoucherService::twoLineEntry]]
+         * বানিয়ে দেয়।
+         *
+         * ⭐ হেডারে বসালেই যথেষ্ট: [[VoucherService]] সারিতে পক্ষ না
+         * পেলে **হেডার থেকে নেয়** — তাই খতিয়ানের দুইটা সারিতেই
+         * পক্ষটা পৌঁছায়, আর পক্ষের খতিয়ান ভরে ওঠে।
+         */
+        $picked = trim((string) $this->input('party', ''));
+
+        if ($picked !== '' && str_contains($picked, ':')) {
+            [$partyType, $partyId] = explode(':', $picked, 2);
+
+            $this->merge([
+                'party_type' => trim($partyType),
+                'party_id' => (int) $partyId,
+            ]);
+        }
+
         $lines = (array) $this->input('lines', []);
 
         if ($lines === []) {
@@ -126,6 +151,21 @@ class VoucherRequest extends FormRequest
             'from_account_id' => ['required', 'integer', 'different:to_account_id'],
             'to_account_id' => ['required', 'integer'],
             'amount' => ['required', 'numeric', 'gt:0'],
+
+            /*
+             * পক্ষ — ঐচ্ছিক, `type:id` আকারে।
+             *
+             * ⓘ বাধ্যতামূলক হওয়ার নিয়মটা এখানে নয়, `after()`-এ: সেটা
+             * নির্ভর করে **কোন খাত বাছা হয়েছে** তার উপর, আর সেটা
+             * একটা সাধারণ নিয়মে বলা যায় না।
+             */
+            'party' => ['nullable', 'string', 'max:64'],
+
+            // ⓘ `prepareForValidation()` এগুলো বসায়; নিয়মে না থাকলে
+            // `validated()` ওগুলো ফেলে দিত আর সেবায় পৌঁছাত না
+            'party_type' => ['nullable', 'string', 'max:32',
+                Rule::in(app(PartyRegistry::class)->types())],
+            'party_id' => ['nullable', 'integer'],
         ];
     }
 
@@ -135,6 +175,78 @@ class VoucherRequest extends FormRequest
     public function after(): array
     {
         return [
+            /*
+             * বাকিতে খরচ হলে পক্ষ ছাড়া চলে না।
+             *
+             * ── কেন ─────────────────────────────────────────────────
+             * ⛔ কারো কাছে **দেনা** হতে হলে "কার কাছে" জানতেই হবে।
+             * পক্ষ ছাড়া লিখলে প্রদেয়ের ঘরে একটা টাকা বসে থাকত **যার
+             * কোনো মালিক নেই**, আর *"কাকে কত দিতে হবে"* তালিকার যোগফল
+             * স্থিতিপত্রের সাথে মিলত না।
+             *
+             * ⓘ নগদে খরচে পক্ষ ঐচ্ছিক — চা-নাস্তা বা রিকশাভাড়ায় "কাকে
+             * দিলাম" লেখার দরকার নেই।
+             *
+             * ⚠️ নিয়মটা `rules()`-এ বসানো যেত না: এটা নির্ভর করে কোন
+             * খাত বাছা হয়েছে তার উপর, আর খাতটা প্রদেয় কিনা তা জানতে
+             * ডাটাবেসে দেখতে হয়।
+             */
+            function (Validator $validator): void {
+                if ($this->isJournal() || blank($this->input('from_account_id'))) {
+                    return;
+                }
+
+                if (filled($this->input('party'))) {
+                    return;
+                }
+
+                /*
+                 * ⛔ ── এখানে ভুল ধ্রুবক মানে নিয়মটা নিভে যাওয়া ──────────
+                 *
+                 * **কোড ধরে একটা খাত খুঁজলে `PAYABLE`; গোটা পরিবার চাইলে
+                 * `PAYABLE_GROUP`।** ⓘ যে পোস্ট করে সে একটা ঘর চায়; যে
+                 * তালিকা বা যাচাই করে সে পরিবার চায়।
+                 *
+                 * ⚠️ এখানে `PAYABLE` লেখা ছিল, আর প্রদেয় চার ঘরে ভাগ
+                 * হওয়ার দিন সেটা `2111`-এ নেমে গেল। ফল **পর্দা সরু হওয়া
+                 * নয় — একটা নিয়ম নিভে যাওয়া**: পরিবহন (২১১৬) বা
+                 * হাম্মালির (২১১৭) দেনায় ক্রেডিট করলে যাচাইটা আর চলত না,
+                 * আর পক্ষ ছাড়াই বাকিতে খরচ সেভ হয়ে যেত।
+                 *
+                 * ⛔ আর সরু পর্দা কেউ দেখে অভিযোগ করেন; **নিভে যাওয়া
+                 * যাচাই কেউ দেখেন না** — ছয় মাস পরে প্রদেয়ের তালিকায়
+                 * মালিকহীন টাকা দেখে লোকে ডাটা এন্ট্রির দোষ ভাবতেন।
+                 *
+                 * ⓘ নিচের মন্তব্যটা পড়ুন: **এই ফাঁদে এটা দ্বিতীয়বার** —
+                 * আর প্রথমবারও কোনো টেস্ট ধরেনি।
+                 */
+                $payable = StandardChart::find(StandardChart::PAYABLE_GROUP);
+
+                if ($payable === null) {
+                    return;
+                }
+
+                /*
+                 * ⚠️ **পুরো বংশ, কেবল ২১১০ নয়।**
+                 *
+                 * `2110` একটা গ্রুপ — ব্যবহারকারী বাছেন তার সন্তানদের
+                 * একটাকে (পরিবহন · হাম্মালি · সরবরাহকারী · সেবা)। কেবল
+                 * বাবার id মেলালে **নিয়মটা কোনোদিন চলতই না**, আর পক্ষ
+                 * ছাড়াই বাকিতে খরচ সেভ হয়ে যেত।
+                 *
+                 * ⓘ ঠিক এটাই ঘটেছিল প্রথমবার — ব্রাউজারে সেভ করে দেখা
+                 * গেছে, টেস্টে নয়।
+                 */
+                $payableIds = $payable->selfAndDescendants()
+                    ->pluck('id')
+                    ->map(fn ($id) => (int) $id)
+                    ->all();
+
+                if (in_array((int) $this->input('from_account_id'), $payableIds, true)) {
+                    $validator->errors()->add('party', __('accounts::validation.credit_needs_a_party'));
+                }
+            },
+
             function (Validator $validator): void {
                 if (! $this->isJournal()) {
                     return;

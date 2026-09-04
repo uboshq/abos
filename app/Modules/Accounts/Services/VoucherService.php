@@ -138,7 +138,39 @@ final class VoucherService
         $this->assertLinesArePostable($voucher);
         $this->assertBankReferenceIsFree($voucher);
 
-        return DB::transaction(function () use ($voucher) {
+        /*
+         * ── হেডারের পক্ষ কোন কোন সারিতে নামবে ────────────────────────
+         *
+         * ⚠️ আগে এখানে কোনো শর্ত ছিল না: `$line->party_type ??
+         * $voucher->party_type` — অর্থাৎ **হেডারে পক্ষ থাকলে সেটা
+         * প্রতিটা সারিতে বসত**।
+         *
+         * ⛔ উদ্দেশ্যটা ভালো ছিল — একটা সাধারণ ভাউচারে "কার সাথে
+         * লেনদেন" একবার লিখলেই যেন সব সারিতে পৌঁছায়। কিন্তু ফলটা ছিল:
+         *
+         *     Dr ৫১০০  খরচের খাত   →  ⛔ সরবরাহকারীর নাম বসে যেত
+         *     Cr ২১১১  প্রদেয়       →  ✅ ঠিক
+         *     Cr ১১০১  নগদ          →  ⛔ নগদেরও একটা "মালিক" হয়ে যেত
+         *
+         * ⚠️ **নগদ বা খরচের খাত কারো নামে বসে থাকে না।** ওখানে পক্ষ
+         * বসলে "এই সরবরাহকারীর সাথে লেনদেন" খুঁজলে **টাকার চলাচলও উঠে
+         * আসত**, আর বকেয়ার অঙ্ক দ্বিগুণ দেখাত — একই টাকা একবার দেনার
+         * সারিতে, আরেকবার নগদের সারিতে।
+         *
+         * ⭐ প্রশ্নটা "কোন পথে এল" নয়, **"এই খাতটা কি কারো নামে বসে
+         * থাকে"**। পাওনা ও দেনা ছাড়া কোনো খাতের মালিক থাকে না — তাই
+         * শর্তটা খাত ধরে, ভাউচারের ধরন ধরে নয়।
+         *
+         * ⓘ কেন এটা এতদিন ধরা পড়েনি: হেডারের পক্ষের ঘরটা কোনো পর্দা
+         * ব্যবহার করত না (৪ সেপ্টেম্বর ২০২৬-এ মাপা — পক্ষসহ পোস্ট করা
+         * ভাউচার **শূন্য**)। বাকিতে খরচের পর্দাই তার প্রথম ব্যবহারকারী,
+         * আর সেদিনই সুপ্ত বাগটা জাগত।
+         *
+         * ⛔ শর্তটা তুলে দিলে ঠিক ওই তিন লাইনের ছবিটাই ফিরে আসবে।
+         */
+        $ownable = $this->accountsThatHoldAParty();
+
+        return DB::transaction(function () use ($voucher, $ownable) {
             $this->posting->post(
                 Voucher::SOURCE_TYPES[$voucher->type],
                 $voucher->id,
@@ -147,8 +179,14 @@ final class VoucherService
                     'account_id' => $line->account_id,
                     'debit' => $line->debit,
                     'credit' => $line->credit,
-                    'party_type' => $line->party_type ?? $voucher->party_type,
-                    'party_id' => $line->party_id ?? $voucher->party_id,
+                    'party_type' => $line->party_type
+                        ?? (in_array((int) $line->account_id, $ownable, true)
+                            ? $voucher->party_type
+                            : null),
+                    'party_id' => $line->party_id
+                        ?? (in_array((int) $line->account_id, $ownable, true)
+                            ? $voucher->party_id
+                            : null),
                     'cost_center_id' => $line->cost_center_id,
                     'narration' => $line->narration ?? $voucher->narration,
                     'source_line_id' => $line->id,
@@ -371,6 +409,44 @@ final class VoucherService
         // খাতটা মাথায় বসে, কারণ অনন্যতার ইনডেক্সও মাথার উপর — লাইনে
         // বসালে দুই লাইনের ভাউচারে নিয়মটা কোন লাইনের তা বলা যেত না
         $voucher->forceFill(['money_account_id' => $account->id])->save();
+    }
+
+    /**
+     * যে খাতগুলো কারো নামে বসে থাকে — পাওনা ও দেনার গোটা পরিবার।
+     *
+     * ── কেন কোড নয়, পরিবার ─────────────────────────────────────────
+     * ছকটা ক্রেতা নিজে বাড়াতে পারেন, আর প্রদেয় ইতিমধ্যেই চার ঘরে ভাগ
+     * হয়েছে (মালের সরবরাহকারী · পরিবহন · হাম্মালি · সেবা)। ⛔ একটা
+     * কোড ধরে মেলালে ঠিক ওই ভাগ হওয়ার দিন নিয়মটা নিভে যেত — যেমন
+     * `PAYABLE` ধরে যাচাই করতে গিয়ে একবার হয়েছিল।
+     *
+     * ⚠️ `selfAndDescendants()` কেবল `id` ও `parent_id` আনে — বাকি
+     * ঘরগুলো `null`। তাই এখানে **কেবল id** মেলানো হয়; `code` বা
+     * `is_group` দেখতে গেলে চারটা `null`-এর সাথে তুলনা করে নীরবে ভুল
+     * উত্তর আসত।
+     *
+     * ⓘ গ্রুপ খাত তালিকায় থাকলেও ক্ষতি নেই — গ্রুপে দাখিলা বসেই না,
+     * `assertLinesArePostable()` তার আগেই আটকায়।
+     *
+     * @return list<int>
+     */
+    private function accountsThatHoldAParty(): array
+    {
+        $ids = [];
+
+        foreach ([StandardChart::RECEIVABLE, StandardChart::PAYABLE_GROUP] as $code) {
+            $root = StandardChart::find($code);
+
+            if ($root === null) {
+                continue;
+            }
+
+            foreach ($root->selfAndDescendants() as $account) {
+                $ids[] = (int) $account->id;
+            }
+        }
+
+        return $ids;
     }
 
     /**
