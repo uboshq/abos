@@ -178,7 +178,15 @@ final class StockReports
                 // পরিসরের নয় — ব্যালেন্স শিটে ঠিক একই যুক্তি
                 ->where('m.trx_date', '<=', $f['to'])
                 ->groupBy('m.product_id', 'p.code', 'p.name_en', 'p.name_bn')
-                ->havingRaw('SUM(m.floor_change) <> 0 OR SUM(m.hold_change) <> 0')
+                /*
+                 * ⚠️ বসার অপেক্ষায় থাকা মালও সারিটা আনে।
+                 *
+                 * আগে শর্তটা ছিল কেবল floor বা hold। ফলে যে পণ্যের সব
+                 * মালই সদ্য এসেছে আর কেউ বুঝে নেয়নি, তার সারিটাই
+                 * রিপোর্টে আসত না — **গুদামে মাল আছে, রিপোর্টে পণ্যটাই
+                 * নেই।** ⓘ ঠিক এভাবেই মাল "উধাও" দেখায়।
+                 */
+                ->havingRaw('SUM(m.floor_change) <> 0 OR SUM(m.hold_change) <> 0 OR SUM(m.unplaced_change) <> 0')
                 ->orderBy('p.code')
                 ->select([
                     'm.product_id',
@@ -187,6 +195,14 @@ final class StockReports
                     DB::raw('SUM(m.floor_change) as floor'),
                     DB::raw('SUM(m.reserved_change) as reserved'),
                     DB::raw('SUM(m.hold_change) as hold'),
+
+                    /*
+                     * ⛔ `available`-এর সূত্রে `unplaced` নেই, আর থাকবেও না —
+                     * বসানো হয়নি এমন মাল বিক্রয়যোগ্য নয়। কলামটা আলাদা
+                     * থাকে যাতে পাঠক দুইটা প্রশ্নের দুইটা উত্তর পান:
+                     * *গুদামে কত আছে* আর *কতটা বেচা যাবে*।
+                     */
+                    DB::raw('SUM(m.unplaced_change) as unplaced'),
                     DB::raw('SUM(m.floor_change) - SUM(m.reserved_change) - SUM(m.hold_change) as available'),
                 ]),
             columns: [
@@ -200,6 +216,7 @@ final class StockReports
                 ['key' => 'floor', 'label' => 'inventory::field.floor', 'type' => ReportColumn::MONEY],
                 ['key' => 'reserved', 'label' => 'inventory::field.reserved', 'type' => ReportColumn::MONEY],
                 ['key' => 'hold', 'label' => 'inventory::field.hold', 'type' => ReportColumn::MONEY],
+                ['key' => 'unplaced', 'label' => 'inventory::field.unplaced', 'type' => ReportColumn::MONEY],
                 ['key' => 'available', 'label' => 'inventory::field.available', 'type' => ReportColumn::MONEY],
             ],
         );

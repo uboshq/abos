@@ -10,6 +10,9 @@ return [
     'deactivate' => 'Deactivate',
     'activate' => 'Activate',
     'adjust' => 'Adjust',
+
+    /* Names the job, not the mechanism — the storeman is taking goods in. */
+    'place' => 'Take in',
     'hold' => 'Hold',
     'release' => 'Release',
     'new_transfer' => 'New transfer',

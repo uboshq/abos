@@ -11,6 +11,7 @@ use App\Modules\Inventory\Http\Controllers\RecipeController;
 use App\Modules\Inventory\Http\Controllers\StockAnalysisController;
 use App\Modules\Inventory\Http\Controllers\StockController;
 use App\Modules\Inventory\Http\Controllers\StockOverviewController;
+use App\Modules\Inventory\Http\Controllers\StockPlacementController;
 use App\Modules\Inventory\Http\Controllers\StockPrintController;
 use App\Modules\Inventory\Http\Controllers\StockReportController;
 use App\Modules\Inventory\Http\Controllers\StockTransferController;
@@ -80,6 +81,17 @@ Route::middleware('auth')->prefix('inventory')->group(function () {
         Route::get('/age', [StockAnalysisController::class, 'age'])->name('age');
 
         Route::get('/', [StockController::class, 'index'])->name('index');
+
+        /*
+         * মাল বুঝে নেওয়া — গাড়ি থেকে নামা আর গুদামে ঢোকা এক নয়।
+         *
+         * ক্রয় বা রিসিভের মাল প্রথমে "বসেনি" ঘরে বসে, আর এই পর্দা
+         * দিয়ে তাকে তোলা হয়। ⓘ ততক্ষণ মালটা বিক্রয়যোগ্য নয় — মালিকের
+         * নিয়ম, ৪ সেপ্টেম্বর ২০২৬।
+         */
+        Route::get('/placement', [StockPlacementController::class, 'index'])->name('placement');
+        Route::post('/placement', [StockPlacementController::class, 'store'])->name('placement.store');
+
         Route::get('/adjust', [StockController::class, 'adjust'])->name('adjust');
         Route::post('/adjust', [StockController::class, 'storeAdjustment'])->name('adjust.store');
 

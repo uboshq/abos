@@ -41,7 +41,8 @@ class StockMovement extends Model
     protected $fillable = [
         'company_id', 'branch_id', 'product_id', 'warehouse_id', 'batch_id', 'trx_date',
         'floor_change', 'reserved_change', 'hold_change',
-        'free_change', 'free_reserved_change', 'reason_code_id',
+        'free_change', 'free_reserved_change',
+        'unplaced_change', 'unplaced_free_change', 'reason_code_id',
         'source_type', 'source_id', 'document_no', 'narration', 'created_by',
     ];
 
@@ -54,6 +55,12 @@ class StockMovement extends Model
             'hold_change' => 'decimal:4',
             'free_change' => 'decimal:4',
             'free_reserved_change' => 'decimal:4',
+
+            /* এসেছে কিন্তু কেউ বুঝে নেয়নি — floor-এ ঢোকার আগের ঘর */
+            'unplaced_change' => 'decimal:4',
+
+            /* একই কথা ফ্রি মালের জন্য — একই গাড়ি, একই দায়িত্ব */
+            'unplaced_free_change' => 'decimal:4',
         ];
     }
 

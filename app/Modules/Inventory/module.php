@@ -103,6 +103,16 @@ return [
         ],
         'transactions' => [
             ['label' => 'inventory::menu.stock', 'route' => 'inventory.stock.index', 'permission' => 'inventory.stock.view'],
+
+            /*
+             * বসানোর সারিটা মজুদের ঠিক পরে, সমন্বয়ের আগে।
+             *
+             * ক্রমটা দিনের ক্রম: মাল আসে → বুঝে নেওয়া হয় → তারপর
+             * গোনা-সমন্বয়-বদলের কাজ। ⓘ নিচে বসালে রোজকার কাজটা
+             * বছরে-কয়েকবারের কাজগুলোর পরে পড়ত।
+             */
+            ['label' => 'inventory::menu.placement', 'route' => 'inventory.stock.placement',
+                'permission' => 'inventory.stock.place'],
             ['label' => 'inventory::menu.adjust', 'route' => 'inventory.stock.adjust', 'permission' => 'inventory.stock.adjust'],
 
             /*
@@ -180,6 +190,22 @@ return [
         'inventory.stock.view',
         'inventory.stock.adjust',
         'inventory.stock.hold',
+
+        /*
+         * মাল বুঝে নেওয়ার চাবি — দেখা বা সমন্বয়ের থেকে আলাদা।
+         *
+         * ── কেন নিজের চাবি ─────────────────────────────────────────
+         * বসানো মানে **দায়িত্ব নেওয়া**: এরপর থেকে মালটা বিক্রয়যোগ্য,
+         * আর গুদামের হিসাবে ঢুকে গেল। যিনি মজুদ দেখেন তাঁর সেটা করার
+         * দরকার নেই, আর যিনি সমন্বয় করেন তিনিও আলাদা কাজ করেন —
+         * সমন্বয় মানে "খাতা আর তাক মেলেনি", বসানো মানে "গাড়ির মাল
+         * আমি বুঝে নিলাম"।
+         *
+         * ⚠️ `stock.view`-এর সাথে জুড়লে যে কেউ মজুদ দেখতে পারেন তিনিই
+         * মাল বসিয়ে দিতে পারতেন, আর তখন "কে বুঝে নিল" প্রশ্নের কোনো
+         * উত্তর থাকত না।
+         */
+        'inventory.stock.place',
 
         /*
          * ক্রয়মূল্য দেখার চাবি — পণ্য দেখার থেকে আলাদা।
@@ -275,6 +301,21 @@ return [
     'role_templates' => [
         'Warehouse' => [
             'inventory.stock.view', 'inventory.stock.adjust', 'inventory.stock.hold',
+
+            /*
+             * মাল বুঝে নেওয়া গুদামের লোকের কাজ — আর কারও নয়।
+             *
+             * ⚠️ এটা এখানে না থাকলে চাবিটা কেবল মালিকের কাছেই থাকত
+             * (`Permission::all()`), আর গুদামের লোক রোজ সকালে মালিককে
+             * ডেকে আনতেন। ⓘ তখন নিয়মটা এক সপ্তাহে "অসুবিধা" হয়ে যেত,
+             * আর কেউ ওটা বন্ধ করার পথ খুঁজত।
+             *
+             * ⛔ Manager-এ দেওয়া হয়নি, ইচ্ছাকৃতভাবে: বসানো মানে
+             * **দায়িত্ব নেওয়া**, আর দায়িত্বটা যিনি মাল গুনে বুঝে নেন
+             * তাঁরই — দূর থেকে অনুমোদন করা কেউ নন।
+             */
+            'inventory.stock.place',
+
             'inventory.stock.opening',
             'inventory.transfer.view', 'inventory.transfer.create', 'inventory.transfer.receive',
             'inventory.product.view',
