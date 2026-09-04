@@ -136,6 +136,7 @@ class ApprovalFlowController extends Controller implements HasMiddleware
     private function companyUsers(): Builder
     {
         return User::query()
+            ->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))
             ->orderBy('name');
     }
 
