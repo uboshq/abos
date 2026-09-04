@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'payment_schedule' => 'Payment schedule',
+
     'suppliers' => 'Suppliers',
     'payable_list' => 'Payable List',
     'ageing' => 'Payable Ageing',
