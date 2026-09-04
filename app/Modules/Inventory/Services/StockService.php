@@ -40,6 +40,9 @@ final class StockService
     /** সমন্বয়ের উৎস — ড্রিল-ডাউনে চেনা যায়। */
     public const ADJUSTMENT = 'stock_adjustment';
 
+    /** মাল বুঝে নেওয়ার উৎস — Stock Placement। */
+    public const PLACEMENT = 'stock_placement';
+
     /** মাল আটকানো ও ছাড়ার উৎস। */
     public const HOLD = 'stock_hold';
 
@@ -73,8 +76,33 @@ final class StockService
          * উপায় থাকত না (Inventory-র ভুল নং ২)।
          */
         ?Batch $batch = null,
+
+        /*
+         * এসেছে, কিন্তু কেউ বুঝে নেয়নি — Stock Placement (৪ সেপ্টেম্বর ২০২৬)।
+         *
+         * ⭐ প্যারামিটারটা **সবার শেষে, ডিফল্ট শূন্য** — তাই বিদ্যমান
+         * একটা ডাকও বদলাতে হয়নি। বাইরে থেকে মাল আনে মাত্র দুইটা সেবা
+         * ([[PurchaseBillService]], [[PurchaseReceiptService]]); বাকি
+         * দশটা ভেতরের মাল নাড়ে, আর তাদের কাছে এই ঘরটার কোনো অর্থ নেই।
+         *
+         * ⚠️ মালটা এখানে `floor`-এ ঢোকে **না**। তাই
+         * `available = floor − reserved − hold` অপরিবর্তিত, আর বসানোর
+         * আগে কেউ ওটা বেচতে গেলে `assertEnoughOnFloor()` নিজেই থামায় —
+         * নতুন কোনো নিয়ম লেখা লাগেনি।
+         */
+        string $unplaced = '0',
+
+        /*
+         * ফ্রি মালের অপেক্ষা — একই গাড়ি, একই দায়িত্ব।
+         *
+         * ⓘ আলাদা ঘর, কারণ ফ্রি মালের ভাণ্ডারও আলাদা: বসানোর সময় বলা
+         * যেতে হবে কতটা বিক্রির আর কতটা ফ্রি।
+         */
+        string $unplacedFree = '0',
     ): StockMovement {
-        $this->assertSomethingMoves($floor, $reserved, $hold, $free, $freeReserved);
+        $this->assertSomethingMoves(
+            $floor, $reserved, $hold, $free, $freeReserved, $unplaced, $unplacedFree,
+        );
 
         /*
          * বন্ধ মাসে মালও নড়বে না — ১ সেপ্টেম্বর ২০২৬।
@@ -115,7 +143,7 @@ final class StockService
         return DB::transaction(function () use (
             $product, $warehouse, $sourceType, $sourceId,
             $floor, $reserved, $hold, $reason, $date, $documentNo, $narration,
-            $free, $freeReserved, $batch
+            $free, $freeReserved, $batch, $unplaced, $unplacedFree
         ) {
             /*
              * তাকে যা নেই তা বের করা যায় না।
@@ -146,6 +174,8 @@ final class StockService
                 'hold_change' => $hold,
                 'free_change' => $free,
                 'free_reserved_change' => $freeReserved,
+                'unplaced_change' => $unplaced,
+                'unplaced_free_change' => $unplacedFree,
                 'reason_code_id' => $reason?->id,
                 'source_type' => $sourceType,
                 'source_id' => $sourceId,
@@ -281,11 +311,28 @@ final class StockService
             $reserved = $reservedFor === null ? '0' : (string) $reservedFor($row);
             $free = bcmul((string) $row->free_change, '-1', 4);
 
+            /*
+             * বসার অপেক্ষায় থাকা মালও ফিরে যায় — Stock Placement।
+             *
+             * ⚠️ **এটা না থাকলে বাতিল করা ক্রয়ের মাল চিরকাল "বসেনি"
+             * ঘরে বসে থাকত।** ক্রয়ের মাল এখন `floor`-এ ঢোকে না, তাই
+             * উল্টানোর সারিতে `floor_change` শূন্য — আর নিচের শর্তটা
+             * সারিটাকে **পুরোপুরি এড়িয়ে যেত** ("কিছুই নড়েনি")।
+             *
+             * ফল হত সবচেয়ে খারাপ ধরনের: বিলটা বাতিল, খতিয়ান উল্টে
+             * গেছে, অথচ Placement-এর পর্দায় কাগজটা রয়ে গেছে — আর কেউ
+             * ওটা বসিয়ে দিলে **বাতিল করা মাল বিক্রয়যোগ্য হয়ে যেত।**
+             */
+            $unplaced = bcmul((string) $row->unplaced_change, '-1', 4);
+            $unplacedFree = bcmul((string) $row->unplaced_free_change, '-1', 4);
+
             // পুরোপুরি শূন্য সারি উল্টানোর কিছু নেই — move() নিজেই
             // আপত্তি করত ("কিছুই নড়ছে না"), আর সেটা ঠিকই করত
             if (bccomp((string) $row->floor_change, '0', 4) === 0
                 && bccomp($reserved, '0', 4) === 0
-                && bccomp($free, '0', 4) === 0) {
+                && bccomp($free, '0', 4) === 0
+                && bccomp($unplaced, '0', 4) === 0
+                && bccomp($unplacedFree, '0', 4) === 0) {
                 continue;
             }
 
@@ -301,6 +348,8 @@ final class StockService
                 narration: $narration,
                 free: $free,
                 batch: $row->batch,
+                unplaced: $unplaced,
+                unplacedFree: $unplacedFree,
             );
         }
 
@@ -441,7 +490,7 @@ final class StockService
      * ফ্রি মালে "আটকানো" নেই — দাম বাড়ার অপেক্ষায় ফ্রি মাল কেউ ধরে রাখে
      * না, কারণ ওটা বেচাই হয় না।
      *
-     * @return array{floor: string, reserved: string, hold: string, available: string, free: string, free_reserved: string, free_available: string}
+     * @return array{floor: string, reserved: string, hold: string, available: string, free: string, free_reserved: string, free_available: string, unplaced: string, on_hand: string, unplaced_free: string, free_on_hand: string}
      */
     public function statesFor(Product $product, ?Warehouse $warehouse = null): array
     {
@@ -453,7 +502,9 @@ final class StockService
                 COALESCE(SUM(reserved_change), 0) as reserved,
                 COALESCE(SUM(hold_change), 0) as hold,
                 COALESCE(SUM(free_change), 0) as free,
-                COALESCE(SUM(free_reserved_change), 0) as free_reserved
+                COALESCE(SUM(free_reserved_change), 0) as free_reserved,
+                COALESCE(SUM(unplaced_change), 0) as unplaced,
+                COALESCE(SUM(unplaced_free_change), 0) as unplaced_free
             ')
             ->first();
 
@@ -462,6 +513,8 @@ final class StockService
         $hold = (string) ($row->hold ?? 0);
         $free = (string) ($row->free ?? 0);
         $freeReserved = (string) ($row->free_reserved ?? 0);
+        $unplaced = (string) ($row->unplaced ?? 0);
+        $unplacedFree = (string) ($row->unplaced_free ?? 0);
 
         return [
             'floor' => $floor,
@@ -473,6 +526,24 @@ final class StockService
             'free' => $free,
             'free_reserved' => $freeReserved,
             'free_available' => bcsub($free, $freeReserved, 4),
+
+            /*
+             * এসেছে, কিন্তু কেউ বুঝে নেয়নি।
+             *
+             * ⚠️ `available`-এর সূত্রে এটা **নেই, আর থাকবেও না** — সেটাই
+             * গোটা নকশার ভিত্তি: বসানো হয়নি এমন মাল বিক্রয়যোগ্য নয়।
+             *
+             * ⭐ কিন্তু `on_hand` আলাদা কথা — *"গুদামে মোট কত"* প্রশ্নের
+             * উত্তরে ওটা ধরতেই হবে। ⓘ না ধরলে গাড়ি থেকে নামা মাল
+             * ব্যবস্থায় **উধাও** দেখাত, আর গুদামের লোক বলতেন "মাল তো
+             * আছে" — লক্ষণ আর কারণ দুই বিভাগে।
+             */
+            'unplaced' => $unplaced,
+            'on_hand' => bcadd($floor, $unplaced, 4),
+
+            /* ফ্রি মালেরও একই জোড়া — একই গাড়ি, একই দায়িত্ব */
+            'unplaced_free' => $unplacedFree,
+            'free_on_hand' => bcadd($free, $unplacedFree, 4),
         ];
     }
 
@@ -502,7 +573,9 @@ final class StockService
                 COALESCE(SUM(reserved_change), 0) as reserved,
                 COALESCE(SUM(hold_change), 0) as hold,
                 COALESCE(SUM(free_change), 0) as free,
-                COALESCE(SUM(free_reserved_change), 0) as free_reserved
+                COALESCE(SUM(free_reserved_change), 0) as free_reserved,
+                COALESCE(SUM(unplaced_change), 0) as unplaced,
+                COALESCE(SUM(unplaced_free_change), 0) as unplaced_free
             ')
             ->get();
 
@@ -514,6 +587,8 @@ final class StockService
             $hold = (string) $row->hold;
             $free = (string) $row->free;
             $freeReserved = (string) $row->free_reserved;
+            $unplaced = (string) $row->unplaced;
+            $unplacedFree = (string) $row->unplaced_free;
 
             $states[(int) $row->product_id] = [
                 'floor' => $floor,
@@ -523,10 +598,118 @@ final class StockService
                 'free' => $free,
                 'free_reserved' => $freeReserved,
                 'free_available' => bcsub($free, $freeReserved, 4),
+
+                /* statesFor()-এর সাথে হুবহু এক — দুইটা আলাদা হলে একই
+                   পণ্য দুই পর্দায় দুই সংখ্যা দেখাত */
+                'unplaced' => $unplaced,
+                'on_hand' => bcadd($floor, $unplaced, 4),
+                'unplaced_free' => $unplacedFree,
+                'free_on_hand' => bcadd($free, $unplacedFree, 4),
             ];
         }
 
         return $states;
+    }
+
+    /**
+     * মাল বুঝে নেওয়া — `unplaced` থেকে `floor`-এ।
+     *
+     * ── কেন একটাই সারি, দুইটা নয় ────────────────────────────────────
+     * এক চলাচলেই `unplaced` কমে আর `floor` বাড়ে, তাই **মোট কখনো নড়ে
+     * না** — এমনকি এক মুহূর্তের জন্যও। দুইটা সারিতে করলে দুইটার মাঝখানে
+     * মালটা কোথাও থাকত না, আর ঠিক ওই মুহূর্তে কেউ রিপোর্ট খুললে গুদাম
+     * খালি দেখাত।
+     *
+     * ── আংশিক বসানো ইচ্ছাকৃতভাবে সম্ভব ──────────────────────────────
+     * ⚠️ দশ কার্টনের আটটা ঠিক, দুইটা ভাঙা — সবটা একসাথে বসানোর নিয়ম
+     * করলে লোকে ভাঙা মালও বসিয়ে দিতেন, কারণ কাজটা এগোতে হবে। বাকি
+     * দুইটা `unplaced`-এই থেকে যায়, আর তালিকায় দেখা যায়।
+     *
+     * ⛔ যা বসেনি তার বেশি বসানো যায় না — নাহলে `unplaced` ঋণাত্মক হয়ে
+     * শূন্য থেকে মাল তৈরি হত।
+     */
+    public function place(
+        Product $product,
+        Warehouse $warehouse,
+        string $qty,
+
+        /*
+         * ⚠️ বসানোর সারিটা **মূল কাগজের উৎসেই** লেখা হয়, নিজের নামে নয়।
+         *
+         * ── কী ভাঙা ছিল, ৪ সেপ্টেম্বর ২০২৬ ─────────────────────────
+         * প্রথমে এখানে `sourceType: self::PLACEMENT` বসত। ফলে আসা আর
+         * বসানো **দুইটা আলাদা দলে** পড়ত: চালানের দলে `unplaced +১২`,
+         * বসানোর দলে `−১২`। যোগফল কাটাকাটি হত না, আর **কাগজটা
+         * তালিকা থেকে কোনোদিন সরত না** — যদিও মাল বসে গেছে।
+         *
+         * ⓘ ধরা পড়েছে ব্রাউজারে পুরোটা চালিয়ে: পণ্যের যোগফল ঠিক
+         * (`unplaced=0`), অথচ পর্দায় কাগজটা রয়ে গেছে। কোড পড়ে ধরা
+         * পড়ত না, কারণ দুইটা সংখ্যাই আলাদাভাবে সঠিক।
+         *
+         * ⭐ একই উৎসে লেখায় ড্রিল-ডাউনও ঠিক থাকে: সারিটা যে চালান
+         * থেকে এসেছিল, বসানোর সারিটাও সেখানেই নিয়ে যায়।
+         */
+        string $sourceType,
+        int $sourceId,
+        Carbon|string|null $date = null,
+        ?string $documentNo = null,
+        ?Batch $batch = null,
+
+        /*
+         * ফ্রি কার্টনও একই সারিতে — কাগজের লাইন ধরে।
+         *
+         * ⚠️ আলাদা করলে গুদামের লোক একই লাইনের অর্ধেক বসিয়ে চলে যেতে
+         * পারতেন, আর বাকি ফ্রি কার্টনটা চিরকাল অপেক্ষায় থাকত।
+         */
+        string $freeQty = '0',
+    ): StockMovement {
+        $wantsPaid = bccomp($qty, '0', 4) > 0;
+        $wantsFree = bccomp($freeQty, '0', 4) > 0;
+
+        if (! $wantsPaid && ! $wantsFree) {
+            throw ValidationException::withMessages([
+                'qty' => __('inventory::validation.nothing_moves'),
+            ]);
+        }
+
+        $state = $this->statesFor($product, $warehouse);
+
+        if (bccomp($qty, $state['unplaced'], 4) > 0) {
+            throw ValidationException::withMessages([
+                'qty' => __('inventory::validation.more_than_unplaced', [
+                    'waiting' => $state['unplaced'],
+                ]),
+            ]);
+        }
+
+        if (bccomp($freeQty, $state['unplaced_free'], 4) > 0) {
+            throw ValidationException::withMessages([
+                'free_qty' => __('inventory::validation.more_than_unplaced', [
+                    'waiting' => $state['unplaced_free'],
+                ]),
+            ]);
+        }
+
+        return $this->move(
+            product: $product,
+            warehouse: $warehouse,
+            sourceType: $sourceType,
+            sourceId: $sourceId,
+            narration: __('inventory::message.placed_narration'),
+            floor: $wantsPaid ? $qty : '0',
+            date: $date,
+            documentNo: $documentNo,
+            free: $wantsFree ? $freeQty : '0',
+            batch: $batch,
+            unplaced: $wantsPaid ? bcmul($qty, '-1', 4) : '0',
+            unplacedFree: $wantsFree ? bcmul($freeQty, '-1', 4) : '0',
+        );
+    }
+
+    /** কত মাল বুঝে নেওয়ার অপেক্ষায় — গুদাম ধরে, বা সব গুদামে। */
+    public function unplacedQty(Product $product, ?Warehouse $warehouse = null): string
+    {
+        return $this->statesFor($product, $warehouse)['unplaced'];
     }
 
     /** তাকে থাকা ফ্রি মাল — বিক্রির মজুদের সাথে মেশে না। */
@@ -570,12 +753,18 @@ final class StockService
         string $hold,
         string $free = '0',
         string $freeReserved = '0',
+        string $unplaced = '0',
+        string $unplacedFree = '0',
     ): void {
         $allZero = bccomp($floor, '0', 4) === 0
             && bccomp($reserved, '0', 4) === 0
             && bccomp($hold, '0', 4) === 0
             && bccomp($free, '0', 4) === 0
-            && bccomp($freeReserved, '0', 4) === 0;
+            && bccomp($freeReserved, '0', 4) === 0
+            /* শেষ দুইটা ঘর না গুনলে কেবল-unplaced চলাচল "কিছুই নড়েনি"
+               বলে ফিরে যেত — অর্থাৎ মাল আসার পথটাই বন্ধ থাকত */
+            && bccomp($unplaced, '0', 4) === 0
+            && bccomp($unplacedFree, '0', 4) === 0;
 
         if ($allZero) {
             // তিনটাই শূন্য মানে সারিটা কিছুই বলে না, শুধু খতিয়ান লম্বা করে

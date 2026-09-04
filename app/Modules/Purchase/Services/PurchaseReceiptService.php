@@ -203,7 +203,13 @@ final class PurchaseReceiptService
                     warehouse: $receipt->warehouse,
                     sourceType: PurchaseReceipt::STOCK_SOURCE,
                     sourceId: $receipt->id,
-                    floor: (string) $line->received_qty,
+
+                    /*
+                     * ⚠️ `floor` নয়, `unplaced` — কারণ ও নজির
+                     * [[PurchaseBillService]]-এ। রিসিভ মানে গাড়ি থেকে
+                     * নামল; বুঝে নেওয়া আলাদা ধাপ।
+                     */
+                    unplaced: (string) $line->received_qty,
                     date: $receipt->trx_date,
                     documentNo: $receipt->document_no,
                     batch: $batch,
@@ -224,7 +230,10 @@ final class PurchaseReceiptService
                         sourceId: $receipt->id,
                         date: $receipt->trx_date,
                         documentNo: $receipt->document_no,
-                        free: (string) $line->free_qty,
+
+                        /* ⚠️ `free` নয়, `unplacedFree` — কারণ ও নজির
+                           [[PurchaseBillService::bringInFree()]]-এ */
+                        unplacedFree: (string) $line->free_qty,
 
                         // ফ্রি কার্টনেও একই লট নম্বর ছাপা থাকে, আর
                         // মেয়াদোত্তীর্ণ ফ্রি ওষুধ বিক্রির চেয়ে কম

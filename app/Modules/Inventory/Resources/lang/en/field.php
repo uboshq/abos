@@ -27,6 +27,10 @@ return [
     'reserved' => 'Reserved',
     'hold' => 'Held',
     'available' => 'Available',
+
+    /* "Not placed", not "waiting" — the word names the job to be done. */
+    'unplaced' => 'Not placed',
+    'unplaced_free' => 'Not placed (free)',
     'reason' => 'Reason',
     'counted' => 'Counted',
     'difference' => 'Difference',

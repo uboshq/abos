@@ -8,6 +8,13 @@ return [
     'not_negative' => ':field cannot be negative.',
     'nothing_moves' => 'No quantity was given — a zero row only lengthens the ledger.',
 
+    /*
+     * The message names the number, not just "too many" — the person is
+     * standing at the goods with the paper in hand, and "how much is
+     * left" is their very next question.
+     */
+    'more_than_unplaced' => 'That much is not waiting to be placed — :waiting remains. Placing more would put goods on the books that are not in the warehouse.',
+
     // Packs — box, strip, piece
     'unknown_unit' => 'That unit is not in this company list.',
     'product_has_no_unit' => ':product has no unit set, so there is nothing to convert into.',

@@ -19,6 +19,11 @@ return [
     'no_movements' => 'No movements for this product yet.',
     'stock_math' => 'What is on the floor, less what is reserved and held, is what may be sold.',
     'adjusted' => 'Adjusted — difference :difference.',
+
+    /* The count is named: somebody may have placed two of six lines. */
+    'placed_narration' => 'Goods taken in',
+    'placed' => ':count line(s) taken in — these can be sold from now on.',
+    'nothing_to_place' => 'Nothing waiting to be placed — everything that arrived has been taken in.',
     'adjust_matched' => 'The count matched the books — no adjustment was needed.',
     'held' => 'Stock held.',
     'released' => 'Stock released.',

@@ -43,7 +43,7 @@ final class StockFacts
      * আটকানো। একটা সংখ্যা দেখালে বিক্রয়কর্মী ১০০ বেচার প্রতিশ্রুতি
      * দিতেন, আর ভুলটা ধরা পড়ত মাল দিতে গিয়ে।
      *
-     * @return array{floor: string, reserved: string, hold: string, available: string}
+     * @return array{floor: string, reserved: string, hold: string, available: string, unplaced: string}
      */
     public function states(?int $warehouseId = null): array
     {
@@ -52,11 +52,13 @@ final class StockFacts
             ->selectRaw('COALESCE(SUM(floor_change), 0) as floor')
             ->selectRaw('COALESCE(SUM(reserved_change), 0) as reserved')
             ->selectRaw('COALESCE(SUM(hold_change), 0) as hold')
+            ->selectRaw('COALESCE(SUM(unplaced_change), 0) as unplaced')
             ->first();
 
         $floor = (string) ($row->floor ?? '0');
         $reserved = (string) ($row->reserved ?? '0');
         $hold = (string) ($row->hold ?? '0');
+        $unplaced = (string) ($row->unplaced ?? '0');
 
         return [
             'floor' => $floor,
@@ -71,6 +73,21 @@ final class StockFacts
              * করবেন বুঝতেন না।
              */
             'available' => bcsub(bcsub($floor, $reserved, 4), $hold, 4),
+
+            /*
+             * বসেনি — আর এটাই সেই সংখ্যা যেটা মানুষকে Placement-এর
+             * পর্দায় নিয়ে যাবে।
+             *
+             * ⚠️ এটা ফিচারটার সবচেয়ে বড় ঝুঁকির উত্তর, আর ঝুঁকিটা কোডে
+             * নয় — অভ্যাসে: যিনি বসাবেন তিনি যদি না জানেন কিছু বসার
+             * অপেক্ষায় আছে, পর্দাটা কেউ খুলবেই না, আর মাল চিরকাল
+             * "বসেনি" ঘরে থেকে যাবে।
+             *
+             * ⛔ আর তখন লক্ষণটা দেখা দিত **বিক্রয়ে** ("মাল নেই"), অথচ
+             * কারণটা **মজুদে** — কাউন্টারের লোক আর গুদামের লোক দুইজনেই
+             * সত্যি বলতেন, আর কেউ মিলাতে পারতেন না।
+             */
+            'unplaced' => $unplaced,
         ];
     }
 

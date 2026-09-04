@@ -6,6 +6,7 @@ return [
     'products' => 'পণ্য তালিকা',
     'warehouses' => 'গুদাম',
     'stock' => 'মজুদ',
+    'placement' => 'মাল বুঝে নেওয়া',
     'adjust' => 'গণনা ও সমন্বয়',
     'stock_ledger' => 'মজুদের খতিয়ান',
     'stock_summary' => 'মজুদের সারাংশ',

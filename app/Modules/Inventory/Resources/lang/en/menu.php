@@ -6,6 +6,7 @@ return [
     'products' => 'Products',
     'warehouses' => 'Warehouses',
     'stock' => 'Stock',
+    'placement' => 'Stock Placement',
     'adjust' => 'Count & Adjust',
     'stock_ledger' => 'Stock Ledger',
     'stock_summary' => 'Stock Summary',

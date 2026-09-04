@@ -245,7 +245,19 @@ final class PurchaseBillService
                 warehouse: $warehouse,
                 sourceType: PurchaseBill::STOCK_SOURCE,
                 sourceId: $bill->id,
-                floor: (string) $line->qty,
+
+                /*
+                 * ⚠️ `floor` নয়, `unplaced` — Stock Placement (৪ সেপ্টেম্বর ২০২৬)।
+                 *
+                 * মালিকের নিয়ম: *"স্টক প্লেসমেন্ট করার আগ পর্যন্ত কোনো
+                 * বিল করা যাবে না, মানে সেল করা যাবে না।"* গাড়ি থেকে
+                 * নামা আর গুদামে বুঝে নেওয়া এক ঘটনা নয়।
+                 *
+                 * ⓘ মালটা তাকেই আছে, আর *"গুদামে মোট কত"* প্রশ্নে গোনাও
+                 * হয় ([[StockService::statesFor()]]-এর `on_hand`) — কেবল
+                 * `floor`-এ নেই, তাই বিক্রয়যোগ্যও নয়।
+                 */
+                unplaced: (string) $line->qty,
                 date: $bill->trx_date,
                 documentNo: $bill->document_no,
                 batch: $batch,
@@ -347,7 +359,10 @@ final class PurchaseBillService
             sourceId: $bill->id,
             date: $bill->trx_date,
             documentNo: $bill->document_no,
-            free: $free,
+
+            /* ⚠️ `free` নয়, `unplacedFree` — ফ্রি কার্টনটাও একই গাড়িতে
+               এসেছে, আর কেউ ওটাও বুঝে নেয়নি। একই লরিতে দুই নিয়ম চলে না। */
+            unplacedFree: $free,
 
             // ফ্রি কার্টনেও একই লট নম্বর ছাপা — মেয়াদোত্তীর্ণ ফ্রি
             // ওষুধ বিক্রির চেয়ে কম বিপজ্জনক নয়, আর রিকলেও ধরা পড়তে হবে
