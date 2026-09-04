@@ -270,9 +270,116 @@ class EveryPolicyRuleIsActuallyReachedTest extends TestCase
 
                 $asked[$model][] = $ability;
             }
+
+            /*
+             * ⭐ দরজাটা এক ধাপ ভেতরেও জিজ্ঞেস করতে পারে — আর সেটাও
+             * "রুট থেকে চাওয়া"।
+             *
+             * ── কেন এটা লাগল, ৪ সেপ্টেম্বর ২০২৬ ─────────────────────
+             * `ReportRunPolicy::download` কে "অনাথ" বলা হচ্ছিল, অথচ
+             * `ReportDownloadController::download()`-এর প্রথম লাইনই
+             * `Gate::authorize('download', $run)`। রুটে স্থির চাবি
+             * বসানো হয়নি, আর সেটা **ইচ্ছাকৃত** — রুট ফাইলের নিজের
+             * মন্তব্যে লেখা: "প্রাপক ব্যবস্থাপক না-ও হতে পারেন, তাই
+             * অনুমতি রেকর্ড দেখে, স্থির চাবি নয়"।
+             *
+             * ⛔ দুইটা পাহারা তখন একই দরজা নিয়ে দুই কথা বলছিল:
+             * [[EveryRouteIsGuardedTest]] পদ্ধতির ভিতরের `authorize()`
+             * বৈধ মানে ("কোন ডকুমেন্টের কাগজ, না জেনে বলা যায় না কার
+             * অনুমতি লাগবে"), আর এই পাহারাটা মানত না। একটাকে সবুজ
+             * করলে অন্যটা লাল — আর তখন কেউ না কেউ **নকশাটা** বদলে
+             * ফেলত পাহারাকে খুশি করতে। পাহারা বাস্তবতার সেবক।
+             *
+             * ⓘ একের বেশি মডেল বাঁধা থাকলে ছেড়ে দেওয়া হয়: তখন কোন
+             * মডেলের উপর ক্ষমতাটা চাওয়া হচ্ছে সেটা আর নিশ্চিত নয়,
+             * আর অনুমান করে বসলে পাহারাটা ভুল কারণে সবুজ হত।
+             */
+            if (count($bindings) === 1) {
+                $model = reset($bindings);
+
+                foreach ($this->abilitiesTheActionAsksFor($route) as $ability) {
+                    $asked[$model][] = $ability;
+                }
+            }
         }
 
         return array_map(fn (array $a): array => array_values(array_unique($a)), $asked);
+    }
+
+    /**
+     * রুটের নিজের পদ্ধতি ভেতরে যে ক্ষমতাগুলো চায়।
+     *
+     * ⚠️ মন্তব্য বাদ দিয়ে পড়া হয়। না দিলে একটা **মন্তব্য করে রাখা**
+     * `// Gate::authorize('download', $run)` লাইনও "চাওয়া" গণ্য হত, আর
+     * পাহারাটা এমন একটা দরজা নিয়ে নিশ্চিন্ত থাকত যেটা আর কিছুই
+     * জিজ্ঞেস করে না।
+     *
+     * @return list<string>
+     */
+    private function abilitiesTheActionAsksFor(\Illuminate\Routing\Route $route): array
+    {
+        $action = $route->getActionName();
+
+        if (! str_contains($action, '@')) {
+            return [];
+        }
+
+        [$controller, $method] = explode('@', $action, 2);
+
+        if (! class_exists($controller) || ! method_exists($controller, $method)) {
+            return [];
+        }
+
+        $reflection = new ReflectionMethod($controller, $method);
+        $file = $reflection->getFileName();
+        $start = $reflection->getStartLine();
+        $end = $reflection->getEndLine();
+
+        if (! is_string($file) || $start === false || $end === false) {
+            return [];
+        }
+
+        $lines = explode("\n", $this->withoutComments((string) file_get_contents($file)));
+        $body = implode("\n", array_slice($lines, $start - 1, $end - $start + 1));
+
+        $found = [];
+
+        foreach ([
+            "/Gate::(?:allows|denies|authorize|any)\(\s*'([a-zA-Z]+)'/",
+            "/\\\$this->authorize\(\s*'([a-zA-Z]+)'/",
+        ] as $pattern) {
+            if (preg_match_all($pattern, $body, $matches) > 0) {
+                $found = array_merge($found, $matches[1]);
+            }
+        }
+
+        return array_values(array_unique($found));
+    }
+
+    /**
+     * কোডটুকু — মন্তব্য ছাড়া, লাইনের সংখ্যা অটুট রেখে।
+     *
+     * নতুন লাইনগুলো রাখা হয় বলেই লাইন-নম্বর ধরে পদ্ধতির শরীর কাটা
+     * যায়; পুরো মন্তব্যটা স্পেস দিয়ে বদলালে বহু-লাইনের doc-block এক
+     * লাইনে নেমে আসত আর কাটাটা ভুল জায়গা থেকে হত।
+     */
+    private function withoutComments(string $source): string
+    {
+        $kept = '';
+
+        foreach (token_get_all($source) as $token) {
+            if (is_array($token)) {
+                $kept .= in_array($token[0], [T_COMMENT, T_DOC_COMMENT], true)
+                    ? (string) preg_replace('/[^\n]/', ' ', $token[1])
+                    : $token[1];
+
+                continue;
+            }
+
+            $kept .= $token;
+        }
+
+        return $kept;
     }
 
     /**
