@@ -108,13 +108,17 @@ final class FinanceDashboard implements ProvidesDashboard
                 Route::has('inventory.stock.movement')
                     ? new Tile(label: __('finance::dashboard.product_costing'),
                         href: route('inventory.stock.movement', ['type' => 'slow']),
-                        permission: 'inventory.cost.view', icon: 'box')
+                        // ⚠️ 'box' আইকন-সেটে নেই — নাম ভুল হলে পর্দায় **কিচ্ছু
+                        // আঁকা হয় না, আর কোনো ত্রুটিও দেখা যায় না** (নীরব
+                        // ফাঁকা জায়গা)। দরজাটা মজুদের পর্দায় যায়, তাই এটাই।
+                        permission: 'inventory.cost.view', icon: 'inventory')
                     : null,
 
                 Route::has('approval.flow.index')
                     ? new Tile(label: __('finance::dashboard.who_approves_what'),
                         href: route('approval.flow.index'),
-                        permission: 'approval.flow.manage', icon: 'shield')
+                        // 'shield'-ও সেটে ছিল না; দরজাটা অনুমোদনের ছকে যায়
+                        permission: 'approval.flow.manage', icon: 'approval')
                     : null,
             ])),
 

@@ -8,6 +8,7 @@ use App\Core\Contracts\ProvidesDashboard;
 use App\Core\Engines\Dashboard\Breakdown;
 use App\Core\Engines\Dashboard\DashboardDefinition;
 use App\Core\Engines\Dashboard\Listing;
+use App\Core\Engines\Drill\DrillResolver;
 use App\Core\Engines\Dashboard\Stat;
 use App\Core\Engines\Dashboard\Tile;
 use App\Core\Support\Money;
@@ -16,8 +17,6 @@ use App\Modules\Accounts\Models\MoneyTransfer;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\AccountsFacts;
 use App\Modules\Accounts\Services\StandardChart;
-use App\Modules\Customer\Models\Customer;
-use App\Modules\Supplier\Models\Supplier;
 
 /**
  * হিসাব মডিউলের ড্যাশবোর্ড — ইঞ্জিনের ছকে।
@@ -61,16 +60,52 @@ final class AccountsDashboard implements ProvidesDashboard
          * কোয়েরি হলে ঠিক সেই ধীরতা জন্মাত যেটা এড়ানোর জন্য
          * [[AccountsFacts::today()]] একটাই কোয়েরিতে তিনটা সংখ্যা দেয়।
          */
+        /*
+         * পক্ষের নাম আসে [[DrillResolver]] দিয়ে — **মডিউলের ক্লাস
+         * import না করে**।
+         *
+         * ── কেন এটা জরুরি ───────────────────────────────────────────
+         * ⚠️ Accounts কারও উপর নির্ভর করে না — `module.php`-এ
+         * `depends_on` ফাঁকা, আর **সবাই যার উপর দাঁড়ায় সে কারও উপর
+         * দাঁড়ালে সীমানাটাই থাকে না**। গ্রাহক ও সরবরাহকারী দুইটাই
+         * Accounts-এর উপর দাঁড়ায়, তাই উল্টো নির্ভরতা **চক্র** তৈরি করত।
+         *
+         * ⛔ প্রথমে এখানে `Customer::query()` ও `Supplier::query()` লেখা
+         * ছিল, আর [[BoundariesTest]] সেটা ধরেছে — ঠিকই ধরেছে।
+         *
+         * ── কেন নাম বাদ দিয়ে দেওয়া হলো না ───────────────────────────
+         * [[CoreReports]]-এ লেখা আছে *"পক্ষের নাম এখানে নেই,
+         * ইচ্ছাকৃতভাবে"* — কারণ তখন টেবিলে জোড় লাগাতে হত। ⭐ কিন্তু
+         * `DrillResolver` সেই সমস্যাটার উত্তর: সে মডিউলের **ঘোষণা** পড়ে
+         * ক্লাসটা বের করে, তাই Accounts কোনো টেবিল বা ক্লাসের নাম জানে
+         * না — কেবল `'customer'` শব্দটা, যেটা খতিয়ানের নিজের ঘরেই আছে।
+         *
+         * ⓘ `whereIn` — প্রতি সারিতে `resolve()` ডাকলে দশ সারিতে দশটা
+         * কোয়েরি হত, আর ড্যাশবোর্ডে তালিকা দুইটা।
+         */
+        $nameFor = function (string $partyType, array $rows) {
+            $ids = array_column($rows, 'party_id');
+
+            if ($ids === []) {
+                return collect();
+            }
+
+            $model = app(DrillResolver::class)->map()[$partyType] ?? null;
+
+            if ($model === null) {
+                return collect();
+            }
+
+            return $model::query()->whereIn('id', $ids)->get()->keyBy('id');
+        };
+
         $topDue = $facts->topDue('customer', StandardChart::RECEIVABLE);
-        $names = Customer::query()
-            ->whereIn('id', array_column($topDue, 'party_id'))
-            ->get()
-            ->keyBy('id');
+        $names = $nameFor('customer', $topDue);
 
         $dueRows = collect($topDue)
             ->map(fn (array $row) => (object) [
                 'id' => $row['party_id'],
-                'name' => $names[$row['party_id']]?->name() ?? '—',
+                'name' => $names[$row['party_id']]?->drillLabel() ?? '—',
                 'amount' => $row['amount'],
             ])
             ->values();
@@ -83,15 +118,12 @@ final class AccountsDashboard implements ProvidesDashboard
          * **মাসের শেষে প্রশ্নটা উল্টে যায়**: কার পাওনা মেটাতে হবে।
          */
         $topOwed = $facts->topDue('supplier', StandardChart::PAYABLE);
-        $supplierNames = Supplier::query()
-            ->whereIn('id', array_column($topOwed, 'party_id'))
-            ->get()
-            ->keyBy('id');
+        $supplierNames = $nameFor('supplier', $topOwed);
 
         $owedRows = collect($topOwed)
             ->map(fn (array $row) => (object) [
                 'id' => $row['party_id'],
-                'name' => $supplierNames[$row['party_id']]?->name() ?? '—',
+                'name' => $supplierNames[$row['party_id']]?->drillLabel() ?? '—',
                 'amount' => $row['amount'],
             ])
             ->values();

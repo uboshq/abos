@@ -153,6 +153,19 @@ final class PartyReports
                  */
                 $paid = DB::table('pur_payment_lines as pl')
                     ->join('pur_payments as p', 'p.id', '=', 'pl.payment_id')
+
+                    /*
+                     * ⚠️ কোম্পানির ছাঁকনি এখানেও, যদিও বাইরের কোয়েরি
+                     * বিলগুলোকে এই কোম্পানিতেই আটকে রেখেছে।
+                     *
+                     * ⓘ join-এর উপর ভরসা করে বিচ্ছিন্নতা ছেড়ে দেওয়া
+                     * ভঙ্গুর: কেউ একদিন join-টা বদলালে ছাঁকনিটা নীরবে
+                     * চলে যেত। **বহু-টেন্যান্টে বিচ্ছিন্নতা সুবিধা নয়,
+                     * আইনি বাধ্যবাধকতা** — তাই প্রতিটা কাঁচা কোয়েরি
+                     * নিজেই বলে সে কোন কোম্পানির।
+                     */
+                    ->where('pl.company_id', $f['company_id'])
+                    ->where('p.company_id', $f['company_id'])
                     ->whereIn('p.status', DocumentStatus::POSTED)
                     ->whereNull('p.deleted_at')
                     ->groupBy('pl.purchase_bill_id')
