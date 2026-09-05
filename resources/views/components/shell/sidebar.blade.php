@@ -203,7 +203,15 @@
                  "এখানে আছি" চিহ্ন দুই মাপের হয়ে যেত। --}}
             <a href="{{ route('dashboard') }}"
                @class([
-                   'relative grid w-(--spacing-sidebar-icon) shrink-0 place-items-center bg-(--color-brand-900)',
+                   {{-- ⚠️ `--color-sidebar`, `--color-brand-900` নয়।
+
+                        ⓘ এই পট্টিটা রেলের ঠিক উপরে বসে, তাই দুইটার
+                        জমিন **এক টোকেন থেকেই** আসতে হবে। ⛔ আগে দুইটা
+                        আলাদা টোকেন পড়ত; দুইটাই `900` ছিল বলে মিলে
+                        যেত, কিন্তু রেল `700`-এ নামার দিন (৬ সেপ্টেম্বর
+                        ২০২৬) উপরের কোণটা **দুই রঙের দুই টুকরো** হয়ে
+                        যেত — ঠিক যে দোষটা আগের দিন সারানো হয়েছিল। --}}
+                   'relative grid w-(--spacing-sidebar-icon) shrink-0 place-items-center bg-(--color-sidebar)',
                    'before:absolute before:top-1/2 before:h-11 before:-translate-y-1/2
                     before:start-0 before:w-1 before:bg-(--color-brand-gold)' => $onDashboard,
                ])
@@ -465,8 +473,7 @@
                              মডিউলের দাগের মতোই উজ্জ্বল হত, আর চোখ দুইটাকে
                              এক জিনিস ভাবত। ভাগ বোঝানোই এর কাজ। --}}
                         <div role="separator" aria-label="{{ $sectionLabel }}"
-                             class="my-1 h-0.5 w-8 shrink-0 rounded-full
-                                    bg-(--color-brand-gold)/60"></div>
+                             class="my-1 h-0.5 w-8 shrink-0 rounded-full bg-(--rail-rule)"></div>
                     @endif
 
                     {{--
