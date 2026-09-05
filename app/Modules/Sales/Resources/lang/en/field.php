@@ -250,7 +250,16 @@ return [
     'vat_rate_for_every_line' => 'This rate applies to every line on this invoice.',
     'this_line' => 'This Line',
     'gift' => 'Gift',
-    'costing' => 'Costing',
+    /*
+     * "Pur. Rate" — the owner's wording, 6 September 2026.
+     *
+     * The button opens what the goods cost us, and "Costing" named the
+     * exercise rather than the number. On a counter where every other
+     * button says what you get, this one said what you were doing.
+     *
+     * Short because the button is narrow: three of them share one row.
+     */
+    'costing' => 'Pur. Rate',
     'items' => 'items',
     'running_total' => 'Running total',
     'sl' => 'SL#',
