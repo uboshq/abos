@@ -13,6 +13,7 @@ use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\StockMovement;
 use App\Modules\Inventory\Models\StockTransfer;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Inventory\Services\GoodsWaitingToBePlaced;
 use App\Modules\Inventory\Reports\StockReports;
 
 /**
@@ -122,7 +123,17 @@ return [
              * কম দেখায় আর লোকে ভাবেন মাল আসেনি।
              */
             ['label' => 'inventory::menu.placement', 'route' => 'inventory.stock.placement',
-                'permission' => 'inventory.stock.place'],
+                'permission' => 'inventory.stock.place',
+
+                /*
+                 * ⭐ কয়টা কাগজের মাল বসানোর অপেক্ষায় — সারিতেই লেখা।
+                 *
+                 * ⓘ মালিকের সিদ্ধান্ত, ৫ সেপ্টেম্বর ২০২৬: ক্রয়ের পর্দার
+                 * স্থায়ী নোটিশটা তুলে দিয়ে বদলে এই সংখ্যাটা। **শূন্য
+                 * হলে ব্যাজ নেই**, তাই যেদিন কিছু পড়ে নেই সেদিন পর্দায়
+                 * কোনো শব্দও নেই।
+                 */
+                'count' => GoodsWaitingToBePlaced::class],
             ['label' => 'inventory::menu.stock', 'route' => 'inventory.stock.index', 'permission' => 'inventory.stock.view'],
             ['label' => 'inventory::menu.adjust', 'route' => 'inventory.stock.adjust', 'permission' => 'inventory.stock.adjust'],
 
