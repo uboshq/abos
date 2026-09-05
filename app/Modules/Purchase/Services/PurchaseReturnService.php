@@ -165,15 +165,48 @@ final class PurchaseReturnService
 
         return DB::transaction(function () use ($return) {
             foreach ($return->lines as $line) {
+                /*
+                 * ⛔ কার্টন না খুলেই ফেরত — ৫ সেপ্টেম্বর ২০২৬।
+                 *
+                 * ── কী ভাঙা ছিল ─────────────────────────────────────
+                 * এখানে আগে কেবল `floor` থেকে বাদ যেত। কিন্তু Stock
+                 * Placement আসার পর (৪ সেপ্টেম্বর) আসা মাল আর সরাসরি
+                 * তাকে ওঠে না — সে **`unplaced`-এ বসে থাকে**।
+                 *
+                 * ⚠️ আর ফেরত ঠিক তখনই সবচেয়ে বেশি হয়: গাড়ি থেকে
+                 * নামিয়ে দেখা গেল ভুল মাল বা ভাঙা কার্টন — কেউ ওটা
+                 * তাকে তোলেনইনি। ফল দুই রকম, দুইটাই খারাপ:
+                 *
+                 *   তাকে অন্য মাল থাকলে   → **তাক থেকে কেটে নিত**, যা
+                 *                            সেখানে যায়ইনি
+                 *   তাক খালি থাকলে        → "তাকে এত নেই" বলে থামত,
+                 *                            অথচ মালটা হাতের সামনেই
+                 *
+                 * ⭐ তাই আগে অপেক্ষার ঘর, তারপর তাক — মালটা যেখানে
+                 * সত্যিই আছে সেখান থেকেই যায়। ⓘ একটাই সারিতে, তাই
+                 * মোট এক মুহূর্তের জন্যও ভুল থাকে না।
+                 */
+                $waiting = $this->stock->unplacedQty($line->product, $return->warehouse);
+                $qty = (string) $line->qty;
+
+                $fromWaiting = bccomp($waiting, $qty, 4) >= 0 ? $qty : $waiting;
+
+                if (bccomp($fromWaiting, '0', 4) < 0) {
+                    $fromWaiting = '0';
+                }
+
+                $fromFloor = bcsub($qty, $fromWaiting, 4);
+
                 $this->stock->move(
                     product: $line->product,
                     warehouse: $return->warehouse,
                     sourceType: PurchaseReturn::STOCK_SOURCE,
                     sourceId: $return->id,
-                    floor: bcmul((string) $line->qty, '-1', 4),
+                    floor: bccomp($fromFloor, '0', 4) > 0 ? bcmul($fromFloor, '-1', 4) : '0',
                     reason: $return->reasonCode,
                     date: $return->trx_date,
                     documentNo: $return->document_no,
+                    unplaced: bccomp($fromWaiting, '0', 4) > 0 ? bcmul($fromWaiting, '-1', 4) : '0',
                 );
             }
 
@@ -200,17 +233,42 @@ final class PurchaseReturnService
             if ($return->status === DocumentStatus::CONFIRMED) {
                 $return->loadMissing(['lines.product', 'warehouse']);
 
-                // মালটা গুদামে ফিরে আসে — সারি মুছে নয়, উল্টো সারিতে
-                foreach ($return->lines as $line) {
+                /*
+                 * মালটা গুদামে ফিরে আসে — সারি মুছে নয়, উল্টো সারিতে।
+                 *
+                 * ⚠️ **ঠিক যেখান থেকে গিয়েছিল, সেখানেই** — অর্ধেক
+                 * অপেক্ষার ঘর থেকে গেলে অর্ধেক সেখানেই ফেরে।
+                 *
+                 * ⛔ সবটা `floor`-এ ফেরালে বাতিল করাটা নীরবে একটা
+                 * **বসানোর কাজ** হয়ে যেত: যে মাল কেউ কোনোদিন বুঝে
+                 * নেয়নি সেটা বিক্রয়যোগ্য হয়ে উঠত, আর মালিকের নিয়ম
+                 * ("বসানোর আগে বিক্রি নয়") একটা বাতিল দিয়ে পাশ কাটানো
+                 * যেত।
+                 *
+                 * ⓘ ভাগটা আন্দাজ করা হয় না — এই কাগজের নিজের সারিগুলো
+                 * যোগ করে উল্টে দেওয়া হয়, তাই সংখ্যাটা সবসময় হুবহু।
+                 */
+                foreach ($this->stock->netBySource(PurchaseReturn::STOCK_SOURCE, $return->id) as $productId => $net) {
+                    /*
+                     * ⓘ শূন্য নিট বাদ — [[StockService::move()]] শূন্য
+                     * চলাচলে ইচ্ছাকৃতভাবে থামে ("কিছুই নড়ছে না")। এখানে
+                     * শূন্য মানে ঐ পণ্যের সারিগুলো আগেই কাটাকাটি হয়ে
+                     * গেছে, আর সেটা ত্রুটি নয়।
+                     */
+                    if (bccomp($net['floor'], '0', 4) === 0 && bccomp($net['unplaced'], '0', 4) === 0) {
+                        continue;
+                    }
+
                     $this->stock->move(
-                        product: $line->product,
+                        product: Product::findOrFail($productId),
                         warehouse: $return->warehouse,
                         sourceType: PurchaseReturn::STOCK_SOURCE,
                         sourceId: $return->id,
-                        floor: (string) $line->qty,
+                        floor: bcmul($net['floor'], '-1', 4),
                         date: $date,
                         documentNo: $return->document_no,
                         narration: $reason,
+                        unplaced: bcmul($net['unplaced'], '-1', 4),
                     );
                 }
 

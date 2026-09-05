@@ -35,4 +35,8 @@ return [
     'start_cooking' => 'রান্না শুরু',
     'mark_ready' => 'হয়েছে',
     'mark_served' => 'দেওয়া হয়েছে',
+    'set' => 'বসাও',
+    'add_place' => 'যোগ করুন',
+    'retire_place' => 'নিষ্ক্রিয়',
+    'places' => 'জায়গা',
 ];

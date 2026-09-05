@@ -92,4 +92,5 @@ return [
     // anything image/png, so the message says the file is not an image
     // rather than that the type is wrong.
     'image_only' => 'That file is not an image. Use JPEG, PNG or WebP — the right name is not enough if the contents are not an image.',
+    'location_not_in_warehouse' => 'That place is not in this warehouse.',
 ];

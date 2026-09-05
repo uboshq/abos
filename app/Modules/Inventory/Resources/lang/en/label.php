@@ -14,4 +14,5 @@ return [
     'own_code' => 'its own code',
     'opens_in_new_tab' => 'Opens in a new tab.',
     'chosen' => 'chosen',
+    'combine_selection' => 'Combine selection for all listed products',
 ];

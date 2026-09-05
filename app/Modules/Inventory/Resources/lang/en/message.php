@@ -108,4 +108,8 @@ return [
     // Product image
     'image_label' => 'Choose an image',
     'image_hint' => 'JPEG · PNG · WebP · up to 2 MB',
+    'place_created' => 'The place was added.',
+    'place_updated' => 'The place was updated.',
+    'place_retired' => 'The place is retired. Past rows are untouched.',
+    'no_places' => 'No blocks or racks are set up in this warehouse. Placement will then show only the warehouse, which is normal for a small shop.',
 ];

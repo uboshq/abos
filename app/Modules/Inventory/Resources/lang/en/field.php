@@ -94,4 +94,17 @@ return [
     'portions_possible' => 'Portions possible',
     'limiting' => 'What runs out first',
     'minutes' => 'm',
+
+    /*
+     * Three steps inside a warehouse — Block, Rack, Shelf.
+     *
+     * The words live here, not in code: a pharmacy calls these room,
+     * cabinet and tray; a cold store calls them chamber, row and tier.
+     */
+    'depth_1' => 'Block',
+    'depth_2' => 'Rack',
+    'depth_3' => 'Shelf',
+    'sort' => 'Order',
+    'path' => 'Path',
+    'parent_place' => 'Inside',
 ];

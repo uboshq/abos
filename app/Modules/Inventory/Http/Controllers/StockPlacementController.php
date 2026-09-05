@@ -9,6 +9,7 @@ use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Product;
+use App\Modules\Inventory\Models\StorageLocation;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\StockService;
 use Illuminate\Http\RedirectResponse;
@@ -61,8 +62,66 @@ class StockPlacementController extends Controller implements HasMiddleware
     {
         return view('inventory::stock.placement', [
             'menu' => $this->menu->forUser($request->user()),
-            'papers' => $this->waiting(),
+            'papers' => $papers = $this->waiting(),
+            'places' => $this->placesIn($papers),
         ]);
+    }
+
+    /**
+     * তাকের গাছ — কেবল যে গুদামগুলো আজ পর্দায় আছে, তাদেরটা।
+     *
+     * ── কেন সব গুদামের সব তাক নয় ────────────────────────────────────
+     * ⚠️ একটা ডিপোতে পাঁচশো শেলফ থাকতে পারে। সবগুলো পাঠালে পর্দাটা
+     * ভারী হত, অথচ ব্যবহারকারী আজ দুইটা গুদামের বাইরে কিছুই বাছবেন
+     * না — বাকি সব সারি নিছক ওজন।
+     *
+     * ── আকৃতি ───────────────────────────────────────────────────────
+     * `[warehouseId => [locationId => ['id','code','name','depth','parent']]]`
+     *
+     * ⓘ সমতল, গাছ নয়। পর্দায় Alpine `parent` ধরে ছেঁকে নেয়, আর
+     * সমতল তালিকা JSON-এ ছোট এবং পড়াও সহজ। ⭐ গভীরতা বাড়লে এই
+     * আকৃতিটার এক অক্ষরও বদলায় না — কেবল আরেকটা কলাম দেখাতে হয়।
+     *
+     * @param  array<string, array{lines: list<array<string, mixed>>}>  $papers
+     * @return array<int, list<array<string, mixed>>>
+     */
+    private function placesIn(array $papers): array
+    {
+        $warehouseIds = [];
+
+        foreach ($papers as $paper) {
+            foreach ($paper['lines'] as $line) {
+                $warehouseIds[(int) $line['warehouse_id']] = true;
+            }
+        }
+
+        if ($warehouseIds === []) {
+            return [];
+        }
+
+        return StorageLocation::query()
+            ->active()
+            ->with('warehouse:id,code,name_en,name_bn')
+            ->whereIn('warehouse_id', array_keys($warehouseIds))
+            ->inWalkingOrder()
+            ->get()
+            ->groupBy('warehouse_id')
+            ->map(fn ($rows) => $rows->map(fn (StorageLocation $place) => [
+                'id' => $place->id,
+                'code' => $place->code,
+                'name' => $place->name(),
+                'depth' => $place->depth,
+                'parent' => $place->parent_id,
+
+                /*
+                 * ⓘ গুদামের নামটা প্রতিটা সারিতে — উপরের "সবার জন্য"
+                 * বারটা গুদামের তালিকা এখান থেকেই বানায়। ⚠️ আলাদা করে
+                 * পাঠালে দুইটা তালিকা একদিন আলাদা হত: একটায় গুদাম আছে
+                 * অথচ তাক নেই, আর ড্রপডাউনটা খালি খুলত।
+                 */
+                'warehouse_name' => $place->warehouse?->name(),
+            ])->values()->all())
+            ->all();
     }
 
     /**
@@ -174,6 +233,18 @@ class StockPlacementController extends Controller implements HasMiddleware
             'lines.*.source_id' => ['required', 'integer'],
             'lines.*.qty' => ['nullable', 'numeric', 'min:0'],
             'lines.*.free_qty' => ['nullable', 'numeric', 'min:0'],
+
+            /*
+             * তাকটা ঐচ্ছিক — আর চিরকাল ঐচ্ছিক।
+             *
+             * ⓘ যে গুদামে তাক বসানো নেই, সেখানে ঘরটা পর্দাতেই আসে না।
+             * ⛔ `required` করলে ছোট দোকানের প্রতিটা বসানোই আটকে যেত।
+             *
+             * ⚠️ তাকটা এই গুদামেরই কি না, সেটা এখানে নয় — নিয়মটা
+             * [[StockService::place()]]-এ, কারণ সিডার আর ইমপোর্টও
+             * ওখান দিয়েই যায়।
+             */
+            'lines.*.storage_location_id' => ['nullable', 'integer'],
         ]);
 
         $placed = 0;
@@ -202,6 +273,9 @@ class StockPlacementController extends Controller implements HasMiddleware
                     sourceId: (int) $line['source_id'],
                     batch: isset($line['batch_id']) ? Batch::find($line['batch_id']) : null,
                     freeQty: $freeQty,
+                    location: filled($line['storage_location_id'] ?? null)
+                        ? StorageLocation::findOrFail($line['storage_location_id'])
+                        : null,
                 );
 
                 $placed++;
