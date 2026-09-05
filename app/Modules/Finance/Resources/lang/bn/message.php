@@ -59,4 +59,11 @@ return [
      * সংখ্যাগুলো কম মনে হবে অথচ কেউ কারণ বুঝবে না।
      */
     'waiting_approval_note' => 'এগুলো এখনো খাতায় বসেনি, তাই উপরের খাত-ভিত্তিক হিসাবে ধরা নেই। অনুমোদন পাওয়ার পর ভাউচারটা পোস্ট করলেই যোগ হবে।',
+    'rental_deposit_narration' => ':who — জামানত/অগ্রিম প্রদান',
+    'rental_month_narration' => ':who — :month মাসের ভাড়া',
+    'rental_refund_narration' => ':who — চুক্তি শেষে জামানত ফেরত',
+    'rental_topup_narration' => ':who — জামানতে অতিরিক্ত প্রদান',
+    'rental_ending_soon' => 'যেসব চুক্তি শেষ হয়ে আসছে — ফেরতের টাকাসহ',
+    'rental_ends_on' => 'শেষ :date',
+    'rental_months' => 'যে মাসগুলো করা হয়েছে',
 ];

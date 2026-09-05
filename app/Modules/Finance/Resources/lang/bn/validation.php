@@ -27,4 +27,13 @@ return [
     'withdrawal_already_posted' => ':no আগেই খাতায় বসেছে',
     'withdrawal_awaits_approval' => ':no এখনো অনুমোদনের অপেক্ষায় — অনুমোদনের আগে টাকা যাবে না',
     'withdrawal_over_cap' => 'মাসিক সীমা :cap — এই মাসে আর :left তোলা যাবে। বেশি লাগলে সীমাটা বদলান',
+    'rental_closed' => 'চুক্তিটা শেষ হয়ে গেছে — শেষ হওয়া চুক্তিতে আর কিছু বসানো যায় না।',
+    'rental_term_needed' => 'মেয়াদ কত মাস, সেটা লিখতে হবে।',
+    'rental_adjustment_over_rent' => 'জামানত থেকে ভাড়ার চেয়ে বেশি কাটা যায় না।',
+    'rental_adjustment_exceeds_deposit' => 'পুরো মেয়াদে কাটা পড়বে :whole, অথচ জামানতে আছে :deposit। মাঝপথেই ফুরিয়ে যেত।',
+    'rental_no_deposit_left' => 'জামানতে আছে মাত্র :left — এর বেশি কাটা যায় না।',
+    'rental_needs_money_account' => 'নগদের অংশটা কোন খাত থেকে যাবে, সেটা বাছুন।',
+    'rental_amount_positive' => 'অঙ্কটা শূন্যের বেশি হতে হবে।',
+    'rental_head_missing' => 'ছকে :code খাতটা নেই — হিসাবের ছক থেকে বসিয়ে নিন।',
+    'rental_month_done_already' => ':month মাসের ভাড়া আগেই বসানো হয়েছে — দুইবার বসালে ঐ মাসের খরচ দ্বিগুণ হত।',
 ];

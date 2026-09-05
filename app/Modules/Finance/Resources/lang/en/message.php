@@ -54,4 +54,11 @@ return [
     // Says what is NOT true first: these are not in the books, so the
     // head totals above look smaller and nobody would know why.
     'waiting_approval_note' => 'These are not in the books yet, so they are not counted in the head totals above. Once approved, posting the voucher adds them.',
+    'rental_deposit_narration' => ':who — deposit paid',
+    'rental_month_narration' => ':who — rent for :month',
+    'rental_refund_narration' => ':who — deposit refunded at close',
+    'rental_topup_narration' => ':who — added to the deposit',
+    'rental_ending_soon' => 'Contracts ending soon, with the money to come back',
+    'rental_ends_on' => 'ends :date',
+    'rental_months' => 'Months already done',
 ];

@@ -27,4 +27,13 @@ return [
     'withdrawal_already_posted' => ':no is already in the books',
     'withdrawal_awaits_approval' => ':no is still waiting for approval — the money cannot move before that',
     'withdrawal_over_cap' => 'The monthly cap is :cap — only :left is left this month. Change the cap if more is needed',
+    'rental_closed' => 'This contract is closed; nothing more can be posted on it.',
+    'rental_term_needed' => 'The term in months is required.',
+    'rental_adjustment_over_rent' => 'More than the rent cannot be taken from the deposit.',
+    'rental_adjustment_exceeds_deposit' => 'Over the term this takes :whole, but the deposit holds :deposit. It would run out mid-term.',
+    'rental_no_deposit_left' => 'Only :left is left in the deposit.',
+    'rental_needs_money_account' => 'Choose the account the cash part is paid from.',
+    'rental_amount_positive' => 'The amount must be greater than zero.',
+    'rental_head_missing' => 'The chart has no :code head. Add it from the chart of accounts.',
+    'rental_month_done_already' => 'Rent for :month is already posted; doing it twice would double that month.',
 ];
