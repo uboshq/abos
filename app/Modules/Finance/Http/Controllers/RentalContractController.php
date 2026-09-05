@@ -39,10 +39,33 @@ class RentalContractController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('can:finance.expense.view', only: ['index', 'show']),
-            new Middleware('can:finance.expense.create', only: [
-                'store', 'adjust', 'revise', 'topUp', 'close',
+            /*
+             * ⚠️ ৫ সেপ্টেম্বর ২০২৬ — এখানে আগে `finance.expense.*` লেখা
+             * ছিল, আর সেটা **নীরবে ৪০৩** দিত।
+             *
+             * ⛔ কারণ `finance.expense.create` বলে কোনো চাবিই নেই — খরচ
+             * লেখা হয় ভাউচারে, তাই Finance-এ কেবল `expense.view` আছে।
+             * Gate অজানা চাবিকে "না" বলে, আর বার্তাটা হয় "This action is
+             * unauthorized" — যা পড়ে কেউ বুঝত না চাবিটাই ভুল।
+             *
+             * ⚠️ আর পর্দাটা `@can('finance.rental.create')` দেখত, অর্থাৎ
+             * **বোতামটা দেখা যেত, চাপলে ৪০৩** — সবচেয়ে বিভ্রান্তিকর রূপ।
+             *
+             * ⓘ কোনো টেস্ট এটা ধরেনি: টেস্টগুলো সার্ভিসটাকে সরাসরি ডাকে,
+             * দরজা দিয়ে যায় না। ⭐ ধরা পড়েছে ব্রাউজারে হাতে চালিয়ে —
+             * মালিক ঠিক এই কারণেই বলেন "Edge খুলে নিজে দেখো"।
+             */
+            new Middleware('can:finance.rental.view', only: ['index', 'show']),
+            new Middleware('can:finance.rental.create', only: [
+                'store', 'adjust', 'revise', 'topUp',
             ]),
+
+            /*
+             * চুক্তি শেষ করা আলাদা চাবি — ওটা **বাকি জামানত ফেরত এসেছে
+             * বলে খাতায় লেখা**, আর ভুল করে করলে লাখ টাকার একটা পাওনা
+             * নীরবে খাতা থেকে মুছে যেত।
+             */
+            new Middleware('can:finance.rental.close', only: ['close']),
         ];
     }
 

@@ -156,22 +156,14 @@
                 <x-ui.field name="term_months" type="number" min="1" max="600"
                             :label="__('finance::field.rental_term')" required />
 
-                <label class="grid gap-1">
-                    <span class="text-2xs text-(--color-ink-muted)">
-                        {{ __('finance::field.rental_money_account') }}
-                    </span>
-                    <select name="money_account_id"
-                            class="h-(--spacing-field) rounded-(--radius-field) border
-                                   border-(--color-border) bg-(--color-surface-card) px-2">
-                        {{-- ⓘ খালি রাখা যায়: পুরনো চুক্তি বসানোর সময় টাকাটা
-                             আগেই দেওয়া হয়ে গেছে আর খোলার জেরে বসেছে, তখন
-                             আবার পোস্ট করলে দুইবার হত। --}}
-                        <option value="">{{ __('finance::field.rental_already_paid') }}</option>
-                        @foreach ($money as $account)
-                            <option value="{{ $account->id }}">{{ $account->code }} — {{ $account->name() }}</option>
-                        @endforeach
-                    </select>
-                </label>
+                {{-- ⓘ খালি রাখা যায়: পুরনো চুক্তি বসানোর সময় টাকাটা আগেই
+                     দেওয়া হয়ে গেছে আর খোলার জেরে বসেছে, তখন আবার পোস্ট
+                     করলে দুইবার হত। --}}
+                @include('finance::rental._money', [
+                    'money' => $money,
+                    'label' => __('finance::field.rental_money_account'),
+                    'blank' => __('finance::field.rental_already_paid'),
+                ])
 
                 <div class="sm:col-span-2 lg:col-span-3">
                     <x-ui.button type="submit">{{ __('finance::action.rental_open') }}</x-ui.button>

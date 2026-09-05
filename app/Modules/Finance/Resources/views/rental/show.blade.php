@@ -112,19 +112,11 @@
                                        :value="old('for_month', now()->startOfMonth()->toDateString())" required />
                         </label>
 
-                        <label class="grid gap-1">
-                            <span class="text-2xs text-(--color-ink-muted)">
-                                {{ __('finance::field.rental_money_account') }}
-                            </span>
-                            <select name="money_account_id"
-                                    class="h-(--spacing-field) rounded-(--radius-field) border
-                                           border-(--color-border) bg-(--color-surface-card) px-2">
-                                <option value="">—</option>
-                                @foreach ($money as $account)
-                                    <option value="{{ $account->id }}">{{ $account->code }} — {{ $account->name() }}</option>
-                                @endforeach
-                            </select>
-                        </label>
+                        @include('finance::rental._money', [
+                            'money' => $money,
+                            'label' => __('finance::field.rental_money_account'),
+                            'blank' => '—',
+                        ])
 
                         {{-- ⓘ দুইটাই ঐচ্ছিক — খালি রাখলে চুক্তির শর্তই খাটে।
                              এক মাসে অন্যরকম হলে (যেমন এক মাস বেশি নগদে দিলেন)
@@ -185,18 +177,11 @@
                         <x-ui.field name="amount" type="number" step="0.0001" min="0.0001"
                                     :label="__('finance::field.rental_top_up_amount')" required />
 
-                        <label class="grid gap-1">
-                            <span class="text-2xs text-(--color-ink-muted)">
-                                {{ __('finance::field.rental_money_account') }}
-                            </span>
-                            <select name="money_account_id" required
-                                    class="h-(--spacing-field) rounded-(--radius-field) border
-                                           border-(--color-border) bg-(--color-surface-card) px-2">
-                                @foreach ($money as $account)
-                                    <option value="{{ $account->id }}">{{ $account->code }} — {{ $account->name() }}</option>
-                                @endforeach
-                            </select>
-                        </label>
+                        @include('finance::rental._money', [
+                            'money' => $money,
+                            'label' => __('finance::field.rental_money_account'),
+                            'required' => true,
+                        ])
 
                         <div class="sm:col-span-2">
                             <x-ui.button type="submit" tone="secondary">
@@ -233,19 +218,14 @@
                         <x-ui.date name="closed_on" :value="old('closed_on', now()->toDateString())" />
                     </label>
 
-                    <label class="grid gap-1">
-                        <span class="text-2xs text-(--color-ink-muted)">
-                            {{ __('finance::field.rental_refund_to') }}
-                        </span>
-                        <select name="money_account_id"
-                                class="h-(--spacing-field) rounded-(--radius-field) border
-                                       border-(--color-border) bg-(--color-surface-card) px-2">
-                            <option value="">—</option>
-                            @foreach ($money as $account)
-                                <option value="{{ $account->id }}">{{ $account->code }} — {{ $account->name() }}</option>
-                            @endforeach
-                        </select>
-                    </label>
+                    {{-- ⓘ এখানে খালি রাখা যায়, আর সেটা একটা সিদ্ধান্ত:
+                         বাড়িওয়ালা আজ টাকা ফেরত দেননি। উপরের লেখাটা তখন
+                         বলে দেয় টাকাটা জামানতের খাতেই পড়ে থাকবে। --}}
+                    @include('finance::rental._money', [
+                        'money' => $money,
+                        'label' => __('finance::field.rental_refund_to'),
+                        'blank' => '—',
+                    ])
 
                     <div class="self-end">
                         <x-ui.button type="submit" tone="secondary">
