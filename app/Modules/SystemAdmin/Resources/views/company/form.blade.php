@@ -116,7 +116,14 @@
                                  আবার আপলোড করতেন। --}}
                             <img src="{{ $company->logoUrl() }}"
                                  alt="{{ $company->name() }}"
-                                 class="h-12 w-auto max-w-40 rounded-(--radius-field)
+                                 {{-- ⚠️ উচ্চতাটা টোকেনে, হাতে লেখা `h-12`-তে নয়।
+                                      ⓘ `EveryScreenObeysTheTheme` গোল কোণ আর
+                                      হাতে লেখা উচ্চতা একসাথে দেখলে ওটাকে একটা
+                                      **নিয়ন্ত্রণ** ধরে — আর নিয়ন্ত্রণের মাপ থিম
+                                      ঠিক করে, পর্দা নয়। ⭐ ছবিটা নিয়ন্ত্রণ নয়,
+                                      কিন্তু ঘরগুলোর পাশে বসে; একই টোকেন নিলে
+                                      সারিটা সব থিমে সমান উঁচু থাকে। --}}
+                                 class="h-(--spacing-field) w-auto max-w-40 rounded-(--radius-field)
                                         border border-(--color-border) bg-white object-contain p-1">
 
                             <label class="flex items-center gap-2 text-2xs text-(--color-ink-muted)">
