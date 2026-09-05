@@ -161,7 +161,9 @@
              দাগ দিয়ে দেখিয়েছেন।
 
              ⭐ মালিকের কথা: *"supp box date box er soman uchu hobe"*। --}}
-        <section data-boxed class="h-full rounded-(--radius-card) border border-(--color-border)
+        {{-- ⚠️ `relative` — সরবরাহকারী খোঁজার প্যানেলটা এর সাপেক্ষে ভাসে
+             (নিচে দেখুন)। --}}
+        <section data-boxed class="relative h-full rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-selected) p-3"
                  style="box-shadow: inset var(--rail-tile-on-edge-w, 2px) 0 0 var(--color-brand-500)">
 
@@ -260,8 +262,25 @@
             {{-- ছাঁকনি — টাইপের সাথে সাথে, আর বাছা হলেই বন্ধ --}}
             <div x-show="supplierPickerOpen" x-cloak
                  @keydown.escape="supplierPickerOpen = false"
-                 class="mt-2 rounded-(--radius-field) border-2 border-(--color-brand-500)
-                        bg-(--color-surface-card) p-1.5 text-(--color-ink)">
+                 {{-- ⭐ **ভাসমান**, প্রবাহের ভিতরে নয় — মালিকের নির্দেশ,
+                      ৬ সেপ্টেম্বর ২০২৬: *"ekhaneo same somossa, search korle box
+                      soho nore"*।
+
+                      ⛔ প্যানেলটা জায়গা **দখল করত**, তাই সরবরাহকারী খুঁজতে গেলেই
+                      কার্ডটা লম্বা হত — আর পাশের চালান-কার্ডটাও তার সাথে টেনে
+                      লম্বা হত (`h-full`), তাই **দুইটা কার্ড একসাথে বাড়ত**।
+                      ⚠️ তিনি ছবিতে ঐ **তৈরি হওয়া বিশাল ফাঁকা জায়গাটাই** লাল
+                      বাক্সে ঘিরে দেখিয়েছেন।
+
+                      ⓘ বিক্রয়ের দুইটা পিকারে আজ এই একই সারাই বসেছে, আর ক্রয়ের
+                      **পণ্যের** তালিকাটা আগে থেকেই ভাসত (`absolute z-20`) —
+                      অর্থাৎ নিয়মটা এই ফাইলেই ছিল, কেবল সরবরাহকারীর ঘরে
+                      পৌঁছায়নি।
+
+                      ⚠️ `z-30` — পাশের চালান-কার্ডের উপরে থাকতে হবে। --}}
+                 class="absolute inset-x-0 top-full z-30 mt-1 rounded-(--radius-card)
+                        border-2 border-(--color-brand-500) bg-(--color-surface-card)
+                        p-1.5 text-(--color-ink) shadow-lg">
                 <input type="search" x-model="supplierTerm"
                        x-effect="supplierPickerOpen && $nextTick(() => $el.focus())"
                        placeholder="{{ __('purchase::message.search_supplier') }}"
@@ -948,9 +967,28 @@
                                 <span class="num" x-text="money(picked?.last_rate)"></span>
                             </span>
                         </div>
-                        {{-- ⓘ পণ্য বাছার আগে ঘরটা পুরো প্রস্থ নেয়, বাছার পরে
-                             সরু হয়ে নামটাকে জায়গা দেয়। --}}
+                        {{-- ⭐ ঘরটা কেবল **খোঁজার সময়** — মালিকের নির্দেশ,
+                             ৬ সেপ্টেম্বর ২০২৬: *"Search box takar kotha
+                             dropdown-er sathe, bose thake onno jaygay; eta
+                             product select er por-o ekhane dekhay, prod add
+                             hole r zate na dekhay"*।
+
+                             ⛔ আগে বাছার পরেও ঘরটা থেকে যেত, কেবল সরু হয়ে
+                             (`w-40`) ডান কোণে সরে যেত। ⚠️ আর তালিকাটা ভাসে
+                             কার্ডের **বাঁ কিনারা থেকে** — ফলে লেখার ঘর ডানে,
+                             তার ফলের তালিকা বাঁয়ে। ⓘ চোখে দুইটা আলাদা জিনিস
+                             মনে হত, অথচ একটা আরেকটার ফল।
+
+                             ⭐ এখন ঘরটা পুরো প্রস্থ নেয় আর **তালিকাটা ঠিক তার
+                             নিচেই** ঝোলে — দুইটা একসাথে, একটাই জিনিস। পণ্য
+                             বাছা হয়ে গেলে সে সরে যায়, আর তখন নাম · মজুদ ·
+                             শেষ দর — তিনটাই পুরো জায়গা পায়।
+
+                             ⓘ আবার খুঁজতে বাঁয়ের চিহ্নটা (`browsing`) — সেটা
+                             আগেও এভাবেই কাজ করত, কেবল ঘরটা লুকানো ছিল না বলে
+                             কেউ চিহ্নটা ব্যবহার করত না। --}}
                         <input type="text" x-model="term" x-ref="search"
+                               x-show="! picked || browsing" x-cloak
                                :class="picked ? 'w-40 shrink-0' : 'min-w-0 flex-1'"
                                @focus="browsing = true"
                                @keydown.escape="browsing = false"
@@ -2202,27 +2240,22 @@
                     {{ __('purchase::action.add_note') }}
                 </button>
 
-                <button type="button" @click="openChart()" :aria-expanded="chartOpen"
-                        class="rounded-(--radius-field) px-1 py-2 text-2xs leading-tight font-medium
-                               text-(--color-ink-inverse)"
-                        style="background: var(--color-module-supplier)">
-                    {{ __('purchase::action.rate_chart') }}
-                </button>
+                {{-- ⛔ "Chart Entry" আর "শিপমেন্ট" — দুইটা বোতামই মালিকের
+                     নির্দেশে তুলে দেওয়া (৬ সেপ্টেম্বর ২০২৬)।
 
+                     ⓘ **কেবল বোতাম গেছে, কিছুই মোছা হয়নি**: দুইটা প্যানেল,
+                     তাদের ঘর, আর সার্ভারের দিক সব অক্ষত (`chartOpen`,
+                     `shipmentOpen`, `openChart()`)। ⚠️ তাই ফিরিয়ে আনতে হলে
+                     ছয় লাইনই যথেষ্ট, নতুন করে কিছু বানাতে হবে না।
+
+                     ⓘ কাউন্টারের ছয়টা বোতাম এখন চারটা: পরিশোধ · মন্তব্য ·
+                     পরিবহন · সব মুছুন। --}}
                 <button type="button" @click="transportOpen = ! transportOpen"
                         :aria-expanded="transportOpen"
                         class="rounded-(--radius-field) py-2 text-2xs font-medium
                                text-(--color-warning-ink)"
                         style="background: var(--color-warning)">
                     {{ __('purchase::action.transportation') }}
-                </button>
-
-                <button type="button" @click="shipmentOpen = ! shipmentOpen"
-                        :aria-expanded="shipmentOpen"
-                        class="rounded-(--radius-field) px-1 py-2 text-2xs leading-tight font-medium
-                               text-(--color-ink-inverse)"
-                        style="background: var(--color-module-backup)">
-                    {{ __('purchase::action.shipment') }}
                 </button>
 
                 <button type="button" @click="clearAll()"
