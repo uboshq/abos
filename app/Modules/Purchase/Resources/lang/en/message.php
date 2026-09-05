@@ -67,6 +67,7 @@ return [
     'last_from_supplier' => 'Last from this supplier',
     'first_from_supplier' => 'First time from this supplier',
     'no_lines_yet' => 'No products added yet.',
+    'cart_empty_hint' => 'Nothing added yet. Pick an item above and press Add to cart.',
     'paid_more_confirm' => 'This pays more than the invoice. The extra stays as an advance with the supplier. Continue?',
     'order_not_confirmed' => ':no is still a draft — no bill can be raised against it yet. Open the order, confirm it, then come back.',
     'order_not_found' => 'That order could not be found. The blank form below is yours to fill by hand if you want.',
@@ -84,4 +85,28 @@ return [
     'no_carrier_party' => 'No transporter is on the party list yet. Mark a supplier as a transport party, or just type the name below.',
     'transport_needs_carrier' => 'Freight is entered, but not who is owed it. Pick a transporter or type the name.',
     'transport_not_in_cost_yet' => 'Recorded on the bill. It does not go into the item cost yet.',
+
+    /*
+     * The counter screen (the owner's pictures, 4 September 2026).
+     *
+     * 'goods_wait_for_placement' is the one that has to be there. The
+     * warehouse is picked here, but the goods land as *not yet placed*
+     * — in the building, not on a shelf, and not sellable. Without a
+     * word saying so, the person at the counter would read the green
+     * confirmation as "it is on the shelf" and sell it the same hour.
+     */
+    'pick_item_hint' => 'Pick an item to see what is already in stock.',
+    'as_printed' => 'as printed',
+    'on_confirm' => 'on confirm',
+    'credit_back_to_terms' => 'Back to the terms list',
+    'bill_no_editable' => 'The next number in the series. Change it if you are entering an older paper.',
+    'search_supplier' => 'Search supplier…',
+    'no_default_warehouse' => 'No default warehouse is set, so the box is empty. Pick a default under Inventory ▸ Warehouses, or choose one here every time.',
+    'sales_rate_hint' => 'leave blank to keep the current price',
+    'goods_wait_for_placement' => 'Goods land as not yet placed. Put them on a shelf under Inventory ▸ Stock placement — until then they are in the warehouse but not sellable.',
+    'costing_no_transport' => 'Freight is not inside this figure. It is recorded on the bill, but it does not reach the item cost yet.',
+    'rate_chart_empty' => 'Nothing has been bought from this supplier before, so there is no rate to show.',
+    'rate_chart_needs_supplier' => 'Pick the supplier first — the chart is their rates, not everybody\'s.',
+    'discount_over_line_screen' => 'The discount is larger than the line itself.',
+    'shipment_not_in_cost_yet' => 'Held on the bill so the bank and customs can be answered later. Duty and port charges do not reach the item cost yet.',
 ];

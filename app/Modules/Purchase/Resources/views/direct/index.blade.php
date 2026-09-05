@@ -37,7 +37,16 @@
           )"
           @submit="guard($event)"
           x-effect="saveDraft()"
-          class="grid gap-3 xl:grid-cols-[1fr_17rem]">
+          {{-- ── দুইটা কার্ড, ৭০ ও ৩০ ─────────────────────────────────
+
+               মালিকের ছবির অনুপাত। ⓘ আগে ডান কলামটা স্থির `17rem` ছিল,
+               আর সেটা ছোট পর্দায় ঠিক থাকলেও ১৪৪০-এ কার্ডটা সরু ফিতার
+               মতো দেখাত — বাঁয়ে আটটা ঘর, ডানে একটা কলাম টাকার অঙ্ক।
+
+               ⚠️ ভাগটা `xl`-এর নিচে ভাঙে না: ৭:৩ মানে ১০২৪-এ ডান
+               কার্ডটা ৩০০ পিক্সেলেরও কম, আর ওতে "TO PAY THIS SUPPLIER"
+               দুই লাইনে ভেঙে যেত। ছোট পর্দায় তাই দুইটা কার্ড উপর-নিচে। --}}
+          class="grid gap-3 lg:grid-cols-[minmax(0,76fr)_minmax(0,22fr)]">
         @csrf
 
         {{-- ── খসড়া পাওয়া গেছে ───────────────────────────────────────
@@ -49,7 +58,7 @@
              দুইটা বোতামেই `type="button"`, নাহলে ওগুলো ফর্মটাই সাবমিট
              করে দিত। --}}
         <div x-show="draftFound" x-cloak
-             class="xl:col-span-2 flex flex-wrap items-center gap-2 rounded-(--radius-card)
+             class="lg:col-span-2 flex flex-wrap items-center gap-2 rounded-(--radius-card)
                     border border-(--color-border) bg-(--color-badge-warning-bg)
                     px-3 py-2 text-sm text-(--color-badge-warning-ink)">
             <span class="font-medium">{{ __('purchase::message.draft_found') }}</span>
@@ -68,45 +77,148 @@
             </span>
         </div>
 
-        {{-- ══ বাঁ দিক: স্ট্রিপ · এন্ট্রি · কার্ট ══════════════════════ --}}
+        {{-- ══ বাঁ অংশ — মাথা, পণ্য, "এই লাইনে", প্যানেল আর কার্ট ══════
+
+             ⚠️ মোটের কার্ডটা এই মোড়কের **বাইরে**, আর তাই সে **একদম উপর
+             থেকে** শুরু হয় — মালিকের নির্দেশ, ৫ সেপ্টেম্বর ২০২৬।
+
+             ⛔ এক দফায় কাগজের মাথাটা পুরো চওড়ায় নেওয়া হয়েছিল
+             (`lg:col-span-2`), আর তাতে মোটের কার্ডটা এক সারি নিচে নেমে
+             গিয়েছিল। ⓘ ওটা ভুল ছিল: *"Bill total box ek dom upor thekei
+             bosbe ager moto"* — টাকার ছকটা চোখের সোজাসুজি থাকা দরকার,
+             কাগজের মাথার নিচে নয়। --}}
         <div class="min-w-0 space-y-3">
 
-            {{-- ── ডকুমেন্ট স্ট্রিপ ──────────────────────────────────── --}}
-            <section data-boxed class="rounded-(--radius-card) border-t-2 border-(--color-brand-500)
-                            border-x border-b border-(--color-border)
-                            bg-(--color-surface-card) p-3">
-                <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                    <label class="block">
-                        <span class="mb-1 block text-2xs text-(--color-ink-muted)">
-                            {{ __('purchase::field.supplier') }}
-                        </span>
-                        {{-- সরবরাহকারী বদলালেই গতবারের দরগুলো নতুন করে আসে।
+            {{-- ══ কাগজের মাথা — বাঁ অংশের পুরো চওড়ায় ══════════════════
 
-                             ⚠️ দরগুলো সরবরাহকারী-ভেদে আলাদা। বাছাই বদলে
-                             পুরনো তালিকা রেখে দিলে কার্টের সারিতে **অন্য
-                             একজনের দর** বসে থাকত — নীরবে, আর ঠিক তখনই যখন
-                             মানুষটা ওই সংখ্যাটা দেখে দরাদরি করছেন। --}}
-                        <select name="supplier_id" required
-                                x-on:change="loadLastRates($event.target.value)"
+                 মালিকের নতুন নকশা (৫ সেপ্টেম্বর ২০২৬, তাঁর আঁকা ছবি):
+
+                 ```
+                 ┌─ পুরো চওড়ায় ─────────────────────────────────────┐
+                 │ ┌ সরবরাহকারী ┐   যেদিন এল · চালান নম্বর · গুদাম   │
+                 │ │             │   বিলের তারিখ · বিল নম্বর · মেয়াদ  │
+                 │ └────────────┘                                  │
+                 └────────────────────────────────────────────────┘
+                 ┌─ পণ্য খোঁজা ও বাছা ──────┐ ┌─ এই লাইনে ─┐
+                 ```
+
+                 ⭐ দুইটা বদল আগের খসড়ার চেয়ে: সরবরাহকারী ঘরগুলোর **নিচে
+                 নয়, বাঁয়ে** — নিজের একটা বাক্সে; আর **সারি দুইটার ক্রম
+                 উল্টো** (`Received on` এখন উপরে)।
+
+                 ⓘ কার্ডটা পুরো চওড়ায়, অর্থাৎ মোটের কার্ডের উপর দিয়েও —
+                 কারণ কাগজের মাথা গোটা বিলের কথা, কোনো এক কলামের নয়। --}}
+            <section data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
+                            bg-(--color-surface-card)">
+                <div class="h-0.5 w-full"
+                     style="background: linear-gradient(90deg, var(--color-success), var(--color-info))"></div>
+
+                {{-- ⓘ মালিক: *"ei box ta ro ektu Slime koro"* — কার্ডটা
+                     সরু। ⚠️ ঘরগুলো ছোট করা হয়নি, কেবল **চারপাশের ফাঁকা
+                     জায়গা**: উপর-নিচের প্যাডিং আর লেবেলের নিচের ফাঁক।
+                     ⓘ ঘর ছোট করলে তারিখের ঘরে আঙুল বসানো কঠিন হত, আর
+                     কাউন্টারে ওটাই সবচেয়ে বেশি ছোঁয়া হয়। --}}
+                <div class="px-3 py-2">
+                {{-- ── ছয়টা ঘর — মালিকের ক্রমে, এক সারিতে ────────────────
+
+                     ⚠️ সরবরাহকারীর বাক্সটা এখান থেকে **সরে গেছে**।
+
+                     ⛔ এক দফায় ওটা ছয়টা ঘরের বাঁ পাশে বসানো হয়েছিল, আর
+                     মালিক লাল দাগ দিয়ে দেখিয়েছেন ওটা ভুল: কাগজের মাথা
+                     একটা সারি, আর সরবরাহকারী তার **নিচে নিজের বাক্সে**।
+                     ⓘ কারণটাও পরিষ্কার — মাথার ছয়টা ঘর *"কোন কাগজ"*,
+                     আর সরবরাহকারীর বাক্স *"কার কাছ থেকে"*। --}}
+                {{-- ⭐ ছয়টাই **এক সারিতে** — মালিক: *"ei line gulo ek line
+                     dorle tai koro"*।
+
+                     ⓘ সরু পর্দায় ভাগ হয়ে নামে (২ → ৩ → ৬)।
+
+                     ⛔ **লাইনটা ভাঙত লেবেলের দোষে, ঘরের নয়।** ১৪৪০-এ ছয়
+                     ভাগে ~১০৫px করে পড়ে, আর তাতে *"Their invoice no."*
+                     দুই লাইনে ভেঙে যেত — তখন ঐ একটা কলাম লম্বা হয়ে তার
+                     ঘরটাকে নিচে নামিয়ে দিত, আর "এক লাইন" ভেঙে যেত।
+
+                     ⭐ তাই লেবেলগুলোকে **ভাঙতে দেওয়াই হয় না**
+                     (`[&>label>span]:truncate`) — লম্বা নামটা তিনটা বিন্দু
+                     নিয়ে থামে, আর সারিটা এক লাইনেই থাকে। ⓘ পুরো লেখাটা
+                     `title`-এ, তাই কিছু হারায় না।
+
+                     ⚠️ প্রথমে ব্রেকপয়েন্ট বদলে (`2xl`) সারানোর চেষ্টা
+                     করেছিলাম — কাজ হয়নি, কারণ মিডিয়া-কোয়েরির `rem` সবসময়
+                     ১৬px ধরে, পাতার ২০px নয়। ⓘ ধরা পড়েছে ব্রাউজারে খুলে,
+                     দুইটা চওড়ায় মিলিয়ে। --}}
+                <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6
+                            [&>label>span]:truncate">
+                    {{-- ⭐ যেদিন মাল এল — মজুদ এই তারিখেই বসে।
+
+                         ⚠️ খালি রাখলে বিলের তারিখই ধরা হয়, তাই প্রতিদিনের
+                         সাধারণ ক্রয়ে ঘরটা ছুঁতে হয় না। ⓘ কিন্তু বিল আর
+                         গাড়ি আলাদা দিনে হলে এই ঘরটাই মাস-শেষের মজুদ
+                         মেলায়। --}}
+                    <label class="block">
+                        <span class="mb-0.5 block text-2xs text-(--color-ink-muted)"
+                              title="{{ __('purchase::field.received_on') }}">
+                            {{ __('purchase::field.received_on') }}
+                        </span>
+                        <x-ui.date name="received_on" :value="old('received_on')"
+                                   class="w-full text-sm" />
+                    </label>
+
+                    {{-- ── আমাদের নিজের চালান নম্বর ─────────────────────
+
+                         ⭐ ঘরটা **ভরা অবস্থায় খোলে**, আর বদলানোও যায়।
+
+                         ⚠️ যা দেখা যাচ্ছে সেটা **প্রতিশ্রুতি নয়, পূর্বাভাস**
+                         — সিরিজের পরের নম্বর, কেবল দেখানো
+                         ([[NumberSeriesEngine::preview()]])। ⛔ `next()`
+                         ডাকা হয় না: তাহলে পাতা খোলামাত্র একটা নম্বর খরচ
+                         হয়ে যেত, কেউ শুধু দেখে চলে গেলেও, আর নিরীক্ষায়
+                         *"৪৭ নম্বর বিলটা কোথায়"* প্রশ্নের উত্তর থাকত না।
+
+                         ⓘ দুইজন একসাথে কাউন্টার খুললে দুইজনেই একই নম্বর
+                         দেখবেন — যিনি আগে সেভ করবেন তিনি ওটা পাবেন,
+                         পরেরজন পরেরটা। --}}
+                    <label class="block">
+                        <span class="mb-0.5 block text-2xs text-(--color-ink-muted)"
+                              title="{{ __('purchase::field.pur_inv_no') }}">
+                            {{ __('purchase::field.pur_inv_no') }}
+                        </span>
+                        <input type="text" name="bill_no" maxlength="32"
+                               value="{{ old('bill_no', $billPreview) }}"
+                               title="{{ __('purchase::message.bill_no_editable') }}"
+                               placeholder="{{ __('purchase::message.on_confirm') }}"
+                               class="h-(--spacing-field) w-full rounded-(--radius-field) border
+                                      border-(--color-border) bg-(--color-surface-app) px-2 text-sm">
+                    </label>
+
+                    {{-- ── গুদাম — কোন ভবনে, তাকে নয় ──────────────────
+
+                         মালিকের কথা (৫ সেপ্টেম্বর ২০২৬): *"ডিরেক্ট
+                         পারচেসে ওয়্যারহাউস দিয়ে দাও... গোডাউনে যদি আরো
+                         ছোটখাটো প্লেসমেন্ট (তাক) থাকে, সে প্লেসমেন্টে
+                         করবে।"*
+
+                         ⭐ অর্থাৎ দুইটা আলাদা প্রশ্ন, দুই জায়গায়: **কোন
+                         গুদামে** এখানে, আর **গুদামের ভিতরে কোথায়**
+                         Inventory ▸ Stock Placement-এ। ⓘ ছোট দোকানে
+                         দুইটাই একজনের কাজ, আর দ্বিতীয়টা এক ক্লিকের।
+
+                         ⭐ ঘরটা **ভরা অবস্থায় খোলে** — কোম্পানির ডিফল্ট
+                         গুদাম বসানো থাকে (মালিক: *"warehouse by defolt
+                         purches e boslo"*)। ⓘ প্রস্তাব, তালা নয়।
+
+                         ⛔ ডিফল্ট বসানো না থাকলে ঘরটা **খালি** থাকে, আর
+                         নিচে কারণটা লেখা — নীরবে প্রথম গুদামটা নিলে মাল
+                         ভুল জায়গায় বসত আর কেউ জানতই না। --}}
+                    <label class="block">
+                        <span class="mb-0.5 block text-2xs text-(--color-ink-muted)"
+                              title="{{ __('inventory::field.warehouse') }}">
+                            {{ __('inventory::field.warehouse') }}
+                        </span>
+                        <select name="warehouse_id" required
                                 class="h-(--spacing-field) w-full rounded-(--radius-field) border
                                        border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
                             <option value="">—</option>
-                            @foreach ($suppliers as $supplier)
-                                <option value="{{ $supplier->id }}"
-                                        @selected(old('supplier_id') == $supplier->id)>
-                                    {{ $supplier->name() }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </label>
-
-                    <label class="block">
-                        <span class="mb-1 block text-2xs text-(--color-ink-muted)">
-                            {{ __('inventory::field.warehouse') }}
-                        </span>
-                        <select name="warehouse_id"
-                                class="h-(--spacing-field) w-full rounded-(--radius-field) border
-                                       border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
                             @foreach ($warehouses as $house)
                                 <option value="{{ $house->id }}"
                                         @selected(old('warehouse_id', $warehouse?->id) == $house->id)>
@@ -117,54 +229,117 @@
                     </label>
 
                     <label class="block">
-                        <span class="mb-1 block text-2xs text-(--color-ink-muted)">
-                            {{ __('purchase::field.supplier_bill_no') }}
-                        </span>
-                        <input type="text" name="supplier_bill_no" value="{{ old('supplier_bill_no') }}"
-                               class="h-(--spacing-field) w-full rounded-(--radius-field) border
-                                      border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
-                    </label>
-
-                    <label class="block">
-                        <span class="mb-1 block text-2xs text-(--color-ink-muted)">
-                            {{ __('purchase::field.trx_date') }}
+                        <span class="mb-0.5 block text-2xs text-(--color-ink-muted)"
+                              title="{{ __('purchase::field.billing_date') }}">
+                            {{ __('purchase::field.billing_date') }}
                         </span>
                         <x-ui.date name="trx_date"
                                    :value="old('trx_date', now()->toDateString())"
                                    class="w-full text-sm" />
-                                   </label>
-                                   </div>
-                                   </section>
+                    </label>
 
-            {{-- ── এন্ট্রি স্ট্রিপ ───────────────────────────────────── --}}
-            <section data-boxed class="rounded-(--radius-card) border border-(--color-border)
-                            bg-(--color-surface-card) p-3">
-                <div class="relative">
-                    <input type="text" x-model="term" x-ref="search"
-                           @keydown.enter.prevent="pickFirst()"
-                           placeholder="{{ __('purchase::message.search_product') }}"
-                           class="h-(--spacing-field) w-full rounded-(--radius-field) border
-                                  border-(--color-border) bg-(--color-surface-card) px-3 text-sm">
+                    <label class="block">
+                        <span class="mb-0.5 block text-2xs text-(--color-ink-muted)"
+                              title="{{ __('purchase::field.their_invoice') }}">
+                            {{ __('purchase::field.their_invoice') }}
+                        </span>
+                        <input type="text" name="supplier_bill_no" value="{{ old('supplier_bill_no') }}"
+                               placeholder="{{ __('purchase::message.as_printed') }}"
+                               class="h-(--spacing-field) w-full rounded-(--radius-field) border
+                                      border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                    </label>
 
-                    <ul x-show="visible.length > 0" x-cloak
-                        class="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-(--radius-field)
-                               border border-(--color-border) bg-(--color-surface-card) shadow-lg">
-                        <template x-for="p in visible" :key="p.id">
-                            <li>
-                                <button type="button" @click="pick(p)"
-                                        class="flex w-full items-center justify-between gap-3 px-3 py-2
-                                               text-start text-sm hover:bg-(--color-surface-hover)">
-                                    <span>
-                                        <span x-text="p.name"></span>
-                                        <span class="block text-2xs text-(--color-ink-muted)" x-text="p.code"></span>
-                                    </span>
-                                    <span class="num shrink-0 text-2xs text-(--color-ink-muted)">
-                                        <span x-text="qty(p.on_hand)"></span>
-                                    </span>
-                                </button>
-                            </li>
-                        </template>
-                    </ul>
+                    {{-- ── পরিশোধের শর্ত — একটাই ঘর, সাতটা বিকল্প ─────────
+
+                         মালিকের সিদ্ধান্ত (৫ সেপ্টেম্বর ২০২৬):
+
+                         ```
+                         Cash · COD · ৩/৭/১৫/৩০ দিনের বাকি ·
+                         Cr. Upto Closing date · a fixed date
+                         ```
+
+                         ⛔ **আগে এটা দুইটা বাক্স হয়ে যেত**: তারিখ বাছলে
+                         পাশে *"or a fixed date"* নামে আরেকটা ঘর ফুটত, আর
+                         তখন পরের ঘরটা **নিচের সারিতে ছিটকে যেত** — গোটা
+                         মাথার সারিটা নড়ত। ⚠️ মালিকের কথা: *"date ditei di
+                         box holo, eta hote parbe na, ek box ei somadhan
+                         korbe"*।
+
+                         ⭐ **তারিখটা এখন সবসময় নিচে লেখা থাকে**, আর
+                         `a fixed date` বাছলে **ঐ লাইনটাই টাইপ করা যায়** —
+                         নতুন কোনো ঘর গজায় না, যা আছে তা সম্পাদনাযোগ্য হয়।
+
+                         ⓘ তিনটা লাভ: সারি নড়ে না · ব্যবহারকারী সবসময়
+                         দেখেন কোন তারিখ বসছে · *"৩০ দিন মানে কবে"* কাউকে
+                         মনে মনে গুনতে হয় না।
+
+                         ── ⚠️ প্রতিটা বিকল্পই একটা তারিখে গিয়ে দাঁড়ায় ──
+                         ```
+                         Cash                  → বিলের তারিখ
+                         COD                   → যেদিন মাল এল
+                         N দিনের বাকি           → বিলের তারিখ + N
+                         Cr. Upto Closing date → বিলের মাসের শেষ দিন
+                         a fixed date          → নিজের বাছা তারিখ
+                         ```
+                         ⓘ তারিখটা **বাছার মুহূর্তেই পাকা** হয়ে `due_on`-এ
+                         বসে, আর ধরনটা `payment_term`-এ। --}}
+                    <label class="block">
+                        <span class="mb-0.5 block text-2xs text-(--color-ink-muted)"
+                              title="{{ __('purchase::field.payment_terms') }}">
+                            {{ __('purchase::field.payment_terms') }}
+                        </span>
+
+                        <select x-model="termChoice" @change="termPicked()"
+                                class="h-(--spacing-field) w-full rounded-(--radius-field) border
+                                       border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                            @foreach ($paymentTerms as $term)
+                                <option value="{{ $term['value'] }}"
+                                        @selected($term['value'] === $paymentTermDefault)>
+                                    {{ $term['label'] }}
+                                </option>
+                            @endforeach
+                        </select>
+
+                        {{-- ── দেয় তারিখ — সবসময় দেখা যায় ────────────────
+
+                             ⭐ `a fixed date` বাছলে **এই লাইনটাই** লেখার ঘর
+                             হয়ে যায় — পাশে দ্বিতীয় বাক্স নয়, নিচে নতুন সারি
+                             নয়। ⓘ দুইটা রূপ একই জায়গা দখল করে, তাই কার্ডের
+                             উচ্চতাও বদলায় না।
+
+                             ⚠️ পড়ার রূপটায় তারিখটা কোম্পানির ছকে লেখা
+                             (`d-m-Y`), ব্রাউজারের ছকে নয় — `05/06` দুইভাবে
+                             পড়া যায়, আর দুইটাই বৈধ তারিখ। --}}
+                        <div class="mt-0.5">
+                            {{-- ⚠️ লেবেলটা লেখা নেই, কেবল তীর আর তারিখ।
+
+                                 ⛔ *"পরিশোধের তারিখ · ০৮-০৯-২০২৬"* লিখলে
+                                 ১৩০px-এ কেটে যেত (`Due on · 08-09-2…`), আর
+                                 কাটা তারিখ **ভুল তারিখের চেয়েও খারাপ** —
+                                 মানুষ অর্ধেকটা পড়ে বাকিটা ধরে নেন।
+
+                                 ⓘ ঘরটার নামই "পরিশোধের শর্ত", তাই নিচের
+                                 তারিখটা কীসের তা আলাদা করে বলার দরকার নেই।
+                                 পুরো লেখাটা `title`-এ আছে। --}}
+                            <div x-show="termKind !== 'fixed'" x-cloak
+                                 class="text-2xs text-(--color-ink-muted)"
+                                 title="{{ __('purchase::field.due_on') }}">
+                                → <span class="num" x-text="dueOnShown || '—'"></span>
+                            </div>
+
+                            <div x-show="termKind === 'fixed'" x-cloak>
+                                <x-ui.date name="due_on_picked"
+                                           bind-name="'due_on_picked'"
+                                           bind-iso="dueOn"
+                                           bind-model="dueOn" />
+                            </div>
+                        </div>
+
+                        {{-- ⓘ যা সত্যিই সার্ভারে যায় — দুইটা: ধরন আর তারিখ।
+                             ⚠️ দিনসংখ্যাটা যায় না; ওটা তারিখ হয়ে গেছে। --}}
+                        <input type="hidden" name="payment_term" :value="termKind">
+                        <input type="hidden" name="due_on" :value="dueOn">
+                    </label>
                 </div>
 
                 {{-- x-show, x-if নয়।
@@ -198,29 +373,180 @@
                     ধরা পড়েছে ২৬ আগস্ট ২০২৬, লাইভের ১৪৪টা পর্দা ঘুরে
                     কনসোল পড়ে — কোনো মানুষের চোখে নয়।
                 --}}
-                <div x-show="picked" x-cloak>
-                    <div class="mt-3">
-                        <div class="mb-2 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+                </div>
+            </section>
+
+            {{-- ══ নিচের অংশ — দুইটা বাক্স, আর তাদের পাশে "এই লাইনে" ══════
+
+                 মালিকের লাল দাগ (৫ সেপ্টেম্বর ২০২৬):
+
+                 ```
+                 ┌─ ছয়টা ঘর ─────────────────────────────┐
+                 ├─ সরবরাহকারীর বাক্স ──┐ ┌─ এই লাইনে ──┐
+                 ├─ পণ্যের বাক্স ────────┤ │            │
+                 └──────────────────────┘ └────────────┘
+                 ```
+
+                 ⭐ **"এই লাইনে" ছকটা দুইটা বাক্স জুড়ে** — তাই ওটা এই
+                 গ্রিডের দ্বিতীয় কলাম, কোনো বাক্সের ভিতরে নয়।
+
+                 ⚠️ `items-start` ছাড়া ছকটা টেনে লম্বা হয়ে দুইটা বাক্সের
+                 সমান হয়ে যেত, আর ভিতরের সারিগুলো ফাঁকা জায়গায় ভেসে থাকত। --}}
+            <div class="grid gap-3 lg:grid-cols-[minmax(0,52fr)_minmax(0,24fr)] lg:items-start">
+            <div class="min-w-0 space-y-3">
+
+            {{-- ── পণ্যের বাক্স — মালিকের দাগানো *"Products box"* ──────── --}}
+            <section data-boxed class="rounded-(--radius-card) border border-(--color-border)
+                            bg-(--color-surface-card) p-3">
+{{-- ⚠️ বার্তাটা সারির **নিচে**, ঘরটার ভিতরে নয়।
+
+                     ⛔ আগে এটা গুদামের `<label>`-এর ভিতরে ছিল, আর তাতে
+                     ওই একটা কলাম লম্বা হয়ে পুরো সারিটার উচ্চতা টেনে
+                     নিত — চারটা ঘর তখন আর এক লাইনে থাকত না। ⓘ ধরা
+                     পড়েছে ব্রাউজারে খুলে, কোড পড়ে নয়। --}}
+                @if ($warehouse === null)
+                    <p class="mt-2 rounded-(--radius-field) bg-(--color-badge-warning-bg) px-2 py-1
+                              text-2xs text-(--color-badge-warning-ink)">
+                        {{ __('purchase::message.no_default_warehouse') }}
+                    </p>
+                @endif
+
+                <p class="mt-2 truncate rounded-(--radius-field) bg-(--color-badge-info-bg) px-2 py-1
+                          text-2xs text-(--color-badge-info-ink)"
+                   title="{{ __('purchase::message.goods_wait_for_placement') }}">
+                    {{ __('purchase::message.goods_wait_for_placement') }}
+                </p>
+
+                {{-- ── পণ্য খোঁজা — কার্ডের মাথায়, বড় করে ────────────
+
+                     ⭐ মালিকের স্ক্রিনশটে এটাই পর্দার সবচেয়ে বড় লেখা
+                     (`Type or pick an item…`), আর পাশে একটা বর্গাকার
+                     খোঁজ-বোতাম। ⓘ মাপটা ইচ্ছাকৃত: কাউন্টারে সবচেয়ে বেশি
+                     যেটা ছোঁয়া হয় সেটাই সবচেয়ে বড় হওয়া দরকার।
+
+                     ⚠️ বোতামটা সাজসজ্জা নয় — চাপলে কার্সর ঘরে ফেরে।
+                     কাউন্টারে মাউস ধরাই যায় না, তাই ঘরটায় ফেরার একটা বড়
+                     লক্ষ্য থাকা দরকার। --}}
+                <div class="relative">
+                    <div class="flex items-center gap-2">
+                        <button type="button" @click="$refs.search.focus()"
+                                aria-label="{{ __('purchase::field.search_item') }}"
+                                class="flex size-(--spacing-command) shrink-0 items-center justify-center
+                                       rounded-(--radius-field) border border-(--color-success)
+                                       text-(--color-success) hover:bg-(--color-surface-hover)">
+                            <x-ui.icon name="search" :size="18" />
+                        </button>
+
+                        <input type="text" x-model="term" x-ref="search"
+                               @keydown.enter.prevent="pickFirst()"
+                               placeholder="{{ __('purchase::message.search_product') }}"
+                               class="h-(--spacing-command) min-w-0 flex-1 border-0 bg-transparent px-1
+                                      text-lg text-(--color-ink) placeholder:text-(--color-ink-placeholder)
+                                      focus:outline-none">
+                    </div>
+
+                    {{-- ছবির ছোট লাইনটা — পণ্য না বাছা পর্যন্ত কেন ঘরগুলো
+                         ফাঁকা, সেটা এই এক বাক্যেই বলা। --}}
+                    <p class="mt-1 text-2xs text-(--color-module-purchase)" x-show="! picked" x-cloak>
+                        {{ __('purchase::message.pick_item_hint') }}
+                    </p>
+
+                    <ul x-show="visible.length > 0" x-cloak
+                        class="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-(--radius-field)
+                               border border-(--color-border) bg-(--color-surface-card) shadow-lg">
+                        <template x-for="p in visible" :key="p.id">
+                            <li>
+                                <button type="button" @click="pick(p)"
+                                        class="flex w-full items-center justify-between gap-3 px-3 py-2
+                                               text-start text-sm hover:bg-(--color-surface-hover)">
+                                    <span>
+                                        <span x-text="p.name"></span>
+                                        <span class="block text-2xs text-(--color-ink-muted)" x-text="p.code"></span>
+                                    </span>
+                                    <span class="num shrink-0 text-2xs text-(--color-ink-muted)">
+                                        <span x-text="qty(p.on_hand)"></span>
+                                    </span>
+                                </button>
+                            </li>
+                        </template>
+                    </ul>
+                </div>
+
+                {{-- ══ সারি ২–৩ আর "এই লাইনে" ছক — পাশাপাশি ═════════════
+
+                     ⭐ মালিকের ছবির বাঁ কার্ড ভিতরে দুই ভাগ: বাঁয়ে ঘরগুলো,
+                     ডানে যোগফলের ছক। ⓘ ছকটা **সবসময় দেখা যায়**, পণ্য বাছার
+                     আগেও — ছবিতে ওটা ৳0.00 নিয়ে বসে আছে, আর ওটাই ঠিক:
+                     মানুষটা আগে থেকেই জানেন সংখ্যাগুলো কোথায় আসবে।
+
+                     ⚠️ ঘরগুলো তবু বন্ধ থাকে পণ্য না বাছা পর্যন্ত
+                     (`:disabled="! picked"`) — খোলা রাখলে কেউ পরিমাণ লিখে
+                     ফেলতেন কোন পণ্যের জন্য তা না বলেই, আর "যোগ করুন" চাপলে
+                     কিছুই হত না, কারণ ছাড়াই। --}}
+                <div class="mt-3">
+                    <div class="min-w-0">
+                        <div class="mb-2 flex min-h-5 flex-wrap items-baseline gap-x-4 gap-y-1">
                             <span class="font-semibold" x-text="picked?.name"></span>
-                            <span class="text-2xs text-(--color-ink-muted)">
+                            <span class="text-2xs text-(--color-ink-muted)" x-show="picked" x-cloak>
                                 {{ __('purchase::message.on_hand') }}:
                                 <span class="num" x-text="qty(picked?.on_hand)"></span>
                             </span>
                             {{-- শেষ কত দামে কেনা হয়েছিল — নতুন দর এর সাথেই মেলানো হয় --}}
-                            <span class="text-2xs text-(--color-ink-muted)" x-show="picked?.last_rate > 0">
+                            <span class="text-2xs text-(--color-ink-muted)" x-show="picked?.last_rate > 0" x-cloak>
                                 {{ __('purchase::message.last_rate') }}:
                                 <span class="num" x-text="money(picked?.last_rate)"></span>
                             </span>
                         </div>
 
+                        {{-- ── সারি ২: পরিমাণ ────────────────────────────
+
+                             ⭐ ছবির পাঁচটা ঘর: `QTY. · UOM · FREE QTY · UOM ·
+                             TOTAL QTY.`। ⓘ শেষেরটা পড়ার জন্য — যোগফলটা হাতে
+                             লিখতে দিলে একদিন কেউ ভুল লিখতেন, আর পর্দার
+                             সংখ্যাটা তার নিজের ঘরের সাথেই মিলত না। --}}
                         <div class="grid gap-2 sm:grid-cols-3 lg:grid-cols-6">
                             <label class="block">
                                 <span class="mb-1 block text-2xs text-(--color-ink-muted)">
                                     {{ __('purchase::field.qty') }}
                                 </span>
                                 <input type="number" step="0.01" inputmode="decimal" x-model="entry.qty"
+                                       :disabled="! picked"
                                        class="num h-(--spacing-field) w-full rounded-(--radius-field) border
-                                              border-(--color-border) bg-(--color-surface-card) px-2 text-end text-sm">
+                                              border-(--color-border) bg-(--color-surface-card) px-2 text-end text-sm
+                                              disabled:opacity-50">
+                            </label>
+
+                            {{-- ── একক — কেনা পরিমাণের ───────────────────
+
+                                 ⭐ পথটা মাথা থেকে পা পর্যন্ত আগেই তৈরি ছিল
+                                 (`lines.*.unit_id` → [[ReadsPackedQuantities]]
+                                 → `entered_qty`/`entered_unit_id`), কেবল এই
+                                 পর্দায় ঘরটা ছিল না — অর্থাৎ "১ বাক্স" লিখে
+                                 কেনার উপায় এখানে ছিল না, যদিও ব্যবস্থাটা ছিল।
+
+                                 ⚠️ তালিকা খালি হলে (কোম্পানি প্যাকে কেনে না,
+                                 বা পণ্যটার সিঁড়িতে একটাই একক) ড্রপডাউনের বদলে
+                                 পণ্যের নিজের এককের নাম **পড়ার ঘরে** বসে।
+                                 ⓘ নিষ্ক্রিয় ড্রপডাউন দিলে সেটা মৃত নিয়ন্ত্রণ
+                                 হত; নামটা লেখা থাকলে ঘরটা একটা উত্তর দেয়। --}}
+                            <label class="block">
+                                <span class="mb-1 block text-2xs text-(--color-ink-muted)">
+                                    {{ __('purchase::field.unit') }}
+                                </span>
+                                <select x-model="entry.unit_id" :disabled="! picked"
+                                        x-show="unitOptions.length > 0" x-cloak
+                                        class="h-(--spacing-field) w-full rounded-(--radius-field) border
+                                               border-(--color-border) bg-(--color-surface-card) px-2 text-sm
+                                               disabled:opacity-50">
+                                    <option value="">—</option>
+                                    <template x-for="u in unitOptions" :key="u.id">
+                                        <option :value="u.id" x-text="u.label"></option>
+                                    </template>
+                                </select>
+                                <div x-show="unitOptions.length === 0"
+                                     class="flex h-(--spacing-field) items-center rounded-(--radius-field)
+                                            bg-(--color-surface-sunken) px-2 text-sm text-(--color-ink-muted)"
+                                     x-text="picked?.unit || '—'"></div>
                             </label>
 
                             @if ($show['free_qty'])
@@ -229,35 +555,82 @@
                                         {{ __('purchase::field.free_qty') }}
                                     </span>
                                     <input type="number" step="0.01" inputmode="decimal" x-model="entry.free_qty"
+                                           :disabled="! picked"
                                            class="num h-(--spacing-field) w-full rounded-(--radius-field) border
-                                                  border-(--color-border) bg-(--color-surface-card) px-2 text-end text-sm">
+                                                  border-(--color-border) bg-(--color-surface-card) px-2 text-end text-sm
+                                                  disabled:opacity-50">
+                                </label>
+
+                                {{-- ⭐ ফ্রি-র নিজের একক — ছবির চতুর্থ ঘর।
+
+                                     মিল কার্টনে বেচে, আর ফ্রি দেয় পিসে। ⛔ আগে
+                                     সার্ভার ফ্রি পরিমাণ **লাইনেরই** এককে নামাত,
+                                     তাই "১০ কার্টন, ১ পিস ফ্রি" লেখাই যেত না।
+                                     ⓘ এখন `free_unit_id` যায়, আর কোন প্যাকে
+                                     লেখা হয়েছিল সেটাও মনে থাকে
+                                     (`entered_free_qty`) — নাহলে বিলটা আবার
+                                     খুললে "১ কার্টন" ফিরত "১২ পিস" হয়ে। --}}
+                                <label class="block">
+                                    <span class="mb-1 block text-2xs text-(--color-ink-muted)">
+                                        {{ __('purchase::field.free_unit') }}
+                                    </span>
+                                    <select x-model="entry.free_unit_id" :disabled="! picked"
+                                            x-show="unitOptions.length > 0" x-cloak
+                                            class="h-(--spacing-field) w-full rounded-(--radius-field) border
+                                                   border-(--color-border) bg-(--color-surface-card) px-2 text-sm
+                                                   disabled:opacity-50">
+                                        <option value="">—</option>
+                                        <template x-for="u in unitOptions" :key="u.id">
+                                            <option :value="u.id" x-text="u.label"></option>
+                                        </template>
+                                    </select>
+                                    <div x-show="unitOptions.length === 0"
+                                         class="flex h-(--spacing-field) items-center rounded-(--radius-field)
+                                                bg-(--color-surface-sunken) px-2 text-sm text-(--color-ink-muted)"
+                                         x-text="picked?.unit || '—'"></div>
                                 </label>
                             @endif
 
                             <label class="block">
                                 <span class="mb-1 block text-2xs text-(--color-ink-muted)">
-                                    {{ __('purchase::field.rate') }}
+                                    {{ __('purchase::field.line_qty_total') }}
                                 </span>
-                                <input type="number" step="0.01" inputmode="decimal"
-                                       x-model="entry.rate" @input="priced('rate')"
-                                       class="num h-(--spacing-field) w-full rounded-(--radius-field) border
-                                              border-(--color-border) bg-(--color-surface-card) px-2 text-end text-sm">
+                                <div class="num flex h-(--spacing-field) items-center justify-end
+                                            rounded-(--radius-field) bg-(--color-surface-sunken) px-2 text-sm"
+                                     x-text="qty(entryTotalQty)"></div>
                             </label>
 
-                            {{-- ── দর নির্ধারণের তিনটা ঘর ───────────────────
-                                 তিনটা একই সম্পর্কের তিনটা মুখ। যেটায় লেখা
-                                 হয় সেটাই নীতি, বাকি দুইটা তার ফল। markup
-                                 মাপা হয় ক্রয়দরের উপর, margin বিক্রয়দরের
-                                 উপর — ১০০-তে কিনে ১৫০-তে বেচা মানে ৫০%
-                                 markup আর ৩৩.৩৩% margin। --}}
+                            <label class="block">
+                                <span class="mb-1 block text-2xs text-(--color-ink-muted)">
+                                    {{ __('purchase::field.purchase_rate') }}
+                                </span>
+                                <input type="number" step="0.01" inputmode="decimal"
+                                       x-model="entry.rate" @input="priced('rate')" :disabled="! picked"
+                                       class="num h-(--spacing-field) w-full rounded-(--radius-field) border
+                                              border-(--color-border) bg-(--color-surface-card) px-2 text-end text-sm
+                                              disabled:opacity-50">
+                            </label>
+
+                        </div>
+
+                        {{-- ── সারি ৩: দর ────────────────────────────────
+
+                             ── দর নির্ধারণের তিনটা ঘর ───────────────────
+                             তিনটা একই সম্পর্কের তিনটা মুখ। যেটায় লেখা
+                             হয় সেটাই নীতি, বাকি দুইটা তার ফল। markup
+                             মাপা হয় ক্রয়দরের উপর, margin বিক্রয়দরের
+                             উপর — ১০০-তে কিনে ১৫০-তে বেচা মানে ৫০%
+                             markup আর ৩৩.৩৩% margin। --}}
+                        <div class="mt-2 grid gap-2 sm:grid-cols-3">
                             <label class="block">
                                 <span class="mb-1 block text-2xs text-(--color-ink-muted)">
                                     {{ __('purchase::field.markup') }}
                                 </span>
                                 <input type="number" step="0.01" inputmode="decimal"
-                                       x-model="entry.markup" @input="priced('markup')"
+                                       x-model="entry.markup" @input="priced('markup')" :disabled="! picked"
                                        class="num h-(--spacing-field) w-full rounded-(--radius-field) border
-                                              border-(--color-border) bg-(--color-surface-card) px-2 text-end text-sm">
+                                              border-(--color-border) bg-(--color-surface-card) px-2 text-end text-sm
+                                              disabled:opacity-50">
                             </label>
 
                             <label class="block">
@@ -265,77 +638,313 @@
                                     {{ __('purchase::field.margin') }}
                                 </span>
                                 <input type="number" step="0.01" inputmode="decimal"
-                                       x-model="entry.margin" @input="priced('margin')"
+                                       x-model="entry.margin" @input="priced('margin')" :disabled="! picked"
                                        class="num h-(--spacing-field) w-full rounded-(--radius-field) border
-                                              border-(--color-border) bg-(--color-surface-card) px-2 text-end text-sm">
+                                              border-(--color-border) bg-(--color-surface-card) px-2 text-end text-sm
+                                              disabled:opacity-50">
                             </label>
 
                             <label class="block">
                                 <span class="mb-1 block text-2xs text-(--color-ink-muted)">
-                                    {{ __('purchase::field.sales_price') }}
+                                    {{ __('purchase::field.sales_rate') }}
                                 </span>
                                 <input type="number" step="0.01" inputmode="decimal"
                                        x-model="entry.sales_price" @input="priced('sales_price')"
+                                       :disabled="! picked"
+                                       placeholder="{{ __('purchase::message.sales_rate_hint') }}"
                                        class="num h-(--spacing-field) w-full rounded-(--radius-field) border
-                                              border-(--color-border) bg-(--color-surface-card) px-2 text-end text-sm">
+                                              border-(--color-border) bg-(--color-surface-card) px-2 text-end text-sm
+                                              disabled:opacity-50">
                             </label>
                         </div>
-
-                        <div class="mt-2 flex flex-wrap items-end gap-2">
-                            @if ($show['line_discount'])
-                                <label class="block">
-                                    <span class="mb-1 block text-2xs text-(--color-ink-muted)">
-                                        {{ __('purchase::field.discount') }}
-                                    </span>
-                                    <input type="number" step="0.01" inputmode="decimal" x-model="entry.discount"
-                                           class="num h-(--spacing-field) w-28 rounded-(--radius-field) border
-                                                  border-(--color-border) bg-(--color-surface-card) px-2 text-end text-sm">
-                                </label>
-                            @endif
-
-                            @if ($show['vat'])
-                                <label class="block">
-                                    <span class="mb-1 block text-2xs text-(--color-ink-muted)">
-                                        {{ __('purchase::field.tax') }}
-                                    </span>
-                                    <input type="number" step="0.01" inputmode="decimal" x-model="entry.tax"
-                                           class="num h-(--spacing-field) w-28 rounded-(--radius-field) border
-                                                  border-(--color-border) bg-(--color-surface-card) px-2 text-end text-sm">
-                                </label>
-                            @endif
-
-                            <span class="ms-auto text-sm">
-                                {{ __('purchase::field.line_total') }}:
-                                <span class="num font-semibold" x-text="money(entryNet)"></span>
-                            </span>
-
-                            <x-ui.button type="button" tone="primary" x-on:click="addToCart()"
-                                         ::disabled="! picked">
-                                {{ __('purchase::action.add_line') }}
-                            </x-ui.button>
-
-                            <x-ui.button type="button" tone="ghost" x-on:click="clearEntry()">
-                                {{ __('purchase::action.clear_line') }}
-                            </x-ui.button>
-                        </div>
                     </div>
+
                 </div>
             </section>
+            </div>
+
+            {{-- ══ এই লাইনে — ছবি ২-এর ছক ═══════════════════════
+
+                 ⭐ ছাড় আর ভ্যাট ছকের **ভিতরে**, বাইরে নয় — মালিকের
+                 দ্বিতীয় ছবির সবচেয়ে বড় পার্থক্যটা এটাই। ⓘ কারণটাও
+                 স্পষ্ট: *"এই লাইনটা শেষে কত দাঁড়াল"* প্রশ্নের প্রতিটা
+                 উপাদান তখন এক কলামে নামে — টাকা → ছাড় → ভ্যাট → নেট।
+                 ⛔ বাইরে থাকলে মানুষটা উপরে ছাড় বসিয়ে নিচে যোগফল
+                 দেখতে চোখ সরাতেন, প্রতিটা লাইনে একবার করে। --}}
+            <aside class="rounded-(--radius-card) border border-(--color-success)
+                          bg-(--color-badge-success-bg) p-2">
+                <div class="flex items-baseline justify-between gap-2">
+                    <span class="text-2xs font-semibold tracking-wide text-(--color-success) uppercase">
+                        {{ __('purchase::field.this_line') }}
+                    </span>
+                    <span class="num text-xl font-bold text-(--color-success)">৳<span x-text="money(entryNet)"></span></span>
+                </div>
+
+                <dl class="mt-2 space-y-1 text-2xs">
+                    <div class="flex items-center justify-between gap-2">
+                        <dt class="text-(--color-ink-muted)">{{ __('purchase::field.total_amount') }}</dt>
+                        <dd class="num" x-text="money(entryBase)"></dd>
+                    </div>
+
+                    @if ($show['line_discount'])
+                        {{-- ── ছাড়: টাকা নাকি শতাংশ ──────────────
+
+                             ⭐ লেখা যায় দুইভাবে, **সংরক্ষিত হয় একভাবে** —
+                             টাকায়। ⓘ কলামটা (`pur_bill_lines.discount`)
+                             টাকার, আর সার্ভার সরাসরি বিয়োগ করে; একই
+                             কলামে কখনো টাকা কখনো শতাংশ বসলে একদিন কেউ
+                             ৫ লিখতেন আর ৫ টাকা বাদ যেত, যেখানে তিনি
+                             ৫% বুঝিয়েছিলেন।
+
+                             ⚠️ আর ক্রয়ে ছাড়টা সরবরাহকারীর কাগজে টাকায়
+                             ছাপা থাকে — দুই খাতা মেলানোর সময় ওই
+                             সংখ্যাটাই মেলে। --}}
+                        <div class="flex items-center justify-between gap-2">
+                            <dt class="shrink-0 text-(--color-ink-muted)">
+                                {{ __('purchase::field.discount_on_line') }}
+                            </dt>
+                            <dd class="flex items-center gap-1">
+                                <input type="number" step="0.01" inputmode="decimal"
+                                       x-model="entry.discount" :disabled="! picked"
+                                       class="num h-(--spacing-field-dense) w-16 rounded-(--radius-field)
+                                              border border-(--color-border) bg-(--color-surface-card)
+                                              px-1 text-end disabled:opacity-50">
+
+                                <button type="button" @click="toggleDiscountMode()"
+                                        :aria-pressed="entry.discount_mode === 'percent'"
+                                        class="w-6 shrink-0 rounded-(--radius-field) border
+                                               border-(--color-border) py-0.5 text-center
+                                               font-medium hover:bg-(--color-surface-hover)"
+                                        x-text="entry.discount_mode === 'percent' ? '%' : '৳'"></button>
+
+                                <span class="num w-16 text-end" x-text="money(entryDiscount)"></span>
+                            </dd>
+                        </div>
+
+                        {{-- ⚠️ সার্ভারও এটাই আটকায়, কিন্তু পর্দায় আগে
+                             বলাটাই ভদ্রতা — সাবমিটের পর জানা মানে বিশ
+                             লাইন টাইপ করার পর জানা। --}}
+                        <p x-show="discountOverLine" x-cloak
+                           class="rounded-(--radius-field) bg-(--color-badge-danger-bg) px-1.5 py-0.5
+                                  text-(--color-badge-danger-ink)">
+                            {{ __('purchase::message.discount_over_line_screen') }}
+                        </p>
+                    @endif
+
+                    @if ($show['vat'])
+                        {{-- ── ভ্যাট: কোন নিয়মে ───────────────────
+
+                             ⭐ তিনটা ধরন, আর তিনটাই আজকের সার্ভারে সত্যি
+                             ([[CalculatesLineTotals::lineFigures]]):
+                             ঘরটা ফাঁকা গেলে পণ্যের নিজের হার, অঙ্ক গেলে
+                             সেটাই, আর ০ গেলে ভ্যাট নেই।
+
+                             ⚠️ এতদিন পর্দায় শুধু একটা খালি ঘর ছিল, আর
+                             **খালি রাখা আর ০ লেখা দুইটা আলাদা কাজ করত** —
+                             অথচ পর্দা সেটা কোথাও বলত না। ⓘ ড্রপডাউনটা
+                             মূলত ওই নীরব পার্থক্যটাকে দৃশ্যমান করে।
+
+                             ⛔ "গোটা বিলের ভ্যাট" এখানে নেই: `pur_bills`-এ
+                             বিল-স্তরের ভ্যাটের ঘর নেই, তাই অপশনটা রাখলে
+                             পর্দা এক সংখ্যা দেখাত আর খতিয়ানে আরেকটা বসত —
+                             ঠিক যে কারণে খরচ ও রাউন্ডিংয়ের ঘর দুইটাও
+                             এখনো বসেনি। --}}
+                        <div class="flex items-center justify-between gap-2">
+                            <dt class="shrink-0 text-(--color-ink-muted)">
+                                {{ __('purchase::field.vat_mode') }}
+                            </dt>
+                            <dd class="flex items-center gap-1">
+                                <select x-model="entry.vat_mode" :disabled="! picked"
+                                        class="h-(--spacing-field-dense) w-24 rounded-(--radius-field)
+                                               border border-(--color-border) bg-(--color-surface-card)
+                                               px-1 disabled:opacity-50">
+                                    <option value="product">{{ __('purchase::field.vat_mode_product') }}</option>
+                                    <option value="amount">{{ __('purchase::field.vat_mode_amount') }}</option>
+                                    <option value="none">{{ __('purchase::field.vat_mode_none') }}</option>
+                                </select>
+
+                                <input type="number" step="0.01" inputmode="decimal"
+                                       x-model="entry.tax"
+                                       x-show="entry.vat_mode === 'amount'" x-cloak
+                                       class="num h-(--spacing-field-dense) w-16 rounded-(--radius-field)
+                                              border border-(--color-border) bg-(--color-surface-card)
+                                              px-1 text-end">
+
+                                <span class="num w-16 text-end" x-show="entry.vat_mode !== 'amount'"
+                                      x-text="money(entryTax)"></span>
+                            </dd>
+                        </div>
+                    @endif
+
+                    <div class="flex items-center justify-between gap-2 border-t
+                                border-(--color-border) pt-1">
+                        <dt class="text-(--color-ink-muted)">{{ __('purchase::field.net_value') }}</dt>
+                        <dd class="num font-medium" x-text="money(entryNet)"></dd>
+                    </div>
+
+                    <div class="flex items-center justify-between gap-2">
+                        <dt class="text-(--color-ink-muted)">{{ __('purchase::field.total_qty') }}</dt>
+                        <dd class="num" x-text="qty(entryTotalQty)"></dd>
+                    </div>
+
+                    <div class="flex items-center justify-between gap-2 border-t
+                                border-(--color-border) pt-1">
+                        <dt class="text-(--color-ink-muted)">{{ __('purchase::field.in_cart') }}</dt>
+                        <dd class="num" x-text="@js(__('purchase::field.items_count', ['count' => ':n']))
+                                                 .replace(':n', lines.length)"></dd>
+                    </div>
+
+                    <div class="flex items-center justify-between gap-2">
+                        <dt class="text-(--color-ink-muted)">{{ __('purchase::field.running_total') }}</dt>
+                        <dd class="num font-medium" x-text="money(netPayable)"></dd>
+                    </div>
+                </dl>
+
+                {{-- ── চারটা বোতাম, এক সারিতে — মালিকের স্ক্রিনশট ────────
+
+                     ```
+                     [ Gift ]  [ Costing ]  [ Add to Cart ]  [ Clear Data ]
+                      ধূসর       পাড়          সবুজ ভরাট        লালচে
+                     ```
+
+                     ⚠️ `Gift` পণ্য না বাছলে **চাপা যায় না**, আর ছবিতেও ওটা
+                     ধূসর — কারণ উপহার সবসময় কোনো একটা পণ্যের বিপরীতে বসে
+                     (`against_product_id`), আর চলতি এন্ট্রিতে পণ্য না থাকলে
+                     জোড়া লাগানোর মতো কিছুই নেই।
+
+                     ⓘ আগের খসড়ায় এখানে `Rate chart` আর `Bulk` নামে আরও
+                     দুইটা বোতাম বসানো হয়েছিল — মালিকের স্ক্রিনশটে ও দুইটা
+                     এখানে নেই, তাই সরানো হলো। ⭐ তালিকার বোতামটা ডান
+                     কার্ডের ছয়-বোতামের ছকে, ছবিতে যেখানে আছে। --}}
+                <div class="mt-3 grid grid-cols-[1fr_1.5fr_1fr] gap-1 text-center [&>button]:whitespace-normal">
+                    {{-- ⭐ নকশার রং ফিরল — অ্যাম্বার পাড়, হালকা জমিন।
+
+                         ⛔ প্রথম খসড়ায় এটা ধূসর ছিল, আর তাতে বোতামটা
+                         **চিরকাল মরা দেখাত** — পণ্য বাছার পরেও কেউ বুঝত
+                         না ওটা এখন চাপা যায়। ⓘ মালিকের নকশায় রংটা লেখা
+                         ছিল (*"হলুদ/অ্যাম্বার পাড়"*), আর রংটাই এখানে
+                         কাজের: নিষ্ক্রিয় অবস্থা ফ্যাকাশে, সক্রিয় অবস্থা
+                         স্পষ্ট।
+
+                         ⚠️ পণ্য না বাছা পর্যন্ত তবু চাপা যায় না, আর সেটাও
+                         নকশারই কথা — উপহার সবসময় **কোনো একটা পণ্যের
+                         বিপরীতে** বসে, তাই জোড়া লাগানোর মতো কিছু না
+                         থাকলে বোতামটার কোনো কাজ নেই। --}}
+                    <button type="button" @click="giftForThisLine()" :disabled="! picked"
+                            class="rounded-(--radius-field) border px-0.5 py-1.5 text-2xs font-medium
+                                   leading-tight break-words disabled:opacity-40"
+                            style="border-color: var(--color-module-purchase);
+                                   color: var(--color-module-purchase);
+                                   background: var(--color-badge-warning-bg)">
+                        {{ __('purchase::action.gift_short') }}
+                    </button>
+
+                    <button type="button" @click="addToCart()" :disabled="! picked"
+                            class="rounded-(--radius-field) bg-(--color-success) px-0.5 py-1.5 text-2xs
+                                   font-medium leading-tight break-words text-(--color-ink-inverse)
+                                   hover:bg-(--color-success-hover) disabled:opacity-40">
+                        {{ __('purchase::action.add_to_cart') }}
+                    </button>
+
+                    <button type="button" @click="clearEntry()"
+                            class="rounded-(--radius-field) bg-(--color-badge-danger-bg) px-0.5 py-1.5
+                                   text-2xs font-medium leading-tight break-words
+                                   text-(--color-badge-danger-ink) hover:bg-(--color-surface-hover)">
+                        {{ __('purchase::action.clear_data') }}
+                    </button>
+                </div>
+            </aside>
+            </div>
+
+                {{-- ══ দরের তালিকা — এই সরবরাহকারীর ════════════════════
+
+                     ⭐ তথ্যটা আজই আসে (`purchase.direct.last_rates`), কিন্তু
+                     আজ পর্যন্ত সেটা কেবল **কার্টে বসে যাওয়া সারির নিচে** দেখা
+                     যেত — অর্থাৎ পণ্যটা তোলার পরে। ⛔ আর দরাদরিটা হয় তোলার
+                     আগে। ⓘ তালিকাটা ঠিক ওই ফাঁকটা ভরে, আর একটাও নতুন দরজা
+                     লাগে না। --}}
+                <div x-show="chartOpen" x-cloak
+                     class="mt-3 rounded-(--radius-card) border border-(--color-border)
+                            bg-(--color-surface-sunken) p-3">
+                    <div class="mb-2 flex items-center justify-between">
+                        <span class="text-2xs font-semibold tracking-wide uppercase">
+                            {{ __('purchase::action.rate_chart') }}
+                        </span>
+                        <button type="button" @click="chartOpen = false"
+                                class="text-2xs text-(--color-ink-muted) hover:text-(--color-ink)">
+                            {{ __('purchase::action.close_panel') }}
+                        </button>
+                    </div>
+
+                    <p x-show="! supplierChosen" x-cloak class="text-2xs text-(--color-ink-muted)">
+                        {{ __('purchase::message.rate_chart_needs_supplier') }}
+                    </p>
+
+                    <p x-show="supplierChosen && chartRows.length === 0" x-cloak
+                       class="text-2xs text-(--color-ink-muted)">
+                        {{ __('purchase::message.rate_chart_empty') }}
+                    </p>
+
+                    <div x-show="chartRows.length > 0" x-cloak class="max-h-56 overflow-y-auto">
+                        <table class="ui-grid is-compact w-full text-2xs">
+                            <thead class="bg-(--color-surface-card) text-(--color-ink-muted)">
+                                <tr>
+                                    <th class="text-start">{{ __('purchase::field.product') }}</th>
+                                    <th class="text-end">{{ __('purchase::field.rate') }}</th>
+                                    <th class="text-end">{{ __('purchase::field.date') }}</th>
+                                    <th><span class="sr-only">{{ __('core.table.actions') }}</span></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="row in chartRows" :key="row.id">
+                                    <tr class="border-t border-(--color-border)">
+                                        <td x-text="row.name"></td>
+                                        <td class="num" x-text="money(row.rate)"></td>
+                                        <td class="num text-(--color-ink-muted)" x-text="row.on"></td>
+                                        <td class="text-end">
+                                            <button type="button" @click="pickFromChart(row)"
+                                                    class="rounded-(--radius-field) border border-(--color-border)
+                                                           px-2 py-0.5 hover:bg-(--color-surface-hover)">
+                                                {{ __('purchase::field.search_item') }}
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
 
             {{-- ── কার্ট ─────────────────────────────────────────────── --}}
             <section data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                             bg-(--color-surface-card)">
                 <div class="overflow-x-auto">
                     <table class="ui-grid is-compact w-full text-sm">
+                        {{-- ── কলামের ক্রম — মালিকের ছবির ক্রম ────────────────
+
+                             ```
+                             SL# · Item Name · Rate · Qty · Free Unit ·
+                             Total Qty. · Sales Price · VAT · Amount
+                             ```
+
+                             ⓘ দর পরিমাণের **আগে**, আর সেটা ইচ্ছাকৃত: কাউন্টারে
+                             চোখ আগে দরে যায় (ওটাই দরাদরির সংখ্যা), পরিমাণটা
+                             কাগজ দেখে টোকা হয়।
+
+                             ⚠️ ছাড়ের কলামটা ছবিতে নেই, তবু আছে — ঘরটা সত্যি,
+                             আর "এই লাইনে" ছকে ছাড় লেখা যায়। ⛔ কলাম না থাকলে
+                             সারিটা কার্টে যাওয়ার পর ছাড়টা আর দেখাই যেত না,
+                             বদলানো তো দূরের কথা। --}}
                         <thead class="bg-(--color-surface-sunken) text-2xs text-(--color-ink-muted)">
                             <tr>
                                 <th class="text-start">{{ __('core.table.serial') }}</th>
                                 <th class="text-start">{{ __('purchase::field.product') }}</th>
+                                <th class="text-end">{{ __('purchase::field.rate') }}</th>
                                 <th class="text-end">{{ __('purchase::field.qty') }}</th>
                                 @if ($show['free_qty'])
                                     <th class="text-end">{{ __('purchase::field.free_qty') }}</th>
                                 @endif
-                                <th class="text-end">{{ __('purchase::field.rate') }}</th>
+                                <th class="text-end">{{ __('purchase::field.line_qty_total') }}</th>
                                 <th class="text-end">{{ __('purchase::field.sales_price') }}</th>
                                 @if ($show['line_discount'])
                                     <th class="text-end">{{ __('purchase::field.discount') }}</th>
@@ -343,7 +952,7 @@
                                 @if ($show['vat'])
                                     <th class="text-end">{{ __('purchase::field.tax') }}</th>
                                 @endif
-                                <th class="text-end">{{ __('purchase::field.line_total') }}</th>
+                                <th class="text-end">{{ __('purchase::field.amount') }}</th>
                                 <th><span class="sr-only">{{ __('core.table.actions') }}</span></th>
                             </tr>
                         </thead>
@@ -388,28 +997,49 @@
                                             </span>
                                         </template>
                                     </td>
-                                    <td>
-                                        <input type="number" step="0.01" inputmode="decimal"
-                                               :name="`lines[${index}][qty]`" x-model="line.qty"
-                                               class="num h-(--spacing-field-dense) w-20 rounded-(--radius-field) border
-                                                      border-(--color-border) bg-(--color-surface-card) px-1 text-end">
-                                    </td>
-                                    @if ($show['free_qty'])
-                                        <td>
-                                            <input type="number" step="0.01" inputmode="decimal"
-                                                   :name="`lines[${index}][free_qty]`" x-model="line.free_qty"
-                                                   class="num h-(--spacing-field-dense) w-20 rounded-(--radius-field) border
-                                                          border-(--color-border) bg-(--color-surface-card) px-1 text-end">
-                                        </td>
-                                    @endif
+                                    {{-- দর — পরিমাণের আগে, ছবির ক্রম --}}
                                     <td>
                                         <input type="number" step="0.01" inputmode="decimal"
                                                :name="`lines[${index}][rate]`" x-model="line.rate"
                                                class="num h-(--spacing-field-dense) w-24 rounded-(--radius-field) border
                                                       border-(--color-border) bg-(--color-surface-card) px-1 text-end">
                                     </td>
+
+                                    {{-- ⓘ একক দুইটা লুকানো ঘরে যায়, আর নামটা
+                                         সংখ্যার নিচে ছোট করে লেখা থাকে। ⚠️ না
+                                         লিখলে কার্টে "১" দেখে বোঝার উপায় থাকত
+                                         না ওটা এক বাক্স না এক পিস — আর ওই
+                                         ভুলটার দাম একশো গুণ। --}}
+                                    <td>
+                                        <input type="number" step="0.01" inputmode="decimal"
+                                               :name="`lines[${index}][qty]`" x-model="line.qty"
+                                               class="num h-(--spacing-field-dense) w-20 rounded-(--radius-field) border
+                                                      border-(--color-border) bg-(--color-surface-card) px-1 text-end">
+                                        <input type="hidden" :name="`lines[${index}][unit_id]`" :value="line.unit_id">
+                                        <span class="block text-end text-2xs text-(--color-ink-muted)"
+                                              x-text="unitName(line.unit_id, line)"></span>
+                                    </td>
+
+                                    @if ($show['free_qty'])
+                                        <td>
+                                            <input type="number" step="0.01" inputmode="decimal"
+                                                   :name="`lines[${index}][free_qty]`" x-model="line.free_qty"
+                                                   class="num h-(--spacing-field-dense) w-20 rounded-(--radius-field) border
+                                                          border-(--color-border) bg-(--color-surface-card) px-1 text-end">
+                                            <input type="hidden" :name="`lines[${index}][free_unit_id]`"
+                                                   :value="line.free_unit_id">
+                                            <span class="block text-end text-2xs text-(--color-ink-muted)"
+                                                  x-text="unitName(line.free_unit_id, line)"></span>
+                                        </td>
+                                    @endif
+
+                                    {{-- ছবির `Total Qty.` — কেনা আর ফ্রি একসাথে,
+                                         অর্থাৎ গুদামে সত্যিই কতটা ঢুকছে --}}
+                                    <td class="num" x-text="qty(lineTotalQty(line))"></td>
+
                                     <td class="num text-(--color-ink-muted)"
                                         x-text="line.sales_price ? money(line.sales_price) : '—'"></td>
+
                                     @if ($show['line_discount'])
                                         <td>
                                             <input type="number" step="0.01" inputmode="decimal"
@@ -418,14 +1048,39 @@
                                                           border-(--color-border) bg-(--color-surface-card) px-1 text-end">
                                         </td>
                                     @endif
+
                                     @if ($show['vat'])
+                                        {{-- ── ভ্যাট — সারিটা নিজের ধরন মনে রাখে ──
+
+                                             ⛔ ঘরটা **নেই** যখন ধরনটা "পণ্য
+                                             অনুযায়ী" — আর সেটাই মূল কথা: নাম
+                                             ছাড়া ঘরটা সার্ভারে পৌঁছায় না, আর
+                                             তখন [[CalculatesLineTotals]] পণ্যের
+                                             নিজের হার থেকে কষে।
+
+                                             ⚠️ পাশে সংখ্যাটা তবু দেখা যায়, কারণ
+                                             "কষে নেবে" মানে "দেখা যাবে না" নয়।
+                                             ⓘ পর্দার আর সার্ভারের অঙ্ক একই সূত্রে
+                                             (হার ও `is_inclusive` দুইটাই পণ্য
+                                             থেকে আসে), তাই দুইটা মেলে। --}}
                                         <td>
-                                            <input type="number" step="0.01" inputmode="decimal"
-                                                   :name="`lines[${index}][tax]`" x-model="line.tax"
-                                                   class="num h-(--spacing-field-dense) w-20 rounded-(--radius-field) border
-                                                          border-(--color-border) bg-(--color-surface-card) px-1 text-end">
+                                            <template x-if="line.vat_mode === 'amount'">
+                                                <input type="number" step="0.01" inputmode="decimal"
+                                                       :name="`lines[${index}][tax]`" x-model="line.tax"
+                                                       class="num h-(--spacing-field-dense) w-20 rounded-(--radius-field) border
+                                                              border-(--color-border) bg-(--color-surface-card) px-1 text-end">
+                                            </template>
+
+                                            <template x-if="line.vat_mode === 'none'">
+                                                <input type="hidden" :name="`lines[${index}][tax]`" value="0">
+                                            </template>
+
+                                            <span class="block text-end text-2xs text-(--color-ink-muted)"
+                                                  x-show="line.vat_mode !== 'amount'"
+                                                  x-text="money(lineTax(line))"></span>
                                         </td>
                                     @endif
+
                                     <td class="num font-medium" x-text="money(lineNet(line))"></td>
                                     <td class="text-end">
                                         <div class="flex items-center justify-end gap-1">
@@ -516,7 +1171,12 @@
                                              দেখা যাবে সেটা সেটিংসের সিদ্ধান্ত, আর সেটা
                                              পাতা তৈরির সময়েই জানা। JS-এ গুনলে একই কথা
                                              দুই জায়গায় থাকত। --}}
-                                        <td colspan="{{ 2
+                                        {{-- ⚠️ সংখ্যাটা কলামের ক্রম বদলানোর সাথে
+                                             বেড়েছে (মোট ৮ + তিনটা সুইচ): ক্রমিক ১,
+                                             পণ্যের ঘরটা ৩, আর শেষে মোছার ঘর ১ —
+                                             বাকিটা এখানে। ⓘ ভুল হলে সারিটা এক
+                                             কলাম সরে বসত, আর ছকটা এলোমেলো দেখাত। --}}
+                                        <td colspan="{{ 3
                                             + ($show['free_qty'] ? 1 : 0)
                                             + ($show['line_discount'] ? 1 : 0)
                                             + ($show['vat'] ? 1 : 0) }}"></td>
@@ -530,29 +1190,350 @@
                             </template>
 
                             <tr x-show="lines.length === 0" x-cloak>
-                                <td colspan="10" class="text-center text-sm text-(--color-ink-muted)">
-                                    {{ __('purchase::message.no_lines_yet') }}
+                                <td colspan="{{ 8
+                                        + ($show['free_qty'] ? 1 : 0)
+                                        + ($show['line_discount'] ? 1 : 0)
+                                        + ($show['vat'] ? 1 : 0) }}"
+                                    class="text-center text-sm text-(--color-ink-muted)">
+                                    {{-- ⭐ খালি ছকটা কেবল "কিছু নেই" বলে না, **পরের
+                                         কাজটা** বলে — মালিকের স্ক্রিনশটের বাক্যটাই।
+                                         ⓘ পুরনো `no_lines_yet` রয়ে গেল: ক্রয়ের অন্য
+                                         পর্দাগুলো ওটাই ব্যবহার করে, আর সেখানে কার্ট
+                                         নেই বলে এই বাক্যটা ভুল হত। --}}
+                                    {{ __('purchase::message.cart_empty_hint') }}
                                 </td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
             </section>
+
+            {{-- ══ পরিশোধ — কার্টের নিচে, চওড়া স্ট্রিপে ═══════════════
+
+                 মালিকের নির্দেশ (৫ সেপ্টেম্বর ২০২৬): বিক্রয়ের পর্দার
+                 মতোই — *"etar moto payment o hobe"*।
+
+                 ⛔ আগে এটা মোটের কার্ডের ভিতরে একটা সরু কলামে ছিল, আর
+                 ঘরগুলো একটার নিচে একটা নামত। ⚠️ ২৪৮px-এ পাঁচটা ঘর মানে
+                 পাঁচটা সারি — কাউন্টারে টাকা নেওয়ার সময় ওটা সবচেয়ে ধীর
+                 জায়গা হত।
+
+                 ⭐ এখন কার্টের নিচে পুরো চওড়ায়, আর সব ঘর **এক সারিতে**:
+                 তারিখ · উপায় · কোন খাত · রেফারেন্স · অঙ্ক · বিবরণ · যোগ।
+
+                 ⓘ `flex-wrap` ইচ্ছাকৃত, `grid` নয় — রেফারেন্সের ঘরটা কেবল
+                 চেক/bKash-এ দেখা যায়, আর গ্রিডে ওটা লুকালে একটা ফাঁকা
+                 কলাম পড়ে থাকত। --}}
+            <section data-boxed x-show="depositOpen" x-cloak
+                     class="rounded-(--radius-card) border border-(--color-border)
+                            bg-(--color-surface-card) p-3">
+
+                {{-- যোগ হয়ে যাওয়া পরিশোধগুলো --}}
+                <template x-for="(row, i) in deposits" :key="i">
+                    <div class="mb-1 flex items-center gap-2 rounded-(--radius-field)
+                                bg-(--color-surface-sunken) px-2 py-1 text-2xs">
+                        <span class="min-w-0 flex-1 truncate">
+                            <span x-text="methodName(row.methodId)"></span>
+                            <span class="text-(--color-ink-muted)"
+                                  x-show="row.reference"
+                                  x-text="' · ' + row.reference"></span>
+                            <span class="text-(--color-ink-muted)"
+                                  x-show="row.narration"
+                                  x-text="' · ' + row.narration"></span>
+                        </span>
+                        <span class="num font-medium" x-text="money(Number(row.amount))"></span>
+                        <button type="button" @click="dropDeposit(i)"
+                                class="px-1 text-(--color-danger)"
+                                aria-label="{{ __('purchase::action.clear_line') }}">&times;</button>
+
+                        {{-- ⓘ সার্ভারে যা যায় — নামের ভিতরে সূচক, তাই
+                             PHP-তে সারিগুলো আলাদা থাকে। --}}
+                        <input type="hidden" :name="`deposits[${i}][amount]`" :value="row.amount">
+                        <input type="hidden" :name="`deposits[${i}][payment_method_id]`" :value="row.methodId">
+                        <input type="hidden" :name="`deposits[${i}][account_id]`" :value="row.accountId">
+                        <input type="hidden" :name="`deposits[${i}][reference]`" :value="row.reference">
+                        <input type="hidden" :name="`deposits[${i}][ref_date]`" :value="row.refDate">
+                        <input type="hidden" :name="`deposits[${i}][narration]`" :value="row.narration">
+                    </div>
+                </template>
+
+                <div class="flex flex-wrap items-end gap-2">
+                    <label class="min-w-0 flex-1">
+                        <span class="mb-1 block text-2xs text-(--color-ink-muted)">
+                            {{ __('purchase::field.ref_date') }}
+                        </span>
+                        <x-ui.date name="deposit_ref_date"
+                                   bind-name="'deposit_ref_date'"
+                                   bind-iso="depositDraft.refDate"
+                                   bind-model="depositDraft.refDate" />
+                    </label>
+
+                    <label class="min-w-0 flex-1">
+                        <span class="mb-1 block text-2xs text-(--color-ink-muted)">
+                            {{ __('purchase::field.instrument') }}
+                        </span>
+                        <select x-model="depositDraft.methodId" @change="methodPicked()"
+                                class="h-(--spacing-field) w-full rounded-(--radius-field) border
+                                       border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                            <option value="">{{ __('purchase::field.paid_how') }}</option>
+                            @foreach ($depositMethods as $method)
+                                <option value="{{ $method['id'] }}">{{ $method['label'] }}</option>
+                            @endforeach
+                        </select>
+                    </label>
+
+                    {{-- ⚠️ খাতের তালিকা উপায় বাছার পরেই। উপায় না বেছে খাত
+                         দেখালে কেউ নগদের খাতে চেকের টাকা বসিয়ে দিতেন, আর
+                         মাস শেষে নগদ মিলত না। --}}
+                    <label class="min-w-0 flex-1">
+                        <span class="mb-1 block text-2xs text-(--color-ink-muted)">
+                            {{ __('purchase::field.paid_from') }}
+                        </span>
+                        <select x-model="depositDraft.accountId" :disabled="! depositDraft.methodId"
+                                class="h-(--spacing-field) w-full rounded-(--radius-field) border
+                                       border-(--color-border) bg-(--color-surface-card) px-2 text-sm
+                                       disabled:opacity-50">
+                            <option value="">{{ __('purchase::field.paid_from') }}</option>
+                            <template x-for="a in depositAccounts" :key="a.id">
+                                <option :value="a.id" x-text="a.label"></option>
+                            </template>
+                        </select>
+                    </label>
+
+                    {{-- রেফারেন্স — কেবল যে উপায়ে সেটা লাগে --}}
+                    <label class="min-w-0 flex-1" x-show="depositNeedsReference" x-cloak>
+                        <span class="mb-1 block text-2xs text-(--color-ink-muted)">
+                            {{ __('purchase::field.reference') }}
+                        </span>
+                        <input type="text" x-model="depositDraft.reference"
+                               class="h-(--spacing-field) w-full rounded-(--radius-field) border
+                                      border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                    </label>
+
+                    <label class="min-w-0 flex-1">
+                        <span class="mb-1 block text-2xs text-(--color-ink-muted)">
+                            {{ __('purchase::field.amount') }}
+                        </span>
+                        <input type="number" step="0.01" inputmode="decimal"
+                               x-model="depositDraft.amount"
+                               class="num h-(--spacing-field) w-full rounded-(--radius-field) border
+                                      border-(--color-border) bg-(--color-surface-card) px-2 text-end text-sm">
+                    </label>
+
+                    <label class="min-w-0 flex-1">
+                        <span class="mb-1 block text-2xs text-(--color-ink-muted)">
+                            {{ __('purchase::field.narration') }}
+                        </span>
+                        <input type="text" maxlength="255" x-model="depositDraft.narration"
+                               class="h-(--spacing-field) w-full rounded-(--radius-field) border
+                                      border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                    </label>
+
+                    <button type="button" @click="addDeposit()" :disabled="! depositReady"
+                            class="h-(--spacing-field) shrink-0 rounded-(--radius-field)
+                                   bg-(--color-brand-500) px-4 text-sm font-medium
+                                   text-(--color-brand-ink) hover:bg-(--color-brand-600)
+                                   disabled:opacity-40">
+                        {{ __('purchase::action.add_deposit') }}
+                    </button>
+                </div>
+
+                {{-- ── এই উপায়ের কোনো খাত নেই ───────────────────────────
+
+                     ⚠️ ছাঁকনিটা ঠিকমতো কাজ করলে এই অবস্থাটা আসবেই: যে
+                     কোম্পানির ব্যাংক হিসাব ছকে বসানো নেই, সে "ব্যাংক
+                     ট্রান্সফার" বাছলে **একটাও খাত পাবে না**।
+
+                     ⛔ বার্তাটা না থাকলে পর্দাটা চুপ করে থাকত — খালি
+                     তালিকা, নিষ্ক্রিয় "যোগ" বোতাম, আর কোনো কারণ নয়।
+                     মানুষটা ভাবতেন পর্দা নষ্ট, অথচ অনুপস্থিত জিনিসটা
+                     তাঁর নিজের হিসাবের ছকে। --}}
+                <p x-show="depositDraft.methodId && depositAccounts.length === 0" x-cloak
+                   class="mt-2 rounded-(--radius-field) bg-(--color-badge-warning-bg) px-2 py-1
+                          text-2xs text-(--color-badge-warning-ink)">
+                    {{ __('purchase::message.no_account_for_method') }}
+                </p>
+            </section>
+
         </div>
 
-        {{-- ══ ডান কলাম: যোগফল ════════════════════════════════════════ --}}
-        <aside class="space-y-3">
-            <section data-boxed class="rounded-(--radius-card) border border-(--color-border)
-                            bg-(--color-surface-card) p-3">
-                <dl class="space-y-1.5 text-sm">
+        {{-- ══ ডান কার্ড — সরবরাহকারী ও রসিদ ═══════════════════════════
+
+             ⭐ মালিকের ছবির ডান কার্ড। ⓘ সরবরাহকারীর ঘরটা আগে বাঁ পাশের
+             ডকুমেন্ট স্ট্রিপে ছিল, আর সেটা ভুল জায়গা ছিল না — কিন্তু তখন
+             *"কার কাছ থেকে কিনছি"* আর *"তাঁকে কত দিতে হবে"* পর্দার দুই
+             প্রান্তে থাকত। এক কার্ডে এনে দুইটা প্রশ্ন পাশাপাশি বসল।
+
+             ⚠️ মাথার রেখাটা সবুজ→বেগুনি: টাকার দিক। টোকেনে আঁকা, হাতে
+             লেখা রঙে নয় (`EveryScreenObeysTheThemeTest`)। --}}
+        {{-- ⓘ কার্ডগুলোর মাঝের ফাঁক `space-y-2` — মালিকের লাল দাগানো
+             তিনটা ফাঁকা জায়গা। ⚠️ শূন্য করা হয়নি: পাড় দুইটা তখন গায়ে
+             গায়ে লেগে একটা মোটা রেখা হয়ে যেত, আর কার্ড দুইটা আলাদা
+             বোঝা যেত না। --}}
+        <aside class="space-y-2">
+
+        {{-- ── সরবরাহকারীর বাক্স — মোটের কার্ডের উপরে ─────────────────
+
+             মালিকের নির্দেশ (৫ সেপ্টেম্বর ২০২৬): *"Supplier details…
+             Bill total er upore niye zaw"*।
+
+             ⭐ বাক্সটা এখন **ডান কলামের মাথায়**, `BILL TOTAL`-এর ঠিক
+             উপরে। ⓘ কারণটা পড়লেই বোঝা যায়: *"কার কাছ থেকে কিনছি"* আর
+             *"তাঁকে কত দিতে হবে"* — দুইটা একই প্রশ্নের দুই মাথা, আর
+             এখন দুইটা চোখের এক জায়গায়।
+
+             ⛔ আগে এটা বাঁ দিকে পণ্যের বাক্সের উপরে ছিল, আর তাতে ডান
+             কলামের মাথায় একটা **ফাঁকা জায়গা** পড়ে থাকত — মালিক ছবিতে
+             লাল দাগ দিয়ে ঠিক ওই ফাঁকাটাই দেখিয়েছেন। --}}
+        {{-- ⓘ শিরোনামটা নেই — মালিক: *"Supplier details likte hobe na"*।
+
+             ⚠️ কারণটাও ঠিক: ঘরটায় *"সরবরাহকারী খুঁজুন…"* লেখা আছে, আর
+             নিচে তাঁর মোবাইল-ঠিকানা। ⛔ উপরে আবার "সরবরাহকারীর বিস্তারিত"
+             লিখলে একই কথা দুইবার, আর তার দাম একটা গোটা সারির উচ্চতা।
+
+             ⓘ ভাষার চাবিটা রেখে দিয়েছি — বাক্সটা ছাপার কাগজে বা অন্য
+             পর্দায় লাগলে শব্দটা দুই ভাষায় আবার খুঁজতে হবে না। --}}
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border)
+                        bg-(--color-surface-card) p-2">
+
+            {{-- ── সরবরাহকারী — মালিকের ক্রমের সাত নম্বর ────────────
+
+                 *"…Warehouse, Supplier Details — ei krome bosaw"*
+
+                 ⭐ ছয়টা ছোট ঘরের **নিচে**, একটাই চওড়া খোঁজার বার।
+                 ⓘ কারণটা কাজের: কাউন্টারে সবচেয়ে বেশি যেটা ছোঁয়া হয়
+                 সেটাই সবচেয়ে বড় হওয়া দরকার।
+
+                 ⚠️ সরবরাহকারী বদলালেই গতবারের দরগুলো নতুন করে আসে।
+                 দরগুলো সরবরাহকারী-ভেদে আলাদা; বাছাই বদলে পুরনো তালিকা
+                 রেখে দিলে কার্টের সারিতে **অন্য একজনের দর** বসে থাকত —
+                 নীরবে, আর ঠিক তখনই যখন মানুষটা ওই সংখ্যাটা দেখে
+                 দরাদরি করছেন। --}}
+            <div class="mt-2 flex gap-2">
+                <button type="button" @click="$refs.supplier.focus()"
+                        aria-label="{{ __('purchase::field.supplier') }}"
+                        class="flex size-(--spacing-field) shrink-0 items-center justify-center
+                               rounded-(--radius-field) border border-(--color-success)
+                               text-(--color-success) hover:bg-(--color-surface-hover)">
+                    <x-ui.icon name="search" :size="16" />
+                </button>
+
+                <select name="supplier_id" required x-ref="supplier"
+                        x-on:change="supplierPicked($event.target.value)"
+                        class="h-(--spacing-field) min-w-0 flex-1 rounded-(--radius-field) border
+                               border-(--color-border) bg-(--color-surface-card) px-2 text-base">
+                    <option value="">{{ __('purchase::message.search_supplier') }}</option>
+                    @foreach ($suppliers as $supplier)
+                        <option value="{{ $supplier->id }}"
+                                @selected(old('supplier_id') == $supplier->id)>
+                            {{ $supplier->name() }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            {{-- ── কার কাছ থেকে — চারটা লাইন ─────────────────────────
+
+                 ⭐ `Proprietor` আর `Received by` দুইটাই আজ পর্যন্ত এই
+                 পর্দায় ছিল না। ⓘ তথ্যগুলো আগে থেকেই আছে
+                 (`suppliers.contact_person`, আর যিনি লগইন করেছেন),
+                 কেবল দেখানো হত না।
+
+                 ⚠️ কেন দরকার: গাড়ির লোক কাগজ ধরিয়ে দেন, আর কাউন্টারের
+                 মানুষটাকে মিলিয়ে নিতে হয় *"এটাই কি সেই প্রতিষ্ঠান"*।
+                 ⛔ কেবল নাম দেখে সেটা করা যায় না — একই নামে দুইটা
+                 সরবরাহকারী থাকতেই পারে, আর তখন মোবাইল নম্বরটাই পার্থক্য।
+
+                 ⓘ সরবরাহকারী না বাছা পর্যন্ত সারিগুলো দেখা যায় না, তাই
+                 খালি পর্দাটা স্ক্রিনশটের মতোই পরিষ্কার থাকে। --}}
+            <dl x-show="supplier" x-cloak
+                class="mt-2 grid gap-x-4 gap-y-0.5 text-2xs sm:grid-cols-2">
+                <div class="flex justify-between gap-2">
+                    <dt class="shrink-0 text-(--color-ink-muted)">{{ __('purchase::field.mobile') }}</dt>
+                    <dd class="num truncate" x-text="supplier?.phone || '—'"></dd>
+                </div>
+                <div class="flex justify-between gap-2">
+                    <dt class="shrink-0 text-(--color-ink-muted)">{{ __('purchase::field.proprietor') }}</dt>
+                    <dd class="truncate text-end" x-text="supplier?.proprietor || '—'"></dd>
+                </div>
+                <div class="flex justify-between gap-2">
+                    <dt class="shrink-0 text-(--color-ink-muted)">{{ __('purchase::field.address') }}</dt>
+                    <dd class="truncate text-end" x-text="supplier?.address || '—'"></dd>
+                </div>
+
+                {{-- ⓘ বাছার কিছু নেই — যিনি পর্দাটা খুলেছেন তিনিই বুঝে
+                     নিচ্ছেন। ⚠️ বাছতে দিলে একদিন অন্যের নাম বসত, আর
+                     "কে বুঝে নিয়েছিল" প্রশ্নের উত্তরটা ভুল হত — খালি
+                     থাকার চেয়েও খারাপ। --}}
+                <div class="flex justify-between gap-2">
+                    <dt class="shrink-0 text-(--color-ink-muted)">{{ __('purchase::field.received_by') }}</dt>
+                    <dd class="truncate text-end">{{ $receivedBy }}</dd>
+                </div>
+            </dl>
+        </section>
+
+            <section data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
+                            bg-(--color-surface-card)">
+                <div class="h-0.5 w-full"
+                     style="background: linear-gradient(90deg, var(--color-success), var(--color-module-customer))"></div>
+
+                {{-- ── মাথার ব্যান্ড — নাম আর বড় অঙ্ক ────────────────────
+
+                     ⭐ মালিকের স্ক্রিনশটে ডান কার্ডের মাথায় হালকা নীল একটা
+                     ব্যান্ড, আর তাতে বড় করে মোট টাকা। ⓘ কার্ডটার বাকি সব
+                     সারি ছোট হরফে — একটাই সংখ্যা বড়, আর সেটাই সেই সংখ্যা
+                     যেটা নিয়ে সরবরাহকারীর সাথে কথা হয়। --}}
+                <div class="flex items-center justify-between gap-2 px-3 pt-2">
+                    <span class="text-2xs font-semibold tracking-wide text-(--color-ink-muted) uppercase">
+                        {{ __('purchase::field.bill_total') }}
+                    </span>
+
+                    {{-- ⭐ অঙ্কটা একটা নীল চিপের ভিতরে, ছবির মতো — গোটা
+                         চওড়ায় ব্যান্ড নয়। ⓘ পার্থক্যটা ছোট মনে হয়, কিন্তু
+                         ব্যান্ড পুরো কার্ডটাকে "শিরোনাম" বানিয়ে দেয়, আর
+                         চিপ কেবল **সংখ্যাটাকে** আলাদা করে। --}}
+                    <span class="num rounded-(--radius-field) bg-(--color-badge-info-bg) px-2 py-1
+                                 text-lg font-bold text-(--color-badge-info-ink)">৳<span
+                          x-text="money(netPayable)"></span></span>
+                </div>
+
+                <div class="p-3">
+                {{-- ── ছবির সারি-ক্রম, হুবহু ─────────────────────────────
+
+                     ```
+                     Sub Total (without VAT)
+                     Discount   [amount or %]      ⏳ nexus-25
+                     VAT        [Per product ▾]    ⏳ ড্রপডাউনটা তার, অঙ্কটা আজই সত্যি
+                     Expense    [amount or %]      ⏳ nexus-25
+                     Rounding   [ + ▾ ] [ ঘর ]      ⏳ nexus-25
+                     Net Payable Amount
+                     Received Deposit
+                     Invoice Due
+                     Previous Due
+                     DUE
+                     ```
+
+                     ⚠️ চারটা ⏳ সারির ঘর `pur_bills`-এ **নেই**, তাই ওগুলো
+                     আজ আঁকা হয় না — নিচের ব্লকে কারণটা লেখা। ⓘ জায়গাটা
+                     ইচ্ছে করে এখানেই রাখা, যাতে ঘরগুলো এলে ছবির ক্রমেই
+                     বসে। --}}
+                <dl class="space-y-1 text-2xs">
                     <div class="flex justify-between">
-                        <dt class="text-(--color-ink-muted)">{{ __('purchase::field.sub_total') }}</dt>
+                        <dt class="text-(--color-ink-muted)">{{ __('purchase::field.sub_total_goods') }}</dt>
                         <dd class="num" x-text="money(subTotal)"></dd>
                     </div>
 
                     @if ($show['vat'])
+                        {{-- ⭐ লেখাটাই বলে দিচ্ছে ভ্যাট খরচের **ভিতরে**, উপরে
+                             যোগ হওয়া কিছু নয় — মালিকের নিজের শব্দ। ⛔ শুধু
+                             "ভ্যাট" লেখা থাকলে কেউ কেউ ওটা মোটের সাথে আবার
+                             যোগ করতেন, আর সরবরাহকারীকে বেশি দিয়ে ফেলতেন।
+
+                             ⏳ ছবির `Per product ▾` ড্রপডাউনটা বিল-স্তরের, আর
+                             ওটা nexus-25-এর চারটা কলামের সাথে আসবে। অঙ্কটা
+                             আজই সত্যি — সারিগুলোর যোগফল। --}}
                         <div class="flex justify-between">
-                            <dt class="text-(--color-ink-muted)">{{ __('purchase::field.tax') }}</dt>
+                            <dt class="text-(--color-ink-muted)">{{ __('purchase::field.vat_part_of_cost') }}</dt>
                             <dd class="num" x-text="money(taxTotal)"></dd>
                         </div>
                     @endif
@@ -588,7 +1569,60 @@
                         <dt>{{ __('purchase::field.net_payable') }}</dt>
                         <dd class="num" x-text="money(netPayable)"></dd>
                     </div>
+
+                    {{-- ⓘ ছবির `Received Deposit` — এখন পর্যন্ত যত টাকা
+                         দেওয়া হলো, সব পথ মিলিয়ে। ⚠️ সারিগুলো নিজে বসে
+                         "জমা" প্যানেলে, কিন্তু **যোগফলটা এখানে**, কারণ
+                         বকেয়ার অঙ্কটা এটা বাদ দিয়েই দাঁড়ায়। --}}
+                    <div class="flex justify-between">
+                        <dt class="text-(--color-ink-muted)">{{ __('purchase::field.paid_total') }}</dt>
+                        <dd class="num" x-text="paidTotal ? money(paidTotal) : '—'"></dd>
+                    </div>
+
+                    {{-- ── তিনটা সারি, একটা নয় — মালিকের ছবির বিন্যাস ─────
+
+                         ```
+                         এই বিলে বাকি   ← এই কাগজটার হিসাব
+                         আগের বকেয়া     ← সরবরাহকারীর পুরনো খাতা
+                         ─────────────
+                         মোট বকেয়া      ← দুইটার যোগফল
+                         ```
+
+                         ⚠️ **কেন তিনটা:** একটা সংখ্যায় মিশিয়ে দিলে "৳৫০,০০০
+                         বাকি" পড়ে বোঝার উপায় থাকত না ওটা আজকের বিলের নাকি
+                         ছয় মাসের জমা দেনা। ⓘ দুইজন মানুষ দুইটা অর্থ করতেন,
+                         আর দরাদরির টেবিলে ওই ভুলের দাম টাকা। --}}
+                    <div class="flex justify-between font-semibold">
+                        <dt>{{ __('purchase::field.invoice_due') }}</dt>
+                        <dd class="num" x-text="money(invoiceDue)"></dd>
+                    </div>
+
+                    {{-- ⚠️ লেবেলটা বদলায় — অগ্রিম আর বকেয়া এক জিনিস নয়।
+
+                         ⓘ বিক্রয়ের পর্দায় ঠিক এই নজিরটাই আছে, আর কারণটা
+                         ওখানে লেখা: *"ব্যালেন্স ৫০০" পড়ে বোঝার উপায় ছিল না
+                         তিনি ৫০০ পাবেন না দেবেন*। ⛔ এখানে উল্টো দিক —
+                         আমরা দেব, নাকি আগেই বেশি দিয়ে রেখেছি। --}}
+                    <div class="flex justify-between">
+                        <dt class="text-(--color-ink-muted)"
+                            x-text="previousDue < 0
+                              ? @js(__('purchase::field.previous_advance'))
+                              : @js(__('purchase::field.previous_due'))"></dt>
+                        <dd class="num"
+                            x-text="previousDue ? money(Math.abs(previousDue)) : '—'"></dd>
+                    </div>
                 </dl>
+
+                {{-- ⭐ `DUE` — ছবিতে নিজের একটা ধূসর ব্যান্ডে, বাকি সারির
+                     সাথে নয়। ⓘ কারণটা পড়ার: এটাই সেই সংখ্যা যা নিয়ে
+                     মানুষটা কাল আবার ফোন করবেন, তাই ওটাকে বাকি সারিগুলোর
+                     ভিড় থেকে আলাদা করে রাখা হয়েছে। --}}
+                <div class="mt-2 flex items-center justify-between rounded-(--radius-field)
+                            bg-(--color-surface-sunken) px-2 py-1.5 text-2xs">
+                    <span class="font-medium">{{ __('purchase::field.total_due') }}</span>
+                    <span class="num font-semibold" x-text="money(totalDue)"></span>
+                </div>
+                </div>
 
                 {{-- ── এখন পরিশোধ ────────────────────────────────────────
                      ডিপোতে অনেক সময় গাড়ির লোককেই টাকা ধরিয়ে দিতে হয়।
@@ -607,8 +1641,16 @@
 
                      ⚠️ আজ ঘরটা কেবল **রাখে** — ভাড়া ক্রয়মূল্যে ঢোকার
                      অংশটা আলাদা কাজ। ⓘ পর্দাতেও সেটা বলা আছে, নাহলে কেউ
-                     ধরে নিতেন লাভের অঙ্কে ওটা ইতিমধ্যে ধরা হয়েছে। --}}
-                <div class="mt-3 space-y-2 border-t border-(--color-border) pt-3">
+                     ধরে নিতেন লাভের অঙ্কে ওটা ইতিমধ্যে ধরা হয়েছে।
+
+                     ⭐ ৫ সেপ্টেম্বর ২০২৬ — ব্লকটা এখন **একটা বোতামের পিছনে**
+                     (`Transportation`), সবসময় খোলা নয়। ⓘ মালিকের স্ক্রিনশটে
+                     ডান কার্ডের নিচে ছয়টা বোতাম, আর ভাড়া তার একটা। ⚠️
+                     বেশিরভাগ চালানে ভাড়া থাকেই না; সবসময় খোলা রাখলে পাঁচটা
+                     খালি ঘর প্রতিদিন চোখে পড়ত, আর মানুষ ওগুলোকে "ঐচ্ছিক
+                     আবর্জনা" পড়তে শিখত। --}}
+                <div x-show="transportOpen" x-cloak
+                     class="mt-3 space-y-2 border-t border-(--color-border) pt-3">
                     <div class="text-2xs font-medium text-(--color-ink-muted)">
                         {{ __('purchase::field.carrier') }}
                     </div>
@@ -693,167 +1735,196 @@
                      খসড়ায় বসে, "যোগ" চাপলে তালিকায় ওঠে, আর লুকানো ঘর
                      হয়ে সার্ভারে যায়। দুইটা পর্দা এক রকম, তাই একবার
                      শিখলেই দুইটাই চলে। --}}
-                <div class="mt-3 space-y-2 border-t border-(--color-border) pt-3">
+                {{-- ══ আমদানি চালান — `Shipment` বোতামের পিছনে ══════════
+
+                     ⭐ মালিকের সিদ্ধান্ত (৫ সেপ্টেম্বর ২০২৬): ছবির
+                     `Shipment` বোতামটা **আমদানি চালানের তথ্য** খোলে —
+                     ঋণপত্র ও বিল অব এন্ট্রির নম্বর, জাহাজ, আর বন্দর।
+
+                     ⛔ আজ পর্যন্ত `pur_bills`-এ ওদের একটারও ঘর ছিল না,
+                     তাই নম্বরগুলো হয় `narration`-এ গদ্য হয়ে বসত, নয়তো
+                     বসতই না। ⚠️ আর যেদিন ব্যাংক বা কাস্টমস জিজ্ঞেস করে
+                     *"কোন LC-র মাল"*, গদ্য থেকে সেটা খুঁজে বের করা যায়
+                     না — খোঁজা যায় না, রিপোর্টও হয় না।
+
+                     ⚠️ **ঘরগুলো কেবল রাখে।** শুল্ক বা বন্দর খরচ পণ্যের
+                     ক্রয়মূল্যে যোগ হয় না, ঠিক যেমন ভাড়াও হয় না —
+                     আর প্যানেলেই কথাটা লেখা আছে। ⛔ না লিখলে কেউ এটাকে
+                     landed cost পড়তেন, আর দর ঠিক করতেন তার উপর।
+
+                     ⓘ চারটাই **লেখার ঘর**, ড্রপডাউন নয়: বন্দর ও জাহাজের
+                     তালিকা গ্রাহকভেদে বদলায়, আর সেরকম তালিকা কোডের
+                     ধ্রুবক হয় না — সেটিংসের সারি হয়। ⚠️ সারি বানানোর
+                     আগেই ঘরগুলো দরকার, আর ফাঁকা লেখার ঘর ভুল
+                     ড্রপডাউনের চেয়ে সৎ। --}}
+                <div x-show="shipmentOpen" x-cloak
+                     class="mt-3 space-y-2 border-t border-(--color-border) pt-3">
                     <div class="text-2xs font-medium text-(--color-ink-muted)">
-                        {{ __('purchase::field.paid_now') }}
+                        {{ __('purchase::field.shipment') }}
                     </div>
 
-                    {{-- যোগ হয়ে যাওয়া জমাগুলো --}}
-                    <template x-for="(row, i) in deposits" :key="i">
-                        <div class="flex items-center gap-1 rounded-(--radius-field)
-                                    bg-(--color-surface-sunken) px-2 py-1 text-2xs">
-                            <span class="min-w-0 flex-1 truncate">
-                                <span x-text="methodName(row.methodId)"></span>
-                                <span class="text-(--color-ink-muted)"
-                                      x-show="row.reference"
-                                      x-text="' · ' + row.reference"></span>
-                            </span>
-                            <span class="num font-medium" x-text="money(Number(row.amount))"></span>
-                            <button type="button" @click="dropDeposit(i)"
-                                    class="px-1 text-(--color-danger)"
-                                    aria-label="{{ __('purchase::action.clear_line') }}">&times;</button>
+                    <input type="text" name="lc_no" maxlength="64" value="{{ old('lc_no') }}"
+                           placeholder="{{ __('purchase::field.lc_no') }}"
+                           class="h-(--spacing-field-dense) w-full rounded-(--radius-field) border
+                                  border-(--color-border) bg-(--color-surface-card) px-2 text-2xs">
 
-                            {{-- ⓘ সার্ভারে যা যায় — নামের ভিতরে সূচক, তাই
-                                 PHP-তে সারিগুলো আলাদা থাকে। --}}
-                            <input type="hidden" :name="`deposits[${i}][amount]`" :value="row.amount">
-                            <input type="hidden" :name="`deposits[${i}][payment_method_id]`" :value="row.methodId">
-                            <input type="hidden" :name="`deposits[${i}][account_id]`" :value="row.accountId">
-                            <input type="hidden" :name="`deposits[${i}][reference]`" :value="row.reference">
-                            <input type="hidden" :name="`deposits[${i}][ref_date]`" :value="row.refDate">
+                    <div class="flex gap-1">
+                        <input type="text" name="be_no" maxlength="64" value="{{ old('be_no') }}"
+                               placeholder="{{ __('purchase::field.be_no') }}"
+                               class="h-(--spacing-field-dense) min-w-0 flex-1 rounded-(--radius-field)
+                                      border border-(--color-border) bg-(--color-surface-card)
+                                      px-2 text-2xs">
+
+                        {{-- ⓘ কোম্পানির ছকেই তারিখটা আঁকা হয়, ব্রাউজারের
+                             ছকে নয় — বাকি প্রতিটা তারিখের ঘরের মতো। --}}
+                        <div class="min-w-0 flex-1">
+                            <x-ui.date name="be_date" :value="old('be_date')" class="w-full text-2xs" />
                         </div>
-                    </template>
-
-                    {{-- নতুন জমার খসড়া --}}
-                    <div class="space-y-1">
-                        <select x-model="depositDraft.methodId" @change="methodPicked()"
-                                class="h-(--spacing-field-dense) w-full rounded-(--radius-field) border
-                                       border-(--color-border) bg-(--color-surface-card) px-2 text-2xs">
-                            <option value="">{{ __('purchase::field.paid_how') }}</option>
-                            <template x-for="m in depositMethods" :key="m.id">
-                                <option :value="m.id" x-text="m.label"></option>
-                            </template>
-                        </select>
-
-                        {{-- ⚠️ খাতের তালিকা উপায় বাছার পরেই। উপায় না বেছে
-                             খাত দেখালে কেউ নগদের খাতে চেকের টাকা বসিয়ে
-                             দিতেন, আর মাস শেষে নগদ মিলত না। --}}
-                        <select x-model="depositDraft.accountId" x-show="depositDraft.methodId" x-cloak
-                                class="h-(--spacing-field-dense) w-full rounded-(--radius-field) border
-                                       border-(--color-border) bg-(--color-surface-card) px-2 text-2xs">
-                            <option value="">{{ __('purchase::field.paid_from') }}</option>
-                            <template x-for="a in depositAccounts" :key="a.id">
-                                <option :value="a.id" x-text="a.label"></option>
-                            </template>
-                        </select>
-
-                        <div class="flex gap-1">
-                            <input type="number" step="0.01" inputmode="decimal"
-                                   x-model="depositDraft.amount"
-                                   placeholder="{{ __('purchase::field.amount') }}"
-                                   class="num h-(--spacing-field-dense) min-w-0 flex-1 rounded-(--radius-field)
-                                          border border-(--color-border) bg-(--color-surface-card)
-                                          px-2 text-end text-2xs">
-                            <button type="button" @click="addDeposit()" :disabled="! depositReady"
-                                    class="rounded-(--radius-field) border border-(--color-border)
-                                           px-2 text-2xs disabled:opacity-40">
-                                {{ __('purchase::action.add_deposit') }}
-                            </button>
-                        </div>
-
-                        {{-- রেফারেন্স — কেবল যে উপায়ে সেটা লাগে --}}
-                        <input type="text" x-model="depositDraft.reference"
-                               x-show="depositNeedsReference" x-cloak
-                               placeholder="{{ __('purchase::field.reference') }}"
-                               class="h-(--spacing-field-dense) w-full rounded-(--radius-field) border
-                                      border-(--color-border) bg-(--color-surface-card) px-2 text-2xs">
-
-                        {{-- ── এই উপায়ের কোনো খাত নেই ───────────────────
-
-                             ⚠️ ছাঁকনিটা ঠিকমতো কাজ করলে এই অবস্থাটা আসবেই:
-                             যে কোম্পানির ব্যাংক হিসাব ছকে বসানো নেই, সে
-                             "ব্যাংক ট্রান্সফার" বাছলে **একটাও খাত পাবে না**।
-
-                             ⛔ বার্তাটা না থাকলে পর্দাটা চুপ করে থাকত —
-                             খালি তালিকা, নিষ্ক্রিয় "যোগ" বোতাম, আর কোনো
-                             কারণ নয়। মানুষটা ভাবতেন পর্দা নষ্ট, অথচ
-                             অনুপস্থিত জিনিসটা তাঁর নিজের হিসাবের ছকে।
-
-                             ⓘ পথটাও বলা আছে, কারণ "কোথায় গিয়ে ঠিক করব"
-                             না জানলে বার্তাটা কেবল একটা অভিযোগ। --}}
-                        <p x-show="depositDraft.methodId && depositAccounts.length === 0" x-cloak
-                           class="rounded-(--radius-field) bg-(--color-badge-warning-bg) px-2 py-1
-                                  text-2xs text-(--color-badge-warning-ink)">
-                            {{ __('purchase::message.no_account_for_method') }}
-                        </p>
                     </div>
 
-                    <div class="flex justify-between text-2xs">
-                        <span class="text-(--color-ink-muted)">{{ __('purchase::field.paid_total') }}</span>
-                        <span class="num" x-text="money(paidTotal)"></span>
+                    <div class="flex gap-1">
+                        <input type="text" name="vessel" maxlength="120" value="{{ old('vessel') }}"
+                               placeholder="{{ __('purchase::field.vessel') }}"
+                               class="h-(--spacing-field-dense) min-w-0 flex-1 rounded-(--radius-field)
+                                      border border-(--color-border) bg-(--color-surface-card)
+                                      px-2 text-2xs">
+
+                        <input type="text" name="port_of_entry" maxlength="120"
+                               value="{{ old('port_of_entry') }}"
+                               placeholder="{{ __('purchase::field.port_of_entry') }}"
+                               class="h-(--spacing-field-dense) min-w-0 flex-1 rounded-(--radius-field)
+                                      border border-(--color-border) bg-(--color-surface-card)
+                                      px-2 text-2xs">
                     </div>
 
-                    {{-- ── তিনটা সারি, একটা নয় — মালিকের ছবির বিন্যাস ─────
-
-                         ```
-                         এই বিলে বাকি   ← এই কাগজটার হিসাব
-                         আগের বকেয়া     ← সরবরাহকারীর পুরনো খাতা
-                         ─────────────
-                         মোট বকেয়া      ← দুইটার যোগফল
-                         ```
-
-                         ⚠️ **কেন তিনটা:** একটা সংখ্যায় মিশিয়ে দিলে "৳৫০,০০০
-                         বাকি" পড়ে বোঝার উপায় থাকত না ওটা আজকের বিলের নাকি
-                         ছয় মাসের জমা দেনা। ⓘ দুইজন মানুষ দুইটা অর্থ করতেন,
-                         আর দরাদরির টেবিলে ওই ভুলের দাম টাকা।
-
-                         ⓘ আগের সারিটার নাম ছিল "বাকি" — এখন **"এই বিলে
-                         বাকি"**। অঙ্ক অপরিবর্তিত, কেবল নামটা সৎ হলো। --}}
-                    <div class="flex justify-between text-sm">
-                        <span class="text-(--color-ink-muted)">{{ __('purchase::field.invoice_due') }}</span>
-                        <span class="num" x-text="money(invoiceDue)"></span>
-                    </div>
-
-                    {{-- ⚠️ লেবেলটা বদলায় — অগ্রিম আর বকেয়া এক জিনিস নয়।
-
-                         ⓘ বিক্রয়ের পর্দায় ঠিক এই নজিরটাই আছে, আর কারণটা
-                         ওখানে লেখা: *"ব্যালেন্স ৫০০" পড়ে বোঝার উপায় ছিল না
-                         তিনি ৫০০ পাবেন না দেবেন*। ⛔ এখানে উল্টো দিক —
-                         আমরা দেব, নাকি আগেই বেশি দিয়ে রেখেছি। --}}
-                    <div class="flex justify-between text-sm">
-                        <span class="text-(--color-ink-muted)"
-                              x-text="previousDue < 0
-                                ? @js(__('purchase::field.previous_advance'))
-                                : @js(__('purchase::field.previous_due'))"></span>
-                        <span class="num"
-                              x-text="previousDue ? money(Math.abs(previousDue)) : '—'"></span>
-                    </div>
-
-                    <div class="flex justify-between border-t border-(--color-border) pt-1.5 text-sm">
-                        <span class="font-medium">{{ __('purchase::field.total_due') }}</span>
-                        <span class="num font-semibold" x-text="money(totalDue)"></span>
-                    </div>
+                    {{-- ⭐ সৎ থাকা: শুল্ক ও বন্দর খরচ আজ ক্রয়মূল্যে যায় না,
+                         আর পর্দা সেটাই বলে — ভাড়ার ঘরটার মতোই। --}}
+                    <p class="text-2xs text-(--color-ink-muted)">
+                        {{ __('purchase::message.shipment_not_in_cost_yet') }}
+                    </p>
                 </div>
+
+                {{-- ── মন্তব্য — `Add Note` বোতামের পিছনে ────────────────
+
+                     ⭐ ঘরটা মালিকের প্রথম ছবিতে ডান কার্ডে `REMARKS` নামে
+                     ছিল, আর স্ক্রিনশটে সেটাই `Add Note` বোতাম হয়ে গেছে।
+                     ⓘ দুইটা একই জিনিস, কেবল দ্বিতীয়টা খালি পর্দায় জায়গা
+                     নেয় না।
+
+                     ⚠️ `narration` নামটা কন্ট্রোলারের নিয়মের সাথে মেলানো
+                     (`'narration' => ['nullable','string','max:500']`) — অন্য
+                     নাম দিলে লেখাটা নীরবে হারাত, কারণ যাচাই ওটাকে চিনত না। --}}
+                <div x-show="noteOpen" x-cloak
+                     class="mt-3 border-t border-(--color-border) pt-3">
+                    <label class="block">
+                        <span class="mb-1 block text-2xs font-medium text-(--color-ink-muted)">
+                            {{ __('purchase::field.remarks') }}
+                        </span>
+                        <textarea name="narration" rows="2" maxlength="500" x-ref="note"
+                                  placeholder="{{ __('purchase::field.optional') }}"
+                                  class="w-full rounded-(--radius-field) border border-(--color-border)
+                                         bg-(--color-surface-card) p-2 text-2xs">{{ old('narration') }}</textarea>
+                    </label>
+                </div>
+
             </section>
 
+            {{-- ── চারটা গণনা — ছবির নিচের ছক ─────────────────────────
+
+                 ```
+                 Total Item · Total Purchase Qnty · Free Qty. · Total Free+Purchase Qty
+                 ```
+
+                 ⭐ আগে এখানে দুইটা সারি ছিল, আর দ্বিতীয়টা (`মোট পরিমাণ`)
+                 কেনা ও ফ্রি **একসাথে** গুনত। ⛔ তাতে *"কতটা কিনলাম"* আর
+                 *"কতটা ফ্রি পেলাম"* দুইটা প্রশ্নের একটাই উত্তর ছিল, অথচ
+                 দ্বিতীয়টাই ক্রয়ের আসল দর ঠিক করে। ⓘ ছবিতে চারটা সারি,
+                 আর চারটাই আলাদা প্রশ্ন। --}}
             <section data-boxed class="rounded-(--radius-card) border border-(--color-border)
-                            bg-(--color-surface-card) p-3 text-2xs text-(--color-ink-muted)">
+                            bg-(--color-surface-card) px-3 py-2 text-2xs text-(--color-ink-muted)">
                 <div class="flex justify-between">
                     <span>{{ __('purchase::field.total_item') }}</span>
                     <span class="num" x-text="lines.length"></span>
                 </div>
                 <div class="mt-1 flex justify-between">
-                    <span>{{ __('purchase::field.total_qty') }}</span>
+                    <span>{{ __('purchase::field.total_bought_qty') }}</span>
+                    <span class="num" x-text="qty(boughtQty)"></span>
+                </div>
+                <div class="mt-1 flex justify-between">
+                    <span>{{ __('purchase::field.free_qty') }}</span>
+                    <span class="num" x-text="qty(freeTotal)"></span>
+                </div>
+                <div class="mt-1 flex justify-between border-t border-(--color-border) pt-1">
+                    <span>{{ __('purchase::field.total_free_plus_bought') }}</span>
                     <span class="num" x-text="qty(totalQty)"></span>
                 </div>
             </section>
 
+            {{-- ── ছয়টা বোতাম, ২×৩ ছকে — মালিকের স্ক্রিনশট ─────────────
+
+                 ⭐ প্রতিটা বোতাম একটা প্যানেল খোলে, আর প্রতিটা প্যানেল
+                 ইতিমধ্যেই ছিল — কেবল সবসময় খোলা অবস্থায়। ⓘ বোতামের পিছনে
+                 নেওয়ায় খালি পর্দাটা স্ক্রিনশটের মতোই পরিষ্কার থাকে, আর যে
+                 দিন ভাড়া বা জমা লাগে সেদিন এক ক্লিকে খোলে।
+
+                 ⚠️ রংগুলো টোকেন থেকে, হাতে লেখা নয় — `#hex` লিখলে
+                 `EveryScreenObeysTheThemeTest` লাল হয়, আর থিম বদলালে
+                 বোতামগুলো একা আগের রঙে বসে থাকত। --}}
+            <div class="grid min-w-0 grid-cols-3 gap-1 text-center [&_button]:break-words">
+                <button type="button" @click="depositOpen = ! depositOpen"
+                        :aria-expanded="depositOpen"
+                        class="rounded-(--radius-field) bg-(--color-success) px-1 py-2 text-2xs font-medium
+                               leading-tight text-(--color-ink-inverse) hover:bg-(--color-success-hover)">
+                    {{ __('purchase::action.add_deposit_panel') }}
+                </button>
+
+                <button type="button" @click="openNote()" :aria-expanded="noteOpen"
+                        class="rounded-(--radius-field) px-1 py-2 text-2xs leading-tight font-medium
+                               text-(--color-ink-inverse)"
+                        style="background: var(--color-info)">
+                    {{ __('purchase::action.add_note') }}
+                </button>
+
+                <button type="button" @click="openChart()" :aria-expanded="chartOpen"
+                        class="rounded-(--radius-field) px-1 py-2 text-2xs leading-tight font-medium
+                               text-(--color-ink-inverse)"
+                        style="background: var(--color-module-supplier)">
+                    {{ __('purchase::action.rate_chart') }}
+                </button>
+
+                <button type="button" @click="transportOpen = ! transportOpen"
+                        :aria-expanded="transportOpen"
+                        class="rounded-(--radius-field) py-2 text-2xs font-medium
+                               text-(--color-warning-ink)"
+                        style="background: var(--color-warning)">
+                    {{ __('purchase::action.transportation') }}
+                </button>
+
+                <button type="button" @click="shipmentOpen = ! shipmentOpen"
+                        :aria-expanded="shipmentOpen"
+                        class="rounded-(--radius-field) px-1 py-2 text-2xs leading-tight font-medium
+                               text-(--color-ink-inverse)"
+                        style="background: var(--color-module-backup)">
+                    {{ __('purchase::action.shipment') }}
+                </button>
+
+                <button type="button" @click="clearAll()"
+                        class="rounded-(--radius-field) bg-(--color-danger) px-1 py-2 text-2xs leading-tight
+                               font-medium text-(--color-ink-inverse) hover:bg-(--color-danger-hover)">
+                    {{ __('purchase::action.clear_all') }}
+                </button>
+            </div>
+
+            {{-- ⭐ বোতামেই টাকার অঙ্ক — মালিকের ছবি।
+
+                 ⓘ ছোট জিনিস মনে হয়, কিন্তু কাজটা বড়: চূড়ান্ত চাপ দেওয়ার
+                 মুহূর্তে চোখ বোতামেই থাকে, উপরের ছকে নয়। ⚠️ অঙ্কটা
+                 বোতামে না থাকলে মানুষটাকে চোখ সরিয়ে মেলাতে হত, আর
+                 বেশিরভাগ দিন সেটা করা হত না। --}}
             <x-ui.button type="submit" tone="primary" class="w-full"
                          ::class="(busy || lines.length === 0) && 'pointer-events-none opacity-50'">
-                {{ __('purchase::action.confirm_direct') }}
-            </x-ui.button>
-
-            <x-ui.button type="button" tone="ghost" class="w-full" x-on:click="clearAll()">
-                {{ __('purchase::action.clear_all') }}
+                {{ __('purchase::action.receive_goods') }} ·
+                <span class="num">৳<span x-text="money(netPayable)"></span></span>
             </x-ui.button>
         </aside>
     </form>
@@ -907,7 +1978,7 @@
                         'label' => $a->label(),
                         'parent' => (string) ($a->parent?->code ?? ''),
                     ])->values()),
-                    depositDraft: { methodId: '', accountId: '', amount: '', reference: '', refDate: '' },
+                    depositDraft: { methodId: '', accountId: '', amount: '', reference: '', refDate: '', narration: '' },
 
                     /* ── কে মালটা আনল ─────────────────────────────────
                        তালিকাটা পক্ষের ধরন ধরে ছাঁকা (TRANSPORT), তাই এখানে
@@ -925,6 +1996,50 @@
                        রাউন্ড-ট্রিপ হত আর কাউন্টারে সেটা টের পাওয়া যেত। */
                     lastRates: {},
                     supplierChosen: false,
+
+                    /* ── প্যাকের তালিকা — পণ্যের আইডি ধরে ────────────────
+                       ⓘ উৎস `PackConversion::optionsFor`, আর সুইচটা
+                       `inventory.pack_entry_enabled`। ⚠️ লাইন-এডিটরও হুবহু
+                       এই ডাকটাই ব্যবহার করে; দুই পর্দায় দুই তালিকা হলে
+                       একই পণ্য এখানে বাক্সে আর বিলে পিসে লিখতে হত। */
+                    packs: @js($packs),
+
+                    /* ── সরবরাহকারীর কার্ডের চারটা লাইন ────────────────
+                       ⓘ তথ্যগুলো আগেই ছিল, দেখানো হত না। ⚠️ আইডিটা
+                       স্ট্রিং করা হয়েছে ইচ্ছে করে: `<select>`-এর মান
+                       সবসময় স্ট্রিং, আর `===` মেলাতে গিয়ে একদিন
+                       কার্ডটা চিরকাল খালি থাকত। */
+                    suppliers: @js($suppliers->map(fn ($s) => [
+                        'id' => (string) $s->id,
+                        'phone' => $s->phone,
+                        'address' => $s->address(),
+                        'proprietor' => $s->contact_person,
+                    ])->values()),
+                    supplierId: '',
+
+                    /* ── দুইটা প্যানেল ──────────────────────────────────
+                       ⓘ দুইটাই বন্ধ অবস্থায় শুরু হয়, আর একসাথে দুইটাই খোলা
+                       থাকতে পারে — কেউ দরের তালিকা খুলে রেখে খরচের হিসাব
+                       দেখতে চাইলে বাধা দেওয়ার কারণ নেই। */
+                    /* ── কত দিনের বাকিতে ────────────────────────────────
+                       ⓘ তালিকাটা `mdm_payment_terms`-এর সারি। ⚠️ বাছাইটা
+                       নিজে সংরক্ষিত হয় না — তার ফল (`due_on`) হয়। */
+                    /* ⓘ ঘরটার একটাই মান: হয় দিনের সংখ্যা ('7'), হয় খালি
+                       ('নগদ'), নয় 'date' — আর শেষেরটা বাছলে ঘরটাই
+                       তারিখের ঘর হয়ে যায়। ⚠️ দুইটা আলাদা মান রাখলে
+                       আবার দুইটা বাক্স হয়ে যেত, শুধু চোখের আড়ালে। */
+                    /* ⓘ ঘরটার একটাই মান: `cash` · `cod` · `credit:7` ·
+                       `month_end` · `fixed`। ⚠️ কোলনের পরের সংখ্যাটা কেবল
+                       `credit`-এ, আর সার্ভারে যায় কেবল কোলনের **আগের**
+                       অংশটা — দিনসংখ্যাটা তারিখ হয়ে যায়। */
+                    termChoice: @js($paymentTermDefault),
+                    dueOn: '',
+
+                    chartOpen: false,
+                    depositOpen: false,
+                    transportOpen: false,
+                    noteOpen: false,
+                    shipmentOpen: false,
 
                     /* ── খসড়া ────────────────────────────────────────────
 
@@ -1089,7 +2204,7 @@
                                ঘরটা কোড দিয়ে বসানো হয়েছে, তাই `change` ঘটে
                                না — আর তখন কার্টে সারি আছে অথচ "গতবার কত"
                                কলামটা ফাঁকা থাকত, ঠিক দরাদরির মুহূর্তে। */
-                            if (d.supplierId) this.loadLastRates(d.supplierId);
+                            if (d.supplierId) this.supplierPicked(d.supplierId);
                         } catch (e) {
                             // ভাঙা খসড়া — ফেরানোর চেয়ে বাদ দেওয়াই নিরাপদ
                         }
@@ -1132,6 +2247,21 @@
                         return {
                             qty: '', free_qty: '', rate: '', discount: '', tax: '',
                             markup: '', margin: '', sales_price: '', anchor: '',
+
+                            /* ── প্যাকের দুইটা ঘর ─────────────────────────
+                               ফাঁকা মানে পণ্যের নিজের একক, অর্থাৎ আগের মতোই।
+                               ⓘ ফ্রি-রটা আলাদা: মিল কার্টনে বেচে, ফ্রি দেয়
+                               পিসে। */
+                            unit_id: '', free_unit_id: '',
+
+                            /* ছাড়টা কীভাবে লেখা হচ্ছে — টাকায় নাকি শতাংশে।
+                               ⚠️ **সংরক্ষিত হয় সবসময় টাকায়**; এটা কেবল লেখার
+                               ভঙ্গি। ⓘ ডিফল্ট টাকা, কারণ সরবরাহকারীর কাগজে
+                               ছাড়টা টাকাতেই ছাপা থাকে। */
+                            discount_mode: 'amount',
+
+                            /* ভ্যাট কোন নিয়মে — pick()-এ পণ্য দেখে বসে */
+                            vat_mode: 'amount',
                         };
                     },
 
@@ -1149,7 +2279,21 @@
                            শুধরে আবার দেখছেন। */
                         const chosen = this.$root.querySelector('[name="supplier_id"]');
 
-                        if (chosen && chosen.value) this.loadLastRates(chosen.value);
+                        /* ⚠️ `supplierPicked`, `loadLastRates` নয় — কার্ডের
+                           চারটা লাইন (মোবাইল · ঠিকানা · স্বত্বাধিকারী)
+                           `supplierId` ধরে বসে। ⓘ কেবল দরগুলো আনলে যাচাই
+                           ব্যর্থ হয়ে ফেরা পাতায় সরবরাহকারী বাছা থাকত অথচ
+                           কার্ডটা ফাঁকা — আর মানুষটা ভাবতেন বাছাই হারিয়ে
+                           গেছে। */
+                        if (chosen && chosen.value) this.supplierPicked(chosen.value);
+
+                        /* ⚠️ ডিফল্ট মেয়াদটা পাতা খোলার সময়েই তারিখ হয়ে বসে।
+                           ⛔ না বসালে ঘরটা "৩ দিন" দেখাত অথচ `due_on` খালি
+                           যেত — পর্দা এক কথা বলত, খাতা আরেক।
+
+                           ⓘ অপশনগুলো সার্ভারে আঁকা, তাই এখানে আর কোনো
+                           `$nextTick`-এর কসরত লাগে না — মানটা আগে থেকেই বসা। */
+                        this.termPicked();
                     },
 
                     /**
@@ -1224,8 +2368,101 @@
                         if (product.last_rate > 0) this.entry.rate = String(product.last_rate);
                         if (product.sales_price > 0) this.entry.sales_price = String(product.sales_price);
 
+                        /*
+                         * ── ভ্যাটের ধরনটা পণ্য দেখে বসে ───────────────────
+                         *
+                         * পণ্যের নিজের হার বসানো থাকলে "পণ্য অনুযায়ী", নাহলে
+                         * "অঙ্ক লিখুন"।
+                         *
+                         * ⚠️ কেন সবসময় "পণ্য অনুযায়ী" নয়: হার বসানো না থাকলে
+                         * ওই ধরনটা সবসময় ০ দিত, আর ঘরটা হত একটা **নীরব
+                         * শূন্য** — মানুষ ভাবতেন ভ্যাট ধরা হয়েছে, অথচ হয়নি।
+                         *
+                         * ⓘ আর কেন সবসময় "অঙ্ক লিখুন" নয়: তাহলে যে পণ্যের হার
+                         * সত্যিই বসানো আছে তার ভ্যাটও প্রতিবার হাতে লিখতে হত,
+                         * আর একদিন কেউ ভুল লিখতেন। ⭐ হারটা যাঁর আছে, তাঁর
+                         * ব্যবস্থাটাই কাজে লাগে।
+                         */
+                        this.entry.vat_mode = (Number(product.tax_rate) || 0) > 0 ? 'product' : 'amount';
+
                         this.term = '';
                     },
+
+                    /** সরবরাহকারী বাছা হলো — দর, বকেয়া আর কার্ডের লাইনগুলো। */
+                    supplierPicked(id) {
+                        this.supplierId = String(id || '');
+                        this.loadLastRates(id);
+                    },
+
+                    /** কার্ডের চারটা লাইনের উৎস — বাছা সরবরাহকারীর সারি। */
+                    get supplier() {
+                        return this.suppliers.find(s => s.id === this.supplierId) || null;
+                    },
+
+                    /**
+                     * ⭐ 🎁 GIFT ITEM — সারিটা কার্টে বসিয়ে তার সাথেই উপহার।
+                     *
+                     * ── কেন দুইটা কাজ এক বোতামে ─────────────────────────
+                     * উপহার সবসময় **কোনো একটা পণ্যের বিপরীতে** বসে
+                     * (`against_product_id`), আর জোড়াটা ছাড়া *"সাবানের আসল
+                     * ক্রয়দর কত পড়ল"* হিসাবটাই করা যায় না। ⛔ কিন্তু চলতি
+                     * এন্ট্রিটা এখনো কার্টে নেই, তাই জোড়া লাগানোর মতো কিছুই
+                     * নেই — বোতামটা তাই আগে সারিটা বসায়, তারপর তার নিচে
+                     * উপহারের ঘর খোলে।
+                     *
+                     * ⓘ কার্টের সারিতে "উপহার যোগ" বোতামটা আগের মতোই আছে —
+                     * পরে মনে পড়লে ওখান থেকেও যোগ করা যায়।
+                     */
+                    giftForThisLine() {
+                        if (! this.picked) return;
+
+                        this.addToCart();
+
+                        const line = this.lines[this.lines.length - 1];
+
+                        if (line) this.addGift(line);
+                    },
+
+                    /** এককের নাম — আইডি না থাকলে পণ্যের নিজেরটা। */
+                    unitName(unitId, line) {
+                        const options = this.packs[line.id] ?? [];
+                        const found = options.find(u => String(u.id) === String(unitId));
+
+                        return found ? found.label : (line.unit || '');
+                    },
+
+                    /* ── দরের তালিকা ────────────────────────────────────
+                       ⓘ `lastRates` ইতিমধ্যেই সরবরাহকারী বাছার মুহূর্তে চলে
+                       আসে — তালিকাটা নতুন কোনো ডাক করে না, কেবল যা আছে তা
+                       পড়ার মতো করে সাজায়। */
+                    openChart() {
+                        this.chartOpen = ! this.chartOpen;
+                    },
+
+                    get chartRows() {
+                        return Object.entries(this.lastRates).map(([id, row]) => {
+                            const product = this.catalogue.find(p => String(p.id) === String(id));
+
+                            return {
+                                id,
+                                name: product?.name ?? '',
+                                rate: row.rate,
+                                on: row.on,
+                            };
+                        }).filter(row => row.name !== '');
+                    },
+
+                    /** তালিকা থেকে সরাসরি এন্ট্রিতে — গতবারের দর বসানো অবস্থায়। */
+                    pickFromChart(row) {
+                        const product = this.catalogue.find(p => String(p.id) === String(row.id));
+
+                        if (! product) return;
+
+                        this.pick(product);
+                        this.entry.rate = String(row.rate);
+                        this.chartOpen = false;
+                    },
+
 
                     pickFirst() {
                         const first = this.visible[0];
@@ -1238,11 +2475,91 @@
                     },
 
                     // ── চলতি লাইনের অঙ্ক ────────────────────────────────
-                    get entryNet() {
-                        const base = (Number(this.entry.qty) || 0) * (Number(this.entry.rate) || 0);
-                        const tax = this.vatEnabled ? (Number(this.entry.tax) || 0) : 0;
 
-                        return base - (Number(this.entry.discount) || 0) + tax;
+                    /** এই পণ্যের প্যাকের তালিকা — না থাকলে খালি। */
+                    get unitOptions() {
+                        return this.packs[this.picked?.id] ?? [];
+                    },
+
+                    get entryBase() {
+                        return (Number(this.entry.qty) || 0) * (Number(this.entry.rate) || 0);
+                    },
+
+                    /**
+                     * ছাড় — সবসময় টাকায়।
+                     *
+                     * ── কেন শতাংশটা এখানেই টাকা হয়ে যায় ─────────────────
+                     * `pur_bill_lines.discount` একটা টাকার কলাম, আর সার্ভার
+                     * সরাসরি বিয়োগ করে ([[CalculatesLineTotals::lineFigures]])।
+                     * ⛔ একই কলামে কখনো টাকা কখনো শতাংশ বসলে একদিন কেউ ৫
+                     * লিখতেন আর ৫ টাকা বাদ যেত, যেখানে তিনি ৫% বুঝিয়েছিলেন —
+                     * আর কোনো ত্রুটি হত না, কেবল সংখ্যাটা ভুল হত।
+                     *
+                     * ⭐ শতাংশটা হারায় না, রূপান্তরিত হয় — আর পর্দায় টাকার
+                     * অঙ্কটা পাশেই দেখা যায়, অর্থাৎ **যা দেখা যাচ্ছে সেটাই
+                     * সেভ হয়**।
+                     */
+                    get entryDiscount() {
+                        const typed = Number(this.entry.discount) || 0;
+
+                        if (this.entry.discount_mode !== 'percent') return typed;
+
+                        return this.entryBase * typed / 100;
+                    },
+
+                    get discountOverLine() {
+                        return this.entryDiscount > this.entryBase;
+                    },
+
+                    /**
+                     * ভ্যাট — তিনটা ধরনের যেটা বাছা হয়েছে।
+                     *
+                     * ⚠️ অঙ্কটা সার্ভারের সূত্রেরই নকল ([[Tax::amountOn]]):
+                     * ছাড়ের **পরের** টাকার উপর, আর দামের ভিতরের ভ্যাটে
+                     * উল্টো হিসাব। ⓘ দুই জায়গায় দুই সূত্র হলে পর্দা এক
+                     * সংখ্যা দেখাত আর খতিয়ানে আরেকটা বসত।
+                     */
+                    taxOn(net, mode, typed, product) {
+                        if (! this.vatEnabled) return 0;
+                        if (mode === 'none') return 0;
+                        if (mode === 'amount') return Number(typed) || 0;
+
+                        const rate = Number(product?.tax_rate) || 0;
+
+                        if (rate <= 0) return 0;
+
+                        /* দামের ভিতরে থাকলে মোট বাড়ে না — ১১৫-তে ১৫% মানে
+                           ১১৫ − (১১৫ ÷ ১.১৫) = ১৫, ১১৫ × ০.১৫ নয়। */
+                        return product?.tax_inclusive
+                            ? net - (net / (1 + rate / 100))
+                            : net * rate / 100;
+                    },
+
+                    get entryTax() {
+                        return this.taxOn(
+                            this.entryBase - this.entryDiscount,
+                            this.entry.vat_mode,
+                            this.entry.tax,
+                            this.picked,
+                        );
+                    },
+
+                    get entryNet() {
+                        const net = this.entryBase - this.entryDiscount;
+
+                        /* ভিতরের ভ্যাটে মোট বাড়ে না; দরেই ওটা আছে। */
+                        return this.picked?.tax_inclusive && this.entry.vat_mode === 'product'
+                            ? net
+                            : net + this.entryTax;
+                    },
+
+                    get entryTotalQty() {
+                        return (Number(this.entry.qty) || 0) + (Number(this.entry.free_qty) || 0);
+                    },
+
+                    toggleDiscountMode() {
+                        this.entry.discount_mode =
+                            this.entry.discount_mode === 'percent' ? 'amount' : 'percent';
                     },
 
                     addToCart() {
@@ -1255,8 +2572,26 @@
                             qty: this.entry.qty || '1',
                             free_qty: this.entry.free_qty || '',
                             rate: this.entry.rate || '0',
-                            discount: this.entry.discount || '',
+
+                            /* ⭐ ছাড়টা **টাকায়** বসে, শতাংশে নয় — যা পর্দায়
+                               দেখা যাচ্ছিল ঠিক সেটাই। ⓘ শতাংশটা এন্ট্রির
+                               ভঙ্গি ছিল, সারির তথ্য নয়। */
+                            discount: this.entryDiscount ? String(this.entryDiscount.toFixed(4)) : '',
+
+                            /* ভ্যাটের ধরনটা সারির সাথে যায়: সারিটা কার্টে
+                               বসার পরেও পর্দা জানে ঘরটা দেখাতে হবে নাকি
+                               সার্ভারকে কষতে দিতে হবে। */
+                            vat_mode: this.entry.vat_mode,
                             tax: this.entry.tax || '',
+
+                            /* প্যাকের দুইটা ঘর — না বসালে সারিটা কার্টে
+                               গিয়ে একক হারাত, আর "১ বাক্স" পিস হয়ে যেত। */
+                            unit_id: this.entry.unit_id || '',
+                            free_unit_id: this.entry.free_unit_id || '',
+                            unit: this.picked.unit || '',
+                            tax_rate: this.picked.tax_rate || 0,
+                            tax_inclusive: this.picked.tax_inclusive || false,
+
                             sales_price: this.entry.sales_price || '',
 
                             /* উপহারের তালিকা সারির সাথেই জন্মায়, চাহিদামতো
@@ -1291,7 +2626,7 @@
                            ফেলতেন। */
                         this.deposits = [];
                         this.depositDraft = {
-                            methodId: '', accountId: '', amount: '', reference: '', refDate: '',
+                            methodId: '', accountId: '', amount: '', reference: '', refDate: '', narration: '',
                         };
 
                         this.carrierId = '';
@@ -1300,15 +2635,46 @@
                         this.vehicleNo = '';
                         this.driverName = '';
 
+                        /* ⚠️ তিনটা প্যানেলও বন্ধ হয় — খোলা রেখে দিলে নতুন
+                           ক্রয়ের পর্দায় আগের সরবরাহকারীর দরের তালিকা খুলে
+                           বসে থাকত, আর কেউ ওই দর ধরে দরাদরি করতেন। */
+                        this.chartOpen = false;
+                        this.depositOpen = false;
+                        this.transportOpen = false;
+                        this.noteOpen = false;
+                        this.shipmentOpen = false;
+
                         this.clearEntry();
                     },
 
                     // ── কার্টের অঙ্ক ────────────────────────────────────
+
+                    /* ⚠️ সারির ভ্যাটটা আর সরাসরি `line.tax` নয়।
+
+                       সারিটা নিজের ধরন মনে রাখে, তাই "পণ্য অনুযায়ী" হলে
+                       অঙ্কটা পণ্যের হার থেকে কষতে হয় — ঠিক যেভাবে সার্ভার
+                       কষবে। ⛔ আগের মতো `line.tax` পড়লে ওই সারিগুলোর ভ্যাট
+                       পর্দায় ০ দেখাত, অথচ খতিয়ানে বসত পুরো অঙ্ক, আর
+                       "মোট দেয়" দুই জায়গায় দুই রকম হত। */
+                    lineTax(line) {
+                        const base = (Number(line.qty) || 0) * (Number(line.rate) || 0);
+
+                        return this.taxOn(base - (Number(line.discount) || 0), line.vat_mode, line.tax, line);
+                    },
+
                     lineNet(line) {
                         const base = (Number(line.qty) || 0) * (Number(line.rate) || 0);
-                        const tax = this.vatEnabled ? (Number(line.tax) || 0) : 0;
+                        const net = base - (Number(line.discount) || 0);
 
-                        return base - (Number(line.discount) || 0) + tax;
+                        /* দামের ভিতরের ভ্যাটে মোট বাড়ে না; দরেই ওটা আছে। */
+                        return line.tax_inclusive && line.vat_mode === 'product'
+                            ? net
+                            : net + this.lineTax(line);
+                    },
+
+                    /** ছবির `Total Qty` — কেনা আর ফ্রি একসাথে। */
+                    lineTotalQty(line) {
+                        return (Number(line.qty) || 0) + (Number(line.free_qty) || 0);
                     },
 
                     get subTotal() {
@@ -1319,7 +2685,32 @@
 
                     get taxTotal() {
                         if (! this.vatEnabled) return 0;
-                        return this.lines.reduce((s, l) => s + (Number(l.tax) || 0), 0);
+
+                        return this.lines.reduce((s, l) => s + this.lineTax(l), 0);
+                    },
+
+                    /**
+                     * মন্তব্যের ঘরটা খুলে কার্সর ভিতরে।
+                     *
+                     * ⚠️ `$nextTick` ছাড়া `focus()` কিছুই করত না: ওই মুহূর্তে
+                     * ঘরটা এখনো `x-show`-এর নিচে লুকানো, আর লুকানো ঘরে
+                     * কার্সর বসে না। ⓘ বোতামটা তখন খুলত ঠিকই, কিন্তু
+                     * লিখতে আরেকটা ক্লিক লাগত।
+                     */
+                    openNote() {
+                        this.noteOpen = ! this.noteOpen;
+
+                        if (this.noteOpen) this.$nextTick(() => this.$refs.note?.focus());
+                    },
+
+                    /** ছবির `Total Purchase Qnty` — কেবল কেনা, ফ্রি ছাড়া। */
+                    get boughtQty() {
+                        return this.lines.reduce((s, l) => s + (Number(l.qty) || 0), 0);
+                    },
+
+                    /** রসিদের ছকের "ফ্রি পাওয়া গেল" — কেবল পরিমাণ, টাকা নয়। */
+                    get freeTotal() {
+                        return this.lines.reduce((s, l) => s + (Number(l.free_qty) || 0), 0);
                     },
 
                     /* ⏳ খরচ ও রাউন্ডিং এখানে যোগ হবে — কিন্তু সেবা ও
@@ -1383,6 +2774,129 @@
                         return Number(this.transportCost) > 0
                             && ! this.carrierId
                             && this.carrierName.trim() === '';
+                    },
+
+                    /** ধরনটার প্রথম অংশ — `credit:7` থেকে `credit`। */
+                    get termKind() {
+                        return String(this.termChoice || '').split(':')[0];
+                    },
+
+                    /** কোম্পানির ছকে দেখানোর জন্য — `2026-09-20` → `20-09-2026`। */
+                    get dueOnShown() {
+                        const parts = String(this.dueOn || '').split('-');
+
+                        return parts.length === 3 ? `${parts[2]}-${parts[1]}-${parts[0]}` : '';
+                    },
+
+                    /**
+                     * শর্তটাকে একটা তারিখে অনুবাদ করা।
+                     *
+                     * ⚠️ গোনাটা **বিলের তারিখ থেকে**, আজ থেকে নয় — পুরনো
+                     * তারিখের বিল তোলা হলে পরিশোধের তারিখও পিছিয়ে বসে।
+                     *
+                     * ⓘ `a fixed date`-এ কিছু গোনা হয় না: তারিখটা মানুষটা
+                     * নিজে বাছেন, আর নিচের লাইনটাই তখন লেখার ঘর।
+                     */
+                    termPicked() {
+                        const [kind, days] = String(this.termChoice || '').split(':');
+
+                        if (kind === 'fixed') {
+                            /* ⚠️ আগের হিসাব করা তারিখটা মুছে দেওয়া হয়,
+                               নাহলে মানুষটা তারিখের ঘরে একটা **আগের
+                               হিসাবের** তারিখ বসা দেখতেন আর ভাবতেন
+                               তিনিই বসিয়েছেন। */
+                            this.dueOn = '';
+
+                            return;
+                        }
+
+                        const from = new Date(this.boxValue('trx_date') || Date.now());
+
+                        if (Number.isNaN(from.getTime())) {
+                            this.dueOn = '';
+
+                            return;
+                        }
+
+                        if (kind === 'cod') {
+                            /* ⓘ মাল পৌঁছে দিয়ে টাকা — তাই গাড়ির দিন।
+                               ⚠️ ঘরটা খালি থাকলে বিলের তারিখই, কারণ
+                               সরাসরি ক্রয়ে দুইটা প্রায়ই একই দিন।
+
+                               ⭐ সাথে পরিশোধের উপায়টাও নগদে বসে যায়
+                               ([[codPicksCash]]) — নাহলে "COD" বাছার
+                               পরেও `Method` খালি থেকে যেত, আর একই
+                               জিনিস দুই জায়গায় দুই কথা বলত। */
+                            this.dueOn = this.boxValue('received_on') || this.isoDate(from);
+                            this.codPicksCash();
+
+                            return;
+                        }
+
+                        if (kind === 'month_end') {
+                            /*
+                             * ⭐ বিলের **মাসের** শেষ দিন — মালিকের
+                             * `Cr. Upto Closing date`।
+                             *
+                             * ⚠️ `new Date(y, m + 1, 0)` মানে "পরের মাসের
+                             * শূন্যতম দিন", অর্থাৎ চলতি মাসের শেষ দিন।
+                             * ⛔ `addDays(30)` দিয়ে গুনলে ফেব্রুয়ারিতে
+                             * মার্চে গিয়ে পড়ত, আর লিপ ইয়ারে আরও একদিন।
+                             *
+                             * ⓘ মাসটা **বিলের তারিখের** মাস, আজকের নয় —
+                             * পুরনো তারিখের বিল বসালে ঐ মাসের শেষ।
+                             */
+                            this.dueOn = this.isoDate(
+                                new Date(from.getFullYear(), from.getMonth() + 1, 0)
+                            );
+
+                            return;
+                        }
+
+                        if (kind === 'cash') {
+                            this.dueOn = this.isoDate(from);
+
+                            return;
+                        }
+
+                        from.setDate(from.getDate() + (Number(days) || 0));
+                        this.dueOn = this.isoDate(from);
+                    },
+
+                    /**
+                     * COD বাছলে পরিশোধের উপায়ও নগদে বসে।
+                     *
+                     * ⚠️ শর্তটা আর উপায়টা দুইটা আলাদা জিনিস, আর দুইটাই
+                     * সার্ভারে যায় আলাদা পথে। ⛔ শর্তে "COD" অথচ উপায়
+                     * খালি — তখন খাতায় লেখা থাকত *"মাল পৌঁছে দিয়ে টাকা"*,
+                     * অথচ টাকাটা কোন খাত থেকে গেল তা কেউ জানত না।
+                     *
+                     * ⓘ ইতিমধ্যে কেউ একটা উপায় বেছে থাকলে **ছোঁয়া হয় না** —
+                     * তাঁর সিদ্ধান্ত মুছে দেওয়ার চেয়ে চুপ থাকা ভালো।
+                     */
+                    codPicksCash() {
+                        if (this.depositDraft.methodId) return;
+
+                        const cash = this.depositMethods.find(m => m.kind === 'cash');
+
+                        if (! cash) return;
+
+                        this.depositDraft.methodId = cash.id;
+                        this.methodPicked();
+                    },
+
+                    /**
+                     * তারিখটা `YYYY-MM-DD` হয়ে।
+                     *
+                     * ⚠️ `toISOString()` নয় — ওটা UTC-তে নামায়, আর
+                     * বাংলাদেশে সন্ধ্যার পর তারিখটা একদিন পিছিয়ে যেত।
+                     */
+                    isoDate(d) {
+                        return [
+                            d.getFullYear(),
+                            String(d.getMonth() + 1).padStart(2, '0'),
+                            String(d.getDate()).padStart(2, '0'),
+                        ].join('-');
                     },
 
                     /** বাছা উপায়টার সারি — id ধরে। */
@@ -1452,7 +2966,7 @@
                         this.deposits.push({ ...this.depositDraft });
 
                         this.depositDraft = {
-                            methodId: '', accountId: '', amount: '', reference: '', refDate: '',
+                            methodId: '', accountId: '', amount: '', reference: '', refDate: '', narration: '',
                         };
                     },
 

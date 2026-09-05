@@ -4,18 +4,23 @@ declare(strict_types=1);
 
 namespace App\Modules\Purchase\Http\Controllers;
 
+use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
+use App\Models\NumberSeries;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Inventory\Services\PackConversion;
 use App\Modules\MasterData\Models\PaymentMethod;
+use App\Modules\MasterData\Models\PaymentTerm;
 use App\Modules\Purchase\Services\DirectPurchaseService;
 use App\Modules\Purchase\Services\LastPaidRate;
 use App\Modules\Supplier\Models\Supplier;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -42,6 +47,13 @@ class DirectPurchaseController extends Controller implements HasMiddleware
      */
     private const INLINE_CATALOGUE_LIMIT = 2000;
 
+    /**
+     * এক অনুরোধে একবারই তোলা পণ্যের তালিকা।
+     *
+     * @var \Illuminate\Database\Eloquent\Collection<int, Product>|null
+     */
+    private ?EloquentCollection $products = null;
+
     public function __construct(
         private readonly DirectPurchaseService $purchases,
         private readonly SettingsService $settings,
@@ -62,9 +74,105 @@ class DirectPurchaseController extends Controller implements HasMiddleware
             'menu' => $this->menu->forUser($request->user()),
             'products' => $this->catalogue($warehouse),
             'suppliers' => Supplier::query()->active()->orderBy('name_en')->get(),
+
+            /*
+             * ── গুদাম বনাম তাক — দুইটা আলাদা প্রশ্ন ──────────────────
+             *
+             * মালিকের কথা (৫ সেপ্টেম্বর ২০২৬): *"ডিরেক্ট পারচেসে
+             * ওয়্যারহাউস দিয়ে দাও... গোডাউনে যদি আরো ছোটখাটো প্লেসমেন্ট
+             * (তাক) থাকে, সে প্লেসমেন্টে করবে। আর যদি শুধুমাত্র ছোট
+             * দোকান হয়... একজনই দুইটা করতে পারবেন।"*
+             *
+             * ⭐ তাই দুইটা স্তর, দুই জায়গায়:
+             *
+             *   কোন গুদামে          → এখানেই, কাউন্টারে
+             *   গুদামের ভিতরে কোথায় → Inventory ▸ Stock Placement
+             *
+             * ⚠️ মালটা তবু **"বসানো হয়নি"** অবস্থাতেই ঢোকে (`unplaced`,
+             * দেখুন [[PurchaseBillService::bringInDirectLines()]]) —
+             * অর্থাৎ গুদামে আছে, কিন্তু বিক্রয়যোগ্য নয়। ⓘ পর্দায় কথাটা
+             * লেখা আছে, নাহলে কাউন্টারের লোক ভাবতেন মাল তাকে উঠে গেছে।
+             *
+             * ⓘ ছোট দোকানের জন্য দুইটা ধাপই একজনের — Placement পর্দায়
+             * এক ক্লিকেই বসে যায়।
+             */
             'warehouses' => Warehouse::query()->active()->orderBy('code')->get(),
             'warehouse' => $warehouse,
             'moneyAccounts' => $this->moneyAccounts(),
+
+            /*
+             * প্যাকের তালিকা — কন্ট্রোল প্যানেলের সুইচের পেছনে।
+             *
+             * ⓘ ডাকটা হুবহু `components/line-editor.blade.php`-এর, আর
+             * সেটাই দরকার: দুই পর্দায় দুই নিয়ম হলে একই পণ্য সরাসরি
+             * ক্রয়ে বাক্সে আর বিলে পিসে লিখতে হত।
+             *
+             * ⚠️ সুইচ বন্ধ থাকলে তালিকাটা খালি, আর পর্দায় একক ঘর দুইটা
+             * রেন্ডারই হয় না — কোম্পানি প্যাকে কেনে না, তাই ঘরটাও নেই।
+             */
+            'packs' => $this->settings->enabled('inventory.pack_entry_enabled')
+                ? app(PackConversion::class)->optionsFor($this->products())
+                : [],
+
+            /*
+             * ⭐ কে মালটা বুঝে নিলেন — মালিকের ছবির `Received by`।
+             *
+             * ⓘ বাছার কিছু নেই, তাই ড্রপডাউনও নেই: যিনি পর্দাটা খুলেছেন
+             * তিনিই বুঝে নিচ্ছেন। ⚠️ বাছতে দিলে একদিন অন্যের নাম বসত,
+             * আর "কে বুঝে নিয়েছিল" প্রশ্নের উত্তরটা **ভুল** হত — খালি
+             * থাকার চেয়েও খারাপ।
+             */
+            'receivedBy' => $request->user()?->name ?? '',
+
+            /*
+             * ── ক্রয় চালানের পরের নম্বর — দেখানোর জন্য, খরচের জন্য নয় ──
+             *
+             * ⛔ `next()` ডাকলে **পাতা খোলামাত্র একটা নম্বর খরচ হয়ে যেত**,
+             * কেউ শুধু দেখে চলে গেলেও। দিনের শেষে সিরিজে ফাঁক, আর নিরীক্ষায়
+             * *"৪৭ নম্বর বিলটা কোথায়"* প্রশ্নের কোনো উত্তর নেই।
+             *
+             * ⭐ `preview()` কেবল পড়ে — তালা নেয় না, কিছু বাড়ায় না। আসল
+             * নম্বরটা বসে সংরক্ষণের ট্রানজেকশনের ভেতরে।
+             *
+             * ⚠️ দুইজন একসাথে কাউন্টার খুললে দুইজনেই একই নম্বর দেখবেন, আর
+             * সেটা ঠিক আছে: যিনি আগে সেভ করবেন তিনি ওটা পাবেন, পরেরজন
+             * পরেরটা। ⓘ ভুল হত দেখানো নম্বরটাকে **প্রতিশ্রুতি** ভাবলে —
+             * ওটা পূর্বাভাস।
+             *
+             * ⓘ বিক্রয়ের কাউন্টারে এই যন্ত্রটা ৩ সেপ্টেম্বর থেকে চলছে
+             * ([[DirectSaleController::invoicePreview()]]); এখানে হুবহু সেটাই।
+             */
+            'billPreview' => $this->billPreview(),
+
+            /*
+             * ── কত দিনের বাকিতে — ছবির `CREDIT PERIOD` ────────────────
+             *
+             * ⓘ সারি, ধ্রুবক নয়: ক্রেতা নিজের শর্ত যোগ করতে পারবেন
+             * (মালিকের স্থায়ী নিয়ম — যে তালিকা গ্রাহকভেদে বদলায় সেটা
+             * সেটিংসের সারি)।
+             *
+             * ⚠️ পর্দা শর্তের আইডি সার্ভারে পাঠায় না, পাঠায় তার ফল —
+             * `due_on` তারিখ। ⛔ আইডি রাখলে একদিন কেউ শর্তের দিনসংখ্যা
+             * বদলাতেন, আর **গত বছরের বন্ধ বিলগুলোর পরিশোধের তারিখও
+             * নীরবে সরে যেত**। ⓘ তারিখটা একটা ঘটনা, শর্তটা একটা নীতি।
+             */
+            'paymentTerms' => $this->paymentTerms(),
+
+            /*
+             * ── ঘরটা কোন মান নিয়ে খোলে ───────────────────────────────
+             *
+             * মালিকের নির্দেশ: *"by defolt Closing 3day thakbe"*।
+             *
+             * ⛔ **তিনটা কোডে লেখা নেই**, আর সেটাই মূল কথা: এক গ্রাহকের ৩,
+             * আরেকজনের ৭। ⓘ মালিকের স্থায়ী নিয়ম — যে সংখ্যা গ্রাহকভেদে
+             * বদলায় সেটা সেটিংসের সারি, কোডের ধ্রুবক নয়।
+             *
+             * ⚠️ `SettingsService::get()`-এর দ্বিতীয় প্যারামিটারটা তখনই
+             * কাজে লাগে যখন কোম্পানি এখনো কিছু বসায়নি — অর্থাৎ ওটা
+             * "বাক্স থেকে বের হওয়ার" মান, নিয়ম নয়। ⓘ কেউ Control
+             * Panel-এ ৭ বসালে পর্দা পরদিনই ৭ খোলে, কোড না ছুঁয়ে।
+             */
+            'paymentTermDefault' => $this->paymentTermDefault(),
 
             /*
              * ── টাকা দেওয়ার উপায়গুলো ─────────────────────────────────
@@ -140,9 +248,64 @@ class DirectPurchaseController extends Controller implements HasMiddleware
             'warehouse_id' => ['nullable', 'integer',
                 Rule::exists('inv_warehouses', 'id')->where('company_id', $companyId)],
             'trx_date' => ['nullable', 'date', 'before_or_equal:today'],
+
+            /*
+             * ⭐ যেদিন মাল এল — বিলের তারিখ থেকে আলাদা।
+             *
+             * ⓘ ঐচ্ছিক, আর খালি হলে সেবা `trx_date` ধরে — অর্থাৎ আজকের
+             * প্রতিটা ডাক অবিকল আগের মতো।
+             *
+             * ⚠️ `before_or_equal:today` এখানেও: ভবিষ্যতে মাল আসা যায় না,
+             * আর তারিখটা মজুদের চলাচল ঠিক করে।
+             */
+            'received_on' => ['nullable', 'date', 'before_or_equal:today'],
+
+            /*
+             * ⭐ ক্রয় চালানের নম্বর — পর্দা এটা ভরে পাঠায়।
+             *
+             * ⓘ নামটা `bill_no`, কিন্তু সেবায় যায় `document_no` হয়ে
+             * (নিচে `store()`-এ)। ⚠️ কারণ যাচাইয়ের ভুল-বার্তা ঘরের নামেই
+             * খোঁজা হয়, আর পর্দার ঘরটার নাম `bill_no` — দুই নাম এক না
+             * রাখলে ডুপ্লিকেট নম্বরের বার্তাটা কোনোদিন দেখা যেত না।
+             */
+            'bill_no' => ['nullable', 'string', 'max:32'],
+
+            /*
+             * ⭐ পরিশোধের শর্ত — পর্দার `Payment Terms`।
+             *
+             * ⚠️ তালিকাটা `Rule::in()` দিয়ে বাঁধা, আর সেটা ইচ্ছাকৃত:
+             * কলামটা ১৬ অক্ষরের, আর যেকোনো লেখা ঢুকতে দিলে একদিন
+             * রিপোর্টে `"3 days Cr"` আর `"credit"` দুইটাই বসে থাকত, আর
+             * *"COD-তে কত কিনলাম"* প্রশ্নের উত্তর গোনাই যেত না।
+             *
+             * ⓘ দিনসংখ্যাটা এখানে আসে না — সেটা `due_on` তারিখে অনুবাদ
+             * হয়ে যায়, আর তারিখটাই খাতায় থাকে।
+             */
+            'payment_term' => ['nullable', 'string',
+                Rule::in(['cash', 'cod', 'credit', 'month_end', 'fixed'])],
+
             'supplier_bill_no' => ['nullable', 'string', 'max:64'],
             'due_on' => ['nullable', 'date'],
             'narration' => ['nullable', 'string', 'max:500'],
+
+            /*
+             * ── আমদানি চালান — পাঁচটাই ঐচ্ছিক ────────────────────────
+             *
+             * দেশের ভিতরের ক্রয়ে পাঁচটাই খালি, আর সেটাই স্বাভাবিক।
+             * ⓘ কিন্তু NEXUS/ABOS এগারোটা শিল্পের জন্য, আর তার একটা
+             * আমদানি-রপ্তানি — ওখানে ব্যাংক ও কাস্টমস **এই নম্বরগুলো
+             * ধরেই** কাগজ খোঁজে।
+             *
+             * ⚠️ `be_date`-এ `before_or_equal:today` নেই, আর সেটা
+             * ইচ্ছাকৃত: খালাসের তারিখ কাগজে যা লেখা তা-ই, আর কাগজটা
+             * হাতে আসে কয়েক দিন পরে। ⓘ ভবিষ্যতের তারিখ আটকানো আছে
+             * `trx_date`-এ, কারণ ওটাই খতিয়ানে যায়।
+             */
+            'lc_no' => ['nullable', 'string', 'max:64'],
+            'be_no' => ['nullable', 'string', 'max:64'],
+            'be_date' => ['nullable', 'date'],
+            'vessel' => ['nullable', 'string', 'max:120'],
+            'port_of_entry' => ['nullable', 'string', 'max:120'],
 
             /*
              * হাতে হাতে দেওয়া টাকা — ঐচ্ছিক।
@@ -236,6 +399,18 @@ class DirectPurchaseController extends Controller implements HasMiddleware
                 Rule::exists('mdm_units', 'id')->where('company_id', $companyId)],
 
             /*
+             * ⭐ ফ্রি পরিমাণের নিজের একক — মালিকের নকশার চতুর্থ ঘর
+             * (`QTY. · UOM · FREE QTY · UOM`)।
+             *
+             * ⓘ না এলে সার্ভিস লাইনের `unit_id`-ই ধরে, অর্থাৎ আগের
+             * আচরণ অবিকল। ⚠️ এলে সংখ্যাটা ওই এককেই মনে রাখা হয়
+             * (`entered_free_qty` · `free_unit_id`) — নাহলে "১ কার্টন
+             * ফ্রি" কাগজে "১২ পিস" হয়ে ফিরত।
+             */
+            'lines.*.free_unit_id' => ['nullable', 'integer',
+                Rule::exists('mdm_units', 'id')->where('company_id', $companyId)],
+
+            /*
              * উপহার — মিল যা সাথে দিয়ে দিল।
              *
              * ⚠️ `lines`-এর মতো `required` নয়। বেশিরভাগ চালানে কোনো
@@ -258,6 +433,12 @@ class DirectPurchaseController extends Controller implements HasMiddleware
                 Rule::exists('inv_products', 'id')->where('company_id', $companyId)],
             'gifts.*.remarks' => ['nullable', 'string', 'max:191'],
         ]);
+
+        /*
+         * ⓘ পর্দার `bill_no` সেবায় যায় `document_no` হয়ে — দুই নামের
+         * সেতুটা এখানেই, আর কেবল এখানেই।
+         */
+        $data['document_no'] = $data['bill_no'] ?? null;
 
         $result = $this->purchases->complete($data, $data['lines'], $data['gifts'] ?? []);
 
@@ -318,10 +499,25 @@ class DirectPurchaseController extends Controller implements HasMiddleware
     {
         $chosen = $request->integer('warehouse_id');
 
+        /*
+         * ── কোনটা আগে থেকে বসানো থাকবে ──────────────────────────────
+         *
+         * মালিকের কথা (৫ সেপ্টেম্বর ২০২৬): *"warehouse by defolt purches e
+         * boslo, placement se approval er por dekhe dekhe korlo"* —
+         * অর্থাৎ ঘরটা ভরা অবস্থায় খোলে, আর কাউন্টারে প্রতিবার একটা
+         * ড্রপডাউন কম খুলতে হয়। ⓘ ডিফল্ট মানে **প্রস্তাব**, তালা নয় —
+         * ব্যবহারকারী বদলাতে পারেন।
+         *
+         * ⛔ ডিফল্ট বসানো না থাকলে **নীরবে প্রথম গুদামটা নেওয়া হয় না**,
+         * আর এখানে আগে ঠিক সেটাই হত (`orderBy('code')->first()`)। ⚠️ ওই
+         * নীরবতার দাম: মাল ভুল গুদামে বসত, কোনো ত্রুটি ছাড়াই, আর ধরা
+         * পড়ত মাস শেষে মজুদ মেলানোর সময় — যখন আর কোন চালানটা ভুল ছিল
+         * তা বলা যায় না। ⓘ এখন ঘরটা খালি থাকে আর পর্দা কারণসহ বলে
+         * কোথায় গিয়ে ঠিক করতে হবে।
+         */
         return $chosen > 0
             ? Warehouse::query()->find($chosen)
-            : Warehouse::query()->where('is_default', true)->first()
-                ?? Warehouse::query()->active()->orderBy('code')->first();
+            : Warehouse::query()->active()->where('is_default', true)->first();
     }
 
     /**
@@ -331,13 +527,154 @@ class DirectPurchaseController extends Controller implements HasMiddleware
      */
     private function catalogue(?Warehouse $warehouse): array
     {
-        return Product::query()
-            ->active()
-            ->orderBy('name_en')
-            ->limit(self::INLINE_CATALOGUE_LIMIT)
-            ->get()
+        return $this->products()
             ->map(fn (Product $p) => $this->purchases->stockPanel($p, $warehouse))
             ->all();
+    }
+
+    /**
+     * পণ্যের মডেলগুলো — এক পাতায় একবারই।
+     *
+     * ── কেন আলাদা একটা পদ্ধতি ও মনে রাখা ────────────────────────────
+     * একই তালিকা দুইজন চায়: `catalogue()` (পর্দার সারি) আর প্যাকের
+     * তালিকা (`PackConversion::optionsFor`)। ⛔ দুইবার তুললে দুই হাজার
+     * সারি দুইবার আসত, আর দ্বিতীয়বারের `unit`/`tax` আবার জোড়া লাগত।
+     *
+     * ⚠️ `with(['unit', 'tax'])` — `preventLazyLoading` চালু, তাই এখানে
+     * না চাইলে `stockPanel()` পর্দাটাই ভাঙত। ⓘ দুইটাই পর্দার নতুন
+     * ঘরগুলোর জন্য: একক না বাছলে পণ্যের নিজের এককের নাম লেখা হয়, আর
+     * "Per product" ভ্যাট ধরনটা হার ছাড়া কষতেই পারত না।
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, Product>
+     */
+    private function products(): EloquentCollection
+    {
+        return $this->products ??= Product::query()
+            ->active()
+            ->with(['unit', 'tax'])
+            ->orderBy('name_en')
+            ->limit(self::INLINE_CATALOGUE_LIMIT)
+            ->get();
+    }
+
+    /**
+     * পরিশোধের শর্তের তালিকা — মালিকের `Payment Terms`।
+     *
+     * ── ⚠️ কোনটা কোডে, কোনটা সারিতে ─────────────────────────────────
+     * চারটা **আচরণ** কোডে: নগদ · COD · মাসের শেষ · নিজের তারিখ।
+     * ⓘ ওগুলো তালিকা নয়, নিয়ম — প্রতিটা ব্যবসায় একই অর্থ বহন করে।
+     *
+     * ⭐ যেটা গ্রাহকভেদে বদলায় সেটা **দিনসংখ্যাগুলো**, আর ওগুলো আগে
+     * থেকেই সারি (`mdm_payment_terms`)। ⚠️ এক গ্রাহকের ৫ দিন,
+     * আরেকজনের ৪৫ — কোড না ছুঁয়ে।
+     *
+     * ⛔ `Date Range` তালিকায় নেই, আর সেটা ইচ্ছাকৃত: একটা পাওনার
+     * **একটাই দেয় তারিখ**। ⓘ রেঞ্জ হলে বকেয়ার বয়সের রিপোর্ট বিলটাকে
+     * কোনো ঘরে ফেলতে পারত না।
+     *
+     * ── ⓘ মানের ছাঁচ ────────────────────────────────────────────────
+     * `cash` · `cod` · `credit:7` · `month_end` · `fixed` — কোলনের পরের
+     * সংখ্যাটা কেবল `credit`-এ, আর পর্দাই ওটা তারিখে অনুবাদ করে।
+     *
+     * @return list<array{value: string, label: string}>
+     */
+    private function paymentTerms(): array
+    {
+        $terms = [
+            ['value' => 'cash', 'label' => __('purchase::field.term_cash')],
+            ['value' => 'cod', 'label' => __('purchase::field.term_cod')],
+        ];
+
+        foreach ($this->creditTerms() as $term) {
+            if ($term['days'] <= 0) {
+                continue;
+            }
+
+            $terms[] = [
+                'value' => 'credit:'.$term['days'],
+                'label' => __('purchase::field.term_credit', ['count' => $term['days']]),
+            ];
+        }
+
+        $terms[] = ['value' => 'month_end', 'label' => __('purchase::field.term_month_end')];
+        $terms[] = ['value' => 'fixed', 'label' => __('purchase::field.term_fixed')];
+
+        return $terms;
+    }
+
+    /**
+     * পর্দা খোলার সময় কোনটা বাছা থাকবে।
+     *
+     * মালিক: *"by defolt Closing 3day thakbe"* — কিন্তু তিনটা **কোডে
+     * নেই**, কোম্পানির সেটিংসে (`purchase.default_credit_days`)।
+     *
+     * ⚠️ ঐ দিনসংখ্যার কোনো শর্ত না থাকলে `creditTerms()` নিজেই সারিটা
+     * বসিয়ে দেয়, তাই বিকল্পটা সবসময় পাওয়া যায়। ⓘ তবু শূন্য বা
+     * ঋণাত্মক হলে নগদে ফেরা — একটা অচেনা মান পর্দায় পাঠানোর চেয়ে ভালো।
+     */
+    private function paymentTermDefault(): string
+    {
+        $days = (int) $this->settings->get('purchase.default_credit_days', 3);
+
+        return $days > 0 ? 'credit:'.$days : 'cash';
+    }
+
+    /**
+     * বাকির মেয়াদের তালিকা — দিনের সংখ্যা ধরে।
+     *
+     * ── কেন মান হিসেবে `days`, `id` নয় ──────────────────────────────
+     * ⚠️ পর্দা শর্তের আইডি সার্ভারে পাঠায় না, পাঠায় তার **ফল** —
+     * `due_on` তারিখ। ⛔ আইডি রাখলে একদিন কেউ শর্তের দিনসংখ্যা বদলাতেন,
+     * আর গত বছরের বন্ধ বিলগুলোর পরিশোধের তারিখও নীরবে সরে যেত।
+     * ⓘ তারিখটা একটা ঘটনা, শর্তটা একটা নীতি — খাতায় ঘটনাটাই থাকে।
+     *
+     * ── ⚠️ ডিফল্টের সংখ্যাটা তালিকায় না থাকলে ───────────────────────
+     * কোম্পানির ডিফল্ট ৩ দিন, অথচ শর্তের তালিকায় ৩ দিনের কোনো সারি
+     * নেই — এটা প্রথম দিনেই ঘটবে। ⛔ তখন ঘরটা খালি খুলত, আর মালিকের
+     * *"by defolt 3 day"* কথাটা মিথ্যা হত।
+     *
+     * ⭐ তাই সংখ্যাটা তালিকায় বসিয়ে দেওয়া হয়, নিজের নামে ("৩ দিন")।
+     * ⓘ এটা শর্তের সারি বানানো নয় — মেয়াদটা শেষ পর্যন্ত একটা সংখ্যা,
+     * আর সংখ্যাটা কোম্পানি নিজেই বসিয়েছে।
+     *
+     * @return list<array{label: string, days: int}>
+     */
+    private function creditTerms(): array
+    {
+        $terms = PaymentTerm::query()
+            ->active()
+            ->orderBy('days')
+            ->get()
+            ->map(fn (PaymentTerm $term): array => [
+                'label' => $term->name(),
+                'days' => (int) $term->days,
+            ])
+            ->values()
+            ->all();
+
+        $default = (int) $this->settings->get('purchase.default_credit_days', 3);
+
+        if ($default > 0 && ! in_array($default, array_column($terms, 'days'), true)) {
+            $terms[] = ['label' => __('purchase::field.credit_days', ['count' => $default]), 'days' => $default];
+
+            usort($terms, fn (array $a, array $b) => $a['days'] <=> $b['days']);
+        }
+
+        return $terms;
+    }
+
+    /** সিরিজের পরের নম্বর, কেবল দেখানোর জন্য — [[NumberSeriesEngine::preview()]]. */
+    private function billPreview(): string
+    {
+        $series = NumberSeries::query()
+            ->where('company_id', CompanyContext::id())
+            ->where('doc_type', 'PBL')
+            ->where('is_active', true)
+            /* ⓘ শাখার নিজস্ব সিরিজ থাকলে সেটাই আগে; না থাকলে কোম্পানির। */
+            ->orderByRaw('branch_id IS NULL')
+            ->first();
+
+        return $series === null ? '' : app(NumberSeriesEngine::class)->preview($series);
     }
 
     /** নগদ ও ব্যাংক — টাকাটা কোথা থেকে গেল। */
