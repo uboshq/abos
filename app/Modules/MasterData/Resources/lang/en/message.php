@@ -33,4 +33,5 @@ return [
     'nothing_to_choose_yet' => 'Nothing to choose yet — add a cash till or a bank account first',
     'allow_duplicate' => 'This really is a different entry — save it anyway',
     'duplicate_overridden' => 'Saved despite a matching name — the duplicate warning was overridden.',
+    'reset_needs_a_year' => 'The number carries no year, so it cannot restart at 1 each year — two papers in two years would share a number. Add {FY} or {YYYY} to the format and the option opens.',
 ];

@@ -278,6 +278,8 @@ return [
         'violet' => 'Violet',
         'emerald' => 'Emerald',
         'slate' => 'Slate',
+        'pink' => 'Pink',
+        'magenta' => 'Magenta',
         'amber' => 'Amber',
         'aubergine' => 'Aubergine',
         'brick' => 'Brick',

@@ -125,7 +125,27 @@ class NumberSeriesController extends Controller implements HasMiddleware
             'format.regex' => __('master_data::validation.format_needs_sequence'),
         ]);
 
-        $validated['reset_yearly'] = $request->boolean('reset_yearly');
+        /*
+         * ⛔ নম্বরে বছর না থাকলে রিসেট বসবেই না — মালিকের নিয়ম,
+         * ৫ সেপ্টেম্বর ২০২৬: *"এই সিরিজ দিলে অটো রিসেট বন্ধ,
+         * ম্যান্ডেটরি।"*
+         *
+         * ── কেন এটা সতর্কবার্তা নয়, নিয়ম ────────────────────────────
+         * `{PREFIX}-{SEQ}` + প্রতি বছর ১ থেকে শুরু = ২০২৬-এর
+         * `INV-0001` আর ২০২৭-এর `INV-0001`, **দুইটা আলাদা বিলে এক
+         * নম্বর**। ⚠️ ভুলটা ধরা পড়ত পরের অর্থবছরের প্রথম বিলে, আর
+         * তখন নিরীক্ষায় প্রমাণ করা যেত না কোনটা কোনটা।
+         *
+         * ⓘ সতর্কবার্তা দিয়ে ছেড়ে দিলে কেউ একদিন ওটা পার হয়ে যেতেন —
+         * আর দামটা একটা ভুল ক্লিকের চেয়ে অনেক বেশি। তাই ঘরটা নীরবে
+         * নয়, **কারণসহ** বন্ধ হয়।
+         */
+        $validated['reset_yearly'] = $request->boolean('reset_yearly')
+            && NumberSeriesProvisioner::resetsWith($validated['format']);
+
+        if ($request->boolean('reset_yearly') && ! $validated['reset_yearly']) {
+            session()->flash('warning', __('master_data::message.reset_needs_a_year'));
+        }
 
         /*
          * অনুসর্গ খালি রাখা যায়, কিন্তু কলামটা NOT NULL।

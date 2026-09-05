@@ -335,7 +335,16 @@
                  বারোটা মডিউলে রেলের উচ্চতা ~৫৯০px, তাই সাধারণ পর্দায়
                  স্ক্রলের দরকার পড়ে না; খুব ছোট উচ্চতায় বাইরের `aside`
                  নিজেই স্ক্রল করে। --}}
-            <nav class="flex w-(--spacing-sidebar-icon) shrink-0 flex-col items-center gap-1.5
+            {{-- ⭐ `gap-1` — মালিকের নির্দেশ, ৫ সেপ্টেম্বর ২০২৬:
+                 *"মডিউল টু মডিউল গ্যাপ কমাও সাইড মেনু বারে।"*
+
+                 ⓘ আগে `gap-1.5`, আর এই থিমে `1rem = 20px` — অর্থাৎ
+                 ৭.৫px, সাথে টাইলের নিজের প্যাডিং যোগ হয়ে চোখে আরও বড়
+                 লাগত। এখন ৫px।
+
+                 ⚠️ শূন্য করা হয়নি: উপরের মন্তব্যের কারণটা এখনো খাটে —
+                 ফাঁক না থাকলে টাইলগুলো জোড়া লেগে একটা লম্বা ফিতা হত। --}}
+            <nav class="flex w-(--spacing-sidebar-icon) shrink-0 flex-col items-center gap-1
                         overflow-visible border-e border-black/10 bg-(--color-sidebar) py-2"
                  aria-label="{{ __('core.a11y.module_navigation') }}">
 
@@ -402,15 +411,62 @@
                         $first = collect($module['groups'])->flatten(1)->firstWhere('url', '!==', null);
 
                         $opensSection = $module['section'] !== $shownSection;
+
+                        /*
+                         * ⛔ রেলের একদম প্রথম সারির উপরে রেখা নয়।
+                         *
+                         * ── কীভাবে ধরা পড়ল ─────────────────────────────
+                         * ৫ সেপ্টেম্বর ২০২৬, রেখাটা সোনালি ও মোটা করার
+                         * পর ব্রাউজারে দেখা গেল **ড্যাশবোর্ডের সাদা
+                         * `border-b`-র ঠিক নিচেই একটা সোনালি দাগ** —
+                         * পরপর দুইটা রেখা, দুই রঙে।
+                         *
+                         * ⚠️ দোষটা নতুন নয়, **পুরনো আর অদৃশ্য**: আগে
+                         * রেখাটা ২০% সাদা ছিল বলে ওই জোড়াটা কেউ দেখেনি।
+                         * ⓘ নিচের মন্তব্যে নিয়মটা লেখাই ছিল ("top দলে
+                         * রেখা নেই"), কিন্তু কোডে বসানো ছিল না — `top`
+                         * দলে যখন এই ব্যবহারকারীর একটাও মডিউল নেই, তখন
+                         * প্রথম দলটা হয়ে যায় FINANCE, আর সে রেখা পায়।
+                         *
+                         * ⭐ তাই শর্তটা দলের নাম দেখে নয়, **উপরে কিছু
+                         * আছে কি না** দেখে: `$shownSection` তখনো `null`
+                         * মানে এটাই রেলের প্রথম সারি, আর তার উপরে ভাগ
+                         * করার মতো কিছুই নেই।
+                         */
+                        $firstInRail = $shownSection === null;
+
                         $shownSection = $module['section'];
                         $sectionLabel = $module['section'] === 'top'
                             ? null
                             : __('core.nav_section.'.$module['section']);
                     @endphp
 
-                    @if ($opensSection && $sectionLabel)
+                    @if ($opensSection && $sectionLabel && ! $firstInRail)
+                        {{-- ⚠️ `/35`, আগে `/20` ছিল — ৫ সেপ্টেম্বর ২০২৬।
+
+                             ⓘ রেলের জমিন এখন অ্যাকসেন্টের `900` শেড, আর
+                             ২০% সাদা ওতে প্রায় মিলিয়ে যেত। ⛔ ব্রাউজারে
+                             ছবি তুলে দেখা গেল ভাগগুলোর মাঝে রেখা আছে
+                             বলে বোঝাই যায় না — আর রেখাটাই একমাত্র জিনিস
+                             যা বলে "এখানে একটা ভাগ শেষ হলো"।
+
+                        ⭐ আর রঙটা সাদা নয়, **সোনালি** — মালিকের নির্দেশ,
+                             ৫ সেপ্টেম্বর ২০২৬: *"গ্রুপ ভাগের রেখা মোটা করো,
+                             গোল্ডেন কালার দাও।"*
+
+                             ⓘ রেলে সোনালি আগে থেকেই একটা অর্থ বহন করে —
+                             চলতি মডিউলের বাঁ কিনারার দাগ
+                             (`--color-brand-gold`)। ⚠️ তাই এখানে নতুন কোনো
+                             রঙ ঢোকেনি, ঐ একই টোকেন — আর সোনালি ABOS-এর
+                             লোগোর রঙ, প্রতিটা অ্যাকসেন্টের `900` জমিনেই
+                             পড়া যায়।
+
+                             ⚠️ `/60` — পুরো ঘনত্বে দিলে রেখাটা চলতি
+                             মডিউলের দাগের মতোই উজ্জ্বল হত, আর চোখ দুইটাকে
+                             এক জিনিস ভাবত। ভাগ বোঝানোই এর কাজ। --}}
                         <div role="separator" aria-label="{{ $sectionLabel }}"
-                             class="my-1 h-px w-7 shrink-0 bg-white/20"></div>
+                             class="my-1 h-0.5 w-8 shrink-0 rounded-full
+                                    bg-(--color-brand-gold)/60"></div>
                     @endif
 
                     {{--
@@ -464,10 +520,21 @@
                                 ⚠️ দুই জায়গায় দুই রকম "এখানে আছি" থাকলে
                                 চোখকে দুইটা নিয়ম শিখতে হত। --}}
                            @class([
-                               'relative flex h-11 w-full items-center justify-center transition-transform',
+                               {{-- ⭐ `h-8` = ৪০px — নকশার নমুনার মাপ, হুবহু:
+                                    `.rail a{width:40px;height:40px}`
+                                    (`brand/design/_ui.css`)।
+
+                                    ⛔ আগে `h-11` = ৫৫px। মালিক ছবিতে টাইলের
+                                    ফাঁকা অংশগুলো লাল বাক্সে ঘিরে দেখিয়েছেন
+                                    (*"এই ফাঁকগুলো কমাও"*) — navy রূপে জমিন
+                                    স্বচ্ছ, তাই ৪০px টাইলের চারপাশের ১৫px
+                                    **ফাঁক হিসেবেই দেখা যেত**। ⓘ রঙিন টাইলে
+                                    যেটা প্যাডিং, স্বচ্ছ টাইলে সেটাই শূন্যতা।
+
+                                    ⚠️ চিহ্নটা এখানে নেই, ভেতরের টাইলে —
+                                    নিচের মন্তব্য দেখুন। --}}
+                               'relative flex h-8 w-full items-center justify-center transition-transform',
                                'hover:-translate-y-px' => ! $isActive,
-                               'before:absolute before:inset-y-0 before:start-0 before:w-1
-                                before:bg-(--color-brand-gold)' => $isActive,
                            ])
                            @if ($isActive) aria-current="true" @endif
                            title="{{ $module['label'] }}">
@@ -481,16 +548,52 @@
 
                                  ⭐ এখন রূপ নিজের মান বসায়: ডিফল্টে আজকের রঙিন টাইল,
                                  ABOS-এর নমুনায় স্বচ্ছ — কেবল আইকনটাই থাকে। --}}
-                            <span @class([
-                                      'grid size-9 place-items-center transition-shadow',
-                                      'shadow-lg' => $isActive,
-                                  ])
-                                  style="background: var(--rail-tile-bg);
+                            {{-- ⭐ "এখানে আছি" চিহ্নটা টাইলের **গায়ে**, রেলের
+                                 দেয়ালে নয় — মালিকের নির্দেশ, ৫ সেপ্টেম্বর ২০২৬।
+
+                                 তিনি দুইটা ছবি পাশাপাশি রেখে জিজ্ঞেস করেছিলেন
+                                 "কোনটা সুন্দর", তারপর: *"আমি এই রকম চাই ১০০%।"*
+                                 ⓘ আর ছবিটা কল্পনা নয় — **আমাদেরই নকশার নমুনা**,
+                                 `brand/design/02-form.html`।
+
+                                 ⛔ আগে দাগটা ছিল `a`-র `::before`-এ, রেলের
+                                 বাইরের কিনারা ঘেঁষে সোজা। টাইল আর দাগের মাঝে
+                                 ফাঁকা জায়গা থাকত, তাই চোখ দুইটাকে জোড়া লাগাত না।
+
+                                 ⚠️ আর `shadow-lg` তুলে দেওয়া হয়েছে: নমুনায়
+                                 চালু টাইলের কোনো ছায়া নেই, আর ইনলাইন
+                                 `box-shadow` ওটাকে এমনিতেই বাতিল করত — ক্লাসটা
+                                 থাকলে পরের পাঠক ভাবত ছায়াটা আসে। --}}
+                            <span class="grid size-8 place-items-center transition-shadow"
+                                  style="background: {{ $isActive
+                                             ? 'var(--rail-tile-on-bg, var(--rail-tile-bg))'
+                                             : 'var(--rail-tile-bg)' }};
                                          border-radius: var(--rail-tile-radius);
                                          color: var(--rail-tile-ink);
+                                         @if ($isActive) box-shadow: inset var(--rail-tile-on-edge-w) 0 0 var(--rail-tile-on-edge); @endif
                                          --color-module-current: var(--color-module-{{ $module['code'] }}, var(--color-brand-600))"
                                   aria-hidden="true">
-                                <x-ui.icon :name="$module['icon']" :size="19" />
+                                {{-- ⭐ `drawn` — আঁকা চিহ্ন, ইমোজি নয়।
+
+                                     মালিক: *"এগুলো এখনো ইমোজি, ছোট স্পষ্ট
+                                     বোঝা যায় না।"* ⓘ ১৯px-এ ইমোজি ঘোলা, আর
+                                     প্রতিটা OS আলাদা করে আঁকে।
+
+                                     ⚠️ আর আসল কারণ রঙের: ইমোজির রং আমাদের
+                                     হাতে নেই। তিনি রেলটা অ্যাকসেন্টের সাথে
+                                     সিঙ্ক করতে চান, আর 🚚 সবসময় কমলাই থাকত।
+                                     ⭐ SVG `currentColor` নেয়, তাই সে
+                                     `--rail-tile-ink` ধরে জমিনের সাথে বদলায়।
+
+                                     ⓘ ড্যাশবোর্ডের বড় কার্ডে ইমোজি থেকে
+                                     গেল — ওখানে জায়গা আছে, আর সমস্যাটা
+                                     সরু রেলের। --}}
+                                {{-- ⭐ `22`, আগে `19` — মালিক: *"SVG গুলো আরো বড়
+                                     করো।"* ⓘ টাইল ছোট হওয়ার পরেও চিহ্নটা
+                                     বড় হয়েছে, তাই ফাঁক কমেছে **আর** চিহ্ন
+                                     স্পষ্ট হয়েছে — দুইটা একে অন্যের বিপরীত
+                                     নয়, ফাঁকটাই চিহ্নের জায়গা খাচ্ছিল। --}}
+                                <x-ui.icon :name="$module['icon']" :size="22" drawn />
                             </span>
 
                             <span class="sr-only">{{ $module['label'] }}</span>
