@@ -14,4 +14,5 @@ return [
     'hand_loan' => 'হাতধার',
     'withdrawal' => 'উত্তোলন',
     'income' => 'আয়',
+    'rental' => 'ভাড়ার চুক্তি ও জামানত',
 ];

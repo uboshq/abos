@@ -14,4 +14,5 @@ return [
     'hand_loan' => 'Hand Loans',
     'withdrawal' => 'Withdrawals',
     'income' => 'Income',
+    'rental' => 'Rentals & deposits',
 ];

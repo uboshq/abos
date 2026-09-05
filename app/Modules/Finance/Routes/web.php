@@ -8,6 +8,7 @@ use App\Modules\Finance\Http\Controllers\ExpenseController;
 use App\Modules\Finance\Http\Controllers\HandLoanController;
 use App\Modules\Finance\Http\Controllers\IncomeController;
 use App\Modules\Finance\Http\Controllers\PlanController;
+use App\Modules\Finance\Http\Controllers\RentalContractController;
 use App\Modules\Finance\Http\Controllers\WithdrawalController;
 use App\Modules\Finance\Models\DepositKind;
 use Illuminate\Support\Facades\Route;
@@ -108,6 +109,37 @@ Route::middleware('auth')->prefix('finance')->group(function () {
 
         Route::post('/{handLoan}/settle', [HandLoanController::class, 'settle'])
             ->whereNumber('handLoan')->name('settle');
+    });
+
+    /*
+     * ভাড়ার চুক্তি ও জামানত।
+     *
+     * ⓘ হাতধারের ঠিক পরে, কারণ দুইটাই একই আকৃতির: একটা চলমান হিসাব,
+     * তার উপরে ঘটনা, আর প্রতিটা ঘটনা একটা ভাউচার।
+     */
+    Route::prefix('rentals')->name('rental.')->group(function () {
+        Route::get('/', [RentalContractController::class, 'index'])->name('index');
+        Route::post('/', [RentalContractController::class, 'store'])->name('store');
+
+        Route::get('/{contract}', [RentalContractController::class, 'show'])
+            ->whereNumber('contract')->name('show');
+
+        Route::post('/{contract}/adjust', [RentalContractController::class, 'adjust'])
+            ->whereNumber('contract')->name('adjust');
+
+        /*
+         * ⓘ শর্ত বদল `PUT` — সে বিদ্যমান কিছু বদলায়, নতুন কিছু বানায়
+         * না। বাকিগুলো `POST`, কারণ প্রতিটা একটা **নতুন ঘটনা**: এক
+         * মাসের ভাড়া, জামানতে টাকা, চুক্তি শেষ।
+         */
+        Route::put('/{contract}', [RentalContractController::class, 'revise'])
+            ->whereNumber('contract')->name('revise');
+
+        Route::post('/{contract}/top-up', [RentalContractController::class, 'topUp'])
+            ->whereNumber('contract')->name('topup');
+
+        Route::post('/{contract}/close', [RentalContractController::class, 'close'])
+            ->whereNumber('contract')->name('close');
     });
 
     Route::prefix('deposits')->name('deposit.')->group(function () {
