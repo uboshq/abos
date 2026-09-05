@@ -20,4 +20,5 @@ return [
     'approval' => 'Approval',
 
     'screens' => 'Which screens appear',
+    'counter' => 'Counter',
 ];

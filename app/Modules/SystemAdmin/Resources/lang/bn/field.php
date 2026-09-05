@@ -22,4 +22,5 @@ return [
     'permission_count' => 'কয়টা অনুমতি',
     'user_count' => 'কতজন',
     'last_login' => 'শেষ ঢোকা',
+    'logo' => 'প্রতিষ্ঠানের লোগো',
 ];

@@ -22,4 +22,5 @@ return [
     'permission_count' => 'Permissions',
     'user_count' => 'Users',
     'last_login' => 'Last signed in',
+    'logo' => 'Company logo',
 ];

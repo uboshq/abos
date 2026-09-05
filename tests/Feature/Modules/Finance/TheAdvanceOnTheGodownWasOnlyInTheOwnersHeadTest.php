@@ -31,13 +31,15 @@ class TheAdvanceOnTheGodownWasOnlyInTheOwnersHeadTest extends TestCase
 
     private RentalContractService $contracts;
 
+    private Company $company;
+
     protected function setUp(): void
     {
         parent::setUp();
         $this->seed(DemoSeeder::class);
 
-        $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
-        CompanyContext::set($company->id, $company->defaultBranch()?->id);
+        $this->company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
+        CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
 
         $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
 
@@ -397,6 +399,64 @@ class TheAdvanceOnTheGodownWasOnlyInTheOwnersHeadTest extends TestCase
             'monthly_rent' => '80000',
             'monthly_adjustment' => '80000',
         ]);
+    }
+
+    /**
+     * ⛔ দরজাগুলো সত্যিই খোলে — সার্ভিস নয়, **রুট** ধরে।
+     *
+     * ── কেন এই পরীক্ষাটা আলাদা করে লাগল, ৫ সেপ্টেম্বর ২০২৬ ──────────
+     * উপরের এগারোটা পরীক্ষা সবুজ ছিল, আর তবু পর্দায় বোতাম চাপলে **৪০৩**
+     * আসত। কারণ কন্ট্রোলারে পুরনো খসড়ার একটা চাবি রয়ে গিয়েছিল
+     * (`finance.expense.create`) — যেটার অস্তিত্বই নেই, আর Gate অচেনা
+     * চাবিকে "না" বলে।
+     *
+     * ⚠️ উপরের পরীক্ষাগুলো [[RentalContractService]]-কে **সরাসরি** ডাকে,
+     * তাই তারা দরজাটা কোনোদিন ছোঁয়নি। ⓘ ধরা পড়েছে ব্রাউজারে হাতে
+     * চালিয়ে — আর ব্রাউজার রোজ খোলা হয় না, তাই নিয়মটা এখানে বাঁধা।
+     *
+     * ⭐ প্রতিটা লেখার দরজা একবার করে ছোঁয়া হয়। **৪০৩ ছাড়া যেকোনো উত্তর
+     * চলবে** — এমনকি ভুল ইনপুটের ৪২২-ও — কারণ প্রশ্নটা "কাজটা হলো কি না"
+     * নয়, "দরজাটা আদৌ খোলে কি না"।
+     */
+    public function test_every_door_opens_for_someone_who_holds_the_keys(): void
+    {
+        $contract = $this->godown();
+
+        $doors = [
+            ['post', route('finance.rental.store'), ['counterparty' => 'দরজা', 'deposit_amount' => '1', 'monthly_rent' => '1', 'starts_on' => '2026-09-01', 'term_months' => 1]],
+            ['post', route('finance.rental.adjust', $contract), ['for_month' => '2027-05-01']],
+            ['put', route('finance.rental.revise', $contract), ['monthly_rent' => '30000']],
+            ['post', route('finance.rental.topup', $contract), ['amount' => '1', 'money_account_id' => $this->cash()->id]],
+            ['post', route('finance.rental.close', $contract), []],
+        ];
+
+        foreach ($doors as [$verb, $url, $payload]) {
+            $response = $this->from(route('finance.rental.show', $contract))->{$verb}($url, $payload);
+
+            $this->assertNotSame(403, $response->getStatusCode(),
+                "দরজাটা বন্ধ: {$verb} {$url} — কন্ট্রোলারের অনুমতির চাবিটা কি সত্যিই আছে?");
+        }
+
+        /* দেখার দুইটা দরজাও — ওগুলো ভিন্ন চাবি ব্যবহার করে। */
+        $this->get(route('finance.rental.index'))->assertOk();
+        $this->get(route('finance.rental.show', $contract))->assertOk();
+    }
+
+    /**
+     * ⛔ আর চাবি না থাকলে দরজাগুলো বন্ধই থাকে।
+     *
+     * ⚠️ উপরের পরীক্ষাটা একা থাকলে "সবাইকে ঢুকতে দাও" লিখেও সবুজ হত।
+     */
+    public function test_the_doors_stay_shut_for_someone_without_the_keys(): void
+    {
+        $stranger = User::factory()->create([
+            'current_company_id' => $this->company->id,
+            'current_branch_id' => $this->company->defaultBranch()?->id,
+        ]);
+
+        $this->actingAs($stranger)
+            ->get(route('finance.rental.index'))
+            ->assertForbidden();
     }
 
     private function godown(): RentalContract

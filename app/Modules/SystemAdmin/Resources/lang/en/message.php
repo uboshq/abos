@@ -34,4 +34,5 @@ return [
     'scope_house_note' => 'Warehouse limit. Tick nothing and they see stock in every warehouse. Tick some and they see only those.',
     'scope_kind_note' => 'Which :kind they may see. Tick nothing and they see them all.',
     'unsaved' => 'unsaved changes',
+    'logo_hint' => 'PNG, JPG or WebP, up to 2 MB. This is what prints on invoices and bills, so use a clear, wide image rather than a tall one.',
 ];

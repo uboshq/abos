@@ -61,7 +61,21 @@ class ControlPanelController extends Controller implements HasMiddleware
             'menu' => $this->menu->forUser($request->user()),
             'tab' => $tab,
             'tabs' => $this->tabs(),
-            'modules' => $this->byModule(),
+
+            /*
+             * ⭐ মডিউল-পেরোনো ট্যাব হলে **কেবল সেই ট্যাবের সারিগুলো**।
+             *
+             * ⓘ ব্লেড একটাই লুপ চালায় (`$modules`), তাই এখানে ঠিক
+             * জিনিসটা ভরে দিলে পর্দার কোনো নতুন শাখা লাগে না — আর
+             * দুইটা শাখা মানে একদিন একটায় বদল, অন্যটায় নয়।
+             *
+             * ⚠️ সারিগুলো এখানেও **একই সেটিং**, কপি নয়: একই চাবি, একই
+             * `settings->get()`। তাই এক দরজায় বদলালে অন্য দরজাতেও
+             * বদলায় — মালিকের "সেটিংস এক জায়গায়" নিয়মটা অক্ষত।
+             */
+            'modules' => in_array($tab, $this->crossTabs(), true)
+                ? $this->crossTab($tab)
+                : $this->byModule(),
 
             /*
              * এই ট্যাবের গাছটুকুই — গোটা গাছ নয়।
@@ -169,11 +183,113 @@ class ControlPanelController extends Controller implements HasMiddleware
          * ঘোষণা করলেও তার ট্যাব লাগে — নাহলে তার পর্দাগুলো বন্ধ করার
          * কোনো জায়গাই থাকত না।
          */
+        /*
+         * ⭐ মডিউল পেরোনো ট্যাব — মালিকের নির্দেশ, ৫ সেপ্টেম্বর ২০২৬।
+         *
+         * ── কেন এটা লাগল ────────────────────────────────────────────
+         * *"Direct Purchase, Direct Sales — এইগুলোর সুইচগুলো কন্ট্রোল
+         * প্যানেলে আলাদা ট্যাবে রাখো।"* কিন্তু ওই দুইটা **দুই
+         * মডিউলে**, আর আজকের প্রতিটা ট্যাব একটা করে মডিউল। কাউন্টারের
+         * লোক একটাই কাজ করেন, অথচ তার সুইচ খুঁজতে দুই জায়গায় যেতে হত।
+         *
+         * ── ⚠️ কোরে কোনো মডিউলের নাম নেই, ইচ্ছাকৃতভাবে ──────────────
+         * সহজ পথ ছিল এখানে "purchase আর sales-এর অমুক সেটিংগুলো" লিখে
+         * দেওয়া। ⛔ তাতে §১৯.৭ ভাঙত: কোর জানত কোন মডিউল আছে আর তাদের
+         * সেটিংয়ের নাম কী। আর কাল POS বা রেস্টুরেন্টের কাউন্টার এলে
+         * **এই ফাইলটা আবার খুলতে হত**।
+         *
+         * ⭐ বদলে সেটিং নিজেই বলে সে কোথায় বসতে চায় —
+         * `'tab' => 'counter'`। ট্যাবটা তখন নিজে থেকেই জন্মায়, আর
+         * কেউ ঘোষণা না করলে জন্মায়ই না (খালি ট্যাব নেই)।
+         */
+        foreach ($this->crossTabs() as $key) {
+            $tabs[] = ['key' => $key, 'label' => __('system_admin::settings_group.'.$key)];
+        }
+
         foreach ($this->switches->tree() as $module) {
             $tabs[] = ['key' => $module['code'], 'label' => $module['label']];
         }
 
         return $tabs;
+    }
+
+    /**
+     * যে ট্যাবগুলো মডিউল পেরিয়ে যায় — ঘোষণা থেকে গোনা।
+     *
+     * ⓘ ক্রমটা ঘোষণার ক্রম নয়, বর্ণানুক্রমও নয় — **প্রথম যে সেটিং
+     * ট্যাবটার নাম বলল** সেই ক্রম। ⚠️ নাহলে একটা মডিউল যোগ হলেই
+     * ট্যাবের সারি নড়ত, আর যিনি অভ্যাসে তৃতীয় ট্যাবে ক্লিক করেন তিনি
+     * অন্য জায়গায় গিয়ে পড়তেন।
+     *
+     * @return list<string>
+     */
+    private function crossTabs(): array
+    {
+        $found = [];
+
+        foreach ($this->settings->definitions() as $definition) {
+            $tab = $definition['tab'] ?? null;
+
+            if ($tab !== null && ! in_array($tab, $found, true)) {
+                $found[] = (string) $tab;
+            }
+        }
+
+        return $found;
+    }
+
+    /**
+     * একটা মডিউল-পেরোনো ট্যাবের সারিগুলো — মডিউল ধরে সাজানো।
+     *
+     * ── ⭐ সারিগুলো পুরনো জায়গা থেকে **সরে না** ──────────────────────
+     * মালিকের সিদ্ধান্ত ছাপার সেটিংস নিয়ে: *"দুই জায়গায়"*। ⓘ যিনি
+     * আজ ক্রয়ের ট্যাবে গিয়ে ছাপার সুইচটা বদলান, তিনি কাল ওটা না পেলে
+     * ভাবতেন জিনিসটা চলে গেছে।
+     *
+     * ⚠️ তাই এটা কোনো **সরানো** নয়, দ্বিতীয় একটা **দরজা** — একই সারি,
+     * একই চাবি, কেবল আরেকটা পথ। দুইটা কপি নয় বলে একটা বদলালে অন্যটাও
+     * বদলায়।
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function crossTab(string $tab): array
+    {
+        $definitions = $this->settings->definitions();
+        $modules = [];
+
+        foreach ($this->registry->all() as $module) {
+            $items = [];
+
+            foreach ($definitions as $key => $definition) {
+                if (($definition['module'] ?? null) !== $module->code) {
+                    continue;
+                }
+
+                if (($definition['menu'] ?? false) || ($definition['tab'] ?? null) !== $tab) {
+                    continue;
+                }
+
+                $items[] = [...$definition, 'key' => $key, 'value' => $this->settings->get($key)];
+            }
+
+            if ($items === []) {
+                continue;
+            }
+
+            /*
+             * ⓘ মডিউলের নামটা রাখা হয় — একই ট্যাবে ক্রয় আর বিক্রয়ের
+             * সুইচ পাশাপাশি থাকলে কোনটা কোথাকার তা না বললে বিভ্রান্তি
+             * হত, বিশেষ করে যখন দুইটার নাম প্রায় এক ("সরাসরি ক্রয়" আর
+             * "সরাসরি বিক্রয়")।
+             */
+            $modules[] = [
+                'code' => $module->code,
+                'label' => $module->label(),
+                'groups' => [$tab => $items],
+            ];
+        }
+
+        return $modules;
     }
 
     public function update(Request $request): RedirectResponse
