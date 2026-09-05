@@ -636,7 +636,7 @@ final class PurchaseReceiptService
 
     private function account(string $code): Account
     {
-        $account = Account::query()->where('code', $code)->first();
+        $account = Account::query()->postable()->where('code', $code)->first();
 
         if ($account === null) {
             // ছকটা বসানো হয়নি — চুপচাপ অন্য খাতে বসানোর চেয়ে থেমে যাওয়া ভালো

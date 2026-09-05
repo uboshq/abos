@@ -242,17 +242,20 @@
                                 কিন্তু একই মুহূর্তে ছাড়া আর কখনো জানা যায় না —
                                 কার্টনটা তখন হাতে, পরে আর নয়।
 
-                                ⛔ `x-ui.date` ব্যবহার করা যায়নি: সে `name` একটা
-                                স্থির প্রপ হিসেবে নেয়, আর এখানে নামটা সারির ক্রম
-                                ধরে বাঁধা (`lines[${i}][…]`)। ⚠️ ফল: তারিখটা
-                                ব্রাউজারের নিজের ছকে আঁকা হয়, কোম্পানির ছকে নয় —
-                                একটা স্বীকৃত ফাঁক। ⓘ সঠিক সমাধান হলো
-                                `x-ui.date`-কে বাঁধা নাম নিতে শেখানো, আর সেটা
-                                কম্পোনেন্টের মালিকের কাজ।
+                                ⭐ ৫ সেপ্টেম্বর ২০২৬ — এখানে আগে কাঁচা
+                                `<input type="date">` ছিল, আর পাশে লেখা ছিল কেন:
+                                `x-ui.date` নামটা স্থির প্রপ হিসেবে নিত, অথচ এখানে
+                                নামটা সারির ক্রম ধরে বাঁধা (`lines[${i}][…]`)। ⛔ ফল:
+                                একমাত্র এই ঘরটাতেই তারিখ ব্রাউজারের ছকে আঁকা হত,
+                                কোম্পানির ছকে নয়।
 
-                                ⓘ মান হিসেবে ISO যায় (`type="date"` তাই দেয়), তাই
-                                সার্ভারে কোনো অস্পষ্টতা নেই — অস্পষ্টতা কেবল
-                                দেখায়।
+                                ⓘ সমাধানটা ওই মন্তব্যেই লেখা ছিল — কম্পোনেন্টকে
+                                বাঁধা নাম নিতে শেখানো। সেটা করা হয়েছে
+                                (`bind-name` · `bind-iso` · `bind-model`), তাই ফাঁকটা
+                                আর নেই।
+
+                                ⓘ সার্ভারে যায় ISO-ই, আগের মতোই — বদলেছে কেবল
+                                দেখাটা।
                             --}}
                             <td class="cell-input" data-label="{{ __('inventory::field.batch_no') }}">
                                 <input type="text" maxlength="60"
@@ -264,11 +267,15 @@
                             </td>
 
                             <td class="cell-input" data-label="{{ __('inventory::field.expiry_date') }}">
-                                <input type="date"
-                                       x-show="tracksLot(row)"
-                                       :name="`lines[${i}][expiry_date]`" x-model="row.expiry_date"
-                                       class="h-(--spacing-field-compact) w-full sm:w-36 rounded-(--radius-field) border
-                                              border-(--color-border) bg-(--color-surface-card) px-2">
+                                {{-- ⚠️ x-show মোড়কের উপরে: কম্পোনেন্টের `$attributes`
+                                     ভেতরের লেখার ঘরে বসে, বাইরের `<div>`-এ নয় —
+                                     সরাসরি দিলে ঘরটা লুকাত, বাক্সটা নয়। --}}
+                                <div x-show="tracksLot(row)" class="w-full sm:w-36">
+                                    <x-ui.date name="expiry_date"
+                                               bind-name="`lines[${i}][expiry_date]`"
+                                               bind-iso="row.expiry_date"
+                                               bind-model="row.expiry_date" />
+                                </div>
                             </td>
 
                             <td class="cell-input" data-label="{{ __('inventory::field.mrp') }}">

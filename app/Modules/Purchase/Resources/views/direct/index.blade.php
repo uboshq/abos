@@ -383,7 +383,7 @@
                                              দিয়েছিল", আর সেটা মিথ্যা। আগে কখনো না কেনা থাকলে
                                              কথাটা সরাসরি লেখা থাকে। --}}
                                         <template x-if="supplierChosen && ! lastRateFor(line)">
-                                            <span class="block text-2xs text-(--color-ink-subtle)">
+                                            <span class="block text-2xs text-(--color-ink-muted)">
                                                 {{ __('purchase::message.first_from_supplier') }}
                                             </span>
                                         </template>

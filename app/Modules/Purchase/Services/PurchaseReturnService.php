@@ -572,7 +572,7 @@ final class PurchaseReturnService
 
     private function account(string $code): Account
     {
-        $account = Account::query()->where('code', $code)->first();
+        $account = Account::query()->postable()->where('code', $code)->first();
 
         if ($account === null) {
             throw ValidationException::withMessages([

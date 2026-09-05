@@ -218,5 +218,18 @@
         <p class="mt-1 max-w-(--spacing-prose-max) text-sm text-(--color-ink-muted)">
             {{ __('core.backup.restore_note') }}
         </p>
+
+        {{--
+            ⚠️ ৫ সেপ্টেম্বর ২০২৬ — এই লাইনটা মডিউল সরানোর সময় হারিয়ে
+            গিয়েছিল। ⛔ ফল: উপরের লেখাটা *"নিচের কমান্ডটা চালাতে হয়"*
+            বলত, আর নিচে কিছুই থাকত না — অর্থাৎ পর্দাটা একটা নির্দেশ
+            দেওয়ার ভান করত।
+
+            ⓘ নামটা হুবহু বসানো, যাতে দরকারের দিন কেউ মনে করার চেষ্টা
+            না করে — কপি করে বসিয়ে দিলেই হয়। ফাইল না থাকলে ছকটা
+            দেখানো হয়, কারণ তখনও কমান্ডটা জানা দরকার।
+        --}}
+        <pre class="mt-2 overflow-x-auto rounded-(--radius-field) bg-(--color-surface-sunken)
+                    px-3 py-2 font-mono text-2xs">php artisan abos:restore {{ $files->first()['name'] ?? 'abos-YYYY-MM-DD-HHMMSS.sql.gz' }}</pre>
     </section>
 </x-layouts.app>

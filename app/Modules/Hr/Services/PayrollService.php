@@ -505,7 +505,7 @@ final class PayrollService
 
     private function accountByCode(string $code): ?Account
     {
-        return Account::query()->where('code', $code)->first();
+        return Account::query()->postable()->where('code', $code)->first();
     }
 
     private function recount(PayrollRun $run): PayrollRun

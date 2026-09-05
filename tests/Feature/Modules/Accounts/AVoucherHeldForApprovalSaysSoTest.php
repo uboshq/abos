@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Modules\Accounts;
 
 use App\Core\Support\CompanyContext;
+use App\Core\Support\DocumentStatus;
 use App\Models\Company;
 use App\Models\User;
 use App\Modules\ApprovalCenter\Models\Approval;
@@ -139,7 +140,7 @@ final class AVoucherHeldForApprovalSaysSoTest extends TestCase
         );
 
         $this->assertSame(
-            Voucher::DRAFT,
+            DocumentStatus::DRAFT,
             $voucher->fresh()->status,
             'অনুমোদনের অপেক্ষায় থাকা ভাউচার খাতায় ঢুকে পড়েছে।',
         );
@@ -166,7 +167,7 @@ final class AVoucherHeldForApprovalSaysSoTest extends TestCase
             ])), false);
 
         $this->assertSame(
-            Voucher::POSTED,
+            DocumentStatus::CONFIRMED,
             $voucher->fresh()->status,
             'অনুমোদন লাগে না, তবু ভাউচারটা খাতায় যায়নি।',
         );
@@ -213,9 +214,35 @@ final class AVoucherHeldForApprovalSaysSoTest extends TestCase
             'to_account_id' => $this->anyExpenseAccount(),
             'amount' => '750',
             'narration' => 'APPROVAL-GUARD',
+
+            /*
+             * ⚠️ ৫ সেপ্টেম্বর ২০২৬ — এই একটা ঘর না দেওয়ায় হেল্পারটা
+             * নামে খসড়া বানাত, কাজে নয়।
+             *
+             * ⛔ `store()` ডিফল্টে **সেভ করলেই পোস্ট** করে (৩ সেপ্টেম্বর
+             * থেকে, "নিঃশব্দে Draft সেভ হয়ে যায়" সারানোর সময়)। তাই এখানে
+             * ফেরত আসত একটা `confirmed` ভাউচার, আর নিচের `post()` রুটটা
+             * অনুমোদনের শর্তে পৌঁছানোর আগেই ভুলে থামত — দুইটা টেস্টই
+             * বার্তা না পেয়ে লাল হত, অথচ ফিচারটা ঠিকই ছিল।
+             *
+             * ⓘ পর্দাতেও ঘরটা আছে ("খসড়া রাখুন"), তাই এটা টেস্টের
+             * সুবিধা নয় — মানুষ যেভাবে খসড়া বানায়, ঠিক সেভাবেই।
+             */
+            'save_as_draft' => 1,
         ])->assertSessionHasNoErrors()->assertRedirect();
 
-        return Voucher::query()->latest('id')->firstOrFail();
+        $voucher = Voucher::query()->latest('id')->firstOrFail();
+
+        /*
+         * ⭐ হেল্পারটা নিজের প্রতিশ্রুতি নিজেই মেপে নেয়।
+         *
+         * ⓘ উপরের ঘরটা কাল আবার হারালে দুইটা টেস্ট গোলমেলে বার্তা নিয়ে
+         * লাল হত; এখানে থামলে কারণটা প্রথম লাইনেই লেখা থাকে।
+         */
+        $this->assertSame(DocumentStatus::DRAFT, $voucher->status,
+            'হেল্পারটা খসড়া দেয়নি — `save_as_draft` কি আর কাজ করছে?');
+
+        return $voucher;
     }
 
     /*

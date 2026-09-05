@@ -255,7 +255,7 @@ class PortalController extends Controller
 
         return view('sales::portal.claim', [
             'customer' => $customer,
-            'banks' => Account::query()
+            'banks' => Account::query()->postable()
                 ->where('is_bank', true)->active()->orderBy('code')->get(),
         ]);
     }

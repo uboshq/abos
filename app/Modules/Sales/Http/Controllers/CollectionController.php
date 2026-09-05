@@ -249,7 +249,7 @@ class CollectionController extends Controller implements HasMiddleware
     {
         return [
             'customers' => Customer::query()->active()->orderBy('name_en')->get(),
-            'accounts' => Account::query()
+            'accounts' => Account::query()->postable()
                 ->whereIn('code', StandardChart::MONEY_PARENTS)
                 ->orWhereIn('parent_id', Account::query()
                     ->whereIn('code', StandardChart::MONEY_PARENTS)->select('id'))

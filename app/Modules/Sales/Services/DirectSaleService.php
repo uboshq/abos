@@ -726,7 +726,7 @@ final class DirectSaleService
      */
     private function chequesInHandAccount(): Account
     {
-        $account = Account::query()
+        $account = Account::query()->postable()
             ->where('code', StandardChart::CHEQUES_IN_HAND)
             ->first();
 

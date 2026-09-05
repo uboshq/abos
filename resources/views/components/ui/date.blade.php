@@ -16,6 +16,28 @@
      * তাই জমাটা কম্পোনেন্ট থেকেই ডাকা হয়, মান পাকা হওয়ার পরে।
      */
     'submitOnChange' => false,
+
+    /*
+     * Alpine-এর লুপের ভেতরে বসার জন্য — নামটা সারির ক্রম ধরে বাঁধা।
+     *
+     * ── কেন এটা যোগ করতে হলো, ৫ সেপ্টেম্বর ২০২৬ ─────────────────────
+     * লাইন-এডিটরে তারিখের ঘরটা কাঁচা `<input type="date">` ছিল, আর
+     * তার পাশে লেখা ছিল কেন: এই কম্পোনেন্ট `name` একটা স্থির প্রপ
+     * হিসেবে নেয়, অথচ ওখানে নামটা `lines[${i}][expiry_date]`।
+     *
+     * ⛔ ফল: ওই একটা ঘরে তারিখটা ব্রাউজারের নিজের ছকে আঁকা হত। ⚠️ আর
+     * en-US-এ `05/06` মানে ৬ মে, বাংলাদেশে ৫ জুন — দুইটাই বৈধ, তাই
+     * ভুলটা খাতা থেকে ধরা যায় না।
+     *
+     * ⭐ সমাধানটা সেখানেই লেখা ছিল: *"`x-ui.date`-কে বাঁধা নাম নিতে
+     * শেখানো, আর সেটা কম্পোনেন্টের মালিকের কাজ।"* — এই তিনটা প্রপ
+     * ঠিক সেটাই।
+     *
+     * ⓘ কোনোটাই না দিলে আচরণ হুবহু আগের মতো।
+     */
+    'bindName' => null,   // x-bind:name — Alpine expression
+    'bindIso' => null,    // শুরুর মান কোথা থেকে — Alpine expression
+    'bindModel' => null,  // পাকা ISO কোথায় ফিরে যাবে — Alpine expression
 ])
 
 {{--
@@ -51,7 +73,19 @@
     $iso = $value ? \Illuminate\Support\Carbon::parse($value)->toDateString() : '';
 @endphp
 
-<div class="relative" x-data="abosDate(@js($iso), @js((bool) $submitOnChange))">
+@php
+    /*
+     * ⚠️ এই টুকরোটা `{{ }}`-এর ভেতরে টার্নারি হিসেবে লেখা যায় না।
+     *
+     * ওখানে `'@js($iso)'` নিছক একটা স্ট্রিং — Blade `@js`-কে কম্পাইলের
+     * সময় দেখে, রানটাইমে নয়। ⛔ ফল হত পর্দায় হুবহু `@js($iso)` লেখা।
+     * ⓘ তাই বীজটা এখানেই পাকা করে নেওয়া হয়।
+     */
+    $seed = $bindIso !== null ? '('.$bindIso." ?? '')" : json_encode($iso);
+@endphp
+
+<div class="relative" x-data="abosDate({{ $seed }}, {{ json_encode((bool) $submitOnChange) }})"
+     @if ($bindModel) x-effect="{{ $bindModel }} = iso" @endif>
     <input type="text"
            id="{{ $id }}"
            x-model="text"
@@ -74,7 +108,7 @@
            ]) }}>
 
     {{-- সার্ভারে যায় এটাই — ISO, তাই ব্যাকএন্ডে কোনো বদল লাগেনি --}}
-    <input type="hidden" name="{{ $name }}" x-bind:value="iso">
+    <input type="hidden" @if ($bindName) x-bind:name="{{ $bindName }}" @else name="{{ $name }}" @endif x-bind:value="iso">
 
     {{-- ব্রাউজারের নিজের পিকার — দেখা যায় না, কিন্তু কাজ করে।
          showPicker() Chrome/Edge ৯৯+ এ আছে; না থাকলে ঘরটায় হাতে লেখা যায়,

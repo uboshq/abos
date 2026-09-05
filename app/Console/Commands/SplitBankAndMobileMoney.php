@@ -91,7 +91,7 @@ class SplitBankAndMobileMoney extends Command
                     $this->line("  {$company->code}: ১১০২-এর নাম বদলে 'ব্যাংক' হলো");
                 }
 
-                foreach (Account::query()->where('parent_id', $bank->id)->orderBy('code')->get() as $account) {
+                foreach (Account::query()->postable()->where('parent_id', $bank->id)->orderBy('code')->get() as $account) {
                     if (! $this->looksLikeMfs($account)) {
                         continue;
                     }

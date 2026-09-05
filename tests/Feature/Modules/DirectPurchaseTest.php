@@ -204,7 +204,16 @@ class DirectPurchaseTest extends TestCase
 
     public function test_one_screen_brings_the_goods_in_and_the_liability_on_the_books(): void
     {
-        $before = app(StockService::class)->availableQty($this->product, $this->warehouse);
+        /*
+         * ⚠️ `availableQty` নয়, `on_hand` — Stock Placement আসার পর
+         * (৫ সেপ্টেম্বর ২০২৬) ক্রয়ের মাল আর সরাসরি তাকে ওঠে না, কেউ
+         * বুঝে নেওয়ার আগে অপেক্ষার ঘরে বসে।
+         *
+         * ⭐ এই পরীক্ষাটার দাবি *"মাল গুদামে ঢুকেছে"*, *"মাল বেচা যায়"*
+         * নয় — তাই এখানে `place()` ডাকা হয়নি। ডাকলে সবুজ হত, কিন্তু
+         * তখন সে আর আসার কথাটা মাপত না।
+         */
+        $before = app(StockService::class)->statesFor($this->product, $this->warehouse)['on_hand'];
 
         $this->post(route('purchase.direct.store'), $this->payload())->assertRedirect();
 
@@ -214,7 +223,7 @@ class DirectPurchaseTest extends TestCase
         $this->assertSame(DocumentStatus::CONFIRMED, $bill->status);
 
         // মাল গুদামে
-        $after = app(StockService::class)->availableQty($this->product, $this->warehouse);
+        $after = app(StockService::class)->statesFor($this->product, $this->warehouse)['on_hand'];
         $this->assertSame(0, bccomp(bcsub($after, $before, 4), '100', 4));
 
         // দায় সরবরাহকারীর নামে — বিলের নিজের দাখিলাগুলো থেকেই গোনা

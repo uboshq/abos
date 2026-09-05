@@ -461,7 +461,7 @@ final class PaymentService
     {
         $account = blank($accountId)
             ? $this->tills->ensurePrimaryTill()->account
-            : Account::query()->whereKey((int) $accountId)->first();
+            : Account::query()->postable()->whereKey((int) $accountId)->first();
 
         if ($account === null) {
             throw ValidationException::withMessages([
@@ -526,7 +526,7 @@ final class PaymentService
 
     private function account(string $code): Account
     {
-        $account = Account::query()->where('code', $code)->first();
+        $account = Account::query()->postable()->where('code', $code)->first();
 
         if ($account === null) {
             throw ValidationException::withMessages([

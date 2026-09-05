@@ -186,7 +186,7 @@ class PaymentController extends Controller implements HasMiddleware
 
         return [
             'suppliers' => Supplier::query()->active()->orderBy('name_en')->get(),
-            'accounts' => Account::query()
+            'accounts' => Account::query()->postable()
                 ->whereIn('code', $moneyCodes)
                 ->orWhereIn('parent_id', Account::query()->whereIn('code', $moneyCodes)->select('id'))
                 ->orderBy('code')->get(),

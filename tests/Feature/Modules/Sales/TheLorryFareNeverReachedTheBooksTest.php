@@ -73,8 +73,14 @@ final class TheLorryFareNeverReachedTheBooksTest extends TestCase
         $this->assertNotNull($hire, 'খরচটা গাড়ির ভাড়ার খাতে (৫২১৭) বসেনি।');
         $this->assertSame('350.0000', $hire->debit);
 
-        $payable = $lines->firstWhere('code', StandardChart::PAYABLE);
-        $this->assertNotNull($payable, 'অন্য পাশটা প্রদেয়তে বসেনি — সম্ভবত নগদে গেছে।');
+        /*
+         * ⓘ ৪ সেপ্টেম্বর ২০২৬-এ প্রদেয় চার ঘরে ভাগ হয়েছে, আর গাড়ির
+         * ভাড়া এখন নিজের ঘরে (২১১৬) — সাধারণ প্রদেয়ে (২১১১) নয়।
+         * ⭐ কারণ *"এই মাসে পরিবহনে কত দিতে বাকি"* ডিপোতে রোজকার
+         * প্রশ্ন, আর দেনাটা সম্পূর্ণ আলাদা মানুষের কাছে।
+         */
+        $payable = $lines->firstWhere('code', StandardChart::TRANSPORT_PAYABLE);
+        $this->assertNotNull($payable, 'অন্য পাশটা প্রদেয় পরিবহনে (২১১৬) বসেনি — সম্ভবত নগদে গেছে।');
         $this->assertSame('350.0000', $payable->credit);
 
         /*
@@ -102,7 +108,17 @@ final class TheLorryFareNeverReachedTheBooksTest extends TestCase
         $credit = $lines->firstWhere('credit', '120.0000');
 
         $this->assertNotNull($credit);
-        $this->assertSame(StandardChart::CASH_IN_HAND, $credit->code);
+        /*
+         * ⚠️ ১১০১ নয় — ওটা একটা **দল**, আসল ক্যাশবাক্স তার সন্তান।
+         *
+         * ৫ সেপ্টেম্বর ২০২৬ পর্যন্ত এখানে ১১০১-ই বসত, আর দলের সারি
+         * কোনো যোগফলে আসে না বলে ভাড়ার টাকা প্রতিটা রিপোর্ট থেকে
+         * নীরবে হারিয়ে যেত। ⓘ এখন প্রধান ক্যাশবাক্সে বসে, ঠিক যেভাবে
+         * আদায় ও পরিশোধ বসে।
+         */
+        $this->assertTrue(str_starts_with($credit->code, StandardChart::CASH_IN_HAND.'-'),
+            "নগদটা প্রধান ক্যাশবাক্সে বসার কথা, বসেছে {$credit->code}-এ।");
+        $this->assertFalse((bool) $credit->is_group, 'দলের খাতে টাকা বসেছে।');
         $this->assertNull($credit->party_type, 'একবারের গাড়িতে কোনো পক্ষ থাকার কথা নয়।');
     }
 

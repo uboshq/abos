@@ -8,13 +8,13 @@ use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\User;
 use App\Modules\Customer\Models\Customer;
-use App\Modules\Inventory\Models\KitchenTicket;
+use App\Modules\Restaurant\Models\KitchenTicket;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Recipe;
 use App\Modules\Inventory\Models\RecipeLine;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\CostLayerService;
-use App\Modules\Inventory\Services\KitchenTicketService;
+use App\Modules\Restaurant\Services\KitchenTicketService;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\MasterData\Models\Unit;
 use App\Modules\Sales\Models\SalesInvoice;
@@ -267,13 +267,13 @@ class TheKitchenNeverKnewAnOrderHadComeTest extends TestCase
         $ticket = KitchenTicket::query()->latest('id')->firstOrFail();
         $kitchen = app(KitchenTicketService::class);
 
-        $this->get(route('inventory.kitchen.tickets'))->assertOk()->assertSee($biryani->name());
+        $this->get(route('restaurant.kitchen.tickets'))->assertOk()->assertSee($biryani->name());
 
         $kitchen->advance($ticket, KitchenTicket::COOKING);
         $kitchen->advance($ticket, KitchenTicket::READY);
         $kitchen->advance($ticket, KitchenTicket::SERVED);
 
-        $feed = $this->getJson(route('inventory.kitchen.feed'))->assertOk()->json();
+        $feed = $this->getJson(route('restaurant.kitchen.feed'))->assertOk()->json();
 
         $this->assertSame([], $feed['tickets'], 'দেওয়া টিকিটটা পর্দায় রয়ে গেছে।');
     }

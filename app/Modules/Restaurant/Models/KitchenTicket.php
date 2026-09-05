@@ -8,6 +8,18 @@ use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Models\User;
+/*
+ * ⚠️ import ছাড়া `Product::class` নিজের namespace-এ খোঁজা হত —
+ * `App\Modules\Restaurant\Models\Product`, যেটা নেই। ⛔ রান্নাঘরের
+ * পর্দায় পণ্যটা ছুঁলেই ৫০০।
+ *
+ * ⓘ ধরা পড়েছে [[ARelationPointedAtAClassThatWasNotThereTest]]-এ,
+ * ৫ সেপ্টেম্বর ২০২৬ — মূলধনের পাতায় হুবহু একই ভুল লাইভে ৫০০ দেওয়ার
+ * পর গার্ডটা লেখা হয়, আর সে প্রথম দৌড়েই এই দ্বিতীয়টা পেয়েছে।
+ *
+ * ⭐ `inventory` module.php-এর `depends_on`-এ ঘোষিত, তাই সীমানা ভাঙে না।
+ */
+use App\Modules\Inventory\Models\Product;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;

@@ -252,7 +252,7 @@ final class StockAdjustmentService
 
     private function account(string $code): Account
     {
-        $account = Account::query()
+        $account = Account::query()->postable()
             ->where('code', $code)
             ->where('company_id', CompanyContext::id())
             ->first();

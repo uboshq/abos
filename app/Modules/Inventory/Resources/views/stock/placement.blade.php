@@ -62,13 +62,13 @@
                         </header>
 
                         <div class="overflow-x-auto">
-                            <table class="w-full text-sm">
+                            <table class="ui-list w-full">
                                 <thead>
                                     <tr class="text-start text-2xs text-(--color-ink-muted)">
-                                        <th class="p-2 text-start">{{ __('inventory::field.product') }}</th>
-                                        <th class="p-2 text-start">{{ __('inventory::field.warehouse') }}</th>
-                                        <th class="p-2 text-end">{{ __('inventory::field.unplaced') }}</th>
-                                        <th class="p-2 text-end">{{ __('inventory::field.unplaced_free') }}</th>
+                                        <th class="text-start">{{ __('inventory::field.product') }}</th>
+                                        <th class="text-start">{{ __('inventory::field.warehouse') }}</th>
+                                        <th class="text-end">{{ __('inventory::field.unplaced') }}</th>
+                                        <th class="text-end">{{ __('inventory::field.unplaced_free') }}</th>
                                     </tr>
                                 </thead>
 
@@ -77,7 +77,7 @@
                                         @php $name = "lines[{$key}-{$i}]"; @endphp
 
                                         <tr class="border-t border-(--color-border)">
-                                            <td class="p-2">
+                                            <td class="">
                                                 {{ $line['product_code'] }} — {{ $line['product_name'] }}
                                                 @if ($line['batch_no'])
                                                     <span class="text-2xs text-(--color-ink-muted)">
@@ -100,9 +100,9 @@
                                                        value="{{ $paper['source_id'] }}">
                                             </td>
 
-                                            <td class="p-2">{{ $line['warehouse_name'] }}</td>
+                                            <td class="">{{ $line['warehouse_name'] }}</td>
 
-                                            <td class="p-2 text-end">
+                                            <td class="text-end">
                                                 <input type="number" step="0.0001" min="0"
                                                        max="{{ $line['waiting'] }}"
                                                        name="{{ $name }}[qty]"
@@ -112,7 +112,7 @@
                                                               bg-(--color-surface-card) px-2 text-end">
                                             </td>
 
-                                            <td class="p-2 text-end">
+                                            <td class="text-end">
                                                 @if (bccomp($line['waiting_free'], '0', 4) > 0)
                                                     <input type="number" step="0.0001" min="0"
                                                            max="{{ $line['waiting_free'] }}"

@@ -211,7 +211,7 @@ final class HandLoanService
         $toUs = '0';
         $byUs = '0';
 
-        $accounts = HandLoanAccount::query()->withCount('movements')
+        $accounts = HandLoanAccount::query()->postable()->withCount('movements')
             ->orderBy('person_name')->get();
 
         foreach ($accounts as $account) {

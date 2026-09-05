@@ -593,7 +593,14 @@ class AClonePromisedAShapeAndDrewAnotherTest extends TestCase
      */
     public function test_only_the_look_that_asks_for_a_filter_bar_gets_one(): void
     {
-        $known = ['toggle', 'bar'];
+        /*
+         * ⓘ `chips` তৃতীয় মান, ৪ সেপ্টেম্বর ২০২৬-এ যোগ হয়েছে — ABOS-এর
+         * নিজের রূপ (navy) ওটা ঘোষণা করে। ⚠️ তালিকাটা ইচ্ছাকৃতভাবে
+         * হাতে লেখা, `Ui`-এর ঘোষণা থেকে নেওয়া নয়: নতুন একটা মান
+         * নীরবে ঢুকে পড়া আর সেটা কেউ না দেখা — এই পরীক্ষাটা ঠিক
+         * সেটাই ঠেকায়। তাই মান যোগ করলে এখানেও একবার লিখতে হয়।
+         */
+        $known = ['toggle', 'bar', 'chips'];
         $open = [];
 
         foreach (Ui::keys() as $look) {
