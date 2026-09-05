@@ -92,7 +92,11 @@ final class DirectPurchaseService
             $this->writeGifts($bill, $gifts);
             $this->bringInGifts($bill->fresh(['giftLines.product']));
 
-            $this->stampSalesPrices($lines);
+            /*
+             * ⚠️ `lines.product` সাথেই আনা — `preventLazyLoading` চালু,
+             * আর না চাইলে এখানেই থেমে যেত।
+             */
+            $this->stampSalesPrices($bill->fresh(['lines.product']));
 
             $payment = $this->payNow($data, $bill);
 
@@ -315,18 +319,33 @@ final class DirectPurchaseService
      * আলাদা জিনিস, আর দ্বিতীয়টা না বসালে দাম ঠিক করার পুরো কাজটাই
      * কোথাও গিয়ে পৌঁছাত না।
      *
-     * @param  list<array<string, mixed>>  $lines
+     * ── ⛔ পর্দার সংখ্যা নয়, **বিলের সারির** সংখ্যা (৫ সেপ্টেম্বর ২০২৬) ──
+     * আগে এখানে পর্দা থেকে আসা কাঁচা `$lines` পড়া হত, আর সেটাই ছিল
+     * বাগ: *"১ বাক্স @ ১২০০"* লিখলে পর্দার `rate` মানে **বাক্সের দাম**,
+     * অথচ পণ্যের গায়ের দাম **পিসের**।
+     *
+     * ⚠️ ফল দুইটা, দুইটাই নীরব:
+     * ```
+     * purchase_price   ১২০০ বসত, ১০০-র বদলে   → পরের বার দরাদরি ভুল সংখ্যায়
+     * sale_price       ১৫০ বসত, ১২.৫০-র বদলে  → পরদিন কাউন্টারে প্রতিটা
+     *                                            পিস বাক্সের দামে বিক্রি
+     * ```
+     *
+     * ⭐ [[PurchaseBillService::replaceLines()]] দুইটাকেই মূল এককে নামায়,
+     * আর সেখানকার মন্তব্যে ঠিক এই বিপদটাই লেখা আছে। ⛔ কিন্তু তার পরেই
+     * এই পদ্ধতিটা মাস্টারে **কাঁচা সংখ্যাটাই** বসিয়ে দিত — অর্থাৎ
+     * রূপান্তরটা হত, আর পরের লাইনেই মুছে যেত।
+     *
+     * ⓘ কেন এতদিন ধরা পড়েনি: এই পর্দাটা `unit_id` **পাঠাতই না** (একক
+     * ঘর দুইটা আজ বসেছে), তাই প্যাকে কেনা কোনোদিন হয়নি। ⚠️ আজকের
+     * ভ্যাটের বাগটার হুবহু আকৃতি — **ঘরটা না থাকায় ফাঁকটা ঘুমিয়ে ছিল**।
+     *
+     * ⭐ এখন উৎস একটাই: বিলের সারি, যা ইতিমধ্যে নামানো।
      */
-    private function stampSalesPrices(array $lines): void
+    private function stampSalesPrices(PurchaseBill $bill): void
     {
-        foreach ($lines as $line) {
-            if (blank($line['sales_price'] ?? null)) {
-                continue;
-            }
-
-            $product = Product::query()->find((int) $line['product_id']);
-
-            if ($product === null) {
+        foreach ($bill->lines as $line) {
+            if ($line->sales_price === null || $line->product === null) {
                 continue;
             }
 
@@ -338,9 +357,9 @@ final class DirectPurchaseService
              * গুলিয়ে ফেলার জিনিস নয়: মজুদের মূল্য স্তর থেকেই আসে,
              * এটা শুধু চোখের সামনে রাখার একটা সংখ্যা।
              */
-            $product->forceFill([
-                'sale_price' => (string) $line['sales_price'],
-                'purchase_price' => (string) $line['rate'],
+            $line->product->forceFill([
+                'sale_price' => (string) $line->sales_price,
+                'purchase_price' => (string) $line->rate,
             ])->save();
         }
     }

@@ -59,7 +59,18 @@ return [
     'cancel_reason' => 'Reason for cancelling',
     'pending_of_order' => ':count line(s) of this order are still to arrive.',
     'paid_against' => 'Paid against :no',
-    'direct_done' => ':no — stock is in and the bill is on the books.',
+    /*
+     * Said once, at the moment it matters.
+     *
+     * The screen used to carry this as a standing blue notice above the
+     * item box. It was read on the first day and furniture by the
+     * fiftieth — and a place where nothing is ever read is where the
+     * real warnings go to die.
+     *
+     * It belongs here because here it is news: the goods have just
+     * landed, and the next thing to do is put them on a shelf.
+     */
+    'direct_done' => ':no — the goods are in and the bill is on the books. :qty are waiting to be placed.',
     'search_product' => 'Type a product name or code',
     'on_hand' => 'In stock',
     'last_rate' => 'Last rate',
