@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Inventory\Http\Controllers;
 
-use App\Core\Support\MenuBuilder;
+use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
 use App\Modules\Inventory\Models\StorageLocation;
 use App\Modules\Inventory\Models\Warehouse;
