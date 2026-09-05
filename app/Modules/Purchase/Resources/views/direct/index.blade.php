@@ -993,17 +993,76 @@
                                @focus="browsing = true"
                                @keydown.escape="browsing = false"
                                @keydown.enter.prevent="pickFirst()"
-                               placeholder="{{ __('purchase::message.search_product') }}"
+                               :placeholder="supplierId ? @js(__('purchase::message.search_product')) : @js(__('purchase::message.pick_supplier_first'))"
                                class="h-(--spacing-command) min-w-0 flex-1 border-0 bg-transparent px-1
                                       text-lg text-(--color-ink) placeholder:text-(--color-ink-placeholder)
                                       focus:outline-none">
+
+                        {{-- ── ছবির ছোট লাইনটা — সারির **ডান প্রান্তে** ──────
+
+                             মালিক (৬ সেপ্টেম্বর ২০২৬): *"Pick an item to see
+                             what is already in stock — lika dane mark kora
+                             box er jaygay rako"*।
+
+                             ⛔ আগে লাইনটা খোঁজার ঘরের **নিচে** বসত, আর একটা
+                             গোটা সারির উচ্চতা নিত — অথচ ঘরটার ডান পাশে
+                             অর্ধেক প্রস্থ খালি পড়ে থাকত।
+
+                             ⓘ `ms-auto` — সে ডান কিনারায় সরে যায়। ⚠️ আর
+                             পণ্য বাছার সাথে সাথেই মিলিয়ে যায়, কারণ তখন ঐ
+                             জায়গাটা পণ্যের নাম নেয়। --}}
+                        <span x-show="! picked" x-cloak
+                              class="ms-auto hidden truncate text-2xs text-(--color-module-purchase) sm:block">
+                            {{ __('purchase::message.pick_item_hint') }}
+                        </span>
                     </div>
 
-                    {{-- ছবির ছোট লাইনটা — পণ্য না বাছা পর্যন্ত কেন ঘরগুলো
-                         ফাঁকা, সেটা এই এক বাক্যেই বলা। --}}
-                    <p class="mt-1 text-2xs text-(--color-module-purchase)" x-show="! picked" x-cloak>
-                        {{ __('purchase::message.pick_item_hint') }}
-                    </p>
+                    {{-- ⭐ ক্রয়দর বদলেছে — প্রশ্ন, বদল নয়।
+
+                         মালিকের শর্ত, ৬ সেপ্টেম্বর ২০২৬: *"ক্রয়মূল্য কমলে বা
+                         বাড়লে warning ও বিক্রয়মূল্য পরিবর্তন হবে"* — আর
+                         কীভাবে, তাও তাঁর: **"জিজ্ঞেস করে বদলাবে।"**
+
+                         ⛔ নিজে বদলে দিলে কাউন্টারে কেউ খেয়াল না করে বিক্রি
+                         করে ফেলতেন। ⚠️ এই পর্দার সংখ্যা সরাসরি কাগজে যায়,
+                         তাই নীরব বদল মানে **ভুল দামে ছাপা চালান**।
+
+                         ⓘ সারিটা তিনটা সংখ্যাই দেখায় — পুরনো দর, নতুন দর,
+                         আর নীতিটা মানলে দাম কত হবে। ⚠️ কেবল "দাম বদলাবে"
+                         লিখলে মানুষ কী মেনে নিচ্ছেন তা জানতেন না।
+
+                         ⓘ দুইটা পথই সমান দৃশ্যমান: মানা আর না-মানা। **না-মানা
+                         লুকানো থাকলে ওটা প্রশ্ন নয়, ঘোষণা।** --}}
+                    <div x-show="priceAsk" x-cloak
+                         class="mt-2 flex flex-wrap items-center gap-2 rounded-(--radius-field)
+                                border border-(--color-badge-pending-ink)/30
+                                bg-(--color-badge-pending-bg) px-3 py-2 text-2xs
+                                text-(--color-badge-pending-ink)">
+                        <span>
+                            {{ __('purchase::message.rate_moved') }}
+                            <span class="num font-semibold" x-text="money(priceAsk?.was)"></span>
+                            →
+                            <span class="num font-semibold" x-text="money(priceAsk?.now)"></span>
+                        </span>
+
+                        <span>
+                            {{ __('purchase::message.price_would_become') }}
+                            <span class="num font-semibold" x-text="money(priceAsk?.from)"></span>
+                            →
+                            <span class="num font-bold" x-text="money(priceAsk?.to)"></span>
+                        </span>
+
+                        <button type="button" @click="takeSuggestedPrice()"
+                                class="ms-auto rounded-(--radius-field) bg-(--color-success) px-3 py-1
+                                       font-semibold text-white">
+                            {{ __('purchase::action.take_new_price') }}
+                        </button>
+
+                        <button type="button" @click="keepOldPrice()"
+                                class="rounded-(--radius-field) border border-current px-3 py-1 font-medium">
+                            {{ __('purchase::action.keep_old_price') }}
+                        </button>
+                    </div>
 
                     <ul x-show="visible.length > 0" x-cloak
                         class="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-(--radius-field)
@@ -1167,7 +1226,7 @@
                                     {{ __('purchase::field.purchase_rate') }}
                                 </span>
                                 <input type="number" step="0.01" inputmode="decimal"
-                                       x-model="entry.rate" @input="priced('rate')" :disabled="! picked"
+                                       x-model="entry.rate" @input="rateEdited()" :disabled="! picked"
                                        class="num h-(--spacing-field) w-full rounded-(--radius-field) border
                                               border-(--color-border) bg-(--color-surface-card) px-2 text-end text-sm
                                               disabled:opacity-50">
@@ -1512,8 +1571,20 @@
                                 <template x-for="(gift, gi) in line.gifts" :key="gift.key">
                                     <tr class="bg-(--color-surface-sunken)/50">
                                         <td></td>
-                                        <td colspan="3">
-                                            <div class="flex flex-wrap items-center gap-2">
+                                        {{-- ⓘ সারিটা টেবিলের **বাকি সব কলাম জুড়ে** — মালিক:
+                                             *"gift likha ek line daw"*।
+
+                                             ⛔ আগে `colspan="3"` ছিল, তাই উপহারের ঘরগুলো
+                                             তিন কলামের প্রস্থে আটকে দুই লাইনে ভাঁজ হত।
+                                             ⚠️ `flex-wrap`-ও ছিল, অর্থাৎ ভাঁজটা ইচ্ছাকৃত
+                                             দেখাত — কিন্তু জায়গা থাকতেও ভাঁজ হওয়ার কোনো
+                                             কারণ নেই।
+
+                                             ⓘ `colspan` বেশি দেওয়া নিরাপদ: ব্রাউজার
+                                             টেবিলের আসল কলাম-সংখ্যায় নামিয়ে আনে, তাই
+                                             একটা কলাম যোগ-বিয়োগ হলেও সারিটা ভাঙে না। --}}
+                                        <td colspan="20">
+                                            <div class="flex items-center gap-2 whitespace-nowrap">
                                                 <span class="rounded-(--radius-field) bg-(--color-badge-info-bg)
                                                              px-1.5 py-0.5 text-2xs text-(--color-badge-info-ink)">
                                                     {{ __('purchase::field.gift') }}
@@ -1524,10 +1595,16 @@
                                                         class="h-(--spacing-field-dense) rounded-(--radius-field) border
                                                                border-(--color-border) bg-(--color-surface-card)
                                                                px-1 text-xs">
-                                                    {{-- ⓘ খালি মানে **পণ্যের নিজের একক** — তাই লেখাটাও
-                                         সেটাই, একটা ড্যাশ নয়। ⚠️ ড্যাশ দেখে মানুষ ভাবতেন
-                                         একক বাছা হয়নি, অথচ ওটাই স্বাভাবিক অবস্থা। --}}
-                                    <option value="" x-text="picked?.unit || '—'"></option>
+                                                    {{-- ⛔ এখানে একবার **এককের** লেখা বসে গিয়েছিল।
+
+                                                         ⚠️ একটা স্ক্রিপ্ট দিয়ে সব `<option value="">—</option>`
+                                                         একসাথে বদলাতে গিয়ে এই একটাও ধরা পড়েছিল — অথচ এটা
+                                                         **পণ্যের** তালিকা, এককের নয়। ⓘ ফলে উপহারের ঘরে
+                                                         প্রথম বিকল্প হিসেবে `pcs` লেখা উঠত।
+
+                                                         ⭐ পাঠ: একই দেখতে দুইটা জিনিস এক নিয়মে বদলানো যায় না —
+                                                         **কোন তালিকা কীসের, সেটা দেখেই বদলাতে হয়।** --}}
+                                                    <option value="">—</option>
                                                     <template x-for="p in catalogue" :key="p.id">
                                                         <option :value="p.id" x-text="p.name"></option>
                                                     </template>
@@ -1539,6 +1616,36 @@
                                                        class="num h-(--spacing-field-dense) w-16 rounded-(--radius-field)
                                                               border border-(--color-border) bg-(--color-surface-card)
                                                               px-1 text-end text-xs">
+
+                                                {{-- ── উপহারের একক ────────────────────────────────
+
+                                                     মালিক (৬ সেপ্টেম্বর ২০২৬):
+                                                     *"Qty er pase UoM dropdown dite hobe"*।
+
+                                                     ⭐ ঘরটা নতুন, কিন্তু **পথটা আগে থেকেই ছিল**:
+                                                     সার্ভার `gifts.*.unit_id` যাচাই করে,
+                                                     `packed()` ওটা দিয়ে বেস এককে নামায়, আর
+                                                     টেবিলে `entered_unit_id` কলামও আছে।
+                                                     ⛔ কেবল **পর্দায় ঘরটা ছিল না**, তাই মান
+                                                     কোনোদিন যেত না — একটা পূর্ণ পথ, একটা ফাঁকা
+                                                     মুখ। ⓘ আজকের চেনা ছাঁচ: ঘর না থাকায়
+                                                     ক্ষমতাটা ঘুমিয়ে ছিল।
+
+                                                     ⚠️ মিল কার্টনে উপহার দেয়, গুনতি হয় পিসে —
+                                                     একক না বললে ১ কার্টন ১ পিস হয়ে বসত।
+
+                                                     ⓘ খালি মানে পণ্যের নিজের একক, ঠিক উপরের
+                                                     সারির নিয়মেই। --}}
+                                                <select :name="`gifts[${line.key}-${gi}][unit_id]`"
+                                                        x-model="gift.unit_id"
+                                                        class="h-(--spacing-field-dense) rounded-(--radius-field) border
+                                                               border-(--color-border) bg-(--color-surface-card)
+                                                               px-1 text-xs">
+                                                    <option value="" x-text="unitLabelFor(gift.product_id)"></option>
+                                                    <template x-for="u in unitsFor(gift.product_id)" :key="u.id">
+                                                        <option :value="u.id" x-text="u.label"></option>
+                                                    </template>
+                                                </select>
 
                                                 <input type="text" maxlength="191"
                                                        :name="`gifts[${line.key}-${gi}][remarks]`"
@@ -2225,7 +2332,16 @@
                  ⚠️ রংগুলো টোকেন থেকে, হাতে লেখা নয় — `#hex` লিখলে
                  `EveryScreenObeysTheThemeTest` লাল হয়, আর থিম বদলালে
                  বোতামগুলো একা আগের রঙে বসে থাকত। --}}
-            <div class="grid min-w-0 grid-cols-3 gap-1 text-center [&_button]:break-words">
+            {{-- ⓘ চারটা বোতাম **দুইটা করে দুই সারিতে** — মালিক, ৬ সেপ্টেম্বর ২০২৬।
+
+                     ⛔ তিন কলামে চারটা বোতাম মানে দ্বিতীয় সারিতে একটা একা,
+                     আর তার পাশে দুইটা ঘর খালি — চোখে ভাঙা লাগে।
+
+                     ⓘ ছয়টা বোতাম ছিল বলে তিন কলাম মানানসই ছিল; দুইটা তুলে
+                     দেওয়ার পর ছকটাও বদলাতে হয়। ⚠️ **বোতাম সরালে ছক না
+                     বদলানো** — এই ভুলটা চোখে পড়ে না, কারণ কিছুই ভাঙে না,
+                     শুধু ফাঁকা থাকে। --}}
+                <div class="grid min-w-0 grid-cols-2 gap-1 text-center [&_button]:break-words">
                 <button type="button" @click="depositOpen = ! depositOpen"
                         :aria-expanded="depositOpen"
                         class="rounded-(--radius-field) bg-(--color-success) px-1 py-2 text-2xs font-medium
@@ -2376,6 +2492,25 @@
                     supplierPickerOpen: false,
                     supplierTerm: '',
                     browsing: false,
+
+                    /*
+                     * পণ্যটা বাছার সময় ক্রয়দর কত ছিল।
+                     *
+                     * ⓘ "বদলেছে" বলতে গেলে **কীসের তুলনায়** তা জানা লাগে।
+                     * ⚠️ পণ্যের `last_rate`-এর সাথে তুলনা করলে হত না: মানুষ
+                     * একবার দর বদলে প্রস্তাব ফিরিয়ে দিলে প্রতিটা কি-স্ট্রোকে
+                     * সে আবার জিজ্ঞেস করত।
+                     */
+                    lastKnownRate: '',
+
+                    /*
+                     * দাম বদলানোর প্রস্তাব — বসানো নয়, জিজ্ঞাসা।
+                     *
+                     * ⓘ `null` মানে কোনো প্রশ্ন নেই। ⚠️ মালিকের সিদ্ধান্ত:
+                     * *"জিজ্ঞেস করে বদলাবে"* — তাই এখানে কেবল প্রস্তাবটা
+                     * থাকে, আর বসে মানুষের এক চাপে।
+                     */
+                    priceAsk: null,
 
                     /* ── দুইটা প্যানেল ──────────────────────────────────
                        ⓘ দুইটাই বন্ধ অবস্থায় শুরু হয়, আর একসাথে দুইটাই খোলা
@@ -2595,6 +2730,25 @@
                     },
 
                     get visible() {
+                        /*
+                         * ── ⛔ পক্ষ আগে, পণ্য পরে — মালিকের নিয়ম, ৬ সেপ্টেম্বর ২০২৬ ──
+                         *
+                         * *"সরবরাহকারী আগে সিলেক্ট করলে পরে প্রোডাক্ট সার্চ হবে,
+                         * সরবরাহকারী না দিলে প্রোডাক্ট শো করবে না।"*
+                         *
+                         * ── কেন এটা কেবল ক্রম নয় ─────────────────────────
+                         * ⚠️ **দর সরবরাহকারীভেদে আলাদা** — একই পণ্য এক সরবরাহকারীর কাছে এক দরে, আরেকজনের কাছে আরেক দরে। পণ্য আগে বাছলে
+                         * পর্দা এমন একটা দর বসাত যেটা এখনো জানা যায়নি কার
+                         * জন্য, আর সরবরাহকারী বাছার পর সেটা **নীরবে ভুল** হয়ে থাকত।
+                         *
+                         * ⓘ কার্টে লাইন বসানোর পর সরবরাহকারী বদলালে ঐ দরগুলো আর
+                         * নিজে থেকে ঠিক হয় না — অর্থাৎ ভুলটা কাগজ পর্যন্ত যেত।
+                         *
+                         * ⭐ তাই তালিকাটা খালি থাকে, আর নিচের বার্তাটা বলে দেয়
+                         * **কী করতে হবে** — শুধু "পারবেন না" নয় (নিয়ম ১)।
+                         */
+                        if (! this.supplierId) return [];
+
                         const t = this.term.trim().toLowerCase();
 
                         /*
@@ -2738,6 +2892,35 @@
                         if (product.sales_price > 0) this.entry.sales_price = String(product.sales_price);
 
                         /*
+                         * ── পণ্যের **নীতি** ফিরিয়ে আনা, ৬ সেপ্টেম্বর ২০২৬ ──
+                         *
+                         * মালিকের শর্ত: *"পরের বার আর বসাতে হবে না।"* ⓘ আগে
+                         * দাম দুইটা ফিরত, কিন্তু নীতি ফিরত না — তাই ক্রয়দর
+                         * বদলালে ব্যবস্থা জানত না নতুন দাম কত হওয়া উচিত।
+                         *
+                         * ⚠️ নোঙরটা বসে **শেষে**, markup/margin বসানোর পরে:
+                         * `reprice()` নোঙর দেখে কাজ করে, আর আগে বসালে সে
+                         * খালি শতাংশ নিয়ে হিসাব করতে যেত।
+                         *
+                         * ⓘ নীতি না থাকলে (`''`) কিছুই বসে না — পুরনো পণ্যের
+                         * নোঙর `null`, আর তখন আচরণ আগের মতোই: দাম ফেরে,
+                         * ক্রয়দর বদলালে কিছু হয় না। ⭐ প্রথম যেদিন কেউ
+                         * markup বা margin লিখে বিল নিশ্চিত করবেন, সেদিন
+                         * থেকে ঐ পণ্যের নীতি চালু।
+                         */
+                        this.entry.markup = '';
+                        this.entry.margin = '';
+                        this.entry.anchor = '';
+                        this.lastKnownRate = product.last_rate > 0 ? String(product.last_rate) : '';
+
+                        if (product.pricing_anchor) {
+                            if (product.pricing_anchor === 'markup') this.entry.markup = String(product.pricing_pct);
+                            if (product.pricing_anchor === 'margin') this.entry.margin = String(product.pricing_pct);
+
+                            this.entry.anchor = product.pricing_anchor;
+                        }
+
+                        /*
                          * ── ভ্যাটের ধরনটা পণ্য দেখে বসে ───────────────────
                          *
                          * পণ্যের নিজের হার বসানো থাকলে "পণ্য অনুযায়ী", নাহলে
@@ -2862,11 +3045,130 @@
                         Object.assign(this.entry, window.abos.reprice(this.entry, edited));
                     },
 
+                    /*
+                     * ── ক্রয়দর বদলাল — **জিজ্ঞেস করে**, নিজে নয় ──────────
+                     *
+                     * মালিকের শর্ত, ৬ সেপ্টেম্বর ২০২৬: *"যদি ক্রয়মূল্য কমে বা
+                     * বাড়ে মানে পরিবর্তন হলেই warning ও বিক্রয়মূল্য পরিবর্তন
+                     * হবে।"* আর কীভাবে, সেটাও তাঁর: **"জিজ্ঞেস করে বদলাবে।"**
+                     *
+                     * ⛔ নিজে বদলে দিলে কাউন্টারে কেউ খেয়াল না করে বিক্রি করে
+                     * ফেলতেন — দামটা বদলে গেছে, অথচ কেউ বলেনি। ⚠️ আর এই পর্দার
+                     * সংখ্যাগুলো সরাসরি কাগজে যায়, তাই নীরব বদল মানে **ভুল
+                     * দামে ছাপা চালান**।
+                     *
+                     * ⓘ তাই এখানে কেবল প্রস্তাবটা তৈরি হয় — পুরনো দর, নতুন দর,
+                     * আর নীতিটা মানলে দাম কত হত। বসানোর কাজটা মানুষের এক
+                     * চাপে (`takeSuggestedPrice`)।
+                     *
+                     * ⚠️ শর্ত তিনটাই লাগে: নীতি আছে · দর সত্যিই বদলেছে ·
+                     * নতুন দামটা আগেরটার চেয়ে আলাদা। ⓘ শেষেরটা ছাড়া
+                     * গোল করার ফলে "৳১০ → ৳১০" প্রস্তাবও দেখাত।
+                     */
+                    /*
+                     * ── ক্রয়দরের ঘরে লেখা হল ────────────────────────────
+                     *
+                     * ⛔ আগে এখানে সরাসরি `priced('rate')` ডাকা হত, আর নোঙর
+                     * markup/margin হলে সে **নিজেই দামটা বদলে দিত**। ⚠️ মেপে
+                     * দেখা গেছে: দর ১০০ → ১২০ করতেই দাম ১৬৬.৬৭ → ২০০ হয়ে
+                     * যেত, কেউ কিছু না বলতেই।
+                     *
+                     * ⓘ মালিকের সিদ্ধান্ত তার উল্টো — **"জিজ্ঞেস করে বদলাবে।"**
+                     *
+                     * ⭐ তাই দুইটা পথ, আর পার্থক্যটা **নোঙরে**:
+                     *
+                     *     নোঙর markup/margin  → নীতি আছে, দাম বদলানোর কথা
+                     *                            → প্রস্তাব তৈরি হয়, বসে না
+                     *     নোঙর দাম / নেই       → দামটাই সিদ্ধান্ত, সে টেকে
+                     *                            → markup ও margin নতুন করে বসে
+                     *
+                     * ⚠️ দ্বিতীয় পথে কিছু জিজ্ঞেস করা হয় না, আর সেটাই ঠিক:
+                     * ওখানে দাম বদলাচ্ছেই না, কেবল শতাংশ দুইটা নতুন দর ধরে
+                     * নিজেদের মিলিয়ে নিচ্ছে।
+                     */
+                    rateEdited() {
+                        const anchor = this.entry.anchor;
+
+                        if (anchor === 'markup' || anchor === 'margin') {
+                            this.rateChanged();
+
+                            return;
+                        }
+
+                        this.priced('rate');
+                    },
+
+                    rateChanged() {
+                        this.priceAsk = null;
+
+                        const anchor = this.entry.anchor;
+
+                        if (anchor !== 'markup' && anchor !== 'margin') return;
+
+                        const was = parseFloat(this.lastKnownRate);
+                        const now = parseFloat(this.entry.rate);
+
+                        if (! Number.isFinite(was) || ! Number.isFinite(now) || was === now) return;
+
+                        const patch = window.abos.reprice(
+                            { ...this.entry, rate: this.entry.rate },
+                            anchor,
+                        );
+
+                        if (! patch.sales_price || patch.sales_price === this.entry.sales_price) return;
+
+                        this.priceAsk = {
+                            was: this.lastKnownRate,
+                            now: this.entry.rate,
+                            from: this.entry.sales_price,
+                            to: patch.sales_price,
+                            patch,
+                        };
+                    },
+
+                    /** প্রস্তাবটা মানুষ মেনে নিলেন। */
+                    takeSuggestedPrice() {
+                        if (! this.priceAsk) return;
+
+                        Object.assign(this.entry, this.priceAsk.patch);
+                        this.lastKnownRate = this.entry.rate;
+                        this.priceAsk = null;
+                    },
+
+                    /** প্রস্তাবটা মানুষ ফিরিয়ে দিলেন — দাম যেমন ছিল তেমনই। */
+                    keepOldPrice() {
+                        this.lastKnownRate = this.entry.rate;
+                        this.priceAsk = null;
+                    },
+
                     // ── চলতি লাইনের অঙ্ক ────────────────────────────────
 
                     /** এই পণ্যের প্যাকের তালিকা — না থাকলে খালি। */
                     get unitOptions() {
                         return this.packs[this.picked?.id] ?? [];
+                    },
+
+                    /**
+                     * যেকোনো পণ্যের প্যাকের তালিকা — উপহারের সারির জন্য।
+                     *
+                     * ⚠️ উপরের `unitOptions` কেবল **চলতি** পণ্যের, কিন্তু উপহার
+                     * অন্য পণ্যও হতে পারে (সাবান কিনে তেল উপহার)। ⓘ তাই
+                     * আইডি ধরে আলাদা করে জিজ্ঞেস করতে হয়।
+                     */
+                    unitsFor(productId) {
+                        return this.packs[productId] ?? [];
+                    },
+
+                    /**
+                     * খালি বিকল্পের লেখা — ঐ পণ্যের নিজের একক।
+                     *
+                     * ⓘ ড্যাশ নয়: খালি মানে "একক বাছা হয়নি" নয়, খালি মানে
+                     * **পণ্যের নিজের একক** — আর সেটাই লেখা থাকা উচিত।
+                     */
+                    unitLabelFor(productId) {
+                        const p = this.catalogue.find(x => String(x.id) === String(productId));
+
+                        return p?.unit || '—';
                     },
 
                     get entryBase() {
@@ -2981,6 +3283,22 @@
                             tax_inclusive: this.picked.tax_inclusive || false,
 
                             sales_price: this.entry.sales_price || '',
+
+                            /*
+                             * দামের নীতি — কোন ঘরটা মানুষ নিজে লিখেছিলেন।
+                             *
+                             * ⓘ সার্ভার এটা লাইনে লেখে, আর বিল নিশ্চিত হলে
+                             * পণ্যেও বসিয়ে দেয়। ⭐ পরের বার ঐ পণ্য বাছলে
+                             * নীতিটা ফিরে আসে, আর ক্রয়দর বদলালে পর্দা
+                             * জানে নতুন দাম কত হওয়া উচিত।
+                             *
+                             * ⚠️ নোঙর `sales_price` হলে শতাংশ পাঠানো হয় না:
+                             * সেখানে নীতিটা *"দামটাই ঠিক"*, কোনো শতাংশ নয়।
+                             */
+                            pricing_anchor: this.entry.anchor || '',
+                            pricing_pct: this.entry.anchor === 'markup'
+                                ? (this.entry.markup || '')
+                                : (this.entry.anchor === 'margin' ? (this.entry.margin || '') : ''),
 
                             /* উপহারের তালিকা সারির সাথেই জন্মায়, চাহিদামতো
                                নয় — `line.gifts` না থাকলে Alpine-এর x-for

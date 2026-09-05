@@ -20,8 +20,8 @@ describe('markup আর margin এক জিনিস নয়', () => {
     it('১০০-তে কিনে ১৫০-তে বেচা মানে ৫০% markup, কিন্তু ৩৩.৩৩% margin', () => {
         const patch = reprice(row({ rate: '100', sales_price: '150' }), 'sales_price')
 
-        expect(patch.markup).toBe('50.00')
-        expect(patch.margin).toBe('33.33')
+        expect(patch.markup).toBe('50')
+        expect(patch.margin).toBe('33.3333')
     })
 
     it('৪০% markup আর ৪০% margin দুইটা আলাদা দামে পৌঁছায়', () => {
@@ -48,14 +48,14 @@ describe('নোঙর — শেষে যে ঘরে লেখা হয়�
         Object.assign(r, reprice(r, 'rate'))
 
         expect(r.sales_price).toBe('165.00')
-        expect(r.markup).toBe('50.00')
+        expect(r.markup).toBe('50')
     })
 
     it('দাম লেখা থাকলে দর বদলালে দামটাই টেকে, বদলায় margin', () => {
         const r = row({ rate: '100', sales_price: '150' })
         Object.assign(r, reprice(r, 'sales_price'))
 
-        expect(r.markup).toBe('50.00')
+        expect(r.markup).toBe('50')
 
         // দর ১১০ হল — দামটা মানুষের বলা, ওটা নড়ে না
         r.rate = '110'
@@ -64,8 +64,8 @@ describe('নোঙর — শেষে যে ঘরে লেখা হয়�
         // অঙ্কটা দেখা হয়, লেখার ধরনটা নয় — মানুষ যা টাইপ করেছেন তা
         // হুবহু থাকে, "150" কে "150.00" বানিয়ে দেওয়া হয় না
         expect(parseFloat(r.sales_price)).toBe(150)
-        expect(r.markup).toBe('36.36')
-        expect(r.margin).toBe('26.67')
+        expect(r.markup).toBe('36.3636')
+        expect(r.margin).toBe('26.6667')
     })
 
     it('markup থেকে margin-এ সরে গেলে নোঙরও সরে', () => {
@@ -77,7 +77,7 @@ describe('নোঙর — শেষে যে ঘরে লেখা হয়�
 
         expect(r.anchor).toBe('margin')
         expect(r.sales_price).toBe('125.00')
-        expect(r.markup).toBe('25.00')
+        expect(r.markup).toBe('25')
     })
 })
 
@@ -99,7 +99,7 @@ describe('যে ঘরে কার্সর আছে সেটা ছোঁ�
         const patch = reprice(row({ rate: '100', sales_price: '12' }), 'sales_price')
 
         expect(patch).not.toHaveProperty('sales_price')
-        expect(patch.markup).toBe('-88.00')
+        expect(patch.markup).toBe('-88')
     })
 })
 
@@ -140,7 +140,58 @@ describe('ক্ষতিতে বেচা', () => {
     it('ক্রয়দরের নিচে দাম দিলে দুইটাই ঋণাত্মক দেখায়', () => {
         const patch = reprice(row({ rate: '100', sales_price: '80' }), 'sales_price')
 
-        expect(patch.markup).toBe('-20.00')
-        expect(patch.margin).toBe('-25.00')
+        expect(patch.markup).toBe('-20')
+        expect(patch.margin).toBe('-25')
+    })
+})
+
+/*
+ * ⛔ গোল করা শতাংশ নোঙর হয়ে বসে, আর দাম তার উপরে বসে।
+ *
+ * ── কীভাবে ধরা পড়ল, ৬ সেপ্টেম্বর ২০২৬ ────────────────────────────
+ * মালিক পর্দার একটা হিসাব দেখিয়ে যাচাই করতে বললেন — ৮৯৭ টাকায় কিনে
+ * ৯,০০০-এ বেচা। ⓘ পর্দার দুইটা সংখ্যাই নির্ভুল ছিল (markup ৯০৩.৩৪%,
+ * margin ৯০.০৩%)।
+ *
+ * ⚠️ কিন্তু ঐ **দেখানো margin-টাই নোঙর হয়ে থেকে যায়**, আর পরে ক্রয়দর
+ * বদলালে দাম ওটার উপরেই নতুন করে বসে — গোল করা মান থেকে, আসলটা থেকে
+ * নয়। ⛔ দুই দশমিকে ৯০,০০০ টাকার লাইনে ফারাক দাঁড়াত **৩০০ টাকা**।
+ *
+ * ⓘ সূত্রটা `দাম = খরচ ÷ (1 − margin/100)` — হর শূন্যের কাছে গেলে
+ * ছোট গোলমাল বিশাল হয়ে ওঠে, তাই উঁচু margin-এ দোষটা সবচেয়ে বড়।
+ *
+ * ⚠️ এই ফাইলের মাথায় লেখা আশঙ্কাটাই এটা: **কোনো ত্রুটিবার্তা আসে না**,
+ * দামটা কেবল একটু কম বসে — বারবার, নীরবে।
+ */
+describe('গোল করা শতাংশ দাম নষ্ট করে না', () => {
+    it('দাম থেকে পাওয়া margin আবার দাম বানালে সেই দামই ফেরে', () => {
+        const first = reprice(row({ rate: '897', sales_price: '9000' }), 'sales_price')
+
+        const back = reprice(
+            row({ rate: '897', margin: first.margin, anchor: 'margin' }),
+            'margin',
+        )
+
+        // দুই দশমিকে এটা ছিল ৮,৯৯৬.৯৯ — তিন টাকা কম
+        expect(Math.abs(parseFloat(back.sales_price) - 9000)).toBeLessThan(0.10)
+    })
+
+    it('উঁচু margin-এ, যেখানে দোষটা সবচেয়ে বড়', () => {
+        const first = reprice(row({ rate: '897', sales_price: '90000' }), 'sales_price')
+
+        const back = reprice(
+            row({ rate: '897', margin: first.margin, anchor: 'margin' }),
+            'margin',
+        )
+
+        // দুই দশমিকে এটা ছিল ৮৯,৭০০ — তিনশো টাকা কম
+        expect(Math.abs(parseFloat(back.sales_price) - 90000)).toBeLessThan(10)
+    })
+
+    it('শতাংশে অকারণ শূন্য থাকে না, কিন্তু দরকারি দশমিক থাকে', () => {
+        const half = reprice(row({ rate: '100', sales_price: '150' }), 'sales_price')
+
+        expect(half.markup).toBe('50')
+        expect(half.margin).toBe('33.3333')
     })
 })

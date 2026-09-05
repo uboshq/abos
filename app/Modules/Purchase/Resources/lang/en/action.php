@@ -89,4 +89,6 @@ return [
        so the two languages now agree in weight as well as meaning. */
     'transportation' => 'Transport',
     'shipment' => 'Shipment',
+    'take_new_price' => 'Use the new price',
+    'keep_old_price' => 'Keep the old price',
 ];

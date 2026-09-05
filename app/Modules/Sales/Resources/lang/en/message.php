@@ -227,4 +227,7 @@ return [
     'scheme_basis_hint' => 'On money or on quantity — the bands are counted in the same unit.',
     'leave_top_band_open' => 'Leave this empty on the highest band, or the biggest sale of the year earns nothing.',
     'fixed_beats_rate' => 'A fixed amount wins; the rate is then ignored.',
+    /* ⭐ No party, no product list — the owner's rule, 6 Sep 2026.
+       ⚠️ The line says what to DO, not merely what is refused. */
+    'pick_customer_first' => 'Choose the customer first — the rate and the credit limit depend on who is buying.',
 ];

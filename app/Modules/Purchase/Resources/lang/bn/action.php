@@ -70,4 +70,6 @@ return [
     'add_note' => 'মন্তব্য',
     'transportation' => 'পরিবহন',
     'shipment' => 'আমদানি চালান',
+    'take_new_price' => 'নতুন দাম নিন',
+    'keep_old_price' => 'পুরনো দামই থাক',
 ];

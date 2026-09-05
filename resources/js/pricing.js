@@ -18,8 +18,42 @@
  * দামে বেচে। তাই দুইটা ঘরই থাকে, দুইটাই জ্যান্ত।
  */
 
-/** দুই দশমিক — টাকা আর শতাংশ, দুইটাই এই নির্ভুলতায় মানুষ পড়ে। */
+/** টাকা — দুই দশমিক, পয়সার নিচে কিছু নেই। */
 const round = (n) => Math.round(n * 100) / 100
+
+/**
+ * শতাংশ — চার দশমিক, আর সেটা সাজসজ্জা নয়।
+ *
+ * ── ⛔ দুই দশমিকে কী ভাঙত, ৬ সেপ্টেম্বর ২০২৬ ────────────────────────
+ * মালিক পর্দার একটা হিসাব দেখিয়ে যাচাই করতে বলেছিলেন — ৮৯৭ টাকায় কিনে
+ * ৯,০০০-এ বেচা, markup ৯০৩.৩৪%, margin ৯০.০৩%। ⓘ দুইটাই নির্ভুল।
+ *
+ * ⚠️ কিন্তু ঐ **দেখানো margin-টাই নোঙর হয়ে বসে থাকে**, আর পরে ক্রয়দর
+ * বদলালে দাম ওটার উপরেই নতুন করে বসে। মাপা:
+ *
+ *     margin ৯০.০৩ (গোল করা) · ক্রয়দর ৮৯৭ → ৯০০ হলে   দাম ৯,০২৭.০৮
+ *     আসল margin ৯০.০৩৩৩ ধরলে                          দাম ৯,০৩০.০৭
+ *                                                       ফারাক ৩ টাকা
+ *
+ * ⛔ আর উঁচু margin-এ ফারাকটা লাফিয়ে বাড়ে: ৯৯%-এ ৮৯,৭০০ বনাম ৯০,০০০ —
+ * **৩০০ টাকা**। ⓘ কারণ সূত্রটা `দাম = খরচ ÷ (1 − margin/100)`, আর হর
+ * শূন্যের কাছে গেলে ছোট গোলমাল বিশাল হয়ে ওঠে।
+ *
+ * ⚠️ এই ফাইলের মাথায় লেখা আশঙ্কাটাই এটা: কোনো ত্রুটিবার্তা আসত না,
+ * শুধু দামটা একটু কম বসত — বারবার, নীরবে।
+ *
+ * ⓘ চার দশমিকই যথেষ্ট: ৯৯% margin-এ ০.০০০১% মানে ৯০,০০০ টাকায় ৯ পয়সা।
+ */
+const pct = (n) => Math.round(n * 10000) / 10000
+
+/**
+ * শতাংশ পর্দায় — পিছনের অপ্রয়োজনীয় শূন্যগুলো ছাঁটা।
+ *
+ * ⓘ `50.0000` পড়তে বাধা দেয়, `50` দেয় না; আর যেখানে দশমিক সত্যিই
+ * দরকার সেখানে সেটা থেকে যায় (`33.3333`)। ⚠️ মানটা ছাঁটাই হয় না,
+ * কেবল লেখাটা — `parseFloat` দুইটাকেই একই সংখ্যা পড়ে।
+ */
+const pctText = (n) => String(pct(n))
 
 const num = (v) => {
     const n = parseFloat(v)
@@ -81,8 +115,8 @@ export function reprice(row, edited) {
 
         patch.sales_price = round(price).toFixed(2)
 
-        if (edited !== 'markup') patch.markup = round(((price - cost) / cost) * 100).toFixed(2)
-        if (edited !== 'margin') patch.margin = round(((price - cost) / price) * 100).toFixed(2)
+        if (edited !== 'markup') patch.markup = pctText(((price - cost) / cost) * 100)
+        if (edited !== 'margin') patch.margin = pctText(((price - cost) / price) * 100)
 
         return patch
     }
@@ -94,8 +128,8 @@ export function reprice(row, edited) {
         return patch
     }
 
-    if (edited !== 'markup') patch.markup = round(((price - cost) / cost) * 100).toFixed(2)
-    if (edited !== 'margin') patch.margin = round(((price - cost) / price) * 100).toFixed(2)
+    if (edited !== 'markup') patch.markup = pctText(((price - cost) / cost) * 100)
+    if (edited !== 'margin') patch.margin = pctText(((price - cost) / price) * 100)
 
     return patch
 }

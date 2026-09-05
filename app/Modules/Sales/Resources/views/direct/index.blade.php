@@ -1373,7 +1373,7 @@
                                     <input type="search" x-model="term" x-ref="search"
                                            @keydown.enter.prevent="pickFirst()"
                                            @keydown.escape="pickerOpen = false"
-                                           placeholder="{{ __('sales::message.type_or_pick') }}"
+                                           :placeholder="customerId ? @js(__('sales::message.type_or_pick')) : @js(__('sales::message.pick_customer_first'))"
                                            class="h-(--spacing-field) w-full truncate rounded-(--radius-field) border
                                                   border-(--color-border) bg-(--color-surface-app)
                                                   px-3 text-xl font-semibold
@@ -3301,6 +3301,26 @@
                      */
                     get visible() {
                         if (! this.pickerOpen) return [];
+
+                        /*
+                         * ── ⛔ পক্ষ আগে, পণ্য পরে — মালিকের নিয়ম, ৬ সেপ্টেম্বর ২০২৬ ──
+                         *
+                         * *"ক্রেতা আগে সিলেক্ট করলে পরে প্রোডাক্ট সার্চ হবে,
+                         * ক্রেতা না দিলে প্রোডাক্ট শো করবে না।"*
+                         *
+                         * ── কেন এটা কেবল ক্রম নয় ─────────────────────────
+                         * ⚠️ **দর ক্রেতাভেদে আলাদা** — একজনের দর তালিকা আরেকজনের চেয়ে আলাদা, আর বকেয়ার সীমাও। পণ্য আগে বাছলে
+                         * পর্দা এমন একটা দর বসাত যেটা এখনো জানা যায়নি কার
+                         * জন্য, আর ক্রেতা বাছার পর সেটা **নীরবে ভুল** হয়ে থাকত।
+                         *
+                         * ⓘ কার্টে লাইন বসানোর পর ক্রেতা বদলালে ঐ দরগুলো আর
+                         * নিজে থেকে ঠিক হয় না — অর্থাৎ ভুলটা কাগজ পর্যন্ত যেত।
+                         *
+                         * ⭐ তাই তালিকাটা খালি থাকে, আর নিচের বার্তাটা বলে দেয়
+                         * **কী করতে হবে** — শুধু "পারবেন না" নয় (নিয়ম ১)।
+                         */
+                        if (! this.customerId) return [];
+
 
                         const t = this.term.trim().toLowerCase();
 

@@ -498,9 +498,102 @@ final class PurchaseBillService
                 continue;
             }
 
-            $line->product->update(['sale_price' => $line->sales_price]);
+            $this->raiseSalePriceIfTheRateOutranIt($line);
+
+            /*
+             * দামের সাথে **নীতিটাও** পণ্যে বসে — ৬ সেপ্টেম্বর ২০২৬।
+             *
+             * ⛔ আগে কেবল `sale_price` বসত, অর্থাৎ একটা **সংখ্যা**। ⓘ পরের
+             * বার ঐ পণ্য বাছলে দামটা ফিরে আসত, কিন্তু *"কেন এই দাম"* ফিরত
+             * না — তাই ক্রয়দর বদলালে ব্যবস্থা জানত না নতুন দাম কত হওয়া
+             * উচিত, আর চুপ করে থাকত।
+             *
+             * ⚠️ মালিকের শর্ত ছিল উল্টো: *"ক্রয়মূল্য কমলে বা বাড়লে
+             * সতর্কবার্তা আসবে ও বিক্রয়মূল্য বদলাবে।"* ⭐ সেটা তখনই সম্ভব
+             * যখন নীতিটা জমা থাকে।
+             *
+             * ⓘ লাইনে নীতি না থাকলে পণ্যের পুরনো নীতি **ছোঁয়া হয় না** —
+             * `null` লিখে দিলে আগের সিদ্ধান্তটা মুছে যেত, অথচ এই কাগজটা
+             * কোনো নতুন সিদ্ধান্ত জানায়নি।
+             */
+            $policy = filled($line->pricing_anchor)
+                ? ['pricing_anchor' => $line->pricing_anchor, 'pricing_pct' => $line->pricing_pct]
+                : [];
+
+            $line->product->update(['sale_price' => $line->sales_price] + $policy);
         }
     }
+
+    /**
+     * ক্রয়দর দামকে ছাড়িয়ে গেলে সফটওয়্যার নিজেই দাম বাড়ায়।
+     *
+     * ── মালিকের সিদ্ধান্ত, ৬ সেপ্টেম্বর ২০২৬ ─────────────────────────
+     * *"দাম বাড়ার সাথে সাথে নোটিশ দিয়ে দিবে যখন প্রোডাক্ট অ্যাড করবে।
+     * আর বিল কনফার্ম করার সময় যদি sales price না বাড়ায়, তখন সফটওয়্যার
+     * ওয়ার্নিং দিয়ে নিজেই বাড়াবে।"*
+     *
+     * ── কেন দুইটা আলাদা মুহূর্তে দুই আচরণ ────────────────────────────
+     * পর্দায় মানুষটা কাগজ হাতে দাঁড়িয়ে, আর তিনি এমন কিছু জানতে পারেন যা
+     * নিয়ম জানে না — এবারের দরটা একটা অফার, বা এক চালানের বাড়তি ভাড়া।
+     * ⓘ তাই ওখানে **জিজ্ঞেস করা হয়**, বসানো হয় না।
+     *
+     * ⛔ কিন্তু বিল একবার নিশ্চিত হয়ে গেলে কাউন্টার থেমে থাকে না — সে
+     * পুরনো দামেই বেচতে থাকে। ⚠️ নোটিশ একটা কাগজ, বিক্রি একটা ঘটনা; যে
+     * নোটিশ কেউ পড়েনি সে একটা টাকাও বাঁচায় না। তাই এখানে **বসেই যায়**।
+     *
+     * ── নীতি ছাড়া কিছুই হয় না ───────────────────────────────────────
+     * ⚠️ পণ্যের নোঙর `markup`/`margin` না হলে ফাংশনটা চুপ। ⓘ নোঙর "দাম"
+     * মানে মানুষ **দামটাই** ঠিক করেছেন (প্যাকেটে ছাপা, ডিলারের সাথে
+     * বাঁধা) — সেখানে দর বাড়লেও দাম বাড়ানোর কথা নয়, মুনাফা কমে।
+     *
+     * ⛔ আর কেবল **বাড়ায়**, কমায় না: দর কমলে পুরনো বেশি দামে বেচতে
+     * থাকা ক্ষতি নয়, আর দাম কমানো একটা ব্যবসায়িক সিদ্ধান্ত — মেশিনের নয়।
+     *
+     * ⓘ বদলটা নীরব নয়: প্রতিটা ফিল্ডের আগের-পরের মান অডিটে বসে
+     * ([[AuditFlushListener]]), আর কল করা কোড তালিকাটা ফেরত পায়।
+     */
+    private function raiseSalePriceIfTheRateOutranIt(PurchaseBillLine $line): void
+    {
+        $anchor = $line->pricing_anchor ?? $line->product->pricing_anchor;
+        $pct = $line->pricing_pct ?? $line->product->pricing_pct;
+
+        if (! in_array($anchor, ['markup', 'margin'], true) || $pct === null) {
+            return;
+        }
+
+        $cost = (float) $line->rate;
+        $percent = (float) $pct;
+
+        if ($cost <= 0 || ($anchor === 'margin' && $percent >= 100)) {
+            return;
+        }
+
+        $should = $anchor === 'markup'
+            ? $cost * (1 + $percent / 100)
+            : $cost / (1 - $percent / 100);
+
+        // এক পয়সার নিচে ফারাক মানে কেবল গোল করার ফল, নীতির ভাঙন নয়
+        if ($should - (float) $line->sales_price <= 0.005) {
+            return;
+        }
+
+        $line->forceFill(['sales_price' => (string) round($should, 4)])->save();
+
+        $this->pricesRaised[] = [
+            'product' => $line->product->name(),
+            'from' => (string) $line->getOriginal('sales_price'),
+            'to' => (string) $line->sales_price,
+        ];
+    }
+
+    /**
+     * নিশ্চিত করার সময় সফটওয়্যার যেসব দাম নিজে বাড়িয়েছে।
+     *
+     * ⓘ কল করা কোড এটা পড়ে ব্যবহারকারীকে দেখায় — **নীরব বদল নয়**।
+     *
+     * @var list<array{product: string, from: string, to: string}>
+     */
+    public array $pricesRaised = [];
 
     /**
      * কোন গুদামে — বিলে বলা থাকলে সেটা, নইলে প্রধান গুদাম।
@@ -848,6 +941,26 @@ final class PurchaseBillService
                 'sales_price' => ($line['sales_price'] ?? '') === '' || ($line['sales_price'] ?? null) === null
                     ? null
                     : $this->packed($product, '1', $pack['entered_unit_id'], $this->money($line['sales_price']))['rate'],
+
+                /*
+                 * দামের নীতি — কোন ঘরটা মানুষ নিজে লিখেছিলেন।
+                 *
+                 * ⭐ ৬ সেপ্টেম্বর ২০২৬। ⓘ `rate` আর `sales_price` থেকে markup
+                 * ও margin দুইটাই বের করা যায়, কিন্তু **কোনটা তিনি বেছেছিলেন
+                 * তা যায় না** — আর ঠিক ওটাই নীতি। ⚠️ ৫০% markup আর ৫০%
+                 * margin দুইটা আলাদা দাম (১৫০ বনাম ২০০)।
+                 *
+                 * ⛔ লাইনগুলো **এখানেই** জন্মায় — সরাসরি ক্রয়, রসিদ, ক্রয়াদেশ,
+                 * তিন পথই। ⚠️ আমি প্রথমে `DirectPurchaseService`-এ বসিয়ে
+                 * ভেবেছিলাম হয়ে গেছে, আর টেস্ট বলল *"null is not identical to
+                 * 'margin'"* — কারণ ওখানে লাইন **বানানো হয় না**, কেবল সাজানো হয়।
+                 */
+                'pricing_anchor' => filled($line['pricing_anchor'] ?? null)
+                    ? (string) $line['pricing_anchor']
+                    : null,
+                'pricing_pct' => filled($line['pricing_pct'] ?? null)
+                    ? (string) $line['pricing_pct']
+                    : null,
 
                 'discount' => $figures['discount'],
                 'tax' => $figures['tax'],
