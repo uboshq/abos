@@ -69,7 +69,7 @@ class PurchaseReturnTest extends TestCase
     {
         $bill = $this->confirmedBill(qty: '10', rate: '50');
 
-        $stockBefore = $this->availableQty();
+        $stockBefore = $this->onHandQty();
         $payableBefore = $this->balanceOf(StandardChart::PAYABLE);
         $inventoryBefore = $this->balanceOf(StandardChart::INVENTORY);
 
@@ -89,8 +89,9 @@ class PurchaseReturnTest extends TestCase
             )
         );
 
-        // দুই বস্তা গুদাম ছাড়ল
-        $this->assertSame(0, bccomp(bcsub($stockBefore, '2', 4), $this->availableQty(), 4));
+        // দুই বস্তা গুদাম ছাড়ল — তাক থেকে হোক বা অপেক্ষার ঘর থেকে
+        $this->assertSame(0, bccomp(bcsub($stockBefore, '2', 4), $this->onHandQty(), 4),
+            'ফেরতের পর গুদামে মোট মাল দুই কমেনি।');
 
         // ১০০ টাকার দায় কমল (২ × ৫০), তাই ব্যালেন্স ডেবিটের দিকে সরে
         $this->assertSame(0, bccomp(
@@ -219,13 +220,20 @@ class PurchaseReturnTest extends TestCase
             )
         );
 
-        $stockAfterReturn = $this->availableQty();
+        $stockAfterReturn = $this->onHandQty();
         $payableAfterReturn = $this->balanceOf(StandardChart::PAYABLE);
 
         $this->returns()->cancel($return, 'ভুল করে ফেরত দেখানো হয়েছিল');
 
         $this->assertSame(DocumentStatus::CANCELLED, $return->fresh()->status);
-        $this->assertSame(0, bccomp(bcadd($stockAfterReturn, '2', 4), $this->availableQty(), 4));
+        /*
+         * ⭐ আর ফেরতটা **ঠিক যেখান থেকে গিয়েছিল সেখানেই** ফেরে —
+         * অপেক্ষার ঘর থেকে গেলে অপেক্ষার ঘরেই। ⛔ সবটা তাকে ফেরালে
+         * বাতিল করাটা নীরবে একটা "বসানোর কাজ" হয়ে যেত, আর "বসানোর
+         * আগে বিক্রি নয়" নিয়মটা একটা বাতিল দিয়ে পাশ কাটানো যেত।
+         */
+        $this->assertSame(0, bccomp(bcadd($stockAfterReturn, '2', 4), $this->onHandQty(), 4),
+            'বাতিলের পর মালটা গুদামে ফেরেনি।');
         $this->assertSame(0, bccomp(
             bcsub($payableAfterReturn, '100', 4),
             $this->balanceOf(StandardChart::PAYABLE),
@@ -275,6 +283,26 @@ class PurchaseReturnTest extends TestCase
     private function availableQty(): string
     {
         return app(StockService::class)->availableQty($this->product, $this->warehouse);
+    }
+
+    /**
+     * গুদামে মোট কত — তাকে যা আছে **আর** যা এখনো বসানো হয়নি।
+     *
+     * ── কেন ফেরতের পরীক্ষায় এটাই সঠিক মাপ, ৫ সেপ্টেম্বর ২০২৬ ────────
+     * Stock Placement আসার (৪ সেপ্টেম্বর) আগে কেনা মাল সরাসরি তাকে
+     * উঠত, তাই `available` দিয়েই মাপা যেত। এখন আসা মাল **অপেক্ষার
+     * ঘরে** বসে, আর কেউ বুঝে না নেওয়া পর্যন্ত তাকে ওঠে না।
+     *
+     * ⛔ তাই কার্টন না খুলে ফেরত দিলে `available` **নড়েই না** — আর
+     * সেটাই ঠিক: যে মাল কোনোদিন তাকে ওঠেনি, সে তাক থেকে যেতেও পারে
+     * না। ⚠️ পুরনো দাবিটা তাই ভুল প্রশ্ন করছিল, কোড নয়।
+     *
+     * ⓘ আসল প্রশ্ন "মালটা গুদাম ছাড়ল কি না" — আর তার উত্তর
+     * `on_hand`, যেটা দুইটা ঘরই গোনে।
+     */
+    private function onHandQty(): string
+    {
+        return app(StockService::class)->statesFor($this->product, $this->warehouse)['on_hand'];
     }
 
     private function balanceOf(string $code): string

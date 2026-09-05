@@ -6,4 +6,5 @@ declare(strict_types=1);
 return [
     'new_user' => 'নতুন ব্যবহারকারী',
     'new_role' => 'নতুন রোল',
+    'remove_logo' => 'লোগোটা তুলে দিন',
 ];

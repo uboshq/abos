@@ -47,7 +47,10 @@
         </div>
     @endif
 
-    <form method="POST"
+    {{-- ⚠️ `enctype` ছাড়া ফাইলটা **কখনো সার্ভারে পৌঁছায় না** — ব্রাউজার
+         কেবল নামটা পাঠায়, আর `$request->file('logo')` চিরকাল `null`।
+         ⓘ কোনো ত্রুটিও দেখায় না; সেভ হয়ে যায়, শুধু লোগো বসে না। --}}
+    <form method="POST" enctype="multipart/form-data"
           action="{{ $isNew ? route('system_admin.company.store') : route('system_admin.company.update', $company->id) }}"
           class="space-y-4">
         @csrf
@@ -88,6 +91,55 @@
 
                 <x-ui.field name="tin" :label="__('system_admin::field.tin')"
                             :value="old('tin', $company->tin)" />
+
+                {{--
+                    প্রতিষ্ঠানের লোগো — ছাপা কাগজে যেটা বসে।
+
+                    ── কেন এটা এখানে, "সেটিংস"-এ নয় ────────────────────
+                    ⓘ লোগো কোম্পানির **পরিচয়ের অংশ**, কোনো সুইচ নয় —
+                    নাম, ঠিকানা আর BIN-এর পাশেই তার জায়গা। মালিকের
+                    স্থায়ী নিয়মও তাই: আপলোড-সম্পাদনা-মোছা যে জিনিসের,
+                    তার নিজের পর্দাতেই।
+
+                    ⚠️ SVG নেওয়া হয় না: ওতে স্ক্রিপ্ট বসানো যায়, আর
+                    ফাইলটা পরে সরাসরি ব্রাউজারে পরিবেশিত হয়।
+                --}}
+                <div class="sm:col-span-2">
+                    <span class="text-2xs text-(--color-ink-muted)">
+                        {{ __('system_admin::field.logo') }}
+                    </span>
+
+                    <div class="mt-1 flex flex-wrap items-center gap-4">
+                        @if (! $isNew && $company->logoUrl())
+                            {{-- ⓘ যা আছে সেটা দেখানো হয় — নাহলে ব্যবহারকারী
+                                 জানতেন না লোগো বসানো আছে কি না, আর প্রতিবার
+                                 আবার আপলোড করতেন। --}}
+                            <img src="{{ $company->logoUrl() }}"
+                                 alt="{{ $company->name() }}"
+                                 class="h-12 w-auto max-w-40 rounded-(--radius-field)
+                                        border border-(--color-border) bg-white object-contain p-1">
+
+                            <label class="flex items-center gap-2 text-2xs text-(--color-ink-muted)">
+                                <input type="checkbox" name="remove_logo" value="1" class="size-4">
+                                {{ __('system_admin::action.remove_logo') }}
+                            </label>
+                        @endif
+
+                        <input type="file" name="logo" accept="image/png,image/jpeg,image/webp"
+                               class="text-sm file:me-3 file:rounded-(--radius-field)
+                                      file:border file:border-(--color-border)
+                                      file:bg-(--color-surface-app) file:px-3 file:py-1.5
+                                      file:text-sm file:text-(--color-ink)">
+                    </div>
+
+                    <p class="mt-1 text-2xs text-(--color-ink-muted)">
+                        {{ __('system_admin::message.logo_hint') }}
+                    </p>
+
+                    @error('logo')
+                        <p class="mt-1 text-2xs text-(--color-badge-danger-ink)">{{ $message }}</p>
+                    @enderror
+                </div>
             </div>
 
             <div class="mt-3 grid gap-3 sm:grid-cols-2">
