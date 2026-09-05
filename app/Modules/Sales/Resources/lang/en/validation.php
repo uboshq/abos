@@ -116,4 +116,5 @@ return [
     'scheme_top_band_closed' => "The top band is closed for: :roles. Leave the last band's upper limit empty, or the biggest sale of the year earns nothing.",
     'scheme_is_live' => "A live scheme's rates cannot be changed — changing them would change what earlier invoices earned. Stop it and write a new one.",
     'price_out_of_range' => ':product — the rate sits more than :tolerance% away from the standard price.',
+    'slip_used_twice' => 'A collection from this customer already carries slip :no. Check that one first — entering it twice lowers their balance twice for money that came once.',
 ];

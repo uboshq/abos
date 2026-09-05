@@ -7,6 +7,7 @@ namespace App\Modules\Purchase\Services;
 use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
+use App\Core\Services\SlipIsNotUsedTwice;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
@@ -62,6 +63,13 @@ final class PaymentService
          * বাস্তবায়ন লেখা হয়নি।
          */
         private readonly ChequeService $cheques,
+
+        /*
+         * ⓘ নিয়মটা কোরে, দুই সার্ভিসে দুইবার নয় — নাহলে একদিন একটায়
+         * বাতিল কাগজ বাদ যেত, অন্যটায় নয়, আর একই স্লিপ এক দরজায়
+         * আটকাত অন্য দরজায় ঢুকত।
+         */
+        private readonly SlipIsNotUsedTwice $slips,
     ) {}
 
     /**
@@ -81,6 +89,22 @@ final class PaymentService
                     'amount' => __('purchase::validation.payment_must_be_positive'),
                 ]);
             }
+
+            /*
+             * ⛔ একই স্লিপ দুইবার নয় — মালিকের নিয়ম, ৫ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ নম্বরটা নেওয়ার **আগে**, ইচ্ছাকৃতভাবে: আটকালে সিরিজের
+             * একটা নম্বর খরচ হয়ে যেত আর কাগজে ফাঁক পড়ত।
+             */
+            $this->slips->check(
+                table: 'pur_payments',
+                slipNo: $data['instrument_no'] ?? null,
+                partyId: (int) $data['supplier_id'],
+                party: 'supplier_id',
+                message: __('purchase::validation.slip_used_twice', [
+                    'no' => trim((string) ($data['instrument_no'] ?? '')),
+                ]),
+            );
 
             $documentNo = $this->numbers->next('SP');
 

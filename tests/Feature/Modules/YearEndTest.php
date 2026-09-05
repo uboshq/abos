@@ -406,7 +406,19 @@ class YearEndTest extends TestCase
     /** কিছু বিক্রি ও কিছু খরচ — বছরের ভেতরে। */
     private function trade(string $income, string $expense): void
     {
-        $cash = StandardChart::find(StandardChart::CASH_IN_HAND);
+        /*
+         * ⚠️ `১১০১ হাতে নগদ` একটা **দল**, ঘর নয় — ৫ সেপ্টেম্বর ২০২৬।
+         *
+         * ⛔ দলে টাকা বসলে সে কোনো যোগফলে আসে না
+         * ([[Account::balanceOn()]] দলের নিজের সারি গোনে না), তাই
+         * পোস্টিং ইঞ্জিন ওটা ঠিকই আটকায়। ⓘ পরীক্ষাটা ইঞ্জিনের ঐ
+         * পাহারার আগে লেখা, তাই এতদিন লাল ছিল।
+         *
+         * ⭐ টাকা বসে দলের সন্তানে — ক্যাশ কাউন্টারে, আর সেটা
+         * [[CashTillService::ensurePrimaryTill()]] দিয়ে পাওয়া যায়।
+         */
+        $cash = app(\App\Modules\Accounts\Services\CashTillService::class)
+            ->ensurePrimaryTill()->account;
         $sales = StandardChart::find(StandardChart::SALES);
         $cost = StandardChart::find(StandardChart::DISCOUNT_GIVEN);
 
