@@ -158,7 +158,7 @@ final class StockService
         return DB::transaction(function () use (
             $product, $warehouse, $sourceType, $sourceId,
             $floor, $reserved, $hold, $reason, $date, $documentNo, $narration,
-            $free, $freeReserved, $batch, $unplaced, $unplacedFree
+            $free, $freeReserved, $batch, $unplaced, $unplacedFree, $location
         ) {
             /*
              * তাকে যা নেই তা বের করা যায় না।
