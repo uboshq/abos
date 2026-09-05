@@ -343,7 +343,7 @@ class DirectPurchaseController extends Controller implements HasMiddleware
     /** নগদ ও ব্যাংক — টাকাটা কোথা থেকে গেল। */
     private function moneyAccounts()
     {
-        $heads = Account::query()
+        $heads = Account::query()->postable()
             ->whereIn('code', StandardChart::MONEY_PARENTS)
             ->pluck('id');
 

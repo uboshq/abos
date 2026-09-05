@@ -328,7 +328,7 @@ class LoanController extends Controller implements HasMiddleware
     /** একটা মাথার নিচের সব খাত — যেগুলোয় সত্যিই দাখিলা বসে। */
     private function accountsUnder(string $parentCode)
     {
-        $parent = Account::query()->where('code', $parentCode)->first();
+        $parent = Account::query()->postable()->where('code', $parentCode)->first();
 
         return $parent === null
             ? collect()
@@ -351,7 +351,7 @@ class LoanController extends Controller implements HasMiddleware
     /** নগদ ও ব্যাংক — টাকাটা কোথায় ঢুকল বা কোথা থেকে গেল। */
     private function moneyAccounts()
     {
-        $heads = Account::query()
+        $heads = Account::query()->postable()
             ->whereIn('code', StandardChart::MONEY_PARENTS)
             ->pluck('id');
 

@@ -42,7 +42,7 @@ return [
         '--color-cell-line' => 'transparent',
         '--color-ink' => '#0b1f33',
         '--color-ink-body' => '#0b1f33',
-        '--color-ink-muted' => '#7a8b96',
+        '--color-ink-muted' => '#41525e',
         '--color-link' => '#1565c0',
         '--color-sidebar' => '#06323c',
         '--color-sidebar-active' => '#08b8c8',

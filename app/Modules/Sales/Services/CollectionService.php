@@ -376,7 +376,7 @@ final class CollectionService
     {
         $account = blank($accountId)
             ? $this->defaultCashAccount()
-            : Account::query()->whereKey((int) $accountId)->first();
+            : Account::query()->postable()->whereKey((int) $accountId)->first();
 
         if ($account === null) {
             throw ValidationException::withMessages([
@@ -456,7 +456,7 @@ final class CollectionService
 
     private function account(string $code): Account
     {
-        $account = Account::query()->where('code', $code)->first();
+        $account = Account::query()->postable()->where('code', $code)->first();
 
         if ($account === null) {
             throw ValidationException::withMessages([

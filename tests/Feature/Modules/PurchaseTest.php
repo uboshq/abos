@@ -122,6 +122,23 @@ class PurchaseTest extends TestCase
         );
     }
 
+    /**
+     * গুদামে মোট কত — তাক আর বসার অপেক্ষা, দুইটা মিলে।
+     *
+     * ── কেন `floorQty` নয় ───────────────────────────────────────────
+     * Stock Placement আসার পর (৫ সেপ্টেম্বর ২০২৬) ক্রয়ের মাল আর
+     * সরাসরি তাকে ওঠে না — কেউ বুঝে নেওয়ার আগে অপেক্ষার ঘরে বসে।
+     *
+     * ⭐ এই ফাইলের দাবিগুলো *"মাল এল / ফিরে গেল"* নিয়ে, *"মাল বেচা
+     * যায়"* নিয়ে নয়। ⛔ তাই `place()` ডেকে সবুজ করা হয়নি: ডাকলে
+     * পরীক্ষাটা আর আসার কথাটা মাপত না, আর ওটাই এখানে মাপার জিনিস।
+     */
+    private function onHand(): string
+    {
+        return app(StockService::class)
+            ->statesFor($this->product, $this->warehouse)['on_hand'];
+    }
+
     private function makeBill(?PurchaseReceipt $receipt, string $qty = '100', string $rate = '50'): PurchaseBill
     {
         return $this->bills()->create(
@@ -146,7 +163,7 @@ class PurchaseTest extends TestCase
     public function test_the_whole_path_from_order_to_bill(): void
     {
         $stock = app(StockService::class);
-        $openingStock = $stock->floorQty($this->product, $this->warehouse);
+        $openingStock = $this->onHand();
 
         /*
          * খতিয়ানেও শুরুর অবস্থাটা ধরে রাখা হয়, স্টকের মতোই।
@@ -161,7 +178,7 @@ class PurchaseTest extends TestCase
         // ── আদেশ: কিছুই নড়ে না ──
         $order = $this->orders()->confirm($this->makeOrder('100', '50'));
 
-        $this->assertSame(0, bccomp($stock->floorQty($this->product, $this->warehouse), $openingStock, 4),
+        $this->assertSame(0, bccomp($this->onHand(), $openingStock, 4),
             'আদেশে স্টক নড়ার কথা নয়');
         $this->assertSame(0, LedgerEntry::query()
             ->where('source_type', PurchaseOrder::drillSourceType())->count(),
@@ -171,7 +188,7 @@ class PurchaseTest extends TestCase
         $receipt = $this->receipts()->confirm($this->makeReceipt($order, '100', '50'));
 
         $this->assertSame(0, bccomp(
-            $stock->floorQty($this->product, $this->warehouse),
+            $this->onHand(),
             bcadd($openingStock, '100', 4),
             4,
         ));
@@ -383,14 +400,14 @@ class PurchaseTest extends TestCase
     public function test_cancelling_a_receipt_reverses_both_stock_and_books(): void
     {
         $stock = app(StockService::class);
-        $before = $stock->floorQty($this->product, $this->warehouse);
+        $before = $this->onHand();
         $inventoryBefore = $this->balanceOf(StandardChart::INVENTORY);
 
         $receipt = $this->receipts()->confirm($this->makeReceipt(null, '40', '50'));
 
         $this->receipts()->cancel($receipt, 'ভুল পণ্য এসেছিল');
 
-        $this->assertSame(0, bccomp($stock->floorQty($this->product, $this->warehouse), $before, 4));
+        $this->assertSame(0, bccomp($this->onHand(), $before, 4));
 
         // বাতিলের পর মজুদ খাত ঠিক যেখানে ছিল সেখানেই — শূন্যে নয়,
         // কারণ খোলা মজুদের টাকা ওখানে আগে থেকেই বসা
@@ -687,7 +704,7 @@ class PurchaseTest extends TestCase
     {
         $order = $this->orders()->confirm($this->makeOrder('100', '50'));
         $stock = app(StockService::class);
-        $before = $stock->availableQty($this->product, $this->warehouse);
+        $before = $this->onHand();
 
         $bill = $this->bills()->create(
             ['supplier_id' => $this->supplier->id, 'trx_date' => now()->toDateString()],
@@ -701,7 +718,7 @@ class PurchaseTest extends TestCase
 
         $this->bills()->confirm($bill);
 
-        $after = $stock->availableQty($this->product, $this->warehouse);
+        $after = $this->onHand();
         $this->assertSame(0, bccomp(bcsub($after, $before, 4), '100', 4));
 
         // জোড়াটা সত্যিই লেখা হয়েছে — নইলে আদেশটা অপেক্ষমাণই থেকে যেত

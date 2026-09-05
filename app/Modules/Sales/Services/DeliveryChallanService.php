@@ -21,6 +21,7 @@ use App\Modules\Inventory\Services\StockService;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\DeliveryChallanLine;
 use App\Modules\Sales\Models\SalesOrder;
+use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Sales\Models\SalesOrderLine;
 use Illuminate\Support\Carbon;
@@ -57,6 +58,23 @@ final class DeliveryChallanService
 
         // গাড়ির ভাড়া খাতায় বসানোর জন্য — নিচে postTransportCost()
         private readonly PostingEngine $posting,
+
+        /*
+         * ⚠️ নগদ ভাড়ার জন্য — আর এটাই ৫ সেপ্টেম্বর ২০২৬-এর সারাই।
+         *
+         * আগে লেখা ছিল `StandardChart::find(CASH_IN_HAND)`, অর্থাৎ
+         * খাত ১১০১। ⛔ কিন্তু ১১০১ ছকে একটা **দল** — আসল ক্যাশবাক্সগুলো
+         * তার সন্তান (`MONEY_PARENTS`-এ ওটা মা হিসেবেই লেখা)।
+         *
+         * ⛔ ফল: গাড়ি নিজের হলে ভাড়ার টাকা একটা দলের খাতে বসত, আর
+         * দলের নিজের সারি কোনো যোগফলে আসে না — খতিয়ানে সারিটা থাকত,
+         * প্রতিটা রিপোর্ট ততটাই কম দেখাত, আর কিছুই লাল হত না।
+         *
+         * ⓘ আদায় ও পরিশোধ অনেক আগেই এই পথে গেছে (`ensurePrimaryTill`)
+         * — কেবল এই একটা জায়গা বাদ পড়েছিল। ⭐ ধরা পড়েছে নতুন
+         * [[PostingEngine]] পাহারায়, প্রথম দিনেই।
+         */
+        private readonly CashTillService $tills,
     ) {}
 
     /**
@@ -482,7 +500,7 @@ final class DeliveryChallanService
          */
         $credit = $carrierId !== null
             ? StandardChart::find(StandardChart::TRANSPORT_PAYABLE)
-            : StandardChart::find(StandardChart::CASH_IN_HAND);
+            : $this->tills->ensurePrimaryTill()->account;
 
         if ($credit === null) {
             return;

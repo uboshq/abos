@@ -203,7 +203,36 @@ final class AChequeIsNotMoneyUntilItClearsTest extends TestCase
             }
         }
 
-        $this->fail('বাকি আছে এমন কোনো ক্রয় বিল ডেমো ডেটায় নেই।');
+        return $this->aFreshBill();
+    }
+
+    /**
+     * নিজের বিল নিজে বানানো — কারণ ডেমো ডেটায় একটাও নেই।
+     *
+     * ── কেন এটা যোগ করতে হলো ────────────────────────────────────────
+     * উপরের খোঁজাটা লেখা হয়েছিল ধরে নিয়ে যে সিডার কিছু ক্রয় বিল রেখে
+     * যায়। ⛔ রাখে না — `DemoSeeder`-এ `PurchaseBill` শব্দটা **শূন্যবার**।
+     * যে বিলগুলো দেখা যাচ্ছিল সেগুলো ছিল হাতে করা পরীক্ষার অবশেষ, আর
+     * ওগুলো ছিল কেবল উন্নয়নের ডাটাবেসে।
+     *
+     * ⚠️ ফলটা আজকের চেনা আকৃতি: পরীক্ষাটা **পরিবেশের উপর দাঁড়িয়ে
+     * ছিল**, নিজের গড়া দৃশ্যের উপর নয় — আর তাই পরিষ্কার ডাটাবেসে
+     * চারটাই থেমে যেত, কোনোটা কিছু প্রমাণ না করেই।
+     *
+     * ⭐ তাই খোঁজাটা রাখা হলো (থাকলে সেটাই বেশি বাস্তব), কিন্তু না
+     * পেলে দৃশ্যটা নিজেই গড়া হয়।
+     */
+    private function aFreshBill(): \App\Modules\Purchase\Models\PurchaseBill
+    {
+        $supplier = \App\Modules\Supplier\Models\Supplier::query()->firstOrFail();
+        $product = \App\Modules\Inventory\Models\Product::query()->firstOrFail();
+
+        $bills = app(\App\Modules\Purchase\Services\PurchaseBillService::class);
+
+        return $bills->confirm($bills->create(
+            ['supplier_id' => $supplier->id, 'trx_date' => now()->toDateString()],
+            [['product_id' => $product->id, 'qty' => '10', 'rate' => '100']],
+        ));
     }
 
     /** কোড থেকে খাতের কোড — নেস্টেড ছকেও ঠিক সারিটাই মেলে। */

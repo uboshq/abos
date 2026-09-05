@@ -172,7 +172,7 @@ final class CapitalService
      */
     private function withdrawnBy(string $name): string
     {
-        $drawings = Account::query()->where('code', StandardChart::DRAWINGS)->first();
+        $drawings = Account::query()->postable()->where('code', StandardChart::DRAWINGS)->first();
 
         if ($drawings === null) {
             return '0.0000';

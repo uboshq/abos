@@ -822,7 +822,7 @@ final class MasterListService implements ProvisionsCompany
                 continue;
             }
 
-            $account = Account::query()->where('code', $accountCode)->first();
+            $account = Account::query()->postable()->where('code', $accountCode)->first();
 
             if ($account !== null) {
                 $reason->forceFill(['account_id' => $account->id])->save();

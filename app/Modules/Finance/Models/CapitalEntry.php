@@ -8,6 +8,17 @@ use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Models\User;
+/*
+ * ⚠️ এই import-টা ছাড়া `Account::class` নিজের namespace-এ খোঁজা হত —
+ * `App\Modules\Finance\Models\Account`, যেটা নেই। ⛔ ফল: মূলধনের পাতা
+ * খুললেই ৫০০, আর ত্রুটিটা লাইভে ধরা পড়েছে, এখানে নয়।
+ *
+ * ⓘ Finance-এর বাকি চারটা মডেল (Deposit · DepositMovement ·
+ * HandLoanMovement · Withdrawal) এটা আগে থেকেই লেখে — কেবল এই ফাইলটাই
+ * বাদ পড়েছিল। ⭐ `accounts` module.php-এর `depends_on`-এ ঘোষিত, তাই
+ * সীমানা ভাঙে না।
+ */
+use App\Modules\Accounts\Models\Account;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;

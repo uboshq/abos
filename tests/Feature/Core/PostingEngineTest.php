@@ -10,6 +10,7 @@ use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\FinancialYear;
 use App\Models\LedgerEntry;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -42,6 +43,41 @@ class PostingEngineTest extends TestCase
             'ends_on' => '2027-06-30',
             'is_current' => true,
         ]);
+
+        $this->makeAccounts();
+    }
+
+    /**
+     * এই ফাইলের দাখিলাগুলো যে খাতগুলোতে বসে।
+     *
+     * ── কেন এগুলো এখন সত্যিই বানাতে হয় ──────────────────────────────
+     * আগে পরীক্ষাগুলো ১০ · ১১ · ২০ · ৩০ · ৪০ — এই আইডিগুলো হাতে লিখত,
+     * আর কোনো খাত সত্যিই থাকত না। ইঞ্জিন তখন খাতের দিকে তাকাতই না,
+     * তাই কিছু ভাঙত না।
+     *
+     * ৫ সেপ্টেম্বর ২০২৬-এ ইঞ্জিন খাত যাচাই করা শুরু করেছে — আছে কি,
+     * এই কোম্পানির কি, দল কি। ⛔ তাতে এই ফাইলের প্রতিটা দাখিলা
+     * *"account 10 does not exist"* বলে থেমে যেত।
+     *
+     * ⭐ পাহারাটাই ঠিক, পরীক্ষাগুলোই অবাস্তব ছিল: কাল্পনিক আইডিতে টাকা
+     * বসানো ঠিক সেই জিনিস যেটা লাইভে নীরবে টাকা হারায়। তাই আইডিগুলো
+     * রাখা হলো (দাবিগুলো ওগুলো ধরে লেখা), কিন্তু খাতগুলো আসল।
+     */
+    private function makeAccounts(): void
+    {
+        foreach ([10, 11, 20, 30, 40] as $id) {
+            DB::table('accounts')->insert([
+                'id' => $id,
+                'company_id' => $this->company->id,
+                'code' => (string) (9000 + $id),
+                'name_en' => "Test account {$id}",
+                'type' => 'asset',
+                'nature' => 'debit',
+                'is_group' => 0,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
     }
 
     protected function tearDown(): void

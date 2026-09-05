@@ -128,7 +128,7 @@ final class OpeningBalanceImporter implements Importer, RefusesAPartialImport
             return null;
         }
 
-        return Account::query()->where('code', $code)->first();
+        return Account::query()->postable()->where('code', $code)->first();
     }
 
     /**

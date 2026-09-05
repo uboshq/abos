@@ -7,6 +7,7 @@ namespace Tests\Feature\Modules;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\User;
+use App\Modules\Backup\Models\BackupDestination;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
@@ -51,10 +52,22 @@ class TheBackupRanWhereNobodyCouldSeeItTest extends TestCase
     /** পর্দাটা খোলে, আর যা জানতে মানুষ আসে তা বলে। */
     public function test_the_screen_answers_the_only_question_people_come_with(): void
     {
-        config([
-            'abos.backup.path' => $dir = storage_path('framework/testing/backup-screen'),
-            'abos.backup.mirror' => null,
-        ]);
+        config(['abos.backup.path' => $dir = storage_path('framework/testing/backup-screen')]);
+
+        /*
+         * ⚠️ ৫ সেপ্টেম্বর ২০২৬ — এখানে আগে `abos.backup.mirror => null`
+         * বসিয়ে পর্দায় `core.backup.no_mirror` খোঁজা হত।
+         *
+         * ⛔ দ্বিতীয় কপি আর `.env`-এর একটা পথ নয়; সেটা এখন গন্তব্যের
+         * সারি, কোম্পানি নিজে বসায় — পেনড্রাইভ, অন্য ড্রাইভ বা অন্য
+         * কম্পিউটার। ⓘ অর্থাৎ পুরনো চাবিটা আর কোনো পর্দাতেই ছাপা হয়
+         * না; পরীক্ষাটা বাসি ছিল, ফিচারটা নয়।
+         *
+         * ⭐ প্রশ্ন তিনটে বদলায়নি, তাই সেই তিনটেই মাপা হয় — আজকের
+         * শব্দে। গন্তব্য মুছে অবস্থাটা নিশ্চিত করা হয়, নাহলে ডেমো
+         * ডেটা বদলালে পরীক্ষাটা দুলত।
+         */
+        BackupDestination::query()->delete();
 
         @mkdir($dir, 0775, true);
 
@@ -62,10 +75,10 @@ class TheBackupRanWhereNobodyCouldSeeItTest extends TestCase
         file_put_contents($dir.DIRECTORY_SEPARATOR.$name, 'a file, not a real dump');
 
         $this->actingAs($this->owner)
-            ->get(route('system_admin.backup.index'))
+            ->get(route('backup.index'))
             ->assertOk()
             ->assertSee($name)                              // শেষটা কোনটা
-            ->assertSee(__('core.backup.no_mirror'))        // দ্বিতীয় কপি আছে কি না
+            ->assertSee(__('backup::message.no_destination'))   // দ্বিতীয় কপি আছে কি না
             ->assertSee('abos:restore');                    // দরকারে কী করতে হবে
 
         @unlink($dir.DIRECTORY_SEPARATOR.$name);
@@ -109,11 +122,11 @@ class TheBackupRanWhereNobodyCouldSeeItTest extends TestCase
         $plain = User::query()->where('email', '!=', 'owner@abos.test')->firstOrFail();
 
         $this->actingAs($plain)
-            ->get(route('system_admin.backup.index'))
+            ->get(route('backup.index'))
             ->assertForbidden();
 
         $this->actingAs($plain)
-            ->post(route('system_admin.backup.store'))
+            ->post(route('backup.store'))
             ->assertForbidden();
     }
 
@@ -127,12 +140,21 @@ class TheBackupRanWhereNobodyCouldSeeItTest extends TestCase
      *
      * পতাকাটা তোলা হয়েছে, তাই সারিটা এখন সত্যিই একটা পর্দায় যায়।
      */
+    /*
+     * ⚠️ ৫ সেপ্টেম্বর ২০২৬ — ব্যাকআপ এখন নিজের মডিউল, SystemAdmin-এর
+     * সেটিংসের একটা সারি নয়। ⛔ এই পরীক্ষাটা পুরনো জায়গায় খুঁজত, আর
+     * "সারিটাই নেই" বলে থামত — অথচ সারিটা আছে, শুধু নিজের ঘরে।
+     *
+     * ⓘ একই আকৃতির ভুল আজ তৃতীয়বার (রান্নাঘরের ক্লাস · রান্নাঘরের রুট ·
+     * এখানে): মডিউল সরে গেছে, টেস্ট পুরনো নাম ধরে বসে আছে। ⭐ পরীক্ষাটা
+     * ভুল ছিল, ফিচারটা নয়।
+     */
     public function test_the_menu_row_is_no_longer_a_promise(): void
     {
-        $module = require app_path('Modules/SystemAdmin/module.php');
+        $module = require app_path('Modules/Backup/module.php');
 
-        $row = collect($module['menu']['settings'])
-            ->firstWhere('label', 'system_admin::menu.backup');
+        $row = collect($module['menu']['transactions'])
+            ->firstWhere('label', 'backup::menu.backups');
 
         $this->assertNotNull($row, 'ব্যাকআপের মেনু সারিটাই নেই।');
         $this->assertFalse($row['planned'] ?? false, 'সারিটা এখনো planned হিসেবে ঘোষিত।');

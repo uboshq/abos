@@ -12,6 +12,7 @@ use App\Core\Contracts\Drillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
@@ -79,12 +80,25 @@ class Batch extends Model implements Drillable
      * তাকের সংখ্যা (`floor_change`), কারণ ব্যাচ একটা ভৌত লট — কতটা
      * বেচা যাবে সেই প্রশ্নটা আলাদা, আর সেটা পণ্য-স্তরের চারটা অবস্থার
      * কাজ।
+     *
+     * ── কেন `unplaced_change`-ও গোনা হয়, ৫ সেপ্টেম্বর ২০২৬ ───────────
+     * Stock Placement আসার পর আসা মাল আর সরাসরি তাকে ওঠে না — কেউ
+     * বুঝে নেওয়ার আগে সে অপেক্ষার ঘরে বসে। ⛔ কেবল তাক গুনলে **সদ্য
+     * আসা গোটা লটটাই অদৃশ্য** হয়ে যেত।
+     *
+     * ⚠️ আর ফার্মেসিতে এটা নিরাপত্তার প্রশ্ন: মেয়াদ আর রিকল ভৌত মালের
+     * কথা বলে, তাকের কথা নয়। রিকলের দিন গুদামে পড়ে থাকা কার্টনটাই
+     * সবচেয়ে সহজে আটকানো যায় — সেটাকে "নেই" বলা সবচেয়ে খারাপ উত্তর।
+     *
+     * ⓘ বিক্রয়ের FEFO এই সংখ্যাটা ব্যবহার করে না (মেপে দেখা: একমাত্র
+     * পাঠক [[BatchTrace::onHand()]]), তাই বসানো হয়নি এমন লট থেকে
+     * বেচার সুযোগ এতে তৈরি হয় না — ওই দরজা `floor` দেখেই থামে।
      */
     public function balance(?Warehouse $warehouse = null): string
     {
         return (string) $this->movements()
             ->when($warehouse !== null, fn ($q) => $q->where('warehouse_id', $warehouse->id))
-            ->sum('floor_change');
+            ->sum(DB::raw('floor_change + unplaced_change'));
     }
 
     /**
