@@ -772,7 +772,7 @@ final class PurchaseBillService
              * অর্থ নেই।
              */
             $orderLine = $receiptLine === null
-                ? $this->resolveOrderLine($bill, $line['purchase_order_line_id'] ?? null, $productId)
+                ? $this->resolveOrderLine($bill, $line['purchase_order_line_id'] ?? null, $productId, $qty)
                 : null;
 
             // ভ্যাট না পাঠালে পণ্যের নিজের হার থেকে গোনা
@@ -941,14 +941,18 @@ final class PurchaseBillService
      * Control Panel-এ GRN-এর পর্দাটা বন্ধও করা যায় — আর তখন আদেশ থেকে
      * বিলে পৌঁছানোর কোনো পথই থাকত না, আদেশটা চিরকাল ঝুলে থাকত।
      *
-     * চালানের যাচাইগুলোর সবকটাই এখানেও, একটা বাদে: "কতটা এসেছে তার
-     * বেশি বিল নয়" — আদেশে মাল তো এখনো আসেইনি, তাই ওখানে মাপকাঠি
-     * আদেশের পরিমাণ, প্রাপ্তির নয়।
+     * চালানের যাচাইগুলোর সবকটাই এখানেও — মাপকাঠিটা কেবল আলাদা:
+     * আদেশে মাল এখনো আসেইনি, তাই এখানে **আদেশের পরিমাণ**, প্রাপ্তির নয়।
+     *
+     * ⛔ ৫ সেপ্টেম্বর ২০২৬ পর্যন্ত ঐ কথাটা কেবল **এই মন্তব্যেই** লেখা
+     * ছিল, কোডে ছিল না — অর্থাৎ ১০০ কার্টনের আদেশে ৬০ + ৫০ = ১১০ বিল
+     * করে ফেলা যেত, আর কেউ আটকাত না।
      */
     private function resolveOrderLine(
         PurchaseBill $bill,
         mixed $orderLineId,
         int $productId,
+        string $qty,
     ): ?PurchaseOrderLine {
         if (blank($orderLineId)) {
             return null;
@@ -983,6 +987,36 @@ final class PurchaseBillService
 
         if ((int) $orderLine->product_id !== $productId) {
             throw ValidationException::withMessages(['lines' => __('purchase::validation.line_product_mismatch')]);
+        }
+
+        /*
+         * ── আদেশের চেয়ে বেশি বিল নয় ─────────────────────────────────
+         *
+         * মালিকের নির্দেশ: আংশিক বিল চলবে (১০০-র আদেশে ৬০ আজ, ৪০ পরে),
+         * ⛔ কিন্তু **৬০ + ৫০ = ১১০ চলবে না**।
+         *
+         * ⚠️ যোগফলটা **এই বিলটা বাদ দিয়ে** — নাহলে একটা বিল সম্পাদনা
+         * করতে গেলে সে নিজেকেই গুনত, আর দ্বিতীয়বার সেভ করাই যেত না।
+         * ⓘ চালানের পথে ঠিক এই কৌশলটাই আগে থেকে আছে; এটা তার নকল।
+         *
+         * ⓘ বাতিল বিল গোনা থেকে বাদ — বাতিল মানে ঐ পরিমাণটা আবার
+         * বিল করা যায়, আর সেটাই ঠিক।
+         */
+        $alreadyBilled = $orderLine->billLines()
+            ->where('purchase_bill_id', '<>', $bill->id)
+            ->whereHas('bill', fn ($q) => $q->where('status', '<>', DocumentStatus::CANCELLED))
+            ->sum('qty');
+
+        $wouldBe = bcadd((string) ($alreadyBilled ?: '0'), $qty, 4);
+
+        if (bccomp($wouldBe, (string) $orderLine->ordered_qty, 4) > 0) {
+            throw ValidationException::withMessages([
+                'lines' => __('purchase::validation.over_billed_order', [
+                    'no' => $orderLine->order->document_no,
+                    'ordered' => rtrim(rtrim((string) $orderLine->ordered_qty, '0'), '.'),
+                    'billed' => rtrim(rtrim((string) ($alreadyBilled ?: '0'), '0'), '.'),
+                ]),
+            ]);
         }
 
         return $orderLine;

@@ -446,6 +446,29 @@ class DirectPurchaseController extends Controller implements HasMiddleware
             ->route('purchase.bill.show', $result['bill']->id)
             ->with('saved', __('purchase::message.direct_done', [
                 'no' => $result['bill']->document_no,
+
+                /*
+                 * ⭐ সংখ্যা, বাক্য নয়।
+                 *
+                 * ⓘ *"৩০টা বসানোর অপেক্ষায়"* পড়ে মানুষ ক্লিক করেন;
+                 * *"মাল ঢোকে বসানো হয়নি অবস্থায়"* পড়ে কেউ কিছু করেন না।
+                 *
+                 * ⚠️ ফ্রি পরিমাণও গোনা হয় — ওটাও একই লরিতে এসেছে আর
+                 * ওটাও তাকে ওঠেনি। ⛔ বাদ দিলে সংখ্যাটা কম বলত, আর
+                 * বসানোর পর্দায় গিয়ে মানুষ বেশি মাল দেখে অবাক হতেন।
+                 *
+                 * ⓘ লেজের শূন্যগুলো ছেঁটে ফেলা হয়: বাক্যটা মানুষ পড়ে,
+                 * আর মানুষ *"১২"* লেখে, *"12.0000"* নয়। ⚠️ ভগ্নাংশ
+                 * থাকলে সেটা থাকে — ২.৫ কেজি ২.৫-ই।
+                 */
+                'qty' => $this->plainQty($result['bill']->lines->reduce(
+                    fn (string $sum, $line) => bcadd(
+                        bcadd($sum, (string) $line->qty, 4),
+                        (string) $line->free_qty,
+                        4,
+                    ),
+                    '0',
+                )),
             ]));
     }
 
@@ -675,6 +698,19 @@ class DirectPurchaseController extends Controller implements HasMiddleware
             ->first();
 
         return $series === null ? '' : app(NumberSeriesEngine::class)->preview($series);
+    }
+
+    /**
+     * সংখ্যাটা মানুষের মতো করে লেখা — ১২, `12.0000` নয়।
+     *
+     * ⓘ ভেতরে সব হিসাব চার দশমিকে হয়, আর সেটাই ঠিক; ⚠️ কিন্তু ঐ চারটা
+     * শূন্য বাক্যের মধ্যে ঢুকলে বার্তাটা যন্ত্রের ভাষা হয়ে যায়।
+     *
+     * ⭐ ভগ্নাংশ থাকলে থাকে — ২.৫ কেজি ২.৫-ই, ২.৫০০০ নয় আবার ৩-ও নয়।
+     */
+    private function plainQty(string $qty): string
+    {
+        return str_contains($qty, '.') ? rtrim(rtrim($qty, '0'), '.') : $qty;
     }
 
     /** নগদ ও ব্যাংক — টাকাটা কোথা থেকে গেল। */

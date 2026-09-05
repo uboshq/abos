@@ -89,4 +89,41 @@ class PurchaseOrderLine extends Model
 
         return bccomp($pending, '0', 4) > 0 ? $pending : '0.0000';
     }
+
+    public function billLines(): HasMany
+    {
+        return $this->hasMany(PurchaseBillLine::class, 'purchase_order_line_id');
+    }
+
+    /**
+     * এই লাইনের বিপরীতে এ পর্যন্ত কত বিল হয়েছে।
+     *
+     * ── ⭐ সংখ্যাটা জমা থাকে না, গোনা হয় ─────────────────────────────
+     * মালিকের কথা: *"Parsial Bill hole setaw dite hobe"* — ১০০ কার্টনের
+     * আদেশে ৬০ এল, ৬০-এর বিল আজ, ৪০ পরে।
+     *
+     * ⚠️ এটা একটা **চলমান সংখ্যা**, আর চলমান সংখ্যা জমা রাখার ফাঁদটা
+     * পরিচিত: বাড়ানোর কোড লেখা হয়, কমানোরটা নয় — আর তখন বাতিল হওয়া
+     * বিলের পরেও আদেশটা চিরকাল *"৪০ বাকি"* বলত।
+     *
+     * ⭐ তাই উপরের `receivedQty()`-র হুবহু নিয়ম: **জমা নয়, গোনা** — আর
+     * বাতিল বিল গোনা থেকে বাদ। ⓘ বাতিল হলে সংখ্যাটা নিজে থেকেই ফিরে
+     * আসে, কারণ ফেরানোর কোনো কোডই নেই।
+     */
+    public function billedQty(): string
+    {
+        $billed = $this->billLines()
+            ->whereHas('bill', fn ($q) => $q->where('status', '<>', 'cancelled'))
+            ->sum('qty');
+
+        return (string) ($billed ?: '0');
+    }
+
+    /** আর কত বিল হওয়া বাকি — ঋণাত্মক হয় না। */
+    public function pendingBillQty(): string
+    {
+        $pending = bcsub((string) $this->ordered_qty, $this->billedQty(), 4);
+
+        return bccomp($pending, '0', 4) > 0 ? $pending : '0.0000';
+    }
 }
