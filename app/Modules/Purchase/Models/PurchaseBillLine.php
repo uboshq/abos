@@ -25,6 +25,15 @@ class PurchaseBillLine extends Model
     protected $fillable = [
         'purchase_bill_id', 'product_id', 'purchase_receipt_line_id', 'purchase_order_line_id',
         'qty', 'free_qty', 'entered_qty', 'entered_unit_id',
+
+        /*
+         * ফ্রি পরিমাণ কোন প্যাকে লেখা হয়েছিল — উপরের জোড়ার হুবহু নকল।
+         *
+         * ⚠️ এই দুইটা নাম এখানে না লিখলে কিছুই ভাঙত না, কেবল সারি
+         * দুইটা **নীরবে খালি** যেত — আর "১ কার্টন ফ্রি" আবার "১২ পিস"
+         * হয়ে ফিরত, ঠিক যে ভুলটা মাইগ্রেশনটা সারাতে এসেছে।
+         */
+        'entered_free_qty', 'free_unit_id',
         'batch_no', 'expiry_date', 'mrp',
         'rate', 'sales_price', 'discount', 'tax', 'tax_variance', 'amount', 'line_no', 'narration',
     ];
@@ -37,6 +46,7 @@ class PurchaseBillLine extends Model
             'expiry_date' => 'date',
             'mrp' => 'decimal:4',
             'entered_qty' => 'decimal:4',
+            'entered_free_qty' => 'decimal:4',
             'rate' => 'decimal:4',
 
             // সরাসরি ক্রয়ের পর্দায় বসানো বিক্রয়মূল্য — এটাও টাকা, তাই

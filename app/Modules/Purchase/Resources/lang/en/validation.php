@@ -50,6 +50,15 @@ return [
     'not_enough_to_return' => ':available of :product is in the warehouse — no more than that can go back.',
 
     'missing_account' => 'Account :code is missing from the chart — the chart has not been installed.',
+    /*
+     * Our own number, already on another bill.
+     *
+     * Checked inside the transaction, because outside it two counters
+     * could both pass and both save. The database unique index is still
+     * the last guard — this message only turns a 500 into a sentence.
+     */
+    'bill_no_taken' => 'Bill number :no is already used. Pick another, or leave the box empty and let the series decide.',
+
     'bill_needs_warehouse' => 'This bill brings goods in without a receipt, but no warehouse is named and there is no default one. Pick a warehouse.',
     'unknown_order_line' => 'That order line was not found.',
     'order_other_supplier' => 'The order belongs to another supplier — one bill cannot mix suppliers.',

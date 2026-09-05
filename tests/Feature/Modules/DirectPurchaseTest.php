@@ -98,10 +98,22 @@ class DirectPurchaseTest extends TestCase
 
     public function test_the_screen_opens(): void
     {
+        /*
+         * ⚠️ চূড়ান্ত বোতামের নাম বদলেছে — ৫ সেপ্টেম্বর ২০২৬।
+         *
+         * মালিকের স্ক্রিনশটে ওটা `Receive goods · ৳x`, আর অঙ্কটা
+         * বোতামেই। ⓘ পুরনো `confirm_direct` চাবিটা আর কোথাও ব্যবহার
+         * হয় না, কিন্তু ভাষার ফাইলে রেখে দেওয়া আছে — মুছে দিলে দুই
+         * ভাষায় শব্দটা আবার লিখতে হত যদি কোনোদিন ফেরে।
+         *
+         * ⛔ `assertSee($text, false)` নয় — এস্কেপসহ। ডেমোর ব্যবহারকারীর
+         * ভাষা বাংলা, আর বাংলা বার্তার কয়েকটায় উদ্ধৃতি চিহ্ন আছে যা
+         * Blade `&quot;` করে ছাপে; কাঁচা তুলনা তখন কখনো মিলত না।
+         */
         $this->get(route('purchase.direct.create'))
             ->assertOk()
             ->assertSee($this->supplier->name())
-            ->assertSee(__('purchase::action.confirm_direct'));
+            ->assertSee(__('purchase::action.receive_goods'));
     }
 
     /**

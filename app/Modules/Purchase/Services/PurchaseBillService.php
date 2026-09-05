@@ -82,7 +82,40 @@ final class PurchaseBillService
             $supplierId = (int) $data['supplier_id'];
             $this->assertBillNoIsFree($supplierId, $data['supplier_bill_no'] ?? null);
 
-            $documentNo = $this->numbers->next('PBL');
+            /*
+             * ── বিলের নম্বর — পর্দা থেকেও আসতে পারে ──────────────────
+             *
+             * ⭐ কাউন্টারের ঘরটা `NumberSeriesEngine::preview()` দিয়ে আগে
+             * থেকে ভরা থাকে, আর দরকারে বদলানো যায় (মালিকের নকশার
+             * `Pur. INV No.`)। ⓘ বিক্রয়ের দিকে এই যন্ত্রটা ৩ সেপ্টেম্বর
+             * থেকে চলছে; এখানে হুবহু সেটাই, `INV`-এর বদলে `PBL`।
+             *
+             * ⚠️ **পর্দার ভরে রাখা নম্বর "হাতে লেখা" নয়** — ওটা সিরিজেরই।
+             * ⛔ `isNextNumber()` না দেখলে যা ঘটত (বিক্রয়ে ঘটেছিল, মাপা):
+             * ব্যবহারকারী কিছু না বদলে সেভ করলে সিরিজ **এক ধাপও এগোত না**,
+             * আর দিনের দ্বিতীয় বিলে ডাটাবেসের ইউনিক ইনডেক্সে ৫০০।
+             *
+             * ⓘ সত্যিকারের হাতে-লেখা নম্বরে আচরণ আগের মতোই — সিরিজ ছোঁয়া
+             * হয় না, কারণ পুরনো কাগজের নম্বর বসালে সিরিজে ফাঁক পড়া উচিত নয়।
+             *
+             * ⚠️ অনন্যতা ট্রানজেকশনের **ভিতরে** দেখা হয়; বাইরে দেখলে দুইটা
+             * কাউন্টার একই নম্বর নিয়ে দুইজনেই পাশ করে যেত। ⓘ শেষ পাহারা
+             * তবু ডাটাবেসের ইউনিক ইনডেক্স — এই যাচাইটা কেবল মানুষকে একটা
+             * পড়ার মতো বার্তা দেয়, ৫০০ পাতার বদলে।
+             */
+            $given = trim((string) ($data['document_no'] ?? ''));
+
+            if ($given !== '' && PurchaseBill::query()->where('document_no', $given)->exists()) {
+                throw ValidationException::withMessages([
+                    'bill_no' => __('purchase::validation.bill_no_taken', ['no' => $given]),
+                ]);
+            }
+
+            $documentNo = match (true) {
+                $given === '' => $this->freeSeriesNumber(),
+                $this->numbers->isNextNumber('PBL', $given) => $this->freeSeriesNumber(),
+                default => $given,
+            };
 
             $bill = PurchaseBill::create([
                 'company_id' => CompanyContext::id(),
@@ -93,7 +126,47 @@ final class PurchaseBillService
                 'warehouse_id' => $data['warehouse_id'] ?? null,
                 'trx_date' => $trxDate->toDateString(),
                 'due_on' => $data['due_on'] ?? null,
+
+                /*
+                 * ⭐ পরিশোধের শর্ত — মালিকের `Payment Terms`।
+                 *
+                 * ⚠️ তারিখটা (`due_on`) **বসার সময়েই পাকা**, পরে আর গোনা
+                 * হয় না। ⛔ নাহলে পুরনো বিল খুললে আজকের মাস ধরে নতুন
+                 * তারিখ দেখাত, আর বকেয়ার তালিকা নীরবে বদলে যেত।
+                 *
+                 * ⓘ ধরনটা আলাদা রাখা হয় কারণ তারিখ **কেন** সেই তারিখ তা
+                 * তারিখ নিজে বলে না — নগদ আর COD-র তারিখ এক হতে পারে।
+                 */
+                'payment_term' => $data['payment_term'] ?? null,
+
                 'supplier_bill_no' => $data['supplier_bill_no'] ?? null,
+
+                /*
+                 * ⭐ যেদিন মাল এল — খতিয়ানের তারিখ নয়, মজুদের।
+                 *
+                 * ⓘ খালি হলে সেবা নিজেই `trx_date` ধরে
+                 * ([[bringInDirectLines()]]), তাই পুরনো প্রতিটা ডাক
+                 * অবিকল আগের মতো চলে।
+                 */
+                'received_on' => $data['received_on'] ?? null,
+
+                /*
+                 * ── আমদানি চালান ────────────────────────────────────
+                 *
+                 * ⚠️ পাঁচটাই ঐচ্ছিক, আর দেশের ভিতরের ক্রয়ে পাঁচটাই খালি।
+                 * ⓘ কিন্তু আমদানিতে ব্যাংক ও কাস্টমস **এই নম্বরগুলো ধরেই**
+                 * কাগজ খোঁজে, আর আগে ওগুলোর কোনো ঘর ছিল না — তাই হয়
+                 * `narration`-এ গদ্য হয়ে বসত, নয়তো বসতই না।
+                 *
+                 * ⛔ ঘরগুলো কেবল **রাখে**: শুল্ক বা বন্দর খরচ পণ্যের
+                 * ক্রয়মূল্যে যোগ হয় না, ঠিক যেমন ভাড়াও হয় না। ⓘ পর্দাতেও
+                 * সেটা লেখা আছে, নাহলে কেউ ধরে নিতেন landed cost হয়ে গেছে।
+                 */
+                'lc_no' => $data['lc_no'] ?? null,
+                'be_no' => $data['be_no'] ?? null,
+                'be_date' => $data['be_date'] ?? null,
+                'vessel' => $data['vessel'] ?? null,
+                'port_of_entry' => $data['port_of_entry'] ?? null,
 
                 /*
                  * ── যে গাড়িটা মাল নিয়ে এল ────────────────────────────
@@ -236,6 +309,20 @@ final class PurchaseBillService
 
         $warehouse = $this->warehouseFor($bill);
 
+        /*
+         * ── মালটা কোন দিনে গুদামে বসবে ─────────────────────────────
+         *
+         * ⭐ গাড়ি যেদিন এল সেদিন — বিলের তারিখে নয়। ⓘ মিল ২ তারিখে বিল
+         * কাটে, ট্রাক পৌঁছায় ৫ তারিখে, আর মজুদের প্রশ্নটা ট্রাকের।
+         *
+         * ⛔ খতিয়ানটা এতে বদলায় না, আর বদলানোর কথাও নয়: টাকার দায়
+         * বিলের তারিখে জন্মায়। ⚠️ দুইটা এক করলে যেকোনো একটা মিথ্যা হত —
+         * হয় সরবরাহকারীর খাতা মিলত না, নয় মাস-শেষের মজুদ।
+         *
+         * ⓘ ঘরটা খালি থাকলে আগের নিয়মই, হুবহু।
+         */
+        $movedOn = $bill->received_on ?? $bill->trx_date;
+
         foreach ($direct as $line) {
             // লট ধরা পণ্যে লটটা এখানেই জন্মায় — মালের সাথে একসাথে
             $batch = $this->lotFor($line, $bill->supplier_bill_no ?: $bill->document_no);
@@ -258,7 +345,7 @@ final class PurchaseBillService
                  * `floor`-এ নেই, তাই বিক্রয়যোগ্যও নয়।
                  */
                 unplaced: (string) $line->qty,
-                date: $bill->trx_date,
+                date: $movedOn,
                 documentNo: $bill->document_no,
                 batch: $batch,
             );
@@ -272,8 +359,23 @@ final class PurchaseBillService
              * চেয়ে দামি দেখাত, আর বেচার সময় মুনাফা কম দেখাত। আর কর
              * যোগ করলে উল্টোটা: ভ্যাট ফেরতযোগ্য, ওটা মালের দাম নয়।
              */
+            /*
+             * ⛔ ৫ সেপ্টেম্বর ২০২৬ — এখানে `amount` ধরা হত, আর **ওটা
+             * ভ্যাটসহ**।
+             *
+             * ⚠️ অর্থাৎ উপরের মন্তব্যটা যা বলে (*"ভ্যাট ফেরতযোগ্য, ওটা
+             * মালের দাম নয়"*) কোডটা ঠিক তার উল্টো করত: প্রতিটা ভ্যাটওয়ালা
+             * ক্রয়ে গুদামের মালের দাম **ভ্যাটের পরিমাণে বেশি** বসত, আর
+             * বেচার দিন মুনাফা ঠিক ততটাই কম দেখাত।
+             *
+             * ⓘ `amount` = নেট + ভ্যাট (দামের বাইরের ভ্যাটে), আর দামের
+             * ভিতরের ভ্যাটে `amount` = নেট যার **ভিতরেই** ভ্যাট আছে —
+             * দুই ক্ষেত্রেই মালের আসল দাম `amount − tax`।
+             */
+            $goodsValue = bcsub((string) $line->amount, (string) $line->tax, 4);
+
             $unitCost = bccomp((string) $line->qty, '0', 4) > 0
-                ? bcdiv((string) $line->amount, (string) $line->qty, 4)
+                ? bcdiv($goodsValue, (string) $line->qty, 4)
                 : '0';
 
             $this->costs->receive(
@@ -283,7 +385,11 @@ final class PurchaseBillService
                 sourceType: PurchaseBill::STOCK_SOURCE,
                 sourceId: $bill->id,
                 documentNo: $bill->document_no,
-                date: $bill->trx_date,
+
+                /* ⚠️ স্তরটাও মালের দিনেই — চলাচল আর তার খরচ দুই দিনে
+                   বসলে FIFO-র ক্রম আর মজুদের ক্রম আলাদা হয়ে যেত, আর
+                   কোন স্তর থেকে কত বেরোল সেটা কেউ মেলাতে পারত না। */
+                date: $movedOn,
             );
         }
     }
@@ -357,7 +463,10 @@ final class PurchaseBillService
             warehouse: $warehouse,
             sourceType: PurchaseBill::STOCK_SOURCE.':free',
             sourceId: $bill->id,
-            date: $bill->trx_date,
+
+            /* ⓘ ফ্রি কার্টনটাও একই গাড়িতে এসেছে, তাই একই তারিখে বসে —
+               `bringInDirectLines()`-এর `$movedOn`-এর মতোই। */
+            date: $bill->received_on ?? $bill->trx_date,
             documentNo: $bill->document_no,
 
             /* ⚠️ `free` নয়, `unplacedFree` — ফ্রি কার্টনটাও একই গাড়িতে
@@ -405,6 +514,35 @@ final class PurchaseBillService
      * আর অন্যটা বদলাত না — তখন বিলের মাল এক গুদামে আর তার উপহার আরেক
      * গুদামে বসত, আর কারণটা কোথাও লেখা থাকত না।
      */
+    /**
+     * সিরিজের এমন একটা নম্বর যা এখনো কেউ নেয়নি।
+     *
+     * ── কেন হাঁটতে হয় ───────────────────────────────────────────────
+     * পুরনো কাগজ তুলতে গিয়ে কেউ হাতে যে নম্বরটা বসিয়েছিলেন, সিরিজ
+     * একদিন সেখানেই পৌঁছাবে। ⚠️ তখন `next()` এমন একটা নম্বর ফেরত দেবে
+     * যেটা ইতিমধ্যেই একটা বিলের গায়ে — আর ডাটাবেসের ইউনিক ইনডেক্সে
+     * ৫০০। ⓘ তাই পরেরটা নেওয়া হয়, যতক্ষণ না ফাঁকা একটা মেলে।
+     *
+     * ⛔ হাতে লেখা নম্বরে এই হাঁটা **হয় না** — ওখানে ব্যবহারকারীকে
+     * পড়ার মতো বার্তা দেওয়া হয়, কারণ তিনি একটা নির্দিষ্ট নম্বর
+     * চেয়েছেন; নীরবে অন্য একটা বসিয়ে দিলে সেটা তাঁর কাগজের সাথে
+     * মিলত না।
+     *
+     * ⓘ বিক্রয়ের [[SalesInvoiceService]]-এ হুবহু এটাই আছে।
+     */
+    private function freeSeriesNumber(): string
+    {
+        for ($attempt = 0; $attempt < 50; $attempt++) {
+            $candidate = $this->numbers->next('PBL');
+
+            if (! PurchaseBill::query()->where('document_no', $candidate)->exists()) {
+                return $candidate;
+            }
+        }
+
+        return $this->numbers->next('PBL');
+    }
+
     public function warehouseFor(PurchaseBill $bill): Warehouse
     {
         $warehouse = $bill->warehouse_id !== null
@@ -488,8 +626,30 @@ final class PurchaseBillService
             $receiptLine = $line->receiptLine;
 
             if ($receiptLine === null) {
-                // চালান নেই মানে মালটা এই বিলেই প্রথম খাতায় এল
-                $directAmount = bcadd($directAmount, (string) $line->amount, 4);
+                /*
+                 * চালান নেই মানে মালটা এই বিলেই প্রথম খাতায় এল।
+                 *
+                 * ⛔ ৫ সেপ্টেম্বর ২০২৬ — এখানে `amount` বসত, আর **ওটা
+                 * ভ্যাটসহ**। ⚠️ ভ্যাটটা নিচে আবার আলাদা করে ডেবিট হয়
+                 * (উপকরণ ভ্যাট), তাই একই টাকা **দুইবার ডেবিট** হত, আর
+                 * ফারাকটা মূল্য-পার্থক্যের খাতে গিয়ে পড়ত:
+                 *
+                 *     ডেবিট  = মোট + ভ্যাট
+                 *     ক্রেডিট = মোট
+                 *     ফারাক  = −ভ্যাট      ← প্রতিটা ভ্যাটওয়ালা সরাসরি ক্রয়ে
+                 *
+                 * ⓘ চালানের পথে ভুলটা ছিল না — ওখানে চালানের দর ধরা হয়,
+                 * আর ওতে ভ্যাট থাকে না। তাই ফাঁকটা কেবল **সরাসরি ক্রয়ে**,
+                 * আর ওখানেই কেউ কোনোদিন ভ্যাট বসায়নি বলে ধরাও পড়েনি।
+                 *
+                 * ⭐ ধরা পড়েছে ভ্যাটের ধরনের ড্রপডাউনটা বসানোর পর, যখন
+                 * প্রথমবার একটা সরাসরি ক্রয়ে পণ্যের নিজের হার বসল।
+                 */
+                $directAmount = bcadd(
+                    $directAmount,
+                    bcsub((string) $line->amount, (string) $line->tax, 4),
+                    4,
+                );
 
                 continue;
             }
@@ -619,19 +779,27 @@ final class PurchaseBillService
             $figures = $this->lineFigures($qty, $rate, $line['discount'] ?? '0', $line['tax'] ?? null, $product->tax);
 
             /*
-             * ফ্রি পরিমাণ — একই সারির একই এককে, তাই একই রূপান্তরে।
+             * ফ্রি পরিমাণ — নিজের একক নিয়ে।
              *
-             * "২ বাক্স, সাথে ১ বাক্স ফ্রি" — ফ্রিটাও বাক্সেই লেখা হয়,
-             * পিসে নয়। আলাদা একক ধরলে একই সারিতে দুইটা একক থাকত।
+             * ⛔ এখানে আগে লাইনের `unit_id`-ই ধরা হত, আর পাশে লেখা ছিল
+             * *"আলাদা একক ধরলে একই সারিতে দুইটা একক থাকত"*। ⚠️ বাস্তবে
+             * দুইটা একক থাকেই: মিল কার্টনে বেচে, আর ফ্রি দেয় পিসে।
+             * মালিকের নকশাতেও চারটা ঘর — `QTY. · UOM · FREE QTY · UOM`।
+             *
+             * ⓘ `free_unit_id` না এলে আগের নিয়মই বহাল — লাইনের একক।
+             * অর্থাৎ পুরনো প্রতিটা ডাক (API · ইমপোর্ট · সিডার) অবিকল
+             * আগের মতো চলে।
              *
              * দর লাগে না: ফ্রি মালের ক্রয়মূল্য নেই, আর সেটাই আলাদা
              * ভাণ্ডার রাখার মূল কারণ।
              */
-            $free = $this->packed(
+            $freePack = $this->packed(
                 $product,
                 $this->zeroOrMore($line['free_qty'] ?? null, 'free_qty'),
-                $line['unit_id'] ?? null,
-            )['qty'];
+                $line['free_unit_id'] ?? $line['unit_id'] ?? null,
+            );
+
+            $free = $freePack['qty'];
 
             PurchaseBillLine::create([
                 'purchase_bill_id' => $bill->id,
@@ -652,6 +820,16 @@ final class PurchaseBillService
 
                 'entered_qty' => $pack['entered_qty'],
                 'entered_unit_id' => $pack['entered_unit_id'],
+
+                /*
+                 * ⓘ ফ্রি-র জোড়াটাও বসে — নাহলে "১ কার্টন ফ্রি" খাতায়
+                 * `12` হয়ে বসত আর কাগজটা আবার খুললে "১২ পিস" পড়া যেত।
+                 * ⚠️ `free_qty` উপরে base এককেই আছে; এই দুইটা কেবল মনে
+                 * রাখে, কোনো যোগফলে ঢোকে না।
+                 */
+                'entered_free_qty' => $freePack['entered_qty'],
+                'free_unit_id' => $freePack['entered_unit_id'],
+
                 'rate' => $rate,
 
                 /*
