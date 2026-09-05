@@ -57,6 +57,19 @@ return [
      * could both pass and both save. The database unique index is still
      * the last guard — this message only turns a 500 into a sentence.
      */
+    /*
+     * More billed against an order than was ever ordered.
+     *
+     * Partial billing is allowed and normal — sixty cartons today, the
+     * other forty next week. What is refused is the sum going past the
+     * order: the supplier would be paid for goods nobody asked for, and
+     * the order would read as over-delivered for ever.
+     *
+     * The numbers are in the sentence because "too much" is not an
+     * answer anyone can act on.
+     */
+    'over_billed_order' => 'Order :no is for :ordered, and :billed is already billed. This line takes it past the order.',
+
     'bill_no_taken' => 'Bill number :no is already used. Pick another, or leave the box empty and let the series decide.',
 
     'bill_needs_warehouse' => 'This bill brings goods in without a receipt, but no warehouse is named and there is no default one. Pick a warehouse.',
@@ -69,4 +82,5 @@ return [
      * and three cheques to the same supplier become indistinguishable.
      */
     'cheque_needs_number' => 'A cheque needs its number. Write the number printed on the cheque.',
+    'slip_used_twice' => 'A payment to this supplier already carries slip :no. Check that one first — entering it twice would show the money leaving twice.',
 ];

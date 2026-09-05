@@ -6,6 +6,7 @@ namespace App\Modules\Sales\Services;
 
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
+use App\Core\Services\SlipIsNotUsedTwice;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
@@ -42,6 +43,9 @@ final class CollectionService
         private readonly PostingEngine $posting,
         private readonly CashTillService $tills,
         private readonly ChequeService $cheques,
+
+        /* ⓘ নিয়মটা কোরে — ক্রয়ের পরিশোধও ঠিক এই একই যন্ত্র ডাকে। */
+        private readonly SlipIsNotUsedTwice $slips,
     ) {}
 
     /**
@@ -61,6 +65,26 @@ final class CollectionService
                     'amount' => __('sales::validation.collection_must_be_positive'),
                 ]);
             }
+
+            /*
+             * ⛔ একই স্লিপ দুইবার নয় — মালিকের নিয়ম, ৫ সেপ্টেম্বর ২০২৬।
+             *
+             * ⚠️ আদায়ে এটা পরিশোধের চেয়েও দামি: একই বিকাশ TrxID দুইবার
+             * বসালে গ্রাহকের পাওনা **দুইবার কমে**, অথচ টাকা এসেছে একবার।
+             * ⓘ ধরা পড়ে মাস শেষে মেলাতে গিয়ে, আর তখন কোনটা আসল তা বলা
+             * কঠিন।
+             *
+             * ⓘ নম্বর নেওয়ার আগে — আটকালে সিরিজে ফাঁক পড়ত।
+             */
+            $this->slips->check(
+                table: 'sal_collections',
+                slipNo: $data['instrument_no'] ?? null,
+                partyId: (int) $data['customer_id'],
+                party: 'customer_id',
+                message: __('sales::validation.slip_used_twice', [
+                    'no' => trim((string) ($data['instrument_no'] ?? '')),
+                ]),
+            );
 
             $documentNo = $this->numbers->next('COL');
 
