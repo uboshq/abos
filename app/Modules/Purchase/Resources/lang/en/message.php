@@ -121,4 +121,13 @@ return [
     'rate_chart_needs_supplier' => 'Pick the supplier first — the chart is their rates, not everybody\'s.',
     'discount_over_line_screen' => 'The discount is larger than the line itself.',
     'shipment_not_in_cost_yet' => 'Held on the bill so the bank and customs can be answered later. Duty and port charges do not reach the item cost yet.',
+    /* ⭐ A changed purchase rate proposes a new sales rate; it never
+       applies one. The owner's decision, 6 Sep 2026. */
+    'rate_moved' => 'Purchase rate moved',
+    'price_would_become' => 'sales rate would become',
+    /* ⭐ No party, no product list — the owner's rule, 6 Sep 2026.
+       ⚠️ The line says what to DO, not merely what is refused. */
+    'pick_supplier_first' => 'Choose the supplier first — the rate depends on who you are buying from.',
+    'prices_raised' => 'Sales rate raised on :count item(s) — the purchase rate had outrun it. :list',
+    'price_raised_one' => ':product :from → :to',
 ];

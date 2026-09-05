@@ -46,7 +46,7 @@ class Product extends Model implements Drillable
     protected $fillable = [
         'company_id', 'code', 'name_en', 'name_bn', 'barcode', 'primary_image_id',
         'brand', 'category', 'brand_id', 'category_id', 'unit_id', 'tax_id',
-        'purchase_price', 'sale_price', 'reorder_level',
+        'purchase_price', 'sale_price', 'pricing_anchor', 'pricing_pct', 'reorder_level',
         'status', 'is_active', 'created_by',
     ];
 
@@ -55,6 +55,7 @@ class Product extends Model implements Drillable
         return [
             'purchase_price' => 'decimal:4',
             'sale_price' => 'decimal:4',
+            'pricing_pct' => 'decimal:4',
             'reorder_level' => 'decimal:4',
             'is_active' => 'boolean',
         ];

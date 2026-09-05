@@ -35,7 +35,8 @@ class PurchaseBillLine extends Model
          */
         'entered_free_qty', 'free_unit_id',
         'batch_no', 'expiry_date', 'mrp',
-        'rate', 'sales_price', 'discount', 'tax', 'tax_variance', 'amount', 'line_no', 'narration',
+        'rate', 'sales_price', 'pricing_anchor', 'pricing_pct',
+        'discount', 'tax', 'tax_variance', 'amount', 'line_no', 'narration',
     ];
 
     protected function casts(): array
@@ -53,6 +54,7 @@ class PurchaseBillLine extends Model
             // এটাও decimal। cast ছাড়া ছিল, আর তখন markup/margin-এর
             // অঙ্কে একটা `+` লিখলেই PHP float বানিয়ে ফেলত।
             'sales_price' => 'decimal:4',
+            'pricing_pct' => 'decimal:4',
 
             'discount' => 'decimal:4',
             'tax' => 'decimal:4',

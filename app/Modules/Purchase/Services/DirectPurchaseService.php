@@ -170,6 +170,24 @@ final class DirectPurchaseService
              */
             'tax' => ($line['tax'] ?? null) === null ? null : (string) $line['tax'],
             'sales_price' => filled($line['sales_price'] ?? null) ? (string) $line['sales_price'] : null,
+
+            /*
+             * দামের নীতি — কোন ঘরটা মানুষ নিজে লিখেছিলেন।
+             *
+             * ⓘ `rate` আর `sales_price` থেকে markup ও margin দুইটাই বের
+             * করা যায়, কিন্তু **কোনটা তিনি বেছেছিলেন তা যায় না** — আর
+             * ঠিক ওটাই নীতি। ⚠️ ৫০% markup আর ৫০% margin দুইটা আলাদা
+             * দাম (১৫০ বনাম ২০০)।
+             *
+             * ⛔ খালি থাকলে `null`-ই থাকে: *"এই লাইনে কোনো নীতি বলা
+             * হয়নি"* আর *"নীতিটা শূন্য শতাংশ"* এক কথা নয়।
+             */
+            'pricing_anchor' => filled($line['pricing_anchor'] ?? null)
+                ? (string) $line['pricing_anchor']
+                : null,
+            'pricing_pct' => filled($line['pricing_pct'] ?? null)
+                ? (string) $line['pricing_pct']
+                : null,
             'narration' => $line['narration'] ?? null,
         ], $lines);
     }
@@ -357,10 +375,31 @@ final class DirectPurchaseService
              * গুলিয়ে ফেলার জিনিস নয়: মজুদের মূল্য স্তর থেকেই আসে,
              * এটা শুধু চোখের সামনে রাখার একটা সংখ্যা।
              */
+            /*
+             * ⭐ দামের সাথে **নীতিটাও** — ৬ সেপ্টেম্বর ২০২৬।
+             *
+             * ⛔ এটা এই ফাইলের **তৃতীয়** স্ট্যাম্পিং জায়গা
+             * ([[PurchaseBillService::applySalesPrices]] আর
+             * [[PurchaseReceiptService::applySalesPrices]]-এর পাশে)। ⚠️ আমি
+             * প্রথম দুইটায় নীতি বসিয়ে ভেবেছিলাম কাজ শেষ — আর টেস্ট বলল
+             * *"null is not identical to 'margin'"*, কারণ সরাসরি ক্রয় এই
+             * তৃতীয় পথে যায়।
+             *
+             * ⓘ **তিন জায়গায় এক নিয়ম** — নাহলে কোন দরজা দিয়ে মাল ঢুকল
+             * তার উপর নির্ভর করে পণ্যের নীতি থাকত বা থাকত না, আর সেটা
+             * ব্যবহারকারীর কাছে খামখেয়ালি মনে হত।
+             *
+             * ⚠️ লাইনে নীতি না থাকলে পণ্যের পুরনো নীতি ছোঁয়া হয় না: এই
+             * কাগজটা কোনো নতুন সিদ্ধান্ত জানায়নি।
+             */
+            $policy = filled($line->pricing_anchor)
+                ? ['pricing_anchor' => $line->pricing_anchor, 'pricing_pct' => $line->pricing_pct]
+                : [];
+
             $line->product->forceFill([
                 'sale_price' => (string) $line->sales_price,
                 'purchase_price' => (string) $line->rate,
-            ])->save();
+            ] + $policy)->save();
         }
     }
 
@@ -490,6 +529,16 @@ final class DirectPurchaseService
             // শেষ যে দামে কেনা হয়েছিল — নতুন দর বসানোর সময় এটাই মাপকাঠি
             'last_rate' => (float) ($product->purchase_price ?? 0),
             'sales_price' => (float) ($product->sale_price ?? 0),
+
+            /*
+             * পণ্যের **নীতি** — কেবল দাম নয়।
+             *
+             * ⓘ এটাই পর্দাকে বলে দেয় ক্রয়দর বদলালে নতুন বিক্রয়দর কত হওয়া
+             * উচিত। ⚠️ ছাড়া হলে পর্দা কেবল দুইটা সংখ্যা পেত আর চুপ করে
+             * থাকত — ঠিক যেটা ৬ সেপ্টেম্বর ধরা পড়েছে।
+             */
+            'pricing_anchor' => (string) ($product->pricing_anchor ?? ''),
+            'pricing_pct' => $product->pricing_pct !== null ? (string) $product->pricing_pct : '',
 
             // পণ্যের নিজের একক — একক না বাছলে পর্দা এই নামটাই লেখে
             'unit_id' => (string) ($product->unit_id ?? ''),

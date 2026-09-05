@@ -251,15 +251,16 @@ return [
     'this_line' => 'This Line',
     'gift' => 'Gift',
     /*
-     * "Pur. Rate" — the owner's wording, 6 September 2026.
+     * "Costing Price" — the owner's wording, 6 September 2026.
      *
-     * The button opens what the goods cost us, and "Costing" named the
-     * exercise rather than the number. On a counter where every other
-     * button says what you get, this one said what you were doing.
+     * It was briefly "Pur. Rate", which was his word too — but for the
+     * buying counter. On a sale the number is not a purchase rate; it
+     * is what this line already cost us, which is what the seller is
+     * measuring the price against.
      *
-     * Short because the button is narrow: three of them share one row.
+     * Same button, two counters, two right answers.
      */
-    'costing' => 'Pur. Rate',
+    'costing' => 'Costing Price',
     'items' => 'items',
     'running_total' => 'Running total',
     'sl' => 'SL#',

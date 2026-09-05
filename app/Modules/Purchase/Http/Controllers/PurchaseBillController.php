@@ -220,9 +220,35 @@ class PurchaseBillController extends Controller implements HasMiddleware
     {
         $this->bills->confirm($bill);
 
-        return redirect()
+        /*
+         * ⭐ সফটওয়্যার যদি নিজে কোনো দাম বাড়িয়ে থাকে, সেটা **বলতেই হবে**।
+         *
+         * মালিকের সিদ্ধান্ত, ৬ সেপ্টেম্বর ২০২৬: *"বিল কনফার্ম করার সময় যদি
+         * sales price না বাড়ায়, তখন সফটওয়্যার ওয়ার্নিং দিয়ে নিজেই বাড়াবে।"*
+         *
+         * ⚠️ **ওয়ার্নিং অংশটা ঐচ্ছিক নয়।** ⓘ নিজে থেকে দাম বদলানো তখনই
+         * গ্রহণযোগ্য যখন কে-কী-কেন বদলাল তা সাথে সাথে দেখা যায়; নাহলে সেটা
+         * একটা **নীরব বদল**, আর কাউন্টারে কেউ পুরনো দাম ধরে বসে থাকতেন।
+         *
+         * ⓘ প্রতিটা পণ্যের নাম ও আগের-পরের দাম আলাদা করে লেখা — "৩টা দাম
+         * বদলেছে" বললে কেউ যাচাই করতে পারতেন না কোনগুলো।
+         */
+        $raised = $this->bills->pricesRaised;
+
+        $flash = redirect()
             ->route('purchase.bill.show', $bill)
             ->with('saved', __('purchase::message.bill_confirmed'));
+
+        if ($raised !== []) {
+            $flash->with('warning', __('purchase::message.prices_raised', [
+                'count' => count($raised),
+                'list' => collect($raised)
+                    ->map(fn (array $r): string => __('purchase::message.price_raised_one', $r))
+                    ->implode(' · '),
+            ]));
+        }
+
+        return $flash;
     }
 
     public function cancel(Request $request, PurchaseBill $bill): RedirectResponse

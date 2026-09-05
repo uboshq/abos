@@ -395,6 +395,15 @@ class DirectPurchaseController extends Controller implements HasMiddleware
             'lines.*.discount' => ['nullable', 'numeric', 'min:0'],
             'lines.*.tax' => ['nullable', 'numeric', 'min:0'],
             'lines.*.sales_price' => ['nullable', 'numeric', 'min:0'],
+
+            /*
+             * দামের নীতি — মুক্ত লেখা নয়, তিনটার একটা।
+             *
+             * ⚠️ `Rule::in` ছাড়া যেকোনো শব্দ কলামে বসত, আর পরে পণ্য
+             * বাছার সময় পর্দা সেটা নোঙর ধরে **কিছুই করত না** — নীরবে।
+             */
+            'lines.*.pricing_anchor' => ['nullable', 'string', Rule::in(['markup', 'margin', 'sales_price'])],
+            'lines.*.pricing_pct' => ['nullable', 'numeric'],
             'lines.*.narration' => ['nullable', 'string', 'max:500'],
 
             /*
