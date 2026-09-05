@@ -545,10 +545,10 @@ class TheFreeCartonCameBackAsTwelvePiecesTest extends TestCase
      *
      * ── কেন দুইটাই লাগে ─────────────────────────────────────────────
      * সাতটা বিকল্পই শেষে একটা তারিখ দেয়, আর তারিখটা `due_on`-এ বসে।
-     * ⚠️ কিন্তু **তারিখটা ধরনটা বলে না**: নগদে কেনা আর COD — দুইটার
+     * ⚠️ কিন্তু **তারিখটা ধরনটা বলে না**: ৩০ দিনের বাকি আর মাস-শেষ — দুইটার
      * তারিখ একই দিন হতে পারে, ব্যবসায়িক অর্থ আলাদা।
      *
-     * ⛔ ধরনটা না রাখলে *"এই মাসে COD-তে কত কিনলাম"* প্রশ্নের উত্তর
+     * ⛔ ধরনটা না রাখলে *"এই মাসে কত মাস-শেষের শর্তে কিনলাম"* প্রশ্নের উত্তর
      * কোথাও থাকত না, যদিও ব্যবহারকারী প্রতিটা বিলে ঘরটা ভরেছেন।
      */
     public function test_the_paper_remembers_its_terms_not_just_its_date(): void
@@ -558,16 +558,16 @@ class TheFreeCartonCameBackAsTwelvePiecesTest extends TestCase
                 'supplier_id' => $this->supplier->id,
                 'warehouse_id' => $this->warehouse->id,
                 'trx_date' => '2026-09-05',
-                'payment_term' => 'cod',
-                'due_on' => '2026-09-05',
+                'payment_term' => 'month_end',
+                'due_on' => '2026-09-30',
             ],
             [['product_id' => $this->product->id, 'qty' => '2', 'rate' => '100']],
         );
 
         $bill = $result['bill']->fresh();
 
-        $this->assertSame('cod', $bill->payment_term);
-        $this->assertSame('2026-09-05', $bill->due_on?->toDateString());
+        $this->assertSame('month_end', $bill->payment_term);
+        $this->assertSame('2026-09-30', $bill->due_on?->toDateString());
     }
 
     /**

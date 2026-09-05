@@ -504,7 +504,16 @@ class DirectSaleTest extends TestCase
              * সেটা সীমা নয়, **সীমা বিয়োগ যা ইতিমধ্যে পাওনা**। সুইচটা একই,
              * কেবল ঘরটার নাম আর অর্থ বদলেছে।
              */
-            'sales.field_credit_limit' => __('sales::field.available_credit'),
+            /*
+             * ⚠️ লেবেলটা বদলেছে — ৬ সেপ্টেম্বর ২০২৬, মালিকের ছকে।
+             *
+             * ⛔ আগে ঘরটা লিখত *"বাকিতে দেওয়া যাবে"* (`available_credit`) —
+             * অর্থাৎ **সীমা বিয়োগ পাওনা**, একটা হিসাবের ফল।
+             *
+             * ⭐ এখন চার নম্বর সারিতে দুইটা কাঁচা সংখ্যা: বকেয়া আর সীমা।
+             * ⓘ সুইচটা একই, কেবল সে যা লুকায় তার নাম বদলেছে।
+             */
+            'sales.field_credit_limit' => __('sales::field.credit_limit'),
             /*
              * ⚠️ `sales.field_warehouse_select` এখানে আর নেই — ৩ সেপ্টেম্বর ২০২৬।
              *
@@ -596,6 +605,103 @@ class DirectSaleTest extends TestCase
         $challan = DeliveryChallan::query()->latest('id')->firstOrFail();
 
         $this->assertSame($this->warehouse->id, (int) $challan->warehouse_id);
+    }
+
+    /**
+     * ⭐ ক্রেতার বাক্সে চারটা সারি, মালিকের দেওয়া ক্রমে।
+     *
+     * ── মালিকের ছক (৫–৬ সেপ্টেম্বর ২০২৬) ────────────────────────────
+     *     Line 1 > Customer name
+     *     Line 2 > Point, Mobile no.
+     *     Line 3 > Address
+     *     Line 4 > Due/Advance,  Cr. Limit
+     *
+     * ── ⛔ যা ভাঙা ছিল, আর কেন পরীক্ষাটা এই আকৃতির ──────────────────
+     * জিনিসগুলো একটা `flex flex-wrap` সারিতে ছিল, তাই **সারির সংখ্যা
+     * প্রস্থের উপর নির্ভর করত**: সরু হলে পয়েন্টটা নামের পাশে উঠে যেত,
+     * আর ঠিকানা কেটে `কে.` হয়ে বকেয়ার পাশে বসত।
+     *
+     * ⚠️ মালিক ঐ ভাঙা অবস্থাটার ছবি পাঠিয়েছেন, আর ওটা **সুইট ধরত না** —
+     * কারণ HTML-এ সব উপাদানই ছিল, কেবল **কোন লাইনে** তা প্রস্থ ঠিক
+     * করত। ⓘ তাই এই পরীক্ষা লেখার উপস্থিতি নয়, **ক্রম** মাপে: চারটা
+     * সারি চারটা আলাদা ব্লক, আর ব্লকগুলোর ক্রম স্থির।
+     */
+    public function test_the_customer_box_stands_in_four_rows(): void
+    {
+        $html = $this->actingAs($this->user)
+            ->get(route('sales.direct.create'))->assertOk()->getContent();
+
+        $at = function (string $needle) use ($html): int {
+            $i = strpos($html, $needle);
+            $this->assertNotFalse($i, "পর্দায় নেই: {$needle}");
+
+            return (int) $i;
+        };
+
+        /*
+         * ⓘ খোঁজা হয় Alpine-এর বাঁধন ধরে, শ্রেণী-নাম বা ফাঁকা জায়গা ধরে নয়।
+         * ⚠️ সাজসজ্জা ধরে লেখা পাহারা রং বা প্যাডিং বদলালেই লাল হয়, আর তখন
+         * সে **ঠিক কোডকে ভুল বলে** — আজ ঐ ভুলটা তিনবার করা হয়েছে।
+         */
+        $picker = $at('data-customer-picker');
+        $name = $at('customer.name || ');
+        $point = $at('x-text="customer.location"');
+        $phone = $at('x-text="customer.phone"');
+        $address = $at('x-text="customer.address"');
+        /*
+         * ⚠️ HTML-এ **অনুবাদটা** বসে, চাবিটা নয়।
+         *
+         * ⛔ প্রথমে আমি `sales::field.credit_limit` খুঁজেছিলাম আর পরীক্ষাটা
+         * লাল হয়েছিল — অথচ কোডটা ঠিকই ছিল। ⓘ আজ এই একই ভুল আমি
+         * **চারবার** করেছি: পাহারা যেন *চেহারা* না খোঁজে, *মান* খোঁজে।
+         */
+        $money = $at(e(__('sales::field.credit_limit')));
+
+        $this->assertLessThan($name, $picker, 'চিহ্নটা নামের পরে বসে আছে।');
+        $this->assertLessThan($point, $name, 'নামের আগে পয়েন্ট বসেছে।');
+        $this->assertLessThan($phone, $point, 'পয়েন্টের আগে ফোন বসেছে।');
+        $this->assertLessThan($address, $phone, 'ফোনের আগে ঠিকানা বসেছে।');
+        $this->assertLessThan($money, $address, 'ঠিকানার আগে টাকার সারি বসেছে।');
+
+        /*
+         * ⭐ চার নম্বর সারিতে **দুইটা** সংখ্যা — বকেয়া আর সীমা।
+         *
+         * ⛔ আগে ওখানে একটাই ছিল ("বাকিতে দেওয়া যাবে"), যেটা সীমা বিয়োগ
+         * পাওনা — একটা **হিসাবের ফল**। ⚠️ ফল দেখালে বিক্রেতা কাঁচা দুইটা
+         * সংখ্যা আর দেখতে পান না, অথচ দুইটা আলাদা প্রশ্নের উত্তর।
+         */
+        $this->assertStringContainsString('customer.due', $html,
+            'চার নম্বর সারিতে বকেয়া নেই।');
+    }
+
+    /**
+     * ⚠️ ঘরটা বন্ধ থাকলে সারির শেষে খালি কলাম পড়ে থাকবে না।
+     *
+     * ── ⛔ যা ঘুমিয়ে ছিল ────────────────────────────────────────────
+     * ছকে **সবসময়** চারটা ট্র্যাক লেখা থাকত, অথচ DO-র ঘরটা সুইচের
+     * পেছনে। ⓘ অর্থাৎ যে কোম্পানি DO বন্ধ রাখে, তার সারির শেষে একটা
+     * পুরো কলাম খালি — ঠিক যে ফাঁকা জায়গা নিয়ে মালিক প্রশ্ন তুলেছেন।
+     *
+     * ⚠️ কেউ দেখেনি কারণ **ডেমোতে DO চালু**।
+     *
+     * ⭐ ছকটা এখন ২×২, তাই ঘরটা বন্ধ থাকলে সারি নিজেই ভরে যায় — কোনো
+     * শর্তসাপেক্ষ ক্লাস লাগে না। ⓘ এই পরীক্ষা সেটাই ধরে রাখে: ঘরটা
+     * সত্যিই উধাও হয়, আর পর্দা তবু দাঁড়িয়ে থাকে।
+     */
+    public function test_switching_off_the_do_number_leaves_the_screen_standing(): void
+    {
+        app(SettingsService::class)->set('sales.field_do_no', false);
+
+        $html = $this->actingAs($this->user)
+            ->get(route('sales.direct.create'))->assertOk()->getContent();
+
+        $this->assertFalse(str_contains($html, 'name="do_no"'),
+            'সুইচ বন্ধ, তবু DO-র ঘরটা পর্দায়।');
+
+        // ⓘ বাকি তিনটা ঘর ঠিকই আছে — পুরো সারিটা উধাও হয়ে যায়নি
+        foreach (['name="invoice_no"', 'name="payment_term"', 'name="trx_date"'] as $must) {
+            $this->assertStringContainsString($must, $html, "ঘরটা হারিয়ে গেছে: {$must}");
+        }
     }
 
     public function test_a_user_without_the_permission_cannot_reach_it(): void

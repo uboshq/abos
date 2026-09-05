@@ -114,7 +114,28 @@ return [
     'free_available' => 'Free',
     'in_cart' => 'In cart',
     'do_no' => 'DO No.',
-    'credit_period' => 'Credit Period',
+    'terms' => 'Terms',
+
+    /*
+     * The five kinds a counter can put on a sale.
+     *
+     * Four are behaviours; the day counts come from settings rows,
+     * because one buyer says seven days and the next says forty-five.
+     *
+     * Cash and COD both end on today's date, and they are still two
+     * different things: cash means the money is in the drawer, COD
+     * means the goods went out on the van and the money comes back
+     * with the delivery man. One is collected, the other is owed.
+     *
+     * The same word is meaningless on a direct purchase — that paper
+     * is written after the goods have already arrived — and it was
+     * taken off that screen on the owner's word, 5 September 2026.
+     */
+    'term_cash' => 'Cash',
+    'term_cod' => 'COD',
+    'term_credit' => ':count days Cr',
+    'term_month_end' => 'Cr. upto closing date',
+    'term_fixed' => 'A fixed date',
     'free_qty' => 'Free Qty',
     'gift_item' => 'Gift Item',
     'gift_for' => 'Gift Item For',
@@ -160,23 +181,58 @@ return [
     'invoice_no_editable' => 'change it if you need to',
     'optional' => 'optional',
     'qty' => 'Qty.',
+    /* One-word labels for the picker rows — the number is the point,
+       the word only says which number it is. */
+    /* ⚠️ Both capitalised — the owner's correction (6 Sep 2026):
+       *"Free eivabe liko"*.
+
+       ⓘ His first note wrote it as *"Stock 8979 ctn, free 675 ctn"*, so
+       the small `f` shipped. ⛔ On the row they sit side by side, and one
+       capital beside one lowercase reads as a mistake, not a distinction —
+       they are two labels of the same kind. */
+    'stock_short' => 'Stock',
+    'free_short' => 'Free',
     'uom' => 'UoM',
     /*
      * ⚠️ One word, not two — the owner's instruction (3 Sep 2026):
      * *"Sales Price/Rate — zekono ekta likho, hoy 'rate' noy 'sales price'"*.
      *
      * A slash between two words is a label that could not make up its mind,
-     * and it costs twice the width for no extra meaning. "Sales Price" is
-     * chosen because the field beside it in the cart already reads
-     * "Unit Price" — the same word for the same idea, in both places.
+     * and it costs twice the width for no extra meaning.
+     *
+     * ⭐ Which of the two, he settled on 6 Sep 2026: *"Direct Sales e
+     * 'Sales Price' change kore 'Sales Rate' likho"*.
+     *
+     * ⓘ It also puts the English back in step with the Bangla, which has
+     * read "বিক্রয় দর" — literally *sales rate* — all along. ⚠️ The two
+     * languages had been naming the same box differently, and nobody
+     * comparing one screen in one language would ever have seen it.
+     *
+     * ⛔ It does cost something, and the note is left here on purpose:
+     * the cart column beside it still reads "Unit Price", so the pair
+     * now says *rate* in one place and *price* in the other. ⓘ Raised
+     * with him; his call, not a thing to fix quietly.
      */
-    'sales_rate' => 'Sales Price',
+    'sales_rate' => 'Sales Rate',
     'total_amount' => 'Total Amount',
     /* The line's discount and the paper's discount were both just
        "Discount", on the same screen. The field-switch guard caught it —
        turning the line one off left the other behind — but the real
-       problem was that a reader could not tell them apart either. */
-    'line_discount' => 'Discount on this line',
+       problem was that a reader could not tell them apart either.
+
+       ⭐ Short again, the owner's instruction (6 Sep 2026): *"this line
+       box e 'Discount on this line' poriborte sudu 'Discount' likho"*.
+
+       ⓘ What changed since is the box around it: the field now sits
+       inside a panel headed **"This line"**, so the container already
+       says which discount this is. ⚠️ The label was repeating its own
+       heading — five words to say what the box said above them.
+
+       ⛔ The old ambiguity is only handled while that heading stays. If
+       this field is ever moved out of the "This line" panel, the two
+       discounts read the same again — and that is exactly the bug the
+       note above records. */
+    'line_discount' => 'Discount',
     'discount_pct' => 'Discount %',
     'net_value' => 'Net Value',
     'vat' => 'VAT',

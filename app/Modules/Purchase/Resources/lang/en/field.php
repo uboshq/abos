@@ -153,9 +153,8 @@ return [
      * date. A range would leave the ageing report with nowhere to put
      * the bill.
      */
-    'payment_terms' => 'Payment terms',
+    'terms' => 'Terms',
     'term_cash' => 'Cash',
-    'term_cod' => 'COD',
     'term_credit' => ':count days Cr',
     'term_month_end' => 'Cr. upto closing date',
     'term_fixed' => 'A fixed date',
@@ -180,7 +179,17 @@ return [
     'line_qty_total' => 'Total qty.',
     'this_line' => 'This line',
     'total_amount' => 'Total amount',
-    'discount_on_line' => 'Discount on this line',
+    /*
+     * Just "Discount" — the owner's word, 6 September 2026.
+     *
+     * The panel is titled THIS LINE, so "on this line" repeated the
+     * heading in every row it sat in. It also outgrew the narrow panel
+     * and squeezed the figures beside it.
+     *
+     * A label earns its length only when it says something the box
+     * around it does not.
+     */
+    'discount_on_line' => 'Discount',
     'net_value' => 'Net value',
     'in_cart' => 'In cart',
     'running_total' => 'Running total',

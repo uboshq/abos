@@ -23,7 +23,15 @@ return [
     'checkout' => 'Complete sale',
     'exact' => 'Exact',
     'add_to_cart' => 'Add to Cart',
-    'clear_data' => 'Clear Data',
+    /*
+     * ⭐ One word — the owner's instruction (6 Sep 2026):
+     * *"Clear Data poriborton kore sudu Clear likho"*.
+     *
+     * ⓘ It sits on a three-button line now (Gift · Costing · Clear), and
+     * "Data" said nothing the button did not already say: the only thing
+     * on that row to clear IS the entry.
+     */
+    'clear_data' => 'Clear',
     /*
      * ⚠️ "Clear All", not "Clear Data" — the owner's decision (3 Sep 2026).
      *
@@ -34,7 +42,19 @@ return [
     'clear_full' => 'Clear All',
     'add_gift' => 'Add a gift',
     'chart_bulk_do' => 'Chart Entry',
-    'transportation' => 'Transportation',
+    /* ⭐ "Transport", not "Transportation" — the owner, 6 Sep 2026:
+       *"Transportation botamer nam poriborton kore Transport koro, Direct
+       Sales & Pur dujaygay"*.
+
+       ⓘ It sits on a row of six one- and two-word buttons (Gift · Costing ·
+       Chart Entry · Shipment · Clear all), and "Transportation" was the only
+       one that had to shrink its own text to fit. ⚠️ A label that wraps or
+       shrinks reads as less important than its neighbours, and this one is
+       not — it changes the amount payable.
+
+       ⓘ Bangla was already the short form (পরিবহন); only English was long,
+       so the two languages now agree in weight as well as meaning. */
+    'transportation' => 'Transport',
     'shipment' => 'Shipment',
     'add_deposit' => 'Add Deposit',
     'add_note' => 'Add Note',
