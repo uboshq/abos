@@ -129,7 +129,21 @@ return [
             ['label' => 'master_data::menu.vehicle_types', 'route' => 'master_data.vehicle_type.index', 'permission' => 'master_data.view', 'setting' => 'master_data.vehicle_enabled'],
             ['label' => 'master_data::menu.vehicles', 'route' => 'master_data.vehicle.index', 'permission' => 'master_data.view', 'setting' => 'master_data.vehicle_enabled'],
 
-            ['label' => 'master_data::menu.number_series', 'route' => 'master_data.series.index', 'permission' => 'master_data.manage'],
+            /*
+             * ⚠️ নম্বর সিরিজের সারিটা এখান থেকে **সিস্টেম প্রশাসনে**
+             * সরেছে — মালিকের প্রশ্ন, ৫ সেপ্টেম্বর ২০২৬:
+             * *"Document number series এখনো মাস্টার ডাটাতে কী করে?"*
+             *
+             * ⭐ আর তাঁর নিজের মাপকাঠিই উত্তরটা দেয়: **মাস্টারে তৈরি
+             * হয়, কন্ট্রোল প্যানেলে নিয়ন্ত্রণ হয়।** ⓘ নম্বর সিরিজ
+             * কেউ তৈরি করে না — কোম্পানি খোলার সময় সিস্টেম নিজে
+             * বসায়, আর পর্দায় কেবল `index` ও `update` আছে, কোনো
+             * `create`/`destroy` নেই। যেখানে তৈরিই হয় না, সেটা মাস্টার
+             * ডাটা নয়।
+             *
+             * ⓘ ঠিকানাটা (`master-data/number-series`) রয়ে গেছে —
+             * বুকমার্ক ভাঙে না, আর রুটের নাম বদলানো আলাদা কাজ।
+             */
         ],
     ],
 

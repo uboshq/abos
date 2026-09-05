@@ -105,6 +105,32 @@ return [
             ['label' => 'core.import.title', 'route' => 'system_admin.import.index',
                 'permission' => 'system_admin.import.manage'],
             ['label' => 'system_admin::menu.control_panel', 'route' => 'system_admin.control-panel', 'permission' => 'system_admin.settings.manage'],
+
+            /*
+             * ⭐ নম্বর সিরিজ — কন্ট্রোল প্যানেলের ঠিক পাশে।
+             *
+             * মালিকের নিয়ম: *"মাস্টারে তৈরি হয়, কন্ট্রোল প্যানেলে
+             * নিয়ন্ত্রণ হয়।"* ⓘ এই পর্দায় `create` নেই, `destroy` নেই —
+             * কেবল দেখা আর সম্পাদনা। অর্থাৎ ওটা নিয়ন্ত্রণ, তৈরি নয়।
+             *
+             * ⚠️ চাবিটা `system_admin.settings.manage` — `master_data.manage`
+             * নয়, আর সেটা ঘোষণার পাহারাটাই শিখিয়ে দিল:
+             *
+             *   *"menu item asks for permission 'master_data.manage',
+             *   which this module does not declare. Nobody would ever be
+             *   granted it, so the item would be invisible to every user."*
+             *
+             * ⭐ পাহারাটা ঠিক — এক মডিউল অন্যের চাবি দিয়ে সারি বসালে
+             * সেটা কারো কাছেই দেখা যেত না। ⓘ আর অর্থটাও মেলে: পর্দাটা
+             * এখন নিয়ন্ত্রণের, তাই নিয়ন্ত্রণের চাবিই।
+             *
+             * ⚠️ কন্ট্রোলারের নিজের middleware এখনো `master_data.manage`
+             * দেখে — অর্থাৎ মেনুতে দেখা আর ভিতরে ঢোকা দুইটা আলাদা চাবি।
+             * ⓘ ওটা ইচ্ছাকৃতভাবে ছোঁয়া হয়নি: কন্ট্রোলারের চাবি বদলানো
+             * মানে কার হাতে ক্ষমতা যাবে সেই সিদ্ধান্ত, আর সেটা মালিকের।
+             */
+            ['label' => 'master_data::menu.number_series', 'route' => 'master_data.series.index',
+                'permission' => 'system_admin.settings.manage'],
             ['label' => 'core.custom_field.title', 'route' => 'system_admin.custom_field.index', 'permission' => 'system_admin.settings.manage'],
             ['label' => 'core.look.title', 'route' => 'system_admin.look.index', 'permission' => 'system_admin.look.manage'],
             /* ব্যাকআপের সারি সরেছে — এখন নিজের মডিউলে ([[Backup/module.php]]) */
