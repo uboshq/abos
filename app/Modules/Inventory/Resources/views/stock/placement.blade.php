@@ -42,8 +42,57 @@
         {{-- খালি অবস্থাটা সুখবর, ব্যর্থতা নয় — বাক্যটাও সেটাই বলে --}}
         <x-ui.empty-state :message="__('inventory::message.nothing_to_place')" />
     @else
-        <form method="POST" action="{{ route('inventory.stock.placement.store') }}">
+        <form method="POST" action="{{ route('inventory.stock.placement.store') }}"
+              x-data="stockPlacement(@js($places))">
             @csrf
+
+            {{--
+                ⭐ "একবার বেছে, সবগুলোয় বসাও" — মালিকের ছবির উপরের সারি
+                ("Combine Selection For All Listed Products")।
+
+                ── কেন এটা আগের "সব বসিয়ে দিন নেই" নিয়মটা ভাঙে না ───────
+                ⚠️ এই বারটা **পরিমাণ ছোঁয় না** — কেবল জায়গাটা বসায়।
+                পরিমাণ প্রতিটা সারিতেই আলাদা থাকে, আর ভাঙা কার্টনের
+                সংখ্যাটা এখনো হাতেই কমাতে হয়। ⓘ আসল নিয়মটা ছিল "ভাঙা
+                মাল যেন এক চাপে বসে না যায়", আর সেটা অক্ষত।
+
+                ⓘ গুদামে কোনো তাক বসানো না থাকলে বারটা আসেই না — তখন
+                ছোট দোকানের জন্য নিচের একটাই বোতামই যথেষ্ট।
+            --}}
+            <template x-if="anyPlaces">
+                <section data-boxed
+                         class="mb-4 rounded-(--radius-card) border border-(--color-border)
+                                bg-(--color-surface-card) p-4">
+                    <h2 class="mb-3 text-2xs font-semibold uppercase tracking-wide
+                               text-(--color-ink-muted)">
+                        {{ __('inventory::label.combine_selection') }}
+                    </h2>
+
+                    <div class="flex flex-wrap items-end gap-3">
+                        @foreach (['warehouse' => 'warehouse', 'block' => 'depth_1', 'rack' => 'depth_2', 'shelf' => 'depth_3'] as $slot => $label)
+                            <label class="grid gap-1">
+                                <span class="text-2xs text-(--color-ink-muted)">
+                                    {{ __('inventory::field.'.$label) }}
+                                </span>
+                                <select x-model="all.{{ $slot }}"
+                                        x-on:change="allChanged('{{ $slot }}')"
+                                        class="h-(--spacing-field) w-44 rounded-(--radius-field)
+                                               border border-(--color-border)
+                                               bg-(--color-surface-card) px-2">
+                                    <option value="">—</option>
+                                    <template x-for="o in allOptions('{{ $slot }}')" :key="o.id">
+                                        <option :value="o.id" x-text="o.name"></option>
+                                    </template>
+                                </select>
+                            </label>
+                        @endforeach
+
+                        <x-ui.button type="button" tone="secondary" x-on:click="applyToAll()">
+                            {{ __('inventory::action.set') }}
+                        </x-ui.button>
+                    </div>
+                </section>
+            </template>
 
             <div class="grid gap-4">
                 @foreach ($papers as $key => $paper)
@@ -67,6 +116,12 @@
                                     <tr class="text-start text-2xs text-(--color-ink-muted)">
                                         <th class="text-start">{{ __('inventory::field.product') }}</th>
                                         <th class="text-start">{{ __('inventory::field.warehouse') }}</th>
+                                        {{-- ⓘ তিনটা ঘর কেবল তখনই, যখন ঐ গুদামে তাক বসানো আছে --}}
+                                        @foreach (['depth_1', 'depth_2', 'depth_3'] as $depth)
+                                            <template x-if="anyPlaces">
+                                                <th class="text-start">{{ __('inventory::field.'.$depth) }}</th>
+                                            </template>
+                                        @endforeach
                                         <th class="text-end">{{ __('inventory::field.unplaced') }}</th>
                                         <th class="text-end">{{ __('inventory::field.unplaced_free') }}</th>
                                     </tr>
@@ -76,7 +131,17 @@
                                     @foreach ($paper['lines'] as $i => $line)
                                         @php $name = "lines[{$key}-{$i}]"; @endphp
 
-                                        <tr class="border-t border-(--color-border)">
+                                        {{--
+                                            ⓘ সারির নিজের অবস্থা — চারটা ঘরের নির্বাচন।
+                                            `rows`-এ নিজেকে লিখিয়ে রাখে, তাই উপরের
+                                            **Set** বোতামটা তাকে খুঁজে পায়। ⚠️ `w`
+                                            গুদামের আইডি: Set কেবল **একই গুদামের**
+                                            সারিতে বসে, নাহলে এক গুদামের র‍্যাক অন্য
+                                            গুদামের সারিতে বসে যেত।
+                                        --}}
+                                        <tr class="border-t border-(--color-border)"
+                                            x-data="{ w: {{ (int) $line['warehouse_id'] }}, block: '', rack: '', shelf: '' }"
+                                            x-init="rows.push($data)">
                                             <td class="">
                                                 {{ $line['product_code'] }} — {{ $line['product_name'] }}
                                                 @if ($line['batch_no'])
@@ -101,6 +166,42 @@
                                             </td>
 
                                             <td class="">{{ $line['warehouse_name'] }}</td>
+
+                                            {{--
+                                                ব্লক ▸ র‍্যাক ▸ শেলফ — উপরেরটা না বাছলে
+                                                নিচেরটা খালি, ইচ্ছাকৃতভাবে।
+
+                                                ⛔ "বাবা না বাছলে সব দেখাও" লিখলে গুদামের
+                                                লোক অন্য র‍্যাকের শেলফ বেছে ফেলতে পারতেন,
+                                                আর কার্টনটা খাতায় এক জায়গায় হাতে আরেক
+                                                জায়গায় থাকত। যুক্তিটা `placement.js`-এ,
+                                                তাই তার পরীক্ষা আছে।
+                                            --}}
+                                            @foreach (['block' => 1, 'rack' => 2, 'shelf' => 3] as $slot => $depth)
+                                                <td>
+                                                    <template x-if="hasPlaces(w)">
+                                                        <select x-model="{{ $slot }}"
+                                                                x-on:change="rowChanged($data, '{{ $slot }}')"
+                                                                class="h-(--spacing-field-compact) w-32
+                                                                       rounded-(--radius-field) border
+                                                                       border-(--color-border)
+                                                                       bg-(--color-surface-card) px-2">
+                                                            <option value="">—</option>
+                                                            <template x-for="o in optionsFor(w, {{ $depth }}, {{ $slot === 'block' ? 'null' : ($slot === 'rack' ? 'block' : 'rack') }})"
+                                                                      :key="o.id">
+                                                                <option :value="o.id" x-text="o.name"></option>
+                                                            </template>
+                                                        </select>
+                                                    </template>
+                                                </td>
+                                            @endforeach
+
+                                            {{-- ⭐ সার্ভারে যায় একটাই — সবচেয়ে গভীরটা।
+                                                 উপরের ধাপগুলো `parent` বেয়ে ফেরত পাওয়া
+                                                 যায়, তাই তিনটা পাঠালে একই সত্যের তিনটা
+                                                 কপি যেত, আর তিন কপি একদিন আলাদা হয়ই। --}}
+                                            <input type="hidden" name="{{ $name }}[storage_location_id]"
+                                                   :value="deepest($data)">
 
                                             <td class="text-end">
                                                 <input type="number" step="0.0001" min="0"

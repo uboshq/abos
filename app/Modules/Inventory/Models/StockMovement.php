@@ -39,7 +39,8 @@ class StockMovement extends Model
     protected $table = 'inv_stock_movements';
 
     protected $fillable = [
-        'company_id', 'branch_id', 'product_id', 'warehouse_id', 'batch_id', 'trx_date',
+        'company_id', 'branch_id', 'product_id', 'warehouse_id', 'storage_location_id',
+        'batch_id', 'trx_date',
         'floor_change', 'reserved_change', 'hold_change',
         'free_change', 'free_reserved_change',
         'unplaced_change', 'unplaced_free_change', 'reason_code_id',
@@ -83,6 +84,17 @@ class StockMovement extends Model
     public function warehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class);
+    }
+
+    /**
+     * গুদামের ভিতরে কোথায় — থাকলে।
+     *
+     * ⓘ `null` মানে "এই গুদামে তাক নেই", "জানা নেই" নয়। ছোট দোকানের
+     * প্রতিটা সারিতেই এটা `null`, আর সেটাই সঠিক।
+     */
+    public function storageLocation(): BelongsTo
+    {
+        return $this->belongsTo(StorageLocation::class);
     }
 
     public function branch(): BelongsTo

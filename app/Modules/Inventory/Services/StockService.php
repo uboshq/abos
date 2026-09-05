@@ -9,6 +9,7 @@ use App\Core\Support\CompanyContext;
 use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\StockMovement;
+use App\Modules\Inventory\Models\StorageLocation;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\MasterData\Models\ReasonCode;
 use Illuminate\Support\Carbon;
@@ -99,6 +100,20 @@ final class StockService
          * যেতে হবে কতটা বিক্রির আর কতটা ফ্রি।
          */
         string $unplacedFree = '0',
+
+        /*
+         * গুদামের ভিতরে কোথায় — ৫ সেপ্টেম্বর ২০২৬।
+         *
+         * ⭐ আবারও **সবার শেষে, ডিফল্ট null**, ঠিক `unplaced`-এর মতোই —
+         * তাই বিদ্যমান কোনো ডাক বদলাতে হয়নি, আর আজকের প্রতিটা সারির
+         * অর্থ অবিকল একই।
+         *
+         * ⚠️ এই ঘরটা কোনো যোগফলে অংশ নেয় না, ইচ্ছাকৃতভাবে। বিক্রি ও
+         * ইস্যুর পথগুলো তাক জিজ্ঞেস করে না, তাই তাক ধরে যোগ করলে
+         * সংখ্যাটা **কেবল বাড়ত, কখনো কমত না**। এটা একটা ঘটনার
+         * স্মৃতি — "কার্টনটা ঐ তাকে রাখা হয়েছিল" — আর ওটুকুই সৎ।
+         */
+        ?StorageLocation $location = null,
     ): StockMovement {
         $this->assertSomethingMoves(
             $floor, $reserved, $hold, $free, $freeReserved, $unplaced, $unplacedFree,
@@ -167,6 +182,7 @@ final class StockService
                 'branch_id' => $warehouse->branch_id ?? CompanyContext::branchId(),
                 'product_id' => $product->id,
                 'warehouse_id' => $warehouse->id,
+                'storage_location_id' => $location?->id,
                 'batch_id' => $batch?->id,
                 'trx_date' => ($date instanceof Carbon ? $date : Carbon::parse($date ?? now()))->toDateString(),
                 'floor_change' => $floor,
@@ -662,7 +678,28 @@ final class StockService
          * পারতেন, আর বাকি ফ্রি কার্টনটা চিরকাল অপেক্ষায় থাকত।
          */
         string $freeQty = '0',
+
+        /*
+         * কোন তাকে রাখা হলো — গুদামে তাক থাকলে।
+         *
+         * ⚠️ তাকটা **এই গুদামেরই** কি না, সেটা এখানে মেলানো হয়।
+         * ⛔ না মেলালে অন্য গুদামের একটা তাকের আইডি পাঠিয়ে দিলে খাতায়
+         * এমন একটা সারি বসত যা বলত মালটা এমন জায়গায় আছে যেখানে ওই
+         * গুদামের কেউ কোনোদিন যান না — আর ভুলটা ধরা পড়ত কেবল যেদিন
+         * কেউ জিনিসটা খুঁজতে যেতেন।
+         *
+         * ⓘ কন্ট্রোলারেও একই যাচাই থাকবে (ব্যবহারকারী বাংলা বার্তা
+         * পান), কিন্তু নিয়মটা এখানেও — সার্ভিসটা সিডার আর ইমপোর্ট
+         * থেকেও ডাকা হয়, আর তারা কন্ট্রোলার দিয়ে আসে না।
+         */
+        ?StorageLocation $location = null,
     ): StockMovement {
+        if ($location !== null && (int) $location->warehouse_id !== (int) $warehouse->id) {
+            throw ValidationException::withMessages([
+                'storage_location_id' => __('inventory::validation.location_not_in_warehouse'),
+            ]);
+        }
+
         $wantsPaid = bccomp($qty, '0', 4) > 0;
         $wantsFree = bccomp($freeQty, '0', 4) > 0;
 
@@ -703,7 +740,52 @@ final class StockService
             batch: $batch,
             unplaced: $wantsPaid ? bcmul($qty, '-1', 4) : '0',
             unplacedFree: $wantsFree ? bcmul($freeQty, '-1', 4) : '0',
+            location: $location,
         );
+    }
+
+    /**
+     * একটা কাগজ এ পর্যন্ত মাল কোথা থেকে কতটা নিয়েছে — পণ্য ধরে।
+     *
+     * ── কেন এটা লাগল, ৫ সেপ্টেম্বর ২০২৬ ─────────────────────────────
+     * ক্রয়-ফেরত এখন **আগে অপেক্ষার ঘর, তারপর তাক** থেকে নেয় (কার্টন
+     * না খুলে ফেরত দেওয়াটাই স্বাভাবিক)। ⚠️ তাই বাতিল করার সময় ভাগটা
+     * আন্দাজ করা চলে না — দশটার ছয়টা অপেক্ষার ঘর থেকে গেলে ছয়টা
+     * সেখানেই ফিরতে হবে।
+     *
+     * ⛔ সবটা `floor`-এ ফেরালে বাতিল করাটা নীরবে একটা **বসানোর কাজ**
+     * হয়ে যেত, আর "বসানোর আগে বিক্রি নয়" নিয়মটা একটা বাতিল দিয়ে পাশ
+     * কাটানো যেত।
+     *
+     * ⓘ কাগজের নিজের সারিগুলোই সত্য — কোনো নতুন কলাম লাগেনি।
+     *
+     * @return array<int, array{floor: string, unplaced: string, free: string, unplaced_free: string}>
+     */
+    public function netBySource(string $sourceType, int $sourceId): array
+    {
+        $rows = StockMovement::query()
+            ->where('source_type', $sourceType)
+            ->where('source_id', $sourceId)
+            ->groupBy('product_id')
+            ->selectRaw('product_id')
+            ->selectRaw('COALESCE(SUM(floor_change), 0) as floor')
+            ->selectRaw('COALESCE(SUM(unplaced_change), 0) as unplaced')
+            ->selectRaw('COALESCE(SUM(free_change), 0) as free')
+            ->selectRaw('COALESCE(SUM(unplaced_free_change), 0) as unplaced_free')
+            ->get();
+
+        $net = [];
+
+        foreach ($rows as $row) {
+            $net[(int) $row->product_id] = [
+                'floor' => (string) $row->floor,
+                'unplaced' => (string) $row->unplaced,
+                'free' => (string) $row->free,
+                'unplaced_free' => (string) $row->unplaced_free,
+            ];
+        }
+
+        return $net;
     }
 
     /** কত মাল বুঝে নেওয়ার অপেক্ষায় — গুদাম ধরে, বা সব গুদামে। */

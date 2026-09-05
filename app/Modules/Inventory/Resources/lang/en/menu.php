@@ -25,4 +25,5 @@ return [
     'food_cost' => 'Food cost',
     'kitchen_board' => 'Kitchen board',
     'kitchen_tickets' => 'Kitchen screen',
+    'places' => 'Places in the warehouse',
 ];

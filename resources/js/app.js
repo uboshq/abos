@@ -2,6 +2,7 @@ import Alpine from 'alpinejs'
 import { reprice } from './pricing.js'
 import { abosDate } from './date.js'
 import { listKeys } from './list-keys.js'
+import { stockPlacement } from './placement.js'
 
 /*
  * Alpine শুধু ছোট UI ইন্টারঅ্যাকশনে — ড্রপডাউন, পাসওয়ার্ড দেখানো, ট্যাব
@@ -46,6 +47,15 @@ document.addEventListener('alpine:init', () => {
      * যায় না। অঙ্কটা `date.js`-এ, তাই তার পরীক্ষা আছে।
      */
     Alpine.data('abosDate', abosDate)
+
+    /*
+     * মাল কোথায় রাখা হলো — গুদাম ▸ ব্লক ▸ র‍্যাক ▸ শেলফ।
+     *
+     * ছাঁকাছাঁকিটা `placement.js`-এ, ঠিক `date.js`-এর কারণেই: ইনলাইন
+     * `x-data` লিখলে ঐ নিয়মগুলোর কোনো পরীক্ষা লেখা যেত না, আর ভুল
+     * শেলফে বসানো কার্টন খুঁজে না পাওয়া পর্যন্ত কেউ টের পেত না।
+     */
+    Alpine.data('stockPlacement', stockPlacement)
 
     Alpine.store('sidebar', {
         collapsed: localStorage.getItem('abos.sidebar') === 'collapsed',

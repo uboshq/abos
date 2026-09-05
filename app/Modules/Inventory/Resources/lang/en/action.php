@@ -35,4 +35,8 @@ return [
     'start_cooking' => 'Start cooking',
     'mark_ready' => 'Ready',
     'mark_served' => 'Served',
+    'set' => 'Set',
+    'add_place' => 'Add',
+    'retire_place' => 'Retire',
+    'places' => 'Places',
 ];

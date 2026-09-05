@@ -12,6 +12,7 @@ use App\Modules\Inventory\Http\Controllers\StockAnalysisController;
 use App\Modules\Inventory\Http\Controllers\StockController;
 use App\Modules\Inventory\Http\Controllers\StockOverviewController;
 use App\Modules\Inventory\Http\Controllers\StockPlacementController;
+use App\Modules\Inventory\Http\Controllers\StorageLocationController;
 use App\Modules\Inventory\Http\Controllers\StockPrintController;
 use App\Modules\Inventory\Http\Controllers\StockReportController;
 use App\Modules\Inventory\Http\Controllers\StockTransferController;
@@ -62,6 +63,24 @@ Route::middleware('auth')->prefix('inventory')->group(function () {
         // (WarehouseService::activate-এ কারণ)
         Route::post('/{warehouse}/activate', [WarehouseController::class, 'activate'])
             ->whereNumber('warehouse')->name('activate');
+
+        /*
+         * গুদামের ভিতরের জায়গা — ব্লক ▸ র‍্যাক ▸ শেলফ।
+         *
+         * ⭐ ঠিকানাটা গুদামের **নিচে**, আলাদা কোনো শাখায় নয়। একটা তাক
+         * গুদাম ছাড়া কিছুই নয়, আর ঠিকানাটা সেটাই বলে — ভুল গুদামের
+         * তাক খোলার কোনো পথই থাকে না।
+         */
+        Route::prefix('/{warehouse}/places')->name('place.')->group(function () {
+            Route::get('/', [StorageLocationController::class, 'index'])
+                ->whereNumber('warehouse')->name('index');
+            Route::post('/', [StorageLocationController::class, 'store'])
+                ->whereNumber('warehouse')->name('store');
+            Route::put('/{place}', [StorageLocationController::class, 'update'])
+                ->whereNumber(['warehouse', 'place'])->name('update');
+            Route::delete('/{place}', [StorageLocationController::class, 'destroy'])
+                ->whereNumber(['warehouse', 'place'])->name('destroy');
+        });
     });
 
     Route::prefix('stock')->name('stock.')->group(function () {
