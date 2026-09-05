@@ -294,15 +294,23 @@ class DirectSaleController extends Controller implements HasMiddleware
              * করলে সেটা পরের দিনই কাউন্টারের ড্রপডাউনে দেখা যাবে,
              * কাউকে কিছু ছাড়াতে হবে না।
              */
-            'paymentTerms' => PaymentTerm::query()
-                ->where('is_active', true)
-                ->orderBy('days')
-                ->get(['id', 'code', 'name_en', 'name_bn', 'days'])
-                ->map(fn (PaymentTerm $t): array => [
-                    'days' => (int) $t->days,
-                    'label' => $t->name(),
-                ])
-                ->values(),
+            /*
+             * ── ⭐ পাঁচটা ধরন, ক্রয়ের কাউন্টারের হুবহু সমান ────────────
+             *
+             * মালিক, ৫ সেপ্টেম্বর ২০২৬: *"r zaza nai sob daw direct
+             * sales e"*।
+             *
+             * ⛔ আগে এখানে কেবল **দিনসংখ্যা** যেত, তাই বিক্রয়ে দুইটা
+             * ধরন বলাই যেত না: `COD` আর `মাস শেষ পর্যন্ত`। ⚠️ অথচ
+             * ডিপোর কাজে ঐ দুইটাই সবচেয়ে চলতি — মাল ভ্যানে যায় আর
+             * টাকা ফেরে, নয়তো মাস শেষে হিসাব হয়।
+             *
+             * ⓘ ছাঁচটা `kind` বা `kind:days` — ক্রয়ের কাউন্টারে ঠিক
+             * এটাই ([[DirectPurchaseController::paymentTerms()]]), আর
+             * দুই পর্দা এক ছাঁচে থাকলে একটা শেখা মানে দুইটা জানা।
+             */
+            'paymentTerms' => $this->paymentTerms(),
+            'paymentTermDefault' => 'cash',
 
             /*
              * ঘরগুলো কোম্পানি চাইলে বন্ধ করতে পারে (নিয়ম ৭)।
@@ -368,6 +376,19 @@ class DirectSaleController extends Controller implements HasMiddleware
             'vehicle_no' => ['nullable', 'string', 'max:64'],
             'driver_name' => ['nullable', 'string', 'max:191'],
             'credit_period_days' => ['nullable', 'integer', 'min:0', 'max:365'],
+
+            /*
+             * ⚠️ ধরনটা **তালিকার বাইরে থেকে আসতে পারে না**।
+             *
+             * ⛔ পর্দা যা পাঠায় তা বিশ্বাস করার কোনো কারণ নেই — কেউ
+             * হাতে অনুরোধ বানালে খাতায় `xyz` লেখা একটা শর্ত বসে যেত,
+             * আর প্রতিবেদনে ওটা কোনো ঘরে ফেলা যেত না।
+             *
+             * ⓘ `null` চলে: পুরনো পর্দা বা অন্য পথ থেকে আসা অনুরোধে
+             * ঘরটা থাকে না, আর **না-জানা আর ভুল-জানা এক জিনিস নয়**।
+             */
+            'payment_term' => ['nullable', 'string',
+                Rule::in(['cash', 'cod', 'credit', 'month_end', 'fixed'])],
 
             /*
              * মেয়াদের দ্বিতীয় মুখ — নির্দিষ্ট তারিখ (৩ সেপ্টেম্বর ২০২৬)।
@@ -622,6 +643,21 @@ class DirectSaleController extends Controller implements HasMiddleware
                     'hold' => (string) $p->hold_total,
                     'available' => $available,
                     'free' => (string) $p->free_total,
+
+                    /*
+                     * ⭐ পুনঃক্রয়ের সীমা — খোঁজার তালিকায় "কম মজুদ" লাল
+                     * দেখানোর জন্য (মালিকের নির্দেশ, ৬ সেপ্টেম্বর ২০২৬)।
+                     *
+                     * ⚠️ সীমাটা **পণ্যের নিজের কলাম**, কোনো ধ্রুবক নয়।
+                     * ⓘ "কত হলে কম" প্রশ্নের উত্তর পণ্যভেদে আলাদা — চালের
+                     * বস্তা আর ওষুধের পাতা এক মাপে কম হয় না — আর
+                     * গ্রাহকভেদেও আলাদা। ⛔ কোডে একটা সংখ্যা বসালে সেটা
+                     * প্রতিটা কোম্পানির জন্য ভুল হত।
+                     *
+                     * ⓘ ডিফল্ট ০, অর্থাৎ যিনি সীমা বসাননি তাঁর কিছুই লাল
+                     * হয় না — নীরবে সবকিছু লাল দেখানোর চেয়ে সেটা ভালো।
+                     */
+                    'reorder' => (string) $p->reorder_level,
                     'free_available' => bcsub((string) $p->free_total, (string) $p->free_reserved_total, 4),
                 ];
             });
@@ -648,4 +684,66 @@ class DirectSaleController extends Controller implements HasMiddleware
 
         return $series === null ? '' : app(NumberSeriesEngine::class)->preview($series);
     }
+
+    /**
+     * কাউন্টারে কী কী শর্ত বাছা যাবে।
+     *
+     * ── ⓘ মানের ছাঁচ ────────────────────────────────────────────────
+     * `cash` · `cod` · `credit:30` · `month_end` · `fixed` — কোলনের
+     * পরের সংখ্যাটা কেবল `credit`-এ, আর পর্দাই ওটা তারিখে অনুবাদ করে।
+     *
+     * ── ⚠️ দিনসংখ্যাগুলো কোডে নেই ───────────────────────────────────
+     * `['৭ দিন', '১৫ দিন', '৩০ দিন']` লিখে দেওয়া যেত, আর সেটা হত ঠিক
+     * সেই ভুল যা মালিক বারবার বারণ করেছেন: *"কোন কোন ধরনের জিনিস"*
+     * এমন প্রতিটা তালিকা কোম্পানির নিজের বাড়ানোর কথা।
+     *
+     * ⓘ `mdm_payment_terms` সেই তালিকা, আর সেটা মাস্টার ডাটার পর্দা
+     * থেকে সম্পাদনা করা যায়। কেউ "৪৫ দিন" যোগ করলে পরের দিনই
+     * কাউন্টারের ড্রপডাউনে দেখা যাবে।
+     *
+     * ⚠️ শূন্য দিনের সারিগুলো বাদ — ওটার নাম "নগদ", আর সেটা উপরেই আছে।
+     * ⛔ না বাদ দিলে তালিকায় দুইটা "নগদ" থাকত, দুই নামে।
+     *
+     * @return list<array{value: string, label: string}>
+     */
+    private function paymentTerms(): array
+    {
+        $terms = [
+            ['value' => 'cash', 'label' => __('sales::field.term_cash')],
+
+            /*
+             * ⭐ COD এখানে সত্যিই আলাদা কিছু বোঝায়, আর ওটাই ক্রয়ের
+             * সাথে পার্থক্য।
+             *
+             * নগদ  → টাকা ড্রয়ারে, জমার ঘরে বসে
+             * COD  → মাল ভ্যানে গেল, টাকা ফিরবে ডেলিভারিম্যানের সাথে
+             *
+             * ⚠️ দুইটার **তারিখ একই দিন**, তবু একটা আদায় হয়ে গেছে আর
+             * আরেকটা পাওনা — খাতায় দুইটা সম্পূর্ণ আলাদা অবস্থা।
+             */
+            ['value' => 'cod', 'label' => __('sales::field.term_cod')],
+        ];
+
+        $rows = PaymentTerm::query()
+            ->where('is_active', true)
+            ->orderBy('days')
+            ->get(['id', 'code', 'name_en', 'name_bn', 'days']);
+
+        foreach ($rows as $row) {
+            if ((int) $row->days <= 0) {
+                continue;
+            }
+
+            $terms[] = [
+                'value' => 'credit:'.(int) $row->days,
+                'label' => __('sales::field.term_credit', ['count' => (int) $row->days]),
+            ];
+        }
+
+        $terms[] = ['value' => 'month_end', 'label' => __('sales::field.term_month_end')];
+        $terms[] = ['value' => 'fixed', 'label' => __('sales::field.term_fixed')];
+
+        return $terms;
+    }
+
 }

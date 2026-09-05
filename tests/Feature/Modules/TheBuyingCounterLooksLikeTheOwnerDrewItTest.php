@@ -104,7 +104,7 @@ class TheBuyingCounterLooksLikeTheOwnerDrewItTest extends TestCase
             'purchase::field.search_item',      // বাঁ কার্ড ২
             'purchase::field.billing_date',     // বাঁ কার্ড ১, সারি ১
             'purchase::field.their_invoice',
-            'purchase::field.payment_terms',
+            'purchase::field.terms',
             'purchase::field.received_on',      // বাঁ কার্ড ১, সারি ২
             'purchase::field.pur_inv_no',
             'purchase::field.this_line',        // মাঝের ছক
@@ -145,7 +145,7 @@ class TheBuyingCounterLooksLikeTheOwnerDrewItTest extends TestCase
             // সারি ২
             'purchase::field.billing_date',
             'purchase::field.their_invoice',
-            'purchase::field.payment_terms',
+            'purchase::field.terms',
         ] as $key) {
             /*
              * ⚠️ লেবেলের `title=` ধরে খোঁজা, কেবল লেখাটা ধরে নয়।
@@ -188,7 +188,14 @@ class TheBuyingCounterLooksLikeTheOwnerDrewItTest extends TestCase
     {
         $screen = $this->screen();
 
-        foreach (['cash', 'cod', 'month_end', 'fixed'] as $kind) {
+        /*
+         * ⛔ এখানে `cod` ছিল — ৫ সেপ্টেম্বর ২০২৬ বাদ।
+         *
+         * ⚠️ মালিক ধরেছেন যে **এই কাগজে** শর্তটা অর্থহীন: সরাসরি ক্রয়ের
+         * বিল লেখাই হয় মাল পৌঁছানোর পরে। ⓘ পাহারাটা তাই এখন চারটা ধরন
+         * দাবি করে, আর পঞ্চমটা ফিরে এলে **এই লাইনটাই** প্রশ্ন তুলবে।
+         */
+        foreach (['cash', 'month_end', 'fixed'] as $kind) {
             $this->assertScreenSays($screen, "purchase::field.term_{$kind}");
         }
 

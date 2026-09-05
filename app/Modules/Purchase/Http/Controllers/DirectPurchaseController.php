@@ -122,7 +122,28 @@ class DirectPurchaseController extends Controller implements HasMiddleware
              * আর "কে বুঝে নিয়েছিল" প্রশ্নের উত্তরটা **ভুল** হত — খালি
              * থাকার চেয়েও খারাপ।
              */
-            'receivedBy' => $request->user()?->name ?? '',
+            /*
+             * ⓘ নামের সাথে ভূমিকাও — মালিক, ৬ সেপ্টেম্বর ২০২৬:
+             * *"Received by: Al-Amin Shuvo (Owner)"*।
+             *
+             * ⚠️ একই নামে দুইজন থাকতে পারেন, আর *"কে বুঝে নিয়েছিল"*
+             * প্রশ্নের উত্তরে ভূমিকাটা পার্থক্য গড়ে দেয়। ⓘ টপবার এই
+             * একই নিয়মে লেখে (`getRoleNames()->first()`), তাই দুই
+             * জায়গায় একই মানুষ একইভাবে লেখা থাকে।
+             */
+            'receivedBy' => (function () use ($request): string {
+                $user = $request->user();
+
+                if ($user === null) {
+                    return '';
+                }
+
+                $role = $user->getRoleNames()->first();
+
+                return $role === null
+                    ? $user->name
+                    : $user->name.' ('.__('core.role.'.$role).')';
+            })(),
 
             /*
              * ── ক্রয় চালানের পরের নম্বর — দেখানোর জন্য, খরচের জন্য নয় ──
@@ -282,7 +303,7 @@ class DirectPurchaseController extends Controller implements HasMiddleware
              * হয়ে যায়, আর তারিখটাই খাতায় থাকে।
              */
             'payment_term' => ['nullable', 'string',
-                Rule::in(['cash', 'cod', 'credit', 'month_end', 'fixed'])],
+                Rule::in(['cash', 'credit', 'month_end', 'fixed'])],
 
             'supplier_bill_no' => ['nullable', 'string', 'max:64'],
             'due_on' => ['nullable', 'date'],
@@ -596,7 +617,7 @@ class DirectPurchaseController extends Controller implements HasMiddleware
      * কোনো ঘরে ফেলতে পারত না।
      *
      * ── ⓘ মানের ছাঁচ ────────────────────────────────────────────────
-     * `cash` · `cod` · `credit:7` · `month_end` · `fixed` — কোলনের পরের
+     * `cash` · `credit:7` · `month_end` · `fixed` — কোলনের পরের
      * সংখ্যাটা কেবল `credit`-এ, আর পর্দাই ওটা তারিখে অনুবাদ করে।
      *
      * @return list<array{value: string, label: string}>
@@ -604,8 +625,20 @@ class DirectPurchaseController extends Controller implements HasMiddleware
     private function paymentTerms(): array
     {
         $terms = [
+            /*
+             * ⛔ এখানে একটা `cod` ছিল — ৫ সেপ্টেম্বর ২০২৬ তুলে দেওয়া।
+             *
+             * মালিক: *"cod to purches e lagena sekane keno dile"*।
+             *
+             * ⚠️ COD মানে "মাল পৌঁছালে টাকা", অথচ **সরাসরি ক্রয়ের কাগজ
+             * লেখাই হয় মাল পৌঁছানোর পরে**। ⓘ যে ঘটনার অপেক্ষায় শর্তটা,
+             * সেটা ইতিমধ্যেই ঘটে গেছে — তাই ওটা নগদেরই দ্বিতীয় নাম ছিল।
+             *
+             * ⭐ শব্দটা অর্থহীন নয়, **এই কাগজে** অর্থহীন। ক্রয়াদেশে ওটা
+             * সত্যি (মাল তখনো আসেনি), আর বিক্রয়েও সত্যি (মাল ভ্যানে
+             * যায়, টাকা ফেরে) — সেখানে ওটা আছে।
+             */
             ['value' => 'cash', 'label' => __('purchase::field.term_cash')],
-            ['value' => 'cod', 'label' => __('purchase::field.term_cod')],
         ];
 
         foreach ($this->creditTerms() as $term) {

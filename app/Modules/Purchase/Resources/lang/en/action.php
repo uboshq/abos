@@ -43,7 +43,14 @@ return [
      * line one.
      */
     'gift_item' => 'Gift item',
-    'rate_chart' => 'Rate chart',
+    /* ⭐ "Chart Entry", not "Rate chart" — the owner, 6 Sep 2026:
+       *"Rate chart ekhane keno? ekhane Chart Entry hobe"*.
+
+       ⓘ Sales already calls the same thing `chart_bulk_do` → **Chart
+       Entry**, and it is the same act on both papers: many products
+       entered at once from a chart, instead of one row at a time.
+       ⚠️ Two names for one act made a reader learn the screen twice. */
+    'rate_chart' => 'Chart Entry',
     'costing' => 'Costing',
 
     /*
@@ -68,6 +75,18 @@ return [
      */
     'add_deposit_panel' => 'Add payment',
     'add_note' => 'Add note',
-    'transportation' => 'Transportation',
+    /* ⭐ "Transport", not "Transportation" — the owner, 6 Sep 2026:
+       *"Transportation botamer nam poriborton kore Transport koro, Direct
+       Sales & Pur dujaygay"*.
+
+       ⓘ It sits on a row of six one- and two-word buttons (Gift · Costing ·
+       Chart Entry · Shipment · Clear all), and "Transportation" was the only
+       one that had to shrink its own text to fit. ⚠️ A label that wraps or
+       shrinks reads as less important than its neighbours, and this one is
+       not — it changes the amount payable.
+
+       ⓘ Bangla was already the short form (পরিবহন); only English was long,
+       so the two languages now agree in weight as well as meaning. */
+    'transportation' => 'Transport',
     'shipment' => 'Shipment',
 ];

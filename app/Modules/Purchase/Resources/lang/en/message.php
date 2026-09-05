@@ -112,6 +112,7 @@ return [
     'credit_back_to_terms' => 'Back to the terms list',
     'bill_no_editable' => 'The next number in the series. Change it if you are entering an older paper.',
     'search_supplier' => 'Search supplier…',
+    'no_supplier_match' => 'No supplier matches that.',
     'no_default_warehouse' => 'No default warehouse is set, so the box is empty. Pick a default under Inventory ▸ Warehouses, or choose one here every time.',
     'sales_rate_hint' => 'leave blank to keep the current price',
     'goods_wait_for_placement' => 'Goods land as not yet placed. Put them on a shelf under Inventory ▸ Stock placement — until then they are in the warehouse but not sellable.',

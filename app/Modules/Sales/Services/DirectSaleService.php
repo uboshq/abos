@@ -325,6 +325,21 @@ final class DirectSaleService
             'credit_period_days' => $data['credit_period_days'] ?? null,
 
             /*
+             * ⛐ ধরনটাও খাতায় — কেবল তারিখ আর দিনসংখ্যা নয়।
+             *
+             * ⚠️ দিনসংখ্যাটা ধরনটা বলে না: নগদ আর COD — দুইটাই
+             * শূন্য দিন, অথচ একটায় টাকা ড্রয়ারে আর আরেকটায় ভ্যানে।
+             * ℹ একইভাবে ৫ তারিখে "মাস শেষ" আর "২৫ দিনের বাকি" —
+             * খাতায় হুবহু এক, ব্যবসায় আলাদা।
+             *
+             * ⭐ ক্রয়ের কাগজে এই কলামটা ১ সেপ্টেম্বর থেকেই আছে;
+             * বিক্রয়ে বসল ৫ সেপ্টেম্বর, মালিকের নির্দেশে।
+             */
+            'payment_term' => ($data['payment_term'] ?? '') !== ''
+                ? (string) $data['payment_term']
+                : null,
+
+            /*
              * ছয়টা বোতামের ঘরগুলো — ২৯ আগস্ট ২০২৬।
              *
              * ── কেন `?: null`, `?? null` নয় ──────────────────────────
@@ -537,6 +552,34 @@ final class DirectSaleService
             return Carbon::parse($on)->toDateString();
         }
 
+        /*
+         * ── ⭐ ধরনটা দিনসংখ্যার আগে ────────────────────────
+         *
+         * ℹ `month_end` কোনো দিনসংখ্যায় বলা যায় না — ৫ তারিখে সেটা
+         * ২৫ দিন, ২৮ তারিখে ২ দিন, আর ফেব্রুয়ারিতে আরও আলাদা।
+         * ⛔ `addDays(30)` দিয়ে গুনলে ফেব্রুয়ারির বিল মার্চে গিয়ে পড়ত।
+         *
+         * ⭐ `endOfMonth()` গোনে **চালানের মাস ধরে**, আজকের মাস নয় —
+         * পুরনো তারিখের বিল বসালে ঐ মাসেরই শেষ।
+         */
+        $from = Carbon::parse($data['trx_date'] ?? now());
+
+        if (($data['payment_term'] ?? '') === 'month_end') {
+            return $from->copy()->endOfMonth()->toDateString();
+        }
+
+        /*
+         * ⭐ নগদ আর COD — দুইটার তারিখই চালানের দিন।
+         *
+         * ⚠️ তবু দুইটা এক নয়, আর পার্থক্যটা জমার ঘরে: নগদে
+         * টাকা ড্রয়ারে ढুকেছে, COD-তে মাল ভ্যানে গেছে আর টাকা
+         * ফিরবে ডেলিভারিম্যানের সাথে। ℹ একটা আদায়, আরেকটা পাওনা —
+         * তাই ধরনটা আলাদা করে খাতায় বসে (`payment_term`)।
+         */
+        if (in_array($data['payment_term'] ?? '', ['cash', 'cod'], true)) {
+            return $from->toDateString();
+        }
+
         $days = $data['credit_period_days'] ?? null;
 
         if ($days === null || $days === '') {
@@ -552,8 +595,6 @@ final class DirectSaleService
          * গতকালের একটা বিল ৩০ দিনের মেয়াদে তুললে মেয়াদটা একদিন বেশি
          * পেত — প্রতিটা ব্যাক-ডেটেড বিলে, নীরবে।
          */
-        $from = Carbon::parse($data['trx_date'] ?? now());
-
         return $days > 0
             ? $from->copy()->addDays($days)->toDateString()
             : null;

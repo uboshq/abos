@@ -18,6 +18,27 @@
     'submitOnChange' => false,
 
     /*
+     * সরু ঘর — কাউন্টারের ঠাসাঠাসি ছকের জন্য।
+     *
+     * ⭐ মালিক, ৫ সেপ্টেম্বর ২০২৬: *"বিলের তারিখ box slim koro"*।
+     *
+     * ⚠️ ঘরটা স্বাভাবিকভাবে **৬০px প্যাডিং** নেয় (`pe-9 ps-3`) —
+     * ডানে ক্যালেন্ডারের বোতামের জায়গা। ℹ লেখাটা `05-09-2026`,
+     * মাত্র ~৮০px — অর্থাৎ অর্ধেকের বেশি ঘর প্যাডিংই।
+     *
+     * ⛔ সরু কলামে তাই তারিখটা কেটে `05-09-2` হয়ে যেত, আর
+     * **একটা কাটা তারিখ ভুল তারিখের চেয়েও খারাপ** — মানুষ
+     * অর্ধেক পড়ে বাকিটা ধরে নেন।
+     *
+     * ⭐ `dense` প্যাডিং আর বোতাম দুইটাই ছোট করে (~১৫ px বাঁচে),
+     * তাই ঘরটা সরু হয়েও তারিখ পুরোটা দেখায়।
+     *
+     * ℹ এটা **অপশন**, ডিফল্ট নয় — বাকি পর্দাগুলোতে ঘরটা
+     * আগের মতোই বসে।
+     */
+    'dense' => false,
+
+    /*
      * Alpine-এর লুপের ভেতরে বসার জন্য — নামটা সারির ক্রম ধরে বাঁধা।
      *
      * ── কেন এটা যোগ করতে হলো, ৫ সেপ্টেম্বর ২০২৬ ─────────────────────
@@ -100,7 +121,21 @@
            @if ($hasError) aria-invalid="true" @endif
            @if ($describedBy) aria-describedby="{{ $describedBy }}" @endif
            {{ $attributes->class([
-               'num h-(--spacing-field) w-full rounded-(--radius-field) border pe-9 ps-3',
+               'num w-full rounded-(--radius-field) border',
+               /*
+                * ⚠️ উচ্চতাও `dense`-এর অংশ।
+                *
+                * ⛔ ঘরটা `--spacing-field` নিত, অথচ কাউন্টারের
+                * বাকি সব ঘর `--spacing-field-dense` — ফলে তারিখের
+                * ঘরটা পাশের ঘরগুলোর চেয়ে **১৬ px উঁচু** থাকত, আর
+                * ছকের সারিটাও ততটাই উঁচু হয়ে যেত।
+                *
+                * ℹ এক সারিতে দুই মাপের ঘর চোখে লাগে না, কিন্তু
+                * সারিটা অসমান দেখায় — আর মালিক লাল দাগ দিয়ে
+                * ঠিক ঐ ফাঁকটাই দেখিয়েছেন।
+                */
+               'h-(--spacing-field) pe-9 ps-3' => ! $dense,
+               'h-(--spacing-field-dense) pe-7 ps-2' => $dense,
                'bg-(--color-surface-card)',
                'bg-(--color-surface-app) text-(--color-ink-muted)' => $readonly,
                'border-(--color-danger)' => $hasError,
@@ -115,13 +150,15 @@
          তাই কোথাও আটকে যায় না। --}}
     <input type="date" x-ref="native" x-bind:value="iso" tabindex="-1" aria-hidden="true"
            x-on:change="fromNative($event.target.value)"
-           class="pointer-events-none absolute end-9 bottom-0 h-0 w-0 opacity-0">
+           @class(['pointer-events-none absolute bottom-0 h-0 w-0 opacity-0', 'end-9' => ! $dense, 'end-7' => $dense])>
 
     @unless ($readonly)
         <button type="button"
                 x-on:click="pick()"
-                class="absolute end-0 top-0 grid h-(--spacing-field) w-9 place-items-center
-                       text-(--color-ink-muted) hover:text-(--color-ink)"
+                @class(['absolute end-0 top-0 grid place-items-center
+                       text-(--color-ink-muted) hover:text-(--color-ink)',
+                    'h-(--spacing-field) w-9' => ! $dense,
+                    'h-(--spacing-field-dense) w-7' => $dense])
                 aria-label="{{ __('core.form.pick_date') }}">
             <x-ui.icon name="calendar" class="size-4" />
         </button>

@@ -49,7 +49,7 @@ class DeliveryChallan extends Model implements Drillable
         'customer_id', 'warehouse_id', 'sales_order_id', 'trx_date',
         'vehicle_id', 'vehicle_no', 'driver_name', 'do_no', 'total',
         'discount_amount', 'expense_amount', 'rounding_amount',
-        'deposit_amount', 'credit_period_days',
+        'deposit_amount', 'credit_period_days', 'payment_term',
 
         /* ছয়টা বোতামের ঘর — সরাসরি বিক্রয়ের পর্দা, ২৯ আগস্ট ২০২৬ */
         'expense_narration', 'carrier_name', 'carrier_id', 'transport_cost',
