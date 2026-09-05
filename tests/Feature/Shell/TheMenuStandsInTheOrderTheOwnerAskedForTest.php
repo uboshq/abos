@@ -40,8 +40,6 @@ class TheMenuStandsInTheOrderTheOwnerAskedForTest extends TestCase
      * রেলের মাথায় আলাদা করে আঁকে।
      */
     private const AS_HE_ASKED = [
-        ['top', 'master_data'],
-
         ['finance', 'accounts'],
         ['finance', 'finance'],
 
@@ -62,11 +60,45 @@ class TheMenuStandsInTheOrderTheOwnerAskedForTest extends TestCase
         ['business', 'inventory'],
         ['business', 'sales'],
 
+        /*
+         * ⭐ রেস্টুরেন্ট বিক্রয়ের ঠিক পরে — মালিকের সিদ্ধান্ত,
+         * ৫ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ ওটা বিক্রয়েরই একটা রূপ: টেবিল, অর্ডার, রান্নাঘর। আলাদা
+         * ভাগে রাখলে যিনি রেস্টুরেন্ট চালান তাঁকে দুই জায়গায় ঘুরতে হত।
+         *
+         * ⚠️ মডিউলটা আগে থেকেই ঠিক ওখানেই বসত (`business`, order ৬০) —
+         * কেবল এই তালিকায় লেখা ছিল না, তাই ৩ সেপ্টেম্বর থেকে দুইটা
+         * পরীক্ষা লাল ছিল। ⓘ কোডের ভুল নয়, একটা অমীমাংসিত প্রশ্ন।
+         */
+        ['business', 'restaurant'],
+
         ['people', 'hr'],
         ['people', 'governance'],
         ['people', 'approval'],
 
+        /*
+         * ⭐ মাস্টার ডাটা এখন সিস্টেমের ভাগে, প্রশাসনের **উপরে** —
+         * মালিকের সিদ্ধান্ত, ৫ সেপ্টেম্বর ২০২৬: *"উপরের মাস্টার ডাটা
+         * সিস্টেমের উপরে নিয়ে আসো।"*
+         *
+         * ⓘ আগে সে `top` ভাগে একা বসত, সবার উপরে। ⚠️ কিন্তু মাস্টার
+         * ডাটা রোজকার কাজ নয় — একবার বসিয়ে বছরের পর বছর ছোঁয়া হয় না,
+         * ঠিক প্রশাসনের মতোই। উপরে থাকায় সে রোজ চোখে পড়ত আর রোজকার
+         * মডিউলগুলোকে এক ধাপ নামিয়ে দিত।
+         */
+        ['system', 'master_data'],
         ['system', 'system_admin'],
+
+        /*
+         * ⭐ ব্যাকআপ সবার শেষে — মালিকের সিদ্ধান্ত।
+         *
+         * ⓘ বছরে দুইবারের কাজ, রোজকার নয়। ⚠️ তবু মেনুতে **থাকতেই
+         * হবে**: ২৫ আগস্ট ব্যাকআপ ঠিক আছে কি না জানতে সার্ভারে ssh
+         * করতে হয়েছিল, আর যিনি ssh করতে পারেন না তিনি ধরে নেন সব
+         * ঠিক আছে — ব্যাকআপের ব্যর্থতা ঠিক এভাবেই নীরব থাকে।
+         */
+        ['system', 'backup'],
     ];
 
     protected function setUp(): void
@@ -271,11 +303,32 @@ class TheMenuStandsInTheOrderTheOwnerAskedForTest extends TestCase
 
         $menu = app(MenuBuilder::class)->forUser($this->owner());
 
-        $daily = collect($menu)->first(fn (array $m): bool => $m['section'] !== 'top');
-        $reference = collect($menu)->first(fn (array $m): bool => $m['section'] === 'top');
+        /*
+         * ⚠️ ৫ সেপ্টেম্বর ২০২৬ — মাপকাঠি `top` থেকে `system`-এ সরল।
+         *
+         * ⓘ মালিক মাস্টার ডাটাকে `top` থেকে সিস্টেমের ভাগে নামিয়েছেন,
+         * তাই `top` এখন খালি। ⛔ পুরনো দাবিটা তখন `assertNotNull` ধাপেই
+         * ভাঙত — অথচ কোডে কোনো ভুল নেই, কেবল রেফারেন্স ডাটার ঘরটা
+         * বদলেছে।
+         *
+         * ⭐ যেটা মাপা হচ্ছে তা এক: **রোজকার নয় এমন কিছু দিয়ে দিন শুরু
+         * হবে না।** আর দাবিটা এখন আরও শক্ত — কেবল "প্রথমটা নয়" নয়,
+         * সরাসরি "মাস্টার ডাটা নয়"।
+         */
+        $daily = collect($menu)->first(
+            fn (array $m): bool => ! in_array($m['section'], ['top', 'system'], true),
+        );
 
-        $this->assertNotNull($daily);
-        $this->assertNotNull($reference);
+        $reference = collect($menu)->first(fn (array $m): bool => $m['code'] === 'master_data');
+
+        $this->assertNotNull($daily, 'রোজকার কাজের একটাও মডিউল নেই — মেনুটাই কি খালি?');
+        $this->assertNotNull($reference, 'মাস্টার ডাটা মেনু থেকেই উধাও।');
+
+        $this->assertNotSame(
+            $reference['code'],
+            $daily['code'],
+            'রোজকার মডিউল হিসেবে মাস্টার ডাটাই বেছে নেওয়া হয়েছে।',
+        );
 
         /*
          * প্যানেলটা নিজের `data-active-module`-এ কোডটা বলে।
