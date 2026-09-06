@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Core;
 
+use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Accounts\Services\CashTillService;
+use App\Modules\Accounts\Models\Account;
 use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
@@ -66,14 +69,52 @@ class FoundationWorksEndToEndTest extends TestCase
         $numbers = app(NumberSeriesEngine::class);
         $documentNo = $numbers->next('JV', sourceType: 'journal_voucher', sourceId: 1);
 
-        $this->assertSame('JRN-2026-2027-0001', $documentNo);
+        /*
+         * ⚠️ `JRN-0001`, আগে `JRN-2026-2027-0001` ছিল।
+         *
+         * ⛔ ছকটা বদলেছে, ৫ সেপ্টেম্বর ২০২৬ — মালিকের সিদ্ধান্ত:
+         * *"Document number series {PREFIX}-{SEQ} বাই ডিফল্ট বসাও"*।
+         *
+         * ⓘ অর্থবছরটা নম্বর থেকে উঠে গেছে, আর তার সাথে **অটো-রিসেটও বন্ধ**
+         * ([[NumberSeriesProvisioner::resetsWith]]) — নাহলে ২০২৬-এর
+         * `JRN-0001` আর ২০২৭-এর `JRN-0001` **দুইটা আলাদা কাগজে এক নম্বর**
+         * হত।
+         *
+         * ⚠️ দাবিটা তবু হুবহু সংখ্যাসহ রাখা হলো, `assertStringStartsWith`
+         * নয়: এই পরীক্ষাটার কাজই হলো **প্রথম নম্বরটা ঠিক কী** তা লিখে
+         * রাখা — আলগা দাবি দিলে `JRN-0007`-ও পাস করত।
+         */
+        $this->assertSame('JRN-0001', $documentNo);
 
         // ৩. হিসাবে বসানো
         $posting = app(PostingEngine::class);
+        /*
+         * ⛔ খাতগুলো **কোড ধরে**, আইডি হার্ডকোড করে নয় — ৬ সেপ্টেম্বর ২০২৬।
+         *
+         * ── কী ভাঙা ছিল ─────────────────────────────────────────────
+         * এখানে লেখা ছিল `1101` · `4001` · `2201` — যেন ওগুলো আইডি। ⚠️
+         * মেপে দেখা গেল **তিনটাই ভুল**:
+         *
+         *     1101  →  আসল আইডি ৩১২৭, আর সেটা একটা **গ্রুপ** (হাতে নগদ)
+         *     4001  →  এই চার্টে **নেই** (বিক্রয় ৪১০০)
+         *     2201  →  এই চার্টে **নেই** (ভ্যাট প্রদেয় ২১২০)
+         *
+         * ⓘ CLAUDE.md-তে ফাঁদটা নাম ধরে লেখা: *"`CASH_IN_HAND`='1101' একটা
+         * **গ্রুপ** — টাকা বসে till-এর সন্তানে, `CashTillService::
+         * ensurePrimaryTill()` দিয়ে।"*
+         *
+         * ⭐ তাই নগদটা till-এর খাত থেকে, আর বাকি দুইটা [[StandardChart]]-এর
+         * ধ্রুবক থেকে। ⚠️ চার্ট বদলালে এই পরীক্ষাটা **নিজে থেকেই** নতুন
+         * কোডে চলবে — আগের মতো নীরবে ভুল আইডিতে নয়।
+         */
+        $till = app(CashTillService::class)->ensurePrimaryTill();
+        $sales = Account::query()->where('code', StandardChart::SALES)->firstOrFail();
+        $vat = Account::query()->where('code', StandardChart::VAT_PAYABLE)->firstOrFail();
+
         $posting->post('journal_voucher', 1, '2026-08-04', [
-            ['account_id' => 1101, 'debit' => 11500, 'party_type' => 'customer', 'party_id' => 7],
-            ['account_id' => 4001, 'credit' => 10000],
-            ['account_id' => 2201, 'credit' => 1500],
+            ['account_id' => $till->account->id, 'debit' => 11500, 'party_type' => 'customer', 'party_id' => 7],
+            ['account_id' => $sales->id, 'credit' => 10000],
+            ['account_id' => $vat->id, 'credit' => 1500],
         ], documentNo: $documentNo);
 
         // নিজের কাগজের সারি গোনা হয়, সবার নয় — সিডারে খোলা মজুদের

@@ -56,7 +56,7 @@
                         ·
                         {{-- ⭐ ফেরতযোগ্য টাকাটা এখানেই লেখা — নাহলে কেউ
                              ক্লিক করে দেখতে যেতেন না --}}
-                        <span class="num font-semibold">{{ number_format((float) $soon->depositLeft(), 2) }}</span>
+                        <span class="num font-semibold">{{ \App\Core\Support\Money::format($soon->depositLeft()) }}</span>
                     </li>
                 @endforeach
             </ul>
@@ -101,13 +101,13 @@
                                     </a>
                                 </td>
                                 <td class="text-(--color-ink-muted)">{{ $contract->subject }}</td>
-                                <td class="num text-end">{{ number_format((float) $contract->monthly_rent, 2) }}</td>
-                                <td class="num text-end">{{ number_format((float) $contract->monthlyCash(), 2) }}</td>
-                                <td class="num text-end">{{ number_format((float) $contract->monthly_adjustment, 2) }}</td>
+                                <td class="num text-end">{{ \App\Core\Support\Money::format($contract->monthly_rent) }}</td>
+                                <td class="num text-end">{{ \App\Core\Support\Money::format($contract->monthlyCash()) }}</td>
+                                <td class="num text-end">{{ \App\Core\Support\Money::format($contract->monthly_adjustment) }}</td>
 
                                 {{-- ⭐ যে সংখ্যাটার জন্য এই পর্দা — ফেরত পাওয়ার টাকা --}}
                                 <td class="num text-end font-semibold">
-                                    {{ number_format((float) $contract->depositLeft(), 2) }}
+                                    {{ \App\Core\Support\Money::format($contract->depositLeft()) }}
                                 </td>
 
                                 <td>{{ $contract->ends_on->format('d/m/Y') }}</td>

@@ -90,6 +90,30 @@ class TheMillSentABucketWithTheSoapTest extends TestCase
     }
 
     /**
+     * ফ্রি ভাণ্ডারের **পুরোটা** — তাকে যা আছে, আর যা এখনো অপেক্ষার ঘরে।
+     *
+     * ── কেন `freeQty()` দিয়ে আর মাপা যায় না (৬ সেপ্টেম্বর ২০২৬) ──────
+     * উপহার এখন সরাসরি তাকে বসে না, `unplacedFree`-এ যায়
+     * ([[DirectPurchaseService::bringInGifts]]) — কারণ একই লরির কেনা
+     * মালও অপেক্ষার ঘরে যায়, আর উপহারকে আলাদা নিয়ম দিলে গুদামের লোক
+     * জানতেনই না ওটা এসেছে, অথচ সেটা সাথে সাথে বিক্রয়যোগ্য হয়ে যেত।
+     *
+     * ⚠️ টেস্টটা তাই **দুর্বল করা হয়নি, ভাগ করা হয়েছে**: আগে একটা
+     * সংখ্যা দেখত, এখন দুইটা — ভাণ্ডারে ঢুকেছে কি না, আর তাকে বসে
+     * গেছে কি না। পুরনো একটামাত্র শর্ত এই দুইটার যোগফলেই ধরা থাকে।
+     */
+    private function freeOnHandQty(Product $product): string
+    {
+        return $this->stock()->statesFor($product, $this->warehouse)['free_on_hand'];
+    }
+
+    /** ফ্রি মাল যা এখনো বুঝে নেওয়ার অপেক্ষায়। */
+    private function unplacedFreeQty(Product $product): string
+    {
+        return $this->stock()->statesFor($product, $this->warehouse)['unplaced_free'];
+    }
+
+    /**
      * @param  list<array<string, mixed>>  $gifts
      * @return array{bill: \App\Modules\Purchase\Models\PurchaseBill, payment: mixed}
      */
@@ -142,13 +166,28 @@ class TheMillSentABucketWithTheSoapTest extends TestCase
 
     public function test_the_gift_lands_in_the_free_pool_not_in_the_bought_stock(): void
     {
-        $freeBefore = $this->freeQty($this->bucket);
+        $freeBefore = $this->freeOnHandQty($this->bucket);
+        $waitingBefore = $this->unplacedFreeQty($this->bucket);
+        $shelfBefore = $this->freeQty($this->bucket);
         $onHandBefore = $this->stock()->availableQty($this->bucket, $this->warehouse);
 
         $this->buy($this->bucketGift('3'));
 
-        $this->assertSame(0, bccomp($this->freeQty($this->bucket), bcadd($freeBefore, '3', 4), 4),
+        $this->assertSame(0, bccomp($this->freeOnHandQty($this->bucket), bcadd($freeBefore, '3', 4), 4),
             'উপহারটা ফ্রি ভাণ্ডারে ঢোকেনি — মালিকের নির্দেশ ছিল free আলাদা থাকবে।');
+
+        /*
+         * ⭐ আর ঢুকেছে **অপেক্ষার ঘরে**, সরাসরি তাকে নয়।
+         *
+         * এই দুইটা আলাদা করে না দেখলে একটা আসল ভুল ফসকে যেত: উপহারটা
+         * সাথে সাথে তাকে বসে গেলে সংখ্যাটা ঠিকই থাকত, অথচ মালিকের
+         * নিয়ম ("বসানোর আগে বিক্রি নয়") উপহারের বেলায় ভাঙত।
+         */
+        $this->assertSame(0, bccomp($this->unplacedFreeQty($this->bucket), bcadd($waitingBefore, '3', 4), 4),
+            'উপহারটা অপেক্ষার ঘরে যায়নি — একই লরির কেনা মাল যায়, উপহারও যাবে।');
+
+        $this->assertSame(0, bccomp($this->freeQty($this->bucket), $shelfBefore, 4),
+            'উপহারটা বসানোর আগেই তাকে উঠে গেছে — তাহলে বসানোর পর্দাটা ওটা কোনোদিন দেখত না।');
 
         /*
          * ⚠️ কেনা মজুদ এক চুলও নড়েনি — আর এটাই আসল পরীক্ষা।
