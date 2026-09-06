@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Core;
 
+use Tests\RealAccounts;
 use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Security\LedgerChain;
 use App\Core\Support\CompanyContext;
@@ -40,6 +41,7 @@ use Tests\TestCase;
  */
 class TheBooksCouldBeEditedAndNobodyWouldKnowTest extends TestCase
 {
+    use RealAccounts;
     use RefreshDatabase;
 
     private Company $depot;
@@ -70,9 +72,9 @@ class TheBooksCouldBeEditedAndNobodyWouldKnowTest extends TestCase
         $before = LedgerEntry::withoutGlobalScopes()->max('id') ?? 0;
 
         app(PostingEngine::class)->post('journal_voucher', mt_rand(1000, 9999), $date, [
-            ['account_id' => 1101, 'debit' => 11500, 'narration' => 'Openning balance'],
-            ['account_id' => 4001, 'credit' => 10000],
-            ['account_id' => 2201, 'credit' => 1500],
+            ['account_id' => $this->cashAccountId(), 'debit' => 11500, 'narration' => 'Openning balance'],
+            ['account_id' => $this->salesAccountId(), 'credit' => 10000],
+            ['account_id' => $this->vatAccountId(), 'credit' => 1500],
         ]);
 
         return LedgerEntry::withoutGlobalScopes()

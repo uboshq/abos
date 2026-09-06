@@ -71,7 +71,14 @@ class SixSpecialLedgersAreOneFilterTest extends TestCase
     private function owe(Supplier $supplier, string $amount): void
     {
         $payable = Account::query()->where('code', StandardChart::PAYABLE)->firstOrFail();
-        $expense = Account::query()->where('code', StandardChart::OPERATING_EXPENSES)->firstOrFail();
+        /*
+         * ⛔ `OPERATING_EXPENSES` ('5200') একটা **গ্রুপ** — ৬ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ গ্রুপে দাখিলা বসে না; তার ব্যালান্স তার সন্তানদের যোগফল।
+         * ⚠️ পোস্টিং ইঞ্জিন ঠিকই থামাত: *"posts to 5200, which is a group"*।
+         * ⭐ তাই তার একটা সত্যিকারের সন্তান — ভাড়া (`RENT`)।
+         */
+        $expense = Account::query()->where('code', StandardChart::RENT)->firstOrFail();
 
         app(PostingEngine::class)->post(
             sourceType: 'test.payable',
@@ -93,14 +100,23 @@ class SixSpecialLedgersAreOneFilterTest extends TestCase
 
     private function partyType(string $code, string $name): PartyType
     {
-        return PartyType::query()->create([
-            'company_id' => $this->company->id,
-            'code' => $code,
-            'name_en' => $name,
-            'name_bn' => $name,
-            'applies_to' => PartyType::SUPPLIER,
-            'is_active' => true,
-        ]);
+        /*
+         * ⚠️ `firstOrCreate`, `create` নয় — ৬ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ সিডারে কিছু পক্ষের ধরন আগে থেকেই বসানো (LABOUR তাদের একটা),
+         * আর `create` তখন `mdm_party_types_company_id_code_unique`-এ গিয়ে
+         * ধাক্কা খেত। ⛔ ত্রুটিটা পড়ে মনে হত ছাঁকনির কোড ভাঙা, অথচ দোষটা
+         * ছিল **টেস্টের সাজানোয়** — সে ধরে নিয়েছিল টেবিলটা খালি।
+         */
+        return PartyType::query()->firstOrCreate(
+            ['company_id' => $this->company->id, 'code' => $code],
+            [
+                'name_en' => $name,
+                'name_bn' => $name,
+                'applies_to' => PartyType::SUPPLIER,
+                'is_active' => true,
+            ],
+        );
     }
 
     /**
