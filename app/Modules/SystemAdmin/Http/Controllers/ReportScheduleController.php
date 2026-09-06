@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\SystemAdmin\Http\Controllers;
 
+use App\Core\Support\CompanyContext;
 use App\Core\Engines\Report\ReportEngine;
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
@@ -95,7 +96,16 @@ final class ReportScheduleController extends Controller implements HasMiddleware
             'menu' => $this->menu->forUser(request()->user()),
             'schedule' => $schedule,
             'reportTitles' => $this->reportTitles(),
-            'users' => User::query()->where('is_active', true)->orderBy('name')->get(['id', 'name']),
+            /*
+             * ⛔ চলতি কোম্পানির মানুষজনই — ৬ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ এটা "রিপোর্টটা কাকে পাঠাব" তালিকা। ⚠️ ছাঁকনি ছাড়া এক
+             * কোম্পানির রিপোর্ট **অন্য কোম্পানির লোককে** পাঠানোর জন্য
+             * বেছে নেওয়া যেত — নাম ফাঁস নয়, **তথ্য পাচার**।
+             */
+            'users' => User::query()
+                ->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))
+                ->where('is_active', true)->orderBy('name')->get(['id', 'name']),
         ]);
     }
 

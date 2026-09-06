@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Governance\Http\Controllers;
 
+use App\Core\Support\CompanyContext;
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
 use App\Models\LoginAttempt;
@@ -35,6 +36,26 @@ class LoginHistoryController extends Controller implements HasMiddleware
     public function index(Request $request): View
     {
         $rows = LoginAttempt::query()
+
+            /*
+             * ⛔ চলতি কোম্পানির লগইনগুলোই — ৬ সেপ্টেম্বর ২০২৬।
+             *
+             * ── কী ভাঙা ছিল ─────────────────────────────────────────
+             * ছাঁকনি ছিল না। ⚠️ কোম্পানি ৪৬ থেকে `/governance/logins`
+             * খুললে কোম্পানি ৪৫-এর **পুরো এক পাতা লগইন** দেখা যেত — কে
+             * কখন ঢুকেছে, কোন ঠিকানা থেকে, কে ব্যর্থ হয়েছে।
+             *
+             * ⭐ আর এটা নীতি নয়, **ভুলে যাওয়া**: ঠিক পাশের
+             * [[ErrorLogController]] (:৬০) ছাঁকা আছে। ⓘ একই ফোল্ডারে
+             * একটা ঠিক আরেকটা ভুল মানে কেউ একটা লিখেছিলেন, অন্যটা
+             * কপি করেননি।
+             *
+             * ⚠️ `whereHas('companies')` নয় — `login_attempts`-এ **নিজেরই
+             * একটা `company_id`** আছে। ⓘ ভুল ছাঁচ বসালে কোয়েরিটা ভাঙত না,
+             * শুধু **ফাঁকা ফেরত দিত** — আর সেটা আরও খারাপ, কারণ "কোনো
+             * লগইন নেই" দেখে কেউ নিশ্চিন্ত হতেন।
+             */
+            ->where('company_id', CompanyContext::id())
             ->with('user')
             ->when($request->query('user'), fn (Builder $q, $id) => $q->where('user_id', (int) $id))
             ->when($request->query('only') === 'failed', fn (Builder $q) => $q->failed())
@@ -59,12 +80,24 @@ class LoginHistoryController extends Controller implements HasMiddleware
              * পড়ে বের করতে হলে বেশিরভাগ দিন কেউ বের করত না।
              */
             'failedToday' => LoginAttempt::query()
+                // ⚠️ উপরের তালিকার মতোই — এই সংখ্যাটাও কেবল এই কোম্পানির
+                ->where('company_id', CompanyContext::id())
                 ->failed()
                 ->where('created_at', '>=', now()->subDay())
                 ->count(),
 
             'users' => User::query()
-                ->whereIn('id', LoginAttempt::query()->distinct()->pluck('user_id')->filter())
+                /*
+                 * ⚠️ ছাঁকনিটা **ভিতরের কোয়েরিতেও** লাগে।
+                 *
+                 * ⓘ এটা ছাঁকনির ড্রপডাউন — কার লগইন দেখব। ⛔ ভিতরের
+                 * তালিকাটা না ছাঁকলে অন্য কোম্পানির **নামগুলো** ঐ
+                 * ড্রপডাউনে বসত, আর তালিকা ছাঁকা থাকলেও পরিচয় ফাঁস হত।
+                 */
+                ->whereIn('id', LoginAttempt::query()
+                    ->where('company_id', CompanyContext::id())
+                    ->distinct()->pluck('user_id')->filter())
+                ->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))
                 ->orderBy('name')
                 ->get(['id', 'name']),
         ]);
