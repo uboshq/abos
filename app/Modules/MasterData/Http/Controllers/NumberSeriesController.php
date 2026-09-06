@@ -58,7 +58,29 @@ class NumberSeriesController extends Controller implements HasMiddleware
 
     public static function middleware(): array
     {
-        return [new Middleware('can:master_data.manage')];
+        /*
+         * ⛔ চাবিটা `system_admin.settings.manage` — ৬ সেপ্টেম্বর ২০২৬।
+         *
+         * ── কেন বদলাল ───────────────────────────────────────────────
+         * মালিকের নিয়ম: *"মাস্টারে তৈরি হয়, **কন্ট্রোল প্যানেলে
+         * নিয়ন্ত্রণ হয়**।"* ⓘ সারিটা তাই System Admin-এর মেনুতে গেছে।
+         *
+         * ⚠️ কিন্তু মেনুর চাবি আর রুটের চাবি আলাদা রেখে দিয়েছিলাম, আর
+         * [[TheMenuAsksWhatTheRouteAsksTest]] ঠিকই ধরেছে: যাঁর মেনুর চাবি
+         * আছে অথচ রুটেরটা নেই, **তিনি সারিটা দেখবেন আর ক্লিক করলে ৪০৩
+         * পাবেন — নিজের কাজের পর্দায়, রোজ**।
+         *
+         * ⓘ আগের মন্তব্যে লিখেছিলাম *"কন্ট্রোলারের চাবি বদলানো মানে কার
+         * হাতে ক্ষমতা যাবে সেই সিদ্ধান্ত, আর সেটা মালিকের"* — যুক্তিটা ঠিক
+         * ছিল, তাই মেপে দেখেছি: **যে রোলে `master_data.manage` আছে, তার
+         * `system_admin.settings.manage`-ও আছে** (owner, একমাত্র)। ⛔ অর্থাৎ
+         * কেউ কিছু হারাচ্ছে না, আর অপেক্ষা করার কারণটাই নেই।
+         *
+         * ⚠️ ভবিষ্যতে যদি কোনো রোলে একটা থাকে আর অন্যটা না থাকে, এই
+         * বদলটা তার কাছ থেকে পর্দাটা কেড়ে নেবে — তখন সিদ্ধান্তটা আবার
+         * মালিকের।
+         */
+        return [new Middleware('can:system_admin.settings.manage')];
     }
 
     public function index(Request $request): View

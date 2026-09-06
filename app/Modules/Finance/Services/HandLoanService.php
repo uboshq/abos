@@ -211,7 +211,24 @@ final class HandLoanService
         $toUs = '0';
         $byUs = '0';
 
-        $accounts = HandLoanAccount::query()->postable()->withCount('movements')
+        /*
+         * ⛔ `postable()` নয়, `open()` — ৬ সেপ্টেম্বর ২০২৬।
+         *
+         * ── কী ভাঙা ছিল ─────────────────────────────────────────────
+         * `scopePostable()` আছে **[[Account]]** মডেলে, `HandLoanAccount`-এ
+         * নয়। ⚠️ ফলে পর্দাটা খুললেই `BadMethodCallException` — **৫০০**,
+         * প্রতিবার। ⓘ চারটা টেস্ট এখানেই আটকে ছিল, আর মেনুর সারিটাও
+         * "দেখা যায়, ক্লিক করলে ভাঙে" তালিকায় উঠে এসেছিল।
+         *
+         * ⓘ ভুলটা নকলের: `Account::query()->postable()` ছাঁচটা এই রিপোতে
+         * বহু জায়গায় আছে, আর ওখানে ওটার মানে *"গ্রুপ নয়, সরাসরি এন্ট্রি
+         * বসানো যায়"*। ⚠️ হাতের ঋণের খাতায় গ্রুপ বলে কিছু নেই — সেখানে
+         * প্রশ্নটা **চুকে গেছে কি না**।
+         *
+         * ⭐ তাই `open()` — চলতি খাতাগুলো। ⓘ চুকে যাওয়া ঋণের কোনো
+         * "বকেয়া অবস্থান" থাকে না, তাই এই তালিকায় তার জায়গাও নেই।
+         */
+        $accounts = HandLoanAccount::query()->open()->withCount('movements')
             ->orderBy('person_name')->get();
 
         foreach ($accounts as $account) {

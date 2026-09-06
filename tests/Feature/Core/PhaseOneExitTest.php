@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Core;
 
+use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Accounts\Services\CashTillService;
+use App\Modules\Accounts\Models\Account;
 use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Engines\Attachment\AttachmentEngine;
 use App\Core\Engines\Drill\DrillResolver;
@@ -81,13 +84,43 @@ class PhaseOneExitTest extends TestCase
         $first = $numbers->next('JV', sourceType: 'journal_voucher', sourceId: 1);
         $second = $numbers->next('JV', sourceType: 'journal_voucher', sourceId: 2);
         $this->assertNotSame($first, $second);
-        $this->assertSame('JRN-2026-2027-0001', $first);
+        /*
+         * ⚠️ `JRN-0001`, আগে `JRN-2026-2027-0001` ছিল।
+         *
+         * ⛔ ছকটা বদলেছে, ৫ সেপ্টেম্বর ২০২৬ — মালিকের সিদ্ধান্ত:
+         * *"Document number series {PREFIX}-{SEQ} বাই ডিফল্ট বসাও"*।
+         *
+         * ⓘ অর্থবছরটা নম্বর থেকে উঠে গেছে, আর তার সাথে **অটো-রিসেটও বন্ধ**
+         * ([[NumberSeriesProvisioner::resetsWith]]) — নাহলে ২০২৬-এর
+         * `JRN-0001` আর ২০২৭-এর `JRN-0001` **দুইটা আলাদা কাগজে এক নম্বর**
+         * হত।
+         *
+         * ⚠️ দাবিটা তবু হুবহু সংখ্যাসহ রাখা হলো, `assertStringStartsWith`
+         * নয়: এই পরীক্ষাটার কাজই হলো **প্রথম নম্বরটা ঠিক কী** তা লিখে
+         * রাখা — আলগা দাবি দিলে `JRN-0007`-ও পাস করত।
+         */
+        $this->assertSame('JRN-0001', $first);
 
         // ৩. Posting — ডেবিট = ক্রেডিট, নাহলে কিছুই বসে না
+        /*
+         * ⛔ খাতগুলো **কোড ধরে**, আইডি হার্ডকোড করে নয় — ৬ সেপ্টেম্বর ২০২৬।
+         *
+         * ⚠️ এখানে `1101` · `4001` · `2201` লেখা ছিল যেন ওগুলো আইডি। মেপে
+         * দেখা গেল তিনটাই ভুল: `1101`-এর আসল আইডি ৩১২৭ **আর সেটা একটা
+         * গ্রুপ**; `4001` ও `2201` এই চার্টে **নেই-ই** (বিক্রয় ৪১০০, ভ্যাট
+         * প্রদেয় ২১২০)।
+         *
+         * ⓘ CLAUDE.md-তে ফাঁদটা নাম ধরে লেখা: টাকা বসে till-এর সন্তানে,
+         * `CashTillService::ensurePrimaryTill()` দিয়ে — গ্রুপে নয়।
+         */
+        $till = app(CashTillService::class)->ensurePrimaryTill();
+        $sales = Account::query()->where('code', StandardChart::SALES)->firstOrFail();
+        $vat = Account::query()->where('code', StandardChart::VAT_PAYABLE)->firstOrFail();
+
         app(PostingEngine::class)->post('journal_voucher', 1, '2026-08-04', [
-            ['account_id' => 1101, 'debit' => 11500, 'party_type' => 'customer', 'party_id' => 7],
-            ['account_id' => 4001, 'credit' => 10000],
-            ['account_id' => 2201, 'credit' => 1500],
+            ['account_id' => $till->account->id, 'debit' => 11500, 'party_type' => 'customer', 'party_id' => 7],
+            ['account_id' => $sales->id, 'credit' => 10000],
+            ['account_id' => $vat->id, 'credit' => 1500],
         ], documentNo: $first);
 
         // নিজের কাগজের সারি গোনা হয়, সবার নয় — খোলা মজুদও এখন খতিয়ানে বসে
@@ -167,8 +200,8 @@ class PhaseOneExitTest extends TestCase
         CompanyContext::set($alpha->id);
 
         app(PostingEngine::class)->post('journal_voucher', 1, '2026-08-04', [
-            ['account_id' => 1101, 'debit' => 500],
-            ['account_id' => 4001, 'credit' => 500],
+            ['account_id' => app(CashTillService::class)->ensurePrimaryTill()->account->id, 'debit' => 500],
+            ['account_id' => Account::query()->where('code', StandardChart::SALES)->firstOrFail()->id, 'credit' => 500],
         ]);
 
         // নিয়ম ৪ (অলঙ্ঘনীয় শর্ত ৪) — অন্য কোম্পানি কিছুই দেখে না

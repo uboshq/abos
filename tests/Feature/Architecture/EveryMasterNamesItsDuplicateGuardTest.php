@@ -11,6 +11,7 @@ use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Models\CostCenter;
 use App\Modules\Customer\Models\Customer;
+use App\Modules\Inventory\Models\StorageLocation;
 use App\Modules\Finance\Models\DepositKind;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\LeaveType;
@@ -55,6 +56,25 @@ class EveryMasterNamesItsDuplicateGuardTest extends TestCase
         Branch::class => 'প্রতিষ্ঠানের গড়ন, সেটআপে বসে; নাম-নকল অর্থহীন',
         PayslipLine::class => 'বেতনের লাইন — লেনদেনের বিস্তারিত, মাস্টার নয়',
         Employee::class => 'মানুষ একই নাম রাখে ("মোঃ রহিম" বহু); নামে নকল ধরা ভুল হত',
+
+        /*
+         * ⚠️ ছাড়টা সাময়িক, আর কারণটা **ইঞ্জিনের, মডেলের নয়**।
+         *
+         * তাকের নাম গুদামভেদে পুনরাবৃত্ত হওয়াই স্বাভাবিক: প্রতিটা গুদামেই
+         * একটা "র‍্যাক ১" থাকে। ⓘ মালিকের নিজের নিয়মটাই এটা — *"রহিম স্টোর
+         * দুই বাজারে দুইটা থাকতেই পারে, কিন্তু দুই বাজারের মালিক এক না।"*
+         *
+         * ⛔ কিন্তু [[DuplicationEngine]] আজ কেবল `model` ও `name` পড়ে —
+         * **অভিভাবকের স্কোপ নেই**। ⓘ ঘোষণা করলে গুদাম-খ-এর "র‍্যাক ১"
+         * গুদাম-ক-এরটাকে নকল বলত, আর ব্যবহারকারী রোজ একটা মিথ্যা সতর্কতা
+         * পেতেন — যতক্ষণে সত্যিকারের নকলটা এলে কেউ আর পড়ত না।
+         *
+         * ⭐ সঠিক সারাই: ইঞ্জিনে একটা `scope` চাবি (`warehouse_id`), তারপর
+         * এই ছাড়টা তুলে ঘোষণা বসানো। ⚠️ ওটা কোরের ইঞ্জিনের কাজ, আর লালের
+         * তাড়ায় বসালে **সব মডিউলের নকল-পাহারা** একসাথে ছোঁয়া হত।
+         */
+        StorageLocation::class => 'তাকের নাম গুদামভেদে পুনরাবৃত্ত হয় (প্রতি গুদামে "র‍্যাক ১"); '
+            .'ইঞ্জিনে অভিভাবক-স্কোপ বসলে ঘোষণা করা হবে',
 
         // খ · অন্যভাবে সুরক্ষিত — সরাসরি DuplicateGuard ডাকে
         Customer::class => 'CustomerService নিজে DuplicateGuard ডাকে (ফোন হার্ড, নাম নরম)',

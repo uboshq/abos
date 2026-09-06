@@ -561,23 +561,45 @@ final class PurchaseBillService
             return;
         }
 
-        $cost = (float) $line->rate;
-        $percent = (float) $pct;
+        /*
+         * ⛔ টাকা কখনো `float`-এ নয় — [[MoneyIsNeverAFloatTest]]।
+         *
+         * ⚠️ আমি প্রথমে `(float)` লিখেছিলাম আর সুইট ধরেছে। ⓘ ভুলটা নিরীহ
+         * মনে হয়: শতাংশের হিসাব তো ভগ্নাংশেই হয়। ⛔ কিন্তু `$cost` আর
+         * `$sales_price` **টাকা**, আর float-এ ০.১ + ০.২ ≠ ০.৩ — লক্ষ লাইনে
+         * ঐ ভুলগুলো জমে।
+         *
+         * ⭐ তাই পুরো হিসাবটা `bcmath`-এ, স্ট্রিং ধরে। ⓘ শতাংশটাও স্ট্রিং,
+         * কারণ ৯৯% margin-এ হর `1 − 0.99` — সেখানে float-এর ভুল সবচেয়ে বড়।
+         *
+         * ⚠️ ছয় দশমিকে কাজ, তারপর চারে গোল — কলামটা `decimal(., 4)`।
+         */
+        $cost = (string) $line->rate;
+        $percent = (string) $pct;
 
-        if ($cost <= 0 || ($anchor === 'margin' && $percent >= 100)) {
+        if (bccomp($cost, '0', 6) <= 0) {
+            return;
+        }
+
+        if ($anchor === 'margin' && bccomp($percent, '100', 6) >= 0) {
             return;
         }
 
         $should = $anchor === 'markup'
-            ? $cost * (1 + $percent / 100)
-            : $cost / (1 - $percent / 100);
+            ? bcmul($cost, bcadd('1', bcdiv($percent, '100', 6), 6), 6)
+            : bcdiv($cost, bcsub('1', bcdiv($percent, '100', 6), 6), 6);
 
-        // এক পয়সার নিচে ফারাক মানে কেবল গোল করার ফল, নীতির ভাঙন নয়
-        if ($should - (float) $line->sales_price <= 0.005) {
+        /*
+         * এক পয়সার নিচে ফারাক মানে কেবল গোল করার ফল, নীতির ভাঙন নয়।
+         *
+         * ⓘ `0.005` — অর্ধেক পয়সা। এর নিচে "দাম বাড়েনি" ধরা হয়, নাহলে
+         * প্রতিটা বিলে গোল করার শেষ অঙ্কটুকু নিয়ে দাম "বেড়েছে" দেখাত।
+         */
+        if (bccomp(bcsub($should, (string) $line->sales_price, 6), '0.005', 6) <= 0) {
             return;
         }
 
-        $line->forceFill(['sales_price' => (string) round($should, 4)])->save();
+        $line->forceFill(['sales_price' => bcadd($should, '0', 4)])->save();
 
         $this->pricesRaised[] = [
             'product' => $line->product->name(),

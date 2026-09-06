@@ -44,9 +44,9 @@
              class="mb-4 grid gap-3 rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card) p-4 sm:grid-cols-2 lg:grid-cols-4">
         @foreach ([
-            'rental_deposit' => number_format((float) $contract->deposit_amount, 2),
-            'rental_adjusted' => number_format((float) $contract->adjustedSoFar(), 2),
-            'rental_deposit_left' => number_format((float) $contract->depositLeft(), 2),
+            'rental_deposit' => \App\Core\Support\Money::format($contract->deposit_amount),
+            'rental_adjusted' => \App\Core\Support\Money::format($contract->adjustedSoFar()),
+            'rental_deposit_left' => \App\Core\Support\Money::format($contract->depositLeft()),
             'rental_ends_on' => $contract->ends_on->format('d/m/Y'),
         ] as $label => $value)
             <div>
@@ -62,15 +62,15 @@
         <dl class="grid gap-2 sm:grid-cols-3">
             <div>
                 <dt class="text-2xs text-(--color-ink-muted)">{{ __('finance::field.rental_rent') }}</dt>
-                <dd class="num">{{ number_format((float) $contract->monthly_rent, 2) }}</dd>
+                <dd class="num">{{ \App\Core\Support\Money::format($contract->monthly_rent) }}</dd>
             </div>
             <div>
                 <dt class="text-2xs text-(--color-ink-muted)">{{ __('finance::field.rental_cash') }}</dt>
-                <dd class="num">{{ number_format((float) $contract->monthlyCash(), 2) }}</dd>
+                <dd class="num">{{ \App\Core\Support\Money::format($contract->monthlyCash()) }}</dd>
             </div>
             <div>
                 <dt class="text-2xs text-(--color-ink-muted)">{{ __('finance::field.rental_from_deposit') }}</dt>
-                <dd class="num">{{ number_format((float) $contract->monthly_adjustment, 2) }}</dd>
+                <dd class="num">{{ \App\Core\Support\Money::format($contract->monthly_adjustment) }}</dd>
             </div>
 
             {{-- ⭐ খাতটা দেখানো হয়, কারণ জামানত (ফেরত আসবে) আর অগ্রিম
@@ -86,7 +86,7 @@
             </div>
             <div>
                 <dt class="text-2xs text-(--color-ink-muted)">{{ __('finance::field.rental_refund_at_end') }}</dt>
-                <dd class="num">{{ number_format((float) $contract->refundableAtEnd(), 2) }}</dd>
+                <dd class="num">{{ \App\Core\Support\Money::format($contract->refundableAtEnd()) }}</dd>
             </div>
         </dl>
     </section>
@@ -123,11 +123,11 @@
                              তখনই কেবল লিখতে হয়। --}}
                         <x-ui.field name="rent" type="number" step="0.0001" min="0"
                                     :label="__('finance::field.rental_rent_this_month')"
-                                    :placeholder="number_format((float) $contract->monthly_rent, 2)" />
+                                    :placeholder="\App\Core\Support\Money::format($contract->monthly_rent)" />
 
                         <x-ui.field name="from_deposit" type="number" step="0.0001" min="0"
                                     :label="__('finance::field.rental_from_deposit')"
-                                    :placeholder="number_format((float) $contract->monthly_adjustment, 2)" />
+                                    :placeholder="\App\Core\Support\Money::format($contract->monthly_adjustment)" />
 
                         <div class="sm:col-span-2">
                             <x-ui.button type="submit">{{ __('finance::action.rental_post_month') }}</x-ui.button>
@@ -203,7 +203,7 @@
                      সংখ্যাটা মেয়াদ-শেষের হিসাবের চেয়ে আলাদা। --}}
                 <p class="mb-3 text-sm text-(--color-ink-muted)">
                     {{ __('finance::message.rental_close_note', [
-                        'amount' => number_format((float) $contract->depositLeft(), 2),
+                        'amount' => \App\Core\Support\Money::format($contract->depositLeft()),
                     ]) }}
                 </p>
 
@@ -263,9 +263,9 @@
                         @foreach ($adjustments as $row)
                             <tr class="border-t border-(--color-border)">
                                 <td>{{ $row->monthLabel() }}</td>
-                                <td class="num text-end">{{ number_format((float) $row->rent, 2) }}</td>
-                                <td class="num text-end">{{ number_format((float) $row->paid_cash, 2) }}</td>
-                                <td class="num text-end">{{ number_format((float) $row->from_deposit, 2) }}</td>
+                                <td class="num text-end">{{ \App\Core\Support\Money::format($row->rent) }}</td>
+                                <td class="num text-end">{{ \App\Core\Support\Money::format($row->paid_cash) }}</td>
+                                <td class="num text-end">{{ \App\Core\Support\Money::format($row->from_deposit) }}</td>
 
                                 {{-- ⭐ প্রতিটা সংখ্যা তার উৎসে পৌঁছায় — মালিকের
                                      স্থায়ী নিয়ম। ভাউচারটা না থাকলে সারিটা
