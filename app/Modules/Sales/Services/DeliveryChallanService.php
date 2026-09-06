@@ -402,7 +402,7 @@ final class DeliveryChallanService
             $qty = $pack['qty'];
             $rate = $pack['rate'];
 
-            $orderLine = $this->resolveOrderLine($challan, $line['sales_order_line_id'] ?? null, $productId);
+            $orderLine = $this->resolveOrderLine($challan, $line['sales_order_line_id'] ?? null, $productId, $qty);
 
             $amount = bcmul($qty, $rate, 4);
 
@@ -551,13 +551,25 @@ final class DeliveryChallanService
         return bccomp($qty, $stillReserved, 4) > 0 ? $stillReserved : $qty;
     }
 
-    private function resolveOrderLine(DeliveryChallan $challan, mixed $orderLineId, int $productId): ?SalesOrderLine
-    {
+    private function resolveOrderLine(
+        DeliveryChallan $challan,
+        mixed $orderLineId,
+        int $productId,
+        string $qty,
+    ): ?SalesOrderLine {
         if ($challan->sales_order_id === null || blank($orderLineId)) {
             return null;
         }
 
+        /*
+         * ⚠️ `with('order')` — বার্তায় আদেশের নম্বরটা লাগে, আর
+         * `Model::preventLazyLoading()` local-এ চালু
+         * ([[AppServiceProvider:179]])। লেজি পড়লে ঠিক যে মুহূর্তে
+         * ব্যবহারকারীর বাংলা বার্তাটা দেখানোর কথা, সেই মুহূর্তেই একটা
+         * ৫০০ আসত — অর্থাৎ পাহারাটা নিজেই পর্দা ভাঙত।
+         */
         $orderLine = SalesOrderLine::query()
+            ->with('order')
             ->where('sales_order_id', $challan->sales_order_id)
             ->whereKey((int) $orderLineId)
             ->first();
@@ -568,6 +580,51 @@ final class DeliveryChallanService
 
         if ((int) $orderLine->product_id !== $productId) {
             throw ValidationException::withMessages(['lines' => __('sales::validation.line_product_mismatch')]);
+        }
+
+        /*
+         * ── আদেশের চেয়ে বেশি ডেলিভারি নয় (৬ সেপ্টেম্বর ২০২৬) ─────────
+         *
+         * আংশিক চালান চলবে — ১০০ কার্টনের আদেশে ৬০ আজ, ৪০ পরে।
+         * ⛔ কিন্তু **৬০ + ৫০ = ১১০ চলবে না**।
+         *
+         * ── ⚠️ কেন এতদিন ধরা পড়েনি ──────────────────────────────────
+         * এই ফাইলেই [[releasableQty()]] আছে আর সে-ও `$alreadyDelivered`
+         * যোগ করে — পড়ে মনে হত পাহারা আছে। কিন্তু সে সীমা দেয়
+         * **রিজার্ভেশন ছাড়ার** উপর, ডেলিভারির উপর নয়: মাল বেরোনো
+         * আটকাত না, কেবল রিজার্ভ ঋণাত্মক হতে দিত না।
+         * ⓘ *যোগফলটা আছে* আর *পাহারা আছে* এক কথা নয়।
+         *
+         * ⭐ সাতটা draw-down সংযোগের ছয়টায় এই সীমা আগে থেকেই ছিল;
+         * এটাই ছিল একমাত্র ফাঁক। ছাঁচটা [[PurchaseBillService]]-এর
+         * হুবহু নকল, যাতে দুই পাশে দুই নিয়ম না দাঁড়ায়।
+         *
+         * ── কেন গোনায় খসড়াও থাকে, `releasableQty()`-র মতো কেবল
+         *    নিশ্চিত করাগুলো নয় ────────────────────────────────────
+         * দুইটা প্রশ্ন আলাদা। *"রিজার্ভ কতটা ছাড়ব"* — কেবল যা সত্যিই
+         * গেছে। *"আর কতটা পাঠানো যায়"* — যা যাওয়ার পথে, তা-ও।
+         * খসড়া বাদ দিলে একই আদেশে দুইটা খসড়া চালান কেটে দুইজনে মিলে
+         * আদেশ ছাড়িয়ে যেতে পারতেন, আর দুইটাই নিশ্চিত হওয়ার সময়
+         * কোনোটাই একা নিয়ম ভাঙত না।
+         *
+         * ⚠️ যোগফলটা **এই চালানটা বাদ দিয়ে** — নাহলে একটা চালান
+         * সম্পাদনা করতে গেলে সে নিজেকেই গুনত।
+         */
+        $alreadyDelivered = $orderLine->challanLines()
+            ->where('delivery_challan_id', '<>', $challan->id)
+            ->whereHas('challan', fn ($q) => $q->where('status', '<>', DocumentStatus::CANCELLED))
+            ->sum('delivered_qty');
+
+        $wouldBe = bcadd((string) ($alreadyDelivered ?: '0'), $qty, 4);
+
+        if (bccomp($wouldBe, (string) $orderLine->ordered_qty, 4) > 0) {
+            throw ValidationException::withMessages([
+                'lines' => __('sales::validation.over_delivered_order', [
+                    'no' => $orderLine->order->document_no,
+                    'ordered' => rtrim(rtrim((string) $orderLine->ordered_qty, '0'), '.'),
+                    'delivered' => rtrim(rtrim((string) ($alreadyDelivered ?: '0'), '0'), '.'),
+                ]),
+            ]);
         }
 
         return $orderLine;

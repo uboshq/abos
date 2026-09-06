@@ -36,6 +36,7 @@ return [
     'zero_value_bill' => 'A bill worth nothing does not reach the books.',
     'line_not_in_order' => 'That line does not belong to this order.',
     'line_product_mismatch' => 'The line product does not match.',
+    'over_delivered_order' => 'Order :no is for :ordered, and :delivered is already delivered. This line takes it past the order.',
     'over_receipt' => 'The order was for :ordered but :total would be received in total. Raise the allowance in the Control Panel to take more.',
     'order_required' => 'Receiving without an order is switched off — change it in the Control Panel.',
     'order_not_open' => ':no is not confirmed.',

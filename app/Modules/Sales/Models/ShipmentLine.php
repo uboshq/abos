@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Models;
 
+use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use Illuminate\Database\Eloquent\Model;
@@ -11,9 +12,25 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * ট্রিপের একটা সারি — গাড়িতে ওঠা একটা চালান, আর তার পরিণতি।
+ *
+ * ── কেন সন্তান-সারিতেও [[BelongsToCompany]] (৬ সেপ্টেম্বর ২০২৬) ───────
+ * টেবিলে `company_id` **আছে** আর ভরাও থাকে, অথচ গ্লোবাল স্কোপ ছিল না —
+ * গোটা রিপোতে এটাই ছিল একমাত্র এমন মডেল (১২৪-এর ১টা)।
+ *
+ * আজ ফাঁস ছিল না: দুইটা কোয়েরিই বাবার মধ্য দিয়ে যায়
+ * (`whereHas('shipment')`, আর [[Shipment]]-এ স্কোপ আছে), আর
+ * [[ShipmentService::syncLines]] হাতে `company_id` বসায়।
+ *
+ * ⚠️ কিন্তু ট্রেইটটার নিজের মন্তব্যই এই ভরসার বিরুদ্ধে লেখা: *"হাতে
+ * লিখলে একদিন কেউ একটা কোয়েরিতে লিখতে ভুলবে, আর সেই একটাই যথেষ্ট।"*
+ * ⓘ কাল কেউ `ShipmentLine::query()->where('delivery_challan_id', $id)`
+ * লিখলে **সব কোম্পানির সারি ফিরত**, আর কেউ টের পেত না।
+ *
+ * ⭐ বিদ্যমান দুইটা কোয়েরি এখন দুইবার ছাঁকা হয় — খরচ নেই, ভুলের পথ বন্ধ।
  */
 class ShipmentLine extends Model
 {
+    use BelongsToCompany;
     use HasPublicId;
     use IsAudited;
 
