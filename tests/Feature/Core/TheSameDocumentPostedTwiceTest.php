@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Core;
 
+use App\Modules\Accounts\Services\StandardChart;
+use Tests\RealAccounts;
 use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Engines\Posting\PostingException;
 use App\Core\Support\CompanyContext;
@@ -36,6 +38,7 @@ use Tests\TestCase;
  */
 class TheSameDocumentPostedTwiceTest extends TestCase
 {
+    use RealAccounts;
     use RefreshDatabase;
 
     private PostingEngine $engine;
@@ -50,6 +53,22 @@ class TheSameDocumentPostedTwiceTest extends TestCase
 
         $this->company = Company::create(['code' => 'TWICE', 'name_en' => 'Twice Ltd']);
         CompanyContext::set($this->company->id);
+
+        /*
+         * ⛔ খাতের চার্ট বসানো — ৬ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ এই ফাইলটা একটা **খালি কোম্পানি** বানায় (`TWICE`), আর আগে
+         * দাখিলাগুলো `1101` জাতীয় হার্ডকোড আইডিতে বসত — কোনো খাত সত্যিই
+         * ছিল না। ⚠️ পোস্টিং ইঞ্জিন খাত যাচাই করা শুরু করার পর প্রতিটা
+         * দাখিলা *"account 1101 does not exist in this company"* বলে
+         * থেমে যেত।
+         *
+         * ⭐ পাহারাটাই ঠিক — কাল্পনিক আইডিতে টাকা বসানো ঠিক সেই জিনিস
+         * যা লাইভে নীরবে টাকা হারায়। ⓘ তাই আইডি বদলে নয়, **চার্টটা
+         * সত্যিই বসিয়ে** সারানো হলো, আর খাতগুলো এখন কোড ধরে আসে
+         * ([[RealAccounts]])।
+         */
+        app(StandardChart::class)->install();
 
         FinancialYear::create([
             'name' => '2026-2027',
@@ -69,8 +88,8 @@ class TheSameDocumentPostedTwiceTest extends TestCase
     private function lines(): array
     {
         return [
-            ['account_id' => 10, 'debit' => 1200],
-            ['account_id' => 20, 'credit' => 1200],
+            ['account_id' => $this->receivableAccountId(), 'debit' => 1200],
+            ['account_id' => $this->salesAccountId(), 'credit' => 1200],
         ];
     }
 
@@ -152,6 +171,9 @@ class TheSameDocumentPostedTwiceTest extends TestCase
 
         $other = Company::create(['code' => 'OTHER', 'name_en' => 'Other Ltd']);
         CompanyContext::set($other->id);
+
+        // ⓘ দ্বিতীয় কোম্পানিরও নিজের চার্ট লাগে — খাত কোম্পানিভেদে আলাদা
+        app(StandardChart::class)->install();
 
         // অর্থবছরও কোম্পানির নিজের — প্রথমটার বছর দ্বিতীয়জন দেখতে পায় না,
         // আর সেটাই ঠিক

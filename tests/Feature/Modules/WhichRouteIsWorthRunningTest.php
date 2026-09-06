@@ -77,7 +77,19 @@ class WhichRouteIsWorthRunningTest extends TestCase
                 ['type' => Voucher::JOURNAL, 'trx_date' => now()->toDateString()],
                 [
                     [
-                        'account_id' => StandardChart::find('5204')->id,   // জ্বালানি ও পরিবহন
+                        /*
+                         * ⛔ `'5204'` নয় — ৬ সেপ্টেম্বর ২০২৬।
+                         *
+                         * ⓘ চার্টে ওটা এখন *"পরিবহন (পুরনো)"* আর
+                         * `is_active => false`। ⚠️ নিষ্ক্রিয় খাতে নতুন
+                         * লেনদেন বসে না, তাই এই ফাইলের পাঁচটা টেস্ট
+                         * *"খাতটা নিষ্ক্রিয়"* বলে থেমে যেত।
+                         *
+                         * ⭐ পাহারাটা ঠিক — বন্ধ করা খাতে টাকা বসানো
+                         * মানে হিসাব এমন জায়গায় জমা যেখানে কেউ আর
+                         * তাকায় না। ⓘ চলতি খাতটা `FUEL` ('5216')।
+                         */
+                        'account_id' => StandardChart::find(StandardChart::FUEL)->id,
                         'debit' => $amount,
                         'cost_center_id' => $centre?->id,
                     ],
@@ -135,9 +147,9 @@ class WhichRouteIsWorthRunningTest extends TestCase
             app(VoucherService::class)->create(
                 ['type' => Voucher::JOURNAL, 'trx_date' => now()->toDateString()],
                 [
-                    ['account_id' => StandardChart::find('5204')->id, 'debit' => '2000',
+                    ['account_id' => StandardChart::find(StandardChart::FUEL)->id, 'debit' => '2000',
                         'cost_center_id' => $this->netrakona->id],
-                    ['account_id' => StandardChart::find('5204')->id, 'debit' => '1500',
+                    ['account_id' => StandardChart::find(StandardChart::FUEL)->id, 'debit' => '1500',
                         'cost_center_id' => $this->kendua->id],
                     ['account_id' => $this->till(), 'credit' => '3500'],
                 ],

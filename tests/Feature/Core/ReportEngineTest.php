@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Core;
 
+use Tests\RealAccounts;
 use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Engines\Report\ReportDefinition;
 use App\Core\Engines\Report\ReportEngine;
@@ -24,6 +25,7 @@ use Tests\TestCase;
  */
 class ReportEngineTest extends TestCase
 {
+    use RealAccounts;
     use RefreshDatabase;
 
     private ReportEngine $reports;
@@ -55,8 +57,8 @@ class ReportEngineTest extends TestCase
 
         for ($i = $startAt; $i < $startAt + $count; $i++) {
             $posting->post('sales_invoice', $i, $date, [
-                ['account_id' => 1101, 'debit' => 1000 * $i],
-                ['account_id' => 4001, 'credit' => 1000 * $i],
+                ['account_id' => $this->cashAccountId(), 'debit' => 1000 * $i],
+                ['account_id' => $this->salesAccountId(), 'credit' => 1000 * $i],
             ], documentNo: sprintf('INV-2026-2027-%04d', $i));
         }
     }
@@ -139,7 +141,7 @@ class ReportEngineTest extends TestCase
     {
         $this->postInvoices(10);
 
-        $filters = ['from' => '2026-08-01', 'to' => '2026-08-31', 'account_id' => 1101];
+        $filters = ['from' => '2026-08-01', 'to' => '2026-08-31', 'account_id' => $this->cashAccountId()];
 
         $page1 = $this->reports->run('accounts.ledger', $filters, page: 1, perPage: 4);
         $page2 = $this->reports->run('accounts.ledger', $filters, page: 2, perPage: 4);

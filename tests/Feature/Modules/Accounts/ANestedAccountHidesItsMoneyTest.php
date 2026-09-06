@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modules\Accounts;
 
+use App\Modules\Accounts\Services\CashTillService;
 use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
@@ -146,13 +147,29 @@ final class ANestedAccountHidesItsMoneyTest extends TestCase
 
     private function spend(Account $expense, string $amount, string $source = 'expense'): void
     {
-        $this->pair($expense, StandardChart::find(StandardChart::CASH_IN_HAND), $amount, $source);
+        $this->pair($expense, $this->cash(), $amount, $source);
     }
 
     private function borrow(Account $loan, string $amount): void
     {
         // ঋণ নেওয়া: নগদ বাড়ে (ডেবিট), দায় বাড়ে (ক্রেডিট)
-        $this->pair(StandardChart::find(StandardChart::CASH_IN_HAND), $loan, $amount, 'loan');
+        $this->pair($this->cash(), $loan, $amount, 'loan');
+    }
+
+    /**
+     * নগদের খাত — till-এর সন্তান, গ্রুপ নয়।
+     *
+     * ⛔ আগে এখানে `$this->cash()` ছিল,
+     * অর্থাৎ `1101`। ⚠️ কিন্তু ওটা একটা **গ্রুপ**, আর গ্রুপে দাখিলা বসে না
+     * — তার ব্যালান্স তার সন্তানদের যোগফল। ⓘ পোস্টিং ইঞ্জিন ঠিকই থামিয়ে
+     * দিত: *"posts to 1101, which is a group"*।
+     *
+     * ⭐ CLAUDE.md-তে ফাঁদটা নাম ধরে লেখা: টাকা বসে till-এর সন্তানে,
+     * `CashTillService::ensurePrimaryTill()` দিয়ে।
+     */
+    private function cash(): Account
+    {
+        return app(CashTillService::class)->ensurePrimaryTill()->account;
     }
 
     private function pair(Account $debit, Account $credit, string $amount, string $source): void

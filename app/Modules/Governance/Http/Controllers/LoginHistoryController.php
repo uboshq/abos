@@ -54,8 +54,21 @@ class LoginHistoryController extends Controller implements HasMiddleware
              * একটা `company_id`** আছে। ⓘ ভুল ছাঁচ বসালে কোয়েরিটা ভাঙত না,
              * শুধু **ফাঁকা ফেরত দিত** — আর সেটা আরও খারাপ, কারণ "কোনো
              * লগইন নেই" দেখে কেউ নিশ্চিন্ত হতেন।
+             *
+             * ── ⛔ `orWhereNull` কেন লাগে ────────────────────────────
+             * **ব্যর্থ লগইনের কোনো কোম্পানি থাকে না** — তখনো কেউ ঢোকেনি,
+             * তাই `company_id` খালি। ⚠️ প্রথমে আমি কেবল `where(...)`
+             * লিখেছিলাম, আর তাতে ঐ সারিগুলো **সম্পূর্ণ অদৃশ্য** হয়ে
+             * গিয়েছিল — অথচ নিরাপত্তার দিক থেকে **ওগুলোই সবচেয়ে
+             * জরুরি**: কে ভুল পাসওয়ার্ড দিয়ে ঢুকতে চাইছে।
+             *
+             * ⓘ ধরা পড়েছে [[WhoGotInTest::test_the_journal_can_be_read]]-এ।
+             * ⭐ পাশের [[ErrorLogController]] (:৬০) ঠিক এই কারণেই
+             * `orWhereNull` রাখে — আমি ছাঁচটা **আধা নকল করেছিলাম**।
              */
-            ->where('company_id', CompanyContext::id())
+            ->where(fn (Builder $q) => $q
+                ->where('company_id', CompanyContext::id())
+                ->orWhereNull('company_id'))
             ->with('user')
             ->when($request->query('user'), fn (Builder $q, $id) => $q->where('user_id', (int) $id))
             ->when($request->query('only') === 'failed', fn (Builder $q) => $q->failed())
@@ -81,7 +94,9 @@ class LoginHistoryController extends Controller implements HasMiddleware
              */
             'failedToday' => LoginAttempt::query()
                 // ⚠️ উপরের তালিকার মতোই — এই সংখ্যাটাও কেবল এই কোম্পানির
+                ->where(fn (Builder $q) => $q
                 ->where('company_id', CompanyContext::id())
+                ->orWhereNull('company_id'))
                 ->failed()
                 ->where('created_at', '>=', now()->subDay())
                 ->count(),
@@ -95,7 +110,9 @@ class LoginHistoryController extends Controller implements HasMiddleware
                  * ড্রপডাউনে বসত, আর তালিকা ছাঁকা থাকলেও পরিচয় ফাঁস হত।
                  */
                 ->whereIn('id', LoginAttempt::query()
-                    ->where('company_id', CompanyContext::id())
+                    ->where(fn (Builder $q) => $q
+                ->where('company_id', CompanyContext::id())
+                ->orWhereNull('company_id'))
                     ->distinct()->pluck('user_id')->filter())
                 ->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))
                 ->orderBy('name')

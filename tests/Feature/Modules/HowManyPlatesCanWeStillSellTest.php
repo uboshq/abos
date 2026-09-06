@@ -237,11 +237,11 @@ class HowManyPlatesCanWeStillSellTest extends TestCase
         $rice = $this->ingredient('Rice', '9');
         $dish = $this->dish('Tehari', [['product' => $rice, 'qty' => '3']]);
 
-        $this->get(route('inventory.kitchen.index'))
+        $this->get(route('restaurant.kitchen.index'))
             ->assertOk()
             ->assertSee($dish->product->name());
 
-        $json = $this->getJson(route('inventory.kitchen.refresh'))->assertOk()->json();
+        $json = $this->getJson(route('restaurant.kitchen.refresh'))->assertOk()->json();
 
         $mine = collect($json['dishes'])->firstWhere('id', $dish->id);
 
@@ -262,7 +262,7 @@ class HowManyPlatesCanWeStillSellTest extends TestCase
 
         $dish->forceFill(['is_active' => false])->save();
 
-        $json = $this->getJson(route('inventory.kitchen.refresh'))->assertOk()->json();
+        $json = $this->getJson(route('restaurant.kitchen.refresh'))->assertOk()->json();
 
         $this->assertNull(collect($json['dishes'])->firstWhere('id', $dish->id));
     }
