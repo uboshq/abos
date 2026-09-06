@@ -294,7 +294,15 @@ final class PosService
         }
 
         return DB::transaction(function () use ($data, $customer, $paid, $invoice) {
-            $invoice = $this->invoices->confirm($invoice);
+            /*
+             * ⚠️ গোনা টাকাটা ধারের সীমার যাচাইয়ে যায় — ৭ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ `$paid` এখানে অনেক আগেই জানা (`paidTotal()`, উপরে), তবু
+             * `confirm()`-কে বলা হত না। ⛔ ফলে সীমার যাচাই দেখত বিলের পুরো
+             * অঙ্ক, আর **নগদ POS বিক্রিও** সীমার নিচে পড়ত — যদিও সেখানে
+             * কারও এক পয়সা ধারও বাড়ে না।
+             */
+            $invoice = $this->invoices->confirm($invoice, $paid);
 
             $total = (string) $invoice->total;
 
