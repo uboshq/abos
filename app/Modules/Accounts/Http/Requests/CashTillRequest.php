@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Http\Requests;
 
+use App\Core\Support\CompanyContext;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -29,8 +30,33 @@ class CashTillRequest extends FormRequest
             'name_en' => ['required', 'string', 'max:120'],
             'name_bn' => ['nullable', 'string', 'max:120'],
 
-            'holder_id' => ['nullable', 'integer', 'exists:users,id'],
-            'branch_id' => ['nullable', 'integer'],
+            /*
+             * ⛔ দুইটাই চলতি কোম্পানির ভেতর থেকে — ৭ সেপ্টেম্বর ২০২৬।
+             *
+             * ── ⚠️ কী ভাঙা ছিল ─────────────────────────────────────────
+             * `holder_id` দেখত `exists:users,id` — অর্থাৎ **যেকোনো
+             * কোম্পানির যে কেউ** নগদ টিলের দায়িত্বে বসতে পারতেন। আর
+             * `branch_id` কিছুই দেখত না।
+             *
+             * ── ⓘ এটা টেন্যান্ট-ফাঁস নয়, তার চেয়ে নীরব কিছু ───────────
+             * `BelongsToCompany` সারিটায় প্রসঙ্গ থেকে `company_id` বসায়,
+             * তাই টিলটা নিজের কোম্পানিতেই থাকে — কেউ অন্য কোম্পানির
+             * টাকা দেখতে পান না।
+             *
+             * ⛔ ভাঙে অন্য জায়গায়: **টাকাটা এমন শাখায় বসে যা এই
+             * কোম্পানির নয়**। ⚠️ তখন ওই শাখার নগদ মিলানো কোনোদিন মেলে
+             * না, আর কোনো পর্দা লাল হয় না — কেবল একটা সংখ্যা চিরকাল
+             * একটু ভুল থাকে।
+             *
+             * ⭐ ছাঁচটা রিপোতে আগে থেকেই আছে (`EmployeeController`,
+             * `WarehouseController`) — নীতির অভাব নয়, পৌঁছানোর অভাব।
+             */
+            'holder_id' => ['nullable', 'integer',
+                Rule::exists('company_user', 'user_id')
+                    ->where('company_id', CompanyContext::id())
+                    ->where('is_active', true)],
+            'branch_id' => ['nullable', 'integer',
+                Rule::exists('branches', 'id')->where('company_id', CompanyContext::id())],
 
             // ঋণাত্মক সীমার কোনো অর্থ নেই; শূন্য মানে সীমাহীন
             'limit_amount' => ['nullable', 'numeric', 'min:0'],
