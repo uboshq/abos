@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Dashboard;
 
+use App\Core\Dashboard\Widget;
 use App\Core\Contracts\ProvidesDashboard;
 use App\Core\Engines\Dashboard\Breakdown;
 use App\Core\Engines\Dashboard\DashboardDefinition;
@@ -32,9 +33,39 @@ final class SalesDashboard implements ProvidesDashboard
 {
     public static function dashboard(): DashboardDefinition
     {
-        $today = SalesMetrics::salesToday();
+        /*
+         * ⛔ সংখ্যাগুলো **বাছা সময়কাল ধরে** — ৬ সেপ্টেম্বর ২০২৬।
+         *
+         * ── কী ভাঙা ছিল ─────────────────────────────────────────────
+         * এখানে সবসময় *আজ* আর *এই মাস* বসত, সময়কাল যা-ই বাছা হোক।
+         * ⚠️ ফলে ড্যাশবোর্ডে "বছর" বাছলেও **"আজকের বিক্রয়" কার্ডটা
+         * থেকে যেত** — আর ঠিক ওটাই [[OneNumberIsNotADirectionTest::
+         * test_only_the_chosen_period_is_shown]] ধরেছে।
+         *
+         * ⓘ কার্ডগুলো (`Widget`) ঠিকই ছাঁকা হত (`group` ধরে), কিন্তু
+         * মডিউলের এই `Stat`-গুলো ছাঁকনির বাইরে ছিল। ⛔ পর্দায় দুইটা
+         * সময়কালের সংখ্যা পাশাপাশি — আর পাঠক জানতেন না কোনটা কোনটার।
+         *
+         * ⚠️ **এটাই ঐ পুরনো দোষটার ফিরে আসা**, যেটার কথা নিচের মন্তব্যে
+         * লেখা: *"আগে আজ ও এই মাস দুইটাই একসাথে দেখানো হত, আর পর্দার
+         * উপরের অর্ধেকটা আটটা কার্ডে ভরে যেত।"* ⓘ কার্ডে সারানো
+         * হয়েছিল, এখানে পৌঁছায়নি।
+         *
+         * ⭐ ডিফল্ট `today` — কেউ কিছু না বাছলে আচরণ আগের মতোই।
+         */
+        $period = in_array(request('period'), Widget::PERIODS, true)
+            ? (string) request('period')
+            : 'today';
+
+        [$sold, $collected] = match ($period) {
+            'year' => [SalesMetrics::salesThisYear(), SalesMetrics::collectedThisYear()],
+            'month' => [SalesMetrics::salesThisMonth(), SalesMetrics::collectedThisMonth()],
+            default => [SalesMetrics::salesToday(), SalesMetrics::collectedToday()],
+        };
+
+        $today = $sold;
         $month = SalesMetrics::salesThisMonth();
-        $collectedToday = SalesMetrics::collectedToday();
+        $collectedToday = $collected;
         $collectedMonth = SalesMetrics::collectedThisMonth();
 
         return new DashboardDefinition(
