@@ -114,10 +114,22 @@ final class DirectSaleService
                 $this->invoiceLines($challan),
             );
 
-            $invoice = $this->invoices->confirm($invoice);
-
             $rows = $this->depositRows($data);
             $deposit = $this->depositTotal($data);
+
+            /*
+             * ⚠️ গোনা টাকাটা **নিশ্চিত করার আগে** জানা দরকার, পরে নয়।
+             *
+             * ── ⛔ কী ভাঙা ছিল, ৭ সেপ্টেম্বর ২০২৬ ────────────────────
+             * `confirm()` ডাকা হত আগে, আর জমার সারিগুলো গোনা হত তার পরে।
+             * ⓘ ফলে ধারের সীমার যাচাইটা দেখত বিলের **পুরো** অঙ্ক — যেন
+             * পুরোটাই বাকি — অথচ ক্রেতা তখন কাউন্টারে টাকা গুনে দাঁড়িয়ে।
+             *
+             * ⚠️ দুইটা লাইন উল্টে দেওয়া ছাড়া এখানে আর কিছু বদলায়নি;
+             * `depositRows()` কেবল `$data` পড়ে, কোনো কিছু লেখে না।
+             */
+            $invoice = $this->invoices->confirm($invoice, $deposit);
+
             $total = (string) $invoice->total;
 
             $applied = bccomp($deposit, $total, 4) > 0 ? $total : $deposit;
