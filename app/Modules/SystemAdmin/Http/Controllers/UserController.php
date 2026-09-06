@@ -64,9 +64,52 @@ class UserController extends Controller implements HasMiddleware
             'menu' => $this->menu->forUser($request->user()),
             'users' => User::query()
                 ->with(['roles', 'companies'])
+
+                /*
+                 * ⛔ চলতি কোম্পানির ব্যবহারকারীরাই — ৬ সেপ্টেম্বর ২০২৬।
+                 *
+                 * ── কী ভাঙা ছিল ─────────────────────────────────────
+                 * ছাঁকনিটা ছিলই না। ⚠️ কোম্পানি ৪৬-এ দাঁড়িয়ে একজন প্রশাসক
+                 * কোম্পানি ৪৫-এর **প্রতিটা ব্যবহারকারীর নাম, ইমেইল ও ভূমিকা**
+                 * দেখতেন — লাইভ সেশনে প্রমাণিত।
+                 *
+                 * ⓘ [[User]] [[BaseEntity]]-র গ্লোবাল স্কোপ পায় না: সে
+                 * `companies` পিভটে ঝোলে, তাই ছাঁকনিটা **হাতে বসাতে হয়** —
+                 * আর হাতের কাজ ভুলে যাওয়া যায়।
+                 *
+                 * ⭐ এই ছাঁচটা রিপোতে **পাঁচ জায়গায় আগে থেকেই আছে** —
+                 * CashTill · MoneyTransfer · Location · CounterApproval ·
+                 * ApprovalFlow। ⚠️ অর্থাৎ নীতির অভাব নয়, **পৌঁছানোর অভাব**;
+                 * আর সেজন্যই [[EveryUserListAsksWhichCompanyTest]] সারাইয়ের
+                 * চেয়েও জরুরি।
+                 *
+                 * ⚠️ CLAUDE.md-তে এটা রুচির কথা নয়: *"বহু-টেন্যান্ট বলেই
+                 * টেন্যান্ট বিচ্ছিন্নতা সুবিধা নয়, **আইনি বাধ্যবাধকতা**।"*
+                 */
+                ->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))
                 ->orderBy('name')
                 ->paginate(50),
         ]);
+    }
+
+    /**
+     * এই ব্যবহারকারী কি চলতি কোম্পানির?
+     *
+     * ⚠️ **তালিকা ছাঁকলেই যথেষ্ট নয়।** ⓘ `edit(Request $request, User $user)`
+     * রুট-মডেল বাইন্ডিং ব্যবহার করে, আর সে **যেকোনো id খুলে দেয়** —
+     * তালিকায় নামটা না দেখলেও কেউ ঠিকানা বদলে ঢুকতে পারতেন
+     * (`/system/users/68/edit` লাইভে ২০০ ফেরত দিত)।
+     *
+     * ⛔ **৪০৪, ৪০৩ নয় — ইচ্ছাকৃত।** ⓘ ৪০৩ বলে *"এটা আছে, কিন্তু আপনি
+     * পাবেন না"*, আর সেটাই একটা তথ্য: id ৬৮ সত্যিই একজন ব্যবহারকারী।
+     * ⚠️ ভিন্ন কোম্পানির কাছে ঐ সারিটার **অস্তিত্বই থাকা উচিত নয়**।
+     */
+    private function mustBeInThisCompany(User $user): void
+    {
+        abort_unless(
+            $user->companies()->whereKey(CompanyContext::id())->exists(),
+            404,
+        );
     }
 
     public function create(Request $request): View
@@ -105,6 +148,8 @@ class UserController extends Controller implements HasMiddleware
 
     public function edit(Request $request, User $user): View
     {
+        $this->mustBeInThisCompany($user);
+
         return view('system_admin::user.form', [
             'menu' => $this->menu->forUser($request->user()),
             'user' => $user->load(['roles', 'companies']),
@@ -117,6 +162,8 @@ class UserController extends Controller implements HasMiddleware
 
     public function update(Request $request, User $user): RedirectResponse
     {
+        $this->mustBeInThisCompany($user);
+
         $data = $this->validated($request, $user);
 
         $this->assertNotLockingThemselvesOut($request, $user, $data);

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\SystemAdmin\Dashboard;
 
+use App\Core\Support\CompanyContext;
 use App\Core\Contracts\ProvidesDashboard;
 use App\Core\Engines\Dashboard\DashboardDefinition;
 use App\Core\Engines\Dashboard\Listing;
@@ -66,7 +67,8 @@ final class SystemAdminDashboard implements ProvidesDashboard
 
                 new Stat(
                     label: __('system_admin::menu.users'),
-                    value: (string) User::query()->count(),
+                    // ⛔ সংখ্যাটাও কেবল এই কোম্পানির — নাহলে কার্ডে সবার যোগফল বসত
+                    value: (string) User::query()->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))->count(),
                     hint: __('system_admin::dashboard.users_hint'),
                     href: route('system_admin.user.index'),
                 ),
@@ -97,7 +99,8 @@ final class SystemAdminDashboard implements ProvidesDashboard
                         ['key' => 'joined', 'label' => __('system_admin::dashboard.joined'), 'width' => '10rem',
                             'render' => fn ($u) => $u->created_at?->format('d M Y') ?? '—'],
                     ],
-                    rows: User::query()->latest('id')->limit(8)->get(),
+                    // ⛔ "নতুন ব্যবহারকারী" — অন্য কোম্পানির নাম এখানে বসত
+                    rows: User::query()->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))->latest('id')->limit(8)->get(),
                     empty: __('system_admin::dashboard.no_users'),
                     href: route('system_admin.user.index'),
                 ),

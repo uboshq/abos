@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Governance\Http\Controllers;
 
+use App\Core\Support\CompanyContext;
 use App\Core\Concerns\SortsLists;
 use App\Core\Engines\Audit\TimeMachine;
 use App\Core\Module\ModuleRegistry;
@@ -100,6 +101,8 @@ class AuditController extends Controller implements HasMiddleware
              * খালি ফলাফল পেতে হত — আর মানুষ ভাবত ছাঁকনিটা নষ্ট।
              */
             'users' => User::query()
+                // ⛔ ছাঁকনির ড্রপডাউন — অন্য কোম্পানির নাম এখানে বসত (৬ সেপ্টেম্বর ২০২৬)
+                ->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))
                 ->whereIn('id', AuditTrail::query()->select('user_id')->distinct())
                 ->orderBy('name')
                 ->get(),

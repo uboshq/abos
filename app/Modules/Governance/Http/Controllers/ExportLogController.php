@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Governance\Http\Controllers;
 
+use App\Core\Support\CompanyContext;
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
 use App\Models\ExportLog;
@@ -70,6 +71,8 @@ class ExportLogController extends Controller implements HasMiddleware
              * তিনি ওখানেই হারিয়ে যেতেন।
              */
             'users' => User::query()
+                // ⛔ ছাঁকনির ড্রপডাউন — অন্য কোম্পানির নাম এখানে বসত (৬ সেপ্টেম্বর ২০২৬)
+                ->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))
                 ->whereIn('id', ExportLog::query()->distinct()->pluck('user_id')->filter())
                 ->orderBy('name')
                 ->get(['id', 'name']),
