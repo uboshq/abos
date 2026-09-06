@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modules;
 
+use App\Modules\Inventory\Services\StockService;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\User;
@@ -60,6 +61,31 @@ class TheOrderWasForAHundredAndTheVanTookOneTenTest extends TestCase
         $this->warehouse = Warehouse::query()->where('is_default', true)->firstOrFail();
         $this->customer = Customer::query()->firstOrFail();
         $this->product = Product::query()->firstOrFail();
+
+        /*
+         * ⛔ মজুদ বসানো — নাহলে সীমা-নিয়মটাই টেস্টটাকে থামায়।
+         *
+         * ── কী ঘটেছিল, ৬ সেপ্টেম্বর ২০২৬ ────────────────────────────
+         * এই ফাইলের প্রতিটা টেস্ট ১০০ পিসের অর্ডার লেখে, কিন্তু সিডারে
+         * ঐ পণ্যের বিক্রয়যোগ্য মজুদ **৯০**। ⚠️ ফলে পাঁচটাই থেমে যেত:
+         * *"বিক্রয়যোগ্য আছে 90 — তার বেশি অর্ডার নেওয়া যাবে না।"*
+         *
+         * ⭐ এটা নিয়মের দোষ নয়, **সাজানোর দোষ**। ⓘ নিয়মটা ঠিক ওটাই করছে
+         * যা করার কথা — মজুদের বেশি অর্ডার আটকানো। ⚠️ নিয়ম শিথিল করে
+         * সবুজ পাওয়া যেত, কিন্তু তাতে সুরক্ষাটাই যেত; তাই মজুদ বাড়ানো
+         * হলো, নিয়ম নয়।
+         *
+         * ⓘ ৫০০ — অর্ডারের ১০০-র অনেক বেশি, যাতে এই ফাইলের কোনো টেস্ট
+         * কখনো মজুদের সীমায় গিয়ে থামে না। ⚠️ ঠিক ১০০ দিলে পরের কেউ
+         * একটা লাইন যোগ করলেই আবার একই জায়গায় আটকাত।
+         */
+        app(StockService::class)->move(
+            product: $this->product,
+            warehouse: $this->warehouse,
+            sourceType: 'test.opening',
+            sourceId: 1,
+            floor: '500',
+        );
     }
 
     private function orderFor(string $qty): SalesOrder
