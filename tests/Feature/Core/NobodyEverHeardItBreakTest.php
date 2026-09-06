@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Core;
 
+use Illuminate\Support\Facades\Artisan;
 use App\Core\Services\ErrorJournal;
 use App\Core\Services\PermissionSyncer;
 use App\Core\Support\CompanyContext;
@@ -45,6 +46,15 @@ use Tests\TestCase;
 class NobodyEverHeardItBreakTest extends TestCase
 {
     use RefreshDatabase;
+
+    /**
+     * ভুলের খাতার মাইগ্রেশন — নিচের টেস্টটা টেবিলটা ফেরাতে এটা চালায়।
+     *
+     * ⓘ পথটা এখানে লেখা, টেস্টের ভিতরে নয়: মাইগ্রেশনের নাম বদলালে
+     * একটাই জায়গায় বদলাবে, আর তখন ব্যর্থতাটা **এই লাইনে** দেখা যাবে।
+     */
+    private const ERROR_EVENTS_MIGRATION =
+        'database/migrations/2026_10_10_100000_something_broke_and_nobody_heard_it.php';
 
     private ErrorJournal $journal;
 
@@ -170,9 +180,34 @@ class NobodyEverHeardItBreakTest extends TestCase
     {
         Schema::drop('error_events');
 
-        $this->journal->record(new RuntimeException('and now the journal is gone too'));
+        try {
+            $this->journal->record(new RuntimeException('and now the journal is gone too'));
 
-        $this->assertTrue(true, 'খাতা লিখতে না পারলেও কিছু ছোঁড়া যাবে না।');
+            $this->assertTrue(true, 'খাতা লিখতে না পারলেও কিছু ছোঁড়া যাবে না।');
+        } finally {
+            /*
+             * ⛔ টেবিলটা ফিরিয়ে দেওয়া — নাহলে বাকি সুইট ওটা ছাড়াই চলে।
+             *
+             * ── ⚠️ MySQL-এ DDL একটা **নীরব COMMIT** ─────────────────
+             * `RefreshDatabase` প্রতিটা টেস্টকে লেনদেনে মুড়ে রাখে আর শেষে
+             * রোলব্যাক করে। ⛔ কিন্তু `Schema::drop()` একটা DDL, আর MySQL
+             * DDL-এর আগে **চলতি লেনদেনটা নিজে থেকেই কমিট করে দেয়**।
+             * ⓘ ফলে দুইটা জিনিস ঘটে: এই টেস্টের সারিগুলো স্থায়ী হয়ে যায়,
+             * আর **টেবিলটা মুছেই থাকে** — রোলব্যাক তাকে ফেরায় না।
+             *
+             * ⚠️ তারপর যে টেস্টই ভুলের খাতায় লিখতে যেত, সে একটা অনুপস্থিত
+             * টেবিল পেত — আর কারণটা **নিজের কোডে খুঁজে পেত না**, কারণ
+             * দোষটা অন্য একটা ফাইলের।
+             *
+             * ⓘ ৬ সেপ্টেম্বর ২০২৬ ধরা পড়েছে, `TwoCountersRaceTest`-এর
+             * একই ধরনের ফাঁদ খুঁজতে গিয়ে। ⭐ দুইটার শিক্ষা এক:
+             * **লেনদেনের বাইরে যা লেখা হয়, তা নিজেকেই তুলে নিতে হয়।**
+             *
+             * ⚠️ `finally`-তে, `try`-এর শেষে নয়: দাবিটা ভেঙে গেলেও
+             * টেবিলটা ফিরতেই হবে, নাহলে একটা লাল থেকে একশোটা জন্মাত।
+             */
+            Artisan::call('migrate', ['--path' => self::ERROR_EVENTS_MIGRATION, '--force' => true]);
+        }
     }
 
     /**
