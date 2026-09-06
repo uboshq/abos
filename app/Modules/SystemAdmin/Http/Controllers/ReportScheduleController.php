@@ -17,6 +17,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Validation\Rule;
 
 /**
  * নির্ধারিত রিপোর্টের সূচি — বানানো, বদলানো, থামানো।
@@ -124,7 +125,28 @@ final class ReportScheduleController extends Controller implements HasMiddleware
             'on_month_end' => ['nullable', 'boolean'],
             'timezone' => ['nullable', 'string', 'timezone'],
             'recipients' => ['nullable', 'array'],
-            'recipients.*' => ['integer'],
+
+            /*
+             * ⛔ শুধু চলতি কোম্পানির মানুষ — ৭ সেপ্টেম্বর ২০২৬।
+             *
+             * ── ⚠️ কী ভাঙা ছিল ─────────────────────────────────────────
+             * নিয়মটা ছিল `['integer']`, অর্থাৎ **যেকোনো আইডি**। ⓘ ৬
+             * সেপ্টেম্বরে ড্রপডাউনটা ছেঁকে দেওয়া হয়েছিল, আর সেটাকেই
+             * সারাই ধরে নেওয়া হয়েছিল।
+             *
+             * ⛔ কিন্তু **পর্দা ছাঁকা মানে অনুরোধ ছাঁকা নয়** — হাতে একটা
+             * অনুরোধ বানিয়ে অন্য কোম্পানির যেকোনো ব্যবহারকারীকে প্রাপক
+             * বসিয়ে দেওয়া যেত। ⚠️ আর ফলটা একটা নাম ফাঁস নয়, **পুরো
+             * রিপোর্ট** — বিক্রি, বকেয়া, মজুদ — প্রতি সপ্তাহে, নিজে থেকে,
+             * ইমেইলে।
+             *
+             * ⓘ তালিকা ছাঁকা ভুল ঠেকায়; দরজা পাহারা আক্রমণ ঠেকায়। দুইটাই
+             * লাগে, আর এতদিন কেবল প্রথমটা ছিল।
+             */
+            'recipients.*' => ['integer',
+                Rule::exists('company_user', 'user_id')
+                    ->where('company_id', CompanyContext::id())
+                    ->where('is_active', true)],
         ]);
     }
 

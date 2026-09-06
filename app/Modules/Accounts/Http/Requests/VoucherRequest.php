@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Accounts\Http\Requests;
 
 use App\Core\Services\PartyRegistry;
+use App\Core\Support\CompanyContext;
 use App\Core\Support\Money;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
@@ -104,7 +105,21 @@ class VoucherRequest extends FormRequest
             'type' => ['required', Rule::in(Voucher::TYPES)],
             'trx_date' => ['required', 'date', 'before_or_equal:today'],
             'narration' => ['nullable', 'string', 'max:500'],
-            'branch_id' => ['nullable', 'integer'],
+
+            /*
+             * ⛔ শাখাটা এই কোম্পানিরই — ৭ সেপ্টেম্বর ২০২৬।
+             *
+             * ⚠️ আগে `['nullable','integer']` ছিল, অর্থাৎ **যেকোনো
+             * সংখ্যা**। ⓘ `BelongsToCompany` কেবল `company_id` বসায়,
+             * `branch_id` নয় — তাই পাঠানো মানটা হুবহু বসে যেত।
+             *
+             * ⛔ ভাউচার মানে **টাকা**। অন্য কোম্পানির শাখার আইডি বসালে
+             * সারিটা নিজের কোম্পানিতেই থাকত (পড়া ছাঁকা), কিন্তু ওই
+             * শাখার হিসাবে কোনোদিন আসত না — আর শাখার মিলটা প্রতি মাসে
+             * ঠিক ওই অঙ্কটা কম দেখাত, কারণ ছাড়াই।
+             */
+            'branch_id' => ['nullable', 'integer',
+                Rule::exists('branches', 'id')->where('company_id', CompanyContext::id())],
 
             'party_type' => ['nullable', 'string', 'max:32'],
             'party_id' => ['nullable', 'integer'],
