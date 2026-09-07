@@ -129,18 +129,33 @@ class ThePickerCouldNotFindItsOwnPartyTest extends TestCase
             'গ্রাহকের বাংলা নামটাই পর্দায় নেই।');
     }
 
-    /** ⛔ আর পণ্যেরও — একই ছাঁচ, একই ক্ষতি। */
-    public function test_the_sales_screen_sends_both_product_names(): void
+    /**
+     * ⛔ আর পণ্যেরও — **দুই পর্দাতেই**, একই ছাঁচ, একই ক্ষতি।
+     *
+     * ── ⚠️ কেন দুইটা পর্দাই আলাদা করে মাপা ─────────────────────────────
+     * প্রথম খসড়ায় কেবল বিক্রয়ের পর্দাটা মাপা হয়েছিল, আর পাহারাটা সবুজ
+     * ছিল। ⛔ তারপর হাতে চালাতে গিয়ে দেখা গেল **ক্রয়ের পণ্যের ছাঁকনিতে
+     * ভুলটা রয়ে গেছে** — একই দিনে, একই ফাইলের কাজে, চতুর্থ জায়গা।
+     *
+     * ⓘ দুইটা কাউন্টার আয়না হলেও তাদের সারি দুই জায়গায় তৈরি হয়:
+     * বিক্রয়েরটা [[DirectSaleController]]-এ, ক্রয়েরটা
+     * [[DirectPurchaseService::stockPanel()]]-এ। ⚠️ একটা মেপে অন্যটা ধরে
+     * নেওয়া যায় না — আর ঠিক সেটাই একবার করেছিলাম।
+     */
+    public function test_both_counters_send_both_product_names(): void
     {
         $p = Product::query()->whereNotNull('name_bn')->where('name_bn', '!=', '')->firstOrFail();
 
-        $html = $this->get(route('sales.direct.create'))->assertOk()->getContent();
+        foreach (['sales.direct.create' => 'বিক্রয়', 'purchase.direct.create' => 'ক্রয়'] as $route => $screen) {
+            $html = $this->get(route($route))->assertOk()->getContent();
 
-        $this->assertStringContainsString($p->name_en, $html,
-            'পণ্যের ইংরেজি নামটা পর্দায় পৌঁছায়নি — বারকোড না থাকলে ওটা খুঁজে পাওয়ার একমাত্র উপায় ছিল।');
+            $this->assertStringContainsString($p->name_en, $html,
+                "{$screen}ের পর্দায় পণ্যের ইংরেজি নামটা পৌঁছায়নি — বারকোড না থাকলে "
+                .'ওটাই খুঁজে পাওয়ার একমাত্র উপায় ছিল।');
 
-        $this->assertStringContainsString($p->name_bn, $html,
-            'পণ্যের বাংলা নামটাই পর্দায় নেই।');
+            $this->assertStringContainsString($p->name_bn, $html,
+                "{$screen}ের পর্দায় পণ্যের বাংলা নামটাই নেই।");
+        }
     }
 
     /**
@@ -154,17 +169,28 @@ class ThePickerCouldNotFindItsOwnPartyTest extends TestCase
     public function test_the_filters_actually_look_at_both_names(): void
     {
         foreach ([
-            'purchase.direct.create' => 'suppliers',
-            'sales.direct.create' => 'customers ও catalogue',
+            'purchase.direct.create' => 'ক্রয়ের সরবরাহকারী ও পণ্য',
+            'sales.direct.create' => 'বিক্রয়ের গ্রাহক ও পণ্য',
         ] as $route => $what) {
             $html = $this->get(route($route))->assertOk()->getContent();
 
+            /*
+             * ⓘ চলকের নাম পর্দাভেদে আলাদা (`x` · `c` · `p`), তাই তিনটাকেই
+             * এক করে নিয়ে গোনা হয় — দাবিটা নামের নয়, **আচরণের**।
+             *
+             * ⚠️ আর গোনা হয় **দুইবার**: প্রতিটা পর্দায় দুইটা করে ছাঁকনি
+             * আছে (পক্ষ ও পণ্য)। ⛔ একটা গুনলে অন্যটা বাদ পড়ত — আর ঠিক
+             * সেটাই ৭ সেপ্টেম্বরে ঘটেছিল, ক্রয়ের পণ্যের ছাঁকনিতে।
+             */
+            $normalised = str_replace(['(c.', '(p.', '(s.'], '(x.', $html);
+
             foreach (['name_en', 'name_bn'] as $field) {
-                $this->assertStringContainsString(
-                    "(x.{$field} || '').toLowerCase().includes(t)",
-                    str_replace(['c.'.$field, 'p.'.$field], 'x.'.$field, $html),
-                    "{$what}-এর ছাঁকনিতে `{$field}` দেখা হয় না।\n"
-                    .'নামটা পর্দায় পৌঁছেছে, কিন্তু খোঁজা হচ্ছে না — ফল একই, আর বোঝা আরও কঠিন।',
+                $this->assertGreaterThanOrEqual(
+                    2,
+                    substr_count($normalised, "(x.{$field} || '').toLowerCase().includes(t)"),
+                    "{$what} — দুইটা ছাঁকনির অন্তত একটায় `{$field}` দেখা হয় না।\n"
+                    ."নামটা পর্দায় পৌঁছেছে, কিন্তু খোঁজা হচ্ছে না — ফল একই, আর বোঝা আরও কঠিন।\n"
+                    .'⚠️ পক্ষের ঘরটা ঠিক করে পণ্যের ঘরটা ভুলে যাওয়া সবচেয়ে সহজ ভুল।',
                 );
             }
         }
