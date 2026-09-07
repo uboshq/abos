@@ -523,6 +523,19 @@ final class DirectPurchaseService
         return [
             'id' => $product->id,
             'name' => $product->name(),
+
+            /*
+             * ⛔ খোঁজার জন্য দুইটা নামই — ৭ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ `name()` কেবল চলতি ভাষার নামটা দেয়, তাই বাংলা লোকেলে
+             * ইংরেজি নামটা পর্দায় পৌঁছাতই না — আর যা পৌঁছায়নি তা খোঁজা
+             * যায় না। ⚠️ একই ভুল একই দিনে চার জায়গায় পাওয়া গেছে
+             * (সরবরাহকারী · গ্রাহক · দুই পর্দার পণ্য), কারণ `name()`
+             * লেখাটাই স্বাভাবিক মনে হয়।
+             */
+            'name_en' => (string) $product->name_en,
+            'name_bn' => (string) $product->name_bn,
+
             'code' => $product->code,
             'on_hand' => (float) $onHand,
 

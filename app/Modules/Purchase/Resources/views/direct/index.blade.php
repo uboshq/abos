@@ -2777,8 +2777,12 @@
                          */
                         if (t === '') return this.browsing ? this.catalogue.slice(0, 30) : [];
 
+                        // ⓘ দুইটা নামই — সরবরাহকারীর ঘরের একই কারণে (৭ সেপ্টেম্বর ২০২৬)
                         return this.catalogue.filter(p =>
-                            p.name.toLowerCase().includes(t) || p.code.toLowerCase().includes(t)
+                            p.name.toLowerCase().includes(t)
+                            || (p.name_en || '').toLowerCase().includes(t)
+                            || (p.name_bn || '').toLowerCase().includes(t)
+                            || p.code.toLowerCase().includes(t)
                         ).slice(0, 30);
                     },
 
