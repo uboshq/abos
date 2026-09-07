@@ -139,4 +139,6 @@ return [
        showed on screen (found 3 September 2026) */
     'count_matched' => 'The cash count matched',
     'count_off_by' => 'The cash count was off by :amount',
+    'net_profit' => 'Net profit',
+    'net_loss' => 'Net loss',
 ];
