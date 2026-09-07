@@ -49,6 +49,8 @@
         </div>
     @endif
 
+    <x-ui.errors />
+
     <section data-boxed
              class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
         <h2 class="mb-3 font-semibold">{{ __('inventory::section.production_head') }}</h2>

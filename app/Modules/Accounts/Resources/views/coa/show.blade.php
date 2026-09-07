@@ -44,6 +44,8 @@
         </div>
     @endif
 
+    <x-ui.errors />
+
     <div class="grid gap-4 lg:grid-cols-3">
         <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="text-sm font-medium text-(--color-ink-muted)">{{ __('accounts::field.balance') }}</h2>

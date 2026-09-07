@@ -55,6 +55,8 @@
         </div>
     @endif
 
+    <x-ui.errors />
+
     <div class="grid gap-4 lg:grid-cols-3">
 
         {{-- প্রদেয় --}}

@@ -20,6 +20,8 @@
                           :subtitle="now()->translatedFormat('F Y')" />
     </x-slot:header>
 
+    <x-ui.errors />
+
     @if ($draftVouchers > 0 || $pendingTransfers > 0)
         <section data-boxed class="mb-4 rounded-(--radius-card) border border-(--color-warning)
                         bg-(--color-badge-warning-bg) p-4">

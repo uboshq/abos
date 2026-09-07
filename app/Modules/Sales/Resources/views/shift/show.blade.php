@@ -25,6 +25,8 @@
         </div>
     @endif
 
+    <x-ui.errors />
+
     <div data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
         <p class="mb-4 text-sm text-(--color-ink-muted)">
             {{ \App\Core\Support\DateFormat::format($shift->opened_at) }}

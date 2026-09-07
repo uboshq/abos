@@ -21,6 +21,8 @@
         </x-ui.page-header>
     </x-slot:header>
 
+    <x-ui.errors />
+
     <div class="grid gap-4 lg:grid-cols-[22rem_1fr]">
         <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <dl class="space-y-2 text-sm">
