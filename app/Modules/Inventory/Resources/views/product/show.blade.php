@@ -46,6 +46,8 @@
         </div>
     @endif
 
+    <x-ui.errors />
+
     {{-- চারটা অবস্থা — সব গুদাম মিলিয়ে --}}
     <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         @foreach ([

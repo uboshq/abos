@@ -27,6 +27,8 @@
         </div>
     @endif
 
+    <x-ui.errors />
+
     <div class="space-y-4">
         <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <dl class="grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-4">

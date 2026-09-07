@@ -39,6 +39,8 @@
         </div>
     @endif
 
+    <x-ui.errors />
+
     <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
         <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
             <h2 class="font-semibold">{{ __('master_data::field.path') }}</h2>
