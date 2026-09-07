@@ -101,6 +101,16 @@ return [
         'system' => 'System',
     ],
 
+    'settings_group' => [
+        'entry' => 'Entry rules',
+        'print' => 'Printing',
+        'report' => 'Reports',
+        'limits' => 'Limits',
+        'location' => 'Location',
+        'general' => 'General',
+        'screens' => 'Screens',
+    ],
+
     'action' => [
         'see_all' => 'See all',
         'refresh' => 'Refresh',

@@ -10,6 +10,7 @@ use App\Modules\SystemAdmin\Http\Controllers\LookController;
 use App\Modules\SystemAdmin\Http\Controllers\ReportDownloadController;
 use App\Modules\SystemAdmin\Http\Controllers\ReportScheduleController;
 use App\Modules\SystemAdmin\Http\Controllers\RoleController;
+use App\Modules\SystemAdmin\Http\Controllers\SettingsController;
 use App\Modules\SystemAdmin\Http\Controllers\SetupController;
 use App\Modules\SystemAdmin\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -72,6 +73,18 @@ Route::middleware('auth')->prefix('system')->group(function () {
 
     Route::get('/control-panel', [ControlPanelController::class, 'edit'])->name('control-panel');
     Route::put('/control-panel', [ControlPanelController::class, 'update'])->name('control-panel.update');
+
+    /*
+     * প্রতিষ্ঠানের সেটিংস — ৭ সেপ্টেম্বর ২০২৬।
+     *
+     * ⛔ মডিউলগুলো ৭৪টা সুইচ ঘোষণা করত আর **৬৯টার কোনো পর্দাই ছিল না**;
+     * লাইভের `settings` টেবিলে তিনটা সারি ছিল, কারণটা এটাই।
+     *
+     * ⚠️ Control Panel-এর পাশে, তার বদলে নয়: ওখানে পর্দা চালু/বন্ধ হয়
+     * (আর "কাগজ ধরা আছে কি না" পাহারাটা ওখানেই), এখানে এন্ট্রির নিয়ম।
+     */
+    Route::get('/settings', [SettingsController::class, 'edit'])->name('settings');
+    Route::put('/settings', [SettingsController::class, 'update'])->name('settings.update');
 
     /*
      * নির্ধারিত রিপোর্ট — সূচি ব্যবস্থাপনা ও ফাইল নামানো।
