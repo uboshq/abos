@@ -248,6 +248,26 @@ class DirectSaleController extends Controller implements HasMiddleware
                 'due' => (float) $c->outstanding(),
                 'days' => (int) $c->credit_days,
                 'name' => $c->name(),
+
+                /*
+                 * ⛔ খোঁজার জন্য **দুইটা নামই** — ৭ সেপ্টেম্বর ২০২৬।
+                 *
+                 * ── ⚠️ কী ভাঙা ছিল ─────────────────────────────────────
+                 * পর্দায় যেত কেবল `name()`, অর্থাৎ **চলতি ভাষার নামটা**।
+                 * ⓘ বাংলা লোকেলে ইংরেজি নামটা ব্রাউজারে পৌঁছাতই না, তাই
+                 * `Rahim Traders` লিখে `রহিম ট্রেডার্স`-কে খুঁজে পাওয়া
+                 * যেত না।
+                 *
+                 * ⛔ আর পর্দা বলত **"ওই নামে কোনো গ্রাহক নেই"** — যেটা
+                 * মিথ্যা। ⚠️ ক্যাশিয়ার তখন হয় নতুন করে একই গ্রাহক বসাতেন
+                 * (দুইটা সারি, দুই জায়গায় বকেয়া), নয় বিক্রিটাই থেমে যেত।
+                 *
+                 * ⓘ ধরা পড়েছে লাইভে, হাতে চালিয়ে — `Bengal` লিখে
+                 * `বেঙ্গল ফুডস লিমিটেড` পাওয়া যায়নি।
+                 */
+                'name_en' => (string) $c->name_en,
+                'name_bn' => (string) $c->name_bn,
+
                 'code' => (string) $c->code,
                 'phone' => (string) ($c->phone ?? ''),
                 'address' => (string) ($c->address() ?? ''),
@@ -612,6 +632,11 @@ class DirectSaleController extends Controller implements HasMiddleware
                     'id' => $p->id,
                     'code' => $p->code,
                     'name' => $p->name(),
+
+                    // ⛔ খোঁজার জন্য দুইটা নামই — গ্রাহকের ঘরের একই কারণে
+                    'name_en' => (string) $p->name_en,
+                    'name_bn' => (string) $p->name_bn,
+
                     'unit' => $p->unit?->name() ?? '',
                     'rate' => (string) $p->sale_price,
                     'barcode' => (string) $p->barcode,

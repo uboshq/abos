@@ -3326,8 +3326,11 @@
 
                         if (t === '') return this.catalogue.slice(0, 30);
 
+                        // ⓘ দুইটা নামই — গ্রাহকের ঘরের একই কারণে (৭ সেপ্টেম্বর ২০২৬)
                         return this.catalogue.filter(p =>
                             p.name.toLowerCase().includes(t)
+                            || (p.name_en || '').toLowerCase().includes(t)
+                            || (p.name_bn || '').toLowerCase().includes(t)
                             || p.code.toLowerCase().includes(t)
                             || (p.barcode || '').toLowerCase().includes(t)
                         ).slice(0, 30);
@@ -3412,8 +3415,17 @@
                         const rows = Object.entries(this.customers)
                             .map(([id, c]) => ({ id, ...c }));
 
+                        /*
+                         * ⓘ দুইটা নামই দেখা হয় — ৭ সেপ্টেম্বর ২০২৬।
+                         *
+                         * ⚠️ শুধু `name` (চলতি ভাষার নাম) দেখলে ইংরেজিতে
+                         * টাইপ করা ক্যাশিয়ার নিজের গ্রাহককেই খুঁজে পেতেন
+                         * না, আর পর্দা বলত "ওই নামে কোনো গ্রাহক নেই"।
+                         */
                         return (t === '' ? rows : rows.filter(c =>
                             (c.name || '').toLowerCase().includes(t)
+                            || (c.name_en || '').toLowerCase().includes(t)
+                            || (c.name_bn || '').toLowerCase().includes(t)
                             || (c.code || '').toLowerCase().includes(t)
                             || (c.phone || '').toLowerCase().includes(t)
                         )).slice(0, 30);
