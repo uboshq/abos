@@ -65,6 +65,44 @@
         </div>
     @endisset
 
+    {{--
+        ফলটা এক লাইনে, সারিগুলোর উপরে — ৭ সেপ্টেম্বর ২০২৬।
+
+        ── ⛔ কী ছিল না ────────────────────────────────────────────────
+        লাভ-ক্ষতির পর্দা খাত ধরে ধরে সব দেখাত, আর নিচে লিখত "সর্বমোট
+        ২৭,০০০"। ⓘ লাভ হয়েছে না ক্ষতি — কোথাও একটা শব্দও ছিল না।
+
+        ⚠️ অথচ মালিকের কাছে ওটাই একমাত্র প্রশ্ন। ⛔ যে লাভ-ক্ষতি হিসাব
+        লাভ কত বলে না, সে হিসাব নয় — সে একটা তালিকা।
+
+        ── কেন উপরে ───────────────────────────────────────────────────
+        স্থিতিপত্রেও একই সিদ্ধান্ত, আর কারণটা ওখানে লেখা: *"পুরনো পর্দায়
+        সংখ্যাটা নিচে পড়ে থাকত আর কেউ দেখত না।"* ⓘ একই যুক্তি এখানেও —
+        একশো সারির নিচে চাপা পড়া উত্তর কোনো উত্তর নয়।
+
+        ⭐ `@isset` বলে বাকি ৩৬টা রিপোর্টের কিছুই বদলায় না।
+    --}}
+    @isset($summary)
+        <section data-boxed
+                 @class([
+                     'mb-4 flex flex-wrap items-center gap-3 rounded-(--radius-card) border px-4 py-3',
+                     'border-(--color-border) bg-(--color-badge-success-bg)' => $summary['good'],
+                     'border-(--color-danger) bg-(--color-badge-danger-bg)' => ! $summary['good'],
+                 ])>
+            <span @class(['font-semibold',
+                'text-(--color-badge-success-ink)' => $summary['good'],
+                'text-(--color-badge-danger-ink)' => ! $summary['good']])>
+                {{ $summary['label'] }}
+            </span>
+
+            <span class="flex-1"></span>
+
+            <strong class="num text-lg tabular-nums">
+                {{ \App\Core\Support\Money::format($summary['value']) }}
+            </strong>
+        </section>
+    @endisset
+
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
             <x-ui.toolbar :title="__($report->title)" :count="trans_choice('accounts::message.row_count', $result->totalRows, ['count' => $result->totalRows])" :search="false">

@@ -313,6 +313,39 @@ final class CoreReports
             'accounts::menu.profit_loss',
             [Account::INCOME, Account::EXPENSE],
             dateRange: true,
+
+            /*
+             * ⭐ ফলটা এক লাইনে, সবার উপরে — ৭ সেপ্টেম্বর ২০২৬।
+             *
+             * ── ⛔ কী ছিল না ─────────────────────────────────────────
+             * পর্দাটা খাত ধরে ধরে সব দেখাত আর নিচে লিখত "সর্বমোট"।
+             * ⓘ লাভ হয়েছে না ক্ষতি — একটা শব্দও ছিল না।
+             *
+             * ── কেন `credit − debit` ─────────────────────────────────
+             * আয়ের খাত ক্রেডিটে বাড়ে, খরচের খাত ডেবিটে। ⓘ তাই সব
+             * ক্রেডিটের যোগফল থেকে সব ডেবিটের যোগফল বাদ দিলে যা থাকে,
+             * সেটাই নিট ফল — ধনাত্মক হলে লাভ, ঋণাত্মক হলে ক্ষতি।
+             *
+             * ⚠️ বিক্রয় ফেরত (৪১১০) আয়ের ঘরে বসে কিন্তু ডেবিটে বাড়ে,
+             * তাই সে নিজে থেকেই আয় কমায় — আলাদা করে বাদ দেওয়ার কিছু
+             * নেই। ⛔ আলাদা করে বাদ দিলে **দুইবার** বাদ যেত।
+             */
+            summary: function (array $totals): array {
+                $income = (string) ($totals['credit'] ?? '0');
+                $spent = (string) ($totals['debit'] ?? '0');
+                $net = bcsub($income ?: '0', $spent ?: '0', 4);
+
+                $profit = bccomp($net, '0', 4) >= 0;
+
+                return [
+                    'label' => $profit
+                        ? __('accounts::message.net_profit')
+                        : __('accounts::message.net_loss'),
+                    // ⓘ ক্ষতিও ধনাত্মক সংখ্যায় দেখানো হয় — শব্দটাই দিক বলে
+                    'value' => $profit ? $net : bcmul($net, '-1', 4),
+                    'good' => $profit,
+                ];
+            },
         );
     }
 
@@ -337,8 +370,13 @@ final class CoreReports
      *
      * @param  list<string>  $types
      */
-    private static function summaryByAccount(string $key, string $title, array $types, bool $dateRange): ReportDefinition
-    {
+    private static function summaryByAccount(
+        string $key,
+        string $title,
+        array $types,
+        bool $dateRange,
+        ?\Closure $summary = null,
+    ): ReportDefinition {
         return new ReportDefinition(
             key: $key,
             title: $title,
@@ -352,6 +390,10 @@ final class CoreReports
              * অন্যটা রয়ে যেত।
              */
             asOfDate: ! $dateRange,
+
+            // ⓘ কেবল লাভ-ক্ষতি এটা দেয়; রেওয়ামিল ও স্থিতিপত্রে `null`
+            summary: $summary,
+
             groupBy: 'account_id',
             query: fn (array $f) => DB::table('ledger_entries')
                 ->leftJoin('accounts', 'accounts.id', '=', 'ledger_entries.account_id')

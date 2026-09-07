@@ -113,6 +113,18 @@ class ReportController extends Controller implements HasMiddleware
             'slug' => $slug,
             'report' => $definition,
             'result' => $result,
+
+            /*
+             * ⭐ ফলটা এক লাইনে — কেবল যে রিপোর্ট সেটা ঘোষণা করে।
+             *
+             * ⓘ আজ একটাই করে (লাভ-ক্ষতি), আর সে নিজের যোগফল থেকেই ফলটা
+             * কষে। ⚠️ কন্ট্রোলারে কষলে পরের রিপোর্টটার জন্য এখানে আবার
+             * `if` লিখতে হত, আর একদিন এই ফাইলটা প্রতিটা রিপোর্টের নিয়ম
+             * জানা শুরু করত — যেটা ঠিক উল্টো দিক।
+             */
+            'summary' => $definition->summary === null
+                ? null
+                : ($definition->summary)($result->totals),
             'branches' => $definition->hasFilter('branch')
                 ? Branch::query()->active()->orderBy('name_en')->get()
                 : collect(),
