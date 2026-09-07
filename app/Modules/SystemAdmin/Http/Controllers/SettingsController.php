@@ -117,6 +117,18 @@ class SettingsController extends Controller implements HasMiddleware
             $value = match ($definition['type']) {
                 'boolean' => filter_var($raw, FILTER_VALIDATE_BOOLEAN),
                 'integer' => $raw === null || $raw === '' ? null : (int) $raw,
+
+                /*
+                 * ⚠️ `number` ঘরটা প্রথম খসড়ায় ছিল না — ৭ সেপ্টেম্বর ২০২৬।
+                 *
+                 * ⓘ চারটা সেটিং এই ধরনের (কমিশনের সর্বোচ্চ টাকা, রাউন্ডিং,
+                 * অনুমোদনের নিজের সীমা)। ⛔ ঘরটা না থাকায় ওগুলো `default`
+                 * শাখায় পড়ে **কাঁচা স্ট্রিং** হিসেবে যেত, আর নিচের তুলনাটা
+                 * `5 === '5'` মিলত না — ফলে প্রতিবার সেভ করলেই ওরা "বদলেছে"
+                 * ধরা হত।
+                 */
+                'number' => $raw === null || $raw === '' ? null : (float) $raw,
+
                 default => $raw,
             };
 
@@ -124,7 +136,29 @@ class SettingsController extends Controller implements HasMiddleware
                 continue;
             }
 
-            if ($this->settings->get($key) === $value) {
+            /*
+             * ⛔ যা বদলায়নি তার জন্য সারি বসানো হয় না — আর এটাই আসল কথা।
+             *
+             * ── ⚠️ কী ঘটেছিল, ৭ সেপ্টেম্বর ২০২৬ ─────────────────────────
+             * তুলনাটা ছিল `get($key) === $value`, অর্থাৎ **কড়া**। ⓘ কিন্তু
+             * সারি না থাকলে `get()` ফেরত দেয় `module.php`-এর ডিফল্ট — যেটা
+             * সংখ্যা (`5`), আর ফর্ম পাঠায় স্ট্রিং (`'5'`)। ⛔ ফলে লাইভে
+             * **একটা** সুইচ টিপে **পাঁচটা** সারি বসে গিয়েছিল।
+             *
+             * ── কেন সেটা ক্ষতিকর, যদিও মানটা একই ─────────────────────────
+             * ⚠️ একটা override সারি মানে ওই কোম্পানি আর **পণ্যের ডিফল্ট
+             * অনুসরণ করে না**। ⓘ কাল ডিফল্টটা বদলালে — নিরাপদ কোনো নতুন
+             * মানে — এই কোম্পানিগুলো নীরবে পুরনোটাই ধরে রাখত, আর কেউ বলতে
+             * পারত না কেন তারা আলাদা।
+             *
+             * ── কেন স্ট্রিং ধরে তুলনা ────────────────────────────────────
+             * ⭐ সংরক্ষণের সময় `encode()` যা করে, এটা তার আয়না: সবই টেক্সট
+             * কলামে যায়। ⓘ তাই "যা বসত, তা-ই কি আছে?" প্রশ্নটার সবচেয়ে সৎ
+             * রূপ এটাই — টাইপ মিলুক বা না মিলুক।
+             */
+            $current = $this->settings->get($key);
+
+            if ($this->asStored($current) === $this->asStored($value)) {
                 continue;
             }
 
@@ -137,6 +171,25 @@ class SettingsController extends Controller implements HasMiddleware
             $changed,
             ['count' => $changed],
         ));
+    }
+
+    /**
+     * একটা মান ডাটাবেসে যে চেহারায় বসত।
+     *
+     * ⓘ [[SettingsService::encode()]]-এর আয়না: `boolean` হয় `'1'`/`'0'`,
+     * বাকি সব `(string)`। ⚠️ ওটা private, তাই এখানে ছোট করে আবার লেখা —
+     * আর সেজন্যই এই মন্তব্যটা, যাতে একদিন ওটা বদলালে কেউ এটাও দেখেন।
+     *
+     * ⛔ `(string) true` = `'1'` আর `(string) false` = `''` — তাই boolean-টা
+     * আলাদা করে লেখা হয়েছে; নাহলে "বন্ধ" আর "কিছুই নেই" এক দেখাত।
+     */
+    private function asStored(mixed $value): string
+    {
+        if (is_bool($value)) {
+            return $value ? '1' : '0';
+        }
+
+        return (string) $value;
     }
 
     /**

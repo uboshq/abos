@@ -124,6 +124,74 @@ class TheSwitchesWereDeclaredAndNeverReachableTest extends TestCase
     }
 
     /**
+     * ⛔ এক সুইচ টিপলে **এক** সারি বসে, পাঁচটা নয়।
+     *
+     * ── ⚠️ কী ঘটেছিল লাইভে, ৭ সেপ্টেম্বর ২০২৬ ──────────────────────────
+     * একটা চেকবক্স টিপে সেভ করার পর পর্দা বলল *"৫ টা সেটিং সংরক্ষিত
+     * হয়েছে"*, আর ডাটাবেসে সত্যিই পাঁচটা সারি বসল — চারটা এমন সেটিং
+     * যেগুলো কেউ ছোঁয়নি, আর সবগুলোই **নিজেদের ডিফল্ট মানেই**।
+     *
+     * ⓘ কারণ: তুলনাটা ছিল কড়া (`===`), আর সারি না থাকলে `get()` ফেরত দেয়
+     * `module.php`-এর ডিফল্ট — সংখ্যা `5`; ফর্ম পাঠায় স্ট্রিং `'5'`।
+     * ⛔ আর `number` ধরনটার জন্য কোনো ঘরই লেখা হয়নি, তাই ওরা কাঁচা
+     * স্ট্রিং হয়েই যেত।
+     *
+     * ── কেন মান এক হলেও এটা ক্ষতি ───────────────────────────────────
+     * ⚠️ একটা override সারি মানে ওই কোম্পানি আর **পণ্যের ডিফল্ট অনুসরণ
+     * করে না**। ⓘ কাল ডিফল্টটা বদলালে — নিরাপদ কোনো নতুন মানে — এই
+     * কোম্পানিগুলো নীরবে পুরনোটাই ধরে রাখত, আর কেউ বলতে পারত না কেন
+     * তারা আলাদা। ⭐ ভুলটা নীরব, আর ছয় মাস পরে ধরা পড়ত।
+     */
+    public function test_pressing_one_switch_writes_one_row_not_five(): void
+    {
+        $before = Setting::query()->where('company_id', $this->company->id)->count();
+
+        /*
+         * ⓘ পর্দাটা যা পাঠাত, হুবহু তা — প্রতিটা ঘর, বদল না করেই, আর
+         * তার সাথে একটামাত্র চেকবক্স।
+         *
+         * ⚠️ কেবল একটা চাবি পাঠালে দাবিটা কিছুই মাপত না: ভুলটা ঘটে
+         * **অন্য ঘরগুলো অপরিবর্তিত অবস্থায় ফিরে আসায়**।
+         */
+        $payload = [];
+
+        foreach (app(SettingsService::class)->definitions() as $key => $definition) {
+            if (($definition['menu'] ?? false) || ($definition['group'] ?? '') === 'screens') {
+                continue;
+            }
+
+            $value = app(SettingsService::class)->get($key);
+
+            if ($definition['type'] === 'boolean') {
+                // ⓘ চেকবক্স বন্ধ থাকলে ব্রাউজার কিছুই পাঠায় না
+                if ($value) {
+                    $payload[$key] = '1';
+                }
+
+                continue;
+            }
+
+            $payload[$key] = (string) $value;
+        }
+
+        $payload['customer.zero_limit_blocks'] = '1';
+
+        $this->actingAs($this->admin)
+            ->put(route('system_admin.settings.update'), ['settings' => $payload])
+            ->assertRedirect();
+
+        $after = Setting::query()->where('company_id', $this->company->id)->count();
+
+        $this->assertSame(
+            $before + 1,
+            $after,
+            "একটা সুইচ টেপায় একের বেশি সারি বসেছে।\n"
+            ."যেগুলো বদলায়নি তাদের জন্য সারি বসানো মানে ওই কোম্পানি আর পণ্যের\n"
+            .'ডিফল্ট অনুসরণ করে না — কাল ডিফল্ট বদলালে সে নীরবে পিছিয়ে থাকবে।',
+        );
+    }
+
+    /**
      * ⛔ এক কোম্পানির সিদ্ধান্ত অন্য কোম্পানিকে ছোঁয় না।
      *
      * ⚠️ `settings` টেবিলে `company_id` আছে, কিন্তু লেখার সময় সেটা
