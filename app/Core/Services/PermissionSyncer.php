@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Core\Services;
 
 use App\Core\Module\ModuleRegistry;
+use App\Core\Support\CompanyContext;
+use App\Models\Company;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
@@ -61,9 +63,41 @@ final class PermissionSyncer
 
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
-        $granted = $this->keepOwnerComplete($guard);
+        /*
+         * ── ⛔ রোলগুলো এখন কোম্পানিভেদে, ৭ সেপ্টেম্বর ২০২৬ ────────────────
+         *
+         * ⚠️ পারমিশন (উপরে) বিশ্বজনীনই থাকে — ওটা পণ্যের শব্দভাণ্ডার।
+         * ⓘ কিন্তু **রোল** এখন প্রতিটা কোম্পানির নিজের, তাই একবার চালিয়ে
+         * থেমে গেলে কেবল **একটা** কোম্পানি রোল পেত।
+         *
+         * ⛔ আর এই কমান্ডটা চলে **কনসোলে, প্রতিটা ডেপ্লয়ে**, যেখানে কোনো
+         * কোম্পানি-প্রসঙ্গ নেই। ⚠️ প্রসঙ্গ ছাড়া `Role::create()` করলে
+         * `company_id` থাকত `null` — অর্থাৎ রোলটা **কোনো কোম্পানিরই নয়**,
+         * আর কেউ সেটা কোনোদিন পেত না। ⓘ লগইন হত, মেনু খালি থাকত, আর
+         * কোথাও কোনো ত্রুটি দেখা যেত না।
+         *
+         * ⭐ তাই প্রতিটা কোম্পানির প্রসঙ্গে ঢুকে আলাদা করে চালানো হয়।
+         * [[CompanyContext::forCompany()]] টিমটাও বসায়, তাই এখানে আলাদা
+         * করে মনে রাখার কিছু নেই।
+         */
+        /*
+         * ⚠️ `keepOwnerComplete()` একটা **সংখ্যা** ফেরায় (কতগুলো অনুমতি
+         * মালিকের রোলে যোগ হলো), আর `applyRoleTemplates()` একটা **তালিকা**
+         * (কোন কোন রোল তৈরি হলো)। ⓘ প্রথম খসড়ায় দুইটাকেই তালিকা ধরে
+         * unpack করেছিলাম, আর সাথে সাথে থেমেছিল:
+         * *"Only arrays and Traversables can be unpacked, int given"*।
+         *
+         * ⭐ তাই সংখ্যাটা যোগ হয়, আর নামগুলো জমা হয় — দুইটা দুই রকম।
+         */
+        $granted = 0;
+        $rolesCreated = [];
 
-        $rolesCreated = $this->applyRoleTemplates($guard);
+        foreach (Company::query()->orderBy('id')->pluck('id') as $companyId) {
+            CompanyContext::forCompany((int) $companyId, function () use ($guard, &$granted, &$rolesCreated) {
+                $granted += $this->keepOwnerComplete($guard);
+                $rolesCreated = array_values(array_unique([...$rolesCreated, ...$this->applyRoleTemplates($guard)]));
+            });
+        }
 
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
@@ -97,9 +131,20 @@ final class PermissionSyncer
                 continue;
             }
 
+            /*
+             * ⚠️ "আছে কি না" প্রশ্নটা **এই কোম্পানিতে** — ৭ সেপ্টেম্বর ২০২৬।
+             *
+             * ⛔ কোম্পানি ছাড়া দেখলে প্রথম কোম্পানিতে রোলটা পাওয়া যেত, আর
+             * বাকিদের জন্য "আছে" ধরে নিয়ে বাদ দেওয়া হত — ফলে দ্বিতীয়
+             * কোম্পানিতে **একটাও টেমপ্লেট-রোল বসত না**।
+             *
+             * ⓘ ভুলটা নীরব: sync চলত, কিছু বলত না, আর মানুষ লগইন করে
+             * খালি মেনু দেখতেন।
+             */
             $exists = Role::query()
                 ->where('name', $roleName)
                 ->where('guard_name', $guard)
+                ->where('company_id', CompanyContext::id())
                 ->exists();
 
             if ($exists) {
@@ -140,11 +185,27 @@ final class PermissionSyncer
         $owner = Role::query()
             ->where('name', self::OWNER_ROLE)
             ->where('guard_name', $guard)
+            ->where('company_id', CompanyContext::id())
             ->first();
 
-        // রোলটা এখনো তৈরি হয়নি (একদম নতুন ইনস্টল) — সিডার বসাবে
+        /*
+         * ── ⛔ রোলটা না থাকলে **এখানেই** বসে, ৭ সেপ্টেম্বর ২০২৬ ──────────
+         *
+         * ⓘ আগে এখানে লেখা ছিল *"সিডার বসাবে"*, আর সেটা সত্যি ছিল যতদিন
+         * রোল বিশ্বজনীন ছিল — একটাই `owner`, সিডার একবার বসাত।
+         *
+         * ⚠️ teams-এর পর **প্রতিটা কোম্পানির নিজের `owner` লাগে**, আর
+         * কোম্পানি তৈরি হয় নানা পথে: সিডার, System Management-এর পর্দা,
+         * আর প্রথম-চালুর ধাপ। ⛔ প্রতিটাকে মনে করিয়ে দেওয়ার চেয়ে এখানে
+         * একবার বসিয়ে দেওয়া নিরাপদ।
+         *
+         * ⓘ ধরা পড়েছে মেপে: দ্বিতীয় কোম্পানিতে **একটাও রোল ছিল না**, আর
+         * সিডার থেমে গিয়েছিল *"There is no role named `owner`"* বলে।
+         * ⭐ ওটা ভাগ্য — বার্তাটা না এলে ভুলটা ধরা পড়ত অনেক পরে, যখন
+         * কেউ দ্বিতীয় কোম্পানিতে লগইন করে খালি মেনু দেখতেন।
+         */
         if ($owner === null) {
-            return 0;
+            $owner = Role::create(['name' => self::OWNER_ROLE, 'guard_name' => $guard]);
         }
 
         $all = Permission::query()->where('guard_name', $guard)->pluck('name');

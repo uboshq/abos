@@ -113,7 +113,19 @@ class TheFirstDoorOpensOnlyOnceTest extends TestCase
          * লগইন করতেন আর **প্রতিটা পর্দায় ৪০৩** পেতেন, কোনো ব্যাখ্যা
          * ছাড়াই।
          */
-        $this->assertTrue($user->hasRole(PermissionSyncer::OWNER_ROLE));
+        /*
+         * ⚠️ প্রশ্নটা **কোন কোম্পানিতে** — ৭ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ teams চালু হওয়ার পর `hasRole()` চলতি টিম ধরে দেখে। ⛔ প্রসঙ্গ
+         * ছাড়া জিজ্ঞেস করলে সে `null` টিমে খোঁজে আর সবসময় `false` বলে —
+         * অথচ রোলটা ঠিকই বসানো।
+         *
+         * ⭐ আর এই বদলটাই দাবিটাকে **সত্যিকারের প্রশ্নের** কাছে নিয়ে গেল:
+         * "তাঁর রোল আছে?" নয়, **"তাঁর নিজের কোম্পানিতে রোল আছে?"**
+         */
+        CompanyContext::forCompany($company->id, function () use ($user): void {
+            $this->assertTrue($user->fresh()->hasRole(PermissionSyncer::OWNER_ROLE));
+        });
         $this->assertTrue($user->fresh()->companies()->where('companies.id', $company->id)->exists());
 
         // যিনি বসালেন, তিনি ঢুকেই গেছেন — আবার পাসওয়ার্ড লিখতে হয় না

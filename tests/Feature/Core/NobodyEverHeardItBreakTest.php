@@ -275,7 +275,23 @@ class NobodyEverHeardItBreakTest extends TestCase
 
         $this->actingAs($user)->get(route('governance.error.index'))->assertForbidden();
 
-        $user->givePermissionTo('governance.error.view');
+        /*
+         * ⚠️ অনুমতিটা **চলতি প্রসঙ্গের কোম্পানিতে** — ৭ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ teams-এর পর `model_has_permissions`-এও `company_id` বসে।
+         *
+         * ⛔ প্রথম খসড়ায় `$user->current_company_id` ধরেছিলাম, আর সেটা
+         * এখানে **খালি** — ব্যবহারকারীটা কেবল pivot-এ যুক্ত, তাঁর
+         * "চলতি কোম্পানি" কেউ বসায়নি। ⚠️ ফলে অনুমতিটা কোম্পানি `0`-তে
+         * বসত, আর পর্দা ৪০৩ ফেরাত।
+         *
+         * ⭐ ঠিক উৎসটা `CompanyContext::id()` — উপরের লাইনেই ওটা দিয়েই
+         * তাঁকে কোম্পানিতে যুক্ত করা হয়েছে।
+         */
+        CompanyContext::forCompany(
+            (int) CompanyContext::id(),
+            fn () => $user->givePermissionTo('governance.error.view'),
+        );
 
         $this->actingAs($user->fresh())
             ->get(route('governance.error.index'))
@@ -296,7 +312,23 @@ class NobodyEverHeardItBreakTest extends TestCase
 
         $user = User::factory()->create();
         $user->companies()->attach(CompanyContext::id(), ['is_active' => true]);
-        $user->givePermissionTo('governance.error.view');
+        /*
+         * ⚠️ অনুমতিটা **চলতি প্রসঙ্গের কোম্পানিতে** — ৭ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ teams-এর পর `model_has_permissions`-এও `company_id` বসে।
+         *
+         * ⛔ প্রথম খসড়ায় `$user->current_company_id` ধরেছিলাম, আর সেটা
+         * এখানে **খালি** — ব্যবহারকারীটা কেবল pivot-এ যুক্ত, তাঁর
+         * "চলতি কোম্পানি" কেউ বসায়নি। ⚠️ ফলে অনুমতিটা কোম্পানি `0`-তে
+         * বসত, আর পর্দা ৪০৩ ফেরাত।
+         *
+         * ⭐ ঠিক উৎসটা `CompanyContext::id()` — উপরের লাইনেই ওটা দিয়েই
+         * তাঁকে কোম্পানিতে যুক্ত করা হয়েছে।
+         */
+        CompanyContext::forCompany(
+            (int) CompanyContext::id(),
+            fn () => $user->givePermissionTo('governance.error.view'),
+        );
 
         $this->actingAs($user->fresh())
             ->post(route('governance.error.acknowledge', $row))

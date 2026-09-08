@@ -7,6 +7,7 @@ namespace App\Modules\SystemAdmin\Http\Controllers;
 use App\Core\Module\ModuleRegistry;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\PermissionSyncer;
+use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -49,7 +50,28 @@ class RoleController extends Controller implements HasMiddleware
     {
         return view('system_admin::role.index', [
             'menu' => $this->menu->forUser($request->user()),
-            'roles' => Role::query()->withCount(['permissions', 'users'])->orderBy('name')->get(),
+            /*
+             * ⛔ চলতি কোম্পানির রোলই — ৭ সেপ্টেম্বর ২০২৬।
+             *
+             * ── ⚠️ কেন আজ এটা লাগল, গতকাল লাগত না ──────────────────────
+             * এতদিন রোল ছিল **বিশ্বজনীন**, তাই ছাঁকনির প্রশ্নই ছিল না —
+             * সবার একটাই `owner`, একটাই `salesman`। ⓘ আজ spatie teams
+             * চালু হওয়ায় প্রতিটা কোম্পানি নিজের কপি পেয়েছে।
+             *
+             * ⛔ ছাঁকনি ছাড়া এই তালিকাটা **সব ক্রেতার রোল** দেখাত, আর
+             * পাশের `update()` অন্য কোম্পানিরটা বদলাতে দিত — অর্থাৎ যে
+             * ফাঁকটা বন্ধ করতে teams চালু করা হলো, সেটাই এই পর্দায় খোলা
+             * থাকত।
+             *
+             * ⚠️ spatie নিজে `Role::query()`-তে কোনো global scope বসায় না
+             * — সে টিমটা দেখে **বরাদ্দ ও যাচাইয়ের সময়**। ⓘ তালিকা ছাঁকা
+             * আমাদের কাজ, আর হাতের কাজ ভুলে যাওয়া যায়।
+             */
+            'roles' => Role::query()
+                ->where('company_id', CompanyContext::id())
+                ->withCount(['permissions', 'users'])
+                ->orderBy('name')
+                ->get(),
             'ownerRole' => PermissionSyncer::OWNER_ROLE,
         ]);
     }
@@ -78,6 +100,7 @@ class RoleController extends Controller implements HasMiddleware
 
     public function edit(Request $request, Role $role): View
     {
+        $this->mustBeInThisCompany($role);
         $this->assertNotTheOwnerRole($role);
 
         return view('system_admin::role.form', [
@@ -90,6 +113,7 @@ class RoleController extends Controller implements HasMiddleware
 
     public function update(Request $request, Role $role): RedirectResponse
     {
+        $this->mustBeInThisCompany($role);
         $this->assertNotTheOwnerRole($role);
 
         $data = $this->validated($request, $role);
@@ -105,6 +129,24 @@ class RoleController extends Controller implements HasMiddleware
     /**
      * মালিকের রোলে হাত দেওয়া যায় না — পর্দা থেকেও নয়, ঠিকানা থেকেও নয়।
      */
+
+    /**
+     * এই রোলটা কি চলতি কোম্পানির?
+     *
+     * ⛔ ৪০৪, ৪০৩ নয় — ইচ্ছাকৃত। ⓘ ৪০৩ বলে *"এটা আছে, কিন্তু আপনি পাবেন
+     * না"*, আর সেটাই একটা তথ্য: ওই আইডিতে সত্যিই একটা রোল আছে। ⚠️ ভিন্ন
+     * কোম্পানির কাছে ঐ সারিটার **অস্তিত্বই থাকা উচিত নয়**।
+     *
+     * ── ⚠️ কেন তালিকা ছাঁকাই যথেষ্ট নয় ─────────────────────────────
+     * `edit(Role $role)` রুট-মডেল বাইন্ডিং ব্যবহার করে, আর সে **যেকোনো
+     * id** খুলে দেয়। ⓘ তালিকায় নামটা না দেখেও কেউ ঠিকানা বদলে ঢুকতে
+     * পারতেন — ছাঁকনি ভুল ঠেকায়, দরজা পাহারা আক্রমণ ঠেকায়।
+     */
+    private function mustBeInThisCompany(Role $role): void
+    {
+        abort_unless((int) $role->company_id === (int) CompanyContext::id(), 404);
+    }
+
     private function assertNotTheOwnerRole(Role $role): void
     {
         if ($role->name === PermissionSyncer::OWNER_ROLE) {
@@ -120,8 +162,22 @@ class RoleController extends Controller implements HasMiddleware
     private function validated(Request $request, ?Role $role): array
     {
         return $request->validate([
+            /*
+             * ⚠️ নামের অদ্বিতীয়তা **কোম্পানির ভেতরে**, বিশ্বজুড়ে নয় —
+             * ৭ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ teams চালু হওয়ার পর প্রতিটা কোম্পানির নিজের "বিক্রয়কর্মী"
+             * আছে। ⛔ ছাঁকনি ছাড়া এই নিয়মটা বলত *"এই নামে একটা রোল আছে"*
+             * — অন্য কারও কোম্পানিতে — আর ব্যবহারকারী নিজের কোম্পানিতে
+             * সেই নামটা বসাতেই পারতেন না।
+             *
+             * ⚠️ আর ফাঁসও: বার্তাটা জানিয়ে দিত অন্য কোথাও ওই নামের রোল
+             * আছে কি না।
+             */
             'name' => ['required', 'string', 'max:64', 'regex:/^[a-z][a-z0-9_]*$/',
-                Rule::unique('roles', 'name')->ignore($role?->id)],
+                Rule::unique('roles', 'name')
+                    ->where('company_id', CompanyContext::id())
+                    ->ignore($role?->id)],
             'permissions' => ['nullable', 'array'],
             'permissions.*' => [Rule::exists('permissions', 'name')],
         ], [

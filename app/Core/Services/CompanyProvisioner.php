@@ -135,6 +135,24 @@ final class CompanyProvisioner
         $user->companies()->syncWithoutDetaching([$company->id]);
 
         CompanyContext::forCompany($company->id, function () use ($user, $role) {
+            /*
+             * ── ⛔ রোলগুলো আগে বসাতে হয়, ৭ সেপ্টেম্বর ২০২৬ ──────────────
+             *
+             * spatie-র teams চালু হওয়ার পর **প্রতিটা কোম্পানির নিজের রোল**
+             * লাগে। ⓘ একদম নতুন কোম্পানিতে সেগুলো এখনো নেই, তাই
+             * `assignRole('owner')` সরাসরি থেমে যেত:
+             *
+             *     ⛔ RoleDoesNotExist: There is no role named `owner`
+             *
+             * ⚠️ আর থামত **পর্দায়, ৫০০ হয়ে** — কেউ কোম্পানি খুলতেই
+             * পারতেন না। ⓘ ধরা পড়েছে পূর্ণ সুইটে, চারটা টেস্ট একসাথে লাল
+             * হয়ে; teams-এর আগে এই লাইনটার কোনো পূর্বশর্তই ছিল না।
+             *
+             * ⭐ `sync()` idempotent — যা আছে তা ছোঁয় না, যা নেই তা বসায়।
+             * তাই দ্বিতীয়বার ডাকলেও ক্রেতার নিজের সাজানো রোল অক্ষত।
+             */
+            app(PermissionSyncer::class)->sync();
+
             $user->assignRole($role);
         });
     }
