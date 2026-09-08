@@ -81,6 +81,27 @@ return new class extends Migration
             });
         }
 
+        /*
+         * ── ⛔ ক্রমটা এখানে ভুল ছিল, আর লাইভে গিয়ে ভেঙেছে ─────────────────
+         *
+         * প্রথম খসড়ায় কলাম বসিয়েই সাথে সাথে প্রাইমারি কী বদলানো হত, আর
+         * ব্যাক-ফিল হত তার **পরে**। ⛔ লাইভে থেমেছে:
+         *
+         *     SQLSTATE[22004] 1138 Invalid use of NULL value
+         *
+         * ⓘ কারণটা সরল — কলামটা nullable হয়ে বসে, চলতি সারিগুলোতে NULL
+         * থাকে, আর **প্রাইমারি কী-তে NULL চলে না**।
+         *
+         * ── ⚠️ কেন ২,৭২০ টেস্ট এটা ধরতে পারেনি ──────────────────────────
+         * টেস্টের ডাটাবেসে এই টেবিলগুলো ওই মুহূর্তে **খালি**। ⓘ NULL সারি
+         * নেই, তাই ALTER নির্বিঘ্নে চলে। ⛔ সুইট সবুজ থেকেও একটা মাইগ্রেশন
+         * লাইভে ভাঙতে পারে — **কারণ মাইগ্রেশন ডাটার উপর চলে, স্কিমার উপর
+         * নয়, আর টেস্টের ডাটা লাইভের ডাটা নয়**।
+         *
+         * ⭐ তাই এখন: কলাম → ব্যাক-ফিল → তবেই প্রাইমারি কী।
+         */
+        $needsPrimaryKey = [];
+
         foreach (['model_has_roles' => 'role_id', 'model_has_permissions' => 'permission_id'] as $table => $fk) {
             if (Schema::hasColumn($table, 'company_id')) {
                 continue;
@@ -91,20 +112,44 @@ return new class extends Migration
                 $t->index('company_id', $table.'_team_foreign_key_index');
             });
 
-            DB::statement("ALTER TABLE `{$table}` DROP PRIMARY KEY, ADD PRIMARY KEY (`{$fk}`, `model_id`, `model_type`, `company_id`)");
+            $needsPrimaryKey[$table] = $fk;
         }
 
         $companies = DB::table('companies')->orderBy('id')->pluck('id')->all();
 
-        if ($companies === []) {
-            return;
+        $first = $companies === [] ? null : array_shift($companies);
+
+        if ($first !== null) {
+            DB::table('roles')->whereNull('company_id')->update(['company_id' => $first]);
+            DB::table('model_has_roles')->whereNull('company_id')->update(['company_id' => $first]);
+            DB::table('model_has_permissions')->whereNull('company_id')->update(['company_id' => $first]);
         }
 
-        $first = array_shift($companies);
+        foreach ($needsPrimaryKey as $table => $fk) {
+            /*
+             * ⚠️ ব্যাক-ফিলের পরেও NULL থাকলে থামি — আর নিজের ভাষায় থামি।
+             *
+             * ⓘ এটা কেবল তখনই ঘটে যখন কোনো কোম্পানিই নেই অথচ বরাদ্দের
+             * সারি আছে — অর্থাৎ ডাটাবেসটা এমন অবস্থায় যা ব্যাখ্যা করা
+             * দরকার। ⛔ ছেড়ে দিলে MySQL-এর `1138` আসত, যেটা পড়ে কেউ
+             * বুঝত না কী করতে হবে।
+             */
+            $orphans = DB::table($table)->whereNull('company_id')->count();
 
-        DB::table('roles')->whereNull('company_id')->update(['company_id' => $first]);
-        DB::table('model_has_roles')->whereNull('company_id')->update(['company_id' => $first]);
-        DB::table('model_has_permissions')->whereNull('company_id')->update(['company_id' => $first]);
+            if ($orphans > 0) {
+                throw new RuntimeException(
+                    "{$table} টেবিলে {$orphans}টা সারির কোম্পানি জানা যায়নি — "
+                    .'কোনো কোম্পানি নেই বলে ব্যাক-ফিল করা যায়নি। '
+                    .'আগে অন্তত একটা কোম্পানি থাকতে হবে।'
+                );
+            }
+
+            DB::statement("ALTER TABLE `{$table}` DROP PRIMARY KEY, ADD PRIMARY KEY (`{$fk}`, `model_id`, `model_type`, `company_id`)");
+        }
+
+        if ($first === null) {
+            return;
+        }
 
         $originals = DB::table('roles')->where('company_id', $first)->get();
 
