@@ -67,7 +67,18 @@ class OneCompanyDoesNotSeeAnothersPeopleTest extends TestCase
     {
         $user = User::factory()->create(['name' => $name, 'current_company_id' => $company->id]);
         $user->companies()->attach($company->id, ['is_active' => true]);
-        $user->givePermissionTo('approval.flow.manage');
+
+        /*
+         * ⚠️ অনুমতিটা **ওই কোম্পানির প্রসঙ্গে** — ৭ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ spatie-র teams চালু হওয়ার পর `model_has_permissions`-এও
+         * `company_id` বসে। ⛔ প্রসঙ্গ ছাড়া দিলে কলামটা `null` হত, আর
+         * ডাটাবেস সরাসরি থামিয়ে দিত।
+         *
+         * ⭐ থেমে যাওয়াটাই ভালো: অনুমতিটা কোন কোম্পানিতে, সেই প্রশ্নের
+         * উত্তর না থাকলে সারিটা বসাই উচিত নয়।
+         */
+        CompanyContext::forCompany($company->id, fn () => $user->givePermissionTo('approval.flow.manage'));
 
         return $user;
     }

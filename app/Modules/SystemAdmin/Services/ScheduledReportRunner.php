@@ -83,7 +83,26 @@ final class ScheduledReportRunner
         // পাহারা ৩: মালিক ওই রিপোর্টের অনুমতি হারিয়েছেন
         $permission = $this->reports->get($schedule->report_key)->permission;
 
-        if ($permission !== null && ! $owner->can($permission)) {
+        /*
+         * ── ⛔ প্রশ্নটা **ওই কোম্পানির ভেতরে**, ৭ সেপ্টেম্বর ২০২৬ ──────────
+         *
+         * ⓘ এই লাইনটা ক্রনে চলে, যেখানে কোনো কোম্পানি-প্রসঙ্গ নেই। teams
+         * চালু হওয়ার আগে রোল বিশ্বজনীন ছিল, তাই প্রশ্নটার উত্তর প্রসঙ্গ
+         * ছাড়াও ঠিক আসত।
+         *
+         * ⛔ এখন প্রসঙ্গ ছাড়া `can()` **সবসময় "না"** বলে — আর ফলটা নীরব:
+         * প্রতিটা সূচি `owner_no_permission` লেখা হয়ে থেমে যেত, কোনো
+         * ত্রুটি ছাড়াই। ⚠️ মালিক কেবল দেখতেন রিপোর্ট আর আসছে না।
+         *
+         * ⭐ ধরা পড়েছে পূর্ণ সুইটে, একটামাত্র টেস্টে — আর সেই টেস্টটার
+         * নামই *"পরপর দুই কোম্পানি একে অন্যের প্রসঙ্গ বয়ে নেয় না"*।
+         */
+        $allowed = $permission === null || CompanyContext::forCompany(
+            (int) $schedule->company_id,
+            fn (): bool => $owner->fresh()->can($permission),
+        );
+
+        if (! $allowed) {
             $this->schedules->markRan($schedule, 'owner_no_permission');
 
             return null;

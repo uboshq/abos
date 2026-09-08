@@ -43,6 +43,30 @@ class ShellTest extends TestCase
         parent::tearDown();
     }
 
+    /**
+     * মালিকের মেনু — **তাঁর কোম্পানিতে দাঁড়িয়ে**।
+     *
+     * ── ⚠️ কেন মোড়কটা লাগল, ৭ সেপ্টেম্বর ২০২৬ ──────────────────────────
+     * এই ফাইলের `setUp()` ইচ্ছে করেই প্রসঙ্গ পরিষ্কার করে — শেলের দাবি
+     * অনেকগুলোই "প্রসঙ্গ ছাড়া কী হয়" নিয়ে।
+     *
+     * ⓘ কিন্তু teams চালু হওয়ার পর `MenuBuilder` প্রতিটা সারিতে
+     * `$user->can()` দেখে, আর সেই প্রশ্নের উত্তর চলতি টিমের উপর নির্ভর
+     * করে। ⛔ প্রসঙ্গ ছাড়া `can()` সবসময় "না" বলে, তাই মেনুটা **খালি**
+     * আসত — আর দাবিগুলো "মেনু খালি" বলে লাল হত, যদিও মেনু ঠিকই আছে।
+     *
+     * ⭐ আর এটাই সত্যি অবস্থা: মানুষ মেনু দেখেন একটা কোম্পানিতে দাঁড়িয়ে।
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function menuOf(User $user): array
+    {
+        return CompanyContext::forCompany(
+            (int) ($user->current_company_id ?? $this->company()->id),
+            fn () => app(MenuBuilder::class)->forUser($user),
+        );
+    }
+
     private function owner(): User
     {
         return User::query()->where('email', 'owner@abos.test')->firstOrFail();
@@ -183,7 +207,7 @@ class ShellTest extends TestCase
     {
         $salesman = User::query()->where('email', 'sales@abos.test')->firstOrFail();
 
-        $menu = app(MenuBuilder::class)->forUser($salesman);
+        $menu = $this->menuOf($salesman);
         $codes = array_column($menu, 'code');
 
         // বিক্রয়কর্মীর গ্রাহক দেখার অধিকার আছে, তাই মডিউলটা আছে।
@@ -195,7 +219,7 @@ class ShellTest extends TestCase
         $stranger->companies()->attach($this->company(), ['is_active' => true]);
         $stranger->forceFill(['current_company_id' => $this->company()->id])->save();
 
-        $this->assertSame([], app(MenuBuilder::class)->forUser($stranger->fresh()));
+        $this->assertSame([], $this->menuOf($stranger->fresh()));
     }
 
     /**
@@ -210,7 +234,7 @@ class ShellTest extends TestCase
     {
         $canonical = ModuleDefinition::MENU_GROUPS;
 
-        $menu = app(MenuBuilder::class)->forUser($this->owner());
+        $menu = $this->menuOf($this->owner());
 
         $this->assertNotEmpty($menu, 'মালিকের মেনু খালি — তাহলে কিছুই যাচাই হত না।');
 
@@ -487,7 +511,7 @@ class ShellTest extends TestCase
     /** রেলে যে মডিউলগুলো সত্যিই বসে — মেনু থেকেই নেওয়া, হাতে লেখা নয়। */
     private function railModules(): array
     {
-        return app(MenuBuilder::class)->forUser($this->owner());
+        return $this->menuOf($this->owner());
     }
 
     /**

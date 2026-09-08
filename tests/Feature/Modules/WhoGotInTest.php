@@ -179,7 +179,17 @@ class WhoGotInTest extends TestCase
         $user = User::factory()->create(['password' => Hash::make('password')]);
         $user->companies()->attach($this->company, ['is_active' => true]);
         $user->forceFill(['current_company_id' => $this->company->id])->save();
-        $user->givePermissionTo($extra);
+        /*
+         * ⚠️ অনুমতিটা **কোন কোম্পানির** — ৭ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ teams-এর পর `model_has_permissions`-এও `company_id` বসে, আর
+         * সেটা আসে চলতি প্রসঙ্গ থেকে। ⛔ প্রসঙ্গটা `setUp`-এ বসানো হয়,
+         * কিন্তু টেস্টের ভেতরে লগইন/লগআউটের সময় হারিয়ে যায় — তখন
+         * কলামটা `null` হত আর ডাটাবেস থামিয়ে দিত।
+         *
+         * ⭐ প্রসঙ্গের ভরসায় না থেকে নাম ধরে বলাই নিরাপদ।
+         */
+        CompanyContext::forCompany($this->company->id, fn () => $user->givePermissionTo($extra));
 
         return $user->fresh();
     }

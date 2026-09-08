@@ -198,7 +198,22 @@ class ModuleMenuTest extends TestCase
 
         // সব অনুমতিওয়ালা ব্যবহারকারী — কিছু লুকানো থাকলে সেটা যেন
         // অনুমতির অভাবে না হয়, তাহলে পরীক্ষাটা কিছুই প্রমাণ করত না
+        /*
+         * ⓘ এই টেস্টটা কোনো সিডার চালায় না — সে কেবল `module.php`-র
+         * ঘোষণাগুলো পড়ে। ⚠️ তাই কোম্পানিটা এখানেই বানাতে হয়।
+         *
+         * ⛔ কেন লাগে: teams-এর পর অনুমতি বসে `company_id` সহ, আর
+         * "কোনো কোম্পানির নয়" এমন ব্যবহারকারীকে আর অনুমতি দেওয়া যায় না।
+         */
+        $company = Company::query()->firstOr(fn () => Company::create([
+            'code' => 'MENU',
+            'name_en' => 'Menu Probe',
+            'currency' => 'BDT',
+            'locale' => 'bn',
+        ]));
+
         $user = User::factory()->create();
+        $user->companies()->attach($company->id, ['is_active' => true]);
 
         foreach (app(ModuleRegistry::class)->all() as $module) {
             foreach ($module->permissions as $permission) {
@@ -206,10 +221,34 @@ class ModuleMenuTest extends TestCase
             }
         }
 
-        $user->givePermissionTo(Permission::all());
+        /*
+         * ── ⚠️ অনুমতিটা এখন একটা কোম্পানির ভেতরে, ৭ সেপ্টেম্বর ২০২৬ ────────
+         *
+         * ⓘ আগে ব্যবহারকারীটা **কোনো কোম্পানিরই ছিল না** — শুধু "সব
+         * অনুমতি আছে" দেখানোর একটা পুতুল। ⛔ teams-এর পর সেটা আর সম্ভব
+         * নয়: `model_has_permissions`-এ `company_id` লাগে।
+         *
+         * ⭐ আর বদলটা দাবিটাকে **আরও সত্যি** করেছে: মেনু তো কোনো
+         * কোম্পানিতে দাঁড়িয়েই দেখা হয়, শূন্যে নয়।
+         */
+        CompanyContext::forCompany($company->id, fn () => $user->givePermissionTo(Permission::all()));
 
-        $rendered = collect(app(MenuBuilder::class)->forUser($user->fresh()))
-            ->flatMap(fn (array $module) => collect($module['groups'])->flatten(1));
+        /*
+         * ⚠️ মেনুটাও **ওই কোম্পানির ভেতরেই** বানাতে হয়।
+         *
+         * ⓘ `MenuBuilder` প্রতিটা সারিতে `$user->can()` দেখে, আর teams-এর
+         * পর সেই প্রশ্নের উত্তর চলতি টিমের উপর নির্ভর করে। ⛔ প্রসঙ্গের
+         * বাইরে বানালে `can()` সবসময় "না" বলত, আর অনুমতি-নির্ভর প্রতিটা
+         * সারি নীরবে বাদ পড়ত — মেনুটা খালি দেখাত।
+         *
+         * ⭐ আর এটাই সত্যিকারের অবস্থা: মানুষ মেনু দেখেন একটা কোম্পানিতে
+         * দাঁড়িয়ে, শূন্যে নয়।
+         */
+        $rendered = CompanyContext::forCompany(
+            $company->id,
+            fn () => collect(app(MenuBuilder::class)->forUser($user->fresh()))
+                ->flatMap(fn (array $module) => collect($module['groups'])->flatten(1)),
+        );
 
         /*
          * ── প্রথম দাবি: planned সারি কোথাও নিয়ে যায় না ──────────────
