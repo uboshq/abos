@@ -34,6 +34,18 @@ class ShiftController extends Controller implements HasMiddleware
         return [new Middleware('can:sales.pos')];
     }
 
+    /**
+     * ⛔ পাতা ভাগ নেই, ইচ্ছাকৃত — দুইটা তালিকাই দিনে বাঁধা।
+     *
+     * `tills` হলো এখন খালি পড়ে থাকা ড্রয়ারগুলো — সংখ্যাটা কাউন্টারের
+     * সংখ্যায় বাঁধা, আর কাউন্টার বসানো হয়, জমে না।
+     *
+     * `closed` হলো **আজ** বন্ধ হওয়া শিফট (`whereDate(opened_at, আজ)`)।
+     * সারি বড়জোর ড্রয়ার × শিফট — কাল আবার শূন্য থেকে শুরু। ছয় মাস
+     * পরেও এই পর্দায় সারির সংখ্যা আজকের সমান।
+     *
+     * কারণটা `EveryListScreenPaginatesTest`-এর ছাড়ের তালিকাতেও আছে।
+     */
     public function index(Request $request): View
     {
         $mine = $this->shifts->openFor((int) $request->user()->id);

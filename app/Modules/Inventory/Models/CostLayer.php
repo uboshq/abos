@@ -36,7 +36,30 @@ class CostLayer extends Model
         return [
             'trx_date' => 'date',
             'qty_in' => 'decimal:4',
+
+            /*
+             * ⛔ PHPStan এই ঘরটা নিয়ে যা বলে, সেটা বিশ্বাস করে "সারাতে"
+             * যাবেন না।
+             *
+             * অভিযোগটা আসে এভাবে: *"Property CostLayer::$qty_remaining
+             * (float) does not accept string"* — `CostLayerService`-এ।
+             * পড়ে মনে হয় ঘরটা float, আর আমরা ভুল করে string বসাচ্ছি।
+             *
+             * ⓘ উল্টোটা সত্য। কলামটা মাইগ্রেশনে `decimal(18, 4)`, কাস্ট
+             * এখানে `decimal:4`, আর যা বসে তা bcmath-এর string — অর্থাৎ
+             * সবই ঠিক। ভুলটা যন্ত্রের: larastan মাইগ্রেশন পড়ার সময়
+             * `decimal` কলামকে `float` ধরে নেয়, তাই সে string-কে আপত্তি
+             * করে। অভিযোগটা phpstan-baseline.neon-এ ধরা আছে, আর ওখানেই
+             * থাকার কথা।
+             *
+             * ⚠️ কেউ এটা "সারাতে" `(float)` কাস্ট বসালে সে রিপোর সবচেয়ে
+             * কঠিন নিয়মটা ভাঙবে — আর **টেস্টও হয়তো পাশ করত**, কারণ ছোট
+             * সংখ্যায় float আর decimal একই উত্তর দেয়। ভুলটা বেরোত মাস
+             * ছয়েক পরে, পয়সার ঘরে, যখন কারণ খোঁজা প্রায় অসম্ভব।
+             * নিয়মটা `MoneyIsNeverAFloatTest`-এ লেখা।
+             */
             'qty_remaining' => 'decimal:4',
+
             'unit_cost' => 'decimal:4',
         ];
     }

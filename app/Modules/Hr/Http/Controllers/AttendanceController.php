@@ -39,6 +39,27 @@ class AttendanceController extends Controller implements HasMiddleware
 
     /**
      * আজকের (বা বাছা দিনের) পর্দা — সবার সারি একসাথে।
+     *
+     * ── কেন এই তালিকায় পাতা ভাগ নেই (১২ সেপ্টেম্বর ২০২৬) ────────────
+     * বাকি তালিকাগুলোয় `paginate(50)` বসানোর সময় এটাও তালিকায় ছিল।
+     * বসানো হয়নি, আর কারণটা দুইটা:
+     *
+     * ১। **এটা তালিকা নয়, এন্ট্রি ফর্ম।** নিচের পুরোটা একটাই POST —
+     *    প্রতিটা সারি `rows[কর্মী][status]`। পাতা ভাগ করলে কেউ প্রথম
+     *    পাতার বিশটা ঘর ভরে "পরের পাতা" চাপলে ভরা ঘরগুলো **কোনো চিহ্ন
+     *    ছাড়াই হারিয়ে যেত** — সংরক্ষণ হয়নি, অথচ ব্রাউজার কিছু বলেনি।
+     *    ঠিক সেই নীরব ক্ষতি, যেটা ঠেকাতেই পাতা ভাগের কাজটা করা।
+     *
+     * ২। **সারি বাড়ে কর্মীসংখ্যায়, দিনে নয়।** `onPayrollFor($date)` এক
+     *    দিনের কর্মীদের আনে — ছয় মাস পরেও সারির সংখ্যা আজকের সমান।
+     *    অন্য তালিকাগুলোর মতো জমে না, তাই পাতা ভাগের আসল কারণটাই
+     *    এখানে নেই।
+     *
+     * যেদিন কোনো কোম্পানির কর্মীসংখ্যাই পর্দাটা ভারী করে তুলবে, উত্তরটা
+     * পাতা ভাগ নয় — বিভাগ বা শাখা ধরে ছাঁকনি, যাতে একজন নিজের দলটাই
+     * দেখেন আর পুরোটা একবারেই সংরক্ষণ করতে পারেন।
+     *
+     * ছাড়টা `EveryListScreenPaginatesTest`-এর তালিকাতেও একই কারণসহ লেখা।
      */
     public function index(Request $request): View
     {
@@ -90,20 +111,33 @@ class AttendanceController extends Controller implements HasMiddleware
 
     /**
      * মাসের সারসংক্ষেপ — কে কতদিন এসেছে, কতদিন কাটা যাবে।
+     *
+     * ── কেন এখানে পাতা ভাগ, অথচ index()-এ নয় ────────────────────────
+     * এটা কেবল পড়ার পর্দা — কোনো ফর্ম নেই, তাই পাতা বদলালে হারানোর
+     * মতো কিছু নেই। আর খরচটা এখানে সারির সংখ্যার চেয়েও বেশি: নিচের
+     * `monthlySummary()` **প্রতিটা কর্মীর জন্য আলাদা কোয়েরি** চালায়,
+     * তাই দুইশো কর্মী মানে দুইশোটা কোয়েরি। পাতা ভাগ ওই সংখ্যাটাকেই
+     * পঞ্চাশে বাঁধে।
      */
     public function sheet(Request $request): View
     {
         $month = $this->chosenMonth($request);
 
-        $employees = Employee::query()
+        /*
+         * সারসংক্ষেপটা বসে paginator-এর **ভেতরে** (`through`), তাই
+         * পাতার তথ্য — মোট কত, কত নম্বর থেকে — অক্ষত থাকে। আগে `map()`
+         * লেখা থাকলে ফল হত একটা সাধারণ Collection, আর পেজার কিছুই
+         * দেখাতে পারত না।
+         */
+        $rows = Employee::query()
             ->onPayrollFor($month->copy()->endOfMonth())
             ->orderBy('code')
-            ->get();
-
-        $rows = $employees->map(fn (Employee $employee) => [
-            'employee' => $employee,
-            'summary' => $this->attendance->monthlySummary($employee, $month),
-        ]);
+            ->paginate(50)
+            ->withQueryString()
+            ->through(fn (Employee $employee) => [
+                'employee' => $employee,
+                'summary' => $this->attendance->monthlySummary($employee, $month),
+            ]);
 
         return view('hr::attendance.sheet', [
             'menu' => $this->menu->forUser($request->user()),

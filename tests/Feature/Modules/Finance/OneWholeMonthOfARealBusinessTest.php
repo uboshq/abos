@@ -18,6 +18,7 @@ use App\Modules\Finance\Services\RentalContractService;
 use App\Modules\Finance\Services\WithdrawalService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
@@ -217,7 +218,7 @@ class OneWholeMonthOfARealBusinessTest extends TestCase
      */
     private function assertBooksBalance(string $asOf): void
     {
-        $row = \Illuminate\Support\Facades\DB::table('ledger_entries')
+        $row = DB::table('ledger_entries')
             ->where('company_id', $this->company->id)
             ->whereDate('trx_date', '<=', $asOf)
             ->selectRaw('COALESCE(SUM(debit), 0) as d, COALESCE(SUM(credit), 0) as c')

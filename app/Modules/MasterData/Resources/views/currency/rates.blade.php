@@ -134,5 +134,7 @@
                 ['key' => 'creator', 'label' => __('master_data::field.entered_by'), 'width' => '12rem',
                  'render' => fn ($r) => $r->creator?->name ?? '—'],
             ]" />
+
+        <x-ui.pager :rows="$rates" />
     </div>
 </x-layouts.app>

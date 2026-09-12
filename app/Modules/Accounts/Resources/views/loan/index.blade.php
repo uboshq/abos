@@ -64,5 +64,7 @@
                      ? __('accounts::message.loan_settled')
                      : \App\Core\Support\Money::format($l->outstanding())],
             ]" />
+
+        <x-ui.pager :rows="$loans" />
     </div>
 </x-layouts.app>

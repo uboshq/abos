@@ -4,17 +4,18 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Http\Controllers;
 
+use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
-use App\Modules\Accounts\Models\Account;
-use App\Core\Services\SettingsService;
-use App\Modules\Customer\Models\Customer;
 use App\Models\LedgerEntry;
+use App\Modules\Accounts\Models\Account;
+use App\Modules\Customer\Models\Customer;
 use App\Modules\Sales\Models\DepositClaim;
 use App\Modules\Sales\Services\CustomerPapers;
 use App\Modules\Sales\Services\DepositClaimService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
@@ -218,7 +219,7 @@ class PortalController extends Controller
      * float ব্যবহার করলে হাজার সারির পর পয়সা হারায়, আর এই রিপোর নিয়মই
      * তাই।
      *
-     * @param  \Illuminate\Support\Collection<int, LedgerEntry>  $rows
+     * @param  Collection<int, LedgerEntry>  $rows
      */
     private function runningBalance($rows, string $opening): string
     {

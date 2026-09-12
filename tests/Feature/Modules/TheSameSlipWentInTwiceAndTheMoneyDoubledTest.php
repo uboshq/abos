@@ -8,6 +8,7 @@ use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\User;
 use App\Modules\Customer\Models\Customer;
+use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Services\CollectionService;
 use App\Modules\Supplier\Models\Supplier;
 use Database\Seeders\DemoSeeder;
@@ -89,7 +90,7 @@ class TheSameSlipWentInTwiceAndTheMoneyDoubledTest extends TestCase
         $this->collect(null, '1200', '2026-09-01');
         $this->collect(null, '1200', '2026-09-01');
 
-        $this->assertSame(2, \App\Modules\Sales\Models\Collection::query()
+        $this->assertSame(2, Collection::query()
             ->where('customer_id', $this->customer->id)
             ->whereNull('instrument_no')
             ->count());
@@ -137,7 +138,7 @@ class TheSameSlipWentInTwiceAndTheMoneyDoubledTest extends TestCase
         $this->collect('  bk-77219 ', '5000', '2026-09-08');
     }
 
-    private function collect(?string $slip, string $amount, string $on): \App\Modules\Sales\Models\Collection
+    private function collect(?string $slip, string $amount, string $on): Collection
     {
         return app(CollectionService::class)->create([
             'customer_id' => $this->customer->id,

@@ -58,6 +58,20 @@ class StockPlacementController extends Controller implements HasMiddleware
         ];
     }
 
+    /**
+     * ⛔ পাতা ভাগ নেই, ইচ্ছাকৃত — এটা তালিকা নয়, একটা বোর্ড।
+     *
+     * সারিগুলো কাগজ ধরে দলে বাঁধা ([[waiting]]), আর প্রতিটা দলের নিচে
+     * তার লাইনগুলো। পঞ্চাশে কাটলে কাটটা পড়ত একটা কাগজের **মাঝখানে** —
+     * একটা চালানের তিনটা লাইন এই পাতায়, বাকি দুইটা পরের পাতায়, আর
+     * বসানোর ফর্মটা তখন অর্ধেক কাগজ জমা দিত।
+     *
+     * তালিকাটা নিজে থেকেই ছোট থাকে: বসানো শেষ হলে সারিটা চলে যায়
+     * (`SUM(unplaced_change) > 0`)। লম্বা হলে সেটা জমে থাকা নয়, একটা
+     * সংকেত — মাল এসেছে অথচ কেউ তাকে তুলছেন না।
+     *
+     * কারণটা `EveryListScreenPaginatesTest`-এর ছাড়ের তালিকাতেও আছে।
+     */
     public function index(Request $request): View
     {
         return view('inventory::stock.placement', [

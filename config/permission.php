@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Company;
 use Spatie\Permission\DefaultTeamResolver;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -49,7 +50,7 @@ return [
          * জানতাম না** — কনফিগের একটা লাইন বদলে দেওয়ায় মডেলে একটা নতুন
          * সম্পর্ক এসে গিয়েছিল।
          */
-        'team' => App\Models\Company::class,
+        'team' => Company::class,
 
         /*
          * When using the "HasModels" trait and passing raw IDs to syncModels,

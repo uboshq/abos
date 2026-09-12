@@ -323,11 +323,50 @@ final class ApprovalEngine
      */
     public function pendingFor(User $user): Collection
     {
+        return $this->pendingQueryFor($user)->get();
+    }
+
+    /**
+     * একই তালিকা, কিন্তু **কোয়েরি হিসেবে** — চালানোর আগে।
+     *
+     * ── কেন এটা লাগল (১২ সেপ্টেম্বর ২০২৬) ───────────────────────────
+     * উপরের মন্তব্যে লেখা আছে তালিকাটা তিন জায়গা থেকে ডাকা হয় — ইনবক্স,
+     * হোমের উইজেট, আর স্ট্যাটাস বার। ⚠️ পাতা-ভাগের নিরীক্ষায় ধরা পড়ল
+     * **তিনজনের দুইজনের কেবল একটা সংখ্যা দরকার**, অথচ তিনজনই পুরো
+     * তালিকাটা মেমরিতে তুলছিল:
+     *
+     *     [[StatusNotices]]      pendingFor($user)->count()
+     *     [[ApprovalWidgets]]    count(pendingFor($user))
+     *
+     * অর্থাৎ একটা সংখ্যা দেখানোর জন্য প্রতিটা সারি তোলা হত, সাথে প্রতিটা
+     * অনুরোধকারীর রেকর্ডও (`with('requester')`)। আর ওই দুইটা জায়গা
+     * ইনবক্স নয় — **প্রায় প্রতিটা পাতায়** চলে। জটে পড়া একটা কোম্পানিতে
+     * এটাই সবচেয়ে দামি কোয়েরি হয়ে উঠত, আর কোনো পর্দায় তার কোনো চিহ্ন
+     * থাকত না।
+     *
+     * কোয়েরিটা ফেরত দিলে যিনি গুনতে চান তিনি `->count()` করেন (গোনাটা
+     * ডাটাবেজেই হয়), আর যিনি দেখাতে চান তিনি নিজের সীমা বসিয়ে নেন।
+     *
+     * ⛔ `pendingFor()` অক্ষত — সে এখন এটাকেই ডাকে, তাই দুইটা আলাদা
+     * হওয়ার উপায় নেই। নিয়ম দুই জায়গায় লিখলে একদিন ইনবক্স আর উইজেট
+     * দুই সংখ্যা দেখাত।
+     *
+     * @return Builder<Approval>
+     */
+    public function pendingQueryFor(User $user): Builder
+    {
         $tuples = $this->decidableTuples($user);
 
-        // কোনো ছকেই ইনি নেই — একটা কোয়েরিও পাঠানোর দরকার নেই।
+        /*
+         * কোনো ছকেই ইনি নেই — কিছুই মেলে না।
+         *
+         * আগে এখানে একটা খালি Collection ফেরত যেত, আর কোনো কোয়েরিই
+         * পাঠানো হত না। এখন কোয়েরি ফেরত দিতে হয় বলে সেটা সম্ভব নয়,
+         * তাই এমন একটা শর্ত যা কখনো সত্যি হয় না — ডাটাবেজ ওটা দেখেই
+         * থেমে যায়, আর ডাকা পক্ষকে আলাদা করে "খালি" সামলাতে হয় না।
+         */
         if ($tuples === []) {
-            return new Collection();
+            return Approval::query()->whereRaw('1 = 0');
         }
 
         $query = Approval::query()
@@ -358,7 +397,9 @@ final class ApprovalEngine
 
         $this->exceptOwnBeyondLimit($query, $user);
 
-        return $query->orderBy('requested_at')->get();
+        // পুরনোটা আগে — যেটা সবচেয়ে বেশিক্ষণ ঝুলে আছে সেটাই কাউকে
+        // সবচেয়ে বেশিক্ষণ আটকে রেখেছে
+        return $query->orderBy('requested_at');
     }
 
     /**
@@ -396,7 +437,7 @@ final class ApprovalEngine
      * সিদ্ধান্তের দরজা দুই কথা বলত।
      *
      * @return list<array{0: string, 1: string, 2: string, 3: list<int>}>
-     *         module · action · approvable_type · যেসব স্তর ইনার
+     *                                                                    module · action · approvable_type · যেসব স্তর ইনার
      */
     private function decidableTuples(User $user): array
     {
@@ -526,7 +567,7 @@ final class ApprovalEngine
      *
      * ⓘ `BelongsToCompany` কোম্পানির সীমাটা নিজেই বসায়।
      *
-     * @return array<string, ApprovalFlow>  "module|action|document_type"
+     * @return array<string, ApprovalFlow> "module|action|document_type"
      */
     private function flows(): array
     {

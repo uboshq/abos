@@ -770,5 +770,4 @@ class DirectSaleController extends Controller implements HasMiddleware
 
         return $terms;
     }
-
 }

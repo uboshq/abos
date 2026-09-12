@@ -50,6 +50,15 @@ use Illuminate\View\View;
  */
 class ExpenseController extends Controller implements HasMiddleware
 {
+    /**
+     * ঝুলে থাকা খরচের তালিকায় সর্বোচ্চ কয়টা সারি।
+     *
+     * পঞ্চাশ — বাকি তালিকাগুলোর পাতার মাপের সমান, যাতে "এক পর্দা কত"
+     * সংখ্যাটা পুরো সিস্টেমে একটাই থাকে। এটা কাজের সীমা নয়, দেখার
+     * সীমা: মোট সংখ্যাটা পাশেই লেখা থাকে।
+     */
+    private const WAITING_LIMIT = 50;
+
     public function __construct(private readonly MenuBuilder $menu) {}
 
     /** @return list<Middleware> */
@@ -58,6 +67,19 @@ class ExpenseController extends Controller implements HasMiddleware
         return [new Middleware('can:finance.expense.view')];
     }
 
+    /**
+     * ⛔ পাতা ভাগ নেই, ইচ্ছাকৃত — এটা ব্যবস্থাপনার ছবি, তালিকা নয়।
+     *
+     * `heads` হলো ছকের `5200`-এর নিচের খাতগুলো — সংখ্যাটা ছক ঠিক করে,
+     * ব্যবসার আয়তন নয়। `recent` আগে থেকেই `limit(20)`, আর তার কাজই
+     * "আজ কী কী লেখা হয়েছে" — একুশতম সারিটা ওই প্রশ্নের উত্তর নয়।
+     * `waiting`-এ এখন [[WAITING_LIMIT]], আর কাটা পড়লে পর্দায় লেখা থাকে।
+     *
+     * ⓘ "আরও দেখুন"-এর উত্তর এখানে নয় — প্রতিটা খাতের সংখ্যা ক্লিক
+     * করলে ওই খাতের খতিয়ানে নিয়ে যায় (নিয়ম ১), আর সেখানে পাতা ভাগ আছে।
+     *
+     * কারণটা `EveryListScreenPaginatesTest`-এর ছাড়ের তালিকাতেও আছে।
+     */
     public function index(Request $request): View
     {
         [$from, $to] = $this->range($request);
@@ -68,6 +90,17 @@ class ExpenseController extends Controller implements HasMiddleware
             'to' => $to,
             'heads' => $this->heads($from, $to),
             'waiting' => $this->waiting(),
+
+            /*
+             * ঝুলে থাকা মোট কয়টা — তালিকার দৈর্ঘ্য থেকে নয়, নিজের গোনা থেকে।
+             *
+             * নিচের তালিকাটা `WAITING_LIMIT`-এ বাঁধা, তাই `$waiting->count()`
+             * বড়জোর পঞ্চাশ বলবে। শিরোনামের ব্যাজে ওই সংখ্যাটা বসালে
+             * একশো সাঁইত্রিশটা ঝুলে থাকা খরচ পর্দায় "৫০" হয়ে যেত — আর
+             * সেটা কম দেখানোর সবচেয়ে খারাপ রূপ, কারণ ব্যাজটা দেখতে
+             * ঠিক আগের মতোই।
+             */
+            'waitingTotal' => $this->waitingCount(),
             'recent' => Voucher::query()
                 ->ofType(Voucher::EXPENSE)
                 ->orderByDesc('trx_date')->orderByDesc('id')
@@ -97,16 +130,24 @@ class ExpenseController extends Controller implements HasMiddleware
      * ⓘ সময়সীমা ইচ্ছাকৃতভাবে **নেই**: ঝুলে থাকা খরচ যত পুরনো তত জরুরি,
      * আর মাস বদলালে সেটা চোখের আড়ালে চলে যাওয়াই সবচেয়ে খারাপ ফল।
      *
+     * ── কেন এখন পঞ্চাশে বাঁধা (১২ সেপ্টেম্বর ২০২৬) ──────────────────
+     * সময়সীমা নেই মানে তালিকাটারও সীমা ছিল না। যে কোম্পানিতে কেউ ছয়
+     * মাস অনুমোদন করেননি, সেখানে এই এক অংশই কয়েক হাজার সারি টানত —
+     * আর পর্দাটা ধীরে খোলা ছাড়া কোনো লক্ষণ দিত না।
+     *
+     * ⚠️ ক্রমটা বদলায়নি — **পুরনোটা আগেই**, তাই সীমাটা নতুনগুলোকে নয়,
+     * কেবল সবচেয়ে কম জরুরিগুলোকে কেটে দেয়। উদ্দেশ্যটা অটুট।
+     *
+     * ⛔ আর কাটাটা লুকানো হয় না: মোট সংখ্যা [[waitingCount]] আলাদা
+     * কোয়েরিতে গোনা হয় আর পর্দায় লেখা থাকে "৫০টি দেখানো হচ্ছে, মোট
+     * ঝুলে আছে ১৩৭টি"। লম্বা সারিটা নিজেই একটা সংকেত — কেউ অনুমোদন
+     * করছেন না — আর সংকেতটা লুকানোর মানে হত না।
+     *
      * @return Collection<int, Voucher>
      */
     private function waiting()
     {
-        $ids = Approval::query()
-            ->where('approvable_type', Voucher::class)
-            ->where('module', VoucherApproval::MODULE)
-            ->where('action', Voucher::EXPENSE)
-            ->pending()
-            ->pluck('approvable_id');
+        $ids = $this->waitingIds();
 
         if ($ids->isEmpty()) {
             return collect();
@@ -115,7 +156,42 @@ class ExpenseController extends Controller implements HasMiddleware
         return Voucher::query()
             ->whereIn('id', $ids)
             ->orderBy('trx_date')->orderBy('id')
+            ->limit(self::WAITING_LIMIT)
             ->get();
+    }
+
+    /**
+     * ঝুলে থাকা খরচ সত্যিই কয়টা — সীমার বাইরেরগুলোসহ।
+     *
+     * গোনাটা ডাটাবেজে, সারি না এনে: প্রশ্নটা "কয়টা", আর তার জন্য
+     * কাগজগুলো মেমরিতে তোলার দরকার নেই।
+     */
+    private function waitingCount(): int
+    {
+        $ids = $this->waitingIds();
+
+        return $ids->isEmpty()
+            ? 0
+            : Voucher::query()->whereIn('id', $ids)->count();
+    }
+
+    /**
+     * অনুমোদনের অপেক্ষায় থাকা খরচ-ভাউচারের আইডি।
+     *
+     * তালিকা আর গোনা — দুইজনেরই একই ছাঁকনি লাগে। দুই জায়গায় লিখলে
+     * একদিন একটায় শর্ত যোগ হত অন্যটায় নয়, আর তখন ব্যাজের সংখ্যা আর
+     * নিচের সারির সংখ্যা দুই রকম কথা বলত।
+     *
+     * @return Collection<int, int>
+     */
+    private function waitingIds()
+    {
+        return Approval::query()
+            ->where('approvable_type', Voucher::class)
+            ->where('module', VoucherApproval::MODULE)
+            ->where('action', Voucher::EXPENSE)
+            ->pending()
+            ->pluck('approvable_id');
     }
 
     /**

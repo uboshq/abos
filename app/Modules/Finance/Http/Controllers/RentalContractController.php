@@ -14,6 +14,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Collection;
 
 /**
  * ভাড়ার চুক্তি ও জামানত।
@@ -199,7 +200,7 @@ class RentalContractController extends Controller implements HasMiddleware
         return back()->with('saved', __('finance::message.rental_closed_done'));
     }
 
-    /** @return \Illuminate\Support\Collection<int, Account> */
+    /** @return Collection<int, Account> */
     private function moneyAccounts()
     {
         return Account::query()->money()->postable()->active()->orderBy('code')->get();

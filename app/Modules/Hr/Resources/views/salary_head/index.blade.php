@@ -86,5 +86,7 @@
             :empty="__('hr::message.no_heads')"
             :rows="$heads"
             :columns="$columns" />
+
+        <x-ui.pager :rows="$heads" />
     </div>
 </x-layouts.app>

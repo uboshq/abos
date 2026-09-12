@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modules;
 
-use App\Modules\Inventory\Services\StockService;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\User;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Inventory\Services\StockService;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesOrder;
 use App\Modules\Sales\Services\DeliveryChallanService;

@@ -94,22 +94,18 @@ class EveryUserListAsksWhichCompanyTest extends TestCase
      * @var array<string, string>
      */
     private const EXEMPT = [
-        'app/Http/Controllers/Auth/LoginController.php' =>
-            'লগইনের মুহূর্তে কোনো কোম্পানি বাছাই হয়নি — ছাঁকনির প্রসঙ্গই নেই',
+        'app/Http/Controllers/Auth/LoginController.php' => 'লগইনের মুহূর্তে কোনো কোম্পানি বাছাই হয়নি — ছাঁকনির প্রসঙ্গই নেই',
 
-        'app/Http/Controllers/WorkspaceController.php' =>
-            'কোম্পানি সুইচার — ব্যবহারকারীর **নিজের** কোম্পানিগুলো দেখায়, '
+        'app/Http/Controllers/WorkspaceController.php' => 'কোম্পানি সুইচার — ব্যবহারকারীর **নিজের** কোম্পানিগুলো দেখায়, '
             .'আর `switchCompany()` নিজে অধিকার যাচাই করে',
 
-        'app/Modules/Approval/Http/Controllers/ApprovalInboxController.php' =>
-            'একটাই `findOrFail($chosen)`, আর তার **আগেই** '
+        'app/Modules/Approval/Http/Controllers/ApprovalInboxController.php' => 'একটাই `findOrFail($chosen)`, আর তার **আগেই** '
             .'`abort_unless(isset($signers[$chosen]), 404)` — আর `theSigners()` '
             .'কোম্পানি ধরে ছাঁকে (whereHas companies)। ⓘ অর্থাৎ id-টা একটা '
             .'কোম্পানি-স্কোপড তালিকার সাথে মিলিয়ে দেখা হয়, তারপর তোলা হয়। '
             .'⚠️ যাচাই করা হয়েছে কোড পড়ে, মন্তব্য পড়ে নয়।',
 
-        'app/Console/Commands/SyncPermissions.php' =>
-            'রোল ও পারমিশন আজ কোম্পানি-নিরপেক্ষ (spatie teams বন্ধ); '
+        'app/Console/Commands/SyncPermissions.php' => 'রোল ও পারমিশন আজ কোম্পানি-নিরপেক্ষ (spatie teams বন্ধ); '
             .'⚠️ teams চালু হলে এই ছাড়টা **তুলে ফেলতে হবে**',
     ];
 

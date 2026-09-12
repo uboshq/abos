@@ -234,7 +234,7 @@ final class OpeningBalanceService
      * idempotent — exists() দিয়ে আগে-বসা জের দেখে থামে, খাতটা ছোঁয়ও না।
      * তাই আংশিক ইমপোর্ট আবার চালালে বাকিটা সম্পূর্ণ হয়, দ্বিগুণ নয়।
      *
-     * @return list<\App\Modules\Accounts\Models\LedgerEntry>
+     * @return list<LedgerEntry>
      */
     public function loadFor(Account $account, string $amount, Carbon|string|null $date = null): array
     {

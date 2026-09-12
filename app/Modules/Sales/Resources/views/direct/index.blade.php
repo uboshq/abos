@@ -1097,7 +1097,7 @@
                                  ক্রয়ের কাউন্টারে যে নামে ওটা আগে থেকেই আছে। --}}
                             <label class="min-w-0" x-show="termKind === 'fixed'" x-cloak>
                                 <span class="mb-0.5 block text-2xs font-semibold uppercase tracking-wide
-                                             text-(--color-ink-muted)">{{ __('sales::field.due_on') }}</span>
+                                             text-(--color-ink-muted)">{{ __('sales::field.due_on_fixed') }}</span>
                                 {{-- ⚠️ ব্রাউজারের নিজের তারিখের ঘর নয় — `x-ui.date` কম্পোনেন্ট।
 
                                      ওটা লেখাটা **নিজের লোকেল ধরে** আঁকে, আর

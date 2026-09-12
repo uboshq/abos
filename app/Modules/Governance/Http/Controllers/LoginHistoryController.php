@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Governance\Http\Controllers;
 
-use App\Core\Support\CompanyContext;
 use App\Core\Services\MenuBuilder;
+use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Models\LoginAttempt;
 use App\Models\User;
@@ -95,8 +95,8 @@ class LoginHistoryController extends Controller implements HasMiddleware
             'failedToday' => LoginAttempt::query()
                 // ⚠️ উপরের তালিকার মতোই — এই সংখ্যাটাও কেবল এই কোম্পানির
                 ->where(fn (Builder $q) => $q
-                ->where('company_id', CompanyContext::id())
-                ->orWhereNull('company_id'))
+                    ->where('company_id', CompanyContext::id())
+                    ->orWhereNull('company_id'))
                 ->failed()
                 ->where('created_at', '>=', now()->subDay())
                 ->count(),
@@ -111,8 +111,8 @@ class LoginHistoryController extends Controller implements HasMiddleware
                  */
                 ->whereIn('id', LoginAttempt::query()
                     ->where(fn (Builder $q) => $q
-                ->where('company_id', CompanyContext::id())
-                ->orWhereNull('company_id'))
+                        ->where('company_id', CompanyContext::id())
+                        ->orWhereNull('company_id'))
                     ->distinct()->pluck('user_id')->filter())
                 ->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))
                 ->orderBy('name')

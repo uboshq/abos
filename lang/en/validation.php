@@ -31,6 +31,32 @@ return [
     'unique' => 'That :attribute already exists.',
     'exists' => 'That :attribute could not be found.',
 
+    /*
+     * Password shape — 12 Sep 2026.
+     *
+     * These five are word-for-word Laravel's own. That breaks the rule at
+     * the top of this file (don't copy what the framework already says
+     * well), and it is deliberate: the Bangla side had to be written, and
+     * rule 9 is that both languages carry the same keys. A key present in
+     * bn and absent here is exactly what
+     * `BothLanguagesSayTheSameThingTest` exists to catch.
+     *
+     * ⚠️ Do not "improve" this wording. Someone who has met these
+     * sentences before should meet the same ones here; rewriting them buys
+     * nothing and costs recognition. If a Laravel upgrade changes them,
+     * copy the new wording across rather than inventing any.
+     *
+     * All five are here, not just the two in use today (`letters`,
+     * `numbers`) — see the Bangla file for why.
+     */
+    'password' => [
+        'letters' => 'The :attribute field must contain at least one letter.',
+        'mixed' => 'The :attribute field must contain at least one uppercase and one lowercase letter.',
+        'numbers' => 'The :attribute field must contain at least one number.',
+        'symbols' => 'The :attribute field must contain at least one symbol.',
+        'uncompromised' => 'The given :attribute has appeared in a data leak. Please choose a different :attribute.',
+    ],
+
     'custom' => [],
 
     /*

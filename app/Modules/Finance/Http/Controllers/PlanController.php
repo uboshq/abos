@@ -30,6 +30,15 @@ class PlanController extends Controller implements HasMiddleware
         return [new Middleware('can:finance.plan.view')];
     }
 
+    /**
+     * ⛔ পাতা ভাগ নেই, ইচ্ছাকৃত — এই পর্দা ডাটাবেজই ছোঁয় না।
+     *
+     * `sections()` আর `tally()` দুইটাই [[FinancePlan]]-এর স্থির লেখা —
+     * মডিউলটা কী কী করে আর কতটা হয়েছে, তার একটা কাগজ। কোনো কোয়েরি নেই,
+     * তাই ডেটা বাড়লে এখানে কিছুই বাড়ে না।
+     *
+     * কারণটা `EveryListScreenPaginatesTest`-এর ছাড়ের তালিকাতেও আছে।
+     */
     public function index(Request $request): View
     {
         return view('finance::plan.index', [

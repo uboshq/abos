@@ -8,6 +8,7 @@ use App\Core\Support\CompanyContext;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Customer\Models\CustomerConduct;
 use App\Modules\Customer\Support\ConductType;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -68,7 +69,7 @@ final class ConductService
      * তাই ক্রমটা `risk → notice → good`, আর তার ভিতরে নতুনটা আগে:
      * পুরনো একটা লাল পতাকার চেয়ে গত সপ্তাহের ঘটনাটাই বেশি কাজের।
      *
-     * @return \Illuminate\Support\Collection<int, CustomerConduct>
+     * @return Collection<int, CustomerConduct>
      */
     public function activeFor(Customer $customer)
     {
@@ -93,7 +94,7 @@ final class ConductService
      * লেখা আছে), কিন্তু আজ পর্যন্ত কেউ ওটা ব্যবহার করেনি।
      *
      * @param  list<int>  $customerIds
-     * @return \Illuminate\Support\Collection<int, \Illuminate\Support\Collection<int, CustomerConduct>>
+     * @return Collection<int, Collection<int, CustomerConduct>>
      */
     public function activeForMany(array $customerIds)
     {
@@ -116,8 +117,8 @@ final class ConductService
      * [[ConductType]] বের করে, আর ওই মিলটা ডাটাবেস জানে না। সারির
      * সংখ্যা একজন গ্রাহকপ্রতি হাতে গোনা, তাই খরচও নেই।
      *
-     * @param  \Illuminate\Support\Collection<int, CustomerConduct>  $rows
-     * @return \Illuminate\Support\Collection<int, CustomerConduct>
+     * @param  Collection<int, CustomerConduct>  $rows
+     * @return Collection<int, CustomerConduct>
      */
     private function sorted($rows)
     {

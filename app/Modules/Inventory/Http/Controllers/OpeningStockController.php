@@ -50,17 +50,29 @@ class OpeningStockController extends Controller implements HasMiddleware
 
     public function index(Request $request): View
     {
-        $entered = $this->entered();
-
         return view('inventory::stock.opening', [
             'menu' => $this->menu->forUser($request->user()),
             'warehouses' => Warehouse::query()->active()->orderBy('code')->get(),
+
+            /*
+             * ⓘ বাছার ঘরের পণ্যগুলো — পাতা ভাগ হয় না, আর হওয়ার কথাও নয়।
+             * এটা একটা `<select>`-এর বিকল্প তালিকা, পর্দার তালিকা নয়;
+             * ড্রপডাউনের অর্ধেক পণ্য লুকিয়ে দিলে বাকিগুলো বসানোই যেত না।
+             */
             'products' => $this->openProducts(),
-            'entered' => $entered,
-            'total' => $entered->reduce(
-                fn (string $sum, object $row) => bcadd($sum, (string) $row->value, 4),
-                '0',
-            ),
+
+            'entered' => $this->entered(),
+
+            /*
+             * মোট মূল্য নিজের কোয়েরিতে, তালিকা থেকে নয়।
+             *
+             * আগে এটা `$entered->reduce(...)` ছিল — তালিকাটা পুরোটা আসত
+             * বলে যোগফলও পুরোটার হত। পাতা ভাগ বসার পর ওই লেখাটা চুপচাপ
+             * **এই পাতার** যোগফল হয়ে যেত, অথচ শিরোনামে লেখা থাকত "মোট
+             * খোলা মজুদের মূল্য"। আর এই সংখ্যাটা শুরুর দিনের অবশিষ্ট
+             * মুনাফায় বসে — ভুল হলে সেটা খাতার ভুল, পর্দার নয়।
+             */
+            'total' => $this->enteredTotal(),
         ]);
     }
 
@@ -125,11 +137,15 @@ class OpeningStockController extends Controller implements HasMiddleware
      * মূল্যটা স্তর থেকে গোনা হয়, আলাদা করে কোথাও জমা রাখা নয় — দুই
      * জায়গায় একই সংখ্যা রাখলে একদিন আলাদা হবেই।
      *
-     * @return Collection<int, object>
+     * ── কেন পাতা ভাগ ────────────────────────────────────────────────
+     * "একবারের কাজ" বলে সারির সংখ্যা ছোট মনে হয়, কিন্তু সারি বসে
+     * **পণ্য × গুদাম** ধরে। পাঁচ হাজার পণ্যের একটা দোকান তিনটা গুদামে
+     * খোলা মজুদ তুললে এই তালিকাটাই পনেরো হাজার সারি — আর তখন ঠিক
+     * সেদিনই পর্দাটা মরত, যেদিন ব্যবহারকারী সিস্টেমটা প্রথম চালু করছেন।
      */
     private function entered()
     {
-        return StockMovement::query()
+        return $this->enteredQuery()
             ->select([
                 'inv_stock_movements.id',
                 'inv_stock_movements.trx_date',
@@ -142,14 +158,52 @@ class OpeningStockController extends Controller implements HasMiddleware
                 DB::raw('COALESCE(inv_cost_layers.qty_in * inv_cost_layers.unit_cost, 0) as value'),
                 'inv_cost_layers.unit_cost',
             ])
+            ->orderByDesc('inv_stock_movements.id')
+            ->paginate(50)
+            ->withQueryString();
+    }
+
+    /**
+     * বসানো সবটার মোট মূল্য — সারি না এনে, ডাটাবেজেই যোগ করা।
+     *
+     * ⚠️ যোগটা SQL-এ, PHP-তে নয়, আর সেটা ইচ্ছাকৃত: PHP-তে করতে হলে
+     * পনেরো হাজার সারি মেমরিতে তুলতে হত — ঠিক যেটা এড়াতে পাতা ভাগ
+     * বসানো হয়েছে। মোট দেখানোর জন্য পুরো তালিকা তোলা মানে পাতা ভাগটা
+     * কেবল চোখের, মেশিনের নয়।
+     *
+     * ⓘ ঘরগুলো DECIMAL, তাই SUM নির্ভুল — float-এর গোলমাল ঢোকে না,
+     * আর `bcadd`-এর সাথে ফলটা চার দশমিকেই মেলে।
+     */
+    private function enteredTotal(): string
+    {
+        $sum = $this->enteredQuery()
+            ->selectRaw('COALESCE(SUM(COALESCE(inv_cost_layers.qty_in * inv_cost_layers.unit_cost, 0)), 0) as total')
+            ->value('total');
+
+        return bcadd((string) ($sum ?? '0'), '0', 4);
+    }
+
+    /**
+     * তালিকা আর যোগফলের সাধারণ ভিত্তি — একই join, একই ছাঁকনি।
+     *
+     * দুই জায়গায় আলাদা করে লিখলে একদিন একটায় শর্ত যোগ হত অন্যটায় নয়,
+     * আর তখন উপরের "মোট" নিচের সারিগুলোর সাথে মিলত না — যে অমিলটা
+     * ধরার একমাত্র উপায় হত হাতে যোগ করা।
+     *
+     * ⚠️ কলামের তালিকাটা এখানে **নেই**, ইচ্ছাকৃতভাবে। ডাকা দুই পক্ষ
+     * দুই রকম কলাম চায় — একজন সারি, অন্যজন একটা যোগফল — আর এখানে
+     * `select()` বসালে যোগফলের কোয়েরিতে ওই কলামগুলোও থেকে যেত: GROUP BY
+     * ছাড়া সংগ্রহের পাশে সাধারণ কলাম, যেটা কড়া MySQL সোজা খারিজ করে।
+     */
+    private function enteredQuery()
+    {
+        return StockMovement::query()
             ->join('inv_products', 'inv_products.id', '=', 'inv_stock_movements.product_id')
             ->join('inv_warehouses', 'inv_warehouses.id', '=', 'inv_stock_movements.warehouse_id')
             ->leftJoin('inv_cost_layers', function ($join) {
                 $join->on('inv_cost_layers.source_id', '=', 'inv_stock_movements.id')
                     ->where('inv_cost_layers.source_type', '=', OpeningStockService::SOURCE_TYPE);
             })
-            ->where('inv_stock_movements.source_type', OpeningStockService::SOURCE_TYPE)
-            ->orderByDesc('inv_stock_movements.id')
-            ->get();
+            ->where('inv_stock_movements.source_type', OpeningStockService::SOURCE_TYPE);
     }
 }

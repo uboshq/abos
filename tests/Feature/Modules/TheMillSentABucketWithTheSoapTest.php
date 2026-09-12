@@ -11,6 +11,7 @@ use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\StockService;
+use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Purchase\Models\PurchaseBillGiftLine;
 use App\Modules\Purchase\Services\DirectPurchaseService;
 use App\Modules\Supplier\Models\Supplier;
@@ -115,7 +116,7 @@ class TheMillSentABucketWithTheSoapTest extends TestCase
 
     /**
      * @param  list<array<string, mixed>>  $gifts
-     * @return array{bill: \App\Modules\Purchase\Models\PurchaseBill, payment: mixed}
+     * @return array{bill: PurchaseBill, payment: mixed}
      */
     private function buy(array $gifts = [], string $qty = '100', string $rate = '60'): array
     {

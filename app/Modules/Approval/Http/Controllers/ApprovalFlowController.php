@@ -38,6 +38,16 @@ class ApprovalFlowController extends Controller implements HasMiddleware
         return [new Middleware('can:approval.flow.manage')];
     }
 
+    /**
+     * ⛔ পাতা ভাগ নেই, ইচ্ছাকৃত — সারির সংখ্যা কোডে বাঁধা।
+     *
+     * একটা সারি মানে একটা মডিউলের একটা কাজের অনুমোদনের নিয়ম, আর
+     * কাজগুলোর তালিকা সোর্স কোডে ([[choices]])। ব্যবহারকারী নতুন নিয়ম
+     * বানাতে পারেন, কিন্তু কেবল ওই তালিকার ভেতরেই — অর্থাৎ সর্বোচ্চ
+     * সংখ্যাটা আগেই জানা, আর সেটা ডেটার সাথে বাড়ে না।
+     *
+     * কারণটা `EveryListScreenPaginatesTest`-এর ছাড়ের তালিকাতেও আছে।
+     */
     public function index(Request $request): View
     {
         return view('approval::flow.index', [

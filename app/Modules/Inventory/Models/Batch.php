@@ -12,10 +12,11 @@ use App\Core\Contracts\Drillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 /**
  * একটা পণ্যের একটা উৎপাদন-লট।
@@ -69,7 +70,17 @@ class Batch extends Model implements Drillable
         return $this->belongsTo(Product::class);
     }
 
-    public function movements()
+    /**
+     * ── রিটার্ন টাইপটা কেন গুরুত্বপূর্ণ ─────────────────────────────
+     * এটা লেখা না থাকায় স্ট্যাটিক বিশ্লেষক রিলেশনটা চিনত না, আর
+     * `Batch::whereHas('movements')`-কে "এই মডেলে movements নেই" বলে
+     * অভিযোগ করত (LotTraceController)। রানটাইমে কিছু ভাঙেনি, কিন্তু
+     * অভিযোগটা baseline-এ চাপা দিলে **ভবিষ্যতে সত্যিকারের ভুল রিলেশনের
+     * নামও** একইভাবে চাপা পড়ত। এক শব্দের টাইপ ঐ পাহারাটা ফিরিয়ে দেয়।
+     *
+     * @return HasMany<StockMovement, $this>
+     */
+    public function movements(): HasMany
     {
         return $this->hasMany(StockMovement::class, 'batch_id');
     }

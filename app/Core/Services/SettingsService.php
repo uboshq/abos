@@ -24,7 +24,16 @@ final class SettingsService
     /** @var array<string, mixed> */
     private array $cache = [];
 
-    /** @var array<string, array{type: string, default: mixed, module: string, group: string, label: string}>|null */
+    /**
+     * ঘোষিত সেটিংগুলো, একবার গুনে রাখা।
+     *
+     * ⚠️ আকারটা **খোলা** (`...`), আর সেটা ইচ্ছাকৃত: মডিউল নিজের সেটিংয়ে
+     * যে চাবিই দিক সেটা এখানে পৌঁছায় ([[SettingsService::definitions()]])।
+     * বন্ধ আকার লিখলে PHPStan ঘোষিত অথচ অতালিকাভুক্ত চাবিকে "নেই" বলত —
+     * আর ঠিক সেটাই `tab`-এর বেলায় ঘটেছিল।
+     *
+     * @var array<string, array{type: string, default: mixed, module: string, group: string, label: string, holds: ?string, ...}>|null
+     */
     private ?array $definitions = null;
 
     public function __construct(
@@ -35,7 +44,7 @@ final class SettingsService
     /**
      * সব মডিউলের ঘোষিত সেটিং — Control Panel-এর স্ক্রিন এটা থেকেই তৈরি হয়।
      *
-     * @return array<string, array{type: string, default: mixed, module: string, group: string, label: string}>
+     * @return array<string, array{type: string, default: mixed, module: string, group: string, label: string, holds: ?string, ...}>
      */
     public function definitions(): array
     {
@@ -56,12 +65,52 @@ final class SettingsService
                     );
                 }
 
-                $definitions[$key] = [
-                    'type' => $setting['type'] ?? 'string',
-                    'default' => $setting['default'] ?? null,
-                    'module' => $module->code,
-                    'group' => $setting['group'] ?? 'general',
-                    'label' => $setting['label'] ?? $key,
+                /*
+                 * মডিউল যা বলেছে তার সবটাই যায়, শুধু ফাঁকগুলো ভরে দেওয়া হয়।
+                 *
+                 * ── ⚠️ আগে এখানে চাবিগুলো হাতে লেখা ছিল ─────────────────
+                 * আগের কোড একটা নতুন অ্যারে বানাত আর `$setting` থেকে নাম
+                 * ধরে ধরে পাঁচ-ছয়টা চাবি তুলে আনত। ফল: **module.php-তে
+                 * যোগ করা যেকোনো নতুন চাবি নীরবে হারিয়ে যেত** — ব্যতিক্রম
+                 * নয়, সতর্কতা নয়, কেবল অনুপস্থিতি।
+                 *
+                 * ⓘ এটা দুইবার ঘটেছে, আর দ্বিতীয়বারটা প্রথমটার পাশে লেখা
+                 * সতর্কবার্তা সত্ত্বেও:
+                 *
+                 *   ১. `holds` — পাহারাটা লেখা ছিল, কন্ট্রোলার সেটা কখনো
+                 *      দেখতই না, আর কাগজভরা পর্দা দিব্যি বন্ধ হয়ে যাচ্ছিল।
+                 *      তখন একটা লাইন যোগ করে সারানো হয়েছিল।
+                 *
+                 *   ২. `tab` — [[ControlPanelController::crossTabs()]] ঘোষণা
+                 *      থেকে ট্যাব গোনে (`'tab' => 'counter'`), আর সেটাই
+                 *      §১৯.৭ মানার উপায়: কোরে মডিউলের নাম না লিখে সেটিং
+                 *      নিজেই বলে সে কোথায় বসতে চায়। ⛔ কিন্তু চাবিটা এই
+                 *      তালিকায় ছিল না, তাই `$definition['tab']` চিরকাল
+                 *      null — অর্থাৎ **ব্যবস্থাটা লেখা ছিল আর কোনোদিন
+                 *      চলতে পারত না**। আজ কোনো মডিউল `tab` ঘোষণা করে না
+                 *      বলে কেউ টের পায়নি; প্রথম যিনি করতেন, তিনি একটা
+                 *      নীরব অ-ঘটনা পেতেন।
+                 *
+                 * ⭐ ১২ সেপ্টেম্বর ২০২৬-এ larastan বসানোর দিনে ধরা পড়ল —
+                 * PHPStan বলছিল `Offset 'tab' … does not exist` আর
+                 * `in_array() … always false`। সংকেতটা ঠিক ছিল।
+                 *
+                 * ── কেন এবার আর তালিকা নয় ──────────────────────────────
+                 * তৃতীয়বার যাতে না ঘটে, তাই নাম ধরে তোলা বন্ধ: `$setting`
+                 * পুরোটাই যায়, আর `+` কেবল **অনুপস্থিত** ঘরগুলো ভরে।
+                 * এখন নতুন চাবি যোগ করতে এই ফাইলটা খুলতেই হয় না।
+                 *
+                 * `key` বাদ, কারণ সেটা অ্যারের চাবি হয়ে আগেই আছে; দুই
+                 * জায়গায় থাকলে একদিন দুইটা আলাদা কথা বলত।
+                 *
+                 * `module` `+`-এর বাইরে বসে, কারণ ওটা কোরের হিসাব — মডিউল
+                 * নিজের কোড ভুল করেও ঘোষণা করতে পারবে না।
+                 */
+                $definitions[$key] = array_diff_key($setting, ['key' => null]) + [
+                    'type' => 'string',
+                    'default' => null,
+                    'group' => 'general',
+                    'label' => $key,
 
                     /*
                      * এই সুইচটা বন্ধ করলে যে কাগজগুলোর দরজা বন্ধ হয়ে যেত।
@@ -69,16 +118,11 @@ final class SettingsService
                      * মডিউল একটা মডেলের নাম দেয়; কোর শুধু গুনে দেখে সারি
                      * আছে কি না, আর থাকলে সুইচটা বন্ধ হতে দেয় না। কোরে
                      * কোনো মডিউলের নাম নেই (১৯.৭)।
-                     *
-                     * ── কেন এই লাইনটা দরকার ────────────────────────────
-                     * এখানে চাবিগুলো হাতে লেখা, তাই module.php-তে যোগ করা
-                     * যেকোনো নতুন চাবি নীরবে হারিয়ে যায়। 'holds' প্রথমবার
-                     * ঠিক তাই হয়েছিল: পাহারাটা লেখা ছিল, কন্ট্রোলার সেটা
-                     * কখনো দেখতই না, আর কাগজভরা পর্দা দিব্যি বন্ধ হয়ে
-                     * যাচ্ছিল।
                      */
-                    'holds' => $setting['holds'] ?? null,
+                    'holds' => null,
                 ];
+
+                $definitions[$key]['module'] = $module->code;
             }
         }
 

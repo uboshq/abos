@@ -7,7 +7,7 @@ namespace App\Modules\Sales\Services;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Modules\Sales\Models\PrintJob;
-use Illuminate\Support\Collection;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -143,13 +143,24 @@ final class PrintQueue
     /**
      * এখনো যেগুলো বেরোয়নি — কাউন্টারের পর্দায় দেখানোর জন্য।
      *
-     * @return Collection<int, PrintJob>
+     * ── কেন পাতা ভাগ (১২ সেপ্টেম্বর ২০২৬) ───────────────────────────
+     * খালি থাকাই স্বাভাবিক, তাই সীমাহীন তালিকাটা নিরীহ মনে হত। কিন্তু
+     * এই পর্দার **কাজই** সেই দিনটা, যেদিন কিছু বেরোচ্ছে না — প্রিন্টার
+     * বিগড়েছে, বা কাগজ শেষ। ঠিক তখনই সারি জমে, আর জমতে থাকে যতক্ষণ
+     * না কেউ খেয়াল করেন। অর্থাৎ তালিকাটা লম্বা হয় কেবল সেই মুহূর্তে
+     * যখন পর্দাটা খুলতেই হবে — আর তখনই সেটা সবচেয়ে ভারী।
+     *
+     * ⚠️ ক্রমটা `id` ধরে, অর্থাৎ **পুরনোটা আগে**, আর সেটা বদলায়নি:
+     * সারিতে যে আগে দাঁড়িয়েছে সে আগে বেরোবে। পাতা ভাগ ক্রমটা ছোঁয় না।
+     *
+     * @return LengthAwarePaginator<int, PrintJob>
      */
     public function pending()
     {
         return PrintJob::query()
             ->waiting()
             ->orderBy('id')
-            ->get();
+            ->paginate(50)
+            ->withQueryString();
     }
 }

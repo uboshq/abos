@@ -95,7 +95,13 @@ return [
     'liability_account' => 'Liability account',
     'interest_account' => 'Interest account',
     'into_account' => 'Money goes into',
-    'from_account' => 'Money comes from',
+    /*
+     * Which account a loan instalment is paid from — not the voucher's
+     * `from_account`. Both were called `from_account` in this one file, and
+     * PHP keeps the last, so the voucher screen and its validation messages
+     * both showed this loan wording instead of their own.
+     */
+    'pay_from_account' => 'Money comes from',
     'security' => 'Security',
     'instalment_no' => 'No',
     'due_date' => 'Due',

@@ -10,7 +10,9 @@ use App\Models\User;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Purchase\Models\PurchaseOrder;
+use App\Modules\Purchase\Models\PurchaseOrderLine;
 use App\Modules\Purchase\Services\PurchaseBillService;
 use App\Modules\Purchase\Services\PurchaseOrderService;
 use App\Modules\Supplier\Models\Supplier;
@@ -82,7 +84,7 @@ class SixtyCartonsTodayAndFortyNextWeekTest extends TestCase
         $this->order = $orders->confirm($this->order);
     }
 
-    private function orderLine(): \App\Modules\Purchase\Models\PurchaseOrderLine
+    private function orderLine(): PurchaseOrderLine
     {
         return $this->order->lines()->firstOrFail();
     }
@@ -90,7 +92,7 @@ class SixtyCartonsTodayAndFortyNextWeekTest extends TestCase
     /**
      * @param  array<string, mixed>  $extra
      */
-    private function bill(string $qty, array $extra = []): \App\Modules\Purchase\Models\PurchaseBill
+    private function bill(string $qty, array $extra = []): PurchaseBill
     {
         return app(PurchaseBillService::class)->create(
             [

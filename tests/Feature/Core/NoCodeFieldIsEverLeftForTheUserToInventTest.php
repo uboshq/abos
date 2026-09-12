@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Tests\Feature\Core;
 
 use App\Core\Engines\Coding\CodeSuggester;
+use App\Core\Support\CompanyContext;
+use App\Models\User;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\AccountService;
 use App\Modules\MasterData\Models\Currency;
@@ -14,8 +16,6 @@ use App\Modules\MasterData\Models\Unit;
 use App\Modules\MasterData\Services\LocationService;
 use App\Modules\MasterData\Services\MasterListService;
 use App\Modules\MasterData\Support\CodeConventions;
-use App\Core\Support\CompanyContext;
-use App\Models\User;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;

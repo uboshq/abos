@@ -8,7 +8,6 @@ use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\LedgerEntry;
 use App\Models\User;
-use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
@@ -19,6 +18,7 @@ use App\Modules\Sales\Services\DeliveryChallanService;
 use App\Modules\Supplier\Models\Supplier;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Collection;
 use Tests\TestCase;
 
 /**
@@ -216,8 +216,8 @@ final class TheLorryFareNeverReachedTheBooksTest extends TestCase
         return $challan;
     }
 
-    /** @return \Illuminate\Support\Collection<int, object> */
-    private function ledgerOf(DeliveryChallan $challan): \Illuminate\Support\Collection
+    /** @return Collection<int, object> */
+    private function ledgerOf(DeliveryChallan $challan): Collection
     {
         return LedgerEntry::query()
             ->join('accounts', 'accounts.id', '=', 'ledger_entries.account_id')

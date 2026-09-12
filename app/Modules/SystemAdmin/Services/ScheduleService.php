@@ -274,7 +274,6 @@ final class ScheduleService
     /**
      * প্রাপক — কেবল সংখ্যা (user id), অনন্য, খালি বাদ।
      *
-     * @param  mixed  $raw
      * @return list<int>
      */
     private function cleanRecipients(mixed $raw): array

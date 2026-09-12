@@ -96,7 +96,7 @@ return [
      */
     'previous_due' => 'Previous Due',
     'previous_advance' => 'Previous Advance',
-    'due' => 'Due',
+    /* 'due' is declared above with the challan/invoice block — same word, so not twice. */
     'advance' => 'Advance',
     /* More paid than the bill — the rest stays to the customer's credit. */
     'kept_as_advance' => 'Kept as advance',
@@ -177,7 +177,14 @@ return [
     'inv_number' => 'INV Number',
     'on_confirm' => 'on confirm',
     'days' => 'days',
-    'due_on' => 'or a fixed date',
+    /*
+     * Terms can be said two ways — in days, or on a date. This labels that
+     * second way; it is not the document's own `due_on` field.
+     *
+     * Both were called `due_on`, and PHP keeps the last, so the invoice form,
+     * the list column and the printed copy all read "or a fixed date".
+     */
+    'due_on_fixed' => 'or a fixed date',
     'invoice_no_editable' => 'change it if you need to',
     'optional' => 'optional',
     'qty' => 'Qty.',
@@ -297,8 +304,13 @@ return [
     // contributed from here (see SalesFacts)
     'last_purchase' => 'Last purchase',
 
-    /* A tile on the customer's page — a smart button in Odoo, a fact row elsewhere. */
-    'invoice_count' => 'Invoices',
+    /*
+     * A tile on the customer's page — a smart button in Odoo, a fact row
+     * elsewhere. It was also called `invoice_count`, like the report column,
+     * and PHP keeps the last: the report column took this tile's wording.
+     * Same word in English, which is why nobody here noticed.
+     */
+    'invoice_count_panel' => 'Invoices',
     'user' => 'User',
     'time' => 'Time',
     'till' => 'Drawer',

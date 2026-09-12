@@ -26,7 +26,12 @@ final class ApprovalWidgets implements DashboardWidgets
     {
         $user = auth()->user();
 
-        $waiting = $user !== null ? count(app(ApprovalEngine::class)->pendingFor($user)) : 0;
+        // গোনাটা ডাটাবেজে — উইজেটে কেবল সংখ্যাটাই বসে, একটাও সারি নয়।
+        // আগে পুরো তালিকা তোলা হত (সাথে প্রতিটা অনুরোধকারী) কেবল
+        // `count()` করার জন্য, আর হোম পর্দা রোজ সবাই খোলেন।
+        $waiting = $user !== null
+            ? app(ApprovalEngine::class)->pendingQueryFor($user)->count()
+            : 0;
 
         return [
             new Widget(

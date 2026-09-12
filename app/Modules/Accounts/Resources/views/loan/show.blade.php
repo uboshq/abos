@@ -247,7 +247,7 @@
 
                                                 <label class="block">
                                                     <span class="mb-1 block text-2xs text-(--color-ink-muted)">
-                                                        {{ __('accounts::field.from_account') }}
+                                                        {{ __('accounts::field.pay_from_account') }}
                                                     </span>
                                                     <select name="from_account_id" required
                                                             class="h-(--spacing-field) rounded-(--radius-field) border

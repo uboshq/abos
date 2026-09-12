@@ -41,6 +41,19 @@ class DestinationController extends Controller
         private readonly DestinationFactory $factory,
     ) {}
 
+    /**
+     * ⛔ পাতা ভাগ নেই, ইচ্ছাকৃত — গন্তব্য বসানো হয়, জমে না।
+     *
+     * একটা সারি মানে একটা জায়গা যেখানে ব্যাকআপ যায় — পেনড্রাইভ,
+     * নেটওয়ার্ক ফোল্ডার, দূরের সার্ভার। একটা প্রতিষ্ঠান দুইটা-তিনটা
+     * বসায়, আর তারপর বছরের পর বছর ছোঁয় না। ডেটা বাড়লে এই সংখ্যা
+     * বাড়ে না।
+     *
+     * ⓘ `drives` ডাটাবেজের নয়, সার্ভার যে ড্রাইভগুলো দেখতে পায় —
+     * ওটা মেশিনের, আর নিচের মন্তব্যে কারণটা লেখা।
+     *
+     * কারণটা `EveryListScreenPaginatesTest`-এর ছাড়ের তালিকাতেও আছে।
+     */
     public function index(Request $request): View
     {
         return view('backup::destinations', [

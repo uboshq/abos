@@ -352,7 +352,7 @@ class MasterListController extends Controller implements HasMiddleware
 
         $sort = $this->applySort($query, $request, $this->sorts($model));
 
-        $records = $query->get();
+        $records = $query->paginate(50)->withQueryString();
 
         return view('master_data::list.index', [
             'menu' => $this->menu->forUser($request->user()),
@@ -374,8 +374,16 @@ class MasterListController extends Controller implements HasMiddleware
              * বোতামে চাপলে কিছুই হত না।
              *
              * নিয়মটা কোডের উপরের মন্তব্যেই লেখা ছিল। মন্তব্য নিয়ম নয়।
+             *
+             * ── ⚠️ আর `isEmpty()` নয়, `total()` ────────────────────
+             * পাতা ভাগ বসার পর `isEmpty()` কেবল **এই পাতার** কথা বলে।
+             * ঠিকানায় `?page=9` থাকলে ভরা তালিকাতেও পাতাটা খালি ফিরত,
+             * আর ঠিক এই বোতামটাই আবার ভেসে উঠত — যেটা চাপলে ভরা
+             * তালিকার উপর প্রমিত তালিকা বসানোর চেষ্টা হত।
+             *
+             * খালি কি না, এই প্রশ্নের উত্তর পাতার কাছে নেই।
              */
-            'canInstallDefaults' => $records->isEmpty()
+            'canInstallDefaults' => $records->total() === 0
                 && in_array($spec['kind'], MasterListService::HAS_DEFAULTS, true)
                 && ! $request->boolean('inactive'),
             'q' => $request->query('q'),

@@ -15,6 +15,7 @@ use App\Models\NumberSeries;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\YearEndService;
 use App\Modules\Supplier\Models\Supplier;
@@ -417,7 +418,7 @@ class YearEndTest extends TestCase
          * ⭐ টাকা বসে দলের সন্তানে — ক্যাশ কাউন্টারে, আর সেটা
          * [[CashTillService::ensurePrimaryTill()]] দিয়ে পাওয়া যায়।
          */
-        $cash = app(\App\Modules\Accounts\Services\CashTillService::class)
+        $cash = app(CashTillService::class)
             ->ensurePrimaryTill()->account;
         $sales = StandardChart::find(StandardChart::SALES);
         $cost = StandardChart::find(StandardChart::DISCOUNT_GIVEN);

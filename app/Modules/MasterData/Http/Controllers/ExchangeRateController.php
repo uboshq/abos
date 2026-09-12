@@ -48,7 +48,22 @@ class ExchangeRateController extends Controller implements HasMiddleware
             'menu' => $this->menu->forUser($request->user()),
             'currency' => $currency,
             'base' => $this->rates->baseCurrency(),
-            'rates' => $currency->rates()->with('creator')->get(),
+            /*
+             * ⚠️ এই তালিকাটা এই মডিউলের একমাত্র তালিকা যা **রোজ বাড়ে**।
+             *
+             * একক, কর, ব্র্যান্ড — সবই বসানোর জিনিস, একবার বসলে থেমে
+             * থাকে। বিনিময় হার তা নয়: প্রতিটা মুদ্রায় প্রতিদিন একটা করে
+             * সারি জমে, আর কেউ কখনো পুরনো হার মোছে না (মুছলে গত বছরের
+             * বিলটা আজ অন্য টাকায় দাঁড়াত)। দুই বছর পরে একটা মুদ্রাতেই
+             * সাতশো সারি — আর আজ ডেটা কম বলে সেটা দেখা যায় না।
+             *
+             * নতুনটা আগে: প্রশ্নটা প্রায় সবসময় "আজকের হার কত", "দুই
+             * বছর আগে কত ছিল" নয়।
+             */
+            'rates' => $currency->rates()
+                ->with('creator')
+                ->paginate(50)
+                ->withQueryString(),
             'today' => $currency->rateOn(),
         ]);
     }

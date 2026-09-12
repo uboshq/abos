@@ -33,6 +33,23 @@ class Unit extends Model implements Drillable
     use IsMasterRecord;
     use SoftDeletes;
 
+    /**
+     * এককের সিঁড়ি সর্বোচ্চ কত ধাপ গভীর হতে পারে।
+     *
+     * ── কেন সংখ্যাটার একটা নাম দরকার ────────────────────────────────
+     * সীমাটা এই ফাইলে দুইবার লাগে (`toBase()` আর `rootUnitId()`), আর
+     * `PackConversion`-এও এর একটা কপি বসে ছিল — `private const
+     * MAX_DEPTH = 8`, যার মন্তব্যে লেখা ছিল "Unit::toBase()-এর সমান"।
+     *
+     * ⛔ কিন্তু ঐ কপিটা কোথাও ব্যবহার হত না, আর এখানে সংখ্যাটা কাঁচা
+     * লেখা ছিল। অর্থাৎ একই সীমার তিনটা রূপ: দুইটা কাঁচা `8`, আর একটা
+     * নাম যা কিছুই বাঁধত না। কেউ একটা বদলালে বাকিগুলো **নীরবে** দ্বিমত
+     * করত, আর মৃত ধ্রুবকটা পড়ে মনে হত সীমাটা এক জায়গায় বাঁধা আছে।
+     *
+     * ⓘ এখন নামটা এখানেই, যেখানে সীমাটা সত্যিই বসানো হয়।
+     */
+    public const MAX_DEPTH = 8;
+
     protected $table = 'mdm_units';
 
     protected $fillable = [
@@ -81,7 +98,7 @@ class Unit extends Model implements Drillable
         $factor = '1';
         $node = $this;
 
-        for ($depth = 0; $node !== null && $depth < 8; $depth++) {
+        for ($depth = 0; $node !== null && $depth < self::MAX_DEPTH; $depth++) {
             $factor = bcmul($factor, (string) $node->factor, 6);
             $node = $node->baseUnit;
         }
@@ -102,7 +119,7 @@ class Unit extends Model implements Drillable
     {
         $node = $this;
 
-        for ($depth = 0; $depth < 8; $depth++) {
+        for ($depth = 0; $depth < self::MAX_DEPTH; $depth++) {
             if ($node->base_unit_id === null || $node->baseUnit === null) {
                 return $node->id;
             }

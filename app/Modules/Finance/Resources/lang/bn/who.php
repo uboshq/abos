@@ -7,7 +7,6 @@ return [
     'partner' => 'অংশীদার',
     'investor' => 'বিনিয়োগকারী',
     'business' => 'ব্যবসা',
-    'owner' => 'মালিক',
     'interest' => 'সুদ',
     'profit' => 'মুনাফা',
 ];

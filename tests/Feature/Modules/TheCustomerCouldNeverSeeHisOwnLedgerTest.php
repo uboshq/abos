@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modules;
 
+use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
+use App\Core\Support\Money;
 use App\Models\Company;
+use App\Models\FinancialYear;
 use App\Models\LedgerEntry;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
@@ -351,7 +354,7 @@ class TheCustomerCouldNeverSeeHisOwnLedgerTest extends TestCase
              * লেখা যায় না, আর বছর-শেষের কাজগুলো ঠিক ওই কলামটা ধরেই
              * চলে। ডিফল্ট থাকলে ভুল বছরে সারি বসত, নীরবে।
              */
-            'financial_year_id' => \App\Models\FinancialYear::query()
+            'financial_year_id' => FinancialYear::query()
                 ->where('is_current', true)->value('id'),
 
             'account_id' => StandardChart::find(StandardChart::RECEIVABLE)->id,
@@ -403,11 +406,11 @@ class TheCustomerCouldNeverSeeHisOwnLedgerTest extends TestCase
         $this->actingAs($this->karim, 'portal')
             ->get(route('sales.portal.ledger'))
             ->assertOk()
-            ->assertSee(\App\Core\Support\Money::format('70000.0000'));
+            ->assertSee(Money::format('70000.0000'));
 
         $this->assertSame(
-            \App\Core\Support\Money::format($this->karim->fresh()->outstanding()),
-            \App\Core\Support\Money::format('70000.0000'),
+            Money::format($this->karim->fresh()->outstanding()),
+            Money::format('70000.0000'),
             'খতিয়ানের জের আর বকেয়ার হিসাব আলাদা হয়ে গেছে — একটা মিথ্যা বলছে।',
         );
     }
@@ -427,8 +430,8 @@ class TheCustomerCouldNeverSeeHisOwnLedgerTest extends TestCase
         $this->actingAs($this->karim, 'portal')
             ->get(route('sales.portal.ledger'))
             ->assertOk()
-            ->assertSee(\App\Core\Support\Money::format('1000.0000'))
-            ->assertDontSee(\App\Core\Support\Money::format('777777.0000'));
+            ->assertSee(Money::format('1000.0000'))
+            ->assertDontSee(Money::format('777777.0000'));
     }
 
     /**
@@ -447,8 +450,8 @@ class TheCustomerCouldNeverSeeHisOwnLedgerTest extends TestCase
             ->get(route('sales.portal.ledger', ['from' => '2026-08-01', 'to' => '2026-08-31']))
             ->assertOk()
             // আগের ৫০,০০০ খোলার জেরে, আর শেষ জের ৭০,০০০
-            ->assertSee(\App\Core\Support\Money::format('50000.0000'))
-            ->assertSee(\App\Core\Support\Money::format('70000.0000'));
+            ->assertSee(Money::format('50000.0000'))
+            ->assertSee(Money::format('70000.0000'));
     }
 
     /**
@@ -459,7 +462,7 @@ class TheCustomerCouldNeverSeeHisOwnLedgerTest extends TestCase
      */
     public function test_the_credit_limit_is_hidden_when_the_company_does_not_use_it(): void
     {
-        app(\App\Core\Services\SettingsService::class)
+        app(SettingsService::class)
             ->set('customer.credit_limit_enabled', false);
 
         $this->actingAs($this->karim, 'portal')
@@ -471,7 +474,7 @@ class TheCustomerCouldNeverSeeHisOwnLedgerTest extends TestCase
     /** সীমা ০ মানে "শেষ" নয় — "নগদ/অগ্রিম"। */
     public function test_a_zero_limit_reads_as_cash_only_not_as_zero(): void
     {
-        app(\App\Core\Services\SettingsService::class)
+        app(SettingsService::class)
             ->set('customer.credit_limit_enabled', true);
 
         $this->actingAs($this->karim, 'portal')

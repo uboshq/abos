@@ -9,6 +9,7 @@ use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\Setting;
 use App\Models\User;
+use App\Modules\SystemAdmin\Http\Controllers\SettingsController;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -274,7 +275,7 @@ class TheSwitchesWereDeclaredAndNeverReachableTest extends TestCase
      */
     public function test_nothing_reaches_the_screen_without_a_translation(): void
     {
-        $controller = app(\App\Modules\SystemAdmin\Http\Controllers\SettingsController::class);
+        $controller = app(SettingsController::class);
         $method = new \ReflectionMethod($controller, 'byModule');
 
         $raw = [];
@@ -313,7 +314,7 @@ class TheSwitchesWereDeclaredAndNeverReachableTest extends TestCase
      */
     public function test_the_screen_actually_shows_most_of_the_declared_switches(): void
     {
-        $controller = app(\App\Modules\SystemAdmin\Http\Controllers\SettingsController::class);
+        $controller = app(SettingsController::class);
         $method = new \ReflectionMethod($controller, 'byModule');
 
         $shown = 0;

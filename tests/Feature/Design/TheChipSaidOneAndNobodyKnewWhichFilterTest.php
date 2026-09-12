@@ -9,6 +9,7 @@ use App\Core\Support\DateFormat;
 use App\Core\Support\Ui;
 use App\Models\Company;
 use App\Models\User;
+use App\Modules\Inventory\Models\Warehouse;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -137,7 +138,7 @@ class TheChipSaidOneAndNobodyKnewWhichFilterTest extends TestCase
      */
     public function test_an_unnamed_filter_still_shows_its_value(): void
     {
-        $warehouse = \App\Modules\Inventory\Models\Warehouse::query()->firstOrFail();
+        $warehouse = Warehouse::query()->firstOrFail();
 
         $chips = $this->chips(route('inventory.stock.index', ['warehouse_id' => $warehouse->id]));
 

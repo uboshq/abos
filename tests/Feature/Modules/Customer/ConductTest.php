@@ -14,6 +14,7 @@ use App\Modules\Customer\Services\CustomerService;
 use App\Modules\Customer\Support\ConductType;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
@@ -258,10 +259,10 @@ class ConductTest extends TestCase
             $ids[] = $c->id;
         }
 
-        \Illuminate\Support\Facades\DB::enableQueryLog();
+        DB::enableQueryLog();
         app(ConductService::class)->activeForMany($ids);
-        $queries = \Illuminate\Support\Facades\DB::getQueryLog();
-        \Illuminate\Support\Facades\DB::disableQueryLog();
+        $queries = DB::getQueryLog();
+        DB::disableQueryLog();
 
         $this->assertCount(1, $queries, 'পতাকা তুলতে একটার বেশি কোয়েরি চলেছে।');
     }

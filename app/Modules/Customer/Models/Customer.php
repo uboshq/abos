@@ -25,6 +25,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 /**
@@ -200,7 +201,7 @@ class Customer extends Model implements AuthenticatableContract, Drillable
      * জরুরি, তাই ঝুঁকি আগে। label/severity ভান্ডার ([[ConductType]])
      * থেকে গোনা — লোড করা সম্পর্কের উপর, তাই বাড়তি কোনো কোয়েরি নেই।
      *
-     * @return Collection<int, array{label: string, severity: string, recorded_at: \Illuminate\Support\Carbon|null}>
+     * @return Collection<int, array{label: string, severity: string, recorded_at: Carbon|null}>
      */
     public function activeConduct(?string $locale = null): Collection
     {

@@ -53,8 +53,7 @@ class ARefusalNobodyEverSawTest extends TestCase
      * @var array<string, string>
      */
     private const EXEMPT = [
-        'app/Modules/Accounts/Resources/views/report/show.blade.php' =>
-            'প্রতিবেদন দেখার পর্দা — কোনো কাজের বোতাম নেই, তাই যাচাইয়ের ত্রুটিও নেই',
+        'app/Modules/Accounts/Resources/views/report/show.blade.php' => 'প্রতিবেদন দেখার পর্দা — কোনো কাজের বোতাম নেই, তাই যাচাইয়ের ত্রুটিও নেই',
     ];
 
     public function test_every_show_screen_can_say_why_it_refused(): void

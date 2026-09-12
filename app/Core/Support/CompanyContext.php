@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Core\Support;
 
+use Spatie\Permission\PermissionRegistrar;
+
 /**
  * এই রিকোয়েস্টটা কোন কোম্পানির — একটাই জায়গায় জানা।
  *
@@ -77,7 +79,7 @@ final class CompanyContext
              * ⓘ খরচ নগণ্য: প্রতি অনুরোধে একবার-দুইবার, আর কোম্পানি
              * বদলানো এমনিতেই বিরল।
              */
-            app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+            app(PermissionRegistrar::class)->forgetCachedPermissions();
         }
     }
 

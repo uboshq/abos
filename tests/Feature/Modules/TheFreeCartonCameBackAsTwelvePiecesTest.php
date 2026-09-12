@@ -6,12 +6,17 @@ namespace Tests\Feature\Modules;
 
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
+use App\Models\LedgerEntry;
 use App\Models\User;
+use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Inventory\Models\Product;
+use App\Modules\Inventory\Models\StockMovement;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\MasterData\Models\Tax;
 use App\Modules\MasterData\Models\Unit;
+use App\Modules\Purchase\Models\PurchaseBill;
+use App\Modules\Purchase\Models\PurchaseBillLine;
 use App\Modules\Purchase\Services\DirectPurchaseService;
 use App\Modules\Supplier\Models\Supplier;
 use Database\Seeders\DemoSeeder;
@@ -105,7 +110,7 @@ class TheFreeCartonCameBackAsTwelvePiecesTest extends TestCase
     /**
      * @param  array<string, mixed>  $line
      */
-    private function buy(array $line): \App\Modules\Purchase\Models\PurchaseBillLine
+    private function buy(array $line): PurchaseBillLine
     {
         $result = app(DirectPurchaseService::class)->complete(
             [
@@ -343,8 +348,8 @@ class TheFreeCartonCameBackAsTwelvePiecesTest extends TestCase
         // ভ্যাটটা সত্যিই বসেছে — নাহলে পরীক্ষাটা কিছুই মাপত না
         $this->assertQty('150', $bill->tax);
 
-        $entries = \App\Models\LedgerEntry::query()
-            ->where('source_type', \App\Modules\Purchase\Models\PurchaseBill::drillSourceType())
+        $entries = LedgerEntry::query()
+            ->where('source_type', PurchaseBill::drillSourceType())
             ->where('source_id', $bill->id)
             ->get();
 
@@ -364,8 +369,8 @@ class TheFreeCartonCameBackAsTwelvePiecesTest extends TestCase
          */
         $inventory = $entries->firstWhere(
             'account_id',
-            \App\Modules\Accounts\Models\Account::query()
-                ->where('code', \App\Modules\Accounts\Services\StandardChart::INVENTORY)
+            Account::query()
+                ->where('code', StandardChart::INVENTORY)
                 ->value('id'),
         );
 
@@ -443,8 +448,8 @@ class TheFreeCartonCameBackAsTwelvePiecesTest extends TestCase
          * ⚠️ কেবল কলামটা সেভ হয়েছে দেখলে কিছুই প্রমাণ হত না: ঘরটা ভরা
          * থাকত আর চলাচল আগের তারিখেই বসত, আর কেউ টের পেত না।
          */
-        $movement = \App\Modules\Inventory\Models\StockMovement::query()
-            ->where('source_type', \App\Modules\Purchase\Models\PurchaseBill::STOCK_SOURCE)
+        $movement = StockMovement::query()
+            ->where('source_type', PurchaseBill::STOCK_SOURCE)
             ->where('source_id', $bill->id)
             ->firstOrFail();
 
@@ -472,7 +477,7 @@ class TheFreeCartonCameBackAsTwelvePiecesTest extends TestCase
             [['product_id' => $this->product->id, 'qty' => '4', 'rate' => '100']],
         );
 
-        $movement = \App\Modules\Inventory\Models\StockMovement::query()
+        $movement = StockMovement::query()
             ->where('source_id', $result['bill']->id)
             ->firstOrFail();
 
@@ -499,7 +504,7 @@ class TheFreeCartonCameBackAsTwelvePiecesTest extends TestCase
         $second = $this->post(route('purchase.direct.store'), $this->counterForm());
         $second->assertSessionHasNoErrors();
 
-        $numbers = \App\Modules\Purchase\Models\PurchaseBill::query()
+        $numbers = PurchaseBill::query()
             ->orderBy('id')->pluck('document_no')->all();
 
         $this->assertCount(2, $numbers);
@@ -638,7 +643,7 @@ class TheFreeCartonCameBackAsTwelvePiecesTest extends TestCase
 
         $response->assertSessionHasNoErrors();
 
-        $bill = \App\Modules\Purchase\Models\PurchaseBill::query()->latest('id')->firstOrFail();
+        $bill = PurchaseBill::query()->latest('id')->firstOrFail();
 
         $this->assertSame('LC-2026-9001', $bill->lc_no);
 

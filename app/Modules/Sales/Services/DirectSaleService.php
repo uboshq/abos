@@ -676,8 +676,23 @@ final class DirectSaleService
      * ⚠️ দুইটা একসাথে এলে `deposits` জেতে — ওটাই বিস্তারিত, আর
      * বিস্তারিতটাই সত্য।
      *
+     * ── `kind` আর `bank_name` ডকব্লক থেকে বাদ পড়েছিল ────────────────
+     * দুইটাই নিচে বসানো হয়, আর দুইটাই ব্যবহৃত হয় — `kind` দিয়ে চেক
+     * শনাক্ত হয় (`$isCheque`), আর `bank_name` চেক-রেজিস্টারে যায়।
+     *
+     * ⛔ অনুপস্থিতিটা নিরীহ ছিল না: স্ট্যাটিক বিশ্লেষক ডকব্লক বিশ্বাস করে
+     * বলত `($row['kind'] ?? null) === 'cheque'` **সবসময় মিথ্যা**, অর্থাৎ
+     * চেকের পুরো পথটা মৃত। রানটাইমে সেটা সত্য নয়, কিন্তু যে-ই ঐ অভিযোগটা
+     * বিশ্বাস করে `kind` মুছে দিত, তার হাতে দুইটা জিনিস **নীরবে** বন্ধ
+     * হত: চেকের টাকা ১১০৪-এ (হাতে চেক) যাওয়া, আর চেক-রেজিস্টারের সারি।
+     * ⚠️ দুইটার একটাও কোনো ত্রুটি দেখাত না — কেবল টাকা ভুল খাতে বসত।
+     *
+     * ⓘ তবে নীরবে নয়: `DirectSaleChequeTest::test_a_cheque_sale_lands_in_
+     * cheques_in_hand_and_registers()` ঠিক ঐ দুইটাই মাপে — ১১০৪-এর জের আর
+     * রেজিস্টারের সারি। ডকব্লক ভুল ছিল, পাহারা নয়।
+     *
      * @param  array<string, mixed>  $data
-     * @return list<array{amount: string, account_id: mixed, instrument: ?string, reference: ?string, ref_date: ?string, narration: ?string}>
+     * @return list<array{amount: string, account_id: mixed, kind: ?string, instrument: ?string, reference: ?string, ref_date: ?string, bank_name: ?string, narration: ?string}>
      */
     private function depositRows(array $data): array
     {

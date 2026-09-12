@@ -24,7 +24,6 @@ use App\Modules\Inventory\Services\CostLayerService;
 use App\Modules\Inventory\Services\ReadsPackedQuantities;
 use App\Modules\Inventory\Services\RecipeService;
 use App\Modules\Inventory\Services\StockService;
-use App\Modules\Sales\Services\ParkedStockReservation;
 use App\Modules\Sales\Events\InvoiceConfirmed;
 use App\Modules\Sales\Models\DeliveryChallanLine;
 use App\Modules\Sales\Models\PricingRule;
@@ -1165,5 +1164,4 @@ final class SalesInvoiceService
 
         return $this->numbers->next('INV');
     }
-
 }

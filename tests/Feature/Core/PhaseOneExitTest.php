@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Core;
 
-use App\Modules\Accounts\Services\StandardChart;
-use App\Modules\Accounts\Services\CashTillService;
-use App\Modules\Accounts\Models\Account;
 use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Engines\Attachment\AttachmentEngine;
 use App\Core\Engines\Drill\DrillResolver;
@@ -26,6 +23,9 @@ use App\Models\Branch;
 use App\Models\Company;
 use App\Models\LedgerEntry;
 use App\Models\User;
+use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Services\CashTillService;
+use App\Modules\Accounts\Services\StandardChart;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;

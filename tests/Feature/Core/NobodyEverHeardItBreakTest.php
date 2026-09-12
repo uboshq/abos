@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Core;
 
-use Illuminate\Support\Facades\Artisan;
 use App\Core\Services\ErrorJournal;
 use App\Core\Services\PermissionSyncer;
 use App\Core\Support\CompanyContext;
@@ -16,6 +15,7 @@ use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Session\TokenMismatchException;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;

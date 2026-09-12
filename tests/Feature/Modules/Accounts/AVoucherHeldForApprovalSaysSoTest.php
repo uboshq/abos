@@ -8,12 +8,13 @@ use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Models\Company;
 use App\Models\User;
-use App\Modules\ApprovalCenter\Models\Approval;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
+use App\Modules\ApprovalCenter\Models\Approval;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 /**
@@ -187,7 +188,7 @@ final class AVoucherHeldForApprovalSaysSoTest extends TestCase
             'is_active' => true,
             'created_at' => now(),
             'updated_at' => now(),
-            'public_id' => (string) \Illuminate\Support\Str::uuid(),
+            'public_id' => (string) Str::uuid(),
         ]);
 
         DB::table('approval_flow_steps')->insert([
@@ -198,7 +199,7 @@ final class AVoucherHeldForApprovalSaysSoTest extends TestCase
             'requires_all' => false,
             'created_at' => now(),
             'updated_at' => now(),
-            'public_id' => (string) \Illuminate\Support\Str::uuid(),
+            'public_id' => (string) Str::uuid(),
         ]);
     }
 

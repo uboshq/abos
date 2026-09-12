@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modules\Accounts;
 
-use App\Modules\Accounts\Services\CashTillService;
 use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\AccountsFacts;
+use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Finance\Services\HeadTotals;
 use Database\Seeders\DemoSeeder;

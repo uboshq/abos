@@ -11,7 +11,6 @@ return [
     'customer' => 'Customer',
     'nobody_owes' => 'Nobody owes anything',
 
-
     // Owner Dashboard-এর সংখ্যাগুলো — ৪ সেপ্টেম্বর ২০২৬
     'today_collection' => 'Collected today',
     'today_collection_hint' => 'Money received from customers today',

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\SystemAdmin\Services;
 
+use App\Core\Engines\Report\ReportColumn;
 use App\Core\Engines\Report\ReportEngine;
 use App\Core\Engines\Report\ReportExport;
 use App\Core\Engines\Report\ReportResult;
@@ -168,7 +169,7 @@ final class ScheduledReportRunner
      * প্রাপকের যদি ক্রয়মূল্য দেখার অনুমতি না থাকে, কলামটা ফাইলেই বসে না —
      * তাই কেউ পর্দায় না-দেখা সংখ্যা ইমেইলে পান না।
      *
-     * @return list<\App\Core\Engines\Report\ReportColumn>
+     * @return list<ReportColumn>
      */
     private function mutuallyVisibleColumns(ReportResult $result, User $owner, ReportSchedule $schedule): array
     {

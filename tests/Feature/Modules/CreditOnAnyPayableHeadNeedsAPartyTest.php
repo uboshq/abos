@@ -12,6 +12,8 @@ use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Illuminate\Testing\TestResponse;
 use PHPUnit\Framework\AssertionFailedError;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
@@ -138,7 +140,7 @@ class CreditOnAnyPayableHeadNeedsAPartyTest extends TestCase
     }
 
     /** @param array<string, mixed> $extra */
-    private function save(Account $credit, array $extra = []): \Illuminate\Testing\TestResponse
+    private function save(Account $credit, array $extra = []): TestResponse
     {
         return $this->actingAs($this->clerk)->post(route('accounts.voucher.store', ['type' => 'expense']), [
             'type' => 'expense',
@@ -221,7 +223,7 @@ class CreditOnAnyPayableHeadNeedsAPartyTest extends TestCase
     public function test_with_a_party_every_payable_head_accepts_it(): void
     {
         $supplier = DB::table('suppliers')->insertGetId([
-            'public_id' => (string) \Illuminate\Support\Str::uuid(),
+            'public_id' => (string) Str::uuid(),
             'company_id' => $this->company->id,
             'code' => 'SUP-0001',
             'name_en' => 'Karim Traders',

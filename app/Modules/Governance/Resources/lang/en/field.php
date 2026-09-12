@@ -29,7 +29,6 @@ return [
     'result' => 'Result',
     'why' => 'Why',
     'where_from' => 'From',
-    'device' => 'Device',
     'last_seen' => 'Last seen',
     'as_on' => 'As on',
     'the_field' => 'Field',
