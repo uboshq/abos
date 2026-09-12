@@ -41,6 +41,20 @@ class BackupController extends Controller
         private readonly BackupRunner $runner,
     ) {}
 
+    /**
+     * ⛔ পাতা ভাগ নেই, ইচ্ছাকৃত — তিনটা তালিকার তিনটাই আগে থেকে বাঁধা।
+     *
+     * `files` ডাটাবেজ থেকে আসে না, ডিস্ক থেকে — আর পুরনো ফাইল
+     * `keep_days` দিন পরে নিজেই মুছে যায়, তাই সংখ্যাটা দিনের সংখ্যায়
+     * বাঁধা, ব্যবসার আকারে নয়। `runs` আগে থেকেই `limit(20)`, আর
+     * `destinations` হাতে গোনা।
+     *
+     * ⚠️ পাতা ভাগ এখানে ক্ষতিকরও হত: প্রশ্নটা প্রায় সবসময় "শেষ ব্যাকআপ
+     * কবে", আর উত্তরটা সবার উপরের সারি। ওটা পেতে কেউ যেন পাতা ওল্টাতে
+     * না হয়।
+     *
+     * কারণটা `EveryListScreenPaginatesTest`-এর ছাড়ের তালিকাতেও আছে।
+     */
     public function index(Request $request): View
     {
         $files = $this->backups->all();

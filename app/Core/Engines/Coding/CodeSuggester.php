@@ -6,6 +6,8 @@ namespace App\Core\Engines\Coding;
 
 use App\Core\Support\CodeFromName;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 /**
@@ -220,7 +222,7 @@ final class CodeSuggester
     {
         $query = $model::query()->where('code', $code);
 
-        if (in_array(\Illuminate\Database\Eloquent\SoftDeletes::class, class_uses_recursive($model), true)) {
+        if (in_array(SoftDeletes::class, class_uses_recursive($model), true)) {
             $query->withTrashed();
         }
 
@@ -271,7 +273,7 @@ final class CodeSuggester
             try {
                 $table = (new $model)->getTable();
 
-                foreach (\Illuminate\Support\Facades\Schema::getColumns($table) as $column) {
+                foreach (Schema::getColumns($table) as $column) {
                     if ($column['name'] !== 'code') {
                         continue;
                     }

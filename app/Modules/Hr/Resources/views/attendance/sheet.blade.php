@@ -61,5 +61,7 @@
                 ['key' => 'unpaid', 'label' => __('hr::field.unpaid_days'), 'numeric' => true, 'width' => '8rem',
                  'render' => fn ($r) => $r['summary']['unpaid']],
             ]" />
+
+        <x-ui.pager :rows="$rows" />
     </div>
 </x-layouts.app>

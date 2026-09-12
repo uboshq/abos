@@ -43,7 +43,12 @@ final class Accent
     public const DEFAULT = 'abos';
 
     /**
-     * @return array<string, array{label: string, swatch: string, scale: array<string, string>}>
+     * ⓘ অন্ধকার রূপের চারটা ঘর আগে এই আকারে লেখা ছিল না, অথচ নিচের
+     * প্রতিটা সারিতে ওগুলো আছে আর ব্যবহারও হয়। ফলে বিশ্লেষক বলত
+     * "`dark` বলে কোনো ঘর নেই" — আর তখন সত্যিকারের ছাপার ভুলও ঐ একই
+     * কথা শুনত, অর্থাৎ আলাদা করা যেত না।
+     *
+     * @return array<string, array{label: string, swatch: string, ink: string, dark: string, dark_600: string, dark_ink: string, scale: array<string, string>}>
      */
     public static function all(): array
     {

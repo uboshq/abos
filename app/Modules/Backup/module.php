@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Modules\Backup\Dashboard\BackupDashboard;
+use App\Modules\Backup\Models\BackupRun;
 
 /**
  * ব্যাকআপ ও দুর্যোগ পুনরুদ্ধার — মালিকের Central Engine v7 ব্লুপ্রিন্ট থেকে।
@@ -151,6 +152,6 @@ return [
      * বদলায় (গন্তব্য) সেটা অডিটে আছেই।
      */
     'audit_exempt' => [
-        \App\Modules\Backup\Models\BackupRun::class => 'যন্ত্রের নিজের খাতা — কারণ ও মাপ EveryChangeableRowRemembersWhoChangedItTest-এ',
+        BackupRun::class => 'যন্ত্রের নিজের খাতা — কারণ ও মাপ EveryChangeableRowRemembersWhoChangedItTest-এ',
     ],
 ];

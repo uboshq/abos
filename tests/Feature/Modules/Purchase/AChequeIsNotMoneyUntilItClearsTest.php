@@ -8,9 +8,15 @@ use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Models\Company;
 use App\Models\User;
+use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Cheque;
 use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Inventory\Models\Product;
+use App\Modules\Purchase\Models\Payment;
+use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Purchase\Services\PaymentService;
+use App\Modules\Purchase\Services\PurchaseBillService;
+use App\Modules\Supplier\Models\Supplier;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -170,11 +176,11 @@ final class AChequeIsNotMoneyUntilItClearsTest extends TestCase
      *
      * @param  array<string, mixed>  $extra
      */
-    private function pay(array $extra): \App\Modules\Purchase\Models\Payment
+    private function pay(array $extra): Payment
     {
         $bill = $this->aBillWithBalance();
 
-        $money = (int) \App\Modules\Accounts\Models\Account::query()
+        $money = (int) Account::query()
             ->money()->postable()->active()->orderBy('code')->value('id');
 
         $service = app(PaymentService::class);
@@ -194,9 +200,9 @@ final class AChequeIsNotMoneyUntilItClearsTest extends TestCase
      * *"বাকির চেয়ে বেশি"* বলে আটকাত — একটা ভুল যার সাথে এই পরীক্ষার
      * কোনো সম্পর্ক নেই। তাই বাকি আছে এমন একটাই বাছা হয়।
      */
-    private function aBillWithBalance(): \App\Modules\Purchase\Models\PurchaseBill
+    private function aBillWithBalance(): PurchaseBill
     {
-        foreach (\App\Modules\Purchase\Models\PurchaseBill::query()
+        foreach (PurchaseBill::query()
             ->where('status', DocumentStatus::CONFIRMED)->orderByDesc('id')->get() as $bill) {
             if (bccomp((string) $bill->dueAmount(), '200', 4) >= 0) {
                 return $bill;
@@ -222,12 +228,12 @@ final class AChequeIsNotMoneyUntilItClearsTest extends TestCase
      * ⭐ তাই খোঁজাটা রাখা হলো (থাকলে সেটাই বেশি বাস্তব), কিন্তু না
      * পেলে দৃশ্যটা নিজেই গড়া হয়।
      */
-    private function aFreshBill(): \App\Modules\Purchase\Models\PurchaseBill
+    private function aFreshBill(): PurchaseBill
     {
-        $supplier = \App\Modules\Supplier\Models\Supplier::query()->firstOrFail();
-        $product = \App\Modules\Inventory\Models\Product::query()->firstOrFail();
+        $supplier = Supplier::query()->firstOrFail();
+        $product = Product::query()->firstOrFail();
 
-        $bills = app(\App\Modules\Purchase\Services\PurchaseBillService::class);
+        $bills = app(PurchaseBillService::class);
 
         return $bills->confirm($bills->create(
             ['supplier_id' => $supplier->id, 'trx_date' => now()->toDateString()],

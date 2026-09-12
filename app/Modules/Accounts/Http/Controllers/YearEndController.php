@@ -37,6 +37,15 @@ class YearEndController extends Controller implements HasMiddleware
         return [new Middleware('can:accounts.report.final')];
     }
 
+    /**
+     * ⛔ পাতা ভাগ নেই, ইচ্ছাকৃত — সারি বাড়ে **বছরে একটা**।
+     *
+     * `years` হলো অর্থবছরের তালিকা। পঞ্চাশ সারিতে পৌঁছাতে একটা
+     * প্রতিষ্ঠানকে পঞ্চাশ বছর চলতে হবে, আর তখনো পাতাটা এক পাতাতেই ধরত।
+     * এই রিপোর তালিকাগুলোর মধ্যে এটাই সবচেয়ে ধীরে বাড়ে।
+     *
+     * কারণটা `EveryListScreenPaginatesTest`-এর ছাড়ের তালিকাতেও আছে।
+     */
     public function index(Request $request): View
     {
         $current = FinancialYear::query()->where('is_current', true)->first();

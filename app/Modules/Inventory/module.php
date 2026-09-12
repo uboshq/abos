@@ -13,8 +13,8 @@ use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\StockMovement;
 use App\Modules\Inventory\Models\StockTransfer;
 use App\Modules\Inventory\Models\Warehouse;
-use App\Modules\Inventory\Services\GoodsWaitingToBePlaced;
 use App\Modules\Inventory\Reports\StockReports;
+use App\Modules\Inventory\Services\GoodsWaitingToBePlaced;
 
 /**
  * Inventory — প্ল্যান Phase 6।

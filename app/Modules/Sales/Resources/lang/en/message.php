@@ -148,7 +148,16 @@ return [
     'shift_matched' => 'It matches.',
     'shift_bills' => 'Bills this shift',
     'shift_today' => 'Closed today',
-    'pos_keys' => 'F2 payment · F4 hold · F8 search · Esc clear · Enter in payment completes the sale',
+    /*
+     * The one-line keyboard map on the counter — not `pos_keys`, which is the
+     * heading of the help panel.
+     *
+     * Both were called `pos_keys`, and PHP keeps the last, so this line read
+     * "Keyboard shortcuts" instead: the keys themselves were written nowhere.
+     * That was the line's whole job — "don't touch the mouse" only holds when
+     * the keys are in front of you.
+     */
+    'pos_keys_map' => 'F2 payment · F4 hold · F8 search · Esc clear · Enter in payment completes the sale',
     'pos_not_found' => 'No product for this code:',
     'no_brand' => 'No brand set',
     'pos_return_narration' => 'Counter return against :no',

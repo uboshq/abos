@@ -10,6 +10,7 @@ use App\Models\Branch;
 use App\Models\Company;
 use App\Models\FinancialYear;
 use App\Models\User;
+use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Purchase\Models\Payment;
 use App\Modules\Purchase\Models\PaymentLine;
@@ -171,7 +172,7 @@ final class ThePaymentScheduleAgreesWithTheBillTest extends TestCase
             'branch_id' => $bill->branch_id,
             'financial_year_id' => $bill->financial_year_id,
             'supplier_id' => $this->supplier->id,
-            'account_id' => \App\Modules\Accounts\Services\StandardChart::find('1101')->id,
+            'account_id' => StandardChart::find('1101')->id,
             'document_no' => 'PAY-'.$bill->document_no,
             'trx_date' => now()->toDateString(),
             'amount' => $amount,

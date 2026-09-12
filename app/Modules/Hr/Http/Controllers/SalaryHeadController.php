@@ -42,13 +42,22 @@ class SalaryHeadController extends Controller implements HasMiddleware
 
         $sort = $this->applySort($query, $request, $this->sorts());
 
-        $heads = $query->get();
+        $heads = $query->paginate(50)->withQueryString();
 
         return view('hr::salary_head.index', [
             'menu' => $this->menu->forUser($request->user()),
             'heads' => $heads,
-            // সব খাত খালি হলেই কেবল "প্রমিত খাত বসান" দেখানো হয়
-            'canInstallDefaults' => $heads->isEmpty() && ! $request->boolean('inactive'),
+            /*
+             * সব খাত খালি হলেই কেবল "প্রমিত খাত বসান" দেখানো হয়।
+             *
+             * ⚠️ `isEmpty()` নয়, `total()` — পাতা ভাগ হওয়ার পর `isEmpty()`
+             * কেবল **এই পাতার** কথা বলে। ঠিকানায় `?page=9` থাকলে সত্যিকারের
+             * খাত থাকা সত্ত্বেও পাতাটা খালি ফিরত, আর পর্দায় "প্রমিত খাত
+             * বসান" বোতামটা ভেসে উঠত — যেটা চাপলে চলতি খাতের উপর আবার
+             * প্রমিত খাত বসানোর চেষ্টা হত। মোটের প্রশ্নের উত্তর মোট থেকেই
+             * নিতে হয়, পাতা থেকে নয়।
+             */
+            'canInstallDefaults' => $heads->total() === 0 && ! $request->boolean('inactive'),
             'sortOptions' => $this->sortLabels(),
             'sort' => $sort,
         ]);

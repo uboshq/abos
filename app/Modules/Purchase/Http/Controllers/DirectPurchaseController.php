@@ -20,6 +20,7 @@ use App\Modules\MasterData\Models\PaymentTerm;
 use App\Modules\Purchase\Services\DirectPurchaseService;
 use App\Modules\Purchase\Services\LastPaidRate;
 use App\Modules\Supplier\Models\Supplier;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -50,7 +51,7 @@ class DirectPurchaseController extends Controller implements HasMiddleware
     /**
      * এক অনুরোধে একবারই তোলা পণ্যের তালিকা।
      *
-     * @var \Illuminate\Database\Eloquent\Collection<int, Product>|null
+     * @var Collection<int, Product>|null
      */
     private ?EloquentCollection $products = null;
 
@@ -598,7 +599,7 @@ class DirectPurchaseController extends Controller implements HasMiddleware
      * ঘরগুলোর জন্য: একক না বাছলে পণ্যের নিজের এককের নাম লেখা হয়, আর
      * "Per product" ভ্যাট ধরনটা হার ছাড়া কষতেই পারত না।
      *
-     * @return \Illuminate\Database\Eloquent\Collection<int, Product>
+     * @return Collection<int, Product>
      */
     private function products(): EloquentCollection
     {

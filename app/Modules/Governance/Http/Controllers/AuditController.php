@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Modules\Governance\Http\Controllers;
 
-use App\Core\Support\CompanyContext;
 use App\Core\Concerns\SortsLists;
 use App\Core\Engines\Audit\TimeMachine;
 use App\Core\Module\ModuleRegistry;
 use App\Core\Services\MenuBuilder;
+use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Models\AuditTrail;
 use App\Models\User;

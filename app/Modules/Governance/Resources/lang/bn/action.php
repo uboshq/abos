@@ -21,6 +21,7 @@ return [
     'portal_password_set' => 'পোর্টালের পাসওয়ার্ড বসানো',
     'password_set' => 'পাসওয়ার্ড বসানো',
     'roles_changed' => 'রোল বদল',
+    'companies_changed' => 'কোম্পানির অধিকার বদল',
     'scopes_changed' => 'দেখার সীমা বদল',
     'look_published' => 'রূপ প্রকাশ',
     'look_reverted' => 'রূপ ফেরানো',

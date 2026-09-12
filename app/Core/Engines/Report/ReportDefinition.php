@@ -112,7 +112,12 @@ final class ReportDefinition
          * ⭐ ঘরটা `null` রাখলে কিছুই বদলায় না, তাই বাকি ৩৬টা রিপোর্ট
          * অক্ষত।
          *
-         * @var null|Closure(array<string, string>, array<string, mixed>): array{label: string, value: string, good: bool}
+         * ⓘ আর্গুমেন্ট একটাই — যোগফলগুলো। ঘোষণাটায় আগে দুইটা লেখা ছিল,
+         * অথচ একমাত্র বাস্তবায়ন (`CoreReports::profitAndLoss()`) আর একমাত্র
+         * কল-সাইট (`ReportController`) দুইটাই একটা দেয়। কোড ঠিক ছিল, ঘোষণা
+         * ভুল — আর ঘোষণাটাই পরের জন পড়ত।
+         *
+         * @var null|Closure(array<string, string>): array{label: string, value: string, good: bool}
          */
         public readonly ?Closure $summary = null,
     ) {

@@ -21,6 +21,7 @@ return [
     'portal_password_set' => 'Portal password set',
     'password_set' => 'Password set',
     'roles_changed' => 'Roles changed',
+    'companies_changed' => 'Company access changed',
     'scopes_changed' => 'Data scope changed',
     'look_published' => 'Look published',
     'look_reverted' => 'Look reverted',

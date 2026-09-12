@@ -45,7 +45,7 @@ final class LastPaidRate
      * ([[DirectPurchaseService]] সাথে সাথে নিশ্চিত করে)। শর্তটা তাই
      * "বাতিল নয়" — যা ভবিষ্যতের অন্য পথেও সত্যি থাকবে।
      *
-     * @return array<int, array{rate: string, on: string}>  পণ্যের আইডি => দর ও তারিখ
+     * @return array<int, array{rate: string, on: string}> পণ্যের আইডি => দর ও তারিখ
      */
     public function forSupplier(int $supplierId): array
     {

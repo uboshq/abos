@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Core;
 
+use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\NumberSeries;
@@ -81,7 +82,7 @@ class TheNumbersRestartedEveryYearAndNobodyCouldSayOtherwiseTest extends TestCas
          */
         $this->assertArrayNotHasKey(
             'master_data.series_reset_yearly',
-            app(\App\Core\Services\SettingsService::class)->definitions(),
+            app(SettingsService::class)->definitions(),
             'নম্বরের রিসেট নিয়ে একটা দ্বিতীয় নিয়ন্ত্রণ ফিরে এসেছে — সিদ্ধান্তটা সিরিজের সারিতেই থাকার কথা।',
         );
     }
@@ -96,13 +97,19 @@ class TheNumbersRestartedEveryYearAndNobodyCouldSayOtherwiseTest extends TestCas
     public function test_when_it_resets_the_new_year_starts_from_the_start_number(): void
     {
         $this->assertStringContainsString(
-            "\$before->reset_yearly ? \$before->start_number : \$before->next_number",
+            '$before->reset_yearly ? $before->start_number : $before->next_number',
             (string) file_get_contents(app_path('Modules/Accounts/Services/YearEndService.php')),
             'বছর বদলের সময় reset_yearly আর পড়া হচ্ছে না — কলামটা তখন অর্থহীন।',
         );
 
+        /*
+         * ⓘ আগে এখানে `close() || roll()` লেখা ছিল। `roll()` বলে কোনো
+         * পদ্ধতি কোনোদিন ছিল না, তাই শাখাটা কখনো চলত না — আর `||`-এর
+         * বাঁ দিক সত্য বলে দাবিটা তবু ঠিক উত্তর দিত। মৃত বিকল্পটা রাখলে
+         * পরের জন ভাবতেন দুইটা নামই বৈধ, আর একদিন ভুল নামটা খুঁজতেন।
+         */
         $this->assertTrue(
-            method_exists(YearEndService::class, 'close') || method_exists(YearEndService::class, 'roll'),
+            method_exists(YearEndService::class, 'close'),
             'বছর বদলানোর সেবাটাই নেই — তাহলে reset_yearly কোথায় পড়া হবে?',
         );
     }

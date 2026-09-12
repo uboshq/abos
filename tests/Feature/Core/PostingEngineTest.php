@@ -10,8 +10,8 @@ use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\FinancialYear;
 use App\Models\LedgerEntry;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**

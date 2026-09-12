@@ -72,7 +72,7 @@ final class SalesFacts implements ContributesFacts
              * সবচেয়ে খারাপ।
              */
             new Fact(
-                label: 'sales::field.invoice_count',
+                label: 'sales::field.invoice_count_panel',
                 value: (string) SalesInvoice::query()
                     ->where('customer_id', $id)
                     ->posted()

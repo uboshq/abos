@@ -12,10 +12,10 @@ use App\Modules\Inventory\Http\Controllers\StockAnalysisController;
 use App\Modules\Inventory\Http\Controllers\StockController;
 use App\Modules\Inventory\Http\Controllers\StockOverviewController;
 use App\Modules\Inventory\Http\Controllers\StockPlacementController;
-use App\Modules\Inventory\Http\Controllers\StorageLocationController;
 use App\Modules\Inventory\Http\Controllers\StockPrintController;
 use App\Modules\Inventory\Http\Controllers\StockReportController;
 use App\Modules\Inventory\Http\Controllers\StockTransferController;
+use App\Modules\Inventory\Http\Controllers\StorageLocationController;
 use App\Modules\Inventory\Http\Controllers\WarehouseController;
 use Illuminate\Support\Facades\Route;
 

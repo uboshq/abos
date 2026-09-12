@@ -10,6 +10,7 @@ use App\Models\Branch;
 use App\Models\Company;
 use App\Models\FinancialYear;
 use App\Models\User;
+use App\Modules\MasterData\Models\Currency;
 use App\Modules\SystemAdmin\Services\FirstRun;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
@@ -308,7 +309,7 @@ class TheFirstDoorOpensOnlyOnceTest extends TestCase
         $this->assertSame('USD', $company->currency);
 
         CompanyContext::forCompany($company->id, function (): void {
-            $base = \App\Modules\MasterData\Models\Currency::query()
+            $base = Currency::query()
                 ->where('is_default', true)
                 ->firstOrFail();
 

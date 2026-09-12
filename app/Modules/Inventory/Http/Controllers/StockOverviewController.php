@@ -50,6 +50,19 @@ class StockOverviewController extends Controller implements HasMiddleware
         return [new Middleware('can:inventory.stock.view')];
     }
 
+    /**
+     * ⛔ পাতা ভাগ নেই, ইচ্ছাকৃত — এই পর্দায় কোনো অসীম তালিকা নেই।
+     *
+     * যা যায় তার সবটাই হয় একটা সংখ্যা (`belowReorder`, `outOfStock`,
+     * `value`, `movementsToday`), নয়তো আগে থেকেই সীমিত — `lowStock()`
+     * আর `recentMovements()` দুইটাই আটটা সারিতে বাঁধা। অর্থাৎ ডেটা
+     * বাড়লে এই পর্দার সারির সংখ্যা বাড়ে না।
+     *
+     * ⓘ "আরও দেখুন" প্রশ্নের উত্তর এখানে নয় — প্রতিটা টালি নিজের
+     * পূর্ণ তালিকায় নিয়ে যায় (নিয়ম ১), আর সেই তালিকাগুলোয় পাতা ভাগ আছে।
+     *
+     * কারণটা `EveryListScreenPaginatesTest`-এর ছাড়ের তালিকাতেও আছে।
+     */
     public function index(Request $request): View
     {
         $warehouse = $this->warehouseAsked($request);

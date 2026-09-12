@@ -16,9 +16,18 @@
             ভাববেন **তাঁর নিজের** সইয়ের অপেক্ষায় বারোটা কাগজ ঝুলে আছে।
             ⓘ ভুল বোঝাটা নীরব: সংখ্যাটা সত্যি, কেবল কার সংখ্যা তা নয়।
         --}}
+        {{-- ⚠️ গোনাটা `$visibleTotal`, `$approvals->count()` নয়।
+
+             তালিকাটা এখন পঞ্চাশে বাঁধা, তাই সারি গুনলে উপরে লেখা উঠত
+             "৫০টি রেকর্ড" — যেখানে সত্যিকারের সংখ্যা একশো সাঁইত্রিশ।
+             আর কম দেখানোটা এখানে নিরীহ নয়: মানুষ ঠিক এই সংখ্যাটা দেখেই
+             ঠিক করেন আজ বসে অনুমোদন করবেন কি না।
+
+             ছাঁকনি দেওয়া থাকলে `$visibleTotal` ওই মডিউলের সংখ্যা, তাই
+             শিরোনাম আর নিচের তালিকা একই কথা বলে। --}}
         <x-ui.page-header
             :title="$person ? __('approval::menu.inbox_of', ['name' => $personName]) : __('approval::menu.inbox')"
-            :subtitle="trans_choice('core.count.records', $approvals->count(), ['count' => $approvals->count()])" />
+            :subtitle="trans_choice('core.count.records', $visibleTotal, ['count' => $visibleTotal])" />
     </x-slot:header>
 
     @if (session('saved'))
@@ -121,6 +130,23 @@
     @endif
 
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+        {{-- কাটা পড়েছে কি না, আর কতটা — কেবল সত্যিই কাটা পড়লে।
+
+             নিচে যা দেখা যাচ্ছে সেটাই সবটা নয়, আর সেটা না বললে পাতাটা
+             সম্পূর্ণ দেখাত অথচ বাকিগুলো চুপচাপ লুকিয়ে রাখত। লম্বা সারিটা
+             নিজেই একটা সংকেত — কেউ অনুমোদন করছেন না — তাই সংখ্যাটা
+             লুকানোর মানে হত না। --}}
+        @if ($visibleTotal > $approvals->count())
+            <p role="status"
+               class="border-b border-(--color-border) bg-(--color-badge-warning-bg) px-4 py-2
+                      text-xs text-(--color-badge-warning-ink)">
+                {{ __('approval::message.inbox_capped', [
+                    'shown' => $approvals->count(),
+                    'total' => $visibleTotal,
+                ]) }}
+            </p>
+        @endif
+
         <x-ui.table
             :empty="__('approval::message.nothing_waiting')"
             :rows="$approvals"

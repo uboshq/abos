@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\MfaController;
+use App\Http\Controllers\ModuleDashboardController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SavedViewController;
-use App\Http\Controllers\ModuleDashboardController;
 use App\Http\Controllers\WorkspaceController;
 use Illuminate\Support\Facades\Route;
 

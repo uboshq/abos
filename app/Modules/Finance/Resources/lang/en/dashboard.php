@@ -14,7 +14,6 @@ return [
     'payable_overview' => 'Owed to suppliers',
     'payable_overview_hint' => 'Total payable — click to see it by age',
 
-
     // চারটা দরজা ও খরচের ভাগ — ৪ সেপ্টেম্বর ২০২৬
     'pending_approvals' => 'Waiting for approval',
     'expense_heads' => 'Expense heads',

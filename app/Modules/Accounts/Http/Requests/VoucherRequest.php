@@ -7,7 +7,6 @@ namespace App\Modules\Accounts\Http\Requests;
 use App\Core\Services\PartyRegistry;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\Money;
-use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
 use Illuminate\Foundation\Http\FormRequest;

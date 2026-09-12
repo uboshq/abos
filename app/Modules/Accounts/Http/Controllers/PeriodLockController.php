@@ -46,6 +46,18 @@ class PeriodLockController extends Controller implements HasMiddleware
         ];
     }
 
+    /**
+     * ⛔ পাতা ভাগ নেই, ইচ্ছাকৃত — সারি বারোটা, আর বারোটাই থাকবে।
+     *
+     * তালিকাটা একটা অর্থবছরের মাসগুলো ([[monthsOf]]), তাই সর্বোচ্চ
+     * বারো সারি। বছর বদলালে আবার বারোটা — জমে না।
+     *
+     * ⚠️ আর পুরো বছরটা একসাথে দেখতে পাওয়াই এই পর্দার কাজ: কোন মাস
+     * তালাবদ্ধ আর কোনটা খোলা, সেটা পাশাপাশি না দেখলে বোঝাই যায় না
+     * কোথায় ফাঁক রয়ে গেছে।
+     *
+     * কারণটা `EveryListScreenPaginatesTest`-এর ছাড়ের তালিকাতেও আছে।
+     */
     public function index(Request $request): View
     {
         $year = FinancialYear::query()->where('is_current', true)->first()

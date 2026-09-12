@@ -131,6 +131,10 @@
                      'numeric' => true, 'width' => '9rem',
                      'render' => fn ($r) => \App\Core\Support\Money::format($r->value)],
                 ]" />
+
+            {{-- ⓘ উপরের "মোট" এই পাতার নয়, সবটার — পেজারের সীমা আর
+                 ওই সংখ্যাটা তাই ইচ্ছাকৃতভাবে দুইটা আলাদা কথা বলে। --}}
+            <x-ui.pager :rows="$entered" />
         </section>
     </div>
 </x-layouts.app>

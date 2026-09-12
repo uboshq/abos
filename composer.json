@@ -10,7 +10,6 @@
         "laravel/framework": "^13.8",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^3.0",
-        "livewire/livewire": "^4.3",
         "mpdf/mpdf": "^8.3",
         "spatie/laravel-activitylog": "^4.12",
         "spatie/laravel-backup": "^10.3",
@@ -19,6 +18,7 @@
     "require-dev": {
         "composer/semver": "^3.4",
         "fakerphp/faker": "^1.23",
+        "larastan/larastan": "^3.12",
         "laravel/pail": "^1.2.5",
         "laravel/pao": "^1.0.6",
         "laravel/pint": "^1.30",

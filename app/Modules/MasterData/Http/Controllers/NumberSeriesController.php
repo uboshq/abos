@@ -83,6 +83,16 @@ class NumberSeriesController extends Controller implements HasMiddleware
         return [new Middleware('can:system_admin.settings.manage')];
     }
 
+    /**
+     * ⛔ পাতা ভাগ নেই, ইচ্ছাকৃত — সারির সংখ্যা কোডে বাঁধা।
+     *
+     * একটা সারি মানে একটা মডিউলের একটা ডকুমেন্টের ধরন, আর ওই তালিকাটা
+     * ডাটাবেজ নয়, **সোর্স কোড** ঠিক করে ([[provision]] ঠিক নিচেই সেটা
+     * বসায়)। ব্যবহারকারী যত কাজই করুন, সারি বাড়ে কেবল তখনই যখন কেউ
+     * নতুন একটা ডকুমেন্টের ধরন লেখে।
+     *
+     * কারণটা `EveryListScreenPaginatesTest`-এর ছাড়ের তালিকাতেও আছে।
+     */
     public function index(Request $request): View
     {
         /*

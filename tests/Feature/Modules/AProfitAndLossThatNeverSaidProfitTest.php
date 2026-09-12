@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modules;
 
+use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Engines\Report\ReportEngine;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
@@ -72,7 +73,7 @@ class AProfitAndLossThatNeverSaidProfitTest extends TestCase
      */
     private function postJournal(string $narration, array $lines): void
     {
-        app(\App\Core\Engines\Posting\PostingEngine::class)->post(
+        app(PostingEngine::class)->post(
             sourceType: 'test.journal',
             sourceId: ++self::$seq,
             trxDate: now()->toDateString(),

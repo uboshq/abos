@@ -29,6 +29,26 @@ use Illuminate\View\View;
  */
 class ApprovalInboxController extends Controller implements HasMiddleware
 {
+    /**
+     * ইনবক্সে সর্বোচ্চ কয়টা সারি দেখানো হয়।
+     *
+     * ── কেন সীমা, আর কেন পাতা ভাগ নয় ────────────────────────────────
+     * তালিকাটার সীমা ছিল না, আর সেটা নিরীহ মনে হত — অপেক্ষমাণ অনুরোধ
+     * তো হাতেগোনা। কিন্তু "হাতেগোনা" ধরে নেওয়াটাই ভুল: ইনবক্স লম্বা
+     * হয় ঠিক তখনই যখন কেউ অনুমোদন করছেন না, আর তখনই পর্দাটা খোলা
+     * সবচেয়ে জরুরি।
+     *
+     * ⛔ পাতা ভাগ এখানে চলে না, আর কারণটা উপরের চিপগুলো: ওরা **পুরো
+     * তালিকার** সংখ্যা দেখায় (নিচের মন্তব্যে কেন তা লেখা)। পাতা ভাগ
+     * বসালে "পাতা ২-এ যান" আর "ক্রয় ১৩৭" — দুইটা আলাদা গল্প একসাথে
+     * বলতে হত। বদলে [[ExpenseController]]-এর ছাঁচ: সীমা + আলাদা
+     * কোয়েরিতে মোট + পর্দায় স্পষ্ট লেখা কতটা দেখা যাচ্ছে।
+     *
+     * পঞ্চাশ — বাকি তালিকাগুলোর পাতার মাপের সমান, যাতে "এক পর্দা কত"
+     * সংখ্যাটা পুরো সিস্টেমে একটাই থাকে।
+     */
+    private const INBOX_LIMIT = 50;
+
     public function __construct(
         private readonly MenuBuilder $menu,
         private readonly ApprovalEngine $engine,
@@ -125,9 +145,15 @@ class ApprovalInboxController extends Controller implements HasMiddleware
             abort(403);
         }
 
-        // পুরনোটা আগে — যেটা সবচেয়ে বেশিক্ষণ ঝুলে আছে সেটাই কাউকে
-        // সবচেয়ে বেশিক্ষণ আটকে রেখেছে (ইঞ্জিনই ওই ক্রমে দেয়)
-        $waiting = $this->engine->pendingFor($subject);
+        /*
+         * পুরনোটা আগে — যেটা সবচেয়ে বেশিক্ষণ ঝুলে আছে সেটাই কাউকে
+         * সবচেয়ে বেশিক্ষণ আটকে রেখেছে (ইঞ্জিনই ওই ক্রমে দেয়)।
+         *
+         * ⚠️ কোয়েরিটা এখানে **চালানো হয় না** — নিচে দুইবার আলাদা করে
+         * চলে, দুইটা আলাদা প্রশ্নের জন্য: চিপের সংখ্যাগুলো পুরো
+         * তালিকার, আর সারিগুলো সীমার ভেতরে।
+         */
+        $pending = $this->engine->pendingQueryFor($subject);
 
         /*
          * মডিউল ধরে ছাঁকনি — §২.২।
@@ -142,8 +168,30 @@ class ApprovalInboxController extends Controller implements HasMiddleware
          * ⚠️ ছাঁকনিটা মূল তালিকা **কমায় না, বাছে** — চিপের সংখ্যাগুলো
          * সবসময় পুরো তালিকার, নাহলে "ক্রয় ৫" বেছে নেওয়ার পর বাকি
          * চিপগুলো শূন্য দেখাত।
+         *
+         * ── কেন গোনাটা এখন ডাটাবেজে, তালিকা থেকে নয় (১২ সেপ্টেম্বর ২০২৬) ──
+         * আগে ছিল `$waiting->countBy('module')` — অর্থাৎ পুরো তালিকাটা
+         * হাতে ছিল বলে গোনাটা বিনামূল্যে হত, আর উপরের যুক্তিটাও তাই
+         * খাটত। কিন্তু তালিকাটা সীমাহীন ছিল: যে ম্যানেজার ছয় মাস
+         * অনুমোদন করেননি, তাঁর ইনবক্স হাজার সারি টানত।
+         *
+         * সীমা বসানোর পর ওই গোনাটা **আর করা যায় না** — সে তখন কেবল
+         * প্রথম পঞ্চাশটার কথা বলত, আর চিপে "ক্রয় ৫০" দেখাত যেখানে
+         * সত্যিকারের সংখ্যা ১৩৭। তাই গোনাটা নেমে এসেছে একটা group-by
+         * কোয়েরিতে, যেটা সারি না তুলেই পুরো তালিকার হিসাব দেয়।
+         *
+         * ⛔ `reorder()` — গোনার কোয়েরিতে ক্রমের কোনো মানে নেই, আর
+         * `requested_at` ধরে সাজানো একটা group-by কড়া MySQL সরাসরি
+         * খারিজ করে (ONLY_FULL_GROUP_BY)।
          */
-        $counts = $waiting->countBy('module');
+        $counts = (clone $pending)
+            ->reorder()
+            ->withoutEagerLoads()
+            ->select('module')
+            ->selectRaw('COUNT(*) as tally')
+            ->groupBy('module')
+            ->pluck('tally', 'module');
+
         $selected = trim((string) $request->query('module', ''));
 
         $modules = [];
@@ -160,17 +208,40 @@ class ApprovalInboxController extends Controller implements HasMiddleware
          * ফলে তালিকা খালি দেখাবে, আর সেটাই সৎ: পুরনো একটা লিংক ধরে
          * এসে "সব" দেখলে মানুষ ভাবতেন ছাঁকনিটা কাজ করেনি।
          */
-        if ($selected !== '') {
-            $waiting = $waiting->where('module', $selected)->values();
-        }
+        /*
+         * এখন সারিগুলো — ছাঁকনিসহ, আর সীমার ভেতরে।
+         *
+         * ⚠️ ছাঁকনিটা **কোয়েরিতে**, আগের মতো তোলা তালিকার উপর নয়। উপরে
+         * ছাঁকলে সীমাটা ভুল জায়গায় পড়ত: ডাটাবেজ প্রথম পঞ্চাশটা দিত
+         * (সব মডিউল মিলিয়ে), আর তারপর তার ভেতর থেকে "ক্রয়" বাছা হত —
+         * ফলে ক্রয়ের একশো সারি থাকলেও পর্দায় হয়তো তিনটা আসত, আর
+         * চিপে লেখা থাকত ১০০। সীমা সবসময় ছাঁকনির পরে বসতে হয়।
+         */
+        $waiting = (clone $pending)
+            ->when($selected !== '', fn ($q) => $q->where('module', $selected))
+            ->limit(self::INBOX_LIMIT)
+            ->get();
+
+        /*
+         * এখন যা দেখা যাচ্ছে তার সত্যিকারের মোট — ছাঁকনি ধরে।
+         *
+         * ছাঁকনি থাকলে ওই মডিউলের সংখ্যা, নাহলে সবার যোগফল। এই
+         * সংখ্যাটাই উপরে "কয়টা" বলে, আর কাটা পড়েছে কি না তাও এটাই ঠিক
+         * করে — `$waiting->count()` দিয়ে করলে দুইটাই বড়জোর পঞ্চাশ বলত।
+         */
+        $visibleTotal = $selected !== ''
+            ? (int) $counts->get($selected, 0)
+            : (int) $counts->sum();
 
         return view('approval::inbox.index', [
             'menu' => $this->menu->forUser($user),
             'approvals' => $waiting,
+            'visibleTotal' => $visibleTotal,
             'labels' => $this->flows->labels(),
             'modules' => $modules,
             'selected' => $selected,
-            'total' => $counts->sum(),
+            // "সব" চিপের সংখ্যা — সবসময় পুরো তালিকার, ছাঁকনি নির্বিশেষে
+            'total' => (int) $counts->sum(),
 
             /*
              * ব্যক্তির তালিকা — কেবল যাঁর অনুমতি আছে তাঁর জন্য, আর
@@ -199,7 +270,7 @@ class ApprovalInboxController extends Controller implements HasMiddleware
      * scope নেই (সে বহু কোম্পানিতে থাকতে পারেন), তাই `User::query()`
      * **সব টেন্যান্টের** নাম ফেরায়।
      *
-     * @return array<int, string>  id => নাম
+     * @return array<int, string> id => নাম
      */
     private function theSigners(): array
     {

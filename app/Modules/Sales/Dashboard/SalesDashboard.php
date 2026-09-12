@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Dashboard;
 
-use App\Core\Dashboard\Widget;
 use App\Core\Contracts\ProvidesDashboard;
+use App\Core\Dashboard\Widget;
 use App\Core\Engines\Dashboard\Breakdown;
 use App\Core\Engines\Dashboard\DashboardDefinition;
 use App\Core\Engines\Dashboard\Listing;

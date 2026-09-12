@@ -14,6 +14,7 @@ use App\Modules\Inventory\Services\GoodsWaitingToBePlaced;
 use App\Modules\Inventory\Services\StockService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
@@ -166,7 +167,7 @@ class ANoticeThatRanAllDayAndNobodyReadItTest extends TestCase
      */
     private function clearTheFloor(): void
     {
-        \Illuminate\Support\Facades\DB::table('inv_stock_movements')
+        DB::table('inv_stock_movements')
             ->where('company_id', CompanyContext::id())
             ->update(['unplaced_change' => 0, 'unplaced_free_change' => 0]);
     }

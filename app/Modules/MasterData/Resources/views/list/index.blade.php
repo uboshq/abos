@@ -56,7 +56,11 @@
 
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
-            <x-ui.toolbar :title="__($spec['title'])" :count="trans_choice('master_data::message.count', $records->count(), ['count' => $records->count()])" :sort="$sortOptions">
+            {{-- ⚠️ গোনাটা `total()`, `count()` নয় — `count()` এই পাতার
+                 সারি গোনে, তাই তিনশো একক থাকলেও টুলবারে লেখা উঠত
+                 "৫০টি"। ছাঁকনি দেওয়ার পর "কয়টা রইল" প্রশ্নের উত্তর
+                 ঠিক এই সংখ্যাটাই, আর সেটা পাতার নয়, তালিকার। --}}
+            <x-ui.toolbar :title="__($spec['title'])" :count="trans_choice('master_data::message.count', $records->total(), ['count' => $records->total()])" :sort="$sortOptions">
         <x-slot:actions>
             @can('master_data.manage')
                     <x-ui.button tone="primary" icon="plus"
@@ -98,5 +102,7 @@
                      'render' => fn ($r) => view('master_data::list.partials.actions', ['record' => $r, 'spec' => $spec])],
                 ],
             )" />
+
+        <x-ui.pager :rows="$records" />
     </div>
 </x-layouts.app>

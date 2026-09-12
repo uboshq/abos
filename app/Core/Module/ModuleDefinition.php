@@ -61,7 +61,30 @@ final class ModuleDefinition
         public readonly string $version,
         /** @var list<string> */
         public readonly array $dependsOn,
-        /** @var array<string, list<array{label: string, route: string, icon?: string, permission?: string}>> */
+        /**
+         * ── আকারটা সম্পূর্ণ রাখতে হয়, নইলে পাহারাটা নিভে যায় ──────────
+         * এখানে আগে কেবল চারটা চাবি লেখা ছিল, অথচ কোড আরো তিনটা পড়ে ও
+         * ব্যবহার করে: `route_params` (অনেক মডিউল ঘোষণা করে), `planned`
+         * (Restaurant ১৮টা, Backup ৪টা), আর `setting` (নিচে fromArray()
+         * নিজেই ওটা যাচাই করে)।
+         *
+         * ⓘ ডেটা হারাত না — নিচে পুরো `$menu` অ্যারেটা অপরিবর্তিত পাস হয়,
+         * তাই রানটাইমে সবই পৌঁছায়।
+         *
+         * ⛔ কিন্তু দাম ছিল দুইটা। এক, স্ট্যাটিক বিশ্লেষক তখন গোটা মেনু-
+         * ব্যবস্থার উপর অন্ধ — আটটা ফাইলে প্রায় বিশটা মিথ্যা অভিযোগ
+         * (MenuBuilder-এ "planned সবসময় false", ModuleMenuTest-এ
+         * "`=== true` সবসময় মিথ্যা")। দুই, আর এটাই আসল: কেউ module.php-তে
+         * `route_parms` লিখলে — একটা অক্ষর কম — **কোনো ভুল দেখাত না**।
+         * আকারটা চাবিটাকে এমনিতেই চিনত না, তাই বিশ্লেষক চুপ থাকত, আর
+         * সারিটা নীরবে প্যারামিটার ছাড়া লিংক বানাত।
+         *
+         * ⚠️ ঠিক ঐ নীরবতাই সেটিংয়ের `tab` চাবিটাকে লুকিয়ে রেখেছিল, আর
+         * ওখানে ক্রস-মডিউল ট্যাবের পুরো ব্যবস্থাটা কোনোদিন চলতেই পারেনি।
+         * নতুন চাবি যোগ করলে এখানেও যোগ করবেন — এই লাইনটাই ঐ পাহারা।
+         *
+         * @var array<string, list<array{label: string, route: string, icon?: string, permission?: string, route_params?: array<string, mixed>, planned?: bool, setting?: string}>>
+         */
         public readonly array $menu,
         /**
          * সাইডবারে এই মডিউলটা কোন দলে, আর সেই দলে কত নম্বরে।
@@ -176,7 +199,7 @@ final class ModuleDefinition
          * ⭐ এটা শুরুর সারি, তালা নয় — provision-এ রোলটা না থাকলে তবেই বসে;
          * ক্রেতা পরে RoleController-এ বদলাতে/বাড়াতে পারেন।
          *
-         * @var array<string, list<string>>  রোল-নাম => অনুমতির তালিকা
+         * @var array<string, list<string>> রোল-নাম => অনুমতির তালিকা
          */
         public readonly array $roleTemplates,
 

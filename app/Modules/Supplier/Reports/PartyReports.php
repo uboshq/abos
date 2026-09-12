@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Modules\Supplier\Reports;
 
 use App\Core\Engines\Report\ReportColumn;
-use App\Core\Support\DocumentStatus;
 use App\Core\Engines\Report\ReportDefinition;
 use App\Core\Engines\Report\ReportEngine;
+use App\Core\Support\DocumentStatus;
 use App\Modules\Supplier\Models\Supplier;
 use Illuminate\Database\Query\Expression;
 use Illuminate\Support\Carbon;

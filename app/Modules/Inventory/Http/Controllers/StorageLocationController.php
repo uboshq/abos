@@ -41,6 +41,19 @@ class StorageLocationController extends Controller implements HasMiddleware
         ];
     }
 
+    /**
+     * ⛔ পাতা ভাগ নেই, ইচ্ছাকৃত — এটা গাছ, তালিকা নয়।
+     *
+     * সারিগুলো হাঁটার ক্রমে আসে আর প্রতিটা সন্তান নিজের বাবার নিচে
+     * বসে। পঞ্চাশে কাটলে কাটটা পড়ত একটা শাখার মাঝখানে: তাক দেখা যেত,
+     * অথচ যে র‍্যাকের নিচে সে বসে সেটা আগের পাতায় — আর ভাঙা গাছ
+     * পুরো গাছের চেয়ে খারাপ, কারণ সেটা ভুল কাঠামো দেখায়।
+     *
+     * গুদামের তাক জমে না, বসানো হয় — আর সংখ্যাটা গুদামের আকারে বাঁধা।
+     * নিচের মন্তব্যে কেন একটাই কোয়েরি, সেটাও লেখা।
+     *
+     * কারণটা `EveryListScreenPaginatesTest`-এর ছাড়ের তালিকাতেও আছে।
+     */
     public function index(Request $request, Warehouse $warehouse): View
     {
         return view('inventory::warehouse.places', [

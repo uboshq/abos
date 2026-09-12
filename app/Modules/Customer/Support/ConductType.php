@@ -27,12 +27,16 @@ final class ConductType
 {
     // গুরুত্ব
     public const GOOD = 'good';
+
     public const NOTICE = 'notice';
+
     public const RISK = 'risk';
 
     // দল
     public const MONEY = 'money';
+
     public const DELIVERY = 'delivery';
+
     public const RELATIONSHIP = 'relationship';
 
     /** মুক্ত লেখার একমাত্র খোলা দরজা — বাছলে নোট বাধ্যতামূলক। */

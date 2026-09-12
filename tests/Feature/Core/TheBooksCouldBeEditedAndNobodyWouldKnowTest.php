@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Core;
 
-use Tests\RealAccounts;
 use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Security\LedgerChain;
 use App\Core\Support\CompanyContext;
@@ -15,6 +14,7 @@ use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Tests\RealAccounts;
 use Tests\TestCase;
 
 /**

@@ -11,7 +11,6 @@ return [
     'customer' => 'গ্রাহক',
     'nobody_owes' => 'কারও কাছে বকেয়া নেই',
 
-
     // Owner Dashboard-এর সংখ্যাগুলো — ৪ সেপ্টেম্বর ২০২৬
     'today_collection' => 'আজকের আদায়',
     'today_collection_hint' => 'আজ গ্রাহকদের কাছ থেকে যত টাকা এসেছে',

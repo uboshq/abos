@@ -84,14 +84,35 @@
                 {{ __('finance::field.waiting_approval') }}
 
                 {{-- সংখ্যাটা শিরোনামেই, কারণ প্রশ্নটা "কয়টা" — আর
-                     উত্তরটা ঠিক নিচেই, গোনা যায় এমন সারিতে (নিয়ম ১) --}}
+                     উত্তরটা ঠিক নিচেই, গোনা যায় এমন সারিতে (নিয়ম ১)।
+
+                     ⚠️ `$waitingTotal`, `$waiting->count()` নয়। তালিকাটা
+                     পঞ্চাশে বাঁধা, তাই সারি গুনলে ব্যাজটা বড়জোর "৫০"
+                     বলত — আর যে কোম্পানিতে একশো সাঁইত্রিশটা ঝুলে আছে
+                     সেখানে ওটাই সবচেয়ে ভুল সংখ্যা, কারণ দেখতে ঠিক
+                     আগের মতোই। --}}
                 <span class="rounded-full bg-(--color-badge-warning-bg) px-2 py-0.5 text-xs
-                             text-(--color-badge-warning-ink)">{{ $waiting->count() }}</span>
+                             text-(--color-badge-warning-ink)">{{ $waitingTotal }}</span>
             </h2>
 
             <p class="border-b border-(--color-border) px-4 py-2 text-xs text-(--color-ink-muted)">
                 {{ __('finance::message.waiting_approval_note') }}
             </p>
+
+            {{-- কাটা পড়েছে কি না, আর কতটা — কেবল সত্যিই কাটা পড়লে।
+
+                 নিচে যা দেখা যাচ্ছে সেটাই সবটা নয় — এই লাইনটা না থাকলে
+                 পর্দাটা সম্পূর্ণ দেখাত অথচ বাকিগুলো চুপচাপ লুকিয়ে রাখত। --}}
+            @if ($waitingTotal > $waiting->count())
+                <p role="status"
+                   class="border-b border-(--color-border) bg-(--color-badge-warning-bg) px-4 py-2
+                          text-xs text-(--color-badge-warning-ink)">
+                    {{ __('finance::message.waiting_approval_capped', [
+                        'shown' => $waiting->count(),
+                        'total' => $waitingTotal,
+                    ]) }}
+                </p>
+            @endif
 
             <x-ui.table
                 :rows="$waiting"

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\SystemAdmin\Http\Controllers;
 
+use App\Core\Services\CompanyProvisioner;
 use App\Http\Controllers\Controller;
 use App\Modules\MasterData\Services\MasterListService;
 use App\Modules\SystemAdmin\Services\FirstRun;
@@ -56,7 +57,7 @@ class SetupController extends Controller
          * থেকে বসানো থাকে, আর যাঁর দরকার তিনি বদলে নেন।
          */
         return view('system_admin::setup.index', [
-            'year' => \App\Core\Services\CompanyProvisioner::currentBangladeshiYear(),
+            'year' => CompanyProvisioner::currentBangladeshiYear(),
             'currencies' => MasterListService::CURRENCIES,
         ]);
     }

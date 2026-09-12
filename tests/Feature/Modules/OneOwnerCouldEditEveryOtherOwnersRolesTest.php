@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Modules;
 
 use App\Core\Services\PermissionSyncer;
+use App\Core\Services\RoleTemplateRegistry;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\User;
@@ -240,7 +241,7 @@ class OneOwnerCouldEditEveryOtherOwnersRolesTest extends TestCase
                 $company->code.'-এ ডেপ্লয়ের পর মালিকের রোলটাই নেই — ওখানে কেউ কিছু পারবেন না।',
             );
 
-            foreach (array_keys(app(\App\Core\Services\RoleTemplateRegistry::class)->all()) as $template) {
+            foreach (array_keys(app(RoleTemplateRegistry::class)->all()) as $template) {
                 $this->assertNotNull(
                     $this->roleIn($company, $template),
                     $company->code.'-এ টেমপ্লেট-রোল "'.$template."\" বসেনি।\n"

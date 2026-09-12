@@ -6,12 +6,13 @@ namespace App\Modules\Sales\Services;
 
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
-use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Models\FinancialYear;
-use App\Models\LedgerEntry;
 use App\Models\IssuedNumber;
+use App\Models\LedgerEntry;
+use App\Modules\Accounts\Services\CashTillService;
+use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\StockMovement;
 use App\Modules\Inventory\Models\Warehouse;
@@ -21,8 +22,6 @@ use App\Modules\Inventory\Services\StockService;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\DeliveryChallanLine;
 use App\Modules\Sales\Models\SalesOrder;
-use App\Modules\Accounts\Services\CashTillService;
-use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Sales\Models\SalesOrderLine;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -54,7 +53,32 @@ final class DeliveryChallanService
         // ছাপা দামের সীমা — কোম্পানি বন্ধ করতে পারে না, তাই কোনো সুইচ নেই
         private readonly PrintedPriceCeiling $ceiling,
 
-        private readonly SettingsService $settings,
+        /*
+         * ── এখানে `SettingsService` নেই, আর সেটা ইচ্ছাকৃত ──────────────
+         *
+         * একটা `SettingsService` এখানে ইনজেক্ট করা ছিল আর কোনোদিন পড়া
+         * হয়নি। দেখে স্বাভাবিক সন্দেহ হয় — "বিল তো `sales.allow_negative_
+         * stock` জিজ্ঞেস করে, চালান করে না কেন?" ⛔ সন্দেহটা ভুল, আর
+         * উত্তরটা এখানে লেখা থাকল যাতে পরের জন আবার একই পথে না হাঁটেন।
+         *
+         * ১. ভৌত মজুদ ঋণাত্মক হতে **কোনো পথেই** পারে না:
+         *    `StockService::move()` শর্তহীনভাবে `assertEnoughOnFloor()`
+         *    ডাকে — কোনো সেটিং সে পড়ে না, কোনো বাইপাস প্যারামিটার নেই।
+         *    `issue()` নিজেই `move()`-এ নামে, তাই চালানও ঐ পাহারার নিচে।
+         *
+         * ২. `sales.allow_negative_stock` তাই "শূন্যের নিচে বেচা" নয়।
+         *    `assertEnoughToSell()` মাপে `available = floor − reserved −
+         *    hold`, অর্থাৎ সেটিংটা **সংরক্ষিত বা হোল্ড করা মালে হাত দিতে**
+         *    দেয়। ওটা বিক্রয়ের প্রশ্ন, ভৌত মজুদের নয়।
+         *
+         * ৩. আর চালান সংরক্ষণ নিয়ে অন্ধ নয়: মাল বেরোনোর সাথে সে নিজের
+         *    রিজার্ভেশনটা ছেড়ে দেয় (নিচে `reserved: bcmul($release, '-1')`)।
+         *    অন্যের জন্য রাখা মালে সে হাত দেয় না।
+         *
+         * ⚠️ তাই এখানে "পাহারা" বসালে সেটা বাড়তি নিরাপত্তা দিত না, বরং
+         * ডিপোর চালান রিজার্ভেশনের কারণে আটকে যেত — যে মাল ইতিমধ্যেই এই
+         * চালানের জন্যই ধরা আছে, তার জন্যই।
+         */
 
         // গাড়ির ভাড়া খাতায় বসানোর জন্য — নিচে postTransportCost()
         private readonly PostingEngine $posting,

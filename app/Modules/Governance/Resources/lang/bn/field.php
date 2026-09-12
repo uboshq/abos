@@ -29,7 +29,6 @@ return [
     'result' => 'ফল',
     'why' => 'কারণ',
     'where_from' => 'কোথা থেকে',
-    'device' => 'যন্ত্র',
     'last_seen' => 'শেষ দেখা',
     'as_on' => 'যে তারিখে',
     'the_field' => 'ঘর',

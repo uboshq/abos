@@ -10,6 +10,8 @@ return [
     'flow_deleted' => 'The rule was deleted.',
 
     'nothing_waiting' => 'Nothing is waiting for your decision.',
+
+    'inbox_capped' => 'Showing the :shown oldest; :total are waiting in all.',
     'no_requests' => 'You have not asked for an approval yet.',
     'no_flows' => 'No rules are set up — so nothing needs approval anywhere.',
     'no_flows_hint' => 'Without a rule, discounts, cancellations and back-dated entries all go through unasked.',

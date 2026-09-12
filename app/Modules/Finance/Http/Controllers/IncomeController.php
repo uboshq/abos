@@ -44,6 +44,18 @@ class IncomeController extends Controller implements HasMiddleware
         return [new Middleware('can:finance.income.view')];
     }
 
+    /**
+     * ⛔ পাতা ভাগ নেই, ইচ্ছাকৃত — খরচের পর্দার মতোই, সারি খাত ধরে।
+     *
+     * একটা সারি মানে ছকের `INCOME`-এর নিচের একটা খাত, আর ওই সংখ্যাটা
+     * ছক ঠিক করে — ব্যবসা যত বড়ই হোক, আয়ের খাত হাতে গোনাই থাকে।
+     *
+     * ⚠️ আর নিচের `split()` — বিক্রয় কত, বিক্রয় ছাড়া কত — গোনা হয়
+     * ঠিক এই সারিগুলোর উপর। পাতা ভাগ করলে ওই দুইটা সংখ্যা এই পাতার
+     * হয়ে যেত, অথচ পুরো পর্দাটার আসল প্রশ্নই ওটা।
+     *
+     * কারণটা `EveryListScreenPaginatesTest`-এর ছাড়ের তালিকাতেও আছে।
+     */
     public function index(Request $request): View
     {
         $from = (string) $request->query('from', now()->startOfMonth()->toDateString());

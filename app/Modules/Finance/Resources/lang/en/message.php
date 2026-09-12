@@ -54,6 +54,8 @@ return [
     // Says what is NOT true first: these are not in the books, so the
     // head totals above look smaller and nobody would know why.
     'waiting_approval_note' => 'These are not in the books yet, so they are not counted in the head totals above. Once approved, posting the voucher adds them.',
+
+    'waiting_approval_capped' => 'Showing the :shown oldest; :total are waiting in all.',
     'rental_deposit_narration' => ':who — deposit paid',
     'rental_month_narration' => ':who — rent for :month',
     'rental_refund_narration' => ':who — deposit refunded at close',

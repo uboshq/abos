@@ -91,6 +91,20 @@ class KitchenBoardController extends Controller implements HasMiddleware
         private readonly KitchenTicketService $tickets,
     ) {}
 
+    /**
+     * ⛔ পাতা ভাগ নেই, ইচ্ছাকৃত — এটা রান্নাঘরের বোর্ড, তালিকা নয়।
+     *
+     * বোর্ডটা দেয়ালে ঝোলে আর নিজে থেকে নতুন হয়; যিনি রাঁধছেন তাঁর হাত
+     * ময়দায়, তিনি "পরের পাতা" চাপবেন না। দ্বিতীয় পাতায় চলে যাওয়া
+     * একটা অর্ডার মানে **সেটা কেউ রাঁধবে না** — আর গ্রাহক টেবিলে বসে
+     * থাকবেন।
+     *
+     * তালিকাটা নিজে থেকেই ছোট থাকে: রান্না হয়ে গেলে পদটা বোর্ড থেকে
+     * নেমে যায়। লম্বা হলে সেটা জমে থাকা নয়, রান্নাঘর পিছিয়ে পড়ার সংকেত —
+     * আর ঠিক তখনই পুরোটা একসাথে দেখা সবচেয়ে জরুরি।
+     *
+     * কারণটা `EveryListScreenPaginatesTest`-এর ছাড়ের তালিকাতেও আছে।
+     */
     public function index(Request $request): View
     {
         return view('restaurant::kitchen.index', [

@@ -14,7 +14,6 @@ return [
     'payable_overview' => 'সরবরাহকারীকে দেনা',
     'payable_overview_hint' => 'মোট প্রদেয় — বয়স ধরে দেখতে ক্লিক করুন',
 
-
     // চারটা দরজা ও খরচের ভাগ — ৪ সেপ্টেম্বর ২০২৬
     'pending_approvals' => 'অপেক্ষমাণ অনুমোদন',
     'expense_heads' => 'খরচের খাত',

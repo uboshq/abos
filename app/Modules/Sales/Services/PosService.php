@@ -16,7 +16,6 @@ use App\Modules\Customer\Models\Customer;
 use App\Modules\MasterData\Models\PaymentMethod;
 use App\Modules\Sales\Metrics\SalesMetrics;
 use App\Modules\Sales\Models\SalesInvoice;
-use App\Modules\Sales\Services\ParkedStockReservation;
 use App\Modules\Sales\Models\SalesInvoiceLine;
 use App\Modules\Sales\Models\SalesReturn;
 use App\Modules\Sales\Models\SalesReturnLine;
@@ -98,7 +97,7 @@ final class PosService
              * লেখা। দুইটাই `available` থেকে বাদ যায়, কিন্তু `Hold`
              * একটা কারণ-কোড দাবি করে আর ধরে রাখা বিল কোনো "কারণ" নয়।
              */
-            app(ParkedStockReservation::class)->reserve($invoice->fresh(['lines.product'])); 
+            app(ParkedStockReservation::class)->reserve($invoice->fresh(['lines.product']));
 
             return $invoice->fresh(['lines']);
         });

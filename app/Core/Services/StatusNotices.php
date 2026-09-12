@@ -171,7 +171,16 @@ final class StatusNotices
             return null;
         }
 
-        $count = app(ApprovalEngine::class)->pendingFor($user)->count();
+        /*
+         * গোনাটা ডাটাবেজে — সারি না তুলে।
+         *
+         * আগে ছিল `pendingFor($user)->count()`, অর্থাৎ প্রতিটা অপেক্ষমাণ
+         * অনুরোধ (আর প্রতিটার অনুরোধকারী) মেমরিতে তুলে তারপর গোনা।
+         * ⚠️ আর এই পট্টিটা **প্রায় প্রতিটা পাতায়** বসে, তাই জটে পড়া
+         * একটা কোম্পানিতে ওটাই হত সবচেয়ে দামি কোয়েরি — একটা সংখ্যার
+         * জন্য, যার পাশে কোনো সারিই দেখানো হয় না।
+         */
+        $count = app(ApprovalEngine::class)->pendingQueryFor($user)->count();
 
         if ($count === 0) {
             return null;

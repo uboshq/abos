@@ -36,6 +36,18 @@ class SalesTargetController extends Controller implements HasMiddleware
         ];
     }
 
+    /**
+     * ⛔ পাতা ভাগ নেই, ইচ্ছাকৃত — স্কোরবোর্ড, আর সারি মানুষ ধরে।
+     *
+     * একটা সারি মানে একজন বিক্রয়কর্মী, আর মাস বদলালেও সেই মানুষগুলোই
+     * থাকেন — সারি জমে না, কেবল সংখ্যাগুলো বদলায়। বিক্রয় দলের আকারে
+     * বাঁধা, আর সেটা দশ-বিশে গোনা।
+     *
+     * ⚠️ আর স্কোরবোর্ডের কাজই তুলনা: কে উপরে, কে নিচে। অর্ধেক দল
+     * দ্বিতীয় পাতায় চলে গেলে র‍্যাঙ্কিংটাই অর্থ হারাত।
+     *
+     * কারণটা `EveryListScreenPaginatesTest`-এর ছাড়ের তালিকাতেও আছে।
+     */
     public function index(Request $request): View
     {
         $month = $this->targets->readMonth($request->query('month'));
