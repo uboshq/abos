@@ -53,6 +53,53 @@ class TheFirstDoorOpensOnlyOnceTest extends TestCase
         ];
     }
 
+    /**
+     * ⭐ যে ভাষায় পাতাটা পড়া হয়েছে, অ্যাকাউন্টও সেই ভাষায় বসে।
+     *
+     * ── ⛔ কী ভাঙা ছিল, ১৩ সেপ্টেম্বর ২০২৬ ─────────────────────────────
+     * সেটআপের কোণে ভাষা বদলানোর বোতামটা ছিল, আর তার পাশে যত্ন করে লেখা
+     * কারণও: *"যিনি নিজের সার্ভারে বসিয়েছেন তিনি হয়তো ইংরেজিতে পড়েন,
+     * আর এটাই তাঁর দেখা ABOS-এর প্রথম পর্দা।"*
+     *
+     * ⚠️ কিন্তু বাছাটা **ফর্মের সাথে যেত না** — কোনো `locale` ঘর পাঠানোই
+     * হত না। কন্ট্রোলার ঘরটা যাচাই করত (`nullable|in:bn,en`), আর
+     * [[FirstRun]] না পেলে `bn` ধরে নিত। ফল: পুরো সেটআপটা ইংরেজিতে পড়ে
+     * শেষ করলেও অ্যাকাউন্ট বসত বাংলায়, আর ঢোকার পর তিনি এমন একটা পর্দা
+     * পেতেন যেটা তিনি পড়তে পারেন না।
+     *
+     * ⓘ আজকের চেনা আকার: **নিয়ম ছিল, ঘরটা কোনোদিন পাঠানো হয়নি** — একটা
+     * যাচাই যা এমন কিছু পাহারা দেয় যা কেউ পাঠাতেই পারে না।
+     */
+    public function test_the_language_of_the_page_becomes_the_language_of_the_account(): void
+    {
+        $this->post('/setup', [...$this->form(), 'locale' => 'en'])
+            ->assertRedirect(route('dashboard'));
+
+        $this->assertSame('en', User::query()->firstOrFail()->locale);
+    }
+
+    /**
+     * ⛔ আর উল্টো দিকটাও, নাহলে দাবিটা অর্ধেক।
+     *
+     * ⓘ কেবল উপরেরটা থাকলে একটা "সবসময় en বসাও" কোডও পাস করত — আর
+     * তখন প্রতিটা বাংলা ক্রেতা ইংরেজি পর্দা পেতেন।
+     */
+    public function test_bangla_stays_bangla(): void
+    {
+        $this->post('/setup', [...$this->form(), 'locale' => 'bn'])
+            ->assertRedirect(route('dashboard'));
+
+        $this->assertSame('bn', User::query()->firstOrFail()->locale);
+    }
+
+    /** ঘরটা না এলে বাংলাই — এই দেশের ক্রেতাই বেশি। */
+    public function test_a_missing_choice_falls_back_to_bangla(): void
+    {
+        $this->post('/setup', $this->form())->assertRedirect(route('dashboard'));
+
+        $this->assertSame('bn', User::query()->firstOrFail()->locale);
+    }
+
     public function test_the_door_is_there_when_nobody_has_ever_logged_in(): void
     {
         // ⚠️ শূন্যটা দেখে নেওয়া — খালি সংগ্রহের উপর চালানো assertion

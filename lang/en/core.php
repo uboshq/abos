@@ -213,6 +213,15 @@ return [
         'powered_by' => 'Powered by',
         /* Not translated: a company's name is its name. */
         'powered_by_name' => 'UNIVER BANGLADESH',
+
+        /*
+         * The rights line — footer, far left. Owner's instruction, 13 Sep 2026.
+         *
+         * The year is not in this string: it would go stale every January and
+         * nobody would remember to change it. It comes from `now()->year`;
+         * this key carries only the part that is actually translatable.
+         */
+        'rights' => 'All Rights Reserved.',
         /*
          * পণ্যের নাম — শুধু ABOS।
          *
