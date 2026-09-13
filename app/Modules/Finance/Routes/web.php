@@ -55,6 +55,19 @@ Route::middleware('auth')->prefix('finance')->group(function () {
     Route::prefix('capital')->name('capital.')->group(function () {
         Route::get('/', [CapitalController::class, 'index'])->name('index');
         Route::post('/', [CapitalController::class, 'store'])->name('store');
+        /*
+         * সম্পাদনা ও মোছা — ⛔ কেবল খসড়া, আর পাহারাটা কন্ট্রোলারে।
+         *
+         * ⓘ `edit` তালিকার পাতাটাই আবার আঁকে, ঘরগুলো ভরা অবস্থায় —
+         * আলাদা পাতা নয়, কারণ ফর্মটা ঐ পাতাতেই বসে।
+         */
+        Route::get('/{entry}/edit', [CapitalController::class, 'edit'])
+            ->whereNumber('entry')->name('edit');
+        Route::put('/{entry}', [CapitalController::class, 'update'])
+            ->whereNumber('entry')->name('update');
+        Route::delete('/{entry}', [CapitalController::class, 'destroy'])
+            ->whereNumber('entry')->name('destroy');
+
         Route::post('/{entry}/post', [CapitalController::class, 'post'])
             ->whereNumber('entry')->name('post');
     });

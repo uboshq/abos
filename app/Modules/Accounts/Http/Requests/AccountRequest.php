@@ -68,6 +68,21 @@ class AccountRequest extends FormRequest
             'account_title' => ['nullable', 'string', 'max:160'],
             'routing_no' => ['nullable', 'string', 'max:32'],
 
+            /*
+             * নগদ কার হাতে।
+             *
+             * ⚠️ `exists` কেবল যথেষ্ট নয় — কোম্পানির শর্ত ছাড়া ঠিকানায়
+             * অন্য কোম্পানির একটা id বসিয়ে দিলে সেই মানুষের নামে এই
+             * কোম্পানির নগদ বসে যেত, আর কোনো পর্দায় সেটা দেখা যেত না।
+             * ⓘ আজ ঠিক এই ভুলটা মালিকানার পর্দাতেও ধরা পড়েছে।
+             *
+             * ⓘ `nullable` এখানে, কারণ ব্যাংক বা খরচের খাতে ঘরটা লাগে
+             * না। **নগদে লাগবেই**, আর সেই শর্তটা
+             * [[AccountService::assertCashHasAKeeper()]]-এ — যেখানে
+             * জানা যায় খাতটা আদৌ নগদ কি না।
+             */
+            'held_by' => ['nullable', 'integer', Rule::exists('users', 'id')],
+
             'is_active' => ['nullable', 'boolean'],
         ];
     }

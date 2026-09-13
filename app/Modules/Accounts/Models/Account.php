@@ -90,7 +90,7 @@ class Account extends Model implements Drillable
 
     protected $fillable = [
         'company_id', 'parent_id', 'code', 'name_en', 'name_bn',
-        'type', 'nature', 'is_group', 'money_kind', 'is_system',
+        'type', 'nature', 'is_group', 'money_kind', 'held_by', 'is_system',
         'opening_balance', 'opening_date',
         'account_number', 'bank_name', 'branch_name', 'account_title', 'routing_no',
         'status', 'is_active', 'created_by',
@@ -132,6 +132,17 @@ class Account extends Model implements Drillable
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * নগদটা কার হাতে।
+     *
+     * ⓘ কেবল নগদ খাতে ভরা থাকে। ব্যাংক বা MFS-এ খালি, আর সেটা ফাঁক নয় —
+     * ব্যাংকের টাকা কারও ড্রয়ারে থাকে না, ওটা ব্যাংকের কাছে।
+     */
+    public function keeper(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'held_by');
     }
 
     /** ব্যবহারকারীর ভাষায় নাম — বাংলা না থাকলে ইংরেজি (সেকশন ১৮.৩)। */

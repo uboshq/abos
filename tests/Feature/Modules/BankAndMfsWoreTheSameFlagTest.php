@@ -8,10 +8,13 @@ use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Services\AccountService;
+use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\StandardChart;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 /**
@@ -35,13 +38,16 @@ class BankAndMfsWoreTheSameFlagTest extends TestCase
 
     private Company $company;
 
+    private User $user;
+
     protected function setUp(): void
     {
         parent::setUp();
         $this->seed(DemoSeeder::class);
 
         $this->company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
-        $user = User::query()->where('email', 'owner@abos.test')->firstOrFail();
+        $this->user = User::query()->where('email', 'owner@abos.test')->firstOrFail();
+        $user = $this->user;
 
         CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
         $this->actingAs($user);
@@ -96,6 +102,13 @@ class BankAndMfsWoreTheSameFlagTest extends TestCase
             $child = $this->service()->create([
                 'name_en' => 'Child of '.$code,
                 'parent_id' => $this->mother($code)->id,
+
+                /*
+                 * ⓘ নগদের ক্ষেত্রে নিয়ন্ত্রকের নাম বাধ্যতামূলক
+                 * ([[AccountService::assertCashHasAKeeper()]]), তাই
+                 * তিনটাতেই পাঠানো হয় — ব্যাংক ও MFS ওটা উপেক্ষা করে।
+                 */
+                'held_by' => $this->user->id,
             ]);
 
             $this->assertSame($expected, $child->money_kind,
@@ -193,6 +206,97 @@ class BankAndMfsWoreTheSameFlagTest extends TestCase
         // দুইটাই টাকার খাত — পার্থক্যটা ধরনে, টাকা ধরায় নয়
         $this->assertTrue($bank->isMoney());
         $this->assertTrue($bkash->isMoney());
+    }
+
+    /**
+     * ⛔ নগদ খাতে কে ধরবেন সেটা না বললে খাতটা জন্মায় না।
+     *
+     * ── মালিকের প্রশ্ন ও সংশোধন, ১৩ সেপ্টেম্বর ২০২৬ ───────────────────
+     * *"এই অ্যাকাউন্টে নিয়ন্ত্রক কে? সেটাই নাই।"*
+     *
+     * ছক থেকে ১১০১-এর নিচে খাত বানালে সত্যিকারের টাকা বসত **কারো নামে
+     * না**, আর "টাকা ও হেফাজত" পর্দায় সারিটা আসতই না।
+     *
+     * ⛔ প্রথম সারাইটা ভুল ছিল — নগদ খাত বানানোই বন্ধ করে সবাইকে টিলের
+     * পর্দায় পাঠানো হচ্ছিল। মালিক ধরিয়ে দিলেন: *"টিল তো POS-এর জন্য।
+     * অফিসে অ্যাকাউন্টসের ক্যাশ কীভাবে হবে?"* ⭐ প্রশ্নটা "কার হাতে",
+     * আর টিল তার একটা উত্তর মাত্র।
+     */
+    public function test_a_cash_account_must_name_who_holds_it(): void
+    {
+        try {
+            $this->service()->create([
+                'name_en' => 'A drawer nobody owns',
+                'parent_id' => $this->mother(StandardChart::CASH_IN_HAND)->id,
+            ]);
+
+            $this->fail('নিয়ন্ত্রকের নাম ছাড়াই নগদ খাত বসে গেল।');
+        } catch (ValidationException $e) {
+            $this->assertSame(
+                __('accounts::validation.cash_needs_a_keeper'),
+                $e->errors()['held_by'][0] ?? '',
+            );
+        }
+    }
+
+    /**
+     * ⭐ নাম দিলে বসে — আর এটাই দাবিটার অন্য অর্ধেক।
+     *
+     * ⛔ শুধু উপরেরটা থাকলে একটা "সব নগদ খাত আটকাও" কোডও পাস করত, আর
+     * তখন অফিসের সিন্দুকই বানানো যেত না — সারানোটা রোগের চেয়ে খারাপ।
+     */
+    public function test_an_office_cash_account_is_fine_once_somebody_holds_it(): void
+    {
+        $office = $this->service()->create([
+            'name_en' => 'Office Cash',
+            'name_bn' => 'অফিসের নগদ',
+            'parent_id' => $this->mother(StandardChart::CASH_IN_HAND)->id,
+            'held_by' => $this->user->id,
+        ]);
+
+        $this->assertSame(Account::CASH, $office->money_kind);
+        $this->assertSame($this->user->id, $office->held_by);
+
+        // ⭐ আর এটা কোনো কাউন্টার নয় — টিল ছাড়াই নগদ ধরা যায়
+        $this->assertSame(0, CashTill::query()
+            ->where('account_id', $office->id)->count());
+    }
+
+    /** ⓘ ব্যাংকে নিয়ন্ত্রক লাগে না — টাকাটা কারও ড্রয়ারে নেই। */
+    public function test_a_bank_account_needs_nobody_to_hold_it(): void
+    {
+        $bank = $this->service()->create([
+            'name_en' => 'Islami Bank Current',
+            'parent_id' => $this->mother(StandardChart::BANK)->id,
+        ]);
+
+        $this->assertSame(Account::BANK, $bank->money_kind);
+        $this->assertNull($bank->held_by);
+    }
+
+    /**
+     * ⭐ কাউন্টার খুললে খাতটা নিয়ন্ত্রকসহ বসে।
+     *
+     * ⓘ দুই জায়গায় একই তথ্য মনে হলেও প্রশ্ন দুইটা আলাদা: টিলের
+     * `holder_id` বলে কাউন্টারটা কার, খাতের `held_by` বলে ঐ টাকাটা
+     * কার হাতে। অফিসের সিন্দুকের টিল নেই, তবু তারও একজন থাকেন।
+     */
+    public function test_a_counter_still_creates_its_own_cash_account(): void
+    {
+        $before = Account::query()->ofMoneyKind(Account::CASH)->count();
+
+        $till = app(CashTillService::class)->create([
+            'name_en' => 'Front Counter',
+            'name_bn' => 'সামনের কাউন্টার',
+            'holder_id' => $this->user->id,
+        ]);
+
+        $this->assertSame($before + 1, Account::query()->ofMoneyKind(Account::CASH)->count());
+        $this->assertSame(Account::CASH, $till->account->money_kind);
+        $this->assertSame($this->user->id, $till->holder_id);
+
+        // ⭐ প্রশ্নটার উত্তর খাতেও আছে, কেবল টিলে নয়
+        $this->assertSame($this->user->id, $till->account->held_by);
     }
 
     /** টাকার মায়ের বাইরের খাত টাকার খাত নয় — খরচ, বিক্রয়, ভাড়া। */

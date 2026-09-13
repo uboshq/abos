@@ -30,7 +30,20 @@ final class RoleLabel
 {
     public static function for(string $name): string
     {
-        $key = 'system_admin::role_name.'.$name;
+        /*
+         * ⚠️ মানচিত্রটা `core`-এ, কোনো মডিউলে নয় — আর সেটা জরুরি।
+         *
+         * প্রথম খসড়ায় আমি `system_admin::role_name` নামে একটা **নতুন**
+         * ফাইল বানিয়েছিলাম, অথচ `core.role` আগে থেকেই ছিল আর টপবার
+         * সেটাই পড়ত। ⛔ ফল: দুইটা উৎস, আর টপবারে কাঁচা চাবি
+         * (`core.role.super_admin`) ছাপা হওয়া — কারণ আমি নতুনটায় নাম
+         * বসিয়েছিলাম, পুরনোটায় নয়।
+         *
+         * ⓘ তার উপর টপবার core-এর, আর মডিউলের ভাষা ফাইল core থেকে পড়া
+         * স্তর উল্টে দিত। তাই মানচিত্রটা এখন core-এর নিজের `core.php`
+         * ভাষা ফাইলে, দুই ভাষাতেই — আর একটাই।
+         */
+        $key = 'core.role.'.$name;
         $label = __($key);
 
         return is_string($label) && $label !== $key ? $label : $name;

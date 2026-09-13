@@ -101,6 +101,17 @@ final class CashTillService implements ProvisionsCompany
                 'name_en' => $data['name_en'],
                 'name_bn' => $data['name_bn'] ?? null,
                 'parent_id' => $parent->id,
+
+                /*
+                 * ⭐ কাউন্টারের দায়িত্ব খাতেও লেখা থাকে।
+                 *
+                 * ⓘ দুই জায়গায় একই তথ্য মনে হলেও প্রশ্ন দুইটা আলাদা:
+                 * টিলের `holder_id` বলে **কাউন্টারটা কার**, খাতের
+                 * `held_by` বলে **ঐ টাকাটা কার হাতে**। অফিসের সিন্দুকের
+                 * কোনো টিল নেই, তবু তারও একজন থাকেন — তাই প্রশ্নটার
+                 * ঘর খাতেই থাকতে হয়।
+                 */
+                'held_by' => $data['holder_id'] ?? null,
                 /*
                  * ধরনটা আর এখান থেকে যায় না — বাবার খাত থেকে বসে
                  * ([[AccountService::moneyKindFor()]])। টিলের বাবা
@@ -109,7 +120,16 @@ final class CashTillService implements ProvisionsCompany
                  */
                 'opening_balance' => $data['opening_balance'] ?? 0,
                 'opening_date' => $data['opening_date'] ?? null,
-            ]);
+            ],
+                /*
+                 * ⭐ নিয়ন্ত্রক এখানে বসছে — তাই নগদের পাহারাটা মেটে।
+                 *
+                 * ছক থেকে সরাসরি নগদ খাত বানানো বন্ধ
+                 * ([[AccountService::assertCashHasAKeeper()]]), কারণ তাতে
+                 * টাকা বসত কারো নামে না। এই পথে টিলের সারিতে `holder_id`
+                 * বসে, তাই প্রশ্নটার উত্তর আছে।
+                 */
+                withAKeeper: true);
 
             /*
              * খোলা ব্যালেন্স উপরে খাতে বসে গেছে — টিলে ওই ঘর দুইটা নেই।

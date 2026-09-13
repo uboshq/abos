@@ -181,6 +181,17 @@
          নামটাই কাটে, বার নয়। ড্যাশবোর্ডে আজই একই নিয়ম বসেছে (grid),
          আর নিচের সার্চ বাক্সেও এটা আগে থেকেই লেখা আছে। --}}
     <div class="ms-auto flex min-w-0 items-center gap-1">
+        {{-- মডিউল লঞ্চার — কেবল ABOS রূপে।
+
+             ⓘ মালিকের নির্দেশ: বদলগুলো শুধু ABOS-এ। ⚠️ আর `apps` রূপের
+             নিজের ৯-ফোঁটার লঞ্চার আগে থেকেই আছে (`chrome/apps`), তাই
+             শর্ত ছাড়া বসালে ওখানে দুইটা বোতাম হত।
+
+             ⓘ কোডে ABOS-এর নাম `navy` — `core.ui.navy` অনুবাদে "ABOS"। --}}
+        @if (\App\Core\Support\LookRegistry::lookFor(\App\Core\Support\LookPreview::orChosen(auth()->user()?->ui)) === 'navy')
+            <x-shell.launcher :menu="$menu ?? []" />
+        @endif
+
         {{-- ঝাঁকের প্রথম, কারণ এটাই একমাত্র যেটা কাজ শুরু করে। --}}
         <x-shell.create-menu />
 
@@ -280,7 +291,12 @@
                  নিচে নামত না, আর ওদের শেল বার ৪৪। --}}
             <span class="hidden max-w-56 min-w-0 truncate text-end text-sm font-medium
                          text-(--color-topbar-ink) lg:block">
-                {{ $user->name }}@if ($role = $user->getRoleNames()->first())<span class="font-normal text-(--color-topbar-ink-muted)"> ({{ __('core.role.'.$role) }})</span>@endif
+                {{-- ⚠️ `__('core.role.'.$role)` সরাসরি নয় — অনুবাদ না পেলে `__()`
+                     **চাবিটাই** ফেরত দেয়, আর তখন নামের পাশে বসত
+                     `core.role.super_admin`। ⓘ কাস্টম রোলে (`store_keeper`,
+                     `Field Sales`) ওটা সবসময়ই ঘটত। RoleLabel অনুবাদ পেলে
+                     সেটা দেয়, নাহলে রোলের নামটাই। --}}
+                {{ $user->name }}@if ($role = $user->getRoleNames()->first())<span class="font-normal text-(--color-topbar-ink-muted)"> ({{ \App\Core\Support\RoleLabel::for($role) }})</span>@endif
             </span>
         @endif
 

@@ -67,6 +67,77 @@ final class CapitalService
     }
 
     /**
+     * খসড়া সারিটা শুধরানো।
+     *
+     * ⛔ নথির নম্বরটা বদলায় না, আর কখনো বদলাবেও না — একবার দেওয়া নম্বর
+     * ফেরত নেওয়া হয় না ([[NumberSeriesEngine]])। ⓘ কেউ কাগজে CAP-0001
+     * লিখে রাখলে সেটা যেন একই জিনিসই বোঝায়।
+     *
+     * ⚠️ অবস্থার পাহারাটা এখানেও, কন্ট্রোলারে থাকা সত্ত্বেও। কারণ এই
+     * সেবাটা পরে ইমপোর্ট বা API থেকেও ডাকা হতে পারে, আর তখন কন্ট্রোলারের
+     * পাহারাটা চলবেই না। ⭐ নিয়মটা যেখানে টাকা নড়ে সেখানে থাকতে হয়,
+     * যেখানে ফর্ম জমা পড়ে সেখানে নয়।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function revise(CapitalEntry $entry, array $data): CapitalEntry
+    {
+        return DB::transaction(function () use ($entry, $data) {
+            $this->assertStillADraft($entry);
+            $this->assertKnown($data);
+
+            $entry->forceFill([
+                'person_id' => (int) $data['person_id'],
+                'contributor_type' => $data['contributor_type'],
+                'entry_type' => $data['entry_type'],
+                'trx_date' => $data['trx_date'],
+                'amount' => $data['amount'],
+                'share_percent' => ($data['share_percent'] ?? '') !== '' ? $data['share_percent'] : null,
+                'narration' => ($data['narration'] ?? '') ?: null,
+            ])->save();
+
+            return $entry->fresh();
+        });
+    }
+
+    /**
+     * খসড়াটা ফেলে দেওয়া।
+     *
+     * ⓘ soft delete, কারণ [[IsAudited]] সারিটার ইতিহাস ধরে রাখে আর
+     * নম্বরটা দখলেই থাকে — ফিরে এসে দেখা যে কেউ CAP-0002 নিয়ে নিয়েছে,
+     * এমন হওয়া উচিত নয়।
+     */
+    public function discard(CapitalEntry $entry): void
+    {
+        DB::transaction(function () use ($entry) {
+            $this->assertStillADraft($entry);
+
+            $entry->delete();
+        });
+    }
+
+    /**
+     * ⛔ পোস্ট হওয়া সারি ছোঁয়া যায় না — বদলানোও নয়, মোছাও নয়।
+     *
+     * পোস্ট মানে একটা ভাউচার আর দুইটা দাখিলা খাতায় বসে গেছে। সারিটা
+     * পরে বদলালে **খাতা আর তালিকা দুই কথা বলত**, আর মুছলে ট্রায়াল
+     * ব্যালেন্সে একটা গর্ত থাকত যার কোনো ব্যাখ্যা নেই।
+     *
+     * ⭐ ভুল হলে বিপরীত দাখিলা — এই রিপোর নিয়ম ৫, আর ঋণের রুটের
+     * মন্তব্যেও একই কথা লেখা আছে।
+     */
+    private function assertStillADraft(CapitalEntry $entry): void
+    {
+        if ($entry->status !== CapitalEntry::DRAFT) {
+            throw ValidationException::withMessages([
+                'status' => __('finance::validation.capital_already_posted', [
+                    'no' => $entry->document_no,
+                ]),
+            ]);
+        }
+    }
+
+    /**
      * টাকাটা এসেছে — খাতায় বসানো।
      *
      * ── কেন কোন খাতে জিজ্ঞেস করা হয় ────────────────────────────────

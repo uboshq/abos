@@ -154,6 +154,7 @@ return [
            থাকার দরকার নেই। */
         'finance.capital.view',
         'finance.capital.create',
+        'finance.capital.delete',
         'finance.capital.post',
 
         /* খরচ দেখা — লেখা হয় ভাউচারে, তাই লেখার অনুমতি ওখানেই */

@@ -8,6 +8,7 @@ return [
 
     'kind' => 'Kind',
     'kind_till' => 'Cash counter',
+    'kind_office_cash' => 'Office cash',
     'kind_bank' => 'Bank / MFS',
     'kind_transit' => 'In transit',
 

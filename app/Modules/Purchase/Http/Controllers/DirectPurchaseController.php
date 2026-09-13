@@ -8,6 +8,7 @@ use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\RoleLabel;
 use App\Http\Controllers\Controller;
 use App\Models\NumberSeries;
 use App\Modules\Accounts\Models\Account;
@@ -141,9 +142,11 @@ class DirectPurchaseController extends Controller implements HasMiddleware
 
                 $role = $user->getRoleNames()->first();
 
+                // ⓘ RoleLabel, সরাসরি `__()` নয় — অনুবাদ না পেলে `__()`
+                // চাবিটাই ফেরত দেয়, আর কাস্টম রোলের কোনো অনুবাদ থাকে না
                 return $role === null
                     ? $user->name
-                    : $user->name.' ('.__('core.role.'.$role).')';
+                    : $user->name.' ('.RoleLabel::for($role).')';
             })(),
 
             /*
