@@ -175,56 +175,6 @@ return new class extends Migration
         $this->assertNothingWouldBeLost();
 
         /*
-         * ── ৪ · পুরনো মুক্ত-লেখা ঘর বাদ ───────────────────────────────
-         *
-         * ⓘ এখানেও হাতে লেখা, উপরের একই কারণে: larastan যেন দেখতে পায়
-         * কোন কলামটা আর নেই। লুপে লিখলে সে ভাবত ঘরগুলো এখনো আছে, আর
-         * পুরনো নামে কেউ কোড লিখলে চুপ করে থাকত।
-         */
-        if (Schema::hasColumn('acc_capital_entries', 'contributor_name')) {
-            Schema::table('acc_capital_entries', function (Blueprint $table): void {
-                $table->dropColumn('contributor_name');
-            });
-        }
-
-        if (Schema::hasColumn('fin_withdrawals', 'contributor_name')) {
-            Schema::table('fin_withdrawals', function (Blueprint $table): void {
-                $table->dropColumn('contributor_name');
-            });
-        }
-
-        if (Schema::hasColumn('acc_withdrawal_limits', 'contributor_name')) {
-            Schema::table('acc_withdrawal_limits', function (Blueprint $table): void {
-                $table->dropColumn('contributor_name');
-            });
-        }
-
-        if (Schema::hasColumn('fin_hand_loan_accounts', 'person_name')) {
-            Schema::table('fin_hand_loan_accounts', function (Blueprint $table): void {
-                $table->dropColumn('person_name');
-            });
-        }
-
-        if (Schema::hasColumn('fin_deposits', 'holder_name')) {
-            Schema::table('fin_deposits', function (Blueprint $table): void {
-                $table->dropColumn('holder_name');
-            });
-        }
-
-        /*
-         * হাতে-ধারের মোবাইলও যায় — নম্বরটা এখন ব্যক্তির সারিতে।
-         *
-         * দুই জায়গায় রাখলে একদিন আলাদা হত: কেউ হাতে-ধারের পর্দায় নম্বর
-         * বদলাতেন, আর তালিকায় পুরনোটা থেকে যেত — তখন নকল-পাহারা পুরনো
-         * নম্বর ধরে কাজ করত।
-         */
-        if (Schema::hasColumn('fin_hand_loan_accounts', 'mobile')) {
-            Schema::table('fin_hand_loan_accounts', function (Blueprint $table): void {
-                $table->dropColumn('mobile');
-            });
-        }
-
-        /*
          * ⚠️ ক্রমটা এখানে উল্টো — **নতুন সূচক আগে, বাসি সূচক পরে**, আর
          * সেটা একটা সত্যিকারের ব্যর্থতার পর (১৩ সেপ্টেম্বর ২০২৬)।
          *
@@ -316,6 +266,81 @@ return new class extends Migration
                     $blueprint->dropIndex($name);
                 });
             }
+        }
+
+        /*
+         * ── ৭ · ⛔ এখন, আর কেবল এখন, পুরনো ঘরগুলো বাদ ─────────────────
+         *
+         * ⚠️ এই ব্লকটা আগে **সূচকগুলোর উপরে** ছিল, আর সেটা একটা নতুন
+         * ডাটাবেসে সোজা ভেঙেছে (১৩ সেপ্টেম্বর ২০২৬, লাইভ পুনঃইনস্টলের সময়):
+         *
+         *     SQLSTATE[42000]: 1072 Key column 'contributor_name'
+         *     doesn't exist in table
+         *     (alter table `acc_withdrawal_limits` drop `contributor_name`)
+         *
+         * কারণ নতুন ডাটাবেসে `unique(company_id, contributor_name)`
+         * সূচকটাই `company_id`-র বিদেশি চাবিকে সেবা দেয়, আর MySQL শেষ
+         * সূচকের একটা কলাম কেড়ে নিতে দেয় না।
+         *
+         * ⭐ আর সবচেয়ে শিক্ষণীয় দিকটা: **চলতি ডাটাবেসে এটা ধরাই পড়েনি**।
+         * সেখানে MySQL কলামটা ফেলতে দিয়েছিল আর সূচকটা **অর্ধেক** রেখে
+         * দিয়েছিল (`unique(company_id)`), যেটা পরে `information_schema`
+         * পড়ে আলাদাভাবে খুঁজে বের করতে হয়েছে। ⓘ একই ভুলের দুই মুখ: এক
+         * ডাটাবেসে নীরব ক্ষতি, আরেকটায় জোরে ব্যর্থতা।
+         *
+         * ⛔ নিয়মটা এখান থেকে: **`migrate` সবুজ হওয়া `migrate:fresh`
+         * সবুজ হওয়ার প্রমাণ নয়।** স্কিমা বদলালে দুইটাই চালাতে হয়, কারণ
+         * ওরা দুইটা আলাদা প্রশ্নের উত্তর দেয় — "চলতি সাইট বাঁচবে কি না"
+         * আর "নতুন ইনস্টল আদৌ দাঁড়াবে কি না"।
+         */
+        /*
+         * পাঁচটা মুক্ত-লেখা ঘর বাদ।
+         *
+         * ⓘ এখানেও হাতে লেখা, উপরের একই কারণে: larastan যেন দেখতে পায়
+         * কোন কলামটা আর নেই। লুপে লিখলে সে ভাবত ঘরগুলো এখনো আছে, আর
+         * পুরনো নামে কেউ কোড লিখলে চুপ করে থাকত।
+         */
+        if (Schema::hasColumn('acc_capital_entries', 'contributor_name')) {
+            Schema::table('acc_capital_entries', function (Blueprint $table): void {
+                $table->dropColumn('contributor_name');
+            });
+        }
+
+        if (Schema::hasColumn('fin_withdrawals', 'contributor_name')) {
+            Schema::table('fin_withdrawals', function (Blueprint $table): void {
+                $table->dropColumn('contributor_name');
+            });
+        }
+
+        if (Schema::hasColumn('acc_withdrawal_limits', 'contributor_name')) {
+            Schema::table('acc_withdrawal_limits', function (Blueprint $table): void {
+                $table->dropColumn('contributor_name');
+            });
+        }
+
+        if (Schema::hasColumn('fin_hand_loan_accounts', 'person_name')) {
+            Schema::table('fin_hand_loan_accounts', function (Blueprint $table): void {
+                $table->dropColumn('person_name');
+            });
+        }
+
+        if (Schema::hasColumn('fin_deposits', 'holder_name')) {
+            Schema::table('fin_deposits', function (Blueprint $table): void {
+                $table->dropColumn('holder_name');
+            });
+        }
+
+        /*
+         * হাতে-ধারের মোবাইলও যায় — নম্বরটা এখন ব্যক্তির সারিতে।
+         *
+         * দুই জায়গায় রাখলে একদিন আলাদা হত: কেউ হাতে-ধারের পর্দায় নম্বর
+         * বদলাতেন, আর তালিকায় পুরনোটা থেকে যেত — তখন নকল-পাহারা পুরনো
+         * নম্বর ধরে কাজ করত।
+         */
+        if (Schema::hasColumn('fin_hand_loan_accounts', 'mobile')) {
+            Schema::table('fin_hand_loan_accounts', function (Blueprint $table): void {
+                $table->dropColumn('mobile');
+            });
         }
     }
 
