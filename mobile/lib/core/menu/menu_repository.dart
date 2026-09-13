@@ -40,6 +40,7 @@ class MenuRepository {
   /// can only ever want one icon; the server's naming is not this app's
   /// concern here).
   static const Map<String, IconData> _iconByAppPath = {
+    'approvals': Icons.fact_check_outlined,
     'customers': Icons.people_alt_outlined,
     'products': Icons.inventory_2_outlined,
     'stock': Icons.warehouse_outlined,

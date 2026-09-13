@@ -485,6 +485,7 @@ void main() {
   // permission. RouteRegistry's whole table is four such strings.
   group('route names — the menu\'s half of the wire', () {
     const routes = <String, String>{
+      'approval.inbox.index': '../app/Modules/Approval/module.php',
       'customer.index': '../app/Modules/Customer/module.php',
       'sales.order.index': '../app/Modules/Sales/module.php',
       'inventory.product.index': '../app/Modules/Inventory/module.php',
@@ -492,9 +493,9 @@ void main() {
     };
 
     test('every route this app opens is still declared by its module', () {
-      // Four, matching RouteRegistry's table exactly. Stated so that a table
+      // Five, matching RouteRegistry's table exactly. Stated so that a table
       // emptied by a bad edit cannot pass this group by looping over nothing.
-      expect(routes, hasLength(4));
+      expect(routes, hasLength(5));
 
       routes.forEach((route, modulePath) {
         final file = File(modulePath);

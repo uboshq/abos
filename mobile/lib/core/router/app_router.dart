@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/approvals/approval_inbox_screen.dart';
 import '../../features/auth/login_screen.dart';
 import '../../features/customers/customer_list_screen.dart';
 import '../../features/home/home_shell.dart';
@@ -61,6 +62,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         path: '/home',
         builder: (context, state) => const HomeShell(),
         routes: [
+          GoRoute(
+            path: 'approvals',
+            builder: (context, state) => const ApprovalInboxScreen(),
+          ),
           GoRoute(
             path: 'customers',
             builder: (context, state) => const CustomerListScreen(),
