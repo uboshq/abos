@@ -126,10 +126,52 @@ class AuthController extends Controller
          * সেটা `auth:sanctum`-এর পরে চলে — আর এই রুটে লগইনের আগে কোনো
          * টোকেনই নেই।
          */
-        CompanyContext::set(
-            $user->current_company_id,
-            $user->current_branch_id,
-        );
+        /*
+         * ⛔ `current_company_id` খালি হতে পারে, আর তখন এটা ৫০০ দিত।
+         *
+         * ── কী ঘটেছিল, ১৩ সেপ্টেম্বর ২০২৬ ────────────────────────────
+         * লাইভে প্রথম বিক্রয়কর্মীর অ্যাকাউন্ট বানিয়ে অ্যাপ থেকে ঢুকতে
+         * গিয়ে:
+         *
+         *     SQLSTATE[23000]: Column 'company_id' cannot be null
+         *     (insert into `sync_devices` …)
+         *
+         * ঘরটা খালি থাকে **যতক্ষণ না কেউ একবার কোম্পানি বাছেন**, আর
+         * সেটা ঘটে ওয়েবে ঢোকার সময়। ⚠️ অর্থাৎ যে কর্মী কোনোদিন ওয়েবে
+         * ঢোকেননি — মাঠের বিক্রয়কর্মী, ঠিক যাঁর জন্য অ্যাপটা — তিনি
+         * **প্রথম লগইনেই ৫০০** পেতেন, আর বার্তায় কোনো কারণ থাকত না।
+         *
+         * ⭐ ওয়েবে এই পতনের পথটা আগে থেকেই আছে
+         * ([[ResolveCompanyContext]]): খালি হলে মিডলওয়্যার ব্যবহারকারীর
+         * প্রথম কোম্পানিটা বেছে নেয়, আর মন্তব্যেও লেখা "প্রথমবার লগইন"।
+         * ⛔ API-তে ওই পথটা ছিল না — একই প্রশ্ন, দুই জায়গায় দুই উত্তর,
+         * যা আজকের গোটা দিনের রোগ।
+         *
+         * ⓘ `switchCompany()` ডাকা হয় যাতে পছন্দটা **সারিতে বসে যায়** —
+         * নাহলে প্রতিবার লগইনে আবার বাছতে হত, আর ওয়েব ও অ্যাপ দুই
+         * কোম্পানিতে বসে থাকতে পারত।
+         */
+        $companyId = $user->current_company_id;
+
+        if ($companyId === null || ! $user->canAccessCompany($companyId)) {
+            $companyId = $user->companies()->orderBy('companies.id')->value('companies.id');
+
+            if ($companyId === null) {
+                /*
+                 * কোনো কোম্পানিতেই নেই — পরিচয় ঠিক, কিন্তু কাজ করার
+                 * জায়গা নেই। ⓘ ৪০৩, ৫০০ নয়: অনুরোধটা ভুল ছিল না, আর
+                 * বার্তাটা পড়ে ব্যবস্থাপক বুঝবেন কী করতে হবে।
+                 */
+                return response()->json([
+                    'message' => __('auth.no_company'),
+                ], 403);
+            }
+
+            $user->switchCompany($companyId);
+            $user->refresh();
+        }
+
+        CompanyContext::set($companyId, $user->current_branch_id);
 
         $this->sync->register(
             $user,

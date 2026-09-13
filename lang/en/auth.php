@@ -124,4 +124,6 @@ return [
     'recovery_title' => 'Recovery codes — write these down now',
     'recovery_note' => 'If the phone is lost or broken, any one of these gets you in. Each works once, and once you leave this page they can never be shown again.',
     'recovery_left' => '{0} No recovery codes left — a lost phone would lock you out|{1} Only 1 recovery code left|[2,*] :count recovery codes left',
+
+    'no_company' => 'Your sign-in is correct, but you have not been added to a company yet. Ask your manager.',
 ];
