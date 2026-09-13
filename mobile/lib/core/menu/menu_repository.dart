@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../auth/auth_user.dart';
 import 'me_api.dart';
 import 'menu_item.dart';
+import 'menu_module.dart';
 import 'route_registry.dart';
 
 /// Where the signed-in person's home menu comes from: `GET /me`, filtered
@@ -51,21 +52,63 @@ class MenuRepository {
       final items = <MenuItem>[];
       for (final module in response.menu) {
         for (final entry in module.allEntries) {
-          final appPath = RouteRegistry.appPathFor(entry.route);
-          if (appPath == null) continue; // no screen for this yet — see class doc.
-          items.add(MenuItem(
-            key: entry.route,
-            label: entry.label,
-            icon: _iconByAppPath[appPath] ?? Icons.circle_outlined,
-            routeName: appPath,
-            planned: entry.planned,
-          ));
+          final tile = tileFor(entry);
+          if (tile != null) items.add(tile);
         }
       }
       return _withSyntheticTiles(items, response.user);
     } catch (_) {
       return _withSyntheticTiles(_localFallback(user), user);
     }
+  }
+
+  /// One `/me` menu row turned into a tile, or null when it has no place on
+  /// this build's home grid.
+  ///
+  /// <p><b>Two different "there is no screen", and they must not end the same
+  /// way.</b>
+  ///
+  /// <p>The server says `planned` — the *system* does not have the thing yet,
+  /// on the web either. That row is shown dimmed and inert, never omitted,
+  /// which is the web side's own convention and the reason `MeController`
+  /// sends the flag at all. Hiding it would let a person conclude the feature
+  /// is not coming and ask the office for it again; showing it greyed says
+  /// "planned, not yet" in the one place they are already looking.
+  ///
+  /// <p>The route is live but [RouteRegistry] has no path for it — the
+  /// *server* has the screen and this *build* has not caught up. That row is
+  /// dropped silently, which is correct rather than a gap; see
+  /// RouteRegistry's own doc comment.
+  ///
+  /// <p>Until this method existed the first case could never happen: every
+  /// row went through the RouteRegistry filter first, and a planned row has
+  /// no path by definition, so all twenty-two of them were dropped before the
+  /// dimmed tile that home_shell.dart had already built for them could ever
+  /// draw. The tile, the flag, the parsing and the "শীঘ্রই আসছে" label were
+  /// all in place and unreachable.
+  @visibleForTesting
+  MenuItem? tileFor(MenuRouteEntry entry) {
+    if (entry.planned) {
+      return MenuItem(
+        key: entry.route,
+        label: entry.label,
+        // No path was resolved and none is wanted — the tile is inert. The
+        // clock is this app's own choice for "not yet", not a server icon.
+        icon: Icons.schedule_outlined,
+        routeName: '',
+        planned: true,
+      );
+    }
+
+    final appPath = RouteRegistry.appPathFor(entry.route);
+    if (appPath == null) return null;
+
+    return MenuItem(
+      key: entry.route,
+      label: entry.label,
+      icon: _iconByAppPath[appPath] ?? Icons.circle_outlined,
+      routeName: appPath,
+    );
   }
 
   List<MenuItem> _localFallback(AuthUser user) {

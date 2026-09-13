@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:abos_mobile/core/auth/auth_user.dart';
+import 'package:abos_mobile/core/menu/menu_module.dart';
 import 'package:abos_mobile/core/menu/menu_repository.dart';
 
 /// `GET /me` cannot be reached from a test run (there is no server, and
@@ -82,5 +83,58 @@ void main() {
 
     final items = await repository.menuFor(noPermissions);
     expect(items.map((item) => item.key), ['sync_status']);
+  });
+
+
+  group('a "coming soon" row is shown, not dropped', () {
+    const repository = MenuRepository();
+
+    test('a planned row becomes a tile even with no screen behind it', () {
+      // This is the case that could not previously happen. Every row was put
+      // through the RouteRegistry filter first, and a planned row has no path
+      // by definition — so the dimmed tile home_shell.dart had already built,
+      // with its "শীঘ্রই আসছে" label, was unreachable code.
+      const entry = MenuRouteEntry(
+        label: 'রেস্টুরেন্ট',
+        route: 'restaurant.index',
+        planned: true,
+      );
+
+      final tile = repository.tileFor(entry);
+
+      expect(tile, isNotNull);
+      expect(tile!.planned, isTrue);
+      expect(tile.label, 'রেস্টুরেন্ট');
+      expect(tile.routeName, isEmpty,
+          reason: 'a planned tile is inert — home_shell passes a null onTap, '
+              'so no path is ever built from this');
+    });
+
+    test('a live row this build has no screen for is still dropped', () {
+      // The other "no screen", and it must not end the same way: the server
+      // has the screen, this build has not caught up. Drawing "শীঘ্রই আসছে"
+      // there would tell the person a lie about the system.
+      const entry = MenuRouteEntry(
+        label: 'আদায়',
+        route: 'sales.collection.index',
+        planned: false,
+      );
+
+      expect(repository.tileFor(entry), isNull);
+    });
+
+    test('a live row with a screen becomes an ordinary tile', () {
+      const entry = MenuRouteEntry(
+        label: 'গ্রাহক',
+        route: 'customer.index',
+        planned: false,
+      );
+
+      final tile = repository.tileFor(entry);
+
+      expect(tile, isNotNull);
+      expect(tile!.planned, isFalse);
+      expect(tile.routeName, 'customers');
+    });
   });
 }

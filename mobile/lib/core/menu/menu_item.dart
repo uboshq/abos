@@ -18,6 +18,11 @@ class MenuItem {
   final IconData icon;
 
   /// The `/home/<routeName>` path segment — see app_router.dart.
+  ///
+  /// <p>Empty when [planned] is true: a "coming soon" row has no screen
+  /// anywhere yet, which is what makes it planned. Nothing navigates to it —
+  /// home_shell.dart passes a null `onTap` for those tiles — so an empty
+  /// segment is never built into a path.
   final String routeName;
 
   /// True means the server itself calls this "coming soon" — shown dimmed

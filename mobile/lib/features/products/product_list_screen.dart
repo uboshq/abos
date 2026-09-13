@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../../core/sync_engine/reference_cache.dart';
+import '../../core/records/money.dart';
+import '../../core/records/product_record.dart';
+import '../../core/records/stock_record.dart';
 import '../../core/sync_engine/reference_sync.dart';
+import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 
@@ -11,8 +14,13 @@ import '../../core/widgets/empty_state.dart';
 /// docs/Contract, §৩ rule ঙ: the server omits the field entirely rather than
 /// sending `null` or a masked value, for anyone without `inventory.cost.view`.
 /// This screen never assumes the key exists; a product card simply has no
-/// cost line when it is missing; see the '_CostLine' widget below for where
-/// that shows up.
+/// cost line when it is missing — [ProductRecord.hasPurchasePrice] tests for
+/// the key, never for the value.
+///
+/// <p><b>The selling price is the line this screen exists for</b>, and until
+/// now it did not draw: the tile read `salesPrice`/`price` and the server
+/// sends `salePrice`, so every product showed a name-less row with no price
+/// at all. See [ProductRecord]'s own doc comment.
 class ProductListScreen extends StatefulWidget {
   const ProductListScreen({super.key});
 
@@ -37,15 +45,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final all = ReferenceCache.instance.allOf('Product');
-    final filtered = _query.isEmpty
-        ? all
-        : all
-            .where((p) => (p['name'] ?? '')
-                .toString()
-                .toLowerCase()
-                .contains(_query.toLowerCase()))
-            .toList();
+    final all = ProductRecord.all();
+    final filtered = all.where((product) => product.matches(_query)).toList();
 
     return Scaffold(
       appBar: AppBar(title: const Text('পণ্যের তালিকা')),
@@ -109,42 +110,64 @@ class _ProductListScreenState extends State<ProductListScreen> {
 class _ProductTile extends StatelessWidget {
   const _ProductTile({required this.product});
 
-  final Map<String, dynamic> product;
+  final ProductRecord product;
 
   @override
   Widget build(BuildContext context) {
-    final name = (product['name'] ?? 'নাম নেই').toString();
-    final unit = product['unit']?.toString();
-    final salesPrice = product['salesPrice'] ?? product['price'];
-    // Absent, not null and not zero — see this file's own class comment.
-    final hasCost = product.containsKey('purchasePrice');
-    final cost = product['purchasePrice'];
+    // Null only for a role whose stock records never sync at all (a salesman
+    // — docs/Contract §০: "মজুদ ❌ রেকর্ডই আসবে না"), and for a product whose
+    // stock row simply has not been pulled yet. Both mean the same thing to
+    // this tile: draw no stock line rather than a zero.
+    final stock = StockRecord.forProduct(product.id);
 
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.md),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(name,
+                  Text(product.name,
                       style: const TextStyle(fontWeight: FontWeight.w600)),
-                  if (unit != null)
-                    Text(unit,
-                        style: Theme.of(context).textTheme.bodySmall),
+                  Text(
+                    [
+                      if (product.code != null) product.code!,
+                      if (product.unit != null) product.unit!,
+                    ].join(' · '),
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  if (stock != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: AppSpacing.xs),
+                      child: Text(
+                        'বিক্রয়যোগ্য ${Money.plain(stock.available)}'
+                        '${product.unit == null ? '' : ' ${product.unit}'}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: stock.available > 0
+                              ? AppColors.success
+                              : AppColors.danger,
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
+            const SizedBox(width: AppSpacing.sm),
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                if (salesPrice != null)
-                  Text('৳$salesPrice',
+                if (product.salePrice != null)
+                  Text(Money.taka(product.salePrice),
                       style: const TextStyle(fontWeight: FontWeight.w700)),
-                if (hasCost)
-                  Text('ক্রয়: ৳$cost',
+                // Absent, not null and not zero — see this file's own class
+                // comment.
+                if (product.hasPurchasePrice)
+                  Text('ক্রয়: ${Money.taka(product.purchasePrice)}',
                       style: Theme.of(context).textTheme.bodySmall),
               ],
             ),
