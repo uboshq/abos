@@ -245,12 +245,46 @@ class SyncEngine {
 
   int get resolvedCount => resolvedItems.length;
 
+  /// The only kind of record this app may write with no signal.
+  ///
+  /// <p>The owner's decision of 2 September 2026, quoted in docs/Contract §০:
+  /// *"নেট না থাকলে শুধু অর্ডার। চালান, বিল, আদায়, POS — একটাও নয়।"* The
+  /// reasoning there is not convenience but honest accounting — offline a
+  /// phone cannot know the next number in the series, what is on the shelf,
+  /// what the shop already owes, or today's price, and a challan, bill,
+  /// collection or POS sale needs all four. An order needs none of them: it
+  /// is a promise, not an entry, and all four are checked on the server at
+  /// the moment it syncs.
+  ///
+  /// <p><b>Why the phone enforces this when the server decides it anyway.</b>
+  /// The server's `acceptsPush()` is the real gate, and it should stay the
+  /// real gate. But this app has no screen for a collection today, so nothing
+  /// stops a future screen from calling [enqueue] with one — and a queued
+  /// change that the server will refuse is worse than one that was never
+  /// written: the rep watches "অপেক্ষমাণ ১" sit there, and learns at sync
+  /// that the money they wrote down was never going anywhere. Refusing here
+  /// makes that a loud stop in front of whoever is adding the screen, at the
+  /// moment they add it, rather than a rejected row in front of a rep in a
+  /// shop.
+  ///
+  /// <p>It is the same two-layer shape the sync engine already uses for
+  /// idempotency — the application check and the database's unique index,
+  /// each doing its job without depending on the other.
+  ///
+  /// <p>⚠️ A new entry here is a business decision, never a convenience: it
+  /// means someone has established that the record can be written honestly
+  /// with no network, and that the server's handler accepts a push for it.
+  static const Set<String> _writableOffline = {'SalesOrder'};
+
   /// Queue one offline create/update, then try to push immediately.
   ///
   /// [clientVersion] is the device's local revision counter for this record.
   /// An UPDATE arriving with a version the server cannot reconcile is a
   /// CONFLICT rather than a silent overwrite of newer server data, so callers
   /// updating an existing record must pass their real version.
+  ///
+  /// Throws [UnsupportedError] for any [entityType] outside
+  /// [_writableOffline] — see that field's own doc comment.
   Future<void> enqueue({
     required String module,
     required String entityType,
@@ -261,6 +295,19 @@ class SyncEngine {
   }) async {
     assert(operation == 'CREATE' || operation == 'UPDATE',
         'The server accepts CREATE or UPDATE only');
+
+    // Thrown, not asserted: an assert is compiled out of a release build, and
+    // a rule that only holds in debug is a rule that does not hold on the one
+    // build that reaches a phone in a shop.
+    if (!_writableOffline.contains(entityType)) {
+      throw UnsupportedError(
+        'Nothing but ${_writableOffline.join(', ')} may be queued offline; '
+        'refused $entityType. docs/Contract §০ — the owner\'s decision of '
+        '2 September 2026: with no network, orders only. If this record can '
+        'now be written honestly offline, that is a decision to record there '
+        'first, and the server handler must accept a push for it.',
+      );
+    }
 
     await _box.add(<String, dynamic>{
       'changeId': _newChangeId(),

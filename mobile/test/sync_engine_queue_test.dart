@@ -95,4 +95,53 @@ void main() {
 
     expect(SyncEngine.instance.pendingCount, 2);
   });
+
+
+  test('a collection cannot be queued offline, however it is asked for',
+      () async {
+    // docs/Contract §০, the owner's decision of 2 September 2026: with no
+    // network, orders only — challans, bills, collections and POS are all
+    // refused, because offline a phone knows neither the next number, nor
+    // the shelf, nor the shop's due, nor today's price, and each of those
+    // four needs all of them.
+    //
+    // <p>The app has no collection screen today, which is exactly why this
+    // test exists: the door is open in SyncEngine.enqueue regardless, and the
+    // day someone builds that screen this is what stops them — in front of
+    // the person writing the code, rather than in front of a rep who watched
+    // "অপেক্ষমাণ ১" sit on their phone and learned at sync that the money
+    // they wrote down was never going anywhere.
+    await expectLater(
+      SyncEngine.instance.enqueue(
+        module: 'sales',
+        entityType: 'Collection',
+        operation: 'CREATE',
+        payload: const {'customerId': 'customer-a', 'amount': '500.0000'},
+      ),
+      throwsUnsupportedError,
+    );
+
+    expect(SyncEngine.instance.pendingCount, 0,
+        reason: 'a refused change must leave nothing behind in the queue');
+  });
+
+  test('an order is still queued, so the guard refuses only what it should',
+      () async {
+    // The other half of the same assertion. A guard that refuses everything
+    // would pass the test above and break the one thing the app is for —
+    // which is the shape of blindness this suite spent the day removing.
+    await SyncEngine.instance.enqueue(
+      module: 'sales',
+      entityType: 'SalesOrder',
+      operation: 'CREATE',
+      payload: const {
+        'customerId': 'customer-a',
+        'lines': [
+          {'productId': 'p1', 'qty': 1, 'rate': '42.5000'},
+        ],
+      },
+    );
+
+    expect(SyncEngine.instance.pendingCount, 1);
+  });
 }
