@@ -84,27 +84,27 @@ return [
 
     'menu' => [
         'dashboard' => [
-            ['label' => 'purchase::dashboard.title', 'route' => 'module.dashboard',
+            ['label' => 'purchase::dashboard.title', 'icon' => 'dashboard', 'route' => 'module.dashboard',
                 'route_params' => ['module' => 'purchase'], 'permission' => 'purchase.bill.view'],
         ],
 
         'transactions' => [
-            ['label' => 'purchase::menu.direct', 'route' => 'purchase.direct.create', 'permission' => 'purchase.bill.create',
+            ['label' => 'purchase::menu.direct', 'icon' => 'purchase', 'route' => 'purchase.direct.create', 'permission' => 'purchase.bill.create',
                 'setting' => 'purchase.screen_direct'],
-            ['label' => 'purchase::menu.orders', 'route' => 'purchase.order.index', 'permission' => 'purchase.order.view',
+            ['label' => 'purchase::menu.orders', 'icon' => 'book', 'route' => 'purchase.order.index', 'permission' => 'purchase.order.view',
                 'setting' => 'purchase.screen_orders'],
-            ['label' => 'purchase::menu.receipts', 'route' => 'purchase.receipt.index', 'permission' => 'purchase.receipt.view',
+            ['label' => 'purchase::menu.receipts', 'icon' => 'inbox', 'route' => 'purchase.receipt.index', 'permission' => 'purchase.receipt.view',
                 'setting' => 'purchase.screen_receipts'],
-            ['label' => 'purchase::menu.bills', 'route' => 'purchase.bill.index', 'permission' => 'purchase.bill.view'],
-            ['label' => 'purchase::menu.payments', 'route' => 'purchase.payment.index', 'permission' => 'purchase.payment.view'],
-            ['label' => 'purchase::menu.returns', 'route' => 'purchase.return.index', 'permission' => 'purchase.return.view'],
+            ['label' => 'purchase::menu.bills', 'icon' => 'receipt', 'route' => 'purchase.bill.index', 'permission' => 'purchase.bill.view'],
+            ['label' => 'purchase::menu.payments', 'icon' => 'outbox', 'route' => 'purchase.payment.index', 'permission' => 'purchase.payment.view'],
+            ['label' => 'purchase::menu.returns', 'icon' => 'refresh', 'route' => 'purchase.return.index', 'permission' => 'purchase.return.view'],
         ],
         'reports' => [
-            ['label' => 'purchase::menu.pending_orders', 'route' => 'purchase.report.show',
+            ['label' => 'purchase::menu.pending_orders', 'icon' => 'clock', 'route' => 'purchase.report.show',
                 'route_params' => ['slug' => 'pending-orders'], 'permission' => 'purchase.report'],
-            ['label' => 'purchase::menu.uninvoiced', 'route' => 'purchase.report.show',
+            ['label' => 'purchase::menu.uninvoiced', 'icon' => 'alert-triangle', 'route' => 'purchase.report.show',
                 'route_params' => ['slug' => 'uninvoiced'], 'permission' => 'purchase.report'],
-            ['label' => 'purchase::menu.by_supplier', 'route' => 'purchase.report.show',
+            ['label' => 'purchase::menu.by_supplier', 'icon' => 'supplier', 'route' => 'purchase.report.show',
                 'route_params' => ['slug' => 'by-supplier'], 'permission' => 'purchase.report'],
 
             /*
@@ -116,7 +116,7 @@ return [
              * দেখতে পারা আর নিজের মার্জিন দেখতে পারা এক জিনিস নয়, তাই
              * চাবিটাও আলাদা।
              */
-            ['label' => 'supplier::menu.settlement', 'route' => 'purchase.report.show',
+            ['label' => 'supplier::menu.settlement', 'icon' => 'check-circle', 'route' => 'purchase.report.show',
                 'route_params' => ['slug' => 'settlement'], 'permission' => 'purchase.settlement.view'],
 
             /*
@@ -125,7 +125,7 @@ return [
              * দুইটাই একই প্রশ্নের দুই অর্ধেক: নিষ্পত্তি বলে "এই মাসে কত
              * এল", আর এটা বলে "ওই টাকা খেটে বছরে কত আনছে"।
              */
-            ['label' => 'supplier::menu.return_on_capital', 'route' => 'purchase.report.show',
+            ['label' => 'supplier::menu.return_on_capital', 'icon' => 'scale', 'route' => 'purchase.report.show',
                 'route_params' => ['slug' => 'return-on-capital'], 'permission' => 'purchase.settlement.view'],
         ],
     ],

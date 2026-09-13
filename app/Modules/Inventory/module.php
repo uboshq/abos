@@ -71,12 +71,12 @@ return [
          * বারোটা প্রায়-একই লাইন থাকত।
          */
         'dashboard' => [
-            ['label' => 'inventory::dashboard.title', 'route' => 'module.dashboard',
+            ['label' => 'inventory::dashboard.title', 'icon' => 'dashboard', 'route' => 'module.dashboard',
                 'route_params' => ['module' => 'inventory'], 'permission' => 'inventory.stock.view'],
         ],
 
         'master' => [
-            ['label' => 'inventory::menu.products', 'route' => 'inventory.product.index', 'permission' => 'inventory.product.view'],
+            ['label' => 'inventory::menu.products', 'icon' => 'inventory', 'route' => 'inventory.product.index', 'permission' => 'inventory.product.view'],
 
             /*
              * লেবেল ছাপা — পণ্যের ঠিক নিচে।
@@ -84,10 +84,10 @@ return [
              * পণ্যের তালিকা থেকেই লোকে এখানে আসেন: মাল ঢুকল, নতুন
              * পণ্য বসল, এবার গায়ে সাঁটার কাগজ চাই।
              */
-            ['label' => 'inventory::label.title', 'route' => 'inventory.label.index',
+            ['label' => 'inventory::label.title', 'icon' => 'printer', 'route' => 'inventory.label.index',
                 'permission' => 'inventory.product.view'],
 
-            ['label' => 'inventory::menu.warehouses', 'route' => 'inventory.warehouse.index', 'permission' => 'inventory.warehouse.view'],
+            ['label' => 'inventory::menu.warehouses', 'icon' => 'building', 'route' => 'inventory.warehouse.index', 'permission' => 'inventory.warehouse.view'],
 
             /*
              * রেসিপি — মাস্টারে, লেনদেনে নয়।
@@ -99,7 +99,7 @@ return [
              * লেনদেনের মেনুতে রাখলে লোকে রোজ ওখানে যেতেন, আর যেটা
              * বছরে দুইবার বদলায় সেটা রোজকার কাজের সাথে মিশে যেত।
              */
-            ['label' => 'inventory::menu.recipes', 'route' => 'inventory.recipe.index',
+            ['label' => 'inventory::menu.recipes', 'icon' => 'book', 'route' => 'inventory.recipe.index',
                 'permission' => 'inventory.recipe.view'],
         ],
         'transactions' => [
@@ -122,7 +122,7 @@ return [
              * যাওয়ার আগেই বসানোর কাজটা সারা থাকা দরকার, নাহলে সংখ্যাটা
              * কম দেখায় আর লোকে ভাবেন মাল আসেনি।
              */
-            ['label' => 'inventory::menu.placement', 'route' => 'inventory.stock.placement',
+            ['label' => 'inventory::menu.placement', 'icon' => 'grid', 'route' => 'inventory.stock.placement',
                 'permission' => 'inventory.stock.place',
 
                 /*
@@ -134,8 +134,8 @@ return [
                  * কোনো শব্দও নেই।
                  */
                 'count' => GoodsWaitingToBePlaced::class],
-            ['label' => 'inventory::menu.stock', 'route' => 'inventory.stock.index', 'permission' => 'inventory.stock.view'],
-            ['label' => 'inventory::menu.adjust', 'route' => 'inventory.stock.adjust', 'permission' => 'inventory.stock.adjust'],
+            ['label' => 'inventory::menu.stock', 'icon' => 'columns', 'route' => 'inventory.stock.index', 'permission' => 'inventory.stock.view'],
+            ['label' => 'inventory::menu.adjust', 'icon' => 'edit', 'route' => 'inventory.stock.adjust', 'permission' => 'inventory.stock.adjust'],
 
             /*
              * সমন্বয়ের পাশে, কিন্তু আলাদা সারি।
@@ -144,9 +144,9 @@ return [
              * ইস্যু মানে "জেনেশুনে দিয়ে দিলাম"। এক সারিতে রাখলে
              * আপ্যায়নের বিস্কুট মজুদ ঘাটতির রিপোর্টে গিয়ে বসত।
              */
-            ['label' => 'inventory::menu.issue', 'route' => 'inventory.stock.issue', 'permission' => 'inventory.stock.adjust'],
-            ['label' => 'inventory::menu.opening', 'route' => 'inventory.stock.opening', 'permission' => 'inventory.stock.opening'],
-            ['label' => 'inventory::menu.transfers', 'route' => 'inventory.transfer.index', 'permission' => 'inventory.transfer.view'],
+            ['label' => 'inventory::menu.issue', 'icon' => 'outbox', 'route' => 'inventory.stock.issue', 'permission' => 'inventory.stock.adjust'],
+            ['label' => 'inventory::menu.opening', 'icon' => 'plus', 'route' => 'inventory.stock.opening', 'permission' => 'inventory.stock.opening'],
+            ['label' => 'inventory::menu.transfers', 'icon' => 'swap', 'route' => 'inventory.transfer.index', 'permission' => 'inventory.transfer.view'],
 
             /*
              * রান্না — লেনদেনে, রেসিপির পাশে নয়।
@@ -155,23 +155,23 @@ return [
              * রোজ সকালে ঘটে। এক মেনুতে রাখলে রোজকার কাজটা মাস্টার
              * ডাটার সাথে মিশে যেত।
              */
-            ['label' => 'inventory::menu.production', 'route' => 'inventory.production.index',
+            ['label' => 'inventory::menu.production', 'icon' => 'refresh', 'route' => 'inventory.production.index',
                 'permission' => 'inventory.production.view'],
         ],
         'reports' => [
-            ['label' => 'inventory::menu.stock_ledger', 'route' => 'inventory.report.show',
+            ['label' => 'inventory::menu.stock_ledger', 'icon' => 'list', 'route' => 'inventory.report.show',
                 'route_params' => ['slug' => 'stock-ledger'], 'permission' => 'inventory.report'],
-            ['label' => 'inventory::menu.stock_summary', 'route' => 'inventory.report.show',
+            ['label' => 'inventory::menu.stock_summary', 'icon' => 'scale', 'route' => 'inventory.report.show',
                 'route_params' => ['slug' => 'stock-summary'], 'permission' => 'inventory.report'],
-            ['label' => 'inventory::menu.hold_report', 'route' => 'inventory.report.show',
+            ['label' => 'inventory::menu.hold_report', 'icon' => 'lock', 'route' => 'inventory.report.show',
                 'route_params' => ['slug' => 'hold'], 'permission' => 'inventory.report'],
 
             // মরা · ধীর · দ্রুত চলা মাল — ড্যাশবোর্ডের সংখ্যার ড্রিল-ডাউন
-            ['label' => 'inventory::menu.stock_movement', 'route' => 'inventory.stock.movement',
+            ['label' => 'inventory::menu.stock_movement', 'icon' => 'share', 'route' => 'inventory.stock.movement',
                 'permission' => 'inventory.report'],
 
             // স্টকের বয়স — কোন বাকেটে কত টাকা আটকে
-            ['label' => 'inventory::menu.stock_age', 'route' => 'inventory.stock.age',
+            ['label' => 'inventory::menu.stock_age', 'icon' => 'clock', 'route' => 'inventory.stock.age',
                 'permission' => 'inventory.report'],
 
             /*
@@ -182,7 +182,7 @@ return [
              * রিপোর্টের মতো সুইচ লাগে না, কারণ রেসিপি বানানো নিজেই
              * একটা সিদ্ধান্ত — কেউ না বানালে সারিটা এমনিতেই নীরব।
              */
-            ['label' => 'inventory::menu.food_cost', 'route' => 'inventory.report.show',
+            ['label' => 'inventory::menu.food_cost', 'icon' => 'wallet', 'route' => 'inventory.report.show',
                 'route_params' => ['slug' => 'food-cost'], 'permission' => 'inventory.report'],
 
             /*
@@ -192,7 +192,7 @@ return [
              * খালি একটা পাতা খুলত, আর মেনুতে জায়গা নিত। ব্যাচের সুইচ
              * চালু থাকলেই কেবল দেখা যায় (নিয়ম ৭)।
              */
-            ['label' => 'inventory::menu.expiring', 'route' => 'inventory.report.show',
+            ['label' => 'inventory::menu.expiring', 'icon' => 'alert-triangle', 'route' => 'inventory.report.show',
                 'route_params' => ['slug' => 'expiring'], 'permission' => 'inventory.report',
                 'setting' => 'inventory.batch_enabled'],
 

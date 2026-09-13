@@ -255,7 +255,7 @@
                    ])
                    @if ($tab['active'] ?? false) aria-current="page" @endif>
                     <span class="flex items-center gap-1.5">
-                        <x-ui.icon :name="$groupIcon($tab['group'])" :size="14"
+                        <x-ui.icon :name="$tab['icon'] ?? $groupIcon($tab['group'])" :size="14"
                                    :class="$groupTint($tab['group'])" />
                         {{ $tab['label'] }}
                     </span>
@@ -273,7 +273,7 @@
                    ])
                    @if ($tab['active'] ?? false) aria-current="page" @endif>
                     <span class="flex items-center gap-1.5">
-                        <x-ui.icon :name="$groupIcon($tab['group'])" :size="14"
+                        <x-ui.icon :name="$tab['icon'] ?? $groupIcon($tab['group'])" :size="14"
                                    :class="$groupTint($tab['group'])" />
                         {{ $tab['label'] }}
                     </span>

@@ -51,17 +51,17 @@ return [
 
     'menu' => [
         'dashboard' => [
-            ['label' => 'supplier::dashboard.title', 'route' => 'module.dashboard',
+            ['label' => 'supplier::dashboard.title', 'icon' => 'dashboard', 'route' => 'module.dashboard',
                 'route_params' => ['module' => 'supplier'], 'permission' => 'supplier.view'],
         ],
 
         'master' => [
-            ['label' => 'supplier::menu.suppliers', 'route' => 'supplier.index', 'permission' => 'supplier.view'],
+            ['label' => 'supplier::menu.suppliers', 'icon' => 'supplier', 'route' => 'supplier.index', 'permission' => 'supplier.view'],
         ],
         'reports' => [
-            ['label' => 'supplier::menu.payable_list', 'route' => 'supplier.report.show',
+            ['label' => 'supplier::menu.payable_list', 'icon' => 'wallet', 'route' => 'supplier.report.show',
                 'route_params' => ['slug' => 'payable-list'], 'permission' => 'supplier.report'],
-            ['label' => 'supplier::menu.ageing', 'route' => 'supplier.report.show',
+            ['label' => 'supplier::menu.ageing', 'icon' => 'clock', 'route' => 'supplier.report.show',
                 'route_params' => ['slug' => 'ageing'], 'permission' => 'supplier.report'],
 
             /*
@@ -70,7 +70,7 @@ return [
              * ⓘ বয়সের রিপোর্টের পাশে, কারণ প্রশ্ন দুইটা পাশাপাশি:
              * **কত দিন ধরে বাকি** আর **কবে দিতে হবে**।
              */
-            ['label' => 'supplier::menu.payment_schedule', 'route' => 'supplier.report.show',
+            ['label' => 'supplier::menu.payment_schedule', 'icon' => 'calendar', 'route' => 'supplier.report.show',
                 'route_params' => ['slug' => 'payment-schedule'], 'permission' => 'supplier.report'],
         ],
     ],

@@ -68,12 +68,12 @@ return [
 
     'menu' => [
         'dashboard' => [
-            ['label' => 'accounts::dashboard.title', 'route' => 'module.dashboard',
+            ['label' => 'accounts::dashboard.title', 'icon' => 'dashboard', 'route' => 'module.dashboard',
                 'route_params' => ['module' => 'accounts'], 'permission' => 'accounts.view'],
         ],
         'master' => [
-            ['label' => 'accounts::menu.chart_of_accounts', 'route' => 'accounts.coa.index', 'permission' => 'accounts.coa.view'],
-            ['label' => 'accounts::menu.cash_tills', 'route' => 'accounts.till.index', 'permission' => 'accounts.till.view'],
+            ['label' => 'accounts::menu.chart_of_accounts', 'icon' => 'book', 'route' => 'accounts.coa.index', 'permission' => 'accounts.coa.view'],
+            ['label' => 'accounts::menu.cash_tills', 'icon' => 'drawer', 'route' => 'accounts.till.index', 'permission' => 'accounts.till.view'],
 
             /*
              * ঋণ মাস্টারে, লেনদেনে নয়।
@@ -82,7 +82,7 @@ return [
              * থাকে। রোজকার লেনদেন তার কিস্তিগুলো, আর সেগুলো ঋণের নিজের
              * পাতা থেকেই দেওয়া হয়।
              */
-            ['label' => 'accounts::menu.loans', 'route' => 'accounts.loan.index', 'permission' => 'accounts.loan.view'],
+            ['label' => 'accounts::menu.loans', 'icon' => 'handover', 'route' => 'accounts.loan.index', 'permission' => 'accounts.loan.view'],
         ],
         /*
          * পাঁচটা সারিই `accounts.report` চায়, `accounts.voucher.create` নয়।
@@ -109,22 +109,22 @@ return [
          * আলাদা কাজ, আর মালিকের সিদ্ধান্ত।
          */
         'transactions' => [
-            ['label' => 'accounts::menu.receipt', 'route' => 'accounts.voucher.index', 'route_params' => ['type' => 'receipt'], 'permission' => 'accounts.report'],
-            ['label' => 'accounts::menu.payment', 'route' => 'accounts.voucher.index', 'route_params' => ['type' => 'payment'], 'permission' => 'accounts.report'],
-            ['label' => 'accounts::menu.expense', 'route' => 'accounts.voucher.index', 'route_params' => ['type' => 'expense'], 'permission' => 'accounts.report'],
-            ['label' => 'accounts::menu.journal', 'route' => 'accounts.voucher.index', 'route_params' => ['type' => 'journal'], 'permission' => 'accounts.report'],
-            ['label' => 'accounts::menu.contra', 'route' => 'accounts.voucher.index', 'route_params' => ['type' => 'contra'], 'permission' => 'accounts.report'],
-            ['label' => 'accounts::menu.money_custody', 'route' => 'accounts.custody', 'permission' => 'accounts.till.view'],
-            ['label' => 'accounts::menu.money_transfer', 'route' => 'accounts.transfer.index', 'permission' => 'accounts.transfer.create'],
-            ['label' => 'accounts::menu.cash_count', 'route' => 'accounts.count.index', 'permission' => 'accounts.count.create'],
+            ['label' => 'accounts::menu.receipt', 'icon' => 'inbox', 'route' => 'accounts.voucher.index', 'route_params' => ['type' => 'receipt'], 'permission' => 'accounts.report'],
+            ['label' => 'accounts::menu.payment', 'icon' => 'outbox', 'route' => 'accounts.voucher.index', 'route_params' => ['type' => 'payment'], 'permission' => 'accounts.report'],
+            ['label' => 'accounts::menu.expense', 'icon' => 'wallet', 'route' => 'accounts.voucher.index', 'route_params' => ['type' => 'expense'], 'permission' => 'accounts.report'],
+            ['label' => 'accounts::menu.journal', 'icon' => 'edit', 'route' => 'accounts.voucher.index', 'route_params' => ['type' => 'journal'], 'permission' => 'accounts.report'],
+            ['label' => 'accounts::menu.contra', 'icon' => 'swap', 'route' => 'accounts.voucher.index', 'route_params' => ['type' => 'contra'], 'permission' => 'accounts.report'],
+            ['label' => 'accounts::menu.money_custody', 'icon' => 'lock', 'route' => 'accounts.custody', 'permission' => 'accounts.till.view'],
+            ['label' => 'accounts::menu.money_transfer', 'icon' => 'share', 'route' => 'accounts.transfer.index', 'permission' => 'accounts.transfer.create'],
+            ['label' => 'accounts::menu.cash_count', 'icon' => 'cash', 'route' => 'accounts.count.index', 'permission' => 'accounts.count.create'],
         ],
         'reports' => [
-            ['label' => 'accounts::menu.day_book', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'day-book'], 'permission' => 'accounts.report'],
-            ['label' => 'accounts::menu.cash_book', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'cash-book'], 'permission' => 'accounts.report'],
-            ['label' => 'accounts::menu.bank_book', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'bank-book'], 'permission' => 'accounts.report'],
+            ['label' => 'accounts::menu.day_book', 'icon' => 'calendar', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'day-book'], 'permission' => 'accounts.report'],
+            ['label' => 'accounts::menu.cash_book', 'icon' => 'cash', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'cash-book'], 'permission' => 'accounts.report'],
+            ['label' => 'accounts::menu.bank_book', 'icon' => 'building', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'bank-book'], 'permission' => 'accounts.report'],
 
             // "আজ কত টাকা ঢুকল" — নগদ বই বলে কোন ড্রয়ারে, এটা বলে কোন কাগজে
-            ['label' => 'accounts::menu.inflow', 'route' => 'accounts.report.show',
+            ['label' => 'accounts::menu.inflow', 'icon' => 'refresh', 'route' => 'accounts.report.show',
                 'route_params' => ['slug' => 'inflow'], 'permission' => 'accounts.report'],
 
             /*
@@ -136,10 +136,10 @@ return [
              * **কিন্তু মেনুতে দরজা নেই** — ঠিক যে ধরনের বাগ এই দল
              * খুঁজে বেড়ায় (৩ সেপ্টেম্বর ২০২৬, A3 ফাইল পড়তে গিয়ে ধরে)।
              */
-            ['label' => 'accounts::menu.by_cost_centre', 'route' => 'accounts.report.show',
+            ['label' => 'accounts::menu.by_cost_centre', 'icon' => 'columns', 'route' => 'accounts.report.show',
                 'route_params' => ['slug' => 'by-cost-centre'], 'permission' => 'accounts.report'],
-            ['label' => 'accounts::menu.ledger', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'ledger'], 'permission' => 'accounts.report'],
-            ['label' => 'accounts::menu.trial_balance', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'trial-balance'], 'permission' => 'accounts.report'],
+            ['label' => 'accounts::menu.ledger', 'icon' => 'list', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'ledger'], 'permission' => 'accounts.report'],
+            ['label' => 'accounts::menu.trial_balance', 'icon' => 'scale', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'trial-balance'], 'permission' => 'accounts.report'],
 
             /*
              * খাতা নিজেই মেলে কি না — রেওয়ামিলের ঠিক নিচে।
@@ -148,8 +148,8 @@ return [
              * বলে দেয় কোথায় ভেঙেছে। উপরে বসালে রোজকার রিপোর্টগুলোর
              * আগে একটা পর্দা পড়ত যেটা বছরে কয়েকবার লাগে।
              */
-            ['label' => 'accounts::menu.books_check', 'route' => 'accounts.integrity', 'permission' => 'accounts.report'],
-            ['label' => 'accounts::menu.profit_loss', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'profit-loss'], 'permission' => 'accounts.report.final'],
+            ['label' => 'accounts::menu.books_check', 'icon' => 'check-circle', 'route' => 'accounts.integrity', 'permission' => 'accounts.report'],
+            ['label' => 'accounts::menu.profit_loss', 'icon' => 'star', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'profit-loss'], 'permission' => 'accounts.report.final'],
             /*
              * স্থিতিপত্রের নিজের রুট — সাধারণ রিপোর্টের slug নয়।
              *
@@ -157,8 +157,8 @@ return [
              * কলাম, সমতল তালিকা, উপমোট ছাড়া, দায়ের সারি ছাড়া, আর
              * মোট শূন্য না হয়ে। মালিক ৩০ আগস্ট ২০২৬-এ ধরিয়ে দিলেন।
              */
-            ['label' => 'accounts::menu.balance_sheet', 'route' => 'accounts.balance_sheet', 'permission' => 'accounts.report.final'],
-            ['label' => 'accounts::menu.cash_flow', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'cash-flow'], 'permission' => 'accounts.report.final'],
+            ['label' => 'accounts::menu.balance_sheet', 'icon' => 'grid', 'route' => 'accounts.balance_sheet', 'permission' => 'accounts.report.final'],
+            ['label' => 'accounts::menu.cash_flow', 'icon' => 'refresh', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'cash-flow'], 'permission' => 'accounts.report.final'],
         ],
         'settings' => [
             // বছর সমাপনী রোজকার কাজ নয়, তাই সেটিংসের সাথে — আর অনুমতিও
@@ -169,10 +169,10 @@ return [
              * "আজ কোন চেকগুলো পাশ হওয়ার কথা" প্রশ্নটা প্রতিদিন সকালে
              * ওঠে, বছরে একবার নয়।
              */
-            ['label' => 'accounts::menu.cheques', 'route' => 'accounts.cheque.index', 'permission' => 'accounts.cheque.view'],
-            ['label' => 'accounts::menu.reconciliations', 'route' => 'accounts.reconciliation.index', 'permission' => 'accounts.reconciliation.view'],
-            ['label' => 'accounts::menu.assets', 'route' => 'accounts.asset.index', 'permission' => 'accounts.asset.view'],
-            ['label' => 'accounts::menu.periods', 'route' => 'accounts.period.index', 'permission' => 'accounts.period.close'],
+            ['label' => 'accounts::menu.cheques', 'icon' => 'challan', 'route' => 'accounts.cheque.index', 'permission' => 'accounts.cheque.view'],
+            ['label' => 'accounts::menu.reconciliations', 'icon' => 'check-circle', 'route' => 'accounts.reconciliation.index', 'permission' => 'accounts.reconciliation.view'],
+            ['label' => 'accounts::menu.assets', 'icon' => 'building', 'route' => 'accounts.asset.index', 'permission' => 'accounts.asset.view'],
+            ['label' => 'accounts::menu.periods', 'icon' => 'clock', 'route' => 'accounts.period.index', 'permission' => 'accounts.period.close'],
             ['label' => 'accounts::menu.year_end', 'route' => 'accounts.year_end.index', 'permission' => 'accounts.report.final'],
             ['label' => 'accounts::menu.settings', 'route' => 'accounts.settings', 'permission' => 'accounts.manage'],
         ],

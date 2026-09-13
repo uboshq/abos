@@ -58,7 +58,7 @@ return [
 
     'menu' => [
         'dashboard' => [
-            ['label' => 'finance::dashboard.title', 'route' => 'module.dashboard',
+            ['label' => 'finance::dashboard.title', 'icon' => 'dashboard', 'route' => 'module.dashboard',
                 'route_params' => ['module' => 'finance'], 'permission' => 'finance.capital.view'],
         ],
 
@@ -70,14 +70,14 @@ return [
              * এটাই চেয়েছেন: "দেখলে বুঝা যাবে আমি কোন কাজটা করছি আর
              * কোনটা করি নাই"। ওটা মেনুর মাথায় না থাকলে খুঁজতে হত।
              */
-            ['label' => 'finance::menu.plan', 'route' => 'finance.plan',
+            ['label' => 'finance::menu.plan', 'icon' => 'book', 'route' => 'finance.plan',
                 'permission' => 'finance.plan.view'],
-            ['label' => 'finance::menu.capital', 'route' => 'finance.capital.index',
+            ['label' => 'finance::menu.capital', 'icon' => 'building', 'route' => 'finance.capital.index',
                 'permission' => 'finance.capital.view'],
         ],
 
         'transactions' => [
-            ['label' => 'finance::menu.expense', 'route' => 'finance.expense.index',
+            ['label' => 'finance::menu.expense', 'icon' => 'wallet', 'route' => 'finance.expense.index',
                 'permission' => 'finance.expense.view'],
 
             /*
@@ -87,7 +87,7 @@ return [
              * ⚠️ জামানতের সাথে ওটার সম্পর্ক আছে বলে অর্থ-সঞ্চয়ের দিকে
              * সরালে যিনি রোজ ভাড়া লেখেন তিনি প্রতিবার খুঁজতেন।
              */
-            ['label' => 'finance::menu.rental', 'route' => 'finance.rental.index',
+            ['label' => 'finance::menu.rental', 'icon' => 'building', 'route' => 'finance.rental.index',
                 'permission' => 'finance.rental.view'],
 
             /*
@@ -97,7 +97,7 @@ return [
              * বিক্রয় ছাড়া। ওই টাকার কোনো ক্রয়মূল্য নেই, তাই পুরোটাই
              * মুনাফা, আর ৪% মার্জিনের ব্যবসায় সেটা বড় কথা।
              */
-            ['label' => 'finance::menu.income', 'route' => 'finance.income.index',
+            ['label' => 'finance::menu.income', 'icon' => 'inbox', 'route' => 'finance.income.index',
                 'permission' => 'finance.income.view'],
 
             /*
@@ -112,15 +112,15 @@ return [
              * ডাকঘরের কাগজও সঞ্চয় অধিদপ্তরের — ডাকঘর কেবল বিক্রি করে।
              * চতুর্থ সারিতে বছরে একটা কাগজও উঠত না।
              */
-            ['label' => 'finance::menu.deposit_bank', 'route' => 'finance.deposit.index',
+            ['label' => 'finance::menu.deposit_bank', 'icon' => 'building', 'route' => 'finance.deposit.index',
                 'route_params' => ['issuer' => 'bank'],
                 'permission' => 'finance.deposit.view'],
 
-            ['label' => 'finance::menu.deposit_savings', 'route' => 'finance.deposit.index',
+            ['label' => 'finance::menu.deposit_savings', 'icon' => 'star', 'route' => 'finance.deposit.index',
                 'route_params' => ['issuer' => 'national_savings'],
                 'permission' => 'finance.deposit.view'],
 
-            ['label' => 'finance::menu.deposit_bond', 'route' => 'finance.deposit.index',
+            ['label' => 'finance::menu.deposit_bond', 'icon' => 'attachment', 'route' => 'finance.deposit.index',
                 'route_params' => ['issuer' => 'bond'],
                 'permission' => 'finance.deposit.view'],
 
@@ -131,7 +131,7 @@ return [
              * হিসাব মডিউলে থাকে, আর সেটা ব্যাংকের ঋণের জন্য — কাগজ,
              * কিস্তি, সুদ। এটা তার কিছুই নয়।
              */
-            ['label' => 'finance::menu.hand_loan', 'route' => 'finance.hand_loan.index',
+            ['label' => 'finance::menu.hand_loan', 'icon' => 'handover', 'route' => 'finance.hand_loan.index',
                 'permission' => 'finance.hand_loan.view'],
 
             /*
@@ -141,7 +141,7 @@ return [
              * দুইটা এক পাতায় রাখা যেত, কিন্তু উত্তোলনে অনুমোদন ও
              * মাসিক সীমা আছে — মূলধনে নেই।
              */
-            ['label' => 'finance::menu.withdrawal', 'route' => 'finance.withdrawal.index',
+            ['label' => 'finance::menu.withdrawal', 'icon' => 'outbox', 'route' => 'finance.withdrawal.index',
                 'permission' => 'finance.withdrawal.view'],
         ],
     ],

@@ -55,7 +55,7 @@ return [
 
     'menu' => [
         'dashboard' => [
-            ['label' => 'system_admin::dashboard.title', 'route' => 'module.dashboard',
+            ['label' => 'system_admin::dashboard.title', 'icon' => 'dashboard', 'route' => 'module.dashboard',
                 'route_params' => ['module' => 'system_admin'], 'permission' => 'system_admin.settings.manage'],
         ],
 
@@ -68,15 +68,15 @@ return [
              * আরেকটা বাছাইয়ের ঘর লাগত। কোম্পানির পাতাতেই তার শাখাগুলো
              * থাকলে প্রশ্নটাই ওঠে না।
              */
-            ['label' => 'system_admin::menu.companies', 'route' => 'system_admin.company.index', 'permission' => 'system_admin.company.manage'],
-            ['label' => 'system_admin::menu.users', 'route' => 'system_admin.user.index', 'permission' => 'system_admin.user.manage'],
-            ['label' => 'system_admin::menu.roles', 'route' => 'system_admin.role.index', 'permission' => 'system_admin.role.manage'],
+            ['label' => 'system_admin::menu.companies', 'icon' => 'building', 'route' => 'system_admin.company.index', 'permission' => 'system_admin.company.manage'],
+            ['label' => 'system_admin::menu.users', 'icon' => 'people', 'route' => 'system_admin.user.index', 'permission' => 'system_admin.user.manage'],
+            ['label' => 'system_admin::menu.roles', 'icon' => 'lock', 'route' => 'system_admin.role.index', 'permission' => 'system_admin.role.manage'],
             /*
              * ⓘ সারিটা ব্যবহারকারী ও ভূমিকার **পরে**, কারণ কাজটা বছরে
              * একবারও হয় না — আর যে কাজ রোজ লাগে না, সেটা তালিকার মাথায়
              * বসলে রোজকার কাজগুলো একটা ঘর নিচে নেমে যায়।
              */
-            ['label' => 'system_admin::menu.ownership', 'route' => 'system_admin.ownership.show', 'permission' => 'system_admin.ownership.transfer'],
+            ['label' => 'system_admin::menu.ownership', 'icon' => 'handover', 'route' => 'system_admin.ownership.show', 'permission' => 'system_admin.ownership.transfer'],
         ],
         /*
          * নিরীক্ষার পর্দাগুলো এখানে নেই — Governance-এ আছে।
@@ -104,13 +104,13 @@ return [
          * বাসি ছিল, কেউ টের পায়নি।
          */
         'reports' => [
-            ['label' => 'system_admin::menu.report_schedules', 'route' => 'system_admin.reports.schedule.index',
+            ['label' => 'system_admin::menu.report_schedules', 'icon' => 'calendar', 'route' => 'system_admin.reports.schedule.index',
                 'permission' => 'system_admin.reports.schedule'],
         ],
         'settings' => [
             ['label' => 'core.import.title', 'route' => 'system_admin.import.index',
                 'permission' => 'system_admin.import.manage'],
-            ['label' => 'system_admin::menu.control_panel', 'route' => 'system_admin.control-panel', 'permission' => 'system_admin.settings.manage'],
+            ['label' => 'system_admin::menu.control_panel', 'icon' => 'settings', 'route' => 'system_admin.control-panel', 'permission' => 'system_admin.settings.manage'],
 
             /*
              * ⭐ প্রতিষ্ঠানের সেটিংস — কন্ট্রোল প্যানেলের ঠিক পরে, ৭ সেপ্টেম্বর ২০২৬।
@@ -122,7 +122,7 @@ return [
              * ⛔ একই চাবি (`settings.manage`) — দুইটা পর্দাই একই প্রশ্নের উত্তর
              * দেয়, আর আলাদা চাবি দিলে কাউকে অর্ধেক উত্তর দেওয়ার অধিকার দেওয়া হত।
              */
-            ['label' => 'system_admin::settings.title', 'route' => 'system_admin.settings',
+            ['label' => 'system_admin::settings.title', 'icon' => 'settings', 'route' => 'system_admin.settings',
                 'permission' => 'system_admin.settings.manage'],
 
             /*
@@ -148,7 +148,7 @@ return [
              * ⓘ ওটা ইচ্ছাকৃতভাবে ছোঁয়া হয়নি: কন্ট্রোলারের চাবি বদলানো
              * মানে কার হাতে ক্ষমতা যাবে সেই সিদ্ধান্ত, আর সেটা মালিকের।
              */
-            ['label' => 'master_data::menu.number_series', 'route' => 'master_data.series.index',
+            ['label' => 'master_data::menu.number_series', 'icon' => 'sort', 'route' => 'master_data.series.index',
                 'permission' => 'system_admin.settings.manage'],
             ['label' => 'core.custom_field.title', 'route' => 'system_admin.custom_field.index', 'permission' => 'system_admin.settings.manage'],
             ['label' => 'core.look.title', 'route' => 'system_admin.look.index', 'permission' => 'system_admin.look.manage'],

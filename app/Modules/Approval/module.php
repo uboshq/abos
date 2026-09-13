@@ -52,13 +52,13 @@ return [
 
     'menu' => [
         'dashboard' => [
-            ['label' => 'approval::dashboard.title', 'route' => 'module.dashboard',
+            ['label' => 'approval::dashboard.title', 'icon' => 'dashboard', 'route' => 'module.dashboard',
                 'route_params' => ['module' => 'approval'], 'permission' => 'approval.view'],
         ],
 
         'approval' => [
-            ['label' => 'approval::menu.inbox', 'route' => 'approval.inbox.index', 'permission' => 'approval.decide'],
-            ['label' => 'approval::menu.mine', 'route' => 'approval.inbox.mine', 'permission' => 'approval.view'],
+            ['label' => 'approval::menu.inbox', 'icon' => 'inbox', 'route' => 'approval.inbox.index', 'permission' => 'approval.decide'],
+            ['label' => 'approval::menu.mine', 'icon' => 'people', 'route' => 'approval.inbox.mine', 'permission' => 'approval.view'],
         ],
         /*
          * চারটা রিপোর্ট — §২.৮।
@@ -69,18 +69,18 @@ return [
          * ⓘ সেটা এখন `ALinkThatLooksAliveAndIsNotTest`-এ বাঁধা।
          */
         'reports' => [
-            ['label' => 'approval::menu.report_pending', 'route' => 'approval.report.show',
+            ['label' => 'approval::menu.report_pending', 'icon' => 'clock', 'route' => 'approval.report.show',
                 'route_params' => ['slug' => 'pending'], 'permission' => 'approval.report'],
-            ['label' => 'approval::menu.report_approved', 'route' => 'approval.report.show',
+            ['label' => 'approval::menu.report_approved', 'icon' => 'check-circle', 'route' => 'approval.report.show',
                 'route_params' => ['slug' => 'approved'], 'permission' => 'approval.report'],
-            ['label' => 'approval::menu.report_rejected', 'route' => 'approval.report.show',
+            ['label' => 'approval::menu.report_rejected', 'icon' => 'alert-triangle', 'route' => 'approval.report.show',
                 'route_params' => ['slug' => 'rejected'], 'permission' => 'approval.report'],
-            ['label' => 'approval::menu.report_by_user', 'route' => 'approval.report.show',
+            ['label' => 'approval::menu.report_by_user', 'icon' => 'people', 'route' => 'approval.report.show',
                 'route_params' => ['slug' => 'by-user'], 'permission' => 'approval.report'],
         ],
 
         'settings' => [
-            ['label' => 'approval::menu.flows', 'route' => 'approval.flow.index', 'permission' => 'approval.flow.manage'],
+            ['label' => 'approval::menu.flows', 'icon' => 'swap', 'route' => 'approval.flow.index', 'permission' => 'approval.flow.manage'],
         ],
     ],
 

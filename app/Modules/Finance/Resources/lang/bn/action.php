@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'new_contribution' => 'নতুন মূলধন',
+    'edit_contribution' => 'মূলধন শোধরানো',
     'money_arrived' => 'টাকা এসেছে',
     'new_expense' => 'নতুন খরচ',
     'add_instalment' => 'কিস্তি দিন',

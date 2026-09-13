@@ -81,12 +81,12 @@ return [
 
     'menu' => [
         'dashboard' => [
-            ['label' => 'sales::dashboard.title', 'route' => 'module.dashboard',
+            ['label' => 'sales::dashboard.title', 'icon' => 'dashboard', 'route' => 'module.dashboard',
                 'route_params' => ['module' => 'sales'], 'permission' => 'sales.invoice.view'],
         ],
 
         'transactions' => [
-            ['label' => 'sales::menu.pos', 'route' => 'sales.pos.index', 'permission' => 'sales.pos',
+            ['label' => 'sales::menu.pos', 'icon' => 'cash', 'route' => 'sales.pos.index', 'permission' => 'sales.pos',
                 'setting' => 'sales.screen_pos'],
 
             /*
@@ -94,13 +94,13 @@ return [
              *
              * যে ব্যবসায় কাউন্টারের পর্দাই নেই, তার ড্রয়ারের শিফটও নেই।
              */
-            ['label' => 'sales::menu.shift', 'route' => 'sales.shift.index', 'permission' => 'sales.pos',
+            ['label' => 'sales::menu.shift', 'icon' => 'clock', 'route' => 'sales.shift.index', 'permission' => 'sales.pos',
                 'setting' => 'sales.screen_pos'],
-            ['label' => 'sales::menu.direct', 'route' => 'sales.direct.create', 'permission' => 'sales.challan.create',
+            ['label' => 'sales::menu.direct', 'icon' => 'sales', 'route' => 'sales.direct.create', 'permission' => 'sales.challan.create',
                 'setting' => 'sales.screen_direct'],
-            ['label' => 'sales::menu.orders', 'route' => 'sales.order.index', 'permission' => 'sales.order.view',
+            ['label' => 'sales::menu.orders', 'icon' => 'book', 'route' => 'sales.order.index', 'permission' => 'sales.order.view',
                 'setting' => 'sales.screen_orders'],
-            ['label' => 'sales::menu.challans', 'route' => 'sales.challan.index', 'permission' => 'sales.challan.view',
+            ['label' => 'sales::menu.challans', 'icon' => 'challan', 'route' => 'sales.challan.index', 'permission' => 'sales.challan.view',
                 'setting' => 'sales.screen_challans'],
 
             /*
@@ -111,11 +111,11 @@ return [
              * ট্রিপেরও মানে নেই, আর সেটা সুইচ নয়, বাস্তবতা: তালিকায়
              * তোলার মতো কোনো চালানই থাকত না।
              */
-            ['label' => 'sales::menu.shipments', 'route' => 'sales.shipment.index',
+            ['label' => 'sales::menu.shipments', 'icon' => 'share', 'route' => 'sales.shipment.index',
                 'permission' => 'sales.shipment.view', 'setting' => 'sales.screen_shipments'],
-            ['label' => 'sales::menu.invoices', 'route' => 'sales.invoice.index', 'permission' => 'sales.invoice.view'],
-            ['label' => 'sales::menu.collections', 'route' => 'sales.collection.index', 'permission' => 'sales.collection.view'],
-            ['label' => 'sales::menu.returns', 'route' => 'sales.return.index', 'permission' => 'sales.return.view'],
+            ['label' => 'sales::menu.invoices', 'icon' => 'receipt', 'route' => 'sales.invoice.index', 'permission' => 'sales.invoice.view'],
+            ['label' => 'sales::menu.collections', 'icon' => 'inbox', 'route' => 'sales.collection.index', 'permission' => 'sales.collection.view'],
+            ['label' => 'sales::menu.returns', 'icon' => 'refresh', 'route' => 'sales.return.index', 'permission' => 'sales.return.view'],
 
             /*
              * যে কাগজ বেরোয়নি।
@@ -129,15 +129,15 @@ return [
              * সাধারণত সারিটা খালি, আর খালি থাকাই স্বাভাবিক — এটা
              * রোজকার কাজের পর্দা নয়, প্রিন্টার বিগড়ানোর দিনের।
              */
-            ['label' => 'sales::menu.print_queue', 'route' => 'sales.print_queue.index',
+            ['label' => 'sales::menu.print_queue', 'icon' => 'printer', 'route' => 'sales.print_queue.index',
                 'permission' => 'sales.invoice.view'],
         ],
         'reports' => [
-            ['label' => 'sales::menu.pending_orders', 'route' => 'sales.report.show',
+            ['label' => 'sales::menu.pending_orders', 'icon' => 'clock', 'route' => 'sales.report.show',
                 'route_params' => ['slug' => 'pending-orders'], 'permission' => 'sales.report'],
-            ['label' => 'sales::menu.undelivered', 'route' => 'sales.report.show',
+            ['label' => 'sales::menu.undelivered', 'icon' => 'alert-triangle', 'route' => 'sales.report.show',
                 'route_params' => ['slug' => 'uninvoiced'], 'permission' => 'sales.report'],
-            ['label' => 'sales::menu.by_customer', 'route' => 'sales.report.show',
+            ['label' => 'sales::menu.by_customer', 'icon' => 'customer', 'route' => 'sales.report.show',
                 'route_params' => ['slug' => 'by-customer'], 'permission' => 'sales.report'],
 
             /*
@@ -149,14 +149,14 @@ return [
              * ক্রয়মূল্য, মুনাফা ও মার্জিনের কলাম তিনটা আলাদা করে ঢাকা
              * (নিয়ম ২৪)। মেনু ধরে আটকালে হয় তাঁর কাজ বন্ধ, নয় সব খোলা।
              */
-            ['label' => 'sales::menu.by_product', 'route' => 'sales.report.show',
+            ['label' => 'sales::menu.by_product', 'icon' => 'inventory', 'route' => 'sales.report.show',
                 'route_params' => ['slug' => 'by-product'], 'permission' => 'sales.report'],
 
             /*
              * ব্র্যান্ড ধরে — দুইশো পণ্যের তালিকায় যা চোখে পড়ে না,
              * বিশটা ব্র্যান্ডে পড়ে। আর দরকষাকষিটাও হয় ব্র্যান্ড ধরে।
              */
-            ['label' => 'sales::menu.by_brand', 'route' => 'sales.report.show',
+            ['label' => 'sales::menu.by_brand', 'icon' => 'star', 'route' => 'sales.report.show',
                 'route_params' => ['slug' => 'by-brand'], 'permission' => 'sales.report'],
 
             /*
@@ -175,7 +175,7 @@ return [
              * তাই সারিটা সবসময় থাকে। লট না থাকলে পর্দার তালিকা খালি,
              * আর পর্দাই বলে দেয় কিছু নেই।
              */
-            ['label' => 'sales::menu.lot_trace', 'route' => 'sales.lot.trace',
+            ['label' => 'sales::menu.lot_trace', 'icon' => 'search', 'route' => 'sales.lot.trace',
                 'permission' => 'sales.challan.view'],
 
             /*
@@ -184,7 +184,7 @@ return [
              * এখানে কোনো কাগজ তৈরি হয় না; মাসে একবার সংখ্যা বসে আর
              * বাকি দিনগুলো দেখা হয় — সেটা প্রতিবেদনের স্বভাব।
              */
-            ['label' => 'sales::target.title', 'route' => 'sales.target.index',
+            ['label' => 'sales::target.title', 'icon' => 'scale', 'route' => 'sales.target.index',
                 'permission' => 'sales.target.view'],
 
             /*
@@ -199,11 +199,11 @@ return [
              * দেওয়া হলো। আগে কেবল দ্বিতীয়টা ছিল, তাই "এই হারটা কে ঠিক
              * করল" প্রশ্নের উত্তর ছিল একজন মানুষের স্মৃতি।
              */
-            ['label' => 'sales::menu.schemes', 'route' => 'sales.scheme.index',
+            ['label' => 'sales::menu.schemes', 'icon' => 'megaphone', 'route' => 'sales.scheme.index',
                 'permission' => 'sales.scheme.view'],
-            ['label' => 'sales::menu.commission', 'route' => 'sales.commission.index',
+            ['label' => 'sales::menu.commission', 'icon' => 'wallet', 'route' => 'sales.commission.index',
                 'permission' => 'sales.commission.view'],
-            ['label' => 'sales::menu.deposit_claims', 'route' => 'sales.claim.index',
+            ['label' => 'sales::menu.deposit_claims', 'icon' => 'attachment', 'route' => 'sales.claim.index',
                 'permission' => 'sales.claim.view'],
         ],
     ],
