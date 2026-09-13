@@ -5,6 +5,12 @@ declare(strict_types=1);
 return [
     'code' => 'Code',
     'name' => 'Name',
+
+    'item_name_en' => 'Item name (English)',
+    'item_name_bn' => 'Item name (Bangla)',
+
+    'location_name_en' => 'Area name (English)',
+    'location_name_bn' => 'Area name (Bangla)',
     'name_en' => 'Name (English)',
     'name_bn' => 'Name (Bangla)',
     'level' => 'Level',

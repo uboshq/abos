@@ -57,13 +57,13 @@
         বাঁ ধার ধরলে চওড়া প্যানেলটা পর্দার বাইরে চলে যেত।
     --}}
     <div x-show="open" x-cloak x-transition.opacity.duration.120ms
-         class="absolute end-0 top-full z-40 mt-2 w-80
+         class="absolute end-0 top-full z-40 mt-2 w-[42rem] max-w-[calc(100vw-2rem)]
                 rounded-(--radius-card) border border-(--color-border)
-                bg-(--color-surface-card) p-2 shadow-lg"
+                bg-(--color-surface-card) p-3 shadow-lg"
          role="menu"
          aria-label="{{ __('core.ui.launcher') }}">
 
-        <div class="grid grid-cols-3 gap-2">
+        <div class="grid grid-cols-4 gap-2">
             @foreach ($menu as $module)
                 @php
                     /* মডিউলের প্রথম **খোলা** পর্দা — `url` ছাড়া সারি বাদ,
@@ -75,31 +75,25 @@
                 @continue ($first === null)
 
                 <a href="{{ $first['url'] }}" role="menuitem"
-                   class="flex flex-col items-center justify-start gap-1 rounded-(--radius-card)
-                          border border-(--color-border) bg-(--color-surface-app) px-1 pt-2 pb-2.5
-                          text-center transition-colors
+                   class="flex min-h-24 flex-col items-center justify-center gap-2
+                          rounded-(--radius-card) border border-(--color-border)
+                          bg-(--color-surface-app) px-2 py-3 text-center transition-colors
                           hover:border-(--color-brand-600) hover:bg-(--color-surface-muted)">
-                    <span class="grid size-8 shrink-0 place-items-center rounded-(--radius-card)
-                                 bg-(--color-surface-muted) text-(--color-brand-600)">
-                        <x-ui.icon :name="$module['icon']" :size="18" />
+                    <span class="grid size-10 shrink-0 place-items-center rounded-(--radius-card)
+                                 bg-(--color-surface-muted)">
+                        <x-ui.icon :name="$module['icon']" :size="24" />
                     </span>
 
                     {{--
-                        ⚠️ `leading-tight` এখানে চলে না — **বাংলার জন্য**।
+                        ⚠️ নামের জন্য জায়গা রাখতেই হয়।
 
-                        ⓘ প্রথম খসড়ায় ওটাই ছিল, আর নামগুলোর নিচের অংশ কাটা
-                        পড়ছিল ("হিসাব", "অর্থ", "সরবরাহকারী")। কারণ বাংলা
-                        অক্ষরের নিচে যুক্তাক্ষর ও কার বসে (ু, ৃ, ্র), আর
-                        ১.২৫ লাইন-উচ্চতায় ওগুলোর জায়গা থাকে না।
-
-                        ⓘ ল্যাটিন লেখায় এটা চোখে পড়ত না — ইংরেজিতে নিচে
-                        নামে কেবল g, j, p, q, y। তাই ঘনত্ব বাড়াতে গিয়ে
-                        ভুলটা করা সহজ, আর ধরা পড়ে কেবল বাংলায়।
-
-                        `break-words` — "নিয়ন্ত্রণ ও নিরীক্ষা"-র মতো লম্বা
-                        নাম দুই লাইনে ভাঙবে, টালির বাইরে যাবে না।
+                        ⓘ আগের খসড়ায় টালিগুলো ছিল ৯৫px চওড়া আর উচ্চতা
+                        বাঁধা ছিল না, তাই "System Administration"-এর মতো
+                        নাম বাক্সের বাইরে বেরিয়ে পড়ত — পর্দায় নামগুলো
+                        টালির নিচে ভাসত। ⛔ পর্দায় জায়গা ছিল, আমি
+                        ব্যবহার করিনি।
                     --}}
-                    <span class="w-full break-words text-2xs leading-normal text-(--color-ink-body)">{{ $module['label'] }}</span>
+                    <span class="w-full break-words text-xs leading-snug text-(--color-ink-body)">{{ $module['label'] }}</span>
                 </a>
             @endforeach
         </div>

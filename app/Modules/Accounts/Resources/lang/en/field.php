@@ -17,6 +17,12 @@ return [
     'code' => 'Code',
     'account_code' => 'Account code',
     'name' => 'Name',
+
+    'account_name_en' => 'Account name (English)',
+    'account_name_bn' => 'Account name (Bangla)',
+
+    'till_name_en' => 'Counter name (English)',
+    'till_name_bn' => 'Counter name (Bangla)',
     'name_en' => 'Name (English)',
     'name_bn' => 'Name (Bangla)',
     'parent' => 'Parent account',

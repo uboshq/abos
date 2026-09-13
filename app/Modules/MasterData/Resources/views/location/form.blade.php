@@ -54,10 +54,10 @@
                             :placeholder="__('core.create.code_auto')"
                             :hint="__('core.create.code_auto_hint')" />
 
-                <x-ui.field name="name_en" :label="__('master_data::field.name_en')"
+                <x-ui.field name="name_en" :label="__('master_data::field.location_name_en')"
                             :value="old('name_en', $location->name_en)" required />
 
-                <x-ui.field name="name_bn" :label="__('master_data::field.name_bn')"
+                <x-ui.field name="name_bn" :label="__('master_data::field.location_name_bn')"
                             :value="old('name_bn', $location->name_bn)" />
             </div>
         </section>

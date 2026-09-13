@@ -48,10 +48,10 @@
                             :placeholder="__('core.create.code_auto')"
                             :hint="$isNew ? __('accounts::message.till_code_hint') : null" />
 
-                <x-ui.field name="name_en" :label="__('accounts::field.name_en')"
+                <x-ui.field name="name_en" :label="__('accounts::field.till_name_en')"
                             :value="old('name_en', $till->name_en)" required />
 
-                <x-ui.field name="name_bn" :label="__('accounts::field.name_bn')"
+                <x-ui.field name="name_bn" :label="__('accounts::field.till_name_bn')"
                             :value="old('name_bn', $till->name_bn)" />
             </div>
         </section>

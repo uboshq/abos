@@ -41,9 +41,9 @@
                             :value="old('code', $employee->code)"
                             :placeholder="__('core.create.code_auto')"
                             :hint="$employee->exists ? null : __('core.create.code_auto_hint')" />
-                <x-ui.field name="name_en" :label="__('hr::field.name_en')"
+                <x-ui.field name="name_en" :label="__('hr::field.employee_name_en')"
                             :value="old('name_en', $employee->name_en)" required />
-                <x-ui.field name="name_bn" :label="__('hr::field.name_bn')"
+                <x-ui.field name="name_bn" :label="__('hr::field.employee_name_bn')"
                             :value="old('name_bn', $employee->name_bn)" />
                 <x-ui.field name="father_name" :label="__('hr::field.father_name')"
                             :value="old('father_name', $employee->father_name)" />

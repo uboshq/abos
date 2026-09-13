@@ -5,6 +5,15 @@ declare(strict_types=1);
 return [
     'code' => 'Code',
     'name' => 'Name',
+
+    'employee_name_en' => 'Employee name (English)',
+    'employee_name_bn' => 'Employee name (Bangla)',
+
+    'leave_type_name_en' => 'Leave type name (English)',
+    'leave_type_name_bn' => 'Leave type name (Bangla)',
+
+    'salary_head_name_en' => 'Salary head name (English)',
+    'salary_head_name_bn' => 'Salary head name (Bangla)',
     'name_en' => 'Name (English)',
     'name_bn' => 'Name (Bangla)',
     'father_name' => 'Father\'s Name',

@@ -81,8 +81,8 @@
                 <div class="space-y-3">
                     <x-ui.field name="code" :label="__('hr::field.code')" :value="old('code')"
                                 :placeholder="__('core.create.code_auto')" />
-                    <x-ui.field name="name_en" :label="__('hr::field.name_en')" :value="old('name_en')" required />
-                    <x-ui.field name="name_bn" :label="__('hr::field.name_bn')" :value="old('name_bn')" />
+                    <x-ui.field name="name_en" :label="__('hr::field.leave_type_name_en')" :value="old('name_en')" required />
+                    <x-ui.field name="name_bn" :label="__('hr::field.leave_type_name_bn')" :value="old('name_bn')" />
                     <x-ui.field name="days_per_year" type="number" step="0.5" min="0"
                                 :label="__('hr::field.days_per_year')"
                                 :value="old('days_per_year', 0)" required />

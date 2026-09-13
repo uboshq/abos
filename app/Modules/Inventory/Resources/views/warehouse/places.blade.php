@@ -69,8 +69,8 @@
                 </label>
 
                 <x-ui.field name="code" :label="__('inventory::field.code')" required maxlength="32" class="w-32" />
-                <x-ui.field name="name_en" :label="__('inventory::field.name_en')" required class="w-48" />
-                <x-ui.field name="name_bn" :label="__('inventory::field.name_bn')" class="w-48" />
+                <x-ui.field name="name_en" :label="__('inventory::field.place_name_en')" required class="w-48" />
+                <x-ui.field name="name_bn" :label="__('inventory::field.place_name_bn')" class="w-48" />
 
                 {{-- ⓘ ক্রম — গুদামে হাঁটার পথ, বর্ণানুক্রম নয়। খালি রাখলে শূন্য। --}}
                 <x-ui.field name="sort" type="number" min="0" :label="__('inventory::field.sort')" class="w-24" />

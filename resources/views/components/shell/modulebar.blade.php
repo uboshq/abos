@@ -47,9 +47,20 @@
      * দেখা যায়, কিন্তু ট্যাব-বারে ওদের জায়গা নেই: `href=""` মানে পাতাটা
      * নিজেকেই আবার খোলে, আর ব্যবহারকারী ভাবেন কিছুই হলো না।
      */
+    /*
+     * ⭐ গ্রুপের নামটা প্রতিটা সারির সাথে রাখা হয় — `flatten()` ওটা
+     * ফেলে দিত।
+     *
+     * ⓘ কারণ আইকন ও রং আসে **গ্রুপ থেকে**: ১৬২টা মেনু সারির একটাও
+     * নিজের আইকন ঘোষণা করে না, কিন্তু প্রতিটা সারি কোনো না কোনো গ্রুপে
+     * আছে। তাই গ্রুপটা ধরে রাখলে সোজা-ট্যাবের মডিউলগুলোও আইকন পায়,
+     * কোনো অনুমান ছাড়াই।
+     */
     $tabs = $current
-        ? collect($current['groups'])->flatten(1)
-            ->filter(fn ($row) => ($row['url'] ?? null) !== null)
+        ? collect($current['groups'])
+            ->flatMap(fn ($items, $group) => collect($items)
+                ->filter(fn ($row) => ($row['url'] ?? null) !== null)
+                ->map(fn ($row) => $row + ['group' => $group]))
             ->values()
         : collect();
 
@@ -98,10 +109,56 @@
      */
     $groupIcon = fn (string $name): string => ['master' => 'book'][$name] ?? $name;
 
+    /*
+     * ── আইকনের রং — গ্রুপ ধরে, আর স্থির ────────────────────────────────
+     * মালিকের কথা: *"আইকনগুলো এত সাদামাটা কেন — এটার মতো রঙিন করো।"*
+     *
+     * ⓘ `x-ui.icon` আঁকে `currentColor` দিয়ে, তাই ওরা লেখার রংই নিত —
+     * একরঙা, ফ্যাকাশে। রঙিন করতে হলে প্রতিটাকে আলাদা রং দিতে হয়।
+     *
+     * ⚠️ এখানে রংগুলো **স্থির** (টোকেন নয়), আর সেটা ইচ্ছাকৃত: এগুলো
+     * থিমের রং নয়, **শ্রেণীর** রং — ঠিক যেমন ফোল্ডারের আইকন সব
+     * থিমেই হলুদ থাকে। ⓘ থিমের সাথে বদলালে "সবুজ মানে লেনদেন" এই
+     * শেখাটাই নষ্ট হত।
+     *
+     * ⓘ ৬০০ স্তর বেছে নেওয়া হয়েছে যাতে হালকা ও গাঢ় দুই থিমেই পড়া যায়।
+     */
+    $groupTint = fn (string $name): string => [
+        'dashboard' => 'text-blue-600',
+        'master' => 'text-violet-600',
+        'transactions' => 'text-emerald-600',
+        'reports' => 'text-amber-600',
+        'settings' => 'text-slate-500',
+    ][$name] ?? 'text-slate-500';
+
+    /*
+     * ── কোন গ্রুপ কখনো ভাঁজ হয় না — মালিকের সিদ্ধান্ত ─────────────────
+     * মালিকের কথা: *"Transactions গুলো গ্রুপ থেকে বের করে দাও, পর্যাপ্ত
+     * জায়গা আছে।"*
+     *
+     * ⭐ আর যুক্তিটা কাজের ছন্দেই: লেনদেন হলো **রোজকার কাজ** — আদায়,
+     * পরিশোধ, জাবেদা, কন্ট্রা। ⓘ ওগুলোর জন্য প্রতিবার একটা গ্রুপ খুলতে
+     * হলে দিনে বহুবার বাড়তি ক্লিক পড়ত। প্রতিবেদন বা সেটিংসে দিনে
+     * একবারও যাওয়া হয় না, তাই ওগুলো ভাঁজেই থাক।
+     *
+     * ⓘ অর্থাৎ নিয়মটা "কয়টা সারি" নয়, **"কত ঘন ঘন লাগে"**।
+     */
+    $neverGrouped = ['transactions'];
+
+    $loose = $grouped
+        ? collect($current['groups'])
+            ->filter(fn ($items, $g) => in_array($g, $neverGrouped, true))
+            ->flatMap(fn ($items, $g) => collect($items)
+                ->filter(fn ($r) => ($r['url'] ?? null) !== null)
+                ->map(fn ($r) => $r + ['group' => $g]))
+            ->values()
+        : collect();
+
     $groups = $grouped
         ? collect($current['groups'])
             ->map(fn ($items) => collect($items)->filter(fn ($r) => ($r['url'] ?? null) !== null)->values())
             ->filter(fn ($items) => $items->isNotEmpty())
+            ->reject(fn ($items, $g) => in_array($g, $neverGrouped, true))
         : collect();
 @endphp
 
@@ -127,7 +184,13 @@
     লেখা পড়ত — পড়াই যেত না। টোকেন ব্যবহার করায় গড়নটা এক থাকে, আর
     থিম বদলালে রং তার সাথে যায়।
 --}}
-<div class="sticky top-(--spacing-header) z-20 flex min-h-(--spacing-field-compact) shrink-0 items-center gap-2
+{{-- ⓘ `data-module-bar` — মাপার জন্য একটা স্থায়ী হাতল।
+
+     ⚠️ এটা বসানো হয়েছে কারণ যাচাই করতে গিয়ে আমি তিনবার **ভুল এলিমেন্ট**
+     মেপেছি: `aria-label` ধরে খুঁজছিলাম, আর একই লেখা নিচের মোবাইল-নেভেও
+     আছে। ⓘ যে চিহ্ন দিয়ে খোঁজা হয় সেটা অনন্য না হলে মাপটাই মিথ্যা। --}}
+<div data-module-bar
+     class="sticky top-(--spacing-header) z-20 flex min-h-(--spacing-field-compact) shrink-0 items-center gap-2
             border-b border-(--color-border)
             bg-linear-to-b from-[var(--color-surface-card)] to-[var(--color-surface-muted)]
             py-1 ps-2 pe-3 md:pe-5 print-hide">
@@ -191,10 +254,32 @@
                        'bg-linear-to-b from-[var(--color-surface-card)] to-[var(--color-surface-muted)] text-(--color-ink-body) hover:bg-(--color-surface-card) hover:bg-none' => ! ($tab['active'] ?? false),
                    ])
                    @if ($tab['active'] ?? false) aria-current="page" @endif>
-                    {{ $tab['label'] }}
+                    <span class="flex items-center gap-1.5">
+                        <x-ui.icon :name="$groupIcon($tab['group'])" :size="14"
+                                   :class="$groupTint($tab['group'])" />
+                        {{ $tab['label'] }}
+                    </span>
                 </a>
             @endforeach
         @else
+            {{-- আগে খোলা সারিগুলো (লেনদেন), তারপর ভাঁজ করা গ্রুপগুলো —
+                 রোজকার কাজ বাঁয়ে, মাঝেমধ্যের কাজ ডানে। --}}
+            @foreach ($loose as $tab)
+                <a href="{{ $tab['url'] }}"
+                   @class([
+                       'shrink-0 whitespace-nowrap border border-(--color-border) -ms-px px-3 py-1 text-xs transition-colors first:ms-0 first:rounded-s-(--radius-field)',
+                       'relative z-10 bg-(--color-surface-card) font-semibold text-(--color-brand-600)' => $tab['active'] ?? false,
+                       'bg-linear-to-b from-[var(--color-surface-card)] to-[var(--color-surface-muted)] text-(--color-ink-body) hover:bg-(--color-surface-card) hover:bg-none' => ! ($tab['active'] ?? false),
+                   ])
+                   @if ($tab['active'] ?? false) aria-current="page" @endif>
+                    <span class="flex items-center gap-1.5">
+                        <x-ui.icon :name="$groupIcon($tab['group'])" :size="14"
+                                   :class="$groupTint($tab['group'])" />
+                        {{ $tab['label'] }}
+                    </span>
+                </a>
+            @endforeach
+
             @foreach ($groups as $name => $items)
                 @php
                     $activeItem = $items->firstWhere('active', true);
@@ -213,7 +298,7 @@
                        ])
                        @if ($activeItem !== null) aria-current="page" @endif>
                         <span class="flex items-center gap-1.5">
-                            <x-ui.icon :name="$groupIcon($name)" :size="14" />
+                            <x-ui.icon :name="$groupIcon($name)" :size="14" :class="$groupTint($name)" />
                             {{ $items->first()['label'] }}
                         </span>
                     </a>
@@ -228,7 +313,7 @@
                                     'relative z-10 bg-(--color-surface-card) font-semibold text-(--color-brand-600)' => $activeItem !== null,
                                     'bg-linear-to-b from-[var(--color-surface-card)] to-[var(--color-surface-muted)] text-(--color-ink-body) hover:bg-(--color-surface-card) hover:bg-none' => $activeItem === null,
                                 ])>
-                            <x-ui.icon :name="$groupIcon($name)" :size="14" />
+                            <x-ui.icon :name="$groupIcon($name)" :size="14" :class="$groupTint($name)" />
 
                             {{ __('core.menu.'.$name) }}
 
