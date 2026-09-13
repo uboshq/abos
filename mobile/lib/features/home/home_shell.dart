@@ -9,6 +9,7 @@ import '../../core/sync_engine/sync_engine.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
+import '../update/update_gate.dart';
 
 /// The signed-in person's home: their name and role, a grid of what `GET
 /// /me` says they may do and this app build can actually open — see
@@ -50,22 +51,28 @@ class HomeShell extends ConsumerWidget {
           ),
         ],
       ),
-      body: FutureBuilder<List<MenuItem>>(
-        future: _menuRepository.menuFor(user),
-        builder: (context, snapshot) {
-          final items = snapshot.data ?? const [];
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (items.isEmpty) {
-            return const EmptyState(
-              icon: Icons.lock_outline,
-              title: 'আপনার জন্য কোনো মেনু নেই',
-              message: 'অফিসে জানান — আপনার অ্যাকাউন্টে কোনো অনুমতি বসানো নেই।',
-            );
-          }
-          return _MenuGrid(items: items);
-        },
+      // docs/Contract §৬. Wrapped here rather than around the whole app: the
+      // login screen must stay reachable for somebody whose build is too old,
+      // because signing in is how they find out anything at all, and a wall
+      // in front of it would leave them with a blank app and no explanation.
+      body: UpdateGate(
+        child: FutureBuilder<List<MenuItem>>(
+          future: _menuRepository.menuFor(user),
+          builder: (context, snapshot) {
+            final items = snapshot.data ?? const [];
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (items.isEmpty) {
+              return const EmptyState(
+                icon: Icons.lock_outline,
+                title: 'আপনার জন্য কোনো মেনু নেই',
+                message: 'অফিসে জানান — আপনার অ্যাকাউন্টে কোনো অনুমতি বসানো নেই।',
+              );
+            }
+            return _MenuGrid(items: items);
+          },
+        ),
       ),
     );
   }
