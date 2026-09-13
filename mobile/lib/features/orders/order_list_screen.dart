@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../core/sync_engine/reference_cache.dart';
+import 'package:intl/intl.dart';
+
+import '../../core/records/money.dart';
+import '../../core/records/sales_order_record.dart';
 import '../../core/sync_engine/reference_sync.dart';
 import '../../core/sync_engine/sync_engine.dart';
 import '../../core/theme/app_spacing.dart';
@@ -42,7 +45,9 @@ class _OrderListScreenState extends State<OrderListScreen> {
         .where((item) => item.entityType == 'SalesOrder')
         .toList();
     final pendingCount = SyncEngine.instance.pendingCount;
-    final synced = ReferenceCache.instance.allOf('SalesOrder');
+    final synced = SalesOrderRecord.all()
+      ..sort((a, b) => (b.trxDate ?? DateTime(0))
+          .compareTo(a.trxDate ?? DateTime(0)));
 
     final nothingAtAll =
         rejected.isEmpty && pendingCount == 0 && synced.isEmpty;
@@ -90,19 +95,30 @@ class _OrderListScreenState extends State<OrderListScreen> {
                   ],
                   if (synced.isNotEmpty) ...[
                     _SectionHeader('সিঙ্ক হয়েছে (${synced.length})'),
-                    ...synced.map((order) {
-                      final number =
-                          (order['orderNumber'] ?? order['number'])?.toString();
-                      final status = order['status']?.toString();
-                      return Card(
-                        child: ListTile(
-                          leading: const AppStatusPill(
-                              label: 'সম্পন্ন', kind: AppStatusKind.success),
-                          title: Text(number ?? 'নম্বর নেই'),
-                          subtitle: status != null ? Text(status) : null,
-                        ),
-                      );
-                    }),
+                    // The number is what this section exists for — the rep
+                    // could not give it to the shopkeeper offline (docs/
+                    // Contract §০, decision ২), so this is the screen where
+                    // they finally get it. It used to read `orderNumber`,
+                    // which the server has never sent, so every confirmed
+                    // order here said "নম্বর নেই"; see SalesOrderRecord.
+                    ...synced.map((order) => Card(
+                          child: ListTile(
+                            leading: const AppStatusPill(
+                                label: 'সম্পন্ন', kind: AppStatusKind.success),
+                            title: Text(order.documentNo ?? 'নম্বর নেই'),
+                            subtitle: Text([
+                              order.customerName,
+                              if (order.trxDate != null)
+                                DateFormat('dd/MM/yyyy').format(order.trxDate!),
+                              order.statusLabel,
+                            ].join(' · ')),
+                            trailing: order.total == null
+                                ? null
+                                : Text(Money.taka(order.total),
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w700)),
+                          ),
+                        )),
                   ],
                 ],
               ),

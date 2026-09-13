@@ -1,15 +1,22 @@
 import 'package:flutter/material.dart';
 
-import '../../core/sync_engine/reference_cache.dart';
+import '../../core/records/customer_record.dart';
 import '../../core/sync_engine/reference_sync.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 
-/// Every customer this device has pulled — see reference_cache.dart's own
-/// doc comment: this reads whatever `Customer` payloads have landed, and
-/// asks nothing about their shape beyond the handful of keys a list row
-/// needs.
+/// Every customer this device has pulled, each with what the shop owes.
+///
+/// <p>Reads through [CustomerRecord] and [CustomerDueRecord] rather than
+/// reaching into the cached payload by hand — see [CustomerRecord]'s own doc
+/// comment for what reading guessed key names cost this screen.
+///
+/// <p><b>Why the due belongs on the list and not only on a detail screen</b>
+/// — docs/Contract §০ names outstanding credit as one of the four things a
+/// phone cannot learn offline, and `CustomerDueSync` goes to real trouble to
+/// keep the figure fresh. A rep walking a route decides which shop to call on
+/// from this list; the figure is worth nothing a tap away.
 class CustomerListScreen extends StatefulWidget {
   const CustomerListScreen({super.key});
 
@@ -37,14 +44,9 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final all = ReferenceCache.instance.allOf('Customer');
-    final filtered = _query.isEmpty
-        ? all
-        : all.where((c) {
-            final name = (c['name'] ?? '').toString().toLowerCase();
-            final phone = (c['phone'] ?? c['mobile'] ?? '').toString();
-            return name.contains(_query.toLowerCase()) || phone.contains(_query);
-          }).toList();
+    final all = CustomerRecord.all();
+    final filtered =
+        all.where((customer) => customer.matches(_query)).toList();
 
     return Scaffold(
       appBar: AppBar(title: const Text('গ্রাহক')),
@@ -95,10 +97,8 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                           itemCount: filtered.length,
                           separatorBuilder: (_, __) =>
                               const SizedBox(height: AppSpacing.xs),
-                          itemBuilder: (context, index) {
-                            final customer = filtered[index];
-                            return _CustomerTile(customer: customer);
-                          },
+                          itemBuilder: (context, index) =>
+                              _CustomerTile(customer: filtered[index]),
                         ),
             ),
           ),
@@ -111,13 +111,16 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
 class _CustomerTile extends StatelessWidget {
   const _CustomerTile({required this.customer});
 
-  final Map<String, dynamic> customer;
+  final CustomerRecord customer;
 
   @override
   Widget build(BuildContext context) {
-    final name = (customer['name'] ?? 'নাম নেই').toString();
-    final phone = (customer['phone'] ?? customer['mobile'])?.toString();
-    final address = customer['address']?.toString();
+    final name = customer.name;
+    final subtitle = [
+      if (customer.phone != null) customer.phone!,
+      if (customer.address != null) customer.address!,
+    ].join(' · ');
+    final due = CustomerDueRecord.forCustomer(customer.id);
 
     return Card(
       child: ListTile(
@@ -130,13 +133,49 @@ class _CustomerTile extends StatelessWidget {
           ),
         ),
         title: Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text(
-          [if (phone != null && phone.isNotEmpty) phone, if (address != null) address]
-              .join(' · '),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
+        subtitle: subtitle.isEmpty
+            ? null
+            : Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
+        // No due row at all when this shop's CustomerDue has not been pulled
+        // yet — the two entity types have separate watermarks, so one can
+        // arrive a sync ahead of the other, and a shop showing "বকেয়া নেই"
+        // when the truth is simply unknown is the one wrong thing to say.
+        trailing: due == null ? null : _DuePill(due: due),
       ),
+    );
+  }
+}
+
+class _DuePill extends StatelessWidget {
+  const _DuePill({required this.due});
+
+  final CustomerDueRecord due;
+
+  @override
+  Widget build(BuildContext context) {
+    // Owed is the only state worth a colour. A shop that is square, or in
+    // advance, is not news — and colouring it green would make the ordinary
+    // case shout as loudly as the one a rep has to act on.
+    final owes = due.outstanding > 0;
+
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Text(
+          due.outstandingLabel,
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 13,
+            color: owes ? AppColors.danger : AppColors.onSurfaceMuted,
+          ),
+        ),
+        if (due.creditDays > 0)
+          Text(
+            '${due.creditDays} দিন',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+      ],
     );
   }
 }

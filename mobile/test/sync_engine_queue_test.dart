@@ -56,8 +56,13 @@ void main() {
       operation: 'CREATE',
       payload: {
         'customerId': '01a0-test-customer',
-        'items': [
-          {'productId': '01a0-test-product', 'quantity': 3},
+        // The shape SalesOrderSync::apply() actually reads — see
+        // SalesOrderDraft. These fixtures used to say items/quantity, which
+        // is the shape the server refuses with order_has_no_lines; a queue
+        // test does not care, but a stale fixture is the next person's
+        // evidence for what a queued order looks like.
+        'lines': [
+          {'productId': '01a0-test-product', 'qty': 3, 'rate': '42.5000'},
         ],
       },
     );
@@ -79,13 +84,13 @@ void main() {
       module: 'sales',
       entityType: 'SalesOrder',
       operation: 'CREATE',
-      payload: {'customerId': 'customer-a', 'items': const []},
+      payload: {'customerId': 'customer-a', 'lines': const []},
     );
     await SyncEngine.instance.enqueue(
       module: 'sales',
       entityType: 'SalesOrder',
       operation: 'CREATE',
-      payload: {'customerId': 'customer-b', 'items': const []},
+      payload: {'customerId': 'customer-b', 'lines': const []},
     );
 
     expect(SyncEngine.instance.pendingCount, 2);

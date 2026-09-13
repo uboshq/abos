@@ -24,9 +24,20 @@ class AppConfig {
   /// API 28, and it fails with a network error that names no cause — which
   /// reads on the phone exactly like "the server is down".
   ///
-  /// Verified reachable from outside the office network on 2 September 2026:
-  /// GET https://abos.univer.com.bd/up answered 200.
-  static const String _live = 'https://abos.univer.com.bd/api/v1';
+  /// <p><b>Moved off abos.univer.com.bd on 13 September 2026</b>, and the
+  /// reason is worth keeping: that host was the office Mac mini behind the
+  /// office router, and for several days nothing outside the office could
+  /// reach it — every inbound port timed out while the machine itself served
+  /// perfectly on the LAN. A server a rep cannot reach from a shop is not a
+  /// server, however healthy it looks from the next desk. ABOS now runs on
+  /// shared hosting, which is reachable from anywhere by construction.
+  ///
+  /// <p>Verified from this machine the same day, and deliberately not from
+  /// inside the office network that used to flatter the old host:
+  /// `GET /up` → 200 in 0.31s, `/` → 302, and `POST /api/v1/auth/login` with
+  /// a bad password → 422 carrying ABOS's own Bengali message, which is what
+  /// actually proves it is this application answering and not a parked page.
+  static const String _live = 'https://os.adi.com.bd/api/v1';
 
   static String get apiBaseUrl {
     if (_baseUrlOverride.isNotEmpty) {

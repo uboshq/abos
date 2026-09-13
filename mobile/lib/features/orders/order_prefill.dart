@@ -1,6 +1,7 @@
 import 'dart:convert';
 
-import '../../core/sync_engine/reference_cache.dart';
+import '../../core/records/customer_record.dart';
+import '../../core/records/sales_order_record.dart';
 import '../../core/sync_engine/sync_engine.dart';
 
 /// What "নতুন করে লিখুন" on a rejected order hands to [NewOrderScreen].
@@ -25,8 +26,8 @@ class OrderPrefill {
 
   final String customerId;
 
-  /// (productId, quantity) pairs — see `new_order_screen.dart`'s own reading
-  /// of a queued `SalesOrder` payload for where these come from.
+  /// (productId, quantity) pairs, read back out of the queued payload by
+  /// [SalesOrderDraft.fromPayload].
   final List<(String, int)> items;
 
   /// The Hive key of the rejected row this retry replaces, passed straight
@@ -68,18 +69,16 @@ class RejectedOrderSummary {
     if (item.entityType != 'SalesOrder') return null;
     try {
       final decoded = jsonDecode(item.payloadJson) as Map<String, dynamic>;
-      final customerId = decoded['customerId']?.toString() ?? '';
-      final itemRows = (decoded['items'] as List?) ?? const [];
-      final items = itemRows
-          .whereType<Map>()
-          .map((row) => (
-                row['productId']?.toString() ?? '',
-                ((row['quantity'] as num?) ?? 1).toInt(),
-              ))
-          .toList();
+      // The queued payload is read back through the same class that writes
+      // it, so the two can never drift apart the way this screen and the
+      // server's own handler did — see SalesOrderDraft's doc comment.
+      final draft = SalesOrderDraft.fromPayload(decoded);
+      if (draft == null) return null;
 
-      final customer = ReferenceCache.instance.get('Customer', customerId);
-      final customerName = customer?['name']?.toString() ?? 'অজানা গ্রাহক';
+      final customerId = draft.customerId;
+      final items = draft.lines;
+      final customerName =
+          CustomerRecord.byId(customerId)?.name ?? 'অজানা গ্রাহক';
 
       return RejectedOrderSummary(
         customerName: customerName,
