@@ -48,10 +48,10 @@
                             :value="old('code', $product->code)"
                             :hint="$isNew ? __('inventory::message.code_auto') : null" />
 
-                <x-ui.field name="name_en" :label="__('inventory::field.name_en')"
+                <x-ui.field name="name_en" :label="__('inventory::field.product_name_en')"
                             :value="old('name_en', $product->name_en)" required />
 
-                <x-ui.field name="name_bn" :label="__('inventory::field.name_bn')"
+                <x-ui.field name="name_bn" :label="__('inventory::field.product_name_bn')"
                             :value="old('name_bn', $product->name_bn)" />
 
                 {{-- বারকোড — কাউন্টারে স্ক্যানার এই নম্বরটাই পাঠায় --}}

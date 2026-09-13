@@ -76,11 +76,11 @@
                             :value="old('code', $record->code)"
                             x-ref="code" @input="touched = true" />
 
-                <x-ui.field name="name_en" :label="__('master_data::field.name_en')"
+                <x-ui.field name="name_en" :label="__('master_data::field.item_name_en')"
                             :value="old('name_en', $record->name_en)" required
                             @input="suggest($event.target.value)" />
 
-                <x-ui.field name="name_bn" :label="__('master_data::field.name_bn')"
+                <x-ui.field name="name_bn" :label="__('master_data::field.item_name_bn')"
                             :value="old('name_bn', $record->name_bn)" />
 
                 {{--

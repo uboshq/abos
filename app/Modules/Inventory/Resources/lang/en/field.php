@@ -5,6 +5,15 @@ declare(strict_types=1);
 return [
     'code' => 'Code',
     'name' => 'Name',
+
+    'product_name_en' => 'Product name (English)',
+    'product_name_bn' => 'Product name (Bangla)',
+
+    'warehouse_name_en' => 'Warehouse name (English)',
+    'warehouse_name_bn' => 'Warehouse name (Bangla)',
+
+    'place_name_en' => 'Place name (English)',
+    'place_name_bn' => 'Place name (Bangla)',
     'name_en' => 'Name (English)',
     'name_bn' => 'Name (Bangla)',
     'barcode' => 'Barcode',

@@ -44,10 +44,10 @@
                             :placeholder="__('core.create.code_auto')"
                             :hint="$warehouse->exists ? null : __('core.create.code_auto_hint')" />
 
-                <x-ui.field name="name_en" :label="__('inventory::field.name_en')"
+                <x-ui.field name="name_en" :label="__('inventory::field.warehouse_name_en')"
                             :value="old('name_en', $warehouse->name_en)" required />
 
-                <x-ui.field name="name_bn" :label="__('inventory::field.name_bn')"
+                <x-ui.field name="name_bn" :label="__('inventory::field.warehouse_name_bn')"
                             :value="old('name_bn', $warehouse->name_bn)" />
 
                 {{-- শাখা — গুদাম শাখার নিচে, নাহলে এক শাখার মাল অন্য

@@ -47,10 +47,10 @@
                                    :value="old('code', $customer->code)"
                                    :hint="$isNew ? __('customer::message.code_auto') : null" />
 
-                <x-ui.field name="name_en" :label="__('customer::field.name_en')"
+                <x-ui.field name="name_en" :label="__('customer::field.customer_name_en')"
                                    :value="old('name_en', $customer->name_en)" required />
 
-                <x-ui.field name="name_bn" :label="__('customer::field.name_bn')"
+                <x-ui.field name="name_bn" :label="__('customer::field.customer_name_bn')"
                                    :value="old('name_bn', $customer->name_bn)"
                                    :required="$requireBangla"
                                    :hint="__('customer::message.bn_name_hint')" />

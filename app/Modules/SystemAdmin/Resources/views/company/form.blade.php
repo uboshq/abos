@@ -71,10 +71,10 @@
                                 :hint="__('core.create.code_auto_hint')" />
                 @endif
 
-                <x-ui.field name="name_en" :label="__('master_data::field.name_en')"
+                <x-ui.field name="name_en" :label="__('system_admin::field.company_name_en')"
                             :value="old('name_en', $company->name_en)" required />
 
-                <x-ui.field name="name_bn" :label="__('master_data::field.name_bn')"
+                <x-ui.field name="name_bn" :label="__('system_admin::field.company_name_bn')"
                             :value="old('name_bn', $company->name_bn)" />
 
                 <x-ui.field name="legal_name" :label="__('system_admin::field.legal_name')"
@@ -169,10 +169,10 @@
                     <x-ui.field name="branch_code" :label="__('master_data::field.code')"
                                 :value="old('branch_code', 'MAIN')" required />
 
-                    <x-ui.field name="branch_name_en" :label="__('master_data::field.name_en')"
+                    <x-ui.field name="branch_name_en" :label="__('system_admin::field.branch_name_en')"
                                 :value="old('branch_name_en')" required />
 
-                    <x-ui.field name="branch_name_bn" :label="__('master_data::field.name_bn')"
+                    <x-ui.field name="branch_name_bn" :label="__('system_admin::field.branch_name_bn')"
                                 :value="old('branch_name_bn')" />
                 </div>
             </section>
@@ -231,8 +231,8 @@
                 @csrf
 
                 <x-ui.field name="code" :label="__('master_data::field.code')" required />
-                <x-ui.field name="name_en" :label="__('master_data::field.name_en')" required />
-                <x-ui.field name="name_bn" :label="__('master_data::field.name_bn')" />
+                <x-ui.field name="name_en" :label="__('system_admin::field.branch_name_en')" required />
+                <x-ui.field name="name_bn" :label="__('system_admin::field.branch_name_bn')" />
 
                 <div class="flex items-end">
                     <x-ui.button type="submit" tone="secondary">

@@ -9,6 +9,10 @@ return [
     'tin' => 'TIN',
     'address_en' => 'Address (English)',
     'address_bn' => 'Address (Bangla)',
+    'company_name_en' => 'Company name (English)',
+    'company_name_bn' => 'Company name (Bangla)',
+    'branch_name_en' => 'Branch name (English)',
+    'branch_name_bn' => 'Branch name (Bangla)',
     'main_branch' => 'Main branch',
     'financial_year' => 'Financial year',
     // ── Users and roles ─────────────────────────────────────────────

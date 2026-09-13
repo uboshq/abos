@@ -47,10 +47,10 @@
                             :value="old('code', $supplier->code)"
                             :hint="$isNew ? __('supplier::message.code_auto') : null" />
 
-                <x-ui.field name="name_en" :label="__('supplier::field.name_en')"
+                <x-ui.field name="name_en" :label="__('supplier::field.supplier_name_en')"
                             :value="old('name_en', $supplier->name_en)" required />
 
-                <x-ui.field name="name_bn" :label="__('supplier::field.name_bn')"
+                <x-ui.field name="name_bn" :label="__('supplier::field.supplier_name_bn')"
                             :value="old('name_bn', $supplier->name_bn)"
                             :required="$requireBangla"
                             :hint="__('supplier::message.bn_name_hint')" />

@@ -5,6 +5,9 @@ declare(strict_types=1);
 return [
     'code' => 'Code',
     'name' => 'Name',
+
+    'customer_name_en' => 'Customer name (English)',
+    'customer_name_bn' => 'Customer name (Bangla)',
     'name_en' => 'Name (English)',
     'name_bn' => 'Name (Bangla)',
     'phone' => 'Mobile',
