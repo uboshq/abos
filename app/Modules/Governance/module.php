@@ -45,12 +45,12 @@ return [
 
     'menu' => [
         'dashboard' => [
-            ['label' => 'governance::dashboard.title', 'route' => 'module.dashboard',
+            ['label' => 'governance::dashboard.title', 'icon' => 'dashboard', 'route' => 'module.dashboard',
                 'route_params' => ['module' => 'governance'], 'permission' => 'governance.audit.view'],
         ],
 
         'reports' => [
-            ['label' => 'governance::menu.audit_trail', 'route' => 'governance.audit.index', 'permission' => 'governance.audit.view'],
+            ['label' => 'governance::menu.audit_trail', 'icon' => 'list', 'route' => 'governance.audit.index', 'permission' => 'governance.audit.view'],
 
             /*
              * রপ্তানির খাতা — অডিটের ঠিক পাশে।
@@ -59,8 +59,8 @@ return [
              * বলে কী বেরিয়ে গেছে। আলাদা জায়গায় রাখলে কেউ একটা দেখে
              * ভাবত পুরো ছবিটা দেখা হয়ে গেছে।
              */
-            ['label' => 'governance::menu.export_log', 'route' => 'governance.export.index', 'permission' => 'governance.audit.view'],
-            ['label' => 'governance::menu.login_history', 'route' => 'governance.login.index', 'permission' => 'governance.audit.view'],
+            ['label' => 'governance::menu.export_log', 'icon' => 'download', 'route' => 'governance.export.index', 'permission' => 'governance.audit.view'],
+            ['label' => 'governance::menu.login_history', 'icon' => 'clock', 'route' => 'governance.login.index', 'permission' => 'governance.audit.view'],
 
             /*
              * ভুলের খাতা — বাকি তিনটার পাশে, কিন্তু নিজের চাবিতে।
@@ -69,7 +69,7 @@ return [
              * কে ঢুকেছে। চতুর্থটা বলে **কী ভেঙেছে** — আর এতদিন সেই
              * প্রশ্নটার কোনো উত্তরই কোথাও ছিল না।
              */
-            ['label' => 'governance::menu.error_log', 'route' => 'governance.error.index', 'permission' => 'governance.error.view'],
+            ['label' => 'governance::menu.error_log', 'icon' => 'alert-triangle', 'route' => 'governance.error.index', 'permission' => 'governance.error.view'],
         ],
     ],
 

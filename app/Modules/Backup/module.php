@@ -81,28 +81,28 @@ return [
      */
     'menu' => [
         'dashboard' => [
-            ['label' => 'backup::dashboard.title', 'route' => 'module.dashboard',
+            ['label' => 'backup::dashboard.title', 'icon' => 'dashboard', 'route' => 'module.dashboard',
                 'route_params' => ['module' => 'backup'], 'permission' => 'backup.view'],
         ],
 
         'transactions' => [
-            ['label' => 'backup::menu.backups', 'route' => 'backup.index', 'permission' => 'backup.view'],
-            ['label' => 'backup::menu.destinations', 'route' => 'backup.destination.index',
+            ['label' => 'backup::menu.backups', 'icon' => 'download', 'route' => 'backup.index', 'permission' => 'backup.view'],
+            ['label' => 'backup::menu.destinations', 'icon' => 'globe', 'route' => 'backup.destination.index',
                 'permission' => 'backup.configure'],
 
-            ['label' => 'backup::menu.policies', 'route' => 'backup.policy.index',
+            ['label' => 'backup::menu.policies', 'icon' => 'book', 'route' => 'backup.policy.index',
                 'permission' => 'backup.configure', 'planned' => true],
-            ['label' => 'backup::menu.restore', 'route' => 'backup.restore.index',
+            ['label' => 'backup::menu.restore', 'icon' => 'refresh', 'route' => 'backup.restore.index',
                 'permission' => 'backup.restore', 'planned' => true],
         ],
 
         'reports' => [
-            ['label' => 'backup::menu.verifications', 'route' => 'backup.verification.index',
+            ['label' => 'backup::menu.verifications', 'icon' => 'check-circle', 'route' => 'backup.verification.index',
                 'permission' => 'backup.view', 'planned' => true],
         ],
 
         'settings' => [
-            ['label' => 'backup::menu.disaster_recovery', 'route' => 'backup.dr.index',
+            ['label' => 'backup::menu.disaster_recovery', 'icon' => 'alert-triangle', 'route' => 'backup.dr.index',
                 'permission' => 'backup.failover', 'planned' => true],
         ],
     ],

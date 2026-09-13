@@ -46,19 +46,19 @@ return [
 
     'menu' => [
         'dashboard' => [
-            ['label' => 'hr::dashboard.title', 'route' => 'module.dashboard',
+            ['label' => 'hr::dashboard.title', 'icon' => 'dashboard', 'route' => 'module.dashboard',
                 'route_params' => ['module' => 'hr'], 'permission' => 'hr.employee.view'],
         ],
 
         'master' => [
-            ['label' => 'hr::menu.employees', 'route' => 'hr.employee.index', 'permission' => 'hr.employee.view'],
-            ['label' => 'hr::menu.salary_heads', 'route' => 'hr.salary_head.index', 'permission' => 'hr.salary.manage'],
+            ['label' => 'hr::menu.employees', 'icon' => 'people', 'route' => 'hr.employee.index', 'permission' => 'hr.employee.view'],
+            ['label' => 'hr::menu.salary_heads', 'icon' => 'wallet', 'route' => 'hr.salary_head.index', 'permission' => 'hr.salary.manage'],
         ],
 
         'transactions' => [
-            ['label' => 'hr::menu.payroll', 'route' => 'hr.payroll.index', 'permission' => 'hr.payroll.view'],
-            ['label' => 'hr::menu.attendance', 'route' => 'hr.attendance.index', 'permission' => 'hr.attendance.view'],
-            ['label' => 'hr::menu.leave', 'route' => 'hr.leave.index', 'permission' => 'hr.leave.view'],
+            ['label' => 'hr::menu.payroll', 'icon' => 'cash', 'route' => 'hr.payroll.index', 'permission' => 'hr.payroll.view'],
+            ['label' => 'hr::menu.attendance', 'icon' => 'calendar', 'route' => 'hr.attendance.index', 'permission' => 'hr.attendance.view'],
+            ['label' => 'hr::menu.leave', 'icon' => 'clock', 'route' => 'hr.leave.index', 'permission' => 'hr.leave.view'],
         ],
     ],
 

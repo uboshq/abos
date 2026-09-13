@@ -54,6 +54,7 @@ Route::middleware('auth')->prefix('finance')->group(function () {
      */
     Route::prefix('capital')->name('capital.')->group(function () {
         Route::get('/', [CapitalController::class, 'index'])->name('index');
+        Route::get('/create', [CapitalController::class, 'create'])->name('create');
         Route::post('/', [CapitalController::class, 'store'])->name('store');
         /*
          * সম্পাদনা ও মোছা — ⛔ কেবল খসড়া, আর পাহারাটা কন্ট্রোলারে।

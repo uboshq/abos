@@ -78,16 +78,16 @@ return [
 
     'menu' => [
         'dashboard' => [
-            ['label' => 'master_data::dashboard.title', 'route' => 'module.dashboard',
+            ['label' => 'master_data::dashboard.title', 'icon' => 'dashboard', 'route' => 'module.dashboard',
                 'route_params' => ['module' => 'master_data'], 'permission' => 'master_data.view'],
         ],
 
         'master' => [
-            ['label' => 'master_data::menu.locations', 'route' => 'master_data.location.index', 'permission' => 'master_data.view'],
-            ['label' => 'master_data::menu.units', 'route' => 'master_data.unit.index', 'permission' => 'master_data.view'],
-            ['label' => 'master_data::menu.taxes', 'route' => 'master_data.tax.index', 'permission' => 'master_data.view'],
-            ['label' => 'master_data::menu.payment_methods', 'route' => 'master_data.payment_method.index', 'permission' => 'master_data.view'],
-            ['label' => 'master_data::menu.transfer_modes', 'route' => 'master_data.transfer_mode.index', 'permission' => 'master_data.view'],
+            ['label' => 'master_data::menu.locations', 'icon' => 'globe', 'route' => 'master_data.location.index', 'permission' => 'master_data.view'],
+            ['label' => 'master_data::menu.units', 'icon' => 'scale', 'route' => 'master_data.unit.index', 'permission' => 'master_data.view'],
+            ['label' => 'master_data::menu.taxes', 'icon' => 'receipt', 'route' => 'master_data.tax.index', 'permission' => 'master_data.view'],
+            ['label' => 'master_data::menu.payment_methods', 'icon' => 'wallet', 'route' => 'master_data.payment_method.index', 'permission' => 'master_data.view'],
+            ['label' => 'master_data::menu.transfer_modes', 'icon' => 'swap', 'route' => 'master_data.transfer_mode.index', 'permission' => 'master_data.view'],
 
             /*
              * ব্র্যান্ড ও শ্রেণি — আগে পণ্যের ফর্মে মুক্ত লেখা ছিল।
@@ -97,12 +97,12 @@ return [
              * সুইচটা বন্ধ থাকলে সারিটা চিরকাল অদৃশ্য থাকত। ব্র্যান্ড না
              * ব্যবহার করলে তালিকাটা খালি, আর পর্দাই সেটা বলে দেয়।
              */
-            ['label' => 'master_data::menu.brands', 'route' => 'master_data.brand.index', 'permission' => 'master_data.view'],
-            ['label' => 'master_data::menu.product_categories', 'route' => 'master_data.product_category.index', 'permission' => 'master_data.view'],
-            ['label' => 'master_data::menu.payment_terms', 'route' => 'master_data.term.index', 'permission' => 'master_data.view'],
-            ['label' => 'master_data::menu.price_lists', 'route' => 'master_data.price_list.index', 'permission' => 'master_data.view'],
-            ['label' => 'master_data::menu.party_types', 'route' => 'master_data.party_type.index', 'permission' => 'master_data.view'],
-            ['label' => 'master_data::menu.reason_codes', 'route' => 'master_data.reason.index', 'permission' => 'master_data.view'],
+            ['label' => 'master_data::menu.brands', 'icon' => 'star', 'route' => 'master_data.brand.index', 'permission' => 'master_data.view'],
+            ['label' => 'master_data::menu.product_categories', 'icon' => 'grid', 'route' => 'master_data.product_category.index', 'permission' => 'master_data.view'],
+            ['label' => 'master_data::menu.payment_terms', 'icon' => 'calendar', 'route' => 'master_data.term.index', 'permission' => 'master_data.view'],
+            ['label' => 'master_data::menu.price_lists', 'icon' => 'list', 'route' => 'master_data.price_list.index', 'permission' => 'master_data.view'],
+            ['label' => 'master_data::menu.party_types', 'icon' => 'people', 'route' => 'master_data.party_type.index', 'permission' => 'master_data.view'],
+            ['label' => 'master_data::menu.reason_codes', 'icon' => 'help', 'route' => 'master_data.reason.index', 'permission' => 'master_data.view'],
 
             /*
              * খরচের কেন্দ্র — কোন রুটে কত খরচ।
@@ -111,7 +111,7 @@ return [
              * একটা রুটের খরচ তার মার্জিনের চেয়ে বেশি হওয়া সম্ভব, আর
              * মোট হিসাবে সেটা দেখাই যায় না।
              */
-            ['label' => 'master_data::menu.cost_centers', 'route' => 'master_data.cost_center.index', 'permission' => 'master_data.view'],
+            ['label' => 'master_data::menu.cost_centers', 'icon' => 'columns', 'route' => 'master_data.cost_center.index', 'permission' => 'master_data.view'],
 
             /*
              * যাঁদের সাথে টাকার সম্পর্ক — মালিক, অংশীদার, আত্মীয়, আমানতের ধারক।
@@ -120,12 +120,12 @@ return [
              * (১৩ সেপ্টেম্বর ২০২৬), তাই সারিটা মাস্টার ডাটায় — পাঁচ
              * জায়গার মালিক একজন নয়, তালিকা একটাই।
              */
-            ['label' => 'master_data::menu.people', 'route' => 'master_data.person.index', 'permission' => 'master_data.view'],
+            ['label' => 'master_data::menu.people', 'icon' => 'people', 'route' => 'master_data.person.index', 'permission' => 'master_data.view'],
 
             // প্রতিষ্ঠানের গড়ন — কর্মীর তালিকা এই তিনটার উপর দাঁড়ায়
-            ['label' => 'master_data::menu.departments', 'route' => 'master_data.department.index', 'permission' => 'master_data.view'],
-            ['label' => 'master_data::menu.designations', 'route' => 'master_data.designation.index', 'permission' => 'master_data.view'],
-            ['label' => 'master_data::menu.employment_types', 'route' => 'master_data.employment_type.index', 'permission' => 'master_data.view'],
+            ['label' => 'master_data::menu.departments', 'icon' => 'building', 'route' => 'master_data.department.index', 'permission' => 'master_data.view'],
+            ['label' => 'master_data::menu.designations', 'icon' => 'star', 'route' => 'master_data.designation.index', 'permission' => 'master_data.view'],
+            ['label' => 'master_data::menu.employment_types', 'icon' => 'book', 'route' => 'master_data.employment_type.index', 'permission' => 'master_data.view'],
 
             /*
              * তিনটা সারি সুইচের পেছনে।
@@ -135,9 +135,9 @@ return [
              * নেই তার বহরের তালিকা চিরকাল খালি থাকত — খালি তালিকা
              * দেখলে মানুষ ভাবে কিছু হারিয়ে গেছে।
              */
-            ['label' => 'master_data::menu.currencies', 'route' => 'master_data.currency.index', 'permission' => 'master_data.view', 'setting' => 'master_data.multi_currency_enabled'],
-            ['label' => 'master_data::menu.vehicle_types', 'route' => 'master_data.vehicle_type.index', 'permission' => 'master_data.view', 'setting' => 'master_data.vehicle_enabled'],
-            ['label' => 'master_data::menu.vehicles', 'route' => 'master_data.vehicle.index', 'permission' => 'master_data.view', 'setting' => 'master_data.vehicle_enabled'],
+            ['label' => 'master_data::menu.currencies', 'icon' => 'cash', 'route' => 'master_data.currency.index', 'permission' => 'master_data.view', 'setting' => 'master_data.multi_currency_enabled'],
+            ['label' => 'master_data::menu.vehicle_types', 'icon' => 'sort', 'route' => 'master_data.vehicle_type.index', 'permission' => 'master_data.view', 'setting' => 'master_data.vehicle_enabled'],
+            ['label' => 'master_data::menu.vehicles', 'icon' => 'share', 'route' => 'master_data.vehicle.index', 'permission' => 'master_data.view', 'setting' => 'master_data.vehicle_enabled'],
 
             /*
              * ⚠️ নম্বর সিরিজের সারিটা এখান থেকে **সিস্টেম প্রশাসনে**

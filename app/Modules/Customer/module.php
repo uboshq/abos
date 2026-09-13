@@ -89,22 +89,22 @@ return [
      */
     'menu' => [
         'dashboard' => [
-            ['label' => 'customer::dashboard.title', 'route' => 'module.dashboard',
+            ['label' => 'customer::dashboard.title', 'icon' => 'dashboard', 'route' => 'module.dashboard',
                 'route_params' => ['module' => 'customer'], 'permission' => 'customer.view'],
         ],
 
         'master' => [
-            ['label' => 'customer::menu.customers', 'route' => 'customer.index', 'permission' => 'customer.view'],
+            ['label' => 'customer::menu.customers', 'icon' => 'customer', 'route' => 'customer.index', 'permission' => 'customer.view'],
         ],
         'reports' => [
-            ['label' => 'customer::menu.due_list', 'route' => 'customer.report.show',
+            ['label' => 'customer::menu.due_list', 'icon' => 'wallet', 'route' => 'customer.report.show',
                 'route_params' => ['slug' => 'due-list'], 'permission' => 'customer.report'],
-            ['label' => 'customer::menu.ageing', 'route' => 'customer.report.show',
+            ['label' => 'customer::menu.ageing', 'icon' => 'clock', 'route' => 'customer.report.show',
                 'route_params' => ['slug' => 'ageing'], 'permission' => 'customer.report'],
 
             // "কত পাওনা" নয়, "এ মাসে কে কত দিল" — আদায়কারীর জমার সাথে
             // মেলানোর তালিকা
-            ['label' => 'customer::menu.collection', 'route' => 'customer.report.show',
+            ['label' => 'customer::menu.collection', 'icon' => 'inbox', 'route' => 'customer.report.show',
                 'route_params' => ['slug' => 'collection'], 'permission' => 'customer.report'],
 
             /*
@@ -114,7 +114,7 @@ return [
              * যাঁদের লিমিট কেউ কোনোদিন বসায়নি তাঁরা সবাই পরদিন সকালেই
              * আটকে যাবেন — ভালো খদ্দেরসহ।
              */
-            ['label' => 'customer::menu.no_limit', 'route' => 'customer.report.show',
+            ['label' => 'customer::menu.no_limit', 'icon' => 'alert-triangle', 'route' => 'customer.report.show',
                 'route_params' => ['slug' => 'no-limit'], 'permission' => 'customer.report'],
         ],
     ],

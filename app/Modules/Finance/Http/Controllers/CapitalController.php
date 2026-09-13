@@ -17,6 +17,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -49,7 +50,7 @@ class CapitalController extends Controller implements HasMiddleware
              * দুইটা একই কাজের দুই ধাপ। ⓘ আলাদা চাবি দিলে কাউকে ভুল
              * বসানোর অধিকার দেওয়া হত, শোধরানোর নয়।
              */
-            new Middleware('can:finance.capital.create', only: ['store', 'edit', 'update']),
+            new Middleware('can:finance.capital.create', only: ['create', 'store', 'edit', 'update']),
 
             /*
              * ⛔ মোছা আলাদা, আর সেটা ইচ্ছাকৃত।
@@ -82,8 +83,7 @@ class CapitalController extends Controller implements HasMiddleware
              * ⓘ কেবল সক্রিয়রা: নিষ্ক্রিয় করা মানুষ আর নতুন কাগজে বসেন
              * না, কিন্তু তাঁর পুরনো সারিগুলো অটুট থাকে (সফট-ডিলিট)।
              */
-            'people' => Person::query()->active()->orderBy('name_en')
-                ->pluck('name_en', 'id'),
+            'people' => $this->peopleForPicker(),
 
             /*
              * টাকা যেখানে আসতে পারে — নগদ, ব্যাংক, টিল।
@@ -142,6 +142,21 @@ class CapitalController extends Controller implements HasMiddleware
         ];
     }
 
+    /**
+     * নতুন সারির পর্দা।
+     *
+     * ⓘ তালিকার ভেতরে গোঁজা ফর্মটা এখান থেকে সরানো হয়েছে, আর উপরে
+     * "+ নতুন" বোতাম বসেছে — বাকি পর্দাগুলোর মতোই।
+     */
+    public function create(Request $request): View
+    {
+        return view('finance::capital.form', [
+            'menu' => $this->menu->forUser($request->user()),
+            'people' => $this->peopleForPicker(),
+            'entry' => null,
+        ]);
+    }
+
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate($this->rules());
@@ -173,7 +188,11 @@ orm]]): *"সম্পাদনা
     {
         $this->assertStillADraft($entry);
 
-        return $this->index($request)->with('editing', $entry);
+        return view('finance::capital.form', [
+            'menu' => $this->menu->forUser($request->user()),
+            'people' => $this->peopleForPicker(),
+            'entry' => $entry,
+        ]);
     }
 
     public function update(Request $request, CapitalEntry $entry): RedirectResponse
@@ -215,6 +234,21 @@ orm]]): *"সম্পাদনা
      * আটকাত না। ⓘ আজ ঠিক এই পার্থক্যটা মালিকানার পর্দাতেও ধরা পড়েছে:
      * **মেনুতে লুকানো আর দরজায় তালা দেওয়া এক জিনিস নয়।**
      */
+    /**
+     * বাছাইয়ের তালিকা — তিন জায়গা থেকে ডাকা হয়, তাই এক জায়গায়।
+     *
+     * ⓘ নিষ্ক্রিয় ব্যক্তি তালিকায় আসেন না, কিন্তু তাঁর পুরনো সারিগুলো
+     * অটুট থাকে (সফট-ডিলিট)। ⚠️ তিন জায়গায় হাতে লিখলে একদিন একটায়
+     * `active()` থাকত আর অন্যটায় না — আর তখন এক পর্দায় যাঁকে বাছা যায়
+     * অন্য পর্দায় তাঁকে যেত না, কোনো ব্যাখ্যা ছাড়াই।
+     *
+     * @return Collection<int, string>
+     */
+    private function peopleForPicker(): Collection
+    {
+        return Person::query()->active()->orderBy('name_en')->pluck('name_en', 'id');
+    }
+
     private function assertStillADraft(CapitalEntry $entry): void
     {
         if ($entry->status !== CapitalEntry::DRAFT) {

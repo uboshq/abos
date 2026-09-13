@@ -10,8 +10,21 @@
     <x-slot:title>{{ __('finance::menu.capital') }}</x-slot:title>
 
     <x-slot:header>
+        {{-- ⭐ "+ নতুন" উপরে, বাকি পর্দাগুলোর মতোই।
+
+             ⛔ ফর্মটা আগে তালিকার মাঝখানে গোঁজা ছিল, আর মালিক ধরেছেন
+             যে বাকি পর্দায় উপরে বোতাম থাকে। ⓘ এক রকম না হলে মানুষ
+             প্রতিটা পর্দায় নতুন করে খোঁজেন কোথায় কী। --}}
         <x-ui.page-header :title="__('finance::menu.capital')"
-                          :subtitle="__('finance::message.capital_note')" />
+                          :subtitle="__('finance::message.capital_note')">
+            <x-slot:actions>
+                @can('finance.capital.create')
+                    <x-ui.button tone="primary" icon="plus" :href="route('finance.capital.create')">
+                        {{ __('finance::action.new_contribution') }}
+                    </x-ui.button>
+                @endcan
+            </x-slot:actions>
+        </x-ui.page-header>
     </x-slot:header>
 
     @if (session('saved'))
@@ -56,60 +69,6 @@
 
     {{-- ── নতুন সারি ──────────────────────────────────────────────────
          ছয়টা ঘর একটা সারিতে: এটা একটা ফর্ম নয়, একটা লাইন লেখা। --}}
-    <section data-boxed class="mb-4 rounded-(--radius-card) border border-(--color-border)
-                    bg-(--color-surface-card) p-4">
-        <h2 class="mb-3 font-semibold">{{ __('finance::field.record_a_contribution') }}</h2>
-
-        <form method="POST" action="{{ route('finance.capital.store') }}"
-              class="grid gap-3 sm:grid-cols-3 xl:grid-cols-6">
-            @csrf
-
-            {{-- ⓘ ঘরটা দুই কলাম নেয়, কারণ ভেতরে বাছাই আর নিচে নতুন নাম
-                 যোগ করার পথ — দুইটা একসাথে। --}}
-            <div class="sm:col-span-2">
-                @include('finance::components.person-picker', [
-                    'people' => $people,
-                    'label' => __('finance::field.who'),
-                    'required' => true,
-                ])
-            </div>
-
-            <x-ui.select name="contributor_type" :label="__('finance::field.as')" required
-                         :options="collect(\App\Modules\Finance\Models\CapitalEntry::WHO)
-                             ->mapWithKeys(fn ($w) => [$w => __('finance::who.'.$w)])"
-                         :selected="old('contributor_type', 'owner')" />
-
-            <x-ui.select name="entry_type" :label="__('finance::field.kind')" required
-                         :options="collect(\App\Modules\Finance\Models\CapitalEntry::KINDS)
-                             ->mapWithKeys(fn ($k) => [$k => __('finance::kind.'.$k)])"
-                         :selected="old('entry_type', 'contribution')" />
-
-            <x-ui.field name="trx_date" type="date" :label="__('finance::field.date')" required
-                        :value="old('trx_date', now()->toDateString())" />
-
-            <x-ui.field name="amount" type="number" step="0.01" numeric required
-                        :label="__('finance::field.amount')" :value="old('amount')" />
-
-            <x-ui.field name="share_percent" type="number" step="0.01" numeric
-                        :label="__('finance::field.share')" :value="old('share_percent')" />
-
-            <div class="sm:col-span-2 xl:col-span-5">
-                <x-ui.field name="narration" :label="__('finance::field.what_for')"
-                            :value="old('narration')" />
-            </div>
-
-            <div class="flex items-end">
-                <x-ui.button type="submit" tone="primary" class="w-full">
-                    {{ __('core.action.save') }}
-                </x-ui.button>
-            </div>
-        </form>
-
-        <p class="mt-2 text-2xs text-(--color-ink-muted)">
-            {{ __('finance::message.recorded_then_posted') }}
-        </p>
-    </section>
-
     {{-- ── সারিগুলো ─────────────────────────────────────────────────── --}}
     <section data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">
@@ -133,6 +92,31 @@
                 ['key' => 'status', 'label' => __('finance::field.state'), 'width' => '15rem',
                  'render' => fn ($e) => view('finance::capital.partials.state',
                      ['entry' => $e, 'accounts' => $accounts])],
+
+                /*
+                 * ⛔ সম্পাদনা ও মোছা — কেবল খসড়ায়।
+                 *
+                 * পোস্ট হওয়া সারিতে বোতাম দুইটা আসে না, আর সেটা সৌজন্য
+                 * মাত্র: আসল পাহারা [[CapitalController::assertStillADraft()]]-এ,
+                 * কারণ ঠিকানা টাইপ করে বা পুরনো ট্যাব থেকেও অনুরোধ আসতে
+                 * পারে। ⓘ **মেনুতে লুকানো আর দরজায় তালা দেওয়া এক জিনিস নয়** —
+                 * আজ এই পার্থক্যটা মালিকানার পর্দাতেও ধরা পড়েছে।
+                 */
+                ['key' => 'actions', 'label' => '', 'width' => '3rem',
+                 'render' => fn ($e) => $e->status !== \App\Modules\Finance\Models\CapitalEntry::DRAFT
+                     ? ''
+                     : view('components.ui.row-actions', ['items' => array_values(array_filter([
+                         auth()->user()?->can('finance.capital.create') ? [
+                             'label' => __('core.action.edit'),
+                             'url' => route('finance.capital.edit', $e),
+                         ] : null,
+                         auth()->user()?->can('finance.capital.delete') ? [
+                             'label' => __('core.action.delete'),
+                             'url' => route('finance.capital.destroy', $e),
+                             'method' => 'delete',
+                             'tone' => 'danger',
+                         ] : null,
+                     ]))])],
             ]" />
 
         <x-ui.pager :rows="$entries" />

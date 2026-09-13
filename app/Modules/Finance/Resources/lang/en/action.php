@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'new_contribution' => 'New contribution',
+    'edit_contribution' => 'Correct a contribution',
     'money_arrived' => 'Money arrived',
     'new_expense' => 'New expense',
     'add_instalment' => 'Pay instalment',
