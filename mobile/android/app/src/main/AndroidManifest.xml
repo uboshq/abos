@@ -1,4 +1,43 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!--
+      Bluetooth, for the shop's thermal receipt printer.
+
+      Those printers speak ESC/POS over a serial link and have no Android
+      print service, so the system print dialog cannot see them at all — see
+      core/printing/document_delivery.dart for why there are two roads to
+      paper and why both print the same server-rendered PDF.
+
+      Two sets, because Android 12 (API 31) split them. Before 31 a single
+      BLUETOOTH permission was granted at install; from 31 CONNECT and SCAN
+      are runtime permissions the person must allow. Declaring only the new
+      pair would leave older handsets unable to print, and only the old one
+      would fail silently on every recent phone, which reads in a shop as
+      "the printer is broken".
+
+      (A double hyphen is illegal inside an XML comment, and this file is the
+      one place in the repository where that bites: it parses nowhere else,
+      so the failure is a manifest merge error naming only the file.)
+
+      neverForLocation on SCAN: this app looks for a paired printer, never
+      for where anybody is. Without it Android treats a Bluetooth scan as a
+      location request and asks the person for location permission, which is
+      a frightening thing to be asked by a billing app and is not something
+      it needs.
+    -->
+    <uses-permission android:name="android.permission.BLUETOOTH"
+        android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"
+        android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation" />
+
+    <!-- A phone with no Bluetooth radio can still do everything else this app
+         does, so the feature is wanted, not required: marking it required
+         would hide the app in Play for those handsets. -->
+    <uses-feature android:name="android.hardware.bluetooth"
+        android:required="false" />
+
     <application
         android:label="ABOS"
         android:name="${applicationName}"
