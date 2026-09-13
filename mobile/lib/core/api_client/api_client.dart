@@ -59,6 +59,14 @@ class ApiClient {
     client.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
+          // Who is calling, on every request. SyncController registers the
+          // device from these two headers on each pull and push; without them
+          // the registry holds a row that cannot say what it is a row about.
+          options.headers['X-App-Version'] = AppConfig.appVersion;
+          options.headers['X-Platform'] = defaultTargetPlatform == TargetPlatform.iOS
+              ? 'ios'
+              : 'android';
+
           if (options.extra[_skipAuthRefreshKey] != true) {
             final token = TokenStorage.instance.cachedAccessToken ??
                 await TokenStorage.instance.accessToken();

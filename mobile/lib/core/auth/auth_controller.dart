@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api_client/api_client.dart';
+import '../config/app_config.dart';
 import '../api_client/network_errors.dart';
 import '../sync_engine/reference_cache.dart';
 import 'auth_exceptions.dart';
@@ -58,6 +59,9 @@ class AuthController extends StateNotifier<AuthState> {
           if (code != null && code.isNotEmpty) 'code': code,
           'deviceId': deviceId,
           'platform': Platform.isIOS ? 'ios' : 'android',
+          // Optional per docs/Contract §১, and only for support — but support
+          // is exactly the moment somebody needs it.
+          'appVersion': AppConfig.appVersion,
         },
         // No token exists to attach yet, and a 401 here (there is none —
         // login answers 422/409 — but a stale Authorization header from a

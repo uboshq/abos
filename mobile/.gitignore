@@ -34,3 +34,9 @@ key.properties
 # The IDE's own view of the project -- window layout, run configurations, the
 # path to one person's Dart SDK.
 .idea/
+
+# Kotlin compiler session files, written by Gradle during an Android build.
+# Pure build residue -- machine-specific, regenerated every run, and they
+# appeared in a commit here once already because .gradle/ was ignored and this
+# sibling directory was not.
+/android/.kotlin/
