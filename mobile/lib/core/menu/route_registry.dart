@@ -38,6 +38,7 @@
 /// app/Modules/Sales/module.php:101      sales.order.index       sales.order.view
 /// app/Modules/Inventory/module.php:79   inventory.product.index inventory.product.view
 /// app/Modules/Inventory/module.php:137  inventory.stock.index   inventory.stock.view
+/// app/Modules/Approval/module.php:60    approval.inbox.index    approval.decide
 /// ```
 ///
 /// <p>`inventory.stock.index` is kept (never deleted, per the owner's own
@@ -48,6 +49,7 @@ class RouteRegistry {
   const RouteRegistry._();
 
   static const Map<String, String> _serverRouteToAppPath = {
+    'approval.inbox.index': 'approvals',
     'customer.index': 'customers',
     'sales.order.index': 'orders',
     'inventory.product.index': 'products',
