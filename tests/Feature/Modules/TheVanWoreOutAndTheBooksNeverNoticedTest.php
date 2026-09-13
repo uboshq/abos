@@ -67,7 +67,7 @@ class TheVanWoreOutAndTheBooksNeverNoticedTest extends TestCase
                 'name_bn' => 'প্রধান ক্যাশ',
                 'type' => Account::ASSET,
                 'nature' => Account::DEBIT,
-                'is_cash' => true,
+                'money_kind' => Account::CASH,
             ],
         );
     }

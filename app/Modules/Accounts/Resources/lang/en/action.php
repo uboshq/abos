@@ -41,6 +41,11 @@ return [
     'close_month' => 'Close the month',
     'reopen' => 'Reopen',
 
+    // তালিকার উপরের "+ নতুন …" বোতামগুলো
+    'new_cheque' => 'New cheque',
+    'new_asset' => 'New asset',
+    'new_reconciliation' => 'New reconciliation',
+
     // চেকের খাতা
     'cheque_deposit' => 'Deposited',
     'cheque_clear' => 'Cleared',

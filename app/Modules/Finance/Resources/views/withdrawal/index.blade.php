@@ -79,8 +79,13 @@
                   class="grid gap-3 sm:grid-cols-2">
                 @csrf
 
-                <x-ui.field name="contributor_name" :label="__('finance::field.who')" required
-                            :value="old('contributor_name')" />
+                <div class="sm:col-span-2">
+                    @include('finance::components.person-picker', [
+                        'people' => $people,
+                        'label' => __('finance::field.who'),
+                        'required' => true,
+                    ])
+                </div>
 
                 <x-ui.field name="amount" type="number" step="0.01" numeric required
                             :label="__('finance::field.amount')" :value="old('amount')" />
@@ -117,8 +122,18 @@
                       class="grid gap-3 sm:grid-cols-2">
                     @csrf
 
-                    <x-ui.field name="contributor_name" :label="__('finance::field.who')" required
-                                errorKey="contributor_name" />
+                    {{-- ⛔ সীমাটা এখন ব্যক্তির সারির উপর বসে, নামের উপর নয়।
+
+                         আগে এখানে নাম টাইপ করা হত, আর উত্তোলনেও নাম টাইপ
+                         করা হত — দুইটা বানান আলাদা হলেই সীমাটা খুঁজে
+                         পাওয়া যেত না আর চুপচাপ কিছুই আটকাত না। --}}
+                    <div class="sm:col-span-2">
+                        @include('finance::components.person-picker', [
+                            'people' => $people,
+                            'label' => __('finance::field.who'),
+                            'required' => true,
+                        ])
+                    </div>
 
                     <x-ui.field name="monthly_cap" type="number" step="0.01" numeric
                                 :label="__('finance::field.monthly_cap')"
@@ -149,7 +164,8 @@
                 ['key' => 'trx_date', 'label' => __('finance::field.date'), 'width' => '9rem',
                  'render' => fn ($w) => \App\Core\Support\DateFormat::format($w->trx_date)],
                 ['key' => 'document_no', 'label' => __('core.print.document_no'), 'width' => '10rem'],
-                ['key' => 'contributor_name', 'label' => __('finance::field.who')],
+                ['key' => 'person', 'label' => __('finance::field.who'),
+                 'render' => fn ($w) => $w->person?->name() ?? '—'],
                 ['key' => 'reason', 'label' => __('finance::field.why'),
                  'render' => fn ($w) => $w->reason ?: '—'],
                 ['key' => 'amount', 'label' => __('finance::field.amount'), 'numeric' => true,

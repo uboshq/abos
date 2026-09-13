@@ -56,6 +56,9 @@
             </p>
 
             <p class="mt-2 text-2xs text-(--color-ink-muted)">
+                {{-- ⓘ প্রকৃতিটা ফর্ম থেকে তুলে দেওয়া হয়েছে, কিন্তু এখানে
+                     থেকে যাচ্ছে: জিজ্ঞেস না করা আর না দেখানো এক কথা নয়।
+                     হিসাবরক্ষক জানতে চান সংখ্যাটা কোন দিকের। --}}
                 {{ __('accounts::nature.' . $account->nature) }} · {{ __('accounts::type.' . $account->type) }}
             </p>
         </section>
@@ -86,13 +89,30 @@
                 <span class="font-medium">{{ $account->name() }}</span>
             </p>
 
-            @if (filled($account->bank_name) || filled($account->account_number))
-                <dl class="mt-3 grid gap-x-4 gap-y-2 sm:grid-cols-3">
-                    @foreach ([
+            {{-- ⚠️ ঘরগুলো ব্যাংক আর MFS-এ এক নয়, তাই লেবেলগুলোও এক নয়।
+
+                 আগে তিনটা লেবেল স্থির ছিল, আর শর্তটা ছিল "ব্যাংকের নাম
+                 বা হিসাব নম্বর ভরা আছে কি না" — অথচ ভেতরে **শাখার নাম**ও
+                 ছাপা হত। কেউ বিকাশের খাতে সেবাদাতার নাম লিখলে পর্দায়
+                 লেখা উঠত "ব্যাংকের নাম: বিকাশ", আর পাশে একটা খালি শাখা। --}}
+            @php
+                $moneyFields = $account->isMfs()
+                    ? [
+                        'accounts::field.mfs_provider' => $account->bank_name,
+                        'accounts::field.mfs_wallet' => $account->account_number,
+                    ]
+                    : [
                         'accounts::field.bank_name' => $account->bank_name,
                         'accounts::field.branch_name' => $account->branch_name,
+                        'accounts::field.account_title' => $account->account_title,
                         'accounts::field.account_number' => $account->account_number,
-                    ] as $label => $value)
+                        'accounts::field.routing_no' => $account->routing_no,
+                    ];
+            @endphp
+
+            @if (collect($moneyFields)->filter()->isNotEmpty())
+                <dl class="mt-3 grid gap-x-4 gap-y-2 sm:grid-cols-3">
+                    @foreach ($moneyFields as $label => $value)
                         @if (filled($value))
                             <div>
                                 <dt class="text-2xs text-(--color-ink-muted)">{{ __($label) }}</dt>

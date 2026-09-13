@@ -19,6 +19,9 @@ return [
     'exchange_rates' => 'বিনিময় হার',
     'vehicle_types' => 'গাড়ির ধরন',
     'vehicles' => 'গাড়ি ও বহর',
+    // যাঁদের সাথে টাকার সম্পর্ক — মালিক, অংশীদার, আত্মীয়, আমানতের ধারক
+    'people' => 'ব্যক্তি',
+
     'departments' => 'বিভাগ',
     'designations' => 'পদবি',
     'employment_types' => 'নিয়োগের ধরন',

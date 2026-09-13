@@ -101,7 +101,14 @@ class ARefusalThatNamesTheFieldInEnglishTest extends TestCase
     {
         $names = (require base_path('lang/bn/validation.php'))['attributes'] ?? [];
 
-        foreach (['lines', 'received_into_account_id', 'contributor_name'] as $key) {
+        /*
+         * ⓘ `person_id` তালিকায় যোগ হয়েছে ১৩ সেপ্টেম্বর ২০২৬-এ, আর সেটা
+         * `contributor_name`-এর **উত্তরসূরি**: অর্থের পাঁচটা পর্দায় নামের
+         * মুক্ত-লেখা ঘর সরিয়ে ব্যক্তির তালিকা বসানো হয়েছে, তাই ভুলের
+         * বার্তা এখন এই ঘরের নামে আসে। নাম না দিলে ব্যবহারকারী "person
+         * id" দেখতেন — হুবহু সেই বাগ যেটা এই ফাইলটা ঠেকাতে বসানো।
+         */
+        foreach (['lines', 'received_into_account_id', 'contributor_name', 'person_id'] as $key) {
             $this->assertArrayHasKey(
                 $key,
                 $names,

@@ -64,8 +64,21 @@ return new class extends Migration
                 'type' => Account::EXPENSE,
                 'parent_id' => $parentId,
                 'is_group' => false,
-                'is_cash' => false,
-                'is_bank' => false,
+                /*
+                 * `is_cash`/`is_bank` এখান থেকে তুলে দেওয়া হলো — দুইটাই
+                 * `false` লিখত, আর কলাম দুইটা আর নেই
+                 * ([[…bank_and_mfs_wore_the_same_flag]])।
+                 *
+                 * ⓘ এটা সরাসরি `DB::table()->insert()`, তাই অচেনা চাবি
+                 * mass assignment-এর মতো নীরবে বাদ পড়ে না। তবু আজ
+                 * `migrate:fresh` ভাঙত না: এই মাইগ্রেশন চলার সময়
+                 * কলাম দুইটা এখনো আছে (`create_accounts` বানায়,
+                 * ১১ নভেম্বরেরটা পরে ফেলে)। সরানো হলো কারণ সংখ্যাটা
+                 * `default(false)`-এর সমান, আর শেষ অবস্থায় যে কলাম
+                 * নেই তার নাম এখানে থাকাটা কেবল বিভ্রান্তি।
+                 *
+                 * খাতটা খরচের, টাকার নয় — তাই `money_kind` বসে না।
+                 */
                 'nature' => Account::defaultNatureFor(Account::EXPENSE),
                 'is_active' => true,
                 'created_at' => $now,

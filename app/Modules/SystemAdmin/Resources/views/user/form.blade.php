@@ -85,7 +85,7 @@
                     <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
                         <input type="checkbox" name="roles[]" value="{{ $role->name }}" class="size-4"
                                @checked(in_array($role->name, $chosenRoles, true))>
-                        {{ $role->name }}
+                        {{ \App\Core\Support\RoleLabel::for($role->name) }}
                     </label>
                 @endforeach
             </div>

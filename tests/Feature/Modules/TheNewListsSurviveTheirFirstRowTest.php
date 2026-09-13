@@ -67,7 +67,7 @@ class TheNewListsSurviveTheirFirstRowTest extends TestCase
             'parent_id' => StandardChart::find(StandardChart::BANK)->id,
             'type' => Account::ASSET,
             'nature' => Account::DEBIT,
-            'is_bank' => true,
+            'money_kind' => Account::BANK,
         ]);
     }
 
@@ -101,7 +101,7 @@ class TheNewListsSurviveTheirFirstRowTest extends TestCase
             'parent_id' => StandardChart::find(StandardChart::CASH_IN_HAND)->id,
             'type' => Account::ASSET,
             'nature' => Account::DEBIT,
-            'is_cash' => true,
+            'money_kind' => Account::CASH,
         ]);
 
         $voucher = $vouchers->create(

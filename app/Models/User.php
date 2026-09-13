@@ -6,6 +6,7 @@ namespace App\Models;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Support\CompanyContext;
+use App\Notifications\PasswordResetLink;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -234,13 +235,57 @@ class User extends Authenticatable
      */
     public function auditCompanyId(): ?int
     {
-        $companyId = CompanyContext::id();
+        /*
+         * ⛔ প্রসঙ্গ না থাকলে মানুষটার নিজের কোম্পানি — ১৩ সেপ্টেম্বর ২০২৬।
+         *
+         * ── কেন এই ধাপটা লাগল ───────────────────────────────────────
+         * পাসওয়ার্ড রিসেট **অতিথি অবস্থায়** ঘটে: যিনি রিসেট করছেন তিনি
+         * তখনো লগইন করেননি, তাই কোনো কোম্পানি বাছাই হয়নি আর
+         * `CompanyContext::id()` খালি।
+         *
+         * ⚠️ কেবল প্রসঙ্গ দেখলে `record()` null পেয়ে **চুপচাপ ফিরে
+         * যেত** — অর্থাৎ "কে নিজের পাসওয়ার্ড রিসেট করল" সারিটা কখনো
+         * বসত না, আর কেউ টের পেত না, কারণ কিছুই ভাঙত না।
+         *
+         * ⓘ কিন্তু উত্তরটা হারিয়ে যায়নি — **সারিটা নিজেই জানে**:
+         * ব্যবহারকারী কোন কোম্পানিতে বসেন সেটা তাঁর নিজের ঘরে লেখা।
+         * ⭐ তাই ক্রমটা এই: চলতি প্রসঙ্গ → তাঁর নিজের চলতি কোম্পানি →
+         * তিনি যে কোম্পানিগুলোতে ঢুকতে পারেন তার প্রথমটা।
+         *
+         * ⚠️ প্রসঙ্গটা **আগে**, আর সেটা ইচ্ছাকৃত: প্রশাসক যখন কাউকে
+         * সম্পাদনা করেন তখন সারিটা **প্রশাসক যে খাতায় দাঁড়িয়ে** সেই
+         * খাতারই — নাহলে এক কোম্পানিতে বসে অন্য কোম্পানির কাউকে
+         * বদলালে সারিটা ভুল পর্দায় গিয়ে বসত।
+         */
+        $companyId = CompanyContext::id()
+            ?? $this->current_company_id
+            ?? $this->companies()->orderBy('companies.id')->value('companies.id');
 
         if ($companyId === null) {
             return null;
         }
 
-        return Company::withTrashed()->whereKey($companyId)->exists() ? $companyId : null;
+        return Company::withTrashed()->whereKey($companyId)->exists() ? (int) $companyId : null;
+    }
+
+    /**
+     * ⛔ পাসওয়ার্ড রিসেটের চিঠি — ব্যবহারকারীর নিজের ভাষায়।
+     *
+     * ── কেন Laravel-এর নিজেরটা নয় ───────────────────────────────────
+     * ফ্রেমওয়ার্কের `ResetPassword` বিজ্ঞপ্তিটা **কেবল ইংরেজি**, আর
+     * তার ছাঁচে ফ্রেমওয়ার্কের নিজের বাক্যও মেশানো থাকে ("If you're
+     * having trouble clicking…", "Regards")। ⚠️ ফলে একজন বাংলা
+     * ব্যবহারকারীর ইনবক্সে একটা পুরো ইংরেজি চিঠি যেত — আর এই
+     * ব্যবস্থার নিয়ম ৯ ঠিক তার উল্টো কথা বলে।
+     *
+     * ⓘ ভাষাটা নেওয়া হয় **তাঁর নিজের রেকর্ড থেকে**, অনুরোধের চলতি
+     * ভাষা থেকে নয়: চিঠিটা লেখা হয় একটা কিউ/অনুরোধের প্রসঙ্গে, কিন্তু
+     * পড়া হয় ঘণ্টা পরে তাঁর ফোনে। ⭐ যে ভাষায় তিনি ব্যবস্থাটা চালান,
+     * চিঠিটাও সেই ভাষায়।
+     */
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new PasswordResetLink($token));
     }
 
     /**

@@ -47,7 +47,7 @@ class SchemeController extends Controller implements HasMiddleware
         return [
             new Middleware('can:sales.scheme.view', only: ['index', 'show']),
             new Middleware('can:sales.scheme.manage', only: [
-                'store', 'update', 'addRule', 'removeRule', 'activate', 'cancel',
+                'create', 'store', 'update', 'addRule', 'removeRule', 'activate', 'cancel',
             ]),
         ];
     }
@@ -71,6 +71,20 @@ class SchemeController extends Controller implements HasMiddleware
             'status' => $request->query('status'),
             'sort' => $sort,
             'sortOptions' => $this->sortLabels(),
+        ]);
+    }
+
+    /**
+     * নতুন স্কিম বসানোর পর্দা।
+     *
+     * ⭐ মেনু ছাড়া আর কিছুই লাগে না: লক্ষ্যের পাঁচটা তালিকা ফর্মটা
+     * নিজেই [[SchemeController::targets()]] থেকে নেয়, আর স্কিমের
+     * সারিগুলো, ছাঁকনি ও ক্রম — সব কেবল তালিকার পাতার জিনিস।
+     */
+    public function create(Request $request): View
+    {
+        return view('sales::scheme.create', [
+            'menu' => $this->menu->forUser($request->user()),
         ]);
     }
 

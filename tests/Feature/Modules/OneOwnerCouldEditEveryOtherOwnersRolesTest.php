@@ -237,7 +237,7 @@ class OneOwnerCouldEditEveryOtherOwnersRolesTest extends TestCase
          */
         foreach ([$this->alpha, $this->beta] as $company) {
             $this->assertNotNull(
-                $this->roleIn($company, 'owner'),
+                $this->roleIn($company, PermissionSyncer::SUPER_ADMIN_ROLE),
                 $company->code.'-এ ডেপ্লয়ের পর মালিকের রোলটাই নেই — ওখানে কেউ কিছু পারবেন না।',
             );
 

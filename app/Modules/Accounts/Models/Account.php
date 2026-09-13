@@ -63,11 +63,36 @@ class Account extends Model implements Drillable
 
     public const CREDIT = 'credit';
 
+    /**
+     * টাকার খাত কোন ধরনের — অথবা `null` হলে টাকার খাতই নয়।
+     *
+     * ── কেন তিনটা পতাকা নয়, একটা ঘর ─────────────────────────────────
+     * আগে দুইটা পতাকা ছিল, `is_cash` আর `is_bank`, আর দ্বিতীয়টা ব্যাংক ও
+     * MFS দুইটাকেই বোঝাত। তিন পতাকায় আটটা সম্ভাব্য অবস্থা হত, যার ছয়টা
+     * অর্থহীন — "নগদ এবং ব্যাংক", "নগদ এবং MFS" — আর সেগুলো ঠেকাতে
+     * ফর্মে হাতে লেখা XOR নিয়ম বসত। ⭐ একটা ঘরে অবৈধ অবস্থাটা জন্মায়ই
+     * না, তাই নিয়মটারও দরকার পড়ে না।
+     *
+     * ⚠️ এটা হাতে লেখা হয় না — বাবার খাত থেকে বসে
+     * ([[AccountService::moneyKindFrom()]])। কারণ টাকার তিনটা মা
+     * ([[StandardChart::MONEY_PARENTS]]) ছকে আগে থেকেই আলাদা, আর
+     * পাশাপাশি একটা হাতে-টিক দেওয়া পতাকা রাখা মানে একই প্রশ্নের দুইটা
+     * উত্তর — যা দুইটা আলাদা হলে ধরা পড়ত কেবল টাকা আটকে যাওয়ায়।
+     */
+    public const CASH = 'cash';
+
+    public const BANK = 'bank';
+
+    public const MFS = 'mfs';
+
+    /** @var list<string> */
+    public const MONEY_KINDS = [self::CASH, self::BANK, self::MFS];
+
     protected $fillable = [
         'company_id', 'parent_id', 'code', 'name_en', 'name_bn',
-        'type', 'nature', 'is_group', 'is_cash', 'is_bank', 'is_system',
+        'type', 'nature', 'is_group', 'money_kind', 'is_system',
         'opening_balance', 'opening_date',
-        'account_number', 'bank_name', 'branch_name',
+        'account_number', 'bank_name', 'branch_name', 'account_title', 'routing_no',
         'status', 'is_active', 'created_by',
     ];
 
@@ -75,8 +100,6 @@ class Account extends Model implements Drillable
     {
         return [
             'is_group' => 'boolean',
-            'is_cash' => 'boolean',
-            'is_bank' => 'boolean',
             'is_system' => 'boolean',
             'is_active' => 'boolean',
             'opening_balance' => 'decimal:4',
@@ -140,10 +163,52 @@ class Account extends Model implements Drillable
         return $query->whereIn('type', (array) $type);
     }
 
-    /** নগদ বা ব্যাংক — টাকার খাত। */
+    /**
+     * নগদ, ব্যাংক বা MFS — যেখানে সত্যিকারের টাকা বসে।
+     *
+     * ⚠️ `is_group` বাদ ইচ্ছাকৃত: তিনটা মা (১১০১, ১১০২, ১১০৫) নিজেরাও
+     * ধরনটা বহন করে, কারণ সন্তানরা সেটা তাদের কাছ থেকেই পায়। কিন্তু
+     * মা একটা শিরোনাম — সেখানে টাকা বসে না, আর পুরনো `is_cash`/`is_bank`
+     * পতাকা দুইটাও গ্রুপে কখনো true হত না। শর্তটা না থাকলে টাকার
+     * খাতের প্রতিটা তালিকায় হঠাৎ তিনটা শিরোনাম বাছাইযোগ্য হয়ে উঠত।
+     */
     public function scopeMoney(Builder $query): Builder
     {
-        return $query->where(fn (Builder $q) => $q->where('is_cash', true)->orWhere('is_bank', true));
+        return $query->whereNotNull('money_kind')->where('is_group', false);
+    }
+
+    /** কেবল এক ধরনের টাকার খাত — `ofMoneyKind(Account::BANK)`। */
+    public function scopeOfMoneyKind(Builder $query, string|array $kind): Builder
+    {
+        return $query->whereIn('money_kind', (array) $kind)->where('is_group', false);
+    }
+
+    public function isCash(): bool
+    {
+        return $this->money_kind === self::CASH;
+    }
+
+    /**
+     * ব্যাংক — ⛔ MFS নয়।
+     *
+     * এই পার্থক্যটা কোথায় লাগে: ব্যাংক মিলকরণের কাগজ বিবরণী, MFS-এর
+     * অ্যাপের লগ; চেক কেবল ব্যাংকে হয়; বিকাশ ক্যাশ-আউটে চার্জ কাটে।
+     * "ব্যাংকে কত আছে" সংখ্যাটায় MFS মিশলে সংখ্যাটাই মিথ্যা।
+     */
+    public function isBank(): bool
+    {
+        return $this->money_kind === self::BANK;
+    }
+
+    public function isMfs(): bool
+    {
+        return $this->money_kind === self::MFS;
+    }
+
+    /** টাকার খাত কি না — কোনটা তা নয়। */
+    public function isMoney(): bool
+    {
+        return $this->money_kind !== null;
     }
 
     public function scopeSearch(Builder $query, ?string $term): Builder

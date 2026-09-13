@@ -5,17 +5,21 @@ declare(strict_types=1);
 namespace App\Modules\Finance\Http\Controllers;
 
 use App\Core\Services\MenuBuilder;
+use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Finance\Models\HandLoanAccount;
 use App\Modules\Finance\Models\HandLoanMovement;
 use App\Modules\Finance\Services\HandLoanService;
+use App\Modules\MasterData\Models\Person;
+use App\Modules\MasterData\Services\PersonResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
@@ -30,6 +34,7 @@ class HandLoanController extends Controller implements HasMiddleware
     public function __construct(
         private readonly MenuBuilder $menu,
         private readonly HandLoanService $loans,
+        private readonly PersonResolver $people,
     ) {}
 
     /** @return list<Middleware> */
@@ -62,16 +67,34 @@ class HandLoanController extends Controller implements HasMiddleware
         return view('finance::hand-loan.index', [
             'menu' => $this->menu->forUser($request->user()),
             'standing' => $this->loans->standing(),
+            'people' => Person::query()->active()->orderBy('name_en')
+                ->pluck('name_en', 'id'),
         ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
+        $companyId = CompanyContext::id();
+
         $data = $request->validate([
-            'person_name' => ['required', 'string', 'max:160'],
-            'mobile' => ['nullable', 'string', 'max:30'],
+            /*
+             * ⓘ দুইটা পথ, একটাই লাগে — তালিকা থেকে বাছা, নয় নতুন নাম।
+             * ⚠️ `exists`-এ `company_id`, নাহলে অন্য কোম্পানির আইডি বসিয়ে
+             * দিলে সেই মানুষের নামে এখানকার হিসাব বসত।
+             */
+            'person_id' => ['nullable', 'integer', 'required_without:person_new',
+                Rule::exists('mdm_people', 'id')->where('company_id', $companyId)],
+            'person_new' => ['nullable', 'string', 'max:120', 'required_without:person_id'],
+            'person_mobile' => ['nullable', 'string', 'max:32'],
             'note' => ['nullable', 'string', 'max:500'],
         ]);
+
+        /*
+         * ⓘ মোবাইলের ঘরটা আর এখানে নেই — নম্বরটা ব্যক্তির সারিতে বসে,
+         * আর নতুন নাম লেখার সময় সেটাও একসাথেই নেওয়া হয়
+         * ([[App\Modules\MasterData\Services\PersonResolver]])।
+         */
+        $data['person_id'] = $this->people->resolve($data);
 
         $account = $this->loans->open($data);
 
@@ -81,7 +104,7 @@ class HandLoanController extends Controller implements HasMiddleware
          * বা নিতে খোলে।
          */
         return redirect()->route('finance.hand_loan.show', $account)
-            ->with('saved', __('finance::message.hand_loan_opened', ['who' => $account->person_name]));
+            ->with('saved', __('finance::message.hand_loan_opened', ['who' => $account->person?->name() ?? '']));
     }
 
     public function show(Request $request, HandLoanAccount $handLoan): View
@@ -109,6 +132,9 @@ class HandLoanController extends Controller implements HasMiddleware
             'amount' => ['required', 'numeric', 'gt:0'],
             'moved_on' => ['required', 'date'],
             'money_account_id' => ['required', 'integer', 'exists:accounts,id'],
+            // ব্যাংক/MFS হলে যে নম্বরটা লাগে — ⛔ `required` নয়, নিয়মটা
+            // এক জায়গায়: [[VoucherService::assertBankReferenceIsFree]]
+            'instrument_no' => ['nullable', 'string', 'max:64'],
             'note' => ['nullable', 'string', 'max:500'],
         ]);
 
@@ -122,7 +148,7 @@ class HandLoanController extends Controller implements HasMiddleware
         $this->loans->settle($handLoan);
 
         return back()->with('saved', __('finance::message.hand_loan_settled', [
-            'who' => $handLoan->person_name,
+            'who' => $handLoan->person?->name() ?? '',
         ]));
     }
 

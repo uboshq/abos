@@ -222,7 +222,15 @@ final class FinanceDashboard implements ProvidesDashboard
                 ),
                 new Stat(
                     label: __('finance::dashboard.contributors'),
-                    value: (string) CapitalEntry::query()->distinct()->count('contributor_name'),
+                    /*
+                     * কতজন টাকা দিয়েছেন — এখন `person_id` গুনে।
+                     *
+                     * ⛔ আগে ছিল `count('contributor_name')`, অর্থাৎ **আলাদা
+                     * বানান গোনা হত, আলাদা মানুষ নয়**। এক মালিক তিন বানানে
+                     * লিখলে টালিতে "৩" উঠত, আর মালিক ভাবতেন ব্যবসায় তিনজন
+                     * বিনিয়োগকারী আছে। সংখ্যাটা দেখতে নিরীহ, অথচ ভুল।
+                     */
+                    value: (string) CapitalEntry::query()->distinct()->count('person_id'),
                     hint: __('finance::dashboard.contributors_hint'),
                     href: route('finance.capital.index'),
                 ),
@@ -273,11 +281,11 @@ final class FinanceDashboard implements ProvidesDashboard
                         ['key' => 'no', 'label' => __('finance::dashboard.document'), 'width' => '9rem',
                             'render' => fn ($e) => $e->document_no],
                         ['key' => 'who', 'label' => __('finance::dashboard.contributor'),
-                            'render' => fn ($e) => $e->contributor_name],
+                            'render' => fn ($e) => $e->person?->name() ?? '—'],
                         ['key' => 'amount', 'label' => __('finance::dashboard.amount'), 'width' => '9rem',
                             'render' => fn ($e) => Money::format($e->amount)],
                     ],
-                    rows: CapitalEntry::query()->latest('id')->limit(8)->get(),
+                    rows: CapitalEntry::query()->with('person')->latest('id')->limit(8)->get(),
                     empty: __('finance::dashboard.no_capital'),
                     href: route('finance.capital.index'),
                 ),

@@ -45,7 +45,8 @@ final class BankReconciliationService
     {
         $account = Account::query()->findOrFail((int) $data['bank_account_id']);
 
-        if (! $account->is_bank) {
+        // ⛔ কেবল ব্যাংক — MFS নয়: মিলকরণ হয় কাগজের বিবরণীর বিপরীতে
+        if (! $account->isBank()) {
             throw ValidationException::withMessages([
                 'bank_account_id' => __('accounts::recon.not_a_bank_account'),
             ]);

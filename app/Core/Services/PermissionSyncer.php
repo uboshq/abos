@@ -29,8 +29,26 @@ final class PermissionSyncer
      * এটা সুবিধা নয়, প্রয়োজন: নতুন মডিউলের অনুমতিগুলো কোনো রোলে না
      * গেলে মডিউলটা কেউ খুলতেই পারে না — মালিকও না। আর তখন উপায় থাকে
      * শুধু হাতে ডাটাবেজে গিয়ে সারি বসানো, যা কেউ মনে রাখে না।
+     *
+     * ── নামটা `owner` ছিল, ১৩ সেপ্টেম্বর ২০২৬-এ `super_admin` হলো ──────
+     * ⓘ কারণ ERP-র জগতে কেউ "owner" বলে না — Odoo, Tally, NetSuite,
+     * QuickBooks সবাই বলে Administrator। "Owner" আসলে SaaS অ্যাপের শব্দ
+     * (GitHub, Slack), আর এই ব্যবস্থাটা ERP।
+     *
+     * ⭐ কিন্তু আসল লাভটা অন্য জায়গায়: অর্থ মডিউলে `finance::who.owner`
+     * = "মালিক" বলতে বোঝায় **কার টাকা ব্যবসায় খাটছে** (মূলধনের খাতা)।
+     * ⛔ একই শব্দ দুই অর্থে বসে থাকায় বারবার প্রশ্ন উঠত "বিনিয়োগকারীকে
+     * কী রোল দেব?" — অথচ যিনি কেবল টাকা দেন তাঁর কোনো অ্যাকাউন্টই লাগে
+     * না। নাম আলাদা হওয়ার পর প্রশ্নটাই আর ওঠে না।
+     *
+     * ⚠️ তাই `finance::who.owner` **ছোঁয়া হয়নি**, আর ছোঁয়া উচিতও নয় —
+     * দুইটা একসাথে বদলালে পুরো লাভটাই হারাত।
+     *
+     * ⓘ ধ্রুবকের **নামটাও** বদলেছে (`SUPER_ADMIN_ROLE` নয়)। মান বদলে নাম রেখে
+     * দিলে `SUPER_ADMIN_ROLE === 'super_admin'` পড়ে পরের জন ভাবতেন দুইটা আলাদা
+     * জিনিস — আর এই রিপোতে বারবার দেখা গেছে, মানুষ নামটাই বিশ্বাস করেন।
      */
-    public const OWNER_ROLE = 'owner';
+    public const SUPER_ADMIN_ROLE = 'super_admin';
 
     public function __construct(
         private readonly ModuleRegistry $registry,
@@ -127,7 +145,7 @@ final class PermissionSyncer
         $created = [];
 
         foreach ($this->templates->all() as $roleName => $permissions) {
-            if ($roleName === self::OWNER_ROLE) {
+            if ($roleName === self::SUPER_ADMIN_ROLE) {
                 continue;
             }
 
@@ -183,7 +201,7 @@ final class PermissionSyncer
     private function keepOwnerComplete(string $guard): int
     {
         $owner = Role::query()
-            ->where('name', self::OWNER_ROLE)
+            ->where('name', self::SUPER_ADMIN_ROLE)
             ->where('guard_name', $guard)
             ->where('company_id', CompanyContext::id())
             ->first();
@@ -205,7 +223,7 @@ final class PermissionSyncer
          * কেউ দ্বিতীয় কোম্পানিতে লগইন করে খালি মেনু দেখতেন।
          */
         if ($owner === null) {
-            $owner = Role::create(['name' => self::OWNER_ROLE, 'guard_name' => $guard]);
+            $owner = Role::create(['name' => self::SUPER_ADMIN_ROLE, 'guard_name' => $guard]);
         }
 
         $all = Permission::query()->where('guard_name', $guard)->pluck('name');

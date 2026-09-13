@@ -71,6 +71,12 @@ return [
             ['label' => 'system_admin::menu.companies', 'route' => 'system_admin.company.index', 'permission' => 'system_admin.company.manage'],
             ['label' => 'system_admin::menu.users', 'route' => 'system_admin.user.index', 'permission' => 'system_admin.user.manage'],
             ['label' => 'system_admin::menu.roles', 'route' => 'system_admin.role.index', 'permission' => 'system_admin.role.manage'],
+            /*
+             * ⓘ সারিটা ব্যবহারকারী ও ভূমিকার **পরে**, কারণ কাজটা বছরে
+             * একবারও হয় না — আর যে কাজ রোজ লাগে না, সেটা তালিকার মাথায়
+             * বসলে রোজকার কাজগুলো একটা ঘর নিচে নেমে যায়।
+             */
+            ['label' => 'system_admin::menu.ownership', 'route' => 'system_admin.ownership.show', 'permission' => 'system_admin.ownership.transfer'],
         ],
         /*
          * নিরীক্ষার পর্দাগুলো এখানে নেই — Governance-এ আছে।
@@ -176,6 +182,21 @@ return [
     'permissions' => [
         'system_admin.company.manage',
         'system_admin.user.manage',
+        /*
+         * ── মালিকানা হস্তান্তরের নিজের অনুমতি, ব্যবহারকারী-ব্যবস্থাপনার
+         *    সাথে নয় ────────────────────────────────────────────────────
+         * ⓘ `system_admin.user.manage` দিয়ে গেট করলে যে কেউ ব্যবহারকারী
+         * সামলাতে পারেন তিনিই মেনুতে সারিটা দেখতেন — অথচ কাজটা কেবল
+         * **বর্তমান মালিকই** করতে পারেন।
+         *
+         * ⚠️ তবু অনুমতিটা একা যথেষ্ট নয়, আর সেটাই নকশা: `owner` রোল
+         * সব অনুমতি পায়, কিন্তু কেউ চাইলে এই অনুমতিটা অন্য রোলেও বসাতে
+         * পারেন। ⛔ তাই আসল পাহারা পরিচয়ে — `OwnershipController` নিজে
+         * দেখে অনুরোধকারী সত্যিই এই কোম্পানির মালিক কি না, আর
+         * `Ownership::transfer()` লেখার মুহূর্তে আবার দেখে।
+         * অনুমতিটা কেবল মেনুর সারিটা লুকিয়ে রাখে।
+         */
+        'system_admin.ownership.transfer',
         'system_admin.role.manage',
         'system_admin.settings.manage',
         /*

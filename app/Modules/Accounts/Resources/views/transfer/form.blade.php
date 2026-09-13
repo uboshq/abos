@@ -112,16 +112,28 @@
                             @endforeach
                         </optgroup>
 
-                        @if ($bankAccounts->isNotEmpty())
-                            <optgroup label="{{ __('accounts::field.is_bank') }}">
-                                @foreach ($bankAccounts as $account)
-                                    <option value="account:{{ $account->id }}"
-                                            @selected(old('destination') === 'account:' . $account->id)>
-                                        {{ $account->label() }}
-                                    </option>
-                                @endforeach
-                            </optgroup>
-                        @endif
+                        {{-- ⛔ আগে একটাই দল ছিল, শিরোনাম "ব্যাংক বা MFS খাত"
+                             — আর ক্যাশিয়ার ওই তালিকায় ইসলামী ব্যাংক আর
+                             বিকাশ পাশাপাশি দেখতেন। দুইটা আলাদা জিনিস:
+                             ব্যাংকে জমা স্লিপ লাগে, বিকাশে ক্যাশ-আউটের
+                             চার্জ কাটে, আর মিলকরণের কাগজও আলাদা। --}}
+                        @foreach ([
+                            \App\Modules\Accounts\Models\Account::BANK => 'accounts::section.bank',
+                            \App\Modules\Accounts\Models\Account::MFS => 'accounts::section.mfs',
+                        ] as $kind => $heading)
+                            @php $ofKind = $bankAccounts->where('money_kind', $kind) @endphp
+
+                            @if ($ofKind->isNotEmpty())
+                                <optgroup label="{{ __($heading) }}">
+                                    @foreach ($ofKind as $account)
+                                        <option value="account:{{ $account->id }}"
+                                                @selected(old('destination') === 'account:' . $account->id)>
+                                            {{ $account->label() }}
+                                        </option>
+                                    @endforeach
+                                </optgroup>
+                            @endif
+                        @endforeach
                     </select>
                 </label>
 

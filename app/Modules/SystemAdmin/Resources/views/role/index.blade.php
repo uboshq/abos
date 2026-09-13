@@ -13,7 +13,7 @@
         [
             'key' => 'name',
             'label' => __('system_admin::field.role_name'),
-            'render' => fn ($r) => $r->name,
+            'render' => fn ($r) => \App\Core\Support\RoleLabel::for($r->name),
         ],
         [
             'key' => 'permissions_count',

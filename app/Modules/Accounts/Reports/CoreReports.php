@@ -59,7 +59,11 @@ final class CoreReports
             query: fn (array $f) => DB::table('ledger_entries')
                 ->leftJoin('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
                 ->where('ledger_entries.company_id', $f['company_id'])
-                ->where(fn ($q) => $q->where('accounts.is_cash', true)->orWhere('accounts.is_bank', true))
+                // টাকার যেকোনো খাত — নগদ, ব্যাংক, MFS ([[Account::scopeMoney]])।
+                // দল বাদ, কারণ পুরনো `is_cash`/`is_bank` পতাকাও দলে কখনো
+                // true হত না — অথচ `money_kind` দলেও বসে।
+                ->whereNotNull('accounts.money_kind')
+                ->where('accounts.is_group', false)
                 ->when($f['branch_id'], fn ($q, $branch) => $q->where('ledger_entries.branch_id', $branch))
                 ->whereBetween('ledger_entries.trx_date', [$f['from'], $f['to']])
                 ->where('ledger_entries.debit', '>', 0)
@@ -246,21 +250,32 @@ final class CoreReports
      */
     public static function cashBook(): ReportDefinition
     {
-        return self::moneyBook('accounts.cash_book', 'accounts::menu.cash_book', 'is_cash');
+        return self::moneyBook('accounts.cash_book', 'accounts::menu.cash_book', Account::CASH);
     }
 
-    /** ব্যাংক বই — ব্যাংক ও MFS খাতের চলাচল। */
+    /**
+     * ব্যাংক বই — ব্যাংক ও MFS খাতের চলাচল।
+     *
+     * ⛔ আচরণ বদলায়নি: পুরনো `is_bank` পতাকাটাই ব্যাংক ও MFS দুইটাকে
+     * বোঝাত, তাই দুইটা ধরন এখানে একই বইয়ে থাকাটা সেই নিয়মেরই সৎ বানান।
+     */
     public static function bankBook(): ReportDefinition
     {
-        return self::moneyBook('accounts.bank_book', 'accounts::menu.bank_book', 'is_bank');
+        return self::moneyBook(
+            'accounts.bank_book',
+            'accounts::menu.bank_book',
+            [Account::BANK, Account::MFS],
+        );
     }
 
     /**
      * দুইটা বই একই আকারের, শুধু ফিল্টারটা আলাদা।
      *
      * আলাদা করে দুইবার লিখলে একদিন একটায় কলাম যোগ হত আর অন্যটায় না।
+     *
+     * @param  string|list<string>  $kind  টাকার ধরন — [[Account::MONEY_KINDS]]
      */
-    private static function moneyBook(string $key, string $title, string $flag): ReportDefinition
+    private static function moneyBook(string $key, string $title, string|array $kind): ReportDefinition
     {
         return new ReportDefinition(
             key: $key,
@@ -270,7 +285,8 @@ final class CoreReports
             query: fn (array $f) => DB::table('ledger_entries')
                 ->leftJoin('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
                 ->where('ledger_entries.company_id', $f['company_id'])
-                ->where('accounts.'.$flag, true)
+                ->whereIn('accounts.money_kind', (array) $kind)
+                ->where('accounts.is_group', false)
                 ->when($f['branch_id'], fn ($q, $branch) => $q->where('ledger_entries.branch_id', $branch))
                 ->whereBetween('ledger_entries.trx_date', [$f['from'], $f['to']])
                 ->orderBy('ledger_entries.trx_date')
@@ -462,7 +478,9 @@ final class CoreReports
             query: fn (array $f) => DB::table('ledger_entries')
                 ->leftJoin('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
                 ->where('ledger_entries.company_id', $f['company_id'])
-                ->where(fn ($q) => $q->where('accounts.is_cash', true)->orWhere('accounts.is_bank', true))
+                // টাকার যেকোনো খাত — নগদ, ব্যাংক, MFS ([[Account::scopeMoney]])
+                ->whereNotNull('accounts.money_kind')
+                ->where('accounts.is_group', false)
                 ->when($f['branch_id'], fn ($q, $branch) => $q->where('ledger_entries.branch_id', $branch))
                 ->whereBetween('ledger_entries.trx_date', [$f['from'], $f['to']])
                 ->groupBy('ledger_entries.trx_date')

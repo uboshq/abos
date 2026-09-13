@@ -23,4 +23,7 @@ return [
     'user_count' => 'Users',
     'last_login' => 'Last signed in',
     'logo' => 'Company logo',
+    'current_owner' => 'Current owner',
+    'new_owner' => 'New owner',
+    'transfer_now' => 'Transfer ownership',
 ];

@@ -10,6 +10,7 @@ use App\Core\Concerns\IsAudited;
 use App\Core\Support\DocumentStatus;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
+use App\Modules\MasterData\Models\Person;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -33,7 +34,7 @@ class Withdrawal extends Model
     protected $table = 'fin_withdrawals';
 
     protected $fillable = [
-        'company_id', 'branch_id', 'document_no', 'contributor_name',
+        'company_id', 'branch_id', 'document_no', 'person_id',
         'amount', 'trx_date', 'money_account_id', 'reason', 'status',
         'voucher_id', 'posted_at', 'created_by',
     ];
@@ -51,6 +52,29 @@ class Withdrawal extends Model
     public function moneyAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'money_account_id');
+    }
+
+    /**
+     * কে তুললেন — নাম নয়, তালিকার সারি।
+     *
+     * ── ⛔ কেন, আর এখানে দামটা সবচেয়ে বেশি ──────────────────────────
+     * এই ঘরটা মাসিক সীমার সাথে মেলাতে হয় (`WithdrawalService::assertWithinCap`),
+     * আর মিলটা ছিল **হুবহু নাম ধরে**। দুইভাবে টাকা বেরিয়ে যেত:
+     *
+     *   ১। সীমাটাই খুঁজে পাওয়া যেত না → চুপচাপ কিছুই আটকাত না
+     *   ২। সীমা পাওয়া গেলেও "এই মাসে কত তোলা হয়েছে" গোনাটা ভিন্ন
+     *      বানানের সারিগুলো বাদ দিত → সীমা বসত ভুল (কম) মোটের উপর,
+     *      আর পর্দা বলত "সীমার ভেতরে আছেন"
+     *
+     * ⚠️ দ্বিতীয়টা প্রথমটার চেয়ে খারাপ: প্রথমটায় সীমা কাজ করে না, যা
+     * অন্তত ধারাবাহিক। দ্বিতীয়টায় সীমা **কাজ করছে বলে মনে হয়**, আর
+     * "বাকি আছে এতটা" সংখ্যাটা মিথ্যা — মানুষ ওই সংখ্যা দেখে সিদ্ধান্ত নেন।
+     *
+     * @return BelongsTo<Person, $this>
+     */
+    public function person(): BelongsTo
+    {
+        return $this->belongsTo(Person::class, 'person_id');
     }
 
     public function voucher(): BelongsTo

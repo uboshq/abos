@@ -55,8 +55,9 @@ class AccountsDashboardController extends Controller implements HasMiddleware
             // হাতে নগদ — সব কাউন্টার মিলে
             'cashInHand' => $this->facts->sumOf($tills->pluck('account_id')->all()),
 
+            // ⛔ কেবল ব্যাংক — MFS নয়
             'bankBalance' => $this->facts->sumOf(
-                Account::query()->where('is_bank', true)->postable()->pluck('id')->all()
+                Account::query()->ofMoneyKind(Account::BANK)->pluck('id')->all()
             ),
 
             'receivable' => $this->facts->receivable(),

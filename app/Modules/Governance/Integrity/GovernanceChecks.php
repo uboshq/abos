@@ -61,7 +61,7 @@ final class GovernanceChecks implements ChecksItsOwnBooks
 
                 $installed = Permission::query()->where('guard_name', 'web')->pluck('name')->all();
 
-                $owner = Role::query()->where('name', PermissionSyncer::OWNER_ROLE)->first();
+                $owner = Role::query()->where('name', PermissionSyncer::SUPER_ADMIN_ROLE)->first();
                 $ownerHas = $owner?->permissions->pluck('name')->all() ?? [];
 
                 $findings = [];

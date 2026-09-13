@@ -73,7 +73,12 @@ final class DepositService
                 'branch_name' => ($data['branch_name'] ?? '') ?: null,
                 'reference_no' => ($data['reference_no'] ?? '') ?: null,
                 'held_by' => $data['held_by'],
-                'holder_name' => ($data['holder_name'] ?? '') ?: null,
+                /*
+                 * ⓘ ঐচ্ছিকই থাকে — ব্যবসার নামে রাখা আমানতের কোনো
+                 * "ব্যক্তি" নেই, আর `held_by` সেটা আগেই বলে দেয়।
+                 * মালিকের নামে রাখা হলে তখন কে, সেটা তালিকা থেকে আসে।
+                 */
+                'person_id' => ($data['person_id'] ?? null) ?: null,
                 'principal' => $data['principal'],
                 'profit_rate' => ($data['profit_rate'] ?? '') !== '' ? $data['profit_rate'] : null,
                 'return_word' => $data['return_word'] ?? 'interest',
@@ -105,7 +110,7 @@ final class DepositService
             ]);
 
             $this->putMoneyIn($deposit, DepositMovement::OPENED, (string) $data['principal'], $from,
-                (string) $data['opened_on']);
+                (string) $data['opened_on'], null, ($data['instrument_no'] ?? '') ?: null);
 
             return $deposit->fresh();
         });
@@ -135,7 +140,8 @@ final class DepositService
             $from = $this->money($data['money_account_id']);
 
             $movement = $this->putMoneyIn($deposit, DepositMovement::INSTALMENT,
-                (string) $data['amount'], $from, (string) $data['moved_on'], $data['note'] ?? null);
+                (string) $data['amount'], $from, (string) $data['moved_on'], $data['note'] ?? null,
+                ($data['instrument_no'] ?? '') ?: null);
 
             $deposit->forceFill([
                 'principal' => bcadd((string) $deposit->principal, (string) $data['amount'], 4),
@@ -166,6 +172,7 @@ final class DepositService
                         'no' => $deposit->document_no,
                         'where' => $deposit->institution,
                     ]),
+                    'instrument_no' => ($data['instrument_no'] ?? '') ?: null,
                 ],
                 [
                     ['account_id' => $into->id, 'debit' => $amount, 'credit' => '0'],
@@ -241,6 +248,7 @@ final class DepositService
                         'no' => $deposit->document_no,
                         'where' => $deposit->institution,
                     ]),
+                    'instrument_no' => ($data['instrument_no'] ?? '') ?: null,
                 ],
                 $lines,
             );
@@ -364,7 +372,7 @@ final class DepositService
      * টাকা ভেতরে গেল — খোলা আর কিস্তি দুইটারই একই দাখিলা।
      */
     private function putMoneyIn(Deposit $deposit, string $kind, string $amount,
-        Account $from, string $on, ?string $note = null): DepositMovement
+        Account $from, string $on, ?string $note = null, ?string $reference = null): DepositMovement
     {
         $voucher = $this->vouchers->create(
             [
@@ -374,6 +382,7 @@ final class DepositService
                     'no' => $deposit->document_no,
                     'where' => $deposit->institution,
                 ]),
+                'instrument_no' => $reference,
             ],
             [
                 ['account_id' => $this->assetHead($deposit->held_by)->id,

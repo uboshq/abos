@@ -127,7 +127,8 @@ final class AccountsWidgets implements DashboardWidgets
 
     private static function bankBalance(): string
     {
-        return self::sumOf(Account::query()->where('is_bank', true)->postable()->pluck('id')->all());
+        // ⛔ কেবল ব্যাংক — MFS আলাদা সংখ্যা, একসাথে গুনলে দুইটাই মিথ্যা
+        return self::sumOf(Account::query()->ofMoneyKind(Account::BANK)->pluck('id')->all());
     }
 
     /**

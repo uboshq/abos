@@ -21,7 +21,9 @@
         [
             'key' => 'roles',
             'label' => __('system_admin::field.roles'),
-            'render' => fn ($u) => $u->roles->pluck('name')->implode(', ') ?: '-',
+            'render' => fn ($u) => $u->roles->pluck('name')
+                ->map(fn (string $n) => \App\Core\Support\RoleLabel::for($n))
+                ->implode(', ') ?: '-',
         ],
         [
             'key' => 'companies',

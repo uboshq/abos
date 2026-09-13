@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Middleware\ContentSecurityPolicy;
 use App\Http\Middleware\ExportListing;
 use App\Http\Middleware\NormalizeUnicodeInput;
+use App\Http\Middleware\OneSubmitPerForm;
 use App\Http\Middleware\RefuseSwitchedOffScreens;
 use App\Http\Middleware\ResolveCompanyContext;
 use Illuminate\Foundation\Application;
@@ -110,6 +111,21 @@ return Application::configure(basePath: dirname(__DIR__))
         // এখানে না বসালে BelongsToCompany ব্যতিক্রম ছুঁড়বে — সেটাই উদ্দেশ্য,
         // কারণ প্রসঙ্গ ছাড়া টেন্যান্ট ডাটা ছোঁয়া মানে সব কোম্পানির রো দেখা।
         $middleware->web(append: [
+            /*
+             * ⛔ একটা ফর্ম একবার আঁকা, একবারই জমা — ১৩ সেপ্টেম্বর ২০২৬।
+             *
+             * ── কেন সবার আগে ────────────────────────────────────────
+             * মালিক মূলধনের ফর্মে Save-এ দুইবার ক্লিক করেছেন আর
+             * ২৫,০০,০০০ টাকা দুইবার বসেছে। ⚠️ দ্বিতীয় অনুরোধটা যত
+             * পরে থামানো হবে তত বেশি কাজ সে ইতিমধ্যে করে ফেলবে, তাই
+             * সিদ্ধান্তটা প্রথমেই — কোনো কন্ট্রোলার চলার আগে।
+             *
+             * ⓘ কোম্পানির প্রসঙ্গের আগেও চলে, আর সেটা নিরাপদ: টোকেনের
+             * টেবিলে `company_id` নেই (যন্ত্রের হিসাব), তাই প্রসঙ্গ
+             * লাগে না।
+             */
+            OneSubmitPerForm::class,
+
             ResolveCompanyContext::class,
 
             /*

@@ -41,7 +41,7 @@ class ChequeController extends Controller implements HasMiddleware
     {
         return [
             new Middleware('can:accounts.cheque.view', only: ['index']),
-            new Middleware('can:accounts.cheque.manage', only: ['store', 'deposit', 'clear', 'bounce']),
+            new Middleware('can:accounts.cheque.manage', only: ['create', 'store', 'deposit', 'clear', 'bounce']),
         ];
     }
 
@@ -62,9 +62,20 @@ class ChequeController extends Controller implements HasMiddleware
         return view('accounts::cheque.index', [
             'menu' => $this->menu->forUser($request->user()),
             'cheques' => $query->paginate(50)->withQueryString(),
-            'parties' => app(PartyRegistry::class)->forPicker(),
-            // ⚠️ `postable()` — দল বাদ; কারণটা [[BankReconciliationController]]-এ
-            'banks' => Account::query()->where('is_bank', true)->postable()->active()->orderBy('code')->get(),
+            /*
+             * ⓘ পক্ষের তালিকাটা আর এখানে নয় — ফর্মটা `create`-এ সরার পর
+             * তালিকার পাতায় ওটার কোনো ব্যবহারকারী নেই, আর
+             * [[PartyRegistry::forPicker()]] প্রতিবার গ্রাহক ও সরবরাহকারী
+             * দুইটা টেবিলই পড়ত।
+             *
+             * ⚠️ খাতের তালিকাটা থাকল: সারির "জমা দিলাম" ফর্মটা ওটা চায়
+             * ([[cheque/partials/actions]])।
+             */
+            // ⚠️ দল বাদ — কারণটা [[BankReconciliationController]]-এ; শর্তটা
+            // এখন `ofMoneyKind()`-এর ভিতরেই।
+            // ⭐ কেবল `BANK`: MFS-এ চেক বলে কিছু নেই, তাই বিকাশ-নগদের
+            // খাত চেকের তালিকায় থাকাটা কেবল ভুল বাছাইয়ের সুযোগ।
+            'banks' => Account::query()->ofMoneyKind(Account::BANK)->active()->orderBy('code')->get(),
             'status' => $request->query('status'),
             'direction' => $request->query('direction'),
             'sortOptions' => $this->sortLabels(),
@@ -78,6 +89,25 @@ class ChequeController extends Controller implements HasMiddleware
              */
             'ripe' => Cheque::query()->ripe()->count(),
             'openTotal' => (string) (Cheque::query()->open()->sum('amount') ?: '0'),
+        ]);
+    }
+
+    /**
+     * নতুন চেক বসানোর পর্দা।
+     *
+     * ⭐ কেবল ফর্মের দুইটা তালিকা — চেকের তালিকা, যোগফল বা ছাঁকনির
+     * কিছুই এখানে তোলা হয় না: এই পাতায় একটাও সারি দেখানো হয় না, তাই
+     * সেগুলো তোলা মানে প্রতিবার অকারণে পঞ্চাশটা সারি ও দুইটা যোগফল।
+     *
+     * ⛔ খাতের কোয়েরিটা `index()`-এরই হুবহু নকল (`ofMoneyKind(BANK)`) —
+     * দুই পর্দায় দুই রকম তালিকা দেখালে একদিন একটা বদলাত, অন্যটা নয়।
+     */
+    public function create(Request $request): View
+    {
+        return view('accounts::cheque.create', [
+            'menu' => $this->menu->forUser($request->user()),
+            'parties' => app(PartyRegistry::class)->forPicker(),
+            'banks' => Account::query()->ofMoneyKind(Account::BANK)->active()->orderBy('code')->get(),
         ]);
     }
 

@@ -16,6 +16,7 @@ use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Finance\Models\CapitalEntry;
 use App\Modules\Finance\Models\Withdrawal;
 use App\Modules\Finance\Services\WithdrawalService;
+use App\Modules\MasterData\Models\Person;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
@@ -43,6 +44,9 @@ class TheOwnerTookMoneyAndNobodyWroteItDownTest extends TestCase
 
     private Company $company;
 
+    /** মালিক — এখন একটা সারি, একটা নাম নয়। */
+    private Person $owner;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -54,6 +58,19 @@ class TheOwnerTookMoneyAndNobodyWroteItDownTest extends TestCase
 
         app(StandardChart::class)->install();
         app(CashTillService::class)->ensurePrimaryTill();
+
+        /*
+         * ⓘ "মালিক" এখন ব্যক্তির তালিকার একটা সারি (১৩ সেপ্টেম্বর ২০২৬)।
+         *
+         * আগে প্রতিটা দাবিতে নামটা স্ট্রিং হিসেবে লেখা ছিল, আর ঠিক ওই
+         * নকশাই বাগটা তৈরি করত: সীমা বসত এক বানানে, উত্তোলন আরেক বানানে,
+         * আর সীমাটা নীরবে কিছুই আটকাত না।
+         */
+        $this->owner = Person::query()->create([
+            'company_id' => $this->company->id,
+            'code' => 'P-OWNER',
+            'name_en' => 'মালিক',
+        ]);
     }
 
     private function service(): WithdrawalService
@@ -83,7 +100,7 @@ class TheOwnerTookMoneyAndNobodyWroteItDownTest extends TestCase
     private function take(string $amount, array $extra = []): Withdrawal
     {
         return $this->service()->request(array_merge([
-            'contributor_name' => 'মালিক',
+            'person_id' => $this->owner->id,
             'amount' => $amount,
             'trx_date' => now()->toDateString(),
         ], $extra));
@@ -137,7 +154,7 @@ class TheOwnerTookMoneyAndNobodyWroteItDownTest extends TestCase
      */
     public function test_the_monthly_cap_refuses_and_says_what_is_left(): void
     {
-        $this->service()->setCap('মালিক', '10000');
+        $this->service()->setCap((int) $this->owner->id, '10000');
 
         $this->take('7000');
 
@@ -167,7 +184,7 @@ class TheOwnerTookMoneyAndNobodyWroteItDownTest extends TestCase
      */
     public function test_right_up_to_the_cap_is_allowed(): void
     {
-        $this->service()->setCap('মালিক', '10000');
+        $this->service()->setCap((int) $this->owner->id, '10000');
 
         $this->take('7000');
         $withdrawal = $this->take('3000');
@@ -192,8 +209,8 @@ class TheOwnerTookMoneyAndNobodyWroteItDownTest extends TestCase
      */
     public function test_a_cap_can_be_lifted(): void
     {
-        $this->service()->setCap('মালিক', '1000');
-        $this->service()->setCap('মালিক', null);
+        $this->service()->setCap((int) $this->owner->id, '1000');
+        $this->service()->setCap((int) $this->owner->id, null);
 
         $withdrawal = $this->take('50000');
 
@@ -210,7 +227,7 @@ class TheOwnerTookMoneyAndNobodyWroteItDownTest extends TestCase
      */
     public function test_drafts_count_towards_the_cap_too(): void
     {
-        $this->service()->setCap('মালিক', '10000');
+        $this->service()->setCap((int) $this->owner->id, '10000');
 
         $this->take('9000');
 
@@ -238,8 +255,9 @@ class TheOwnerTookMoneyAndNobodyWroteItDownTest extends TestCase
     public function test_it_needs_a_name_and_a_positive_amount(): void
     {
         try {
-            $this->take('5000', ['contributor_name' => '   ']);
-            $this->fail('নাম ছাড়াই লেখা হয়ে গেছে।');
+            // ⓘ শূন্য মানে "কেউ বাছা হয়নি" — আগে এটা ফাঁকা স্ট্রিং ছিল
+            $this->take('5000', ['person_id' => 0]);
+            $this->fail('কাউকে না বেছেই উত্তোলন লেখা হয়ে গেছে।');
         } catch (ValidationException) {
             // ঠিক আছে
         }
@@ -259,7 +277,11 @@ class TheOwnerTookMoneyAndNobodyWroteItDownTest extends TestCase
         CapitalEntry::query()->create([
             'company_id' => $this->company->id,
             'document_no' => 'CAP-TEST-1',
-            'contributor_name' => 'অংশীদার',
+            'person_id' => Person::query()->create([
+                'company_id' => $this->company->id,
+                'code' => 'P-PARTNER',
+                'name_en' => 'অংশীদার',
+            ])->id,
             'contributor_type' => 'partner',
             'entry_type' => 'contribution',
             'trx_date' => now()->toDateString(),
@@ -281,12 +303,12 @@ class TheOwnerTookMoneyAndNobodyWroteItDownTest extends TestCase
         $this->get(route('finance.withdrawal.index'))->assertOk();
 
         $this->post(route('finance.withdrawal.cap'), [
-            'contributor_name' => 'মালিক',
+            'person_id' => $this->owner->id,
             'monthly_cap' => '20000',
         ])->assertRedirect();
 
         $this->post(route('finance.withdrawal.store'), [
-            'contributor_name' => 'মালিক',
+            'person_id' => $this->owner->id,
             'amount' => '8000',
             'trx_date' => now()->toDateString(),
             'reason' => 'বাড়ির খরচ',

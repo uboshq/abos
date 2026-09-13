@@ -101,7 +101,7 @@ class PaymentMethodKindAndTransferModeTest extends TestCase
             'type' => $bank->type,
             'nature' => $bank->nature,
             'is_group' => false,
-            'is_bank' => true,
+            'money_kind' => Account::BANK,
         ]);
 
         // ── legacy-আকারের সারি: kind খালি রেখে (backfill যা ঠিক করবে) ──
@@ -203,7 +203,7 @@ class PaymentMethodKindAndTransferModeTest extends TestCase
             'type' => $bank->type,
             'nature' => $bank->nature,
             'is_group' => false,
-            'is_bank' => true,
+            'money_kind' => Account::BANK,
         ]);
     }
 }

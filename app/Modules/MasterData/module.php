@@ -12,6 +12,7 @@ use App\Modules\MasterData\Models\Location;
 use App\Modules\MasterData\Models\PartyType;
 use App\Modules\MasterData\Models\PaymentMethod;
 use App\Modules\MasterData\Models\PaymentTerm;
+use App\Modules\MasterData\Models\Person;
 use App\Modules\MasterData\Models\PriceList;
 use App\Modules\MasterData\Models\ProductCategory;
 use App\Modules\MasterData\Models\ReasonCode;
@@ -112,6 +113,15 @@ return [
              */
             ['label' => 'master_data::menu.cost_centers', 'route' => 'master_data.cost_center.index', 'permission' => 'master_data.view'],
 
+            /*
+             * যাঁদের সাথে টাকার সম্পর্ক — মালিক, অংশীদার, আত্মীয়, আমানতের ধারক।
+             *
+             * অর্থ মডিউলের পাঁচটা পর্দা এই একটা তালিকা থেকেই "কে" বাছে
+             * (১৩ সেপ্টেম্বর ২০২৬), তাই সারিটা মাস্টার ডাটায় — পাঁচ
+             * জায়গার মালিক একজন নয়, তালিকা একটাই।
+             */
+            ['label' => 'master_data::menu.people', 'route' => 'master_data.person.index', 'permission' => 'master_data.view'],
+
             // প্রতিষ্ঠানের গড়ন — কর্মীর তালিকা এই তিনটার উপর দাঁড়ায়
             ['label' => 'master_data::menu.departments', 'route' => 'master_data.department.index', 'permission' => 'master_data.view'],
             ['label' => 'master_data::menu.designations', 'route' => 'master_data.designation.index', 'permission' => 'master_data.view'],
@@ -202,6 +212,7 @@ return [
         'vehicle_type' => VehicleType::class,
         'vehicle' => Vehicle::class,
         'transfer_mode' => TransferMode::class,
+        'person' => Person::class,
     ],
 
     /*
@@ -235,6 +246,24 @@ return [
         ['model' => TransferMode::class, 'name' => ['name_en', 'name_bn']],
         ['model' => Vehicle::class, 'name' => ['name_en', 'name_bn']],
         ['model' => PaymentMethod::class, 'name' => ['name_en', 'name_bn']],
+
+        /*
+         * ⭐ মানুষের সারিটা বাকিদের থেকে আলাদা — এখানে `phone`-ও আছে।
+         *
+         * ── কেন নামে পাহারা নরম রাখতেই হবে ──────────────────────────
+         * ⚠️ উপরের তালিকাগুলোয় একই নামে দুইটা সারি মানে প্রায় নিশ্চিতভাবে
+         * ভুল — দুইটা "কেজি" বা দুইটা "নেসলে" হয় না। **মানুষে উল্টো:**
+         * দুইজন সত্যিকারের আলাদা মানুষের নাম সত্যিই এক হতে পারে ("মোঃ
+         * রহিম" বহু)। রিপো এই সিদ্ধান্তটা আগেই নিয়েছে —
+         * [[EveryMasterNamesItsDuplicateGuardTest]]-এ `Employee`-র ছাড়ে
+         * হুবহু এই কারণটা লেখা।
+         *
+         * তাই নাম কেবল **সতর্ক করে** (`allow_duplicate` টিকে এগোনো যায়,
+         * আর override অডিটে বসে), আর মোবাইল **থামায়** — একটা নম্বর
+         * দুইজনের হয় না। ঠিক [[App\Modules\Customer\Models\Customer]]-এর
+         * ধরন, আর একই কারণে।
+         */
+        ['model' => Person::class, 'name' => ['name_en', 'name_bn'], 'phone' => ['mobile']],
     ],
 
     'settings' => [

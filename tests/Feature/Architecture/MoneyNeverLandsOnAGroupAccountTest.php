@@ -96,8 +96,29 @@ final class MoneyNeverLandsOnAGroupAccountTest extends TestCase
             foreach ($found[0] as [$chain, $at]) {
                 $checked++;
 
-                if (str_contains($chain, 'postable()') || str_contains($chain, 'is_group')) {
-                    continue;
+                /*
+                 * তিনটা রূপই গ্রহণযোগ্য, আর তিনটাই একই কথা বলে।
+                 *
+                 * ⭐ `money()` ও `ofMoneyKind()` ১৩ সেপ্টেম্বর ২০২৬-এ যোগ
+                 * হয়েছে, আর তারা **নিজেদের ভিতরেই** দল ছাঁকে
+                 * ([[Account::scopeMoney()]])। শর্তটা স্কোপের ভিতরে নেওয়া
+                 * হয়েছিল ইচ্ছাকৃতভাবে: আগে প্রতিটা ডাকের জায়গায়
+                 * `postable()` হাতে লিখতে হত, আর দুইটা জায়গায় (এখানে আর
+                 * ChequeController-এ) কেউ লিখতে ভুলে গিয়েছিল।
+                 *
+                 * ⛔ কিন্তু ঐ বদলটা এই পাহারাটাকে **মিথ্যা লাল** করে
+                 * দিয়েছিল — বাইরের `postable()` তুলে দেওয়ায় সে আর কিছু
+                 * খুঁজে পায়নি, যদিও কোড আগের চেয়ে নিরাপদ হয়েছে।
+                 *
+                 * ⚠️ আর মিথ্যা লালকে "কোড তো ঠিকই আছে" বলে উপেক্ষা করা
+                 * যায় না: একবার উপেক্ষা করলে পরের জন সত্যিকারের লালটাও
+                 * উপেক্ষা করবেন। তাই ছাড় নয় — পাহারাটাকে নতুন রূপটা
+                 * চিনতে শেখানো হলো।
+                 */
+                foreach (['postable()', 'is_group', '->money()', 'ofMoneyKind('] as $filters) {
+                    if (str_contains($chain, $filters)) {
+                        continue 2;
+                    }
                 }
 
                 $line = substr_count(substr($source, 0, $at), "\n") + 1;
@@ -124,7 +145,8 @@ final class MoneyNeverLandsOnAGroupAccountTest extends TestCase
             'একটা দলে টাকা বসলে সেটা কোনো রিপোর্টে আসে না — Account::balanceOn()',
             'দলের নিজের সারি গোনে না। খতিয়ানে সারিটা থাকে, যোগফলে থাকে না।',
             '',
-            '`->postable()` যোগ করুন, নয় দল থাকা যদি ইচ্ছাকৃত হয় তবে',
+            '`->postable()`, `->money()` বা `->ofMoneyKind()` যোগ করুন — শেষ',
+            'দুইটা নিজেরাই দল ছাঁকে। দল থাকা ইচ্ছাকৃত হলে',
             'GROUPS_BELONG_HERE-এ কারণসহ লিখুন।',
             '',
             ...$offenders,

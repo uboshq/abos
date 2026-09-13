@@ -19,6 +19,8 @@ use App\Models\User;
  * সীমানা ভাঙে না।
  */
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\Voucher;
+use App\Modules\MasterData\Models\Person;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -72,7 +74,7 @@ class CapitalEntry extends Model
     protected $table = 'acc_capital_entries';
 
     protected $fillable = [
-        'company_id', 'branch_id', 'document_no', 'contributor_name', 'contributor_type',
+        'company_id', 'branch_id', 'document_no', 'person_id', 'contributor_type',
         'entry_type', 'trx_date', 'amount', 'share_percent', 'narration', 'status',
         'voucher_id', 'received_into_account_id', 'posted_at', 'created_by',
     ];
@@ -86,6 +88,49 @@ class CapitalEntry extends Model
             'share_percent' => 'decimal:4',
             'posted_at' => 'datetime',
         ];
+    }
+
+    /**
+     * কে দিলেন — নাম নয়, তালিকার সারি।
+     *
+     * ── ⛔ কেন নামটা সরানো হলো, ১৩ সেপ্টেম্বর ২০২৬ ───────────────────
+     * আগে ঘরটা ছিল `contributor_name`, মুক্ত লেখা। মালিক নিজে প্রশ্নটা
+     * করেছেন: *"একই মালিক আবার বিনিয়োগ করলে আবার নাম লিখতে হবে?"*
+     *
+     * দামটা টাইপ করার কষ্ট ছিল না। `CapitalService::positions()` দল
+     * বাঁধত ওই নাম ধরে, তাই `Al Amin` ও `Al-Amin` **দুইজন অংশীদার** হয়ে
+     * যেতেন — দুইজনের আলাদা নিট, আর দুইজনের আলাদা **অংশ %**। আর ওই
+     * শতাংশটাই মুনাফা ভাগের হিসাব।
+     *
+     * ⓘ `contributor_type` (মালিক / অংশীদার) রয়ে গেছে, আর সেটা ঠিক —
+     * ওটা **ভূমিকা**, পরিচয় নয়। একই মানুষ এক বছর অংশীদার, পরের বছর
+     * মালিক হতে পারেন, আর তখনো তিনি একই সারি।
+     *
+     * @return BelongsTo<Person, $this>
+     */
+    public function person(): BelongsTo
+    {
+        return $this->belongsTo(Person::class, 'person_id');
+    }
+
+    /**
+     * কোন ভাউচারে খাতায় বসেছে — নিয়ম ১, "সংখ্যা থেকে কাগজে"।
+     *
+     * ── কেন এটা আজ পর্যন্ত ছিল না (১৩ সেপ্টেম্বর ২০২৬) ───────────────
+     * `voucher_id` ঘরটা চিরকাল ছিল আর `post()` সেটা ভরত, কিন্তু সম্পর্কটা
+     * ঘোষণা করা হয়নি — তাই `$entry->voucher` **চুপচাপ `null`** দিত।
+     * ⚠️ কোনো ত্রুটি নয়: Eloquent অচেনা নামকে অনুপস্থিত অ্যাট্রিবিউট ধরে,
+     * আর PHP `null->instrument_no` পড়তে গিয়েই তবে বাজে।
+     *
+     * ⓘ [[Withdrawal]]-এ ঠিক একই ঘর, আর ওখানে সম্পর্কটা আছে — অর্থাৎ
+     * দুইটা প্রায়-একই নথি দুই রকম আচরণ করত, আর পার্থক্যটা কোথাও লেখা
+     * ছিল না। ধরা পড়েছে লেনদেন নম্বরের পরীক্ষা লিখতে গিয়ে।
+     *
+     * @return BelongsTo<Voucher, $this>
+     */
+    public function voucher(): BelongsTo
+    {
+        return $this->belongsTo(Voucher::class);
     }
 
     public function account(): BelongsTo

@@ -58,10 +58,16 @@
               class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             @csrf
 
-            <x-ui.field name="person_name" :label="__('finance::field.person_name')" required
-                        :value="old('person_name')" />
-
-            <x-ui.field name="mobile" :label="__('finance::field.mobile')" :value="old('mobile')" />
+            {{-- ⓘ মোবাইলের আলাদা ঘরটা আর নেই — নম্বরটা ব্যক্তির সারিতে
+                 বসে, আর নতুন নাম যোগ করার সময় নিচেই একসাথে নেওয়া হয়।
+                 দুই জায়গায় নম্বর রাখলে একদিন আলাদা হত। --}}
+            <div class="sm:col-span-2">
+                @include('finance::components.person-picker', [
+                    'people' => $people,
+                    'label' => __('finance::field.person_name'),
+                    'required' => true,
+                ])
+            </div>
 
             <x-ui.field name="note" :label="__('finance::field.note')" :value="old('note')" />
 

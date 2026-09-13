@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\PasswordResetController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -42,6 +43,45 @@ Route::middleware('guest')->group(function () {
     Route::post('/login', [LoginController::class, 'store'])
         ->middleware('throttle:10,1')
         ->name('login.store');
+
+    /*
+     * ⛔ পাসওয়ার্ড ভুলে গেলে ফেরার পথ — ১৩ সেপ্টেম্বর ২০২৬।
+     *
+     * ── কেন `guest` গোষ্ঠীর ভেতরে ───────────────────────────────────
+     * চারটাই এমন মানুষের জন্য যিনি ঢুকতে **পারছেন না**। ⓘ যিনি
+     * ইতিমধ্যে ভেতরে, তাঁর এই পথ লাগে না — তাঁর জন্য প্রোফাইলের
+     * পাসওয়ার্ড বদল, যেখানে পুরনো পাসওয়ার্ড চাওয়া যায়। `guest`
+     * তাঁকে নিজে থেকেই ড্যাশবোর্ডে ফেরত পাঠায়।
+     *
+     * ── ⚠️ throttle, আর কেন সংখ্যাগুলো এমন ──────────────────────────
+     * লগইনের দরজায় `throttle:10,1`। ⛔ রিসেটের দরজা তার চেয়ে **ঢিলা
+     * হলে আক্রমণকারী কেবল এই দরজাটাই ব্যবহার করতেন** — দুইটার একটাতে
+     * তালা মানে তালা নেই ([[CredentialCheck]]-এ একই কথা লেখা)।
+     *
+     * ⭐ চিঠি পাঠানোর দরজাটা **আরও কড়া, মিনিটে পাঁচ** — আর সেটা
+     * ইচ্ছাকৃত: ওটার প্রতিটা সফল ডাক একটা ইমেইল বাইরে পাঠায়। ⓘ ঢিলা
+     * রাখলে ওটা দিয়ে অন্যের ইনবক্সে চিঠি ঢালা যেত (mail bombing), আর
+     * সেই সাথে আমাদের পাঠানোর সুনামও পুড়ত। ⚠️ ব্রোকারের নিজের ৬০
+     * সেকেন্ডের তালা (`config/auth.php`) এর **উপরের** স্তর, বিকল্প নয়:
+     * ওটা ঠিকানা ধরে, এটা IP ধরে।
+     *
+     * ⓘ টোকেনসহ পাতাটাও (`password.reset`) throttled — ওটা GET, কিন্তু
+     * টোকেন আন্দাজ করার চেষ্টাটা ঠিক ওখানেই হত।
+     */
+    Route::get('/forgot-password', [PasswordResetController::class, 'request'])
+        ->name('password.request');
+
+    Route::post('/forgot-password', [PasswordResetController::class, 'email'])
+        ->middleware('throttle:5,1')
+        ->name('password.email');
+
+    Route::get('/reset-password/{token}', [PasswordResetController::class, 'reset'])
+        ->middleware('throttle:10,1')
+        ->name('password.reset');
+
+    Route::post('/reset-password', [PasswordResetController::class, 'store'])
+        ->middleware('throttle:10,1')
+        ->name('password.store');
 });
 
 Route::post('/logout', [LoginController::class, 'destroy'])

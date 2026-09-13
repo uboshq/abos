@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modules;
 
+use App\Core\Services\PermissionSyncer;
 use App\Core\Support\CompanyContext;
 use App\Models\AuditTrail;
 use App\Models\Company;
@@ -184,7 +185,7 @@ class TheGuardsWereNeverProvenTest extends TestCase
                 'email' => $this->owner->email,
                 'locale' => 'bn',
                 'is_active' => '0',
-                'roles' => ['owner'],
+                'roles' => [PermissionSyncer::SUPER_ADMIN_ROLE],
                 'companies' => [$this->company->id],
             ])
             ->assertSessionHasErrors('is_active');
@@ -206,7 +207,7 @@ class TheGuardsWereNeverProvenTest extends TestCase
             ])
             ->assertSessionHasErrors('roles');
 
-        $this->assertTrue($this->owner->fresh()->hasRole('owner'));
+        $this->assertTrue($this->owner->fresh()->hasRole(PermissionSyncer::SUPER_ADMIN_ROLE));
     }
 
     // ── রোল ─────────────────────────────────────────────────────────
@@ -260,12 +261,12 @@ class TheGuardsWereNeverProvenTest extends TestCase
      */
     public function test_the_owner_role_cannot_be_edited_even_by_address(): void
     {
-        $owner = Role::query()->where('name', 'owner')->firstOrFail();
+        $owner = Role::query()->where('name', PermissionSyncer::SUPER_ADMIN_ROLE)->firstOrFail();
         $before = $owner->permissions->count();
 
         $this->actingAs($this->owner)
             ->put(route('system_admin.role.update', $owner), [
-                'name' => 'owner',
+                'name' => PermissionSyncer::SUPER_ADMIN_ROLE,
                 'permissions' => ['sales.invoice.view'],
             ])
             ->assertSessionHasErrors('name');

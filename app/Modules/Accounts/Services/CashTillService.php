@@ -101,7 +101,12 @@ final class CashTillService implements ProvisionsCompany
                 'name_en' => $data['name_en'],
                 'name_bn' => $data['name_bn'] ?? null,
                 'parent_id' => $parent->id,
-                'is_cash' => true,
+                /*
+                 * ধরনটা আর এখান থেকে যায় না — বাবার খাত থেকে বসে
+                 * ([[AccountService::moneyKindFor()]])। টিলের বাবা
+                 * সবসময় `cashParent()` = ১১০১ হাতে নগদ, আর ওটার
+                 * `money_kind` `cash`, তাই সন্তানও `cash` পায়।
+                 */
                 'opening_balance' => $data['opening_balance'] ?? 0,
                 'opening_date' => $data['opening_date'] ?? null,
             ]);

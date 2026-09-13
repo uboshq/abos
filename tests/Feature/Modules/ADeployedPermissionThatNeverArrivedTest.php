@@ -90,7 +90,7 @@ class ADeployedPermissionThatNeverArrivedTest extends TestCase
      */
     public function test_a_permission_the_owner_does_not_hold_is_caught(): void
     {
-        $owner = Role::query()->where('name', PermissionSyncer::OWNER_ROLE)->firstOrFail();
+        $owner = Role::query()->where('name', PermissionSyncer::SUPER_ADMIN_ROLE)->firstOrFail();
         $owner->revokePermissionTo('sales.shipment.create');
 
         $findings = $this->findings();

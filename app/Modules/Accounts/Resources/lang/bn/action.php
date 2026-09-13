@@ -41,6 +41,11 @@ return [
     'close_month' => 'মাসটা বন্ধ করুন',
     'reopen' => 'খুলুন',
 
+    // তালিকার উপরের "+ নতুন …" বোতামগুলো
+    'new_cheque' => 'নতুন চেক',
+    'new_asset' => 'নতুন সম্পদ',
+    'new_reconciliation' => 'নতুন মিলকরণ',
+
     // চেকের খাতা
     'cheque_deposit' => 'জমা দিলাম',
     'cheque_clear' => 'পাশ হয়েছে',

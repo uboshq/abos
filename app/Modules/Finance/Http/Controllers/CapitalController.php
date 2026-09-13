@@ -5,15 +5,19 @@ declare(strict_types=1);
 namespace App\Modules\Finance\Http\Controllers;
 
 use App\Core\Services\MenuBuilder;
+use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Finance\Models\CapitalEntry;
 use App\Modules\Finance\Services\CapitalService;
+use App\Modules\MasterData\Models\Person;
+use App\Modules\MasterData\Services\PersonResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
@@ -29,6 +33,7 @@ class CapitalController extends Controller implements HasMiddleware
     public function __construct(
         private readonly MenuBuilder $menu,
         private readonly CapitalService $capital,
+        private readonly PersonResolver $people,
     ) {}
 
     /** @return list<Middleware> */
@@ -45,9 +50,22 @@ class CapitalController extends Controller implements HasMiddleware
     {
         return view('finance::capital.index', [
             'menu' => $this->menu->forUser($request->user()),
-            'entries' => CapitalEntry::query()->with('account')
+            /*
+             * ⓘ `person`-ও সাথেই — প্রতিটা সারিতে নামটা দেখানো হয়, আর
+             * আলাদা করে আনলে পঞ্চাশ সারির পাতায় পঞ্চাশটা বাড়তি কোয়েরি হত।
+             */
+            'entries' => CapitalEntry::query()->with(['account', 'person'])
                 ->orderByDesc('trx_date')->orderByDesc('id')->paginate(50),
             'positions' => $this->capital->positions(),
+
+            /*
+             * কে দিতে পারেন — মালিক, অংশীদার, আত্মীয়।
+             *
+             * ⓘ কেবল সক্রিয়রা: নিষ্ক্রিয় করা মানুষ আর নতুন কাগজে বসেন
+             * না, কিন্তু তাঁর পুরনো সারিগুলো অটুট থাকে (সফট-ডিলিট)।
+             */
+            'people' => Person::query()->active()->orderBy('name_en')
+                ->pluck('name_en', 'id'),
 
             /*
              * টাকা যেখানে আসতে পারে — নগদ, ব্যাংক, টিল।
@@ -73,8 +91,21 @@ class CapitalController extends Controller implements HasMiddleware
 
     public function store(Request $request): RedirectResponse
     {
+        $companyId = CompanyContext::id();
+
         $data = $request->validate([
-            'contributor_name' => ['required', 'string', 'max:191'],
+            /*
+             * ⓘ দুইটা পথ, একটাই লাগে: তালিকা থেকে বাছা, নয় নতুন নাম
+             * লেখা ([[App\Modules\MasterData\Services\PersonResolver]])।
+             *
+             * ⚠️ `exists`-এ `company_id` — নাহলে ঠিকানায় অন্য কোম্পানির
+             * একটা আইডি বসিয়ে দিলে সেই মানুষের নামে এই কোম্পানির মূলধন
+             * বসে যেত, আর কোনো পর্দায় সেটা দেখা যেত না।
+             */
+            'person_id' => ['nullable', 'integer', 'required_without:person_new',
+                Rule::exists('mdm_people', 'id')->where('company_id', $companyId)],
+            'person_new' => ['nullable', 'string', 'max:120', 'required_without:person_id'],
+            'person_mobile' => ['nullable', 'string', 'max:32'],
             'contributor_type' => ['required', 'string', 'in:'.implode(',', CapitalEntry::WHO)],
             'entry_type' => ['required', 'string', 'in:'.implode(',', CapitalEntry::KINDS)],
             'trx_date' => ['required', 'date', 'before_or_equal:today'],
@@ -82,6 +113,8 @@ class CapitalController extends Controller implements HasMiddleware
             'share_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'narration' => ['nullable', 'string', 'max:500'],
         ]);
+
+        $data['person_id'] = $this->people->resolve($data);
 
         $entry = $this->capital->record($data);
 
@@ -100,9 +133,23 @@ class CapitalController extends Controller implements HasMiddleware
         $data = $request->validate([
             'received_into_account_id' => ['required', 'integer',
                 'exists:accounts,id'],
+            /*
+             * ব্যাংক বা MFS হলে যে নম্বরটা লাগে — চেক নম্বর, TrxID।
+             *
+             * ⛔ `required` **নয়**, আর সেটা ইচ্ছাকৃত: নগদে নম্বর হয় না,
+             * আর কখন নম্বর লাগবে সেটা ইতিমধ্যেই এক জায়গায় জানা —
+             * [[App\Modules\Accounts\Services\VoucherService::assertBankReferenceIsFree]]।
+             * এখানে `required` করলে নিয়মটা দুই জায়গায় থাকত, আর একদিন
+             * দুইটা আলাদা কথা বলত (নগদেও চাওয়া, বা ব্যাংকে না চাওয়া)।
+             */
+            'instrument_no' => ['nullable', 'string', 'max:64'],
         ]);
 
-        $this->capital->post($entry, Account::query()->findOrFail($data['received_into_account_id']));
+        $this->capital->post(
+            $entry,
+            Account::query()->findOrFail($data['received_into_account_id']),
+            ($data['instrument_no'] ?? '') ?: null,
+        );
 
         return back()->with('saved', __('finance::message.capital_posted', ['no' => $entry->document_no]));
     }

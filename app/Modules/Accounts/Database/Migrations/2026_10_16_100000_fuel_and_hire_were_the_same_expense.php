@@ -93,8 +93,10 @@ return new class extends Migration
                     'type' => Account::EXPENSE,
                     'parent_id' => $parentId,
                     'is_group' => false,
-                    'is_cash' => false,
-                    'is_bank' => false,
+                    // `is_cash`/`is_bank` (দুইটাই `false`) তুলে দেওয়া হলো —
+                    // কলাম দুইটা আর নেই। কারণটা পুরোটা
+                    // [[…interest_is_not_a_bank_charge]]-এ। খরচের খাত,
+                    // টাকার নয় — তাই `money_kind` বসে না।
                     'nature' => Account::defaultNatureFor(Account::EXPENSE),
                     'is_active' => true,
                     'created_at' => $now,

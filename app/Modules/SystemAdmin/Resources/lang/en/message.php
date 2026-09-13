@@ -26,6 +26,14 @@ return [
     'owner_role_fixed' => 'The owner role cannot be edited — by definition it can do everything',
     'user_created' => ':name was added.',
     'user_updated' => ':name was updated.',
+    'ownership_transferred' => 'Ownership was transferred to :name. You are no longer the owner.',
+    'ownership_intro' => 'A company has exactly one owner. Making someone else the owner hands the '
+        .'responsibility over — your own owner rights go at that same moment.',
+    'ownership_weight' => 'The owner holds every permission: changing roles, deactivating users, opening a month, all of it.',
+    'ownership_not_an_investor' => 'Somebody who only puts money in needs no account at all — '
+        .'their name belongs in Finance → Capital, not here.',
+    'ownership_no_candidates' => 'There is no other active user in this company, so there is nobody to hand it to. '
+        .'Add a user first.',
     'role_created' => 'The role :name was created.',
     'role_updated' => 'The role :name was updated.',
     'scope_note' => 'What they may see. Tick nothing and they see every branch of this company. Tick some and they see only those (papers with no branch are always visible).',

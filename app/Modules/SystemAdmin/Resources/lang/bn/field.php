@@ -23,4 +23,7 @@ return [
     'user_count' => 'কতজন',
     'last_login' => 'শেষ ঢোকা',
     'logo' => 'প্রতিষ্ঠানের লোগো',
+    'current_owner' => 'বর্তমান মালিক',
+    'new_owner' => 'নতুন মালিক',
+    'transfer_now' => 'মালিকানা হস্তান্তর করুন',
 ];

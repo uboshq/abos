@@ -125,7 +125,7 @@ class TheFirstDoorOpensOnlyOnceTest extends TestCase
          * "তাঁর রোল আছে?" নয়, **"তাঁর নিজের কোম্পানিতে রোল আছে?"**
          */
         CompanyContext::forCompany($company->id, function () use ($user): void {
-            $this->assertTrue($user->fresh()->hasRole(PermissionSyncer::OWNER_ROLE));
+            $this->assertTrue($user->fresh()->hasRole(PermissionSyncer::SUPER_ADMIN_ROLE));
         });
         $this->assertTrue($user->fresh()->companies()->where('companies.id', $company->id)->exists());
 

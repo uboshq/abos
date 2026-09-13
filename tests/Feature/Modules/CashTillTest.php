@@ -68,7 +68,7 @@ class CashTillTest extends TestCase
         $till = $this->make();
 
         $this->assertNotNull($till->account);
-        $this->assertTrue($till->account->is_cash);
+        $this->assertTrue($till->account->isCash());
         $this->assertFalse($till->account->is_group);
 
         // "১১০১ হাতে নগদ"-এর নিচে, নাহলে ক্যাশ বই কাউন্টারগুলো খুঁজে পেত না

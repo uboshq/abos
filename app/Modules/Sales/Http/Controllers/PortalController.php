@@ -256,8 +256,9 @@ class PortalController extends Controller
 
         return view('sales::portal.claim', [
             'customer' => $customer,
-            'banks' => Account::query()->postable()
-                ->where('is_bank', true)->active()->orderBy('code')->get(),
+            // ⛔ কেবল ব্যাংক — MFS নয়; `ofMoneyKind()` নিজেই দল ছাঁকে
+            'banks' => Account::query()
+                ->ofMoneyKind(Account::BANK)->active()->orderBy('code')->get(),
         ]);
     }
 

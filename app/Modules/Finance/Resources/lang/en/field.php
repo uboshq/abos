@@ -107,4 +107,9 @@ return [
     'rental_top_up_amount' => 'Amount to add',
     'rental_closed_on' => 'Closed on',
     'rental_refund_to' => 'Refund to',
+
+    'person_not_listed' => 'Not in the list? Add a new name',
+    'person_new_name' => 'New name',
+    'person_new_hint' => 'Goes into the list, so you will not type it again',
+    'person_pick_or_add' => 'Pick from the list, or add a new name below',
 ];

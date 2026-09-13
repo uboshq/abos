@@ -11,6 +11,8 @@ use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\VoucherService;
 use App\Modules\Finance\Models\CapitalEntry;
+use App\Modules\Finance\Models\Withdrawal;
+use App\Modules\MasterData\Models\Person;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -51,7 +53,7 @@ final class CapitalService
                 'company_id' => CompanyContext::id(),
                 'branch_id' => CompanyContext::branchId(),
                 'document_no' => $this->numbers->next('CAP'),
-                'contributor_name' => trim((string) $data['contributor_name']),
+                'person_id' => (int) $data['person_id'],
                 'contributor_type' => $data['contributor_type'],
                 'entry_type' => $data['entry_type'],
                 'trx_date' => $data['trx_date'],
@@ -76,7 +78,25 @@ final class CapitalService
      * টাকা যেখানে এল সেটা ডেবিট (সম্পদ বাড়ল), আর মালিকের মূলধন
      * ক্রেডিট (ব্যবসা মালিকের কাছে দায়বদ্ধ হলো)।
      */
-    public function post(CapitalEntry $entry, Account $into): CapitalEntry
+    /**
+     * ── `$reference` — ব্যাংক বা MFS হলে যে নম্বরটা লাগে ──────────────
+     *
+     * চেক নম্বর, ট্রানজেকশন আইডি, বিকাশের TrxID। ⛔ ঘরটা **ঐচ্ছিক**, আর
+     * সেটা ইচ্ছাকৃত: নগদে কোনো নম্বর হয় না, আর কখন নম্বর **লাগবে** সেটা
+     * ইতিমধ্যেই এক জায়গায় জানা — [[VoucherService::assertBankReferenceIsFree]]
+     * টাকার খাতটা ব্যাংক বা MFS হলে নিজেই আটকায়।
+     *
+     * ⚠️ এখানে `required` করলে নিয়মটা **দুই জায়গায়** থাকত, আর একদিন
+     * দুইটা আলাদা কথা বলত — নগদেও নম্বর চাওয়া, বা ব্যাংকে না চাওয়া।
+     *
+     * ── কেন ঘরটা আজ পর্যন্ত ছিলই না (১৩ সেপ্টেম্বর ২০২৬) ────────────
+     * `VoucherService` নম্বরটা চিরকাল নিয়েছে, আর ব্যাংক খাতে বাধ্যতামূলকও
+     * করেছে — কিন্তু অর্থ মডিউলের **একটাও সেবা সেটা পাঠাত না**। ফল:
+     * মালিক ব্যাংকে মূলধন ঢোকাতে গিয়ে এমন একটা নম্বর চাওয়ার বার্তা
+     * পেতেন যেটা পাঠানোর কোনো পথ পর্দায় ছিল না — **টাকাটা ঢোকানোই
+     * যেত না**। মালিক নিজে ধরেছেন।
+     */
+    public function post(CapitalEntry $entry, Account $into, ?string $reference = null): CapitalEntry
     {
         if ($entry->status === CapitalEntry::POSTED) {
             throw ValidationException::withMessages([
@@ -90,7 +110,7 @@ final class CapitalService
             ]);
         }
 
-        return DB::transaction(function () use ($entry, $into) {
+        return DB::transaction(function () use ($entry, $into, $reference) {
             $capital = Account::query()
                 ->where('code', StandardChart::OWNER_CAPITAL)
                 ->firstOrFail();
@@ -101,9 +121,10 @@ final class CapitalService
                     'trx_date' => $entry->trx_date->toDateString(),
                     'narration' => $entry->narration
                         ?? __('finance::message.capital_narration', [
-                            'who' => $entry->contributor_name,
+                            'who' => $entry->person?->name() ?? '',
                             'no' => $entry->document_no,
                         ]),
+                    'instrument_no' => $reference,
                 ],
                 [
                     ['account_id' => $into->id, 'debit' => $entry->amount, 'credit' => '0'],
@@ -139,19 +160,37 @@ final class CapitalService
      */
     public function positions(): array
     {
+        /*
+         * ⛔ দল বাঁধা হয় `person_id` ধরে, নাম ধরে নয় (১৩ সেপ্টেম্বর ২০২৬)।
+         *
+         * আগে ছিল `groupBy('contributor_name', ...)`, আর তাতে একই মালিক
+         * তিন বানানে **তিনটা সারি** হয়ে যেতেন — তিনজনের আলাদা নিট, আর
+         * তিনজনের আলাদা **অংশ %**। মালিক নিজে প্রশ্নটা করেছেন, আর ওই
+         * শতাংশটাই মুনাফা ভাগের হিসাব।
+         */
         $given = CapitalEntry::query()
             ->posted()
-            ->selectRaw('contributor_name, contributor_type, MAX(share_percent) as share, SUM(amount) as total')
-            ->groupBy('contributor_name', 'contributor_type')
+            ->selectRaw('person_id, contributor_type, MAX(share_percent) as share, SUM(amount) as total')
+            ->groupBy('person_id', 'contributor_type')
             ->get();
+
+        // নামগুলো একবারেই, প্রতি সারিতে একটা কোয়েরি নয়
+        $people = Person::query()->whereKey($given->pluck('person_id'))->get()->keyBy('id');
 
         $out = [];
 
         foreach ($given as $row) {
-            $taken = $this->withdrawnBy((string) $row->contributor_name);
+            $person = $people->get((int) $row->person_id);
+
+            if ($person === null) {
+                continue;
+            }
+
+            $taken = $this->withdrawnBy((int) $row->person_id);
 
             $out[] = [
-                'name' => (string) $row->contributor_name,
+                'person_id' => (int) $row->person_id,
+                'name' => $person->name(),
                 'type' => (string) $row->contributor_type,
                 'contributed' => (string) $row->total,
                 'withdrawn' => $taken,
@@ -164,26 +203,49 @@ final class CapitalService
     }
 
     /**
-     * এই নামে উত্তোলনের খাত থেকে কত গেছে।
+     * ইনি কত তুলে নিয়েছেন।
      *
-     * বিবরণে নাম খোঁজা হয়, কারণ উত্তোলন একটা সাধারণ পরিশোধ ভাউচার —
-     * ওর নিজের কোনো "কে" কলাম নেই। নাম না মিললে শূন্য, আর সেটাই ঠিক:
-     * যে উত্তোলনে কারও নাম লেখা নেই সেটা কারও নামে বসানো যায় না।
+     * ── ⛔ আগে এটা খতিয়ানের বিবরণে নাম খুঁজত, আর সেটাই ছিল সবচেয়ে গভীর
+     *      ফাঁকটা (১৩ সেপ্টেম্বর ২০২৬) ──────────────────────────────────
+     * পুরনো কোড:
+     *
+     *     ->where('narration', 'like', '%'.$name.'%')
+     *
+     * তিনটা ফল, আর তিনটাই নীরব:
+     *
+     *   ১। **substring** — "রহিম" নামের অংশীদারের হিসাবে "আব্দুর রহিম"-এর
+     *      উত্তোলনও যোগ হয়ে যেত। এক মালিকের টাকা আরেকজনের নিটে, আর
+     *      **দুইজনেরই অংশ % ভুল**।
+     *   ২। **বানান** — বিবরণে "Al-Amin" থাকলে "Al Amin"-এর সাথে মিলত না,
+     *      তাই তাঁর উত্তোলন শূন্য দেখাত আর নিট মূলধন **বেশি** দেখাত।
+     *   ৩। নামে `%` বা `_` থাকলে ওগুলো wildcard হয়ে যেত।
+     *
+     * ⚠️ আর সবচেয়ে বলার মতো কথা: **সীমা আর অংশ % দুই আলাদা উৎস থেকে
+     * গোনা হত** — সীমা `fin_withdrawals.amount` ধরে
+     * ([[WithdrawalService::assertWithinCap]]), আর নিট এই বিবরণ ধরে।
+     * অর্থাৎ দুইটা সংখ্যা একমত ছিল না, আর কেউ কোনোদিন মিলিয়ে দেখেনি।
+     * এখন দুইটাই একই উৎস, তাই অমিলটার অস্তিত্বই নেই।
+     *
+     * ── ⚠️ জানা সীমা, আর এটা ইচ্ছাকৃত ───────────────────────────────
+     * গোনাটা এখন **উত্তোলনের সারি** ধরে। তাই কেউ উত্তোলনের পর্দা দিয়ে না
+     * গিয়ে সরাসরি জাবেদায় ৩২০০ খাতে টাকা বসালে সেটা **কারো নিটে যোগ
+     * হবে না** — খতিয়ানে থাকবে, কিন্তু কোনো মানুষের নামে বসবে না।
+     *
+     * ⭐ এটা পিছিয়ে যাওয়া নয়, আর কারণটা সহজ: আগে ওই সারিটা যোগ হত
+     * ঠিকই, কিন্তু **substring মিলিয়ে** — অর্থাৎ প্রায়ই ভুল মানুষের নিটে।
+     * **ভুল দায় দেওয়ার চেয়ে দায় না দেওয়া ভালো**, কারণ একটা ভুল সংখ্যা
+     * শূন্যের চেয়ে বিপজ্জনক — মানুষ ওটা দেখে মুনাফা ভাগ করেন।
+     *
+     * ⓘ সীমাটা টেস্টে বাঁধা আছে, যাতে ছয় মাস পরে কেউ এটাকে "বাগ" ভেবে
+     * আবার বিবরণ-খোঁজা ফিরিয়ে না আনেন:
+     * [[Tests\Feature\Modules\Finance\TheCapWasSetOnANameAndTheNameChangedTest]]।
      */
-    private function withdrawnBy(string $name): string
+    private function withdrawnBy(int $personId): string
     {
-        $drawings = Account::query()->postable()->where('code', StandardChart::DRAWINGS)->first();
-
-        if ($drawings === null) {
-            return '0.0000';
-        }
-
-        $sum = DB::table('ledger_entries')
-            ->where('company_id', CompanyContext::id())
-            ->where('account_id', $drawings->id)
-            ->where('narration', 'like', '%'.$name.'%')
-            ->selectRaw('COALESCE(SUM(debit) - SUM(credit), 0) as net')
-            ->value('net');
+        $sum = Withdrawal::query()
+            ->where('person_id', $personId)
+            ->posted()
+            ->sum('amount');
 
         return (string) ($sum ?: '0.0000');
     }
@@ -191,6 +253,21 @@ final class CapitalService
     /** @param  array<string, mixed>  $data */
     private function assertKnown(array $data): void
     {
+        /*
+         * কে দিলেন, সেটা না জানলে সারিটা বসে না।
+         *
+         * ⚠️ শর্তটা কন্ট্রোলারের যাচাইতেও আছে (`required_without`), তবু
+         * এখানেও — কারণ `(int) null` হয় **শূন্য**, আর শূন্য একটা বৈধ
+         * দেখতে আইডি। সেবাটা সরাসরি ডাকা হলে (টেস্ট, ইমপোর্ট, কমান্ড)
+         * ওই শূন্যটা FK-এ গিয়ে ভাঙত, আর বার্তাটা হত ডাটাবেজের ভাষায় —
+         * ব্যবহারকারীর নয়।
+         */
+        if ((int) ($data['person_id'] ?? 0) <= 0) {
+            throw ValidationException::withMessages([
+                'person_id' => __('finance::validation.capital_needs_a_name'),
+            ]);
+        }
+
         if (! in_array($data['contributor_type'] ?? '', CapitalEntry::WHO, true)) {
             throw ValidationException::withMessages([
                 'contributor_type' => __('finance::validation.unknown_contributor_type'),

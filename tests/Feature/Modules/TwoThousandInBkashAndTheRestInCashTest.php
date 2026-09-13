@@ -67,13 +67,27 @@ class TwoThousandInBkashAndTheRestInCashTest extends TestCase
 
         $this->bkash = Account::query()->create([
             'company_id' => $this->company->id,
-            'code' => '1102-BKASH',
+            /*
+             * ⛔ এটা আগে `1102-BKASH` ছিল, ব্যাংকের মাথার নিচে।
+             *
+             * ছকের নিজের সিদ্ধান্তের বিপরীত ([[StandardChart::BANK]]-এর
+             * ডকব্লক, ৩০ আগস্ট ২০২৬): *"বিকাশ ক্যাশ-আউটে চার্জ কাটে,
+             * ব্যাংক কাটে না… মিলকরণের কাগজ আলাদা… এক মাথায় থাকলে
+             * 'ব্যাংকে কত আছে' সংখ্যাটাই মিথ্যা বলত।"*
+             *
+             * ⓘ দাবিগুলো বদলায়নি: প্রতিটা দাবি এই খাতটার **নিজের**
+             * ব্যালেন্সে, ১১০২-এর বংশ-যোগফলে নয়। কেবল সারিটা এখন আর
+             * নিজের সাথে বিরোধ করে না।
+             */
+            'code' => '1105-BKASH',
             'name_en' => 'bKash Merchant',
             'name_bn' => 'বিকাশ মার্চেন্ট',
-            'parent_id' => StandardChart::find(StandardChart::BANK)->id,
+            'parent_id' => StandardChart::find(StandardChart::MOBILE_MONEY)->id,
             'type' => Account::ASSET,
             'nature' => Account::DEBIT,
-            'is_bank' => true,
+            // ⚠️ হাতে, কারণ সারিটা AccountService নয়, Account::create()
+            // দিয়ে বসে — গাছ থেকে বসানোর নিয়মটা এখানে চলে না
+            'money_kind' => Account::MFS,
             'is_active' => true,
             'status' => DocumentStatus::CONFIRMED,
         ]);

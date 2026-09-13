@@ -60,4 +60,7 @@ return [
     'rate_source_hint' => 'Bank name, or entered by hand',
     'entered_by' => 'Entered By',
     'exchange_rate' => 'Rate',
+
+    'mobile' => 'Mobile',
+    'note' => 'Note',
 ];

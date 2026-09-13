@@ -2,8 +2,8 @@
     মিলকরণের তালিকা।
 
     মাস শেষে প্রথম প্রশ্নটা "কোন হিসাবের কোন মাস মেলানো হয়েছে, আর কোনটা
-    বাকি" — তাই তালিকাটাই প্রধান পর্দা, আর নতুন মিলকরণ শুরু করার ফর্মটা
-    উপরে, চেকের খাতার মতোই।
+    বাকি" — তাই তালিকাটাই প্রধান পর্দা, আর নতুন মিলকরণ শুরু করার পথটা
+    উপরে বাঁ কোণের বোতামে, নিজের পাতায় ([[reconciliation/create]])।
 
     ── কলামগুলো এখানে, স্লটে নয় ─────────────────────────────────────────
     প্রথম লেখায় `<x-ui.table>`-এর ভেতরে হাতে `<tr>` বসানো ছিল। কম্পোনেন্ট
@@ -53,7 +53,17 @@
 
     <x-slot:header>
         <x-ui.page-header :title="__('accounts::recon.title')"
-                          :subtitle="__('accounts::recon.subtitle')" />
+                          :subtitle="__('accounts::recon.subtitle')">
+            {{-- শর্তটা হুবহু সেটাই যেটায় আগে নিচের ফর্মটা দেখা যেত। --}}
+            <x-slot:actions>
+                @can('accounts.reconciliation.manage')
+                    <x-ui.button tone="primary" icon="plus"
+                                 :href="route('accounts.reconciliation.create')">
+                        {{ __('accounts::action.new_reconciliation') }}
+                    </x-ui.button>
+                @endcan
+            </x-slot:actions>
+        </x-ui.page-header>
     </x-slot:header>
 
     @if (session('status'))
@@ -75,52 +85,6 @@
             </ul>
         </div>
     @endif
-
-    @can('accounts.reconciliation.manage')
-        <form method="POST" action="{{ route('accounts.reconciliation.store') }}"
-              class="mb-5 grid gap-3 rounded-(--radius-card) border border-(--color-border)
-                     bg-(--color-surface-card) p-4 md:grid-cols-2 lg:grid-cols-5">
-            @csrf
-
-            <label class="flex flex-col gap-1">
-                <span class="text-sm font-medium">{{ __('accounts::recon.bank_account') }}</span>
-                <select name="bank_account_id" required
-                        class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border)
-                               bg-(--color-surface-app) px-2">
-                    @foreach ($banks as $bank)
-                        <option value="{{ $bank->id }}">{{ $bank->label() }}</option>
-                    @endforeach
-                </select>
-            </label>
-
-            <label class="flex flex-col gap-1">
-                <span class="text-sm font-medium">{{ __('accounts::recon.statement_date') }}</span>
-                <x-ui.date name="statement_date" :required="true"
-                           :value="old('statement_date', now()->toDateString())" />
-            </label>
-
-            <label class="flex flex-col gap-1">
-                <span class="text-sm font-medium">{{ __('accounts::recon.statement_balance') }}</span>
-                <input type="number" step="0.01" name="statement_balance" required
-                       value="{{ old('statement_balance') }}"
-                       class="num h-(--spacing-field) rounded-(--radius-field) border border-(--color-border)
-                              bg-(--color-surface-app) px-2 text-end">
-            </label>
-
-            <label class="flex flex-col gap-1">
-                <span class="text-sm font-medium">{{ __('accounts::recon.narration') }}</span>
-                <input type="text" name="narration" value="{{ old('narration') }}"
-                       class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border)
-                              bg-(--color-surface-app) px-2">
-            </label>
-
-            <div class="flex items-end">
-                <x-ui.button type="submit" tone="primary" class="w-full">
-                    {{ __('accounts::recon.open_action') }}
-                </x-ui.button>
-            </div>
-        </form>
-    @endcan
 
     <x-ui.table :rows="$reconciliations"
                 :columns="$columns"

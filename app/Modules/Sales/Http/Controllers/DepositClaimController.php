@@ -50,9 +50,9 @@ class DepositClaimController extends Controller implements HasMiddleware
                 ->paginate(50)->withQueryString(),
             'status' => $status,
             'pendingCount' => DepositClaim::query()->pending()->count(),
+            // `money()` নিজেই দল ছাঁকে, তাই আলাদা `postable()` লাগে না
             'moneyAccounts' => Account::query()
-                ->where(fn ($q) => $q->where('is_cash', true)->orWhere('is_bank', true))
-                ->postable()->active()->orderBy('code')->get(),
+                ->money()->active()->orderBy('code')->get(),
         ]);
     }
 

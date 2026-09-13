@@ -34,9 +34,65 @@ return [
     'caps_lock_on' => 'Caps Lock is on',
     'remember_device' => 'Remember this device',
     'forgot_password' => 'Forgot password?',
-    /* Honest, not decorative: MAIL_MAILER=log here and on live, so no
-       reset mail can leave the building yet. See lang/bn/auth.php. */
-    'coming_soon' => 'Coming soon',
+    'back_to_sign_in' => 'Back to sign in',
+    'email' => 'Email address',
+    'new_password' => 'New password',
+    'confirm_password' => 'Type the new password again',
+    'password_rule' => 'At least 8 characters, including at least one letter and one number.',
+
+    /*
+     * Conditional wording — "if". Saying "we have sent it" would itself be
+     * a fact: that the address exists. Anyone could then count the staff
+     * list one address at a time. This sentence gives the same comfort and
+     * leaks nothing.
+     */
+    'forgot_title' => 'Get your password back',
+    'forgot_lead' => 'Give us your email address and we will send a link for setting a new password.',
+    'forgot_submit' => 'Send the link',
+    'forgot_sending' => 'Sending…',
+    'forgot_sent' => 'If that address is in our books, a link for setting a new password has been sent. Check your inbox, and the spam folder too.',
+
+    /*
+     * The only honest path for someone with no real mailbox. A depot
+     * worker's email is often on paper only — an address nobody opens.
+     * The letter goes nowhere for them, and without this line they would
+     * sit watching an inbox all day.
+     */
+    'forgot_no_mail' => 'If no email arrives, ask your manager — they can set your password directly.',
+
+    'reset_title' => 'Set a new password',
+    'reset_lead' => 'This link works once, and only for a short while.',
+    'reset_submit' => 'Set the password',
+    'reset_saving' => 'Saving…',
+
+    /*
+     * One message for two different failures. The broker says "no user
+     * with that email" and "invalid token" separately, but this screen can
+     * be reached without a valid token — so separate messages would reopen
+     * the very enumeration hole the first step closes.
+     */
+    'reset_link_dead' => 'That link no longer works — it has either expired or already been used. Ask for a new one.',
+    'reset_done' => 'Your new password is set. Sign in with it now.',
+
+    /* The letter itself — [[PasswordResetLink]] and `mail.password_reset`. */
+    'reset_mail_subject' => 'Set your password — ABOS',
+    'reset_mail_heading' => 'Password reset request',
+    'reset_mail_greeting' => ':name, this was requested for your account.',
+    'reset_mail_body' => 'Press the button below to set a new password. The link stops working after :minutes minutes, and after one use.',
+    'reset_mail_button' => 'Set a new password',
+    'reset_mail_fallback' => 'If the button does not work, copy this address into your browser:',
+    'reset_mail_ignore' => 'If you did not ask for this, there is nothing to do — leave the link alone and your old password keeps working.',
+
+    /*
+     * ⓘ `coming_soon` used to live here — removed 13 Sep 2026.
+     *
+     * Its own note said the key would go once SMTP arrived and a real link
+     * could take its place. That day came: the link now works
+     * (`password.request`), so the badge has no job left.
+     *
+     * ⚠️ Removed from BOTH languages — leaving it in one would turn
+     * [[BothLanguagesSayTheSameThingTest]] red, and rightly so.
+     */
 
     'highlight' => [
         'multi_company' => 'Multi company',

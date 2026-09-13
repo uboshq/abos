@@ -19,6 +19,7 @@ use App\Modules\MasterData\Models\EmploymentType;
 use App\Modules\MasterData\Models\PartyType;
 use App\Modules\MasterData\Models\PaymentMethod;
 use App\Modules\MasterData\Models\PaymentTerm;
+use App\Modules\MasterData\Models\Person;
 use App\Modules\MasterData\Models\PriceList;
 use App\Modules\MasterData\Models\ProductCategory;
 use App\Modules\MasterData\Models\ReasonCode;
@@ -269,6 +270,35 @@ class MasterListController extends Controller implements HasMiddleware
          * সুইচের পেছনে নয়: বিভাগ ও পদবি ছাড়া কর্মীর তালিকাই লেখা যায় না,
          * আর যে প্রতিষ্ঠানে কর্মী নেই সেখানে HR মডিউলটাই বন্ধ থাকে।
          */
+        /*
+         * যাঁদের সাথে টাকার সম্পর্ক — মালিক, অংশীদার, আত্মীয়, আমানতের ধারক।
+         *
+         * ── কেন এটা তালিকা, আর মুক্ত লেখা নয় (১৩ সেপ্টেম্বর ২০২৬) ─────
+         * অর্থ মডিউলের পাঁচ জায়গায় "কে" ঘরটা মুক্ত লেখা ছিল। মালিক নিজে
+         * ধরেছেন: *"একই মালিক আবার বিনিয়োগ করলে আবার নাম লিখতে হবে?"*
+         *
+         * ⛔ দামটা টাইপ করার কষ্ট নয় — `Al Amin`, `Al-Amin`, `আল আমিন`
+         * ব্যবস্থার কাছে **তিনজন**, আর তখন অংশ % ভুল হয় (মুনাফা ভাগের
+         * হিসাব) আর উত্তোলনের সীমা ভুল মানুষের উপর বসে। কোনোটাই ভাঙে না।
+         *
+         * ⓘ সীমানাটা [[App\Modules\MasterData\Models\Person]]-এর মন্তব্যে:
+         * কর্মী নন, গ্রাহক নন, সরবরাহকারী নন।
+         */
+        'people' => [
+            'model' => Person::class,
+            'route' => 'person',
+            'title' => 'master_data::menu.people',
+            'fields' => [
+                /*
+                 * ⓘ মোবাইল ঐচ্ছিক, কিন্তু দিলে সেটাই নকল ধরার শক্ত সূত্র —
+                 * নামে পাহারা নরম (দুইজন "মোঃ রহিম" থাকতে পারেন), নম্বরে কঠিন।
+                 */
+                'mobile' => ['type' => 'text', 'label' => 'master_data::field.mobile'],
+                'note' => ['type' => 'text', 'label' => 'master_data::field.note'],
+            ],
+            'columns' => ['mobile'],
+        ],
+
         'departments' => [
             'model' => Department::class,
             'route' => 'department',

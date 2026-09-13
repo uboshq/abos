@@ -131,6 +131,9 @@ class RentalContractController extends Controller implements HasMiddleware
             'account_id' => ['nullable', 'integer'],
             'expense_account_id' => ['nullable', 'integer'],
             'money_account_id' => ['nullable', 'integer'],
+            // ব্যাংক/MFS হলে যে নম্বরটা লাগে — ⛔ `required` নয়, নিয়মটা
+            // এক জায়গায়: [[VoucherService::assertBankReferenceIsFree]]
+            'instrument_no' => ['nullable', 'string', 'max:64'],
             'note' => ['nullable', 'string', 'max:500'],
         ]));
 
@@ -148,6 +151,9 @@ class RentalContractController extends Controller implements HasMiddleware
             'rent' => ['nullable', 'numeric', 'min:0'],
             'from_deposit' => ['nullable', 'numeric', 'min:0'],
             'money_account_id' => ['nullable', 'integer'],
+            // ব্যাংক/MFS হলে যে নম্বরটা লাগে — ⛔ `required` নয়, নিয়মটা
+            // এক জায়গায়: [[VoucherService::assertBankReferenceIsFree]]
+            'instrument_no' => ['nullable', 'string', 'max:64'],
         ]));
 
         return back()->with('saved', __('finance::message.rental_month_done'));
@@ -177,6 +183,9 @@ class RentalContractController extends Controller implements HasMiddleware
         $this->contracts->addToDeposit($contract, $request->validate([
             'amount' => ['required', 'numeric', 'min:0.0001'],
             'money_account_id' => ['required', 'integer'],
+            // ব্যাংক/MFS হলে যে নম্বরটা লাগে — ⛔ `required` নয়, নিয়মটা
+            // এক জায়গায়: [[VoucherService::assertBankReferenceIsFree]]
+            'instrument_no' => ['nullable', 'string', 'max:64'],
             'paid_on' => ['nullable', 'date'],
         ]));
 
@@ -195,6 +204,9 @@ class RentalContractController extends Controller implements HasMiddleware
         $this->contracts->close($contract, $request->validate([
             'closed_on' => ['nullable', 'date'],
             'money_account_id' => ['nullable', 'integer'],
+            // ব্যাংক/MFS হলে যে নম্বরটা লাগে — ⛔ `required` নয়, নিয়মটা
+            // এক জায়গায়: [[VoucherService::assertBankReferenceIsFree]]
+            'instrument_no' => ['nullable', 'string', 'max:64'],
         ]));
 
         return back()->with('saved', __('finance::message.rental_closed_done'));

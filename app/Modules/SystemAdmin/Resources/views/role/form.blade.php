@@ -12,11 +12,11 @@
 @endphp
 
 <x-layouts.app :menu="$menu">
-    <x-slot:title>{{ $isNew ? __('system_admin::action.new_role') : $role->name }}</x-slot:title>
+    <x-slot:title>{{ $isNew ? __('system_admin::action.new_role') : \App\Core\Support\RoleLabel::for($role->name) }}</x-slot:title>
 
     <x-slot:header>
         <x-ui.page-header
-            :title="$isNew ? __('system_admin::action.new_role') : $role->name"
+            :title="$isNew ? __('system_admin::action.new_role') : \App\Core\Support\RoleLabel::for($role->name)"
             :subtitle="__('system_admin::message.roles_note')" />
     </x-slot:header>
 

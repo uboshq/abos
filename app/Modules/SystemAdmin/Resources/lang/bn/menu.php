@@ -6,6 +6,7 @@ return [
     'companies' => 'কোম্পানি',
     'branches' => 'শাখা',
     'users' => 'ব্যবহারকারী',
+    'ownership' => 'মালিকানা হস্তান্তর',
     'roles' => 'রোল ও অনুমতি',
     'financial_years' => 'অর্থবছর',
     'number_series' => 'ডকুমেন্ট নম্বর সিরিজ',

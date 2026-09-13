@@ -43,30 +43,45 @@ final class HandLoanService
     public function __construct(private readonly VoucherService $vouchers) {}
 
     /**
-     * একজন মানুষ — নাম আর একটা নম্বর, ব্যস।
+     * একজন মানুষ — এবার তালিকা থেকে বাছা।
      *
-     * ── কেন পক্ষের তালিকা থেকে নয় ───────────────────────────────────
+     * ── কেন গ্রাহক বা সরবরাহকারীর তালিকা থেকে নয় ─────────────────────
      * এদের বেশিরভাগ গ্রাহকও নন, সরবরাহকারীও নন, আর কোনোদিন হবেনও না।
      * চাচাতো ভাইকে পাঁচ হাজার ধার দিতে আগে একটা গ্রাহক রেকর্ড বানাতে
      * হলে ফিচারটা অব্যবহৃত থেকে যেত।
+     *
+     * ── ⛔ কিন্তু মুক্ত লেখাও উত্তর ছিল না (১৩ সেপ্টেম্বর ২০২৬) ────────
+     * এই মন্তব্যে আগে লেখা ছিল *"নাম আর একটা নম্বর, ব্যস"* — আর ওই
+     * সরলতার দাম ছিল: একই চাচাতো ভাই তিন বানানে তিনটা খাতা পেতেন, আর
+     * "করিম কত ফেরত দিয়েছে" প্রশ্নের উত্তর তিন টুকরো হত।
+     *
+     * তাই এখন [[App\Modules\MasterData\Models\Person]] — মালিক,
+     * অংশীদার, আত্মীয়দের একটাই তালিকা, গ্রাহকের তালিকা নয়। নতুন নাম
+     * যোগ করা এই পর্দা থেকেই হয়, তাই সহজ থাকাটা হারায়নি।
      *
      * @param  array<string, mixed>  $data
      */
     public function open(array $data): HandLoanAccount
     {
-        $name = trim((string) ($data['person_name'] ?? ''));
+        $personId = (int) ($data['person_id'] ?? 0);
 
-        if ($name === '') {
+        if ($personId <= 0) {
             throw ValidationException::withMessages([
-                'person_name' => __('finance::validation.hand_loan_needs_a_name'),
+                'person_id' => __('finance::validation.hand_loan_needs_a_name'),
             ]);
         }
 
+        /*
+         * ⓘ মোবাইলের ঘরটা এখানে আর নেই — নম্বরটা ব্যক্তির সারিতে।
+         *
+         * দুই জায়গায় রাখলে একদিন আলাদা হত: কেউ এই পর্দায় নম্বর বদলাতেন,
+         * আর তালিকায় পুরনোটা থেকে যেত — তখন নকল-পাহারা পুরনো নম্বর ধরে
+         * কাজ করত আর একই মানুষ দুইবার বসে যেতেন।
+         */
         return HandLoanAccount::query()->create([
             'company_id' => CompanyContext::id(),
             'branch_id' => CompanyContext::branchId(),
-            'person_name' => $name,
-            'mobile' => ($data['mobile'] ?? '') ?: null,
+            'person_id' => $personId,
             'partner_id' => $data['partner_id'] ?? null,
             'partner_type' => ($data['partner_id'] ?? null) !== null
                 ? ($data['partner_type'] ?? null) : null,
@@ -125,8 +140,17 @@ final class HandLoanService
                     'type' => $out ? Voucher::PAYMENT : Voucher::RECEIPT,
                     'trx_date' => $on,
                     'narration' => ($data['note'] ?? '') ?: __('finance::message.hand_loan_narration', [
-                        'who' => $account->person_name,
+                        'who' => $account->person?->name() ?? '',
                     ]),
+
+                    /*
+                     * ব্যাংক বা বিকাশ হলে যে নম্বরটা লাগে — চেক নম্বর,
+                     * TrxID। ⛔ ঐচ্ছিক, কারণ নগদে নম্বর হয় না, আর কখন
+                     * লাগবে সেটা [[VoucherService::assertBankReferenceIsFree]]
+                     * একাই জানে। এই ঘরটা না পাঠানোয় আগে ব্যাংক থেকে
+                     * হাতে-ধার দেওয়াই যেত না (১৩ সেপ্টেম্বর ২০২৬)।
+                     */
+                    'instrument_no' => ($data['instrument_no'] ?? '') ?: null,
                 ],
                 [
                     [
@@ -253,8 +277,30 @@ final class HandLoanService
          * ⭐ তাই `open()` — চলতি খাতাগুলো। ⓘ চুকে যাওয়া ঋণের কোনো
          * "বকেয়া অবস্থান" থাকে না, তাই এই তালিকায় তার জায়গাও নেই।
          */
-        $accounts = HandLoanAccount::query()->open()->withCount('movements')
-            ->orderBy('person_name')->get();
+        /*
+         * সম্পর্কটা সাথেই আনা — নাহলে প্রতি সারিতে একটা করে বাড়তি কোয়েরি
+         * হত, কারণ নিচে প্রতিটা সারির নাম দেখানো হয়।
+         *
+         * ── ⛔ সাজানোটা PHP-তে, SQL-এর join দিয়ে নয় ─────────────────
+         * প্রথমে `join('mdm_people')->orderBy('mdm_people.name_en')` লেখা
+         * হয়েছিল, আর দুইটা কারণেই সেটা ভুল ছিল:
+         *
+         * ১। **inner join** — যে সারির `person_id` কোনো কারণে খালি,
+         *    সেটা তালিকা থেকে **নীরবে উধাও** হয়ে যেত। একটা খোলা হাতে-ধার
+         *    পর্দায় না দেখা মানে ওই টাকাটা ভুলে যাওয়া, আর ফিচারটা ঠিক
+         *    ওটা ঠেকাতেই বানানো।
+         * ২। `select('fin_hand_loan_accounts.*')` উপরের `withCount()`-এর
+         *    যোগ করা গোনার কলামটা **মুছে দিত**, তাই `movements_count`
+         *    শূন্য হয়ে যেত — আর পর্দায় "কয়টা চলাচল" সবার জন্য ০ দেখাত।
+         *
+         * তালিকাটা দশে গোনা (খোলা হিসাব), তাই মেমরিতে সাজানোই সৎ ও সহজ।
+         */
+        $accounts = HandLoanAccount::query()->open()
+            ->withCount('movements')
+            ->with('person')
+            ->get()
+            ->sortBy(fn (HandLoanAccount $account) => $account->person?->name() ?? '')
+            ->values();
 
         foreach ($accounts as $account) {
             $balance = $this->balanceOf($account);
@@ -324,7 +370,7 @@ final class HandLoanService
         if ($account->isSettled()) {
             throw ValidationException::withMessages([
                 'status' => __('finance::validation.hand_loan_already_settled', [
-                    'who' => $account->person_name,
+                    'who' => $account->person?->name() ?? '',
                 ]),
             ]);
         }

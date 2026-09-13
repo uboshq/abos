@@ -72,7 +72,7 @@ class RoleController extends Controller implements HasMiddleware
                 ->withCount(['permissions', 'users'])
                 ->orderBy('name')
                 ->get(),
-            'ownerRole' => PermissionSyncer::OWNER_ROLE,
+            'ownerRole' => PermissionSyncer::SUPER_ADMIN_ROLE,
         ]);
     }
 
@@ -149,7 +149,7 @@ class RoleController extends Controller implements HasMiddleware
 
     private function assertNotTheOwnerRole(Role $role): void
     {
-        if ($role->name === PermissionSyncer::OWNER_ROLE) {
+        if ($role->name === PermissionSyncer::SUPER_ADMIN_ROLE) {
             throw ValidationException::withMessages([
                 'name' => __('system_admin::validation.owner_role_is_fixed'),
             ]);
