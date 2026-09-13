@@ -40,9 +40,21 @@ final class AccountService
     /**
      * @param  array<string, mixed>  $data
      */
-    public function create(array $data): Account
+    /**
+     * @param  array<string, mixed>  $data
+     * @param  bool  $withAKeeper  ⛔ কেবল [[CashTillService]] এটা `true` পাঠায়।
+     *
+     * ⓘ পতাকাটা "নিয়মটা এড়িয়ে যাও" বলে না — বলে **"নিয়ন্ত্রক ইতিমধ্যে
+     * বসানো হচ্ছে"**। টিল নিজেই তার খাতটা বানায়, আর টিলের সারিতে
+     * `holder_id` থাকে; অর্থাৎ শর্তটা মিটে গেছে, এড়ানো হয়নি।
+     *
+     * ⚠️ নামটা `$skipGuard` নয় ইচ্ছাকৃতভাবে: একটা পতাকা যার নাম বলে
+     * "পাহারা বন্ধ করো", সেটা একদিন এমন জায়গায় বসে যেখানে পাহারাটা
+     * সত্যিই দরকার ছিল।
+     */
+    public function create(array $data, bool $withAKeeper = false): Account
     {
-        return DB::transaction(function () use ($data) {
+        return DB::transaction(function () use ($data, $withAKeeper) {
             $parent = $this->resolveParent($data['parent_id'] ?? null);
 
             $type = $this->resolveType($data, $parent);
@@ -73,6 +85,9 @@ final class AccountService
             }
 
             $this->assertCodeIsFree($code);
+            if (! $withAKeeper) {
+                $this->assertCashHasAKeeper($data, $code, $parent, (bool) ($data['is_group'] ?? false));
+            }
 
             $account = Account::create([
                 ...$data,
@@ -358,6 +373,47 @@ final class AccountService
             StandardChart::MOBILE_MONEY => Account::MFS,
             default => $parent?->money_kind,
         };
+    }
+
+    /**
+     * ⛔ নগদ খাতে কে ধরবেন, সেটা লেখা থাকতেই হবে।
+     *
+     * ── মালিকের প্রশ্ন ও সংশোধন, ১৩ সেপ্টেম্বর ২০২৬ ───────────────────
+     * প্রথম প্রশ্ন: *"এই অ্যাকাউন্টে নিয়ন্ত্রক কে? সেটাই নাই।"*
+     *
+     * ⛔ প্রথম সারাইটা ভুল ছিল: ছক থেকে নগদ খাত বানানোই বন্ধ করা
+     * হয়েছিল, আর সবাইকে টিলের পর্দায় পাঠানো হচ্ছিল। মালিক সাথে সাথে
+     * ধরিয়ে দিলেন:
+     *
+     *     "টিল তো POS-এর জন্য। অফিসে অ্যাকাউন্টসের ক্যাশ কীভাবে হবে?
+     *      কাউন্টার আর ক্যাশ অ্যাকাউন্ট এক না — যদিও দুইটাই ক্যাশের
+     *      নিচে।"
+     *
+     * ⭐ কথাটা ঠিক। একটা কাউন্টার (টিল) আর অফিসের সিন্দুক দুইটা আলাদা
+     * জিনিস, আর দ্বিতীয়টাকে কাউন্টার বানাতে বাধ্য করা মানে ব্যবসার
+     * গড়নটাই বদলে দেওয়া।
+     *
+     * ⭐ তাই নিয়মটা **"টিল হতে হবে"** নয়, নিয়মটা **"কার হাতে সেটা
+     * লেখা থাকতে হবে"**। টিল একটা উত্তর, অফিসের সিন্দুক আরেকটা — আর
+     * দুইটাই এখন একই প্রশ্নের উত্তর দেয়।
+     *
+     * ⓘ দল ছাড় পায়: একটা দল কেবল শিরোনাম, সেখানে টাকা বসে না।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function assertCashHasAKeeper(array $data, string $code, ?Account $parent, bool $isGroup): void
+    {
+        if ($isGroup || $this->moneyKindFor($code, $parent) !== Account::CASH) {
+            return;
+        }
+
+        if ((int) ($data['held_by'] ?? 0) > 0) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'held_by' => __('accounts::validation.cash_needs_a_keeper'),
+        ]);
     }
 
     private function cascadeMoneyKind(Account $account): void

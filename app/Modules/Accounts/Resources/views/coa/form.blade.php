@@ -35,7 +35,11 @@
         অ্যাট্রিবিউটের ভিতরের লেখা ব্রাউজারে যায়, আর ভিতরে একটা ডবল
         কোট পড়লে অ্যাট্রিবিউটটা ওখানেই শেষ হয়ে যায় — ⛔ পাতাটা তবু
         ২০০ দেয় আর দেখতে ঠিক লাগে, কেবল JavaScript-টা নীরবে মরে থাকে।
-        `{{--  --}}` ব্রাউজারে যায় না, তাই এখানে যা খুশি লেখা চলে।
+        ব্লেডের মন্তব্য ব্রাউজারে যায় না, তাই এখানে যা খুশি লেখা চলে।
+        ⚠️ কেবল একটা জিনিস ছাড়া: মন্তব্যের **ভিতরে** মন্তব্য বন্ধ করার
+        চিহ্নটা লেখা যায় না। ⓘ ১৩ সেপ্টেম্বর ২০২৬-এ ঠিক সেটাই এখানে
+        লেখা হয়েছিল — ব্যাখ্যা করতে গিয়ে — আর মন্তব্যটা ওখানেই শেষ হয়ে
+        বাকি লাইনগুলো **পাতার মাথায় ছাপা হচ্ছিল**, লাইভে।
 
         ── `kind` — এই খাতটা কোন ধরনের টাকা ধরে ─────────────────────────
         `''`, `cash`, `bank` বা `mfs`। ⛔ এটা ব্যবহারকারীর বাছা নয়,
@@ -204,6 +208,44 @@
                  এক বাক্যে: ছকে নগদ · ব্যাংক · MFS তিনটা আলাদা মাথা আগে
                  থেকেই ছিল, তাই টিক দুইটা একই প্রশ্নের দ্বিতীয় উত্তর দিত,
                  আর দুইটা আলাদা হলে টাকা আটকে যেত। --}}
+            {{-- ⛔ নগদ কার হাতে — আর এটা ঐচ্ছিক নয়।
+
+                 মালিকের প্রশ্ন, ১৩ সেপ্টেম্বর ২০২৬: *"এই অ্যাকাউন্টে
+                 নিয়ন্ত্রক কে? সেটাই নাই।"*
+
+                 ⚠️ ঘরটা কেবল নগদে আসে। ব্যাংক বা MFS-এ আসে না, আর সেটা
+                 ফাঁক নয় — ব্যাংকের টাকা কারও ড্রয়ারে থাকে না, ওটা
+                 ব্যাংকের কাছে।
+
+                 ⓘ টিলের পর্দাতেও একই ঘর আছে, আর তালিকাটাও হুবহু এক
+                 ([[CashTillController::holderOptions()]]) — দুইটা পর্দা
+                 একই প্রশ্ন করে, তাই উত্তরের তালিকাও এক। --}}
+            <template x-if="kind === 'cash' && ! isGroup">
+                <label class="mt-3 block">
+                    <span class="mb-1 block text-sm font-medium">
+                        {{ __('accounts::field.holder') }}
+                        <span class="text-(--color-danger)" aria-hidden="true">*</span>
+                        <span class="sr-only">({{ __('core.form.required') }})</span>
+                    </span>
+
+                    <select name="held_by"
+                            class="h-(--spacing-field) w-full max-w-sm rounded-(--radius-field) border
+                                   border-(--color-border) bg-(--color-surface-card) px-3">
+                        <option value="">—</option>
+                        @foreach ($keepers as $keeper)
+                            <option value="{{ $keeper->id }}"
+                                    @selected(old('held_by', $account->held_by) == $keeper->id)>
+                                {{ $keeper->name }}
+                            </option>
+                        @endforeach
+                    </select>
+
+                    @error('held_by')
+                        <span class="mt-1 block text-2xs text-(--color-danger)">{{ $message }}</span>
+                    @enderror
+                </label>
+            </template>
+
             <template x-if="kind">
                 <p class="mt-3 rounded-(--radius-field) bg-(--color-surface-app) px-3 py-2 text-sm">
                     <span x-show="kind === 'cash'">{{ __('accounts::message.holds_cash') }}</span>

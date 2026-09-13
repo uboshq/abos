@@ -7,9 +7,11 @@ namespace App\Modules\Accounts\Http\Controllers;
 use App\Core\Concerns\AuthorizesResource;
 use App\Core\Engines\Coding\CodeSuggester;
 use App\Core\Services\MenuBuilder;
+use App\Core\Support\CompanyContext;
 use App\Core\Support\RunningBalance;
 use App\Http\Controllers\Controller;
 use App\Models\LedgerEntry;
+use App\Models\User;
 use App\Modules\Accounts\Http\Requests\AccountRequest;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\AccountService;
@@ -108,6 +110,7 @@ class ChartOfAccountsController extends Controller implements HasMiddleware
             // ?parent=12 দিয়ে এলে ওই মাথার নিচেই তৈরি হবে — গাছের
             // একটা শাখা থেকে "+" চাপলে আবার বাবা বাছতে হয় না
             'preselectedParent' => $request->integer('parent') ?: null,
+            'keepers' => $this->keeperOptions(),
         ]);
     }
 
@@ -243,6 +246,7 @@ class ChartOfAccountsController extends Controller implements HasMiddleware
             // বাদ, নাহলে ব্যবহারকারী বাছার পর ভুলের বার্তা পেত
             'parents' => $this->groupOptions(exclude: $account->selfAndDescendants()->pluck('id')->all()),
             'preselectedParent' => $account->parent_id,
+            'keepers' => $this->keeperOptions(),
         ]);
     }
 
@@ -357,6 +361,29 @@ class ChartOfAccountsController extends Controller implements HasMiddleware
         }
 
         return $out;
+    }
+
+    /**
+     * নগদ কে ধরতে পারেন।
+     *
+     * ⚠️ কোম্পানি-স্কোপ বাধ্যতামূলক — নাহলে এক কোম্পানির হিসাবরক্ষক
+     * অন্য কোম্পানির মানুষের নাম দেখতেন, আর
+     * [[EveryUserListAsksWhichCompanyTest]] সেটা ধরে।
+     *
+     * ⓘ আকৃতিটা [[CashTillController::holderOptions()]]-এর হুবহু এক,
+     * আর সেটা ইচ্ছাকৃত: দুইটা পর্দা একই প্রশ্ন করে ("নগদ কার হাতে"),
+     * তাই তালিকাটাও একই হতে হয়। ⛔ আলাদা হলে টিলে বাছা যেত এমন একজনকে
+     * খাতে বাছা যেত না, আর কেউ কারণটা বুঝত না।
+     *
+     * @return Collection<int, User>
+     */
+    private function keeperOptions(): Collection
+    {
+        return User::query()
+            ->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name']);
     }
 
     /**

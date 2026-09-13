@@ -24,6 +24,8 @@ return [
     'system_account_locked' => '":name" is a system account. Sales, purchases and other modules '
         .'look it up by code, so it cannot be changed or removed.',
     'group_cannot_take_entries' => 'A group account takes no entries. Pick one of the accounts under it.',
+    'cash_needs_a_keeper' => 'Pick who holds this cash. Cash is always in a pair of hands, and without a name there is no answer at the end of the day to who has how much.',
+
     'cash_or_bank_not_both' => 'An account cannot be both cash and bank.',
     'group_is_not_money' => 'A group holds no money, so it cannot be marked as cash or bank.',
     'till_code_taken' => 'Another cash counter already uses code :code.',

@@ -460,8 +460,19 @@ return [
         'show_vendor_credit' => 'Show "Powered by UNIVER BANGLADESH" and the hotline on printouts',
     ],
 
+    /*
+     * How a role's name is written on screen — and this is the only map.
+     *
+     * The key was not renamed when `owner` became `super_admin`, and the
+     * result was visible at once: the topbar printed the key itself,
+     * `core.role.super_admin`, because `__()` returns the key when there
+     * is no translation. Fixing it, a *second* map was briefly created
+     * in the SystemAdmin module before it was noticed this one already
+     * existed; two sources mean one of them goes stale. Every reader now
+     * comes here, through App\Core\Support\RoleLabel.
+     */
     'role' => [
-        'owner' => 'Owner',
+        'super_admin' => 'Super Admin',
         'accountant' => 'Accountant',
         'salesman' => 'Salesman',
     ],

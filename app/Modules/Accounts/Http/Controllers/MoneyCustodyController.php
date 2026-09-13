@@ -65,6 +65,28 @@ class MoneyCustodyController extends Controller implements HasMiddleware
             ->orderBy('code')
             ->get();
 
+        /*
+         * ⭐ নগদ খাত যেগুলোর কোনো কাউন্টার নেই — অফিসের সিন্দুক।
+         *
+         * ── মালিকের সংশোধন, ১৩ সেপ্টেম্বর ২০২৬ ────────────────────────
+         * *"টিল তো POS-এর জন্য। অফিসে অ্যাকাউন্টসের ক্যাশ কীভাবে হবে?
+         *   কাউন্টার আর ক্যাশ অ্যাকাউন্ট এক না।"*
+         *
+         * ⛔ এই পর্দাটা এতদিন **কেবল টিল** গুনত। তাই অফিসের সিন্দুকের
+         * টাকা নগদ বইয়ে দেখাত, অথচ "কার কাছে কত" পর্দায় কোথাও থাকত
+         * না — আর দিনশেষে মেলানোর সময় ওটাই সবচেয়ে দরকারি সারি।
+         *
+         * ⓘ যেগুলোর টিল আছে সেগুলো বাদ, নাহলে একই টাকা দুইবার দেখাত।
+         */
+        $tillAccounts = $tills->pluck('account_id')->filter()->all();
+
+        $officeCash = Account::query()
+            ->ofMoneyKind(Account::CASH)
+            ->when($tillAccounts !== [], fn ($q) => $q->whereNotIn('id', $tillAccounts))
+            ->with('keeper')
+            ->orderBy('code')
+            ->get();
+
         // ⛔ কেবল ব্যাংক — MFS নয়; `ofMoneyKind()` নিজেই দল ছাঁকে
         $banks = Account::query()
             ->ofMoneyKind(Account::BANK)
@@ -86,7 +108,7 @@ class MoneyCustodyController extends Controller implements HasMiddleware
 
         return view('accounts::custody.index', [
             'menu' => $this->menu->forUser($request->user()),
-            'rows' => $this->rows($tills, $banks),
+            'rows' => $this->rows($tills, $officeCash, $banks),
             'onTheRoad' => $onTheRoad,
             'transit' => Money::format(
                 StandardChart::find(StandardChart::CASH_IN_TRANSIT)?->balanceOn() ?? '0'
@@ -116,7 +138,7 @@ class MoneyCustodyController extends Controller implements HasMiddleware
      * @param  Collection<int, Account>  $banks
      * @return list<array<string, mixed>>
      */
-    private function rows($tills, $banks): array
+    private function rows($tills, $officeCash, $banks): array
     {
         $sentFrom = MoneyTransfer::query()
             ->pending()
@@ -137,6 +159,27 @@ class MoneyCustodyController extends Controller implements HasMiddleware
                 'url' => route('accounts.till.index'),
                 'active' => $till->is_active,
                 'primary' => $till->is_primary,
+            ];
+        }
+
+        /*
+         * অফিসের সিন্দুক — টিল নয়, কিন্তু হেফাজতের প্রশ্ন একই।
+         *
+         * ⚠️ নিয়ন্ত্রকের ঘর ফাঁকা হতে পারে কেবল পুরনো সারিতে (এই
+         * নিয়মটা বসার আগে বানানো)। নতুন কোনো নগদ খাত নাম ছাড়া জন্মাতে
+         * পারে না, আর ফাঁকা ঘরটা তাই একটা সতর্কতা — সত্য নয়।
+         */
+        foreach ($officeCash as $cash) {
+            $rows[] = [
+                'code' => $cash->code,
+                'name' => $cash->name(),
+                'kind' => __('accounts::custody.kind_office_cash'),
+                'holder' => $cash->keeper?->name,
+                'balance' => Money::format($cash->balanceOn()),
+                'sent' => Money::format('0'),
+                'url' => route('accounts.coa.show', $cash),
+                'active' => $cash->is_active,
+                'primary' => false,
             ];
         }
 

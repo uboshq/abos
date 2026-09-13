@@ -11,6 +11,8 @@ return [
     'recorded_then_posted' => 'Recorded when agreed, posted when the money actually arrives — usually different days',
     'no_capital_yet' => 'Nothing recorded yet',
     'capital_recorded' => ':no recorded',
+    'capital_updated' => ':no corrected',
+    'capital_discarded' => ':no discarded',
     'capital_posted' => ':no posted',
     'capital_narration' => ':who — capital (:no)',
     'plan_note' => 'The thirty three sections — what is built and what is not',

@@ -553,7 +553,14 @@ final class StandardChart implements ProvisionsCompany
                      * রিপোর্ট আগের মতোই থাকে।
                      */
                     'is_active' => (bool) ($flags['is_active'] ?? true),
-                ]);
+                ],
+                    /*
+                     * ⓘ প্রমিত ছকে ১১০১ একটা **দল**, পাতা নয় — তাই
+                     * নগদের পাহারাটা এমনিতেই ছাড় দিত। পতাকাটা তবু
+                     * স্পষ্ট করে বসানো, কারণ ছকের সারিগুলো একদিন বদলাতে
+                     * পারে, আর তখন ইনস্টল নীরবে থেমে যেত।
+                     */
+                    withAKeeper: true);
 
                 if (in_array($code, self::SYSTEM_CODES, true)) {
                     $this->accounts->markAsSystem($account);
