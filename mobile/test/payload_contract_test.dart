@@ -476,4 +476,36 @@ void main() {
       expect(source, isNot(contains("'id' => \$user->id")));
     });
   });
+
+
+  // A route name is the flimsiest string on this boundary: it is invented on
+  // the server, travels as data, and is matched here by equality. Rename one
+  // in module.php and the tile simply stops appearing — no error, no log, and
+  // on a salesman's phone no way to tell a missing screen from a missing
+  // permission. RouteRegistry's whole table is four such strings.
+  group('route names — the menu\'s half of the wire', () {
+    const routes = <String, String>{
+      'customer.index': '../app/Modules/Customer/module.php',
+      'sales.order.index': '../app/Modules/Sales/module.php',
+      'inventory.product.index': '../app/Modules/Inventory/module.php',
+      'inventory.stock.index': '../app/Modules/Inventory/module.php',
+    };
+
+    test('every route this app opens is still declared by its module', () {
+      // Four, matching RouteRegistry's table exactly. Stated so that a table
+      // emptied by a bad edit cannot pass this group by looping over nothing.
+      expect(routes, hasLength(4));
+
+      routes.forEach((route, modulePath) {
+        final file = File(modulePath);
+        expect(file.existsSync(), isTrue, reason: '$modulePath is gone');
+
+        expect(file.readAsStringSync(), contains("'route' => '$route'"),
+            reason: "$modulePath no longer declares '$route'. "
+                'RouteRegistry maps that name to a screen this app has built; '
+                'with the name gone the row never matches, the tile never '
+                'draws, and nobody is told why');
+      });
+    });
+  });
 }

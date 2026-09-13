@@ -24,13 +24,26 @@
 ///    below; see the class doc comment for why that is correct rather than
 ///    a gap.
 ///
-/// <p>`inventory.product.index` and `inventory.stock.index` remain this
-/// app's own best guess — salesman lacks both permissions, so neither name
-/// has appeared in a real payload yet. `inventory.stock.index` is kept
-/// (never deleted, per the owner's own instruction) for the warehouse/
-/// delivery roles that will actually receive it — a salesman's own `/me`
-/// simply never sends that row, so it never appears on that phone regardless
-/// of what this table contains.
+/// <p>`inventory.product.index` and `inventory.stock.index` were this app's
+/// own guess for a while — a salesman holds neither permission, so neither
+/// name had ever appeared in a real payload. <b>Both confirmed correct on
+/// 13 September 2026</b>, not against a live response but against the source
+/// the response is generated from, which is stronger: the server's own module
+/// definitions. All four names below are pinned by
+/// `test/payload_contract_test.dart`, so a rename on that side goes red here
+/// rather than quietly emptying somebody's home screen.
+///
+/// ```
+/// app/Modules/Customer/module.php:97    customer.index          customer.view
+/// app/Modules/Sales/module.php:101      sales.order.index       sales.order.view
+/// app/Modules/Inventory/module.php:79   inventory.product.index inventory.product.view
+/// app/Modules/Inventory/module.php:137  inventory.stock.index   inventory.stock.view
+/// ```
+///
+/// <p>`inventory.stock.index` is kept (never deleted, per the owner's own
+/// instruction) for the warehouse/delivery roles that will actually receive
+/// it — a salesman's own `/me` simply never sends that row, so it never
+/// appears on that phone regardless of what this table contains.
 class RouteRegistry {
   const RouteRegistry._();
 
