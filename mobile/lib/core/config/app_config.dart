@@ -37,7 +37,16 @@ class AppConfig {
   /// `GET /up` → 200 in 0.31s, `/` → 302, and `POST /api/v1/auth/login` with
   /// a bad password → 422 carrying ABOS's own Bengali message, which is what
   /// actually proves it is this application answering and not a parked page.
-  static const String _live = 'https://os.adi.com.bd/api/v1';
+  /// <p><b>`erp.` and not `os.`</b>, though both answer today: the server's
+  /// own `APP_URL` is `erp.adi.com.bd`, so that is where its mail links and
+  /// CLI-generated URLs point, and an app on a second name would be the one
+  /// thing disagreeing with everything else.
+  ///
+  /// <p>⚠️ This is a one-way door. There is no screen inside the app for
+  /// changing the address, deliberately — a handset given a wrong one could
+  /// not be corrected from outside — so the domain must stay put once builds
+  /// are in people's hands.
+  static const String _live = 'https://erp.adi.com.bd/api/v1';
 
   static String get apiBaseUrl {
     if (_baseUrlOverride.isNotEmpty) {
@@ -69,6 +78,17 @@ class AppConfig {
   /// by `test/app_version_test.dart`, which reads the file and fails when
   /// they drift. A version constant that silently lies is worse than none.
   static const String appVersion = '0.1.0';
+
+  /// The counter Android actually compares, and the one `GET /app/version`
+  /// answers with — see docs/Contract §৬.
+  ///
+  /// <p>⚠️ Never compare version *names*. `"0.2.0" > "0.10.0"` is true as a
+  /// string and false as a version, and a phone that believed it would tell
+  /// a rep they were up to date for as long as the mistake lasted.
+  ///
+  /// <p>Must match the `+N` in `pubspec.yaml`'s `version:` — pinned by
+  /// `test/app_version_test.dart` for the same reason as [appVersion].
+  static const int appVersionCode = 1;
 
   static const Duration connectTimeout = Duration(seconds: 15);
   static const Duration receiveTimeout = Duration(seconds: 30);

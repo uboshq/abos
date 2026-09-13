@@ -41,5 +41,15 @@ void main() {
         reason: 'AppConfig.appVersion and pubspec.yaml have drifted. Whichever '
             'was bumped, the other must follow — the server is told this '
             'number on every request and will believe it');
+
+    // The +N, which is the number that actually decides whether this build is
+    // current — docs/Contract §৬. A stale one here and the phone compares the
+    // wrong figure against the server's, then tells a rep they are up to date
+    // when they are not.
+    final code = line.split('+').last.trim();
+    expect(int.tryParse(code), isNotNull,
+        reason: 'pubspec version has no +N build number to compare against');
+    expect(AppConfig.appVersionCode, int.parse(code),
+        reason: 'AppConfig.appVersionCode and pubspec.yaml have drifted');
   });
 }
