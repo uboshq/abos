@@ -51,6 +51,25 @@ class AppConfig {
   static String _stripTrailingSlash(String value) =>
       value.endsWith('/') ? value.substring(0, value.length - 1) : value;
 
+  /// What this build calls itself, sent on every request.
+  ///
+  /// <p>The server asks for it in two places and has been told nothing in
+  /// either: `POST /auth/login` accepts an `appVersion` field, and
+  /// `SyncController` reads an `X-App-Version` header on every pull and push
+  /// to register the device. Both were arriving null, so the device registry
+  /// recorded every handset as running an unknown build.
+  ///
+  /// <p>That only matters on the day it matters, and then it matters a lot: a
+  /// rep reports that a screen is wrong, and the first question — *which
+  /// build are they running* — has no answer, so the office cannot tell a bug
+  /// from a phone that never updated.
+  ///
+  /// ⚠️ Must match `pubspec.yaml`'s `version:`. Nothing in Dart can read
+  /// pubspec at runtime without another package, so the two are kept in step
+  /// by `test/app_version_test.dart`, which reads the file and fails when
+  /// they drift. A version constant that silently lies is worse than none.
+  static const String appVersion = '0.1.0';
+
   static const Duration connectTimeout = Duration(seconds: 15);
   static const Duration receiveTimeout = Duration(seconds: 30);
 
