@@ -29,6 +29,22 @@ return [
     'opening_date' => 'Opening date',
     'account_number' => 'Account number',
     'bank_name' => 'Bank name',
+    'account_title' => 'Account name',
+    'routing_no' => 'Routing number',
+    'mfs_provider' => 'Service',
+    /*
+     * ⚠️ চাবিটা `mfs_number` নয়, আর সেটা ইচ্ছাকৃত।
+     *
+     * HR-এ `mfs_number` একটা **এনক্রিপ্ট করা** ঘরের নাম — কর্মীর বিকাশ
+     * নম্বর, যেটা ১২ অক্টোবর ২০২৬-এ খোলা পড়ে থাকা অবস্থা থেকে সরানো
+     * হয়েছে। [[NoSensitiveFieldIsPrintedInTheOpenTest]] সংবেদনশীল ঘর
+     * খোঁজে **নাম ধরে**, তাই এই নিরীহ চাবিটা ব্যবহার করা মাত্র সে
+     * অভিযোগ করত — একই নাম, দুইটা আলাদা জিনিস।
+     *
+     * ⓘ ছাড় লেখা যেত, কিন্তু তাতে দুইটা আলাদা জিনিস এক নামে থেকেই যেত,
+     * আর পরেরবার কেউ সত্যিকারের ফাঁকটা ছাড়ের তালিকায় লিখে ফেলতেন।
+     */
+    'mfs_wallet' => 'Wallet number',
     'branch_name' => 'Branch name',
     'holder' => 'Held by',
     'no_holder' => 'The company (nobody personally)',
@@ -54,6 +70,7 @@ return [
     // Asked for at posting time, so it gets its own name — "Cheque/" would
     // mislead there, since most of the time this is a bKash TrxID
     'bank_reference' => 'Bank / MFS transaction no.',
+    'money_account_pick' => 'Landed in',
     'from_date' => 'From date',
     'to_date' => 'To date',
     'given_by' => 'Handed over by',

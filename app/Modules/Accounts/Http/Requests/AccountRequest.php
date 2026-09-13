@@ -7,7 +7,6 @@ namespace App\Modules\Accounts\Http\Requests;
 use App\Modules\Accounts\Models\Account;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Validator;
 
 /**
  * খাতের ইনপুট যাচাই — অলঙ্ঘনীয় শর্ত ৪।
@@ -40,8 +39,15 @@ class AccountRequest extends FormRequest
             'nature' => ['nullable', Rule::in([Account::DEBIT, Account::CREDIT])],
 
             'is_group' => ['nullable', 'boolean'],
-            'is_cash' => ['nullable', 'boolean'],
-            'is_bank' => ['nullable', 'boolean'],
+
+            /*
+             * ⛔ `is_cash` ও `is_bank` এখানে আর নেই, আর সেটা ইচ্ছাকৃত।
+             *
+             * টাকার ধরনটা এখন গাছ থেকে আসে
+             * ([[AccountService::moneyKindFor()]]) — কেউ পাঠালেও গ্রাহ্য
+             * হয় না। তাই `money_kind`-এরও কোনো নিয়ম নেই: যে ঘরটা
+             * কখনো পড়া হয় না, তার যাচাই একটা প্রতিশ্রুতির ভান।
+             */
 
             'opening_balance' => ['nullable', 'numeric'],
             /*
@@ -59,6 +65,8 @@ class AccountRequest extends FormRequest
             'account_number' => ['nullable', 'string', 'max:64'],
             'bank_name' => ['nullable', 'string', 'max:120'],
             'branch_name' => ['nullable', 'string', 'max:120'],
+            'account_title' => ['nullable', 'string', 'max:160'],
+            'routing_no' => ['nullable', 'string', 'max:32'],
 
             'is_active' => ['nullable', 'boolean'],
         ];
@@ -71,30 +79,7 @@ class AccountRequest extends FormRequest
         // সম্পাদনায় সেটা নিজে থেকে মিথ্যা হয়ে যেত।
         $this->merge([
             'is_group' => $this->boolean('is_group'),
-            'is_cash' => $this->boolean('is_cash'),
-            'is_bank' => $this->boolean('is_bank'),
         ]);
-    }
-
-    /**
-     * নগদ আর ব্যাংক একসাথে হয় না, আর গ্রুপ কোনোটাই নয়।
-     */
-    public function after(): array
-    {
-        return [
-            function (Validator $validator): void {
-                if ($this->boolean('is_cash') && $this->boolean('is_bank')) {
-                    $validator->errors()->add('is_cash', __('accounts::validation.cash_or_bank_not_both'));
-                }
-
-                if ($this->boolean('is_group') && ($this->boolean('is_cash') || $this->boolean('is_bank'))) {
-                    // গ্রুপে টাকা বসে না, তাই "এটা নগদের খাত" বলার কোনো
-                    // মানে নেই — আর ক্যাশ বই তখন একটা মাথা দেখাত যাতে
-                    // কোনো লেনদেন নেই।
-                    $validator->errors()->add('is_group', __('accounts::validation.group_is_not_money'));
-                }
-            },
-        ];
     }
 
     /** @return array<string, string> */

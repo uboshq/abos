@@ -64,8 +64,15 @@
               class="grid gap-3 sm:grid-cols-3 xl:grid-cols-6">
             @csrf
 
-            <x-ui.field name="contributor_name" :label="__('finance::field.who')" required
-                        :value="old('contributor_name')" />
+            {{-- ⓘ ঘরটা দুই কলাম নেয়, কারণ ভেতরে বাছাই আর নিচে নতুন নাম
+                 যোগ করার পথ — দুইটা একসাথে। --}}
+            <div class="sm:col-span-2">
+                @include('finance::components.person-picker', [
+                    'people' => $people,
+                    'label' => __('finance::field.who'),
+                    'required' => true,
+                ])
+            </div>
 
             <x-ui.select name="contributor_type" :label="__('finance::field.as')" required
                          :options="collect(\App\Modules\Finance\Models\CapitalEntry::WHO)
@@ -117,7 +124,8 @@
                 ['key' => 'trx_date', 'label' => __('finance::field.date'), 'width' => '8rem',
                  'render' => fn ($e) => \App\Core\Support\DateFormat::format($e->trx_date)],
                 ['key' => 'document_no', 'label' => __('core.print.document_no'), 'width' => '9rem'],
-                ['key' => 'contributor_name', 'label' => __('finance::field.who')],
+                ['key' => 'person', 'label' => __('finance::field.who'),
+                 'render' => fn ($e) => $e->person?->name() ?? '—'],
                 ['key' => 'entry_type', 'label' => __('finance::field.kind'), 'width' => '8rem',
                  'render' => fn ($e) => __('finance::kind.'.$e->entry_type)],
                 ['key' => 'amount', 'label' => __('finance::field.amount'), 'numeric' => true, 'width' => '10rem',

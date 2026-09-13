@@ -130,8 +130,27 @@ final class CompanyProvisioner
      * কাজটাই অর্থহীন — তালিকায় নতুন নামটা দেখা যেত, কিন্তু বেছে নেওয়া
      * যেত না, আর কেন যেত না তার কোনো ব্যাখ্যাও থাকত না।
      */
-    public function grantAccess(Company $company, User $user, string $role = PermissionSyncer::OWNER_ROLE): void
+    public function grantAccess(Company $company, User $user, string $role = PermissionSyncer::SUPER_ADMIN_ROLE): void
     {
+        /*
+         * ── owner একজনই — আর তালাটা এখানেই, ১৩ সেপ্টেম্বর ২০২৬ ──────────
+         *
+         * ⭐ এই একটা পদ্ধতির ভিতর দিয়ে **দুইটা পথই** যায়: প্রথম সেটআপ
+         * (`FirstRun::open()`) আর নতুন কোম্পানি খোলা। তাই নিয়মটা এখানে
+         * বসালে দুইটাই এক সাথে পাহারায় আসে।
+         *
+         * ⓘ আর প্রথম সেটআপ **নিজে থেকেই** পার পায়, কোনো ব্যতিক্রম না
+         * লিখেই: শর্তটা "ইনি ছাড়া আর কেউ owner নন", আর একদম নতুন
+         * কোম্পানিতে owner শূন্য। ⭐ না-লেখা ব্যতিক্রমই সবচেয়ে নিরাপদ —
+         * যে ব্যতিক্রম লেখা হয় না, সেটা একদিন ভুল জায়গায় খাটেও না।
+         *
+         * ⚠️ শর্তটা `$role` দেখে, কারণ এই পদ্ধতিটা accountant বা
+         * salesman বসাতেও ডাকা হয় — তাদের সংখ্যায় কোনো সীমা নেই।
+         */
+        if ($role === PermissionSyncer::SUPER_ADMIN_ROLE) {
+            app(Ownership::class)->assertMayBecomeOwner($user, $company->id);
+        }
+
         $user->companies()->syncWithoutDetaching([$company->id]);
 
         CompanyContext::forCompany($company->id, function () use ($user, $role) {
@@ -140,9 +159,9 @@ final class CompanyProvisioner
              *
              * spatie-র teams চালু হওয়ার পর **প্রতিটা কোম্পানির নিজের রোল**
              * লাগে। ⓘ একদম নতুন কোম্পানিতে সেগুলো এখনো নেই, তাই
-             * `assignRole('owner')` সরাসরি থেমে যেত:
+             * `assignRole(super_admin)` সরাসরি থেমে যেত:
              *
-             *     ⛔ RoleDoesNotExist: There is no role named `owner`
+             *     ⛔ RoleDoesNotExist: There is no role named `super_admin`
              *
              * ⚠️ আর থামত **পর্দায়, ৫০০ হয়ে** — কেউ কোম্পানি খুলতেই
              * পারতেন না। ⓘ ধরা পড়েছে পূর্ণ সুইটে, চারটা টেস্ট একসাথে লাল

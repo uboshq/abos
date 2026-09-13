@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Finance\Http\Controllers;
 
 use App\Core\Services\MenuBuilder;
+use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Loan;
@@ -13,11 +14,14 @@ use App\Modules\Finance\Models\Deposit;
 use App\Modules\Finance\Models\DepositKind;
 use App\Modules\Finance\Models\DepositMovement;
 use App\Modules\Finance\Services\DepositService;
+use App\Modules\MasterData\Models\Person;
+use App\Modules\MasterData\Services\PersonResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
@@ -37,6 +41,7 @@ class DepositController extends Controller implements HasMiddleware
     public function __construct(
         private readonly MenuBuilder $menu,
         private readonly DepositService $deposits,
+        private readonly PersonResolver $people,
     ) {}
 
     /** @return list<Middleware> */
@@ -99,6 +104,15 @@ class DepositController extends Controller implements HasMiddleware
             'standing' => $this->deposits->standing($issuer),
 
             /*
+             * কার নামে রাখা যায় — মালিক, অংশীদার।
+             *
+             * ⓘ ব্যবসার নামে রাখা আমানতের কোনো ব্যক্তি লাগে না
+             * (`held_by` সেটা বলে), তাই ঘরটা ঐচ্ছিক।
+             */
+            'people' => Person::query()->active()->orderBy('name_en')
+                ->pluck('name_en', 'id'),
+
+            /*
              * খোলাগুলো আগে, তারপর যেগুলো চুকে গেছে।
              *
              * ── কেন মেয়াদ ধরে সাজানো ────────────────────────────────
@@ -154,7 +168,18 @@ class DepositController extends Controller implements HasMiddleware
             'branch_name' => ['nullable', 'string', 'max:160'],
             'reference_no' => ['nullable', 'string', 'max:60'],
             'held_by' => ['required', 'string', 'in:'.Deposit::BUSINESS.','.Deposit::OWNER],
-            'holder_name' => ['nullable', 'string', 'max:160'],
+
+            /*
+             * ⓘ এখানে `required_without` **নেই**, আর বাকি চার পর্দার সাথে
+             * এটাই পার্থক্য: ব্যবসার নামে রাখা আমানতের কোনো ব্যক্তি নেই,
+             * আর `held_by` সেই প্রশ্নের উত্তর আগেই দিয়ে দেয়।
+             *
+             * ⚠️ `exists`-এ `company_id`, বাকিগুলোর মতোই একই কারণে।
+             */
+            'person_id' => ['nullable', 'integer',
+                Rule::exists('mdm_people', 'id')->where('company_id', CompanyContext::id())],
+            'person_new' => ['nullable', 'string', 'max:120'],
+            'person_mobile' => ['nullable', 'string', 'max:32'],
             'principal' => ['required', 'numeric', 'gt:0'],
             'profit_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'return_word' => ['required', 'string', 'in:interest,profit'],
@@ -164,6 +189,9 @@ class DepositController extends Controller implements HasMiddleware
             'instalment_day' => ['nullable', 'integer', 'min:1', 'max:28'],
             'payout_account_id' => ['nullable', 'integer', 'exists:accounts,id'],
             'funded_from_account_id' => ['required', 'integer', 'exists:accounts,id'],
+            // ব্যাংক/MFS হলে যে নম্বরটা লাগে — ⛔ `required` নয়, নিয়মটা
+            // এক জায়গায়: [[VoucherService::assertBankReferenceIsFree]]
+            'instrument_no' => ['nullable', 'string', 'max:64'],
 
             /*
              * কোন ধারের বিপরীতে বন্ধক -- খালি রাখলে জমাটা হাতের টাকা।
@@ -176,6 +204,8 @@ class DepositController extends Controller implements HasMiddleware
 
             'note' => ['nullable', 'string', 'max:500'],
         ]);
+
+        $data['person_id'] = $this->people->resolve($data);
 
         $deposit = $this->deposits->open($data);
 
@@ -233,6 +263,9 @@ class DepositController extends Controller implements HasMiddleware
             'amount' => ['required', 'numeric', 'gt:0'],
             'moved_on' => ['required', 'date'],
             'money_account_id' => ['required', 'integer', 'exists:accounts,id'],
+            // ব্যাংক/MFS হলে যে নম্বরটা লাগে — ⛔ `required` নয়, নিয়মটা
+            // এক জায়গায়: [[VoucherService::assertBankReferenceIsFree]]
+            'instrument_no' => ['nullable', 'string', 'max:64'],
             'note' => ['nullable', 'string', 'max:500'],
         ]);
 
@@ -249,6 +282,9 @@ class DepositController extends Controller implements HasMiddleware
             'amount' => ['required', 'numeric', 'gt:0'],
             'moved_on' => ['required', 'date'],
             'money_account_id' => ['required', 'integer', 'exists:accounts,id'],
+            // ব্যাংক/MFS হলে যে নম্বরটা লাগে — ⛔ `required` নয়, নিয়মটা
+            // এক জায়গায়: [[VoucherService::assertBankReferenceIsFree]]
+            'instrument_no' => ['nullable', 'string', 'max:64'],
             'note' => ['nullable', 'string', 'max:500'],
         ]);
 

@@ -99,7 +99,7 @@ final class StandardChart implements ProvisionsCompany
      * ধরে**, যদিও তার মা চলতি সম্পদ (১১০০), money mother নয়। এটাই সেই সংজ্ঞার
      * বাকি অংশ — ইনলাইন `||` ব্যতিক্রম নয়, একটা নামওয়ালা তালিকা।
      *
-     * ⚠️ এগুলো `is_cash`/`is_bank` নয়, তাই টাকার খাতের picker-এ কখনো দেখায় না
+     * ⚠️ এগুলোর `money_kind` নেই, তাই টাকার খাতের picker-এ কখনো দেখায় না
      * — কেউ হাতে বাছতে পারেন না। কেবল নির্দিষ্ট কোড-পথ (চেক আদায়) explicit
      * অনুমতিতে এগুলোতে টাকা বসায়; সাধারণ আদায় এখনো কেবল মায়ের সন্তান খাতেই।
      *
@@ -527,8 +527,15 @@ final class StandardChart implements ProvisionsCompany
                      */
                     'parent_id' => $parentCode === null ? null : ($byCode[$parentCode]->id ?? null),
                     'is_group' => $isGroup,
-                    'is_cash' => (bool) ($flags['cash'] ?? false),
-                    'is_bank' => (bool) ($flags['bank'] ?? false),
+                    /*
+                     * টাকার ধরন এখান থেকে আর যায় না — বসে কোড ও বাবা
+                     * থেকে ([[AccountService::moneyKindFor()]])।
+                     *
+                     * ⓘ ছকের কোনো সারি `cash`/`bank` পতাকা পাঠাতই না,
+                     * তাই এই দুই লাইন সবসময় `false` লিখত — অর্থাৎ নতুন
+                     * কোম্পানিতে প্রতিটা খাত "টাকার খাত নয়" হয়ে বসত।
+                     * ঠিক ওটাই ছিল দুই পতাকার আসল ফাঁক।
+                     */
                     'nature' => $flags['nature'] ?? Account::defaultNatureFor($type),
 
                     /*

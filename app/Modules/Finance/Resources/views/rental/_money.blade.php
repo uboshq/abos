@@ -28,7 +28,9 @@
     $blank ??= null;
 @endphp
 
-<label class="grid gap-1">
+{{-- ⓘ `div`, `label` নয় — ভেতরের উপাদানের নিজের label আছে, আর
+     label-এর ভেতরে label বসে না। --}}
+<div class="grid gap-1">
     <span class="text-2xs text-(--color-ink-muted)">{{ $label }}</span>
 
     @if ($money->isEmpty())
@@ -36,18 +38,14 @@
             {{ __('finance::message.rental_no_money_account') }}
         </span>
     @else
-        <select name="{{ $name }}" @if ($required) required @endif
-                class="h-(--spacing-field) rounded-(--radius-field) border
-                       border-(--color-border) bg-(--color-surface-card) px-2">
-            {{-- ⓘ খালি বিকল্পটা কেবল তখনই, যখন "না দেওয়া"-রও একটা অর্থ
-                 আছে — যেমন পুরনো চুক্তি, যার টাকা আগেই দেওয়া। --}}
-            @if ($blank !== null)
-                <option value="">{{ $blank }}</option>
-            @endif
+        {{-- ⓘ খালি বিকল্পটা কেবল তখনই, যখন "না দেওয়া"-রও একটা অর্থ
+             আছে — যেমন পুরনো চুক্তি, যার টাকা আগেই দেওয়া।
 
-            @foreach ($money as $account)
-                <option value="{{ $account->id }}">{{ $account->code }} — {{ $account->name() }}</option>
-            @endforeach
-        </select>
+             ⛔ ঘরটা আগে এখানেই আঁকা হত, আর তাই ভাড়ার চারটা পোস্ট-পথেই
+             লেনদেন নম্বরের কোনো ঘর ছিল না — অথচ ব্যাংক খাত বাছলে
+             [[VoucherService::assertBankReferenceIsFree()]] সেটা
+             বাধ্যতামূলক করত। এখন দুইটা ঘর একসাথে আসে। --}}
+        <x-ui.money-account :name="$name" :accounts="$money" :blank="$blank" codes compact
+                            :required="$required" />
     @endif
-</label>
+</div>

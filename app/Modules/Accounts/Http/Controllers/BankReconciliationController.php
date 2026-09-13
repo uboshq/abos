@@ -37,7 +37,7 @@ class BankReconciliationController extends Controller implements HasMiddleware
     {
         return [
             new Middleware('can:accounts.reconciliation.view', only: ['index', 'show']),
-            new Middleware('can:accounts.reconciliation.manage', only: ['store', 'mark', 'confirm']),
+            new Middleware('can:accounts.reconciliation.manage', only: ['create', 'store', 'mark', 'confirm']),
             new Middleware('can:accounts.reconciliation.reopen', only: ['reopen']),
         ];
     }
@@ -51,19 +51,31 @@ class BankReconciliationController extends Controller implements HasMiddleware
                 ->orderByDesc('statement_date')
                 ->paginate(50)
                 ->withQueryString(),
-            /*
-             * ⚠️ `postable()` — দল বাদ, নাহলে দলে দাখিলা বসানো যেত।
-             *
-             * ⓘ একটা দলে টাকা বসলে সেটা **কোনো রিপোর্টে আসে না**
-             * (`Account::balanceOn()` দলের নিজের সারি গোনে না), অথচ
-             * খতিয়ানে সারিটা থাকে। বাকি খাত-নির্বাচকগুলো এটা ছাঁকত,
-             * এই দুইটা (এখানে আর [[ChequeController]]) ভুলে গিয়েছিল।
-             *
-             * ⓘ `AccountRequest` দলকে `is_bank` হতে দেয় না, তাই তালিকাটা
-             * এমনিতেই খালি থাকার কথা — **কিন্তু ওটা কেবল ফর্মের পথ**;
-             * সিডার, ইমপোর্ট বা মাইগ্রেশন ওই যাচাই দিয়ে যায় না।
-             */
-            'banks' => Account::query()->where('is_bank', true)->postable()->active()->orderBy('code')->get(),
+        ]);
+    }
+
+    /**
+     * মিলকরণ খোলার পর্দা।
+     *
+     * ⭐ কেবল ব্যাংক খাতের তালিকা — মিলকরণের সারিগুলো এখানে তোলা হয়
+     * না, কারণ এই পাতায় একটাও সারি দেখানো হয় না।
+     *
+     * ── ⚠️ তিনটা শর্ত, আর তিনটাই ইচ্ছাকৃত ────────────────────────────
+     * `ofMoneyKind(BANK)` — ⛔ MFS নয়: বিকাশের অ্যাপের লগ কাগজের
+     * ব্যাংক বিবরণী নয়, তাই ওটা মিলকরণের তালিকায় আসেই না।
+     * ⓘ স্কোপটা নিজেই **দল** ছাঁকে, তাই আলাদা `postable()` লাগে না —
+     * একটা দলে দাখিলা বসলে সেটা কোনো রিপোর্টে আসত না
+     * ([[Account::balanceOn()]] দলের নিজের সারি গোনে না), অথচ খতিয়ানে
+     * সারিটা থেকে যেত।
+     *
+     * ⓘ আগে এই কোয়েরিটা `index()`-এও ছিল, কারণ তৈরির ফর্মটা তালিকার
+     * নিচে গোঁজা থাকত। ফর্মটা এই পাতায় সরে আসায় ওখানে আর লাগে না।
+     */
+    public function create(Request $request): View
+    {
+        return view('accounts::reconciliation.create', [
+            'menu' => $this->menu->forUser($request->user()),
+            'banks' => Account::query()->ofMoneyKind(Account::BANK)->active()->orderBy('code')->get(),
         ]);
     }
 

@@ -71,7 +71,7 @@ class TheCustomerCouldNeverSeeHisOwnLedgerTest extends TestCase
             'parent_id' => StandardChart::find(StandardChart::BANK)->id,
             'type' => Account::ASSET,
             'nature' => Account::DEBIT,
-            'is_bank' => true,
+            'money_kind' => Account::BANK,
         ]);
 
         $this->karim = $this->customer('PORTAL-K', 'Karim Customer');

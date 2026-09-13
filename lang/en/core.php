@@ -646,6 +646,25 @@ return [
         // Dates read day-month-year everywhere, never the browser's locale
         'date_hint' => 'dd-mm-yyyy',
         'pick_date' => 'Open calendar',
+
+        /*
+         * The answer to a double submit — 13 Sep 2026.
+         *
+         * The owner clicked Save twice on the capital form and 2,500,000
+         * went in twice. Both sentences are deliberately calm and NOT in an
+         * error tone: pressing a button twice is not a mistake, and on a
+         * slow connection it is the normal thing to do. A red error would
+         * make people think something broke and press a third time — which
+         * is the illness being cured.
+         */
+        'already_saved' => 'This was already saved — that is what you are looking at.',
+
+        /*
+         * Must not say "nothing happened". The first request is still
+         * running, so the place to look does not exist yet; the sentence
+         * therefore confirms the save and leaves no room for doubt.
+         */
+        'still_saving' => 'Saved — give it a moment and check the list.',
     ],
 
     'profile' => [

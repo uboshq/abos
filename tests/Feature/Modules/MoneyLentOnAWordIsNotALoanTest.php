@@ -14,6 +14,7 @@ use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Finance\Models\HandLoanAccount;
 use App\Modules\Finance\Models\HandLoanMovement;
 use App\Modules\Finance\Services\HandLoanService;
+use App\Modules\MasterData\Models\Person;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
@@ -79,11 +80,23 @@ class MoneyLentOnAWordIsNotALoanTest extends TestCase
         return bcsub((string) $row->d, (string) $row->c, 4);
     }
 
+    /** নাম ধরে ব্যক্তির সারি — না থাকলে বানিয়ে নেওয়া। */
+    private function person(string $name, ?string $mobile = null): Person
+    {
+        return Person::query()->firstOrCreate(
+            ['company_id' => $this->company->id, 'name_en' => $name],
+            ['code' => 'P-'.mb_substr(md5($name), 0, 6), 'mobile' => $mobile],
+        );
+    }
+
     private function karim(): HandLoanAccount
     {
+        /*
+         * ⓘ নম্বরটা এখন ব্যক্তির সারিতে, হাতে-ধারের খাতায় নয়
+         * (১৩ সেপ্টেম্বর ২০২৬) — দুই জায়গায় রাখলে একদিন আলাদা হত।
+         */
         return $this->service()->open([
-            'person_name' => 'করিম',
-            'mobile' => '01711000000',
+            'person_id' => $this->person('করিম', '01711000000')->id,
         ]);
     }
 
@@ -149,7 +162,7 @@ class MoneyLentOnAWordIsNotALoanTest extends TestCase
      */
     public function test_borrowing_shows_as_a_negative_balance(): void
     {
-        $mama = $this->service()->open(['person_name' => 'মামা']);
+        $mama = $this->service()->open(['person_id' => $this->person('মামা')->id]);
 
         $this->move($mama, HandLoanMovement::IN, '10000');
 
@@ -252,7 +265,8 @@ class MoneyLentOnAWordIsNotALoanTest extends TestCase
     {
         $this->expectException(ValidationException::class);
 
-        $this->service()->open(['person_name' => '   ']);
+        // ⓘ শূন্য মানে "কেউ বাছা হয়নি" — আগে এটা ফাঁকা স্ট্রিং ছিল
+        $this->service()->open(['person_id' => 0]);
     }
 
     /**
@@ -262,10 +276,17 @@ class MoneyLentOnAWordIsNotALoanTest extends TestCase
     {
         $this->get(route('finance.hand_loan.index'))->assertOk();
 
-        $this->post(route('finance.hand_loan.store'), ['person_name' => 'রহিম'])
+        /*
+         * ⭐ `person_new` ইচ্ছাকৃতভাবে — ইনলাইন নতুন-নাম যোগ করার পথটাই
+         * এখানে মাপা হচ্ছে। কাউন্টারে দাঁড়িয়ে কেউ মাস্টার ডাটার পর্দায়
+         * গিয়ে ফিরে আসেন না, তাই পথটা সত্যিই কাজ করতে হবে।
+         */
+        $this->post(route('finance.hand_loan.store'), ['person_new' => 'রহিম'])
             ->assertRedirect();
 
-        $rahim = HandLoanAccount::query()->where('person_name', 'রহিম')->firstOrFail();
+        $rahim = HandLoanAccount::query()
+            ->whereHas('person', fn ($q) => $q->where('name_en', 'রহিম'))
+            ->firstOrFail();
 
         $this->get(route('finance.hand_loan.show', $rahim))->assertOk()->assertSee('রহিম');
 

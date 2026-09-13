@@ -36,4 +36,7 @@ return [
     'rental_amount_positive' => 'The amount must be greater than zero.',
     'rental_head_missing' => 'The chart has no :code head. Add it from the chart of accounts.',
     'rental_month_done_already' => 'Rent for :month is already posted; doing it twice would double that month.',
+
+    'person_pick_or_type' => 'Either pick from the list or type a new name, not both.',
+    'capital_needs_a_name' => 'Pick who is contributing, or type a new name.',
 ];

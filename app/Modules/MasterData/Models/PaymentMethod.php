@@ -90,7 +90,8 @@ class PaymentMethod extends Model implements Drillable
      */
     public function isCash(): bool
     {
-        return (bool) $this->account?->is_cash;
+        // ⛔ কেবল নগদ — বিকাশ (MFS) বা ব্যাংক ড্রয়ারে আসে না
+        return $this->account?->isCash() ?? false;
     }
 
     // ── Drillable — নিয়ম ১ ────────────────────────────────────────────

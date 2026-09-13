@@ -14,6 +14,23 @@
     জমিন, লোগো, শিরোনাম, পাদটীকা — কিছুই নেই। ওগুলো **দরজার**, ফর্মের
     নয়। দুইটা দরজা আলাদা দেখতে হবে বলেই তো দুইটা।
 --}}
+                {{--
+                    ⭐ রিসেটের পর ফিরে আসার বার্তা — ১৩ সেপ্টেম্বর ২০২৬।
+
+                    ⓘ [[PasswordResetController::store]] ইচ্ছাকৃতভাবে কাউকে
+                    ঢুকিয়ে দেয় না (নাহলে MFA এড়ানো যেত), তাই মানুষ এখানে
+                    এসে পড়েন। ⚠️ কোনো বার্তা না থাকলে তিনি বুঝতেই পারতেন
+                    না নতুন পাসওয়ার্ডটা সত্যিই বসেছে কি না — আর আবার
+                    রিসেট চাইতেন।
+                --}}
+                @if (session('password_reset'))
+                    <div role="status"
+                         class="mt-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2
+                                text-sm text-(--color-badge-success-ink)">
+                        {{ __('auth.reset_done') }}
+                    </div>
+                @endif
+
                 @if ($errors->any())
                     <div role="alert"
                          class="mt-4 rounded-(--radius-field) bg-(--color-badge-danger-bg) px-3 py-2
@@ -141,16 +158,26 @@
                             {{ __('auth.remember_device') }}
                         </label>
 
-                        <span class="ms-auto flex shrink-0 items-center gap-1.5 text-xs
-                                     text-(--color-ink-muted)"
-                              aria-disabled="true">
-                            {{ __('auth.forgot_password') }}
+                        {{--
+                            ⭐ এখানে একটা নিষ্ক্রিয় "শীঘ্রই আসছে" ব্যাজ ছিল —
+                            ১৩ সেপ্টেম্বর ২০২৬-এ সেটা আসল লিংক হলো।
 
-                            <span class="rounded-full border border-(--color-border)
-                                         bg-(--color-surface-muted) px-1.5 py-px text-2xs">
-                                {{ __('auth.coming_soon') }}
-                            </span>
-                        </span>
+                            ⓘ ব্যাজটা মিথ্যা ছিল না, আর সেটাই ছিল তার গুণ:
+                            `MAIL_MAILER=log` অবস্থায় একটা কাজ-করা লিংক বসালে
+                            মানুষ চাপ দিতেন, "পাঠানো হয়েছে" দেখতেন, আর সারাদিন
+                            ইনবক্স খুলে বসে থাকতেন। ⚠️ যে বোতাম মিথ্যা বলে, সেটা
+                            না থাকা বোতামের চেয়ে খারাপ।
+
+                            ⚠️ শর্তটা এখনো বদলায়নি — SMTP `.env`-এ না বসা
+                            পর্যন্ত চিঠি বাইরে যায় না। পার্থক্যটা হলো এখন পথটা
+                            **সত্যিই আছে**, আর না-পৌঁছানো চিঠির জন্য পর্দায়
+                            দ্বিতীয় একটা বাক্য লেখা আছে ("ম্যানেজারকে বলুন")।
+                        --}}
+                        <a href="{{ route('password.request') }}"
+                           class="ms-auto shrink-0 text-xs text-(--color-brand-600)
+                                  underline-offset-4 hover:underline">
+                            {{ __('auth.forgot_password') }}
+                        </a>
                     </div>
 
                     {{-- দ্বিতীয় ক্লিক pointer-events দিয়ে আটকানো, disabled

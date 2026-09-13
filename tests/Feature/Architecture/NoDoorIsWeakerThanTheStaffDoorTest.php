@@ -64,6 +64,7 @@ class NoDoorIsWeakerThanTheStaffDoorTest extends TestCase
      * @var list<string>
      */
     private const KNOWN_DOORS = [
+        'app/Http/Controllers/Auth/PasswordResetController.php',
         'app/Modules/Customer/Http/Controllers/CustomerPortalController.php',
         'app/Modules/SystemAdmin/Http/Controllers/UserController.php',
         'app/Modules/SystemAdmin/Http/Controllers/SetupController.php',

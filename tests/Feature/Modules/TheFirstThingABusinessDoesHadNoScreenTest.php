@@ -11,6 +11,7 @@ use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Finance\Models\CapitalEntry;
 use App\Modules\Finance\Services\CapitalService;
+use App\Modules\MasterData\Models\Person;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -57,6 +58,15 @@ class TheFirstThingABusinessDoesHadNoScreenTest extends TestCase
      * "এটা একটা মাথা, খাত নয়"। পাহারাটা কাজ করেছে; পরীক্ষাটাই ভুল
      * ছিল।
      */
+    /** নাম ধরে ব্যক্তির সারি — না থাকলে বানিয়ে নেওয়া। */
+    private function person(string $name): Person
+    {
+        return Person::query()->firstOrCreate(
+            ['company_id' => CompanyContext::id(), 'name_en' => $name],
+            ['code' => 'P-'.mb_strtoupper(mb_substr($name, 0, 6))],
+        );
+    }
+
     private function cashAccount(): Account
     {
         return Account::query()
@@ -66,10 +76,16 @@ class TheFirstThingABusinessDoesHadNoScreenTest extends TestCase
             ->firstOrFail();
     }
 
+    /**
+     * ⓘ সহায়কটা নামই নেয়, যাতে নিচের দাবিগুলো মানুষের ভাষাতেই পড়া যায় —
+     * কিন্তু ভেতরে নামটা ব্যক্তির তালিকার একটা সারি হয়ে বসে
+     * (১৩ সেপ্টেম্বর ২০২৬)। একই নাম দুইবার দিলে একই সারিই ফেরে, আর
+     * ঠিক ওটাই এই কাজের মূল কথা।
+     */
     private function record(string $who, string $amount, string $kind = CapitalEntry::CONTRIBUTION): CapitalEntry
     {
         return app(CapitalService::class)->record([
-            'contributor_name' => $who,
+            'person_id' => $this->person($who)->id,
             'contributor_type' => CapitalEntry::OWNER,
             'entry_type' => $kind,
             'trx_date' => now()->toDateString(),
@@ -201,8 +217,15 @@ class TheFirstThingABusinessDoesHadNoScreenTest extends TestCase
     {
         $this->get(route('finance.capital.index'))->assertOk();
 
+        /*
+         * ⭐ এখানে `person_new` ইচ্ছাকৃতভাবে — `person_id` নয়।
+         *
+         * এটাই ইনলাইন নতুন-নাম যোগ করার পথ: যিনি আজ প্রথমবার কারো নাম
+         * লিখছেন, তাঁকে মাস্টার ডাটার পর্দায় পাঠানো হয় না। পথটা সত্যিই
+         * কাজ করে কি না, এই দাবিটা সেটাও মাপে।
+         */
         $this->post(route('finance.capital.store'), [
-            'contributor_name' => 'Rahim',
+            'person_new' => 'Rahim',
             'contributor_type' => CapitalEntry::PARTNER,
             'entry_type' => CapitalEntry::INVESTMENT,
             'trx_date' => now()->toDateString(),
@@ -210,7 +233,13 @@ class TheFirstThingABusinessDoesHadNoScreenTest extends TestCase
             'share_percent' => '40',
         ])->assertRedirect(route('finance.capital.index'));
 
-        $entry = CapitalEntry::query()->where('contributor_name', 'Rahim')->firstOrFail();
+        $entry = CapitalEntry::query()
+            ->whereHas('person', fn ($q) => $q->where('name_en', 'Rahim'))
+            ->firstOrFail();
+
+        // নামটা সত্যিই তালিকায় বসেছে — কেবল কাগজে নয়
+        $this->assertNotNull(Person::query()->where('name_en', 'Rahim')->first(),
+            'ইনলাইন নাম যোগ হয়নি — তালিকায় সারিটা নেই।');
 
         $this->assertSame(CapitalEntry::INVESTMENT, $entry->entry_type);
         $this->assertSame(0, bccomp((string) $entry->share_percent, '40', 4));

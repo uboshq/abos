@@ -7,6 +7,7 @@ use App\Modules\SystemAdmin\Http\Controllers\ControlPanelController;
 use App\Modules\SystemAdmin\Http\Controllers\CustomFieldController;
 use App\Modules\SystemAdmin\Http\Controllers\ImportController;
 use App\Modules\SystemAdmin\Http\Controllers\LookController;
+use App\Modules\SystemAdmin\Http\Controllers\OwnershipController;
 use App\Modules\SystemAdmin\Http\Controllers\ReportDownloadController;
 use App\Modules\SystemAdmin\Http\Controllers\ReportScheduleController;
 use App\Modules\SystemAdmin\Http\Controllers\RoleController;
@@ -141,6 +142,23 @@ Route::middleware('auth')->prefix('system')->group(function () {
         Route::post('/', [UserController::class, 'store'])->name('store');
         Route::get('/{user}/edit', [UserController::class, 'edit'])->whereNumber('user')->name('edit');
         Route::put('/{user}', [UserController::class, 'update'])->whereNumber('user')->name('update');
+    });
+
+    /*
+     * মালিকানা হস্তান্তর — নিজের পাতা, ইচ্ছাকৃতভাবে।
+     *
+     * ⓘ কাজটা ব্যবহারকারী-সম্পাদনার পর্দাতেও বসানো যেত, রোলের আরেকটা
+     * চেকবক্স হিসেবে। ⛔ কিন্তু তাতে ব্যবস্থার সবচেয়ে বড় চাবিটা হাতবদল
+     * করা দেখতে হত বাকি দশটা সিদ্ধান্তের মতোই — আর যে জিনিস দেখতে
+     * সাধারণ, সেটা সাবধানে করা হয় না।
+     *
+     * ⚠️ অনুমতিটা কেবল দরজার নামফলক; আসল তালাটা পরিচয়ে — কন্ট্রোলার
+     * দেখে অনুরোধকারী সত্যিই এই কোম্পানির মালিক কি না, আর পাসওয়ার্ড
+     * চায়। খোলা রেখে যাওয়া একটা স্ক্রিনই নইলে যথেষ্ট হত।
+     */
+    Route::prefix('ownership')->name('ownership.')->group(function () {
+        Route::get('/', [OwnershipController::class, 'show'])->name('show');
+        Route::put('/', [OwnershipController::class, 'update'])->name('update');
     });
 
     Route::prefix('roles')->name('role.')->group(function () {

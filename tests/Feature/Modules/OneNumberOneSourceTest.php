@@ -67,7 +67,6 @@ class OneNumberOneSourceTest extends TestCase
             'name_en' => 'Test Bank Account',
             'name_bn' => 'পরীক্ষার ব্যাংক হিসাব',
             'parent_id' => $parent->id,
-            'is_bank' => true,
             'opening_balance' => $opening,
             'opening_date' => now()->toDateString(),
         ]);
@@ -202,7 +201,6 @@ class OneNumberOneSourceTest extends TestCase
             'code' => '1102-ZERO',
             'name_en' => 'No Opening Bank',
             'parent_id' => $parent->id,
-            'is_bank' => true,
             'opening_balance' => 0,
         ]);
 

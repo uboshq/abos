@@ -9,7 +9,7 @@
         {{ __('finance::who.'.$deposit->held_by) }}
     </x-ui.badge>
 
-    @if ($deposit->holder_name)
-        <span class="mt-0.5 text-2xs text-(--color-ink-muted)">{{ $deposit->holder_name }}</span>
+    @if ($deposit->person)
+        <span class="mt-0.5 text-2xs text-(--color-ink-muted)">{{ $deposit->person->name() }}</span>
     @endif
 </span>

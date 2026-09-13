@@ -111,8 +111,10 @@ Route::middleware('auth')->prefix('sales')->group(function () {
     /*
      * ডিলারের কমিশন — কোম্পানির কাছে দাবি।
      *
-     * তালিকাই প্রধান পর্দা, তাই আলাদা create/show নেই: বসানো হয়
-     * তালিকার উপরের ফর্ম থেকে, আর সিদ্ধান্ত সারি থেকেই।
+     * তালিকাই প্রধান পর্দা, আর সিদ্ধান্ত সারি থেকেই। বসানোটা এখন
+     * নিজের পাতায় (`/create`) — তালিকার নিচে গোঁজা ফর্মটা সরানো হয়েছে,
+     * নকল করা হয়নি: দুইটা পথ থাকলে একদিন একটা বদলাত, অন্যটা নয়।
+     * `show` নেই — একটা দাবির পুরো কথাটা সারিতেই ধরে।
      */
     /*
      * গ্রাহকদের তোলা জমার দাবি — ডিপোর দিক।
@@ -136,6 +138,9 @@ Route::middleware('auth')->prefix('sales')->group(function () {
      */
     Route::prefix('schemes')->name('scheme.')->group(function () {
         Route::get('/', [SchemeController::class, 'index'])->name('index');
+
+        // বসানোর পর্দা — `/{scheme}`-এর আগে, নাহলে "create" একটা id ভেবে ৪০৪
+        Route::get('/create', [SchemeController::class, 'create'])->name('create');
         Route::post('/', [SchemeController::class, 'store'])->name('store');
         Route::get('/{scheme}', [SchemeController::class, 'show'])
             ->whereNumber('scheme')->name('show');
@@ -153,6 +158,9 @@ Route::middleware('auth')->prefix('sales')->group(function () {
 
     Route::prefix('commissions')->name('commission.')->group(function () {
         Route::get('/', [CommissionClaimController::class, 'index'])->name('index');
+
+        // বসানোর পর্দা — `/{claim}`-এর আগে, নাহলে "create" একটা id ভেবে ৪০৪
+        Route::get('/create', [CommissionClaimController::class, 'create'])->name('create');
         Route::post('/', [CommissionClaimController::class, 'store'])->name('store');
         Route::post('/{claim}/settle', [CommissionClaimController::class, 'settle'])
             ->whereNumber('claim')->name('settle');

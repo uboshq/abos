@@ -9,6 +9,7 @@ use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Loan;
+use App\Modules\MasterData\Models\Person;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -80,7 +81,7 @@ class Deposit extends Model
 
     protected $fillable = [
         'company_id', 'branch_id', 'document_no', 'kind_id', 'institution',
-        'branch_name', 'reference_no', 'held_by', 'holder_name', 'principal',
+        'branch_name', 'reference_no', 'held_by', 'person_id', 'principal',
         'profit_rate', 'return_word', 'opened_on', 'matures_on',
         'instalment_amount', 'instalment_day', 'payout_account_id', 'account_id',
         'funded_from_account_id', 'pledged_to_loan_id', 'status', 'closed_on',
@@ -99,6 +100,25 @@ class Deposit extends Model
             'closed_on' => 'date',
             'cancelled_at' => 'datetime',
         ];
+    }
+
+    /**
+     * কার নামে রাখা — নাম নয়, তালিকার সারি।
+     *
+     * ── কেন এটা `held_by`-র বদলে নয়, তার পাশে ────────────────────────
+     * `held_by` বলে **ব্যবসার না মালিকের** (দাখিলা ওটাই ঠিক করে), আর
+     * এই ঘরটা বলে **কোন মানুষ**। দুইটা আলাদা প্রশ্ন: ব্যবসার নামে রাখা
+     * আমানতের কোনো ব্যক্তি নেই, তাই এটা `null` থাকতে পারে।
+     *
+     * ⓘ আগে ঘরটা ছিল `holder_name`, মুক্ত লেখা। আমানত বছরের পর বছর
+     * থাকে, তাই ওখানে বানানের ভিন্নতা সবচেয়ে বেশি সময় ধরে জমত — আর
+     * "মালিকের নামে মোট কত আমানত" প্রশ্নের উত্তর টুকরো হয়ে যেত।
+     *
+     * @return BelongsTo<Person, $this>
+     */
+    public function person(): BelongsTo
+    {
+        return $this->belongsTo(Person::class, 'person_id');
     }
 
     public function kind(): BelongsTo

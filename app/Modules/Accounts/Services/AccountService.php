@@ -78,6 +78,8 @@ final class AccountService
                 ...$data,
                 'code' => $code,
                 'type' => $type,
+                // ⛔ ইনপুট যা-ই পাঠাক, ধরনটা গাছ থেকেই আসে
+                'money_kind' => $this->moneyKindFor($code, $parent),
                 'nature' => $data['nature'] ?? Account::defaultNatureFor($type),
                 'is_group' => (bool) ($data['is_group'] ?? false),
                 'is_active' => $data['is_active'] ?? true,
@@ -160,20 +162,44 @@ final class AccountService
             // সত্যি তা বলার উপায় থাকে না। বদলাতে জাবেদা ভাউচার।
             unset($data['opening_balance'], $data['opening_date'], $data['is_system']);
 
+            $code = trim((string) ($data['code'] ?? '')) !== ''
+                ? trim((string) $data['code'])
+                : $account->code;
+
             $account->update([
                 ...$data,
-                'code' => trim((string) ($data['code'] ?? '')) !== ''
-                    ? trim((string) $data['code'])
-                    : $account->code,
+                'code' => $code,
                 'type' => $type,
                 'nature' => $data['nature'] ?? $account->nature,
                 'is_group' => $wantsGroup,
+                /*
+                 * ⚠️ `$parent`, `$account->parent` নয়।
+                 *
+                 * সম্পর্কটা **পুরনো** বাবাকে ধরে রাখে — `parent_id` এই
+                 * একই `update()`-এ বদলাচ্ছে, আর Eloquent সম্পর্কটা আগেই
+                 * লোড করে রেখেছে। প্রথমে ওটাই লিখেছিলাম, আর ফল: "Bank"
+                 * থেকে "MFS"-এ সরানো শাখা `bank` লেখা নিয়েই বসে থাকত।
+                 * ⓘ পরীক্ষাটা ধরেছে, পড়া ধরেনি।
+                 */
+                'money_kind' => $this->moneyKindFor($code, $parent),
             ]);
 
             // ধরন বদলালে নিচের সবারও বদলায় — সন্তান বাবার চেয়ে অন্য ধরনের
             // হতে পারে না, নাহলে একটা সম্পদের নিচে একটা খরচ ঝুলত।
             if ($account->wasChanged('type')) {
                 $this->cascadeType($account);
+            }
+
+            /*
+             * খাতটা সরালে নিচের সবার টাকার ধরনও সরে।
+             *
+             * ⚠️ এটা না থাকলে "Bank" মাথার নিচ থেকে একটা শাখা "MFS"-এ
+             * সরালে শাখাটা `bank` লেখা নিয়েই বসে থাকত — আর তারপর
+             * বিকাশের টাকা ব্যাংক বইয়ে দেখাত, ব্যাংক মিলকরণে একটা
+             * চিরস্থায়ী অমিল হয়ে।
+             */
+            if ($account->wasChanged('money_kind')) {
+                $this->cascadeMoneyKind($account);
             }
 
             return $account->fresh();
@@ -299,6 +325,52 @@ final class AccountService
         }
 
         return $type;
+    }
+
+    /**
+     * এই খাতটা কোন ধরনের টাকা ধরে — নগদ, ব্যাংক, MFS, নাকি টাকাই নয়।
+     *
+     * ── কেন প্রশ্নটা কাউকে জিজ্ঞেস করা হয় না ──────────────────────────
+     * আগে ফর্মে দুইটা টিক ছিল, "নগদ খাত" আর "ব্যাংক বা MFS খাত"। ⛔ তার
+     * তিনটা ফল হয়েছিল:
+     *
+     *   ১. প্রমিত ছকের একটা সারিও টিক দুইটা পাঠাত না, তাই নতুন
+     *      কোম্পানিতে প্রতিটা খাত "টাকার খাত নয়" হয়ে বসত — অথচ ছকে
+     *      ১১০১, ১১০২, ১১০৫ তিনটা মা পরিষ্কার আলাদা ছিল।
+     *   ২. ফলে Finance-এর পর্দাগুলো পতাকা ছেড়ে গাছ ধরতে শুরু করে
+     *      ([[StandardChart::MONEY_PARENTS]]), আর Accounts-এর পাহারা
+     *      পতাকাই ধরে থাকে — **এক প্রশ্নের দুইটা উত্তর**।
+     *   ৩. ব্যাংক আর MFS একই টিকে বসত, তাই "ব্যাংকে কত আছে" সংখ্যাটায়
+     *      বিকাশের টাকা মিশে থাকত।
+     *
+     * ⭐ কাঠামোটা আগে থেকেই সঠিক উত্তরটা জানত। তাই প্রশ্নটা তুলে দেওয়া
+     * হলো, আর উত্তরটা যেখানে ছিল সেখান থেকেই নেওয়া হয়: বাবার খাত।
+     *
+     * ⓘ তিনটা মা নিজেরা কোড দিয়ে চেনা হয়, কারণ তাদের বাবা (১১০০ চলতি
+     * সম্পদ) টাকার খাত নয় — শিকড়টা কোথাও না কোথাও নাম ধরে বসাতেই হয়।
+     * ওগুলো [[StandardChart::SYSTEM_CODES]]-এ, তাই কোড বদলানো যায় না।
+     */
+    private function moneyKindFor(string $code, ?Account $parent): ?string
+    {
+        return match ($code) {
+            StandardChart::CASH_IN_HAND => Account::CASH,
+            StandardChart::BANK => Account::BANK,
+            StandardChart::MOBILE_MONEY => Account::MFS,
+            default => $parent?->money_kind,
+        };
+    }
+
+    private function cascadeMoneyKind(Account $account): void
+    {
+        foreach ($account->children as $child) {
+            // forceFill — কোডে বসা ধরন, তাই fillable-এর ছাঁকনি এখানে
+            // অর্থহীন; আর মায়ের কোডে বসা সন্তান নিজের কোডই রাখে
+            $child->forceFill([
+                'money_kind' => $this->moneyKindFor($child->code, $account),
+            ])->save();
+
+            $this->cascadeMoneyKind($child);
+        }
     }
 
     private function cascadeType(Account $account): void

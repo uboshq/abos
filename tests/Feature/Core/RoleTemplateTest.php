@@ -87,7 +87,7 @@ class RoleTemplateTest extends TestCase
     /** owner টেমপ্লেটে নেই — সে সবসময় সব পায় (keepOwnerComplete)। */
     public function test_owner_is_not_a_template_and_keeps_everything(): void
     {
-        $this->assertNotContains('owner', app(RoleTemplateRegistry::class)->declaredRoles());
-        $this->assertTrue($this->role('owner')->hasPermissionTo('inventory.stock.view'));
+        $this->assertNotContains(PermissionSyncer::SUPER_ADMIN_ROLE, app(RoleTemplateRegistry::class)->declaredRoles());
+        $this->assertTrue($this->role(PermissionSyncer::SUPER_ADMIN_ROLE)->hasPermissionTo('inventory.stock.view'));
     }
 }

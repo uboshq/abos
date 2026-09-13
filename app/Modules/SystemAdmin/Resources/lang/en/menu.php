@@ -6,6 +6,7 @@ return [
     'companies' => 'Companies',
     'branches' => 'Branches',
     'users' => 'Users',
+    'ownership' => 'Transfer ownership',
     'roles' => 'Roles & Permissions',
     'financial_years' => 'Financial Years',
     'number_series' => 'Document Number Series',

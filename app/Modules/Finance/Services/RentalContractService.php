@@ -86,6 +86,14 @@ class RentalContractService
                         'narration' => __('finance::message.rental_deposit_narration', [
                             'who' => $contract->counterparty,
                         ]),
+
+                        /*
+                         * ⓘ ভাড়ার জামানত প্রায়ই চেকে যায়, তাই এই পথে
+                         * নম্বরটা সবচেয়ে বেশি লাগে। ⛔ তবু ঐচ্ছিক —
+                         * নগদে হাতে দিলে নম্বর হয় না, আর কখন লাগবে সেটা
+                         * [[VoucherService::assertBankReferenceIsFree]] জানে।
+                         */
+                        'instrument_no' => ($data['instrument_no'] ?? '') ?: null,
                     ],
                     [
                         [
@@ -217,6 +225,7 @@ class RentalContractService
                         'who' => $contract->counterparty,
                         'month' => $month->translatedFormat('F Y'),
                     ]),
+                    'instrument_no' => ($data['instrument_no'] ?? '') ?: null,
                 ],
                 $lines,
             );
@@ -341,6 +350,7 @@ class RentalContractService
                     'narration' => __('finance::message.rental_topup_narration', [
                         'who' => $contract->counterparty,
                     ]),
+                    'instrument_no' => ($data['instrument_no'] ?? '') ?: null,
                 ],
                 [
                     [
@@ -393,6 +403,7 @@ class RentalContractService
                         'narration' => __('finance::message.rental_refund_narration', [
                             'who' => $contract->counterparty,
                         ]),
+                        'instrument_no' => ($data['instrument_no'] ?? '') ?: null,
                     ],
                     [
                         [

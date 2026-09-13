@@ -8,6 +8,8 @@ use App\Core\Engines\Audit\AuditEngine;
 use App\Core\Module\ModuleRegistry;
 use App\Core\Services\DataScope;
 use App\Core\Services\MenuBuilder;
+use App\Core\Services\Ownership;
+use App\Core\Services\PermissionSyncer;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
@@ -51,6 +53,7 @@ class UserController extends Controller implements HasMiddleware
     public function __construct(
         private readonly MenuBuilder $menu,
         private readonly AuditEngine $audit,
+        private readonly Ownership $ownership,
     ) {}
 
     public static function middleware(): array
@@ -127,6 +130,8 @@ class UserController extends Controller implements HasMiddleware
     {
         $data = $this->validated($request, null);
 
+        $this->assertOwnershipRules(new User, $data);
+
         $user = DB::transaction(function () use ($data) {
             $user = User::create([
                 'name' => $data['name'],
@@ -167,6 +172,7 @@ class UserController extends Controller implements HasMiddleware
         $data = $this->validated($request, $user);
 
         $this->assertNotLockingThemselvesOut($request, $user, $data);
+        $this->assertOwnershipRules($user, $data);
 
         DB::transaction(function () use ($user, $data) {
             $user->update([
@@ -463,6 +469,65 @@ class UserController extends Controller implements HasMiddleware
      *
      * @param  array<string, mixed>  $data
      */
+    /**
+     * মালিক একজনই — আর এই পর্দাটাই সেই নিয়মের সবচেয়ে ব্যস্ত দরজা।
+     *
+     * ── কেন নিয়মটা এখানেও, যদিও `Ownership`-এ লেখা আছে ────────────────
+     * নিয়মটার সংজ্ঞা এক জায়গায় (`Ownership`), কিন্তু **প্রয়োগ** প্রতিটা
+     * দরজায় বসাতে হয়। ⓘ `CompanyProvisioner` কোম্পানি বানানোর পথটা
+     * পাহারা দেয়; এই পর্দা দিয়েই বাকি সব রোল বদল হয়, তাই এখানে না
+     * বসালে পাহারাটা কেবল ঐ পথগুলো দেখত যেগুলো দিয়ে কেউ যায় না।
+     *
+     * ⚠️ `$user->exists` দেখা হয় কারণ `store()` থেকেও এটা ডাকা হয় —
+     * তখন মানুষটা এখনো নেই, তাই "ইনি সরে গেলে কেউ থাকে কি না" প্রশ্নটাই
+     * ওঠে না; কেবল "দ্বিতীয় মালিক হচ্ছেন কি না" প্রশ্নটা ওঠে।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function assertOwnershipRules(User $user, array $data): void
+    {
+        $companyId = CompanyContext::id();
+
+        $wantsOwner = in_array(
+            PermissionSyncer::SUPER_ADMIN_ROLE,
+            $data['roles'] ?? [],
+            true,
+        );
+
+        /*
+         * ⛔ কোম্পানির প্রসঙ্গ না থাকলে **চুপচাপ ছেড়ে দেওয়া যায় না**।
+         *
+         * রোল বসে কোম্পানি ধরে, তাই প্রসঙ্গ ছাড়া `Ownership`-এর গণনাটা
+         * খালি ফিরত — আর খালি গণনা মানে "কোনো মালিক নেই", অর্থাৎ তালাটা
+         * ঠিক তখনই খুলে যেত যখন সে কিছু দেখতেই পাচ্ছে না।
+         *
+         * ⚠️ এটাই আজকের বারবার-শেখা ভুলটার আকার: একটা পাহারা যেটা কিছু
+         * না দেখেই পাশ করে। তাই না দেখতে পেলে সে **প্রত্যাখ্যান** করে।
+         */
+        if ($companyId === null) {
+            if ($wantsOwner) {
+                throw ValidationException::withMessages([
+                    'roles' => __('system_admin::validation.owner_needs_company'),
+                ]);
+            }
+
+            return;
+        }
+
+        if ($wantsOwner) {
+            $this->ownership->assertMayBecomeOwner($user, $companyId);
+        }
+
+        if ($user->exists) {
+            $this->ownership->assertCompanyKeepsAnOwner(
+                $user,
+                $companyId,
+                $wantsOwner,
+                filter_var($data['is_active'] ?? false, FILTER_VALIDATE_BOOL),
+            );
+        }
+    }
+
     private function assertNotLockingThemselvesOut(Request $request, User $user, array $data): void
     {
         if ($request->user()?->id !== $user->id) {

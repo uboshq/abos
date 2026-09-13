@@ -128,19 +128,25 @@
                 </p>
             </div>
 
-            <div x-cloak x-show="heldBy === 'owner'">
-                <x-ui.field name="holder_name" :label="__('finance::field.holder_name')"
-                            :value="old('holder_name')" />
+            {{-- ⓘ মোড়কটা অপরিবর্তিত: ব্যবসার নামে রাখা আমানতের কোনো
+                 ব্যক্তি নেই, তাই ঘরটা তখন পর্দাতেই আসে না। যে ঘর কখনো
+                 ভরা হবে না, সেটা দেখানো মানে ভুল প্রশ্ন করা। --}}
+            <div x-cloak x-show="heldBy === 'owner'" class="sm:col-span-2">
+                @include('finance::components.person-picker', [
+                    'people' => $people,
+                    'label' => __('finance::field.holder_name'),
+                ])
             </div>
 
             <x-ui.field name="principal" type="number" step="0.01" numeric required
                         :label="__('finance::field.principal')" :value="old('principal')" />
 
 
-            <x-ui.select name="funded_from_account_id" :label="__('finance::field.funded_from')" required
-                         :options="$accounts->mapWithKeys(fn ($a) => [$a->id => $a->name()])"
-                         :placeholder="__('finance::field.choose')"
-                         :selected="old('funded_from_account_id')" />
+            {{-- এখানেই টাকা নড়ে, তাই ব্যাংক বা MFS হলে নম্বরটাও এখানেই। --}}
+            <x-ui.money-account name="funded_from_account_id" required
+                                :label="__('finance::field.funded_from')"
+                                :accounts="$accounts"
+                                :selected="old('funded_from_account_id')" />
 
             <x-ui.field name="profit_rate" type="number" step="0.01" numeric
                         :label="__('finance::field.profit_rate')" :value="old('profit_rate')" />
@@ -171,10 +177,12 @@
             </div>
 
             <div x-cloak x-show="shape === 'periodic_payout'" class="xl:col-span-2">
-                <x-ui.select name="payout_account_id" :label="__('finance::field.payout_account')"
-                             :options="$accounts->mapWithKeys(fn ($a) => [$a->id => $a->name()])"
-                             :placeholder="__('finance::field.choose')"
-                             :selected="old('payout_account_id')" />
+                {{-- ⓘ নম্বর চাওয়া হয় না: এটা ভবিষ্যতের লাভ কোথায় আসবে
+                     তার ঠিকানা, আজকের কোনো লেনদেন নয়। --}}
+                <x-ui.money-account name="payout_account_id" :reference="false"
+                                    :label="__('finance::field.payout_account')"
+                                    :accounts="$accounts"
+                                    :selected="old('payout_account_id')" />
             </div>
 
             {{-- কোন ধারের বিপরীতে বন্ধক।

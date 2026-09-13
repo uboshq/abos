@@ -63,7 +63,7 @@ class TheBankStatementAndTheLedgerNeverAgreedTest extends TestCase
             'parent_id' => StandardChart::find(StandardChart::BANK)->id,
             'type' => Account::ASSET,
             'nature' => Account::DEBIT,
-            'is_bank' => true,
+            'money_kind' => Account::BANK,
         ]);
 
         /*
@@ -81,7 +81,7 @@ class TheBankStatementAndTheLedgerNeverAgreedTest extends TestCase
             'parent_id' => StandardChart::find(StandardChart::CASH_IN_HAND)->id,
             'type' => Account::ASSET,
             'nature' => Account::DEBIT,
-            'is_cash' => true,
+            'money_kind' => Account::CASH,
         ]);
 
         $this->recons = app(BankReconciliationService::class);

@@ -59,7 +59,6 @@ class BankAndMobileMoneyAreNotTheSameThingTest extends TestCase
             'name_bn' => 'বিকাশ মার্চেন্ট',
             'parent_id' => Account::query()
                 ->where('code', StandardChart::MOBILE_MONEY)->value('id'),
-            'is_bank' => true,
         ]);
     }
 
@@ -155,7 +154,6 @@ class BankAndMobileMoneyAreNotTheSameThingTest extends TestCase
             'code' => '1102-OLD-BK',
             'name_en' => 'Nagad Distributor',
             'parent_id' => $bank->id,
-            'is_bank' => true,
         ]);
 
         /* সাধারণ ব্যাংক হিসাব — এটা যেন না নড়ে */
@@ -163,7 +161,6 @@ class BankAndMobileMoneyAreNotTheSameThingTest extends TestCase
             'code' => '1102-CITY',
             'name_en' => 'City Bank Current Account',
             'parent_id' => $bank->id,
-            'is_bank' => true,
         ]);
 
         Artisan::call('abos:split-bank-and-mfs');

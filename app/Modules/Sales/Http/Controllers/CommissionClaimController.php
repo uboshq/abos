@@ -27,8 +27,9 @@ use Illuminate\View\View;
  * কোনটা মানা হলো, কোনটা নয়। আলাদা পর্দায় পাঠালে প্রতিটা সিদ্ধান্তে
  * দুইবার করে যাওয়া-আসা করতে হত।
  *
- * তৈরির ফর্মটাও উপরেই, কারণ কমিশন বসানো আর কমিশনের অবস্থা দেখা —
- * দুইটাই একই মানুষের একই বসায় করা কাজ।
+ * ⓘ তৈরির ফর্মটা আলাদা পাতায় ([[CommissionClaimController::create()]]),
+ * আর উপরে বাঁ কোণে তার বোতাম — বিক্রয় বিলের মতোই। আগে ওটা তালিকার
+ * নিচে গোঁজা ছিল, আর উপরে কোনো বোতাম ছিল না।
  */
 class CommissionClaimController extends Controller implements HasMiddleware
 {
@@ -43,7 +44,7 @@ class CommissionClaimController extends Controller implements HasMiddleware
     {
         return [
             new Middleware('can:sales.commission.view', only: ['index']),
-            new Middleware('can:sales.commission.manage', only: ['store', 'settle', 'reject']),
+            new Middleware('can:sales.commission.manage', only: ['create', 'store', 'settle', 'reject']),
         ];
     }
 
@@ -59,8 +60,11 @@ class CommissionClaimController extends Controller implements HasMiddleware
         return view('sales::commission.index', [
             'menu' => $this->menu->forUser($request->user()),
             'claims' => $query->paginate(50)->withQueryString(),
-            'customers' => Customer::query()->active()->orderBy('name_en')->get(['id', 'code', 'name_en', 'name_bn']),
-            'suppliers' => Supplier::query()->active()->orderBy('name_en')->get(['id', 'code', 'name_en', 'name_bn']),
+            /*
+             * ⓘ ডিলার ও কোম্পানির তালিকা দুইটা আর এখানে নয় — ফর্মটা
+             * `create`-এ সরার পর তালিকার পাতায় ওগুলোর কোনো ব্যবহারকারী
+             * নেই, অথচ প্রতিবার দুইটা পুরো টেবিল পড়া হত।
+             */
             'status' => $request->query('status'),
             'sortOptions' => $this->sortLabels(),
             'sort' => $sort,
@@ -72,6 +76,22 @@ class CommissionClaimController extends Controller implements HasMiddleware
              * সংখ্যা যেটা কোম্পানির লোককে বলা হয়।
              */
             'pendingTotal' => (string) (CommissionClaim::query()->pending()->sum('amount') ?: '0'),
+        ]);
+    }
+
+    /**
+     * নতুন কমিশন বসানোর পর্দা।
+     *
+     * ⭐ কেবল ফর্মের দুইটা তালিকা (ডিলার ও কোম্পানি) — দাবির সারিগুলো
+     * আর উপরের যোগফলটা এখানে তোলা হয় না: এই পাতায় একটাও সারি দেখানো
+     * হয় না, আর যোগফলটা তালিকার পাতার নিজের প্রশ্ন।
+     */
+    public function create(Request $request): View
+    {
+        return view('sales::commission.create', [
+            'menu' => $this->menu->forUser($request->user()),
+            'customers' => Customer::query()->active()->orderBy('name_en')->get(['id', 'code', 'name_en', 'name_bn']),
+            'suppliers' => Supplier::query()->active()->orderBy('name_en')->get(['id', 'code', 'name_en', 'name_bn']),
         ]);
     }
 

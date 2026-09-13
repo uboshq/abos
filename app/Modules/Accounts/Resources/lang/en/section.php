@@ -6,6 +6,7 @@ return [
     'identity' => 'Identity',
     'placement' => 'Placement in the chart',
     'bank' => 'Bank details',
+    'mfs' => 'Mobile money details',
     'opening' => 'Opening balance',
     'custody' => 'Custody',
     'details' => 'Details',

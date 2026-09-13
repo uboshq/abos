@@ -35,11 +35,11 @@ final class AccountsFacts
         return $this->sumOf($this->tills()->pluck('account_id')->all());
     }
 
-    /** ব্যাংকে — যে খাতগুলো ব্যাংক বলে চিহ্নিত। */
+    /** ব্যাংকে — ⛔ MFS নয়, নাহলে "ব্যাংকে কত আছে" সংখ্যাটাই মিথ্যা হত। */
     public function bankBalance(): string
     {
         return $this->sumOf(
-            Account::query()->where('is_bank', true)->postable()->pluck('id')->all()
+            Account::query()->ofMoneyKind(Account::BANK)->pluck('id')->all()
         );
     }
 

@@ -67,7 +67,16 @@ class BankMoneyIsBookedOnceTest extends TestCase
         $this->cash = (int) app(CashTillService::class)->ensurePrimaryTill()->account_id;
         $this->rent = (int) Account::query()->where('code', '5202')->firstOrFail()->id;
 
-        $this->bank = $this->makeBank('1102-BKASH', 'bKash Merchant', 'বিকাশ মার্চেন্ট');
+        /*
+         * ⛔ এটা আগে `1102-BKASH`, "bKash Merchant" ছিল — ব্যাংকের
+         * মাথার নিচে বসা একটা বিকাশের খাত।
+         *
+         * ⓘ এই ফাইলের দুইটা খাতকেই **ব্যাংক** হতে হয় (দুইটা আলাদা
+         * ব্যাংকে একই চেক নম্বর — সেটাই মূল দাবি), তাই খাতটা সরানো
+         * হয়নি, নামটা শোধরানো হয়েছে। বিকাশ ব্যাংক নয়:
+         * [[StandardChart::BANK]]-এর ডকব্লকে কারণ লেখা।
+         */
+        $this->bank = $this->makeBank('1102-IBBL', 'Islami Bank Current', 'ইসলামী ব্যাংক চলতি');
         $this->otherBank = $this->makeBank('1102-CITY', 'City Bank', 'সিটি ব্যাংক');
     }
 
@@ -81,7 +90,7 @@ class BankMoneyIsBookedOnceTest extends TestCase
             'parent_id' => StandardChart::find(StandardChart::BANK)->id,
             'type' => Account::ASSET,
             'nature' => Account::DEBIT,
-            'is_bank' => true,
+            'money_kind' => Account::BANK,
             'is_active' => true,
             'status' => DocumentStatus::CONFIRMED,
         ])->id;
@@ -122,7 +131,7 @@ class BankMoneyIsBookedOnceTest extends TestCase
             // ব্যাংক থাকলে "নম্বর লাগবে" শুনে কেউ বুঝত না কোনটার।
             // কোড ধরে দেখা হয়, নাম ধরে নয়: নাম ভাষার সাথে বদলায়।
             $this->assertStringContainsString(
-                '1102-BKASH',
+                '1102-IBBL',
                 implode(' ', $e->errors()['instrument_no'] ?? []),
             );
         }

@@ -65,9 +65,9 @@ class MoneyCustodyController extends Controller implements HasMiddleware
             ->orderBy('code')
             ->get();
 
+        // ⛔ কেবল ব্যাংক — MFS নয়; `ofMoneyKind()` নিজেই দল ছাঁকে
         $banks = Account::query()
-            ->where('is_bank', true)
-            ->postable()
+            ->ofMoneyKind(Account::BANK)
             ->orderBy('code')
             ->get();
 

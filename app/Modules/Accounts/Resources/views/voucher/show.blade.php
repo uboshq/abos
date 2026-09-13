@@ -16,7 +16,13 @@
      * বসিয়ে এগিয়ে যেতেন। লেজারে বসানোর মুহূর্তেই টাকাটা সত্যিই নড়ে,
      * তাই নম্বরটাও তখন হাতে থাকে।
      */
-    $bankAccount = $voucher->lines->map(fn ($line) => $line->account)->first(fn ($a) => $a?->is_bank);
+    /*
+     * ব্যাংক ও MFS দুইটাতেই নম্বর লাগে — শর্তটা হুবহু
+     * [[VoucherService::assertBankReferenceIsFree()]]-এর মতো, নাহলে পর্দা
+     * নম্বরটা চাইত না অথচ নিশ্চিত করার সময় পাহারা আটকাত।
+     */
+    $bankAccount = $voucher->lines->map(fn ($line) => $line->account)
+        ->first(fn ($a) => $a !== null && ($a->isBank() || $a->isMfs()));
     $needsReference = $bankAccount !== null && blank($voucher->instrument_no);
 @endphp
 

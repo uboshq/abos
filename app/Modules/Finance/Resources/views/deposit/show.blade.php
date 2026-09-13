@@ -157,12 +157,11 @@
                                     :label="__('finance::field.date')"
                                     :value="old('moved_on', now()->toDateString())" />
 
-                        <x-ui.select name="money_account_id" required
-                                     :label="__('finance::field.money_account')"
-                                     :options="$money"
-                                     :placeholder="__('finance::field.choose')"
-                                     :selected="old('money_account_id',
-                                         $d->payout_account_id ?? $d->funded_from_account_id)" />
+                        <x-ui.money-account name="money_account_id" required
+                                            :label="__('finance::field.money_account')"
+                                            :accounts="$money"
+                                            :selected="old('money_account_id',
+                                                $d->payout_account_id ?? $d->funded_from_account_id)" />
 
                         <div class="flex items-end">
                             <x-ui.button type="submit" tone="primary" class="w-full">
@@ -195,11 +194,10 @@
                                 :label="__('finance::field.date')"
                                 :value="old('moved_on', now()->toDateString())" />
 
-                    <x-ui.select name="money_account_id" required
-                                 :label="__('finance::field.money_account')"
-                                 :options="$money"
-                                 :placeholder="__('finance::field.choose')"
-                                 :selected="old('money_account_id', $d->funded_from_account_id)" />
+                    <x-ui.money-account name="money_account_id" required
+                                        :label="__('finance::field.money_account')"
+                                        :accounts="$money"
+                                        :selected="old('money_account_id', $d->funded_from_account_id)" />
 
                     <div class="flex items-end">
                         <x-ui.button type="submit" tone="danger" class="w-full">

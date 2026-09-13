@@ -13,11 +13,11 @@
 @endphp
 
 <x-layouts.app :menu="$menu">
-    <x-slot:title>{{ $account->person_name }}</x-slot:title>
+    <x-slot:title>{{ $account->person?->name() ?? '—' }}</x-slot:title>
 
     <x-slot:header>
-        <x-ui.page-header :title="$account->person_name"
-                          :subtitle="$account->mobile ?: __('finance::message.hand_loan_note')">
+        <x-ui.page-header :title="$account->person?->name() ?? '—'"
+                          :subtitle="$account->person?->mobile ?: __('finance::message.hand_loan_note')">
             <x-slot:actions>
                 <x-ui.button tone="secondary" :href="route('finance.hand_loan.index')">
                     {{ __('finance::menu.hand_loan') }}
@@ -113,11 +113,12 @@
                             :label="__('finance::field.date')"
                             :value="old('moved_on', now()->toDateString())" />
 
-                <x-ui.select name="money_account_id" required
-                             :label="__('finance::field.money_account')"
-                             :options="$money"
-                             :placeholder="__('finance::field.choose')"
-                             :selected="old('money_account_id')" />
+                {{-- ⛔ আগে এখানে কেবল খাতের ঘর ছিল, আর ব্যাংক বাছলে
+                     সার্ভার লেনদেন নম্বর চেয়ে আটকে দিত — ঘরটা ছাড়াই। --}}
+                <x-ui.money-account name="money_account_id" required codes
+                                    :label="__('finance::field.money_account')"
+                                    :accounts="$money"
+                                    :selected="old('money_account_id')" />
 
                 <div class="flex items-end">
                     <x-ui.button type="submit" tone="primary" class="w-full">

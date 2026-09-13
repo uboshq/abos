@@ -18,18 +18,15 @@
         @endif
     </span>
 @elseif (auth()->user()?->can('finance.withdrawal.post'))
+    {{-- মূলধনের পর্দার হুবহু একই ফাঁদ ছিল এখানেও: ব্যাংক বাছলে সার্ভার
+         লেনদেন নম্বর চাইত, আর ঘরটা ছিল না। --}}
     <form method="POST" action="{{ route('finance.withdrawal.post', $row) }}"
-          class="flex items-center gap-1">
+          class="flex items-start gap-1">
         @csrf
 
-        <select name="money_account_id" required
-                class="h-(--spacing-field-compact) min-w-0 flex-1 rounded-(--radius-field)
-                       border border-(--color-border) bg-(--color-surface-card) px-2 text-2xs">
-            <option value="" disabled selected>{{ __('finance::field.money_account') }}</option>
-            @foreach ($accounts as $account)
-                <option value="{{ $account->id }}">{{ $account->name() }}</option>
-            @endforeach
-        </select>
+        <div class="min-w-0 flex-1">
+            <x-ui.money-account name="money_account_id" :accounts="$accounts" compact required />
+        </div>
 
         <x-ui.button type="submit" tone="primary">{{ __('finance::action.money_taken') }}</x-ui.button>
     </form>

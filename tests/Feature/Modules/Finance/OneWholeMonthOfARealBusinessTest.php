@@ -16,6 +16,7 @@ use App\Modules\Finance\Models\CapitalEntry;
 use App\Modules\Finance\Services\CapitalService;
 use App\Modules\Finance\Services\RentalContractService;
 use App\Modules\Finance\Services\WithdrawalService;
+use App\Modules\MasterData\Models\Person;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -52,6 +53,20 @@ class OneWholeMonthOfARealBusinessTest extends TestCase
 
     private Account $till;
 
+    /**
+     * মালিক — একটাই সারি, আর মূলধন ও উত্তোলন দুইটাই ওটার দিকে তাক করে।
+     *
+     * ⓘ `firstOrCreate`, তাই দুইবার ডাকলেও একই সারি — আর ওটাই এই
+     * পরীক্ষার একটা নীরব দাবি: এক মানুষ, এক সারি।
+     */
+    private function owner(): Person
+    {
+        return Person::query()->firstOrCreate(
+            ['company_id' => $this->company->id, 'name_en' => 'মালিক'],
+            ['code' => 'P-OWNER'],
+        );
+    }
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -86,7 +101,7 @@ class OneWholeMonthOfARealBusinessTest extends TestCase
 
         /* ── ১ · মূলধন ২৫ লাখ ──────────────────────────────────────── */
         $capital = app(CapitalService::class)->record([
-            'contributor_name' => 'মালিক',
+            'person_id' => $this->owner()->id,
             'contributor_type' => CapitalEntry::OWNER,
             'entry_type' => CapitalEntry::CONTRIBUTION,
             'trx_date' => '2026-09-01',
@@ -150,7 +165,14 @@ class OneWholeMonthOfARealBusinessTest extends TestCase
 
         /* ── ৫ · মাস শেষে উত্তোলন ─────────────────────────────────── */
         $withdrawal = app(WithdrawalService::class)->request([
-            'contributor_name' => 'মালিক',
+            /*
+             * ⭐ একই সারি, একই মানুষ — আর এটাই এই পুরো বদলের মূল কথা।
+             *
+             * আগে দুই জায়গায় "মালিক" আলাদা করে টাইপ করা হত, আর বানান
+             * এক অক্ষর আলাদা হলে মূলধন ও উত্তোলন দুইজন আলাদা মানুষের
+             * হয়ে যেত — অংশ % ভুল, সীমা নিষ্ক্রিয়।
+             */
+            'person_id' => $this->owner()->id,
             'amount' => '50000',
             'trx_date' => '2026-09-30',
         ]);

@@ -184,7 +184,8 @@ class MoneyTransferController extends Controller implements HasMiddleware
             'tills' => CashTill::query()->active()->with('account')->orderByDesc('is_primary')->orderBy('code')->get(),
             // ব্যাংকে জমা দেওয়াটাও হস্তান্তর, আর সেটাই দিনশেষে সবচেয়ে
             // বেশি হয় — তাই ব্যাংকের খাতগুলোও গন্তব্যের তালিকায়
-            'bankAccounts' => Account::query()->where('is_bank', true)->postable()->active()->orderBy('code')->get(),
+            // ⛔ কেবল ব্যাংক — MFS নয়
+            'bankAccounts' => Account::query()->ofMoneyKind(Account::BANK)->active()->orderBy('code')->get(),
             'people' => User::query()
                 ->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))
                 ->where('is_active', true)

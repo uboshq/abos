@@ -130,7 +130,7 @@ class MoneyAndCustodyTest extends TestCase
             'parent_id' => StandardChart::find(StandardChart::BANK)->id,
             'type' => Account::ASSET,
             'nature' => Account::DEBIT,
-            'is_bank' => true,
+            'money_kind' => Account::BANK,
             'is_active' => true,
             'status' => DocumentStatus::CONFIRMED,
         ]);

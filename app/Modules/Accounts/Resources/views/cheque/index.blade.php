@@ -30,7 +30,17 @@
 
     <x-slot:header>
         <x-ui.page-header :title="__('accounts::menu.cheques')"
-                          :subtitle="__('accounts::message.cheque_note')" />
+                          :subtitle="__('accounts::message.cheque_note')">
+            {{-- বসানোর পথটা এখন উপরে, বিক্রয় বিলের মতোই — শর্তটা হুবহু
+                 সেটাই যেটায় আগে নিচের ফর্মটা দেখা যেত। --}}
+            <x-slot:actions>
+                @can('accounts.cheque.manage')
+                    <x-ui.button tone="primary" icon="plus" :href="route('accounts.cheque.create')">
+                        {{ __('accounts::action.new_cheque') }}
+                    </x-ui.button>
+                @endcan
+            </x-slot:actions>
+        </x-ui.page-header>
     </x-slot:header>
 
     @if (session('saved'))
@@ -76,106 +86,6 @@
             <p class="num text-2xl font-semibold">{{ $ripe }}</p>
         </a>
     </div>
-
-    @can('accounts.cheque.manage')
-        <form method="POST" action="{{ route('accounts.cheque.store') }}"
-              class="mb-5 grid gap-3 rounded-(--radius-card) border border-(--color-border)
-                     bg-(--color-surface-card) p-4 md:grid-cols-3 lg:grid-cols-6">
-            @csrf
-
-            <label class="flex flex-col gap-1">
-                <span class="text-sm font-medium">{{ __('accounts::field.cheque_direction') }}</span>
-                <select name="direction"
-                        class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border)
-                               bg-(--color-surface-app) px-2">
-                    <option value="received">{{ __('accounts::field.cheque_received') }}</option>
-                    <option value="issued">{{ __('accounts::field.cheque_issued') }}</option>
-                </select>
-            </label>
-
-            <label class="flex flex-col gap-1">
-                <span class="text-sm font-medium">{{ __('accounts::field.cheque_no') }}</span>
-                <input type="text" name="cheque_no" required value="{{ old('cheque_no') }}"
-                       class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border)
-                              bg-(--color-surface-app) px-2">
-            </label>
-
-            <label class="flex flex-col gap-1">
-                <span class="text-sm font-medium">{{ __('accounts::field.bank_name') }}</span>
-                <input type="text" name="bank_name" value="{{ old('bank_name') }}"
-                       class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border)
-                              bg-(--color-surface-app) px-2">
-            </label>
-
-            {{--
-                চেকের নিজের তারিখ — এন্ট্রির তারিখ নয়।
-
-                আগাম তারিখের চেক (PDC) বাংলাদেশে রোজকার, আর ওটাই এই
-                খাতার প্রাণ: "আগামী সপ্তাহে কত টাকার চেক পাশ হবে"।
-            --}}
-            <label class="flex flex-col gap-1">
-                <span class="text-sm font-medium">{{ __('accounts::field.cheque_date') }}</span>
-                <x-ui.date name="cheque_date" :required="true"
-                           :value="old('cheque_date', now()->toDateString())" />
-                           </label>
-
-            <label class="flex flex-col gap-1">
-                <span class="text-sm font-medium">{{ __('accounts::field.amount') }}</span>
-                <input type="number" step="0.01" min="0" name="amount" required value="{{ old('amount') }}"
-                       class="num h-(--spacing-field) rounded-(--radius-field) border border-(--color-border)
-                              bg-(--color-surface-app) px-2 text-end">
-            </label>
-
-            <label class="flex flex-col gap-1">
-                <span class="text-sm font-medium">{{ __('accounts::field.party') }}</span>
-                <select name="party"
-                        class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border)
-                               bg-(--color-surface-app) px-2">
-                    <option value="">—</option>
-                    @foreach ($parties as $group)
-                        <optgroup label="{{ $group['label'] }}">
-                            @foreach ($group['options'] as $party)
-                                <option value="{{ $group['type'] }}:{{ $party['id'] }}">{{ $party['label'] }}</option>
-                            @endforeach
-                        </optgroup>
-                    @endforeach
-                </select>
-            </label>
-
-            {{--
-                আমাদের কোন ব্যাংক হিসাবে টাকাটা বসবে।
-
-                উপরের "ব্যাংকের নাম" ঘরটা আলাদা জিনিস — ওটা চেকটা **কোন
-                ব্যাংকের**, অর্থাৎ যিনি চেক দিয়েছেন তাঁর ব্যাংক। দুইটাতেই
-                একই লেবেল বসানো ছিল, আর পর্দায় পাশাপাশি দুইটা "ব্যাংকের
-                নাম" দেখে বোঝার উপায় ছিল না কোনটা কী।
-            --}}
-            <label class="flex flex-col gap-1 md:col-span-2">
-                <span class="text-sm font-medium">{{ __('accounts::field.deposit_into') }}</span>
-                <select name="bank_account_id"
-                        class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border)
-                               bg-(--color-surface-app) px-2">
-                    <option value="">—</option>
-                    @foreach ($banks as $bank)
-                        <option value="{{ $bank->id }}">{{ $bank->label() }}</option>
-                    @endforeach
-                </select>
-            </label>
-
-            <label class="flex flex-col gap-1 md:col-span-2 lg:col-span-3">
-                <span class="text-sm font-medium">{{ __('core.table.narration') }}</span>
-                <input type="text" name="narration" value="{{ old('narration') }}"
-                       class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border)
-                              bg-(--color-surface-app) px-2">
-            </label>
-
-            <div class="flex items-end">
-                <x-ui.button type="submit" tone="primary" class="w-full">
-                    {{ __('core.action.save') }}
-                </x-ui.button>
-            </div>
-        </form>
-    @endcan
 
     @if ($cheques->isEmpty())
         <x-ui.empty-state :message="__('accounts::message.no_cheques')" />

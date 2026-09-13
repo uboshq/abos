@@ -50,6 +50,19 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
             ->middleware('can:create,'.Account::class)
             ->name('install');
 
+        /*
+         * এটাও {account}-এর আগে, আর একই কারণে।
+         *
+         * অনুমতিটা হাতে লেখা: AuthorizesResource কেবল সাতটা চেনা
+         * পদ্ধতিকে ক্ষমতা দেয়, তাই নতুন পদ্ধতি যোগ করলে সেটা নিজে থেকে
+         * পাহারায় পড়ে না — EveryRouteIsGuardedTest ওটা ধরবে, কিন্তু
+         * ধরার আগেই বসানো ভালো। `create`, কারণ পরের খালি কোডটা জানা
+         * আর নতুন খাত বানানো একই কাজের দুই ধাপ।
+         */
+        Route::get('/next-code', [ChartOfAccountsController::class, 'nextCode'])
+            ->middleware('can:create,'.Account::class)
+            ->name('next-code');
+
         Route::get('/{account}', [ChartOfAccountsController::class, 'show'])->name('show');
         Route::get('/{account}/edit', [ChartOfAccountsController::class, 'edit'])->name('edit');
         Route::put('/{account}', [ChartOfAccountsController::class, 'update'])->name('update');
@@ -207,12 +220,22 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
     /*
      * চেকের খাতা।
      *
-     * তালিকাই প্রধান পর্দা — বসানো হয় উপরের ফর্ম থেকে, আর জমা/পাশ/
-     * ফেরত তিনটাই সারি থেকে। আলাদা পাতায় পাঠালে প্রতিটা সিদ্ধান্তে
-     * যাওয়া-আসা করতে হত, আর দিনে দশটা চেকে সেটা অসহ্য।
+     * তালিকাই প্রধান পর্দা, আর জমা/পাশ/ফেরত তিনটাই সারি থেকে — আলাদা
+     * পাতায় পাঠালে প্রতিটা সিদ্ধান্তে যাওয়া-আসা করতে হত, আর দিনে দশটা
+     * চেকে সেটা অসহ্য।
+     *
+     * বসানোটা অন্য জিনিস, আর ওটা এখন নিজের পাতায় (`/create`): তালিকার
+     * নিচে গোঁজা ফর্মটা সেখানে **সরানো** হয়েছে, নকল করা হয়নি।
      */
     Route::prefix('cheques')->name('cheque.')->group(function () {
         Route::get('/', [ChequeController::class, 'index'])->name('index');
+
+        /*
+         * বসানোর পর্দাটা আলাদা — আর `/create` অবশ্যই `/{cheque}`-এর আগে,
+         * `install-standard`-এর মতোই: পরে বসালে বাইন্ডিং "create" কে
+         * একটা চেকের id ভেবে ৪০৪ দিত।
+         */
+        Route::get('/create', [ChequeController::class, 'create'])->name('create');
         Route::post('/', [ChequeController::class, 'store'])->name('store');
         Route::post('/{cheque}/deposit', [ChequeController::class, 'deposit'])
             ->whereNumber('cheque')->name('deposit');
@@ -230,6 +253,15 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
      */
     Route::prefix('reconciliations')->name('reconciliation.')->group(function () {
         Route::get('/', [BankReconciliationController::class, 'index'])->name('index');
+
+        /*
+         * খোলার পর্দা — `/{reconciliation}`-এর আগে, একই কারণে।
+         *
+         * ⓘ তিন ধাপ: এখানে অধিবেশনটা খোলা হয় (`store`), আর তারপর
+         * ব্যবহারকারী `show`-এ গিয়ে লাইন ধরে টিক দেন। তাই `store`
+         * আগের মতোই `show`-এ পাঠায়, তালিকায় নয়।
+         */
+        Route::get('/create', [BankReconciliationController::class, 'create'])->name('create');
         Route::post('/', [BankReconciliationController::class, 'store'])->name('store');
         Route::get('/{reconciliation}', [BankReconciliationController::class, 'show'])
             ->whereNumber('reconciliation')->name('show');
@@ -249,6 +281,9 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
      */
     Route::prefix('assets')->name('asset.')->group(function () {
         Route::get('/', [FixedAssetController::class, 'index'])->name('index');
+
+        // বসানোর পর্দা — `/{asset}`-এর আগে, নাহলে "create" একটা id ভেবে ৪০৪
+        Route::get('/create', [FixedAssetController::class, 'create'])->name('create');
         Route::post('/', [FixedAssetController::class, 'store'])->name('store');
         Route::post('/depreciate', [FixedAssetController::class, 'depreciate'])->name('depreciate');
         Route::get('/{asset}', [FixedAssetController::class, 'show'])

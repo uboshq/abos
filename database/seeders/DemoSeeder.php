@@ -134,13 +134,13 @@ class DemoSeeder extends Seeder
         CompanyContext::forCompany($alpha->id, function () use (&$roles) {
             $roles = [];
 
-            foreach (['owner', 'accountant', 'salesman'] as $role) {
+            foreach ([PermissionSyncer::SUPER_ADMIN_ROLE, 'accountant', 'salesman'] as $role) {
                 $roles[$role] = Role::findOrCreate($role);
             }
 
             // মালিক সব পারেন। বাকিদের সীমা module.php-র prefix ধরে —
             // হিসাবরক্ষক accounts.*, বিক্রয়কর্মী sales.* ও customer.*।
-            $roles['owner']->syncPermissions(Permission::all());
+            $roles[PermissionSyncer::SUPER_ADMIN_ROLE]->syncPermissions(Permission::all());
 
             $roles['accountant']->syncPermissions(
                 Permission::query()
@@ -323,12 +323,12 @@ class DemoSeeder extends Seeder
          * সেজন্যই এই বদলটা সহজে চোখ এড়িয়ে যায়।
          */
         CompanyContext::forCompany($alpha->id, function () use ($owner, $accountant, $salesman) {
-            $owner->assignRole('owner');
+            $owner->assignRole(PermissionSyncer::SUPER_ADMIN_ROLE);
             $accountant->assignRole('accountant');
             $salesman->assignRole('salesman');
         });
 
-        CompanyContext::forCompany($beta->id, fn () => $owner->assignRole('owner'));
+        CompanyContext::forCompany($beta->id, fn () => $owner->assignRole(PermissionSyncer::SUPER_ADMIN_ROLE));
 
         $owner->switchCompany($alpha->id);
         $accountant->switchCompany($alpha->id);
@@ -365,7 +365,7 @@ class DemoSeeder extends Seeder
         $this->command?->table(
             ['ব্যবহারকারী', 'ইমেইল', 'রোল', 'কোম্পানি'],
             [
-                ['Al-Amin Shuvo', 'owner@abos.test', 'owner', $alpha->code.' + '.$beta->code],
+                ['Al-Amin Shuvo', 'owner@abos.test', PermissionSyncer::SUPER_ADMIN_ROLE, $alpha->code.' + '.$beta->code],
                 ['হিসাবরক্ষক', 'accounts@abos.test', 'accountant', $alpha->code],
                 ['বিক্রয়কর্মী', 'sales@abos.test', 'salesman', $alpha->code],
             ],

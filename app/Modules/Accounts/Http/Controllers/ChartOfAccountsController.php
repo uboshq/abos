@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Accounts\Http\Controllers;
 
 use App\Core\Concerns\AuthorizesResource;
+use App\Core\Engines\Coding\CodeSuggester;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\RunningBalance;
 use App\Http\Controllers\Controller;
@@ -13,6 +14,7 @@ use App\Modules\Accounts\Http\Requests\AccountRequest;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\AccountService;
 use App\Modules\Accounts\Services\StandardChart;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -106,6 +108,47 @@ class ChartOfAccountsController extends Controller implements HasMiddleware
             // ?parent=12 দিয়ে এলে ওই মাথার নিচেই তৈরি হবে — গাছের
             // একটা শাখা থেকে "+" চাপলে আবার বাবা বাছতে হয় না
             'preselectedParent' => $request->integer('parent') ?: null,
+        ]);
+    }
+
+    /**
+     * বাবা বাছার সাথে সাথে কোডটা কী হবে — ফর্মের পূর্বরূপ।
+     *
+     * ── কেন এটা একটা আলাদা ডাক, ফর্মের সাথে পাঠানো নয় ──────────────
+     * ⛔ প্রথমে ভাবা হয়েছিল প্রতিটা অভিভাবকের পরের কোডটা আগেই গুনে
+     * ফর্মের সাথে পাঠানো হবে। কিন্তু `underParent()` প্রতি ডাকে ভাইদের
+     * কোড তোলে আর খালি নম্বর খোঁজে — ত্রিশটা মাথার ছকে সেটা ষাটটা
+     * কোয়েরি, প্রতিবার ফর্ম খোলায়, অথচ ব্যবহারকারী একটাই মাথা বাছেন।
+     *
+     * ⭐ আর যে কারণে এটা হাতে গোনা হয় না: কোডের নিয়মটা
+     * [[CodeSuggester::underParent()]]-এ **একবারই** লেখা আছে — দলের নিচে
+     * দল হলে +১০০, পাতা হলে +১, শূন্য ধরে রাখা, আর মুছে ফেলা সারির কোড
+     * দখলে রাখা। এখানে আরেকটা হিসাব লিখলে পর্দা এক কথা বলত আর সংরক্ষণ
+     * আরেকটা — আর ব্যবহারকারী সেটা টের পেতেন সেভ করার পরে।
+     *
+     * ⚠️ এটা প্রতিশ্রুতি নয়, পূর্বাভাস। দুইজন একসাথে খুললে দুইজনেই একই
+     * নম্বর দেখবেন, আর দ্বিতীয়জন সেভ করার সময় পরেরটা পাবেন — কারণ
+     * আসল সিদ্ধান্তটা `AccountService::create()`-এ, লেনদেনের ভেতরে।
+     */
+    public function nextCode(Request $request, CodeSuggester $codes): JsonResponse
+    {
+        $id = $request->integer('parent') ?: null;
+        $parent = $id === null ? null : Account::query()->find($id);
+
+        return response()->json([
+            'code' => $codes->underParent(Account::class, $parent, $request->boolean('group')),
+
+            /*
+             * ⭐ ধরনটাও একই ডাকে, আর সেটা কাকতালীয় নয়।
+             *
+             * ফর্মে আগে "নগদ খাত" ও "ব্যাংক বা MFS খাত" দুইটা টিক ছিল, আর
+             * ব্যবহারকারী সেগুলো বাবার সাথে অসঙ্গত রেখে দিতে পারতেন।
+             * এখন উত্তরটা বাবার খাতেই লেখা আছে ([[AccountService::moneyKindFor()]]),
+             * তাই পর্দা সেটা **জিজ্ঞেস করে না, জানিয়ে দেয়** — আর জানানোর
+             * জন্য সার্ভারকেই জিজ্ঞেস করে, যাতে পর্দা আর সংরক্ষণ কখনো
+             * দুই কথা না বলে।
+             */
+            'money_kind' => $parent?->money_kind,
         ]);
     }
 

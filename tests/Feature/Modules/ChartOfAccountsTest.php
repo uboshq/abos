@@ -349,7 +349,7 @@ class ChartOfAccountsTest extends TestCase
 
     public function test_a_debit_nature_account_shows_a_positive_balance_when_debited(): void
     {
-        $cash = $this->make(['code' => '9101', 'type' => Account::ASSET, 'is_cash' => true]);
+        $cash = $this->make(['code' => '9101', 'type' => Account::ASSET]);
 
         $this->entry($cash, debit: '5000');
         $this->entry($cash, credit: '2000');

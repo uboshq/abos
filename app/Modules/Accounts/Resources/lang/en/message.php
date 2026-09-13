@@ -16,6 +16,24 @@ return [
     'deactivate_confirm' => 'This account and everything under it will be deactivated. Past transactions stay. Continue?',
     'group_hint' => 'A group is only a heading — it takes no entries of its own and shows the total of what sits under it.',
     'parent_sets_type' => 'Pick a parent and the type comes from it.',
+
+    /*
+     * এই তিনটা বাক্য একটা প্রশ্নের জায়গায় বসেছে।
+     *
+     * আগে ফর্ম জিজ্ঞেস করত "এটা কি নগদ খাত?" আর "এটা কি ব্যাংক বা
+     * MFS খাত?" — দুইটা টিক, যা বাবার খাতের সাথে অসঙ্গত রাখা যেত।
+     * এখন উত্তরটা গাছ থেকেই আসে, তাই পর্দা কেবল জানিয়ে দেয় — আর
+     * বাক্যটা লেখা হয়েছে যাতে কেউ **ভুল মাথা বেছেছেন কি না** সেটা
+     * পড়েই বুঝতে পারেন।
+     */
+    'bank_reference_placeholder' => 'Cheque no. or TrxID',
+    'reference_hint_bank' => 'The cheque number, or the reference the bank gave the transfer.',
+    'reference_hint_mfs' => 'The TrxID from the confirmation message.',
+    'holds_cash' => 'Real cash sits in this account — it shows in the cash book, and a counter has to hold it.',
+    'holds_bank' => 'This is a bank account. Money moving through it needs a cheque or transaction number, and it gets reconciled against the bank statement.',
+    'holds_mfs' => 'This is a mobile money account (bKash, Nagad, Rocket, Upay). Money moving through it needs its TrxID, and cash-out charges belong in their own head.',
+    'routing_no_hint' => 'Nine digits, printed on your cheque book. Needed for EFT and RTGS.',
+    'mfs_provider_hint' => 'bKash, Nagad, Rocket, Upay.',
     'opening_note' => 'What the balance was before this system. Can only be set now — to change it later, post a journal voucher.',
     'opening_balance' => 'Opening balance',
 

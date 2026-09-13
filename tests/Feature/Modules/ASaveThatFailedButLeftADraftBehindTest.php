@@ -76,7 +76,7 @@ class ASaveThatFailedButLeftADraftBehindTest extends TestCase
                 'name_bn' => 'কিউএ ব্যাংক হিসাব',
                 'type' => Account::ASSET,
                 'nature' => Account::DEBIT,
-                'is_bank' => true,
+                'money_kind' => Account::BANK,
             ],
         );
     }

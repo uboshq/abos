@@ -73,7 +73,7 @@ class DirectPurchaseTest extends TestCase
                 'type' => Account::ASSET,
                 'nature' => Account::DEBIT,
                 'is_group' => false,
-                'is_bank' => true,
+                'money_kind' => Account::BANK,
             ],
         );
     }

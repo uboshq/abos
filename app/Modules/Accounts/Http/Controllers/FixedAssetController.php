@@ -36,7 +36,7 @@ class FixedAssetController extends Controller implements HasMiddleware
     {
         return [
             new Middleware('can:accounts.asset.view', only: ['index', 'show']),
-            new Middleware('can:accounts.asset.manage', only: ['store', 'depreciate', 'dispose']),
+            new Middleware('can:accounts.asset.manage', only: ['create', 'store', 'depreciate', 'dispose']),
         ];
     }
 
@@ -51,7 +51,10 @@ class FixedAssetController extends Controller implements HasMiddleware
         return view('accounts::asset.index', [
             'menu' => $this->menu->forUser($request->user()),
             'assets' => $assets,
-            'assetAccounts' => $this->under(StandardChart::FIXED_ASSETS),
+            /*
+             * ⓘ সম্পদের খাতের তালিকাটা আর এখানে নয় — ফর্মটা `create`-এ
+             * সরার পর তালিকার পাতায় ওটার কোনো ব্যবহারকারী নেই।
+             */
             'accumulated' => Account::query()
                 ->where('code', StandardChart::ACCUMULATED_DEPRECIATION)->first(),
             'expense' => Account::query()
@@ -68,14 +71,32 @@ class FixedAssetController extends Controller implements HasMiddleware
         ]);
     }
 
+    /**
+     * নতুন সম্পদ বসানোর পর্দা।
+     *
+     * ⭐ কেবল খাতের তালিকাটা — সম্পদের সারিগুলো, আর মাস শেষের দৌড়ের
+     * `defaultMonth` এখানে লাগে না: দৌড়টা তালিকার পাতাতেই থাকে
+     * (রুট ফাইলে কারণটা লেখা), আর ফর্মটা একটাও সারি দেখায় না।
+     *
+     * ⓘ `accumulated` ও `expense` খাত দুইটাও নয় — ওগুলো ফর্মের ঘর নয়,
+     * `store()` নিজেই কোড ধরে খুঁজে নেয়।
+     */
+    public function create(Request $request): View
+    {
+        return view('accounts::asset.create', [
+            'menu' => $this->menu->forUser($request->user()),
+            'assetAccounts' => $this->under(StandardChart::FIXED_ASSETS),
+        ]);
+    }
+
     public function show(Request $request, FixedAsset $asset): View
     {
         return view('accounts::asset.show', [
             'menu' => $this->menu->forUser($request->user()),
             'asset' => $asset->load(['depreciation', 'assetAccount']),
+            // `money()` নিজেই দল ছাঁকে, তাই আলাদা `postable()` লাগে না
             'moneyAccounts' => Account::query()
-                ->where(fn ($q) => $q->where('is_cash', true)->orWhere('is_bank', true))
-                ->postable()->active()->orderBy('code')->get(),
+                ->money()->active()->orderBy('code')->get(),
             'nextAmount' => $this->assets->monthlyAmount($asset),
         ]);
     }
