@@ -7,6 +7,7 @@ namespace App\Modules\Finance\Models;
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Core\Contracts\SettledByAVoucher;
 use App\Models\User;
 /*
  * ⚠️ এই import-টা ছাড়া `Account::class` নিজের namespace-এ খোঁজা হত —
@@ -36,7 +37,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * নয় আসেনি। "বাতিল" রাখলে একটা না-আসা টাকার সারি চিরকাল তালিকায়
  * থেকে যেত, আর কেউ বলতে পারত না ওটা আসবে না কি ভুলে গেছে।
  */
-class CapitalEntry extends Model
+class CapitalEntry extends Model implements SettledByAVoucher
 {
     use BelongsToCompany;
     use HasFactory;
@@ -147,5 +148,63 @@ class CapitalEntry extends Model
     public function scopePosted(Builder $query): void
     {
         $query->where('status', self::POSTED);
+    }
+
+    /**
+     * রসিদটা পোস্ট হলো — টাকাটা এসে গেছে।
+     *
+     * ── ⭐ মালিকের কথা, ১৪ সেপ্টেম্বর ২০২৬ ───────────────────────────
+     * *"ক্যাপিটাল থেকেই টাকা রিসিভ করার ব্যবস্থা করো।"*
+     *
+     * ⓘ অর্থাৎ শুরুটা এখান থেকে, কিন্তু টাকা গ্রহণের পর্দা একটাই —
+     * রসিদ। আগে এই তালিকার প্রতিটা সারিতে একটা খাত-বাছাইয়ের ঘর গোঁজা
+     * ছিল, আর সেখানে ব্যাংক, MFS, চার্জ, লেনদেন নম্বর — কিছুই চাওয়া
+     * যেত না। ⛔ দুইটা আলাদা পথে টাকা ঢুকলে একদিন একটায় চার্জ বসত,
+     * অন্যটায় না, আর কেউ ধরত না।
+     *
+     * ── ⚠️ কেন `where('status', DRAFT)` শর্তটা জরুরি ─────────────────
+     * চুক্তিটা **idempotent** হতে বলে, আর কারণটা আসল: একটা রসিদ বাতিল
+     * করে আবার পোস্ট করা যায়। শর্ত ছাড়া লিখলে দ্বিতীয়বার পোস্টে
+     * `posted_at` বদলে যেত — অর্থাৎ **টাকাটা কবে এসেছিল সেই তারিখটাই
+     * মিথ্যা হত**, আর ওটা ফিরে পাওয়ার কোনো উপায় থাকত না।
+     *
+     * ⓘ নিজের `save()` নয়, একটা শর্তযুক্ত `update()` — কারণ দুইটা
+     * অনুরোধ একসাথে এলে প্রথমটাই জেতে, আর দ্বিতীয়টা শূন্য সারি বদলায়।
+     */
+    public function settleWith(int $voucherId): void
+    {
+        static::query()
+            ->whereKey($this->getKey())
+            ->where('status', self::DRAFT)
+            ->update([
+                'status' => self::POSTED,
+                'voucher_id' => $voucherId,
+                'posted_at' => now(),
+            ]);
+
+        $this->refresh();
+    }
+
+    /**
+     * রসিদটা বাতিল হলো — সারিটা আবার খসড়া।
+     *
+     * ⚠️ শর্তে `voucher_id` মেলানো হয়, কারণ **অন্য কোনো ভাউচারের
+     * বাতিল এই সারিটা খুলে দিতে পারবে না**। ⓘ শর্তটা না থাকলে একটা
+     * ভুল `against_id` লেখা ভাউচার বাতিল করলে সম্পূর্ণ অন্য কারো
+     * মূলধন আবার "আসেনি" হয়ে যেত, আর টাকাটা দ্বিতীয়বার চাওয়া হত।
+     */
+    public function unsettle(int $voucherId): void
+    {
+        static::query()
+            ->whereKey($this->getKey())
+            ->where('status', self::POSTED)
+            ->where('voucher_id', $voucherId)
+            ->update([
+                'status' => self::DRAFT,
+                'voucher_id' => null,
+                'posted_at' => null,
+            ]);
+
+        $this->refresh();
     }
 }

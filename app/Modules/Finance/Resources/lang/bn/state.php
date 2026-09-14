@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'draft' => 'টাকা আসেনি',
     'posted' => 'খাতায় বসেছে',
     'active' => 'চালু',
     'closed' => 'শেষ',

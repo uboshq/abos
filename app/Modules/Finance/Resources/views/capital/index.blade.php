@@ -92,8 +92,7 @@
                 /* ⚠️ চওড়া, কারণ ভিতরে খাতের ঘর, নম্বরের ঘর আর বোতাম —
                    তিনটা। সরু রাখলে লেখাগুলো লম্বালম্বি ভেঙে যায়। */
                 ['key' => 'status', 'label' => __('finance::field.state'), 'width' => '22rem',
-                 'render' => fn ($e) => view('finance::capital.partials.state',
-                     ['entry' => $e, 'accounts' => $accounts])],
+                 'render' => fn ($e) => view('finance::capital.partials.state', ['entry' => $e])],
 
                 /*
                  * ⛔ সম্পাদনা ও মোছা — কেবল খসড়ায়।

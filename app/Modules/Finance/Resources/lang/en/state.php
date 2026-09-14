@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'draft' => 'Not received yet',
     'posted' => 'Posted',
     'active' => 'Active',
     'closed' => 'Closed',
