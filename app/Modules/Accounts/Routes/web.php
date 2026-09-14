@@ -136,6 +136,20 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
         Route::post('/{voucher}/cancel', [VoucherController::class, 'cancel'])
             ->whereNumber('voucher')->name('cancel');
 
+        /*
+         * একজন পক্ষের কাছে এখন কত পাওনা — ফর্মের "Collectable" ঘরটা।
+         *
+         * ── কেন একটা আলাদা ঠিকানা, পাতার সাথে পাঠানো নয় ─────────────
+         * ⛔ সব পক্ষের বকেয়া আগেভাগে পাঠানো যেত না: একটা ডিপোতে
+         * কয়েকশো গ্রাহক, আর প্রত্যেকের বকেয়া মানে খতিয়ানে একটা করে
+         * যোগফল। ভাউচারের ফর্মটা খুলতেই কয়েকশো কোয়েরি হত — আর তার
+         * প্রায় সবটাই অপচয়, কারণ ব্যবহারকারী একজনকেই বাছেন।
+         *
+         * ⓘ স্থির পথ, তাই /{type}-এর **আগে** — নাহলে "due" কে একটা
+         * ভাউচারের ধরন ভেবে বসত, ঠিক নিচের মন্তব্যটা যে ফাঁদের কথা বলে।
+         */
+        Route::get('due', [VoucherController::class, 'due'])->name('due');
+
         // ধরনভিত্তিক রুটগুলো শেষে — নাহলে /vouchers/receipt কে একটা
         // ভাউচারের id ভেবে বাইন্ডিং ৪০৪ দিত
         Route::get('/{type}', [VoucherController::class, 'index'])->name('index');

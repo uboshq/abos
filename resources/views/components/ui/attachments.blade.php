@@ -87,7 +87,10 @@
             <input type="hidden" name="source_type" value="{{ $sourceType }}">
             <input type="hidden" name="source_id" value="{{ $document->getKey() }}">
 
+            {{-- ছবি হলে স্ক্যানের পর্দা খোলে; PDF/Excel-এ কিছুই হয় না
+                 ([[components/shell/scanner]])। --}}
             <input type="file" name="file" required
+                   x-on:change="$store.scanner.begin($el, 'paper')"
                    class="min-w-0 flex-1 text-sm file:me-2 file:rounded-(--radius-field)
                           file:border file:border-(--color-border) file:bg-(--color-surface-app)
                           file:px-3 file:py-1.5 file:text-sm">

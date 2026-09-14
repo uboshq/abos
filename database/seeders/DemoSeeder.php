@@ -15,12 +15,14 @@ use App\Models\Company;
 use App\Models\User;
 use App\Modules\Accounts\Services\OpeningBalanceService;
 use App\Modules\Customer\Services\CustomerService;
+use App\Modules\Hr\Models\Employee;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\CostLayerService;
 use App\Modules\Inventory\Services\ProductService;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\Inventory\Services\WarehouseService;
+use App\Modules\MasterData\Models\Designation;
 use App\Modules\MasterData\Models\Location;
 use App\Modules\MasterData\Models\ReasonCode;
 use App\Modules\MasterData\Models\Unit;
@@ -358,6 +360,21 @@ class DemoSeeder extends Seeder
             $this->setUpCustomers();
             $this->setUpStock();
         });
+
+        /*
+         * ⭐ মালিকের নিজের কর্মী-রেকর্ড — ১৪ সেপ্টেম্বর ২০২৬।
+         *
+         * ── কেন লাগল ────────────────────────────────────────────────
+         * ফুটারে এখন নামের পাশে **পদবি** বসে (`shell/statusbar`), আর
+         * পদবি আসে HR-এর কর্মী রেকর্ড থেকে — `hr_employees.user_id`
+         * ধরে। ⓘ ঐ সংযোগটা ছাড়া ডেমোতে কারও পদবিই থাকত না, আর ফুটার
+         * কেবল নাম দেখাত।
+         *
+         * ⚠️ মালিকের নির্দেশ: *"tumi koro eta demo tai tumi koro"* —
+         * অর্থাৎ ডেমোতে জিনিসটা **বসানো থাকবে**, কাউকে হাতে ট্যাগ করতে
+         * হবে না।
+         */
+        CompanyContext::forCompany($alpha->id, fn () => $this->setUpOwnersDesk($owner));
 
         CompanyContext::clear();
 
@@ -730,6 +747,58 @@ class DemoSeeder extends Seeder
     private function reason(string $code): ReasonCode
     {
         return ReasonCode::query()->where('code', $code)->firstOrFail();
+    }
+
+    /**
+     * ⭐ মালিককে একজন কর্মী হিসেবেও বসানো — যাতে তাঁর একটা পদবি থাকে।
+     *
+     * ── কেন এটা দরকার ───────────────────────────────────────────────
+     * ফুটারে নামের পাশে পদবি দেখায় ([[shell.statusbar]]), আর পদবি
+     * আসে HR থেকে — লগইন ও কর্মীর মধ্যে `user_id` সেতু ধরে।
+     * ⓘ ⚠️ ঐ সেতুটা বসানোর ঘরটা ফর্মে **আজই প্রথম আঁকা হলো**; কলামটা
+     * ২০২৬-০৮-০৯ থেকে থাকলেও কেউ কোনোদিন বসাতে পারেনি।
+     *
+     * ── ⓘ কেন "CEO" পদবিটা এখানে বানানো হয়, মাস্টার তালিকায় নয় ──────
+     * `MasterListService`-এর ডিফল্ট সাতটা পদবি ডিপোর কাজের — ব্যবস্থাপক,
+     * বিক্রয় প্রতিনিধি, গুদামরক্ষী, চালক। ⚠️ প্রতিটা নতুন প্রতিষ্ঠানে
+     * "CEO" বসানো ভুল হত: বেশিরভাগ ডিপোতে ঐ পদবির কেউ নেই, আর
+     * মাস্টার ডাটায় অব্যবহৃত সারি জমলে তালিকাটা পড়া কঠিন হয়।
+     * ⭐ তাই ওটা **ডেমোর তথ্য**, আর ডেমোর ফাইলেই থাকে।
+     *
+     * ── ⚠️ কেন `Employee::create()`, সেবাটা নয় ──────────────────────
+     * [[EmployeeService::create()]] কোড বসায় নম্বর-সিরিজ থেকে, আর
+     * সিডারে সেটা চালালে ডেমোর কর্মী-কোড আর বাস্তব ব্যবহারের কোড একই
+     * সিরিজ ভাগ করত। ⓘ এখানে কোডটা হাতে বসানো (`EMP-0001`), যেভাবে
+     * ডেমোর বাকি সব কোড বসে।
+     */
+    private function setUpOwnersDesk(User $owner): void
+    {
+        $ceo = Designation::create([
+            'code' => 'CEO',
+            'name_en' => 'Chief Executive Officer',
+            'name_bn' => 'প্রধান নির্বাহী',
+            'is_active' => true,
+        ]);
+
+        Employee::create([
+            'branch_id' => Branch::query()->orderBy('id')->value('id'),
+            'code' => 'EMP-0001',
+            'name_en' => $owner->name,
+            'name_bn' => $owner->name,
+            'mobile' => '01711134341',
+            'email' => $owner->email,
+
+            /*
+             * ⭐ এই লাইনটাই পুরো কাজের কারণ — লগইনটা মানুষটার সাথে
+             * বাঁধা। ⓘ এটা ছাড়া ফুটার কেবল নাম দেখাত, পদবি নয়।
+             */
+            'user_id' => $owner->id,
+
+            'designation_id' => $ceo->id,
+            'joining_date' => now()->subYears(2)->toDateString(),
+            'payment_method' => 'cash',
+            'is_active' => true,
+        ]);
     }
 
     private function user(string $name, string $email): User

@@ -60,7 +60,7 @@ final class FinancePlan
      * তাই একটা তারিখ — **ছয় মাসের পুরনো তারিখ নিজেই বলে দেবে মানচিত্র
      * কতটা বিশ্বাস করা যায়**। পর্দার মাথায় দেখা যায়, কেবল মন্তব্যে নয়।
      */
-    public const RECONCILED_ON = '2026-09-06';
+    public const RECONCILED_ON = '2026-09-13';
 
     public static function sections(): array
     {
@@ -230,6 +230,7 @@ final class FinancePlan
                 'items' => [
                     ['মূলধন ও বিনিয়োগ', 'finance.capital.index', '২৯ আগস্ট ২০২৬-এ হয়েছে'],
                     ['কে কোথায় দাঁড়িয়ে', 'finance.capital.index', 'একই পর্দায়'],
+                    ['নতুন মূলধন লেখা', 'finance.capital.create', '১৩ সেপ্টেম্বর ২০২৬ — ফর্মটা তালিকার ভিতর থেকে সরানো হলো'],
                     ['বিনিয়োগের রিটার্ন', null, 'বাকি'],
                     ['লাভ ভাগাভাগি', null, 'বাকি — অংশীদারি হলে'],
                 ],

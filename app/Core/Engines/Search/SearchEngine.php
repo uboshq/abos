@@ -9,6 +9,7 @@ use App\Core\Module\ModuleRegistry;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 
@@ -115,11 +116,22 @@ final class SearchEngine
              * না যায়, [[EveryStaffDoorIsShutInSearchTest]] গুনে দেখে
              * কয়টা উৎস সত্যিই খোঁজা হলো।
              */
-            if ($source['permission'] === null || $user === null || ! $user->can($source['permission'])) {
+            if ($user === null || ! $this->mayOpen($user, $source)) {
                 continue;
             }
 
             foreach ($this->matchesIn($class, $source['columns'], $term) as $record) {
+                /*
+                 * ⛔ পলিসি-ধাঁচের উৎসে যাচাইটা **সারি ধরে**, আর সেটাই
+                 * সবচেয়ে সৎ উত্তর: প্রশ্নটা তো "ইনি কি এই সারিটা দেখতে
+                 * পারেন" — আর পলিসিই ঐ প্রশ্নের মালিক।
+                 *
+                 * ⓘ খরচ নেই: পলিসি মেমরিতে চলে, ডাটাবেজে যায় না।
+                 */
+                if ($source['ability'] !== null && ! $user->can($source['ability'], $record)) {
+                    continue;
+                }
+
                 $hits[] = $this->hitFrom($record);
 
                 if (count($hits) >= $limit) {
@@ -141,8 +153,37 @@ final class SearchEngine
     {
         return count(array_filter(
             $this->sources(),
-            fn (array $s) => $s['permission'] !== null && $user !== null && $user->can($s['permission']),
+            fn (array $s) => $user !== null && $this->mayOpen($user, $s),
         ));
+    }
+
+    /**
+     * ⭐ এই উৎসটা কি আদৌ খোঁজা হবে — কোয়েরির আগের দরজা।
+     *
+     * ── ⓘ দুইটা রূপ, দুইটা উত্তর ─────────────────────────────────────
+     * **সাধারণ অনুমতি** (`can:customer.view`) এখানেই যাচাই হয়, তাই
+     * নিষিদ্ধ টেবিল ছোঁয়াই হয় না।
+     *
+     * **পলিসি** (`can:view,customer`) এখানে যাচাই করা **যায় না** — ওটার
+     * উত্তর সারির উপর নির্ভর করে, আর সারি তখনো হাতে নেই। ⓘ তাই দরজাটা
+     * খোলা থাকে, আর আসল ছাঁকনি বসে সারি পাওয়ার পরে ([[search()]])।
+     *
+     * ⚠️ এতে নিষিদ্ধ টেবিল পড়া হতে পারে, কিন্তু **ফলাফল ফাঁস হয় না** —
+     * প্রতিটা সারি পলিসির মধ্য দিয়ে যায়। ⭐ আর সেটাই বেশি সৎ: পলিসি
+     * সারি-স্তরের প্রশ্নের মালিক, আর মডিউলের দরজা আগেই আলাদা অনুমতিতে
+     * বন্ধ।
+     *
+     * ⛔ দুইটার একটাও না জানা গেলে উৎসটা বাদ — অজানা অবস্থায় দরজা বন্ধ।
+     *
+     * @param  array{ability: ?string, permission: ?string}  $source
+     */
+    private function mayOpen(User $user, array $source): bool
+    {
+        if ($source['permission'] !== null) {
+            return $user->can($source['permission']);
+        }
+
+        return $source['ability'] !== null;
     }
 
     /**
@@ -230,8 +271,8 @@ final class SearchEngine
 
         return [
             'route' => $route,
-            'permission' => $this->permissionFor($route),
             'columns' => $columns,
+            ...$this->permissionFor($route),
         ];
     }
 
@@ -250,25 +291,51 @@ final class SearchEngine
      * ওটা আছে। অর্থাৎ এই ইঞ্জিন নতুন কোনো দাবি করছে না — যেটা ইতিমধ্যে
      * প্রমাণিত, সেটাই পড়ছে।
      */
-    private function permissionFor(string $routeName): ?string
+    /**
+     * @return array{ability: ?string, permission: ?string}
+     */
+    private function permissionFor(string $routeName): array
     {
+        $nothing = ['ability' => null, 'permission' => null];
+
         $route = Route::getRoutes()->getByName($routeName);
 
         if ($route === null) {
-            return null;
+            return $nothing;
         }
 
         foreach ($route->gatherMiddleware() as $middleware) {
             if (is_string($middleware) && str_starts_with($middleware, 'can:')) {
                 /*
-                 * ⓘ `can:accounts.view,record` ধরনের রূপও হয় — প্রথম
-                 * অংশটাই অনুমতির নাম।
+                 * ⛔ `can:` দুই রকম, আর পার্থক্যটা গোনা হয়েছে
+                 * (১৪ সেপ্টেম্বর ২০২৬): **৫২০টা সাধারণ, ১৩২টা পলিসি**।
+                 *
+                 *     can:customer.view          ← অনুমতির নাম
+                 *     can:view,customer          ← পলিসির ক্ষমতা + সারি
+                 *
+                 * ⚠️ প্রথম খসড়ায় এখানে `explode(',', …)[0]` ছিল, অর্থাৎ
+                 * দ্বিতীয় রূপ থেকে আসত `view` — যা কোনো অনুমতির নাম নয়।
+                 * `$user->can('view')` সবসময় **মিথ্যা** ফেরাত, তাই ঐ
+                 * উৎসগুলো চুপচাপ বাদ পড়ত।
+                 *
+                 * ⛔ আর ঠিক ওগুলোতেই সব ডেটা: গ্রাহক, পণ্য, সরবরাহকারী,
+                 * হিসাব খাত, বিক্রয় বিল। ⓘ মেপে দেখা গেছে খোঁজায় যে
+                 * ১৮টা উৎস টিকত তার প্রায় সবই **খালি টেবিল** — তাই
+                 * সার্চ কাজ করছে মনে হত, শুধু কিছুই পাওয়া যেত না।
+                 *
+                 * ⭐ তাই কমা থাকলে সেটা পলিসি, আর পলিসি **সারি ছাড়া
+                 * যাচাই করা যায় না** — ওটা ফেরত যায় `ability` হয়ে, আর
+                 * যাচাই হয় সারি হাতে পাওয়ার পরে।
                  */
-                return explode(',', substr($middleware, 4))[0];
+                $clause = substr($middleware, 4);
+
+                return str_contains($clause, ',')
+                    ? ['ability' => explode(',', $clause)[0], 'permission' => null]
+                    : ['ability' => null, 'permission' => $clause];
             }
         }
 
-        return null;
+        return $nothing;
     }
 
     /**
@@ -354,6 +421,20 @@ final class SearchEngine
         $like = '%'.str_replace(['%', '_'], ['\%', '\_'], $term).'%';
 
         return $class::query()
+            /*
+             * ── সম্পর্কগুলো আগে থেকেই, ১৪ সেপ্টেম্বর ২০২৬ ──────────────
+             * ⛔ `hitFrom()` প্রতিটা সারির `drillLabel()` ডাকে, আর কোনো
+             * কোনো মডেলের লেবেল সম্পর্ক ছোঁয় — `Location::path()` উপরের
+             * খাত ধরে ধরে উঠে যায়।
+             *
+             * ⚠️ আগে থেকে না তুললে সেটা lazy load, আর উন্নয়ন পরিবেশে
+             * ওটা **ব্যতিক্রম**: খোঁজায় "ra" লিখলেই ৫০০ আসত। ⓘ চালু
+             * সার্ভারে ব্যতিক্রম হত না, হত N+1 — অর্থাৎ ভুলটা ওখানে
+             * ধরাই পড়ত না, কেবল ধীর হত।
+             *
+             * ⓘ মডেল নিজে বলে তার কী লাগে; না বললে কিছুই তোলা হয় না।
+             */
+            ->when(method_exists($class, 'drillRelations'), fn ($q) => $q->with($class::drillRelations()))
             ->where(function ($query) use ($columns, $like) {
                 foreach ($columns as $column) {
                     $query->orWhere($column, 'like', $like);
@@ -368,8 +449,28 @@ final class SearchEngine
     {
         [$name, $params] = $record->drillRoute() + [1 => []];
 
+        /*
+         * ⛔ ধরনটা অনুবাদ করে, কাঁচা স্লাগ নয় — ১৪ সেপ্টেম্বর ২০২৬।
+         *
+         * ⚠️ `drillSourceType()` ফেরায় যন্ত্রের স্লাগ (`customer`,
+         * `account`, `warehouse`) — মানুষের নাম নয়। ⓘ প্রথম খসড়ায়
+         * ওটাই সরাসরি পর্দায় যেত, আর ফলাফলের তালিকা দেখাত
+         * "customer · CUS-0001 · রহিম ট্রেডার্স"।
+         *
+         * ⭐ নামগুলো `core.source.*`-এ আছে, দুই ভাষায় — ৪৮টার ৪৮টাই
+         * (৩৩টা এই কাজেই বসানো হয়েছে, কারণ আগে ছিল মাত্র ১৫টা)।
+         *
+         * ⓘ `Lang::has()` দিয়ে দেখা হয়, কারণ `__()` অনুবাদ না পেলে
+         * **চাবিটাই** ফেরত দেয় — আর তখন পর্দায় `core.source.xyz` বসত,
+         * যা কাঁচা স্লাগের চেয়েও খারাপ। ⚠️ না পেলে স্লাগটাই থাক:
+         * অপরিচিত শব্দ, কিন্তু অন্তত শব্দ।
+         */
+        $slug = $record::drillSourceType();
+        $key = 'core.source.'.$slug;
+
         return new SearchHit(
-            type: $record::drillSourceType(),
+            slug: $slug,
+            type: Lang::has($key) ? __($key) : $slug,
             documentNo: $record->drillDocumentNo(),
             label: $record->drillLabel(),
             url: route($name, $params),

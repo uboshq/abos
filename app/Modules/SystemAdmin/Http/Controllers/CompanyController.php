@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\SystemAdmin\Http\Controllers;
 
+use App\Core\Engines\Image\ImageEngine;
 use App\Core\Services\CompanyProvisioner;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\CodeFromName;
@@ -15,6 +16,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -292,7 +294,9 @@ class CompanyController extends Controller implements HasMiddleware
              * আর ফাইলটা পরে সরাসরি ব্রাউজারে পরিবেশিত হয়। ⓘ এটা
              * সুবিধার প্রশ্ন নয়, নিরাপত্তার।
              */
-            'logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
+            // ⓘ ১২ MB — ইঞ্জিন নিজেই নামিয়ে আনে বলে দরজাটা আর সরু রাখার
+            // দরকার নেই; সীমাটা কেবল অস্বাভাবিক ফাইল ঠেকাতে।
+            'logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:12288'],
 
             /*
              * লোগো সরানোর ঘর — আলাদা, কারণ "নতুন ফাইল দিইনি" আর
@@ -345,6 +349,46 @@ class CompanyController extends Controller implements HasMiddleware
 
         if ($file === null) {
             return [];
+        }
+
+        /*
+         * ⭐ ১৪ সেপ্টেম্বর ২০২৬: এখানে আগে কাঁচা ফাইলটাই বসত।
+         *
+         * ⓘ মালিকের কথা ছিল *"যেকোনো ফটো আপলোডের সময়"* — লোগোও একটা ফটো
+         * আপলোড। ⚠️ আর এই একটা ফাইলের ওজন সবচেয়ে বেশি ছড়ায়, কারণ ওটা
+         * **প্রতিটা ছাপা কাগজে** base64 হয়ে যায়।
+         *
+         * ⛔ ব্যর্থ হলে কাঁচা ফাইলটাই বসে — একটা বড় লোগো থাকা, কোম্পানির
+         * লোগো না থাকার চেয়ে ভালো।
+         */
+        $source = $file->getRealPath();
+
+        if ($source !== false) {
+            try {
+                $mark = (new ImageEngine)->mark($source);
+
+                $name = $company->code.'-'.now()->format('Ymd-His').'.'.$mark['extension'];
+                $path = 'logos/'.$name;
+
+                Storage::disk('public')->put($path, $mark['bytes']);
+
+                return ['logo_path' => $path];
+            } catch (\Throwable) {
+                // নিচে পড়ে যায়।
+            }
+        }
+
+        /*
+         * ⛔ প্রক্রিয়া হয়নি, অথচ ফাইলটা বড় — নীরবে রাখা যায় না।
+         *
+         * ⚠️ দরজার সীমা ১২ MB করা হয়েছে এই ভরসায় যে আমরাই ছোট করব।
+         * ⓘ সেই কাজটা না হলে ভরসাটা মিথ্যা, আর তখন একটা ১২ MB লোগো
+         * **প্রতিটা ছাপা কাগজে** base64 হয়ে বসত (≈১৬ MB)।
+         */
+        if ((int) $file->getSize() > 2 * 1024 * 1024) {
+            throw ValidationException::withMessages([
+                'logo' => __('core.image.logo_not_processed'),
+            ]);
         }
 
         $name = $company->code.'-'.now()->format('Ymd-His').'.'.$file->extension();

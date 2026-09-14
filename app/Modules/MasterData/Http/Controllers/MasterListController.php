@@ -11,6 +11,7 @@ use App\Core\Support\CodeFromName;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CostCenter;
+use App\Modules\Accounts\Models\MoneyCategory;
 use App\Modules\MasterData\Models\Brand;
 use App\Modules\MasterData\Models\Currency;
 use App\Modules\MasterData\Models\Department;
@@ -297,6 +298,36 @@ class MasterListController extends Controller implements HasMiddleware
                 'note' => ['type' => 'text', 'label' => 'master_data::field.note'],
             ],
             'columns' => ['mobile'],
+        ],
+
+        /*
+         * টাকার শ্রেণি — আদায়/প্রদান ভাউচারের "কী ধরনের টাকা"।
+         *
+         * ⭐ `account_id` ঘরটাই এই তালিকার কারণ: শ্রেণি বাছলে ভাউচারে
+         * খাতটা নিজে থেকে বসে, তাই কাউন্টারের লোককে আর হিসাবের ছক
+         * পড়তে হয় না ([[MoneyCategory::resolvedAccountId()]])।
+         *
+         * ⓘ `parent_id`-র তালিকাটা এই একই তালিকা — Category ও Sub
+         * Category আলাদা কিছু নয়, একই গাছের দুই স্তর।
+         */
+        'money-categories' => [
+            'model' => MoneyCategory::class,
+            'route' => 'money_category',
+            'title' => 'master_data::menu.money_categories',
+            'fields' => [
+                /*
+                 * প্রসঙ্গ বাধ্যতামূলক — [[ReasonCode]]-এর `context` ঠিক
+                 * একই কারণে, আর সেখানে কারণটা লেখা আছে: কলামটা
+                 * `NOT NULL`, তাই খালি রেখে Save চাপলে ৫০০।
+                 */
+                'context' => ['type' => 'select', 'label' => 'master_data::field.context',
+                    'options' => 'money_contexts', 'labels' => 'money_context', 'rules' => ['required']],
+                'parent_id' => ['type' => 'select', 'label' => 'master_data::field.parent_category',
+                    'options' => 'money_categories'],
+                'account_id' => ['type' => 'select', 'label' => 'master_data::field.account',
+                    'options' => 'accounts'],
+            ],
+            'columns' => ['context', 'account_id'],
         ],
 
         'departments' => [
@@ -760,6 +791,17 @@ class MasterListController extends Controller implements HasMiddleware
             'payment_kinds' => PaymentMethod::KINDS,
             'applies' => PartyType::APPLIES,
             'contexts' => ReasonCode::CONTEXTS,
+            'money_contexts' => MoneyCategory::CONTEXTS,
+
+            /*
+             * Sub Category বাছার তালিকা — কেবল **মা-হীন** সারিগুলো।
+             *
+             * ⚠️ পুরো তালিকা দিলে একটা Sub Category-কে আরেকটার মা বানানো
+             * যেত, আর তখন পর্দার দুইটা ড্রপডাউন তিন স্তরের গাছ দেখাতে
+             * পারত না — সারিটা কোনো তালিকাতেই উঠত না, নীরবে হারিয়ে যেত।
+             */
+            'money_categories' => MoneyCategory::query()
+                ->active()->whereNull('parent_id')->orderBy('code')->get(),
             'vehicle_types' => VehicleType::query()->active()->orderBy('code')->get(),
             'owner_types' => Vehicle::OWNER_TYPES,
         ];

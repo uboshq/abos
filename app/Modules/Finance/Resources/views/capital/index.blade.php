@@ -89,7 +89,9 @@
                  'render' => fn ($e) => __('finance::kind.'.$e->entry_type)],
                 ['key' => 'amount', 'label' => __('finance::field.amount'), 'numeric' => true, 'width' => '10rem',
                  'render' => fn ($e) => \App\Core\Support\Money::format($e->amount)],
-                ['key' => 'status', 'label' => __('finance::field.state'), 'width' => '15rem',
+                /* ⚠️ চওড়া, কারণ ভিতরে খাতের ঘর, নম্বরের ঘর আর বোতাম —
+                   তিনটা। সরু রাখলে লেখাগুলো লম্বালম্বি ভেঙে যায়। */
+                ['key' => 'status', 'label' => __('finance::field.state'), 'width' => '22rem',
                  'render' => fn ($e) => view('finance::capital.partials.state',
                      ['entry' => $e, 'accounts' => $accounts])],
 
@@ -105,18 +107,7 @@
                 ['key' => 'actions', 'label' => '', 'width' => '3rem',
                  'render' => fn ($e) => $e->status !== \App\Modules\Finance\Models\CapitalEntry::DRAFT
                      ? ''
-                     : view('components.ui.row-actions', ['items' => array_values(array_filter([
-                         auth()->user()?->can('finance.capital.create') ? [
-                             'label' => __('core.action.edit'),
-                             'url' => route('finance.capital.edit', $e),
-                         ] : null,
-                         auth()->user()?->can('finance.capital.delete') ? [
-                             'label' => __('core.action.delete'),
-                             'url' => route('finance.capital.destroy', $e),
-                             'method' => 'delete',
-                             'tone' => 'danger',
-                         ] : null,
-                     ]))])],
+                     : view('finance::capital.partials.row-actions', ['entry' => $e])],
             ]" />
 
         <x-ui.pager :rows="$entries" />

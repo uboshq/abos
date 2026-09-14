@@ -161,7 +161,7 @@
 
          JavaScript বন্ধ থাকলেও ফর্মটা কাজ করে: ঘর দুইটা সার্ভার-রেন্ডার
          করা মান নিয়েই যায়, আর সম্পাদনার সময় ওগুলো আগে থেকেই ভরা থাকে। --}}
-    <script>
+    <script @nonce>
         (() => {
             const picker = document.getElementById('module-action');
             const moduleField = document.getElementById('flow-module');

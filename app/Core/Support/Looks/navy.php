@@ -104,12 +104,35 @@ return [
         '--color-table-head' => '#f8fafc',
         '--color-table-head-ink' => '#41525e',
         '--color-toolbar' => '#ffffff',
-        '--color-topbar' => '#ffffff',
-        '--color-topbar-border' => '#e4ebef',
-        '--color-topbar-field' => '#f8fafc',
-        '--color-topbar-hover' => '#f2f6fc',
-        '--color-topbar-ink' => '#0b1f33',
-        '--color-topbar-ink-muted' => '#41525e',
+        /*
+         * ── উপরের বার ও তার নিচের মেনু-বার — মালিকের দেওয়া রং ──────────
+         * নির্দেশ (১৪ সেপ্টেম্বর ২০২৬): টপবার `#838383`, নিচের মেনু-বার
+         * `#c9c9c9`।
+         *
+         * ⚠️ রং বদলানোয় **লেখার রংও বদলাতে হয়েছে**, আর সেটা রুচির প্রশ্ন
+         * নয়: আগের কালি ছিল গাঢ় নেভি (`#0b1f33`), যা সাদার উপর দিব্যি
+         * পড়া যেত। ⛔ কিন্তু `#838383`-এর উপর ওই কালির বৈসাদৃশ্য ৩.৪:১ —
+         * WCAG-এর ৪.৫:১ সীমার নিচে, অর্থাৎ ছোট লেখা পড়তে কষ্ট হত।
+         * ⓘ সাদা কালিতে ওটা ৪.৫:১ পেরোয়, তাই কালি সাদা।
+         *
+         * ⓘ কেবল হালকা থিমে — গাঢ় থিমের নিজের সেট নিচে অপরিবর্তিত।
+         */
+        '--color-topbar' => '#838383',
+        '--color-topbar-border' => '#6f6f6f',
+        '--color-topbar-field' => '#9a9a9a',
+        '--color-topbar-hover' => '#767676',
+        '--color-topbar-ink' => '#ffffff',
+        '--color-topbar-ink-muted' => '#ececec',
+
+        /*
+         * নিচের মেনু-বারের নিজের টোকেন।
+         *
+         * ⓘ আলাদা টোকেন লাগল কারণ বারটা আগে `surface-muted` ধরত, আর ওটা
+         * গোটা অ্যাপের রং — বদলালে টেবিলের মাথা থেকে কার্ডের পেট পর্যন্ত
+         * সব ধূসর হয়ে যেত। ⭐ নিজের নাম থাকায় বদলটা ঐ বারেই থাকে।
+         */
+        '--color-modulebar' => '#c9c9c9',
+        '--color-modulebar-border' => '#b0b0b0',
         '--color-topnav' => '#ffffff',
         '--color-topnav-border' => '#e5e7eb',
         '--color-topnav-hover' => '#f2f6fc',

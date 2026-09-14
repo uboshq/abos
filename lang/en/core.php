@@ -52,6 +52,56 @@ return [
         'loan_instalment' => 'Loan Instalment',
         'product' => 'Product',
         'supplier' => 'Supplier',
+
+        /*
+         * The other 34 source names — 13 Sep 2026.
+         *
+         * Counted: the modules declare 48 sources in `drill_sources`, and
+         * only 15 had a name here. For the rest `__()` returned the raw key
+         * and the screen printed `core.source.cheque`.
+         *
+         * This was never only a search problem: the ledger drill-down has
+         * been reading these keys all along (`DrillResolver:140`). The gap
+         * is old; nobody had landed on one of those 33 until now.
+         *
+         * The words are the repo's own, taken from each module's `lang/en`
+         * rather than invented here — otherwise one thing would have two
+         * names on two screens. See lang/bn/core.php for the same note.
+         */
+        'account' => 'Account',
+        'approval' => 'Approval',
+        'cash_till' => 'Cash Till',
+        'cheque' => 'Cheque',
+        'collection' => 'Collection',
+        'commission_claim' => 'Commission Claim',
+        'currency' => 'Currency',
+        'delivery_challan' => 'Delivery Challan',
+        'department' => 'Department',
+        'designation' => 'Designation',
+        'employee' => 'Employee',
+        'employment_type' => 'Employment Type',
+        'location' => 'Area',
+        'party_type' => 'Party Type',
+        'payment_term' => 'Payment Term',
+        'payroll_run' => 'Payroll Run',
+        'person' => 'Person',
+        'price_list' => 'Price List',
+        'purchase_bill' => 'Purchase Bill',
+        'purchase_order' => 'Purchase Order',
+        'purchase_payment' => 'Purchase Payment',
+        'purchase_receipt' => 'Purchase Receipt',
+        'purchase_return' => 'Purchase Return',
+        'reason_code' => 'Reason Code',
+        'sales_order' => 'Sales Order',
+        'sales_return' => 'Sales Return',
+        'shipment' => 'Shipment',
+        'stock_transfer' => 'Stock Transfer',
+        'tax' => 'VAT',
+        'transfer_mode' => 'Transfer Mode',
+        'unit' => 'Unit',
+        'vehicle' => 'Vehicle',
+        'vehicle_type' => 'Vehicle Type',
+        'warehouse' => 'Warehouse',
     ],
 
     'posting' => [
@@ -471,6 +521,11 @@ return [
      * existed; two sources mean one of them goes stale. Every reader now
      * comes here, through App\Core\Support\RoleLabel.
      */
+    'search' => [
+        'type_to_find' => 'Type what you are looking for — a name, a number or a code.',
+        'nothing_found' => 'Nothing found.',
+    ],
+
     'role' => [
         'super_admin' => 'Super Admin',
         'accountant' => 'Accountant',
@@ -705,6 +760,28 @@ return [
     'avatar' => [
         'not_an_image' => 'That file could not be opened as an image. Use JPG, PNG or WebP.',
         'too_large' => 'That photo is too large. Please use a smaller one.',
+    ],
+
+    // ছবির ইঞ্জিন যা ছুঁড়তে পারে। ⚠️ `avatar.*` থেকে আলাদা রাখা হয়েছে,
+    // কারণ এখন একই ইঞ্জিন প্রোফাইল ছবি ও সংযুক্তি — দুইটাই সামলায়।
+    'image' => [
+        'not_an_image' => 'That file could not be opened as an image. Use JPG, PNG or WebP.',
+        'too_large_to_process' => 'That photo has too many pixels for the server to process. Please take it at a smaller camera size.',
+        'logo_not_processed' => 'The logo could not be processed, and a file that size cannot be kept as it is. Please use an image under 2 MB.',
+    ],
+
+    // ছবি তোলার পর্দা ([[components/shell/scanner]])
+    'scan' => [
+        'title_paper' => 'Straighten the page',
+        'title_face' => 'Choose the part to keep',
+        'found' => 'The four corners were found. Drag them if any is off.',
+        'not_found' => 'Drag the four dots onto the corners of the page.',
+        'corner' => 'Corner',
+        'hint' => 'Put the four blue dots on the corners of the page.',
+        'size' => 'Size',
+        'apply' => 'Use this',
+        'working' => 'Working…',
+        'skip' => 'Skip',
     ],
     'count' => [
         'records' => ':count record|:count records',

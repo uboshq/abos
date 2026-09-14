@@ -2954,7 +2954,7 @@
     </form>
 
     @push('scripts')
-        <script>
+        <script @nonce>
             function directSale(catalogue, customers, walkinId, vatEnabled, packs) {
                 return {
                     catalogue,

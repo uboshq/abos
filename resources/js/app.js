@@ -3,6 +3,7 @@ import { reprice } from './pricing.js'
 import { abosDate } from './date.js'
 import { listKeys } from './list-keys.js'
 import { stockPlacement } from './placement.js'
+import { scannerStore } from './scanner.js'
 
 /*
  * Alpine শুধু ছোট UI ইন্টারঅ্যাকশনে — ড্রপডাউন, পাসওয়ার্ড দেখানো, ট্যাব
@@ -56,6 +57,20 @@ document.addEventListener('alpine:init', () => {
      * শেলফে বসানো কার্টন খুঁজে না পাওয়া পর্যন্ত কেউ টের পেত না।
      */
     Alpine.data('stockPlacement', stockPlacement)
+
+    /*
+     * ছবি তোলার পর্দা — চার কোণ টেনে কাগজ সোজা করা।
+     *
+     * ── কেন store, `Alpine.data` নয় ─────────────────────────────────
+     * ছবির ঘর চারটা (সংযুক্তি, প্রোফাইল, পণ্য, লোগো) কিন্তু পর্দাটা
+     * একটাই — শেলে বসানো। ⓘ ইনপুট আর পর্দা দুইটা আলাদা DOM শাখায়, তাই
+     * সাইডবারের মতোই এখানে একটা ভাগ করা অবস্থা লাগে।
+     *
+     * ⚠️ অঙ্কটা এখানে নেই: perspective warp আর কোণ খোঁজা `scan.js`-এ,
+     * আর তার পরীক্ষা `scan.test.js`-এ (`npm test`)। এখানে কেবল হাতের
+     * কাজ — টানা, আঁকা, ফর্মে ফেরত দেওয়া।
+     */
+    Alpine.store('scanner', scannerStore())
 
     Alpine.store('sidebar', {
         collapsed: localStorage.getItem('abos.sidebar') === 'collapsed',

@@ -132,6 +132,12 @@
                             </label>
                         @endif
 
+                        {{-- ⛔ এখানে স্ক্যানের পর্দা ইচ্ছাকৃতভাবে **নেই**।
+                             লোগো কাগজ নয় (সোজা করার কিছু নেই), আর বর্গও
+                             নয় — বেশিরভাগ লোগো চওড়া। ⚠️ আর পর্দাটা JPEG
+                             ফেরত দেয়, অর্থাৎ স্বচ্ছ PNG-র স্বচ্ছতা মারা
+                             যেত। ⭐ সার্ভারের `ImageEngine::mark()` এটাকে
+                             PNG রেখেই ছোট করে। --}}
                         <input type="file" name="logo" accept="image/png,image/jpeg,image/webp"
                                class="text-sm file:me-3 file:rounded-(--radius-field)
                                       file:border file:border-(--color-border)

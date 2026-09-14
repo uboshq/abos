@@ -22,7 +22,7 @@
     $columns = $thermal ? 1 : 3;
 @endphp
 
-<style>
+<style @nonce>
     * { box-sizing: border-box; }
 
     body {

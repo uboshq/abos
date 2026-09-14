@@ -291,7 +291,7 @@
     </form>
 
     @push('scripts')
-        <script>
+        <script @nonce>
             function journalForm() {
                 return {
                     busy: false,

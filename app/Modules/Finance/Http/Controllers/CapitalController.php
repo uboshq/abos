@@ -271,6 +271,16 @@ orm]]): *"সম্পাদনা
         $data = $request->validate([
             'received_into_account_id' => ['required', 'integer',
                 'exists:accounts,id'],
+
+            /*
+             * ব্যাংক বা বিকাশ যা কেটে রেখেছে।
+             *
+             * ⓘ `nullable`, কারণ বেশিরভাগ জমায় চার্জ থাকে না, আর
+             * প্রতিবার শূন্য লিখতে বাধ্য করা মানে রোজকার কাজে একটা
+             * বাড়তি ধাপ। ⚠️ "চার্জ মোটের চেয়ে ছোট" শর্তটা এখানে নয়,
+             * [[CapitalService::lines()]]-এ — সেখানে মোট অঙ্কটা জানা।
+             */
+            'charge' => ['nullable', 'numeric', 'gte:0'],
             /*
              * ব্যাংক বা MFS হলে যে নম্বরটা লাগে — চেক নম্বর, TrxID।
              *
@@ -287,6 +297,7 @@ orm]]): *"সম্পাদনা
             $entry,
             Account::query()->findOrFail($data['received_into_account_id']),
             ($data['instrument_no'] ?? '') ?: null,
+            ($data['charge'] ?? '') !== '' ? (string) $data['charge'] : null,
         );
 
         return back()->with('saved', __('finance::message.capital_posted', ['no' => $entry->document_no]));

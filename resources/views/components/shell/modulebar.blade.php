@@ -191,31 +191,9 @@
      আছে। ⓘ যে চিহ্ন দিয়ে খোঁজা হয় সেটা অনন্য না হলে মাপটাই মিথ্যা। --}}
 <div data-module-bar
      class="sticky top-(--spacing-header) z-20 flex min-h-(--spacing-field-compact) shrink-0 items-center gap-2
-            border-b border-(--color-border)
-            bg-linear-to-b from-[var(--color-surface-card)] to-[var(--color-surface-muted)]
-            py-1 ps-2 pe-3 md:pe-5 print-hide">
-
-    {{-- মডিউলের নাম — ট্যাবগুলোর বাঁয়ে, আলাদা করে।
-
-         ⓘ এটাই breadcrumb-এর মাঝের ধাপটার কাজ করে ("অর্থ"), আর লিংক
-         থাকায় মডিউলের প্রথম পর্দায় ফেরাও যায়। --}}
-    @if ($current)
-        @if ($moduleUrl)
-            <a href="{{ $moduleUrl }}"
-               class="me-1 shrink-0 truncate text-xs font-semibold text-(--color-ink-body)
-                      hover:text-(--color-brand-600) hover:underline">{{ $current['label'] }}</a>
-        @else
-            <span class="me-1 shrink-0 truncate text-xs font-semibold text-(--color-ink-body)">{{ $current['label'] }}</span>
-        @endif
-
-        <span class="h-4 w-px shrink-0 bg-(--color-border)" aria-hidden="true"></span>
-    @else
-        {{-- কোনো মডিউল মেলেনি (ড্যাশবোর্ড) — খালি বার রাখার চেয়ে
-             বাড়ির নামটা থাকা ভালো, আর ডান পাশের কাজগুলো তখনো দরকার। --}}
-        <a href="{{ route('dashboard') }}"
-           class="me-1 shrink-0 text-xs font-semibold text-(--color-ink-body)
-                  hover:text-(--color-brand-600) hover:underline">{{ __('core.menu.dashboard') }}</a>
-    @endif
+            py-1 ps-2 pe-3 md:pe-5 print-hide"
+     style="background:var(--color-modulebar, var(--color-surface-muted));
+            border-bottom:1px solid var(--color-modulebar-border, var(--color-border))">
 
     {{--
         ট্যাবগুলো — একটাই সারিতে, আর বেশি হলে পাশে স্ক্রল।
@@ -249,9 +227,9 @@
                      মোটা দাগ পড়ে না। ছবির বারেও দাগটা এক পিক্সেল। --}}
                 <a href="{{ $tab['url'] }}"
                    @class([
-                       'shrink-0 whitespace-nowrap border border-(--color-border) -ms-px px-3 py-1 text-xs transition-colors first:ms-0 first:rounded-s-(--radius-field) last:rounded-e-(--radius-field)',
-                       'relative z-10 bg-(--color-surface-card) font-semibold text-(--color-brand-600)' => $tab['active'] ?? false,
-                       'bg-linear-to-b from-[var(--color-surface-card)] to-[var(--color-surface-muted)] text-(--color-ink-body) hover:bg-(--color-surface-card) hover:bg-none' => ! ($tab['active'] ?? false),
+                       'shrink-0 whitespace-nowrap -ms-px px-3 py-1 text-xs transition-colors first:ms-0 first:rounded-s-(--radius-field) last:rounded-e-(--radius-field)',
+                       'modulebar-cell modulebar-cell-on' => $tab['active'] ?? false,
+                       'modulebar-cell' => ! ($tab['active'] ?? false),
                    ])
                    @if ($tab['active'] ?? false) aria-current="page" @endif>
                     <span class="flex items-center gap-1.5">
@@ -262,46 +240,47 @@
                 </a>
             @endforeach
         @else
-            {{-- আগে খোলা সারিগুলো (লেনদেন), তারপর ভাঁজ করা গ্রুপগুলো —
-                 রোজকার কাজ বাঁয়ে, মাঝেমধ্যের কাজ ডানে। --}}
-            @foreach ($loose as $tab)
-                <a href="{{ $tab['url'] }}"
-                   @class([
-                       'shrink-0 whitespace-nowrap border border-(--color-border) -ms-px px-3 py-1 text-xs transition-colors first:ms-0 first:rounded-s-(--radius-field)',
-                       'relative z-10 bg-(--color-surface-card) font-semibold text-(--color-brand-600)' => $tab['active'] ?? false,
-                       'bg-linear-to-b from-[var(--color-surface-card)] to-[var(--color-surface-muted)] text-(--color-ink-body) hover:bg-(--color-surface-card) hover:bg-none' => ! ($tab['active'] ?? false),
-                   ])
-                   @if ($tab['active'] ?? false) aria-current="page" @endif>
-                    <span class="flex items-center gap-1.5">
-                        <x-ui.icon :name="$tab['icon'] ?? $groupIcon($tab['group'])" :size="14"
-                                   :class="$groupTint($tab['group'])" />
-                        {{ $tab['label'] }}
-                    </span>
-                </a>
-            @endforeach
+            {{--
+                ⭐ ক্রমটা `module.php`-র ঘোষণার ক্রমেই — মালিকের নির্দেশ
+                (১৪ সেপ্টেম্বর): *"Dashboard প্রথমে থাকবে সব জায়গায়।"*
 
-            @foreach ($groups as $name => $items)
+                ⛔ আগে আমি খোলা সারিগুলো (লেনদেন) আগে আর ভাঁজ করা গ্রুপগুলো
+                পরে আঁকতাম, দুইটা আলাদা লুপে। ⓘ তাতে অর্থ মডিউলে
+                "ড্যাশবোর্ড" **নয় নম্বরে** গিয়ে পড়ত, কারণ সে একটা গ্রুপ
+                আর লেনদেনের সারিগুলো খোলা।
+
+                ⓘ এখন একটাই লুপ, ঘোষণার ক্রম ধরে — আর প্রতিটা মডিউলের
+                `module.php`-তে `dashboard` সবার উপরে লেখা, তাই ক্রমটা
+                আলাদা করে বসাতে হয়নি; ঠিক জায়গা থেকে আসছে।
+            --}}
+            @foreach ($current['groups'] as $name => $raw)
                 @php
+                    $items = collect($raw)->filter(fn ($r) => ($r['url'] ?? null) !== null)
+                        ->map(fn ($r) => $r + ['group' => $name])->values();
                     $activeItem = $items->firstWhere('active', true);
                 @endphp
 
-                @if ($items->count() === 1)
-                    {{-- ⭐ একটাই পর্দা হলে ড্রপডাউন নয়, সরাসরি লিংক।
+                @continue ($items->isEmpty())
 
-                         ⓘ এক আইটেমের ড্রপডাউন মানে একটা ক্লিক নষ্ট — খুলে
-                         দেখা যায় ভিতরে একটাই জিনিস, যেটা বাইরেই লেখা ছিল। --}}
-                    <a href="{{ $items->first()['url'] }}"
-                       @class([
-                           'shrink-0 whitespace-nowrap border border-(--color-border) -ms-px px-3 py-1 text-xs transition-colors first:ms-0 first:rounded-s-(--radius-field)',
-                           'relative z-10 bg-(--color-surface-card) font-semibold text-(--color-brand-600)' => $activeItem !== null,
-                           'bg-linear-to-b from-[var(--color-surface-card)] to-[var(--color-surface-muted)] text-(--color-ink-body) hover:bg-(--color-surface-card) hover:bg-none' => $activeItem === null,
-                       ])
-                       @if ($activeItem !== null) aria-current="page" @endif>
-                        <span class="flex items-center gap-1.5">
-                            <x-ui.icon :name="$groupIcon($name)" :size="14" :class="$groupTint($name)" />
-                            {{ $items->first()['label'] }}
-                        </span>
-                    </a>
+                @if (in_array($name, $neverGrouped, true) || $items->count() === 1)
+                    {{-- ⓘ ভাঁজ না হওয়া গ্রুপ (লেনদেন), আর এক-পর্দার গ্রুপ —
+                         দুইটাই সরাসরি ঘর। এক আইটেমের ড্রপডাউন মানে একটা
+                         ক্লিক নষ্ট: খুলে দেখা যায় ভিতরে যা ছিল বাইরেই লেখা। --}}
+                    @foreach ($items as $tab)
+                        <a href="{{ $tab['url'] }}"
+                           @class([
+                               'shrink-0 whitespace-nowrap -ms-px px-3 py-1 text-xs transition-colors first:ms-0 first:rounded-s-(--radius-field)',
+                               'modulebar-cell modulebar-cell-on' => $tab['active'] ?? false,
+                               'modulebar-cell' => ! ($tab['active'] ?? false),
+                           ])
+                           @if ($tab['active'] ?? false) aria-current="page" @endif>
+                            <span class="flex items-center gap-1.5">
+                                <x-ui.icon :name="$tab['icon'] ?? $groupIcon($tab['group'])" :size="14"
+                                           :class="$groupTint($tab['group'])" />
+                                {{ $tab['label'] }}
+                            </span>
+                        </a>
+                    @endforeach
                 @else
                     <div x-data="{ open: false }" class="relative shrink-0">
                         <button type="button"
@@ -309,17 +288,14 @@
                                 @keydown.escape.window="open = false"
                                 :aria-expanded="open.toString()"
                                 @class([
-                                    'flex items-center gap-1 whitespace-nowrap border border-(--color-border) -ms-px px-3 py-1 text-xs transition-colors first:ms-0',
-                                    'relative z-10 bg-(--color-surface-card) font-semibold text-(--color-brand-600)' => $activeItem !== null,
-                                    'bg-linear-to-b from-[var(--color-surface-card)] to-[var(--color-surface-muted)] text-(--color-ink-body) hover:bg-(--color-surface-card) hover:bg-none' => $activeItem === null,
+                                    'flex items-center gap-1 whitespace-nowrap -ms-px px-3 py-1 text-xs transition-colors first:ms-0',
+                                    'modulebar-cell modulebar-cell-on' => $activeItem !== null,
+                                    'modulebar-cell' => $activeItem === null,
                                 ])>
                             <x-ui.icon :name="$groupIcon($name)" :size="14" :class="$groupTint($name)" />
 
                             {{ __('core.menu.'.$name) }}
 
-                            {{-- ⭐ চলতি পর্দার নামটা গ্রুপের গায়েই — তাই
-                                 কিছু না খুলেই "আমি কোথায়" পড়া যায়।
-                                 ⓘ breadcrumb যা বলত, এটাও সেটাই বলে। --}}
                             @if ($activeItem !== null)
                                 <span class="opacity-70" aria-hidden="true">›</span>
                                 <span class="max-w-32 truncate">{{ $activeItem['label'] }}</span>
@@ -333,11 +309,13 @@
                             @foreach ($items as $item)
                                 <a href="{{ $item['url'] }}"
                                    @class([
-                                       'block px-3 py-1.5 text-xs transition-colors hover:bg-(--color-surface-muted)',
+                                       'flex items-center gap-2 px-3 py-1.5 text-xs transition-colors hover:bg-(--color-surface-muted)',
                                        'font-semibold text-(--color-brand-600)' => $item['active'] ?? false,
                                        'text-(--color-ink-body)' => ! ($item['active'] ?? false),
                                    ])
                                    @if ($item['active'] ?? false) aria-current="page" @endif>
+                                    <x-ui.icon :name="$item['icon'] ?? $groupIcon($name)" :size="14"
+                                               :class="$groupTint($name)" />
                                     {{ $item['label'] }}
                                 </a>
                             @endforeach

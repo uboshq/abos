@@ -20,6 +20,7 @@ return [
     'vehicle_types' => 'Vehicle Types',
     'vehicles' => 'Vehicles & Fleet',
     'people' => 'People',
+    'money_categories' => 'Money categories',
 
     'departments' => 'Departments',
     'designations' => 'Designations',

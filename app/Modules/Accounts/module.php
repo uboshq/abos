@@ -14,6 +14,7 @@ use App\Modules\Accounts\Models\Cheque;
 use App\Modules\Accounts\Models\Loan;
 use App\Modules\Accounts\Models\LoanInstalment;
 use App\Modules\Accounts\Models\LoanMovement;
+use App\Modules\Accounts\Models\MoneyCategory;
 use App\Modules\Accounts\Models\MoneyTransfer;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Reports\CoreReports;
@@ -298,6 +299,24 @@ return [
      * বিপরীত এন্ট্রিগুলো "receipt_voucher:reversal" নামে বসে; সেগুলো
      * এখানে লেখার দরকার নেই, DrillResolver উপসর্গটা ছেঁটে নেয়।
      */
+    /*
+     * নকল-পাহারা — এক নামে দুইটা শ্রেণি নয়।
+     *
+     * ── কেন এই মডিউলে, MasterData-তে নয় ─────────────────────────────
+     * ঘোষণাটা যায় **মডেল যে মডিউলের, সেখানে**। [[MoneyCategory]]
+     * Accounts-এর, কারণ সে হিসাবের খাতের সাথে বাঁধা আর ভাউচার তাকে
+     * ব্যবহার করে — আর Accounts কারও উপর দাঁড়ায় না, তাই উল্টো দিকে
+     * রাখলে সীমানার নিয়ম ভাঙত ([[BoundariesTest]])।
+     *
+     * ⚠️ পাহারাটা **কঠিন নয়, নরম** — [[App\Core\Engines\Duplication\DuplicationEngine]]
+     * নাম মিললে থামে কিন্তু জেনেশুনে এগোতেও দেয়। আর সেটাই দরকার:
+     * "ভাড়ার আয়" নামে আদায়ের একটা শ্রেণি আর প্রদানের একটা শ্রেণি
+     * দুইটাই থাকতে পারে, কারণ `context` আলাদা।
+     */
+    'duplicates' => [
+        ['model' => MoneyCategory::class, 'name' => ['name_en', 'name_bn']],
+    ],
+
     'drill_sources' => [
         'cheque' => Cheque::class,
         'account' => Account::class,
@@ -309,6 +328,7 @@ return [
         'contra_voucher' => Voucher::class,
         'money_transfer' => MoneyTransfer::class,
         'cash_count' => CashCount::class,
+        'money_category' => MoneyCategory::class,
 
         /*
          * ঋণ নিজে খতিয়ানে বসে না — তার নড়াচড়া আর কিস্তিগুলো বসে।

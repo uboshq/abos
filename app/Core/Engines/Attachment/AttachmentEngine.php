@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Engines\Attachment;
 
+use App\Core\Engines\Image\ImageEngine;
 use App\Core\Support\CompanyContext;
 use App\Models\Attachment;
 use Illuminate\Database\Eloquent\Collection;
@@ -34,7 +35,30 @@ final class AttachmentEngine
 
     private const DEFAULT_MAX_BYTES = 10 * 1024 * 1024;
 
-    public function __construct(private readonly string $disk = 'local') {}
+    /**
+     * ⛔ প্রক্রিয়া **না হওয়া** একটা ছবি সর্বোচ্চ কত বড় হয়ে ডিস্কে বসতে পারে।
+     *
+     * ── কেন এই সীমাটা আলাদা, আর কেন এটা না থাকলে বিপদ ────────────────
+     * ⓘ ঢোকার দরজার সীমা (`$maxBytes`) এখন ঢিলা — ১২ MB — কারণ যুক্তিটা
+     * ছিল *"আমরাই তো ছোট করে নিচ্ছি"*।
+     *
+     * ⚠️ কিন্তু নিচের `keep()`-এ একটা fallback আছে: ইঞ্জিন ব্যর্থ হলে
+     * কাঁচা ফাইলটাই জমা হয়। ⛔ দুইটা একসাথে রাখলে ফল দাঁড়াত — একটা
+     * ১২ MB ছবি **সোজা ডিস্কে**, আর কেউ টের পেত না যতক্ষণ না শেয়ার্ড
+     * cPanel-এর জায়গা ফুরাত।
+     *
+     * ⭐ তাই নিয়মটা দুই ভাগ: **ঢুকতে** পারে ১২ MB, কিন্তু **প্রক্রিয়া
+     * ছাড়া থাকতে** পারে ২ MB। এর বেশি হলে চুপ করে রাখা হয় না —
+     * ব্যবহারকারীকে বলা হয়।
+     *
+     * ⓘ এই ফাঁকটা abos-68 ধরেছে, ব্যবহারকারী নয় — আর সেটাই কাম্য।
+     */
+    private const RAW_IMAGE_CEILING = 2 * 1024 * 1024;
+
+    public function __construct(
+        private readonly string $disk = 'local',
+        private readonly ImageEngine $images = new ImageEngine,
+    ) {}
 
     public function store(
         UploadedFile $file,
@@ -63,7 +87,7 @@ final class AttachmentEngine
             now()->format('m'),
         );
 
-        $path = $file->storeAs($directory, $storedName, ['disk' => $this->disk]);
+        $kept = $this->keep($file, $directory, $storedName, $extension);
 
         $version = 1;
 
@@ -77,12 +101,19 @@ final class AttachmentEngine
             'source_module' => $module,
             'source_entity' => $entity,
             'source_entity_id' => $entityId,
+            /*
+             * ⭐ নামটা ব্যবহারকারীর দেওয়াটাই থাকে — `IMG_20260914.jpg`।
+             *
+             * ⓘ ছবি প্রক্রিয়া করা হলেও এখানে নতুন নাম বসানো হয় না, কারণ
+             * তালিকায় মানুষ **নিজের ফাইলটা চিনতে** চান। ⚠️ যে জিনিস
+             * বদলেছে (ধরন, আকার, বাইট) সেগুলো নিচে সত্যি করে লেখা হয়।
+             */
             'original_name' => $file->getClientOriginalName(),
-            'stored_path' => $path,
-            'mime_type' => $file->getClientMimeType(),
-            'extension' => $extension,
-            'size_bytes' => $file->getSize(),
-            'checksum' => hash_file('sha256', Storage::disk($this->disk)->path($path)),
+            'stored_path' => $kept['path'],
+            'mime_type' => $kept['mime'],
+            'extension' => $kept['extension'],
+            'size_bytes' => $kept['bytes'],
+            'checksum' => hash_file('sha256', Storage::disk($this->disk)->path($kept['path'])),
             'version' => $version,
             'replaces_id' => $replacesId,
             'uploaded_by' => $userId ?? auth()->id(),
@@ -125,6 +156,86 @@ final class AttachmentEngine
     public function delete(Attachment $attachment): void
     {
         $attachment->delete();
+    }
+
+    /**
+     * ⛔ বিলের ছবি যেমন আসত তেমনই জমা হত — ১৪ সেপ্টেম্বর ২০২৬।
+     *
+     * ── কী ভাঙা ছিল ──────────────────────────────────────────────────
+     * এখানে আগে একটাই লাইন ছিল: `$file->storeAs(...)`। ⓘ অর্থাৎ ফোনে তোলা
+     * একটা রসিদ **পাশ ফিরে, ছয় মেগাবাইট, ছায়াসহ** ডিস্কে বসত।
+     *
+     * ⚠️ মালিকের অভিযোগটা ঠিক এটাই ছিল: *"যেকোনো ফটো আপলোডের সময় নিজে
+     * থেকে ক্রপ করে নেওয়ার ব্যবস্থা করার কথা ছিল সেটা হয় নাই"*।
+     * ⓘ প্রোফাইল ছবিতে ব্যবস্থাটা ছিল ([[AvatarService]]), সংযুক্তিতে
+     * কখনোই ছিল না — তাই "হয় নাই" কথাটা আক্ষরিক অর্থেই সত্যি ছিল।
+     *
+     * ── ⭐ যা ছবি নয়, তাতে হাত পড়ে না ─────────────────────────────────
+     * PDF, Excel, Word — যেমন আসে তেমনই যায়। ⛔ একটা চুক্তিপত্রের PDF-কে
+     * "উন্নত" করতে যাওয়া মানে সেটা নষ্ট করা।
+     *
+     * ── ⚠️ ব্যর্থ হলে ফাইলটা হারায় না ────────────────────────────────
+     * GD একটা ভাঙা বা অদ্ভুত ছবিতে হোঁচট খেতে পারে। ⓘ তখন কাঁচা ফাইলটাই
+     * জমা হয় — **একটা বড় ছবি থাকা, কাগজটা হারানোর চেয়ে ভালো**। ব্যবহারকারী
+     * বিলটা তুলেছেন একবার; আমাদের যন্ত্রের অক্ষমতার দায় তাঁর নয়।
+     *
+     * @return array{path: string, extension: string, mime: string, bytes: int}
+     */
+    private function keep(UploadedFile $file, string $directory, string $storedName, string $extension): array
+    {
+        $source = $file->getRealPath();
+        $isImage = $source !== false && @getimagesize($source) !== false;
+
+        if ($isImage && $this->images->reads($source)) {
+            try {
+                $bytes = $this->images->paper($source);
+
+                /*
+                 * ⓘ যা বের হয় সেটা সবসময় JPEG, তাই নামের লেজও তাই — নাহলে
+                 * `.png` নামের ভিতরে JPEG থাকত, আর একদিন কেউ নাম দেখে
+                 * সিদ্ধান্ত নিয়ে ভুল করত।
+                 */
+                $name = preg_replace('/\.[^.]+$/', '', $storedName).'.jpg';
+                $path = $directory.'/'.$name;
+
+                Storage::disk($this->disk)->put($path, $bytes);
+
+                return [
+                    'path' => $path,
+                    'extension' => 'jpg',
+                    'mime' => 'image/jpeg',
+                    'bytes' => strlen($bytes),
+                ];
+            } catch (\Throwable) {
+                // নিচে পড়ে যায় — কাঁচা ফাইলই জমা হবে, সীমার মধ্যে হলে।
+            }
+        }
+
+        /*
+         * ⛔ এখানে পৌঁছানো মানে: এটা ছবি, কিন্তু প্রক্রিয়া হয়নি —
+         * হয় GD হোঁচট খেয়েছে, নয় বিন্দুর সংখ্যা মেমরির চেয়ে বেশি
+         * ([[ImageEngine::fitsInMemory]])।
+         *
+         * ⚠️ ছোট হলে চুপচাপ রেখে দেওয়া যায় — ব্যবহারকারীর কাগজ হারানোর
+         * চেয়ে ভালো। ⛔ কিন্তু বড় হলে **নীরবে রাখা যায় না**: ডিস্ক ভরার
+         * মতো ক্ষতি কেউ টের পায় না যতক্ষণ না দেরি হয়ে যায়।
+         */
+        if ($isImage && $file->getSize() > self::RAW_IMAGE_CEILING) {
+            throw new AttachmentException(sprintf(
+                'That photo could not be processed, and at %s it is too large to keep as it is. The limit for an unprocessed photo is %s.',
+                $this->human((int) $file->getSize()),
+                $this->human(self::RAW_IMAGE_CEILING),
+            ));
+        }
+
+        $path = $file->storeAs($directory, $storedName, ['disk' => $this->disk]);
+
+        return [
+            'path' => $path,
+            'extension' => $extension,
+            'mime' => $file->getClientMimeType(),
+            'bytes' => (int) Storage::disk($this->disk)->size($path),
+        ];
     }
 
     private function assertAllowed(UploadedFile $file, int $maxBytes): void

@@ -21,6 +21,18 @@
      * আগেরটাকে মুছে দিত।
      */
     'reference' => 'instrument_no',
+
+    /*
+     * চার্জের ঘরের নাম — `false` দিলে ঘরটা আসে না।
+     *
+     * ⭐ ১৩ সেপ্টেম্বর ২০২৬: মালিক ধরিয়ে দিলেন যে ব্যাংক ও বিকাশ দুইটাই
+     * চার্জ কাটে, আর সেই চার্জ কোথাও লেখা হত না। ⓘ ছকে খাত দুইটা
+     * (`5210`, `5211`) আগে থেকেই ছিল, কেবল কেউ ব্যবহার করত না।
+     *
+     * ⚠️ কেবল ঐ পর্দাগুলোতেই দিতে হবে যেখানে সেবাটা চার্জ নিয়ে কিছু
+     * করে — না দিলে ঘরটা আসবে, আর সংখ্যাটা নীরবে হারিয়ে যাবে।
+     */
+    'charge' => false,
 ])
 
 {{--
@@ -68,7 +80,12 @@
             return this.kind === 'bank' || this.kind === 'mfs';
         },
      }"
-     class="grid min-w-0 gap-2 {{ $compact ? '' : 'sm:grid-cols-2' }}">
+     {{-- ⭐ সরু জায়গায় ঘর দুইটা **উপর-নিচে**, পাশাপাশি নয়।
+
+          তালিকার ঘরে দুইটা ইনপুট পাশাপাশি বসালে দুইটাই এত সরু হয় যে
+          কোনোটাই পড়া যায় না। ⓘ উপর-নিচে বসালে সারিটা দুই লাইন উঁচু
+          হয় — কিন্তু ওটা তখনই, যখন ব্যাংক বাছা হয়েছে। --}}
+     class="grid min-w-0 {{ $compact ? 'gap-1' : 'gap-2 sm:grid-cols-2' }}">
 
     <label class="block">
         @if ($label)
@@ -103,9 +120,23 @@
          লেখা নম্বরটা থেকে যায়, যেটা `x-if` হলে হারাত। --}}
     @if ($reference !== false)
     <label x-show="needsReference" x-cloak class="block">
-        <span class="mb-1 block text-sm font-medium">{{ __('accounts::field.bank_reference') }}</span>
+        {{-- ⛔ সরু জায়গায় লেবেলটা লেখা হয় না।
+
+             ── কী ভেঙেছিল, ১৩ সেপ্টেম্বর ২০২৬ ────────────────────────
+             উপাদানটা তালিকার একটা ঘরের ভিতরে বসানো হয়েছিল (মূলধনের
+             "টাকা এসেছে" সারি)। ঘরটা দুইশো পিক্সেলের, আর লেবেলটা
+             "ব্যাংক/MFS লেনদেন নম্বর" — ফলে লেখাটা **লম্বালম্বি ভেঙে**
+             প্রতিটা সারিকে পাঁচ লাইন উঁচু করে দিয়েছিল, আর ইনপুটটা
+             "Cheque n" পর্যন্ত দেখাত।
+
+             ⭐ সরু জায়গায় placeholder-ই লেবেল। ⚠️ স্ক্রিন রিডারের জন্য
+             `aria-label` থাকে, নাহলে ঘরটা চোখে বোঝা যেত আর কানে নয়। --}}
+        @unless ($compact)
+            <span class="mb-1 block text-sm font-medium">{{ __('accounts::field.bank_reference') }}</span>
+        @endunless
 
         <input type="text" name="{{ $reference }}"
+               @if ($compact) aria-label="{{ __('accounts::field.bank_reference') }}" @endif
                value="{{ old($reference) }}"
                x-bind:required="needsReference"
                placeholder="{{ __('accounts::message.bank_reference_placeholder') }}"
@@ -121,8 +152,46 @@
         @endunless
     </label>
 
-    @error($reference)
-        <p class="text-2xs text-(--color-danger) sm:col-span-2">{{ $message }}</p>
-    @enderror
+    {{-- চার্জ — ব্যাংক বা MFS-এ, নগদে নয়।
+
+         ⓘ নগদে কেউ কিছু কাটে না, তাই ঘরটা আসেই না। ⚠️ আর ঘরটা ফাঁকা
+         রাখা যায়: বেশিরভাগ জমায় চার্জ থাকে না, আর প্রতিবার শূন্য লিখতে
+         বাধ্য করা মানে রোজকার কাজে একটা বাড়তি ধাপ। --}}
+    @if ($charge !== false)
+        <label x-show="needsReference" x-cloak class="block">
+            @unless ($compact)
+                <span class="mb-1 block text-sm font-medium">{{ __('accounts::field.money_charge') }}</span>
+            @endunless
+
+            <input type="text" inputmode="decimal" name="{{ $charge }}"
+                   value="{{ old($charge) }}"
+                   @if ($compact) aria-label="{{ __('accounts::field.money_charge') }}" @endif
+                   placeholder="{{ __('accounts::field.money_charge') }}"
+                   class="num w-full min-w-0 rounded-(--radius-field) border border-(--color-border)
+                          bg-(--color-surface-card) text-end
+                          {{ $compact ? 'h-(--spacing-field-compact) px-2 text-2xs' : 'h-(--spacing-field) px-3' }}">
+
+            @unless ($compact)
+                <span class="mt-1 block text-2xs text-(--color-ink-muted)">
+                    {{ __('accounts::message.charge_hint') }}
+                </span>
+            @endunless
+        </label>
+    @endif
+
+    {{-- ⛔ সরু জায়গায় ভুলের বার্তা এখানে নয়।
+
+         একই তালিকার প্রতিটা সারি এই উপাদানটা আঁকে, আর ভুলের ঝুড়ি
+         সারিভিত্তিক নয় — পাতার। ফলে একটা সারিতে ভুল হলে বার্তাটা
+         **প্রতিটা সারিতে** ছাপা হত, লাল রঙে, পাতার মাথার বার্তাটা
+         ছাড়াও। ⓘ দুইটা সারির পর্দায় সেটা দুইবার; বিশটা সারিতে বিশবার।
+
+         ⭐ পাতার মাথার বার্তাটাই যথেষ্ট — ওটা একবার, আর সেখানে কোন
+         খাতের কথা বলা হচ্ছে তাও লেখা থাকে। --}}
+    @unless ($compact)
+        @error($reference)
+            <p class="text-2xs text-(--color-danger) sm:col-span-2">{{ $message }}</p>
+        @enderror
+    @endunless
     @endif
 </div>

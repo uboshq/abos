@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Services;
 
+use App\Core\Contracts\SettledByAVoucher;
+use App\Core\Engines\Drill\DrillResolver;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Support\CompanyContext;
@@ -16,6 +18,7 @@ use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Models\VoucherLine;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -60,12 +63,42 @@ final class VoucherService
                 'type' => $type,
                 'document_no' => $documentNo,
                 'trx_date' => $trxDate->toDateString(),
+
+                /*
+                 * ⚠️ প্রতিটা ঘর **হাতে লেখা**, `...$data` নয় — আর সেটাই
+                 * এই মেথডের পাহারা: অনুরোধে যা-ই আসুক, খাতায় কেবল এই
+                 * তালিকার ঘরগুলোই বসে। নতুন ঘর যোগ করলে এখানে এক লাইন
+                 * লিখতেই হবে, আর সেই বাধ্যবাধকতাটাই ইচ্ছাকৃত।
+                 *
+                 * ⛔ ১৪ সেপ্টেম্বর ২০২৬-এ ঠিক এখানেই হোঁচট: মালিকের চাওয়া
+                 * পাঁচটা নতুন ঘর যাচাইয়ে ছিল, ফর্মে ছিল, কলামও ছিল —
+                 * কিন্তু এই তালিকায় না থাকলে সেগুলো নীরবে হারিয়ে যেত।
+                 * `update()` স্প্রেড করে বলে সম্পাদনায় বসত, তৈরিতে নয় —
+                 * অর্থাৎ ভুলটা ধরা পড়ত কেবল "নতুন ভাউচারে ব্যাংকের নাম
+                 * থাকে না, কিন্তু এডিট করলে বসে" এই অদ্ভুত অভিযোগে।
+                 */
+                'ref_date' => $data['ref_date'] ?? null,
                 'party_type' => $data['party_type'] ?? null,
                 'party_id' => $data['party_id'] ?? null,
+                'money_category_id' => $data['money_category_id'] ?? null,
+                'money_subcategory_id' => $data['money_subcategory_id'] ?? null,
+                'charge_amount' => $data['charge_amount'] ?? 0,
+
+                /*
+                 * ⭐ এই রসিদটা কোন নথি নিষ্পন্ন করছে।
+                 *
+                 * ⓘ অর্থ মডিউল থেকে "টাকা এসেছে" চাপলে রসিদের পর্দাটা
+                 * এই দুইটা ঘর আগে থেকে ভরা অবস্থায় খোলে, আর পোস্ট হলে
+                 * ঐ নথিটা আর খসড়া থাকে না — এক সত্যের একটাই উৎস।
+                 */
+                'against_type' => $data['against_type'] ?? null,
+                'against_id' => $data['against_id'] ?? null,
                 'narration' => $data['narration'] ?? null,
                 'instrument' => $data['instrument'] ?? null,
                 'instrument_no' => $data['instrument_no'] ?? null,
                 'instrument_date' => $data['instrument_date'] ?? null,
+                'from_bank' => $data['from_bank'] ?? null,
+                'from_account_no' => $data['from_account_no'] ?? null,
                 'status' => DocumentStatus::DRAFT,
                 'created_by' => auth()->id(),
             ]);
@@ -202,8 +235,80 @@ final class VoucherService
                 'approved_at' => now(),
             ])->save();
 
+            $this->settle($voucher, settled: true);
+
             return $voucher->fresh(['lines']);
         });
+    }
+
+    /**
+     * যে নথির বিপরীতে এই ভাউচার, সেটাকে নিষ্পন্ন বা আবার খসড়া করা।
+     *
+     * ── ⭐ মালিকের স্থাপত্যগত সিদ্ধান্ত, ১৪ সেপ্টেম্বর ২০২৬ ───────────
+     * *"অর্থে মূলধন লিখে হিসাবে রিসিভ করলেই তো সমাধান।"* অর্থ কেবল লেখে
+     * "কে কত দেবেন"; টাকা গ্রহণ করে একাই রসিদের পর্দা। ⛔ কিন্তু ভাগটা
+     * তখনই কাজ করে যখন রসিদ পোস্ট হলে অর্থের সারিটাও নিষ্পন্ন হয় —
+     * নাহলে সারিটা চিরকাল খসড়া, আর এক সত্যের দুইটা উৎস।
+     *
+     * ── ⚠️ কেন ক্লাসটার নাম এখানে লেখা নেই ──────────────────────────
+     * Accounts-এর `depends_on` ফাঁকা — বাকি সবাই তার উপর দাঁড়ায়। এখানে
+     * `CapitalEntry` লিখলে চক্রাকার নির্ভরতা, আর [[BoundariesTest]]
+     * ঠিকই ধরত।
+     *
+     * ⭐ তাই ধরনটা থেকে ক্লাসে পৌঁছানো হয় [[DrillResolver]] দিয়ে, ঠিক
+     * যেভাবে খতিয়ানের সারি তার উৎস-নথি খুঁজে পায়। এই সেবা কেবল
+     * [[SettledByAVoucher]] চুক্তিটা চেনে।
+     *
+     * ── ⓘ তিনটা নীরব পথ, আর তিনটাই ইচ্ছাকৃত ────────────────────────
+     * ধরন নেই · ধরনটা কোনো মডিউল ঘোষণা করেনি · ক্লাসটা চুক্তিটা প্রয়োগ
+     * করে না — তিন ক্ষেত্রেই কিছুই হয় না, ভাউচারটা স্বাভাবিকভাবে বসে।
+     *
+     * ⚠️ এটা ঝুঁকি বহন করে: ঘোষণা ভুলে গেলে হুকটা নীরবে কিছুই করবে না।
+     * কিন্তু বিকল্পটা আরও খারাপ — হাতে খোলা একটা সাধারণ রসিদে `against_*`
+     * খালি থাকে, আর সেখানে ছুঁড়লে রোজকার কাজই বন্ধ হত। তাই শর্তটা
+     * চুক্তির ডকেই লেখা, যেখানে যিনি প্রয়োগ করবেন তিনি পড়বেন।
+     */
+    private function settle(Voucher $voucher, bool $settled): void
+    {
+        $type = (string) ($voucher->against_type ?? '');
+        $id = (int) ($voucher->against_id ?? 0);
+
+        if ($type === '' || $id <= 0) {
+            return;
+        }
+
+        $class = app(DrillResolver::class)->map()[$type] ?? null;
+
+        if ($class === null) {
+            return;
+        }
+
+        /*
+         * ⚠️ ক্লাসটাকে **দুইটাই** হতে হবে — একটা Eloquent মডেল আর
+         * চুক্তিটার প্রয়োগকারী।
+         *
+         * ⓘ কেবল `is_subclass_of(..., SettledByAVoucher::class)` দেখে
+         * `$class::query()` ডাকা যায় না: চুক্তিতে `query()` নেই, তাই
+         * ওটা একটা সত্যিকারের ধরন-ভুল ছিল আর স্ট্যাটিক বিশ্লেষণ ঠিকই
+         * ধরেছে। সারাইটা টীকা নয় — একটা **সত্যিকারের নমুনা** বানিয়ে
+         * দুইটা শর্তই যাচাই করা, ঠিক যেভাবে
+         * [[App\Core\Services\PartyRegistry::modelFor()]] করে।
+         */
+        $model = new $class;
+
+        if (! $model instanceof Model || ! $model instanceof SettledByAVoucher) {
+            return;
+        }
+
+        $document = $model->newQuery()->find($id);
+
+        if (! $document instanceof SettledByAVoucher) {
+            return;
+        }
+
+        $settled
+            ? $document->settleWith((int) $voucher->id)
+            : $document->unsettle((int) $voucher->id);
     }
 
     /**
@@ -250,6 +355,13 @@ final class VoucherService
                 'money_account_id' => null,
             ])->save();
 
+            /*
+             * ⚠️ নথিটা আবার খসড়া — নাহলে ভুল করে কাটা একটা রসিদ বাতিল
+             * করার পরেও অর্থের সারিটা "পাওয়া গেছে" বলে বসে থাকত, আর
+             * টাকাটা দ্বিতীয়বার কেউ চাইত না।
+             */
+            $this->settle($voucher, settled: false);
+
             return $voucher->fresh(['lines']);
         });
     }
@@ -266,7 +378,7 @@ final class VoucherService
      *
      * @return list<array<string, mixed>>
      */
-    public function twoLineEntry(string $type, int $fromAccountId, int $toAccountId, string $amount, ?string $narration = null): array
+    public function twoLineEntry(string $type, int $fromAccountId, int $toAccountId, string $amount, ?string $narration = null, ?string $charge = null): array
     {
         if (bccomp($amount, '0', 4) <= 0) {
             throw ValidationException::withMessages([
@@ -293,9 +405,100 @@ final class VoucherService
          *
          * পর্দার লেবেল আলাদা হতে পারে, কিন্তু হিসাবটা এক।
          */
+        if (bccomp($charge ?? '0', '0', 4) <= 0) {
+            return [
+                ['account_id' => $toAccountId, 'debit' => $amount, 'credit' => '0', 'narration' => $narration],
+                ['account_id' => $fromAccountId, 'debit' => '0', 'credit' => $amount, 'narration' => $narration],
+            ];
+        }
+
+        return $this->withCharge($toAccountId, $fromAccountId, $amount, (string) $charge, $narration);
+    }
+
+    /**
+     * ব্যাংক বা MFS চার্জ কেটে রাখলে তিনটা সারি।
+     *
+     * ── ⭐ মালিকের নিয়ম, ১৪ সেপ্টেম্বর ২০২৬ ─────────────────────────
+     * **যা পাঠানো হলো তাই মূলধন**, যা ঢুকল তা নয়।
+     *
+     *   ৮,০০০ পাঠালেন · ২০ কাটল
+     *   → ব্যাংক ডেবিট ৭,৯৮০ · চার্জ ডেবিট ২০ · মূলধন ক্রেডিট ৮,০০০
+     *
+     * ⛔ চার্জটা আলাদা সারি না করলে দুইটা খারাপ পথের একটা নিতে হত: হয়
+     * মূলধন ৭,৯৮০ লেখা (⚠️ তখন বিনিয়োগকারীর অংশ % ভুল, আর ওটা সোজা
+     * মুনাফা ভাগের হিসাব), নয় চার্জটা কোথাও না লেখা (⚠️ তখন খাতা ২০
+     * টাকা মিলত না)।
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function withCharge(
+        int $toAccountId,
+        int $fromAccountId,
+        string $amount,
+        string $charge,
+        ?string $narration,
+    ): array {
+        if (bccomp($charge, $amount, 4) >= 0) {
+            throw ValidationException::withMessages([
+                'charge_amount' => __('accounts::validation.charge_eats_the_whole_amount'),
+            ]);
+        }
+
+        $into = Account::query()->find($toAccountId);
+
+        /*
+         * ⚠️ চার্জের খাতটা **কোডে হাতে লেখা নয়** — টাকা যে ধরনের খাতে
+         * ঢুকছে তা থেকে আসে।
+         *
+         * ── কেন এই পার্থক্যটা রাখতেই হবে ────────────────────────────
+         * ছকের মন্তব্যে কারণটা আগেই লেখা: **বিকাশ ক্যাশ-আউটে চার্জ কাটে,
+         * ব্যাংক কাটে না**। দুইটা এক খাতে গেলে *"বিকাশে বছরে কত গেল"*
+         * প্রশ্নের উত্তর আর বের করা যেত না — আর ডিপোর মালিকের কাছে
+         * ওটাই বছরের সবচেয়ে দামি সংখ্যাগুলোর একটা।
+         *
+         * ⛔ নগদে চার্জ হয় না। কেউ নগদের খাতে চার্জ লিখলে সেটা নীরবে
+         * ব্যাংক-চার্জের খাতে বসানোর চেয়ে থেমে যাওয়াই ভালো — নাহলে
+         * ঐ খাতটায় এমন টাকা জমত যা কোনো ব্যাংক কোনোদিন কাটেনি।
+         */
+        $code = match (true) {
+            $into?->isMfs() === true => StandardChart::MFS_CHARGES,
+            $into?->isBank() === true => StandardChart::BANK_CHARGES,
+            default => null,
+        };
+
+        if ($code === null) {
+            throw ValidationException::withMessages([
+                'charge_amount' => __('accounts::validation.charge_needs_a_bank_or_mfs'),
+            ]);
+        }
+
+        $chargeAccount = StandardChart::find($code);
+
+        if ($chargeAccount === null) {
+            throw ValidationException::withMessages([
+                'charge_amount' => __('accounts::validation.charge_account_missing', ['code' => $code]),
+            ]);
+        }
+
         return [
-            ['account_id' => $toAccountId, 'debit' => $amount, 'credit' => '0', 'narration' => $narration],
-            ['account_id' => $fromAccountId, 'debit' => '0', 'credit' => $amount, 'narration' => $narration],
+            [
+                'account_id' => $toAccountId,
+                'debit' => bcsub($amount, $charge, 4),
+                'credit' => '0',
+                'narration' => $narration,
+            ],
+            [
+                'account_id' => (int) $chargeAccount->id,
+                'debit' => $charge,
+                'credit' => '0',
+                'narration' => $narration,
+            ],
+            [
+                'account_id' => $fromAccountId,
+                'debit' => '0',
+                'credit' => $amount,
+                'narration' => $narration,
+            ],
         ];
     }
 

@@ -137,7 +137,7 @@
     </form>
 
     @push('scripts')
-        <script>
+        <script @nonce>
             /*
              * নোট গোনার হিসাব।
              *

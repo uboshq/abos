@@ -262,6 +262,37 @@ class Location extends Model implements Drillable
         return $this->path();
     }
 
+    /**
+     * লেবেল বানাতে যা যা লাগে — খোঁজা এটা আগে থেকেই তোলে।
+     *
+     * ⓘ `path()` উপরের দিকে হেঁটে যায়, তাই `parent` ছাড়া ওটা প্রতিটা
+     * সারিতে একটা করে কোয়েরি করত (উন্নয়নে ব্যতিক্রম, চালু সার্ভারে N+1)।
+     *
+     * ── ⛔ এক স্তর যথেষ্ট নয় — মেপে দেখা, ১৪ সেপ্টেম্বর ২০২৬ ─────────
+     * প্রথম চেষ্টায় এখানে কেবল `['parent']` ছিল, আর **তবু ৫০০ আসত**:
+     *
+     *     LazyLoadingViolationException: Attempted to lazy load [parent]
+     *     on model [MasterData\Models\Location]
+     *
+     * ⓘ কারণ [[ancestors()]] এক স্তরে থামে না — সে `$node->parent` ধরে
+     * **উপরে উঠতেই থাকে** (দশ স্তরের নিরাপত্তা-সীমা পর্যন্ত)। ⚠️ এক
+     * স্তর তুললে দ্বিতীয় স্তরেই আবার lazy load।
+     *
+     * ⭐ তাই শিকলটা পূর্ণ: সাতটা স্তর, কারণ `ancestors()`-এর নিজের
+     * মন্তব্যেই লেখা *"মই সাত স্তরের"*। ⓘ Eloquent নেস্টেড `with`-এ
+     * প্রতি স্তরে **একটা** কোয়েরি করে, সারি প্রতি নয় — অর্থাৎ খরচ
+     * সাতটা কোয়েরি, যত সারিই মিলুক।
+     *
+     * ⚠️ মই যেদিন আট স্তরের হবে, সেদিন এখানে একটা `parent` যোগ করতে
+     * হবে। লক্ষণ: উন্নয়নে আবার ঐ ব্যতিক্রম, চালু সার্ভারে নীরব N+1।
+     *
+     * @return list<string>
+     */
+    public static function drillRelations(): array
+    {
+        return ['parent.parent.parent.parent.parent.parent.parent'];
+    }
+
     public function drillRoute(): array
     {
         return ['master_data.location.show', ['location' => $this->id]];

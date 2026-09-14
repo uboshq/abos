@@ -2396,7 +2396,7 @@
     </form>
 
     @push('scripts')
-        <script>
+        <script @nonce>
             /*
              * সরাসরি ক্রয়ের পর্দা।
              *

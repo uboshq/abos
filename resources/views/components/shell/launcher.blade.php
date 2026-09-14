@@ -74,37 +74,43 @@
             জুম করা পর্দা অস্বাভাবিক কিছু নয় — যিনি সারাদিন সংখ্যা পড়েন
             তিনি প্রায়ই বড় করে রাখেন।
         --}}
-        <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+        {{--
+            ── জ্যামিতিটা inline style-এ, আর সেটা ইচ্ছাকৃত ব্যতিক্রম ──────
+            এই রিপোর নিয়ম টোকেন ও ইউটিলিটি ক্লাস, আর সেটাই ঠিক। ⛔ কিন্তু
+            এই প্যানেলটা পরপর তিনবার ভাঙা অবস্থায় মালিকের পর্দায় গেছে,
+            আর প্রতিবার কারণ ছিল এক: কোনো একটা ক্লাস **কম্পাইলই হয়নি**,
+            অথচ ব্লেডে ওটা লেখা ছিল। ⚠️ যে ক্লাস নেই সে চুপ করে কিছুই
+            করে না — কোনো ভুলের বার্তা নেই, কেবল ভাঙা পর্দা।
+
+            ⓘ তাই যেটুকুর উপর গড়নটা দাঁড়িয়ে আছে — ছক, মাপ, ফাঁক — সেটুকু
+            inline, কারণ inline style কম্পাইল হওয়ার অপেক্ষা করে না। রং
+            আগের মতোই টোকেনে, তাই থিম বদলালে সাথে যায়।
+
+            `auto-fill minmax(120px, 1fr)` — কলামের সংখ্যা আর কোথাও লেখা
+            নেই; যত জায়গা, তত কলাম। জুম করা পর্দা বা সরু জানালায় নিজে
+            থেকেই কমে যায়, আর কোনো breakpoint মনে রাখতে হয় না।
+        --}}
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px">
             @foreach ($menu as $module)
                 @php
-                    /* মডিউলের প্রথম **খোলা** পর্দা — `url` ছাড়া সারি বাদ,
-                       কারণ ওগুলো এখনো তৈরি হয়নি (`planned`) আর টালিতে
-                       চাপলে কিছুই হত না। */
                     $first = collect($module['groups'])->flatten(1)->firstWhere('url', '!==', null);
                 @endphp
 
                 @continue ($first === null)
 
                 <a href="{{ $first['url'] }}" role="menuitem"
-                   class="flex min-h-24 flex-col items-center justify-center gap-2
-                          rounded-(--radius-card) border border-(--color-border)
-                          bg-(--color-surface-app) px-2 py-3 text-center transition-colors
-                          hover:border-(--color-brand-600) hover:bg-(--color-surface-muted)">
-                    <span class="grid size-10 shrink-0 place-items-center rounded-(--radius-card)
-                                 bg-(--color-surface-muted)">
+                   class="transition-colors hover:bg-(--color-surface-muted)"
+                   style="display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+                          gap:8px;min-height:104px;padding:12px 8px;text-align:center;
+                          border:1px solid var(--color-border);border-radius:10px;
+                          background:var(--color-surface-app)">
+                    <span style="display:grid;place-items:center;width:40px;height:40px;flex:none;
+                                 border-radius:10px;background:var(--color-surface-muted)">
                         <x-ui.icon :name="$module['icon']" :size="24" />
                     </span>
 
-                    {{--
-                        ⚠️ নামের জন্য জায়গা রাখতেই হয়।
-
-                        ⓘ আগের খসড়ায় টালিগুলো ছিল ৯৫px চওড়া আর উচ্চতা
-                        বাঁধা ছিল না, তাই "System Administration"-এর মতো
-                        নাম বাক্সের বাইরে বেরিয়ে পড়ত — পর্দায় নামগুলো
-                        টালির নিচে ভাসত। ⛔ পর্দায় জায়গা ছিল, আমি
-                        ব্যবহার করিনি।
-                    --}}
-                    <span class="w-full break-words text-xs leading-snug text-(--color-ink-body)">{{ $module['label'] }}</span>
+                    <span style="width:100%;font-size:12px;line-height:1.35;overflow-wrap:break-word;
+                                 color:var(--color-ink-body)">{{ $module['label'] }}</span>
                 </a>
             @endforeach
         </div>

@@ -208,6 +208,11 @@
             </label>
             <input id="product_image" name="product_image" type="file"
                    accept="image/jpeg,image/png,image/webp"
+                   {{-- `face`, `paper` নয়: পণ্যের ছবি কাগজ নয়, তাই সোজা
+                        করার কিছু নেই। ⓘ তালিকা ও কার্ডে ওটা বর্গাকারে বসে
+                        ([[components/ui/table]]), তাই ব্যবহারকারী নিজেই ঠিক
+                        করেন ছবির কোন অংশটা ঐ বর্গে থাকবে। --}}
+                   x-on:change="$store.scanner.begin($el, 'face')"
                    class="w-full rounded-(--radius-field) border border-(--color-border)
                           bg-(--color-surface-card) px-3 py-2 text-sm
                           file:mr-3 file:rounded-(--radius-field) file:border-0

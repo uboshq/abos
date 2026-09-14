@@ -83,8 +83,10 @@ class Voucher extends Model implements Drillable
 
     protected $fillable = [
         'company_id', 'branch_id', 'financial_year_id', 'type', 'document_no',
-        'trx_date', 'party_type', 'party_id', 'amount', 'narration',
+        'trx_date', 'ref_date', 'party_type', 'party_id', 'amount', 'charge_amount', 'narration',
+        'money_category_id', 'money_subcategory_id', 'against_type', 'against_id',
         'instrument', 'instrument_no', 'instrument_date', 'money_account_id',
+        'from_bank', 'from_account_no',
         'status', 'approved_by', 'approved_at',
         'cancelled_by', 'cancelled_at', 'cancel_reason', 'created_by',
     ];
@@ -93,8 +95,10 @@ class Voucher extends Model implements Drillable
     {
         return [
             'trx_date' => 'date',
+            'ref_date' => 'date',
             'instrument_date' => 'date',
             'amount' => 'decimal:4',
+            'charge_amount' => 'decimal:4',
             'approved_at' => 'datetime',
             'cancelled_at' => 'datetime',
         ];
@@ -113,6 +117,29 @@ class Voucher extends Model implements Drillable
     public function financialYear(): BelongsTo
     {
         return $this->belongsTo(FinancialYear::class);
+    }
+
+    /**
+     * টাকাটা কোন শ্রেণির — আর সেই শ্রেণিই বলে দেয় কোন খাতে বসবে।
+     *
+     * ⓘ `null` হতে পারে, আর সেটা ফাঁক নয়: এই ঘরটা বসার আগের হাজার
+     * হাজার ভাউচারের কোনো শ্রেণি নেই, আর জাবেদা ভাউচারে ওটা লাগেও না।
+     *
+     * @return BelongsTo<MoneyCategory, $this>
+     */
+    public function moneyCategory(): BelongsTo
+    {
+        return $this->belongsTo(MoneyCategory::class, 'money_category_id');
+    }
+
+    /**
+     * উপ-শ্রেণি — একই তালিকার সারি, কেবল এক স্তর নিচে।
+     *
+     * @return BelongsTo<MoneyCategory, $this>
+     */
+    public function moneySubcategory(): BelongsTo
+    {
+        return $this->belongsTo(MoneyCategory::class, 'money_subcategory_id');
     }
 
     public function creator(): BelongsTo

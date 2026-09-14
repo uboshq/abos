@@ -28,6 +28,7 @@ return [
     'needs_reference' => 'Needs a reference',
     'fee_percent' => 'Fee (%)',
     'account' => 'Account',
+    'parent_category' => 'Parent category',
     'days' => 'Days',
     'early_discount_percent' => 'Early discount (%)',
     'early_discount_days' => 'Within days',

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'charge_eats_the_whole_thing' => 'The charge must be less than the amount, or nothing would land in the account.',
     'capital_already_posted' => ':no is already posted',
     'not_a_postable_account' => 'That is a heading, not an account',
     'unknown_contributor_type' => 'Unknown contributor type',

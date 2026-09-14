@@ -13,7 +13,7 @@
     $vendorCredit = $settings->get('print.show_vendor_credit', true);
 @endphp
 
-<style>
+<style @nonce>
     * { box-sizing: border-box; }
 
     body {
