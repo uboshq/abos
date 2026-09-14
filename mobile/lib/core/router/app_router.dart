@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/approvals/approval_inbox_screen.dart';
+import '../../features/attendance/attendance_screen.dart';
 import '../../features/auth/login_screen.dart';
 import '../../features/customers/customer_list_screen.dart';
 import '../../features/home/home_shell.dart';
@@ -65,6 +66,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'approvals',
             builder: (context, state) => const ApprovalInboxScreen(),
+          ),
+          GoRoute(
+            path: 'attendance',
+            builder: (context, state) => const AttendanceScreen(),
           ),
           GoRoute(
             path: 'customers',
