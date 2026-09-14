@@ -10,9 +10,14 @@ use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Models\Company;
 use App\Models\User;
+use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Finance\Models\Deposit;
+use App\Modules\Finance\Models\DepositKind;
 use App\Modules\Finance\Models\DepositMovement;
+use App\Modules\Finance\Models\HandLoanAccount;
 use App\Modules\Finance\Models\HandLoanMovement;
 use App\Modules\Finance\Models\RentalAdjustment;
+use App\Modules\Finance\Models\RentalContract;
 use App\Modules\Finance\Models\Withdrawal;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -51,6 +56,20 @@ final class TheOtherFourRowsStayedDraftsTooTest extends TestCase
 
     private Company $company;
 
+    /**
+     * ⛔ বানানো নম্বর চলে না — `voucher_id`-তে আসল বিদেশি চাবি আছে।
+     *
+     * ⓘ প্রথমে একটা বানানো নম্বর লেখা হয়েছিল, আর MySQL ফিরিয়ে দিল:
+     * *"foreign key constraint fails"*। ⭐ ওটা পরীক্ষার ব্যর্থতা নয়,
+     * ডাটাবেজের একটা **সত্যিকারের পাহারা** — অস্তিত্বহীন ভাউচারের সাথে
+     * কোনো সারি বাঁধা যাবে না।
+     *
+     * তাই ডেমোর দুইটা আসল ভাউচার ধার করা হয়: একটা "নিজের", একটা "অন্যের"।
+     */
+    private int $mine;
+
+    private int $other;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -61,6 +80,33 @@ final class TheOtherFourRowsStayedDraftsTooTest extends TestCase
 
         CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
         $this->actingAs($user);
+
+        /*
+         * ⛔ প্রথমে ডেমোর ভাউচার ধার করা হয়েছিল, আর নয়টা দাবিই লাল হলো:
+         * *"ডেমোতে দুইটা ভাউচারও নেই"*। ⓘ ডেমো সিডার কোনো ভাউচার বসায় না।
+         *
+         * ⭐ তাই দুইটা নিজেই বানানো — একটা “নিজের”, একটা “অন্যের”।
+         * ⚠️ দুইটা লাগে, কারণ সবচেয়ে জরুরি দাবিটাই হলো **অন্য ভাউচারের
+         * বাতিল এই সারিটা খুলতে পারে না**, আর সেটা একটা ভাউচার দিয়ে
+         * মাপাই যায় না।
+         */
+        $year = DB::table('financial_years')->where('company_id', $this->company->id)->value('id');
+
+        $this->assertNotNull($year, 'কোম্পানির কোনো অর্থবছর নেই — ভাউচার বানানো যাচ্ছে না।');
+
+        $make = fn (string $no): int => (int) Voucher::query()->create([
+            'company_id' => $this->company->id,
+            'branch_id' => $this->company->defaultBranch()?->id,
+            'financial_year_id' => $year,
+            'type' => 'payment',
+            'document_no' => $no,
+            'trx_date' => now()->toDateString(),
+            'amount' => '1.0000',
+            'status' => DocumentStatus::CONFIRMED,
+        ])->id;
+
+        $this->mine = $make('PV-TEST-0001');
+        $this->other = $make('PV-TEST-0002');
     }
 
     /**
@@ -111,10 +157,10 @@ final class TheOtherFourRowsStayedDraftsTooTest extends TestCase
     {
         $row = $this->withdrawal();
 
-        $row->settleWith(4242);
+        $row->settleWith($this->mine);
 
         $this->assertSame(DocumentStatus::CONFIRMED, $row->status);
-        $this->assertSame(4242, (int) $row->voucher_id);
+        $this->assertSame($this->mine, (int) $row->voucher_id);
         $this->assertNotNull($row->posted_at);
     }
 
@@ -129,32 +175,32 @@ final class TheOtherFourRowsStayedDraftsTooTest extends TestCase
     {
         $row = $this->withdrawal();
 
-        $row->settleWith(4242);
+        $row->settleWith($this->mine);
         $first = $row->posted_at;
 
-        $row->settleWith(9999);
+        $row->settleWith($this->other);
 
-        $this->assertSame(4242, (int) $row->voucher_id, 'দ্বিতীয় ভাউচার সারিটা ছিনিয়ে নিয়েছে।');
+        $this->assertSame($this->mine, (int) $row->voucher_id, 'দ্বিতীয় ভাউচার সারিটা ছিনিয়ে নিয়েছে।');
         $this->assertEquals($first, $row->posted_at, 'পোস্টের তারিখ নড়েছে।');
     }
 
     public function test_another_vouchers_cancellation_leaves_the_withdrawal_alone(): void
     {
         $row = $this->withdrawal();
-        $row->settleWith(4242);
+        $row->settleWith($this->mine);
 
-        $row->unsettle(7777);
+        $row->unsettle($this->other);
 
         $this->assertSame(DocumentStatus::CONFIRMED, $row->status, 'অন্য ভাউচারের বাতিল এই সারিটা খুলে দিয়েছে।');
-        $this->assertSame(4242, (int) $row->voucher_id);
+        $this->assertSame($this->mine, (int) $row->voucher_id);
     }
 
     public function test_cancelling_its_own_voucher_opens_the_withdrawal_again(): void
     {
         $row = $this->withdrawal();
-        $row->settleWith(4242);
+        $row->settleWith($this->mine);
 
-        $row->unsettle(4242);
+        $row->unsettle($this->mine);
 
         $this->assertSame(DocumentStatus::DRAFT, $row->status);
         $this->assertNull($row->voucher_id);
@@ -171,23 +217,23 @@ final class TheOtherFourRowsStayedDraftsTooTest extends TestCase
     public function test_a_movement_binds_once_and_a_second_voucher_cannot_take_it(): void
     {
         foreach ($this->movements() as $label => $row) {
-            $row->settleWith(555);
-            $this->assertSame(555, (int) $row->voucher_id, "{$label}: প্রথম জোড়াই লাগেনি।");
+            $row->settleWith($this->mine);
+            $this->assertSame($this->mine, (int) $row->voucher_id, "{$label}: প্রথম জোড়াই লাগেনি।");
 
-            $row->settleWith(666);
-            $this->assertSame(555, (int) $row->voucher_id, "{$label}: দ্বিতীয় ভাউচার সারিটা ছিনিয়ে নিয়েছে।");
+            $row->settleWith($this->other);
+            $this->assertSame($this->mine, (int) $row->voucher_id, "{$label}: দ্বিতীয় ভাউচার সারিটা ছিনিয়ে নিয়েছে।");
         }
     }
 
     public function test_only_its_own_voucher_can_unbind_a_movement(): void
     {
         foreach ($this->movements() as $label => $row) {
-            $row->settleWith(555);
+            $row->settleWith($this->mine);
 
-            $row->unsettle(888);
-            $this->assertSame(555, (int) $row->voucher_id, "{$label}: অন্য ভাউচারের বাতিল জোড়াটা খুলে দিয়েছে।");
+            $row->unsettle($this->other);
+            $this->assertSame($this->mine, (int) $row->voucher_id, "{$label}: অন্য ভাউচারের বাতিল জোড়াটা খুলে দিয়েছে।");
 
-            $row->unsettle(555);
+            $row->unsettle($this->mine);
             $this->assertNull($row->voucher_id, "{$label}: নিজের ভাউচার বাতিল হলেও জোড়াটা খোলেনি।");
         }
     }
@@ -204,8 +250,8 @@ final class TheOtherFourRowsStayedDraftsTooTest extends TestCase
         foreach ($this->movements() as $label => $row) {
             $key = $row->getKey();
 
-            $row->settleWith(555);
-            $row->unsettle(555);
+            $row->settleWith($this->mine);
+            $row->unsettle($this->mine);
 
             $this->assertNotNull(
                 $row->newQuery()->withoutGlobalScopes()->find($key),
@@ -252,50 +298,82 @@ final class TheOtherFourRowsStayedDraftsTooTest extends TestCase
          * বিষয়বস্তুর উপর দাঁড়াবে না। ⚠️ দাঁড়ালে ডেমো বদলালেই এটা লাল
          * হত, অথচ কোডে কিছুই ভাঙত না।
          */
+        /*
+         * ⚠️ `DB::table()->insertGetId()` নয় — Eloquent।
+         *
+         * ⛔ সরাসরি ঢোকাতে গিয়ে MySQL বলল: *"Field 'public_id' doesn't
+         * have a default value"*। ⓘ কারণ [[HasPublicId]] একটা **মডেলের**
+         * ঘটনায় ঘরটা ভরে; query builder ঐ ঘটনাগুলো একেবারেই চালায় না।
+         *
+         * ⭐ অর্থাৎ পরীক্ষার নমুনাও মডেলের পথেই বানাতে হয়, নাহলে
+         * বাস্তবের চেয়ে আলাদা সারি তৈরি হয় আর ব্যর্থতাটা বিভ্রান্ত করে।
+         */
         $branchId = $this->company->defaultBranch()?->id;
 
-        $kindId = DB::table('fin_deposit_kinds')->insertGetId([
+        $kind = DepositKind::query()->create([
             'company_id' => $this->company->id,
             'code' => 'FDR-T',
             'name_en' => 'Fixed Deposit (test)',
             'name_bn' => 'স্থায়ী আমানত (পরীক্ষা)',
             'shape' => 'lump',
             'issuer' => 'bank',
-            'personal_only' => 0,
-            'is_active' => 1,
+            'personal_only' => false,
+            'is_active' => true,
             'sort' => 1,
         ]);
 
-        $depositId = DB::table('fin_deposits')->insertGetId([
+        $depositId = Deposit::query()->create([
             'company_id' => $this->company->id,
             'branch_id' => $branchId,
             'document_no' => 'DEP-TEST-0001',
-            'kind_id' => $kindId,
+            'kind_id' => $kind->id,
             'institution' => 'Islami Bank Bangladesh PLC',
             'principal' => '1000000.0000',
             'opened_on' => now()->toDateString(),
             'status' => DocumentStatus::CONFIRMED,
-        ]);
+        ])->id;
 
-        $loanId = DB::table('fin_hand_loan_accounts')->insertGetId([
+        $loanId = HandLoanAccount::query()->create([
             'company_id' => $this->company->id,
             'branch_id' => $branchId,
             'person_id' => DB::table('mdm_people')->where('company_id', $this->company->id)->value('id'),
             'status' => DocumentStatus::CONFIRMED,
-        ]);
+        ])->id;
 
-        $contractId = DB::table('fin_rental_contracts')->insertGetId([
+        /*
+         * ⚠️ ভাড়ার চুক্তিতে দুইটা খাত **বাধ্যতামূলক** (`->constrained()`,
+         * nullable নয়): টাকা কোথা থেকে যায়, আর খরচ কোন খাতে বসে।
+         *
+         * ⭐ নমুনাতেও ওগুলো দিতে হয় — নাহলে MySQL বলে *"Field 'account_id'
+         * doesn't have a default value"*, আর সেটা পরীক্ষার ব্যর্থতা নয়,
+         * স্কিমার একটা সত্যিকারের দাবি।
+         */
+        $accountId = DB::table('accounts')->where('company_id', $this->company->id)->value('id');
+
+        $this->assertNotNull($accountId, 'কোম্পানির চার্টে একটাও খাত নেই।');
+
+        $contractId = RentalContract::query()->create([
             'company_id' => $this->company->id,
             'branch_id' => $branchId,
             'document_no' => 'RNT-TEST-0001',
             'counterparty' => 'হাজী মোহাম্মদ আলী',
             'subject' => 'দোকান — ময়মনসিংহ',
+            'account_id' => $accountId,
+            'expense_account_id' => $accountId,
             'deposit_amount' => '200000.0000',
             'monthly_rent' => '45000.0000',
             'starts_on' => now()->startOfMonth()->toDateString(),
             'term_months' => 36,
+
+            /*
+             * ⚠️ `ends_on`-ও বাধ্যতামূলক, যদিও শুরু ও মেয়াদ থেকে ওটা
+             * হিসাব করা যায়। ⓘ স্কিমা ইচ্ছাকৃতভাবে সংখ্যাটা **সংরক্ষণ**
+             * করে, হিসাব করে না — নাহলে চুক্তির মেয়াদ বাড়ালে পুরনো
+             * কাগজে লেখা শেষ তারিখটাও নীরবে বদলে যেত।
+             */
+            'ends_on' => now()->startOfMonth()->addMonths(36)->toDateString(),
             'status' => DocumentStatus::CONFIRMED,
-        ]);
+        ])->id;
 
         return [
             'আমানতের গতিবিধি' => DepositMovement::query()->create([

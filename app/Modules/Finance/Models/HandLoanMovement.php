@@ -156,6 +156,19 @@ class HandLoanMovement extends Model implements Drillable, SettledByAVoucher
     /** @return array{0: string, 1: array<string, mixed>} */
     public function drillRoute(): array
     {
-        return ['finance.hand_loan.show', ['handLoan' => $this->hand_loan_account_id]];
+        /*
+         * ⛔ `hand_loan_account_id` নয় — কলামটার নাম `account_id`।
+         *
+         * ⚠️ প্রথমে ভুল নামটাই লেখা হয়েছিল, আর Eloquent তাতে **কিছুই
+         * ছোঁড়ে না**: অচেনা নামকে সে অনুপস্থিত অ্যাট্রিবিউট ধরে নেয়,
+         * তাই `null` ফেরাত। ⓘ ফল হত একটা লিংক যেটা কোথাও যায় না —
+         * কোনো ত্রুটি ছাড়া, আর ধরা পড়ত মাস পরে।
+         *
+         * ⭐ ধরেছে অর্থের সেশন, কলামের তালিকা মিলিয়ে। আমার নিজের
+         * [[EveryDrillSourceCanActuallyBeDrilledIntoTest]] এটা ধরত না —
+         * সে দেখত ক্লাসটা `Drillable` কি না, রুটের ঘরগুলো সত্যি কি না
+         * তা নয়। ⓘ সেই ফাঁকটাও এখন বন্ধ।
+         */
+        return ['finance.hand_loan.show', ['handLoan' => $this->account_id]];
     }
 }
