@@ -218,7 +218,7 @@ final class TheOtherFourRowsStayedDraftsTooTest extends TestCase
 
     private function withdrawal(): Withdrawal
     {
-        $person = DB::table('md_persons')->where('company_id', $this->company->id)->value('id');
+        $person = DB::table('mdm_people')->where('company_id', $this->company->id)->value('id');
 
         return Withdrawal::query()->create([
             'company_id' => $this->company->id,
@@ -243,13 +243,59 @@ final class TheOtherFourRowsStayedDraftsTooTest extends TestCase
      */
     private function movements(): array
     {
-        $depositId = DB::table('fin_deposits')->where('company_id', $this->company->id)->value('id');
-        $loanId = DB::table('fin_hand_loan_accounts')->where('company_id', $this->company->id)->value('id');
-        $contractId = DB::table('fin_rental_contracts')->where('company_id', $this->company->id)->value('id');
+        /*
+         * ⛔ প্রথমে ডেমোর সারি খোঁজা হয়েছিল, আর তিনটা দাবিই লাল হলো:
+         * *"ডেমোতে একটাও আমানত নেই"*। ⓘ ডেমো সিডার অর্থের এই তিনটা
+         * খাতায় কিছুই বসায় না।
+         *
+         * ⭐ তাই মা-সারিগুলো এখানেই বানানো হয় — পরীক্ষাটা ডেমোর
+         * বিষয়বস্তুর উপর দাঁড়াবে না। ⚠️ দাঁড়ালে ডেমো বদলালেই এটা লাল
+         * হত, অথচ কোডে কিছুই ভাঙত না।
+         */
+        $branchId = $this->company->defaultBranch()?->id;
 
-        $this->assertNotNull($depositId, 'ডেমোতে একটাও আমানত নেই — নমুনা বানানো যাচ্ছে না।');
-        $this->assertNotNull($loanId, 'ডেমোতে একটাও হাতধারের হিসাব নেই।');
-        $this->assertNotNull($contractId, 'ডেমোতে একটাও ভাড়ার চুক্তি নেই।');
+        $kindId = DB::table('fin_deposit_kinds')->insertGetId([
+            'company_id' => $this->company->id,
+            'code' => 'FDR-T',
+            'name_en' => 'Fixed Deposit (test)',
+            'name_bn' => 'স্থায়ী আমানত (পরীক্ষা)',
+            'shape' => 'lump',
+            'issuer' => 'bank',
+            'personal_only' => 0,
+            'is_active' => 1,
+            'sort' => 1,
+        ]);
+
+        $depositId = DB::table('fin_deposits')->insertGetId([
+            'company_id' => $this->company->id,
+            'branch_id' => $branchId,
+            'document_no' => 'DEP-TEST-0001',
+            'kind_id' => $kindId,
+            'institution' => 'Islami Bank Bangladesh PLC',
+            'principal' => '1000000.0000',
+            'opened_on' => now()->toDateString(),
+            'status' => DocumentStatus::CONFIRMED,
+        ]);
+
+        $loanId = DB::table('fin_hand_loan_accounts')->insertGetId([
+            'company_id' => $this->company->id,
+            'branch_id' => $branchId,
+            'person_id' => DB::table('mdm_people')->where('company_id', $this->company->id)->value('id'),
+            'status' => DocumentStatus::CONFIRMED,
+        ]);
+
+        $contractId = DB::table('fin_rental_contracts')->insertGetId([
+            'company_id' => $this->company->id,
+            'branch_id' => $branchId,
+            'document_no' => 'RNT-TEST-0001',
+            'counterparty' => 'হাজী মোহাম্মদ আলী',
+            'subject' => 'দোকান — ময়মনসিংহ',
+            'deposit_amount' => '200000.0000',
+            'monthly_rent' => '45000.0000',
+            'starts_on' => now()->startOfMonth()->toDateString(),
+            'term_months' => 36,
+            'status' => DocumentStatus::CONFIRMED,
+        ]);
 
         return [
             'আমানতের গতিবিধি' => DepositMovement::query()->create([
