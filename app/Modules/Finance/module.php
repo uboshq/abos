@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 use App\Modules\Finance\Dashboard\FinanceDashboard;
+use App\Modules\Finance\Models\CapitalEntry;
 
 /**
  * অর্থ — টাকা কোথা থেকে আসে, কোথায় থাকে, কোথায় যায়, আর কার।
@@ -287,6 +288,33 @@ return [
      */
     'approvals' => [
         'withdrawal' => 'finance::approval.withdrawal',
+    ],
+
+    /*
+     * ⛔ এই ব্লকটা এতদিন **ছিলই না**, আর সেটা একটা নীরব ফাঁক ছিল।
+     *
+     * ── কী এটা করে ───────────────────────────────────────────────────
+     * ধরনের নামটা (`capital_entry`) ক্লাসের সাথে বাঁধে। দুই জায়গায়
+     * লাগে, আর দুইটাই নীরবে ব্যর্থ হত:
+     *
+     *   ১. খতিয়ানের সারি থেকে মূলধনের নথিতে ফিরে যাওয়া (Drill)
+     *   ২. ⭐ রসিদ পোস্ট হলে সারিটা নিষ্পন্ন করা
+     *      ([[App\Core\Contracts\SettledByAVoucher]])
+     *
+     * ── ⚠️ কেন এটাই একমাত্র পথ ──────────────────────────────────────
+     * [[App\Modules\Accounts\Services\VoucherService]] কোনোদিন জানবে না
+     * `capital_entry` মানে কোন ক্লাস — Accounts-এর `depends_on` ফাঁকা,
+     * বাকি সবাই তার উপরে দাঁড়ায়। ⓘ ওই ফাইলে Finance-এর নাম লিখলে
+     * চক্রাকার নির্ভরতা, আর [[Tests\Feature\Architecture\BoundariesTest]]
+     * ঠিকই ধরত। তাই নামটা এখানে, আর `DrillResolver` খুলে দেয়।
+     *
+     * ⛔ ব্লকটা না থাকলে যা হত — আর ১৪ সেপ্টেম্বর ২০২৬ পর্যন্ত হচ্ছিল:
+     * রসিদ পোস্ট হত, খাতায় টাকা বসত, অথচ মূলধনের সারিটা **চিরকাল
+     * খসড়া** থেকে যেত। দুইটা পর্দা দুই কথা বলত, আর কোথাও কোনো ভুলের
+     * চিহ্ন থাকত না।
+     */
+    'drill_sources' => [
+        'capital_entry' => CapitalEntry::class,
     ],
 
     'reports' => [],
