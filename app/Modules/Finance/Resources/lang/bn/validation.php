@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'charge_eats_the_whole_thing' => 'চার্জ মোট অঙ্কের চেয়ে কম হতে হবে — নাহলে খাতে কিছুই ঢুকত না।',
     'capital_already_posted' => ':no আগেই খাতায় বসেছে',
     'not_a_postable_account' => 'এটা একটা মাথা, খাত নয়',
     'unknown_contributor_type' => 'অচেনা পরিচয়',

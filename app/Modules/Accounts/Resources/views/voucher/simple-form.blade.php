@@ -58,6 +58,30 @@
         @unless ($isNew) @method('PUT') @endunless
         <input type="hidden" name="type" value="{{ $type }}">
 
+        {{--
+            ⭐ এই রসিদটা কোন নথি নিষ্পন্ন করছে — "কীসের বিপরীতে"।
+
+            ── কেন লুকানো ঘর, ড্রপডাউন নয় ───────────────────────────────
+            মালিকের সিদ্ধান্ত (১৪ সেপ্টেম্বর ২০২৬): অর্থ মডিউল কেবল লেখে
+            *"কে কত দেবেন"*, আর টাকা গ্রহণ করে **একাই এই পর্দা**। অর্থের
+            তালিকায় "টাকা এসেছে" চাপলে এই পর্দাটা আগে থেকে ভরা অবস্থায়
+            খোলে, আর ঘর দুইটা তখন লিংক থেকেই আসে।
+
+            ⛔ ড্রপডাউন দিলে ব্যবহারকারীকে খসড়া নথির তালিকা থেকে খুঁজে
+            বের করতে বলা হত — অথচ তিনি এইমাত্র ঐ সারিটার পাশের বোতামেই
+            চাপ দিয়েছেন। আর ভুল সারি বাছলে টাকাটা অন্য কারো নথি নিষ্পন্ন
+            করে ফেলত।
+
+            ⓘ হাতে খোলা রসিদে ঘর দুইটা খালি থাকে, আর সেটাই স্বাভাবিক —
+            বেশিরভাগ আদায় কোনো নথির বিপরীতে নয়।
+        --}}
+        @if (filled(old('against_type', $voucher->against_type)))
+            <input type="hidden" name="against_type"
+                   value="{{ old('against_type', $voucher->against_type) }}">
+            <input type="hidden" name="against_id"
+                   value="{{ old('against_id', $voucher->against_id) }}">
+        @endif
+
         @if ($errors->any())
             <div role="alert"
                  class="rounded-(--radius-field) bg-(--color-badge-danger-bg) px-3 py-2 text-sm
@@ -71,10 +95,24 @@
         @endif
 
         <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
-            <div class="grid gap-3 sm:grid-cols-2">
+            <div class="grid gap-3 sm:grid-cols-3">
                 <x-ui.field name="trx_date" type="date" :label="__('accounts::field.date')"
                             :value="old('trx_date', $voucher->trx_date?->format('Y-m-d') ?? now()->format('Y-m-d'))"
                             required />
+
+                {{--
+                    যে কাগজের বিপরীতে টাকা, তার তারিখ — চেকের তারিখ নয়।
+
+                    ⚠️ দুইটা গুলিয়ে ফেলা সহজ, তাই ঘর দুইটা **আলাদা
+                    সেকশনে**: এটা উপরে ভাউচারের নিজের তারিখের পাশে, আর
+                    চেকের তারিখ নিচে "বিবরণ"-এ চেক নম্বরের পাশে। একটা
+                    ১০ তারিখের বিলের বিপরীতে ২৫ তারিখের চেক — দুইটাই
+                    সত্যি, আর দুইটা আলাদা প্রশ্নের উত্তর।
+
+                    ঐচ্ছিক: নগদে টাকা এলে কোনো কাগজই নেই।
+                --}}
+                <x-ui.field name="ref_date" type="date" :label="__('accounts::field.ref_date')"
+                            :value="old('ref_date', $voucher->ref_date?->format('Y-m-d'))" />
 
                 <x-ui.field name="amount" type="number" step="0.01" inputmode="decimal"
                             :label="__('accounts::field.amount')"
@@ -87,6 +125,88 @@
                      from: '{{ old('from_account_id', $creditLine?->account_id) }}',
                      credit: @js($creditIds),
                      get onCredit() { return this.credit.includes(Number(this.from)); },
+
+                     partyType: @js((string) old('party_type', $voucher->party_type ?? '')),
+                     partyId: @js((string) old('party_id', $voucher->party_id ?? '')),
+                     parties: @js(collect($parties)->flatMap(fn (array $g) => collect($g['options'])
+                         ->map(fn (array $o) => ['type' => $g['type'], 'id' => (int) $o['id'], 'label' => $o['label']]))
+                         ->values()),
+                     get partyOptions() {
+                         return this.parties.filter(p => p.type === this.partyType);
+                     },
+
+                     cats: @js($moneyCategories),
+                     catId: @js((string) old('money_category_id', $voucher->money_category_id ?? '')),
+                     subId: @js((string) old('money_subcategory_id', $voucher->money_subcategory_id ?? '')),
+                     get parentCats() { return this.cats.filter(c => c.parent_id === null); },
+                     get subCats() {
+                         return this.cats.filter(c => String(c.parent_id) === String(this.catId));
+                     },
+
+                     dueUrl: @js(route('accounts.voucher.due')),
+                     due: null,
+                     dueBusy: false,
+
+                     /*
+                      * ⭐ চিহ্নটাই বাক্যটা বদলে দেয়।
+                      *
+                      * ডেবিট − ক্রেডিট ধনাত্মক মানে তিনি আমাদের দেবেন,
+                      * ঋণাত্মক মানে উল্টো। ⚠️ কেবল একটা সংখ্যা দেখালে
+                      * সরবরাহকারীর ঘরে "−৫,০০০" বসত আর কেউ ভাবতেন
+                      * হিসাবে গোলমাল — অথচ ওটাই ঠিক উত্তর, শুধু অন্য
+                      * দিকের। তাই সংখ্যার পাশে কথাটাও থাকে।
+                      */
+                     get dueText() {
+                         const n = Number(this.due);
+                         const shown = Math.abs(n).toLocaleString(undefined, {
+                             minimumFractionDigits: 2, maximumFractionDigits: 2,
+                         });
+
+                         return shown + ' — ' + (n < 0
+                             ? @js(__('accounts::message.we_owe_them'))
+                             : @js(__('accounts::message.they_owe_us')));
+                     },
+
+                     /*
+                      * ধরন বদলালে বাছা মানুষটাও বদলাতে হবে — নাহলে
+                      * 'customer' ধরনের সাথে একজন সরবরাহকারীর আইডি
+                      * জোড়া লেগে থাকত, আর সেটা চুপচাপ ভুল পক্ষের
+                      * খতিয়ানে টাকা বসাত।
+                      */
+                     resetParty() { this.partyId = ''; this.due = null; },
+
+                     loadDue() {
+                         this.due = null;
+
+                         if (! this.partyType || ! this.partyId) { return; }
+
+                         this.dueBusy = true;
+
+                         fetch(this.dueUrl + '?party_type=' + encodeURIComponent(this.partyType)
+                                   + '&party_id=' + encodeURIComponent(this.partyId),
+                               { headers: { 'Accept': 'application/json' } })
+                             .then(r => r.ok ? r.json() : null)
+                             .then(d => { this.due = (d && d.known) ? d.amount : null; })
+                             .catch(() => { this.due = null; })
+                             .finally(() => { this.dueBusy = false; });
+                     },
+
+                     /*
+                      * শ্রেণি বাছলে খাতটা নিজে থেকে বসে।
+                      *
+                      * ⓘ এটা কেবল **সুবিধা** — আসল নিয়মটা সার্ভারে
+                      * ([[VoucherRequest::fillAccountFromCategory()]]),
+                      * তাই JS বন্ধ থাকলেও শ্রেণি থেকে খাত বসে।
+                      */
+                     pickCategory() { this.subId = ''; this.applyAccount(this.catId); },
+                     pickSub() { this.applyAccount(this.subId || this.catId); },
+                     applyAccount(id) {
+                         const row = this.cats.find(c => String(c.id) === String(id));
+
+                         if (row && row.account_id) { this.from = String(row.account_id); }
+                     },
+
+                     init() { this.loadDue(); },
                  }">
             <div class="grid gap-3 sm:grid-cols-2">
                 {{-- from — টাকা যেখান থেকে এল --}}
@@ -163,33 +283,148 @@
                     ⓘ ইতিহাসটা রেখে দেওয়া হলো ইচ্ছে করেই: পরের জন যেন মন্তব্য
                     বিশ্বাস করার আগে মেপে নেন।
                 --}}
+                {{--
+                    ⭐ "কার কাছ থেকে" — দুইটা ঘর, একটা নয়।
+
+                    ── কেন ভাঙা হলো, ১৪ সেপ্টেম্বর ২০২৬ ──────────────────────
+                    মালিক ঘরের তালিকায় **Received From Type** আলাদা করে
+                    চেয়েছেন, আর কারণটা পর্দায় দাঁড়ালেই বোঝা যায়: আগে একটাই
+                    ড্রপডাউনে গ্রাহক-সরবরাহকারী-কর্মী-ব্যক্তি সবাই মিলে
+                    কয়েকশো সারি হত। ⛔ কয়েকশো সারির ড্রপডাউনে মানুষ খোঁজেন
+                    না — তিনি উপরের দিকের যেকোনো একটা চেনা নাম বেছে ফেলেন।
+
+                    ধরন আগে বাছলে তালিকাটা ছোট হয়ে আসে, আর ছোট তালিকায়
+                    ভুল বাছাই কমে।
+
+                    ⓘ `party_type` ও `party_id` সরাসরি যাচ্ছে — আগের মতো
+                    `type:id` জোড়া লাগিয়ে `party` ঘরে নয়। এক ঘরে দুইটা
+                    তথ্য ঠেসে দিলে ভাঙা-জোড়ার একটা ধাপ বাড়ে, আর ঐ ধাপটা
+                    JS-এর উপর দাঁড়িয়ে থাকত।
+                --}}
+                <label class="mt-3 block">
+                    <span class="mb-1 block text-sm font-medium">
+                        {{ __('accounts::field.party_type') }}
+                        <span class="text-(--color-danger)" x-cloak x-show="onCredit" aria-hidden="true">*</span>
+                    </span>
+                    <select name="party_type" x-model="partyType" @change="resetParty()"
+                            class="h-(--spacing-field) w-full rounded-(--radius-field) border
+                                   border-(--color-border) bg-(--color-surface-card) px-3">
+                        <option value="">—</option>
+                        @foreach ($parties as $group)
+                            <option value="{{ $group['type'] }}">{{ $group['label'] }}</option>
+                        @endforeach
+                    </select>
+                    @error('party_type')
+                        <span class="mt-1 block text-2xs text-(--color-danger)">{{ $message }}</span>
+                    @enderror
+                </label>
+
                 <label class="mt-3 block">
                     <span class="mb-1 block text-sm font-medium">
                         {{ __('accounts::field.party') }}
                         <span class="text-(--color-danger)" x-cloak x-show="onCredit" aria-hidden="true">*</span>
                     </span>
-                    <select name="party"
+                    <select name="party_id" x-model="partyId" @change="loadDue()"
                             :required="onCredit"
                             class="h-(--spacing-field) w-full rounded-(--radius-field) border
                                    border-(--color-border) bg-(--color-surface-card) px-3">
                         <option value="">—</option>
-                        @foreach ($parties as $group)
-                            <optgroup label="{{ $group['label'] }}">
-                                @foreach ($group['options'] as $party)
-                                    <option value="{{ $group['type'] }}:{{ $party['id'] }}"
-                                            @selected(old('party') === $group['type'].':'.$party['id']
-                                                || ($voucher->party_type === $group['type']
-                                                    && $voucher->party_id == $party['id']))>
-                                        {{ $party['label'] }}
-                                    </option>
-                                @endforeach
-                            </optgroup>
-                        @endforeach
+
+                        <template x-for="row in partyOptions" :key="row.type + ':' + row.id">
+                            <option :value="row.id" x-text="row.label"
+                                    :selected="String(row.id) === String(partyId)"></option>
+                        </template>
                     </select>
+                    @error('party_id')
+                        <span class="mt-1 block text-2xs text-(--color-danger)">{{ $message }}</span>
+                    @enderror
                     @error('party')
                         <span class="mt-1 block text-2xs text-(--color-danger)">{{ $message }}</span>
                     @enderror
                 </label>
+
+                {{--
+                    ⭐ এখন তাঁর কাছে কত পাওনা — **পড়ার ঘর, লেখার নয়**।
+
+                    মালিকের সিদ্ধান্ত (১৪ সেপ্টেম্বর ২০২৬): সংখ্যাটা নিজে
+                    থেকে আসবে, টাইপ করা যাবে না। হাতে লিখতে দিলে সেটা
+                    খতিয়ানের একটা **দ্বিতীয় উৎস** হত, আর এই রিপো একবার
+                    শিখেছে দুই উৎস মানে একদিন দুই উত্তর।
+
+                    ⚠️ সংখ্যাটা **এখনকার**, ভাউচারের তারিখের নয় — লেবেলটাই
+                    সেটা বলে, যাতে কেউ ওটাকে ঐতিহাসিক জের ভেবে না বসেন।
+
+                    ⓘ কোনো `name` নেই ইচ্ছাকৃতভাবে: ঘরটা জমা পড়ে না, তাই
+                    বাইরে থেকে একটা মনগড়া অঙ্ক পাঠানোর পথও নেই।
+                --}}
+                <div class="mt-3">
+                    <span class="mb-1 block text-sm font-medium">
+                        {{ __('accounts::field.collectable') }}
+                    </span>
+                    <p class="rounded-(--radius-field) border border-dashed border-(--color-border)
+                              px-3 py-2 text-sm">
+                        <span x-show="dueBusy" x-cloak>…</span>
+                        <span x-show="! dueBusy && due === null">—</span>
+                        <span x-show="! dueBusy && due !== null" x-cloak>
+                            <span x-text="dueText"></span>
+                        </span>
+                    </p>
+                </div>
+
+                {{--
+                    ⭐ টাকার শ্রেণি — আর **শ্রেণিই খাত ঠিক করে**।
+
+                    ── কেন ঘর দুইটা লাগল ────────────────────────────────────
+                    মালিকের সিদ্ধান্ত (১৪ সেপ্টেম্বর ২০২৬)। আগে উপরের
+                    "কোথা থেকে এল" ঘরে পুরো হিসাবের ছক খোলা থাকত, আর
+                    কাউন্টারের লোককে নিজে ঠিক করতে হত টাকাটা কোন খাতে
+                    যাবে। ⛔ ভুল খাত বাছলে কিছুই ভাঙত না — ভাউচার পোস্ট
+                    হত, খতিয়ান মিলত, শুধু টাকাটা ভুল জায়গায় বসত। মাস
+                    শেষে বকেয়া মিলত না আর কেউ বলতে পারত না কোন সারিতে।
+
+                    ⓘ শ্রেণি বাছলে উপরের খাতের ঘরটা নিজে থেকে ভরে যায়,
+                    কিন্তু **লুকানো হয় না** — কেউ চাইলে বদলাতে পারেন, আর
+                    কী বসল সেটা চোখের সামনেই থাকে।
+                --}}
+                <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                    <label class="block">
+                        <span class="mb-1 block text-sm font-medium">
+                            {{ __('accounts::field.money_category') }}
+                        </span>
+                        <select name="money_category_id" x-model="catId" @change="pickCategory()"
+                                class="h-(--spacing-field) w-full rounded-(--radius-field) border
+                                       border-(--color-border) bg-(--color-surface-card) px-3">
+                            <option value="">—</option>
+                            <template x-for="row in parentCats" :key="row.id">
+                                <option :value="row.id" x-text="row.label"
+                                        :selected="String(row.id) === String(catId)"></option>
+                            </template>
+                        </select>
+                        @error('money_category_id')
+                            <span class="mt-1 block text-2xs text-(--color-danger)">{{ $message }}</span>
+                        @enderror
+                    </label>
+
+                    {{-- ⓘ উপ-শ্রেণি না থাকলে ঘরটা দেখানোই হয় না — একটা
+                         চিরকাল খালি ড্রপডাউন জায়গা নেয় আর কিছুই বলে না। --}}
+                    <label class="block" x-show="subCats.length > 0" x-cloak>
+                        <span class="mb-1 block text-sm font-medium">
+                            {{ __('accounts::field.money_subcategory') }}
+                        </span>
+                        <select name="money_subcategory_id" x-model="subId" @change="pickSub()"
+                                class="h-(--spacing-field) w-full rounded-(--radius-field) border
+                                       border-(--color-border) bg-(--color-surface-card) px-3">
+                            <option value="">—</option>
+                            <template x-for="row in subCats" :key="row.id">
+                                <option :value="row.id" x-text="row.label"
+                                        :selected="String(row.id) === String(subId)"></option>
+                            </template>
+                        </select>
+                        @error('money_subcategory_id')
+                            <span class="mt-1 block text-2xs text-(--color-danger)">{{ $message }}</span>
+                        @enderror
+                    </label>
+                </div>
 
                 {{--
                     ⭐ বাছার পর পর্দা বলে **কী ঘটতে যাচ্ছে**।
@@ -230,6 +465,51 @@
 
                 <x-ui.field name="instrument_date" type="date" :label="__('accounts::field.instrument_date')"
                             :value="old('instrument_date', $voucher->instrument_date?->format('Y-m-d'))" />
+            </div>
+
+            {{--
+                ⭐ যিনি টাকাটা দিলেন **তাঁর** ব্যাংক ও হিসাব নম্বর।
+
+                ⚠️ আমাদের ব্যাংক নয় — সেটা উপরের "কোথায় জমা হলো" ঘরটা।
+                দুইটা গুলিয়ে ফেললে ব্যাংক মিলকরণ পুরোটাই ভুল হত, তাই
+                লেবেলে "যিনি দিলেন" কথাটা আছে।
+
+                ⛔ কেন ঘর দুইটা দরকার: চেক নম্বর আগে থেকেই ছিল, কিন্তু
+                একটা চেক ডিজঅনার হয়ে ফিরলে হাতে থাকত কেবল একটা নম্বর —
+                আর একই নম্বরের চেক ভিন্ন ব্যাংকে ভিন্ন মানুষের হয়। ফেরত
+                চেকটা কোন আদায়ের ছিল, খুঁজে বের করার নিশ্চিত পথ ছিল না।
+
+                ⓘ মুক্ত লেখা, মালিকের নিজের সিদ্ধান্ত (১৪ সেপ্টেম্বর ২০২৬)
+                — চেকে যা ছাপা আছে হুবহু তাই লেখা যায়।
+            --}}
+            <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                <x-ui.field name="from_bank" :label="__('accounts::field.from_bank')"
+                            :value="old('from_bank', $voucher->from_bank)" />
+
+                <x-ui.field name="from_account_no" :label="__('accounts::field.from_account_no')"
+                            :value="old('from_account_no', $voucher->from_account_no)" />
+            </div>
+
+            {{--
+                ⭐ ব্যাংক বা MFS যা কেটে রেখেছে।
+
+                ── মালিকের নিয়ম, ১৪ সেপ্টেম্বর ২০২৬ ──────────────────────
+                **যা পাঠানো হলো তাই মূলধন**, যা ঢুকল তা নয়। ৮,০০০ পাঠালেন,
+                ২০ কাটল → ব্যাংকে ৭,৯৮০ · চার্জ খাতে ২০ · মূলধন ৮,০০০।
+
+                ⓘ উপরের "অঙ্ক" ঘরে **পাঠানো টাকাটাই** লিখুন, ঢোকা টাকা নয় —
+                নাহলে বিনিয়োগকারীর অংশ % ভুল হবে, আর ওটা সোজা মুনাফা ভাগের
+                হিসাব।
+
+                ⚠️ ঘরটা কেবল ব্যাংক বা MFS-এ টাকা ঢুকলে কাজে লাগে; নগদে
+                চার্জ হয় না, আর নগদের খাতে চার্জ লিখলে সেবাটা থামায়
+                ([[VoucherService::withCharge()]])।
+            --}}
+            <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                <x-ui.field name="charge_amount" type="number" step="0.01" inputmode="decimal"
+                            :label="__('accounts::field.money_charge')"
+                            :value="old('charge_amount', $voucher->charge_amount ?: null)"
+                            :hint="__('accounts::message.charge_hint')" numeric />
             </div>
 
             <label class="mt-3 block">

@@ -1132,3 +1132,94 @@ input[type='number'] {
     -moz-appearance: textfield;
     appearance: textfield;
 }
+
+/*
+ * মডিউল-বারের ঘরগুলো — বারের সাথে **একই রং**, মালিকের নির্দেশ।
+ *
+ * ⛔ আগে ঘরগুলো সাদা ছিল (`surface-card`), আর বারটা ধূসর — তাই ওগুলো
+ * বারের উপর সাদা ছোপের মতো দেখাত, বোতামের সারির মতো নয়।
+ *
+ * ⓘ নিয়মগুলো এখানে, ইউটিলিটি ক্লাসে নয় — কারণ রংটা একটা টোকেন থেকে
+ * আসে যার কোনো Tailwind নাম নেই, আর এই বারটায় একটা ক্লাস নীরবে
+ * কম্পাইল না হলে গোটা গড়নটাই ভেঙে পড়ে (আজ তিনবার হয়েছে)।
+ */
+.modulebar-cell {
+    background: var(--color-modulebar, var(--color-surface-muted));
+    border: 1px solid var(--color-modulebar-border, var(--color-border));
+    color: var(--color-ink-body);
+}
+
+.modulebar-cell:hover {
+    /* ⓘ রং বদলায় না, কেবল একটু গাঢ় ছায়া — "এটা চাপা যায়" বোঝাতে
+       ততটুকুই যথেষ্ট, আর সারিটা তখনো এক রঙের থাকে */
+    background: color-mix(in srgb, var(--color-modulebar, #c9c9c9) 88%, #000);
+}
+
+/*
+ * চলতি পর্দা — রং এক, কিন্তু লেখা গাঢ় আর নিচে দাগ।
+ *
+ * ⚠️ ভরাট রং দিয়ে আলাদা করা যেত, কিন্তু তাতে "সব মেনু একই রঙের"
+ * কথাটাই ভাঙত। ⓘ তাই পার্থক্যটা রঙে নয়, **ওজনে** — আর "আমি কোথায়"
+ * প্রশ্নের উত্তর তাতেও পরিষ্কার থাকে।
+ */
+.modulebar-cell-on {
+    font-weight: 600;
+    color: var(--color-brand-600);
+    border-color: var(--color-brand-600);
+    position: relative;
+    z-index: 10;
+}
+
+/*
+ * নিচের বার (মোবাইল) — মালিকের দেওয়া ছবির গড়ন, ১৪ সেপ্টেম্বর ২০২৬।
+ *
+ * ⓘ নীল পটি · সাদা রেখা-আইকন · সাদা লেখা · আর সক্রিয় আইকনের পিছনে
+ * একটা গোলাকার "পিল"।
+ *
+ * ⚠️ সক্রিয়তা আগে কেবল **লেখার রং** বদলে বোঝানো হত। ⛔ নীল পটিতে ওটা
+ * আর চলে না: সাদা আর হালকা-সাদার তফাত ছোট পর্দায় চোখে পড়ে না। পিলটা
+ * আকার দিয়ে বলে, রং দিয়ে নয় — আর ওটা রোদে-ধরা ফোনেও দেখা যায়।
+ *
+ * ⓘ নিয়মগুলো এখানে, ইউটিলিটি ক্লাসে নয় — এই শেল-অংশগুলোয় একটা ক্লাস
+ * নীরবে কম্পাইল না হলে গোটা গড়নটা ভেঙে পড়ে, আর কোনো ভুলের বার্তা থাকে না।
+ */
+.bottom-nav {
+    background: var(--color-brand-600);
+    border-top: 1px solid var(--color-brand-600);
+}
+
+.bottom-nav-item {
+    display: flex;
+    flex: 1 1 0%;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding-inline: 4px;
+    font-size: 11px;
+    color: #fff;
+    transition: opacity 120ms;
+}
+
+.bottom-nav-item:not(.bottom-nav-item-on) {
+    /* ⓘ নিষ্ক্রিয়গুলো সাদাই, কেবল একটু হালকা — আলাদা রং দিলে বারটা
+       দুই রঙের হয়ে যেত, আর ছবিতে সবই সাদা */
+    opacity: 0.82;
+}
+
+.bottom-nav-pill {
+    display: grid;
+    place-items: center;
+    width: 56px;
+    height: 30px;
+    border-radius: 9999px;
+    transition: background-color 120ms;
+}
+
+.bottom-nav-item-on {
+    font-weight: 600;
+}
+
+.bottom-nav-item-on .bottom-nav-pill {
+    background: rgb(255 255 255 / 0.22);
+}

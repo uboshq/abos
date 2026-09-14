@@ -9,6 +9,7 @@ use App\Core\Services\ListExport;
 use App\Core\Services\Ownership;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\Csp;
 use App\Models\User;
 use App\Models\UserPermissionOverride;
 use Illuminate\Database\Eloquent\Model;
@@ -266,5 +267,24 @@ class AppServiceProvider extends ServiceProvider
          */
         Blade::directive('csrf', fn (): string => '<?php echo csrf_field(), '
             .'app('.FormIsNotSubmittedTwice::class.'::class)->field(); ?>');
+
+        /*
+         * ⭐ `@nonce` — ইনলাইন `<script>` ও `<style>` ব্লকের ছাড়পত্র।
+         *
+         * পুরো অ্যাট্রিবিউটটাই বসায় (`nonce="..."`), শুধু মানটা নয়।
+         * ⓘ কারণ অর্ধেক বসালে ভুলটা সহজ হত — কেউ কোট দিতে ভুলতেন, আর
+         * তখন চিহ্নটা কেটে যেত প্রথম স্পেসেই, ব্লকটা নীরবে বন্ধ হত।
+         *
+         * ব্যবহার: `<script @nonce>` — আর কিছু নয়।
+         *
+         * ⚠️ মানটা `e()`-তে দিয়ে নয়, কারণ ওটা base64, আর base64-এ
+         * HTML-এর বিপজ্জনক অক্ষর নেই। তবু কোটের ভিতরেই থাকে।
+         *
+         * ⛔ নতুন ইনলাইন ব্লকে এটা বসাতে ভুললে ব্লকটা **চলবেই না**, আর
+         * কনসোলে CSP-র অভিযোগ আসবে — নীরব নয়, জোরে। তার উপরেও
+         * [[EveryInlineScriptCarriesItsNonceTest]] গুনে দেখে।
+         */
+        Blade::directive('nonce', fn (): string => '<?php echo \'nonce="\', '
+            .Csp::class.'::nonce(), \'"\'; ?>');
     }
 }

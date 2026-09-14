@@ -26,6 +26,11 @@ return [
      * বাক্যটা লেখা হয়েছে যাতে কেউ **ভুল মাথা বেছেছেন কি না** সেটা
      * পড়েই বুঝতে পারেন।
      */
+    'charge_hint' => 'What the bank or the wallet kept. Leave it empty if nothing was deducted. The contribution stays whole — the charge is booked as a business expense.',
+
+    'they_owe_us' => 'they owe us',
+    'we_owe_them' => 'we owe them',
+
     'bank_reference_placeholder' => 'Cheque no. or TrxID',
     'reference_hint_bank' => 'The cheque number, or the reference the bank gave the transfer.',
     'reference_hint_mfs' => 'The TrxID from the confirmation message.',

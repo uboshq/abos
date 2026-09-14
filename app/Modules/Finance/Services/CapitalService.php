@@ -67,6 +67,73 @@ final class CapitalService
     }
 
     /**
+     * দাখিলার লাইনগুলো — চার্জ থাকলে তিনটা, নাহলে দুইটা।
+     *
+     * ── মালিকের সিদ্ধান্ত, ১৩ সেপ্টেম্বর ২০২৬ ─────────────────────────
+     * প্রশ্নটা তিনি নিজেই তুলেছেন: *"ব্যাংক চার্জ আছে, MFS চার্জ আছে —
+     * এগুলো কোথায়?"*
+     *
+     * ⛔ কোথাও ছিল না। খাত দুইটা প্রমিত ছকে **আগে থেকেই বসানো**
+     * (`5210` ব্যাংক চার্জ, `5211` মোবাইল ব্যাংকিং চার্জ), আর ছকের
+     * মন্তব্যে কারণও লেখা: *"বিকাশ ক্যাশ-আউটে চার্জ কাটে, ব্যাংক কাটে
+     * না… ওই চার্জটা আলাদা খাতে না গেলে বছরে কত গেল কেউ জানে না।"*
+     * ⚠️ খাত বানানো হয়েছিল, কারণ লেখা হয়েছিল, আর **কোনো পর্দা ওটা
+     * কোনোদিন ব্যবহার করেনি** — আজকের চেনা রোগ।
+     *
+     * ── ⭐ কোনটা মূলধন: যা পাঠানো হলো, যা ঢুকল নয় ────────────────────
+     * মালিক ৮,০০০ পাঠালেন, ব্যাংক ২০ কাটল, ৭,৯৮০ ঢুকল:
+     *
+     *     ব্যাংক খাত     ডেবিট  ৭,৯৮০
+     *     চার্জ খাত       ডেবিট     ২০
+     *     মূলধন          ক্রেডিট  ৮,০০০
+     *
+     * ⓘ মালিকের অংশ পুরো ৮,০০০, কারণ তিনি ততটাই দিয়েছেন — আর ২০ টাকা
+     * ব্যবসার খরচ, তাঁর অনুদানের ঘাটতি নয়। ⚠️ উল্টোটা করলে অংশীদারি
+     * ব্যবসায় কার কত অংশ সেই সংখ্যাটা চার্জের হারের সাথে নড়ত।
+     *
+     * ── কোন চার্জ খাত ─────────────────────────────────────────────────
+     * টাকা যে ধরনের খাতে ঢুকছে সেটাই ঠিক করে — ব্যাংক হলে `5210`,
+     * MFS হলে `5211`। ⓘ নগদে চার্জ হয় না, আর ঘরটাও তখন আসে না।
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function lines(CapitalEntry $entry, Account $into, Account $capital, ?string $charge): array
+    {
+        $cut = trim((string) $charge);
+
+        if ($cut === '' || bccomp($cut, '0', 4) <= 0) {
+            return [
+                ['account_id' => $into->id, 'debit' => $entry->amount, 'credit' => '0'],
+                ['account_id' => $capital->id, 'debit' => '0', 'credit' => $entry->amount],
+            ];
+        }
+
+        /*
+         * ⛔ চার্জ মোটের চেয়ে বড় বা সমান হতে পারে না।
+         *
+         * ⓘ সমানও নয়: তাহলে খাতে শূন্য ঢুকত, আর "টাকা এসেছে" বলাটাই
+         * মিথ্যা হত। সংখ্যাটা হাতে লেখা, তাই একটা বাড়তি শূন্যই যথেষ্ট।
+         */
+        if (bccomp($cut, (string) $entry->amount, 4) >= 0) {
+            throw ValidationException::withMessages([
+                'charge' => __('finance::validation.charge_eats_the_whole_thing'),
+            ]);
+        }
+
+        $landed = bcsub((string) $entry->amount, $cut, 4);
+
+        $chargeAccount = Account::query()
+            ->where('code', $into->isMfs() ? StandardChart::MFS_CHARGES : StandardChart::BANK_CHARGES)
+            ->firstOrFail();
+
+        return [
+            ['account_id' => $into->id, 'debit' => $landed, 'credit' => '0'],
+            ['account_id' => $chargeAccount->id, 'debit' => $cut, 'credit' => '0'],
+            ['account_id' => $capital->id, 'debit' => '0', 'credit' => $entry->amount],
+        ];
+    }
+
+    /**
      * খসড়া সারিটা শুধরানো।
      *
      * ⛔ নথির নম্বরটা বদলায় না, আর কখনো বদলাবেও না — একবার দেওয়া নম্বর
@@ -167,7 +234,15 @@ final class CapitalService
      * পেতেন যেটা পাঠানোর কোনো পথ পর্দায় ছিল না — **টাকাটা ঢোকানোই
      * যেত না**। মালিক নিজে ধরেছেন।
      */
-    public function post(CapitalEntry $entry, Account $into, ?string $reference = null): CapitalEntry
+    /**
+     * @param  string|null  $charge  ব্যাংক বা MFS যা কেটে রেখেছে।
+     */
+    public function post(
+        CapitalEntry $entry,
+        Account $into,
+        ?string $reference = null,
+        ?string $charge = null,
+    ): CapitalEntry
     {
         if ($entry->status === CapitalEntry::POSTED) {
             throw ValidationException::withMessages([
@@ -198,8 +273,7 @@ final class CapitalService
                     'instrument_no' => $reference,
                 ],
                 [
-                    ['account_id' => $into->id, 'debit' => $entry->amount, 'credit' => '0'],
-                    ['account_id' => $capital->id, 'debit' => '0', 'credit' => $entry->amount],
+                    ...$this->lines($entry, $into, $capital, $charge),
                 ],
             );
 

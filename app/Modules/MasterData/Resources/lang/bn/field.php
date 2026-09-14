@@ -42,6 +42,7 @@ return [
     'needs_reference' => 'লেনদেন নম্বর লাগে',
     'fee_percent' => 'ফি (%)',
     'account' => 'হিসাবের খাত',
+    'parent_category' => 'মা-শ্রেণি',
     'days' => 'দিন',
     'early_discount_percent' => 'আগে দিলে ছাড় (%)',
     'early_discount_days' => 'কত দিনের মধ্যে',

@@ -55,7 +55,7 @@
 
     @once
         @push('scripts')
-            <script>
+            <script @nonce>
                 function anchorNav() {
                     return {
                         items: [],

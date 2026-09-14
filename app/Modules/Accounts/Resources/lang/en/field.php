@@ -64,6 +64,13 @@ return [
     'from_account' => 'From account',
     'to_account' => 'To account',
     'received_from' => 'Received from',
+    'party_type' => 'Received from type',
+    'collectable' => 'Collectable now',
+    'ref_date' => 'Ref date',
+    'money_category' => 'Category',
+    'money_subcategory' => 'Sub category',
+    'from_bank' => 'From bank',
+    'from_account_no' => 'Account number',
     'received_into' => 'Received into',
     'paid_from' => 'Paid from',
     'paid_to' => 'Paid to',
@@ -75,6 +82,8 @@ return [
     'instrument_date' => 'Cheque date',
     // Asked for at posting time, so it gets its own name — "Cheque/" would
     // mislead there, since most of the time this is a bKash TrxID
+    'money_charge' => 'Charge deducted',
+
     'bank_reference' => 'Bank / MFS transaction no.',
     'money_account_pick' => 'Landed in',
     'from_date' => 'From date',

@@ -122,6 +122,16 @@ return [
              */
             ['label' => 'master_data::menu.people', 'icon' => 'people', 'route' => 'master_data.person.index', 'permission' => 'master_data.view'],
 
+            /*
+             * টাকার শ্রেণি — আদায়/প্রদান ভাউচারের "কী ধরনের টাকা"।
+             *
+             * ⭐ সারিটার সাথে হিসাবের খাত বাঁধা থাকে, তাই এটা কেবল একটা
+             * লেবেলের তালিকা নয় — এখানে ভুল খাত বসালে আগামীকাল থেকে
+             * প্রতিটা আদায় ভুল জায়গায় বসবে। তাই পর্দাটা মাস্টার ডাটায়,
+             * যেখানে বদলটা অডিটে বসে।
+             */
+            ['label' => 'master_data::menu.money_categories', 'icon' => 'wallet', 'route' => 'master_data.money_category.index', 'permission' => 'master_data.view'],
+
             // প্রতিষ্ঠানের গড়ন — কর্মীর তালিকা এই তিনটার উপর দাঁড়ায়
             ['label' => 'master_data::menu.departments', 'icon' => 'building', 'route' => 'master_data.department.index', 'permission' => 'master_data.view'],
             ['label' => 'master_data::menu.designations', 'icon' => 'star', 'route' => 'master_data.designation.index', 'permission' => 'master_data.view'],
@@ -213,6 +223,23 @@ return [
         'vehicle' => Vehicle::class,
         'transfer_mode' => TransferMode::class,
         'person' => Person::class,
+    ],
+
+    /*
+     * ব্যক্তি একটা পক্ষ — মালিকের তালিকার "Others"।
+     *
+     * ── কেন এটা লাগল, ১৪ সেপ্টেম্বর ২০২৬ ───────────────────────────
+     * মালিক আদায় ভাউচারে চার ধরনের পক্ষ চেয়েছেন: গ্রাহক, সরবরাহকারী,
+     * কর্মী, আর **অন্যান্য**। প্রথম তিনটার নিজের তালিকা আছে; চতুর্থটার
+     * জন্য [[Person]] তালিকাটা গত সপ্তাহেই বসেছে, ঠিক এই কাজের জন্য —
+     * "যাঁদের সাথে ব্যবসার টাকার সম্পর্ক আছে"।
+     *
+     * ⛔ ঘোষণাটা না দিলে "অন্যান্য" মানে হত আবার মুক্ত লেখা, আর তখন
+     * `Person` তালিকাটা বানানোর পুরো কারণটাই — *"একই মালিক আবার
+     * বিনিয়োগ করলে আবার নাম লিখতে হবে?"* — এই এক পর্দায় ফিরে আসত।
+     */
+    'parties' => [
+        'person' => 'master_data::menu.people',
     ],
 
     /*

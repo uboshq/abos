@@ -7,6 +7,7 @@ namespace App\Modules\Accounts\Http\Requests;
 use App\Core\Services\PartyRegistry;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\Money;
+use App\Modules\Accounts\Models\MoneyCategory;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
 use Illuminate\Foundation\Http\FormRequest;
@@ -70,6 +71,8 @@ class VoucherRequest extends FormRequest
             ]);
         }
 
+        $this->fillAccountFromCategory();
+
         $lines = (array) $this->input('lines', []);
 
         if ($lines === []) {
@@ -95,6 +98,48 @@ class VoucherRequest extends FormRequest
         }
 
         $this->merge(['lines' => $lines]);
+    }
+
+    /**
+     * শ্রেণি বাছা হয়েছে অথচ খাত খালি — খাতটা শ্রেণি থেকেই বসিয়ে দাও।
+     *
+     * ── ⭐ কেন এটা সার্ভারে, শুধু ব্রাউজারে নয় ──────────────────────
+     * ফর্মে Alpine শ্রেণি বাছলেই খাতের ড্রপডাউনটা ভরে দেয়, তাই
+     * স্বাভাবিক পথে এই মেথডের কিছু করার থাকে না।
+     *
+     * ⛔ কিন্তু ব্রাউজারের ভরাট একটা **সুবিধা**, পাহারা নয়। JS বন্ধ
+     * থাকলে, পুরনো ফোনে, বা API থেকে সরাসরি পাঠালে খাতটা খালি আসত আর
+     * ব্যবহারকারী দেখতেন *"খাত বাছুন"* — অথচ তিনি শ্রেণি বেছেই দিয়েছেন
+     * আর সেটাই খাতের উত্তর। দুই জায়গায় একই নিয়ম নয়; নিয়মটা এখানে,
+     * আর ব্রাউজার কেবল আগেভাগে দেখিয়ে দেয়।
+     *
+     * ⓘ ব্যবহারকারী নিজে খাত বাছলে সেটাই থাকে — শ্রেণি তার উপর দিয়ে
+     * যায় না। শ্রেণি **ফাঁকা ঘর ভরে**, বাছাই মোছে না।
+     */
+    private function fillAccountFromCategory(): void
+    {
+        if (trim((string) $this->input('from_account_id', '')) !== '') {
+            return;
+        }
+
+        /*
+         * উপ-শ্রেণি আগে — নির্দিষ্টটাই জেতে।
+         *
+         * ⓘ [[MoneyCategory::resolvedAccountId()]] নিজেই মায়ের খাতে
+         * ফিরে যায়, তাই এখানে দুইটা ধাপ লাগে না — কেবল কোন সারি ধরে
+         * জিজ্ঞেস করব সেটা ঠিক করি।
+         */
+        $id = (int) ($this->input('money_subcategory_id') ?: $this->input('money_category_id'));
+
+        if ($id <= 0) {
+            return;
+        }
+
+        $account = MoneyCategory::query()->with('parent')->find($id)?->resolvedAccountId();
+
+        if ($account !== null) {
+            $this->merge(['from_account_id' => $account]);
+        }
     }
 
     /** @return array<string, mixed> */
@@ -180,6 +225,66 @@ class VoucherRequest extends FormRequest
             'party_type' => ['nullable', 'string', 'max:32',
                 Rule::in(app(PartyRegistry::class)->types())],
             'party_id' => ['nullable', 'integer'],
+
+            /*
+             * মালিকের চাওয়া বাকি ঘরগুলো (১৪ সেপ্টেম্বর ২০২৬)।
+             *
+             * ⓘ "Collectable" এখানে নেই, আর থাকার কথাও নয় — ওটা
+             * ব্যবহারকারী পাঠান না, পর্দা খতিয়ান থেকে দেখায়
+             * ([[AccountsFacts::dueFrom()]])। নিয়মে রাখলে বোঝা যেত
+             * সংখ্যাটা বাইরে থেকে আসে, আর একদিন কেউ সেটা পাঠাত।
+             */
+            'ref_date' => ['nullable', 'date'],
+
+            /*
+             * ⚠️ `exists` **দরকার**, কারণ ঘরটা একটা ড্রপডাউন হলেও
+             * অনুরোধটা যেকোনো সংখ্যা বহন করতে পারে। না দিলে অন্য
+             * কোম্পানির শ্রেণির আইডি পাঠিয়ে সেই খাতে টাকা বসানো যেত।
+             *
+             * ⓘ কোম্পানির ছাঁকনি আলাদা করে লেখা নেই — [[MoneyCategory]]
+             * -এ [[BelongsToCompany]] গ্লোবাল স্কোপ আছে, কিন্তু
+             * `Rule::exists` কাঁচা কোয়েরি বিল্ডারে চলে যেখানে স্কোপ
+             * খাটে না। তাই শর্তটা হাতে বসানো।
+             */
+            'money_category_id' => ['nullable', 'integer',
+                Rule::exists('acc_money_categories', 'id')
+                    ->where('company_id', CompanyContext::id())
+                    ->whereNull('deleted_at')],
+            'money_subcategory_id' => ['nullable', 'integer',
+                Rule::exists('acc_money_categories', 'id')
+                    ->where('company_id', CompanyContext::id())
+                    ->whereNull('deleted_at')],
+
+            /*
+             * যিনি দিলেন তাঁর ব্যাংক ও হিসাব নম্বর — মুক্ত লেখা, মালিকের
+             * নিজের সিদ্ধান্ত। চেকে যা ছাপা আছে হুবহু তাই।
+             *
+             * ⚠️ আমাদের ব্যাংক নয় (`money_account_id`) — চেক ফেরত এলে
+             * এই দুইটাই খোঁজার একমাত্র সূত্র।
+             */
+            'from_bank' => ['nullable', 'string', 'max:120'],
+            'from_account_no' => ['nullable', 'string', 'max:64'],
+
+            /*
+             * ব্যাংক বা MFS যা কেটে রেখেছে।
+             *
+             * ⓘ `lt:amount` এখানে **নেই** ইচ্ছাকৃতভাবে — শর্তটা
+             * [[VoucherService::withCharge()]]-এ, কারণ ওখানেই চার্জের
+             * খাত বাছা হয় আর ওখানেই জানা যায় খাতটা ব্যাংক না MFS না
+             * নগদ। দুই জায়গায় আধা-আধা নিয়ম রাখলে একদিন একটা বদলাত আর
+             * অন্যটা থেকে যেত।
+             */
+            'charge_amount' => ['nullable', 'numeric', 'min:0'],
+
+            /*
+             * কোন নথির বিপরীতে — অর্থ মডিউল থেকে আসা রসিদের জন্য।
+             *
+             * ⚠️ ঘর দুইটা **একসাথে** আসতে হবে; একটা ছাড়া অন্যটা মানে
+             * একটা আইডি যার কোনো ধরন নেই, বা একটা ধরন যার কোনো সারি
+             * নেই — দুইটাই খতিয়ানে বসে থাকা আবর্জনা।
+             */
+            'against_type' => ['nullable', 'string', 'max:32', 'required_with:against_id'],
+            'against_id' => ['nullable', 'integer', 'required_with:against_type'],
         ];
     }
 
@@ -210,7 +315,28 @@ class VoucherRequest extends FormRequest
                     return;
                 }
 
+                /*
+                 * ⚠️ দুইটা আকৃতিই মানতে হবে, আর কারণটা ১৪ সেপ্টেম্বর
+                 * ২০২৬-এ তৈরি হয়েছে।
+                 *
+                 * আগে সহজ ফর্ম পক্ষটা পাঠাত `party` ঘরে `type:id`
+                 * আকারে। মালিকের চাওয়া "Received From Type" বসানোর পর
+                 * ঘরটা **দুইটা হয়েছে** — `party_type` আর `party_id`,
+                 * আর `party` ঘরটা আর নেই।
+                 *
+                 * ⛔ কেবল `filled('party')` দেখলে নিয়মটা তখন **উল্টো
+                 * দিকে ভাঙত**: ব্যবহারকারী পক্ষ বেছে দিয়েছেন, তবু
+                 * "পক্ষ ছাড়া বাকিতে খরচ চলে না" বলে আটকে দিত — অর্থাৎ
+                 * একটা সঠিক ভাউচার সেভই করা যেত না।
+                 *
+                 * ⓘ `party` ঘরটা তবু দেখা হয়, কারণ জাবেদার পথ ও
+                 * পুরনো API অনুরোধ এখনো ওটাই পাঠায়।
+                 */
                 if (filled($this->input('party'))) {
+                    return;
+                }
+
+                if (filled($this->input('party_type')) && filled($this->input('party_id'))) {
                     return;
                 }
 

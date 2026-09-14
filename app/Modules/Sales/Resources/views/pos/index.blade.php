@@ -625,7 +625,7 @@
     </div>
 
     @push('scripts')
-        <script>
+        <script @nonce>
             function pos(catalogue, walkinId, resumed, discountOn, methods) {
                 return {
                     catalogue,

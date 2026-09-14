@@ -25,7 +25,8 @@
         @csrf
 
         <div class="min-w-0 flex-1">
-            <x-ui.money-account name="received_into_account_id" :accounts="$accounts" compact required />
+            <x-ui.money-account name="received_into_account_id" :accounts="$accounts"
+                                compact required charge="charge" />
         </div>
 
         <x-ui.button type="submit" tone="primary">{{ __('finance::action.money_arrived') }}</x-ui.button>

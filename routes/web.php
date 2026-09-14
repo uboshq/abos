@@ -8,6 +8,7 @@ use App\Http\Controllers\ModuleDashboardController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SavedViewController;
+use App\Http\Controllers\SearchController;
 use App\Http\Controllers\WorkspaceController;
 use Illuminate\Support\Facades\Route;
 
@@ -20,6 +21,15 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth')->group(function () {
     Route::get('/', [WorkspaceController::class, 'dashboard'])->name('dashboard');
+
+    /*
+     * উপরের খোঁজার ঘরের পিছনের তার।
+     *
+     * ⓘ `data-no-prefetch` লাগে না — এটা কোনো লিংক নয়, JavaScript
+     * নিজে ডাকে। ⚠️ কিন্তু লেআউটের speculation rules `/*` ধরে prefetch
+     * করে, আর এই ঠিকানায় `?q=` ছাড়া কেউ আসে না, তাই ওটা নিরীহ।
+     */
+    Route::get('/search', SearchController::class)->name('search');
 
     /*
      * মডিউলের নিজস্ব ড্যাশবোর্ড — মালিকের নির্দেশ, ২ সেপ্টেম্বর ২০২৬।

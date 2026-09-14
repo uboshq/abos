@@ -7,6 +7,7 @@ use App\Modules\Hr\Dashboard\HrWidgets;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\PayrollRun;
 use App\Modules\Hr\Models\Payslip;
+use App\Modules\Hr\Panels\EmployeeFacts;
 
 /**
  * HR ও পে-রোল — প্ল্যানের ফেজ ৯।
@@ -191,6 +192,43 @@ return [
     'drill_sources' => [
         'employee' => Employee::class,
         'payroll_run' => PayrollRun::class,
+    ],
+
+    /*
+     * কর্মী একটা পক্ষ — খতিয়ানের সারি তাঁর নাম ধরে রাখতে পারে।
+     *
+     * ── কেন এটা লাগল, ১৪ সেপ্টেম্বর ২০২৬ ───────────────────────────
+     * মালিক আদায় ভাউচারে "Received From Type" চেয়েছেন, আর তালিকায়
+     * **Employee** আছে। ঘোষণাটা ছাড়া কর্মী ভাউচারের পক্ষ-তালিকায় উঠত
+     * না ([[App\Core\Module\ModuleDefinition::validateParties()]]
+     * পক্ষকে drill_source-এর সাথে মিলিয়ে দেখে)।
+     *
+     * ⛔ বাস্তবে এটা রোজকার ঘটনা: কর্মীকে সফরের অগ্রিম দেওয়া হলো,
+     * তিনি ফিরে এসে বাকি টাকা ফেরত দিলেন। ফেরতটা একটা আদায়, আর
+     * ⚠️ পক্ষ ছাড়া সেটা খতিয়ানে বসত **কার কাছ থেকে না বলে** — তখন
+     * "কার কাছে কত অগ্রিম পড়ে আছে" প্রশ্নের উত্তর মিলত না।
+     *
+     * ⓘ কর্মী [[App\Modules\MasterData\Models\Person]] নন, আর
+     * সেই সীমানাটা Person-এর ডকেই লেখা: কর্মীর বেতন-হাজিরা-ছুটির
+     * নিজের জীবনচক্র আছে, তাই তালিকা দুইটা আলাদা।
+     */
+    'parties' => [
+        'employee' => 'hr::menu.employees',
+    ],
+
+    /*
+     * ⭐ ব্যবহারকারীর পদবি — HR-এর কথা, কোরের রেকর্ড সম্পর্কে।
+     *
+     * ⓘ মালিক ফুটারে *"Al-Amin Shuvo (CEO)"* চেয়েছেন। নামটা
+     * ব্যবহারকারীর নিজের, কিন্তু **পদবি কেবল HR-এ আছে** — আর শেল কোরের
+     * অংশ, যে কোনো মডিউলের নাম চেনে না (মেপে দেখা: `app/Core`,
+     * `app/Models`, `app/Providers` আর শেলের ভিউ — চারটার একটাতেও
+     * `App\Modules\` নেই)।
+     *
+     * ⚠️ তাই উত্তরটা উল্টো দিক থেকে যায়, ঠিক `SalesFacts`-এর মতো।
+     */
+    'facts' => [
+        EmployeeFacts::class,
     ],
 
     'dashboard' => HrDashboard::class,

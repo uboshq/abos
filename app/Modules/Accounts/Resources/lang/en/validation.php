@@ -38,6 +38,10 @@ return [
     'no_lines' => 'A voucher needs at least one line.',
     'not_balanced' => 'Debit and credit do not match — debit :debit, credit :credit.',
     'amount_must_be_positive' => 'The amount must be more than zero.',
+
+    'charge_eats_the_whole_amount' => 'The charge cannot be equal to or more than the amount. Enter the amount that was sent, not the amount that arrived.',
+    'charge_needs_a_bank_or_mfs' => 'A charge only applies to a bank or mobile money account. Nothing is deducted from cash, so leave the field empty.',
+    'charge_account_missing' => 'The charge account :code is not in the chart. Add it under Accounts ▸ Chart of accounts first, or the charge has nowhere to go.',
     'same_account_both_sides' => 'The same account cannot be on both sides — the money would go nowhere.',
     'account_missing' => 'One of the lines has no account.',
     'inactive_account' => '":name" is inactive, so it takes no new transactions.',

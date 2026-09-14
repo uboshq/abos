@@ -11,6 +11,7 @@ use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
+use App\Models\User;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Services\EmployeeService;
 use App\Modules\Hr\Services\SalaryStructureService;
@@ -21,6 +22,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -85,14 +87,20 @@ class EmployeeController extends Controller implements HasMiddleware
 
     public function create(Request $request): View
     {
+        /*
+         * ⓘ আলাদা ভেরিয়েবল, কারণ `formData()`-রও ওটা লাগে — সম্পাদনার
+         * সময় কর্মীর নিজের ব্যবহারকারীকে ড্রপডাউনে রাখতে।
+         */
+        $employee = new Employee([
+            'joining_date' => now()->toDateString(),
+            'payment_method' => 'cash',
+            'is_active' => true,
+        ]);
+
         return view('hr::employee.form', [
             'menu' => $this->menu->forUser($request->user()),
-            'employee' => new Employee([
-                'joining_date' => now()->toDateString(),
-                'payment_method' => 'cash',
-                'is_active' => true,
-            ]),
-            ...$this->formData(),
+            'employee' => $employee,
+            ...$this->formData($employee),
         ]);
     }
 
@@ -126,7 +134,7 @@ class EmployeeController extends Controller implements HasMiddleware
         return view('hr::employee.form', [
             'menu' => $this->menu->forUser($request->user()),
             'employee' => $employee,
-            ...$this->formData(),
+            ...$this->formData($employee),
         ]);
     }
 
@@ -225,7 +233,14 @@ class EmployeeController extends Controller implements HasMiddleware
     /**
      * @return array<string, mixed>
      */
-    private function formData(): array
+    /**
+     * ⓘ `$employee` লাগে শুধু একটা কারণে: সম্পাদনার সময় তাঁর নিজের
+     * ব্যবহারকারীটা ড্রপডাউনে রাখতে (`taggableUsers`)। নতুন কর্মীর
+     * বেলায় খালি মডেলটাই যথেষ্ট, তার `id` নেই।
+     *
+     * @return array<string, mixed>
+     */
+    private function formData(Employee $employee): array
     {
         return [
             'branches' => Branch::query()->orderBy('code')->get(),
@@ -233,7 +248,58 @@ class EmployeeController extends Controller implements HasMiddleware
             'designations' => Designation::query()->active()->orderBy('code')->get(),
             'employmentTypes' => EmploymentType::query()->active()->orderBy('code')->get(),
             'paymentMethods' => Employee::PAYMENT_METHODS,
+            'taggableUsers' => $this->taggableUsers($employee),
         ];
+    }
+
+    /**
+     * ⛔ যে ব্যবহারকারীদের সাথে এই কর্মীকে জোড়া যায় — ১৩ সেপ্টেম্বর ২০২৬।
+     *
+     * ── কী ভাঙা ছিল ─────────────────────────────────────────────────
+     * `hr_employees.user_id` কলামটা **২০২৬-০৮-০৯ থেকেই আছে**, মডেলের
+     * `$fillable`-এ আছে, `user()` সম্পর্ক আছে, আর নিচে `validated()`-এ
+     * তার জন্য একটা যত্ন করে লেখা নিয়মও আছে (nullable + exists +
+     * unique), পাশে মন্তব্য: *"দুইজন কর্মী এক লগইনে বাঁধা থাকলে 'এই
+     * এন্ট্রিটা কে করেছে' প্রশ্নের দুইটা উত্তর হত।"*
+     *
+     * ⛔ কিন্তু **ফর্মে ঘরটা কোনোদিন আঁকা হয়নি**, আর তালিকাটাও কখনো
+     * পাঠানো হয়নি। ⚠️ অর্থাৎ ভ্যালিডেশনটা এমন একটা ঘর পাহারা দিচ্ছিল
+     * **যা কেউ পাঠাতেই পারত না** — নিয়ম লেখা, অথচ অপৌঁছানো।
+     *
+     * ⓘ ফলটা কেবল এই পর্দার নয়: ফুটারে কর্মীর **পদবি** দেখাতে হলে এই
+     * সংযোগটাই লাগে, আর সংযোগ না থাকায় কারও পদবিই জানা যেত না।
+     *
+     * ── ⚠️ কোম্পানির ছাঁকনি — এটা ঐচ্ছিক নয় ─────────────────────────
+     * [[User]] [[BaseEntity]]-র গ্লোবাল স্কোপ পায় না; সে `companies`
+     * পিভটে ঝোলে, তাই ছাঁকনিটা **হাতে বসাতে হয়**। ⛔ না বসালে এক
+     * কোম্পানির HR অন্য কোম্পানির প্রতিটা ব্যবহারকারীর নাম ও ইমেইল
+     * দেখতেন — আর CLAUDE.md-তে টেন্যান্ট বিচ্ছিন্নতা সুবিধা নয়,
+     * **আইনি বাধ্যবাধকতা**। ⓘ ছাঁচটা রিপোতে বহু জায়গায় আছে, আর
+     * [[EveryUserListAsksWhichCompanyTest]] সেটা পাহারা দেয়।
+     *
+     * ── ⭐ কেন ইতিমধ্যে জোড়া ব্যবহারকারীরা তালিকায় নেই ───────────────
+     * একটা লগইন একজন কর্মীর সাথেই জোড়া যায় (নিচের `unique` নিয়ম)।
+     * ⚠️ তালিকায় রাখলে মানুষ একজনকে বেছে নিয়ে সেভ চেপে ধমক খেতেন —
+     * *"যে বোতাম মিথ্যা বলে সেটা না থাকা বোতামের চেয়ে খারাপ"*।
+     *
+     * ⛔ তবে **এই কর্মীর নিজের জোড়াটা বাদ দেওয়া যাবে না** — নাহলে নাম
+     * শুধরাতে গিয়ে সেভ করলেই সংযোগটা নীরবে মুছে যেত, কারণ ড্রপডাউনে
+     * তাঁর নিজের ব্যবহারকারীই থাকত না।
+     *
+     * @return Collection<int, User>
+     */
+    private function taggableUsers(Employee $employee): Collection
+    {
+        $taken = Employee::query()
+            ->whereNotNull('user_id')
+            ->whereKeyNot($employee->id)
+            ->pluck('user_id');
+
+        return User::query()
+            ->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))
+            ->whereNotIn('id', $taken)
+            ->orderBy('name')
+            ->get();
     }
 
     /**

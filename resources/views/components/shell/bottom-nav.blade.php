@@ -14,8 +14,7 @@
     $hasMore = count($menu) > 4;
 @endphp
 
-<nav class="fixed inset-x-0 bottom-0 z-30 flex h-(--spacing-bottom-nav) items-stretch
-            border-t border-(--color-border) bg-(--color-surface-card) md:hidden"
+<nav class="bottom-nav fixed inset-x-0 bottom-0 z-30 flex h-(--spacing-bottom-nav) items-stretch md:hidden"
      aria-label="{{ __('core.a11y.main_navigation') }}">
 
     @foreach ($primary as $module)
@@ -26,21 +25,24 @@
         @endphp
 
         <a @if ($first && $first['url']) href="{{ $first['url'] }}" @endif
-           @class([
-               'flex flex-1 flex-col items-center justify-center gap-0.5 px-1 text-2xs transition-colors',
-               'text-(--color-brand-500) font-medium' => $active,
-               'text-(--color-ink-muted)' => ! $active,
-           ])
+           @class(['bottom-nav-item', 'bottom-nav-item-on' => $active])
            @if ($active) aria-current="page" @endif>
             {{-- মোবাইলেও মডিউলের নিজের আকার — পাঁচটা আইটেম একরকম দেখালে
                  নিচের বারটা পড়া ছাড়া কাজে লাগে না।
 
-                 এখানে রঙিন টাইল নয়, currentColor: নিচের বারে লেখাটা
-                 আইকনের ঠিক নিচেই থাকে, তাই চেনার কাজটা লেখাই করে। বারোটা
-                 রঙিন টাইল পাঁচ ইঞ্চির পর্দায় পাশাপাশি বসালে ওটা একটা
-                 রঙের সারি হয়ে যেত, আর সক্রিয় কোনটা তা বোঝা যেত না —
-                 সক্রিয়তা এখানে রং দিয়েই বলা হয়। --}}
-            <x-ui.icon :name="$module['icon']" :size="20" />
+                 ⓘ `drawn` মানে রেখা-আঁকা SVG, ইমোজি নয়। ⚠️ মডিউলের
+                 আইকন ডিফল্টে ইমোজি (🗃️ 🏦 🏭), আর ইমোজির নিজের রং আছে —
+                 নীল পটিতে ওগুলো সাদা হতে পারত না, আর পাঁচটা রঙিন ছবি
+                 পাশাপাশি বসলে সক্রিয় কোনটা তা বোঝাই যেত না। `drawn`
+                 সংস্করণ `currentColor` ধরে, তাই সাদা।
+
+                 ⚠️ নামটা তালিকায় না থাকলে এই কম্পোনেন্ট **চুপ করে কিছুই
+                 আঁকে না** — কোনো ভুলের বার্তা নেই, কেবল ফাঁকা ঘর। তাই
+                 পনেরোটা মডিউলের কোডই আঁকার তালিকায় আছে কি না, সেটা আগে
+                 মিলিয়ে নেওয়া হয়েছে। --}}
+            <span class="bottom-nav-pill">
+                <x-ui.icon :name="$module['icon']" :size="20" drawn />
+            </span>
             <span class="w-full truncate text-center">{{ $module['label'] }}</span>
         </a>
     @endforeach
@@ -49,11 +51,12 @@
         <button type="button"
                 x-data
                 @click="$dispatch('open-command-center')"
-                class="flex flex-1 flex-col items-center justify-center gap-0.5 px-1 text-2xs
-                       text-(--color-ink-muted)">
-            <svg viewBox="0 0 24 24" class="size-(--spacing-icon) fill-current" aria-hidden="true">
-                <path d="M4 6h16v2H4V6Zm0 5h16v2H4v-2Zm0 5h16v2H4v-2Z"/>
-            </svg>
+                class="bottom-nav-item">
+            <span class="bottom-nav-pill">
+                <svg viewBox="0 0 24 24" class="size-(--spacing-icon) fill-current" aria-hidden="true">
+                    <path d="M4 6h16v2H4V6Zm0 5h16v2H4v-2Zm0 5h16v2H4v-2Z"/>
+                </svg>
+            </span>
             <span>{{ __('core.action.more') }}</span>
         </button>
     @endif

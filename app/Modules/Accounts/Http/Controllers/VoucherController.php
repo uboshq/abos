@@ -14,10 +14,13 @@ use App\Models\Branch;
 use App\Modules\Accounts\Http\Requests\VoucherRequest;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CostCenter;
+use App\Modules\Accounts\Models\MoneyCategory;
 use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Accounts\Services\AccountsFacts;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\VoucherApproval;
 use App\Modules\Accounts\Services\VoucherService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -122,9 +125,108 @@ class VoucherController extends Controller implements HasMiddleware
         return view($type === Voucher::JOURNAL ? 'accounts::voucher.journal-form' : 'accounts::voucher.simple-form', [
             'menu' => $this->menu->forUser($request->user()),
             'type' => $type,
-            'voucher' => new Voucher(['type' => $type, 'trx_date' => now()]),
+            'voucher' => new Voucher([
+                'type' => $type,
+                'trx_date' => now(),
+                ...$this->prefill($request),
+            ]),
             ...$this->formOptions($type),
         ]);
+    }
+
+    /**
+     * একজন পক্ষের কাছে এখন কত পাওনা — ফর্মের "Collectable" ঘরের উত্তর।
+     *
+     * ── ⭐ কেন ঘরটা ব্যবহারকারী লেখেন না ────────────────────────────
+     * মালিকের সিদ্ধান্ত, ১৪ সেপ্টেম্বর ২০২৬: সংখ্যাটা নিজে থেকে আসবে।
+     * হাতে লিখতে দিলে সেটা খতিয়ানের একটা দ্বিতীয় উৎস হত, আর দুই উৎস
+     * মানে একদিন দুই উত্তর — এই রিপো ওটা একবার দেখেছে।
+     *
+     * ⚠️ সংখ্যাটা **এখনকার**, ভাউচারের তারিখের নয়। আদায়ের সময় প্রশ্নটা
+     * "আজ তাঁর কাছে কত পাওনা", "গত মাসে কত ছিল" নয়। ঘরটার লেবেলও তাই
+     * বলে, যাতে কেউ ওটাকে ঐতিহাসিক জের ভেবে না বসেন।
+     *
+     * ⓘ অচেনা পক্ষের ধরন এলে ৪২২ নয়, **শূন্য** — কারণ এটা একটা সহায়ক
+     * ঘর, আর একটা সহায়ক ঘরের জন্য ফর্ম ভাঙা উচিত নয়। তবে চুপচাপ শূন্যও
+     * নয়: `known` মিথ্যা হলে পর্দা "—" দেখায়, "০.০০" নয়।
+     */
+    public function due(Request $request): JsonResponse
+    {
+        /*
+         * ⚠️ চাবিটা `middleware()`-এ নয়, এখানে — আর কারণটা এই মডিউলেই
+         * আগে লেখা আছে ([[module.php]]-র মেনু-অংশে): **ক্যাশিয়ারের
+         * `accounts.voucher.create` আছে কিন্তু `accounts.report` নেই**।
+         *
+         * ⛔ তাই `accounts.report` দিয়ে আটকালে ঠিক যিনি ঘরটা রোজ দেখেন
+         * তিনিই "—" দেখতেন, আর কেউ বুঝত না কেন।
+         *
+         * ⓘ আর `middleware()` দিয়ে **দুইটার যেকোনো একটা** বলা যায় না —
+         * একই মেথড দুইটা `only:`-তে থাকলে দুইটাই লাগে (AND)। এখানে
+         * দরকার OR, তাই শর্তটা হাতে।
+         */
+        abort_unless(
+            $request->user()?->canAny(['accounts.voucher.create', 'accounts.voucher.update']) ?? false,
+            403,
+        );
+
+        $type = (string) $request->query('party_type', '');
+        $id = (int) $request->query('party_id', 0);
+
+        if ($id <= 0 || ! app(PartyRegistry::class)->knows($type)) {
+            return response()->json(['known' => false, 'amount' => '0.0000']);
+        }
+
+        /*
+         * ⚠️ পক্ষটা সত্যিই এই কোম্পানির কি না — নাহলে অন্য কোম্পানির
+         * আইডি পাঠিয়ে তাদের বকেয়ার অঙ্ক পড়ে ফেলা যেত।
+         */
+        if (! app(PartyRegistry::class)->exists($type, $id)) {
+            return response()->json(['known' => false, 'amount' => '0.0000']);
+        }
+
+        return response()->json([
+            'known' => true,
+            'amount' => app(AccountsFacts::class)->dueFrom($type, $id),
+        ]);
+    }
+
+    /**
+     * অন্য মডিউল থেকে আসা রসিদের আগাম-ভরা ঘরগুলো।
+     *
+     * ── ⭐ মালিকের স্থাপত্যগত সিদ্ধান্ত, ১৪ সেপ্টেম্বর ২০২৬ ───────────
+     * তিনি প্রশ্ন করেছিলেন: *"অর্থে মূলধন লিখে হিসাবে রিসিভ করলেই তো
+     * সমাধান — এক জায়গায় হয়, এত কী করো?"*
+     *
+     * তাই কাজ ভাগ হলো: **অর্থ কেবল লেখে "কে কত দেবেন", টাকা গ্রহণ করে
+     * একাই রসিদের পর্দা।** অর্থের তালিকার "টাকা এসেছে" বোতামটা তাই
+     * টেবিলের ঘরে ফর্ম আঁকে না — সে এই পর্দাটাই আগে থেকে ভরা অবস্থায়
+     * খোলে।
+     *
+     * ── ⚠️ কেন কেবল এই কয়টা ঘর, সব নয় ──────────────────────────────
+     * ⛔ পুরো `$request->query()` ঢেলে দেওয়া যেত না: তাহলে যে কেউ
+     * URL-এ `status=posted` বা `company_id=2` জুড়ে দিয়ে ফর্মটা এমন
+     * অবস্থায় খুলতে পারতেন যা কোনো বোতাম কোনোদিন বানায় না। তালিকাটা
+     * তাই **সাদা তালিকা**, আর ছোট।
+     *
+     * ⓘ কোনো ঘরই এখানে যাচাই হয় না, আর হওয়ার দরকারও নেই — এগুলো কেবল
+     * ফর্মের প্রাথমিক চেহারা। আসল যাচাই জমা দেওয়ার সময়,
+     * [[VoucherRequest]]-এ, যেখানে সবকিছু আবার নতুন করে দেখা হয়।
+     *
+     * @return array<string, mixed>
+     */
+    private function prefill(Request $request): array
+    {
+        $allowed = [
+            'against_type', 'against_id',
+            'party_type', 'party_id',
+            'amount', 'money_category_id', 'money_subcategory_id',
+            'narration',
+        ];
+
+        return collect($allowed)
+            ->mapWithKeys(fn (string $key) => [$key => $request->query($key)])
+            ->filter(fn ($value) => filled($value))
+            ->all();
     }
 
     public function store(VoucherRequest $request, string $type): RedirectResponse
@@ -333,6 +435,16 @@ class VoucherController extends Controller implements HasMiddleware
             (int) $request->input('to_account_id'),
             (string) $request->input('amount'),
             $request->input('narration'),
+
+            /*
+             * ⓘ খালি ঘর মানে চার্জ নেই, `0` নয় — আর পার্থক্যটা কাজের:
+             * `null` পেলে [[VoucherService::twoLineEntry()]] আগের মতো
+             * দুইটা সারিই বানায়, তাই চার্জহীন লক্ষ লক্ষ ভাউচারের পথ
+             * এক চুলও বদলায় না।
+             */
+            ($request->input('charge_amount') ?? '') !== ''
+                ? (string) $request->input('charge_amount')
+                : null,
         );
     }
 
@@ -436,7 +548,55 @@ class VoucherController extends Controller implements HasMiddleware
              * ছিল, আর BoundariesTest সেটাই ধরল।
              */
             'sides' => $this->sidesFor($type),
+
+            /*
+             * টাকার শ্রেণি — দুইটা ড্রপডাউনের কাঁচামাল।
+             *
+             * ⭐ দুইটা আলাদা কোয়েরি নয়, **একটাই** — মা ও সন্তান একই
+             * টেবিলের সারি, তাই সবগুলো একবারে এনে ব্রাউজারেই ভাগ করা
+             * হয় (Sub Category-র তালিকা Category বাছার সাথে সাথে বদলায়,
+             * আর প্রতিবার সার্ভারে গেলে ফর্মটা থেমে থেমে চলত)।
+             *
+             * ⓘ সারির সাথে `account_id` যায়, কারণ শ্রেণি বাছলেই খাতের
+             * ড্রপডাউনটা ভরে যাওয়া দরকার। খাতহীন মা-শ্রেণির সন্তান
+             * মায়ের খাত পায় — যুক্তিটা এক জায়গায়, [[MoneyCategory::resolvedAccountId()]]
+             * -এ, আর এখানে তার ফলটাই পাঠানো হয়।
+             *
+             * ⚠️ জাবেদা ভাউচারে এই ঘর দুইটা নেই — ওখানে প্রতিটা সারির
+             * নিজের খাত, তাই শ্রেণি থেকে খাত বসানোর প্রশ্নই ওঠে না।
+             */
+            'moneyCategories' => $type === Voucher::JOURNAL
+                ? collect()
+                : MoneyCategory::query()
+                    ->with('parent')
+                    ->active()
+                    ->whereIn('context', [$this->categoryContextFor($type), MoneyCategory::BOTH])
+                    ->orderBy('code')
+                    ->get()
+                    ->map(fn (MoneyCategory $row) => [
+                        'id' => (int) $row->getKey(),
+                        'parent_id' => $row->parent_id === null ? null : (int) $row->parent_id,
+                        'label' => $row->name(),
+                        'account_id' => $row->resolvedAccountId(),
+                    ])
+                    ->values(),
         ];
+    }
+
+    /**
+     * এই ধরনের ভাউচারে কোন প্রসঙ্গের শ্রেণি দেখানো হবে।
+     *
+     * ⚠️ আদায়ে প্রদানের শ্রেণি দেখালে ব্যবহারকারী "সরবরাহকারীকে অগ্রিম"
+     * বেছে ফেলতে পারতেন, আর তখন টাকার দিক উল্টো বসত — খাতা তবু মিলত,
+     * কেবল উত্তরটা মিথ্যা হত।
+     *
+     * ⓘ খরচ ও কন্ট্রা ভাউচারও টাকা বের করে, তাই ওগুলোও প্রদানের পাশে।
+     */
+    private function categoryContextFor(string $type): string
+    {
+        return $type === Voucher::RECEIPT
+            ? MoneyCategory::RECEIPT
+            : MoneyCategory::PAYMENT;
     }
 
     /**

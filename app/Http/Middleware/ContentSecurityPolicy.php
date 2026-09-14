@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Core\Support\Csp;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -19,15 +20,30 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * ক্রেতার IT বিভাগ নিরাপত্তার তালিকা মেলাতে গিয়ে প্রথমেই এটা খোঁজে।
  *
- * ── কেন `unsafe-inline` আর `unsafe-eval` রাখা হয়েছে ──────────────────
- * সৎ থাকা ভালো: এই দুইটা থাকলে CSP-র সবচেয়ে বড় সুরক্ষাটা (ইনজেক্ট করা
- * স্ক্রিপ্ট চলতে না দেওয়া) দুর্বল হয়ে যায়। তবু এখন দুইটাই লাগে —
- * Alpine.js `x-` অ্যাট্রিবিউটের ভেতরের লেখা মূল্যায়ন করে, আর কাউন্টারের
- * পর্দায় বড় একটা ইনলাইন স্ক্রিপ্ট আছে।
+ * ── ⭐ `unsafe-inline` চলে গেছে — ১৪ সেপ্টেম্বর ২০২৬ ──────────────────
+ * আগে এখানে লেখা ছিল *"ওগুলো সরানো একটা সত্যিকারের কাজ"*, আর সেটা
+ * সত্যি ছিল — কিন্তু **কাজটা কত বড় তা কেউ মেপে দেখেনি**। মেপে পাওয়া গেল:
  *
- * ওগুলো সরানো মানে প্রতিটা পর্দার জাভাস্ক্রিপ্ট আলাদা ফাইলে সরানো আর
- * Alpine-এর CSP সংস্করণে যাওয়া — একটা সত্যিকারের কাজ, আর সেটা এই
- * হেডারটা বসানোর সাথে একসাথে করতে গেলে দুইটাই আধা হত।
+ *     সত্যিকারের ইনলাইন `<script>`  ৯টা ফাইলে
+ *     সত্যিকারের ইনলাইন `<style>`   ৩টা ফাইলে
+ *     তৃতীয় পক্ষের JS লাইব্রেরি      ০ (কেবল Alpine)
+ *
+ * বারোটা জায়গায় `@nonce` বসানোই যথেষ্ট ছিল। ⓘ অর্থাৎ এক বছর ধরে
+ * সুরক্ষাটা বন্ধ ছিল একটা **অনুমানের** কারণে, বাধার কারণে নয়।
+ *
+ * ⭐ এখন কেউ একটা ঘরে `<script>` লিখে জমা দিলে, আর সেটা কোথাও এস্কেপ
+ * না হয়ে ছাপা হলে, ব্রাউজার সেটা **চালাবে না** — চিহ্নটা নেই।
+ * চিহ্ন কীভাবে তৈরি ও ঘোরে: [[App\Core\Support\Csp]].
+ *
+ * ── ⚠️ `unsafe-eval` এখনো আছে, আর কারণটা মাপা ────────────────────────
+ * **৭২টা ব্লেড ফাইলে `x-data`** — Alpine অ্যাট্রিবিউটের ভিতরের লেখাটা
+ * মূল্যায়ন করে, তাই `eval` ছাড়া চলে না। Alpine-এর CSP সংস্করণে যেতে
+ * হলে ঐ ৭২টা পর্দার প্রতিটা এক্সপ্রেশন আলাদা কম্পোনেন্ট অবজেক্টে লিখতে
+ * হয়। ⛔ সেটা এক বসায় করলে ৭২টা নতুন বাগ হত, একটা সবুজ টিক নয়।
+ *
+ * ⓘ তবু আজকের বদলটা ফাঁকা নয়: `unsafe-eval` কেবল **আগে থেকে পাতায়
+ * থাকা** কোডকে `eval` করতে দেয়; বাইরে থেকে ঢোকানো নতুন `<script>`
+ * ব্লক এখন আর চলে না। দুইটা আলাদা দরজা, আর বড়টা বন্ধ হলো।
  *
  * ── তবু এটা ফাঁকা নয় ─────────────────────────────────────────────────
  * যা আজই আটকায়:
@@ -48,28 +64,62 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class ContentSecurityPolicy
 {
-    private const POLICY = [
-        "default-src 'self'",
+    /**
+     * @return list<string>
+     */
+    private function policy(string $nonce): array
+    {
+        return [
+            "default-src 'self'",
 
-        // Alpine ও ইনলাইন স্ক্রিপ্টের জন্য — উপরের মন্তব্যে কারণ
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+            /*
+             * ⚠️ nonce থাকলে ব্রাউজার `'unsafe-inline'` **উপেক্ষা করে** —
+             * CSP2 থেকে এটাই নিয়ম। তাই "পুরনো ব্রাউজারের জন্য রেখে দিই"
+             * বলে ওটা রাখা অর্থহীন হত: যে ব্রাউজার nonce বোঝে সে ওটা
+             * মানে না, আর যে বোঝে না তার কাছে গোটা হেডারটাই নতুন।
+             *
+             * `unsafe-eval` কেন থাকল — উপরের মন্তব্যে, সংখ্যাসহ।
+             */
+            "script-src 'self' 'nonce-{$nonce}' 'unsafe-eval'",
 
-        // Tailwind ও ইনলাইন style অ্যাট্রিবিউট
-        "style-src 'self' 'unsafe-inline'",
+            // Tailwind ফাইল থেকেই আসে; তিনটা ইনলাইন `<style>` চিহ্ন নিয়ে
+            "style-src 'self' 'nonce-{$nonce}'",
 
-        // data: — বারকোড ও কিউআর ছবি ইনলাইন হিসেবে তৈরি হয়
-        "img-src 'self' data:",
-        "font-src 'self' data:",
+            /*
+             * ⓘ ১২০টা ইনলাইন `style=` অ্যাট্রিবিউট, আর Alpine-এর
+             * `x-show` নিজেও `element.style.display` বসায়। আলাদা করে না
+             * বললে উপরের `style-src` অ্যাট্রিবিউটেও খাটত, আর প্রতিটা
+             * `x-show` নীরবে কাজ করা বন্ধ করত।
+             *
+             * ⭐ ভাগ করার লাভটা আসল: ইনজেক্ট করা গোটা `<style>` ব্লক
+             * এখন আটকায়, অথচ অ্যাট্রিবিউট চলে।
+             */
+            "style-src-attr 'unsafe-inline'",
 
-        "connect-src 'self'",
-        "form-action 'self'",
-        "base-uri 'self'",
-        "frame-ancestors 'self'",
-        "object-src 'none'",
-    ];
+            // data: — বারকোড ও কিউআর ছবি ইনলাইন হিসেবে তৈরি হয়
+            "img-src 'self' data:",
+            "font-src 'self' data:",
+
+            "connect-src 'self'",
+            "form-action 'self'",
+            "base-uri 'self'",
+            "frame-ancestors 'self'",
+            "object-src 'none'",
+        ];
+    }
 
     public function handle(Request $request, Closure $next): Response
     {
+        /*
+         * ⛔ `$next()`-এর **আগে**, কারণ ভিউ রেন্ডার হওয়ার সময় ব্লেডগুলো
+         * `@nonce` ডাকবে — তখন চিহ্নটা তৈরি হয়ে থাকতে হবে।
+         *
+         * ⚠️ আর `rotate()`, `nonce()` নয়: Octane বা কিউ-কর্মীতে
+         * প্রক্রিয়াটা বেঁচে থাকে, আর তখন একই চিহ্ন সব অনুরোধে যেত।
+         * ⓘ সেটা কিছুই ভাঙত না — কেবল সুরক্ষাটা নীরবে শূন্য হত।
+         */
+        $nonce = Csp::rotate();
+
         $response = $next($request);
 
         if (strtolower((string) env('ABOS_CSP', 'on')) === 'off') {
@@ -84,7 +134,7 @@ class ContentSecurityPolicy
          * কড়াটা** মানে — ফল হত অপ্রত্যাশিতভাবে ভাঙা পর্দা।
          */
         if (! $response->headers->has('Content-Security-Policy')) {
-            $response->headers->set('Content-Security-Policy', implode('; ', self::POLICY));
+            $response->headers->set('Content-Security-Policy', implode('; ', $this->policy($nonce)));
         }
 
         return $response;

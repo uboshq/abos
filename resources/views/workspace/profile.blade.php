@@ -60,9 +60,15 @@
                                       rounded-(--radius-field) bg-(--color-brand-700) px-4 text-sm font-medium
                                       text-(--color-ink-inverse) transition-opacity hover:opacity-90"
                                :class="busy && 'pointer-events-none opacity-70'">
+                            {{-- ⚠️ এখানে আগে `onchange="this.form.requestSubmit()"`
+                                 ছিল, অর্থাৎ ছবি বাছার সাথে সাথেই ফর্ম চলে
+                                 যেত। ⛔ ক্রপের পর্দা খোলার কোনো ফাঁক
+                                 থাকত না। ⭐ এখন জমা দেওয়ার কাজটা পর্দার
+                                 হাতে (`submit: true`), আর ব্যবহারকারী বাদ
+                                 দিলেও ফর্ম ঠিকই জমা হয়। --}}
                             <input type="file" name="avatar" class="sr-only"
                                    accept="image/jpeg,image/png,image/webp"
-                                   onchange="this.form.requestSubmit()">
+                                   x-on:change="$store.scanner.begin($el, 'face', { submit: true })">
                             {{ $user->avatarUrl()
                                 ? __('core.profile.change_photo')
                                 : __('core.profile.upload_photo') }}

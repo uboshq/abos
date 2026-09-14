@@ -233,7 +233,7 @@
     </form>
 
     @push('scripts')
-        <script>
+        <script @nonce>
             function recipeForm() {
                 return {
                     lines: {!! $linesJson !!},
