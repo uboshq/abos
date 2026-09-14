@@ -3,6 +3,10 @@
 declare(strict_types=1);
 use App\Modules\Finance\Dashboard\FinanceDashboard;
 use App\Modules\Finance\Models\CapitalEntry;
+use App\Modules\Finance\Models\DepositMovement;
+use App\Modules\Finance\Models\HandLoanMovement;
+use App\Modules\Finance\Models\RentalAdjustment;
+use App\Modules\Finance\Models\Withdrawal;
 
 /**
  * অর্থ — টাকা কোথা থেকে আসে, কোথায় থাকে, কোথায় যায়, আর কার।
@@ -313,8 +317,29 @@ return [
      * খসড়া** থেকে যেত। দুইটা পর্দা দুই কথা বলত, আর কোথাও কোনো ভুলের
      * চিহ্ন থাকত না।
      */
+    /*
+     * ⛔ এই ব্লকটা কেবল ড্রিল-ডাউনের নয় — নিষ্পত্তিরও।
+     *
+     * ── কেন নামগুলো এখানে থাকতেই হবে ─────────────────────────────────
+     * [[App\Modules\Accounts\Services\VoucherService]] কখনোই জানবে না
+     * `withdrawal` মানে কোন ক্লাস — Accounts-এর `depends_on` ফাঁকা, বাকি
+     * সবাই তার উপর দাঁড়ায়। ⓘ তাই ধরনের নামটা এখানে বাঁধা থাকে,
+     * [[App\Core\Engines\Drill\DrillResolver]] খুলে দেয়, আর Accounts কেবল
+     * Core-এর চুক্তিটা চেনে ([[App\Core\Contracts\SettledByAVoucher]])।
+     *
+     * ⚠️ নাম না থাকলে হুকটা **নীরবে কিছুই করবে না** — ভাউচার পোস্ট হবে,
+     * টাকা খাতায় বসবে, আর অর্থের সারিটা চিরকাল খসড়া থেকে যাবে। ⛔ এটাই
+     * এই কাজের সবচেয়ে খারাপ ফল, কারণ পর্দা সবুজ দেখাবে।
+     *
+     * ⓘ ১৪ সেপ্টেম্বর ২০২৬-এ মূলধনের সারিতে ঠিক এটাই ঘটছিল, আর ধরা
+     * পড়েছিল কেবল পর্দায় তাকিয়ে।
+     */
     'drill_sources' => [
         'capital_entry' => CapitalEntry::class,
+        'withdrawal' => Withdrawal::class,
+        'deposit_movement' => DepositMovement::class,
+        'hand_loan_movement' => HandLoanMovement::class,
+        'rental_adjustment' => RentalAdjustment::class,
     ],
 
     'reports' => [],

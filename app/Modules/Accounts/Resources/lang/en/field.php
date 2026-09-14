@@ -3,6 +3,28 @@
 declare(strict_types=1);
 
 return [
+    'lands_on' => 'Lands on',
+    'deposit_slip' => 'Deposit slip number',
+    'account_no' => 'Account number',
+    'account_holder' => 'Account holder',
+    'branch' => 'Branch',
+    'our_bank' => 'From our bank',
+    'transfer_mode' => 'Transfer mode',
+    'charge_borne_by' => 'Who paid the charge',
+    'bank_charge' => 'Bank charge',
+    'charge' => 'Charge',
+    'transaction_id' => 'Transaction ID',
+    'receiver_phone' => 'Receiver\'s mobile number',
+    'sender_phone' => 'Sender\'s mobile number',
+    'wallet_medium' => 'How it was sent',
+    'wallet' => 'Wallet',
+    'counted_total' => 'Counted total',
+    'note_of' => ':note taka notes',
+    'note_breakdown' => 'Note breakdown',
+    'how_it_moved' => 'How the money moved',
+    'moved_at' => 'Time',
+    'carried_by_nobody' => 'Nobody — straight to the bank',
+    'carried_by' => 'Carried by',
     'on_credit_option' => 'On credit — :account (creates a payable)',
 
     'closing_year' => 'Year being closed',

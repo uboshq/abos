@@ -7,6 +7,8 @@ namespace App\Modules\Finance\Models;
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Core\Contracts\Drillable;
+use App\Core\Contracts\SettledByAVoucher;
 use App\Core\Support\DocumentStatus;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
@@ -24,7 +26,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * লিখলে ব্যবসার মুনাফা কম দেখাত, আর বছরশেষে কে কত নিল তা বলার উপায়
  * থাকত না — অথচ অংশীদারি ব্যবসায় ওই সংখ্যাটাই সবচেয়ে বেশি দরকারি।
  */
-class Withdrawal extends Model
+class Withdrawal extends Model implements Drillable, SettledByAVoucher
 {
     use BelongsToCompany;
     use HasFactory;
@@ -103,5 +105,101 @@ class Withdrawal extends Model
     public function countsTowardsCap(): bool
     {
         return $this->status !== DocumentStatus::CANCELLED;
+    }
+
+    /**
+     * পরিশোধ ভাউচারটা পোস্ট হলো — টাকাটা সত্যিই বেরিয়ে গেছে।
+     *
+     * ── ⛔ কেন এটা এতদিন ছিল না ─────────────────────────────────────
+     * `voucher_id` ঘরটা আর `voucher()` সম্পর্কটা **আগে থেকেই** ছিল,
+     * কিন্তু ভরার কেউ ছিল না। ⚠️ অর্থাৎ ভাউচার পোস্ট হত, টাকা খাতায়
+     * বসত, আর উত্তোলনের সারিটা **চিরকাল খসড়া** থেকে যেত — কোনো
+     * ত্রুটি ছাড়াই, কারণ কোথাও কিছু ভাঙত না।
+     *
+     * ⓘ [[CapitalEntry::settleWith()]]-এর হুবহু ছাঁচ, আর সেটাই উদ্দেশ্য:
+     * একই নিয়মের দুইটা বাস্তবায়ন থাকলে ওরা একদিন আলাদা উত্তর দেয়।
+     *
+     * ⚠️ শর্তযুক্ত `update()`, নিজের `save()` নয় — চুক্তিটা
+     * **idempotent** হতে বলে ([[SettledByAVoucher]])। একটা ভাউচার বাতিল
+     * করে আবার পোস্ট করা যায়; শর্ত ছাড়া লিখলে `posted_at` বদলে যেত,
+     * অর্থাৎ **টাকাটা কবে গিয়েছিল সেই তারিখটাই মিথ্যা হত**।
+     */
+    public function settleWith(int $voucherId): void
+    {
+        static::query()
+            ->whereKey($this->getKey())
+            ->where('status', DocumentStatus::DRAFT)
+            ->update([
+                'status' => DocumentStatus::CONFIRMED,
+                'voucher_id' => $voucherId,
+                'posted_at' => now(),
+            ]);
+
+        $this->refresh();
+    }
+
+    /**
+     * ভাউচারটা বাতিল হলো — সারিটা আবার খসড়া।
+     *
+     * ⚠️ শর্তে `voucher_id` মেলানো হয়, কারণ **অন্য কোনো ভাউচারের বাতিল
+     * এই সারিটা খুলে দিতে পারবে না**। ⓘ না মিলালে একটা ভুল
+     * `against_id` লেখা ভাউচার বাতিল করলে সম্পূর্ণ অন্য কারো উত্তোলন
+     * আবার "হয়নি" হয়ে যেত — আর মাসিক সীমার হিসাবও তাতে ভুল হত
+     * ([[countsTowardsCap()]])।
+     */
+    public function unsettle(int $voucherId): void
+    {
+        static::query()
+            ->whereKey($this->getKey())
+            ->where('status', DocumentStatus::CONFIRMED)
+            ->where('voucher_id', $voucherId)
+            ->update([
+                'status' => DocumentStatus::DRAFT,
+                'voucher_id' => null,
+                'posted_at' => null,
+            ]);
+
+        $this->refresh();
+    }
+
+    // ── Drillable — নিয়ম ১, "সংখ্যা থেকে কাগজে" ───────────────────────
+
+    /**
+     * ⛔ `drill_sources`-এ নাম বসানোই যথেষ্ট নয় — ক্লাসটাকেও ড্রিল করা
+     * যেতে হবে।
+     *
+     * ── কী ধরা পড়েছিল, ১৪ সেপ্টেম্বর ২০২৬ ────────────────────────────
+     * নিষ্পত্তির হুকের জন্য (`SettledByAVoucher`) নামটা মানচিত্রে বসানো
+     * হলো, আর সেটা কাজও করল — কারণ [[VoucherService]] `map()` সরাসরি পড়ে।
+     *
+     * ⚠️ কিন্তু একই মানচিত্র [[DrillResolver::resolve()]]-ও পড়ে, আর সে
+     * `Drillable` না পেলে **ব্যতিক্রম ছোঁড়ে**। ⓘ অর্থাৎ টাকা ঠিকই বসত,
+     * সব সবুজ দেখাত, আর ভুলটা ধরা পড়ত সেদিন — মাস পরে — যেদিন কেউ
+     * খতিয়ানের একটা সারি থেকে এই নথিতে ফিরতে চাইতেন।
+     *
+     * ⭐ ধরা পড়েছে [[EveryDrillSourceCanActuallyBeDrilledIntoTest]]-এ,
+     * চোখে নয় — মানচিত্রের প্রতিটা নাম গুনে দেখে।
+     *
+     * মালিক কত তুললেন — নিজের নথি, নিজের নম্বর।
+     */
+    public static function drillSourceType(): string
+    {
+        return 'withdrawal';
+    }
+
+    public function drillDocumentNo(): string
+    {
+        return $this->document_no;
+    }
+
+    public function drillLabel(): string
+    {
+        return __('finance::menu.withdrawal').' — '.$this->drillDocumentNo();
+    }
+
+    /** @return array{0: string, 1: array<string, mixed>} */
+    public function drillRoute(): array
+    {
+        return ['finance.withdrawal.index', ['highlight' => $this->id]];
     }
 }

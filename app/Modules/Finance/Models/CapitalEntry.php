@@ -7,6 +7,7 @@ namespace App\Modules\Finance\Models;
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Core\Contracts\Drillable;
 use App\Core\Contracts\SettledByAVoucher;
 use App\Models\User;
 /*
@@ -37,7 +38,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * নয় আসেনি। "বাতিল" রাখলে একটা না-আসা টাকার সারি চিরকাল তালিকায়
  * থেকে যেত, আর কেউ বলতে পারত না ওটা আসবে না কি ভুলে গেছে।
  */
-class CapitalEntry extends Model implements SettledByAVoucher
+class CapitalEntry extends Model implements Drillable, SettledByAVoucher
 {
     use BelongsToCompany;
     use HasFactory;
@@ -148,6 +149,52 @@ class CapitalEntry extends Model implements SettledByAVoucher
     public function scopePosted(Builder $query): void
     {
         $query->where('status', self::POSTED);
+    }
+
+    // ── Drillable — নিয়ম ১, "সংখ্যা থেকে কাগজে" ───────────────────────
+
+    /**
+     * ⛔ এটা না থাকলে ড্রিল-লিংক ব্যতিক্রম ছুঁড়ত — আর সেটা আমি নিজেই
+     * লাইভে পাঠিয়ে দিয়েছিলাম।
+     *
+     * ── কী ঘটেছিল, ১৪ সেপ্টেম্বর ২০২৬ ────────────────────────────────
+     * `Finance/module.php`-এর `drill_sources`-এ `capital_entry` বসানো
+     * হলো, কারণ [[App\Core\Contracts\SettledByAVoucher]]-এর হুকটা ঐ
+     * মানচিত্র ধরেই ক্লাস খোঁজে। সেটা কাজ করেছে, আর ডিপ্লয়ও হয়েছে।
+     *
+     * ⚠️ কিন্তু একই মানচিত্র [[DrillResolver::resolve()]]-ও পড়ে, আর সে
+     * `Drillable` না পেলে **জোরে থামে**:
+     *
+     *     "{$modelClass} is registered as drill source '{$sourceType}'
+     *      but does not implement Drillable."
+     *
+     * ⓘ নিষ্পত্তির পথটা ভাঙত না — সে `map()` পড়ে, `resolve()` নয়। তাই
+     * টাকা ঠিকই বসত, আর ভুলটা ধরা পড়ত কেবল যেদিন কেউ খতিয়ানের সারি
+     * থেকে মূলধনের নথিতে ফিরতে চাইতেন। ⛔ একটা ৫০০, মাস পরে, আর কারণটা
+     * ঐ দিনের কোনো কাজের সাথে মিলত না।
+     *
+     * ⭐ ধরা পড়েছে মেপে — পাঁচটা মডেলে `Drillable` আছে কি না গুনে দেখে,
+     * চোখে পড়ে নয়।
+     */
+    public static function drillSourceType(): string
+    {
+        return 'capital_entry';
+    }
+
+    public function drillDocumentNo(): string
+    {
+        return $this->document_no;
+    }
+
+    public function drillLabel(): string
+    {
+        return __('finance::menu.capital').' — '.$this->document_no;
+    }
+
+    /** @return array{0: string, 1: array<string, mixed>} */
+    public function drillRoute(): array
+    {
+        return ['finance.capital.index', ['highlight' => $this->id]];
     }
 
     /**
