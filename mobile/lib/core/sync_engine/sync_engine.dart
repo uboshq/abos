@@ -274,7 +274,19 @@ class SyncEngine {
   /// <p>⚠️ A new entry here is a business decision, never a convenience: it
   /// means someone has established that the record can be written honestly
   /// with no network, and that the server's handler accepts a push for it.
-  static const Set<String> _writableOffline = {'SalesOrder'};
+  static const Set<String> _writableOffline = {
+    'SalesOrder',
+
+    /*
+     * হাজিরা — docs/Contract §৭. Not an exception to "orders only", but
+     * outside it: that decision is about sales documents, which take a
+     * number, move stock and post to the ledger. Attendance does none of
+     * those, and the spec asks for it offline by name — a field worker marks
+     * their own day from wherever they are, which is exactly where there is
+     * no signal. `AttendanceSync::acceptsPush()` has been true all along.
+     */
+    'Attendance',
+  };
 
   /// Queue one offline create/update, then try to push immediately.
   ///
@@ -330,6 +342,37 @@ class SyncEngine {
 
     await flush(module);
   }
+
+  /// The decoded payloads of everything still queued for one entity type.
+  ///
+  /// <p>For the one question a screen cannot answer from [pendingCount]: *is
+  /// the thing I am about to write already waiting?* Attendance needs it —
+  /// the server refuses a second row for the same day (CONFLICT), so a phone
+  /// that let someone queue today twice would send a second change that comes
+  /// back refused, and the person would read that as "my attendance did not
+  /// go through" when in fact it had.
+  ///
+  /// <p>Excludes rejected and resolved rows, like [pendingCount]: neither is
+  /// waiting on a connection any more.
+  List<Map<String, dynamic>> pendingPayloadsOf(String entityType) =>
+      (_queue?.values ?? const Iterable<Map>.empty())
+          .where((row) =>
+              row['entityType'] == entityType &&
+              row['status'] != _statusRejected &&
+              row['status'] != _statusResolved)
+          .map((row) {
+            try {
+              return jsonDecode(row['payloadJson'] as String? ?? '{}')
+                  as Map<String, dynamic>;
+            } catch (_) {
+              // A row this build cannot read is still a queued row, but it
+              // cannot answer the question above — skipped rather than
+              // crashing a screen that only wanted to know about today.
+              return null;
+            }
+          })
+          .whereType<Map<String, dynamic>>()
+          .toList();
 
   /// Pushes every module that has queued changes.
   Future<void> flushAll() async {
