@@ -443,74 +443,31 @@
         <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="mb-3 font-semibold">{{ __('accounts::section.details') }}</h2>
 
-            <div class="grid gap-3 sm:grid-cols-3">
-                <label class="block">
-                    <span class="mb-1 block text-sm font-medium">{{ __('accounts::field.instrument') }}</span>
-                    <select name="instrument"
-                            class="h-(--spacing-field) w-full rounded-(--radius-field) border
-                                   border-(--color-border) bg-(--color-surface-card) px-3">
-                        <option value="">—</option>
-                        @foreach (['cash', 'cheque', 'mfs', 'transfer', 'card'] as $mode)
-                            <option value="{{ $mode }}" @selected(old('instrument', $voucher->instrument) === $mode)>
-                                {{ __('accounts::instrument.' . $mode) }}
-                            </option>
-                        @endforeach
-                    </select>
-                </label>
-
-                {{-- চেকের নম্বর ও তারিখ ছাড়া ব্যাংকের বিবরণীর সাথে মেলানো
-                     যায় না — হিসাবের দিক থেকে অপ্রয়োজনীয়, বাস্তবে অপরিহার্য --}}
-                <x-ui.field name="instrument_no" :label="__('accounts::field.instrument_no')"
-                            :value="old('instrument_no', $voucher->instrument_no)" />
-
-                <x-ui.field name="instrument_date" type="date" :label="__('accounts::field.instrument_date')"
-                            :value="old('instrument_date', $voucher->instrument_date?->format('Y-m-d'))" />
-            </div>
-
             {{--
-                ⭐ যিনি টাকাটা দিলেন **তাঁর** ব্যাংক ও হিসাব নম্বর।
+                ⭐ টাকাটা কীভাবে হাতবদল হলো — একটাই ব্লক, ১৪ সেপ্টেম্বর ২০২৬।
 
-                ⚠️ আমাদের ব্যাংক নয় — সেটা উপরের "কোথায় জমা হলো" ঘরটা।
-                দুইটা গুলিয়ে ফেললে ব্যাংক মিলকরণ পুরোটাই ভুল হত, তাই
-                লেবেলে "যিনি দিলেন" কথাটা আছে।
+                ── ⛔ আগে এখানে কী ছিল ─────────────────────────────────
+                পাঁচটা ছড়ানো ঘর: মাধ্যম, লেনদেন নম্বর, তারিখ, প্রেরকের
+                ব্যাংক ও হিসাব নম্বর, আর চার্জ। ⓘ কাজ করত, কিন্তু মালিকের
+                তালিকার **আঠারোটার মধ্যে ছয়টা** — মিল ৩৩.৩%।
 
-                ⛔ কেন ঘর দুইটা দরকার: চেক নম্বর আগে থেকেই ছিল, কিন্তু
-                একটা চেক ডিজঅনার হয়ে ফিরলে হাতে থাকত কেবল একটা নম্বর —
-                আর একই নম্বরের চেক ভিন্ন ব্যাংকে ভিন্ন মানুষের হয়। ফেরত
-                চেকটা কোন আদায়ের ছিল, খুঁজে বের করার নিশ্চিত পথ ছিল না।
+                যা চাওয়া হত না: নোট গুনে মেলানো · MFS-এর ওয়ালেট ও মাধ্যম ·
+                প্রেরকের মোবাইল নম্বর · চার্জটা কে দিয়েছে · BEFTN/RTGS/NPSB ·
+                ব্রাঞ্চ ও হিসাবধারীর নাম · জমা স্লিপ · কবে পৌঁছাবে ·
+                কে বহন করল · কখন।
 
-                ⓘ মুক্ত লেখা, মালিকের নিজের সিদ্ধান্ত (১৪ সেপ্টেম্বর ২০২৬)
-                — চেকে যা ছাপা আছে হুবহু তাই লেখা যায়।
+                ── ⚠️ আর কেন ব্লকটা এই ফাইলে লেখা নেই ──────────────────
+                অর্থের খাতাগুলোরও হুবহু এই প্রশ্নগুলো লাগে। দুই জায়গায়
+                লিখলে একদিন একটায় চেকের ব্রাঞ্চ চাওয়া হত, অন্যটায় না —
+                আর তখন "কোন ব্যাংক থেকে কত এল" প্রশ্নের উত্তর অর্ধেক
+                লেনদেনে থাকত না। ⓘ তাই [[resources/views/components/ui/money-movement]]
+                একটাই, আর দুইজনেই সেটা ডাকে।
             --}}
-            <div class="mt-3 grid gap-3 sm:grid-cols-2">
-                <x-ui.field name="from_bank" :label="__('accounts::field.from_bank')"
-                            :value="old('from_bank', $voucher->from_bank)" />
-
-                <x-ui.field name="from_account_no" :label="__('accounts::field.from_account_no')"
-                            :value="old('from_account_no', $voucher->from_account_no)" />
-            </div>
-
-            {{--
-                ⭐ ব্যাংক বা MFS যা কেটে রেখেছে।
-
-                ── মালিকের নিয়ম, ১৪ সেপ্টেম্বর ২০২৬ ──────────────────────
-                **যা পাঠানো হলো তাই মূলধন**, যা ঢুকল তা নয়। ৮,০০০ পাঠালেন,
-                ২০ কাটল → ব্যাংকে ৭,৯৮০ · চার্জ খাতে ২০ · মূলধন ৮,০০০।
-
-                ⓘ উপরের "অঙ্ক" ঘরে **পাঠানো টাকাটাই** লিখুন, ঢোকা টাকা নয় —
-                নাহলে বিনিয়োগকারীর অংশ % ভুল হবে, আর ওটা সোজা মুনাফা ভাগের
-                হিসাব।
-
-                ⚠️ ঘরটা কেবল ব্যাংক বা MFS-এ টাকা ঢুকলে কাজে লাগে; নগদে
-                চার্জ হয় না, আর নগদের খাতে চার্জ লিখলে সেবাটা থামায়
-                ([[VoucherService::withCharge()]])।
-            --}}
-            <div class="mt-3 grid gap-3 sm:grid-cols-2">
-                <x-ui.field name="charge_amount" type="number" step="0.01" inputmode="decimal"
-                            :label="__('accounts::field.money_charge')"
-                            :value="old('charge_amount', $voucher->charge_amount ?: null)"
-                            :hint="__('accounts::message.charge_hint')" numeric />
-            </div>
+            <x-ui.money-movement
+                :direction="$voucher->type === \App\Modules\Accounts\Models\Voucher::PAYMENT ? 'out' : 'in'"
+                :carriers="$carriers ?? []"
+                :modes="$transferModes ?? []"
+                :record="$voucher" />
 
             <label class="mt-3 block">
                 <span class="mb-1 block text-sm font-medium">{{ __('core.table.narration') }}</span>

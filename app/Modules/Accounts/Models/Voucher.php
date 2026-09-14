@@ -53,6 +53,24 @@ class Voucher extends Model implements Drillable
     public const CONTRA = 'contra';
 
     /** @var list<string> */
+    /**
+     * টাকা কীভাবে হাতবদল হলো — পাঁচটা, আর কেবল পাঁচটা।
+     *
+     * ── ⛔ কেন এটা এখানে, ১৪ সেপ্টেম্বর ২০২৬ ──────────────────────────
+     * তালিকাটা এতদিন **তিন জায়গায়** লেখা ছিল: [[VoucherRequest]]-এর
+     * `Rule::in()`, ফর্মের `@foreach`, আর ভাষার ফাইল।
+     *
+     * ⚠️ আর তিনটা আলাদা হয়ে গিয়েছিল। নতুন কম্পোনেন্টে `online` লেখা
+     * হয়েছিল যেখানে ব্যবস্থার নাম `transfer`, আর `card` বাদ পড়েছিল।
+     * ⓘ ফল হত: ব্যাংক ট্রান্সফারের প্রতিটা রসিদ ভ্যালিডেশনে আটকাত, আর
+     * কার্ডে নেওয়া পুরনো ভাউচার সম্পাদনা করলে মাধ্যমটা নীরবে বদলে যেত।
+     *
+     * ⭐ তাই সত্যটা এখন এক জায়গায়, আর বাকি সবাই এখান থেকে পড়ে।
+     *
+     * @var list<string>
+     */
+    public const INSTRUMENTS = ['cash', 'mfs', 'transfer', 'cheque', 'card'];
+
     public const TYPES = [self::RECEIPT, self::PAYMENT, self::EXPENSE, self::JOURNAL, self::CONTRA];
 
     /**

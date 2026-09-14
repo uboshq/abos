@@ -8,9 +8,11 @@ use App\Core\Concerns\SortsLists;
 use App\Core\Engines\Drill\DrillResolver;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\PartyRegistry;
+use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Models\Approval;
 use App\Models\Branch;
+use App\Models\User;
 use App\Modules\Accounts\Http\Requests\VoucherRequest;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CostCenter;
@@ -20,6 +22,7 @@ use App\Modules\Accounts\Services\AccountsFacts;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\VoucherApproval;
 use App\Modules\Accounts\Services\VoucherService;
+use App\Modules\MasterData\Models\TransferMode;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -465,6 +468,39 @@ class VoucherController extends Controller implements HasMiddleware
         return [
             'moneyAccounts' => $money,
             'allAccounts' => $all,
+
+            /*
+             * ⭐ টাকার মাধ্যমের ব্লকের দুইটা তালিকা — ১৪ সেপ্টেম্বর ২০২৬।
+             *
+             * ⛔ এই দুইটা না পাঠালে ঘর দুইটা **নীরবে খালি** আসত: ড্রপডাউন
+             * দেখা যেত, ভিতরে কিছু থাকত না, আর কেউ বলতে পারত না কেন।
+             * ⓘ কম্পোনেন্টের ডিফল্ট `[]`, তাই কোনো ত্রুটিও আসত না।
+             */
+
+            /*
+             * যাঁদের হাত দিয়ে টাকা যায় — গরমিল হলে এই নামটাই প্রথম প্রশ্ন।
+             *
+             * ⛔ প্রথমে এখানে `CompanyContext::companyId()` লেখা হয়েছিল, আর
+             * সেই নামে কোনো পদ্ধতি **নেই** — আসল নাম `id()`। ⓘ নামটা যাচাই
+             * না করে লেখা হয়েছিল, আর ফল ছিল পাতাটা খুললেই ৫০০।
+             *
+             * ⚠️ ভুলটা নীরব ছিল না — এটা জোরেই ভেঙেছে, আর সেটাই ভালো।
+             * কিন্তু ভাঙাটা দেখেছেন মালিক, পরীক্ষা নয়, কারণ পরীক্ষাটা
+             * তখনো চলছিল আর আমি ফল আসার আগেই তাঁকে দেখতে বলেছিলাম।
+             * ⭐ শিক্ষা: "চালাচ্ছি" আর "চলেছে" এক নয়।
+             */
+            'carriers' => User::query()
+                ->whereHas('companies', fn ($q) => $q->where('companies.id', CompanyContext::id()))
+                ->orderBy('name')
+                ->pluck('name', 'id'),
+
+            /*
+             * BEFTN · RTGS · NPSB — `mdm_transfer_modes` থেকে।
+             *
+             * ⚠️ টেবিলটা ২১ অক্টোবর থেকে বসানো, আর আজ পর্যন্ত **কোনো ফর্মে
+             * ঘরটা ছিল না** — আজকের চেনা রোগ: নিয়ম লেখা, অথচ অপৌঁছানো।
+             */
+            'transferModes' => TransferMode::query()->orderBy('code')->pluck('name_en', 'id'),
 
             /*
              * জাবেদার সারিতে বাছার মতো পক্ষগুলো।

@@ -168,7 +168,7 @@ class VoucherRequest extends FormRequest
             'party_type' => ['nullable', 'string', 'max:32'],
             'party_id' => ['nullable', 'integer'],
 
-            'instrument' => ['nullable', Rule::in(['cash', 'cheque', 'mfs', 'transfer', 'card'])],
+            'instrument' => ['nullable', Rule::in(Voucher::INSTRUMENTS)],
             'instrument_no' => ['nullable', 'string', 'max:64'],
             'instrument_date' => ['nullable', 'date'],
         ];

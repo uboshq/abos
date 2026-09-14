@@ -124,7 +124,7 @@
         </legend>
 
         <div class="flex flex-wrap gap-2">
-            @foreach (['cash', 'mfs', 'online', 'cheque'] as $way)
+            @foreach (\App\Modules\Accounts\Models\Voucher::INSTRUMENTS as $way)
                 <label class="cursor-pointer">
                     <input type="radio" name="instrument" value="{{ $way }}" class="peer sr-only"
                            x-model="method" @checked($was('instrument', 'cash') === $way)>
@@ -222,13 +222,13 @@
                         x-model.number="charge" />
         </div>
 
-        <x-ui.charge-bearer :direction="$direction" />
+        <x-ui.charge-bearer :direction="$direction" :record="$record" />
     </div>
 
     {{-- ── ব্যাংক ট্রান্সফার ─────────────────────────────────────── --}}
     <div class="rounded-(--radius-field) border border-(--color-border)
                 border-l-2 border-l-(--color-brand-500) bg-(--color-surface-sunken) p-3"
-         x-show="method === 'online'" x-cloak>
+         x-show="method === 'transfer'" x-cloak>
         <div class="grid gap-3 sm:grid-cols-3">
             <x-ui.select name="transfer_mode_id" :label="__('accounts::field.transfer_mode')"
                          :options="$modes" :selected="$was('transfer_mode_id')" blank="—" />
@@ -259,7 +259,32 @@
                         :value="$was('lands_on')" />
         </div>
 
-        <x-ui.charge-bearer :direction="$direction" />
+        <x-ui.charge-bearer :direction="$direction" :record="$record" />
+    </div>
+
+
+    {{-- ── কার্ড ─────────────────────────────────────────────────
+         ⓘ ডিপোতে কার্ড বিরল, কিন্তু ব্যবস্থায় মাধ্যমটা আগে থেকেই আছে
+         (`VoucherRequest`-এর তালিকায়)। ⛔ ঘরটা না রাখলে কার্ডে নেওয়া
+         একটা পুরনো ভাউচার সম্পাদনা করতে গেলে মাধ্যমটাই বেছে নেওয়া
+         যেত না, আর সেভ করলে সেটা নীরবে বদলে যেত।
+
+         ⚠️ কার্ডের নিজের প্রশ্ন কম: টার্মিনালের রেফারেন্স, আর ব্যাংকের
+         কমিশন। চেক বা ওয়ালেটের ঘরগুলো এখানে অর্থহীন। --}}
+    <div class="rounded-(--radius-field) border border-(--color-border)
+                border-l-2 border-l-(--color-brand-500) bg-(--color-surface-sunken) p-3"
+         x-show="method === 'card'" x-cloak>
+        <div class="grid gap-3 sm:grid-cols-3">
+            <x-ui.field name="instrument_no" :label="__('accounts::field.card_reference')"
+                        :value="$was('instrument_no')" />
+            <x-ui.field name="from_bank" :label="__('accounts::field.card_bank')"
+                        :value="$was('from_bank')" />
+            <x-ui.field name="charge_amount" type="number" step="0.01" numeric
+                        :label="__('accounts::field.card_commission')"
+                        :value="$was('charge_amount')" x-model.number="charge" />
+        </div>
+
+        <x-ui.charge-bearer :direction="$direction" :record="$record" />
     </div>
 
     {{-- ── চেক ──────────────────────────────────────────────────── --}}
