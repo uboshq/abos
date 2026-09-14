@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Architecture;
 
 use App\Modules\Accounts\Models\CashCount;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
@@ -31,6 +32,19 @@ use Tests\TestCase;
  */
 final class MoneyMovementHasEveryFieldTheOwnerAskedForTest extends TestCase
 {
+    /*
+     * ⛔ এই ট্রেইটটা প্রথমে ছিল না, আর তার ফলটা শেখার মতো।
+     *
+     * স্কিমা ছাড়া `Schema::hasColumn()` প্রতিটা ঘরের জন্য **false**
+     * ফেরায় — কোনো ত্রুটি নয়, কেবল "নেই"। ⓘ ফল: আঠারোটার আঠারোটাই
+     * অনুপস্থিত দেখাল, যার মধ্যে `instrument_no` আর `from_bank`
+     * মাসখানেক ধরে বসানো।
+     *
+     * ⚠️ দাবিটা ঠিক ছিল, মাপার যন্ত্রটা ভুল। ⭐ ধরা পড়েছে সময় দেখে —
+     * ১.০৭ সেকেন্ড, আর ১৫৯টা টেবিল বসাতে তার চেয়ে ঢের বেশি লাগে।
+     */
+    use RefreshDatabase;
+
     /**
      * মালিকের তালিকা — ঘর => [কলাম আছে কি না দেখতে হবে?, অনুবাদের চাবি]
      *

@@ -1,4 +1,4 @@
-@props(['direction' => 'in'])
+@props(['direction' => 'in', 'record' => null])
 
 {{--
     চার্জটা কে দিয়েছে — আমরা, না অন্য পক্ষ।
@@ -36,7 +36,8 @@
         @foreach (['us', 'them'] as $who)
             <label class="cursor-pointer">
                 <input type="radio" name="charge_borne_by" value="{{ $who }}" class="peer sr-only"
-                       x-model="chargeBy" @checked($who === 'us')>
+                       x-model="chargeBy"
+                       @checked(old('charge_borne_by', $record?->charge_borne_by ?? 'us') === $who)>
                 <span class="inline-flex items-center rounded-(--radius-field) border
                              border-(--color-border) bg-(--color-surface-card) px-2.5 py-1 text-xs
                              text-(--color-ink-muted) transition-colors

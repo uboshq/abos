@@ -25,6 +25,17 @@
      * গরমিলটা কোন নোটে তা কেউ বলতে পারে না।
      */
     'counting' => true,
+
+    /*
+     * সম্পাদনার সময় যে ভাউচারটা খোলা — ঘরগুলো এর মান নিয়ে বসে।
+     *
+     * ⛔ এটা না থাকলে একটা পুরনো ভাউচার খুললে প্রতিটা ঘর **ফাঁকা** আসত,
+     * আর সেভ করলে মানগুলো নীরবে মুছে যেত। ⚠️ কোনো ত্রুটি নয়: ফর্মটা
+     * ফাঁকা ঘরই জমা দিত, আর ভ্যালিডেশন ওগুলোকে "দেওয়া হয়নি" ধরে নিত।
+     *
+     * ⓘ নতুন ভাউচারে `null` — তখন `old()`-ই একমাত্র উৎস, আর সেটাই ঠিক।
+     */
+    'record' => null,
 ])
 
 {{--
@@ -51,6 +62,14 @@
 
 @php
     $inward = $direction === 'in';
+
+    /*
+     * পুরনো ইনপুট আগে, তারপর সারির মান — Laravel-এর নিজের ক্রম।
+     *
+     * ⚠️ উল্টো করলে ভ্যালিডেশন ব্যর্থ হয়ে ফেরার পর ব্যবহারকারীর টাইপ
+     * করা লেখা হারিয়ে যেত, আর তিনি আবার সব লিখতেন — প্রতিবার।
+     */
+    $was = fn (string $field, $fallback = null) => old($field, $record?->{$field} ?? $fallback);
 
     /*
      * নোটের মান — বড় থেকে ছোট।
@@ -91,9 +110,11 @@
     {{-- ── কে বহন করল, আর কখন ─────────────────────────────────── --}}
     <div class="grid gap-3 sm:grid-cols-2">
         <x-ui.select name="carried_by" :label="__('accounts::field.carried_by')"
-                     :options="$carriers" blank="{{ __('accounts::field.carried_by_nobody') }}" />
+                     :options="$carriers" :selected="$was('carried_by')"
+                     blank="{{ __('accounts::field.carried_by_nobody') }}" />
 
-        <x-ui.field name="moved_at" type="time" :label="__('accounts::field.moved_at')" />
+        <x-ui.field name="moved_at" type="time" :label="__('accounts::field.moved_at')"
+                    :value="$was('moved_at')" />
     </div>
 
     {{-- ── মাধ্যম ───────────────────────────────────────────────── --}}
@@ -106,7 +127,7 @@
             @foreach (['cash', 'mfs', 'online', 'cheque'] as $way)
                 <label class="cursor-pointer">
                     <input type="radio" name="instrument" value="{{ $way }}" class="peer sr-only"
-                           x-model="method" @checked($way === 'cash')>
+                           x-model="method" @checked($was('instrument', 'cash') === $way)>
                     <span class="inline-flex items-center gap-2 rounded-(--radius-field) border
                                  border-(--color-border) bg-(--color-surface-sunken) px-3 py-1.5 text-sm
                                  text-(--color-ink-muted) transition-colors
@@ -141,6 +162,7 @@
                         <input type="number" min="0" step="1" inputmode="numeric"
                                name="note_counts[{{ $note }}]"
                                x-model.number="notes[{{ $note }}]"
+                               value="{{ $was('note_counts')[$note] ?? '' }}"
                                aria-label="{{ __('accounts::field.note_of', ['note' => number_format($note)]) }}"
                                class="w-full rounded border border-(--color-border) bg-(--color-surface-card)
                                       px-1.5 py-0.5 text-right">
@@ -174,10 +196,11 @@
                 border-l-2 border-l-(--color-brand-500) bg-(--color-surface-sunken) p-3"
          x-show="method === 'mfs'" x-cloak>
         <div class="grid gap-3 sm:grid-cols-3">
-            <x-ui.select name="wallet" :label="__('accounts::field.wallet')"
+            <x-ui.select name="wallet" :label="__('accounts::field.wallet')" :selected="$was('wallet')"
                          :options="['bkash' => 'বিকাশ', 'nagad' => 'নগদ', 'rocket' => 'রকেট', 'upay' => 'উপায়']" />
 
             <x-ui.select name="wallet_medium" :label="__('accounts::field.wallet_medium')"
+                         :selected="$was('wallet_medium')"
                          :options="[
                              'send_money' => __('accounts::wallet.send_money'),
                              'cash_out' => __('accounts::wallet.cash_out'),
@@ -186,15 +209,17 @@
                          ]" />
 
             {{-- ⛔ লেখাটা দিক ধরে বদলায়; কলামটা একটাই। --}}
-            <x-ui.field name="counterparty_phone" inputmode="tel"
+            <x-ui.field name="counterparty_phone" inputmode="tel" :value="$was('counterparty_phone')"
                         :label="$inward ? __('accounts::field.sender_phone') : __('accounts::field.receiver_phone')" />
 
             <div class="sm:col-span-2">
-                <x-ui.field name="instrument_no" :label="__('accounts::field.transaction_id')" />
+                <x-ui.field name="instrument_no" :label="__('accounts::field.transaction_id')"
+                            :value="$was('instrument_no')" />
             </div>
 
             <x-ui.field name="charge_amount" type="number" step="0.01" numeric
-                        :label="__('accounts::field.charge')" x-model.number="charge" />
+                        :label="__('accounts::field.charge')" :value="$was('charge_amount')"
+                        x-model.number="charge" />
         </div>
 
         <x-ui.charge-bearer :direction="$direction" />
@@ -206,26 +231,32 @@
          x-show="method === 'online'" x-cloak>
         <div class="grid gap-3 sm:grid-cols-3">
             <x-ui.select name="transfer_mode_id" :label="__('accounts::field.transfer_mode')"
-                         :options="$modes" blank="—" />
+                         :options="$modes" :selected="$was('transfer_mode_id')" blank="—" />
 
-            <x-ui.field name="from_bank"
+            <x-ui.field name="from_bank" :value="$was('from_bank')"
                         :label="$inward ? __('accounts::field.from_bank') : __('accounts::field.our_bank')" />
-            <x-ui.field name="from_branch" :label="__('accounts::field.branch')" />
+            <x-ui.field name="from_branch" :label="__('accounts::field.branch')" :value="$was('from_branch')" />
 
             {{-- ⚠️ নম্বর দেখে বলা যায় না টাকাটা ঠিক হিসাব থেকে এসেছে
                  কি না — নাম দেখে যায়। --}}
-            <x-ui.field name="from_account_name" :label="__('accounts::field.account_holder')" />
-            <x-ui.field name="from_account_no" :label="__('accounts::field.account_no')" />
-            <x-ui.field name="instrument_no" :label="__('accounts::field.transaction_id')" />
+            <x-ui.field name="from_account_name" :label="__('accounts::field.account_holder')"
+                        :value="$was('from_account_name')" />
+            <x-ui.field name="from_account_no" :label="__('accounts::field.account_no')"
+                        :value="$was('from_account_no')" />
+            <x-ui.field name="instrument_no" :label="__('accounts::field.transaction_id')"
+                            :value="$was('instrument_no')" />
 
-            <x-ui.field name="deposit_slip_no" :label="__('accounts::field.deposit_slip')" />
+            <x-ui.field name="deposit_slip_no" :label="__('accounts::field.deposit_slip')"
+                        :value="$was('deposit_slip_no')" />
             <x-ui.field name="charge_amount" type="number" step="0.01" numeric
-                        :label="__('accounts::field.bank_charge')" x-model.number="charge" />
+                        :label="__('accounts::field.bank_charge')" :value="$was('charge_amount')"
+                        x-model.number="charge" />
 
             {{-- ⛔ খাতটা দিক ধরে আলাদা: আসছে হলে 1103 (সম্পদ), যাচ্ছে
                  হলে 2114 (দায়)। এক খাতে বসালে ব্যালান্স শিট ভুল পাশে
                  দেখাত, আর যোগফল মিলে যেত। --}}
-            <x-ui.field name="lands_on" type="date" :label="__('accounts::field.lands_on')" />
+            <x-ui.field name="lands_on" type="date" :label="__('accounts::field.lands_on')"
+                        :value="$was('lands_on')" />
         </div>
 
         <x-ui.charge-bearer :direction="$direction" />
@@ -236,13 +267,16 @@
                 border-l-2 border-l-(--color-brand-500) bg-(--color-surface-sunken) p-3"
          x-show="method === 'cheque'" x-cloak>
         <div class="grid gap-3 sm:grid-cols-3">
-            <x-ui.field name="instrument_no" :label="__('accounts::field.cheque_no')" />
+            <x-ui.field name="instrument_no" :label="__('accounts::field.cheque_no')"
+                        :value="$was('instrument_no')" />
             <x-ui.field name="instrument_date" type="date" :label="__('accounts::field.cheque_date')"
-                        x-model="chequeDate" />
+                        :value="$was('instrument_date')" x-model="chequeDate" />
             <x-ui.field name="from_bank" :label="__('accounts::field.bank_name')" />
-            <x-ui.field name="from_branch" :label="__('accounts::field.branch')" />
-            <x-ui.field name="from_account_name" :label="__('accounts::field.account_holder')" />
-            <x-ui.field name="from_account_no" :label="__('accounts::field.account_no')" />
+            <x-ui.field name="from_branch" :label="__('accounts::field.branch')" :value="$was('from_branch')" />
+            <x-ui.field name="from_account_name" :label="__('accounts::field.account_holder')"
+                        :value="$was('from_account_name')" />
+            <x-ui.field name="from_account_no" :label="__('accounts::field.account_no')"
+                        :value="$was('from_account_no')" />
         </div>
 
         {{-- ⚠️ আগাম তারিখের চেক — টাকা আজ খাতায় বসে না। ⓘ এটা থামায় না,
