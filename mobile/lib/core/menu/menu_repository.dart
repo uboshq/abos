@@ -34,6 +34,17 @@ class MenuRepository {
 
   static const _newOrderPermission = 'sales.order.create';
 
+  /// Marking *your own* attendance — never the whole team's.
+  ///
+  /// <p>⛔ The menu can never carry this. `/me`'s `hr.attendance.index` row
+  /// requires `hr.attendance.view`, which is the permission for seeing
+  /// everybody's attendance and is deliberately withheld from field staff;
+  /// their templates carry `hr.attendance.self`. A tile built from the menu
+  /// would have been invisible to exactly the people who need it — and
+  /// perfectly visible to whoever checked it from an office, which is how a
+  /// bug like that survives. See docs/Contract §৭.
+  static const _ownAttendancePermission = 'hr.attendance.self';
+
   /// One icon per app path segment — `/me` sends a label for every row but
   /// no icon, so the icon is this app's own, keyed by the path it already
   /// resolved the row to rather than by the server's route name (one path
@@ -41,6 +52,7 @@ class MenuRepository {
   /// concern here).
   static const Map<String, IconData> _iconByAppPath = {
     'approvals': Icons.fact_check_outlined,
+    'attendance': Icons.how_to_reg_outlined,
     'customers': Icons.people_alt_outlined,
     'products': Icons.inventory_2_outlined,
     'stock': Icons.warehouse_outlined,
@@ -152,6 +164,13 @@ class MenuRepository {
             label: 'নতুন অর্ডার',
             icon: Icons.add_shopping_cart_outlined,
             routeName: 'new-order',
+          ),
+        if (user.can(_ownAttendancePermission))
+          const MenuItem(
+            key: 'hr.attendance.self',
+            label: 'হাজিরা',
+            icon: Icons.how_to_reg_outlined,
+            routeName: 'attendance',
           ),
         // What this device has and has not sent is a fact about the phone,
         // not a business permission — every signed-in role can open it, live
