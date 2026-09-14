@@ -7,6 +7,7 @@ namespace Tests\Feature\Architecture;
 use App\Core\Support\Csp;
 use App\Http\Middleware\ContentSecurityPolicy;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\File;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\TestCase;
@@ -138,6 +139,33 @@ final class EveryInlineScriptCarriesItsNonceTest extends TestCase
         $this->assertIsString($raw);
         $this->assertGreaterThanOrEqual(16, strlen($raw),
             'চিহ্নটা ১২৮ বিটের কম — অনুমান করা যায় এমন nonce মানে কোনো nonce নয়।');
+    }
+
+    /**
+     * ⛔ `@nonce` সত্যিই একটা কাজের অ্যাট্রিবিউট বানায়, আর মানটা
+     * হেডারেরটার সাথে মেলে।
+     *
+     * ── ⚠️ কেন এটা আলাদা করে লাগল, ১৪ সেপ্টেম্বর ২০২৬ ──────────────
+     * ডিপ্লয়ের পর লাইভে যাচাই করতে গিয়ে ধরা পড়ল উপরের দুইটা দাবি
+     * **এই প্রশ্নটা কখনো করেনি**: একটা ব্লেডের *উৎসে* `@nonce` আছে
+     * কি না দেখে, আর হেডারে `'nonce-…'` আছে কি না দেখে — কিন্তু
+     * নির্দেশিকাটা কী রেন্ডার করে, তা নয়।
+     *
+     * ⛔ নির্দেশিকাটা ভুল থাকলে দুইটা দাবিই সবুজ থাকত, অথচ প্রতিটা
+     * ইনলাইন ব্লক লাইভে নীরবে বন্ধ হত। ⓘ আজকের চেনা আকৃতি, আর এবার
+     * ফাঁদটা আমার নিজের পাহারার ভিতরেই ছিল।
+     */
+    public function test_the_directive_renders_a_usable_attribute(): void
+    {
+        $html = Blade::render('<script @nonce></script>');
+
+        $this->assertMatchesRegularExpression('/^<script nonce="[A-Za-z0-9+\/=]+"><\/script>$/', $html,
+            "`@nonce` কাজের অ্যাট্রিবিউট বানায়নি, বানিয়েছে: {$html}");
+
+        preg_match('/nonce="([^"]+)"/', $html, $found);
+
+        $this->assertSame(Csp::nonce(), $found[1],
+            'ব্লেডে বসা চিহ্ন আর Csp::nonce() আলাদা — তাহলে হেডারেরটার সাথেও মিলবে না।');
     }
 
     /**
