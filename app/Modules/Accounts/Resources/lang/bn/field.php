@@ -3,6 +3,9 @@
 declare(strict_types=1);
 
 return [
+    'card_commission' => 'ব্যাংকের কমিশন',
+    'card_bank' => 'কার্ডের ব্যাংক',
+    'card_reference' => 'টার্মিনাল রেফারেন্স',
     'lands_on' => 'কবে পৌঁছাবে',
     'deposit_slip' => 'জমা স্লিপ নম্বর',
     'account_no' => 'হিসাব নম্বর',

@@ -3,6 +3,9 @@
 declare(strict_types=1);
 
 return [
+    'card_commission' => 'Bank commission',
+    'card_bank' => 'The card\'s bank',
+    'card_reference' => 'Terminal reference',
     'lands_on' => 'Lands on',
     'deposit_slip' => 'Deposit slip number',
     'account_no' => 'Account number',

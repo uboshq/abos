@@ -6,6 +6,9 @@ namespace Tests\Feature\Architecture;
 
 use App\Core\Contracts\Drillable;
 use App\Core\Engines\Drill\DrillResolver;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 /**
@@ -34,6 +37,13 @@ use Tests\TestCase;
  */
 final class EveryDrillSourceCanActuallyBeDrilledIntoTest extends TestCase
 {
+    /*
+     * ⚠️ তৃতীয় দাবিটা `Schema::getColumnListing()` ডাকে, তাই স্কিমা লাগে।
+     * ⓘ ছাড়া চললে প্রতিটা টেবিল "নেই" দেখাত আর লুপটা নীরবে এড়িয়ে যেত —
+     * পাহারাটা সবুজ থাকত, কিছুই না মেপে।
+     */
+    use RefreshDatabase;
+
     /**
      * ⛔ মানচিত্রের প্রতিটা ক্লাস `Drillable`।
      */
@@ -76,6 +86,94 @@ final class EveryDrillSourceCanActuallyBeDrilledIntoTest extends TestCase
             '',
             'সারাই: ক্লাসে `implements Drillable` আর চারটা পদ্ধতি —',
             'drillSourceType() · drillDocumentNo() · drillLabel() · drillRoute().',
+            '',
+            ...$broken,
+        ]));
+    }
+
+    /**
+     * ⛔ `drillRoute()` যে ঘরগুলো ডাকে, সেগুলো সত্যিই ঐ টেবিলে আছে।
+     *
+     * ── ⚠️ কেন এই দাবিটা আলাদা করে লাগল, ১৫ সেপ্টেম্বর ২০২৬ ──────────
+     * উপরের দাবিটা কেবল দেখে ক্লাসটা `Drillable` কি না। ⓘ কিন্তু চুক্তি
+     * মানা আর **কাজ করা** দুইটা আলাদা সত্য।
+     *
+     * `HandLoanMovement::drillRoute()`-এ লেখা হয়েছিল
+     * `$this->hand_loan_account_id`, অথচ কলামটার নাম `account_id`।
+     * ⛔ Eloquent অচেনা নামে কিছুই ছোঁড়ে না — সে ওটাকে অনুপস্থিত
+     * অ্যাট্রিবিউট ধরে `null` ফেরায়। ⓘ ফল: একটা লিংক যেটা কোথাও যায় না,
+     * কোনো ত্রুটি ছাড়া।
+     *
+     * ⭐ ধরা পড়েছে অর্থের সেশনের মাপে — কলামের তালিকা মিলিয়ে, চোখে নয়।
+     * আর তখনই বোঝা গেল আমার নিজের পাহারায় এই ফাঁকটা ছিল।
+     *
+     * ⓘ দাবিটা কলামের নাম ধরে, সারি বানিয়ে নয় — সারি বানাতে গেলে
+     * প্রতিটা মডেলের নিজের নির্ভরতা লাগত (৫৪টা), আর পাহারাটা তখন
+     * সিডারের সাথে বাঁধা পড়ে যেত।
+     *
+     * ── ⚠️ এই পাহারার সীমা, আর সেটা লিখে রাখা দরকার ─────────────────
+     * **সম্পর্কের মধ্য দিয়ে যাওয়া ঘরগুলো ধরা পড়বে না** —
+     * `$this->deposit?->document_no` ধরনের। ⓘ ওখানে ভুল নাম দিলে
+     * Eloquent আবারও চুপচাপ `null` ফেরাবে, আর কলাম-পরীক্ষা কিছু বলবে না,
+     * কারণ `deposit` একটা কলাম নয়, একটা সম্পর্ক।
+     *
+     * ⛔ ধরতে হলে সারি বানিয়ে রুটটা সত্যিই তৈরি করে দেখতে হবে — আর
+     * সেটা উপরের কারণেই করা হয়নি। ⭐ সীমাটা জানা থাকা আর না-থাকার
+     * তফাত হলো: জানা থাকলে কেউ এই পাহারাকে বেশি বিশ্বাস করবে না।
+     */
+    public function test_every_drill_route_asks_for_columns_that_exist(): void
+    {
+        $broken = [];
+        $checked = 0;
+
+        foreach (app(DrillResolver::class)->map() as $sourceType => $class) {
+            if (! is_string($class) || ! is_subclass_of($class, Drillable::class)) {
+                continue;
+            }
+
+            $source = File::get((new \ReflectionClass($class))->getFileName());
+
+            if (! preg_match('/function drillRoute\(\).*?\{(.*?)\n    \}/s', $source, $body)) {
+                continue;
+            }
+
+            $model = new $class;
+            $table = $model->getTable();
+
+            if (! Schema::hasTable($table)) {
+                continue;
+            }
+
+            $columns = Schema::getColumnListing($table);
+
+            preg_match_all('/\$this->([a-z_]+)\b(?!\()/', $body[1], $used);
+
+            foreach (array_unique($used[1]) as $field) {
+                $checked++;
+
+                /*
+                 * ⓘ সম্পর্কের নাম (`$this->deposit?->id`) কলাম নয়, তাই
+                 * কেবল তখনই অভিযোগ যখন নামটা কোনো কলামও নয় আর কোনো
+                 * সম্পর্কও নয়।
+                 */
+                if (in_array($field, $columns, true) || method_exists($model, $field)) {
+                    continue;
+                }
+
+                $broken[] = "{$class}::drillRoute() চায় \${$field} — {$table} টেবিলে নেই";
+            }
+        }
+
+        $this->assertGreaterThan(20, $checked,
+            'একটাও ঘর পরীক্ষা করা হয়নি — খোঁজাটা কি আর কাজ করছে?');
+
+        sort($broken);
+
+        $this->assertSame([], $broken, implode("\n", [
+            'এই রুটগুলো এমন ঘর চায় যা টেবিলে নেই:',
+            '',
+            '⛔ Eloquent অচেনা নামে কিছুই ছোঁড়ে না — `null` ফেরায়।',
+            'ⓘ ফল: একটা লিংক যেটা কোথাও যায় না, কোনো ত্রুটি ছাড়া।',
             '',
             ...$broken,
         ]));
