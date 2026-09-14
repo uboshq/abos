@@ -7,6 +7,8 @@ namespace App\Modules\Finance\Models;
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Core\Contracts\Drillable;
+use App\Core\Contracts\SettledByAVoucher;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -24,7 +26,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * চিহ্ন দিয়ে চললে ওই প্রশ্নটাই ওঠে না। **ঘটনাটার মানে ব্যালেন্স বলে,
  * চলাচল নয়।**
  */
-class HandLoanMovement extends Model
+class HandLoanMovement extends Model implements Drillable, SettledByAVoucher
 {
     use BelongsToCompany;
     use HasFactory;
@@ -77,5 +79,83 @@ class HandLoanMovement extends Model
         return $this->direction === self::OUT
             ? (string) $this->amount
             : bcmul((string) $this->amount, '-1', 4);
+    }
+
+    /**
+     * ভাউচারটা পোস্ট হলো — ধারের এই গতিবিধির টাকাটা সত্যিই নড়েছে।
+     *
+     * ── ⚠️ এই টেবিলে `status` নেই, তাই নিষ্পত্তির চিহ্ন `voucher_id` ──
+     * [[CapitalEntry]] ও [[Withdrawal]]-এ অবস্থা বদলায়; এখানে সারিটা
+     * জন্মায়ই ঘটনা হিসেবে। ⭐ তাই পাহারাটা `whereNull()`, আর চুক্তির
+     * দুইটা শর্তই মানা হয় ([[SettledByAVoucher]])।
+     *
+     * ── ⛔ এক সারি দুই দিকে যায়, আর সেখানেই ফাঁদ ────────────────────
+     * `direction` ঘরটা বলে টাকা গেছে (`out`) না এসেছে (`in`) — অর্থাৎ
+     * একই টেবিলের সারি কখনো পরিশোধ ভাউচারে, কখনো রসিদে বাঁধে।
+     *
+     * ⚠️ `whereNull` ছাড়া লিখলে ভুল দিকের একটা ভাউচার একই সারিকে
+     * পুনরায় বেঁধে ফেলত — আর তখন ধার শোধের টাকাটা ধার নেওয়া হিসেবে
+     * দেখাত, বকেয়া দ্বিগুণ হয়ে।
+     */
+    public function settleWith(int $voucherId): void
+    {
+        static::query()
+            ->whereKey($this->getKey())
+            ->whereNull('voucher_id')
+            ->update(['voucher_id' => $voucherId]);
+
+        $this->refresh();
+    }
+
+    /** ভাউচার বাতিল — জোড়াটা খোলে, সারিটা থাকে। */
+    public function unsettle(int $voucherId): void
+    {
+        static::query()
+            ->whereKey($this->getKey())
+            ->where('voucher_id', $voucherId)
+            ->update(['voucher_id' => null]);
+
+        $this->refresh();
+    }
+
+    // ── Drillable — নিয়ম ১, "সংখ্যা থেকে কাগজে" ───────────────────────
+
+    /**
+     * ⛔ `drill_sources`-এ নাম বসানোই যথেষ্ট নয় — ক্লাসটাকেও ড্রিল করা
+     * যেতে হবে।
+     *
+     * ── কী ধরা পড়েছিল, ১৪ সেপ্টেম্বর ২০২৬ ────────────────────────────
+     * নিষ্পত্তির হুকের জন্য (`SettledByAVoucher`) নামটা মানচিত্রে বসানো
+     * হলো, আর সেটা কাজও করল — কারণ [[VoucherService]] `map()` সরাসরি পড়ে।
+     *
+     * ⚠️ কিন্তু একই মানচিত্র [[DrillResolver::resolve()]]-ও পড়ে, আর সে
+     * `Drillable` না পেলে **ব্যতিক্রম ছোঁড়ে**। ⓘ অর্থাৎ টাকা ঠিকই বসত,
+     * সব সবুজ দেখাত, আর ভুলটা ধরা পড়ত সেদিন — মাস পরে — যেদিন কেউ
+     * খতিয়ানের একটা সারি থেকে এই নথিতে ফিরতে চাইতেন।
+     *
+     * ⭐ ধরা পড়েছে [[EveryDrillSourceCanActuallyBeDrilledIntoTest]]-এ,
+     * চোখে নয় — মানচিত্রের প্রতিটা নাম গুনে দেখে।
+     *
+     * ধারের কিস্তির নিজের নম্বর নেই — ধারের হিসাবটাই মানুষ চেনে।
+     */
+    public static function drillSourceType(): string
+    {
+        return 'hand_loan_movement';
+    }
+
+    public function drillDocumentNo(): string
+    {
+        return $this->account?->document_no ?? (string) $this->id;
+    }
+
+    public function drillLabel(): string
+    {
+        return __('finance::menu.hand_loan').' — '.$this->drillDocumentNo();
+    }
+
+    /** @return array{0: string, 1: array<string, mixed>} */
+    public function drillRoute(): array
+    {
+        return ['finance.hand_loan.show', ['handLoan' => $this->hand_loan_account_id]];
     }
 }

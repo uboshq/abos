@@ -3,6 +3,28 @@
 declare(strict_types=1);
 
 return [
+    'lands_on' => 'কবে পৌঁছাবে',
+    'deposit_slip' => 'জমা স্লিপ নম্বর',
+    'account_no' => 'হিসাব নম্বর',
+    'account_holder' => 'হিসাবধারীর নাম',
+    'branch' => 'ব্রাঞ্চের নাম',
+    'our_bank' => 'আমাদের যে ব্যাংক থেকে',
+    'transfer_mode' => 'ট্রান্সফার মোড',
+    'charge_borne_by' => 'চার্জটা কে দিয়েছে',
+    'bank_charge' => 'ব্যাংক চার্জ',
+    'charge' => 'চার্জ',
+    'transaction_id' => 'ট্রানজেকশন আইডি',
+    'receiver_phone' => 'প্রাপকের মোবাইল নম্বর',
+    'sender_phone' => 'প্রেরকের মোবাইল নম্বর',
+    'wallet_medium' => 'মাধ্যম',
+    'wallet' => 'ওয়ালেট',
+    'counted_total' => 'গোনা মোট',
+    'note_of' => ':note টাকার নোট',
+    'note_breakdown' => 'নোটের হিসাব',
+    'how_it_moved' => 'টাকাটা কীভাবে এল',
+    'moved_at' => 'কখন',
+    'carried_by_nobody' => 'কেউ যায়নি — সরাসরি',
+    'carried_by' => 'কার মাধ্যমে',
     'on_credit_option' => 'বাকিতে — :account (দেনা তৈরি হবে)',
 
     'closing_year' => 'যে বছর বন্ধ হচ্ছে',
