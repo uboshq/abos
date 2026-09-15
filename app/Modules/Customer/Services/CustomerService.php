@@ -12,6 +12,7 @@ use App\Core\Support\DocumentStatus;
 use App\Models\IssuedNumber;
 use App\Modules\Accounts\Services\OpeningBalanceService;
 use App\Modules\Customer\Models\Customer;
+use App\Modules\MasterData\Models\PartyType;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -37,6 +38,7 @@ final class CustomerService
     {
         $this->assertBanglaNameIfRequired($data);
         $this->assertNotADuplicate($data);
+        $this->assertOnlyOneDistributorPerPoint($data);
 
         return DB::transaction(function () use ($data) {
             // কোড না দিলে সিরিজ থেকে — নম্বর ইস্যু ট্রানজেকশনের ভেতরে,
@@ -101,6 +103,7 @@ final class CustomerService
     {
         $this->assertBanglaNameIfRequired($data, $customer);
         $this->assertNotADuplicate($data, $customer->id);
+        $this->assertOnlyOneDistributorPerPoint($data, $customer);
 
         if (isset($data['code']) && $data['code'] !== $customer->code) {
             $this->assertCodeIsFree($data['code'], $customer->id);
@@ -131,6 +134,15 @@ final class CustomerService
 
     public function activate(Customer $customer): Customer
     {
+        /*
+         * ⚠️ সক্রিয় করাই সেই বাঁকে যেখানে নিয়মটা ভাঙতে পারে।
+         *
+         * ⓘ নিষ্ক্রিয় থাকা পরিবেশক কারো জায়গা নেন না, তাই তৈরি বা সম্পাদনার
+         * সময় তাঁকে আটকানো হয় না। ⛔ কিন্তু এই এক ক্লিকেই তিনি আবার
+         * বসে পড়তে পারেন — আর তখন এক পয়েন্টে দুইজন হয়ে যেত।
+         */
+        $this->assertOnlyOneDistributorPerPoint(['is_active' => true], $customer);
+
         $customer->update(['is_active' => true]);
 
         return $customer->fresh();
@@ -158,6 +170,16 @@ final class CustomerService
     public function assertImportable(array $data): void
     {
         $this->assertBanglaNameIfRequired($data);
+
+        /*
+         * ⭐ পরিবেশকের নিয়মটাও যাচাই-পর্দায় দেখা যাক, ১৫ সেপ্টেম্বর ২০২৬।
+         *
+         * ⚠️ এটা না থাকলে একশো সারির ফাইলে দুইটা পরিবেশক একই পয়েন্টে
+         * থাকলে পর্দায় সব সবুজ দেখাত, আর বসানোর সময় ঠিক মাঝপথে ভেঙে
+         * পড়ত। ⛔ তখন কিছু সারি বসে গেছে, কিছু বসেনি — আর কোনগুলো
+         * বসেছে সেটা ব্যবহারকারীকে হাতে মিলিয়ে দেখতে হত।
+         */
+        $this->assertOnlyOneDistributorPerPoint($data);
     }
 
     private function assertBanglaNameIfRequired(array $data, ?Customer $existing = null): void
@@ -216,6 +238,83 @@ final class CustomerService
         if ($matches->isNotEmpty()) {
             throw ValidationException::withMessages([
                 'name_en' => __('core.duplicate.name_matches').' '.__('core.duplicate.confirm_hint'),
+            ]);
+        }
+    }
+
+    /**
+     * ⭐ এক পয়েন্টে একজনই সক্রিয় পরিবেশক — আর পরিবেশকের পয়েন্ট লাগবেই।
+     *
+     * ── ⛔ মালিকের নিয়ম, ১৫ সেপ্টেম্বর ২০২৬ ─────────────────────────────
+     * *"গ্রাহকের ধরন যদি পরিবেশক হয় তাহলে পয়েন্ট বাধ্যতামূলক। আর এক
+     * পয়েন্টে দুজন সক্রিয় পরিবেশক হবে না — দুজন থাকলে একটা নিষ্ক্রিয়
+     * করে আরেকটা সক্রিয় করতে হবে। কেন? **এক এলাকায় একজনই পরিবেশক হয়।**"*
+     *
+     * ── ⚠️ কেন এটা সার্ভিসে, ভ্যালিডেশনে নয় ────────────────────────────
+     * গ্রাহক তিনটা দরজা দিয়ে ঢোকে: ফর্ম, ইমপোর্ট, আর মোবাইল সিংক। ⛔
+     * নিয়মটা [[CustomerRequest]]-এ লিখলে কেবল **প্রথম** দরজাটা পাহারা
+     * পেত, আর বাকি দুইটা দিয়ে এক পয়েন্টে দুই পরিবেশক দিব্যি ঢুকে যেত।
+     *
+     * ⓘ কোডের অনন্যতাও ঠিক এই কারণেই এখানে ([[assertCodeIsFree]]) —
+     * একই যুক্তি, একই জায়গা।
+     *
+     * ── ⓘ "সক্রিয়" শব্দটা এখানে মূল কথা ────────────────────────────────
+     * পুরনো পরিবেশক ইতিহাসে থেকে যান, নইলে তাঁর নামের বিলগুলো অনাথ হত।
+     * ⭐ তাই বাধাটা কেবল **সক্রিয়** সারির উপর: পুরনোজনকে নিষ্ক্রিয় করে
+     * নতুনজনকে বসানো যায়, আর দুইজন একসাথে সক্রিয় থাকতে পারেন না।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function assertOnlyOneDistributorPerPoint(array $data, ?Customer $existing = null): void
+    {
+        $typeId = array_key_exists('party_type_id', $data)
+            ? $data['party_type_id']
+            : $existing?->party_type_id;
+
+        if (blank($typeId) || ! PartyType::query()->whereKey($typeId)->first()?->isDistributor()) {
+            return;
+        }
+
+        $pointId = array_key_exists('location_id', $data)
+            ? $data['location_id']
+            : $existing?->location_id;
+
+        /*
+         * ⛔ পয়েন্ট ছাড়া পরিবেশক হয় না।
+         *
+         * ⓘ বাকি সব ধরনে পয়েন্টটা ঐচ্ছিক (নতুন দোকান বসানোর সময় এলাকা
+         * ভাগ ঠিক না-ও থাকতে পারে)। ⚠️ কিন্তু পরিবেশকের পুরো সংজ্ঞাটাই
+         * এলাকা ধরে — পয়েন্ট না জানলে "এক এলাকায় একজন" নিয়মটা কীসের
+         * উপর দাঁড়াবে?
+         */
+        if (blank($pointId)) {
+            throw ValidationException::withMessages([
+                'location_id' => __('customer::validation.distributor_needs_a_point'),
+            ]);
+        }
+
+        // নিষ্ক্রিয় পরিবেশক কারো জায়গা নেন না — তাই তাঁকে আটকানোর কিছু নেই
+        $willBeActive = (bool) (array_key_exists('is_active', $data)
+            ? $data['is_active']
+            : ($existing?->is_active ?? true));
+
+        if (! $willBeActive) {
+            return;
+        }
+
+        $sitting = Customer::query()
+            ->where('location_id', $pointId)
+            ->where('is_active', true)
+            ->when($existing, fn ($q) => $q->whereKeyNot($existing->id))
+            ->whereHas('partyType', fn ($q) => $q->where('code', PartyType::DISTRIBUTOR))
+            ->first();
+
+        if ($sitting !== null) {
+            throw ValidationException::withMessages([
+                'location_id' => __('customer::validation.point_already_has_a_distributor', [
+                    'name' => $sitting->name(),
+                    'code' => $sitting->code,
+                ]),
             ]);
         }
     }
