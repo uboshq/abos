@@ -744,15 +744,65 @@ return [
 
     'profile' => [
         'title' => 'My profile',
-        'subtitle' => 'Your name and photo',
+        'subtitle' => 'Your details, your photo and your password',
         'identity' => 'Identity',
         'name' => 'Name',
         'email' => 'Email',
+
+        /*
+         * Shown, never edited — both of them.
+         *
+         * The user ID is the one the support desk asks for, so it needs to
+         * be readable and copyable; it is not a field anybody types into.
+         * The designation belongs to HR: a person setting their own would
+         * read on screen exactly like a real one.
+         */
+        'user_id' => 'User ID',
+        'designation' => 'Designation',
+        'designation_none' => 'Not set — HR keeps this',
+
+        'login_id' => 'Login ID',
+        'login_id_note' => 'Lowercase letters, digits, dot, underscore or hyphen — starting with a letter. You can sign in with this instead of your email.',
+        'email_change_note' => 'The address changes only after you open the link we send to the new one. Until then your old address keeps working.',
+        'email_change' => 'Change email',
+        'email_new' => 'New email address',
+        'email_same' => 'That is already your email address.',
+        'email_sent' => 'A confirmation link was sent to :email. The address changes only after you open that link — until then your old one keeps working.',
+        'email_pending' => 'Waiting for confirmation at :email.',
+        'email_changed' => 'Your email address is now :email.',
+        'email_link_dead' => 'That link is no longer valid. It may have expired — ask for a new one.',
+        'email_taken_now' => 'That address now belongs to another account.',
+        'email_mail_subject' => 'Confirm your new email address',
+        'email_mail_greeting' => 'Hello :name,',
+        'email_mail_line' => 'This address was given as the new email for an ABOS account. Open the link below to confirm it.',
+        'email_mail_action' => 'Confirm this address',
+        'email_mail_expiry' => 'The link works for :minutes minutes.',
+        'email_mail_ignore' => 'If you did not ask for this, do nothing — nothing will change.',
+        'email_warn_subject' => 'Someone asked to change your email address',
+        'email_warn_line' => 'A request was made to move your ABOS account to :email.',
+        'email_warn_ok' => 'If that was you, open the link sent to the new address. Nothing has changed yet.',
+        'email_warn_not_you' => 'If that was not you, change your password now — someone may be using your account.',
+        'contact' => 'Contact',
+        'mobile' => 'Mobile',
+        'mobile_alt' => 'Second mobile',
+        'mobile_alt_note' => 'Optional — a number to try when the first one does not answer.',
+        'address' => 'Address',
+
+        'password' => 'Password',
+        'password_note' => 'At least 8 characters, with letters and numbers.',
+        'current_password' => 'Current password',
+        'new_password' => 'New password',
+        'confirm_password' => 'Type the new password again',
+        'password_wrong' => 'That is not your current password.',
+        'password_same' => 'The new password is the same as the old one.',
+        'password_saved' => 'Password changed.',
+
         'photo' => 'Photo',
         'photo_note' => 'JPG, PNG or WebP — up to :mb MB. The photo will be cropped square.',
         'upload_photo' => 'Upload photo',
         'change_photo' => 'Change photo',
         'remove_photo' => 'Remove photo',
+        'upload_now' => 'Upload',
         'remove_confirm' => 'The photo will be removed. Continue?',
         'saved' => 'Saved.',
     ],
