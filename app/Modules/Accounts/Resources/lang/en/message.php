@@ -171,4 +171,10 @@ return [
     'count_off_by' => 'The cash count was off by :amount',
     'net_profit' => 'Net profit',
     'net_loss' => 'Net loss',
+    'bill_tag_hint' => 'If one truck brought several bills, tick them all. Tick none and this is an indirect cost; tick one and it is direct - the money rides on that stock.',
+    'no_bill_to_tag' => 'There is no bill to tag right now - either nothing has been purchased yet, or every bill already carries its costs.',
+    'direct_effect' => 'Direct: the money rides on the stock of the bills you ticked, so the profit on those goods reads true.',
+    'indirect_effect' => 'Indirect: the money lands straight in the expense head, this month. It rides on no product.',
+    'reverse_on_hint' => 'If this entry is provisional, the day it undoes itself - optional.',
+    'attachment_hint' => 'A photo or scan of the bill - six months later this is what you need.',
 ];

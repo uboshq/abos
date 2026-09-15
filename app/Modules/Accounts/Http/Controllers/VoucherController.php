@@ -18,6 +18,7 @@ use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CostCenter;
 use App\Modules\Accounts\Models\MoneyCategory;
 use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Accounts\Services\AccountsFacts;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\VoucherApproval;
@@ -264,6 +265,32 @@ class VoucherController extends Controller implements HasMiddleware
         [$voucher, $waiting] = DB::transaction(function () use ($request, $data, $type) {
             $voucher = $this->vouchers->create($data, $this->linesFrom($request, $type));
 
+            /*
+             * ⭐ কোন চালানের ঘাড়ে কতটা — খরচ ভাউচারের ট্যাগ।
+             *
+             * ⓘ একই লেনদেনে, ভাউচারের সাথেই। ⚠️ আলাদা করলে পোস্টিং
+             * আটকালে ভাউচারটা ফিরে যেত কিন্তু ট্যাগগুলো পড়ে থাকত —
+             * অনাথ সারি, যেগুলোর ভাউচারই নেই।
+             */
+            $this->vouchers->replaceBillShares($voucher, $data['bill_shares'] ?? [], $data['alloc_basis'] ?? 'qty');
+
+            /*
+             * সংযুক্তি — বিলের ছবি বা স্ক্যান।
+             *
+             * ⛔ ইঞ্জিনটা নিজের ব্যতিক্রম ছোড়ে (আকার, ধরন, ভাঙা ছবি),
+             * আর সেটা এখানে ধরা হয় **না**: লেনদেনটা তখন ফিরে যায়, আর
+             * ব্যবহারকারী কারণটা দেখেন। ⚠️ চুপচাপ গিলে ফেললে ভাউচারটা
+             * সেভ হত, ছবিটা হত না, আর কেউ জানত না।
+             */
+            if ($request->hasFile('attachment')) {
+                app(\App\Core\Engines\Attachment\AttachmentEngine::class)->store(
+                    $request->file('attachment'),
+                    'accounts',
+                    \App\Modules\Accounts\Models\Voucher::class,
+                    $voucher->id,
+                );
+            }
+
             if ($request->boolean('save_as_draft')) {
                 return [$voucher, false];
             }
@@ -324,7 +351,28 @@ class VoucherController extends Controller implements HasMiddleware
     {
         $this->assertEditable($voucher);
 
-        $this->vouchers->update($voucher, $request->validated(), $this->linesFrom($request, $voucher->type));
+        $validated = $request->validated();
+
+        $this->vouchers->update($voucher, $validated, $this->linesFrom($request, $voucher->type));
+
+        /*
+         * ⓘ সম্পাদনাতেও একই — নাহলে টিক তুলে নিলে সারিটা থেকে যেত,
+         * আর ঐ মালের দামে একটা খরচ বসে থাকত যেটা কেউ আর চায় না।
+         */
+        $this->vouchers->replaceBillShares(
+            $voucher,
+            $validated['bill_shares'] ?? [],
+            $validated['alloc_basis'] ?? 'qty',
+        );
+
+        if ($request->hasFile('attachment')) {
+            app(\App\Core\Engines\Attachment\AttachmentEngine::class)->store(
+                $request->file('attachment'),
+                'accounts',
+                Voucher::class,
+                $voucher->id,
+            );
+        }
 
         $waiting = false;
 
@@ -518,6 +566,43 @@ class VoucherController extends Controller implements HasMiddleware
              * খালি ঘর জায়গা নিত আর কিছুই বলত না।
              */
             'costCenters' => CostCenter::query()->active()->orderBy('code')->get(),
+
+            /*
+             * খরচের কেন্দ্র — খরচ ভাউচারের ড্রপডাউনের জন্য, চাবি-মান জোড়ায়।
+             *
+             * ⓘ উপরের `costCenters` জাবেদার সারির জন্য গোটা মডেল পাঠায়;
+             * এখানে কেবল নাম দরকার। দুইটা আলাদা রাখা হয়েছে যাতে একটার
+             * আকার বদলালে অন্যটা না ভাঙে।
+             */
+            'costCentres' => CostCenter::query()->active()->orderBy('code')
+                ->get()->mapWithKeys(fn ($c) => [$c->id => $c->display_name ?? $c->name_bn ?? $c->name_en]),
+
+            /*
+             * ⭐ যে চালানগুলোয় এই খরচটা বসতে পারে — মালিকের ট্যাগের তালিকা।
+             *
+             * ── ⚠️ "আগে বসেছে" কলামটা কেন ─────────────────────────────
+             * মালিকের কথা: *"একই পণ্যের বিলে দুইবার ভাড়া বসলে সমস্যা,
+             * তাই যেগুলো পেন্ডিং তালিকা করে দিলেই ভালো"*।
+             *
+             * ⓘ তাই প্রতিটা চালানের পাশে **আগে কত খরচ বসেছে** তা দেখানো
+             * হয়, আর ছাঁকনি দিয়ে কেবল খালিগুলো দেখা যায়। ⛔ দুইবার বসানো
+             * **আটকানো হয় না** — মালিকের নির্দেশ: *"আটকে দেব না, দেখিয়ে
+             * দেব"*। কখনো সত্যিই দুইবার ভাড়া লাগে (ফেরত, পুনঃপরিবহন)।
+             *
+             * ── ⓘ কেন কেবল সাম্প্রতিক ────────────────────────────────
+             * বছরের সব চালান দেখালে তালিকাটা শ'য়ে শ'য়ে সারি হত, আর যে
+             * ট্রাকটা আজ এসেছে সেটা খুঁজে পাওয়া যেত না। ৬০ দিনের সীমাটা
+             * ব্যবসার ছন্দ থেকে: মাল আসার পর ভাড়ার বিল দিন তিনেকের
+             * মধ্যেই আসে, আর দুই মাস যথেষ্ট বেশি।
+             */
+            'taggableBills' => PurchaseBill::query()
+                ->where('company_id', CompanyContext::id())
+                ->where('trx_date', '>=', now()->subDays(60)->toDateString())
+                ->withSum('billShares as already_charged', 'share_amount')
+                ->withSum('lines as total_qty', 'qty')
+                ->orderByDesc('trx_date')->orderByDesc('id')
+                ->limit(50)
+                ->get(),
             'expenseAccounts' => $all->where('type', Account::EXPENSE)->values(),
 
             /*

@@ -109,6 +109,45 @@ class PurchaseBill extends Model implements Drillable
     }
 
     /**
+     * এই চালানের ঘাড়ে যত খরচ বসেছে — ভাড়া, হাম্মালি, গাড়িভাড়া।
+     *
+     * ── ⭐ কেন ক্রয়ের দিক থেকেও সম্পর্কটা লাগে ──────────────────────
+     * মালিকের কথা: *"একই পণ্যের বিলে দুইবার ভাড়া বসলে সমস্যা, তাই
+     * যেগুলো পেন্ডিং তালিকা করে দিলেই ভালো"*।
+     *
+     * ⓘ খরচ ভাউচারের পর্দা এই যোগফলটাই "আগে বসেছে" কলামে দেখায়।
+     * ⛔ দুইবার বসানো **আটকানো হয় না** — মালিকের নির্দেশ *"আটকে দেব না,
+     * দেখিয়ে দেব"*, কারণ কখনো সত্যিই দুইবার ভাড়া লাগে (ফেরত,
+     * পুনঃপরিবহন)।
+     *
+     * @return HasMany<\App\Modules\Accounts\Models\VoucherBillShare, $this>
+     */
+    public function billShares(): HasMany
+    {
+        return $this->hasMany(\App\Modules\Accounts\Models\VoucherBillShare::class, 'purchase_bill_id');
+    }
+
+    /**
+     * চালানে কী কী মাল — এক লাইনে, পর্দায় দেখানোর জন্য।
+     *
+     * ⓘ তিনটার বেশি হলে "…" — তালিকাটা ট্যাগের টেবিলের একটা ঘরে বসে,
+     * আর ওখানে লম্বা লেখা সারিটাকে ভেঙে দিত।
+     */
+    public function getGoodsSummaryAttribute(): string
+    {
+        $names = $this->lines->take(3)
+            ->map(fn ($l) => $l->product?->display_name ?? $l->product?->name_bn ?? '—')
+            ->filter()
+            ->all();
+
+        if ($names === []) {
+            return '—';
+        }
+
+        return implode(' · ', $names).($this->lines->count() > 3 ? ' …' : '');
+    }
+
+    /**
      * মিল যা সাথে দিয়ে দিল — অন্য পণ্য, বিলের মোটে নেই।
      *
      * ⚠️ [[lines]]-এর সাথে মিশিয়ে ফেলা যাবে না। বিলের যোগফল কেবল
