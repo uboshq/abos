@@ -47,10 +47,54 @@ class HandLoanAccount extends Model
 
     protected $table = 'fin_hand_loan_accounts';
 
+    /**
+     * ফেরতের ছাঁদ — কোডে, মাইগ্রেশনে নয়।
+     *
+     * ⓘ ধ্রুবকে রাখা হয় যাতে নতুন একটা ছাঁদ যোগ করতে ডাটাবেজ ছুঁতে না
+     * হয়। ⚠️ enum কলাম হলে প্রতিটা নতুন ছাঁদে একটা মাইগ্রেশন লাগত, আর
+     * পুরনো সারিগুলোর অর্থ বদলে যাওয়ার ঝুঁকি থাকত।
+     */
+    public const LUMP = 'lump';
+
+    public const MONTHLY = 'monthly';
+
+    public const WHENEVER = 'whenever';
+
+    /** @var list<string> */
+    public const REPAYMENTS = [self::LUMP, self::MONTHLY, self::WHENEVER];
+
+    /**
+     * কী কাগজে দাঁড়িয়ে আছে।
+     *
+     * ⛔ এই ঘরটা না থাকলে ছয় মাস পরে কেউ বলতে পারে না *"কাগজ ছিল কি
+     * না"* — আর ঐ প্রশ্নটাই ওঠে ঠিক তখন, যখন সম্পর্কটা আর ভালো নেই।
+     */
+    public const VERBAL = 'verbal';
+
+    public const STAMPED = 'stamped';
+
+    public const BLANK_CHEQUE = 'blank_cheque';
+
+    /** @var list<string> */
+    public const SECURITIES = [self::VERBAL, self::STAMPED, self::BLANK_CHEQUE];
+
     protected $fillable = [
         'company_id', 'branch_id', 'person_id',
         'partner_id', 'partner_type', 'note', 'status', 'created_by',
+        'interest_rate', 'term_months', 'due_on', 'repayment', 'security', 'next_due_on',
     ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'interest_rate' => 'decimal:4',
+            'due_on' => 'date',
+            'next_due_on' => 'date',
+        ];
+    }
 
     /**
      * কার সাথে — নাম নয়, তালিকার সারি।

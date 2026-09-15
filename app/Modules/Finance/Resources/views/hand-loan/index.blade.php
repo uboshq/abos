@@ -69,6 +69,44 @@
                 ])
             </div>
 
+            {{--
+                ⭐ ধারের শর্ত — ১৫ সেপ্টেম্বর ২০২৬।
+
+                ── ⛔ এতদিন এই পর্দায় কেবল নাম আর নোট ছিল ─────────────
+                টাকার গতিবিধি নিচের তালিকায় ঠিকই বসত, কিন্তু **শর্ত
+                কোথাও না**: সুদ কত · কবে ফেরত · কী কাগজে দাঁড়ানো।
+                ⚠️ আর ঐ তিনটা প্রশ্নই ওঠে ছয় মাস পরে, ঠিক তখন যখন
+                সম্পর্কটা আর ভালো নেই।
+
+                ── ⓘ সবগুলোই ঐচ্ছিক, আর সেটা ইচ্ছাকৃত ────────────────
+                পরিচিত মানুষের ধার প্রায়ই সুদবিহীন ও মেয়াদহীন।
+                ⛔ বাধ্যতামূলক করলে মানুষ বানানো সংখ্যা বসাতেন, আর সেটা
+                না লেখার চেয়েও খারাপ — কারণ তখন মিথ্যাটা খাতায় বসে যায়।
+            --}}
+            <x-ui.field name="interest_rate" type="number" step="0.01" inputmode="decimal"
+                        :label="__('finance::field.interest_rate')"
+                        :value="old('interest_rate', '0')" numeric />
+
+            <x-ui.field name="term_months" type="number" inputmode="numeric"
+                        :label="__('finance::field.term_months')"
+                        :value="old('term_months')" numeric />
+
+            <x-ui.field name="due_on" type="date"
+                        :label="__('finance::field.due_on')"
+                        :value="old('due_on')" />
+
+            <x-ui.select name="repayment" :label="__('finance::field.repayment')"
+                         :options="collect(\App\Modules\Finance\Models\HandLoanAccount::REPAYMENTS)
+                             ->mapWithKeys(fn (string $r) => [$r => __('finance::field.repayment_'.$r)])"
+                         :selected="old('repayment', \App\Modules\Finance\Models\HandLoanAccount::LUMP)" />
+
+            {{-- ⛔ এটাই সেই ঘর যেটা না থাকলে কেউ বলতে পারে না "কাগজ ছিল
+                 কি না" — আর অস্বীকার করলে প্রমাণও থাকে না। --}}
+            <x-ui.select name="security" :label="__('finance::field.security')"
+                         :options="collect(\App\Modules\Finance\Models\HandLoanAccount::SECURITIES)
+                             ->mapWithKeys(fn (string $s) => [$s => __('finance::field.security_'.$s)])"
+                         :selected="old('security', \App\Modules\Finance\Models\HandLoanAccount::VERBAL)" />
+
             <x-ui.field name="note" :label="__('finance::field.note')" :value="old('note')" />
 
             <div class="flex items-end">

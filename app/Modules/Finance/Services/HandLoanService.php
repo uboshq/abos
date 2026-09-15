@@ -86,6 +86,34 @@ final class HandLoanService
             'partner_type' => ($data['partner_id'] ?? null) !== null
                 ? ($data['partner_type'] ?? null) : null,
             'note' => ($data['note'] ?? '') ?: null,
+
+            /*
+             * ⭐ শর্তগুলো — সুদ, মেয়াদ, ফেরতের ছাঁদ, কাগজ।
+             *
+             * ⓘ সুদে `?? 0`, বাকিগুলোয় `?? null` — আর পার্থক্যটা অর্থের:
+             * **শূন্য সুদ একটা সত্যিকারের উত্তর** (পরিচিত মানুষের ধার
+             * প্রায়ই সুদবিহীন), কিন্তু "মেয়াদ শূন্য মাস" কোনো উত্তরই নয়।
+             *
+             * ⚠️ দুইটাকে এক রকম করলে *"লেখা হয়নি"* আর *"সুদ নেই"* এক
+             * দেখাত, আর বকেয়া হিসাব করতে গিয়ে থামতে হত।
+             */
+            'interest_rate' => $data['interest_rate'] ?? 0,
+            'term_months' => $data['term_months'] ?? null,
+            'due_on' => $data['due_on'] ?? null,
+            'repayment' => $data['repayment'] ?? HandLoanAccount::LUMP,
+            'security' => $data['security'] ?? HandLoanAccount::VERBAL,
+
+            /*
+             * ⓘ মেয়াদ দিলে শেষ তারিখটা নিজে থেকেই বসে, কিন্তু
+             * **সংরক্ষিত** হয় — হিসাব করা হয় না। ⚠️ পরে মেয়াদ বাড়ালে
+             * পুরনো কাগজে লেখা তারিখটাও নীরবে বদলে যেত।
+             */
+            'next_due_on' => $data['due_on'] ?? (
+                isset($data['term_months'])
+                    ? now()->addMonths((int) $data['term_months'])->toDateString()
+                    : null
+            ),
+
             'status' => HandLoanAccount::ACTIVE,
             'created_by' => auth()->id(),
         ]);

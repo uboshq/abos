@@ -12,6 +12,7 @@ return [
     'deposit_savings' => 'সঞ্চয়পত্র',
     'deposit_bond' => 'বন্ড',
     'hand_loan' => 'হাতধার',
+    'bank_facility' => 'ব্যাংক ঋণ',
     'withdrawal' => 'উত্তোলন',
     'income' => 'আয়',
     'rental' => 'ভাড়ার চুক্তি ও জামানত',

@@ -87,6 +87,24 @@ class HandLoanController extends Controller implements HasMiddleware
             'person_new' => ['nullable', 'string', 'max:120', 'required_without:person_id'],
             'person_mobile' => ['nullable', 'string', 'max:32'],
             'note' => ['nullable', 'string', 'max:500'],
+
+            /*
+             * ⭐ ধারের শর্তগুলো — ১৫ সেপ্টেম্বর ২০২৬-এ যোগ করা।
+             *
+             * ⛔ এতদিন এই পর্দায় কেবল **কে** আর **কত নোট** চাওয়া হত।
+             * ⚠️ অর্থাৎ *"সুদ কত"*, *"কবে ফেরত"*, *"কাগজ কী"* — তিনটার
+             * একটারও উত্তর খাতায় থাকত না, আর প্রশ্নগুলো ওঠে ঠিক তখন
+             * যখন সম্পর্কটা আর ভালো নেই।
+             *
+             * ⓘ সবগুলোই ঐচ্ছিক, আর সেটা ইচ্ছাকৃত: পরিচিত মানুষের ধার
+             * প্রায়ই সুদবিহীন আর মেয়াদহীন। ⛔ বাধ্যতামূলক করলে মানুষ
+             * বানানো সংখ্যা বসাত, আর সেটা না লেখার চেয়েও খারাপ।
+             */
+            'interest_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'term_months' => ['nullable', 'integer', 'min:1', 'max:600'],
+            'due_on' => ['nullable', 'date'],
+            'repayment' => ['nullable', Rule::in(HandLoanAccount::REPAYMENTS)],
+            'security' => ['nullable', Rule::in(HandLoanAccount::SECURITIES)],
         ]);
 
         /*

@@ -56,7 +56,7 @@ class RentalContract extends Model
         'company_id', 'branch_id', 'document_no',
         'counterparty', 'counterparty_phone', 'subject',
         'account_id', 'expense_account_id',
-        'deposit_amount', 'monthly_rent', 'monthly_adjustment',
+        'deposit_amount', 'monthly_rent', 'monthly_adjustment', 'advance_months', 'tax_rate', 'rent_day',
         'starts_on', 'term_months', 'ends_on',
         'status', 'closed_on', 'note', 'created_by',
     ];
@@ -67,6 +67,7 @@ class RentalContract extends Model
             'deposit_amount' => 'decimal:4',
             'monthly_rent' => 'decimal:4',
             'monthly_adjustment' => 'decimal:4',
+            'tax_rate' => 'decimal:2',
             'starts_on' => 'date',
             'ends_on' => 'date',
             'closed_on' => 'date',

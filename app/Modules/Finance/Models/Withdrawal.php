@@ -33,11 +33,43 @@ class Withdrawal extends Model implements Drillable, SettledByAVoucher
     use HasPublicId;
     use IsAudited;
 
+    /**
+     * তিনটা আলাদা জিনিস, আর হিসাবে তিনটার ফল আলাদা।
+     *
+     *     DRAWING  পুঁজি কমায় · মুনাফায় প্রভাব নেই      · 3200 উত্তোলন
+     *     SALARY   খরচ — মুনাফা কমায় · করযোগ্য আয়       · 5201 বেতন
+     *     PROFIT   অর্জিত মুনাফা থেকে ভাগ                · 3210 মুনাফার ভাগ
+     *
+     * ⛔ তিনটাকে এক নামে রাখলে বছরশেষে **মুনাফার অঙ্কটাই ভুল** হত, আর
+     * করের হিসাবেও। ⚠️ আর লোকসানের বছরে "মুনাফার ভাগ" দেওয়া হলে সেটা
+     * আসলে উত্তোলন — নাম বদলে নয়, তাই পর্দায় ওটা বলে দেওয়া দরকার।
+     */
+    public const DRAWING = 'drawing';
+
+    public const SALARY = 'salary';
+
+    public const PROFIT_SHARE = 'profit_share';
+
+    /** @var list<string> */
+    public const KINDS = [self::DRAWING, self::SALARY, self::PROFIT_SHARE];
+
+    /**
+     * ⭐ কোনটা মুনাফা কমায় — এই একটা প্রশ্নই তিনটার আসল পার্থক্য।
+     *
+     * ⓘ মালিকের বেতন ব্যবসার খরচ; উত্তোলন ও মুনাফার ভাগ নয়। ⚠️ এটা
+     * কোথাও লেখা না থাকলে রিপোর্ট লেখার সময় প্রত্যেকে নিজের মতো ধরে
+     * নিত, আর দুইটা পর্দা দুই রকম মুনাফা দেখাত।
+     */
+    public function isExpense(): bool
+    {
+        return $this->kind === self::SALARY;
+    }
+
     protected $table = 'fin_withdrawals';
 
     protected $fillable = [
         'company_id', 'branch_id', 'document_no', 'person_id',
-        'amount', 'trx_date', 'money_account_id', 'reason', 'status',
+        'amount', 'kind', 'trx_date', 'money_account_id', 'reason', 'status',
         'voucher_id', 'posted_at', 'created_by',
     ];
 

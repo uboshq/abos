@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\Finance\Http\Controllers\BankFacilityController;
 use App\Modules\Finance\Http\Controllers\CapitalController;
 use App\Modules\Finance\Http\Controllers\DepositController;
 use App\Modules\Finance\Http\Controllers\ExpenseController;
@@ -111,6 +112,26 @@ Route::middleware('auth')->prefix('finance')->group(function () {
      * আলাদা"*। ঋণের ফর্মে এটা একটা `kind` ছিল, আর HP-র রিপোর্টে ওই
      * ব্যবস্থার ফলটাই ধরা পড়েছে: "Hand loan" বাছলে সেভ হত "CC" হিসেবে।
      */
+    /*
+     * ব্যাংকের সুবিধা — ১৬ সেপ্টেম্বর ২০২৬।
+     *
+     * ⛔ হাতধারের সাথে এক পর্দায় রাখা যেত না: মঞ্জুরিপত্র · জামানত ·
+     * ড্রয়িং পাওয়ার · বার্ষিক নবায়ন — একটাও হাতধারে নেই।
+     *
+     * ⚠️ আর `move`/`settle` এখানে **নেই**, ইচ্ছাকৃতভাবে: টাকা নাড়ে
+     * ভাউচার, খাতা নয়। ⓘ এখানে কেবল নথিটা খোলা ও বন্ধ করা যায়।
+     */
+    Route::prefix('bank-facilities')->name('bank_facility.')->group(function () {
+        Route::get('/', [BankFacilityController::class, 'index'])->name('index');
+        Route::post('/', [BankFacilityController::class, 'store'])->name('store');
+
+        Route::get('/{bankFacility}', [BankFacilityController::class, 'show'])
+            ->whereNumber('bankFacility')->name('show');
+
+        Route::post('/{bankFacility}/close', [BankFacilityController::class, 'close'])
+            ->whereNumber('bankFacility')->name('close');
+    });
+
     Route::prefix('hand-loans')->name('hand_loan.')->group(function () {
         Route::get('/', [HandLoanController::class, 'index'])->name('index');
         Route::post('/', [HandLoanController::class, 'store'])->name('store');

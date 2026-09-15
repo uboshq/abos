@@ -82,7 +82,7 @@ class Deposit extends Model
     protected $fillable = [
         'company_id', 'branch_id', 'document_no', 'kind_id', 'institution',
         'branch_name', 'reference_no', 'held_by', 'person_id', 'principal',
-        'profit_rate', 'return_word', 'opened_on', 'matures_on',
+        'profit_rate', 'tax_rate', 'return_word', 'opened_on', 'matures_on', 'on_maturity',
         'instalment_amount', 'instalment_day', 'payout_account_id', 'account_id',
         'funded_from_account_id', 'pledged_to_loan_id', 'status', 'closed_on',
         'note', 'cancel_reason', 'cancelled_at', 'cancelled_by', 'created_by',
@@ -94,6 +94,7 @@ class Deposit extends Model
         return [
             'principal' => 'decimal:4',
             'profit_rate' => 'decimal:4',
+            'tax_rate' => 'decimal:2',
             'instalment_amount' => 'decimal:4',
             'opened_on' => 'date',
             'matures_on' => 'date',
