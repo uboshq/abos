@@ -97,6 +97,17 @@ final class HandLoanService
              * ⚠️ দুইটাকে এক রকম করলে *"লেখা হয়নি"* আর *"সুদ নেই"* এক
              * দেখাত, আর বকেয়া হিসাব করতে গিয়ে থামতে হত।
              */
+            /*
+             * ⭐ নমুনার তিনটা ঘর — ১৫ সেপ্টেম্বর ২০২৬।
+             *
+             * ⚠️ `opening_repaid` নামেই বলা আছে এটা কী: **খোলার জের**।
+             * ⛔ `repaid` বা `outstanding` নাম দিলে একদিন কেউ ওটাকেই
+             * চলতি সংখ্যা ধরে নিত, আর খতিয়ানের সাথে দুই কথা হত।
+             */
+            'principal' => $data['principal'] ?? 0,
+            'opening_repaid' => $data['opening_repaid'] ?? 0,
+            'money_account_id' => ($data['money_account_id'] ?? '') ?: null,
+
             'interest_rate' => $data['interest_rate'] ?? 0,
             'term_months' => $data['term_months'] ?? null,
             'due_on' => $data['due_on'] ?? null,
@@ -108,7 +119,7 @@ final class HandLoanService
              * **সংরক্ষিত** হয় — হিসাব করা হয় না। ⚠️ পরে মেয়াদ বাড়ালে
              * পুরনো কাগজে লেখা তারিখটাও নীরবে বদলে যেত।
              */
-            'next_due_on' => $data['due_on'] ?? (
+            'next_due_on' => ($data['next_due_on'] ?? '') ?: $data['due_on'] ?? (
                 isset($data['term_months'])
                     ? now()->addMonths((int) $data['term_months'])->toDateString()
                     : null

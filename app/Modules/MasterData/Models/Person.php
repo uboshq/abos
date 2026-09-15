@@ -87,7 +87,7 @@ class Person extends Model implements Drillable
      */
     protected $fillable = [
         'company_id', 'code', 'name_en', 'name_bn',
-        'mobile', 'note', 'is_active', 'created_by',
+        'mobile', 'relationship', 'address', 'nid_tin', 'note', 'is_active', 'created_by',
     ];
 
     protected function casts(): array

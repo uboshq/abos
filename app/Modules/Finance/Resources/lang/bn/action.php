@@ -3,6 +3,9 @@
 declare(strict_types=1);
 
 return [
+    'save_capital_row' => 'মূলধনের সারি সংরক্ষণ',
+    'take_money_receipt' => 'টাকা নিন — রসিদ ভাউচার ↗',
+    'pay_money_voucher' => 'টাকা দিন — পরিশোধ ভাউচার ↗',
     'new_contribution' => 'নতুন মূলধন',
     'edit_contribution' => 'মূলধন শোধরানো',
     'money_arrived' => 'টাকা এসেছে',

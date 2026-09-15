@@ -77,6 +77,28 @@
             <x-ui.field name="person_mobile"
                         :label="__('master_data::field.mobile')"
                         :value="old('person_mobile')" />
+
+            {{-- ⭐ নমুনার তিনটা ঘর — সম্পর্ক, ঠিকানা, পরিচয়পত্র।
+
+                 ⓘ ঘরগুলো এখানে, কারণ এগুলো **মানুষটার**, ধারের নয়।
+                 ⚠️ ধারের সারিতে রাখলে একই করিম উদ্দিনের ঠিকানা তিনটা
+                 ধারে তিন রকম হতে পারত, আর কোনটা সত্যি তা বলার উপায়
+                 থাকত না।
+
+                 ⓘ তিনটাই ঐচ্ছিক: টাকাটা ইতিমধ্যে হাতবদল হয়ে গেছে, আর
+                 NID না থাকলে খাতাই লেখা যাবে না — এমন নিয়ম বাস্তবে
+                 কেউ মানতেন না, বরং নামটা ভুল করে দ্বিতীয়বার লিখতেন। --}}
+            <x-ui.field name="person_relationship"
+                        :label="__('finance::field.relationship')"
+                        :value="old('person_relationship')" />
+
+            <x-ui.field name="person_address"
+                        :label="__('finance::field.address')"
+                        :value="old('person_address')" />
+
+            <x-ui.field name="person_nid_tin"
+                        :label="__('finance::field.nid_tin')"
+                        :value="old('person_nid_tin')" />
         </div>
     </details>
 </div>

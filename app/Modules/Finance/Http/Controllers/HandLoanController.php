@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Finance\Http\Controllers;
 
+use App\Core\Engines\Attachment\AttachmentEngine;
+use App\Core\Engines\Attachment\AttachmentException;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
@@ -35,6 +37,7 @@ class HandLoanController extends Controller implements HasMiddleware
         private readonly MenuBuilder $menu,
         private readonly HandLoanService $loans,
         private readonly PersonResolver $people,
+        private readonly AttachmentEngine $attachments,
     ) {}
 
     /** @return list<Middleware> */
@@ -69,6 +72,7 @@ class HandLoanController extends Controller implements HasMiddleware
             'standing' => $this->loans->standing(),
             'people' => Person::query()->active()->orderBy('name_en')
                 ->pluck('name_en', 'id'),
+            'accounts' => $this->moneyAccounts(),
         ]);
     }
 
@@ -86,6 +90,28 @@ class HandLoanController extends Controller implements HasMiddleware
                 Rule::exists('mdm_people', 'id')->where('company_id', $companyId)],
             'person_new' => ['nullable', 'string', 'max:120', 'required_without:person_id'],
             'person_mobile' => ['nullable', 'string', 'max:32'],
+
+            /*
+             * ⭐ পক্ষের তিনটা ঘর — মানুষটার সাথে যায়
+             * ([[App\Modules\MasterData\Services\PersonResolver]])।
+             */
+            'person_relationship' => ['nullable', 'string', 'max:60'],
+            'person_address' => ['nullable', 'string', 'max:191'],
+            'person_nid_tin' => ['nullable', 'string', 'max:40'],
+
+            /*
+             * ⭐ নমুনার তিনটা ঘর — ১৫ সেপ্টেম্বর ২০২৬।
+             *
+             * ⚠️ `opening_repaid` — নামটা সৎ রাখা হয়েছে। এটা **খোলার
+             * জের**, চলতি ব্যালান্স নয়: পুরনো খাতা ব্যবস্থায় তোলার সময়
+             * যেটুকু আগে ফেরত এসেছে সেটুকু। ⛔ এরপর থেকে হিসাব রাখে
+             * খতিয়ান, এই ঘরটা নয়।
+             */
+            'principal' => ['nullable', 'numeric', 'min:0'],
+            'opening_repaid' => ['nullable', 'numeric', 'min:0'],
+            'money_account_id' => ['nullable', 'integer', 'exists:accounts,id'],
+            'paper' => ['nullable', 'file'],
+
             'note' => ['nullable', 'string', 'max:500'],
 
             /*
@@ -103,6 +129,7 @@ class HandLoanController extends Controller implements HasMiddleware
             'interest_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'term_months' => ['nullable', 'integer', 'min:1', 'max:600'],
             'due_on' => ['nullable', 'date'],
+            'next_due_on' => ['nullable', 'date'],
             'repayment' => ['nullable', Rule::in(HandLoanAccount::REPAYMENTS)],
             'security' => ['nullable', Rule::in(HandLoanAccount::SECURITIES)],
         ]);
@@ -115,6 +142,8 @@ class HandLoanController extends Controller implements HasMiddleware
         $data['person_id'] = $this->people->resolve($data);
 
         $account = $this->loans->open($data);
+
+        $this->keepThePaper($request, $account);
 
         /*
          * খোলার পর তার নিজের পাতায় — পরের কাজটা প্রায় সবসময় ওখানেই,
@@ -182,5 +211,33 @@ class HandLoanController extends Controller implements HasMiddleware
             ->whereIn('parent_id', Account::query()
                 ->whereIn('code', StandardChart::MONEY_PARENTS)->select('id'))
             ->orderBy('code')->get();
+    }
+
+    /**
+     * ফর্মের সাথে আসা কাগজটা — খাতাটা বসার **পরেই**।
+     *
+     * ⓘ কাগজ বসে `(উৎস, আইডি)` জোড়ার উপর, আর খাতাটা তৈরি হওয়ার আগে
+     * আইডিটাই নেই। ⛔ কাগজ আটকালে খাতাটা থাকে, কেবল সতর্কবার্তা যায় —
+     * ⚠️ ধারের খবরটা ছবির চেয়ে দামি, আর কাগজটা পরে খাতার নিজের পাতা
+     * থেকে তোলা যায়।
+     */
+    private function keepThePaper(Request $request, HandLoanAccount $account): void
+    {
+        if (! $request->hasFile('paper')) {
+            return;
+        }
+
+        try {
+            $this->attachments->store(
+                file: $request->file('paper'),
+                module: 'finance',
+                entity: HandLoanAccount::drillSourceType(),
+                entityId: (int) $account->getKey(),
+            );
+        } catch (AttachmentException $refused) {
+            session()->flash('warning', __('core.attachment.refused', [
+                'reason' => $refused->getMessage(),
+            ]));
+        }
     }
 }

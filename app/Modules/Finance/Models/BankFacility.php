@@ -99,6 +99,7 @@ class BankFacility extends Model implements Drillable
         'stock_value', 'margin_percent', 'instalments', 'instalment_amount',
         'down_payment', 'charges',
         'security_type', 'security_value', 'guarantors', 'covenant', 'last_statement_on',
+        'opening_drawn',
         'liability_account_id', 'money_account_id',
         'status', 'closed_on', 'note', 'created_by',
     ];

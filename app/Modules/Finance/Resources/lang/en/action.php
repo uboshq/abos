@@ -3,6 +3,9 @@
 declare(strict_types=1);
 
 return [
+    'save_capital_row' => 'Save the capital row',
+    'take_money_receipt' => 'Take the money — receipt voucher ↗',
+    'pay_money_voucher' => 'Pay the money — payment voucher ↗',
     'new_contribution' => 'New contribution',
     'edit_contribution' => 'Correct a contribution',
     'money_arrived' => 'Money arrived',

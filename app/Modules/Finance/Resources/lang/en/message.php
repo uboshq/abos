@@ -3,6 +3,18 @@
 declare(strict_types=1);
 
 return [
+    'within_the_limit' => 'Within the limit.',
+    'over_the_limit' => 'Over the limit - the bank will charge penal interest.',
+    'ledger_debit' => 'Debit',
+    'ledger_credit' => 'Credit',
+    'ledger_debit_capital' => 'The account the money landed in — cash, bank or mobile',
+    'ledger_credit_capital' => "3100 Owner's capital — the money is the owner's, not the business's",
+    'ledger_only_after_posting' => 'Nothing reaches the ledger while the row is a draft — it lands the day the receipt is posted',
+    'step_this_book' => 'This book',
+    'step_receipt_voucher' => 'Receipt voucher',
+    'step_payment_voucher' => 'Payment voucher',
+    'step_ledger' => 'Ledger',
+    'money_fields_belong_to_the_voucher' => 'The money fields belong to the voucher, not this book',
     'reconciled_on' => 'Last reconciled: :date',
 
     'deposits_all_hint' => 'Every deposit, across bank, national savings and bonds. To open a new one, go to that issuer’s own page.',

@@ -84,6 +84,16 @@ final class DepositService
                 'return_word' => $data['return_word'] ?? 'interest',
                 'opened_on' => $data['opened_on'],
                 'matures_on' => ($data['matures_on'] ?? '') ?: null,
+
+                /*
+                 * ⭐ দুইটাই ডিফল্টসহ কলামে বসেছিল, কিন্তু ফর্ম থেকে
+                 * কোনোদিন আসত না — ১৫ সেপ্টেম্বর ২০২৬।
+                 *
+                 * ⓘ খালি এলে কলামের ডিফল্টই থাকে (কর ১০%, নবায়ন
+                 * আসল ও মুনাফাসহ), তাই পুরনো আচরণ বদলায় না।
+                 */
+                'tax_rate' => ($data['tax_rate'] ?? '') !== '' ? $data['tax_rate'] : 10,
+                'on_maturity' => ($data['on_maturity'] ?? '') ?: Deposit::RENEW_WITH_PROFIT,
                 'instalment_amount' => $kind->takesInstalments() && ($data['instalment_amount'] ?? '') !== ''
                     ? $data['instalment_amount'] : null,
                 'instalment_day' => $kind->takesInstalments() && ($data['instalment_day'] ?? '') !== ''

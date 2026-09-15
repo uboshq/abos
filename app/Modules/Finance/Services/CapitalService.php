@@ -56,6 +56,21 @@ final class CapitalService
                 'person_id' => (int) $data['person_id'],
                 'contributor_type' => $data['contributor_type'],
                 'entry_type' => $data['entry_type'],
+                /*
+                 * ⓘ কী দিয়ে এল — খালি এলে কলামের ডিফল্ট `cash`, তাই
+                 * পুরনো সারির আচরণ বদলায় না।
+                 */
+                'in_kind' => ($data['in_kind'] ?? '') ?: CapitalEntry::CASH,
+
+                /*
+                 * ⚠️ খাতটা এখানে **প্রস্তাব**, সিদ্ধান্ত নয়।
+                 *
+                 * ⛔ সারিটা এখনো খসড়া — টাকা নড়েনি। ⓘ ঘরটা কেবল রসিদের
+                 * পর্দায় খাতটা আগে থেকে বসিয়ে রাখার জন্য; আসল খাত ঠিক
+                 * হয় ভাউচার পোস্ট হওয়ার দিন।
+                 */
+                'received_into_account_id' => ($data['received_into_account_id'] ?? '') ?: null,
+
                 'trx_date' => $data['trx_date'],
                 'amount' => $data['amount'],
                 'share_percent' => ($data['share_percent'] ?? '') !== '' ? $data['share_percent'] : null,
@@ -157,6 +172,21 @@ final class CapitalService
                 'person_id' => (int) $data['person_id'],
                 'contributor_type' => $data['contributor_type'],
                 'entry_type' => $data['entry_type'],
+                /*
+                 * ⓘ কী দিয়ে এল — খালি এলে কলামের ডিফল্ট `cash`, তাই
+                 * পুরনো সারির আচরণ বদলায় না।
+                 */
+                'in_kind' => ($data['in_kind'] ?? '') ?: CapitalEntry::CASH,
+
+                /*
+                 * ⚠️ খাতটা এখানে **প্রস্তাব**, সিদ্ধান্ত নয়।
+                 *
+                 * ⛔ সারিটা এখনো খসড়া — টাকা নড়েনি। ⓘ ঘরটা কেবল রসিদের
+                 * পর্দায় খাতটা আগে থেকে বসিয়ে রাখার জন্য; আসল খাত ঠিক
+                 * হয় ভাউচার পোস্ট হওয়ার দিন।
+                 */
+                'received_into_account_id' => ($data['received_into_account_id'] ?? '') ?: null,
+
                 'trx_date' => $data['trx_date'],
                 'amount' => $data['amount'],
                 'share_percent' => ($data['share_percent'] ?? '') !== '' ? $data['share_percent'] : null,
@@ -233,8 +263,7 @@ final class CapitalService
      * মালিক ব্যাংকে মূলধন ঢোকাতে গিয়ে এমন একটা নম্বর চাওয়ার বার্তা
      * পেতেন যেটা পাঠানোর কোনো পথ পর্দায় ছিল না — **টাকাটা ঢোকানোই
      * যেত না**। মালিক নিজে ধরেছেন।
-     */
-    /**
+     *
      * @param  string|null  $charge  ব্যাংক বা MFS যা কেটে রেখেছে।
      */
     public function post(
@@ -242,8 +271,7 @@ final class CapitalService
         Account $into,
         ?string $reference = null,
         ?string $charge = null,
-    ): CapitalEntry
-    {
+    ): CapitalEntry {
         if ($entry->status === CapitalEntry::POSTED) {
             throw ValidationException::withMessages([
                 'status' => __('finance::validation.capital_already_posted', ['no' => $entry->document_no]),
@@ -256,7 +284,17 @@ final class CapitalService
             ]);
         }
 
-        return DB::transaction(function () use ($entry, $into, $reference) {
+        /*
+         * ⛔ `$charge` এই তালিকায় ছিল না — ১৫ সেপ্টেম্বর ২০২৬-এ ধরা।
+         *
+         * ⚠️ অথচ নিচে `lines(..., $charge)` ডাকা হয়, তাই **এই মেথডটা
+         * যে কেউ ডাকলেই `Undefined variable $charge` দিয়ে মরত**।
+         *
+         * ⓘ ধরা পড়েনি কারণ লাইভে এই পথটা কেউ ডাকে না — মূলধন খাতায়
+         * বসে রসিদ ভাউচারের পর্দা থেকে, আর `CapitalController::post()`
+         * মৃত কোড। ⭐ ছয়টা টেস্ট এটাকে ডাকে, আর ওগুলো চালানোই হয়নি।
+         */
+        return DB::transaction(function () use ($entry, $into, $reference, $charge) {
             $capital = Account::query()
                 ->where('code', StandardChart::OWNER_CAPITAL)
                 ->firstOrFail();

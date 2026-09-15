@@ -9,6 +9,7 @@ use App\Models\Company;
 use App\Models\LedgerEntry;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Services\AccountService;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Finance\Models\CapitalEntry;
 use App\Modules\Finance\Services\CapitalService;
@@ -69,7 +70,7 @@ class TheChargeWentNowhereTest extends TestCase
     {
         $mother = Account::query()->where('code', $motherCode)->firstOrFail();
 
-        return app(\App\Modules\Accounts\Services\AccountService::class)->create([
+        return app(AccountService::class)->create([
             'name_en' => $name,
             'parent_id' => $mother->id,
         ]);
@@ -81,7 +82,6 @@ class TheChargeWentNowhereTest extends TestCase
             'company_id' => $this->company->id,
             'code' => 'P0001',
             'name_en' => 'Owner One',
-            'kind' => 'person',
             'is_active' => true,
         ]);
 

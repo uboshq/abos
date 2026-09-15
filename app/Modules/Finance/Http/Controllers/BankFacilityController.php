@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\Modules\Finance\Http\Controllers;
 
+use App\Core\Engines\Attachment\AttachmentEngine;
+use App\Core\Engines\Attachment\AttachmentException;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Finance\Models\BankFacility;
 use App\Modules\Finance\Services\BankFacilityService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -28,9 +31,23 @@ use Illuminate\View\View;
  */
 class BankFacilityController extends Controller implements HasMiddleware
 {
+    /*
+     * ⛔ কোড তিনটা এখানে ধ্রুবক, কারণ ছকের মালিক `Accounts/`।
+     *
+     * ⚠️ কোডটা বদলালে এই ছাঁকনি **নীরবে খালি** হয়ে যাবে — কোনো ভুল
+     * উঠবে না, শুধু ড্রপডাউনে কিছু থাকবে না। ⓘ তাই নামগুলো এক
+     * জায়গায়, আর টেস্টে গুনে দেখা হয় ওরা সত্যিই আছে কি না।
+     */
+    private const TERM_LOAN = '2211';
+
+    private const LEASE_LIABILITY = '2212';
+
+    private const LTR_LIABILITY = '2170';
+
     public function __construct(
         private readonly BankFacilityService $facilities,
         private readonly MenuBuilder $menu,
+        private readonly AttachmentEngine $attachments,
     ) {}
 
     /**
@@ -61,8 +78,8 @@ class BankFacilityController extends Controller implements HasMiddleware
             'menu' => $this->menu->forUser($request->user()),
             'facilities' => BankFacility::query()->latest('id')->get(),
             'renewals' => $this->facilities->dueForRenewal(),
-            'liabilityAccounts' => $this->accounts(),
-            'moneyAccounts' => $this->accounts(),
+            'liabilityAccounts' => $this->liabilityAccounts(),
+            'moneyAccounts' => $this->moneyAccounts(),
         ]);
     }
 
@@ -91,6 +108,22 @@ class BankFacilityController extends Controller implements HasMiddleware
             'renews_on' => ['nullable', 'date'],
 
             'stock_value' => ['nullable', 'numeric', 'min:0'],
+
+            /*
+             * ⓘ স্টকের অঙ্কটা কবেকার — ড্রয়িং পাওয়ারের বয়স।
+             * ⛔ ভবিষ্যতের তারিখ নেওয়া হয় না: স্টেটমেন্ট এখনো আসেনি
+             * এমন তারিখ লিখলে সংখ্যাটা আরও টাটকা দেখাত, কম নয়।
+             */
+            'last_statement_on' => ['nullable', 'date', 'before_or_equal:today'],
+
+            /*
+             * ⚠️ `lte:limit_amount` — সীমার বেশি তোলা যায় না, আর
+             * ⓘ ঐ ভুলটা টাইপ করতে গিয়ে সহজেই হয় (একটা শূন্য বেশি)।
+             * ⛔ পাহারাটা না থাকলে ড্রয়িং পাওয়ার ঋণাত্মক হয়ে যেত, আর
+             * পর্দা বলত ব্যবসাটা সীমার চেয়ে বেশি তুলে ফেলেছে।
+             */
+            'opening_drawn' => ['nullable', 'numeric', 'min:0', 'lte:limit_amount'],
+            'paper' => ['nullable', 'file'],
             'margin_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'instalments' => ['nullable', 'integer', 'min:1', 'max:600'],
             'instalment_amount' => ['nullable', 'numeric', 'min:0'],
@@ -115,6 +148,8 @@ class BankFacilityController extends Controller implements HasMiddleware
         ]);
 
         $facility = $this->facilities->open($data);
+
+        $this->keepThePaper($request, $facility);
 
         return redirect()->route('finance.bank_facility.show', $facility)
             ->with('saved', __('finance::message.facility_opened'));
@@ -141,23 +176,77 @@ class BankFacilityController extends Controller implements HasMiddleware
     }
 
     /**
-     * খাত বাছার তালিকা।
+     * দায়ের খাত বাছার তালিকা — ⭐ এখন ছেঁকে, ১৫ সেপ্টেম্বর ২০২৬।
      *
-     * ⚠️ ১৬ সেপ্টেম্বর ২০২৬ পর্যন্ত ঋণের নিজস্ব খাতগুলো
-     * (`2211` · `2212` · `2170`) চার্টে **বসানো হয়নি** — ওগুলো
-     * `Accounts/`-এর কাজ, আর সেই সেশনকে জানানো আছে।
+     * ── ⓘ আগে পুরো ছকই দেখানো হত, আর সেটা ইচ্ছাকৃত ছিল ───────────────
+     * ঋণের নিজস্ব খাতগুলো (`2211` · `2212` · `2170`) তখনো চার্টে বসেনি,
+     * আর ছেঁকে দিলে একটা **খালি ড্রপডাউন** পড়ত — ব্যবহারকারী বুঝতেন না
+     * কী হারিয়ে গেছে। ⭐ খাতগুলো আজ বসেছে (abos-e8), তাই ছাঁকনিটাও।
      *
-     * ⓘ তাই এখানে পুরো চার্টই দেখানো হয়, ছেঁকে নয়: খাতটা না থাকলে
-     * ছাঁকনি একটা **খালি ড্রপডাউন** দিত, আর ব্যবহারকারী বুঝতেন না
-     * কী হারিয়ে গেছে। ⭐ খাতগুলো বসার পর এখানে ছাঁকনি বসবে।
+     * ── ⚠️ কেন CC ও BG-তে তালিকাটা খালি থাকে ────────────────────────
+     * ⛔ ক্যাশ ক্রেডিটের দেনা আলাদা কোনো দায়ের খাতে বসে না — ওটা
+     * **ব্যাংক হিসাবের নিজের ঋণাত্মক ব্যালান্স**। আর গ্যারান্টি কেউ
+     * না ভাঙানো পর্যন্ত দায়ই নয়।
+     *
+     * ⓘ তাই ঐ দুই ধরনে ঘরটা খালি রাখাই সঠিক, আর
+     * [[BankFacility::isBalanceSheetDebt()]] একই কথা বলে।
      *
      * @return Collection<int, Account>
      */
-    private function accounts(): Collection
+    private function liabilityAccounts(): Collection
     {
-        return Account::query()
-            ->where('is_group', false)
-            ->orderBy('code')
+        return $this->postable()
+            ->whereIn('code', [self::TERM_LOAN, self::LEASE_LIABILITY, self::LTR_LIABILITY])
             ->get(['id', 'code', 'name_en', 'name_bn']);
+    }
+
+    /**
+     * টাকার খাত — নগদ, ব্যাংক, মোবাইল ব্যাংকিং।
+     *
+     * ⓘ `money()` স্কোপ `money_kind` ধরে বাছে, কোড ধরে নয় — তাই নতুন
+     * ব্যাংক হিসাব খুললে সেটা নিজে থেকেই তালিকায় আসে।
+     */
+    private function moneyAccounts(): Collection
+    {
+        return $this->postable()->money()->get(['id', 'code', 'name_en', 'name_bn']);
+    }
+
+    /**
+     * ⚠️ দুইটা শর্ত সব তালিকাতেই লাগে, তাই এক জায়গায়।
+     *
+     * ⓘ গ্রুপে দাখিলা বসে না, আর অন্য কোম্পানির খাত এখানে দেখানোই
+     * উচিত নয় — `BelongsToCompany` স্কোপটা মডেলেই আছে।
+     *
+     * @return Builder<Account>
+     */
+    private function postable(): Builder
+    {
+        return Account::query()->where('is_group', false)->orderBy('code');
+    }
+
+    /**
+     * ফর্মের সাথে আসা কাগজটা — সারিটা বসার **পরেই**।
+     *
+     * ⓘ কাগজ বসে `(উৎস, আইডি)` জোড়ার উপর, আর সারিটা তৈরি হওয়ার আগে
+     * আইডিটাই নেই। ⛔ কাগজ আটকালে সারিটা থাকে, কেবল সতর্কবার্তা যায়।
+     */
+    private function keepThePaper(Request $request, BankFacility $row): void
+    {
+        if (! $request->hasFile('paper')) {
+            return;
+        }
+
+        try {
+            $this->attachments->store(
+                file: $request->file('paper'),
+                module: 'finance',
+                entity: BankFacility::drillSourceType(),
+                entityId: (int) $row->getKey(),
+            );
+        } catch (AttachmentException $refused) {
+            session()->flash('warning', __('core.attachment.refused', [
+                'reason' => $refused->getMessage(),
+            ]));
+        }
     }
 }

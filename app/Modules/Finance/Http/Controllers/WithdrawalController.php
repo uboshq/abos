@@ -86,6 +86,18 @@ class WithdrawalController extends Controller implements HasMiddleware
                 Rule::exists('mdm_people', 'id')->where('company_id', $companyId)],
             'person_new' => ['nullable', 'string', 'max:120', 'required_without:person_id'],
             'person_mobile' => ['nullable', 'string', 'max:32'],
+            /*
+             * ⭐ পক্ষের তিনটা ঘর — মানুষটার সাথে যায়, সারির সাথে নয়
+             * ([[App\Modules\MasterData\Services\PersonResolver]])।
+             *
+             * ⛔ এগুলো `validate()`-এ না থাকলে **নীরবে হারায়**: Laravel
+             * কেবল যাচাই করা চাবিগুলোই ফেরায়, তাই ফর্ম পাঠালেও
+             * PersonResolver ঘরগুলো পেত না আর সারি বসত `NULL` নিয়ে।
+             * ⓘ ১৫ সেপ্টেম্বর ২০২৬-এ লোকালে জমা দিয়ে ধরা পড়েছে।
+             */
+            'person_relationship' => ['nullable', 'string', 'max:60'],
+            'person_address' => ['nullable', 'string', 'max:191'],
+            'person_nid_tin' => ['nullable', 'string', 'max:40'],
             'amount' => ['required', 'numeric', 'gt:0'],
             'trx_date' => ['required', 'date', 'before_or_equal:today'],
             'reason' => ['nullable', 'string', 'max:500'],

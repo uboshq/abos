@@ -7,6 +7,7 @@ namespace App\Modules\Finance\Models;
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Core\Contracts\Drillable;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Loan;
 use App\Modules\MasterData\Models\Person;
@@ -49,7 +50,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  *
  * সারিটা থাকে দুই ক্ষেত্রেই; কেবল টাকার দাখিলাটা আলাদা।
  */
-class Deposit extends Model
+class Deposit extends Model implements Drillable
 {
     use BelongsToCompany;
     use HasFactory;
@@ -61,6 +62,26 @@ class Deposit extends Model
 
     /** মালিকের নামে — ব্যবসার টাকা গেলে সেটা উত্তোলন */
     public const OWNER = 'owner';
+
+    /*
+     * মেয়াদ শেষে কী হবে — তিনটাই ব্যাংকের ফর্মে ছাপা থাকে।
+     *
+     * ⛔ ঘরটা ছিল কলামে, কিন্তু কোনো পর্দায় নয় — ১৫ সেপ্টেম্বর ২০২৬-এ
+     * মালিক লোকালে খুলে ধরিয়ে দিয়েছেন। ⚠️ ডিফল্ট `renew_with_profit`,
+     * কারণ FDR না বললে ব্যাংক ওটাই করে; কিন্তু ⭐ **ধরে নেওয়া আর
+     * লেখা এক নয়** — মেয়াদ শেষে টাকাটা কোথায় যাবে সেটা আগে থেকে
+     * লেখা না থাকলে ঐ দিনটায় কেউ জানে না কী করতে হবে।
+     */
+    public const RENEW_WITH_PROFIT = 'renew_with_profit';
+
+    public const RENEW_PRINCIPAL_ONLY = 'renew_principal_only';
+
+    public const ENCASH = 'encash';
+
+    /** @var list<string> */
+    public const ON_MATURITY = [
+        self::RENEW_WITH_PROFIT, self::RENEW_PRINCIPAL_ONLY, self::ENCASH,
+    ];
 
     public const ACTIVE = 'active';
 
@@ -239,5 +260,49 @@ class Deposit extends Model
         }
 
         return ! $loan->isSettled();
+    }
+
+    /*
+     * ── Drillable — ⭐ কেন খাতাটা নিজেই, তার নড়াচড়া নয় ───────────────
+     *
+     * ⛔ ১৫ সেপ্টেম্বর ২০২৬ পর্যন্ত কেবল নড়াচড়ার সারিগুলো Drillable ছিল
+     * (`deposit_movement` ধরনের), খাতাটা নয়।
+     *
+     * ⚠️ ফল: **কাগজ রাখার জায়গা ছিল না।** [[components/ui/attachments]]
+     * `drillSourceType()` ধরে কাগজ খোঁজে, তাই FDR-এর সার্টিফিকেট,
+     * ধারের স্ট্যাম্প বা ভাড়ার চুক্তিপত্র কোথাও তোলা যেত না — অথচ
+     * ঝগড়া বাধলে ঐ কাগজটাই একমাত্র প্রমাণ।
+     *
+     * ⓘ কাগজ বসে **চুক্তিতে**, কিস্তিতে নয় — একটা FDR-এ একটাই
+     * সার্টিফিকেট, যতবারই টাকা নড়ুক।
+     */
+    public static function drillSourceType(): string
+    {
+        return 'deposit';
+    }
+
+    public function drillDocumentNo(): string
+    {
+        return $this->document_no ?? $this->reference_no ?? (string) $this->id;
+    }
+
+    public function drillLabel(): string
+    {
+        return __('finance::menu.deposits_all').' — '.$this->drillDocumentNo();
+    }
+
+    /** @return array{0: string, 1: array<string, mixed>} */
+    public function drillRoute(): array
+    {
+        /*
+         * ⚠️ `issuer` পথের অংশ, আর সেটা আসে জমার ধরন থেকে
+         * ([[DepositKind::ISSUERS]])। ⓘ ধরনটা কোনো কারণে না থাকলে
+         * `bank` — কারণ রুটটা `whereIn(ISSUERS)` দিয়ে বাঁধা, আর
+         * অচেনা শব্দ দিলে লিংকটা ৪০৪ হত।
+         */
+        return ['finance.deposit.show', [
+            'issuer' => $this->kind?->issuer ?? 'bank',
+            'deposit' => $this->id,
+        ]];
     }
 }

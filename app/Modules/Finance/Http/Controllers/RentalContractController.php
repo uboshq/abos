@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Finance\Http\Controllers;
 
+use App\Core\Engines\Attachment\AttachmentEngine;
+use App\Core\Engines\Attachment\AttachmentException;
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounts\Models\Account;
@@ -35,6 +37,7 @@ class RentalContractController extends Controller implements HasMiddleware
     public function __construct(
         private readonly RentalContractService $contracts,
         private readonly MenuBuilder $menu,
+        private readonly AttachmentEngine $attachments,
     ) {}
 
     public static function middleware(): array
@@ -128,6 +131,17 @@ class RentalContractController extends Controller implements HasMiddleware
             'monthly_adjustment' => ['nullable', 'numeric', 'min:0'],
             'starts_on' => ['required', 'date'],
             'term_months' => ['required', 'integer', 'min:1', 'max:600'],
+
+            /*
+             * ⭐ তিনটাই কলামে ছিল, ফর্মে ছিল না — ১৫ সেপ্টেম্বর ২০২৬।
+             * ⓘ `rent_day` ২৮-এ থামে: ২৯ বা ৩০ লিখলে ফেব্রুয়ারিতে
+             * তারিখটা থাকত না, আর "কত তারিখে" প্রশ্নের উত্তর বছরে
+             * একবার মিথ্যা হত।
+             */
+            'rent_day' => ['nullable', 'integer', 'min:1', 'max:28'],
+            'advance_months' => ['nullable', 'integer', 'min:0', 'max:36'],
+            'tax_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'paper' => ['nullable', 'file'],
             'account_id' => ['nullable', 'integer'],
             'expense_account_id' => ['nullable', 'integer'],
             'money_account_id' => ['nullable', 'integer'],
@@ -136,6 +150,8 @@ class RentalContractController extends Controller implements HasMiddleware
             'instrument_no' => ['nullable', 'string', 'max:64'],
             'note' => ['nullable', 'string', 'max:500'],
         ]));
+
+        $this->keepThePaper($request, $contract);
 
         return redirect()
             ->route('finance.rental.show', $contract)
@@ -216,5 +232,31 @@ class RentalContractController extends Controller implements HasMiddleware
     private function moneyAccounts()
     {
         return Account::query()->money()->postable()->active()->orderBy('code')->get();
+    }
+
+    /**
+     * ফর্মের সাথে আসা কাগজটা — সারিটা বসার **পরেই**।
+     *
+     * ⓘ কাগজ বসে `(উৎস, আইডি)` জোড়ার উপর, আর সারিটা তৈরি হওয়ার আগে
+     * আইডিটাই নেই। ⛔ কাগজ আটকালে সারিটা থাকে, কেবল সতর্কবার্তা যায়।
+     */
+    private function keepThePaper(Request $request, RentalContract $row): void
+    {
+        if (! $request->hasFile('paper')) {
+            return;
+        }
+
+        try {
+            $this->attachments->store(
+                file: $request->file('paper'),
+                module: 'finance',
+                entity: RentalContract::drillSourceType(),
+                entityId: (int) $row->getKey(),
+            );
+        } catch (AttachmentException $refused) {
+            session()->flash('warning', __('core.attachment.refused', [
+                'reason' => $refused->getMessage(),
+            ]));
+        }
     }
 }

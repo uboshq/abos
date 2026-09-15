@@ -4,9 +4,13 @@ declare(strict_types=1);
 
 namespace App\Modules\Finance\Http\Controllers;
 
+use App\Core\Engines\Attachment\AttachmentEngine;
+use App\Core\Engines\Attachment\AttachmentException;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
+use App\Models\Branch;
+use App\Models\Company;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Finance\Models\CapitalEntry;
@@ -36,6 +40,7 @@ class CapitalController extends Controller implements HasMiddleware
         private readonly MenuBuilder $menu,
         private readonly CapitalService $capital,
         private readonly PersonResolver $people,
+        private readonly AttachmentEngine $attachments,
     ) {}
 
     /** @return list<Middleware> */
@@ -133,8 +138,39 @@ class CapitalController extends Controller implements HasMiddleware
                 Rule::exists('mdm_people', 'id')->where('company_id', $companyId)],
             'person_new' => ['nullable', 'string', 'max:120', 'required_without:person_id'],
             'person_mobile' => ['nullable', 'string', 'max:32'],
+            /*
+             * ⭐ পক্ষের তিনটা ঘর — মানুষটার সাথে যায়, সারির সাথে নয়
+             * ([[App\Modules\MasterData\Services\PersonResolver]])।
+             *
+             * ⛔ এগুলো `validate()`-এ না থাকলে **নীরবে হারায়**: Laravel
+             * কেবল যাচাই করা চাবিগুলোই ফেরায়, তাই ফর্ম পাঠালেও
+             * PersonResolver ঘরগুলো পেত না আর সারি বসত `NULL` নিয়ে।
+             * ⓘ ১৫ সেপ্টেম্বর ২০২৬-এ লোকালে জমা দিয়ে ধরা পড়েছে।
+             */
+            'person_relationship' => ['nullable', 'string', 'max:60'],
+            'person_address' => ['nullable', 'string', 'max:191'],
+            'person_nid_tin' => ['nullable', 'string', 'max:40'],
             'contributor_type' => ['required', 'string', 'in:'.implode(',', CapitalEntry::WHO)],
             'entry_type' => ['required', 'string', 'in:'.implode(',', CapitalEntry::KINDS)],
+
+            /*
+             * ⭐ নমুনার তিনটা ঘর — ১৫ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ `received_into_account_id` ঐচ্ছিক, আর সেটাই মূল কথা:
+             * খালি রাখলে রসিদের পর্দাই খাতটা ঠিক করে। ⚠️ `exists`-এ
+             * `company_id`, নাহলে অন্য কোম্পানির খাতে টাকা বসত।
+             */
+            'in_kind' => ['nullable', Rule::in(CapitalEntry::IN_KINDS)],
+            'received_into_account_id' => ['nullable', 'integer',
+                Rule::exists('accounts', 'id')->where('company_id', $companyId)],
+
+            /*
+             * ⛔ কাগজের সীমা এখানে **লেখা হয় না** — নিয়মটা এক জায়গায়,
+             * [[App\Core\Engines\Attachment\AttachmentEngine]]-এ। ⓘ এখানে
+             * দ্বিতীয় সীমা বসালে একদিন দুইটা আলাদা সংখ্যা হত, আর
+             * ব্যবহারকারী দুই রকম বার্তা পেতেন।
+             */
+            'paper' => ['nullable', 'file'],
             'trx_date' => ['required', 'date', 'before_or_equal:today'],
             'amount' => ['required', 'numeric', 'gt:0'],
             'share_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
@@ -154,6 +190,9 @@ class CapitalController extends Controller implements HasMiddleware
             'menu' => $this->menu->forUser($request->user()),
             'people' => $this->peopleForPicker(),
             'entry' => null,
+            'writingFor' => $this->writingFor(),
+            'moneyAccounts' => $this->moneyAccountsForForm(),
+            'carriers' => $this->carriers(),
         ]);
     }
 
@@ -164,6 +203,8 @@ class CapitalController extends Controller implements HasMiddleware
         $data['person_id'] = $this->people->resolve($data);
 
         $entry = $this->capital->record($data);
+
+        $this->keepThePaper($request, $entry);
 
         return redirect()->route('finance.capital.index')
             ->with('saved', __('finance::message.capital_recorded', ['no' => $entry->document_no]));
@@ -192,6 +233,9 @@ orm]]): *"সম্পাদনা
             'menu' => $this->menu->forUser($request->user()),
             'people' => $this->peopleForPicker(),
             'entry' => $entry,
+            'writingFor' => $this->writingFor(),
+            'moneyAccounts' => $this->moneyAccountsForForm(),
+            'carriers' => $this->carriers(),
         ]);
     }
 
@@ -301,5 +345,110 @@ orm]]): *"সম্পাদনা
         );
 
         return back()->with('saved', __('finance::message.capital_posted', ['no' => $entry->document_no]));
+    }
+
+    /**
+     * কোন কোম্পানির, কোন শাখার খাতায় লেখা হচ্ছে।
+     *
+     * ── ⛔ কেন এটা একটা বাছাইয়ের ঘর নয় ─────────────────────────────
+     * নকশার কাগজে ঘরটা ড্রপডাউন। ⚠️ কিন্তু লাইভে কোম্পানি ও শাখা আগেই
+     * বাছা হয়ে আছে — শেলের উপরে, আর পুরো সেশন ধরে
+     * ([[App\Core\Support\CompanyContext]])।
+     *
+     * ⛔ এখানে দ্বিতীয় একটা বাছাই বসালে **দুই জায়গায় দুই উত্তর** থাকত,
+     * আর একদিন কেউ শেলে এক কোম্পানি দেখে অন্য কোম্পানির খাতায় লিখে
+     * ফেলতেন — কিছুই ভাঙত না, শুধু টাকাটা ভুল বইয়ে বসত।
+     *
+     * ⓘ তাই তথ্যটা দেখানো হয়, বাছাই নয়: *"আপনি কার খাতায় লিখছেন"*।
+     */
+    private function writingFor(): string
+    {
+        $company = Company::query()->find(CompanyContext::id());
+        $branch = Branch::query()->find(CompanyContext::branchId());
+
+        return trim(implode(' — ', array_filter([
+            $company?->name(),
+            $branch?->name(),
+        ]))) ?: '—';
+    }
+
+    /**
+     * টাকার খাত — নমুনার "যে খাতে জমা"।
+     *
+     * ── ⭐ মালিকের নির্দেশ, ১৫ সেপ্টেম্বর ২০২৬ ───────────────────────
+     * *"sample er 100% lagbe, 99.99% o na"* — সাতবার বলা।
+     *
+     * ⓘ আমার আপত্তি ছিল: খাতটা রসিদেও চাওয়া হয়, তাই দুই জায়গায় দুই
+     * উত্তর থাকতে পারে। ⚠️ সেই ঝুঁকিটা কমানো হয়েছে **ঘরটা ঐচ্ছিক রেখে**
+     * — খালি রাখলে আগের মতোই রসিদই ঠিক করে, আর ভরলে সেটা রসিদের
+     * পর্দায় আগে থেকে বসানো থাকে।
+     *
+     * ⛔ অর্থাৎ ঘরটা **প্রস্তাব**, দ্বিতীয় দরজা নয়। টাকা নড়ে এখনো
+     * একটাই জায়গা থেকে — রসিদ ভাউচার।
+     *
+     * @return Collection<int, Account>
+     */
+    private function moneyAccountsForForm(): Collection
+    {
+        return Account::query()
+            ->money()
+            ->where('is_group', false)
+            ->orderBy('code')
+            ->get(['id', 'code', 'name_en', 'name_bn']);
+    }
+
+    /**
+     * ফর্মের সাথে আসা কাগজটা — সারিটা বসার **পরেই**।
+     *
+     * ── ⛔ কেন আগে নয় ───────────────────────────────────────────────
+     * কাগজ বসে `(উৎস, আইডি)` জোড়ার উপর, আর সারিটা তৈরি হওয়ার আগে
+     * আইডিটাই নেই। ⓘ তাই নমুনার ঘরটা ফর্মে থাকলেও কাজটা হয় পরে।
+     *
+     * ── ⚠️ কাগজ আটকালে সারিটা কী হবে ────────────────────────────────
+     * ⭐ সারিটা থাকে, আর ব্যবহারকারী একটা সতর্কবার্তা পান।
+     *
+     * ⛔ পুরোটা ফিরিয়ে দিলে যা হত: মূলধনের তথ্যটা — কে, কত, কবে —
+     * হারিয়ে যেত একটা **ছবির দোষে**। ⓘ টাকার খবরটা কাগজের চেয়ে দামি,
+     * আর কাগজটা পরে সারির নিজের পাতা থেকে তোলা যায়।
+     */
+    private function keepThePaper(Request $request, CapitalEntry $entry): void
+    {
+        if (! $request->hasFile('paper')) {
+            return;
+        }
+
+        try {
+            $this->attachments->store(
+                file: $request->file('paper'),
+                module: 'finance',
+                entity: CapitalEntry::drillSourceType(),
+                entityId: (int) $entry->getKey(),
+            );
+        } catch (AttachmentException $refused) {
+            /*
+             * ⓘ `saved` নয়, `warning` — কাজটা হয়েছে, কিন্তু অর্ধেক।
+             * ⚠️ নীরবে গিলে ফেললে ব্যবহারকারী ভাবতেন কাগজটা জমা আছে,
+             * আর ঝগড়ার দিন খুঁজে পেতেন না।
+             */
+            session()->flash('warning', __('core.attachment.refused', [
+                'reason' => $refused->getMessage(),
+            ]));
+        }
+    }
+
+    /**
+     * কে টাকাটা বয়ে এনেছেন — নমুনার "কার মাধ্যমে"।
+     *
+     * ⓘ তালিকাটা পক্ষের নিবন্ধন থেকেই আসে, আলাদা কোনো তালিকা নয়:
+     * ক্যাশিয়ার, ডেলিভারি ম্যান, হিসাবরক্ষক — সবাই ঐ একই তালিকার সারি।
+     *
+     * ⚠️ দ্বিতীয় তালিকা বানালে একই মানুষ দুই জায়গায় দুই নামে থাকতেন।
+     *
+     * @return array<int, string>
+     */
+    private function carriers(): array
+    {
+        return Person::query()->active()->orderBy('name_en')
+            ->pluck('name_en', 'id')->all();
     }
 }

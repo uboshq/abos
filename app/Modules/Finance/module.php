@@ -4,9 +4,12 @@ declare(strict_types=1);
 use App\Modules\Finance\Dashboard\FinanceDashboard;
 use App\Modules\Finance\Models\BankFacility;
 use App\Modules\Finance\Models\CapitalEntry;
+use App\Modules\Finance\Models\Deposit;
 use App\Modules\Finance\Models\DepositMovement;
+use App\Modules\Finance\Models\HandLoanAccount;
 use App\Modules\Finance\Models\HandLoanMovement;
 use App\Modules\Finance\Models\RentalAdjustment;
+use App\Modules\Finance\Models\RentalContract;
 use App\Modules\Finance\Models\Withdrawal;
 
 /**
@@ -302,6 +305,18 @@ return [
 
         /* উত্তোলন — নিজের নম্বর, কারণ অনুমোদনে এটাই পরিচয় */
         'WDR' => 'finance::doc.withdrawal',
+
+        /*
+         * ⭐ দুইটাই ১৫ সেপ্টেম্বর ২০২৬-এ যোগ হলো — মালিক লোকালে একটা
+         * ভাড়ার চুক্তি জমা দিয়ে ধরিয়ে দিয়েছেন।
+         *
+         * ⛔ `document_no` কলামটা দুইটা টেবিলেই ছিল, কিন্তু কোনো সার্ভিস
+         * নম্বর চাইত না — সব সারি `NULL` নিয়ে বসে থাকত। ⚠️ ফলে একটা
+         * চুক্তির কথা বলার কোনো উপায় ছিল না: বাড়িওয়ালা ফোন করলে
+         * "কোন চুক্তি" প্রশ্নের উত্তর কেবল আইডি, আর ওটা কাগজে থাকে না।
+         */
+        'RNT' => 'finance::doc.rental',
+        'BFC' => 'finance::doc.bank_facility',
     ],
 
     /*
@@ -375,6 +390,18 @@ return [
         'hand_loan_movement' => HandLoanMovement::class,
         'rental_adjustment' => RentalAdjustment::class,
         'bank_facility' => BankFacility::class,
+
+        /*
+         * ⭐ খাতাগুলো নিজেরাই — ১৫ সেপ্টেম্বর ২০২৬।
+         *
+         * ⛔ এতদিন কেবল **নড়াচড়া** এখানে ছিল, খাতা নয়। ⚠️ আর
+         * [[components/ui/attachments]] এই তালিকা ধরেই কাগজ খোঁজে,
+         * তাই FDR-এর সার্টিফিকেট, ধারের স্ট্যাম্প বা ভাড়ার চুক্তিপত্র
+         * **কোথাও তোলা যেত না** — অথচ ঝগড়া বাধলে ঐ কাগজটাই প্রমাণ।
+         */
+        'deposit' => Deposit::class,
+        'hand_loan' => HandLoanAccount::class,
+        'rental_contract' => RentalContract::class,
     ],
 
     'reports' => [],

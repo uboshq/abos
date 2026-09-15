@@ -7,6 +7,7 @@ namespace App\Modules\Finance\Models;
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Core\Contracts\Drillable;
 use App\Models\Branch;
 use App\Modules\Accounts\Models\Account;
 use Illuminate\Database\Eloquent\Builder;
@@ -28,7 +29,7 @@ use Illuminate\Support\Carbon;
  * হয়ই — সাধারণত যেদিন একটা ভাউচার বাতিল হয় আর একটা কপি উল্টে যায়।
  * তখন কোনটা সত্যি তা বলার কোনো উপায় থাকে না।
  */
-class RentalContract extends Model
+class RentalContract extends Model implements Drillable
 {
     use BelongsToCompany;
     use HasFactory;
@@ -166,5 +167,40 @@ class RentalContract extends Model
     public function scopeEndingSoon(Builder $query, int $days = 90): Builder
     {
         return $query->active()->whereDate('ends_on', '<=', now()->addDays($days));
+    }
+
+    /*
+     * ── Drillable — ⭐ কেন খাতাটা নিজেই, তার নড়াচড়া নয় ───────────────
+     *
+     * ⛔ ১৫ সেপ্টেম্বর ২০২৬ পর্যন্ত কেবল নড়াচড়ার সারিগুলো Drillable ছিল
+     * (`rental_contract_movement` ধরনের), খাতাটা নয়।
+     *
+     * ⚠️ ফল: **কাগজ রাখার জায়গা ছিল না।** [[components/ui/attachments]]
+     * `drillSourceType()` ধরে কাগজ খোঁজে, তাই FDR-এর সার্টিফিকেট,
+     * ধারের স্ট্যাম্প বা ভাড়ার চুক্তিপত্র কোথাও তোলা যেত না — অথচ
+     * ঝগড়া বাধলে ঐ কাগজটাই একমাত্র প্রমাণ।
+     *
+     * ⓘ কাগজ বসে **চুক্তিতে**, কিস্তিতে নয় — একটা FDR-এ একটাই
+     * সার্টিফিকেট, যতবারই টাকা নড়ুক।
+     */
+    public static function drillSourceType(): string
+    {
+        return 'rental_contract';
+    }
+
+    public function drillDocumentNo(): string
+    {
+        return $this->document_no ?? (string) $this->id;
+    }
+
+    public function drillLabel(): string
+    {
+        return __('finance::menu.rental').' — '.$this->drillDocumentNo();
+    }
+
+    /** @return array{0: string, 1: array<string, mixed>} */
+    public function drillRoute(): array
+    {
+        return ['finance.rental.show', ['contract' => $this->id]];
     }
 }

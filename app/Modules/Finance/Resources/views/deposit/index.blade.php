@@ -79,7 +79,9 @@
              x-effect="if (personalOnly) heldBy = 'owner'">
         <h2 class="mb-3 font-semibold">{{ __('finance::field.open_a_deposit') }}</h2>
 
-        <form method="POST" action="{{ route('finance.deposit.store', ['issuer' => $issuer]) }}"
+
+        <form method="POST" enctype="multipart/form-data" x-data
+              action="{{ route('finance.deposit.store', ['issuer' => $issuer]) }}"
               class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             @csrf
 
@@ -164,6 +166,26 @@
             <x-ui.field name="matures_on" type="date" :label="__('finance::field.matures_on')"
                         :value="old('matures_on')" />
 
+            {{-- ⭐ উৎসে কর — ঘরটা কলামে ছিল, পর্দায় ছিল না (১৫ সেপ্টেম্বর ২০২৬)।
+
+                 ⚠️ ব্যাংক মুনাফা দেওয়ার আগেই কেটে রাখে, তাই হাতে আসা
+                 টাকাটা ঘোষিত হারের চেয়ে কম। ⛔ হারটা লেখা না থাকলে
+                 মালিক প্রতি বছর ভাবতেন ব্যাংক কম দিয়েছে, অথচ কাটাটা
+                 সরকারের। ⓘ ১০% ডিফল্ট, কারণ TIN থাকলে ওটাই। --}}
+            <x-ui.field name="tax_rate" type="number" step="0.01" numeric
+                        :label="__('finance::field.tax_rate')"
+                        :value="old('tax_rate', 10)" />
+
+            {{-- ⭐ মেয়াদ শেষে কী হবে — আগে থেকেই লেখা থাকে।
+
+                 ⛔ না লিখলে মেয়াদ শেষের দিনটায় কেউ জানে না কী করতে
+                 হবে, আর ব্যাংক নিজে থেকে নবায়ন করে দেয় — প্রায়ই এমন
+                 হারে যেটা কেউ দেখেনি। --}}
+            <x-ui.select name="on_maturity" :label="__('finance::field.on_maturity')"
+                         :options="collect(\App\Modules\Finance\Models\Deposit::ON_MATURITY)
+                             ->mapWithKeys(fn ($m) => [$m => __('finance::field.on_maturity_'.str_replace('_only', '', $m))])"
+                         :selected="old('on_maturity', \App\Modules\Finance\Models\Deposit::RENEW_WITH_PROFIT)" />
+
             <div x-cloak x-show="shape === 'instalment'">
                 <x-ui.field name="instalment_amount" type="number" step="0.01" numeric
                             :label="__('finance::field.instalment_amount')"
@@ -216,6 +238,40 @@
             </div>
 
             <div class="flex items-end">
+                {{-- ⭐ ফিতাটা ঘরগুলোর পরে, ভাউচারের বাক্সের আগে — নমুনার ক্রম।
+                     ⓘ আগে এটা ফর্মের বাইরে ছিল, তাই কার্ডের নিচে আলগা হয়ে
+                     ঝুলত। মালিক পাঁচটা পর্দা পাশাপাশি দেখে ধরিয়ে দিয়েছেন। --}}
+                <div class="sm:col-span-2 xl:col-span-4">
+                    @include('finance::partials.handoff', [
+                        'voucher' => 'payment',
+                        'to' => route('accounts.voucher.create', ['type' => 'payment']),
+                        'action' => __('finance::action.pay_money_voucher'),
+                    ])
+                </div>
+
+                {{-- ⭐ ভাউচারের ঘর — নমুনার সবচেয়ে বড় অংশ।
+                     ⓘ ঘরগুলো খাতার সারিতে বসে না; ওগুলো ভাউচারে যায়। --}}
+                <div class="sm:col-span-2 xl:col-span-4">
+                    @include('finance::partials.voucher-box', [
+                        'direction' => 'out',
+                        'carriers' => $carriers ?? [],
+                    ])
+                </div>
+
+                {{-- ⭐ সংযুক্তি — FDR বা সঞ্চয়পত্রের সার্টিফিকেট।
+                     ⚠️ ঐ কাগজটাই একমাত্র প্রমাণ যে টাকাটা ব্যাংকে আছে;
+                     মেয়াদ শেষে ওটা ছাড়া টাকা তোলাই যায় না। --}}
+                <div class="mb-2">
+                    <label for="dep-paper" class="mb-1 block text-sm font-medium">
+                        {{ __('finance::field.attachment') }}
+                    </label>
+                    <input id="dep-paper" type="file" name="paper"
+                           x-on:change="$store.scanner.begin($el, 'paper')"
+                           class="w-full text-sm file:me-2 file:rounded-(--radius-field)
+                                  file:border file:border-(--color-border) file:bg-(--color-surface-app)
+                                  file:px-3 file:py-1.5 file:text-sm">
+                </div>
+
                 <x-ui.button type="submit" tone="primary" class="w-full">
                     {{ __('core.action.save') }}
                 </x-ui.button>

@@ -7,6 +7,7 @@ namespace App\Modules\Finance\Models;
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Core\Contracts\Drillable;
 use App\Modules\MasterData\Models\Person;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -27,7 +28,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * ধনাত্মক — টাকাটা বাইরে আছে, তিনি ডিপোকে ফেরত দেবেন।
  * ঋণাত্মক — ডিপো তাঁর কাছে ধার নিয়েছে।
  */
-class HandLoanAccount extends Model
+class HandLoanAccount extends Model implements Drillable
 {
     use BelongsToCompany;
     use HasFactory;
@@ -82,6 +83,7 @@ class HandLoanAccount extends Model
         'company_id', 'branch_id', 'person_id',
         'partner_id', 'partner_type', 'note', 'status', 'created_by',
         'interest_rate', 'term_months', 'due_on', 'repayment', 'security', 'next_due_on',
+        'principal', 'opening_repaid', 'money_account_id',
     ];
 
     /**
@@ -124,5 +126,40 @@ class HandLoanAccount extends Model
     public function isSettled(): bool
     {
         return $this->status === self::SETTLED;
+    }
+
+    /*
+     * ── Drillable — ⭐ কেন খাতাটা নিজেই, তার নড়াচড়া নয় ───────────────
+     *
+     * ⛔ ১৫ সেপ্টেম্বর ২০২৬ পর্যন্ত কেবল নড়াচড়ার সারিগুলো Drillable ছিল
+     * (`hand_loan_movement` ধরনের), খাতাটা নয়।
+     *
+     * ⚠️ ফল: **কাগজ রাখার জায়গা ছিল না।** [[components/ui/attachments]]
+     * `drillSourceType()` ধরে কাগজ খোঁজে, তাই FDR-এর সার্টিফিকেট,
+     * ধারের স্ট্যাম্প বা ভাড়ার চুক্তিপত্র কোথাও তোলা যেত না — অথচ
+     * ঝগড়া বাধলে ঐ কাগজটাই একমাত্র প্রমাণ।
+     *
+     * ⓘ কাগজ বসে **চুক্তিতে**, কিস্তিতে নয় — একটা FDR-এ একটাই
+     * সার্টিফিকেট, যতবারই টাকা নড়ুক।
+     */
+    public static function drillSourceType(): string
+    {
+        return 'hand_loan';
+    }
+
+    public function drillDocumentNo(): string
+    {
+        return $this->document_no ?? (string) $this->id;
+    }
+
+    public function drillLabel(): string
+    {
+        return __('finance::menu.hand_loan').' — '.$this->drillDocumentNo();
+    }
+
+    /** @return array{0: string, 1: array<string, mixed>} */
+    public function drillRoute(): array
+    {
+        return ['finance.hand_loan.show', ['handLoan' => $this->id]];
     }
 }

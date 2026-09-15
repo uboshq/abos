@@ -63,6 +63,7 @@
         </section>
     @endif
 
+
     <form method="GET" class="mb-3">
         <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
             <input type="checkbox" name="closed" value="1" @checked($showClosed)
@@ -127,7 +128,7 @@
                         bg-(--color-surface-card) p-4">
             <h2 class="mb-3 font-semibold">{{ __('finance::action.rental_new') }}</h2>
 
-            <form method="POST" action="{{ route('finance.rental.store') }}"
+            <form method="POST" enctype="multipart/form-data" action="{{ route('finance.rental.store') }}"
                   class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 @csrf
 
@@ -156,6 +157,35 @@
                 <x-ui.field name="term_months" type="number" min="1" max="600"
                             :label="__('finance::field.rental_term')" required />
 
+                {{-- ⭐ তিনটা ঘরই কলামে ছিল, পর্দায় ছিল না — ১৫ সেপ্টেম্বর ২০২৬।
+
+                     ⚠️ ভাড়ার দিনটা লেখা না থাকলে "দেরি হয়েছে কি না"
+                     প্রশ্নের উত্তর দেওয়া যায় না, আর বাড়িওয়ালা ফোন
+                     করলে তর্ক হয়। ⓘ ৫ তারিখ ডিফল্ট, কারণ বেশিরভাগ
+                     চুক্তিতে ওটাই লেখা থাকে। --}}
+                <x-ui.field name="rent_day" type="number" min="1" max="28"
+                            :label="__('finance::field.rent_day')"
+                            :value="old('rent_day', 5)" />
+
+                {{-- ⛔ অগ্রিম আর জামানত দুইটা আলাদা জিনিস — স্যাম্পলের
+                     ঐ লাইনটাই এখানে সবচেয়ে জরুরি।
+
+                     ⓘ অগ্রিম ভাড়া **ভাড়ারই আগাম**, তাই প্রতি মাসে ওটা
+                     থেকে কাটা পড়ে আর একদিন শূন্য হয়। ⚠️ জামানত ফেরতযোগ্য
+                     — চুক্তি শেষ না হলে ওটা কমে না। দুইটাকে এক ধরলে
+                     মালিক ভাবতেন তাঁর টাকা জমা আছে, অথচ সেটা খরচ হয়ে
+                     গেছে। --}}
+                <x-ui.field name="advance_months" type="number" min="0" max="36"
+                            :label="__('finance::field.advance_months')"
+                            :value="old('advance_months', 0)" />
+
+                {{-- ⓘ ভাড়ার উপর উৎসে কর — ভাড়াটিয়া কেটে সরকারকে দেয়,
+                     তাই বাড়িওয়ালা হাতে পান কম। ⚠️ হারটা না থাকলে
+                     বাড়িওয়ালার খাতা আর আমাদের খাতা মিলত না। --}}
+                <x-ui.field name="tax_rate" type="number" step="0.01" min="0" max="100"
+                            :label="__('finance::field.rental_tax_rate')"
+                            :value="old('tax_rate', 5)" />
+
                 {{-- ⓘ খালি রাখা যায়: পুরনো চুক্তি বসানোর সময় টাকাটা আগেই
                      দেওয়া হয়ে গেছে আর খোলার জেরে বসেছে, তখন আবার পোস্ট
                      করলে দুইবার হত। --}}
@@ -166,6 +196,39 @@
                 ])
 
                 <div class="sm:col-span-2 lg:col-span-3">
+
+                    {{-- ⭐ ফিতাটা ঘরগুলোর পরে, ভাউচারের বাক্সের আগে — নমুনার ক্রম।
+                         ⓘ আগে এটা ফর্মের বাইরে ছিল, তাই কার্ডের নিচে আলগা হয়ে
+                         ঝুলত। মালিক পাঁচটা পর্দা পাশাপাশি দেখে ধরিয়ে দিয়েছেন। --}}
+                    <div class="sm:col-span-2 xl:col-span-4">
+                        @include('finance::partials.handoff', [
+                            'voucher' => 'payment',
+                            'to' => route('accounts.voucher.create', ['type' => 'payment']),
+                            'action' => __('finance::action.pay_money_voucher'),
+                        ])
+                    </div>
+
+                    {{-- ⭐ ভাউচারের ঘর — নমুনার সবচেয়ে বড় অংশ।
+                         ⓘ ঘরগুলো খাতার সারিতে বসে না; ওগুলো ভাউচারে যায়। --}}
+                    <div class="sm:col-span-2 xl:col-span-4">
+                        @include('finance::partials.voucher-box', [
+                            'direction' => 'out',
+                            'carriers' => $carriers ?? [],
+                        ])
+                    </div>
+
+                    {{-- ⭐ সংযুক্তি — ভাড়ার চুক্তিপত্র। ⚠️ কত বছর, কত বাড়বে, জামানত কত — সব ওখানে। --}}
+                    <div class="sm:col-span-2">
+                        <label for="rent-paper" class="mb-1 block text-sm font-medium">
+                            {{ __('finance::field.attachment') }}
+                        </label>
+                        <input id="rent-paper" type="file" name="paper"
+                               x-on:change="$store.scanner.begin($el, 'paper')"
+                               class="w-full text-sm file:me-2 file:rounded-(--radius-field)
+                                      file:border file:border-(--color-border) file:bg-(--color-surface-app)
+                                      file:px-3 file:py-1.5 file:text-sm">
+                    </div>
+
                     <x-ui.button type="submit">{{ __('finance::action.rental_open') }}</x-ui.button>
                 </div>
             </form>

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Finance\Services;
 
+use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Modules\Finance\Models\BankFacility;
@@ -23,6 +24,8 @@ use Illuminate\Validation\ValidationException;
  */
 class BankFacilityService
 {
+    public function __construct(private readonly NumberSeriesEngine $numbers) {}
+
     /**
      * নতুন সুবিধা।
      *
@@ -40,6 +43,18 @@ class BankFacilityService
         $this->assertKindHasWhatItNeeds($kind, $data);
 
         return BankFacility::query()->create([
+            /*
+             * ⭐ নথি নম্বর — ১৫ সেপ্টেম্বর ২০২৬-এ যোগ হলো, আর এটা আমার
+             * নিজের ফাঁক।
+             *
+             * ⛔ `drillDocumentNo()` লিখেছিলাম `document_no ?? sanction_no
+             * ?? id` — অর্থাৎ ফলব্যাকটা কাজ করত, তাই **কিছুই ভাঙত না**,
+             * আর প্রথম ঘরটা যে কোনোদিন ভরত না সেটা ধরাও পড়ত না।
+             *
+             * ⚠️ ফল: মঞ্জুরি নম্বর না লিখলে সুবিধাটার পরিচয় হত স্রেফ
+             * একটা আইডি, আর ড্রিলের তালিকায় সেটা দেখতে ভুলের মতো লাগত।
+             */
+            'document_no' => $this->numbers->next('BFC'),
             'company_id' => CompanyContext::id(),
             'branch_id' => CompanyContext::branchId(),
             'kind' => $kind,
@@ -68,6 +83,20 @@ class BankFacilityService
 
             'stock_value' => $data['stock_value'] ?? null,
             'margin_percent' => $data['margin_percent'] ?? null,
+
+            /*
+             * ⓘ স্টকের অঙ্কটা কবেকার — খালি থাকলে খালিই থাকে।
+             * ⛔ `now()` বসানো হয় না: ওটা একটা **অনুমানকে তারিখের
+             * ছদ্মবেশ** দিত, আর তখন তিন মাসের পুরনো হিসাবও আজকের
+             * বলে চালিয়ে যেত।
+             */
+            'last_statement_on' => ($data['last_statement_on'] ?? '') ?: null,
+
+            /*
+             * ⓘ খোলার দিনের ব্যবহৃত অঙ্ক — খালি এলে শূন্য, আর শূন্যই
+             * সঠিক: নতুন সুবিধায় কিছু তোলা হয়নি।
+             */
+            'opening_drawn' => $data['opening_drawn'] ?? 0,
             'instalments' => $data['instalments'] ?? null,
             'instalment_amount' => $data['instalment_amount'] ?? null,
             'down_payment' => $data['down_payment'] ?? null,

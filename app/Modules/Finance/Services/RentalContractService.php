@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Finance\Services;
 
+use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
@@ -24,7 +25,10 @@ use Illuminate\Validation\ValidationException;
  */
 class RentalContractService
 {
-    public function __construct(private readonly VoucherService $vouchers) {}
+    public function __construct(
+        private readonly VoucherService $vouchers,
+        private readonly NumberSeriesEngine $numbers,
+    ) {}
 
     /**
      * চুক্তি খোলা, আর জামানতের টাকাটা পোস্ট করা।
@@ -47,6 +51,15 @@ class RentalContractService
 
         return DB::transaction(function () use ($data, $deposit, $rent, $adjustment, $term, $starts) {
             $contract = RentalContract::create([
+                /*
+                 * ⭐ নথি নম্বর — ১৫ সেপ্টেম্বর ২০২৬-এ যোগ হলো।
+                 *
+                 * ⛔ কলামটা ছিল, কেউ ভরত না, তাই প্রতিটা চুক্তি `NULL`
+                 * নিয়ে বসে থাকত। ⚠️ বাড়িওয়ালা ফোন করলে "কোন চুক্তি"
+                 * প্রশ্নের উত্তর দেওয়ার মতো কিছুই ছিল না — আইডি কাগজে
+                 * লেখা থাকে না।
+                 */
+                'document_no' => $this->numbers->next('RNT'),
                 'counterparty' => (string) $data['counterparty'],
                 'counterparty_phone' => $data['counterparty_phone'] ?? null,
                 'subject' => $data['subject'] ?? null,
@@ -57,6 +70,14 @@ class RentalContractService
                 'monthly_adjustment' => $adjustment,
                 'starts_on' => $starts->toDateString(),
                 'term_months' => $term,
+
+                /*
+                 * ⓘ খালি এলে কলামের ডিফল্টই থাকে (দিন ৫, অগ্রিম ০,
+                 * কর ৫%) — পুরনো চুক্তির আচরণ বদলায় না।
+                 */
+                'rent_day' => (int) ($data['rent_day'] ?? 5),
+                'advance_months' => (int) ($data['advance_months'] ?? 0),
+                'tax_rate' => ($data['tax_rate'] ?? '') !== '' ? $data['tax_rate'] : 5,
 
                 /*
                  * ⚠️ শেষ দিনটা "শুরু + মেয়াদ" নয়, তার **এক দিন আগে**।
