@@ -204,8 +204,10 @@ class ProfileController extends Controller
         ])->save();
 
         /* অনুমতি চাওয়া — নতুন ঠিকানায়। */
+        /* ⚠️ নাম ও ভাষা সাথে দিতে হয় — প্রাপক এখনো কেউ নন, তাই
+           চিঠিটা নিজের থেকে ওগুলো জানতে পারে না ([[EmailChangeLink]])। */
         Notification::route('mail', $validated['email'])
-            ->notify(new EmailChangeLink($token));
+            ->notify(new EmailChangeLink($token, (string) $user->name, (string) $user->locale));
 
         /* খবর দেওয়া — পুরনো ঠিকানায়। ⓘ এখনো `email` বদলায়নি, তাই
            `$user`-কে সরাসরি পাঠালেই সেটা পুরনো ঠিকানাতেই যায়। */
