@@ -69,9 +69,9 @@ class MenuRepository {
           if (tile != null) items.add(tile);
         }
       }
-      return _withSyntheticTiles(items, response.user);
+      return ordered(items, response.user);
     } catch (_) {
-      return _withSyntheticTiles(_localFallback(user), user);
+      return ordered(_localFallback(user), user);
     }
   }
 
@@ -153,11 +153,37 @@ class MenuRepository {
     return items;
   }
 
+  /// Everything this person can open, in the order a day actually uses it.
+  ///
+  /// <p><b>Work first, "coming soon" last.</b> Seen on a real device on 15
+  /// September: a super_admin's grid put নতুন অর্ডার, হাজিরা and সিঙ্কের অবস্থা
+  /// — the three things used every single day — *below twenty greyed tiles
+  /// for features that do not exist yet*. Someone had to scroll past
+  /// everything that does not work to reach everything that does.
+  ///
+  /// <p>The planned rows still belong on screen (docs/Contract: hiding them
+  /// lets a person conclude the feature is never coming and ask the office
+  /// for it again) — they just do not belong in front.
+  ///
+  /// <p>⚠️ Within the live group the server's own order is preserved
+  /// untouched. That order is a decision made on the web side — the menu
+  /// stands in the order the goods actually move — and this file has no
+  /// business second-guessing it. All that changes here is that dead tiles
+  /// sink.
+  @visibleForTesting
+  List<MenuItem> ordered(List<MenuItem> items, AuthUser user) {
+    final live = <MenuItem>[];
+    final planned = <MenuItem>[];
+    for (final item in items) {
+      (item.planned ? planned : live).add(item);
+    }
+    return [...live, ..._syntheticTiles(user), ...planned];
+  }
+
   /// Tiles that are not `/me` menu rows at all — see this class's own doc
-  /// comment for "নতুন অর্ডার", and [_withSyntheticTiles]'s trailing comment
-  /// for the sync-status tile every role gets regardless.
-  List<MenuItem> _withSyntheticTiles(List<MenuItem> items, AuthUser user) => [
-        ...items,
+  /// comment for "নতুন অর্ডার" and হাজিরা, and the trailing comment below for
+  /// the sync-status tile every role gets regardless.
+  List<MenuItem> _syntheticTiles(AuthUser user) => [
         if (user.can(_newOrderPermission))
           const MenuItem(
             key: 'sales.order.create',

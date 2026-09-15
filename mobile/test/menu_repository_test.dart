@@ -137,4 +137,67 @@ void main() {
       expect(tile.routeName, 'customers');
     });
   });
+
+  group('what a day uses comes first', () {
+    const repository = MenuRepository();
+
+    test('planned rows sink below everything that works', () {
+      // Seen on a device on 15 September: নতুন অর্ডার, হাজিরা and সিঙ্কের অবস্থা
+      // sat below twenty greyed "শীঘ্রই আসছে" tiles, so the three things used
+      // every day were the last three a person could reach.
+      final tiles = [
+        repository.tileFor(const MenuRouteEntry(
+            label: 'রেস্টুরেন্ট', route: 'restaurant.index', planned: true))!,
+        repository.tileFor(const MenuRouteEntry(
+            label: 'গ্রাহক', route: 'customer.index', planned: false))!,
+        repository.tileFor(const MenuRouteEntry(
+            label: 'রেসিপি', route: 'recipe.index', planned: true))!,
+        repository.tileFor(const MenuRouteEntry(
+            label: 'অর্ডার', route: 'sales.order.index', planned: false))!,
+      ];
+
+      final ordered = repository.ordered(
+        tiles,
+        const AuthUser(
+          id: '1',
+          name: 'SR',
+          email: 'sr@abos.test',
+          roles: ['salesman'],
+          permissions: ['sales.order.create', 'hr.attendance.self'],
+        ),
+      );
+
+      final labels = ordered.map((i) => i.label).toList();
+      final firstPlanned = ordered.indexWhere((i) => i.planned);
+      final lastLive = ordered.lastIndexWhere((i) => !i.planned);
+
+      expect(lastLive, lessThan(firstPlanned),
+          reason: 'nothing that works may sit below something that does not');
+      // The two everyday actions are in the working half, not after the
+      // "coming soon" wall.
+      expect(labels.indexOf('নতুন অর্ডার'), lessThan(firstPlanned));
+      expect(labels.indexOf('হাজিরা'), lessThan(firstPlanned));
+    });
+
+    test("the server's own order survives inside the live group", () {
+      // ⚠️ That order is a decision made on the web side — the menu stands in
+      // the order the goods actually move — and this file must not
+      // second-guess it. All that changes is that dead tiles sink.
+      final tiles = [
+        repository.tileFor(const MenuRouteEntry(
+            label: 'পণ্য', route: 'inventory.product.index', planned: false))!,
+        repository.tileFor(const MenuRouteEntry(
+            label: 'গ্রাহক', route: 'customer.index', planned: false))!,
+      ];
+
+      final ordered = repository.ordered(
+        tiles,
+        const AuthUser(
+            id: '1', name: 'x', email: 'x@abos.test', roles: [], permissions: []),
+      );
+
+      expect(ordered.map((i) => i.key).take(2).toList(),
+          ['inventory.product.index', 'customer.index']);
+    });
+  });
 }
