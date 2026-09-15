@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
 
@@ -374,6 +375,33 @@ class SyncEngine {
           .whereType<Map<String, dynamic>>()
           .toList();
 
+  /// Why the last push attempt for each module did not go through.
+  ///
+  /// <p>⚠️ <b>"Waiting" and "refused" look identical on a queue, and they are
+  /// not the same thing.</b> A phone out of coverage and a server rejecting
+  /// the request outright both leave the row exactly where it was, so the
+  /// screen says "N অপেক্ষমাণ" either way and the rep reads it as no signal.
+  ///
+  /// <p>That cost a real afternoon on 15 September: every order queued on a
+  /// live server sat pending, the sync screen showed nothing wrong, and the
+  /// cause — the server answering 422 to every push — was only found by
+  /// reading `adb logcat`. Nobody in a shop has adb.
+  ///
+  /// <p>In memory rather than on disk, deliberately: this describes the last
+  /// *attempt*, not the queue, and a stale reason from three days ago would
+  /// be worse than none. The next attempt rewrites it within seconds.
+  final Map<String, SyncAttemptFailure> _lastFailureByModule = {};
+
+  /// Null when the last attempt succeeded, or when none has been made since
+  /// the app started.
+  SyncAttemptFailure? lastFailureFor(String module) =>
+      _lastFailureByModule[module];
+
+  /// Every module whose last attempt failed — for a screen that wants to say
+  /// so once rather than per module.
+  List<SyncAttemptFailure> get lastFailures =>
+      _lastFailureByModule.values.toList();
+
   /// Pushes every module that has queued changes.
   Future<void> flushAll() async {
     if (_queue == null) return;
@@ -488,6 +516,7 @@ class SyncEngine {
 
   Future<void> _recordFailedAttempt(String module, Object error) async {
     debugPrint('ABOS sync: $module push failed ($error) — kept in queue');
+    _lastFailureByModule[module] = SyncAttemptFailure.from(error);
 
     for (final key in _box.keys.toList(growable: false)) {
       final row = _box.get(key);
@@ -566,4 +595,66 @@ class RejectedChange {
   /// When this device queued the change — device-local time (see
   /// [SyncEngine.enqueue]'s own comment on why that is fine here).
   final DateTime enqueuedAt;
+}
+
+/// What stopped the last push — in the terms a person can act on.
+///
+/// <p>The distinction that matters is not the status code but who has to do
+/// something: a rep who walks to a window, or an office that has to fix a
+/// build. A queue that cannot tell those apart sends the rep to the window
+/// forever.
+class SyncAttemptFailure {
+  const SyncAttemptFailure({
+    required this.isNetwork,
+    this.statusCode,
+    this.serverMessage,
+  });
+
+  /// No signal, a timeout, an unreachable host — ordinary, and the queue is
+  /// doing exactly what it was built for.
+  final bool isNetwork;
+
+  /// The server answered, and refused. ⚠️ Not a rejected *change* — those come
+  /// back per change in `outcomes` and land in [SyncEngine.rejectedItems].
+  /// This is the request itself being turned away, which no amount of waiting
+  /// or retrying will fix.
+  final int? statusCode;
+
+  final String? serverMessage;
+
+  bool get isServerRefusal => !isNetwork && statusCode != null;
+
+  factory SyncAttemptFailure.from(Object error) {
+    if (error is! DioException) {
+      return const SyncAttemptFailure(isNetwork: false);
+    }
+
+    final network = error.type == DioExceptionType.connectionError ||
+        error.type == DioExceptionType.connectionTimeout ||
+        error.type == DioExceptionType.sendTimeout ||
+        error.type == DioExceptionType.receiveTimeout;
+
+    final body = error.response?.data;
+
+    return SyncAttemptFailure(
+      isNetwork: network,
+      statusCode: error.response?.statusCode,
+      serverMessage: body is Map ? body['message']?.toString() : null,
+    );
+  }
+
+  /// One sentence, and it names who acts.
+  String get sentence {
+    if (isNetwork) {
+      return 'সংযোগ নেই — সংযোগ পেলেই নিজে থেকে চলে যাবে।';
+    }
+    if (isServerRefusal) {
+      return serverMessage == null
+          ? 'সার্ভার অনুরোধটাই নিচ্ছে না (কোড $statusCode) — অফিসে জানান, '
+              'অপেক্ষা করে ঠিক হবে না।'
+          : 'সার্ভার বলছে: $serverMessage (কোড $statusCode) — অফিসে জানান, '
+              'অপেক্ষা করে ঠিক হবে না।';
+    }
+    return 'পাঠানো যায়নি — কারণ জানা যায়নি। অফিসে জানান।';
+  }
 }
