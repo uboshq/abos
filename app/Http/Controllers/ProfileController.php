@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Core\Panels\FactRegistry;
 use App\Core\Services\AvatarService;
 use App\Core\Services\MenuBuilder;
+use App\Core\Support\MailReach;
 use App\Models\User;
 use App\Notifications\EmailChangeLink;
 use App\Notifications\EmailChangeWarning;
@@ -133,6 +134,26 @@ class ProfileController extends Controller
     public function requestEmailChange(Request $request): RedirectResponse
     {
         $user = $request->user();
+
+        /*
+         * ⛔ চিঠি না গেলে কাজটা **শুরুই করা হয় না** — ১৫ সেপ্টেম্বর ২০২৬।
+         *
+         * ⚠️ `MAIL_MAILER=log` অবস্থায় Laravel চিঠিটা সফলভাবে পাঠায়,
+         * লগ ফাইলে। কোনো ব্যতিক্রম ওঠে না, তাই এই পদ্ধতিটা নির্দ্বিধায়
+         * বলত *"লিংক পাঠানো হয়েছে"*, আর ব্যবহারকারী ইনবক্স খুলে বসে
+         * থাকতেন।
+         *
+         * ⛔ আরও খারাপ: `pending_email` বসে যেত। অর্থাৎ পর্দায় লেখা
+         * উঠত "অমুক ঠিকানার নিশ্চিতকরণের অপেক্ষায়" — একটা অপেক্ষা যার
+         * শেষ নেই, কারণ লিংকটা কেউ কোনোদিন পাবেন না।
+         *
+         * ⭐ তাই যাচাইটা সবার আগে, ডাটাবেজে কিছু লেখার আগেই।
+         */
+        if (MailReach::silent()) {
+            throw ValidationException::withMessages([
+                'email' => __('core.profile.email_no_mailer'),
+            ]);
+        }
 
         $validated = $request->validate([
             /*

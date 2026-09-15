@@ -323,6 +323,23 @@
                     {{ __('core.profile.email_change_note') }}
                 </p>
 
+                {{-- ⛔ চিঠি না গেলে সেটা **চাপার আগেই** বলা হয়।
+
+                     ⚠️ কন্ট্রোলারও আটকায়, তাই এটা নিরাপত্তার জন্য নয় —
+                     ⓘ ভদ্রতার জন্য। বোতামটা চাপার পর "হলো না" বলা আর
+                     চাপার আগে "এখন হবে না" বলা এক জিনিস নয়: প্রথমটায়
+                     মানুষ নতুন ঠিকানা আর পাসওয়ার্ড টাইপ করে তবে জানেন।
+
+                     ⭐ SMTP বসানোর দিন এটা নিজে থেকেই মিলিয়ে যাবে;
+                     কোনো কোড বদলাতে হবে না। --}}
+                @if (\App\Core\Support\MailReach::silent())
+                    <p role="status"
+                       class="mb-3 rounded-(--radius-field) bg-(--color-badge-pending-bg) px-3 py-2 text-sm
+                              text-(--color-badge-pending-ink)">
+                        {{ __('core.profile.email_no_mailer') }}
+                    </p>
+                @endif
+
                 <div class="grid gap-3 sm:grid-cols-2">
                     <label class="block">
                         <span class="mb-1 block text-sm font-medium">{{ __('core.profile.email_new') }}</span>
