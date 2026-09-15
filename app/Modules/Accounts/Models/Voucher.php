@@ -107,6 +107,16 @@ class Voucher extends Model implements Drillable
         'from_bank', 'from_account_no',
         'status', 'approved_by', 'approved_at',
         'cancelled_by', 'cancelled_at', 'cancel_reason', 'created_by',
+
+        // ১৪ সেপ্টেম্বর — টাকা চলাচলের ব্লক
+        'carried_by', 'moved_at', 'note_counts', 'wallet', 'wallet_medium',
+        'counterparty_phone', 'charge_borne_by', 'transfer_mode_id',
+        'from_branch', 'from_account_name', 'deposit_slip_no', 'lands_on',
+        'reverse_on',
+
+        // ১৫ সেপ্টেম্বর — খরচ ভাউচারের নিজের ঘর
+        'cost_centre_id', 'expense_account_id', 'bill_no',
+        'gross_amount', 'ait_amount', 'vds_amount',
     ];
 
     protected function casts(): array
@@ -114,12 +124,38 @@ class Voucher extends Model implements Drillable
         return [
             'trx_date' => 'date',
             'ref_date' => 'date',
+            'reverse_on' => 'date',
             'instrument_date' => 'date',
             'amount' => 'decimal:4',
             'charge_amount' => 'decimal:4',
             'approved_at' => 'datetime',
             'cancelled_at' => 'datetime',
         ];
+    }
+
+    /**
+     * এই খরচটা কোন কোন চালানের ঘাড়ে — আর কার কতটা।
+     *
+     * ⓘ খালি থাকা বৈধ, আর তার মানে **পরোক্ষ খরচ**। মালিকের নিয়ম:
+     * *"একটাও না বাছলে এটা পরোক্ষ; বাছলেই প্রত্যক্ষ।"*
+     *
+     * @return HasMany<VoucherBillShare, $this>
+     */
+    public function billShares(): HasMany
+    {
+        return $this->hasMany(VoucherBillShare::class);
+    }
+
+    /**
+     * প্রত্যক্ষ খরচ কি না — চালান বাছা হয়েছে কি না, সেটাই একমাত্র প্রশ্ন।
+     *
+     * ⚠️ আলাদা কোনো "ধরন" ঘর রাখা হয়নি, ইচ্ছাকৃতভাবে। ⛔ ঘর থাকলে কেউ
+     * "প্রত্যক্ষ" বেছে একটাও চালান না বাছতে পারতেন, আর দুইটা তথ্য
+     * পরস্পরবিরোধী হয়ে বসে থাকত — তখন কোনটা সত্যি তা কেউ বলতে পারত না।
+     */
+    public function isDirectCost(): bool
+    {
+        return $this->billShares()->exists();
     }
 
     public function lines(): HasMany

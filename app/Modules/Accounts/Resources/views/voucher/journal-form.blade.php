@@ -37,7 +37,18 @@
             :subtitle="$isNew ? __('accounts::message.number_on_save') : $voucher->document_no" />
     </x-slot:header>
 
-    <form method="POST"
+    {{--
+        ⛔ `enctype` ছাড়া ফাইলের ঘরটা নীরবে অকেজো — ১৫ সেপ্টেম্বর ২০২৬।
+
+        ⓘ ব্রাউজার ডিফল্টে ফর্মটা `application/x-www-form-urlencoded`
+        হিসেবে পাঠায়, আর তাতে ফাইলের কেবল **নামটা** যায়, বাইটগুলো নয়।
+
+        ⚠️ সার্ভারে কোনো ভুল দেখা যেত না: `$request->file('attachment')`
+        হত `null`, আর কোড ভাবত ব্যবহারকারী কিছু দেননি। ⓘ তিনি দেখতেন
+        ভাউচারটা সেভ হয়েছে, কেবল ছবিটা নেই — আর কেন, তার কোনো চিহ্নও
+        থাকত না।
+    --}}
+    <form method="POST" enctype="multipart/form-data"
           action="{{ $isNew ? route('accounts.voucher.store', 'journal') : route('accounts.voucher.update', $voucher) }}"
           x-data="journalForm()"
           @submit="busy ? $event.preventDefault() : (busy = true)"
@@ -70,6 +81,32 @@
                            class="h-(--spacing-field) w-full rounded-(--radius-field) border
                                   border-(--color-border) bg-(--color-surface-card) px-3">
                 </label>
+
+                {{--
+                    ⭐ উল্টো দাখিলার তারিখ — নমুনার চতুর্থ ঘর, ১৫ সেপ্টেম্বর ২০২৬।
+
+                    ── কেন এই ঘরটা লাগে ────────────────────────────────
+                    মাসের শেষে কিছু হিসাব সাময়িক: বিদ্যুৎ বিল এসে
+                    পৌঁছায়নি, কিন্তু খরচটা এই মাসেরই। তাই একটা জাবেদা
+                    বসে, আর পরের মাসের ১ তারিখে সেটা উল্টে যায়।
+
+                    ⚠️ তারিখটা ভাউচারের সাথেই লেখা থাকে, কারও মনে রাখার
+                    উপর নয়। ⓘ মনে রাখার উপর ছাড়লে কেউ একদিন ভুলে যেতেন,
+                    আর আসল বিল আসার পর খরচটা **দুইবার** বসত — ধরা পড়ত
+                    বছরের শেষে, যখন আর কেউ মনে করতে পারেন না কেন।
+
+                    ⓘ ঐচ্ছিক: বেশিরভাগ জাবেদা উল্টানোর নয় (সংশোধন,
+                    সমন্বয়, খোলার জের)।
+                --}}
+                <x-ui.field name="reverse_on" type="date"
+                            :label="__('accounts::field.reverse_on')"
+                            :value="old('reverse_on', $voucher->reverse_on?->format('Y-m-d'))"
+                            :hint="__('accounts::message.reverse_on_hint')" />
+            </div>
+
+            {{-- নমুনার চতুর্থ ঘর — জাবেদাতেও কাগজ থাকে --}}
+            <div class="mt-3">
+                @include('accounts::voucher.partials.attachment-field')
 
                 {{-- ব্যাংক/MFS লেনদেন নম্বর।
 

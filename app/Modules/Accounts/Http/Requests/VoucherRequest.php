@@ -7,6 +7,7 @@ namespace App\Modules\Accounts\Http\Requests;
 use App\Core\Services\PartyRegistry;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\Money;
+use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\MoneyCategory;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
@@ -171,6 +172,93 @@ class VoucherRequest extends FormRequest
             'instrument' => ['nullable', Rule::in(Voucher::INSTRUMENTS)],
             'instrument_no' => ['nullable', 'string', 'max:64'],
             'instrument_date' => ['nullable', 'date'],
+
+            /*
+             * ── টাকা চলাচলের ব্লকের ঘরগুলো, ১৫ সেপ্টেম্বর ২০২৬ ─────────
+             *
+             * ⛔ ঘরগুলো ১৪ তারিখে পর্দায় বসেছিল, কলামও হয়েছিল — কিন্তু
+             * **এখানে নিয়ম না থাকায়** সেগুলো `validated()`-এ আসতই না।
+             * ⚠️ তাই কন্ট্রোলার ওগুলো কোনোদিন দেখেনি, আর সেভও হয়নি।
+             * দুই দিক থেকেই বন্ধ দরজা।
+             */
+            'carried_by' => ['nullable', 'integer',
+                Rule::exists('users', 'id')],
+            'moved_at' => ['nullable', 'date_format:H:i'],
+
+            /*
+             * নোটের গণনা — কোন নোট কয়টা।
+             *
+             * ⓘ চাবিগুলো [[CashCount::DENOMINATIONS]]-এর ভিতরেই থাকতে
+             * হবে: বাইরের চাবি এলে যোগফল আর নোটের হিসাব মিলত না, আর
+             * গরমিলটা ধরা পড়ত কেবল ক্যাশ মেলানোর দিন।
+             */
+            'note_counts' => ['nullable', 'array'],
+            'note_counts.*' => ['nullable', 'integer', 'min:0', 'max:100000'],
+
+            'wallet' => ['nullable', 'string', 'max:32'],
+            'wallet_medium' => ['nullable', 'string', 'max:32'],
+            'counterparty_phone' => ['nullable', 'string', 'max:20'],
+
+            /*
+             * ⭐ চার্জটা কে দিয়েছে — মালিকের নির্দেশ, ১৪ সেপ্টেম্বর।
+             *
+             * ⓘ দুইটাই বৈধ উত্তর, আর দুইটায় খতিয়ান আলাদা হয়: আমরা
+             * দিলে চার্জ আমাদের খরচ, প্রেরক দিলে তাঁর খতিয়ানে পুরো মোট।
+             */
+            'charge_borne_by' => ['nullable', Rule::in(['us', 'them'])],
+            'transfer_mode_id' => ['nullable', 'integer',
+                Rule::exists('mdm_transfer_modes', 'id')],
+
+            'from_branch' => ['nullable', 'string', 'max:120'],
+            'from_account_name' => ['nullable', 'string', 'max:120'],
+            'deposit_slip_no' => ['nullable', 'string', 'max:64'],
+            'lands_on' => ['nullable', 'date'],
+
+            /*
+             * ⭐ উল্টো দাখিলার তারিখ — সাময়িক জাবেদা নিজেকে যেদিন উল্টাবে।
+             *
+             * ⛔ ভাউচারের তারিখের পরে হতেই হবে: আগের তারিখে উল্টালে
+             * এন্ট্রিটা বসার আগেই মুছে যেত, আর খাতায় কেবল উল্টোটাই
+             * থাকত — অর্থাৎ হিসাবটা উল্টো দিকে ভুল হত।
+             */
+            'reverse_on' => ['nullable', 'date', 'after:trx_date'],
+
+            /*
+             * ── খরচ ভাউচারের নিজের ঘর, ১৫ সেপ্টেম্বর ২০২৬ ─────────────
+             * নমুনার চৌদ্দটা ঘরের যেগুলো ভাউচারের সারিতে বসে।
+             */
+            'cost_centre_id' => ['nullable', 'integer',
+                Rule::exists('acc_cost_centers', 'id')->where('company_id', CompanyContext::id())],
+
+            /*
+             * ⛔ খাতটা এই কোম্পানির, আর **খরচের** খাত।
+             *
+             * ⚠️ কেবল `exists` দিলে যে কেউ ব্যাংকের আইডি পাঠিয়ে খরচটা
+             * সম্পদের খাতে বসিয়ে দিতে পারত, আর মুনাফা মিথ্যা বেশি
+             * দেখাত — কোনো ভুল বার্তা ছাড়াই।
+             */
+            'expense_account_id' => ['nullable', 'integer',
+                Rule::exists('accounts', 'id')
+                    ->where('company_id', CompanyContext::id())
+                    ->where('type', Account::EXPENSE)
+                    ->where('is_group', false)],
+
+            'bill_no' => ['nullable', 'string', 'max:60'],
+            'gross_amount' => ['nullable', 'numeric', 'min:0'],
+            'ait_amount' => ['nullable', 'numeric', 'min:0'],
+            'vds_amount' => ['nullable', 'numeric', 'min:0'],
+
+            /*
+             * ⭐ কোন চালানের জন্য — এক খরচ, একাধিক চালান।
+             *
+             * ⓘ মালিকের কথা: *"এক ট্রাকে একাধিক চালান এলে সবগুলোই
+             * বাছুন"*। খালি থাকা বৈধ, আর তার মানে **পরোক্ষ খরচ**।
+             */
+            'bill_shares' => ['nullable', 'array'],
+            'bill_shares.*.purchase_bill_id' => ['required_with:bill_shares', 'integer',
+                Rule::exists('pur_bills', 'id')->where('company_id', CompanyContext::id())],
+            'bill_shares.*.share_amount' => ['required_with:bill_shares', 'numeric', 'min:0'],
+            'alloc_basis' => ['nullable', Rule::in(['qty', 'value', 'weight'])],
         ];
 
         if ($this->isJournal()) {

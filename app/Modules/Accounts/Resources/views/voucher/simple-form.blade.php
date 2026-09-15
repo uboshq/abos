@@ -49,7 +49,18 @@
             :subtitle="$isNew ? __('accounts::message.number_on_save') : $voucher->document_no" />
     </x-slot:header>
 
-    <form method="POST"
+    {{--
+        ⛔ `enctype` ছাড়া ফাইলের ঘরটা নীরবে অকেজো — ১৫ সেপ্টেম্বর ২০২৬।
+
+        ⓘ ব্রাউজার ডিফল্টে ফর্মটা `application/x-www-form-urlencoded`
+        হিসেবে পাঠায়, আর তাতে ফাইলের কেবল **নামটা** যায়, বাইটগুলো নয়।
+
+        ⚠️ সার্ভারে কোনো ভুল দেখা যেত না: `$request->file('attachment')`
+        হত `null`, আর কোড ভাবত ব্যবহারকারী কিছু দেননি। ⓘ তিনি দেখতেন
+        ভাউচারটা সেভ হয়েছে, কেবল ছবিটা নেই — আর কেন, তার কোনো চিহ্নও
+        থাকত না।
+    --}}
+    <form method="POST" enctype="multipart/form-data"
           action="{{ $isNew ? route('accounts.voucher.store', $type) : route('accounts.voucher.update', $voucher) }}"
           x-data="{ busy: false }"
           @submit="busy ? $event.preventDefault() : (busy = true)"
@@ -119,6 +130,20 @@
                             :value="old('amount', $debitLine?->debit)" required numeric />
             </div>
         </section>
+
+        {{--
+            ── খরচ ভাউচারের নিজস্ব অংশ, ১৫ সেপ্টেম্বর ২০২৬ ──────────────
+            ⛔ এই পর্দাটা পাঁচটা ভাউচারের চারটাকেই এক চেহারায় দেখাত, আর
+            টাইপভেদে আলাদা কিছুই ছিল না। ⓘ ফলে খরচ ভাউচার দেখতে হুবহু
+            রসিদের মতো — অথচ খরচের নিজের প্রশ্নগুলো (কোন খাতে, কার খরচ,
+            কোন চালানের জন্য) কোথাও জিজ্ঞেসই করা হত না।
+
+            ⚠️ মালিক নমুনা আর পর্দা পাশাপাশি রেখে দেখান, আর গুনে পাওয়া
+            যায় নমুনার চৌদ্দটা ঘরের মাত্র তিনটা।
+        --}}
+        @if ($voucher->type === \App\Modules\Accounts\Models\Voucher::EXPENSE)
+            @include('accounts::voucher.partials.expense-fields')
+        @endif
 
         <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4"
                  x-data="{

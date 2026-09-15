@@ -99,6 +99,49 @@ final class VoucherService
                 'instrument_date' => $data['instrument_date'] ?? null,
                 'from_bank' => $data['from_bank'] ?? null,
                 'from_account_no' => $data['from_account_no'] ?? null,
+
+                /*
+                 * ── ⛔ একই ভুল, দ্বিতীয়বার — ১৫ সেপ্টেম্বর ২০২৬ ─────────
+                 * উপরের মন্তব্যটা ঠিক এই ফাঁদের কথাই বলেছিল, আর তবু
+                 * ১৪ তারিখে যোগ হওয়া **বারোটা ঘরের একটাও** এই তালিকায়
+                 * বসানো হয়নি।
+                 *
+                 * ⚠️ ফল হুবহু যা লেখা ছিল: ঘরগুলো ফর্মে আছে, যাচাইয়ে
+                 * আছে, কলামও আছে — কিন্তু **নতুন ভাউচারে সেভ হয় না**।
+                 * সম্পাদনায় বসে, কারণ `update()` স্প্রেড করে। ⓘ তাই
+                 * অভিযোগটা হত ঐ অদ্ভুত আকারেই: "নতুন রসিদে ওয়ালেট
+                 * থাকে না, কিন্তু এডিট করলে বসে"।
+                 *
+                 * ⭐ ধরা পড়েছে মালিক নমুনা আর পর্দা পাশাপাশি রেখে
+                 * দেখানোয়, কোনো টেস্টে নয়।
+                 */
+                'carried_by' => $data['carried_by'] ?? null,
+                'moved_at' => $data['moved_at'] ?? null,
+                'note_counts' => $data['note_counts'] ?? null,
+                'wallet' => $data['wallet'] ?? null,
+                'wallet_medium' => $data['wallet_medium'] ?? null,
+                'counterparty_phone' => $data['counterparty_phone'] ?? null,
+                'charge_borne_by' => $data['charge_borne_by'] ?? 'us',
+                'transfer_mode_id' => $data['transfer_mode_id'] ?? null,
+                'from_branch' => $data['from_branch'] ?? null,
+                'from_account_name' => $data['from_account_name'] ?? null,
+                'deposit_slip_no' => $data['deposit_slip_no'] ?? null,
+                'lands_on' => $data['lands_on'] ?? null,
+                'reverse_on' => $data['reverse_on'] ?? null,
+
+                /*
+                 * ── খরচ ভাউচারের নিজের ছয়টা, ১৫ সেপ্টেম্বর ২০২৬ ────────
+                 * নমুনার চৌদ্দটা ঘরের মধ্যে এগুলোই ভাউচারের সারিতে বসে;
+                 * বাকিগুলো হয় আগে থেকেই ছিল, নয় আলাদা টেবিলে
+                 * ([[VoucherBillShare]])।
+                 */
+                'cost_centre_id' => $data['cost_centre_id'] ?? null,
+                'expense_account_id' => $data['expense_account_id'] ?? null,
+                'bill_no' => $data['bill_no'] ?? null,
+                'gross_amount' => $data['gross_amount'] ?? null,
+                'ait_amount' => $data['ait_amount'] ?? 0,
+                'vds_amount' => $data['vds_amount'] ?? 0,
+
                 'status' => DocumentStatus::DRAFT,
                 'created_by' => auth()->id(),
             ]);
@@ -116,6 +159,41 @@ final class VoucherService
 
             return $voucher->fresh(['lines']);
         });
+    }
+
+    /**
+     * এই খরচটা কোন কোন চালানের ঘাড়ে — আর কার কতটা।
+     *
+     * ── ⭐ কেন "replace", "add" নয় ───────────────────────────────────
+     * সম্পাদনার সময় ব্যবহারকারী একটা চালানের টিক তুলে নিতে পারেন।
+     * ⓘ কেবল যোগ করলে তোলা টিকটা সারিতে থেকে যেত, আর ঐ মালের দামে
+     * একটা খরচ বসে থাকত যেটা কেউ আর চায় না।
+     *
+     * ── ⚠️ শূন্য ভাগ বাদ ────────────────────────────────────────────
+     * টিক দেওয়া কিন্তু অঙ্ক না লেখা মানে ব্যবহারকারী এখনো ঠিক করেননি।
+     * ⛔ শূন্য টাকার সারি রাখলে চালানটা "খরচ বসেছে" দেখাত, অথচ কিছুই
+     * বসেনি — আর পরেরবার সে চালানটা ছাঁকনিতে লুকিয়ে যেত।
+     *
+     * @param  list<array<string, mixed>>  $shares
+     */
+    public function replaceBillShares(Voucher $voucher, array $shares, string $basis = 'qty'): void
+    {
+        $voucher->billShares()->delete();
+
+        foreach ($shares as $row) {
+            $billId = (int) ($row['purchase_bill_id'] ?? 0);
+            $amount = (string) ($row['share_amount'] ?? '0');
+
+            if ($billId === 0 || bccomp($amount, '0', 4) <= 0) {
+                continue;
+            }
+
+            $voucher->billShares()->create([
+                'purchase_bill_id' => $billId,
+                'share_amount' => $amount,
+                'basis' => $basis,
+            ]);
+        }
     }
 
     /**

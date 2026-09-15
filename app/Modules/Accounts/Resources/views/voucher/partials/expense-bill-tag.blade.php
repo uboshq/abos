@@ -1,0 +1,156 @@
+{{--
+    কোন চালানের জন্য — প্রত্যক্ষ না পরোক্ষ।
+
+    ── ⭐ মালিকের নিজের কথায় কেন এটা লাগে ──────────────────────────────
+    "এক্সপেন্স সংযুক্তির সাথে ইনভয়েস নম্বর ট্যাগ করলেই হয় — তাহলে
+    ডাইরেক্ট এক্সপেন্স আর ইনডাইরেক্ট ট্যাগ করা সহজ হবে।"
+
+    ⓘ ভাড়া, হাম্মালি বা গাড়িভাড়া কোন মালের দামে উঠবে সেটা এই ট্যাগ
+    ছাড়া কেউ বলতে পারে না। ⛔ আর তখন "কোন পণ্যে কত লাভ" প্রশ্নের
+    উত্তরটাই ভুল থাকে — খরচটা কোথাও একটা বসে, কিন্তু ঐ মালের গায়ে নয়।
+
+    ── ⚠️ আটকায় না, দেখায় ─────────────────────────────────────────────
+    মালিকের নির্দেশ ছিল স্পষ্ট: "আটকে দেব না। দেখিয়ে দেব। কোন কোন
+    খরচ হয়েছে তা দেখিয়ে দেবে ইনভয়েসের সাথে।"
+
+    ⓘ তাই এখানে কিছুই বাধ্যতামূলক নয়। একটাও চালান না বাছলে খরচটা
+    পরোক্ষ — সরাসরি ঐ খাতে বসে, আর সেটাও একটা বৈধ উত্তর। বাছলেই
+    প্রত্যক্ষ, আর টাকাটা ঐ মালের দামে ওঠে।
+
+    ── ⛔ এক ট্রাকে একাধিক চালান ────────────────────────────────────────
+    মালিকের কথা: "এক ট্রাকে একাধিক চালান এলে সবগুলোই বাছুন", আর
+    "একই পণ্যের বিলে দুইবার ভাড়া বসলে সমস্যা — তাই যেগুলো পেন্ডিং
+    তালিকা করে দিলেই ভালো"।
+
+    ⓘ সেজন্যই "আগে বসেছে" কলামটা আর "কেবল যেগুলোয় এখনো ভাড়া বসেনি"
+    ছাঁকনিটা — দুইবার বসানো ঠেকানো হয় না, দেখিয়ে দেওয়া হয়।
+--}}
+<details class="mt-4 rounded-(--radius-card) border border-(--color-border) p-3"
+         @if (! empty(old('bill_shares', $voucher->billShares?->all() ?? []))) open @endif
+         x-data="{ onlyUntagged: true }">
+    <summary class="cursor-pointer text-sm font-semibold">
+        {{ __('accounts::field.against_which_bill') }}
+        <span class="ms-2 text-xs font-normal"
+              :class="isDirect ? 'text-(--color-badge-success-ink)' : 'text-(--color-ink-muted)'"
+              x-text="isDirect ? directLabel + ' · ' + tagged : indirectLabel"></span>
+    </summary>
+
+    <p class="mt-2 text-xs text-(--color-ink-muted)">
+        {{ __('accounts::message.bill_tag_hint') }}
+    </p>
+
+    @if (($taggableBills ?? collect())->isEmpty())
+        {{--
+            ⓘ একটাও চালান নেই — আর সেটা স্বাভাবিক, ব্যতিক্রম নয়।
+
+            ⚠️ খালি টেবিল দেখালে ব্যবহারকারী ভাবতেন কিছু ভাঙা। তাই
+            কারণটা লেখা থাকে: হয় এখনো কোনো ক্রয় হয়নি, নয় সবগুলোয়
+            ইতিমধ্যে ভাড়া বসেছে।
+        --}}
+        <p class="mt-3 rounded-(--radius-field) bg-(--color-surface-app) p-3 text-sm text-(--color-ink-muted)">
+            {{ __('accounts::message.no_bill_to_tag') }}
+        </p>
+    @else
+        <div class="mt-3 overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="text-xs text-(--color-ink-muted)">
+                    <tr class="border-b border-(--color-border)">
+                        <th class="w-8"></th>
+                        <th class="p-2 text-start">{{ __('accounts::field.bill') }}</th>
+                        <th class="p-2 text-start">{{ __('accounts::field.goods') }}</th>
+                        <th class="p-2 text-end">{{ __('accounts::field.qty') }}</th>
+                        <th class="p-2 text-end">{{ __('accounts::field.already_charged') }}</th>
+                        <th class="p-2 text-end">{{ __('accounts::field.this_share') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($taggableBills as $i => $bill)
+                        @php
+                            $rows = collect(old('bill_shares', $voucher->billShares?->all() ?? []));
+                            $picked = $rows->first(function ($s) use ($bill) {
+                                $id = is_array($s) ? ($s['purchase_bill_id'] ?? null) : $s->purchase_bill_id;
+
+                                return (int) $id === (int) $bill->id;
+                            });
+                            $share = is_array($picked) ? ($picked['share_amount'] ?? '') : ($picked?->share_amount ?? '');
+                        @endphp
+                        <tr class="border-b border-(--color-border)"
+                            x-show="! onlyUntagged || {{ $bill->already_charged > 0 ? 'false' : 'true' }}">
+                            <td class="p-2">
+                                <input type="checkbox"
+                                       name="bill_shares[{{ $i }}][purchase_bill_id]"
+                                       value="{{ $bill->id }}"
+                                       @checked($picked)
+                                       x-on:change="tagged += $event.target.checked ? 1 : -1">
+                            </td>
+                            <td class="p-2 font-medium">{{ $bill->document_no }}</td>
+                            <td class="p-2">{{ $bill->goods_summary }}</td>
+                            <td class="num p-2 text-end">{{ $bill->total_qty }}</td>
+                            <td class="num p-2 text-end text-(--color-ink-muted)">
+                                {{ $bill->already_charged > 0 ? number_format((float) $bill->already_charged, 2) : '—' }}
+                            </td>
+                            <td class="p-2 text-end">
+                                <input type="number" step="0.01" inputmode="decimal"
+                                       class="num w-28 rounded-(--radius-field) border border-(--color-border) p-1 text-end"
+                                       name="bill_shares[{{ $i }}][share_amount]"
+                                       value="{{ $share }}">
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+
+        <div class="mt-2 flex flex-wrap gap-2">
+            <button type="button"
+                    class="rounded-full border border-(--color-border) px-3 py-1 text-xs"
+                    :class="onlyUntagged ? 'bg-(--color-surface-app) font-semibold' : ''"
+                    x-on:click="onlyUntagged = true">
+                {{ __('accounts::field.only_untagged') }}
+            </button>
+            <button type="button"
+                    class="rounded-full border border-(--color-border) px-3 py-1 text-xs"
+                    :class="! onlyUntagged ? 'bg-(--color-surface-app) font-semibold' : ''"
+                    x-on:click="onlyUntagged = false">
+                {{ __('accounts::field.all_bills') }}
+            </button>
+        </div>
+
+        <div class="mt-3 grid gap-3 sm:grid-cols-3">
+            {{--
+                ভাগ হবে কীসের অনুপাতে — পরিমাণ, মূল্য, না ওজন।
+
+                ⓘ অনুপাতটা সারিতেও লেখা থাকে, কারণ পরে নিয়ম বদলালে
+                পুরনো ভাউচারের ভাগও বদলে যেত — আর অনুমোদিত কাগজ নিজে
+                থেকে বদলায় না।
+            --}}
+            <x-ui.select name="alloc_basis" :label="__('accounts::field.alloc_basis')"
+                         :value="old('alloc_basis', 'qty')">
+                <option value="qty">{{ __('accounts::field.basis_qty') }}</option>
+                <option value="value">{{ __('accounts::field.basis_value') }}</option>
+                <option value="weight">{{ __('accounts::field.basis_weight') }}</option>
+            </x-ui.select>
+
+            {{--
+                ধরন ও কোথায় বসবে — লেখা, ঘর নয়।
+
+                ⚠️ দুইটাই উপরের বাছাই থেকে আপনা-আপনি আসে, তাই ব্যবহারকারী
+                এগুলো টাইপ করেন না। ⓘ ঘর বানালে কেউ "প্রত্যক্ষ" লিখে
+                একটাও চালান না বাছতে পারতেন, আর দুইটা পরস্পরবিরোধী হয়ে
+                থাকত।
+            --}}
+            <div>
+                <span class="block text-sm text-(--color-ink-muted)">{{ __('accounts::field.kind') }}</span>
+                <p class="mt-1 text-sm font-medium" x-text="isDirect ? directLabel : indirectLabel"></p>
+            </div>
+
+            <div>
+                <span class="block text-sm text-(--color-ink-muted)">{{ __('accounts::field.lands_where') }}</span>
+                <p class="mt-1 text-sm font-medium" x-text="isDirect ? landsGoods : landsHead"></p>
+            </div>
+        </div>
+
+        <p class="mt-2 text-xs text-(--color-ink-muted)"
+           x-text="isDirect ? directEffect : indirectEffect"></p>
+    @endif
+</details>
