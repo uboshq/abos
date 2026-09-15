@@ -1134,40 +1134,147 @@ input[type='number'] {
 }
 
 /*
- * মডিউল-বারের ঘরগুলো — বারের সাথে **একই রং**, মালিকের নির্দেশ।
+ * মডিউল-বারের ঘরগুলো — উঁচু, ত্রিমাত্রিক চাবি।
  *
- * ⛔ আগে ঘরগুলো সাদা ছিল (`surface-card`), আর বারটা ধূসর — তাই ওগুলো
- * বারের উপর সাদা ছোপের মতো দেখাত, বোতামের সারির মতো নয়।
+ * ── মালিকের নির্দেশ, ১৫ সেপ্টেম্বর ২০২৬ ─────────────────────────────
+ * তিনি ছবিতে বারটা দাগিয়ে বললেন *"mark kora buton gulo 3d type koro"*।
+ *
+ * ⭐ আগের নিয়মটা ছিল "বারের সাথে একই রং" (তাঁরই আগের নির্দেশ), আর সেটা
+ * ভাঙা হয়নি: ভিত্তির রংটা এখনো হুবহু বারের রং। ⓘ আলো-ছায়াটা তার
+ * **উপরে** বসানো — উপরে একটু আলো, নিচে একটু ছায়া। তাই সারিটা এক
+ * পরিবারেরই থাকে, কেবল ঘরগুলো আর সমতল নয়।
+ *
+ * ── কেন `color-mix` ভিত্তির রং ধরে, ধ্রুবক ধরে নয় ───────────────────
+ * ⚠️ আগের `:hover` নিয়মে `#c9c9c9` হাতে লেখা ছিল — অর্থাৎ ওটা কেবল
+ * `navy` চেহারায় ঠিক ছিল, যেখানে টোকেনটা ঘোষিত। বাকি নয়টা চেহারায়
+ * ঘরটা `surface-card`-এ নেমে আসত আর ছায়াটা ভুল দিকে যেত।
+ *
+ * ⓘ এখন মিশ্রণটা `var(--color-modulebar, var(--color-surface-muted))`
+ * ধরেই হয়, তাই দশটা চেহারা ও আলো-অন্ধকার দুই মোডেই বেভেলটা নিজে থেকে
+ * ঠিক দিকে বসে — হালকা ভিত্তিতে হালকা আলো, গাঢ়তে গাঢ়।
+ *
+ * ── ⚠️ কেন ঘরগুলো এখন আলাদা, জোড়া নয় ───────────────────────────────
+ * আগে `-ms-px` দিয়ে ঘরগুলো পাশাপাশি লাগানো ছিল, যাতে মাঝের দাগটা এক
+ * পিক্সেল থাকে। ⛔ কিন্তু জোড়া লাগানো ঘরে ত্রিমাত্রিক ছায়া কাজ করে না —
+ * পাশেরটার ছায়া নিজের গায়ে পড়ে, আর পুরোটা একটা নোংরা পটি দেখায়।
+ * ⓘ তাই ৩ পিক্সেল ফাঁক, আর প্রতিটা ঘরের নিজের গোল কোণা — চাবির সারির
+ * মতো। ⭐ নিয়মটা এখানেই, কারণ এটা `@layer`-এর বাইরে বলে Tailwind-এর
+ * `-ms-px` ইউটিলিটিকে হারায় (উপরে ১০১৮ লাইনে একই ফাঁদের কথা লেখা)।
  *
  * ⓘ নিয়মগুলো এখানে, ইউটিলিটি ক্লাসে নয় — কারণ রংটা একটা টোকেন থেকে
  * আসে যার কোনো Tailwind নাম নেই, আর এই বারটায় একটা ক্লাস নীরবে
  * কম্পাইল না হলে গোটা গড়নটাই ভেঙে পড়ে (আজ তিনবার হয়েছে)।
  */
 .modulebar-cell {
-    background: var(--color-modulebar, var(--color-surface-muted));
-    border: 1px solid var(--color-modulebar-border, var(--color-border));
+    --modulebar-base: var(--color-modulebar, var(--color-surface-muted));
+
+    /* উপরে আলো, নিচে ছায়া — ভিত্তির রংটা ঠিক মাঝখানে থাকে */
+    background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--modulebar-base) 84%, #fff) 0%,
+        var(--modulebar-base) 55%,
+        color-mix(in srgb, var(--modulebar-base) 90%, #000) 100%
+    );
+    border: 1px solid color-mix(in srgb, var(--color-modulebar-border, var(--color-border)) 78%, #000);
+    border-radius: var(--radius-field);
     color: var(--color-ink-body);
+
+    /* ভিতরে বেভেল, বাইরে ঢালাই ছায়া — এই চারটাই গভীরতাটা বানায় */
+    box-shadow:
+        inset 0 1px 0 color-mix(in srgb, #fff 55%, transparent),
+        inset 0 -1px 0 color-mix(in srgb, #000 10%, transparent),
+        0 1px 0 color-mix(in srgb, #000 16%, transparent),
+        0 2px 3px color-mix(in srgb, #000 14%, transparent);
+
+    /* ⚠️ `-ms-px` উল্টে দেওয়া — কারণটা উপরের মন্তব্যে */
+    margin-inline-start: 3px;
+
+    transform: translateY(0);
+    transition:
+        transform 90ms ease,
+        box-shadow 90ms ease,
+        background 120ms ease;
+}
+
+/* ⓘ প্রথম ঘরটার আগে ফাঁক নয় — বারের নিজের `ps-2` ইতিমধ্যে জায়গা দেয় */
+.modulebar-cell:first-child {
+    margin-inline-start: 0;
 }
 
 .modulebar-cell:hover {
-    /* ⓘ রং বদলায় না, কেবল একটু গাঢ় ছায়া — "এটা চাপা যায়" বোঝাতে
-       ততটুকুই যথেষ্ট, আর সারিটা তখনো এক রঙের থাকে */
-    background: color-mix(in srgb, var(--color-modulebar, #c9c9c9) 88%, #000);
+    /* ⭐ চাবিটা এক পিক্সেল উঠে আসে আর ছায়া লম্বা হয় — "এটা চাপা যায়"
+       কথাটা রঙের বদলে **নড়াচড়ায়** বলা, আর সারিটা তখনো এক রঙের থাকে */
+    background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--modulebar-base) 76%, #fff) 0%,
+        color-mix(in srgb, var(--modulebar-base) 96%, #fff) 55%,
+        color-mix(in srgb, var(--modulebar-base) 92%, #000) 100%
+    );
+    transform: translateY(-1px);
+    box-shadow:
+        inset 0 1px 0 color-mix(in srgb, #fff 65%, transparent),
+        inset 0 -1px 0 color-mix(in srgb, #000 10%, transparent),
+        0 2px 0 color-mix(in srgb, #000 16%, transparent),
+        0 4px 6px color-mix(in srgb, #000 18%, transparent);
 }
 
 /*
- * চলতি পর্দা — রং এক, কিন্তু লেখা গাঢ় আর নিচে দাগ।
+ * চাপার মুহূর্ত — চাবিটা সত্যিই দেবে যায়।
+ *
+ * ⓘ ছায়া ভিতরে ঢুকে যায় আর ঘরটা নিচে নামে; বাইরের ছায়া প্রায় মুছে
+ * যায়, কারণ দেবে যাওয়া চাবি আর কিছু ঢালে না।
+ */
+.modulebar-cell:active {
+    transform: translateY(1px);
+    box-shadow:
+        inset 0 2px 4px color-mix(in srgb, #000 26%, transparent),
+        inset 0 1px 0 color-mix(in srgb, #000 12%, transparent);
+}
+
+/*
+ * চলতি পর্দা — চাবিটা **চাপা অবস্থায় আটকে আছে**।
+ *
+ * ⭐ এটাই ত্রিমাত্রিক ভাষায় "আমি এখানে": বাকি সব চাবি উঁচু, এটা দেবানো।
  *
  * ⚠️ ভরাট রং দিয়ে আলাদা করা যেত, কিন্তু তাতে "সব মেনু একই রঙের"
- * কথাটাই ভাঙত। ⓘ তাই পার্থক্যটা রঙে নয়, **ওজনে** — আর "আমি কোথায়"
- * প্রশ্নের উত্তর তাতেও পরিষ্কার থাকে।
+ * কথাটাই ভাঙত। ⓘ তাই পার্থক্যটা রঙে নয় — **গভীরতায়, ওজনে ও কালিতে**।
  */
-.modulebar-cell-on {
+.modulebar-cell-on,
+.modulebar-cell-on:hover {
     font-weight: 600;
     color: var(--color-brand-600);
     border-color: var(--color-brand-600);
+
+    /* ঢাল উল্টো — উপরে ছায়া, নিচে আলো; চোখ এটাকে গর্ত হিসেবেই পড়ে */
+    background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--modulebar-base) 88%, #000) 0%,
+        var(--modulebar-base) 60%,
+        color-mix(in srgb, var(--modulebar-base) 90%, #fff) 100%
+    );
+    box-shadow:
+        inset 0 2px 4px color-mix(in srgb, #000 22%, transparent),
+        inset 0 -1px 0 color-mix(in srgb, #fff 40%, transparent);
+    transform: translateY(1px);
+
     position: relative;
     z-index: 10;
+}
+
+/*
+ * ⚠️ যাঁরা নড়াচড়া বন্ধ রেখেছেন — আলো-ছায়া থাকে, লাফানো থাকে না।
+ *
+ * ⓘ গভীরতাটা রঙে, তাই `transform` তুলে দিলে চেহারাটা নষ্ট হয় না; কেবল
+ * ঘরগুলো আর ওঠানামা করে না।
+ */
+@media (prefers-reduced-motion: reduce) {
+    .modulebar-cell,
+    .modulebar-cell:hover,
+    .modulebar-cell:active,
+    .modulebar-cell-on {
+        transform: none;
+        transition: none;
+    }
 }
 
 /*

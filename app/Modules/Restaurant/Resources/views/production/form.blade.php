@@ -30,7 +30,7 @@
         </div>
     @endif
 
-    <form method="POST" action="{{ route('inventory.production.store') }}">
+    <form method="POST" action="{{ route('restaurant.production.store') }}">
         @csrf
 
         <section data-boxed
@@ -85,7 +85,7 @@
         @if ($recipes !== [])
             <div class="mt-4 flex flex-wrap gap-2">
                 <x-ui.button type="submit" tone="primary">{{ __('core.action.save') }}</x-ui.button>
-                <x-ui.button :href="route('inventory.production.index')" tone="secondary">
+                <x-ui.button :href="route('restaurant.production.index')" tone="secondary">
                     {{ __('core.action.cancel') }}
                 </x-ui.button>
             </div>

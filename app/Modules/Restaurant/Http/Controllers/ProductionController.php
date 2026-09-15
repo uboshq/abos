@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\Inventory\Http\Controllers;
+namespace App\Modules\Restaurant\Http\Controllers;
 
 use App\Core\Concerns\AuthorizesResource;
 use App\Core\Concerns\FiltersByDate;
@@ -10,11 +10,11 @@ use App\Core\Concerns\SortsLists;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\DocumentStatus;
 use App\Http\Controllers\Controller;
-use App\Modules\Inventory\Http\Requests\ProductionRequest;
-use App\Modules\Inventory\Models\Production;
-use App\Modules\Inventory\Models\Recipe;
 use App\Modules\Inventory\Models\Warehouse;
-use App\Modules\Inventory\Services\ProductionService;
+use App\Modules\Restaurant\Http\Requests\ProductionRequest;
+use App\Modules\Restaurant\Models\Production;
+use App\Modules\Restaurant\Models\Recipe;
+use App\Modules\Restaurant\Services\ProductionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -79,7 +79,7 @@ class ProductionController extends Controller implements HasMiddleware
             'oldest' => fn ($q) => $q->orderBy('trx_date')->orderBy('id'),
         ]);
 
-        return view('inventory::production.index', [
+        return view('restaurant::production.index', [
             'menu' => $this->menu->forUser($request->user()),
             'productions' => $query->paginate(50)->withQueryString(),
             'q' => $request->query('q'),
@@ -95,7 +95,7 @@ class ProductionController extends Controller implements HasMiddleware
 
     public function create(Request $request): View
     {
-        return view('inventory::production.form', [
+        return view('restaurant::production.form', [
             'menu' => $this->menu->forUser($request->user()),
             'production' => new Production(['trx_date' => now()->toDateString()]),
             ...$this->options(),
@@ -107,13 +107,13 @@ class ProductionController extends Controller implements HasMiddleware
         $production = $this->productions->create($request->validated());
 
         return redirect()
-            ->route('inventory.production.show', $production)
+            ->route('restaurant.production.show', $production)
             ->with('saved', __('inventory::message.production_saved'));
     }
 
     public function show(Request $request, Production $production): View
     {
-        return view('inventory::production.show', [
+        return view('restaurant::production.show', [
             'menu' => $this->menu->forUser($request->user()),
             'production' => $production->load(['lines.product', 'product', 'recipe', 'warehouse', 'creator']),
         ]);
@@ -131,7 +131,7 @@ class ProductionController extends Controller implements HasMiddleware
         $this->productions->confirm($production);
 
         return redirect()
-            ->route('inventory.production.show', $production)
+            ->route('restaurant.production.show', $production)
             ->with('saved', __('inventory::message.production_confirmed'));
     }
 
@@ -141,7 +141,7 @@ class ProductionController extends Controller implements HasMiddleware
         $production->delete();
 
         return redirect()
-            ->route('inventory.production.index')
+            ->route('restaurant.production.index')
             ->with('saved', __('inventory::message.production_removed'));
     }
 

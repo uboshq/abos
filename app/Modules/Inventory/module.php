@@ -99,8 +99,6 @@ return [
              * লেনদেনের মেনুতে রাখলে লোকে রোজ ওখানে যেতেন, আর যেটা
              * বছরে দুইবার বদলায় সেটা রোজকার কাজের সাথে মিশে যেত।
              */
-            ['label' => 'inventory::menu.recipes', 'icon' => 'book', 'route' => 'inventory.recipe.index',
-                'permission' => 'inventory.recipe.view'],
         ],
         'transactions' => [
             /*
@@ -155,8 +153,6 @@ return [
              * রোজ সকালে ঘটে। এক মেনুতে রাখলে রোজকার কাজটা মাস্টার
              * ডাটার সাথে মিশে যেত।
              */
-            ['label' => 'inventory::menu.production', 'icon' => 'refresh', 'route' => 'inventory.production.index',
-                'permission' => 'inventory.production.view'],
         ],
         'reports' => [
             ['label' => 'inventory::menu.stock_ledger', 'icon' => 'list', 'route' => 'inventory.report.show',
@@ -182,8 +178,6 @@ return [
              * রিপোর্টের মতো সুইচ লাগে না, কারণ রেসিপি বানানো নিজেই
              * একটা সিদ্ধান্ত — কেউ না বানালে সারিটা এমনিতেই নীরব।
              */
-            ['label' => 'inventory::menu.food_cost', 'icon' => 'wallet', 'route' => 'inventory.report.show',
-                'route_params' => ['slug' => 'food-cost'], 'permission' => 'inventory.report'],
 
             /*
              * মেয়াদ ঘনিয়ে আসা লট — সুইচের পেছনে।
@@ -259,10 +253,6 @@ return [
          * পণ্যের চাবির সাথে জুড়ে দিলে যে কেউ পণ্য সম্পাদনা করতে পারেন
          * তিনি রেসিপিও বদলাতে পারতেন, আর ওই দুইটা এক দায়িত্ব নয়।
          */
-        'inventory.recipe.view',
-        'inventory.recipe.create',
-        'inventory.recipe.update',
-        'inventory.recipe.delete',
 
         /*
          * রান্নার চাবি তিনটা, আর নিশ্চিত করাটা আলাদা।
@@ -273,9 +263,6 @@ return [
          * এক চাবিতে রাখলে যিনি রোজ হাঁড়ির হিসাব লেখেন তিনিই স্টক
          * নামাতে পারতেন, আর ভুল সংখ্যা সাথে সাথেই খাতায় বসত।
          */
-        'inventory.production.view',
-        'inventory.production.create',
-        'inventory.production.confirm',
 
         /*
          * লটের ছাপা দাম বদলানো — বিক্রয়ের অনুমতির সাথে নয়।
@@ -355,7 +342,6 @@ return [
         'SC' => 'inventory::doc.stock_count',
 
         /* রান্না — হাঁড়ির উৎপাদন। */
-        'CKG' => 'inventory::doc.production',
 
         /*
          * গুদামের কোডও সিরিজ থেকে — মালিকের নির্দেশ (২০২৬-০৮-০৭):

@@ -21,7 +21,7 @@
     if (auth()->user()?->can('update', $recipe)) {
         $items[] = [
             'label' => __('core.action.edit'),
-            'url' => route('inventory.recipe.edit', $recipe),
+            'url' => route('restaurant.recipe.edit', $recipe),
         ];
     }
 
@@ -36,13 +36,13 @@
         $items[] = $recipe->is_active
             ? [
                 'label' => __('inventory::action.deactivate'),
-                'url' => route('inventory.recipe.destroy', $recipe),
+                'url' => route('restaurant.recipe.destroy', $recipe),
                 'method' => 'delete',
                 'tone' => 'danger',
             ]
             : [
                 'label' => __('inventory::action.activate'),
-                'url' => route('inventory.recipe.activate', $recipe),
+                'url' => route('restaurant.recipe.activate', $recipe),
                 'method' => 'post',
                 'tone' => 'success',
             ];

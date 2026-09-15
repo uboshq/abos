@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\Inventory\Policies;
+namespace App\Modules\Restaurant\Policies;
 
 use App\Models\User;
-use App\Modules\Inventory\Models\Recipe;
+use App\Modules\Restaurant\Models\Recipe;
 
 /**
  * রেসিপির চাবি — পণ্যের চাবির সাথে নয়।
@@ -25,22 +25,22 @@ class RecipePolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->can('inventory.recipe.view');
+        return $user->can('restaurant.recipe.view');
     }
 
     public function view(User $user, Recipe $recipe): bool
     {
-        return $user->can('inventory.recipe.view');
+        return $user->can('restaurant.recipe.view');
     }
 
     public function create(User $user): bool
     {
-        return $user->can('inventory.recipe.create');
+        return $user->can('restaurant.recipe.create');
     }
 
     public function update(User $user, Recipe $recipe): bool
     {
-        return $user->can('inventory.recipe.update');
+        return $user->can('restaurant.recipe.update');
     }
 
     /**
@@ -52,6 +52,6 @@ class RecipePolicy
      */
     public function delete(User $user, Recipe $recipe): bool
     {
-        return $user->can('inventory.recipe.delete');
+        return $user->can('restaurant.recipe.delete');
     }
 }

@@ -10,14 +10,14 @@ use App\Models\Company;
 use App\Models\User;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
-use App\Modules\Inventory\Models\Production;
-use App\Modules\Inventory\Models\Recipe;
-use App\Modules\Inventory\Models\RecipeLine;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\CostLayerService;
-use App\Modules\Inventory\Services\ProductionService;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\MasterData\Models\Unit;
+use App\Modules\Restaurant\Models\Production;
+use App\Modules\Restaurant\Models\Recipe;
+use App\Modules\Restaurant\Models\RecipeLine;
+use App\Modules\Restaurant\Services\ProductionService;
 use App\Modules\Sales\Services\SalesInvoiceService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -206,11 +206,11 @@ class ThePotIsCookedOnceAndSoldFiftyTimesTest extends TestCase
      */
     public function test_the_screens_open_and_the_confirm_button_works(): void
     {
-        $this->get(route('inventory.production.index'))->assertOk();
-        $this->get(route('inventory.production.create'))->assertOk();
+        $this->get(route('restaurant.production.index'))->assertOk();
+        $this->get(route('restaurant.production.create'))->assertOk();
 
         // খসড়া বানানো — পর্দার পথেই
-        $this->post(route('inventory.production.store'), [
+        $this->post(route('restaurant.production.store'), [
             'recipe_id' => $this->recipe->id,
             'warehouse_id' => $this->warehouse->id,
             'trx_date' => now()->toDateString(),
@@ -219,18 +219,18 @@ class ThePotIsCookedOnceAndSoldFiftyTimesTest extends TestCase
 
         $production = Production::query()->latest('id')->firstOrFail();
 
-        $this->get(route('inventory.production.show', $production))->assertOk();
+        $this->get(route('restaurant.production.show', $production))->assertOk();
 
         // এখনো কিছুই নড়েনি
         $this->assertOnHand($this->rice, '100.0000');
 
-        $this->post(route('inventory.production.confirm', $production))->assertRedirect();
+        $this->post(route('restaurant.production.confirm', $production))->assertRedirect();
 
         $this->assertOnHand($this->rice, '90.0000');
         $this->assertOnHand($this->biryani, '50.0000');
 
         // নিশ্চিত হওয়ার পর পাতাটা উপকরণের সারিও দেখায়
-        $this->get(route('inventory.production.show', $production))
+        $this->get(route('restaurant.production.show', $production))
             ->assertOk()
             ->assertSee('Rice');
     }
@@ -246,7 +246,7 @@ class ThePotIsCookedOnceAndSoldFiftyTimesTest extends TestCase
     {
         $this->recipe->forceFill(['kind' => Recipe::TO_ORDER])->save();
 
-        $offered = $this->get(route('inventory.production.create'))
+        $offered = $this->get(route('restaurant.production.create'))
             ->assertOk()
             ->viewData('recipes');
 
@@ -274,7 +274,7 @@ class ThePotIsCookedOnceAndSoldFiftyTimesTest extends TestCase
         $this->sell($this->biryani, '3');
 
         $rows = app(ReportEngine::class)
-            ->run('inventory.food_cost', [
+            ->run('restaurant.food_cost', [
                 'from' => now()->subDay()->toDateString(),
                 'to' => now()->addDay()->toDateString(),
             ]);
@@ -313,7 +313,7 @@ class ThePotIsCookedOnceAndSoldFiftyTimesTest extends TestCase
         $this->sell($this->rice, '2');
 
         $rows = app(ReportEngine::class)
-            ->run('inventory.food_cost', [
+            ->run('restaurant.food_cost', [
                 'from' => now()->subDay()->toDateString(),
                 'to' => now()->addDay()->toDateString(),
             ]);

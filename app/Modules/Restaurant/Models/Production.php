@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\Inventory\Models;
+namespace App\Modules\Restaurant\Models;
 
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasDocumentStatus;
@@ -10,6 +10,8 @@ use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Concerns\ScopedToUserBranch;
 use App\Models\User;
+use App\Modules\Inventory\Models\Product;
+use App\Modules\Inventory\Models\Warehouse;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;

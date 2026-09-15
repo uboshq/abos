@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Services;
 
+use App\Core\Contracts\RecipeBook;
 use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
@@ -18,11 +19,9 @@ use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
-use App\Modules\Inventory\Models\Recipe;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\CostLayerService;
 use App\Modules\Inventory\Services\ReadsPackedQuantities;
-use App\Modules\Inventory\Services\RecipeService;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\Sales\Events\InvoiceConfirmed;
 use App\Modules\Sales\Models\DeliveryChallanLine;
@@ -62,7 +61,7 @@ final class SalesInvoiceService
         private readonly NumberSeriesEngine $numbers,
         private readonly PostingEngine $posting,
         private readonly StockService $stock,
-        private readonly RecipeService $recipes,
+        private readonly RecipeBook $recipes,
         private readonly CostLayerService $costs,
         private readonly SettingsService $settings,
         private readonly ApprovalEngine $approvals,
@@ -438,18 +437,35 @@ final class SalesInvoiceService
                  * গুদামে ঢোকে — তাই তার বিক্রি নিচের সাধারণ পথেই যায়,
                  * আর সেটাই ঠিক। দুই জায়গায় কমালে চাল দুইবার খরচ হত।
                  */
-                if ($this->recipes->consumesOnSale($line->product)) {
-                    $recipe = $this->recipes->forProduct($line->product);
+                if ($this->recipes->consumesOnSale((int) $line->product->id)) {
+                    $this->assertRecipeCanBeCooked($line->product, $warehouse, (string) $line->qty);
 
-                    $this->assertRecipeCanBeCooked($line->product, $recipe, $warehouse, (string) $line->qty);
+                    /*
+                     * ⛔ গুদাম ছাড়া রান্না হয় না, আর চুপচাপ এগোনো যায় না।
+                     *
+                     * ⚠️ আগে `consume()` `Warehouse` টাইপ চাইত, তাই `null`
+                     * এলে TypeError হত — কুৎসিত, কিন্তু **জোরে**। এখন
+                     * চুক্তিটা `int $warehouseId` চায়, আর `$warehouse?->id`
+                     * লিখলে `null` নীরবে `0` হয়ে যেত — অর্থাৎ উপকরণ
+                     * কাটা হত একটা অস্তিত্বহীন গুদাম থেকে, আর কেউ জানত না।
+                     *
+                     * ⓘ তাই শর্তটা স্পষ্ট, আর বার্তাটা ব্যবহারকারীর ভাষায়।
+                     */
+                    if ($warehouse === null) {
+                        throw ValidationException::withMessages([
+                            'lines' => __('sales::validation.cooking_needs_a_warehouse', [
+                                'product' => $line->product->name(),
+                            ]),
+                        ]);
+                    }
 
                     $this->recipes->consume(
-                        recipe: $recipe,
+                        dishId: (int) $line->product->id,
                         servings: (string) $line->qty,
-                        warehouse: $warehouse,
+                        warehouseId: (int) $warehouse->id,
                         sourceType: SalesInvoice::STOCK_SOURCE,
                         sourceId: $invoice->id,
-                        date: $invoice->trx_date,
+                        date: $invoice->trx_date?->toDateString(),
                         documentNo: $invoice->document_no,
                     );
 
@@ -833,7 +849,7 @@ final class SalesInvoiceService
              * রাখলে ৭ আগস্টের সেই ভুলটাই ফিরত — মাল ঢুকত এক দামে,
              * বেরোত আরেক দামে।
              */
-            if ($this->recipes->consumesOnSale($line->product)) {
+            if ($this->recipes->consumesOnSale((int) $line->product->id)) {
                 $cost = bcadd($cost, $this->cookedCost($invoice, $line), 4);
 
                 continue;
@@ -884,17 +900,32 @@ final class SalesInvoiceService
      */
     private function cookedCost(SalesInvoice $invoice, SalesInvoiceLine $line): string
     {
-        $recipe = $this->recipes->forProduct($line->product);
+        $needs = $this->recipes->needsFor((int) $line->product->id, (string) $line->qty);
 
-        if ($recipe === null) {
+        if ($needs === []) {
             return '0';
         }
 
+        $ingredients = $this->ingredientsOf($needs);
         $cost = '0';
 
-        foreach ($this->recipes->needsFor($recipe, (string) $line->qty) as $need) {
+        foreach ($needs as $need) {
+            $ingredient = $ingredients[$need['product_id']] ?? null;
+
+            /*
+             * ⚠️ এখানে ছোঁড়া হয় না, এড়ানো হয় — আর পার্থক্যটা ইচ্ছাকৃত।
+             *
+             * ⓘ এই পদ্ধতিটা চলে **উপকরণ কেটে নেওয়ার পরে**, কেবল দর
+             * গোনার জন্য। এতদূর আসার আগেই [[assertRecipeCanBeCooked()]]
+             * প্রতিটা উপকরণ আছে কি না দেখে থেমে গেছে। ⛔ এখানে ছুঁড়লে
+             * মাল বেরিয়ে যাওয়ার পর লেনদেনটা ভাঙত।
+             */
+            if ($ingredient === null) {
+                continue;
+            }
+
             $taken = $this->costs->issue(
-                product: $need['product'],
+                product: $ingredient,
                 qty: $need['qty'],
                 sourceType: SalesInvoice::STOCK_SOURCE,
                 sourceId: $invoice->id,
@@ -912,6 +943,33 @@ final class SalesInvoiceService
         ]);
 
         return $cost;
+    }
+
+    /**
+     * উপকরণের আইডিগুলো থেকে পণ্যগুলো — একটাই কোয়েরিতে, আইডি ধরে সাজানো।
+     *
+     * ── ⭐ কেন এই সেতুটা লাগল, ১৫ সেপ্টেম্বর ২০২৬ ────────────────────
+     * [[App\Core\Contracts\RecipeBook]] কেবল আইডি ও অঙ্ক ফেরত দেয়,
+     * কোনো মডেল নয় — কারণ চুক্তিটা `app/Core`-এ, আর সেখানে কোনো
+     * মডিউলের নাম লেখা যায় না ([[BoundariesTest]])।
+     *
+     * ⓘ তাই মডেলে ফেরার কাজটা বিক্রয়ের, আর সেটা এখানে এক জায়গায় —
+     * দুইটা ডাকার জায়গায় দুইবার লিখলে একদিন একটায় `whereIn` বসত আর
+     * অন্যটায় লুপে `find()`।
+     *
+     * @param  list<array{product_id: int, qty: string}>  $needs
+     * @return array<int, Product>
+     */
+    private function ingredientsOf(array $needs): array
+    {
+        $ids = array_values(array_unique(array_column($needs, 'product_id')));
+
+        if ($ids === []) {
+            return [];
+        }
+
+        /** @var array<int, Product> */
+        return Product::query()->whereKey($ids)->get()->keyBy('id')->all();
     }
 
     private function resolveChallanLine(
@@ -1056,11 +1114,20 @@ final class SalesInvoiceService
      */
     private function assertRecipeCanBeCooked(
         Product $dish,
-        ?Recipe $recipe,
         ?Warehouse $warehouse,
         string $servings,
     ): void {
-        if ($recipe === null || $recipe->lines->isEmpty()) {
+        $needs = $this->recipes->needsFor((int) $dish->id, $servings);
+
+        /*
+         * ⚠️ খালি তালিকা এখানে **অসম্পূর্ণ রেসিপি**, "রেসিপি নেই" নয়।
+         *
+         * ⓘ এই পদ্ধতিটা ডাকাই হয় কেবল `consumesOnSale()` সত্যি হলে —
+         * অর্থাৎ রেসিপি আছে, মেড-টু-অর্ডার, তবু কোনো উপকরণ বেরোয়নি।
+         * [[App\Core\Contracts\RecipeBook::needsFor()]]-এর ডকে এই
+         * পার্থক্যটা লেখা আছে।
+         */
+        if ($needs === []) {
             throw ValidationException::withMessages([
                 'lines' => __('sales::validation.recipe_incomplete', [
                     'product' => $dish->name(),
@@ -1072,14 +1139,37 @@ final class SalesInvoiceService
             return;
         }
 
-        foreach ($this->recipes->needsFor($recipe, $servings) as $need) {
-            $available = $this->stock->availableQty($need['product'], $warehouse);
+        /*
+         * ⓘ উপকরণগুলো একবারেই আনা — চুক্তিটা কেবল আইডি দেয়, আর প্রতিটা
+         * উপকরণের জন্য আলাদা `find()` করলে একটা রেসিপিতে দশটা কোয়েরি হত।
+         */
+        $ingredients = $this->ingredientsOf($needs);
+
+        foreach ($needs as $need) {
+            $ingredient = $ingredients[$need['product_id']] ?? null;
+
+            /*
+             * ⛔ উপকরণটা নেই — নীরবে এড়ানো যায় না।
+             *
+             * ⚠️ রেসিপিতে এমন পণ্যের আইডি থাকতে পারে যা পরে মুছে গেছে।
+             * এড়িয়ে গেলে বিলটা পাস করত আর ঐ উপকরণ কোনোদিন কাটা হত না —
+             * গুদামে মাল থেকে যেত কাগজে, বাস্তবে নয়।
+             */
+            if ($ingredient === null) {
+                throw ValidationException::withMessages([
+                    'lines' => __('sales::validation.recipe_incomplete', [
+                        'product' => $dish->name(),
+                    ]),
+                ]);
+            }
+
+            $available = $this->stock->availableQty($ingredient, $warehouse);
 
             if (bccomp($available, $need['qty'], 4) < 0) {
                 throw ValidationException::withMessages([
                     'lines' => __('sales::validation.not_enough_to_cook', [
                         'product' => $dish->name(),
-                        'ingredient' => $need['product']->name(),
+                        'ingredient' => $ingredient->name(),
                         'available' => rtrim(rtrim($available, '0'), '.'),
                     ]),
                 ]);

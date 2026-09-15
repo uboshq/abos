@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Http\Controllers;
 
+use App\Core\Contracts\RecipeBook;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingsService;
@@ -17,7 +18,6 @@ use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\PackConversion;
-use App\Modules\Inventory\Services\RecipeService;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\MasterData\Models\PaymentMethod;
 use App\Modules\MasterData\Models\PaymentTerm;
@@ -54,7 +54,7 @@ class DirectSaleController extends Controller implements HasMiddleware
         private readonly DirectSaleService $sales,
         private readonly SettingsService $settings,
         private readonly MenuBuilder $menu,
-        private readonly RecipeService $recipes,
+        private readonly RecipeBook $recipes,
     ) {}
 
     public static function middleware(): array
@@ -622,11 +622,11 @@ class DirectSaleController extends Controller implements HasMiddleware
                  * ডাকটাই করে, তাই দুই কাউন্টারে একই খাবারের পাশে
                  * দুইটা সংখ্যা বসে না।
                  */
-                $available = $this->recipes->sellableQty($p, bcsub(
+                $available = $this->recipes->sellableQty((int) $p->id, bcsub(
                     bcsub((string) $p->floor_total, (string) $p->reserved_total, 4),
                     (string) $p->hold_total,
                     4,
-                ), $warehouse);
+                ), $warehouse?->id);
 
                 return (object) [
                     'id' => $p->id,

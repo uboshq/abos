@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\Inventory\Http\Requests;
+namespace App\Modules\Restaurant\Http\Requests;
 
-use App\Modules\Inventory\Models\Recipe;
+use App\Modules\Restaurant\Models\Recipe;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 

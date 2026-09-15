@@ -2,8 +2,11 @@
 
 declare(strict_types=1);
 
+use App\Core\Contracts\RecipeBook;
 use App\Modules\Restaurant\Dashboard\RestaurantDashboard;
 use App\Modules\Restaurant\Listeners\SendTheOrderToTheKitchen;
+use App\Modules\Restaurant\Reports\RestaurantReports;
+use App\Modules\Restaurant\Services\RecipeBookAdapter;
 use App\Modules\Sales\Events\InvoiceConfirmed;
 
 /*
@@ -78,6 +81,77 @@ return [
         'restaurant.view',
         'restaurant.kitchen.view',
         'restaurant.kitchen.manage',
+
+        /*
+         * রান্না ও রিপোর্টের চাবি — মজুদ থেকে পর্দা দুইটা আসার সাথে,
+         * ১৫ সেপ্টেম্বর ২০২৬।
+         *
+         * ⭐ চাবিগুলো **রেস্তোরাঁর নিজের**, মজুদের ধার করা নয় — আর
+         * কারণটা মাপা: `inventory.production.*` কোনো রোল-টেমপ্লেটে ছিল
+         * না, কেবল মালিকের কাছে (`Permission::all()`)। অর্থাৎ নতুন
+         * চাবিতে যাওয়ায় আজ কেউ কিছু হারাচ্ছে না।
+         *
+         * ⓘ রান্নাঘরের সারিগুলোর মন্তব্যে লেখা "সঠিক পথ"টা এটাই ছিল:
+         * আগে নতুন চাবি, তারপর রুট। এখানে দুইটাই একসাথে হলো, কারণ
+         * হারানোর মতো কেউ ছিল না।
+         */
+        'restaurant.production.view',
+        'restaurant.production.create',
+        'restaurant.production.confirm',
+        'restaurant.report',
+
+        /*
+         * রেসিপির চাবি — পর্দাটা আসার সাথে, ১৫ সেপ্টেম্বর ২০২৬।
+         *
+         * ⚠️ পুরনো `inventory.recipe.*` চাবিগুলো **কোনো রোল-টেমপ্লেটে
+         * ছিল না** (মেপে দেখা) — কেবল মালিকের কাছে। তাই নতুন চাবিতে
+         * যাওয়ায় আজ কেউ কিছু হারাচ্ছে না, ঠিক রান্নার মতোই।
+         */
+        'restaurant.recipe.view',
+        'restaurant.recipe.create',
+        'restaurant.recipe.update',
+        'restaurant.recipe.delete',
+    ],
+
+    /*
+     * ⚠️ `restaurant.report` ম্যানেজারকে দেওয়া — আর এটা না দিলে একটা
+     * নীরব ক্ষতি হত।
+     *
+     * খাদ্য-খরচের রিপোর্ট আগে `inventory.report` চাইত, আর ওটা মজুদের
+     * `Manager` টেমপ্লেটে আছে। ⓘ চাবি বদলে টেমপ্লেট না দিলে আজ যে
+     * ম্যানেজার রিপোর্টটা দেখেন তিনি কাল সারিটাই দেখতেন না — আর কেউ
+     * বলত না কেন।
+     */
+    'role_templates' => [
+        'Manager' => ['restaurant.view', 'restaurant.report'],
+        'Kitchen' => [
+            'restaurant.view',
+            'restaurant.kitchen.view',
+            'restaurant.kitchen.manage',
+
+            /*
+             * ⭐ রেসিপি লেখা ও বদলানো রাঁধুনির কাজ — মালিকের নয়।
+             *
+             * ── কেন `view`-এর পাশে `create` ও `update`-ও ────────────
+             * এই রিপোতেই কারণটা আগে লেখা আছে (মজুদের `Warehouse`
+             * টেমপ্লেটে, "মাল বুঝে নেওয়া"র চাবি নিয়ে): চাবিটা কেবল
+             * মালিকের কাছে থাকলে রাঁধুনি রোজ সকালে মালিককে ডেকে
+             * আনতেন, আর নিয়মটা এক সপ্তাহে "অসুবিধা" হয়ে যেত।
+             *
+             * ⛔ `delete` **ইচ্ছাকৃতভাবে বাদ**, আর সেটাই এখানে মূল
+             * সিদ্ধান্ত। একটা রেসিপি মুছে ফেলা মানে ঐ খাবারের প্রতিটা
+             * ভবিষ্যৎ বিক্রিতে উপকরণ কাটা বন্ধ হয়ে যাওয়া — গুদামের
+             * সংখ্যা নীরবে ভুল হতে থাকত। ⚠️ ভুল রেসিপি শোধরানোর পথ
+             * `update`, আর আর দরকার না হলে `activate` দিয়ে নিষ্ক্রিয়।
+             */
+            'restaurant.recipe.view',
+            'restaurant.recipe.create',
+            'restaurant.recipe.update',
+
+            'restaurant.production.view',
+            'restaurant.production.create',
+            'restaurant.production.confirm',
+        ],
     ],
 
     'menu' => [
@@ -119,6 +193,21 @@ return [
             ['label' => 'restaurant::menu.kot', 'icon' => 'printer', 'route' => 'restaurant.kitchen.tickets',
                 'permission' => 'restaurant.kitchen.view'],
 
+            /*
+             * রান্না — মজুদ থেকে এখানে আনা, ১৫ সেপ্টেম্বর ২০২৬।
+             *
+             * মালিক ছবিতে দাগিয়ে বলেছেন এটা রেস্তোরাঁর পর্দা। ⭐ কথাটা
+             * ঠিক: রান্না একটা ঘটনা যা রোজ সকালে ঘটে, আর মজুদ কেবল বলে
+             * কী ঢুকল আর কী বেরোল।
+             *
+             * ⭐ চাবিটা রেস্তোরাঁর নিজের, আর [[ProductionPolicy]]-ও একই
+             * চাবি চায় — তাই মেনু যা দেখায় রুটও তাই মানে। ⓘ রান্নাঘরের
+             * সারিগুলোয় এই দুইটা এখনো আলাদা (ঐ মন্তব্যে কারণ লেখা);
+             * এখানে মেলানো গেছে কারণ পুরনো চাবি কারও কাছে ছিল না।
+             */
+            ['label' => 'restaurant::menu.cooking', 'icon' => 'refresh', 'route' => 'restaurant.production.index',
+                'permission' => 'restaurant.production.view'],
+
             ['label' => 'restaurant::menu.orders', 'icon' => 'book', 'route' => 'restaurant.order.index',
                 'permission' => 'restaurant.view', 'planned' => true],
             ['label' => 'restaurant::menu.service', 'icon' => 'people', 'route' => 'restaurant.service.index',
@@ -138,8 +227,15 @@ return [
                 'permission' => 'restaurant.view', 'planned' => true],
             ['label' => 'restaurant::menu.menu_cards', 'icon' => 'list', 'route' => 'restaurant.card.index',
                 'permission' => 'restaurant.view', 'planned' => true],
+            /*
+             * ⭐ রেসিপি — `planned` ছিল, ১৫ সেপ্টেম্বর ২০২৬-এ আসল হলো।
+             *
+             * মালিকের সিদ্ধান্ত: *"রেসিপি রান্নাঘরে যাবে।"* ⓘ সারিটা ও
+             * ঠিকানাটা এখানে আগে থেকেই ঘোষিত ছিল — কেবল পর্দাটা মজুদে
+             * চলত। এখন দুইটাই এক জায়গায়।
+             */
             ['label' => 'restaurant::menu.recipes', 'icon' => 'book', 'route' => 'restaurant.recipe.index',
-                'permission' => 'restaurant.view', 'planned' => true],
+                'permission' => 'restaurant.recipe.view'],
             ['label' => 'restaurant::menu.combos', 'icon' => 'plus', 'route' => 'restaurant.combo.index',
                 'permission' => 'restaurant.view', 'planned' => true],
             ['label' => 'restaurant::menu.guests', 'icon' => 'customer', 'route' => 'restaurant.guest.index',
@@ -149,8 +245,14 @@ return [
         ],
 
         'reports' => [
-            ['label' => 'restaurant::menu.food_costing', 'icon' => 'wallet', 'route' => 'restaurant.costing.index',
-                'permission' => 'restaurant.view', 'planned' => true],
+            /*
+             * ⭐ খাদ্য-খরচ — `food_costing` নামে একটা `planned` সারি এখানে
+             * ছিল, আর আসল পর্দাটা মজুদে চলত। মালিকের দাগানো অনুযায়ী
+             * (১৫ সেপ্টেম্বর ২০২৬) আসলটাই এখানে এল, আর খালি প্রতিশ্রুতিটা
+             * সরে গেল — দুইটা সারি রাখলে একটা কাজ করত, অন্যটা ৪০৪ দিত।
+             */
+            ['label' => 'restaurant::menu.food_cost', 'icon' => 'wallet', 'route' => 'restaurant.report.show',
+                'route_params' => ['slug' => 'food-cost'], 'permission' => 'restaurant.report'],
             ['label' => 'restaurant::menu.analytics', 'icon' => 'reports', 'route' => 'restaurant.analytics.index',
                 'permission' => 'restaurant.view', 'planned' => true],
             ['label' => 'restaurant::menu.hygiene', 'icon' => 'check-circle', 'route' => 'restaurant.hygiene.index',
@@ -179,6 +281,38 @@ return [
      * বিক্রয়কে রেস্টুরেন্টের উপর নির্ভর করতে হত, আর তখন **রেস্টুরেন্ট
      * বন্ধ করা কোম্পানিতেও বিক্রয় চলত না**।
      */
+    /*
+     * রান্নার কাগজের নম্বর — `CKG`, মজুদ থেকে হুবহু আনা।
+     *
+     * ⚠️ চাবিটা `CKG`-ই রাখা হয়েছে, বদলানো হয়নি: `number_series` ও
+     * `issued_numbers`-এ চলতি সারিগুলো এই স্ট্রিং ধরে বসে আছে। নতুন
+     * চাবি দিলে সিরিজটা শূন্য থেকে শুরু হত আর পুরনো নম্বরগুলো অনাথ হত।
+     */
+    /*
+     * রেসিপির বই — কোরের চুক্তি, রেস্তোরাঁর বাস্তবায়ন।
+     *
+     * ── ⭐ কেন এই সারিটা মজুদ থেকে এখানে এল ──────────────────────────
+     * বিক্রয়ের বিলের সেবা রেসিপি পড়ে, কিন্তু বিক্রয় রেস্তোরাঁর উপর
+     * দাঁড়াতে পারে না। ⓘ তাই মাঝে কোরের চুক্তি, আর বাস্তবায়নটা যে
+     * মডিউলের রেসিপি তারই।
+     *
+     * ⛔ কেউ এটা না বাঁধলে বিক্রয় কোরের শূন্য-বাস্তবায়ন পেত, আর
+     * **প্রতিটা মেড-টু-অর্ডার খাবারের বিক্রয়যোগ্য শূন্য** হয়ে যেত।
+     * ⚠️ পরীক্ষায় ঠিক তাই ধরা পড়েছিল — ২৬টার ৮টা লাল, সবগুলোরই
+     * বার্তা *"বিক্রয়যোগ্য আছে ০"*।
+     */
+    'bindings' => [
+        RecipeBook::class => RecipeBookAdapter::class,
+    ],
+
+    'doc_types' => [
+        'CKG' => 'restaurant::doc.production',
+    ],
+
+    'reports' => [
+        RestaurantReports::class,
+    ],
+
     'listeners' => [
         InvoiceConfirmed::class => [SendTheOrderToTheKitchen::class],
     ],

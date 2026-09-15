@@ -77,7 +77,7 @@
     @endif
 
     <form method="POST"
-          action="{{ $recipe->exists ? route('inventory.recipe.update', $recipe) : route('inventory.recipe.store') }}"
+          action="{{ $recipe->exists ? route('restaurant.recipe.update', $recipe) : route('restaurant.recipe.store') }}"
           x-data="recipeForm()">
         @csrf
         @if ($recipe->exists) @method('PUT') @endif
@@ -226,7 +226,7 @@
 
         <div class="mt-4 flex flex-wrap gap-2">
             <x-ui.button type="submit" tone="primary">{{ __('core.action.save') }}</x-ui.button>
-            <x-ui.button :href="route('inventory.recipe.index')" tone="secondary">
+            <x-ui.button :href="route('restaurant.recipe.index')" tone="secondary">
                 {{ __('core.action.cancel') }}
             </x-ui.button>
         </div>

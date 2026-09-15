@@ -8,8 +8,8 @@ use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\User;
 use App\Modules\Inventory\Models\Product;
-use App\Modules\Inventory\Models\Recipe;
-use App\Modules\Inventory\Models\RecipeLine;
+use App\Modules\Restaurant\Models\Recipe;
+use App\Modules\Restaurant\Models\RecipeLine;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -53,7 +53,7 @@ class ARecipeScreenOpensTest extends TestCase
 
     public function test_the_list_opens_when_there_are_no_recipes_yet(): void
     {
-        $this->get(route('inventory.recipe.index'))
+        $this->get(route('restaurant.recipe.index'))
             ->assertOk()
             ->assertSee(__('inventory::message.no_recipes'));
     }
@@ -62,16 +62,16 @@ class ARecipeScreenOpensTest extends TestCase
     {
         $this->recipe();
 
-        $this->get(route('inventory.recipe.index'))
+        $this->get(route('restaurant.recipe.index'))
             ->assertOk()
             ->assertSee($this->dish->name());
     }
 
     public function test_the_form_opens_empty_and_for_editing(): void
     {
-        $this->get(route('inventory.recipe.create'))->assertOk();
+        $this->get(route('restaurant.recipe.create'))->assertOk();
 
-        $this->get(route('inventory.recipe.edit', $this->recipe()))->assertOk();
+        $this->get(route('restaurant.recipe.edit', $this->recipe()))->assertOk();
     }
 
     /**
@@ -83,7 +83,7 @@ class ARecipeScreenOpensTest extends TestCase
      */
     public function test_a_recipe_cannot_be_saved_without_ingredients(): void
     {
-        $this->post(route('inventory.recipe.store'), [
+        $this->post(route('restaurant.recipe.store'), [
             'product_id' => $this->dish->id,
             'kind' => Recipe::TO_ORDER,
             'yield_qty' => '1',
@@ -95,7 +95,7 @@ class ARecipeScreenOpensTest extends TestCase
     /** খাবার নিজেই নিজের উপকরণ হতে পারে না — হলে অসীম চক্র। */
     public function test_a_dish_cannot_be_its_own_ingredient(): void
     {
-        $this->post(route('inventory.recipe.store'), [
+        $this->post(route('restaurant.recipe.store'), [
             'product_id' => $this->dish->id,
             'kind' => Recipe::TO_ORDER,
             'yield_qty' => '1',
@@ -110,7 +110,7 @@ class ARecipeScreenOpensTest extends TestCase
     {
         $this->recipe();
 
-        $this->post(route('inventory.recipe.store'), [
+        $this->post(route('restaurant.recipe.store'), [
             'product_id' => $this->dish->id,
             'kind' => Recipe::TO_ORDER,
             'yield_qty' => '1',
@@ -130,7 +130,7 @@ class ARecipeScreenOpensTest extends TestCase
     {
         $recipe = $this->recipe();
 
-        $this->put(route('inventory.recipe.update', $recipe), [
+        $this->put(route('restaurant.recipe.update', $recipe), [
             'product_id' => $this->dish->id,
             'kind' => Recipe::BATCH,
             'yield_qty' => '10',
@@ -149,12 +149,12 @@ class ARecipeScreenOpensTest extends TestCase
     {
         $recipe = $this->recipe();
 
-        $this->delete(route('inventory.recipe.destroy', $recipe))->assertRedirect();
+        $this->delete(route('restaurant.recipe.destroy', $recipe))->assertRedirect();
 
         $this->assertFalse($recipe->fresh()->is_active);
         $this->assertDatabaseCount('inv_recipes', 1);
 
-        $this->post(route('inventory.recipe.activate', $recipe))->assertRedirect();
+        $this->post(route('restaurant.recipe.activate', $recipe))->assertRedirect();
 
         $this->assertTrue($recipe->fresh()->is_active);
     }

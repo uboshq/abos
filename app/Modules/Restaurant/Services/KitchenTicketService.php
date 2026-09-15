@@ -10,7 +10,6 @@ use App\Modules\Inventory\Models\Product;
    PHP নিজের namespace-এ খোঁজে। ফাইলটা যখন মজুদের ভেতরে ছিল তখন
    `use` লাগত না; সরানোর পর লেগেছে, আর অভাবটা ধরা পড়েছিল কেবল
    পর্দা খুলে — কম্পাইলে নয় (২ সেপ্টেম্বর ২০২৬) */
-use App\Modules\Inventory\Services\RecipeService;
 use App\Modules\Restaurant\Models\KitchenTicket;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
