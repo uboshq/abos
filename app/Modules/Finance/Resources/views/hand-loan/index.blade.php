@@ -54,7 +54,9 @@
             {{ __('finance::message.hand_loan_is_not_a_loan') }}
         </p>
 
-        <form method="POST" action="{{ route('finance.hand_loan.store') }}"
+
+        <form method="POST" enctype="multipart/form-data" x-data
+              action="{{ route('finance.hand_loan.store') }}"
               class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             @csrf
 
@@ -83,6 +85,33 @@
                 ⛔ বাধ্যতামূলক করলে মানুষ বানানো সংখ্যা বসাতেন, আর সেটা
                 না লেখার চেয়েও খারাপ — কারণ তখন মিথ্যাটা খাতায় বসে যায়।
             --}}
+            {{-- ⭐ টাকার পরিমাণ — নমুনার ঘর, ১৫ সেপ্টেম্বর ২০২৬।
+
+                 ⛔ এতদিন খাতাটা খোলা যেত কত টাকা না জানিয়েই: অঙ্কটা
+                 ছিল কেবল নড়াচড়ার সারিতে, তাই প্রথম নড়াচড়ার আগে
+                 খাতাটা সংখ্যাহীন থাকত। --}}
+            <x-ui.field name="principal" type="number" step="0.01" inputmode="decimal" numeric
+                        :label="__('finance::field.loan_principal')"
+                        :value="old('principal')" />
+
+            {{-- ⚠️ এ পর্যন্ত ফেরত — **খোলার জের**, চলতি ব্যালান্স নয়।
+
+                 ⓘ পুরনো খাতা ব্যবস্থায় তোলার সময় যেটুকু আগে ফেরত
+                 এসেছে সেটুকু এখানে বসে। ⛔ এরপর থেকে হিসাব রাখে
+                 খতিয়ান — ঘরটা দ্বিতীয় কপি নয়, শুরুর বিন্দু। --}}
+            <x-ui.field name="opening_repaid" type="number" step="0.01" inputmode="decimal" numeric
+                        :label="__('finance::field.opening_repaid')"
+                        :value="old('opening_repaid', 0)" />
+
+            {{-- ⓘ যে খাতে ঢুকল — ঐচ্ছিক, কারণ পুরনো ধার বসানোর সময়
+                 টাকাটা আগেই হাতবদল হয়ে গেছে; তখন আবার পোস্ট করলে
+                 দুইবার হত। --}}
+            <x-ui.money-account name="money_account_id"
+                                :label="__('finance::field.loan_money_account')"
+                                :accounts="$accounts" codes
+                                :blank="__('finance::field.choose')"
+                                :selected="old('money_account_id')" />
+
             <x-ui.field name="interest_rate" type="number" step="0.01" inputmode="decimal"
                         :label="__('finance::field.interest_rate')"
                         :value="old('interest_rate', '0')" numeric />
@@ -94,6 +123,22 @@
             <x-ui.field name="due_on" type="date"
                         :label="__('finance::field.due_on')"
                         :value="old('due_on')" />
+
+            {{-- ⭐ পরের কিস্তি — ১৫ সেপ্টেম্বর ২০২৬-এ ঘরটা যোগ হলো।
+
+                 ⛔ কলামটা ছিল, কিন্তু কেউ লিখতে পারত না: সার্ভিস ওটা
+                 `due_on` থেকে নিজে বসিয়ে দিত।
+
+                 ⚠️ আর সেটা **কিস্তির ধারে ভুল** — মাসে মাসে ফেরত দিলে
+                 পরের কিস্তি আগামী মাসে, চুক্তির শেষ দিনে নয়। ⓘ ফলে
+                 "কার কাছে এখন টাকা চাইতে হবে" প্রশ্নের উত্তর সবসময়
+                 চুক্তির শেষ তারিখ দেখাত, অর্থাৎ কোনোদিন কিছু বকেয়া
+                 দেখাত না।
+
+                 ⓘ খালি রাখলে আগের মতোই নিজে বসে — পুরনো আচরণ অক্ষত। --}}
+            <x-ui.field name="next_due_on" type="date"
+                        :label="__('finance::field.next_due_on')"
+                        :value="old('next_due_on')" />
 
             <x-ui.select name="repayment" :label="__('finance::field.repayment')"
                          :options="collect(\App\Modules\Finance\Models\HandLoanAccount::REPAYMENTS)
@@ -110,6 +155,39 @@
             <x-ui.field name="note" :label="__('finance::field.note')" :value="old('note')" />
 
             <div class="flex items-end">
+                {{-- ⭐ ফিতাটা ঘরগুলোর পরে, ভাউচারের বাক্সের আগে — নমুনার ক্রম।
+                     ⓘ আগে এটা ফর্মের বাইরে ছিল, তাই কার্ডের নিচে আলগা হয়ে
+                     ঝুলত। মালিক পাঁচটা পর্দা পাশাপাশি দেখে ধরিয়ে দিয়েছেন। --}}
+                <div class="sm:col-span-2 xl:col-span-4">
+                    @include('finance::partials.handoff', [
+                        'voucher' => 'receipt',
+                        'to' => route('accounts.voucher.create', ['type' => 'receipt']),
+                        'action' => __('finance::action.take_money_receipt'),
+                    ])
+                </div>
+
+                {{-- ⭐ ভাউচারের ঘর — নমুনার সবচেয়ে বড় অংশ।
+                     ⓘ ঘরগুলো খাতার সারিতে বসে না; ওগুলো ভাউচারে যায়। --}}
+                <div class="sm:col-span-2 xl:col-span-4">
+                    @include('finance::partials.voucher-box', [
+                        'direction' => 'in',
+                        'carriers' => $carriers ?? [],
+                    ])
+                </div>
+
+                {{-- ⭐ সংযুক্তি — ধারের স্ট্যাম্প বা লেখা কাগজ।
+                     ⚠️ মুখের কথা আদালতে দাঁড়ায় না, আর ঝগড়াটা বাধে বছর পরে। --}}
+                <div class="mb-2">
+                    <label for="loan-paper" class="mb-1 block text-sm font-medium">
+                        {{ __('finance::field.attachment') }}
+                    </label>
+                    <input id="loan-paper" type="file" name="paper"
+                           x-on:change="$store.scanner.begin($el, 'paper')"
+                           class="w-full text-sm file:me-2 file:rounded-(--radius-field)
+                                  file:border file:border-(--color-border) file:bg-(--color-surface-app)
+                                  file:px-3 file:py-1.5 file:text-sm">
+                </div>
+
                 <x-ui.button type="submit" tone="primary" class="w-full">
                     {{ __('core.action.save') }}
                 </x-ui.button>

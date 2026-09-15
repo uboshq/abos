@@ -3,6 +3,18 @@
 declare(strict_types=1);
 
 return [
+    'within_the_limit' => 'সীমার ভিতরেই আছে।',
+    'over_the_limit' => 'সীমা ছাড়িয়ে গেছে — ব্যাংক দণ্ডসুদ বসাবে।',
+    'ledger_debit' => 'ডেবিট',
+    'ledger_credit' => 'ক্রেডিট',
+    'ledger_debit_capital' => 'যে খাতে টাকাটা এল — নগদ, ব্যাংক বা মোবাইল হিসাব',
+    'ledger_credit_capital' => '৩১০০ মালিকের মূলধন — টাকাটা ব্যবসার নয়, মালিকের',
+    'ledger_only_after_posting' => 'খসড়া অবস্থায় খতিয়ানে কিছুই বসে না — বসে রসিদ পোস্ট হওয়ার দিন',
+    'step_this_book' => 'এই খাতা',
+    'step_receipt_voucher' => 'রসিদ ভাউচার',
+    'step_payment_voucher' => 'পরিশোধ ভাউচার',
+    'step_ledger' => 'খতিয়ান',
+    'money_fields_belong_to_the_voucher' => 'টাকার ঘরগুলো ভাউচারের, খাতার নয়',
     'reconciled_on' => 'শেষ মিলিয়ে দেখা: :date',
 
     'deposits_all_hint' => 'সব ইস্যুকারীর জমা একসাথে — ব্যাংক, সঞ্চয়পত্র ও বন্ড। নতুন জমা খুলতে ইস্যুকারীর নিজের পাতায় যান।',

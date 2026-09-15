@@ -67,6 +67,22 @@ class CapitalEntry extends Model implements Drillable, SettledByAVoucher
     public const INVESTMENT = 'investment';
 
     /** @var list<string> */
+    /*
+     * মূলধন কী দিয়ে এল — নমুনার তিনটা পথ।
+     *
+     * ⛔ টাকা ছাড়া অন্য কিছু দিলে দাখিলার ডেবিট দিকটা বদলায়: যন্ত্রপাতি
+     * গেলে স্থায়ী সম্পদে, পণ্য গেলে মজুদে। ⚠️ ঘরটা না থাকায় সবই টাকা
+     * ধরা হত, আর একটা ট্রাক দিয়ে দেওয়া মূলধন নগদ হিসেবে বসত।
+     */
+    public const CASH = 'cash';
+
+    public const ASSET = 'asset';
+
+    public const GOODS = 'goods';
+
+    /** @var list<string> */
+    public const IN_KINDS = [self::CASH, self::ASSET, self::GOODS];
+
     public const KINDS = [self::CONTRIBUTION, self::INVESTMENT];
 
     public const DRAFT = 'draft';
@@ -77,7 +93,7 @@ class CapitalEntry extends Model implements Drillable, SettledByAVoucher
 
     protected $fillable = [
         'company_id', 'branch_id', 'document_no', 'person_id', 'contributor_type',
-        'entry_type', 'trx_date', 'amount', 'share_percent', 'narration', 'status',
+        'entry_type', 'in_kind', 'trx_date', 'amount', 'share_percent', 'narration', 'status',
         'voucher_id', 'received_into_account_id', 'posted_at', 'created_by',
     ];
 

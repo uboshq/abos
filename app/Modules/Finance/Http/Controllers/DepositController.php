@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Finance\Http\Controllers;
 
+use App\Core\Engines\Attachment\AttachmentEngine;
+use App\Core\Engines\Attachment\AttachmentException;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
@@ -42,6 +44,7 @@ class DepositController extends Controller implements HasMiddleware
         private readonly MenuBuilder $menu,
         private readonly DepositService $deposits,
         private readonly PersonResolver $people,
+        private readonly AttachmentEngine $attachments,
     ) {}
 
     /** @return list<Middleware> */
@@ -180,8 +183,29 @@ class DepositController extends Controller implements HasMiddleware
                 Rule::exists('mdm_people', 'id')->where('company_id', CompanyContext::id())],
             'person_new' => ['nullable', 'string', 'max:120'],
             'person_mobile' => ['nullable', 'string', 'max:32'],
+            /*
+             * ⭐ পক্ষের তিনটা ঘর — মানুষটার সাথে যায়, সারির সাথে নয়
+             * ([[App\Modules\MasterData\Services\PersonResolver]])।
+             *
+             * ⛔ এগুলো `validate()`-এ না থাকলে **নীরবে হারায়**: Laravel
+             * কেবল যাচাই করা চাবিগুলোই ফেরায়, তাই ফর্ম পাঠালেও
+             * PersonResolver ঘরগুলো পেত না আর সারি বসত `NULL` নিয়ে।
+             * ⓘ ১৫ সেপ্টেম্বর ২০২৬-এ লোকালে জমা দিয়ে ধরা পড়েছে।
+             */
+            'person_relationship' => ['nullable', 'string', 'max:60'],
+            'person_address' => ['nullable', 'string', 'max:191'],
+            'person_nid_tin' => ['nullable', 'string', 'max:40'],
             'principal' => ['required', 'numeric', 'gt:0'],
             'profit_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
+
+            /*
+             * ⭐ ঘর দুইটা কলামে ছিল, পর্দায় ছিল না — ১৫ সেপ্টেম্বর ২০২৬।
+             * ⓘ `nullable`, কারণ পুরনো সারিগুলোর ডিফল্ট ইতিমধ্যে বসানো।
+             */
+            'tax_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'on_maturity' => ['nullable', Rule::in(Deposit::ON_MATURITY)],
+            'paper' => ['nullable', 'file'],
+
             'return_word' => ['required', 'string', 'in:interest,profit'],
             'opened_on' => ['required', 'date'],
             'matures_on' => ['nullable', 'date', 'after:opened_on'],
@@ -208,6 +232,8 @@ class DepositController extends Controller implements HasMiddleware
         $data['person_id'] = $this->people->resolve($data);
 
         $deposit = $this->deposits->open($data);
+
+        $this->keepThePaper($request, $deposit);
 
         /*
          * খোলার পর তার নিজের পাতায় — তালিকায় নয়।
@@ -327,5 +353,32 @@ class DepositController extends Controller implements HasMiddleware
             ->whereIn('parent_id', Account::query()
                 ->whereIn('code', StandardChart::MONEY_PARENTS)->select('id'))
             ->orderBy('code')->get();
+    }
+
+    /**
+     * ফর্মের সাথে আসা কাগজটা — জমাটা বসার **পরেই**।
+     *
+     * ⓘ কাগজ বসে `(উৎস, আইডি)` জোড়ার উপর, আর জমাটা তৈরি হওয়ার আগে
+     * আইডিটাই নেই। ⛔ কাগজ আটকালে জমাটা থাকে, কেবল সতর্কবার্তা যায় —
+     * ⚠️ টাকার খবরটা ছবির চেয়ে দামি।
+     */
+    private function keepThePaper(Request $request, Deposit $deposit): void
+    {
+        if (! $request->hasFile('paper')) {
+            return;
+        }
+
+        try {
+            $this->attachments->store(
+                file: $request->file('paper'),
+                module: 'finance',
+                entity: Deposit::drillSourceType(),
+                entityId: (int) $deposit->getKey(),
+            );
+        } catch (AttachmentException $refused) {
+            session()->flash('warning', __('core.attachment.refused', [
+                'reason' => $refused->getMessage(),
+            ]));
+        }
     }
 }

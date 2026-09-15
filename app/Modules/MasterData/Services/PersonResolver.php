@@ -55,7 +55,21 @@ final class PersonResolver
         $typed = trim((string) ($data['person_new'] ?? ''));
         $mobile = trim((string) ($data['person_mobile'] ?? ''));
 
-        unset($data['person_new'], $data['person_mobile']);
+        /*
+         * ⭐ নমুনার তিনটা ঘর — সম্পর্ক, ঠিকানা, পরিচয়পত্র (১৫ সেপ্টেম্বর ২০২৬)।
+         *
+         * ⓘ এগুলো **মানুষটার** তথ্য, তাই এখানেই বসে — যে পর্দা থেকেই
+         * নামটা আসুক। ⚠️ প্রতিটা মডিউলে আলাদা করে লিখলে একদিন ধারের
+         * পর্দায় ঠিকানা চাওয়া হত, ভাড়ার পর্দায় না।
+         */
+        $relationship = trim((string) ($data['person_relationship'] ?? ''));
+        $address = trim((string) ($data['person_address'] ?? ''));
+        $nidTin = trim((string) ($data['person_nid_tin'] ?? ''));
+
+        unset(
+            $data['person_new'], $data['person_mobile'],
+            $data['person_relationship'], $data['person_address'], $data['person_nid_tin'],
+        );
 
         if ($picked > 0) {
             /*
@@ -79,7 +93,20 @@ final class PersonResolver
 
         $person = $this->lists->create(
             Person::class,
-            ['name_en' => $typed, 'mobile' => $mobile !== '' ? $mobile : null],
+            [
+                'name_en' => $typed,
+                'mobile' => $mobile !== '' ? $mobile : null,
+
+                /*
+                 * ⓘ খালি ঘর `null` হয়ে বসে, খালি স্ট্রিং নয়।
+                 * ⚠️ `''` বসালে "ঠিকানা আছে কিন্তু ফাঁকা" আর "ঠিকানা
+                 * নেই" দুইটা এক দেখাত, আর খুঁজে বের করা যেত না কার
+                 * ঠিকানা এখনো নেওয়া হয়নি।
+                 */
+                'relationship' => $relationship !== '' ? $relationship : null,
+                'address' => $address !== '' ? $address : null,
+                'nid_tin' => $nidTin !== '' ? $nidTin : null,
+            ],
             'people',
         );
 

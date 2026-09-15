@@ -7,13 +7,16 @@ namespace Tests\Feature\Modules\Finance;
 use App\Core\Contracts\SettledByAVoucher;
 use App\Core\Engines\Drill\DrillResolver;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\DocumentStatus;
 use App\Models\Company;
 use App\Models\User;
+use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Finance\Models\CapitalEntry;
 use App\Modules\Finance\Services\CapitalService;
 use App\Modules\MasterData\Models\Person;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
@@ -56,6 +59,38 @@ final class TheMoneyArrivedButTheRowStayedADraftTest extends TestCase
     }
 
     /**
+     * একটা আসল ভাউচার — ⛔ বানানো নম্বর চলে না।
+     *
+     * ── ⚠️ ১৫ সেপ্টেম্বর ২০২৬-এ চারটা দাবি এখানেই মরত ────────────────
+     * আগে সরাসরি `settleWith(4242)` লেখা ছিল, অর্থাৎ হাওয়া থেকে তোলা
+     * একটা নম্বর। ⛔ `acc_capital_entries.voucher_id`-তে আসল বিদেশি চাবি
+     * আছে (`acc_capital_entries_voucher_id_foreign` → `vouchers`), তাই
+     * ডাটাবেজ সেটা নিতে অস্বীকার করত।
+     *
+     * ⓘ দাবিগুলো ভুল ছিল না — **ফিক্সচারটা ভুল ছিল**। আর এটাও আজকের
+     * সেই একই শ্রেণি: টেস্টটা লেখা হয়েছিল, চালানো হয়নি।
+     */
+    private function voucherNo(string $no): int
+    {
+        $year = DB::table('financial_years')
+            ->where('company_id', $this->company->id)
+            ->value('id');
+
+        $this->assertNotNull($year, 'কোম্পানির কোনো অর্থবছর নেই — ভাউচার বানানো যাচ্ছে না।');
+
+        return (int) Voucher::query()->create([
+            'company_id' => $this->company->id,
+            'branch_id' => $this->company->defaultBranch()?->id,
+            'financial_year_id' => $year,
+            'type' => 'receipt',
+            'document_no' => $no,
+            'trx_date' => now()->toDateString(),
+            'amount' => '1.0000',
+            'status' => DocumentStatus::CONFIRMED,
+        ])->id;
+    }
+
+    /**
      * ⛔ নামটা সত্যিই ক্লাসে পৌঁছায় — `drill_sources` ব্লকটা আছে।
      *
      * ⓘ এটা আলাদা করে মাপা হয়, কারণ এই একটা কড়ি খসে পড়লে নিচের সব
@@ -87,10 +122,12 @@ final class TheMoneyArrivedButTheRowStayedADraftTest extends TestCase
 
         $this->assertSame(CapitalEntry::DRAFT, $entry->status);
 
-        $entry->settleWith(4242);
+        $mine = $this->voucherNo('RV-TEST-4242');
+
+        $entry->settleWith($mine);
 
         $this->assertSame(CapitalEntry::POSTED, $entry->status);
-        $this->assertSame(4242, $entry->voucher_id);
+        $this->assertSame($mine, $entry->voucher_id);
         $this->assertNotNull($entry->posted_at);
     }
 
@@ -105,16 +142,19 @@ final class TheMoneyArrivedButTheRowStayedADraftTest extends TestCase
     {
         $entry = $this->draft();
 
-        $entry->settleWith(11);
+        $first_v = $this->voucherNo('RV-TEST-0011');
+        $second_v = $this->voucherNo('RV-TEST-0022');
+
+        $entry->settleWith($first_v);
         $first = $entry->posted_at;
 
         $this->travel(2)->minutes();
 
-        $entry->settleWith(22);
+        $entry->settleWith($second_v);
 
         $this->assertEquals($first, $entry->posted_at,
             'দ্বিতীয় ডাকে তারিখটা নড়ে গেছে — টাকাটা কবে এসেছিল তা আর বলা যাবে না।');
-        $this->assertSame(11, $entry->voucher_id,
+        $this->assertSame($first_v, $entry->voucher_id,
             'দ্বিতীয় ভাউচারটা প্রথমটাকে সরিয়ে দিয়েছে।');
     }
 
@@ -128,8 +168,10 @@ final class TheMoneyArrivedButTheRowStayedADraftTest extends TestCase
     {
         $entry = $this->draft();
 
-        $entry->settleWith(77);
-        $entry->unsettle(77);
+        $v = $this->voucherNo('RV-TEST-0077');
+
+        $entry->settleWith($v);
+        $entry->unsettle($v);
 
         $this->assertSame(CapitalEntry::DRAFT, $entry->status);
         $this->assertNull($entry->voucher_id);
@@ -147,12 +189,15 @@ final class TheMoneyArrivedButTheRowStayedADraftTest extends TestCase
     {
         $entry = $this->draft();
 
-        $entry->settleWith(100);
-        $entry->unsettle(999);
+        $mine = $this->voucherNo('RV-TEST-0100');
+        $other = $this->voucherNo('RV-TEST-0999');
+
+        $entry->settleWith($mine);
+        $entry->unsettle($other);
 
         $this->assertSame(CapitalEntry::POSTED, $entry->status,
             'অন্য একটা ভাউচারের বাতিল এই সারিটা খুলে দিয়েছে।');
-        $this->assertSame(100, $entry->voucher_id);
+        $this->assertSame($mine, $entry->voucher_id);
     }
 
     /**
@@ -191,7 +236,6 @@ final class TheMoneyArrivedButTheRowStayedADraftTest extends TestCase
             'company_id' => $this->company->id,
             'code' => 'P0001',
             'name_en' => 'Owner One',
-            'kind' => 'person',
             'is_active' => true,
         ]);
 
