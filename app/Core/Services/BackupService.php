@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 namespace App\Core\Services;
 
+use App\Core\Services\Backup\PdoDumper;
+use App\Core\Services\Backup\PdoLoader;
+use App\Core\Services\Backup\ShellAvailability;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use RuntimeException;
 use Symfony\Component\Process\Process;
 
@@ -313,8 +317,57 @@ final class BackupService
         return realpath($path) ?: $path;
     }
 
+    /**
+     * শেলের পথে যাব, নাকি বিশুদ্ধ PHP-র পথে।
+     *
+     * ── ⛔ কেন প্রশ্নটা `ShellAvailability`-র চেয়ে বড়, ১৫ সেপ্টেম্বর ২০২৬ ──
+     * `ShellAvailability::canRunProcesses()` একটা **সত্য** বলে: এই মেশিনে
+     * `proc_open` চলে কি না। ⓘ সেটা মিথ্যা বানানোর কোনো উপায় থাকা উচিত
+     * নয় — একটা সক্ষমতা-যাচাই মিথ্যা বললে সেটা আর যাচাই নয়।
+     *
+     * ⭐ কিন্তু "কোন পথে যাব" আলাদা প্রশ্ন, আর ওটার উপর হাত থাকা দরকার।
+     * ⚠️ নইলে লাইভের পথটা — যেখানে শেল নেই — এই মেশিনে কোনোদিন চালিয়েই
+     * দেখা যেত না, আর "সারানো হয়েছে" কথাটা আবার দাবি হয়ে থাকত, প্রমাণ নয়।
+     */
+    private function usesShell(): bool
+    {
+        if (config('abos.backup.force_php') === true) {
+            return false;
+        }
+
+        return ShellAvailability::canRunProcesses();
+    }
+
     private function dump(string $target): void
     {
+        /*
+         * ⛔ শেল না থাকলে বিশুদ্ধ PHP পথ — আর সেটাই এখন লাইভের পথ।
+         *
+         * ── কেন এই শাখাটা লাগল, ১৫ সেপ্টেম্বর ২০২৬ ──────────────────
+         * লাইভে মেপে দেখা গেছে `abos:backup` **কোনোদিন চলেনি**:
+         * শেয়ার্ড হোস্টিংয়ে `proc_open` বন্ধ, আর `Symfony\Process`
+         * ওটা ছাড়া চলে না। ⚠️ আর ছয় দিন সেটা কেউ জানল না।
+         *
+         * ⓘ নিচের `mysqldump` পথটা রাখা হয়েছে কারণ যেখানে শেল আছে
+         * সেখানে ওটা দ্রুত ও বেশি সম্পূর্ণ (রুটিন, ট্রিগার)। কিন্তু
+         * পথ বাছার সিদ্ধান্তটা এখন **পরিবেশ দেখে**, আশা দেখে নয়।
+         */
+        if (! $this->usesShell()) {
+            $tables = app(PdoDumper::class)->dump($target.'.sql');
+
+            try {
+                $this->compress($target.'.sql', $target);
+            } finally {
+                @unlink($target.'.sql');
+            }
+
+            if ($tables === 0) {
+                throw new RuntimeException(__('backup::error.dump_was_empty'));
+            }
+
+            return;
+        }
+
         $db = config('database.connections.mysql');
 
         /*
@@ -401,6 +454,45 @@ final class BackupService
 
     private function load(string $file, string $database): void
     {
+        /*
+         * ⓘ ডাম্পের মতোই — শেল না থাকলে PDO দিয়ে ফিরিয়ে আনা।
+         *
+         * ⚠️ এই শাখাটা না থাকলে যাচাইটা (`verify()`) শেয়ার্ড হোস্টিংয়ে
+         * কোনোদিন চলত না, আর তখন "ব্যাকআপ নেওয়া হয়েছে" কথাটা আবার
+         * অপ্রমাণিত হয়ে যেত — যে রোগটা সারাতে বসেছি ঠিক সেটাই।
+         */
+        if (! $this->usesShell()) {
+            $raw = $file.'.restore.sql';
+            $pdo = DB::connection()->getPdo();
+
+            /*
+             * ⛔ যে ডাটাবেজে ছিলাম সেখানে ফিরে যেতেই হবে, ১৫ সেপ্টেম্বর ২০২৬।
+             *
+             * ⚠️ `USE` সংযোগটাকে সরিয়ে দেয়, আর এটা অ্যাপের **নিজের**
+             * সংযোগ। যাচাইয়ের ডাটাবেজটা শেষে ফেলে দেওয়া হয় — তাই ফিরে
+             * না গেলে সংযোগটা একটা **মুছে ফেলা** ডাটাবেজের দিকে তাকিয়ে
+             * থাকত, আর তারপরের প্রতিটা প্রশ্ন ব্যর্থ হত।
+             *
+             * ⓘ শেলের পথে এটা ঘটত না (আলাদা প্রসেস), তাই ফাঁকটা এতদিন
+             * দেখা যায়নি — লাইভের পথটা চালিয়ে দেখার আগ পর্যন্ত।
+             */
+            $was = DB::connection()->getDatabaseName();
+
+            try {
+                $this->decompress($file, $raw);
+
+                $pdo->exec('USE `'.str_replace('`', '``', $database).'`');
+
+                app(PdoLoader::class)->load($pdo, $raw);
+            } finally {
+                @unlink($raw);
+
+                $pdo->exec('USE `'.str_replace('`', '``', $was).'`');
+            }
+
+            return;
+        }
+
         $db = config('database.connections.mysql');
         $defaults = $this->defaultsFile($db);
 
@@ -469,6 +561,31 @@ final class BackupService
      */
     private function mysql(string $sql): string
     {
+        /*
+         * ⓘ শেল না থাকলে সরাসরি PDO — ডাটাবেজ বানানো/মোছা ও গোনা,
+         * তিনটাই PDO নিজেই পারে।
+         *
+         * ⚠️ এখানে **একাধিক বিবৃতি** আসে (`DROP …; CREATE …;`), আর
+         * `PDO::exec()` সেটা পারে না। তাই `;`-এ ভাগ করা হয় — নিরাপদ,
+         * কারণ এই পদ্ধতিতে আসা SQL সবসময় কোডে লেখা, কোনোদিন ব্যবহারকারীর
+         * ডেটা নয় (চারটা ডাকার জায়গাই উপরে দেখা যায়)।
+         */
+        if (! $this->usesShell()) {
+            $pdo = DB::connection()->getPdo();
+            $last = '';
+
+            foreach (array_filter(array_map('trim', explode(';', $sql))) as $one) {
+                $result = $pdo->query($one);
+
+                if ($result !== false) {
+                    $value = $result->fetchColumn();
+                    $last = $value === false ? $last : (string) $value;
+                }
+            }
+
+            return $last;
+        }
+
         $db = config('database.connections.mysql');
         $defaults = $this->defaultsFile($db);
 
