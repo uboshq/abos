@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Core\Contracts\RecipeBook;
 use App\Core\Engines\Report\ReportEngine;
 use App\Core\Events\EventRegistry;
 use App\Core\Module\ModuleRegistry;
+use App\Core\Services\NoRecipeBook;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
@@ -24,6 +26,47 @@ class ModuleServiceProvider extends ServiceProvider
     {
         $this->app->singleton(ModuleRegistry::class, fn () => new ModuleRegistry(app_path('Modules')));
         $this->app->singleton(ReportEngine::class);
+
+        $this->bindDefaults();
+        $this->bindWhatModulesDeclare();
+    }
+
+    /**
+     * কোরের চুক্তিগুলোর "কিছুই করে না" বাস্তবায়ন।
+     *
+     * ── ⛔ কেন ডিফল্ট থাকতেই হবে ────────────────────────────────────
+     * যে কোম্পানিতে রেস্তোরাঁ মডিউল বন্ধ, সেখানে কেউ [[RecipeBook]]
+     * বাঁধে না। ⚠️ বাঁধন ছাড়া কনটেইনার ছুঁড়ত, আর বিক্রয়ের সেবা ওটা
+     * ইনজেক্ট করে বলে **প্রতিটা বিল কাটা বন্ধ হয়ে যেত** — যে ডিপো
+     * জীবনে একটা রেসিপিও লেখেনি তার ওখানেও।
+     *
+     * ⓘ পুরো কারণটা [[NoRecipeBook]]-এর ডকে লেখা।
+     */
+    private function bindDefaults(): void
+    {
+        $this->app->bind(RecipeBook::class, NoRecipeBook::class);
+    }
+
+    /**
+     * মডিউলের নিজের ঘোষণা — `module.php`-র `bindings`।
+     *
+     * ── ⭐ এখানেও কোনো মডিউলের নাম লেখা নেই ─────────────────────────
+     * ক্লাসের নামগুলো **ডেটা**, কোড নয় — সেগুলো আসে মডিউলের নিজের
+     * ফাইল থেকে। তাই উপরের প্রতিশ্রুতিটা ("এখানে কোনো মডিউলের নাম
+     * লেখা নেই এবং কখনো লেখা হবে না") অটুট থাকে।
+     *
+     * ⚠️ `register()`-এ, `boot()`-এ নয়: বাঁধন বসার আগেই অন্য কোনো সেবা
+     * চুক্তিটা চেয়ে বসতে পারে, আর তখন সে ডিফল্ট শূন্য-বাস্তবায়নটা পেত
+     * যদিও মডিউলটা আসলটা দিত। ⓘ দুইটার পার্থক্য নীরব — বিল কাটা হত,
+     * কেবল উপকরণ কাটা হত না।
+     */
+    private function bindWhatModulesDeclare(): void
+    {
+        foreach ($this->app->make(ModuleRegistry::class)->all() as $module) {
+            foreach ($module->bindings as $contract => $implementation) {
+                $this->app->bind($contract, $implementation);
+            }
+        }
     }
 
     public function boot(ModuleRegistry $registry, ReportEngine $reports, EventRegistry $events): void

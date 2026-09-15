@@ -280,6 +280,16 @@ final class ModuleDefinition
         public readonly array $listeners,
 
         /**
+         * কনটেইনারের বাঁধন — চুক্তি => বাস্তবায়ন।
+         *
+         * ⭐ এটাই সেই দরজা যেটা দিয়ে একটা মডিউল কোরের কোনো চুক্তির
+         * বাস্তবায়ন দেয়, অথচ কোরে তার নাম লেখা থাকে না।
+         *
+         * @var array<class-string, class-string>
+         */
+        public readonly array $bindings,
+
+        /**
          * অন্য মডিউলের রেকর্ড সম্পর্কে এই মডিউলের যা বলার আছে।
          *
          * "শেষ কেনা কবে" গ্রাহকের পাতায় বসে, কিন্তু কথাটা বিক্রয়ের।
@@ -501,6 +511,7 @@ final class ModuleDefinition
             ),
             events: self::validateEvents($raw['events'] ?? [], $path),
             listeners: self::validateListeners($raw['listeners'] ?? [], $path),
+            bindings: self::validateBindings($raw['bindings'] ?? [], $path),
             facts: self::validateFacts($raw['facts'] ?? [], $path),
             provisions: self::validateProvisions($raw['provisions'] ?? [], $path),
             authProviders: self::validateAuthProviders($raw['auth_providers'] ?? [], $path),
@@ -710,6 +721,49 @@ final class ModuleDefinition
      * @param  list<mixed>  $events
      * @return list<class-string<DomainEvent>>
      */
+    /**
+     * বাঁধনগুলো — দুই পাশই সত্যিকারের, আর দিকটাও ঠিক।
+     *
+     * ⛔ তিনটা ভুলই নীরব হত, তাই তিনটাই এখানে ধরা হয়:
+     *
+     *   চুক্তিটা নেই        → বাঁধনটা কোনোদিন কাজে লাগত না
+     *   বাস্তবায়নটা নেই     → প্রথম ইনজেকশনে ৫০০, অথচ বহু পরে
+     *   ⚠️ বাস্তবায়ন চুক্তিটা মানে না → কনটেইনার খুশি, কিন্তু প্রথম
+     *      পদ্ধতি-কলে TypeError — আর সেটা ঘটত রোজকার কোনো কাজের মাঝে
+     *
+     * @param  array<string, mixed>  $bindings
+     * @return array<class-string, class-string>
+     */
+    private static function validateBindings(array $bindings, string $path): array
+    {
+        foreach ($bindings as $contract => $implementation) {
+            if (! is_string($contract) || ! interface_exists($contract)) {
+                throw new InvalidArgumentException(
+                    "{$path}: binding key '".(is_string($contract) ? $contract : gettype($contract))
+                    ."' is not an interface. A module binds a contract, not a class."
+                );
+            }
+
+            if (! is_string($implementation) || ! class_exists($implementation)) {
+                throw new InvalidArgumentException(
+                    "{$path}: binding for {$contract} points at '"
+                    .(is_string($implementation) ? $implementation : gettype($implementation))
+                    ."', which does not exist."
+                );
+            }
+
+            if (! is_subclass_of($implementation, $contract)) {
+                throw new InvalidArgumentException(
+                    "{$path}: {$implementation} does not implement {$contract}. The container would "
+                    .'accept it and the first method call would fail, far from here.'
+                );
+            }
+        }
+
+        /** @var array<class-string, class-string> $bindings */
+        return $bindings;
+    }
+
     private static function validateEvents(array $events, string $path): array
     {
         foreach ($events as $class) {

@@ -1,7 +1,7 @@
 @php
     $columns = [
         ['key' => 'document_no', 'label' => __('inventory::field.document_no'), 'width' => '10rem',
-         'render' => fn ($p) => view('inventory::partials.production-no', ['production' => $p])],
+         'render' => fn ($p) => view('restaurant::partials.production-no', ['production' => $p])],
 
         ['key' => 'trx_date', 'label' => __('inventory::field.date'), 'width' => '9rem',
          'render' => fn ($p) => \App\Core\Support\DateFormat::format($p->trx_date)],
@@ -20,12 +20,12 @@
              : ''],
 
         ['key' => 'status', 'label' => __('inventory::field.state'), 'width' => '8rem',
-         'render' => fn ($p) => view('inventory::partials.production-state', ['production' => $p])],
+         'render' => fn ($p) => view('restaurant::partials.production-state', ['production' => $p])],
     ];
 @endphp
 
 <x-layouts.app :menu="$menu">
-    <x-slot:title>{{ __('inventory::menu.production') }}</x-slot:title>
+    <x-slot:title>{{ __('restaurant::menu.cooking') }}</x-slot:title>
 
     @if (session('saved'))
         <div role="status"
@@ -38,14 +38,14 @@
     <div data-boxed
          class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
-            <x-ui.toolbar :title="__('inventory::menu.production')"
+            <x-ui.toolbar :title="__('restaurant::menu.cooking')"
                           :count="trans_choice('inventory::message.production_count', $productions->total(), ['count' => $productions->total()])"
                           :columns="$columns"
                           :search-placeholder="__('inventory::field.production_search')"
                           :sort="$sortOptions">
                 <x-slot:actions>
-                    @can('create', \App\Modules\Inventory\Models\Production::class)
-                        <x-ui.button tone="primary" icon="plus" :href="route('inventory.production.create')">
+                    @can('create', \App\Modules\Restaurant\Models\Production::class)
+                        <x-ui.button tone="primary" icon="plus" :href="route('restaurant.production.create')">
                             {{ __('inventory::action.new_production') }}
                         </x-ui.button>
                     @endcan

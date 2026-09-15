@@ -31,7 +31,7 @@
         <x-ui.page-header :title="$production->document_no"
                           :subtitle="$production->product?->name()">
             @can('confirm', $production)
-                <form method="POST" action="{{ route('inventory.production.confirm', $production) }}">
+                <form method="POST" action="{{ route('restaurant.production.confirm', $production) }}">
                     @csrf
                     <x-ui.button type="submit" tone="primary">
                         {{ __('inventory::action.confirm_production') }}

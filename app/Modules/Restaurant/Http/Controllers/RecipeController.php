@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\Inventory\Http\Controllers;
+namespace App\Modules\Restaurant\Http\Controllers;
 
 use App\Core\Concerns\AuthorizesResource;
 use App\Core\Concerns\SortsLists;
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
-use App\Modules\Inventory\Http\Requests\RecipeRequest;
 use App\Modules\Inventory\Models\Product;
-use App\Modules\Inventory\Models\Recipe;
-use App\Modules\Inventory\Models\RecipeLine;
+use App\Modules\Restaurant\Http\Requests\RecipeRequest;
+use App\Modules\Restaurant\Models\Recipe;
+use App\Modules\Restaurant\Models\RecipeLine;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -87,7 +87,7 @@ class RecipeController extends Controller implements HasMiddleware
             ),
         ]);
 
-        return view('inventory::recipe.index', [
+        return view('restaurant::recipe.index', [
             'menu' => $this->menu->forUser($request->user()),
             'recipes' => $query->paginate(50)->withQueryString(),
             'q' => $request->query('q'),
@@ -103,7 +103,7 @@ class RecipeController extends Controller implements HasMiddleware
 
     public function create(Request $request): View
     {
-        return view('inventory::recipe.form', [
+        return view('restaurant::recipe.form', [
             'menu' => $this->menu->forUser($request->user()),
             'recipe' => new Recipe(['kind' => Recipe::TO_ORDER, 'yield_qty' => '1', 'is_active' => true]),
             ...$this->options(),
@@ -115,13 +115,13 @@ class RecipeController extends Controller implements HasMiddleware
         $recipe = $this->save(new Recipe, $request);
 
         return redirect()
-            ->route('inventory.recipe.edit', $recipe)
+            ->route('restaurant.recipe.edit', $recipe)
             ->with('saved', __('inventory::message.recipe_saved'));
     }
 
     public function edit(Request $request, Recipe $recipe): View
     {
-        return view('inventory::recipe.form', [
+        return view('restaurant::recipe.form', [
             'menu' => $this->menu->forUser($request->user()),
             'recipe' => $recipe->load('lines.product'),
             ...$this->options(),
@@ -133,7 +133,7 @@ class RecipeController extends Controller implements HasMiddleware
         $this->save($recipe, $request);
 
         return redirect()
-            ->route('inventory.recipe.edit', $recipe)
+            ->route('restaurant.recipe.edit', $recipe)
             ->with('saved', __('inventory::message.recipe_saved'));
     }
 
@@ -148,7 +148,7 @@ class RecipeController extends Controller implements HasMiddleware
         $recipe->forceFill(['is_active' => false])->save();
 
         return redirect()
-            ->route('inventory.recipe.index')
+            ->route('restaurant.recipe.index')
             ->with('saved', __('inventory::message.recipe_deactivated'));
     }
 
@@ -157,7 +157,7 @@ class RecipeController extends Controller implements HasMiddleware
         $recipe->forceFill(['is_active' => true])->save();
 
         return redirect()
-            ->route('inventory.recipe.index')
+            ->route('restaurant.recipe.index')
             ->with('saved', __('inventory::message.recipe_activated'));
     }
 

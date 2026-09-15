@@ -30,9 +30,9 @@ class StockReportController extends Controller implements HasMiddleware
         'stock-summary' => 'inventory.stock_summary',
         'hold' => 'inventory.hold',
 
-        /* খাদ্য-খরচ — রান্না করা খাবারের প্রশ্ন, মজুদের নয়,
-           কিন্তু উত্তরটা মজুদের সংখ্যা থেকেই আসে। */
-        'food-cost' => 'inventory.food_cost',
+        /* ⓘ খাদ্য-খরচ এখানে ছিল — ১৫ সেপ্টেম্বর ২০২৬-এ রেস্তোরাঁয় গেছে
+           ([[App\Modules\Restaurant\Http\Controllers\RestaurantReportController]]),
+           মালিকের দাগানো অনুযায়ী। প্রশ্নটা রান্না করা খাবারের, মজুদের নয়। */
     ];
 
     public function __construct(

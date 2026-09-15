@@ -6,8 +6,6 @@ use App\Modules\Inventory\Http\Controllers\BatchController;
 use App\Modules\Inventory\Http\Controllers\LabelController;
 use App\Modules\Inventory\Http\Controllers\OpeningStockController;
 use App\Modules\Inventory\Http\Controllers\ProductController;
-use App\Modules\Inventory\Http\Controllers\ProductionController;
-use App\Modules\Inventory\Http\Controllers\RecipeController;
 use App\Modules\Inventory\Http\Controllers\StockAnalysisController;
 use App\Modules\Inventory\Http\Controllers\StockController;
 use App\Modules\Inventory\Http\Controllers\StockOverviewController;
@@ -173,30 +171,22 @@ Route::middleware('auth')->prefix('inventory')->group(function () {
     });
 
     /*
-     * রেসিপি — কোন খাবার কী দিয়ে তৈরি।
+     * ⓘ রেসিপির রুটগুলো এখানে ছিল — ১৫ সেপ্টেম্বর ২০২৬-এ রেস্তোরাঁয় গেছে।
      *
-     * ── কেন ইনভেন্টরির রুটে, বিক্রয়ের নয় ────────────────────────────
-     * রেসিপি বিক্রির কথা নয়, **স্টকের** কথা। একই রেসিপি বিক্রিতে লাগে,
-     * উৎপাদনে লাগে, খরচের রিপোর্টে লাগে। বিক্রয়ে রাখলে উৎপাদনকে
-     * বিক্রয়ের উপর নির্ভর করতে হত — অথচ হাঁড়ি চড়ানোর সাথে বিক্রির
-     * কোনো সম্পর্ক নেই।
+     * ── ⚠️ আর এখানে যে কারণটা লেখা ছিল, সেটা এখন পুরনো ─────────────
+     * লেখা ছিল: *"রেসিপি বিক্রির কথা নয়, স্টকের কথা… বিক্রয়ে রাখলে
+     * উৎপাদনকে বিক্রয়ের উপর নির্ভর করতে হত।"*
      *
-     * `whereNumber` — পণ্যের রুটে যে কারণে (উপরে লেখা): নাহলে
-     * `/recipes/create`-কে একটা id ভেবে বাইন্ডিং ৪০৪ দিত।
+     * ⭐ যুক্তিটা তখন ঠিক ছিল, আর আজও ঠিক — কিন্তু উত্তরটা ভুল ছিল।
+     * রেসিপি **রেস্তোরাঁর** কথা, আর উৎপাদনও তাই; দুইটাই এখন একসাথে
+     * ওখানে। মালিকের সিদ্ধান্ত: *"রেসিপি রান্নাঘরে যাবে।"*
+     *
+     * ── ⛔ যে দেয়ালটা এতদিন আটকে রেখেছিল, আর যেভাবে ভাঙা হলো ────────
+     * [[App\Modules\Sales\Services\SalesInvoiceService]] রেসিপি পড়ে
+     * (বিক্রি হলে উপকরণ কাটতে হয়), আর বিক্রয় রেস্তোরাঁর উপর দাঁড়াতে
+     * পারে না। ⓘ তাই মাঝখানে কোরের একটা চুক্তি বসেছে —
+     * [[App\Core\Contracts\RecipeBook]] — আর বিক্রয় এখন কেবল সেটাই চেনে।
      */
-    Route::prefix('recipes')->name('recipe.')->group(function () {
-        Route::get('/', [RecipeController::class, 'index'])->name('index');
-        Route::get('/create', [RecipeController::class, 'create'])->name('create');
-        Route::post('/', [RecipeController::class, 'store'])->name('store');
-        Route::get('/{recipe}/edit', [RecipeController::class, 'edit'])
-            ->whereNumber('recipe')->name('edit');
-        Route::put('/{recipe}', [RecipeController::class, 'update'])
-            ->whereNumber('recipe')->name('update');
-        Route::delete('/{recipe}', [RecipeController::class, 'destroy'])
-            ->whereNumber('recipe')->name('destroy');
-        Route::post('/{recipe}/activate', [RecipeController::class, 'activate'])
-            ->whereNumber('recipe')->name('activate');
-    });
 
     /*
      * রান্নাঘরের বোর্ড — এখন আর কী কী বানানো যাবে।
@@ -208,22 +198,18 @@ Route::middleware('auth')->prefix('inventory')->group(function () {
      */
 
     /*
-     * রান্না — হাঁড়ির উৎপাদন।
+     * ⓘ রান্নার রুটগুলো এখানে ছিল — ১৫ সেপ্টেম্বর ২০২৬-এ রেস্তোরাঁয় গেছে।
      *
-     * `confirm` আলাদা একটা POST, কারণ ওটাই আসল ঘটনা: খসড়া লেখা নিরীহ,
-     * নিশ্চিত করা মানে গুদাম থেকে মাল বেরিয়ে যাওয়া।
+     * মালিক ছবিতে দাগিয়ে বলেছেন *"cooking, food cost — egolo Restaurant
+     * modiule zawar kotha"*। ⭐ কথাটা ঠিক: রান্না একটা রেস্তোরাঁর ঘটনা,
+     * মজুদের নয়। মজুদ কেবল বলে কী ঢুকল আর কী বেরোল।
+     *
+     * ⚠️ রেসিপি কিন্তু **এখানেই থেকে গেছে**, আর সেটা ইচ্ছাকৃত —
+     * [[App\Modules\Sales\Services\SalesInvoiceService]] রেসিপি পড়ে
+     * (বিক্রি হলে উপকরণ কাটতে হয়)। রেসিপি রেস্তোরাঁয় সরালে বিক্রয়কে
+     * রেস্তোরাঁ চিনতে হত, আর [[BoundariesTest]] ঠিকই লাল হত — বিক্রয়ের
+     * `depends_on`-এ রেস্তোরাঁ নেই, থাকার কথাও নয়।
      */
-    Route::prefix('cookings')->name('production.')->group(function () {
-        Route::get('/', [ProductionController::class, 'index'])->name('index');
-        Route::get('/create', [ProductionController::class, 'create'])->name('create');
-        Route::post('/', [ProductionController::class, 'store'])->name('store');
-        Route::get('/{production}', [ProductionController::class, 'show'])
-            ->whereNumber('production')->name('show');
-        Route::post('/{production}/confirm', [ProductionController::class, 'confirm'])
-            ->whereNumber('production')->name('confirm');
-        Route::delete('/{production}', [ProductionController::class, 'destroy'])
-            ->whereNumber('production')->name('destroy');
-    });
 
     Route::get('/reports/{slug}', [StockReportController::class, 'show'])->name('report.show');
 });

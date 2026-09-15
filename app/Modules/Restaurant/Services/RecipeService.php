@@ -2,11 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\Inventory\Services;
+namespace App\Modules\Restaurant\Services;
 
 use App\Modules\Inventory\Models\Product;
-use App\Modules\Inventory\Models\Recipe;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Inventory\Services\StockService;
+use App\Modules\Restaurant\Models\Recipe;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 

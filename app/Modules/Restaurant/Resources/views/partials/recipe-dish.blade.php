@@ -1,5 +1,5 @@
 {{-- খাবারের নাম, আর নিষ্ক্রিয় হলে সেটাও। --}}
-<a href="{{ route('inventory.recipe.edit', $recipe) }}" class="underline">
+<a href="{{ route('restaurant.recipe.edit', $recipe) }}" class="underline">
     {{ $recipe->product?->name() }}
 </a>
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Http\Controllers;
 
+use App\Core\Contracts\RecipeBook;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
@@ -15,7 +16,6 @@ use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\PackBarcode;
-use App\Modules\Inventory\Services\RecipeService;
 use App\Modules\MasterData\Models\PaymentMethod;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Services\CounterApproval;
@@ -53,7 +53,7 @@ class PosController extends Controller implements HasMiddleware
         private readonly SettingsService $settings,
         private readonly MenuBuilder $menu,
         private readonly CounterApproval $approvals,
-        private readonly RecipeService $recipes,
+        private readonly RecipeBook $recipes,
     ) {}
 
     public static function middleware(): array
@@ -539,13 +539,13 @@ class PosController extends Controller implements HasMiddleware
     private function sellable(Product $product, ?Warehouse $warehouse): string
     {
         return $this->recipes->sellableQty(
-            $product,
+            (int) $product->id,
             bcsub(
                 bcsub((string) $product->floor_total, (string) $product->reserved_total, 4),
                 (string) $product->hold_total,
                 4,
             ),
-            $warehouse,
+            $warehouse?->id,
         );
     }
 

@@ -14,7 +14,7 @@
      */
     $columns = [
         ['key' => 'product_id', 'label' => __('inventory::field.dish'), 'width' => '18rem',
-         'render' => fn ($r) => view('inventory::partials.recipe-dish', ['recipe' => $r])],
+         'render' => fn ($r) => view('restaurant::partials.recipe-dish', ['recipe' => $r])],
 
         ['key' => 'kind', 'label' => __('inventory::field.recipe_kind'), 'width' => '11rem',
          'render' => fn ($r) => $r->isMadeToOrder()
@@ -35,10 +35,10 @@
          */
         ['key' => 'lines', 'label' => __('inventory::field.ingredients'), 'width' => '8rem',
          'align' => 'end',
-         'render' => fn ($r) => view('inventory::partials.recipe-lines', ['recipe' => $r])],
+         'render' => fn ($r) => view('restaurant::partials.recipe-lines', ['recipe' => $r])],
 
         ['key' => 'actions', 'label' => __('core.action.edit'), 'width' => '6rem',
-         'render' => fn ($r) => view('inventory::partials.recipe-actions', ['recipe' => $r])],
+         'render' => fn ($r) => view('restaurant::partials.recipe-actions', ['recipe' => $r])],
     ];
 @endphp
 
@@ -62,8 +62,8 @@
                           :search-placeholder="__('inventory::field.recipe_search')"
                           :sort="$sortOptions">
                 <x-slot:actions>
-                    @can('create', \App\Modules\Inventory\Models\Recipe::class)
-                        <x-ui.button tone="primary" icon="plus" :href="route('inventory.recipe.create')">
+                    @can('create', \App\Modules\Restaurant\Models\Recipe::class)
+                        <x-ui.button tone="primary" icon="plus" :href="route('restaurant.recipe.create')">
                             {{ __('inventory::action.new_recipe') }}
                         </x-ui.button>
                     @endcan

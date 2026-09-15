@@ -2,16 +2,18 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\Inventory\Services;
+namespace App\Modules\Restaurant\Services;
 
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Models\FinancialYear;
-use App\Modules\Inventory\Models\Production;
-use App\Modules\Inventory\Models\ProductionLine;
-use App\Modules\Inventory\Models\Recipe;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Inventory\Services\CostLayerService;
+use App\Modules\Inventory\Services\StockService;
+use App\Modules\Restaurant\Models\Production;
+use App\Modules\Restaurant\Models\ProductionLine;
+use App\Modules\Restaurant\Models\Recipe;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\Inventory\Policies;
+namespace App\Modules\Restaurant\Policies;
 
 use App\Core\Support\DocumentStatus;
 use App\Models\User;
-use App\Modules\Inventory\Models\Production;
+use App\Modules\Restaurant\Models\Production;
 
 /**
  * রান্নার কাগজের চাবি।
@@ -22,17 +22,17 @@ class ProductionPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->can('inventory.production.view');
+        return $user->can('restaurant.production.view');
     }
 
     public function view(User $user, Production $production): bool
     {
-        return $user->can('inventory.production.view');
+        return $user->can('restaurant.production.view');
     }
 
     public function create(User $user): bool
     {
-        return $user->can('inventory.production.create');
+        return $user->can('restaurant.production.create');
     }
 
     /**
@@ -44,18 +44,18 @@ class ProductionPolicy
     public function update(User $user, Production $production): bool
     {
         return $production->status === DocumentStatus::DRAFT
-            && $user->can('inventory.production.create');
+            && $user->can('restaurant.production.create');
     }
 
     public function confirm(User $user, Production $production): bool
     {
         return $production->status === DocumentStatus::DRAFT
-            && $user->can('inventory.production.confirm');
+            && $user->can('restaurant.production.confirm');
     }
 
     public function delete(User $user, Production $production): bool
     {
         return $production->status === DocumentStatus::DRAFT
-            && $user->can('inventory.production.create');
+            && $user->can('restaurant.production.create');
     }
 }
