@@ -80,6 +80,10 @@ class _SyncStatusScreenState extends State<SyncStatusScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Only the modules whose last attempt actually failed; empty when the
+    // queue is simply waiting for a connection that has not been tried yet.
+    final failures = SyncEngine.instance.lastFailures;
+
     final rejected = SyncEngine.instance.rejectedItems;
     final pendingCount = SyncEngine.instance.pendingCount;
 
@@ -104,6 +108,23 @@ class _SyncStatusScreenState extends State<SyncStatusScreen> {
                       title: Text(pendingCount == 0
                           ? 'সব পাঠানো হয়ে গেছে'
                           : 'সংযোগের অপেক্ষায় — এই ফোনেই আছে'),
+                      // ⚠️ Why the last attempt did not go through, when
+                      // there was one. "Waiting" and "refused outright" leave
+                      // a queue looking identical, and only one of them is
+                      // fixed by walking to a window — see
+                      // SyncEngine.lastFailureFor's own doc comment for the
+                      // afternoon that cost.
+                      subtitle: pendingCount == 0 || failures.isEmpty
+                          ? null
+                          : Text(
+                              failures.first.sentence,
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                color: failures.first.isServerRefusal
+                                    ? AppColors.danger
+                                    : AppColors.onSurfaceMuted,
+                              ),
+                            ),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.md),
