@@ -4,11 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Core;
 
-use App\Models\Company;
-use App\Models\User;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 /**
@@ -50,16 +47,63 @@ final class TheSyncPushNeverWorkedForARealPhoneTest extends TestCase
 
     private const DEVICE = 'abos-test-phone-01';
 
+    private string $token;
+
+    /**
+     * ⛔ এই পরীক্ষাটা নিজেই কোনোদিন চলেনি — ১৫ সেপ্টেম্বর ২০২৬।
+     *
+     * ── কী ছিল ───────────────────────────────────────────────────────
+     * এখানে লেখা ছিল `Sanctum::actingAs($user)`, আর তিনটা দাবিই
+     * প্রতিবার **৪০৩** পেত — ২০০/৪০০/৪২২ কোনোটাই নয়।
+     *
+     * ⓘ কারণ: Sanctum-এর `actingAs($user, $abilities = [])` — ডিফল্ট
+     * **খালি তালিকা**, `['*']` নয়। খালি ability-র টোকেন বানানো হত, আর
+     * `/api/v1/*`-এর `abilities:sync` মিডলওয়্যার সেটাকে ফিরিয়ে দিত।
+     *
+     * ⚠️ অর্থাৎ অনুরোধটা `SyncController`-এ **পৌঁছাতই না**। যে বাগটা
+     * ধরার জন্য পরীক্ষাটা লেখা, সেই কোডের একটা লাইনও চলেনি — অথচ
+     * পরীক্ষাটা আত্মবিশ্বাসের সাথে লাল হয়ে বসে ছিল, আর সারাইটা
+     * (`$request->json()->all()`) **অপ্রমাণিত অবস্থায় লাইভে গেছে**।
+     *
+     * ── ⭐ কেন এখন আসল লগইন, আর শর্টকাট নয় ──────────────────────────
+     * শর্টকাটটাই ভুলটা তৈরি করেছিল। আর এই পরীক্ষার গোটা যুক্তিই হলো
+     * **"ফোন যে পথে হাঁটে সেই পথে হাঁটা"** — উপরের ব্যাখ্যায় লেখা আছে
+     * পুরনো পরীক্ষাগুলো `?deviceId=` ছাড়া ডাকত বলেই বাগটা ধরা পড়েনি।
+     *
+     * ⓘ একই ভুল দুইবার: প্রথমে query প্যারামিটার বাদ, তারপর গোটা
+     * টোকেন-পথটাই বাদ। তাই এখন `/api/v1/auth/login` দিয়েই টোকেন নেওয়া
+     * হয় — ঠিক যেভাবে [[ThePhoneCouldNotAskWhoItWasTest]] করে।
+     */
     protected function setUp(): void
     {
         parent::setUp();
         $this->seed(DemoSeeder::class);
 
-        $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
-        $user = User::query()->where('email', 'owner@abos.test')->firstOrFail();
-        $user->switchCompany($company->id);
+        /*
+         * ⚠️ টোকেন নেওয়ার আগে গার্ডটা ভুলিয়ে দিতে হয় — নাহলে পরের
+         * অনুরোধে Laravel আগের অনুরোধে মনে রাখা ব্যবহারকারীকেই ফেরত
+         * দেয়, আর `withToken()` কার্যত অগ্রাহ্য হয়।
+         */
+        $this->app['auth']->forgetGuards();
 
-        Sanctum::actingAs($user);
+        $login = $this->postJson('/api/v1/auth/login', [
+            // ডেমোর সবার পাসওয়ার্ড `password` — README দেখুন
+            'identifier' => 'sales@abos.test',
+            'password' => 'password',
+            'deviceId' => self::DEVICE,
+            'appVersion' => '0.1.0',
+            'platform' => 'android',
+        ]);
+
+        $this->token = (string) $login->json('accessToken');
+
+        $this->assertNotSame('', $this->token, implode("\n", [
+            'লগইনই হয়নি — নিচের কোনো দাবিই তাহলে সিঙ্কের কথা বলছে না।',
+            '',
+            'সার্ভার দিয়েছে '.$login->status().': '.$login->getContent(),
+        ]));
+
+        $this->app['auth']->forgetGuards();
     }
 
     /**
@@ -69,12 +113,23 @@ final class TheSyncPushNeverWorkedForARealPhoneTest extends TestCase
      */
     public function test_a_push_with_the_device_id_in_the_query_is_accepted(): void
     {
-        $response = $this->postJson(
+        $response = $this->withToken($this->token)->postJson(
             '/api/v1/sync/sales/push?deviceId='.self::DEVICE,
             [$this->anOrder()],
         );
 
-        $response->assertOk();
+        /*
+         * ⓘ `assertOk()` নয় — সে কেবল সংখ্যাটা বলে, শরীরটা নয়।
+         *
+         * ⚠️ ৪২২-এর কারণ দুইটা হতে পারে: তালিকার আকৃতি ভাঙা, নাকি
+         * সারিটার নিজের যাচাই ব্যর্থ। সংখ্যাটা দুইটার তফাত করে না,
+         * আর তফাতটা না জানলে সারাইটা অনুমানে হয়।
+         */
+        $this->assertSame(200, $response->status(), implode("\n", [
+            'সার্ভার সারিটা নেয়নি — ফেরত দিয়েছে '.$response->status().'।',
+            '',
+            'শরীর: '.$response->getContent(),
+        ]));
 
         $this->assertArrayHasKey('outcomes', $response->json(), implode("\n", [
             'সার্ভার সারিটা নেয়নি।',
@@ -102,7 +157,7 @@ final class TheSyncPushNeverWorkedForARealPhoneTest extends TestCase
      */
     public function test_a_push_without_a_device_id_is_refused_before_the_body_is_read(): void
     {
-        $this->postJson('/api/v1/sync/sales/push', [$this->anOrder()])
+        $this->withToken($this->token)->postJson('/api/v1/sync/sales/push', [$this->anOrder()])
             ->assertStatus(400);
     }
 
@@ -115,24 +170,44 @@ final class TheSyncPushNeverWorkedForARealPhoneTest extends TestCase
      */
     public function test_a_body_that_is_not_a_list_is_still_refused(): void
     {
-        $this->postJson(
+        $this->withToken($this->token)->postJson(
             '/api/v1/sync/sales/push?deviceId='.self::DEVICE,
             ['changes' => [$this->anOrder()]],
         )->assertStatus(422);
     }
 
     /**
+     * ⭐ তারে ঠিক যা যায় — `sync_engine.dart`-এর `flush()` থেকে নেওয়া।
+     *
+     * ── ⛔ আগে এখানে যা ছিল, আর কেন সেটা সবকিছু নষ্ট করেছিল ──────────
+     * লেখা ছিল `clientId` · `kind` · `payload` — তিনটা ঘর, **তিনটাই
+     * বানানো**। আসল চুক্তি ছয় ঘরের, আর নামগুলোও আলাদা।
+     *
+     * ⚠️ ফল: [[PushedChange::fromArray]] প্রথম যাচাইতেই সারিটা ফিরিয়ে
+     * দিত, তাই পরীক্ষাটা যে বাগটা ধরার জন্য লেখা সেটা **স্পর্শই করত না**।
+     *
+     * ⓘ সবচেয়ে সূক্ষ্ম ফাঁদটা `payloadJson`: তারে ওটা একটা **JSON
+     * স্ট্রিং**, নেস্টেড অবজেক্ট নয়। ফোন ওটা কিউতে বসানোর সময়ই
+     * `jsonEncode` করে রাখে, যাতে সারিটা কিউতে বসে থাকা অবস্থায়
+     * অ্যাপের মডেল বদলে গেলেও সারিটা অটুট থাকে।
+     *
+     * ⭐ তাই ফিক্সচারটা এখন অনুমান নয় — `sync_engine.dart:420-427`
+     * থেকে ঘরে ঘরে মেলানো।
+     *
      * @return array<string, mixed>
      */
     private function anOrder(): array
     {
         return [
-            'clientId' => 'phone-order-0001',
-            'kind' => 'order',
-            'payload' => [
+            'changeId' => 'local-'.self::DEVICE.'-0001',
+            'entityType' => 'SalesOrder',
+            'entityId' => null,     // CREATE-এ আইডি থাকে না, সার্ভার বানায়
+            'operation' => 'CREATE',
+            'payloadJson' => json_encode([
                 'trxDate' => now()->toDateString(),
                 'lines' => [],
-            ],
+            ], JSON_THROW_ON_ERROR),
+            'clientVersion' => 1,
         ];
     }
 }

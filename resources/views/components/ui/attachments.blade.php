@@ -30,7 +30,16 @@
     $canAttach = auth()->user()?->can('create', $document::class) ?? false;
 @endphp
 
-<section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+{{-- ⭐ `x-data` এখানে লাগে, ১৫ সেপ্টেম্বর ২০২৬ ────────────────────────────
+     নিচে ফাইলের ঘরটায় `x-on:change="$store.scanner.begin(...)"` আছে।
+     ⛔ কিন্তু পাঁচটা পাতার চারটাতেই (bill, receipt, challan, invoice)
+     কোনো `x-data` নেই, তাই Alpine অ্যাট্রিবিউটটা পড়তই না — ছবি বাছলে
+     সোজা করার পর্দাটা খুলত না।
+
+     ⓘ সারাইটা কার্ডের গোড়ায়, ডাকার চার পাতায় নয় — তাতে কম্পোনেন্টটা
+     নিজেই সম্পূর্ণ, আর পরে কেউ পঞ্চম একটা পাতায় বসালে তাকে এই কথাটা
+     জানতে হয় না। --}}
+<section data-boxed x-data class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
     <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-3 font-semibold">
         {{ __('core.attachment.title') }}
     </h2>
