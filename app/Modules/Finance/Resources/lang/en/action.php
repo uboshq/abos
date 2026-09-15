@@ -25,4 +25,5 @@ return [
     'rental_add_deposit' => 'Add',
     'rental_close' => 'Close the contract',
     'rental_close_now' => 'Close',
+    'close_facility' => 'Close the facility',
 ];

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 use App\Modules\Finance\Dashboard\FinanceDashboard;
+use App\Modules\Finance\Models\BankFacility;
 use App\Modules\Finance\Models\CapitalEntry;
 use App\Modules\Finance\Models\DepositMovement;
 use App\Modules\Finance\Models\HandLoanMovement;
@@ -140,6 +141,16 @@ return [
                 'permission' => 'finance.hand_loan.view'],
 
             /*
+             * ব্যাংক ঋণ — হাতধারের ঠিক পাশে, আর সেটা ইচ্ছাকৃত।
+             *
+             * ⓘ দুইটাই "ফেরত দিতে হবে", তাই মানুষ পাশাপাশি খোঁজেন।
+             * ⚠️ কিন্তু এক মেনুতে মেলানো যেত না: মঞ্জুরি, জামানত,
+             * ড্রয়িং পাওয়ার আর নবায়ন — একটাও হাতধারে নেই।
+             */
+            ['label' => 'finance::menu.bank_facility', 'icon' => 'bank', 'route' => 'finance.bank_facility.index',
+                'permission' => 'finance.bank_facility.view'],
+
+            /*
              * উত্তোলন — মূলধনের উল্টো দিক, তাই ওটার কাছেই।
              *
              * মূলধনের পর্দা বলে কে কত দিয়েছেন; এটা বলে কে কত নিয়েছেন।
@@ -199,6 +210,18 @@ return [
         'finance.hand_loan.move',
 
         /*
+         * ব্যাংকের সুবিধা।
+         *
+         * ⓘ এখানে `move` নেই, আর সেটাই নকশার কথা: টাকা নাড়ে ভাউচার।
+         * ⚠️ `close` আলাদা ক্ষমতা, কারণ একটা সুবিধা বন্ধ করা মানে
+         * ব্যবসার ধার তোলার পথ বন্ধ করা — যে কেরানি নথিটা লিখতে
+         * পারেন, তাঁর ঐ ক্ষমতা থাকার দরকার নেই।
+         */
+        'finance.bank_facility.view',
+        'finance.bank_facility.create',
+        'finance.bank_facility.close',
+
+        /*
          * উত্তোলন — চারটা ক্ষমতা, আর `cap` সবচেয়ে কড়া।
          *
          * সীমা বদলানো মানে নিয়মটাই বদলানো। যে কেরানি উত্তোলন লিখতে
@@ -238,9 +261,20 @@ return [
          * বাড়িওয়ালাকে ফোন করেন। দেখতে না পেলে তারিখটা আবার কারো
          * মাথায় ফিরে যেত — আর এই গোটা মডিউলটা ঠিক ওই সমস্যাটার জন্যই।
          */
+        /*
+         * ⭐ ব্যাংকের সুবিধাও ম্যানেজার দেখেন — খোলেন বা বন্ধ করেন না।
+         *
+         * ⚠️ কারণটা ভাড়ার চুক্তির হুবহু একই: **যাঁর চেক ফেরত আসে,
+         * তাঁকেই ড্রয়িং পাওয়ারটা দেখতে দিতে হয়**। ⓘ স্টক কমলে সীমা
+         * কমে, আর ম্যানেজার সেটা না দেখলে সরবরাহকারীর সামনে গিয়ে
+         * জানতে পারেন।
+         *
+         * ⛔ `create` ও `close` দেওয়া হয়নি: একটা সুবিধা বন্ধ করা মানে
+         * ব্যবসার ধার তোলার পথ বন্ধ করা — ওটা মালিকের সিদ্ধান্ত।
+         */
         'Manager' => [
             'finance.expense.view', 'finance.income.view', 'finance.deposit.view',
-            'finance.rental.view',
+            'finance.rental.view', 'finance.bank_facility.view',
         ],
     ],
 
@@ -340,6 +374,7 @@ return [
         'deposit_movement' => DepositMovement::class,
         'hand_loan_movement' => HandLoanMovement::class,
         'rental_adjustment' => RentalAdjustment::class,
+        'bank_facility' => BankFacility::class,
     ],
 
     'reports' => [],

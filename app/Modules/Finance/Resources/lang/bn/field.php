@@ -52,6 +52,41 @@ return [
     'maturing_soon' => 'ত্রিশ দিনে মেয়াদ শেষ',
     'days_left' => 'বাকি',
     'note' => 'মন্তব্য',
+
+    /*
+     * ধারের শর্ত — ১৫ সেপ্টেম্বর ২০২৬।
+     *
+     * ⛔ এতদিন এই পর্দায় কেবল নাম আর নোট ছিল; সুদ, মেয়াদ আর কাগজের
+     * কথা কোথাও লেখা থাকত না। ⚠️ আর ঐ তিনটা প্রশ্নই ওঠে ছয় মাস পরে।
+     */
+    'interest_rate' => 'সুদের হার (%/বছর)',
+    'term_months' => 'মেয়াদ (মাস)',
+    'due_on' => 'ফেরতের তারিখ',
+    'next_due_on' => 'পরের কিস্তি',
+    'repayment' => 'ফেরতের ধরন',
+    'repayment_lump' => 'এককালীন — মেয়াদ শেষে',
+    'repayment_monthly' => 'সমান কিস্তি — মাসিক',
+    'repayment_whenever' => 'যখন পারা যায়',
+    'security' => 'জামিন / কাগজ',
+    'security_verbal' => 'মৌখিক',
+    'security_stamped' => 'স্ট্যাম্পে লিখিত',
+    'security_blank_cheque' => 'ব্ল্যাংক চেক জমা',
+
+    // আমানত ও ভাড়ায় উৎসে কর — সরকারের টাকা, আমাদের নয়
+    'tax_rate' => 'উৎসে কর (%)',
+    'on_maturity' => 'মেয়াদ শেষে',
+    'on_maturity_renew_with_profit' => 'নবায়ন — আসল ও মুনাফাসহ',
+    'on_maturity_renew_principal' => 'নবায়ন — কেবল আসল',
+    'on_maturity_encash' => 'নগদায়ন',
+    'advance_months' => 'অগ্রিম ভাড়া (মাস)',
+    'rent_day' => 'প্রতি মাসের কত তারিখে',
+
+    // উত্তোলনের ধরন — তিনটার হিসাব তিন রকম
+    'withdrawal_kind' => 'ধরন',
+    'kind_drawing' => 'উত্তোলন',
+    'kind_salary' => 'মালিকের বেতন',
+    'kind_profit_share' => 'মুনাফার ভাগ',
+
     'movement' => 'চলাচল',
     'choose' => 'বেছে নিন',
     'cancel_reason' => 'কেন বাতিল',
@@ -114,4 +149,34 @@ return [
     'person_new_hint' => 'তালিকায় যোগ হয়ে যাবে, পরের বার আর লিখতে হবে না',
     // ⓘ HTML "দুইটার একটা" বলতে পারে না, তাই নিয়মটা কথায় বলা হয়
     'person_pick_or_add' => 'তালিকা থেকে বাছুন, অথবা নিচে নতুন নাম লিখুন',
+    'facility_cc' => 'সিসি / ওডি',
+    'facility_term' => 'মেয়াদি ঋণ',
+    'facility_ltr' => 'এলটিআর / এলসি',
+    'facility_lease' => 'লিজ',
+    'facility_bg' => 'ব্যাংক গ্যারান্টি',
+    'sanction_no' => 'মঞ্জুরি নম্বর',
+    'sanctioned_on' => 'মঞ্জুরির তারিখ',
+    'limit_amount' => 'সীমা / অঙ্ক',
+    'renews_on' => 'নবায়নের তারিখ',
+    'stock_value' => 'স্টক ও পাওনার মূল্য',
+    'margin_percent' => 'মার্জিন (%)',
+    'drawing_power' => 'ড্রয়িং পাওয়ার',
+    'instalments' => 'কিস্তির সংখ্যা',
+    'down_payment' => 'ডাউন পেমেন্ট',
+    'charges' => 'ফি ও কমিশন',
+    'security_type' => 'জামানতের ধরন',
+    'security_hypothecation' => 'হাইপোথিকেশন — স্টক ও পাওনা',
+    'security_mortgage' => 'মর্টগেজ — জমি ও দালান',
+    'security_lien' => 'লিয়েন — এফডিআর',
+    'security_personal' => 'ব্যক্তিগত গ্যারান্টি',
+    'security_unsecured' => 'জামানতবিহীন',
+    'security_value' => 'জামানতের মূল্য',
+    'guarantors' => 'ব্যক্তিগত জামিনদার',
+    'covenant' => 'বিশেষ শর্ত',
+    'last_statement_on' => 'শেষ স্টেটমেন্ট',
+    'liability_account' => 'দায়ের খাত',
+    'facility_account' => 'সুবিধার ব্যাংক হিসাব',
+    'facility_kind' => 'সুবিধার ধরন',
+    'bank' => 'ব্যাংক',
+    'instalment_amount' => 'কিস্তির অঙ্ক',
 ];

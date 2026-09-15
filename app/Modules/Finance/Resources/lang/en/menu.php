@@ -12,6 +12,7 @@ return [
     'deposit_savings' => 'Savings Certificates',
     'deposit_bond' => 'Bonds',
     'hand_loan' => 'Hand Loans',
+    'bank_facility' => 'Bank facilities',
     'withdrawal' => 'Withdrawals',
     'income' => 'Income',
     'rental' => 'Rentals & deposits',

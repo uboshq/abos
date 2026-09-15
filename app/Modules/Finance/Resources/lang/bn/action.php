@@ -25,4 +25,5 @@ return [
     'rental_add_deposit' => 'যোগ করুন',
     'rental_close' => 'চুক্তি শেষ',
     'rental_close_now' => 'শেষ করুন',
+    'close_facility' => 'সুবিধাটা বন্ধ করুন',
 ];
