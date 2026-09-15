@@ -75,6 +75,24 @@ Route::middleware('auth')->group(function () {
     Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar');
     Route::delete('/profile/avatar', [ProfileController::class, 'removeAvatar'])->name('profile.avatar.remove');
 
+    /*
+     * পাসওয়ার্ড বদল — নিজের, আর তাই নিজের পথ।
+     *
+     * ⚠️ পরিচয়ের ফর্মটার সাথে জোড়া হয়নি, আর সেটা ইচ্ছাকৃত: নাম ঠিক
+     * করতে গিয়ে পাসওয়ার্ডের ঘর খালি থাকলে হয় ফর্ম আটকে যেত, নয়তো
+     * পাসওয়ার্ড মুছে যেত। ⓘ একই কারণে ছবি, নাম আর ছবি-মোছা আগে থেকেই
+     * তিনটা আলাদা ফর্ম।
+     */
+    Route::put('/profile/password', [ProfileController::class, 'updatePassword'])
+        ->name('profile.password');
+
+    /*
+     * ইমেইল বদলানোর অনুরোধ — এখানে কিছুই বদলায় না, কেবল চিঠি যায়।
+     * ⓘ নিশ্চিতকরণের পথটা নিচে, লগইনের বাইরে।
+     */
+    Route::post('/profile/email', [ProfileController::class, 'requestEmailChange'])
+        ->name('profile.email.request');
+
     Route::get('/appearance', [WorkspaceController::class, 'appearance'])->name('appearance');
     Route::post('/appearance', [WorkspaceController::class, 'saveAppearance'])->name('appearance.save');
 
@@ -110,5 +128,20 @@ Route::middleware('auth')->group(function () {
     Route::post('/locale/switch', [WorkspaceController::class, 'switchLocale'])->name('locale.switch');
     Route::post('/theme/switch', [WorkspaceController::class, 'switchTheme'])->name('theme.switch');
 });
+
+/*
+ * ইমেইল বদলের নিশ্চিতকরণ — ⚠️ ইচ্ছাকৃতভাবে `auth`-এর **বাইরে**।
+ *
+ * ⓘ চিঠিটা যায় নতুন ঠিকানায়, আর সেটা তিনি হয়তো ফোনে খুলবেন যেখানে
+ * ABOS-এ লগইন করা নেই। ⛔ লগইন বাধ্যতামূলক করলে তাঁকে আগে **পুরনো**
+ * ঠিকানা দিয়ে ঢুকতে হত — আর যিনি ইমেইল বদলাচ্ছেন কারণ পুরনোটা আর
+ * খোলেন না, তাঁর পক্ষে ওটা অসম্ভব।
+ *
+ * ⭐ প্রমাণটা টোকেনেই আছে: ওটা কেবল ঐ ইনবক্সে গেছে, ডাটাবেজে আছে তার
+ * হ্যাশ, আর মেয়াদ এক ঘণ্টা। ⓘ পাসওয়ার্ড রিসেটের লিংকও ঠিক এই
+ * যুক্তিতেই লগইনের বাইরে।
+ */
+Route::get('/profile/email/confirm/{token}', [ProfileController::class, 'confirmEmailChange'])
+    ->name('profile.email.confirm');
 
 require __DIR__.'/auth.php';
