@@ -122,7 +122,22 @@ class ThePhotoWentInSidewaysAndEightMegabytesTest extends TestCase
 
     public function test_a_contract_pdf_is_left_exactly_as_it_came(): void
     {
-        $file = UploadedFile::fake()->create('chukti.pdf', 120, 'application/pdf');
+        /*
+         * ⛔ `fake()->create('x.pdf', 120)` **একটাও বাইট লেখে না**
+         * (`FileFactory::create()` কেবল `sizeToReport` বসায়)।
+         *
+         * ⚠️ ইঞ্জিন **জমা হওয়া** ফাইলের আকার মাপে, ঘোষিত আকার নয় —
+         * আর সেটাই সঠিক, কারণ ছবি জমার আগে চেপে নেওয়া হয়। ফলে খালি
+         * ফিক্সচারে দাবিটা `০ ≠ 122880` হয়ে লাল দিত, আর **একটা সঠিক
+         * ইঞ্জিনকে ভুল প্রমাণ করত**।
+         *
+         * ⓘ তাই সত্যিকারের ১২০ KB লেখা হয়: তখন দাবিটা যা বলে তাই মাপে
+         * — একটা PDF হুবহু যেমন এসেছিল তেমনই বসেছে।
+         */
+        $file = UploadedFile::fake()->createWithContent(
+            'chukti.pdf',
+            str_repeat('%PDF-1.4 fake contract body ', (int) ceil(120 * 1024 / 28)),
+        );
 
         $attachment = $this->engine->store($file, 'customer', 'Customer', 1);
 
@@ -132,7 +147,12 @@ class ThePhotoWentInSidewaysAndEightMegabytesTest extends TestCase
          * ফেলত আর পাতাগুলো হারিয়ে যেত।
          */
         $this->assertSame('pdf', $attachment->extension);
-        $this->assertSame(120 * 1024, (int) $attachment->size_bytes);
+        // ⓘ ডিস্কে যা বসেছে আর সারিতে যা লেখা — দুইটা এক হতে হবে
+        $this->assertSame(
+            strlen((string) Storage::disk('local')->get($attachment->stored_path)),
+            (int) $attachment->size_bytes,
+        );
+        $this->assertGreaterThanOrEqual(120 * 1024, (int) $attachment->size_bytes);
     }
 
     public function test_a_photo_that_could_not_be_processed_is_refused_rather_than_quietly_kept_at_full_size(): void
@@ -147,17 +167,70 @@ class ThePhotoWentInSidewaysAndEightMegabytesTest extends TestCase
          * ভাঙা ছবি বানানো হয়: শুরুটা JPEG-এর, বাকিটা আবর্জনা। অর্থাৎ
          * `getimagesize()` "এটা ছবি" বলে, কিন্তু GD খুলতে পারে না।
          */
+        /*
+         * ⛔ আগের ফিক্সচারটা আসলে ভাঙা ছিল না — ১৫ সেপ্টেম্বর ২০২৬।
+         *
+         * ── এখানে আগে কী ছিল ────────────────────────────────────────
+         *     JPEG-এর প্রথম ৪০০ বাইট + ৩ MB আবর্জনা
+         *
+         * ⚠️ ধরে নেওয়া হয়েছিল GD ওটা খুলতে পারবে না। **পারে** — GD
+         * নষ্ট JPEG-এ হাল ছাড়ে না, বাকিটা ফেলে দিয়ে একটা ছবি ফেরায়।
+         * ⛔ ফলে `paper()` সফল হত, ব্যতিক্রম উঠত না, আর দাবিটা লাল দিত।
+         *
+         * ⓘ অর্থাৎ এতদিন **পাহারাটা কোনোদিন পরীক্ষিতই হয়নি** — আজকের
+         * সবচেয়ে বড় শিক্ষাটা এখানেও: অকার্যকর পাহারা সবুজই দেখায়।
+         *
+         * ── ⭐ এখন যেভাবে নিশ্চিত করে ভাঙা হয় ───────────────────────
+         * [[ImageEngine::keep]]-এর মন্তব্য দুইটা কারণ বলে: *"হয় GD
+         * হোঁচট খেয়েছে, নয় বিন্দুর সংখ্যা মেমরির চেয়ে বেশি"*। প্রথমটা
+         * GD-র খেয়ালের উপর, দ্বিতীয়টা **অঙ্কের উপর** — তাই দ্বিতীয়টাই
+         * নেওয়া হলো।
+         *
+         * শিরোনামে ঘোষিত মাপ ৩০০০০×৩০০০০ বসানো হয়, কিন্তু ফাইলে
+         * বাইট মাত্র ৩ MB। `getimagesize()` শিরোনামই পড়ে, তাই "এটা ছবি"
+         * বলে; আর `fitsInMemory()` হিসাব করে ৯ GB লাগবে, তাই
+         * `reads()` **false** — একটাও বাইট GD-তে যায় না।
+         */
         $path = tempnam(sys_get_temp_dir(), 'abos').'.jpg';
 
-        $head = imagecreatetruecolor(3000, 3000);
-        imagejpeg($head, $path, 100);
-        file_put_contents($path, substr((string) file_get_contents($path), 0, 400).random_bytes(3 * 1024 * 1024), FILE_APPEND);
+        $head = imagecreatetruecolor(64, 64);
+        imagejpeg($head, $path, 90);
+        $jpeg = (string) file_get_contents($path);
+
+        /*
+         * SOF0 (`FF C0`): দৈর্ঘ্য(২) · নির্ভুলতা(১) · উচ্চতা(২) · প্রস্থ(২)।
+         * ⓘ কেবল উচ্চতা-প্রস্থ বদলানো হয়, বাকি শিরোনাম অক্ষত — তাই
+         * ফাইলটা `getimagesize()`-এর কাছে বৈধ JPEG-ই থাকে।
+         */
+        $sof = strpos($jpeg, chr(0xFF).chr(0xC0));
+        $this->assertNotFalse($sof, 'GD বেসলাইন JPEG লেখেনি, ফিক্সচারটাই ভুল।');
+
+        $huge = pack('n', 30000).pack('n', 30000);
+        $jpeg = substr_replace($jpeg, $huge, $sof + 5, 4);
+
+        file_put_contents($path, $jpeg.random_bytes(3 * 1024 * 1024));
+
+        // ⚠️ ঘোষিত মাপটা সত্যিই পড়া যাচ্ছে কি না — নাহলে পরীক্ষাটা
+        // অন্য কারণে পাশ করত, আর আমরা ভাবতাম পাহারাটা কাজ করছে
+        $this->assertSame([30000, 30000], array_slice((array) getimagesize($path), 0, 2));
 
         $broken = new UploadedFile($path, 'bhanga.jpg', 'image/jpeg', null, true);
 
-        $this->expectException(AttachmentException::class);
+        /*
+         * ⛔ মেমরির সীমা এখানে বেঁধে দেওয়া হয়: কেউ `-d memory_limit=-1`
+         * দিয়ে চালালে `fitsInMemory()` হ্যাঁ বলত, আর GD ৩.৬ GB চাইতে
+         * গিয়ে **পুরো suite মেরে ফেলত** — ব্যতিক্রম নয়, fatal।
+         */
+        $was = (string) ini_get('memory_limit');
+        ini_set('memory_limit', '256M');
 
-        $this->engine->store($broken, 'purchase', 'Bill', 9, maxBytes: 12 * 1024 * 1024);
+        try {
+            $this->expectException(AttachmentException::class);
+
+            $this->engine->store($broken, 'purchase', 'Bill', 9, maxBytes: 12 * 1024 * 1024);
+        } finally {
+            ini_set('memory_limit', $was);
+        }
     }
 
     public function test_a_small_photo_that_could_not_be_processed_is_still_kept_because_losing_the_paper_is_worse(): void
