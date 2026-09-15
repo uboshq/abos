@@ -21,15 +21,53 @@ use Illuminate\Notifications\Notification;
  * ([[EmailChangeWarning]])। দুইটা চিঠির কাজ দুই রকম: এটা **অনুমতি
  * চায়**, ওটা **খবর দেয়**।
  *
- * ── ⚠️ চিঠি সত্যিই যাবে কি না, সেটা কোডের হাতে নয় ───────────────────
- * `MAIL_MAILER=log` থাকলে এই চিঠি `storage/logs/laravel.log`-এ লেখা হয়
- * আর কেউ কিছু পান না — ১৪ সেপ্টেম্বর ২০২৬-এ `.env`-এ ওটাই বসানো আছে।
- * ⓘ [[PasswordResetLink]]-এ একই কথা লেখা, আর একই কারণে: SMTP না বসানো
- * পর্যন্ত এই পথটা লোকালে পরীক্ষা করা যায়, বাস্তবে চলে না।
+ * ── ⓘ চিঠি সত্যিই যাবে কি না ─────────────────────────────────────────
+ * ১৫ সেপ্টেম্বর ২০২৬-এ SMTP বসানো হয়েছে (`mail.adi.com.bd`), আর একটা
+ * সত্যিকারের চিঠি পাঠিয়ে ইনবক্সে পৌঁছানো **মেপে দেখা হয়েছে**।
+ * ⚠️ তবু মেইলার কোনোদিন `log`-এ ফিরে গেলে এই চিঠি চুপচাপ লগ ফাইলে
+ * লেখা হত — সেটা ঠেকায় [[App\Core\Support\MailReach]], পাঠানোর আগেই।
  */
 final class EmailChangeLink extends Notification
 {
-    public function __construct(private readonly string $token) {}
+    /**
+     * ⛔ নাম ও ভাষা সাথে করে আনতে হয় — ১৫ সেপ্টেম্বর ২০২৬।
+     *
+     * ── কী ভাঙা ছিল, আর কেন কোনো টেস্ট ধরেনি ────────────────────────
+     * ⚠️ এই চিঠিটা যায় **বেনামে** — নতুন ঠিকানাটা এখনো কারো অ্যাকাউন্ট
+     * নয়, তাই `Notification::route('mail', $email)` দিয়ে পাঠানো হয়।
+     * ⓘ ফলে `$notifiable` একটা `AnonymousNotifiable`, আর তার
+     * `name` বা `locale` **কোনোটাই নেই**।
+     *
+     * ⛔ চিঠিটা তবু যেত, কেবল সম্বোধনটা হত *"নমস্কার ,"* — নামের
+     * জায়গাটা ফাঁকা। PHP কেবল একটা warning তোলে, ব্যতিক্রম নয়।
+     *
+     * ⚠️ আর ধরা পড়েনি কারণ পরীক্ষাগুলো `Notification::fake()` ব্যবহার
+     * করে, আর সে `toMail()` **কখনো চালায় না** — সে কেবল গোনে কোন
+     * চিঠি কাকে পাঠানো হয়েছে। ⓘ আজকের চেনা আকৃতি: সবুজ পাহারা যা
+     * আসল জিনিসটা দেখেইনি। ⭐ ধরা পড়েছে সত্যিকারের একটা চিঠি পাঠিয়ে।
+     *
+     * ⭐ তাই এখন নাম ও ভাষা পাঠানোর সময়েই সাথে দেওয়া হয়। পাহারা:
+     * [[TheLetterKnowsWhoItIsWritingToTest]]
+     */
+    public function __construct(
+        private readonly string $token,
+        private readonly string $name,
+
+        /*
+         * ⛔ ঘরটার নাম `lang`, `locale` নয় — আর সেটা বাধ্য হয়ে।
+         *
+         * ⚠️ `Illuminate\Notifications\Notification`-এ আগে থেকেই একটা
+         * `$locale` ঘর আছে, আর সেটা readonly নয়। ⓘ একই নামে readonly
+         * ঘর বসাতে গিয়ে PHP ক্লাসটা **লোডই করতে পারেনি**:
+         *
+         *   Cannot redeclare non-readonly property
+         *   Illuminate\Notifications\Notification::$locale as readonly
+         *
+         * ⚠️ আর `php -l` এটা ধরেনি — সে কেবল বাক্যগঠন দেখে, উত্তরাধিকার
+         * নয়। ধরা পড়েছে ক্লাসটা সত্যিই লোড করে।
+         */
+        private readonly string $lang,
+    ) {}
 
     /** @return list<string> */
     public function via(object $notifiable): array
@@ -42,16 +80,19 @@ final class EmailChangeLink extends Notification
         /*
          * ভাষাটা তাঁর নিজের রেকর্ড থেকে, অনুরোধের চলতি ভাষা থেকে নয় —
          * ⓘ চিঠিটা লেখা হয় এক মুহূর্তে, পড়া হয় আরেক মুহূর্তে।
+         *
+         * ⚠️ `$notifiable` থেকে নেওয়া যায় না: সে বেনামি, তার কোনো
+         * রেকর্ডই নেই। তাই পাঠানোর সময় সাথে দেওয়া হয়েছে।
          */
-        $locale = in_array($notifiable->locale, ['bn', 'en'], true)
-            ? $notifiable->locale
+        $locale = in_array($this->lang, ['bn', 'en'], true)
+            ? $this->lang
             : (string) config('app.locale');
 
         $minutes = (int) config('abos.email_change_expire', 60);
 
         return (new MailMessage)
             ->subject(__('core.profile.email_mail_subject', [], $locale))
-            ->greeting(__('core.profile.email_mail_greeting', ['name' => $notifiable->name], $locale))
+            ->greeting(__('core.profile.email_mail_greeting', ['name' => $this->name], $locale))
             ->line(__('core.profile.email_mail_line', [], $locale))
             ->action(
                 __('core.profile.email_mail_action', [], $locale),
