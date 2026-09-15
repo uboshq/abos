@@ -335,16 +335,99 @@ class AlpineHandlersHaveAScopeTest extends TestCase
                 continue;
             }
 
-            foreach ([$name['full'], $name['short']] as $candidate) {
-                if ($candidate !== null && str_contains($source, "'".$candidate."'")) {
-                    $includers[$other] = $this->hasScope($source);
-
-                    break;
-                }
+            if ($this->callsIt($source, $name, $this->componentTags($file))) {
+                $includers[$other] = $this->hasScope($source);
             }
         }
 
         return $includers !== [] && ! in_array(false, $includers, true);
+    }
+
+    /**
+     * এই ফাইলটা কি ওই সোর্সের ভিতর থেকে ডাকা হয়?
+     *
+     * ── ⛔ কেন ছাড়টা অর্ধেক ছিল, ১৫ সেপ্টেম্বর ২০২৬ ───────────
+     * ছাড়টা লেখা হয়েছিল `@include('নাম')`-এর কথা ভেবে, তাই সে
+     * **উদ্ধৃতির ভিতরে** ভিউয়ের নাম খুঁজত। কিন্তু এই রেপোর বেনামী
+     * কম্পোনেন্টগুলো ওভাবে ডাকা হয় না — ডাকা হয় ট্যাগ হিসেবে:
+     *
+     *     <x-ui.charge-bearer :direction="$direction" />
+     *
+     * ⓘ ওখানে নামটা কোথাও উদ্ধৃত নয়, তাই খোঁজাটা কিছুই পেত না, আর
+     * `$includers` খালি থেকে যেত — যার মানে দাঁড়াত "একে কেউ ব্যবহারই
+     * করে না", অর্থাৎ অভিযোগ।
+     *
+     * ⚠️ ফল একটা **মিথ্যা অভিযোগ**: `charge-bearer` দিব্যি কাজ করে,
+     * কারণ তাকে যে `money-movement` ডাকে তার নিজের `x-data` আছে, আর
+     * ব্রাউজারে কম্পোনেন্টটা ঠিক ওই স্কোপের ভিতরেই বসে।
+     *
+     * ⭐ আর মিথ্যা অভিযোগ এই ফাইলের সবচেয়ে বড় ঝুঁকি — উপরে
+     * [[everyIncluderHasScope]]-এর নোটেই লেখা আছে, ওরকম পাহারা
+     * কিছুদিনের মধ্যে বন্ধ করে দেওয়া হয়, তারপর সে আসল ভুলটাও ধরে না।
+     *
+     * ⓘ নিয়মটা বদলায়নি, কেবল **ডাকার দ্বিতীয় ব্যাকরণটা** শেখানো
+     * হলো: সব ডাকার জায়গায় `x-data` থাকতেই হবে, আর ডাকার জায়গা
+     * একটাও না থাকলে এখনো অভিযোগ।
+     *
+     * @param  array{full: ?string, short: string}|null  $name
+     * @param  list<string>  $tags
+     */
+    private function callsIt(string $source, ?array $name, array $tags): bool
+    {
+        foreach ($name === null ? [] : [$name['full'], $name['short']] as $candidate) {
+            if ($candidate !== null && str_contains($source, "'".$candidate."'")) {
+                return true;
+            }
+        }
+
+        foreach ($tags as $tag) {
+            /*
+             * ⚠️ শেষের পাহারাটা (`(?![\w.\-])`) ছাড়া `<x-ui.date`
+             * খুঁজতে গিয়ে `<x-ui.date-range` মিলে যেত, আর তখন একটা
+             * ভুল ফাইলের স্কোপ দেখে ছাড় দেওয়া হত — **ভুয়া সবুজ**।
+             */
+            if (preg_match('/<x-'.preg_quote($tag, '/').'(?![\w.\-])/', $source) === 1) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * বেনামী কম্পোনেন্টের ফাইলপথ থেকে তার ট্যাগের নাম।
+     *
+     * `resources/views/components/ui/charge-bearer.blade.php` হয়
+     * `ui.charge-bearer`, আর মডিউলের ভিতরের হলে `code::ui.charge-bearer`।
+     *
+     * ⓘ `.../foo/index.blade.php` দুই নামেই ডাকা যায় — `foo.index`
+     * আর শুধু `foo` — তাই দুইটাই ফেরত যায়। একটাও বাদ পড়লে সেটা আবার
+     * সেই মিথ্যা অভিযোগ।
+     *
+     * @return list<string>
+     */
+    private function componentTags(string $file): array
+    {
+        $path = str_replace(DIRECTORY_SEPARATOR, '/', $file);
+
+        if (preg_match('#/app/Modules/([^/]+)/Resources/views/components/(.+)\.blade\.php$#', $path, $m)) {
+            $prefix = Str::snake($m[1]).'::';
+            $rest = $m[2];
+        } elseif (preg_match('#/resources/views/components/(.+)\.blade\.php$#', $path, $m)) {
+            $prefix = '';
+            $rest = $m[1];
+        } else {
+            return [];
+        }
+
+        $dotted = str_replace('/', '.', $rest);
+        $tags = [$prefix.$dotted];
+
+        if (str_ends_with($dotted, '.index')) {
+            $tags[] = $prefix.substr($dotted, 0, -6);
+        }
+
+        return $tags;
     }
 
     /**
