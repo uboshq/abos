@@ -174,9 +174,37 @@ class AttachmentEngineTest extends TestCase
         });
     }
 
+    /**
+     * ⛔ ফিক্সচারটা মিথ্যা বলছিল, কোডটা নয় — ১৫ সেপ্টেম্বর ২০২৬।
+     *
+     * ── কী ছিল ───────────────────────────────────────────────────────
+     *     UploadedFile::fake()->create('note.pdf', 2048)
+     *
+     * ⓘ `fake()->create()` **আকারটা বলে দেয়** (`getSize()` ২ MB ফেরায়),
+     * কিন্তু ফাইলটায় একটাও বাইট লেখে না। ⚠️ তাই জমা হওয়ার পর ডিস্কে
+     * ফাইলটা শূন্য, আর দাবিটা `'0 B'` পেত।
+     *
+     * ── ⭐ কেন ইঞ্জিনটাই ঠিক, আর পরীক্ষাটাই বদলাল ───────────────────
+     * [[AttachmentEngine]] এখন **জমা হওয়া** ফাইলের আকার মাপে
+     * (`Storage::size($path)`), আপলোড করা ফাইলের নয়। ⓘ আর সেটাই সঠিক:
+     * ছবি জমা হওয়ার আগে ঘুরিয়ে, ছোট করে, চেপে নেওয়া হয় — তাই আপলোডের
+     * আকারটা ব্যবহারকারীকে দেখালে **ভুল সংখ্যা** দেখানো হত, আর তিনি
+     * ডাউনলোড করে অন্য আকার পেতেন।
+     *
+     * ⚠️ অর্থাৎ লাল দাবিটা একটা আসল উন্নতিকে ভুল প্রমাণ করছিল। তাই
+     * ফিক্সচারে এখন **সত্যিকারের বাইট** — যা মাপা হচ্ছে তা যেন সত্যিই
+     * ওখানে থাকে।
+     */
     public function test_file_size_reads_the_way_a_person_expects(): void
     {
-        $attachment = $this->engine->store(UploadedFile::fake()->create('note.pdf', 2048), 'customer', 'Customer', 1);
+        $twoMegabytes = str_repeat('a', 2048 * 1024);
+
+        $attachment = $this->engine->store(
+            UploadedFile::fake()->createWithContent('note.pdf', $twoMegabytes),
+            'customer',
+            'Customer',
+            1,
+        );
 
         $this->assertSame('2 MB', $attachment->humanSize());
     }
