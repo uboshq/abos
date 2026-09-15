@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Auth;
 
 use App\Core\Engines\Audit\AuditEngine;
+use App\Core\Support\MailReach;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -96,6 +97,27 @@ class PasswordResetController extends Controller
         $data = $request->validate([
             'email' => ['required', 'string', 'email', 'max:191'],
         ]);
+
+        /*
+         * ⛔ চিঠি না গেলে "পাঠানো হয়েছে" বলা যাবে না — ১৫ সেপ্টেম্বর ২০২৬।
+         *
+         * ⚠️ লাইভে `MAIL_MAILER=log`, আর ঐ অবস্থায় Laravel চিঠিটা
+         * **সফলভাবে** পাঠায় — লগ ফাইলে। কোনো ব্যতিক্রম ওঠে না, তাই
+         * নিচের লাইনটা নির্দ্বিধায় সফলতা ঘোষণা করত।
+         *
+         * ⛔ আর এই পর্দায় ক্ষতিটা সবচেয়ে বেশি: যিনি এখানে এসেছেন তিনি
+         * ইতিমধ্যে নিজের অ্যাকাউন্ট থেকে বেরিয়ে আছেন। ⓘ তাঁকে "দেখুন,
+         * পাঠিয়ে দিয়েছি" বলে ইনবক্সের সামনে বসিয়ে রাখাটা তাঁর একমাত্র
+         * ফেরার পথটাই কেড়ে নেওয়া — তিনি জানতেও পারেন না যে অপেক্ষা
+         * করে লাভ নেই, আর প্রশাসককে বলতেও যান না।
+         *
+         * ⭐ এই পাতার গোপনীয়তার নিয়মটা (উপরের নোট: ঠিকানা আছে কি নেই
+         * তা ফাঁস করা হয় না) এতে ভাঙে না — বার্তাটা ব্যবহারকারীর কথা
+         * কিছুই বলে না, কেবল ব্যবস্থার কথা বলে।
+         */
+        if (MailReach::silent()) {
+            return back()->withErrors(['email' => __('core.profile.email_no_mailer')]);
+        }
 
         PasswordBroker::sendResetLink(['email' => $data['email']]);
 

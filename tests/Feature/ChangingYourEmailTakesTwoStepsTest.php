@@ -36,6 +36,23 @@ final class ChangingYourEmailTakesTwoStepsTest extends TestCase
 
         Notification::fake();
 
+        /*
+         * ⭐ কাজ-করা একটা মেইলার — ১৫ সেপ্টেম্বর ২০২৬।
+         *
+         * ⚠️ `phpunit.xml`-এ `MAIL_MAILER=array`, আর [[App\Core\Support\MailReach]]
+         * সেটাকে **নীরব** ধরে (ঠিকই ধরে — `array` কিছুই পাঠায় না)। ⛔ ফলে
+         * এই ফাইলের প্রতিটা অনুরোধ নতুন পাহারায় আটকে যেত, আর দাবিগুলো
+         * লাল হত এমন একটা কারণে যার সাথে ইমেইল বদলের কোনো সম্পর্ক নেই।
+         *
+         * ⓘ এই ফাইলের প্রশ্ন *"দুই ধাপের ব্যবস্থাটা ঠিক চলে কি"* — অর্থাৎ
+         * ধরে নেওয়া হচ্ছে চিঠি যায়। মেইলার না থাকলে কী হয়, সেটা আলাদা
+         * করে মাপা আছে ([[NoScreenPromisesALetterItCannotSendTest]])।
+         *
+         * ⭐ `Notification::fake()` চিঠিটা ধরে রাখে, তাই কিছু সত্যিই
+         * পাঠানো হয় না — কেবল পাহারাটা সন্তুষ্ট হয়।
+         */
+        config(['mail.default' => 'smtp']);
+
         $company = Company::create(['code' => 'EM', 'name_en' => 'Email Co']);
 
         $this->user = User::factory()->create([
