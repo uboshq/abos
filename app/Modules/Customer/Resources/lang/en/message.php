@@ -8,6 +8,7 @@ return [
     'bn_name_hint' => 'Without it the English name is shown everywhere.',
     'type_hint' => 'For example: retail, wholesale, institution.',
     'zero_means_unlimited' => '0 means no limit.',
+    'credit_days_hint' => 'How many days the credit may run — after that the amount counts as overdue.',
 
     'opening_note' => 'What was owed before this system. Can only be set now — '
         .'to change it later, post a journal voucher, or the ledger and this list would disagree.',

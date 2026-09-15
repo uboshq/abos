@@ -98,13 +98,48 @@
 
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
-            <x-ui.toolbar :title="__('customer::menu.customers')" :count="trans_choice('customer::message.count', $customers->total(), ['count' => $customers->total()])"
+            {{-- ⛔ ছাঁকনিটা খোঁজার পরেও টিকে থাকতে হবে।
+
+                 ⚠️ এই ফর্মটা GET — সাবমিট হলে কেবল ভেতরের ঘরগুলো
+                 ঠিকানায় যায়। ⓘ লুকানো ঘরটা না থাকলে পরিবেশক তালিকায়
+                 দাঁড়িয়ে কিছু খুঁজলেই ছাঁকনিটা **নীরবে খসে পড়ত**, আর
+                 হঠাৎ সব গ্রাহক ফিরে আসত — কেউ বুঝতেন না কেন। --}}
+            @if ($partyTypeFilter)
+                <input type="hidden" name="party_type" value="{{ $partyTypeFilter }}">
+            @endif
+
+            <x-ui.toolbar :title="$distributorType && (string) $partyTypeFilter === (string) $distributorType->id
+                    ? __('customer::menu.distributors')
+                    : __('customer::menu.customers')" :count="trans_choice('customer::message.count', $customers->total(), ['count' => $customers->total()])"
                 :columns="$columns"
                 :search-placeholder="__('customer::message.search_placeholder')"
                 :sort="$sortOptions"
                 view>
         <x-slot:actions>
-            @can('create', \App\Modules\Customer\Models\Customer::class)
+            {{-- ⭐ পরিবেশক তালিকা — মালিকের চাওয়া, ১৬ সেপ্টেম্বর ২০২৬।
+
+                 ⓘ আলাদা পর্দা নয়, **একই তালিকা এক ধরনে ছাঁকা**। খোঁজা,
+                 সাজানো, কলাম বাছা, বকেয়ার হিসাব — সব যেমন ছিল তেমনই
+                 চলে। ⚠️ আলাদা পর্দা বানালে ঐ সবগুলো দুই জায়গায় থাকত,
+                 আর একদিন একটায় ঠিক হয়ে অন্যটায় পুরনো থেকে যেত।
+
+                 ⛔ বোতামটা ছাঁকনি চালু থাকলে **ফেরার পথ** দেখায়, নাহলে
+                 ব্যবহারকারী আটকে যেতেন — বেরোনোর একমাত্র উপায় হত
+                 ঠিকানার ঘর থেকে হাতে লেখা মুছে ফেলা। --}}
+            @if ($distributorType)
+                        @php $onDistributors = (string) $partyTypeFilter === (string) $distributorType->id; @endphp
+
+                        <x-ui.button :tone="$onDistributors ? 'primary' : 'secondary'"
+                                     :href="route('customer.index', $onDistributors
+                                        ? []
+                                        : ['party_type' => $distributorType->id])">
+                            {{ $onDistributors
+                                ? __('customer::action.all_customers')
+                                : __('customer::action.distributor_list') }}
+                        </x-ui.button>
+                    @endif
+
+                    @can('create', \App\Modules\Customer\Models\Customer::class)
                     <x-ui.button tone="primary" icon="plus" :href="route('customer.create')">
                         {{ __('customer::action.new') }}
                     </x-ui.button>

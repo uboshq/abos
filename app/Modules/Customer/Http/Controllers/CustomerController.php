@@ -104,7 +104,24 @@ class CustomerController extends Controller implements HasMiddleware
              * তালিকাটা একই স্কোপ থেকে আসে (`overCreditLimit`) — তাই
              * "৩ জন" দেখে ক্লিক করে চারজন পাওয়ার সুযোগ নেই।
              */
-            ->when($request->boolean('over_limit'), fn ($q) => $q->overCreditLimit());
+            ->when($request->boolean('over_limit'), fn ($q) => $q->overCreditLimit())
+
+            /*
+             * ⭐ এক ধরনের তালিকা — মালিকের চাওয়া "পরিবেশক তালিকা", ১৬ সেপ্টেম্বর ২০২৬।
+             *
+             * ── ⛔ কেন আলাদা পর্দা নয়, একটা ছাঁকনি ─────────────────────
+             * আলাদা কন্ট্রোলার ও ভিউ বানানো যেত। ⚠️ কিন্তু তাহলে খোঁজা,
+             * সাজানো, পাতা ভাঙা, কলাম বাছা, বকেয়ার হিসাব — সব **দুই
+             * জায়গায়** থাকত, আর একদিন একটায় ঠিক হয়ে অন্যটায় পুরনো
+             * থেকে যেত। ⓘ আজকের দিনটাই শিখিয়েছে দুই জায়গায় এক নিয়ম
+             * রাখার দাম কত।
+             *
+             * ⭐ তাই তালিকা একটাই, আর "পরিবেশক তালিকা" বোতামটা সেই
+             * তালিকাকেই একটা ধরনে ছেঁকে দেখায়।
+             */
+            ->when($request->filled('party_type'), fn ($q) => $q->where(
+                'party_type_id', $request->integer('party_type'),
+            ));
 
         $sort = $this->applySort($query, $request, $this->sorts());
 
@@ -114,6 +131,18 @@ class CustomerController extends Controller implements HasMiddleware
             ->paginate(50)
             ->withQueryString();
 
+        /*
+         * ⓘ পরিবেশক ধরনটা কোন সারি — তালিকার বোতামটার জন্য।
+         *
+         * ⚠️ id-টা কোডে লেখা যায় না: প্রতিটা কোম্পানির নিজের সারি, আর
+         * কেউ ধরনটা মুছেও ফেলতে পারেন। ⓘ না পেলে বোতামটা আঁকাই হয় না —
+         * একটা ভাঙা লিংক দেখানোর চেয়ে কিছু না দেখানো ভালো।
+         */
+        $distributorType = PartyType::query()
+            ->where('code', PartyType::DISTRIBUTOR)
+            ->active()
+            ->first();
+
         return view('customer::index', [
             'menu' => $this->menu->forUser($request->user()),
             'customers' => $customers,
@@ -121,6 +150,8 @@ class CustomerController extends Controller implements HasMiddleware
             'showInactive' => $request->boolean('inactive'),
             'sortOptions' => $this->sortLabels(),
             'sort' => $sort,
+            'distributorType' => $distributorType,
+            'partyTypeFilter' => $request->integer('party_type') ?: null,
         ]);
     }
 

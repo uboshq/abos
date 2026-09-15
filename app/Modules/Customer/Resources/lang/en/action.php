@@ -6,6 +6,8 @@ return [
     'new' => 'New customer',
     'edit' => 'Edit customer',
     'show_inactive' => 'Show inactive too',
+    'distributor_list' => 'Distributors',
+    'all_customers' => 'All customers',
     'statement' => 'Statement',
     'deactivate' => 'Deactivate',
     'activate' => 'Activate',

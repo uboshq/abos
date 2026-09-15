@@ -6,6 +6,8 @@ return [
     'new' => 'নতুন গ্রাহক',
     'edit' => 'গ্রাহক সম্পাদনা',
     'show_inactive' => 'নিষ্ক্রিয়রাও দেখাও',
+    'distributor_list' => 'পরিবেশক তালিকা',
+    'all_customers' => 'সব গ্রাহক',
     'statement' => 'হিসাব বিবরণী',
     'deactivate' => 'নিষ্ক্রিয় করুন',
     'activate' => 'সক্রিয় করুন',

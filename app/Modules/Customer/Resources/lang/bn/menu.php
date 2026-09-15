@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'dashboard' => 'গ্রাহক ড্যাশবোর্ড',
     'customers' => 'গ্রাহক তালিকা',
+    'distributors' => 'পরিবেশক তালিকা',
     'statement' => 'গ্রাহক বিবরণী',
     'due_list' => 'বকেয়া তালিকা',
     'ageing' => 'বকেয়ার বয়স',
