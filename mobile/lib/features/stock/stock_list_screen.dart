@@ -40,6 +40,9 @@ class _StockListScreenState extends State<StockListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Why the last pull brought nothing down, when that is what happened —
+    // null after a clean pull, and an empty list then means an empty list.
+    final trouble = ReferenceSync.troubleSentence;
     final all = StockRecord.all();
     // A stock row whose product has not been pulled yet has no name to search
     // by; it is still listed (the quantity is real), it simply cannot match a
@@ -74,11 +77,16 @@ class _StockListScreenState extends State<StockListScreen> {
               onRefresh: _refresh,
               child: all.isEmpty
                   ? ListView(
-                      children: const [
+                      children: [
                         EmptyState(
-                          icon: Icons.warehouse_outlined,
-                          title: 'এখনো কোনো মজুদ সিঙ্ক হয়নি',
-                          message: 'নিচে টেনে আবার চেষ্টা করুন।',
+                          icon: trouble == null
+                              ? Icons.warehouse_outlined
+                              : Icons.cloud_off_outlined,
+                          title: trouble == null
+                              ? 'এখনো কোনো মজুদ সিঙ্ক হয়নি'
+                              : 'মজুদের তালিকা আনা যায়নি',
+                          // See CustomerListScreen's comment on the same line.
+                          message: trouble ?? 'নিচে টেনে আবার চেষ্টা করুন।',
                         ),
                       ],
                     )

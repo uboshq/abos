@@ -49,6 +49,9 @@ class _OrderListScreenState extends State<OrderListScreen> {
       ..sort((a, b) => (b.trxDate ?? DateTime(0))
           .compareTo(a.trxDate ?? DateTime(0)));
 
+    // Why the last pull brought nothing down, when that is what happened —
+    // null after a clean pull, and an empty list then means an empty list.
+    final trouble = ReferenceSync.troubleSentence;
     final nothingAtAll =
         rejected.isEmpty && pendingCount == 0 && synced.isEmpty;
 
@@ -70,11 +73,16 @@ class _OrderListScreenState extends State<OrderListScreen> {
           ? RefreshIndicator(
               onRefresh: _refresh,
               child: ListView(
-                children: const [
+                children: [
                   EmptyState(
-                    icon: Icons.receipt_long_outlined,
-                    title: 'এখনো কোনো অর্ডার নেই',
-                    message: 'নিচে টেনে আবার চেষ্টা করুন।',
+                    icon: trouble == null
+                        ? Icons.receipt_long_outlined
+                        : Icons.cloud_off_outlined,
+                    title: trouble == null
+                        ? 'এখনো কোনো অর্ডার নেই'
+                        : 'অর্ডারের তালিকা আনা যায়নি',
+                    // See CustomerListScreen's comment on the same line.
+                    message: trouble ?? 'নিচে টেনে আবার চেষ্টা করুন।',
                   ),
                 ],
               ),
