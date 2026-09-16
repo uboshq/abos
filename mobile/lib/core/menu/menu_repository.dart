@@ -69,6 +69,7 @@ class MenuRepository {
     'attendance': Icons.how_to_reg_outlined,
     'dues': Icons.account_balance_wallet_outlined,
     'today': Icons.insights_outlined,
+    'reports': Icons.bar_chart_outlined,
     'customers': Icons.people_alt_outlined,
     'products': Icons.inventory_2_outlined,
     'stock': Icons.warehouse_outlined,
@@ -215,6 +216,16 @@ class MenuRepository {
             label: 'আজকের হিসাব',
             icon: Icons.insights_outlined,
             routeName: 'today',
+          ),
+        // One tile for every report the server will let this person run —
+        // docs/Contract §৯. Which ones those are is the server's answer, not
+        // a list kept here; the tile only opens the door.
+        if (user.can('sales.order.view') || user.can('customer.view'))
+          const MenuItem(
+            key: 'reports',
+            label: 'রিপোর্ট',
+            icon: Icons.bar_chart_outlined,
+            routeName: 'reports',
           ),
         if (user.can(_dueListPermission))
           const MenuItem(
