@@ -45,6 +45,9 @@ class _ProductListScreenState extends State<ProductListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Why the last pull brought nothing down, when that is what happened —
+    // null after a clean pull, and an empty list then means an empty list.
+    final trouble = ReferenceSync.troubleSentence;
     final all = ProductRecord.all();
     final filtered = all.where((product) => product.matches(_query)).toList();
 
@@ -73,11 +76,19 @@ class _ProductListScreenState extends State<ProductListScreen> {
               onRefresh: _refresh,
               child: all.isEmpty
                   ? ListView(
-                      children: const [
+                      children: [
                         EmptyState(
-                          icon: Icons.inventory_2_outlined,
-                          title: 'এখনো কোনো পণ্য সিঙ্ক হয়নি',
-                          message: 'নিচে টেনে আবার চেষ্টা করুন।',
+                          icon: trouble == null
+                              ? Icons.inventory_2_outlined
+                              : Icons.cloud_off_outlined,
+                          title: trouble == null
+                              ? 'এখনো কোনো পণ্য সিঙ্ক হয়নি'
+                              : 'পণ্যের তালিকা আনা যায়নি',
+                          // See CustomerListScreen's comment on the same line.
+                          // This screen carries it twice over: নতুন অর্ডার
+                          // sends people here to pull, so a silent failure
+                          // here stalls the order screen too.
+                          message: trouble ?? 'নিচে টেনে আবার চেষ্টা করুন।',
                         ),
                       ],
                     )

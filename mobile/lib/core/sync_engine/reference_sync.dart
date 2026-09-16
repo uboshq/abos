@@ -6,6 +6,7 @@ import '../api_client/api_client.dart';
 import '../auth/token_storage.dart';
 import 'reference_cache.dart';
 import 'sync_capabilities_api.dart';
+import 'sync_engine.dart';
 
 /// The download half of sync — reference data (products, customers, prices,
 /// dues) pulled into [ReferenceCache] so the pickers that need them work with
@@ -48,10 +49,24 @@ class ReferenceSync {
   /// startup swallows it, a button shows it — and that only works if this file
   /// stops hiding the failure from both.
   static Future<List<ReferenceSyncOutcome>> syncAll() async {
-    final capabilities = await SyncCapabilitiesApi.list();
+    final List<SyncCapability> capabilities;
+    try {
+      capabilities = await SyncCapabilitiesApi.list();
+    } catch (error) {
+      // Recorded before it is rethrown. Every list screen catches this and
+      // keeps showing whatever it had, which is right — but without the
+      // reason kept somewhere, a phone whose token expired shows "এখনো কোনো
+      // গ্রাহক সিঙ্ক হয়নি — নিচে টেনে আবার চেষ্টা করুন" and goes on saying
+      // it after every pull, forever. See [lastFailure].
+      _lastFailure = SyncAttemptFailure.from(error,
+          direction: SyncDirection.pull);
+      rethrow;
+    }
+
     final modules = capabilities.map((c) => c.module).toSet();
 
     final outcomes = <ReferenceSyncOutcome>[];
+    SyncAttemptFailure? failure;
     for (final module in modules) {
       try {
         outcomes.add(await _pullOnce(module));
@@ -61,12 +76,50 @@ class ReferenceSync {
         // mode as a dropped connection, and one module's bad record must not
         // take every other module in this loop down with it.
         debugPrint('ABOS reference sync: $module pull failed ($error)');
+        failure ??= SyncAttemptFailure.from(error,
+            direction: SyncDirection.pull);
         outcomes.add(ReferenceSyncOutcome(
             module: module, recordCount: 0, caughtUp: false));
       }
     }
+
+    // Cleared on a clean pass, so a reason from two pulls ago never outlives
+    // the trouble it described.
+    _lastFailure = failure;
     return outcomes;
   }
+
+  static SyncAttemptFailure? _lastFailure;
+
+  /// Why the last pull did not bring anything down, or null if it did.
+  ///
+  /// <p>⚠️ <b>An empty list and a failed pull look identical on screen, and
+  /// they are opposite situations.</b> "No customers have synced yet" is
+  /// something a pull fixes; an expired token, a 403, a server that is not
+  /// answering are not, and the screen that keeps saying "নিচে টেনে আবার
+  /// চেষ্টা করুন" sends somebody to do the one thing that cannot work — the
+  /// pull half of the afternoon that [SyncEngine.lastFailureFor] documents.
+  ///
+  /// <p>In memory, not on disk, for the same reason as the push side: this
+  /// describes the last attempt, and a stale reason is worse than none.
+  static SyncAttemptFailure? get lastFailure => _lastFailure;
+
+  /// The sentence an empty screen should show instead of "নিচে টেনে আবার
+  /// চেষ্টা করুন", when there is one. Null means the last pull was clean and
+  /// the list really is empty.
+  static String? get troubleSentence => _lastFailure?.sentence;
+
+  /// Called on sign-out, and by tests. A new account's first empty screen
+  /// must not carry the previous account's 403 — the same tenant boundary
+  /// ReferenceCache.clearAll draws, for the same reason.
+  static void forgetLastFailure() => _lastFailure = null;
+
+  /// Puts a failure in place without a server to fail against, so a test can
+  /// pump a screen and read what it says. Only tests: production sets this by
+  /// actually failing.
+  @visibleForTesting
+  static void rememberFailureForTest(SyncAttemptFailure failure) =>
+      _lastFailure = failure;
 
   /// One module, one call to `GET /sync/{module}/pull`.
   static Future<ReferenceSyncOutcome> _pullOnce(String module) async {

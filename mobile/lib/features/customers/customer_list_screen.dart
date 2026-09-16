@@ -45,6 +45,9 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Why the last pull brought nothing down, when that is what happened —
+    // null after a clean pull, and an empty list then means an empty list.
+    final trouble = ReferenceSync.troubleSentence;
     final all = CustomerRecord.all();
     final filtered =
         all.where((customer) => customer.matches(_query)).toList();
@@ -75,11 +78,21 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
               onRefresh: _refresh,
               child: all.isEmpty
                   ? ListView(
-                      children: const [
+                      children: [
                         EmptyState(
-                          icon: Icons.people_outline,
-                          title: 'এখনো কোনো গ্রাহক সিঙ্ক হয়নি',
-                          message: 'নিচে টেনে আবার চেষ্টা করুন।',
+                          icon: trouble == null
+                              ? Icons.people_outline
+                              : Icons.cloud_off_outlined,
+                          title: trouble == null
+                              ? 'এখনো কোনো গ্রাহক সিঙ্ক হয়নি'
+                              : 'গ্রাহকের তালিকা আনা যায়নি',
+                          // ⚠️ A failed pull and an empty catalogue leave this
+                          // screen looking identical, and only one of the two
+                          // is fixed by pulling. Without the reason here, a
+                          // phone whose token expired answers every pull with
+                          // the same 'নিচে টেনে আবার চেষ্টা করুন' — the pull
+                          // half of what SyncEngine.lastFailureFor documents.
+                          message: trouble ?? 'নিচে টেনে আবার চেষ্টা করুন।',
                         ),
                       ],
                     )
