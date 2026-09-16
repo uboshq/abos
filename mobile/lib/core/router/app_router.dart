@@ -6,6 +6,7 @@ import '../../features/approvals/approval_inbox_screen.dart';
 import '../../features/attendance/attendance_screen.dart';
 import '../../features/auth/login_screen.dart';
 import '../../features/customers/customer_list_screen.dart';
+import '../../features/customers/due_list_screen.dart';
 import '../../features/home/home_shell.dart';
 import '../../features/orders/new_order_screen.dart';
 import '../../features/orders/order_prefill.dart';
@@ -13,6 +14,7 @@ import '../../features/orders/order_list_screen.dart';
 import '../../features/products/product_list_screen.dart';
 import '../../features/splash/splash_screen.dart';
 import '../../features/stock/stock_list_screen.dart';
+import '../../features/today/today_screen.dart';
 import '../../features/sync/sync_status_screen.dart';
 import '../auth/auth_state.dart';
 
@@ -70,6 +72,14 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'attendance',
             builder: (context, state) => const AttendanceScreen(),
+          ),
+          GoRoute(
+            path: 'today',
+            builder: (context, state) => const TodayScreen(),
+          ),
+          GoRoute(
+            path: 'dues',
+            builder: (context, state) => const DueListScreen(),
           ),
           GoRoute(
             path: 'customers',
