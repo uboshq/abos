@@ -58,9 +58,41 @@ class SupplierController extends Controller implements HasMiddleware
         ];
     }
 
+    /**
+     * সরবরাহকারীর তালিকা — কেবল আসল সরবরাহকারীরা।
+     */
     public function index(Request $request): View
     {
+        return $this->list($request, services: false);
+    }
+
+    /**
+     * ⭐ সেবাদাতার তালিকা — মালিকের নির্দেশ, ১৬ সেপ্টেম্বর ২০২৬।
+     *
+     * *"সরবরাহকারীর পাশে আরও একটা বোতাম বানাও… সরবরাহকারী বাদে বাকিগুলো
+     * ওই লিস্টে যাবে"*।
+     *
+     * ── ⓘ কেন আলাদা তালিকা, শুধু একটা ছাঁকনি নয় ────────────────────
+     * ছাঁকনি হলে ঠিকানাটা মনে রাখতে হত আর প্রতিবার বেছে নিতে হত। ⭐ দুইটা
+     * আলাদা পথ মানে দুইটা আলাদা বোতাম, আর মেনুতেই বোঝা যায় কোথায় কী।
+     *
+     * ⚠️ তবু ভেতরে একটাই কোড — নিচের `list()`। ⛔ দুইবার লিখলে একদিন
+     * একটায় ছাঁকনি বসত আর অন্যটায় নয়।
+     */
+    public function services(Request $request): View
+    {
+        return $this->list($request, services: true);
+    }
+
+    /**
+     * দুইটা তালিকার ভেতরের একমাত্র কোড।
+     *
+     * ⓘ পার্থক্য কেবল একটা scope, আর পর্দার শিরোনামটা।
+     */
+    private function list(Request $request, bool $services): View
+    {
         $query = Supplier::query()
+            ->when($services, fn ($q) => $q->onlyServiceProviders(), fn ($q) => $q->onlySuppliers())
             ->search($request->query('q'))
             ->when(! $request->boolean('inactive'), fn ($q) => $q->active())
             ->with(['partyType', 'paymentTerm'])
@@ -81,16 +113,63 @@ class SupplierController extends Controller implements HasMiddleware
             'showInactive' => $request->boolean('inactive'),
             'sortOptions' => $this->sortLabels(),
             'sort' => $sort,
+
+            /* ⓘ পর্দাটা এক, কিন্তু শিরোনাম দুই — নাহলে দুইটা তালিকা
+               দেখতে হুবহু এক হত আর কেউ বুঝত না কোনটায় দাঁড়িয়ে আছেন। */
+            'heading' => $services
+                ? __('supplier::menu.service_providers')
+                : __('supplier::menu.suppliers'),
+            'isServices' => $services,
         ]);
     }
 
     public function create(Request $request): View
     {
+        /* ⓘ কোন তালিকা থেকে আসা হলো — কেবল পর্দার লেখা ঠিক করতে।
+           ⚠️ এটা কোনো ছাঁকনি নয়, তাই ভুল মান এলেও কিছু ভাঙে না। */
+        $kind = $request->query('kind') === 'service' ? 'service' : null;
+
+        /*
+         * ⭐ ধরনের ঘরে "সরবরাহকারী" আগে থেকেই বসানো — মালিকের নির্দেশ,
+         * ১৬ সেপ্টেম্বর ২০২৬: *"নতুন সরবরাহকারী → ধরন → সরবরাহকারী by
+         * default বসে থাকবে"*।
+         *
+         * ⓘ যুক্তিটা গণনার: সরবরাহকারীর তালিকায় যাঁরা যোগ হন তাঁদের
+         * প্রায় সবাই আসল সরবরাহকারী। ⚠️ ঘরটা খালি রাখলে প্রতিবার একই
+         * জিনিস বাছতে হত, আর কেউ ভুলে গেলে সারিটা ধরনহীন হয়ে বসত।
+         *
+         * ⛔ সেবাদাতার তালিকা থেকে এলে **বসানো হয় না**, আর সেটা
+         * ইচ্ছাকৃত: ওখানে চারটা ধরন (কুরিয়ার · পরিবহন · হাম্মালি ·
+         * সার্ভিস), আর কোনটা তা কেবল মানুষই জানেন। একটা আন্দাজ বসিয়ে
+         * দিলে ভুলটা নীরবে সংরক্ষিত হত।
+         */
+        $supplier = new Supplier(['credit_limit' => 0, 'credit_days' => 0, 'is_active' => true]);
+
+        if ($kind === null) {
+            $supplier->party_type_id = $this->vendorTypeId();
+        }
+
         return view('supplier::form', [
             'menu' => $this->menu->forUser($request->user()),
-            'supplier' => new Supplier(['credit_limit' => 0, 'credit_days' => 0, 'is_active' => true]),
+            'supplier' => $supplier,
+            'kind' => $kind,
             ...$this->options(),
         ]);
+    }
+
+    /**
+     * "সরবরাহকারী" ধরনের আইডি — না থাকলে `null`।
+     *
+     * ⚠️ প্রতিষ্ঠান সারিটা মুছে বা নিষ্ক্রিয় করে দিতে পারে, তাই এটা
+     * কখনোই ধরে নেওয়া যায় না যে সারিটা আছে। ⓘ না পেলে ঘরটা খালিই
+     * থাকে — একটা ভুল আইডি বসিয়ে দেওয়ার চেয়ে খালি ঘর ভালো।
+     */
+    private function vendorTypeId(): ?int
+    {
+        return \App\Modules\MasterData\Models\PartyType::query()
+            ->where('code', Supplier::VENDOR_CODE)
+            ->where('is_active', true)
+            ->value('id');
     }
 
     public function store(SupplierRequest $request): RedirectResponse

@@ -16,6 +16,15 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth')->prefix('suppliers')->group(function () {
     Route::get('/', [SupplierController::class, 'index'])->name('index');
+
+    /*
+     * ⭐ সেবাদাতার তালিকা — সরবরাহকারী বাদে বাকি সব ধরন।
+     *
+     * ⚠️ `/create`-এর **আগে** নয়, পরে নয় — এটা একটা স্থির পথ, তাই
+     * `{supplier}`-এর আগে থাকতেই হবে। ⓘ নিচের `{supplier}` সংখ্যায়
+     * বাঁধা, তাই সংঘর্ষ হত না; তবু স্থির পথ আগে রাখাই এই রিপোর নিয়ম।
+     */
+    Route::get('/services', [SupplierController::class, 'services'])->name('service.index');
     Route::get('/create', [SupplierController::class, 'create'])->name('create');
     Route::post('/', [SupplierController::class, 'store'])->name('store');
 
