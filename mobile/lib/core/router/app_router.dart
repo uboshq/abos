@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/approvals/approval_inbox_screen.dart';
 import '../../features/attendance/attendance_screen.dart';
 import '../../features/auth/login_screen.dart';
+import '../../features/customers/customer_detail_screen.dart';
 import '../../features/customers/customer_list_screen.dart';
 import '../../features/customers/due_list_screen.dart';
 import '../../features/home/home_shell.dart';
@@ -89,6 +90,16 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'customers',
             builder: (context, state) => const CustomerListScreen(),
+            routes: [
+              GoRoute(
+                // The public_id in the path, never a sequential one — the
+                // same rule the wire follows (docs/Contract §৩ ক).
+                path: ':id',
+                builder: (context, state) => CustomerDetailScreen(
+                  customerId: state.pathParameters['id'] ?? '',
+                ),
+              ),
+            ],
           ),
           GoRoute(
             path: 'products',
