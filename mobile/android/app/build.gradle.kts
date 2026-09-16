@@ -46,11 +46,26 @@ android {
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
-        // Uses the version code from pubspec.yaml. When using split APKs, 1000 * ABI_VERSION
-        // is added automatically by Flutter. (https://developer.android.com/studio/build/configure-apk-splits#configure-APK-versions)
-        // You can force using the value of versionCode by specifying the `-P force-version-code-ignoring-abi=true`
-        // flag during build.
-        versionCode = flutter.versionCode
+        // ⛔ ২০,০০০ যোগ করা হচ্ছে, আর এটা ইচ্ছাকৃত — ইতিহাস মোছার জন্য।
+        //
+        // Flutter split-per-ABI বিল্ডে নিজে থেকেই `1000 * ABI_VERSION` যোগ করে
+        // (https://developer.android.com/studio/build/configure-apk-splits#configure-APK-versions)।
+        // তাই ০.১.০ আর ০.২.০-র যে APK-গুলো মাঠে গেছে সেগুলোর versionCode
+        // ১০০২ / ২০০২ ধরনের, অথচ pubspec-এ লেখা ছিল কেবল `+2`।
+        //
+        // ১৭ সেপ্টেম্বর ২০২৬-এ বিতরণ লিংকে চলে যাওয়ার সময় ধরা পড়ল: universal
+        // APK-র versionCode হয় ৩, আর Android সেটাকে ৪০০৩-এর উপরে বসাতে অস্বীকার
+        // করে — `INSTALL_FAILED_VERSION_DOWNGRADE`, যা ফোনে কেবল
+        // "App not installed" হয়ে দেখা দেয়, কোনো কারণ ছাড়াই। অর্থাৎ নতুন
+        // বিল্ডটা ঠিক তাদের ফোনেই বসত না যাদের কাছে পুরনোটা আছে।
+        //
+        // ⭐ তাই এখন থেকে **একটাই ধরনের APK** — universal, `flutter build apk
+        // --release`। `--split-per-abi` আর ব্যবহার করবেন না: ওটা ২২০০৩ ধরনের
+        // সংখ্যা বানাবে, আর তারপর পরের universal বিল্ডটা আর বসবে না। দুই ধরন
+        // একসাথে বিলি করলে আপডেট চিরকালের জন্য ভাঙে।
+        //
+        // ২০,০০০ সংখ্যাটা কেবল "যা কিছু আগে গেছে তার উপরে" — সর্বোচ্চ ছিল ৪০০৩।
+        versionCode = 20000 + flutter.versionCode
         versionName = flutter.versionName
     }
 
