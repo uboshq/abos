@@ -54,10 +54,30 @@ class _OrderListScreenState extends State<OrderListScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('অর্ডারের অবস্থা')),
+      // ⛔ Even with nothing to show, the empty state lives inside a
+      // RefreshIndicator over a scrollable. A RefreshIndicator only
+      // recognises a pull on a scrollable descendant, so a bare EmptyState
+      // makes the gesture do nothing — on the one screen where somebody is
+      // most likely to try it, because nothing is there yet.
+      //
+      // ⚠️ This is commit b2392ce's bug, found on a device and fixed on three
+      // screens; this fourth one was missed, and the test written that day
+      // listed those three by hand so it never noticed. Found again on 16
+      // September the same way: by pulling on a real screen and watching
+      // nothing happen. pull_to_refresh_test.dart now counts the screens that
+      // can draw an EmptyState, so the next one cannot slip past either.
       body: nothingAtAll
-          ? const EmptyState(
-              icon: Icons.receipt_long_outlined,
-              title: 'এখনো কোনো অর্ডার নেই',
+          ? RefreshIndicator(
+              onRefresh: _refresh,
+              child: ListView(
+                children: const [
+                  EmptyState(
+                    icon: Icons.receipt_long_outlined,
+                    title: 'এখনো কোনো অর্ডার নেই',
+                    message: 'নিচে টেনে আবার চেষ্টা করুন।',
+                  ),
+                ],
+              ),
             )
           : RefreshIndicator(
               onRefresh: _refresh,
