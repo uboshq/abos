@@ -608,7 +608,14 @@ class SyncAttemptFailure {
     required this.isNetwork,
     this.statusCode,
     this.serverMessage,
+    this.direction = SyncDirection.push,
   });
+
+  /// Which half of the sync this was. The status codes and the parsing are
+  /// identical; only [sentence] differs, and it has to — "সংযোগ পেলেই চলে
+  /// যাবে" is a true sentence about a queued order and a false one about a
+  /// catalogue that failed to arrive, where nothing is waiting to go anywhere.
+  final SyncDirection direction;
 
   /// No signal, a timeout, an unreachable host — ordinary, and the queue is
   /// doing exactly what it was built for.
@@ -624,9 +631,12 @@ class SyncAttemptFailure {
 
   bool get isServerRefusal => !isNetwork && statusCode != null;
 
-  factory SyncAttemptFailure.from(Object error) {
+  factory SyncAttemptFailure.from(
+    Object error, {
+    SyncDirection direction = SyncDirection.push,
+  }) {
     if (error is! DioException) {
-      return const SyncAttemptFailure(isNetwork: false);
+      return SyncAttemptFailure(isNetwork: false, direction: direction);
     }
 
     final network = error.type == DioExceptionType.connectionError ||
@@ -640,21 +650,42 @@ class SyncAttemptFailure {
       isNetwork: network,
       statusCode: error.response?.statusCode,
       serverMessage: body is Map ? body['message']?.toString() : null,
+      direction: direction,
     );
   }
 
   /// One sentence, and it names who acts.
   String get sentence {
+    final pulling = direction == SyncDirection.pull;
+
     if (isNetwork) {
-      return 'সংযোগ নেই — সংযোগ পেলেই নিজে থেকে চলে যাবে।';
+      return pulling
+          // ⚠️ Not "চলে যাবে". Nothing is queued on a failed pull — the list
+          // stays empty until somebody pulls again, and promising it will
+          // arrive on its own is how an empty catalogue gets waited on all
+          // morning.
+          ? 'সংযোগ নেই — সংযোগ পেয়ে আবার নিচে টানুন।'
+          : 'সংযোগ নেই — সংযোগ পেলেই নিজে থেকে চলে যাবে।';
     }
     if (isServerRefusal) {
-      return serverMessage == null
-          ? 'সার্ভার অনুরোধটাই নিচ্ছে না (কোড $statusCode) — অফিসে জানান, '
-              'অপেক্ষা করে ঠিক হবে না।'
-          : 'সার্ভার বলছে: $serverMessage (কোড $statusCode) — অফিসে জানান, '
-              'অপেক্ষা করে ঠিক হবে না।';
+      final what = serverMessage == null
+          ? 'সার্ভার অনুরোধটাই নিচ্ছে না (কোড $statusCode)'
+          : 'সার্ভার বলছে: $serverMessage (কোড $statusCode)';
+      return '$what — অফিসে জানান, ${pulling ? 'বারবার টেনে' : 'অপেক্ষা করে'} '
+          'ঠিক হবে না।';
     }
-    return 'পাঠানো যায়নি — কারণ জানা যায়নি। অফিসে জানান।';
+    return pulling
+        ? 'তালিকা আনা যায়নি — কারণ জানা যায়নি। অফিসে জানান।'
+        : 'পাঠানো যায়নি — কারণ জানা যায়নি। অফিসে জানান।';
   }
+}
+
+/// Which way a failed sync attempt was going.
+enum SyncDirection {
+  /// Changes made on this phone, going up. A failure leaves them queued.
+  push,
+
+  /// The catalogue coming down. A failure leaves a screen empty, and there is
+  /// nothing queued that will fix it later by itself.
+  pull,
 }

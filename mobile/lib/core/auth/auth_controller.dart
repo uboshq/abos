@@ -7,6 +7,7 @@ import '../api_client/api_client.dart';
 import '../config/app_config.dart';
 import '../api_client/network_errors.dart';
 import '../sync_engine/reference_cache.dart';
+import '../sync_engine/reference_sync.dart';
 import 'auth_exceptions.dart';
 import 'auth_state.dart';
 import 'auth_user.dart';
@@ -127,6 +128,10 @@ class AuthController extends StateNotifier<AuthState> {
     // own doc comment: the next person on this device may be a different
     // company.
     await ReferenceCache.instance.clearAll();
+    // Same boundary: the reason the last pull failed belongs to the session
+    // that failed it. Left behind, it puts the previous account's 403 on the
+    // next person'''s first empty screen.
+    ReferenceSync.forgetLastFailure();
     state = const AuthState.signedOut();
   }
 }

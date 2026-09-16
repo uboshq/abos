@@ -47,6 +47,9 @@ class _DueListScreenState extends State<DueListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Why the last pull brought nothing down, when that is what happened —
+    // null after a clean pull, and an empty list then means an empty list.
+    final trouble = ReferenceSync.troubleSentence;
     final rows = _owing()..sort((a, b) => b.due.outstanding.compareTo(a.due.outstanding));
     final filtered =
         rows.where((row) => row.customer.matches(_query)).toList();
@@ -73,13 +76,24 @@ class _DueListScreenState extends State<DueListScreen> {
               onRefresh: _refresh,
               child: rows.isEmpty
                   ? ListView(
-                      children: const [
+                      children: [
                         EmptyState(
-                          icon: Icons.check_circle_outline,
-                          // Good news, not an error — the same distinction the
-                          // approvals inbox draws.
-                          title: 'কারো কাছে বকেয়া নেই',
-                          message: 'সিঙ্ক হয়নি মনে হলে নিচে টেনে দেখুন।',
+                          icon: trouble == null
+                              ? Icons.check_circle_outline
+                              : Icons.cloud_off_outlined,
+                          // ⛔ The worst one on this list to get wrong. After a
+                          // clean pull, 'কারো কাছে বকেয়া নেই' is good news,
+                          // not an error — the same distinction the approvals
+                          // inbox draws. After a failed pull it is a claim
+                          // about money made on no data, and somebody acts on
+                          // it: no collection round, no call, a credit limit
+                          // read as headroom. An empty list is only news when
+                          // the list actually arrived.
+                          title: trouble == null
+                              ? 'কারো কাছে বকেয়া নেই'
+                              : 'বকেয়ার তালিকা আনা যায়নি',
+                          message:
+                              trouble ?? 'সিঙ্ক হয়নি মনে হলে নিচে টেনে দেখুন।',
                         ),
                       ],
                     )

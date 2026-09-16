@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
@@ -200,7 +201,8 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                     onTap: _pickCustomer,
                   ),
                 ),
-                if (_customer != null) _DueNotice(customerId: _customer!.id),
+                if (_customer != null)
+                  DueNotice(customerId: _customer!.id, orderTotal: _total),
                 const SizedBox(height: AppSpacing.md),
                 Row(
                   children: [
@@ -293,6 +295,10 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
 
 /// What the chosen shop owes, shown the moment the shop is chosen.
 ///
+/// <p>Public so credit_headroom_test.dart can pump it on its own: reaching it
+/// through the order screen means seeding a catalogue and driving a picker,
+/// and the arithmetic below is worth testing without that in the way.
+///
 /// <p><b>It states, it does not decide.</b> `CustomerDueSync`'s own comment
 /// is explicit that a zero credit limit means cash or advance rather than
 /// "no sale", and that whether it blocks anything is a company switch the
@@ -300,10 +306,15 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
 /// judgement to the person standing in the shop and to the server at sync —
 /// a phone refusing an order on its own cached copy of a limit would be
 /// wrong in both directions.
-class _DueNotice extends StatelessWidget {
-  const _DueNotice({required this.customerId});
+class DueNotice extends StatelessWidget {
+  const DueNotice(
+      {super.key, required this.customerId, required this.orderTotal});
 
   final String customerId;
+
+  /// What is in the cart right now. The figures above it are about the past;
+  /// this is the one that makes them a decision.
+  final double orderTotal;
 
   @override
   Widget build(BuildContext context) {
@@ -315,19 +326,54 @@ class _DueNotice extends StatelessWidget {
 
     final owes = due.outstanding > 0;
 
+    // ⚠️ The arithmetic nobody can do standing in a shop, across two screens,
+    // while a shopkeeper waits. "বকেয়া ৳45,000 · সীমা ৳50,000" and a cart of
+    // ৳12,000 are three numbers a rep has to hold and subtract correctly to
+    // know they are about to write an order the office will refuse — and the
+    // refusal reaches them hours later, after the goods were promised.
+    //
+    // Still stating, not deciding, exactly as this class's doc comment says:
+    // a sentence about what the numbers add up to, not a blocked button. A
+    // zero credit limit means cash or advance rather than "no sale", and
+    // whether a limit blocks anything is a company switch the phone is
+    // deliberately not sent.
+    final headroom = due.creditLimit - due.outstanding;
+    final overBy = orderTotal - headroom;
+    final willCross = due.hasCreditLimit && orderTotal > 0 && overBy > 0;
+
+    // The figure's age, shown only when something is being concluded from it.
+    // CustomerDue has its own watermark and can lag Customer by a sync, so a
+    // due that arrived last Tuesday looks exactly like one from this morning
+    // — tolerable while it is only being displayed, not while it is the basis
+    // of a sentence telling somebody they are over a limit.
+    final syncedAt = CustomerDueRecord.syncedAt(customerId);
+
     return Padding(
       padding: const EdgeInsets.only(top: AppSpacing.sm),
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.sm),
         decoration: BoxDecoration(
-          color: owes ? AppColors.warningSurface : AppColors.surfaceMuted,
+          color: willCross
+              ? AppColors.dangerSurface
+              : owes
+                  ? AppColors.warningSurface
+                  : AppColors.surfaceMuted,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
           children: [
-            Icon(owes ? Icons.account_balance_wallet_outlined : Icons.check,
+            Icon(
+                willCross
+                    ? Icons.report_problem_outlined
+                    : owes
+                        ? Icons.account_balance_wallet_outlined
+                        : Icons.check,
                 size: 18,
-                color: owes ? AppColors.warning : AppColors.onSurfaceMuted),
+                color: willCross
+                    ? AppColors.danger
+                    : owes
+                        ? AppColors.warning
+                        : AppColors.onSurfaceMuted),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: Column(
@@ -347,9 +393,37 @@ class _DueNotice extends StatelessWidget {
                       [
                         if (due.hasCreditLimit)
                           'সীমা ${Money.taka(due.creditLimit)}',
+                        if (due.hasCreditLimit && headroom > 0)
+                          'বাকি ${Money.taka(headroom)}',
                         if (due.creditDays > 0) '${due.creditDays} দিন',
                       ].join(' · '),
                       style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  if (willCross)
+                    Padding(
+                      padding: const EdgeInsets.only(top: AppSpacing.xs),
+                      child: Text(
+                        headroom <= 0
+                            // Already at or past the limit before this order
+                            // adds anything — a different sentence, because
+                            // "over by" against a negative headroom reads as
+                            // though the cart caused it.
+                            ? 'সীমা আগেই পেরিয়ে আছে — এই অর্ডারে '
+                                '${Money.taka(orderTotal)} যোগ হবে।'
+                            : 'এই অর্ডারে সীমা ${Money.taka(overBy)} '
+                                'ছাড়িয়ে যাবে।',
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.danger,
+                        ),
+                      ),
+                    ),
+                  if (willCross && syncedAt != null)
+                    Text(
+                      'বকেয়ার তথ্য সিঙ্ক ${DateFormat('dd/MM/yyyy hh:mm a').format(syncedAt)}',
+                      style: const TextStyle(
+                          fontSize: 11, color: AppColors.onSurfaceMuted),
                     ),
                 ],
               ),
