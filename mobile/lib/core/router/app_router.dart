@@ -13,6 +13,7 @@ import '../../features/orders/order_prefill.dart';
 import '../../features/orders/order_list_screen.dart';
 import '../../features/products/product_list_screen.dart';
 import '../../features/splash/splash_screen.dart';
+import '../../features/reports/reports_screen.dart';
 import '../../features/stock/stock_list_screen.dart';
 import '../../features/today/today_screen.dart';
 import '../../features/sync/sync_status_screen.dart';
@@ -72,6 +73,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'attendance',
             builder: (context, state) => const AttendanceScreen(),
+          ),
+          GoRoute(
+            path: 'reports',
+            builder: (context, state) => const ReportsScreen(),
           ),
           GoRoute(
             path: 'today',
