@@ -72,6 +72,12 @@ class VoucherRequest extends FormRequest
             ]);
         }
 
+        /*
+         * ⓘ পক্ষ আগে, শ্রেণি পরে — দুইটাই খালি ঘর ভরে,
+         * বাছাই মোছে না। ⭐ রসিদে পক্ষটাই বেশি নির্দিষ্ট — কার
+         * কাছ থেকে টাকা, সেটা কোন ধরনের টাকা তার চেয়ে স্পষ্ট।
+         */
+        $this->fillAccountFromParty();
         $this->fillAccountFromCategory();
 
         $lines = (array) $this->input('lines', []);
@@ -117,6 +123,61 @@ class VoucherRequest extends FormRequest
      * ⓘ ব্যবহারকারী নিজে খাত বাছলে সেটাই থাকে — শ্রেণি তার উপর দিয়ে
      * যায় না। শ্রেণি **ফাঁকা ঘর ভরে**, বাছাই মোছে না।
      */
+    /**
+     * ⭐ রসিদ ও পরিশোধে অন্য পাশটা পক্ষ থেকেই আসে — ১৬ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⛔ কেন এটা লাগল ─────────────────────────────────────────────
+     * নমুনার রসিদ পর্দায় "কার কাছ থেকে" নামে কোনো ঘর **নেই** — উপরে
+     * ডিপোজিটর বাছা হয়েই যায়, আর সেটাই বলে দেয় টাকা কার কাছ থেকে।
+     * ⚠️ দুইটা ঘর রাখলে একজন গ্রাহক বাছতেন আর খাত বাছতেন অন্য কারও,
+     * আর তখন খতিয়ানে কোনটা বসত তা বলা যেত না।
+     *
+     * ⛔ কিন্তু খাতার দুই পাশ লাগেই — `from_account_id` ছাড়া দাখিলা
+     * অসম্পূর্ণ, আর যাচাই সেটা `required` ধরে। ⓘ তাই ঘরটা পর্দা থেকে
+     * সরানোর সাথে সাথেই এই পূরণটা বসাতে হয়েছে, নাহলে **প্রতিটা রসিদ
+     * জমা দিতে গিয়ে আটকাত**।
+     *
+     * ── ⓘ কোন খাত ─────────────────────────────────────────────────
+     * গ্রাহক টাকা দিলে তাঁর দেনা কমে, তাই ক্রেডিট যায় **প্রাপ্য
+     * হিসাবে** (১১১০)। সরবরাহকারীকে টাকা দিলে আমাদের দেনা কমে, তাই
+     * ডেবিট যায় **প্রদেয় হিসাবে** (২১১০)।
+     *
+     * ⚠️ পক্ষ না বাছলে কিছুই করা হয় না — তখন পুরনো নিয়মেই শ্রেণি
+     * থেকে ভরে, আর সেটাও না পেলে যাচাই সৎভাবে আটকায়।
+     */
+    private function fillAccountFromParty(): void
+    {
+        if (trim((string) $this->input('from_account_id', '')) !== '') {
+            return;
+        }
+
+        $type = (string) $this->input('party_type', '');
+        $partyId = (int) $this->input('party_id', 0);
+
+        if ($type === '' || $partyId <= 0) {
+            return;
+        }
+
+        $code = match ($this->input('type')) {
+            Voucher::RECEIPT => StandardChart::RECEIVABLE,
+            Voucher::PAYMENT => StandardChart::PAYABLE_GROUP,
+            default => null,
+        };
+
+        if ($code === null) {
+            return;
+        }
+
+        $account = Account::query()
+            ->where('company_id', CompanyContext::id())
+            ->where('code', $code)
+            ->value('id');
+
+        if ($account !== null) {
+            $this->merge(['from_account_id' => $account]);
+        }
+    }
+
     private function fillAccountFromCategory(): void
     {
         if (trim((string) $this->input('from_account_id', '')) !== '') {

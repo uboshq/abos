@@ -4,6 +4,7 @@ import { abosDate } from './date.js'
 import { listKeys } from './list-keys.js'
 import { stockPlacement } from './placement.js'
 import { scannerStore } from './scanner.js'
+import partyVoucher from './party-voucher.js'
 
 /*
  * Alpine শুধু ছোট UI ইন্টারঅ্যাকশনে — ড্রপডাউন, পাসওয়ার্ড দেখানো, ট্যাব
@@ -57,6 +58,14 @@ document.addEventListener('alpine:init', () => {
      * শেলফে বসানো কার্টন খুঁজে না পাওয়া পর্যন্ত কেউ টের পেত না।
      */
     Alpine.data('stockPlacement', stockPlacement)
+
+    /*
+     * রসিদ ও পরিশোধের পর্দা — পক্ষ, বকেয়া, আর বিলের ভাগ।
+     *
+     * ⓘ যুক্তিটা ফাইলে, ব্লেডের অ্যাট্রিবিউটে নয়: ওখানে অনুবাদের
+     * অ্যাপস্ট্রফি আর Blade-এর পার্সিং দুইবার ভেঙেছে।
+     */
+    Alpine.data('partyVoucher', partyVoucher)
 
     /*
      * ছবি তোলার পর্দা — চার কোণ টেনে কাগজ সোজা করা।

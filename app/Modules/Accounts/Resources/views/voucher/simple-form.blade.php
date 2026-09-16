@@ -12,6 +12,18 @@
 @php
     $isNew = ! $voucher->exists;
 
+    /*
+     * রসিদ ও পরিশোধে পক্ষের ঘর দুইটা উপরে বসে (নমুনার সারি ২)।
+     *
+     * ⚠️ নিচের পুরনো ঘরগুলো তখন লুকানো **আর নিষ্ক্রিয়** — দুইটাই লাগে।
+     * ⛔ কেবল লুকালে ব্রাউজার শেষেরটার মান পাঠাত, আর উপরের বাছাইটা
+     * নীরবে হারাত; কেবল নিষ্ক্রিয় করলে খালি ঘরটা পর্দায় থেকে যেত।
+     */
+    $partyAbove = in_array($voucher->type, [
+        \App\Modules\Accounts\Models\Voucher::RECEIPT,
+        \App\Modules\Accounts\Models\Voucher::PAYMENT,
+    ], true);
+
     $optionsFor = fn (string $source) => match ($source) {
         'money' => $moneyAccounts,
         'expense' => $expenseAccounts,
@@ -105,31 +117,40 @@
             </div>
         @endif
 
-        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
-            <div class="grid gap-3 sm:grid-cols-3">
-                <x-ui.field name="trx_date" type="date" :label="__('accounts::field.date')"
-                            :value="old('trx_date', $voucher->trx_date?->format('Y-m-d') ?? now()->format('Y-m-d'))"
-                            required />
+        {{--
+            ── রসিদ ও পরিশোধ — নমুনার নিজস্ব কাঠামো, ১৫ সেপ্টেম্বর ২০২৬ ─
+            ⛔ এখানে আগে ছিল একটা সাধারণ তিন-ঘরের সারি (তারিখ · কাগজের
+            তারিখ · টাকার অঙ্ক), যেটা পাঁচটা ভাউচারের সবগুলোতেই একই
+            দেখাত।
 
-                {{--
-                    যে কাগজের বিপরীতে টাকা, তার তারিখ — চেকের তারিখ নয়।
+            ⚠️ নমুনায় রসিদের প্রথম সারি আলাদা — **লেনদেনের তারিখ · কার
+            মাধ্যমে · কখন** — আর দ্বিতীয় সারিতে ডিপোজিটর, তার পাশে পাওনা।
+            ⓘ তারপর সবচেয়ে বড় অংশটা: "কোন বিলের বিপরীতে"।
 
-                    ⚠️ দুইটা গুলিয়ে ফেলা সহজ, তাই ঘর দুইটা **আলাদা
-                    সেকশনে**: এটা উপরে ভাউচারের নিজের তারিখের পাশে, আর
-                    চেকের তারিখ নিচে "বিবরণ"-এ চেক নম্বরের পাশে। একটা
-                    ১০ তারিখের বিলের বিপরীতে ২৫ তারিখের চেক — দুইটাই
-                    সত্যি, আর দুইটা আলাদা প্রশ্নের উত্তর।
+            ⭐ মালিকের সিদ্ধান্ত: **নমুনাই চূড়ান্ত।** তাই "কাগজের তারিখ",
+            "টাকার শ্রেণি" ও "উপশ্রেণি" — নমুনায় নেই বলে তুলে দেওয়া হলো।
+        --}}
+        @if (in_array($voucher->type, [
+            \App\Modules\Accounts\Models\Voucher::RECEIPT,
+            \App\Modules\Accounts\Models\Voucher::PAYMENT,
+        ], true))
+            @include('accounts::voucher.partials.party-fields')
+        @else
+            <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+                <div class="grid gap-3 sm:grid-cols-3">
+                    <x-ui.field name="trx_date" type="date" :label="__('accounts::field.date')"
+                                :value="old('trx_date', $voucher->trx_date?->format('Y-m-d') ?? now()->format('Y-m-d'))"
+                                required />
 
-                    ঐচ্ছিক: নগদে টাকা এলে কোনো কাগজই নেই।
-                --}}
-                <x-ui.field name="ref_date" type="date" :label="__('accounts::field.ref_date')"
-                            :value="old('ref_date', $voucher->ref_date?->format('Y-m-d'))" />
+                    <x-ui.field name="ref_date" type="date" :label="__('accounts::field.ref_date')"
+                                :value="old('ref_date', $voucher->ref_date?->format('Y-m-d'))" />
 
-                <x-ui.field name="amount" type="number" step="0.01" inputmode="decimal"
-                            :label="__('accounts::field.amount')"
-                            :value="old('amount', $debitLine?->debit)" required numeric />
-            </div>
-        </section>
+                    <x-ui.field name="amount" type="number" step="0.01" inputmode="decimal"
+                                :label="__('accounts::field.amount')"
+                                :value="old('amount', $debitLine?->debit)" required numeric />
+                </div>
+            </section>
+        @endif
 
         {{--
             ── খরচ ভাউচারের নিজস্ব অংশ, ১৫ সেপ্টেম্বর ২০২৬ ──────────────
@@ -233,14 +254,19 @@
 
                      init() { this.loadDue(); },
                  }">
-            <div class="grid gap-3 sm:grid-cols-2">
+            {{--
+                ⛔ রসিদ ও পরিশোধে এই দুইটা ঘর নিচের সারিতে বসে (নমুনা)।
+                ⓘ "কার কাছ থেকে" ঘরটা নমুনায় নেই — উপরে ডিপোজিটরই
+                বলে দেয় টাকা কার কাছ থেকে। ⚠️ আলাদা ঘরটা দ্বিত্ব।
+            --}}
+            <div class="grid gap-3 sm:grid-cols-2" @if ($partyAbove) hidden @endif>
                 {{-- from — টাকা যেখান থেকে এল --}}
                 <label class="block">
                     <span class="mb-1 block text-sm font-medium">
                         {{ __($sides['from']['label']) }}
                         <span class="text-(--color-danger)" aria-hidden="true">*</span>
                     </span>
-                    <select name="from_account_id" required x-model="from"
+                    <select name="from_account_id" required @disabled($partyAbove) x-model="from"
                             class="h-(--spacing-field) w-full rounded-(--radius-field) border
                                    border-(--color-border) bg-(--color-surface-card) px-3">
                         <option value="">—</option>
@@ -264,7 +290,7 @@
                         {{ __($sides['to']['label']) }}
                         <span class="text-(--color-danger)" aria-hidden="true">*</span>
                     </span>
-                    <select name="to_account_id" required
+                    <select name="to_account_id" required @disabled($partyAbove)
                             class="h-(--spacing-field) w-full rounded-(--radius-field) border
                                    border-(--color-border) bg-(--color-surface-card) px-3">
                         <option value="">—</option>
@@ -326,12 +352,19 @@
                     তথ্য ঠেসে দিলে ভাঙা-জোড়ার একটা ধাপ বাড়ে, আর ঐ ধাপটা
                     JS-এর উপর দাঁড়িয়ে থাকত।
                 --}}
-                <label class="mt-3 block">
+                {{--
+                    ⓘ রসিদ ও পরিশোধে পক্ষের ঘর দুইটা **উপরে** বসে
+                    (নমুনার সারি ২), তাই এখানে কেবল খরচ ও কন্ট্রার জন্য।
+                    ⚠️ দুই জায়গায় একই নামের ঘর থাকলে ব্রাউজার শেষেরটার
+                    মান পাঠাত, আর উপরের বাছাইটা নীরবে হারাত।
+                --}}
+                <label class="mt-3 block" @if ($partyAbove) hidden @endif>
                     <span class="mb-1 block text-sm font-medium">
                         {{ __('accounts::field.party_type') }}
                         <span class="text-(--color-danger)" x-cloak x-show="onCredit" aria-hidden="true">*</span>
                     </span>
                     <select name="party_type" x-model="partyType" @change="resetParty()"
+                            @disabled($partyAbove)
                             class="h-(--spacing-field) w-full rounded-(--radius-field) border
                                    border-(--color-border) bg-(--color-surface-card) px-3">
                         <option value="">—</option>
@@ -344,13 +377,14 @@
                     @enderror
                 </label>
 
-                <label class="mt-3 block">
+                <label class="mt-3 block" @if ($partyAbove) hidden @endif>
                     <span class="mb-1 block text-sm font-medium">
                         {{ __('accounts::field.party') }}
                         <span class="text-(--color-danger)" x-cloak x-show="onCredit" aria-hidden="true">*</span>
                     </span>
                     <select name="party_id" x-model="partyId" @change="loadDue()"
                             :required="onCredit"
+                            @disabled($partyAbove)
                             class="h-(--spacing-field) w-full rounded-(--radius-field) border
                                    border-(--color-border) bg-(--color-surface-card) px-3">
                         <option value="">—</option>
@@ -382,7 +416,14 @@
                     ⓘ কোনো `name` নেই ইচ্ছাকৃতভাবে: ঘরটা জমা পড়ে না, তাই
                     বাইরে থেকে একটা মনগড়া অঙ্ক পাঠানোর পথও নেই।
                 --}}
-                <div class="mt-3">
+                {{--
+                    ⛔ রসিদ ও পরিশোধে পাওনাটা **নামের পাশে** দেখায়
+                    (নমুনার সারি ২), আলাদা ঘরে নয় — তাই সেখানে এই
+                    ব্লকটা আঁকা হয় না।
+
+                    ⓘ মালিকের সিদ্ধান্ত: নমুনাই চূড়ান্ত।
+                --}}
+                <div class="mt-3" @if ($partyAbove) hidden @endif>
                     <span class="mb-1 block text-sm font-medium">
                         {{ __('accounts::field.collectable') }}
                     </span>
@@ -411,12 +452,21 @@
                     কিন্তু **লুকানো হয় না** — কেউ চাইলে বদলাতে পারেন, আর
                     কী বসল সেটা চোখের সামনেই থাকে।
                 --}}
-                <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                {{--
+                    ⛔ টাকার শ্রেণি ও উপশ্রেণি — নমুনায় নেই।
+
+                    ⓘ মালিকের সিদ্ধান্ত, ১৫ সেপ্টেম্বর ২০২৬: **"নমুনাই
+                    চূড়ান্ত — বাদ দাও।"** তাই রসিদ ও পরিশোধে ঘর দুইটা
+                    দেখানো হয় না। ⚠️ খরচ ও কন্ট্রায় থেকে যায়, কারণ
+                    নমুনায় ঐ দুইটার নিজস্ব কাঠামো আলাদা।
+                --}}
+                <div class="mt-3 grid gap-3 sm:grid-cols-2" @if ($partyAbove) hidden @endif>
                     <label class="block">
                         <span class="mb-1 block text-sm font-medium">
                             {{ __('accounts::field.money_category') }}
                         </span>
                         <select name="money_category_id" x-model="catId" @change="pickCategory()"
+                                @disabled($partyAbove)
                                 class="h-(--spacing-field) w-full rounded-(--radius-field) border
                                        border-(--color-border) bg-(--color-surface-card) px-3">
                             <option value="">—</option>
@@ -465,8 +515,25 @@
             </div>
         </section>
 
-        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
-            <h2 class="mb-3 font-semibold">{{ __('accounts::section.details') }}</h2>
+        {{-- ⓘ রসিদ ও পরিশোধে এই ব্লকটার নিজস্ব বাক্স নেই — ভিতরের
+             সবকিছু লুকানো থাকায় পর্দায় একটা খালি বাক্স দেখা যেত। --}}
+        <section @if (! $partyAbove) data-boxed
+                 class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4"
+                 @endif>
+            {{--
+                ⛔ "বিবরণ" শিরোনামটা নমুনায় নেই — ১৫ সেপ্টেম্বর ২০২৬।
+
+                ⓘ নমুনায় "বিবরণ" কেবল সবচেয়ে নিচের **ঘরটা** (p-nar),
+                কোনো সেকশনের নাম নয়। ⚠️ এখানে শিরোনাম থাকায় "পেমেন্ট
+                মেথড" চিপগুলো একটা "বিবরণ" ঘরের ভিতরে বসে আছে বলে মনে
+                হত — মালিক সেটাই ধরিয়ে দেন।
+
+                ⓘ খরচ ও কন্ট্রায় থাকে, কারণ ঐ দুইটার নমুনায় ব্লকটা
+                সত্যিই আলাদা একটা দল।
+            --}}
+            @unless ($partyAbove)
+                <h2 class="mb-3 font-semibold">{{ __('accounts::section.details') }}</h2>
+            @endunless
 
             {{--
                 ⭐ টাকাটা কীভাবে হাতবদল হলো — একটাই ব্লক, ১৪ সেপ্টেম্বর ২০২৬।
@@ -492,16 +559,70 @@
                 :direction="$voucher->type === \App\Modules\Accounts\Models\Voucher::PAYMENT ? 'out' : 'in'"
                 :carriers="$carriers ?? []"
                 :modes="$transferModes ?? []"
+                :carrier-here="! $partyAbove"
                 :record="$voucher" />
 
-            <label class="mt-3 block">
+            {{--
+                ⛔ রসিদ ও পরিশোধে "বিবরণ" নিচের সারিতে বসে — নমুনার মতো।
+                ⓘ খরচ ও কন্ট্রায় এখানেই থাকে, কারণ ঐ দুইটার নমুনায়
+                কাঠামোটা আলাদা।
+            --}}
+            <label class="mt-3 block" @if ($partyAbove) hidden @endif>
                 <span class="mb-1 block text-sm font-medium">{{ __('core.table.narration') }}</span>
-                <textarea name="narration" rows="2"
+                <textarea name="narration" rows="2" @disabled($partyAbove)
                           class="w-full rounded-(--radius-field) border border-(--color-border)
                                  bg-(--color-surface-card) px-3 py-2">{{ old('narration', $voucher->narration) }}</textarea>
             </label>
         </section>
 
-        @include('accounts::voucher.partials.save-buttons', ['voucher' => $voucher, 'type' => $type])
+        {{--
+            ── নমুনার শেষ সারি, ১৬ সেপ্টেম্বর ২০২৬ ──────────────────────
+            নমুনায় রসিদের একদম নিচে তিনটা ঘর এক সারিতে, আর পাশে বোতাম:
+
+                যে খাতে জমা · গৃহীত টাকা · বিবরণ · [সংরক্ষণ ও পোস্ট]
+
+            ⛔ আগে এগুলো ছড়িয়ে ছিল: "কার কাছ থেকে" ও "যে খাতে জমা"
+            মাঝখানে একটা আলাদা বাক্সে, "গৃহীত টাকা" একদম উপরে, আর
+            "বিবরণ" টাকা-চলাচলের ব্লকের ভিতরে।
+
+            ⚠️ আর "কার কাছ থেকে" ঘরটা **দ্বিত্ব**: উপরে ডিপোজিটর বাছা
+            হয়েই গেছে। ⓘ দুইটা আলাদা উত্তর দিলে খাতায় কোনটা বসত তা
+            বলা যেত না, তাই সেটা লুকানো ও নিষ্ক্রিয়।
+        --}}
+        @if ($partyAbove)
+            <section data-boxed
+                     class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+                <div class="grid items-end gap-3 sm:grid-cols-[2fr_1fr_2fr_auto]">
+                    <x-ui.select name="to_account_id"
+                                 :label="__($sides['to']['label'])"
+                                 :options="collect($optionsFor($sides['to']['source']))->mapWithKeys(fn ($a) => [$a->id => $a->label()])->all()"
+                                 :selected="old('to_account_id', $debitLine?->account_id)"
+                                 required />
+
+                    <x-ui.field name="amount" type="number" step="0.01" inputmode="decimal"
+                                :label="$voucher->type === \App\Modules\Accounts\Models\Voucher::RECEIPT
+                                    ? __('accounts::field.amount_received')
+                                    : __('accounts::field.amount_paid')"
+                                :value="old('amount', $debitLine?->debit)" required numeric />
+
+                    <x-ui.field name="narration"
+                                :label="__('core.table.narration')"
+                                :value="old('narration', $voucher->narration)" />
+
+                    <div class="pb-1">
+                        @include('accounts::voucher.partials.save-buttons', ['voucher' => $voucher, 'type' => $type])
+                    </div>
+                </div>
+            </section>
+        @endif
+
+        {{--
+            ⓘ রসিদ ও পরিশোধে বোতামগুলো নিচের সারির ভিতরে বসে
+            (নমুনায় "সংরক্ষণ ও পোস্ট" তিন ঘরের পাশে)।
+            ⛔ এখানেও আঁকলে বোতাম দুইবার দেখা যায় — গুনে ধরা পড়েছে।
+        --}}
+        @unless ($partyAbove)
+            @include('accounts::voucher.partials.save-buttons', ['voucher' => $voucher, 'type' => $type])
+        @endunless
     </form>
 </x-layouts.app>

@@ -14,6 +14,15 @@
     /* BEFTN · RTGS · NPSB — `mdm_transfer_modes` থেকে। */
     'modes' => [],
 
+    /*
+     * বাহকের ঘর দুইটা এখানে আঁকা হবে কি না।
+     *
+     * ⓘ রসিদ ও পরিশোধে ওগুলো পর্দার **উপরে** বসে (নমুনার সারি ১), তাই
+     * সেখানে `false`। ⚠️ দুই জায়গায় একই নামের ঘর থাকলে ব্রাউজার
+     * শেষেরটার মান পাঠায়, আর উপরের বাছাইটা নীরবে হারায়।
+     */
+    'carrierHere' => true,
+
     /* ভাউচারের নিজের অঙ্ক, নোট গোনার সাথে মেলানোর জন্য। */
     'amountField' => 'amount',
 
@@ -107,15 +116,26 @@
              .toString().replace(/[^0-9.]/g, '') || 0
      ">
 
-    {{-- ── কে বহন করল, আর কখন ─────────────────────────────────── --}}
-    <div class="grid gap-3 sm:grid-cols-2">
-        <x-ui.select name="carried_by" :label="__('accounts::field.carried_by')"
-                     :options="$carriers" :selected="$was('carried_by')"
-                     blank="{{ __('accounts::field.carried_by_nobody') }}" />
+    {{--
+        ── কে বহন করল, আর কখন ──────────────────────────────────────
+        ⛔ রসিদ ও পরিশোধে ঘর দুইটা **উপরে** বসে (নমুনার সারি ১), তাই
+        সেখানে এই ব্লকটা আঁকা হয় না।
 
-        <x-ui.field name="moved_at" type="time" :label="__('accounts::field.moved_at')"
-                    :value="$was('moved_at')" />
-    </div>
+        ⚠️ দুই জায়গায় একই নামের ঘর থাকলে ব্রাউজার **শেষেরটার** মান
+        পাঠাত, আর উপরের বাছাইটা নীরবে হারাত — ব্যবহারকারী উপরে বাহক
+        বাছতেন, খাতায় বসত নিচের খালি ঘরটা। ⓘ ধরা পড়েছে গুনে: পর্দায়
+        "কার মাধ্যমে" দুইবার ছিল।
+    --}}
+    @if ($carrierHere)
+        <div class="grid gap-3 sm:grid-cols-2">
+            <x-ui.select name="carried_by" :label="__('accounts::field.carried_by')"
+                         :options="$carriers" :selected="$was('carried_by')"
+                         blank="{{ __('accounts::field.carried_by_nobody') }}" />
+
+            <x-ui.field name="moved_at" type="time" :label="__('accounts::field.moved_at')"
+                        :value="$was('moved_at')" />
+        </div>
+    @endif
 
     {{-- ── মাধ্যম ───────────────────────────────────────────────── --}}
     <fieldset class="flex flex-col gap-1.5">
@@ -124,7 +144,16 @@
         </legend>
 
         <div class="flex flex-wrap gap-2">
+            {{--
+                ⓘ নমুনায় চারটা চিপ — কার্ড নেই।
+
+                ⚠️ `card` ধ্রুবক থেকে মোছা হয়নি: পুরনো ভাউচারে
+                ওই মানটা বসা আছে, আর ধ্রুবক থেকে সরালে যাচাই ওগুলো
+                সম্পাদনা করতে দিত না — ঠিক যে ভুলটা ১৪ সেপ্টেম্বরে ধরা
+                পড়েছিল। ⓘ কেবল নতুন ভাউচারে চিপটা দেখানো হয় না।
+            --}}
             @foreach (\App\Modules\Accounts\Models\Voucher::INSTRUMENTS as $way)
+                @continue($way === 'card' && $was('instrument') !== 'card')
                 <label class="cursor-pointer">
                     <input type="radio" name="instrument" value="{{ $way }}" class="peer sr-only"
                            x-model="method" @checked($was('instrument', 'cash') === $way)>
