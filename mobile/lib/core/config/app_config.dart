@@ -77,7 +77,7 @@ class AppConfig {
   /// pubspec at runtime without another package, so the two are kept in step
   /// by `test/app_version_test.dart`, which reads the file and fails when
   /// they drift. A version constant that silently lies is worse than none.
-  static const String appVersion = '0.2.0';
+  static const String appVersion = '0.3.0';
 
   /// The counter Android actually compares, and the one `GET /app/version`
   /// answers with — see docs/Contract §৬.
@@ -88,7 +88,7 @@ class AppConfig {
   ///
   /// <p>Must match the `+N` in `pubspec.yaml`'s `version:` — pinned by
   /// `test/app_version_test.dart` for the same reason as [appVersion].
-  static const int appVersionCode = 2;
+  static const int appVersionCode = 3;
 
   static const Duration connectTimeout = Duration(seconds: 15);
   static const Duration receiveTimeout = Duration(seconds: 30);
