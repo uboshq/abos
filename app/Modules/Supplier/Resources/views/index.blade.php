@@ -47,7 +47,10 @@
 @endphp
 
 <x-layouts.app :menu="$menu">
-    <x-slot:title>{{ __('supplier::menu.suppliers') }}</x-slot:title>
+    {{-- ⓘ দুইটা তালিকা একই পর্দা ব্যবহার করে, তাই শিরোনাম ও বোতামের
+         লেখা কন্ট্রোলার থেকে আসে। ⚠️ স্থির লেখা রাখলে সেবাদাতার
+         তালিকাতেও "সরবরাহকারী" লেখা থাকত, আর কেউ বুঝত না তিনি কোথায়। --}}
+    <x-slot:title>{{ $heading }}</x-slot:title>
 
     @if (session('saved'))
         <div role="status"
@@ -59,15 +62,22 @@
 
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
-            <x-ui.toolbar :title="__('supplier::menu.suppliers')" :count="trans_choice('supplier::message.count', $suppliers->total(), ['count' => $suppliers->total()])"
+            <x-ui.toolbar :title="$heading" :count="trans_choice('supplier::message.count', $suppliers->total(), ['count' => $suppliers->total()])"
                 :columns="$columns"
                 :search-placeholder="__('supplier::message.search_placeholder')"
                 :sort="$sortOptions"
                 view>
         <x-slot:actions>
             @can('create', \App\Modules\Supplier\Models\Supplier::class)
-                    <x-ui.button tone="primary" icon="plus" :href="route('supplier.create')">
-                        {{ __('supplier::action.new') }}
+                    {{-- ⭐ মালিকের নির্দেশ, ১৬ সেপ্টেম্বর ২০২৬: *"সেবাদাতা
+                         তালিকা create-এ নতুন সেবাদাতা হবে"*।
+
+                         ⓘ `?kind=service` — কাগজটা একই, কেবল পর্দার লেখা
+                         বদলায়। ⚠️ আলাদা রুট বানালে একই ফর্মের দুইটা পথ
+                         হত, আর একদিন একটায় ঘর যোগ হত অন্যটায় নয়। --}}
+                    <x-ui.button tone="primary" icon="plus"
+                                 :href="route('supplier.create', $isServices ? ['kind' => 'service'] : [])">
+                        {{ $isServices ? __('supplier::action.new_service') : __('supplier::action.new') }}
                     </x-ui.button>
                 @endcan
         </x-slot:actions>

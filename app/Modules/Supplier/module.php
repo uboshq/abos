@@ -57,6 +57,12 @@ return [
 
         'master' => [
             ['label' => 'supplier::menu.suppliers', 'icon' => 'supplier', 'route' => 'supplier.index', 'permission' => 'supplier.view'],
+
+            /* ⭐ সেবাদাতা — মালিকের নির্দেশ, ১৬ সেপ্টেম্বর ২০২৬: সরবরাহকারীর
+               পাশে আলাদা একটা বোতাম, আর সরবরাহকারী বাদে বাকি সব ধরন ওখানে।
+               ⓘ আইকন `handover` — মাল নয়, হাতবদল হওয়া সেবা। */
+            ['label' => 'supplier::menu.service_providers', 'icon' => 'handover',
+                'route' => 'supplier.service.index', 'permission' => 'supplier.view'],
         ],
         'reports' => [
             ['label' => 'supplier::menu.payable_list', 'icon' => 'wallet', 'route' => 'supplier.report.show',

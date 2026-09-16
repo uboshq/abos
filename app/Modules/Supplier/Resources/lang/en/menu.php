@@ -6,6 +6,7 @@ return [
     'payment_schedule' => 'Payment schedule',
 
     'suppliers' => 'Suppliers',
+    'service_providers' => 'Service Providers',
     'payable_list' => 'Payable List',
     'ageing' => 'Payable Ageing',
 
