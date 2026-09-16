@@ -45,6 +45,20 @@ class MenuRepository {
   /// bug like that survives. See docs/Contract §৭.
   static const _ownAttendancePermission = 'hr.attendance.self';
 
+  /// The due list — who owes what, largest first.
+  ///
+  /// <p>Synthetic rather than a menu row, and for a different reason than
+  /// হাজিরা: the server *does* have a row for it, but its route is
+  /// `customer.report.show` — the same route name four different reports
+  /// share, told apart only by a `route_params.slug` this app does not read.
+  /// Mapping by route name alone would make "বকেয়া তালিকা", "বয়সভিত্তিক",
+  /// "আদায়" and "সীমাহীন" indistinguishable, and three of the four would
+  /// open the wrong screen.
+  ///
+  /// <p>⚠️ Worth revisiting when route_params is read: then it becomes an
+  /// ordinary menu row and this tile can go.
+  static const _dueListPermission = 'customer.view';
+
   /// One icon per app path segment — `/me` sends a label for every row but
   /// no icon, so the icon is this app's own, keyed by the path it already
   /// resolved the row to rather than by the server's route name (one path
@@ -53,6 +67,8 @@ class MenuRepository {
   static const Map<String, IconData> _iconByAppPath = {
     'approvals': Icons.fact_check_outlined,
     'attendance': Icons.how_to_reg_outlined,
+    'dues': Icons.account_balance_wallet_outlined,
+    'today': Icons.insights_outlined,
     'customers': Icons.people_alt_outlined,
     'products': Icons.inventory_2_outlined,
     'stock': Icons.warehouse_outlined,
@@ -190,6 +206,22 @@ class MenuRepository {
             label: 'নতুন অর্ডার',
             icon: Icons.add_shopping_cart_outlined,
             routeName: 'new-order',
+          ),
+        // First tile on the grid for whoever can see the day's sales — it is
+        // the question asked most often and from the furthest away.
+        if (user.can('sales.order.view'))
+          const MenuItem(
+            key: 'dashboard.today',
+            label: 'আজকের হিসাব',
+            icon: Icons.insights_outlined,
+            routeName: 'today',
+          ),
+        if (user.can(_dueListPermission))
+          const MenuItem(
+            key: 'customer.dues',
+            label: 'বকেয়া তালিকা',
+            icon: Icons.account_balance_wallet_outlined,
+            routeName: 'dues',
           ),
         if (user.can(_ownAttendancePermission))
           const MenuItem(
