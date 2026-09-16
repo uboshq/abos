@@ -10,7 +10,7 @@ publish_to: "none"
 # package installer refuses an "upgrade" whose versionCode is not greater --
 # which is exactly the path a phone in a shop takes in the morning. A plain
 # counter that only ever goes up, never derived from the version name.
-version: 0.1.0+1
+version: 0.2.0+2
 
 environment:
   sdk: ">=3.4.0 <4.0.0"
