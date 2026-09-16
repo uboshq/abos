@@ -49,15 +49,43 @@ class _OrderListScreenState extends State<OrderListScreen> {
       ..sort((a, b) => (b.trxDate ?? DateTime(0))
           .compareTo(a.trxDate ?? DateTime(0)));
 
+    // Why the last pull brought nothing down, when that is what happened —
+    // null after a clean pull, and an empty list then means an empty list.
+    final trouble = ReferenceSync.troubleSentence;
     final nothingAtAll =
         rejected.isEmpty && pendingCount == 0 && synced.isEmpty;
 
     return Scaffold(
       appBar: AppBar(title: const Text('অর্ডারের অবস্থা')),
+      // ⛔ Even with nothing to show, the empty state lives inside a
+      // RefreshIndicator over a scrollable. A RefreshIndicator only
+      // recognises a pull on a scrollable descendant, so a bare EmptyState
+      // makes the gesture do nothing — on the one screen where somebody is
+      // most likely to try it, because nothing is there yet.
+      //
+      // ⚠️ This is commit b2392ce's bug, found on a device and fixed on three
+      // screens; this fourth one was missed, and the test written that day
+      // listed those three by hand so it never noticed. Found again on 16
+      // September the same way: by pulling on a real screen and watching
+      // nothing happen. pull_to_refresh_test.dart now counts the screens that
+      // can draw an EmptyState, so the next one cannot slip past either.
       body: nothingAtAll
-          ? const EmptyState(
-              icon: Icons.receipt_long_outlined,
-              title: 'এখনো কোনো অর্ডার নেই',
+          ? RefreshIndicator(
+              onRefresh: _refresh,
+              child: ListView(
+                children: [
+                  EmptyState(
+                    icon: trouble == null
+                        ? Icons.receipt_long_outlined
+                        : Icons.cloud_off_outlined,
+                    title: trouble == null
+                        ? 'এখনো কোনো অর্ডার নেই'
+                        : 'অর্ডারের তালিকা আনা যায়নি',
+                    // See CustomerListScreen's comment on the same line.
+                    message: trouble ?? 'নিচে টেনে আবার চেষ্টা করুন।',
+                  ),
+                ],
+              ),
             )
           : RefreshIndicator(
               onRefresh: _refresh,

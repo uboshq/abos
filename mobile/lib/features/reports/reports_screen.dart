@@ -200,18 +200,41 @@ class _ReportViewScreenState extends State<ReportViewScreen> {
                   style: const TextStyle(fontSize: 12.5)),
             ),
           Expanded(
-            child: _error != null
-                ? EmptyState(
-                    icon: Icons.cloud_off_outlined,
-                    title: 'রিপোর্ট আনা গেল না',
-                    message: _error)
-                : page == null
-                    ? const SizedBox.shrink()
-                    : page.rows.isEmpty
-                        ? const EmptyState(
+            // ⛔ Both empty branches sit inside the RefreshIndicator, over a
+            // scrollable. Outside one, the pull gesture is not recognised at
+            // all — and with no rows there is no pager either, so a failed
+            // report became a dead end that could only be left by going back
+            // and tapping the report again. Same shape as the bug found on
+            // four list screens; see pull_to_refresh_test.dart.
+            //
+            // ⓘ The RefreshIndicator goes around the empty branches only, not
+            // around _Table. A table scrolls horizontally on the outside, and
+            // a RefreshIndicator ignores a horizontal scrollable — wrapping
+            // the whole thing would have looked right in the source and done
+            // nothing on a phone, which is this bug's entire habit. Rows on
+            // screen have the pager instead.
+            child: page != null && page.rows.isNotEmpty
+                ? _Table(page: page)
+                : RefreshIndicator(
+                    onRefresh: _load,
+                    child: ListView(
+                      children: [
+                        if (_error != null)
+                          EmptyState(
+                            icon: Icons.cloud_off_outlined,
+                            title: 'রিপোর্ট আনা গেল না',
+                            message: _error,
+                          )
+                        else if (page == null)
+                          const SizedBox(height: 200)
+                        else
+                          const EmptyState(
                             icon: Icons.inbox_outlined,
-                            title: 'এই সময়ে কোনো সারি নেই')
-                        : _Table(page: page),
+                            title: 'এই সময়ে কোনো সারি নেই',
+                          ),
+                      ],
+                    ),
+                  ),
           ),
           if (page != null && (page.page > 1 || page.hasMore))
             _Pager(
