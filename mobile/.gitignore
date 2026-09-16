@@ -40,3 +40,7 @@ key.properties
 # appeared in a commit here once already because .gradle/ was ignored and this
 # sibling directory was not.
 /android/.kotlin/
+
+# বিতরণের জন্য নামকরণ করা APK — গিটে নয়, ৫২ MB বাইনারি
+# প্রতিটা রিলিজে চিরকালের জন্য রিপোতে জমে যেত।
+dist/
