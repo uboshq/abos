@@ -191,7 +191,81 @@ class VoucherController extends Controller implements HasMiddleware
         return response()->json([
             'known' => true,
             'amount' => app(AccountsFacts::class)->dueFrom($type, $id),
+            'bills' => $this->openBillsOf($type, $id),
         ]);
+    }
+
+    /**
+     * এই পক্ষের যে বিলগুলো এখনো পুরো শোধ হয়নি।
+     *
+     * ── ⭐ কেন মোট বকেয়া যথেষ্ট নয় ──────────────────────────────────
+     * [[AccountsFacts::dueFrom]] খতিয়ান ধরে **একটা সংখ্যা** দেয় — "তিনি
+     * মোট কত দেবেন"। ⓘ কিন্তু টাকা এলে প্রশ্নটা আলাদা: **কোন বিলের
+     * বিপরীতে?**
+     *
+     * ⚠️ সেটা না জানলে পুরনো বিলটা চিরকাল খোলা থাকত আর নতুনটা শোধ
+     * দেখাত, অথচ টাকাটা একই। ⓘ বয়স ধরে বকেয়ার তালিকা (aging) তখন
+     * মিথ্যা বলত, আর "কার টাকা কতদিন আটকে" প্রশ্নের উত্তরটাই ভুল হত।
+     *
+     * ── ⓘ কেন কেবল গ্রাহক ───────────────────────────────────────────
+     * বিলভিত্তিক নিষ্পত্তি এই মুহূর্তে বিক্রয়ের দিকেই আছে
+     * (`sal_invoices`)। ⚠️ সরবরাহকারীর দিকে একই জিনিস লাগবে, কিন্তু
+     * সেটা `pur_bills` ধরে, আর সেই পথটা এখনো লেখা হয়নি — তাই খালি
+     * তালিকা ফেরে, ভুল তালিকা নয়।
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function openBillsOf(string $type, int $id): array
+    {
+        if ($type !== 'customer') {
+            return [];
+        }
+
+        /*
+         * ⓘ `paid` ধরা হয় ঐ ইনভয়েসের বিপরীতে বসা রসিদগুলোর যোগফল
+         * থেকে (`against_type` / `against_id`) — আলাদা কোনো "শোধ হয়েছে"
+         * কলাম নেই, আর সেটাই ঠিক: দুই জায়গায় লিখলে একদিন দুইটা আলাদা
+         * হয়ে যেত।
+         */
+        return DB::table('sal_invoices as i')
+            ->where('i.company_id', CompanyContext::id())
+            ->where('i.customer_id', $id)
+            ->where('i.status', 'posted')
+            ->whereNull('i.deleted_at')
+            ->leftJoin('vouchers as v', function ($join): void {
+                $join->on('v.against_id', '=', 'i.id')
+                    ->where('v.against_type', '=', 'sales_invoice')
+                    ->whereNull('v.deleted_at')
+                    ->where('v.status', '=', 'posted');
+            })
+            ->groupBy('i.id', 'i.document_no', 'i.trx_date', 'i.due_on', 'i.total')
+            ->havingRaw('i.total - COALESCE(SUM(v.amount), 0) > 0.0001')
+            ->orderBy('i.trx_date')
+            ->limit(50)
+            ->get([
+                'i.id',
+                'i.document_no',
+                'i.trx_date',
+                'i.due_on',
+                'i.total',
+                DB::raw('COALESCE(SUM(v.amount), 0) as paid'),
+            ])
+            ->map(fn ($row) => [
+                'id' => (int) $row->id,
+                'no' => $row->document_no,
+                'date' => $row->trx_date,
+
+                /*
+                 * বয়স — দিনে, আর সেটা এখানেই গোনা হয়।
+                 *
+                 * ⓘ ব্রাউজারে গুনলে ফোনের ঘড়ি ভুল থাকলে বয়সটাও ভুল
+                 * হত, আর ব্যবহারকারী বুঝতেন না কেন।
+                 */
+                'age' => (int) now()->startOfDay()->diffInDays(\Illuminate\Support\Carbon::parse($row->trx_date)->startOfDay()),
+                'outstanding' => bcsub((string) $row->total, (string) $row->paid, 4),
+            ])
+            ->values()
+            ->all();
     }
 
     /**
@@ -735,7 +809,7 @@ class VoucherController extends Controller implements HasMiddleware
             // টাকা এল গ্রাহক/আয় থেকে, গেল ক্যাশ বা ব্যাংকে
             Voucher::RECEIPT => [
                 'from' => ['label' => 'accounts::field.received_from', 'source' => 'party_or_income'],
-                'to' => ['label' => 'accounts::field.received_into', 'source' => 'money'],
+                'to' => ['label' => 'accounts::field.paid_into', 'source' => 'money'],
             ],
             // টাকা এল ক্যাশ/ব্যাংক থেকে, গেল সরবরাহকারী বা দায়ে
             Voucher::PAYMENT => [

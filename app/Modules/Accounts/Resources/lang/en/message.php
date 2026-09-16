@@ -177,4 +177,6 @@ return [
     'indirect_effect' => 'Indirect: the money lands straight in the expense head, this month. It rides on no product.',
     'reverse_on_hint' => 'If this entry is provisional, the day it undoes itself - optional.',
     'attachment_hint' => 'A photo or scan of the bill - six months later this is what you need.',
+    'over_allocated' => 'You have split more than the amount received - the two must match.',
+    'no_open_bill' => 'This party has no open bill - the money will sit as an advance.',
 ];

@@ -80,18 +80,16 @@
 
     <div class="grid gap-3 sm:grid-cols-3">
         {{-- খরচের খাত — ৫৩১০ পরিবহন ভাড়া, ৫৩২০ বিদ্যুৎ বিল… --}}
+        {{--
+            ⛔ `:options` প্রপ, স্লটে `<option>` নয় — ১৫ সেপ্টেম্বর ২০২৬।
+            কম্পোনেন্টটা স্লটের অপশনগুলো চুপচাপ ফেলে দেয়, আর ড্রপডাউনটা
+            খালি থাকে — ঘরটা পর্দায় থাকে, ভিতরে কিছুই না।
+        --}}
         <x-ui.select name="expense_account_id"
                      :label="__('accounts::field.expense_head')"
-                     :value="$was('expense_account_id')"
-                     required>
-            <option value="">—</option>
-            @foreach ($expenseAccounts as $account)
-                <option value="{{ $account->id }}"
-                        @selected((int) $was('expense_account_id') === (int) $account->id)>
-                    {{ $account->code }} · {{ $account->display_name }}
-                </option>
-            @endforeach
-        </x-ui.select>
+                     :options="collect($expenseAccounts)->mapWithKeys(fn ($a) => [$a->id => $a->code.' · '.$a->label()])->all()"
+                     :selected="$was('expense_account_id')"
+                     required />
 
         {{--
             খরচের কেন্দ্র — কোন ডিপো, গুদাম, অফিস বা গাড়ির খরচ।
@@ -102,12 +100,8 @@
         --}}
         <x-ui.select name="cost_centre_id"
                      :label="__('accounts::field.cost_centre')"
-                     :value="$was('cost_centre_id')">
-            <option value="">—</option>
-            @foreach ($costCentres ?? [] as $id => $name)
-                <option value="{{ $id }}" @selected((int) $was('cost_centre_id') === (int) $id)>{{ $name }}</option>
-            @endforeach
-        </x-ui.select>
+                     :options="$costCentres ?? []"
+                     :selected="$was('cost_centre_id')" />
     </div>
 
     <div class="mt-3 grid gap-3 sm:grid-cols-3">
