@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/records/customer_record.dart';
 import '../../core/sync_engine/reference_sync.dart';
@@ -136,6 +137,7 @@ class _CustomerTile extends StatelessWidget {
         subtitle: subtitle.isEmpty
             ? null
             : Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
+        onTap: () => context.go('/home/customers/${customer.id}'),
         // No due row at all when this shop's CustomerDue has not been pulled
         // yet — the two entity types have separate watermarks, so one can
         // arrive a sync ahead of the other, and a shop showing "বকেয়া নেই"
