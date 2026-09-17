@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Models;
 
+use App\Core\Concerns\BelongsToCompanyThroughParent;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use Illuminate\Database\Eloquent\Builder;
@@ -20,6 +21,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class VoucherLine extends Model
 {
+    use BelongsToCompanyThroughParent;
     use HasFactory;
     use HasPublicId;
     use IsAudited;
@@ -44,6 +46,16 @@ class VoucherLine extends Model
             'credit' => 'decimal:4',
             'sort_order' => 'integer',
         ];
+    }
+
+    /**
+     * এই সারির কাগজ — আর তার `company_id`-ই এটাকে বাঁধে।
+     *
+     * ⓘ পুরো কারণটা [[BelongsToCompanyThroughParent]]-এ।
+     */
+    protected function companyParent(): string
+    {
+        return 'voucher';
     }
 
     public function voucher(): BelongsTo

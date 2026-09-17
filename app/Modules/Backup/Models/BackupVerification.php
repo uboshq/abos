@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Backup\Models;
 
+use App\Core\Concerns\BelongsToCompanyThroughParent;
 use App\Core\Concerns\HasPublicId;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -44,6 +45,7 @@ class BackupVerification extends Model
      * ডিপ্লয়ের ঠিক আগে ধরেছে (৩ সেপ্টেম্বর ২০২৬)। এই রিপোতে ঠিকানায়
      * ডাটাবেসের `id` কখনো যায় না, তাই প্রতিটা মডেলেই এটা লাগে।
      */
+    use BelongsToCompanyThroughParent;
     use HasPublicId;
 
     protected $table = 'bak_verifications';
@@ -64,6 +66,16 @@ class BackupVerification extends Model
             'duration_ms' => 'integer',
             'verified_at' => 'datetime',
         ];
+    }
+
+    /**
+     * এই সারির কাগজ — আর তার `company_id`-ই এটাকে বাঁধে।
+     *
+     * ⓘ পুরো কারণটা [[BelongsToCompanyThroughParent]]-এ।
+     */
+    protected function companyParent(): string
+    {
+        return 'run';
     }
 
     public function run(): BelongsTo

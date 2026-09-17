@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Models;
 
+use App\Core\Concerns\BelongsToCompanyThroughParent;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Modules\Inventory\Concerns\HasEnteredPack;
@@ -14,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /** বিলের একটা লাইন। */
 class SalesInvoiceLine extends Model
 {
+    use BelongsToCompanyThroughParent;
     use HasEnteredPack;
     use HasPublicId;
     use IsAudited;
@@ -47,6 +49,16 @@ class SalesInvoiceLine extends Model
             'price_variance' => 'decimal:4',
             'tax_variance' => 'decimal:4',
         ];
+    }
+
+    /**
+     * এই সারির কাগজ — আর তার `company_id`-ই এটাকে বাঁধে।
+     *
+     * ⓘ পুরো কারণটা [[BelongsToCompanyThroughParent]]-এ।
+     */
+    protected function companyParent(): string
+    {
+        return 'invoice';
     }
 
     public function invoice(): BelongsTo

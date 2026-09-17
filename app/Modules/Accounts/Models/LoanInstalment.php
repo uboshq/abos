@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Models;
 
+use App\Core\Concerns\BelongsToCompanyThroughParent;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Contracts\Drillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -24,6 +25,7 @@ use Illuminate\Support\Carbon;
  */
 class LoanInstalment extends Model implements Drillable
 {
+    use BelongsToCompanyThroughParent;
     use HasFactory;
     use HasPublicId;
 
@@ -47,6 +49,16 @@ class LoanInstalment extends Model implements Drillable
             'interest' => 'decimal:4',
             'paid_amount' => 'decimal:4',
         ];
+    }
+
+    /**
+     * এই সারির কাগজ — আর তার `company_id`-ই এটাকে বাঁধে।
+     *
+     * ⓘ পুরো কারণটা [[BelongsToCompanyThroughParent]]-এ।
+     */
+    protected function companyParent(): string
+    {
+        return 'loan';
     }
 
     public function loan(): BelongsTo

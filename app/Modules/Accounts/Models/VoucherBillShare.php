@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Models;
 
+use App\Core\Concerns\BelongsToCompanyThroughParent;
 use App\Modules\Purchase\Models\PurchaseBill;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -27,6 +28,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 final class VoucherBillShare extends Model
 {
+    use BelongsToCompanyThroughParent;
+
     protected $table = 'acc_voucher_bill_shares';
 
     protected $fillable = [
@@ -38,6 +41,16 @@ final class VoucherBillShare extends Model
         return [
             'share_amount' => 'decimal:4',
         ];
+    }
+
+    /**
+     * এই সারির কাগজ — আর তার `company_id`-ই এটাকে বাঁধে।
+     *
+     * ⓘ পুরো কারণটা [[BelongsToCompanyThroughParent]]-এ।
+     */
+    protected function companyParent(): string
+    {
+        return 'voucher';
     }
 
     public function voucher(): BelongsTo
