@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Purchase\Services;
 
+use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Services\SettingsService;
@@ -56,6 +57,7 @@ final class PurchaseReceiptService
         private readonly StockService $stock,
         private readonly CostLayerService $costs,
         private readonly SettingsService $settings,
+        private readonly DocumentApproval $approvals,
     ) {}
 
     /**
@@ -204,6 +206,25 @@ final class PurchaseReceiptService
         if ($receipt->lines->isEmpty()) {
             throw ValidationException::withMessages(['lines' => __('purchase::validation.no_lines')]);
         }
+
+        /*
+         * ⭐ অনুমোদন — মালিকের সিদ্ধান্ত, ১৮ সেপ্টেম্বর ২০২৬।
+         *
+         * মালিকের কথা: *"এখন সব জায়গায় এপ্রুভাল দিয়ে টেস্ট কর, পরে যে
+         * যে জায়গায় লাগবে না তাও উঠিয়ে দিব"*।
+         *
+         * ⚠️ সারিটা কারো আজকের কাজ থামায় না: ছক না বসানো পর্যন্ত
+         * `assertClear()` চুপচাপ ফিরে যায়, আর কাজ আগের মতোই চলে।
+         * ⓘ কত টাকার উপরে সই লাগবে সেটা প্রতিটা কোম্পানি নিজে বসায় —
+         * এক ডিপোর "বড় কাজ" আরেকটার রোজকার কাজ।
+         */
+        $this->approvals->assertClear(
+            document: $receipt,
+            module: 'purchase',
+            action: 'receipt',
+            field: 'status',
+            reason: $receipt->narration,
+        );
 
         return DB::transaction(function () use ($receipt) {
             foreach ($receipt->lines as $line) {

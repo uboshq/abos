@@ -305,6 +305,16 @@ return [
         RecipeBook::class => RecipeBookAdapter::class,
     ],
 
+    /*
+     * ⭐ রান্না নিশ্চিত করা — মালিকের সিদ্ধান্ত, ১৮ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ নিশ্চিত করার মুহূর্তেই কাঁচামাল গুদাম থেকে খরচ হয়ে যায়,
+     * আর রান্না ফেরত নেওয়া যায় না — তাই প্রশ্নটা আগেই করা ভালো।
+     */
+    'approvals' => [
+        'production' => 'restaurant::approval.production',
+    ],
+
     'doc_types' => [
         'CKG' => 'restaurant::doc.production',
     ],

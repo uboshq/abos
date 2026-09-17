@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Customer\Services;
 
+use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Services\DuplicateGuard;
 use App\Core\Services\SettingsService;
@@ -29,6 +30,7 @@ final class CustomerService
         private readonly NumberSeriesEngine $numbers,
         private readonly SettingsService $settings,
         private readonly OpeningBalanceService $openings,
+        private readonly DocumentApproval $approvals,
     ) {}
 
     /**
@@ -113,6 +115,38 @@ final class CustomerService
         // পাওনা লেজার থেকে আসে, আর এখানে সংখ্যাটা বদলালে লেজার ও তালিকা
         // দুই রকম বলত। বদলাতে হলে একটা জাবেদা ভাউচার লাগবে।
         unset($data['opening_balance'], $data['opening_date']);
+
+        /*
+         * ⭐ বাকির সীমা বাড়ানো সই চায় — মালিকের সিদ্ধান্ত, ১৮ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⛔ কেন এই একটা ঘর ───────────────────────────
+         * বাকির সীমাটাই সবচেয়ে চুপচাপ দরজা: সংখ্যাটা একবার বাড়িয়ে
+         * দিলেই ওই গ্রাহকের কাছে যত খুশি মাল বাকিতে যায় — প্রতিটা
+         * বিক্রয় তখন নিয়ম মেনেই হয়, আর কোথাও কিছু ভাঙে না।
+         *
+         * ⚠️ ⛔ আর ধরা পড়ে বহু পরে, যখন টাকাটা আর ওঠে না।
+         *
+         * ── ⓘ কেবল বাড়ালে, কমালে নয় ────────────────────
+         * সীমা কমানো ঝুঁকি কমায়, তাই ওতে সই চাওয়া কেবল কাজ থামাত।
+         * ⓘ অঙ্ক হিসেবে বাড়তিটাই যায় — তাই কোম্পানি "পঞ্চাশ হাজারের
+         * বেশি বাড়ালে সই" বসাতে পারে।
+         */
+        $before = (string) ($customer->credit_limit ?? '0');
+        $after = (string) ($data['credit_limit'] ?? $before);
+
+        if (bccomp($after, $before, 4) > 0) {
+            $this->approvals->assertClear(
+                document: $customer,
+                module: 'customer',
+                action: 'credit_limit',
+                field: 'credit_limit',
+                amount: bcsub($after, $before, 4),
+                reason: __('customer::approval.limit_raised', [
+                    'from' => $before,
+                    'to' => $after,
+                ]),
+            );
+        }
 
         $customer->update($data);
 

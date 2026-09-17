@@ -451,6 +451,20 @@ return [
      * রোজকার ছাড়।
      */
     'approvals' => [
+        /*
+         * ⭐ ফেরত ও আদায় — মালিকের সিদ্ধান্ত, ১৮ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ দুইটার মিল একটাই: **টাকা বা মাল ফিরে আসে, আর
+         * খাতা দেখে বোঝার উপায় থাকে না**। ⚠️ একটা মিথ্যা ফেরতে
+         * বিক্রি মুছে যায়; কম লেখা আদায়ে টাকা পথেই থেকে যায়।
+         *
+         * ⚠️ সারি দুইটা কারো আজকের কাজ থামায় না — ছক না বসানো
+         * পর্যন্ত সব আগের মতোই চলে।
+         */
+        'return' => 'sales::approval.return',
+        'order' => 'sales::approval.order',
+        'challan' => 'sales::approval.challan',
+        'collection' => 'sales::approval.collection',
         'discount' => 'sales::approval.discount',
     ],
 

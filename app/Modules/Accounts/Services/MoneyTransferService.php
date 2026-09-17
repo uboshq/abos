@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Services;
 
+use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Support\CompanyContext;
@@ -45,6 +46,7 @@ final class MoneyTransferService
     public function __construct(
         private readonly NumberSeriesEngine $numbers,
         private readonly PostingEngine $posting,
+        private readonly DocumentApproval $approvals,
     ) {}
 
     /**
@@ -199,6 +201,24 @@ final class MoneyTransferService
                 'to_till_id' => __('accounts::validation.transfer_no_destination'),
             ]);
         }
+
+        /*
+         * ⭐ অনুমোদন — মালিকের সিদ্ধান্ত, ১৮ সেপ্টেম্বর ২০২৬।
+         *
+         * মালিকের কথা: *"এখন সব জায়গায় এপ্রুভাল দিয়ে টেস্ট কর, পরে যে
+         * যে জায়গায় লাগবে না তাও উঠিয়ে দিব"*।
+         *
+         * ⚠️ সারিটা কারো আজকের কাজ থামায় না: ছক না বসানো পর্যন্ত
+         * `assertClear()` চুপচাপ ফিরে যায়, আর কাজ আগের মতোই চলে।
+         */
+        $this->approvals->assertClear(
+            document: $transfer,
+            module: 'accounts',
+            action: 'transfer',
+            field: 'status',
+            amount: (string) $transfer->amount,
+            reason: $transfer->narration,
+        );
 
         return DB::transaction(function () use ($transfer, $destination, $receivedBy) {
             /*

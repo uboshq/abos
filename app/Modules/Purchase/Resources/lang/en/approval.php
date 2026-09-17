@@ -10,6 +10,7 @@ declare(strict_types=1);
  */
 
 return [
+    'receipt' => 'Goods receipt',
     'order' => 'Confirming a purchase order',
     'bill' => 'Posting a purchase bill',
     'payment' => 'Paying a supplier',

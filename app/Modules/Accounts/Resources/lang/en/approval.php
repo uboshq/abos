@@ -10,6 +10,9 @@ declare(strict_types=1);
  */
 
 return [
+    'cash_count' => 'Accepting a cash-count difference',
+    'transfer' => 'Money transfer',
+    'year_end' => 'Year-end closing',
     'expense' => 'Expense voucher',
     'receipt' => 'Receipt voucher',
     'payment' => 'Payment voucher',

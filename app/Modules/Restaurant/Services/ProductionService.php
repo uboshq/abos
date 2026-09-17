@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Restaurant\Services;
 
+use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
@@ -46,6 +47,7 @@ final class ProductionService
         private readonly RecipeService $recipes,
         private readonly StockService $stock,
         private readonly CostLayerService $costs,
+        private readonly DocumentApproval $approvals,
     ) {}
 
     /**
@@ -94,6 +96,23 @@ final class ProductionService
                 'status' => __('inventory::validation.production_not_draft'),
             ]);
         }
+
+        /*
+         * ⭐ অনুমোদন — মালিকের সিদ্ধান্ত, ১৮ সেপ্টেম্বর ২০২৬।
+         *
+         * মালিকের কথা: *"এখন সব জায়গায় এপ্রুভাল দিয়ে টেস্ট কর, পরে যে
+         * যে জায়গায় লাগবে না তাও উঠিয়ে দিব"*।
+         *
+         * ⚠️ সারিটা কারো আজকের কাজ থামায় না: ছক না বসানো পর্যন্ত
+         * `assertClear()` চুপচাপ ফিরে যায়, আর কাজ আগের মতোই চলে।
+         */
+        $this->approvals->assertClear(
+            document: $production,
+            module: 'restaurant',
+            action: 'production',
+            field: 'status',
+            reason: $production->narration,
+        );
 
         return DB::transaction(function () use ($production) {
             $recipe = $production->recipe()->with('lines.product')->firstOrFail();

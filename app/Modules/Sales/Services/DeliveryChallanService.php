@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Services;
 
+use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Support\CompanyContext;
@@ -99,6 +100,7 @@ final class DeliveryChallanService
          * [[PostingEngine]] পাহারায়, প্রথম দিনেই।
          */
         private readonly CashTillService $tills,
+        private readonly DocumentApproval $approvals,
     ) {}
 
     /**
@@ -200,6 +202,25 @@ final class DeliveryChallanService
         if ($challan->lines->isEmpty()) {
             throw ValidationException::withMessages(['lines' => __('sales::validation.no_lines')]);
         }
+
+        /*
+         * ⭐ অনুমোদন — মালিকের সিদ্ধান্ত, ১৮ সেপ্টেম্বর ২০২৬।
+         *
+         * মালিকের কথা: *"এখন সব জায়গায় এপ্রুভাল দিয়ে টেস্ট কর, পরে যে
+         * যে জায়গায় লাগবে না তাও উঠিয়ে দিব"*।
+         *
+         * ⚠️ সারিটা কারো আজকের কাজ থামায় না: ছক না বসানো পর্যন্ত
+         * `assertClear()` চুপচাপ ফিরে যায়, আর কাজ আগের মতোই চলে।
+         * ⓘ কত টাকার উপরে সই লাগবে সেটা প্রতিটা কোম্পানি নিজে বসায় —
+         * এক ডিপোর "বড় কাজ" আরেকটার রোজকার কাজ।
+         */
+        $this->approvals->assertClear(
+            document: $challan,
+            module: 'sales',
+            action: 'challan',
+            field: 'status',
+            reason: $challan->narration,
+        );
 
         return DB::transaction(function () use ($challan) {
             foreach ($challan->lines as $line) {

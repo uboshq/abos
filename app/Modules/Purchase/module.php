@@ -225,6 +225,7 @@ return [
      */
     'approvals' => [
         'order' => 'purchase::approval.order',
+        'receipt' => 'purchase::approval.receipt',
         'bill' => 'purchase::approval.bill',
         'payment' => 'purchase::approval.payment',
         'return' => 'purchase::approval.return',

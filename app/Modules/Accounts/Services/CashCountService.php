@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Services;
 
+use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DateFormat;
@@ -33,6 +34,7 @@ final class CashCountService
     public function __construct(
         private readonly NumberSeriesEngine $numbers,
         private readonly VoucherService $vouchers,
+        private readonly DocumentApproval $approvals,
     ) {}
 
     /**
@@ -95,6 +97,28 @@ final class CashCountService
                 'status' => __('accounts::validation.count_already_approved'),
             ]);
         }
+
+        /*
+         * ⭐ অনুমোদন — মালিকের সিদ্ধান্ত, ১৮ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⛔ কেন গনার মানা সই চায় ──────────────────────
+         * এই মুহূর্তেই গনা টাকা আর খাতার টাকার **পার্থক্যটা
+         * খাতায় বসে যায়** — অর্থাৎ ঘাটতিটা ক্ষমা পেয়ে যায়।
+         *
+         * ⚠️ যিনি গুনলেন আর যিনি ক্ষমা করলেন — একজন হলে ক্যাশিয়ার
+         * নিজেই নিজের ঘাটতি মুছে দিতে পারেন, আর কেউ জানবে না।
+         *
+         * ⓘ অঙ্ক হিসেবে পার্থক্যটাই যায় — মিলে গেলে শূন্য, তাই
+         * সীমা বসালে মিলে যাওয়া গণনা কখনো আটকাবে না।
+         */
+        $this->approvals->assertClear(
+            document: $count,
+            module: 'accounts',
+            action: 'cash_count',
+            field: 'status',
+            amount: (string) abs((float) ($count->difference ?? 0)),
+            reason: $count->narration,
+        );
 
         return DB::transaction(function () use ($count) {
             if (! $count->matches()) {
