@@ -76,7 +76,18 @@ class BankFacilityController extends Controller implements HasMiddleware
     {
         return view('finance::bank-facility.index', [
             'menu' => $this->menu->forUser($request->user()),
-            'facilities' => BankFacility::query()->latest('id')->get(),
+            /*
+             * ⭐ পাতা ভাগ — ১৭ সেপ্টেম্বর ২০২৬, নিরীক্ষার ধাপ ২।
+             *
+             * ⓘ সুবিধাগুলো **জমতেই থাকে**: প্রতিটা নবায়ন একটা নতুন সারি,
+             * আর পুরনোগুলো ইতিহাস হিসেবে থেকে যায় (মুছলে ঐ সময়ের চেকের
+             * হিসাব অনাথ হত)। ⚠️ তাই তালিকাটার কোনো স্বাভাবিক সীমা নেই।
+             *
+             * ⛔ সীমা ছাড়া তালিকা শেয়ার্ড হোস্টিংয়ে একদিন টাইমআউট করে —
+             * আর সেদিন ব্যবহারকারী কেবল একটা সাদা পাতা দেখেন, কোনো
+             * কারণ ছাড়াই।
+             */
+            'facilities' => BankFacility::query()->latest('id')->paginate(50)->withQueryString(),
             'renewals' => $this->facilities->dueForRenewal(),
             'liabilityAccounts' => $this->liabilityAccounts(),
             'moneyAccounts' => $this->moneyAccounts(),
