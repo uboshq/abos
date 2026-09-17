@@ -226,11 +226,12 @@ final class AccountsDashboard implements ProvidesDashboard
                     label: __('accounts::dashboard.today_expense'),
                     value: Money::format($today['expense']),
                     hint: __('accounts::dashboard.today_expense_hint'),
-                    href: route('finance.expense.index', [
+                    href: route('accounts.voucher.index', [
+                        'type' => Voucher::EXPENSE,
                         'from' => now()->toDateString(),
                         'to' => now()->toDateString(),
                     ]),
-                    permission: 'finance.expense.view',
+                    permission: 'accounts.report',
                     tone: Stat::BAD,
                 ),
 

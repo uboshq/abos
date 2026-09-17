@@ -266,10 +266,25 @@ class AnExpenseNobodySaidYesToTest extends TestCase
         $voucher = $this->expense();
         app(VoucherApproval::class)->stopping($voucher);
 
-        $html = $this->get(route('finance.expense.index'))->assertOk()->getContent();
+        /*
+         * ⓘ পর্দাটা বদলেছে, দাবিটা নয় — ১৮ সেপ্টেম্বর ২০২৬।
+         * মালিক খরচ অর্থ মডিউল থেকে তুলে দিতে বলেছেন, আর ঝুলে থাকা
+         * কাগজগুলো এখন খরচ ভাউচারের তালিকার মাথায় একটা চিপে।
+         */
+        $html = $this->get(route('accounts.voucher.index', Voucher::EXPENSE))
+            ->assertOk()->getContent();
 
-        $this->assertStringContainsString((string) $voucher->document_no, $html);
-        $this->assertStringContainsString(__('finance::field.waiting_approval'), $html);
+        $this->assertStringContainsString(
+            trans_choice('accounts::message.awaiting_approval', 1, ['count' => 1]),
+            $html,
+            'ঝুলে থাকা খরচের সংখ্যাটা তালিকার মাথায় নেই।',
+        );
+
+        /* ⭐ আর চিপে চাপ দিলে কেবল ওই কাগজগুলোই দেখা যায়। */
+        $only = $this->get(route('accounts.voucher.index', [Voucher::EXPENSE, 'awaiting' => 1]))
+            ->assertOk()->getContent();
+
+        $this->assertStringContainsString((string) $voucher->document_no, $only);
     }
 
     /**
@@ -283,8 +298,12 @@ class AnExpenseNobodySaidYesToTest extends TestCase
     {
         $this->expense();
 
-        $html = $this->get(route('finance.expense.index'))->assertOk()->getContent();
+        $html = $this->get(route('accounts.voucher.index', Voucher::EXPENSE))
+            ->assertOk()->getContent();
 
-        $this->assertStringNotContainsString(__('finance::field.waiting_approval'), $html);
+        $this->assertStringNotContainsString(
+            trans_choice('accounts::message.awaiting_approval', 1, ['count' => 1]),
+            $html,
+        );
     }
 }

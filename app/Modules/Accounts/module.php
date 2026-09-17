@@ -139,6 +139,17 @@ return [
              */
             ['label' => 'accounts::menu.by_cost_centre', 'icon' => 'columns', 'route' => 'accounts.report.show',
                 'route_params' => ['slug' => 'by-cost-centre'], 'permission' => 'accounts.report'],
+
+            /*
+             * ⭐ কোন খাতে কত খরচ — অর্থ মডিউল থেকে এখানে।
+             *
+             * ⚠️ অনুমতি ইচ্ছাকৃতভাবে `accounts.report`, `.final` নয় —
+             * রোজ খরচ লেখেন ডিপো ম্যানেজার, আর তাঁর লাভ-ক্ষতি দেখার
+             * অনুমতি থাকে না। ⓘ এই পাতায় লাভ বা মূলধনের কোনো
+             * সংখ্যা নেই, কেবল খরচ।
+             */
+            ['label' => 'accounts::menu.expense_by_head', 'icon' => 'wallet', 'route' => 'accounts.report.show',
+                'route_params' => ['slug' => 'expense-by-head'], 'permission' => 'accounts.report'],
             ['label' => 'accounts::menu.ledger', 'icon' => 'list', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'ledger'], 'permission' => 'accounts.report'],
             ['label' => 'accounts::menu.trial_balance', 'icon' => 'scale', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'trial-balance'], 'permission' => 'accounts.report'],
 
