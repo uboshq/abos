@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Purchase\Models;
 
+use App\Core\Concerns\BelongsToCompanyThroughParent;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Modules\Inventory\Concerns\HasEnteredPack;
@@ -25,6 +26,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class PurchaseOrderLine extends Model
 {
+    use BelongsToCompanyThroughParent;
     use HasEnteredPack;
     use HasPublicId;
     use IsAudited;
@@ -55,6 +57,16 @@ class PurchaseOrderLine extends Model
              */
             'tax_variance' => 'decimal:4',
         ];
+    }
+
+    /**
+     * এই সারির কাগজ — আর তার `company_id`-ই এটাকে বাঁধে।
+     *
+     * ⓘ পুরো কারণটা [[BelongsToCompanyThroughParent]]-এ।
+     */
+    protected function companyParent(): string
+    {
+        return 'order';
     }
 
     public function order(): BelongsTo

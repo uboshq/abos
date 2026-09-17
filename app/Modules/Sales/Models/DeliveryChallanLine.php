@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Models;
 
+use App\Core\Concerns\BelongsToCompanyThroughParent;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Modules\Inventory\Concerns\HasEnteredPack;
@@ -15,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /** চালানের একটা লাইন — এক পণ্য, যত গেল। */
 class DeliveryChallanLine extends Model
 {
+    use BelongsToCompanyThroughParent;
     use HasEnteredPack;
     use HasPublicId;
     use IsAudited;
@@ -38,6 +40,16 @@ class DeliveryChallanLine extends Model
             'rate' => 'decimal:4',
             'amount' => 'decimal:4',
         ];
+    }
+
+    /**
+     * এই সারির কাগজ — আর তার `company_id`-ই এটাকে বাঁধে।
+     *
+     * ⓘ পুরো কারণটা [[BelongsToCompanyThroughParent]]-এ।
+     */
+    protected function companyParent(): string
+    {
+        return 'challan';
     }
 
     public function challan(): BelongsTo
