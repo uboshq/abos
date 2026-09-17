@@ -117,6 +117,9 @@ class Voucher extends Model implements Drillable
         // ১৫ সেপ্টেম্বর — খরচ ভাউচারের নিজের ঘর
         'cost_centre_id', 'expense_account_id', 'bill_no',
         'gross_amount', 'ait_amount', 'vds_amount',
+
+        // ১৮ সেপ্টেম্বর — কাকে দেওয়া হলো: ধরন ও নাম
+        'payee_type_id', 'payee_name',
     ];
 
     protected function casts(): array

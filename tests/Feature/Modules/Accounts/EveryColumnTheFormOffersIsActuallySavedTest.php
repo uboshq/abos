@@ -56,6 +56,15 @@ final class EveryColumnTheFormOffersIsActuallySavedTest extends TestCase
         'cost_centre_id', 'expense_account_id', 'bill_no',
         'gross_amount', 'ait_amount', 'vds_amount',
 
+        /*
+         * কাকে দেওয়া হলো — ১৮ সেপ্টেম্বর ২০২৬।
+         *
+         * ⛔ `payee_name` ঘরটা তিন দিন পর্দায় ছিল আর কখনো সেভ হত না —
+         * কলামই ছিল না। ⓘ এই পরীক্ষাটা তখন চলত, কিন্তু তালিকায়
+         * নাম দুইটা না থাকায় কিছুই বলত না।
+         */
+        'payee_type_id', 'payee_name',
+
         // জাবেদার উল্টো দাখিলার তারিখ — ১৫ সেপ্টেম্বর ২০২৬
         'reverse_on',
 

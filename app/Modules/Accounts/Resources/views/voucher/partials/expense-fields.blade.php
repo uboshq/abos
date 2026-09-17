@@ -46,6 +46,12 @@
          class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4"
          x-data="{
              head: '{{ $was('expense_account_id') ?? $was('to_account_id') }}',
+
+             /* কাকে দেওয়া হলো — ধরন বাছলে তাঁর লোকজন সাজেশনে আসে। */
+             payeeType: '{{ $was('payee_type_id') }}',
+             payeesByType: @js($payeesByType ?? []),
+             get payeeList() { return this.payeesByType[this.payeeType] ?? [] },
+
              gross: {{ (float) ($was('gross_amount') ?? 0) }},
              ait: {{ (float) ($was('ait_amount') ?? 0) }},
              vds: {{ (float) ($was('vds_amount') ?? 0) }},
@@ -121,15 +127,52 @@
                      :selected="$was('cost_centre_id')" />
     </div>
 
-    {{-- সারি ২ — কাকে দেওয়া হলো, নকশায় পুরো চওড়া --}}
-    <div class="mt-3">
-        <x-ui.field name="payee_name"
-                    :label="__('accounts::field.payee')"
-                    :value="$was('payee_name')" />
-    </div>
+    {{--
+        সারি ২ — কাকে দেওয়া হলো, তিনটা ঘর এক লাইনে (মালিকের ছবি, ১৮ সেপ্টেম্বর ২০২৬)
 
-    {{-- সারি ৩ — সরবরাহকারীর নিজের বিল নম্বর, ছয় মাস পরে মেলানোর সূত্র --}}
-    <div class="mt-3 grid gap-3 sm:grid-cols-3">
+        মালিকের কথা: *"কাকে দেওয়া হলো ei line Paytype (vendor,
+        transporter/carrier, others …) … tar por boxe কাকে দেওয়া হলো/payee,
+        বিল / ভাউচার নম্বর"*।
+    --}}
+    <div class="mt-3 grid gap-3 sm:grid-cols-[1fr_2fr_1fr]">
+        {{--
+            ধরনগুলো মাস্টার থেকে (`mdm_party_types`) — সরবরাহকারী · পরিবহনকারী ·
+            কুরিয়ার · হাম্মালি ঠিকাদার · সার্ভিস প্রোভাইডার · প্রতিষ্ঠান।
+            ⓘ ফাঁকা সারিটাই "অন্যান্য": ধরন না বাছলে নামটা হাতে লেখা হয়,
+            আর সেটাই রিকশাভাড়া বা চা-নাস্তার স্ভাভাবিক উত্তর।
+        --}}
+        <x-ui.select name="payee_type_id"
+                     :label="__('accounts::field.payee_type')"
+                     :options="$payeeTypes ?? []"
+                     :selected="$was('payee_type_id')"
+                     :placeholder="__('accounts::field.payee_type_other')"
+                     x-model="payeeType" />
+
+        {{--
+            নামের ঘরটা লেখাও যায়, বাছাও যায় — দুইটা আলাদা ঘর নয়।
+            ⛔ দুইটা ঘর বসালে একটায় লেখা আর অন্যটায় বাছা — দুই উত্তর থাকত,
+            আর খাতায় কোনটা বসত তা বলা যেত না। ⭐ তাই একটাই ঘর, আর ধরন
+            বাছলে তাঁর লোকজনের নাম সাজেশনে আসে (`<datalist>`)।
+
+            ⚠️ আজ কোনো সরবরাহকারীর ধরন বসানো নেই, তাই সাজেশন খালি —
+            ঘরটা তবু কাজ করে, আর ধরন বসানো শুরু হলেই তালিকা ভরে ওঠে।
+        --}}
+        <label class="block">
+            <span class="mb-1 block text-sm font-medium">{{ __('accounts::field.payee') }}</span>
+            <input type="text" name="payee_name" list="payee-name-options"
+                   value="{{ $was('payee_name') }}"
+                   class="h-(--spacing-field) w-full rounded-(--radius-field) border
+                          border-(--color-border) bg-(--color-surface-card) px-3">
+            <datalist id="payee-name-options">
+                <template x-for="p in payeeList" :key="p.id">
+                    <option :value="p.label"></option>
+                </template>
+            </datalist>
+            @error('payee_name')
+                <span class="mt-1 block text-2xs text-(--color-danger)">{{ $message }}</span>
+            @enderror
+        </label>
+
         <x-ui.field name="bill_no"
                     :label="__('accounts::field.bill_no')"
                     :value="$was('bill_no')" />
@@ -182,6 +225,15 @@
             <span class="num font-semibold" x-text="net.toFixed(2)"></span>
         </p>
         </details>
+
+        {{--
+            ⓘ সংযুক্তি মালিকের ছবির মার্ক করা খালি জায়গায় — উৎসে কর্তনের ঠিক নিচে।
+            ⭐ বাম কলামটা উৎসে কর্তনের পরে খালি পড়ে থাকত, আর ডান কলামে
+            নোটের হিসাব লম্বা হয়ে যেত — জায়গাটা এখন কাজে লাগে।
+        --}}
+        <div class="lg:col-start-1">
+            @include('accounts::voucher.partials.attachment-field')
+        </div>
 
         <x-ui.money-movement direction="out"
                              :carriers="$carriers ?? []"

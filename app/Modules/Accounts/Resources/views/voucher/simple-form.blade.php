@@ -607,7 +607,7 @@
                 ভাঁজ খুলে "বিলের মোট" লিখতে হত। তাই ঘরটা এখানে রাখা হলো।
             --}}
             @if ($expenseLayout)
-                <div class="mt-4 grid items-end gap-3 sm:grid-cols-[2fr_1fr_1.4fr_2fr_auto]">
+                <div class="mt-4 grid items-end gap-3 sm:grid-cols-[2fr_1fr_2fr_auto]">
                     <label class="block">
                         <span class="mb-1 block text-sm font-medium">
                             {{ __('accounts::field.from_head') }}
@@ -635,7 +635,7 @@
                                 :label="__('accounts::field.amount')"
                                 :value="old('amount', $debitLine?->debit)" required numeric />
 
-                    @include('accounts::voucher.partials.attachment-field')
+                    {{-- ⓘ সংযুক্তি মালিকের ছবির মার্ক করা খালি জায়গায় — উৎসে কর্তনের ঠিক নিচে। --}}
 
                     <x-ui.field name="narration"
                                 :label="__('core.table.narration')"
