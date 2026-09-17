@@ -1,3 +1,30 @@
+{{--
+    ── ⛔ পাঁচটা পদ্ধতির ব্লক এখন `x-if`, `x-show` নয় — ১৮ সেপ্টেম্বর ২০২৬ ──
+
+    ⚠️ এটা রূপের সিদ্ধান্ত নয়, **টাকার**। `x-show` ঘরটাকে কেবল চোখ থেকে
+    লুকায় — ঘরটা DOM-এ থেকে যায়, আর জমা দেওয়ার সময় **যায়ও**।
+
+    ⛔ পাঁচটা ব্লকেই একই নামের ঘর আছে (`instrument_no`, `charge_amount`,
+    `from_bank`, `from_branch`, `from_account_name`, `from_account_no`) —
+    অর্থাৎ ব্রাউজার ছয়টা নামের প্রতিটা **কয়েকবার** পাঠাত, আর সার্ভার
+    শেষেরটা রাখত।
+
+    ⓘ ফল, রোজকার ভাষায়: কেউ "মোবাইল ব্যাংকিং" বেছে লেনদেন নম্বর লিখলেন,
+    আর লুকানো চেকের ব্লকের **খালি** `instrument_no` সেটা মুছে দিত। টাকা
+    ঠিকই বসত, কিন্তু *কোন চেকে · কোন ব্যাংকে · কত কমিশন* — সব হারাত।
+
+    ⭐ আর নীরবে: কোনো ভুলবার্তা নেই, পর্দায় সব ঠিক দেখাত, টের পাওয়া যেত
+    মাস খানেক পরে মিলাতে বসে।
+
+    ── ⓘ এই শিক্ষাটা এই রিপোতেই আগে লেখা আছে ─────────────────────────
+    খাতের ফর্মে (`coa/form.blade.php`) হুবহু একই কারণে `x-if` ব্যবহার করা
+    হয়েছে, আর সেখানে মন্তব্যে লেখা: *"লুকানো খালি ঘরটা ভরা ঘরটাকে মুছে
+    দিত, আর ব্যবহারকারী সেভ করে দেখতেন নামটা উধাও।"*
+
+    ⚠️ শিক্ষাটা লেখা ছিল, কিন্তু এই ফাইলে পৌঁছায়নি। ⭐ ধরা পড়েছে
+    [[EveryFormScreenAnswersForItselfTest]]-এ — পাতাটা সত্যিই এঁকে,
+    একই নামের সক্রিয় ঘর গুনে।
+--}}
 @props([
     /*
      * টাকা কোন দিকে — `in` (আমরা পাচ্ছি) বা `out` (আমরা দিচ্ছি)।
@@ -193,9 +220,9 @@
          কথা, তাই এখানে সতর্কতা নয়, থামানো। নিয়মটা কোথায় থামাবে আর
          কোথায় কেবল দেখাবে: [[docs]] আর নমুনার শেষ প্যানেল। --}}
     @if ($counting)
+        <template x-if="method === 'cash'">
         <div class="rounded-(--radius-field) border border-(--color-border)
-                    border-l-2 border-l-(--color-brand-500) bg-(--color-surface-sunken) p-3"
-             x-show="method === 'cash'" x-cloak>
+                    border-l-2 border-l-(--color-brand-500) bg-(--color-surface-sunken) p-3">
             <p class="mb-2 text-2xs font-medium tracking-wide text-(--color-ink-muted) uppercase">
                 {{ __('accounts::field.note_breakdown') }}
             </p>
@@ -236,12 +263,13 @@
                    ? @js(__('accounts::message.count_agrees'))
                    : @js(__('accounts::message.count_differs'))"></p>
         </div>
+        </template>
     @endif
 
     {{-- ── মোবাইল ব্যাংকিং ──────────────────────────────────────── --}}
+    <template x-if="method === 'mfs'">
     <div class="rounded-(--radius-field) border border-(--color-border)
-                border-l-2 border-l-(--color-brand-500) bg-(--color-surface-sunken) p-3"
-         x-show="method === 'mfs'" x-cloak>
+                border-l-2 border-l-(--color-brand-500) bg-(--color-surface-sunken) p-3">
         <div class="grid gap-3 sm:grid-cols-3">
             <x-ui.select name="wallet" :label="__('accounts::field.wallet')" :selected="$was('wallet')"
                          :options="['bkash' => 'বিকাশ', 'nagad' => 'নগদ', 'rocket' => 'রকেট', 'upay' => 'উপায়']" />
@@ -271,11 +299,12 @@
 
         <x-ui.charge-bearer :direction="$direction" :record="$record" />
     </div>
+    </template>
 
     {{-- ── ব্যাংক ট্রান্সফার ─────────────────────────────────────── --}}
+    <template x-if="method === 'transfer'">
     <div class="rounded-(--radius-field) border border-(--color-border)
-                border-l-2 border-l-(--color-brand-500) bg-(--color-surface-sunken) p-3"
-         x-show="method === 'transfer'" x-cloak>
+                border-l-2 border-l-(--color-brand-500) bg-(--color-surface-sunken) p-3">
         <div class="grid gap-3 sm:grid-cols-3">
             <x-ui.select name="transfer_mode_id" :label="__('accounts::field.transfer_mode')"
                          :options="$modes" :selected="$was('transfer_mode_id')" placeholder="—" />
@@ -308,6 +337,7 @@
 
         <x-ui.charge-bearer :direction="$direction" :record="$record" />
     </div>
+    </template>
 
 
     {{-- ── কার্ড ─────────────────────────────────────────────────
@@ -318,9 +348,9 @@
 
          ⚠️ কার্ডের নিজের প্রশ্ন কম: টার্মিনালের রেফারেন্স, আর ব্যাংকের
          কমিশন। চেক বা ওয়ালেটের ঘরগুলো এখানে অর্থহীন। --}}
+    <template x-if="method === 'card'">
     <div class="rounded-(--radius-field) border border-(--color-border)
-                border-l-2 border-l-(--color-brand-500) bg-(--color-surface-sunken) p-3"
-         x-show="method === 'card'" x-cloak>
+                border-l-2 border-l-(--color-brand-500) bg-(--color-surface-sunken) p-3">
         <div class="grid gap-3 sm:grid-cols-3">
             <x-ui.field name="instrument_no" :label="__('accounts::field.card_reference')"
                         :value="$was('instrument_no')" />
@@ -333,11 +363,12 @@
 
         <x-ui.charge-bearer :direction="$direction" :record="$record" />
     </div>
+    </template>
 
     {{-- ── চেক ──────────────────────────────────────────────────── --}}
+    <template x-if="method === 'cheque'">
     <div class="rounded-(--radius-field) border border-(--color-border)
-                border-l-2 border-l-(--color-brand-500) bg-(--color-surface-sunken) p-3"
-         x-show="method === 'cheque'" x-cloak>
+                border-l-2 border-l-(--color-brand-500) bg-(--color-surface-sunken) p-3">
         <div class="grid gap-3 sm:grid-cols-3">
             <x-ui.field name="instrument_no" :label="__('accounts::field.cheque_no')"
                         :value="$was('instrument_no')" />
@@ -359,4 +390,5 @@
             {{ $inward ? __('accounts::message.pdc_received') : __('accounts::message.pdc_issued') }}
         </p>
     </div>
+    </template>
 </div>

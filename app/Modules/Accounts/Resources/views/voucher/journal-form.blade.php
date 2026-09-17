@@ -175,6 +175,7 @@
                             <tr>
                                 <td class="tight">
                                     <select name="lines[{{ $i }}][account_id]"
+                                            aria-label="{{ __('accounts::field.account') }} — {{ $i + 1 }}"
                                             class="h-(--spacing-field) w-full min-w-48 rounded-(--radius-field)
                                                    border border-(--color-border) bg-(--color-surface-card) px-2">
                                         <option value="">—</option>
@@ -189,6 +190,7 @@
 
                                 <td class="tight">
                                     <input type="text" name="lines[{{ $i }}][narration]"
+                                           aria-label="{{ __('accounts::field.narration') }} — {{ $i + 1 }}"
                                            value="{{ $line['narration'] ?? '' }}"
                                            class="h-(--spacing-field) w-full rounded-(--radius-field) border
                                                   border-(--color-border) bg-(--color-surface-card) px-2">
@@ -217,6 +219,7 @@
                                 --}}
                                 <td class="tight">
                                     <select name="lines[{{ $i }}][party]"
+                                            aria-label="{{ __('accounts::field.party') }} — {{ $i + 1 }}"
                                             class="h-(--spacing-field) w-full rounded-(--radius-field)
                                                    border border-(--color-border)
                                                    bg-(--color-surface-card) px-2">
@@ -246,6 +249,7 @@
                                 @if ($costCenters->isNotEmpty())
                                     <td class="tight">
                                         <select name="lines[{{ $i }}][cost_center_id]"
+                                            aria-label="{{ __('accounts::field.cost_center') }} — {{ $i + 1 }}"
                                                 class="h-(--spacing-field) w-full rounded-(--radius-field)
                                                        border border-(--color-border)
                                                        bg-(--color-surface-card) px-2">
@@ -263,6 +267,7 @@
                                 <td class="tight">
                                     <input type="number" step="0.01" inputmode="decimal"
                                            name="lines[{{ $i }}][debit]" value="{{ $line['debit'] ?? '' }}"
+                                           aria-label="{{ __('accounts::field.debit') }} — {{ $i + 1 }}"
                                            @input="recount()"
                                            class="num h-(--spacing-field) w-full rounded-(--radius-field) border
                                                   border-(--color-border) bg-(--color-surface-card) px-2 text-end">
@@ -271,6 +276,7 @@
                                 <td class="tight">
                                     <input type="number" step="0.01" inputmode="decimal"
                                            name="lines[{{ $i }}][credit]" value="{{ $line['credit'] ?? '' }}"
+                                           aria-label="{{ __('accounts::field.credit') }} — {{ $i + 1 }}"
                                            @input="recount()"
                                            class="num h-(--spacing-field) w-full rounded-(--radius-field) border
                                                   border-(--color-border) bg-(--color-surface-card) px-2 text-end">
