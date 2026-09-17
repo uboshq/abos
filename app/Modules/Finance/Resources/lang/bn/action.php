@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'save_withdrawal_row' => 'উত্তোলনের সারি সংরক্ষণ',
+    'withdrawal_list' => 'তালিকা ও মাসিক সীমা',
     'save_capital_row' => 'মূলধনের সারি সংরক্ষণ',
     'take_money_receipt' => 'টাকা নিন — রসিদ ভাউচার ↗',
     'pay_money_voucher' => 'টাকা দিন — পরিশোধ ভাউচার ↗',

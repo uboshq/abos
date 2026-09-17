@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'save_withdrawal_row' => 'Save the withdrawal row',
+    'withdrawal_list' => 'List and monthly cap',
     'save_capital_row' => 'Save the capital row',
     'take_money_receipt' => 'Take the money — receipt voucher ↗',
     'pay_money_voucher' => 'Pay the money — payment voucher ↗',

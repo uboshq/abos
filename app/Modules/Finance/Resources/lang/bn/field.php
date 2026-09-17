@@ -3,6 +3,10 @@
 declare(strict_types=1);
 
 return [
+    // ⭐ উত্তোলন — মূলধনের অন্য দিক, ১৮ সেপ্টেম্বর ২০২৬
+    'withdrawal_amount' => 'উত্তোলনের পরিমাণ',
+    'taken_from' => 'যে খাত থেকে',
+    'withdrawal_kind_box' => 'উত্তোলনের ধরন',
     'facility_book_tag' => 'মঞ্জুরি, জামানত, নবায়ন — ধারের চেয়ে অন্য জাত',
     'facility_book_note' => 'নতুন খাতা — সাতটার তালিকায় ছিল না',
     'security_and_terms' => 'জামানত ও শর্ত',

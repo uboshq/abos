@@ -82,6 +82,15 @@ final class WithdrawalService
                 'person_id' => $personId,
                 'amount' => $amount,
                 'trx_date' => $on,
+                /*
+                 * ⭐ ধরনটা সারিতে বসে — তিনটার হিসাব তিন রকম।
+                 *
+                 * ⓘ উত্তোলন ও মুনাফার ভাগ মূলধন কমায়; মালিকের বেতন
+                 * একটা **খরচ**। ⚠️ খালি এলে কলামের ডিফল্ট `drawing`,
+                 * তাই পুরনো সারির আচরণ বদলায় না।
+                 */
+                'kind' => ($data['kind'] ?? '') ?: Withdrawal::DRAWING,
+
                 'money_account_id' => $data['money_account_id'] ?? null,
                 'reason' => ($data['reason'] ?? '') ?: null,
                 'status' => DocumentStatus::DRAFT,

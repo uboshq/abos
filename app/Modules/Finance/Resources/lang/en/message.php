@@ -3,6 +3,9 @@
 declare(strict_types=1);
 
 return [
+    'withdrawal_kind_note' => 'Drawings and profit share reduce capital; an owner salary is an expense and reduces profit.',
+    'ledger_debit_withdrawal' => '3200 Drawings, 3210 Profit share or 5201 Owner salary, by kind',
+    'ledger_credit_withdrawal' => 'The account the money left - cash, bank or mobile',
     'within_the_limit' => 'Within the limit.',
     'over_the_limit' => 'Over the limit - the bank will charge penal interest.',
     'ledger_debit' => 'Debit',
