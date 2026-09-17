@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Accounts\Http\Controllers;
 
 use App\Core\Concerns\SortsLists;
+use App\Core\Engines\Attachment\AttachmentEngine;
 use App\Core\Engines\Drill\DrillResolver;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\PartyRegistry;
@@ -18,17 +19,20 @@ use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CostCenter;
 use App\Modules\Accounts\Models\MoneyCategory;
 use App\Modules\Accounts\Models\Voucher;
-use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Accounts\Services\AccountsFacts;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\VoucherApproval;
 use App\Modules\Accounts\Services\VoucherService;
+use App\Modules\MasterData\Models\PartyType;
 use App\Modules\MasterData\Models\TransferMode;
+use App\Modules\Purchase\Models\PurchaseBill;
+use App\Modules\Supplier\Models\Supplier;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -261,7 +265,7 @@ class VoucherController extends Controller implements HasMiddleware
                  * ⓘ ব্রাউজারে গুনলে ফোনের ঘড়ি ভুল থাকলে বয়সটাও ভুল
                  * হত, আর ব্যবহারকারী বুঝতেন না কেন।
                  */
-                'age' => (int) now()->startOfDay()->diffInDays(\Illuminate\Support\Carbon::parse($row->trx_date)->startOfDay()),
+                'age' => (int) now()->startOfDay()->diffInDays(Carbon::parse($row->trx_date)->startOfDay()),
                 'outstanding' => bcsub((string) $row->total, (string) $row->paid, 4),
             ])
             ->values()
@@ -357,10 +361,10 @@ class VoucherController extends Controller implements HasMiddleware
              * সেভ হত, ছবিটা হত না, আর কেউ জানত না।
              */
             if ($request->hasFile('attachment')) {
-                app(\App\Core\Engines\Attachment\AttachmentEngine::class)->store(
+                app(AttachmentEngine::class)->store(
                     $request->file('attachment'),
                     'accounts',
-                    \App\Modules\Accounts\Models\Voucher::class,
+                    Voucher::class,
                     $voucher->id,
                 );
             }
@@ -440,7 +444,7 @@ class VoucherController extends Controller implements HasMiddleware
         );
 
         if ($request->hasFile('attachment')) {
-            app(\App\Core\Engines\Attachment\AttachmentEngine::class)->store(
+            app(AttachmentEngine::class)->store(
                 $request->file('attachment'),
                 'accounts',
                 Voucher::class,
@@ -650,6 +654,45 @@ class VoucherController extends Controller implements HasMiddleware
              */
             'costCentres' => CostCenter::query()->active()->orderBy('code')
                 ->get()->mapWithKeys(fn ($c) => [$c->id => $c->display_name ?? $c->name_bn ?? $c->name_en]),
+
+            /*
+             * ⭐ কাকে দেওয়া হলো — ধরনগুলো মাস্টার থেকে, হাতে লেখা নয়।
+             *
+             * ⓘ মালিক যে নামগুলো বললেন — vendor, transporter/carrier —
+             * সেগুলো `mdm_party_types`-এ **আগে থেকেই বসানো**: সরবরাহকারী,
+             * পরিবহনকারী, কুরিয়ার, হাম্মালি ঠিকাদার, সার্ভিস প্রোভাইডার,
+             * প্রতিষ্ঠান। ⛔ তাই তালিকাটা কোডে লেখা হয়নি — লিখলে একদিন
+             * মাস্টারে একটা ধরন যোগ হত আর এই পর্দায় আসত না।
+             */
+            'payeeTypes' => PartyType::query()
+                ->where('company_id', CompanyContext::id())
+                ->whereIn('applies_to', ['supplier', 'both'])
+                ->where('is_active', true)
+                ->orderBy('name_bn')
+                ->get()
+                ->mapWithKeys(fn ($t) => [$t->id => $t->name_bn ?? $t->name_en])
+                ->all(),
+
+            /*
+             * প্রতিটা ধরনের নিজের লোকজন — ধরন বাছলে নামের ঘরটা
+             * তাঁদের দেখায়।
+             *
+             * ⚠️ আজকের ডেটায় কোনো সরবরাহকারীর ধরন বসানো নেই
+             * (`party_type_id` সব খালি), তাই তালিকাগুলো আজ খালি আসবে
+             * আর পর্দা নাম লেখার ঘরটাই দেখাবে। ⓘ সরবরাহকারীর ফর্মে
+             * ধরন বসানো শুরু করলেই এটা নিজে থেকে কাজ করবে।
+             */
+            'payeesByType' => Supplier::query()
+                ->where('company_id', CompanyContext::id())
+                ->where('is_active', true)
+                ->whereNotNull('party_type_id')
+                ->orderBy('name_bn')
+                ->get(['id', 'name_bn', 'name_en', 'party_type_id'])
+                ->groupBy(fn ($s) => (string) $s->party_type_id)
+                ->map(fn ($group) => $group
+                    ->map(fn ($s) => ['id' => (int) $s->id, 'label' => $s->name_bn ?? $s->name_en])
+                    ->values())
+                ->all(),
 
             /*
              * ⭐ যে চালানগুলোয় এই খরচটা বসতে পারে — মালিকের ট্যাগের তালিকা।

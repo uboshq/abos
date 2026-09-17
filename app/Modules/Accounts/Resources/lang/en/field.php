@@ -29,6 +29,8 @@ return [
     'why_this_way' => 'Why this way',
     'from_head' => 'Paid from',
     'no_bill_picked' => 'against no bill',
+    'payee_type' => 'Payee type',
+    'payee_type_other' => 'Other',
     'moved_at' => 'Time',
     'carried_by_nobody' => 'Nobody — straight to the bank',
     'carried_by' => 'Carried by',

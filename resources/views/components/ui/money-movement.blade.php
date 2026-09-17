@@ -130,7 +130,13 @@
         <div class="grid gap-3 sm:grid-cols-2">
             <x-ui.select name="carried_by" :label="__('accounts::field.carried_by')"
                          :options="$carriers" :selected="$was('carried_by')"
-                         blank="{{ __('accounts::field.carried_by_nobody') }}" />
+                         {{--
+                             ⛔ `blank` নামে কোনো প্রপ নেই — ১৮ সেপ্টেম্বর ২০২৬।
+                             ⓘ শব্দটা HTML অ্যাট্রিবিউট হয়ে বসত, আর কম্পোনেন্ট
+                             খালি সারিটা **আঁকতই না** — অর্থাৎ একবার কাউকে বাছলে
+                             "কেউ নয়" ফেরার উপায়ই থাকত না। সঠিক নাম `placeholder`।
+                         --}}
+                         :placeholder="__('accounts::field.carried_by_nobody')" />
 
             <x-ui.field name="moved_at" type="time" :label="__('accounts::field.moved_at')"
                         :value="$was('moved_at')" />
@@ -272,7 +278,7 @@
          x-show="method === 'transfer'" x-cloak>
         <div class="grid gap-3 sm:grid-cols-3">
             <x-ui.select name="transfer_mode_id" :label="__('accounts::field.transfer_mode')"
-                         :options="$modes" :selected="$was('transfer_mode_id')" blank="—" />
+                         :options="$modes" :selected="$was('transfer_mode_id')" placeholder="—" />
 
             <x-ui.field name="from_bank" :value="$was('from_bank')"
                         :label="$inward ? __('accounts::field.from_bank') : __('accounts::field.our_bank')" />

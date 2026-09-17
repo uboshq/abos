@@ -138,6 +138,13 @@ final class VoucherService
                 'cost_centre_id' => $data['cost_centre_id'] ?? null,
                 'expense_account_id' => $data['expense_account_id'] ?? null,
                 'bill_no' => $data['bill_no'] ?? null,
+
+                /*
+                 * ⛔ এই দুইটা তিন দিন পর্দায় ছিল আর কখনো সেভ হত না —
+                 * কলাম না থাকায় Eloquent চুপচাপ ফেলে দিত।
+                 */
+                'payee_type_id' => $data['payee_type_id'] ?? null,
+                'payee_name' => $data['payee_name'] ?? null,
                 'gross_amount' => $data['gross_amount'] ?? null,
                 'ait_amount' => $data['ait_amount'] ?? 0,
                 'vds_amount' => $data['vds_amount'] ?? 0,

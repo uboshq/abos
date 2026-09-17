@@ -305,6 +305,21 @@ class VoucherRequest extends FormRequest
                     ->where('is_group', false)],
 
             'bill_no' => ['nullable', 'string', 'max:60'],
+
+            /*
+             * ⭐ কাকে দেওয়া হলো — ধরন তালিকা থেকে, নাম লেখা।
+             *
+             * ⛔ ধরনটা **এই কোম্পানির** হতে হবে, আর সরবরাহকারীর
+             * দিকের হতে হবে — কেবল `exists` দিলে অন্য কোম্পানির বা
+             * গ্রাহকের ধরন পাঠানো যেত, আর খরচটা ভুল দলে গুনা হত।
+             */
+            'payee_type_id' => ['nullable', 'integer',
+                Rule::exists('mdm_party_types', 'id')
+                    ->where('company_id', CompanyContext::id())
+                    ->whereIn('applies_to', ['supplier', 'both'])
+                    ->whereNull('deleted_at')],
+
+            'payee_name' => ['nullable', 'string', 'max:120'],
             'gross_amount' => ['nullable', 'numeric', 'min:0'],
             'ait_amount' => ['nullable', 'numeric', 'min:0'],
             'vds_amount' => ['nullable', 'numeric', 'min:0'],
