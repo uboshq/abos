@@ -157,6 +157,24 @@
             {{ __('finance::field.withdrawals_list') }}
         </h2>
 
+        {{-- ⭐ ধরনের কলাম দুইটা — ১৮ সেপ্টেম্বর ২০২৬, মালিকের প্রশ্নে।
+
+             ── ⛔ কলাম ছিল, সারিতে বসত, কোথাও দেখা যেত না ──────────────
+             তিনটা চিপ দিয়ে ধরন বাছা যেত, ডাটাবেজে বসতও — অথচ তালিকায়
+             কলামই ছিল না। ⚠️ মালিক জিজ্ঞেস করেছেন *"এগুলোর লিস্ট
+             কোথায়"*, আর সৎ উত্তর ছিল: কোথাও নেই।
+
+             ⓘ আর দেখাটা জরুরি, কারণ তিনটার হিসাব তিন রকম — বেতন একটা
+             **খরচ**, বাকি দুইটা মূলধন কমায়। ⛔ কোনটা কী তা না দেখে
+             মাসের শেষে মেলানো যায় না।
+
+             ── ⚠️ "কী দিয়ে" কেবল টাকা না হলে দেখায় ────────────────────
+             ⓘ সব সারিতে "টাকা" লিখলে কলামটা কোলাহল হত, আর যে দুই-একটা
+             সারি সত্যিই আলাদা সেগুলো ভিড়ে হারাত।
+
+             ⛔ ⚠️ এই মন্তব্যটা এখানে, `:columns`-এর **ভিতরে নয়** —
+             অ্যাট্রিবিউটের ভিতরে PHP মন্তব্য লিখলে Blade ওটা পার্স করে
+             না, আর পুরো সংজ্ঞাটা পাতায় **লেখা হিসেবে ছাপা হয়**। --}}
         <x-ui.table
             :empty="__('finance::message.no_withdrawal_yet')"
             :rows="$rows"
@@ -166,6 +184,12 @@
                 ['key' => 'document_no', 'label' => __('core.print.document_no'), 'width' => '10rem'],
                 ['key' => 'person', 'label' => __('finance::field.who'),
                  'render' => fn ($w) => $w->person?->name() ?? '—'],
+                ['key' => 'kind', 'label' => __('finance::field.withdrawal_kind_box'), 'width' => '10rem',
+                 'render' => fn ($w) => __('finance::field.kind_'.($w->kind ?: 'drawing'))],
+                ['key' => 'in_kind', 'label' => __('finance::field.in_kind'), 'width' => '9rem',
+                 'render' => fn ($w) => ($w->in_kind ?? 'cash') === 'cash'
+                     ? '—'
+                     : __('finance::field.in_kind_'.$w->in_kind)],
                 ['key' => 'reason', 'label' => __('finance::field.why'),
                  'render' => fn ($w) => $w->reason ?: '—'],
                 ['key' => 'amount', 'label' => __('finance::field.amount'), 'numeric' => true,
