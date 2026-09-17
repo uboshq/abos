@@ -345,5 +345,7 @@
                 ['key' => 'status', 'label' => __('finance::field.state'), 'width' => '8rem',
                  'render' => fn ($f) => __('core.status.' . $f->status)],
             ]" />
+
+        <x-ui.pager :rows="$facilities" />
     </div>
 </x-layouts.app>
