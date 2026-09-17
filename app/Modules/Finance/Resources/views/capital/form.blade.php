@@ -102,7 +102,7 @@
                         {{ __('finance::field.way_in') }}
                     </span>
 
-                    <a href="{{ route('finance.withdrawal.index') }}"
+                    <a href="{{ route('finance.withdrawal.create') }}"
                        class="flex items-center gap-1.5 rounded-(--radius-field)
                               border border-(--color-border) px-3 py-1.5 text-sm
                               transition-colors hover:bg-(--color-surface-hover)">

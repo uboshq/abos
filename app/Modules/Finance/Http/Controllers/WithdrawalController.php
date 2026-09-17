@@ -7,6 +7,8 @@ namespace App\Modules\Finance\Http\Controllers;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
+use App\Models\Branch;
+use App\Models\Company;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Finance\Models\Withdrawal;
@@ -72,6 +74,46 @@ class WithdrawalController extends Controller implements HasMiddleware
         ]);
     }
 
+    /**
+     * উত্তোলন লেখার পাতা — মালিকের পুঁজির অন্য দিক।
+     *
+     * ── ⭐ কেন `index` থেকে আলাদা, ১৮ সেপ্টেম্বর ২০২৬ ────────────────
+     * মালিক নমুনা আর লাইভ পাশাপাশি রেখে দেখিয়েছেন: নমুনায় উত্তোলন
+     * মূলধনের পাতারই দ্বিতীয় দিক — একই হেডার, একই ঘরের ক্রম, একই
+     * ফিতা, একই ভাউচারের বাক্স।
+     *
+     * ⓘ `index` তবু রয়ে গেছে, কারণ ওখানে যা আছে তা **পড়ার** জিনিস:
+     * মাসের হিসাব, কে কত তুলেছেন, মাসিক সীমা। ⛔ ওগুলো নমুনার লেখার
+     * পাতায় নেই, আর থাকলে ফর্মটা তিনগুণ লম্বা হত।
+     */
+    public function create(Request $request): View
+    {
+        return view('finance::withdrawal.form', [
+            'menu' => $this->menu->forUser($request->user()),
+            'people' => $this->peopleForPicker(),
+            'moneyAccounts' => $this->moneyAccounts(),
+            'carriers' => $this->peopleForPicker(),
+            'writingFor' => $this->writingFor(),
+        ]);
+    }
+
+    /**
+     * কোন কোম্পানির, কোন শাখার খাতায় লেখা হচ্ছে।
+     *
+     * ⓘ বাছাই নয়, তথ্য — কোম্পানি ও শাখা আগেই বাছা হয়ে আছে শেলে।
+     * ⛔ এখানে দ্বিতীয় বাছাই বসালে দুই জায়গায় দুই উত্তর থাকত।
+     */
+    private function writingFor(): string
+    {
+        $company = Company::query()->find(CompanyContext::id());
+        $branch = Branch::query()->find(CompanyContext::branchId());
+
+        return trim(implode(' — ', array_filter([
+            $company?->name(),
+            $branch?->name(),
+        ]))) ?: '—';
+    }
+
     public function store(Request $request): RedirectResponse
     {
         $companyId = CompanyContext::id();
@@ -100,6 +142,20 @@ class WithdrawalController extends Controller implements HasMiddleware
             'person_nid_tin' => ['nullable', 'string', 'max:40'],
             'amount' => ['required', 'numeric', 'gt:0'],
             'trx_date' => ['required', 'date', 'before_or_equal:today'],
+            /*
+             * ⭐ উত্তোলনের ধরন — ১৮ সেপ্টেম্বর ২০২৬।
+             *
+             * ⛔ কলামটা আমি বসিয়েছিলাম, চিপ তিনটাও বসিয়েছিলাম, কিন্তু
+             * ভ্যালিডেশনে নাম ছিল না — তাই `validate()` ঘরটা **ফেলে
+             * দিত**, আর সারিতে সবসময় ডিফল্ট `drawing` বসত।
+             *
+             * ⚠️ পর্দায় "মালিকের বেতন" বাছা যেত, সারিতে বসত "উত্তোলন",
+             * আর কোনো ভুল উঠত না। ⓘ ধরা পড়েছে ফর্ম জমা দিয়ে সারি
+             * পড়ায়, পর্দা দেখে নয়।
+             */
+            'kind' => ['nullable', Rule::in(Withdrawal::KINDS)],
+            'paper' => ['nullable', 'file'],
+
             'reason' => ['nullable', 'string', 'max:500'],
         ]);
 
@@ -182,6 +238,21 @@ class WithdrawalController extends Controller implements HasMiddleware
     }
 
     /** @return Collection<int, Account> */
+    /**
+     * নামের তালিকা — বাছাইয়ের ঘরে আর "কার মাধ্যমে" ঘরে, একই উৎস।
+     *
+     * ⓘ দুইটা তালিকা আলাদা করে বানানো হয়নি: যিনি টাকা তোলেন আর যিনি
+     * বয়ে নিয়ে যান, দুইজনই পক্ষের নিবন্ধনের সারি। ⚠️ আলাদা করলে একই
+     * মানুষ দুই জায়গায় দুই নামে থাকতেন।
+     *
+     * @return array<int, string>
+     */
+    private function peopleForPicker(): array
+    {
+        return Person::query()->active()->orderBy('name_en')
+            ->pluck('name_en', 'id')->all();
+    }
+
     private function moneyAccounts(): Collection
     {
         return Account::query()

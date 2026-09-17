@@ -98,6 +98,17 @@ Route::middleware('auth')->prefix('finance')->group(function () {
      */
     Route::prefix('withdrawals')->name('withdrawal.')->group(function () {
         Route::get('/', [WithdrawalController::class, 'index'])->name('index');
+        /*
+         * ⭐ লেখার পাতা — নমুনার কাঠামোয়, ১৮ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ `index` রয়ে গেছে **পড়ার** পাতা হিসেবে: মাসের হিসাব, কে
+         * কোথায় দাঁড়িয়ে, মাসিক সীমা, আর তোলা টাকার তালিকা।
+         *
+         * ⛔ দুইটা এক পাতায় ছিল, আর নমুনার সাথে মিলত না: নমুনায়
+         * উত্তোলন হলো মালিকের পুঁজির **দ্বিতীয় দিক**, আলাদা চেহারার
+         * পাতা নয়।
+         */
+        Route::get('/create', [WithdrawalController::class, 'create'])->name('create');
         Route::post('/', [WithdrawalController::class, 'store'])->name('store');
         Route::post('/cap', [WithdrawalController::class, 'cap'])->name('cap');
 

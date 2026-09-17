@@ -7,7 +7,7 @@ return [
 
     'capital' => 'Capital & investment',
     'plan' => 'Finance map',
-    'expense' => 'Expenses',
+    'expense' => 'Expenses by Head',
     'deposit_bank' => 'Bank Deposits',
     'deposit_savings' => 'Savings Certificates',
     'deposit_bond' => 'Bonds',
