@@ -161,12 +161,12 @@
 
                     {{-- markup_pct/margin_pct জমা পড়ে না — ProductRequest ওগুলো
                          চেনে না, তাই validated() ছেঁটে ফেলে; শুধু হিসাবের ঘর। --}}
-                    <x-ui.field name="markup_pct" type="number" step="0.01" inputmode="decimal"
+                    <x-ui.field name="markup_pct" type="number" step="any" inputmode="decimal"
                                 :label="__('inventory::field.markup')"
                                 :hint="__('inventory::message.markup_hint')"
                                 x-model="markup" @input="fromMarkup()" numeric />
 
-                    <x-ui.field name="margin_pct" type="number" step="0.01" inputmode="decimal"
+                    <x-ui.field name="margin_pct" type="number" step="any" inputmode="decimal"
                                 :label="__('inventory::field.margin')"
                                 :hint="__('inventory::message.margin_hint')"
                                 x-model="margin" @input="fromMargin()" numeric />

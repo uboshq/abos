@@ -31,12 +31,36 @@ class PurchaseBillPolicy
         return $user->can('purchase.bill.create');
     }
 
+    /**
+     * সম্পাদনা — খসড়া সবার, নিশ্চিত কেবল super admin-এর।
+     *
+     * ── ⓘ কেন নিশ্চিত বিল সাধারণত বদলায় না ──────────────────────────
+     * ওটা সরবরাহকারীর খাতায় **দেনা বসিয়ে ফেলেছে**, আর হয়তো টাকাও
+     * পরিশোধ হয়েছে। ⚠️ চুপচাপ বদলাতে দিলে কাগজের সংখ্যা আর খাতার
+     * সংখ্যা আলাদা হয়ে যেত, আর ছয় মাস পরে কেউ বলতে পারত না কোনটা আসল।
+     *
+     * ── ⭐ কেন তবু super admin পারে, ১৮ সেপ্টেম্বর ২০২৬ ──────────────
+     * মালিকের সিদ্ধান্ত: *"edite update delete super admin korte parbe"*,
+     * আর *"super admin sob pare sob company te"*।
+     *
+     * ⛔ কিন্তু অনুমতিটা একা যথেষ্ট নয়: ঐ বিলের দাখিলা খাতায় বসে আছে।
+     * ⓘ তাই [[PurchaseBillService::update()]] নিশ্চিত বিল সম্পাদনার সময়
+     * **পুরনো দাখিলা উল্টে নতুন করে বসায়** — নাহলে কাগজ বদলাত, খাতা নয়।
+     *
+     * ⚠️ বাতিল হওয়া বিল এখানেও বাদ: ওটা ইতিহাস, আর ইতিহাস বদলায় না।
+     */
     public function update(User $user, PurchaseBill $document): bool
     {
-        // নিশ্চিত হওয়া ডকুমেন্ট আর বদলায় না — সেবা স্তরও এটা আটকায়,
-        // কিন্তু বোতামটা দেখানোই উচিত নয়
-        return $user->can('purchase.bill.create')
-            && $document->status === DocumentStatus::DRAFT;
+        if (! $user->can('purchase.bill.create')) {
+            return false;
+        }
+
+        if ($document->status === DocumentStatus::DRAFT) {
+            return true;
+        }
+
+        return $document->status === DocumentStatus::CONFIRMED
+            && $user->hasRole('super_admin');
     }
 
     public function delete(User $user, PurchaseBill $document): bool

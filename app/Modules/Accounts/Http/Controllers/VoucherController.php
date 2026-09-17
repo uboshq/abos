@@ -763,6 +763,15 @@ class VoucherController extends Controller implements HasMiddleware
                 ->where('trx_date', '>=', now()->subDays(60)->toDateString())
                 ->withSum('billShares as already_charged', 'share_amount')
                 ->withSum('lines as total_qty', 'qty')
+
+                /*
+                 * মূল্যও লাগে — ভাগ কেবল পরিমাণে হয় না।
+                 *
+                 * ⓘ "ভাগ হবে কীসের অনুপাতে" ঘরটা পরিমাণ ও মূল্য —
+                 * দুইটাই বলে। ⛔ মূল্যের যোগফল না আনলে ও বাছাইটা
+                 * পর্দায় থাকত আর কাজ করত না।
+                 */
+                ->withSum('lines as total_value', 'amount')
                 ->orderByDesc('trx_date')->orderByDesc('id')
                 ->limit(50)
                 ->get(),

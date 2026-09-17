@@ -10,6 +10,7 @@ return [
     'opening' => 'Opening balance',
     'custody' => 'Custody',
     'details' => 'Details',
+    'paper_and_time' => 'Paper and timing',
     'hand_over' => 'Handing over',
     'receive' => 'Receiving',
     'notes' => 'Note breakdown',

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'rate_first' => 'Enter the purchase rate first — markup is measured on the rate and margin on the price, so neither can be worked out without it.',
     'stock_in' => ':no — goods into the warehouse',
     'awaiting_bill' => ':no — goods received, bill awaited',
     'bill_clears_pending' => ':no — clears the pending liability',
@@ -21,6 +22,8 @@ return [
     'bill_updated' => 'Bill updated.',
     'bill_confirmed' => 'Bill posted — the liability is now in the supplier\'s name.',
     'bill_cancelled' => 'Bill cancelled.',
+    'bill_reposted' => 'The bill was changed - the old entries were reversed and the new ones posted.',
+    'edited_after_posting' => ':no was edited - the earlier entries are reversed.',
     'no_orders' => 'No purchase orders yet.',
     'no_receipts' => 'Nothing received yet.',
     'no_bills' => 'No purchase bills yet.',

@@ -209,11 +209,25 @@ class PurchaseBillController extends Controller implements HasMiddleware
 
     public function update(PurchaseBillRequest $request, PurchaseBill $bill): RedirectResponse
     {
-        $this->bills->update($bill, $request->documentData(), $request->lineData());
+        /*
+         * ⭐ নিশ্চিত বিল সম্পাদনা — ১৮ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ অনুমতিটা নীতি দেয় ([[PurchaseBillPolicy::update]]), আর
+         * এই লাইনটা সেবাকে বলে **খাতাও ঠিক করতে হবে**।
+         *
+         * ⚠️ দুইটা আলাদা রাখা হয়েছে ইচ্ছাকৃতভাবে: নীতি বলে **কে পারে**,
+         * সেবা জানে **কী করতে হবে**। ⛔ সেবাকে auth পড়ালে একদিন
+         * কনসোল বা সিডার থেকে ডাকলে নিয়মটা অন্য রকম হয়ে যেত।
+         */
+        $repost = $bill->status === DocumentStatus::CONFIRMED;
+
+        $this->bills->update($bill, $request->documentData(), $request->lineData(), $repost);
 
         return redirect()
             ->route('purchase.bill.show', $bill)
-            ->with('saved', __('purchase::message.bill_updated'));
+            ->with('saved', __($repost
+                ? 'purchase::message.bill_reposted'
+                : 'purchase::message.bill_updated'));
     }
 
     public function confirm(PurchaseBill $bill): RedirectResponse

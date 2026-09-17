@@ -91,7 +91,7 @@
                                        name="bill_shares[{{ $i }}][purchase_bill_id]"
                                        value="{{ $bill->id }}"
                                        @checked($picked)
-                                       x-on:change="tagged += $event.target.checked ? 1 : -1">
+                                       x-on:change="toggle({{ $i }}, $event.target.checked)">
                             </td>
                             <td class="p-2 font-medium">{{ $bill->document_no }}</td>
                             <td class="p-2">{{ $bill->goods_summary }}</td>
@@ -100,7 +100,13 @@
                                 {{ $bill->already_charged > 0 ? number_format((float) $bill->already_charged, 2) : '—' }}
                             </td>
                             <td class="p-2 text-end">
+                                {{--
+                                    ⓘ `x-ref` — ভাগ বসানোর কোড এই ঘরটায় লেখে।
+                                    ⚠️ `x-model` নয়: তাহলে Alpine ঘরটার মালিক হত আর
+                                    সার্ভার থেকে আসা পুরনো মানটা মুছে যেত।
+                                --}}
                                 <input type="number" step="0.01" inputmode="decimal"
+                                       x-ref="share{{ $i }}"
                                        class="num w-28 rounded-(--radius-field) border border-(--color-border) p-1 text-end"
                                        name="bill_shares[{{ $i }}][share_amount]"
                                        value="{{ $share }}">
@@ -146,7 +152,8 @@
                              'value' => __('accounts::field.basis_value'),
                              'weight' => __('accounts::field.basis_weight'),
                          ]"
-                         :selected="old('alloc_basis', 'qty')" />
+                         :selected="old('alloc_basis', 'qty')"
+                         x-model="basis" x-on:change="spread()" />
 
             {{--
                 ধরন ও কোথায় বসবে — লেখা, ঘর নয়।

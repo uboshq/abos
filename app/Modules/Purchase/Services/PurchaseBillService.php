@@ -215,8 +215,27 @@ final class PurchaseBillService
      * @param  array<string, mixed>  $data
      * @param  list<array<string, mixed>>  $lines
      */
-    public function update(PurchaseBill $bill, array $data, array $lines): PurchaseBill
+    public function update(PurchaseBill $bill, array $data, array $lines, bool $repost = false): PurchaseBill
     {
+        /*
+         * ⭐ নিশ্চিত বিল সম্পাদনা — কেবল `$repost` বলা থাকলে, ১৮ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⛔ কেন পতাকাটা লাগল ─────────────────────────────────────
+         * মালিকের সিদ্ধান্তে super admin নিশ্চিত বিলও বদলাতে পারেন। ⚠️ কিন্তু
+         * ঐ বিলের দাখিলা খাতায় বসে আছে আর মাল গুদামে ঢুকে গেছে — কেবল
+         * সারিগুলো বদলে দিলে **কাগজ বদলাত, খাতা নয়**, আর দুইটা নীরবে
+         * আলাদা হয়ে যেত।
+         *
+         * ⓘ তাই এখানে বাতিলের **উল্টানো** আর নিশ্চিতের **বসানো** দুইটাই
+         * একসাথে চলে: পুরনোটা উল্টে যায়, নতুনটা বসে, অবস্থা নিশ্চিতই থাকে।
+         *
+         * ⚠️ পতাকাটা ডিফল্টে `false`, আর সেটাই নিরাপদ দিক: কেউ ভুলে গেলে
+         * পুরনো নিয়মই চলে (খসড়া ছাড়া সম্পাদনা নেই), উল্টোটা নয়।
+         */
+        if ($repost && $bill->status === DocumentStatus::CONFIRMED) {
+            return $this->updatePosted($bill, $data, $lines);
+        }
+
         $this->assertEditable($bill);
 
         if ($lines === []) {
@@ -671,6 +690,72 @@ final class PurchaseBillService
         }
 
         return $warehouse;
+    }
+
+    /**
+     * নিশ্চিত বিল সম্পাদনা — উল্টে, বদলে, আবার বসিয়ে।
+     *
+     * ── ⓘ ক্রমটাই সবকিছু ────────────────────────────────────────────
+     *   ১. পুরনো মাল গুদাম থেকে ফেরত ([[takeBackDirectLines]])
+     *   ২. পুরনো দাখিলা উল্টানো ([[PostingEngine::reverse]])
+     *   ৩. সারি ও হেডার বদলানো
+     *   ৪. নতুন মাল ঢোকানো, নতুন দাখিলা বসানো, দাম বসানো
+     *
+     * ⚠️ পুরো কাজটা **একটাই লেনদেনে** — মাঝপথে ভাঙলে খাতায় কেবল উল্টো
+     * সারিটা বসে থাকত আর নতুনটা না, অর্থাৎ বিলটা খাতা থেকে উবে যেত।
+     *
+     * ⛔ আর উল্টানোর সারিগুলো মোছা হয় না, খাতায় থেকে যায় — নিয়ম ৫।
+     * ⓘ নিরীক্ষক তখন দেখতে পান বিলটা একবার বদলেছে, আর কী থেকে কী হয়েছে।
+     *
+     * @param  array<string, mixed>  $data
+     * @param  list<array<string, mixed>>  $lines
+     */
+    private function updatePosted(PurchaseBill $bill, array $data, array $lines): PurchaseBill
+    {
+        if ($lines === []) {
+            throw ValidationException::withMessages(['lines' => __('purchase::validation.no_lines')]);
+        }
+
+        $reason = __('purchase::message.edited_after_posting', ['no' => $bill->document_no]);
+
+        return DB::transaction(function () use ($bill, $data, $lines, $reason) {
+            $date = now();
+
+            $this->takeBackDirectLines($bill, $date, $reason);
+
+            $this->posting->reverse(
+                sourceType: PurchaseBill::drillSourceType(),
+                sourceId: $bill->id,
+                reversalDate: $date,
+                reason: $reason,
+            );
+
+            $trxDate = Carbon::parse($data['trx_date'] ?? $bill->trx_date);
+            $billNo = $data['supplier_bill_no'] ?? null;
+
+            if ($billNo !== $bill->supplier_bill_no) {
+                $this->assertBillNoIsFree($bill->supplier_id, $billNo, $bill->id);
+            }
+
+            $bill->update([
+                'warehouse_id' => $data['warehouse_id'] ?? null,
+                'trx_date' => $trxDate->toDateString(),
+                'due_on' => $data['due_on'] ?? null,
+                'supplier_bill_no' => $billNo,
+                'narration' => $data['narration'] ?? null,
+                'financial_year_id' => $this->resolveFinancialYear($trxDate)->id,
+            ]);
+
+            $this->replaceLines($bill, $lines);
+
+            $fresh = $bill->fresh(['lines']);
+
+            $this->bringInDirectLines($fresh);
+            $this->postToLedger($fresh);
+            $this->applySalesPrices($fresh);
+
+            return $fresh->fresh(['lines']);
+        });
     }
 
     /**

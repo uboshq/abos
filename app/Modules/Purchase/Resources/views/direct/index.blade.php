@@ -1235,7 +1235,7 @@
                                 <span class="mb-1 block text-2xs text-(--color-ink-muted)">
                                     {{ __('purchase::field.markup') }}
                                 </span>
-                                <input type="number" step="0.01" inputmode="decimal"
+                                <input type="number" step="any" inputmode="decimal"
                                        x-model="entry.markup" @input="priced('markup')" :disabled="! picked"
                                        class="num h-(--spacing-field) w-full rounded-(--radius-field) border
                                               border-(--color-border) bg-(--color-surface-card) px-2 text-end text-sm
@@ -1246,7 +1246,7 @@
                                 <span class="mb-1 block text-2xs text-(--color-ink-muted)">
                                     {{ __('purchase::field.margin') }}
                                 </span>
-                                <input type="number" step="0.01" inputmode="decimal"
+                                <input type="number" step="any" inputmode="decimal"
                                        x-model="entry.margin" @input="priced('margin')" :disabled="! picked"
                                        class="num h-(--spacing-field) w-full rounded-(--radius-field) border
                                               border-(--color-border) bg-(--color-surface-card) px-2 text-end text-sm
@@ -1266,6 +1266,12 @@
                                               disabled:opacity-50">
                             </label>
                         </div>
+
+                        <p x-show="needsRate" x-cloak
+                           class="mt-2 rounded-(--radius-field) bg-(--color-badge-pending-bg) px-3 py-2
+                                  text-xs text-(--color-badge-pending-ink)">
+                            {{ __('purchase::message.rate_first') }}
+                        </p>
 
                         {{-- ── সারি ৩: দর ────────────────────────────────
 
@@ -3072,6 +3078,20 @@
                     /** তিনটা ঘরের একটায় লেখা হল — বাকিগুলো নতুন করে বসে। */
                     priced(edited) {
                         Object.assign(this.entry, window.abos.reprice(this.entry, edited));
+                    },
+
+                    /*
+                     * দাম বলা হয়েছে অথচ দর বলা হয়নি — ১৮ সেপ্টেম্বর ২০২৬।
+                     *
+                     * ⓘ markup মাপা হয় ক্রয়দরের উপর, তাই দর খালি থাকলে
+                     * ঘর দুইটা খালিই থাকে। ⚠️ কারণটা পর্দায় লেখা না
+                     * থাকলে সেটা ভাঙা বলে মনে হয় — মালিক নিজেই তাই ভেবেছিলেন।
+                     */
+                    get needsRate() {
+                        const e = this.entry || {};
+
+                        return (parseFloat(e.rate) || 0) <= 0
+                            && !! (e.sales_price || e.markup || e.margin);
                     },
 
                     /*
