@@ -78,6 +78,7 @@ final class TheFiveBooksOpenedAndTheIncludesWereThereTest extends TestCase
     {
         $screens = [
             'finance.capital.create' => [],
+            'finance.withdrawal.create' => [],
             'finance.deposit.index' => ['issuer' => 'bank'],
             'finance.hand_loan.index' => [],
             'finance.bank_facility.index' => [],
@@ -90,7 +91,7 @@ final class TheFiveBooksOpenedAndTheIncludesWereThereTest extends TestCase
     }
 
     /**
-     * ⛔ দুইটা সাধারণ অংশ সত্যিই রেন্ডার হয়, নাম মিলিয়ে নয়।
+     * ⛔ ফিতাটা সত্যিই রেন্ডার হয়, আর ভাউচারের বাক্সটা ফেরেনি।
      *
      * ── ⚠️ কেন `@include`-এর নাম গুনে দেখা যথেষ্ট নয় ─────────────────
      * ব্লেডে `@include('finance::partials.handoff')` লেখা থাকা মানে
@@ -104,6 +105,7 @@ final class TheFiveBooksOpenedAndTheIncludesWereThereTest extends TestCase
     {
         $screens = [
             ['finance.capital.create', []],
+            ['finance.withdrawal.create', []],
             ['finance.deposit.index', ['issuer' => 'bank']],
             ['finance.hand_loan.index', []],
             ['finance.bank_facility.index', []],
@@ -119,11 +121,33 @@ final class TheFiveBooksOpenedAndTheIncludesWereThereTest extends TestCase
             $page->assertSee(__('finance::message.step_this_book'), false);
             $page->assertSee(__('finance::message.step_ledger'), false);
 
-            // ভাউচারের ঘর — শিরোনামটা দিক অনুযায়ী দুই রকম
-            $box = str_contains($page->getContent(), __('finance::field.voucher_box_in'))
-                || str_contains($page->getContent(), __('finance::field.voucher_box_out'));
+            /*
+             * ⛔ ভাউচারের বাক্সের দাবিটা তুলে নেওয়া হলো — ১৮ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ মালিকের সিদ্ধান্ত: *"টাকাটা কীভাবে এল সেটা Accounts-এর
+             * ব্যাপার — Finance থেকে শুধু work order যাবে।"* ⭐ তাই
+             * বাইশটা ঘরের বাক্সটা ছয়টা পর্দা থেকেই সরেছে।
+             *
+             * ⚠️ দাবিটা তখন **উল্টো দিকে** বসল: বাক্সটা যেন ফিরে না
+             * আসে। ⓘ ফিরে এলে আবার দুইটা পথ হবে, আর টাকার নিয়মগুলো
+             * ভাউচারে থাকা সত্ত্বেও ঘরগুলো খাতায় থাকবে।
+             */
+            $this->assertStringNotContainsString(
+                __('finance::field.voucher_box_in'), $page->getContent(),
+                "{$name}-এ ভাউচারের বাক্সটা ফিরে এসেছে — টাকা নেওয়ার দ্বিতীয় পথ।",
+            );
 
-            $this->assertTrue($box, "{$name}-এ ভাউচারের ঘরটা নেই।");
+            $this->assertStringNotContainsString(
+                __('finance::field.voucher_box_out'), $page->getContent(),
+                "{$name}-এ ভাউচারের বাক্সটা ফিরে এসেছে — টাকা দেওয়ার দ্বিতীয় পথ।",
+            );
+
+            /*
+             * ⭐ আর যেটা থাকতেই হবে: ভাউচারে যাওয়ার পথ।
+             * ⓘ বাক্স সরানোর পর এটাই একমাত্র সেতু — এটাও হারালে খাতা
+             * আর খতিয়ানের মাঝে কোনো পথই থাকত না।
+             */
+            $page->assertSee('/accounts/vouchers/', escape: false);
         }
     }
 
