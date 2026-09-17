@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Services;
 
+use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Support\CompanyContext;
@@ -55,6 +56,7 @@ final class SalesReturnService
         private readonly PostingEngine $posting,
         private readonly StockService $stock,
         private readonly CostLayerService $costs,
+        private readonly DocumentApproval $approvals,
     ) {}
 
     /**
@@ -145,6 +147,29 @@ final class SalesReturnService
         foreach ($return->lines as $line) {
             $this->assertWithinSold($line);
         }
+
+        /*
+         * ⭐ অনুমোদন — মালিকের সিদ্ধান্ত, ১৮ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⛔ কেন ফেরত সই চায় ──────────────────────────────────────
+         * ফেরতে **দুইটা জিনিস একসাথে ঘটে**: মাল গুদামে ফেরে আর গ্রাহকের
+         * দেনা কমে। ⚠️ অর্থাৎ একটা মিথ্যা ফেরত দিয়ে বিক্রি মুছে ফেলা
+         * যায়, আর খাতা দেখে বোঝার উপায় থাকে না — কাগজে সব ঠিক।
+         *
+         * ⓘ অঙ্কটা পাঠানো হয়, তাই কোম্পানি চাইলে "দুই হাজারের উপরে সই"
+         * বসাতে পারে — ছোট ফেরত রোজকার কাজ, ওটা থামানোর মানে নেই।
+         *
+         * ⚠️ ছক না বসানো পর্যন্ত কিছুই বদলায় না: `assertClear()` চুপচাপ
+         * ফিরে যায় আর ফেরত আগের মতোই নিশ্চিত হয়।
+         */
+        $this->approvals->assertClear(
+            document: $return,
+            module: 'sales',
+            action: 'return',
+            field: 'status',
+            amount: (string) $return->total,
+            reason: $return->narration,
+        );
 
         return DB::transaction(function () use ($return) {
             foreach ($return->lines as $line) {

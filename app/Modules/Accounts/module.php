@@ -403,6 +403,9 @@ return [
      */
     'approvals' => [
         'expense' => 'accounts::approval.expense',
+        'transfer' => 'accounts::approval.transfer',
+        'cash_count' => 'accounts::approval.cash_count',
+        'year_end' => 'accounts::approval.year_end',
 
         /*
          * বাকি চার ধরনের ভাউচার।

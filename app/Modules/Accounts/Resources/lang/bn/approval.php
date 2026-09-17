@@ -10,6 +10,9 @@ declare(strict_types=1);
  */
 
 return [
+    'cash_count' => 'নগদ গণনার পার্থক্য ক্ষমা করা',
+    'transfer' => 'টাকা হস্তান্তর',
+    'year_end' => 'বছর সমাপনী',
     'expense' => 'খরচের ভাউচার',
     'receipt' => 'আদায় ভাউচার',
     'payment' => 'পরিশোধ ভাউচার',

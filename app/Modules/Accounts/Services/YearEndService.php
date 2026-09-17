@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Services;
 
+use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Engines\Posting\PostingException;
 use App\Core\Services\NumberSeriesProvisioner;
@@ -48,6 +49,7 @@ final class YearEndService
     public function __construct(
         private readonly PostingEngine $posting,
         private readonly NumberSeriesProvisioner $series,
+        private readonly DocumentApproval $approvals,
     ) {}
 
     /** বছর বন্ধের দাখিলার উৎস — ড্রিল-ডাউনে চেনা যায়। */
@@ -107,6 +109,23 @@ final class YearEndService
     public function close(FinancialYear $year, array $next = []): FinancialYear
     {
         $this->assertCanClose($year);
+
+        /*
+         * ⭐ অনুমোদন — মালিকের সিদ্ধান্ত, ১৮ সেপ্টেম্বর ২০২৬।
+         *
+         * মালিকের কথা: *"এখন সব জায়গায় এপ্রুভাল দিয়ে টেস্ট কর, পরে যে
+         * যে জায়গায় লাগবে না তাও উঠিয়ে দিব"*।
+         *
+         * ⚠️ সারিটা কারো আজকের কাজ থামায় না: ছক না বসানো পর্যন্ত
+         * `assertClear()` চুপচাপ ফিরে যায়, আর কাজ আগের মতোই চলে।
+         */
+        $this->approvals->assertClear(
+            document: $year,
+            module: 'accounts',
+            action: 'year_end',
+            field: 'is_closed',
+            reason: $year->name,
+        );
 
         return DB::transaction(function () use ($year, $next) {
             $proposed = [...$this->nextYearFor($year), ...array_filter($next)];

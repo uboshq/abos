@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Services;
 
+use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Services\SlipIsNotUsedTwice;
@@ -46,6 +47,7 @@ final class CollectionService
 
         /* ⓘ নিয়মটা কোরে — ক্রয়ের পরিশোধও ঠিক এই একই যন্ত্র ডাকে। */
         private readonly SlipIsNotUsedTwice $slips,
+        private readonly DocumentApproval $approvals,
     ) {}
 
     /**
@@ -162,6 +164,27 @@ final class CollectionService
         }
 
         $this->assertStillFits($collection);
+
+        /*
+         * ⭐ অনুমোদন — মালিকের সিদ্ধান্ত, ১৮ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⓘ কেন আদায়েও সই লাগতে পারে ──────────────────────────────
+         * মাঠকর্মী গ্রাহকের কাছ থেকে টাকা তোলেন, আর খাতায় বসান নিজে।
+         * ⚠️ কম বসালে পার্থক্যটা গ্রাহকের খতিয়ানে থেকে যায়, আর গ্রাহক
+         * অভিযোগ না করা পর্যন্ত কেউ জানে না।
+         *
+         * ⓘ বড় অঙ্কে সই চাইলে সেটা ধরা পড়ে সাথে সাথেই। ⚠️ ছোট আদায়ে
+         * সই চাওয়ার মানে নেই — তাই অঙ্কটা পাঠানো হয়, আর সীমাটা
+         * কোম্পানি নিজে বসায়।
+         */
+        $this->approvals->assertClear(
+            document: $collection,
+            module: 'sales',
+            action: 'collection',
+            field: 'status',
+            amount: (string) $collection->amount,
+            reason: $collection->narration,
+        );
 
         return DB::transaction(function () use ($collection) {
             $this->posting->post(
