@@ -182,9 +182,18 @@ class EveryMenuRowHasItsOwnSwitchTest extends TestCase
 
         $this->get(route('finance.income.index'))->assertNotFound();
 
-        /* অন্য গ্রুপের সারি অক্ষত — একটা গ্রুপ বন্ধ করলে মডিউল নয় */
-        $this->assertContains('finance.capital.index', $after,
-            'এক গ্রুপ বন্ধ করায় অন্য গ্রুপের সারিও চলে গেছে।');
+        /*
+         * ⓘ সাক্ষী বদলাল — ১৮ সেপ্টেম্বর ২০২৬।
+         *
+         * আগে এখানে `finance.capital.index` ছিল, কারণ ওটা অর্থের
+         * মাস্টার গ্রুপে বসত। মালিক বললেন *"finance e master
+         * dorkar ache bole mone hoy na"*, আর দলটা উঠে গেছে — মূলধন
+         * এখন লেনদেনের দলেই, তাই গ্রুপ বন্ধ হলে ওটাও সাথে যায়।
+         *
+         * ⭐ দাবিটা একই: এক গ্রুপ বন্ধ করলে পুরো মেনু যায় না।
+         */
+        $this->assertContains('accounts.coa.index', $after,
+            'এক গ্রুপ বন্ধ করায় অন্য মডিউলের সারিও চলে গেছে।');
     }
 
     /**
