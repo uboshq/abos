@@ -24,7 +24,9 @@
     ফাঁকা। ⓘ ফিতাটা ঐ দূরত্বটা চোখে দেখায়: **খাতা ঘটনা লেখে · ভাউচার
     টাকা নাড়ে**।
 --}}
-<div data-boxed
+{{-- ⓘ `x-data` লাগে: নিচের `x-on:click` Alpine ছাড়া পড়াই হয় না,
+     আর তখন বোতামটা নীরবে খালি রসিদ খুলত — ঠিক আগের আচরণ। --}}
+<div data-boxed x-data
      class="my-3 flex flex-wrap items-center gap-2 rounded-(--radius-card)
             border border-dashed border-(--color-brand-400)
             bg-(--color-surface-app) px-3 py-2 text-sm">
@@ -57,7 +59,56 @@
     </span>
 
     @if ($to)
-        <x-ui.button tone="primary" class="ms-auto" :href="$to">
+        {{-- ⭐ বোতামটা ঘরগুলো বয়ে নেয় — ১৮ সেপ্টেম্বর ২০২৬।
+
+             ── ⛔ মালিকের প্রশ্ন, আর সেটা ন্যায্য ছিল ──────────────────
+             *"আবার Accounts-এ গেলে তাহলে আলাদা করে লাভ কী?"*
+
+             ⚠️ আগে বোতামটা **কিছুই নিত না** — শুধু একটা খালি রসিদ
+             খুলত। ⓘ ফলে ব্যবহারকারী এখানে টাকা, নাম আর বিবরণ ভরে
+             ওপাশে গিয়ে আবার একই তিনটা টাইপ করতেন। ⛔ তখন বাক্সটা
+             সত্যিই নকল ছিল, আর মালিকের আপত্তিটাই সঠিক ছিল।
+
+             ⭐ এখন `x-on:click` ফর্মের ঘরগুলো পড়ে নিয়ে ঠিকানায় জুড়ে
+             দেয়, তাই ওপাশে সব আগে থেকে বসানো থাকে।
+
+             ── ⓘ কেবল এই কয়টা ঘরই কেন ─────────────────────────────
+             ⓘ [[VoucherController::prefill()]] একটা **সাদা তালিকা**
+             রাখে, আর তার বাইরের কিছু নীরবে ফেলে দেয়। ⚠️ এখানে বেশি
+             পাঠালে কিছু ঘর চুপচাপ হারাত, আর কেউ বুঝত না কেন।
+
+             ⛔ `against_type` ও `against_id` যায় **কেবল সারিটা বসার
+             পরে** — নতুন ফর্মে আইডিটাই নেই। ⓘ তাই লেখার পাতা থেকে
+             গেলে রসিদটা সারির সাথে বাঁধা পড়ে না; বাঁধা পড়ে তালিকার
+             সারির বোতাম থেকে গেলে ([[capital/partials/state]])। --}}
+        <x-ui.button tone="primary" class="ms-auto" :href="$to"
+                     x-on:click="
+                         (() => {
+                             const form = $el.closest('form');
+                             if (! form) { return; }
+
+                             const url = new URL($el.href, window.location.origin);
+                             const pick = {
+                                 amount: ['amount'],
+                                 narration: ['narration', 'reason'],
+                                 party_id: ['person_id'],
+                             };
+
+                             for (const [key, names] of Object.entries(pick)) {
+                                 for (const name of names) {
+                                     const box = form.querySelector('[name=' + name + ']');
+                                     if (box && box.value) { url.searchParams.set(key, box.value); break; }
+                                 }
+                             }
+
+                             /* ⓘ পক্ষের ধরন বসে কেবল যখন সত্যিই একজন বাছা হয়েছে */
+                             if (url.searchParams.has('party_id')) {
+                                 url.searchParams.set('party_type', 'person');
+                             }
+
+                             $el.href = url.toString();
+                         })()
+                     ">
             {{ $action ?? __('finance::action.money_arrived') }}
         </x-ui.button>
     @endif
