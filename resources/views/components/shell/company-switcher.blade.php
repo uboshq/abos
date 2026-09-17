@@ -21,15 +21,22 @@
     কথাটা চোখে পড়া দরকার, বদলে ফেলার পরে নয়।
 --}}
 @php
+    /*
+     * ⭐ কোয়েরিগুলো এখান থেকে সরেছে — ১৮ সেপ্টেম্বর ২০২৬, নিরীক্ষার ধাপ ৪.২।
+     *
+     * ⛔ আগে এখানেই দুইটা কোয়েরি লেখা ছিল, আর এই কম্পোনেন্টটা **প্রতিটা
+     * পাতায়** আঁকা হয়। ⚠️ ধীর পাতার কারণ খুঁজতে সবাই কন্ট্রোলার ও সার্ভিস
+     * দেখে; কেউ একটা কম্পোনেন্টের `@php` ব্লক খোলে না।
+     *
+     * ⓘ [[ShellFacts]] `scoped`, তাই উত্তরটা **অনুরোধপ্রতি** একবার বেরোয় —
+     * কম্পোনেন্টটা দুইবার আঁকলেও কোয়েরি একবারই, আর পরের পাতায় আবার তাজা।
+     */
+    $shell = app(\App\Core\Services\ShellFacts::class);
+
     $user = auth()->user();
-
-    $companies = $user?->companies()->orderBy('name_en')->get() ?? collect();
-
-    // শাখাগুলো চলতি কোম্পানির — গ্লোবাল স্কোপই সেটা করে দেয়
-    $branches = \App\Models\Branch::query()->active()->orderBy('name_en')->get();
-
-    // একটাই কোম্পানি আর একটাই শাখা হলে বদলানোর কিছু নেই, তাই মেনুও নেই
-    $canSwitch = $companies->count() > 1 || $branches->count() > 1;
+    $companies = $shell->companies();
+    $branches = $shell->branches();
+    $canSwitch = $shell->canSwitch();
 @endphp
 
 <div x-data="{ open: false }" class="relative">
