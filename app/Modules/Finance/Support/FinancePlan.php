@@ -220,7 +220,7 @@ final class FinancePlan
                      * ভাঙা** হয়েছে (জ্বালানি · গাড়ির ভাড়া · লোডিং · আনলোডিং ·
                      * হাম্মালি), তাই শ্রেণিটা এখন সত্যিই কাজের।
                      */
-                    ['খরচের শ্রেণি — খাত ধরে', 'finance.expense.index', null],
+                    ['খরচের শ্রেণি — খাত ধরে', 'accounts.report.show:expense-by-head', null],
                     ['খরচের অনুমোদন', 'approval.inbox.index', 'অনুমোদন কেন্দ্র থেকে'],
                 ],
             ],

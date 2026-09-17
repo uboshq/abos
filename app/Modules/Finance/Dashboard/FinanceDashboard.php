@@ -96,9 +96,14 @@ final class FinanceDashboard implements ProvidesDashboard
                         permission: 'approval.decide', icon: 'check-circle')
                     : null,
 
+                /*
+                 * ⓘ দরজাটা এখন হিসাবের রিপোর্টে — ১৮ সেপ্টেম্বর ২০২৬।
+                 * মালিক খরচের পর্দা অর্থ থেকে তুলে দিতে বলেছেন; টাইলটা
+                 * রয়ে গেল, কেবল গন্তব্য বদলাল — প্রশ্নটা তো বদলায়নি।
+                 */
                 new Tile(label: __('finance::dashboard.expense_heads'),
-                    href: route('finance.expense.index'),
-                    permission: 'finance.expense.view', icon: 'reports'),
+                    href: route('accounts.report.show', ['slug' => 'expense-by-head']),
+                    permission: 'accounts.report', icon: 'reports'),
 
                 /*
                  * ⚠️ পণ্যের খরচ **অনুমতির পিছনে** — `inventory.cost.view`।
