@@ -76,6 +76,86 @@
                     :value="old('happened_at')" />
     </div>
 
+    {{-- ── নগদ: নোটের হিসাব ───────────────────────────────────────────
+
+         ⭐ নমুনার বাক্স, ১৮ সেপ্টেম্বর ২০২৬।
+
+         ── ⛔ কেন নোট গোনা হয়, কেবল অঙ্ক নয় ───────────────────────────
+         ⚠️ নগদে সবচেয়ে সাধারণ ভুল হলো **কাগজে এক অঙ্ক, হাতে আরেক**।
+         ⓘ গোনা মোট আর লেখা অঙ্ক মিলিয়ে দেখালে পার্থক্যটা ঐ মুহূর্তেই
+         ধরা পড়ে — সিন্দুক মেলানোর দিন নয়, যখন কেউ আর মনে করতে পারে না।
+
+         ⛔ সংখ্যাগুলো সংরক্ষণ হয় না — ওগুলো ভাউচারের ঘর, খাতার নয়।
+         ⓘ এখানে ওদের একমাত্র কাজ গুনে দেখানো।
+
+         ── ⚠️ দশটা নোট, আর ২ টাকাও আছে ────────────────────────────────
+         ⓘ ১০০০ · ৫০০ · ২০০ · ১০০ · ৫০ · ২০ · ১০ · ৫ · ২ · ১ — বাংলাদেশে
+         চালু সবগুলো। ⛔ ছোটগুলো বাদ দিলে খুচরার হিসাব মিলত না, আর
+         দোকানের নগদে খুচরাই সবচেয়ে বেশি। --}}
+    <template x-if="pay === 'cash'">
+        <fieldset x-data="{
+                      n: { 1000: 0, 500: 0, 200: 0, 100: 0, 50: 0, 20: 0, 10: 0, 5: 0, 2: 0, 1: 0 },
+                      written: 0,
+                      get counted() {
+                          return Object.entries(this.n)
+                              .reduce((t, [note, count]) => t + (Number(note) * (Number(count) || 0)), 0);
+                      },
+                      money(v) {
+                          return new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2 }).format(v || 0);
+                      },
+                      readWritten() {
+                          const box = this.$root.closest('form')?.querySelector('[name=amount]');
+                          this.written = Number(box?.value || 0);
+                      },
+                  }"
+                  x-init="readWritten()"
+                  x-on:input.window="readWritten()"
+                  class="mt-3 rounded-(--radius-card) border border-(--color-border) p-3">
+
+            <legend class="px-1 text-sm font-medium text-(--color-brand-700)">
+                {{ __('finance::field.cash_title') }}
+            </legend>
+
+            <div class="grid gap-x-6 gap-y-1 sm:grid-cols-2">
+                @foreach ([1000, 500, 200, 100, 50, 20, 10, 5, 2, 1] as $note)
+                    <div class="flex items-center gap-2 text-sm">
+                        <span class="w-12 text-end tabular-nums">{{ number_format($note) }}</span>
+                        <span aria-hidden="true" class="text-(--color-ink-muted)">×</span>
+
+                        {{-- ⓘ `aria-label` লাগে, কারণ চোখে নোটের অঙ্কটাই
+                             লেবেল — পর্দা-পাঠকের কাছে ওটা আলাদা ঘর নয়। --}}
+                        <input type="number" min="0" step="1" inputmode="numeric"
+                               x-model.number="n[{{ $note }}]"
+                               aria-label="{{ __('finance::field.notes_of', ['note' => number_format($note)]) }}"
+                               class="h-(--spacing-field-compact) w-20 rounded-(--radius-field)
+                                      border border-(--color-border) px-2 text-end tabular-nums">
+
+                        <span class="flex-1 text-end tabular-nums text-(--color-ink-muted)"
+                              x-text="n[{{ $note }}] ? money({{ $note }} * n[{{ $note }}]) : '—'"></span>
+                    </div>
+                @endforeach
+            </div>
+
+            <p class="mt-3 flex items-baseline justify-between gap-2 border-t border-(--color-border) pt-2">
+                <span class="text-sm font-medium">{{ __('finance::field.counted_total') }}</span>
+                <span class="text-lg font-semibold tabular-nums" x-text="'৳ ' + money(counted)"></span>
+            </p>
+
+            {{-- ⚠️ মিলছে কি না — আর না মিললে কথাটা স্পষ্ট করে বলা।
+                 ⓘ রঙ একা যথেষ্ট নয়; লেখাটাই আসল বার্তা। --}}
+            <p class="mt-2 rounded-(--radius-field) px-3 py-2 text-2xs"
+               x-bind:class="counted === written
+                   ? 'bg-badge-success-bg text-badge-success-ink'
+                   : 'bg-badge-warning-bg text-badge-warning-ink'"
+               x-text="counted === written
+                   ? @js(__('finance::message.cash_matches'))
+                   : @js(__('finance::message.cash_differs', ['counted' => '__C__', 'written' => '__W__', 'gap' => '__G__']))
+                       .replace('__C__', '৳ ' + money(counted))
+                       .replace('__W__', '৳ ' + money(written))
+                       .replace('__G__', '৳ ' + money(Math.abs(written - counted)))"></p>
+        </fieldset>
+    </template>
+
     <template x-if="pay === 'transfer'">
         <fieldset class="mt-3 rounded-(--radius-card) border border-(--color-border) p-3">
             <legend class="px-1 text-sm font-medium text-(--color-brand-700)">

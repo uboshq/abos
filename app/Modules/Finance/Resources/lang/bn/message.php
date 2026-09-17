@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'cash_matches' => 'গোনা আর লেখা মিলেছে।',
+    'cash_differs' => 'গোনা :counted, লেখা :written — পার্থক্য :gap। ⛔ না মিললে পোস্ট হবে না।',
     'withdrawal_kind_note' => 'উত্তোলন ও মুনাফার ভাগ মূলধন কমায়; মালিকের বেতন একটা খরচ, তাই মুনাফা কমায়।',
     'ledger_debit_withdrawal' => '৩২০০ উত্তোলন · ৩২১০ মুনাফার ভাগ · ৫২০১ মালিকের বেতন — ধরন অনুযায়ী',
     'ledger_credit_withdrawal' => 'যে খাত থেকে টাকাটা গেল — নগদ, ব্যাংক বা মোবাইল হিসাব',

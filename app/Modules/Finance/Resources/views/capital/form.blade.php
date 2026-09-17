@@ -117,7 +117,10 @@
             <x-ui.field name="trx_date" type="date" :label="__('finance::field.date')" required
                         :value="old('trx_date', $entry?->trx_date?->toDateString() ?? now()->toDateString())" />
 
-            <div class="sm:col-span-2">
+            {{-- ⓘ এক কলাম — নমুনায় তারিখ · কে · কোম্পানি এক সারিতে।
+                 ⛔ আগে দুই কলাম নিত, তাই কোম্পানি পরের সারিতে নেমে
+                 যেত আর সারিটা তিনটার বদলে দুইটা ঘর দেখাত। --}}
+            <div>
                 @include('finance::components.person-picker', [
                     'people' => $people,
                     'label' => __('finance::field.who'),
@@ -216,7 +219,7 @@
             {{-- ⓘ নমুনার শব্দ "বিবরণ" — আগে লেখা ছিল "কীসের জন্য"।
                  ⚠️ দুইটার মানে কাছাকাছি, কিন্তু মালিকের নিয়ম ১০০%,
                  তাই নমুনার শব্দটাই বসল। --}}
-            <div class="sm:col-span-2 xl:col-span-3">
+            <div>
                 <x-ui.field name="narration" :label="__('finance::field.narration')"
                             :value="old('narration', $entry->narration ?? null)" />
             </div>
@@ -254,7 +257,7 @@
 
                  ⓘ `enctype` এই ফর্মে আজ যোগ হলো; ওটা ছাড়া ফাইল
                  পাঠানোই যেত না, আর কোনো ভুলও দেখাত না। --}}
-            <div class="sm:col-span-2 xl:col-span-3">
+            <div>
                 <label for="paper" class="mb-1 block text-sm font-medium">
                     {{ __('finance::field.attachment') }}
                 </label>
@@ -265,7 +268,9 @@
                               file:px-3 file:py-1.5 file:text-sm">
             </div>
 
-            <div class="flex flex-wrap items-end gap-2 sm:col-span-2 xl:col-span-3">
+            {{-- ⓘ নমুনায় বিবরণ · সংযুক্তি · বোতাম — তিনটাই এক সারিতে,
+                 আর বোতামটা ডান কোণে। --}}
+            <div class="flex flex-wrap items-end gap-2">
                 {{-- ⓘ নমুনার লেখা — "সংরক্ষণ" নয়, "মূলধনের সারি সংরক্ষণ"।
                      ⚠️ বোতামটা কী সংরক্ষণ করছে সেটা বলা থাকলে মানুষ
                      থামেন না; সাধারণ "সংরক্ষণ" পড়ে অনেকে ভাবেন টাকাটাও

@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'notes_of' => ':note টাকার নোট কয়টা',
+    'counted_total' => 'গোনা মোট',
     // ⭐ উত্তোলন — মূলধনের অন্য দিক, ১৮ সেপ্টেম্বর ২০২৬
     'withdrawal_amount' => 'উত্তোলনের পরিমাণ',
     'taken_from' => 'যে খাত থেকে',

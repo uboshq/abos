@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'notes_of' => 'How many :note notes',
+    'counted_total' => 'Counted total',
     'withdrawal_amount' => 'Amount drawn',
     'taken_from' => 'Taken from',
     'withdrawal_kind_box' => 'Kind of withdrawal',

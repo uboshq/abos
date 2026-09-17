@@ -13,6 +13,7 @@ use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\VoucherService;
+use App\Modules\Finance\Models\CapitalEntry;
 use App\Modules\Finance\Models\Withdrawal;
 use App\Modules\Finance\Models\WithdrawalLimit;
 use App\Modules\MasterData\Models\Person;
@@ -90,6 +91,12 @@ final class WithdrawalService
                  * তাই পুরনো সারির আচরণ বদলায় না।
                  */
                 'kind' => ($data['kind'] ?? '') ?: Withdrawal::DRAWING,
+
+                /*
+                 * ⓘ খালি এলে কলামের ডিফল্ট `cash` — পুরনো সারির আচরণ
+                 * বদলায় না।
+                 */
+                'in_kind' => ($data['in_kind'] ?? '') ?: CapitalEntry::CASH,
 
                 'money_account_id' => $data['money_account_id'] ?? null,
                 'reason' => ($data['reason'] ?? '') ?: null,
