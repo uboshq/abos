@@ -53,7 +53,17 @@
     $expenseLayout = $voucher->type === \App\Modules\Accounts\Models\Voucher::EXPENSE;
 
     /* নমুনা-কাঠামোর পর্দাগুলো — পুরনো ছড়ানো ঘরগুলো এখানে লুকানো ও নিষ্ক্রিয়। */
-    $sampled = $partyAbove || $expenseLayout;
+    /*
+     * ⭐ কন্ট্রার নকশা — ১৮ সেপ্টেম্বর ২০২৬।
+     *
+     * মালিক ছবি পাঠিয়ে বললেন *"কন্ট্রা ভাউচার emon koro"*।
+     * ⚠️ কন্ট্রায় পক্ষ বলে কিছু নেই — টাকাটা নিজেরই এক খাত
+     * থেকে অন্য খাতে যায়। ⓘ তাই পক্ষ, টাকার শ্রেণি আর নোট
+     * গোনা — তিনটাই এই পর্দায় অর্থহীন।
+     */
+    $contraLayout = $voucher->type === \App\Modules\Accounts\Models\Voucher::CONTRA;
+
+    $sampled = $partyAbove || $expenseLayout || $contraLayout;
 
     $optionsFor = fn (string $source) => match ($source) {
         'money' => $moneyAccounts,
@@ -96,8 +106,10 @@
             :title="__('accounts::voucher.' . $type)"
             :subtitle="$expenseLayout
                 ? __('accounts::message.expense_subtitle')
-                : ($isNew ? __('accounts::message.number_on_save') : $voucher->document_no)">
-            @if ($expenseLayout)
+                : ($contraLayout
+                    ? __('accounts::message.contra_subtitle')
+                    : ($isNew ? __('accounts::message.number_on_save') : $voucher->document_no))">
+            @if ($expenseLayout || $contraLayout)
                 <x-slot:actions>
                     <span class="num rounded-(--radius-field) border border-(--color-border)
                                  bg-(--color-surface-sunken) px-3 py-1.5 text-sm text-(--color-ink-muted)">
@@ -123,7 +135,7 @@
           action="{{ $isNew ? route('accounts.voucher.store', $type) : route('accounts.voucher.update', $voucher) }}"
           x-data="{ busy: false }"
           @submit="busy ? $event.preventDefault() : (busy = true)"
-          class="{{ $expenseLayout ? 'max-w-6xl' : 'max-w-3xl' }} space-y-4">
+          class="{{ $expenseLayout || $contraLayout ? 'max-w-6xl' : 'max-w-3xl' }} space-y-4">
         @csrf
         @unless ($isNew) @method('PUT') @endunless
         <input type="hidden" name="type" value="{{ $type }}">
@@ -182,6 +194,18 @@
             ঘরগুলো এই ক্রমে। ⚠️ লেখাটা ভাঁজে, কারণ রোজ যিনি লেখেন
             তাঁর এটা লাগে না; নতুন কেউ প্রথম দিনে পড়েন।
         --}}
+        {{--
+            ⛔ কন্ট্রায় "কেন এভাবে" তুলে দেওয়া হলো — ১৮ সেপ্টেম্বর ২০২৬।
+
+            মালিকের প্রশ্ন: *"eta ki asolei dorkar ache?"* — আর না, ছিল না।
+
+            ⓘ কন্ট্রার উপশিরোনামেই পুরো কথাটা আছে — "নিজের এক খাত
+            থেকে অন্য খাতে"। ⚠️ তার পরে তিন ঘরের একটা পর্দায়
+            আরো চার লাইন ব্যাখ্যা পড়ার মতো কিছু নয়, কেবল জায়গা।
+
+            ⭐ খরচে রয়ে গেছে, আর সেটা ইচ্ছাকৃত: ওখানে প্রত্যক্ষ-পরোক্ষের
+            সিদ্ধান্তটা সত্যিই ব্যাখ্যা চায়, আর ভাঁজ করা আছে।
+        --}}
         @if ($expenseLayout)
             <details class="text-sm">
                 <summary class="cursor-pointer text-(--color-ink-muted)">
@@ -198,7 +222,7 @@
             \App\Modules\Accounts\Models\Voucher::PAYMENT,
         ], true))
             @include('accounts::voucher.partials.party-fields')
-        @elseif (! $expenseLayout)
+        @elseif (! $expenseLayout && ! $contraLayout)
             {{-- ⓘ খরচে এই সারিটা নেই: তারিখ নকশার সারি ১-এ চলে গেছে,
                  "কাগজের তারিখ" নকশায় নেই, আর "টাকার অঙ্ক" শেষ সারিতে। --}}
             <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
@@ -250,7 +274,21 @@
             @include('accounts::voucher.partials.expense-fields')
         @endif
 
-        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4"
+        @if ($contraLayout)
+            @include('accounts::voucher.partials.contra-fields')
+        @endif
+
+        {{--
+            ⛔ কন্ট্রায় এই বাক্সটা খালি দেখা যেত — ১৮ সেপ্টেম্বর ২০২৬।
+
+            ⓘ ভিতরের সব ঘর লুকানো (খাত দুইটা উপরে, পক্ষ ও টাকার
+            শ্রেণি কন্ট্রায় অর্থহীন), আর খরচের মতো শেষ সারিও এখানে
+            নেই — তাই পর্দায় পড়ে থাকত একটা সাদা, খালি কার্ড।
+            ⚠️ মালিক ছবিতে সেটাই দেখা যাচ্ছিল, দুই অংশের মাঝখানে।
+
+            ⭐ ঘরগুলো রয়ে গেছে (লুকানো ও নিষ্ক্রিয়), কেবল বাক্সটা নেই।
+        --}}
+        <section @unless ($contraLayout) data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4" @endunless
                  x-data="{
                      from: '{{ old('from_account_id', $creditLine?->account_id) }}',
                      credit: @js($creditIds),
@@ -671,7 +709,8 @@
                                      না নিচে, আর ধরন অনুযায়ী তিনটা শাখা। ⛔ একটা বদলে বাকি
                                      দুইটা ভুলে গেলে একই বোতাম এক ভাউচারে কাজ করত, অন্যটায়
                                      নীরবে করত না। --}}
-                                :value="old('amount', $debitLine?->debit ?? $voucher->amount)" required numeric />
+                                :value="old('amount', $debitLine?->debit ?? $voucher->amount)" required numeric 
+                                x-on:input="$dispatch('abos-expense-amount', $event.target.value)" />
 
                     {{-- ⓘ সংযুক্তি মালিকের ছবির মার্ক করা খালি জায়গায় — উৎসে কর্তনের ঠিক নিচে। --}}
 
@@ -708,7 +747,7 @@
             উৎসে কর্তনের **পাশে** বসে (দুই কলাম), আর "বিবরণ" শেষ সারিতে।
             ⓘ তাই খরচে টাকা-চলাচলের ব্লকটা expense-fields থেকে ডাকা হয়।
         --}}
-        @unless ($expenseLayout)
+        @unless ($expenseLayout || $contraLayout)
         <section @if (! $partyAbove) data-boxed
                  class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4"
                  @endif>
@@ -785,7 +824,7 @@
         @if ($partyAbove)
             <section data-boxed
                      class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
-                <div class="grid items-end gap-3 sm:grid-cols-[2fr_1fr_2fr_auto]">
+                <div class="grid items-end gap-3 sm:grid-cols-[2fr_1fr_1.4fr_2fr]">
                     <x-ui.select name="to_account_id"
                                  :label="__($sides['to']['label'])"
                                  :options="collect($optionsFor($sides['to']['source']))->mapWithKeys(fn ($a) => [$a->id => $a->label()])->all()"
@@ -817,6 +856,58 @@
                                      নীরবে করত না। --}}
                                 :value="old('amount', $debitLine?->debit ?? $voucher->amount)" required numeric />
 
+                    {{--
+                        ⭐ কার মাধ্যমে — বিবরণের ঠিক আগে, ১৮ সেপ্টেম্বর ২০২৬।
+
+                        মালিকের নির্দেশ: *"কার মাধ্যমে ei boxta বিবরণ er
+                        age niye aso"*। ⓘ ঘরটা আগে সবার উপরে বসত, তারিখের পাশে।
+
+                        ⛔ ঘরটা party-fields থেকে **মুছে** ফেলা হয়েছে, কেবল
+                        লুকানো হয়নি — এক নামে দুইটা সক্রিয় ঘর থাকলে ব্রাউজার
+                        শেষেরটার মান পাঠায়, আর বাছাইটা নীরবে হারায়।
+                    --}}
+                    <x-ui.select name="carried_by" :label="__('accounts::field.carried_by')"
+                                 :options="$carriers ?? []"
+                                 :selected="old('carried_by', $voucher->carried_by)"
+                                 :placeholder="__('accounts::field.carried_by_none')" />
+
+                    <x-ui.field name="narration"
+                                :label="__('core.table.narration')"
+                                :value="old('narration', $voucher->narration)" />
+                </div>
+
+                {{--
+                    ⓘ বোতাম তিনটা এক লাইন নিচে — মালিকের নির্দেশ।
+
+                    ⚠️ ঘরগুলোর সাথে এক সারিতে থাকায় চারটা ঘর আর তিনটা
+                    বোতাম একসাথে চাপাচাপি হয়ে যেত।
+                --}}
+                <div class="mt-4">
+                    @include('accounts::voucher.partials.save-buttons', ['voucher' => $voucher, 'type' => $type])
+                </div>
+            </section>
+        @endif
+
+        {{--
+            ⓘ রসিদ ও পরিশোধে বোতামগুলো নিচের সারির ভিতরে বসে
+            (নমুনায় "সংরক্ষণ ও পোস্ট" তিন ঘরের পাশে)।
+            ⛔ এখানেও আঁকলে বোতাম দুইবার দেখা যায় — গুনে ধরা পড়েছে।
+        --}}
+        {{--
+            ── কন্ট্রার শেষ সারি, ১৮ সেপ্টেম্বর ২০২৬ ───────────────
+                টাকার পরিমাণ · বিবরণ · [সংরক্ষণ ও পোস্ট]
+
+            ⓘ নকশায় বোতামটা এই সারির পাশেই — আদায় বা খরচের মতো
+            নিচে নয়। ⚠️ কন্ট্রায় ঘর দুইটা, তাই জায়গার টানাটানি নেই।
+        --}}
+        @if ($contraLayout)
+            <section data-boxed
+                     class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+                <div class="grid items-end gap-3 sm:grid-cols-[1fr_2fr_auto]">
+                    <x-ui.field name="amount" type="number" step="0.01" inputmode="decimal"
+                                :label="__('accounts::field.amount_moved')"
+                                :value="old('amount', $debitLine?->debit ?? $voucher->amount)" required numeric />
+
                     <x-ui.field name="narration"
                                 :label="__('core.table.narration')"
                                 :value="old('narration', $voucher->narration)" />
@@ -828,11 +919,6 @@
             </section>
         @endif
 
-        {{--
-            ⓘ রসিদ ও পরিশোধে বোতামগুলো নিচের সারির ভিতরে বসে
-            (নমুনায় "সংরক্ষণ ও পোস্ট" তিন ঘরের পাশে)।
-            ⛔ এখানেও আঁকলে বোতাম দুইবার দেখা যায় — গুনে ধরা পড়েছে।
-        --}}
         @unless ($sampled)
             @include('accounts::voucher.partials.save-buttons', ['voucher' => $voucher, 'type' => $type])
         @endunless

@@ -32,9 +32,21 @@
     <x-slot:title>{{ __('accounts::voucher.journal') }}</x-slot:title>
 
     <x-slot:header>
+        {{--
+            ⓘ নকশায় নম্বরটা ডানে একটা ব্যাজে, আর উপশিরোনামে জাবেদার
+            সংজ্ঞাটাই — "টাকা নড়ে না — খাতা নড়ে"। ⭐ মালিকের কথা:
+            *"১ নম্বরের চেহারা, ২ নম্বরের ঘরগুলো"*।
+        --}}
         <x-ui.page-header
             :title="__('accounts::voucher.journal')"
-            :subtitle="$isNew ? __('accounts::message.number_on_save') : $voucher->document_no" />
+            :subtitle="__('accounts::message.journal_subtitle')">
+            <x-slot:actions>
+                <span class="num rounded-(--radius-field) border border-(--color-border)
+                             bg-(--color-surface-sunken) px-3 py-1.5 text-sm text-(--color-ink-muted)">
+                    {{ $isNew ? __('accounts::message.number_on_save') : $voucher->document_no }}
+                </span>
+            </x-slot:actions>
+        </x-ui.page-header>
     </x-slot:header>
 
     {{--
@@ -57,6 +69,29 @@
         @unless ($isNew) @method('PUT') @endunless
         <input type="hidden" name="type" value="journal">
 
+        {{--
+            ⛔ "কেন এভাবে" ব্লকটা তুলে দেওয়া হলো — মালিকের সিদ্ধান্ত, ১৮ সেপ্টেম্বর ২০২৬।
+
+            ── ⓘ কী ছিল আর কেন গেল ─────────────────────────────────────
+            নকশার ছবিতে মাথায় দুইটা লাইন ছিল: একটা নিয়ম (নগদ/ব্যাংকের
+            খাত বসালে সতর্ক করে, থামায় না), আর একটা স্বীকারোক্তি
+            (*"আমি প্রথমে এটা পুরো আটকে দিয়েছিলাম, আর সেটা ভুল ছিল…"*)।
+
+            ⚠️ দ্বিতীয়টা পর্দার লেখাই নয় — ওটা নকশা আঁকার সময় নকশা-পাঠকের
+            উদ্দেশে লেখা, প্রথম পুরুষে। ⓘ মালিক ধরিয়ে দেন, আর সেটা বাদ যায়।
+            তারপর তিনি বলেন *"eta bad daw"* — বাকিটাও।
+
+            ── ⭐ আর নিয়মটা হারায়নি ───────────────────────────────────
+            নগদ/ব্যাংকের খাত বসালে পর্দা **তখনই** সতর্ক করে, যখন সত্যিই
+            বসানো হয় — সেটাই ঠিক জায়গা। ⛔ আগে থেকে সবার মাথায় চার লাইন
+            পড়ানোর দরকার নেই; বেশিরভাগ জাবেদায় নগদের খাত থাকেই না।
+
+            ⓘ আর নিয়মটা কেন আটকায় না তার কারণ কোডেই লেখা
+            ([[VoucherService]]): ব্যাংক নিজে সুদ দিলে বা চার্জ কাটলে
+            দাখিলাটা জাবেদা ছাড়া লেখারই পথ থাকত না, আর মানুষ তখন একটা
+            ভুয়া রসিদ বানাত।
+        --}}
+
         @if ($errors->any())
             <div role="alert"
                  class="rounded-(--radius-field) bg-(--color-badge-danger-bg) px-3 py-2 text-sm
@@ -69,65 +104,30 @@
             </div>
         @endif
 
+        {{--
+            ── নকশার উপরের অংশ — তারিখ, তারপর পুরো চওড়া বিবরণ ──────────
+
+            ⛔ আগে তিনটা ঘর এক সারিতে ছিল (তারিখ · বিবরণ · উল্টো দাখিলা),
+            আর বিবরণ পেত এক-তৃতীয়াংশ জায়গা। ⚠️ জাবেদার বিবরণ একটা
+            **বাক্য** — "সেপ্টেম্বরের অবচয় ও অগ্রিম ভাড়ার সমন্বয়" — আর
+            ঐটুকু ঘরে সেটা দেখাই যেত না।
+
+            ⓘ উল্টো দাখিলার তারিখ, সংযুক্তি আর লেনদেন নম্বর নিচের সারিতে
+            চলে গেছে — নকশায় ওগুলো ওখানেই।
+        --}}
         <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <div class="grid gap-3 sm:grid-cols-3">
                 <x-ui.field name="trx_date" type="date" :label="__('accounts::field.date')"
                             :value="old('trx_date', $voucher->trx_date?->format('Y-m-d') ?? now()->format('Y-m-d'))"
                             required />
-
-                <label class="block">
-                    <span class="mb-1 block text-sm font-medium">{{ __('core.table.narration') }}</span>
-                    <input type="text" name="narration" value="{{ old('narration', $voucher->narration) }}"
-                           class="h-(--spacing-field) w-full rounded-(--radius-field) border
-                                  border-(--color-border) bg-(--color-surface-card) px-3">
-                </label>
-
-                {{--
-                    ⭐ উল্টো দাখিলার তারিখ — নমুনার চতুর্থ ঘর, ১৫ সেপ্টেম্বর ২০২৬।
-
-                    ── কেন এই ঘরটা লাগে ────────────────────────────────
-                    মাসের শেষে কিছু হিসাব সাময়িক: বিদ্যুৎ বিল এসে
-                    পৌঁছায়নি, কিন্তু খরচটা এই মাসেরই। তাই একটা জাবেদা
-                    বসে, আর পরের মাসের ১ তারিখে সেটা উল্টে যায়।
-
-                    ⚠️ তারিখটা ভাউচারের সাথেই লেখা থাকে, কারও মনে রাখার
-                    উপর নয়। ⓘ মনে রাখার উপর ছাড়লে কেউ একদিন ভুলে যেতেন,
-                    আর আসল বিল আসার পর খরচটা **দুইবার** বসত — ধরা পড়ত
-                    বছরের শেষে, যখন আর কেউ মনে করতে পারেন না কেন।
-
-                    ⓘ ঐচ্ছিক: বেশিরভাগ জাবেদা উল্টানোর নয় (সংশোধন,
-                    সমন্বয়, খোলার জের)।
-                --}}
-                <x-ui.field name="reverse_on" type="date"
-                            :label="__('accounts::field.reverse_on')"
-                            :value="old('reverse_on', $voucher->reverse_on?->format('Y-m-d'))"
-                            :hint="__('accounts::message.reverse_on_hint')" />
             </div>
 
-            {{-- নমুনার চতুর্থ ঘর — জাবেদাতেও কাগজ থাকে --}}
-            <div class="mt-3">
-                @include('accounts::voucher.partials.attachment-field')
-
-                {{-- ব্যাংক/MFS লেনদেন নম্বর।
-
-                     ---- কেন ঘরটা এখানে লাগল, ৩০ আগস্ট ২০২৬ ----
-                     জাবেদার সারিতে একটা ব্যাংক-খাত থাকলে পোস্ট করার
-                     সময় নম্বরটা বাধ্যতামূলক ([[VoucherService::
-                     assertBankReferenceIsFree()]]) -- কারণ ভুল নম্বর
-                     কোনো নম্বর না থাকার চেয়ে খারাপ।
-
-                     কিন্তু এই ফর্মে ঘরটাই ছিল না। ফলে ব্যাংক ছুঁলে
-                     "সংরক্ষণ ও পোস্ট" প্রতিবারই ব্যর্থ হত, আর পর্দা
-                     এমন একটা জিনিস চাইত যেটা দেওয়ার জায়গাই সে দেয়নি।
-                     HP ২৯ আগস্ট ধরেছেন।
-
-                     আদায়-পরিশোধের ফর্মে ঘরটা প্রথম দিন থেকেই ছিল;
-                     জাবেদা আলাদা টেমপ্লেট বলে বাদ পড়েছিল। --}}
-                <x-ui.field name="instrument_no"
-                            :label="__('accounts::field.instrument_no')"
-                            :hint="__('accounts::message.instrument_no_when_bank')"
-                            :value="old('instrument_no', $voucher->instrument_no)" />
-            </div>
+            <label class="mt-3 block">
+                <span class="mb-1 block text-sm font-medium">{{ __('core.table.narration') }}</span>
+                <input type="text" name="narration" value="{{ old('narration', $voucher->narration) }}"
+                       class="h-(--spacing-field) w-full rounded-(--radius-field) border
+                              border-(--color-border) bg-(--color-surface-card) px-3">
+            </label>
         </section>
 
         <section data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
@@ -139,13 +139,14 @@
                             <th scope="col">
                                 {{ __('core.print.account') }}
                             </th>
-                            <th scope="col" style="width: 10rem"
-                                class="num">
-                                {{ __('core.table.debit') }}
-                            </th>
-                            <th scope="col" style="width: 10rem"
-                                class="num">
-                                {{ __('core.table.credit') }}
+                            {{--
+                                ⭐ লাইনের বিবরণ খাতের ঠিক পাশে — নকশার মতো।
+                                ⓘ আগে সবার ডানে ছিল, আর `lg` থেকে ছোট পর্দায়
+                                **একেবারে লুকানো**। ⚠️ অথচ ছয় মাস পরে সারিটা
+                                কেন বসেছিল তার একমাত্র উত্তর ওই ঘরেই।
+                            --}}
+                            <th scope="col">
+                                {{ __('accounts::field.line_narration') }}
                             </th>
                             <th scope="col" style="width: 14rem"
 >
@@ -157,8 +158,13 @@
                                     {{ __('accounts::field.cost_center') }}
                                 </th>
                             @endif
-                            <th scope="col" class="hidden lg:table-cell">
-                                {{ __('core.table.narration') }}
+                            <th scope="col" style="width: 10rem"
+                                class="num">
+                                {{ __('core.table.debit') }}
+                            </th>
+                            <th scope="col" style="width: 10rem"
+                                class="num">
+                                {{ __('core.table.credit') }}
                             </th>
                         </tr>
                     </thead>
@@ -182,20 +188,12 @@
                                 </td>
 
                                 <td class="tight">
-                                    <input type="number" step="0.01" inputmode="decimal"
-                                           name="lines[{{ $i }}][debit]" value="{{ $line['debit'] ?? '' }}"
-                                           @input="recount()"
-                                           class="num h-(--spacing-field) w-full rounded-(--radius-field) border
-                                                  border-(--color-border) bg-(--color-surface-card) px-2 text-end">
+                                    <input type="text" name="lines[{{ $i }}][narration]"
+                                           value="{{ $line['narration'] ?? '' }}"
+                                           class="h-(--spacing-field) w-full rounded-(--radius-field) border
+                                                  border-(--color-border) bg-(--color-surface-card) px-2">
                                 </td>
 
-                                <td class="tight">
-                                    <input type="number" step="0.01" inputmode="decimal"
-                                           name="lines[{{ $i }}][credit]" value="{{ $line['credit'] ?? '' }}"
-                                           @input="recount()"
-                                           class="num h-(--spacing-field) w-full rounded-(--radius-field) border
-                                                  border-(--color-border) bg-(--color-surface-card) px-2 text-end">
-                                </td>
 
                                 {{--
                                     সারির পক্ষ — কার নামে টাকাটা বসবে।
@@ -262,41 +260,94 @@
                                     </td>
                                 @endif
 
-                                <td class="tight hidden lg:table-cell">
-                                    <input type="text" name="lines[{{ $i }}][narration]"
-                                           value="{{ $line['narration'] ?? '' }}"
-                                           class="h-(--spacing-field) w-full rounded-(--radius-field) border
-                                                  border-(--color-border) bg-(--color-surface-card) px-2">
+                                <td class="tight">
+                                    <input type="number" step="0.01" inputmode="decimal"
+                                           name="lines[{{ $i }}][debit]" value="{{ $line['debit'] ?? '' }}"
+                                           @input="recount()"
+                                           class="num h-(--spacing-field) w-full rounded-(--radius-field) border
+                                                  border-(--color-border) bg-(--color-surface-card) px-2 text-end">
+                                </td>
+
+                                <td class="tight">
+                                    <input type="number" step="0.01" inputmode="decimal"
+                                           name="lines[{{ $i }}][credit]" value="{{ $line['credit'] ?? '' }}"
+                                           @input="recount()"
+                                           class="num h-(--spacing-field) w-full rounded-(--radius-field) border
+                                                  border-(--color-border) bg-(--color-surface-card) px-2 text-end">
                                 </td>
                             </tr>
                         @endfor
                     </tbody>
 
                     <tfoot>
-                        <tr class="bg-(--color-surface-app) font-semibold">
-                            <td class="text-end">{{ __('core.print.total') }}</td>
-                            <td class="num" x-text="format(debit)">0.00</td>
-                            <td class="num" x-text="format(credit)">0.00</td>
-                            <td></td>
-                            @if ($costCenters->isNotEmpty())
-                                <td></td>
-                            @endif
-                            <td class="hidden lg:table-cell">
-                                {{-- পার্থক্যটা দেখানো হয়, লুকানো হয় না: কত টাকা
-                                     কম পড়ছে সেটা জানলে ভুলটা খুঁজে পাওয়া সহজ।
+                        {{--
+                            ⓘ কলামের ক্রম বদলেছে, তাই মোটের সারিও — সংখ্যা
+                            দুইটা এখন ডানপ্রান্তে, আর "মোট" তার ঠিক বাঁয়ে।
 
-                                     কিন্তু খালি ফর্মে নয় — কিছু টাইপ করার
-                                     আগেই লাল "পার্থক্য ০.০০" দেখালে সেটা
-                                     ভুলের বার্তা হয়ে দাঁড়ায়, অথচ কেউ এখনো
-                                     কিছু করেনি। --}}
+                            ⚠️ পার্থক্যটা বাঁ পাশে দেখানো হয়, লুকানো হয় না:
+                            কত টাকা কম পড়ছে জানলে ভুলটা খুঁজে পাওয়া সহজ।
+                            ⛔ কিন্তু খালি ফর্মে নয় — কিছু টাইপ করার আগেই
+                            লাল "পার্থক্য ০.০০" দেখালে সেটা ভুলের বার্তা হয়ে
+                            দাঁড়াত, অথচ কেউ এখনো কিছু করেনি।
+                        --}}
+                        <tr class="bg-(--color-surface-app) font-semibold">
+                            <td colspan="{{ $costCenters->isNotEmpty() ? 3 : 2 }}">
                                 <span x-show="touched && ! balanced" x-cloak
                                       class="text-2xs font-normal text-(--color-danger)"
                                       x-text="'{{ __('accounts::message.difference') }} ' + format(Math.abs(debit - credit))">
                                 </span>
                             </td>
+                            <td class="text-end">{{ __('core.print.total') }}</td>
+                            <td class="num" x-text="format(debit)">0.00</td>
+                            <td class="num" x-text="format(credit)">0.00</td>
                         </tr>
                     </tfoot>
                 </table>
+            </div>
+
+            {{--
+                ⭐ সবুজ বার্তা — নকশার নিজস্ব অংশ, ১৮ সেপ্টেম্বর ২০২৬।
+
+                ⛔ আগে পর্দা কেবল **না মিললে** কথা বলত; মিললে চুপ থাকত।
+                ⓘ আর চুপ থাকার দুইটা অর্থ হয়: "সব ঠিক আছে" আর "আমি
+                এখনো কিছু দেখিনি" — ব্যবহারকারী কোনটা বুঝবেন তা বলা যায় না।
+
+                ⭐ তাই এখন মিললে পর্দা নিজেই বলে — "পোস্ট করা যাবে"।
+            --}}
+            <p x-show="balanced" x-cloak
+               class="m-3 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2
+                      text-sm text-(--color-badge-success-ink)">
+                {{ __('accounts::message.journal_balanced') }}
+            </p>
+        </section>
+
+        {{--
+            ── নকশার শেষ সারি ─────────────────────────────
+                উল্টো দাখিলার তারিখ · সংযুক্তি · চেক/লেনদেন নম্বর
+
+            ⓘ নকশায় প্রথম দুইটা আছে। ⚠️ তৃতীয়টা নেই, আর সেটা নকশার
+            নিজের লাল লাইনের সাথেই বিরোধী: ব্যাংক যখন সুদ দেয় বা চার্জ
+            কাটে, তখন দাখিলাটা জাবেদায় লেখা হয় — আর ঠিক তখনই ব্যাংক
+            বিবরণীর সাথে মেলানোর জন্য নম্বরটা লাগে।
+
+            ⛔ পোস্ট করার সময় সারিতে ব্যাংক-খাত থাকলে নম্বরটা
+            বাধ্যতামূলক — ঘরটা না থাকলে পর্দা এমন একটা জিনিস চাইত
+            যেটা দেওয়ার জায়গাই সে দেয়নি।
+        --}}
+        <section data-boxed
+                 class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+            <div class="grid gap-3 sm:grid-cols-3">
+                <x-ui.field name="reverse_on" type="date"
+                            :label="__('accounts::field.reverse_on')"
+                            :value="old('reverse_on', $voucher->reverse_on?->format('Y-m-d'))"
+                            :hint="__('accounts::message.reverse_on_hint')" />
+
+                @include('accounts::voucher.partials.attachment-field')
+
+                <x-ui.field name="instrument_no"
+                            :label="__('accounts::field.instrument_no')"
+                            :hint="__('accounts::message.instrument_no_when_bank')"
+                            :value="old('instrument_no', $voucher->instrument_no)" />
             </div>
         </section>
 

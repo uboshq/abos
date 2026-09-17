@@ -17,6 +17,23 @@
     'showDiscount' => true,
     'showSalesPrice' => false,
 
+    /*
+     * ফ্রি পরিমাণের ঘর আঁকা হবে কি না।
+     *
+     * ── ⛔ কেন এটা লাগল, ১৮ সেপ্টেম্বর ২০২৬ ─────────────
+     * মালিক বললেন *"free item gor nai"* — আর ঠিকই বললেন।
+     *
+     * ⓘ `free_qty` কলাম আছে (`pur_bill_lines`), যাচাইয়ে আছে,
+     * সেবা সেভও করে, আর মাল বুঝে নেওয়ার সেবা ওটা পড়ে
+     * স্টকে বসায়। ⛔ কেবল এই কম্পোনেন্ট ঘরটা কখনো আঁকত না —
+     * কাজটা হয়েছিল, দরজাটা কেউ বসায়নি।
+     *
+     * ⚠️ ডিফল্ট `false` — ক্রয় **আদেশে** ফ্রির কলাম নেই
+     * (`pur_order_lines`), তাই ভুলে গেলে ঘরটা **থাকে না**, আর
+     * সেটাই নিরাপদ দিক — ঠিক `lots` প্রপটার মতো।
+     */
+    'showFree' => false,
+
     /**
      * এই কাগজটা কি লট রাখতে পারে।
      *
@@ -115,7 +132,7 @@
         },
         add() {
             this.rows.push({
-                product_id: '', qty: '', rate: '', discount: '', tax: '', link: '', unit_id: '',
+                product_id: '', qty: '', free_qty: '', rate: '', discount: '', tax: '', link: '', unit_id: '',
                 sales_price: '', markup: '', margin: '', anchor: '',
                 batch_no: '', expiry_date: '', mrp: '',
             });
@@ -136,6 +153,17 @@
         priced(row, edited) {
             Object.assign(row, window.abos.reprice(row, edited));
         },
+
+        /*
+         * কোনো সারিতে দাম বলা হয়েছে অথচ দর বলা হয়নি।
+         *
+         * ⓘ তখনই markup ও margin খালি থেকে যায়, আর কারণটা পর্দায়
+         * লেখা না থাকলে সেটা ভাঙা বলে মনে হয়।
+         */
+        get needsRate() {
+            return this.rows.some(row => (parseFloat(row.rate) || 0) <= 0
+                && (row.sales_price || row.markup || row.margin));
+        },
      }"
      x-init="if (rows.length === 0) add()">
 
@@ -148,6 +176,9 @@
                         <th class="text-start">{{ __('purchase::field.'.($linkField === 'purchase_order_line_id' ? 'order' : 'receipt')) }}</th>
                     @endif
                     <th class="text-end">{{ __('purchase::field.quantity') }}</th>
+                    @if ($showFree)
+                        <th class="text-end">{{ __('purchase::field.free_qty') }}</th>
+                    @endif
                     @if ($packs !== [])
                         <th class="text-start">{{ __('purchase::field.unit') }}</th>
                     @endif
@@ -206,6 +237,17 @@
                                    class="num h-(--spacing-field-compact) w-full sm:w-28 rounded-(--radius-field) border border-(--color-border)
                                           bg-(--color-surface-card) px-2 text-end">
                         </td>
+
+                        {{-- ⓘ ফ্রি পরিমাণ — দামে যোগ হয় না, গুদামে ঠিকই ঢোকে।
+                             ⚠️ তাই ঘরটা `required` নয় আর অঙ্কেও হাত দেয় না। --}}
+                        @if ($showFree)
+                            <td class="cell-input" data-label="{{ __('purchase::field.free_qty') }}">
+                                <input type="number" step="0.01" min="0" inputmode="decimal"
+                                       :name="`lines[${i}][free_qty]`" x-model="row.free_qty"
+                                       class="num h-(--spacing-field-compact) w-full sm:w-24 rounded-(--radius-field) border border-(--color-border)
+                                              bg-(--color-surface-card) px-2 text-end">
+                            </td>
+                        @endif
 
                         @if ($packs !== [])
                             {{--
@@ -311,13 +353,29 @@
                                               bg-(--color-surface-card) px-2 text-end">
                             </td>
                             <td class="cell-input" data-label="{{ __('purchase::field.markup') }}">
-                                <input type="number" step="0.01" inputmode="decimal"
+                                {{--
+                                    ⛔ `step="any"`, `0.01` নয় — ১৮ সেপ্টেম্বর ২০২৬।
+
+                                    মালিক পর্দার ছবি পাঠালেন: markup ঘরে `4.0042`, আর
+                                    ব্রাউজার বলছে *"The two nearest valid values are 4 and
+                                    4.01"* — ফর্মটা সেভই হত না।
+
+                                    ⓘ অঙ্কটা ভুল নয়। [[resources/js/pricing]] ইচ্ছাকৃতভাবে
+                                    **চার দশমিক** রাখে, আর কারণটা ওই ফাইলে মাপা:
+                                    দুই দশমিকে বসালে পরে দর বদলালে দাম তিনশো টাকা
+                                    পর্যন্ত কম বসত — নীরবে।
+
+                                    ⚠️ আর ঘর দুইটার `name`ই নেই — ওগুলো সার্ভারে
+                                    যায়ই না। ⛔ যে ঘর তথ্য পাঠায় না, সে তথ্য সংরক্ষণ
+                                    আটকাতেও পারে না — এটাই আসল ভুলটা ছিল।
+                                --}}
+                                <input type="number" step="any" inputmode="decimal"
                                        x-model="row.markup" @input="priced(row, 'markup')"
                                        class="num h-(--spacing-field-compact) w-full sm:w-20 rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-card) px-2 text-end">
                             </td>
                             <td class="cell-input" data-label="{{ __('purchase::field.margin') }}">
-                                <input type="number" step="0.01" inputmode="decimal"
+                                <input type="number" step="any" inputmode="decimal"
                                        x-model="row.margin" @input="priced(row, 'margin')"
                                        class="num h-(--spacing-field-compact) w-full sm:w-20 rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-card) px-2 text-end">
@@ -365,6 +423,27 @@
             </tfoot>
         </table>
     </div>
+
+    {{--
+        ⭐ দর না লিখলে পর্দা কেন চুপ, সেটা বলে দেওয়া — ১৮ সেপ্টেম্বর ২০২৬।
+
+        ── ⛔ কী ঘটেছিল ────────────────────────────────────────────────
+        মালিক বিক্রয়মূল্য লিখলেন, markup ও margin খালিই রইল, আর তিনি
+        জিজ্ঞেস করলেন *"egulo te auto hoto ekhon hocche na keno?"*।
+
+        ⓘ অঙ্ক ভাঙেনি — markup মাপা হয় **ক্রয়দরের উপর**, আর দর খালি
+        থাকলে ভাগটাই অসম্ভব ([[resources/js/pricing]] তখন ইচ্ছাকৃতভাবে
+        কিছুই বসায় না, কারণ মনগড়া সংখ্যা বসানোর চেয়ে চুপ থাকা ভালো)।
+
+        ⚠️ কিন্তু **চুপ থাকাটা কারণ ব্যাখ্যা করে না**। ব্যবহারকারী ভাবেন
+        জিনিসটা ভেঙে গেছে — মালিক নিজেই তাই ভেবেছিলেন। ⓘ তাই এখন পর্দা
+        নিজেই বলে দেয় কী লাগবে।
+    --}}
+    <p x-show="needsRate" x-cloak
+       class="mt-2 rounded-(--radius-field) bg-(--color-badge-pending-bg) px-3 py-2
+              text-xs text-(--color-badge-pending-ink)">
+        {{ __('purchase::message.rate_first') }}
+    </p>
 
     <button type="button" @click="add()"
             class="mt-2 rounded-(--radius-field) border border-(--color-border) px-3 py-1.5 text-sm

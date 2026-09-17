@@ -31,6 +31,31 @@
      * ⓘ Js::from কোটেশন, ব্যাকস্ল্যাশ ও ইউনিকোড সবই নিরাপদে পালায়,
      * তাই অনুবাদে অ্যাপস্ট্রফি থাকলেও অভিব্যক্তিটা ভাঙে না।
      */
+    /*
+     * ভাগ বসানোর জন্য প্রতিটা চালানের দুইটা সংখ্যা — পরিমাণ ও মূল্য।
+     *
+     * ⓘ চাবিটা সারির ক্রম (`$i`), চালানের id নয় — কারণ ঘরের
+     * `x-ref`-ও ওই ক্রমই ব্যবহার করে, আর দুইটা এক রাখলে মিলানোর
+     * জন্য আলাদা কোনো তালিকা রাখতে হয় না।
+     */
+    $billFacts = collect($taggableBills ?? [])->values()
+        ->map(fn ($b) => [
+            'qty' => (float) ($b->total_qty ?? 0),
+            'value' => (float) ($b->total_value ?? 0),
+        ])->all();
+
+    /* সম্পাদনার সময় যে সারিগুলো আগেই টিক দেওয়া। */
+    $pickedRows = collect($taggableBills ?? [])->values()
+        ->filter(function ($bill) use ($voucher) {
+            $rows = collect(old('bill_shares', $voucher->billShares?->all() ?? []));
+
+            return $rows->contains(function ($s) use ($bill) {
+                $id = is_array($s) ? ($s['purchase_bill_id'] ?? null) : $s->purchase_bill_id;
+
+                return (int) $id === (int) $bill->id;
+            });
+        })->keys()->all();
+
     $texts = \Illuminate\Support\Js::from([
         'directLabel' => __('accounts::field.direct_cost'),
         'indirectLabel' => __('accounts::field.indirect_cost'),
@@ -69,6 +94,105 @@
              get isDirect() { return this.tagged > 0 },
 
              /*
+              * ⛔ টিক দিয়ে ভাগ না বসালে ট্যাগটা নীরবে হারাত — ১৮ সেপ্টেম্বর ২০২৬।
+              *
+              * ── যা ঘটত ──────────────────────────────────────────────
+              * মালিক তিনটা চালান টিক দিলেন, পর্দা বলল "প্রত্যক্ষ খরচ ·
+              * ঐ মালের দামে" — কিন্তু "এই খরচের ভাগ" ঘর তিনটা খালি।
+              * ⚠️ [[VoucherService::replaceBillShares]] শূন্য ভাগের সারি
+              * **পুরো বাদ** দেয়, তাই একটাও চালান ট্যাগ হত না — আর খাতায়
+              * খরচটা পরোক্ষ হয়ে বসত, পর্দা যা বলল তার ঠিক উল্টো।
+              *
+              * ⓘ আর "ভাগ হবে কীসের অনুপাতে" ঘরটা ছিল একটা **প্রতিশ্রুতি**
+              * যা কিছুই ভাগ করত না, কেবল সেভ হত।
+              *
+              * ── ⭐ মালিকের নিয়ম মেনে সমাধান ─────────────────────────
+              * *"আটকে দেব না। দেখিয়ে দেব।"* — তাই টিক দিলেই অঙ্কটা
+              * অনুপাত অনুযায়ী বসে যায়, আর ঘরগুলো খোলা থাকে: কেউ চাইলে
+              * হাতে বদলাতে পারেন (ভাঙা মাল, আলাদা বোঝাপড়া)।
+              */
+             bills: @js($billFacts ?? []),
+             basis: @js(old('alloc_basis', 'qty')),
+             amount: {{ (float) old('amount', 0) }},
+             picked: @js($pickedRows ?? []),
+
+             toggle(i, on) {
+                 this.picked = on
+                     ? [...this.picked, i]
+                     : this.picked.filter(x => x !== i)
+
+                 this.tagged = this.picked.length
+                 this.spread()
+             },
+
+             /*
+              * ⚠️ হাতে লেখা ভাগ মুছে যায় না — কেবল খালি ঘরগুলো ভরে।
+              *
+              * ⛔ প্রতিবার সব ঘর নতুন করে বসালে কেউ একটা সারিতে হাতে
+              * কম বসিয়ে পরের চালানটা টিক দিলেই তাঁর লেখাটা মুছে যেত।
+              * ⓘ তাই টাকা ভাগ হয় **যেগুলো এখনো খালি** তাদের মধ্যে, আর
+              * হাতে লেখাগুলো আগে বাদ যায়।
+              */
+             spread() {
+                 const total = Number(this.amount) || 0
+
+                 if (total <= 0 || this.picked.length === 0) return
+
+                 let left = total
+                 const empty = []
+
+                 this.picked.forEach(i => {
+                     const box = this.$refs['share' + i]
+                     if (! box) return
+
+                     const typed = parseFloat(box.value)
+
+                     if (Number.isFinite(typed) && typed > 0) {
+                         left -= typed
+                     } else {
+                         empty.push(i)
+                     }
+                 })
+
+                 if (empty.length === 0 || left <= 0) return
+
+                 const weightOf = i => {
+                     const bill = this.bills[i] || {}
+                     const w = this.basis === 'value' ? bill.value : bill.qty
+
+                     return Number(w) || 0
+                 }
+
+                 let sum = empty.reduce((t, i) => t + weightOf(i), 0)
+
+                 /*
+                  * ⓘ অনুপাতের কোনো ভিত্তি না থাকলে (সব শূন্য) সমান ভাগ —
+                  * শূন্য দিয়ে ভাগ করার চেয়ে সেটাই সৎ।
+                  */
+                 const equal = sum <= 0
+
+                 if (equal) sum = empty.length
+
+                 let placed = 0
+
+                 empty.forEach((i, n) => {
+                     const w = equal ? 1 : weightOf(i)
+
+                     /*
+                      * ⚠️ শেষ সারিটা বিয়োগ করে বসানো হয়, ভাগ করে নয় —
+                      * নাহলে পয়সার গোল করার ফলে যোগফল অঙ্কের সাথে
+                      * মিলত না, আর কেউ বলতে পারত না এক পয়সা কোথায় গেল।
+                      */
+                     const share = n === empty.length - 1
+                         ? left - placed
+                         : Math.round((left * w / sum) * 100) / 100
+
+                     placed += share
+                     this.$refs['share' + i].value = share.toFixed(2)
+                 })
+             },
+
+             /*
               * লেখাগুলো এক জায়গায়, PHP-তে বানানো — কারণ দুইটা।
               *
               * ⚠️ এক: x-text একটা JS অভিব্যক্তি পড়ে। অনুবাদে একটা
@@ -84,7 +208,8 @@
               * ⭐ তাই এখন একটাই বস্তু, আর ব্যাখ্যায় কোনো নমুনা নেই।
               */
              ...{{ $texts }},
-         }">
+         }"
+         x-on:abos-expense-amount.window="amount = $event.detail; spread()">
 
     {{-- সারি ১ — তারিখ · খরচের খাত · খরচের কেন্দ্র (নকশার হুবহু) --}}
     <div class="grid gap-3 sm:grid-cols-3">

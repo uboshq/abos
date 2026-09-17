@@ -48,29 +48,30 @@
          })">
 
     {{--
-        ── সারি ১ — লেনদেনের তারিখ · কার মাধ্যমে · কখন ──────────────────
-        ⓘ নমুনার হুবহু। মাঝখানে একবার ঘর দুইটা তুলে দেওয়া হয়েছিল
-        (কেউ ওগুলো পড়ে না বলে), কিন্তু মালিক নমুনার ছবি দেখিয়ে
-        ফিরিয়ে আনতে বলেছেন — **নমুনাই চূড়ান্ত**।
+        ── সারি ১ — তারিখ · কখন · ডিপোজিটরের ধরন · ডিপোজিটরের নাম ───────
+
+        ⭐ চারটা ঘর এক লাইনে — মালিকের নির্দেশ, ১৮ সেপ্টেম্বর ২০২৬।
+        তিনি পর্দার ছবিতে লিখে দিলেন: *"লেনদেনের তারিখ, কখন,
+        ডিপোজিটরের ধরন, ডিপোজিটরের নাম egulo ek line daw"*।
+
+        ⓘ আগে দুই সারি ছিল (তিন ঘর + দুই ঘর), আর মাঝখানে "কার মাধ্যমে"।
+        ⚠️ সেটা এখন নিচের সারিতে, বিবরণের ঠিক আগে — মালিকের নির্দেশেই:
+        *"কার মাধ্যমে ei boxta বিবরণ er age niye aso"*।
+
+        ⛔ ঘরটা এখান থেকে **মুছে** ফেলতে হয়েছে, কেবল সরানো নয় — একই
+        নামের দুইটা সক্রিয় ঘর থাকলে ব্রাউজার শেষেরটার মান পাঠাত, আর
+        উপরের বাছাইটা নীরবে হারাত।
     --}}
-    <div class="grid gap-3 sm:grid-cols-3">
+    <div class="grid gap-3 sm:grid-cols-4">
         <x-ui.field name="trx_date" type="date"
                     :label="__('accounts::field.trx_date_long')"
                     :value="old('trx_date', $voucher->trx_date?->format('Y-m-d') ?? now()->format('Y-m-d'))"
                     required />
 
-        <x-ui.select name="carried_by" :label="__('accounts::field.carried_by')"
-                     :options="$carriers ?? []"
-                     :selected="$was('carried_by')"
-                     :placeholder="__('accounts::field.carried_by_none')" />
-
         <x-ui.field name="moved_at" type="time"
                     :label="__('accounts::field.moved_at')"
                     :value="$was('moved_at')" />
-    </div>
 
-    {{-- ── সারি ২ — পক্ষের ধরন · পক্ষের নাম (পাশে পাওনা/দেনা) ────────── --}}
-    <div class="mt-3 grid gap-3 sm:grid-cols-2">
 
         {{--
             ⛔ "কার মাধ্যমে" ও "কখন" — মালিকের সিদ্ধান্তে বাদ, ১৫ সেপ্টেম্বর ২০২৬।
@@ -134,6 +135,42 @@
             @error('party_id')
                 <span class="mt-1 block text-2xs text-(--color-danger)">{{ $message }}</span>
             @enderror
+
+            {{-- ⭐ তালিকায় নেই? নাম লিখুন — ১৮ সেপ্টেম্বর ২০২৬।
+
+                 ── ⛔ কেন দরকার ────────────────────────────────────────
+                 মালিকের কথা: *"ডিপোজিটরের নাম / প্রাপকের নাম হাতে লিখতে
+                 পারতে হবে।"* ⚠️ এতদিন ঘরটা কেবল ড্রপডাউন ছিল, তাই
+                 কাউন্টারে একজন অচেনা লোক টাকা দিয়ে গেলে **রসিদই কাটা
+                 যেত না** — আগে মাস্টার ডেটায় গিয়ে তাঁকে বসিয়ে আসতে হত।
+
+                 ── ⚠️ কেন পঞ্চম একটা "অন্যান্য" ধরন বানানো হয়নি ────────
+                 ⛔ তাহলে ঐ নামগুলো কোনো তালিকায় থাকত না, পরের বার আবার
+                 টাইপ করতে হত, আর একই মানুষ তিন বানানে তিনজন হয়ে যেতেন।
+
+                 ⭐ বদলে নামটা **ব্যক্তি** হিসেবে বসে (`mdm_people`) —
+                 মালিকের নিজের নির্দেশে ওখানেই ঋণদাতা, বাড়িওয়ালা, বাহক
+                 সবাই থাকেন। ⓘ তাই পরের বার নামটা তালিকাতেই পাওয়া যায়।
+
+                 ⓘ ছাঁচটা Finance-এর [[finance::components.person-picker]]
+                 থেকে নেওয়া, আর পিছনে একই [[PersonResolver]]। --}}
+            <details class="mt-2 text-sm"
+                     @if ($errors->has('party_new')) open @endif>
+                <summary class="cursor-pointer text-(--color-brand-500) underline-offset-2 hover:underline">
+                    {{ __('accounts::field.party_not_listed') }}
+                </summary>
+
+                <div class="mt-2 grid gap-2 sm:grid-cols-2">
+                    <x-ui.field name="party_new"
+                                :label="__('accounts::field.party_new_name')"
+                                :value="old('party_new')"
+                                :hint="__('accounts::field.party_new_hint')" />
+
+                    <x-ui.field name="party_mobile"
+                                :label="__('master_data::field.mobile')"
+                                :value="old('party_mobile')" />
+                </div>
+            </details>
         </div>
     </div>
 

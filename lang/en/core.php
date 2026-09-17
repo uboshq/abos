@@ -717,6 +717,7 @@ return [
 
     'form' => [
         'required' => 'required',
+        'choose' => '— choose —',
         'optional' => 'optional',
         // Dates read day-month-year everywhere, never the browser's locale
         'date_hint' => 'dd-mm-yyyy',

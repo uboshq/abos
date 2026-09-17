@@ -3,6 +3,9 @@
 declare(strict_types=1);
 
 return [
+    'party_not_listed' => 'Not on the list? Type a name',
+    'party_new_name' => 'New name',
+    'party_new_hint' => 'It joins the party list, so next time you can pick it',
     'card_commission' => 'Bank commission',
     'card_bank' => 'The card\'s bank',
     'card_reference' => 'Terminal reference',
@@ -28,8 +31,14 @@ return [
     'how_it_came' => 'How it came in',
     'why_this_way' => 'Why this way',
     'from_head' => 'Paid from',
+    'to_head' => 'Into',
+    'amount_moved' => 'Amount moved',
+    'line_narration' => 'Line narration',
+    'lands_today' => 'Today',
+    'lands_later' => 'On the way',
+    'bank_charge' => 'Bank charge',
+    'carried_by_hand' => 'Carried by',
     'no_bill_picked' => 'against no bill',
-    'payee_type' => 'Payee type',
     'payee_type_other' => 'Other',
     'moved_at' => 'Time',
     'carried_by_nobody' => 'Nobody — straight to the bank',

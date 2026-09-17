@@ -10,6 +10,7 @@ return [
     'opening' => 'খোলা ব্যালেন্স',
     'custody' => 'হেফাজত',
     'details' => 'বিবরণ',
+    'paper_and_time' => 'কাগজ ও সময়',
     'hand_over' => 'যিনি দিচ্ছেন',
     'receive' => 'যিনি নেবেন',
     'notes' => 'নোটের হিসাব',
