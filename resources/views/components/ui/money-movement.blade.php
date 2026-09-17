@@ -139,8 +139,15 @@
 
     {{-- ── মাধ্যম ───────────────────────────────────────────────── --}}
     <fieldset class="flex flex-col gap-1.5">
+        {{--
+            ⓘ নামটা দিক অনুযায়ী — নকশায় খরচে "কীভাবে দেওয়া হলো",
+            আর আদায়ে "কীভাবে এলো"। ⚠️ একটাই নাম রাখলে দুই দিকের
+            একটায় সেটা উল্টো অর্থ বহন করত।
+        --}}
         <legend class="text-2xs font-medium tracking-wide text-(--color-ink-muted) uppercase">
-            {{ __('accounts::field.how_it_moved') }}
+            {{ $direction === 'out'
+                ? __('accounts::field.how_it_moved')
+                : __('accounts::field.how_it_came') }}
         </legend>
 
         <div class="flex flex-wrap gap-2">
@@ -168,6 +175,11 @@
                 </label>
             @endforeach
         </div>
+
+        {{-- ⓘ নকশার ইশারা: প্রতিটা মাধ্যমের ঘরগুলো নিজে থেকে খোলে। --}}
+        <p class="text-2xs text-(--color-ink-muted)">
+            {{ __('accounts::message.instrument_opens_own_fields') }}
+        </p>
     </fieldset>
 
     {{-- ── নগদ: নোটের হিসাব ─────────────────────────────────────

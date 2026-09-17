@@ -79,6 +79,9 @@ return [
     'no_vouchers' => 'No vouchers of this kind.',
     'voucher_count' => '{0} No vouchers|{1} 1 voucher|[2,*] :count vouchers',
     'number_on_save' => 'Numbered when saved',
+    'expense_subtitle' => 'Money going out · into an expense head',
+    'why_expense_this_way' => 'Say which head the expense belongs to first, then who was paid and against which bill. Tag a purchase bill and the money lands in that stock cost; tag none and it goes straight to the expense head. Last, say which account the money came out of.',
+    'instrument_opens_own_fields' => 'Same as a receipt — each method opens its own fields.',
     'voucher_saved' => ':no saved.',
     'voucher_posted' => ':no posted to the ledger.',
 

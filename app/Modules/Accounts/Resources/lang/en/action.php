@@ -16,6 +16,7 @@ return [
     'show_closed' => 'Show closed too',
     'new_voucher' => 'New voucher',
     'save_and_post' => 'Save and post',
+    'send_for_approval' => 'Send for approval',
     'save_draft' => 'Save as draft',
     'post_now' => 'Post now',
     'cancel_voucher' => 'Cancel voucher',

@@ -24,6 +24,37 @@
         \App\Modules\Accounts\Models\Voucher::PAYMENT,
     ], true);
 
+    /*
+     * ⭐ খরচের নমুনা — নিজের কাঠামো, ১৮ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⛔ পর্দা আর নমুনা পাশাপাশি রেখে যা পাওয়া গেল ────────────────
+     * মালিক দুইটা ছবি পাঠালেন — একটা নকশা, একটা আসল পর্দা। আসলটায়:
+     *   ⛔ "কীসের খরচ" ঘরটা **দুইবার** (উপরে `expense_account_id`,
+     *      নিচে `to_account_id` — দুইটার লেবেলই এক)
+     *   ⛔ "কার মাধ্যমে · কখন" — মালিক নিজে বলেছিলেন *"দুইটাই বাদ দাও"*
+     *   ⛔ "কী ধরনের পক্ষ · পক্ষ · এখন তার কাছে পাওনা · টাকার শ্রেণি" —
+     *      নকশায় একটাও নেই
+     *   ⛔ "কাগজের তারিখ" — নকশায় নেই
+     *   ⛔ চারটা আলাদা কার্ড, নকশায় একটা টানা পর্দা
+     *
+     * ── ⭐ নকশার ক্রম ─────────────────────────────────────────────────
+     *   সারি ১   তারিখ · খরচের খাত · খরচের কেন্দ্র
+     *   সারি ২   কাকে দেওয়া হলো (পুরো চওড়া)
+     *   সারি ৩   বিল / ভাউচার নম্বর
+     *   ভাঁজ     কোন চালানের জন্য
+     *   দুই কলাম উৎসে কর্তন · কীভাবে দেওয়া হলো
+     *   শেষ সারি যে খাত থেকে · সংযুক্তি · বিবরণ · [বোতাম]
+     *
+     * ⓘ পক্ষের ঘর দুইটা মুছে ফেলা যায়নি: **বাকিতে খরচ** লিখলে যাচাই
+     * পক্ষ চায় (`credit_needs_a_party`)। ⚠️ তাই ওগুলো এখন কেবল তখনই
+     * দেখা যায় যখন "যে খাত থেকে" একটা প্রদেয় খাত — নগদে খরচে, অর্থাৎ
+     * নকশার অবস্থায়, পর্দায় ওগুলো নেই।
+     */
+    $expenseLayout = $voucher->type === \App\Modules\Accounts\Models\Voucher::EXPENSE;
+
+    /* নমুনা-কাঠামোর পর্দাগুলো — পুরনো ছড়ানো ঘরগুলো এখানে লুকানো ও নিষ্ক্রিয়। */
+    $sampled = $partyAbove || $expenseLayout;
+
     $optionsFor = fn (string $source) => match ($source) {
         'money' => $moneyAccounts,
         'expense' => $expenseAccounts,
@@ -56,9 +87,25 @@
     <x-slot:title>{{ __('accounts::voucher.' . $type) }}</x-slot:title>
 
     <x-slot:header>
+        {{--
+            ⓘ নকশায় নম্বরটা ডান দিকে একটা ব্যাজে বসে, শিরোনামের নিচে নয় —
+            আর উপশিরোনামে থাকে টাকার দিকটা ("টাকা যাচ্ছে · খরচের খাতে")।
+            ⚠️ নতুন ভাউচারে নম্বর নেই, তাই ব্যাজে তখন কারণটাই লেখা থাকে।
+        --}}
         <x-ui.page-header
             :title="__('accounts::voucher.' . $type)"
-            :subtitle="$isNew ? __('accounts::message.number_on_save') : $voucher->document_no" />
+            :subtitle="$expenseLayout
+                ? __('accounts::message.expense_subtitle')
+                : ($isNew ? __('accounts::message.number_on_save') : $voucher->document_no)">
+            @if ($expenseLayout)
+                <x-slot:actions>
+                    <span class="num rounded-(--radius-field) border border-(--color-border)
+                                 bg-(--color-surface-sunken) px-3 py-1.5 text-sm text-(--color-ink-muted)">
+                        {{ $isNew ? __('accounts::message.number_on_save') : $voucher->document_no }}
+                    </span>
+                </x-slot:actions>
+            @endif
+        </x-ui.page-header>
     </x-slot:header>
 
     {{--
@@ -76,7 +123,7 @@
           action="{{ $isNew ? route('accounts.voucher.store', $type) : route('accounts.voucher.update', $voucher) }}"
           x-data="{ busy: false }"
           @submit="busy ? $event.preventDefault() : (busy = true)"
-          class="max-w-3xl space-y-4">
+          class="{{ $expenseLayout ? 'max-w-6xl' : 'max-w-3xl' }} space-y-4">
         @csrf
         @unless ($isNew) @method('PUT') @endunless
         <input type="hidden" name="type" value="{{ $type }}">
@@ -130,12 +177,30 @@
             ⭐ মালিকের সিদ্ধান্ত: **নমুনাই চূড়ান্ত।** তাই "কাগজের তারিখ",
             "টাকার শ্রেণি" ও "উপশ্রেণি" — নমুনায় নেই বলে তুলে দেওয়া হলো।
         --}}
+        {{--
+            ⓘ নকশার মাথায় "কেন এভাবে" — পর্দাটা নিজেই বলে কেন
+            ঘরগুলো এই ক্রমে। ⚠️ লেখাটা ভাঁজে, কারণ রোজ যিনি লেখেন
+            তাঁর এটা লাগে না; নতুন কেউ প্রথম দিনে পড়েন।
+        --}}
+        @if ($expenseLayout)
+            <details class="text-sm">
+                <summary class="cursor-pointer text-(--color-ink-muted)">
+                    &#9432; {{ __('accounts::field.why_this_way') }}
+                </summary>
+                <p class="mt-2 text-xs text-(--color-ink-muted)">
+                    {{ __('accounts::message.why_expense_this_way') }}
+                </p>
+            </details>
+        @endif
+
         @if (in_array($voucher->type, [
             \App\Modules\Accounts\Models\Voucher::RECEIPT,
             \App\Modules\Accounts\Models\Voucher::PAYMENT,
         ], true))
             @include('accounts::voucher.partials.party-fields')
-        @else
+        @elseif (! $expenseLayout)
+            {{-- ⓘ খরচে এই সারিটা নেই: তারিখ নকশার সারি ১-এ চলে গেছে,
+                 "কাগজের তারিখ" নকশায় নেই, আর "টাকার অঙ্ক" শেষ সারিতে। --}}
             <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
                 <div class="grid gap-3 sm:grid-cols-3">
                     <x-ui.field name="trx_date" type="date" :label="__('accounts::field.date')"
@@ -259,14 +324,14 @@
                 ⓘ "কার কাছ থেকে" ঘরটা নমুনায় নেই — উপরে ডিপোজিটরই
                 বলে দেয় টাকা কার কাছ থেকে। ⚠️ আলাদা ঘরটা দ্বিত্ব।
             --}}
-            <div class="grid gap-3 sm:grid-cols-2" @if ($partyAbove) hidden @endif>
+            <div class="grid gap-3 sm:grid-cols-2" @if ($sampled) hidden @endif>
                 {{-- from — টাকা যেখান থেকে এল --}}
                 <label class="block">
                     <span class="mb-1 block text-sm font-medium">
                         {{ __($sides['from']['label']) }}
                         <span class="text-(--color-danger)" aria-hidden="true">*</span>
                     </span>
-                    <select name="from_account_id" required @disabled($partyAbove) x-model="from"
+                    <select name="from_account_id" required @disabled($sampled) x-model="from"
                             class="h-(--spacing-field) w-full rounded-(--radius-field) border
                                    border-(--color-border) bg-(--color-surface-card) px-3">
                         <option value="">—</option>
@@ -290,7 +355,7 @@
                         {{ __($sides['to']['label']) }}
                         <span class="text-(--color-danger)" aria-hidden="true">*</span>
                     </span>
-                    <select name="to_account_id" required @disabled($partyAbove)
+                    <select name="to_account_id" required @disabled($sampled)
                             class="h-(--spacing-field) w-full rounded-(--radius-field) border
                                    border-(--color-border) bg-(--color-surface-card) px-3">
                         <option value="">—</option>
@@ -358,7 +423,13 @@
                     ⚠️ দুই জায়গায় একই নামের ঘর থাকলে ব্রাউজার শেষেরটার
                     মান পাঠাত, আর উপরের বাছাইটা নীরবে হারাত।
                 --}}
-                <label class="mt-3 block" @if ($partyAbove) hidden @endif>
+                {{--
+                    ⓘ খরচে ঘরটা মুছে ফেলা যায়নি: **বাকিতে খরচ** লিখলে যাচাই পক্ষ চায়
+                    ⚠️ তাই নকশার অবস্থায় (নগদে খরচ) পর্দায় এটা নেই, আর
+                    প্রদেয় খাত বাছলেই ঘর দুইটা ফুটে ওঠে।
+                --}}
+                <label class="mt-3 block" @if ($partyAbove) hidden @endif
+                       @if ($expenseLayout) x-cloak x-show="onCredit" @endif>
                     <span class="mb-1 block text-sm font-medium">
                         {{ __('accounts::field.party_type') }}
                         <span class="text-(--color-danger)" x-cloak x-show="onCredit" aria-hidden="true">*</span>
@@ -377,7 +448,8 @@
                     @enderror
                 </label>
 
-                <label class="mt-3 block" @if ($partyAbove) hidden @endif>
+                <label class="mt-3 block" @if ($partyAbove) hidden @endif
+                       @if ($expenseLayout) x-cloak x-show="onCredit" @endif>
                     <span class="mb-1 block text-sm font-medium">
                         {{ __('accounts::field.party') }}
                         <span class="text-(--color-danger)" x-cloak x-show="onCredit" aria-hidden="true">*</span>
@@ -423,7 +495,7 @@
 
                     ⓘ মালিকের সিদ্ধান্ত: নমুনাই চূড়ান্ত।
                 --}}
-                <div class="mt-3" @if ($partyAbove) hidden @endif>
+                <div class="mt-3" @if ($sampled) hidden @endif>
                     <span class="mb-1 block text-sm font-medium">
                         {{ __('accounts::field.collectable') }}
                     </span>
@@ -460,13 +532,13 @@
                     দেখানো হয় না। ⚠️ খরচ ও কন্ট্রায় থেকে যায়, কারণ
                     নমুনায় ঐ দুইটার নিজস্ব কাঠামো আলাদা।
                 --}}
-                <div class="mt-3 grid gap-3 sm:grid-cols-2" @if ($partyAbove) hidden @endif>
+                <div class="mt-3 grid gap-3 sm:grid-cols-2" @if ($sampled) hidden @endif>
                     <label class="block">
                         <span class="mb-1 block text-sm font-medium">
                             {{ __('accounts::field.money_category') }}
                         </span>
                         <select name="money_category_id" x-model="catId" @change="pickCategory()"
-                                @disabled($partyAbove)
+                                @disabled($sampled)
                                 class="h-(--spacing-field) w-full rounded-(--radius-field) border
                                        border-(--color-border) bg-(--color-surface-card) px-3">
                             <option value="">—</option>
@@ -486,7 +558,13 @@
                         <span class="mb-1 block text-sm font-medium">
                             {{ __('accounts::field.money_subcategory') }}
                         </span>
+                        {{--
+                            ⛔ লুকানো হলেই ঘরটা জমা পড়া থামে না — ১৮ সেপ্টেম্বর ২০২৬।
+                            ⓘ পাশের শ্রেণির ঘরটায় `@disabled` ছিল, এইটায় ছিল না —
+                            একটা পরীক্ষা গনা শুরু করার আগ পর্যন্ত কেউ টের পায়নি।
+                        --}}
                         <select name="money_subcategory_id" x-model="subId" @change="pickSub()"
+                                @disabled($sampled)
                                 class="h-(--spacing-field) w-full rounded-(--radius-field) border
                                        border-(--color-border) bg-(--color-surface-card) px-3">
                             <option value="">—</option>
@@ -513,10 +591,86 @@
                     {{ __('accounts::message.expense_on_credit') }}
                 </p>
             </div>
+
+            {{--
+                ── নকশার শেষ সারি, ১৮ সেপ্টেম্বর ২০২৬ ────────────
+                    যে খাত থেকে · টাকার অঙ্ক · সংযুক্তি · বিবরণ · [বোতাম]
+
+                ⚠️ সারিটা এই সেকশনের **ভিতরে**, বাইরে নয় — কারণ
+                "যে খাত থেকে" ঘরটা Alpine-এর `from` অবস্থা ধরে রাখে, আর
+                সেই অবস্থা থেকেই "বাকিতে কি না" (`onCredit`) ঠিক হয়।
+                ⛔ বাইরে বসালে স্কোপ শেষ হয়ে যেত, আর পক্ষের ঘর কখনো ফুটত না।
+
+                ⓘ নকশায় "টাকার অঙ্ক" ঘরটা আঁকা নেই — ওখানে উৎসে
+                কর্তনের ভাঁজে "হাতে ৳৪৮,৫০০" দেখানো। ⚠️ কিন্তু কর্তন
+                ছাড়া খরচে (যা বেশিরভাগ) অঙ্ক লেখার কোনো ঘরই থাকত না —
+                ভাঁজ খুলে "বিলের মোট" লিখতে হত। তাই ঘরটা এখানে রাখা হলো।
+            --}}
+            @if ($expenseLayout)
+                <div class="mt-4 grid items-end gap-3 sm:grid-cols-[2fr_1fr_1.4fr_2fr_auto]">
+                    <label class="block">
+                        <span class="mb-1 block text-sm font-medium">
+                            {{ __('accounts::field.from_head') }}
+                            <span class="text-(--color-danger)" aria-hidden="true">*</span>
+                        </span>
+                        <select name="from_account_id" required x-model="from"
+                                class="h-(--spacing-field) w-full rounded-(--radius-field) border
+                                       border-(--color-border) bg-(--color-surface-card) px-3">
+                            <option value="">&mdash;</option>
+                            @foreach ($optionsFor($sides['from']['source']) as $account)
+                                <option value="{{ $account->id }}"
+                                        @selected(old('from_account_id', $creditLine?->account_id) == $account->id)>
+                                    {{ in_array((int) $account->id, $creditIds, true)
+                                        ? __('accounts::field.on_credit_option', ['account' => $account->label()])
+                                        : $account->label() }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('from_account_id')
+                            <span class="mt-1 block text-2xs text-(--color-danger)">{{ $message }}</span>
+                        @enderror
+                    </label>
+
+                    <x-ui.field name="amount" type="number" step="0.01" inputmode="decimal"
+                                :label="__('accounts::field.amount')"
+                                :value="old('amount', $debitLine?->debit)" required numeric />
+
+                    @include('accounts::voucher.partials.attachment-field')
+
+                    <x-ui.field name="narration"
+                                :label="__('core.table.narration')"
+                                :value="old('narration', $voucher->narration)" />
+
+                    {{--
+                        ⭐ নকশার বোতাম — মালিকের সিদ্ধান্ত, ১৮ সেপ্টেম্বর ২০২৬।
+
+                        ⓘ আমি প্রশ্ন তুলেছিলাম: অনুমোদন লাগবে কি না সেটা
+                        প্রতিটা কোম্পানি নিজে ছকে বসায়, আর ছক না বসালে ভাউচার
+                        সোজা খাতায় যায়। ⭐ মালিক তারপরও বললেন *"নাম বদলা"* —
+                        নকশাই চূড়ান্ত, আর খরচে অনুমোদন তাঁদের নিয়ম।
+
+                        ⚠️ কেবল খরচে, পাঁচটাতে নয়: আদায় ও পরিশোধের নকশায়
+                        বোতামটা "সংরক্ষণ ও পোস্ট"ই।
+                    --}}
+                    <div class="pb-1">
+                        @include('accounts::voucher.partials.save-buttons', [
+                            'voucher' => $voucher,
+                            'type' => $type,
+                            'primaryLabel' => 'accounts::action.send_for_approval',
+                        ])
+                    </div>
+                </div>
+            @endif
         </section>
 
         {{-- ⓘ রসিদ ও পরিশোধে এই ব্লকটার নিজস্ব বাক্স নেই — ভিতরের
              সবকিছু লুকানো থাকায় পর্দায় একটা খালি বাক্স দেখা যেত। --}}
+        {{--
+            ⛔ খরচে গোটা সেকশনটাই নেই: নকশায় "কীভাবে দেওয়া হলো"
+            উৎসে কর্তনের **পাশে** বসে (দুই কলাম), আর "বিবরণ" শেষ সারিতে।
+            ⓘ তাই খরচে টাকা-চলাচলের ব্লকটা expense-fields থেকে ডাকা হয়।
+        --}}
+        @unless ($expenseLayout)
         <section @if (! $partyAbove) data-boxed
                  class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4"
                  @endif>
@@ -567,13 +721,14 @@
                 ⓘ খরচ ও কন্ট্রায় এখানেই থাকে, কারণ ঐ দুইটার নমুনায়
                 কাঠামোটা আলাদা।
             --}}
-            <label class="mt-3 block" @if ($partyAbove) hidden @endif>
+            <label class="mt-3 block" @if ($sampled) hidden @endif>
                 <span class="mb-1 block text-sm font-medium">{{ __('core.table.narration') }}</span>
-                <textarea name="narration" rows="2" @disabled($partyAbove)
+                <textarea name="narration" rows="2" @disabled($sampled)
                           class="w-full rounded-(--radius-field) border border-(--color-border)
                                  bg-(--color-surface-card) px-3 py-2">{{ old('narration', $voucher->narration) }}</textarea>
             </label>
         </section>
+        @endunless
 
         {{--
             ── নমুনার শেষ সারি, ১৬ সেপ্টেম্বর ২০২৬ ──────────────────────
@@ -621,7 +776,7 @@
             (নমুনায় "সংরক্ষণ ও পোস্ট" তিন ঘরের পাশে)।
             ⛔ এখানেও আঁকলে বোতাম দুইবার দেখা যায় — গুনে ধরা পড়েছে।
         --}}
-        @unless ($partyAbove)
+        @unless ($sampled)
             @include('accounts::voucher.partials.save-buttons', ['voucher' => $voucher, 'type' => $type])
         @endunless
     </form>

@@ -165,6 +165,103 @@ final class TheSampleAskedFourteenAndTheScreenAskedThreeTest extends TestCase
     }
 
     /**
+     * ⭐ খরচের ঘরগুলো নকশার ক্রমেই বসে, কেবল পর্দায় থাকে না।
+     *
+     * ── ⛔ কেন নাম গুনে দেখা যথেষ্ট নয়, ১৮ সেপ্টেম্বর ২০২৬ ─────
+     * উপরের পরীক্ষাগুলো সবুজ থাকতে পারে অথচ পর্দা দেখতে নকশার
+     * মতো না হতে পারে — ঘরগুলো অন্য ক্রমে, অন্য দলে, অন্য কার্ডে।
+     * ⓘ মালিক ঠিক সেটাই অনেকবার বলেছেন: *"মিলে না"* — আর
+     * সত্যিই মিলত না, কারণ পরিমাপটা হত নাম গুনে, দেখে নয়।
+     *
+     * ── ⓘ ক্রমটাই পরিমাপযোগ্য অংশ ────────────────────
+     * রং, ফাঁক বা গোল কোণা যন্ত্র দিয়ে মিলানো যায় না — ওগুলো
+     * মালিকের চোখের কাজ। ⭐ কিন্তু **কোনটার পরে কোনটা** সেটা
+     * HTML-ই বলে দেয়, আর একটা ঘর সরলেই এই পরীক্ষা লাল হয়।
+     *
+     * ⚠️ `bill_shares` ও `alloc_basis` তালিকায় নেই ইচ্ছাকৃতভাবে:
+     * ট্যাগ করার মতো চালান না থাকলে ও দুইটা ঘর পর্দায় আসেই না,
+     * আর তাতে পরীক্ষাটা ডেটার উপর নির্ভর করত — নকশার উপর নয়।
+     */
+    public function test_the_expense_screen_puts_the_boxes_in_the_order_the_sample_does(): void
+    {
+        $order = [
+            'trx_date',
+            'expense_account_id',
+            'cost_centre_id',
+            'payee_name',
+            'bill_no',
+            'gross_amount',
+            'ait_amount',
+            'vds_amount',
+            'instrument',
+            'from_account_id',
+            'amount',
+            'attachment',
+            'narration',
+        ];
+
+        $html = $this->screen('expense');
+
+        $at = [];
+
+        foreach ($order as $name) {
+            $position = strpos($html, 'name="'.$name.'"');
+
+            $this->assertNotFalse($position,
+                'খরচের পর্দায় "'.$name.'" ঘরটাই নেই।');
+
+            $at[$name] = $position;
+        }
+
+        $sorted = $at;
+        asort($sorted);
+
+        $this->assertSame(array_keys($at), array_keys($sorted), implode("
+", [
+            'খরচ ভাউচারের ঘরগুলো নকশার ক্রমে নেই।',
+            '',
+            'ⓘ নকশার ক্রম:   '.implode(' → ', array_keys($at)),
+            '⛔ পর্দার ক্রম:  '.implode(' → ', array_keys($sorted)),
+        ]));
+    }
+
+    /**
+     * ⛔ নকশায় যে ঘরগুলো নেই, সেগুলো খরচের পর্দায় দেখাও যায় না।
+     *
+     * ⓘ ঘরগুলো HTML থেকে মুছে ফেলা হয়নি — কয়েকটা লাগে
+     * (বাকিতে খরচে পক্ষ, যাচাইয়ের দাবি)। ⭐ তাই দাবিটা
+     * অনুপস্থিতি নয়, **অদৃশ্যতা**: ঘরটার সারিতে `hidden` আছে,
+     * নাহলে ওটা Alpine-এর শর্তে (`x-show`) লুকানো।
+     */
+    public function test_the_expense_screen_hides_what_the_sample_never_asked_for(): void
+    {
+        $html = $this->screen('expense');
+
+        // মালিকের নির্দেশ: "কার মাধ্যমে , কখন — দুইটাই বাদ দাও"।
+        foreach (['carried_by', 'moved_at', 'ref_date'] as $gone) {
+            $this->assertStringNotContainsString('name="'.$gone.'"', $html,
+                'খরচের পর্দায় "'.$gone.'" ঘরটা আবার ফিরে এসেছে — নকশায় ওটা নেই।');
+        }
+
+        /*
+         * ⚠️ টাকার শ্রেণির ঘর দুইটা HTML থেকে মোছা হয়নি — অন্য
+         * পর্দাগুলো একই ব্লক ব্যবহার করে। ⭐ কিন্তু খরচে ওগুলো `disabled`,
+         * আর নিষ্ক্রিয় ঘর ব্রাউজার পাঠায়ই না — কেবল লুকালে উপরের
+         * বাছাইটা নীরবে হারাত।
+         */
+        foreach (['money_category_id', 'money_subcategory_id'] as $inert) {
+            $where = strpos($html, 'name="'.$inert.'"');
+
+            if ($where === false) {
+                continue;
+            }
+
+            $this->assertStringContainsString('disabled', substr($html, $where, 400),
+                'খরচের পর্দায় "'.$inert.'" ঘরটা লুকানো, কিন্তু নিষ্ক্রিয় নয় — ব্রাউজার ওটাও পাঠাবে।');
+        }
+    }
+
+    /**
      * @param  array<string, string>  $fields
      */
     private function assertScreenAsks(string $type, array $fields): void
