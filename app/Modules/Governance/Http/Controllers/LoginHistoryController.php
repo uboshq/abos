@@ -30,7 +30,17 @@ class LoginHistoryController extends Controller implements HasMiddleware
 
     public static function middleware(): array
     {
-        return [new Middleware('can:governance.audit.view')];
+        /*
+         * ⭐ নিজের চাবি — ১৮ সেপ্টেম্বর ২০২৬, নিরীক্ষার ধাপ ৩.৪।
+         *
+         * ⛔ আগে অডিটের চাবিতে খুলত। ⚠️ কিন্তু লগইনের খাতা আর ব্যবসার
+         * খাতা এক জিনিস নয়: এখানে থাকে **কে কখন কোথা থেকে ঢুকেছে** —
+         * ঠিকানা, যন্ত্র, ব্যর্থ চেষ্টা। ⓘ ওটা IT-র প্রশ্ন, হিসাবের নয়।
+         *
+         * ⭐ আর উল্টোটাও: নিরাপত্তা দেখার লোককে লগইন ইতিহাস দিতে গিয়ে
+         * প্রতিটা বেতন ও দরও দিয়ে দিতে হত।
+         */
+        return [new Middleware('can:governance.login.view')];
     }
 
     public function index(Request $request): View
