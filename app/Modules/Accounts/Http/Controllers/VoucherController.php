@@ -77,12 +77,44 @@ class VoucherController extends Controller implements HasMiddleware
     {
         $type = $this->assertType($type);
 
+        /*
+         * ⭐ অনুমোদনের অপেক্ষায় ঝুলে আছে — ১৮ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⓘ এটা এখানে এল কেন ─────────────────────────
+         * মালিকের সিদ্ধান্ত: *"খরচ ভাউচার finance থেকে তুলে দাও …
+         * যা রাখতে হয় accounts-এ রাখো"*। অর্থের খরচের পর্দায় এই
+         * একটা জিনিসই অন্য কোথাও ছিল না।
+         *
+         * ── ⛔ অনুমোদন সেন্টার এর উত্তর নয় ───────────────
+         * ইনবক্স কেবল **যিনি সিদ্ধান্ত দিতে পারেন** তাঁকে দেখায়।
+         * যিনি কাগজটা লিখেছেন অথচ অনুমোদনকারী নন, তিনি ওখানে
+         * খালি পাতা পান — নিজের ঝুলে থাকা খরচটা আর কোথাও দেখেন না।
+         *
+         * ⚠️ আর ওগুলো খাতায় বসেও নেই — অর্থাৎ মাসের যোগফলেও নেই,
+         * চোখেও নেই। ⭐ তাই সংখ্যাটা তালিকার মাথায়, আর চাপ দিলে
+         * কেবল সেগুলোই দেখা যায়।
+         *
+         * ⓘ গোনাটা পাঁচ ধরনের ভাউচারেই চলে, কেবল খরচে নয় — পাঁচটাই
+         * `module.php`-তে অনুমোদনের কাজ হিসেবে ঘোষিত।
+         */
+        $awaitingIds = Approval::query()
+            ->where('approvable_type', Voucher::class)
+            ->where('module', VoucherApproval::MODULE)
+            ->where('action', $type)
+            ->pending()
+            ->pluck('approvable_id');
+
         $query = Voucher::query()
             ->ofType($type)
             ->search($request->query('q'))
             ->when($request->query('from'), fn ($q, $d) => $q->whereDate('trx_date', '>=', $d))
             ->when($request->query('to'), fn ($q, $d) => $q->whereDate('trx_date', '<=', $d))
-            ->when($request->query('status'), fn ($q, $s) => $q->where('status', $s));
+            ->when($request->query('status'), fn ($q, $s) => $q->where('status', $s))
+            /*
+             * ⛔ খালি তালিকায় `whereIn` দিলে শূন্য সারি আসে, আর সেটাই
+             * ঠিক: ঝুলে থাকা কিছু না থাকলে ছাঁকনিটাও খালি দেখাবে।
+             */
+            ->when($request->boolean('awaiting'), fn ($q) => $q->whereIn('id', $awaitingIds));
 
         $sort = $this->applySort($query, $request, $this->sorts());
 
@@ -95,6 +127,8 @@ class VoucherController extends Controller implements HasMiddleware
             'q' => $request->query('q'),
             'sortOptions' => $this->sortLabels(),
             'sort' => $sort,
+            'awaitingCount' => $awaitingIds->count(),
+            'awaiting' => $request->boolean('awaiting'),
         ]);
     }
 

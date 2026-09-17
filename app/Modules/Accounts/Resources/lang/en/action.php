@@ -17,6 +17,7 @@ return [
     'new_voucher' => 'New voucher',
     'save_and_post' => 'Save and post',
     'send_for_approval' => 'Send for approval',
+    'show_all' => 'Show all',
     'save_draft' => 'Save as draft',
     'post_now' => 'Post now',
     'cancel_voucher' => 'Cancel voucher',

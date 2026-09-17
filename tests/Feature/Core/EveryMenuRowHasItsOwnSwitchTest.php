@@ -164,18 +164,23 @@ class EveryMenuRowHasItsOwnSwitchTest extends TestCase
 
         $before = $this->visibleRoutes();
 
-        $this->assertContains('finance.expense.index', $before);
+        /*
+         * ⓘ আগে এখানে `finance.expense.index` লেখা ছিল — ১৮ সেপ্টেম্বর
+         * ২০২৬-এ মালিক খরচের সারিটা অর্থ থেকে তুলে দিতে বলেছেন।
+         * দাবিটা একই রয়ে গেছে, কেবল সাক্ষী বদলাল।
+         */
+        $this->assertContains('finance.income.index', $before);
         $this->assertContains('finance.hand_loan.index', $before);
 
         $this->settings()->set($key, false);
 
         $after = $this->visibleRoutes();
 
-        $this->assertNotContains('finance.expense.index', $after,
+        $this->assertNotContains('finance.income.index', $after,
             'গ্রুপ বন্ধ করার পরেও তার সারি মেনুতে আছে।');
         $this->assertNotContains('finance.hand_loan.index', $after);
 
-        $this->get(route('finance.expense.index'))->assertNotFound();
+        $this->get(route('finance.income.index'))->assertNotFound();
 
         /* অন্য গ্রুপের সারি অক্ষত — একটা গ্রুপ বন্ধ করলে মডিউল নয় */
         $this->assertContains('finance.capital.index', $after,

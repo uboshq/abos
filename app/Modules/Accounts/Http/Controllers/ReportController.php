@@ -46,6 +46,7 @@ class ReportController extends Controller implements HasMiddleware
          * রিপোর্টেও একই জিনিস ঘটেছিল।
          */
         'by-cost-centre' => 'accounts.by_cost_centre',
+        'expense-by-head' => 'accounts.expense_by_head',
         'cash-book' => 'accounts.cash_book',
         'bank-book' => 'accounts.bank_book',
 

@@ -56,4 +56,5 @@ return [
     'reconciliations' => 'ব্যাংক মিলকরণ',
     'assets' => 'স্থায়ী সম্পদ',
     'by_cost_centre' => 'কোন কেন্দ্রে কত',
+    'expense_by_head' => 'খাতভিত্তিক খরচ',
 ];

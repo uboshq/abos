@@ -35,6 +35,7 @@ final class CoreReports
         $engine->register(self::cashFlow());
         $engine->register(self::inflow());
         $engine->register(self::byCostCentre());
+        $engine->register(self::expenseByHead());
     }
 
     /**
@@ -586,6 +587,59 @@ final class CoreReports
                 ['key' => 'spent', 'label' => 'accounts::field.spent', 'type' => ReportColumn::MONEY],
                 ['key' => 'earned', 'label' => 'accounts::field.earned', 'type' => ReportColumn::MONEY],
                 ['key' => 'net', 'label' => 'accounts::field.net', 'type' => ReportColumn::MONEY],
+            ],
+        );
+    }
+
+    /**
+     * কোন খাতে কত খরচ — মাস ধরে।
+     *
+     * ── ⓘ এটা অর্থ মডিউল থেকে এখানে এল, ১৮ সেপ্টেম্বর ২০২৬ ──
+     * মালিক দুই মেনুতে একই নাম দেখে প্রশ্ন করলেন, তারপর বললেন
+     * *"খরচ ভাউচার finance থেকে তুলে দাও … যা রাখতে হয় accounts-এ রাখো"*।
+     *
+     * ── ⛔ লাভ-ক্ষতি এই প্রশ্নের উত্তর নয় ───────────────────
+     * সংখ্যাগুলো লাভ-ক্ষতিতেও আছে, কিন্তু ওটা দেখতে `accounts.report.final`
+     * লাগে — ডিপো ম্যানেজারের সেটা থাকে না। ⚠️ অথচ রোজ খরচ লেখেন
+     * তিনিই, আর "এই মাসে জ্বালানিতে কত গেল" প্রশ্নটা তাঁরই।
+     *
+     * ⓘ তাই এই পাতাটা সাধারণ `accounts.report` অনুমতিতে — লাভ বা
+     * মূলধনের কোনো সংখ্যা এখানে নেই, কেবল খরচ।
+     *
+     * ── ⭐ কেবল পোস্ট হওয়া খরচ ──────────────────────────
+     * খাতায় বসেনি এমন খরচ এখানে নেই, আর সেটাই ঠিক — রিপোর্ট
+     * খাতা পড়ে। ⚠️ ঝুলে থাকা কাগজগুলো খরচ ভাউচারের তালিকার মাথায়
+     * একটা চিপে গোনা হয় — দুইটা আলাদা প্রশ্ন, দুই জায়গায়।
+     */
+    public static function expenseByHead(): ReportDefinition
+    {
+        return new ReportDefinition(
+            key: 'accounts.expense_by_head',
+            title: 'accounts::menu.expense_by_head',
+            filters: ['date_range', 'branch'],
+            groupBy: 'account_id',
+            query: fn (array $f) => DB::table('ledger_entries')
+                ->join('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
+                ->where('ledger_entries.company_id', $f['company_id'])
+                ->whereBetween('ledger_entries.trx_date', [$f['from'], $f['to']])
+                ->when($f['branch_id'], fn ($q, $branch) => $q->where('ledger_entries.branch_id', $branch))
+                ->where('accounts.type', Account::EXPENSE)
+
+                /*
+                 * ⓘ গ্রুপ বাদ — গ্রুপে দাখিলা বসে না, তাই সারিও আসবে না।
+                 *   শর্তটা তবু লেখা, কারণ দাবিটা পড়ে বোঝা যাওয়া উচিত।
+                 */
+                ->where('accounts.is_group', false)
+                ->groupBy('ledger_entries.account_id', 'accounts.code', 'accounts.name_en', 'accounts.name_bn')
+                ->orderByRaw('SUM(ledger_entries.debit - ledger_entries.credit) DESC')
+                ->select([
+                    'ledger_entries.account_id',
+                    DB::raw(self::accountName()),
+                    DB::raw('SUM(ledger_entries.debit - ledger_entries.credit) as spent'),
+                ]),
+            columns: [
+                ['key' => 'account_name', 'label' => 'accounts::field.expense_head', 'type' => ReportColumn::TEXT],
+                ['key' => 'spent', 'label' => 'accounts::field.spent', 'type' => ReportColumn::MONEY],
             ],
         );
     }
