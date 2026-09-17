@@ -11,6 +11,7 @@ use App\Models\Branch;
 use App\Models\Company;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Finance\Models\CapitalEntry;
 use App\Modules\Finance\Models\Withdrawal;
 use App\Modules\Finance\Services\WithdrawalService;
 use App\Modules\MasterData\Models\Person;
@@ -154,6 +155,15 @@ class WithdrawalController extends Controller implements HasMiddleware
              * পড়ায়, পর্দা দেখে নয়।
              */
             'kind' => ['nullable', Rule::in(Withdrawal::KINDS)],
+
+            /*
+             * ⭐ কী দিয়ে বেরোল — ১৮ সেপ্টেম্বর ২০২৬, মালিকের লাল দাগ।
+             *
+             * ⓘ মানগুলো মূলধনেরটার হুবহু, কারণ এক খাতার দুই দিক।
+             * ⛔ টাকা ছাড়া অন্য কিছু হলে দাখিলার ক্রেডিট দিকটাই বদলায়:
+             * ফ্রিজ গেলে স্থায়ী সম্পদ, পণ্য গেলে মজুদ।
+             */
+            'in_kind' => ['nullable', Rule::in(CapitalEntry::IN_KINDS)],
             'paper' => ['nullable', 'file'],
 
             'reason' => ['nullable', 'string', 'max:500'],

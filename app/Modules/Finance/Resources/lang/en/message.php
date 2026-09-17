@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'cash_matches' => 'The count matches the amount.',
+    'cash_differs' => 'Counted :counted, written :written - a gap of :gap. It will not post until they match.',
     'withdrawal_kind_note' => 'Drawings and profit share reduce capital; an owner salary is an expense and reduces profit.',
     'ledger_debit_withdrawal' => '3200 Drawings, 3210 Profit share or 5201 Owner salary, by kind',
     'ledger_credit_withdrawal' => 'The account the money left - cash, bank or mobile',

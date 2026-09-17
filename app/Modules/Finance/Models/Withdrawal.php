@@ -69,7 +69,7 @@ class Withdrawal extends Model implements Drillable, SettledByAVoucher
 
     protected $fillable = [
         'company_id', 'branch_id', 'document_no', 'person_id',
-        'amount', 'kind', 'trx_date', 'money_account_id', 'reason', 'status',
+        'amount', 'kind', 'in_kind', 'trx_date', 'money_account_id', 'reason', 'status',
         'voucher_id', 'posted_at', 'created_by',
     ];
 

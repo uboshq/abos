@@ -90,7 +90,7 @@
             <x-ui.field name="trx_date" type="date" :label="__('finance::field.date')" required
                         :value="old('trx_date', now()->toDateString())" />
 
-            <div class="sm:col-span-2">
+            <div>
                 @include('finance::components.person-picker', [
                     'people' => $people,
                     'label' => __('finance::field.who'),
@@ -101,7 +101,7 @@
 
             {{-- ⓘ বাছাই নয়, তথ্য — কোম্পানি ও শাখা আগেই বাছা
                  ([[CapitalController::writingFor()]]-এর একই যুক্তি)। --}}
-            <div class="sm:col-span-2 xl:col-span-3">
+            <div>
                 <label for="writing-for" class="mb-1 block text-sm font-medium">
                     {{ __('finance::field.writing_for') }}
                 </label>
@@ -114,14 +114,18 @@
                         :label="__('finance::field.withdrawal_amount')"
                         :value="old('amount')" />
 
-            {{-- ⛔ "কী দিয়ে" ঘরটা এখানে নেই, আর সেটা ইচ্ছাকৃত।
+            {{-- ⭐ কী দিয়ে — মালিকের নির্দেশে, ১৮ সেপ্টেম্বর ২০২৬।
 
-                 ⓘ নমুনায় ঘরটা আছে, কিন্তু `fin_withdrawals`-এ কলামটা
-                 নেই — ওটা মূলধনের (`acc_capital_entries.in_kind`)।
+                 ⚠️ মালিক একটা ফ্রিজ নিয়ে গেলে সেটা নগদ উত্তোলন নয়।
+                 ⛔ ঘরটা না থাকায় সবই টাকা ধরা হত: সিন্দুক থেকে টাকা
+                 বেরোনো দেখাত, অথচ সিন্দুক অক্ষত — আর মাস শেষে ক্যাশ
+                 বই মিলত না।
 
-                 ⚠️ ঘরটা বসিয়ে দিলে ব্যবহারকারী "পণ্য" বাছতেন আর সেটা
-                 **নীরবে হারাত** — ঠিক যেভাবে আজ `kind` হারাচ্ছিল।
-                 ⭐ কলামটা বসার দিন ঘরটাও বসবে; তার আগে নয়। --}}
+                 ⓘ মানগুলো মূলধনেরটার হুবহু, কারণ এক খাতার দুই দিক। --}}
+            <x-ui.select name="in_kind" :label="__('finance::field.in_kind')"
+                         :options="collect(\App\Modules\Finance\Models\CapitalEntry::IN_KINDS)
+                             ->mapWithKeys(fn ($k) => [$k => __('finance::field.in_kind_'.$k)])"
+                         :selected="old('in_kind', \App\Modules\Finance\Models\CapitalEntry::CASH)" />
 
             {{-- ⓘ ঐচ্ছিক, মূলধনের মতোই: খালি রাখলে পরিশোধের পর্দাই
                  খাতটা ঠিক করে। --}}
@@ -185,12 +189,12 @@
                 ])
             </div>
 
-            <div class="sm:col-span-2 xl:col-span-3">
+            <div>
                 <x-ui.field name="reason" :label="__('finance::field.narration')"
                             :value="old('reason')" />
             </div>
 
-            <div class="sm:col-span-2 xl:col-span-3">
+            <div>
                 <label for="wdr-paper" class="mb-1 block text-sm font-medium">
                     {{ __('finance::field.attachment') }}
                 </label>
@@ -201,7 +205,7 @@
                               file:px-3 file:py-1.5 file:text-sm">
             </div>
 
-            <div class="flex flex-wrap items-end gap-2 sm:col-span-2 xl:col-span-3">
+            <div class="flex flex-wrap items-end gap-2">
                 <x-ui.button type="submit" tone="primary">
                     {{ __('finance::action.save_withdrawal_row') }}
                 </x-ui.button>
