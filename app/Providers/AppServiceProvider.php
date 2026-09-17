@@ -8,6 +8,7 @@ use App\Core\Services\FormIsNotSubmittedTwice;
 use App\Core\Services\ListExport;
 use App\Core\Services\Ownership;
 use App\Core\Services\SettingsService;
+use App\Core\Services\ShellFacts;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\Csp;
 use App\Models\User;
@@ -109,6 +110,21 @@ class AppServiceProvider extends ServiceProvider
          * মালিক ছক বদলালে সেটা সাথে সাথেই কার্যকর হওয়া দরকার।
          */
         $this->app->scoped(ApprovalEngine::class);
+
+        /*
+         * ⭐ খোলসের ঘরগুলোর তথ্য — অনুরোধ প্রতি একটা।
+         * ── ১৮ সেপ্টেম্বর ২০২৬, নিরীক্ষার ধাপ ৪.২ ────────────────────
+         *
+         * ⛔ কোম্পানি-সুইচারের কোয়েরি দুইটা ব্লেডের ভিতরে লেখা ছিল, আর
+         * কম্পোনেন্টটা **প্রতিটা পাতায়** আঁকা হয়। ⚠️ ধীর পাতার কারণ
+         * খুঁজতে কেউ একটা কম্পোনেন্টের `@php` ব্লক খোলে না।
+         *
+         * scoped, singleton নয়: ⓘ কেউ শাখা যোগ করলে বা কোম্পানি বদলালে
+         * পরের পাতাতেই সেটা দেখা যাওয়া দরকার। ⛔ singleton হলে উত্তরটা
+         * প্রক্রিয়া বাঁচা পর্যন্ত আটকে থাকত (octane, queue worker), আর
+         * *"আমার নতুন শাখা দেখা যাচ্ছে না কেন"* প্রশ্নের উত্তর থাকত না।
+         */
+        $this->app->scoped(ShellFacts::class);
 
         /*
          * কে কোন সারি দেখবেন — অনুরোধ প্রতি একটা।
