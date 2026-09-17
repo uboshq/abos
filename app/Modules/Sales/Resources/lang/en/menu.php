@@ -6,7 +6,7 @@ return [
     'orders' => 'Sales Orders',
     'receipts' => 'Goods Received',
     'bills' => 'Purchase Bills',
-    'pending_orders' => 'Pending Orders',
+    'pending_orders' => 'Pending Sales Orders',
     'uninvoiced' => 'Received, Not Invoiced',
     'by_supplier' => 'Purchases by Supplier',
     'challans' => 'Delivery Challans',

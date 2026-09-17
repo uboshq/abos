@@ -8,7 +8,7 @@ return [
     'bills' => 'Purchase Bills',
     'payments' => 'Payments',
     'returns' => 'Purchase Returns',
-    'pending_orders' => 'Pending Orders',
+    'pending_orders' => 'Pending Purchase Orders',
     'uninvoiced' => 'Received, Not Invoiced',
     'by_supplier' => 'Purchases by Supplier',
     'direct' => 'Direct Purchase',

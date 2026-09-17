@@ -25,14 +25,24 @@
     ⓘ সেজন্যই "আগে বসেছে" কলামটা আর "কেবল যেগুলোয় এখনো ভাড়া বসেনি"
     ছাঁকনিটা — দুইবার বসানো ঠেকানো হয় না, দেখিয়ে দেওয়া হয়।
 --}}
-<details class="mt-4 rounded-(--radius-card) border border-(--color-border) p-3"
-         @if (! empty(old('bill_shares', $voucher->billShares?->all() ?? []))) open @endif
+{{--
+    ⓘ নকশায় এই বাক্সটা **খোলা**, আর বাম ধারে নীল রেখা — কারণ
+    সিদ্ধান্তটা (প্রত্যক্ষ না পরোক্ষ) এই পর্দার সবচেয়ে বড় প্রশ্ন।
+    ⛔ ভাঁজ করা থাকলে কেউ খুলতেন না, আর সব খরচই পরোক্ষ
+    হয়ে বসত — যা ঠিক সেই ভুল যেটা এই বাক্সটা ঠেকানোর জন্য।
+--}}
+<details class="mt-4 rounded-(--radius-card) border border-(--color-border)
+                border-l-4 border-l-(--color-brand-500) p-3"
+         open
          x-data="{ onlyUntagged: true }">
-    <summary class="cursor-pointer text-sm font-semibold">
-        {{ __('accounts::field.against_which_bill') }}
-        <span class="ms-2 text-xs font-normal"
+    <summary class="flex cursor-pointer flex-wrap items-center justify-between gap-2
+                    text-sm font-semibold">
+        <span>{{ __('accounts::field.against_which_bill') }}</span>
+        <span class="text-xs font-normal"
               :class="isDirect ? 'text-(--color-badge-success-ink)' : 'text-(--color-ink-muted)'"
-              x-text="isDirect ? directLabel + ' · ' + tagged : indirectLabel"></span>
+              x-text="isDirect
+                  ? directLabel + ' · ' + tagged
+                  : indirectLabel + ' · ' + noBillLabel"></span>
     </summary>
 
     <p class="mt-2 text-xs text-(--color-ink-muted)">
@@ -124,12 +134,19 @@
                 পুরনো ভাউচারের ভাগও বদলে যেত — আর অনুমোদিত কাগজ নিজে
                 থেকে বদলায় না।
             --}}
+            {{--
+                ⛔ স্লটে `<option>` দিলে কম্পোনেন্ট সেগুলো নীরবে ফেলে দেয় —
+                ড্রপডাউনটা পর্দায় থাকত, ভিতরে একটাও সারি না। ⚠️ আর `:value`
+                নামে কোনো প্রপ নেই — বাছাইটা হয় `:selected` দিয়ে।
+                ⓘ দুইটা ভুল একসাথে: অপশন নেই, আর থাকলেও বাছা হত না।
+            --}}
             <x-ui.select name="alloc_basis" :label="__('accounts::field.alloc_basis')"
-                         :value="old('alloc_basis', 'qty')">
-                <option value="qty">{{ __('accounts::field.basis_qty') }}</option>
-                <option value="value">{{ __('accounts::field.basis_value') }}</option>
-                <option value="weight">{{ __('accounts::field.basis_weight') }}</option>
-            </x-ui.select>
+                         :options="[
+                             'qty' => __('accounts::field.basis_qty'),
+                             'value' => __('accounts::field.basis_value'),
+                             'weight' => __('accounts::field.basis_weight'),
+                         ]"
+                         :selected="old('alloc_basis', 'qty')" />
 
             {{--
                 ধরন ও কোথায় বসবে — লেখা, ঘর নয়।
@@ -150,7 +167,8 @@
             </div>
         </div>
 
-        <p class="mt-2 text-xs text-(--color-ink-muted)"
+        <p class="mt-3 rounded-(--radius-field) bg-(--color-badge-pending-bg) px-3 py-2
+                  text-xs text-(--color-badge-pending-ink)"
            x-text="isDirect ? directEffect : indirectEffect"></p>
     @endif
 </details>

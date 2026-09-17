@@ -670,6 +670,18 @@ class VoucherController extends Controller implements HasMiddleware
              * মধ্যেই আসে, আর দুই মাস যথেষ্ট বেশি।
              */
             'taggableBills' => PurchaseBill::query()
+                /*
+                 * ⛔ `goods_summary` সারিগুলো পড়ে, তাই ওগুলো আগেই নিয়ে আসতে হয়।
+                 *
+                 * ⓘ এই রিপোতে অলস লোড বন্ধ (`preventLazyLoading`), আর সেটা
+                 * সুবিধা: লুকানো N+1 এখানে নীরবে ধীর হয় না, সাথে সাথে ভাঙে।
+                 *
+                 * ⚠️ কিন্তু ভাঙাটা দেখা গেছে কেবল মালিকের মেশিনে: পরীক্ষার
+                 * ডেটায় ট্যাগ করার মতো একটাও চালান নেই, তাই টেবিলটাই আঁকা
+                 * হত না আর সবুজ থাকত। ⓘ লেখা রহিল: খালি ডেটায় সবুজ
+                 * হওয়া আর কাজ করা এক কথা নয়।
+                 */
+                ->with(['lines.product'])
                 ->where('company_id', CompanyContext::id())
                 ->where('trx_date', '>=', now()->subDays(60)->toDateString())
                 ->withSum('billShares as already_charged', 'share_amount')

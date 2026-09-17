@@ -38,12 +38,14 @@
         'landsHead' => __('accounts::field.into_expense_head'),
         'directEffect' => __('accounts::message.direct_effect'),
         'indirectEffect' => __('accounts::message.indirect_effect'),
+        'noBillLabel' => __('accounts::field.no_bill_picked'),
     ]);
 @endphp
 
 <section data-boxed
          class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4"
          x-data="{
+             head: '{{ $was('expense_account_id') ?? $was('to_account_id') }}',
              gross: {{ (float) ($was('gross_amount') ?? 0) }},
              ait: {{ (float) ($was('ait_amount') ?? 0) }},
              vds: {{ (float) ($was('vds_amount') ?? 0) }},
@@ -78,18 +80,33 @@
              ...{{ $texts }},
          }">
 
+    {{-- সারি ১ — তারিখ · খরচের খাত · খরচের কেন্দ্র (নকশার হুবহু) --}}
     <div class="grid gap-3 sm:grid-cols-3">
+        <x-ui.field name="trx_date" type="date" :label="__('accounts::field.date')"
+                    :value="old('trx_date', $voucher->trx_date?->format('Y-m-d') ?? now()->format('Y-m-d'))"
+                    required />
+
         {{-- খরচের খাত — ৫৩১০ পরিবহন ভাড়া, ৫৩২০ বিদ্যুৎ বিল… --}}
         {{--
             ⛔ `:options` প্রপ, স্লটে `<option>` নয় — ১৫ সেপ্টেম্বর ২০২৬।
             কম্পোনেন্টটা স্লটের অপশনগুলো চুপচাপ ফেলে দেয়, আর ড্রপডাউনটা
             খালি থাকে — ঘরটা পর্দায় থাকে, ভিতরে কিছুই না।
         --}}
+        {{--
+            ⛔ "খরচের খাত" একটাই, দুইটা নয় — ১৮ সেপ্টেম্বর ২০২৬।
+            পর্দায় ঘরটা **দুইবার** ছিল: এখানে `expense_account_id`, আর নিচে
+            `to_account_id` — দুইটার লেবেলই "খরচের খাত", আর মালিক ছবিতে
+            সেটাই ধরিয়ে দেন। ⚠️ দুই ঘরে দুই উত্তর দিলে খাতায় কোনটা
+            বসত তা বলা যেত না। ⓘ এখন দেখা যায় একটা, আর খাতার
+            দিকটা (`to_account_id`) লুকানো ঘরে সেই একটাকেই অনুসরণ করে।
+        --}}
         <x-ui.select name="expense_account_id"
                      :label="__('accounts::field.expense_head')"
                      :options="collect($expenseAccounts)->mapWithKeys(fn ($a) => [$a->id => $a->code.' · '.$a->label()])->all()"
-                     :selected="$was('expense_account_id')"
+                     :selected="$was('expense_account_id') ?? old('to_account_id')"
+                     x-model="head"
                      required />
+        <input type="hidden" name="to_account_id" :value="head">
 
         {{--
             খরচের কেন্দ্র — কোন ডিপো, গুদাম, অফিস বা গাড়ির খরচ।
@@ -104,15 +121,15 @@
                      :selected="$was('cost_centre_id')" />
     </div>
 
-    <div class="mt-3 grid gap-3 sm:grid-cols-3">
-        {{-- কাকে দেওয়া হলো — নমুনায় দুই ঘর চওড়া --}}
-        <div class="sm:col-span-2">
-            <x-ui.field name="payee_name"
-                        :label="__('accounts::field.payee')"
-                        :value="$was('payee_name')" />
-        </div>
+    {{-- সারি ২ — কাকে দেওয়া হলো, নকশায় পুরো চওড়া --}}
+    <div class="mt-3">
+        <x-ui.field name="payee_name"
+                    :label="__('accounts::field.payee')"
+                    :value="$was('payee_name')" />
+    </div>
 
-        {{-- সরবরাহকারীর নিজের বিল নম্বর — ছয় মাস পরে মেলানোর একমাত্র সূত্র --}}
+    {{-- সারি ৩ — সরবরাহকারীর নিজের বিল নম্বর, ছয় মাস পরে মেলানোর সূত্র --}}
+    <div class="mt-3 grid gap-3 sm:grid-cols-3">
         <x-ui.field name="bill_no"
                     :label="__('accounts::field.bill_no')"
                     :value="$was('bill_no')" />
@@ -125,14 +142,22 @@
         ⚠️ `amount` হাতে যাওয়া টাকা, `gross_amount` বিলের মোট। ⓘ দুইটা
         এক নয়, আর পার্থক্যটা সরকারের ঘরে যায় (২১২১ উৎসে কর্তিত কর)।
     --}}
-    <details class="mt-4 rounded-(--radius-card) border border-(--color-border) p-3"
-             @if ((float) ($was('ait_amount') ?? 0) > 0 || (float) ($was('vds_amount') ?? 0) > 0) open @endif>
-        <summary class="cursor-pointer text-sm font-semibold">
-            {{ __('accounts::field.deduction_at_source') }}
-            <span class="ms-2 text-xs font-normal text-(--color-ink-muted)"
-                  x-text="ait + vds > 0
-                      ? '{{ __('accounts::field.deducted') }} ' + (ait + vds).toFixed(2)
-                      : ''"></span>
+    {{--
+        নকশার দুই কলাম — উৎসে কর্তন · কীভাবে দেওয়া হলো
+
+        ⓘ দুইটাই "টাকাটা কত আর কীভাবে গেল" প্রশ্নের উত্তর, তাই
+        নকশায় পাশাপাশি। ⚠️ "কার মাধ্যমে · কখন" ঘর দুইটা নেই —
+        মালিকের নির্দেশ: *"দুইটাই বাদ দাও"*।
+    --}}
+    <div class="mt-4 grid gap-4 lg:grid-cols-2">
+        <details class="self-start rounded-(--radius-card) border border-(--color-border)
+                        border-l-4 border-l-(--color-danger) p-3"
+                 @if ((float) ($was('ait_amount') ?? 0) > 0 || (float) ($was('vds_amount') ?? 0) > 0) open @endif>
+        <summary class="flex cursor-pointer flex-wrap items-center justify-between gap-2 text-sm font-semibold">
+            <span>{{ __('accounts::field.deduction_at_source') }}</span>
+            <span class="num text-xs font-normal text-(--color-ink-muted)"
+                  x-text="'{{ __('accounts::field.deducted') }} ' + (ait + vds).toFixed(2)
+                      + ' · {{ __('accounts::field.net_payable') }} ' + net.toFixed(2)"></span>
         </summary>
 
         <div class="mt-3 grid gap-3 sm:grid-cols-3">
@@ -156,10 +181,15 @@
             <span class="text-(--color-ink-muted)">{{ __('accounts::field.net_payable') }}</span>
             <span class="num font-semibold" x-text="net.toFixed(2)"></span>
         </p>
-    </details>
+        </details>
+
+        <x-ui.money-movement direction="out"
+                             :carriers="$carriers ?? []"
+                             :modes="$transferModes ?? []"
+                             :carrier-here="false"
+                             :record="$voucher" />
+    </div>
 
     {{-- নমুনার শেষ ঘর — বিলের ছবি, যা ছয় মাস পরে একমাত্র সাক্ষী --}}
-    <div class="mt-4">
-        @include('accounts::voucher.partials.attachment-field')
-    </div>
+    {{-- ⓘ সংযুক্তি নকশার শেষ সারিতে চলে গেছে, তাই এখানে আর নেই। --}}
 </section>

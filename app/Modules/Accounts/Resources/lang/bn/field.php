@@ -24,7 +24,15 @@ return [
     'counted_total' => 'গোনা মোট',
     'note_of' => ':note টাকার নোট',
     'note_breakdown' => 'নোটের হিসাব',
-    'how_it_moved' => 'পেমেন্ট মেথড',
+    /*
+     * নমুনার নাম — "পেমেন্ট মেথড" নয়। ⓘ দুইটাই ইংরেজি শব্দ ছিল, আর
+     * বাকি পুরো পর্দাটা বাংলা। মালিকের নমুনায় লেখা "কীভাবে দেওয়া হলো"।
+     */
+    'how_it_moved' => 'কীভাবে দেওয়া হলো',
+    'how_it_came' => 'কীভাবে এলো',
+    'why_this_way' => 'কেন এভাবে',
+    'from_head' => 'যে খাত থেকে',
+    'no_bill_picked' => 'কোনো চালানে নয়',
     'moved_at' => 'কখন',
     'carried_by_nobody' => 'কেউ যায়নি — সরাসরি',
     'carried_by' => 'কার মাধ্যমে',
@@ -101,7 +109,7 @@ return [
     'received_into' => 'কোথায় জমা হল',
     'paid_from' => 'কোথা থেকে দেওয়া হল',
     'paid_to' => 'কাকে দেওয়া হল',
-    'expense_head' => 'কীসের খরচ',
+    'expense_head' => 'খরচের খাত',
     'moved_from' => 'কোথা থেকে',
     'moved_to' => 'কোথায়',
     'instrument' => 'মাধ্যম',
@@ -219,7 +227,7 @@ return [
     'total_funding' => 'মোট দায় ও মূলধন',
     'profit_this_year' => 'চলতি বছরের লাভ/ক্ষতি',
     'against_which_bill' => 'কোন চালানের জন্য',
-    'ait' => 'AIT (%)',
+    'ait' => 'AIT',
     'all_bills' => 'সব চালান',
     'alloc_basis' => 'ভাগ হবে কীসের অনুপাতে',
     'already_charged' => 'আগে বসেছে',
@@ -244,7 +252,7 @@ return [
     'payee' => 'কাকে দেওয়া হলো',
     'qty' => 'পরিমাণ',
     'this_share' => 'এই খরচের ভাগ',
-    'vds' => 'VDS (%)',
+    'vds' => 'VDS',
     'reverse_on' => 'উল্টো দাখিলার তারিখ',
     'attachment' => 'সংযুক্তি',
     'trx_date_long' => 'লেনদেনের তারিখ',
