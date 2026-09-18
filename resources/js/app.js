@@ -5,6 +5,8 @@ import { listKeys } from './list-keys.js'
 import { stockPlacement } from './placement.js'
 import { scannerStore } from './scanner.js'
 import partyVoucher from './party-voucher.js'
+import directSale from './counter/direct-sale.js'
+import directPurchase from './counter/direct-purchase.js'
 
 /*
  * Alpine শুধু ছোট UI ইন্টারঅ্যাকশনে — ড্রপডাউন, পাসওয়ার্ড দেখানো, ট্যাব
@@ -66,6 +68,15 @@ document.addEventListener('alpine:init', () => {
      * অ্যাপস্ট্রফি আর Blade-এর পার্সিং দুইবার ভেঙেছে।
      */
     Alpine.data('partyVoucher', partyVoucher)
+
+    /*
+     * ⭐ কাউন্টারের বিক্রয় — ১৮ সেপ্টেম্বর ২০২৬, নিরীক্ষার ধাপ ৪.১।
+     *
+     * ⛔ যুক্তিটা ব্লেডের ভিতরে ১,৪৫৩ লাইন ছিল, আর তাতে একটাও পরীক্ষা
+     * লেখা যেত না — অথচ ওখানেই দর, ছাড় ও খসড়ার হিসাব।
+     */
+    Alpine.data('directSale', directSale)
+    Alpine.data('directPurchase', directPurchase)
 
     /*
      * ছবি তোলার পর্দা — চার কোণ টেনে কাগজ সোজা করা।
