@@ -1,0 +1,203 @@
+import { beforeEach, describe, expect, it } from 'vitest'
+import directSale from './direct-sale.js'
+
+/*
+ * কাউন্টারে বিক্রয়ের অঙ্ক।
+ *
+ * ── ⭐ এই ফাইলটা কেন আছে — ১৮ সেপ্টেম্বর ২০২৬ ────────────────────────
+ * নিরীক্ষার ধাপ ৪.১: *"সরানো প্রতিটি টুকরার জন্য vitest পরীক্ষা লিখুন
+ * (দর গণনা, ছাড়, খসড়া সংরক্ষণ, বারকোড)।"*
+ *
+ * ⛔ এই অঙ্কগুলো **১,৪৫৩ লাইন ধরে ব্লেডের ভিতরে** ছিল, আর সেখানে একটাও
+ * পরীক্ষা লেখা যেত না। ⚠️ এখানকার ভুল কোনো ত্রুটিবার্তা দেয় না — শুধু
+ * প্রতিটা বিলে অঙ্কটা একটু এদিক-ওদিক হয়, আর মাসশেষে কেউ ধরতে পারে না
+ * কেন হিসাব মিলছে না।
+ *
+ * ⓘ ঠিক এই কথাটাই পাশের [[pricing.test.js]]-এ লেখা আছে, আর ওটার জন্যই
+ * ঐ ফাইলটা ব্লেডের বাইরে।
+ */
+
+/** ন্যূনতম একটা পণ্য — পরীক্ষাগুলো যা যা ছোঁয়। */
+const product = (over = {}) => ({
+    id: 1,
+    name: 'চাল',
+    rate: '50',
+    vatRate: 0,
+    vatInclusive: false,
+    ...over,
+})
+
+/** ফাঁকা একটা কাউন্টার — ব্লেড যা যা দেয় তার ন্যূনতম রূপ। */
+const counter = (over = {}) => directSale({
+    catalogue: [product()],
+    customers: [],
+    walkinId: 1,
+    vatEnabled: false,
+    packs: [],
+    paymentTermDefault: 'cash',
+    carriers: [],
+    depositMethods: [],
+    moneyAccounts: [],
+    draftKey: 'test.counter',
+    hasErrors: false,
+    texts: { notForSales: 'বিক্রয়ের জন্য নয়' },
+    ...over,
+})
+
+describe('লাইনের ভিত্তি', () => {
+    let c
+
+    beforeEach(() => {
+        c = counter()
+        c.picked = product()
+    })
+
+    it('পরিমাণ × দর', () => {
+        c.entry.qty = '3'
+        c.entry.rate = '50'
+
+        expect(c.entryBase).toBe(150)
+    })
+
+    /*
+     * ⚠️ খালি ঘর মানে শূন্য, `NaN` নয়।
+     *
+     * ⛔ `NaN` একবার ঢুকলে সে পুরো কাগজে ছড়ায়: মোট `NaN`, ভ্যাট `NaN`,
+     * আর পর্দায় "NaN" লেখা একটা বিল। ⓘ ব্যবহারকারী তখন বোঝেনই না
+     * কোন ঘরটা ভরতে হবে।
+     */
+    it('খালি ঘরে শূন্য, NaN নয়', () => {
+        c.entry.qty = ''
+        c.entry.rate = ''
+
+        expect(c.entryBase).toBe(0)
+        expect(Number.isNaN(c.entryBase)).toBe(false)
+    })
+})
+
+describe('ছাড় — টাকায় বা শতাংশে, একটাই ঘর', () => {
+    let c
+
+    beforeEach(() => {
+        c = counter()
+        c.picked = product()
+        c.entry.qty = '2'
+        c.entry.rate = '100'
+    })
+
+    it('সংখ্যা লিখলে সেটা টাকা', () => {
+        c.entry.discountInput = '30'
+
+        expect(c.entryDiscount).toBe(30)
+    })
+
+    it('শেষে % থাকলে সেটা শতাংশ', () => {
+        c.entry.discountInput = '10%'
+
+        expect(c.entryDiscount).toBe(20)
+    })
+
+    /*
+     * ⛔ এটাই এই ফাইলের সবচেয়ে জরুরি দাবি।
+     *
+     * ⚠️ ছাড় লাইনের মোটের চেয়ে বড় হলে লাইনটা **ঋণাত্মক** হত — অর্থাৎ
+     * বিক্রির কাগজে একটা সারি গ্রাহককে টাকা **ফেরত** দিত। ⓘ কেউ ভুল
+     * করে একটা শূন্য বেশি টাইপ করলেই সেটা ঘটত।
+     */
+    it('ছাড় লাইনের মোটের চেয়ে বড় হতে পারে না', () => {
+        c.entry.discountInput = '5000'
+
+        expect(c.entryDiscount).toBe(200)
+        expect(c.entryAfterDiscount).toBe(0)
+    })
+
+    it('ঋণাত্মক বা আজেবাজে লেখায় ছাড় নেই', () => {
+        c.entry.discountInput = '-50'
+        expect(c.entryDiscount).toBe(0)
+
+        c.entry.discountInput = 'অনেক'
+        expect(c.entryDiscount).toBe(0)
+    })
+
+    /*
+     * ⓘ সার্ভার ছাড়টা শতাংশে নেয়, তাই টাকায় লেখা হলে ফিরিয়ে দিতে হয়।
+     * ⚠️ ভিত্তি শূন্য হলে শতাংশ বের করা যায় না — তখন খালি।
+     */
+    it('টাকার ছাড় শতাংশে ফিরে যায়', () => {
+        c.entry.discountInput = '50'
+
+        expect(c.entryDiscountPercent).toBe('25')
+    })
+
+    it('ভিত্তি শূন্য হলে শতাংশ খালি', () => {
+        c.entry.qty = ''
+        c.entry.discountInput = '50'
+
+        expect(c.entryDiscountPercent).toBe('')
+    })
+})
+
+describe('ভ্যাট — সহ না বাদে', () => {
+    it('ভ্যাট বন্ধ থাকলে শূন্য', () => {
+        const c = counter({ vatEnabled: false })
+        c.picked = product({ vatRate: 15 })
+        c.entry.qty = '1'
+        c.entry.rate = '100'
+
+        expect(c.entryVat).toBe(0)
+    })
+
+    it('ভ্যাট বাদে দরে ভ্যাট যোগ হয়', () => {
+        const c = counter({ vatEnabled: true })
+        c.picked = product({ vatRate: 15, vatInclusive: false })
+        c.entry.qty = '1'
+        c.entry.rate = '100'
+
+        expect(c.entryVat).toBe(15)
+        expect(c.entryNet).toBe(115)
+    })
+
+    /*
+     * ⚠️ ভ্যাট-সহ দরে ভ্যাট **ভিতর থেকে** বের করা হয়, উপরে যোগ নয়।
+     *
+     * ⛔ ভুল করে যোগ করলে ১১৫ টাকার পণ্য ১৩২.২৫ হয়ে যেত — আর সেটা
+     * প্রতিটা বিলে, প্রতিদিন।
+     */
+    it('ভ্যাট সহ দরে ভ্যাট ভিতর থেকে বেরোয়', () => {
+        const c = counter({ vatEnabled: true })
+        c.picked = product({ vatRate: 15, vatInclusive: true })
+        c.entry.qty = '1'
+        c.entry.rate = '115'
+
+        expect(c.entryVat).toBeCloseTo(15, 6)
+        expect(c.entryNet).toBe(115)
+    })
+
+    /*
+     * ⭐ পুরো কাগজের বদল পণ্যের নিজের নিয়মকে ঢেকে দেয় — হার **ও** ধরন,
+     * দুইটাই। ⓘ নইলে ভ্যাট গোনা হত নতুন নিয়মে আর মোট গোনা হত পুরনো
+     * নিয়মে, আর দুইটা সংখ্যা মিলত না।
+     */
+    it('কাগজের বদল পণ্যের নিজের নিয়ম ঢেকে দেয়', () => {
+        const c = counter({ vatEnabled: true })
+        c.picked = product({ vatRate: 5, vatInclusive: false })
+        c.entry.qty = '1'
+        c.entry.rate = '115'
+        c.vatMode = 'inclusive'
+        c.vatRate = 15
+
+        expect(c.isInclusive(c.picked)).toBe(true)
+        expect(c.entryVat).toBeCloseTo(15, 6)
+    })
+
+    it('অব্যাহতি দিলে ভ্যাট শূন্য, আর দর ভ্যাট-সহ নয়', () => {
+        const c = counter({ vatEnabled: true })
+        c.picked = product({ vatRate: 15, vatInclusive: true })
+        c.entry.qty = '1'
+        c.entry.rate = '115'
+        c.vatMode = 'exempt'
+
+        expect(c.entryVat).toBe(0)
+        expect(c.isInclusive(c.picked)).toBe(false)
+    })
+})
