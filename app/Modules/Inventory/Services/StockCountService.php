@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Modules\Inventory\Services;
 
+use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\StockCount;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\MasterData\Models\ReasonCode;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -21,12 +23,24 @@ use Illuminate\Validation\ValidationException;
  * নোটের বদলে বহু পণ্য। এই সার্ভিস কেবল গণনা লেখে ও পার্থক্য বের করে —
  * খসড়া অবস্থায় খাতা এক চুলও নড়ে না।
  *
- * ── অনুমোদন এখানে নেই, ইচ্ছাকৃতভাবে ────────────────────────────────
- * পার্থক্যকে সত্যিকারের স্টক-সমন্বয়ে পরিণত করা (তাক, দাম ও খতিয়ান একসাথে
- * বদলানো) টাকার পথ — ওটা [[StockAdjustmentService]] দিয়ে যায় আর মাসের
- * তালা মানে। সেই ধাপটা আলাদা সার্ভিস-মেথডে বসবে, নিজের অনুমোদন-পারমিশন
- * ও পরীক্ষা নিয়ে। অর্ধেক টাকার-পথ রেখে যাওয়া হয়নি: এই মেথড শুরু থেকে
- * শেষ পর্যন্ত সম্পূর্ণ — একটা গণনা লেখা ও তার পার্থক্য দেখানো।
+ * ── ⭐ দুই ধাপ, আর দ্বিতীয়টা আজ বসল — ১৮ সেপ্টেম্বর ২০২৬ ───────────
+ * এই ফাইলের মাথায় আগে লেখা ছিল: *"সেই ধাপটা আলাদা সার্ভিস-মেথডে বসবে,
+ * নিজের অনুমোদন-পারমিশন ও পরীক্ষা নিয়ে।"*
+ *
+ * ⛔ কিন্তু বসেনি। ফল: গণনা লেখা হত, পার্থক্য পর্দায় দেখা যেত, আর
+ * **কোনোদিন কিছুই ঠিক হত না** — খাতার সংখ্যা যা ছিল তা-ই থেকে যেত।
+ * ⚠️ অর্থাৎ গোটা কাজটার দ্বিতীয় অর্ধেক অনুপস্থিত ছিল, আর পর্দা দেখে
+ * বোঝার কোনো উপায় ছিল না: গণনাটা সেভ হত, সবুজ বার্তা আসত।
+ *
+ * ⓘ এখন [[approve()]] আছে: ওটাই পার্থক্যকে সত্যিকারের সমন্বয়ে পরিণত
+ * করে ([[StockAdjustmentService]] দিয়ে, তাক-দাম-খতিয়ান একসাথে), আর
+ * ঠিক ওই মুহূর্তেই সই চায়।
+ *
+ * ── ⚠️ কেন সই এখানে, `record()`-এ নয় ───────────────────────────────
+ * গোনা কোনো সিদ্ধান্ত নয়, একটা পর্যবেক্ষণ — ওটা আটকানোর মানে নেই।
+ * ⛔ সিদ্ধান্তটা হলো **পার্থক্যটা মেনে নেওয়া**, কারণ তখনই মাল খাতা
+ * থেকে উবে যায় (বা বিনা টাকায় জন্ম নেয়)। ⓘ নগদ গণনাতেও হুবহু এই
+ * ভাগ — `record()` তারপর `approve()`।
  *
  * ── সবচেয়ে বিপজ্জনক নিয়ম: গোনা-হয়নি ≠ শূন্য ────────────────────────
  * লাইন বসে কেবল যে পণ্য গণনাকারী সত্যিই দিয়েছেন। তালিকায় নেই মানে "গোনা
@@ -39,6 +53,8 @@ final class StockCountService
         private readonly NumberSeriesEngine $numbers,
         private readonly StockService $stock,
         private readonly CostLayerService $costs,
+        private readonly StockAdjustmentService $adjustments,
+        private readonly DocumentApproval $approvals,
     ) {}
 
     /**
@@ -108,6 +124,102 @@ final class StockCountService
             }
 
             return $count->load('lines');
+        });
+    }
+
+    /**
+     * গণনা মেনে নেওয়া — পার্থক্যটা এখন সত্যিই খাতায় বসে।
+     *
+     * ── ⛔ এই মেথডটাই অনুপস্থিত ছিল, ১৮ সেপ্টেম্বর ২০২৬ ───────────────
+     * মালিক বললেন *"সব জায়গায় এপ্রুভাল বসাও"*, আর বসাতে গিয়ে দেখা গেল
+     * মজুদ গণনায় বসানোর **জায়গাই নেই** — কারণ মেনে নেওয়ার ধাপটাই লেখা
+     * হয়নি। ⚠️ গণনা সেভ হত, পার্থক্য দেখা যেত, খাতা অটুট থাকত।
+     *
+     * ── ⓘ কী ঘটে ──────────────────────────────────────────────────
+     *   ১. সই লাগে কি না দেখা (ছক না বসানো থাকলে চুপচাপ এগোয়)
+     *   ২. প্রতিটা লাইনের পার্থক্য [[StockAdjustmentService::adjust()]]-এ
+     *   ৩. গণনাটা নিশ্চিত হিসেবে দাগানো, কে ও কখন সহ
+     *
+     * ⚠️ পার্থক্য শূন্য হলে ওই লাইনে কিছুই হয় না — `adjust()` নিজেই
+     * `null` ফেরায়, আর শূন্য সারি খতিয়ানে কেবল ভিড় বাড়াত।
+     *
+     * ── ⛔ কেন কারণ-কোড বাধ্যতামূলক ────────────────────────────────
+     * মাল কম পাওয়া গেছে — চুরি, ভাঙা, মেয়াদ, নাকি গোনার ভুল? ⓘ উত্তরটা
+     * ছাড়া সংখ্যাটা কেবল একটা ক্ষতি; উত্তর থাকলে ওটা একটা তথ্য, আর
+     * মাস শেষে "কোন কারণে কত গেল" প্রশ্নের জবাব দেওয়া যায়।
+     */
+    public function approve(StockCount $count, ReasonCode $reason): StockCount
+    {
+        if ($count->status !== DocumentStatus::DRAFT) {
+            throw ValidationException::withMessages([
+                'status' => __('inventory::validation.count_not_draft'),
+            ]);
+        }
+
+        $count->loadMissing(['lines.product', 'warehouse']);
+
+        if ($count->lines->isEmpty()) {
+            throw ValidationException::withMessages([
+                'lines' => __('inventory::validation.count_needs_lines'),
+            ]);
+        }
+
+        /*
+         * ⓘ অঙ্ক হিসেবে পার্থক্যের **টাকা** যায়, সংখ্যা নয় — একশো
+         * পিস সাবানের ঘাটতি আর একশো পিস ওষুধের ঘাটতি এক জিনিস নয়।
+         *
+         * ⚠️ যে লাইনে দর জানা নেই (স্তর খালি) সেটা যোগে ধরা হয় না;
+         * ধরে-নেওয়া দর বসালে সীমাটাই মিথ্যা হয়ে যেত।
+         */
+        $atStake = '0';
+
+        foreach ($count->lines as $line) {
+            if ($line->unit_cost === null) {
+                continue;
+            }
+
+            $atStake = bcadd($atStake, bcmul(
+                (string) abs((float) $line->difference),
+                (string) $line->unit_cost,
+                4,
+            ), 4);
+        }
+
+        $this->approvals->assertClear(
+            document: $count,
+            module: 'inventory',
+            action: 'count',
+            field: 'status',
+            amount: $atStake,
+            reason: $count->narration,
+        );
+
+        return DB::transaction(function () use ($count, $reason) {
+            foreach ($count->lines as $line) {
+                if (bccomp((string) $line->difference, '0', 4) === 0) {
+                    continue;
+                }
+
+                $this->adjustments->adjust(
+                    product: $line->product,
+                    warehouse: $count->warehouse,
+                    countedQty: (string) $line->counted_qty,
+                    reason: $reason,
+                    date: $count->count_date,
+                    narration: $count->narration ?: $count->document_no,
+                    unitCost: $line->unit_cost === null ? null : (string) $line->unit_cost,
+                );
+
+                $line->update(['reason_code_id' => $reason->id]);
+            }
+
+            $count->update([
+                'status' => DocumentStatus::CONFIRMED,
+                'approved_by' => auth()->id(),
+                'approved_at' => now(),
+            ]);
+
+            return $count->fresh(['lines']);
         });
     }
 

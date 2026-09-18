@@ -10,5 +10,6 @@ declare(strict_types=1);
  */
 
 return [
+    'count' => 'মজুদ গণনার পার্থক্য মেনে নেওয়া',
     'transfer' => 'গুদাম বদলে মাল রওনা',
 ];
