@@ -12,6 +12,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\StockAdjustmentService;
+use App\Modules\Inventory\Services\StockCountService;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\MasterData\Models\ReasonCode;
 use Illuminate\Database\Query\Builder;
@@ -38,6 +39,12 @@ class StockController extends Controller implements HasMiddleware
         private readonly StockService $stock,
         private readonly StockAdjustmentService $adjustments,
         private readonly MenuBuilder $menu,
+
+        /*
+         * ⓘ সমন্বয় এখন গণনার কাগজ দিয়ে যায় — তাতে সই চাওয়ার
+         * একটা জায়গা তৈরি হয়, আর কে কেন করল তার একটা কাগজও।
+         */
+        private readonly StockCountService $counts,
     ) {}
 
     public static function middleware(): array
@@ -91,7 +98,48 @@ class StockController extends Controller implements HasMiddleware
             ->select('inv_products.*')
             ->selectSub($this->sumOf('floor_change', $warehouse), 'floor_total')
             ->selectSub($this->sumOf('reserved_change', $warehouse), 'reserved_total')
-            ->selectSub($this->sumOf('hold_change', $warehouse), 'hold_total');
+            ->selectSub($this->sumOf('hold_change', $warehouse), 'hold_total')
+
+            /*
+             * ⭐ ফ্রি মাল আলাদা — ১৮ সেপ্টেম্বর ২০২৬, মালিকের নির্দেশে।
+             *
+             * ── ⛔ অভিযোগটা ন্যায্য ছিল ──────────────────────────────
+             * *"ইনভেন্টরিতে স্টক আলাদা ম্যানেজ হওয়ার কথা ছিল, কিন্তু
+             * হচ্ছে না।"*
+             *
+             * ⓘ আর সবচেয়ে শেখার মতো ব্যাপারটা হলো — **হিসাবটা আগে
+             * থেকেই আলাদা ছিল**। চলাচলের টেবিলে `free_change` ও
+             * `free_reserved_change` কলাম দুইটা প্রথম দিন থেকে আছে,
+             * [[StockService::statesForAll()]] ওগুলো গুনেও রাখত।
+             *
+             * ⛔ কেবল **এই পর্দাটা কোনোদিন জিজ্ঞেসই করেনি**। তাই ফ্রি
+             * মাল গুদামে ঢুকত, খাতায় বসত, আর তালিকায় অদৃশ্য থাকত —
+             * কোনো ত্রুটি ছাড়াই, কারণ কিছুই ভাঙেনি।
+             *
+             * ⚠️ ঠিক এই কারণেই ফ্রি-টা `floor`-এর সাথে যোগ করে দেখানো
+             * হয় না: *"তাকে ১৬০"* আর *"তার ৪০টা ফ্রি"* দুইটা আলাদা
+             * প্রশ্ন, আর একসাথে করলে লাভের হিসাব ভুল হত।
+             */
+            ->selectSub($this->sumOf('free_change', $warehouse), 'free_total')
+            ->selectSub($this->sumOf('free_reserved_change', $warehouse), 'free_reserved_total')
+
+            /*
+             * ⭐ এসেছে কিন্তু বসেনি — ১৮ সেপ্টেম্বর ২০২৬।
+             *
+             * ── ⛔ এটা না থাকায় তালিকাটা মিথ্যা বলত ──────────────────
+             * ক্রয় থেকে আসা মাল প্রথমে `unplaced` খোপে বসে, `floor`-এ
+             * নয় ([[PurchaseBillService::bringInDirectLines]])। ⓘ কারণটা
+             * সৎ: লরি থেকে নামা মাল আর তাকে তোলা মাল এক জিনিস নয়।
+             *
+             * ⚠️ কিন্তু এই পর্দা কেবল `floor` গুনত। ⛔ ফল: আজ পঞ্চাশ
+             * কার্টন এল, আর মজুদের তালিকা **শূন্য** দেখাল — যতক্ষণ না
+             * কেউ Stock Placement পর্দায় গিয়ে বসিয়ে আসেন। ⓘ মালিকের
+             * *"স্টক দেখাচ্ছে না"* অভিযোগের একটা বড় অংশ এটাই।
+             *
+             * ⭐ এখন সংখ্যাটা দেখা যায়, আর দেখেই বোঝা যায় কাজটা বাকি।
+             */
+            ->selectSub($this->sumOf('unplaced_change', $warehouse), 'unplaced_total')
+            ->selectSub($this->sumOf('unplaced_free_change', $warehouse), 'unplaced_free_total');
 
         $sort = $this->applySort($query, $request, $this->sorts());
 
@@ -139,6 +187,15 @@ class StockController extends Controller implements HasMiddleware
             'available_desc' => fn ($q) => $q->orderByRaw("{$available} desc"),
             'floor_desc' => fn ($q) => $q->orderByRaw('floor_total desc'),
             'hold_desc' => fn ($q) => $q->orderByRaw('hold_total desc'),
+
+            /*
+             * ⭐ *"কোন পণ্যে সবচেয়ে বেশি ফ্রি পড়ে আছে"* — ১৮ সেপ্টেম্বর।
+             *
+             * ⓘ কলামটা দেখানোই যথেষ্ট নয়: ত্রিশ পাতার তালিকায় চোখে
+             * খুঁজে বের করা যায় না। ⚠️ আর সাজানোর নামগুলো সাব-সিলেক্টের
+             * নাম — ব্যবহারকারীর পাঠানো কোনো লেখা এখানে পৌঁছায় না।
+             */
+            'free_desc' => fn ($q) => $q->orderByRaw('free_total desc'),
             'name' => fn ($q) => $q->orderBy('inv_products.name_en'),
             'code' => fn ($q) => $q->orderBy('inv_products.code'),
         ];
@@ -154,6 +211,7 @@ class StockController extends Controller implements HasMiddleware
             'available_desc' => __('inventory::sort.available_high'),
             'floor_desc' => __('inventory::sort.floor_high'),
             'hold_desc' => __('inventory::sort.hold_high'),
+            'free_desc' => __('inventory::sort.free_high'),
             'name' => __('inventory::sort.name'),
             'code' => __('inventory::sort.code'),
         ];
@@ -180,22 +238,45 @@ class StockController extends Controller implements HasMiddleware
     {
         $data = $this->validatedMovement($request, ReasonCode::STOCK_ADJUSTMENT, 'counted');
 
-        $movement = $this->adjustments->adjust(
-            product: $data['product'],
-            warehouse: $data['warehouse'],
-            countedQty: (string) $request->input('counted'),
-            reason: $data['reason'],
-            date: $request->input('trx_date'),
-            narration: $request->input('narration'),
-            unitCost: $request->input('unit_cost'),
-        );
+        /*
+         * ⭐ সমন্বয় এখন একটা গণনার কাগজ হয়ে যায় — ১৮ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⛔ কেন লাগল ────────────────────────────────
+         * মালিক বললেন সব জায়গায় অনুমোদন বসাতে। ⚠️ কিন্তু সমন্বয়
+         * কোনো **কাগজ বানাত না** — সারিটা তৈরি হয় কাজটা হয়ে যাওয়ার
+         * **পরে**, আর সই বসে এমন কাগজে যেটা আগে থেকে আছে।
+         *
+         * ── ⭐ সমাধান ─────────────────────────────────
+         * প্রতিটা সমন্বয় এখন একটা **এক-সারির গণনা** হয়ে যায়:
+         * কাগজটা তৈরি হয়, তারপর মেনে নেওয়া হয় — আর মেনে নেওয়ার
+         * মুহূর্তেই সই চাওয়া হয়।
+         *
+         * ⓘ দুইটা লাভ একসাথে: অনুমোদনের জায়গা তৈরি হলো, আর
+         * রাইট-অফের একটা নম্বরওয়ালা কাগজ রয়ে গেল — আগে কেবল
+         * একটা স্টক সারি ছিল, যা দেখে কে কেন করল বলা যেত না।
+         *
+         * ⚠️ ছক না বসানো থাকলে আগের মতোই সাথে সাথে হয় — কেবল
+         * একটা কাগজ বেশি তৈরি হয়।
+         */
+        $count = $this->counts->record([
+            'warehouse_id' => $data['warehouse']->id,
+            'count_date' => $request->input('trx_date'),
+            'narration' => $request->input('narration'),
+        ], [[
+            'product_id' => $data['product']->id,
+            'counted_qty' => (string) $request->input('counted'),
+        ]]);
+
+        $this->counts->approve($count, $data['reason']);
+
+        $difference = (string) ($count->lines->first()?->difference ?? '0');
 
         // মিলে গেলে কোনো সারি বসে না — আর সেটা ব্যবহারকারীকে বলা হয়,
         // নাহলে তিনি ভাবতেন সেভ হয়নি
-        return back()->with('saved', $movement === null
+        return back()->with('saved', bccomp($difference, '0', 4) === 0
             ? __('inventory::message.adjust_matched')
             : __('inventory::message.adjusted', [
-                'difference' => Money::format($movement->floor_change),
+                'difference' => Money::format($difference),
             ]));
     }
 

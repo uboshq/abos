@@ -427,6 +427,7 @@ return [
      */
     'approvals' => [
         'transfer' => 'inventory::approval.transfer',
+        'count' => 'inventory::approval.count',
     ],
 
     'reports' => [

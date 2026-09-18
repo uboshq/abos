@@ -23,3 +23,16 @@
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
 </IfModule>
+
+# ── APK ডাউনলোড — ১৮ সেপ্টেম্বর ২০২৬ ───────────────────
+#
+# ⛔ সঠিক MIME টাইপ ছাড়া Android ফাইলটা **ইনস্টলই করতে পারে না** —
+# ব্রাউজার ওটাকে সাধারণ ফাইল মনে করে নামায়, আর ফোন বলে "কিছুই হলো না"।
+# ⓘ কোনো ভুল বার্তা নেই, তাই কারণটা খুঁজে পাওয়া কঠিন।
+#
+# ⓘ লিংকটা স্থায়ী: /download/abos-latest.apk — মালিকের নির্দেশ,
+# *"only ekta link banaba za diye all versoin download kora zay"*। নতুন
+# রিলিজ বসানো মানে এই একটা ফাইল বদলানো — লিংক একই থাকে।
+<IfModule mod_mime.c>
+    AddType application/vnd.android.package-archive .apk
+</IfModule>
