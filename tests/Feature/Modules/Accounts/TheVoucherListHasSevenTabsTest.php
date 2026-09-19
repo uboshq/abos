@@ -12,6 +12,8 @@ use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\StandardChart;
+use App\Core\Engines\Posting\PostingEngine;
+use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Sales\Models\SalesInvoice;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -110,7 +112,12 @@ final class TheVoucherListHasSevenTabsTest extends TestCase
 
         $total = Voucher::query()->count();
         $page = $this->get(route('accounts.voucher.list'));
-        $counts = $page->viewData('counts');
+
+        /*
+         * ⓘ ক্রয় আর বিক্রয় ট্যাব ভাউচার নয়, খাতায় বসা বিল — ভাগের যোগে
+         * ওদের গোনা হয় না ([[VoucherListController::PURCHASE]])।
+         */
+        $counts = array_diff_key($page->viewData('counts'), VoucherListController::DOCUMENT_TABS);
 
         $this->assertSame($total, array_sum($counts),
             'সাত ট্যাবের যোগ মোট ভাউচারের সমান নয় — কোনোটা বাদ পড়েছে বা দুইবার এসেছে।');
@@ -138,6 +145,82 @@ final class TheVoucherListHasSevenTabsTest extends TestCase
             SalesInvoice::drillSourceType(),
             VoucherListController::SALES_INVOICE_SOURCE,
         );
+
+        $this->assertSame(
+            PurchaseBill::drillSourceType(),
+            VoucherListController::PURCHASE_BILL_SOURCE,
+        );
+    }
+
+    /**
+     * ⭐ ক্রয় ট্যাব খাতায় বসা বিল দেখায় — নিট অঙ্কে, একবার।
+     *
+     * ── ⛔ কেন নিট ──────────────────────────────────────────────────
+     * নিশ্চিত বিল বদলালে আগের দাখিলা উল্টানো হয় (`purchase_bill:reversal`)
+     * আর নতুন দাখিলা আবার আসল নামে বসে। ⚠️ কেবল আসল নামের ডেবিট যোগ
+     * করলে বদলানো বিল দ্বিগুণ দেখাত।
+     *
+     * ⓘ দুইটা বিল: একটা সাধারণ, একটা বাতিল (উল্টানো) — বাতিলটা তালিকায়
+     * আসে না, কারণ নিট শূন্য।
+     *
+     * ⛔ "বদলানো বিল" (উল্টে আবার বসানো) এখানে মাপা যায় না — ১৯ সেপ্টেম্বর
+     * ২০২৬-এ ধরা পড়ল যে [[PostingEngine::assertNotAlreadyPosted()]] উল্টানোর
+     * পরেও আসল নামের সারি দেখে আবার বসাতে দেয় না। ⚠️ অর্থাৎ নিশ্চিত ক্রয়
+     * বিল বদলানোর পথটাই আজ আটকে থাকে; মালিক ও abos-e8-কে জানানো হয়েছে।
+     * ⓘ নিট হিসাবটা তবু রাখা হলো — ঐ পথ খুললে বদলানো বিল দ্বিগুণ দেখাবে না।
+     */
+    public function test_the_purchase_tab_shows_posted_bills_and_hides_cancelled_ones(): void
+    {
+        $plain = 9001;
+        $cancelled = 9003;
+
+        $this->postBill($plain, '1000');
+
+        $this->postBill($cancelled, '300');
+        $this->reverse($cancelled);
+
+        $page = $this->get(route('accounts.voucher.list', ['tab' => VoucherListController::PURCHASE]));
+
+        $page->assertOk();
+
+        $rows = collect($page->viewData('vouchers')->items())->keyBy('source_id');
+
+        $this->assertSame([$plain], $rows->keys()->map(fn ($k) => (int) $k)->values()->all(),
+            'বাতিল বিলটা তালিকায় এসেছে, বা সাধারণ বিলটা হারিয়েছে।');
+
+        $this->assertSame('1000.0000', number_format((float) $rows[$plain]->amount, 4, '.', ''),
+            'অঙ্কটা খাতার ডেবিটের সাথে মেলে না।');
+
+        $this->assertSame(1, $page->viewData('counts')[VoucherListController::PURCHASE]);
+    }
+
+    private function postBill(int $id, string $amount): void
+    {
+        app(PostingEngine::class)->post(
+            sourceType: PurchaseBill::drillSourceType(),
+            sourceId: $id,
+            trxDate: now()->toDateString(),
+            lines: [
+                ['account_id' => $this->accountId(StandardChart::INVENTORY), 'debit' => $amount],
+                ['account_id' => $this->accountId(StandardChart::PAYABLE), 'credit' => $amount],
+            ],
+            documentNo: 'PBL-T'.$id,
+        );
+    }
+
+    private function reverse(int $id): void
+    {
+        app(PostingEngine::class)->reverse(
+            sourceType: PurchaseBill::drillSourceType(),
+            sourceId: $id,
+            reversalDate: now(),
+            reason: 'TEST',
+        );
+    }
+
+    private function accountId(string $code): int
+    {
+        return (int) Account::query()->where('code', $code)->value('id');
     }
 
     private function voucher(string $type, ?string $against, int $n): void
