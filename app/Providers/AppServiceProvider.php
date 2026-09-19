@@ -9,10 +9,12 @@ use App\Core\Services\ListExport;
 use App\Core\Services\Ownership;
 use App\Core\Services\SettingsService;
 use App\Core\Services\ShellFacts;
+use App\Core\Support\AlpineLiteral;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\Csp;
 use App\Models\User;
 use App\Models\UserPermissionOverride;
+use App\Modules\SystemAdmin\Policies\UserPolicy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Blade;
@@ -70,6 +72,14 @@ class AppServiceProvider extends ServiceProvider
 
             return $override?->granted;
         });
+
+        /*
+         * ⓘ ব্যবহারকারীর পলিসি নিজে খুঁজে পাওয়া যায় না: মডেলটা কোরে
+         * (`App\Models\User`), আর Laravel পলিসি খোঁজে মডেলের পাশের
+         * `Policies`-এ। নিয়মগুলো SystemAdmin-এর, তাই পলিসিও সেখানে —
+         * কেবল জোড়াটা এখানে বাঁধা। বিস্তার [[UserPolicy]]-তে।
+         */
+        Gate::policy(User::class, UserPolicy::class);
 
         /*
          * সেটিং পড়ার সেবাটা একটাই — প্রতি অনুরোধে একবার।
@@ -312,6 +322,6 @@ class AppServiceProvider extends ServiceProvider
          * হয়ে যেত। ⓘ কী বদলায় আর কেন, [[AlpineLiteral]]-এ।
          */
         Blade::directive('js', fn (string $expression): string => '<?php echo '
-            .\App\Core\Support\AlpineLiteral::class.'::from('.$expression.'); ?>');
+            .AlpineLiteral::class.'::from('.$expression.'); ?>');
     }
 }

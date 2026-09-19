@@ -34,6 +34,9 @@ class PayslipPrintController extends Controller implements HasMiddleware
 
     public function one(Request $request, Payslip $payslip): Response
     {
+        // ⓘ পাতাটা যায় তার রানের শাখা ধরে — [[PayslipPolicy]]
+        $this->authorize('view', $payslip);
+
         $payslip->load(['employee.department', 'employee.designation', 'lines', 'run']);
 
         return $this->pdf(

@@ -40,6 +40,9 @@ class SalaryStructureController extends Controller implements HasMiddleware
 
     public function edit(Request $request, Employee $employee): View
     {
+        // ⓘ অনুমতির সাথে কর্মীর শাখাও — [[EmployeePolicy]]
+        $this->authorize('viewSalary', $employee);
+
         $on = $this->asOf($request);
 
         return view('hr::employee.salary', [
@@ -56,6 +59,8 @@ class SalaryStructureController extends Controller implements HasMiddleware
 
     public function store(Request $request, Employee $employee): RedirectResponse
     {
+        $this->authorize('manageSalary', $employee);
+
         $data = $request->validate([
             'effective_from' => ['required', 'date'],
             'amounts' => ['required', 'array', 'min:1'],
