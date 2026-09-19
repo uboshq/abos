@@ -6,12 +6,14 @@ import '../api_client/api_client.dart';
 
 /// The server's finished documents, fetched as bytes.
 ///
-/// <p>Shape agreed with the server side and written into docs/Contract before
-/// either half was built. ⚠️ **The endpoints do not exist yet** — this file is
-/// the app's half of an agreement, not a guess at one, and the difference is
-/// the whole lesson of 12 September: six screens had been reading key names
-/// nobody had ever agreed, and stayed green for a month while drawing
-/// nothing.
+/// <p>⚠️ **The endpoints do not exist yet**, and for three days this comment
+/// claimed the shape had been "agreed with the server side and written into
+/// docs/Contract" when it had not been — §১০ did not exist. Caught on 19
+/// September, when the server work was handed out and somebody would have
+/// built the other half from their own reading. That is exactly how the six
+/// payload bugs of 12 September happened: two halves, two guesses, green for
+/// a month, drawing nothing. §১০ is now written, from this file, and this
+/// comment is true.
 ///
 /// <p>Nothing here renders a document. `app/Core/Engines/Print` does, with the
 /// same [PrintEngine] the web uses — one layout, one set of totals, one
