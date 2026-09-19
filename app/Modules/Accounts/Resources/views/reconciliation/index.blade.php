@@ -51,21 +51,6 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('accounts::recon.title') }}</x-slot:title>
 
-    <x-slot:header>
-        <x-ui.page-header :title="__('accounts::recon.title')"
-                          :subtitle="__('accounts::recon.subtitle')">
-            {{-- শর্তটা হুবহু সেটাই যেটায় আগে নিচের ফর্মটা দেখা যেত। --}}
-            <x-slot:actions>
-                @can('accounts.reconciliation.manage')
-                    <x-ui.button tone="primary" icon="plus"
-                                 :href="route('accounts.reconciliation.create')">
-                        {{ __('accounts::action.new_reconciliation') }}
-                    </x-ui.button>
-                @endcan
-            </x-slot:actions>
-        </x-ui.page-header>
-    </x-slot:header>
-
     @if (session('status'))
         <div role="status"
              class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm
@@ -86,9 +71,31 @@
         </div>
     @endif
 
-    <x-ui.table :rows="$reconciliations"
-                :columns="$columns"
-                :empty="__('accounts::recon.empty')" />
+    {{-- ⭐ শিরোনাম, "নতুন মিলকরণ" আর খোঁজা তালিকার মাথায়, একই বাক্সে — মালিকের
+         নির্দেশ, ১৯ সেপ্টেম্বর ২০২৬: *"সব মডিউলেই একই অবস্থা, সব ঠিক করো"*। --}}
+    <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+        <form method="GET" class="contents">
+            <x-ui.toolbar :title="__('accounts::recon.title')"
+                :subtitle="__('accounts::recon.subtitle')"
+                :search-placeholder="__('accounts::message.recon_search')"
+                :columns="$columns">
+                {{-- শর্তটা হুবহু সেটাই যেটায় আগে নিচের ফর্মটা দেখা যেত। --}}
+                <x-slot:actions>
+                    @can('accounts.reconciliation.manage')
+                        <x-ui.button tone="primary" icon="plus"
+                                     :href="route('accounts.reconciliation.create')">
+                            {{ __('accounts::action.new_reconciliation') }}
+                        </x-ui.button>
+                    @endcan
+                </x-slot:actions>
+            </x-ui.toolbar>
+        </form>
 
-    {{ $reconciliations->links() }}
+        <x-ui.table :rows="$reconciliations"
+                    :columns="$columns"
+                    :compact="request()->boolean('compact')"
+                    :empty="$q ? __('core.empty.no_results') : __('accounts::recon.empty')" />
+    </div>
+
+    <div class="mt-3">{{ $reconciliations->links() }}</div>
 </x-layouts.app>

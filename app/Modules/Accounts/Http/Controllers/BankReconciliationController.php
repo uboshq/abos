@@ -48,9 +48,24 @@ class BankReconciliationController extends Controller implements HasMiddleware
             'menu' => $this->menu->forUser($request->user()),
             'reconciliations' => BankReconciliation::query()
                 ->with(['bankAccount', 'confirmer'])
+                /*
+                 * খোঁজা — ব্যাংক হিসাবের নাম/কোড/নম্বর, আর বিবরণ।
+                 *
+                 * ⓘ whereHas এখানে সস্তা: ব্যাংক খাত হাতে গোনা কয়েকটা, আর
+                 * মিলকরণ মাসে একটা করে। তালিকার প্রথম কলামটাই ব্যাংকের নাম,
+                 * তাই মানুষ ওটা দিয়েই খোঁজেন।
+                 */
+                ->when(trim((string) $request->query('q')) ?: null, fn ($query, $term) => $query->where(
+                    fn ($w) => $w->where('narration', 'like', "%{$term}%")
+                        ->orWhereHas('bankAccount', fn ($a) => $a->where('name_en', 'like', "%{$term}%")
+                            ->orWhere('name_bn', 'like', "%{$term}%")
+                            ->orWhere('code', 'like', "%{$term}%")
+                            ->orWhere('account_number', 'like', "%{$term}%"))
+                ))
                 ->orderByDesc('statement_date')
                 ->paginate(50)
                 ->withQueryString(),
+            'q' => $request->query('q'),
         ]);
     }
 

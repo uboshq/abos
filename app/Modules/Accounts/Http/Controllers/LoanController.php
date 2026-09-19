@@ -47,11 +47,24 @@ class LoanController extends Controller implements HasMiddleware
 
     public function index(Request $request): View
     {
-        $loans = Loan::query()->orderByDesc('id')->paginate(50)->withQueryString();
+        $loans = Loan::query()
+            /*
+             * খোঁজা — কাগজের নম্বর, ঋণদাতা আর ব্যাংকের হিসাব নম্বর।
+             *
+             * ⚠️ নিচের "মোট বকেয়া" খোঁজা মানে না, ইচ্ছাকৃত — ওটা সব ঋণের
+             * মোট (কারণ নিচে লেখা), খোঁজার ফল নয়।
+             */
+            ->when(trim((string) $request->query('q')) ?: null, fn ($query, $term) => $query->where(
+                fn ($w) => $w->where('document_no', 'like', "%{$term}%")
+                    ->orWhere('lender', 'like', "%{$term}%")
+                    ->orWhere('account_no', 'like', "%{$term}%")
+            ))
+            ->orderByDesc('id')->paginate(50)->withQueryString();
 
         return view('accounts::loan.index', [
             'menu' => $this->menu->forUser($request->user()),
             'loans' => $loans,
+            'q' => $request->query('q'),
 
             /*
              * মোট বকেয়া খতিয়ান থেকে গোনা, আলাদা কোনো কলাম থেকে নয়।

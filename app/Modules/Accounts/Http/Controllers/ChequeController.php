@@ -55,13 +55,27 @@ class ChequeController extends Controller implements HasMiddleware
              * ওই চেকগুলোই দেখা যায় — মালিকের নিয়ম: প্রতিটা সংখ্যা থেকে উৎসে।
              */
             ->when($request->query('filter') === 'open', fn ($q) => $q->open())
-            ->when($request->query('filter') === 'ripe', fn ($q) => $q->ripe());
+            ->when($request->query('filter') === 'ripe', fn ($q) => $q->ripe())
+            /*
+             * খোঁজা — চেক নম্বর, ব্যাংক, কাগজের নম্বর আর বিবরণ।
+             *
+             * ⓘ পক্ষের নাম নয়: পক্ষ দুই টেবিলের (গ্রাহক/সরবরাহকারী) যেকোনোটা,
+             * আর দুইটাতেই whereHas চালানো এই তালিকার জন্য ভারী। মানুষ চেক
+             * খোঁজেন হাতের কাগজের নম্বর দেখে — সেটা এখানেই আছে।
+             */
+            ->when(trim((string) $request->query('q')) ?: null, fn ($query, $term) => $query->where(
+                fn ($w) => $w->where('cheque_no', 'like', "%{$term}%")
+                    ->orWhere('bank_name', 'like', "%{$term}%")
+                    ->orWhere('document_no', 'like', "%{$term}%")
+                    ->orWhere('narration', 'like', "%{$term}%")
+            ));
 
         $sort = $this->applySort($query, $request, $this->sorts());
 
         return view('accounts::cheque.index', [
             'menu' => $this->menu->forUser($request->user()),
             'cheques' => $query->paginate(50)->withQueryString(),
+            'q' => $request->query('q'),
             /*
              * ⓘ পক্ষের তালিকাটা আর এখানে নয় — ফর্মটা `create`-এ সরার পর
              * তালিকার পাতায় ওটার কোনো ব্যবহারকারী নেই, আর

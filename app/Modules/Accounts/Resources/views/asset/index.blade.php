@@ -64,20 +64,6 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('accounts::asset.title') }}</x-slot:title>
 
-    <x-slot:header>
-        <x-ui.page-header :title="__('accounts::asset.title')"
-                          :subtitle="__('accounts::asset.subtitle')">
-            {{-- শর্তটা হুবহু সেটাই যেটায় আগে নিচের ফর্মটা দেখা যেত। --}}
-            <x-slot:actions>
-                @can('accounts.asset.manage')
-                    <x-ui.button tone="primary" icon="plus" :href="route('accounts.asset.create')">
-                        {{ __('accounts::action.new_asset') }}
-                    </x-ui.button>
-                @endcan
-            </x-slot:actions>
-        </x-ui.page-header>
-    </x-slot:header>
-
     @if (session('status'))
         <div role="status"
              class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm
@@ -124,9 +110,31 @@
         </form>
     @endcan
 
-    <x-ui.table :rows="$assets"
-                :columns="$columns"
-                :empty="__('accounts::asset.empty')" />
+    {{-- ⭐ শিরোনাম, "নতুন সম্পদ" আর খোঁজা এক বাক্সে, তালিকার মাথায় — মালিকের
+         নির্দেশ, ১৯ সেপ্টেম্বর ২০২৬: *"সব মডিউলেই একই অবস্থা, সব ঠিক করো"*।
+         ⓘ অবচয়ের দৌড়টা বাক্সের বাইরে, উপরেই — ওটা তালিকার অংশ নয়, মাসের কাজ। --}}
+    <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+        <form method="GET" class="contents">
+            <x-ui.toolbar :title="__('accounts::asset.title')"
+                :subtitle="__('accounts::asset.subtitle')"
+                :search-placeholder="__('accounts::message.asset_search')"
+                :columns="$columns">
+                {{-- শর্তটা হুবহু সেটাই যেটায় আগে নিচের ফর্মটা দেখা যেত। --}}
+                <x-slot:actions>
+                    @can('accounts.asset.manage')
+                        <x-ui.button tone="primary" icon="plus" :href="route('accounts.asset.create')">
+                            {{ __('accounts::action.new_asset') }}
+                        </x-ui.button>
+                    @endcan
+                </x-slot:actions>
+            </x-ui.toolbar>
+        </form>
 
-    {{ $assets->links() }}
+        <x-ui.table :rows="$assets"
+                    :columns="$columns"
+                    :compact="request()->boolean('compact')"
+                    :empty="$q ? __('core.empty.no_results') : __('accounts::asset.empty')" />
+    </div>
+
+    <div class="mt-3">{{ $assets->links() }}</div>
 </x-layouts.app>

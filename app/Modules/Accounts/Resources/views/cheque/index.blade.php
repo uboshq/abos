@@ -28,21 +28,6 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('accounts::menu.cheques') }}</x-slot:title>
 
-    <x-slot:header>
-        <x-ui.page-header :title="__('accounts::menu.cheques')"
-                          :subtitle="__('accounts::message.cheque_note')">
-            {{-- বসানোর পথটা এখন উপরে, বিক্রয় বিলের মতোই — শর্তটা হুবহু
-                 সেটাই যেটায় আগে নিচের ফর্মটা দেখা যেত। --}}
-            <x-slot:actions>
-                @can('accounts.cheque.manage')
-                    <x-ui.button tone="primary" icon="plus" :href="route('accounts.cheque.create')">
-                        {{ __('accounts::action.new_cheque') }}
-                    </x-ui.button>
-                @endcan
-            </x-slot:actions>
-        </x-ui.page-header>
-    </x-slot:header>
-
     @if (session('saved'))
         <div role="status"
              class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm
@@ -87,16 +72,71 @@
         </a>
     </div>
 
-    @if ($cheques->isEmpty())
-        <x-ui.empty-state :message="__('accounts::message.no_cheques')" />
-    @else
-        <div data-boxed class="overflow-x-auto rounded-(--radius-card) border border-(--color-border)
-                    bg-(--color-surface-card)">
+    {{--
+        ⭐ তালিকা এখন টুলবারের নিচে, একই বাক্সে — মালিকের নির্দেশ, ১৯ সেপ্টেম্বর
+        ২০২৬: *"সব মডিউলেই একই অবস্থা, সব ঠিক করো"*। শিরোনাম, বর্ণনা আর
+        "নতুন চেক" ১ম লাইনে; খোঁজা-সাজানো-কলাম ২য় লাইনে।
+
+        ⓘ খালি তালিকার আলাদা empty-state আর নেই — টেবিল নিজেই খালি লেখা
+        দেখায়, আর তাতে টুলবারটা থাকে, তাই খোঁজা বা ছাঁকনি তুলে ফেরা যায়।
+    --}}
+    <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+        <form method="GET" class="contents">
+            {{-- উপরের দুই সংখ্যার লিংকের ছাঁকনি (open/ripe) — খুঁজলেও যেন
+                 হারিয়ে না যায়; চিপ থেকে তুলে দিলে এটাও খালি আসে। --}}
+            @if (in_array(request('filter'), ['open', 'ripe'], true))
+                <input type="hidden" name="filter" value="{{ request('filter') }}">
+            @endif
+
+            <x-ui.toolbar :title="__('accounts::menu.cheques')"
+                :subtitle="__('accounts::message.cheque_note')"
+                :search-placeholder="__('accounts::message.cheque_search')"
+                :sort="$sortOptions"
+                :columns="$columns"
+                :filter-labels="['status' => __('accounts::field.state'), 'direction' => __('accounts::field.cheque_direction')]">
+                {{-- বসানোর পথটা উপরে, বিক্রয় বিলের মতোই — শর্তটা হুবহু
+                     সেটাই যেটায় আগে নিচের ফর্মটা দেখা যেত। --}}
+                <x-slot:actions>
+                    @can('accounts.cheque.manage')
+                        <x-ui.button tone="primary" icon="plus" :href="route('accounts.cheque.create')">
+                            {{ __('accounts::action.new_cheque') }}
+                        </x-ui.button>
+                    @endcan
+                </x-slot:actions>
+
+                {{-- নিয়ামক আগে থেকেই `status` ও `direction` মানত, কিন্তু
+                     পর্দায় বাছার জায়গা ছিল না — কেবল ঠিকানায় লিখে। --}}
+                <select name="direction" aria-label="{{ __('accounts::field.cheque_direction') }}"
+                        class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
+                               bg-(--color-surface-app) px-2 text-sm">
+                    <option value="">{{ __('accounts::field.cheque_direction') }}</option>
+                    @foreach ([\App\Modules\Accounts\Models\Cheque::RECEIVED, \App\Modules\Accounts\Models\Cheque::ISSUED] as $d)
+                        <option value="{{ $d }}" @selected(request('direction') === $d)>{{ __('accounts::field.cheque_'.$d) }}</option>
+                    @endforeach
+                </select>
+
+                <select name="status" aria-label="{{ __('accounts::field.state') }}"
+                        class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
+                               bg-(--color-surface-app) px-2 text-sm">
+                    <option value="">{{ __('accounts::field.state') }}</option>
+                    @foreach ([
+                        \App\Modules\Accounts\Models\Cheque::PENDING,
+                        \App\Modules\Accounts\Models\Cheque::DEPOSITED,
+                        \App\Modules\Accounts\Models\Cheque::CLEARED,
+                        \App\Modules\Accounts\Models\Cheque::BOUNCED,
+                        \App\Modules\Accounts\Models\Cheque::CANCELLED,
+                    ] as $s)
+                        <option value="{{ $s }}" @selected(request('status') === $s)>{{ __('accounts::field.cheque_'.$s) }}</option>
+                    @endforeach
+                </select>
+            </x-ui.toolbar>
+        </form>
+
         <x-ui.table :rows="$cheques"
                     :columns="$columns"
-                    :empty="__('accounts::message.no_cheques')" />
-        </div>
+                    :compact="request()->boolean('compact')"
+                    :empty="$q ? __('core.empty.no_results') : __('accounts::message.no_cheques')" />
+    </div>
 
-        <div class="mt-3">{{ $cheques->links() }}</div>
-    @endif
+    <div class="mt-3">{{ $cheques->links() }}</div>
 </x-layouts.app>

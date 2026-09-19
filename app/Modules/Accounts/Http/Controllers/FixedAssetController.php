@@ -44,6 +44,13 @@ class FixedAssetController extends Controller implements HasMiddleware
     {
         $assets = FixedAsset::query()
             ->with(['assetAccount'])
+            // খোঁজা — নাম, কাগজের নম্বর আর গায়ের ট্যাগ; গুদামে দাঁড়িয়ে
+            // মানুষের হাতে ট্যাগ নম্বরটাই থাকে।
+            ->when(trim((string) $request->query('q')) ?: null, fn ($query, $term) => $query->where(
+                fn ($w) => $w->where('name', 'like', "%{$term}%")
+                    ->orWhere('document_no', 'like', "%{$term}%")
+                    ->orWhere('tag_no', 'like', "%{$term}%")
+            ))
             ->orderByDesc('acquired_on')
             ->paginate(50)
             ->withQueryString();
@@ -51,6 +58,7 @@ class FixedAssetController extends Controller implements HasMiddleware
         return view('accounts::asset.index', [
             'menu' => $this->menu->forUser($request->user()),
             'assets' => $assets,
+            'q' => $request->query('q'),
             /*
              * ⓘ সম্পদের খাতের তালিকাটা আর এখানে নয় — ফর্মটা `create`-এ
              * সরার পর তালিকার পাতায় ওটার কোনো ব্যবহারকারী নেই।

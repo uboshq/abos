@@ -8,22 +8,34 @@
     বকেয়া খতিয়ান থেকে গোনা হয়, কোনো কলামে জমা রাখা নয় — দুই জায়গায়
     একই সংখ্যা রাখলে একদিন আলাদা হবেই।
 --}}
+@php
+    /* কলামগুলো এখানে তোলা — টেবিল আর টুলবারের Columns মেনু একই তালিকা পড়ে। */
+    $columns = [
+        ['key' => 'document_no', 'label' => __('core.print.document_no'), 'width' => '13rem',
+         'render' => fn ($l) => new \Illuminate\Support\HtmlString(
+             '<a href=\'' . route('accounts.loan.show', $l->id) . '\' '
+             . 'class=\'text-(--color-brand-500) underline-offset-2 hover:underline\'>'
+             . e($l->document_no) . '</a>')],
+        ['key' => 'lender', 'label' => __('accounts::field.lender'),
+         'render' => fn ($l) => $l->lender],
+        ['key' => 'kind', 'label' => __('accounts::field.loan_kind'), 'width' => '9rem',
+         'render' => fn ($l) => $l->kindLabel()],
+        ['key' => 'sanctioned', 'label' => __('accounts::field.sanctioned'),
+         'numeric' => true, 'width' => '10rem',
+         'render' => fn ($l) => \App\Core\Support\Money::format($l->sanctioned)],
+        ['key' => 'rate', 'label' => __('accounts::field.interest_rate'),
+         'numeric' => true, 'width' => '7rem',
+         'render' => fn ($l) => rtrim(rtrim((string) $l->interest_rate, '0'), '.')],
+        ['key' => 'outstanding', 'label' => __('accounts::message.loan_outstanding'),
+         'numeric' => true, 'width' => '11rem',
+         'render' => fn ($l) => $l->isSettled()
+             ? __('accounts::message.loan_settled')
+             : \App\Core\Support\Money::format($l->outstanding())],
+    ];
+@endphp
+
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('accounts::menu.loans') }}</x-slot:title>
-
-    <x-slot:header>
-        <x-ui.page-header
-            :title="__('accounts::menu.loans')"
-            :subtitle="__('accounts::message.loan_total') . ': ' . \App\Core\Support\Money::format($total)">
-            <x-slot:actions>
-                @can('accounts.loan.manage')
-                    <x-ui.button tone="primary" icon="plus" :href="route('accounts.loan.create')">
-                        {{ __('core.action.create') }}
-                    </x-ui.button>
-                @endcan
-            </x-slot:actions>
-        </x-ui.page-header>
-    </x-slot:header>
 
     @if (session('saved'))
         <div role="status"
@@ -37,33 +49,30 @@
         {{ __('accounts::message.loan_note') }}
     </p>
 
+    {{-- ⭐ শিরোনাম, মোট বকেয়া আর "তৈরি" তালিকার মাথায়, একই বাক্সে — মালিকের
+         নির্দেশ, ১৯ সেপ্টেম্বর ২০২৬: *"সব মডিউলেই একই অবস্থা, সব ঠিক করো"*। --}}
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                 bg-(--color-surface-card)">
+        <form method="GET" class="contents">
+            <x-ui.toolbar :title="__('accounts::menu.loans')"
+                :count="__('accounts::message.loan_total') . ': ' . \App\Core\Support\Money::format($total)"
+                :search-placeholder="__('accounts::message.loan_search')"
+                :columns="$columns">
+                <x-slot:actions>
+                    @can('accounts.loan.manage')
+                        <x-ui.button tone="primary" icon="plus" :href="route('accounts.loan.create')">
+                            {{ __('core.action.create') }}
+                        </x-ui.button>
+                    @endcan
+                </x-slot:actions>
+            </x-ui.toolbar>
+        </form>
+
         <x-ui.table
-            :empty="__('accounts::message.no_loans')"
+            :compact="request()->boolean('compact')"
+            :empty="$q ? __('core.empty.no_results') : __('accounts::message.no_loans')"
             :rows="$loans"
-            :columns="[
-                ['key' => 'document_no', 'label' => __('core.print.document_no'), 'width' => '13rem',
-                 'render' => fn ($l) => new \Illuminate\Support\HtmlString(
-                     '<a href=\'' . route('accounts.loan.show', $l->id) . '\' '
-                     . 'class=\'text-(--color-brand-500) underline-offset-2 hover:underline\'>'
-                     . e($l->document_no) . '</a>')],
-                ['key' => 'lender', 'label' => __('accounts::field.lender'),
-                 'render' => fn ($l) => $l->lender],
-                ['key' => 'kind', 'label' => __('accounts::field.loan_kind'), 'width' => '9rem',
-                 'render' => fn ($l) => $l->kindLabel()],
-                ['key' => 'sanctioned', 'label' => __('accounts::field.sanctioned'),
-                 'numeric' => true, 'width' => '10rem',
-                 'render' => fn ($l) => \App\Core\Support\Money::format($l->sanctioned)],
-                ['key' => 'rate', 'label' => __('accounts::field.interest_rate'),
-                 'numeric' => true, 'width' => '7rem',
-                 'render' => fn ($l) => rtrim(rtrim((string) $l->interest_rate, '0'), '.')],
-                ['key' => 'outstanding', 'label' => __('accounts::message.loan_outstanding'),
-                 'numeric' => true, 'width' => '11rem',
-                 'render' => fn ($l) => $l->isSettled()
-                     ? __('accounts::message.loan_settled')
-                     : \App\Core\Support\Money::format($l->outstanding())],
-            ]" />
+            :columns="$columns" />
 
         <x-ui.pager :rows="$loans" />
     </div>
