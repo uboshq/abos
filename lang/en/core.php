@@ -451,6 +451,7 @@ return [
     ],
 
     'print' => [
+        'free_qty' => 'Free',
         'paper' => [
             'a4' => 'A4',
             '80_mm' => '80 mm (thermal)',

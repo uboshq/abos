@@ -30,6 +30,25 @@ class StockReportController extends Controller implements HasMiddleware
         'stock-summary' => 'inventory.stock_summary',
         'hold' => 'inventory.hold',
 
+        /*
+         * ⛔ `expiring` এই তালিকায় ছিল না — ১৮ সেপ্টেম্বর ২০২৬তে
+         * ধরা পড়ল।
+         *
+         * ⓘ [[StockReports::expiring()]] লেখা হয়েছিল, ইঞ্জিনে নিবন্ধিতও
+         * হত, আর মেনুতে সারিটাও ছিল। ⛔ কেবল এই একটা সারি
+         * না থাকায় সারিতায় চাপলে **৪০৪** আসত।
+         *
+         * ⚠️ ঠিক সেই চেনা ধরন: তিনটা অংশই ছিল, জোড়াটা ছিল না,
+         * আর কিছুই ভাঙেনি — কারণ কেউ ব্যাচের সুইচ চালু করে সারিটায়
+         * চাপেনি।
+         */
+        'expiring' => 'inventory.expiring',
+
+        /* ⭐ ব্যাচভিত্তিক মজুদ — ১৮ সেপ্টেম্বর ২০২৬, মালিকের
+           *"স্টক আলাদা ম্যানেজ"* নির্দেশে। ⓘ হাইফেন, আন্ডারস্কোর
+           নয় — এই তালিকার বাকি সব ঠিকানাও তাই। */
+        'stock-by-batch' => 'inventory.stock_by_batch',
+
         /* ⓘ খাদ্য-খরচ এখানে ছিল — ১৫ সেপ্টেম্বর ২০২৬-এ রেস্তোরাঁয় গেছে
            ([[App\Modules\Restaurant\Http\Controllers\RestaurantReportController]]),
            মালিকের দাগানো অনুযায়ী। প্রশ্নটা রান্না করা খাবারের, মজুদের নয়। */

@@ -341,7 +341,16 @@ final class CapitalService
      *
      * @return list<array{name: string, type: string, contributed: string, withdrawn: string, net: string, share: ?string}>
      */
-    public function positions(): array
+    /**
+     * কে কোথায় দাঁড়িয়ে — দিয়েছেন, তুলেছেন, বাকি, আর অংশ।
+     *
+     * @param  string|null  $profit  চলতি বছরের মুনাফা। ⓘ না দিলে লাভের
+     *                               অংশের ঘরটা `null` থাকে — কলামটা তখন
+     *                               একটা ড্যাশ দেখায়, শূন্য নয়।
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function positions(?string $profit = null): array
     {
         /*
          * ⛔ দল বাঁধা হয় `person_id` ধরে, নাম ধরে নয় (১৩ সেপ্টেম্বর ২০২৬)।
@@ -379,6 +388,27 @@ final class CapitalService
                 'withdrawn' => $taken,
                 'net' => bcsub((string) $row->total, $taken, 4),
                 'share' => $row->share !== null ? (string) $row->share : null,
+
+                /*
+                 * ⭐ শতাংশটা টাকায় কত — ১৮ সেপ্টেম্বর ২০২৬, মালিকের প্রশ্নে।
+                 *
+                 * ── ⛔ আগে কেবল "৪০%" লেখা থাকত ──────────────────────
+                 * মালিক জিজ্ঞেস করেছেন *"কে কত % লাভ পাবে, তার অংশ কত?"*
+                 * ⓘ শতাংশ থেকে টাকা বের করতে হলে চলতি বছরের মুনাফা
+                 * জানতে হয়, আর সেটা এই পর্দায় ছিল না।
+                 *
+                 * ── ⚠️ সংখ্যাটা **আন্দাজ**, চূড়ান্ত নয় ────────────────
+                 * ⛔ বছর বন্ধ হওয়ার আগে মুনাফা বদলায় — একটা বড় খরচ বা
+                 * একটা অনাদায়ী বিল সবটা ঘুরিয়ে দিতে পারে। ⓘ তাই কলামের
+                 * শিরোনামেই "চলতি" কথাটা থাকে, আর লোকসান হলে সংখ্যাটা
+                 * ঋণাত্মক দেখায় — শূন্য নয়।
+                 *
+                 * ⚠️ অংশ % লেখা না থাকলে `null`, শূন্য নয়: *"অংশ ঠিক
+                 * হয়নি"* আর *"অংশ নেই"* এক কথা নয়।
+                 */
+                'profit_share' => ($profit === null || $row->share === null)
+                    ? null
+                    : bcdiv(bcmul($profit, (string) $row->share, 6), '100', 4),
             ];
         }
 

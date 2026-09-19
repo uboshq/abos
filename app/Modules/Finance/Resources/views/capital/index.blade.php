@@ -48,6 +48,14 @@
             {{ __('finance::field.where_each_stands') }}
         </h2>
 
+        {{-- ⭐ লাভের অংশ — ১৮ সেপ্টেম্বর ২০২৬, মালিকের প্রশ্নে।
+
+             *"কে কত % মালিকানা, আর কে কত % লাভ পাবে — সেগুলো কোথায়?"*
+
+             ⓘ শতাংশটা আগে থেকেই ছিল; টাকায় কত সেটা ছিল না। ⚠️ সংখ্যাটা
+             **চলতি বছরের আন্দাজ**: বছর বন্ধ হওয়ার আগে একটা বড় খরচ বা
+             একটা অনাদায়ী বিল সবটা ঘুরিয়ে দিতে পারে। ⛔ তাই শিরোনামে
+             "চলতি" কথাটা আছে, আর লোকসান হলে সংখ্যাটা ঋণাত্মক দেখায়। --}}
         <x-ui.table
             :empty="__('finance::message.no_capital_yet')"
             :rows="$positions"
@@ -64,6 +72,10 @@
                  'render' => fn ($p) => \App\Core\Support\Money::format($p['net'])],
                 ['key' => 'share', 'label' => __('finance::field.share'), 'numeric' => true,
                  'render' => fn ($p) => $p['share'] === null ? '—' : rtrim(rtrim($p['share'], '0'), '.').'%'],
+                ['key' => 'profit_share', 'label' => __('finance::field.profit_share_now'), 'numeric' => true,
+                 'render' => fn ($p) => $p['profit_share'] === null
+                     ? '—'
+                     : \App\Core\Support\Money::format($p['profit_share'])],
             ]" />
     </section>
 
@@ -87,6 +99,15 @@
                  'render' => fn ($e) => $e->person?->name() ?? '—'],
                 ['key' => 'entry_type', 'label' => __('finance::field.kind'), 'width' => '8rem',
                  'render' => fn ($e) => __('finance::kind.'.$e->entry_type)],
+
+                ['key' => 'contributor_type', 'label' => __('finance::field.as'), 'width' => '8rem',
+                 'render' => fn ($e) => __('finance::who.'.$e->contributor_type)],
+
+                ['key' => 'share_percent', 'label' => __('finance::field.share'), 'numeric' => true,
+                 'width' => '7rem',
+                 'render' => fn ($e) => $e->share_percent === null
+                     ? '—'
+                     : rtrim(rtrim((string) $e->share_percent, '0'), '.').'%'],
                 ['key' => 'amount', 'label' => __('finance::field.amount'), 'numeric' => true, 'width' => '10rem',
                  'render' => fn ($e) => \App\Core\Support\Money::format($e->amount)],
                 /* ⚠️ চওড়া, কারণ ভিতরে খাতের ঘর, নম্বরের ঘর আর বোতাম —

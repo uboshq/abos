@@ -11,6 +11,7 @@ use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\MoneyCategory;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\MasterData\Services\PersonResolver;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -61,6 +62,28 @@ class VoucherRequest extends FormRequest
          * পেলে **হেডার থেকে নেয়** — তাই খতিয়ানের দুইটা সারিতেই
          * পক্ষটা পৌঁছায়, আর পক্ষের খতিয়ান ভরে ওঠে।
          */
+        /*
+         * ⭐ নোটের হিসাব — খালি ঘরগুলো ছেঁটে ফেলা, ১৮ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ পর্দায় দশটা ঘর (১০০০ … ১), আর মানুষ সাধারণত দুই-তিনটা ভরেন।
+         * ⛔ না ছাঁটলে বাকি সাতটা `''` হয়ে JSON-এ বসত, আর খতিয়ানে
+         * `{"1000":null,"500":null,…}` জমত — *"নোট গোনা হয়নি"* আর
+         * *"নোট গুনে শূন্য পাওয়া গেছে"* তখন আর আলাদা করা যেত না।
+         *
+         * ⚠️ একটাও না ভরলে ঘরটা `null` থাকে, খালি অ্যারে `[]` নয়:
+         * খালি অ্যারেও একটা JSON, আর ওটা *"গোনা হয়েছে"* বলে দাবি করত।
+         */
+        $counts = $this->input('note_counts');
+
+        if (is_array($counts)) {
+            $counts = array_filter(
+                $counts,
+                static fn ($v) => $v !== null && $v !== '' && (int) $v > 0,
+            );
+
+            $this->merge(['note_counts' => $counts === [] ? null : $counts]);
+        }
+
         $picked = trim((string) $this->input('party', ''));
 
         if ($picked !== '' && str_contains($picked, ':')) {
@@ -70,6 +93,42 @@ class VoucherRequest extends FormRequest
                 'party_type' => trim($partyType),
                 'party_id' => (int) $partyId,
             ]);
+        }
+
+        /*
+         * ⭐ তালিকায় না থাকা পক্ষ — হাতে লেখা নাম, ১৮ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⛔ মালিকের নির্দেশ ───────────────────────────────────────
+         * *"ডিপোজিটরের নাম / প্রাপকের নাম হাতে লিখতে পারতে হবে।"*
+         * ⚠️ এতদিন ঘরটা কেবল ড্রপডাউন ছিল, তাই কাউন্টারে একজন অচেনা
+         * লোক টাকা দিয়ে গেলে রসিদই কাটা যেত না।
+         *
+         * ── ⭐ কেন এখানে, যাচাইয়ের আগে ──────────────────────────────
+         * সারিটা এখানেই বসে যায়, তাই নিচের নিয়মগুলোর কাছে `party_id`
+         * একটা **আসল আইডি** হয়ে পৌঁছায়। ⛔ তাই ভ্যালিডেশন শিথিল
+         * করতে হয়নি — হাতে লেখা নাম আর কড়া নিয়ম দুইটাই একসাথে।
+         *
+         * ⓘ নামটা বসে `mdm_people`-এ, অর্থাৎ **পরের বার তালিকাতেই**
+         * পাওয়া যাবে ([[PersonResolver]])। ⚠️ পঞ্চম একটা "অন্যান্য"
+         * ধরন বানালে নামটা কোথাও থাকত না, আর একই মানুষ তিন বানানে
+         * তিনজন হয়ে যেতেন।
+         */
+        $typed = trim((string) $this->input('party_new', ''));
+
+        if ($typed !== '' && (int) $this->input('party_id', 0) <= 0) {
+            $fields = [
+                'person_new' => $typed,
+                'person_mobile' => (string) $this->input('party_mobile', ''),
+            ];
+
+            $personId = app(PersonResolver::class)->resolve($fields);
+
+            if ($personId !== null) {
+                $this->merge([
+                    'party_type' => 'person',
+                    'party_id' => $personId,
+                ]);
+            }
         }
 
         /*
@@ -226,6 +285,14 @@ class VoucherRequest extends FormRequest
              */
             'branch_id' => ['nullable', 'integer',
                 Rule::exists('branches', 'id')->where('company_id', CompanyContext::id())],
+
+            /*
+             * ⓘ ঘর দুইটা নিয়মে আছে যাতে ভুল হলে বার্তা দেখানো যায়।
+             * ⛔ নিয়মে না থাকলে `validated()` ওদের ফেলে দিত, আর
+             * `@error('party_new')` কোনোদিন কিছু দেখাত না।
+             */
+            'party_new' => ['nullable', 'string', 'max:120'],
+            'party_mobile' => ['nullable', 'string', 'max:32'],
 
             'party_type' => ['nullable', 'string', 'max:32'],
             'party_id' => ['nullable', 'integer'],

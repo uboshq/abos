@@ -190,6 +190,19 @@ return [
                 'route_params' => ['slug' => 'expiring'], 'permission' => 'inventory.report',
                 'setting' => 'inventory.batch_enabled'],
 
+            /*
+             * ⭐ ব্যাচভিত্তিক মজুদ — ১৮ সেপ্টেম্বর ২০২৬।
+             *
+             * ⛔ সারিটা না বসালে রিপোর্টটা থাকত আর কেউ কোনোদিন
+             * খুঁজে পেত না — এই প্রকল্পের সবচেয়ে চেনা ফাঁদ।
+             *
+             * ⓘ মেয়াদের সারিটার মতোই ব্যাচের সুইচের পিছনে: যে ব্যবসায়
+             * লট ধরা হয় না, তার কাছে এটা একটা খালি পাতা হত (নিয়ম ৭)।
+             */
+            ['label' => 'inventory::menu.stock_by_batch', 'icon' => 'grid', 'route' => 'inventory.report.show',
+                'route_params' => ['slug' => 'stock-by-batch'], 'permission' => 'inventory.report',
+                'setting' => 'inventory.batch_enabled'],
+
             // রিকলের পর্দাটা বিক্রয়ের মেনুতে — উত্তরটা গ্রাহকের তালিকা
         ],
     ],

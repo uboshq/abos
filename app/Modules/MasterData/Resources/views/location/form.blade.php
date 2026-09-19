@@ -75,8 +75,32 @@
                     </span>
 
                     @if ($isNew)
+                        {{-- ⭐ স্তর বদলালে যা লেখা ছিল তা সাথে যায় — ১৮ সেপ্টেম্বর ২০২৬।
+
+                             ⓘ পাতাটা নতুন করে খুলতেই হয়: বাবার তালিকা কোন
+                             স্তরের, সেটা সার্ভার ছাড়া জানা যায় না।
+
+                             ⛔ আগে `window.location = ...?level=` লেখা ছিল, আর
+                             ঐ এক লাইনেই টাইপ করা নাম-কোড সব মুছে যেত। ⚠️ ফল:
+                             মানুষ শিখতেন "আগে স্তর বাছো" — আর ভুলে গেলে দুইবার
+                             টাইপ করতেন, প্রতিবার। --}}
                         <select name="level" required
-                                onchange="window.location = '{{ route('master_data.location.create') }}?level=' + this.value"
+                                x-on:change="
+                                    (() => {
+                                        const url = new URL(
+                                            '{{ route('master_data.location.create') }}',
+                                            window.location.origin,
+                                        );
+                                        url.searchParams.set('level', $el.value);
+
+                                        for (const name of ['code', 'name_en', 'name_bn', 'assigned_to']) {
+                                            const box = $el.form.querySelector('[name=' + name + ']');
+                                            if (box && box.value) { url.searchParams.set(name, box.value); }
+                                        }
+
+                                        window.location = url.toString();
+                                    })()
+                                "
                                 class="h-(--spacing-field) w-full rounded-(--radius-field) border
                                        border-(--color-border) bg-(--color-surface-card) px-3">
                             @foreach ($ladder as $level)

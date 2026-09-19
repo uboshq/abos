@@ -18,6 +18,33 @@
         $showUnit = $columns >= 8;
         $showRate = $doc->showMoney && $columns >= 4;
         $showAmount = $doc->showMoney;
+
+        /*
+         * ⭐ ফ্রি পরিমাণ আলাদা — ১৮ সেপ্টেম্বর ২০২৬, মালিকের নির্দেশে।
+         *
+         * ── ⛔ অভিযোগ ────────────────────────────────────────────────
+         * *"ইনভয়েস প্রিন্টিংয়ে আলাদা দেখানোর কথা, দেখাচ্ছে না।"*
+         *
+         * ⓘ কাগজে কেবল একটা `qty` ছিল। ⚠️ ফল: চল্লিশ পিস কেনা আর চার
+         * পিস ফ্রি — দুইটা এক সংখ্যায় মিশে যেত, আর ক্রেতা বুঝতেন না
+         * তাঁকে কতটা ফ্রি দেওয়া হলো। ⛔ অথচ ফ্রি দেওয়াটাই বিক্রির
+         * সবচেয়ে বড় দর-কষাকষির জায়গা।
+         *
+         * ── ⚠️ কলামটা সব কাগজে বসে না, আর সেটা ইচ্ছাকৃত ──────────────
+         * ৫৮mm থার্মালে কলামের সংখ্যাই বাজেট — এখানে একটা কলাম কাটলে
+         * **পণ্যের নামটা** ভেঙে দুই-তিন লাইনে যেত, আর নামটাই সবচেয়ে
+         * বেশি পড়া হয়। ⓘ তাই সরু কাগজে সংখ্যাটা নামের নিচে ছোট লেখায়
+         * যায় (`note`-এর মতোই), হারায় না।
+         *
+         * ⛔ আর কলামটা কেবল তখনই বসে যখন **এই কাগজে সত্যিই কোনো ফ্রি
+         * আছে** — নাহলে প্রতিটা চালানে একটা শূন্যের কলাম জায়গা নিত।
+         */
+        $hasFree = collect($doc->lines)->contains(
+            fn (array $line) => ($line['free'] ?? '') !== '' && $line['free'] !== '0',
+        );
+
+        $showFree = $hasFree && $columns >= 8;
+        $freeInNote = $hasFree && ! $showFree;
     @endphp
 
     @if ($doc->notice)
@@ -78,6 +105,9 @@
                         <th style="width: 16mm">{{ __('core.print.unit') }}</th>
                     @endif
                     <th class="num" style="width: {{ $thermal ? '13mm' : '20mm' }}">{{ __('core.print.qty') }}</th>
+                    @if ($showFree)
+                        <th class="num" style="width: 16mm">{{ __('core.print.free_qty') }}</th>
+                    @endif
                     @if ($showRate)
                         <th class="num" style="width: {{ $thermal ? '15mm' : '24mm' }}">{{ __('core.print.rate') }}</th>
                     @endif
@@ -109,11 +139,20 @@
                             @if (($line['note'] ?? '') !== '')
                                 <div class="note">{{ $line['note'] }}</div>
                             @endif
+
+                            {{-- ⭐ সরু কাগজে ফ্রি-টা এখানে — কলাম নেই, তবু
+                                 সংখ্যাটা হারায় না। ⓘ পাশের `$showFree`-এর মন্তব্য দেখুন। --}}
+                            @if ($freeInNote && ($line['free'] ?? '') !== '' && $line['free'] !== '0')
+                                <div class="note">{{ __('core.print.free_qty') }}: {{ $line['free'] }}</div>
+                            @endif
                         </td>
                         @if ($showUnit)
                             <td>{{ $line['unit'] }}</td>
                         @endif
                         <td class="num">{{ $line['qty'] }}</td>
+                        @if ($showFree)
+                            <td class="num">{{ ($line['free'] ?? '') !== '' && $line['free'] !== '0' ? $line['free'] : '' }}</td>
+                        @endif
                         @if ($showRate)
                             <td class="num">{{ $line['rate'] }}</td>
                         @endif

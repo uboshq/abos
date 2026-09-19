@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'free' => 'Free',
+    'free_available' => 'Free sellable',
     'code' => 'Code',
     'name' => 'Name',
 
