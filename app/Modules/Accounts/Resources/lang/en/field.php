@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'voucher_type' => 'Voucher type',
+    'came_from' => 'Came from',
     'party_not_listed' => 'Not on the list? Type a name',
     'party_new_name' => 'New name',
     'party_new_hint' => 'It joins the party list, so next time you can pick it',

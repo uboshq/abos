@@ -110,6 +110,19 @@ return [
          * আলাদা কাজ, আর মালিকের সিদ্ধান্ত।
          */
         'transactions' => [
+            /*
+             * ⭐ ভাউচার তালিকা — মালিকের নির্দেশ, ১৯ সেপ্টেম্বর ২০২৬: *"Master-এর পাশে।"*
+             *
+             * ⚠️ আলাদা গ্রুপ নয়, এই গ্রুপের **প্রথম** সারি। ⛔ প্রথমে `'vouchers'`
+             * নামে নতুন গ্রুপ বসানো হয়েছিল, আর গোটা অ্যাপ চালু হওয়ার সময়েই
+             * ভেঙে ছিল — গ্রুপের নামগুলো কোরে বাঁধা (`ModuleDefinition::MENU_GROUPS`)।
+             *
+             * ⓘ `transactions`-এর সারিগুলো মডিউল-বারে আলাদা আলাদা বোতাম হয়ে
+             * বসে, আর এই গ্রুপটা Master-এর ঠিক পরে — তাই প্রথম সারি মানেই
+             * Master-এর পাশে। কোরে হাত দিতে হয়নি।
+             */
+            ['label' => 'accounts::menu.voucher_list', 'icon' => 'list', 'route' => 'accounts.voucher.list', 'permission' => 'accounts.report'],
+
             ['label' => 'accounts::menu.receipt', 'icon' => 'inbox', 'route' => 'accounts.voucher.index', 'route_params' => ['type' => 'receipt'], 'permission' => 'accounts.report'],
             ['label' => 'accounts::menu.payment', 'icon' => 'outbox', 'route' => 'accounts.voucher.index', 'route_params' => ['type' => 'payment'], 'permission' => 'accounts.report'],
             ['label' => 'accounts::menu.expense', 'icon' => 'wallet', 'route' => 'accounts.voucher.index', 'route_params' => ['type' => 'expense'], 'permission' => 'accounts.report'],

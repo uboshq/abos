@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 /** Accounts মডিউলের মেনু — নিয়ম ৯: কোনো লেখা Blade বা module.php-তে হার্ডকোড নয়। */
 return [
+    // ⭐ সব ভাউচার এক পর্দায়, ট্যাবে — ১৯ সেপ্টেম্বর ২০২৬
+    'voucher_list' => 'ভাউচার তালিকা',
     'year_end' => 'বছর সমাপনী',
     'dashboard' => 'হিসাব ড্যাশবোর্ড',
     'chart_of_accounts' => 'হিসাব তালিকা',
