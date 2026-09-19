@@ -15,4 +15,5 @@ return [
     'rates' => 'Rates',
     'save_rate' => 'Save Rate',
     'back_to_currencies' => '← Currencies',
+    'new_level' => 'New :level',
 ];

@@ -77,7 +77,16 @@
                 :columns="$columns">
         <x-slot:actions>
             @can('master_data.manage')
-                    @if ($total > 0)
+                    {{-- ⓘ স্তরের পাতায় বোতামটা **ঐ স্তরেরই** — "নতুন পয়েন্ট",
+                         কেবল "নতুন" নয়। ⚠️ আর উপরের স্তর খালি থাকলে বোতামটা
+                         বসে না: নিচে একটা বার্তা আগে কোনটা বানাতে হবে বলে দেয়,
+                         আর একটা মৃত বোতামের চেয়ে সেটাই কাজের। --}}
+                    @if ($level !== null && ! $parentsMissing)
+                        <x-ui.button tone="primary" icon="plus"
+                                     :href="route('master_data.location.create', ['level' => $level])">
+                            {{ __('master_data::action.new_level', ['level' => __('master_data::level.' . $level)]) }}
+                        </x-ui.button>
+                    @elseif ($level === null && $total > 0)
                         <x-ui.button tone="primary" icon="plus" :href="route('master_data.location.create')">
                             {{ __('master_data::action.new') }}
                         </x-ui.button>
@@ -91,19 +100,89 @@
                 </x-ui.toolbar>
             </form>
 
-            @if ($tooManyToShow)
+            {{-- ⭐ স্তরের ট্যাব — মালিকের নির্দেশ, ১৯ সেপ্টেম্বর ২০২৬।
+
+                 *"ei sob alada alada create hobe alada list hobe, Tree hobe"*।
+                 ⓘ প্রথমটা "গাছ" — গোটা পিরামিড এক সাথে; বাকিগুলো মই-এর
+                 ক্রমে, প্রতিটায় নিজের তালিকা আর নিজের "নতুন" বোতাম।
+
+                 ⭐ পাশের সংখ্যাটাই পথ দেখায়: "টেরিটরি ০" চোখে পড়লেই বোঝা যায়
+                 পয়েন্ট বানানোর আগে কী লাগবে — আলাদা কোনো নির্দেশনা লিখতে হয় না।
+
+                 ⓘ মই-টা সেটিংস থেকে আসে, তাই অঞ্চল বা টেরিটরি বন্ধ থাকলে
+                 তাদের ট্যাবও থাকে না। --}}
+            <nav class="flex flex-wrap gap-1 border-b border-(--color-border) px-3 py-2"
+                 aria-label="{{ __('master_data::message.levels_nav') }}">
+                @php
+                    $tab = 'inline-flex items-center gap-1.5 rounded-(--radius-field) px-3 py-1.5 text-sm transition-colors';
+                    $tabOn = 'bg-(--color-brand-500) text-white';
+                    $tabOff = 'text-(--color-ink-muted) hover:bg-(--color-surface-hover)';
+                @endphp
+
+                <a href="{{ route('master_data.location.index') }}"
+                   @class([$tab, $level === null ? $tabOn : $tabOff])
+                   @if ($level === null) aria-current="page" @endif>
+                    {{ __('master_data::message.tree_tab') }}
+                </a>
+
+                @foreach ($ladder as $step)
+                    <a href="{{ route('master_data.location.level', ['level' => $step]) }}"
+                       @class([$tab, $level === $step ? $tabOn : $tabOff])
+                       @if ($level === $step) aria-current="page" @endif>
+                        {{ __('master_data::level.' . $step) }}
+                        <span class="num text-xs opacity-80">{{ $counts[$step] ?? 0 }}</span>
+                    </a>
+                @endforeach
+            </nav>
+
+            @if ($level !== null)
+                {{-- ⭐ উপরের স্তর খালি — পরের ধাপটা সোজা বলা। ⛔ নাহলে এই
+                     পাতায় কেবল একটা খালি তালিকা থাকত আর কোনো বোতাম নয়,
+                     আর মানুষ বুঝতেন না কেন কিছু বানানো যাচ্ছে না। --}}
+                @if ($parentsMissing)
+                    <div class="flex flex-wrap items-center gap-3 border-b border-(--color-border)
+                                bg-(--color-badge-pending-bg) px-4 py-3 text-sm text-(--color-badge-pending-ink)"
+                         role="status">
+                        <span class="flex-1">
+                            {{ __('master_data::message.need_parent_first', [
+                                'parent' => __('master_data::level.' . $parentLevel),
+                                'level' => __('master_data::level.' . $level),
+                            ]) }}
+                        </span>
+
+                        @can('master_data.manage')
+                            <x-ui.button tone="primary" icon="plus"
+                                         :href="route('master_data.location.create', ['level' => $parentLevel])">
+                                {{ __('master_data::action.new_level', ['level' => __('master_data::level.' . $parentLevel)]) }}
+                            </x-ui.button>
+                        @endcan
+                    </div>
+                @endif
+
+                <x-ui.table
+                    :compact="request()->boolean('compact')"
+                    :empty="__('master_data::message.level_empty', ['level' => __('master_data::level.' . $level)])"
+                    :rows="$rows"
+                    :columns="$columns" />
+
+                @if ($rows->hasPages())
+                    <div class="border-t border-(--color-border) px-4 py-3">
+                        {{ $rows->links() }}
+                    </div>
+                @endif
+            @elseif ($tooManyToShow)
                 <div class="border-b border-(--color-border) bg-(--color-surface-app) px-4 py-3 text-sm">
                     {{ __('master_data::message.too_many', ['count' => $total]) }}
                 </div>
             @endif
 
-            @if ($q)
+            @if ($level === null && $q)
                 <x-ui.table
             :compact="request()->boolean('compact')"
                     :empty="__('core.empty.no_results')"
                     :rows="$results"
                     :columns="$columns" />
-            @elseif (! $tooManyToShow)
+            @elseif ($level === null && ! $tooManyToShow)
                 <div class="overflow-x-auto">
                     <table class="ui-grid">
                         <thead>
