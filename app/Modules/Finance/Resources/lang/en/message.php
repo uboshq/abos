@@ -109,4 +109,5 @@ return [
     'facility_is_not_debt' => 'This is not shown as debt. A guarantee is a contingent liability — a note; and a cash credit shows as the overdrawn balance of its bank account.',
     'facility_balance_lives_in' => 'What has been drawn is not kept here — the figure lives in the ledger of :account.',
     'drawing_power_note' => 'Stock and receivables less the margin is what can be drawn today, whatever the sanctioned limit says.',
+    'capital_from_receipt' => 'Taken in through receipt :no — already in the books; this row only lists it here.',
 ];

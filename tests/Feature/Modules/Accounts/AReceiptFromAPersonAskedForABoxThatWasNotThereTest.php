@@ -63,6 +63,23 @@ final class AReceiptFromAPersonAskedForABoxThatWasNotThereTest extends TestCase
             .'গ্রাহক ছাড়া কারও রসিদ কাটা যাবে না।');
 
         $this->assertStringContainsString('3100', $html, 'খাতের তালিকায় মালিকের মূলধন (3100) নেই।');
+
+        /*
+         * ⛔ "কী বাবদ" প্রশ্নে টাকা রাখার খাত থাকবে না — মালিক: *"full hisab
+         * talika dewa keno"*। ⓘ নতুন ঘরটার ভিতরের অপশনগুলোই পড়া হয়।
+         */
+        preg_match('/<select[^>]*name="from_account_id"[^>]*x-bind:value[^>]*>(.*?)<\/select>/s', $html, $box);
+        preg_match_all('/<option value="(\d+)"/', $box[1] ?? '', $ids);
+
+        $offered = Account::query()->whereKey($ids[1])->get();
+
+        $this->assertNotEmpty($offered, 'নতুন ঘরে একটাও খাত নেই।');
+        $this->assertSame([], $offered->whereNotNull('money_kind')->pluck('code')->values()->all(),
+            'নগদ/ব্যাংক "কী বাবদ"-এর তালিকায় এসেছে।');
+        $this->assertSame([], $offered->where('type', Account::EXPENSE)->pluck('code')->values()->all(),
+            'খরচের খাত "কী বাবদ"-এর তালিকায় এসেছে।');
+        $this->assertNotContains(StandardChart::RECEIVABLE, $offered->pluck('code')->all());
+        $this->assertContains(StandardChart::OWNER_CAPITAL, $offered->pluck('code')->all());
     }
 
     public function test_money_from_a_person_reaches_the_account_chosen_on_screen(): void

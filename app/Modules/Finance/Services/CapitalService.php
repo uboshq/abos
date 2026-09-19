@@ -362,6 +362,15 @@ final class CapitalService
          */
         $given = CapitalEntry::query()
             ->posted()
+
+            /*
+             * ⛔ যে রসিদ দিয়ে মূলধনটা এসেছিল সেটা বাতিল হলে সারিটা গোনা হয়
+             * না — ১৯ সেপ্টেম্বর ২০২৬। ⓘ রসিদ থেকে নিজে থেকে ওঠা সারি
+             * ([[CapitalFromReceipt]]) মোছা হয় না, তাই বাতিলের খবর এখানে ধরা
+             * হয়; খাতায় তো উল্টো দাখিলা বসেই গেছে।
+             */
+            ->where(fn ($q) => $q->whereNull('voucher_id')
+                ->orWhereHas('voucher', fn ($v) => $v->where('status', '!=', \App\Core\Support\DocumentStatus::CANCELLED)))
             ->selectRaw('person_id, contributor_type, MAX(share_percent) as share, SUM(amount) as total')
             ->groupBy('person_id', 'contributor_type')
             ->get();

@@ -509,4 +509,12 @@ return [
             'group' => 'print',
         ],
     ],
+    /*
+     * ⓘ যে ঘটনাগুলো Accounts ঘোষণা করে — অন্য মডিউল এগুলো শোনে,
+     * Accounts-এর সেবায় হাত না দিয়ে। [[VoucherPosted]] শোনে Finance
+     * (রসিদ মূলধনের খাতে গেলে মূলধনের তালিকায় তোলা)।
+     */
+    'events' => [
+        \App\Modules\Accounts\Events\VoucherPosted::class,
+    ],
 ];

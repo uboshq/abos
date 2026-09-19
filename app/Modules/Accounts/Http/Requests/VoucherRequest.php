@@ -258,6 +258,21 @@ class VoucherRequest extends FormRequest
             default => null,
         };
 
+        /*
+         * ⭐ যিনি আগে মূলধন দিয়েছেন, তাঁর রসিদ মূলধনে — ১৯ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ মালিক: *"capital theke asle eta auto boslei to valo hoy"*। পর্দা
+         * নিজেই ঘরটায় 3100 বসায় ([[party-fields]]); এটা তার সার্ভারের জোড়া,
+         * যাতে ঘর খালি এলেও (JS বন্ধ, মোবাইল) টাকা AR-এ বা কোথাও না হারায়।
+         * ⚠️ কেবল তাঁদের জন্য যাঁদের মূলধনের রেকর্ড আছে — একজন অচেনা ব্যক্তির
+         * টাকা আন্দাজে মূলধন বানালে ঠিক সেই ভুলটাই ফিরত যেটা 5e7d508c সারাল।
+         */
+        if ($code === null && (string) $this->input('type') === Voucher::RECEIPT && $type === 'person'
+            && class_exists(\App\Modules\Finance\Models\CapitalEntry::class)
+            && \App\Modules\Finance\Models\CapitalEntry::query()->where('person_id', $partyId)->exists()) {
+            $code = StandardChart::OWNER_CAPITAL;
+        }
+
         if ($code === null) {
             return;
         }

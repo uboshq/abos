@@ -135,7 +135,10 @@
           action="{{ $isNew ? route('accounts.voucher.store', $type) : route('accounts.voucher.update', $voucher) }}"
           x-data="{ busy: false }"
           @submit="busy ? $event.preventDefault() : (busy = true)"
-          class="{{ $expenseLayout || $contraLayout ? 'max-w-6xl' : 'max-w-3xl' }} space-y-4">
+          {{-- ⛔ রসিদ ও পরিশোধও চওড়া — ১৯ সেপ্টেম্বর ২০২৬, মালিক: *"bame faka jayga
+               komale box e sari vange na"*। ⓘ `max-w-3xl`-এ পাতাটা মাঝখানে সরু বসত,
+               দুই পাশ ফাঁকা, আর নিচের সারির "কার মাধ্যমে" লেখা কেটে যেত। --}}
+          class="{{ $expenseLayout || $contraLayout || $partyAbove ? 'max-w-6xl' : 'max-w-3xl' }} space-y-4">
         @csrf
         @unless ($isNew) @method('PUT') @endunless
         <input type="hidden" name="type" value="{{ $type }}">
@@ -288,7 +291,10 @@
 
             ⭐ ঘরগুলো রয়ে গেছে (লুকানো ও নিষ্ক্রিয়), কেবল বাক্সটা নেই।
         --}}
-        <section @unless ($contraLayout) data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4" @endunless
+        {{-- ⛔ রসিদ ও পরিশোধেও বাক্স নেই — ১৯ সেপ্টেম্বর ২০২৬, মালিক: *"majkane
+             ei khali box ta keno dewa?"*। ⓘ ওখানে ভিতরের সব ঘর নমুনা মেনে লুকানো
+             (নিচের সারিতে "যে খাতে জমা", উপরে ডিপোজিটর), তাই কার্ডটা খালি পড়ে থাকত। --}}
+        <section @unless ($contraLayout || $partyAbove) data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4" @endunless
                  {{-- ⓘ যুক্তিটা `resources/js/components/forms.js`-এ (simpleVoucherBox) --}}
                  x-data="simpleVoucherBox({
                      from: @js((string) old('from_account_id', $creditLine?->account_id)),
