@@ -86,6 +86,23 @@ return [
         ],
 
         'transactions' => [
+            /*
+             * ⭐ ইনভয়েস তালিকা — ড্যাশবোর্ডের ঠিক পরে, ১৯ সেপ্টেম্বর ২০২৬।
+             *
+             * মালিক: *"Dashboard er por 'Invoice list' banaw zate sob sales
+             * invoice takbe"*। ⓘ তালিকাটা আগে থেকেই ছিল ("বিক্রয় বিল"),
+             * আর সেটা সত্যিই সব বিল দেখায় — কাউন্টার, সরাসরি বিক্রয়, চালান
+             * থেকে বানানো — কেবল বাতিলগুলো একটা বোতামের পেছনে।
+             *
+             * ⚠️ তাই নতুন পাতা নয়, একই সারিটা উপরে উঠল আর নাম বদলাল। ⛔ দুই
+             * মেনুতে একই তালিকা রাখা মালিকের নিজের নিয়মের বিরুদ্ধে (*"ekoi
+             * jinis dui jaygay dorkar nai"*)।
+             *
+             * ⓘ গ্রুপটা `transactions`, আলাদা কিছু নয় — মেনু-গ্রুপের নাম
+             * কোরে বাঁধা ([[ModuleDefinition::MENU_GROUPS]])।
+             */
+            ['label' => 'sales::menu.invoices', 'icon' => 'receipt', 'route' => 'sales.invoice.index', 'permission' => 'sales.invoice.view'],
+
             ['label' => 'sales::menu.pos', 'icon' => 'cash', 'route' => 'sales.pos.index', 'permission' => 'sales.pos',
                 'setting' => 'sales.screen_pos'],
 
@@ -113,7 +130,6 @@ return [
              */
             ['label' => 'sales::menu.shipments', 'icon' => 'share', 'route' => 'sales.shipment.index',
                 'permission' => 'sales.shipment.view', 'setting' => 'sales.screen_shipments'],
-            ['label' => 'sales::menu.invoices', 'icon' => 'receipt', 'route' => 'sales.invoice.index', 'permission' => 'sales.invoice.view'],
             ['label' => 'sales::menu.collections', 'icon' => 'inbox', 'route' => 'sales.collection.index', 'permission' => 'sales.collection.view'],
             ['label' => 'sales::menu.returns', 'icon' => 'refresh', 'route' => 'sales.return.index', 'permission' => 'sales.return.view'],
 
