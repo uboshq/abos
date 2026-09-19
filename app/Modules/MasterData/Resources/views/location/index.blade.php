@@ -73,7 +73,12 @@
         <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">
             <form method="GET" class="contents">
-                <x-ui.toolbar :title="__('master_data::menu.locations')" :count="collect($ladder)->map(fn ($level) => __('master_data::level.' . $level))->implode(' › ')"
+                {{-- ⓘ মই-টা ("দেশ › বিভাগ › …") আর শিরোনামের পাশে লেখা নেই —
+                     ১৯ সেপ্টেম্বর ২০২৬। নিচের ট্যাবগুলো ঠিক ঐ কথাটাই বলে,
+                     আর বেশি বলে: প্রতিটায় ক্লিক করা যায়, পাশে সংখ্যা থাকে।
+                     ⚠️ দুইটা একসাথে থাকলে একই মই পর্দায় দুইবার — মালিক ধূসর
+                     লেখাটাকেই দাগিয়ে বলেছিলেন "এগুলো আলাদা ট্যাব হবে"। --}}
+                <x-ui.toolbar :title="__('master_data::menu.locations')"
                 :columns="$columns">
         <x-slot:actions>
             @can('master_data.manage')
