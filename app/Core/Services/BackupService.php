@@ -73,7 +73,18 @@ final class BackupService
             throw new RuntimeException("ডাম্প ফাইলটা নেই: {$file}");
         }
 
-        $scratch = config('database.connections.mysql.database').'_verify';
+        $source = (string) config('database.connections.mysql.database');
+        $scratch = $source.'_verify';
+
+        /*
+         * ⛔ যাচাইয়ের ডাটাবেজ কখনো আসলটা হতে পারে না — ১৯ সেপ্টেম্বর ২০২৬।
+         *
+         * ⚠️ নিচের প্রথম লাইনটাই `DROP DATABASE`। নামটা আসল ডাটাবেজের সমান
+         * হলে (ভুল সেটিং, খালি নাম, বা সংযোগ অন্য ডাটাবেজে বসে থাকলে)
+         * যাচাই করতে গিয়ে গোটা খাতাটাই মুছে যেত — আর সেটা হত রাতে, কেউ
+         * দেখত না। ⓘ তাই কিছু ছোঁয়ার **আগেই** থামা, আর চিৎকার করে।
+         */
+        $this->refuseToTouchTheBooks($source, $scratch);
 
         $this->mysql("DROP DATABASE IF EXISTS `{$scratch}`; CREATE DATABASE `{$scratch}`;");
 
@@ -96,6 +107,27 @@ final class BackupService
         } finally {
             // যাচাইয়ের ডাটাবেজ রেখে দিলে প্রতিটা রাতে একটা করে জমত
             $this->mysql("DROP DATABASE IF EXISTS `{$scratch}`;");
+        }
+    }
+
+    /**
+     * যাচাইয়ের লক্ষ্যটা আসল খাতা নয় — নিশ্চিত না হলে থামা।
+     *
+     * ⓘ তিনটা প্রশ্ন: আসল নামটা খালি কি না (তখন লক্ষ্য হত `_verify` —
+     * কোন খাতার, কেউ জানে না), লক্ষ্য আর আসল এক কি না, আর সংযোগটা এই
+     * মুহূর্তে যে ডাটাবেজে বসে আছে সেটাই লক্ষ্য কি না।
+     */
+    private function refuseToTouchTheBooks(string $source, string $target): void
+    {
+        $live = (string) DB::connection()->getDatabaseName();
+
+        if (trim($source) === '' || $target === $source || $target === $live) {
+            throw new RuntimeException(sprintf(
+                'CRITICAL: যাচাই থামানো হলো — লক্ষ্য ডাটাবেজ "%s" আসল খাতার ("%s") সাথে মিলে যায় বা নামই নেই। '
+                .'এগোলে আসল ডাটাবেজ মুছে যেত।',
+                $target,
+                $source !== '' ? $source : $live,
+            ));
         }
     }
 
@@ -482,6 +514,21 @@ final class BackupService
                 $this->decompress($file, $raw);
 
                 $pdo->exec('USE `'.str_replace('`', '``', $database).'`');
+
+                /*
+                 * ⛔ সংযোগটা সত্যিই লক্ষ্যে পৌঁছেছে কি না — ঢালার আগে দেখা।
+                 * ⚠️ ডাম্পের প্রথম কাজই `DROP TABLE`; ভুল ডাটাবেজে থাকলে সেটা
+                 * আসল খাতার টেবিল ফেলত।
+                 */
+                $now = (string) $pdo->query('SELECT DATABASE()')->fetchColumn();
+
+                if ($now !== $database) {
+                    throw new RuntimeException(sprintf(
+                        'CRITICAL: ফিরিয়ে আনা থামানো হলো — সংযোগ "%s"-এ, অথচ লক্ষ্য "%s"।',
+                        $now,
+                        $database,
+                    ));
+                }
 
                 app(PdoLoader::class)->load($pdo, $raw);
             } finally {

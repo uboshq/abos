@@ -264,6 +264,16 @@ class TheBackupSaidDoneForSixDaysTest extends TestCase
      */
     public function test_the_road_live_really_walks_without_a_shell(): void
     {
+        /*
+         * ⓘ নিজের একটা চেনা সারি — আগের পরীক্ষার ফেলে যাওয়া সারির উপর
+         * ভরসা নয়। ⛔ আগে এখানে কেবল `Company::count() > 0` দেখা হত, আর
+         * এই পরীক্ষা একা চালালে (খালি ডাটাবেজে) সেটা সবসময় ০ দিত —
+         * অথচ দেখাত যেন যাচাই আসল খাতা মুছেছে। ⭐ এখন প্রমাণটা সরাসরি:
+         * যাচাইয়ের আগে বসানো সারিটা যাচাইয়ের পরেও হুবহু আছে।
+         */
+        $marker = 'যাচাইয়ে-হাত-পড়েনি-'.uniqid();
+        $mine = Company::query()->create(['code' => 'VFY'.random_int(1000, 9999), 'name_en' => $marker]);
+
         config([
             'abos.backup.path' => storage_path('framework/testing/backup-noshell'),
             'abos.backup.force_php' => true,
@@ -297,11 +307,46 @@ class TheBackupSaidDoneForSixDaysTest extends TestCase
                 'যাচাইয়ের পর সংযোগটা অন্য ডাটাবেজে পড়ে আছে।',
             );
 
-            $this->assertGreaterThan(0, Company::query()->count(),
-                'যাচাইয়ের পর সাধারণ প্রশ্নই আর চলছে না।');
+            $this->assertSame($marker, Company::query()->whereKey($mine->id)->value('name_en'),
+                'যাচাইয়ের পর আসল খাতার সারিটা নেই — যাচাই আসল ডাটাবেজে হাত দিয়েছে।');
         } finally {
             @unlink($result['file']);
         }
+    }
+
+    /**
+     * ⛔ যাচাইয়ের লক্ষ্য আসল খাতা হলে — কিছু ছোঁয়ার আগেই থামে।
+     *
+     * ⓘ ঠিক সেই অবস্থাটা বানানো হয়: আসল ডাটাবেজের নাম খালি (ভুল বা
+     * হারানো সেটিং), তাই লক্ষ্য হত কেবল `_verify` — কোন খাতার, কেউ
+     * জানে না। ⭐ CRITICAL, আর আগে বসানো সারিটা অক্ষত।
+     */
+    public function test_a_verify_aimed_at_the_real_books_stops_before_touching_them(): void
+    {
+        $marker = 'খাতা-অক্ষত-'.uniqid();
+        $mine = Company::query()->create(['code' => 'GRD'.random_int(1000, 9999), 'name_en' => $marker]);
+
+        $file = $this->scratch('guard.sql.gz');
+        file_put_contents($file, gzencode('DROP TABLE IF EXISTS `companies`;'));
+
+        $real = (string) config('database.connections.mysql.database');
+
+        try {
+            config(['database.connections.mysql.database' => '', 'abos.backup.force_php' => true]);
+
+            try {
+                app(BackupService::class)->verify($file);
+                $this->fail('আসল ডাটাবেজের নাম খালি, তবু যাচাই থামেনি।');
+            } catch (\RuntimeException $e) {
+                $this->assertStringContainsString('CRITICAL', $e->getMessage());
+            }
+        } finally {
+            config(['database.connections.mysql.database' => $real]);
+            @unlink($file);
+        }
+
+        $this->assertSame($marker, Company::query()->whereKey($mine->id)->value('name_en'),
+            'পাহারা থামার আগে আসল খাতার সারি মুছে গেছে।');
     }
 
     /**
