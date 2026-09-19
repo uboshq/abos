@@ -8,7 +8,16 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('approval::menu.inbox') }}</x-slot:title>
 
-    <x-slot:header>
+    @if (session('saved'))
+        <div role="status"
+             class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm
+                    text-(--color-badge-success-ink)">
+            {{ session('saved') }}
+        </div>
+    @endif
+
+    <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+        <form method="GET" class="contents">
         {{--
             অন্য কারো ইনবক্স দেখলে শিরোনামেই তাঁর নাম।
 
@@ -25,18 +34,67 @@
 
              ছাঁকনি দেওয়া থাকলে `$visibleTotal` ওই মডিউলের সংখ্যা, তাই
              শিরোনাম আর নিচের তালিকা একই কথা বলে। --}}
-        <x-ui.page-header
-            :title="$person ? __('approval::menu.inbox_of', ['name' => $personName]) : __('approval::menu.inbox')"
-            :subtitle="trans_choice('core.count.records', $visibleTotal, ['count' => $visibleTotal])" />
-    </x-slot:header>
+        {{-- ⭐ শিরোনাম আর গোনা এখন টুলবারে — আগে ছিল page-header-এ,
+             তালিকার বাক্সের বাইরে। মালিকের নির্দেশ, ১৯ সেপ্টেম্বর ২০২৬:
+             *"সব মডিউলেই একই অবস্থা, সব ঠিক করো"*।
 
-    @if (session('saved'))
-        <div role="status"
-             class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm
-                    text-(--color-badge-success-ink)">
-            {{ session('saved') }}
-        </div>
-    @endif
+             ⓘ খোঁজার ঘর নেই (:search="false") — কন্ট্রোলার কোনো `q`
+             পড়ে না, আর যে ঘর কিছুই খোঁজে না সেটা মৃত বোতাম।
+
+             ⚠️ মডিউলটা লুকানো ঘরে ফর্মের সাথে যায়: নাহলে ঘনত্ব বা
+             রিফ্রেশ চাপলে ছাঁকনিটা নীরবে উঠে যেত, আর সংখ্যাটা বদলে
+             যেত কোনো কারণ না দেখিয়ে। ঘরটা টুলবারের **বাইরে**, কারণ
+             ভেতরে বসালে খালি ছাঁকনির প্যানেল খোলার একটা মৃত বোতাম
+             উঠত। --}}
+        @if ($selected !== '')
+            <input type="hidden" name="module" value="{{ $selected }}">
+        @endif
+
+        <x-ui.toolbar :title="$person ? __('approval::menu.inbox_of', ['name' => $personName]) : __('approval::menu.inbox')"
+                      :count="trans_choice('core.count.records', $visibleTotal, ['count' => $visibleTotal])"
+                      :search="false"
+                      :filter-labels="['person' => __('approval::field.whose_inbox'), 'module' => __('approval::field.module')]">
+            {{--
+                কার ইনবক্স — কেবল যাঁর অনুমতি আছে তাঁর জন্য।
+
+                ── কেন ড্রপডাউন, চিপ নয় ─────────────────────────────────
+                মডিউলের চিপে সংখ্যা বসে, কারণ গণনাটা **একই তালিকা থেকেই**
+                পাওয়া যায় — বাড়তি কোনো কোয়েরি লাগে না। মানুষের বেলায়
+                তা নয়: প্রত্যেকের সংখ্যা জানতে প্রত্যেকের জন্য আলাদা
+                হিসাব করতে হত। ⚠️ আর সংখ্যা ছাড়া দশটা চিপ কেবল জায়গা
+                নিত, তাই ওটা ড্রপডাউন।
+
+                ⓘ "সবাই" বিকল্প নেই — সেটা রিপোর্টের প্রশ্ন, ইনবক্সের নয়।
+
+                ⓘ ১৯ সেপ্টেম্বর ২০২৬ থেকে এটা টুলবারের ছাঁকনির ঘরে — নিজের
+                আলাদা ফর্মে থাকলে টুলবারের ফর্মের ভেতরে ফর্ম বসাতে হত, যা
+                HTML মানে না।
+            --}}
+            @if (count($signers) > 1)
+                <label for="person" class="text-xs text-(--color-ink-muted)">
+                    {{ __('approval::field.whose_inbox') }}
+                </label>
+
+                {{-- ⓘ "নিজের ইনবক্স"-এর মান খালি, "0" নয় — ফর্মটা এখন
+                     ঘনত্ব আর রিফ্রেশেও জমা পড়ে, আর "0" গেলে টুলবার সেটাকে
+                     চালু ছাঁকনি ভেবে একটা অর্থহীন চিপ আঁকত। কন্ট্রোলার
+                     খালিকে শূন্যই পড়ে। --}}
+                <select id="person" name="person" onchange="this.form.submit()"
+                        class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
+                               bg-(--color-surface-app) px-2 text-sm">
+                    <option value="">{{ __('approval::field.my_inbox') }}</option>
+                    @foreach ($signers as $id => $name)
+                        <option value="{{ $id }}" @selected($person === $id)>{{ $name }}</option>
+                    @endforeach
+                </select>
+
+                {{-- JS বন্ধ থাকলেও যেন কাজ করে — নিয়ম নয়, সৌজন্য নয়, শর্ত --}}
+                <noscript>
+                    <button type="submit" class="text-xs underline">{{ __('core.action.apply') }}</button>
+                </noscript>
+            @endif
+        </x-ui.toolbar>
+        </form>
 
     {{--
         মডিউল ধরে ছাঁকনি — §২.২।
@@ -50,48 +108,11 @@
         একটা মাত্র বিকল্পের ছাঁকনি ছাঁকে না, শুধু জায়গা নেয় — আর নতুন
         প্রতিষ্ঠানে শুরুর দিনগুলোতে ঠিক তা-ই হত।
     --}}
-    @if (count($modules) > 1 || count($signers) > 1)
-        <div class="mb-3 flex flex-wrap items-center gap-2">
-            {{--
-                কার ইনবক্স — কেবল যাঁর অনুমতি আছে তাঁর জন্য।
-
-                ── কেন ড্রপডাউন, চিপ নয় ─────────────────────────────────
-                মডিউলের চিপে সংখ্যা বসে, কারণ গণনাটা **একই তালিকা থেকেই**
-                পাওয়া যায় — বাড়তি কোনো কোয়েরি লাগে না। মানুষের বেলায়
-                তা নয়: প্রত্যেকের সংখ্যা জানতে প্রত্যেকের জন্য আলাদা
-                হিসাব করতে হত। ⚠️ আর সংখ্যা ছাড়া দশটা চিপ কেবল জায়গা
-                নিত, তাই ওটা ড্রপডাউন।
-
-                ⓘ "সবাই" বিকল্প নেই — সেটা রিপোর্টের প্রশ্ন, ইনবক্সের নয়।
-            --}}
-            @if (count($signers) > 1)
-                <form method="GET" class="flex items-center gap-2">
-                    @if ($selected !== '')
-                        <input type="hidden" name="module" value="{{ $selected }}">
-                    @endif
-
-                    <label for="person" class="text-xs text-(--color-ink-muted)">
-                        {{ __('approval::field.whose_inbox') }}
-                    </label>
-
-                    <select id="person" name="person" onchange="this.form.submit()"
-                            class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
-                                   bg-(--color-surface-app) px-2 text-sm">
-                        <option value="0">{{ __('approval::field.my_inbox') }}</option>
-                        @foreach ($signers as $id => $name)
-                            <option value="{{ $id }}" @selected($person === $id)>{{ $name }}</option>
-                        @endforeach
-                    </select>
-
-                    {{-- JS বন্ধ থাকলেও যেন কাজ করে — নিয়ম নয়, সৌজন্য নয়, শর্ত --}}
-                    <noscript>
-                        <button type="submit" class="text-xs underline">{{ __('core.action.apply') }}</button>
-                    </noscript>
-                </form>
-            @endif
-
-            @if (count($modules) > 1)
-                <div class="flex flex-wrap items-center gap-2" role="group"
+        {{-- ⓘ ১৯ সেপ্টেম্বর ২০২৬ থেকে চিপগুলো বাক্সের ভেতরে, টুলবারের ঠিক
+             নিচে — ছাঁকনির প্যানেলে ঢোকানো হয়নি, কারণ ওটা বোতাম চেপে
+             খোলে, আর তখন "কোথায় কাজ আছে" সংখ্যাগুলো আড়ালে চলে যেত। --}}
+        @if (count($modules) > 1)
+                <div class="flex flex-wrap items-center gap-2 border-b border-(--color-border) px-3 py-2" role="group"
                      aria-label="{{ __('approval::field.module') }}">
                     @php
                         $chip = 'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium
@@ -125,11 +146,8 @@
                         </a>
                     @endforeach
                 </div>
-            @endif
-        </div>
-    @endif
+        @endif
 
-    <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         {{-- কাটা পড়েছে কি না, আর কতটা — কেবল সত্যিই কাটা পড়লে।
 
              নিচে যা দেখা যাচ্ছে সেটাই সবটা নয়, আর সেটা না বললে পাতাটা

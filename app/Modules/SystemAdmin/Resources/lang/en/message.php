@@ -21,6 +21,10 @@ return [
     'financial_year_note' => 'In Bangladesh the year runs July to June. The dates are filled in already, because a calendar year would put every report out of step with the tax office.',
     'users_note' => 'Who can sign in, to which company, and what they may do. Users are never deleted — deactivating keeps their name on old paperwork.',
     'roles_note' => 'A named set of permissions. Every depot splits the work differently, so roles are rows here rather than names in code.',
+    // প্রতিটা তালিকার খোঁজার ঘর কী কী দিয়ে খোঁজে — ঘরের ভেতরের লেখা
+    'user_search' => 'Search by name or email',
+    'company_search' => 'Search by code or name',
+    'role_search' => 'Search by role name',
     'roles_are_global' => 'A role belongs to the person, not to a company — the same rights apply in every company they can enter.',
     'company_access_note' => 'At least one company is required, or signing in would show an empty screen. Choosing a branch decides where they land.',
     'owner_role_fixed' => 'The owner role cannot be edited — by definition it can do everything',

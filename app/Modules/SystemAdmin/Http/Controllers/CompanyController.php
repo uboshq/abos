@@ -77,6 +77,23 @@ class CompanyController extends Controller implements HasMiddleware
              */
             'companies' => Company::query()
                 ->withCount(['branches' => fn ($q) => $q->withoutGlobalScopes()])
+
+                /*
+                 * টুলবারের খোঁজা — কোড বা নাম (ইংরেজি ও বাংলা দুইটাই),
+                 * ১৯ সেপ্টেম্বর ২০২৬।
+                 *
+                 * ⓘ পর্দায় নামটা ভাষা ধরে বদলায় ([[Company::name()]]), তাই
+                 * খোঁজাও দুই ঘরেই — নাহলে বাংলা পর্দায় যে নামটা চোখে দেখা
+                 * যাচ্ছে সেটা লিখে কিছুই মিলত না।
+                 */
+                ->when(trim((string) $request->query('q')) !== '', function ($query) use ($request) {
+                    $like = '%'.str_replace(['%', '_'], ['\%', '\_'], trim((string) $request->query('q'))).'%';
+
+                    $query->where(fn ($inner) => $inner
+                        ->where('code', 'like', $like)
+                        ->orWhere('name_en', 'like', $like)
+                        ->orWhere('name_bn', 'like', $like));
+                })
                 ->orderBy('name_en')
                 ->get(),
         ]);

@@ -7,18 +7,6 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('approval::menu.flows') }}</x-slot:title>
 
-    <x-slot:header>
-        <x-ui.page-header
-            :title="__('approval::menu.flows')"
-            :subtitle="trans_choice('core.count.records', $flows->count(), ['count' => $flows->count()])">
-            <x-slot:actions>
-                <x-ui.button tone="primary" icon="plus" :href="route('approval.flow.create')">
-                    {{ __('approval::action.new_flow') }}
-                </x-ui.button>
-            </x-slot:actions>
-        </x-ui.page-header>
-    </x-slot:header>
-
     @if (session('saved'))
         <div role="status"
              class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm
@@ -34,6 +22,28 @@
             {{ $message }}
         </div>
     @enderror
+
+    {{-- ⭐ শিরোনাম, গোনা আর "নতুন ছক" বোতাম এখন টুলবারে — আগে ছিল
+         page-header-এ। মালিকের নির্দেশ, ১৯ সেপ্টেম্বর ২০২৬: *"সব মডিউলেই
+         একই অবস্থা, সব ঠিক করো"*।
+
+         ⓘ এটা ছক নয়, কার্ডের তালিকা — তাই খোঁজা, ঘনত্ব আর রপ্তানি বন্ধ:
+         কন্ট্রোলার কোনো `q` পড়ে না, ঘনত্ব কেবল `x-ui.table` মানে, আর
+         রপ্তানির ফাইল টেবিলের কলাম থেকেই বানানো হয়। ⛔ ওগুলো রাখলে তিনটা
+         মৃত বোতাম হত। কার্ডগুলো যেমন ছিল তেমনই, টুলবারের বাক্সের নিচে। --}}
+    <div data-boxed class="mb-3 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+        <form method="GET" class="contents">
+            <x-ui.toolbar :title="__('approval::menu.flows')"
+                          :count="trans_choice('core.count.records', $flows->count(), ['count' => $flows->count()])"
+                          :search="false" :density="false" :export="false">
+                <x-slot:actions>
+                    <x-ui.button tone="primary" icon="plus" :href="route('approval.flow.create')">
+                        {{ __('approval::action.new_flow') }}
+                    </x-ui.button>
+                </x-slot:actions>
+            </x-ui.toolbar>
+        </form>
+    </div>
 
     @if ($flows->isEmpty())
         <div data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-6">

@@ -48,18 +48,6 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('system_admin::menu.users') }}</x-slot:title>
 
-    <x-slot:header>
-        <x-ui.page-header
-            :title="__('system_admin::menu.users')"
-            :subtitle="__('system_admin::message.users_note')">
-            <x-slot:actions>
-                <x-ui.button tone="primary" icon="plus" :href="route('system_admin.user.create')">
-                    {{ __('core.action.create') }}
-                </x-ui.button>
-            </x-slot:actions>
-        </x-ui.page-header>
-    </x-slot:header>
-
     @if (session('saved'))
         <div role="status"
              class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm
@@ -68,9 +56,32 @@
         </div>
     @endif
 
-    <x-ui.table :rows="$users"
-                :columns="$columns"
-                :empty="__('core.empty.no_results')" />
+    <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+        <form method="GET" class="contents">
+            {{-- ⭐ শিরোনাম, বর্ণনা আর "নতুন" বোতাম এখন টুলবারে — আগে ছিল
+                 page-header-এ, তালিকার বাক্সের বাইরে। মালিকের নির্দেশ,
+                 ১৯ সেপ্টেম্বর ২০২৬: *"সব মডিউলেই একই অবস্থা, সব ঠিক করো"*।
+
+                 ⓘ খোঁজা নাম ও ইমেইলে (UserController::index)। সাজানো নেই —
+                 তালিকা সবসময় নামের ক্রমে, আর অন্য কোনো ক্রম কন্ট্রোলার
+                 জানে না। --}}
+            <x-ui.toolbar :title="__('system_admin::menu.users')"
+                          :subtitle="__('system_admin::message.users_note')"
+                          :search-placeholder="__('system_admin::message.user_search')"
+                          :columns="$columns">
+                <x-slot:actions>
+                    <x-ui.button tone="primary" icon="plus" :href="route('system_admin.user.create')">
+                        {{ __('core.action.create') }}
+                    </x-ui.button>
+                </x-slot:actions>
+            </x-ui.toolbar>
+        </form>
+
+        <x-ui.table :rows="$users"
+                    :columns="$columns"
+                    :compact="request()->boolean('compact')"
+                    :empty="__('core.empty.no_results')" />
+    </div>
 
     {{ $users->links() }}
 

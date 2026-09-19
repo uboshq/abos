@@ -8,6 +8,7 @@ use App\Core\Module\ModuleRegistry;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\PermissionSyncer;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\RoleLabel;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -72,7 +73,25 @@ class RoleController extends Controller implements HasMiddleware
                 ->where('company_id', CompanyContext::id())
                 ->withCount(['permissions', 'users'])
                 ->orderBy('name')
-                ->get(),
+                ->get()
+
+                /*
+                 * টুলবারের খোঁজা — রোলের নাম, ১৯ সেপ্টেম্বর ২০২৬।
+                 *
+                 * ⚠️ কোয়েরিতে নয়, তোলা তালিকার উপর — ইচ্ছাকৃত। পর্দায় যে
+                 * নামটা দেখা যায় সেটা [[RoleLabel]]-এর অনুবাদ ("মালিক"),
+                 * আর টেবিলে বসে কাঁচা নাম (`super_admin`)। ⛔ ডাটাবেজে খুঁজলে
+                 * চোখে দেখা নামটা লিখে কিছুই মিলত না। ⓘ রোল হাতেগোনা, তাই
+                 * দুইটাতেই মেলানোর খরচ নেই।
+                 */
+                ->when(trim((string) $request->query('q')) !== '', function ($roles) use ($request) {
+                    $term = Str::lower(trim((string) $request->query('q')));
+
+                    return $roles->filter(fn (Role $role) => Str::contains(
+                        Str::lower($role->name.' '.RoleLabel::for($role->name)),
+                        $term,
+                    ))->values();
+                }),
             'ownerRole' => PermissionSyncer::SUPER_ADMIN_ROLE,
         ]);
     }

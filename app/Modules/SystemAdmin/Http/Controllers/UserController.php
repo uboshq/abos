@@ -90,8 +90,27 @@ class UserController extends Controller implements HasMiddleware
                  * টেন্যান্ট বিচ্ছিন্নতা সুবিধা নয়, **আইনি বাধ্যবাধকতা**।"*
                  */
                 ->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))
+
+                /*
+                 * টুলবারের খোঁজা — নাম বা ইমেইল, ১৯ সেপ্টেম্বর ২০২৬।
+                 *
+                 * ⓘ খোঁজার ঘরটা সব তালিকায় একই জায়গায় বসে, আর যে ঘর কিছুই
+                 * খোঁজে না সেটা মৃত বোতাম। তাই ঘরটার সাথে এই ছাঁকনিটাও এল।
+                 *
+                 * ⚠️ `where(fn …)`-এর ভেতরে — বাইরে `orWhere` বসালে উপরের
+                 * কোম্পানির ছাঁকনিটা ভেঙে অন্য কোম্পানির মানুষও মিলে যেত।
+                 */
+                ->when(trim((string) $request->query('q')) !== '', function ($query) use ($request) {
+                    $like = '%'.str_replace(['%', '_'], ['\%', '\_'], trim((string) $request->query('q'))).'%';
+
+                    $query->where(fn ($inner) => $inner
+                        ->where('name', 'like', $like)
+                        ->orWhere('email', 'like', $like));
+                })
                 ->orderBy('name')
-                ->paginate(50),
+                ->paginate(50)
+                // ⓘ পাতা বদলালে খোঁজা আর ঘনত্ব হারায় না
+                ->withQueryString(),
         ]);
     }
 

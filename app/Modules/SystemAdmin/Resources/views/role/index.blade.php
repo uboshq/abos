@@ -39,18 +39,6 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('system_admin::menu.roles') }}</x-slot:title>
 
-    <x-slot:header>
-        <x-ui.page-header
-            :title="__('system_admin::menu.roles')"
-            :subtitle="__('system_admin::message.roles_note')">
-            <x-slot:actions>
-                <x-ui.button tone="primary" icon="plus" :href="route('system_admin.role.create')">
-                    {{ __('core.action.create') }}
-                </x-ui.button>
-            </x-slot:actions>
-        </x-ui.page-header>
-    </x-slot:header>
-
     @if (session('saved'))
         <div role="status"
              class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm
@@ -67,8 +55,31 @@
         </div>
     @endif
 
-    <x-ui.table :rows="$roles"
-                :columns="$columns"
-                :empty="__('core.empty.no_results')" />
+    <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+        <form method="GET" class="contents">
+            {{-- ⭐ শিরোনাম, বর্ণনা আর "নতুন" বোতাম এখন টুলবারে — আগে ছিল
+                 page-header-এ, তালিকার বাক্সের বাইরে। মালিকের নির্দেশ,
+                 ১৯ সেপ্টেম্বর ২০২৬: *"সব মডিউলেই একই অবস্থা, সব ঠিক করো"*।
+
+                 ⓘ খোঁজা রোলের নামে — কাঁচা নাম আর পর্দার অনুবাদ দুইটাতেই
+                 (RoleController::index)। কলাম আর মালিকের সারির তালা যেমন
+                 ছিল তেমনই। --}}
+            <x-ui.toolbar :title="__('system_admin::menu.roles')"
+                          :subtitle="__('system_admin::message.roles_note')"
+                          :search-placeholder="__('system_admin::message.role_search')"
+                          :columns="$columns">
+                <x-slot:actions>
+                    <x-ui.button tone="primary" icon="plus" :href="route('system_admin.role.create')">
+                        {{ __('core.action.create') }}
+                    </x-ui.button>
+                </x-slot:actions>
+            </x-ui.toolbar>
+        </form>
+
+        <x-ui.table :rows="$roles"
+                    :columns="$columns"
+                    :compact="request()->boolean('compact')"
+                    :empty="__('core.empty.no_results')" />
+    </div>
 
 </x-layouts.app>
