@@ -119,7 +119,17 @@ class TheSaveButtonWasOffTheScreenTest extends TestCase
             'আবার তুলে নিলেও পটিটা একটা বদল দেখাত।',
         ]));
 
-        $this->assertStringContainsString('el.dataset.was', $html,
+        /*
+         * ⓘ গোনার যুক্তি ১৯ সেপ্টেম্বর ২০২৬ থেকে পাতায় নয়, একটা নামওয়ালা
+         * কম্পোনেন্টে (`switchBoard`, resources/js/components/forms.js) —
+         * CSP-Alpine অ্যাট্রিবিউটের ভিতরে পদ্ধতি পড়ে না। ⭐ তাই দুইটা দেখা:
+         * পাতা ঐ কম্পোনেন্টটাই ডাকে, আর কম্পোনেন্টটা আগের মানের সাথেই
+         * মেলায়। আচরণের পরীক্ষা `components.test.js`-এ।
+         */
+        $this->assertStringContainsString('x-data="switchBoard(', $html,
+            'নিয়ন্ত্রণ-প্যানেল আর `switchBoard` ডাকে না — গোনাটা কে করছে?');
+        $this->assertStringContainsString('el.dataset.was',
+            (string) file_get_contents(resource_path('js/components/forms.js')),
             'গোনাটা আর আগের মানের সাথে মেলানো হচ্ছে না।');
     }
 }

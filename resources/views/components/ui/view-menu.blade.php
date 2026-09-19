@@ -108,9 +108,9 @@
 @endphp
 
 @if ($addressable && $user)
-    <div x-data="{ open: false, naming: false }"
-         @click.outside="open = false; naming = false"
-         @keydown.escape.window="open = false; naming = false"
+    <div x-data="viewMenu"
+         @click.outside="close()"
+         @keydown.escape.window="close()"
          class="relative shrink-0">
 
         <button type="button" data-view-menu
@@ -284,7 +284,7 @@
                  ধরে খুঁজলে নকশা বদলালে। চিহ্নটা দুইটার কোনোটার সাথেই
                  বদলায় না। --}}
             <button type="button" x-show="! naming" data-view-save
-                    @click="naming = true; $nextTick(() => $refs.viewName?.focus())"
+                    @click="startNaming()"
                     class="flex min-h-(--spacing-touch) w-full items-center gap-2 px-3 text-start text-sm
                            text-(--color-ink-body) hover:bg-(--color-surface-hover)">
                 <svg viewBox="0 0 24 24" aria-hidden="true" class="size-4 shrink-0 fill-current">

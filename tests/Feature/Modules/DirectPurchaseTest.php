@@ -138,9 +138,10 @@ class DirectPurchaseTest extends TestCase
         $html = $this->get(route('purchase.direct.create'))->assertOk()->getContent();
 
         // Alpine-এর বাঁধন, একটাই কোলন দিয়ে।
-        $this->assertStringContainsString(':name="`lines[${index}][product_id]`"', $html,
+        // ⓘ জোড়া-লাগানো স্ট্রিং, টেমপ্লেট লিটারাল নয় — CSP-Alpine ব্যাকটিক পড়ে না
+        $this->assertStringContainsString(":name=\"'lines[' + (index) + '][product_id]'\"", $html,
             'লাইনের product_id ঘরটার নাম Alpine দিয়ে বাঁধা নেই — ফর্ম পাঠালে কোনো লাইন যাবে না।');
-        $this->assertStringContainsString(':name="`lines[${index}][qty]`"', $html,
+        $this->assertStringContainsString(":name=\"'lines[' + (index) + '][qty]'\"", $html,
             'পরিমাণের ঘরটার নাম বাঁধা নেই।');
 
         // আর দুই কোলনের একটাও যেন সাধারণ ইনপুটে না থাকে।

@@ -77,13 +77,8 @@
                         {{-- বাতিলের কারণ বাধ্যতামূলক — কারণ ছাড়া বাতিল করা
                              ভাউচার পরে কেউ ব্যাখ্যা করতে পারে না --}}
                         <form method="POST" action="{{ route('accounts.voucher.cancel', $voucher) }}"
-                              x-data="{ ask() {
-                                  const r = prompt('{{ __('accounts::message.cancel_reason_prompt') }}');
-                                  if (! r) return false;
-                                  this.$refs.reason.value = r;
-                                  return true;
-                              } }"
-                              @submit="if (! ask()) $event.preventDefault()">
+                              x-data="reasonPrompt({ question: @js(__('accounts::message.cancel_reason_prompt')) })"
+                              @submit="ask($event)">
                             @csrf
                             <input type="hidden" name="cancel_reason" x-ref="reason">
                             <x-ui.button type="submit" tone="secondary">

@@ -49,51 +49,7 @@
 @endphp
 
 @if ($items !== [])
-    <div x-data="{
-             open: false,
-
-             /*
-              * মেনুটা খোলার সময় fixed-এ বসে, আর সেটাই একমাত্র উপায়।
-              *
-              * সারির বোতামটা বসে `.table-responsive`-এর ভেতরে, আর তার
-              * `overflow-x: auto` দুই দিকেই কাটে — CSS-এর নিয়মে এক অক্ষে
-              * `auto` দিলে অন্যটা আর `visible` থাকতে পারে না, নীরবে `auto`
-              * হয়ে যায়। তাই কার্ডের `overflow-hidden` সরালেও কিছু বদলাত না।
-              *
-              * `absolute` মেনুটা শেষ সারিতে **পুরোপুরি অদৃশ্য** হয়ে যেত
-              * (মাপা: স্ক্রলারের তল ছাড়িয়ে ১৩৬px), আর ব্যবহারকারীর মনে হত
-              * বোতামটা কাজই করে না — তিনি আবার চাপতেন, মেনু বন্ধ হয়ে যেত।
-              *
-              * ⚠️ উপরের দিকে খোলা (`bottom-full`) যথেষ্ট নয় — এক বা দুই
-              * সারির তালিকায় উপরেও জায়গা নেই, তখন উল্টো দিকে কাটত। এক
-              * ফাঁদ সরিয়ে আরেকটা বসানো হত।
-              *
-              * ⓘ পূর্বপুরুষে `transform`/`filter`/`contain` থাকলে `fixed` ওর
-              * সাপেক্ষে বসত — মেপে দেখা হয়েছে, শেলে একটাও নেই।
-              */
-             place() {
-                 const r = $refs.button.getBoundingClientRect();
-                 const m = $refs.menu;
-                 const rtl = getComputedStyle(document.documentElement).direction === 'rtl';
-
-                 // অবস্থান ক্লাসে বসানো (`fixed`) — এখানে কেবল স্থানাঙ্ক
-                 m.style.insetInlineEnd = (rtl ? r.left : window.innerWidth - r.right) + 'px';
-
-                 // নিচে না কুলালে উপরে — পর্দার কোন প্রান্তেই কাটা যায় না
-                 if (window.innerHeight - r.bottom < m.offsetHeight + 8) {
-                     m.style.top = 'auto';
-                     m.style.bottom = (window.innerHeight - r.top + 4) + 'px';
-                 } else {
-                     m.style.bottom = 'auto';
-                     m.style.top = (r.bottom + 4) + 'px';
-                 }
-             },
-
-             toggle() {
-                 this.open = ! this.open;
-                 if (this.open) this.$nextTick(() => this.place());
-             },
-         }"
+    <div x-data="rowActions"
          class="flex justify-end print-hide">
         <button type="button"
                 x-ref="button"

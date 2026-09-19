@@ -100,7 +100,7 @@
     সাইডবারটা খোলাই দেখায় — অর্থাৎ ভুল অবস্থাটা দেখা যায় না, শুধু
     গুটানো ব্যবহারকারীর ক্ষেত্রে এক পলকে খোলা থেকে গুটিয়ে যায়।
 --}}
-<aside x-data="{ filter: '' }"
+<aside x-data="sidebarFilter"
        {{--
            চওড়া মাপটা স্থির ক্লাসেই, Alpine-এর অপেক্ষায় নয়।
 
@@ -625,8 +625,7 @@
                             ->pluck('label')->map(fn ($l) => mb_strtolower($l))->values();
                     @endphp
 
-                    <p x-show="filter !== '' && ! {{ Js::from($labels) }}
-                               .some(l => l.includes(filter.toLowerCase().trim()))"
+                    <p x-show="noneMatch(@js($labels))"
                        x-cloak
                        class="px-3 py-2 text-2xs text-(--color-ink-muted)">
                         {{ __('core.empty.no_results') }}
@@ -646,7 +645,7 @@
                                      মিলে যেত, আর তালিকাটা লম্বা হলে "আমি
                                      কোথায়" প্রশ্নের উত্তর খুঁজতে হত। --}}
                                 <a @if ($item['url']) href="{{ $item['url'] }}" @endif
-                                   x-show="filter === '' || {{ Js::from(mb_strtolower($item['label'])) }}.includes(filter.toLowerCase().trim())"
+                                   x-show="shows(@js(mb_strtolower($item['label'])))"
                                    @class([
                                        'rail-item flex min-h-(--rail-item-h) items-center gap-2 px-2.5 text-(length:--rail-item-font) transition-colors',
                                        'bg-(--rail-item-on-bg) font-semibold text-(--rail-item-on-ink)' => $item['active'],

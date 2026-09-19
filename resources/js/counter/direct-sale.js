@@ -1481,5 +1481,36 @@ export default function directSale({
         qty(v) {
             return String(Number(v || 0));
         },
+
+        /*
+         * ⓘ নিচের তিনটা আগে ব্লেডের অ্যাট্রিবিউটে লেখা ছিল। CSP-Alpine
+         * `=>`, `?.` আর কমা-দিয়ে-জোড়া এক্সপ্রেশন পড়ে না, তাই এখানে
+         * (১৯ সেপ্টেম্বর ২০২৬, নিরীক্ষার ধাপ ৩.১)।
+         */
+
+        /** আইডি থেকে পণ্যের নাম — উপহারের সারিতে */
+        productName(id) {
+            return (this.catalogue.find(p => String(p.id) === String(id)) || {}).name || '';
+        },
+
+        /*
+         * Esc — সবচেয়ে ভিতরের জিনিসটা আগে বন্ধ: খোলা প্যানেল, তারপর
+         * তালিকা, শেষে সাহায্যের পাতা।
+         */
+        escape() {
+            if (this.panel) {
+                this.panel = '';
+            } else if (this.pickerOpen || this.customerPickerOpen) {
+                this.pickerOpen = false;
+                this.customerPickerOpen = false;
+            } else {
+                this.helping = false;
+            }
+        },
+
+        /** F6 — হিসাবের খাত থেকে পণ্য বাছার বোতাম */
+        openChartEntry() {
+            this.$refs.chartEntry?.querySelector('button')?.click();
+        },
     };
 }

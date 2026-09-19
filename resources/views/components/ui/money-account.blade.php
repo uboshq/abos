@@ -62,24 +62,8 @@
     $accounts = collect($accounts);
 @endphp
 
-<div x-data="{
-        chosen: '{{ old($name, $selected) }}',
-
-        /*
-         * বাছা খাতটা কোন ধরনের — 'cash' হলে নম্বর লাগে না।
-         *
-         * ⚠️ ধরনটা প্রতিটা option-এ `data-kind`-এ বসে, তালিকার আলাদা
-         * কোনো নকলে নয়। দুই জায়গায় রাখলে একটা তালিকা ছাঁকা হত আর
-         * অন্যটা নয়, আর তখন নম্বরের ঘরটা ভুল খাতে ভেসে উঠত।
-         */
-        get kind() {
-            const option = this.$refs.picker?.selectedOptions?.[0];
-            return option?.dataset?.kind ?? '';
-        },
-        get needsReference() {
-            return this.kind === 'bank' || this.kind === 'mfs';
-        },
-     }"
+{{-- ⓘ ধরন আর নম্বরের ঘরের যুক্তি `resources/js/components/money.js`-এ --}}
+<div x-data="moneyAccount({ chosen: @js((string) old($name, $selected)) })"
      {{-- ⭐ সরু জায়গায় ঘর দুইটা **উপর-নিচে**, পাশাপাশি নয়।
 
           তালিকার ঘরে দুইটা ইনপুট পাশাপাশি বসালে দুইটাই এত সরু হয় যে

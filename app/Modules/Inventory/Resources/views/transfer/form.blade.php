@@ -66,12 +66,7 @@
         <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="mb-3 font-semibold">{{ __('inventory::message.lines') }}</h2>
 
-            <div x-data="{
-                    rows: {{ Illuminate\Support\Js::from($existing) }},
-                    add() { this.rows.push({ product_id: '', qty: '' }); },
-                    remove(i) { this.rows.splice(i, 1); if (this.rows.length === 0) this.add(); },
-                 }"
-                 x-init="if (rows.length === 0) add()">
+            <div x-data="lineRows({ rows: @js($existing), blank: { product_id: '', qty: '' } })">
 
                 <div class="table-responsive">
                     <table class="ui-lines table-cards w-full text-sm">
@@ -87,7 +82,7 @@
                             <template x-for="(row, i) in rows" :key="i">
                                 <tr class="border-b border-(--color-border)">
                                     <td class="cell-input" data-label="{{ __('inventory::field.product') }}">
-                                        <select :name="`lines[${i}][product_id]`" x-model="row.product_id"
+                                        <select :name="'lines[' + i + '][product_id]'" x-model="row.product_id"
                                                 class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                                                        bg-(--color-surface-card) px-2">
                                             <option value="">-</option>
@@ -99,7 +94,7 @@
 
                                     <td class="cell-input" data-label="{{ __('inventory::field.quantity') }}">
                                         <input type="number" step="0.01" inputmode="decimal"
-                                               :name="`lines[${i}][qty]`" x-model="row.qty"
+                                               :name="'lines[' + i + '][qty]'" x-model="row.qty"
                                                class="num h-(--spacing-field-compact) w-full sm:w-28 rounded-(--radius-field)
                                                       border border-(--color-border)
                                                       bg-(--color-surface-card) px-2 text-end">

@@ -30,22 +30,22 @@
 
                                     <td class="cell" data-label="{{ __('sales::field.item_name') }}">
                                         <span x-text="line.name"></span>
-                                        <input type="hidden" :name="`lines[${i}][product_id]`" :value="line.id">
+                                        <input type="hidden" :name="'lines[' + (i) + '][product_id]'" :value="line.id">
                                         {{-- বাছা প্যাকের একক — সার্ভার এটা দেখেই
                                              "২ বাক্স"-কে পিসে নামায়, দর সহ --}}
-                                        <input type="hidden" :name="`lines[${i}][unit_id]`" :value="line.unitId || ''">
+                                        <input type="hidden" :name="'lines[' + (i) + '][unit_id]'" :value="line.unitId || ''">
                                     </td>
 
                                     <td class="cell-input text-end" data-label="{{ __('sales::field.unit_price') }}">
                                         <input type="number" step="0.0001" min="0" x-model="line.rate"
-                                               :name="`lines[${i}][rate]`"
+                                               :name="'lines[' + (i) + '][rate]'"
                                                class="num h-(--spacing-field-dense) w-full sm:w-24 rounded-(--radius-field) border
                                                       border-(--color-border) bg-(--color-surface-app) px-2 text-end">
                                     </td>
 
                                     <td class="cell-input text-end" data-label="{{ __('sales::field.quantity') }}">
                                         <input type="number" step="0.01" min="0.01" x-model="line.qty"
-                                               :name="`lines[${i}][qty]`"
+                                               :name="'lines[' + (i) + '][qty]'"
                                                class="num h-(--spacing-field-dense) w-full sm:w-20 rounded-(--radius-field) border
                                                       border-(--color-border) bg-(--color-surface-app) px-2 text-end">
                                     </td>
@@ -53,20 +53,20 @@
                                     @if ($show['free_qty'])
                                         <td class="cell-input text-end" data-label="{{ __('sales::field.free_unit') }}">
                                             <input type="number" step="0.01" min="0" x-model="line.freeQty"
-                                                   :name="`lines[${i}][free_qty]`"
+                                                   :name="'lines[' + (i) + '][free_qty]'"
                                                    class="num h-(--spacing-field-dense) w-full sm:w-20 rounded-(--radius-field) border
                                                           border-(--color-border) bg-(--color-surface-app) px-2 text-end">
                                         </td>
                                     @endif
 
                                     <td class="num cell" data-label="{{ __('sales::field.total_qty') }}"
-                                        x-text="qty(Number(line.qty || 0) + Number(line.freeQty || 0))"></td>
+                                        x-text="qty($num(line.qty || 0) + $num(line.freeQty || 0))"></td>
 
                                     @if ($show['line_discount'])
                                         <td class="cell-input text-end" data-label="{{ __('sales::field.dis') }}">
                                             <input type="number" step="0.01" min="0" max="100"
                                                    x-model="line.discountPercent"
-                                                   :name="`lines[${i}][discount_percent]`"
+                                                   :name="'lines[' + (i) + '][discount_percent]'"
                                                    class="num h-(--spacing-field-dense) w-full sm:w-20 rounded-(--radius-field) border
                                                           border-(--color-border) bg-(--color-surface-app) px-2 text-end">
                                         </td>
@@ -118,7 +118,7 @@
                                         <td class="cell text-(--color-badge-pending-ink)"
                                             style="padding-inline-start: calc(var(--grid-pad-x) * 2)"
                                             data-label="{{ __('sales::field.item_name') }}">
-                                            🎁 <span x-text="(catalogue.find(p => String(p.id) === String(gift.productId)) || {}).name || ''"></span>
+                                            🎁 <span x-text="productName(gift.productId)"></span>
                                         </td>
 
                                         <td class="cell text-end text-(--color-ink-muted)">—</td>
@@ -127,12 +127,12 @@
                                         @if ($show['free_qty'])
                                             <td class="num cell text-(--color-badge-pending-ink)"
                                                 data-label="{{ __('sales::field.free_unit') }}"
-                                                x-text="qty(Number(gift.qty || 0)) + ' ' + (line.unit || '')"></td>
+                                                x-text="qty($num(gift.qty || 0)) + ' ' + (line.unit || '')"></td>
                                         @endif
 
                                         <td class="num cell text-(--color-badge-pending-ink)"
                                             data-label="{{ __('sales::field.total_qty') }}"
-                                            x-text="qty(Number(gift.qty || 0))"></td>
+                                            x-text="qty($num(gift.qty || 0))"></td>
 
                                         @if ($show['line_discount'])
                                             <td class="cell text-end text-(--color-ink-muted)">—</td>

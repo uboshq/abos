@@ -32,7 +32,7 @@
                              খালি থাকত — মালিক: *"product sarch icon o kaj kore
                              na, Product aseo na"*। --}}
                         <button type="button"
-                                @click="browsing = ! browsing; $refs.search.focus()"
+                                @click="toggleBrowsing()"
                                 aria-label="{{ __('purchase::field.search_item') }}"
                                 class="flex size-(--spacing-command) shrink-0 items-center justify-center
                                        rounded-(--radius-field) border border-(--color-success)
@@ -53,15 +53,15 @@
                              হয়েছে তার নাম · মজুদ · গতবারের দর। ⓘ পণ্য বাছার
                              পর খোঁজার ঘরটা সরু হয়ে নামটাকে জায়গা দেয়। --}}
                         <div x-show="picked" x-cloak class="flex min-w-0 shrink items-baseline gap-x-4">
-                            <span class="font-semibold" x-text="picked?.name"></span>
+                            <span class="font-semibold" x-text="(picked && picked.name)"></span>
                             <span class="text-2xs text-(--color-ink-muted)" x-show="picked" x-cloak>
                                 {{ __('purchase::message.on_hand') }}:
-                                <span class="num" x-text="qty(picked?.on_hand)"></span>
+                                <span class="num" x-text="qty((picked && picked.on_hand))"></span>
                             </span>
                             {{-- শেষ কত দামে কেনা হয়েছিল — নতুন দর এর সাথেই মেলানো হয় --}}
-                            <span class="text-2xs text-(--color-ink-muted)" x-show="picked?.last_rate > 0" x-cloak>
+                            <span class="text-2xs text-(--color-ink-muted)" x-show="(picked && picked.last_rate) > 0" x-cloak>
                                 {{ __('purchase::message.last_rate') }}:
-                                <span class="num" x-text="money(picked?.last_rate)"></span>
+                                <span class="num" x-text="money((picked && picked.last_rate))"></span>
                             </span>
                         </div>
                         {{-- ⭐ ঘরটা কেবল **খোঁজার সময়** — মালিকের নির্দেশ,
@@ -137,16 +137,16 @@
                                 text-(--color-badge-pending-ink)">
                         <span>
                             {{ __('purchase::message.rate_moved') }}
-                            <span class="num font-semibold" x-text="money(priceAsk?.was)"></span>
+                            <span class="num font-semibold" x-text="money((priceAsk && priceAsk.was))"></span>
                             →
-                            <span class="num font-semibold" x-text="money(priceAsk?.now)"></span>
+                            <span class="num font-semibold" x-text="money((priceAsk && priceAsk.now))"></span>
                         </span>
 
                         <span>
                             {{ __('purchase::message.price_would_become') }}
-                            <span class="num font-semibold" x-text="money(priceAsk?.from)"></span>
+                            <span class="num font-semibold" x-text="money((priceAsk && priceAsk.from))"></span>
                             →
-                            <span class="num font-bold" x-text="money(priceAsk?.to)"></span>
+                            <span class="num font-bold" x-text="money((priceAsk && priceAsk.to))"></span>
                         </span>
 
                         <button type="button" @click="takeSuggestedPrice()"
@@ -166,7 +166,7 @@
                                border border-(--color-border) bg-(--color-surface-card) shadow-lg">
                         <template x-for="p in visible" :key="p.id">
                             <li>
-                                <button type="button" @click="browsing = false; pick(p)"
+                                <button type="button" @click="pickFromList(p)"
                                         class="flex w-full items-center justify-between gap-3 px-3 py-2
                                                text-start text-sm hover:bg-(--color-surface-hover)">
                                     <span>
@@ -254,7 +254,7 @@
                                     {{-- ⓘ খালি মানে **পণ্যের নিজের একক** — তাই লেখাটাও
                                          সেটাই, একটা ড্যাশ নয়। ⚠️ ড্যাশ দেখে মানুষ ভাবতেন
                                          একক বাছা হয়নি, অথচ ওটাই স্বাভাবিক অবস্থা। --}}
-                                    <option value="" x-text="picked?.unit || '—'"></option>
+                                    <option value="" x-text="(picked && picked.unit) || '—'"></option>
                                     <template x-for="u in unitOptions" :key="u.id">
                                         <option :value="u.id" x-text="u.label"></option>
                                     </template>
@@ -300,7 +300,7 @@
                                         {{-- ⓘ খালি মানে **পণ্যের নিজের একক** — তাই লেখাটাও
                                          সেটাই, একটা ড্যাশ নয়। ⚠️ ড্যাশ দেখে মানুষ ভাবতেন
                                          একক বাছা হয়নি, অথচ ওটাই স্বাভাবিক অবস্থা। --}}
-                                    <option value="" x-text="picked?.unit || '—'"></option>
+                                    <option value="" x-text="(picked && picked.unit) || '—'"></option>
                                         <template x-for="u in unitOptions" :key="u.id">
                                             <option :value="u.id" x-text="u.label"></option>
                                         </template>

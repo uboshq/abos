@@ -37,7 +37,7 @@
 @endphp
 
 @if ($anchors)
-    <div x-data="anchorNav()" x-init="collect()" x-show="items.length > 1" x-cloak
+    <div x-data="anchorNav" x-init="collect()" x-show="items.length > 1" x-cloak
          data-anchor-nav
          class="sticky top-(--spacing-header) z-20 -mx-3 mb-3 flex gap-1 overflow-x-auto
                 border-b border-(--color-border) bg-(--color-surface-app) px-3 py-1.5
@@ -53,77 +53,4 @@
         </template>
     </div>
 
-    @once
-        @push('scripts')
-            <script @nonce>
-                function anchorNav() {
-                    return {
-                        items: [],
-                        active: null,
-
-                        /* পাতার অংশগুলো — যাদের নিজের একটা <h2> আছে। */
-                        collect() {
-                            const main = document.querySelector('main') || document.body;
-                            const found = [];
-
-                            main.querySelectorAll('section').forEach((section, i) => {
-                                const heading = section.querySelector('h2');
-                                if (!heading) return;
-
-                                const label = heading.textContent.trim();
-                                if (label === '') return;
-
-                                /* নিজের id না থাকলে একটা বসানো হয়। ক্রমটাও
-                                   নামের সাথে রাখা হয়, কারণ দুইটা অংশের নাম
-                                   এক হলে দুইটা এক id পেত আর দ্বিতীয়টায়
-                                   কোনোদিন যাওয়া যেত না। */
-                                if (!section.id) section.id = 'sec-' + i;
-
-                                found.push({ id: section.id, label });
-                            });
-
-                            this.items = found;
-                            this.active = found.length ? found[0].id : null;
-
-                            if (found.length > 1) this.watch(found);
-                        },
-
-                        /* কোন অংশটা এখন চোখের সামনে। */
-                        watch(found) {
-                            if (!('IntersectionObserver' in window)) return;
-
-                            const seen = new IntersectionObserver((entries) => {
-                                entries
-                                    .filter((e) => e.isIntersecting)
-                                    .forEach((e) => { this.active = e.target.id; });
-                            }, { rootMargin: '-20% 0px -70% 0px' });
-
-                            found.forEach((f) => {
-                                const el = document.getElementById(f.id);
-                                if (el) seen.observe(el);
-                            });
-                        },
-
-                        go(id) {
-                            const el = document.getElementById(id);
-                            if (!el) return;
-
-                            /* `scrollIntoView` পটিটার নিচে অংশটাকে লুকিয়ে
-                               ফেলত — পটিটা sticky, তাই তার উচ্চতাটা বাদ
-                               দিয়ে নামতে হয়। */
-                            const bar = document.querySelector('[data-anchor-nav]');
-                            const gap = (bar ? bar.getBoundingClientRect().height : 0) + 8;
-
-                            window.scrollTo({
-                                top: el.getBoundingClientRect().top + window.scrollY - gap,
-                                behavior: 'smooth',
-                            });
-
-                            this.active = id;
-                        },
-                    };
-                }
-            </script>
-        @endpush
-    @endonce
 @endif

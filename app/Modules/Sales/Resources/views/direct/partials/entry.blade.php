@@ -144,13 +144,13 @@
                                                    text-start text-xl font-semibold
                                                    transition-colors hover:border-(--color-border)"
                                             :class="picked ? 'text-(--color-ink)' : 'text-(--color-ink-muted)'"
-                                            x-text="picked?.name || @js(__('sales::message.type_or_pick'))">
+                                            x-text="(picked && picked.name) || @js(__('sales::message.type_or_pick'))">
                                     </button>
 
                                     <span x-show="picked" x-cloak
                                           class="num shrink-0 rounded-(--radius-field) border border-(--color-border)
                                                  px-2 py-0.5 text-2xs font-medium text-(--color-ink-muted)"
-                                          x-text="picked?.code"></span>
+                                          x-text="(picked && picked.code)"></span>
                                 </div>
 
                                 <label class="block" x-show="pickerOpen" x-cloak>
@@ -224,10 +224,10 @@
                                 <span class="{{ $big ? 'text-sm' : 'text-2xs' }}">
                                     <span class="text-(--color-ink-muted)">{{ __($label) }}</span>
                                     <span class="num font-bold {{ $tone }}"
-                                          x-text="qty(picked?.{{ $key }})"></span>
+                                          x-text="qty(picked && picked.{{ $key }})"></span>
                                     <span class="text-2xs text-(--color-ink-muted)"
-                                          x-show="picked?.unit" x-cloak
-                                          x-text="picked?.unit"></span>
+                                          x-show="(picked && picked.unit)" x-cloak
+                                          x-text="(picked && picked.unit)"></span>
                                 </span>
                             @endforeach
                         </div>
@@ -282,10 +282,10 @@
                                     <span class="shrink-0 text-2xs text-(--color-ink-muted)">
                                         {{ __('sales::field.stock_short') }}
                                         <span class="num font-bold"
-                                              :class="Number(p.available) > 0
-                                                  && Number(p.available) <= Number(p.reorder || 0)
+                                              :class="$num(p.available) > 0
+                                                  && $num(p.available) <= $num(p.reorder || 0)
                                                       ? 'text-(--color-danger)'
-                                                      : (Number(p.available) <= 0
+                                                      : ($num(p.available) <= 0
                                                           ? 'text-(--color-danger)'
                                                           : 'text-(--color-success)')"
                                               x-text="qty(p.available)"></span>
@@ -293,7 +293,7 @@
                                     </span>
 
                                     <span class="shrink-0 text-2xs text-(--color-ink-muted)"
-                                          x-show="Number(p.free) > 0" x-cloak>
+                                          x-show="$num(p.free) > 0" x-cloak>
                                         {{ __('sales::field.free_short') }}
                                         <span class="num font-bold text-(--color-success)"
                                               x-text="qty(p.free)"></span>
@@ -427,7 +427,7 @@
                                 </template>
 
                                 <template x-if="entryUnits.length === 0">
-                                    <input type="text" readonly :value="picked?.unit || ''"
+                                    <input type="text" readonly :value="(picked && picked.unit) || ''"
                                            class="h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
                                                   bg-(--color-surface-app) px-2 text-sm text-(--color-ink-muted)">
                                 </template>
@@ -441,7 +441,7 @@
                                 </x-sales::entry-field>
 
                                 <x-sales::entry-field label="sales::field.uom" width="w-full">
-                                    <input type="text" readonly :value="picked?.unit || ''"
+                                    <input type="text" readonly :value="(picked && picked.unit) || ''"
                                            class="h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
                                                   bg-(--color-surface-app) px-2 text-sm text-(--color-ink-muted)">
                                 </x-sales::entry-field>
@@ -561,7 +561,7 @@
                                     </label>
 
                                     <button type="button" @click="commitGift()"
-                                            :disabled="! giftDraft.productId || ! (Number(giftDraft.qty) > 0)"
+                                            :disabled="! giftDraft.productId || ! ($num(giftDraft.qty) > 0)"
                                             class="h-(--spacing-field-dense) whitespace-nowrap rounded-(--radius-field)
                                                    bg-(--color-badge-pending-ink) px-4 text-xs font-semibold text-white
                                                    disabled:opacity-40">
@@ -583,8 +583,8 @@
                                     <span class="inline-flex items-center gap-1 rounded-full
                                                  bg-(--color-badge-pending-bg) px-2 py-0.5 text-2xs
                                                  text-(--color-badge-pending-ink)">
-                                        🎁 <span x-text="(catalogue.find(p => String(p.id) === String(g.productId)) || {}).name || ''"></span>
-                                        <span class="num" x-text="qty(Number(g.qty || 0))"></span>
+                                        🎁 <span x-text="productName(g.productId)"></span>
+                                        <span class="num" x-text="qty($num(g.qty || 0))"></span>
                                         <button type="button" @click="entry.gifts.splice(n, 1)"
                                                 class="text-(--color-danger)">&times;</button>
                                     </span>

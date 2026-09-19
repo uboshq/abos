@@ -68,15 +68,11 @@
          নিয়মিত মুনাফার জমায় মুনাফার খাত। --}}
     <section data-boxed class="mb-4 rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card) p-4"
-             x-data="{
-                 kinds: {{ Js::from($shapes) }},
-                 kindId: '{{ old('kind_id') }}',
-                 heldBy: '{{ old('held_by', $issuer === 'bank' ? 'business' : 'owner') }}',
-
-                 get shape() { return this.kinds[this.kindId]?.shape ?? null },
-                 get personalOnly() { return this.kinds[this.kindId]?.personal ?? false },
-             }"
-             x-effect="if (personalOnly) heldBy = 'owner'">
+             x-data="depositOpener({
+                 kinds: @js($shapes),
+                 kindId: @js((string) old('kind_id')),
+                 heldBy: @js((string) old('held_by', $issuer === 'bank' ? 'business' : 'owner')),
+             })">
         <h2 class="mb-3 font-semibold">{{ __('finance::field.open_a_deposit') }}</h2>
 
 

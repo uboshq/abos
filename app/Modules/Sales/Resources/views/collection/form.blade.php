@@ -118,43 +118,12 @@
         <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="mb-3 font-semibold">{{ __('sales::message.lines') }}</h2>
 
-            <div x-data="{
-                    /*
-                     * গ্রাহকের নম্বরটা এখানেই রাখা, বাইরের কোনো
-                     * `x-data` থেকে ধার করা নয়।
-                     *
-                     * Alpine-এ ভেতরের কম্পোনেন্ট বাইরেরটার ঘর পড়তে
-                     * পারে, কিন্তু সেটা নির্ভর করে স্কোপ-চেইনের উপর —
-                     * আর একদিন কেউ মাঝখানে আরেকটা `x-data` বসালে
-                     * তালিকাটা নীরবে খালি হয়ে যেত। ঘটনাটা নিজের সাথে
-                     * নম্বরটা বয়ে আনে, তাই মাঝখানে কী আছে তাতে কিছু
-                     * আসে যায় না।
-                     */
-                    customerId: {{ Illuminate\Support\Js::from((string) old('customer_id', $invoice?->customer_id ?? $collection->customer_id ?? '')) }},
-                    rows: {{ Illuminate\Support\Js::from($existing) }},
-                    open: {{ Illuminate\Support\Js::from($openList) }},
-                    add() { this.rows.push({ sales_invoice_id: '', amount: '' }); },
-                    remove(i) { this.rows.splice(i, 1); if (this.rows.length === 0) this.add(); },
-                    /* এই গ্রাহকের বিলগুলোই — গ্রাহক না বাছা থাকলে কিছুই নয়,
-                       কারণ কার টাকা তা না জেনে বিল বাছার কোনো মানে নেই। */
-                    get mine() {
-                        return this.customerId
-                            ? this.open.filter(o => o.customer_id === String(this.customerId))
-                            : [];
-                    },
-                    /* বিল বাছলে তার বকেয়াটাই বসে — মানুষ প্রায় সবসময়
-                       পুরোটাই নেন, আর টাইপ করা মানে টাইপের ভুল। */
-                    fillDue(row) {
-                        const found = this.open.find(o => o.id === String(row.sales_invoice_id));
-                        if (found) { row.amount = found.due; }
-                    },
-                    get allocated() {
-                        return this.rows.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
-                    },
-                 }"
-                 @customer-picked.window="customerId = $event.detail;
-                                          rows.forEach(r => { r.sales_invoice_id = ''; r.amount = ''; })"
-                 x-init="if (rows.length === 0) add()">
+            <div x-data="invoiceCollection({
+                             customerId: @js((string) old('customer_id', $invoice?->customer_id ?? $collection->customer_id ?? '')),
+                             rows: @js($existing),
+                             open: @js($openList),
+                           })"
+                 @customer-picked.window="pickCustomer($event.detail)">
 
                 <div class="table-responsive">
                     <table class="ui-lines table-cards w-full text-sm">
@@ -170,7 +139,7 @@
                             <template x-for="(row, i) in rows" :key="i">
                                 <tr class="border-b border-(--color-border)">
                                     <td class="cell-input" data-label="{{ __('sales::field.invoice') }}">
-                                        <select :name="`lines[${i}][sales_invoice_id]`" x-model="row.sales_invoice_id"
+                                        <select :name="'lines[' + (i) + '][sales_invoice_id]'" x-model="row.sales_invoice_id"
                                                 @change="fillDue(row)"
                                                 class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                                                        bg-(--color-surface-card) px-2">
@@ -182,7 +151,7 @@
                                     </td>
                                     <td class="cell-input" data-label="{{ __('sales::field.amount') }}">
                                         <input type="number" step="0.01" inputmode="decimal"
-                                               :name="`lines[${i}][amount]`" x-model="row.amount"
+                                               :name="'lines[' + (i) + '][amount]'" x-model="row.amount"
                                                class="num h-(--spacing-field-compact) w-full sm:w-32 rounded-(--radius-field)
                                                       border border-(--color-border)
                                                       bg-(--color-surface-card) px-2 text-end">

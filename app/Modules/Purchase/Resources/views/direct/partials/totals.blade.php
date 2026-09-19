@@ -167,7 +167,7 @@
                               ? @js(__('purchase::field.previous_advance'))
                               : @js(__('purchase::field.previous_due'))"></dt>
                         <dd class="num"
-                            x-text="previousDue ? money(Math.abs(previousDue)) : '—'"></dd>
+                            x-text="previousDue ? money($abs(previousDue)) : '—'"></dd>
                     </div>
                 </dl>
 

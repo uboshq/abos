@@ -637,7 +637,7 @@
                  <b>যাকে পাঠানো হচ্ছে তার লগইন লাগবে</b> — লিংকটা এই
                  প্রতিষ্ঠানের ভেতরের। বাইরের কাউকে পাঠাতে হলে CSV। --}}
             @if ($share)
-                <div x-data="{ open: false, copied: false }" class="relative">
+                <div x-data="shareMenu({ url: @js($shareUrl) })" class="relative">
                     <button type="button" @click="open = ! open" @click.outside="open = false"
                             @keydown.escape.window="open = false"
                             :aria-expanded="open.toString()"
@@ -664,7 +664,7 @@
                             {{ __('core.toolbar.share_email') }}
                         </a>
                         <button type="button"
-                                @click="navigator.clipboard.writeText('{{ $shareUrl }}'); copied = true; setTimeout(() => copied = false, 2000)"
+                                @click="copy()"
                                 aria-label="{{ __('core.toolbar.share_copy') }}"
                                 class="block w-full px-3 py-2 text-start text-sm hover:bg-(--color-surface-hover)">
                             <span x-show="! copied">{{ __('core.toolbar.share_copy') }}</span>

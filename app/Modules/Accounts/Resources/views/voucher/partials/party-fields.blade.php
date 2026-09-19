@@ -132,7 +132,7 @@
                            border-(--color-border) bg-(--color-surface-card) px-3">
                 <option value="">—</option>
                 <template x-for="p in partyOptions" :key="p.id">
-                    <option :value="p.id" x-text="p.label" :selected="String(p.id) === partyId"></option>
+                    <option :value="p.id" x-text="p.label" :selected="$str(p.id) === partyId"></option>
                 </template>
             </select>
 
@@ -228,7 +228,7 @@
                                     <td class="p-2 font-medium" x-text="b.no"></td>
                                     <td class="p-2" x-text="b.date"></td>
                                     <td class="num p-2 text-end" x-text="b.age"></td>
-                                    <td class="num p-2 text-end" x-text="Number(b.outstanding).toFixed(2)"></td>
+                                    <td class="num p-2 text-end" x-text="$fixed(b.outstanding)"></td>
                                     <td class="p-2 text-end">
                                         <input type="number" step="0.01" inputmode="decimal"
                                                class="num w-28 rounded-(--radius-field) border border-(--color-border) p-1 text-end"

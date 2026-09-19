@@ -82,33 +82,7 @@
              গেলে রসিদটা সারির সাথে বাঁধা পড়ে না; বাঁধা পড়ে তালিকার
              সারির বোতাম থেকে গেলে ([[capital/partials/state]])। --}}
         <x-ui.button tone="primary" class="ms-auto" :href="$to"
-                     x-on:click="
-                         (() => {
-                             const form = $el.closest('form');
-                             if (! form) { return; }
-
-                             const url = new URL($el.href, window.location.origin);
-                             const pick = {
-                                 amount: ['amount'],
-                                 narration: ['narration', 'reason'],
-                                 party_id: ['person_id'],
-                             };
-
-                             for (const [key, names] of Object.entries(pick)) {
-                                 for (const name of names) {
-                                     const box = form.querySelector('[name=' + name + ']');
-                                     if (box && box.value) { url.searchParams.set(key, box.value); break; }
-                                 }
-                             }
-
-                             /* ⓘ পক্ষের ধরন বসে কেবল যখন সত্যিই একজন বাছা হয়েছে */
-                             if (url.searchParams.has('party_id')) {
-                                 url.searchParams.set('party_type', 'person');
-                             }
-
-                             $el.href = url.toString();
-                         })()
-                     ">
+                     x-data="handoffLink" x-on:click="carry()">
             {{ $action ?? __('finance::action.money_arrived') }}
         </x-ui.button>
     @endif

@@ -157,24 +157,24 @@
 
                     {{-- Alpine দিয়ে যোগ করা সারিগুলো। JavaScript বন্ধ থাকলেও
                          উপরের সারিগুলো কাজ করে — কেবল যোগ করার সুবিধাটা যায়। --}}
-                    <template x-for="n in Math.max(0, rows - {{ count($rows) }})" :key="n">
+                    <template x-for="n in $max(0, rows - {{ count($rows) }})" :key="n">
                         <div class="grid gap-2 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
                             <input type="text" list="look-tokens"
-                                   :name="`tokens[${ {{ count($rows) }} + n - 1 }][name]`"
+                                   :name="'tokens[' + ({{ count($rows) }} + n - 1) + '][name]'"
                                    placeholder="{{ __('core.look.token_name') }}"
                                    aria-label="{{ __('core.look.token_name') }}"
                                    class="w-full rounded-(--radius-field) border border-(--color-border)
                                           bg-(--color-surface-app) px-2 py-1.5 font-mono text-sm">
 
                             <input type="text"
-                                   :name="`tokens[${ {{ count($rows) }} + n - 1 }][light]`"
+                                   :name="'tokens[' + ({{ count($rows) }} + n - 1) + '][light]'"
                                    placeholder="{{ __('core.appearance.light') }}"
                                    aria-label="{{ __('core.appearance.light') }}"
                                    class="w-full rounded-(--radius-field) border border-(--color-border)
                                           bg-(--color-surface-app) px-2 py-1.5 font-mono text-sm">
 
                             <input type="text"
-                                   :name="`tokens[${ {{ count($rows) }} + n - 1 }][dark]`"
+                                   :name="'tokens[' + ({{ count($rows) }} + n - 1) + '][dark]'"
                                    placeholder="{{ __('core.appearance.dark') }}"
                                    aria-label="{{ __('core.appearance.dark') }}"
                                    class="w-full rounded-(--radius-field) border border-(--color-border)

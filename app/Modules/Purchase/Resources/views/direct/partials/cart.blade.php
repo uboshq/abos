@@ -45,8 +45,8 @@
                                     <td class="num" x-text="index + 1"></td>
                                     <td>
                                         <span x-text="line.name"></span>
-                                        <input type="hidden" :name="`lines[${index}][product_id]`" :value="line.id">
-                                        <input type="hidden" :name="`lines[${index}][sales_price]`"
+                                        <input type="hidden" :name="'lines[' + (index) + '][product_id]'" :value="line.id">
+                                        <input type="hidden" :name="'lines[' + (index) + '][sales_price]'"
                                                :value="line.sales_price">
 
                                         {{-- ⭐ গতবারের দর — সারিতেই, ভাসমান নয়।
@@ -64,7 +64,7 @@
                                             <span class="block text-2xs text-(--color-ink-muted)">
                                                 {{ __('purchase::message.last_from_supplier') }}:
                                                 <span class="num" x-text="money(lastRateFor(line).rate)"></span>
-                                                <span x-text="`· ${lastRateFor(line).on}`"></span>
+                                                <span x-text="'· ' + (lastRateFor(line).on)"></span>
                                             </span>
                                         </template>
 
@@ -82,7 +82,7 @@
                                     {{-- দর — পরিমাণের আগে, ছবির ক্রম --}}
                                     <td>
                                         <input type="number" step="0.01" inputmode="decimal"
-                                               :name="`lines[${index}][rate]`" x-model="line.rate"
+                                               :name="'lines[' + (index) + '][rate]'" x-model="line.rate"
                                                class="num h-(--spacing-field-dense) w-24 rounded-(--radius-field) border
                                                       border-(--color-border) bg-(--color-surface-card) px-1 text-end">
                                     </td>
@@ -94,10 +94,10 @@
                                          ভুলটার দাম একশো গুণ। --}}
                                     <td>
                                         <input type="number" step="0.01" inputmode="decimal"
-                                               :name="`lines[${index}][qty]`" x-model="line.qty"
+                                               :name="'lines[' + (index) + '][qty]'" x-model="line.qty"
                                                class="num h-(--spacing-field-dense) w-20 rounded-(--radius-field) border
                                                       border-(--color-border) bg-(--color-surface-card) px-1 text-end">
-                                        <input type="hidden" :name="`lines[${index}][unit_id]`" :value="line.unit_id">
+                                        <input type="hidden" :name="'lines[' + (index) + '][unit_id]'" :value="line.unit_id">
                                         <span class="block text-end text-2xs text-(--color-ink-muted)"
                                               x-text="unitName(line.unit_id, line)"></span>
                                     </td>
@@ -105,10 +105,10 @@
                                     @if ($show['free_qty'])
                                         <td>
                                             <input type="number" step="0.01" inputmode="decimal"
-                                                   :name="`lines[${index}][free_qty]`" x-model="line.free_qty"
+                                                   :name="'lines[' + (index) + '][free_qty]'" x-model="line.free_qty"
                                                    class="num h-(--spacing-field-dense) w-20 rounded-(--radius-field) border
                                                           border-(--color-border) bg-(--color-surface-card) px-1 text-end">
-                                            <input type="hidden" :name="`lines[${index}][free_unit_id]`"
+                                            <input type="hidden" :name="'lines[' + (index) + '][free_unit_id]'"
                                                    :value="line.free_unit_id">
                                             <span class="block text-end text-2xs text-(--color-ink-muted)"
                                                   x-text="unitName(line.free_unit_id, line)"></span>
@@ -125,7 +125,7 @@
                                     @if ($show['line_discount'])
                                         <td>
                                             <input type="number" step="0.01" inputmode="decimal"
-                                                   :name="`lines[${index}][discount]`" x-model="line.discount"
+                                                   :name="'lines[' + (index) + '][discount]'" x-model="line.discount"
                                                    class="num h-(--spacing-field-dense) w-20 rounded-(--radius-field) border
                                                           border-(--color-border) bg-(--color-surface-card) px-1 text-end">
                                         </td>
@@ -148,13 +148,13 @@
                                         <td>
                                             <template x-if="line.vat_mode === 'amount'">
                                                 <input type="number" step="0.01" inputmode="decimal"
-                                                       :name="`lines[${index}][tax]`" x-model="line.tax"
+                                                       :name="'lines[' + (index) + '][tax]'" x-model="line.tax"
                                                        class="num h-(--spacing-field-dense) w-20 rounded-(--radius-field) border
                                                               border-(--color-border) bg-(--color-surface-card) px-1 text-end">
                                             </template>
 
                                             <template x-if="line.vat_mode === 'none'">
-                                                <input type="hidden" :name="`lines[${index}][tax]`" value="0">
+                                                <input type="hidden" :name="'lines[' + (index) + '][tax]'" value="0">
                                             </template>
 
                                             <span class="block text-end text-2xs text-(--color-ink-muted)"
@@ -194,7 +194,7 @@
                                  সংখ্যা নয় — মাঝখানের একটা সারি মুছে দিলে ক্রমিক
                                  সংখ্যাগুলো পিছিয়ে যেত আর দুইটা উপহার একই নামে
                                  জমা পড়ত। --}}
-                            <template x-for="line in lines" :key="`g${line.key}`">
+                            <template x-for="line in lines" :key="'g' + (line.key)">
                                 <template x-for="(gift, gi) in line.gifts" :key="gift.key">
                                     <tr class="bg-(--color-surface-sunken)/50">
                                         <td></td>
@@ -217,7 +217,7 @@
                                                     {{ __('purchase::field.gift') }}
                                                 </span>
 
-                                                <select :name="`gifts[${line.key}-${gi}][product_id]`"
+                                                <select :name="'gifts[' + (line.key) + '-' + (gi) + '][product_id]'"
                                                         x-model="gift.product_id" required
                                                         class="h-(--spacing-field-dense) rounded-(--radius-field) border
                                                                border-(--color-border) bg-(--color-surface-card)
@@ -238,7 +238,7 @@
                                                 </select>
 
                                                 <input type="number" step="0.01" inputmode="decimal" min="0"
-                                                       :name="`gifts[${line.key}-${gi}][qty]`" x-model="gift.qty"
+                                                       :name="'gifts[' + (line.key) + '-' + (gi) + '][qty]'" x-model="gift.qty"
                                                        placeholder="{{ __('purchase::field.qty') }}"
                                                        class="num h-(--spacing-field-dense) w-16 rounded-(--radius-field)
                                                               border border-(--color-border) bg-(--color-surface-card)
@@ -263,7 +263,7 @@
 
                                                      ⓘ খালি মানে পণ্যের নিজের একক, ঠিক উপরের
                                                      সারির নিয়মেই। --}}
-                                                <select :name="`gifts[${line.key}-${gi}][unit_id]`"
+                                                <select :name="'gifts[' + (line.key) + '-' + (gi) + '][unit_id]'"
                                                         x-model="gift.unit_id"
                                                         class="h-(--spacing-field-dense) rounded-(--radius-field) border
                                                                border-(--color-border) bg-(--color-surface-card)
@@ -275,7 +275,7 @@
                                                 </select>
 
                                                 <input type="text" maxlength="191"
-                                                       :name="`gifts[${line.key}-${gi}][remarks]`"
+                                                       :name="'gifts[' + (line.key) + '-' + (gi) + '][remarks]'"
                                                        x-model="gift.remarks"
                                                        placeholder="{{ __('purchase::field.narration') }}"
                                                        class="h-(--spacing-field-dense) w-40 rounded-(--radius-field)
@@ -289,7 +289,7 @@
                                                      দিলে একদিন ভুল পণ্য বাছা হত, আর তখন "সাবানে আসল
                                                      ক্রয়দর কত পড়ল" হিসাবটা নীরবে ভুল হত। --}}
                                                 <input type="hidden"
-                                                       :name="`gifts[${line.key}-${gi}][against_product_id]`"
+                                                       :name="'gifts[' + (line.key) + '-' + (gi) + '][against_product_id]'"
                                                        :value="line.id">
 
                                                 <span class="text-2xs text-(--color-ink-muted)">

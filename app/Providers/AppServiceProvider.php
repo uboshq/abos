@@ -302,5 +302,16 @@ class AppServiceProvider extends ServiceProvider
          */
         Blade::directive('nonce', fn (): string => '<?php echo \'nonce="\', '
             .Csp::class.'::nonce(), \'"\'; ?>');
+
+        /*
+         * ⭐ `@js` — Laravel-এর নয়, CSP-Alpine যা পড়তে পারে সেটা।
+         *
+         * ⚠️ `@csrf`-এর মতোই ফ্রেমওয়ার্কের নির্দেশিকা বদলানো, আর কারণটাও
+         * একই: ১০২ জায়গায় `@js` বসে আছে, আর নতুন নাম দিলে ১০৩তমটা কেউ
+         * পুরনো নামেই লিখতেন — পর্দা চলত, কেবল বাংলা লেখাগুলো `u09ac`
+         * হয়ে যেত। ⓘ কী বদলায় আর কেন, [[AlpineLiteral]]-এ।
+         */
+        Blade::directive('js', fn (string $expression): string => '<?php echo '
+            .\App\Core\Support\AlpineLiteral::class.'::from('.$expression.'); ?>');
     }
 }

@@ -127,16 +127,9 @@
         <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="mb-3 font-semibold">{{ __('sales::message.lines') }}</h2>
 
-            <div x-data="{
-                    rows: {{ Illuminate\Support\Js::from($existing) }},
-                    add() { this.rows.push({ product_id: '', sales_invoice_line_id: '', qty: '', rate: '', tax: '', to_hold: false }); },
-                    remove(i) { this.rows.splice(i, 1); if (this.rows.length === 0) this.add(); },
-                    amount(row) {
-                        return (parseFloat(row.qty) || 0) * (parseFloat(row.rate) || 0) + (parseFloat(row.tax) || 0);
-                    },
-                    get total() { return this.rows.reduce((s, r) => s + this.amount(r), 0); },
-                 }"
-                 x-init="if (rows.length === 0) add()">
+            <div x-data="salesReturn({
+                             rows: @js($existing),
+                           })">
 
                 <div class="table-responsive">
                     <table class="ui-lines table-cards w-full text-sm">
@@ -156,7 +149,7 @@
                             <template x-for="(row, i) in rows" :key="i">
                                 <tr class="border-b border-(--color-border)">
                                     <td class="cell-input" data-label="{{ __('sales::field.product') }}">
-                                        <select :name="`lines[${i}][product_id]`" x-model="row.product_id"
+                                        <select :name="'lines[' + (i) + '][product_id]'" x-model="row.product_id"
                                                 class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                                                        bg-(--color-surface-card) px-2">
                                             <option value="">-</option>
@@ -165,13 +158,13 @@
                                             @endforeach
                                         </select>
 
-                                        <input type="hidden" :name="`lines[${i}][sales_invoice_line_id]`"
+                                        <input type="hidden" :name="'lines[' + (i) + '][sales_invoice_line_id]'"
                                                x-model="row.sales_invoice_line_id">
                                     </td>
 
                                     <td class="cell-input" data-label="{{ __('sales::field.quantity') }}">
                                         <input type="number" step="0.01" inputmode="decimal"
-                                               :name="`lines[${i}][qty]`" x-model="row.qty"
+                                               :name="'lines[' + (i) + '][qty]'" x-model="row.qty"
                                                class="num h-(--spacing-field-compact) w-full sm:w-24 rounded-(--radius-field)
                                                       border border-(--color-border)
                                                       bg-(--color-surface-card) px-2 text-end">
@@ -179,7 +172,7 @@
 
                                     <td class="cell-input" data-label="{{ __('sales::field.rate') }}">
                                         <input type="number" step="0.01" inputmode="decimal"
-                                               :name="`lines[${i}][rate]`" x-model="row.rate"
+                                               :name="'lines[' + (i) + '][rate]'" x-model="row.rate"
                                                class="num h-(--spacing-field-compact) w-full sm:w-24 rounded-(--radius-field)
                                                       border border-(--color-border)
                                                       bg-(--color-surface-card) px-2 text-end">
@@ -187,7 +180,7 @@
 
                                     <td class="cell-input" data-label="{{ __('sales::field.tax') }}">
                                         <input type="number" step="0.01" inputmode="decimal"
-                                               :name="`lines[${i}][tax]`" x-model="row.tax"
+                                               :name="'lines[' + (i) + '][tax]'" x-model="row.tax"
                                                class="num h-(--spacing-field-compact) w-full sm:w-24 rounded-(--radius-field)
                                                       border border-(--color-border)
                                                       bg-(--color-surface-card) px-2 text-end">
@@ -196,8 +189,8 @@
                                     {{-- আবার বেচা যাবে না — টিক দিলে মালটা গুদামে
                                          ঢুকবে কিন্তু Hold-এ থাকবে --}}
                                     <td class="cell-input" data-label="{{ __('sales::field.not_sellable') }}">
-                                        <input type="hidden" :name="`lines[${i}][to_hold]`" value="0">
-                                        <input type="checkbox" :name="`lines[${i}][to_hold]`" value="1"
+                                        <input type="hidden" :name="'lines[' + (i) + '][to_hold]'" value="0">
+                                        <input type="checkbox" :name="'lines[' + (i) + '][to_hold]'" value="1"
                                                x-model="row.to_hold" class="size-4">
                                     </td>
 

@@ -279,7 +279,7 @@ class TheMillSentABucketWithTheSoapTest extends TestCase
 
         foreach (['product_id', 'qty', 'against_product_id'] as $field) {
             $this->assertStringContainsString(
-                ':name="`gifts[${line.key}-${gi}]['.$field.']`"',
+                ":name=\"'gifts[' + (line.key) + '-' + (gi) + '][{$field}]'\"",
                 $html,
                 "উপহারের {$field} ঘরটার নাম Alpine দিয়ে বাঁধা নেই — ফর্মে ওটা যাবে না।"
             );

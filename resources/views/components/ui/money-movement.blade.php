@@ -118,30 +118,7 @@
 @endphp
 
 <div class="flex flex-col gap-3"
-     x-data="{
-         method: 'cash',
-         charge: 0,
-         chargeBy: 'us',
-         amount: 0,
-         notes: {},
-         chequeDate: '',
-
-         get counted() {
-             return Object.entries(this.notes)
-                 .reduce((sum, [note, qty]) => sum + (Number(note) * (Number(qty) || 0)), 0)
-         },
-         get countMatches() {
-             return Math.abs(this.counted - Number(this.amount || 0)) < 0.005
-         },
-         get postDated() {
-             return this.method === 'cheque' && this.chequeDate
-                 && this.chequeDate > new Date().toISOString().slice(0, 10)
-         },
-     }"
-     x-init="
-         amount = Number(($el.closest('form')?.querySelector('[name={{ $amountField }}]')?.value || 0))
-             .toString().replace(/[^0-9.]/g, '') || 0
-     ">
+     x-data="moneyMovement({ amountField: @js($amountField) })">
 
     {{--
         ── কে বহন করল, আর কখন ──────────────────────────────────────

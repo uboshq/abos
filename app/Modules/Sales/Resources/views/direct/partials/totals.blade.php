@@ -286,7 +286,7 @@
                 --}}
                 @if ($show['deposit'])
                     <x-sales::panel-row :label="__('sales::field.received_deposit')">
-                        <span class="num" x-text="Number(deposit) > 0 ? '৳' + money(deposit) : '—'"></span>
+                        <span class="num" x-text="$num(deposit) > 0 ? '৳' + money(deposit) : '—'"></span>
                     </x-sales::panel-row>
                 @endif
 
@@ -335,7 +335,7 @@
                             : @js(__('sales::field.previous_due'))"></span>
 
                     <span class="num"
-                          x-text="customer.due ? money(Math.abs(customer.due)) : '—'"></span>
+                          x-text="customer.due ? money($abs(customer.due)) : '—'"></span>
                 </div>
             </div>
 
@@ -371,7 +371,7 @@
                             : @js(__('sales::field.due'))"></span>
 
                     <span class="num text-sm font-bold"
-                          x-text="'৳' + money(Math.abs(outstanding))"></span>
+                          x-text="'৳' + money($abs(outstanding))"></span>
                 </div>
             </div>
 

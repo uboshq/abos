@@ -60,31 +60,14 @@
     --}}
     <form method="POST"
           action="{{ $isNew ? route('accounts.coa.store') : route('accounts.coa.update', $account) }}"
-          x-data="{
-              busy: false,
-              parent: '{{ old('parent_id', $preselectedParent) }}',
-              isGroup: {{ old('is_group', $account->is_group) ? 'true' : 'false' }},
-              isNew: {{ $isNew ? 'true' : 'false' }},
-              kind: '{{ old('money_kind', $account->money_kind) }}',
-              suggested: '',
-              async preview() {
-                  const wantsCode = this.isNew;
-                  const url = new URL('{{ route('accounts.coa.next-code') }}', window.location.origin);
-                  url.searchParams.set('parent', this.parent);
-                  url.searchParams.set('group', this.isGroup ? '1' : '0');
-                  try {
-                      const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
-                      if (! response.ok) { this.suggested = ''; return; }
-                      const body = await response.json();
-                      this.suggested = wantsCode ? (body.code ?? '') : '';
-                      this.kind = body.money_kind ?? '';
-                  } catch {
-                      this.suggested = '';
-                  }
-              },
-          }"
-          x-init="preview()"
-          @submit="busy ? $event.preventDefault() : (busy = true)"
+          x-data="coaForm({
+              parent: @js((string) old('parent_id', $preselectedParent)),
+              isGroup: @js((bool) old('is_group', $account->is_group)),
+              isNew: @js((bool) $isNew),
+              kind: @js((string) old('money_kind', $account->money_kind)),
+              url: @js(route('accounts.coa.next-code')),
+          })"
+          @submit="guard($event)"
           class="max-w-3xl space-y-4">
         @csrf
         @unless ($isNew) @method('PUT') @endunless

@@ -60,18 +60,7 @@
                 বিদ্যমান একটা কোড কখনো নিজে থেকে বদলায় না।
             --}}
             <div class="grid gap-3 sm:grid-cols-2"
-                 x-data="{
-                     touched: @js((string) old('code', $record->code) !== ''),
-                     suggest(name) {
-                         if (this.touched) return;
-
-                         // ইংরেজি অক্ষর ও অঙ্ক ছাড়া সব বাদ, তারপর গোড়া
-                         // থেকে তিন অক্ষর — সার্ভারে CodeFromName ঠিক
-                         // একই নিয়ম মানে, তাই দুই জায়গায় একই উত্তর আসে
-                         const letters = (name || '').replace(/[^A-Za-z0-9]+/g, '');
-                         this.$refs.code.value = letters.slice(0, 3).toUpperCase();
-                     },
-                 }">
+                 x-data="codeFromName({ touched: @js((string) old('code', $record->code) !== '') })">
                 <x-ui.field name="code" :label="__('master_data::field.code')"
                             :value="old('code', $record->code)"
                             x-ref="code" @input="touched = true" />

@@ -9,21 +9,7 @@
     অমিল হয়ে যেত — বোতামটা ভুল আইকন দেখাত।
 --}}
 <button type="button"
-        x-data="{
-            full: false,
-            sync() { this.full = Boolean(document.fullscreenElement) },
-            toggle() {
-                if (document.fullscreenElement) {
-                    document.exitFullscreen()
-                } else {
-                    // ব্যবহারকারীর ক্লিক ছাড়া, বা iframe/policy আটকালে
-                    // প্রত্যাখ্যাত হয়। ফেরানোর কিছু নেই — পাতা যেমন আছে
-                    // তেমনই থাকে, আর আইকনটা ঠিকই থাকে কারণ সেটা document
-                    // অনুসরণ করে।
-                    document.documentElement.requestFullscreen().catch(() => {})
-                }
-            },
-        }"
+        x-data="fullscreenToggle"
         x-init="sync()"
         @fullscreenchange.document="sync()"
         @click="toggle()"

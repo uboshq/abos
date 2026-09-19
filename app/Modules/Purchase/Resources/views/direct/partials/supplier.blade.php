@@ -74,18 +74,18 @@
                      জায়গা আছে বলেই হরফ বড় করতে হবে, এমন নয়; **নামটা পুরো
                      দেখা যাওয়াই বড় হওয়ার চেয়ে দামি**। --}}
                 <span class="min-w-0 flex-1 truncate text-lg font-semibold text-(--color-ink)"
-                      :title="supplier?.name"
-                      x-text="supplier?.name || @js(__('purchase::message.search_supplier'))"></span>
+                      :title="(supplier && supplier.name)"
+                      x-text="(supplier && supplier.name) || @js(__('purchase::message.search_supplier'))"></span>
             </div>
 
             <div x-show="supplier" x-cloak class="mt-1 truncate text-sm text-(--color-ink)">
                 <span class="text-(--color-ink-muted)">{{ __('purchase::field.mobile') }}:</span>
-                <span class="num font-semibold" x-text="supplier?.phone || '—'"></span>
+                <span class="num font-semibold" x-text="(supplier && supplier.phone) || '—'"></span>
             </div>
 
             <div x-show="supplier" x-cloak class="mt-1 truncate text-sm text-(--color-ink)"
-                 :title="supplier?.address"
-                 x-text="supplier?.address || '—'"></div>
+                 :title="(supplier && supplier.address)"
+                 x-text="(supplier && supplier.address) || '—'"></div>
 
             <div x-show="supplier" x-cloak class="mt-1 truncate text-2xs text-(--color-ink-muted)">
                 {{ __('purchase::field.received_by') }}:
@@ -117,7 +117,7 @@
                         border-2 border-(--color-brand-500) bg-(--color-surface-card)
                         p-1.5 text-(--color-ink) shadow-lg">
                 <input type="search" x-model="supplierTerm"
-                       x-effect="supplierPickerOpen && $nextTick(() => $el.focus())"
+                       x-effect="supplierPickerOpen && $focusSoon()"
                        placeholder="{{ __('purchase::message.search_supplier') }}"
                        class="h-(--spacing-field-dense) w-full rounded-(--radius-field)
                               border border-(--color-border) bg-(--color-surface-app) px-2 text-sm">

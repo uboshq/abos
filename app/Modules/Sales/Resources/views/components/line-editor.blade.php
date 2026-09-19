@@ -35,63 +35,10 @@
         : [];
 @endphp
 
-<div x-data="{
-        rows: {{ Illuminate\Support\Js::from($lines) }},
-        packs: {{ Illuminate\Support\Js::from($packs) }},
-        unitsFor(row) {
-            return this.packs[row.product_id] ?? [];
-        },
-        add() {
-            this.rows.push({
-                product_id: '', qty: '', rate: '', discount: '', tax: '', link: '', unit_id: '',
-            });
-        },
-        remove(i) {
-            this.rows.splice(i, 1);
-            if (this.rows.length === 0) this.add();
-        },
-
-        /*
-         * চার্ট/বাল্ক শীট থেকে আসা সারিগুলো।
-         *
-         * ── কেন মিলিয়ে বসানো হয়, বদলে দেওয়া হয় না ──────────────────
-         * অর্ডার ধরে খোলা চালানে লাইনগুলো আগে থেকেই ভরা থাকে। শীট
-         * Apply করলে ওগুলো মুছে গেলে মানুষ ভাবতেন শীটটা কিছু নষ্ট
-         * করেছে — অথচ তিনি শুধু আরও কয়েকটা পণ্য যোগ করতে চেয়েছিলেন।
-         *
-         * একই পণ্য দুই জায়গায় থাকলে শীটের সংখ্যাটাই থাকে: শীটে তিনি
-         * সবে ওটা টাইপ করেছেন, আর নতুন কথাটাই শেষ কথা।
-         */
-        absorb(rows) {
-            for (const row of rows) {
-                const existing = this.rows.find(r => String(r.product_id) === String(row.product_id));
-
-                if (existing) {
-                    existing.qty = row.qty;
-                    existing.rate = row.rate || existing.rate;
-                    continue;
-                }
-
-                this.rows.push({
-                    product_id: String(row.product_id),
-                    qty: row.qty, rate: row.rate ?? '',
-                    discount: '', tax: '', link: '', unit_id: '',
-                });
-            }
-
-            // শুরুর খালি সারিটা — শীট থেকে আসার পর ওটা কেবল একটা ফাঁকা ঘর
-            this.rows = this.rows.filter(r => r.product_id !== '' || this.rows.length === 1);
-        },
-        amount(row) {
-            const base = (parseFloat(row.qty) || 0) * (parseFloat(row.rate) || 0);
-            const net = base - (parseFloat(row.discount) || 0);
-            return net + (parseFloat(row.tax) || 0);
-        },
-        get total() {
-            return this.rows.reduce((sum, row) => sum + this.amount(row), 0);
-        },
-     }"
-     x-init="if (rows.length === 0) add()"
+<div x-data="salesLineEditor({
+                 rows: @js($lines),
+                 packs: @js($packs),
+               })"
      @bulk-applied.window="absorb($event.detail.rows)">
 
     <div class="table-responsive">
@@ -120,7 +67,7 @@
                 <template x-for="(row, i) in rows" :key="i">
                     <tr class="border-b border-(--color-border)">
                         <td class="cell-input" data-label="{{ __('sales::field.product') }}">
-                            <select :name="`lines[${i}][product_id]`" x-model="row.product_id" required
+                            <select :name="'lines[' + (i) + '][product_id]'" x-model="row.product_id" required
                                     @change="row.unit_id = ''"
                                     class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                                            bg-(--color-surface-card) px-2">
@@ -133,7 +80,7 @@
 
                         @if ($linkField)
                             <td class="cell-input" data-label="{{ __('sales::field.'.($linkField === 'purchase_order_line_id' ? 'order' : 'receipt')) }}">
-                                <select :name="`lines[${i}][{{ $linkField }}]`" x-model="row.link"
+                                <select :name="'lines[' + (i) + '][{{ $linkField }}]'" x-model="row.link"
                                         class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                                                bg-(--color-surface-card) px-2">
                                     <option value="">-</option>
@@ -146,7 +93,7 @@
 
                         <td class="cell-input" data-label="{{ __('sales::field.quantity') }}">
                             <input type="number" step="0.01" inputmode="decimal" required
-                                   :name="`lines[${i}][{{ $qtyField }}]`" x-model="row.qty"
+                                   :name="'lines[' + (i) + '][{{ $qtyField }}]'" x-model="row.qty"
                                    class="num h-(--spacing-field-compact) w-full sm:w-28 rounded-(--radius-field) border border-(--color-border)
                                           bg-(--color-surface-card) px-2 text-end">
                         </td>
@@ -165,7 +112,7 @@
                                 সার্ভার অনুরোধটা ফিরিয়ে দিত।
                             --}}
                             <td class="cell-input" data-label="{{ __('sales::field.unit') }}">
-                                <select :name="`lines[${i}][unit_id]`" x-model="row.unit_id"
+                                <select :name="'lines[' + (i) + '][unit_id]'" x-model="row.unit_id"
                                         x-show="unitsFor(row).length > 0"
                                         class="h-(--spacing-field-compact) w-full sm:w-28 rounded-(--radius-field) border border-(--color-border)
                                                bg-(--color-surface-card) px-2">
@@ -179,7 +126,7 @@
 
                         <td class="cell-input" data-label="{{ __('sales::field.rate') }}">
                             <input type="number" step="0.0001" inputmode="decimal" required
-                                   :name="`lines[${i}][rate]`" x-model="row.rate"
+                                   :name="'lines[' + (i) + '][rate]'" x-model="row.rate"
                                    class="num h-(--spacing-field-compact) w-full sm:w-28 rounded-(--radius-field) border border-(--color-border)
                                           bg-(--color-surface-card) px-2 text-end">
                         </td>
@@ -187,13 +134,13 @@
                         @if ($showDiscount)
                             <td class="cell-input" data-label="{{ __('sales::field.discount') }}">
                                 <input type="number" step="0.01" inputmode="decimal"
-                                       :name="`lines[${i}][discount]`" x-model="row.discount"
+                                       :name="'lines[' + (i) + '][discount]'" x-model="row.discount"
                                        class="num h-(--spacing-field-compact) w-full sm:w-24 rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-card) px-2 text-end">
                             </td>
                             <td class="cell-input" data-label="{{ __('sales::field.tax') }}">
                                 <input type="number" step="0.01" inputmode="decimal"
-                                       :name="`lines[${i}][tax]`" x-model="row.tax"
+                                       :name="'lines[' + (i) + '][tax]'" x-model="row.tax"
                                        class="num h-(--spacing-field-compact) w-full sm:w-24 rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-card) px-2 text-end">
                             </td>

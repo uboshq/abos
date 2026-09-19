@@ -93,22 +93,10 @@
          চালু সবগুলো। ⛔ ছোটগুলো বাদ দিলে খুচরার হিসাব মিলত না, আর
          দোকানের নগদে খুচরাই সবচেয়ে বেশি। --}}
     <template x-if="pay === 'cash'">
-        <fieldset x-data="{
-                      n: { 1000: 0, 500: 0, 200: 0, 100: 0, 50: 0, 20: 0, 10: 0, 5: 0, 2: 0, 1: 0 },
-                      written: 0,
-                      get counted() {
-                          return Object.entries(this.n)
-                              .reduce((t, [note, count]) => t + (Number(note) * (Number(count) || 0)), 0);
-                      },
-                      money(v) {
-                          return new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2 }).format(v || 0);
-                      },
-                      readWritten() {
-                          const box = this.$root.closest('form')?.querySelector('[name=amount]');
-                          this.written = Number(box?.value || 0);
-                      },
-                  }"
-                  x-init="readWritten()"
+        <fieldset x-data="noteTally({
+                      matches: @js(__('finance::message.cash_matches')),
+                      differs: @js(__('finance::message.cash_differs', ['counted' => '__C__', 'written' => '__W__', 'gap' => '__G__'])),
+                  })"
                   x-on:input.window="readWritten()"
                   class="mt-3 rounded-(--radius-card) border border-(--color-border) p-3">
 
@@ -147,12 +135,7 @@
                x-bind:class="counted === written
                    ? 'bg-badge-success-bg text-badge-success-ink'
                    : 'bg-badge-warning-bg text-badge-warning-ink'"
-               x-text="counted === written
-                   ? @js(__('finance::message.cash_matches'))
-                   : @js(__('finance::message.cash_differs', ['counted' => '__C__', 'written' => '__W__', 'gap' => '__G__']))
-                       .replace('__C__', '৳ ' + money(counted))
-                       .replace('__W__', '৳ ' + money(written))
-                       .replace('__G__', '৳ ' + money(Math.abs(written - counted)))"></p>
+               x-text="verdict"></p>
         </fieldset>
     </template>
 

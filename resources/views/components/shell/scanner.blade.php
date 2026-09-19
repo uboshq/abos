@@ -71,7 +71,7 @@
     <div class="flex flex-1 items-center justify-center overflow-auto p-4">
         <div
             class="relative select-none touch-none"
-            x-bind:style="`width:${$store.scanner.viewWidth}px;height:${$store.scanner.viewHeight}px`"
+            x-bind:style="$store.scanner.viewBox"
             x-on:pointermove="$store.scanner.move($event)"
             x-on:pointerup="$store.scanner.drop()"
             x-on:pointerleave="$store.scanner.drop()"
@@ -103,9 +103,9 @@
                         <button
                             type="button"
                             x-on:pointerdown.prevent="$store.scanner.grab(index)"
-                            x-bind:style="`left:${corner.x}px;top:${corner.y}px`"
+                            x-bind:style="{ left: corner.x + 'px', top: corner.y + 'px' }"
                             class="absolute -ml-5.5 -mt-5.5 flex h-11 w-11 items-center justify-center rounded-full"
-                            x-bind:aria-label="`{{ __('core.scan.corner') }} ${index + 1}`"
+                            x-bind:aria-label="'{{ __('core.scan.corner') }} ' + (index + 1)"
                         >
                             <span class="block h-4 w-4 rounded-full border-2 border-white bg-[rgb(37,99,235)] shadow"></span>
                         </button>
@@ -126,7 +126,7 @@
                     <div
                         x-on:pointerdown.prevent="$store.scanner.grabSquare()"
                         class="absolute cursor-move rounded-full border-2 border-white shadow-[0_0_0_9999px_rgba(0,0,0,0.45)]"
-                        x-bind:style="`left:${$store.scanner.square.x}px;top:${$store.scanner.square.y}px;width:${$store.scanner.square.size}px;height:${$store.scanner.square.size}px`"
+                        x-bind:style="$store.scanner.squareBox"
                     ></div>
                 </div>
             </template>
@@ -141,7 +141,7 @@
                 type="range"
                 min="20"
                 max="100"
-                x-bind:value="Math.round($store.scanner.square.size * 100 / Math.min($store.scanner.viewWidth, $store.scanner.viewHeight))"
+                x-bind:value="$store.scanner.squarePercent"
                 x-on:input="$store.scanner.resize($event.target.value)"
                 class="w-full max-w-xs"
             >
