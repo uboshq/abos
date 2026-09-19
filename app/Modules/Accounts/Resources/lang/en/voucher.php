@@ -16,5 +16,7 @@ return [
         'journal' => 'Journal',
         'contra' => 'Contra',
         'others' => 'Others Voucher',
+        'purchase' => 'Purchase',
+        'sales' => 'Sales',
     ],
 ];

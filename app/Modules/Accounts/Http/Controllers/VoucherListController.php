@@ -7,11 +7,13 @@ namespace App\Modules\Accounts\Http\Controllers;
 use App\Core\Concerns\SortsLists;
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
+use App\Models\LedgerEntry;
 use App\Modules\Accounts\Models\Voucher;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 /**
@@ -58,6 +60,37 @@ class VoucherListController extends Controller implements HasMiddleware
      */
     public const SALES_INVOICE_SOURCE = 'sales_invoice';
 
+    /** ⓘ একই কারণে হাতে লেখা, আর একই পাহারা — উপরের মন্তব্য দেখুন। */
+    public const PURCHASE_BILL_SOURCE = 'purchase_bill';
+
+    /*
+     * ⭐ ক্রয় আর বিক্রয় — মালিকের সম্মতি, ১৯ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⓘ এগুলো ভাউচার নয়, আর সেটাই ইচ্ছাকৃত ────────────────────────
+     * মালিক জিজ্ঞেস করেছিলেন *"ক্রয় ভাউচার, বিক্রয় ভাউচার নেই?"*। ⚠️ এই
+     * ব্যবস্থায় কেনাবেচা খাতায় ওঠে নিজের কাগজে — ক্রয় বিল আর বিক্রয় বিল
+     * নিজেই দাখিলা বসায়। ⛔ আলাদা ভাউচার বানালে একই কেনাবেচা খাতায়
+     * **দুইবার** উঠত।
+     *
+     * ⭐ তাই এই দুইটা ট্যাব কেবল **দেখায়** — খাতায় বসা বিলগুলো, খাতা
+     * (`ledger_entries`) থেকে পড়ে। ⓘ খাতা সবার সাধারণ, তাই হিসাব মডিউলকে
+     * ক্রয় বা বিক্রয়ের উপর নির্ভর করতে হয় না; বিলটা খোলার লিংক দেয়
+     * কোরের `<x-ui.drill>`।
+     */
+    public const PURCHASE = 'purchase';
+
+    public const SALES = 'sales';
+
+    /**
+     * কোন ট্যাব খাতার কোন উৎস পড়ে।
+     *
+     * @var array<string, string>
+     */
+    public const DOCUMENT_TABS = [
+        self::PURCHASE => self::PURCHASE_BILL_SOURCE,
+        self::SALES => self::SALES_INVOICE_SOURCE,
+    ];
+
     /**
      * মালিকের ক্রমেই — ট্যাবের সারিটা ঠিক এভাবে পড়তে হবে।
      *
@@ -71,6 +104,8 @@ class VoucherListController extends Controller implements HasMiddleware
         Voucher::JOURNAL,
         Voucher::CONTRA,
         self::OTHERS,
+        self::PURCHASE,
+        self::SALES,
     ];
 
     public function __construct(private readonly MenuBuilder $menu) {}
@@ -86,6 +121,10 @@ class VoucherListController extends Controller implements HasMiddleware
         $tab = in_array($request->query('tab'), self::TABS, true)
             ? (string) $request->query('tab')
             : Voucher::RECEIPT;
+
+        if (isset(self::DOCUMENT_TABS[$tab])) {
+            return $this->documents($request, $tab);
+        }
 
         $query = $this->scoped(Voucher::query(), $tab)
             ->search($request->query('q'))
@@ -104,20 +143,11 @@ class VoucherListController extends Controller implements HasMiddleware
          * কী আছে। ⚠️ তারিখের ছাঁকনি সংখ্যাতেও খাটে, নাহলে ট্যাব বলত
          * "১২০" আর খুললে দেখাত "৩"।
          */
-        $counts = [];
-
-        foreach (self::TABS as $each) {
-            $counts[$each] = $this->scoped(Voucher::query(), $each)
-                ->when($request->query('from'), fn ($q, $d) => $q->whereDate('trx_date', '>=', $d))
-                ->when($request->query('to'), fn ($q, $d) => $q->whereDate('trx_date', '<=', $d))
-                ->count();
-        }
-
         return view('accounts::voucher.list', [
             'menu' => $this->menu->forUser($request->user()),
             'tab' => $tab,
             'tabs' => self::TABS,
-            'counts' => $counts,
+            'counts' => $this->counts($request),
             'vouchers' => $query->paginate(50)->withQueryString(),
             'q' => $request->query('q'),
             'sort' => $sort,
@@ -128,6 +158,94 @@ class VoucherListController extends Controller implements HasMiddleware
                 'document_no' => __('core.print.document_no'),
             ],
         ]);
+    }
+
+    /**
+     * খাতায় বসা ক্রয় বা বিক্রয় বিল — কেবল দেখার জন্য।
+     */
+    private function documents(Request $request, string $tab): View
+    {
+        $term = trim((string) $request->query('q', ''));
+
+        $query = $this->posted(self::DOCUMENT_TABS[$tab], $request)
+            ->when($term !== '', fn ($q) => $q->having('document_no', 'like', '%'.$term.'%'));
+
+        $sort = $this->applySort($query, $request, [
+            'latest' => fn ($q) => $q->orderByDesc('trx_date')->orderByDesc('source_id'),
+            'oldest' => fn ($q) => $q->orderBy('trx_date')->orderBy('source_id'),
+            'amount' => fn ($q) => $q->orderByDesc('amount'),
+            'document_no' => fn ($q) => $q->orderBy('document_no'),
+        ]);
+
+        return view('accounts::voucher.list', [
+            'menu' => $this->menu->forUser($request->user()),
+            'tab' => $tab,
+            'tabs' => self::TABS,
+            'counts' => $this->counts($request),
+            'vouchers' => $query->paginate(50)->withQueryString(),
+            'q' => $request->query('q'),
+            'sort' => $sort,
+            'sortOptions' => [
+                'latest' => __('accounts::sort.latest'),
+                'oldest' => __('accounts::sort.oldest'),
+                'amount' => __('accounts::sort.amount'),
+                'document_no' => __('core.print.document_no'),
+            ],
+        ]);
+    }
+
+    /**
+     * একটা উৎসের খাতায় বসা কাগজগুলো, প্রতি কাগজে এক সারি।
+     *
+     * ── ⚠️ অঙ্কটা নিট, আসল দাখিলার যোগ নয় ───────────────────────────
+     * নিশ্চিত বিল পরে বদলালে [[PostingEngine::reverse()]] আগের দাখিলা উল্টে
+     * দেয় (`<উৎস>:reversal` নামে), আর নতুন দাখিলা আবার আসল নামেই বসে।
+     * ⛔ কেবল আসল নামের ডেবিট যোগ করলে বদলানো বিল **দ্বিগুণ** দেখাত।
+     *
+     * ⓘ তাই অঙ্ক = আসল নামের ডেবিট − উল্টো নামের ডেবিট (উল্টোটায় ডেবিট-
+     * ক্রেডিট অদলবদল, তাই ওর ডেবিট = আগের দাখিলার মোট)। ⚠️ বাতিল বিলে নিট
+     * শূন্য, আর সেগুলো তালিকায় আসে না — খাতায় ওদের আর কোনো ভার নেই।
+     */
+    private function posted(string $source, Request $request): Builder
+    {
+        $reversal = $source.':reversal';
+        $net = 'SUM(CASE WHEN source_type = ? THEN debit ELSE 0 END)'
+            .' - SUM(CASE WHEN source_type = ? THEN debit ELSE 0 END)';
+        $firstDate = 'MIN(CASE WHEN source_type = ? THEN trx_date END)';
+
+        return LedgerEntry::query()
+            ->whereIn('source_type', [$source, $reversal])
+            ->groupBy('source_id')
+            ->select('source_id')
+            ->selectRaw('? as source_type', [$source])
+            ->selectRaw($firstDate.' as trx_date', [$source])
+            ->selectRaw('MAX(CASE WHEN source_type = ? THEN document_no END) as document_no', [$source])
+            ->selectRaw('MAX(CASE WHEN source_type = ? THEN narration END) as narration', [$source])
+            ->selectRaw($net.' as amount', [$source, $reversal])
+            ->havingRaw($net.' > 0', [$source, $reversal])
+            ->when($request->query('from'), fn ($q, $d) => $q->havingRaw($firstDate.' >= ?', [$source, $d]))
+            ->when($request->query('to'), fn ($q, $d) => $q->havingRaw($firstDate.' <= ?', [$source, $d]));
+    }
+
+    /**
+     * প্রতিটা ট্যাবের পাশের সংখ্যা — তারিখের ছাঁকনি সহ।
+     *
+     * @return array<string, int>
+     */
+    private function counts(Request $request): array
+    {
+        $counts = [];
+
+        foreach (self::TABS as $each) {
+            $counts[$each] = isset(self::DOCUMENT_TABS[$each])
+                ? DB::query()->fromSub($this->posted(self::DOCUMENT_TABS[$each], $request)->toBase(), 'd')->count()
+                : $this->scoped(Voucher::query(), $each)
+                    ->when($request->query('from'), fn ($q, $d) => $q->whereDate('trx_date', '>=', $d))
+                    ->when($request->query('to'), fn ($q, $d) => $q->whereDate('trx_date', '<=', $d))
+                    ->count();
+        }
+
+        return $counts;
     }
 
     /**

@@ -8,26 +8,46 @@
     পর্দায় একই ভাউচার একই চেহারায় দেখায়। "অন্যান্য" ট্যাবে একটা কলাম
     বেশি — ভাউচারটা কোথা থেকে এল, কারণ ওখানে সেটাই প্রথম প্রশ্ন।
 --}}
+{{-- ⭐ ক্রয় আর বিক্রয় ট্যাব — ভাউচার নয়, খাতায় বসা বিল (১৯ সেপ্টেম্বর ২০২৬)।
+     ⓘ সারিটা খাতার গোছানো যোগ, তাই ভাউচারের অবস্থার কলাম নেই; নম্বরটা
+     কোরের `<x-ui.drill>` দিয়ে বিলের নিজের পাতায় যায়। কেন ভাউচার নয় —
+     [[VoucherListController::PURCHASE]]। --}}
 @php
-    $columns = [
+    $isDocumentTab = isset(\App\Modules\Accounts\Http\Controllers\VoucherListController::DOCUMENT_TABS[$tab]);
+@endphp
+
+@php
+    $columns = $isDocumentTab ? [
+        ['key' => 'trx_date', 'label' => __('core.table.date'), 'width' => '8rem',
+         'render' => fn ($d) => \App\Core\Support\DateFormat::format($d->trx_date)],
+        ['key' => 'document_no', 'label' => __('core.print.document_no'), 'width' => '13rem',
+         'render' => fn ($d) => view('accounts::voucher.partials.document-link', [
+             'source' => $d->source_type, 'id' => $d->source_id,
+         ])],
+        ['key' => 'narration', 'label' => __('core.table.narration')],
+        ['key' => 'amount', 'label' => __('accounts::field.amount'), 'numeric' => true, 'width' => '10rem',
+         'render' => fn ($d) => \App\Core\Support\Money::format($d->amount)],
+    ] : [
         ['key' => 'trx_date', 'label' => __('core.table.date'), 'width' => '8rem',
          'render' => fn ($v) => \App\Core\Support\DateFormat::format($v->trx_date)],
         ['key' => 'document_no', 'label' => __('core.print.document_no'), 'width' => '13rem',
          'render' => fn ($v) => view('accounts::voucher.partials.number', ['voucher' => $v])],
     ];
 
-    if ($tab === \App\Modules\Accounts\Http\Controllers\VoucherListController::OTHERS) {
+    if (! $isDocumentTab && $tab === \App\Modules\Accounts\Http\Controllers\VoucherListController::OTHERS) {
         $columns[] = ['key' => 'type', 'label' => __('accounts::field.voucher_type'), 'width' => '9rem',
             'render' => fn ($v) => __('accounts::menu.' . $v->type)];
         $columns[] = ['key' => 'against_type', 'label' => __('accounts::field.came_from'), 'width' => '11rem',
             'render' => fn ($v) => \Illuminate\Support\Str::headline((string) $v->against_type)];
     }
 
-    $columns[] = ['key' => 'narration', 'label' => __('core.table.narration')];
-    $columns[] = ['key' => 'amount', 'label' => __('accounts::field.amount'), 'numeric' => true, 'width' => '10rem',
-        'render' => fn ($v) => \App\Core\Support\Money::format($v->amount)];
-    $columns[] = ['key' => 'status', 'label' => __('accounts::field.state'), 'width' => '8rem',
-        'render' => fn ($v) => view('accounts::voucher.partials.status', ['voucher' => $v])];
+    if (! $isDocumentTab) {
+        $columns[] = ['key' => 'narration', 'label' => __('core.table.narration')];
+        $columns[] = ['key' => 'amount', 'label' => __('accounts::field.amount'), 'numeric' => true, 'width' => '10rem',
+            'render' => fn ($v) => \App\Core\Support\Money::format($v->amount)];
+        $columns[] = ['key' => 'status', 'label' => __('accounts::field.state'), 'width' => '8rem',
+            'render' => fn ($v) => view('accounts::voucher.partials.status', ['voucher' => $v])];
+    }
 @endphp
 
 <x-layouts.app :menu="$menu">
