@@ -16,11 +16,44 @@ bool isNetworkError(Object error) =>
         error.type == DioExceptionType.sendTimeout ||
         error.type == DioExceptionType.receiveTimeout);
 
+/// The server answered 404 — the door this build knocked on is not there.
+///
+/// <p>⚠️ <b>Only meaningful for a feature's own endpoint</b>, never for one
+/// naming a particular row. `GET /dashboard/today` returning 404 means the
+/// server has no such route; `GET /documents/SalesInvoice/{id}/pdf` returning
+/// 404 far more likely means that invoice is gone. Same status code, opposite
+/// sentences — which is why this is a separate question a caller answers for
+/// itself rather than something [errorMessageFor] decides on its own.
+bool isRouteAbsent(Object error) =>
+    error is DioException && error.response?.statusCode == 404;
+
 /// A message for an error branch that tells a connection problem apart from
 /// anything else the server might have said.
-String errorMessageFor(Object error, {required String fallback}) {
+///
+/// <p>[whenAbsent] is shown for a 404, and callers pass it only where a 404
+/// means the **feature** is missing rather than a row. Without it, a phone
+/// newer than its server says "তালিকা আনা গেল না" — which reads as *this is
+/// broken* or *the server is down*, sending somebody to check a connection
+/// that is fine and to report a fault that does not exist.
+///
+/// <p>⭐ This is not a temporary state to be tidied away once the routes
+/// land. Handsets are updated one at a time, by hand, from a link — so an app
+/// ahead of its server is the normal condition of a fleet, not an accident,
+/// and it stays true for every release after this one.
+String errorMessageFor(
+  Object error, {
+  required String fallback,
+  String? whenAbsent,
+}) {
   if (isNetworkError(error)) {
     return 'সংযোগ নেই। ইন্টারনেট চেক করে আবার চেষ্টা করুন।';
+  }
+  if (whenAbsent != null && isRouteAbsent(error)) {
+    // Ahead of any server sentence: Laravel's own 404 body ("Route [x] not
+    // defined.") is English, so serverSentence already declines it — but a
+    // server that someday answers 404 with a Bangla sentence would otherwise
+    // overwrite the one thing the caller knows and this file does not.
+    return whenAbsent;
   }
   return serverSentence(error) ?? fallback;
 }

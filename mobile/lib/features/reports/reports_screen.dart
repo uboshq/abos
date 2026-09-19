@@ -45,8 +45,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
       if (mounted) setState(() => _reports = list);
     } catch (error) {
       if (mounted) {
-        setState(() => _error =
-            errorMessageFor(error, fallback: 'রিপোর্টের তালিকা আনা গেল না।'));
+        setState(() => _error = errorMessageFor(error,
+            fallback: 'রিপোর্টের তালিকা আনা গেল না।',
+            whenAbsent: 'রিপোর্ট এখনো এই সার্ভারে নেই — অ্যাপটা সার্ভারের '
+                'চেয়ে নতুন। অফিসে জানান।'));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -169,6 +171,10 @@ class _ReportViewScreenState extends State<ReportViewScreen> {
       if (mounted) setState(() => _page = result);
     } catch (error) {
       if (mounted) {
+        // ⛔ No whenAbsent here, unlike the list above. This call names a
+        // particular report, so a 404 is at least as likely to mean that key
+        // is gone as that the route is — and "your app is newer than the
+        // server" would then be a confident, wrong explanation.
         setState(() =>
             _error = errorMessageFor(error, fallback: 'রিপোর্ট আনা গেল না।'));
       }
