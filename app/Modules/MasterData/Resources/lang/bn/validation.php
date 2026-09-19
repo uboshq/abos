@@ -33,4 +33,7 @@ return [
         'customers' => 'গ্রাহক',
         'sal_shipments' => 'গাড়ির চালান',
     ],
+    /* একই বাবার নিচে একই নাম — LocationService::assertNameIsFree(), ১৯ সেপ্টেম্বর ২০২৬ */
+    'location_name_taken' => ':name নামে একটা :level :parent-এর নিচে আগে থেকেই আছে (:code)।',
+    'location_name_taken_top' => ':name নামে একটা :level আগে থেকেই আছে (:code)।',
 ];
