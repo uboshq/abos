@@ -63,13 +63,10 @@
             <x-ui.toolbar :title="__('purchase::menu.bills')" :count="__('purchase::message.bill_note')"
                 :columns="$columns" :search-placeholder="__('purchase::message.bill_search')"
                           :sort="$sortOptions">
-        <x-slot:actions>
-            @can('create', \App\Modules\Purchase\Models\PurchaseBill::class)
-                    <x-ui.button tone="primary" icon="plus" :href="route('purchase.bill.create')">
-                        {{ __('purchase::action.new_bill') }}
-                    </x-ui.button>
-                @endcan
-        </x-slot:actions>
+        {{-- ⭐ "নতুন বিল" নেই — মালিকের নির্দেশ, ১৯ সেপ্টেম্বর ২০২৬: বিল জন্মায়
+             মাল গ্রহণে আর সরাসরি ক্রয়ে, আপনা থেকে। এই পাতা কেবল তালিকা; বিল
+             খুলে সম্পাদনা করা যায়। ⓘ আদেশের পাতার "এই আদেশের বিল করুন" থাকল —
+             যে ডিপো মাল গ্রহণের পর্দা বন্ধ রাখে, তার একমাত্র পথ ওটাই। --}}
                 <x-ui.date-range :dates="$dates" />
 
                 <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">

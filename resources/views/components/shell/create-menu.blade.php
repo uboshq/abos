@@ -47,11 +47,19 @@
          */
         ['route' => 'sales.direct.create', 'label' => 'core.create.direct_sale', 'can' => 'sales.challan.create'],
         ['route' => 'sales.order.create', 'label' => 'core.create.sales_order', 'can' => 'sales.order.create'],
-        ['route' => 'sales.invoice.create', 'label' => 'core.create.invoice', 'can' => 'sales.invoice.create'],
-        ['route' => 'sales.collection.create', 'label' => 'core.create.collection', 'can' => 'sales.collection.create'],
+        /*
+         * ⭐ মালিকের নির্দেশ, ১৯ সেপ্টেম্বর ২০২৬:
+         *   · বিক্রয় বিল আর ক্রয় বিল এখানে নেই — বিল জন্মায় সরাসরি বিক্রয়/ক্রয়ে
+         *     আর মাল গ্রহণে, আপনা থেকে; তালিকার "নতুন" বোতামও সরেছে।
+         *   · "আদায়" আর "পরিশোধ" এখন হিসাবের **রসিদ** ও **পরিশোধ** ভাউচার —
+         *     *"যেহেতু accounts-এর কাজ"*, আর বাইরের সবার খাতা ব্যাংকের মতো
+         *     Dr/Cr। লেবেল পুরনোটাই, কারণ মানুষ কাজটাকে ঐ নামেই চেনেন।
+         */
+        ['route' => 'accounts.voucher.create', 'params' => ['type' => 'receipt'],
+         'label' => 'core.create.collection', 'can' => 'accounts.voucher.create'],
         ['route' => 'purchase.order.create', 'label' => 'core.create.purchase_order', 'can' => 'purchase.order.create'],
-        ['route' => 'purchase.bill.create', 'label' => 'core.create.purchase_bill', 'can' => 'purchase.bill.create'],
-        ['route' => 'purchase.payment.create', 'label' => 'core.create.payment', 'can' => 'purchase.payment.create'],
+        ['route' => 'accounts.voucher.create', 'params' => ['type' => 'payment'],
+         'label' => 'core.create.payment', 'can' => 'accounts.voucher.create'],
         /*
          * ⭐ ভাউচারের রুটে একটা ধরন লাগে — `/accounts/vouchers/{type}/create`।
          *

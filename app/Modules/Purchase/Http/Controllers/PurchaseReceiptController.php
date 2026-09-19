@@ -13,6 +13,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Purchase\Http\Requests\PurchaseReceiptRequest;
+use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Purchase\Models\PurchaseOrder;
 use App\Modules\Purchase\Models\PurchaseReceipt;
 use App\Modules\Purchase\Services\PurchaseReceiptService;
@@ -42,6 +43,7 @@ class PurchaseReceiptController extends Controller implements HasMiddleware
         return [
             ...static::resourcePermissions(PurchaseReceipt::class, 'receipt'),
             new Middleware('can:purchase.receipt.create', only: ['confirm']),
+            new Middleware('can:purchase.bill.create', only: ['bill']),
             new Middleware('can:purchase.receipt.cancel', only: ['cancel']),
         ];
     }
@@ -111,6 +113,17 @@ class PurchaseReceiptController extends Controller implements HasMiddleware
         return view('purchase::receipt.show', [
             'menu' => $this->menu->forUser($request->user()),
             'receipt' => $receipt,
+
+            // ⓘ এই মাল গ্রহণের বিল(গুলো) — বিল এখন আপনা থেকে হয়, তাই পাতাটা বলে কোনটা
+            'bills' => PurchaseBill::query()
+                ->where('status', '<>', DocumentStatus::CANCELLED)
+                ->whereHas('lines', fn ($q) => $q->whereIn('purchase_receipt_line_id', $receipt->lines->pluck('id')))
+                ->orderBy('id')
+                ->get(['id', 'document_no', 'status']),
+
+            // ⓘ কিছু অংশের বিল বাকি থাকলে তবেই "বিল তৈরি করুন"
+            'unbilled' => $receipt->status === DocumentStatus::CONFIRMED
+                && $receipt->lines->contains(fn ($line) => bccomp($line->unbilledQty(), '0', 4) > 0),
         ]);
     }
 
@@ -137,13 +150,46 @@ class PurchaseReceiptController extends Controller implements HasMiddleware
             ->with('saved', __('purchase::message.receipt_updated'));
     }
 
+    /**
+     * মাল বুঝে নেওয়া নিশ্চিত — আর সাথে সাথে বিল (মালিকের নির্দেশ, ১৯ সেপ্টেম্বর ২০২৬)।
+     *
+     * ⓘ বার্তাটা বলে বিলের কী হলো: নিশ্চিত, সইয়ের অপেক্ষায়, নাকি হয়নি
+     * আর কেন। ⚠️ বিল না হলে মাল গ্রহণ ফেরে না — পাতায় "বিল তৈরি করুন"
+     * বোতাম থাকে ([[bill()]])।
+     */
     public function confirm(PurchaseReceipt $receipt): RedirectResponse
     {
-        $this->receipts->confirm($receipt);
+        $result = $this->receipts->confirmAndBill($receipt);
+
+        return $this->backWithBill($result['receipt'], $result, __('purchase::message.receipt_confirmed'));
+    }
+
+    /**
+     * নিশ্চিত মাল গ্রহণের বাকি অংশের বিল — পুরনো মাল গ্রহণ, বা যেটার বিল আটকে গিয়েছিল।
+     */
+    public function bill(PurchaseReceipt $receipt): RedirectResponse
+    {
+        return $this->backWithBill($receipt, $this->receipts->billFor($receipt), null);
+    }
+
+    /**
+     * @param  array{bill: ?PurchaseBill, held: bool, problem: ?string}  $result
+     */
+    private function backWithBill(PurchaseReceipt $receipt, array $result, ?string $lead): RedirectResponse
+    {
+        $bill = $result['bill'];
+
+        $said = match (true) {
+            $bill !== null && $result['held'] => __('purchase::message.auto_bill_held', ['no' => $bill->document_no]),
+            $bill !== null && $result['problem'] === null => __('purchase::message.auto_bill_made', ['no' => $bill->document_no]),
+            $bill !== null => __('purchase::message.auto_bill_draft', ['no' => $bill->document_no, 'why' => $result['problem']]),
+            $result['problem'] !== null => __('purchase::message.auto_bill_failed', ['why' => $result['problem']]),
+            default => __('purchase::message.auto_bill_nothing_left'),
+        };
 
         return redirect()
             ->route('purchase.receipt.show', $receipt)
-            ->with('saved', __('purchase::message.receipt_confirmed'));
+            ->with('saved', trim(($lead ?? '').' '.$said));
     }
 
     public function cancel(Request $request, PurchaseReceipt $receipt): RedirectResponse

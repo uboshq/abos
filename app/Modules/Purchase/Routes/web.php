@@ -90,6 +90,8 @@ Route::middleware('auth')->prefix('purchase')->group(function () {
         Route::put('/{receipt}', [PurchaseReceiptController::class, 'update'])->whereNumber('receipt')->name('update');
         Route::post('/{receipt}/confirm', [PurchaseReceiptController::class, 'confirm'])->whereNumber('receipt')->name('confirm');
         Route::post('/{receipt}/cancel', [PurchaseReceiptController::class, 'cancel'])->whereNumber('receipt')->name('cancel');
+        // ⓘ বাকি অংশের বিল — বিল এখন মাল গ্রহণেই আপনা থেকে হয় (১৯ সেপ্টেম্বর ২০২৬)
+        Route::post('/{receipt}/bill', [PurchaseReceiptController::class, 'bill'])->whereNumber('receipt')->name('bill');
     });
 
     Route::prefix('bills')->name('bill.')->group(function () {

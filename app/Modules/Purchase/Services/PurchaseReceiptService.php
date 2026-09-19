@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Purchase\Services;
 
 use App\Core\Engines\Approval\DocumentApproval;
+use App\Core\Engines\Approval\HeldForApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Services\SettingsService;
@@ -19,6 +20,7 @@ use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\CostLayerService;
 use App\Modules\Inventory\Services\ReadsPackedQuantities;
 use App\Modules\Inventory\Services\StockService;
+use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Purchase\Models\PurchaseOrder;
 use App\Modules\Purchase\Models\PurchaseOrderLine;
 use App\Modules\Purchase\Models\PurchaseReceipt;
@@ -58,7 +60,76 @@ final class PurchaseReceiptService
         private readonly CostLayerService $costs,
         private readonly SettingsService $settings,
         private readonly DocumentApproval $approvals,
+        private readonly PurchaseBillService $bills,
     ) {}
+
+    /**
+     * মাল বুঝে নেওয়া নিশ্চিত — আর সাথে সাথে তার বিল।
+     *
+     * ── ⭐ মালিকের নির্দেশ, ১৯ সেপ্টেম্বর ২০২৬ ─────────────────────────
+     * *"Goods Received করবে, তখন অটো purchase invoice জেনারেট হবে।"* ⓘ তাই
+     * ক্রয় বিলের পাতায় আর "নতুন বিল" নেই; পর্দার "নিশ্চিত" বোতাম এটাই ডাকে।
+     *
+     * ── ⚠️ কেন [[confirm()]] নিজে বিল বানায় না ─────────────────────────
+     * `confirm()` মাল আর খাতার একটা পরিষ্কার ঘটনা, আর অনেক পরীক্ষা ও পথ
+     * তাকে আলাদা করে ডাকে — কেউ কেউ তার পরে নিজেই বিল বানায় (আদেশ ধরে বা
+     * আংশিক)। ⛔ ওখানে বিল গুঁজে দিলে ঐ সব পথে বিল দুইবার হত বা আটকাত।
+     *
+     * ── সীমানা, [[DirectPurchaseService::complete()]]-এর হুবহু কারণে ─────
+     *   ১. মাল গ্রহণ — নিজের লেনদেনে (`confirm()`)।
+     *   ২. বিলের খসড়া — নিজের লেনদেনে।
+     *   ৩. বিলের সই — লেনদেনের বাইরে: ছক থাকলে বিল খসড়া হয়ে অনুমোদনের
+     *      অপেক্ষায় থাকে, আর অনুরোধটা মুছে যায় না।
+     *
+     * ⚠️ বিল না হলেও মাল গ্রহণ ফেরে না — মাল তো সত্যিই গুদামে। ⓘ কারণটা
+     * পর্দায় যায়, আর মাল গ্রহণের পাতায় "বিল তৈরি করুন" বোতাম থাকে
+     * ([[billFor()]])।
+     *
+     * @return array{receipt: PurchaseReceipt, bill: ?PurchaseBill, held: bool, problem: ?string}
+     */
+    public function confirmAndBill(PurchaseReceipt $receipt): array
+    {
+        $receipt = $this->confirm($receipt);
+
+        return ['receipt' => $receipt, ...$this->billFor($receipt)];
+    }
+
+    /**
+     * নিশ্চিত মাল গ্রহণের বাকি থাকা অংশের বিল — তৈরি, আর পারলে নিশ্চিত।
+     *
+     * ⓘ দুই জায়গা থেকে আসে: [[confirmAndBill()]], আর মাল গ্রহণের পাতার
+     * "বিল তৈরি করুন" বোতাম (পুরনো মাল গ্রহণ, বা যেটার বিল আটকে গিয়েছিল)।
+     *
+     * @return array{bill: ?PurchaseBill, held: bool, problem: ?string}
+     */
+    public function billFor(PurchaseReceipt $receipt): array
+    {
+        if ($receipt->status !== DocumentStatus::CONFIRMED) {
+            return ['bill' => null, 'held' => false, 'problem' => __('purchase::validation.receipt_not_confirmed', [
+                'no' => $receipt->document_no,
+            ])];
+        }
+
+        try {
+            $bill = $this->bills->fromReceipt($receipt);
+        } catch (ValidationException $e) {
+            return ['bill' => null, 'held' => false, 'problem' => collect($e->errors())->flatten()->first()];
+        }
+
+        if ($bill === null) {
+            return ['bill' => null, 'held' => false, 'problem' => null];
+        }
+
+        try {
+            return ['bill' => $this->bills->confirm($bill), 'held' => false, 'problem' => null];
+        } catch (HeldForApproval) {
+            // ⓘ খসড়া বিল অনুমোদনের অপেক্ষায় — অনুরোধটা ইনবক্সে
+            return ['bill' => $bill->fresh(), 'held' => true, 'problem' => null];
+        } catch (ValidationException $e) {
+            // ⓘ খসড়া থেকে যায় — বিলের পাতা থেকে সারিয়ে নিশ্চিত করা যায়
+            return ['bill' => $bill->fresh(), 'held' => false, 'problem' => collect($e->errors())->flatten()->first()];
+        }
+    }
 
     /**
      * চালান তৈরি — খসড়া, কিছুই নড়ে না।

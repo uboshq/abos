@@ -64,13 +64,9 @@
             <x-ui.toolbar :title="__('sales::menu.invoices')" :count="__('sales::message.invoice_note')"
                 :columns="$columns" :search-placeholder="__('sales::message.invoice_search')"
                           :sort="$sortOptions">
-        <x-slot:actions>
-            @can('create', \App\Modules\Sales\Models\SalesInvoice::class)
-                    <x-ui.button tone="primary" icon="plus" :href="route('sales.invoice.create')">
-                        {{ __('sales::action.new_invoice') }}
-                    </x-ui.button>
-                @endcan
-        </x-slot:actions>
+        {{-- ⭐ "New invoice" নেই — মালিকের নির্দেশ, ১৯ সেপ্টেম্বর ২০২৬: *"Direct Sales আছে।"*
+             বিল জন্মায় সরাসরি বিক্রয়ে, আর (পরের কাজ) শিপমেন্ট থেকে আদেশ ধরে। ⓘ চালানের পাতার
+             "এই চালানের বিল করুন" থাকল — সেই ব্যবস্থা তৈরি হওয়া পর্যন্ত আদেশের মালের একমাত্র পথ। --}}
                 <x-ui.date-range :dates="$dates" />
 
                 <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">

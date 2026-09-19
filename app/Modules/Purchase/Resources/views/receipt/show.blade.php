@@ -16,12 +16,21 @@
                     </form>
                 @endcan
 
-                @if ($receipt->status === \App\Core\Support\DocumentStatus::CONFIRMED)
+                {{-- ⭐ বিল এখন মাল গ্রহণেই আপনা থেকে (মালিকের নির্দেশ, ১৯ সেপ্টেম্বর ২০২৬)।
+                     ⓘ তাই এখানে বিলের লিংক, আর কিছু বাকি থাকলে তবেই "বিল তৈরি করুন" —
+                     পুরনো মাল গ্রহণ, বা যেটার বিল আটকে গিয়েছিল। --}}
+                @foreach ($bills ?? [] as $bill)
+                    <x-ui.button tone="secondary" :href="route('purchase.bill.show', $bill->id)">
+                        {{ __('purchase::action.open_bill', ['no' => $bill->document_no]) }}
+                    </x-ui.button>
+                @endforeach
+
+                @if ($unbilled ?? false)
                     @can('create', \App\Modules\Purchase\Models\PurchaseBill::class)
-                        <x-ui.button tone="primary"
-                                     :href="route('purchase.bill.create', ['purchase_receipt_id' => $receipt->id])">
-                            {{ __('purchase::action.bill_against') }}
-                        </x-ui.button>
+                        <form method="POST" action="{{ route('purchase.receipt.bill', $receipt) }}">
+                            @csrf
+                            <x-ui.button type="submit" tone="primary">{{ __('purchase::action.bill_against') }}</x-ui.button>
+                        </form>
                     @endcan
                 @endif
                 {{--

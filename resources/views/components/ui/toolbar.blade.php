@@ -227,6 +227,10 @@
     {{--
         দৃশ্যের সারি — শিরোনাম · গোনা · ছাঁকনি · খোঁজা · সাজানো।
 
+        ⓘ ১৯ সেপ্টেম্বর ২০২৬ থেকে শিরোনাম নিজের লাইনে, আর বাকিটা কমান্ড
+        বারের সাথে এক লাইনে — নিচের ⭐ মন্তব্য। নিচের ইতিহাসটা থাকল, কারণ
+        "HTML নয়, CSS-এর ক্রম" যুক্তিটা এখনো একই।
+
         `order-2` — এই ব্লকটা লেখা আছে আগে, কিন্তু দেখা যায় পরে।
 
         ── কেন CSS-এর ক্রম, HTML-এর নয় ────────────────────────────────
@@ -240,7 +244,26 @@
         আর ট্যাব-অর্ডার HTML-এর ক্রমই মানে, তাই কীবোর্ডে শিরোনাম-ঘর
         আগে আসে, যা ঠিকই আছে।
     --}}
-    <div class="order-2 flex flex-wrap items-center gap-2 px-3 py-2">
+    {{--
+        ⭐ দুই লাইন — মালিকের নির্দেশ, ১৯ সেপ্টেম্বর ২০২৬।
+
+        *"Invoice List — The invoice posts income… এগুলো প্রথমে দিয়ে, নিচে
+        বক্সের ভিতরে সব এক লাইনে দাও। + Filter প্রথম — শিরোনামের পর ২য়
+        লাইনে প্রথম।"*
+
+        ⓘ তাই: ১ম লাইনে শিরোনাম ও বর্ণনা, আর ডানে পাতার বোতাম ("নতুন …" —
+        মালিক: *"শিরোনামের ডানে create বোতাম"*); ২য় লাইনে Filter → চালু
+        ছাঁকনি → খোঁজা → Sort → ডানে দৃশ্য · ঘনত্ব · কলাম · রপ্তানি · শেয়ার ·
+        ছাপা · রিফ্রেশ। ছোট পর্দায় লাইনটা ভেঙে নিচে নামে (flex-wrap)।
+
+        ⚠️ নিচের দুইটা পুরনো সারি HTML-এ যেখানে ছিল সেখানেই — `contents`
+        হয়ে এক লাইনের ধারকের ভেতরে গলে যায়, আর ক্রমটা প্রতিটা জিনিসের নিজের
+        `order`। ⓘ কারণটা নিচের পুরনো মন্তব্যেরই: ডানের সরঞ্জামের ব্লকে
+        Alpine-এর অবস্থা আর ড্রপডাউন — হাতে সরালে বোতাম দেখতে ঠিক থাকত
+        অথচ কাজ করত না।
+    --}}
+    @if ($title || isset($actions))
+    <div class="order-1 flex flex-wrap items-center gap-x-3 gap-y-1 px-3 pt-2 pb-1.5">
 
         {{-- দৃশ্যের শিরোনাম — নাম, আর পাশে কত সারি।
 
@@ -272,6 +295,30 @@
         @endif
 
         {{--
+            ⭐ পাতার বোতাম ("নতুন আদেশ", "নতুন ডিলার"…) — শিরোনামের ডানে।
+
+            মালিকের নির্দেশ, ১৯ সেপ্টেম্বর ২০২৬: *"যেখানে create বোতাম আছে,
+            সেখানে শিরোনামের ডানে create বোতাম রাখো।"* ⓘ আগে এটা কমান্ড
+            বারের বাঁ প্রান্তে, শিরোনামের উপরের সারিতে বসত।
+
+            cmd-actions — এখানকার বোতামগুলো ৩২px, ফর্মের ৪৮px নয়।
+            নিয়মটা app.css-এ, আর কেন স্তরের বাইরে তা ওখানে লেখা।
+        --}}
+        @isset($actions)
+            {{-- ⓘ ms-auto নয় — বোতাম শিরোনামের **পাশেই**, দূরে ডান প্রান্তে নয় (মালিক
+                 চান বোতাম আর শিরোনাম একসাথে — abos-8b-এর কাছে পাঠানো দাগানো ছবিতেও) --}}
+            <div data-command-bar class="cmd-actions flex flex-wrap items-center gap-1">
+                {{ $actions }}
+            </div>
+        @endisset
+    </div>
+    @endif
+
+    {{-- ২য় লাইন — বক্সের ভেতরে, সব এক লাইনে (উপরের মন্তব্য)। --}}
+    <div class="order-2 flex flex-wrap items-center gap-2 border-t border-(--color-border) px-2 py-1.5">
+    <div class="contents">
+
+        {{--
             সক্রিয় ছাঁকনিগুলো — সরানো-যায় এমন পিল।
 
             ── কেন এটা সব রূপেই থাকে, কেবল Odoo-তে নয় ──────────────────
@@ -287,7 +334,7 @@
             সেটা নকলের জন্য বাদ যায় না।
         --}}
         @if ($screenFilters->isNotEmpty())
-            <span class="flex flex-wrap items-center gap-1">
+            <span class="order-2 flex flex-wrap items-center gap-1">
                 @foreach ($screenFilters as $key => $value)
                     <a data-facet
                        href="{{ url()->current().'?'.http_build_query(collect(request()->query())->except([$key, 'page'])->all()) }}"
@@ -337,7 +384,8 @@
                     @if ($filterMode === 'chips') data-look-chip @endif
 
                     @class([
-                        'flex items-center gap-1.5 transition-colors hover:bg-(--color-surface-hover)',
+                        // ⓘ order-1 — ২য় লাইনের একেবারে শুরুতে (মালিক: "+ Filter প্রথম")
+                        'order-1 flex items-center gap-1.5 transition-colors hover:bg-(--color-surface-hover)',
 
                         /*
                          * chips মোড — বোতামটা চিপের চেহারা নেয়।
@@ -376,7 +424,7 @@
                  ঘরটা এক আঙুলের চেয়েও সরু হয়ে যেত, শুধু ম্যাগনিফায়ারটা
                  দেখা যেত। একটা সর্বনিম্ন চওড়া ধরে রাখলে ওটা মিলিয়ে যাওয়ার
                  বদলে Sort by পরের লাইনে নেমে যায়। --}}
-            <label class="relative min-w-48 flex-1 sm:max-w-sm">
+            <label class="relative order-3 min-w-48 flex-1 sm:max-w-sm">
                 <span class="sr-only">{{ __('core.action.search') }}</span>
                 {{-- placeholder-এ কী কী দিয়ে খোঁজা যায় তা লেখা থাকে।
                      শুধু "খুঁজুন" লিখলে ব্যবহারকারী নাম দিয়েই খোঁজে, আর
@@ -397,7 +445,7 @@
              বকেয়া আগে"), নাহলে ব্যবহারকারীকে প্রতিবার নিজে সাজাতে হয়,
              আর তালিকা খুলেই কাজের সারিগুলো চোখে পড়ে না। --}}
         @if ($sort !== [])
-            <label class="flex items-center gap-2 text-sm">
+            <label class="order-4 flex items-center gap-2 text-sm">
                 <span class="whitespace-nowrap text-(--color-ink-muted)">{{ __('core.toolbar.sort_by') }}</span>
                 <select name="sort" onchange="this.form.submit()"
                         class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
@@ -424,16 +472,10 @@
 
         ফলে মানুষ **জায়গাটা** শেখে, বোতামটা নয়।
     --}}
-    <div class="order-1 flex flex-wrap items-center gap-1 border-b border-(--color-border) px-2 py-1.5">
-        @isset($actions)
-            {{-- cmd-actions — এখানকার বোতামগুলো ৩২px, ফর্মের ৪৮px নয়।
-                 নিয়মটা app.css-এ, আর কেন স্তরের বাইরে তা ওখানে লেখা। --}}
-            <div data-command-bar class="cmd-actions flex flex-wrap items-center gap-1">
-                {{ $actions }}
-            </div>
-        @endisset
-
-        <div class="print-hide ms-auto flex items-center gap-1">
+    {{-- ⓘ `contents` — এই সারিটাও ২য় লাইনে গলে যায় (উপরের ⭐ মন্তব্য, ১৯ সেপ্টেম্বর ২০২৬)।
+         পাতার বোতাম ("নতুন …") আর এখানে নেই — শিরোনামের ডানে, ১ম লাইনে। --}}
+    <div class="contents">
+        <div class="print-hide order-6 ms-auto flex items-center gap-1">
 
             {{-- View — তালিকা নাকি কার্ড।
 
@@ -718,6 +760,7 @@
             @endif
         </div>
     </div>
+    </div>{{-- ২য় লাইনের ধারক --}}
 
     {{-- স্ক্রিনের নিজস্ব ফিল্টার — একটাই সারিতে, টেবিলের উপরে
          (সেকশন ১৫.৮), Filter By বোতামের নিচে। --}}

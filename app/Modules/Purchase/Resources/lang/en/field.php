@@ -70,7 +70,7 @@ return [
     'rounding' => 'Rounding',
     'invoice_due' => 'Invoice Due',
     'previous_due' => 'Previous Due',
-    'previous_advance' => 'Previous Advance',
+    'previous_advance' => 'Previous Credit',
     'total_due' => 'DUE',
     'total_item' => 'Total items',
     'total_qty' => 'Total qty',

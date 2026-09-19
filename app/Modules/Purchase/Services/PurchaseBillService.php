@@ -24,6 +24,7 @@ use App\Modules\Inventory\Services\StockService;
 use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Purchase\Models\PurchaseBillLine;
 use App\Modules\Purchase\Models\PurchaseOrderLine;
+use App\Modules\Purchase\Models\PurchaseReceipt;
 use App\Modules\Purchase\Models\PurchaseReceiptLine;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -64,6 +65,59 @@ final class PurchaseBillService
         private readonly SettingsService $settings,
         private readonly DocumentApproval $approvals,
     ) {}
+
+    /**
+     * মাল বুঝে নেওয়ার কাগজ থেকে খসড়া বিল — যতটুকুর বিল এখনো হয়নি, ঠিক ততটুকু।
+     *
+     * ── ⭐ মালিকের নির্দেশ, ১৯ সেপ্টেম্বর ২০২৬ ─────────────────────────
+     * *"Purchase Order দিলে Goods Received-এ ঐ নম্বর ধরে Goods Received
+     * করবে, তখন অটো purchase invoice জেনারেট হবে — Direct Purchase-এও
+     * অটো হয়।"* ⓘ তাই ক্রয় বিলের পাতা এখন কেবল তালিকা; বিল জন্মায়
+     * মাল গ্রহণে ([[PurchaseReceiptService::confirmAndBill()]])।
+     *
+     * ⓘ সারিগুলো বিলের ফর্ম যেভাবে ভরত হুবহু সেভাবে (`bill/form.blade.php`-র
+     * `$seed`): পরিমাণ = `unbilledQty()`, দর = মাল গ্রহণের দর, ছাড় শূন্য,
+     * ভ্যাট পণ্যের নিজের হার। সরবরাহকারীর আসল বিলে দাম বা ছাড় আলাদা
+     * হলে বিল খুলে সম্পাদনা (861ad66a-এর পর নিশ্চিত বিলও সম্পাদনা হয়)।
+     *
+     * ⛔ দুইবার বিল হয় না: `unbilledQty()` বাতিল-নয় এমন সব বিল বাদ দিয়ে
+     * গোনে, আর কিছু বাকি না থাকলে `null` — আর [[resolveReceiptLine()]]
+     * বাড়তি বিল এমনিতেও আটকায়। ⓘ ফ্রি মাল এখানে নেই — সেটা মাল গ্রহণেই
+     * ভাণ্ডারে ঢুকেছে।
+     */
+    public function fromReceipt(PurchaseReceipt $receipt): ?PurchaseBill
+    {
+        $receipt->loadMissing(['lines', 'supplier.paymentTerm']);
+
+        $lines = $receipt->lines
+            ->filter(fn (PurchaseReceiptLine $line) => bccomp($line->unbilledQty(), '0', 4) > 0)
+            ->map(fn (PurchaseReceiptLine $line) => [
+                'product_id' => $line->product_id,
+                'qty' => $line->unbilledQty(),
+                'rate' => (string) $line->rate,
+                'discount' => '0',
+                'tax' => null,
+                'purchase_receipt_line_id' => $line->id,
+            ])
+            ->values()
+            ->all();
+
+        if ($lines === []) {
+            return null;
+        }
+
+        $date = $receipt->trx_date->toDateString();
+
+        return $this->create([
+            'supplier_id' => $receipt->supplier_id,
+            'warehouse_id' => $receipt->warehouse_id,
+            'branch_id' => $receipt->branch_id,
+            'trx_date' => $date,
+            'received_on' => $date,
+            'due_on' => $receipt->supplier?->dueDateFrom($date)->toDateString(),
+            'narration' => __('purchase::message.bill_from_receipt', ['no' => $receipt->document_no]),
+        ], $lines);
+    }
 
     /**
      * @param  array<string, mixed>  $data
