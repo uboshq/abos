@@ -153,6 +153,52 @@ class PostingEngineTest extends TestCase
         ]);
     }
 
+    /**
+     * ⛔ এক পয়সার গরমিলও খাতায় ঢোকে না।
+     *
+     * ── মিউটেশন পরীক্ষায় ধরা ফাঁক, ২০ সেপ্টেম্বর ২০২৬ ─────────────────
+     * মিলানোর তুলনাটা পুরো টাকায় নামিয়ে দিলে (`bccomp(…, 0)`) — অর্থাৎ
+     * পয়সা উপেক্ষা — একটা পরীক্ষাও লাল হয়নি। ⚠️ উপরের "ভগ্নাংশ মেলে"
+     * পরীক্ষাটা কেবল **মেলা** ভগ্নাংশ দেখে; না-মেলাটা কেউ দেখেনি। তাই
+     * ১০০.৫০ ডেবিট আর ১০০.০০ ক্রেডিটের ভাউচার চুপচাপ বসে যেত, আর
+     * ট্রায়াল ব্যালেন্স পঞ্চাশ পয়সায় মিলত না — কারণ খুঁজে পাওয়া কঠিন।
+     */
+    public function test_a_document_off_by_a_few_paisa_writes_nothing(): void
+    {
+        try {
+            $this->engine->post('journal_voucher', 21, '2026-08-04', [
+                ['account_id' => 10, 'debit' => '100.50'],
+                ['account_id' => 20, 'credit' => '100.00'],
+            ]);
+            $this->fail('পঞ্চাশ পয়সার গরমিল খাতায় ঢুকে গেছে।');
+        } catch (PostingException $e) {
+            $this->assertStringContainsString('does not balance', $e->getMessage());
+        }
+
+        $this->assertSame(0, LedgerEntry::query()->where('source_id', 21)->count(),
+            'গরমিলের ভাউচারের কোনো লাইন খাতায় বসেছে।');
+    }
+
+    /**
+     * ⛔ দুই দিকেই শূন্য — এমন লাইন খাতায় বসে না।
+     *
+     * ── মিউটেশন পরীক্ষায় ধরা ফাঁক, ২০ সেপ্টেম্বর ২০২৬ ─────────────────
+     * শর্তটা তুলে দিলে কোনো পরীক্ষা লাল হয়নি। ⓘ শূন্য লাইন মিলানো
+     * ভাঙে না, তাই মিলানোর পাহারা এটা ধরে না — অথচ খতিয়ানে একটা ফাঁকা
+     * সারি বসে, যেটা খুললে "কিছুই না" দেখায় আর প্রশ্ন তোলে।
+     */
+    public function test_a_line_that_is_zero_on_both_sides_is_refused(): void
+    {
+        $this->expectException(PostingException::class);
+        $this->expectExceptionMessageMatches('/zero on both sides/');
+
+        $this->engine->post('journal_voucher', 22, '2026-08-04', [
+            ['account_id' => 10, 'debit' => 100],
+            ['account_id' => 11, 'debit' => 0, 'credit' => 0],
+            ['account_id' => 20, 'credit' => 100],
+        ]);
+    }
+
     public function test_posting_into_a_closed_year_is_refused(): void
     {
         FinancialYear::query()->update(['is_closed' => true]);

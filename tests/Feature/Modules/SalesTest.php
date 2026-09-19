@@ -293,6 +293,31 @@ class SalesTest extends TestCase
     /**
      * বিক্রয়যোগ্য মালের বেশি অর্ডার নেওয়া যায় না।
      */
+    /**
+     * ⛔ শূন্য টাকার বিল খাতায় বসে না — আর বিলটা খসড়াই থাকে।
+     *
+     * ── মিউটেশন পরীক্ষায় ধরা ফাঁক, ২০ সেপ্টেম্বর ২০২৬ ─────────────────
+     * `postToLedger()`-এর "শূন্য টাকা" শর্তটা তুলে দিলে একটা পরীক্ষাও লাল
+     * হয়নি। ⓘ দামটা ভুলে শূন্য থেকে গেলে বিলটা "নিশ্চিত" হয়ে যেত, মাল
+     * গুদাম থেকে বেরোত, অথচ গ্রাহকের নামে এক পয়সাও বসত না।
+     */
+    public function test_an_invoice_worth_nothing_is_refused_and_stays_a_draft(): void
+    {
+        $invoice = $this->makeInvoice(null, '1', '0');
+
+        try {
+            $this->invoices()->confirm($invoice);
+            $this->fail('শূন্য টাকার বিল নিশ্চিত হয়ে গেছে।');
+        } catch (ValidationException $e) {
+            $this->assertStringContainsString(
+                __('sales::validation.zero_value_invoice'),
+                implode(' ', $e->validator->errors()->all()),
+            );
+        }
+
+        $this->assertSame(DocumentStatus::DRAFT, $invoice->fresh()?->status);
+    }
+
     public function test_more_than_available_cannot_be_ordered(): void
     {
         $available = $this->stock()->availableQty($this->product, $this->warehouse);
