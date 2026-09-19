@@ -137,42 +137,28 @@ final class BackupRunner
     }
 
     /**
-     * কনসোল থেকে ডাকা — ডাম্পটা ইতিমধ্যেই হয়ে গেছে, কেবল কপি ও হিসাব।
+     * রাতের ব্যাকআপ — খাতায় তোলা আর গন্তব্যে পাঠানো।
      *
-     * ── কেন এই আলাদা প্রবেশপথ ────────────────────────────────────────
-     * রোজকার ব্যাকআপ আর deploy-এর ব্যাকআপ দুইটাই `abos:backup` দিয়ে
-     * চলে, আর সেই কমান্ডটার signature `deploy.sh:93` ধরে আছে —
-     * বদলালে প্রতিটা deploy ব্যাকআপের ধাপেই থেমে যেত।
+     * ── ⛔ রাতের ব্যাকআপ কোনো চিহ্ন রাখত না, ১৯ সেপ্টেম্বর ২০২৬ ──────────
+     * আগে এখানে লেখা ছিল `if (! $hasAny) continue` — গন্তব্য বসানো না থাকলে
+     * কোম্পানিটা বাদ। ⚠️ লাইভে কোনো গন্তব্য নেই, তাই প্রতিটা রাতের ব্যাকআপ
+     * নেওয়া হত, যাচাইও হত — আর **ডাটাবেজে একটা সারিও পড়ত না**। পর্দা বলত
+     * "কিছুই হয়নি", অথচ ডাম্পটা ডিস্কে বসে ছিল। ⓘ ধরা পড়েছে যাচাইয়ের পর্দা
+     * বানাতে গিয়ে: দেখানোর মতো কিছু ছিল না।
      *
-     * তাই ডাম্পের পথটা অপরিবর্তিত রেখে কপি ও হিসাবটা পরে যোগ হয়।
+     * ⭐ এখন প্রতিটা রাত প্রতিটা কোম্পানির খাতায় ওঠে। গন্তব্য না থাকলে অবস্থা
+     * `local_only` — "ব্যাকআপ আছে, কিন্তু একই সার্ভারে"। আর যাচাইয়ের ফলটাও
+     * সারির সাথে থাকে ([[BackupVerification]]), কেবল লগ ফাইলে নয়।
      *
-     * ⚠️ কনসোলে কোনো লগইন নেই, কোনো কোম্পানি-প্রসঙ্গও নেই। তাই
-     * **প্রতিটা কোম্পানির গন্তব্য আলাদা করে দেখা হয়** — নাহলে
-     * বহু-কোম্পানির ইনস্টলে কেবল একটার গন্তব্যে কপি যেত, আর বাকিরা
-     * চুপচাপ বাদ পড়ত।
-     *
-     * @param  array{file: string, bytes: int, mirrored: ?string}  $made
+     * @param  array{file: string, bytes: int}  $made
+     * @param  array{tables?: int, rows?: int}|null  $verified  রাতের যাচাইয়ের ফল — বাদ দেওয়া হলে null
      */
-    public function recordAndCopy(array $made, ?Command $console = null): void
+    public function recordAndCopy(array $made, ?Command $console = null, ?array $verified = null, int $verifyMs = 0): void
     {
         $file = (string) $made['file'];
 
         foreach (Company::query()->pluck('id') as $companyId) {
             CompanyContext::set((int) $companyId);
-
-            $hasAny = BackupDestination::query()->where('is_active', true)->exists();
-
-            /*
-             * যে কোম্পানির কোনো গন্তব্য নেই, তার জন্য একটা সারিও নয়।
-             *
-             * ⓘ নাহলে দশ-কোম্পানির ইনস্টলে রোজ দশটা `local_only` সারি
-             * জমত, আর তালিকাটা এত ভরে যেত যে আসল ব্যর্থতাগুলো তার
-             * ভেতরে হারিয়ে যেত। **যে সারি কেউ পড়ে না, সেটা লগ নয়,
-             * আবর্জনা।**
-             */
-            if (! $hasAny) {
-                continue;
-            }
 
             $run = BackupRun::create([
                 'company_id' => (int) $companyId,
@@ -185,6 +171,17 @@ final class BackupRunner
                 'checksum' => is_file($file) ? hash_file('sha256', $file) : null,
                 'triggered_by' => 'schedule',
             ]);
+
+            if ($verified !== null) {
+                BackupVerification::create([
+                    'run_id' => $run->id,
+                    'kind' => 'test_restore',
+                    'status' => ($verified['tables'] ?? 0) > 0 ? 'passed' : 'failed',
+                    'detail' => $verified,
+                    'duration_ms' => $verifyMs,
+                    'verified_at' => Carbon::now(),
+                ]);
+            }
 
             [$ok, $failed] = $this->copyEverywhere($file);
 
@@ -199,14 +196,62 @@ final class BackupRunner
                 },
             ]);
 
-            $console?->line(sprintf(
-                '  গন্তব্য: %dটায় গেছে, %dটায় যায়নি',
-                count($ok),
-                count($failed),
-            ));
+            if ($ok !== [] || $failed !== []) {
+                $console?->line(sprintf(
+                    '  গন্তব্য: %dটায় গেছে, %dটায় যায়নি',
+                    count($ok),
+                    count($failed),
+                ));
+            }
 
             foreach ($failed as $f) {
                 $console?->warn("    {$f['name']} — ".__($f['reason']));
+            }
+        }
+
+        CompanyContext::clear();
+    }
+
+    /**
+     * ব্যর্থ রাত — কারণসহ, হুবহু।
+     *
+     * ⛔ আগে ব্যর্থতা কেবল লগ ফাইলে যেত; খাতায় কিছুই না। ⚠️ ১৯ সেপ্টেম্বরের
+     * ১৬:৩০-এ যাচাই ব্যর্থ হয়েছিল (*"Access denied … to database
+     * 'univerbd_abos_verify'"*) — মালিক সেটা জানতে পারতেন কেবল সার্ভারে ঢুকে
+     * লগ পড়ে। ⭐ এখন সারিটা লাল হয়ে পর্দায় আসে, আর বার্তাটা যেমন ছিল তেমন।
+     *
+     * @param  array{file: string, bytes: int}|null  $made  ডাম্প নেওয়া গিয়েছিল কি না (যাচাইয়ে ভাঙলে আছে)
+     */
+    public function recordFailure(?array $made, Throwable $failure, bool $whileVerifying, int $verifyMs = 0): void
+    {
+        $file = $made !== null ? (string) $made['file'] : null;
+
+        foreach (Company::query()->pluck('id') as $companyId) {
+            CompanyContext::set((int) $companyId);
+
+            $run = BackupRun::create([
+                'company_id' => (int) $companyId,
+                'started_at' => now(),
+                'finished_at' => now(),
+                'status' => 'failed',
+                'backup_type' => 'full',
+                'scope' => 'all',
+                'file' => $file !== null ? basename($file) : null,
+                'bytes' => $made !== null ? (int) $made['bytes'] : null,
+                'checksum' => $file !== null && is_file($file) ? hash_file('sha256', $file) : null,
+                'error' => mb_substr($failure->getMessage(), 0, 2000),
+                'triggered_by' => 'schedule',
+            ]);
+
+            if ($whileVerifying) {
+                BackupVerification::create([
+                    'run_id' => $run->id,
+                    'kind' => 'test_restore',
+                    'status' => 'failed',
+                    'detail' => ['error' => mb_substr($failure->getMessage(), 0, 300)],
+                    'duration_ms' => $verifyMs,
+                    'verified_at' => Carbon::now(),
+                ]);
             }
         }
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Modules\Backup\Http\Controllers\BackupController;
 use App\Modules\Backup\Http\Controllers\DestinationController;
+use App\Modules\Backup\Http\Controllers\RecoveryController;
 use Illuminate\Support\Facades\Route;
 
 /**
@@ -53,6 +54,26 @@ Route::middleware('auth')->prefix('backup')->group(function () {
     Route::get('/download/{name}', [BackupController::class, 'download'])
         ->name('download')
         ->middleware('can:backup.download');
+
+    /*
+     * ── নীতি, যাচাই, ফেরানো, দুর্যোগ — কেবল দেখার (নিরীক্ষার ধাপ ৫.১) ──
+     * ⓘ চারটাই GET। কেন কোনো POST নেই, [[RecoveryController]]-এ।
+     */
+    Route::get('/policy', [RecoveryController::class, 'policy'])
+        ->name('policy.index')
+        ->middleware('can:backup.configure');
+
+    Route::get('/verifications', [RecoveryController::class, 'verifications'])
+        ->name('verification.index')
+        ->middleware('can:backup.view');
+
+    Route::get('/restore', [RecoveryController::class, 'restore'])
+        ->name('restore.index')
+        ->middleware('can:backup.restore');
+
+    Route::get('/disaster-recovery', [RecoveryController::class, 'disaster'])
+        ->name('dr.index')
+        ->middleware('can:backup.failover');
 
     // ── গন্তব্য ───────────────────────────────────────────────────────
     Route::prefix('destinations')->name('destination.')->group(function () {

@@ -225,9 +225,10 @@ class ABackupOnOneDiskIsNotABackupTest extends TestCase
     public function test_the_nightly_backup_also_reaches_its_destinations(): void
     {
         $dir = sys_get_temp_dir().DIRECTORY_SEPARATOR.'abos-night-'.uniqid();
+        $companyId = CompanyContext::id();
 
         BackupDestination::create([
-            'company_id' => CompanyContext::id(),
+            'company_id' => $companyId,
             'name' => 'রাতের গন্তব্য', 'driver' => 'local', 'kind' => 'offline',
             'config' => ['path' => $dir], 'is_active' => true,
         ]);
@@ -243,7 +244,15 @@ class ABackupOnOneDiskIsNotABackupTest extends TestCase
         app(BackupRunner::class)
             ->recordAndCopy(['file' => $fake, 'bytes' => filesize($fake), 'mirrored' => null]);
 
-        $run = BackupRun::query()->where('triggered_by', 'schedule')->latest('id')->first();
+        /*
+         * ⓘ ১৯ সেপ্টেম্বর ২০২৬ থেকে রাতের ব্যাকআপ **প্রতিটা** কোম্পানির
+         * খাতায় ওঠে, গন্তব্য না থাকলেও ([[TheNightlyBackupLeftNoRecordTest]])।
+         * ⚠️ তাই "সবশেষ সারি" অন্য কোম্পানিরও হতে পারে — খোঁজা হয় এই
+         * কোম্পানির সারিটাই, যার গন্তব্য বসানো আছে।
+         */
+        $run = BackupRun::query()->withoutGlobalScopes()
+            ->where('company_id', $companyId)
+            ->where('triggered_by', 'schedule')->latest('id')->first();
 
         $this->assertNotNull($run, 'রাতের পথে কোনো সারিই লেখা হয়নি।');
         $this->assertSame(1, $run->copiesLanded(), 'রাতের ব্যাকআপ কোনো গন্তব্যে পৌঁছায়নি।');

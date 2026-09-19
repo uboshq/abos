@@ -94,6 +94,11 @@ class TheBackupRanWhereNobodyCouldSeeItTest extends TestCase
      *
      * এটা এমন সিদ্ধান্ত যা পরে কেউ "সুবিধার জন্য" উল্টে দিতে পারেন।
      * তাই কারণটা কেবল মন্তব্যে নয়, একটা পরীক্ষাতেও।
+     *
+     * ⓘ ১৯ সেপ্টেম্বর ২০২৬ থেকে "ফিরিয়ে আনা" নামে একটা **দেখার** পর্দা আছে
+     * (কোন ফাইল যাচাই-করা, আর হুবহু কমান্ড)। ⚠️ তাই প্রশ্নটা এখন নাম নয়,
+     * কাজ: এমন কোনো ফেরানোর রুট নেই যা GET ছাড়া অন্য কিছু নেয় — অর্থাৎ
+     * যা কিছু বদলাতে পারে। আর দেখার পাতাতেও কোনো ফর্ম নেই।
      */
     public function test_there_is_no_way_to_restore_from_a_screen(): void
     {
@@ -101,11 +106,17 @@ class TheBackupRanWhereNobodyCouldSeeItTest extends TestCase
 
         foreach (Route::getRoutes() as $route) {
             $name = (string) $route->getName();
+            $changes = array_diff($route->methods(), ['GET', 'HEAD']) !== [];
 
-            if (str_contains($name, 'backup') && str_contains($name, 'restore')) {
-                $restoring[] = $name;
+            if (str_contains($name, 'backup') && str_contains($name, 'restore') && $changes) {
+                $restoring[] = $name.' ['.implode('|', $route->methods()).']';
             }
         }
+
+        $page = (string) file_get_contents(base_path('app/Modules/Backup/Resources/views/restore.blade.php'));
+
+        $this->assertStringNotContainsString('<form', $page,
+            'ফেরানোর দেখার পাতায় একটা ফর্ম বসেছে — ফেরানো কমান্ড লাইনের কাজ।');
 
         $this->assertSame([], $restoring, implode("\n", [
             'ব্যাকআপ ফিরিয়ে আনার একটা রুট বসেছে:',

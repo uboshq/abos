@@ -29,6 +29,14 @@ class Backup extends Command
     {
         $now = Carbon::now();
 
+        /*
+         * ⓘ ব্যর্থ হলে কোন ধাপে — ডাম্পে না যাচাইয়ে — সেটা খাতায় লাগে:
+         * যাচাইয়ে ভাঙলে ডাম্পটা আছে, আর সেই ফাইলের নামও সারিতে থাকে।
+         */
+        $result = null;
+        $verifying = false;
+        $verifyMs = 0;
+
         try {
             if (! $this->option('keep-only')) {
                 $result = $backups->run($now);
@@ -49,8 +57,16 @@ class Backup extends Command
                         .'একই ডিস্ক নষ্ট হলে ব্যাকআপও হারাবে।');
                 }
 
+                $check = null;
+
                 if (! $this->option('no-verify')) {
+                    $verifying = true;
+                    $started = microtime(true);
+
                     $check = $backups->verify($result['file']);
+
+                    $verifyMs = (int) ((microtime(true) - $started) * 1000);
+                    $verifying = false;
 
                     $this->info("  যাচাই ঠিক আছে — ফিরিয়ে এনে {$check['tables']}টা টেবিল পাওয়া গেছে।");
                 }
@@ -80,7 +96,7 @@ class Backup extends Command
                  * ⚠️ কনসোলে কোনো কোম্পানি-প্রসঙ্গ নেই, তাই রানার
                  * প্রতিটা কোম্পানির গন্তব্য আলাদা করে দেখে।
                  */
-                app(BackupRunner::class)->recordAndCopy($result, $this);
+                app(BackupRunner::class)->recordAndCopy($result, $this, $check, $verifyMs);
             }
 
             $removed = $backups->prune($now);
@@ -103,6 +119,19 @@ class Backup extends Command
              * scheduler বা cron-এর নজরদারি এটা ধরতে পারে।
              */
             $this->error('ব্যাকআপ ব্যর্থ: '.$e->getMessage());
+
+            /*
+             * ⭐ ব্যর্থতাও খাতায় — কেবল লগে নয় ([[BackupRunner::recordFailure()]])।
+             * ⚠️ খাতায় লিখতে গিয়েও ভাঙতে পারে (ডাটাবেজই যদি সমস্যা হয়);
+             * তখন মূল ত্রুটিটা ঢেকে না দিয়ে কেবল একটা লাইন যোগ হয়।
+             */
+            if (! $this->option('keep-only')) {
+                try {
+                    app(BackupRunner::class)->recordFailure($result, $e, $verifying, $verifyMs);
+                } catch (Throwable $alsoFailed) {
+                    $this->warn('  খাতায় তোলাও গেল না: '.$alsoFailed->getMessage());
+                }
+            }
 
             return self::FAILURE;
         }

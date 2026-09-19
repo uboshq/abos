@@ -91,19 +91,19 @@ return [
                 'permission' => 'backup.configure'],
 
             ['label' => 'backup::menu.policies', 'icon' => 'book', 'route' => 'backup.policy.index',
-                'permission' => 'backup.configure', 'planned' => true],
+                'permission' => 'backup.configure'],
             ['label' => 'backup::menu.restore', 'icon' => 'refresh', 'route' => 'backup.restore.index',
-                'permission' => 'backup.restore', 'planned' => true],
+                'permission' => 'backup.restore'],
         ],
 
         'reports' => [
             ['label' => 'backup::menu.verifications', 'icon' => 'check-circle', 'route' => 'backup.verification.index',
-                'permission' => 'backup.view', 'planned' => true],
+                'permission' => 'backup.view'],
         ],
 
         'settings' => [
             ['label' => 'backup::menu.disaster_recovery', 'icon' => 'alert-triangle', 'route' => 'backup.dr.index',
-                'permission' => 'backup.failover', 'planned' => true],
+                'permission' => 'backup.failover'],
         ],
     ],
 
