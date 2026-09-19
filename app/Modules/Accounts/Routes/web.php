@@ -115,6 +115,14 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
      * {voucher} রুটগুলো ধরন ছাড়া, কারণ একটা ভাউচার নিজেই জানে সে কোন
      * ধরনের — ঠিকানায় ধরনটা আবার লিখলে দুইটা অমিল হতে পারত।
      */
+    /*
+     * ⭐ সব ভাউচার এক পর্দায়, সাতটা ট্যাবে — [[VoucherListController]] (১৯ সেপ্টেম্বর)।
+     * ⓘ `/vouchers/{type}`-এর ভেতরে নয়, আলাদা পথে — নাহলে "list"-কে একটা ভাউচারের
+     * ধরন ভেবে বসত, ঠিক নিচের মন্তব্যটা যে ফাঁদের কথা বলে।
+     */
+    Route::get('voucher-list', [\App\Modules\Accounts\Http\Controllers\VoucherListController::class, 'index'])
+        ->name('voucher.list');
+
     Route::prefix('vouchers')->name('voucher.')->group(function () {
         Route::get('/{voucher}', [VoucherController::class, 'show'])
             ->whereNumber('voucher')->name('show');

@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'voucher_type' => 'ভাউচারের ধরন',
+    'came_from' => 'কোথা থেকে এল',
     // ⭐ তালিকায় না থাকা পক্ষ — ১৮ সেপ্টেম্বর ২০২৬
     'party_not_listed' => 'তালিকায় নেই? নাম লিখুন',
     'party_new_name' => 'নতুন নাম',
