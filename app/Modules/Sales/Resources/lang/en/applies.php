@@ -7,6 +7,6 @@ return [
     'product' => 'One product',
     'category' => 'One category',
     'brand' => 'One brand',
-    'territory' => 'One territory',
+    'territory' => 'One area',
     'dealer_tier' => 'Dealer tier',
 ];

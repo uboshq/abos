@@ -17,7 +17,7 @@ return [
     'empty_locations_note' => 'Start with Bangladesh and its eight divisions. Everything from area downwards is your own trading structure, so you build that.',
     'empty_lists' => 'These lists are empty.',
     'empty_lists_note' => 'Without units, taxes, terms and reason codes the first invoice cannot be written. Install the standard lists, then remove what you do not need.',
-    'levels_off' => 'Region and territory can be switched off in settings — small businesses do not need them.',
+    'levels_off' => 'Zone and area can be switched off in settings — small businesses do not need them.',
     'deactivate_confirm' => 'This and everything under it will be deactivated. Past records stay. Continue?',
     'series_placeholders' => 'These markers can be used in the format. A format without {SEQ} is refused — without it every document would get the same number.',
 
