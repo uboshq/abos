@@ -162,6 +162,67 @@ final class TheBillWentForApprovalAndVanishedTest extends TestCase
     }
 
     /**
+     * ⭐ পর্দা সোজা খসড়া বিলের পাতায় যায় — ভরা ফর্মে ফেরে না।
+     *
+     * ── ⛔ মালিকের দ্বিতীয় অভিযোগ, ১৯ সেপ্টেম্বর ২০২৬ ────────────────
+     * *"অনুমোদনে গেলে ক্রয়ের পর হারিয়ে যায়।"* ⓘ খসড়াটা আগের দিনই টিকে
+     * যাচ্ছিল (উপরের দুইটা দাবি), কিন্তু পর্দা ফিরত সরাসরি ক্রয়ের ভরা
+     * ফর্মে — খসড়ার কোনো লিংক ছাড়া। ⚠️ মানুষের চোখে ওটা "কিছুই হয়নি"।
+     *
+     * ⚠️ দাবিটা **HTTP ধরে**, সেবা ধরে নয়: সেবা ঠিকই ছিল, ভাঙা ছিল
+     * কন্ট্রোলার কোথায় পাঠায় সেটা।
+     */
+    public function test_the_screen_goes_straight_to_the_held_draft(): void
+    {
+        $response = $this->post(route('purchase.direct.store'), [
+            ...$this->documentData(),
+            'lines' => $this->lines(),
+        ]);
+
+        $draft = PurchaseBill::query()->latest('id')->firstOrFail();
+
+        $this->assertSame('draft', $draft->status);
+
+        $response->assertRedirect(route('purchase.bill.show', $draft->id));
+
+        /*
+         * ⓘ দুইটা বার্তাই সাথে যায়: সবুজটা বলে কাগজটা কোথায় আর পরের
+         * ধাপ কী, লালটা বলে কেন আটকেছে। ⛔ একটা হারালে মানুষ হয় জানেন
+         * না কাগজটা আছে, নয় জানেন না কেন এগোচ্ছে না।
+         */
+        $response->assertSessionHas('saved');
+        $response->assertSessionHasErrors('status');
+    }
+
+    /**
+     * ⭐ বাকি ছয় জায়গা আগের মতোই — বার্তা দেখায়, ৫০০ নয়।
+     *
+     * ⓘ [[HeldForApproval]] `ValidationException`-এর উপ-ধরন, আর দাবি ছিল
+     * যে ছয়টা সেবা [[DocumentApproval::assertClear()]] ডাকে তাদের কিছুই
+     * বদলায় না। ⚠️ দাবিটা লিখে রাখাই যথেষ্ট নয় — বিলের সাধারণ "নিশ্চিত"
+     * বোতামটা (যেখানে কেউ আলাদা করে ধরে না) আসলে চেপে দেখা হয়।
+     */
+    public function test_the_plain_confirm_button_still_shows_the_message(): void
+    {
+        $bill = app(\App\Modules\Purchase\Services\PurchaseBillService::class)->create(
+            $this->documentData(),
+            [[
+                'product_id' => $this->product->id,
+                'qty' => '10',
+                'rate' => '60',
+            ]],
+        );
+
+        $response = $this->from(route('purchase.bill.show', $bill->id))
+            ->post(route('purchase.bill.confirm', $bill->id));
+
+        $response->assertRedirect(route('purchase.bill.show', $bill->id));
+        $response->assertSessionHasErrors('status');
+
+        $this->assertSame('draft', $bill->fresh()->status);
+    }
+
+    /**
      * ⭐ ছক না থাকলে আজকের মতোই — এক পর্দায় সব শেষ।
      *
      * ⚠️ এই দাবিটা সংশোধনের পাহারা: লেনদেনের সীমানা সরানোর পর স্বাভাবিক
