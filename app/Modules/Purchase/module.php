@@ -96,7 +96,13 @@ return [
             ['label' => 'purchase::menu.receipts', 'icon' => 'inbox', 'route' => 'purchase.receipt.index', 'permission' => 'purchase.receipt.view',
                 'setting' => 'purchase.screen_receipts'],
             ['label' => 'purchase::menu.bills', 'icon' => 'receipt', 'route' => 'purchase.bill.index', 'permission' => 'purchase.bill.view'],
-            ['label' => 'purchase::menu.payments', 'icon' => 'outbox', 'route' => 'purchase.payment.index', 'permission' => 'purchase.payment.view'],
+            /*
+             * ⭐ "পরিশোধ" বোতাম নেই — মালিকের নির্দেশ, ১৯ সেপ্টেম্বর ২০২৬:
+             * *"পরিশোধ বোতাম দরকার নেই, যেহেতু accounts-এর কাজ।"* ⓘ সরবরাহকারীকে
+             * টাকা দেওয়া এখন হিসাবের পরিশোধ ভাউচার, আর বাইরের সবার খাতা
+             * ব্যাংকের মতো Dr/Cr। ⓘ পুরনো পরিশোধের পাতা ও রুট থাকল — ইতিহাস
+             * আর বিলের পাতার লিংক ওখানেই খোলে।
+             */
             ['label' => 'purchase::menu.returns', 'icon' => 'refresh', 'route' => 'purchase.return.index', 'permission' => 'purchase.return.view'],
         ],
         'reports' => [

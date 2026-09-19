@@ -130,7 +130,12 @@ return [
              */
             ['label' => 'sales::menu.shipments', 'icon' => 'share', 'route' => 'sales.shipment.index',
                 'permission' => 'sales.shipment.view', 'setting' => 'sales.screen_shipments'],
-            ['label' => 'sales::menu.collections', 'icon' => 'inbox', 'route' => 'sales.collection.index', 'permission' => 'sales.collection.view'],
+            /*
+             * ⭐ "আদায়" বোতাম নেই — মালিকের নির্দেশ, ১৯ সেপ্টেম্বর ২০২৬ (ক্রয়ের
+             * "পরিশোধ"-এর মতোই): গ্রাহকের টাকা নেওয়া হিসাবের রসিদ ভাউচারের কাজ,
+             * আর কাউন্টারের ডিপোজিটও এখন রসিদ ভাউচার। ⓘ পুরনো আদায়ের পাতা ও
+             * রুট থাকল — ইতিহাস, চেক ফেরত আর বিলের পাতার লিংক ওখানেই খোলে।
+             */
             ['label' => 'sales::menu.returns', 'icon' => 'refresh', 'route' => 'sales.return.index', 'permission' => 'sales.return.view'],
 
             /*
