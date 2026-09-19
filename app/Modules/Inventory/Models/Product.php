@@ -67,6 +67,16 @@ class Product extends Model implements Drillable
     }
 
     /**
+     * এই পণ্যের প্যাকগুলো — base সহ, বড়টা আগে।
+     *
+     * ⓘ [[ProductUnit]] দেখুন: কার্টনের মাপ পণ্যের, এককের মাস্টারের নয়।
+     */
+    public function packs(): HasMany
+    {
+        return $this->hasMany(ProductUnit::class)->orderByDesc('factor');
+    }
+
+    /**
      * পণ্যের মুখ — তালিকায় ও কাউন্টারে যেটা দেখা যায়।
      *
      * ── কেন এটা "প্রধান ছবি", "ছবি" নয় ──────────────────────────────
