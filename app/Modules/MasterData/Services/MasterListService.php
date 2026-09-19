@@ -537,6 +537,23 @@ final class MasterListService implements ProvisionsCompany
         ]);
 
         /*
+         * ⭐ ডজন = ১২ পিস — সত্যিই জোড়া, ১৯ সেপ্টেম্বর ২০২৬।
+         *
+         * ⛔ উপরের সারিতে ডজনের factor ১২ লেখা থাকত, কিন্তু base কিছু নয় —
+         * অর্থাৎ "১২ কিসের?" প্রশ্নের উত্তর ছিল না, আর রূপান্তর কোথাও
+         * কাজ করত না। লাইভের প্রতিটা কোম্পানিতে ঠিক এই অবস্থা পাওয়া গেছে।
+         *
+         * ⓘ base-টা এখানে, সারির ভেতরে নয়: পিসের id সারিগুলো তৈরির পরেই
+         * জানা যায়। পুরনো কোম্পানির জন্য একই কাজ `abos:packs-backfill`।
+         */
+        $piece = Unit::query()->where('code', 'PCS')->first();
+        $dozen = Unit::query()->where('code', 'DOZ')->whereNull('base_unit_id')->first();
+
+        if ($piece !== null && $dozen !== null) {
+            $dozen->forceFill(['base_unit_id' => $piece->id])->save();
+        }
+
+        /*
          * টাকা কীভাবে এল — চারটা, আর এই চারটাই বাংলাদেশে যথেষ্ট শুরু।
          *
          * ⓘ `account_id` ইচ্ছাকৃতভাবে খালি: কোন হিসাবের খাতে বসবে সেটা

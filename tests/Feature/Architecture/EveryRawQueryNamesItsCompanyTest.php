@@ -107,6 +107,12 @@ class EveryRawQueryNamesItsCompanyTest extends TestCase
         'app/Core/Security/LedgerChain.php' => 'শৃঙ্খল সারাইয়ের একক সারি, প্রাথমিক কী (`id`) ধরে; '
             .'সারির তালিকাটা `reseal(int $companyId)`-এ আগেই কোম্পানি ধরে বাছা',
 
+        'app/Modules/MasterData/Services/LocationService.php' => 'মোছার আগে কে এই এলাকার দিকে দেখায় (purge) — '
+            .'information_schema থেকে পাওয়া টেবিলে এলাকার id দিয়ে, আর এলাকাটা নিজেই কোম্পানি-স্কোপে বাছা; '
+            .'MasterListService-এর একই কারণ',
+        'app/Modules/Inventory/Services/PackSnapshot.php' => 'গোটা ডেটাবেসের আঙুলের ছাপ, ইচ্ছে করে কোম্পানি-নিরপেক্ষ: '
+            .'প্রমাণটা "কোনো কোম্পানিতেই মজুদ বা লাইন বদলায়নি"; লাইন-টেবিলে company_id নেই; '
+            .'আর ছাপে কেবল সারির সংখ্যা ও md5 বেরোয়, কোনো সারির লেখা নয়',
         'app/Console/Commands/CatchUpNumbers.php' => 'ছাঁকনিটা শর্তসাপেক্ষে বসে (`$where[\'scoped\']`), কারণ নম্বর '
             .'সিরিজের কিছু টেবিল ইচ্ছাকৃতভাবেই কোম্পানি-নিরপেক্ষ; '
             .'বসানোর সময় সিরিজের নিজের company_id ব্যবহার হয়',
