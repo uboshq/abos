@@ -159,13 +159,24 @@ class PackEntryScreenTest extends TestCase
     // ── সুইচ ─────────────────────────────────────────────────────
 
     /** সুইচ চালু থাকলে ফর্মে এককের ঘরটা থাকে। */
+    /**
+     * একক-ঘরের নাম, পর্দায় যেভাবে লেখা।
+     *
+     * ⚠️ ১৯ সেপ্টেম্বর ২০২৬: CSP কমিট `lines[${i}][unit_id]` বদলে যোগ-চিহ্নে
+     * জোড়া নাম বসায়, কিন্তু দুইটা দাবিতেই পুরনো লেখা রয়ে গিয়েছিল। ⛔ তাতে
+     * "আছে"-র দাবি লাল হলো, আর "নেই"-র দাবি **অন্ধভাবে সবুজ** — যে লেখা
+     * আর কোথাও নেই, তা না-থাকা সবসময়ই সত্যি। তাই দুই দাবি একটাই ধ্রুবক পড়ে।
+     */
+    private const UNIT_BOX = "'lines[' + (i) + '][unit_id]'";
+
     public function test_the_unit_column_appears_when_the_switch_is_on(): void
     {
         $this->switchOn(true);
 
         $this->get(route('sales.invoice.create'))
             ->assertOk()
-            ->assertSee('lines[${i}][unit_id]', escape: false);
+            // ⓘ CSP-এর পর (9b93cc03) নামটা যোগ-চিহ্নে জোড়া, template literal-এ নয়
+            ->assertSee(self::UNIT_BOX, escape: false);
     }
 
     /**
@@ -180,7 +191,7 @@ class PackEntryScreenTest extends TestCase
 
         $this->get(route('sales.invoice.create'))
             ->assertOk()
-            ->assertDontSee('lines[${i}][unit_id]', escape: false);
+            ->assertDontSee(self::UNIT_BOX, escape: false);
     }
 
     /**
