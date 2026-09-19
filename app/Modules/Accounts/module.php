@@ -416,6 +416,9 @@ return [
      */
     'approvals' => [
         'expense' => 'accounts::approval.expense',
+
+        // ⭐ কাউন্টারের ডিপোজিট — হাতে লেখা রসিদ থেকে আলাদা নিয়ম (১৯ সেপ্টেম্বর)
+        'counter_deposit' => 'accounts::approval.counter_deposit',
         'transfer' => 'accounts::approval.transfer',
         'cash_count' => 'accounts::approval.cash_count',
         'year_end' => 'accounts::approval.year_end',

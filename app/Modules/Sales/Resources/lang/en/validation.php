@@ -3,6 +3,11 @@
 declare(strict_types=1);
 
 return [
+    'nothing_held_here' => 'Invoice :no has no deposit waiting for approval.',
+    'deposit_still_waiting' => 'Deposit :no is not approved yet — the sale is confirmed only once it is signed.',
+    'held_use_finish' => 'Invoice :no is waiting on a counter deposit approval — finish it with the "Approved, confirm the sale" button on the invoice page.',
+    'held_no_edit' => 'Invoice :no is waiting on a deposit approval — it cannot be changed now.',
+    'held_no_print' => 'Invoice :no is waiting on a deposit approval — it is not printed before that.',
     'group_takes_no_money' => '":name" is a head, not an account — money posted there shows up in no balance. Pick one of the accounts under it.',
     'no_cash_counter' => 'There is no cash counter yet. Open one first — without it there is no way to say whose custody the money went into.',
     'unknown_payment_method' => 'That payment method was not found, or it has been switched off.',

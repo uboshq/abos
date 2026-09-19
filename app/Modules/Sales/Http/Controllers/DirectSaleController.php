@@ -590,6 +590,21 @@ class DirectSaleController extends Controller implements HasMiddleware
          * ডিপোজিটটা চোখের সামনে, আর বার্তায় বিলের নম্বর (রসিদ পরে ছাপা
          * যায়)। ⓘ সাধারণ বিক্রয়ে কিছুই বদলায় না — সোজা রসিদে।
          */
+        /*
+         * ⭐ কাউন্টারের ডিপোজিটে সই লাগলে — বিলের পাতায়, ছাপায় নয় (১৯ সেপ্টেম্বর)।
+         *
+         * ⓘ মালিকের নিয়ম: *"কোনো print option আসবে না যতক্ষণ approve
+         * হচ্ছে।"* ⚠️ তাই রসিদের PDF-এ যাওয়াই চলে না; বিলের পাতা বলে কোন
+         * ডিপোজিট কার সইয়ের অপেক্ষায়, আর সই হলে সেখান থেকেই "নিশ্চিত"।
+         */
+        if (($result['awaiting'] ?? []) !== []) {
+            return redirect()
+                ->route('sales.invoice.show', $result['invoice']->id)
+                ->with('saved', __('sales::message.direct_sale_held', [
+                    'invoice' => $result['invoice']->document_no,
+                ]));
+        }
+
         if ($result['held'] !== []) {
             return redirect()
                 ->route('sales.collection.index', ['stage' => DocumentStatus::DRAFT])

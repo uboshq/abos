@@ -3,6 +3,13 @@
 declare(strict_types=1);
 
 return [
+    'held_deposits' => 'ডিপোজিট অনুমোদনের অপেক্ষায়',
+    'deposit_state' => [
+        'pending' => 'সইয়ের অপেক্ষায়',
+        'approved' => 'অনুমোদিত',
+        'rejected' => 'প্রত্যাখ্যাত',
+        'none' => 'সই লাগে না',
+    ],
     'supplier' => 'সরবরাহকারী',
     'product' => 'পণ্য',
     'warehouse' => 'গুদাম',

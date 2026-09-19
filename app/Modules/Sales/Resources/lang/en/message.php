@@ -3,6 +3,9 @@
 declare(strict_types=1);
 
 return [
+    'direct_sale_held' => ':invoice kept as a draft — the deposit is waiting for approval. Once signed, confirm the sale from this page; the goods go out and the invoice can be printed then.',
+    'held_sale_finished' => ':no confirmed — the goods are out, and the invoice and deposit are on the books.',
+    'held_explain' => 'Until approval the challan and invoice stay drafts, no goods have left, and the invoice is not printed.',
 
     // চালান নিশ্চিত হলে খতিয়ানে যে বর্ণনাটা বসে
     'transport_for_challan' => 'Vehicle hire for challan :no',

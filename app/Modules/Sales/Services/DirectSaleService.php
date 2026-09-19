@@ -4,11 +4,16 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Services;
 
+use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Engines\Approval\HeldForApproval;
 use App\Core\Services\SettingsService;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\ChequeService;
 use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Accounts\Services\VoucherApproval;
+use App\Modules\Accounts\Services\VoucherService;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
@@ -54,6 +59,10 @@ final class DirectSaleService
         private readonly SettingsService $settings,
         private readonly BatchAllocator $batches,
         private readonly ChequeService $cheques,
+        private readonly ApprovalEngine $approvalEngine,
+        private readonly VoucherService $vouchers,
+        private readonly VoucherApproval $voucherApproval,
+        private readonly CashTillService $tills,
     ) {}
 
     /**
@@ -72,6 +81,23 @@ final class DirectSaleService
 
         $customer = $this->resolveCustomer($data['customer_id'] ?? null);
         $warehouse = $this->resolveWarehouse($data['warehouse_id'] ?? null);
+
+        /*
+         * ⭐ কাউন্টারের ডিপোজিটে সই লাগলে — সবকিছু খসড়া, ১৯ সেপ্টেম্বর ২০২৬।
+         *
+         * ── মালিকের নকশা ────────────────────────────────────────────────
+         * *"Add Deposit → রসিদ ভাউচার। Invoice confirm করলে approval-এ যাবে,
+         * invoice খসড়া থাকবে, কোনো print option আসবে না যতক্ষণ approve
+         * হচ্ছে। Deposit approve হলে bill print হবে।"* আর প্রশ্নের উত্তরে:
+         * সই না হওয়া পর্যন্ত **সবকিছু** অপেক্ষা করবে — মালও বের হবে না।
+         *
+         * ⓘ প্রশ্নটা কাগজ বানানোর **আগে**: [[ApprovalEngine::requires()]]।
+         * ⚠️ ছক বসানো না থাকলে (বা অঙ্ক সীমার নিচে) নিচের পুরনো পথ অবিকল
+         * আগের মতো — মালিকের কথায়, *"আজকের মতো: সাথে সাথে নিশ্চিত + ছাপা"*।
+         */
+        if ($this->counterDepositNeedsApproval($data)) {
+            return $this->hold($data, $lines, $gifts, $customer, $warehouse);
+        }
 
         return DB::transaction(function () use ($data, $lines, $gifts, $customer, $warehouse) {
             $challan = $this->challans->create(
@@ -288,6 +314,199 @@ final class DirectSaleService
      * @param  list<array<string, mixed>>  $lines
      * @return list<array<string, mixed>>
      */
+    /**
+     * কাউন্টারের কোনো ডিপোজিটে সই লাগবে কি?
+     *
+     * ⓘ প্রতিটা সারি আলাদা করে — ছকের সীমা একেকটা ভাউচারের অঙ্কে খাটে,
+     * মোট অঙ্কে নয়। ⚠️ মোট ধরলে দুইটা ছোট ডিপোজিট মিলে সীমা পেরোত,
+     * অথচ কোনো ভাউচারই সই চাইত না, আর বিক্রয় অকারণে আটকে থাকত।
+     */
+    private function counterDepositNeedsApproval(array $data): bool
+    {
+        foreach ($this->depositRows($data) as $row) {
+            if ($this->approvalEngine->requires(
+                VoucherApproval::MODULE,
+                VoucherApproval::COUNTER_DEPOSIT,
+                (string) $row['amount'],
+                class_basename(Voucher::class),
+            )) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * সই লাগবে — তাই চালান আর বিল খসড়া, ডিপোজিট রসিদ ভাউচার হয়ে সইয়ের অপেক্ষায়।
+     *
+     * ── ⚠️ কী হয় আর কী হয় না ─────────────────────────────────────────
+     * ✓ চালান ও তার সারি, উপহার, বিল — সব লেখা থাকে, খসড়া অবস্থায়।
+     * ✓ প্রতিটা ডিপোজিট একটা **রসিদ ভাউচার** (খসড়া), বিলের সাথে বাঁধা
+     *   (`against`), কাউন্টারের চিহ্নসহ (`origin`) — আর অনুমোদনের অনুরোধ।
+     * ✗ মাল বের হয় না, ফ্রি মাল নড়ে না, খাতায় কিছু বসে না।
+     *
+     * ⓘ বাকিটা [[finishHeld()]] করে, সই হয়ে যাওয়ার পর — বিলের পাতার বোতাম।
+     *
+     * @param  list<array<string, mixed>>  $lines
+     * @param  list<array<string, mixed>>  $gifts
+     * @return array{challan: DeliveryChallan, invoice: SalesInvoice, change: string, held: list<mixed>, awaiting: list<Voucher>}
+     */
+    private function hold(array $data, array $lines, array $gifts, Customer $customer, Warehouse $warehouse): array
+    {
+        return DB::transaction(function () use ($data, $lines, $gifts, $customer, $warehouse) {
+            $trxDate = $data['trx_date'] ?? now()->toDateString();
+
+            $challan = $this->challans->create(
+                [
+                    'customer_id' => $customer->id,
+                    'warehouse_id' => $warehouse->id,
+                    'trx_date' => $trxDate,
+                    'vehicle_no' => $data['vehicle_no'] ?? null,
+                    'driver_name' => $data['driver_name'] ?? null,
+                    'narration' => $data['narration'] ?? null,
+                ],
+                $this->challanLines($lines),
+            );
+
+            $this->stampExtras($challan, $data, $lines);
+            $this->writeGifts($challan, $gifts, $warehouse);
+
+            // ⓘ খসড়া চালানের বিল — কেবল এই চালানের জন্য ছাড় ([[SalesInvoiceService::createForHeldCounterSale()]])
+            $invoice = $this->invoices->createForHeldCounterSale(
+                [
+                    'customer_id' => $customer->id,
+                    'warehouse_id' => $warehouse->id,
+                    'trx_date' => $trxDate,
+                    'due_on' => $this->dueOn($data, $customer),
+                    'document_no' => trim((string) ($data['invoice_no'] ?? '')) ?: null,
+                    'narration' => $data['narration'] ?? null,
+                ],
+                $this->invoiceLines($challan->fresh(['lines'])),
+                (int) $challan->id,
+            );
+
+            $receivable = Account::query()->postable()->where('code', StandardChart::RECEIVABLE)->firstOrFail();
+            $awaiting = [];
+
+            foreach ($this->depositRows($data) as $row) {
+                $isCheque = ($row['kind'] ?? null) === 'cheque';
+
+                $moneyAccount = $isCheque
+                    ? $this->chequesInHandAccount()->id
+                    : (int) (($row['account_id'] ?? null) ?: $this->tills->ensurePrimaryTill()->account_id);
+
+                $narration = $row['narration'] ?? __('sales::message.direct_narration', [
+                    'no' => $challan->document_no,
+                ]);
+
+                $voucher = $this->vouchers->create(
+                    [
+                        'type' => Voucher::RECEIPT,
+                        'trx_date' => $trxDate,
+                        'party_type' => 'customer',
+                        'party_id' => $customer->id,
+                        'instrument' => $row['instrument'] ?? null,
+                        'instrument_no' => $row['reference'] ?? null,
+                        'instrument_date' => $row['ref_date'] ?? null,
+                        'from_bank' => $row['bank_name'] ?? null,
+                        'narration' => $narration,
+                        'against_type' => SalesInvoice::drillSourceType(),
+                        'against_id' => $invoice->id,
+                        'origin' => Voucher::ORIGIN_COUNTER,
+                    ],
+                    $this->vouchers->twoLineEntry(
+                        Voucher::RECEIPT,
+                        (int) $receivable->id,
+                        $moneyAccount,
+                        (string) $row['amount'],
+                        $narration,
+                    ),
+                );
+
+                // ⓘ অনুরোধটা এখানেই — সীমার নিচের ভাউচার কিছুই চায় না
+                $this->voucherApproval->stopping($voucher);
+
+                $awaiting[] = $voucher;
+            }
+
+            return [
+                'challan' => $challan->fresh(['lines', 'giftLines']),
+                'invoice' => $invoice->fresh(['lines']),
+                'change' => '0.0000',
+                'held' => [],
+                'awaiting' => $awaiting,
+            ];
+        });
+    }
+
+    /**
+     * সই হয়ে গেছে — এবার বিক্রয়টা শেষ করা।
+     *
+     * ── ⭐ কেন একটা আলাদা ধাপ, ১৯ সেপ্টেম্বর ২০২৬ ───────────────────────
+     * অনুমোদন কেবল "হ্যাঁ" বলে, কাগজ এগোয় না ([[DocumentApproval::stopping()]]
+     * -এর মন্তব্য)। ⓘ তাই বিলের পাতায় একটা বোতাম এটা ডাকে: চালান নিশ্চিত
+     * (মাল বের হয়), ফ্রি মাল নড়ে, বিল নিশ্চিত, আর ভাউচারগুলো খাতায়।
+     *
+     * ⚠️ একটাও ভাউচার সইয়ের অপেক্ষায় বা প্রত্যাখ্যাত থাকলে কিছুই হয় না —
+     * অর্ধেক বিক্রয় চেয়ে পুরো অপেক্ষা ভালো। ⛔ আর সবটা একটাই লেনদেনে:
+     * মাল বের হলো অথচ বিল খসড়া — এমন অবস্থা কোনো মুহূর্তেও থাকে না।
+     */
+    public function finishHeld(SalesInvoice $invoice): SalesInvoice
+    {
+        $invoice->loadMissing(['lines.challanLine']);
+
+        $vouchers = $this->counterVouchers($invoice);
+
+        if ($invoice->status !== 'draft' || $vouchers === []) {
+            throw ValidationException::withMessages([
+                'status' => __('sales::validation.nothing_held_here', ['no' => $invoice->document_no]),
+            ]);
+        }
+
+        foreach ($vouchers as $voucher) {
+            if ($this->voucherApproval->stopping($voucher) !== null) {
+                throw ValidationException::withMessages([
+                    'status' => __('sales::validation.deposit_still_waiting', ['no' => $voucher->document_no]),
+                ]);
+            }
+        }
+
+        $challanId = $invoice->lines->first()?->challanLine?->delivery_challan_id;
+        $challan = DeliveryChallan::query()->with(['lines', 'warehouse'])->findOrFail($challanId);
+
+        return DB::transaction(function () use ($invoice, $vouchers, $challan) {
+            $challan = $this->challans->confirm($challan);
+
+            $this->moveFreeStock($challan->fresh(['lines.product', 'giftLines.product']), $challan->warehouse);
+
+            $deposit = array_reduce(
+                $vouchers,
+                fn (string $sum, Voucher $v) => bcadd($sum, (string) $v->amount, 4),
+                '0',
+            );
+
+            $invoice = $this->invoices->confirm($invoice->fresh(['lines']), $deposit);
+
+            foreach ($vouchers as $voucher) {
+                $this->vouchers->post($voucher->fresh());
+            }
+
+            return $invoice->fresh(['lines']);
+        });
+    }
+
+    /**
+     * এই বিলের কাউন্টারের খসড়া ডিপোজিটগুলো।
+     *
+     * @return list<Voucher>
+     */
+    public function counterVouchers(SalesInvoice $invoice): array
+    {
+        // ⓘ প্রশ্নটা এক জায়গায় — [[SalesInvoice::heldCounterDeposits()]]
+        return $invoice->heldCounterDeposits()->orderBy('id')->get()->all();
+    }
+
     private function challanLines(array $lines): array
     {
         return array_values(array_map(fn (array $line) => [

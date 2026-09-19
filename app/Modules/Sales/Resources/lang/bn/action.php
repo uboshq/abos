@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'finish_held' => 'অনুমোদন হয়েছে — বিক্রয় নিশ্চিত করুন',
     'new_order' => 'নতুন অর্ডার',
     'new_receipt' => 'মাল বুঝে নিন',
     'new_bill' => 'নতুন বিল',

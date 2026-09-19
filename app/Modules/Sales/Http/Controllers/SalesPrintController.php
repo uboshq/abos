@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Http\Controllers;
 
+use Illuminate\Validation\ValidationException;
 use App\Core\Engines\Print\PaperSize;
 use App\Core\Engines\Print\PrintableDocument;
 use App\Core\Engines\Print\PrintEngine;
@@ -66,6 +67,17 @@ class SalesPrintController extends Controller implements HasMiddleware
     public function invoice(Request $request, SalesInvoice $invoice): Response
     {
         /*
+         * ⛔ কাউন্টারে আটকে থাকা বিক্রয়ের বিল ছাপা হয় না — মালিকের নিয়ম
+         * (১৯ সেপ্টেম্বর): *"কোনো print option আসবে না যতক্ষণ approve হচ্ছে।"*
+         * ⓘ বোতামটা পাতায় লুকানো; এটা ঠিকানা টাইপ করে আসার পাহারা।
+         */
+        if ($invoice->isHeldAtCounter()) {
+            throw ValidationException::withMessages([
+                'status' => __('sales::validation.held_no_print', ['no' => $invoice->document_no]),
+            ]);
+        }
+
+        /*
          * ⚠️ `lines.challanLine` — নইলে ছাপার পাতা ৫০০ দেয়।
          *
          * ── কী ঘটেছিল (মাপা, ৩ সেপ্টেম্বর ২০২৬) ─────────────────────
@@ -108,6 +120,17 @@ class SalesPrintController extends Controller implements HasMiddleware
      */
     public function draft(Request $request, SalesInvoice $invoice): Response
     {
+        /*
+         * ⛔ কাউন্টারে আটকে থাকা বিক্রয়ের বিল ছাপা হয় না — মালিকের নিয়ম
+         * (১৯ সেপ্টেম্বর): *"কোনো print option আসবে না যতক্ষণ approve হচ্ছে।"*
+         * ⓘ বোতামটা পাতায় লুকানো; এটা ঠিকানা টাইপ করে আসার পাহারা।
+         */
+        if ($invoice->isHeldAtCounter()) {
+            throw ValidationException::withMessages([
+                'status' => __('sales::validation.held_no_print', ['no' => $invoice->document_no]),
+            ]);
+        }
+
         /*
          * ⚠️ `lines.challanLine` — নইলে ছাপার পাতা ৫০০ দেয়।
          *

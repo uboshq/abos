@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Http\Controllers;
 
+use App\Modules\Sales\Services\DirectSaleService;
+use App\Modules\Accounts\Services\VoucherApproval;
+use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Concerns\AuthorizesResource;
 use App\Core\Concerns\FiltersByDate;
 use App\Core\Concerns\SortsLists;
@@ -205,6 +208,17 @@ class SalesInvoiceController extends Controller implements HasMiddleware
         return view('sales::invoice.show', [
             'menu' => $this->menu->forUser($request->user()),
             'invoice' => $invoice,
+
+            /*
+             * ⓘ কাউন্টারের যে ডিপোজিটগুলো সইয়ের অপেক্ষায় — প্রতিটার সাথে
+             * অনুমোদনের অবস্থা, যাতে পাতাটা বলতে পারে কোনটা আটকে আছে।
+             */
+            'heldDeposits' => $invoice->isHeldAtCounter()
+                ? $invoice->heldCounterDeposits()->orderBy('id')->get()->map(fn ($v) => [
+                    'voucher' => $v,
+                    'approval' => app(ApprovalEngine::class)->latestFor($v, VoucherApproval::COUNTER_DEPOSIT),
+                ])->all()
+                : [],
         ]);
     }
 
@@ -231,6 +245,21 @@ class SalesInvoiceController extends Controller implements HasMiddleware
 
     public function confirm(SalesInvoice $invoice): RedirectResponse
     {
+        /*
+         * ⭐ কাউন্টারে আটকে থাকা বিক্রয় — একই বোতাম, ঠিক পথ (১৯ সেপ্টেম্বর)।
+         *
+         * ⓘ আলাদা বোতাম নয়: মানুষ বিলের পাতায় "নিশ্চিত"-ই খোঁজেন। ⚠️ সই না
+         * হলে [[DirectSaleService::finishHeld()]] পরিষ্কার বার্তা দেয়; হলে
+         * চালান, মাল, বিল আর ডিপোজিট একসাথে খাতায় ওঠে।
+         */
+        if ($invoice->isHeldAtCounter()) {
+            app(DirectSaleService::class)->finishHeld($invoice);
+
+            return redirect()
+                ->route('sales.invoice.show', $invoice)
+                ->with('saved', __('sales::message.held_sale_finished', ['no' => $invoice->document_no]));
+        }
+
         $this->service->confirm($invoice);
 
         return redirect()

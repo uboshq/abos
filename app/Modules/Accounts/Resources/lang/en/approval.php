@@ -14,6 +14,7 @@ return [
     'transfer' => 'Money transfer',
     'year_end' => 'Year-end closing',
     'expense' => 'Expense voucher',
+    'counter_deposit' => 'Counter deposit',
     'receipt' => 'Receipt voucher',
     'payment' => 'Payment voucher',
     'journal' => 'Journal voucher',

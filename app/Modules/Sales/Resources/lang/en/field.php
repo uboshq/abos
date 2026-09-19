@@ -3,6 +3,13 @@
 declare(strict_types=1);
 
 return [
+    'held_deposits' => 'Deposits waiting for approval',
+    'deposit_state' => [
+        'pending' => 'Waiting for approval',
+        'approved' => 'Approved',
+        'rejected' => 'Rejected',
+        'none' => 'No approval needed',
+    ],
     'supplier' => 'Supplier',
     'product' => 'Product',
     'warehouse' => 'Warehouse',
