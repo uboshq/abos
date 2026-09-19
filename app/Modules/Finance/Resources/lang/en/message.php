@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'share_total_off' => 'Ownership adds up to :total% — :gap% is not written against anyone. Check the partners\' shares.',
+    'showing_one_person' => 'Showing :name\'s rows',
     'cash_matches' => 'The count matches the amount.',
     'cash_differs' => 'Counted :counted, written :written - a gap of :gap. It will not post until they match.',
     'withdrawal_kind_note' => 'Drawings and profit share reduce capital; an owner salary is an expense and reduces profit.',

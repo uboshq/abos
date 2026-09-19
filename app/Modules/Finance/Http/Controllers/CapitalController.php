@@ -73,14 +73,32 @@ class CapitalController extends Controller implements HasMiddleware
 
     public function index(Request $request): View
     {
+        /*
+         * ⭐ দুইটা ট্যাব — লেনদেন, আর মালিক ও বিনিয়োগকারী (১৯ সেপ্টেম্বর ২০২৬)।
+         *
+         * ── মালিকের প্রস্তাব ─────────────────────────────────────────────
+         * *"মূলধন ও বিনিয়োগের ভিতরে একটা ট্যাবে 'মালিক ও বিনিয়োগকারী'…
+         * বাকি বোতামগুলোতেও একই ভাবে।"* ⓘ অর্থাৎ নাম আলাদা খাতায় যায় না —
+         * মানুষ থাকেন একটাই তালিকায় (মাস্টার ডেটার ব্যক্তি), আর এই ট্যাব
+         * কেবল এই খাতার লেনদেন থেকে প্রতি জনের হিসাব দেখায়।
+         *
+         * ⓘ নামে ক্লিক করলে লেনদেন ট্যাবে কেবল তাঁর সারি (`?person=`)।
+         * ⚠️ অচেনা ট্যাব চুপচাপ মানা হয় না — লেনদেনেই ফেরে।
+         */
+        $tab = $request->query('tab') === 'owners' ? 'owners' : 'entries';
+        $personId = $request->integer('person') ?: null;
+
         return view('finance::capital.index', [
             'menu' => $this->menu->forUser($request->user()),
+            'tab' => $tab,
+            'person' => $personId === null ? null : Person::query()->find($personId),
             /*
              * ⓘ `person`-ও সাথেই — প্রতিটা সারিতে নামটা দেখানো হয়, আর
              * আলাদা করে আনলে পঞ্চাশ সারির পাতায় পঞ্চাশটা বাড়তি কোয়েরি হত।
              */
             'entries' => CapitalEntry::query()->with(['account', 'person'])
-                ->orderByDesc('trx_date')->orderByDesc('id')->paginate(50),
+                ->when($personId, fn ($q, $id) => $q->where('person_id', $id))
+                ->orderByDesc('trx_date')->orderByDesc('id')->paginate(50)->withQueryString(),
             /*
              * ⓘ মুনাফাটা স্থিতিপত্র থেকে — **একটাই উৎস**।
              *
