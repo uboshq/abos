@@ -38,8 +38,10 @@ class LocationController extends Controller implements HasMiddleware
         return [
             new Middleware('can:master_data.view', only: ['index', 'show']),
             new Middleware('can:master_data.manage', only: [
-                'create', 'store', 'edit', 'update', 'destroy', 'installBangladesh',
+                'create', 'store', 'edit', 'update', 'destroy', 'activate', 'installBangladesh',
             ]),
+            // মোছা আলাদা চাবিতে — মাস্টার তালিকার মতোই (MasterListController::purge)
+            new Middleware('can:master_data.delete', only: ['purge']),
         ];
     }
 
@@ -77,7 +79,7 @@ class LocationController extends Controller implements HasMiddleware
          * মই-এর বাইরের কিছু এলে গাছেই ফেরা।
          */
         /* ⓘ পথ থেকে (`/locations/level/point`) — রুটের মন্তব্যে কারণ লেখা।
-           ⚠️ মই-এর ভেতরে থেকেও **বন্ধ** স্তর (অঞ্চল বা টেরিটরি বন্ধ থাকলে)
+           ⚠️ মই-এর ভেতরে থেকেও **বন্ধ** স্তর (জোন বা এরিয়া বন্ধ থাকলে)
            এলে গাছেই ফেরা, খালি একটা পাতা নয়। */
         $level = $request->route('level');
         $level = is_string($level) && in_array($level, $ladder, true) ? $level : null;
@@ -85,7 +87,7 @@ class LocationController extends Controller implements HasMiddleware
         /*
          * ট্যাবের সংখ্যাগুলো — এক কোয়েরিতে, স্তর ধরে।
          *
-         * ⓘ সংখ্যাটাই বলে দেয় কোথায় শুরু করতে হবে: "টেরিটরি ০" দেখলে
+         * ⓘ সংখ্যাটাই বলে দেয় কোথায় শুরু করতে হবে: "এরিয়া ০" দেখলে
          * বোঝা যায় পয়েন্ট বানানোর আগে কী লাগবে, আর সেটা বলতে কোনো
          * বার্তা লিখতে হয় না।
          */
@@ -141,7 +143,7 @@ class LocationController extends Controller implements HasMiddleware
      * দায়িত্বে" প্রশ্নের উত্তর পেতে গোটা গাছ খুলতে হত।
      *
      * ── ⭐ উপরের স্তর খালি থাকলে ─────────────────────────────────────
-     * `parentsMissing` — পয়েন্ট বানাতে টেরিটরি লাগে, আর টেরিটরি একটাও না
+     * `parentsMissing` — পয়েন্ট বানাতে এরিয়া লাগে, আর এরিয়া একটাও না
      * থাকলে পর্দা **আগেই** বলে দেয় কোথা থেকে শুরু করতে হবে। ⛔ আগে এই
      * অবস্থায় ফর্মে একটা খালি ড্রপডাউন বসত, অথচ সেটা required — মানুষ
      * আটকে যেতেন আর কারণ বুঝতেন না।
@@ -235,12 +237,12 @@ class LocationController extends Controller implements HasMiddleware
      *
      * ── ⛔ যে বাগটা এটা ঠিক করে, ১৮ সেপ্টেম্বর ২০২৬ ──────────────────
      * মালিক একটা **পয়েন্ট** বানাতে গিয়ে বাবাটা না বেছে জমা দিয়েছেন।
-     * [[LocationService::resolveParent()]] ঠিকই বলেছে *"টেরিটরিটা
+     * [[LocationService::resolveParent()]] ঠিকই বলেছে *"এরিয়াটা
      * বাছুন"* — কিন্তু ফিরে আসা পাতায় স্তরটা আবার **দেশ** হয়ে গেছে,
      * কারণ `back()` ঠিকানায় `?level=point` ছিল না।
      *
      * ⚠️ আর দেশের কোনো বাবা নেই, তাই ফর্ম বাবার ঘরটাই দেখায়নি —
-     * পর্দা টেরিটরি চাইছে, অথচ টেরিটরি বাছার কোনো ঘর নেই। ⛔ ঐ
+     * পর্দা এরিয়া চাইছে, অথচ এরিয়া বাছার কোনো ঘর নেই। ⛔ ঐ
      * অবস্থা থেকে ব্যবহারকারীর বেরোনোর পথ ছিল না।
      *
      * ⭐ তাই আগে `old('level')` — ব্যর্থ জমা থেকে ফেরা মানুষ ঠিক যে
@@ -263,12 +265,19 @@ class LocationController extends Controller implements HasMiddleware
         return Location::COUNTRY;
     }
 
+    /**
+     * ⭐ সংরক্ষণের পর সেই স্তরের ট্যাবে — ১৯ সেপ্টেম্বর ২০২৬।
+     *
+     * ⛔ আগে গাছে ফিরত। ⚠️ "নতুন পয়েন্ট" চেপে এসে পরপর পাঁচটা পয়েন্ট
+     * বসাতে চাইলে প্রতিবার আবার পয়েন্টের ট্যাব খুঁজতে হত, আর নতুনটা
+     * গাছের কোথায় বসল তা খুঁজে দেখতে হত।
+     */
     public function store(Request $request): RedirectResponse
     {
-        $this->locations->create($this->validated($request));
+        $location = $this->locations->create($this->validated($request));
 
         return redirect()
-            ->route('master_data.location.index')
+            ->route('master_data.location.level', ['level' => $location->level])
             ->with('saved', __('master_data::message.created'));
     }
 
@@ -311,14 +320,37 @@ class LocationController extends Controller implements HasMiddleware
             ->with('saved', __('master_data::message.updated'));
     }
 
-    /** নিষ্ক্রিয় করা — মোছা নয় (নিয়ম ৫)। */
+    /**
+     * নিষ্ক্রিয় করা — মোছা নয় (নিয়ম ৫)।
+     *
+     * ⓘ `back()`: স্তরের ট্যাবের Action থেকে এলে ঐ ট্যাবেই ফেরা, গাছে নয়।
+     */
     public function destroy(Location $location): RedirectResponse
     {
         $this->locations->deactivate($location);
 
-        return redirect()
-            ->route('master_data.location.index')
-            ->with('saved', __('master_data::message.deactivated'));
+        return back()->with('saved', __('master_data::message.deactivated'));
+    }
+
+    /** আবার সক্রিয় — নিষ্ক্রিয় করা একমুখী দরজা হতে পারে না। */
+    public function activate(Location $location): RedirectResponse
+    {
+        $this->locations->activate($location);
+
+        return back()->with('saved', __('master_data::message.activated'));
+    }
+
+    /**
+     * সত্যিই মুছে ফেলা — কেবল যেটার নিচে কিছু নেই আর কোথাও ব্যবহার হয়নি।
+     *
+     * ⓘ না পারলে [[LocationService::purge()]] কারণসহ থামায় — "নিচে ৩টা
+     * পয়েন্ট আছে" — আর সেই বার্তা ট্যাবের উপরেই দেখা যায়।
+     */
+    public function purge(Location $location): RedirectResponse
+    {
+        $this->locations->purge($location);
+
+        return back()->with('saved', __('master_data::message.deleted'));
     }
 
     public function installBangladesh(): RedirectResponse

@@ -175,7 +175,8 @@ final class ThePageAskedForAParentAndOfferedNoBoxTest extends TestCase
          * ⛔ তিনটা দাবি একসাথে, আর তিনটাই ঐ পর্দায় ভাঙা ছিল:
          * স্তরটা পয়েন্ট আছে, বাবার ঘরটা আছে, আর লেখা নামটাও আছে।
          */
-        $page->assertSee('value="'.Location::POINT.'" selected', escape: false);
+        // ⓘ স্তরটা এখন বাঁধা (ড্রপডাউন নেই), তাই লুকানো ঘরটাই স্তর বহন করে
+        $page->assertSee('name="level" value="'.Location::POINT.'"', escape: false);
         $page->assertSee('name="parent_id"', escape: false);
         $page->assertSee('Mymensing city', escape: false);
     }

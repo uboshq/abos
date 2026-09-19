@@ -74,7 +74,7 @@ final class LocationService
             /*
              * স্তর বদলানো যায় না।
              *
-             * একটা এরিয়াকে রুট বানালে তার নিচের টেরিটরিগুলো এমন এক
+             * একটা রিজিয়নকে রুট বানালে তার নিচের এরিয়াগুলো এমন এক
              * বাবার নিচে পড়ত যে নিজেই সবচেয়ে নিচের স্তর — গাছটা তখন
              * আর মই থাকত না। বদলাতে হলে নতুন রেকর্ড, আর পুরনোটা
              * নিষ্ক্রিয়।
@@ -134,6 +134,87 @@ final class LocationService
 
             return $location->fresh();
         });
+    }
+
+    /**
+     * সত্যিই মুছে ফেলা — ১৯ সেপ্টেম্বর ২০২৬, মালিকের নির্দেশ:
+     * প্রতিটা স্তরের ট্যাবে "মুছুন"।
+     *
+     * ── ⛔ দুইটা জিনিস থাকলে মোছা নয়, আর কারণটা বলা ─────────────────
+     * ① **নিচে সন্তান আছে** — একটা রিজিয়ন মুছলে তার এরিয়াগুলো বাবাহীন
+     *    ঝুলত, গাছে আর খুঁজে পাওয়া যেত না। ⚠️ তাই আগে নিচেরগুলো মুছতে বা
+     *    সরাতে বলা হয়, সংখ্যা আর স্তরের নাম সহ ("নিচে ৩টা পয়েন্ট আছে")।
+     * ② **কোথাও ব্যবহার হয়েছে** — গ্রাহকের পয়েন্ট, গাড়ির চালানের রুট।
+     *    ⛔ মুছলে পুরনো কাগজ এমন কিছুর দিকে দেখাত যা আর নেই। ⓘ ওখানে
+     *    উত্তর নিষ্ক্রিয় করা (নিয়ম ৫) — বার্তাটাও তাই বলে।
+     *
+     * ── ⓘ কোন টেবিল দেখে, সেটা হাতে লেখা নয় ──────────────────────
+     * [[MasterListService::referencesTo()]]-এর মতোই ডাটাবেজকে জিজ্ঞেস
+     * করা হয় কে কে এই টেবিলের দিকে দেখায়। ⚠️ হাতে লিখলে একদিন নতুন
+     * একটা টেবিল যোগ হত আর পাহারাটা থাকা অবস্থাতেই ফাঁক গলে যেত।
+     *
+     * ⓘ `forceDelete`, `delete` নয়: সাধারণ delete কেবল `deleted_at`
+     * বসায়, আর কোডটা [[assertCodeIsFree()]]-এ চিরকাল আটকে থাকত — ভুল
+     * করে বানানো এরিয়া মুছে ঠিকটা একই কোডে আর বানানো যেত না।
+     */
+    public function purge(Location $location): void
+    {
+        $children = Location::query()->withTrashed()
+            ->where('parent_id', $location->id)
+            ->orderBy('id')
+            ->get(['id', 'level']);
+
+        if ($children->isNotEmpty()) {
+            throw ValidationException::withMessages([
+                'location' => __('master_data::validation.location_has_children', [
+                    'name' => $location->name(),
+                    'count' => $this->digits($children->count()),
+                    'level' => __('master_data::level.'.$children->first()->level),
+                ]),
+            ]);
+        }
+
+        $links = DB::select(
+            'SELECT TABLE_NAME AS child, COLUMN_NAME AS child_column
+               FROM information_schema.KEY_COLUMN_USAGE
+              WHERE TABLE_SCHEMA = DATABASE()
+                AND REFERENCED_TABLE_NAME = ?
+                AND TABLE_NAME <> ?',
+            [$location->getTable(), $location->getTable()],
+        );
+
+        foreach ($links as $link) {
+            $count = DB::table($link->child)->where($link->child_column, $location->id)->count();
+
+            if ($count > 0) {
+                $where = __('master_data::validation.location_used_by.'.$link->child);
+
+                throw ValidationException::withMessages([
+                    'location' => __('master_data::validation.location_in_use', [
+                        'name' => $location->name(),
+                        'count' => $this->digits($count),
+                        // অচেনা টেবিল হলে কাঁচা নামটাই — চুপ থাকার চেয়ে ভালো
+                        'where' => str_contains($where, 'location_used_by') ? $link->child : $where,
+                    ]),
+                ]);
+            }
+        }
+
+        $location->forceDelete();
+    }
+
+    /**
+     * সংখ্যাটা পাঠকের অঙ্কে — বাংলায় "৩টা", "3টা" নয়।
+     *
+     * ⓘ `Number::format()` intl চায়, আর লাইভ সার্ভারে সেটা আছে কি না
+     * নিশ্চিত নয়; ⚠️ না থাকলে ঠিক মোছার মুহূর্তে পাতা ৫০০ দিত। তাই সোজা
+     * অঙ্ক-বদল।
+     */
+    private function digits(int $n): string
+    {
+        return app()->getLocale() === 'bn'
+            ? strtr((string) $n, ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'])
+            : (string) $n;
     }
 
     /**
@@ -214,7 +295,7 @@ final class LocationService
         /*
          * বন্ধ স্তরে কিছু বসানো যায় না।
          *
-         * সেটিংসে টেরিটরি বন্ধ থাকলে টেরিটরি তৈরি করতে দিলে সেটা গাছে
+         * সেটিংসে এরিয়া বন্ধ থাকলে এরিয়া তৈরি করতে দিলে সেটা গাছে
          * থাকত অথচ ড্রপডাউনে আসত না — আর তার নিচের সব হারিয়ে যেত।
          */
         if (! in_array($level, Location::activeLadder(), true)) {

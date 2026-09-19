@@ -47,6 +47,8 @@ Route::middleware('auth')->prefix('master-data')->group(function () {
         Route::get('/{location}/edit', [LocationController::class, 'edit'])->whereNumber('location')->name('edit');
         Route::put('/{location}', [LocationController::class, 'update'])->whereNumber('location')->name('update');
         Route::delete('/{location}', [LocationController::class, 'destroy'])->whereNumber('location')->name('destroy');
+        Route::post('/{location}/activate', [LocationController::class, 'activate'])->whereNumber('location')->name('activate');
+        Route::delete('/{location}/purge', [LocationController::class, 'purge'])->whereNumber('location')->name('purge');
     });
 
     Route::get('/number-series', [NumberSeriesController::class, 'index'])->name('series.index');

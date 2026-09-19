@@ -1,7 +1,8 @@
 {{--
     এলাকা তৈরি ও সম্পাদনা।
 
-    স্তরটা সম্পাদনায় বদলানো যায় না, আর ঘরটা তখন readonly: একটা এরিয়াকে
+    স্তরটা বদলানো যায় না — নতুনেও না (কোন স্তর, তা বলে দেয় কোন ট্যাবের
+    বোতাম চাপা হল), সম্পাদনাতেও না। ঘরটা সবসময় readonly: একটা রিজিয়নকে
     রুট বানালে তার নিচের সব এমন এক বাবার নিচে পড়ত যে নিজেই সবচেয়ে
     নিচের স্তর — গাছটা তখন আর মই থাকত না।
 
@@ -19,8 +20,10 @@
 
     <x-slot:header>
         <x-ui.page-header
-            :title="$isNew ? __('master_data::action.new') : __('master_data::action.edit')"
-            :subtitle="__('master_data::level.' . $location->level)" />
+            :title="$isNew
+                ? __('master_data::action.new_level', ['level' => __('master_data::level.' . $location->level)])
+                : __('master_data::action.edit')"
+            :subtitle="$isNew ? null : __('master_data::level.' . $location->level)" />
     </x-slot:header>
 
     <form method="POST"
@@ -66,56 +69,31 @@
             <h2 class="mb-3 font-semibold">{{ __('master_data::section.placement') }}</h2>
 
             <div class="grid gap-3 sm:grid-cols-2">
+                {{-- ⭐ স্তরটা বাঁধা — নতুনেও, সম্পাদনাতেও। মালিকের নির্দেশ,
+                     ১৯ সেপ্টেম্বর ২০২৬: *"alada alada create"*।
+
+                     ⛔ আগে নতুন ফর্মে স্তরের একটা ড্রপডাউন ছিল। ⚠️ লাইভে
+                     মালিক "নতুন এরিয়া" (আজকের নামে রিজিয়ন) খুলে ওটা বিভাগে বদলে দেন — ফলে একটা
+                     বাড়তি বিভাগ তৈরি হল, আর রিজিয়নটা বসল তার নিচে। কোড ঠিকই
+                     চলেছে; পর্দাটাই ভুলটা করতে ডেকেছিল।
+
+                     ⭐ এখন প্রতিটা স্তরের নিজের বোতাম ("নতুন পয়েন্ট"), আর
+                     ফর্মে স্তরটা কেবল লেখা, সাথে একটা লুকানো ঘর। অন্য স্তর
+                     চাইলে অন্য ট্যাবের বোতাম।
+
+                     ⓘ সম্পাদনায় বদলানো যায় না, আগের মতোই — একটা রিজিয়নকে রুট
+                     বানালে তার নিচের সব সবচেয়ে নিচের স্তরের নিচে ঝুলত। --}}
                 <label class="block">
-                    <span class="mb-1 block text-sm font-medium">
-                        {{ __('master_data::field.level') }}
-                        @if ($isNew)
-                            <span class="text-(--color-danger)" aria-hidden="true">*</span>
-                        @endif
-                    </span>
+                    <span class="mb-1 block text-sm font-medium">{{ __('master_data::field.level') }}</span>
+
+                    <input type="text" readonly
+                           value="{{ __('master_data::level.' . $location->level) }}"
+                           class="h-(--spacing-field) w-full rounded-(--radius-field) border
+                                  border-(--color-border) bg-(--color-surface-app) px-3
+                                  text-(--color-ink-muted)">
 
                     @if ($isNew)
-                        {{-- ⭐ স্তর বদলালে যা লেখা ছিল তা সাথে যায় — ১৮ সেপ্টেম্বর ২০২৬।
-
-                             ⓘ পাতাটা নতুন করে খুলতেই হয়: বাবার তালিকা কোন
-                             স্তরের, সেটা সার্ভার ছাড়া জানা যায় না।
-
-                             ⛔ আগে `window.location = ...?level=` লেখা ছিল, আর
-                             ঐ এক লাইনেই টাইপ করা নাম-কোড সব মুছে যেত। ⚠️ ফল:
-                             মানুষ শিখতেন "আগে স্তর বাছো" — আর ভুলে গেলে দুইবার
-                             টাইপ করতেন, প্রতিবার। --}}
-                        <select name="level" required
-                                x-on:change="
-                                    (() => {
-                                        const url = new URL(
-                                            '{{ route('master_data.location.create') }}',
-                                            window.location.origin,
-                                        );
-                                        url.searchParams.set('level', $el.value);
-
-                                        for (const name of ['code', 'name_en', 'name_bn', 'assigned_to']) {
-                                            const box = $el.form.querySelector('[name=' + name + ']');
-                                            if (box && box.value) { url.searchParams.set(name, box.value); }
-                                        }
-
-                                        window.location = url.toString();
-                                    })()
-                                "
-                                class="h-(--spacing-field) w-full rounded-(--radius-field) border
-                                       border-(--color-border) bg-(--color-surface-card) px-3">
-                            @foreach ($ladder as $level)
-                                <option value="{{ $level }}" @selected($location->level === $level)>
-                                    {{ __('master_data::level.' . $level) }}
-                                </option>
-                            @endforeach
-                        </select>
-                    @else
-                        {{-- সম্পাদনায় বদলানো যায় না — উপরের মন্তব্য দেখুন --}}
-                        <input type="text" readonly
-                               value="{{ __('master_data::level.' . $location->level) }}"
-                               class="h-(--spacing-field) w-full rounded-(--radius-field) border
-                                      border-(--color-border) bg-(--color-surface-app) px-3
-                                      text-(--color-ink-muted)">
+                        <input type="hidden" name="level" value="{{ $location->level }}">
                     @endif
                 </label>
 
@@ -127,7 +105,7 @@
                      লেখা দিয়ে ("Please select an item"), আর মানুষ বুঝতেন না
                      কেন — ড্রপডাউন খুললে তো কিছুই নেই।
 
-                     ⭐ এখন পর্দা সোজা বলে: আগে একটা টেরিটরি লাগবে, আর
+                     ⭐ এখন পর্দা সোজা বলে: আগে একটা এরিয়া লাগবে, আর
                      বোতামটা সেখানেই নিয়ে যায়। ⓘ মালিকের নিজের কথাই এটা —
                      *"1st e hobe Country Create, Divi Create, ei vabe…"*। --}}
                 @if ($parentLevel !== null && $parents->isEmpty())
@@ -167,7 +145,7 @@
                 @endif
 
                 {{-- দায়িত্ব — রুটে কে যায়। উপরের স্তরেও দেওয়া যায়:
-                     একটা এরিয়ার একজন সুপারভাইজার থাকতে পারে। --}}
+                     একটা রিজিয়নের একজন সুপারভাইজার থাকতে পারে। --}}
                 <label class="block">
                     <span class="mb-1 block text-sm font-medium">{{ __('master_data::field.assigned_to') }}</span>
                     <select name="assigned_to"
@@ -199,7 +177,7 @@
 
             <x-ui.button tone="secondary"
                          :href="$isNew
-                             ? route('master_data.location.index')
+                             ? route('master_data.location.level', ['level' => $location->level])
                              : route('master_data.location.show', $location)">
                 {{ __('core.action.cancel') }}
             </x-ui.button>

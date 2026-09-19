@@ -26,4 +26,11 @@ return [
        so switching off a default warehouse showed the raw key instead of
        the reason (found 3 September 2026) */
     'default_cannot_be_deactivated' => 'This is the default, so it cannot be switched off. Make another one the default first.',
+    /* Deleting a location — LocationService::purge(), 19 September 2026 */
+    'location_has_children' => ':name cannot be deleted — it has :count :level under it. Delete or move those first.',
+    'location_in_use' => ':name cannot be deleted — :count :where are tied to it. Deactivate it if it is no longer needed.',
+    'location_used_by' => [
+        'customers' => 'customers',
+        'sal_shipments' => 'vehicle trips',
+    ],
 ];
