@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'free_high' => 'Most free first',
     'name' => 'By name',
     'code' => 'By code',
 

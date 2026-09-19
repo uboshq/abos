@@ -3,6 +3,9 @@
 declare(strict_types=1);
 
 return [
+    'profit_share_now' => "This year's share of profit",
+    'book_paper' => 'Contract / certificate',
+    'book_paper_hint' => 'Bank slips and cheque images go on the voucher — this is for the papers that carry the terms',
     'notes_of' => 'How many :note notes',
     'counted_total' => 'Counted total',
     'withdrawal_amount' => 'Amount drawn',

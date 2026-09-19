@@ -94,16 +94,69 @@ class LocationController extends Controller implements HasMiddleware
 
     public function create(Request $request): View
     {
-        $level = (string) $request->query('level', Location::COUNTRY);
+        $level = $this->levelToOpen($request);
 
         return view('master_data::location.form', [
             'menu' => $this->menu->forUser($request->user()),
-            'location' => new Location(['is_active' => true, 'level' => $level]),
+
+            /*
+             * ⭐ যা টাইপ করা ছিল তা ফিরিয়ে দেওয়া — ১৮ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ স্তর বদলালে পাতাটা নতুন করে খোলে (উপরের স্তর জানা না
+             * থাকলে বাবার তালিকা বানানো যায় না)। ⛔ আগে ঐ মুহূর্তে
+             * লেখা নামটা হারিয়ে যেত, তাই মানুষ আগে স্তর বাছতে শিখতেন —
+             * আর ভুলে গেলে দুইবার টাইপ করতেন।
+             *
+             * ⚠️ `old()` এখানে কাজে আসে না: স্তর বদলানোটা একটা সাধারণ
+             * GET, কোনো ব্যর্থ জমা নয়। তাই ঘরগুলো ঠিকানার সাথেই আসে।
+             */
+            'location' => new Location([
+                'is_active' => true,
+                'level' => $level,
+                'code' => (string) $request->query('code', ''),
+                'name_en' => (string) $request->query('name_en', ''),
+                'name_bn' => (string) $request->query('name_bn', ''),
+                'assigned_to' => $request->integer('assigned_to') ?: null,
+            ]),
+
             'ladder' => Location::activeLadder(),
             'parents' => $this->parentOptions($level),
             'people' => $this->people(),
             'preselectedParent' => $request->integer('parent') ?: null,
         ]);
+    }
+
+    /**
+     * কোন স্তরের ফর্মটা খুলবে।
+     *
+     * ── ⛔ যে বাগটা এটা ঠিক করে, ১৮ সেপ্টেম্বর ২০২৬ ──────────────────
+     * মালিক একটা **পয়েন্ট** বানাতে গিয়ে বাবাটা না বেছে জমা দিয়েছেন।
+     * [[LocationService::resolveParent()]] ঠিকই বলেছে *"টেরিটরিটা
+     * বাছুন"* — কিন্তু ফিরে আসা পাতায় স্তরটা আবার **দেশ** হয়ে গেছে,
+     * কারণ `back()` ঠিকানায় `?level=point` ছিল না।
+     *
+     * ⚠️ আর দেশের কোনো বাবা নেই, তাই ফর্ম বাবার ঘরটাই দেখায়নি —
+     * পর্দা টেরিটরি চাইছে, অথচ টেরিটরি বাছার কোনো ঘর নেই। ⛔ ঐ
+     * অবস্থা থেকে ব্যবহারকারীর বেরোনোর পথ ছিল না।
+     *
+     * ⭐ তাই আগে `old('level')` — ব্যর্থ জমা থেকে ফেরা মানুষ ঠিক যে
+     * স্তরে ছিলেন, সেখানেই ফেরেন, আর বাবার ঘরটা সাথেই থাকে।
+     *
+     * ⚠️ অচেনা বা বন্ধ স্তর চুপচাপ মেনে নেওয়া হয় না: `?level=zilla`
+     * লিখলে [[Location::parentLevelOf()]] `null` ফেরাত, আর তখন ঠিক
+     * একই অন্ধ গলি তৈরি হত। ⓘ তাই মই-এর বাইরের কিছু এলে দেশ।
+     */
+    private function levelToOpen(Request $request): string
+    {
+        $ladder = Location::activeLadder();
+
+        foreach ([$request->old('level'), $request->query('level')] as $candidate) {
+            if (is_string($candidate) && in_array($candidate, $ladder, true)) {
+                return $candidate;
+            }
+        }
+
+        return Location::COUNTRY;
     }
 
     public function store(Request $request): RedirectResponse
@@ -206,6 +259,29 @@ class LocationController extends Controller implements HasMiddleware
         return Location::query()
             ->atLevel($parentLevel)
             ->active()
+
+            /*
+             * ⛔ ৫০০ এরর — lazy loading বন্ধ, ১৮ সেপ্টেম্বর ২০২৬।
+             *
+             * ফর্ম প্রতিটা বিকল্পে [[Location::path()]] দেখায় ("ময়মনসিংহ
+             * › ত্রিশাল"), আর `path()` [[Location::ancestors()]] ধরে
+             * **উপরের দিকে হেঁটে যায়**। ⚠️ শিকলটা আগে থেকে তোলা না
+             * থাকায় প্রথম ধাপেই ব্যতিক্রম:
+             *
+             *     Attempted to lazy load [parent] on model [Location]
+             *
+             * ⓘ ফলটা ঠিক যেভাবে লুকিয়ে ছিল সেটাই শেখার: বাবার তালিকা
+             * **খালি থাকলে** লুপটা চলত না, তাই দেশ বা বিভাগের ফর্ম
+             * দিব্যি খুলত — আর পয়েন্ট বা রুটের ফর্ম, যেখানে সত্যিই
+             * বিকল্প আছে, ৫০০ দিত। ⛔ অর্থাৎ যে পর্দাটা কাজ করার কথা
+             * ঠিক সেটাই ভাঙা ছিল।
+             *
+             * ⭐ শিকলটার সংজ্ঞা একটাই জায়গায় — [[Location::drillRelations()]],
+             * যেখানে *কেন সাত স্তর* তার হিসাবও লেখা আছে। ⚠️ এখানে হাতে
+             * `['parent']` লিখলে দ্বিতীয় স্তরেই আবার একই ব্যতিক্রম।
+             */
+            ->with(Location::drillRelations())
+
             ->when($exclude !== [], fn ($q) => $q->whereNotIn('id', $exclude))
             ->orderBy('code')
             ->get();

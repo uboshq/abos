@@ -194,6 +194,19 @@ class PurchasePrintController extends Controller implements HasMiddleware
                 'name' => trim(($line->product?->code ?? '').' '.($line->product?->name() ?? '')),
                 'qty' => $this->qty($line->packedQty($qtyField)),
                 'unit' => $line->packedUnitName(),
+
+                /*
+                 * ⭐ ফ্রি পরিমাণ — ১৮ সেপ্টেম্বর ২০২৬, মালিকের নির্দেশে।
+                 *
+                 * ⓘ ক্রয়ের কাগজে এটা সবচেয়ে দরকারি: সরবরাহকারীর
+                 * বিলে *"৪৮ + ৪ ফ্রি"* লেখা থাকে, আর মিলাতে গেলে
+                 * দুইটা সংখ্যাই আলাদা লাগে। ⚠️ এক সংখ্যায় মিশিয়ে
+                 * দিলে ক্রয়দরের হিসাবই ভুল হয়।
+                 *
+                 * ⛔ `entered_free_qty` আগে: ফ্রি-র নিজের প্যাক থাকতে
+                 * পারে (`free_unit_id`) — কেনা পিসে, ফ্রি কার্টনে।
+                 */
+                'free' => $this->freeOf($line),
             ];
 
             if ($money) {
@@ -203,6 +216,23 @@ class PurchasePrintController extends Controller implements HasMiddleware
 
             return $row;
         })->values()->all();
+    }
+
+    /**
+     * এই সারিতে ফ্রি কতটা — যে প্যাকে লেখা হয়েছিল সেই প্যাকে।
+     *
+     * ⓘ খালি হলে [[print/document-body]] কলামটাই আঁকে না, তাই
+     * ফ্রি না থাকলে কাগজ অবিকল আগের মতো।
+     */
+    private function freeOf(object $line): string
+    {
+        $free = $line->entered_free_qty ?: $line->free_qty;
+
+        if ($free === null || bccomp((string) $free, '0', 4) <= 0) {
+            return '';
+        }
+
+        return $this->qty($free);
     }
 
     /**

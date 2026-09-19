@@ -16,6 +16,19 @@
         (string) $p->hold_total,
         4,
     );
+
+    /*
+     * ⭐ ফ্রি মালের বিক্রয়যোগ্য অংশ — ১৮ সেপ্টেম্বর ২০২৬।
+     *
+     * ⚠️ `hold` বাদ যায় না, আর সেটা ইচ্ছাকৃত: আটকানো মাল **কেনা
+     * মালের** খোপে থাকে, ফ্রি-র নয়। ⓘ দুইবার বিয়োগ করলে একই মাল
+     * দুই জায়গায় কমত, আর সংখ্যাটা বাস্তবের চেয়ে কম দেখাত।
+     */
+    $freeAvailable = fn ($p) => bcsub(
+        (string) $p->free_total,
+        (string) $p->free_reserved_total,
+        4,
+    );
 @endphp
 
 {{--
@@ -83,6 +96,46 @@
             'render' => fn ($p) => view('ui.amount-link', [
                 'value' => $available($p),
                 'href' => route('inventory.product.show', $p).'#movements',
+            ]),
+        ],
+        [
+            'key' => 'free',
+            'label' => __('inventory::field.free'),
+            'numeric' => true,
+            'width' => '8rem',
+            'render' => fn ($p) => view('ui.amount-link', [
+                'value' => $p->free_total,
+                'href' => route('inventory.product.show', $p).'#movements',
+            ]),
+        ],
+        [
+            'key' => 'free_available',
+            'label' => __('inventory::field.free_available'),
+            'numeric' => true,
+            'width' => '9rem',
+            'render' => fn ($p) => view('ui.amount-link', [
+                'value' => $freeAvailable($p),
+                'href' => route('inventory.product.show', $p).'#movements',
+            ]),
+        ],
+        [
+            'key' => 'unplaced',
+            'label' => __('inventory::field.unplaced'),
+            'numeric' => true,
+            'width' => '8rem',
+            'render' => fn ($p) => view('ui.amount-link', [
+                'value' => $p->unplaced_total,
+                'href' => route('inventory.stock.placement'),
+            ]),
+        ],
+        [
+            'key' => 'unplaced_free',
+            'label' => __('inventory::field.unplaced_free'),
+            'numeric' => true,
+            'width' => '9rem',
+            'render' => fn ($p) => view('ui.amount-link', [
+                'value' => $p->unplaced_free_total,
+                'href' => route('inventory.stock.placement'),
             ]),
         ],
     ];

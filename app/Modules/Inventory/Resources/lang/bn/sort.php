@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'free_high' => 'ফ্রি বেশি আগে',
     'name' => 'নাম অনুযায়ী',
     'code' => 'কোড অনুযায়ী',
 

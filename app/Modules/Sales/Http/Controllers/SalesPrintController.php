@@ -372,8 +372,48 @@ class SalesPrintController extends Controller implements HasMiddleware
              * আর কাগজ অবিকল আগের মতো।
              */
             'note' => $lots[$line->product_id] ?? '',
+
+            /*
+             * ⭐ ফ্রি পরিমাণ — ১৮ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ খালি হলে [[print/document-body]] কলামটাই আঁকে না,
+             * তাই যে ব্যবসায় ফ্রি দেওয়া হয় না তার কাগজ অবিকল
+             * আগের মতো।
+             */
+            'free' => $this->freeOf($line),
         ])->values()->all();
     }
+
+    /**
+     * এই সারিতে ফ্রি কতটা — কাগজে দেখানোর জন্য।
+     *
+     * ── ⭐ কেন তিন জায়গায় খোঁজা হয়, ১৮ সেপ্টেম্বর ২০২৬ ──────────────
+     * মালিকের নির্দেশ: *"ইনভয়েস প্রিন্টিংয়ে ফ্রি আলাদা দেখাতে হবে।"*
+     *
+     * ⚠️ কিন্তু ফ্রি পরিমাণটা সব সারিতে থাকে না। ⓘ `sal_challan_lines`-এ
+     * `free_qty` কলামটা আছে; **`sal_invoice_lines`-এ নেই** — চালানের
+     * বিলে ফ্রি-টা তার চালানের সারি থেকেই আসে, আর ছাপার কন্ট্রোলার
+     * `lines.challanLine` এমনিতেই সাথে তোলে।
+     *
+     * ⛔ `method_exists()` পরীক্ষাটা বাদ দেওয়া যায় না: ক্রয়াদেশের
+     * সারিতে ঐ সম্পর্কটা নেই, আর না দেখে ডাকলে `BadMethodCallException`
+     * হয়ে গোটা ছাপার পাতা ৫০০ দিত।
+     *
+     * ⓘ শূন্য মানে খালি লেখা, "0" নয় — কাগজে শূন্যের কলাম কেবল জায়গা
+     * নেয়, আর সরু রোলে জায়গাটাই সবচেয়ে দামি।
+     */
+    private function freeOf(object $line): string
+    {
+        $free = $line->free_qty
+            ?? (method_exists($line, 'challanLine') ? $line->challanLine?->free_qty : null);
+
+        if ($free === null || bccomp((string) $free, '0', 4) <= 0) {
+            return '';
+        }
+
+        return $this->qty($free);
+    }
+
 
     /**
      * @return array<string, string>

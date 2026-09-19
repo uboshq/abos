@@ -3,6 +3,9 @@
 declare(strict_types=1);
 
 return [
+    // ⭐ ফ্রি মাল আলাদা — ১৮ সেপ্টেম্বর ২০২৬
+    'free' => 'ফ্রি',
+    'free_available' => 'ফ্রি বিক্রয়যোগ্য',
     'code' => 'কোড',
     'name' => 'নাম',
 

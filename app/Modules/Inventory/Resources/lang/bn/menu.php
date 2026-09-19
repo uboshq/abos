@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'stock_by_batch' => 'ব্যাচভিত্তিক মজুদ',
     'products' => 'পণ্য তালিকা',
     'warehouses' => 'গুদাম',
     'stock' => 'মজুদ',

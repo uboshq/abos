@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Finance\Http\Controllers;
 
+use App\Modules\Accounts\Services\BalanceSheetService;
 use App\Core\Engines\Attachment\AttachmentEngine;
 use App\Core\Engines\Attachment\AttachmentException;
 use App\Core\Services\MenuBuilder;
@@ -80,7 +81,17 @@ class CapitalController extends Controller implements HasMiddleware
              */
             'entries' => CapitalEntry::query()->with(['account', 'person'])
                 ->orderByDesc('trx_date')->orderByDesc('id')->paginate(50),
-            'positions' => $this->capital->positions(),
+            /*
+             * ⓘ মুনাফাটা স্থিতিপত্র থেকে — **একটাই উৎস**।
+             *
+             * ⛔ এখানে নতুন করে হিসাব করা যেত, কিন্তু তখন দুই পর্দায়
+             * দুইটা মুনাফা থাকত, আর একদিন ওরা আলাদা কথা বলত।
+             * ⚠️ চলতি বছরের ফল খতিয়ানেই আছে, তাই সেটাই পড়া হয়
+             * ([[BalanceSheetService::build()]])।
+             */
+            'positions' => $this->capital->positions(
+                (string) (app(BalanceSheetService::class)->build()['profit'] ?? '0'),
+            ),
 
             /*
              * কে দিতে পারেন — মালিক, অংশীদার, আত্মীয়।

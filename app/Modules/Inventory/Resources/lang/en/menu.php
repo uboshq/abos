@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'stock_by_batch' => 'Stock by batch',
     'products' => 'Products',
     'warehouses' => 'Warehouses',
     'stock' => 'Stock',

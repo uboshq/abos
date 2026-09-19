@@ -26,6 +26,78 @@ final class StockReports
         $engine->register(self::stockSummary());
         $engine->register(self::holdReport());
         $engine->register(self::expiring());
+        $engine->register(self::stockByBatch());
+    }
+
+    /**
+     * কোন ব্যাচের কত মাল, কোন গুদামে — কেনা আর ফ্রি আলাদা।
+     *
+     * ── ⭐ কেন এটা লাগল, ১৮ সেপ্টেম্বর ২০২৬ ─────────────────────────
+     * মালিকের নির্দেশ: *"ইনভেন্টরিতে স্টক আলাদা ম্যানেজ হওয়ার কথা"* —
+     * আর তালিকা করে দেখা গেল ব্যাচ-ভাগটাই একমাত্র সত্যিকারের ফাঁক।
+     *
+     * ⓘ ভিত্তিটা আগে থেকেই ছিল: `inv_batches` টেবিল, চলাচলে `batch_id`,
+     * আর [[BatchAllocator]] বিক্রির সময় লট ধরে মাল কাটে। ⛔ কিন্তু
+     * *"এই মুহূর্তে কোন ব্যাচে কত আছে"* জিজ্ঞেস করার কোনো জায়গা ছিল না
+     * — কেবল মেয়াদের রিপোর্ট, আর সে শুধু মেয়াদ থাকা লট দেখাত।
+     *
+     * ── ⚠️ মেয়াদের রিপোর্ট থেকে এটা আলাদা, তিন জায়গায় ──────────────
+     * ⓘ **এক** — মেয়াদ না থাকা ব্যাচও আসে (চাল, তেল, সাবানের অনেক লটে
+     * মেয়াদ লেখা হয় না, তবু লট আলাদা)।
+     * ⓘ **দুই** — গুদাম ধরে ভাগ: একই ব্যাচ দুই গুদামে থাকলে দুই সারি,
+     * কারণ *"কত আছে"* প্রশ্নের উত্তর গুদামভেদে আলাদা।
+     * ⓘ **তিন** — ফ্রি মাল নিজের কলামে।
+     *
+     * ── ⛔ শূন্য লট বাদ, আর কারণটা মেয়াদের রিপোর্টের মতোই ───────────
+     * যে লট শেষ, তাকে নিয়ে কারও কিছু করার নেই। ⚠️ রাখলে ছয় মাসে
+     * তালিকাটা এত লম্বা হত যে কেউ পড়ত না, আর যেটা আজ গুদামে আছে
+     * সেটাই খুঁজে পাওয়া যেত না।
+     */
+    public static function stockByBatch(): ReportDefinition
+    {
+        return new ReportDefinition(
+            key: 'inventory.stock_by_batch',
+            title: 'inventory::menu.stock_by_batch',
+            filters: ['branch'],
+            query: fn (array $f) => DB::table('inv_stock_movements as m')
+                ->join('inv_products as p', 'p.id', '=', 'm.product_id')
+                ->join('inv_warehouses as w', 'w.id', '=', 'm.warehouse_id')
+
+                /*
+                 * ⚠️ `leftJoin` — `batch_id` খালি থাকতে পারে, আর সেটা
+                 * বৈধ: যে ব্যবসায় লট ধরা হয় না তার প্রতিটা চলাচলেই
+                 * ঘরটা খালি। ⛔ ভেতরের join করলে ঐ মালটা **রিপোর্ট
+                 * থেকেই উবে যেত**, আর মোট মিলত না।
+                 */
+                ->leftJoin('inv_batches as b', 'b.id', '=', 'm.batch_id')
+
+                ->where('m.company_id', $f['company_id'])
+                ->when($f['branch_id'], fn ($q, $b) => $q->where('m.branch_id', $b))
+                ->groupBy('p.code', 'p.name_en', 'p.name_bn', 'w.name_en', 'b.batch_no', 'b.expiry_date')
+                ->havingRaw('COALESCE(SUM(m.floor_change), 0) + COALESCE(SUM(m.free_change), 0) > 0')
+                ->orderBy('p.code')
+                ->orderBy('b.expiry_date')
+                ->select([
+                    'p.code as product_code',
+                    self::productName(),
+                    'w.name_en as warehouse_name',
+                    'b.batch_no',
+                    'b.expiry_date',
+                    DB::raw('COALESCE(SUM(m.floor_change), 0) as on_hand'),
+                    DB::raw('COALESCE(SUM(m.free_change), 0) as free_on_hand'),
+                    DB::raw('COALESCE(SUM(m.unplaced_change), 0) as unplaced'),
+                ]),
+            columns: [
+                ['key' => 'product_code', 'label' => 'inventory::field.code', 'width' => '7rem'],
+                ['key' => 'product_name', 'label' => 'inventory::field.product'],
+                ['key' => 'warehouse_name', 'label' => 'inventory::field.warehouse', 'width' => '10rem'],
+                ['key' => 'batch_no', 'label' => 'inventory::field.batch_no', 'width' => '8rem'],
+                ['key' => 'expiry_date', 'label' => 'inventory::field.expiry_date', 'type' => ReportColumn::DATE, 'width' => '7rem'],
+                ['key' => 'on_hand', 'label' => 'inventory::field.floor', 'type' => ReportColumn::MONEY],
+                ['key' => 'free_on_hand', 'label' => 'inventory::field.free', 'type' => ReportColumn::MONEY],
+                ['key' => 'unplaced', 'label' => 'inventory::field.unplaced', 'type' => ReportColumn::MONEY],
+            ],
+        );
     }
 
     /**
