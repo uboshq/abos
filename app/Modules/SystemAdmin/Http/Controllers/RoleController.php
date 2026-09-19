@@ -13,6 +13,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -82,6 +83,7 @@ class RoleController extends Controller implements HasMiddleware
             'menu' => $this->menu->forUser($request->user()),
             'role' => new Role,
             'held' => [],
+            'members' => collect(),
             ...$this->formData(),
         ]);
     }
@@ -107,6 +109,7 @@ class RoleController extends Controller implements HasMiddleware
             'menu' => $this->menu->forUser($request->user()),
             'role' => $role,
             'held' => $role->permissions->pluck('name')->all(),
+            'members' => $role->users()->orderBy('name')->get(['users.id', 'users.name', 'users.email']),
             ...$this->formData(),
         ]);
     }
@@ -161,6 +164,20 @@ class RoleController extends Controller implements HasMiddleware
      */
     private function validated(Request $request, ?Role $role): array
     {
+        /*
+         * ⛔ নামের ছাঁচ কেবল **নতুন নামে** — ১৯ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ টেমপ্লেটের রোলগুলো মডিউল থেকে আসে, আর তাদের নাম এই ছাঁচে
+         * পড়ে না: `Manager`, `Field Sales`, `HR`, `Warehouse`। ⚠️ ফলে
+         * ঐ রোলগুলোর একটাও এই পর্দা থেকে **সংরক্ষণই করা যেত না** — নাম
+         * না ছুঁয়ে কেবল একটা অনুমতি বদলালেও বলত "নামের ছাঁচ ভুল"।
+         * ধরা পড়েছে নতুন ছকের পাহারায় (`TheRolePageShowsEveryPermissionTest`)।
+         *
+         * ⓘ নাম অপরিবর্তিত থাকলে ছাঁচ প্রশ্নই নয় — কোড যে নামটা খোঁজে
+         * সেটা তো বদলাচ্ছে না।
+         */
+        $keepsItsName = $role !== null && $request->input('name') === $role->name;
+
         return $request->validate([
             /*
              * ⚠️ নামের অদ্বিতীয়তা **কোম্পানির ভেতরে**, বিশ্বজুড়ে নয় —
@@ -174,7 +191,8 @@ class RoleController extends Controller implements HasMiddleware
              * ⚠️ আর ফাঁসও: বার্তাটা জানিয়ে দিত অন্য কোথাও ওই নামের রোল
              * আছে কি না।
              */
-            'name' => ['required', 'string', 'max:64', 'regex:/^[a-z][a-z0-9_]*$/',
+            'name' => ['required', 'string', 'max:64',
+                ...($keepsItsName ? [] : ['regex:/^[a-z][a-z0-9_]*$/']),
                 Rule::unique('roles', 'name')
                     ->where('company_id', CompanyContext::id())
                     ->ignore($role?->id)],
@@ -187,12 +205,23 @@ class RoleController extends Controller implements HasMiddleware
     }
 
     /**
-     * অনুমতিগুলো মডিউল ধরে সাজানো।
+     * অনুমতিগুলো মডিউল ▸ জিনিস ▸ কাজ — একটা ছক।
      *
-     * ── কেন সাজানো লাগে ─────────────────────────────────────────────
-     * একশো ঊনিশটা অনুমতি একটা লম্বা তালিকায় দিলে কেউ পড়ত না, আর
-     * পড়ে না দেখে টিক দেওয়া মানে ভুল অধিকার দেওয়া। মডিউলের নামের
-     * নিচে থাকলে "বিক্রয়ের কী কী পারবেন" এক নজরে দেখা যায়।
+     * ── ⛔ কেন ছক, ১৯ সেপ্টেম্বর ২০২৬ ────────────────────────────────
+     * আগে প্রতিটা মডিউলের নিচে অনুমতিগুলো **কাঁচা নামে** এক সারিতে বসত
+     * (`accounts.voucher.update`)। ⓘ মালিক দুইটা নকশা পাঠালেন — প্রতিটা
+     * জিনিস এক সারি, পাশে দেখা · তৈরি · সম্পাদনা · মোছা।
+     *
+     * ⚠️ জমা দেওয়ার পথ বদলায়নি: প্রতিটা সুইচ এখনো `permissions[]`-এ
+     * পুরো নামটাই পাঠায়, তাই `store()` / `update()` এক লাইনও বদলায়নি।
+     *
+     * ── ⓘ চার কলামে যা ধরে না ────────────────────────────────────────
+     * `manage` একাই তৈরি-সম্পাদনা-মোছা — তাই যেখানে ঐ তিনটা আলাদা নেই,
+     * সুইচটা তিন কলাম জুড়ে বসে। বাকি কাজগুলো (অনুমোদন, রিপোর্ট, নিয়ম
+     * পেরোনো…) "বিশেষ" কলামে নামসহ।
+     *
+     * ⛔ কোনো অনুমতি বাদ পড়ে না — ছকে না ধরলে বিশেষ কলামে যায়।
+     * `TheRolePageShowsEveryPermissionTest` গুনে দেখে।
      *
      * @return array<string, mixed>
      */
@@ -204,15 +233,118 @@ class RoleController extends Controller implements HasMiddleware
             $labels[$module->code] = $module->label();
         }
 
-        $grouped = Permission::query()
+        $matrix = [];
+
+        $permissions = Permission::query()
             ->where('guard_name', 'web')
             ->orderBy('name')
-            ->get()
-            ->groupBy(fn (Permission $permission) => explode('.', $permission->name)[0]);
+            ->pluck('name');
+
+        foreach ($permissions as $name) {
+            $parts = explode('.', $name);
+            $verb = count($parts) > 1 ? array_pop($parts) : 'manage';
+            $subject = implode('.', $parts);
+            $module = $parts[0];
+
+            $matrix[$module][$subject]['verbs'][$verb] = $name;
+        }
+
+        $grid = [];
+
+        foreach ($matrix as $module => $subjects) {
+            $rows = [];
+
+            foreach ($subjects as $subject => ['verbs' => $verbs]) {
+                $cells = [];
+
+                foreach (self::COLUMNS as $column => $candidates) {
+                    foreach ($candidates as $candidate) {
+                        if (isset($verbs[$candidate])) {
+                            $cells[$column] = $verbs[$candidate];
+                            unset($verbs[$candidate]);
+                            break;
+                        }
+                    }
+                }
+
+                /*
+                 * `manage` তিন কলাম জুড়ে — কেবল যখন তৈরি/সম্পাদনা/মোছা
+                 * আলাদা করে নেই। থাকলে ওরা নিজের ঘরে, আর manage বিশেষে।
+                 */
+                $spans = null;
+
+                if (isset($verbs['manage']) && ! array_intersect_key($cells, array_flip(['create', 'update', 'delete']))) {
+                    $spans = $verbs['manage'];
+                    unset($verbs['manage']);
+                }
+
+                $rows[] = [
+                    'key' => $subject,
+                    'label' => $this->subjectLabel($subject),
+                    'cells' => $cells,
+                    'manage' => $spans,
+                    'special' => collect($verbs)
+                        ->mapWithKeys(fn (string $name, string $verb) => [$name => $this->verbLabel($verb)])
+                        ->all(),
+                ];
+            }
+
+            /* ⓘ "পুরো মডিউল" সারিটা (দুই অংশের নাম) উপরে, বাকিগুলো নামের ক্রমে। */
+            usort($rows, fn (array $a, array $b) => [str_contains($a['key'], '.'), $a['label']]
+                <=> [str_contains($b['key'], '.'), $b['label']]);
+
+            $grid[$module] = [
+                'label' => $labels[$module] ?? $this->subjectLabel($module),
+                'rows' => $rows,
+                'all' => collect($rows)
+                    ->flatMap(fn (array $r) => [...array_values($r['cells']), ...array_filter([$r['manage']]), ...array_keys($r['special'])])
+                    ->all(),
+            ];
+        }
+
+        /* ⓘ মেনুর ক্রমেই — মানুষ যে ক্রমে মডিউলগুলো চেনেন। */
+        $order = array_flip(array_keys($labels));
+        uksort($grid, fn (string $a, string $b) => [$order[$a] ?? PHP_INT_MAX, $a] <=> [$order[$b] ?? PHP_INT_MAX, $b]);
 
         return [
-            'grouped' => $grouped,
-            'moduleNames' => $labels,
+            'grid' => $grid,
+            'roleList' => Role::query()
+                ->where('company_id', CompanyContext::id())
+                ->withCount('users')
+                ->orderBy('name')
+                ->get(),
+            'ownerRole' => PermissionSyncer::SUPER_ADMIN_ROLE,
         ];
+    }
+
+    /**
+     * ছকের চার কলাম, আর প্রতিটায় কোন কাজগুলো বসতে পারে — ক্রম ধরে।
+     *
+     * ⓘ `cancel` মোছার ঘরে: দলিল মোছা হয় না, বাতিল হয় — ক্রয় বিলের
+     * "মোছা" মানে ওটাই।
+     */
+    private const COLUMNS = [
+        'view' => ['view'],
+        'create' => ['create'],
+        'update' => ['update'],
+        'delete' => ['delete', 'cancel'],
+    ];
+
+    private function subjectLabel(string $subject): string
+    {
+        $key = 'system_admin::permission.subjects.'.$subject;
+        $label = __($key);
+
+        return is_string($label) && $label !== $key
+            ? $label
+            : Str::headline(str_replace('.', ' ', Str::after($subject, '.')));
+    }
+
+    private function verbLabel(string $verb): string
+    {
+        $key = 'system_admin::permission.verbs.'.$verb;
+        $label = __($key);
+
+        return is_string($label) && $label !== $key ? $label : Str::headline($verb);
     }
 }
