@@ -60,6 +60,44 @@ class LocationController extends Controller implements HasMiddleware
     {
         $q = $request->query('q');
         $showInactive = $request->boolean('inactive');
+        $ladder = Location::activeLadder();
+
+        /*
+         * ⭐ স্তর ধরে আলাদা তালিকা — মালিকের নির্দেশ, ১৯ সেপ্টেম্বর ২০২৬।
+         *
+         * *"Country Create, Divi Create… ei sob alada alada create hobe,
+         * alada list hobe, Tree hobe"*।
+         *
+         * ⓘ গাছটা আগেও ছিল, কিন্তু সব স্তর এক জায়গায় মেশানো, আর তৈরির
+         * বোতাম একটাই — কোন স্তর বানাচ্ছেন সেটা ফর্মে গিয়ে বাছতে হত।
+         * ⚠️ তাই "কোথা থেকে শুরু করব" প্রশ্নের উত্তর পর্দায় ছিল না।
+         *
+         * ⭐ এখন `?level=` দিলে কেবল ঐ স্তরের তালিকা, নিজের "নতুন" বোতামসহ;
+         * না দিলে আগের গাছ। ⚠️ অচেনা স্তর চুপচাপ মেনে নেওয়া হয় না —
+         * মই-এর বাইরের কিছু এলে গাছেই ফেরা।
+         */
+        /* ⓘ পথ থেকে (`/locations/level/point`) — রুটের মন্তব্যে কারণ লেখা।
+           ⚠️ মই-এর ভেতরে থেকেও **বন্ধ** স্তর (অঞ্চল বা টেরিটরি বন্ধ থাকলে)
+           এলে গাছেই ফেরা, খালি একটা পাতা নয়। */
+        $level = $request->route('level');
+        $level = is_string($level) && in_array($level, $ladder, true) ? $level : null;
+
+        /*
+         * ট্যাবের সংখ্যাগুলো — এক কোয়েরিতে, স্তর ধরে।
+         *
+         * ⓘ সংখ্যাটাই বলে দেয় কোথায় শুরু করতে হবে: "টেরিটরি ০" দেখলে
+         * বোঝা যায় পয়েন্ট বানানোর আগে কী লাগবে, আর সেটা বলতে কোনো
+         * বার্তা লিখতে হয় না।
+         */
+        $counts = Location::query()
+            ->when(! $showInactive, fn ($b) => $b->active())
+            ->selectRaw('level, count(*) as n')
+            ->groupBy('level')
+            ->pluck('n', 'level');
+
+        if ($level !== null) {
+            return $this->levelList($request, $level, $ladder, $counts, $showInactive);
+        }
 
         $query = Location::query()
             ->when(! $showInactive, fn ($b) => $b->active())
@@ -88,7 +126,73 @@ class LocationController extends Controller implements HasMiddleware
             'showInactive' => $showInactive,
             'total' => $total,
             'tooManyToShow' => ! $searching && $total > self::TREE_LIMIT,
-            'ladder' => Location::activeLadder(),
+            'ladder' => $ladder,
+            'counts' => $counts,
+            'level' => null,
+        ]);
+    }
+
+    /**
+     * একটা স্তরের সমতল তালিকা — "সব পয়েন্ট", "সব রুট"।
+     *
+     * ── ⓘ কেন গাছের পাশাপাশি এটাও ─────────────────────────────────────
+     * গাছ বলে **কোনটা কার নিচে**; তালিকা বলে **এই স্তরে কী কী আছে**।
+     * ⚠️ দুইশো পয়েন্ট গাছে ছড়িয়ে থাকলে "আমাদের কয়টা পয়েন্ট, কার
+     * দায়িত্বে" প্রশ্নের উত্তর পেতে গোটা গাছ খুলতে হত।
+     *
+     * ── ⭐ উপরের স্তর খালি থাকলে ─────────────────────────────────────
+     * `parentsMissing` — পয়েন্ট বানাতে টেরিটরি লাগে, আর টেরিটরি একটাও না
+     * থাকলে পর্দা **আগেই** বলে দেয় কোথা থেকে শুরু করতে হবে। ⛔ আগে এই
+     * অবস্থায় ফর্মে একটা খালি ড্রপডাউন বসত, অথচ সেটা required — মানুষ
+     * আটকে যেতেন আর কারণ বুঝতেন না।
+     *
+     * @param  list<string>  $ladder
+     * @param  \Illuminate\Support\Collection<string, int>  $counts
+     */
+    private function levelList(Request $request, string $level, array $ladder, $counts, bool $showInactive): View
+    {
+        $q = $request->query('q');
+
+        $rows = Location::query()
+            ->atLevel($level)
+            ->when(! $showInactive, fn ($b) => $b->active())
+            ->when(filled($q), fn ($b) => $b->search($q))
+
+            /*
+             * ⚠️ `path()`-এর শিকলটা আগে থেকে তোলা — [[parentOptions()]]-এর
+             * মন্তব্য দেখুন। ⛔ না তুললে এই পাতাও ঠিক পয়েন্ট আর রুটেই
+             * ৫০০ দিত, যেখানে তালিকাটা সবচেয়ে দরকারি।
+             */
+            ->with([...Location::drillRelations(), 'assignee'])
+
+            ->orderBy('code')
+            // পেজিনেশন বাধ্যতামূলক (সেকশন ৯) — রুট কয়েকশো হতে পারে
+            ->paginate(50)
+            ->withQueryString();
+
+        $parentLevel = Location::parentLevelOf($level);
+
+        return view('master_data::location.index', [
+            'menu' => $this->menu->forUser($request->user()),
+            'tree' => new Collection,
+            'results' => new Collection,
+            'q' => $q,
+            'showInactive' => $showInactive,
+            'total' => (int) $counts->sum(),
+            'tooManyToShow' => false,
+            'ladder' => $ladder,
+            'counts' => $counts,
+            'level' => $level,
+            'rows' => $rows,
+            'parentLevel' => $parentLevel,
+            /*
+             * ⚠️ `$counts` থেকে নয়, আলাদা করে — "নিষ্ক্রিয়ও দেখাও" চালু
+             * থাকলে গোনায় নিষ্ক্রিয় বাবারাও পড়ে, অথচ ফর্মের তালিকায় কেবল
+             * সক্রিয়রা আসে ([[parentOptions()]])। ⛔ তখন পর্দা বলত "আছে"
+             * আর ফর্মের ড্রপডাউন খালি — ঠিক যে অন্ধ গলিটা এটা বন্ধ করতে এল।
+             */
+            'parentsMissing' => $parentLevel !== null
+                && Location::query()->atLevel($parentLevel)->active()->doesntExist(),
         ]);
     }
 

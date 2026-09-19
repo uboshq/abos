@@ -119,7 +119,34 @@
                     @endif
                 </label>
 
-                @if ($parentLevel !== null)
+                {{-- ⭐ উপরের স্তর খালি — অন্ধ গলির বদলে পরের ধাপ।
+                     মালিকের অভিযোগ, ১৯ সেপ্টেম্বর ২০২৬: *"point creat hoyna"*।
+
+                     ⛔ আগে এখানে বাবার ড্রপডাউনটা বসতই — একটাও বিকল্প ছাড়া,
+                     অথচ `required`। ⚠️ ব্রাউজার জমা আটকাত একটা ছোট্ট ভাসমান
+                     লেখা দিয়ে ("Please select an item"), আর মানুষ বুঝতেন না
+                     কেন — ড্রপডাউন খুললে তো কিছুই নেই।
+
+                     ⭐ এখন পর্দা সোজা বলে: আগে একটা টেরিটরি লাগবে, আর
+                     বোতামটা সেখানেই নিয়ে যায়। ⓘ মালিকের নিজের কথাই এটা —
+                     *"1st e hobe Country Create, Divi Create, ei vabe…"*। --}}
+                @if ($parentLevel !== null && $parents->isEmpty())
+                    <div class="rounded-(--radius-field) border border-(--color-badge-pending-ink)/30
+                                bg-(--color-badge-pending-bg) px-3 py-3 text-sm text-(--color-badge-pending-ink)
+                                sm:col-span-2" role="status">
+                        <p>
+                            {{ __('master_data::message.need_parent_first', [
+                                'parent' => __('master_data::level.' . $parentLevel),
+                                'level' => __('master_data::level.' . $location->level),
+                            ]) }}
+                        </p>
+
+                        <x-ui.button tone="primary" icon="plus" class="mt-2"
+                                     :href="route('master_data.location.create', ['level' => $parentLevel])">
+                            {{ __('master_data::action.new_level', ['level' => __('master_data::level.' . $parentLevel)]) }}
+                        </x-ui.button>
+                    </div>
+                @elseif ($parentLevel !== null)
                     <label class="block">
                         <span class="mb-1 block text-sm font-medium">
                             {{ __('master_data::level.' . $parentLevel) }}

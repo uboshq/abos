@@ -21,6 +21,21 @@ Route::middleware('auth')->prefix('master-data')->group(function () {
 
     Route::prefix('locations')->name('location.')->group(function () {
         Route::get('/', [LocationController::class, 'index'])->name('index');
+
+        /*
+         * ⭐ একটা স্তরের তালিকা — `/locations/level/point`, ১৯ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ স্তরটা পথের অংশ, `?level=` নয়, আর কারণটা পর্দায় দেখা যায়:
+         * টুলবার ঠিকানার প্রতিটা অচেনা ঘরকে একটা **ছাঁকনির চিপ** হিসেবে
+         * দেখায়। ⛔ তাই `?level=point` দিলে বাংলা পর্দায় কাঁচা ইংরেজি
+         * "point ×" চিপ বসত। ⚠️ টুলবারটা সবার ভাগের কম্পোনেন্ট, আর মানটা
+         * অনুবাদ করার উপায় ওতে নেই; স্তরটা তো ছাঁকনিও নয়, ট্যাব।
+         *
+         * ⓘ `whereIn` — মই-এর বাইরের কিছু এলে সোজা ৪০৪, নিয়ন্ত্রকে পৌঁছায়ই না।
+         */
+        Route::get('/level/{level}', [LocationController::class, 'index'])
+            ->whereIn('level', \App\Modules\MasterData\Models\Location::LADDER)
+            ->name('level');
         Route::get('/create', [LocationController::class, 'create'])->name('create');
         Route::post('/', [LocationController::class, 'store'])->name('store');
 
