@@ -116,7 +116,7 @@ final class CashCountService
             module: 'accounts',
             action: 'cash_count',
             field: 'status',
-            amount: (string) abs((float) ($count->difference ?? 0)),
+            amount: ltrim((string) ($count->difference ?? '0'), '-'),
             reason: $count->narration,
         );
 

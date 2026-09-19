@@ -40,8 +40,8 @@
      */
     $billFacts = collect($taggableBills ?? [])->values()
         ->map(fn ($b) => [
-            'qty' => (float) ($b->total_qty ?? 0),
-            'value' => (float) ($b->total_value ?? 0),
+            'qty' => (string) ($b->total_qty ?? '0'),
+            'value' => (string) ($b->total_value ?? '0'),
         ])->all();
 
     /* সম্পাদনার সময় যে সারিগুলো আগেই টিক দেওয়া। */
@@ -75,13 +75,13 @@
              head: @js((string) ($was('expense_account_id') ?? $was('to_account_id'))),
              payeeType: @js((string) $was('payee_type_id')),
              payeesByType: @js($payeesByType ?? []),
-             gross: @js((float) ($was('gross_amount') ?? 0)),
-             ait: @js((float) ($was('ait_amount') ?? 0)),
-             vds: @js((float) ($was('vds_amount') ?? 0)),
+             gross: @js((string) ($was('gross_amount') ?: '0')),
+             ait: @js((string) ($was('ait_amount') ?: '0')),
+             vds: @js((string) ($was('vds_amount') ?: '0')),
              tagged: @js(count(old('bill_shares', $voucher->billShares?->pluck('purchase_bill_id')->all() ?? []))),
              bills: @js($billFacts ?? []),
              basis: @js(old('alloc_basis', 'qty')),
-             amount: @js((float) old('amount', 0)),
+             amount: @js((string) (old('amount') ?: '0')),
              picked: @js($pickedRows ?? []),
              texts: @js($texts),
          })"
@@ -196,7 +196,7 @@
     <div class="mt-4 grid gap-4 lg:grid-cols-2">
         <details class="self-start rounded-(--radius-card) border border-(--color-border)
                         border-l-4 border-l-(--color-danger) p-3"
-                 @if ((float) ($was('ait_amount') ?? 0) > 0 || (float) ($was('vds_amount') ?? 0) > 0) open @endif>
+                 @if (bccomp((string) ($was('ait_amount') ?: '0'), '0', 4) > 0 || bccomp((string) ($was('vds_amount') ?: '0'), '0', 4) > 0) open @endif>
         <summary class="flex cursor-pointer flex-wrap items-center justify-between gap-2 text-sm font-semibold">
             <span>{{ __('accounts::field.deduction_at_source') }}</span>
             <span class="num text-xs font-normal text-(--color-ink-muted)"

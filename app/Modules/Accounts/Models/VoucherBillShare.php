@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Accounts\Models;
 
 use App\Core\Concerns\BelongsToCompanyThroughParent;
+use App\Core\Concerns\HasPublicId;
 use App\Modules\Purchase\Models\PurchaseBill;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -29,6 +30,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 final class VoucherBillShare extends Model
 {
     use BelongsToCompanyThroughParent;
+    use HasPublicId;
 
     protected $table = 'acc_voucher_bill_shares';
 
