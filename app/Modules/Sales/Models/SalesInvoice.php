@@ -12,6 +12,7 @@ use App\Core\Concerns\ScopedToUserBranch;
 use App\Core\Contracts\Drillable;
 use App\Models\Branch;
 use App\Models\User;
+use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Warehouse;
 use Illuminate\Database\Eloquent\Builder;
@@ -135,11 +136,45 @@ class SalesInvoice extends Model implements Drillable
          */
         $preloaded = $this->getAttribute('collected_total');
 
-        $collected = $preloaded ?? $this->collectionLines()
+        if ($preloaded !== null) {
+            // ⓘ withCollected() দুইটা অঙ্কই সারির সাথে আনে — আলাদা কোয়েরি নয়
+            return bcadd(
+                (string) ($preloaded ?: '0'),
+                (string) ($this->getAttribute('voucher_total') ?? $this->paidByReceiptVouchers()),
+                4,
+            );
+        }
+
+        $collected = (string) $this->collectionLines()
             ->whereHas('collection', fn ($q) => $q->posted())
             ->sum('amount');
 
-        return (string) ($collected ?: '0');
+        return bcadd($collected ?: '0', $this->paidByReceiptVouchers(), 4);
+    }
+
+    /**
+     * রসিদ ভাউচারে এই বিলের বিপরীতে যা এসেছে — খাতায় বসা অংশটুকু।
+     *
+     * ── ⭐ কেন লাগল, ১৯ সেপ্টেম্বর ২০২৬ ─────────────────────────────
+     * মালিকের নকশা: কাউন্টারের ডিপোজিট হবে **হিসাবের আসল রসিদ ভাউচার**,
+     * বিলের সাথে বাঁধা (`against_type = sales_invoice`)। ⚠️ কিন্তু বিল নিজের
+     * বকেয়া গুনত কেবল বিক্রয়ের "আদায়" দিয়ে। ⛔ ফল: টাকা খাতায় বসত, গ্রাহকের
+     * মোট হিসাব ঠিক থাকত — অথচ বিলটা "বকেয়া" দেখাত, তাগাদার তালিকায় থাকত,
+     * আর গ্রাহকের ধারের সীমা ভরা দেখাত।
+     *
+     * ⓘ কেবল **রসিদ**, আর কেবল **খাতায় বসা** — খসড়া বা অনুমোদনের অপেক্ষায়
+     * থাকা ভাউচার টাকা নয় (নিচের আদায়ের নিয়মের হুবহু একই কারণে)।
+     * ⚠️ বিলের বিপরীতে লেখা পরিশোধ (ফেরত টাকা) এখানে বিয়োগ হয় না — ফেরত
+     * বিক্রয়ের নিজের পথ আছে, আর এখানে মেশালে বকেয়া দুইবার বাড়ত।
+     */
+    public function paidByReceiptVouchers(): string
+    {
+        return (string) (Voucher::query()
+            ->where('type', Voucher::RECEIPT)
+            ->where('against_type', static::drillSourceType())
+            ->where('against_id', $this->getKey())
+            ->posted()
+            ->sum('amount') ?: '0');
     }
 
     /**
@@ -157,8 +192,24 @@ class SalesInvoice extends Model implements Drillable
             ->whereColumn('sal_collection_lines.sales_invoice_id', 'sal_invoices.id')
             ->whereHas('collection', fn ($q) => $q->posted());
 
+        /*
+         * ⭐ রসিদ ভাউচারও — [[paidByReceiptVouchers()]]-এর হুবহু শর্ত।
+         * ⚠️ এখানে বাদ পড়লে আদায়ের পর্দার তালিকায় বিলটা পুরো বকেয়া দেখাত,
+         * আর একক পাতায় শোধ — ঠিক যে দুই-অঙ্কের ভুলটা উপরের মন্তব্য বলে।
+         */
+        $byVoucher = Voucher::query()
+            ->selectRaw('COALESCE(SUM(amount), 0)')
+            ->where('type', Voucher::RECEIPT)
+            ->where('against_type', static::drillSourceType())
+            ->whereColumn('against_id', 'sal_invoices.id')
+            ->posted();
+
         // sal_invoices.* না দিলে addSelect শুধু সাব-কোয়েরিটাই আনত
-        return $query->addSelect(['sal_invoices.*', 'collected_total' => $collected]);
+        return $query->addSelect([
+            'sal_invoices.*',
+            'collected_total' => $collected,
+            'voucher_total' => $byVoucher,
+        ]);
     }
 
     public function dueAmount(): string
