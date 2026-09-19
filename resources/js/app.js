@@ -8,6 +8,7 @@ import partyVoucher from './party-voucher.js'
 import directSale from './counter/direct-sale.js'
 import directPurchase from './counter/direct-purchase.js'
 import { registerComponents } from './components/index.js'
+import { listenForColumnChoice } from './columns.js'
 
 /*
  * Alpine শুধু ছোট UI ইন্টারঅ্যাকশনে — ড্রপডাউন, পাসওয়ার্ড দেখানো, ট্যাব
@@ -118,6 +119,12 @@ document.addEventListener('alpine:init', () => {
  * করা এক — আর সেটা মেপে দেখা যায়, বিশ্বাস করতে হয় না।
  */
 listKeys()
+
+/*
+ * Columns মেনু — টিক-না-দেওয়া কলামগুলো `?hide=`-এ।
+ * ⓘ এটা না থাকায় মেনুটা কোনো তালিকাতেই কিছু লুকাত না; কারণ `columns.js`-এ।
+ */
+listenForColumnChoice()
 
 /*
  * ⛔ একটা ফর্ম একবারই জমা — প্রথম স্তর, ১৩ সেপ্টেম্বর ২০২৬।

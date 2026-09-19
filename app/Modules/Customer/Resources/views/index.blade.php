@@ -15,26 +15,52 @@
             'numeric' => true,
             'render' => fn ($c, $i) => $customers->firstItem() + $i,
         ],
+        /*
+         * ⭐ কোড নিজের কলামে — মালিকের দেওয়া ক্রম, ১৯ সেপ্টেম্বর ২০২৬:
+         * SL# · পার্টি কোড · নাম · পয়েন্ট · এরিয়া · পূর্ণ ঠিকানা · মালিক ·
+         * মোবাইল · বকেয়া · অবস্থা · কাজ।
+         *
+         * ⓘ আগে কোডটা নামের নিচে ছোট করে বসত। আলাদা কলামে থাকলে কোড ধরে
+         * সাজানো, লুকানো আর রপ্তানি করা যায় — আর কাগজ মেলানোর সময় কোডই
+         * খোঁজা হয়।
+         */
+        [
+            'key' => 'code',
+            'label' => __('customer::field.code'),
+            'width' => '7rem',
+            'render' => fn ($c) => view('customer::partials.name-link', ['customer' => $c, 'text' => $c->code]),
+        ],
         [
             'key' => 'name_en',
             'label' => __('customer::field.name'),
             // স্পষ্ট প্রস্থ, নাহলে বাংলা নাম কয়েক লাইনে ভাঙে —
             // বাকি কলামগুলোর নির্দিষ্ট প্রস্থের পর যা থাকে তাতেই
             // নামটা চাপা পড়ে যায়
-            'width' => '18rem',
-            'render' => fn ($c) => view('customer::partials.code-link', ['customer' => $c]),
+            'width' => '16rem',
+            'render' => fn ($c) => view('customer::partials.name-link', ['customer' => $c, 'text' => $c->name()]),
         ],
+        /*
+         * ⚠️ শিরোনাম মইয়ের নিজের নাম থেকে — `master_data::level.*`। মালিক
+         * একদিন আবার নাম বদলালে তালিকাও সাথে সাথে বদলায়। ⓘ "এরিয়া" এখন
+         * `territory` চাবি ([[Customer::ladderNode()]])।
+         */
         [
             'key' => 'point',
-            'label' => __('customer::field.point'),
+            'label' => __('master_data::level.point'),
             'width' => '9rem',
-            'render' => fn ($c) => $c->location?->name() ?? '—',
+            'render' => fn ($c) => $c->ladderNode(\App\Modules\MasterData\Models\Location::POINT)?->name() ?? '—',
         ],
         [
             'key' => 'area',
-            'label' => __('customer::field.area'),
+            'label' => __('master_data::level.territory'),
             'width' => '9rem',
-            'render' => fn ($c) => $c->area()?->name() ?? '—',
+            'render' => fn ($c) => $c->ladderNode(\App\Modules\MasterData\Models\Location::TERRITORY)?->name() ?? '—',
+        ],
+        [
+            'key' => 'address',
+            'label' => __('customer::field.full_address'),
+            'width' => '16rem',
+            'render' => fn ($c) => $c->address() ?: '—',
         ],
         [
             'key' => 'owner_name',
@@ -160,13 +186,10 @@
             :compact="request()->boolean('compact')"
             :grid="request('view') === 'grid'"
             {{--
-                কলামের ক্রমটা মালিকের দেওয়া (২০২৬-০৮-০৭), হুবহু:
-                ক্রম · নাম · পয়েন্ট · এরিয়া · মালিক · মোবাইল · পাওনা ·
-                অবস্থা · বিস্তারিত · কাজ।
-
-                কোডের কলামটা সরানো হয়েছে, বাদ দেওয়া হয়নি — নামটাই এখন
-                কোডের লিংক বহন করে। কারণ ওই ক্রমে কোড নেই, অথচ কোড ছাড়া
-                একই নামের দুইটা দোকান আলাদা করা যেত না।
+                কলামের ক্রমটা মালিকের দেওয়া — প্রথমবার ২০২৬-০৮-০৭, আর
+                ১৯ সেপ্টেম্বর ২০২৬-এ আবার: ক্রম · পার্টি কোড · নাম ·
+                পয়েন্ট · এরিয়া · পূর্ণ ঠিকানা · মালিক · মোবাইল · বকেয়া ·
+                অবস্থা · কাজ। কোড আগে নামের নিচে বসত, এখন নিজের কলামে।
 
                 ক্রম নম্বরটা পাতার সাথে চলে (firstItem), সারির গোনা নয় —
                 তিন নম্বর পাতায় আবার ১ থেকে শুরু হলে "১৪ নম্বরটা দেখুন"

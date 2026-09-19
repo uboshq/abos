@@ -297,6 +297,33 @@ class Customer extends Model implements AuthenticatableContract, Drillable
     }
 
     /**
+     * মইয়ের একটা নির্দিষ্ট ধাপ — গ্রাহকের নিজের জায়গা থেকে উপরে খুঁজে।
+     *
+     * ⓘ তালিকার "পয়েন্ট" আর "এরিয়া" কলামের জন্য, ১৯ সেপ্টেম্বর ২০২৬।
+     * ⚠️ "এরিয়া" এখন `territory` চাবি — মালিক নাম বদলেছেন (06e0d8cd:
+     * Territory → Area, Area → Region), চাবি নয়। [[area()]] পুরনো `area`
+     * চাবিটাই খোঁজে (যেটা এখন "Region" লেখে), আর অন্য পর্দা ওটা ব্যবহার করে;
+     * তাই এটা আলাদা, আর ধাপটা ডাকার সময় বলা হয়।
+     *
+     * ⓘ মই আগে থেকে আনা থাকলে ([[CustomerController::index()]] ছয় ধাপ আনে)
+     * কোনো নতুন কোয়েরি হয় না।
+     */
+    public function ladderNode(string $level): ?Location
+    {
+        $node = $this->location;
+
+        while ($node !== null) {
+            if ($node->level === $level) {
+                return $node;
+            }
+
+            $node = $node->parent;
+        }
+
+        return null;
+    }
+
+    /**
      * আর কত ধার দেওয়া যায়।
      *
      * ── সীমা শূন্য মানে সীমাহীন, বন্ধ নয় ────────────────────────────

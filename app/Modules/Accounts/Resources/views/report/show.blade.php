@@ -29,6 +29,34 @@
     $columns = $result->columnsFor(auth()->user());
 
     /*
+        কলাম লুকানো-দেখানো — তালিকার পর্দাগুলোর মতোই, ১৯ সেপ্টেম্বর ২০২৬।
+
+        ⓘ তালিকায় কাজটা `x-ui.table` করে; এই পর্দা নিজের টেবিল আঁকে, তাই
+        একই নিয়ম এখানে: ঠিকানার `?hide=` কলামগুলো বাদ, আর সব বাদ গেলে সবই
+        দেখানো (কলামহীন টেবিলের চেয়ে সব কলাম ভালো)। ⚠️ ছাঁকা তালিকাটাই
+        রপ্তানিতে যায় — পর্দায় যা, ফাইলেও তা।
+
+        মেনুর জন্য টুলবার পায় পুরো তালিকা (লুকানোগুলোসহ), নাহলে একবার
+        লুকানো কলাম আর ফেরানো যেত না।
+    */
+    $menuColumns = collect($columns)
+        ->map(fn ($column) => ['key' => $column->key, 'label' => __($column->label)])
+        ->all();
+
+    $hiddenKeys = collect(explode(',', (string) request('hide')))
+        ->map(fn ($key) => trim($key))
+        ->filter()
+        ->all();
+
+    if ($hiddenKeys !== []) {
+        $kept = array_values(array_filter($columns, fn ($column) => ! in_array($column->key, $hiddenKeys, true)));
+
+        if ($kept !== []) {
+            $columns = $kept;
+        }
+    }
+
+    /*
         রপ্তানি — ঠিক এই কলামগুলো নিয়েই।
 
         তালিকার পর্দাগুলোয় কাজটা x-ui.table নিজে করে; এই পর্দাটা নিজের
@@ -105,7 +133,8 @@
 
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
-            <x-ui.toolbar :title="__($report->title)" :count="trans_choice('accounts::message.row_count', $result->totalRows, ['count' => $result->totalRows])" :search="false">
+            <x-ui.toolbar :title="__($report->title)" :count="trans_choice('accounts::message.row_count', $result->totalRows, ['count' => $result->totalRows])" :search="false"
+                          :columns="$menuColumns">
                 @if ($report->hasFilter('date_range'))
                     {{--
                         জেরের রিপোর্টে "কবে থেকে" বলে কিছু নেই।

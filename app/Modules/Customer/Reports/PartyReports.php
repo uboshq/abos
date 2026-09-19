@@ -8,6 +8,7 @@ use App\Core\Engines\Report\ReportColumn;
 use App\Core\Engines\Report\ReportDefinition;
 use App\Core\Engines\Report\ReportEngine;
 use App\Modules\Customer\Models\Customer;
+use App\Modules\MasterData\Models\Location;
 use Illuminate\Database\Query\Expression;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -69,6 +70,7 @@ final class PartyReports
             groupBy: 'party_id',
             query: fn (array $f) => DB::table('ledger_entries')
                 ->join('customers', 'customers.id', '=', 'ledger_entries.party_id')
+                ->tap(fn ($q) => self::joinLadder($q))
                 ->where('ledger_entries.company_id', $f['company_id'])
                 ->where('ledger_entries.party_type', Customer::drillSourceType())
                 ->when($f['branch_id'], fn ($q, $branch) => $q->where('ledger_entries.branch_id', $branch))
@@ -81,26 +83,20 @@ final class PartyReports
                 ->when($f['party_type_id'] ?? null,
                     fn ($q, $type) => $q->where('customers.party_type_id', $type))
                 ->whereBetween('ledger_entries.trx_date', [$f['from'], $f['to']])
-                ->groupBy('ledger_entries.party_id', 'customers.code', 'customers.name_en', 'customers.name_bn')
+                ->groupBy('ledger_entries.party_id', 'customers.id', 'l0.id', 'l1.id', 'l2.id')
                 // যে গ্রাহকের এই সময়ে কিছুই হয়নি তাঁর সারি শুধু ভিড় বাড়ায়
                 ->havingRaw('SUM(ledger_entries.credit) > 0 OR SUM(ledger_entries.debit) > 0')
                 ->orderByRaw('SUM(ledger_entries.credit) DESC')
                 ->select([
                     'ledger_entries.party_id',
-                    self::customerName(),
+                    ...self::identity(),
                     DB::raw("'".Customer::drillSourceType()."' as party_type_literal"),
                     DB::raw('SUM(ledger_entries.debit) as billed'),
                     DB::raw('SUM(ledger_entries.credit) as collected'),
                     DB::raw('SUM(ledger_entries.debit) - SUM(ledger_entries.credit) as movement'),
                 ]),
             columns: [
-                [
-                    'key' => 'customer_name',
-                    'label' => 'customer::field.name',
-                    'type' => ReportColumn::DOCUMENT,
-                    'source_type' => 'party_type_literal',
-                    'source_id' => 'party_id',
-                ],
+                ...self::identityColumns('party_id', mobile: true),
                 ['key' => 'billed', 'label' => 'customer::field.billed_in_period', 'type' => ReportColumn::MONEY],
                 ['key' => 'collected', 'label' => 'customer::field.collected_in_period', 'type' => ReportColumn::MONEY],
 
@@ -147,6 +143,7 @@ final class PartyReports
                         ->select(['party_id', DB::raw('SUM(debit) - SUM(credit) as due')]),
                     'l', 'l.party_id', '=', 'customers.id',
                 )
+                ->tap(fn ($q) => self::joinLadder($q))
                 ->where('customers.company_id', $f['company_id'])
                 ->whereNull('customers.deleted_at')
                 ->where('customers.is_active', true)
@@ -157,19 +154,13 @@ final class PartyReports
                 ->orderByRaw('COALESCE(l.due, 0) DESC')
                 ->select([
                     'customers.id',
-                    self::customerName(),
+                    ...self::identity(),
                     DB::raw("'".Customer::drillSourceType()."' as party_type_literal"),
                     'customers.credit_days',
                     DB::raw('COALESCE(l.due, 0) as outstanding'),
                 ]),
             columns: [
-                [
-                    'key' => 'customer_name',
-                    'label' => 'customer::field.name',
-                    'type' => ReportColumn::DOCUMENT,
-                    'source_type' => 'party_type_literal',
-                    'source_id' => 'id',
-                ],
+                ...self::identityColumns('id', mobile: true),
                 ['key' => 'credit_days', 'label' => 'customer::field.credit_days', 'type' => ReportColumn::TEXT],
                 ['key' => 'outstanding', 'label' => 'customer::field.outstanding', 'type' => ReportColumn::MONEY],
             ],
@@ -191,6 +182,7 @@ final class PartyReports
             groupBy: 'party_id',
             query: fn (array $f) => DB::table('ledger_entries')
                 ->join('customers', 'customers.id', '=', 'ledger_entries.party_id')
+                ->tap(fn ($q) => self::joinLadder($q))
                 ->where('ledger_entries.company_id', $f['company_id'])
                 ->where('ledger_entries.party_type', Customer::drillSourceType())
                 ->when($f['branch_id'], fn ($q, $branch) => $q->where('ledger_entries.branch_id', $branch))
@@ -205,27 +197,21 @@ final class PartyReports
                 // শুরুর তারিখ ধরা হয় না: বকেয়া একটা মুহূর্তের অবস্থা,
                 // পরিসরের নয় — "কত দিন থেকে বাকি" প্রশ্নটা ageing-এর
                 ->where('ledger_entries.trx_date', '<=', $f['to'])
-                ->groupBy('ledger_entries.party_id', 'customers.code', 'customers.name_en', 'customers.name_bn')
+                ->groupBy('ledger_entries.party_id', 'customers.id', 'l0.id', 'l1.id', 'l2.id')
                 ->havingRaw('SUM(ledger_entries.debit) - SUM(ledger_entries.credit) <> 0')
                 ->orderByRaw('SUM(ledger_entries.debit) - SUM(ledger_entries.credit) DESC')
                 ->select([
                     'ledger_entries.party_id',
-                    self::customerName(),
+                    ...self::identity(),
                     // ড্রিল-ডাউনের জন্য source_type — প্রতিটা সারিতে একই,
                     // তাই ধ্রুবক হিসেবেই select করা। engine সারিগুলোকে
                     // সাধারণ অ্যারে হিসেবে দেখে, তাই কলামটা থাকতেই হবে।
                     DB::raw("'".Customer::drillSourceType()."' as party_type_literal"),
                     DB::raw('SUM(ledger_entries.debit) - SUM(ledger_entries.credit) as outstanding'),
                 ]),
+            // ⭐ গ্রাহক তালিকার কলামগুলোই, একই ক্রমে — মালিকের চাওয়া, ১৯ সেপ্টেম্বর ২০২৬
             columns: [
-                [
-                    'key' => 'customer_name',
-                    'label' => 'customer::field.name',
-                    'type' => ReportColumn::DOCUMENT,
-                    // নামটা ক্লিকযোগ্য — নিয়ম ১
-                    'source_type' => 'party_type_literal',
-                    'source_id' => 'party_id',
-                ],
+                ...self::identityColumns('party_id', address: true, owner: true, mobile: true),
                 ['key' => 'outstanding', 'label' => 'customer::field.outstanding', 'type' => ReportColumn::MONEY],
             ],
         );
@@ -274,6 +260,7 @@ final class PartyReports
 
                 return DB::table('ledger_entries')
                     ->join('customers', 'customers.id', '=', 'ledger_entries.party_id')
+                    ->tap(fn ($q) => self::joinLadder($q))
                     ->where('ledger_entries.company_id', $f['company_id'])
                     ->where('ledger_entries.party_type', Customer::drillSourceType())
                     ->when($f['branch_id'], fn ($q, $branch) => $q->where('ledger_entries.branch_id', $branch))
@@ -281,33 +268,40 @@ final class PartyReports
                     ->when($f['party_type_id'] ?? null,
                         fn ($q, $type) => $q->where('customers.party_type_id', $type))
                     ->where('ledger_entries.trx_date', '<=', $f['to'])
-                    ->groupBy('ledger_entries.party_id', 'customers.code', 'customers.name_en', 'customers.name_bn')
+                    ->groupBy('ledger_entries.party_id', 'customers.id', 'l0.id', 'l1.id', 'l2.id')
                     ->havingRaw('SUM(ledger_entries.debit) - SUM(ledger_entries.credit) <> 0')
                     ->orderByRaw('SUM(ledger_entries.debit) - SUM(ledger_entries.credit) DESC')
                     ->select([
                         'ledger_entries.party_id',
-                        self::customerName(),
+                        ...self::identity(),
                         DB::raw("'".Customer::drillSourceType()."' as party_type_literal"),
                         DB::raw($bucket(null, $b1).' as bucket_current'),
                         DB::raw($bucket($b1, $b2).' as bucket_30'),
                         DB::raw($bucket($b2, $b3).' as bucket_60'),
                         DB::raw($bucket($b3, null).' as bucket_90'),
                         DB::raw('SUM(ledger_entries.debit) - SUM(ledger_entries.credit) as outstanding'),
+                        DB::raw('MAX(CASE WHEN ledger_entries.debit > 0 THEN ledger_entries.trx_date END) as last_billed'),
+                        DB::raw('MAX(CASE WHEN ledger_entries.credit > 0 THEN ledger_entries.trx_date END) as last_collected'),
+                        'customers.credit_limit',
                     ]);
             },
             columns: [
-                [
-                    'key' => 'customer_name',
-                    'label' => 'customer::field.name',
-                    'type' => ReportColumn::DOCUMENT,
-                    'source_type' => 'party_type_literal',
-                    'source_id' => 'party_id',
-                ],
+                ...self::identityColumns('party_id', mobile: true),
                 ['key' => 'bucket_current', 'label' => 'customer::field.bucket_current', 'type' => ReportColumn::MONEY],
                 ['key' => 'bucket_30', 'label' => 'customer::field.bucket_30', 'type' => ReportColumn::MONEY],
                 ['key' => 'bucket_60', 'label' => 'customer::field.bucket_60', 'type' => ReportColumn::MONEY],
                 ['key' => 'bucket_90', 'label' => 'customer::field.bucket_90', 'type' => ReportColumn::MONEY],
                 ['key' => 'outstanding', 'label' => 'customer::field.outstanding', 'type' => ReportColumn::MONEY],
+
+                /*
+                 * ⭐ মালিক জানতে চেয়েছেন আর কী দেওয়া যায় — ১৯ সেপ্টেম্বর ২০২৬।
+                 * ⓘ তিনটা প্রশ্ন, যা বয়সের বালতি একা বলে না: শেষ কবে বিল হলো
+                 * (কেনা থেমেছে কি না), শেষ কবে টাকা এল (দেওয়া থেমেছে কি না),
+                 * আর সীমা কত (বকেয়া সীমার কত কাছে)।
+                 */
+                ['key' => 'last_billed', 'label' => 'customer::field.last_billed_on', 'type' => ReportColumn::DATE],
+                ['key' => 'last_collected', 'label' => 'customer::field.last_collected_on', 'type' => ReportColumn::DATE],
+                ['key' => 'credit_limit', 'label' => 'customer::field.credit_limit', 'type' => ReportColumn::MONEY],
             ],
         );
     }
@@ -319,12 +313,88 @@ final class PartyReports
      * সারির জন্য মডেল লাগত, আর engine সারিগুলোকে সাধারণ অ্যারে হিসেবেই
      * দেখে।
      */
-    private static function customerName(): Expression
+    /**
+     * গ্রাহকের পরিচয় — চারটা রিপোর্টে একই কলাম, গ্রাহক তালিকার মতোই।
+     *
+     * ── ⭐ মালিকের চাওয়া, ১৯ সেপ্টেম্বর ২০২৬ ─────────────────────────────
+     * তালিকায় যা দেখেন, রিপোর্টেও তা-ই: কোড আলাদা কলামে, তারপর নাম,
+     * পয়েন্ট, এরিয়া, মোবাইল (বকেয়ার তালিকায় ঠিকানা আর মালিকও)। ⓘ আগে
+     * কেবল একটা ঘর ছিল — "কোড — নাম" — আর কোন এলাকার দোকান, তা জানতে
+     * প্রতিটা সারি খুলে দেখতে হত।
+     *
+     * ⚠️ "এরিয়া" এখন `territory` চাবি (06e0d8cd-এ কেবল নাম বদলেছে), আর
+     * শিরোনাম আসে `master_data::level.*` থেকে — তালিকার সাথে একই।
+     *
+     * @return list<Expression|string>
+     */
+    private static function identity(): array
     {
-        $name = app()->getLocale() === 'bn'
-            ? "COALESCE(NULLIF(customers.name_bn, ''), customers.name_en)"
-            : 'customers.name_en';
+        return [
+            'customers.code as customer_code',
+            DB::raw(self::localised('customers').' as customer_name'),
+            DB::raw(self::ladderName(Location::POINT).' as point_name'),
+            DB::raw(self::ladderName(Location::TERRITORY).' as area_name'),
+            DB::raw((app()->getLocale() === 'bn'
+                ? "COALESCE(NULLIF(customers.address_bn, ''), customers.address_en)"
+                : "COALESCE(NULLIF(customers.address_en, ''), customers.address_bn)").' as full_address'),
+            'customers.owner_name',
+            'customers.phone',
+        ];
+    }
 
-        return DB::raw("CONCAT(customers.code, ' — ', {$name}) as customer_name");
+    /**
+     * মইয়ের তিন ধাপ — গ্রাহকের নিজের জায়গা আর উপরের দুইটা।
+     *
+     * ⓘ তিনটাই যথেষ্ট: দোকান বসে পয়েন্টে (কখনো রুটে), আর এরিয়া তার ঠিক
+     * উপরে বা আরেক ধাপ উপরে। ⚠️ `leftJoin` — মই না থাকলেও সারিটা থাকে।
+     */
+    private static function joinLadder($query): void
+    {
+        $query->leftJoin('mdm_locations as l0', 'l0.id', '=', 'customers.location_id')
+            ->leftJoin('mdm_locations as l1', 'l1.id', '=', 'l0.parent_id')
+            ->leftJoin('mdm_locations as l2', 'l2.id', '=', 'l1.parent_id');
+    }
+
+    /** তিন ধাপের যেটা এই স্তরের, তার নাম */
+    private static function ladderName(string $level): string
+    {
+        $quoted = DB::getPdo()->quote($level);
+
+        return 'CASE'
+            ." WHEN l0.level = {$quoted} THEN ".self::localised('l0')
+            ." WHEN l1.level = {$quoted} THEN ".self::localised('l1')
+            ." WHEN l2.level = {$quoted} THEN ".self::localised('l2')
+            .' END';
+    }
+
+    private static function localised(string $table): string
+    {
+        return app()->getLocale() === 'bn'
+            ? "COALESCE(NULLIF({$table}.name_bn, ''), {$table}.name_en)"
+            : "COALESCE(NULLIF({$table}.name_en, ''), {$table}.name_bn)";
+    }
+
+    /**
+     * পরিচয়ের কলামগুলো — নামটা ক্লিকযোগ্য (নিয়ম ১), বাকিগুলো লেখা।
+     *
+     * @return list<array<string, string>>
+     */
+    private static function identityColumns(string $idKey, bool $address = false, bool $owner = false, bool $mobile = false): array
+    {
+        return array_values(array_filter([
+            ['key' => 'customer_code', 'label' => 'customer::field.code', 'type' => ReportColumn::TEXT],
+            [
+                'key' => 'customer_name',
+                'label' => 'customer::field.name',
+                'type' => ReportColumn::DOCUMENT,
+                'source_type' => 'party_type_literal',
+                'source_id' => $idKey,
+            ],
+            ['key' => 'point_name', 'label' => 'master_data::level.point', 'type' => ReportColumn::TEXT],
+            ['key' => 'area_name', 'label' => 'master_data::level.territory', 'type' => ReportColumn::TEXT],
+            $address ? ['key' => 'full_address', 'label' => 'customer::field.full_address', 'type' => ReportColumn::TEXT] : null,
+            $owner ? ['key' => 'owner_name', 'label' => 'customer::field.owner_name', 'type' => ReportColumn::TEXT] : null,
+            $mobile ? ['key' => 'phone', 'label' => 'customer::field.phone', 'type' => ReportColumn::TEXT] : null,
+        ]));
     }
 }
