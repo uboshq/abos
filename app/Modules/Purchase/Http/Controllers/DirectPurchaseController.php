@@ -762,7 +762,23 @@ class DirectPurchaseController extends Controller implements HasMiddleware
     /** নগদ ও ব্যাংক — টাকাটা কোথা থেকে গেল। */
     private function moneyAccounts()
     {
-        $heads = Account::query()->postable()
+        /*
+         * ⛔ এখানে `postable()` ছিল, আর তাতে তালিকাটা **সবসময় খালি** — ১৯ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ `postable()` মানে `is_group = false`। অথচ টাকার তিন মা —
+         * ১১০১ নগদ · ১১০২ ব্যাংক · ১১০৫ MFS — **তিনটাই দল**। ⚠️ তাই মা
+         * খোঁজাটা শূন্য ফেরাত, আর শূন্য মায়ের সন্তানও শূন্য।
+         *
+         * ⛔ ফল: "Paid from" ঘরটা **প্রতিটা উপায়ে খালি** থাকত — নগদ,
+         * ব্যাংক, সব। আর পর্দা বলত *"এই ধরনের কোনো খাত এখনো
+         * বসানো নেই"* — অথচ প্রধান কাউন্টার শুরু থেকেই ছিল।
+         * ⚠️ বার্তাটা মিথ্যা ছিল, আর মালিক সেটা বিশ্বাস করে ব্যাংক খাত
+         * বসাতে চেয়েছিলেন।
+         *
+         * ⭐ মা খোঁজায় `postable()` নেই — মা দল হবেই, আর দল বাদ
+         * পড়ে নিচের `is_group = false`-এ, যেখানে ওটাই ঠিক জায়গা।
+         */
+        $heads = Account::query()
             ->whereIn('code', StandardChart::MONEY_PARENTS)
             ->pluck('id');
 
