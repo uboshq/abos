@@ -65,12 +65,12 @@ final class PostingEngine
         $financialYear = $this->resolveFinancialYear($trxDate);
         $this->assertBalanced($lines, $sourceType, $sourceId);
         $this->assertAccountsCanHoldMoney($lines, $sourceType, $sourceId);
-        $this->assertNotAlreadyPosted($sourceType, $sourceId);
+        $claimKey = $this->assertNotAlreadyPosted($sourceType, $sourceId);
 
         $branchId = $branchId ?? CompanyContext::branchId();
         $userId = $userId ?? auth()->id();
 
-        return DB::transaction(function () use ($lines, $sourceType, $sourceId, $trxDate, $documentNo, $branchId, $userId, $financialYear) {
+        return DB::transaction(function () use ($lines, $sourceType, $sourceId, $trxDate, $documentNo, $branchId, $userId, $financialYear, $claimKey) {
             /*
              * উপরের `assertNotAlreadyPosted()` ভদ্রতা; আসল পাহারা এটা।
              *
@@ -78,7 +78,7 @@ final class PostingEngine
              * দুইজনেই "বসেনি" দেখে। এই সারিটা লেনদেনের ভেতরে বসে, আর
              * দ্বিতীয়জন unique key-তে ধাক্কা খেয়ে পুরো লেনদেন ফিরিয়ে দেয়।
              */
-            $this->claim($sourceType, $sourceId, $userId);
+            $this->claim($claimKey, $sourceId, $userId);
 
             $created = [];
 
@@ -150,11 +150,34 @@ final class PostingEngine
         ?string $reason = null,
         ?int $userId = null,
     ): array {
+        $reversalType = $sourceType.':reversal';
+        $lastReversal = $this->lastRowId($reversalType, $sourceId);
+
+        /*
+         * ⭐ কেবল যা এখনো উল্টানো হয়নি — ১৯ সেপ্টেম্বর ২০২৬।
+         *
+         * ⛔ আগে এখানে কাগজের **সব** সারি তোলা হত। একবারের বাতিলে সেটাই
+         * ঠিক, কিন্তু নিশ্চিত বিল সম্পাদনার পর (উল্টানো → আবার বসানো)
+         * দ্বিতীয়বার উল্টালে প্রথম দাখিলাটাও আবার উল্টাত — খাতায় বিলটা
+         * দুইবার বিয়োগ হত, আর রেওয়ামিল তবু মিলত, তাই কেউ টের পেত না।
+         *
+         * ⓘ উল্টো সারি সবসময় যা উল্টায় তার **পরে** বসে, তাই শেষ উল্টো
+         * সারির id-র পরের সারিগুলোই এখনো খোলা দাখিলা। প্রথমবার উল্টো
+         * সারি নেই, তাই সব — অর্থাৎ আগের আচরণ অবিকল।
+         */
         $original = LedgerEntry::query()
             ->where('source_type', $sourceType)
             ->where('source_id', $sourceId)
+            ->when($lastReversal !== null, fn ($q) => $q->where('id', '>', $lastReversal))
             ->orderBy('id')
             ->get();
+
+        // সব দাখিলা আগেই উল্টানো — দ্বিতীয় বাতিল। বার্তাটা আগের মতোই।
+        if ($original->isEmpty() && $lastReversal !== null) {
+            throw new PostingException(
+                "{$reversalType}#{$sourceId} is already in the ledger. Reverse it before posting again."
+            );
+        }
 
         if ($original->isEmpty()) {
             throw new PostingException(
@@ -177,14 +200,21 @@ final class PostingEngine
         $financialYear = $this->resolveFinancialYear($reversalDate);
         $userId = $userId ?? auth()->id();
 
-        $reversalType = $sourceType.':reversal';
+        /*
+         * উল্টো এন্ট্রিও প্রতিটা দাখিলার জন্য একবারই — দুইবার বাতিল করলে
+         * হিসাব উল্টোদিকে দ্বিগুণ হত, আর সেটাও রেওয়ামিল মেলা অবস্থাতেই।
+         *
+         * ⓘ প্রথম উল্টানোর পাহারার নাম আগের মতোই `<উৎস>:reversal`। পরেরগুলো
+         * যে দাখিলা উল্টায় তার শেষ সারির id বহন করে — তাই একই দাখিলা
+         * দুইবার উল্টাতে গেলে (দুইবার ক্লিক) দুজনেই একই নাম চায়, আর
+         * টেবিলের unique দ্বিতীয়জনকে থামায়।
+         */
+        $claimKey = $lastReversal === null
+            ? $reversalType
+            : $reversalType.'@'.$original->last()->id;
 
-        $this->assertNotAlreadyPosted($reversalType, $sourceId);
-
-        return DB::transaction(function () use ($original, $reversalType, $sourceId, $reversalDate, $financialYear, $reason, $userId) {
-            // উল্টো এন্ট্রিও একবারই — দুইবার বাতিল করলে হিসাব উল্টোদিকে
-            // দ্বিগুণ হত, আর সেটাও রেওয়ামিল মেলা অবস্থাতেই
-            $this->claim($reversalType, $sourceId, $userId);
+        return DB::transaction(function () use ($original, $reversalType, $sourceId, $reversalDate, $financialYear, $reason, $userId, $claimKey) {
+            $this->claim($claimKey, $sourceId, $userId);
 
             $created = [];
 
@@ -365,24 +395,62 @@ final class PostingEngine
                 'posted_by' => $userId,
             ]);
         } catch (UniqueConstraintViolationException) {
+            $type = Str::before($sourceType, '@');
+
             throw new PostingException(
-                "{$sourceType}#{$sourceId} is already in the ledger. Reverse it before posting again."
+                "{$type}#{$sourceId} is already in the ledger. Reverse it before posting again."
             );
         }
     }
 
-    private function assertNotAlreadyPosted(string $sourceType, int $sourceId): void
+    /**
+     * খাতায় এই কাগজের কোনো **খোলা** দাখিলা আছে কি না — আর থাকলে থামা।
+     *
+     * ── ⛔ কেন "আছে কি না" আর যথেষ্ট নয়, ১৯ সেপ্টেম্বর ২০২৬ ─────────────
+     * আগে প্রশ্নটা ছিল *"এই কাগজের কোনো সারি খাতায় আছে?"*। ⓘ কিন্তু
+     * উল্টো সারিগুলো মূল সারি মোছে না (নিয়ম ৫), তাই একবার বসানো কাগজ
+     * উল্টানোর পরেও উত্তর থাকত "হ্যাঁ"। ⛔ ফল: নিশ্চিত ক্রয় বিল সম্পাদনা
+     * (উল্টানো → বদলানো → আবার বসানো) **প্রতিবার** এখানে ভাঙত —
+     * `PurchaseBillService::updatePosted()`। ধরা পড়ল অন্য একটা পরীক্ষায়
+     * বিল বানাতে গিয়ে; সম্পাদনার পথের নিজের কোনো পরীক্ষা ছিল না।
+     *
+     * ⭐ এখন প্রশ্ন: শেষ উল্টানোর পরে কোনো সারি বসেছে কি? বসে থাকলে
+     * দাখিলাটা খোলা — আবার বসানো মানে দ্বিগুণ, তাই থামা। না বসলে (সব
+     * উল্টানো) নতুন দাখিলা বসতে পারে।
+     *
+     * @return string প্রহরী-টেবিলে যে নামে দাবি বসবে — প্রথম দাখিলায়
+     *                কাগজের ধরন নিজেই (আগের মতো), পরেরগুলোয় যে উল্টানোর
+     *                পরে বসছে তার id সহ, যাতে একই মুহূর্তের দুইটা চেষ্টা
+     *                একই নাম চায় আর দ্বিতীয়টা থামে।
+     */
+    private function assertNotAlreadyPosted(string $sourceType, int $sourceId): string
     {
-        $exists = LedgerEntry::query()
+        $lastReversal = $this->lastRowId($sourceType.':reversal', $sourceId);
+
+        $open = LedgerEntry::query()
             ->where('source_type', $sourceType)
             ->where('source_id', $sourceId)
+            ->when($lastReversal !== null, fn ($q) => $q->where('id', '>', $lastReversal))
             ->exists();
 
-        if ($exists) {
+        if ($open) {
             throw new PostingException(
                 "{$sourceType}#{$sourceId} is already in the ledger. Reverse it before posting again."
             );
         }
+
+        return $lastReversal === null ? $sourceType : $sourceType.'@'.$lastReversal;
+    }
+
+    /** এই ধরনের এই কাগজের খাতায় শেষ সারিটার id — না থাকলে null। */
+    private function lastRowId(string $sourceType, int $sourceId): ?int
+    {
+        $id = LedgerEntry::query()
+            ->where('source_type', $sourceType)
+            ->where('source_id', $sourceId)
+            ->max('id');
+
+        return $id === null ? null : (int) $id;
     }
 
     private function resolveFinancialYear(Carbon $date): FinancialYear
