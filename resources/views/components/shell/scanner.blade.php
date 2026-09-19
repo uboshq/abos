@@ -36,14 +36,14 @@
     x-cloak
     x-show="$store.scanner.open"
     x-on:keydown.escape.window="$store.scanner.skip()"
-    class="fixed inset-0 z-50 flex flex-col bg-[--surface-sunken]/95 backdrop-blur-sm"
+    class="fixed inset-0 z-50 flex flex-col bg-(--color-surface-app)/95 backdrop-blur-sm"
     role="dialog"
     aria-modal="true"
     aria-labelledby="scanner-title"
 >
-    <header class="flex items-center justify-between gap-3 border-b border-[--line] px-4 py-3">
+    <header class="flex items-center justify-between gap-3 border-b border-(--color-border) px-4 py-3">
         <div class="min-w-0">
-            <h2 id="scanner-title" class="truncate text-sm font-semibold text-[--ink]">
+            <h2 id="scanner-title" class="truncate text-sm font-semibold text-(--color-ink)">
                 <span x-show="$store.scanner.mode === 'paper'">{{ __('core.scan.title_paper') }}</span>
                 <span x-show="$store.scanner.mode === 'face'">{{ __('core.scan.title_face') }}</span>
             </h2>
@@ -53,7 +53,7 @@
                 নয়। ⓘ না পেলে সেটা বলা হয়, যাতে ব্যবহারকারী বুঝতে পারেন
                 কোণগুলো নিজে টানতে হবে — নীরবে ভুল কোণ বসিয়ে রাখা হয় না।
             --}}
-            <p class="truncate text-xs text-[--ink-soft]" x-show="$store.scanner.mode === 'paper'">
+            <p class="truncate text-xs text-(--color-ink-muted)" x-show="$store.scanner.mode === 'paper'">
                 <span x-show="$store.scanner.detected">{{ __('core.scan.found') }}</span>
                 <span x-show="! $store.scanner.detected">{{ __('core.scan.not_found') }}</span>
             </p>
@@ -62,7 +62,7 @@
         <button
             type="button"
             x-on:click="$store.scanner.skip()"
-            class="shrink-0 rounded-md px-3 py-1.5 text-xs text-[--ink-soft] hover:bg-[--surface-hover]"
+            class="shrink-0 rounded-md px-3 py-1.5 text-xs text-(--color-ink-muted) hover:bg-(--color-surface-hover)"
         >
             {{ __('core.scan.skip') }}
         </button>
@@ -133,9 +133,9 @@
         </div>
     </div>
 
-    <footer class="flex items-center justify-between gap-3 border-t border-[--line] px-4 py-3">
+    <footer class="flex items-center justify-between gap-3 border-t border-(--color-border) px-4 py-3">
         {{-- মুখের মাপ: একটাই হাতল, কারণ বর্গের একটাই সংখ্যা --}}
-        <label class="flex flex-1 items-center gap-2 text-xs text-[--ink-soft]" x-show="$store.scanner.mode === 'face'">
+        <label class="flex flex-1 items-center gap-2 text-xs text-(--color-ink-muted)" x-show="$store.scanner.mode === 'face'">
             {{ __('core.scan.size') }}
             <input
                 type="range"
@@ -147,7 +147,7 @@
             >
         </label>
 
-        <p class="flex-1 text-xs text-[--ink-soft]" x-show="$store.scanner.mode === 'paper'">
+        <p class="flex-1 text-xs text-(--color-ink-muted)" x-show="$store.scanner.mode === 'paper'">
             {{ __('core.scan.hint') }}
         </p>
 
@@ -155,7 +155,7 @@
             type="button"
             x-on:click="$store.scanner.accept()"
             x-bind:disabled="$store.scanner.busy"
-            class="shrink-0 rounded-md bg-[--accent] px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            class="shrink-0 rounded-md bg-(--color-brand-500) px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
             <span x-show="! $store.scanner.busy">{{ __('core.scan.apply') }}</span>
             <span x-show="$store.scanner.busy">{{ __('core.scan.working') }}</span>

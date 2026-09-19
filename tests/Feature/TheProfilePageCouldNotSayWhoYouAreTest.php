@@ -59,9 +59,21 @@ final class TheProfilePageCouldNotSayWhoYouAreTest extends TestCase
             $page->assertSee('name="'.$field.'"', escape: false);
         }
 
-        /* ⓘ এই দুইটা সম্পাদনার ঘর নয় — মান ধরেই মাপা হয়। */
-        $page->assertSee($this->user->public_id);
         $page->assertSee(route('profile.password'), escape: false);
+
+        /*
+         * ⛔ ভেতরের স্থায়ী নম্বরটা (`public_id`) পর্দায় **নেই** —
+         * ১৯ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ এই দাবিটা আগে উল্টো ছিল: নম্বরটা দেখা যেতেই হবে। ⚠️ মালিক
+         * পাতাটা দেখে জিজ্ঞেস করলেন *"User ID diye kaj ki ekane?"* — ঐ
+         * নম্বর কেউ মুখে বলতে পারে না, আর তা দিয়ে কোথাও ঢোকাও যায় না।
+         * তিনি চেয়েছিলেন লগইন আইডি, আর সেটা উপরের দাবিতে আছে।
+         *
+         * ⭐ দাবিটা মুছে না দিয়ে উল্টে দেওয়া হলো — নাহলে কেউ ঘরটা আবার
+         * বসালে কোনো টেস্ট টেরই পেত না।
+         */
+        $page->assertDontSee($this->user->public_id);
     }
 
     /**
