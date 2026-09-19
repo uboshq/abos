@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'share_total_off' => 'মোট মালিকানা :total% — :gap% কারও নামে লেখা নেই। অংশীদারদের অংশ মিলিয়ে নিন।',
+    'showing_one_person' => ':name-এর সারিগুলো দেখানো হচ্ছে',
     'cash_matches' => 'গোনা আর লেখা মিলেছে।',
     'cash_differs' => 'গোনা :counted, লেখা :written — পার্থক্য :gap। ⛔ না মিললে পোস্ট হবে না।',
     'withdrawal_kind_note' => 'উত্তোলন ও মুনাফার ভাগ মূলধন কমায়; মালিকের বেতন একটা খরচ, তাই মুনাফা কমায়।',

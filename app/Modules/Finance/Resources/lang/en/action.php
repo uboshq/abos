@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'show_everyone' => 'Show everyone',
     'save_withdrawal_row' => 'Save the withdrawal row',
     'withdrawal_list' => 'List and monthly cap',
     'save_capital_row' => 'Save the capital row',
