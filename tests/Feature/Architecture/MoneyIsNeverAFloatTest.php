@@ -232,7 +232,6 @@ class MoneyIsNeverAFloatTest extends TestCase
     private const FLOAT_IS_DELIBERATE = [
         'app/Models/Attachment.php' => 'ফাইলের আকার, টাকা নয়',
         'app/Modules/Inventory/Http/Requests/StockTransferRequest.php' => 'তুলনা — খালি সারি ছাঁকা',
-        'app/Modules/Inventory/Services/PackConversion.php' => 'সাজানোর চাবি, হিসাব নয়',
         'app/Modules/Purchase/Http/Controllers/DirectPurchaseController.php' => 'তুলনা — শূন্যের বেশি কি না',
         'app/Modules/Purchase/Http/Requests/PaymentRequest.php' => 'তুলনা — খালি সারি ছাঁকা',
         'app/Modules/Purchase/Http/Requests/PurchaseReturnRequest.php' => 'তুলনা — খালি সারি ছাঁকা',
