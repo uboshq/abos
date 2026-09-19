@@ -75,7 +75,8 @@
         <form method="GET" class="contents">
             <input type="hidden" name="tab" value="{{ $tab }}">
 
-            <x-ui.toolbar :title="__('accounts::voucher.tab.' . $tab)"
+            {{-- ⓘ ট্যাব ছাঁকনির চিপ নয় — উপরের ট্যাবগুলোই দেখায় (১৯ সেপ্টেম্বর ২০২৬) --}}
+            <x-ui.toolbar :title="__('accounts::voucher.tab.' . $tab)" :quiet="['tab']"
                 :count="trans_choice('accounts::message.voucher_count', $vouchers->total(), ['count' => $vouchers->total()])"
                 :sort="$sortOptions"
                 :columns="$columns">

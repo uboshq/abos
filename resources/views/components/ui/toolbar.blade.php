@@ -19,6 +19,17 @@
     'refresh' => true,
 
     /*
+     * ঠিকানার যে চাবিগুলো ছাঁকনি নয়, দৃশ্যের অবস্থা — যেমন ট্যাব (`tab`)।
+     *
+     * ── কেন লাগল, ১৯ সেপ্টেম্বর ২০২৬ ─────────────────────────────────
+     * টুলবার অচেনা প্রতিটা চাবিকে সরানো-যায় এমন চিপ বানায় (নিচে
+     * `$screenFilters`)। ⚠️ মূলধনের "মালিক ও বিনিয়োগকারী" ট্যাবে তাই
+     * "owners" লেখা একটা চিপ উঠত, আর দাবির পাতায় "all" — কাঁচা শব্দ,
+     * আর ক্লিক করলে ট্যাবটাই হারাত। ⓘ পাতা নিজে বলে দেয় কোনগুলো চুপ থাকবে।
+     */
+    'quiet' => [],
+
+    /*
      * পর্দার শিরোনাম ও গোনা — এখন টুলবারের নিজের।
      *
      * ── কেন এগুলো এখানে এল ───────────────────────────────────────────
@@ -209,7 +220,7 @@
      * দৃশ্য, ঘনত্ব, পাতা, কলাম) ছাড়া ঠিকানায় আর কিছু থাকলেই সেটা
      * স্ক্রিনের ছাঁকনি, আর প্যানেলটা খোলা থাকে।
      */
-    $ownKeys = ['q', 'sort', 'view', 'compact', 'page', 'hide', 'show', 'export'];
+    $ownKeys = ['q', 'sort', 'view', 'compact', 'page', 'hide', 'show', 'export', ...$quiet];
     $screenFilters = collect(request()->query())
         ->except($ownKeys)
         ->filter(fn ($value) => $value !== '' && $value !== null);
@@ -445,7 +456,12 @@
              বকেয়া আগে"), নাহলে ব্যবহারকারীকে প্রতিবার নিজে সাজাতে হয়,
              আর তালিকা খুলেই কাজের সারিগুলো চোখে পড়ে না। --}}
         @if ($sort !== [])
-            <label class="order-4 flex items-center gap-2 text-sm">
+            {{-- ⚠️ order-3, খোঁজার সমান — নতুন `order-4` নয়। বানানো CSS-এ কেবল
+                 order-1..3 আছে, আর অচেনা ক্লাস ০ ধরে Sort-কে লাইনের শুরুতে
+                 তুলে দিয়েছিল (মালিক ধরেছেন, ১৯ সেপ্টেম্বর ২০২৬: *"+ Filter &
+                 Search, Sort by-এর আগে থাকার কথা"*)। ⓘ সমান order-এ HTML-এর ক্রম
+                 খাটে: খোঁজা → Sort → সরঞ্জাম। --}}
+            <label class="order-3 flex items-center gap-2 text-sm">
                 <span class="whitespace-nowrap text-(--color-ink-muted)">{{ __('core.toolbar.sort_by') }}</span>
                 <select name="sort" onchange="this.form.submit()"
                         class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
@@ -475,7 +491,8 @@
     {{-- ⓘ `contents` — এই সারিটাও ২য় লাইনে গলে যায় (উপরের ⭐ মন্তব্য, ১৯ সেপ্টেম্বর ২০২৬)।
          পাতার বোতাম ("নতুন …") আর এখানে নেই — শিরোনামের ডানে, ১ম লাইনে। --}}
     <div class="contents">
-        <div class="print-hide order-6 ms-auto flex items-center gap-1">
+        {{-- ⓘ order-3 — Sort-এর পরে HTML-এ, তাই সমান order-এ তার পরেই; ms-auto ডানে ঠেলে --}}
+        <div class="print-hide order-3 ms-auto flex items-center gap-1">
 
             {{-- View — তালিকা নাকি কার্ড।
 

@@ -70,8 +70,15 @@ final class TheVoucherListHasSevenTabsTest extends TestCase
     /**
      * ⭐ মেনুতে Master-এর ঠিক পরে।
      *
-     * ⓘ `transactions`-এর সারিগুলো বারে আলাদা বোতাম হয়ে বসে, তাই দাবি দুইটা:
-     * গ্রুপটা Master-এর পরে, আর ভাউচার তালিকা তার **প্রথম** সারি।
+     * ⓘ `transactions`-এর সারিগুলো বারে বোতাম হয়ে বসে, তাই দাবি দুইটা:
+     * গ্রুপটা Master-এর পরে, আর ভাউচার তালিকা তার **প্রথম দলে** (cluster)।
+     *
+     * ── ⓘ দাবিটা একটু বদলাল, ১৯ সেপ্টেম্বর ২০২৬ ─────────────────────────
+     * ⭐ abos-8b (8074af41) ছয়টা ভাউচার-বোতামকে একটা দলে এনেছে — বারে এখন
+     * একটাই বোতাম, ভেতরে ছয়টা সারি, আর তালিকা তার শেষে। ⓘ মালিকের চাওয়া
+     * ("Master-এর পাশে Voucher List") তাতে অক্ষত: দলটাই Master-এর পরের
+     * প্রথম বোতাম। ⚠️ তাই দাবিটা এখন **দল** ধরে, সারির ক্রম ধরে নয় —
+     * নাহলে দলের ভেতরের সাজানো বদলালেই পরীক্ষা মিথ্যা লাল হত।
      *
      * ⚠️ আর পাতাটা খোলে — আলাদা গ্রুপ বসানোর প্রথম চেষ্টায় গোটা অ্যাপ
      * চালু হওয়ার সময়েই ভেঙেছিল (গ্রুপের নাম কোরে বাঁধা)।
@@ -87,8 +94,19 @@ final class TheVoucherListHasSevenTabsTest extends TestCase
             'Master-এর পরের গ্রুপটা আর transactions নয়।',
         );
 
-        $this->assertSame('accounts.voucher.list', $module['menu']['transactions'][0]['route'] ?? null,
-            'ভাউচার তালিকা transactions-এর প্রথম সারি নয় — Master-এর পাশে বসবে না।');
+        $rows = $module['menu']['transactions'];
+        $cluster = $rows[0]['cluster'] ?? null;
+
+        $this->assertNotNull($cluster,
+            'transactions-এর প্রথম বোতামটা আর কোনো দলের নয় — ভাউচার তালিকা Master-এর পাশে থাকছে না।');
+
+        $inCluster = array_map(
+            fn (array $row) => $row['route'] ?? null,
+            array_filter($rows, fn (array $row) => ($row['cluster'] ?? null) === $cluster),
+        );
+
+        $this->assertContains('accounts.voucher.list', $inCluster,
+            'ভাউচার তালিকা প্রথম দলে নেই — Master-এর পাশে বসবে না।');
     }
 
     /**
