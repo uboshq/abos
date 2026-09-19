@@ -39,8 +39,17 @@ class PayrollController extends Controller implements HasMiddleware
             'menu' => $this->menu->forUser($request->user()),
             'runs' => PayrollRun::query()
                 ->with('branch')
+                /*
+                 * ⭐ খোঁজা — টুলবারের ঘরটা সত্যিই কাজ করে (১৯ সেপ্টেম্বর ২০২৬)।
+                 * ⓘ রানের নম্বর আর বিবরণ।
+                 */
+                ->when(trim((string) $request->query('q')) ?: null, fn ($q, $term) => $q->where(
+                    fn ($w) => $w->where('document_no', 'like', "%{$term}%")
+                        ->orWhere('narration', 'like', "%{$term}%"),
+                ))
                 ->orderByDesc('month')->orderByDesc('id')
-                ->paginate(50),
+                // ⓘ withQueryString — পরের পাতায় গেলে খোঁজা আর ঘনত্ব হারায় না
+                ->paginate(50)->withQueryString(),
         ]);
     }
 

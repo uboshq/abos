@@ -57,11 +57,6 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('sales::portal.desk_title') }}</x-slot:title>
 
-    <x-slot:header>
-        <x-ui.page-header :title="__('sales::portal.desk_title')"
-                          :subtitle="__('sales::portal.desk_subtitle')" />
-    </x-slot:header>
-
     @if (session('status'))
         <div role="status"
              class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm
@@ -82,28 +77,50 @@
         </div>
     @endif
 
-    <div class="mb-4 flex gap-2">
-        <a href="{{ route('sales.claim.index') }}"
-           @class([
-               'rounded-(--radius-field) border px-3 py-1.5 text-sm',
-               'border-(--color-brand-500) text-(--color-brand-500)' => $status === 'pending',
-               'border-(--color-border)' => $status !== 'pending',
-           ])>
-            {{ __('sales::portal.only_pending') }} ({{ $pendingCount }})
-        </a>
-        <a href="{{ route('sales.claim.index', ['status' => 'all']) }}"
-           @class([
-               'rounded-(--radius-field) border px-3 py-1.5 text-sm',
-               'border-(--color-brand-500) text-(--color-brand-500)' => $status === 'all',
-               'border-(--color-border)' => $status !== 'all',
-           ])>
-            {{ __('sales::portal.show_all') }}
-        </a>
-    </div>
+    <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+        {{-- ⭐ শিরোনাম আর খোঁজা — বাকি তালিকার মতো এক বাক্সে।
+             মালিক, ১৯ সেপ্টেম্বর ২০২৬: *"সব মডিউলেই একই অবস্থা, সব ঠিক করো"*। --}}
+        <form method="GET" class="contents">
+            {{-- ⓘ "সব" দেখার সময় খোঁজা বা ঘনত্ব বদলালেও "সব"-ই থাকে --}}
+            @if ($status !== 'pending')
+                <input type="hidden" name="status" value="{{ $status }}">
+            @endif
 
-    <x-ui.table :rows="$claims"
+            <x-ui.toolbar :title="__('sales::portal.desk_title')"
+                :subtitle="__('sales::portal.desk_subtitle')"
                 :columns="$columns"
-                :empty="__('sales::portal.empty')" />
+                :search-placeholder="__('sales::message.claim_search')"
+                {{-- ⓘ অপেক্ষায়/সব — নিচের দুই লিংকই দেখায়, চিপ নয় --}}
+                :quiet="['status']" />
+        </form>
+
+        {{-- অপেক্ষমাণ / সব — টুলবারের ঠিক নিচে, বাক্সের ভেতরে। ⓘ ছাঁকনির
+             প্যানেলে নয়, কারণ এই পাতার প্রথম প্রশ্নই এটা, লুকানো থাকলে চলে না।
+             খোঁজাটা সাথে যায়, পাতার নম্বর যায় না। --}}
+        <div class="flex flex-wrap gap-2 border-b border-(--color-border) px-3 py-2">
+            <a href="{{ route('sales.claim.index', request()->except(['status', 'page'])) }}"
+               @class([
+                   'rounded-(--radius-field) border px-3 py-1.5 text-sm',
+                   'border-(--color-brand-500) text-(--color-brand-500)' => $status === 'pending',
+                   'border-(--color-border)' => $status !== 'pending',
+               ])>
+                {{ __('sales::portal.only_pending') }} ({{ $pendingCount }})
+            </a>
+            <a href="{{ route('sales.claim.index', [...request()->except(['status', 'page']), 'status' => 'all']) }}"
+               @class([
+                   'rounded-(--radius-field) border px-3 py-1.5 text-sm',
+                   'border-(--color-brand-500) text-(--color-brand-500)' => $status === 'all',
+                   'border-(--color-border)' => $status !== 'all',
+               ])>
+                {{ __('sales::portal.show_all') }}
+            </a>
+        </div>
+
+        <x-ui.table :rows="$claims"
+                    :columns="$columns"
+                    :compact="request()->boolean('compact')"
+                    :empty="request('q') ? __('core.empty.no_results') : __('sales::portal.empty')" />
+    </div>
 
     {{ $claims->links() }}
 

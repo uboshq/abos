@@ -48,7 +48,7 @@ class PrintQueueController extends Controller implements HasMiddleware
     {
         return view('sales::print_queue.index', [
             'menu' => app(MenuBuilder::class)->forUser($request->user()),
-            'jobs' => $this->queue->pending(),
+            'jobs' => $this->queue->pending((string) $request->query('q')),
         ]);
     }
 

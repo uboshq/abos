@@ -53,7 +53,21 @@ class CommissionClaimController extends Controller implements HasMiddleware
         $query = CommissionClaim::query()
             ->with(['customer', 'supplier', 'invoice'])
             ->when($request->query('status'), fn ($q, $s) => $q->where('status', $s))
-            ->when($request->query('supplier'), fn ($q, $s) => $q->where('supplier_id', $s));
+            ->when($request->query('supplier'), fn ($q, $s) => $q->where('supplier_id', $s))
+            /*
+             * ⭐ খোঁজা — টুলবারের ঘরটা সত্যিই কাজ করে (১৯ সেপ্টেম্বর ২০২৬)।
+             * ⓘ নম্বর, বিবরণ, আর ডিলার ও কোম্পানির নাম/কোড।
+             */
+            ->when(trim((string) $request->query('q')) ?: null, fn ($q, $term) => $q->where(
+                fn ($w) => $w->where('document_no', 'like', "%{$term}%")
+                    ->orWhere('narration', 'like', "%{$term}%")
+                    ->orWhereHas('customer', fn ($c) => $c->where('name_en', 'like', "%{$term}%")
+                        ->orWhere('name_bn', 'like', "%{$term}%")
+                        ->orWhere('code', 'like', "%{$term}%"))
+                    ->orWhereHas('supplier', fn ($s) => $s->where('name_en', 'like', "%{$term}%")
+                        ->orWhere('name_bn', 'like', "%{$term}%")
+                        ->orWhere('code', 'like', "%{$term}%")),
+            ));
 
         $sort = $this->applySort($query, $request, $this->sorts());
 

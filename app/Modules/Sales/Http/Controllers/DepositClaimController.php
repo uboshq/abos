@@ -46,6 +46,17 @@ class DepositClaimController extends Controller implements HasMiddleware
             'claims' => DepositClaim::query()
                 ->with(['customer', 'bankAccount', 'decider'])
                 ->when($status !== 'all', fn ($q) => $q->where('status', $status))
+                /*
+                 * ⭐ খোঁজা — টুলবারের ঘরটা সত্যিই কাজ করে (১৯ সেপ্টেম্বর ২০২৬)।
+                 * ⓘ রেফারেন্স, নোট, আর গ্রাহকের নাম/কোড।
+                 */
+                ->when(trim((string) $request->query('q')) ?: null, fn ($q, $term) => $q->where(
+                    fn ($w) => $w->where('reference', 'like', "%{$term}%")
+                        ->orWhere('note', 'like', "%{$term}%")
+                        ->orWhereHas('customer', fn ($c) => $c->where('name_en', 'like', "%{$term}%")
+                            ->orWhere('name_bn', 'like', "%{$term}%")
+                            ->orWhere('code', 'like', "%{$term}%")),
+                ))
                 ->orderByDesc('claimed_on')->orderByDesc('id')
                 ->paginate(50)->withQueryString(),
             'status' => $status,

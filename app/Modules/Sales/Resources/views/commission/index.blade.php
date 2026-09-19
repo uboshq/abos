@@ -31,20 +31,6 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('sales::menu.commission') }}</x-slot:title>
 
-    <x-slot:header>
-        <x-ui.page-header :title="__('sales::menu.commission')"
-                          :subtitle="__('sales::message.commission_note')">
-            {{-- শর্তটা হুবহু সেটাই যেটায় আগে উপরের ফর্মটা দেখা যেত। --}}
-            <x-slot:actions>
-                @can('sales.commission.manage')
-                    <x-ui.button tone="primary" icon="plus" :href="route('sales.commission.create')">
-                        {{ __('sales::action.new_commission') }}
-                    </x-ui.button>
-                @endcan
-            </x-slot:actions>
-        </x-ui.page-header>
-    </x-slot:header>
-
     @if (session('saved'))
         <div role="status"
              class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm
@@ -79,16 +65,37 @@
         <p class="num text-2xl font-semibold">{{ \App\Core\Support\Money::format($pendingTotal) }}</p>
     </div>
 
-    @if ($claims->isEmpty())
-        <x-ui.empty-state :message="__('sales::message.no_commissions')" />
-    @else
-        <div data-boxed class="overflow-x-auto rounded-(--radius-card) border border-(--color-border)
-                    bg-(--color-surface-card)">
-        <x-ui.table :rows="$claims"
-                    :columns="$columns"
-                    :empty="__('core.empty.no_results')" />
-        </div>
+    {{-- ⓘ তালিকা খালি হলেও বাক্সটা থাকে — খোঁজায় কিছু না মিললে টুলবারটা
+         হারালে খোঁজা মোছার পথও হারাত। খালির বার্তাটা এখন টেবিলের নিজের। --}}
+    <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+        {{-- ⭐ শিরোনাম, "নতুন কমিশন" আর খোঁজা/সাজানো — সব এক বাক্সে।
+             মালিক, ১৯ সেপ্টেম্বর ২০২৬: *"সব মডিউলেই একই অবস্থা, সব ঠিক করো"*। --}}
+        <form method="GET" class="contents">
+            <x-ui.toolbar :title="__('sales::menu.commission')"
+                :subtitle="__('sales::message.commission_note')"
+                :sort="$sortOptions"
+                :columns="$columns"
+                :search-placeholder="__('sales::message.commission_search')">
+                {{-- শর্তটা হুবহু সেটাই যেটায় আগে উপরের ফর্মটা দেখা যেত। --}}
+                <x-slot:actions>
+                    @can('sales.commission.manage')
+                        <x-ui.button tone="primary" icon="plus" :href="route('sales.commission.create')">
+                            {{ __('sales::action.new_commission') }}
+                        </x-ui.button>
+                    @endcan
+                </x-slot:actions>
+            </x-ui.toolbar>
+        </form>
 
-        <div class="mt-3">{{ $claims->links() }}</div>
-    @endif
+        <div class="overflow-x-auto">
+            <x-ui.table :rows="$claims"
+                        :columns="$columns"
+                        :compact="request()->boolean('compact')"
+                        :empty="request('q') || request('status') || request('supplier')
+                            ? __('core.empty.no_results')
+                            : __('sales::message.no_commissions')" />
+        </div>
+    </div>
+
+    <div class="mt-3">{{ $claims->links() }}</div>
 </x-layouts.app>

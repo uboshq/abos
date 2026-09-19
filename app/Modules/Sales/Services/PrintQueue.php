@@ -153,12 +153,18 @@ final class PrintQueue
      * ⚠️ ক্রমটা `id` ধরে, অর্থাৎ **পুরনোটা আগে**, আর সেটা বদলায়নি:
      * সারিতে যে আগে দাঁড়িয়েছে সে আগে বেরোবে। পাতা ভাগ ক্রমটা ছোঁয় না।
      *
+     * ⭐ `$term` — টুলবারের খোঁজা, কাগজের নম্বর ধরে (১৯ সেপ্টেম্বর ২০২৬)।
+     * ⓘ ফাঁকা হলে আগের মতোই গোটা সারি।
+     *
      * @return LengthAwarePaginator<int, PrintJob>
      */
-    public function pending()
+    public function pending(?string $term = null)
     {
+        $term = trim((string) $term);
+
         return PrintJob::query()
             ->waiting()
+            ->when($term !== '', fn ($q) => $q->where('document_no', 'like', "%{$term}%"))
             ->orderBy('id')
             ->paginate(50)
             ->withQueryString();
