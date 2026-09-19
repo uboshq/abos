@@ -28,4 +28,5 @@ return [
     // Names the name back: the rule is not about the field being
     // required, it is about this name yielding no ASCII code.
     'code_needs_latin' => 'Please type the code — no code could be made from “:name”, because codes are always written in Latin letters and go into every document number.',
+    'role_beyond_your_own' => ':roles carries permissions you do not have yourself — nobody can hand out more power than they hold. Ask the owner.',
 ];

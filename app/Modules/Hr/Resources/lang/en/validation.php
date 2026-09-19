@@ -28,4 +28,5 @@ return [
     'leave_already_decided' => 'This application has already been decided.',
     'leave_already_cancelled' => 'This application was already withdrawn.',
     'unknown_attendance_status' => 'That attendance status is not one we know.',
+    'branch_out_of_reach' => 'That branch is outside your reach — if you placed someone there, you could no longer see them yourself.',
 ];

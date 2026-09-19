@@ -130,6 +130,7 @@ class UserController extends Controller implements HasMiddleware
     {
         $data = $this->validated($request, null);
 
+        $this->assertRolesWithinReach($request, new User, $data);
         $this->assertOwnershipRules(new User, $data);
 
         $user = DB::transaction(function () use ($data) {
@@ -154,6 +155,7 @@ class UserController extends Controller implements HasMiddleware
     public function edit(Request $request, User $user): View
     {
         $this->mustBeInThisCompany($user);
+        $this->authorize('update', $user);
 
         return view('system_admin::user.form', [
             'menu' => $this->menu->forUser($request->user()),
@@ -168,8 +170,11 @@ class UserController extends Controller implements HasMiddleware
     public function update(Request $request, User $user): RedirectResponse
     {
         $this->mustBeInThisCompany($user);
+        $this->authorize('update', $user);
 
         $data = $this->validated($request, $user);
+
+        $this->assertRolesWithinReach($request, $user, $data);
 
         $this->assertNotLockingThemselvesOut($request, $user, $data);
         $this->assertOwnershipRules($user, $data);
@@ -484,6 +489,32 @@ class UserController extends Controller implements HasMiddleware
      *
      * @param  array<string, mixed>  $data
      */
+    /**
+     * প্রতিটা নতুন ভূমিকা দাতার নিজের ক্ষমতার ভিতরে — [[UserPolicy::grantRole()]]।
+     *
+     * ⓘ ৪০৩ নয়, ঘরের পাশে বার্তা: মানুষটা ভুল ভূমিকা বেছেছেন, পাতা থেকে
+     * তাড়িয়ে দেওয়ার মতো কিছু করেননি।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function assertRolesWithinReach(Request $request, User $user, array $data): void
+    {
+        $beyond = Role::query()
+            ->whereIn('name', $data['roles'] ?? [])
+            ->with('permissions')
+            ->get()
+            ->reject(fn (Role $role) => $request->user()?->can('grantRole', [$user, $role]))
+            ->pluck('name');
+
+        if ($beyond->isNotEmpty()) {
+            throw ValidationException::withMessages([
+                'roles' => __('system_admin::validation.role_beyond_your_own', [
+                    'roles' => $beyond->implode(', '),
+                ]),
+            ]);
+        }
+    }
+
     private function assertOwnershipRules(User $user, array $data): void
     {
         $companyId = CompanyContext::id();

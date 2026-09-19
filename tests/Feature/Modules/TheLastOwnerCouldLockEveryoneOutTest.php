@@ -135,12 +135,19 @@ class TheLastOwnerCouldLockEveryoneOutTest extends TestCase
         $this->assertCount(1, $this->ownership()->activeOwnersIn($this->alpha->id));
     }
 
-    /** ⓵ শেষ owner-কে নিষ্ক্রিয় করা। */
+    /**
+     * ⓵ শেষ owner-কে নিষ্ক্রিয় করা।
+     *
+     * ⓘ ১৯ সেপ্টেম্বর ২০২৬ থেকে উত্তরটা আরও কড়া: ব্যবহারকারী-প্রশাসক
+     * মালিকের খাতা **খুলতেই** পারেন না ([[UserPolicy]]) — কারণ যে পাতায়
+     * নিষ্ক্রিয় করা যায়, সেই পাতাতেই ইমেইল আর পাসওয়ার্ডও বদলানো যেত।
+     * ⚠️ তাই বার্তা নয়, ৪০৩ — আর মালিক আগের মতোই সক্রিয়।
+     */
     public function test_the_last_owner_cannot_be_deactivated(): void
     {
         $this->actingAs($this->admin)
             ->put(route('system_admin.user.update', $this->owner), $this->ownerForm(['is_active' => '0']))
-            ->assertSessionHasErrors('roles');
+            ->assertForbidden();
 
         $this->assertTrue($this->owner->fresh()?->is_active,
             'শেষ owner নিষ্ক্রিয় হয়ে গেছেন — তাহলে আর কেউ ঢুকতে পারবেন না।');
@@ -149,9 +156,10 @@ class TheLastOwnerCouldLockEveryoneOutTest extends TestCase
     /** ⓵ শেষ owner-এর রোল কেড়ে নেওয়া। */
     public function test_the_last_owner_cannot_lose_the_role(): void
     {
+        // ⓘ উপরের মতোই — মালিকের খাতায় হাত দেওয়াটাই বন্ধ
         $this->actingAs($this->admin)
             ->put(route('system_admin.user.update', $this->owner), $this->ownerForm(['roles' => ['salesman']]))
-            ->assertSessionHasErrors('roles');
+            ->assertForbidden();
 
         $this->assertTrue($this->ownership()->isOwnerIn($this->owner->fresh(), $this->alpha->id));
     }

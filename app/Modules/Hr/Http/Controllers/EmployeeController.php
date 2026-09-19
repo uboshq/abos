@@ -6,12 +6,14 @@ namespace App\Modules\Hr\Http\Controllers;
 
 use App\Core\Concerns\SortsLists;
 use App\Core\Security\FieldSecurity;
+use App\Core\Services\DataScope;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Models\User;
+use App\Models\UserDataScope;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Services\EmployeeService;
 use App\Modules\Hr\Services\SalaryStructureService;
@@ -53,6 +55,17 @@ class EmployeeController extends Controller implements HasMiddleware
         $query = Employee::query()
             ->search($request->query('q'))
             ->with(['department', 'designation', 'employmentType']);
+
+        /*
+         * ⓘ শাখায় সীমিত ব্যবহারকারী কেবল নিজের শাখার কর্মী দেখেন — ঠিক
+         * [[EmployeePolicy]]-র নিয়মেই। ⚠️ তালিকা আর পাতা দুই নিয়মে চললে
+         * তালিকায় এমন সারি থাকত যেটা চাপলে ৪০৩ আসে।
+         */
+        $branches = app(DataScope::class)->idsFor($request->user(), UserDataScope::BRANCH);
+
+        if ($branches !== null) {
+            $query->where(fn ($q) => $q->whereIn('branch_id', $branches)->orWhereNull('branch_id'));
+        }
 
         /*
          * ছেড়ে যাওয়া কর্মীরা ডিফল্টে তালিকায় নেই।
@@ -115,22 +128,24 @@ class EmployeeController extends Controller implements HasMiddleware
 
     public function show(Request $request, Employee $employee): View
     {
+        $this->authorize('view', $employee);
+
+        $seesSalary = (bool) $request->user()?->can('viewSalary', $employee);
+
         $employee->load(['department', 'designation', 'employmentType', 'branch', 'creator']);
 
         return view('hr::employee.show', [
             'menu' => $this->menu->forUser($request->user()),
             'employee' => $employee,
-            'components' => $request->user()?->can('hr.salary.view')
-                ? $this->salaries->componentsOn($employee, now())
-                : [],
-            'totals' => $request->user()?->can('hr.salary.view')
-                ? $this->salaries->totalsOn($employee, now())
-                : null,
+            'components' => $seesSalary ? $this->salaries->componentsOn($employee, now()) : [],
+            'totals' => $seesSalary ? $this->salaries->totalsOn($employee, now()) : null,
         ]);
     }
 
     public function edit(Request $request, Employee $employee): View
     {
+        $this->authorize('update', $employee);
+
         return view('hr::employee.form', [
             'menu' => $this->menu->forUser($request->user()),
             'employee' => $employee,
@@ -140,6 +155,8 @@ class EmployeeController extends Controller implements HasMiddleware
 
     public function update(Request $request, Employee $employee): RedirectResponse
     {
+        $this->authorize('update', $employee);
+
         $this->employees->update($employee, $this->validated($request, $employee));
 
         return redirect()
@@ -150,6 +167,8 @@ class EmployeeController extends Controller implements HasMiddleware
     /** চাকরির অবসান — মোছা নয়, কারণ পুরনো বেতনশিটে নামটা লাগে। */
     public function destroy(Request $request, Employee $employee): RedirectResponse
     {
+        $this->authorize('delete', $employee);
+
         $date = $request->validate([
             'leaving_date' => ['required', 'date'],
         ])['leaving_date'];
@@ -197,7 +216,14 @@ class EmployeeController extends Controller implements HasMiddleware
             'national_id' => ['nullable', 'string', 'max:32'],
 
             'branch_id' => ['nullable', 'integer',
-                Rule::exists('branches', 'id')->where('company_id', $companyId)],
+                Rule::exists('branches', 'id')->where('company_id', $companyId),
+                // ⓘ নিজের নাগালের বাইরের শাখায় কর্মী বসানো যায় না — নাহলে
+                // বসিয়েই তিনি আর তাঁকে দেখতে পেতেন না
+                function (string $attribute, mixed $value, \Closure $fail) use ($request): void {
+                    if (! app(DataScope::class)->allows($request->user(), UserDataScope::BRANCH, (int) $value)) {
+                        $fail(__('hr::validation.branch_out_of_reach'));
+                    }
+                }],
             'department_id' => ['nullable', 'integer',
                 Rule::exists('mdm_departments', 'id')->where('company_id', $companyId)],
             'designation_id' => ['nullable', 'integer',
