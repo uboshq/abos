@@ -16,11 +16,18 @@ import { countNotes } from './money.js'
 const warnings = []
 
 beforeAll(() => {
-    const warn = console.warn
-    console.warn = (...args) => {
-        warnings.push(String(args[0]))
-        warn(...args)
-    }
+    /*
+     * ⓘ Alpine নিজে ভুলটা কনসোলে লেখে, তারপর `setTimeout`-এ আবার **ছুঁড়ে
+     * দেয়**। ⛔ পরীক্ষায় সেটা vitest-এর কাছে "unhandled error" — সব পরীক্ষা
+     * পাস করলেও `npm test` exit 1 দিত, আর "কমিটের আগে npm test" নিয়মটা
+     * সবার জন্য লাল থাকত (১৯ সেপ্টেম্বর ২০২৬, abos-45 ধরেছে)।
+     *
+     * ⭐ তাই ভুলটা এখানে ধরে রাখা হয়, আর দাবিগুলো সেটাই পড়ে — ছুঁড়ে
+     * দেওয়া হয় না।
+     */
+    Alpine.setErrorHandler((error, el, expression) => {
+        warnings.push(`Alpine Expression Error: ${error?.message} — ${expression}`)
+    })
 
     window.Alpine = Alpine
     registerComponents(Alpine)
