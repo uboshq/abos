@@ -160,21 +160,25 @@ final class TheVoucherListHasSevenTabsTest extends TestCase
      * আর নতুন দাখিলা আবার আসল নামে বসে। ⚠️ কেবল আসল নামের ডেবিট যোগ
      * করলে বদলানো বিল দ্বিগুণ দেখাত।
      *
-     * ⓘ দুইটা বিল: একটা সাধারণ, একটা বাতিল (উল্টানো) — বাতিলটা তালিকায়
-     * আসে না, কারণ নিট শূন্য।
+     * ⓘ তিনটা বিল: একটা সাধারণ, একটা বদলানো (উল্টে আবার বসানো), একটা
+     * বাতিল (কেবল উল্টানো) — বাতিলটা তালিকায় আসে না, কারণ নিট শূন্য।
      *
-     * ⛔ "বদলানো বিল" (উল্টে আবার বসানো) এখানে মাপা যায় না — ১৯ সেপ্টেম্বর
-     * ২০২৬-এ ধরা পড়ল যে [[PostingEngine::assertNotAlreadyPosted()]] উল্টানোর
-     * পরেও আসল নামের সারি দেখে আবার বসাতে দেয় না। ⚠️ অর্থাৎ নিশ্চিত ক্রয়
-     * বিল বদলানোর পথটাই আজ আটকে থাকে; মালিক ও abos-e8-কে জানানো হয়েছে।
-     * ⓘ নিট হিসাবটা তবু রাখা হলো — ঐ পথ খুললে বদলানো বিল দ্বিগুণ দেখাবে না।
+     * ⓘ বদলানো বিলের অংশটা ১৯ সেপ্টেম্বর কিছুক্ষণ বাদ ছিল: তখন
+     * [[PostingEngine]] উল্টানোর পরেও আবার বসাতে দিত না। abos-e8 সেটা সারিয়েছে
+     * (861ad66a), আর দাবিটা ফিরে এসেছে — এখন এটাই সবচেয়ে জরুরি অংশ, কারণ
+     * নিট হিসাব ভুল হলে বদলানো বিল ঠিক এখানেই দ্বিগুণ দেখাত।
      */
-    public function test_the_purchase_tab_shows_posted_bills_and_hides_cancelled_ones(): void
+    public function test_the_purchase_tab_shows_posted_bills_at_their_net_amount(): void
     {
         $plain = 9001;
+        $edited = 9002;
         $cancelled = 9003;
 
         $this->postBill($plain, '1000');
+
+        $this->postBill($edited, '500');
+        $this->reverse($edited);
+        $this->postBill($edited, '700');
 
         $this->postBill($cancelled, '300');
         $this->reverse($cancelled);
@@ -185,13 +189,16 @@ final class TheVoucherListHasSevenTabsTest extends TestCase
 
         $rows = collect($page->viewData('vouchers')->items())->keyBy('source_id');
 
-        $this->assertSame([$plain], $rows->keys()->map(fn ($k) => (int) $k)->values()->all(),
-            'বাতিল বিলটা তালিকায় এসেছে, বা সাধারণ বিলটা হারিয়েছে।');
+        $this->assertEqualsCanonicalizing([$plain, $edited], $rows->keys()->map(fn ($k) => (int) $k)->all(),
+            'বাতিল বিলটা তালিকায় এসেছে, বা একটা বিল হারিয়েছে।');
 
         $this->assertSame('1000.0000', number_format((float) $rows[$plain]->amount, 4, '.', ''),
             'অঙ্কটা খাতার ডেবিটের সাথে মেলে না।');
 
-        $this->assertSame(1, $page->viewData('counts')[VoucherListController::PURCHASE]);
+        $this->assertSame('700.0000', number_format((float) $rows[$edited]->amount, 4, '.', ''),
+            'বদলানো বিল নিট অঙ্কে দেখাচ্ছে না — আগের আর নতুন দাখিলা যোগ হয়ে গেছে।');
+
+        $this->assertSame(2, $page->viewData('counts')[VoucherListController::PURCHASE]);
     }
 
     private function postBill(int $id, string $amount): void
