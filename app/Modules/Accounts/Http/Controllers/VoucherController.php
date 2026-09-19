@@ -120,7 +120,20 @@ class VoucherController extends Controller implements HasMiddleware
 
         $vouchers = $query->paginate(50)->withQueryString();
 
+        /*
+         * ⭐ পক্ষ · কী বাবদ · কোথায় · মাধ্যম — ১৯ সেপ্টেম্বর ২০২৬, মালিকের
+         * "koro"। ⓘ দাখিলার লাইন আর পক্ষের নাম একবারে তোলা হয়, সারি ধরে নয়।
+         */
+        $vouchers->getCollection()->load('lines.account');
+
+        $partyNames = app(\App\Core\Services\PartyRegistry::class)->labelsOf(
+            $vouchers->getCollection()
+                ->filter(fn (Voucher $v) => $v->party_type !== null && $v->party_id !== null)
+                ->map(fn (Voucher $v) => [(string) $v->party_type, (int) $v->party_id]),
+        );
+
         return view('accounts::voucher.index', [
+            'partyNames' => $partyNames,
             'menu' => $this->menu->forUser($request->user()),
             'type' => $type,
             'vouchers' => $vouchers,

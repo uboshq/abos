@@ -121,6 +121,8 @@ return [
     'to_account' => 'যে খাতে',
     'received_from' => 'কার কাছ থেকে',
     'received_on_account' => 'টাকাটা কী বাবদ',
+    'list_for' => 'কী বাবদ',
+    'list_method' => 'মাধ্যম',
     'source_equity' => 'মূলধন',
     'source_liability' => 'ঋণ ও দায়',
     'source_income' => 'আয়',

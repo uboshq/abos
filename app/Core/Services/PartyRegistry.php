@@ -152,6 +152,44 @@ final class PartyRegistry
         return $groups;
     }
 
+    /**
+     * অনেকগুলো পক্ষের নাম একবারে — ধরন প্রতি একটা প্রশ্ন।
+     *
+     * ⓘ ভাউচারের তালিকায় "কার কাছ থেকে / কাকে" কলামের জন্য, ১৯ সেপ্টেম্বর
+     * ২০২৬। ⚠️ সারি প্রতি একটা প্রশ্ন চালালে পঞ্চাশ সারির পাতায় পঞ্চাশটা।
+     *
+     * @param  iterable<array{0: string, 1: int}>  $pairs  [ধরন, id]
+     * @return array<string, string>  "ধরন:id" => নাম
+     */
+    public function labelsOf(iterable $pairs): array
+    {
+        $byType = [];
+
+        foreach ($pairs as [$type, $id]) {
+            if ($type !== null && $type !== '' && (int) $id > 0) {
+                $byType[$type][] = (int) $id;
+            }
+        }
+
+        $labels = [];
+
+        foreach ($byType as $type => $ids) {
+            $model = $this->modelFor($type);
+
+            if ($model === null) {
+                continue;
+            }
+
+            foreach ($model::query()->whereKey(array_unique($ids))->get() as $row) {
+                $labels[$type.':'.$row->getKey()] = method_exists($row, 'drillLabel')
+                    ? $row->drillLabel()
+                    : (string) $row->getKey();
+            }
+        }
+
+        return $labels;
+    }
+
     private function modelFor(string $type): ?Model
     {
         if (! $this->knows($type)) {

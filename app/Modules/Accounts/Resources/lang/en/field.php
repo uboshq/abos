@@ -107,6 +107,8 @@ return [
     'to_account' => 'To account',
     'received_from' => 'Received from',
     'received_on_account' => 'What the money is for',
+    'list_for' => 'For',
+    'list_method' => 'Method',
     'source_equity' => 'Capital',
     'source_liability' => 'Loans and liabilities',
     'source_income' => 'Income',

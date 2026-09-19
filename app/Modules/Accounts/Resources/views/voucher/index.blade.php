@@ -6,11 +6,66 @@
     পার্থক্যটা মৌলিক: একটা হিসাবে আছে, অন্যটা নেই।
 --}}
 @php
+    /*
+     * ⭐ পক্ষ · কী বাবদ · কোথায় · মাধ্যম — ১৯ সেপ্টেম্বর ২০২৬, মালিকের "koro"।
+     *
+     * ⓘ তারিখ-নম্বর-বিবরণ-অঙ্ক দেখে বোঝা যেত না টাকাটা কার, কীসের, কোথায়
+     * গেল — প্রতিটা খুলে দেখতে হত। ⭐ দাখিলার লাইন থেকেই পড়া হয়: যে খাতটা
+     * নগদ/ব্যাংক/মোবাইল (বা পথের টাকা, হাতে চেক) সেটা "কোথায়", বাকিটা
+     * "কী বাবদ"। শিরোনাম ধরন অনুযায়ী — আদায়ে "কোথায় জমা", পরিশোধে
+     * "কোথা থেকে", জাবেদায় ডেবিট / ক্রেডিট।
+     */
+    $isMoney = fn ($a) => $a !== null && ($a->money_kind !== null
+        || in_array((string) $a->code, [\App\Modules\Accounts\Services\StandardChart::CASH_IN_TRANSIT,
+            \App\Modules\Accounts\Services\StandardChart::CHEQUES_IN_HAND], true));
+
+    $names = fn ($lines) => $lines->map(fn ($l) => $l->account?->name())->filter()->unique()->implode(', ') ?: '—';
+
+    $side = fn ($v, string $dc, ?bool $money) => $v->lines
+        ->filter(fn ($l) => bccomp((string) $l->{$dc}, '0', 4) > 0)
+        ->filter(fn ($l) => $money === null || $isMoney($l->account) === $money);
+
+    [$forLabel, $forSide, $whereLabel, $whereSide] = match ($type) {
+        \App\Modules\Accounts\Models\Voucher::RECEIPT => [__('accounts::field.list_for'), ['credit', false], __('accounts::field.paid_into'), ['debit', true]],
+        \App\Modules\Accounts\Models\Voucher::PAYMENT => [__('accounts::field.list_for'), ['debit', false], __('accounts::field.paid_from'), ['credit', true]],
+        \App\Modules\Accounts\Models\Voucher::EXPENSE => [__('accounts::field.expense_head'), ['debit', false], __('accounts::field.paid_from'), ['credit', null]],
+        \App\Modules\Accounts\Models\Voucher::CONTRA => [__('accounts::field.moved_from'), ['credit', null], __('accounts::field.moved_to'), ['debit', null]],
+        default => [__('accounts::field.debit'), ['debit', null], __('accounts::field.credit'), ['credit', null]],
+    };
+
+    $method = function ($v) use ($isMoney) {
+        if ($v->instrument) {
+            return __('accounts::instrument.'.$v->instrument);
+        }
+
+        $kind = $v->lines->map(fn ($l) => $l->account)->first(fn ($a) => $isMoney($a))?->money_kind;
+
+        return match ($kind) {
+            \App\Modules\Accounts\Models\Account::CASH => __('accounts::instrument.cash'),
+            \App\Modules\Accounts\Models\Account::MFS => __('accounts::instrument.mfs'),
+            \App\Modules\Accounts\Models\Account::BANK => __('accounts::instrument.transfer'),
+            default => '—',
+        };
+    };
+
+    $flowColumns = array_values(array_filter([
+        $type === \App\Modules\Accounts\Models\Voucher::CONTRA ? null : [
+            'key' => 'party',
+            'label' => $type === \App\Modules\Accounts\Models\Voucher::RECEIPT ? __('accounts::field.received_from') : __('accounts::field.party'),
+            'render' => fn ($v) => ($partyNames ?? [])[$v->party_type.':'.$v->party_id] ?? ($v->payee_name ?: '—'),
+        ],
+        ['key' => 'for', 'label' => $forLabel, 'render' => fn ($v) => $names($side($v, ...$forSide))],
+        ['key' => 'where', 'label' => $whereLabel, 'render' => fn ($v) => $names($side($v, ...$whereSide))],
+        in_array($type, [\App\Modules\Accounts\Models\Voucher::JOURNAL], true) ? null
+            : ['key' => 'method', 'label' => __('accounts::field.list_method'), 'width' => '8rem', 'render' => $method],
+    ]));
+
     $columns = [
         ['key' => 'trx_date', 'label' => __('core.table.date'), 'width' => '8rem',
          'render' => fn ($v) => \App\Core\Support\DateFormat::format($v->trx_date)],
         ['key' => 'document_no', 'label' => __('core.print.document_no'), 'width' => '13rem',
          'render' => fn ($v) => view('accounts::voucher.partials.number', ['voucher' => $v])],
+        ...$flowColumns,
         ['key' => 'narration', 'label' => __('core.table.narration')],
         ['key' => 'amount', 'label' => __('accounts::field.amount'), 'numeric' => true, 'width' => '10rem',
          'render' => fn ($v) => \App\Core\Support\Money::format($v->amount)],
