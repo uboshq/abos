@@ -190,6 +190,12 @@ return [
     'reverse_on_hint' => 'If this entry is provisional, the day it undoes itself - optional.',
     'attachment_hint' => 'A photo or scan of the bill - six months later this is what you need.',
     'over_allocated' => 'You have split more than the amount received - the two must match.',
-    'no_open_bill' => 'This party has no open bill - the money will sit as an advance.',
+    'no_open_bill' => 'This party has no open bill - the money stays on their account and comes off the next bill.',
     'received_on_account_hint' => 'Capital, a loan, income, a deposit — what the money came in for. "Deposited to" below is where it was put (cash or which bank). Choose capital and it also appears on the Capital & investment page by itself.',
+
+    // What each list's search box looks in — the toolbar shows it as the placeholder.
+    'cheque_search' => 'Cheque no, bank, document no or note',
+    'asset_search' => 'Asset name, document no or tag no',
+    'loan_search' => 'Document no, lender or account no',
+    'recon_search' => 'Bank account name, code or number, or note',
 ];

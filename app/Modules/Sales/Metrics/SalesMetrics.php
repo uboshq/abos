@@ -8,6 +8,7 @@ use App\Core\Contracts\ProvidesMetrics;
 use App\Core\Metrics\Metric;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
+use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\SalesInvoice;
 use Illuminate\Support\Carbon;
@@ -217,11 +218,32 @@ final class SalesMetrics implements ProvidesMetrics
             ->sum('total'));
     }
 
-    private static function collectionTotal(string $from, string $to): string
+    /**
+     * গ্রাহকের কাছ থেকে আসা টাকা — আদায়ের কাগজ **আর** গ্রাহকের রসিদ ভাউচার।
+     *
+     * ── ⭐ কেন ভাউচারও, ১৯ সেপ্টেম্বর ২০২৬ ──────────────────────────────
+     * মালিকের নিয়মে কাউন্টারের সব ডিপোজিট এখন রসিদ ভাউচার। ⛔ কেবল আদায়ের
+     * কাগজ গুনলে কাউন্টারের টাকা ড্যাশবোর্ড থেকে উধাও হত — আর হিসাব থেকে
+     * হাতে কাটা গ্রাহকের রসিদ আগেও বাদ পড়ত।
+     *
+     * ⓘ কেবল খাতায় বসা, কেবল গ্রাহক পক্ষ — সরবরাহকারীর ফেরত বা অন্য আয়
+     * বিক্রয়ের আদায় নয়। ⓘ ড্যাশবোর্ডের মাসিক চার্টও এটাই ডাকে, যাতে
+     * কার্ড আর চার্ট দুই অঙ্ক না বলে।
+     */
+    public static function collectionTotal(string $from, string $to): string
     {
-        return Money::of(Collection::query()
+        $byCollection = (string) (Collection::query()
             ->posted()
             ->whereBetween('trx_date', [$from, $to])
-            ->sum('amount'));
+            ->sum('amount') ?: '0');
+
+        $byVoucher = (string) (Voucher::query()
+            ->where('type', Voucher::RECEIPT)
+            ->where('party_type', 'customer')
+            ->posted()
+            ->whereBetween('trx_date', [$from, $to])
+            ->sum('amount') ?: '0');
+
+        return Money::of(bcadd($byCollection, $byVoucher, 4));
     }
 }

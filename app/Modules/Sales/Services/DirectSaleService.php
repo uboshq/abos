@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Modules\Sales\Services;
 
 use App\Core\Engines\Approval\ApprovalEngine;
-use App\Core\Engines\Approval\HeldForApproval;
 use App\Core\Services\SettingsService;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
@@ -36,10 +35,12 @@ use Illuminate\Validation\ValidationException;
  *
  *     ডেলিভারি চালান  — মাল বেরোল (ফ্রি ও উপহার সহ)
  *     বিক্রয় বিল       — টাকা পাওনা হলো
- *     আদায়            — কাউন্টারে টাকা নিলে, ততটুকুই
+ *     রসিদ ভাউচার      — কাউন্টারে টাকা নিলে, প্রতিটা ডিপোজিটে একটা
  *
  * তিনটাই বিদ্যমান সেবা দিয়ে — DeliveryChallanService, SalesInvoiceService,
- * CollectionService। নিজে পোস্ট করলে একদিন এখানে বিক্রীত পণ্যের ব্যয় বসত
+ * VoucherService। ⓘ ১৯ সেপ্টেম্বর ২০২৬-এর আগে টাকাটা আদায়ের কাগজ
+ * (CollectionService) হত; মালিকের নিয়মে এখন রসিদ ভাউচার — [[complete()]]।
+ * নিজে পোস্ট করলে একদিন এখানে বিক্রীত পণ্যের ব্যয় বসত
  * না বা স্টক নামত না, আর অমিলটা ধরা পড়ত মাস শেষে।
  *
  * ── ফ্রি ও উপহার ফ্রি ভাণ্ডার থেকে ───────────────────────────────────
@@ -54,7 +55,6 @@ final class DirectSaleService
     public function __construct(
         private readonly DeliveryChallanService $challans,
         private readonly SalesInvoiceService $invoices,
-        private readonly CollectionService $collections,
         private readonly StockService $stock,
         private readonly SettingsService $settings,
         private readonly BatchAllocator $batches,
@@ -71,7 +71,7 @@ final class DirectSaleService
      * @param  array<string, mixed>  $data
      * @param  list<array<string, mixed>>  $lines
      * @param  list<array<string, mixed>>  $gifts
-     * @return array{challan: DeliveryChallan, invoice: SalesInvoice, change: string, held: list<\App\Modules\Sales\Models\Collection>}
+     * @return array{challan: DeliveryChallan, invoice: SalesInvoice, extra: string, held: list<mixed>, awaiting?: list<Voucher>}
      */
     public function complete(array $data, array $lines, array $gifts = []): array
     {
@@ -100,11 +100,13 @@ final class DirectSaleService
         }
 
         return DB::transaction(function () use ($data, $lines, $gifts, $customer, $warehouse) {
+            $trxDate = $data['trx_date'] ?? now()->toDateString();
+
             $challan = $this->challans->create(
                 [
                     'customer_id' => $customer->id,
                     'warehouse_id' => $warehouse->id,
-                    'trx_date' => $data['trx_date'] ?? now()->toDateString(),
+                    'trx_date' => $trxDate,
                     'vehicle_no' => $data['vehicle_no'] ?? null,
                     'driver_name' => $data['driver_name'] ?? null,
                     'narration' => $data['narration'] ?? null,
@@ -141,171 +143,53 @@ final class DirectSaleService
                 $this->invoiceLines($challan),
             );
 
-            $rows = $this->depositRows($data);
             $deposit = $this->depositTotal($data);
 
             /*
              * ⚠️ গোনা টাকাটা **নিশ্চিত করার আগে** জানা দরকার, পরে নয়।
              *
-             * ── ⛔ কী ভাঙা ছিল, ৭ সেপ্টেম্বর ২০২৬ ────────────────────
-             * `confirm()` ডাকা হত আগে, আর জমার সারিগুলো গোনা হত তার পরে।
-             * ⓘ ফলে ধারের সীমার যাচাইটা দেখত বিলের **পুরো** অঙ্ক — যেন
-             * পুরোটাই বাকি — অথচ ক্রেতা তখন কাউন্টারে টাকা গুনে দাঁড়িয়ে।
-             *
-             * ⚠️ দুইটা লাইন উল্টে দেওয়া ছাড়া এখানে আর কিছু বদলায়নি;
-             * `depositRows()` কেবল `$data` পড়ে, কোনো কিছু লেখে না।
+             * ⓘ ৭ সেপ্টেম্বরের সারাই: আগে ধারের সীমার যাচাই বিলের **পুরো**
+             * অঙ্ক দেখত — যেন পুরোটাই বাকি — অথচ ক্রেতা তখন কাউন্টারে টাকা
+             * গুনে দাঁড়িয়ে।
              */
             $invoice = $this->invoices->confirm($invoice, $deposit);
 
-            $total = (string) $invoice->total;
-
-            $applied = bccomp($deposit, $total, 4) > 0 ? $total : $deposit;
-            $change = bccomp($deposit, $total, 4) > 0 ? bcsub($deposit, $total, 4) : '0.0000';
-
             /*
-             * ── প্রতিটা জমা নিজের কাগজ, নিজের খাত ───────────────────────
+             * ⭐ প্রতিটা ডিপোজিট একটা রসিদ ভাউচার, পুরো টাকায় — ১৯ সেপ্টেম্বর ২০২৬।
              *
-             * ⚠️ আগে সবটা **একটা** আদায়ের কাগজ হত, আর খাত না বলায়
-             * `CollectionService` প্রধান টিলের নগদ খাত ধরে নিত। ফলে
-             * গ্রাহক বিকাশে দিলেও খাতা বলত নগদ — মাস শেষে বিকাশের
-             * ব্যালেন্স মিলত না, আর কারণটা কোথাও লেখা থাকত না।
+             * ── মালিকের সিদ্ধান্ত ─────────────────────────────────────────────
+             * *"কাউন্টারের সব ডিপোজিট সবসময় রসিদ ভাউচার… অগ্রিম আলাদাভাবে
+             * থাকবে না, এতে সমন্বয়ের ঝামেলা থাকে। যা টাকা জমা বা উত্তোলন হয়
+             * তা ব্যাংক লেজারের মতো Dr Cr হবে — জমা উত্তোলন, দেনা পাওনা।"*
+             * আর: *"অগ্রিম শুধু অফিস ইউজ অনলি।"*
              *
-             * ── কেন `$left` ধরে ধরে কাটা ────────────────────────────────
-             * বিলের চেয়ে বেশি জমা নেওয়া যায় (ফেরত দিতে হয়), কিন্তু
-             * **বিলের গায়ে বিলের চেয়ে বেশি বসানো যায় না** — বসালে
-             * বিলটা নিজেই ঋণাত্মক বকেয়া দেখাত। তাই সারিগুলো ক্রম ধরে
-             * ভরা হয়, আর যতটুকু বিলে ধরে ততটুকুই বসে; বাকিটা ফেরত।
+             * ⓘ তাই বিলের চেয়ে বেশি দিলে বাড়তিটা কোথাও "অগ্রিম" হয়ে আলাদা
+             * বসে না — গ্রাহকের খাতায় ক্রেডিট হয়ে থাকে, পরের বিলে নিজেই কাটে।
+             * বিলের বকেয়া শূন্যের নিচে নামে না ([[SalesInvoice::dueAmount()]])।
              *
-             * ⓘ ক্রমটা পর্দার ক্রম — যে জমা আগে বসানো হয়েছে, সেটাই আগে।
+             * ⛔ আগে কী ভাঙা ছিল: বাড়তিটা বার্তায় "ফেরত" বলে দেখাত, অথচ
+             * খাতায় পুরোটাই বসত — ক্যাশিয়ার ফেরত দিলে টাকা দুইবার গোনা হত।
+             *
+             * ⓘ এক রকমের কাগজ, তাই ভাউচার তালিকার "Sales Added Deposit"
+             * ট্যাবে সব কাউন্টার-ডিপোজিট — সই লাগুক বা না লাগুক।
              */
-            $left = $applied;
-            $held = [];
-
-            foreach ($rows as $row) {
-                /*
-                 * ⚠️ বরাদ্দ থামে, **টাকা থামে না**।
-                 *
-                 * ── কী ভুল ছিল (মালিক ধরেছেন, ৩ সেপ্টেম্বর ২০২৬) ────────
-                 * ৬০,৫৬৫ টাকার বিলে ৫৬ লাখ জমা নিলে পর্দা বলত "বকেয়া ০",
-                 * আর **বাকি ৫৬ লাখ কোথাও থাকত না** — না পর্দায়, না খাতায়।
-                 * আগে সারিগুলো বিলের মোট পর্যন্ত কেটে থেমে যেত, তাই
-                 * ক্যাশিয়ার হাতে যে টাকা নিয়েছেন তার একটা অংশ **কোনো
-                 * কাগজেই লেখা হত না**।
-                 *
-                 * ── এখন ────────────────────────────────────────────────
-                 * প্রতিটা সারির **পুরো টাকা** আদায়ের কাগজে বসে; কেবল
-                 * **বিলে বরাদ্দটা** সীমিত। উদ্বৃত্তটা তখন গ্রাহকের খাতায়
-                 * **অগ্রিম** হয়ে থাকে — আর ঠিক ওটাই ডিপোর স্বাভাবিক ঘটনা:
-                 * ডিলার আগাম টাকা দিয়ে যান, পরের চালানে কাটা হয়।
-                 *
-                 * ⓘ `CollectionService` এটা আগে থেকেই সমর্থন করে — সে
-                 * কেবল দেখে বরাদ্দ **টাকার বেশি নয়**; কম হলে আপত্তি নেই।
-                 */
-                $take = bccomp($left, '0', 4) > 0
-                    ? (bccomp($row['amount'], $left, 4) > 0 ? $left : $row['amount'])
-                    : '0.0000';
-
-                $isCheque = ($row['kind'] ?? null) === 'cheque';
-
-                /*
-                 * ⚠️ চেকের টাকা "হাতে চেক" (১১০৪)-এ বসে, নগদ/ব্যাংকে নয় —
-                 * পর্দা কোন খাত পাঠাল তা নির্বিশেষে সার্ভারই ঠিক করে (ঘরটা
-                 * চেকে লুকানো)। ১১০৪ সাধারণ picker-এ নেই, তাই `allows_holding`
-                 * স্পষ্ট অনুমতি দেয় — নইলে আদায় ওখানে টাকা বসাতে দিত না, আর
-                 * সেটাই সাধারণ আদায়কে চেক ছাড়া ১১০৪ থেকে দূরে রাখে।
-                 */
-                $accountId = $isCheque ? $this->chequesInHandAccount()->id : $row['account_id'];
-
-                $collection = $this->collections->create(
-                    [
-                        'customer_id' => $customer->id,
-                        'account_id' => $accountId,
-                        'allows_holding' => $isCheque,
-                        /*
-                         * ⚠️ টাকাটা **আজ** এসেছে; চেকের তারিখ আলাদা ঘর।
-                         *
-                         * "Ref Date" বলতে বিক্রেতা চেকের বা বিকাশের
-                         * লেনদেনের তারিখ বোঝেন — সেটা গতকালেরও হতে পারে।
-                         * ওটাকে `trx_date` বানালে **আদায়টা অন্য দিনে বসে
-                         * যেত**, আর দিনের ক্যাশ মিলত না।
-                         */
-                        'trx_date' => $data['trx_date'] ?? now()->toDateString(),
-                        'instrument' => $row['instrument'],
-                        'instrument_no' => $row['reference'],
-                        'instrument_date' => $row['ref_date'],
-                        'amount' => $row['amount'],
-                        'narration' => $row['narration'] ?? __('sales::message.direct_narration', [
-                            'no' => $challan->document_no,
-                        ]),
-                    ],
-                    // বরাদ্দ শূন্য হলে কোনো লাইন নয় — পুরোটাই অগ্রিম
-                    bccomp($take, '0', 4) > 0
-                        ? [['sales_invoice_id' => $invoice->id, 'amount' => $take]]
-                        : [],
+            foreach ($this->depositRows($data) as $row) {
+                $this->postCounterVoucher(
+                    $this->counterVoucher($row, $customer, $invoice, $challan, $trxDate),
                 );
-
-                /*
-                 * ⭐ ডিপোজিট অনুমোদনে আটকালে খসড়া হয়ে থাকে — ১৯ সেপ্টেম্বর ২০২৬।
-                 *
-                 * ── ⛔ মালিকের অভিযোগ ───────────────────────────────────────────────
-                 * *"সরাসরি বিক্রয় থেকে ডিপোজিট যোগ করে নিশ্চিত করলে ডিপোজিট হারিয়ে
-                 * যায়।"* ⓘ আসলে হারাত **গোটা বিক্রয়টা**: [[CollectionService::confirm()]]
-                 * ১৮ তারিখ থেকে `sales|collection` ছক দেখে, আর আটকালে যে
-                 * ব্যতিক্রম ছোঁড়ে সেটা এই মেথডের একটাই লেনদেন রোলব্যাক করত —
-                 * চালান, বিল, আদায়, আর অনুমোদনের অনুরোধটাও।
-                 *
-                 * ⚠️ ক্রয় বিলের হুবহু একই ফাঁদ ([[DirectPurchaseService::complete()]])।
-                 *
-                 * ── ⭐ এখন ─────────────────────────────────────────────────────────────
-                 * বিক্রয় এগোয় — মাল গেছে, বিল হয়েছে, ওটা সত্যি। ⓘ আদায়টা খসড়া
-                 * হয়ে থাকে, আর অনুরোধটা ইনবক্সে। ⚠️ সই না হওয়া পর্যন্ত
-                 * বিলটা বকেয়া দেখায়, আর সেটাই সঠিক: খাতা টাকাটা এখনো মানেনি।
-                 *
-                 * ⓘ কেবল [[HeldForApproval]] গিলে ফেলা হয়। ⛔ আদায়ের অন্য যেকোনো
-                 * ভুল আগের মতোই গোটা বিক্রয়টা থামায় — ওগুলো সত্যিকারের ভুল।
-                 */
-                try {
-                    $collection = $this->collections->confirm($collection);
-                } catch (HeldForApproval) {
-                    $held[] = $collection->fresh();
-                }
-
-                /*
-                 * চেক হলে রেজিস্টারে একটা সারি — অ-পোস্টিং, কারণ টাকাটা উপরের
-                 * আদায়ের কাগজ পোস্ট করেছে (Dr ১১০৪ / Cr গ্রাহক)। এই সারিটা
-                 * চেকের জীবন রাখে (পাশ · ফেরত · PDC রিপোর্ট · একই চেক দুইবার
-                 * নয়), আর `collection_id` দিয়ে ওই কাগজটার সাথে বাঁধা — ফেরত
-                 * এলে ঠিক ওটাই বাতিল করতে হবে।
-                 */
-                if ($isCheque) {
-                    $this->cheques->record([
-                        'collection_id' => $collection->id,
-                        'party_type' => 'customer',
-                        'party_id' => $customer->id,
-                        'cheque_no' => $row['reference'],
-                        'cheque_date' => $row['ref_date'],
-                        'bank_name' => $row['bank_name'] ?? null,
-                        'amount' => $row['amount'],
-                        'received_on' => $data['trx_date'] ?? now()->toDateString(),
-                        'narration' => __('sales::message.direct_narration', [
-                            'no' => $challan->document_no,
-                        ]),
-                    ]);
-                }
-
-                $left = bcsub($left, $take, 4);
             }
+
+            $total = (string) $invoice->total;
 
             return [
                 'challan' => $challan->fresh(['lines', 'giftLines']),
                 'invoice' => $invoice->fresh(['lines']),
-                'change' => $change,
 
-                /*
-                 * ⓘ যে ডিপোজিটগুলো সইয়ের অপেক্ষায় — পর্দা এগুলো দেখিয়ে
-                 * বলে, নাহলে ক্যাশিয়ার ভাবতেন টাকাটা খাতায় উঠে গেছে।
-                 */
-                'held' => $held,
+                // ⓘ বিলের চেয়ে যা বেশি জমা পড়ল — গ্রাহকের খাতায় রইল, ফেরত নয়
+                'extra' => bccomp($deposit, $total, 4) > 0 ? bcsub($deposit, $total, 4) : '0.0000',
+
+                // ⓘ পুরনো চাবি — আদায়ের কাগজ আর নেই, তাই আটকানোও নেই; সই [[hold()]]-এ
+                'held' => [],
             ];
         });
     }
@@ -350,7 +234,7 @@ final class DirectSaleService
      *
      * @param  list<array<string, mixed>>  $lines
      * @param  list<array<string, mixed>>  $gifts
-     * @return array{challan: DeliveryChallan, invoice: SalesInvoice, change: string, held: list<mixed>, awaiting: list<Voucher>}
+     * @return array{challan: DeliveryChallan, invoice: SalesInvoice, extra: string, held: list<mixed>, awaiting: list<Voucher>}
      */
     private function hold(array $data, array $lines, array $gifts, Customer $customer, Warehouse $warehouse): array
     {
@@ -386,43 +270,10 @@ final class DirectSaleService
                 (int) $challan->id,
             );
 
-            $receivable = Account::query()->postable()->where('code', StandardChart::RECEIVABLE)->firstOrFail();
             $awaiting = [];
 
             foreach ($this->depositRows($data) as $row) {
-                $isCheque = ($row['kind'] ?? null) === 'cheque';
-
-                $moneyAccount = $isCheque
-                    ? $this->chequesInHandAccount()->id
-                    : (int) (($row['account_id'] ?? null) ?: $this->tills->ensurePrimaryTill()->account_id);
-
-                $narration = $row['narration'] ?? __('sales::message.direct_narration', [
-                    'no' => $challan->document_no,
-                ]);
-
-                $voucher = $this->vouchers->create(
-                    [
-                        'type' => Voucher::RECEIPT,
-                        'trx_date' => $trxDate,
-                        'party_type' => 'customer',
-                        'party_id' => $customer->id,
-                        'instrument' => $row['instrument'] ?? null,
-                        'instrument_no' => $row['reference'] ?? null,
-                        'instrument_date' => $row['ref_date'] ?? null,
-                        'from_bank' => $row['bank_name'] ?? null,
-                        'narration' => $narration,
-                        'against_type' => SalesInvoice::drillSourceType(),
-                        'against_id' => $invoice->id,
-                        'origin' => Voucher::ORIGIN_COUNTER,
-                    ],
-                    $this->vouchers->twoLineEntry(
-                        Voucher::RECEIPT,
-                        (int) $receivable->id,
-                        $moneyAccount,
-                        (string) $row['amount'],
-                        $narration,
-                    ),
-                );
+                $voucher = $this->counterVoucher($row, $customer, $invoice, $challan, $trxDate);
 
                 // ⓘ অনুরোধটা এখানেই — সীমার নিচের ভাউচার কিছুই চায় না
                 $this->voucherApproval->stopping($voucher);
@@ -433,7 +284,7 @@ final class DirectSaleService
             return [
                 'challan' => $challan->fresh(['lines', 'giftLines']),
                 'invoice' => $invoice->fresh(['lines']),
-                'change' => '0.0000',
+                'extra' => '0.0000',
                 'held' => [],
                 'awaiting' => $awaiting,
             ];
@@ -488,12 +339,105 @@ final class DirectSaleService
 
             $invoice = $this->invoices->confirm($invoice->fresh(['lines']), $deposit);
 
+            // ⓘ চেক হলে রেজিস্টারেও — আগে এই পথের চেক রেজিস্টারে উঠতই না
             foreach ($vouchers as $voucher) {
-                $this->vouchers->post($voucher->fresh());
+                $this->postCounterVoucher($voucher->fresh());
             }
 
             return $invoice->fresh(['lines']);
         });
+    }
+
+    /**
+     * কাউন্টারের একটা ডিপোজিট-সারি থেকে খসড়া রসিদ ভাউচার।
+     *
+     * ⓘ দুই পথ — সাথে সাথে ([[complete()]]) আর সইয়ের অপেক্ষায় ([[hold()]])
+     * — একই ভাউচার বানায়; তফাত কেবল কখন পোস্ট হয়। ⚠️ তাই বানানোটা এক
+     * জায়গায়, নাহলে একদিন দুই পথের ভাউচার দুই রকম হত।
+     *
+     * ⓘ চেক হলে টাকা ১১০৪ হাতে-চেক খাতে, নাহলে সারির খাতে, আর খাত না
+     * বললে প্রধান টিলের নগদে — আগের আদায়ের কাগজের নিয়মই।
+     *
+     * @param  array<string, mixed>  $row
+     */
+    private function counterVoucher(
+        array $row,
+        Customer $customer,
+        SalesInvoice $invoice,
+        DeliveryChallan $challan,
+        string $trxDate,
+    ): Voucher {
+        $receivable = Account::query()->postable()->where('code', StandardChart::RECEIVABLE)->firstOrFail();
+
+        $moneyAccount = ($row['kind'] ?? null) === 'cheque'
+            ? $this->chequesInHandAccount()->id
+            : (int) (($row['account_id'] ?? null) ?: $this->tills->ensurePrimaryTill()->account_id);
+
+        $narration = $row['narration'] ?? __('sales::message.direct_narration', [
+            'no' => $challan->document_no,
+        ]);
+
+        return $this->vouchers->create(
+            [
+                'type' => Voucher::RECEIPT,
+                'trx_date' => $trxDate,
+                'party_type' => 'customer',
+                'party_id' => $customer->id,
+                'instrument' => $row['instrument'] ?? null,
+                'instrument_no' => $row['reference'] ?? null,
+                'instrument_date' => $row['ref_date'] ?? null,
+                'from_bank' => $row['bank_name'] ?? null,
+                'narration' => $narration,
+                'against_type' => SalesInvoice::drillSourceType(),
+                'against_id' => $invoice->id,
+                'origin' => Voucher::ORIGIN_COUNTER,
+            ],
+            $this->vouchers->twoLineEntry(
+                Voucher::RECEIPT,
+                (int) $receivable->id,
+                $moneyAccount,
+                (string) $row['amount'],
+                $narration,
+            ),
+        );
+    }
+
+    /**
+     * কাউন্টারের ভাউচার খাতায় — আর চেক হলে রেজিস্টারে একটা সারি।
+     *
+     * ⓘ রেজিস্টারের সারি অ-পোস্টিং: টাকা ভাউচার বসিয়েছে (Dr ১১০৪ / Cr
+     * গ্রাহক)। সারিটা চেকের **জীবন** রাখে — পাশ · ফেরত · PDC · একই চেক
+     * দুইবার নয় — আর `voucher_id` দিয়ে বাঁধা, যাতে ফেরত এলে ঠিক এই
+     * ভাউচারটাই বাতিল হয় ([[ChequeService::bounce()]])।
+     *
+     * ⚠️ রেজিস্টারে ওঠে **পোস্টের সময়**, খসড়ায় নয় — সই না পাওয়া
+     * ডিপোজিটের চেক রেজিস্টারে "হাতে আছে" বলে বসে থাকত।
+     */
+    private function postCounterVoucher(Voucher $voucher): Voucher
+    {
+        $voucher = $this->vouchers->post($voucher);
+        $voucher->loadMissing('lines.account');
+
+        $isCheque = $voucher->lines->contains(
+            fn ($line) => $line->account?->code === StandardChart::CHEQUES_IN_HAND
+                && bccomp((string) $line->debit, '0', 4) > 0,
+        );
+
+        if ($isCheque) {
+            $this->cheques->record([
+                'voucher_id' => $voucher->id,
+                'party_type' => 'customer',
+                'party_id' => $voucher->party_id,
+                'cheque_no' => $voucher->instrument_no,
+                'cheque_date' => $voucher->instrument_date?->toDateString(),
+                'bank_name' => $voucher->from_bank,
+                'amount' => (string) $voucher->amount,
+                'received_on' => $voucher->trx_date?->toDateString(),
+                'narration' => $voucher->narration,
+            ]);
+        }
+
+        return $voucher;
     }
 
     /**
@@ -978,7 +922,7 @@ final class DirectSaleService
                 'amount' => $amount,
                 /*
                  * খাত বাছা না থাকলে উপায়ের নিজের খাত — আর সেটাও না
-                 * থাকলে `null`, যেটা `CollectionService` প্রধান টিলে
+                 * থাকলে `null`, যেটা [[counterVoucher()]] প্রধান টিলের নগদে
                  * পাঠায়। ⓘ শেষ ধাপটা কেবল নগদের জন্য ঠিক, তাই উপায়ের
                  * সারিতে খাত বসানো **সেটআপের কাজ**, কোডের নয়।
                  */

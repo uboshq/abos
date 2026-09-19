@@ -9,6 +9,7 @@ use App\Models\ApprovalFlow;
 use App\Models\ApprovalFlowStep;
 use App\Models\Company;
 use App\Models\User;
+use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
@@ -102,43 +103,38 @@ final class TheDepositWentForApprovalAndTookTheSaleWithItTest extends TestCase
     }
 
     /**
-     * ⭐ ডিপোজিটটা খসড়া আদায় হয়ে থাকে — হারায় না।
+     * ⭐ ডিপোজিট হারায় না — আর এখন সেটা রসিদ ভাউচার, আদায়ের কাগজ নয়।
+     *
+     * ── ⓘ দাবিটা বদলাল, ১৯ সেপ্টেম্বর ২০২৬ (একই দিনের পরের নকশা) ────────
+     * মালিকের নিয়ম: কাউন্টারের **সব** ডিপোজিট রসিদ ভাউচার, আর তার সই
+     * কাউন্টারের **নিজের** ছকে (`counter_deposit`) —
+     * [[TheCounterDepositWaitedForItsSignatureTest]]। ⚠️ তাই আদায়ের ছক
+     * (`sales|collection`) কাউন্টারে আর খাটে না: বিক্রয় আর ডিপোজিট দুইটাই
+     * সাথে সাথে খাতায়। ⓘ আগের দাবি ছিল "খসড়া আদায় হয়ে থাকে" — ঐ
+     * কাগজটাই কাউন্টারে আর জন্মায় না।
      */
-    public function test_the_deposit_is_kept_as_a_draft_collection(): void
+    public function test_the_deposit_is_a_posted_receipt_voucher(): void
     {
         $this->sellWithDeposit();
 
-        $collection = Collection::query()
-            ->where('customer_id', $this->customer->id)
+        $this->assertSame(0, Collection::query()->where('customer_id', $this->customer->id)->count(),
+            'কাউন্টার আবার আদায়ের কাগজ বানাচ্ছে।');
+
+        $voucher = Voucher::query()
+            ->where('origin', Voucher::ORIGIN_COUNTER)
+            ->where('party_id', $this->customer->id)
             ->latest('id')
             ->first();
 
-        $this->assertNotNull($collection,
-            'ডিপোজিটটা কোথাও নেই — ঠিক যেটার অভিযোগ মালিক করেছেন।');
-
-        $this->assertSame('1000.0000', (string) $collection->amount);
-        $this->assertSame('draft', $collection->status,
-            'সই ছাড়াই আদায়টা খাতায় বসে গেছে।');
-
-        $this->assertDatabaseHas('approvals', [
-            'approvable_id' => $collection->id,
-            'module' => 'sales',
-            'action' => 'collection',
-            'status' => 'pending',
-        ]);
+        $this->assertNotNull($voucher, 'ডিপোজিটটা কোথাও নেই — ঠিক যেটার অভিযোগ মালিক করেছেন।');
+        $this->assertSame('1000.0000', (string) $voucher->amount);
+        $this->assertTrue($voucher->isPosted(), 'আদায়ের ছকে কাউন্টারের ডিপোজিট আটকে গেছে।');
     }
 
     /**
-     * ⭐ ক্যাশিয়ার জানতে পারেন — পর্দা খসড়া আদায়ের তালিকায় যায়।
-     *
-     * ⛔ সাধারণ পথ সোজা রসিদের PDF-এ যায়, আর PDF কোনো বার্তা দেখায়
-     * না। ⚠️ সেখানে গেলে ডিপোজিটটা টিকে থেকেও **অদৃশ্য** থাকত — মালিকের
-     * অভিযোগের অর্ধেকটা ঠিক এই।
-     *
-     * ⓘ দাবিটা HTTP ধরে: সেবা ঠিক থাকলেও কন্ট্রোলার কোথায় পাঠায় সেটাই
-     * মানুষ দেখেন।
+     * ⭐ আদায়ের ছক কাউন্টার আটকায় না — ক্যাশিয়ার সোজা রসিদে।
      */
-    public function test_the_cashier_lands_on_the_draft_collections(): void
+    public function test_the_cashier_goes_straight_to_the_receipt(): void
     {
         $response = $this->post(route('sales.direct.store'), [
             'customer_id' => $this->customer->id,
@@ -147,7 +143,7 @@ final class TheDepositWentForApprovalAndTookTheSaleWithItTest extends TestCase
             'lines' => [['product_id' => $this->product->id, 'qty' => '10', 'rate' => '100']],
         ]);
 
-        $response->assertRedirect(route('sales.collection.index', ['stage' => 'draft']));
+        $response->assertRedirectContains('/print/invoice/');
         $response->assertSessionHas('saved');
     }
 

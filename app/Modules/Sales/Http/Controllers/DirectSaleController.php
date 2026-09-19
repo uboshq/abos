@@ -580,17 +580,6 @@ class DirectSaleController extends Controller implements HasMiddleware
         );
 
         /*
-         * ⭐ ডিপোজিট সইয়ের অপেক্ষায় থাকলে — আদায়ের "খসড়া" তালিকায়, ১৯ সেপ্টেম্বর।
-         *
-         * ⛔ রসিদের পর্দাটা একটা PDF, আর PDF কোনো বার্তা দেখায় না। ⚠️
-         * সেখানে গেলে ক্যাশিয়ার জানতেনই না যে টাকাটা খাতায় ওঠেনি, আর
-         * মালিকের অভিযোগ হুবহু এই: *"ডিপোজিট হারিয়ে যায়"*।
-         *
-         * ⭐ তাই এই অবস্থায় পর্দা যায় আদায়ের তালিকার খসড়া ট্যাবে —
-         * ডিপোজিটটা চোখের সামনে, আর বার্তায় বিলের নম্বর (রসিদ পরে ছাপা
-         * যায়)। ⓘ সাধারণ বিক্রয়ে কিছুই বদলায় না — সোজা রসিদে।
-         */
-        /*
          * ⭐ কাউন্টারের ডিপোজিটে সই লাগলে — বিলের পাতায়, ছাপায় নয় (১৯ সেপ্টেম্বর)।
          *
          * ⓘ মালিকের নিয়ম: *"কোনো print option আসবে না যতক্ষণ approve
@@ -605,28 +594,34 @@ class DirectSaleController extends Controller implements HasMiddleware
                 ]));
         }
 
-        if ($result['held'] !== []) {
-            return redirect()
-                ->route('sales.collection.index', ['stage' => DocumentStatus::DRAFT])
-                ->with('saved', __('sales::message.direct_deposit_held', [
-                    'challan' => $result['challan']->document_no,
-                    'invoice' => $result['invoice']->document_no,
-                    'amount' => Money::format(array_reduce(
-                        $result['held'],
-                        fn (string $sum, $c) => bcadd($sum, (string) $c->amount, 4),
-                        '0',
-                    )),
-                ]));
+        /*
+         * ⓘ আগে এখানে আরেকটা শাখা ছিল: আদায়ের কাগজ `sales|collection` ছকে
+         * আটকালে আদায়ের খসড়া তালিকায় যেত। ১৯ সেপ্টেম্বর ২০২৬ থেকে কাউন্টারের
+         * টাকা রসিদ ভাউচার, আর তার সই কাউন্টারের নিজের নিয়মে — উপরের শাখায়।
+         */
+
+        /*
+         * সোজা রসিদে — বিক্রির পরের কাজটা কাগজ দেওয়া।
+         *
+         * ⭐ বাড়তি টাকা "ফেরত" নয় (১৯ সেপ্টেম্বর ২০২৬)। মালিকের নিয়মে বাইরের
+         * সবার খাতা ব্যাংকের মতো — বাড়তিটা গ্রাহকের খাতায় জমা থাকে। ⛔ আগে
+         * বার্তা "ফেরত" বলত অথচ খাতায় পুরোটা বসত: ক্যাশিয়ার ফেরত দিলে
+         * টাকা দুইবার গোনা হত।
+         */
+        $extra = (string) ($result['extra'] ?? '0');
+
+        $done = __('sales::message.direct_done', [
+            'challan' => $result['challan']->document_no,
+            'invoice' => $result['invoice']->document_no,
+        ]);
+
+        if (bccomp($extra, '0', 4) > 0) {
+            $done .= ' '.__('sales::message.direct_extra_kept', ['amount' => Money::format($extra)]);
         }
 
-        // সোজা রসিদে — বিক্রির পরের কাজটা কাগজ দেওয়া
         return redirect()
             ->route('sales.print.invoice', ['invoice' => $result['invoice']->id, 'paper' => '80mm'])
-            ->with('saved', __('sales::message.direct_done', [
-                'challan' => $result['challan']->document_no,
-                'invoice' => $result['invoice']->document_no,
-                'change' => Money::format($result['change']),
-            ]));
+            ->with('saved', $done);
     }
 
     /**

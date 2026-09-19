@@ -60,7 +60,7 @@ class Cheque extends Model implements Drillable
     protected $fillable = [
         'company_id', 'branch_id', 'document_no', 'direction',
         'cheque_date', 'received_on', 'cheque_no', 'bank_name', 'amount',
-        'party_type', 'party_id', 'bank_account_id', 'collection_id',
+        'party_type', 'party_id', 'bank_account_id', 'collection_id', 'voucher_id',
         'status', 'deposited_on', 'cleared_on', 'bounce_reason',
         'narration', 'created_by',
     ];
@@ -108,6 +108,18 @@ class Cheque extends Model implements Drillable
     public function postedByCollection(): bool
     {
         return $this->collection_id !== null;
+    }
+
+    /**
+     * টাকাটা একটা রসিদ ভাউচার পোস্ট করেছে — কাউন্টারের চেক, ১৯ সেপ্টেম্বর ২০২৬ থেকে।
+     *
+     * ⓘ মালিকের নিয়মে কাউন্টারের সব ডিপোজিট এখন রসিদ ভাউচার। ⚠️ ফেরত এলে
+     * চেক নিজে পোস্ট করে না — ভাউচারটা বাতিল হয়, আর তার উল্টো দাখিলাই
+     * টাকা গ্রাহকের খাতায় ফেরায় ([[ChequeService::bounce()]])।
+     */
+    public function postedByVoucher(): bool
+    {
+        return $this->voucher_id !== null;
     }
 
     /** @param  Builder<self>  $query */

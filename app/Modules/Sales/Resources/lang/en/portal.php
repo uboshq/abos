@@ -85,5 +85,5 @@ return [
     // A limit of 0 does not mean "used up": it means cash or advance only.
     // Printing "0" would read as "your credit is finished" and start the
     // phone call this portal exists to prevent.
-    'cash_only' => 'Cash / advance',
+    'cash_only' => 'Cash / credit only',
 ];

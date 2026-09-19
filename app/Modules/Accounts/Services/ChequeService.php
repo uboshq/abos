@@ -10,6 +10,7 @@ use App\Core\Support\CompanyContext;
 use App\Core\Support\Money;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Cheque;
+use App\Modules\Accounts\Models\Voucher;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -40,6 +41,7 @@ final class ChequeService
     public function __construct(
         private readonly PostingEngine $posting,
         private readonly NumberSeriesEngine $numbers,
+        private readonly VoucherService $vouchers,
     ) {}
 
     /**
@@ -158,6 +160,8 @@ final class ChequeService
             'party_type' => $data['party_type'] ?? null,
             'party_id' => $data['party_id'] ?? null,
             'collection_id' => $data['collection_id'] ?? null,
+            // ⓘ কাউন্টারের চেক, ১৯ সেপ্টেম্বর থেকে — টাকা পোস্ট করেছে এই রসিদ ভাউচার
+            'voucher_id' => $data['voucher_id'] ?? null,
             'status' => Cheque::PENDING,
             'narration' => $data['narration'] ?? null,
             'created_by' => auth()->id(),
@@ -274,6 +278,33 @@ final class ChequeService
 
         $date = $onDate ?? now()->toDateString();
         $amount = (string) $cheque->amount;
+
+        /*
+         * ⭐ রসিদ ভাউচার যে চেকের টাকা তুলেছে — ভাউচারটাই বাতিল (১৯ সেপ্টেম্বর ২০২৬)।
+         *
+         * ⓘ কাউন্টারের ডিপোজিট এখন রসিদ ভাউচার (Dr ১১০৪ / Cr গ্রাহক)। বাতিলের
+         * উল্টো দাখিলা ঠিক সেটাই ফেরায়: ১১০৪ খালি, গ্রাহকের খাতায় টাকাটা আবার
+         * পাওনা। ⛔ এখানে নিজের দাখিলাও বসালে টাকা **দ্বিগুণ** কাটত — ঠিক
+         * আদায়ের কাগজের চেকের মতো ফাঁদ।
+         */
+        if ($cheque->postedByVoucher()) {
+            return DB::transaction(function () use ($cheque, $reason, $date) {
+                $voucher = Voucher::query()->findOrFail($cheque->voucher_id);
+
+                if (! $voucher->isCancelled()) {
+                    $this->vouchers->cancel($voucher, $reason,
+                        $date instanceof Carbon ? $date->toDateString() : (string) $date);
+                }
+
+                $cheque->update([
+                    'status' => Cheque::BOUNCED,
+                    'bounce_reason' => $reason,
+                    'cleared_on' => null,
+                ]);
+
+                return $cheque->fresh();
+            });
+        }
 
         return DB::transaction(function () use ($cheque, $reason, $date, $amount) {
             $this->post($cheque, Cheque::STOCK_SOURCE.':bounced', $date,

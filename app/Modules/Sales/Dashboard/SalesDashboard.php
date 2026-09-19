@@ -15,7 +15,6 @@ use App\Core\Engines\Dashboard\Tile;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Modules\Sales\Metrics\SalesMetrics;
-use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\SalesInvoice;
 use Illuminate\Support\Carbon;
 
@@ -214,9 +213,11 @@ final class SalesDashboard implements ProvidesDashboard
             $out[] = [
                 'label' => $cursor->translatedFormat('M'),
                 'first' => (string) $billed,
-                'second' => (string) Collection::query()
-                    ->whereBetween('trx_date', [$from, $to])
-                    ->sum('amount'),
+                /*
+                 * ⓘ কার্ডের গোনাই — আদায় + গ্রাহকের রসিদ ভাউচার, কেবল খাতায়
+                 * বসা (১৯ সেপ্টেম্বর ২০২৬)। ⛔ আগে এখানে খসড়া আদায়ও গোনা হত।
+                 */
+                'second' => SalesMetrics::collectionTotal($from, $to),
             ];
 
             $cursor->addMonth();

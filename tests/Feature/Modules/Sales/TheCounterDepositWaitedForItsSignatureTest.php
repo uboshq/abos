@@ -195,6 +195,75 @@ final class TheCounterDepositWaitedForItsSignatureTest extends TestCase
     }
 
     /**
+     * ⭐ সই না লাগলেও ডিপোজিটটা রসিদ ভাউচার — আর ভাউচার তালিকার নিজের ট্যাবে।
+     *
+     * ── মালিকের সিদ্ধান্ত, ১৯ সেপ্টেম্বর ২০২৬ ──────────────────────────
+     * *"কাউন্টারের সব ডিপোজিট সবসময় রসিদ ভাউচার (RCV)। রেকর্ড থাকবে এক
+     * রকমের, আর তালিকা সবসময় পুরো থাকবে।"* ⛔ আগে সই ছাড়া পথের টাকা
+     * আদায়ের কাগজ হত, আর "Sales Added Deposit" ট্যাবে কখনো উঠত না।
+     */
+    public function test_without_a_rule_the_deposit_is_still_a_voucher_on_the_list(): void
+    {
+        $collectedBefore = $this->listedCollected();
+
+        $this->sell();
+
+        $invoice = SalesInvoice::query()->latest('id')->firstOrFail();
+
+        $voucher = Voucher::query()
+            ->where('origin', Voucher::ORIGIN_COUNTER)
+            ->where('against_id', $invoice->id)
+            ->firstOrFail();
+
+        $this->assertTrue($voucher->isPosted(), 'সই না লাগা ডিপোজিট খাতায় বসেনি।');
+        $this->assertSame('0.0000', $invoice->fresh()->dueAmount());
+        $this->assertSame(0, \App\Modules\Sales\Models\Collection::query()
+            ->where('customer_id', $this->customer->id)->where('trx_date', now()->toDateString())->count(),
+            'কাউন্টার আবার আদায়ের কাগজ বানাচ্ছে।');
+
+        $this->get(route('accounts.voucher.list', ['tab' => 'sales_deposit']))
+            ->assertOk()
+            ->assertSee($voucher->document_no);
+
+        // ⓘ বিলের তালিকাও ভাউচারের টাকা গোনে — আগে কেবল আদায়ের কাগজ গুনত
+        $this->assertSame(0, bccomp(bcsub($this->listedCollected(), $collectedBefore, 4), '1000', 4),
+            'বিলের তালিকা কাউন্টারের টাকা দেখেনি।');
+    }
+
+    /**
+     * ⭐ বিলের চেয়ে বেশি দিলে "ফেরত" নয় — গ্রাহকের খাতায় জমা।
+     *
+     * ⓘ মালিক: *"অগ্রিম আলাদাভাবে থাকবে না… ব্যাংক লেজারের মতো Dr Cr।"*
+     */
+    public function test_an_extra_deposit_stays_on_the_customer_account(): void
+    {
+        $before = (string) $this->customer->outstanding();
+        $collectedBefore = $this->listedCollected();
+
+        $this->post(route('sales.direct.store'), [
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'deposit' => '1500',
+            'lines' => [['product_id' => $this->product->id, 'qty' => '10', 'rate' => '100']],
+        ])->assertSessionHas('saved', fn (string $said) => str_contains(
+            $said,
+            __('sales::message.direct_extra_kept', ['amount' => \App\Core\Support\Money::format('500')]),
+        ));
+
+        $this->assertSame(0, bccomp((string) $this->customer->fresh()->outstanding(), bcsub($before, '500', 4), 4),
+            'বাড়তি ৫০০ গ্রাহকের খাতায় জমা হয়নি।');
+
+        // ⓘ বিলের তালিকায় এক বিলের বাড়তি অন্য বিলে গড়ায় না — এই বিলের আদায় ১০০০-ই
+        $this->assertSame(0, bccomp(bcsub($this->listedCollected(), $collectedBefore, 4), '1000', 4),
+            'বিলের তালিকায় বাড়তি জমা অন্য বিলের বকেয়া কমিয়েছে।');
+    }
+
+    private function listedCollected(): string
+    {
+        return (string) $this->get(route('sales.invoice.index'))->viewData('totals')['collected'];
+    }
+
+    /**
      * ⭐ দুই নিয়ম আলাদা — হাতে লেখা রসিদের ছক কাউন্টার আটকায় না।
      *
      * ⓘ মালিকের কথা: *"কাউন্টারের জন্য আলাদা নিয়ম, বাকিগুলো আলাদা।"*

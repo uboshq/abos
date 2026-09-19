@@ -18,7 +18,6 @@ use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Sales\Http\Requests\SalesInvoiceRequest;
-use App\Modules\Sales\Models\CollectionLine;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Services\SalesInvoiceService;
@@ -26,6 +25,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 /**
@@ -133,9 +133,8 @@ class SalesInvoiceController extends Controller implements HasMiddleware
          *
          * ── ⓘ বকেয়াটা যোগফলের স্তরে বিয়োগ ───────────────────────────
          * মালিকের নকশাও ঠিক এভাবেই গোনে: `৪২,১৮,৯৫০ − ৩১,০৪,২২০ =
-         * ১১,১৪,৭৩০`। ⚠️ কোনো বিলে বেশি আদায় হলে সেটা অন্যটার বকেয়া
-         * কমিয়ে দেবে — বিরল, আর সারি-ধরে গোনার দাম (প্রতি সারিতে
-         * একটা কোয়েরি) এর চেয়ে অনেক বেশি।
+         * ১১,১৪,৭৩০`। ⓘ এক বিলের বাড়তি আদায় অন্যটার বকেয়া কমায় না —
+         * নিচের `LEAST` (১৯ সেপ্টেম্বর ২০২৬), তবু একটাই কোয়েরি।
          *
          * ⓘ খরচ দুইটা হালকা কোয়েরি, ঠিক `processBand`-এর মতোই।
          */
@@ -143,10 +142,24 @@ class SalesInvoiceController extends Controller implements HasMiddleware
 
         $money = (clone $totalled)->sum('total');
 
-        $collected = CollectionLine::query()
-            ->whereHas('collection', fn ($q) => $q->posted())
-            ->whereIn('sales_invoice_id', (clone $totalled)->select('sal_invoices.id'))
-            ->sum('amount');
+        /*
+         * ⭐ আদায় = আদায়ের কাগজ + রসিদ ভাউচার, বিলপ্রতি বিলের অঙ্ক পর্যন্ত — ১৯ সেপ্টেম্বর ২০২৬।
+         *
+         * ⛔ আগে কেবল আদায়ের কাগজ গোনা হত। কাউন্টারের টাকা এখন রসিদ ভাউচার
+         * (মালিকের নিয়ম), তাই পুরনো গোনায় কাউন্টারের প্রতিটা বিল তালিকায়
+         * পুরো বকেয়া দেখাত, অথচ বিলের পাতা বলত শোধ।
+         *
+         * ⓘ শর্তগুলো [[SalesInvoice::scopeWithCollected()]]-এর — নিজে লেখা নয়।
+         * ⚠️ `LEAST`: বাড়তি জমা এখন স্বাভাবিক (খাতায় জমা থাকে, ব্যাংকের মতো),
+         * তাই এক বিলের বাড়তি অন্য বিলের বকেয়া কমিয়ে দেখাবে না।
+         */
+        $perBill = SalesInvoice::query()
+            ->whereIn('sal_invoices.id', (clone $totalled)->select('sal_invoices.id'))
+            ->withCollected();
+
+        $collected = (string) (DB::query()->fromSub($perBill, 'b')
+            ->selectRaw('COALESCE(SUM(LEAST(b.total, b.collected_total + b.voucher_total)), 0) AS s')
+            ->value('s') ?? '0');
 
         return view('sales::invoice.index', [
             'menu' => $this->menu->forUser($request->user()),

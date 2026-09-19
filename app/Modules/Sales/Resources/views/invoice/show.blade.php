@@ -30,9 +30,18 @@
 
                 @if ($invoice->status === \App\Core\Support\DocumentStatus::CONFIRMED
                     && bccomp($invoice->dueAmount(), '0', 4) > 0)
-                    @can('create', \App\Modules\Sales\Models\Collection::class)
+                    {{-- ⭐ আদায় এখন হিসাবের রসিদ ভাউচারে (মালিকের নির্দেশ, ১৯ সেপ্টেম্বর ২০২৬) —
+                         পক্ষ, বিল আর বকেয়া অঙ্ক আগে থেকে ভরা ([[VoucherController::prefill()]])। --}}
+                    @can('accounts.voucher.create')
                         <x-ui.button tone="primary"
-                                     :href="route('sales.collection.create', ['sales_invoice_id' => $invoice->id])">
+                                     :href="route('accounts.voucher.create', [
+                                         'type' => \App\Modules\Accounts\Models\Voucher::RECEIPT,
+                                         'party_type' => 'customer',
+                                         'party_id' => $invoice->customer_id,
+                                         'against_type' => \App\Modules\Sales\Models\SalesInvoice::drillSourceType(),
+                                         'against_id' => $invoice->id,
+                                         'amount' => $invoice->dueAmount(),
+                                     ])">
                             {{ __('sales::action.collect_against') }}
                         </x-ui.button>
                     @endcan

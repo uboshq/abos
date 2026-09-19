@@ -406,8 +406,15 @@ class DirectSaleTest extends TestCase
          * উদ্বৃত্ত গ্রাহকের খাতায় **অগ্রিম** — ডিপোর স্বাভাবিক ঘটনা।
          *
          * ⓘ তাই ড্রয়ারে এখন ১,৫০০, আর গ্রাহকের হিসাব ৫০০ ঋণাত্মক।
+         *
+         * ── ⭐ ১৯ সেপ্টেম্বর ২০২৬: "ফেরত" নয়, "খাতায় জমা" ───────────────
+         * মালিকের নিয়ম: বাইরের সবার খাতা ব্যাংকের মতো, "অগ্রিম" বলে কিছু
+         * নেই। ⛔ আগে ফলাফল বাড়তিটাকে `change` (ফেরত) বলত, অথচ খাতায়
+         * পুরোটা বসত — ক্যাশিয়ার ফেরত দিলে টাকা দুইবার গোনা হত। এখন নাম
+         * `extra`: গ্রাহকের খাতায় থাকল, পরের বিলে কাটবে।
          */
-        $this->assertSame(0, bccomp($result['change'], '500', 4));
+        $this->assertSame(0, bccomp($result['extra'], '500', 4));
+        $this->assertArrayNotHasKey('change', $result, 'বাড়তিটা আবার "ফেরত" বলে ফিরছে।');
         $this->assertSame(0, bccomp($this->balanceOfAccount($this->cashTillAccount()), '1500', 4),
             'পুরো জমাটা টাকার খাতে বসেনি — উদ্বৃত্ত আবার হারাচ্ছে।');
         $this->assertSame(0, bccomp((string) $this->customer->fresh()->outstanding(), '-500', 4),

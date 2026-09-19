@@ -102,11 +102,11 @@ return [
      * So the figure is always shown positive and the direction is the label.
      */
     'previous_due' => 'Previous Due',
-    'previous_advance' => 'Previous Advance',
+    'previous_advance' => 'Previous Credit',
     /* 'due' is declared above with the challan/invoice block — same word, so not twice. */
-    'advance' => 'Advance',
+    'advance' => 'Credit',
     /* More paid than the bill — the rest stays to the customer's credit. */
-    'kept_as_advance' => 'Kept as advance',
+    'kept_as_advance' => 'Stays on the account',
 
     'available_short' => 'Available',
     'main_stock' => 'Main Stock',
@@ -177,7 +177,7 @@ return [
 
     /* A limit of zero stops credit, not goods — so it is said in words,
        never as "0", which reads as "nothing may be sold". */
-    'cash_only' => 'cash / advance',
+    'cash_only' => 'cash / credit only',
     'reserved_short' => 'Reserved',
     'total_qty' => 'Total Qty',
     'challan_date' => 'Invoice Date',

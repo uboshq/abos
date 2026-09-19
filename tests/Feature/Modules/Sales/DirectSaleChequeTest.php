@@ -125,7 +125,9 @@ class DirectSaleChequeTest extends TestCase
         // রেজিস্টারে অ-পোস্টিং সারি
         $cheque = Cheque::query()->where('cheque_no', 'CHQ-77')->firstOrFail();
         $this->assertSame(Cheque::PENDING, $cheque->status);
-        $this->assertTrue($cheque->postedByCollection());
+        // ⭐ ১৯ সেপ্টেম্বর ২০২৬ থেকে টাকাটা রসিদ ভাউচার পোস্ট করে, আদায়ের কাগজ নয়
+        $this->assertTrue($cheque->postedByVoucher());
+        $this->assertFalse($cheque->postedByCollection());
         $this->assertSame('City Bank', $cheque->bank_name);
         $this->assertSame('customer', $cheque->party_type);
         $this->assertSame($this->customer->id, $cheque->party_id);
@@ -138,7 +140,8 @@ class DirectSaleChequeTest extends TestCase
         $result = $this->sellByCheque();
         $cheque = Cheque::query()->where('cheque_no', 'CHQ-77')->firstOrFail();
 
-        app(CollectionService::class)->bounceReceivedCheque($cheque, 'insufficient funds');
+        // ⓘ ভাউচারে বসা চেক — রেজিস্টারের নিজের দরজা ভাউচারটাই বাতিল করে
+        app(ChequeService::class)->bounce($cheque, 'insufficient funds');
 
         // টাকা ১১০৪ ছেড়ে গেছে, গ্রাহক আবার দেনাদার, বিল আবার পুরো বকেয়া
         $this->assertSame(0, bccomp($this->balanceOf(StandardChart::CHEQUES_IN_HAND), '0', 4),
@@ -156,8 +159,8 @@ class DirectSaleChequeTest extends TestCase
         $result = $this->sellByCheque();
         $cheque = Cheque::query()->where('cheque_no', 'CHQ-77')->firstOrFail();
 
-        // চেকের খাতার bounce-বোতাম collection-চেকে এই Sales-দরজায় পোস্ট করে
-        $this->post(route('sales.collection.cheque_bounce', $cheque), ['bounce_reason' => 'returned unpaid'])
+        // ⓘ ভাউচারে বসা চেকের বোতাম হিসাবের দরজায় যায় (কেবল আদায়ে বসা পুরনো চেক Sales-দরজায়)
+        $this->post(route('accounts.cheque.bounce', $cheque), ['bounce_reason' => 'returned unpaid'])
             ->assertRedirect();
 
         $this->assertSame(Cheque::BOUNCED, $cheque->fresh()->status);
@@ -182,14 +185,26 @@ class DirectSaleChequeTest extends TestCase
         $this->assertSame(Cheque::CLEARED, $cheque->fresh()->status);
     }
 
-    /** ★ দ্বিগুণ-দাখিলা পাহারা — আদায়ে-পোস্ট-করা চেকে bounce() নিজে পোস্ট করে না। */
-    public function test_cheque_service_bounce_refuses_a_receipt_posted_cheque(): void
+    /**
+     * ★ দ্বিগুণ-দাখিলা পাহারা — ভাউচারে বসা চেকের ফেরতে টাকা একবারই ফেরে।
+     *
+     * ⓘ bounce() নিজের দাখিলা বসায় না, ভাউচারটা বাতিল করে। ⛔ দুইটাই করলে
+     * ১১০৪ ঋণাত্মক হত আর গ্রাহক দ্বিগুণ দেনাদার। আর দ্বিতীয়বার ফেরত চলে না।
+     */
+    public function test_a_voucher_posted_cheque_bounces_only_once(): void
     {
         $this->sellByCheque();
         $cheque = Cheque::query()->where('cheque_no', 'CHQ-77')->firstOrFail();
 
+        app(ChequeService::class)->bounce($cheque, 'insufficient funds');
+
+        $this->assertSame(0, bccomp($this->balanceOf(StandardChart::CHEQUES_IN_HAND), '0', 4),
+            'ফেরতে ১১০৪ শূন্যের নিচে নেমেছে — টাকা দুইবার উল্টেছে।');
+        $this->assertSame(0, bccomp($this->balanceOf(StandardChart::RECEIVABLE), '1000', 4),
+            'গ্রাহক দ্বিগুণ দেনাদার হয়েছেন।');
+
         $this->expectException(ValidationException::class);
-        app(ChequeService::class)->bounce($cheque, 'wrong path');
+        app(ChequeService::class)->bounce($cheque->fresh(), 'again');
     }
 
     /** ★ পাহারা — সাধারণ আদায় ১১০৪-এ টাকা বসাতে পারে না, আর picker-এও নেই। */
