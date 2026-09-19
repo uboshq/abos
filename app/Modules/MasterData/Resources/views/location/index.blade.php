@@ -17,6 +17,9 @@
                  'render' => fn ($l) => __('master_data::level.' . $l->level)],
                 ['key' => 'assigned_to', 'label' => __('master_data::field.assigned_to'), 'width' => '11rem',
                  'render' => fn ($l) => $l->assignee?->name ?? '—'],
+                // অবস্থা — নিষ্ক্রিয় সারি তালিকায় থাকে, মালিকের নির্দেশ, ২০ সেপ্টেম্বর ২০২৬
+                ['key' => 'state', 'label' => __('core.table.status'), 'width' => '8rem',
+                 'render' => fn ($l) => view('master_data::location.partials.state', ['location' => $l])],
                 // সম্পাদনা · সক্রিয়/নিষ্ক্রিয় · মুছুন — মালিকের নির্দেশ, ১৯ সেপ্টেম্বর ২০২৬
                 ['key' => 'actions', 'label' => __('core.table.actions'), 'width' => '5rem',
                  'render' => fn ($l) => view('master_data::location.partials.actions', ['location' => $l])],

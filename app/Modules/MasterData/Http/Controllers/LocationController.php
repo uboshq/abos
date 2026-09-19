@@ -91,8 +91,11 @@ class LocationController extends Controller implements HasMiddleware
          * বোঝা যায় পয়েন্ট বানানোর আগে কী লাগবে, আর সেটা বলতে কোনো
          * বার্তা লিখতে হয় না।
          */
+        /*
+         * ⓘ ট্যাবের সংখ্যায় নিষ্ক্রিয়গুলোও — ২০ সেপ্টেম্বর ২০২৬। স্তরের তালিকা
+         * এখন নিষ্ক্রিয় সারিও দেখায় (অবস্থার কলামে), তাই সংখ্যা আর সারি মেলে।
+         */
         $counts = Location::query()
-            ->when(! $showInactive, fn ($b) => $b->active())
             ->selectRaw('level, count(*) as n')
             ->groupBy('level')
             ->pluck('n', 'level');
@@ -157,7 +160,12 @@ class LocationController extends Controller implements HasMiddleware
 
         $rows = Location::query()
             ->atLevel($level)
-            ->when(! $showInactive, fn ($b) => $b->active())
+
+            /*
+             * ⛔ নিষ্ক্রিয় সারিও থাকে — ২০ সেপ্টেম্বর ২০২৬, মালিক: *"Deactive
+             * korlei List theke Hariye zacche keno?"*। ⓘ অবস্থা দেখায় নতুন
+             * কলাম; সক্রিয়গুলো আগে, তারপর নিষ্ক্রিয়।
+             */
             ->when(filled($q), fn ($b) => $b->search($q))
 
             /*
@@ -167,6 +175,7 @@ class LocationController extends Controller implements HasMiddleware
              */
             ->with([...Location::drillRelations(), 'assignee'])
 
+            ->orderByDesc('is_active')
             ->orderBy('code')
             // পেজিনেশন বাধ্যতামূলক (সেকশন ৯) — রুট কয়েকশো হতে পারে
             ->paginate(50)

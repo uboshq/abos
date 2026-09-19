@@ -23,8 +23,8 @@ return [
     'item_name_en' => 'সারির নাম (ইংরেজি)',
     'item_name_bn' => 'সারির নাম (বাংলা)',
 
-    'location_name_en' => 'এলাকার নাম (ইংরেজি)',
-    'location_name_bn' => 'এলাকার নাম (বাংলা)',
+    'location_name_en' => ':level (ইংরেজি নাম)',
+    'location_name_bn' => ':level (বাংলা নাম)',
     'name_en' => 'নাম (ইংরেজি)',
     'name_bn' => 'নাম (বাংলা)',
     'level' => 'স্তর',
