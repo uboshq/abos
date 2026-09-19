@@ -1,18 +1,30 @@
 {{-- একটা বিক্রয় বিল। --}}
+{{-- ⓘ কাউন্টারে আটকে থাকা বিক্রয় কি — পাতার ওপরে একবার, যাতে শিরোনাম আর দেহ দুই জায়গায় পাওয়া যায় --}}
+@php($held = ($heldDeposits ?? []) !== [])
+
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ $invoice->document_no }}</x-slot:title>
 
     <x-slot:header>
         <x-ui.page-header :title="$invoice->document_no" :subtitle="$invoice->customer?->name()">
             <x-slot:actions>
+                {{-- ⭐ কাউন্টারে আটকে থাকা বিক্রয় (১৯ সেপ্টেম্বর ২০২৬): সম্পাদনা নেই,
+                     ছাপা নেই, আর "নিশ্চিত" বোতামের নাম বলে দেয় সেটা কী করবে।
+                     ⓘ বোতামটা একই রুটে যায় — [[SalesInvoiceController::confirm()]]
+                     আটকে থাকা বিক্রয় চিনে ঠিক পথে পাঠায়। --}}
+
                 @can('update', $invoice)
-                    <x-ui.button tone="secondary" :href="route('sales.invoice.edit', $invoice)">
-                        {{ __('core.action.edit') }}
-                    </x-ui.button>
+                    @unless ($held)
+                        <x-ui.button tone="secondary" :href="route('sales.invoice.edit', $invoice)">
+                            {{ __('core.action.edit') }}
+                        </x-ui.button>
+                    @endunless
 
                     <form method="POST" action="{{ route('sales.invoice.confirm', $invoice) }}">
                         @csrf
-                        <x-ui.button type="submit" tone="primary">{{ __('sales::action.confirm') }}</x-ui.button>
+                        <x-ui.button type="submit" tone="primary">
+                            {{ $held ? __('sales::action.finish_held') : __('sales::action.confirm') }}
+                        </x-ui.button>
                     </form>
                 @endcan
 
@@ -25,10 +37,12 @@
                         </x-ui.button>
                     @endcan
                 @endif
-                <x-ui.print-menu :documents="[
-                    ['label' => __('sales::doc.invoice'), 'url' => route('sales.print.invoice', $invoice)],
-                    ['label' => __('core.print.draft_notice'), 'url' => route('sales.print.draft', $invoice)],
-                ]" />
+                @unless ($held)
+                    <x-ui.print-menu :documents="[
+                        ['label' => __('sales::doc.invoice'), 'url' => route('sales.print.invoice', $invoice)],
+                        ['label' => __('core.print.draft_notice'), 'url' => route('sales.print.draft', $invoice)],
+                    ]" />
+                @endunless
             </x-slot:actions>
         </x-ui.page-header>
     </x-slot:header>
@@ -42,6 +56,25 @@
     @endif
 
     <x-ui.errors />
+
+    {{-- ⭐ কোন ডিপোজিট কার সইয়ের অপেক্ষায় — আটকে থাকা বিক্রয়ে কেবল --}}
+    @if ($held)
+        <section role="status" data-boxed
+                 class="mb-4 rounded-(--radius-card) border border-(--color-badge-pending-ink)/30
+                        bg-(--color-badge-pending-bg) p-4 text-sm text-(--color-badge-pending-ink)">
+            <h2 class="mb-2 font-semibold">{{ __('sales::field.held_deposits') }}</h2>
+            <p class="mb-2">{{ __('sales::message.held_explain') }}</p>
+            <ul class="space-y-1">
+                @foreach ($heldDeposits as $row)
+                    <li class="flex flex-wrap gap-x-3">
+                        <span class="font-medium">{{ $row['voucher']->document_no }}</span>
+                        <span>{{ \App\Core\Support\Money::format($row['voucher']->amount) }}</span>
+                        <span>{{ __('sales::field.deposit_state.'.($row['approval']?->status ?? 'none')) }}</span>
+                    </li>
+                @endforeach
+            </ul>
+        </section>
+    @endif
 
     <div class="space-y-4">
         <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">

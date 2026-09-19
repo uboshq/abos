@@ -109,6 +109,28 @@ final class ApprovalEngine
     }
 
     /**
+     * এই কাজে অনুমোদন লাগবে কি না — কোনো অনুরোধ না বানিয়ে।
+     *
+     * ── ⭐ কেন লাগল, ১৯ সেপ্টেম্বর ২০২৬ ─────────────────────────────
+     * [[request()]] প্রশ্নটার উত্তর দেয় **কাগজ হাতে থাকলে**, আর সাথে
+     * অনুরোধটাও লিখে ফেলে। ⚠️ কিন্তু কাউন্টারকে কাগজ বানানোর **আগেই**
+     * জানতে হয়: সই লাগলে চালান আর বিল খসড়া থাকবে, মাল বের হবে না;
+     * না লাগলে আজকের মতো সব এক চাপে শেষ।
+     *
+     * ⓘ নিয়মটা [[request()]]-এর হুবহু — একই ছক, একই সীমা। ⛔ আলাদা
+     * করে লিখলে একদিন দুইটা দুই কথা বলত: কাউন্টার ভাবত সই লাগবে না,
+     * আর পোস্টের সময় ইঞ্জিন আটকাত।
+     *
+     * @param  string  $documentType  কাগজের ক্লাসের ছোট নাম (`class_basename`)
+     */
+    public function requires(string $module, string $action, ?string $amount, string $documentType): bool
+    {
+        $flow = $this->flowFor($module, $action, $documentType);
+
+        return $flow !== null && $flow->appliesTo($amount);
+    }
+
+    /**
      * এক স্তরের অনুমোদন। সব স্তর শেষ হলে অনুরোধটাই approved হয়।
      */
     public function approve(Approval $approval, User $user, ?string $remarks = null): Approval

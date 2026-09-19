@@ -93,6 +93,13 @@ final class VoucherService
                  */
                 'against_type' => $data['against_type'] ?? null,
                 'against_id' => $data['against_id'] ?? null,
+
+                /*
+                 * ⓘ কোথা থেকে এল — কেবল সেবা থেকে ভরা হয় (কাউন্টার)।
+                 * ⚠️ ফর্মের যাচাইয়ে ঘরটা নেই, তাই কেউ হাতে পাঠিয়ে
+                 * কাউন্টারের নিয়মে ঢুকতে পারে না।
+                 */
+                'origin' => $data['origin'] ?? null,
                 'narration' => $data['narration'] ?? null,
                 'instrument' => $data['instrument'] ?? null,
                 'instrument_no' => $data['instrument_no'] ?? null,

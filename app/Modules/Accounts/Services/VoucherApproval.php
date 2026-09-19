@@ -35,6 +35,9 @@ final class VoucherApproval
     /** অনুমোদনের ছকে মডিউলের নাম — `module.php`-র `code`। */
     public const MODULE = 'accounts';
 
+    /** কাউন্টারের ডিপোজিটের অনুমোদনের কাজ — [[stopping()]]। */
+    public const COUNTER_DEPOSIT = 'counter_deposit';
+
     public function __construct(private readonly ApprovalEngine $approvals) {}
 
     /**
@@ -46,7 +49,15 @@ final class VoucherApproval
      */
     public function stopping(Voucher $voucher): ?Approval
     {
-        $action = (string) $voucher->type;
+        /*
+         * ⭐ কাউন্টারের ডিপোজিট নিজের নিয়মে — মালিকের নির্দেশ, ১৯ সেপ্টেম্বর।
+         *
+         * ⓘ *"কাউন্টারের জন্য আলাদা নিয়ম, বাকিগুলো আলাদা।"* ⚠️ না করলে
+         * কাউন্টারে সই চাইতে গিয়ে হিসাবের প্রতিটা হাতে লেখা রসিদ আটকাত।
+         */
+        $action = $voucher->origin === Voucher::ORIGIN_COUNTER
+            ? self::COUNTER_DEPOSIT
+            : (string) $voucher->type;
 
         $latest = $this->approvals->latestFor($voucher, $action);
 

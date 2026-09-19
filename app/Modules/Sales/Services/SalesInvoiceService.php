@@ -227,6 +227,37 @@ final class SalesInvoiceService
      * @param  array<string, mixed>  $data
      * @param  list<array<string, mixed>>  $lines
      */
+    /**
+     * কাউন্টারে আটকে থাকা বিক্রয়ের বিল — ঠিক একটা খসড়া চালানের সারি থেকে।
+     *
+     * ── ⭐ কেন একটা আলাদা দরজা, ১৯ সেপ্টেম্বর ২০২৬ ───────────────────────
+     * সাধারণ নিয়ম: খসড়া চালানের বিল হয় না — যে মাল দেওয়াই হয়নি তার দাম
+     * চাওয়া যায় না ([[resolveChallanLine()]])। ⭐ নিয়মটা ঠিক, আর ঢিলা হয়নি।
+     *
+     * ⓘ কিন্তু কাউন্টারের ডিপোজিটে সই লাগলে মালিকের নিয়মে **সবকিছু**
+     * অপেক্ষা করে: চালান আর বিল দুইটাই খসড়া, আর দুইটা একসাথে নিশ্চিত হয়
+     * ([[DirectSaleService::finishHeld()]])। ⚠️ তাই এখানে ছাড় **কেবল এই এক
+     * চালানের জন্য**, যেটা একই লেনদেনে এইমাত্র তৈরি — অন্য কোনো খসড়া চালান
+     * থেকে বিল করা আগের মতোই আটকায়। ⛔ `finally` ছাড়টা সবসময় বন্ধ করে, ব্যতিক্রম
+     * এলেও — নাহলে পরের ডাকে দরজাটা খোলা থেকে যেত।
+     *
+     * @param  array<string, mixed>  $data
+     * @param  list<array<string, mixed>>  $lines
+     */
+    public function createForHeldCounterSale(array $data, array $lines, int $draftChallanId): SalesInvoice
+    {
+        $this->heldChallanId = $draftChallanId;
+
+        try {
+            return $this->create($data, $lines);
+        } finally {
+            $this->heldChallanId = null;
+        }
+    }
+
+    /** ⓘ [[createForHeldCounterSale()]] চলাকালীন কেবল — বাকি সময় খালি। */
+    private ?int $heldChallanId = null;
+
     public function create(array $data, array $lines): SalesInvoice
     {
         if ($lines === []) {
@@ -353,6 +384,22 @@ final class SalesInvoiceService
         if ($invoice->status !== DocumentStatus::DRAFT) {
             throw ValidationException::withMessages([
                 'status' => __('sales::validation.only_draft_confirms', ['no' => $invoice->document_no]),
+            ]);
+        }
+
+        /*
+         * ⛔ কাউন্টারে আটকে থাকা বিক্রয় এই দরজা দিয়ে নিশ্চিত হয় না — ১৯ সেপ্টেম্বর।
+         *
+         * ⚠️ এখানে নিশ্চিত হলে বিলটা খাতায় বসত, অথচ চালান খসড়াই থাকত (মাল
+         * বের হওয়ার হিসাব নেই) আর ডিপোজিটের ভাউচার খাতায় উঠত না — অর্থাৎ
+         * অনুমোদনের পুরো নিয়মটা এক চাপে এড়িয়ে যাওয়া যেত।
+         *
+         * ⓘ ঠিক পথটা [[DirectSaleService::finishHeld()]], আর সে চালানটা **আগে**
+         * নিশ্চিত করে তারপর এখানে আসে — তাই তখন এই পাহারা বাধা দেয় না।
+         */
+        if ($invoice->isHeldAtCounter() && $this->challanStillDraft($invoice)) {
+            throw ValidationException::withMessages([
+                'status' => __('sales::validation.held_use_finish', ['no' => $invoice->document_no]),
             ]);
         }
 
@@ -1014,7 +1061,12 @@ final class SalesInvoiceService
             throw ValidationException::withMessages(['lines' => __('sales::validation.challan_other_customer')]);
         }
 
-        if ($challanLine->challan->status !== DocumentStatus::CONFIRMED) {
+        // ⓘ ছাড় কেবল কাউন্টারে আটকে রাখা ঐ এক খসড়া চালানে — [[createForHeldCounterSale()]]
+        $heldHere = $this->heldChallanId !== null
+            && (int) $challanLine->challan->id === $this->heldChallanId
+            && $challanLine->challan->status === DocumentStatus::DRAFT;
+
+        if ($challanLine->challan->status !== DocumentStatus::CONFIRMED && ! $heldHere) {
             throw ValidationException::withMessages([
                 'lines' => __('sales::validation.challan_not_confirmed', [
                     'no' => $challanLine->challan->document_no,
@@ -1184,6 +1236,13 @@ final class SalesInvoiceService
 
     private function assertEditable(SalesInvoice $invoice): void
     {
+        // ⛔ কাউন্টারে আটকে থাকা বিক্রয় বদলানো যায় না — বিল আর চালান মিলত না
+        if ($invoice->isHeldAtCounter()) {
+            throw ValidationException::withMessages([
+                'status' => __('sales::validation.held_no_edit', ['no' => $invoice->document_no]),
+            ]);
+        }
+
         if ($invoice->status !== DocumentStatus::DRAFT) {
             throw ValidationException::withMessages([
                 'status' => __('sales::validation.only_draft_edits', ['no' => $invoice->document_no]),
@@ -1253,5 +1312,17 @@ final class SalesInvoiceService
         }
 
         return $this->numbers->next('INV');
+    }
+
+    /**
+     * এই বিলের চালান এখনো খসড়া কি — কাউন্টারে আটকে থাকা বিক্রয়ের পাহারার জন্য।
+     */
+    private function challanStillDraft(SalesInvoice $invoice): bool
+    {
+        $invoice->loadMissing('lines.challanLine.challan');
+
+        return $invoice->lines->contains(
+            fn ($line) => $line->challanLine?->challan?->status === DocumentStatus::DRAFT,
+        );
     }
 }

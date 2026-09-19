@@ -52,6 +52,14 @@ class Voucher extends Model implements Drillable
     /** টাকার খাত থেকে টাকার খাতে — ব্যাংকে জমা, ব্যাংক থেকে উত্তোলন। */
     public const CONTRA = 'contra';
 
+    /**
+     * সরাসরি বিক্রয়ের কাউন্টার থেকে আসা রসিদ — ১৯ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ অনুমোদনের কাজের নাম তখন `counter_deposit`, হাতে লেখা রসিদের
+     * `receipt` নয় — কারণটা [[VoucherApproval::stopping()]]-এ।
+     */
+    public const ORIGIN_COUNTER = 'counter';
+
     /** @var list<string> */
     /**
      * টাকা কীভাবে হাতবদল হলো — পাঁচটা, আর কেবল পাঁচটা।
@@ -120,6 +128,9 @@ class Voucher extends Model implements Drillable
 
         // ১৮ সেপ্টেম্বর — কাকে দেওয়া হলো: ধরন ও নাম
         'payee_type_id', 'payee_name',
+
+        // ১৯ সেপ্টেম্বর — কোথা থেকে এল (কাউন্টারের ডিপোজিটের নিজের নিয়ম)
+        'origin',
     ];
 
     protected function casts(): array
@@ -131,6 +142,9 @@ class Voucher extends Model implements Drillable
             'instrument_date' => 'date',
             'amount' => 'decimal:4',
             'charge_amount' => 'decimal:4',
+            'gross_amount' => 'decimal:4',
+            'ait_amount' => 'decimal:4',
+            'vds_amount' => 'decimal:4',
             'approved_at' => 'datetime',
             'cancelled_at' => 'datetime',
 

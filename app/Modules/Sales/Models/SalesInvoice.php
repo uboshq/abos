@@ -212,6 +212,35 @@ class SalesInvoice extends Model implements Drillable
         ]);
     }
 
+    /**
+     * কাউন্টারের যে ডিপোজিটগুলো এই বিলের সাথে বাঁধা, অথচ এখনো খসড়া।
+     *
+     * ⓘ সরাসরি বিক্রয়ে ডিপোজিটে সই লাগলে বিক্রয়টা এভাবেই আটকে থাকে
+     * ([[DirectSaleService::hold()]])। ⚠️ এক জায়গায় লেখা, কারণ চারটা
+     * পথ একই প্রশ্ন করে — নিশ্চিত, সম্পাদনা, ছাপা আর বিলের পাতা।
+     */
+    public function heldCounterDeposits(): Builder
+    {
+        return Voucher::query()
+            ->where('type', Voucher::RECEIPT)
+            ->where('origin', Voucher::ORIGIN_COUNTER)
+            ->where('against_type', static::drillSourceType())
+            ->where('against_id', $this->getKey())
+            ->draft();
+    }
+
+    /**
+     * কাউন্টারের ডিপোজিটের সইয়ের অপেক্ষায় আটকে আছে কি — ১৯ সেপ্টেম্বর ২০২৬।
+     *
+     * ── মালিকের নিয়ম ───────────────────────────────────────────────────
+     * *"Invoice খসড়া থাকবে, কোনো print option আসবে না যতক্ষণ approve হচ্ছে।
+     * Deposit approve হলে bill print হবে।"*
+     */
+    public function isHeldAtCounter(): bool
+    {
+        return $this->status === 'draft' && $this->heldCounterDeposits()->exists();
+    }
+
     public function dueAmount(): string
     {
         $due = bcsub((string) $this->total, $this->collectedAmount(), 4);

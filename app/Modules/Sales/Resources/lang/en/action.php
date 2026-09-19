@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'finish_held' => 'Approved — confirm the sale',
     'new_order' => 'New order',
     'new_receipt' => 'Receive goods',
     'new_bill' => 'New bill',
