@@ -106,6 +106,7 @@ return [
     'from_account' => 'From account',
     'to_account' => 'To account',
     'received_from' => 'Received from',
+    'received_on_account' => 'On which account',
     'party_type' => 'Received from type',
     'collectable' => 'Collectable now',
     'ref_date' => 'Ref date',

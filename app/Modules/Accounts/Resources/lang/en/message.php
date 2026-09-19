@@ -191,4 +191,5 @@ return [
     'attachment_hint' => 'A photo or scan of the bill - six months later this is what you need.',
     'over_allocated' => 'You have split more than the amount received - the two must match.',
     'no_open_bill' => 'This party has no open bill - the money will sit as an advance.',
+    'received_on_account_hint' => 'Money from someone who is not a customer: pick what it is for (a loan, income, a deposit…). For an owner or partner putting in capital, use the Capital & investment screen instead, so it also shows who put in how much.',
 ];
