@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Purchase\Http\Controllers;
 
+use App\Core\Engines\Approval\HeldForApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingsService;
@@ -474,7 +475,31 @@ class DirectPurchaseController extends Controller implements HasMiddleware
          */
         $data['document_no'] = $data['bill_no'] ?? null;
 
-        $result = $this->purchases->complete($data, $data['lines'], $data['gifts'] ?? []);
+        /*
+         * ⭐ অনুমোদনে আটকালে সোজা খসড়াটার কাছে — ১৯ সেপ্টেম্বর ২০২৬।
+         *
+         * ⛔ মালিকের অভিযোগ: *"অনুমোদনে গেলে ক্রয়ের পর বিলটা হারিয়ে যায়।"*
+         * ⓘ বিলটা আর মোছে না (খসড়া হয়ে থাকে), কিন্তু পর্দা ফিরে যেত
+         * এই ভরা ফর্মেই — লাল বার্তা, খসড়াটার কোনো লিংক ছাড়া।
+         *
+         * ⚠️ আর ভরা ফর্মে আবার সেভ চাপলে **দ্বিতীয় একটা খসড়া** তৈরি হওয়ার
+         * ঝুঁকি ছিল। ⭐ এখন মানুষ সোজা খসড়া বিলের পাতায় যান — নম্বরটা
+         * চোখের সামনে, আর সই হলে ওখানেই "নিশ্চিত" বোতাম।
+         *
+         * ⓘ কেবল [[HeldForApproval]] ধরা হয়। ⛔ বাকি সব যাচাইয়ের ভুল
+         * (নকল নম্বর, সারি নেই …) আগের মতোই ফর্মে ফেরে — ওগুলো সারাতে
+         * ফর্মটাই লাগে।
+         */
+        try {
+            $result = $this->purchases->complete($data, $data['lines'], $data['gifts'] ?? []);
+        } catch (HeldForApproval $held) {
+            return redirect()
+                ->route('purchase.bill.show', $held->document->getKey())
+                ->with('saved', __('purchase::message.direct_held', [
+                    'no' => $held->document->getAttribute('document_no'),
+                ]))
+                ->withErrors($held->errors());
+        }
 
         return redirect()
             ->route('purchase.bill.show', $result['bill']->id)

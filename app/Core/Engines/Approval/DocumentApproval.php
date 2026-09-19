@@ -6,7 +6,6 @@ namespace App\Core\Engines\Approval;
 
 use App\Models\Approval;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Validation\ValidationException;
 
 /**
  * একটা কাগজ নিশ্চিত করার আগে অনুমোদন লাগে কি না।
@@ -123,13 +122,21 @@ final class DocumentApproval
             return;
         }
 
-        throw ValidationException::withMessages([
-            $field => $stopping->status === Approval::REJECTED
+        /*
+         * ⓘ [[HeldForApproval]] — `ValidationException`-এরই উপ-ধরন, তাই
+         * যে ছয়টা সেবা এটা ডাকে তাদের আচরণ হুবহু আগের মতো। ⭐ তফাত
+         * কেবল এই: কাগজটা সাথে যায়, তাই সরাসরি ক্রয়ের পর্দা মানুষকে
+         * সোজা খসড়াটার কাছে নিয়ে যেতে পারে (১৯ সেপ্টেম্বর ২০২৬)।
+         */
+        throw HeldForApproval::on(
+            $document,
+            $field,
+            $stopping->status === Approval::REJECTED
                 ? __('core.approval.rejected', [
                     'reason' => (string) $stopping->decisions()->latest('id')->value('remarks'),
                 ])
                 : __('core.approval.awaiting'),
-        ]);
+        );
     }
 
     /**

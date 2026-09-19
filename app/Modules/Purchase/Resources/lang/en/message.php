@@ -73,6 +73,7 @@ return [
      * It belongs here because here it is news: the goods have just
      * landed, and the next thing to do is put them on a shelf.
      */
+    'direct_held' => ':no is kept as a draft — once approved, press “Confirm” on this page. Until then the goods are not in stock.',
     'direct_done' => ':no — the goods are in and the bill is on the books. :qty are waiting to be placed.',
     'search_product' => 'Type a product name or code',
     'on_hand' => 'In stock',
