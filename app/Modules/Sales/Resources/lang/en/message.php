@@ -96,6 +96,7 @@ return [
     'pos_parked_none' => 'Nothing is waiting.',
     'pos_parked_line' => ':no · :lines items · :total',
     'direct_note' => 'Goods go out without an order and the bill is raised there and then — challan, invoice and deposit in one press.',
+    'direct_deposit_held' => ':challan and :invoice created. But the :amount deposit is waiting for approval — it is in the draft list below and goes on the books once signed. Until then the invoice shows as due. Print the receipt from the invoice page.',
     'direct_done' => ':challan and :invoice created. Change :change.',
     'direct_narration' => ':no — deposit against a direct sale',
     'not_for_sales' => 'Not for Sales',

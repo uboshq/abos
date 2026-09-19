@@ -9,6 +9,7 @@ use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Http\Controllers\Controller;
 use App\Models\NumberSeries;
@@ -577,6 +578,31 @@ class DirectSaleController extends Controller implements HasMiddleware
                 fn (array $gift) => filled($gift['product_id'] ?? null) && (float) ($gift['qty'] ?? 0) > 0,
             )),
         );
+
+        /*
+         * ⭐ ডিপোজিট সইয়ের অপেক্ষায় থাকলে — আদায়ের "খসড়া" তালিকায়, ১৯ সেপ্টেম্বর।
+         *
+         * ⛔ রসিদের পর্দাটা একটা PDF, আর PDF কোনো বার্তা দেখায় না। ⚠️
+         * সেখানে গেলে ক্যাশিয়ার জানতেনই না যে টাকাটা খাতায় ওঠেনি, আর
+         * মালিকের অভিযোগ হুবহু এই: *"ডিপোজিট হারিয়ে যায়"*।
+         *
+         * ⭐ তাই এই অবস্থায় পর্দা যায় আদায়ের তালিকার খসড়া ট্যাবে —
+         * ডিপোজিটটা চোখের সামনে, আর বার্তায় বিলের নম্বর (রসিদ পরে ছাপা
+         * যায়)। ⓘ সাধারণ বিক্রয়ে কিছুই বদলায় না — সোজা রসিদে।
+         */
+        if ($result['held'] !== []) {
+            return redirect()
+                ->route('sales.collection.index', ['stage' => DocumentStatus::DRAFT])
+                ->with('saved', __('sales::message.direct_deposit_held', [
+                    'challan' => $result['challan']->document_no,
+                    'invoice' => $result['invoice']->document_no,
+                    'amount' => Money::format(array_reduce(
+                        $result['held'],
+                        fn (string $sum, $c) => bcadd($sum, (string) $c->amount, 4),
+                        '0',
+                    )),
+                ]));
+        }
 
         // সোজা রসিদে — বিক্রির পরের কাজটা কাগজ দেওয়া
         return redirect()

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Services;
 
+use App\Core\Engines\Approval\HeldForApproval;
 use App\Core\Services\SettingsService;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\ChequeService;
@@ -61,7 +62,7 @@ final class DirectSaleService
      * @param  array<string, mixed>  $data
      * @param  list<array<string, mixed>>  $lines
      * @param  list<array<string, mixed>>  $gifts
-     * @return array{challan: DeliveryChallan, invoice: SalesInvoice, change: string}
+     * @return array{challan: DeliveryChallan, invoice: SalesInvoice, change: string, held: list<\App\Modules\Sales\Models\Collection>}
      */
     public function complete(array $data, array $lines, array $gifts = []): array
     {
@@ -152,6 +153,7 @@ final class DirectSaleService
              * ⓘ ক্রমটা পর্দার ক্রম — যে জমা আগে বসানো হয়েছে, সেটাই আগে।
              */
             $left = $applied;
+            $held = [];
 
             foreach ($rows as $row) {
                 /*
@@ -188,7 +190,7 @@ final class DirectSaleService
                  */
                 $accountId = $isCheque ? $this->chequesInHandAccount()->id : $row['account_id'];
 
-                $collection = $this->collections->confirm($this->collections->create(
+                $collection = $this->collections->create(
                     [
                         'customer_id' => $customer->id,
                         'account_id' => $accountId,
@@ -214,7 +216,33 @@ final class DirectSaleService
                     bccomp($take, '0', 4) > 0
                         ? [['sales_invoice_id' => $invoice->id, 'amount' => $take]]
                         : [],
-                ));
+                );
+
+                /*
+                 * ⭐ ডিপোজিট অনুমোদনে আটকালে খসড়া হয়ে থাকে — ১৯ সেপ্টেম্বর ২০২৬।
+                 *
+                 * ── ⛔ মালিকের অভিযোগ ───────────────────────────────────────────────
+                 * *"সরাসরি বিক্রয় থেকে ডিপোজিট যোগ করে নিশ্চিত করলে ডিপোজিট হারিয়ে
+                 * যায়।"* ⓘ আসলে হারাত **গোটা বিক্রয়টা**: [[CollectionService::confirm()]]
+                 * ১৮ তারিখ থেকে `sales|collection` ছক দেখে, আর আটকালে যে
+                 * ব্যতিক্রম ছোঁড়ে সেটা এই মেথডের একটাই লেনদেন রোলব্যাক করত —
+                 * চালান, বিল, আদায়, আর অনুমোদনের অনুরোধটাও।
+                 *
+                 * ⚠️ ক্রয় বিলের হুবহু একই ফাঁদ ([[DirectPurchaseService::complete()]])।
+                 *
+                 * ── ⭐ এখন ─────────────────────────────────────────────────────────────
+                 * বিক্রয় এগোয় — মাল গেছে, বিল হয়েছে, ওটা সত্যি। ⓘ আদায়টা খসড়া
+                 * হয়ে থাকে, আর অনুরোধটা ইনবক্সে। ⚠️ সই না হওয়া পর্যন্ত
+                 * বিলটা বকেয়া দেখায়, আর সেটাই সঠিক: খাতা টাকাটা এখনো মানেনি।
+                 *
+                 * ⓘ কেবল [[HeldForApproval]] গিলে ফেলা হয়। ⛔ আদায়ের অন্য যেকোনো
+                 * ভুল আগের মতোই গোটা বিক্রয়টা থামায় — ওগুলো সত্যিকারের ভুল।
+                 */
+                try {
+                    $collection = $this->collections->confirm($collection);
+                } catch (HeldForApproval) {
+                    $held[] = $collection->fresh();
+                }
 
                 /*
                  * চেক হলে রেজিস্টারে একটা সারি — অ-পোস্টিং, কারণ টাকাটা উপরের
@@ -246,6 +274,12 @@ final class DirectSaleService
                 'challan' => $challan->fresh(['lines', 'giftLines']),
                 'invoice' => $invoice->fresh(['lines']),
                 'change' => $change,
+
+                /*
+                 * ⓘ যে ডিপোজিটগুলো সইয়ের অপেক্ষায় — পর্দা এগুলো দেখিয়ে
+                 * বলে, নাহলে ক্যাশিয়ার ভাবতেন টাকাটা খাতায় উঠে গেছে।
+                 */
+                'held' => $held,
             ];
         });
     }
