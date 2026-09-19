@@ -120,6 +120,7 @@ return [
     'from_account' => 'যে খাত থেকে',
     'to_account' => 'যে খাতে',
     'received_from' => 'কার কাছ থেকে',
+    'received_on_account' => 'কোন খাতের টাকা',
     'party_type' => 'কী ধরনের পক্ষ',
     'collectable' => 'এখন তাঁর কাছে পাওনা',
     'ref_date' => 'কাগজের তারিখ',

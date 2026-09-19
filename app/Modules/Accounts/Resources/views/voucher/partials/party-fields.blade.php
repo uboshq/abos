@@ -179,6 +179,46 @@
     </div>
 
     {{--
+        ── কোন খাতের টাকা — গ্রাহক ছাড়া অন্য কারও কাছ থেকে রসিদ ────────
+        ⛔ কী ঘটছিল, ১৯ সেপ্টেম্বর ২০২৬: মালিক একজন ব্যক্তির কাছ থেকে
+        মূলধনের রসিদ কাটতে গেলেন, আর পর্দা বলল *"যে খাত থেকে দিতেই
+        হবে"* — অথচ ঐ ঘরটা পর্দায় কোথাও নেই। তিনি জিজ্ঞেস করলেন:
+        *"eta capital entry nicchena keno"*।
+
+        ⓘ দুইটা ঠিক সিদ্ধান্ত একসাথে ভুল ফল দিচ্ছিল:
+        ১. নমুনা মেনে রসিদে "কার কাছ থেকে" খাতের ঘরটা লুকানো ও নিষ্ক্রিয়
+           (উপরে ডিপোজিটরই সেটা বলে)।
+        ২. 5e7d508c: পক্ষ থেকে খাত আন্দাজ কেবল গ্রাহকের বেলায় (→ AR),
+           কারণ আগে ব্যক্তির টাকাও AR-এ বসত — ২৫ লাখের মূলধনটা ঠিক তাই।
+        ⛔ ফল: গ্রাহক ছাড়া কারও কাছ থেকে **কোনো রসিদই** কাটা যেত না।
+
+        ⭐ তাই ডিপোজিটর গ্রাহক না হলে ঘরটা এখানে দেখা দেয়। গ্রাহক হলে
+        লুকানো ও নিষ্ক্রিয়, তাই আগের মতোই AR নিজে বসে, আর আগে বাছা
+        কোনো খাত ভুল করে জমা পড়ে না।
+    --}}
+    @if ($isReceipt)
+        <div class="mt-3 max-w-xl" x-show="partyType !== '' && partyType !== 'customer'" x-cloak>
+            <label class="block">
+                <span class="mb-1 block text-sm font-medium">
+                    {{ __('accounts::field.received_on_account') }}
+                    <span class="text-(--color-danger)" aria-hidden="true">*</span>
+                </span>
+                <select name="from_account_id" x-bind:disabled="partyType === '' || partyType === 'customer'"
+                        class="h-(--spacing-field) w-full rounded-(--radius-field) border
+                               border-(--color-border) bg-(--color-surface-card) px-3">
+                    <option value="">&mdash;</option>
+                    @foreach ($optionsFor('party_or_income') as $account)
+                        <option value="{{ $account->id }}" @selected(old('from_account_id') == $account->id)>
+                            {{ $account->label() }}
+                        </option>
+                    @endforeach
+                </select>
+            </label>
+            <p class="mt-1 text-2xs text-(--color-ink-muted)">{{ __('accounts::message.received_on_account_hint') }}</p>
+        </div>
+    @endif
+
+    {{--
         ── কোন বিলের বিপরীতে ──────────────────────────────────────────
         ⭐ রসিদের সবচেয়ে বড় প্রশ্ন, আর এতদিন পর্দায় ছিলই না।
 
