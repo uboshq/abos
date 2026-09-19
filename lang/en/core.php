@@ -13,6 +13,8 @@ return [
         'confirmed' => 'Confirmed',
         'cancelled' => 'Cancelled',
         'closed' => 'Closed',
+        /* খসড়া নয় — কেউ পাঠিয়েছেন, সইয়ের অপেক্ষা (১৯ সেপ্টেম্বর ২০২৬) */
+        'awaiting_approval' => 'Awaiting approval',
     ],
 
     /*

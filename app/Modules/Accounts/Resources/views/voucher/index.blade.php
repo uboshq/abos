@@ -15,7 +15,10 @@
         ['key' => 'amount', 'label' => __('accounts::field.amount'), 'numeric' => true, 'width' => '10rem',
          'render' => fn ($v) => \App\Core\Support\Money::format($v->amount)],
         ['key' => 'status', 'label' => __('accounts::field.state'), 'width' => '8rem',
-         'render' => fn ($v) => view('accounts::voucher.partials.status', ['voucher' => $v])],
+         'render' => fn ($v) => view('accounts::voucher.partials.status', [
+             'voucher' => $v,
+             'awaiting' => in_array((int) $v->id, $awaitingIds ?? [], true),
+         ])],
     ];
 @endphp
 

@@ -128,6 +128,7 @@ class VoucherController extends Controller implements HasMiddleware
             'sortOptions' => $this->sortLabels(),
             'sort' => $sort,
             'awaitingCount' => $awaitingIds->count(),
+            'awaitingIds' => $awaitingIds->map(fn ($id) => (int) $id)->all(),
             'awaiting' => $request->boolean('awaiting'),
         ]);
     }
