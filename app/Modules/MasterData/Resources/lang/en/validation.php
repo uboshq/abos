@@ -33,4 +33,7 @@ return [
         'customers' => 'customers',
         'sal_shipments' => 'vehicle trips',
     ],
+    /* Same name under the same parent — LocationService::assertNameIsFree(), 19 September 2026 */
+    'location_name_taken' => 'A :level named :name already exists under :parent (:code).',
+    'location_name_taken_top' => 'A :level named :name already exists (:code).',
 ];

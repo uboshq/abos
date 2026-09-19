@@ -47,6 +47,7 @@ final class LocationService
             }
 
             $this->assertCodeIsFree($code);
+            $this->assertNameIsFree($level, $parent, $data['name_en'] ?? null, $data['name_bn'] ?? null);
 
             return Location::create([
                 ...$data,
@@ -101,6 +102,14 @@ final class LocationService
             if (trim((string) ($data['code'] ?? '')) === '') {
                 unset($data['code']);
             }
+
+            $this->assertNameIsFree(
+                $location->level,
+                $parent,
+                array_key_exists('name_en', $data) ? $data['name_en'] : $location->name_en,
+                array_key_exists('name_bn', $data) ? $data['name_bn'] : $location->name_bn,
+                $location->id,
+            );
 
             $location->update([...$data, 'parent_id' => $parent?->id]);
 
@@ -307,6 +316,82 @@ final class LocationService
         }
 
         return $level;
+    }
+
+    /**
+     * ⛔ একই বাবার নিচে একই স্তরে একই নাম দুইবার নয় — ১৯ সেপ্টেম্বর ২০২৬।
+     *
+     * ── কী ঘটেছিল ───────────────────────────────────────────────────
+     * লাইভে বিভাগের ট্যাবে দুইটা "Bangladesh › Mymensingh" — MYM আর
+     * MYM2। মালিকের কথা: *"ekhane duplicate howar kotha na taw hoyeche"*।
+     * ⚠️ কোডের পাহারা ([[assertCodeIsFree()]]) ধরেনি, কারণ দ্বিতীয়টার কোড
+     * **নিজে থেকে বানানো** — নাম এক হলেও কোড আলাদা হয়ে গেছে।
+     *
+     * ⭐ তাই এখানে নামটাই দেখা হয়, কোড নয়: ইংরেজি নাম, আর বাংলা নাম
+     * থাকলে সেটাও। বড়-ছোট হাত, আগে-পিছের ও মাঝের বাড়তি ফাঁকা বাদ।
+     *
+     * ⓘ নিষ্ক্রিয় সারিও গোনা হয় — নইলে পরে সেটা সক্রিয় করলেই দুইটা।
+     * ⓘ আলাদা বাবার নিচে একই নাম চলে: দুই জেলায় "সদর" থাকতেই পারে।
+     *
+     * ⚠️ তুলনাটা PHP-তে, SQL-এ নয়: এই ফাইলগুলোয় "য়" কখনো ভাঙা আকারে
+     * (য + ়) জমা থাকে, আর MySQL-এর collation দুই আকারকে সবসময় এক ধরে
+     * না। ভাইবোন কয়েকটাই, তাই সবগুলো তুলে মেলানো সস্তা।
+     */
+    private function assertNameIsFree(
+        string $level,
+        ?Location $parent,
+        ?string $nameEn,
+        ?string $nameBn,
+        ?int $exceptId = null,
+    ): void {
+        $siblings = Location::query()
+            ->where('level', $level)
+            ->when(
+                $parent === null,
+                fn ($q) => $q->whereNull('parent_id'),
+                fn ($q) => $q->where('parent_id', $parent->id),
+            )
+            ->when($exceptId, fn ($q, $id) => $q->whereKeyNot($id))
+            ->get(['id', 'code', 'name_en', 'name_bn']);
+
+        foreach (['name_en' => $nameEn, 'name_bn' => $nameBn] as $field => $name) {
+            $wanted = $this->sameNameKey($name);
+
+            if ($wanted === '') {
+                continue;
+            }
+
+            $twin = $siblings->first(fn (Location $s) => $this->sameNameKey($s->{$field}) === $wanted);
+
+            if ($twin === null) {
+                continue;
+            }
+
+            $args = [
+                'name' => trim((string) $name),
+                'level' => __('master_data::level.'.$level),
+                'parent' => $parent?->name(),
+                'code' => $twin->code,
+            ];
+
+            throw ValidationException::withMessages([
+                $field => $parent === null
+                    ? __('master_data::validation.location_name_taken_top', $args)
+                    : __('master_data::validation.location_name_taken', $args),
+            ]);
+        }
+    }
+
+    /** তুলনার চাবি — ফাঁকা, হাত আর ভাঙা বাংলা অক্ষর বাদ দিয়ে। */
+    private function sameNameKey(?string $name): string
+    {
+        $name = strtr((string) $name, [
+            "\u{09AF}\u{09BC}" => "\u{09DF}", // য + ় → য়
+            "\u{09A1}\u{09BC}" => "\u{09DC}", // ড + ় → ড়
+            "\u{09A2}\u{09BC}" => "\u{09DD}", // ঢ + ় → ঢ়
+        ]);
+
+        return mb_strtolower(trim((string) preg_replace('/\s+/u', ' ', $name)));
     }
 
     private function assertCodeIsFree(string $code, ?int $exceptId = null): void
