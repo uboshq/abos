@@ -22,6 +22,7 @@ return [
     'bill_updated' => 'Bill updated.',
     'bill_confirmed' => 'Bill posted — the liability is now in the supplier\'s name.',
     'bill_cancelled' => 'Bill cancelled.',
+    'cancel_reason_prompt' => 'Why is this being cancelled?',
     'bill_reposted' => 'The bill was changed - the old entries were reversed and the new ones posted.',
     'edited_after_posting' => ':no was edited - the earlier entries are reversed.',
     'no_orders' => 'No purchase orders yet.',
