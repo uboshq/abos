@@ -193,11 +193,17 @@ class ApprovalTest extends TestCase
      *
      * এটা না থাকলে পুরো ব্যবস্থাটাই সাজানো — যে ছাড় চায় সে নিজেই
      * দিয়ে দেয়, আর ছকটা কেবল একটা বাড়তি ক্লিক হয়ে দাঁড়ায়।
+     *
+     * ⚠️ ১৯ সেপ্টেম্বর ২০২৬ থেকে একটাই ব্যতিক্রম — সুপার অ্যাডমিন (মালিকের
+     * সিদ্ধান্ত, [[OnePersonOneExceptionTest]]-এ মাপা)। `$this->seller`
+     * এখানে মালিক, তাই নিয়মটা মাপা হয় একজন সাধারণ বিক্রয়কর্মী দিয়ে।
      */
     public function test_nobody_approves_their_own_request(): void
     {
-        $this->flow(threshold: '500', approver: $this->seller);
-        $this->actingAs($this->seller);
+        $seller = User::query()->where('email', 'sales@abos.test')->firstOrFail();
+
+        $this->flow(threshold: '500', approver: $seller);
+        $this->actingAs($seller);
 
         $invoice = $this->draft(discount: '900');
 
@@ -209,7 +215,7 @@ class ApprovalTest extends TestCase
 
         $approval = Approval::query()->firstOrFail();
 
-        $this->assertFalse(app(ApprovalEngine::class)->canDecide($approval, $this->seller));
+        $this->assertFalse(app(ApprovalEngine::class)->canDecide($approval, $seller));
     }
 
     /**

@@ -8,6 +8,8 @@ use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Models\Approval;
+use App\Models\ApprovalFlow;
+use App\Models\ApprovalFlowStep;
 use App\Models\Company;
 use App\Models\User;
 use App\Models\UserPermissionOverride;
@@ -139,6 +141,30 @@ class OnePersonOneExceptionTest extends TestCase
 
     // ── দুই · নিজের কাগজে নিজের সই ──────────────────────────────────
 
+    /**
+     * একজন সাধারণ অনুমোদনকারী — সুপার অ্যাডমিন নন।
+     *
+     * ⚠️ ১৯ সেপ্টেম্বর ২০২৬ থেকে সুপার অ্যাডমিন নিজের কাগজে সই দিতে পারেন
+     * (মালিকের সিদ্ধান্ত)। তাই সীমার নিয়ম মাপতে মালিককে আর ব্যবহার করা
+     * যায় না — তাঁর জন্য নিয়মটাই খাটে না। ⓘ হিসাবরক্ষককে ছকের প্রথম
+     * স্তরে বসানো হয়, আর তাঁকে দিয়ে মাপা হয়।
+     */
+    private function approver(): User
+    {
+        $accountant = User::query()->where('email', 'accounts@abos.test')->firstOrFail();
+
+        $flow = ApprovalFlow::query()->where('module', 'sales')->where('action', 'discount')->firstOrFail();
+
+        ApprovalFlowStep::create([
+            'approval_flow_id' => $flow->id,
+            'level' => 1,
+            'approver_type' => ApprovalFlowStep::BY_USER,
+            'approver_id' => $accountant->id,
+        ]);
+
+        return $accountant;
+    }
+
     /** একটা অনুমোদনের অনুরোধ — দেওয়া অঙ্কে। */
     private function requestFor(string $amount, User $by): Approval
     {
@@ -172,9 +198,10 @@ class OnePersonOneExceptionTest extends TestCase
      */
     public function test_by_default_nobody_signs_their_own(): void
     {
-        $approval = $this->requestFor('50', $this->owner);
+        $approver = $this->approver();
+        $approval = $this->requestFor('50', $approver);
 
-        $this->assertFalse(app(ApprovalEngine::class)->canDecide($approval, $this->owner),
+        $this->assertFalse(app(ApprovalEngine::class)->canDecide($approval, $approver),
             'সীমা শূন্য, তবু নিজের অনুরোধ নিজে অনুমোদন করা যাচ্ছে।');
     }
 
@@ -183,9 +210,10 @@ class OnePersonOneExceptionTest extends TestCase
     {
         app(SettingsService::class)->set('approval.self_limit', 500);
 
-        $approval = $this->requestFor('50', $this->owner);
+        $approver = $this->approver();
+        $approval = $this->requestFor('50', $approver);
 
-        $this->assertTrue(app(ApprovalEngine::class)->canDecide($approval, $this->owner),
+        $this->assertTrue(app(ApprovalEngine::class)->canDecide($approval, $approver),
             'সীমার নিচের ছোট অঙ্কেও নিজের সই আটকে গেছে।');
     }
 
@@ -194,13 +222,15 @@ class OnePersonOneExceptionTest extends TestCase
     {
         app(SettingsService::class)->set('approval.self_limit', 500);
 
+        $approver = $this->approver();
+
         $this->assertFalse(
-            app(ApprovalEngine::class)->canDecide($this->requestFor('500', $this->owner), $this->owner),
+            app(ApprovalEngine::class)->canDecide($this->requestFor('500', $approver), $approver),
             'ঠিক সীমার অঙ্কেই নিজের সই চলে গেছে — সীমাটা "এর নিচে" হওয়ার কথা।',
         );
 
         $this->assertFalse(
-            app(ApprovalEngine::class)->canDecide($this->requestFor('900', $this->owner), $this->owner),
+            app(ApprovalEngine::class)->canDecide($this->requestFor('900', $approver), $approver),
         );
     }
 
@@ -214,10 +244,11 @@ class OnePersonOneExceptionTest extends TestCase
     {
         app(SettingsService::class)->set('approval.self_limit', 500);
 
-        $approval = $this->requestFor('50', $this->owner);
+        $approver = $this->approver();
+        $approval = $this->requestFor('50', $approver);
         $approval->update(['amount' => null]);
 
-        $this->assertFalse(app(ApprovalEngine::class)->canDecide($approval->fresh(), $this->owner));
+        $this->assertFalse(app(ApprovalEngine::class)->canDecide($approval->fresh(), $approver));
     }
 
     /** অন্যের অনুরোধে সীমার কোনো ভূমিকা নেই — ওটা আগের মতোই চলে। */
@@ -227,5 +258,37 @@ class OnePersonOneExceptionTest extends TestCase
 
         $this->assertTrue(app(ApprovalEngine::class)->canDecide($approval, $this->owner),
             'অন্যের অনুরোধ অনুমোদন করাও আটকে গেছে।');
+    }
+    // ── তিন · সুপার অ্যাডমিন ────────────────────────────────────────
+
+    /**
+     * সুপার অ্যাডমিন নিজের কাগজে সই দিতে পারেন — সীমা ছাড়াই, যেকোনো অঙ্কে।
+     *
+     * ⛔ মালিক জিজ্ঞেস করেছিলেন: *"super admin create korle se approve dite
+     * pare na keno?"* — ১৯ সেপ্টেম্বর ২০২৬। ⭐ সিদ্ধান্ত: সুপার অ্যাডমিন সব
+     * পারবেন। আর তাঁর ইনবক্সেও কাগজটা দেখাতে হবে, নাহলে অধিকার থেকেও
+     * বোতামটা খুঁজে পাওয়া যেত না।
+     */
+    public function test_the_super_admin_signs_their_own_at_any_amount(): void
+    {
+        $approval = $this->requestFor('900000', $this->owner);
+
+        $this->assertTrue(app(ApprovalEngine::class)->canDecide($approval, $this->owner),
+            'সুপার অ্যাডমিন নিজের কাগজে সই দিতে পারছেন না।');
+
+        $this->assertTrue(
+            app(ApprovalEngine::class)->pendingFor($this->owner)->contains('id', $approval->id),
+            'সই দেওয়া যায়, অথচ কাগজটা তাঁর ইনবক্সে নেই।',
+        );
+    }
+
+    /** ছাড়টা কেবল সুপার অ্যাডমিনের — একজন সাধারণ অনুমোদনকারী এখনো নিজে সই দেন না। */
+    public function test_the_exception_is_only_the_super_admins(): void
+    {
+        $approver = $this->approver();
+        $approval = $this->requestFor('900', $approver);
+
+        $this->assertFalse(app(ApprovalEngine::class)->canDecide($approval, $approver));
+        $this->assertFalse(app(ApprovalEngine::class)->pendingFor($approver)->contains('id', $approval->id));
     }
 }

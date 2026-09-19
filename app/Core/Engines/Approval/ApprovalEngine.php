@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Core\Engines\Approval;
 
 use App\Core\Services\NotificationService;
+use App\Core\Services\PermissionSyncer;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Models\Approval;
@@ -411,6 +412,10 @@ final class ApprovalEngine
      */
     private function exceptOwnBeyondLimit(Builder $query, User $user): void
     {
+        if ($this->isSuperAdmin($user)) {
+            return;
+        }
+
         $limit = $this->selfLimit();
 
         if (bccomp($limit, '0', 4) <= 0) {
@@ -512,7 +517,9 @@ final class ApprovalEngine
          * কত টাকা জানা নেই মানে সীমার নিচে কি না তাও জানা নেই, আর
          * সন্দেহে কড়া দিকটাই নিরাপদ।
          */
-        if ($approval->requested_by === $user->id && ! $this->withinSelfLimit($approval)) {
+        if ($approval->requested_by === $user->id
+            && ! $this->withinSelfLimit($approval)
+            && ! $this->isSuperAdmin($user)) {
             return false;
         }
 
@@ -528,6 +535,31 @@ final class ApprovalEngine
      * সীমা শূন্য বা বসানো না থাকলে উত্তর সবসময় "না" — অর্থাৎ পুরনো
      * কঠোর নিয়ম। এটাই ডিফল্ট, আর ইচ্ছাকৃত।
      */
+    /**
+     * সুপার অ্যাডমিন — নিজের কাগজেও সই দিতে পারেন, যেকোনো অঙ্কে।
+     *
+     * ── ⛔ কেন, ১৯ সেপ্টেম্বর ২০২৬ ──────────────────────────────────────
+     * মালিক জিজ্ঞেস করলেন: *"super admin create korle se approve dite
+     * pare na keno?"* ⓘ কারণ নিজের অনুরোধ নিজে সই করার নিয়ম (উপরে) কাউকে
+     * ছাড় দিত না — মালিককেও নয়। তাঁর কাগজ তাই অন্য কারও ইনবক্সে বসে
+     * থাকত, আর নিজের ইনবক্সে দেখাতই না।
+     *
+     * ⭐ মালিকের সিদ্ধান্ত: *"সুপার অ্যাডমিন সব পারবেন"* — আগের কথাটাই,
+     * *"super admin sob pare sob company te"*। বাকি সবার জন্য নিয়ম অবিকল।
+     *
+     * ⚠️ কেবল **নিজের অনুরোধের** বাধাটা ওঠে। ছকের ধাপে ইনি না থাকলে
+     * সেই স্তরে সই দেওয়ার অধিকার এখনো ছক থেকেই আসে — ছকটা মালিকেরই
+     * বসানো, আর সেটাকে এখানে চুপচাপ উল্টানো হয় না।
+     *
+     * ⓘ রোলটা চলতি কোম্পানির (spatie teams)। সিদ্ধান্তের সারিতে কে
+     * চেয়েছেন আর কে দিয়েছেন দুইটাই থাকে, তাই নিরীক্ষায় নিজে-সই করা
+     * কাগজ আলাদা করে দেখা যায়।
+     */
+    private function isSuperAdmin(User $user): bool
+    {
+        return $user->roles->contains('name', PermissionSyncer::SUPER_ADMIN_ROLE);
+    }
+
     private function withinSelfLimit(Approval $approval): bool
     {
         $limit = $this->selfLimit();
