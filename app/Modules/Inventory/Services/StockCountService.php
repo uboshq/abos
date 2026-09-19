@@ -179,7 +179,7 @@ final class StockCountService
             }
 
             $atStake = bcadd($atStake, bcmul(
-                (string) abs((float) $line->difference),
+                ltrim((string) $line->difference, '-'),
                 (string) $line->unit_cost,
                 4,
             ), 4);

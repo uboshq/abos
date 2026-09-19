@@ -113,6 +113,7 @@ class BankFacility extends Model implements Drillable
             'last_statement_on' => 'date',
             'closed_on' => 'date',
             'limit_amount' => 'decimal:4',
+            'opening_drawn' => 'decimal:4',
             'interest_rate' => 'decimal:4',
             'stock_value' => 'decimal:4',
             'margin_percent' => 'decimal:2',

@@ -97,7 +97,7 @@
                             <td class="p-2">{{ $bill->goods_summary }}</td>
                             <td class="num p-2 text-end">{{ $bill->total_qty }}</td>
                             <td class="num p-2 text-end text-(--color-ink-muted)">
-                                {{ $bill->already_charged > 0 ? number_format((float) $bill->already_charged, 2) : '—' }}
+                                {{ bccomp((string) $bill->already_charged, '0', 4) > 0 ? number_format((string) $bill->already_charged, 2) : '—' }}
                             </td>
                             <td class="p-2 text-end">
                                 {{--

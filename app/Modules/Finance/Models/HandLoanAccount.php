@@ -92,6 +92,8 @@ class HandLoanAccount extends Model implements Drillable
     protected function casts(): array
     {
         return [
+            'principal' => 'decimal:4',
+            'opening_repaid' => 'decimal:4',
             'interest_rate' => 'decimal:4',
             'due_on' => 'date',
             'next_due_on' => 'date',
