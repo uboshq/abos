@@ -1792,12 +1792,7 @@
 
                         {{-- ⓘ সার্ভারে যা যায় — নামের ভিতরে সূচক, তাই
                              PHP-তে সারিগুলো আলাদা থাকে। --}}
-                        <input type="hidden" :name="`deposits[${i}][amount]`" :value="row.amount">
-                        <input type="hidden" :name="`deposits[${i}][payment_method_id]`" :value="row.methodId">
-                        <input type="hidden" :name="`deposits[${i}][account_id]`" :value="row.accountId">
-                        <input type="hidden" :name="`deposits[${i}][reference]`" :value="row.reference">
-                        <input type="hidden" :name="`deposits[${i}][ref_date]`" :value="row.refDate">
-                        <input type="hidden" :name="`deposits[${i}][narration]`" :value="row.narration">
+                        <x-counter.deposit-fields />
                     </div>
                 </template>
 
