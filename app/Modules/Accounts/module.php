@@ -174,6 +174,14 @@ return [
              * আগে একটা পর্দা পড়ত যেটা বছরে কয়েকবার লাগে।
              */
             ['label' => 'accounts::menu.books_check', 'icon' => 'check-circle', 'route' => 'accounts.integrity', 'permission' => 'accounts.report'],
+            /*
+             * খাতার নিয়ন্ত্রণ — এক গুচ্ছে, খাতার যাচাইয়ের পাশে (২০ সেপ্টেম্বর
+             * ২০২৬)। নম্বর সিরিজের পর্দা সেটিংসের চাবিতে, তাই সেটা মেনুতে নেই;
+             * নম্বর সিরিজের পাতা আর ফিন্যান্স মানচিত্র থেকে যাওয়া যায়।
+             */
+            ['label' => 'accounts::menu.posting_monitor', 'cluster' => 'control', 'icon' => 'refresh', 'route' => 'accounts.control.posting', 'permission' => 'accounts.report'],
+            ['label' => 'accounts::menu.month_end', 'cluster' => 'control', 'icon' => 'calendar', 'route' => 'accounts.control.month_end', 'permission' => 'accounts.report'],
+            ['label' => 'accounts::menu.background_jobs', 'cluster' => 'control', 'icon' => 'clock', 'route' => 'accounts.control.jobs', 'permission' => 'accounts.report'],
             ['label' => 'accounts::menu.profit_loss', 'icon' => 'star', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'profit-loss'], 'permission' => 'accounts.report.final'],
             /*
              * স্থিতিপত্রের নিজের রুট — সাধারণ রিপোর্টের slug নয়।

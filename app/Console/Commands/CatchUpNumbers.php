@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
-use App\Models\NumberSeries;
+use App\Core\Services\NumberSeriesCatchUp;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
 
 /**
  * নম্বর সিরিজগুলোকে আসল কাগজের পেছন থেকে সামনে আনা।
@@ -49,47 +48,28 @@ class CatchUpNumbers extends Command
 
     protected $description = 'আমদানি করা কাগজের পেছনে পড়ে থাকা নম্বর সিরিজগুলোকে সামনে আনে';
 
-    public function handle(): int
+    public function handle(NumberSeriesCatchUp $catchUp): int
     {
-        $columns = $this->numberColumns();
+        $behind = $catchUp->behind($this->option('company') ? (int) $this->option('company') : null);
 
-        if ($columns === []) {
-            $this->error('কোনো টেবিলেই code বা document_no কলাম নেই — এটা হওয়ার কথা নয়।');
-
-            return self::FAILURE;
-        }
-
-        $series = NumberSeries::query()
-            ->withoutGlobalScopes()
-            ->when($this->option('company'), fn ($q, $id) => $q->where('company_id', (int) $id))
-            ->orderBy('company_id')
-            ->orderBy('doc_type')
-            ->get();
-
-        $moved = 0;
-
-        foreach ($series as $one) {
-            $highest = $this->highestUsed($one, $columns);
-
-            if ($highest === null || $highest < $one->next_number) {
-                continue;
-            }
+        foreach ($behind as $row) {
+            $one = $row['series'];
 
             $this->line(sprintf(
                 '  কোম্পানি %d · %-5s  %d → %d   (%s-%s পর্যন্ত ব্যবহার হয়ে গেছে)',
                 $one->company_id,
                 $one->doc_type,
                 $one->next_number,
-                $highest + 1,
+                $row['highest'] + 1,
                 $one->prefix,
-                str_pad((string) $highest, (int) $one->padding, '0', STR_PAD_LEFT),
+                str_pad((string) $row['highest'], (int) $one->padding, '0', STR_PAD_LEFT),
             ));
+        }
 
-            $moved++;
+        $moved = count($behind);
 
-            if (! $this->option('pretend')) {
-                $one->forceFill(['next_number' => $highest + 1])->save();
-            }
+        if (! $this->option('pretend')) {
+            $catchUp->apply($behind);
         }
 
         $this->newLine();
@@ -101,91 +81,5 @@ class CatchUpNumbers extends Command
                 : "{$moved}টা সিরিজ সামনে আনা হলো।"));
 
         return self::SUCCESS;
-    }
-
-    /**
-     * কোন টেবিলের কোন কলামে নম্বর বসে — স্কিমা থেকে।
-     *
-     * `company_id` আছে কি না সেটাও দেখা হয়, কারণ থাকলে খোঁজাটা
-     * কোম্পানিতে সীমাবদ্ধ রাখতে হয়। না রাখলে এক কোম্পানির কাগজ দেখে
-     * অন্য কোম্পানির সিরিজ লাফ দিত, আর তাদের নম্বরে ফাঁক পড়ত।
-     *
-     * @return list<array{table: string, column: string, scoped: bool}>
-     */
-    private function numberColumns(): array
-    {
-        $database = DB::connection()->getDatabaseName();
-
-        $rows = DB::select(
-            'select table_name as t, column_name as c
-             from information_schema.columns
-             where table_schema = ? and column_name in (?, ?)',
-            [$database, 'code', 'document_no'],
-        );
-
-        $scoped = collect(DB::select(
-            'select table_name as t from information_schema.columns
-             where table_schema = ? and column_name = ?',
-            [$database, 'company_id'],
-        ))->pluck('t')->map(fn ($t) => (string) $t)->all();
-
-        $out = [];
-
-        foreach ($rows as $row) {
-            $table = (string) $row->t;
-
-            $out[] = [
-                'table' => $table,
-                'column' => (string) $row->c,
-                'scoped' => in_array($table, $scoped, true),
-            ];
-        }
-
-        return $out;
-    }
-
-    /**
-     * এই সিরিজের উপসর্গ ধরে সবচেয়ে বড় যে ক্রমটা ইতিমধ্যেই ব্যবহার হয়েছে।
-     *
-     * ── কেন শেষ টুকরাটাই ক্রম ────────────────────────────────────────
-     * ছক দুইরকম: মাস্টারের `{PREFIX}-{SEQ}` (CUS-0031), আর কাগজের
-     * `{PREFIX}-{FY}-{SEQ}` (INV-2026-2027-0004)। দুইটাতেই ক্রমটা
-     * শেষ ড্যাশের পরে, তাই ওটাই নেওয়া হয় — ছকের নাম পড়তে হয় না।
-     *
-     * ── উপসর্গের সাথে ড্যাশ কেন ─────────────────────────────────────
-     * `PR` আর `PRD` দুইটাই আছে। ড্যাশ ছাড়া মেলালে `PRD-0001` দেখে
-     * PR সিরিজ লাফ দিত, আর ক্রয় ফেরতের নম্বরে একটা ফাঁক পড়ত যার
-     * কোনো ব্যাখ্যা কোথাও থাকত না।
-     *
-     * @param  list<array{table: string, column: string, scoped: bool}>  $columns
-     */
-    private function highestUsed(NumberSeries $series, array $columns): ?int
-    {
-        $like = $series->prefix.'-%';
-        $highest = null;
-
-        foreach ($columns as $where) {
-            $query = DB::table($where['table'])->where($where['column'], 'like', $like);
-
-            if ($where['scoped']) {
-                $query->where('company_id', $series->company_id);
-            }
-
-            /*
-             * ক্রমটা সংখ্যা হিসেবে, লেখা হিসেবে নয়। `MAX('0009')` আর
-             * `MAX('0031')` লেখা হিসেবে তুলনা করলেও ঠিক আসে, কিন্তু
-             * ৯৯৯৯ পেরোলে `'10000' < '9999'` হয়ে যেত — আর ঠিক তখনই
-             * সিরিজটা পিছিয়ে গিয়ে পুরনো নম্বর আবার দিত।
-             */
-            $max = $query->max(DB::raw(
-                "CAST(SUBSTRING_INDEX({$where['column']}, '-', -1) AS UNSIGNED)"
-            ));
-
-            if ($max !== null) {
-                $highest = max($highest ?? 0, (int) $max);
-            }
-        }
-
-        return $highest;
     }
 }

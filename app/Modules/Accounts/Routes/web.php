@@ -11,6 +11,7 @@ use App\Modules\Accounts\Http\Controllers\CashCountController;
 use App\Modules\Accounts\Http\Controllers\CashTillController;
 use App\Modules\Accounts\Http\Controllers\ChartOfAccountsController;
 use App\Modules\Accounts\Http\Controllers\ChequeController;
+use App\Modules\Accounts\Http\Controllers\FinanceControlController;
 use App\Modules\Accounts\Http\Controllers\FixedAssetController;
 use App\Modules\Accounts\Http\Controllers\LoanController;
 use App\Modules\Accounts\Http\Controllers\MoneyCustodyController;
@@ -181,6 +182,21 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
      * ঠিক হয় না।
      */
     Route::get('books-check', BooksIntegrityController::class)->name('integrity');
+
+    /*
+     * খাতার নিয়ন্ত্রণ — পোস্টিং মনিটর, ব্যর্থ পোস্টিং, মাস-শেষের চেকলিস্ট,
+     * পটভূমির কাজ, নম্বর সিরিজ মেলানো ([[FinanceControlController]])।
+     * ফিন্যান্স মানচিত্রের §২, §২৪, §৩১, §৩৩ — ২০ সেপ্টেম্বর ২০২৬।
+     */
+    Route::prefix('control')->name('control.')->group(function () {
+        Route::get('/posting', [FinanceControlController::class, 'posting'])->name('posting');
+        Route::get('/failed', [FinanceControlController::class, 'failed'])->name('failed');
+        Route::get('/month-end', [FinanceControlController::class, 'monthEnd'])->name('month_end');
+        Route::get('/jobs', [FinanceControlController::class, 'jobs'])->name('jobs');
+        Route::get('/duplicates', [FinanceControlController::class, 'duplicates'])->name('duplicates');
+        Route::get('/numbers', [FinanceControlController::class, 'numbers'])->name('numbers');
+        Route::post('/numbers', [FinanceControlController::class, 'catchUp'])->name('catch_up');
+    });
 
     Route::prefix('money-transfers')->name('transfer.')->group(function () {
         Route::get('/', [MoneyTransferController::class, 'index'])->name('index');

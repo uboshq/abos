@@ -60,7 +60,10 @@ final class FinancePlan
      * তাই একটা তারিখ — **ছয় মাসের পুরনো তারিখ নিজেই বলে দেবে মানচিত্র
      * কতটা বিশ্বাস করা যায়**। পর্দার মাথায় দেখা যায়, কেবল মন্তব্যে নয়।
      */
-    public const RECONCILED_ON = '2026-09-13';
+    public const RECONCILED_ON = '2026-09-20';
+
+    /** "পরের ধাপ" — এই শব্দে শুরু হওয়া টীকা মানে লাইনটা জেনেশুনে পরে রাখা। */
+    public const LATER = 'পরের ধাপ';
 
     public static function sections(): array
     {
@@ -84,9 +87,9 @@ final class FinancePlan
                     ['বকেয়ার সংক্ষেপ', 'customer.report.show:due-list', null],
                     ['দেনার সংক্ষেপ', 'supplier.report.show:payable-list', null],
                     ['CFO ড্যাশবোর্ড', null, 'বাকি — Financial Health ও Liquidity Score'],
-                    ['ঝুঁকির ড্যাশবোর্ড', null, 'বাকি'],
+                    ['ঝুঁকির ড্যাশবোর্ড', null, 'পরের ধাপ'],
                     ['বাজেটের অবস্থা', null, 'বাকি — §১৬ বাজেট আগে লাগবে'],
-                    ['ট্রেজারি সংক্ষেপ', null, 'বাকি — বহু-কোম্পানি হলে'],
+                    ['ট্রেজারি সংক্ষেপ', null, 'পরের ধাপ — বহু-কোম্পানি হলে'],
                     ['অপেক্ষমাণ অনুমোদন', 'approval.inbox.index', 'অনুমোদন কেন্দ্র থেকে'],
                 ],
             ],
@@ -97,9 +100,9 @@ final class FinancePlan
                     ['হিসাবের সততা যাচাই', 'accounts.integrity', 'খাতা নিজে নিজে মেলে কি না'],
                     ['ব্যাংক মিলকরণ', 'accounts.reconciliation.index', null],
                     ['পিরিয়ডের অবস্থা', 'accounts.period.index', null],
-                    ['পোস্টিং মনিটর', null, 'বাকি'],
-                    ['ব্যতিক্রম ও ভুলের সারি', null, 'বাকি'],
-                    ['ইন্টিগ্রেশন মনিটর', null, 'বাকি — ইঞ্জিন Platform Management-এ'],
+                    ['পোস্টিং মনিটর', 'accounts.control.posting', null],
+                    ['ব্যতিক্রম ও ভুলের সারি', 'governance.error.index', 'ভুলের খাতা — কেউ "দেখেছি" না বলা পর্যন্ত থাকে'],
+                    ['ইন্টিগ্রেশন মনিটর', null, 'পরের ধাপ — ইঞ্জিন Platform Management-এ'],
                 ],
             ],
             [
@@ -109,13 +112,13 @@ final class FinancePlan
                     ['হিসাবের ছক', 'accounts.coa.index', null],
                     ['খাতের মাথা ও দল', 'accounts.coa.index', 'একই পর্দায়'],
                     ['খরচের কেন্দ্র', 'master_data.cost_center.index', null],
-                    ['অর্থবছর', null, 'বাকি — সিস্টেম প্রশাসনে কোম্পানির সেটআপে'],
+                    ['অর্থবছর', 'accounts.year_end.index', 'বছর শেষের পর্দায় সব অর্থবছর'],
                     ['নম্বর সিরিজ', 'master_data.series.index', null],
                     ['করের ছক', 'master_data.tax.index', null],
                     ['হিসাবের সেটিংস', 'accounts.settings', null],
-                    ['মুনাফা কেন্দ্র ও সেগমেন্ট', null, 'বাকি'],
-                    ['মুদ্রা ও বিনিময় হার', null, 'বাকি — একাধিক মুদ্রা লাগলে'],
-                    ['স্বয়ংক্রিয় পোস্টিং ম্যাপিং', null, 'বাকি'],
+                    ['মুনাফা কেন্দ্র ও সেগমেন্ট', null, 'পরের ধাপ — এখন খরচের কেন্দ্র দিয়ে চলে'],
+                    ['মুদ্রা ও বিনিময় হার', null, 'পরের ধাপ — পর্দা আছে (master_data.currency.index), কন্ট্রোল প্যানেলে বহু-মুদ্রার সুইচ চালু করলে খোলে'],
+                    ['স্বয়ংক্রিয় পোস্টিং ম্যাপিং', null, 'পরের ধাপ — খাত এখন কোডে বাঁধা'],
                     ['অনুমোদনের নিয়ম', 'approval.inbox.index', 'অনুমোদন কেন্দ্র থেকে'],
                 ],
             ],
@@ -142,7 +145,7 @@ final class FinancePlan
                     ['কে কত দিল', 'customer.report.show:collection', null],
                     ['কাদের লিমিট নেই', 'customer.report.show:no-limit', null],
                     ['আদায়ের তালিকা', 'sales.collection.index', null],
-                    ['অগ্রিম আদায়', null, 'বাকি'],
+                    ['অগ্রিম আদায়', null, 'পরের ধাপ — কাউন্টারের জমা এখন রসিদ, অগ্রিম খাত নেই'],
                 ],
             ],
             [
@@ -167,7 +170,7 @@ final class FinancePlan
                     ['কন্ট্রা ভাউচার', 'accounts.voucher.index:contra', null],
                     ['খরচ ভাউচার', 'accounts.voucher.index:expense', null],
                     ['উত্তোলন ভাউচার', 'finance.withdrawal.index', 'উত্তোলনের পর্দা থেকেই বসে'],
-                    ['ডেবিট ও ক্রেডিট নোট', null, 'বাকি'],
+                    ['ডেবিট ও ক্রেডিট নোট', null, 'পরের ধাপ — এখন ফেরতের কাগজ দিয়ে'],
                     ['ভাউচারের ইতিহাস ও অডিট', 'governance.audit.index', 'অডিট ট্রেইল থেকে'],
                 ],
             ],
@@ -231,8 +234,8 @@ final class FinancePlan
                     ['মূলধন ও বিনিয়োগ', 'finance.capital.index', '২৯ আগস্ট ২০২৬-এ হয়েছে'],
                     ['কে কোথায় দাঁড়িয়ে', 'finance.capital.index', 'একই পর্দায়'],
                     ['নতুন মূলধন লেখা', 'finance.capital.create', '১৩ সেপ্টেম্বর ২০২৬ — ফর্মটা তালিকার ভিতর থেকে সরানো হলো'],
-                    ['বিনিয়োগের রিটার্ন', null, 'বাকি'],
-                    ['লাভ ভাগাভাগি', null, 'বাকি — অংশীদারি হলে'],
+                    ['বিনিয়োগের রিটার্ন', null, 'পরের ধাপ'],
+                    ['লাভ ভাগাভাগি', null, 'পরের ধাপ — অংশীদারি হলে'],
                 ],
             ],
             [
@@ -255,7 +258,7 @@ final class FinancePlan
                     ['ঋণ বিতরণ', 'accounts.loan.create', null],
                     ['কিস্তির সূচি ও পরিশোধ', 'accounts.loan.index', null],
                     ['সুদের হিসাব', 'accounts.loan.index', null],
-                    ['লিজ', null, 'বাকি'],
+                    ['লিজ', null, 'পরের ধাপ'],
                 ],
             ],
             /*
@@ -403,7 +406,7 @@ final class FinancePlan
                 'no' => '১৮',
                 'title' => 'প্রকল্প হিসাব',
                 'items' => [
-                    ['প্রকল্পভিত্তিক খতিয়ান', null, 'ডিপোতে ঐচ্ছিক — বহু-প্রকল্প হলে'],
+                    ['প্রকল্পভিত্তিক খতিয়ান', null, 'পরের ধাপ — ডিপোতে ঐচ্ছিক, বহু-প্রকল্প হলে'],
                 ],
             ],
             [
@@ -412,16 +415,16 @@ final class FinancePlan
                 'items' => [
                     ['করের ছক', 'master_data.tax.index', null],
                     ['করের হিসাব ও পোস্টিং', 'accounts.report.show:ledger', 'বিলেই বসে'],
-                    ['মুশক চালান', null, 'বাকি'],
-                    ['NBR রিপোর্টিং', null, 'বাকি'],
+                    ['মুশক চালান', null, 'পরের ধাপ — NBR-এর ছক মিলিয়ে'],
+                    ['NBR রিপোর্টিং', null, 'পরের ধাপ — NBR-এর ছক মিলিয়ে'],
                 ],
             ],
             [
                 'no' => '২০',
                 'title' => 'ট্রেজারি',
                 'items' => [
-                    ['তহবিল পরিকল্পনা', null, 'বাকি'],
-                    ['উদ্বৃত্ত তহবিলের বিনিয়োগ', null, 'বাকি'],
+                    ['তহবিল পরিকল্পনা', null, 'পরের ধাপ'],
+                    ['উদ্বৃত্ত তহবিলের বিনিয়োগ', null, 'পরের ধাপ'],
                 ],
             ],
             [
@@ -429,21 +432,21 @@ final class FinancePlan
                 'title' => 'আন্তঃকোম্পানি',
                 'items' => [
                     ['শাখার মধ্যে স্থানান্তর', 'inventory.transfer.index', 'মালের স্থানান্তর'],
-                    ['আন্তঃকোম্পানি মিলকরণ', null, 'বাকি — বহু-কোম্পানি হলে'],
+                    ['আন্তঃকোম্পানি মিলকরণ', null, 'পরের ধাপ — বহু-কোম্পানি হলে'],
                 ],
             ],
             [
                 'no' => '২২',
                 'title' => 'একীভূত বিবরণী',
                 'items' => [
-                    ['গ্রুপের একীভূত হিসাব', null, 'বাকি — বহু-কোম্পানি হলে'],
+                    ['গ্রুপের একীভূত হিসাব', null, 'পরের ধাপ — বহু-কোম্পানি হলে'],
                 ],
             ],
             [
                 'no' => '২৩',
                 'title' => 'পরিকল্পনা ও বিশ্লেষণ',
                 'items' => [
-                    ['পূর্বাভাস ও দৃশ্যকল্প', null, 'বাকি'],
+                    ['পূর্বাভাস ও দৃশ্যকল্প', null, 'পরের ধাপ'],
                 ],
             ],
             [
@@ -452,7 +455,7 @@ final class FinancePlan
                 'items' => [
                     ['পিরিয়ড বন্ধ', 'accounts.period.index', null],
                     ['বছর শেষ', 'accounts.year_end.index', null],
-                    ['মাস-শেষের চেকলিস্ট', null, 'বাকি'],
+                    ['মাস-শেষের চেকলিস্ট', 'accounts.control.month_end', null],
                 ],
             ],
             [
@@ -463,7 +466,7 @@ final class FinancePlan
                     ['কে কী পারে', 'system_admin.role.index', 'রোল ও অনুমতি'],
                     // ৪ সেপ্টেম্বর: কে কী অনুমোদন করেন — অর্থের পাতা থেকে
                     ['অনুমোদনের ছক', 'approval.flow.index', null],
-                    ['নীতি ব্যবস্থাপনা', null, 'বাকি'],
+                    ['নীতি ব্যবস্থাপনা', null, 'পরের ধাপ'],
                 ],
             ],
             [
@@ -473,14 +476,14 @@ final class FinancePlan
                     ['বিক্রয় → খাতা', 'accounts.report.show:ledger', 'বিল নিশ্চিত হলেই'],
                     ['ক্রয় → খাতা', 'accounts.report.show:ledger', 'বিল নিশ্চিত হলেই'],
                     ['মজুদ → খাতা', 'accounts.report.show:ledger', 'মাল নড়লেই'],
-                    ['ব্যাংক ও কর API', null, 'বাকি — Platform Management-এ'],
+                    ['ব্যাংক ও কর API', null, 'পরের ধাপ — Platform Management-এ'],
                 ],
             ],
             [
                 'no' => '২৭',
                 'title' => 'AI ফিন্যান্স',
                 'items' => [
-                    ['OCR, স্মার্ট পোস্টিং, জালিয়াতি ধরা', null, 'ধাপ ৩ — ঐচ্ছিক, নিজের সার্ভারে'],
+                    ['OCR, স্মার্ট পোস্টিং, জালিয়াতি ধরা', null, 'পরের ধাপ — মালিক: দুই মাস পরে (নভেম্বর ২০২৬)'],
                 ],
             ],
             [
@@ -490,7 +493,7 @@ final class FinancePlan
                     ['অডিট ট্রেইল', 'governance.audit.index', null],
                     ['হিসাবের সততা যাচাই', 'accounts.integrity', null],
                     ['রপ্তানির লগ', 'governance.export.index', 'কে কী নামিয়েছে'],
-                    ['কাগজ সংরক্ষণ নীতি', null, 'বাকি'],
+                    ['কাগজ সংরক্ষণ নীতি', null, 'পরের ধাপ'],
                 ],
             ],
             [
@@ -515,7 +518,7 @@ final class FinancePlan
                 'no' => '৩০',
                 'title' => 'অ্যানালিটিক্স',
                 'items' => [
-                    ['ফিন্যান্সের মেট্রিক', null, 'ইঞ্জিন Analytics & BI-তে'],
+                    ['ফিন্যান্সের মেট্রিক', null, 'পরের ধাপ — ইঞ্জিন Analytics & BI-তে'],
                 ],
             ],
             [
@@ -523,8 +526,8 @@ final class FinancePlan
                 'title' => 'পর্যবেক্ষণ',
                 'items' => [
                     ['হিসাবের সততা যাচাই', 'accounts.integrity', null],
-                    ['ব্যর্থ পোস্টিংয়ের সারি', null, 'বাকি'],
-                    ['পটভূমির কাজ ও সতর্কতা', null, 'বাকি'],
+                    ['ব্যর্থ পোস্টিংয়ের সারি', 'accounts.control.failed', null],
+                    ['পটভূমির কাজ ও সতর্কতা', 'accounts.control.jobs', 'সময়সূচি, সারি, ব্যর্থ কাজ, শেষ ব্যাকআপ'],
                 ],
             ],
             [
@@ -533,7 +536,7 @@ final class FinancePlan
                 'items' => [
                     ['হিসাবের সেটিংস', 'accounts.settings', null],
                     ['কন্ট্রোল প্যানেল', 'system_admin.control-panel', 'প্রতিটা ঘরের সুইচ'],
-                    ['বিজ্ঞপ্তির সেটিংস', null, 'বাকি'],
+                    ['বিজ্ঞপ্তির সেটিংস', null, 'পরের ধাপ'],
                 ],
             ],
             [
@@ -542,8 +545,8 @@ final class FinancePlan
                 'items' => [
                     ['আমদানি ও রপ্তানি', 'governance.export.index', null],
                     ['ব্যালেন্স আবার গোনা', 'accounts.integrity', null],
-                    ['নম্বর সিরিজ মেলানো', null, '`abos:catch-up-numbers` — কমান্ড আছে, পর্দা নেই'],
-                    ['ডুপ্লিকেট খোঁজা ও মেরামত', null, 'বাকি'],
+                    ['নম্বর সিরিজ মেলানো', 'accounts.control.numbers', '`abos:catch-up-numbers`-এর পর্দা'],
+                    ['ডুপ্লিকেট খোঁজা ও মেরামত', 'accounts.control.duplicates', 'খোঁজা; মেরামত হাতে, জোড়া লাগানো নয়'],
                 ],
             ],
         ];
@@ -585,12 +588,19 @@ final class FinancePlan
      * আর অন্যটায় একটা। লাইন গুনলে সংখ্যাটা সত্যিকারের কাজের অনুপাত
      * বলে — আর ওটাই মালিক জানতে চেয়েছেন।
      *
-     * @return array{done: int, total: int}
+     * ── "পরের ধাপ", ২০ সেপ্টেম্বর ২০২৬ ─────────────────────────────────
+     * মালিক: *"bachai koro kongulo jororin rater modho ses hobe"*। যে লাইন
+     * জেনেশুনে পরে রাখা হয়েছে, তার টীকা শুরু হয় [[self::LATER]] দিয়ে, আর
+     * সেগুলো আলাদা গোনা হয়। ⛔ মোট থেকে বাদ নয়: তাহলে শতাংশটা মিথ্যা
+     * বলত যে কাজ শেষ।
+     *
+     * @return array{done: int, total: int, later: int}
      */
     public static function tally(): array
     {
         $done = 0;
         $total = 0;
+        $later = 0;
 
         foreach (self::sections() as $section) {
             foreach ($section['items'] as $item) {
@@ -598,10 +608,18 @@ final class FinancePlan
 
                 if ($item[1] !== null && self::urlFor($item[1]) !== null) {
                     $done++;
+                } elseif (self::isLater($item)) {
+                    $later++;
                 }
             }
         }
 
-        return ['done' => $done, 'total' => $total];
+        return ['done' => $done, 'total' => $total, 'later' => $later];
+    }
+
+    /** জেনেশুনে পরের ধাপে রাখা লাইন — টীকার শুরু দেখে। */
+    public static function isLater(array $item): bool
+    {
+        return $item[1] === null && is_string($item[2] ?? null) && str_starts_with($item[2], self::LATER);
     }
 }
