@@ -121,13 +121,13 @@ return [
              * বসে, আর এই গ্রুপটা Master-এর ঠিক পরে — তাই প্রথম সারি মানেই
              * Master-এর পাশে। কোরে হাত দিতে হয়নি।
              */
-            ['label' => 'accounts::menu.voucher_list', 'icon' => 'list', 'route' => 'accounts.voucher.list', 'permission' => 'accounts.report'],
 
-            ['label' => 'accounts::menu.receipt', 'icon' => 'inbox', 'route' => 'accounts.voucher.index', 'route_params' => ['type' => 'receipt'], 'permission' => 'accounts.report'],
-            ['label' => 'accounts::menu.payment', 'icon' => 'outbox', 'route' => 'accounts.voucher.index', 'route_params' => ['type' => 'payment'], 'permission' => 'accounts.report'],
-            ['label' => 'accounts::menu.expense', 'icon' => 'wallet', 'route' => 'accounts.voucher.index', 'route_params' => ['type' => 'expense'], 'permission' => 'accounts.report'],
-            ['label' => 'accounts::menu.journal', 'icon' => 'edit', 'route' => 'accounts.voucher.index', 'route_params' => ['type' => 'journal'], 'permission' => 'accounts.report'],
-            ['label' => 'accounts::menu.contra', 'icon' => 'swap', 'route' => 'accounts.voucher.index', 'route_params' => ['type' => 'contra'], 'permission' => 'accounts.report'],
+            ['label' => 'accounts::menu.receipt', 'cluster' => 'vouchers', 'icon' => 'inbox', 'route' => 'accounts.voucher.index', 'route_params' => ['type' => 'receipt'], 'permission' => 'accounts.report'],
+            ['label' => 'accounts::menu.payment', 'cluster' => 'vouchers', 'icon' => 'outbox', 'route' => 'accounts.voucher.index', 'route_params' => ['type' => 'payment'], 'permission' => 'accounts.report'],
+            ['label' => 'accounts::menu.expense', 'cluster' => 'vouchers', 'icon' => 'wallet', 'route' => 'accounts.voucher.index', 'route_params' => ['type' => 'expense'], 'permission' => 'accounts.report'],
+            ['label' => 'accounts::menu.journal', 'cluster' => 'vouchers', 'icon' => 'edit', 'route' => 'accounts.voucher.index', 'route_params' => ['type' => 'journal'], 'permission' => 'accounts.report'],
+            ['label' => 'accounts::menu.contra', 'cluster' => 'vouchers', 'icon' => 'swap', 'route' => 'accounts.voucher.index', 'route_params' => ['type' => 'contra'], 'permission' => 'accounts.report'],
+            ['label' => 'accounts::menu.voucher_list', 'cluster' => 'vouchers', 'icon' => 'list', 'route' => 'accounts.voucher.list', 'permission' => 'accounts.report'],
             ['label' => 'accounts::menu.money_custody', 'icon' => 'lock', 'route' => 'accounts.custody', 'permission' => 'accounts.till.view'],
             ['label' => 'accounts::menu.money_transfer', 'icon' => 'share', 'route' => 'accounts.transfer.index', 'permission' => 'accounts.transfer.create'],
             ['label' => 'accounts::menu.cash_count', 'icon' => 'cash', 'route' => 'accounts.count.index', 'permission' => 'accounts.count.create'],

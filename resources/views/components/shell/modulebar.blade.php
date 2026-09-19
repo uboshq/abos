@@ -273,7 +273,41 @@
                     {{-- ⓘ ভাঁজ না হওয়া গ্রুপ (লেনদেন), আর এক-পর্দার গ্রুপ —
                          দুইটাই সরাসরি ঘর। এক আইটেমের ড্রপডাউন মানে একটা
                          ক্লিক নষ্ট: খুলে দেখা যায় ভিতরে যা ছিল বাইরেই লেখা। --}}
-                    @foreach ($items as $tab)
+                    @php
+                        /*
+                         * ⭐ দলের ভিতরের ভাঁজ — ১৯ সেপ্টেম্বর ২০২৬, মালিক: ভাউচার তালিকা,
+                         * আদায়, পরিশোধ, খরচ, জাবেদা, কন্ট্রা *"eigulo mile ekta group
+                         * korlei hoy"*। একই `cluster` নামের সারিগুলো প্রথমটার জায়গায়
+                         * এক ড্রপডাউনে বসে; বাকিরা আগের মতো সরাসরি ঘর। ⓘ ভাঁজে একটাই
+                         * সারি বাকি থাকলে (বাকিগুলো সুইচে বন্ধ) সেটা সরাসরি ঘর — এক
+                         * সারির ড্রপডাউন মানে একটা ক্লিক নষ্ট।
+                         */
+                        $cells = [];
+                        $clustered = [];
+
+                        foreach ($items as $tab) {
+                            $cluster = $tab['cluster'] ?? null;
+                            $members = $cluster === null ? collect() : $items->where('cluster', $cluster)->values();
+
+                            if ($members->count() < 2) {
+                                $cells[] = ['tab' => $tab];
+                            } elseif (! isset($clustered[$cluster])) {
+                                $clustered[$cluster] = true;
+                                $cells[] = ['cluster' => $cluster, 'items' => $members];
+                            }
+                        }
+                    @endphp
+
+                    @foreach ($cells as $cell)
+                        @if (isset($cell['cluster']))
+                            <x-shell.modulebar-menu :label="__('core.menu.'.$cell['cluster'])"
+                                                    :icon="$cell['items']->first()['icon'] ?? $groupIcon($name)"
+                                                    :tint="$groupTint($name)"
+                                                    :items="$cell['items']" />
+                            @continue
+                        @endif
+
+                        @php $tab = $cell['tab']; @endphp
                         <a href="{{ $tab['url'] }}"
                            @class([
                                'shrink-0 whitespace-nowrap -ms-px px-3 py-1 text-xs transition-colors first:ms-0 first:rounded-s-(--radius-field)',
@@ -289,45 +323,10 @@
                         </a>
                     @endforeach
                 @else
-                    <div x-data="{ open: false }" class="relative shrink-0">
-                        <button type="button"
-                                @click="open = ! open" @click.outside="open = false"
-                                @keydown.escape.window="open = false"
-                                :aria-expanded="open.toString()"
-                                @class([
-                                    'flex items-center gap-1 whitespace-nowrap -ms-px px-3 py-1 text-xs transition-colors first:ms-0',
-                                    'modulebar-cell modulebar-cell-on' => $activeItem !== null,
-                                    'modulebar-cell' => $activeItem === null,
-                                ])>
-                            <x-ui.icon :name="$groupIcon($name)" :size="14" :class="$groupTint($name)" />
-
-                            {{ __('core.menu.'.$name) }}
-
-                            @if ($activeItem !== null)
-                                <span class="opacity-70" aria-hidden="true">›</span>
-                                <span class="max-w-32 truncate">{{ $activeItem['label'] }}</span>
-                            @endif
-                        </button>
-
-                        <div x-show="open" x-cloak x-transition.opacity
-                             class="absolute start-0 top-full z-30 mt-1 max-h-80 min-w-48 overflow-y-auto
-                                    rounded-(--radius-card) border border-(--color-border)
-                                    bg-(--color-surface-card) py-1 shadow-lg">
-                            @foreach ($items as $item)
-                                <a href="{{ $item['url'] }}"
-                                   @class([
-                                       'flex items-center gap-2 px-3 py-1.5 text-xs transition-colors hover:bg-(--color-surface-muted)',
-                                       'font-semibold text-(--color-brand-600)' => $item['active'] ?? false,
-                                       'text-(--color-ink-body)' => ! ($item['active'] ?? false),
-                                   ])
-                                   @if ($item['active'] ?? false) aria-current="page" @endif>
-                                    <x-ui.icon :name="$item['icon'] ?? $groupIcon($name)" :size="14"
-                                               :class="$groupTint($name)" />
-                                    {{ $item['label'] }}
-                                </a>
-                            @endforeach
-                        </div>
-                    </div>
+                    <x-shell.modulebar-menu :label="__('core.menu.'.$name)"
+                                            :icon="$groupIcon($name)"
+                                            :tint="$groupTint($name)"
+                                            :items="$items" />
                 @endif
             @endforeach
         @endif

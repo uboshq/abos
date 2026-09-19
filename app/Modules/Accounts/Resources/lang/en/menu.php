@@ -3,14 +3,14 @@
 declare(strict_types=1);
 
 return [
-    'voucher_list' => 'Voucher List',
+    'voucher_list' => 'All vouchers',
     'year_end' => 'Year End',
     'dashboard' => 'Accounts Dashboard',
     'chart_of_accounts' => 'Chart of Accounts',
     'cash_tills' => 'Cash Tills',
-    'receipt' => 'Receipt Voucher',
-    'payment' => 'Payment Voucher',
-    'expense' => 'Expense Voucher',
+    'receipt' => 'Receipt',
+    'payment' => 'Payment',
+    'expense' => 'Expense',
     'journal' => 'Journal',
     'contra' => 'Contra',
     'money_custody' => 'Money & custody',

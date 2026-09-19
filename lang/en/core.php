@@ -136,6 +136,9 @@ return [
         'reports' => 'Reports',
         'settings' => 'Settings',
 
+        /* দলের ভেতরের ভাঁজ — এক নামে কয়েকটা পর্দা (১৯ সেপ্টেম্বর ২০২৬) */
+        'vouchers' => 'Vouchers',
+
         /* A dimmed row reads the same whether it means "not for you" or
            "not built yet" — only the words tell them apart (3 Sep 2026) */
         'coming_soon' => 'Coming soon',
