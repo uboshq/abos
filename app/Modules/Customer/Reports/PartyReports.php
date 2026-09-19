@@ -154,7 +154,7 @@ final class PartyReports
                 ->orderByRaw('COALESCE(l.due, 0) DESC')
                 ->select([
                     'customers.id',
-                    ...self::identity(),
+                    ...self::identity(grouped: false),
                     DB::raw("'".Customer::drillSourceType()."' as party_type_literal"),
                     'customers.credit_days',
                     DB::raw('COALESCE(l.due, 0) as outstanding'),
@@ -282,7 +282,8 @@ final class PartyReports
                         DB::raw('SUM(ledger_entries.debit) - SUM(ledger_entries.credit) as outstanding'),
                         DB::raw('MAX(CASE WHEN ledger_entries.debit > 0 THEN ledger_entries.trx_date END) as last_billed'),
                         DB::raw('MAX(CASE WHEN ledger_entries.credit > 0 THEN ledger_entries.trx_date END) as last_collected'),
-                        'customers.credit_limit',
+                        // ⓘ গ্রুপের বাইরের ঘর — কারণটা [[identity()]]-এ
+                        DB::raw('MIN(customers.credit_limit) as credit_limit'),
                     ]);
             },
             columns: [
@@ -327,18 +328,41 @@ final class PartyReports
      *
      * @return list<Expression|string>
      */
-    private static function identity(): array
+    private static function identity(bool $grouped = true): array
     {
+        $address = app()->getLocale() === 'bn'
+            ? "COALESCE(NULLIF(customers.address_bn, ''), customers.address_en)"
+            : "COALESCE(NULLIF(customers.address_en, ''), customers.address_bn)";
+
+        /*
+         * ⛔ প্রতিটা ঘর `MIN()`-এ মোড়া — আর এটা সাজসজ্জা নয়, ২০ সেপ্টেম্বর
+         * ২০২৬-এ লাইভে তিনটা রিপোর্ট ৫০০ দিয়েছে ঠিক এই কারণে:
+         *
+         *     SQLSTATE[42000]: 1055 'customers.code' isn't in GROUP BY
+         *
+         * ── কেন লোকালে ধরা পড়েনি ────────────────────────────────────
+         * ⚠️ লাইভের সার্ভার `ONLY_FULL_GROUP_BY` নিয়ে চলে, আর আমাদের
+         * লোকাল MySQL চলে না — একই প্রশ্ন ওখানে ভুল, এখানে নীরবে ঠিক।
+         * ⓘ আর যে ইঞ্জিন কার্যকরী নির্ভরতা বোঝে (`customers.id` গ্রুপে
+         * থাকলে `customers.code` এমনিতেই একটাই) সে ছেড়ে দিত; যে বোঝে না
+         * সে থামায়। তাই ভরসা না করে **স্পষ্ট করে বলা**।
+         *
+         * ⓘ গ্রুপ প্রতি সারি একটাই গ্রাহক, তাই `MIN()` মানে "ঐ একটাই মান" —
+         * সংখ্যাটা বদলায় না, কেবল প্রশ্নটা সব ইঞ্জিনে বৈধ হয়।
+         * ⚠️ যে প্রশ্নে `GROUP BY` নেই (যেমন "কাদের লিমিট নেই") সেখানে
+         * মোড়ানো চলবে না — একটা সমষ্টি পুরো তালিকাকে এক সারিতে নামিয়ে
+         * আনত। তাই ঘরটা ডাকার জায়গা থেকেই বলে দেয়।
+         */
+        $wrap = fn (string $sql, string $alias) => DB::raw($grouped ? "MIN({$sql}) as {$alias}" : "{$sql} as {$alias}");
+
         return [
-            'customers.code as customer_code',
-            DB::raw(self::localised('customers').' as customer_name'),
-            DB::raw(self::ladderName(Location::POINT).' as point_name'),
-            DB::raw(self::ladderName(Location::TERRITORY).' as area_name'),
-            DB::raw((app()->getLocale() === 'bn'
-                ? "COALESCE(NULLIF(customers.address_bn, ''), customers.address_en)"
-                : "COALESCE(NULLIF(customers.address_en, ''), customers.address_bn)").' as full_address'),
-            'customers.owner_name',
-            'customers.phone',
+            $wrap('customers.code', 'customer_code'),
+            $wrap(self::localised('customers'), 'customer_name'),
+            $wrap(self::ladderName(Location::POINT), 'point_name'),
+            $wrap(self::ladderName(Location::TERRITORY), 'area_name'),
+            $wrap($address, 'full_address'),
+            $wrap('customers.owner_name', 'owner_name'),
+            $wrap('customers.phone', 'phone'),
         ];
     }
 
