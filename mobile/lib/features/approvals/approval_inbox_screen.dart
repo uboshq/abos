@@ -70,8 +70,14 @@ class _ApprovalInboxScreenState extends State<ApprovalInboxScreen> {
       // An empty inbox and an unreachable server are opposite facts, and a
       // screen that shows "কিছু অপেক্ষা করছে না" for both would tell someone
       // their work is done when it is merely invisible.
+      // ⚠️ And a server without the route is a third fact again. 404 here
+      // cannot mean "no such approval" — this endpoint names no row — so it
+      // means this build is newer than the server it is talking to, which on
+      // a fleet updated by hand from a link is an ordinary Tuesday.
       setState(() => _error = errorMessageFor(error,
-          fallback: 'তালিকা আনা গেল না। আবার চেষ্টা করুন।'));
+          fallback: 'তালিকা আনা গেল না। আবার চেষ্টা করুন।',
+          whenAbsent: 'অনুমোদনের সুবিধাটা এখনো এই সার্ভারে নেই — অ্যাপটা '
+              'সার্ভারের চেয়ে নতুন। অফিসে জানান।'));
     } finally {
       if (mounted) setState(() => _busy = false);
     }

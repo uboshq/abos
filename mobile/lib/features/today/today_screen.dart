@@ -59,7 +59,12 @@ class _TodayScreenState extends State<TodayScreen> {
     } catch (error) {
       if (!mounted) return;
       setState(() => _error = errorMessageFor(error,
-          fallback: 'আজকের হিসাব আনা গেল না।'));
+          fallback: 'আজকের হিসাব আনা গেল না।',
+          // See the approvals screen: a 404 on a route that names no row
+          // means the server is older than this build, not that today has no
+          // figures.
+          whenAbsent: 'আজকের হিসাব এখনো এই সার্ভারে নেই — অ্যাপটা সার্ভারের '
+              'চেয়ে নতুন। অফিসে জানান।'));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
