@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Inventory\Services;
 
 use App\Modules\Inventory\Models\Product;
+use App\Modules\Inventory\Models\ProductUnit;
 use App\Modules\MasterData\Models\Unit;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
@@ -113,6 +114,24 @@ final class PackConversion
             ]);
         }
 
+        /*
+         * ⭐ আগে পণ্যের নিজের প্যাক — ১৯ সেপ্টেম্বর ২০২৬।
+         *
+         * ⛔ কার্টনের মাপ পণ্যে পণ্যে আলাদা (সাবানে ২৪, বিস্কুটে ৪৮), আর
+         * এককের মাস্টারে একটাই সংখ্যা বসত — লাইভে কার্টনের factor ছিল ১।
+         * ⓘ তাই পণ্যের টেবিলে সারি থাকলে সেটাই সত্যি, আর তার factor
+         * সরাসরি পণ্যের base-এর হিসাবে ([[ProductUnit]]), শিকল হাঁটা নেই।
+         *
+         * ⚠️ না থাকলে আগের নিয়মই — এককের মাস্টারের সার্বজনীন রূপান্তর
+         * (১ ডজন = ১২ পিস)। তাই যে পণ্যের টেবিল খালি, তার জন্য এই
+         * মেথডের উত্তর আগের মতোই, একটা অঙ্কও না বদলে।
+         */
+        $pack = $this->pack($product, $unitId);
+
+        if ($pack !== null) {
+            return bcadd((string) $pack->factor, '0', 6);
+        }
+
         if ($entered->rootUnitId() !== $stocking->rootUnitId()) {
             throw ValidationException::withMessages([
                 'unit_id' => __('inventory::validation.units_do_not_meet', [
@@ -151,16 +170,57 @@ final class PackConversion
             return collect();
         }
 
-        $stocking = $this->unit($product->unit_id);
-        $root = $stocking->rootUnitId();
+        $units = Unit::query()->active()->with('baseUnit')->get();
+        $packs = ProductUnit::query()->where('product_id', $product->id)->where('is_active', true)->get();
 
-        return Unit::query()
-            ->active()
-            ->with('baseUnit')
-            ->get()
-            ->filter(fn (Unit $unit) => $unit->rootUnitId() === $root)
-            ->sortByDesc(fn (Unit $unit) => (float) $unit->toBase('1'))
+        return collect($this->ladder($product, $units, $packs))
+            ->map(fn (array $step) => $step['unit'])
             ->values();
+    }
+
+    /**
+     * একটা পণ্যের সিঁড়ি — কোন কোন এককে লেখা যায়, আর প্রতিটায় কত base।
+     *
+     * দুই উৎস: এককের মাস্টারের সার্বজনীন রূপান্তর (গোড়া এক এমন সব), আর
+     * পণ্যের নিজের প্যাক। ⚠️ একই একক দুই জায়গায় থাকলে **প্যাক জেতে** —
+     * পণ্যের নিজের কথা সার্বজনীনের চেয়ে নির্দিষ্ট, আর [[factorFor()]]-ও
+     * ঠিক এই ক্রমেই দেখে। দুই জায়গায় দুই নিয়ম হলে ড্রপডাউন বলত এক
+     * সংখ্যা আর মজুদে বসত আরেকটা।
+     *
+     * বড়টা আগে। নিষ্ক্রিয় একক বা নিষ্ক্রিয় প্যাক আসে না।
+     *
+     * @param  \Illuminate\Support\Collection<int, Unit>  $units  সক্রিয় সব একক
+     * @param  \Illuminate\Support\Collection<int, ProductUnit>  $packs  এই পণ্যের সক্রিয় প্যাক
+     * @return list<array{unit: Unit, factor: string}>
+     */
+    private function ladder(Product $product, Collection $units, Collection $packs): array
+    {
+        $byId = $units->keyBy('id');
+        $stocking = $byId->get($product->unit_id);
+        $steps = [];
+
+        if ($stocking !== null) {
+            $root = $stocking->rootUnitId();
+            $base = $stocking->toBase('1');
+
+            foreach ($units as $unit) {
+                if ($unit->rootUnitId() === $root) {
+                    $steps[$unit->id] = ['unit' => $unit, 'factor' => bcdiv($unit->toBase('1'), $base, 6)];
+                }
+            }
+        }
+
+        foreach ($packs as $pack) {
+            $unit = $byId->get($pack->unit_id);
+
+            if ($unit !== null) {
+                $steps[$unit->id] = ['unit' => $unit, 'factor' => bcadd((string) $pack->factor, '0', 6)];
+            }
+        }
+
+        uasort($steps, fn (array $a, array $b) => bccomp($b['factor'], $a['factor'], 6));
+
+        return array_values($steps);
     }
 
     /**
@@ -186,27 +246,36 @@ final class PackConversion
             return [];
         }
 
-        // গোড়া ধরে ভাগ, আর প্রতিটা দলে বড়টা আগে
-        $byRoot = $units
-            ->groupBy(fn (Unit $unit) => $unit->rootUnitId())
-            ->map(fn (Collection $group) => $group
-                ->sortByDesc(fn (Unit $unit) => (float) $unit->toBase('1'))
-                ->map(fn (Unit $unit) => ['id' => $unit->id, 'label' => $unit->name()])
-                ->values()
-                ->all());
+        $products = collect($products);
 
-        $rootOf = $units->mapWithKeys(fn (Unit $unit) => [$unit->id => $unit->rootUnitId()]);
+        /*
+         * ⭐ সব পণ্যের প্যাক একটা কোয়েরিতে — ১৯ সেপ্টেম্বর ২০২৬।
+         * ⚠️ পণ্যপ্রতি একটা করে তুললে পাঁচশো পণ্যের ফর্মে পাঁচশো কোয়েরি,
+         * ঠিক যে কারণে [[unitsFor()]] এখানে লুপে ডাকা হয় না।
+         */
+        $packs = ProductUnit::query()
+            ->whereIn('product_id', $products->pluck('id')->filter()->all())
+            ->where('is_active', true)
+            ->get()
+            ->groupBy('product_id');
 
         $options = [];
 
         foreach ($products as $product) {
-            $root = $rootOf[$product->unit_id] ?? null;
-
-            if ($root === null || count($byRoot[$root] ?? []) < 2) {
+            if ($product->unit_id === null) {
                 continue;
             }
 
-            $options[$product->id] = $byRoot[$root];
+            $ladder = $this->ladder($product, $units, $packs->get($product->id, collect()));
+
+            if (count($ladder) < 2) {
+                continue;
+            }
+
+            $options[$product->id] = array_map(
+                fn (array $step) => ['id' => $step['unit']->id, 'label' => $step['unit']->name()],
+                $ladder,
+            );
         }
 
         return $options;
@@ -242,6 +311,25 @@ final class PackConversion
             ->findOr($id, fn () => throw ValidationException::withMessages([
                 'unit_id' => __('inventory::validation.unknown_unit'),
             ]));
+    }
+
+    /** @var array<string, ProductUnit|null> */
+    private array $packCache = [];
+
+    /** পণ্যের নিজের সক্রিয় প্যাক, এই এককে — না থাকলে null। */
+    private function pack(Product $product, int $unitId): ?ProductUnit
+    {
+        $key = $product->id.':'.$unitId;
+
+        if (! array_key_exists($key, $this->packCache)) {
+            $this->packCache[$key] = ProductUnit::query()
+                ->where('product_id', $product->id)
+                ->where('unit_id', $unitId)
+                ->where('is_active', true)
+                ->first();
+        }
+
+        return $this->packCache[$key];
     }
 
     /** পেছনের অর্থহীন শূন্য ফেলে দেওয়া — "২ বাক্স", "২.০০০০০০ বাক্স" নয়। */
