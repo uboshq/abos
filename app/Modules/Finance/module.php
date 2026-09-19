@@ -493,4 +493,12 @@ return [
     'reports' => [],
 
     'events' => [],
+
+    /*
+     * ⓘ রসিদ মূলধনের খাতে (3100) গেলে মূলধনের তালিকাতেও ওঠে — ১৯ সেপ্টেম্বর
+     * ২০২৬, মালিকের কথায়। বিস্তার [[CapitalFromReceipt]]-এ।
+     */
+    'listeners' => [
+        \App\Modules\Accounts\Events\VoucherPosted::class => [\App\Modules\Finance\Listeners\CapitalFromReceipt::class],
+    ],
 ];

@@ -110,7 +110,7 @@
                      :selected="$was('party_type')"
                      x-model="partyType" x-on:change="resetParty()" />
 
-        <div>
+        <div x-data="{ adding: @js($errors->has('party_new') || filled(old('party_new'))) }">
             <div class="mb-1 flex items-baseline justify-between gap-2">
                 <span class="text-sm font-medium">
                     {{ $isReceipt ? __('accounts::field.depositor_name') : __('accounts::field.payee_name_party') }}
@@ -126,15 +126,24 @@
             {{-- ⓘ `aria-label` — ঘরটার নিজের `<label for>` নেই, কারণ নামটা
                  উপরের সারিতে পাওনার সাথে এক লাইনে বসে। ⚠️ চোখে নামটা
                  দেখা যায়, কিন্তু স্ক্রিন-রিডার কেবল "combo box" বলত। --}}
-            <select name="party_id" x-model="partyId" x-on:change="loadDue()"
-                    aria-label="{{ __('accounts::field.party') }}"
-                    class="h-(--spacing-field) w-full rounded-(--radius-field) border
-                           border-(--color-border) bg-(--color-surface-card) px-3">
-                <option value="">—</option>
-                <template x-for="p in partyOptions" :key="p.id">
-                    <option :value="p.id" x-text="p.label" :selected="$str(p.id) === partyId"></option>
-                </template>
-            </select>
+            {{-- ⭐ নামের পাশে "+" — ১৯ সেপ্টেম্বর ২০২৬, মালিক: *"তালিকায় নেই? নাম লিখুন
+                 eta ডিপোজিটরের নাম er box er pase + bosalei hoy"*। ⓘ চাপলে নিচে নতুন
+                 নাম আর মোবাইলের ঘর খোলে; আবার চাপলে বন্ধ। --}}
+            <div class="flex gap-2">
+                <select name="party_id" x-model="partyId" x-on:change="loadDue()"
+                        aria-label="{{ __('accounts::field.party') }}"
+                        class="h-(--spacing-field) min-w-0 flex-1 rounded-(--radius-field) border
+                               border-(--color-border) bg-(--color-surface-card) px-3">
+                    <option value="">—</option>
+                    <template x-for="p in partyOptions" :key="p.id">
+                        <option :value="p.id" x-text="p.label" :selected="$str(p.id) === partyId"></option>
+                    </template>
+                </select>
+                <x-ui.button type="button" tone="secondary" icon="plus"
+                             x-on:click="adding = ! adding"
+                             title="{{ __('accounts::field.party_not_listed') }}"
+                             aria-label="{{ __('accounts::field.party_not_listed') }}" />
+            </div>
 
             @error('party_id')
                 <span class="mt-1 block text-2xs text-(--color-danger)">{{ $message }}</span>
@@ -158,13 +167,8 @@
 
                  ⓘ ছাঁচটা Finance-এর [[finance::components.person-picker]]
                  থেকে নেওয়া, আর পিছনে একই [[PersonResolver]]। --}}
-            <details class="mt-2 text-sm"
-                     @if ($errors->has('party_new')) open @endif>
-                <summary class="cursor-pointer text-(--color-brand-500) underline-offset-2 hover:underline">
-                    {{ __('accounts::field.party_not_listed') }}
-                </summary>
-
-                <div class="mt-2 grid gap-2 sm:grid-cols-2">
+            <div class="mt-2" x-show="adding" x-cloak>
+                <div class="grid gap-2 sm:grid-cols-2">
                     <x-ui.field name="party_new"
                                 :label="__('accounts::field.party_new_name')"
                                 :value="old('party_new')"
@@ -174,7 +178,7 @@
                                 :label="__('master_data::field.mobile')"
                                 :value="old('party_mobile')" />
                 </div>
-            </details>
+            </div>
         </div>
     </div>
 
@@ -203,14 +207,48 @@
                     {{ __('accounts::field.received_on_account') }}
                     <span class="text-(--color-danger)" aria-hidden="true">*</span>
                 </span>
+                @php
+                    /* যাঁরা আগে মূলধন দিয়েছেন — তাঁদের বাছলে ঘরটায় মূলধন (3100) নিজে বসে */
+                    $contributors = class_exists(\App\Modules\Finance\Models\CapitalEntry::class)
+                        ? \App\Modules\Finance\Models\CapitalEntry::query()->distinct()->pluck('person_id')->map(fn ($id) => (string) $id)->values()->all()
+                        : [];
+                    $capitalAccount = (string) \App\Modules\Accounts\Models\Account::query()
+                        ->where('code', \App\Modules\Accounts\Services\StandardChart::OWNER_CAPITAL)->value('id');
+
+                    /*
+                     * ⛔ "কী বাবদ" প্রশ্নে পুরো হিসাবের তালিকা নয় — ১৯ সেপ্টেম্বর ২০২৬,
+                     * মালিক: *"'টাকাটা কী বাবদ' zodi hoy tahole full hisab talika
+                     * dewa keno"*। ⓘ নগদ, ব্যাংক, মজুদ হলো টাকা **রাখার** জায়গা, আসার
+                     * কারণ নয়; গ্রাহক-সরবরাহকারীর বাকি তাঁদের নিজের পথে আসে; খরচের
+                     * খাতে টাকা ঢোকে না। ⭐ থাকে চার দল, মূলধন আগে:
+                     *   মূলধন · ঋণ ও দায় (সরবরাহকারীর বাকি বাদে) · আয় ·
+                     *   ফেরত পাওয়া (অগ্রিম, জামানত, দাবি, বিনিয়োগ, দেওয়া হাতধার — ১১৩০–১১৭০)
+                     */
+                    $returnable = ['113', '114', '115', '116', '117'];
+                    $pool = collect($optionsFor('party_or_income'))
+                        ->filter(fn ($a) => $a->money_kind === null);
+                    $sourceGroups = array_filter([
+                        __('accounts::field.source_equity') => $pool->where('type', \App\Modules\Accounts\Models\Account::EQUITY),
+                        __('accounts::field.source_liability') => $pool->where('type', \App\Modules\Accounts\Models\Account::LIABILITY)
+                            ->reject(fn ($a) => str_starts_with((string) $a->code, \App\Modules\Accounts\Services\StandardChart::PAYABLE_GROUP)),
+                        __('accounts::field.source_income') => $pool->where('type', \App\Modules\Accounts\Models\Account::INCOME),
+                        __('accounts::field.source_returned') => $pool->where('type', \App\Modules\Accounts\Models\Account::ASSET)
+                            ->filter(fn ($a) => in_array(substr((string) $a->code, 0, 3), $returnable, true)),
+                    ], fn ($group) => $group->isNotEmpty());
+                @endphp
                 <select name="from_account_id" x-bind:disabled="partyType === '' || partyType === 'customer'"
+                        x-bind:value="partyType === 'person' && @js($contributors).includes(partyId) ? @js($capitalAccount) : $el.value"
                         class="h-(--spacing-field) w-full rounded-(--radius-field) border
                                border-(--color-border) bg-(--color-surface-card) px-3">
                     <option value="">&mdash;</option>
-                    @foreach ($optionsFor('party_or_income') as $account)
-                        <option value="{{ $account->id }}" @selected(old('from_account_id') == $account->id)>
-                            {{ $account->label() }}
-                        </option>
+                    @foreach ($sourceGroups as $groupLabel => $accounts)
+                        <optgroup label="{{ $groupLabel }}">
+                            @foreach ($accounts as $account)
+                                <option value="{{ $account->id }}" @selected(old('from_account_id') == $account->id)>
+                                    {{ $account->label() }}
+                                </option>
+                            @endforeach
+                        </optgroup>
                     @endforeach
                 </select>
             </label>

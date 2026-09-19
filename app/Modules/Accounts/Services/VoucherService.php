@@ -14,6 +14,7 @@ use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Models\FinancialYear;
 use App\Models\IssuedNumber;
+use App\Modules\Accounts\Events\VoucherPosted;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Models\VoucherLine;
@@ -328,6 +329,14 @@ final class VoucherService
             ])->save();
 
             $this->settle($voucher, settled: true);
+
+            /*
+             * ⓘ অন্য মডিউলকে জানানো — লেনদেন পাকা হওয়ার পরে, আগে নয়।
+             * ⚠️ আগে জানালে শ্রোতা এমন ভাউচার দেখত যেটা একটু পরে
+             * রোলব্যাক হয়ে যেতে পারে (অনুমোদনে আটকানো, মাসের তালা)।
+             * [[VoucherPosted]]-এ কারণ লেখা।
+             */
+            DB::afterCommit(fn () => event(VoucherPosted::from($voucher)));
 
             return $voucher->fresh(['lines']);
         });
