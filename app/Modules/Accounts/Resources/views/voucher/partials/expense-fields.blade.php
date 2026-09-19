@@ -56,7 +56,7 @@
             });
         })->keys()->all();
 
-    $texts = \Illuminate\Support\Js::from([
+    $texts = [
         'directLabel' => __('accounts::field.direct_cost'),
         'indirectLabel' => __('accounts::field.indirect_cost'),
         'landsGoods' => __('accounts::field.into_goods_cost'),
@@ -64,152 +64,28 @@
         'directEffect' => __('accounts::message.direct_effect'),
         'indirectEffect' => __('accounts::message.indirect_effect'),
         'noBillLabel' => __('accounts::field.no_bill_picked'),
-    ]);
+    ];
 @endphp
 
 <section data-boxed
          class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4"
-         x-data="{
-             head: '{{ $was('expense_account_id') ?? $was('to_account_id') }}',
-
-             /* কাকে দেওয়া হলো — ধরন বাছলে তাঁর লোকজন সাজেশনে আসে। */
-             payeeType: '{{ $was('payee_type_id') }}',
+         {{-- ⓘ যুক্তিটা `resources/js/components/forms.js`-এ (expenseFields) —
+              ভাগ বসানোর নিয়ম, হাতে লেখা ভাগ রক্ষা, আর শেষ সারির পয়সা। --}}
+         x-data="expenseFields({
+             head: @js((string) ($was('expense_account_id') ?? $was('to_account_id'))),
+             payeeType: @js((string) $was('payee_type_id')),
              payeesByType: @js($payeesByType ?? []),
-             get payeeList() { return this.payeesByType[this.payeeType] ?? [] },
-
-             gross: {{ (float) ($was('gross_amount') ?? 0) }},
-             ait: {{ (float) ($was('ait_amount') ?? 0) }},
-             vds: {{ (float) ($was('vds_amount') ?? 0) }},
-
-             /*
-              * হাতে যাবে — বিলের মোট থেকে কর্তন বাদ।
-              *
-              * ⚠️ শতাংশ নয়, টাকার অঙ্কই রাখা হয়: হার বদলায়, আর পুরনো
-              * ভাউচার নতুন হারে হিসাব করলে ভুল দেখাত।
-              */
-             get net() { return Math.max(0, this.gross - this.ait - this.vds) },
-
-             /* একটাও চালান বাছা হয়নি মানে পরোক্ষ খরচ — মালিকের নিয়ম। */
-             tagged: {{ count(old('bill_shares', $voucher->billShares?->pluck('purchase_bill_id')->all() ?? [])) }},
-             get isDirect() { return this.tagged > 0 },
-
-             /*
-              * ⛔ টিক দিয়ে ভাগ না বসালে ট্যাগটা নীরবে হারাত — ১৮ সেপ্টেম্বর ২০২৬।
-              *
-              * ── যা ঘটত ──────────────────────────────────────────────
-              * মালিক তিনটা চালান টিক দিলেন, পর্দা বলল "প্রত্যক্ষ খরচ ·
-              * ঐ মালের দামে" — কিন্তু "এই খরচের ভাগ" ঘর তিনটা খালি।
-              * ⚠️ [[VoucherService::replaceBillShares]] শূন্য ভাগের সারি
-              * **পুরো বাদ** দেয়, তাই একটাও চালান ট্যাগ হত না — আর খাতায়
-              * খরচটা পরোক্ষ হয়ে বসত, পর্দা যা বলল তার ঠিক উল্টো।
-              *
-              * ⓘ আর "ভাগ হবে কীসের অনুপাতে" ঘরটা ছিল একটা **প্রতিশ্রুতি**
-              * যা কিছুই ভাগ করত না, কেবল সেভ হত।
-              *
-              * ── ⭐ মালিকের নিয়ম মেনে সমাধান ─────────────────────────
-              * *"আটকে দেব না। দেখিয়ে দেব।"* — তাই টিক দিলেই অঙ্কটা
-              * অনুপাত অনুযায়ী বসে যায়, আর ঘরগুলো খোলা থাকে: কেউ চাইলে
-              * হাতে বদলাতে পারেন (ভাঙা মাল, আলাদা বোঝাপড়া)।
-              */
+             gross: @js((float) ($was('gross_amount') ?? 0)),
+             ait: @js((float) ($was('ait_amount') ?? 0)),
+             vds: @js((float) ($was('vds_amount') ?? 0)),
+             tagged: @js(count(old('bill_shares', $voucher->billShares?->pluck('purchase_bill_id')->all() ?? []))),
              bills: @js($billFacts ?? []),
              basis: @js(old('alloc_basis', 'qty')),
-             amount: {{ (float) old('amount', 0) }},
+             amount: @js((float) old('amount', 0)),
              picked: @js($pickedRows ?? []),
-
-             toggle(i, on) {
-                 this.picked = on
-                     ? [...this.picked, i]
-                     : this.picked.filter(x => x !== i)
-
-                 this.tagged = this.picked.length
-                 this.spread()
-             },
-
-             /*
-              * ⚠️ হাতে লেখা ভাগ মুছে যায় না — কেবল খালি ঘরগুলো ভরে।
-              *
-              * ⛔ প্রতিবার সব ঘর নতুন করে বসালে কেউ একটা সারিতে হাতে
-              * কম বসিয়ে পরের চালানটা টিক দিলেই তাঁর লেখাটা মুছে যেত।
-              * ⓘ তাই টাকা ভাগ হয় **যেগুলো এখনো খালি** তাদের মধ্যে, আর
-              * হাতে লেখাগুলো আগে বাদ যায়।
-              */
-             spread() {
-                 const total = Number(this.amount) || 0
-
-                 if (total <= 0 || this.picked.length === 0) return
-
-                 let left = total
-                 const empty = []
-
-                 this.picked.forEach(i => {
-                     const box = this.$refs['share' + i]
-                     if (! box) return
-
-                     const typed = parseFloat(box.value)
-
-                     if (Number.isFinite(typed) && typed > 0) {
-                         left -= typed
-                     } else {
-                         empty.push(i)
-                     }
-                 })
-
-                 if (empty.length === 0 || left <= 0) return
-
-                 const weightOf = i => {
-                     const bill = this.bills[i] || {}
-                     const w = this.basis === 'value' ? bill.value : bill.qty
-
-                     return Number(w) || 0
-                 }
-
-                 let sum = empty.reduce((t, i) => t + weightOf(i), 0)
-
-                 /*
-                  * ⓘ অনুপাতের কোনো ভিত্তি না থাকলে (সব শূন্য) সমান ভাগ —
-                  * শূন্য দিয়ে ভাগ করার চেয়ে সেটাই সৎ।
-                  */
-                 const equal = sum <= 0
-
-                 if (equal) sum = empty.length
-
-                 let placed = 0
-
-                 empty.forEach((i, n) => {
-                     const w = equal ? 1 : weightOf(i)
-
-                     /*
-                      * ⚠️ শেষ সারিটা বিয়োগ করে বসানো হয়, ভাগ করে নয় —
-                      * নাহলে পয়সার গোল করার ফলে যোগফল অঙ্কের সাথে
-                      * মিলত না, আর কেউ বলতে পারত না এক পয়সা কোথায় গেল।
-                      */
-                     const share = n === empty.length - 1
-                         ? left - placed
-                         : Math.round((left * w / sum) * 100) / 100
-
-                     placed += share
-                     this.$refs['share' + i].value = share.toFixed(2)
-                 })
-             },
-
-             /*
-              * লেখাগুলো এক জায়গায়, PHP-তে বানানো — কারণ দুইটা।
-              *
-              * ⚠️ এক: x-text একটা JS অভিব্যক্তি পড়ে। অনুবাদে একটা
-              * অ্যাপস্ট্রফি থাকলেই স্ট্রিংটা ওখানেই শেষ হয়ে যেত, আর
-              * গোটা অভিব্যক্তিটা নীরবে ভেঙে পড়ত। Js::from সেটা পালায়।
-              *
-              * ⛔ দুই: এখানে প্রথমে প্রতিটা লাইনে আলাদা করে js নির্দেশ
-              * দেওয়া হয়েছিল, আর উপরের ব্যাখ্যার ভিতরে একটা নমুনা লেখা
-              * ছিল দুই বন্ধনী দিয়ে। ⓘ Blade জাভাস্ক্রিপ্টের মন্তব্য
-              * চেনে না — সে ঐ নমুনাটাকেও কোড ধরে পার্স করেছে, আর গোটা
-              * অ্যাট্রিবিউটটা ভেঙে পাতাটা ৫০০ দিয়েছে।
-              *
-              * ⭐ তাই এখন একটাই বস্তু, আর ব্যাখ্যায় কোনো নমুনা নেই।
-              */
-             ...{{ $texts }},
-         }"
-         x-on:abos-expense-amount.window="amount = $event.detail; spread()">
+             texts: @js($texts),
+         })"
+         x-on:abos-expense-amount.window="setAmount($event.detail)">
 
     {{-- সারি ১ — তারিখ · খরচের খাত · খরচের কেন্দ্র (নকশার হুবহু) --}}
     <div class="grid gap-3 sm:grid-cols-3">

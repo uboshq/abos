@@ -70,90 +70,9 @@
     ])->values();
 @endphp
 
-<div x-data="{
-        open: false,
-        search: '',
-        filter: 'all',
-        sort: 'name',
-        sheet: {{ Illuminate\Support\Js::from($sheet) }},
-
-        /* পণ্য ধরে রাখা, সারির ক্রম ধরে নয় — নাহলে ছাঁকনি বদলালে বা
-           খুঁজলে আগের টাইপ করা সংখ্যাগুলো অন্য পণ্যের ঘরে গিয়ে বসত।
-           চারটা পরিমাণ লিখে পঞ্চমটা খোঁজা যেন প্রথম চারটা হারানোর উপায়
-           না হয়। */
-        typed: {},
-
-        box(id) {
-            if (! this.typed[id]) this.typed[id] = { qty: '', free: '' };
-            return this.typed[id];
-        },
-        num(value) {
-            const n = parseFloat(value);
-            return Number.isFinite(n) ? n : 0;
-        },
-        hasSomething(id) {
-            const row = this.typed[id];
-            return !! row && (this.num(row.qty) > 0 || this.num(row.free) > 0);
-        },
-
-        get visible() {
-            const needle = this.search.trim().toLowerCase();
-            let rows = this.sheet;
-
-            if (needle) {
-                rows = rows.filter(r => r.name.toLowerCase().includes(needle)
-                    || (r.code ?? '').toLowerCase().includes(needle));
-            }
-            if (this.filter === 'in_stock') rows = rows.filter(r => this.num(r.available) > 0);
-            if (this.filter === 'typed') rows = rows.filter(r => this.hasSomething(r.id));
-
-            const sorted = [...rows];
-            if (this.sort === 'name') sorted.sort((a, b) => a.name.localeCompare(b.name));
-            if (this.sort === 'available') sorted.sort((a, b) => this.num(b.available) - this.num(a.available));
-            if (this.sort === 'typed') {
-                sorted.sort((a, b) => (this.hasSomething(a.id) ? 0 : 1) - (this.hasSomething(b.id) ? 0 : 1)
-                    || a.name.localeCompare(b.name));
-            }
-            return sorted;
-        },
-
-        /* তিনটা সংখ্যা — যা টাইপ করা হয়েছে তার উপর, যা দেখা যাচ্ছে তার
-           উপর নয়। খুঁজলেই বদলে যায় এমন যোগফল কেউ বিশ্বাস করে না। */
-        get totals() {
-            let amount = 0, items = 0, free = 0;
-
-            for (const row of this.sheet) {
-                const box = this.typed[row.id];
-                if (! box) continue;
-
-                const qty = this.num(box.qty), freeQty = this.num(box.free);
-                if (qty <= 0 && freeQty <= 0) continue;
-
-                items += 1;
-                free += freeQty;
-                amount += qty * this.num(row.rate);
-            }
-            return { amount, items, free };
-        },
-
-        apply() {
-            const rows = this.sheet
-                .filter(row => this.hasSomething(row.id))
-                .map(row => ({
-                    product_id: row.id,
-                    qty: this.typed[row.id].qty || '0',
-                    free_qty: this.typed[row.id].free || '',
-                    rate: row.rate,
-                    discount: '', tax: '', link: '', unit_id: '',
-                }));
-
-            /* ইভেন্ট দিয়ে, সরাসরি নয় — শীটটা জানে না কে শুনছে, তাই
-               একই শীট চালান, সরাসরি বিক্রয় ও ক্রয়েও বসানো যায়। */
-            this.$dispatch('bulk-applied', { rows });
-
-            this.open = false;
-        },
-     }">
+<div x-data="bulkSheet({
+                 sheet: @js($sheet),
+               })">
 
     <button type="button" @click="open = true" class="{{ $buttonClass }}">
         {{ __('sales::bulk.open') }}

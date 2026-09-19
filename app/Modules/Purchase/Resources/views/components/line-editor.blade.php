@@ -111,61 +111,11 @@
     কিছুই বসে না। পুরো নিয়মটা resources/js/pricing.js-এ, তার ১৪টা
     পরীক্ষা সহ।
 --}}
-<div x-data="{
-        rows: {{ Illuminate\Support\Js::from($lines) }},
-        packs: {{ Illuminate\Support\Js::from($packs) }},
-        lots: {{ Illuminate\Support\Js::from($lotProducts) }},
-        unitsFor(row) {
-            return this.packs[row.product_id] ?? [];
-        },
-
-        /*
-         * এই সারির পণ্য কি লট ধরে চলে।
-         *
-         * ⚠️ তুলনাটা String() দিয়ে: পণ্যের আইডি সার্ভার থেকে সংখ্যা
-         * হয়ে আসে, আর `<select>`-এর মান সবসময় স্ট্রিং। `===` দিলে
-         * কোনো সারিতেই ঘর তিনটা কখনো দেখা যেত না — আর পর্দা কিছু
-         * ভাঙত না, কেবল ওষুধ কেনা যেত না।
-         */
-        tracksLot(row) {
-            return this.lots.some(id => String(id) === String(row.product_id));
-        },
-        add() {
-            this.rows.push({
-                product_id: '', qty: '', free_qty: '', rate: '', discount: '', tax: '', link: '', unit_id: '',
-                sales_price: '', markup: '', margin: '', anchor: '',
-                batch_no: '', expiry_date: '', mrp: '',
-            });
-        },
-        remove(i) {
-            this.rows.splice(i, 1);
-            if (this.rows.length === 0) this.add();
-        },
-        amount(row) {
-            const base = (parseFloat(row.qty) || 0) * (parseFloat(row.rate) || 0);
-            const net = base - (parseFloat(row.discount) || 0);
-            return net + (parseFloat(row.tax) || 0);
-        },
-        get total() {
-            return this.rows.reduce((sum, row) => sum + this.amount(row), 0);
-        },
-
-        priced(row, edited) {
-            Object.assign(row, window.abos.reprice(row, edited));
-        },
-
-        /*
-         * কোনো সারিতে দাম বলা হয়েছে অথচ দর বলা হয়নি।
-         *
-         * ⓘ তখনই markup ও margin খালি থেকে যায়, আর কারণটা পর্দায়
-         * লেখা না থাকলে সেটা ভাঙা বলে মনে হয়।
-         */
-        get needsRate() {
-            return this.rows.some(row => (parseFloat(row.rate) || 0) <= 0
-                && (row.sales_price || row.markup || row.margin));
-        },
-     }"
-     x-init="if (rows.length === 0) add()">
+<div x-data="purchaseLineEditor({
+                 rows: @js($lines),
+                 packs: @js($packs),
+                 lots: @js($lotProducts),
+               })">
 
     <div class="table-responsive">
         <table class="ui-lines table-cards w-full text-sm">
@@ -207,7 +157,7 @@
                 <template x-for="(row, i) in rows" :key="i">
                     <tr class="border-b border-(--color-border)">
                         <td class="cell-input" data-label="{{ __('purchase::field.product') }}">
-                            <select :name="`lines[${i}][product_id]`" x-model="row.product_id" required
+                            <select :name="'lines[' + (i) + '][product_id]'" x-model="row.product_id" required
                                     @change="row.unit_id = ''"
                                     class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                                            bg-(--color-surface-card) px-2">
@@ -220,7 +170,7 @@
 
                         @if ($linkField)
                             <td class="cell-input" data-label="{{ __('purchase::field.'.($linkField === 'purchase_order_line_id' ? 'order' : 'receipt')) }}">
-                                <select :name="`lines[${i}][{{ $linkField }}]`" x-model="row.link"
+                                <select :name="'lines[' + (i) + '][{{ $linkField }}]'" x-model="row.link"
                                         class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                                                bg-(--color-surface-card) px-2">
                                     <option value="">-</option>
@@ -233,7 +183,7 @@
 
                         <td class="cell-input" data-label="{{ __('purchase::field.quantity') }}">
                             <input type="number" step="0.01" inputmode="decimal" required
-                                   :name="`lines[${i}][{{ $qtyField }}]`" x-model="row.qty"
+                                   :name="'lines[' + (i) + '][{{ $qtyField }}]'" x-model="row.qty"
                                    class="num h-(--spacing-field-compact) w-full sm:w-28 rounded-(--radius-field) border border-(--color-border)
                                           bg-(--color-surface-card) px-2 text-end">
                         </td>
@@ -243,7 +193,7 @@
                         @if ($showFree)
                             <td class="cell-input" data-label="{{ __('purchase::field.free_qty') }}">
                                 <input type="number" step="0.01" min="0" inputmode="decimal"
-                                       :name="`lines[${i}][free_qty]`" x-model="row.free_qty"
+                                       :name="'lines[' + (i) + '][free_qty]'" x-model="row.free_qty"
                                        class="num h-(--spacing-field-compact) w-full sm:w-24 rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-card) px-2 text-end">
                             </td>
@@ -262,7 +212,7 @@
                                 পর্দার markup আর খাতার markup এক থাকে।
                             --}}
                             <td class="cell-input" data-label="{{ __('purchase::field.unit') }}">
-                                <select :name="`lines[${i}][unit_id]`" x-model="row.unit_id"
+                                <select :name="'lines[' + (i) + '][unit_id]'" x-model="row.unit_id"
                                         x-show="unitsFor(row).length > 0"
                                         class="h-(--spacing-field-compact) w-full sm:w-28 rounded-(--radius-field) border border-(--color-border)
                                                bg-(--color-surface-card) px-2">
@@ -303,7 +253,7 @@
                                 <input type="text" maxlength="60"
                                        x-show="tracksLot(row)"
                                        :required="tracksLot(row)"
-                                       :name="`lines[${i}][batch_no]`" x-model="row.batch_no"
+                                       :name="'lines[' + (i) + '][batch_no]'" x-model="row.batch_no"
                                        class="h-(--spacing-field-compact) w-full sm:w-28 rounded-(--radius-field) border
                                               border-(--color-border) bg-(--color-surface-card) px-2">
                             </td>
@@ -323,7 +273,7 @@
                             <td class="cell-input" data-label="{{ __('inventory::field.mrp') }}">
                                 <input type="number" step="0.01" inputmode="decimal" min="0"
                                        x-show="tracksLot(row)"
-                                       :name="`lines[${i}][mrp]`" x-model="row.mrp"
+                                       :name="'lines[' + (i) + '][mrp]'" x-model="row.mrp"
                                        class="num h-(--spacing-field-compact) w-full sm:w-24 rounded-(--radius-field) border
                                               border-(--color-border) bg-(--color-surface-card) px-2 text-end">
                             </td>
@@ -331,7 +281,7 @@
 
                         <td class="cell-input" data-label="{{ __('purchase::field.rate') }}">
                             <input type="number" step="0.0001" inputmode="decimal" required
-                                   :name="`lines[${i}][rate]`" x-model="row.rate"
+                                   :name="'lines[' + (i) + '][rate]'" x-model="row.rate"
                                    @input="priced(row, 'rate')"
                                    class="num h-(--spacing-field-compact) w-full sm:w-28 rounded-(--radius-field) border border-(--color-border)
                                           bg-(--color-surface-card) px-2 text-end">
@@ -347,7 +297,7 @@
                             --}}
                             <td class="cell-input" data-label="{{ __('purchase::field.sales_price') }}">
                                 <input type="number" step="0.01" min="0" inputmode="decimal"
-                                       :name="`lines[${i}][sales_price]`" x-model="row.sales_price"
+                                       :name="'lines[' + (i) + '][sales_price]'" x-model="row.sales_price"
                                        @input="priced(row, 'sales_price')"
                                        class="num h-(--spacing-field-compact) w-full sm:w-28 rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-card) px-2 text-end">
@@ -385,13 +335,13 @@
                         @if ($showDiscount)
                             <td class="cell-input" data-label="{{ __('purchase::field.discount') }}">
                                 <input type="number" step="0.01" inputmode="decimal"
-                                       :name="`lines[${i}][discount]`" x-model="row.discount"
+                                       :name="'lines[' + (i) + '][discount]'" x-model="row.discount"
                                        class="num h-(--spacing-field-compact) w-full sm:w-24 rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-card) px-2 text-end">
                             </td>
                             <td class="cell-input" data-label="{{ __('purchase::field.tax') }}">
                                 <input type="number" step="0.01" inputmode="decimal"
-                                       :name="`lines[${i}][tax]`" x-model="row.tax"
+                                       :name="'lines[' + (i) + '][tax]'" x-model="row.tax"
                                        class="num h-(--spacing-field-compact) w-full sm:w-24 rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-card) px-2 text-end">
                             </td>

@@ -22,9 +22,9 @@
     থেকে আসে, তাই ব্লেডের কিছু পাঠানোর নেই। ⚠️ কম্পোনেন্টটা `<template
     x-for="(row, i) in deposits">`-এর **ভিতরেই** বসাতে হবে।
 --}}
-<input type="hidden" :name="`deposits[${i}][amount]`" :value="row.amount">
-<input type="hidden" :name="`deposits[${i}][payment_method_id]`" :value="row.methodId">
-<input type="hidden" :name="`deposits[${i}][account_id]`" :value="row.accountId">
-<input type="hidden" :name="`deposits[${i}][ref_date]`" :value="row.refDate">
-<input type="hidden" :name="`deposits[${i}][reference]`" :value="row.reference">
-<input type="hidden" :name="`deposits[${i}][narration]`" :value="row.narration">
+<input type="hidden" :name="'deposits[' + i + '][amount]'" :value="row.amount">
+<input type="hidden" :name="'deposits[' + i + '][payment_method_id]'" :value="row.methodId">
+<input type="hidden" :name="'deposits[' + i + '][account_id]'" :value="row.accountId">
+<input type="hidden" :name="'deposits[' + i + '][ref_date]'" :value="row.refDate">
+<input type="hidden" :name="'deposits[' + i + '][reference]'" :value="row.reference">
+<input type="hidden" :name="'deposits[' + i + '][narration]'" :value="row.narration">

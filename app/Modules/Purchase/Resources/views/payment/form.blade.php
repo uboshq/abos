@@ -84,15 +84,9 @@
         <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="mb-3 font-semibold">{{ __('purchase::message.payment_lines') }}</h2>
 
-            <div x-data="{
-                    rows: {{ Illuminate\Support\Js::from($existing) }},
-                    add() { this.rows.push({ purchase_bill_id: '', amount: '' }); },
-                    remove(i) { this.rows.splice(i, 1); if (this.rows.length === 0) this.add(); },
-                    get allocated() {
-                        return this.rows.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
-                    },
-                 }"
-                 x-init="if (rows.length === 0) add()">
+            <div x-data="billPayment({
+                             rows: @js($existing),
+                           })">
 
                 <div class="table-responsive">
                     <table class="ui-lines table-cards w-full text-sm">
@@ -108,7 +102,7 @@
                             <template x-for="(row, i) in rows" :key="i">
                                 <tr class="border-b border-(--color-border)">
                                     <td class="cell-input" data-label="{{ __('purchase::field.bill') }}">
-                                        <select :name="`lines[${i}][purchase_bill_id]`" x-model="row.purchase_bill_id"
+                                        <select :name="'lines[' + (i) + '][purchase_bill_id]'" x-model="row.purchase_bill_id"
                                                 class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                                                        bg-(--color-surface-card) px-2">
                                             <option value="">-</option>
@@ -121,7 +115,7 @@
                                     </td>
                                     <td class="cell-input" data-label="{{ __('purchase::field.amount') }}">
                                         <input type="number" step="0.01" inputmode="decimal"
-                                               :name="`lines[${i}][amount]`" x-model="row.amount"
+                                               :name="'lines[' + (i) + '][amount]'" x-model="row.amount"
                                                class="num h-(--spacing-field-compact) w-full sm:w-32 rounded-(--radius-field)
                                                       border border-(--color-border)
                                                       bg-(--color-surface-card) px-2 text-end">

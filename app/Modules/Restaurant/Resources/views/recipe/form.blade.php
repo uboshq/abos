@@ -36,8 +36,6 @@
         })->values()->all()
         : []);
 
-    $linesJson = json_encode($lines, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
-
     // পণ্যের তালিকা — `x-ui.select` যে আকারে চায়: [আইডি => নাম]
     $productOptions = $products->mapWithKeys(function ($product) {
         return [$product->id => $product->name()];
@@ -78,7 +76,7 @@
 
     <form method="POST"
           action="{{ $recipe->exists ? route('restaurant.recipe.update', $recipe) : route('restaurant.recipe.store') }}"
-          x-data="recipeForm()">
+          x-data="recipeForm({ lines: @js($lines) })">
         @csrf
         @if ($recipe->exists) @method('PUT') @endif
 
@@ -161,7 +159,7 @@
                         <template x-for="(line, i) in lines" :key="line.key">
                             <tr>
                                 <td>
-                                    <select :name="`lines[${i}][product_id]`" x-model="line.product_id" required
+                                    <select :name="'lines[' + i + '][product_id]'" x-model="line.product_id" required
                                             class="min-h-(--spacing-field) w-full min-w-[12rem]
                                                    rounded-(--radius-field) border border-(--color-border)
                                                    bg-(--color-surface-app) px-2 text-sm">
@@ -173,7 +171,7 @@
                                 </td>
 
                                 <td>
-                                    <input type="number" :name="`lines[${i}][qty]`" x-model="line.qty"
+                                    <input type="number" :name="'lines[' + i + '][qty]'" x-model="line.qty"
                                            step="0.0001" min="0.0001" required
                                            class="min-h-(--spacing-field) w-28 rounded-(--radius-field)
                                                   border border-(--color-border) bg-(--color-surface-app)
@@ -181,7 +179,7 @@
                                 </td>
 
                                 <td>
-                                    <input type="number" :name="`lines[${i}][waste_pct]`" x-model="line.waste_pct"
+                                    <input type="number" :name="'lines[' + i + '][waste_pct]'" x-model="line.waste_pct"
                                            step="0.01" min="0" max="99.99"
                                            class="min-h-(--spacing-field) w-24 rounded-(--radius-field)
                                                   border border-(--color-border) bg-(--color-surface-app)
@@ -232,42 +230,4 @@
         </div>
     </form>
 
-    @push('scripts')
-        <script @nonce>
-            function recipeForm() {
-                return {
-                    lines: {!! $linesJson !!},
-
-                    init() {
-                        /* প্রতিটা সারির একটা স্থায়ী চাবি — নাহলে একটা
-                           সারি মুছলে Alpine বাকিগুলো নতুন করে আঁকত আর
-                           বাছাই করা পণ্যগুলো এক ঘর সরে যেত। */
-                        this.lines = this.lines.map((l) => ({ ...l, key: this.nextKey() }));
-
-                        if (this.lines.length === 0) this.addLine();
-                    },
-
-                    nextKey() {
-                        this._key = (this._key || 0) + 1;
-                        return this._key;
-                    },
-
-                    addLine() {
-                        this.lines.push({ product_id: '', qty: '', waste_pct: '0', key: this.nextKey() });
-                    },
-
-                    /* গুদাম থেকে যতটা বেরোবে — ভাগ, গুণ নয়। */
-                    gross(line) {
-                        const qty = parseFloat(line.qty);
-                        const waste = parseFloat(line.waste_pct);
-
-                        if (!isFinite(qty) || qty <= 0) return '—';
-                        if (!isFinite(waste) || waste <= 0 || waste >= 100) return qty.toFixed(4);
-
-                        return (qty / ((100 - waste) / 100)).toFixed(4);
-                    },
-                };
-            }
-        </script>
-    @endpush
 </x-layouts.app>

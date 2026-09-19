@@ -81,25 +81,11 @@
             গুনে বলে কয়টা জমেছে।
         --}}
         <form method="POST" action="{{ route('system_admin.control-panel.update') }}"
-              x-data="{
-                  /*
-                   * কোন সুইচ এখন চালু — কেবল দেখানোর জন্য।
-                   *
-                   * মডিউল বা সাবমডিউল বন্ধ করলে ভেতরেরগুলো সাথে সাথে
-                   * ম্লান হয়ে যায়, সেভ করার আগেই। নাহলে ব্যবহারকারী
-                   * মডিউল বন্ধ করে ভেতরের একটা সারি চালু দেখে ভাবতেন
-                   * ওটা তবু কাজ করবে — অথচ সার্ভার উপরের স্তরটাই
-                   * আগে দেখে ([[MenuSwitches::itemIsOn()]])।
-                   */
-                  on: {{ Js::from($switchState ?? []) }},
-                  changed: {},
-                  get count() { return Object.keys(this.changed).length; },
-                  touch(el) {
-                      const now = el.type === 'checkbox' ? (el.checked ? '1' : '') : el.value;
-                      if (now === el.dataset.was) { delete this.changed[el.name]; }
-                      else { this.changed[el.name] = true; }
-                  },
-              }"
+              {{-- ⓘ কোন সুইচ চালু, আর কয়টা বদল জমেছে — `components/forms.js`-এ
+                   (switchBoard)। মডিউল বন্ধ করলে ভেতরেরগুলো সাথে সাথে ম্লান
+                   হয়, কারণ সার্ভার উপরের স্তরটাই আগে দেখে
+                   ([[MenuSwitches::itemIsOn()]])। --}}
+              x-data="switchBoard({ on: @js($switchState ?? []) })"
               @change="touch($event.target)"
               class="max-w-3xl space-y-4 pb-20">
             @csrf
@@ -239,7 +225,7 @@
                          মানটাই সত্যি, আর হাতে ফেরত বসাতে গেলে
                          দুইজায়গায় দুই হিসাব থাকত। --}}
                     <x-ui.button type="button" tone="secondary" x-data
-                                 @click="window.location.reload()">
+                                 @click="$reload()">
                         {{ __('core.action.discard') }}
                     </x-ui.button>
 

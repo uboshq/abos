@@ -14,48 +14,10 @@
     খুঁজতে এলেন, তারপর ফিরে যাবেন। ⓘ আলাদা পাতায় নিয়ে গেলে ফেরার পথটা
     হারায়, আর `Esc`-এ যা ফিরে আসে সেটাই সবচেয়ে সস্তা ফেরা।
 --}}
-<div x-data="{
-        open: false,
-        q: '',
-        hits: [],
-        busy: false,
-        timer: null,
-
-        /*
-         * প্রতিটা অক্ষরে অনুরোধ নয় — থেমে যাওয়ার পর।
-         *
-         * ⓘ ২০০ মিলিসেকেন্ড: টাইপ করার স্বাভাবিক বিরতির চেয়ে বড়, আর
-         * মানুষের কাছে তাৎক্ষণিকই মনে হয়। ⚠️ না দিলে 'invoice' লিখতে
-         * সাতটা অনুরোধ যেত, আর শেষেরটা আগে ফিরলে তালিকায় ভুল ফল বসত।
-         */
-        ask() {
-            clearTimeout(this.timer);
-
-            if (this.q.trim().length < 2) {
-                this.hits = [];
-                this.busy = false;
-
-                return;
-            }
-
-            this.busy = true;
-
-            this.timer = setTimeout(async () => {
-                try {
-                    const res = await fetch('{{ route('search') }}?q=' + encodeURIComponent(this.q));
-                    const data = await res.json();
-                    this.hits = data.hits ?? [];
-                } catch (e) {
-                    /* ⓘ নীরবে খালি — খোঁজা ব্যর্থ হলে পাতাটা ভাঙার কোনো
-                       কারণ নেই; মানুষ আবার লিখবেন। */
-                    this.hits = [];
-                }
-
-                this.busy = false;
-            }, 200);
-        },
-     }"
-     @open-command-center.window="open = true; $nextTick(() => $refs.box?.focus())"
+{{-- ⓘ যুক্তিটা `resources/js/components/shell.js`-এ (commandCenter) —
+     CSP-Alpine অ্যাট্রিবিউটের ভিতরে পদ্ধতি পড়তে পারে না। --}}
+<div x-data="commandCenter({ url: '{{ route('search') }}' })"
+     @open-command-center.window="show()"
      @keydown.escape.window="open = false"
      x-show="open" x-cloak
      x-transition.opacity.duration.100ms
@@ -87,13 +49,13 @@
             {{-- ⚠️ তিনটা অবস্থা, আর তিনটাই আলাদা কথা বলে। ⓘ একটাতে সব
                  মিলিয়ে দিলে "কিছু পাওয়া যায়নি" আর "এখনো কিছু লেখেননি"
                  এক দেখাত, অথচ দুইটার উত্তর সম্পূর্ণ আলাদা। --}}
-            <template x-if="q.trim().length < 2">
+            <template x-if="tooShort">
                 <p style="padding:16px;font-size:13px;color:var(--color-ink-muted)">
                     {{ __('core.search.type_to_find') }}
                 </p>
             </template>
 
-            <template x-if="q.trim().length >= 2 && ! busy && hits.length === 0">
+            <template x-if="nothingFound">
                 <p style="padding:16px;font-size:13px;color:var(--color-ink-muted)">
                     {{ __('core.search.nothing_found') }}
                 </p>

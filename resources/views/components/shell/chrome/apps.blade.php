@@ -65,8 +65,8 @@
         আলাদা ডালে, তাই একটা ঘটনা লাগে।
     --}}
     <div data-launcher-sheet
-         x-data="{ open: false, q: '' }"
-         @open-launcher.window="open = true; $nextTick(() => $refs.q?.focus())"
+         x-data="launcher"
+         @open-launcher.window="show()"
          @keydown.escape.window="open = false"
          x-show="open" x-cloak
          x-transition.opacity.duration.120ms
@@ -105,7 +105,7 @@
             শিরোনামটা ঝুলে থাকত**, নিচে একটাও টাইল ছাড়া।
 
             তাই প্রতিটা শিরোনাম নিজের দলের মডিউল-নামগুলো নিয়ে ঘোরে, আর
-            তার একটাও না মিললে নিজেও সরে যায়। `Js::from()` তালিকাটা
+            তার একটাও না মিললে নিজেও সরে যায়। `@js()` তালিকাটা
             নিরাপদে JSON করে — হাতে উদ্ধৃতি বসালে বাংলা নামের কোনো
             অ্যাপোস্ট্রফি স্ক্রিপ্টটাই ভেঙে দিত।
         --}}
@@ -134,13 +134,13 @@
                     <p class="col-span-full mt-4 border-b border-(--color-border) pb-1 text-2xs
                               font-semibold uppercase tracking-wide text-(--color-ink-muted)
                               first:mt-0"
-                       x-show="!q || {{ Js::from($sectionNames) }}.some(n => n.includes(q.toLowerCase()))">
+                       x-show="showsAny(@js($sectionNames))">
                         {{ $sectionLabel }}
                     </p>
                 @endif
 
                 <a @if ($first) href="{{ $first['url'] }}" @endif
-                   x-show="!q || '{{ Str::lower($module['label']) }}'.includes(q.toLowerCase())"
+                   x-show="shows(@js(Str::lower($module['label'])))"
                    class="flex flex-col items-center gap-2 rounded-(--radius-card) p-3
                           text-center transition-colors hover:bg-(--color-surface-hover)">
                     <span class="grid size-11 place-items-center rounded-(--radius-card) text-white"

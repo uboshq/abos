@@ -57,7 +57,7 @@
                     <label class="flex min-h-(--spacing-touch) items-center gap-3 border-b border-(--color-border)
                                   px-4 py-2 text-sm last:border-b-0 hover:bg-(--color-surface-hover)">
                         <input type="checkbox" name="products[]" value="{{ $product->id }}" class="size-4"
-                               @change="chosen += $event.target.checked ? 1 : -1">
+                               @change="chosen = chosen + ($event.target.checked ? 1 : -1)">
 
                         <span class="w-32 shrink-0 font-medium">{{ $product->code }}</span>
                         <span class="min-w-0 flex-1 truncate">{{ $product->name() }}</span>

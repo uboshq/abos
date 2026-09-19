@@ -1331,5 +1331,22 @@ export default function directPurchase({
         qty(v) {
             return String(Number(v || 0));
         },
+
+        /*
+         * ⓘ নিচের দুইটা আগে ব্লেডে `a; b` আকারে ছিল — CSP-Alpine একটার
+         * বেশি বাক্য পড়ে না (১৯ সেপ্টেম্বর ২০২৬, নিরীক্ষার ধাপ ৩.১)।
+         */
+
+        /** খোঁজার চিহ্ন — পুরো তালিকা খোলে/বন্ধ করে, আর ঘরে ফোকাস রাখে */
+        toggleBrowsing() {
+            this.browsing = ! this.browsing;
+            this.$refs.search.focus();
+        },
+
+        /** তালিকা থেকে বাছা — তালিকাটা বন্ধ হয় */
+        pickFromList(product) {
+            this.browsing = false;
+            this.pick(product);
+        },
     };
 }

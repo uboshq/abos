@@ -203,17 +203,7 @@
             </a>
         @else
             <div class="shrink-0"
-                 x-data="{
-                     open: false, x: 0, y: 0,
-                     place() {
-                         const r = $refs.btn.getBoundingClientRect();
-                         /* ২৬৪ = তালিকার চওড়া (w-64) + ৮px ফাঁক — ডান
-                            প্রান্তের মডিউলটা নাহলে পর্দার বাইরে খুলত। */
-                         this.x = Math.max(8, Math.min(r.left, window.innerWidth - 264));
-                         this.y = r.bottom + 4;
-                     },
-                     toggle() { this.open = ! this.open; if (this.open) this.place(); },
-                 }"
+                 x-data="topnavMenu"
                  @click.outside="open = false"
                  @keydown.escape.window="open = false"
                  @resize.window="open = false"
@@ -243,7 +233,7 @@
                     একটা গাঢ় বাক্স ভেসে থাকত — যেটা কোনো ERP করে না।
                 --}}
                 <div x-show="open" x-cloak x-transition.opacity.duration.100ms
-                     :style="`left: ${x}px; top: ${y}px`"
+                     :style="position"
                      class="pops-onto-page fixed z-50 max-h-[70vh] w-64 overflow-y-auto
                             rounded-(--radius-card) border border-(--color-border)
                             bg-(--color-surface-card) py-1.5 shadow-lg">

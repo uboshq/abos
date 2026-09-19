@@ -78,7 +78,7 @@ class ThePharmacyCouldNotBuyASingleStripTest extends TestCase
     {
         $html = (string) $this->get(route($route))->assertOk()->getContent();
 
-        return str_contains($html, ':name="`lines[${i}][batch_no]`"');
+        return str_contains($html, ":name=\"'lines[' + (i) + '][batch_no]'\"");
     }
 
     public function test_the_bill_and_the_receipt_ask_for_a_lot(): void

@@ -116,33 +116,10 @@
         --}}
         <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4"
                  @if ($showCost)
-                 x-data="{
-                     cost: '{{ old('purchase_price', $product->purchase_price) }}',
-                     sale: '{{ old('sale_price', $product->sale_price) }}',
-                     markup: '',
-                     margin: '',
-                     init() { this.fromPrices(); },
-                     n(v) { v = (v ?? '').toString().trim(); return v !== '' && !isNaN(v) ? parseFloat(v) : null; },
-                     fromPrices() {
-                         const c = this.n(this.cost), s = this.n(this.sale);
-                         this.markup = (c !== null && c > 0 && s !== null) ? ((s - c) / c * 100).toFixed(2) : '';
-                         this.margin = (s !== null && s > 0 && c !== null) ? ((s - c) / s * 100).toFixed(2) : '';
-                     },
-                     fromMarkup() {
-                         const c = this.n(this.cost), m = this.n(this.markup);
-                         if (c === null || c <= 0 || m === null || m <= -100) return;
-                         this.sale = (c * (100 + m) / 100).toFixed(4);
-                         const s = this.n(this.sale);
-                         this.margin = (s !== null && s > 0) ? ((s - c) / s * 100).toFixed(2) : '';
-                     },
-                     fromMargin() {
-                         const c = this.n(this.cost), m = this.n(this.margin);
-                         if (c === null || c <= 0 || m === null || m >= 100) return;
-                         this.sale = (c * 100 / (100 - m)).toFixed(4);
-                         const s = this.n(this.sale);
-                         this.markup = (s !== null && s > 0) ? ((s - c) / c * 100).toFixed(2) : '';
-                     }
-                 }"
+                 x-data="productPricing({
+                     cost: @js((string) old('purchase_price', $product->purchase_price)),
+                     sale: @js((string) old('sale_price', $product->sale_price)),
+                 })"
                  @endif>
             <h2 class="mb-3 font-semibold">{{ __('inventory::section.pricing') }}</h2>
 

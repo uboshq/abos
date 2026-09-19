@@ -132,7 +132,7 @@
                  সীমাও কমে। ⓘ ঘরগুলো একসাথে না দেখালে সম্পর্কটা চোখে
                  পড়ে না, আর টের পাওয়া যায় চেক ফেরত এলে। --}}
             <template x-if="kind === 'cc'">
-                <fieldset x-data="{ stock: 0, margin: 30, drawn: 0 }"
+                <fieldset x-data="drawingPower"
                           class="sm:col-span-2 xl:col-span-4 rounded-(--radius-card)
                                  border border-(--color-border) bg-(--color-surface-app) p-3">
 
@@ -193,11 +193,11 @@
                     <p class="mt-3 flex flex-wrap items-baseline justify-between gap-2">
                         <span class="text-sm font-medium">{{ __('finance::field.still_drawable') }}</span>
                         <span class="text-xl font-semibold tabular-nums"
-                              x-text="new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2 }).format(Math.max(0, stock * (1 - margin / 100) - drawn))"></span>
+                              x-text="drawable"></span>
                     </p>
 
                     <p class="mt-1 text-2xs text-(--color-ink-muted)"
-                       x-text="new Intl.NumberFormat('en-IN').format(stock) + ' - ' + margin + '% = ' + new Intl.NumberFormat('en-IN').format(stock * (1 - margin / 100))"></p>
+                       x-text="sum"></p>
 
                     {{-- ⚠️ সীমা ছাড়ালে চুপ করে থাকা যায় না — ব্যাংক ঐ দিনই
                          দণ্ডসুদ বসায়, আর সেটা ধরা পড়ে মাস শেষে, অনেক দেরিতে। --}}

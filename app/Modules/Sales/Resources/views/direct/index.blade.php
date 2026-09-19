@@ -57,11 +57,11 @@
 
     <form method="POST" action="{{ route('sales.direct.store') }}"
           x-data="directSale({
-              catalogue: {{ Illuminate\Support\Js::from($products) }},
-              customers: {{ Illuminate\Support\Js::from($customerTerms) }},
+              catalogue: @js($products),
+              customers: @js($customerTerms),
               walkinId: {{ $walkinId }},
               vatEnabled: {{ $vatEnabled ? 'true' : 'false' }},
-              packs: {{ Illuminate\Support\Js::from($packs) }},
+              packs: @js($packs),
               paymentTermDefault: @js($paymentTermDefault),
               carriers: @js($carriers),
               depositMethods: @js($depositMethods),
@@ -128,7 +128,7 @@
           --}}
           @keydown.window.f1.prevent="helping = ! helping"
           @keydown.window.f2.prevent="openPanel('deposit')"
-          @keydown.window.f6.prevent="$refs.chartEntry?.querySelector('button')?.click()"
+          @keydown.window.f6.prevent="openChartEntry()"
           @keydown.window.f7.prevent="customerPickerOpen = true"
           @keydown.window.f8.prevent="openPicker()"
           @keydown.window.f9.prevent="picked && addToCart()"
@@ -152,10 +152,8 @@
               করে, আর কোনটা কখন তা ঘরটাই ঠিক করে।**
           --}}
           @keydown.window.enter="! panel && picked && addToCart()"
-          @keydown.window.f10.prevent="canConfirm && $refs.confirm?.click()"
-          @keydown.window.escape="panel ? (panel = '') : (pickerOpen || customerPickerOpen
-              ? (pickerOpen = false, customerPickerOpen = false)
-              : (helping = false))"
+          @keydown.window.f10.prevent="canConfirm && $press($refs.confirm)"
+          @keydown.window.escape="escape()"
 
           class="grid gap-3 xl:grid-cols-[1fr_17rem]">
         @csrf
@@ -189,10 +187,10 @@
                 </p>
 
                 <p class="mt-3 text-lg font-semibold text-(--color-ink)"
-                   x-text="outOfStock?.name"></p>
+                   x-text="(outOfStock && outOfStock.name)"></p>
 
                 <p class="num mt-1 text-2xs text-(--color-ink-muted)"
-                   x-text="outOfStock?.code"></p>
+                   x-text="(outOfStock && outOfStock.code)"></p>
 
                 <p class="mt-4 text-sm text-(--color-ink-muted)">
                     {{ __('sales::message.no_stock_hint') }}
@@ -827,10 +825,10 @@
             --}}
             <template x-for="(g, n) in payloadGifts" :key="n">
                 <span>
-                    <input type="hidden" :name="`gifts[${n}][product_id]`" :value="g.productId">
-                    <input type="hidden" :name="`gifts[${n}][against_product_id]`" :value="g.againstProductId">
-                    <input type="hidden" :name="`gifts[${n}][qty]`" :value="g.qty">
-                    <input type="hidden" :name="`gifts[${n}][remarks]`" :value="g.remarks">
+                    <input type="hidden" :name="'gifts[' + (n) + '][product_id]'" :value="g.productId">
+                    <input type="hidden" :name="'gifts[' + (n) + '][against_product_id]'" :value="g.againstProductId">
+                    <input type="hidden" :name="'gifts[' + (n) + '][qty]'" :value="g.qty">
+                    <input type="hidden" :name="'gifts[' + (n) + '][remarks]'" :value="g.remarks">
                 </span>
             </template>
 

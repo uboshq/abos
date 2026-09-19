@@ -15,7 +15,7 @@
                                   x-show="row.narration"
                                   x-text="' · ' + row.narration"></span>
                         </span>
-                        <span class="num font-medium" x-text="money(Number(row.amount))"></span>
+                        <span class="num font-medium" x-text="money($num(row.amount))"></span>
                         <button type="button" @click="dropDeposit(i)"
                                 class="px-1 text-(--color-danger)"
                                 aria-label="{{ __('purchase::action.clear_line') }}">&times;</button>

@@ -29,36 +29,10 @@
         উপরে লেখা থাকে — নাহলে জমে থাকা একটা পুরনো সংখ্যা নতুনের মতো
         দেখাত, আর সেটা সংখ্যাটা না থাকার চেয়েও খারাপ।
     --}}
-    <div x-data="{
-             at: '{{ now()->format('H:i:s') }}',
-             busy: false,
-             stale: false,
-             async pull() {
-                 if (this.busy) { return; }
-                 this.busy = true;
-                 try {
-                     const r = await fetch('{{ route('restaurant.kitchen.refresh', request()->query()) }}',
-                                           { headers: { 'Accept': 'application/json' } });
-                     if (! r.ok) { throw new Error(r.status); }
-                     const d = await r.json();
-                     this.at = d.at;
-                     this.stale = false;
-                     d.dishes.forEach(dish => {
-                         const cell = document.querySelector(`[data-portions='${dish.id}']`);
-                         if (cell) { cell.textContent = dish.portions; }
-                         const row = document.querySelector(`[data-dish='${dish.id}']`);
-                         if (row) { row.classList.toggle('is-out', dish.portions === 0); }
-                     });
-                 } catch (e) {
-                     /* নেট গেলে চুপচাপ পুরনো সংখ্যা রেখে দেওয়া হয় না —
-                        উপরে লেখা হয় যে মিলিয়ে দেখা যাচ্ছে না। */
-                     this.stale = true;
-                 } finally {
-                     this.busy = false;
-                 }
-             },
-         }"
-         x-init="setInterval(() => pull(), 20000)">
+    <div x-data="kitchenBoard({
+             at: @js(now()->format('H:i:s')),
+             url: @js(route('restaurant.kitchen.refresh', request()->query())),
+         })">
 
         <div class="mb-3 flex flex-wrap items-center gap-3">
             <form method="GET" class="flex items-center gap-2">

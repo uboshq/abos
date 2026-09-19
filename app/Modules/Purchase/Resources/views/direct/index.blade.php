@@ -31,9 +31,9 @@
 
     <form method="POST" action="{{ route('purchase.direct.store') }}"
           x-data="directPurchase({
-              catalogue: {{ Illuminate\Support\Js::from($products) }},
+              catalogue: @js($products),
               vatEnabled: {{ $show['vat'] ? 'true' : 'false' }},
-              lastRatesUrl: {{ Illuminate\Support\Js::from(route('purchase.direct.last_rates', ['supplier' => 0])) }},
+              lastRatesUrl: @js(route('purchase.direct.last_rates', ['supplier' => 0])),
               depositMethods: @js($depositMethods),
               moneyAccounts: @js($moneyAccounts->map(fn ($a) => [
                   'id' => (string) $a->id,
@@ -464,7 +464,7 @@
                     {{-- ⭐ সৎ থাকা: সংখ্যাটা আজ ক্রয়মূল্যে যায় না, আর
                          পর্দা সেটাই বলে। ⓘ না বললে কেউ ধরে নিতেন লাভের
                          অঙ্কে ধরা হয়েছে, আর দর ঠিক করতেন তার উপর। --}}
-                    <p x-show="Number(transportCost) > 0" x-cloak
+                    <p x-show="$num(transportCost) > 0" x-cloak
                        class="text-2xs text-(--color-ink-muted)">
                         {{ __('purchase::message.transport_not_in_cost_yet') }}
                     </p>

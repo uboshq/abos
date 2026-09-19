@@ -1,4 +1,4 @@
-import Alpine from 'alpinejs'
+import Alpine from '@alpinejs/csp'
 import { reprice } from './pricing.js'
 import { abosDate } from './date.js'
 import { listKeys } from './list-keys.js'
@@ -7,6 +7,7 @@ import { scannerStore } from './scanner.js'
 import partyVoucher from './party-voucher.js'
 import directSale from './counter/direct-sale.js'
 import directPurchase from './counter/direct-purchase.js'
+import { registerComponents } from './components/index.js'
 
 /*
  * Alpine শুধু ছোট UI ইন্টারঅ্যাকশনে — ড্রপডাউন, পাসওয়ার্ড দেখানো, ট্যাব
@@ -77,6 +78,13 @@ document.addEventListener('alpine:init', () => {
      */
     Alpine.data('directSale', directSale)
     Alpine.data('directPurchase', directPurchase)
+
+    /*
+     * ⭐ শেল, টাকার ঘর ও বাকি পর্দার ছোট কম্পোনেন্ট — ১৯ সেপ্টেম্বর ২০২৬।
+     * ⓘ ব্লেডের অ্যাট্রিবিউটে লেখা যুক্তি CSP-Alpine পড়তে পারে না; তাই
+     * প্রতিটা এখন একটা নাম, আর যুক্তিটা `components/`-এ।
+     */
+    registerComponents(Alpine)
 
     /*
      * ছবি তোলার পর্দা — চার কোণ টেনে কাগজ সোজা করা।

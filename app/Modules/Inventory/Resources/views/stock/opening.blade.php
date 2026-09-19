@@ -52,12 +52,7 @@
                 কিন্তু মূল্যের ঘরে পার্থক্যটা দশগুণ হয়ে চোখে পড়ে।
             --}}
             <form method="POST" action="{{ route('inventory.stock.opening.store') }}" class="space-y-3"
-                  x-data="{ qty: '', rate: '',
-                            get value() {
-                                const v = (parseFloat(this.qty) || 0) * (parseFloat(this.rate) || 0);
-                                return v ? v.toLocaleString(undefined, { minimumFractionDigits: 2,
-                                                                        maximumFractionDigits: 2 }) : '—';
-                            } }">
+                  x-data="openingValue">
                 @csrf
 
                 <x-ui.select name="product_id" :label="__('inventory::field.product')"

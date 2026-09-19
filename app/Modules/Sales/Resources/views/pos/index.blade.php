@@ -95,7 +95,10 @@
         preventDefault দরকার: F2 ব্রাউজারের নিজের কাজ নয়, কিন্তু কিছু
         ব্রাউজারে F4/F8 ঠিকানার বার বা ডিবাগারে যায়।
     --}}
-    <div x-data="pos({{ Illuminate\Support\Js::from($products) }}, {{ $walkinId }}, {{ Illuminate\Support\Js::from($resumed) }}, {{ Illuminate\Support\Js::from($discountOn) }}, {{ Illuminate\Support\Js::from($methods) }})"
+    <div x-data="pos(@js($products), @js($walkinId), @js($resumed), @js($discountOn), @js($methods), {
+             urls: { bill: @js(route('sales.pos.bill')), lookup: @js(route('sales.pos.lookup')) },
+             texts: { billNotFound: @js(__('sales::message.pos_bill_not_found')) },
+         })"
          {{--
              কি-বোর্ডের সারি — কাউন্টারে হাত মাউসে যায় না।
 
@@ -113,14 +116,14 @@
          --}}
          @keydown.window.escape="term ? (term = '') : closePanels()"
          @keydown.window.f1.prevent="helping = !helping"
-         @keydown.window.f2.prevent="$refs.paid?.focus()"
+         @keydown.window.f2.prevent="$focus($refs.paid)"
          @keydown.window.f3.prevent="openReturn()"
-         @keydown.window.f4.prevent="$refs.hold?.click()"
+         @keydown.window.f4.prevent="$press($refs.hold)"
          @keydown.window.f6.prevent="startSplit()"
-         @keydown.window.f7.prevent="document.querySelector('[name=customer_id]')?.focus()"
-         @keydown.window.f8.prevent="$refs.search?.focus()"
+         @keydown.window.f7.prevent="$focus('[name=customer_id]')"
+         @keydown.window.f8.prevent="$focus($refs.search)"
          @keydown.window.f9.prevent="lines.length && (paid = total.toFixed(2))"
-         @keydown.window.f10.prevent="lines.length && $refs.checkout?.click()"
+         @keydown.window.f10.prevent="lines.length && $press($refs.checkout)"
          class="grid gap-4 lg:grid-cols-[1fr_22rem]">
 
         {{-- ── বাঁ দিক: খোঁজা ও পণ্য ───────────────────────────────── --}}
@@ -131,7 +134,7 @@
                     <input type="search"
                            x-model="term"
                            x-ref="search"
-                           x-init="$nextTick(() => $refs.search.focus())"
+                           x-init="$focusSoon('search')"
                            @keydown.enter.prevent="takeFirst()"
                            placeholder="{{ __('sales::message.pos_search') }}"
                            class="h-(--spacing-field) w-full rounded-(--radius-field) border border-(--color-border)
@@ -171,7 +174,7 @@
                         <div class="mt-1 flex items-baseline justify-between">
                             <span class="num text-base font-semibold" x-text="money(p.rate)"></span>
                             <span class="text-2xs"
-                                  :class="Number(p.available) > 0
+                                  :class="$num(p.available) > 0
                                       ? 'text-(--color-ink-muted)'
                                       : 'text-(--color-danger)'">
                                 {{ __('sales::field.available_short') }}
@@ -242,27 +245,27 @@
                             </div>
 
                             <div class="mt-1 flex items-center gap-1">
-                                <button type="button" @click="line.qty = Math.max(1, Number(line.qty) - 1)"
+                                <button type="button" @click="line.qty = $max(1, $num(line.qty) - 1)"
                                         :aria-label="'−'"
                                         class="size-8 rounded-(--radius-field) border border-(--color-border)">−</button>
 
                                 <input type="number" step="0.01" min="0.01"
                                        x-model="line.qty"
-                                       :name="`lines[${i}][qty]`"
+                                       :name="'lines[' + (i) + '][qty]'"
                                        class="num h-(--spacing-field-dense) w-20 rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-app) px-2 text-end text-sm">
 
-                                <button type="button" @click="line.qty = Number(line.qty) + 1"
+                                <button type="button" @click="line.qty = $num(line.qty) + 1"
                                         :aria-label="'+'"
                                         class="size-8 rounded-(--radius-field) border border-(--color-border)">+</button>
 
                                 <input type="number" step="0.01" min="0"
                                        x-model="line.rate"
-                                       :name="`lines[${i}][rate]`"
+                                       :name="'lines[' + (i) + '][rate]'"
                                        class="num ms-auto h-(--spacing-field-dense) w-24 rounded-(--radius-field) border
                                               border-(--color-border) bg-(--color-surface-app) px-2 text-end text-sm">
 
-                                <input type="hidden" :name="`lines[${i}][product_id]`" :value="line.id">
+                                <input type="hidden" :name="'lines[' + (i) + '][product_id]'" :value="line.id">
                             </div>
 
                             {{--
@@ -284,12 +287,12 @@
                             --}}
                             <div x-show="discountOn" x-cloak class="mt-1 flex items-center gap-1">
                                 <label class="text-2xs text-(--color-ink-muted)"
-                                       :for="`discount-${i}`">{{ __('sales::field.discount') }}</label>
+                                       :for="'discount-' + (i)">{{ __('sales::field.discount') }}</label>
 
-                                <input type="number" step="0.01" min="0" :id="`discount-${i}`"
+                                <input type="number" step="0.01" min="0" :id="'discount-' + (i)"
                                        x-model="line.discount"
                                        :max="lineBase(line)"
-                                       :name="`lines[${i}][discount]`"
+                                       :name="'lines[' + (i) + '][discount]'"
                                        class="num ms-auto h-(--spacing-field-dense) w-24 rounded-(--radius-field) border
                                               border-(--color-border) bg-(--color-surface-app) px-2 text-end text-sm">
                             </div>
@@ -338,7 +341,7 @@
                             {{ __('sales::action.exact') }}
                         </button>
                         <template x-for="note in [100, 500, 1000]" :key="note">
-                            <button type="button" @click="paid = String(note)"
+                            <button type="button" @click="paid = $str(note)"
                                     class="num rounded-(--radius-field) border border-(--color-border) px-2 py-1 text-2xs"
                                     x-text="note"></button>
                         </template>
@@ -370,7 +373,7 @@
                         <div x-show="splitting" x-cloak class="mt-2 space-y-1">
                             <template x-for="(part, p) in payments" :key="p">
                                 <div class="flex items-center gap-1">
-                                    <select :name="`payments[${p}][payment_method_id]`"
+                                    <select :name="'payments[' + (p) + '][payment_method_id]'"
                                             x-model="part.method_id"
                                             class="h-(--spacing-field-compact) min-w-0 flex-1 rounded-(--radius-field) border
                                                    border-(--color-border) bg-(--color-surface-app) px-2 text-sm">
@@ -382,7 +385,7 @@
 
                                     <input type="number" step="0.01" min="0"
                                            x-model="part.amount"
-                                           :name="`payments[${p}][amount]`"
+                                           :name="'payments[' + (p) + '][amount]'"
                                            class="num h-(--spacing-field-compact) w-24 rounded-(--radius-field) border
                                                   border-(--color-border) bg-(--color-surface-app)
                                                   px-2 text-end text-sm">
@@ -390,7 +393,7 @@
                                     {{-- নম্বর কেবল যে উপায়ে লাগে — নগদে TrxID নেই --}}
                                     <input type="text" x-show="needsReference(part)" x-cloak
                                            x-model="part.reference"
-                                           :name="`payments[${p}][reference]`"
+                                           :name="'payments[' + (p) + '][reference]'"
                                            :placeholder="'{{ __('sales::field.instrument_no') }}'"
                                            class="h-(--spacing-field-compact) w-28 rounded-(--radius-field) border
                                                   border-(--color-border) bg-(--color-surface-app) px-2 text-sm">
@@ -413,7 +416,7 @@
                                 {{-- ভাগগুলোর যোগফল — না মিললে সেবাটাই আটকায়,
                                      কিন্তু ততক্ষণে ক্রেতা দাঁড়িয়ে আছেন --}}
                                 <span class="num text-2xs"
-                                      :class="Math.abs(splitTotal - Number(paid || 0)) < 0.005
+                                      :class="$abs(splitTotal - $num(paid || 0)) < 0.005
                                               ? 'text-(--color-ink-muted)'
                                               : 'text-(--color-danger)'"
                                       x-text="money(splitTotal)"></span>
@@ -422,9 +425,9 @@
                     @endif
 
                     <div class="mt-2 flex items-baseline justify-between text-sm"
-                         x-show="Number(paid) > total" x-cloak>
+                         x-show="$num(paid) > total" x-cloak>
                         <span class="text-(--color-ink-muted)">{{ __('sales::field.change') }}</span>
-                        <span class="num font-semibold" x-text="money(Number(paid) - total)"></span>
+                        <span class="num font-semibold" x-text="money($num(paid) - total)"></span>
                     </div>
                 </div>
 
@@ -583,17 +586,17 @@
                                          ফেরতের সময় এটা না জানালে ক্যাশিয়ার
                                          পুরোটা টাইপ করতেন আর সেবাটা আটকাত --}}
                                     <span class="num text-2xs text-(--color-ink-muted)"
-                                          x-text="`${roomOn(line)} / ${line.qty}`"></span>
+                                          x-text="(roomOn(line)) + ' / ' + (line.qty)"></span>
 
                                     <input type="number" step="0.01" min="0" :max="roomOn(line)"
                                            x-model="line.take"
-                                           :name="`lines[${i}][qty]`"
+                                           :name="'lines[' + (i) + '][qty]'"
                                            class="num h-(--spacing-field-compact) w-20 rounded-(--radius-field) border
                                                   border-(--color-border) bg-(--color-surface-app)
                                                   px-2 text-end text-sm">
 
-                                    <input type="hidden" :name="`lines[${i}][product_id]`" :value="line.product_id">
-                                    <input type="hidden" :name="`lines[${i}][sales_invoice_line_id]`" :value="line.id">
+                                    <input type="hidden" :name="'lines[' + (i) + '][product_id]'" :value="line.product_id">
+                                    <input type="hidden" :name="'lines[' + (i) + '][sales_invoice_line_id]'" :value="line.id">
                                 </div>
                             </template>
                         </div>
@@ -624,316 +627,4 @@
         </div>
     </div>
 
-    @push('scripts')
-        <script @nonce>
-            function pos(catalogue, walkinId, resumed, discountOn, methods) {
-                return {
-                    catalogue,
-                    walkinId,
-                    discountOn,
-                    methods,
-
-                    /*
-                     * ভাগ করে পরিশোধ — শুরুতে বন্ধ।
-                     *
-                     * বেশিরভাগ বিক্রয় এক উপায়েই; ঘরগুলো খোলা রাখলে
-                     * প্রতিটা নগদ বিক্রয়ে বাড়তি ট্যাব চাপতে হত।
-                     */
-                    splitting: false,
-                    payments: [],
-
-                    /*
-                     * কি-বোর্ডের সাহায্য — F1।
-                     *
-                     * ── কেন এটা ছাড়া বাকি কি-গুলোর মানে নেই ─────────
-                     * দশটা শর্টকাট থাকা আর না থাকা সমান, যদি কেউ না
-                     * জানে কোনটা কী করে। নতুন ক্যাশিয়ার প্রথম দিনেই
-                     * F1 চেপে তালিকাটা দেখতে পান, আর তারপর আর লাগে না।
-                     */
-                    helping: false,
-
-                    closePanels() {
-                        this.helping = false;
-                        this.returning = false;
-                    },
-
-                    // ── কাউন্টার থেকেই ফেরত ──────────────────────────
-                    returning: false,
-                    billNo: '',
-                    bill: null,
-                    billError: '',
-                    refunding: true,
-
-                    openReturn() {
-                        this.returning = true;
-                        this.$nextTick(() => this.$refs.billNo?.focus());
-                    },
-
-                    /*
-                     * নম্বর ধরে বিলটা আনা।
-                     *
-                     * নেট গেলে কাউন্টার থামে না: ব্যর্থ হলে কেবল একটা
-                     * বার্তা দেখায়, ঝুড়ি ও বিক্রয় আগের মতোই চলে।
-                     */
-                    async findBill() {
-                        this.bill = null;
-                        this.billError = '';
-
-                        const no = String(this.billNo || '').trim();
-
-                        if (no === '') {
-                            return;
-                        }
-
-                        try {
-                            const response = await fetch(
-                                `{{ route('sales.pos.bill') }}?no=${encodeURIComponent(no)}`,
-                                {headers: {Accept: 'application/json'}},
-                            );
-
-                            if (!response.ok) {
-                                this.billError = '{{ __('sales::message.pos_bill_not_found') }}';
-
-                                return;
-                            }
-
-                            const bill = await response.json();
-
-                            // প্রতিটা সারিতে "কতটুকু ফেরত নিচ্ছি" — শুরুতে
-                            // খালি, কারণ বেশিরভাগ ফেরতে এক-দুইটা পণ্যই আসে
-                            bill.lines.forEach((l) => { l.take = ''; });
-
-                            this.bill = bill;
-                        } catch (e) {
-                            this.billError = '{{ __('sales::message.pos_bill_not_found') }}';
-                        }
-                    },
-
-                    /** এই লাইনে আর কতটুকু ফেরত নেওয়া যায়। */
-                    roomOn(line) {
-                        return Math.max(0, Number(line.qty) - Number(line.returned || 0));
-                    },
-
-                    /*
-                     * তোলা বিলের সারিগুলো নিয়েই পর্দা খোলে।
-                     *
-                     * সার্ভার সারিগুলো পাঠায় লাইনের চেহারায় (product_id),
-                     * আর কার্ট চেনে id নামে — তাই এখানেই বদলে নেওয়া হয়।
-                     * না বদলালে সারিগুলো দেখা যেত, কিন্তু একই পণ্য আবার
-                     * চাপলে নতুন সারি হত আর রসিদে জিনিসটা দুইবার থাকত।
-                     */
-                    lines: (resumed || []).map(l => ({
-                        id: l.product_id,
-                        name: l.name,
-                        rate: l.rate,
-                        qty: Number(l.qty),
-                        discount: l.discount || '',
-                    })),
-
-                    term: '',
-                    paid: '',
-
-                    /*
-                     * শেষ যে কোডটা খুঁজে পাওয়া যায়নি।
-                     *
-                     * নীরবে কিছু না করলে ক্যাশিয়ার দ্বিতীয়বার, তৃতীয়বার
-                     * স্ক্যান করতেন আর ভাবতেন স্ক্যানারটা নষ্ট। কোডটা
-                     * দেখিয়ে দিলে তিনি অন্তত জানেন যন্ত্র পড়েছে,
-                     * ব্যবস্থা চেনেনি।
-                     */
-                    notFound: '',
-
-                    get visible() {
-                        const t = this.term.trim().toLowerCase();
-
-                        // খালি ঘরে সব পণ্য — কাউন্টারে বেশিরভাগ সময় লোকে
-                        // খোঁজে না, চোখে দেখে বেছে নেয়
-                        if (t === '') return this.catalogue.slice(0, 60);
-
-                        return this.catalogue.filter(p =>
-                            p.name.toLowerCase().includes(t)
-                            || p.code.toLowerCase().includes(t)
-                            || (p.barcode || '').toLowerCase().includes(t)
-                        ).slice(0, 60);
-                    },
-
-                    /*
-                     * Enter চাপলে প্রথমটা ঝুড়িতে।
-                     *
-                     * বারকোড স্ক্যানার শেষে Enter পাঠায়, আর বারকোডে
-                     * সাধারণত একটাই পণ্য মেলে — তাই স্ক্যান করলেই সরাসরি
-                     * ঝুড়িতে চলে যায়, কোনো ক্লিক ছাড়াই।
-                     */
-                    takeFirst() {
-                        const first = this.visible[0];
-
-                        if (first) {
-                            this.add(first);
-                            return;
-                        }
-
-                        /*
-                         * পাতার তালিকায় নেই — সার্ভারকে জিজ্ঞেস করা হয়।
-                         *
-                         * ── ওষুধের কার্টনে এটাই একমাত্র পথ ─────────────
-                         * GS1 DataMatrix স্ক্যান করলে স্ক্যানার পাঠায় গোটা
-                         * element string (পণ্য + লট + মেয়াদ একসাথে)। ওই
-                         * লেখাটা পাতার তালিকার নাম/কোড/বারকোডের কোনোটার
-                         * সাথেই মেলে না, তাই স্থানীয় খোঁজা সবসময় খালি
-                         * ফেরে — আর ক্যাশিয়ার দেখেন "পণ্য নেই", অথচ
-                         * প্যাকেটটা তাঁর হাতেই।
-                         *
-                         * সার্ভারের lookup বারকোডটা ভেঙে GTIN বের করে,
-                         * আর সাথে লট ও মেয়াদও ফেরত দেয়।
-                         */
-                        const scanned = this.term.trim();
-
-                        if (scanned === '') return;
-
-                        this.askServer(scanned);
-                    },
-
-                    async askServer(code) {
-                        try {
-                            const response = await fetch(
-                                '{{ route('sales.pos.lookup') }}?code=' + encodeURIComponent(code),
-                                { headers: { 'Accept': 'application/json' } },
-                            );
-
-                            if (!response.ok) {
-                                this.notFound = code;
-                                return;
-                            }
-
-                            const product = await response.json();
-
-                            this.add({
-                                id: product.id,
-                                name: product.name,
-                                rate: product.rate,
-                                batch: product.scanned_batch,
-                                expiry: product.scanned_expiry,
-                            });
-                        } catch (e) {
-                            /*
-                             * নেট গেলে কাউন্টার থামে না।
-                             *
-                             * খোঁজাটা ব্যর্থ হলে কেবল "পাওয়া গেল না"
-                             * দেখায়; ঝুড়ি, মোট আর ছাপা সবই আগের মতো
-                             * চলে। ব্যতিক্রম ছড়াতে দিলে Alpine-এর পুরো
-                             * অংশটা থেমে যেত।
-                             */
-                            this.notFound = code;
-                        }
-                    },
-
-                    add(product) {
-                        this.notFound = '';
-
-                        const existing = this.lines.find(l => l.id === product.id);
-
-                        // একই পণ্য দ্বিতীয়বার স্ক্যান করলে নতুন সারি নয়,
-                        // পরিমাণ এক বাড়ে — রসিদে একই জিনিস দুই সারিতে
-                        // দেখলে গ্রাহক ভাবেন দুইবার ধরা হয়েছে
-                        if (existing) {
-                            existing.qty = Number(existing.qty) + 1;
-                        } else {
-                            this.lines.push({
-                                id: product.id,
-                                name: product.name,
-                                rate: product.rate,
-                                qty: 1,
-
-                                // ছাড় শুরুতে খালি — শূন্য লিখলে ঘরটায়
-                                // "0" বসে থাকত আর টাইপ করতে আগে মুছতে হত
-                                discount: '',
-
-                                /*
-                                 * স্ক্যানে পাওয়া লট ও মেয়াদ — কেবল
-                                 * দেখানোর জন্য, কার্টে পাঠানোর জন্য নয়।
-                                 *
-                                 * কোন লট বেরোবে সেটা FEFO ঠিক করে মাল
-                                 * বেরোনোর মুহূর্তে। এখানে সংখ্যাগুলো
-                                 * থাকে যাতে ক্যাশিয়ার হাতের প্যাকেটের
-                                 * সাথে মিলিয়ে নিতে পারেন — বিশেষত
-                                 * মেয়াদটা, যেটা ছোট ছাপায় পড়া কঠিন।
-                                 */
-                                batch: product.batch ?? null,
-                                expiry: product.expiry ?? null,
-                            });
-                        }
-
-                        this.term = '';
-                        this.$nextTick(() => this.$refs.search.focus());
-                    },
-
-                    remove(index) {
-                        this.lines.splice(index, 1);
-                    },
-
-                    /*
-                     * ভাগ করে দেওয়া শুরু — প্রথম সারিতে পুরো টাকাটাই।
-                     *
-                     * খালি সারি দিয়ে শুরু করলে ক্যাশিয়ারকে দুইবার টাইপ
-                     * করতে হত: একবার মোট, একবার প্রথম ভাগ। পুরোটা বসিয়ে
-                     * দিলে তিনি কেবল দ্বিতীয় সারিতে যতটা সরাতে চান
-                     * ততটুকুই লেখেন।
-                     */
-                    startSplit() {
-                        this.splitting = true;
-
-                        if (this.payments.length === 0) {
-                            this.payments = [
-                                {method_id: '', amount: (this.paid || this.total.toFixed(2)), reference: ''},
-                                {method_id: '', amount: '', reference: ''},
-                            ];
-                        }
-                    },
-
-                    get splitTotal() {
-                        return this.payments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
-                    },
-
-                    needsReference(part) {
-                        const found = this.methods.find((m) => String(m.id) === String(part.method_id));
-
-                        return Boolean(found && found.needs_reference);
-                    },
-
-                    lineBase(line) {
-                        return (Number(line.qty) || 0) * (Number(line.rate) || 0);
-                    },
-
-                    /*
-                     * ছাড় বাদ দিয়ে লাইনের টাকা।
-                     *
-                     * ছাড় লাইনের চেয়ে বেশি হতে পারে না — সেবাটাও সেটা
-                     * আটকায়, কিন্তু পর্দায় ঋণাত্মক সংখ্যা দেখানো মানে
-                     * ক্রেতাকে ভুল মোট দেখানো, আর সেটা সংশোধনের আগেই
-                     * বলা হয়ে যায়।
-                     */
-                    lineTotal(line) {
-                        const base = this.lineBase(line);
-                        const off = Math.min(Number(line.discount) || 0, base);
-
-                        return base - off;
-                    },
-
-                    get total() {
-                        return this.lines.reduce((sum, l) => sum + this.lineTotal(l), 0);
-                    },
-
-                    money(v) {
-                        return Number(v || 0).toLocaleString('en-US', {
-                            minimumFractionDigits: 2, maximumFractionDigits: 2,
-                        });
-                    },
-
-                    qty(v) {
-                        return String(Number(v || 0));
-                    },
-                };
-            }
-        </script>
-    @endpush
 </x-layouts.app>

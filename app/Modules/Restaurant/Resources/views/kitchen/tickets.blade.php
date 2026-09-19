@@ -50,27 +50,11 @@
         সংখ্যাটা বদলালে কার্ডের ভেতরটা হাতে সাজানোর চেয়ে reload সৎ, আর
         রান্নাঘরে কেউ ফর্ম ভরে বসে নেই যেটা হারাতে পারে।
     --}}
-    <div x-data="{
-             at: '{{ now()->format('H:i:s') }}',
-             stale: false,
-             async pull() {
-                 try {
-                     const r = await fetch('{{ route('restaurant.kitchen.feed') }}',
-                                           { headers: { 'Accept': 'application/json' } });
-                     if (! r.ok) { throw new Error(r.status); }
-                     const d = await r.json();
-                     this.at = d.at;
-                     this.stale = false;
-
-                     if (d.tickets.length !== {{ $tickets->count() }}) {
-                         window.location.reload();
-                     }
-                 } catch (e) {
-                     this.stale = true;
-                 }
-             },
-         }"
-         x-init="setInterval(() => pull(), 10000)">
+    <div x-data="kitchenTickets({
+             at: @js(now()->format('H:i:s')),
+             url: @js(route('restaurant.kitchen.feed')),
+             count: @js($tickets->count()),
+         })">
 
         <div class="mb-3 flex items-center gap-3">
             <span class="text-2xs text-(--color-ink-muted)">

@@ -477,7 +477,7 @@
                                               :class="customer.due > 0
                                                         ? 'text-(--color-danger)'
                                                         : 'text-(--color-ink)'"
-                                              x-text="money(Math.abs(customer.due || 0))"></span>
+                                              x-text="money($abs(customer.due || 0))"></span>
                                     </span>
 
                                     @if ($show['credit_limit'])
@@ -530,7 +530,7 @@
                                     border-2 border-(--color-brand-500) bg-(--color-surface-card)
                                     p-1.5 text-(--color-ink) shadow-lg">
                             <input type="search" x-model="customerTerm"
-                                   x-effect="customerPickerOpen && $nextTick(() => $el.focus())"
+                                   x-effect="customerPickerOpen && $focusSoon()"
                                    @keydown.enter.prevent="pickFirstCustomer()"
                                    placeholder="{{ __('sales::message.search_customer') }}"
                                    class="h-(--spacing-field-dense) w-full rounded-(--radius-field)
@@ -544,7 +544,7 @@
                                                      আর `surface-hover`, দুইটাই থিমের সাথে
                                                      বদলায়। ⛔ আগে `brand-100` ছিল, আর ডার্কে
                                                      ওটা হালকা টিয়া হয়ে লেখা গিলে ফেলত। --}}
-                                                :class="String(row.id) === customerId
+                                                :class="$str(row.id) === customerId
                                                     ? 'bg-(--color-surface-selected) font-semibold' : ''"
                                                 class="w-full rounded-(--radius-field) px-2 py-1.5 text-start
                                                        hover:bg-(--color-surface-hover)">

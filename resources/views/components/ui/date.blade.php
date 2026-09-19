@@ -101,8 +101,11 @@
      * ওখানে `'@js($iso)'` নিছক একটা স্ট্রিং — Blade `@js`-কে কম্পাইলের
      * সময় দেখে, রানটাইমে নয়। ⛔ ফল হত পর্দায় হুবহু `@js($iso)` লেখা।
      * ⓘ তাই বীজটা এখানেই পাকা করে নেওয়া হয়।
+     *
+     * ⚠️ `?? ''` এখানে লেখা হয় না — CSP-Alpine-এর পার্সার `??` চেনে না।
+     * ফাঁকা মানটা `abosDate()` নিজেই সামলায় (`iso ?? ''`, date.js-এ)।
      */
-    $seed = $bindIso !== null ? '('.$bindIso." ?? '')" : json_encode($iso);
+    $seed = $bindIso !== null ? $bindIso : json_encode($iso);
 @endphp
 
 <div class="relative" x-data="abosDate({{ $seed }}, {{ json_encode((bool) $submitOnChange) }})"

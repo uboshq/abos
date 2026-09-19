@@ -50,6 +50,27 @@ export function scannerStore() {
          */
         square: { x: 0, y: 0, size: 0 },
 
+        /*
+         * ⓘ মুখের বর্গটা ছবির কত শতাংশ — আকারের স্লাইডারের মান।
+         * ⚠️ পর্দায় লেখা যেত না: CSP-Alpine `Math` দেখে না।
+         */
+        get squarePercent() {
+            const side = Math.min(this.viewWidth, this.viewHeight)
+
+            return side ? Math.round(this.square.size * 100 / side) : 0
+        },
+
+        /** পর্দার মাপ, `:style`-এর জন্য — টেমপ্লেট লিটারাল CSP-Alpine পড়ে না */
+        get viewBox() {
+            return { width: this.viewWidth + 'px', height: this.viewHeight + 'px' }
+        },
+
+        get squareBox() {
+            const { x, y, size } = this.square
+
+            return { left: x + 'px', top: y + 'px', width: size + 'px', height: size + 'px' }
+        },
+
         dragging: -1,
         detected: false,
         failed: '',

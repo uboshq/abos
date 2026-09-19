@@ -289,93 +289,22 @@
             ⭐ ঘরগুলো রয়ে গেছে (লুকানো ও নিষ্ক্রিয়), কেবল বাক্সটা নেই।
         --}}
         <section @unless ($contraLayout) data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4" @endunless
-                 x-data="{
-                     from: '{{ old('from_account_id', $creditLine?->account_id) }}',
+                 {{-- ⓘ যুক্তিটা `resources/js/components/forms.js`-এ (simpleVoucherBox) --}}
+                 x-data="simpleVoucherBox({
+                     from: @js((string) old('from_account_id', $creditLine?->account_id)),
                      credit: @js($creditIds),
-                     get onCredit() { return this.credit.includes(Number(this.from)); },
-
                      partyType: @js((string) old('party_type', $voucher->party_type ?? '')),
                      partyId: @js((string) old('party_id', $voucher->party_id ?? '')),
                      parties: @js(collect($parties)->flatMap(fn (array $g) => collect($g['options'])
                          ->map(fn (array $o) => ['type' => $g['type'], 'id' => (int) $o['id'], 'label' => $o['label']]))
                          ->values()),
-                     get partyOptions() {
-                         return this.parties.filter(p => p.type === this.partyType);
-                     },
-
                      cats: @js($moneyCategories),
                      catId: @js((string) old('money_category_id', $voucher->money_category_id ?? '')),
                      subId: @js((string) old('money_subcategory_id', $voucher->money_subcategory_id ?? '')),
-                     get parentCats() { return this.cats.filter(c => c.parent_id === null); },
-                     get subCats() {
-                         return this.cats.filter(c => String(c.parent_id) === String(this.catId));
-                     },
-
                      dueUrl: @js(route('accounts.voucher.due')),
-                     due: null,
-                     dueBusy: false,
-
-                     /*
-                      * ⭐ চিহ্নটাই বাক্যটা বদলে দেয়।
-                      *
-                      * ডেবিট − ক্রেডিট ধনাত্মক মানে তিনি আমাদের দেবেন,
-                      * ঋণাত্মক মানে উল্টো। ⚠️ কেবল একটা সংখ্যা দেখালে
-                      * সরবরাহকারীর ঘরে “−৫,০০০” বসত আর কেউ ভাবতেন
-                      * হিসাবে গোলমাল — অথচ ওটাই ঠিক উত্তর, শুধু অন্য
-                      * দিকের। তাই সংখ্যার পাশে কথাটাও থাকে।
-                      */
-                     get dueText() {
-                         const n = Number(this.due);
-                         const shown = Math.abs(n).toLocaleString(undefined, {
-                             minimumFractionDigits: 2, maximumFractionDigits: 2,
-                         });
-
-                         return shown + ' — ' + (n < 0
-                             ? @js(__('accounts::message.we_owe_them'))
-                             : @js(__('accounts::message.they_owe_us')));
-                     },
-
-                     /*
-                      * ধরন বদলালে বাছা মানুষটাও বদলাতে হবে — নাহলে
-                      * 'customer' ধরনের সাথে একজন সরবরাহকারীর আইডি
-                      * জোড়া লেগে থাকত, আর সেটা চুপচাপ ভুল পক্ষের
-                      * খতিয়ানে টাকা বসাত।
-                      */
-                     resetParty() { this.partyId = ''; this.due = null; },
-
-                     loadDue() {
-                         this.due = null;
-
-                         if (! this.partyType || ! this.partyId) { return; }
-
-                         this.dueBusy = true;
-
-                         fetch(this.dueUrl + '?party_type=' + encodeURIComponent(this.partyType)
-                                   + '&party_id=' + encodeURIComponent(this.partyId),
-                               { headers: { 'Accept': 'application/json' } })
-                             .then(r => r.ok ? r.json() : null)
-                             .then(d => { this.due = (d && d.known) ? d.amount : null; })
-                             .catch(() => { this.due = null; })
-                             .finally(() => { this.dueBusy = false; });
-                     },
-
-                     /*
-                      * শ্রেণি বাছলে খাতটা নিজে থেকে বসে।
-                      *
-                      * ⓘ এটা কেবল **সুবিধা** — আসল নিয়মটা সার্ভারে
-                      * ([[VoucherRequest::fillAccountFromCategory()]]),
-                      * তাই JS বন্ধ থাকলেও শ্রেণি থেকে খাত বসে।
-                      */
-                     pickCategory() { this.subId = ''; this.applyAccount(this.catId); },
-                     pickSub() { this.applyAccount(this.subId || this.catId); },
-                     applyAccount(id) {
-                         const row = this.cats.find(c => String(c.id) === String(id));
-
-                         if (row && row.account_id) { this.from = String(row.account_id); }
-                     },
-
-                     init() { this.loadDue(); },
-                 }">
+                     weOweThem: @js(__('accounts::message.we_owe_them')),
+                     theyOweUs: @js(__('accounts::message.they_owe_us')),
+                 })">
             {{--
                 ⛔ রসিদ ও পরিশোধে এই দুইটা ঘর নিচের সারিতে বসে (নমুনা)।
                 ⓘ "কার কাছ থেকে" ঘরটা নমুনায় নেই — উপরে ডিপোজিটরই
@@ -520,7 +449,7 @@
 
                         <template x-for="row in partyOptions" :key="row.type + ':' + row.id">
                             <option :value="row.id" x-text="row.label"
-                                    :selected="String(row.id) === String(partyId)"></option>
+                                    :selected="$str(row.id) === $str(partyId)"></option>
                         </template>
                     </select>
                     @error('party_id')
@@ -601,7 +530,7 @@
                             <option value="">—</option>
                             <template x-for="row in parentCats" :key="row.id">
                                 <option :value="row.id" x-text="row.label"
-                                        :selected="String(row.id) === String(catId)"></option>
+                                        :selected="$str(row.id) === $str(catId)"></option>
                             </template>
                         </select>
                         @error('money_category_id')
@@ -627,7 +556,7 @@
                             <option value="">—</option>
                             <template x-for="row in subCats" :key="row.id">
                                 <option :value="row.id" x-text="row.label"
-                                        :selected="String(row.id) === String(subId)"></option>
+                                        :selected="$str(row.id) === $str(subId)"></option>
                             </template>
                         </select>
                         @error('money_subcategory_id')
