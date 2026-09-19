@@ -6,6 +6,7 @@ namespace App\Modules\SystemAdmin\Policies;
 
 use App\Core\Services\PermissionSyncer;
 use App\Models\User;
+use App\Models\UserPermissionOverride;
 use Spatie\Permission\Models\Role;
 
 /**
@@ -22,12 +23,15 @@ use Spatie\Permission\Models\Role;
  *    নিজের নেই — module.php-তে লেখা আছে User Admin *"ক্ষমতার ছক বানান
  *    না"*, অথচ ছকের যেকোনো ঘর তিনি নিজের নামে বসাতে পারতেন।
  *
- * ⭐ দুইটা নিয়ম:
+ * ⭐ তিনটা নিয়ম:
  *   · মালিকের খাতা কেবল মালিক বদলান
+ *   · নিজের চেয়ে বেশি ক্ষমতার কারও খাতা বদলানো যায় না — পাসওয়ার্ড বদলে
+ *     তাঁর হয়ে ঢোকা মানে তাঁর ক্ষমতাটাই নিয়ে নেওয়া
  *   · নতুন ভূমিকা দেওয়া যায় কেবল যদি তার প্রতিটা অনুমতি দাতার নিজের আছে
  *     (যা আগে থেকেই আছে সেটা রেখে দেওয়া আটকায় না)
  *
- * ⓘ মালিকের জন্য কোনো সীমা নেই — তিনিই ছক বানান।
+ * ⓘ দ্বিতীয় নিয়মটা মালিকের সিদ্ধান্ত, ১৯ সেপ্টেম্বর ২০২৬: *"bondo koro,
+ * sob power super admin er"*। মালিকের জন্য কোনো সীমা নেই — তিনিই ছক বানান।
  */
 class UserPolicy
 {
@@ -41,7 +45,33 @@ class UserPolicy
             return true;
         }
 
-        return ! ($target->exists && $this->isOwner($target));
+        if (! $target->exists) {
+            return true;
+        }
+
+        if ($this->isOwner($target)) {
+            return false;
+        }
+
+        /*
+         * ⓘ তাঁর প্রতিটা ক্ষমতা আমারও আছে — তবেই তাঁর খাতায় হাত। ভূমিকার
+         * অনুমতির সাথে তাঁর নিজের নামে দেওয়া ব্যতিক্রমও ([[UserPermissionOverride]]),
+         * নাহলে ব্যতিক্রম দিয়ে ক্ষমতা পাওয়া মানুষটা এই নিয়মের বাইরে থাকতেন।
+         */
+        $powers = $target->getAllPermissions()->pluck('name')->merge(
+            UserPermissionOverride::query()
+                ->where('user_id', $target->id)
+                ->where('granted', true)
+                ->pluck('permission'),
+        )->unique();
+
+        foreach ($powers as $permission) {
+            if (! $actor->can($permission)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**

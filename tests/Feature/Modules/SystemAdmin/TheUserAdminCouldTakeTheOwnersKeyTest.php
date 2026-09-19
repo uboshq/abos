@@ -10,6 +10,7 @@ use App\Models\Branch;
 use App\Models\Company;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -147,6 +148,32 @@ final class TheUserAdminCouldTakeTheOwnersKeyTest extends TestCase
             ->assertSessionHasErrors('roles');
     }
 
+    /**
+     * ⛔ দরজা ৩ — নিজের চেয়ে বেশি ক্ষমতার কারও পাসওয়ার্ড বদলে তাঁর হয়ে ঢোকা।
+     *
+     * ⓘ মালিকের সিদ্ধান্ত, ১৯ সেপ্টেম্বর ২০২৬: *"bondo koro, sob power
+     * super admin er"*। হিসাবরক্ষকের ক্ষমতা ব্যবহারকারী-প্রশাসকের নেই, তাই
+     * তাঁর খাতায় প্রশাসকের হাত নেই — মালিকের আছে।
+     */
+    public function test_nobody_edits_someone_more_powerful_than_themselves(): void
+    {
+        $accountant = $this->person('accountant@uak.test');
+        CompanyContext::forCompany($this->company->id, fn () => $accountant->assignRole('accountant'));
+
+        $this->assertFalse($this->admin->can('update', $accountant->fresh()));
+        $this->assertTrue($this->owner->can('update', $accountant->fresh()));
+
+        $this->actingAs($this->admin)
+            ->put(route('system_admin.user.update', $accountant), $this->form($accountant,
+                ['accountant'], ['password' => 'Borrowed-key-77']))
+            ->assertForbidden();
+
+        $this->assertFalse(
+            Hash::check('Borrowed-key-77', (string) $accountant->fresh()?->password),
+            'প্রশাসক হিসাবরক্ষকের পাসওয়ার্ড বদলে ফেলেছেন — এখন তিনি হিসাবরক্ষক হয়ে ঢুকতে পারবেন।',
+        );
+    }
+
     /** ⭐ নিজের ভিতরের ক্ষমতা দেওয়া যায়; যা আগে থেকেই আছে তা রাখা যায় */
     public function test_what_is_within_reach_or_already_there_passes(): void
     {
@@ -155,9 +182,10 @@ final class TheUserAdminCouldTakeTheOwnersKeyTest extends TestCase
         $this->assertTrue($this->admin->can('grantRole', [$this->clerk, $userAdmin]));
         $this->assertFalse($this->admin->can('grantRole', [$this->clerk, $this->accountant]));
 
-        CompanyContext::forCompany($this->company->id, fn () => $this->clerk->assignRole('accountant'));
+        $holder = $this->person('holder@uak.test');
+        CompanyContext::forCompany($this->company->id, fn () => $holder->assignRole('accountant'));
 
-        $this->assertTrue($this->admin->can('grantRole', [$this->clerk->fresh(), $this->accountant]),
+        $this->assertTrue($this->admin->can('grantRole', [$holder->fresh(), $this->accountant]),
             'যে ভূমিকা আগে থেকেই আছে, সেটা রাখাও আটকে যাচ্ছে — তাহলে প্রশাসক কারও নামটাও বদলাতে পারতেন না।');
 
         $this->assertTrue($this->owner->can('grantRole', [$this->clerk, $this->accountant]),
