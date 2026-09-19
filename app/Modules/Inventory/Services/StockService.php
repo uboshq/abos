@@ -311,9 +311,26 @@ final class StockService
         ?string $narration = null,
         ?callable $reservedFor = null,
     ): array {
+        /*
+         * ⭐ কেবল যা এখনো ফেরানো হয়নি — ১৯ সেপ্টেম্বর ২০২৬।
+         *
+         * ⛔ আগে উৎসের **সব** চলাচল তোলা হত। নিশ্চিত ক্রয় বিল সম্পাদনায়
+         * (মাল ফেরত → বদলানো → আবার ঢোকানো) দ্বিতীয় সম্পাদনা বা পরে বাতিল
+         * করলে প্রথমবার ঢোকানো মালটাও আবার বের হত — মজুদ নীরবে কমত।
+         *
+         * ⓘ ফেরানোর সারি সবসময় যা ফেরায় তার **পরে** বসে, তাই শেষ ফেরানো
+         * সারির id-র পরের চলাচলগুলোই খোলা। প্রথমবার ফেরানো সারি নেই, তাই
+         * সব — আগের আচরণ অবিকল। [[PostingEngine::reverse()]]-এর একই নিয়ম।
+         */
+        $lastReversed = StockMovement::query()
+            ->where('source_type', $reversedType)
+            ->where('source_id', $sourceId)
+            ->max('id');
+
         $original = StockMovement::query()
             ->where('source_type', $sourceType)
             ->where('source_id', $sourceId)
+            ->when($lastReversed !== null, fn ($q) => $q->where('id', '>', (int) $lastReversed))
             ->with(['product', 'warehouse', 'batch'])
             ->get();
 
