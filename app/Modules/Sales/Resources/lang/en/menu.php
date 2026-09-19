@@ -10,7 +10,7 @@ return [
     'uninvoiced' => 'Received, Not Invoiced',
     'by_supplier' => 'Purchases by Supplier',
     'challans' => 'Delivery Challans',
-    'invoices' => 'Sales Invoices',
+    'invoices' => 'Invoice List',
     'collections' => 'Collections',
     'undelivered' => 'Delivered, Not Invoiced',
     'by_customer' => 'Sales by Customer',
