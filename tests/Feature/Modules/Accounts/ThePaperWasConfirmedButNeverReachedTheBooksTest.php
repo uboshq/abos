@@ -57,6 +57,19 @@ final class ThePaperWasConfirmedButNeverReachedTheBooksTest extends TestCase
 
         $this->assertStringContainsString('data-not-posted', $html, 'পর্দায় "খাতায় ওঠেনি" অংশটাই নেই।');
         $this->assertStringContainsString($bill->document_no, $html, 'কাগজটা তালিকায় আসেনি।');
+
+        /*
+         * ⚠️ কম্পাইল না হওয়া ট্যাগ — abos-f9-এর ধরা, ২০ সেপ্টেম্বর ২০২৬।
+         *
+         * ⛔ অ্যাট্রিবিউটের ভিতরে একটা ASCII ডবল কোট ঢুকলে Blade ট্যাগটা আর
+         * চেনে না, আর পুরোটা **লেখা হিসেবে** ছাপে। পাতা তবু ২০০ দেয়, তাই
+         * কোনো পরীক্ষা লাল হয় না — টেবিলটা নীরবে উধাও।
+         */
+        $this->assertStringNotContainsString('<x-ui.', $html, 'একটা কম্পোনেন্ট কম্পাইল না হয়ে লেখা হিসেবে ছাপা হয়েছে।');
+
+        /* নম্বরটা ক্লিকযোগ্য — কাগজটা খুলেই বোঝা যায় কেন খাতায় ওঠেনি */
+        $this->assertMatchesRegularExpression('/<a[^>]*>\s*'.preg_quote($bill->document_no, '/').'/', $html,
+            'নথি নম্বরটা লিংক নয়।');
     }
 
     /** সংখ্যাটা ড্যাশবোর্ডেও — যিনি জানেন না, তিনি মনিটরে যাবেন না। */

@@ -18,6 +18,31 @@
          'render' => fn ($r) => \App\Core\Support\DateFormat::formatWithTime($r['last_at'])],
     ];
 
+    /*
+     * ⭐ খাতায় না-ওঠা কাগজের কলাম — নম্বরটা ক্লিকযোগ্য, মালিকের
+     * "sob jaygay hyper link dewar kotha" ধরে।
+     *
+     * ⚠️ ছকটা এখানে, `:columns="[…]"`-এর ভিতরে নয় — abos-f9-এর ধরা, ২০
+     * সেপ্টেম্বর ২০২৬। ⛔ অ্যাট্রিবিউটের ভিতরে একটা ASCII ডবল কোট থাকলেই
+     * (এমনকি মন্তব্যের ভিতরে) Blade ওখানেই অ্যাট্রিবিউট শেষ ধরে, আর
+     * পুরো ট্যাগটা লেখা হিসেবে ছাপা হয় — পাতা তবু ২০০ দেয়, তাই টেরও
+     * পাওয়া যায় না।
+     *
+     * ⓘ কোন কাগজ কোথায় খোলে সেটা x-ui.drill জানে, তাই এখানে রুট বাছা হয় না।
+     */
+    $notPostedColumns = [
+        ['key' => 'trx_date', 'label' => __('accounts::control.date'), 'width' => '8rem',
+         'render' => fn ($r) => \App\Core\Support\DateFormat::format($r['trx_date'])],
+        ['key' => 'source', 'label' => __('accounts::control.source'), 'width' => '11rem',
+         'render' => fn ($r) => \Illuminate\Support\Facades\Lang::has('core.source.'.$r['source'])
+             ? __('core.source.'.$r['source'])
+             : $r['source']],
+        ['key' => 'document_no', 'label' => __('core.print.document_no'), 'width' => '12rem',
+         'render' => fn ($r) => view('accounts::control.partials.paper-link', ['row' => $r])],
+        ['key' => 'amount', 'label' => __('accounts::control.amount'), 'numeric' => true, 'width' => '10rem',
+         'render' => fn ($r) => $r['amount'] === null ? '—' : \App\Core\Support\Money::format($r['amount'])],
+    ];
+
     $stuckColumns = [
         ['key' => 'trx_date', 'label' => __('accounts::control.date'), 'width' => '8rem',
          'render' => fn ($v) => \App\Core\Support\DateFormat::format($v->trx_date)],
@@ -89,18 +114,7 @@
                         {{ __('accounts::control.not_posted_note', ['days' => \App\Modules\Accounts\Services\PostingBacklog::LOOK_BACK_DAYS]) }}
                     </p>
 
-                    <x-ui.table :rows="$notPosted" :columns="[
-                        ['key' => 'trx_date', 'label' => __('accounts::control.date'), 'width' => '8rem',
-                         'render' => fn ($r) => \App\Core\Support\DateFormat::format($r['trx_date'])],
-                        ['key' => 'source', 'label' => __('accounts::control.source'), 'width' => '11rem',
-                         'render' => fn ($r) => \Illuminate\Support\Facades\Lang::has('core.source.'.$r['source'])
-                             ? __('core.source.'.$r['source'])
-                             : $r['source']],
-                        ['key' => 'document_no', 'label' => __('core.print.document_no'), 'width' => '12rem',
-                         'render' => fn ($r) => $r['document_no'] ?: '—'],
-                        ['key' => 'amount', 'label' => __('accounts::control.amount'), 'numeric' => true, 'width' => '10rem',
-                         'render' => fn ($r) => $r['amount'] === null ? '—' : \App\Core\Support\Money::format($r['amount'])],
-                    ]" />
+                    <x-ui.table :rows="$notPosted" :columns="$notPostedColumns" />
                 </section>
             @endif
 
