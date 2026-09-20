@@ -6,6 +6,7 @@ use App\Modules\Accounts\Http\Controllers\AccountsDashboardController;
 use App\Modules\Accounts\Http\Controllers\AccountsSettingsController;
 use App\Modules\Accounts\Http\Controllers\BalanceSheetController;
 use App\Modules\Accounts\Http\Controllers\BankReconciliationController;
+use App\Modules\Accounts\Http\Controllers\NoteController;
 use App\Modules\Accounts\Http\Controllers\BooksIntegrityController;
 use App\Modules\Accounts\Http\Controllers\CashCountController;
 use App\Modules\Accounts\Http\Controllers\CashTillController;
@@ -298,6 +299,27 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
      * চেকের মতো এক পাতায় নয়: ওখানে সিদ্ধান্ত সারিপ্রতি, এখানে সিদ্ধান্ত
      * পুরো কাগজটা নিয়ে। তাই তালিকা আর কাজের পর্দা আলাদা।
      */
+    /*
+     * ⭐ ডেবিট ও ক্রেডিট নোট — মানচিত্র §৭, ২০ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ একটাই পর্দা, ট্যাবে দুই দিক — কাজটা এক (টাকার অঙ্কটা ভুল ছিল,
+     * শোধরাও), কেবল কাকে দেওয়া হচ্ছে সেটা আলাদা।
+     *
+     * ⚠️ `/create` `/{note}`-এর আগে, বাকি সব পর্দার মতোই — নাহলে
+     * "create" নামের একটা নোট খোঁজা হত।
+     */
+    Route::prefix('notes')->name('note.')->group(function () {
+        Route::get('/', [NoteController::class, 'index'])->name('index');
+        Route::get('/create', [NoteController::class, 'create'])->name('create');
+        Route::post('/', [NoteController::class, 'store'])->name('store');
+        Route::get('/{note}', [NoteController::class, 'show'])
+            ->whereNumber('note')->name('show');
+        Route::post('/{note}/confirm', [NoteController::class, 'confirm'])
+            ->whereNumber('note')->name('confirm');
+        Route::post('/{note}/cancel', [NoteController::class, 'cancel'])
+            ->whereNumber('note')->name('cancel');
+    });
+
     Route::prefix('reconciliations')->name('reconciliation.')->group(function () {
         Route::get('/', [BankReconciliationController::class, 'index'])->name('index');
 

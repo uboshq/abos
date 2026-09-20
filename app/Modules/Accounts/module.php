@@ -16,6 +16,7 @@ use App\Modules\Accounts\Models\Loan;
 use App\Modules\Accounts\Models\LoanInstalment;
 use App\Modules\Accounts\Models\LoanMovement;
 use App\Modules\Accounts\Models\MoneyCategory;
+use App\Modules\Accounts\Models\Note;
 use App\Modules\Accounts\Models\MoneyTransfer;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Reports\CoreReports;
@@ -224,6 +225,15 @@ return [
              * ওঠে, বছরে একবার নয়।
              */
             ['label' => 'accounts::menu.cheques', 'icon' => 'challan', 'route' => 'accounts.cheque.index', 'permission' => 'accounts.cheque.view'],
+            /*
+             * ⭐ ডেবিট ও ক্রেডিট নোট — মানচিত্র §৭, ২০ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ লেনদেনের ঘরে, চেকের পাশে — রোজকার কাজ। ⚠️ সারিটা মেনুতে
+             * বসানোর একই মুহূর্তে রুটও বসেছে; আগে দুইবার এই সেতুটা ভুলে
+             * যাওয়ায় পর্দা তৈরি থেকেও কেউ পৌঁছাতে পারেনি।
+             */
+            ['label' => 'accounts::note.title', 'icon' => 'challan', 'route' => 'accounts.note.index', 'permission' => 'accounts.note.view'],
+
             ['label' => 'accounts::menu.reconciliations', 'icon' => 'check-circle', 'route' => 'accounts.reconciliation.index', 'permission' => 'accounts.reconciliation.view'],
             ['label' => 'accounts::menu.assets', 'icon' => 'building', 'route' => 'accounts.asset.index', 'permission' => 'accounts.asset.view'],
             ['label' => 'accounts::menu.periods', 'icon' => 'clock', 'route' => 'accounts.period.index', 'permission' => 'accounts.period.close'],
@@ -284,6 +294,8 @@ return [
         'accounts.asset.view',
         'accounts.asset.manage',
 
+        'accounts.note.view',
+        'accounts.note.manage',
         'accounts.reconciliation.view',
         'accounts.reconciliation.manage',
         'accounts.reconciliation.reopen',
@@ -316,6 +328,14 @@ return [
     ],
 
     'doc_types' => [
+        /*
+         * ⭐ ডেবিট ও ক্রেডিট নোট — মানচিত্র §৭, ২০ সেপ্টেম্বর ২০২৬।
+         * ⓘ দুইটা আলাদা ক্রম, কারণ গ্রাহকের কাগজ আর সরবরাহকারীর কাগজ
+         * আলাদা করে গোনা হয় — এক ক্রমে থাকলে "এ মাসে কয়টা ক্রেডিট নোট"
+         * প্রশ্নের উত্তর নম্বর দেখে বলা যেত না।
+         */
+        'CN' => 'accounts::note.credit_note',
+        'DN' => 'accounts::note.debit_note',
         'CHQ' => 'accounts::doc.cheque',
         'RV' => 'accounts::doc.receipt_voucher',
         'PV' => 'accounts::doc.payment_voucher',
@@ -371,6 +391,9 @@ return [
     ],
 
     'drill_sources' => [
+        /* ⭐ দুই দিকের দুইটা নাম, একই মডেল — [[Note::sourceType()]] */
+        'credit_note' => Note::class,
+        'debit_note' => Note::class,
         'cheque' => Cheque::class,
         'account' => Account::class,
         'cash_till' => CashTill::class,
