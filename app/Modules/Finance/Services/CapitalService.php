@@ -6,6 +6,7 @@ namespace App\Modules\Finance\Services;
 
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\DocumentStatus;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
@@ -32,6 +33,7 @@ final class CapitalService
     public function __construct(
         private readonly NumberSeriesEngine $numbers,
         private readonly VoucherService $vouchers,
+        private readonly ProfitSplit $split,
     ) {}
 
     /**
@@ -347,7 +349,6 @@ final class CapitalService
      * @param  string|null  $profit  চলতি বছরের মুনাফা। ⓘ না দিলে লাভের
      *                               অংশের ঘরটা `null` থাকে — কলামটা তখন
      *                               একটা ড্যাশ দেখায়, শূন্য নয়।
-     *
      * @return list<array<string, mixed>>
      */
     public function positions(?string $profit = null): array
@@ -370,7 +371,7 @@ final class CapitalService
              * হয়; খাতায় তো উল্টো দাখিলা বসেই গেছে।
              */
             ->where(fn ($q) => $q->whereNull('voucher_id')
-                ->orWhereHas('voucher', fn ($v) => $v->where('status', '!=', \App\Core\Support\DocumentStatus::CANCELLED)))
+                ->orWhereHas('voucher', fn ($v) => $v->where('status', '!=', DocumentStatus::CANCELLED)))
             ->selectRaw('person_id, contributor_type, MAX(share_percent) as share, SUM(amount) as total')
             ->groupBy('person_id', 'contributor_type')
             ->get();
@@ -403,6 +404,31 @@ final class CapitalService
 
         $out = $this->fillSharesFromCapital($out);
 
+        /*
+         * ⭐ লাভের ভাগ একই অঙ্কে, দুই পর্দাতেই — ২০ সেপ্টেম্বর ২০২৬।
+         *
+         * ⛔ এখানে ছিল সোজা গুণ-ভাগ, আর "বিনিয়োগের রিটার্ন" পাতায়
+         * [[ProfitSplit]]। ⚠️ তিনজনে সমান ভাগে দুই পাতায় দুই রকম পয়সা
+         * দেখাত, আর কোনটা সত্যি তা কেউ বলতে পারত না। ⓘ তাই ভাগটা এক
+         * জায়গাতেই হয়, আর সেই এক জায়গা কোনো পয়সা হারায় না।
+         *
+         * ⓘ লোকসানের বেলায় ভাগ হয় না (ProfitSplit ঋণাত্মক ফেরায় না) —
+         * তখন অনুপাতটাই ঠিক উত্তর, আর নিচে সেটাই থাকে।
+         */
+        $earned = [];
+
+        if ($profit !== null && bccomp($profit, '0', 4) > 0) {
+            $shares = [];
+
+            foreach ($out as $position) {
+                if ($position['share'] !== null) {
+                    $shares[$position['person_id']] = $position['share'];
+                }
+            }
+
+            $earned = $this->split->byShares($profit, $shares)['amounts'];
+        }
+
         foreach ($out as $i => $position) {
             /*
              * ⭐ শতাংশটা টাকায় কত — ১৮ সেপ্টেম্বর ২০২৬, মালিকের প্রশ্নে।
@@ -423,9 +449,12 @@ final class CapitalService
              * নিজেই হিসাব হয় ([[fillSharesFromCapital]]), তাই `null`
              * কেবল তখন, যখন কারও বাকি মূলধনই নেই।
              */
-            $out[$i]['profit_share'] = ($profit === null || $position['share'] === null)
-                ? null
-                : bcdiv(bcmul($profit, $position['share'], 6), '100', 4);
+            $out[$i]['profit_share'] = match (true) {
+                $profit === null, $position['share'] === null => null,
+                isset($earned[$position['person_id']]) => $earned[$position['person_id']],
+                // লোকসান, বা লাভ শূন্য — অনুপাতেই, চিহ্ন সমেত
+                default => bcdiv(bcmul($profit, $position['share'], 6), '100', 4),
+            };
 
             /*
              * ⭐ উত্তোলন বনাম লাভ ও মূলধনের মিলকরণ — অর্থের মানচিত্র §১৩,

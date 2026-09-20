@@ -5,6 +5,8 @@ declare(strict_types=1);
 use App\Modules\Finance\Http\Controllers\BudgetController;
 use App\Modules\Finance\Http\Controllers\CfoController;
 use App\Modules\Finance\Http\Controllers\ForecastController;
+use App\Modules\Finance\Http\Controllers\InvestmentController;
+use App\Modules\Finance\Http\Controllers\RiskController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -26,5 +28,9 @@ Route::middleware('auth')->prefix('finance')->group(function () {
     });
 
     Route::get('/cash-forecast', [ForecastController::class, 'cash'])->name('forecast.cash');
+
+    // ⓘ কার টাকা কত আনল (§১২), আর কোনগুলো আজ দেখা দরকার (§১)
+    Route::get('/investment-returns', [InvestmentController::class, 'returns'])->name('investment.returns');
+    Route::get('/risks', [RiskController::class, 'index'])->name('risk');
     Route::get('/cfo', [CfoController::class, 'index'])->name('cfo');
 });
