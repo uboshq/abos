@@ -42,4 +42,8 @@ return [
     'price_policy' => 'What happens beyond that',
     'price_policy_below' => 'Apply below the standard price too',
     'price_policy_above' => 'Apply above the standard price too',
+    'paper_invoice' => 'Paper for the sales invoice',
+    'paper_challan' => 'Paper for the delivery challan',
+    'paper_order' => 'Paper for the sales order',
+    'paper_receipt' => 'Paper for the collection receipt',
 ];

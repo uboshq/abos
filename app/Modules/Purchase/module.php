@@ -256,6 +256,41 @@ return [
 
     'settings' => [
         /*
+         * ⭐ কোন কাগজে ছাপা হবে — মালিকের সিদ্ধান্ত, যন্ত্রের নয়।
+         *
+         * ⓘ মালিকের কথা, ২০ সেপ্টেম্বর ২০২৬: *"কি কাগজে প্রিন্ট করবো এটা
+         * নিজে নির্ধারণ করে দিব"*। ⚠️ আগে ঠিকানায় মাপ না থাকলে প্রতিটা
+         * কন্ট্রোলার নিজে থেকে A4 ধরে নিত, আর বদলানোর কোনো পথ ছিল না।
+         *
+         * ⓘ প্রতিটা কাগজের নিজের ঘর, কারণ একই দোকানে বিল যায় রোলে আর
+         * ভাউচার যায় A4-তে। ⛔ একটা মাত্র ডিফল্ট দিলে তার একটাকে বাঁচাতে
+         * গিয়ে অন্যটা প্রতিবার হাতে বদলাতে হত।
+         */
+        [
+            'key' => 'purchase.print.paper.bill',
+            'label' => 'purchase::settings.paper_bill',
+            'type' => 'choice',
+            'options' => \App\Core\Engines\Print\PaperSize::all(),
+            'default' => \App\Core\Engines\Print\PaperSize::A4,
+            'group' => 'print',
+        ],
+        [
+            'key' => 'purchase.print.paper.order',
+            'label' => 'purchase::settings.paper_order',
+            'type' => 'choice',
+            'options' => \App\Core\Engines\Print\PaperSize::all(),
+            'default' => \App\Core\Engines\Print\PaperSize::A4,
+            'group' => 'print',
+        ],
+        [
+            'key' => 'purchase.print.paper.receipt',
+            'label' => 'purchase::settings.paper_receipt',
+            'type' => 'choice',
+            'options' => \App\Core\Engines\Print\PaperSize::all(),
+            'default' => \App\Core\Engines\Print\PaperSize::A4,
+            'group' => 'print',
+        ],
+        /*
          * কোন পর্দাগুলো থাকবে — বিক্রয়ের মতোই (Sales/module.php)।
          *
          * ছোট ডিপো সরাসরি কেনে: গাড়ি আসে, মাল নামে, চালান হাতে ধরিয়ে

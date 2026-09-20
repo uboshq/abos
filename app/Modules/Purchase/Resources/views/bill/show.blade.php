@@ -35,7 +35,7 @@
                     খসড়ার কপি থাকত, অন্যটায় না।
                 --}}
                 <x-ui.print-menu :documents="[
-                    ['label' => __('purchase::doc.bill'), 'url' => route('purchase.print.bill', $bill)],
+                    ['label' => __('purchase::doc.bill'), 'url' => route('purchase.print.bill', $bill), 'paper_setting' => 'purchase.print.paper.bill', 'type' => 'purchase_bill', 'id' => $bill->id, 'no' => $bill->document_no],
                 ]" />
                 {{--
                     ⛔ নিশ্চিত বিলে কোনো পথই ছিল না — ১৮ সেপ্টেম্বর ২০২৬।
@@ -124,12 +124,12 @@
                     /*
                      * ⛔ ফ্রি-র পরিমাণ কোথাও দেখা যেত না — ১৮ সেপ্টেম্বর ২০২৬।
                      *
-                     * মালিকের কথা: *"free gulo kothaw asteche na"*।
+                     * মালিকের কথা: *“free gulo kothaw asteche na”*।
                      *
                      * ⓘ সংখ্যাটা সেভ হয় আর স্টকেও যায় (`free_qty` কলাম,
                      * [[PurchaseReceiptService]] ওটা পড়ে) — কেবল লেখার পরে
                      * আর কোনো পর্দায় দেখা যেত না। ⚠️ সরবরাহকারীর বিলে লেখা
-                     * "২৪ + ১ ফ্রি", আর আমাদের কাগজে কেবল "২৪" — ছয় মাস
+                     * “২৪ + ১ ফ্রি”, আর আমাদের কাগজে কেবল “২৪” — ছয় মাস
                      * পরে মিলাতে গিয়ে কেউ বলতে পারত না ফ্রিটা কোথায় গেল।
                      *
                      * ⓘ কলামটা কেবল তখনই আসে যখন সত্যিই ফ্রি আছে —

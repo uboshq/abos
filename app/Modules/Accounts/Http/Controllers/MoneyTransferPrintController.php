@@ -6,10 +6,13 @@ namespace App\Modules\Accounts\Http\Controllers;
 
 use App\Core\Engines\Print\PaperSize;
 use App\Core\Engines\Print\PrintEngine;
+use App\Core\Services\PaperTrail;
+use App\Core\Services\SettingsService;
 use App\Core\Support\AmountInWords;
 use App\Core\Support\DateFormat;
 use App\Core\Support\Money;
 use App\Http\Controllers\Controller;
+use App\Models\DocumentDelivery;
 use App\Modules\Accounts\Models\MoneyTransfer;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -32,7 +35,15 @@ use Illuminate\Routing\Controllers\Middleware;
  */
 class MoneyTransferPrintController extends Controller implements HasMiddleware
 {
-    public function __construct(private readonly PrintEngine $print) {}
+    public function __construct(
+        private readonly PrintEngine $print,
+
+        // কোন কাগজে ছাপা হবে — মালিকের বসানো মাপ
+        private readonly SettingsService $settings,
+
+        // ছাপা · নামানো · পাঠানো · খোলা — সব কাগজের এক হিসাব
+        private readonly PaperTrail $trail,
+    ) {}
 
     public static function middleware(): array
     {
@@ -43,13 +54,11 @@ class MoneyTransferPrintController extends Controller implements HasMiddleware
     {
         $transfer->load(['fromTill.account', 'toTill.account', 'toAccount', 'giver', 'receiver', 'branch']);
 
-        $paper = $request->query('paper', PaperSize::A4);
-
-        // অজানা মাপে ৪০৪ নয় — পুরনো বুকমার্কের জন্য একটা স্লিপ আটকে
-        // যাওয়ার কারণ নেই
-        if (! in_array($paper, PaperSize::all(), true)) {
-            $paper = PaperSize::A4;
-        }
+        /*
+         * ⭐ কাগজের মাপ মালিকের বসানো, হাতে লেখা A4 নয় (২০ সেপ্টেম্বর ২০২৬)।
+         * ⓘ ঠিকানায় চাওয়া মাপ আগে, তারপর সেটিং — কারণ [[PaperSize::chosen()]]-এ।
+         */
+        $paper = PaperSize::chosen($request->query('paper'), $this->settings->get('accounts.print.paper.transfer'));
 
         $pdf = $this->print->render(
             template: 'print.handover',
@@ -68,9 +77,24 @@ class MoneyTransferPrintController extends Controller implements HasMiddleware
             paper: $paper,
         );
 
+        /*
+         * ⭐ কাগজটা বেরোল — ছাপা হয়ে, নাকি ফাইল হয়ে (২০ সেপ্টেম্বর ২০২৬)।
+         *
+         * ⓘ মালিকের চাওয়া: *"কয়টা কাগজ প্রিন্ট হল কয়টা শেয়ার হইল"*। ⚠️ দুইটা
+         * আলাদা গোনা হয়, কারণ "ছেপে দিয়েছি" আর "ফাইল পাঠিয়েছি" এক কথা নয়।
+         * ⛔ ফাইলটা আলাদা করে আঁকা হয় না — উপরের `$pdf`-ই নামে।
+         */
+        $asFile = $request->boolean('download');
+
+        $this->trail->record(
+            'accounts_transfer', (int) $transfer->id, $paper,
+            $asFile ? DocumentDelivery::DOWNLOADED : DocumentDelivery::PRINTED,
+            $transfer->document_no,
+        );
+
         return response($pdf, 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="'.$transfer->document_no.'.pdf"',
+            'Content-Disposition' => ($asFile ? 'attachment' : 'inline').'; filename="'.$transfer->document_no.'.pdf"',
         ]);
     }
 

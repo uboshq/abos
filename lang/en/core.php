@@ -168,6 +168,7 @@ return [
     ],
 
     'action' => [
+        'copied' => 'Copied',
         'see_all' => 'See all',
         'refresh' => 'Refresh',
         'close' => 'Close',
@@ -457,6 +458,28 @@ return [
     ],
 
     'print' => [
+        'history_title' => 'Who took this paper out, and when',
+        'history_of' => 'Document :no — printed, downloaded and sent',
+        'history_when' => 'When',
+        'history_how' => 'How',
+        'history_who' => 'Who',
+        'history_paper' => 'Paper',
+        'history_from' => 'From',
+        'history_customer' => 'The customer',
+        'history_empty' => 'This paper has never been taken out.',
+        'way_printed' => 'Printed',
+        'way_downloaded' => 'Downloaded as a file',
+        'way_shared' => 'Sent to the customer',
+        'way_opened' => 'Opened by the customer',
+        'as_file' => 'Download PDF',
+        'send_to_customer' => 'Send to customer',
+        'printed_times' => 'printed :n×',
+        'downloaded_times' => 'downloaded :n×',
+        'sent_times' => 'sent :n×',
+        'opened_times' => 'opened :n×',
+        'link_ready' => 'Link ready — good for 30 days',
+        'copy_link' => 'Copy link',
+        'whatsapp' => 'Send on WhatsApp',
         'free_qty' => 'Free',
         'paper' => [
             'a4' => 'A4',

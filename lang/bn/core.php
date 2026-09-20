@@ -199,6 +199,7 @@ return [
     ],
 
     'action' => [
+        'copied' => 'কপি হয়েছে',
         'see_all' => 'সব দেখুন',
         'refresh' => 'নতুন করে দেখুন',
         'close' => 'বন্ধ করুন',
@@ -520,6 +521,28 @@ return [
     ],
 
     'print' => [
+        'history_title' => 'কাগজটা কে কখন বের করেছে',
+        'history_of' => 'নথি :no — ছাপা, নামানো ও পাঠানোর ইতিহাস',
+        'history_when' => 'কখন',
+        'history_how' => 'কীভাবে',
+        'history_who' => 'কে',
+        'history_paper' => 'কাগজ',
+        'history_from' => 'যেখান থেকে',
+        'history_customer' => 'গ্রাহক',
+        'history_empty' => 'এই কাগজ এখনো একবারও বের হয়নি।',
+        'way_printed' => 'ছাপা হয়েছে',
+        'way_downloaded' => 'ফাইল নামানো হয়েছে',
+        'way_shared' => 'গ্রাহককে পাঠানো হয়েছে',
+        'way_opened' => 'গ্রাহক খুলেছেন',
+        'as_file' => 'PDF নামান',
+        'send_to_customer' => 'গ্রাহককে পাঠান',
+        'printed_times' => ':n বার ছাপা',
+        'downloaded_times' => ':n বার নামানো',
+        'sent_times' => ':n বার পাঠানো',
+        'opened_times' => ':n বার খোলা',
+        'link_ready' => 'লিংক তৈরি — ৩০ দিন চলবে',
+        'copy_link' => 'লিংক কপি করুন',
+        'whatsapp' => 'হোয়াটসঅ্যাপে পাঠান',
         'free_qty' => 'ফ্রি',
         'paper' => [
             'a4' => 'A4',

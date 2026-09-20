@@ -147,6 +147,14 @@ class SettingsController extends Controller implements HasMiddleware
                     ? null
                     : trim((string) $raw),
 
+                /*
+                 * ⓘ বাছাইয়ের ঘর — ছাপার কাগজের মাপ। ⛔ তালিকার বাইরের কিছু
+                 * এলে `null`, অর্থাৎ "যা ছিল তাই থাক": হাতে বদলানো ফর্ম বা
+                 * পুরনো ট্যাব থেকে অচেনা মান এসে বসলে ছাপা ভেঙে পড়ত, আর
+                 * কারণটা সেটিংসের পাতায় দেখে বোঝা যেত না।
+                 */
+                'choice' => in_array($raw, (array) ($definition['options'] ?? []), true) ? $raw : null,
+
                 default => $raw,
             };
 

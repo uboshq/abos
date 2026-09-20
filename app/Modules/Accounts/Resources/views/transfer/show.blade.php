@@ -43,7 +43,7 @@
                      হয়নি। ছাপা বন্ধ করলে বাতিলের কোনো কাগজ থাকত না। --}}
                 <x-ui.print-menu :documents="[
                     ['label' => __('accounts::print.handover_title'),
-                     'url' => route('accounts.transfer.print', $transfer)],
+                     'url' => route('accounts.transfer.print', $transfer), 'paper_setting' => 'accounts.print.paper.transfer', 'type' => 'accounts_transfer', 'id' => $transfer->id, 'no' => $transfer->document_no],
                 ]" />
             </x-slot:actions>
         </x-ui.page-header>
@@ -103,7 +103,21 @@
             <div class="grid gap-4 sm:grid-cols-2">
                 <div>
                     <p class="text-2xs text-(--color-ink-muted)">{{ __('accounts::field.moved_from') }}</p>
-                    <p class="text-sm font-medium">{{ $transfer->fromTill?->name() }}</p>
+                    {{-- ⭐ ক্যাশবাক্সের নাম ক্যাশবাক্সের পাতায় নিয়ে যায় —
+                         মালিকের কথা, ২০ সেপ্টেম্বর ২০২৬: *"সব জায়গায় হাইপার লিংক"*।
+
+                         ⓘ প্রশ্নটা সবসময়ই পরেরটা: "ঐ বাক্সে এখন কত আছে?" —
+                         আগে নামটা পড়ে মেনু ঘুরে বাক্সটা খুঁজতে হত। --}}
+                    <p class="text-sm font-medium">
+                        @if ($transfer->fromTill)
+                            <a href="{{ route('accounts.till.show', $transfer->from_till_id) }}"
+                               class="text-(--color-brand-500) underline-offset-2 hover:underline">
+                                {{ $transfer->fromTill->name() }}
+                            </a>
+                        @else
+                            <span class="text-(--color-ink-muted)">—</span>
+                        @endif
+                    </p>
 
                     <p class="mt-2 flex items-center gap-2 text-sm">
                         @if ($transfer->giver)
@@ -117,7 +131,24 @@
 
                 <div>
                     <p class="text-2xs text-(--color-ink-muted)">{{ __('accounts::field.moved_to') }}</p>
-                    <p class="text-sm font-medium">{{ $transfer->destinationName() }}</p>
+                    {{-- ⚠️ গন্তব্য দুই রকম হতে পারে — ক্যাশবাক্স, নয়তো সরাসরি
+                         একটা হিসাব। তাই লিংকটাও দুই রকম, আর কোনোটাই না হলে
+                         নামটা সাদা লেখা থাকে (`destinationName()` তখন "—")। --}}
+                    <p class="text-sm font-medium">
+                        @if ($transfer->to_till_id)
+                            <a href="{{ route('accounts.till.show', $transfer->to_till_id) }}"
+                               class="text-(--color-brand-500) underline-offset-2 hover:underline">
+                                {{ $transfer->destinationName() }}
+                            </a>
+                        @elseif ($transfer->to_account_id)
+                            <a href="{{ route('accounts.coa.show', $transfer->to_account_id) }}"
+                               class="text-(--color-brand-500) underline-offset-2 hover:underline">
+                                {{ $transfer->destinationName() }}
+                            </a>
+                        @else
+                            {{ $transfer->destinationName() }}
+                        @endif
+                    </p>
 
                     <p class="mt-2 flex items-center gap-2 text-sm">
                         @if ($transfer->receiver)

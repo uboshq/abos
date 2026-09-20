@@ -67,7 +67,7 @@
                     খসড়ার কপি থাকত, অন্যটায় না।
                 --}}
                 <x-ui.print-menu :documents="[
-                    ['label' => __('purchase::doc.order'), 'url' => route('purchase.print.order', $order)],
+                    ['label' => __('purchase::doc.order'), 'url' => route('purchase.print.order', $order), 'paper_setting' => 'purchase.print.paper.order', 'type' => 'purchase_order', 'id' => $order->id, 'no' => $order->document_no, 'share' => ['route' => 'purchase.print.order', 'params' => ['order' => $order->id]]],
                 ]" />
             </x-slot:actions>
         </x-ui.page-header>

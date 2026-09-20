@@ -501,6 +501,49 @@ return [
 
     'settings' => [
         /*
+         * ⭐ কোন কাগজে ছাপা হবে — মালিকের সিদ্ধান্ত, যন্ত্রের নয়।
+         *
+         * ⓘ মালিকের কথা, ২০ সেপ্টেম্বর ২০২৬: *"কি কাগজে প্রিন্ট করবো এটা
+         * নিজে নির্ধারণ করে দিব"*। ⚠️ আগে ঠিকানায় মাপ না থাকলে প্রতিটা
+         * কন্ট্রোলার নিজে থেকে A4 ধরে নিত, আর বদলানোর কোনো পথ ছিল না।
+         *
+         * ⓘ প্রতিটা কাগজের নিজের ঘর, কারণ একই দোকানে বিল যায় রোলে আর
+         * ভাউচার যায় A4-তে। ⛔ একটা মাত্র ডিফল্ট দিলে তার একটাকে বাঁচাতে
+         * গিয়ে অন্যটা প্রতিবার হাতে বদলাতে হত।
+         */
+        [
+            'key' => 'sales.print.paper.invoice',
+            'label' => 'sales::settings.paper_invoice',
+            'type' => 'choice',
+            'options' => \App\Core\Engines\Print\PaperSize::all(),
+            'default' => \App\Core\Engines\Print\PaperSize::A4,
+            'group' => 'print',
+        ],
+        [
+            'key' => 'sales.print.paper.challan',
+            'label' => 'sales::settings.paper_challan',
+            'type' => 'choice',
+            'options' => \App\Core\Engines\Print\PaperSize::all(),
+            'default' => \App\Core\Engines\Print\PaperSize::A4,
+            'group' => 'print',
+        ],
+        [
+            'key' => 'sales.print.paper.order',
+            'label' => 'sales::settings.paper_order',
+            'type' => 'choice',
+            'options' => \App\Core\Engines\Print\PaperSize::all(),
+            'default' => \App\Core\Engines\Print\PaperSize::A4,
+            'group' => 'print',
+        ],
+        [
+            'key' => 'sales.print.paper.receipt',
+            'label' => 'sales::settings.paper_receipt',
+            'type' => 'choice',
+            'options' => \App\Core\Engines\Print\PaperSize::all(),
+            'default' => \App\Core\Engines\Print\PaperSize::A4,
+            'group' => 'print',
+        ],
+        /*
          * দাম কতটা সরতে পারে, আর সরলে কী।
          *
          * ---- কেন এটা লাগল, ৩০ আগস্ট ২০২৬ ----
