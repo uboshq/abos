@@ -93,7 +93,7 @@ class BankFacility extends Model implements Drillable
     protected $table = 'fin_bank_facilities';
 
     protected $fillable = [
-        'company_id', 'branch_id', 'document_no', 'kind',
+        'company_id', 'branch_id', 'document_no', 'kind', 'institution_id',
         'bank', 'branch_name', 'sanction_no', 'sanctioned_on',
         'limit_amount', 'interest_rate', 'term_months', 'renews_on',
         'stock_value', 'margin_percent', 'instalments', 'instalment_amount',
@@ -127,6 +127,17 @@ class BankFacility extends Model implements Drillable
     public function liabilityAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'liability_account_id');
+    }
+
+    /**
+     * কোন ব্যাংক — তালিকা থেকে ([[Institution]])।
+     *
+     * ⓘ পুরনো `bank` ঘরটা থেকে যায়: মানুষ যা টাইপ করেছিলেন সেটাই
+     * ঐতিহাসিক সত্য। নতুন সারিতে ঘরটা আর চাওয়া হয় না।
+     */
+    public function institution(): BelongsTo
+    {
+        return $this->belongsTo(Institution::class);
     }
 
     /** CC-র নিজের ব্যাংক হিসাব — বাকি চারটায় `null`। */

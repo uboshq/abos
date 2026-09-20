@@ -285,6 +285,12 @@
                 <x-ui.field name="routing_no" :label="__('accounts::field.routing_no')"
                                    :hint="__('accounts::message.routing_no_hint')"
                                    :value="old('routing_no', $account->routing_no)" numeric />
+
+                {{-- ⓘ অন্য মডিউলের ঘর — যেমন অর্থ চালু থাকলে "কোন প্রতিষ্ঠান"
+                     ([[App\Modules\Accounts\Events\AccountFormOpened]])। --}}
+                @foreach ($extras ?? [] as [$extraView, $extraData])
+                    @include($extraView, $extraData)
+                @endforeach
             </div>
         </section>
         </template>
@@ -307,6 +313,12 @@
                                    :value="old('bank_name', $account->bank_name)" />
                 <x-ui.field name="account_number" :label="__('accounts::field.mfs_wallet')"
                                    :value="old('account_number', $account->account_number)" numeric />
+
+                {{-- ⓘ অন্য মডিউলের ঘর — যেমন অর্থ চালু থাকলে "কোন প্রতিষ্ঠান"
+                     ([[App\Modules\Accounts\Events\AccountFormOpened]])। --}}
+                @foreach ($extras ?? [] as [$extraView, $extraData])
+                    @include($extraView, $extraData)
+                @endforeach
             </div>
         </section>
         </template>

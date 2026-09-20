@@ -13,6 +13,7 @@ use App\Modules\Accounts\Services\VoucherService;
 use App\Modules\Finance\Models\Deposit;
 use App\Modules\Finance\Models\DepositKind;
 use App\Modules\Finance\Models\DepositMovement;
+use App\Modules\Finance\Models\Institution;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -44,6 +45,7 @@ final class DepositService
     public function __construct(
         private readonly NumberSeriesEngine $numbers,
         private readonly VoucherService $vouchers,
+        private readonly InstitutionService $institutions,
     ) {}
 
     /**
@@ -64,12 +66,17 @@ final class DepositService
 
             $this->assertSane($kind, $data);
 
+            // ⭐ কোথায় রাখা — তালিকা থেকে; পুরনো লেখা ঘরটাও ভরে থাকে
+            $institutionId = $this->institutions->resolve($data, Institution::BANK);
+
             $deposit = Deposit::query()->create([
                 'company_id' => CompanyContext::id(),
                 'branch_id' => CompanyContext::branchId(),
                 'document_no' => $this->numbers->next('DEP'),
                 'kind_id' => $kind->id,
-                'institution' => trim((string) $data['institution']),
+                'institution_id' => $institutionId,
+                'institution' => $this->institutions->nameOf($institutionId)
+                    ?? trim((string) ($data['institution'] ?? '')),
                 'branch_name' => ($data['branch_name'] ?? '') ?: null,
                 'reference_no' => ($data['reference_no'] ?? '') ?: null,
                 'held_by' => $data['held_by'],

@@ -101,7 +101,7 @@ class Deposit extends Model implements Drillable
     protected $table = 'fin_deposits';
 
     protected $fillable = [
-        'company_id', 'branch_id', 'document_no', 'kind_id', 'institution',
+        'company_id', 'branch_id', 'document_no', 'kind_id', 'institution_id', 'institution',
         'branch_name', 'reference_no', 'held_by', 'person_id', 'principal',
         'profit_rate', 'tax_rate', 'return_word', 'opened_on', 'matures_on', 'on_maturity',
         'instalment_amount', 'instalment_day', 'payout_account_id', 'account_id',
@@ -141,6 +141,12 @@ class Deposit extends Model implements Drillable
     public function person(): BelongsTo
     {
         return $this->belongsTo(Person::class, 'person_id');
+    }
+
+    /** কোথায় রাখা — তালিকা থেকে ([[Institution]]); পুরনো `institution` লেখাটা থেকে যায় */
+    public function institution(): BelongsTo
+    {
+        return $this->belongsTo(Institution::class);
     }
 
     public function kind(): BelongsTo

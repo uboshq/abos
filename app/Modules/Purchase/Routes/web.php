@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Modules\Purchase\Http\Controllers\DirectPurchaseController;
 use App\Modules\Purchase\Http\Controllers\PaymentController;
+use App\Modules\Purchase\Http\Controllers\PaymentScheduleController;
 use App\Modules\Purchase\Http\Controllers\PurchaseBillController;
 use App\Modules\Purchase\Http\Controllers\PurchaseOrderController;
 use App\Modules\Purchase\Http\Controllers\PurchasePrintController;
@@ -104,6 +105,12 @@ Route::middleware('auth')->prefix('purchase')->group(function () {
         Route::post('/{bill}/confirm', [PurchaseBillController::class, 'confirm'])->whereNumber('bill')->name('confirm');
         Route::post('/{bill}/cancel', [PurchaseBillController::class, 'cancel'])->whereNumber('bill')->name('cancel');
     });
+
+    /*
+     * পরিশোধের সময়সূচি — কোন বিল কবে দিতে হবে (অর্থের মানচিত্র §৬)।
+     * ⓘ বিলের শেষ তারিখ কেবল ক্রয় জানে, তাই পাতাটা এখানে।
+     */
+    Route::get('/payment-schedule', [PaymentScheduleController::class, 'index'])->name('payment_schedule.index');
 
     Route::prefix('payments')->name('payment.')->group(function () {
         Route::get('/', [PaymentController::class, 'index'])->name('index');

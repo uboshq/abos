@@ -12,6 +12,8 @@ use App\Core\Support\RunningBalance;
 use App\Http\Controllers\Controller;
 use App\Models\LedgerEntry;
 use App\Models\User;
+use App\Modules\Accounts\Events\AccountFormOpened;
+use App\Modules\Accounts\Events\AccountSaved;
 use App\Modules\Accounts\Http\Requests\AccountRequest;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\AccountService;
@@ -21,6 +23,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 /**
@@ -103,9 +106,12 @@ class ChartOfAccountsController extends Controller implements HasMiddleware
 
     public function create(Request $request): View
     {
+        $account = new Account(['is_active' => true, 'type' => Account::ASSET]);
+
         return view('accounts::coa.form', [
             'menu' => $this->menu->forUser($request->user()),
-            'account' => new Account(['is_active' => true, 'type' => Account::ASSET]),
+            'account' => $account,
+            'extras' => $this->extras($account),
             'parents' => $this->groupOptions(),
             // ?parent=12 দিয়ে এলে ওই মাথার নিচেই তৈরি হবে — গাছের
             // একটা শাখা থেকে "+" চাপলে আবার বাবা বাছতে হয় না
@@ -157,7 +163,17 @@ class ChartOfAccountsController extends Controller implements HasMiddleware
 
     public function store(AccountRequest $request): RedirectResponse
     {
-        $account = $this->accounts->create($request->validated());
+        /*
+         * ⓘ খাত আর অন্য মডিউলের ঘর (`ext[...]`) একই লেনদেনে — শ্রোতা
+         * ভাঙলে খাতটাও বসে না, অর্ধেক জমা থাকে না ([[AccountSaved]])।
+         */
+        $account = DB::transaction(function () use ($request) {
+            $account = $this->accounts->create($request->validated());
+
+            event(AccountSaved::from($account, (array) $request->input('ext', [])));
+
+            return $account;
+        });
 
         return redirect()
             ->route('accounts.coa.show', $account)
@@ -242,6 +258,7 @@ class ChartOfAccountsController extends Controller implements HasMiddleware
         return view('accounts::coa.form', [
             'menu' => $this->menu->forUser($request->user()),
             'account' => $account->load('parent'),
+            'extras' => $this->extras($account),
             // নিজে ও নিজের নিচের কেউ বাবা হতে পারে না — তালিকা থেকেই
             // বাদ, নাহলে ব্যবহারকারী বাছার পর ভুলের বার্তা পেত
             'parents' => $this->groupOptions(exclude: $account->selfAndDescendants()->pluck('id')->all()),
@@ -252,7 +269,11 @@ class ChartOfAccountsController extends Controller implements HasMiddleware
 
     public function update(AccountRequest $request, Account $account): RedirectResponse
     {
-        $this->accounts->update($account, $request->validated());
+        DB::transaction(function () use ($request, $account) {
+            $this->accounts->update($account, $request->validated());
+
+            event(AccountSaved::from($account, (array) $request->input('ext', [])));
+        });
 
         return redirect()
             ->route('accounts.coa.show', $account)
@@ -260,6 +281,18 @@ class ChartOfAccountsController extends Controller implements HasMiddleware
     }
 
     /** মোছা নয়, নিষ্ক্রিয় করা — নিয়ম ৫। */
+    /**
+     * অন্য মডিউলের ঘর — কেউ শুনলে তবেই ([[AccountFormOpened]])।
+     *
+     * @return list<array{0: string, 1: array<string, mixed>}>
+     */
+    private function extras(Account $account): array
+    {
+        event($opened = AccountFormOpened::from($account));
+
+        return $opened->extras;
+    }
+
     public function destroy(Account $account): RedirectResponse
     {
         $this->accounts->deactivate($account);

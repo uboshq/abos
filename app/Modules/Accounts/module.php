@@ -524,5 +524,7 @@ return [
      */
     'events' => [
         \App\Modules\Accounts\Events\VoucherPosted::class,
+        \App\Modules\Accounts\Events\AccountSaved::class,
+        \App\Modules\Accounts\Events\AccountFormOpened::class,
     ],
 ];

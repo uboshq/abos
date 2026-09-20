@@ -8,6 +8,7 @@ use App\Modules\Finance\Models\Deposit;
 use App\Modules\Finance\Models\DepositMovement;
 use App\Modules\Finance\Models\HandLoanAccount;
 use App\Modules\Finance\Models\HandLoanMovement;
+use App\Modules\Finance\Models\InsurancePremium;
 use App\Modules\Finance\Models\RentalAdjustment;
 use App\Modules\Finance\Models\RentalContract;
 use App\Modules\Finance\Models\Withdrawal;
@@ -232,6 +233,14 @@ return [
             ['label' => 'finance::menu.income', 'icon' => 'inbox', 'route' => 'finance.income.index',
                 'permission' => 'finance.income.view'],
 
+            /* ⓘ বীমা চুক্তির পাশে — প্রিমিয়াম দেওয়ার দায় আর নবায়নের তারিখ, দুইটাই চুক্তির মতো */
+            ['label' => 'finance::insurance.title', 'icon' => 'lock', 'route' => 'finance.insurance.index',
+                'permission' => 'finance.insurance.view'],
+
+            /* ⓘ শেষে — তালিকাটা রোজকার কাজ নয়, বাকি সারিগুলো যার উপর দাঁড়ায় */
+            ['label' => 'finance::institution.title', 'icon' => 'bank', 'route' => 'finance.institution.index',
+                'permission' => 'finance.institution.view'],
+
             /*
              * ⛔ উত্তোলনের নিজস্ব মেনু তুলে দেওয়া হলো — ১৮ সেপ্টেম্বর ২০২৬।
              *
@@ -306,6 +315,12 @@ return [
          * ব্যবসার ধার তোলার পথ বন্ধ করা — যে কেরানি নথিটা লিখতে
          * পারেন, তাঁর ঐ ক্ষমতা থাকার দরকার নেই।
          */
+        'finance.institution.view',
+        'finance.institution.manage',
+
+        'finance.insurance.view',
+        'finance.insurance.manage',
+
         'finance.bank_facility.view',
         'finance.bank_facility.create',
         'finance.bank_facility.close',
@@ -471,6 +486,7 @@ return [
      */
     'drill_sources' => [
         'capital_entry' => CapitalEntry::class,
+        'insurance_premium' => InsurancePremium::class,
         'withdrawal' => Withdrawal::class,
         'deposit_movement' => DepositMovement::class,
         'hand_loan_movement' => HandLoanMovement::class,
@@ -500,5 +516,9 @@ return [
      */
     'listeners' => [
         \App\Modules\Accounts\Events\VoucherPosted::class => [\App\Modules\Finance\Listeners\CapitalFromReceipt::class],
+
+        // ⓘ খাতের ফর্মে "কোন প্রতিষ্ঠান" — ঘর আঁকা আর জমা ([[InstitutionFieldOnAccountForm]])
+        \App\Modules\Accounts\Events\AccountFormOpened::class => [\App\Modules\Finance\Listeners\InstitutionFieldOnAccountForm::class],
+        \App\Modules\Accounts\Events\AccountSaved::class => [\App\Modules\Finance\Listeners\InstitutionFromAccountForm::class],
     ],
 ];

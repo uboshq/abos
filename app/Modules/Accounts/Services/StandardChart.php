@@ -360,6 +360,15 @@ final class StandardChart implements ProvisionsCompany
 
     public const HAMMALI = '5220';
 
+    /**
+     * বীমার প্রিমিয়াম — ট্রাক, গুদাম, মাল, মানুষ।
+     *
+     * ⓘ আগে প্রিমিয়াম "বিবিধ খরচে" (৫২৯৯) হারাত, আর বছরে বীমায় কত গেল
+     * তা কেউ বলতে পারত না। অর্থের বীমা পলিসির "প্রিমিয়াম দিন" বোতাম
+     * পরিশোধ ভাউচারে এই খাতটাই বাছতে বলে।
+     */
+    public const INSURANCE_PREMIUM = '5221';
+
     /*
      * বেতনের দুইটা খাত — খরচ ও দায়।
      *
@@ -987,6 +996,7 @@ final class StandardChart implements ProvisionsCompany
             ['5218', 'Loading', 'লোডিং', $X, '5200', false, []],
             ['5219', 'Unloading', 'আনলোডিং', $X, '5200', false, []],
             ['5220', 'Labour (Hammali)', 'হাম্মালি', $X, '5200', false, []],
+            ['5221', 'Insurance Premium', 'বীমা প্রিমিয়াম', $X, '5200', false, []],
             ['5210', 'Bank Charges', 'ব্যাংক চার্জ', $X, '5200', false, []],
 
             ['5211', 'Mobile Banking Charges', 'মোবাইল ব্যাংকিং চার্জ', $X, '5200', false, []],

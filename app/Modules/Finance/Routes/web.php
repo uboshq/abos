@@ -3,11 +3,16 @@
 declare(strict_types=1);
 
 use App\Modules\Finance\Http\Controllers\BankFacilityController;
+use App\Modules\Finance\Http\Controllers\AccountAnalysisController;
+use App\Modules\Finance\Http\Controllers\BankChargeController;
+use App\Modules\Finance\Http\Controllers\CarrierAndLabourController;
 use App\Modules\Finance\Http\Controllers\CapitalController;
 use App\Modules\Finance\Http\Controllers\DepositController;
 use App\Modules\Finance\Http\Controllers\ExpenseController;
 use App\Modules\Finance\Http\Controllers\HandLoanController;
 use App\Modules\Finance\Http\Controllers\IncomeController;
+use App\Modules\Finance\Http\Controllers\InstitutionController;
+use App\Modules\Finance\Http\Controllers\InsuranceController;
 use App\Modules\Finance\Http\Controllers\PlanController;
 use App\Modules\Finance\Http\Controllers\RentalContractController;
 use App\Modules\Finance\Http\Controllers\WithdrawalController;
@@ -233,6 +238,53 @@ Route::middleware('auth')->prefix('finance')->group(function () {
          */
         Route::post('/{issuer}/{deposit}/cancel', [DepositController::class, 'cancel'])
             ->whereIn('issuer', DepositKind::ISSUERS)->whereNumber('deposit')->name('cancel');
+    });
+
+    /*
+     * ব্যাংক চার্জ — মানচিত্র §৯; কেবল দেখা, চার্জ বসে ভাউচারে।
+     */
+    Route::get('/bank-charges', [BankChargeController::class, 'index'])->name('bank_charge.index');
+
+    /*
+     * খাত বিশ্লেষণ — মানচিত্র §৪; খতিয়ানের দাখিলা মাস/কাগজ/পক্ষ ধরে।
+     */
+    Route::get('/account-analysis', [AccountAnalysisController::class, 'index'])->name('account_analysis.index');
+
+    /*
+     * পরিবহন ও শ্রমিকের খতিয়ান — মানচিত্র §৬; ২১১৬/২১১৭ পক্ষ ধরে।
+     */
+    Route::get('/carrier-labour', [CarrierAndLabourController::class, 'index'])->name('carrier_labour.index');
+    /*
+     * আর্থিক প্রতিষ্ঠান — ব্যাংক, আর্থিক প্রতিষ্ঠান/লিজিং, বীমা, মোবাইল ব্যাংকিং।
+     * ⓘ মালিকের কথায় তালিকাটা কেবল অর্থে (*"eta sudu ekhanei bebohar hobe"*)।
+     */
+    Route::prefix('institutions')->name('institution.')->group(function () {
+        Route::get('/', [InstitutionController::class, 'index'])->name('index');
+        Route::get('/create', [InstitutionController::class, 'create'])->name('create');
+        Route::post('/', [InstitutionController::class, 'store'])->name('store');
+        Route::get('/{institution}/edit', [InstitutionController::class, 'edit'])->whereNumber('institution')->name('edit');
+        Route::put('/{institution}', [InstitutionController::class, 'update'])->whereNumber('institution')->name('update');
+        Route::patch('/{institution}/toggle', [InstitutionController::class, 'toggle'])->whereNumber('institution')->name('toggle');
+        Route::get('/{institution}', [InstitutionController::class, 'show'])->whereNumber('institution')->name('show');
+        // ⓘ "খাত জোড়ো" — ব্যাংক/MFS খাত এই প্রতিষ্ঠানের
+        Route::post('/{institution}/accounts', [InstitutionController::class, 'link'])->whereNumber('institution')->name('link');
+        Route::delete('/{institution}/accounts/{account}', [InstitutionController::class, 'unlink'])
+            ->whereNumber('institution')->whereNumber('account')->name('unlink');
+    });
+
+    /*
+     * বীমা পলিসি — প্রিমিয়াম দেওয়া হয় পরিশোধ ভাউচারে, এখানে নয়।
+     */
+    Route::prefix('insurance')->name('insurance.')->group(function () {
+        Route::get('/', [InsuranceController::class, 'index'])->name('index');
+        Route::get('/create', [InsuranceController::class, 'create'])->name('create');
+        Route::post('/', [InsuranceController::class, 'store'])->name('store');
+        Route::get('/{policy}', [InsuranceController::class, 'show'])->whereNumber('policy')->name('show');
+        Route::get('/{policy}/edit', [InsuranceController::class, 'edit'])->whereNumber('policy')->name('edit');
+        Route::put('/{policy}', [InsuranceController::class, 'update'])->whereNumber('policy')->name('update');
+        Route::get('/{policy}/renew', [InsuranceController::class, 'renewForm'])->whereNumber('policy')->name('renew_form');
+        Route::post('/{policy}/renew', [InsuranceController::class, 'renew'])->whereNumber('policy')->name('renew');
+        Route::patch('/{policy}/toggle', [InsuranceController::class, 'toggle'])->whereNumber('policy')->name('toggle');
     });
 });
 

@@ -8,7 +8,9 @@ use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Modules\Finance\Models\BankFacility;
+use App\Modules\Finance\Models\Institution;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -24,7 +26,10 @@ use Illuminate\Validation\ValidationException;
  */
 class BankFacilityService
 {
-    public function __construct(private readonly NumberSeriesEngine $numbers) {}
+    public function __construct(
+        private readonly NumberSeriesEngine $numbers,
+        private readonly InstitutionService $institutions,
+    ) {}
 
     /**
      * নতুন সুবিধা।
@@ -41,6 +46,16 @@ class BankFacilityService
         $kind = (string) ($data['kind'] ?? '');
 
         $this->assertKindHasWhatItNeeds($kind, $data);
+
+        /*
+         * ⭐ ব্যাংকটা এখন তালিকা থেকে ([[Institution]]), আর নতুন নাম
+         * ফর্মেই যোগ করা যায় ([[InstitutionService::resolve]])।
+         *
+         * ⓘ পুরনো `bank` ঘরটা তবু লেখা হয় — প্রতিষ্ঠানের নামটাই। ⚠️ ওটা
+         * বাদ দিলে পুরনো সারি আর নতুন সারি দুই রকম হত, আর যে রিপোর্ট
+         * ঐ ঘর পড়ে সেগুলো নতুন সারিতে ফাঁকা দেখাত।
+         */
+        $institutionId = $this->institutions->resolve($data, Institution::BANK);
 
         return BankFacility::query()->create([
             /*
@@ -59,7 +74,8 @@ class BankFacilityService
             'branch_id' => CompanyContext::branchId(),
             'kind' => $kind,
 
-            'bank' => $data['bank'],
+            'institution_id' => $institutionId,
+            'bank' => $this->institutions->nameOf($institutionId) ?? ($data['bank'] ?? ''),
             'branch_name' => $data['branch_name'] ?? null,
             'sanction_no' => $data['sanction_no'] ?? null,
             'sanctioned_on' => $data['sanctioned_on'],
@@ -187,6 +203,84 @@ class BankFacilityService
             ->where('renews_on', '<=', now()->addDays(30)->toDateString())
             ->orderBy('renews_on')
             ->get();
+    }
+
+    /**
+     * কত তোলা হয়েছে, আর সীমার কতটা বাকি — খতিয়ান থেকে, দ্বিতীয় কপি নয়।
+     *
+     * ── ⭐ অর্থের মানচিত্র §১৪গ, ২০ সেপ্টেম্বর ২০২৬ ──────────────────────
+     * লাইনটার টীকাই বলে দিয়েছিল কীভাবে করতে হবে: *"খতিয়ানে থাকে, এখানে
+     * দ্বিতীয় কপি রাখা হয়নি"*। ⛔ সুবিধার সারিতে একটা `drawn` কলাম বসালে
+     * সেটা একদিন খতিয়ানের সাথে আলাদা হয়ে যেত, আর কোনটা সত্যি তা নিয়ে
+     * প্রশ্ন উঠত — এই রিপোজিটরিতে ঐ ফাঁদ [[SalesInvoice::collectedAmount]]
+     * নিয়ে একবার দেখা হয়েছে।
+     *
+     * ── ⚠️ দুই ধরনের সুবিধা, দুই জায়গায় দেনাটা বসে ───────────────────
+     * · মেয়াদি · LTR · লিজ — নিজের **দায়ের খাত**, যা ক্রেডিটে বাড়ে।
+     * · CC — আলাদা দায়ের খাত নেই ([[BankFacility::isBalanceSheetDebt()]]);
+     *   দেনাটা **ব্যাংক হিসাবের ঋণাত্মক জের**, তাই চিহ্ন উল্টে নেওয়া হয়।
+     * ⓘ গ্যারান্টিতে টাকা তোলাই হয় না, তাই ব্যবহৃত শূন্য — যতক্ষণ না
+     * ব্যাংক ওটা নগদায়ন করে, আর তখন দাখিলাটা এমনিতেই খাতায় আসে।
+     *
+     * ⓘ `opening_drawn` যোগ হয়: পুরনো ব্যবস্থা থেকে তোলা টাকা খতিয়ানে নেই।
+     * ⚠️ একটাই গ্রুপড কোয়েরি — সারিপ্রতি একটা করে কোয়েরি হলে তালিকাটা
+     * সুবিধার সংখ্যার সাথে ধীর হত।
+     *
+     * @param  \Illuminate\Support\Collection<int, BankFacility>  $facilities
+     * @return array<int, array{used: string, left: string}>
+     */
+    public function standing(\Illuminate\Support\Collection $facilities): array
+    {
+        $accounts = $facilities
+            ->map(fn (BankFacility $f) => $this->accountOf($f))
+            ->filter()
+            ->unique()
+            ->values();
+
+        $balances = $accounts->isEmpty() ? collect() : DB::table('ledger_entries')
+            ->where('company_id', CompanyContext::id())
+            ->whereIn('account_id', $accounts->all())
+            ->groupBy('account_id')
+            ->pluck(DB::raw('SUM(credit - debit)'), 'account_id');
+
+        $standing = [];
+
+        foreach ($facilities as $facility) {
+            $account = $this->accountOf($facility);
+
+            // ⓘ CC-তে টাকা বেরোলে ব্যাংকের জের ঋণাত্মক, আর ঋণ ততটাই
+            $ledger = (string) ($balances[$account] ?? '0');
+
+            $used = bcadd((string) ($facility->opening_drawn ?? '0'), $ledger, 4);
+
+            // ⛔ ঋণাত্মক "ব্যবহৃত" মানে বেশি শোধ — পর্দায় ওটা শূন্য
+            if (bccomp($used, '0', 4) < 0) {
+                $used = '0.0000';
+            }
+
+            $left = bcsub((string) $facility->limit_amount, $used, 4);
+
+            $standing[(int) $facility->id] = [
+                'used' => $used,
+                'left' => bccomp($left, '0', 4) > 0 ? $left : '0.0000',
+            ];
+        }
+
+        return $standing;
+    }
+
+    /**
+     * দেনাটা কোন খাতে বসে — ধরনটাই ঠিক করে ([[standing()]]-এর ব্যাখ্যা)।
+     */
+    private function accountOf(BankFacility $facility): ?int
+    {
+        if ($facility->kind === BankFacility::GUARANTEE) {
+            return null;
+        }
+
+        return $facility->isBalanceSheetDebt()
+            ? ($facility->liability_account_id === null ? null : (int) $facility->liability_account_id)
+            : ($facility->money_account_id === null ? null : (int) $facility->money_account_id);
     }
 
     /**
