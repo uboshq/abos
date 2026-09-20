@@ -16,8 +16,10 @@ use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Finance\Models\CapitalEntry;
 use App\Modules\Finance\Models\Deposit;
 use App\Modules\Finance\Models\Withdrawal;
+use App\Modules\Finance\Services\BudgetService;
 use App\Modules\Finance\Services\HeadTotals;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * অর্থ মডিউলের ড্যাশবোর্ড।
@@ -202,6 +204,14 @@ final class FinanceDashboard implements ProvidesDashboard
                     href: route('finance.withdrawal.index'),
                     tone: Stat::WARN,
                 ),
+
+                /*
+                 * ⭐ বাজেটের অবস্থা — মানচিত্র §১, ২০ সেপ্টেম্বর ২০২৬।
+                 * এ মাসের খরচের বাজেটের কত শতাংশ খরচ হয়েছে; ১০০-র বেশি হলে লাল।
+                 * ⓘ বাজেটই না থাকলে কার্ডটা আসে না — "০%" দেখালে মনে হত
+                 * কিছুই খরচ হয়নি, অথচ আসলে মাপার কিছু লেখাই হয়নি।
+                 */
+                ...self::budgetStatus(),
                 new Stat(
                     label: __('finance::dashboard.deposits'),
                     value: (string) Deposit::query()->count(),
@@ -296,5 +306,45 @@ final class FinanceDashboard implements ProvidesDashboard
                 ),
             ],
         );
+    }
+
+    /**
+     * বাজেটের অবস্থার কার্ড — বাজেট না থাকলে ফাঁকা তালিকা।
+     *
+     * @return list<Stat>
+     */
+    private static function budgetStatus(): array
+    {
+        /*
+         * ⚠️ টেবিলটা আছে কি না, আগে সেটা — ২০ সেপ্টেম্বর ২০২৬।
+         *
+         * ⛔ ডিপ্লয়ের মাঝখানে কোড নতুন আর মাইগ্রেশন এখনো চলেনি, এমন একটা
+         * মুহূর্ত থাকে। তখন এই একটা কার্ডের জন্য **গোটা ফিন্যান্স
+         * ড্যাশবোর্ড** ৫০০ দিত (শেয়ার করা ট্রিতে মেপে দেখা গেছে)।
+         * ⓘ একটা কার্ড না দেখানো আর পুরো পাতা না খোলা এক জিনিস নয়।
+         */
+        if (! Schema::hasTable('fin_budgets')) {
+            return [];
+        }
+
+        $status = app(BudgetService::class)->monthStatus();
+
+        if ($status === null) {
+            return [];
+        }
+
+        $over = $status['used_pct'] !== null && bccomp($status['used_pct'], '100', 1) > 0;
+
+        return [new Stat(
+            label: __('finance::budget.status'),
+            value: ($status['used_pct'] ?? '0').'%',
+            hint: __('finance::budget.status_hint', [
+                'budget' => Money::format($status['budget']),
+                'actual' => Money::format($status['actual']),
+            ]),
+            href: route('finance.budget.actual'),
+            tone: $over ? Stat::BAD : Stat::NEUTRAL,
+            permission: 'finance.budget.view',
+        )];
     }
 }

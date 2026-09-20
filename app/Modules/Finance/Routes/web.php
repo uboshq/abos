@@ -307,3 +307,8 @@ Route::middleware('auth')->prefix('finance')->group(function () {
 Route::middleware('auth')
     ->get('/accounts/capital', fn () => redirect()->route('finance.capital.index'))
     ->name('capital.moved');
+
+/*
+ * ⭐ পরিকল্পনার পর্দা (বাজেট, নগদের পূর্বাভাস, CFO) নিজের ফাইলে — কারণ planning.php-এ।
+ */
+require __DIR__.'/planning.php';

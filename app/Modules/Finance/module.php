@@ -107,6 +107,18 @@ return [
                 'permission' => 'finance.plan.view'],
 
             /*
+             * ⭐ পরিকল্পনা — CFO ড্যাশবোর্ড, বাজেট, নগদের পূর্বাভাস।
+             * মানচিত্র §১, §৮, §১৬, §২৯; ২০ সেপ্টেম্বর ২০২৬। ⓘ মানচিত্রের
+             * ঠিক পরে: "আজ টাকার অবস্থা কেমন" প্রশ্নটা দিনের প্রথম প্রশ্ন।
+             */
+            ['label' => 'finance::forecast.cfo', 'icon' => 'dashboard', 'route' => 'finance.cfo',
+                'permission' => 'finance.forecast.view'],
+            ['label' => 'finance::budget.title', 'icon' => 'reports', 'route' => 'finance.budget.index',
+                'permission' => 'finance.budget.view'],
+            ['label' => 'finance::forecast.title', 'icon' => 'cash', 'route' => 'finance.forecast.cash',
+                'permission' => 'finance.forecast.view'],
+
+            /*
              * মূলধন ও বিনিয়োগ — মালিক কত দিলেন, কত তুললেন।
              *
              * ⓘ উত্তোলনের আলাদা সারি নেই: ওটা এই পর্দারই দ্বিতীয় দিক
@@ -263,6 +275,13 @@ return [
     'permissions' => [
         'finance.plan.view',
 
+        /* বাজেট — দেখা আর লেখা আলাদা: যিনি বাজেট দেখে খরচ সামলান, বাজেট
+           বদলানোর ক্ষমতা তাঁর দরকার নেই। পূর্বাভাস আর CFO ড্যাশবোর্ড শুধু
+           দেখার — ওখানে লেখার কিছু নেই। (২০ সেপ্টেম্বর ২০২৬) */
+        'finance.budget.view',
+        'finance.budget.create',
+        'finance.forecast.view',
+
         /* মূলধন — দেখা, লেখা, আর খাতায় বসানো আলাদা তিনটা ক্ষমতা।
            যে কেরানি সারি লিখতে পারেন, তাঁর খাতায় বসানোর ক্ষমতা
            থাকার দরকার নেই। */
@@ -379,6 +398,8 @@ return [
         'Manager' => [
             'finance.expense.view', 'finance.income.view', 'finance.deposit.view',
             'finance.rental.view', 'finance.bank_facility.view',
+            // ⓘ বাজেট দেখা — খরচ যিনি সামলান, সীমাটা তাঁরই জানা দরকার
+            'finance.budget.view',
         ],
     ],
 
