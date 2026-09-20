@@ -27,12 +27,33 @@
     $isReceipt = $voucher->type === \App\Modules\Accounts\Models\Voucher::RECEIPT;
 
     $was = fn (string $field, $fallback = null) => old($field, $voucher->{$field} ?? $fallback);
+
+    /*
+     * ⭐ ধরনটা আগে থেকেই বসানো — ২০ সেপ্টেম্বর ২০২৬, মালিক: *"ডিপোজিটরের
+     * ধরন আদায় ভাউচার e grahok, payment e supplyer, defolt koro"*।
+     *
+     * ⓘ টাকা আসে প্রায় সবসময় গ্রাহকের কাছ থেকে, আর যায় সরবরাহকারীর কাছে —
+     * তাই ঐ দুইটাই ধরা থাকে, আর অন্য কিছু হলে বদলানো যায়। ⛔ ফাঁকা রাখলে
+     * প্রতিটা আদায়ে একটা বাড়তি ক্লিক, আর নামের তালিকাটা ততক্ষণ খালি।
+     *
+     * ⚠️ কেবল নতুন কাগজে: পুরনো ভাউচার খুললে তার নিজের ধরনই থাকে, আর
+     * ভুল জমার পরে old() যা ছিল তাই ফেরে।
+     */
+    $partyDefault = $isReceipt ? 'customer' : 'supplier';
+
+    $knownTypes = collect($parties)->pluck('type')->all();
+
+    $partyType = (string) ($was('party_type') ?? '');
+
+    if ($partyType === '' && in_array($partyDefault, $knownTypes, true)) {
+        $partyType = $partyDefault;
+    }
 @endphp
 
 <section data-boxed
          class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4"
          x-data="partyVoucher({
-             partyType: @js((string) ($was('party_type') ?? '')),
+             partyType: @js($partyType),
              partyId: @js((string) ($was('party_id') ?? '')),
              parties: @js(collect($parties)->flatMap(fn (array $g) => collect($g['options'])
                  ->map(fn (array $o) => ['type' => $g['type'], 'id' => (int) $o['id'], 'label' => $o['label']]))
@@ -107,7 +128,7 @@
         <x-ui.select name="party_type"
                      :label="$isReceipt ? __('accounts::field.depositor_type') : __('accounts::field.payee_type')"
                      :options="collect($parties)->pluck('label', 'type')->all()"
-                     :selected="$was('party_type')"
+                     :selected="$partyType"
                      x-model="partyType" x-on:change="resetParty()" />
 
         <div x-data="{ adding: @js($errors->has('party_new') || filled(old('party_new'))) }">
@@ -116,8 +137,20 @@
                     {{ $isReceipt ? __('accounts::field.depositor_name') : __('accounts::field.payee_name_party') }}
                 </span>
 
-                {{-- পাওনা — নামের পাশে, নমুনার মতো --}}
-                <span class="text-xs text-(--color-ink-muted)" x-show="due !== null" x-cloak>
+                {{-- পাওনা — নামের পাশে, রঙিন পটভূমিতে।
+
+                     ⭐ মালিক, ২০ সেপ্টেম্বর ২০২৬: *"পাওনা -280.56 brafground e
+                     ekta color daw"*। ⓘ ধূসর ছোট লেখায় সংখ্যাটা চোখ এড়িয়ে যেত,
+                     অথচ টাকা নেওয়ার আগে এটাই দেখার জিনিস।
+
+                     ⚠️ রং দুই রকম, আর অর্থও দুই রকম: ধনাত্মক মানে তিনি দেবেন
+                     (লাল), ঋণাত্মক মানে তাঁর টাকা আমাদের কাছে জমা আছে (সবুজ) —
+                     ⛔ ঋণাত্মক পাওনা দেখে আরেকবার টাকা চাইলে সেটা ভুল আদায়।
+                     ⓘ রং একা কিছু বলে না, তাই লেখাটাও সাথে থাকে। --}}
+                <span class="rounded-(--radius-pill) px-2 py-0.5 text-xs" x-show="due !== null" x-cloak
+                      x-bind:class="due > 0
+                          ? 'bg-(--color-badge-danger-bg) text-(--color-badge-danger-ink)'
+                          : 'bg-(--color-badge-success-bg) text-(--color-badge-success-ink)'">
                     <span x-text="texts.owed"></span>
                     <b class="num ms-1" x-text="due"></b>
                 </span>
