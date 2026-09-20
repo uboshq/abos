@@ -21,7 +21,37 @@ final class DrillResolver
     /** @var array<string, class-string>|null */
     private ?array $map = null;
 
+    /**
+     * এই অনুরোধে যে উৎসগুলো ইতিমধ্যে তোলা হয়েছে।
+     *
+     * ── ⛔ কেন, ২১ সেপ্টেম্বর ২০২৬ ───────────────────────────────────
+     * [[drill]] কম্পোনেন্ট **প্রতিটা সারিতে** `describe()` ডাকে, আর
+     * সেটা প্রতিবার `find()` করত। ⓘ ১০০ সারির খতিয়ানে সেটা ১০০টা
+     * কোয়েরি, আর `drillLabel()` সম্পর্ক ছুঁলে আরও ১০০।
+     *
+     * ⚠️ একই কাগজের একাধিক সারি সাধারণ — একটা ভাউচারের ছয়টা লাইন
+     * ছয়বার একই ডকুমেন্ট চাইত। ⭐ স্মৃতিটা অন্তত ঐ পুনরাবৃত্তিটুকু
+     * কাটে, আর কোনো আচরণ বদলায় না।
+     *
+     * ⓘ অনুরোধভিত্তিক (`scoped`), তাই পরের অনুরোধে তাজা তথ্যই আসে —
+     * রিপোর্ট পড়ার মাঝখানে কেউ কাগজ বদলালে ভুল দেখানোর প্রশ্ন নেই।
+     *
+     * @var array<string, ?Drillable>
+     */
+    private array $seen = [];
+
     public function __construct(private readonly ModuleRegistry $registry) {}
+
+    /**
+     * স্মৃতিটা ভুলিয়ে দেওয়া — যিনি কাগজ বদলান তিনি ডাকবেন।
+     *
+     * ⓘ আজ কোনো পর্দা এক অনুরোধে কাগজ বদলে আবার সেটার ড্রিল আঁকে না,
+     * তাই প্রশ্নটা তাত্ত্বিক — কিন্তু দরজাটা খোলা রাখা হলো।
+     */
+    public function forget(): void
+    {
+        $this->seen = [];
+    }
 
     /** @return array<string, class-string> */
     public function map(): array
@@ -104,11 +134,23 @@ final class DrillResolver
             return null;
         }
 
+        /*
+         * ⓘ চাবিতে ধরনটাও আছে — দুই মডিউলের দুইটা কাগজের আইডি এক হতেই
+         * পারে, আর কেবল আইডি ধরে রাখলে একটা আরেকটার উত্তর দিত।
+         */
+        $key = $sourceType.'#'.$sourceId;
+
+        if (array_key_exists($key, $this->seen)) {
+            return $this->seen[$key];
+        }
+
         /** @var Model|null $model */
         $model = $modelClass::query()->find($sourceId);
 
         if ($model === null) {
-            return null;
+            /* ⓘ "নেই"-ও মনে রাখা হয়, নাহলে বাতিল কাগজের প্রতিটা সারি
+               বারবার একই খালি খোঁজ চালাত। */
+            return $this->seen[$key] = null;
         }
 
         if (! $model instanceof Drillable) {
@@ -118,7 +160,7 @@ final class DrillResolver
             );
         }
 
-        return $model;
+        return $this->seen[$key] = $model;
     }
 
     /**

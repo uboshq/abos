@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Core\Engines\Approval\ApprovalEngine;
+use App\Core\Engines\Drill\DrillResolver;
 use App\Core\Services\DataScope;
 use App\Core\Services\FormIsNotSubmittedTwice;
 use App\Core\Services\ListExport;
@@ -190,6 +191,19 @@ class AppServiceProvider extends ServiceProvider
          * ব্যতিক্রম ধরে রাখা মানে সোজা নিরাপত্তা-ফুটো।
          */
         $this->app->scoped(PermissionOverrides::class);
+
+        /*
+         * ⭐ একই কারণে ড্রিল-রিজলভারও — ২১ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ [[drill]] কম্পোনেন্ট **প্রতিটা সারিতে** `app(DrillResolver::class)`
+         * ডাকে, আর বাঁধন ছাড়া সেটা প্রতিবার একটা নতুন খালি বস্তু বানাত।
+         * ⛔ ভিতরে স্মৃতি বসালেও কিছু হত না — স্মৃতিটা জন্মাত আর মরত
+         * একই সারিতে।
+         *
+         * ⚠️ scoped, singleton নয়: রিপোর্টের উৎস-ডকুমেন্টগুলো কোম্পানি-
+         * স্কোপে বাছা, আর পরের অনুরোধ অন্য কোম্পানির হতে পারে।
+         */
+        $this->app->scoped(DrillResolver::class);
     }
 
     /**
