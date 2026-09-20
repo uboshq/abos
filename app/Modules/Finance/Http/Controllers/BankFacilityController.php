@@ -170,6 +170,21 @@ class BankFacilityController extends Controller implements HasMiddleware
         return view('finance::bank-facility.create', [
             'menu' => $this->menu->forUser($request->user()),
             'institutions' => $this->institutions(),
+
+            /*
+             * ⭐ প্রতিষ্ঠানের শাখা — মালিকের কথা, ২০ সেপ্টেম্বর ২০২৬:
+             * *"ব্যাংক select korle শাখা auto asar kotha"*।
+             *
+             * ⓘ নামগুলো পাতার সাথেই যায়, কোনো fetch নয় — তালিকাটা ডিপোতে
+             * দশে গোনা, আর CSP-Alpine-এ বাইরে ডাকার পথও নেই।
+             */
+            'branches' => Institution::query()
+                ->whereIn('kind', [Institution::BANK, Institution::NBFI])
+                ->active()
+                ->pluck('branch_name', 'id')
+                ->filter()
+                ->all(),
+
             'liabilityAccounts' => $this->liabilityAccounts(),
             'moneyAccounts' => $this->moneyAccounts(),
         ]);
@@ -237,6 +252,17 @@ class BankFacilityController extends Controller implements HasMiddleware
              * পর্দা বলত ব্যবসাটা সীমার চেয়ে বেশি তুলে ফেলেছে।
              */
             'opening_drawn' => ['nullable', 'numeric', 'min:0', 'lte:limit_amount'],
+
+            /*
+             * ⭐ এই ঋণ কি নতুন, নাকি আগে থেকেই চলছে — ২০ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ নতুন হলে টাকা আসে রসিদ ভাউচারে, আগের মতো। ⚠️ আর আগে
+             * থেকে চলতে থাকলে টাকাটা বছর আগেই এসেছিল — তখন কেবল
+             * **আজকের বকেয়া** খাতায় তোলা হয়।
+             */
+            'already_running' => ['nullable', 'boolean'],
+            'instalments_paid' => ['nullable', 'integer', 'min:0', 'max:600'],
+
             'paper' => ['nullable', 'file'],
             'margin_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'instalments' => ['nullable', 'integer', 'min:1', 'max:600'],
@@ -263,6 +289,17 @@ class BankFacilityController extends Controller implements HasMiddleware
 
         $facility = $this->facilities->open($data);
 
+        /*
+         * ⭐ আগে থেকেই চলছে — তবে আজকের বকেয়াটা খাতায় তুলতে হয়।
+         *
+         * ⓘ নতুন ঋণে এটা চলে না: তখন টাকা আসে রসিদ ভাউচারে, আর
+         * সেই পথটাই ব্যাংক হিসাব বাড়ায়। ⚠️ দুইটাই করলে টাকাটা
+         * দুইবার আসত।
+         */
+        if ($request->boolean('already_running')) {
+            $this->facilities->openingFor($facility, (string) ($data['opening_drawn'] ?? '0'));
+        }
+
         $this->keepThePaper($request, $facility);
 
         return redirect()->route('finance.bank_facility.show', $facility)
@@ -274,6 +311,13 @@ class BankFacilityController extends Controller implements HasMiddleware
         return view('finance::bank-facility.show', [
             'menu' => $this->menu->forUser($request->user()),
             'facility' => $bankFacility->load(['liabilityAccount', 'moneyAccount']),
+
+            /*
+             * ⭐ কয়টা কিস্তি দেওয়া হলো, কয়টা বাকি — খাতা থেকে গোনা।
+             * ⛔ কোনো গুনতি সংরক্ষণ করা হয় না (মালিকের নিয়ম) — সংরক্ষিত
+             * সংখ্যা আর খাতা একদিন আলাদা কথা বলত।
+             */
+            'instalments' => $this->facilities->instalmentStanding($bankFacility),
         ]);
     }
 

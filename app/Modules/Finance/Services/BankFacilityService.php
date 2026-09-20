@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Modules\Finance\Services;
 
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
+use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
+use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Finance\Models\BankFacility;
 use App\Modules\Finance\Models\Institution;
 use Illuminate\Database\Eloquent\Collection;
@@ -26,9 +28,19 @@ use Illuminate\Validation\ValidationException;
  */
 class BankFacilityService
 {
+    /**
+     * আগে থেকে চলতে থাকা ঋণের খোলা ব্যালেন্সের উৎস।
+     *
+     * ⓘ সুবিধার নিজের উৎস (`bank_facility`) থেকে আলাদা, আর সেটা
+     * ইচ্ছাকৃত: একই চাবি হলে পরে সুবিধাটা নিয়ে আর কোনো দাখিলা বসা
+     * যেত না ([[FixedAsset::disposalSourceType]]-এ ঠিক এই ভুলটা ধরা পড়েছে)।
+     */
+    public const OPENING_SOURCE = 'bank_facility_opening';
+
     public function __construct(
         private readonly NumberSeriesEngine $numbers,
         private readonly InstitutionService $institutions,
+        private readonly PostingEngine $posting,
     ) {}
 
     /**
@@ -96,6 +108,10 @@ class BankFacilityService
                     ? now()->addMonths((int) $data['term_months'])->toDateString()
                     : null
             ),
+
+            'opening_instalments_paid' => ($data['already_running'] ?? false)
+                ? ($data['instalments_paid'] ?? null)
+                : null,
 
             'stock_value' => $data['stock_value'] ?? null,
             'margin_percent' => $data['margin_percent'] ?? null,
@@ -184,6 +200,116 @@ class BankFacilityService
         if ($missing !== []) {
             throw ValidationException::withMessages($missing);
         }
+    }
+
+    /**
+     * আগে থেকেই চলতে থাকা ঋণ — আজকের বকেয়া খাতায় তোলা।
+     *
+     * ── ⭐ মালিকের নির্দেশ, ২০ সেপ্টেম্বর ২০২৬ ──────────────
+     * নতুন ঋণে টাকা আসে রসিদ ভাউচারে। ⚠️ কিন্তু যে ঋণ বছর আগে
+     * নেওয়া, তার টাকা তখনই ব্যাংকে এসেছিল — আজ আবার বসালে ব্যাংকের
+     * জেরটাই মিথ্যা হয়। ⛔ তাই **টাকার খাত ছোঁয়া হয় না**।
+     *
+     * ── ⓘ তবে কোথায় বসে ────────────────────────────────
+     * দায়ের খাতে ক্রেডিট (ঋণটা আছে), আর বিপরীতে সঞ্চিত মুনাফায় ডেবিট
+     * — খোলা ব্যালেন্সের নিয়মটাই ([[OpeningBalanceService]])। ⓘ আগের
+     * ব্যবসার ফল নতুন খাতায় তোলা হচ্ছে, এই বছরের খরচ নয়।
+     *
+     * ⛔ দুইবার বসার পথ নেই: উৎসের নামে সুবিধার আইডি আছে, আর
+     * পোস্টিং ইঞ্জিন একই উৎসে দ্বিতীয়বার বসতে দেয় না।
+     */
+    public function openingFor(BankFacility $facility, string $outstanding): void
+    {
+        if (bccomp($outstanding, '0', 4) <= 0) {
+            return;
+        }
+
+        /*
+         * ⚠️ CC ও গ্যারান্টিতে দায়ের আলাদা খাত নেই — CC-র বকেয়া তো
+         * ব্যাংক হিসাবের ঋণাত্মক জেরই। ⛔ সেটা এখান থেকে বসালে ব্যাংকের
+         * জের দুইবার গোনা হত — একবার খাতের নিজের খোলা ব্যালেন্সে,
+         * আরেকবার এখানে। ⓘ তাই স্পষ্ট করে না বলা হয়।
+         */
+        if ($facility->liability_account_id === null) {
+            throw ValidationException::withMessages([
+                'opening_drawn' => __('finance::validation.opening_needs_a_liability_account'),
+            ]);
+        }
+
+        $equity = StandardChart::find(StandardChart::RETAINED_EARNINGS);
+
+        if ($equity === null) {
+            throw ValidationException::withMessages([
+                'opening_drawn' => __('finance::validation.opening_needs_the_chart'),
+            ]);
+        }
+
+        $this->posting->post(
+            sourceType: self::OPENING_SOURCE,
+            sourceId: (int) $facility->id,
+            trxDate: $facility->sanctioned_on->toDateString(),
+            lines: [
+                ['account_id' => (int) $equity->id, 'debit' => $outstanding],
+                ['account_id' => (int) $facility->liability_account_id, 'credit' => $outstanding],
+            ],
+            documentNo: $facility->document_no,
+        );
+    }
+
+    /**
+     * কয়টা কিস্তি দেওয়া হলো, আর কয়টা বাকি — খাতা থেকে গোনা।
+     *
+     * ── ⛔ কোনো গুনতি সংরক্ষণ করা হয় না, ২০ সেপ্টেম্বর ২০২৬ ─────
+     * মালিকের নিয়ম: যা ওই ঋণের খাতে শোধ হয়েছে, তাই শোধ।
+     * ⚠️ সংরক্ষিত গুনতি আর খাতা একদিন আলাদা কথা বলত, আর তখন কোনটা
+     * সত্যি সেটা কেউ বলতে পারত না।
+     *
+     * ⓘ শুরুর দিনের গুনতিটা যোগ হয়, কারণ ওই কিস্তিগুলো ব্যবস্থার
+     * বাইরে দেওয়া হয়েছিল — খাতায় ওদের খুঁজে পাওয়ার কোনো পথই নেই।
+     *
+     * @return array{paid: int, left: int, repaid: string}
+     */
+    public function instalmentStanding(BankFacility $facility): array
+    {
+        $opening = (int) ($facility->opening_instalments_paid ?? 0);
+        $each = (string) ($facility->instalment_amount ?? '0');
+        $count = (int) ($facility->instalments ?? 0);
+
+        $repaid = '0';
+
+        if ($facility->liability_account_id !== null) {
+            /*
+             * ⓘ দায়ের খাতে ডেবিট মানে দায় কমা — অর্থাৎ শোধ।
+             * ⚠️ খোলা ব্যালেন্সের সারিটা ক্রেডিট, তাই সে নিজেই এই
+             * যোগফলে পড়ে না।
+             */
+            $repaid = (string) (DB::table('ledger_entries')
+                ->where('company_id', CompanyContext::id())
+                ->where('account_id', (int) $facility->liability_account_id)
+
+                /*
+                 * ⛔ খোলা ব্যালেন্সের সারিটা বাদ — সে দায় বসায়, শোধ করে না।
+                 * ⚠️ না বাদ দিলে পুরনো ঋণে যোগফল ঋণাত্মক হয়ে যেত, আর
+                 * পর্দা বলত একটা কিস্তিও দেওয়া হয়নি।
+                 */
+                ->where('source_type', '<>', self::OPENING_SOURCE)
+                ->sum(DB::raw('debit - credit')) ?? '0');
+        }
+
+        if (bccomp($repaid, '0', 4) < 0) {
+            $repaid = '0';
+        }
+
+        $fromLedger = bccomp($each, '0', 4) > 0
+            ? (int) bcdiv($repaid, $each, 0)
+            : 0;
+
+        $paid = $opening + $fromLedger;
+
+        // ⚠️ সংখ্যার বেশি শোধ হলেও বাকি ঋণাত্মক দেখানো হয় না
+        $left = $count > 0 ? max(0, $count - $paid) : 0;
+
+        return ['paid' => $paid, 'left' => $left, 'repaid' => $repaid];
     }
 
     /**

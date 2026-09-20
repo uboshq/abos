@@ -143,4 +143,7 @@ return [
     'no_people_yet' => 'Nobody on the list yet.',
     'no_rental_people' => 'No contract is linked to anybody on the list yet.',
     'institution_not_linked' => 'No institution linked yet',
+    'opening_touches_no_bank' => 'That money arrived years ago, so no bank account is touched — only the liability and retained earnings.',
+    'instalments_paid_hint' => 'How many were paid before this was put in the system. The ones after that are counted from the ledger.',
+    'instalment_standing' => ':paid paid, :left left',
 ];

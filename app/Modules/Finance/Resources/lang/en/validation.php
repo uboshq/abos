@@ -44,4 +44,6 @@ return [
 
     'kind_in_use' => 'Deposits were opened under :name, so it cannot be removed — deactivate it instead and the old papers stay whole.',
 
+    'opening_needs_a_liability_account' => 'Bringing in a running loan needs its liability account. A cash credit\'s outstanding lives in the bank account\'s own balance — set it there instead.',
+    'opening_needs_the_chart' => 'Install the standard chart first — there is no retained earnings account.',
 ];

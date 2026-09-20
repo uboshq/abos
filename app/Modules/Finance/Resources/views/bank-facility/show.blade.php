@@ -50,10 +50,34 @@
                 <dt class="text-(--color-ink-muted)">{{ __('finance::field.sanctioned_on') }}</dt>
                 <dd class="text-end">{{ $facility->sanctioned_on?->translatedFormat('j F Y') }}</dd>
 
-                <dt class="text-(--color-ink-muted)">{{ __('finance::field.renews_on') }}</dt>
+                {{-- ⭐ নামটা ধরন ধরে — গ্যারান্টি নবায়ন হয় না, ফুরায়। --}}
+                <dt class="text-(--color-ink-muted)">
+                    {{ $facility->kind === \App\Modules\Finance\Models\BankFacility::GUARANTEE
+                        ? __('finance::field.expires_on')
+                        : __('finance::field.renews_on') }}
+                </dt>
                 <dd @class(['text-end', 'font-semibold text-badge-warning-ink' => $facility->renewalIsNear()])>
                     {{ $facility->renews_on?->translatedFormat('j F Y') ?? '—' }}
                 </dd>
+
+                {{-- ⭐ কিস্তি — কয়টা দেওয়া, কয়টা বাকি (২০ সেপ্টেম্বর ২০২৬)।
+
+                     ⛔ সংখ্যাটা কোথাও সংরক্ষণ করা নেই — মালিকের নিয়ম: যা ওই
+                     ঋণের খাতে শোধ হয়েছে, তাই শোধ। ⓘ দায়ের খাতে যত ডেবিট,
+                     তত শোধ — কিস্তির অঙ্ক দিয়ে ভাগ। ⚠️ সংরক্ষিত গুনতি আর
+                     খাতা একদিন আলাদা কথা বলত।
+
+                     ⓘ শুরুর দিনের গুনতিটা যোগ হয়: ব্যবস্থায় তোলার আগের
+                     কিস্তিগুলো খাতায় খুঁজে পাওয়ার কোনো পথ নেই। --}}
+                @if ((int) ($facility->instalments ?? 0) > 0)
+                    <dt class="text-(--color-ink-muted)">{{ __('finance::field.instalments') }}</dt>
+                    <dd class="text-end">
+                        {{ __('finance::message.instalment_standing', [
+                            'paid' => $instalments['paid'],
+                            'left' => $instalments['left'],
+                        ]) }}
+                    </dd>
+                @endif
             </dl>
 
             {{--

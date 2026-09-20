@@ -2,6 +2,7 @@
 import Alpine from '@alpinejs/csp'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { registerComponents } from './index.js'
+import { bankFacilityForm } from './forms.js'
 import { countNotes } from './money.js'
 
 /*
@@ -195,5 +196,78 @@ describe('নিয়ন্ত্রণ-প্যানেলের বদল �
         await Alpine.nextTick()
         expect(host.querySelector('b').textContent).toBe('n0')
         expect(warnings).toEqual([])
+    })
+})
+
+/*
+ * ব্যাংকের সুবিধার ফর্ম — কিস্তির অঙ্ক দুই দিকেই, আর শাখা নিজে থেকে।
+ * ২০ সেপ্টেম্বর ২০২৬, মালিকের নির্দেশে।
+ */
+describe('ব্যাংকের সুবিধা', () => {
+    it('সীমা, হার ও সংখ্যা দিলে কিস্তির অঙ্ক বসে', () => {
+        const f = bankFacilityForm({ kind: 'term' })
+
+        f.limit = '1200000'
+        f.rate = '10'
+        f.count = '12'
+        f.fromTerms()
+
+        // ১২,০০,০০০ + এক বছরের ১০% সুদ = ১৩,২০,০০০ ÷ ১২
+        expect(f.instalment).toBe('110000.00')
+    })
+
+    it('⭐ আর কিস্তির অঙ্ক টাইপ করলে হার নতুন করে বসে — উল্টো দিকটাও', () => {
+        const f = bankFacilityForm({ kind: 'term' })
+
+        f.limit = '1200000'
+        f.count = '12'
+        f.instalment = '110000'
+        f.fromInstalment()
+
+        expect(f.rate).toBe('10.00')
+    })
+
+    it('⛔ অসম্পূর্ণ ঘরে কিছুই বসায় না — মানুষের টাইপ করা জিনিস মুছে যায় না', () => {
+        const f = bankFacilityForm({ kind: 'term' })
+
+        f.limit = ''
+        f.count = '12'
+        f.instalment = '110000'
+        f.fromInstalment()
+
+        expect(f.rate).toBe('')
+    })
+
+    it('ব্যাংক বাছলে শাখা বসে, কিন্তু টাইপ করা শাখা অক্ষত থাকে', () => {
+        const f = bankFacilityForm({ branches: { 3: 'Gulshan' } })
+
+        f.pickedBank(3)
+        expect(f.branch).toBe('Gulshan')
+
+        const typed = bankFacilityForm({ branches: { 3: 'Gulshan' } })
+        typed.branch = 'Banani'
+        typed.branchTyped()
+        typed.pickedBank(3)
+
+        expect(typed.branch).toBe('Banani')
+    })
+
+    it('⛔ প্রতিষ্ঠানের শাখা লেখা না থাকলে ঘরটা খালিও করে না', () => {
+        const f = bankFacilityForm({ branches: {} })
+
+        f.branch = 'Mirpur'
+        f.pickedBank(9)
+
+        expect(f.branch).toBe('Mirpur')
+    })
+
+    it('ধরন অনুযায়ী কোন ঘর থাকবে — নবায়ন শুধু CC-তে, কিস্তি গ্যারান্টিতে নয়', () => {
+        const cc = bankFacilityForm({ kind: 'cc' })
+        const term = bankFacilityForm({ kind: 'term' })
+        const bg = bankFacilityForm({ kind: 'bg' })
+
+        expect([cc.hasRenewal, cc.hasInstalments, cc.hasExpiry]).toEqual([true, false, false])
+        expect([term.hasRenewal, term.hasInstalments, term.hasInterest]).toEqual([false, true, true])
+        expect([bg.hasExpiry, bg.hasInstalments, bg.hasInterest]).toEqual([true, false, false])
     })
 })

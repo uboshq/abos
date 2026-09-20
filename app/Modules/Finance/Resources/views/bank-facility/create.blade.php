@@ -40,7 +40,13 @@
         --}}
 
         <form method="POST" enctype="multipart/form-data" action="{{ route('finance.bank_facility.store') }}"
-              x-data="{ kind: '{{ old('kind', \App\Modules\Finance\Models\BankFacility::CC) }}' }"
+              x-data="bankFacilityForm(@js([
+                  'kind' => old('kind', \App\Modules\Finance\Models\BankFacility::CC),
+                  'branches' => $branches,
+                  'branch' => old('branch_name', ''),
+                  'typedBranch' => filled(old('branch_name')),
+                  'running' => (bool) old('already_running'),
+              ]))"
               class="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             @csrf
 
@@ -62,7 +68,16 @@
                 'selected' => old('institution_id'),
                 'label' => __('finance::field.bank'),
             ])
-            <x-ui.field name="branch_name" :label="__('finance::field.branch_name')" :value="old('branch_name')" />
+            {{-- ⭐ ব্যাংক বাছলে শাখা নিজে থেকে — মালিকের কথা, ২০ সেপ্টেম্বর ২০২৬:
+                 *"ব্যাংক select korle শাখা auto asar kotha"*।
+
+                 ⛔ ঘরটা **ভরে, আটকায় না**: এক ব্যাংকের বহু শাখা, আর সুবিধাটা
+                 অন্য শাখার হতেই পারে। ⚠️ আর কেউ আগে কিছু লিখে থাকলে সেটা
+                 রাখা হয় — টাইপ করা জিনিস নীরবে বদলে গেলে ফর্মের উপর
+                 বিশ্বাসটাই চলে যায়। ⓘ প্রতিষ্ঠানের শাখা লেখা না থাকলে ঘরটা
+                 খালিও করা হয় না। --}}
+            <x-ui.field name="branch_name" :label="__('finance::field.branch_name')"
+                        x-model="branch" x-on:input="branchTyped()" />
             <x-ui.field name="sanction_no" :label="__('finance::field.sanction_no')" :value="old('sanction_no')" />
 
             <x-ui.field name="sanctioned_on" type="date" :label="__('finance::field.sanctioned_on')"
@@ -70,14 +85,34 @@
 
             <x-ui.field name="limit_amount" type="number" step="0.01" inputmode="decimal"
                         :label="__('finance::field.limit_amount')"
-                        :value="old('limit_amount')" required numeric />
+                        :value="old('limit_amount')" required numeric
+                        x-model="limit" x-on:input="fromTerms()" />
 
-            <x-ui.field name="interest_rate" type="number" step="0.01" inputmode="decimal"
-                        :label="__('finance::field.interest_rate')"
-                        :value="old('interest_rate', '0')" numeric />
+            {{-- ⛔ গ্যারান্টিতে সুদ নেই — ওটা কমিশনে চলে, আর কমিশনটা
+                 নিচের "চার্জ" ঘরেই বসে (মালিক, ২০ সেপ্টেম্বর ২০২৬)। --}}
+            <template x-if="hasInterest">
+                <x-ui.field name="interest_rate" type="number" step="0.01" inputmode="decimal"
+                            :label="__('finance::field.interest_rate')"
+                            :value="old('interest_rate', '0')" numeric
+                            x-model="rate" x-on:input="fromTerms()" />
+            </template>
 
-            <x-ui.field name="renews_on" type="date" :label="__('finance::field.renews_on')"
-                        :value="old('renews_on')" />
+            {{-- ⭐ নবায়নের তারিখ কেবল CC-তে — মালিকের কথা: *"Tarm loan e
+                 নবায়নের তারিখ thake na tahole tumi dila keno"*।
+
+                 ⓘ মেয়াদি ঋণ নবায়ন হয় না, সে শেষ হয়। ⚠️ ঘরটা দেখিয়ে
+                 সংরক্ষণ না করা আরও খারাপ হত: কেউ ভরতেন আর ভাবতেন লেখা হয়েছে। --}}
+            <template x-if="hasRenewal">
+                <x-ui.field name="renews_on" type="date" :label="__('finance::field.renews_on')"
+                            :value="old('renews_on')" />
+            </template>
+
+            {{-- ⭐ গ্যারান্টির তারিখটা নবায়ন নয়, **মেয়াদ শেষ** — গ্যারান্টি
+                 ফুরায়, গড়ায় না। কলাম একটাই, কিন্তু নামটা আলাদা। --}}
+            <template x-if="hasExpiry">
+                <x-ui.field name="renews_on" type="date" :label="__('finance::field.expires_on')"
+                            :value="old('renews_on')" />
+            </template>
 
             {{-- CC — স্টকই আজকের সীমা ঠিক করে --}}
             {{-- ⭐ ড্রয়িং পাওয়ার ও ব্যবহার — নমুনার নিজস্ব বাক্স।
@@ -167,16 +202,26 @@
                 </fieldset>
             </template>
 
-            {{-- মেয়াদি ও লিজ — কিস্তি --}}
-            <template x-if="kind === 'term' || kind === 'lease'">
+            {{-- ⭐ কিস্তি — মেয়াদি, LTR ও লিজ। CC-তে নয়: চলতি মূলধন
+                 কিস্তিতে শোধ হয় না, চাহিবামাত্র।
+
+                 ── ⭐ অঙ্কটা দুই দিকেই চলে, ২০ সেপ্টেম্বর ২০২৬ ────────────
+                 মালিকের কথা: *"markup marjin sales price er moto"*। সীমা,
+                 হার ও সংখ্যা দিলে কিস্তির অঙ্ক বসে; আর ব্যাংকের কাগজে অন্য
+                 অঙ্ক থাকলে সেটা টাইপ করলে **হার** নতুন করে বসে।
+                 ⛔ কোনো দিকই টাইপ করা ঘর চুপচাপ মুছে দেয় না — ব্যাংকের
+                 কাগজই শেষ কথা, আমাদের অঙ্ক কেবল সাহায্য। --}}
+            <template x-if="hasInstalments">
                 <div class="contents">
                     <x-ui.field name="instalments" type="number" inputmode="numeric"
                                 :label="__('finance::field.instalments')"
-                                :value="old('instalments')" numeric />
+                                :value="old('instalments')" numeric
+                                x-model="count" x-on:input="fromTerms()" />
 
                     <x-ui.field name="instalment_amount" type="number" step="0.01" inputmode="decimal"
                                 :label="__('finance::field.instalment_amount')"
-                                :value="old('instalment_amount')" numeric />
+                                :value="old('instalment_amount')" numeric
+                                x-model="instalment" x-on:input="fromInstalment()" />
                 </div>
             </template>
 
@@ -198,6 +243,39 @@
                 <x-ui.select name="liability_account_id" :label="__('finance::field.liability_account')"
                              :options="$liabilityAccounts->mapWithKeys(fn ($a) => [$a->id => $a->code . ' · ' . $a->name()])"
                              :selected="old('liability_account_id')" />
+            </template>
+
+            {{-- ⭐ এই ঋণ নতুন, নাকি আগে থেকেই চলছে — মালিকের নির্দেশ,
+                 ২০ সেপ্টেম্বর ২০২৬।
+
+                 ── ⚠️ কেন এই একটা প্রশ্ন সবচেয়ে জরুরি ─────────────────────
+                 ব্যবস্থায় আসার দিন বেশিরভাগ ঋণই পুরনো। ⓘ নতুন হলে টাকা
+                 আসে রসিদ ভাউচারে, আর সেটাই ব্যাংক হিসাব বাড়ায়। ⛔ পুরনো
+                 হলে টাকাটা বছর আগেই এসেছিল — আজ আবার বসালে **ব্যাংকের
+                 জেরটাই মিথ্যা হয়ে যেত**। তখন কেবল আজকের বকেয়া খাতায়
+                 ওঠে: দায় ক্রেডিট, সঞ্চিত মুনাফা ডেবিট। --}}
+            <label class="flex items-center gap-2 sm:col-span-2 xl:col-span-4">
+                <input type="checkbox" name="already_running" value="1"
+                       @checked(old('already_running'))
+                       x-model="running"
+                       class="size-4 rounded border-(--color-border)">
+                <span class="text-sm font-medium">{{ __('finance::field.already_running') }}</span>
+            </label>
+
+            <template x-if="running">
+                <div class="contents">
+                    <x-ui.field name="opening_drawn" type="number" step="0.01" inputmode="decimal"
+                                :label="__('finance::field.outstanding_today')"
+                                :value="old('opening_drawn')" numeric
+                                :hint="__('finance::message.opening_touches_no_bank')" />
+
+                    <template x-if="hasInstalments">
+                        <x-ui.field name="instalments_paid" type="number" inputmode="numeric"
+                                    :label="__('finance::field.instalments_paid')"
+                                    :value="old('instalments_paid')" numeric
+                                    :hint="__('finance::message.instalments_paid_hint')" />
+                    </template>
+                </div>
             </template>
 
             {{-- ⭐ জামানত ও শর্ত — নমুনায় ভাঁজ করা।

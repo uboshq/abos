@@ -318,4 +318,9 @@ return [
     'rental_how_many' => 'Contracts',
     'dep_tab_institution' => 'Where it is kept',
     'dep_next_maturity' => 'Next maturity',
+    'expires_on' => 'Expires on',
+    'already_running' => 'This loan is already running',
+    'outstanding_today' => 'Outstanding today',
+    'instalments_paid' => 'Instalments already paid',
+    'instalments_left' => 'Instalments left',
 ];

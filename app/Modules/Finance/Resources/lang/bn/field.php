@@ -348,4 +348,9 @@ return [
     'rental_how_many' => 'কয়টা চুক্তি',
     'dep_tab_institution' => 'কোন প্রতিষ্ঠানে',
     'dep_next_maturity' => 'পরের মেয়াদ',
+    'expires_on' => 'মেয়াদ শেষ',
+    'already_running' => 'এই ঋণ আগে থেকেই চলছে',
+    'outstanding_today' => 'আজকের বকেয়া',
+    'instalments_paid' => 'কয়টা কিস্তি ইতিমধ্যে দেওয়া',
+    'instalments_left' => 'বাকি কিস্তি',
 ];

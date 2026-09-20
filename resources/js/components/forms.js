@@ -607,6 +607,114 @@ export function expenseFields (config) {
 }
 
 /*
+ * ব্যাংকের সুবিধার ফর্ম — ধরন, শাখা, আর কিস্তির দুই দিকের অঙ্ক।
+ * ২০ সেপ্টেম্বর ২০২৬, মালিকের নির্দেশে।
+ *
+ * ── ⭐ কিস্তি দুই দিকেই ──────────────────────────────────────────────
+ * মালিকের কথা: *"markup marjin sales price er moto"*। অর্থাৎ সীমা, হার
+ * ও কিস্তির সংখ্যা দিলে কিস্তির অঙ্ক বসে; আর ব্যাংকের কাগজে অন্য অঙ্ক
+ * লেখা থাকলে সেটা টাইপ করলে **হার** নতুন করে বসে।
+ *
+ * ⛔ কোনো দিকই মানুষের টাইপ করা ঘর চুপচাপ মুছে দেয় না: যে ঘরে হাত পড়ে
+ * সেটাই সত্যি, আর অন্যটা তার থেকে হিসাব হয়। ⚠️ ব্যাংকের কাগজই শেষ কথা;
+ * আমাদের অঙ্ক কেবল সাহায্য।
+ *
+ * ── ⓘ সরল সুদ, EMI নয় ───────────────────────────────────────────────
+ * মোট শোধ = আসল + আসল × হার × বছর, আর কিস্তি = মোট ÷ সংখ্যা। বাংলাদেশে
+ * মেয়াদি ঋণের কাগজে এভাবেই লেখা থাকে (flat)। ⚠️ EMI ধরলে আমাদের সংখ্যা
+ * ব্যাংকের কাগজের সাথে মিলত না, আর মানুষ ভাবতেন কোনোটা ভুল।
+ *
+ * ── ⭐ ব্যাংক বাছলে শাখা ─────────────────────────────────────────────
+ * ⓘ শাখার নামগুলো পাতার সাথেই আসে (`branches`), তাই কোনো fetch নেই।
+ * ⛔ ঘরটা **ভরে, আটকায় না**: এক ব্যাংকের বহু শাখা, আর সুবিধাটা অন্য
+ * শাখার হতেই পারে। ⚠️ আর কেউ আগে থেকে কিছু লিখে থাকলে সেটা রাখা হয় —
+ * টাইপ করা জিনিস নীরবে বদলে গেলে ফর্মের উপর বিশ্বাস চলে যায়।
+ */
+export function bankFacilityForm ({ kind = 'cc', branches = {}, branch = '', typedBranch = false, running = false } = {}) {
+    const n = (v) => {
+        v = (v ?? '').toString().trim()
+
+        return v !== '' && ! isNaN(v) ? parseFloat(v) : null
+    }
+
+    return {
+        kind,
+        branches,
+        branch,
+        typedBranch,
+        running,
+
+        limit: '',
+        rate: '',
+        count: '',
+        instalment: '',
+
+        /* ⓘ ধরনটা বদলালে কোন ঘরগুলো থাকবে — পর্দার `x-show` এগুলোই পড়ে */
+        get hasInstalments () {
+            return this.kind === 'term' || this.kind === 'ltr' || this.kind === 'lease'
+        },
+
+        get hasRenewal () {
+            return this.kind === 'cc'
+        },
+
+        get hasExpiry () {
+            return this.kind === 'bg'
+        },
+
+        get hasInterest () {
+            return this.kind !== 'bg'
+        },
+
+        /* ব্যাংক বাছা হলো — শাখাটা ভরে দাও, যদি কেউ নিজে কিছু না লিখে থাকেন */
+        pickedBank (id) {
+            const found = this.branches[id]
+
+            if (this.typedBranch) return
+            if (found === undefined || found === null || found === '') return
+
+            this.branch = found
+        },
+
+        /* মানুষ নিজে শাখা লিখেছেন — এরপর আর ভরা হয় না */
+        branchTyped () {
+            this.typedBranch = this.branch.toString().trim() !== ''
+        },
+
+        /* সীমা + হার + সংখ্যা → কিস্তির অঙ্ক */
+        fromTerms () {
+            const p = n(this.limit)
+            const r = n(this.rate)
+            const c = n(this.count)
+
+            if (p === null || p <= 0 || c === null || c < 1) return
+
+            const years = c / 12
+            const total = p + (p * (r === null ? 0 : r) / 100 * years)
+
+            this.instalment = (total / c).toFixed(2)
+        },
+
+        /* কিস্তির অঙ্ক টাইপ হলো → হার নতুন করে */
+        fromInstalment () {
+            const p = n(this.limit)
+            const c = n(this.count)
+            const a = n(this.instalment)
+
+            if (p === null || p <= 0 || c === null || c < 1 || a === null) return
+
+            const years = c / 12
+
+            if (years <= 0) return
+
+            const rate = ((a * c) - p) / p / years * 100
+
+            this.rate = rate.toFixed(2)
+        },
+    }
+}
+
+/*
  * ব্যাংকের সুবিধা — এখনো কত তোলা যাবে: স্টক × (১ − মার্জিন) থেকে ব্যবহৃত বাদ।
  * ⛔ কেবল দেখানো, সংরক্ষণ হয় না — আসল হিসাব খতিয়ানের।
  */
