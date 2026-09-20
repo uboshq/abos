@@ -151,4 +151,9 @@ return [
     'settlement_basis_unknown' => 'A charge on the interest still to come is not worked out yet — it depends on whether the bank counts interest flat or reducing, and a wrong figure here is money.',
     'schedule_totals' => 'Instalment :instalment · interest :interest · paid in all :total',
     'party_linked' => 'Linked — their loan and their dues now answer to one name',
+    /* ⭐ Maturity and chasing notices — money map §14ক & §14খ, 21 Sep 2026 */
+    'notice_maturing' => ':document at :institution is maturing',
+    'notice_maturing_body' => 'Matures :date · :days days to go. Miss it and the bank rolls the money over on its own.',
+    'notice_hand_loan' => 'A hand loan with :person is due',
+    'notice_hand_loan_body' => 'Due :date · :days days.',
 ];

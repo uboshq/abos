@@ -29,6 +29,18 @@ final class NotificationKinds
             'approval.approved' => 'core.notify.kind.approval_approved',
             'approval.rejected' => 'core.notify.kind.approval_rejected',
             'report_ready' => 'core.notify.kind.report_ready',
+
+            /*
+             * ⭐ তারিখের আগাম খবর — ২১ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ নাম দুইটা চিহ্নমাত্র — কোর কোনো মডিউলের ক্লাস চেনে না,
+             * শুধু পাঠানো খবরের ধরনটা জানে — অনুমোদনের দুইটা সারিও
+             * ঠিক তাই। ⚠️ তালিকায় না বসালে খবরটা যেত, কিন্তু কেউ সেটা
+             * বন্ধ করতে পারতেন না — আর যে খবর বন্ধ করা যায় না, সেটা
+             * একদিন সবাই না-দেখা শিখে যান।
+             */
+            'finance.deposit_maturing' => 'core.notify.kind.deposit_maturing',
+            'finance.hand_loan_due' => 'core.notify.kind.hand_loan_due',
         ];
     }
 

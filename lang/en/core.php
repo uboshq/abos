@@ -931,6 +931,10 @@ return [
             'approval_rejected_note' => 'With the reason it was sent back. ⚠️ Off means a returned paper sits there unnoticed.',
             'report_ready' => 'When a scheduled report is ready',
             'report_ready_note' => 'Reports that build themselves and wait to be downloaded.',
+            'deposit_maturing' => 'When a deposit is about to mature',
+            'deposit_maturing_note' => 'From thirty days out, once a week. ⚠️ Off means the bank rolls the money over on its own.',
+            'hand_loan_due' => 'When a hand loan falls due',
+            'hand_loan_due_note' => 'Overdue, or due within thirty days. ⓘ Loans with no date never send one.',
         ],
     ],
     'look' => [
