@@ -52,4 +52,5 @@ return [
     'cheque_deposit' => 'Deposited',
     'cheque_clear' => 'Cleared',
     'cheque_bounce' => 'Bounced',
+    'reopen_year' => 'Reopen the year',
 ];

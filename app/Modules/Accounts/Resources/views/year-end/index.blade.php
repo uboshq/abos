@@ -152,7 +152,11 @@
                 ['key' => 'ends_on', 'label' => __('accounts::field.ends_on'), 'width' => '10rem',
                  'render' => fn ($y) => \App\Core\Support\DateFormat::format($y->ends_on)],
                 ['key' => 'is_closed', 'label' => __('accounts::field.state'),
-                 'render' => fn ($y) => view('accounts::year-end.partials.state', ['year' => $y])],
+                 'render' => fn ($y) => view('accounts::year-end.partials.state', [
+                     'year' => $y,
+                     'canReopen' => $canReopen,
+                     'reopenableId' => $reopenableId,
+                 ])],
             ]" />
     </section>
 </x-layouts.app>

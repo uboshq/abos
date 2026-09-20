@@ -8,12 +8,14 @@ use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Engines\Posting\PostingException;
 use App\Core\Services\NumberSeriesProvisioner;
+use App\Core\Services\PermissionSyncer;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Models\Company;
 use App\Models\FinancialYear;
 use App\Models\LedgerEntry;
 use App\Models\NumberSeries;
+use App\Models\User;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
 use Illuminate\Support\Carbon;
@@ -192,6 +194,119 @@ final class YearEndService
 
             return $newYear->fresh();
         });
+    }
+
+    /** এই মানুষটা বন্ধ বছর খুলতে পারেন কি না — পর্দায় বোতাম দেখানোর জন্য। */
+    public function canReopen(?User $user): bool
+    {
+        return $user !== null && $this->isSuperAdmin($user);
+    }
+
+    /**
+     * কোন বছরটা এখন খোলা যায় — সবচেয়ে পরে বন্ধ হওয়াটা, নাহলে কিছুই না।
+     *
+     * ⓘ পর্দা আর সেবা একই প্রশ্ন দুইভাবে জিজ্ঞেস করে না: বোতামটা এই
+     * উত্তরেই বসে, আর [[self::reopen()]] একই উত্তর ধরেই আটকায়।
+     */
+    public function reopenableYear(): ?FinancialYear
+    {
+        return FinancialYear::query()
+            ->where('is_closed', true)
+            ->orderByDesc('closed_at')
+            ->orderByDesc('ends_on')
+            ->first();
+    }
+
+    /**
+     * বন্ধ বছর আবার খোলা — কেবল সুপার অ্যাডমিন।
+     *
+     * ── কেন দরজাটা লাগে, ২০ সেপ্টেম্বর ২০২৬ ─────────────────────────
+     * মালিক লাইভে ২০২৬-২০২৭ বন্ধ করে দেখলেন খোলার কোনো উপায় নেই:
+     * *"অর্থবছরগুলো বন্ধ korechi calur option nai keno. super admin er
+     * kache seta thakte hobe"*। ⓘ বন্ধ করা এক-মুখী বলেই ভুলটা সহজে হয় —
+     * আর হয়ে গেলে গোটা বছরের কাজ আটকে থাকে।
+     *
+     * ── কেন কেবল শেষ বন্ধ বছরটা ─────────────────────────────────────
+     * ⛔ পুরনো কোনো বছর খুললে তার পরের বন্ধগুলো অর্থহীন হত: ২০২৪ খুলে
+     * বসলে ২০২৫ আর ২০২৬-এর সমাপনী দাখিলাগুলো ঐ বছরের লাভ ধরে বসে আছে,
+     * অথচ ভিত্তিটাই আর স্থির নয়। তাই কেবল সবচেয়ে পরে বন্ধ হওয়াটা।
+     *
+     * ── কী ফেরানো হয় ───────────────────────────────────────────────
+     * সমাপনীর দাখিলাটা উল্টানো হয় ([[PostingEngine::reverse()]]) — মোছা
+     * হয় না। ⚠️ মুছে ফেলা মানে খাতায় একটা গর্ত, আর তখন "কী হয়েছিল"
+     * প্রশ্নের উত্তর কোথাও থাকত না। উল্টো সারিগুলো থাকে, তাই ইতিহাসটা
+     * পুরোটাই পড়া যায়।
+     *
+     * ⓘ বন্ধ করার সময় যে পরের বছরটা খোলা হয়েছিল সেটা মুছে ফেলা হয় না —
+     * ওতে ইতিমধ্যে কাজ হয়ে থাকতে পারে। কেবল "চলতি" চিহ্নটা ফিরে আসে।
+     *
+     * @throws ValidationException
+     */
+    public function reopen(FinancialYear $year, User $user): FinancialYear
+    {
+        if (! $this->isSuperAdmin($user)) {
+            throw ValidationException::withMessages([
+                'reopen' => __('accounts::validation.year_reopen_super_admin'),
+            ]);
+        }
+
+        if (! $year->is_closed) {
+            throw ValidationException::withMessages([
+                'reopen' => __('accounts::validation.year_not_closed'),
+            ]);
+        }
+
+        $latestClosed = $this->reopenableYear();
+
+        if ($latestClosed === null || $latestClosed->id !== $year->id) {
+            throw ValidationException::withMessages([
+                'reopen' => __('accounts::validation.year_reopen_latest_only', [
+                    'name' => $latestClosed?->name ?? $year->name,
+                ]),
+            ]);
+        }
+
+        return DB::transaction(function () use ($year, $user) {
+            /*
+             * ⚠️ সমাপনীতে কোনো দাখিলা না-ও বসে থাকতে পারে — আয় ও ব্যয়
+             * দুইটাই শূন্য হলে [[self::close()]] কিছুই পোস্ট করে না।
+             *
+             * ⓘ মালিকের লাইভ পাতাতেই অবস্থাটা এমন ছিল ("বছরের নিট ফল
+             * ০.০০, যত খাত শূন্য হবে ০"), আর না দেখে উল্টাতে গেলে ইঞ্জিন
+             * ঠিকই ছুঁড়ত — অর্থাৎ যে বছরে কিছু হয়নি, ঠিক সেটাই খোলা যেত না।
+             */
+            $hasClosingRows = LedgerEntry::query()
+                ->where('source_type', self::CLOSE_SOURCE)
+                ->where('source_id', $year->id)
+                ->exists();
+
+            if ($hasClosingRows) {
+                $this->posting->reverse(
+                    sourceType: self::CLOSE_SOURCE,
+                    sourceId: $year->id,
+                    reversalDate: $year->ends_on,
+                    reason: __('accounts::message.year_reopened', ['name' => $year->name]),
+                    userId: $user->id,
+                );
+            }
+
+            FinancialYear::query()->where('is_current', true)->update(['is_current' => false]);
+
+            $year->forceFill([
+                'is_closed' => false,
+                'is_current' => true,
+                'closed_at' => null,
+                'closed_by' => null,
+            ])->save();
+
+            return $year->fresh();
+        });
+    }
+
+    /** সুপার অ্যাডমিন কি না — রোলের নাম ধরে, অনুমতি ধরে নয়। */
+    private function isSuperAdmin(User $user): bool
+    {
+        return $user->roles->contains('name', PermissionSyncer::SUPER_ADMIN_ROLE);
     }
 
     /**

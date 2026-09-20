@@ -59,4 +59,5 @@ return [
     'cheque_deposit' => 'জমা দিলাম',
     'cheque_clear' => 'পাশ হয়েছে',
     'cheque_bounce' => 'ফেরত এসেছে',
+    'reopen_year' => 'বছরটা আবার খুলুন',
 ];

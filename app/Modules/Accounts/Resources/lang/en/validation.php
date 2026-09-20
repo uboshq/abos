@@ -91,4 +91,7 @@ return [
     'bounce_needs_reason' => 'Say why it bounced — "no funds" and "signature mismatch" are not the same thing.',
     'chart_not_installed' => 'The chart of accounts has not been installed yet.',
     'opening_head_missing' => 'The chart has no account :code (Opening Balance Equity)',
+    'year_reopen_super_admin' => 'Only a super admin can reopen a closed year.',
+    'year_not_closed' => 'That year is not closed.',
+    'year_reopen_latest_only' => 'Only the year closed most recently can be reopened — right now that is ":name".',
 ];

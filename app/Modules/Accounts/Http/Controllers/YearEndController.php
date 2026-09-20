@@ -57,6 +57,13 @@ class YearEndController extends Controller implements HasMiddleware
             // ব্যতিক্রম পড়ত
             'preview' => $current !== null ? $this->yearEnd->preview($current) : null,
             'years' => FinancialYear::query()->orderByDesc('starts_on')->get(),
+
+            /*
+             * ⭐ আবার খোলার দরজা — কেবল সুপার অ্যাডমিন, আর কেবল সবচেয়ে
+             * পরে বন্ধ হওয়া বছরটায় ([[YearEndService::reopen()]])।
+             */
+            'canReopen' => $this->yearEnd->canReopen($request->user()),
+            'reopenableId' => $this->yearEnd->reopenableYear()?->id,
         ]);
     }
 
@@ -95,5 +102,33 @@ class YearEndController extends Controller implements HasMiddleware
                 'closed' => $year->name,
                 'opened' => $newYear->name,
             ]));
+    }
+
+    /**
+     * বন্ধ বছর আবার খোলা — সুপার অ্যাডমিনের নিজের দরজা।
+     *
+     * ⓘ অনুমতি দিয়ে নয়, রোল দিয়ে ([[YearEndService::reopen()]])। মালিকের
+     * কথা: *"super admin er kache seta thakte hobe"* — অর্থাৎ এটা রোজকার
+     * কারো কাজ নয়, একজনের হাতে রাখা দরজা।
+     *
+     * ⚠️ নামটা হুবহু লিখতে হয়, বন্ধ করার মতোই: ভুল করে চাপা ঠেকাতে।
+     */
+    public function reopen(Request $request, FinancialYear $year): RedirectResponse
+    {
+        $data = $request->validate([
+            'confirm' => ['required', 'string'],
+        ]);
+
+        if (trim($data['confirm']) !== $year->name) {
+            return back()
+                ->withInput()
+                ->withErrors(['confirm' => __('accounts::validation.year_confirm_name', ['name' => $year->name])]);
+        }
+
+        $this->yearEnd->reopen($year, $request->user());
+
+        return redirect()
+            ->route('accounts.year_end.index')
+            ->with('saved', __('accounts::message.year_reopened', ['name' => $year->name]));
     }
 }

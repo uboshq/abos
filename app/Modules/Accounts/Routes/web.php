@@ -20,6 +20,7 @@ use App\Modules\Accounts\Http\Controllers\MoneyTransferPrintController;
 use App\Modules\Accounts\Http\Controllers\PeriodLockController;
 use App\Modules\Accounts\Http\Controllers\ReportController;
 use App\Modules\Accounts\Http\Controllers\VoucherController;
+use App\Modules\Accounts\Http\Controllers\VoucherListController;
 use App\Modules\Accounts\Http\Controllers\VoucherPrintController;
 use App\Modules\Accounts\Http\Controllers\YearEndController;
 use App\Modules\Accounts\Models\Account;
@@ -121,7 +122,7 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
      * ⓘ `/vouchers/{type}`-এর ভেতরে নয়, আলাদা পথে — নাহলে "list"-কে একটা ভাউচারের
      * ধরন ভেবে বসত, ঠিক নিচের মন্তব্যটা যে ফাঁদের কথা বলে।
      */
-    Route::get('voucher-list', [\App\Modules\Accounts\Http\Controllers\VoucherListController::class, 'index'])
+    Route::get('voucher-list', [VoucherListController::class, 'index'])
         ->name('voucher.list');
 
     Route::prefix('vouchers')->name('voucher.')->group(function () {
@@ -247,6 +248,14 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
         Route::get('/', [YearEndController::class, 'index'])->name('index');
         Route::post('/{year}/close', [YearEndController::class, 'close'])
             ->whereNumber('year')->name('close');
+
+        /*
+         * আবার খোলা — সুপার অ্যাডমিন ছাড়া কেউ পারে না, আর সেই পাহারাটা
+         * সেবার ভিতরে ([[YearEndService::reopen()]]), কারণ এটা অনুমতির
+         * প্রশ্ন নয়, রোলের।
+         */
+        Route::post('/{year}/reopen', [YearEndController::class, 'reopen'])
+            ->whereNumber('year')->name('reopen');
     });
 
     /*

@@ -198,4 +198,6 @@ return [
     'asset_search' => 'Asset name, document no or tag no',
     'loan_search' => 'Document no, lender or account no',
     'recon_search' => 'Bank account name, code or number, or note',
+    'year_reopened' => ':name is open again — the closing entry has been reversed.',
+    'reopen_note' => 'The closing entry is reversed, not deleted — the history stays.',
 ];

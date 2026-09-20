@@ -306,4 +306,5 @@ return [
     'amount_received' => 'গৃহীত টাকা',
     'amount_paid' => 'পরিশোধিত টাকা',
     'payment_method' => 'পেমেন্ট মেথড',
+    'confirm_year' => 'নিশ্চিত করতে লিখুন: :name',
 ];

@@ -287,4 +287,5 @@ return [
     'amount_received' => 'Amount received',
     'amount_paid' => 'Amount paid',
     'payment_method' => 'Payment method',
+    'confirm_year' => 'Type to confirm: :name',
 ];
