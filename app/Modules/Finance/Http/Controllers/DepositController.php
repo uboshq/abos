@@ -15,6 +15,7 @@ use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Finance\Models\Deposit;
 use App\Modules\Finance\Models\DepositKind;
 use App\Modules\Finance\Models\DepositMovement;
+use App\Modules\Finance\Models\Institution;
 use App\Modules\Finance\Services\DepositService;
 use App\Modules\MasterData\Models\Person;
 use App\Modules\MasterData\Services\PersonResolver;
@@ -179,6 +180,8 @@ class DepositController extends Controller implements HasMiddleware
              * ⓘ ব্যবসার নামে রাখা আমানতের কোনো ব্যক্তি লাগে না
              * (`held_by` সেটা বলে), তাই ঘরটা ঐচ্ছিক।
              */
+            'institutions' => $this->institutions(),
+
             'people' => Person::query()->active()->orderBy('name_en')
                 ->pluck('name_en', 'id'),
 
@@ -212,11 +215,33 @@ class DepositController extends Controller implements HasMiddleware
         ]);
     }
 
+    /**
+     * বাছাইয়ের তালিকা — চালু ব্যাংক ও আর্থিক প্রতিষ্ঠান।
+     *
+     * ⓘ বীমা কোম্পানি বা মোবাইল ব্যাংকিং এখানে নয়: ঋণ বা আমানত ওদের
+     * কাছে থাকে না, আর তালিকায় রাখলে ভুল বাছার পথ খুলে যেত।
+     *
+     * @return array<int, string>
+     */
+    private function institutions(): array
+    {
+        return Institution::query()
+            ->whereIn('kind', [Institution::BANK, Institution::NBFI])
+            ->active()
+            ->orderBy('name_en')
+            ->get()
+            ->mapWithKeys(fn (Institution $i) => [$i->id => $i->label()])
+            ->all();
+    }
+
     public function store(Request $request, string $issuer): RedirectResponse
     {
         $data = $request->validate([
             'kind_id' => ['required', 'integer', 'exists:fin_deposit_kinds,id'],
-            'institution' => ['required', 'string', 'max:160'],
+            'institution_id' => ['nullable', 'integer',
+                Rule::exists('fin_institutions', 'id')->where('company_id', CompanyContext::id())],
+            'institution_new' => ['nullable', 'string', 'max:160',
+                'required_without:institution_id'],
             'branch_name' => ['nullable', 'string', 'max:160'],
             'reference_no' => ['nullable', 'string', 'max:60'],
             'held_by' => ['required', 'string', 'in:'.Deposit::BUSINESS.','.Deposit::OWNER],

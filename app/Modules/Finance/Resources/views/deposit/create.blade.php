@@ -62,8 +62,13 @@
                          :placeholder="__('finance::field.choose')"
                          :selected="old('kind_id')" />
 
-            <x-ui.field name="institution" :label="__('finance::field.institution')" required
-                        :value="old('institution')" />
+            {{-- ⭐ কোথায় রাখা — তালিকা থেকে; তালিকায় না থাকলে "+" এখানেই।
+                 কারণটা ব্যাংক সুবিধার ফর্মে লেখা আছে। --}}
+            @include('finance::components.institution-picker', [
+                'institutions' => $institutions,
+                'selected' => old('institution_id'),
+                'label' => __('finance::field.institution'),
+            ])
 
             <x-ui.field name="branch_name" :label="__('finance::field.branch_name')"
                         :value="old('branch_name')" />

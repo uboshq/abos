@@ -12,7 +12,9 @@ use App\Core\Support\DocumentStatus;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Finance\Models\BankFacility;
+use App\Modules\Finance\Models\Institution;
 use App\Modules\Finance\Services\BankFacilityService;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -123,7 +125,7 @@ class BankFacilityController extends Controller implements HasMiddleware
      * ⓘ আলাদা মেথডে, কারণ সারিগুলো [[standingOf()]]-এরও লাগে, আর দুইবার
      * কোয়েরি চালানো মানে একদিন দুইটা আলাদা তালিকা।
      */
-    private function facilityList(string $tab, string $term): \Illuminate\Contracts\Pagination\LengthAwarePaginator
+    private function facilityList(string $tab, string $term): LengthAwarePaginator
     {
         return BankFacility::query()
             ->when($tab === 'closed',
@@ -152,7 +154,7 @@ class BankFacilityController extends Controller implements HasMiddleware
      *
      * @return array<int, array{used: string, left: string}>
      */
-    private function standingOf(\Illuminate\Contracts\Pagination\LengthAwarePaginator $facilities): array
+    private function standingOf(LengthAwarePaginator $facilities): array
     {
         return $this->facilities->standing($facilities->getCollection());
     }
@@ -167,9 +169,29 @@ class BankFacilityController extends Controller implements HasMiddleware
     {
         return view('finance::bank-facility.create', [
             'menu' => $this->menu->forUser($request->user()),
+            'institutions' => $this->institutions(),
             'liabilityAccounts' => $this->liabilityAccounts(),
             'moneyAccounts' => $this->moneyAccounts(),
         ]);
+    }
+
+    /**
+     * বাছাইয়ের তালিকা — চালু ব্যাংক ও আর্থিক প্রতিষ্ঠান।
+     *
+     * ⓘ বীমা কোম্পানি বা মোবাইল ব্যাংকিং এখানে নয়: ঋণ বা আমানত ওদের
+     * কাছে থাকে না, আর তালিকায় রাখলে ভুল বাছার পথ খুলে যেত।
+     *
+     * @return array<int, string>
+     */
+    private function institutions(): array
+    {
+        return Institution::query()
+            ->whereIn('kind', [Institution::BANK, Institution::NBFI])
+            ->active()
+            ->orderBy('name_en')
+            ->get()
+            ->mapWithKeys(fn (Institution $i) => [$i->id => $i->label()])
+            ->all();
     }
 
     public function store(Request $request): RedirectResponse
@@ -186,7 +208,10 @@ class BankFacilityController extends Controller implements HasMiddleware
          */
         $data = $request->validate([
             'kind' => ['required', Rule::in(BankFacility::KINDS)],
-            'bank' => ['required', 'string', 'max:191'],
+            'institution_id' => ['nullable', 'integer',
+                Rule::exists('fin_institutions', 'id')->where('company_id', CompanyContext::id())],
+            'institution_new' => ['nullable', 'string', 'max:160',
+                'required_without:institution_id'],
             'branch_name' => ['nullable', 'string', 'max:191'],
             'sanction_no' => ['nullable', 'string', 'max:64'],
             'sanctioned_on' => ['required', 'date'],

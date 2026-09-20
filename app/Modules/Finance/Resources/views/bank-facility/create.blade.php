@@ -50,7 +50,18 @@
                              ->mapWithKeys(fn (string $k) => [$k => __('finance::field.facility_' . $k)])"
                          :selected="old('kind', \App\Modules\Finance\Models\BankFacility::CC)" required />
 
-            <x-ui.field name="bank" :label="__('finance::field.bank')" :value="old('bank')" required />
+            {{-- ⭐ ব্যাংকটা এখন তালিকা থেকে — ২০ সেপ্টেম্বর ২০২৬।
+
+                 ⓘ আগে ঘরটা মুক্ত লেখা ছিল, আর একই ব্যাংক তিন বানানে বসত
+                 ("IBBL", "Islami Bank", "Islami Bank Bangladesh Ltd.")।
+                 ⚠️ তখন "এই ব্যাংকে আমাদের মোট কত" প্রশ্নের উত্তরই বের করা
+                 যেত না। তালিকায় না থাকলে "+" দিয়ে এখানেই যোগ করা যায়,
+                 এক জমায় ([[App\Modules\Finance\Services\InstitutionService::resolve]])। --}}
+            @include('finance::components.institution-picker', [
+                'institutions' => $institutions,
+                'selected' => old('institution_id'),
+                'label' => __('finance::field.bank'),
+            ])
             <x-ui.field name="branch_name" :label="__('finance::field.branch_name')" :value="old('branch_name')" />
             <x-ui.field name="sanction_no" :label="__('finance::field.sanction_no')" :value="old('sanction_no')" />
 
