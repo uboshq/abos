@@ -247,4 +247,66 @@ class CostLayerTest extends TestCase
     {
         return app(CostLayerService::class);
     }
+
+    /**
+     * ⭐⭐ ৳১০০-এর ৩ বস্তা: স্তরগুলোর যোগফল হুবহু ৳১০০ — ২১ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⛔ অডিটে যা ধরা পড়েছিল ────────────────────────────────────────
+     * ক্রয়ের বিল একক দর বের করত `bcdiv($value, $qty, 4)` দিয়ে, আর সেটা
+     * **কেটে ফেলে**: ১০০ ÷ ৩ = ৩৩.৩৩৩৩ → স্তরের মোট ৯৯.৯৯৯৯। ⚠️ খাতায়
+     * বসে ১০০.০০০০, তাই তিনটাই বেরিয়ে গেলে ৳০.০০০১ মজুদ খাতায় পড়ে থাকত
+     * **যেখানে মজুদ শূন্য** — আর কেউ ব্যাখ্যা করতে পারত না।
+     *
+     * ⭐ এখন টাকাটাই স্থির: বাকিটুকু আলাদা স্তরে সরে যায়।
+     */
+    public function test_a_price_that_does_not_divide_still_adds_up(): void
+    {
+        $this->costs()->receiveWorth($this->product, '3', '100', 'test_purchase', 1);
+
+        $this->assertSame('100.0000', $this->valueOnHand(),
+            'স্তরগুলোর যোগফল ৳১০০ নয় — ভাগের সময় পয়সা হারিয়েছে।');
+
+        // আর সব বেরিয়ে গেলে মজুদের দাম ঠিক শূন্য, ০.০০০১ পড়ে থাকে না
+        $out = $this->costs()->issue($this->product, '3', 'test_sale', 1);
+
+        $this->assertSame('100.0000', $out['cost'], 'তিনটা বেরোলে খরচ ৳১০০ হওয়ার কথা।');
+        $this->assertSame('0.0000', $this->valueOnHand(), 'মজুদ শূন্য, অথচ দাম পড়ে আছে।');
+    }
+
+    /**
+     * ⭐ যে ভাগটা মেলে, সেখানে বাড়তি স্তর তৈরি হয় না।
+     *
+     * ⚠️ প্রতিটা ক্রয়ে দুইটা করে স্তর বানালে FIFO-র তালিকা অকারণে
+     * দ্বিগুণ লম্বা হত, আর পুরনো পরীক্ষাগুলোও নড়ত।
+     */
+    public function test_a_price_that_divides_cleanly_makes_one_layer(): void
+    {
+        $before = CostLayer::query()->where('product_id', $this->product->id)->count();
+
+        $this->costs()->receiveWorth($this->product, '4', '100', 'test_purchase', 2);
+
+        $this->assertSame(
+            $before + 1,
+            CostLayer::query()->where('product_id', $this->product->id)->count(),
+            '১০০ ÷ ৪ = ২৫ — এখানে ভাগশেষ নেই, তাই একটাই স্তর হওয়ার কথা।',
+        );
+
+        $this->assertSame('100.0000', $this->valueOnHand());
+    }
+
+    /** তাকে থাকা মালের মোট দাম — প্রতিটা স্তরের বাকি × তার দর। */
+    private function valueOnHand(): string
+    {
+        return CostLayer::query()
+            ->where('product_id', $this->product->id)
+            ->get()
+            ->reduce(
+                fn (string $sum, CostLayer $layer) => bcadd(
+                    $sum,
+                    bcmul((string) $layer->qty_remaining, (string) $layer->unit_cost, 4),
+                    4,
+                ),
+                '0',
+            );
+    }
 }

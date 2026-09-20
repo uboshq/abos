@@ -137,4 +137,62 @@ final class NobodyLosesThePaisaWhenProfitIsSharedTest extends TestCase
 
         $this->assertSame($first['amounts'], $again['amounts']);
     }
+
+    /**
+     * ⭐⭐ মূলধনের অনুপাতে ভাগ করলে যোগফল হুবহু ১০০% — ২১ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⛔ অডিটে যা ধরা পড়েছিল ────────────────────────────────────────
+     * তিন অংশীদারের মূলধন সমান হলে [[CapitalService::fillSharesFromCapital()]]
+     * প্রত্যেককে ৩৩.৩৩৩৩% দিত, যোগ **৯৯.৯৯৯৯%**। ⚠️ বাকি ০.০০০১% কারও
+     * নয়, আর কোথাও দেখানোও হয় না — দশ লাখ টাকার লাভে ৳১.০০, প্রতি বছর।
+     */
+    public function test_equal_capital_still_adds_up_to_a_hundred_percent(): void
+    {
+        $shares = $this->split->byWeights('100', [1 => '100000', 2 => '100000', 3 => '100000']);
+
+        $this->assertSame('100.0000', $this->sum($shares),
+            'তিনজনের অংশের যোগ ১০০% হয়নি — কারও নামে না-থাকা একটা টুকরা পড়ে আছে।');
+
+        sort($shares);
+        $this->assertSame(['33.3333', '33.3333', '33.3334'], $shares);
+    }
+
+    /**
+     * ⭐ অসম মূলধনেও পুরোটাই বিলি হয়, আর অনুপাতটা ঠিক থাকে।
+     */
+    public function test_uneven_capital_divides_the_whole_share(): void
+    {
+        $shares = $this->split->byWeights('100', [1 => '600000', 2 => '300000', 3 => '100000']);
+
+        $this->assertSame('100.0000', $this->sum($shares));
+        $this->assertSame('60.0000', $shares[1]);
+        $this->assertSame('30.0000', $shares[2]);
+        $this->assertSame('10.0000', $shares[3]);
+    }
+
+    /**
+     * ⭐ চুক্তিতে কিছু আগেই বাঁধা থাকলে বাকিটুকুই ভাগ হয় — পুরোপুরি।
+     *
+     * ⓘ একজনের ৫০% চুক্তিতে লেখা; বাকি ৫০% দুইজনে মূলধনের অনুপাতে।
+     */
+    public function test_what_is_left_after_an_agreed_share_is_fully_divided(): void
+    {
+        $shares = $this->split->byWeights('50', [2 => '300000', 3 => '100000']);
+
+        $this->assertSame('50.0000', $this->sum($shares), 'বাকি ৫০% পুরোটা ভাগ হয়নি।');
+        $this->assertSame('37.5000', $shares[2]);
+        $this->assertSame('12.5000', $shares[3]);
+    }
+
+    /**
+     * ⛔ যাঁর বাকি মূলধন নেই, তিনি ভাগেই আসেন না।
+     *
+     * ⚠️ ঋণাত্মক ওজন ধরলে অন্যদের অংশ ১০০-র বেশি হয়ে যেত।
+     */
+    public function test_a_partner_who_took_everything_out_gets_no_share(): void
+    {
+        $shares = $this->split->byWeights('100', [1 => '500000', 2 => '0', 3 => '-20000']);
+
+        $this->assertSame(['1' => '100.0000'], array_map('strval', $shares));
+    }
 }

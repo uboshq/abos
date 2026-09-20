@@ -86,7 +86,11 @@
             'width' => '8rem',
             'render' => fn ($p) => view('ui.amount-link', [
                 'value' => $p->hold_total,
-                'href' => route('inventory.report.show', 'inventory.hold'),
+                {{-- ⛔ এখানে ছিল `'inventory.hold'` — ওটা রিপোর্টের **চাবি**,
+                     ঠিকানার স্লাগ নয়, তাই লিংকটা ৪০৪ দিত (২১ সেপ্টেম্বর
+                     ২০২৬, অডিটে ধরা)। ⓘ স্লাগ `hold`, আর জোড়াটা
+                     [[StockReportController::SLUGS]]-এ। --}}
+                'href' => route('inventory.report.show', ['slug' => 'hold']),
             ]),
         ],
         [

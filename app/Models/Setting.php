@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Core\Services\SettingsService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -37,6 +38,29 @@ class Setting extends Model
     use IsAudited;
 
     protected $fillable = ['company_id', 'module', 'key', 'type', 'value', 'group'];
+
+    /**
+     * ⭐ সারি বদলালে পড়ার স্মৃতিটা ফেলে দেওয়া — ২০ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⛔ কেন এটা মডেলে, সেবায় নয় ───────────────────────────────────
+     * [[SettingsService]] এখন কোম্পানির **সব** সারি একবারে তুলে রাখে
+     * (নইলে একটা পাতা খুলতেই ২৪৭টা কোয়েরি হত)। ⚠️ কিন্তু "একবারে তোলা"
+     * মানেই "পরে লেখা সারি আর দেখা যায় না" — আর ঠিক সেটাই ঘটেছিল:
+     * সিডার সেটিং লেখার **আগে** কেউ একটা সেটিং পড়ে ফেলায় স্মৃতিটা
+     * পুরনো অবস্থায় জমে যেত, আর ক্রয়ের ফর্মে প্যাক আর আসত না।
+     *
+     * ⓘ সেবার `set()` নিজের চাবিটা মুছত ঠিকই, কিন্তু সারি সবসময় সেবার
+     * ভিতর দিয়ে লেখা হয় না — সিডার, কমান্ড, ইমপোর্ট সরাসরি মডেল ব্যবহার
+     * করে। ⭐ তাই খবরটা সারিটার নিজের কাছেই থাকে; তখন যে-ই লিখুক, পড়ার
+     * স্মৃতি তাজা থাকে।
+     */
+    protected static function booted(): void
+    {
+        $forget = fn () => app(SettingsService::class)->flush();
+
+        static::saved($forget);
+        static::deleted($forget);
+    }
 
     /** স্ট্রিং হিসেবে সংরক্ষিত মানকে তার আসল ধরনে ফেরানো। */
     public function typedValue(): mixed

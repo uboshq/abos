@@ -141,11 +141,35 @@ final class ALinkThatLooksAliveAndIsNotTest extends TestCase
      */
     private function linksIn(string $source): array
     {
-        $pattern = "/route\(\s*'([a-z_]+\.report\.show)'\s*,\s*\[\s*'slug'\s*=>\s*'([^']+)'/";
+        /*
+         * ⭐ লিংক লেখার **দুইটা** চেহারাই দেখা হয় — ২১ সেপ্টেম্বর ২০২৬।
+         *
+         * ⛔ আগে কেবল অ্যারের রূপটা চেনা হত (`['slug' => 'hold']`), আর
+         * সরাসরি রূপটা (`route('x.report.show', 'hold')`) কোনোদিন দেখা
+         * হয়নি। ⚠️ ফাঁকটা তাত্ত্বিক ছিল না: মজুদের পাতায়
+         * `route('inventory.report.show', 'inventory.hold')` লেখা ছিল —
+         * ওটা রিপোর্টের **চাবি**, স্লাগ নয় — আর লিংকটা ৪০৪ দিত।
+         *
+         * ⓘ চলক এখনো বাদ (`['slug' => $row->slug]`): কী মান আসবে তা
+         * চলার সময় ঠিক হয়, আর অর্ধেক যাচাই করে "সব ঠিক" বলার চেয়ে না
+         * বলা ভালো।
+         */
+        $patterns = [
+            "/route\(\s*'([a-z_]+\.report\.show)'\s*,\s*\[\s*'slug'\s*=>\s*'([^']+)'/",
+            "/route\(\s*'([a-z_]+\.report\.show)'\s*,\s*'([^']+)'/",
+        ];
 
-        preg_match_all($pattern, $source, $matches, PREG_SET_ORDER);
+        $out = [];
 
-        return array_map(fn (array $m) => [$m[1], $m[2]], $matches);
+        foreach ($patterns as $pattern) {
+            preg_match_all($pattern, $source, $matches, PREG_SET_ORDER);
+
+            foreach ($matches as $m) {
+                $out[] = [$m[1], $m[2]];
+            }
+        }
+
+        return $out;
     }
 
     /** @return array<string, string> */

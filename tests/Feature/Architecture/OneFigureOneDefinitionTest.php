@@ -48,7 +48,24 @@ class OneFigureOneDefinitionTest extends TestCase
          * একটা পাহারা যা অর্ধেক ধরে, তার বিপদ ধরতে না পারার চেয়ে বেশি:
          * সবুজ দেখে সবাই ধরে নেয় জিনিসটা এক জায়গায় আছে।
          */
-        $pattern = '/CONFIRMED,(?:self|DocumentStatus)::CLOSED,?\]/';
+        /*
+         * ⭐ দুইটা চেহারা, আর দ্বিতীয়টা ২১ সেপ্টেম্বর ২০২৬-এ যোগ হলো।
+         *
+         * ⛔ পাহারাটা কেবল ধ্রুবকের রূপ খুঁজত (`DocumentStatus::CONFIRMED`),
+         * তাই **হুবহু লেখা স্ট্রিং** (`['confirmed', 'closed']`) কোনোদিন
+         * দেখত না। ⚠️ আর নিয়মটা ঠিক ওভাবেই আরও **ছয় জায়গায়** লেখা ছিল —
+         * PurchaseWidgets, ReturnOnCapitalReport (দুইবার), SettlementReport
+         * (দুইবার), আর PaymentScheduleController-এ **কাঁচা SQL-এর ভিতরে**।
+         *
+         * ⓘ অর্থাৎ পাহারাটা দাবি করত "সংজ্ঞাটা এক জায়গায়", অথচ সাত
+         * জায়গায় ছিল — আর সবুজ দেখে সবাই ধরে নিত জিনিসটা এক জায়গায় আছে।
+         */
+        $patterns = [
+            '/CONFIRMED,(?:self|DocumentStatus)::CLOSED,?\]/',
+            "/'confirmed','closed'/",
+            '/\'confirmed\',\'closed\'/',
+        ];
+
         $home = 'app/Core/Support/DocumentStatus.php';
 
         $offenders = [];
@@ -62,8 +79,12 @@ class OneFigureOneDefinitionTest extends TestCase
 
             $code = preg_replace('/\s+/', '', $this->withoutComments(file_get_contents($path)));
 
-            if (preg_match($pattern, $code) === 1) {
-                $offenders[] = $relative;
+            foreach ($patterns as $pattern) {
+                if (preg_match($pattern, $code) === 1) {
+                    $offenders[] = $relative;
+
+                    break;
+                }
             }
         }
 

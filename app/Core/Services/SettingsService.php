@@ -25,6 +25,16 @@ final class SettingsService
     private array $cache = [];
 
     /**
+     * কোন কোম্পানির সব সারি একবারে তোলা হয়ে গেছে।
+     *
+     * ⓘ একই অনুরোধে কোম্পানি বদলাতে পারে (কনসোল, সিডার), তাই কোম্পানি
+     * ধরে আলাদা — নইলে দ্বিতীয় কোম্পানি প্রথমটার সেটিং পড়ত।
+     *
+     * @var array<string, true>
+     */
+    private array $primed = [];
+
+    /**
      * ঘোষিত সেটিংগুলো, একবার গুনে রাখা।
      *
      * ⚠️ আকারটা **খোলা** (`...`), আর সেটা ইচ্ছাকৃত: মডিউল নিজের সেটিংয়ে
@@ -218,13 +228,10 @@ final class SettingsService
             return $this->cache[$cacheKey];
         }
 
-        $row = Setting::query()
-            ->where('key', $key)
-            ->where('company_id', $companyId)
-            ->first();
+        $this->primeFor($companyId);
 
-        if ($row !== null) {
-            return $this->cache[$cacheKey] = $row->typedValue();
+        if (array_key_exists($cacheKey, $this->cache)) {
+            return $this->cache[$cacheKey];
         }
 
         $definition = $this->definitions()[$key] ?? null;
@@ -242,6 +249,37 @@ final class SettingsService
         }
 
         return $this->cache[$cacheKey] = $fallback;
+    }
+
+    /**
+     * ⭐ একটা কোম্পানির সব সেটিং একবারে — ২০ সেপ্টেম্বর ২০২৬, অডিটে ধরা।
+     *
+     * ── ⛔ কী ঘটত ──────────────────────────────────────────────────────
+     * প্রতিটা `get()` একটা করে কোয়েরি করত। ⓘ মেনু আঁকতে গিয়ে
+     * [[MenuSwitches::itemIsOn()]] প্রতি সারিতে **তিনটা** সেটিং দেখে
+     * (মডিউল · দল · সারি), আর তাতে একটা পাতা খোলার আগেই ২৪৭টা কোয়েরি
+     * হত। ⚠️ আর তার প্রায় সবগুলোই **কিছুই না পেয়ে** ফিরত: সারিটা
+     * টেবিলে নেই, তাই ডিফল্টে গিয়ে পড়ত। অর্থাৎ ২৪৭ বার ডাটাবেসে গিয়ে
+     * কিছু না জেনে ফেরা।
+     *
+     * ⭐ সেটিং অল্প কয়েকশো সারি, আর একটা পাতা এমনিতেই ডজনখানেক দেখে —
+     * তাই সবগুলো একবারে তুলে নেওয়াই সস্তা। ১টা কোয়েরি, তারপর সব উত্তর
+     * স্মৃতি থেকে।
+     *
+     * ⚠️ না-থাকা সারিও স্মৃতিতে বসে (ডিফল্ট হিসেবে), তাই একই অচেনা চাবি
+     * বারবার জিজ্ঞেস করলেও দ্বিতীয়বার কোয়েরি হয় না।
+     */
+    private function primeFor(?int $companyId): void
+    {
+        if (isset($this->primed[(string) $companyId])) {
+            return;
+        }
+
+        $this->primed[(string) $companyId] = true;
+
+        foreach (Setting::query()->where('company_id', $companyId)->get() as $row) {
+            $this->cache[$companyId.'|'.$row->key] = $row->typedValue();
+        }
     }
 
     public function enabled(string $key): bool
@@ -323,6 +361,7 @@ final class SettingsService
     public function flush(): void
     {
         $this->cache = [];
+        $this->primed = [];
     }
 
     private function encode(mixed $value, string $type): string

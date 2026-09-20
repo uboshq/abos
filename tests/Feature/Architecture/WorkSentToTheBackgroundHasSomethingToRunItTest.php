@@ -59,14 +59,26 @@ class WorkSentToTheBackgroundHasSomethingToRunItTest extends TestCase
         'queue-worker',
     ];
 
+    /**
+     * যে ছাঁকনি দিয়ে কিউ-করা ক্লাস খোঁজা হয়।
+     *
+     * ⚠️ এক জায়গায়, ইচ্ছাকৃতভাবে: স্ব-পরীক্ষাটা যদি regex-এর একটা
+     * **নকল** দেখত, তবে কেউ আসলটা অন্ধ করে দিলেও সে সবুজ থাকত — আর
+     * পাহারাটা আবার ঠিক আগের অবস্থায় ফিরে যেত (২১ সেপ্টেম্বর ২০২৬)।
+     */
+    private const QUEUED = '/\bimplements\b[^{]*\bShouldQueue\b/';
+
     public function test_nothing_is_queued_unless_the_deploy_runs_a_worker(): void
     {
         $queued = [];
+        $looked = 0;
 
         foreach (File::allFiles(base_path('app')) as $file) {
             if (! str_ends_with($file->getFilename(), '.php')) {
                 continue;
             }
+
+            $looked++;
 
             $source = File::get($file->getPathname());
 
@@ -78,18 +90,37 @@ class WorkSentToTheBackgroundHasSomethingToRunItTest extends TestCase
             $source = (string) preg_replace('#/\*.*?\*/#su', '', $source);
             $source = (string) preg_replace('#//[^\n]*#', '', $source);
 
-            if (preg_match('/\bimplements\b[^{]*\bShouldQueue\b/', $source) === 1) {
+            if (preg_match(self::QUEUED, $source) === 1) {
                 $queued[] = $file->getFilename();
             }
         }
 
         if ($queued === []) {
             /*
-             * আজকের অবস্থা — আর এটাই সৎ: কিছু কিউ হয় না, তাই কিছু
-             * হারায় না। পরীক্ষাটা এখানে থেমে যায়, কিন্তু **চুপচাপ
-             * নয়**: নিচের assertion বলে দেয় সে সত্যিই দেখেছে।
+             * ⛔ এখানে আগে লেখা ছিল `assertSame([], $queued)` — অর্থাৎ
+             * `assertSame([], [])`, যা সবসময় সত্য। ⚠️ আর তার পাশের
+             * মন্তব্যে দাবি করা ছিল *"নিচের assertion বলে দেয় সে সত্যিই
+             * দেখেছে"*। সে দেখত না; সে কেবল দুইটা খালি তালিকা মেলাত।
+             * ২১ সেপ্টেম্বর ২০২৬, অডিটে ধরা।
+             *
+             * ── ⭐ "খালি" তখনই অর্থবহ, যখন দুইটা কথা জানা থাকে ──────────
+             * ১. সত্যিই অনেকগুলো ফাইল পড়া হয়েছে।
+             * ২. যে ছাঁকনিটা দিয়ে খোঁজা হলো, সে সত্যিই খুঁজে পেতে পারে।
+             *
+             * ⓘ দ্বিতীয়টা ছাড়া প্রথমটা যথেষ্ট নয়: একটা ভাঙা regex দিয়ে
+             * দশ হাজার ফাইল পড়লেও উত্তর চিরকাল "কিছু নেই"।
              */
-            $this->assertSame([], $queued);
+            $this->assertGreaterThan(
+                300,
+                $looked,
+                "কেবল {$looked}টা ফাইল পড়া হয়েছে — তালিকাটা খালি, কারণ খোঁজাই হয়নি।",
+            );
+
+            $this->assertSame(
+                1,
+                preg_match(self::QUEUED, 'final class SendTheBill implements ShouldQueue {}'),
+                'ছাঁকনিটা একটা সত্যিকারের কিউ-করা ক্লাসও চিনতে পারে না — তাই "কিছু নেই" কথাটার কোনো মানে নেই।',
+            );
 
             return;
         }

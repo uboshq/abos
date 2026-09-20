@@ -69,6 +69,62 @@ final class CostLayerService
     }
 
     /**
+     * ⭐ মাল ঢুকল, আর **মোট দামটাই** সত্য — ২১ সেপ্টেম্বর ২০২৬, অডিটে ধরা।
+     *
+     * ── ⛔ কী ঘটত ──────────────────────────────────────────────────────
+     * ডাকার জায়গা একক দর বের করত `bcdiv($value, $qty, 4)` দিয়ে, আর সেটা
+     * **কেটে ফেলে, রাউন্ড করে না**। ⓘ ৳১০০-এর ৩ বস্তা → একক ৩৩.৩৩৩৩ →
+     * স্তরের মোট ৳৯৯.৯৯৯৯, অথচ খাতায় ৳১০০.০০০০। ⚠️ তিনটাই বেরিয়ে গেলে
+     * ৳০.০০০১ মজুদ খাতায় পড়ে থাকে **যেখানে মজুদ শূন্য** — আর ওটা কেউ
+     * ব্যাখ্যা করতে পারে না।
+     *
+     * ── ⭐ তাই টাকাটা স্থির, দরটা নয় ─────────────────────────────────────
+     * বাকিটুকু আলাদা একটা স্তরে সরিয়ে রাখা হয়: কয়টা একক এক ধাপ (০.০০০১)
+     * বেশি দরে বসবে, সেটাই গোনা হয়। ⓘ নিয়মটা নতুন নয় — মজুদ নতুন এককে
+     * নামানোর সময় ([[PackRebase]]) ঠিক এভাবেই টাকা অক্ষত রাখা হয়েছিল।
+     *
+     * ⚠️ ফলে একই ক্রয়ে দুইটা স্তর হতে পারে, আর সেটা ঠিক: FIFO-র ক্রম
+     * বদলায় না (একই দিন, একই কাগজ), কিন্তু যোগফল **হুবহু** মেলে।
+     *
+     * @return list<CostLayer>
+     */
+    public function receiveWorth(
+        Product $product,
+        string $qty,
+        string $value,
+        string $sourceType,
+        int $sourceId,
+        ?string $documentNo = null,
+        Carbon|string|null $date = null,
+    ): array {
+        if (bccomp($qty, '0', 4) <= 0) {
+            throw new RuntimeException('A cost layer needs a positive quantity.');
+        }
+
+        $low = bcdiv($value, $qty, 4);
+        $residue = bcsub($value, bcmul($qty, $low, 4), 4);
+
+        // কয়টা একক এক ধাপ বেশি দরে বসবে — বাকিটুকু ঠিক ততটাই
+        $higher = bcmul($residue, '10000', 0);
+
+        $layers = [];
+
+        if (bccomp($higher, '0', 0) > 0) {
+            $layers[] = $this->receive(
+                $product, $higher, bcadd($low, '0.0001', 4), $sourceType, $sourceId, $documentNo, $date
+            );
+        }
+
+        $rest = bcsub($qty, $higher, 4);
+
+        if (bccomp($rest, '0', 4) > 0) {
+            $layers[] = $this->receive($product, $rest, $low, $sourceType, $sourceId, $documentNo, $date);
+        }
+
+        return $layers;
+    }
+
+    /**
      * মাল বেরোল — পুরনো স্তর থেকে, যতগুলো লাগে।
      *
      * ── কেন লক ─────────────────────────────────────────────────────

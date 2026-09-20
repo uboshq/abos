@@ -66,6 +66,17 @@ class EveryChangeableRowRemembersWhoChangedItTest extends TestCase
         'App\Models\SavedView' => 'নিজের তালিকার নিজের ছাঁকনি',
         'App\Models\LookSkinVersion' => 'পর্দার রূপ — হিসাবের কিছু নয়',
 
+        /*
+         * ⓘ কে কোন খবর পেতে চান — ব্যক্তির পছন্দ, ব্যবসার তথ্য নয়, আর
+         * সারিটার কোনো কোম্পানিও নেই (`user_id` ধরে)। ⚠️ অডিট বসালে
+         * ইঞ্জিন কোম্পানি না পেয়ে নীরবে ফিরে যেত — অর্থাৎ খাতায় কিছুই
+         * লেখা হত না, অথচ কোড দেখে মনে হত লেখা হচ্ছে।
+         *
+         * ⛔ এতদিন তালিকায় ছিল না, কারণ পাহারাটা `final class` দেখতই না
+         * (২১ সেপ্টেম্বর ২০২৬)।
+         */
+        'App\Models\NotificationChoice' => 'ব্যক্তির নিজের পছন্দ, আর সারিটার কোনো কোম্পানি নেই',
+
         // ── ফোনের সাথে কথা বলার বইখাতা (২ সেপ্টেম্বর ২০২৬) ──────────
         //
         // চারটাই যন্ত্রের নিজের হিসাব, মানুষের সিদ্ধান্ত নয়। একটা
@@ -118,8 +129,19 @@ class EveryChangeableRowRemembersWhoChangedItTest extends TestCase
         foreach ($this->modelFiles() as $file) {
             $src = (string) file_get_contents($file);
 
-            if (! preg_match('/\nclass (\w+) extends .*Model\b/', $src, $m)
-                && ! preg_match('/\nclass (\w+) extends Model\b/', $src, $m)) {
+            /*
+             * ⛔ নোঙরটা ছিল `\nclass` — তাই `final class` কোনোদিন ধরা
+             * পড়েনি। ২১ সেপ্টেম্বর ২০২৬, অডিটে ধরা।
+             *
+             * ⚠️ আর ফাঁকটা তাত্ত্বিক ছিল না: [[VoucherBillShare]] ঠিক
+             * ওখান দিয়েই বেরিয়ে গেছে — **টাকার টেবিল, অডিট ছাড়া**।
+             * ⓘ সে রাখে কোন ক্রয় বিলের বিপরীতে কত বসল, আর ভাউচার
+             * সম্পাদনায় প্রতিবার সারিগুলো মুছে নতুন করে লেখা হয়। অর্থাৎ
+             * সরবরাহকারীর বিলের মধ্যে টাকা সরত, কোনো হিসাব না রেখে।
+             *
+             * ⓘ `abstract` বাদ — ওরা নিজেরা কোনো সারি রাখে না।
+             */
+            if (! preg_match('/\n(?:final\s+)?class (\w+) extends .*Model\b/', $src, $m)) {
                 continue;
             }
 

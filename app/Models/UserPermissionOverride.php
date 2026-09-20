@@ -7,6 +7,7 @@ namespace App\Models;
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Core\Services\PermissionOverrides;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -33,6 +34,28 @@ class UserPermissionOverride extends Model
     protected function casts(): array
     {
         return ['granted' => 'boolean'];
+    }
+
+    /**
+     * ⭐ সারি বদলালে পড়ার স্মৃতিটা ফেলে দেওয়া — ২০ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⛔ কেন এটা লাগল ───────────────────────────────────────────────
+     * [[PermissionOverrides]] এখন একজনের সব ব্যতিক্রম একবারে তুলে রাখে
+     * (নইলে মেনু আঁকতেই ১৯২টা কোয়েরি হত)। ⚠️ কিন্তু একবার তুলে রাখলে
+     * **পরে লেখা সারি আর দেখা যায় না**, আর সেটা এখানে নিছক গতির প্রশ্ন
+     * নয় — নিরাপত্তার: কারও ক্ষমতা কেড়ে নেওয়ার পরেও সে ক্ষমতাটা ঐ
+     * অনুরোধে টিকে থাকত।
+     *
+     * ⓘ ঠিক এটাই ধরা পড়েছে পরীক্ষায় — *"ব্যতিক্রমটা রোলের অনুমতি কাড়তে
+     * পারেনি"*। ⭐ তাই খবরটা সারিটার নিজের কাছে: যে-ই লিখুক, পড়ার
+     * স্মৃতি তখনই বাতিল।
+     */
+    protected static function booted(): void
+    {
+        $forget = fn () => app(PermissionOverrides::class)->forget();
+
+        static::saved($forget);
+        static::deleted($forget);
     }
 
     public function user(): BelongsTo

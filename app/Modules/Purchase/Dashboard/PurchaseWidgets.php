@@ -8,6 +8,7 @@ use App\Core\Contracts\DashboardWidgets;
 use App\Core\Dashboard\Widget;
 use App\Core\Engines\Report\ReportEngine;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Modules\Purchase\Models\PurchaseBill;
 use Illuminate\Support\Carbon;
@@ -105,7 +106,7 @@ final class PurchaseWidgets implements DashboardWidgets
     {
         $row = DB::table('sal_invoices')
             ->where('company_id', CompanyContext::id())
-            ->whereIn('status', ['confirmed', 'closed'])
+            ->whereIn('status', DocumentStatus::POSTED)
             ->whereBetween('trx_date', [
                 Carbon::today()->startOfMonth()->toDateString(),
                 Carbon::today()->endOfMonth()->toDateString(),

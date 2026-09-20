@@ -49,12 +49,29 @@ class PaymentScheduleController extends Controller implements HasMiddleware
      * ইচ্ছাকৃত ঝুঁকি: একটা বদলালে অন্যটাও বদলাতে হবে। ⚠️ বিকল্পটা ছিল
      * অ্যালিয়াসের উপর `HAVING`, আর `ONLY_FULL_GROUP_BY` চালু থাকলে সেটা
      * ভেঙে পড়ত।
+     *
+     * ⛔ আর অবস্থার তালিকাটা এখানে **হাতে লেখা** ছিল — ২১ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ `'confirmed', 'closed'` — অর্থাৎ *"কোন কাগজ হিসাবে গোনা হবে"*
+     * প্রশ্নের উত্তরটা [[DocumentStatus::POSTED]]-এর বাইরে আরেকবার লেখা,
+     * আর এবার SQL-এর ভিতরে, যেখানে কোনো পাহারা তাকাত না। ⚠️ কেউ
+     * তালিকাটা বদলালে এই পর্দাটা নীরবে পুরনো নিয়মে চলত।
+     *
+     * ⭐ এখন ধ্রুবকটা থেকেই বোনা হয়, তাই দুই জায়গায় দুই উত্তর অসম্ভব।
      */
-    private const DUE = "(pur_bills.total - (
-        select COALESCE(SUM(pl.amount), 0) from pur_payment_lines pl
-        join pur_payments p on p.id = pl.payment_id
-        where pl.purchase_bill_id = pur_bills.id and p.status in ('confirmed', 'closed')
-    ))";
+    private static function due(): string
+    {
+        $posted = implode(', ', array_map(
+            fn (string $status) => "'".$status."'",
+            DocumentStatus::POSTED,
+        ));
+
+        return "(pur_bills.total - (
+            select COALESCE(SUM(pl.amount), 0) from pur_payment_lines pl
+            join pur_payments p on p.id = pl.payment_id
+            where pl.purchase_bill_id = pur_bills.id and p.status in ({$posted})
+        ))";
+    }
 
     /** শেষ তারিখ — না থাকলে বিলের তারিখ */
     private const WHEN = 'COALESCE(pur_bills.due_on, pur_bills.trx_date)';
@@ -97,7 +114,7 @@ class PaymentScheduleController extends Controller implements HasMiddleware
     {
         $query = PurchaseBill::query()
             ->where('status', DocumentStatus::CONFIRMED)
-            ->whereRaw(self::DUE.' > 0');
+            ->whereRaw(self::due().' > 0');
 
         $when = self::WHEN;
 
@@ -120,7 +137,7 @@ class PaymentScheduleController extends Controller implements HasMiddleware
     private function buckets(Carbon $today): array
     {
         $when = self::WHEN;
-        $due = self::DUE;
+        $due = self::due();
 
         $row = $this->outstanding('all', $today)
             ->toBase()

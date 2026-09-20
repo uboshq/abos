@@ -447,14 +447,25 @@ final class PurchaseBillService
              */
             $goodsValue = bcsub((string) $line->amount, (string) $line->tax, 4);
 
-            $unitCost = bccomp((string) $line->qty, '0', 4) > 0
-                ? bcdiv($goodsValue, (string) $line->qty, 4)
-                : '0';
+            if (bccomp((string) $line->qty, '0', 4) <= 0) {
+                continue;
+            }
 
-            $this->costs->receive(
+            /*
+             * ⛔ এখানে আগে `bcdiv($goodsValue, $qty, 4)` দিয়ে একক দর বের
+             * করা হত — ২১ সেপ্টেম্বর ২০২৬ অডিটে ধরা।
+             *
+             * ⚠️ ভাগটা **কেটে ফেলে**: ৳১০০-এর ৩ বস্তায় একক ৩৩.৩৩৩৩, আর
+             * স্তরের মোট ৳৯৯.৯৯৯৯ — খাতায় ৳১০০। ⓘ তিনটাই বেরিয়ে গেলে
+             * ৳০.০০০১ মজুদ খাতায় পড়ে থাকত যেখানে মজুদ শূন্য।
+             *
+             * ⭐ এখন মোট দামটাই পাঠানো হয়, আর বাকিটুকু সামলায়
+             * [[CostLayerService::receiveWorth()]] — টাকাই স্থির।
+             */
+            $this->costs->receiveWorth(
                 product: $line->product,
                 qty: (string) $line->qty,
-                unitCost: $unitCost,
+                value: $goodsValue,
                 sourceType: PurchaseBill::STOCK_SOURCE,
                 sourceId: $bill->id,
                 documentNo: $bill->document_no,

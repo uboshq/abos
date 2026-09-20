@@ -530,14 +530,39 @@ final class CapitalService
             return $out;
         }
 
+        /*
+         * ⛔ এখানে ছিল সোজা `bcdiv($net * $left, $pool, 4)` — ২১ সেপ্টেম্বর
+         * ২০২৬ অডিটে ধরা।
+         *
+         * ⚠️ তিন অংশীদারের সমান মূলধনে প্রত্যেকের অংশ দাঁড়াত ৩৩.৩৩৩৩,
+         * যোগ **৯৯.৯৯৯৯%**। ⓘ বাকি ০.০০০১% কারও নয়, আর কোথাও দেখানোও
+         * হয় না — দশ লাখ টাকার লাভে সেটা ৳১.০০, প্রতি বছর।
+         *
+         * ⭐ সমাধানটা পাশেই ছিল: [[ProfitSplit]] বড়-অবশিষ্টের নিয়মে ভাগ
+         * করে আর কিছুই হারায় না। এখন সেটাই ডাকা হয়, ওজন হিসেবে প্রত্যেকের
+         * বাকি মূলধন।
+         */
+        $weights = [];
+
+        foreach ($out as $i => $position) {
+            if ($position['share'] === null && bccomp($position['net'], '0', 4) > 0) {
+                $weights[$i] = $position['net'];
+            }
+        }
+
+        $shares = $this->split->byWeights($left, $weights);
+
         foreach ($out as $i => $position) {
             if ($position['share'] !== null) {
                 continue;
             }
 
-            $net = bccomp($position['net'], '0', 4) > 0 ? $position['net'] : '0';
-
-            $out[$i]['share'] = bcdiv(bcmul($net, $left, 8), $pool, 4);
+            /*
+             * ⓘ যাঁর বাকি মূলধন শূন্য বা ঋণাত্মক, তাঁর অংশ শূন্য — ওজনের
+             * তালিকায় তিনি নেই। ⚠️ `null` রাখা যেত না: `null` মানে "ঠিক
+             * হয়নি", আর এখানে উত্তরটা জানা — শূন্য।
+             */
+            $out[$i]['share'] = $shares[$i] ?? '0.0000';
             $out[$i]['share_source'] = 'capital';
         }
 

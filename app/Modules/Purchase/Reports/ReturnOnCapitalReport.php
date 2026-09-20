@@ -7,6 +7,7 @@ namespace App\Modules\Purchase\Reports;
 use App\Core\Engines\Report\ReportColumn;
 use App\Core\Engines\Report\ReportDefinition;
 use App\Core\Engines\Report\ReportEngine;
+use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Purchase\Models\PurchaseReceipt;
@@ -280,7 +281,7 @@ final class ReturnOnCapitalReport
             })
             ->where('u.company_id', $company)
             ->whereBetween('i.trx_date', [$from, $to])
-            ->whereIn('i.status', ['confirmed', 'closed'])
+            ->whereIn('i.status', DocumentStatus::POSTED)
             ->whereNotNull(DB::raw('COALESCE(r.supplier_id, b.supplier_id)'))
             ->groupBy(DB::raw('COALESCE(r.supplier_id, b.supplier_id)'))
             ->select([
@@ -300,7 +301,7 @@ final class ReturnOnCapitalReport
             })
             ->where('u.company_id', $company)
             ->whereBetween('i.trx_date', [$from, $to])
-            ->whereIn('i.status', ['confirmed', 'closed'])
+            ->whereIn('i.status', DocumentStatus::POSTED)
             ->select([DB::raw('COALESCE(SUM(u.amount), 0) as total_cost')]);
     }
 

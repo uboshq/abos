@@ -7,6 +7,7 @@ namespace App\Modules\Purchase\Reports;
 use App\Core\Engines\Report\ReportColumn;
 use App\Core\Engines\Report\ReportDefinition;
 use App\Core\Engines\Report\ReportEngine;
+use App\Core\Support\DocumentStatus;
 use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Purchase\Models\PurchaseReceipt;
 use App\Modules\Sales\Models\SalesInvoice;
@@ -132,7 +133,7 @@ final class SettlementReport
         return DB::table('pur_receipts')
             ->where('company_id', $company)
             ->whereBetween('trx_date', [$from, $to])
-            ->whereIn('status', ['confirmed', 'closed'])
+            ->whereIn('status', DocumentStatus::POSTED)
             ->groupBy('supplier_id')
             ->select(['supplier_id', DB::raw('SUM(total) as goods_in')]);
     }
@@ -174,7 +175,7 @@ final class SettlementReport
             })
             ->where('u.company_id', $company)
             ->whereBetween('i.trx_date', [$from, $to])
-            ->whereIn('i.status', ['confirmed', 'closed'])
+            ->whereIn('i.status', DocumentStatus::POSTED)
             ->whereNotNull(DB::raw('COALESCE(r.supplier_id, b.supplier_id)'))
             ->groupBy(DB::raw('COALESCE(r.supplier_id, b.supplier_id)'))
             ->select([
