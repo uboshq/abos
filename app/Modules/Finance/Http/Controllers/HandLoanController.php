@@ -11,11 +11,13 @@ use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Customer\Models\Customer;
 use App\Modules\Finance\Models\HandLoanAccount;
 use App\Modules\Finance\Models\HandLoanMovement;
 use App\Modules\Finance\Services\HandLoanService;
 use App\Modules\MasterData\Models\Person;
 use App\Modules\MasterData\Services\PersonResolver;
+use App\Modules\Supplier\Models\Supplier;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -97,17 +99,47 @@ class HandLoanController extends Controller implements HasMiddleware
          */
         $sideOf = fn (array $row) => bccomp((string) $row['balance'], '0', 4);
 
+        /*
+         * ⭐ মনে করিয়ে দেওয়া — অর্থের মানচিত্র §১৪খ, ২০ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⓘ কোনগুলো ─────────────────────────────────────────────────
+         * যার হিসাব এখনো চুকে যায়নি, আর তারিখ পেরিয়ে গেছে বা ত্রিশ দিনের
+         * ভিতরে আসছে। ⚠️ তারিখটা পরের কিস্তির (`next_due_on`), না থাকলে
+         * চুক্তির শেষ দিন — "কাকে এখন ফোন করতে হবে" প্রশ্নের উত্তর ঐটাই।
+         *
+         * ⛔ তারিখহীন ধার এখানে আসে না: *"যখন পারো দিও"* ধরনের ধারে মনে
+         * করিয়ে দেওয়ার কিছু নেই, আর ওগুলো তালিকায় ভরলে সত্যিকারের
+         * তাগাদাগুলো চোখ এড়াত।
+         */
+        $soon = now()->addDays(30)->startOfDay();
+
+        $needsChasing = function (array $row) use ($sideOf, $soon): bool {
+            if ($sideOf($row) === 0) {
+                return false;
+            }
+
+            $due = $row['account']->next_due_on ?? $row['account']->due_on;
+
+            return $due !== null && $due->lte($soon);
+        };
+
         $counts = [
             'all' => count($rows),
             'they' => count(array_filter($rows, fn ($r) => $sideOf($r) > 0)),
             'we' => count(array_filter($rows, fn ($r) => $sideOf($r) < 0)),
+            'due' => count(array_filter($rows, $needsChasing)),
         ];
 
-        $tab = in_array($request->query('tab'), ['they', 'we'], true) ? (string) $request->query('tab') : 'all';
+        $tab = in_array($request->query('tab'), ['they', 'we', 'due'], true)
+            ? (string) $request->query('tab')
+            : 'all';
 
         if ($tab !== 'all') {
-            $rows = array_values(array_filter($rows,
-                fn ($r) => $tab === 'they' ? $sideOf($r) > 0 : $sideOf($r) < 0));
+            $rows = array_values(array_filter($rows, match ($tab) {
+                'they' => fn ($r) => $sideOf($r) > 0,
+                'we' => fn ($r) => $sideOf($r) < 0,
+                default => $needsChasing,
+            }));
         }
 
         return view('finance::hand-loan.index', [
@@ -132,6 +164,24 @@ class HandLoanController extends Controller implements HasMiddleware
             'people' => Person::query()->active()->orderBy('name_en')
                 ->pluck('name_en', 'id'),
             'accounts' => $this->moneyAccounts(),
+
+            /*
+             * ⭐ পক্ষের সাথে জোড়ার তালিকা — মানচিত্র §১৪খ, ২০ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ চাবিটা "customer:12" ছাঁদে, তাই একটাই ঘরে দুই রকম পক্ষ ধরে —
+             * পর্দায় কোনো Alpine লাগে না। ⚠️ কেবল সক্রিয়রা, আর নামে সাজানো।
+             */
+            'parties' => Customer::query()->where('is_active', true)->orderBy('name_en')->get()
+                ->mapWithKeys(fn (Customer $c) => [
+                    'customer:'.$c->id => __('finance::field.party_customer').' — '.$c->name(),
+                ])
+                ->merge(
+                    Supplier::query()->where('is_active', true)->orderBy('name_en')->get()
+                        ->mapWithKeys(fn (Supplier $s) => [
+                            'supplier:'.$s->id => __('finance::field.party_supplier').' — '.$s->name(),
+                        ]),
+                )
+                ->all(),
         ]);
     }
 
@@ -174,6 +224,22 @@ class HandLoanController extends Controller implements HasMiddleware
             'note' => ['nullable', 'string', 'max:500'],
 
             /*
+             * ⭐ পক্ষের সাথে জোড়া — অর্থের মানচিত্র §১৪খ, ২০ সেপ্টেম্বর ২০২৬।
+             *
+             * ── ⛔ কলামটা ছিল, পর্দা ছিল না ─────────────────────────────
+             * `partner_id`/`partner_type` অনেক দিন ধরেই সারিতে আছে আর সেবাও
+             * লেখে, কিন্তু ফর্মে ঘরটা কেউ আঁকেনি — তাই মান কখনো আসতই না।
+             *
+             * ⓘ একটাই ঘর, "customer:12" ছাঁদে — দুইটা ঘর (ধরন + তালিকা) হলে
+             * পর্দায় Alpine লাগত, আর CSP-র নিয়মে ওটা বাড়তি ঝুঁকি।
+             *
+             * ⚠️ কেন জোড়াটা দরকার: একই মানুষ প্রায়ই একসাথে ডিলার আর
+             * ধারদাতা। ⓘ জোড়া থাকলে তাঁর হাতধার আর তাঁর বাকির হিসাব এক
+             * নামে মেলানো যায়; না থাকলে দুইটা আলাদা মানুষ মনে হত।
+             */
+            'party' => ['nullable', 'string', 'regex:/^(customer|supplier):[0-9]+$/'],
+
+            /*
              * ⭐ ধারের শর্তগুলো — ১৫ সেপ্টেম্বর ২০২৬-এ যোগ করা।
              *
              * ⛔ এতদিন এই পর্দায় কেবল **কে** আর **কত নোট** চাওয়া হত।
@@ -199,6 +265,17 @@ class HandLoanController extends Controller implements HasMiddleware
          * ([[App\Modules\MasterData\Services\PersonResolver]])।
          */
         $data['person_id'] = $this->people->resolve($data);
+
+        /*
+         * ⓘ "customer:12" → দুইটা ঘরে ([[HandLoanService::open()]] ওদেরই
+         * চেনে)। ⚠️ খালি হলে দুইটাই নাল — জোড়া না থাকাটাও একটা উত্তর।
+         */
+        if (filled($data['party'] ?? null)) {
+            [$kind, $id] = explode(':', (string) $data['party']);
+
+            $data['partner_type'] = $kind;
+            $data['partner_id'] = (int) $id;
+        }
 
         $account = $this->loans->open($data);
 

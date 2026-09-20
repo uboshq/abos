@@ -9,8 +9,11 @@ use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\VoucherService;
+use App\Modules\Customer\Models\Customer;
 use App\Modules\Finance\Models\HandLoanAccount;
 use App\Modules\Finance\Models\HandLoanMovement;
+use App\Modules\Supplier\Models\Supplier;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -341,6 +344,8 @@ final class HandLoanService
             ->sortBy(fn (HandLoanAccount $account) => $account->person?->name() ?? '')
             ->values();
 
+        $partners = $this->partnerNames($accounts);
+
         foreach ($accounts as $account) {
             $balance = $this->balanceOf($account);
 
@@ -348,6 +353,15 @@ final class HandLoanService
                 'account' => $account,
                 'balance' => $balance,
                 'movements' => $account->movements_count,
+
+                /*
+                 * ⭐ জোড়া পক্ষের নাম — মানচিত্র §১৪খ, ২০ সেপ্টেম্বর ২০২৬।
+                 *
+                 * ⓘ নামগুলো উপরে একবারেই তোলা ([[partnerNames()]]), সারি ধরে
+                 * নয় — দশটা খাতায় দশটা কোয়েরি হত, আর তালিকাটা সব সময় ছোট
+                 * থাকবে এমন কোনো কথা নেই।
+                 */
+                'partner_name' => $partners[$account->partner_type][(int) $account->partner_id] ?? null,
             ];
 
             if (bccomp($balance, '0', 4) > 0) {
@@ -358,6 +372,38 @@ final class HandLoanService
         }
 
         return ['rows' => $rows, 'owed_to_us' => $toUs, 'we_owe' => $byUs];
+    }
+
+    /**
+     * জোড়া পক্ষগুলোর নাম — ধরন ধরে, দুইটা কোয়েরিতে।
+     *
+     * ── ⭐ মানচিত্র §১৪খ, ২০ সেপ্টেম্বর ২০২৬ ────────────────────────────
+     * কলামটা (`partner_id`/`partner_type`) অনেক দিন ধরেই ছিল, পর্দা ছিল না।
+     * ⓘ নাম দেখাতে হলে নামগুলো আনতে হয়, আর সারি ধরে আনলে দশটা খাতায়
+     * দশটা কোয়েরি হত।
+     *
+     * @param  Collection<int, HandLoanAccount>  $accounts
+     * @return array<string, array<int, string>>
+     */
+    private function partnerNames(Collection $accounts): array
+    {
+        $ids = fn (string $kind) => $accounts
+            ->where('partner_type', $kind)
+            ->pluck('partner_id')
+            ->filter()
+            ->unique()
+            ->all();
+
+        $customers = $ids('customer');
+        $suppliers = $ids('supplier');
+
+        return [
+            'customer' => $customers === [] ? [] : Customer::query()->whereKey($customers)->get()
+                ->mapWithKeys(fn (Customer $c) => [(int) $c->id => $c->name()])->all(),
+
+            'supplier' => $suppliers === [] ? [] : Supplier::query()->whereKey($suppliers)->get()
+                ->mapWithKeys(fn (Supplier $s) => [(int) $s->id => $s->name()])->all(),
+        ];
     }
 
     /**

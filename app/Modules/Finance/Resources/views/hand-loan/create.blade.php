@@ -131,6 +131,17 @@
                              ->mapWithKeys(fn (string $s) => [$s => __('finance::field.security_'.$s)])"
                          :selected="old('security', \App\Modules\Finance\Models\HandLoanAccount::VERBAL)" />
 
+            {{-- ⭐ পক্ষের সাথে জোড়া — অর্থের মানচিত্র §১৪খ, ২০ সেপ্টেম্বর ২০২৬।
+
+                 ⓘ ঘরটা ঐচ্ছিক: পরিচিত মানুষের ধারে প্রায়ই কোনো পক্ষ থাকে না।
+                 ⚠️ কিন্তু একই মানুষ যখন ডিলারও, তখন জোড়াটা না থাকলে তাঁর
+                 হাতধার আর বাকির হিসাব দুইজন আলাদা মানুষ মনে হত। --}}
+            <x-ui.select name="party" :label="__('finance::field.party_link')"
+                         :options="$parties"
+                         :placeholder="__('finance::field.party_none')"
+                         :hint="__('finance::message.party_link_hint')"
+                         :selected="old('party')" />
+
             <x-ui.field name="note" :label="__('finance::field.note')" :value="old('note')" />
 
             {{--

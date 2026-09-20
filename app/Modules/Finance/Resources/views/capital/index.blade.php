@@ -92,8 +92,15 @@
         ['key' => 'trx_date', 'label' => __('finance::field.date'), 'width' => '8rem',
          'render' => fn ($e) => \App\Core\Support\DateFormat::format($e->trx_date)],
         ['key' => 'document_no', 'label' => __('core.print.document_no'), 'width' => '9rem'],
+        /* ⭐ নামটা লিংক — মালিকের নির্দেশ, ২০ সেপ্টেম্বর ২০২৬। ⓘ উপরের
+           ট্যাবের নামগুলোর মতোই: ক্লিক করলে কেবল তাঁর সারিগুলো থাকে। */
         ['key' => 'person', 'label' => __('finance::field.who'),
-         'render' => fn ($e) => $e->person?->name() ?? '—'],
+         'render' => fn ($e) => $e->person === null
+             ? '—'
+             : view('finance::capital.partials.owner-link', ['position' => [
+                 'person_id' => $e->person_id,
+                 'name' => $e->person->name(),
+             ]])],
         ['key' => 'entry_type', 'label' => __('finance::field.kind'), 'width' => '8rem',
          'render' => fn ($e) => __('finance::kind.'.$e->entry_type)],
 

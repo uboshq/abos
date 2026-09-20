@@ -102,7 +102,9 @@
              aria-label="{{ __('finance::menu.hand_loan') }}">
             @foreach (['all' => __('finance::field.hl_tab_all'),
                        'they' => __('finance::message.hand_loan_they_owe'),
-                       'we' => __('finance::message.hand_loan_we_owe')] as $key => $label)
+                       'we' => __('finance::message.hand_loan_we_owe'),
+                       /* ⭐ মনে করিয়ে দেওয়া — তারিখ পেরোনো বা ত্রিশ দিনের ভিতরে (§১৪খ) */
+                       'due' => __('finance::field.hl_tab_due')] as $key => $label)
                 <a href="{{ route('finance.hand_loan.index', array_filter([
                         'tab' => $key === 'all' ? null : $key,
                         'q' => request('q'),

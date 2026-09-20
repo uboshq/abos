@@ -23,8 +23,15 @@
              '<a class="text-(--color-link)" href="'.e(route('sales.order.show', $o->id)).'">'
              .e($o->document_no).'</a>')],
 
+        /* ⭐ গ্রাহকের নামও লিংক — মালিকের নির্দেশ, ২০ সেপ্টেম্বর ২০২৬:
+           *"sob jaygay hyper link dewar kotha"*। ⓘ আদেশ দেখতে দেখতে
+           প্রশ্নটা ওঠে *"এই গ্রাহকের বাকি কত"*, আর উত্তরটা ওদের পাতায়। */
         ['key' => 'customer', 'label' => __('sales::field.customer'),
-         'render' => fn ($o) => $o->customer?->name() ?? '—'],
+         'render' => fn ($o) => $o->customer === null
+             ? '—'
+             : new \Illuminate\Support\HtmlString(
+                 '<a class="text-(--color-link)" href="'.e(route('customer.show', $o->customer->id)).'">'
+                 .e($o->customer->name()).'</a>')],
 
         ['key' => 'total', 'label' => __('sales::field.total'), 'numeric' => true, 'width' => '10rem',
          'render' => fn ($o) => $money($o->total)],
