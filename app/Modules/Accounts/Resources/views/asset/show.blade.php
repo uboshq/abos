@@ -65,6 +65,70 @@
         @endforeach
     </div>
 
+    {{-- ── ⭐ শাখা বদল — মানচিত্র §১৫, ২১ সেপ্টেম্বর ২০২৬ ──────────────
+
+         ⚠️ কেন কেবল একটা কলাম বদলানো যথেষ্ট নয়: ফ্রিজটা ঢাকা থেকে খুলনায়
+         গেলে **দুইটা শাখার স্থিতিপত্রই** বদলায় — একটা থেকে সম্পদ যায়,
+         অন্যটায় আসে। ⓘ তাই দাখিলা বসে, আর সঞ্চিত ক্ষয়টাও সাথে যায়।
+
+         ⓘ ইতিহাসটা নিচে থাকে, কারণ "গত বছর এটা কোথায় ছিল" প্রশ্নটা
+         ছয় মাস পরে ওঠে, আর তখন উত্তর দেওয়ার মতো আর কিছু থাকে না। --}}
+    @if ($asset->isActive() && $branches->isNotEmpty())
+        @can('accounts.asset.manage')
+            <form method="POST" action="{{ route('accounts.asset.transfer', $asset) }}"
+                  class="mb-5 grid gap-3 rounded-(--radius-card) border border-(--color-border)
+                         bg-(--color-surface-card) p-4 md:grid-cols-2 lg:grid-cols-4">
+                @csrf
+
+                <div class="lg:col-span-4">
+                    <p class="text-sm font-semibold">{{ __('accounts::asset.transfer') }}</p>
+                    <p class="text-2xs text-(--color-ink-muted)">{{ __('accounts::asset.transfer_hint') }}</p>
+                </div>
+
+                <x-ui.select name="to_branch_id"
+                             :label="__('accounts::asset.to_branch')"
+                             :options="$branches->mapWithKeys(fn ($b) => [$b->id => $b->name()])->all()"
+                             placeholder="—" required />
+
+                <label class="block">
+                    <span class="text-sm font-medium">{{ __('accounts::asset.moved_on') }}</span>
+                    <x-ui.date name="moved_on" :required="true" :value="now()->toDateString()" />
+                </label>
+
+                <x-ui.field name="note" :label="__('core.table.narration')" :value="old('note')" />
+
+                <div class="flex items-end">
+                    <x-ui.button type="submit" tone="secondary">
+                        {{ __('accounts::asset.transfer') }}
+                    </x-ui.button>
+                </div>
+            </form>
+        @endcan
+    @endif
+
+    @if ($moves->isNotEmpty())
+        <section data-boxed
+                 class="mb-5 overflow-hidden rounded-(--radius-card) border border-(--color-border)
+                        bg-(--color-surface-card)">
+            <h2 class="border-b border-(--color-border) px-4 py-2 text-sm font-semibold">
+                {{ __('accounts::asset.move_history') }}
+            </h2>
+
+            <ul class="divide-y divide-(--color-border) text-sm">
+                @foreach ($moves as $move)
+                    <li class="flex flex-wrap items-center gap-x-3 px-4 py-2">
+                        <span class="tabular-nums text-(--color-ink-muted)">{{ $move->moved_on?->format('d M Y') }}</span>
+                        <span>{{ $move->fromBranch?->name() ?? '—' }} → {{ $move->toBranch?->name() ?? '—' }}</span>
+                        @if (filled($move->note))
+                            <span class="text-2xs text-(--color-ink-muted)">{{ $move->note }}</span>
+                        @endif
+                        <span class="ms-auto text-2xs text-(--color-ink-muted)">{{ $move->creator?->name }}</span>
+                    </li>
+                @endforeach
+            </ul>
+        </section>
+    @endif
+
     @if ($asset->isActive())
         @can('accounts.asset.manage')
             <form method="POST" action="{{ route('accounts.asset.dispose', $asset) }}"

@@ -9,6 +9,7 @@ use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\Money;
 use App\Models\FinancialYear;
+use App\Modules\Accounts\Models\AssetTransfer;
 use App\Modules\Accounts\Models\DepreciationEntry;
 use App\Modules\Accounts\Models\FixedAsset;
 use Illuminate\Support\Carbon;
@@ -476,6 +477,90 @@ final class FixedAssetService
      * আর ক্ষয় দুইটাই খাতায় ঝুলে থাকত, আর ব্যালেন্স শিটে এমন একটা
      * ভ্যান দেখাত যা ছয় মাস আগে বিক্রি হয়ে গেছে।
      */
+    /**
+     * ⭐ সম্পদ এক শাখা থেকে আরেক শাখায় — মানচিত্র §১৫, ২১ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⚠️ কেন খাতায় দাখিলা লাগে, কেবল কলাম বদলানো নয় ─────────────
+     * ফ্রিজটা ঢাকা থেকে খুলনায় গেলে **দুইটা শাখার স্থিতিপত্রই** বদলায়:
+     * একটা থেকে সম্পদ যায়, অন্যটায় আসে। ⓘ কেবল `branch_id` বদলালে
+     * খতিয়ানের পুরনো সারিগুলো ঢাকার নামেই পড়ে থাকত, আর শাখা ধরে
+     * স্থিতিপত্র চাইলে দুইটাই ভুল আসত।
+     *
+     * ⛔ সঞ্চিত অবচয়টাও সাথে যায়, আর সেটা ভুলে যাওয়া সহজ: সম্পদের খাত
+     * সরিয়ে ক্ষয়ের খাত রেখে দিলে নতুন শাখায় জিনিসটা **নতুনের দামে**
+     * বসত, আর পুরনো শাখায় একটা ক্ষয় ঝুলে থাকত যার কোনো সম্পদ নেই।
+     *
+     * ⓘ মোট অঙ্ক শূন্য — এটা টাকার চলাচল নয়, জায়গা বদল। ⚠️ তবু দাখিলা
+     * দুই দিকেই বসে, কারণ শাখাটা সারির নিজের ঘরে থাকে।
+     */
+    public function transfer(
+        FixedAsset $asset,
+        int $toBranchId,
+        Carbon|string|null $date = null,
+        ?string $note = null,
+    ): AssetTransfer {
+        if (! $asset->isActive()) {
+            throw ValidationException::withMessages([
+                'status' => __('accounts::asset.not_active'),
+            ]);
+        }
+
+        if ((int) $asset->branch_id === $toBranchId) {
+            throw ValidationException::withMessages([
+                'to_branch_id' => __('accounts::asset.already_there'),
+            ]);
+        }
+
+        $on = Carbon::parse($date ?? now())->startOfDay();
+        $from = $asset->branch_id === null ? null : (int) $asset->branch_id;
+        $accumulated = $asset->accumulated();
+
+        return DB::transaction(function () use ($asset, $toBranchId, $on, $from, $accumulated, $note) {
+            $move = AssetTransfer::query()->create([
+                'company_id' => CompanyContext::id(),
+                'asset_id' => $asset->id,
+                'from_branch_id' => $from,
+                'to_branch_id' => $toBranchId,
+                'moved_on' => $on->toDateString(),
+                'note' => $note,
+                'created_by' => auth()->id(),
+            ]);
+
+            /*
+             * ⓘ কেনা দামটা পুরনো শাখা থেকে নতুন শাখায়।
+             * ⚠️ প্রতিটা সারিতে নিজের `branch_id` — এটাই গোটা দাখিলার
+             * একমাত্র কারণ ([[PostingEngine]] সারি-প্রতি শাখা মানে)।
+             */
+            $lines = [
+                ['account_id' => $asset->asset_account_id, 'credit' => (string) $asset->cost, 'branch_id' => $from],
+                ['account_id' => $asset->asset_account_id, 'debit' => (string) $asset->cost, 'branch_id' => $toBranchId],
+            ];
+
+            if (bccomp($accumulated, '0', 4) > 0) {
+                /* ⛔ ক্ষয়টাও সাথে যায় — নাহলে নতুন শাখায় জিনিসটা নতুন দেখাত */
+                $lines[] = ['account_id' => $asset->accumulated_account_id, 'debit' => $accumulated, 'branch_id' => $from];
+                $lines[] = ['account_id' => $asset->accumulated_account_id, 'credit' => $accumulated, 'branch_id' => $toBranchId];
+            }
+
+            /*
+             * ⚠️ চাবিটা **স্থানান্তরের নিজের সারির** আইডিতে, সম্পদের নয়।
+             * ⛔ সম্পদের আইডি দিলে দ্বিতীয় স্থানান্তরটা নীরবে আটকে যেত —
+             * ঠিক যে ফাঁদে বিদায় পড়েছিল ([[FixedAsset::disposalSourceType]])।
+             */
+            $this->posting->post(
+                sourceType: AssetTransfer::drillSourceType(),
+                sourceId: $move->id,
+                trxDate: $on->toDateString(),
+                lines: $lines,
+                documentNo: $asset->document_no.'/MOVE',
+            );
+
+            $asset->update(['branch_id' => $toBranchId]);
+
+            return $move->refresh();
+        });
+    }
+
     public function dispose(
         FixedAsset $asset,
         string $amount,

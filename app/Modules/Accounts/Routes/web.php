@@ -366,6 +366,13 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
             ->whereNumber('asset')->name('show');
         Route::post('/{asset}/dispose', [FixedAssetController::class, 'dispose'])
             ->whereNumber('asset')->name('dispose');
+
+        /*
+         * ⭐ শাখা বদল — মানচিত্র §১৫, ২১ সেপ্টেম্বর ২০২৬।
+         * ⓘ প্রতিটা স্থানান্তরের নিজের সারি, তাই একই সম্পদ বহুবার সরতে পারে।
+         */
+        Route::post('/{asset}/transfer', [FixedAssetController::class, 'transfer'])
+            ->whereNumber('asset')->name('transfer');
     });
 
     Route::prefix('periods')->name('period.')->group(function () {

@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace App\Modules\Accounts\Http\Controllers;
 
 use App\Core\Services\MenuBuilder;
+use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
+use App\Models\Branch;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\AssetTransfer;
 use App\Modules\Accounts\Models\FixedAsset;
 use App\Modules\Accounts\Services\FixedAssetService;
 use App\Modules\Accounts\Services\StandardChart;
@@ -38,7 +41,7 @@ class FixedAssetController extends Controller implements HasMiddleware
     {
         return [
             new Middleware('can:accounts.asset.view', only: ['index', 'show']),
-            new Middleware('can:accounts.asset.manage', only: ['create', 'store', 'depreciate', 'dispose']),
+            new Middleware('can:accounts.asset.manage', only: ['create', 'store', 'depreciate', 'dispose', 'transfer']),
         ];
     }
 
@@ -117,6 +120,21 @@ class FixedAssetController extends Controller implements HasMiddleware
             'moneyAccounts' => Account::query()
                 ->money()->active()->orderBy('code')->get(),
             'nextAmount' => $this->assets->monthlyAmount($asset),
+
+            /*
+             * ⭐ শাখা বদলের তালিকা — মানচিত্র §১৫, ২১ সেপ্টেম্বর ২০২৬।
+             * ⓘ চলতি শাখাটা বাদ: "যেখানে আছে সেখানেই পাঠাও" কোনো কাজ নয়,
+             * আর সেবাও ওটা ফিরিয়ে দেয়।
+             */
+            'branches' => Branch::query()
+                ->where('id', '!=', $asset->branch_id)
+                ->orderBy('code')->get(),
+
+            /* ⓘ কোথায় কোথায় ছিল — ইতিহাসটাই এই ঘরটার আসল দাম */
+            'moves' => AssetTransfer::query()
+                ->where('asset_id', $asset->id)
+                ->with(['fromBranch', 'toBranch', 'creator'])
+                ->orderByDesc('moved_on')->orderByDesc('id')->get(),
         ]);
     }
 
@@ -188,6 +206,31 @@ class FixedAssetController extends Controller implements HasMiddleware
             'posted' => $result['posted'],
             'skipped' => $result['skipped'],
         ]));
+    }
+
+    /**
+     * ⭐ সম্পদ এক শাখা থেকে আরেক শাখায় — মানচিত্র §১৫।
+     *
+     * ⓘ তারিখটা বাধ্যতামূলক আর ভবিষ্যতে নয়: দাখিলা ঐ তারিখেই বসে, আর
+     * কাল-পরশুর তারিখে বসালে চলতি মাসের স্থিতিপত্র ভুল বলত।
+     */
+    public function transfer(Request $request, FixedAsset $asset): RedirectResponse
+    {
+        $data = $request->validate([
+            'to_branch_id' => ['required', 'integer',
+                Rule::exists('branches', 'id')->where('company_id', CompanyContext::id())],
+            'moved_on' => ['required', 'date', 'before_or_equal:today'],
+            'note' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $this->assets->transfer(
+            $asset,
+            (int) $data['to_branch_id'],
+            (string) $data['moved_on'],
+            ($data['note'] ?? '') ?: null,
+        );
+
+        return back()->with('saved', __('accounts::asset.moved'));
     }
 
     public function dispose(Request $request, FixedAsset $asset): RedirectResponse

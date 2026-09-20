@@ -77,4 +77,11 @@ return [
     'opening_accumulated' => 'Depreciation charged so far',
     'opening_accumulated_hint' => 'Fill this in for a used asset — zero for a new one. It does not go to expense; it sits in retained earnings.',
     'opening_needs_the_chart' => 'Install the standard chart first — there is no retained earnings account.',
+    'transfer' => 'Move to another branch',
+    'transfer_hint' => 'If the thing has moved to another branch, record it here — the books of both branches follow.',
+    'to_branch' => 'To which branch',
+    'moved_on' => 'Moved on',
+    'moved' => 'Moved — the books of both branches now agree',
+    'already_there' => 'It is already at that branch',
+    'move_history' => 'Where it has been',
 ];
