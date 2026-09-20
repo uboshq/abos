@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Finance\Services;
 
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Finance\Models\Deposit;
 use App\Modules\Finance\Models\Institution;
 use App\Modules\Finance\Models\InstitutionAccount;
 use Illuminate\Support\Collection;
@@ -91,6 +92,81 @@ final class InstitutionLinkProposer
             });
     }
 
+    /**
+     * ⭐ পুরনো আমানতগুলোর টাইপ করা নাম ↔ প্রতিষ্ঠান — মালিকের চাওয়া,
+     * ২০ সেপ্টেম্বর ২০২৬ (abos-8b-র মাধ্যমে)।
+     *
+     * ── কেন সারি নয়, **নাম** ধরে ───────────────────────────────────
+     * একই ব্যাংকে ত্রিশটা আমানত থাকলে ত্রিশটা সারি পড়ে সিদ্ধান্ত নেওয়া
+     * যায় না। ⓘ তাই একই টাইপ করা নাম এক সারি: কয়টা আমানত, কত টাকা,
+     * আর প্রস্তাব কী। মালিক একবার "হ্যাঁ" বললে ঐ নামের সবগুলো বসে।
+     *
+     * ⚠️ প্রস্তাবহীন সারিগুলোও ফেরত আসে — ওগুলো লুকালে তালিকাটা
+     * "সব মিলে গেছে" বলে মিথ্যা বলত, আর বাকি কাজটা কেউ দেখত না।
+     *
+     * @return Collection<int, array{name: string, count: int, principal: string, institution: ?Institution, candidates: list<Institution>, why: string}>
+     */
+    public function proposeDeposits(): Collection
+    {
+        /*
+         * ⓘ কেবল ব্যাংক ও আর্থিক প্রতিষ্ঠান — আমানতের ফর্মেও ঐ দুইটাই
+         * দেখানো হয় ([[DepositController::institutions]])। ⛔ বিমা বা MFS
+         * এখানে ঢুকলে "নগদ" নামের একটা আমানত মোবাইল ব্যাংকিংয়ে জুড়ে যেত।
+         */
+        $institutions = Institution::query()
+            ->whereIn('kind', [Institution::BANK, Institution::NBFI])
+            ->orderBy('name_en')
+            ->get();
+
+        return Deposit::query()
+            ->whereNull('institution_id')
+            ->selectRaw('institution, COUNT(*) as n, COALESCE(SUM(principal), 0) as total')
+            ->groupBy('institution')
+            ->orderByDesc('n')
+            ->get()
+            ->map(function ($row) use ($institutions) {
+                $name = trim((string) $row->institution);
+
+                // ⚠️ নাম না থাকলে মেলানোর কিছু নেই — হাতেই বসাতে হবে
+                $match = $name === ''
+                    ? ['institution' => null, 'candidates' => [], 'why' => 'blank']
+                    : $this->matchName($name, $institutions);
+
+                return [
+                    'name' => $name,
+                    'count' => (int) $row->n,
+                    'principal' => (string) $row->total,
+                    ...$match,
+                ];
+            });
+    }
+
+    /**
+     * প্রস্তাব মানা হলে ঐ নামের সব আমানতে প্রতিষ্ঠানটা বসে।
+     *
+     * ⚠️ কেবল **নিশ্চিত** সারিগুলো — দ্ব্যর্থক আর না-মেলা নামগুলো ছোঁয়াও হয় না।
+     *
+     * @param  Collection<int, array<string, mixed>>  $proposals
+     * @return int কয়টা আমানতে বসল
+     */
+    public function applyDeposits(Collection $proposals): int
+    {
+        $done = 0;
+
+        foreach ($proposals as $p) {
+            if ($p['institution'] === null || $p['name'] === '') {
+                continue;
+            }
+
+            $done += Deposit::query()
+                ->whereNull('institution_id')
+                ->where('institution', $p['name'])
+                ->update(['institution_id' => $p['institution']->id]);
+        }
+
+        return $done;
+    }
+
     /** @return int কয়টা জোড়া বসল */
     public function apply(Collection $proposals, ?int $by = null): int
     {
@@ -116,16 +192,63 @@ final class InstitutionLinkProposer
         return $made;
     }
 
+    /**
+     * ⭐ যেকোনো লেখা ↔ প্রতিষ্ঠান — আমানতের টাইপ করা নামের জন্য।
+     *
+     * ── কেন আলাদা একটা দরজা ─────────────────────────────────────────
+     * খাতের নাম আসে ছক থেকে, আর আমানতের নাম আসে মানুষের আঙুল থেকে —
+     * "IBBL Mirpur", "ইসলামী ব্যাংক", "dutch bangla bank ltd."। ⓘ কিন্তু
+     * মেলানোর **নিয়মটা এক**, আর সেটাই আসল কথা: দুই জায়গায় দুই নিয়ম হলে
+     * একই নাম এক জায়গায় মিলত, অন্য জায়গায় নয়।
+     *
+     * ⛔ দুইটা প্রতিষ্ঠান মিললে প্রস্তাব নয় — `ambiguous`। "Dhaka Bank" আর
+     * "DBBL" দুইটা আলাদা ব্যাংক, আর ঢিলে মিল ওদের এক করে ফেলত।
+     *
+     * @param  Collection<int, Institution>  $institutions
+     * @return array{institution: ?Institution, candidates: list<Institution>, why: string}
+     */
+    public function matchName(string $text, Collection $institutions): array
+    {
+        $hits = [];
+
+        foreach ($institutions as $institution) {
+            $why = $this->whyFor($text, $institution);
+
+            if ($why !== null) {
+                $hits[] = [$institution, $why];
+            }
+        }
+
+        return [
+            'institution' => count($hits) === 1 ? $hits[0][0] : null,
+            'candidates' => array_map(fn ($h) => $h[0], $hits),
+            'why' => count($hits) === 1 ? $hits[0][1] : (count($hits) === 0 ? 'none' : 'ambiguous'),
+        ];
+    }
+
     /** কেন মেলে — না মিললে null */
     private function why(Account $account, Institution $institution): ?string
     {
-        $name = $this->words($account->name_en.' '.$account->name_bn);
+        return $this->whyFor($account->name_en.' '.$account->name_bn, $institution);
+    }
+
+    /** একই নিয়ম, কিন্তু কাঁচা লেখার উপর — [[matchName]] আর [[why]] দুইটাই এখানে নামে */
+    private function whyFor(string $text, Institution $institution): ?string
+    {
+        $name = $this->words($text);
         $inst = $this->words($institution->name_en.' '.$institution->name_bn);
 
-        $full = $this->words((string) $institution->name_en);
+        /*
+         * ⓘ পুরো নাম দুই ভাষাতেই দেখা হয় — মানুষ বাংলাতেও লেখেন
+         * ("ইসলামী ব্যাংক বাংলাদেশ")। ⚠️ এতে মিল **বাড়ে না** যেখানে
+         * বিপদ: দুইটা প্রতিষ্ঠান মিললে সেটা তখনো `ambiguous`, প্রস্তাব নয়।
+         */
+        foreach ([(string) $institution->name_en, (string) $institution->name_bn] as $candidate) {
+            $full = $this->words($candidate);
 
-        if ($full !== '' && str_contains($name, $full)) {
-            return 'name';
+            if ($full !== '' && str_contains($name, $full)) {
+                return 'name';
+            }
         }
 
         $code = $this->words((string) $institution->short_code);
