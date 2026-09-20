@@ -318,6 +318,30 @@ class SalesTest extends TestCase
         $this->assertSame(DocumentStatus::DRAFT, $invoice->fresh()?->status);
     }
 
+    /**
+     * ⛔ মজুদের চেয়ে **ঠিক এক একক** বেশি বিলেও যায় না।
+     *
+     * ── মিউটেশন পরীক্ষায় ধরা ফাঁক, ২০ সেপ্টেম্বর ২০২৬ ─────────────────
+     * বিলের মজুদ-পাহারাটা `< 0` থেকে `< -1` করে দিলে একটাও পরীক্ষা লাল
+     * হয়নি — অর্থাৎ "এক একক বেশি" ঘটনাটা কেউ মাপত না। ⓘ উপরের পরীক্ষাটা
+     * সীমানা মাপে, কিন্তু **অর্ডারের** পথে; বিলের পথ আলাদা কোড, আর
+     * ডেলিভারি চালান ছাড়া সরাসরি বিল কাটা যায়।
+     *
+     * ⚠️ এক একক বেশি বেচা মানে গুদামে ঋণাত্মক মজুদ, আর সেটাই সবচেয়ে
+     * নীরব ভুল: সংখ্যাটা ছোট বলে কেউ তাকায় না, অথচ মজুদের হিসাব ঐ দিন
+     * থেকে আর কোনোদিন মেলে না।
+     */
+    public function test_one_more_than_available_cannot_be_invoiced(): void
+    {
+        $available = $this->stock()->availableQty($this->product, $this->warehouse);
+
+        $invoice = $this->makeInvoice(null, bcadd($available, '1', 4));
+
+        $this->expectException(ValidationException::class);
+
+        $this->invoices()->confirm($invoice);
+    }
+
     public function test_more_than_available_cannot_be_ordered(): void
     {
         $available = $this->stock()->availableQty($this->product, $this->warehouse);
