@@ -251,7 +251,7 @@ final class FinancePlan
                     ['উত্তোলনের অনুরোধ ও অনুমোদন', 'finance.withdrawal.index',
                         'অনুমোদনের প্রবাহ বসানো থাকলে ওখানেই যায়'],
                     ['উত্তোলনের সীমা', 'finance.withdrawal.index', 'একই পর্দায়, মাসিক'],
-                    ['উত্তোলন বনাম লাভ/মূলধন মিলকরণ', null, 'বাকি'],
+                    ['উত্তোলন বনাম লাভ/মূলধন মিলকরণ', 'finance.capital.index', 'মালিক ও বিনিয়োগকারী ট্যাবে — কে তাঁর পাওনার বেশি তুলেছেন'],
                     ['ব্যক্তিভিত্তিক উত্তোলন বিবরণী', 'finance.withdrawal.index', null],
                     ['উত্তোলন লেখা', 'finance.withdrawal.create', null],
                 ],
