@@ -163,6 +163,13 @@ return [
              */
             ['label' => 'accounts::menu.expense_by_head', 'icon' => 'wallet', 'route' => 'accounts.report.show',
                 'route_params' => ['slug' => 'expense-by-head'], 'permission' => 'accounts.report'],
+            /*
+             * ⭐ আয়ের আয়না — ২০ সেপ্টেম্বর ২০২৬, মানচিত্রের §১০। খরচের
+             * পাতার ঠিক পাশে, কারণ প্রশ্ন দুইটা একসাথেই ওঠে: কোন খাতে কত
+             * গেল, আর কোন খাত থেকে কত এল।
+             */
+            ['label' => 'accounts::menu.income_by_head', 'icon' => 'star', 'route' => 'accounts.report.show',
+                'route_params' => ['slug' => 'income-by-head'], 'permission' => 'accounts.report'],
             ['label' => 'accounts::menu.ledger', 'icon' => 'list', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'ledger'], 'permission' => 'accounts.report'],
             ['label' => 'accounts::menu.trial_balance', 'icon' => 'scale', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'trial-balance'], 'permission' => 'accounts.report'],
 

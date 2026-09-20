@@ -169,6 +169,7 @@ final class FinancePlan
                     ['জাবেদা ভাউচার', 'accounts.voucher.index:journal', null],
                     ['কন্ট্রা ভাউচার', 'accounts.voucher.index:contra', null],
                     ['খরচ ভাউচার', 'accounts.voucher.index:expense', null],
+                    ['খরচের পাতা — সব খরচ এক জায়গায়', 'finance.expense.index', 'সদ্যগুলো, অপেক্ষমাণ, আর খাত ধরে যোগ'],
                     ['উত্তোলন ভাউচার', 'finance.withdrawal.index', 'উত্তোলনের পর্দা থেকেই বসে'],
                     ['ডেবিট ও ক্রেডিট নোট', null, 'পরের ধাপ — এখন ফেরতের কাগজ দিয়ে'],
                     ['ভাউচারের ইতিহাস ও অডিট', 'governance.audit.index', 'অডিট ট্রেইল থেকে'],
@@ -209,7 +210,7 @@ final class FinancePlan
                     ['বিক্রয়ের আয় বিশ্লেষণ', 'sales.report.show:by-product', null],
                     ['গ্রাহকভিত্তিক আয়', 'sales.report.show:by-customer', null],
                     ['ব্র্যান্ডভিত্তিক আয়', 'sales.report.show:by-brand', null],
-                    ['আয়ের শ্রেণি', null, 'বাকি'],
+                    ['আয়ের শ্রেণি', 'accounts.report.show:income-by-head', 'খরচের আয়না — কোন খাতে কত আয়'],
                     // ৪ সেপ্টেম্বর: পাতাটা আগেই ছিল, লাইনটা "বাকি" রয়ে গিয়েছিল
                     ['বিক্রয় ছাড়া অন্য আয়', 'finance.income.index', null],
                 ],
@@ -252,6 +253,7 @@ final class FinancePlan
                     ['উত্তোলনের সীমা', 'finance.withdrawal.index', 'একই পর্দায়, মাসিক'],
                     ['উত্তোলন বনাম লাভ/মূলধন মিলকরণ', null, 'বাকি'],
                     ['ব্যক্তিভিত্তিক উত্তোলন বিবরণী', 'finance.withdrawal.index', null],
+                    ['উত্তোলন লেখা', 'finance.withdrawal.create', null],
                 ],
             ],
             [
@@ -296,6 +298,7 @@ final class FinancePlan
                      * **ভুল দরজা থাকলে তাঁরা ভুল সংখ্যাটাই বিশ্বাস করেন।**
                      */
                     ['সব জমা — তিন ইস্যুকারী একসাথে', 'finance.deposit.all', null],
+                    ['নতুন আমানত', 'finance.deposit.create:bank', 'ইস্যুকারী ধরে ফর্ম'],
                     ['জমার ধরন সেটিংস', null, 'বাকি — এখন ডিপ্লয়ে বসে, সম্পাদনা করা যায় না'],
                     ['মেয়াদপূর্তির আগাম খবর', null, 'বাকি — পর্দায় গোনা হয়, নোটিফিকেশন নেই'],
                     ['বন্ধকী জমা বনাম ঋণ', null, 'বাকি — ঘরটা আছে, পর্দা নেই'],
@@ -314,6 +317,7 @@ final class FinancePlan
                     ['কে পায়, কাকে দিতে হবে', 'finance.hand_loan.index', null],
                     ['টাকা দেওয়া ও নেওয়া', 'finance.hand_loan.index', 'মানুষটার নিজের পাতায়'],
                     ['চুকে গেছে চিহ্নিত করা', 'finance.hand_loan.index', null],
+                    ['নতুন হাতধার', 'finance.hand_loan.create', null],
                     ['পক্ষের সাথে জোড়া', null, 'বাকি — ঘরটা আছে, পর্দা নেই'],
                     ['মনে করিয়ে দেওয়া', null, 'বাকি — বিজ্ঞপ্তি ইঞ্জিন লাগবে'],
                 ],
@@ -334,10 +338,11 @@ final class FinancePlan
                 'items' => [
                     ['সুবিধার তালিকা — সীমা ও শর্ত', 'finance.bank_facility.index', null],
                     ['নতুন সুবিধা খোলা', 'finance.bank_facility.index', 'CC · মেয়াদি · LTR · লিজ · গ্যারান্টি'],
+                    ['নতুন সুবিধার ফর্ম', 'finance.bank_facility.create', null],
                     ['ড্রয়িং পাওয়ার', 'finance.bank_facility.index', 'CC-তে স্টক ও মার্জিন ধরে'],
                     ['নবায়নের আগাম খবর', 'finance.bank_facility.index', 'তালিকার উপরে আলাদা করে'],
                     ['সুবিধা বন্ধ করা', 'finance.bank_facility.index', 'সুবিধার নিজের পাতায়'],
-                    ['ব্যবহৃত অঙ্ক ও বকেয়া', null, 'বাকি — খতিয়ানে থাকে, এখানে দ্বিতীয় কপি রাখা হয়নি'],
+                    ['ব্যবহৃত অঙ্ক ও বকেয়া', 'finance.bank_facility.index', 'তালিকার কলামে, খতিয়ান থেকে গোনা'],
                 ],
             ],
             /*
@@ -369,6 +374,7 @@ final class FinancePlan
                      * সেটা **নোটে** বলা হয়, ভাঙা লিংকে নয়।
                      */
                     ['চুক্তির তালিকা ও মেয়াদ', 'finance.rental.index', null],
+                    ['নতুন ভাড়ার চুক্তি', 'finance.rental.create', null],
                     ['অগ্রিম ও মাসিক ভাড়া', 'finance.rental.index', 'চুক্তির নিজের পাতায়'],
                     ['মাসের ভাড়া বসানো', 'finance.rental.index', 'নগদ + অগ্রিম থেকে কাটা'],
                     ['শর্ত বদল ও অগ্রিম বাড়ানো', 'finance.rental.index', 'চুক্তির নিজের পাতায়'],
