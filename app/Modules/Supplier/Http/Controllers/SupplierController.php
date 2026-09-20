@@ -55,6 +55,20 @@ class SupplierController extends Controller implements HasMiddleware
              * সুইচটার একদিকে তালা থাকত, অন্যদিকে নয়।
              */
             new Middleware('can:delete,supplier', only: ['activate']),
+
+            /*
+             * ⛔ সেবাদাতার তালিকাও তালার ভিতরে — ২০ সেপ্টেম্বর ২০২৬।
+             *
+             * ⚠️ [[AuthorizesResource::abilityPerResourceMethod()]] কেবল চেনা
+             * নামগুলোয় (index, show, edit…) পাহারা বসায়, আর `services` সেই
+             * তালিকায় নেই। ⓘ ফল: তালিকাটা **লগইন করা যে কারও** কাছে খুলত —
+             * সরবরাহকারীর নাম, বাকির সীমা, সব। মেনুতে সারিটা লুকানো থাকলেও
+             * ঠিকানা টাইপ করলেই পর্দা আসত।
+             *
+             * ⓘ একই তালিকা, একই সারি — তাই একই চাবি (`viewAny`), সরবরাহকারীর
+             * তালিকার মতোই।
+             */
+            new Middleware('can:viewAny,'.Supplier::class, only: ['services']),
         ];
     }
 
