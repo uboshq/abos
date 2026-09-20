@@ -33,11 +33,23 @@
     $packs = app(App\Core\Services\SettingsService::class)->enabled('inventory.pack_entry_enabled')
         ? app(App\Modules\Inventory\Services\PackConversion::class)->optionsFor($products)
         : [];
+
+    /*
+     * ⭐ কোন প্যাকটা আগে থেকে বসবে — মালিকের বাছাই, ধাপ ৫, ২০ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ পণ্যের ফর্মের রেডিও ("বেচায়") যা বলে, কেবল সেটাই। ⚠️ কেউ কিছু না
+     * বাছলে খালি থাকে, আর তখন আগের মতোই পণ্যের নিজের একক — অর্থাৎ যে
+     * ব্যবসা প্যাক ব্যবহার করে না, তার কিছুই বদলায় না।
+     */
+    $packDefaults = $packs === []
+        ? []
+        : app(App\Modules\Inventory\Services\PackConversion::class)->defaultsFor($products, 'sales');
 @endphp
 
 <div x-data="salesLineEditor({
                  rows: @js($lines),
                  packs: @js($packs),
+                 packDefaults: @js($packDefaults),
                })"
      @bulk-applied.window="absorb($event.detail.rows)">
 
@@ -68,7 +80,7 @@
                     <tr class="border-b border-(--color-border)">
                         <td class="cell-input" data-label="{{ __('sales::field.product') }}">
                             <select :name="'lines[' + (i) + '][product_id]'" x-model="row.product_id" required
-                                    @change="row.unit_id = ''"
+                                    @change="row.unit_id = defaultUnit(row.product_id)"
                                     class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                                            bg-(--color-surface-card) px-2">
                                 <option value="">-</option>

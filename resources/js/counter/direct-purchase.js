@@ -23,7 +23,7 @@
  */
 export default function directPurchase({
     catalogue, vatEnabled, lastRatesUrl,
-    depositMethods, moneyAccounts, carriers, packs, suppliers,
+    depositMethods, moneyAccounts, carriers, packs, packDefaults, suppliers,
     paymentTermDefault, draftKey, hasErrors, accountCodes, texts,
 }) {
     return {
@@ -85,6 +85,11 @@ export default function directPurchase({
            এই ডাকটাই ব্যবহার করে; দুই পর্দায় দুই তালিকা হলে
            একই পণ্য এখানে বাক্সে আর বিলে পিসে লিখতে হত। */
         packs,
+
+        /* ⭐ কোন প্যাকটা আগে থেকে বসবে — মালিকের বাছাই ("কাউন্টারে"),
+           ধাপ ৫। ⓘ কিছু না বাছা থাকলে খালি, আর তখন সার্ভার পণ্যের নিজের
+           একক ধরে — আজকের আচরণ হুবহু। */
+        packDefaults: packDefaults || {},
 
         /* ── সরবরাহকারীর কার্ডের চারটা লাইন ────────────────
            ⓘ তথ্যগুলো আগেই ছিল, দেখানো হত না। ⚠️ আইডিটা
@@ -491,6 +496,7 @@ export default function directPurchase({
             this.picked = product;
             this.entry = this.blankEntry();
             this.entry.qty = '1';
+            this.entry.unit_id = this.defaultUnit(product.id);
 
             /*
              * শেষ ক্রয়দর আর চলতি বিক্রয়মূল্য বসিয়ে দেওয়া হয়,
@@ -792,6 +798,13 @@ export default function directPurchase({
          */
         unitsFor(productId) {
             return this.packs[productId] ?? [];
+        },
+
+        /** এই পণ্যে কাউন্টারের ডিফল্ট প্যাক — না বাছা থাকলে খালি। */
+        defaultUnit(productId) {
+            const chosen = this.packDefaults[productId];
+
+            return chosen === undefined ? '' : String(chosen);
         },
 
         /**

@@ -65,6 +65,17 @@
         : [];
 
     /*
+     * ⭐ কোন প্যাকটা আগে থেকে বসবে — মালিকের বাছাই, ধাপ ৫, ২০ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ পণ্যের ফর্মের রেডিও ("কেনায়") যা বলে, কেবল সেটাই — গুদামে কেনা হয়
+     * কার্টনে, দোকানে বেচা হয় পিসে, তাই দুই কাগজে দুই ডিফল্ট। ⚠️ কেউ কিছু না
+     * বাছলে খালি, আর তখন আগের মতোই পণ্যের নিজের একক।
+     */
+    $packDefaults = $packs === []
+        ? []
+        : app(App\Modules\Inventory\Services\PackConversion::class)->defaultsFor($products, 'purchase');
+
+    /*
      * লট ধরা পণ্যগুলোর আইডি — প্যাকের তালিকার মতোই।
      *
      * ── কেন ঘরগুলো শর্তসাপেক্ষে ─────────────────────────────────────
@@ -114,6 +125,7 @@
 <div x-data="purchaseLineEditor({
                  rows: @js($lines),
                  packs: @js($packs),
+                 packDefaults: @js($packDefaults),
                  lots: @js($lotProducts),
                })">
 
@@ -158,7 +170,7 @@
                     <tr class="border-b border-(--color-border)">
                         <td class="cell-input" data-label="{{ __('purchase::field.product') }}">
                             <select :name="'lines[' + (i) + '][product_id]'" x-model="row.product_id" required
-                                    @change="row.unit_id = ''"
+                                    @change="row.unit_id = defaultUnit(row.product_id)"
                                     class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                                            bg-(--color-surface-card) px-2">
                                 <option value="">-</option>

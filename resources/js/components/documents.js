@@ -11,8 +11,22 @@ export function salesLineEditor (config = {}) {
     return {
         rows: config.rows,
         packs: config.packs,
+        packDefaults: config.packDefaults || {},
         unitsFor(row) {
             return this.packs[row.product_id] ?? [];
+        },
+
+        /*
+         * পণ্য বাছলে কোন প্যাকটা বসবে — মালিকের বাছাই, ধাপ ৫।
+         *
+         * ⓘ পণ্যের ফর্মের রেডিও থেকে আসা তালিকা (`packDefaults`)। ⚠️ কিছু
+         * না বাছা থাকলে ফাঁকা স্ট্রিং, আর তখন সার্ভার পণ্যের নিজের একক
+         * ধরে — আগের আচরণ হুবহু।
+         */
+        defaultUnit(productId) {
+            const chosen = (this.packDefaults || {})[productId];
+
+            return chosen === undefined ? '' : String(chosen);
         },
         add() {
             this.rows.push({
@@ -74,9 +88,23 @@ export function purchaseLineEditor (config = {}) {
     return {
         rows: config.rows,
         packs: config.packs,
+        packDefaults: config.packDefaults || {},
         lots: config.lots,
         unitsFor(row) {
             return this.packs[row.product_id] ?? [];
+        },
+
+        /*
+         * পণ্য বাছলে কোন প্যাকটা বসবে — মালিকের বাছাই, ধাপ ৫।
+         *
+         * ⓘ পণ্যের ফর্মের রেডিও থেকে আসা তালিকা (`packDefaults`)। ⚠️ কিছু
+         * না বাছা থাকলে ফাঁকা স্ট্রিং, আর তখন সার্ভার পণ্যের নিজের একক
+         * ধরে — আগের আচরণ হুবহু।
+         */
+        defaultUnit(productId) {
+            const chosen = (this.packDefaults || {})[productId];
+
+            return chosen === undefined ? '' : String(chosen);
         },
 
         /*

@@ -118,6 +118,15 @@ class DirectPurchaseController extends Controller implements HasMiddleware
                 : [],
 
             /*
+             * ⭐ কোন প্যাকটা আগে থেকে বসবে — মালিকের বাছাই, ধাপ ৫,
+             * ২০ সেপ্টেম্বর ২০২৬। ⓘ পণ্যের ফর্মের "কাউন্টারে" রেডিও যা বলে,
+             * কেবল সেটাই; কেউ না বাছলে আগের মতোই পণ্যের নিজের একক।
+             */
+            'packDefaults' => $this->settings->enabled('inventory.pack_entry_enabled')
+                ? app(PackConversion::class)->defaultsFor($this->products(), 'counter')
+                : [],
+
+            /*
              * ⭐ কে মালটা বুঝে নিলেন — মালিকের ছবির `Received by`।
              *
              * ⓘ বাছার কিছু নেই, তাই ড্রপডাউনও নেই: যিনি পর্দাটা খুলেছেন

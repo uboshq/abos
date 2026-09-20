@@ -189,8 +189,8 @@ final class PackConversion
      *
      * বড়টা আগে। নিষ্ক্রিয় একক বা নিষ্ক্রিয় প্যাক আসে না।
      *
-     * @param  \Illuminate\Support\Collection<int, Unit>  $units  সক্রিয় সব একক
-     * @param  \Illuminate\Support\Collection<int, ProductUnit>  $packs  এই পণ্যের সক্রিয় প্যাক
+     * @param  Collection<int, Unit>  $units  সক্রিয় সব একক
+     * @param  Collection<int, ProductUnit>  $packs  এই পণ্যের সক্রিয় প্যাক
      * @return list<array{unit: Unit, factor: string}>
      */
     private function ladder(Product $product, Collection $units, Collection $packs): array
@@ -279,6 +279,38 @@ final class PackConversion
         }
 
         return $options;
+    }
+
+    /**
+     * প্রতিটা পণ্যে কোন প্যাকটা আগে থেকে বাছা থাকবে — ধাপ ৫, ২০ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ বাছাইটা **মালিকের**, ডেটা থেকে আন্দাজ নয়: পণ্যের ফর্মের চারটা
+     * রেডিও (কেনায় · বেচায় · POS-এ · কাউন্টারে) যা বলে, এখানে কেবল সেটাই
+     * ফেরে ([[ProductPackService::KINDS]])। ⚠️ কেউ কিছু না বাছলে সারিটা
+     * আসেই না, আর পর্দা আগের মতোই পণ্যের নিজের একক ধরে — অর্থাৎ যে
+     * ব্যবসা প্যাক ব্যবহার করে না, তার কিছুই বদলায় না।
+     *
+     * ⛔ ভুল ডিফল্ট কোনো ডিফল্টের চেয়ে খারাপ: ঘরটা ভরা থাকে, তাই কেউ
+     * দেখে না, আর কার্টনের দামে পিস বিক্রি হয়ে যায়।
+     *
+     * @param  iterable<Product>  $products
+     * @return array<int, int> পণ্যের id → এককের id
+     */
+    public function defaultsFor(iterable $products, string $kind): array
+    {
+        if (! in_array($kind, ProductPackService::KINDS, true)) {
+            return [];
+        }
+
+        $products = collect($products);
+
+        return ProductUnit::query()
+            ->whereIn('product_id', $products->pluck('id')->filter()->all())
+            ->where('is_active', true)
+            ->where('is_'.$kind.'_default', true)
+            ->pluck('unit_id', 'product_id')
+            ->map(fn ($unitId) => (int) $unitId)
+            ->all();
     }
 
     /**
