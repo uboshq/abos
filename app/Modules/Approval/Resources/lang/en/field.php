@@ -31,4 +31,8 @@ return [
     'active' => 'Active',
     'decisions' => 'Decision history',
     'steps' => 'Levels',
+
+    'party' => 'Party',
+    'what_for' => 'What for',
+    'where_money' => 'Where',
 ];

@@ -12,6 +12,7 @@ use App\Models\Approval;
 use App\Models\ApprovalFlow;
 use App\Models\ApprovalFlowStep;
 use App\Models\User;
+use App\Modules\Approval\Services\ApprovalFacts;
 use App\Modules\Approval\Services\ApprovalFlowService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -53,6 +54,7 @@ class ApprovalInboxController extends Controller implements HasMiddleware
         private readonly MenuBuilder $menu,
         private readonly ApprovalEngine $engine,
         private readonly ApprovalFlowService $flows,
+        private readonly ApprovalFacts $facts,
     ) {}
 
     public static function middleware(): array
@@ -236,6 +238,12 @@ class ApprovalInboxController extends Controller implements HasMiddleware
         return view('approval::inbox.index', [
             'menu' => $this->menu->forUser($user),
             'approvals' => $waiting,
+
+            /*
+             * ⭐ কার · কী বাবদ · কোথায় — ২০ সেপ্টেম্বর ২০২৬। কাগজগুলো ধরন
+             * ধরে একবারে তোলা হয় ([[ApprovalFacts]]), সারি ধরে নয়।
+             */
+            'facts' => $this->facts->of($waiting),
             'visibleTotal' => $visibleTotal,
             'labels' => $this->flows->labels(),
             'modules' => $modules,
