@@ -203,6 +203,10 @@
         </div>
         </div>
 
+        {{-- প্যাকের টেবিল — পুরো চওড়ায়, কারণ সারিতে সাতটা ঘর
+             ([[product.partials.packs]]) --}}
+        @include('inventory::product.partials.packs')
+
         <x-ui.custom-fields :record="$product" />
 
         <div class="flex flex-wrap gap-2">

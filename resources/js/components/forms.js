@@ -632,3 +632,107 @@ export function drawingPower ({ stock = 0, margin = 30, drawn = 0 } = {}) {
         },
     }
 }
+
+/*
+ * পণ্যের প্যাকের টেবিল — "১ কার্টন = ১২ বক্স", আর পাশে "= ২৮৮ পিস"।
+ * ধাপ ৪খ, ২০ সেপ্টেম্বর ২০২৬।
+ *
+ * ⓘ মালিকের বাক্যটাই নকশা: *"২৪ পিসে এক বক্স, ১২ বক্সে এক কার্টন"*। তাই
+ * প্রতিটা সারি অন্য একটা এককের হিসাবে লেখা যায়, আর base-এ কত সেটা এখানে
+ * গুণ করে দেখানো হয় — টাইপ করার সাথে সাথেই, যাতে ভুলটা জমা দেওয়ার আগেই
+ * চোখে পড়ে।
+ *
+ * ⚠️ এই সংখ্যাটা কেবল দেখানোর — আসল হিসাব আর পাহারা সার্ভারে
+ * ([[ProductPackService]])। ⛔ দুই জায়গায় দুই নিয়ম হলে পর্দা এক সংখ্যা
+ * দেখাত আর মজুদে বসত আরেকটা।
+ */
+export function productPacks ({ rows = [], base = 0, baseName = '', names = {}, defaults = {} } = {}) {
+    return {
+        rows,
+        base,
+        baseName,
+        names,
+
+        /*
+         * কোন কাজে কোন প্যাক আগে থেকে বাছা — কেনা, বেচা, POS, কাউন্টার।
+         * ⓘ রেডিও চারটা কলামে, তাই অবস্থাটা এখানে; সারি মুছে ফেললে ঐ
+         * কাজের বাছাইটা base-এ ফিরে যায় ([[dropped()]])।
+         */
+        defaults,
+
+        add () {
+            this.rows.push({ unit_id: '', per_qty: '', per_unit_id: '', barcode: '' })
+        },
+
+        remove (i) {
+            const gone = this.rows[i].unit_id
+
+            this.rows.splice(i, 1)
+            this.dropped(gone)
+        },
+
+        /** সরানো এককটা কোনো কাজের ডিফল্ট থাকলে সেটা base-এ ফেরে */
+        dropped (unitId) {
+            for (const kind of ['purchase', 'sales', 'pos', 'counter']) {
+                if (String(this.defaults[kind]) === String(unitId)) {
+                    this.defaults[kind] = this.base
+                }
+            }
+        },
+
+        /** এককের নাম — id থেকে; অচেনা হলে ফাঁকা */
+        nameOf (id) {
+            return this.names[String(id)] || ''
+        },
+
+        /*
+         * base-এ কত — শিকল ধরে, সার্ভারের [[ProductPackService::factors()]]-এর
+         * একই নিয়মে: যার "কিসের" জানা, সে মেটে; কেউ না মিটলে বাকিরা চক্রে।
+         */
+        factors () {
+            const known = {}
+            known[String(this.base)] = 1
+
+            let left = this.rows.filter(row => row.unit_id && row.per_qty)
+            let moved = true
+
+            while (left.length > 0 && moved) {
+                moved = false
+                const still = []
+
+                for (const row of left) {
+                    const per = String(row.per_unit_id || this.base)
+
+                    if (known[per] !== undefined) {
+                        known[String(row.unit_id)] = known[per] * parseFloat(row.per_qty)
+                        moved = true
+                    } else {
+                        still.push(row)
+                    }
+                }
+
+                left = still
+            }
+
+            return known
+        },
+
+        /** এক সারির পাশে যা লেখা থাকে — "= ২৮৮ পিস", বা চক্র হলে ফাঁকা */
+        inBase (row) {
+            if (!row.unit_id || !row.per_qty) {
+                return ''
+            }
+
+            const value = this.factors()[String(row.unit_id)]
+
+            if (value === undefined || !isFinite(value)) {
+                return ''
+            }
+
+            const shown = Number.isInteger(value) ? String(value) : String(Math.round(value * 1000000) / 1000000)
+
+            return '= ' + shown + ' ' + this.baseName
+        },
+
+    }
+}

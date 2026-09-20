@@ -12,6 +12,7 @@ use App\Core\Services\SettingsService;
 use App\Http\Controllers\Controller;
 use App\Modules\Inventory\Http\Requests\ProductRequest;
 use App\Modules\Inventory\Models\Product;
+use App\Modules\Inventory\Models\ProductUnit;
 use App\Modules\Inventory\Models\StockMovement;
 use App\Modules\Inventory\Services\ProductImageService;
 use App\Modules\Inventory\Services\ProductService;
@@ -95,6 +96,7 @@ class ProductController extends Controller implements HasMiddleware
             'menu' => $this->menu->forUser($request->user()),
             'product' => new Product(['purchase_price' => 0, 'sale_price' => 0, 'reorder_level' => 0]),
             ...$this->options(),
+            ...$this->packOptions(new Product),
         ]);
     }
 
@@ -138,6 +140,7 @@ class ProductController extends Controller implements HasMiddleware
             'menu' => $this->menu->forUser($request->user()),
             'product' => $product,
             ...$this->options(),
+            ...$this->packOptions($product),
         ]);
     }
 
@@ -248,6 +251,52 @@ class ProductController extends Controller implements HasMiddleware
     }
 
     /** @return array<string, mixed> */
+    /**
+     * প্যাকের টেবিলের জন্য যা লাগে — ধাপ ৪খ, ২০ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ base-এর সারিটা যায় না: ওটা পর্দায় বাঁধা, আর সার্ভারেও নিজে থেকে
+     * বসে ([[ProductPackService::sync()]])। এখানে কেবল বাকি প্যাকগুলো,
+     * মানুষ যেভাবে লিখেছিলেন সেভাবেই (`per_qty`, `per_unit_id`)।
+     *
+     * @return array<string, mixed>
+     */
+    private function packOptions(Product $product): array
+    {
+        $units = Unit::query()->orderBy('code')->get();
+        $base = (int) $product->unit_id;
+
+        $packs = $product->exists
+            ? ProductUnit::query()->where('product_id', $product->id)->where('is_active', true)->get()
+            : collect();
+
+        $trim = fn ($n) => rtrim(rtrim((string) $n, '0'), '.');
+
+        return [
+            'baseName' => $units->firstWhere('id', $base)?->name() ?? '',
+            'unitNames' => $units->mapWithKeys(fn (Unit $u) => [(string) $u->id => $u->name()])->all(),
+
+            'packRows' => $packs
+                ->where('unit_id', '!=', $base)
+                ->sortByDesc('factor')
+                ->map(fn (ProductUnit $p) => [
+                    'unit_id' => (string) $p->unit_id,
+                    // ⓘ লেখা না থাকলে (ব্যাকফিলের সারি) base-এ কত, সেটাই দেখাই
+                    'per_qty' => $trim($p->per_qty ?? $p->factor),
+                    'per_unit_id' => (string) ($p->per_unit_id ?? $base),
+                    'barcode' => (string) ($p->barcode ?? ''),
+                ])
+                ->values()
+                ->all(),
+
+            'packDefaults' => [
+                'purchase' => (string) ($packs->firstWhere('is_purchase_default', true)?->unit_id ?? $base),
+                'sales' => (string) ($packs->firstWhere('is_sales_default', true)?->unit_id ?? $base),
+                'pos' => (string) ($packs->firstWhere('is_pos_default', true)?->unit_id ?? $base),
+                'counter' => (string) ($packs->firstWhere('is_counter_default', true)?->unit_id ?? $base),
+            ],
+        ];
+    }
+
     private function options(): array
     {
         return [
