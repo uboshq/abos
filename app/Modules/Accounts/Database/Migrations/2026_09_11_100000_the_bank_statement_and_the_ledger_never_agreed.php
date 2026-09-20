@@ -59,7 +59,8 @@ return new class extends Migration
              * সত্যি সেটা বলার কোনো উপায় থাকত না।
              */
             $table->unique(['company_id', 'bank_account_id', 'statement_date'], 'acc_bank_recon_unique');
-            $table->index(['company_id', 'bank_account_id', 'status']);
+            /* ⚠️ নিজের নাম — জেনারেট করা নামটা ঠিক ৬৪ অক্ষরে দাঁড়াত */
+            $table->index(['company_id', 'bank_account_id', 'status'], 'acc_bank_recon_state');
         });
 
         /*

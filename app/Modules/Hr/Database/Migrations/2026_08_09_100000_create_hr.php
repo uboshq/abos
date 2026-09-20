@@ -154,7 +154,12 @@ return new class extends Migration
             // একই দিনে একই কর্মীর একই খাতে দুইটা অঙ্ক থাকলে কোনটা সত্যি
             // তা বলার উপায় থাকত না
             $table->unique(['company_id', 'employee_id', 'salary_head_id', 'effective_from'], 'hr_structure_unique');
-            $table->index(['company_id', 'employee_id', 'effective_from']);
+            /*
+             * ⚠️ নিজের নাম — জেনারেট করা নামটা ঠিক ৬৪ অক্ষরে দাঁড়াত,
+             * অর্থাৎ এই টেবিলে একটা কলাম যোগ করলেই সবার migrate ভাঙত
+             * ([[Tests\Feature\Architecture\NoIndexNameStandsAtTheEdgeTest]])।
+             */
+            $table->index(['company_id', 'employee_id', 'effective_from'], 'hr_salary_effective');
         });
     }
 
