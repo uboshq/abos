@@ -504,7 +504,7 @@ final class FinancePlan
                     ['অডিট ট্রেইল', 'governance.audit.index', null],
                     ['হিসাবের সততা যাচাই', 'accounts.integrity', null],
                     ['রপ্তানির লগ', 'governance.export.index', 'কে কী নামিয়েছে'],
-                    ['কাগজ সংরক্ষণ নীতি', null, 'পরের ধাপ'],
+                    ['কাগজ সংরক্ষণ নীতি', 'governance.retention.index', 'কী কতদিন থাকে — কোডে যা ঘটে, তাই'],
                 ],
             ],
             [

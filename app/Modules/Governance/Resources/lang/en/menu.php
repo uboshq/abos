@@ -8,4 +8,5 @@ return [
     'login_history' => 'Login history',
     'error_log' => 'What broke',
     'my_sessions' => 'Where I am logged in',
+    'retention' => 'What is kept how long',
 ];

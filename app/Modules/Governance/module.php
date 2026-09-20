@@ -60,6 +60,11 @@ return [
              * ভাবত পুরো ছবিটা দেখা হয়ে গেছে।
              */
             ['label' => 'governance::menu.export_log', 'icon' => 'download', 'route' => 'governance.export.index', 'permission' => 'governance.export.view'],
+            /*
+             * কাগজ সংরক্ষণ নীতি — রপ্তানির লগের পাশে, কারণ দুইটাই একই
+             * প্রশ্নের দুই দিক: কী বেরিয়ে গেল, আর কী কতদিন থাকে।
+             */
+            ['label' => 'governance::menu.retention', 'icon' => 'book', 'route' => 'governance.retention.index', 'permission' => 'governance.audit.view'],
             ['label' => 'governance::menu.login_history', 'icon' => 'clock', 'route' => 'governance.login.index', 'permission' => 'governance.login.view'],
 
             /*

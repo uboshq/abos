@@ -8,4 +8,5 @@ return [
     'login_history' => 'ঢোকার খাতা',
     'error_log' => 'কী ভেঙেছে',
     'my_sessions' => 'আমার লগইনগুলো',
+    'retention' => 'কাগজ কতদিন থাকে',
 ];

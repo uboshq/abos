@@ -6,6 +6,7 @@ use App\Modules\Governance\Http\Controllers\AuditController;
 use App\Modules\Governance\Http\Controllers\ErrorLogController;
 use App\Modules\Governance\Http\Controllers\ExportLogController;
 use App\Modules\Governance\Http\Controllers\LoginHistoryController;
+use App\Modules\Governance\Http\Controllers\RetentionController;
 use App\Modules\Governance\Http\Controllers\SessionController;
 use Illuminate\Support\Facades\Route;
 
@@ -51,6 +52,12 @@ Route::middleware('auth')->prefix('governance')->group(function () {
      * বদলেছে, অন্যটা বলে কী বেরিয়ে গেছে।
      */
     Route::get('/exports', [ExportLogController::class, 'index'])->name('export.index');
+
+    /*
+     * কাগজ সংরক্ষণ নীতি — মানচিত্রের §২৮, ২০ সেপ্টেম্বর ২০২৬।
+     * ⓘ কেবল পড়া, আর যা সত্যিই ঘটে তাই দেখায় ([[WhatIsKeptHowLong]])।
+     */
+    Route::get('/retention', [RetentionController::class, 'index'])->name('retention.index');
 
     /*
      * ঢোকার খাতা — কে ঢুকল, আর কে ঢুকতে চেয়ে পারল না।
