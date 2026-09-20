@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use IlluminateSupportCarbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -126,10 +127,12 @@ class VoucherListController extends Controller implements HasMiddleware
             return $this->documents($request, $tab);
         }
 
+        [$from, $to] = $this->range($request);
+
         $query = $this->scoped(Voucher::query(), $tab)
             ->search($request->query('q'))
-            ->when($request->query('from'), fn ($q, $d) => $q->whereDate('trx_date', '>=', $d))
-            ->when($request->query('to'), fn ($q, $d) => $q->whereDate('trx_date', '<=', $d));
+            ->where('trx_date', '>=', $from)
+            ->where('trx_date', '<=', $to);
 
         $sort = $this->applySort($query, $request, [
             'latest' => fn ($q) => $q->orderByDesc('trx_date')->orderByDesc('id'),
@@ -208,6 +211,8 @@ class VoucherListController extends Controller implements HasMiddleware
      */
     private function posted(string $source, Request $request): Builder
     {
+        [$from, $to] = $this->range($request);
+
         $reversal = $source.':reversal';
         $net = 'SUM(CASE WHEN source_type = ? THEN debit ELSE 0 END)'
             .' - SUM(CASE WHEN source_type = ? THEN debit ELSE 0 END)';
@@ -223,8 +228,8 @@ class VoucherListController extends Controller implements HasMiddleware
             ->selectRaw('MAX(CASE WHEN source_type = ? THEN narration END) as narration', [$source])
             ->selectRaw($net.' as amount', [$source, $reversal])
             ->havingRaw($net.' > 0', [$source, $reversal])
-            ->when($request->query('from'), fn ($q, $d) => $q->havingRaw($firstDate.' >= ?', [$source, $d]))
-            ->when($request->query('to'), fn ($q, $d) => $q->havingRaw($firstDate.' <= ?', [$source, $d]));
+            ->havingRaw($firstDate.' >= ?', [$source, $from])
+            ->havingRaw($firstDate.' <= ?', [$source, $to]);
     }
 
     /**
@@ -279,5 +284,34 @@ class VoucherListController extends Controller implements HasMiddleware
                 ->where('type', $tab)
                 ->whereNull('against_type'),
         };
+    }
+
+    /**
+     * কোন তারিখ থেকে কোন তারিখ — না বললে চলতি মাস।
+     *
+     * ── ⛔ আগে কোনো ডিফল্ট ছিল না, ২১ সেপ্টেম্বর ২০২৬ পর্যন্ত ──────────
+     * শর্ত দুইটা `when()`-এর ভিতরে ছিল, অর্থাৎ ঠিকানায় তারিখ না দিলে
+     * **পুরো টেবিলটা** আসত। ⓘ আজ ভাউচার গোটা কয়েক, তাই কিছুই দেখা
+     * যায় না; বছর দুয়েক পরে পাতাটা খুলতেই সময় লাগবে, আর তখন কারণটা
+     * খুঁজে বের করা কঠিন হবে।
+     *
+     * ⚠️ ইঞ্জিনের নিজের নিয়মও তাই ([[ReportEngine]]: প্রতিটা তালিকা
+     * নিজের তারিখ-সীমা বহন করে) — কেবল এই পর্দাটা সেটা মানত না।
+     *
+     * ⭐ চলতি মাস বাছা হয়েছে কারণ ভাউচারের পাতায় মানুষ প্রায় সবসময়
+     * সাম্প্রতিকটাই খোঁজেন, আর সীমাটা ঠিকানায় লেখা থাকে বলে অন্য মাস
+     * চাওয়া এক ক্লিক দূরে।
+     *
+     * @return array{0: string, 1: string}
+     */
+    private function range(Request $request): array
+    {
+        $from = $request->query('from');
+        $to = $request->query('to');
+
+        return [
+            filled($from) ? (string) $from : Carbon::today()->startOfMonth()->toDateString(),
+            filled($to) ? (string) $to : Carbon::today()->endOfMonth()->toDateString(),
+        ];
     }
 }

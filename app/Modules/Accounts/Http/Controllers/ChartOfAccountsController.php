@@ -6,6 +6,7 @@ namespace App\Modules\Accounts\Http\Controllers;
 
 use App\Core\Concerns\AuthorizesResource;
 use App\Core\Engines\Coding\CodeSuggester;
+use App\Core\Services\LedgerBalances;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\RunningBalance;
@@ -242,6 +243,23 @@ class ChartOfAccountsController extends Controller implements HasMiddleware
             $account->load('children.children.children.children');
         }
 
+        /*
+         * ⭐ সব খাতের কাঁচা জের একবারে — ২১ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ উপরের মন্তব্যে লেখা ছিল জেরটা তবু প্রতি খাতে আলাদা গোনা হয়,
+         * আর পুরো সাবট্রির একটাই যোগফল নিলে **চিহ্নের নিয়ম** বদলাতে হত।
+         * ⭐ সেই নিয়মটা অক্ষত রেখেই এটা করা যায়: [[LedgerBalances]] কেবল
+         * ডেবিট-ক্রেডিটের কাঁচা যোগফল একবারে তোলে (`GROUP BY account_id`),
+         * আর চিহ্ন বসে আগের জায়গাতেই, যার যার প্রকৃতি ধরে।
+         *
+         * ⓘ মেপে দেখা ছিল ১৯০ খাতের ছকে ৮১টা কোয়েরি; এখন একটা।
+         * ⚠️ তুলতে না পারলে কিছুই ভাঙে না — [[Account::balanceOn]] তখন
+         * আগের পথেই নিজে গোনে।
+         */
+        app(LedgerBalances::class)->preload(
+            $this->everyAccountUnder($account)
+        );
+
         return view('accounts::coa.show', [
             'menu' => $this->menu->forUser($request->user()),
             'account' => $account,
@@ -441,5 +459,24 @@ class ChartOfAccountsController extends Controller implements HasMiddleware
                 ->orderBy('code')
                 ->get()
         );
+    }
+
+    /**
+     * এই খাত আর তার নিচের সব খাতের আইডি।
+     *
+     * ⓘ আগে থেকে তোলা সম্পর্ক ধরেই হাঁটা হয় (`children...` চার ধাপ),
+     * তাই এখানে বাড়তি কোনো কোয়েরি যায় না।
+     *
+     * @return list<int>
+     */
+    private function everyAccountUnder(Account $account): array
+    {
+        $ids = [(int) $account->id];
+
+        foreach ($account->children as $child) {
+            $ids = array_merge($ids, $this->everyAccountUnder($child));
+        }
+
+        return $ids;
     }
 }

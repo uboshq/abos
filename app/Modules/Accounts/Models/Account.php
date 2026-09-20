@@ -10,6 +10,7 @@ use App\Core\Concerns\HasDocumentStatus;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Contracts\Drillable;
+use App\Core\Services\LedgerBalances;
 use App\Core\Support\RunningBalance;
 use App\Models\LedgerEntry;
 use App\Models\User;
@@ -257,12 +258,28 @@ class Account extends Model implements Drillable
             );
         }
 
-        $row = LedgerEntry::query()
-            ->forAccount($this->id)
-            ->when($upto, fn (Builder $q, string $date) => $q->whereDate('trx_date', '<=', $date))
-            ->when($branchId, fn (Builder $q, int $branch) => $q->where('branch_id', $branch))
-            ->selectRaw('COALESCE(SUM(debit), 0) as d, COALESCE(SUM(credit), 0) as c')
-            ->first();
+        /*
+         * ⭐ আগে থেকে তোলা থাকলে সেটাই — ২১ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ [[LedgerBalances]] অনেক খাতের কাঁচা যোগফল **একবারে** তোলে
+         * (`GROUP BY account_id`), আর ছকের পর্দা সেটা আগে ডেকে নেয়।
+         * ⛔ না তুললে `null` আসে আর নিচের পথটাই চলে — অর্থাৎ সেবাটা
+         * কেবল দ্রুত পথ, আচরণের অংশ নয়।
+         *
+         * ⚠️ চিহ্নের নিয়মটা এখানেই থাকে, নিচে, আগের মতোই — কাঁচা
+         * ডেবিট-ক্রেডিট তোলা আর প্রকৃতি ধরে চিহ্ন বসানো দুইটা আলাদা
+         * কাজ, আর দ্বিতীয়টা টাকার নিয়ম।
+         */
+        $preloaded = app(LedgerBalances::class)->raw($this->id, $upto, $branchId);
+
+        $row = $preloaded === null
+            ? LedgerEntry::query()
+                ->forAccount($this->id)
+                ->when($upto, fn (Builder $q, string $date) => $q->whereDate('trx_date', '<=', $date))
+                ->when($branchId, fn (Builder $q, int $branch) => $q->where('branch_id', $branch))
+                ->selectRaw('COALESCE(SUM(debit), 0) as d, COALESCE(SUM(credit), 0) as c')
+                ->first()
+            : (object) ['d' => $preloaded[0], 'c' => $preloaded[1]];
 
         /*
          * ── খোলার জের এখানে আর যোগ হয় না, ২৯ আগস্ট ২০২৬ ────────────
