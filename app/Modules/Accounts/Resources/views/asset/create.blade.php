@@ -71,6 +71,28 @@
                        :value="old('acquired_on', now()->toDateString())" />
         </label>
 
+        {{-- ⭐ এ পর্যন্ত যতটা ক্ষয় ধরা হয়েছে — ২০ সেপ্টেম্বর ২০২৬।
+
+             ── ⛔ কী ভাঙা ছিল ─────────────────────────────────────────
+             তিন বছর চলা একটা ভ্যান নতুন হিসেবে ঢুকত: খাতায় তার দাম পুরো
+             দেখাত, আর অবচয় শুরু হত আজ থেকে। ⚠️ অর্থাৎ তিন বছরের ক্ষয়
+             একবারে মুছে যেত — সম্পদটা ফুলে থাকত, আর পরের বছরগুলোয় খরচ
+             বেশি দেখাত।
+
+             ⓘ ঘরটা খালি রাখলে কিছুই বদলায় না — নতুন জিনিসের ক্ষয় শূন্য।
+             ⚠️ আর এই অঙ্কটা খরচে যায় না, যায় সঞ্চিত মুনাফায়: ওই ক্ষয়
+             আগের বছরগুলোর, এই বছরের খরচ নয়। --}}
+        <label class="flex flex-col gap-1">
+            <span class="text-sm font-medium">{{ __('accounts::asset.opening_accumulated') }}</span>
+            <input type="number" step="0.01" min="0" name="opening_accumulated"
+                   value="{{ old('opening_accumulated', 0) }}"
+                   class="num h-(--spacing-field) rounded-(--radius-field) border border-(--color-border)
+                          bg-(--color-surface-app) px-2 text-end">
+            <span class="text-2xs text-(--color-ink-muted)">
+                {{ __('accounts::asset.opening_accumulated_hint') }}
+            </span>
+        </label>
+
         <label class="flex flex-col gap-1">
             <span class="text-sm font-medium">{{ __('accounts::asset.method') }}</span>
             <select name="method" x-model="method"

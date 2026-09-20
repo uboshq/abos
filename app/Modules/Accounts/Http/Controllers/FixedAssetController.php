@@ -129,6 +129,13 @@ class FixedAssetController extends Controller implements HasMiddleware
             'cost' => ['required', 'numeric', 'gt:0'],
             'salvage' => ['nullable', 'numeric', 'min:0'],
             'acquired_on' => ['required', 'date'],
+
+            /*
+             * ⭐ এ পর্যন্ত যতটা ক্ষয় ধরা হয়েছে — পুরনো জিনিস তোলার ঘর।
+             * ⚠️ কেনার দামের বেশি হতে পারে না: হলে খাতায় জিনিসটার
+             * দাম ঋণাত্মক হয়ে যেত।
+             */
+            'opening_accumulated' => ['nullable', 'numeric', 'min:0', 'lte:cost'],
             'method' => ['required', Rule::in([FixedAsset::STRAIGHT_LINE, FixedAsset::REDUCING])],
             'life_months' => ['nullable', 'integer', 'min:1', 'max:1200'],
             'rate' => ['nullable', 'numeric', 'min:0', 'max:100'],

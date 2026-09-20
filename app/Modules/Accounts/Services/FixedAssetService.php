@@ -8,6 +8,7 @@ use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\Money;
+use App\Models\FinancialYear;
 use App\Modules\Accounts\Models\DepreciationEntry;
 use App\Modules\Accounts\Models\FixedAsset;
 use Illuminate\Support\Carbon;
@@ -105,44 +106,168 @@ final class FixedAssetService
 
         $funding = $this->fundingFrom($data);
 
-        unset($data['funded_by'], $data['funding_person_id'], $data['funding_account_id'], $data['funding_supplier_id']);
+        /* ⓘ এ পর্যন্ত যতটা ক্ষয় ধরা হয়েছে — সিদ্ধান্তের ঘর, কাগজের কলাম নয় */
+        $openingDepreciation = (string) ($data['opening_accumulated'] ?? '0');
 
-        return DB::transaction(function () use ($data, $method, $funding) {
-            $asset = FixedAsset::create([
-                ...$data,
-                'company_id' => CompanyContext::id(),
-                'branch_id' => $data['branch_id'] ?? CompanyContext::branchId(),
-                'document_no' => $this->numbers->next('FA'),
-                'method' => $method,
-                'status' => FixedAsset::ACTIVE,
-                'created_by' => auth()->id(),
+        unset(
+            $data['funded_by'], $data['funding_person_id'],
+            $data['funding_account_id'], $data['funding_supplier_id'],
+            $data['opening_accumulated'],
+        );
+
+        /*
+         * ⭐ ভুলবার্তাটা ফরমের ঘরে ফেরানো — ২০ সেপ্টেম্বর ২০২৬।
+         *
+         * ⛔ পোস্টিং ইঞ্জিন অভিযোগ করে `trx_date` নামে ([[OpenPeriod::assertOpen]]),
+         * আর সম্পদের ফরমে ওই নামে কোনো ঘর নেই — ঘরটার নাম `acquired_on`।
+         * ⚠️ ফলে বার্তাটা পর্দায় কোথাও বসত না: ব্যবহারকারী সেভ চাপতেন,
+         * পাতা ফিরে আসত, আর **কেন হলো না সেটা কোথাও লেখা থাকত না**।
+         */
+        try {
+            return DB::transaction(function () use ($data, $method, $funding, $openingDepreciation) {
+                $asset = FixedAsset::create([
+                    ...$data,
+                    'company_id' => CompanyContext::id(),
+                    'branch_id' => $data['branch_id'] ?? CompanyContext::branchId(),
+                    'document_no' => $this->numbers->next('FA'),
+                    'method' => $method,
+                    'status' => FixedAsset::ACTIVE,
+                    'created_by' => auth()->id(),
+                ]);
+
+                if ($funding !== null) {
+                    $this->posting->post(
+                        sourceType: FixedAsset::drillSourceType(),
+                        sourceId: $asset->id,
+                        trxDate: $this->postableDate($asset->acquired_on),
+                        lines: [
+                            [
+                                'account_id' => (int) $asset->asset_account_id,
+                                'debit' => (string) $asset->cost,
+                                'narration' => $asset->name,
+                            ],
+                            [
+                                'account_id' => $funding['account_id'],
+                                'credit' => (string) $asset->cost,
+                                'party_type' => $funding['party_type'],
+                                'party_id' => $funding['party_id'],
+                                'narration' => $asset->name,
+                            ],
+                        ],
+                        documentNo: $asset->document_no,
+                    );
+                }
+
+                $this->openingDepreciation($asset, $openingDepreciation);
+
+                return $asset;
+            });
+        } catch (ValidationException $e) {
+            throw $this->onTheDateField($e);
+        }
+    }
+
+    /**
+     * তারিখের অভিযোগ হলে সেটা ফরমের ঘরে বসায়।
+     *
+     * ⓘ অন্য সব ভুল অবিকল থাকে — কেবল `trx_date` নামটা বদলায়,
+     * কারণ এই পর্দায় তারিখের ঘরটার নাম আলাদা।
+     */
+    private function onTheDateField(ValidationException $e): ValidationException
+    {
+        $errors = $e->errors();
+
+        if (! isset($errors['trx_date'])) {
+            return $e;
+        }
+
+        $errors['acquired_on'] = $errors['trx_date'];
+        unset($errors['trx_date']);
+
+        return ValidationException::withMessages($errors);
+    }
+
+    /**
+     * দাখিলার তারিখ — পুরনো হলে চলতি বছরের প্রথম দিনে।
+     *
+     * ── ⛔ কী ভাঙা ছিল, ২০ সেপ্টেম্বর ২০২৬ ─────────────────
+     * তিন বছরের পুরনো একটা ভ্যান তুলতে গেলে কেনার তারিখে দাখিলা
+     * বসানোর চেষ্টা হত। ⚠️ ওই তারিখ কোনো চালু অর্থবছরে পড়ত না, তাই
+     * পোস্টিং ইঞ্জিন ঠিকই আটকাত — আর লেনদেন ফিরে যাওয়ায়
+     * **সম্পদের সারিটাই তৈরি হত না**। ⛔ ফল: ফরম ভরে সেভ চাপেন,
+     * আর কিছুই থাকে না।
+     *
+     * ⓘ নিয়মটা [[OpeningBalanceService::dateFor]]-এর হুবহু এক: খাতা যেদিন
+     * শুরু, তার আগের কোনো দিনে দাখিলা বসানোর মানে হয় না। ⭐ আসল
+     * কেনার তারিখ হারায় না — সেটা `acquired_on` ঘরেই থাকে।
+     */
+    private function postableDate(Carbon $date): string
+    {
+        $year = FinancialYear::query()->where('is_current', true)->first();
+
+        if ($year === null) {
+            return $date->toDateString();
+        }
+
+        $start = Carbon::parse($year->starts_on);
+
+        return $date->lt($start) ? $start->toDateString() : $date->toDateString();
+    }
+
+    /**
+     * এ পর্যন্ত যতটা ক্ষয় ধরা হয়ে গেছে — ব্যবস্থায় তোলার আগেই।
+     *
+     * ── ⭐ কেন লাগল, ২০ সেপ্টেম্বর ২০২৬ ────────────────────
+     * তিন বছর চলা একটা ভ্যান নতুন হিসাবে ঢুকত: খাতায় তার দাম পুরো
+     * দেখাত, আর অবচয় শুরু হত আজ থেকে — অর্থাৎ তিন বছরের ক্ষয়
+     * একবারে মুছে যেত। ⚠️ স্থিতিপত্রে সম্পদটা ফুলে থাকত, আর পরের
+     * বছরগুলোয় খরচ বেশি দেখাত।
+     *
+     * ── ⓘ কেন একটা অবচয়ের সারি, আলাদা কলাম নয় ─────────────
+     * ⭐ [[FixedAsset::accumulated]] অবচয়ের সারিগুলোই যোগ করে। সারি হলে
+     * খাতার মান, বইয়ের দাম আর মাসের দৌড় — তিনটাই নিজে থেকে ঠিক
+     * জায়গা থেকে শুরু করে। ⛔ আলাদা কলাম হলে তিন জায়গায় তিনটা যোগ
+     * লিখতে হত, আর একদিন একটায় সংশোধন হত বাকি দুইটায় নয়।
+     *
+     * ⚠️ খরচের খাতে যায় না — যায় সঞ্চিত মুনাফায়। ওই ক্ষয় আগের
+     * বছরগুলোর, এই বছরের খরচ নয় — খরচে ফেললে প্রথম মাসেই তিন
+     * বছরের অবচয় লাভ খেয়ে ফেলত।
+     */
+    private function openingDepreciation(FixedAsset $asset, string $amount): void
+    {
+        if (bccomp($amount, '0', 4) <= 0) {
+            return;
+        }
+
+        $equity = StandardChart::find(StandardChart::RETAINED_EARNINGS);
+
+        if ($equity === null) {
+            throw ValidationException::withMessages([
+                'opening_accumulated' => __('accounts::asset.opening_needs_the_chart'),
             ]);
+        }
 
-            if ($funding !== null) {
-                $this->posting->post(
-                    sourceType: FixedAsset::drillSourceType(),
-                    sourceId: $asset->id,
-                    trxDate: $asset->acquired_on->toDateString(),
-                    lines: [
-                        [
-                            'account_id' => (int) $asset->asset_account_id,
-                            'debit' => (string) $asset->cost,
-                            'narration' => $asset->name,
-                        ],
-                        [
-                            'account_id' => $funding['account_id'],
-                            'credit' => (string) $asset->cost,
-                            'party_type' => $funding['party_type'],
-                            'party_id' => $funding['party_id'],
-                            'narration' => $asset->name,
-                        ],
-                    ],
-                    documentNo: $asset->document_no,
-                );
-            }
+        $on = $this->postableDate($asset->acquired_on);
 
-            return $asset;
-        });
+        $entry = DepreciationEntry::create([
+            'company_id' => $asset->company_id,
+            'fixed_asset_id' => $asset->id,
+            'period_end' => $on,
+            'amount' => $amount,
+            'document_no' => $asset->document_no.'/OPEN',
+            'created_by' => auth()->id(),
+        ]);
+
+        $this->posting->post(
+            sourceType: DepreciationEntry::drillSourceType(),
+            sourceId: $entry->id,
+            trxDate: $on,
+            lines: [
+                ['account_id' => (int) $equity->id, 'debit' => $amount],
+                ['account_id' => (int) $asset->accumulated_account_id, 'credit' => $amount],
+            ],
+            documentNo: $entry->document_no,
+        );
     }
 
     /**

@@ -156,13 +156,23 @@ final class YearEndService
 
             $this->assertNoOverlap($year, $proposed);
 
-            $newYear = FinancialYear::create([
-                'name' => $proposed['name'],
-                'starts_on' => $proposed['starts_on'],
-                'ends_on' => $proposed['ends_on'],
-                'is_closed' => false,
-                'is_current' => false,
-            ]);
+            /*
+             * ⓘ বছরটা আগেই থাকতে পারে — আগেরবার বন্ধ করার দিন তৈরি
+             * হয়েছিল, আর [[reopen()]] সেটা মোছে না। ⭐ তখন নতুন একটা
+             * বানানো হয় না — ওর ভিতরে ইতিমধ্যে কাগজ বসে গেছে, আর দুইটা
+             * হলে একই তারিখ দুই বছরে পড়ত।
+             */
+            $newYear = FinancialYear::query()
+                ->whereDate('starts_on', $proposed['starts_on'])
+                ->whereDate('ends_on', $proposed['ends_on'])
+                ->first()
+                ?? FinancialYear::create([
+                    'name' => $proposed['name'],
+                    'starts_on' => $proposed['starts_on'],
+                    'ends_on' => $proposed['ends_on'],
+                    'is_closed' => false,
+                    'is_current' => false,
+                ]);
 
             /*
              * ১. আয়-ব্যয় বন্ধ — বছরের শেষ দিনে।
@@ -389,10 +399,28 @@ final class YearEndService
          * FinancialYear::forDate() যেকোনো একটা ফেরত দিত। বাদ দেওয়ার
          * কোনো কারণই ছিল না: বন্ধ হলেও বছরটা থেকে যায়।
          */
+        /*
+         * ⭐ যে বছরটা হুবহু এই প্রস্তাবটাই, সে সংঘর্ষ নয় — ২০ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⛔ কী ভাঙা ছিল ────────────────────────────────────────────
+         * [[reopen()]] বছরটা খুলে দেয়, কিন্তু বন্ধ করার দিন তৈরি হওয়া
+         * **পরের বছরটা রেখে দেয়** — আর সেটাই ঠিক: ওই বছরে ততদিনে
+         * কাগজ বসে গেছে। ⚠️ কিন্তু তারপর আবার বন্ধ করতে গেলে এই পাহারা
+         * নিজের তৈরি করা বছরটাকেই সংঘর্ষ বলত — অর্থাৎ **একবার খোলা
+         * বছর আর কোনোদিন বন্ধ করা যেত না**।
+         *
+         * ⓘ তাই হুবহু একই সীমার বছরটা বাদ যায়। ⚠️ আংশিক ছাপাপড়া
+         * অন্য কোনো বছর তবু সংঘর্ষই — দুই বছর একই তারিখ ঢাকলে
+         * [[FinancialYear::forDate]] যেকোনো একটা ফেরত দিত।
+         */
         $clash = FinancialYear::query()
             ->where(function ($q) use ($next) {
                 $q->whereDate('starts_on', '<=', $next['ends_on'])
                     ->whereDate('ends_on', '>=', $next['starts_on']);
+            })
+            ->where(function ($q) use ($next) {
+                $q->whereDate('starts_on', '<>', $next['starts_on'])
+                    ->orWhereDate('ends_on', '<>', $next['ends_on']);
             })
             ->exists();
 

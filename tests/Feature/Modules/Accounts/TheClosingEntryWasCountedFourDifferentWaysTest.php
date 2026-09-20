@@ -19,6 +19,7 @@ use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\YearEndService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
@@ -158,6 +159,95 @@ final class TheClosingEntryWasCountedFourDifferentWaysTest extends TestCase
 
         $this->assertSame(0, bccomp($service->netResult($this->year->fresh()), '20000', 4),
             'বন্ধ বছরের ফল শূন্য দেখাচ্ছে — ওই বছরে কত লাভ হয়েছিল, সেটাই মুছে গেল।');
+    }
+
+    /**
+     * ⭐ তিন বছরের পুরনো একটা ভ্যানও ব্যবস্থায় তোলা যায়।
+     *
+     * ⛔ আগে যেত না: কেনার তারিখে দাখিলা বসানোর চেষ্টা হত, আর
+     * ওই তারিখ কোনো চালু অর্থবছরে না পড়ায় সব ফিরে যেত — **সম্পদের
+     * সারিটাই তৈরি হত না**।
+     *
+     * ⭐ আর তিন বছরের ক্ষয়টাও সাথে আসে, তাই খাতায় জিনিসটা নতুন
+     * দেখায় না। ⚠️ ক্ষয়টা খরচে যায় না — ওটা আগের বছরগুলোর।
+     */
+    public function test_a_three_year_old_van_can_be_brought_in(): void
+    {
+        $spentBefore = $this->expenseTotal();
+
+        $asset = app(FixedAssetService::class)->register([
+            'name' => 'Old Van',
+            'acquired_on' => $this->year->starts_on->copy()->subYears(3)->toDateString(),
+            'cost' => '100000',
+            'salvage' => '0',
+            'life_months' => 60,
+            'asset_account_id' => Account::query()->postable()->where('code', '1202')->value('id'),
+            'accumulated_account_id' => StandardChart::find(StandardChart::ACCUMULATED_DEPRECIATION)?->id,
+            'expense_account_id' => StandardChart::find(StandardChart::DEPRECIATION_EXPENSE)?->id,
+            'funded_by' => FixedAssetService::FUNDED_OPENING,
+            'opening_accumulated' => '60000',
+        ]);
+
+        $this->assertNotNull($asset->fresh(), 'সম্পদের সারিটাই তৈরি হয়নি।');
+
+        // ⭐ খাতায় জিনিসটার দাম এখন বাকি দামই — ১,০০,০০০ বিয়োগ ৬০,০০০
+        $this->assertSame(0, bccomp($asset->fresh()->bookValue(), '40000', 4),
+            'পুরনো ক্ষয়টা খাতায় ওঠেনি — ভ্যানটা নতুন হিসেবেই ঢুকল।');
+
+        // ⚠️ আর ওই ক্ষয় এই বছরের খরচ নয়
+        $this->assertSame($spentBefore, $this->expenseTotal(),
+            'পুরনো ক্ষয়টা এই বছরের খরচে বসেছে — প্রথম মাসেই লাভ খেয়ে ফেলত।');
+    }
+
+    /** খরচের খাতগুলোর যোগফল। */
+    private function expenseTotal(): string
+    {
+        return (string) LedgerEntry::query()
+            ->join('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
+            ->where('accounts.type', Account::EXPENSE)
+            ->sum(DB::raw('ledger_entries.debit - ledger_entries.credit'));
+    }
+
+    /**
+     * ⭐ বছর আবার খুলে তারপর আবার বন্ধ করা যায় — তিন ধাপেই খাতা মেলে।
+     *
+     * ⛔ আগে যেত না: বন্ধ করার দিন পরের বছরটা তৈরি হয়, আর খোলার
+     * সময় সেটা মোছা হয় না — তাই দ্বিতীয়বার বন্ধ করতে গেলে নিজের
+     * তৈরি বছরটাকেই "সংঘর্ষ" বলত।
+     */
+    public function test_a_reopened_year_can_be_closed_again(): void
+    {
+        $this->trade(income: '50000', expense: '30000');
+
+        $service = app(YearEndService::class);
+        $owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
+
+        $service->close($this->year);
+        $this->assertTrue($this->sheet()['agrees'], 'প্রথম বন্ধের পর খাতা মেলে না।');
+
+        $service->reopen($this->year->fresh(), $owner);
+        $this->assertTrue($this->sheet()['agrees'], 'আবার খোলার পর খাতা মেলে না।');
+
+        // ⭐ তৃতীয় ধাপ — এই ডাকটাই আগে ব্যতিক্রম ছুঁড়ত
+        $service->close($this->year->fresh());
+
+        $sheet = $this->sheet();
+
+        $this->assertTrue($sheet['agrees'], 'আবার বন্ধ করার পর খাতা মেলে না — বেমিল '.$sheet['difference']);
+
+        // ⚠️ দুইবার বন্ধ হলেও লাভ দ্বিগুণ হয় না
+        $this->assertSame(0, bccomp(app(YearEndService::class)->netResult($this->year->fresh()), '20000', 4));
+
+        // ⓘ আর একই সীমার দুইটা বছর তৈরি হয়নি
+        $this->assertSame(1, FinancialYear::query()
+            ->whereDate('starts_on', $this->year->ends_on->copy()->addDay()->toDateString())
+            ->count(), 'একই তারিখে দুইটা অর্থবছর বসেছে।');
+    }
+
+    /** স্থিতিপত্র, বছরের শেষ দিনে। */
+    private function sheet(): array
+    {
+        return app(BalanceSheetService::class)->build($this->year->ends_on->toDateString());
     }
 
     /** টাকা দিয়ে কেনা একটা সম্পদ — উৎস লেখা আছে, তাই নিবন্ধনেই দাখিলা বসে। */

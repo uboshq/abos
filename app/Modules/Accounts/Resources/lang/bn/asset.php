@@ -74,4 +74,7 @@ return [
     'funding_account' => 'কোন খাত থেকে',
     'funding_supplier' => 'কোন বিক্রেতা',
     'funding_account_missing' => 'হিসাবের ছকে :code খাতটা নেই — ছকটা বসিয়ে তারপর চেষ্টা করুন।',
+    'opening_accumulated' => 'এ পর্যন্ত যতটা ক্ষয় ধরা হয়েছে',
+    'opening_accumulated_hint' => 'পুরনো জিনিস হলে লিখুন — নতুন হলে শূন্য। এটা খরচে যায় না, সঞ্চিত মুনাফায় বসে।',
+    'opening_needs_the_chart' => 'হিসাবের মানদণ্ড ছকটা আগে বসাতে হবে — সঞ্চিত মুনাফার খাত নেই।',
 ];
