@@ -9,6 +9,7 @@ use App\Modules\Finance\Models\DepositMovement;
 use App\Modules\Finance\Models\HandLoanAccount;
 use App\Modules\Finance\Models\HandLoanMovement;
 use App\Modules\Finance\Models\InsurancePremium;
+use App\Modules\Finance\Models\Institution;
 use App\Modules\Finance\Models\RentalAdjustment;
 use App\Modules\Finance\Models\RentalContract;
 use App\Modules\Finance\Models\Withdrawal;
@@ -62,7 +63,16 @@ return [
      *
      * মাস্টার ডাটার উপরও, কারণ খরচের কেন্দ্র ও কর ওখানে বসে।
      */
-    'depends_on' => ['accounts', 'master_data'],
+    'depends_on' => [
+        /*
+         * ⓘ নগদের পূর্বাভাস ক্রয় ও বিক্রয়ের বকেয়া পড়ে
+         * ([[CashForecast]]), আর ঝুঁকির বোর্ড মজুদ পড়ে
+         * ([[RiskBoard]])। ⚠️ তিনটার একটাও finance-এর উপর দাঁড়ায়
+         * না, তাই চক্র হয় না (২১ সেপ্টেম্বর ২০২৬ — সীমারেখার নিরীক্ষা)।
+         */
+        'purchase',
+        'sales',
+        'inventory','accounts', 'master_data'],
 
     'dashboard' => FinanceDashboard::class,
 
@@ -261,6 +271,20 @@ return [
              * নিজেই বলত না কোনটা আসল জায়গা।
              */
         ],
+    ],
+
+    /*
+     * ⭐ একজন ব্যক্তির টাকা কোন খাতে — মূলধনের কথা Finance-ই জানে।
+     *
+     * ⚠️ ২১ সেপ্টেম্বর ২০২৬: আগে Accounts নিজে `CapitalEntry` খুঁজত, আর
+     * তাতে তীরটা উল্টো হত — নিচের `depends_on`-এ লেখা আছে Finance
+     * accounts চেনে, উল্টোটা নয়। ⛔ Accounts-কে Finance চিনতে হলে
+     * Finance বন্ধ করে দিলে ভাউচারের পর্দাই ভাঙত।
+     *
+     * ⓘ এখন কথাটা যার, সে-ই বলে; Accounts কেবল চুক্তিটা চায়।
+     */
+    'bindings' => [
+        \App\Core\Contracts\KnowsWhereAPersonsMoneyBelongs::class => \App\Modules\Finance\Services\CapitalContributors::class,
     ],
 
     'permissions' => [
@@ -504,6 +528,21 @@ return [
      * ⓘ ১৪ সেপ্টেম্বর ২০২৬-এ মূলধনের সারিতে ঠিক এটাই ঘটছিল, আর ধরা
      * পড়েছিল কেবল পর্দায় তাকিয়ে।
      */
+    /*
+     * ⭐ এক নামে দুইটা প্রতিষ্ঠান নয় — ২১ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ প্রতিষ্ঠানের তালিকাটাই বসানো হয়েছিল যেন "IBBL" আর "Islami Bank"
+     * দুই ব্যাংক না হয়ে যায়। ⚠️ কিন্তু তালিকায় নতুন নাম যোগ করার
+     * সময় কোনো পাহারা ছিল না — একই ব্যাংক দুইবার লেখা যেত, আর তখন
+     * "এই ব্যাংকে আমাদের মোট কত" প্রশ্নটাই আবার উত্তরহীন হত।
+     *
+     * ⓘ পাহারাটা নরম ([[DuplicationEngine]]) — নাম মিললে থামে, কিন্তু
+     * জেনেশুনে এগোনো যায়: একই নামে দুই শাখা সত্যিই থাকতে পারে।
+     */
+    'duplicates' => [
+        ['model' => Institution::class, 'name' => ['name_en', 'name_bn']],
+    ],
+
     'drill_sources' => [
         'capital_entry' => CapitalEntry::class,
         'insurance_premium' => InsurancePremium::class,

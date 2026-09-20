@@ -7,13 +7,15 @@ use App\Core\Services\DataScope;
 use App\Core\Services\FormIsNotSubmittedTwice;
 use App\Core\Services\ListExport;
 use App\Core\Services\Ownership;
+use App\Core\Services\PermissionOverrides;
+use App\Core\Contracts\KnowsWhereAPersonsMoneyBelongs;
+use App\Core\Services\NobodyKnowsWhereTheMoneyBelongs;
 use App\Core\Services\SettingsService;
 use App\Core\Services\ShellFacts;
 use App\Core\Support\AlpineLiteral;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\Csp;
 use App\Models\User;
-use App\Models\UserPermissionOverride;
 use App\Modules\SystemAdmin\Policies\UserPolicy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
@@ -60,17 +62,21 @@ class AppServiceProvider extends ServiceProvider
          * ব্যতিক্রম অন্যটায় খাটার কথা নয়। প্রসঙ্গ বসানো না থাকলে
          * (কনসোল, সিডার) কিছুই খোঁজা হয় না।
          */
+        /*
+         * ⚠️ ব্যতিক্রমগুলো একবারে তোলা হয়, প্রতি অনুমতিতে একবার নয় —
+         * ২০ সেপ্টেম্বর ২০২৬, অডিটে ধরা।
+         *
+         * ⛔ আগে এখানেই একটা `->first()` ছিল, আর সেটা প্রতিটা `can()`-এ
+         * একটা করে কোয়েরি করত। ⓘ মেনু আঁকতে ১৯২টা অনুমতি দেখা হয়, তাই
+         * পাতা খোলার আগেই ১৯২টা কোয়েরি — আর প্রায় সবগুলোই কিছু না পেয়ে
+         * ফিরত। হিসাবটা এখন [[PermissionOverrides]]-এ, উত্তর অবিকল একই।
+         */
         Gate::before(function (User $user, string $ability) {
             if (CompanyContext::id() === null) {
                 return null;
             }
 
-            $override = UserPermissionOverride::query()
-                ->where('user_id', $user->id)
-                ->where('permission', $ability)
-                ->first();
-
-            return $override?->granted;
+            return app(PermissionOverrides::class)->granted($user, $ability);
         });
 
         /*
@@ -96,6 +102,21 @@ class AppServiceProvider extends ServiceProvider
          * বস্তু হলে set()-এর অকার্যকর-করা সবার জন্যই কাজ করে।
          */
         $this->app->singleton(SettingsService::class);
+
+        /*
+         * ⭐ "একজন ব্যক্তির টাকা কোন খাতে" — কেউ না বললে "জানি না"।
+         *
+         * ── ⚠️ কেন কোরে একটা খালি বাস্তবায়ন বাঁধা থাকে ──────────────
+         * চুক্তিটা সত্যিকারে পূরণ করে Finance, আর সে নিজের `module.php`-র
+         * `bindings`-এ সেটা ঘোষণা করে — ঐ বাঁধন এর **উপরে** বসে।
+         * ⛔ কিন্তু Finance বন্ধ থাকতে পারে, আর তখন কনটেইনার চুক্তিটা
+         * মেটাতে না পেরে ছুঁড়ে ফেলত: ভাউচারের পর্দা ভাঙত ঠিক সেই
+         * নির্ভরতার কারণেই যেটা সরানো হয়েছে, কেবল অন্য চেহারায়।
+         *
+         * ⓘ এখানে কোনো মডিউলের নাম লেখা নেই — কোর কেবল একটা নিরীহ
+         * ডিফল্ট রাখে ([[App\Core\Contracts\KnowsWhereAPersonsMoneyBelongs]])।
+         */
+        $this->app->bind(KnowsWhereAPersonsMoneyBelongs::class, NobodyKnowsWhereTheMoneyBelongs::class);
 
         /*
          * রপ্তানির সংগ্রাহক — অনুরোধ প্রতি একটা।
@@ -156,6 +177,19 @@ class AppServiceProvider extends ServiceProvider
          * ধরে রাখা চলবে না — ওটা ঠিক উল্টো দিকের নিরাপত্তা-ফুটো হত।
          */
         $this->app->scoped(DataScope::class);
+
+        /*
+         * অনুমতির ব্যতিক্রম — অনুরোধ প্রতি একটা।
+         *
+         * ⓘ বস্তুটা ভেতরে ব্যতিক্রমগুলো জমিয়ে রাখে, আর সেটাই তার পুরো
+         * কাজ ([[PermissionOverrides]])। ⛔ বাঁধন না থাকলে প্রতিটা
+         * `app(...)` নতুন খালি স্মৃতি বানাত, আর ১৯২টা কোয়েরি আগের মতোই
+         * থাকত — কেবল কোডটা দেখতে সাজানো লাগত।
+         *
+         * ⚠️ scoped, singleton নয়: পরের অনুরোধে আগের ব্যবহারকারীর
+         * ব্যতিক্রম ধরে রাখা মানে সোজা নিরাপত্তা-ফুটো।
+         */
+        $this->app->scoped(PermissionOverrides::class);
     }
 
     /**

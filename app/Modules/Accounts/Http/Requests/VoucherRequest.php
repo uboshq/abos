@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Accounts\Http\Requests;
 
 use App\Core\Services\PartyRegistry;
+use App\Core\Contracts\KnowsWhereAPersonsMoneyBelongs;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\Money;
 use App\Modules\Accounts\Models\Account;
@@ -267,10 +268,16 @@ class VoucherRequest extends FormRequest
          * ⚠️ কেবল তাঁদের জন্য যাঁদের মূলধনের রেকর্ড আছে — একজন অচেনা ব্যক্তির
          * টাকা আন্দাজে মূলধন বানালে ঠিক সেই ভুলটাই ফিরত যেটা 5e7d508c সারাল।
          */
-        if ($code === null && (string) $this->input('type') === Voucher::RECEIPT && $type === 'person'
-            && class_exists(\App\Modules\Finance\Models\CapitalEntry::class)
-            && \App\Modules\Finance\Models\CapitalEntry::query()->where('person_id', $partyId)->exists()) {
-            $code = StandardChart::OWNER_CAPITAL;
+        if ($code === null && (string) $this->input('type') === Voucher::RECEIPT && $type === 'person') {
+            /*
+             * ⭐ চুক্তিটা জিজ্ঞেস করা হয়, মডিউলটা নয় — ২১ সেপ্টেম্বর ২০২৬।
+             *
+             * ⚠️ আগে এখানে সরাসরি `Finance\Models\CapitalEntry` ডাকা হত,
+             * আর তাতে তীরটা উল্টো ছিল ([[KnowsWhereAPersonsMoneyBelongs]])।
+             * ⓘ কেউ চুক্তিটা না মেটালে কোরের "জানি না" বাঁধনটা চলে, আর
+             * উত্তর `null` — তখন নিচের সাধারণ নিয়মই খাটে।
+             */
+            $code = app(KnowsWhereAPersonsMoneyBelongs::class)->accountCodeFor((int) $partyId);
         }
 
         if ($code === null) {

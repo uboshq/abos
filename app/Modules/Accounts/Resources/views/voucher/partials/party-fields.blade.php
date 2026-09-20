@@ -241,10 +241,15 @@
                     <span class="text-(--color-danger)" aria-hidden="true">*</span>
                 </span>
                 @php
-                    /* যাঁরা আগে মূলধন দিয়েছেন — তাঁদের বাছলে ঘরটায় মূলধন (3100) নিজে বসে */
-                    $contributors = class_exists(\App\Modules\Finance\Models\CapitalEntry::class)
-                        ? \App\Modules\Finance\Models\CapitalEntry::query()->distinct()->pluck('person_id')->map(fn ($id) => (string) $id)->values()->all()
-                        : [];
+                    /*
+                        যাঁরা আগে মূলধন দিয়েছেন — তাঁদের বাছলে ঘরটায় মূলধন (3100) নিজে বসে।
+
+                        ⚠️ ২১ সেপ্টেম্বর ২০২৬: আগে এখানে সরাসরি Finance-এর মডেল ডাকা হত,
+                        আর তাতে নির্ভরতার তীরটা উল্টো ছিল — Finance accounts চেনে, উল্টোটা
+                        নয়। ⓘ এখন চুক্তিটা জিজ্ঞেস করা হয়; কে উত্তর দিচ্ছে, দিচ্ছে কি না,
+                        এই পর্দা কিছুই জানে না ([[KnowsWhereAPersonsMoneyBelongs]])।
+                    */
+                    $contributors = app(\App\Core\Contracts\KnowsWhereAPersonsMoneyBelongs::class)->peopleItKnowsAbout();
                     $capitalAccount = (string) \App\Modules\Accounts\Models\Account::query()
                         ->where('code', \App\Modules\Accounts\Services\StandardChart::OWNER_CAPITAL)->value('id');
 

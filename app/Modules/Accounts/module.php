@@ -65,7 +65,13 @@ return [
      */
     'nav' => ['section' => 'finance', 'order' => 10],
 
-    'depends_on' => [],
+    'depends_on' => [
+        /*
+         * ⓘ ব্যাকআপ — অর্থের নিয়ন্ত্রণ পর্দা ব্যাকআপের অবস্থা দেখায়
+         * ([[FinanceControlController]])। ⚠️ চক্র হয় না: Backup
+         * কারও উপর দাঁড়ায় না (২১ সেপ্টেম্বর ২০২৬ — সীমারেখার নিরীক্ষা)।
+         */
+        'backup',],
 
     'dashboard' => AccountsDashboard::class,
 

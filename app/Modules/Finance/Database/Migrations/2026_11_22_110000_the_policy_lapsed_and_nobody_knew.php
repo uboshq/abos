@@ -45,8 +45,9 @@ return new class extends Migration
             // কী — "ট্রাক ঢাকা মেট্রো ট ১১-১২৩৪", "নেত্রকোনা গুদাম"
             $table->string('subject', 200);
 
-            $table->decimal('sum_insured', 18, 2)->default(0);
-            $table->decimal('premium', 18, 2)->default(0);
+            /* ⚠️ ১৮,৪ — বাকি সব টাকার ঘরের মতোই (২১ সেপ্টেম্বর ২০২৬) */
+            $table->decimal('sum_insured', 18, 4)->default(0);
+            $table->decimal('premium', 18, 4)->default(0);
 
             $table->date('starts_on');
             $table->date('ends_on');
@@ -80,7 +81,7 @@ return new class extends Migration
             // এই প্রিমিয়াম কোন মেয়াদের
             $table->date('period_from');
             $table->date('period_to');
-            $table->decimal('amount', 18, 2);
+            $table->decimal('amount', 18, 4);
 
             // draft · posted — পোস্ট হয় পরিশোধ ভাউচারের সাথে
             $table->string('status', 16)->default('draft');

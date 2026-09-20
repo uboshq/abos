@@ -39,7 +39,12 @@ return [
     'nav' => ['section' => 'people', 'order' => 20],
 
     // কারও উপর নির্ভর করে না: অডিট কোরের ইঞ্জিন, কোনো মডিউলের নয়
-    'depends_on' => [],
+    'depends_on' => [
+        /*
+         * ⓘ তথ্য রাখার মেয়াদের পর্দা অর্থের সারিগুলোও দেখায়।
+         * ⚠️ চক্র হয় না: finance governance চেনে না (২১ সেপ্টেম্বর ২০২৬ — সীমারেখার নিরীক্ষা)।
+         */
+        'finance',],
 
     'dashboard' => GovernanceDashboard::class,
 
