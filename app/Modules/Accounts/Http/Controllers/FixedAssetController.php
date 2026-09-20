@@ -10,6 +10,8 @@ use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\FixedAsset;
 use App\Modules\Accounts\Services\FixedAssetService;
 use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\MasterData\Models\Person;
+use App\Modules\Supplier\Models\Supplier;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -94,6 +96,15 @@ class FixedAssetController extends Controller implements HasMiddleware
         return view('accounts::asset.create', [
             'menu' => $this->menu->forUser($request->user()),
             'assetAccounts' => $this->under(StandardChart::FIXED_ASSETS),
+
+            /*
+             * ⭐ "টাকাটা কোথা থেকে এল" — ২০ সেপ্টেম্বর ২০২৬, মালিকের
+             * *"ok tik koro"*। তিনটা তালিকা, কারণ উত্তরটা তিন রকম হতে
+             * পারে: কোন মানুষ, কোন খাত, নাকি কোন বিক্রেতা।
+             */
+            'people' => Person::query()->active()->orderBy('name_en')->get(),
+            'moneyAccounts' => Account::query()->money()->active()->orderBy('code')->get(),
+            'suppliers' => Supplier::query()->where('is_active', true)->orderBy('name_en')->get(),
         ]);
     }
 
@@ -122,6 +133,25 @@ class FixedAssetController extends Controller implements HasMiddleware
             'life_months' => ['nullable', 'integer', 'min:1', 'max:1200'],
             'rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'narration' => ['nullable', 'string', 'max:500'],
+
+            /*
+             * ⓘ উৎসটা বাধ্যতামূলক — "কিছু বলিনি" বলে আর পার পাওয়া যায় না।
+             * ⛔ আগে ঘরটাই ছিল না, আর তাতেই পাঁচ লাখ টাকার সম্পদ খাতার
+             * বাইরে থেকে যেত ([[FixedAssetService::register()]])।
+             */
+            'funded_by' => ['required', Rule::in(FixedAssetService::FUNDING_WAYS)],
+            'funding_person_id' => [
+                Rule::requiredIf(fn () => $request->input('funded_by') === FixedAssetService::FUNDED_CAPITAL),
+                'nullable', 'integer', 'exists:mdm_people,id',
+            ],
+            'funding_account_id' => [
+                Rule::requiredIf(fn () => $request->input('funded_by') === FixedAssetService::FUNDED_MONEY),
+                'nullable', 'integer', 'exists:accounts,id',
+            ],
+            'funding_supplier_id' => [
+                Rule::requiredIf(fn () => $request->input('funded_by') === FixedAssetService::FUNDED_CREDIT),
+                'nullable', 'integer', 'exists:suppliers,id',
+            ],
         ]);
 
         $asset = $this->assets->register([

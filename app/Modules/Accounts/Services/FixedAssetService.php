@@ -26,21 +26,52 @@ use Illuminate\Validation\ValidationException;
  */
 final class FixedAssetService
 {
+    /** মালিক বা বিনিয়োগকারী দিয়েছেন — মূলধনে ক্রেডিট, তাঁর নামে। */
+    public const FUNDED_CAPITAL = 'capital';
+
+    /** ব্যাংক বা নগদ থেকে দেওয়া হয়েছে — ঐ খাতে ক্রেডিট। */
+    public const FUNDED_MONEY = 'money';
+
+    /** বাকিতে কেনা — বিক্রেতার পাওনায় ক্রেডিট। */
+    public const FUNDED_CREDIT = 'credit';
+
+    /** পুরনো খাতার জের — ব্যবসার আগে থেকেই ছিল। */
+    public const FUNDED_OPENING = 'opening';
+
+    /** আগেই ভাউচার কাটা হয়েছে — এখানে কিছু বসবে না। */
+    public const FUNDED_ALREADY = 'already';
+
+    /** @var list<string> */
+    public const FUNDING_WAYS = [
+        self::FUNDED_CAPITAL,
+        self::FUNDED_MONEY,
+        self::FUNDED_CREDIT,
+        self::FUNDED_OPENING,
+        self::FUNDED_ALREADY,
+    ];
+
     public function __construct(
         private readonly NumberSeriesEngine $numbers,
         private readonly PostingEngine $posting,
     ) {}
 
     /**
-     * খাতায় একটা সম্পদ তোলা।
+     * খাতায় একটা সম্পদ তোলা — আর টাকাটা কোথা থেকে এল, সেটাও।
      *
-     * ── কেনার দাখিলা এখানে বসে না ───────────────────────────────────
-     * জিনিসটা কেনা হয়েছে একটা ক্রয় বা পেমেন্ট ভাউচার দিয়ে, আর ওখানেই
-     * টাকাটা সম্পদের খাতে ডেবিট হয়েছে। এখানে আবার বসালে একই কেনা
-     * দুইবার খাতায় উঠত।
+     * ── কেন এখন দাখিলাও এখানে বসে, ২০ সেপ্টেম্বর ২০২৬ ───────────────
+     * আগে এখানে কোনো দাখিলা বসত না, আর ধরে নেওয়া হত জিনিসটা একটা ক্রয়
+     * বা পেমেন্ট ভাউচার দিয়ে কেনা হয়েছে। ⛔ মালিক মেপে দেখালেন সেটা
+     * হয় না: অফিসের পাঁচ লাখ টাকার কম্পিউটার বসিয়ে দেখা গেল খাতায়
+     * একটা সারিও ওঠেনি — অথচ অবচয় ঠিকই বসতে থাকে (খরচ ডেবিট / সঞ্চিত
+     * অবচয় ক্রেডিট)। ⚠️ ফল: স্থিতিপত্রে সম্পদের দাম **ঋণাত্মক**, আর
+     * লাভ-ক্ষতিতে এমন জিনিসের খরচ যেটা খাতা অনুযায়ী নেই-ই।
      *
-     * এই খাতাটার কাজ আলাদা: জিনিসটা কী, কত আয়ু, কোন পদ্ধতিতে ক্ষয়
-     * ধরা হবে — অর্থাৎ অবচয় চালানোর জন্য যা যা জানা দরকার।
+     * ⭐ তাই ফর্ম এখন জিজ্ঞেস করে "টাকাটা কোথা থেকে এল", আর উত্তর ধরে
+     * দাখিলাটা এখানেই বসে: সম্পদের খাত ডেবিট / উৎস ক্রেডিট।
+     *
+     * ⓘ `already` বিকল্পটা ইচ্ছাকৃত — যিনি আগেই ভাউচার কেটেছেন তিনি
+     * ওটা বেছে নেন, আর তখন কিছুই বসে না। ওটা না রাখলে পুরনো অভ্যাসে
+     * কাজ করা মানুষের কেনা **দুইবার** খাতায় উঠত।
      *
      * @param  array<string, mixed>  $data
      */
@@ -72,15 +103,101 @@ final class FixedAssetService
             ]);
         }
 
-        return FixedAsset::create([
-            ...$data,
-            'company_id' => CompanyContext::id(),
-            'branch_id' => $data['branch_id'] ?? CompanyContext::branchId(),
-            'document_no' => $this->numbers->next('FA'),
-            'method' => $method,
-            'status' => FixedAsset::ACTIVE,
-            'created_by' => auth()->id(),
-        ]);
+        $funding = $this->fundingFrom($data);
+
+        unset($data['funded_by'], $data['funding_person_id'], $data['funding_account_id'], $data['funding_supplier_id']);
+
+        return DB::transaction(function () use ($data, $method, $funding) {
+            $asset = FixedAsset::create([
+                ...$data,
+                'company_id' => CompanyContext::id(),
+                'branch_id' => $data['branch_id'] ?? CompanyContext::branchId(),
+                'document_no' => $this->numbers->next('FA'),
+                'method' => $method,
+                'status' => FixedAsset::ACTIVE,
+                'created_by' => auth()->id(),
+            ]);
+
+            if ($funding !== null) {
+                $this->posting->post(
+                    sourceType: FixedAsset::drillSourceType(),
+                    sourceId: $asset->id,
+                    trxDate: $asset->acquired_on->toDateString(),
+                    lines: [
+                        [
+                            'account_id' => (int) $asset->asset_account_id,
+                            'debit' => (string) $asset->cost,
+                            'narration' => $asset->name,
+                        ],
+                        [
+                            'account_id' => $funding['account_id'],
+                            'credit' => (string) $asset->cost,
+                            'party_type' => $funding['party_type'],
+                            'party_id' => $funding['party_id'],
+                            'narration' => $asset->name,
+                        ],
+                    ],
+                    documentNo: $asset->document_no,
+                );
+            }
+
+            return $asset;
+        });
+    }
+
+    /**
+     * টাকাটা কোথা থেকে এল — উত্তরটা খাতার একটা খাতে অনুবাদ করা।
+     *
+     * ⚠️ খাতগুলো ছকে না থাকলে থামা হয়, নীরবে অন্য খাতে বসানো হয় না:
+     * ভুল খাতে বসা পাঁচ লাখ খুঁজে বের করার চেয়ে একটা পরিষ্কার ভুল-বার্তা
+     * ঢের ভালো।
+     *
+     * @param  array<string, mixed>  $data
+     * @return array{account_id: int, party_type: ?string, party_id: ?int}|null
+     */
+    private function fundingFrom(array $data): ?array
+    {
+        $how = (string) ($data['funded_by'] ?? self::FUNDED_ALREADY);
+
+        if ($how === self::FUNDED_ALREADY) {
+            return null;
+        }
+
+        if ($how === self::FUNDED_MONEY) {
+            return [
+                'account_id' => (int) $data['funding_account_id'],
+                'party_type' => null,
+                'party_id' => null,
+            ];
+        }
+
+        $code = match ($how) {
+            self::FUNDED_CAPITAL => StandardChart::OWNER_CAPITAL,
+            self::FUNDED_CREDIT => StandardChart::VENDOR_PAYABLE,
+            default => StandardChart::RETAINED_EARNINGS,
+        };
+
+        $account = StandardChart::find($code);
+
+        if ($account === null) {
+            throw ValidationException::withMessages([
+                'funded_by' => __('accounts::asset.funding_account_missing', ['code' => $code]),
+            ]);
+        }
+
+        return [
+            'account_id' => (int) $account->id,
+            'party_type' => match ($how) {
+                self::FUNDED_CAPITAL => 'person',
+                self::FUNDED_CREDIT => 'supplier',
+                default => null,
+            },
+            'party_id' => match ($how) {
+                self::FUNDED_CAPITAL => (int) $data['funding_person_id'],
+                self::FUNDED_CREDIT => (int) $data['funding_supplier_id'],
+                default => null,
+            },
+        ];
     }
 
     /**

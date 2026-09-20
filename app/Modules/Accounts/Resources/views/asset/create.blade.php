@@ -100,6 +100,72 @@
                           bg-(--color-surface-app) px-2 text-end">
         </label>
 
+        {{-- ⭐ টাকাটা কোথা থেকে এল — ২০ সেপ্টেম্বর ২০২৬।
+
+             ⛔ আগে এই প্রশ্নটাই ছিল না, তাই সম্পদটা কেবল একটা রেকর্ড হয়ে
+             থাকত আর খাতায় একটা সারিও উঠত না — অথচ অবচয় বসতে থাকত। মালিক
+             অফিসের কম্পিউটার বসিয়ে ধরলেন: "এই টাকাটা কোথা থেকে যাবে আর
+             কোথায় জমা হবে?"
+
+             ⓘ শেষ বিকল্পটা ("আগেই বসানো") না রাখলে পুরনো অভ্যাসে যিনি
+             ভাউচার কেটে আসেন, তাঁর কেনা দুইবার খাতায় উঠত। --}}
+        <fieldset class="md:col-span-2 lg:col-span-4"
+                  x-data="{ funded: '{{ old('funded_by', \App\Modules\Accounts\Services\FixedAssetService::FUNDED_CAPITAL) }}' }">
+            <legend class="text-sm font-medium">{{ __('accounts::asset.funded_by') }}</legend>
+            <p class="mb-2 text-2xs text-(--color-ink-muted)">{{ __('accounts::asset.funded_by_note') }}</p>
+
+            <div class="grid gap-2 md:grid-cols-2">
+                @foreach (\App\Modules\Accounts\Services\FixedAssetService::FUNDING_WAYS as $way)
+                    <label class="flex items-start gap-2 rounded-(--radius-field) border border-(--color-border) px-3 py-2">
+                        <input type="radio" name="funded_by" value="{{ $way }}" x-model="funded"
+                               class="mt-1 size-4 shrink-0">
+                        <span class="min-w-0">
+                            <span class="block text-sm font-medium">{{ __('accounts::asset.funded_'.$way) }}</span>
+                            <span class="block text-2xs text-(--color-ink-muted)">{{ __('accounts::asset.funded_'.$way.'_note') }}</span>
+                        </span>
+                    </label>
+                @endforeach
+            </div>
+
+            <div class="mt-2 grid gap-3 md:grid-cols-2">
+                <label class="flex flex-col gap-1" x-show="funded === 'capital'">
+                    <span class="text-sm font-medium">{{ __('accounts::asset.funding_person') }}</span>
+                    <select name="funding_person_id"
+                            class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border)
+                                   bg-(--color-surface-app) px-2">
+                        <option value="">—</option>
+                        @foreach ($people as $person)
+                            <option value="{{ $person->id }}" @selected(old('funding_person_id') == $person->id)>{{ $person->name() }}</option>
+                        @endforeach
+                    </select>
+                </label>
+
+                <label class="flex flex-col gap-1" x-show="funded === 'money'" x-cloak>
+                    <span class="text-sm font-medium">{{ __('accounts::asset.funding_account') }}</span>
+                    <select name="funding_account_id"
+                            class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border)
+                                   bg-(--color-surface-app) px-2">
+                        <option value="">—</option>
+                        @foreach ($moneyAccounts as $account)
+                            <option value="{{ $account->id }}" @selected(old('funding_account_id') == $account->id)>{{ $account->label() }}</option>
+                        @endforeach
+                    </select>
+                </label>
+
+                <label class="flex flex-col gap-1" x-show="funded === 'credit'" x-cloak>
+                    <span class="text-sm font-medium">{{ __('accounts::asset.funding_supplier') }}</span>
+                    <select name="funding_supplier_id"
+                            class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border)
+                                   bg-(--color-surface-app) px-2">
+                        <option value="">—</option>
+                        @foreach ($suppliers as $supplier)
+                            <option value="{{ $supplier->id }}" @selected(old('funding_supplier_id') == $supplier->id)>{{ $supplier->name() }}</option>
+                        @endforeach
+                    </select>
+                </label>
+            </div>
+        </fieldset>
+
         <div class="flex flex-wrap items-end gap-2 md:col-span-2 lg:col-span-4">
             <x-ui.button type="submit" tone="primary">
                 {{ __('accounts::asset.register_action') }}
