@@ -90,6 +90,25 @@ class ErrorLogController extends Controller implements HasMiddleware
      */
     public function acknowledge(Request $request, ErrorEvent $error): RedirectResponse
     {
+        /*
+         * ⛔⛔ অন্য কোম্পানির ভুল চাপা দেওয়া যায় না — ২১ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⚠️ যা ভাঙা ছিল ──────────────────────────────────────────
+         * **তালিকাটা** ছাঁকা হয়েছিল (উপরে, `index()`), কিন্তু **কাজটা**
+         * হয়নি। ⓘ রুট বাইন্ডিং যেকোনো কোম্পানির সারি ধরে আনত, তাই id
+         * টাইপ করে অন্য কোম্পানির একটা ভুল "দেখেছি" বলে তালিকা থেকে
+         * সরিয়ে দেওয়া যেত — আর ঐ কোম্পানির কেউ কোনোদিন জানত না যে
+         * ভুলটা ঘটেছিল।
+         *
+         * ⓘ `company_id` `null` হলে সেটা ব্যবস্থার নিজের ভুল (কোনো
+         * কোম্পানির প্রসঙ্গ ছাড়া ঘটা), আর সেটা সবাই দেখতে ও চাপতে
+         * পারেন — তালিকাতেও ঠিক ঐ নিয়মেই আসে।
+         */
+        abort_unless(
+            $error->company_id === null || (int) $error->company_id === (int) CompanyContext::id(),
+            404,
+        );
+
         $error->forceFill([
             'acknowledged_at' => now(),
             'acknowledged_by' => $request->user()?->getKey(),

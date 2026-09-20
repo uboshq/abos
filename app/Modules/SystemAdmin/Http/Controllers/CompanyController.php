@@ -77,6 +77,20 @@ class CompanyController extends Controller implements HasMiddleware
              * নিজের — আর গোনা হচ্ছে কেবল সংখ্যা, কারো ডাটা নয়।
              */
             'companies' => Company::query()
+                /*
+                 * ⛔⛔ কেবল **আপনার** কোম্পানিগুলো — ২১ সেপ্টেম্বর ২০২৬।
+                 *
+                 * ⚠️ উপরের মন্তব্যটা লেখা ছিল "যাঁর কাছে সব কোম্পানিই নিজের",
+                 * আর ঐ অনুমানটাই ভুল ছিল: বহু-কোম্পানির ইনস্টলে **প্রতিটা
+                 * কোম্পানির নিজের super_admin** এই অনুমতি ধরে রাখেন। ⛔ ফলে
+                 * ক কোম্পানির মালিক খ কোম্পানির নাম, কোড, বিআইএন ও টিআইএন
+                 * তালিকাতেই পড়ে ফেলতেন।
+                 *
+                 * ⓘ সুইচ করার যুক্তিটা এতে ভাঙে না — যে কোম্পানিতে আপনি
+                 * সত্যিই আছেন, সেটা তালিকায় থাকেই ([[User::canAccessCompany()]]
+                 * একই প্রশ্ন, একই উত্তর)।
+                 */
+                ->whereIn('id', $request->user()?->companies()->pluck('companies.id') ?? [])
                 ->withCount(['branches' => fn ($q) => $q->withoutGlobalScopes()])
 
                 /*
@@ -252,8 +266,40 @@ class CompanyController extends Controller implements HasMiddleware
         ]);
     }
 
+    /**
+     * ⛔⛔ এই কোম্পানিটা কি আদৌ আপনার — ২১ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⚠️ যা ভাঙা ছিল ──────────────────────────────────────────
+     * `Company`-তে টেন্যান্ট স্কোপ নেই, আর সেটা ইচ্ছাকৃত (অন্য কোম্পানিতে
+     * যেতে হলে আগে তাকে দেখতে পাওয়া লাগে)। ⛔ কিন্তু তার মানে রুট
+     * বাইন্ডিং ইনস্টলের **যেকোনো** কোম্পানি ধরে আনত, আর একমাত্র পাহারা
+     * ছিল `can:system_admin.company.manage` — যেটা **প্রতিটা কোম্পানির
+     * নিজের super_admin ধরে রাখেন**।
+     *
+     * ⓘ ফল: ক কোম্পানির মালিক খ কোম্পানির নাম, বিআইএন, টিআইএন ও ঠিকানা
+     * পড়তে ও বদলাতে পারতেন, ভিতরে শাখা বানাতে পারতেন, আর নিষ্ক্রিয়
+     * করে খ-এর সব ব্যবহারকারীকে তালাবন্ধ করে দিতে পারতেন।
+     *
+     * ── কেন "চলতি কোম্পানি" নয়, "আপনার কোম্পানিগুলো" ──────────
+     * ⓘ একজন মানুষ সত্যিই দুইটা কোম্পানি চালাতে পারেন, আর তখন অন্যটার
+     * সেটিংস খোলার জন্য আগে সেখানে সুইচ করা অর্থহীন হত। ⚠️ তাই প্রশ্নটা
+     * "এটা কি চলতি কোম্পানি" নয় — "এটা কি আপনারগুলোর একটা"।
+     *
+     * ⭐ আর সেই প্রশ্নটার উত্তর আগে থেকেই ছিল: [[User::canAccessCompany()]],
+     * ঠিক যেটা কোম্পানি বদলানোর সময় মাপা হয়। দুই দরজায় দুই নিয়ম থাকলে
+     * একদিন একটা শিথিল হত।
+     *
+     * ⚠️ ৪০৪, ৪০৩ নয় — যে কোম্পানিতে আপনার কিছু নেই, তার অস্তিত্ব আছে
+     * কি না সেটাও আপনার জানার কথা নয়।
+     */
+    private function mustBeYourCompany(Request $request, Company $company): void
+    {
+        abort_unless($request->user()?->canAccessCompany((int) $company->id), 404);
+    }
     public function edit(Request $request, Company $company): View
     {
+        $this->mustBeYourCompany($request, $company);
+
         return view('system_admin::company.form', [
             'menu' => $this->menu->forUser($request->user()),
             'company' => $company,
@@ -267,6 +313,8 @@ class CompanyController extends Controller implements HasMiddleware
 
     public function update(Request $request, Company $company): RedirectResponse
     {
+        $this->mustBeYourCompany($request, $company);
+
         $data = $request->validate([
             /*
              * ⭐ কোডটা বদলানো যায় — কিন্তু কেবল কাগজ বেরোনোর আগে পর্যন্ত।
@@ -454,6 +502,8 @@ class CompanyController extends Controller implements HasMiddleware
     /** নতুন শাখা — চলতি নয়, যে কোম্পানির পাতা খোলা আছে তার। */
     public function storeBranch(Request $request, Company $company): RedirectResponse
     {
+        $this->mustBeYourCompany($request, $company);
+
         $data = $request->validate([
             'code' => ['required', 'string', 'max:16', 'alpha_dash'],
             'name_en' => ['required', 'string', 'max:160'],
@@ -489,8 +539,10 @@ class CompanyController extends Controller implements HasMiddleware
      * মুহূর্তে এমন একটা কোম্পানিতে বসে থাকতেন যেটা আর নেই, আর পরের
      * ক্লিকেই সব পর্দা ভাঙত।
      */
-    public function toggle(Company $company): RedirectResponse
+    public function toggle(Request $request, Company $company): RedirectResponse
     {
+        $this->mustBeYourCompany($request, $company);
+
         if ($company->id === CompanyContext::id() && $company->is_active) {
             return back()->withErrors([
                 'is_active' => __('system_admin::message.cannot_disable_current'),

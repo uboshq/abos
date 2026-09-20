@@ -310,11 +310,74 @@ final class TheBillWentOutAndNobodyKeptCountTest extends TestCase
         ]));
     }
 
+    /**
+     * ⛔ বাতিল করা লিংক আর কিছু খোলে না — ২১ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⚠️ যা ভাঙা ছিল ──────────────────────────────────────────────
+     * `revoked_at` ঘরটা প্রথম দিন থেকেই ছিল আর [[DocumentShare::isAlive()]]
+     * ওটা পড়তও — কিন্তু **কেউ কোনোদিন লিখত না**। ⓘ ভুল নম্বরে বিলটা
+     * পাঠিয়ে ফেললে ৩০ দিন ধরে অচেনা কারো হাতে কাগজটা খোলা থাকত
+     * (abos-8b-র অডিট, খ৪)।
+     */
+    public function test_a_revoked_link_opens_nothing(): void
+    {
+        $share = app(PaperTrail::class)->share(
+            routeName: 'accounts.voucher.print',
+            routeParams: ['voucher' => $this->voucher->id],
+            documentType: self::KIND,
+            documentId: $this->voucher->id,
+            paper: PaperSize::A4,
+        );
+
+        // ⭐ আগে লিংকটা কাজ করে — নাহলে পরীক্ষাটা কিছুই প্রমাণ করত না
+        $this->get(route('paper.shared', $share->token))->assertOk();
+
+        $this->post(route('paper.revoke', $share))->assertRedirect();
+
+        $this->assertNotNull($share->fresh()->revoked_at, 'বাতিলের সময়টা বসেনি।');
+
+        auth()->logout();
+
+        $this->get(route('paper.shared', $share->token))->assertNotFound();
+    }
+
+    /**
+     * ⛔ যাঁর ঐ কাগজ ছাপার অনুমতি নেই, তিনি লিংকটাও থামাতে পারেন না।
+     */
+    public function test_revoking_needs_the_papers_own_permission(): void
+    {
+        $share = app(PaperTrail::class)->share(
+            routeName: 'accounts.voucher.print',
+            routeParams: ['voucher' => $this->voucher->id],
+            documentType: self::KIND,
+            documentId: $this->voucher->id,
+            paper: PaperSize::A4,
+        );
+
+        $this->actingAs($this->nobody())
+            ->post(route('paper.revoke', $share))
+            ->assertForbidden();
+
+        $this->assertNull($share->fresh()->revoked_at);
+    }
+
+    /**
+     * এই কোম্পানিরই একজন, কিন্তু কোনো ক্ষমতা নেই।
+     *
+     * ⚠️ কোম্পানিতে যুক্ত করাটা জরুরি, আর সেটা ২১ সেপ্টেম্বর ২০২৬-এ ধরা
+     * পড়েছে: যুক্ত না করলে কোম্পানির দেয়ালটাই আগে আটকাত (৪০৪), আর
+     * **অনুমতির পাহারাটা কোনোদিন মাপাই হত না** — পরীক্ষা সবুজ থাকত,
+     * অথচ যা প্রমাণ করার কথা তা প্রমাণ হত না।
+     */
     private function nobody(): User
     {
-        return User::factory()->create([
+        $user = User::factory()->create([
             'current_company_id' => CompanyContext::id(),
         ]);
+
+        $user->companies()->attach(CompanyContext::id(), ['is_active' => true]);
+
+        return $user;
     }
 
     private function postedVoucher(): Voucher

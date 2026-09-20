@@ -128,12 +128,28 @@ final class TheCompanyCodeCouldNeverBeFixedTest extends TestCase
         $this->assertSame('NEWCODE', $company->fresh()->code, 'সুপার অ্যাডমিনও বদলাতে পারলেন না।');
     }
 
+    /**
+     * একদম নতুন একটা কোম্পানি — আর মালিক তার ভিতরে।
+     *
+     * ⚠️ যুক্ত করাটা ২১ সেপ্টেম্বর ২০২৬-এ যোগ হয়েছে, কোম্পানির দেয়াল
+     * বসানোর সাথে: এখন অন্য কোম্পানির সেটিংস ছোঁয়া যায় না
+     * ([[Tests\Feature\Modules\SystemAdmin\OneCompanyCouldReachIntoAnotherTest]])।
+     *
+     * ⓘ সারিটা নকল কিছু নয় — আসল পথেও ঠিক এটাই ঘটে: কোম্পানি বানানোর
+     * পরপরই [[CompanyProvisioner::grantAccess()]] স্রষ্টাকে ভিতরে নেয়।
+     * ⛔ এখানে সরাসরি `Company::create()` ডাকায় ঐ ধাপটা বাদ পড়ত, আর
+     * তাতে এমন একটা কোম্পানি তৈরি হত যেটা **কারও নয়**।
+     */
     private function aFreshCompany(): Company
     {
-        return Company::query()->create([
+        $company = Company::query()->create([
             'code' => 'TMP',
             'name_en' => 'Temporary Name',
             'is_active' => true,
         ]);
+
+        $this->admin->companies()->syncWithoutDetaching([$company->id]);
+
+        return $company;
     }
 }

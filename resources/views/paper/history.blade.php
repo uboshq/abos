@@ -20,6 +20,48 @@
         </p>
     </div>
 
+    {{--
+        ⭐ এখনো বেঁচে থাকা গোপন লিংক — আর থামানোর বোতাম (২১ সেপ্টেম্বর ২০২৬)।
+
+        ── ⚠️ কেন এটা না থাকা একটা ফাঁক ছিল ────────────────────────────
+        ভুল নম্বরে বিলটা পাঠিয়ে ফেললে ৩০ দিন ধরে অচেনা কারো হাতে কাগজটা
+        খোলা থাকত, আর থামানোর কোনো পথ ছিল না। ⓘ ডেটাবেসে ঘরটা প্রথম দিন
+        থেকেই ছিল — কেবল কেউ কোনোদিন ওতে লিখত না।
+    --}}
+    @if ($shares->isNotEmpty())
+        <section data-boxed
+                 class="mb-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
+                        bg-(--color-surface-card)">
+            <header class="border-b border-(--color-border) px-4 py-2">
+                <h2 class="text-sm font-semibold">{{ __('core.print.live_links') }}</h2>
+                <p class="text-2xs text-(--color-ink-muted)">{{ __('core.print.live_links_hint') }}</p>
+            </header>
+
+            <ul class="divide-y divide-(--color-border)">
+                @foreach ($shares as $share)
+                    <li class="flex flex-wrap items-center gap-3 px-4 py-2 text-sm">
+                        <span class="text-(--color-ink-muted)">
+                            {{ __('core.print.days_left', ['n' => $share->daysLeft()]) }}
+                        </span>
+
+                        <span class="tabular-nums text-2xs text-(--color-ink-muted)">
+                            {{ __('core.print.opened_times', ['n' => $share->opened_count]) }}
+                        </span>
+
+                        <span class="flex-1"></span>
+
+                        <form method="POST" action="{{ route('paper.revoke', $share) }}">
+                            @csrf
+                            <x-ui.button type="submit" tone="secondary">
+                                {{ __('core.print.revoke_link') }}
+                            </x-ui.button>
+                        </form>
+                    </li>
+                @endforeach
+            </ul>
+        </section>
+    @endif
+
     @php
         $ways = [
             \App\Models\DocumentDelivery::PRINTED => 'core.print.way_printed',

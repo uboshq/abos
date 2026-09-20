@@ -152,6 +152,13 @@ Route::middleware('auth')->group(function () {
      */
     Route::get('/papers/history', [PaperHistoryController::class, 'show'])->name('paper.history');
 
+    /*
+     * ⛔ ভুল লোককে পাঠানো লিংকটা এখনই মেরে ফেলা — ২১ সেপ্টেম্বর ২০২৬।
+     * ⓘ `revoked_at` ঘরটা ছিল, লেখার পথ ছিল না (abos-8b-র অডিট, খ৪)।
+     */
+    Route::post('/papers/shares/{share}/revoke', [PaperShareController::class, 'revoke'])
+        ->whereNumber('share')->name('paper.revoke');
+
     Route::post('/locale/switch', [WorkspaceController::class, 'switchLocale'])->name('locale.switch');
     Route::post('/theme/switch', [WorkspaceController::class, 'switchTheme'])->name('theme.switch');
 });

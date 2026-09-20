@@ -78,7 +78,8 @@ class LoginHistoryController extends Controller implements HasMiddleware
              */
             ->where(fn (Builder $q) => $q
                 ->where('company_id', CompanyContext::id())
-                ->orWhereNull('company_id'))
+                ->orWhere(fn (Builder $w) => $w->whereNull('company_id')
+                    ->whereIn('identifier', self::identifiersHere())))
             ->with('user')
             ->when($request->query('user'), fn (Builder $q, $id) => $q->where('user_id', (int) $id))
             ->when($request->query('only') === 'failed', fn (Builder $q) => $q->failed())
@@ -106,7 +107,8 @@ class LoginHistoryController extends Controller implements HasMiddleware
                 // ⚠️ উপরের তালিকার মতোই — এই সংখ্যাটাও কেবল এই কোম্পানির
                 ->where(fn (Builder $q) => $q
                     ->where('company_id', CompanyContext::id())
-                    ->orWhereNull('company_id'))
+                    ->orWhere(fn (Builder $w) => $w->whereNull('company_id')
+                        ->whereIn('identifier', self::identifiersHere())))
                 ->failed()
                 ->where('created_at', '>=', now()->subDay())
                 ->count(),
@@ -122,11 +124,42 @@ class LoginHistoryController extends Controller implements HasMiddleware
                 ->whereIn('id', LoginAttempt::query()
                     ->where(fn (Builder $q) => $q
                         ->where('company_id', CompanyContext::id())
-                        ->orWhereNull('company_id'))
+                        ->orWhere(fn (Builder $w) => $w->whereNull('company_id')
+                            ->whereIn('identifier', self::identifiersHere())))
                     ->distinct()->pluck('user_id')->filter())
                 ->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))
                 ->orderBy('name')
                 ->get(['id', 'name']),
         ]);
+    }
+
+    /**
+     * ⛔ এই কোম্পানির মানুষগুলো লগইনে যা যা লেখেন — ২১ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⚠️ কেন এটা দরকার হলো ────────────────────────────────────
+     * আগে শর্তটা ছিল `orWhereNull('company_id')`, আর ছাঁচটা নকল করা
+     * হয়েছিল ভুলের খাতা থেকে — যেখানে ওটা ঠিক: কোম্পানি-প্রসঙ্গহীন
+     * ভুল সবার। ⛔ কিন্তু লগইনের সারিতে `company_id` খালি থাকে ঠিক
+     * তখনই যখন **ইমেইলটা চেনা যায়নি** ([[LoginJournal::write()]] —
+     * `$user?->current_company_id`), আর সারিটায় ইমেইল ও আইপি দুইটাই
+     * বসে থাকে। ⓘ ফল: প্রতিটা কোম্পানি বাকি সবার ব্যর্থ লগইনের
+     * ইমেইল ও আইপি পড়তে পারত।
+     *
+     * ⭐ পাহারার মূল্যটা হারায় না: কেউ **আপনার** লোকের নামে বারবার
+     * চেষ্টা করলে সেটা তালিকায় থাকেই। ⚠️ কেবল অন্য কোম্পানির লোকের
+     * নামে চেষ্টা আর আপনার ব্যাপার নয়।
+     *
+     * @return list<string>
+     */
+    private static function identifiersHere(): array
+    {
+        return User::query()
+            ->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))
+            ->get(['email', 'login_id'])
+            ->flatMap(fn (User $u) => [$u->email, $u->login_id])
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
     }
 }

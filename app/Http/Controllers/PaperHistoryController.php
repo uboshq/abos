@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\PaperTrail;
 use App\Models\DocumentDelivery;
+use App\Models\DocumentShare;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -60,6 +61,21 @@ class PaperHistoryController extends Controller
             $this->authorize($ability);
         }
 
+        /*
+         * ⭐ এখনো বেঁচে থাকা গোপন লিংকগুলো — ২১ সেপ্টেম্বর ২০২৬।
+         *
+         * ⚠️ `revoked_at` ঘরটা প্রথম দিন থেকেই ছিল আর [[DocumentShare::isAlive()]]
+         * ওটা পড়তও, কিন্তু **কেউ কোনোদিন লিখত না**। ⛔ অর্থাৎ ভুল লোককে
+         * লিংক পাঠিয়ে ফেললে ৩০ দিন অপেক্ষা ছাড়া কিছুই করার ছিল না।
+         * ⓘ পাতাটা এখানেই, কারণ প্রশ্নটা একই: "এই কাগজটা কোথায় কোথায় গেছে"।
+         */
+        $shares = DocumentShare::query()
+            ->alive()
+            ->where('document_type', $type)
+            ->where('document_id', $id)
+            ->latest('id')
+            ->get();
+
         $rows = DocumentDelivery::query()
             ->where('document_type', $type)
             ->where('document_id', $id)
@@ -73,6 +89,7 @@ class PaperHistoryController extends Controller
             'type' => $type,
             'id' => $id,
             'documentNo' => $rows->first()?->document_no,
+            'shares' => $shares,
             'rows' => $rows,
         ]);
     }

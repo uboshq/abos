@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Core\Engines\Print\PaperSize;
+use App\Core\Support\CompanyContext;
 use App\Core\Services\PaperTrail;
+use App\Models\DocumentShare;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\Rule;
 
@@ -97,6 +100,42 @@ class PaperShareController extends Controller
         );
 
         return back()->with('shared_link', route('paper.shared', $share->token));
+    }
+
+    /**
+     * ⛔ লিংকটা এখনই মেরে ফেলা — ২১ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⚠️ কেন এটা না থাকা একটা ফাঁক ছিল ────────────────────────────
+     * `revoked_at` ঘরটা প্রথম দিন থেকেই ছিল আর [[DocumentShare::isAlive()]]
+     * ওটা পড়তও — কিন্তু **কেউ কোনোদিন লিখত না**। ⓘ অর্থাৎ ভুল নম্বরে
+     * বিলটা পাঠিয়ে ফেললে ৩০ দিন ধরে অচেনা কারো হাতে কাগজটা খোলা থাকত,
+     * আর থামানোর কোনো পথ ছিল না (abos-8b-র অডিট, খ৪)।
+     *
+     * ⓘ অনুমতি পাঠানোরই — যিনি পাঠাতে পারেন, তিনিই ফেরাতে পারেন। ⚠️ আলাদা
+     * ক্ষমতা বানালে যে মানুষটা ভুলটা করেছেন তিনিই সেটা শোধরাতে পারতেন না।
+     */
+    public function revoke(Request $request, DocumentShare $share): RedirectResponse
+    {
+        /*
+         * ⛔ অন্য কোম্পানির লিংক ছোঁয়া যায় না।
+         *
+         * ⓘ `DocumentShare`-এ কোম্পানির ছাঁকনি আছে, কিন্তু রুট বাইন্ডিং
+         * গ্লোবাল স্কোপ মানে — তাই এখানে আবার মাপা হয়। ⚠️ ৪০৪, কারণ
+         * অন্য কোম্পানির সারিটার অস্তিত্বও আপনার জানার কথা নয়।
+         */
+        abort_unless((int) $share->company_id === (int) CompanyContext::id(), 404);
+
+        $abilities = PaperTrail::abilitiesFor($share->document_type);
+
+        abort_if($abilities === [], 403);
+
+        foreach ($abilities as $ability) {
+            $this->authorize($ability);
+        }
+
+        $share->forceFill(['revoked_at' => Carbon::now()])->save();
+
+        return back()->with('saved', __('core.print.link_revoked'));
     }
 
     /**
