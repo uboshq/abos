@@ -60,15 +60,25 @@
             <h2 class="mb-3 font-semibold">{{ __('master_data::section.identity') }}</h2>
 
             <div class="grid gap-3 sm:grid-cols-2">
-                @if ($isNew)
-                    {{-- কোডটা কেবল খোলার সময়। ছাপা কাগজে, রপ্তানি ফাইলে
-                         আর ব্যাংকের বিবরণীতে ওটা বসে যায় — পরে বদলালে
-                         পুরনো কাগজ আর নতুন খাতা দুইটা আলাদা প্রতিষ্ঠানের
-                         মতো দেখাত। --}}
+                {{-- ⭐ কোডটা বদলানো যায় — কেবল প্রথম কাগজ বেরোনোর আগ পর্যন্ত।
+
+                     ⓘ ছাপা কাগজে, রপ্তানি ফাইলে আর ব্যাংকের বিবরণীতে কোডটা
+                     বসে যায়, তাই একটা নম্বর ইস্যু হয়ে গেলে ঘরটা আর খোলে না।
+                     ⛔ কিন্তু খালি কোম্পানিতে ঐ কারণটা নেই — মালিক নাম বদলে
+                     দেখলেন কোড আগের প্রতিষ্ঠানেরই রয়ে গেছে (২০ সেপ্টেম্বর
+                     ২০২৬)। শর্তটা [[Company::canChangeCode()]]-এ, আর
+                     যাচাইও ঐ একই উত্তরে। --}}
+                @if ($isNew || $company->canChangeCode())
                     <x-ui.field name="code" :label="__('master_data::field.code')"
-                                :value="old('code')"
-                                :placeholder="__('core.create.code_auto')"
-                                :hint="__('core.create.code_auto_hint')" />
+                                :value="old('code', $company->code)"
+                                :placeholder="$isNew ? __('core.create.code_auto') : null"
+                                :hint="$isNew ? __('core.create.code_auto_hint') : __('system_admin::message.code_still_free')" />
+                @else
+                    {{-- ⓘ লুকানো নয়, তালাবদ্ধ: কোডটা দেখা যায়, আর কেন বদলানো
+                         যায় না সেটাও লেখা থাকে। --}}
+                    <x-ui.field name="code_locked" :label="__('master_data::field.code')"
+                                :value="$company->code" :readonly="true"
+                                :hint="__('system_admin::message.code_locked')" />
                 @endif
 
                 <x-ui.field name="name_en" :label="__('system_admin::field.company_name_en')"

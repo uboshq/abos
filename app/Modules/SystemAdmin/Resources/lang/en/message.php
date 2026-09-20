@@ -47,4 +47,6 @@ return [
     'scope_kind_note' => 'Which :kind they may see. Tick nothing and they see them all.',
     'unsaved' => 'unsaved changes',
     'logo_hint' => 'PNG, JPG or WebP, up to 2 MB. This is what prints on invoices and bills, so use a clear, wide image rather than a tall one.',
+    'code_still_free' => 'Nothing has been printed yet, so the code can still change. It locks when the first number is issued.',
+    'code_locked' => 'This code is already on paper and in exports, so it cannot change now.',
 ];

@@ -67,6 +67,43 @@ class Company extends Model
         return null;
     }
 
+    /**
+     * কোডটা এখনো বদলানো যায় কি না।
+     *
+     * ── কেন নিয়মটা শর্তসাপেক্ষ, ২০ সেপ্টেম্বর ২০২৬ ──────────────────
+     * কোড বদলানো একদম আটকানো ছিল, আর কারণটা ন্যায্য: ছাপা কাগজে, রপ্তানি
+     * করা ফাইলে আর ব্যাংকের বিবরণীতে ওটা বসে যায়; বদলালে পুরনো কাগজ আর
+     * নতুন খাতা দুইটা আলাদা প্রতিষ্ঠানের মতো দেখাত।
+     *
+     * ⓘ কিন্তু কারণটা **কেবল তখনই সত্যি যখন কাগজ বেরিয়েছে**। মালিক একটা
+     * খালি কোম্পানির নাম বদলে দেখলেন কোডটা আগের প্রতিষ্ঠানেরই রয়ে গেছে:
+     * *"code poriborton hoyna keno?"* — আর ঐ কোম্পানিতে তখনো একটা কাগজও
+     * ছাপা হয়নি।
+     *
+     * ⭐ তাই নিয়মটা এখন শর্তসাপেক্ষ: **একটা নম্বরও ইস্যু হয়নি আর খাতায়
+     * একটা সারিও নেই** — ততক্ষণ কোড বদলানো যায়। তারপর আর নয়।
+     *
+     * ⛔ খসড়া কাগজও গোনা হয়: খসড়ার নম্বর ইতিমধ্যে ইস্যু হয়ে গেছে, আর ঐ
+     * নম্বর কেউ ফোনে বলে দিলে সেটা বাইরে চলে গেছে।
+     */
+    public function canChangeCode(): bool
+    {
+        $numbersIssued = NumberSeries::query()
+            ->withoutGlobalScopes()
+            ->where('company_id', $this->id)
+            ->where('next_number', '>', 1)
+            ->exists();
+
+        if ($numbersIssued) {
+            return false;
+        }
+
+        return ! LedgerEntry::query()
+            ->withoutGlobalScopes()
+            ->where('company_id', $this->id)
+            ->exists();
+    }
+
     public function branches(): HasMany
     {
         return $this->hasMany(Branch::class);

@@ -268,12 +268,23 @@ class CompanyController extends Controller implements HasMiddleware
     {
         $data = $request->validate([
             /*
-             * কোডটা বদলানো যায় না।
+             * ⭐ কোডটা বদলানো যায় — কিন্তু কেবল কাগজ বেরোনোর আগে পর্যন্ত।
              *
-             * ছাপা কাগজে, রপ্তানি করা ফাইলে আর ব্যাংকের বিবরণীতে ওটা
-             * বসে যায়। বদলালে পুরনো কাগজ আর নতুন খাতা দুইটা আলাদা
-             * প্রতিষ্ঠানের মতো দেখাত।
+             * ⓘ আগে একদম আটকানো ছিল, আর কারণটা ন্যায্য: ছাপা কাগজে, রপ্তানি
+             * করা ফাইলে আর ব্যাংকের বিবরণীতে কোডটা বসে যায়। ⛔ কিন্তু ঐ
+             * কারণটা কেবল তখনই সত্যি যখন একটা নম্বরও ইস্যু হয়েছে — খালি
+             * কোম্পানিতে নিয়মটা কেবল বিরক্তি। মালিক: *"code poriborton
+             * hoyna keno?"* (২০ সেপ্টেম্বর ২০২৬)।
+             *
+             * ⚠️ শর্তটা [[Company::canChangeCode()]]-এ, আর সেটাই একমাত্র
+             * জায়গা: পর্দা ঘরটা লুকায় ঐ উত্তর দেখে, আর এখানেও একই উত্তর।
              */
+            'code' => [
+                Rule::excludeIf(! $company->canChangeCode()),
+                'required', 'string', 'max:16', 'alpha_dash',
+                Rule::unique('companies', 'code')->ignore($company->id),
+            ],
+
             'name_en' => ['required', 'string', 'max:160'],
             'name_bn' => ['nullable', 'string', 'max:160'],
             'legal_name' => ['nullable', 'string', 'max:191'],
@@ -326,6 +337,11 @@ class CompanyController extends Controller implements HasMiddleware
         $logo = $this->keepLogo($request, $company);
 
         unset($data['logo'], $data['remove_logo']);
+
+        /* ⓘ কোডটা সবসময় বড় হাতের — তালিকা, ছাপা কাগজ আর রপ্তানিতে একরকম দেখায় */
+        if (isset($data['code'])) {
+            $data['code'] = strtoupper(trim($data['code']));
+        }
 
         $company->update([...$data, ...$logo]);
 
