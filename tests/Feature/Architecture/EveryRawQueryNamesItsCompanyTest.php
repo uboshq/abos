@@ -87,6 +87,20 @@ class EveryRawQueryNamesItsCompanyTest extends TestCase
      * @var array<string, string>
      */
     private const DECLARED = [
+        /*
+         * ⭐ আদেশের সারি গোনা — তিনটা সহ-কোয়েরি, প্রতিটাই `sal_orders.id`
+         * ধরে বাঁধা (`whereColumn`)। ⓘ বাইরের কোয়েরিটা `SalesOrder::query()`,
+         * আর সে [[BelongsToCompany]] দিয়ে কোম্পানি-স্কোপেই বাছে — তাই অন্য
+         * কোম্পানির আদেশ সারিতেই আসে না।
+         *
+         * ⛔ আর লাইনের টেবিলগুলোয় `company_id` কলামটা নেইই — ওরা
+         * কাগজের মাধ্যমে বাঁধা ([[BelongsToCompanyThroughParent]])। ⚠️ তাই
+         * ছাঁকনিটা বসানো যেত না; বসালে SQL-ই ভাঙত।
+         */
+        'app/Modules/Sales/Services/OrderTracking.php' => 'আদেশের সারি গোনা — `sal_orders.id` ধরে, '
+            .'আর আদেশটা বাইরের কোয়েরিতেই কোম্পানি-স্কোপে বাছা; লাইনের টেবিলে '
+            .'`company_id` কলামই নেই',
+
         'app/Modules/MasterData/Services/MasterListService.php' => 'সন্তান-সারি আছে কি না দেখা — অভিভাবকের আইডি দিয়েই, আর অভিভাবক '
             .'ইতিমধ্যেই কোম্পানি-স্কোপে বাছা',
 
