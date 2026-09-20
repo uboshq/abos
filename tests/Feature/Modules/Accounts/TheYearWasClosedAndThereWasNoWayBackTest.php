@@ -10,9 +10,14 @@ use App\Models\Company;
 use App\Models\FinancialYear;
 use App\Models\LedgerEntry;
 use App\Models\User;
+use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Accounts\Services\VoucherService;
 use App\Modules\Accounts\Services\YearEndService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
@@ -52,6 +57,17 @@ final class TheYearWasClosedAndThereWasNoWayBackTest extends TestCase
     {
         $year = $this->currentYear();
 
+        /*
+         * ⚠️ বছরে আয় থাকতেই হবে — নাহলে সমাপনীতে কোনো দাখিলাই বসে না।
+         *
+         * ⛔ প্রথম লেখা পরীক্ষাটা ঠিক এই গর্তেই পড়েছিল: ডেমোর বছরে আয়-ব্যয়
+         * শূন্য, তাই সমাপনী কিছু পোস্ট করেনি, আর "উল্টো সারি আছে" দাবিটা
+         * ০ == ০ মিলিয়ে সবুজ হয়ে গিয়েছিল। ⓘ ফলে আসল পথটা কখনো মাপা হয়নি,
+         * আর লাইভে গিয়ে মালিক পেলেন বছরটা খুলছেই না — কারণ বন্ধ বছরে
+         * উল্টো দাখিলাটাই বসতে পারে না।
+         */
+        $this->anIncomeInsideTheYear($year);
+
         app(YearEndService::class)->close($year);
 
         $this->assertTrue($year->fresh()->is_closed, 'বছরটা বন্ধই হয়নি।');
@@ -60,6 +76,8 @@ final class TheYearWasClosedAndThereWasNoWayBackTest extends TestCase
             ->where('source_type', YearEndService::CLOSE_SOURCE)
             ->where('source_id', $year->id)
             ->count();
+
+        $this->assertGreaterThan(0, $closingRows, 'সমাপনীতে কিছুই বসেনি — তাহলে মাপার কিছু নেই।');
 
         app(YearEndService::class)->reopen($year->fresh(), $this->owner);
 
@@ -126,6 +144,37 @@ final class TheYearWasClosedAndThereWasNoWayBackTest extends TestCase
             ->assertRedirect(route('accounts.year_end.index'));
 
         $this->assertFalse($year->fresh()->is_closed, 'ঠিক নাম লিখেও বছরটা খোলেনি।');
+    }
+
+    /**
+     * বছরের ভিতরে একটা আয় — যাতে সমাপনীতে সত্যিই দাখিলা বসে।
+     *
+     * ⓘ ভাউচার দিয়ে, সরাসরি খতিয়ানে নয়: সমাপনী আয়-ব্যয়ের খাত ধরে হিসাব
+     * করে, আর ভাউচারই ঐ খাতে সারি বসানোর চেনা পথ।
+     */
+    private function anIncomeInsideTheYear(FinancialYear $year): void
+    {
+        $income = Account::query()
+            ->where('code', 'like', '4%')
+            ->where('is_group', false)
+            ->orderBy('code')
+            ->firstOrFail();
+
+        $service = app(VoucherService::class);
+
+        $voucher = $service->create(
+            [
+                'type' => Voucher::JOURNAL,
+                'trx_date' => Carbon::parse($year->starts_on)->addDays(2)->toDateString(),
+                'narration' => 'YEAR-INCOME',
+            ],
+            [
+                ['account_id' => Account::query()->where('code', StandardChart::RECEIVABLE)->value('id'), 'debit' => '5000'],
+                ['account_id' => $income->id, 'credit' => '5000'],
+            ],
+        );
+
+        $service->post($voucher);
     }
 
     private function currentYear(): FinancialYear

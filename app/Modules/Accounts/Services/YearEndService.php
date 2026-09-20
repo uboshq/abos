@@ -280,6 +280,27 @@ final class YearEndService
                 ->where('source_id', $year->id)
                 ->exists();
 
+            FinancialYear::query()->where('is_current', true)->update(['is_current' => false]);
+
+            /*
+             * ⚠️ তালাটা আগে খোলা, তারপর উল্টো দাখিলা — ক্রমটা উল্টালে কাজই হয় না।
+             *
+             * ⛔ [[PostingEngine]] বন্ধ বছরে কোনো সারি বসাতে দেয় না ("Reopening
+             * it is an approved action, not a side effect of posting") — আর
+             * উল্টো দাখিলাটার তারিখ ঐ বছরেরই শেষ দিন। ⓘ তাই আগে উল্টাতে গেলে
+             * ইঞ্জিন ছুঁড়ত, বছরটা বন্ধই থেকে যেত, আর পর্দায় কিছুই হত না —
+             * মালিক লাইভে ঠিক সেটাই পেয়েছেন (২০ সেপ্টেম্বর ২০২৬)।
+             *
+             * ⓘ পুরোটা এক ট্রানজেকশনে, তাই উল্টাতে গিয়ে কিছু ভাঙলে তালাটাও
+             * আগের জায়গায় ফিরে যায়।
+             */
+            $year->forceFill([
+                'is_closed' => false,
+                'is_current' => true,
+                'closed_at' => null,
+                'closed_by' => null,
+            ])->save();
+
             if ($hasClosingRows) {
                 $this->posting->reverse(
                     sourceType: self::CLOSE_SOURCE,
@@ -289,15 +310,6 @@ final class YearEndService
                     userId: $user->id,
                 );
             }
-
-            FinancialYear::query()->where('is_current', true)->update(['is_current' => false]);
-
-            $year->forceFill([
-                'is_closed' => false,
-                'is_current' => true,
-                'closed_at' => null,
-                'closed_by' => null,
-            ])->save();
 
             return $year->fresh();
         });
