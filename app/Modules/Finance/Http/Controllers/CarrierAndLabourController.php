@@ -22,14 +22,18 @@ use Illuminate\View\View;
  */
 class CarrierAndLabourController extends Controller implements HasMiddleware
 {
-    public function __construct(private readonly MenuBuilder $menu) {}
+    /** ⓘ সেবাটা কনস্ট্রাক্টরে — কারণটা [[BankChargeController]]-এ লেখা */
+    public function __construct(
+        private readonly MenuBuilder $menu,
+        private readonly CarrierAndLabourLedger $ledger,
+    ) {}
 
     public static function middleware(): array
     {
         return [new Middleware('can:finance.expense.view')];
     }
 
-    public function index(Request $request, CarrierAndLabourLedger $ledger): View
+    public function index(Request $request): View
     {
         $tab = array_key_exists((string) $request->query('tab'), CarrierAndLabourLedger::HEADS)
             ? (string) $request->query('tab') : 'transport';
@@ -38,7 +42,7 @@ class CarrierAndLabourController extends Controller implements HasMiddleware
         $from = $this->date($request->query('from')) ?? $today->copy()->startOfMonth()->toDateString();
         $to = $this->date($request->query('to')) ?? $today->toDateString();
 
-        $head = $ledger->head($tab);
+        $head = $this->ledger->head($tab);
         $party = $request->has('party') ? (string) $request->query('party') : null;
 
         return view('finance::carrier-labour.index', [
@@ -47,9 +51,9 @@ class CarrierAndLabourController extends Controller implements HasMiddleware
             'from' => $from,
             'to' => $to,
             'head' => $head,
-            'parties' => $head ? $ledger->parties($head, $from, $to) : collect(),
+            'parties' => $head ? $this->ledger->parties($head, $from, $to) : collect(),
             'party' => $party,
-            'statement' => $head && $party !== null ? $ledger->statement($head, $party, $from, $to) : null,
+            'statement' => $head && $party !== null ? $this->ledger->statement($head, $party, $from, $to) : null,
         ]);
     }
 

@@ -190,7 +190,7 @@ return [
              * মেনুতে মেলানো যেত না — মঞ্জুরি, জামানত, ড্রয়িং পাওয়ার
              * আর নবায়ন, একটাও হাতধারে নেই।
              */
-            ['label' => 'finance::menu.bank_facility', 'icon' => 'bank', 'route' => 'finance.bank_facility.index',
+            ['label' => 'finance::menu.bank_facility', 'icon' => 'building', 'route' => 'finance.bank_facility.index',
                 'permission' => 'finance.bank_facility.view'],
 
             /*
@@ -250,7 +250,7 @@ return [
                 'permission' => 'finance.insurance.view'],
 
             /* ⓘ শেষে — তালিকাটা রোজকার কাজ নয়, বাকি সারিগুলো যার উপর দাঁড়ায় */
-            ['label' => 'finance::institution.title', 'icon' => 'bank', 'route' => 'finance.institution.index',
+            ['label' => 'finance::institution.title', 'icon' => 'building', 'route' => 'finance.institution.index',
                 'permission' => 'finance.institution.view'],
 
             /*

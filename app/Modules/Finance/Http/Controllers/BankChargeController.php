@@ -27,14 +27,24 @@ class BankChargeController extends Controller implements HasMiddleware
     /** @var list<string> */
     public const PERIODS = ['this_month', 'last_month', 'this_year', 'custom'];
 
-    public function __construct(private readonly MenuBuilder $menu) {}
+    /**
+     * ⓘ সেবাটা কনস্ট্রাক্টরে, মেথডের ঘরে নয় — আর সেটা কেবল অভ্যাস নয়:
+     * [[Tests\Feature\Architecture\EveryListScreenPaginatesTest]] পাতা ভাগ
+     * খোঁজে `$this->সেবা->মেথড()` ধরে। ⚠️ মেথডের প্যারামিটারে নিলে সে
+     * ভেতরে তাকাতে পারে না, আর পাতা ভাগ থাকা সত্ত্বেও পর্দাটা
+     * "পুরো টেবিল আনে" বলে ধরা পড়ে।
+     */
+    public function __construct(
+        private readonly MenuBuilder $menu,
+        private readonly BankCharges $charges,
+    ) {}
 
     public static function middleware(): array
     {
         return [new Middleware('can:finance.expense.view')];
     }
 
-    public function index(Request $request, BankCharges $charges): View
+    public function index(Request $request): View
     {
         $period = in_array($request->query('period'), self::PERIODS, true) ? (string) $request->query('period') : 'this_month';
 
@@ -50,9 +60,9 @@ class BankChargeController extends Controller implements HasMiddleware
             'period' => $period,
             'from' => $from,
             'to' => $to,
-            'byBank' => $charges->byBank($from, $to),
-            'total' => $charges->total($from, $to),
-            'rows' => $charges->rows($from, $to),
+            'byBank' => $this->charges->byBank($from, $to),
+            'total' => $this->charges->total($from, $to),
+            'rows' => $this->charges->rows($from, $to),
         ]);
     }
 
