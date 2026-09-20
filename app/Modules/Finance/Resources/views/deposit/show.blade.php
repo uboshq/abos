@@ -163,8 +163,11 @@
                                             :selected="old('money_account_id',
                                                 $d->payout_account_id ?? $d->funded_from_account_id)" />
 
-                        <div class="flex items-end">
-                            <x-ui.button type="submit" tone="primary" class="w-full">
+                        {{-- ⛔ চাপা কলাম সারানো — ১৯ সেপ্টেম্বর ২০২৬ (মালিক: *"সব পাতাতেই সমস্যা"*)।
+                             ⓘ বোতামটা `flex items-end`-এর ভেতরে গ্রিডের একটা ঘর নিত, আর
+                             আধা পর্দার প্যানেলে লেখা ভাঙত। ⭐ এখন নিজের সারি, নিচে বাঁয়ে। --}}
+                        <div class="flex flex-wrap items-center gap-2 sm:col-span-2">
+                            <x-ui.button type="submit" tone="primary">
                                 {{ __('core.action.save') }}
                             </x-ui.button>
                         </div>
@@ -199,8 +202,9 @@
                                         :accounts="$money"
                                         :selected="old('money_account_id', $d->funded_from_account_id)" />
 
-                    <div class="flex items-end">
-                        <x-ui.button type="submit" tone="danger" class="w-full">
+                    {{-- ⓘ একই সারানো — বোতাম নিজের সারিতে, নিচে বাঁয়ে --}}
+                    <div class="flex flex-wrap items-center gap-2 sm:col-span-2">
+                        <x-ui.button type="submit" tone="danger">
                             {{ __('finance::action.close_deposit') }}
                         </x-ui.button>
                     </div>

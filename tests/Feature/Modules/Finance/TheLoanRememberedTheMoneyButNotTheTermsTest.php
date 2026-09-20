@@ -155,7 +155,8 @@ final class TheLoanRememberedTheMoneyButNotTheTermsTest extends TestCase
      */
     public function test_the_form_actually_draws_the_term_fields(): void
     {
-        $page = $this->get(route('finance.hand_loan.index'));
+        // ⓘ ফর্মটা ২০ সেপ্টেম্বর ২০২৬ থেকে নিজের পাতায় — তালিকার উপরে আর বসে না
+        $page = $this->get(route('finance.hand_loan.create'));
 
         $page->assertOk();
 

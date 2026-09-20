@@ -32,4 +32,5 @@ return [
     'rental_close' => 'Close the contract',
     'rental_close_now' => 'Close',
     'close_facility' => 'Close the facility',
+    'new_hand_loan' => 'New hand loan',
 ];

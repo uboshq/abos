@@ -52,7 +52,7 @@ class DepositController extends Controller implements HasMiddleware
     {
         return [
             new Middleware('can:finance.deposit.view', only: ['index', 'show', 'all']),
-            new Middleware('can:finance.deposit.create', only: ['store']),
+            new Middleware('can:finance.deposit.create', only: ['create', 'store']),
             new Middleware('can:finance.deposit.move', only: ['movement', 'close']),
             new Middleware('can:finance.deposit.cancel', only: ['cancel']),
         ];
@@ -101,10 +101,77 @@ class DepositController extends Controller implements HasMiddleware
 
     public function index(Request $request, string $issuer): View
     {
+        /*
+         * ⭐ ট্যাব আর খোঁজা — তালিকা এখন টুলবারের নিচে, মালিকের নির্দেশে।
+         * ১৯ সেপ্টেম্বর ২০২৬ — *"সব পাতাতেই সমস্যা"*।
+         *
+         * ⓘ চালু · শেষ দুই ট্যাব, মূলধনের পাতার মতো। ⚠️ "শেষ"-এ ভাঙা আর
+         * বাতিল দুইটাই — মেয়াদের কলামটাই বলে দেয় কোনটা কী।
+         */
+        $tab = $request->query('tab') === 'closed' ? 'closed' : 'active';
+
+        $term = trim((string) $request->query('q'));
+
         return view('finance::deposit.index', [
             'menu' => $this->menu->forUser($request->user()),
             'issuer' => $issuer,
             'standing' => $this->deposits->standing($issuer),
+            'tab' => $tab,
+
+            // ⓘ ট্যাবের পাশের গোনা — খোঁজায় ছাঁকা হয় না, ট্যাবের মোট সংখ্যা
+            'counts' => [
+                'active' => Deposit::query()->issuedBy($issuer)->open()->count(),
+                'closed' => Deposit::query()->issuedBy($issuer)
+                    ->where('status', '!=', Deposit::ACTIVE)->count(),
+            ],
+
+            /*
+             * খোলাগুলো আগে, তারপর যেগুলো চুকে গেছে।
+             *
+             * ── কেন মেয়াদ ধরে সাজানো ────────────────────────────────
+             * মেয়াদোত্তীর্ণ FD ব্যাংকে পড়ে থাকে আর সাধারণ সঞ্চয়ী হারে
+             * সুদ পায় — অর্থাৎ প্রতিদিন টাকা হারায়। যেটার মেয়াদ সবার
+             * আগে, সেটাই সবার উপরে থাকা দরকার।
+             *
+             * ⓘ খোঁজা — নম্বর, প্রতিষ্ঠান, শাখা, রেফারেন্স, নোট আর যাঁর
+             * নামে। ⚠️ মোড়কের `where(fn …)` জরুরি, নাহলে `orWhere`
+             * ইস্যুয়ার আর ট্যাবের শর্ত পাশ কাটিয়ে যেত।
+             */
+            'deposits' => Deposit::query()
+                ->issuedBy($issuer)
+                ->when($tab === 'closed',
+                    fn ($q) => $q->where('status', '!=', Deposit::ACTIVE),
+                    fn ($q) => $q->open())
+                ->when($term !== '', fn ($q) => $q->where(
+                    fn ($w) => $w->where('document_no', 'like', "%{$term}%")
+                        ->orWhere('institution', 'like', "%{$term}%")
+                        ->orWhere('branch_name', 'like', "%{$term}%")
+                        ->orWhere('reference_no', 'like', "%{$term}%")
+                        ->orWhere('note', 'like', "%{$term}%")
+                        ->orWhereHas('person', fn ($p) => $p->where('name_en', 'like', "%{$term}%")
+                            ->orWhere('name_bn', 'like', "%{$term}%")),
+                ))
+                ->with(['kind', 'movements', 'person'])
+                ->orderByRaw('CASE WHEN status = ? THEN 0 ELSE 1 END', [Deposit::ACTIVE])
+                ->orderByRaw('matures_on IS NULL')
+                ->orderBy('matures_on')
+                ->orderByDesc('id')
+                ->paginate(50)
+                ->withQueryString(),
+        ]);
+    }
+
+    /**
+     * নতুন জমার ফর্ম — নিজের পাতায়, ইস্যুয়ার সহ (১৯ সেপ্টেম্বর ২০২৬)।
+     *
+     * ⓘ আগে ফর্মটা তালিকার উপরে বসত, আর তালিকাটা লম্বা ফর্মের নিচে চাপা
+     * পড়ত। ⚠️ ইস্যুয়ারটা পথেই থাকে, নাহলে বাঁ পাশের মেনুর সারি নিভে যেত।
+     */
+    public function create(Request $request, string $issuer): View
+    {
+        return view('finance::deposit.create', [
+            'menu' => $this->menu->forUser($request->user()),
+            'issuer' => $issuer,
 
             /*
              * কার নামে রাখা যায় — মালিক, অংশীদার।
@@ -114,24 +181,6 @@ class DepositController extends Controller implements HasMiddleware
              */
             'people' => Person::query()->active()->orderBy('name_en')
                 ->pluck('name_en', 'id'),
-
-            /*
-             * খোলাগুলো আগে, তারপর যেগুলো চুকে গেছে।
-             *
-             * ── কেন মেয়াদ ধরে সাজানো ────────────────────────────────
-             * মেয়াদোত্তীর্ণ FD ব্যাংকে পড়ে থাকে আর সাধারণ সঞ্চয়ী হারে
-             * সুদ পায় — অর্থাৎ প্রতিদিন টাকা হারায়। যেটার মেয়াদ সবার
-             * আগে, সেটাই সবার উপরে থাকা দরকার।
-             */
-            'deposits' => Deposit::query()
-                ->issuedBy($issuer)
-                ->with(['kind', 'movements'])
-                ->orderByRaw('CASE WHEN status = ? THEN 0 ELSE 1 END', [Deposit::ACTIVE])
-                ->orderByRaw('matures_on IS NULL')
-                ->orderBy('matures_on')
-                ->orderByDesc('id')
-                ->paginate(50)
-                ->withQueryString(),
 
             'kinds' => DepositKind::query()
                 ->where('issuer', $issuer)->where('is_active', true)

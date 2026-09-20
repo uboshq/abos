@@ -8,6 +8,7 @@ use App\Core\Engines\Attachment\AttachmentEngine;
 use App\Core\Engines\Attachment\AttachmentException;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\DocumentStatus;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Finance\Models\BankFacility;
@@ -57,7 +58,7 @@ class BankFacilityController extends Controller implements HasMiddleware
     {
         return [
             new Middleware('can:finance.bank_facility.view', only: ['index', 'show']),
-            new Middleware('can:finance.bank_facility.create', only: ['store']),
+            new Middleware('can:finance.bank_facility.create', only: ['create', 'store']),
             new Middleware('can:finance.bank_facility.close', only: ['close']),
         ];
     }
@@ -74,8 +75,32 @@ class BankFacilityController extends Controller implements HasMiddleware
      */
     public function index(Request $request): View
     {
+        /*
+         * ⭐ ট্যাব আর খোঁজা — তালিকা এখন টুলবারের নিচে, মালিকের নির্দেশে।
+         * ১৯ সেপ্টেম্বর ২০২৬ — *"সব পাতাতেই সমস্যা"*।
+         *
+         * ⓘ চালু · বন্ধ দুই ট্যাব, মূলধনের পাতার মতো। ⚠️ "চালু" মানে
+         * `closed` নয় এমন সব — অন্য কোনো অবস্থার সারি দুই ট্যাবের
+         * কোনোটা থেকেই হারায় না।
+         */
+        $tab = $request->query('tab') === 'closed' ? 'closed' : 'active';
+
+        $term = trim((string) $request->query('q'));
+
+        $facilities = $this->facilityList($tab, $term);
+
         return view('finance::bank-facility.index', [
             'menu' => $this->menu->forUser($request->user()),
+            'tab' => $tab,
+
+            // ⭐ ব্যবহৃত অঙ্ক ও বাকি সীমা — খতিয়ান থেকে (অর্থের মানচিত্র §১৪গ, ২০ সেপ্টেম্বর ২০২৬)
+            'standing' => $this->standingOf($facilities),
+
+            // ⓘ ট্যাবের পাশের গোনা — খোঁজায় ছাঁকা হয় না, ট্যাবের মোট সংখ্যা
+            'counts' => [
+                'active' => BankFacility::query()->where('status', '!=', DocumentStatus::CLOSED)->count(),
+                'closed' => BankFacility::query()->where('status', DocumentStatus::CLOSED)->count(),
+            ],
             /*
              * ⭐ পাতা ভাগ — ১৭ সেপ্টেম্বর ২০২৬, নিরীক্ষার ধাপ ২।
              *
@@ -87,8 +112,61 @@ class BankFacilityController extends Controller implements HasMiddleware
              * আর সেদিন ব্যবহারকারী কেবল একটা সাদা পাতা দেখেন, কোনো
              * কারণ ছাড়াই।
              */
-            'facilities' => BankFacility::query()->latest('id')->paginate(50)->withQueryString(),
+            'facilities' => $facilities,
             'renewals' => $this->facilities->dueForRenewal(),
+        ]);
+    }
+
+    /**
+     * তালিকার কোয়েরি — ট্যাব ও খোঁজা ধরে।
+     *
+     * ⓘ আলাদা মেথডে, কারণ সারিগুলো [[standingOf()]]-এরও লাগে, আর দুইবার
+     * কোয়েরি চালানো মানে একদিন দুইটা আলাদা তালিকা।
+     */
+    private function facilityList(string $tab, string $term): \Illuminate\Contracts\Pagination\LengthAwarePaginator
+    {
+        return BankFacility::query()
+            ->when($tab === 'closed',
+                fn ($q) => $q->where('status', DocumentStatus::CLOSED),
+                fn ($q) => $q->where('status', '!=', DocumentStatus::CLOSED))
+            /*
+             * ⓘ খোঁজা — ব্যাংক, শাখা, মঞ্জুরির নম্বর, নথির নম্বর আর নোট।
+             * ⚠️ মোড়কের `where(fn …)` জরুরি: নাহলে `orWhere` ট্যাবের
+             * শর্তটাকে পাশ কাটিয়ে বন্ধ সারিও চালু ট্যাবে তুলে আনত।
+             */
+            ->when($term !== '', fn ($q) => $q->where(
+                fn ($w) => $w->where('bank', 'like', "%{$term}%")
+                    ->orWhere('branch_name', 'like', "%{$term}%")
+                    ->orWhere('sanction_no', 'like', "%{$term}%")
+                    ->orWhere('document_no', 'like', "%{$term}%")
+                    ->orWhere('note', 'like', "%{$term}%"),
+            ))
+            ->latest('id')->paginate(50)->withQueryString();
+    }
+
+    /**
+     * ব্যবহৃত অঙ্ক ও বাকি সীমা — খতিয়ান থেকে (অর্থের মানচিত্র §১৪গ)।
+     *
+     * ⓘ হিসাবটা [[BankFacilityService::standing()]]-এ, আর সেখানেই লেখা
+     * কেন সারিতে দ্বিতীয় কপি রাখা হয়নি।
+     *
+     * @return array<int, array{used: string, left: string}>
+     */
+    private function standingOf(\Illuminate\Contracts\Pagination\LengthAwarePaginator $facilities): array
+    {
+        return $this->facilities->standing($facilities->getCollection());
+    }
+
+    /**
+     * নতুন সুবিধার ফর্ম — নিজের পাতায় (১৯ সেপ্টেম্বর ২০২৬)।
+     *
+     * ⓘ আগে ফর্মটা তালিকার উপরে বসত, আর তালিকাটা লম্বা ফর্মের নিচে
+     * চাপা পড়ত। ভুল হলে Laravel এই পাতাতেই ফেরায়, পুরনো লেখা সহ।
+     */
+    public function create(Request $request): View
+    {
+        return view('finance::bank-facility.create', [
+            'menu' => $this->menu->forUser($request->user()),
             'liabilityAccounts' => $this->liabilityAccounts(),
             'moneyAccounts' => $this->moneyAccounts(),
         ]);

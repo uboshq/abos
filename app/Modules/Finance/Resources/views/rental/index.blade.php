@@ -9,12 +9,51 @@
 
     ⓘ তাই নিচের তালিকায় গিয়ে খুঁজতে হয় না; জিনিসটা নিজে থেকে সামনে আসে।
 --}}
+{{--
+    ⭐ তালিকাটা এখন `x-ui.table` — মালিক, ১৯ সেপ্টেম্বর ২০২৬: *"সব পাতাতেই সমস্যা"*।
+
+    ⓘ আগে টেবিলটা হাতে লেখা ছিল, তাই টুলবারের ঘনত্ব, কলাম আর রপ্তানি
+    বন্ধ রাখতে হত। ⭐ এখন কলামগুলো এক জায়গায় — টেবিল আর টুলবারের কলাম-মেনু
+    একই তালিকা পড়ে, আর প্রতিটা ঘর আগের মতোই একই জিনিস দেখায়।
+--}}
+@php
+    $rentColumns = [
+        ['key' => 'counterparty', 'label' => __('finance::field.rental_counterparty'),
+         'render' => fn ($c) => new \Illuminate\Support\HtmlString(
+             '<a href=\'' . route('finance.rental.show', $c) . '\' '
+             . 'class=\'text-(--color-brand-500) underline-offset-2 hover:underline\'>'
+             . e($c->counterparty) . '</a>')],
+        ['key' => 'subject', 'label' => __('finance::field.rental_subject'),
+         'render' => fn ($c) => new \Illuminate\Support\HtmlString(
+             '<span class=\'text-(--color-ink-muted)\'>' . e($c->subject) . '</span>')],
+        ['key' => 'monthly_rent', 'label' => __('finance::field.rental_rent'), 'numeric' => true,
+         'render' => fn ($c) => \App\Core\Support\Money::format($c->monthly_rent)],
+        ['key' => 'cash', 'label' => __('finance::field.rental_cash'), 'numeric' => true,
+         'render' => fn ($c) => \App\Core\Support\Money::format($c->monthlyCash())],
+        ['key' => 'monthly_adjustment', 'label' => __('finance::field.rental_from_deposit'), 'numeric' => true,
+         'render' => fn ($c) => \App\Core\Support\Money::format($c->monthly_adjustment)],
+        /* ⭐ যে সংখ্যাটার জন্য এই পর্দা — ফেরত পাওয়ার টাকা */
+        ['key' => 'deposit_left', 'label' => __('finance::field.rental_deposit_left'), 'numeric' => true,
+         'render' => fn ($c) => new \Illuminate\Support\HtmlString(
+             '<span class=\'font-semibold\'>' . e(\App\Core\Support\Money::format($c->depositLeft())) . '</span>')],
+        ['key' => 'ends_on', 'label' => __('finance::field.rental_ends_on'), 'width' => '8rem',
+         'render' => fn ($c) => $c->ends_on->format('d/m/Y')],
+        /* ⓘ নিজের পাতায় — মাসের ভাড়া, শর্ত বদল, জামানত, চুক্তি শেষ সব ওখানে */
+        ['key' => 'actions', 'label' => __('core.table.actions'), 'width' => '7rem',
+         'render' => fn ($c) => new \Illuminate\Support\HtmlString(
+             '<a href=\'' . route('finance.rental.show', $c) . '\' '
+             . 'class=\'inline-flex min-h-(--spacing-touch) items-center rounded-(--radius-field) px-2 text-sm '
+             . 'text-(--color-link) transition-colors hover:bg-(--color-surface-hover) print-hide\'>'
+             . e(__('core.action.view')) . '</a>')],
+    ];
+
+    $rentTabs = [
+        'running' => __('finance::state.active'),
+        'closed' => __('finance::state.closed'),
+    ];
+@endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('finance::menu.rental') }}</x-slot:title>
-
-    <x-slot:header>
-        <x-ui.page-header :title="__('finance::menu.rental')" />
-    </x-slot:header>
 
     @if (session('saved'))
         <div role="status"
@@ -36,244 +75,88 @@
         </div>
     @endif
 
-    @if ($endingSoon->isNotEmpty())
-        <section data-boxed
-                 class="mb-4 rounded-(--radius-card) border border-(--color-border)
-                        bg-(--color-badge-warning-bg) p-4">
-            <h2 class="mb-2 font-semibold text-(--color-badge-warning-ink)">
-                {{ __('finance::message.rental_ending_soon') }}
-            </h2>
+    <section data-boxed
+             class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
+                    bg-(--color-surface-card)">
+        {{-- ⭐ শিরোনাম, খোঁজা আর "বন্ধগুলোও দেখাও" — বাকি তালিকার মতো এক বাক্সে।
+             মালিক, ১৯ সেপ্টেম্বর ২০২৬: *"সব মডিউলেই একই অবস্থা, সব ঠিক করো"*।
 
-            <ul class="grid gap-1 text-sm text-(--color-badge-warning-ink)">
-                @foreach ($endingSoon as $soon)
-                    <li>
-                        <a href="{{ route('finance.rental.show', $soon) }}"
-                           class="underline decoration-dotted underline-offset-2">
-                            {{ $soon->counterparty }}@if ($soon->subject) — {{ $soon->subject }}@endif
-                        </a>
-                        ·
-                        {{ __('finance::message.rental_ends_on', ['date' => $soon->ends_on->format('d/m/Y')]) }}
-                        ·
-                        {{-- ⭐ ফেরতযোগ্য টাকাটা এখানেই লেখা — নাহলে কেউ
-                             ক্লিক করে দেখতে যেতেন না --}}
-                        <span class="num font-semibold">{{ \App\Core\Support\Money::format($soon->depositLeft()) }}</span>
-                    </li>
-                @endforeach
-            </ul>
-        </section>
-    @endif
+             ⓘ "বন্ধগুলোও দেখাও" চেকবক্সটা এখন ট্যাব (চালু · বন্ধ), মূলধনের পাতার
+             মতো। ⭐ টেবিলটা এখন `x-ui.table`, তাই ঘনত্ব, কলাম আর রপ্তানি সত্যিই
+             কাজ করে — আর "+ নতুন চুক্তি" শিরোনামের ডানে, ফর্মটা নিজের পাতায়। --}}
+        <form method="GET" class="contents">
+            {{-- ⓘ ঘনত্ব, কলাম বা খোঁজা বদলালে খোলা ট্যাবটা হারায় না --}}
+            @if ($tab === 'closed')
+                <input type="hidden" name="tab" value="closed">
+            @endif
 
+            <x-ui.toolbar :title="__('finance::menu.rental')"
+                :subtitle="__('finance::message.rental_note')"
+                :columns="$rentColumns"
+                :search-placeholder="__('finance::message.rental_search')"
+                {{-- ⓘ ট্যাব ছাঁকনির চিপ নয় — ট্যাব নিজেই দেখায়; `closed` পুরনো লিংকের --}}
+                :quiet="['tab', 'closed']">
+                <x-slot:actions>
+                    @can('finance.rental.create')
+                        <x-ui.button tone="primary" icon="plus" :href="route('finance.rental.create')">
+                            {{ __('finance::action.rental_new') }}
+                        </x-ui.button>
+                    @endcan
+                </x-slot:actions>
+            </x-ui.toolbar>
+        </form>
 
-    <form method="GET" class="mb-3">
-        <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
-            <input type="checkbox" name="closed" value="1" @checked($showClosed)
-                   onchange="this.form.submit()" class="size-4">
-            {{ __('finance::action.rental_show_closed') }}
-        </label>
-    </form>
+        {{-- ট্যাবের সারি — প্রতিটার পাশে কয়টা চুক্তি --}}
+        <nav class="flex flex-wrap gap-1 border-b border-(--color-border) px-2 text-sm"
+             aria-label="{{ __('finance::menu.rental') }}">
+            @foreach ($rentTabs as $key => $label)
+                <a href="{{ route('finance.rental.index', $key === 'running' ? [] : ['tab' => $key]) }}"
+                   @if ($tab === $key) aria-current="page" @endif
+                   class="-mb-px flex min-h-(--spacing-touch) items-center gap-2 border-b-2 px-3
+                          {{ $tab === $key
+                              ? 'border-(--color-brand-500) font-semibold text-(--color-ink)'
+                              : 'border-transparent text-(--color-ink-muted) hover:text-(--color-ink)' }}">
+                    {{ $label }}
+                    <span class="rounded-full bg-(--color-surface-sunken) px-2 text-2xs text-(--color-ink-muted)">
+                        {{ $counts[$key] }}
+                    </span>
+                </a>
+            @endforeach
+        </nav>
 
-    @if ($contracts->isEmpty())
-        <x-ui.empty-state :message="__('finance::message.no_rentals')" />
-    @else
-        <section data-boxed
-                 class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
-                        bg-(--color-surface-card)">
-            <div class="overflow-x-auto">
-                <table class="ui-list w-full">
-                    <thead>
-                        <tr class="text-2xs text-(--color-ink-muted)">
-                            <th class="text-start">{{ __('finance::field.rental_counterparty') }}</th>
-                            <th class="text-start">{{ __('finance::field.rental_subject') }}</th>
-                            <th class="text-end">{{ __('finance::field.rental_rent') }}</th>
-                            <th class="text-end">{{ __('finance::field.rental_cash') }}</th>
-                            <th class="text-end">{{ __('finance::field.rental_from_deposit') }}</th>
-                            <th class="text-end">{{ __('finance::field.rental_deposit_left') }}</th>
-                            <th class="text-start">{{ __('finance::field.rental_ends_on') }}</th>
-                        </tr>
-                    </thead>
+        {{-- ⓘ শেষ হয়ে আসা চুক্তি — একই বাক্সে, ট্যাবের নিচে আর তালিকার উপরে।
+             আগে বাক্সের বাইরে উপরে বসত আর টুলবারকে নিচে ঠেলত। কেবল চালুর
+             ট্যাবে: বন্ধ চুক্তির তালিকার উপরে "শেষ হয়ে আসছে" বিভ্রান্ত করত। --}}
+        @if ($tab === 'running' && $endingSoon->isNotEmpty())
+            <section class="border-b border-(--color-border) bg-(--color-badge-warning-bg) px-4 py-3">
+                <h2 class="mb-2 font-semibold text-(--color-badge-warning-ink)">
+                    {{ __('finance::message.rental_ending_soon') }}
+                </h2>
 
-                    <tbody>
-                        @foreach ($contracts as $contract)
-                            <tr class="border-t border-(--color-border)">
-                                <td>
-                                    <a href="{{ route('finance.rental.show', $contract) }}"
-                                       class="text-(--color-brand-500) underline-offset-2 hover:underline">
-                                        {{ $contract->counterparty }}
-                                    </a>
-                                </td>
-                                <td class="text-(--color-ink-muted)">{{ $contract->subject }}</td>
-                                <td class="num text-end">{{ \App\Core\Support\Money::format($contract->monthly_rent) }}</td>
-                                <td class="num text-end">{{ \App\Core\Support\Money::format($contract->monthlyCash()) }}</td>
-                                <td class="num text-end">{{ \App\Core\Support\Money::format($contract->monthly_adjustment) }}</td>
+                <ul class="grid gap-1 text-sm text-(--color-badge-warning-ink)">
+                    @foreach ($endingSoon as $soon)
+                        <li>
+                            <a href="{{ route('finance.rental.show', $soon) }}"
+                               class="underline decoration-dotted underline-offset-2">
+                                {{ $soon->counterparty }}@if ($soon->subject) — {{ $soon->subject }}@endif
+                            </a>
+                            ·
+                            {{ __('finance::message.rental_ends_on', ['date' => $soon->ends_on->format('d/m/Y')]) }}
+                            ·
+                            {{-- ⭐ ফেরতযোগ্য টাকাটা এখানেই লেখা — নাহলে কেউ
+                                 ক্লিক করে দেখতে যেতেন না --}}
+                            <span class="num font-semibold">{{ \App\Core\Support\Money::format($soon->depositLeft()) }}</span>
+                        </li>
+                    @endforeach
+                </ul>
+            </section>
+        @endif
 
-                                {{-- ⭐ যে সংখ্যাটার জন্য এই পর্দা — ফেরত পাওয়ার টাকা --}}
-                                <td class="num text-end font-semibold">
-                                    {{ \App\Core\Support\Money::format($contract->depositLeft()) }}
-                                </td>
-
-                                <td>{{ $contract->ends_on->format('d/m/Y') }}</td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-        </section>
+        <x-ui.table :rows="$contracts"
+                    :columns="$rentColumns"
+                    :compact="request()->boolean('compact')"
+                    :empty="request('q') ? __('core.empty.no_results') : __('finance::message.no_rentals')" />
 
         <x-ui.pager :rows="$contracts" />
-    @endif
-
-    @can('finance.rental.create')
-        <section data-boxed
-                 class="mt-4 rounded-(--radius-card) border border-(--color-border)
-                        bg-(--color-surface-card) p-4">
-            <h2 class="mb-3 font-semibold">{{ __('finance::action.rental_new') }}</h2>
-
-            <form method="POST" enctype="multipart/form-data" action="{{ route('finance.rental.store') }}"
-                  class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                @csrf
-
-                <x-ui.field name="counterparty" :label="__('finance::field.rental_counterparty')" required />
-                <x-ui.field name="counterparty_phone" :label="__('finance::field.rental_phone')" />
-                <x-ui.field name="subject" :label="__('finance::field.rental_subject')" />
-
-                <x-ui.field name="deposit_amount" type="number" step="0.0001" min="0"
-                            :label="__('finance::field.rental_deposit')" required />
-                <x-ui.field name="monthly_rent" type="number" step="0.0001" min="0"
-                            :label="__('finance::field.rental_rent')" required />
-
-                {{-- ⓘ নগদের অঙ্কটা চাওয়া হয় না — সেটা ভাড়া বিয়োগ এটা।
-                     তিনটা সংখ্যা চাইলে কেউ এমন তিনটা বসাত যাদের যোগফল
-                     মেলে না, আর ভাউচারটা ভারসাম্যহীন হয়ে থামত। --}}
-                <x-ui.field name="monthly_adjustment" type="number" step="0.0001" min="0"
-                            :label="__('finance::field.rental_from_deposit')" />
-
-                <label class="grid gap-1">
-                    <span class="text-2xs text-(--color-ink-muted)">
-                        {{ __('finance::field.rental_starts_on') }}
-                    </span>
-                    <x-ui.date name="starts_on" :value="old('starts_on', now()->toDateString())" required />
-                </label>
-
-                <x-ui.field name="term_months" type="number" min="1" max="600"
-                            :label="__('finance::field.rental_term')" required />
-
-                {{-- ⭐ তিনটা ঘরই কলামে ছিল, পর্দায় ছিল না — ১৫ সেপ্টেম্বর ২০২৬।
-
-                     ⚠️ ভাড়ার দিনটা লেখা না থাকলে "দেরি হয়েছে কি না"
-                     প্রশ্নের উত্তর দেওয়া যায় না, আর বাড়িওয়ালা ফোন
-                     করলে তর্ক হয়। ⓘ ৫ তারিখ ডিফল্ট, কারণ বেশিরভাগ
-                     চুক্তিতে ওটাই লেখা থাকে। --}}
-                <x-ui.field name="rent_day" type="number" min="1" max="28"
-                            :label="__('finance::field.rent_day')"
-                            :value="old('rent_day', 5)" />
-
-                {{-- ⛔ অগ্রিম আর জামানত দুইটা আলাদা জিনিস — স্যাম্পলের
-                     ঐ লাইনটাই এখানে সবচেয়ে জরুরি।
-
-                     ⓘ অগ্রিম ভাড়া **ভাড়ারই আগাম**, তাই প্রতি মাসে ওটা
-                     থেকে কাটা পড়ে আর একদিন শূন্য হয়। ⚠️ জামানত ফেরতযোগ্য
-                     — চুক্তি শেষ না হলে ওটা কমে না। দুইটাকে এক ধরলে
-                     মালিক ভাবতেন তাঁর টাকা জমা আছে, অথচ সেটা খরচ হয়ে
-                     গেছে। --}}
-                <x-ui.field name="advance_months" type="number" min="0" max="36"
-                            :label="__('finance::field.advance_months')"
-                            :value="old('advance_months', 0)" />
-
-                {{-- ⓘ ভাড়ার উপর উৎসে কর — ভাড়াটিয়া কেটে সরকারকে দেয়,
-                     তাই বাড়িওয়ালা হাতে পান কম। ⚠️ হারটা না থাকলে
-                     বাড়িওয়ালার খাতা আর আমাদের খাতা মিলত না। --}}
-                <x-ui.field name="tax_rate" type="number" step="0.01" min="0" max="100"
-                            :label="__('finance::field.rental_tax_rate')"
-                            :value="old('tax_rate', 5)" />
-
-                {{-- ⓘ খালি রাখা যায়: পুরনো চুক্তি বসানোর সময় টাকাটা আগেই
-                     দেওয়া হয়ে গেছে আর খোলার জেরে বসেছে, তখন আবার পোস্ট
-                     করলে দুইবার হত। --}}
-                @include('finance::rental._money', [
-                    'money' => $money,
-                    'label' => __('finance::field.rental_money_account'),
-                    'blank' => __('finance::field.rental_already_paid'),
-                ])
-
-                <div class="sm:col-span-2 lg:col-span-3">
-
-                    {{-- ⭐ ফিতাটা ঘরগুলোর পরে, ভাউচারের বাক্সের আগে — নমুনার ক্রম।
-                         ⓘ আগে এটা ফর্মের বাইরে ছিল, তাই কার্ডের নিচে আলগা হয়ে
-                         ঝুলত। মালিক পাঁচটা পর্দা পাশাপাশি দেখে ধরিয়ে দিয়েছেন। --}}
-                    <div class="sm:col-span-2 xl:col-span-4">
-                        @include('finance::partials.handoff', [
-                            'voucher' => 'payment',
-                            'to' => route('accounts.voucher.create', ['type' => 'payment']),
-                            'action' => __('finance::action.pay_money_voucher'),
-                        ])
-                    </div>
-
-                    {{-- ⛔ ভাউচারের বাক্সটা এখান থেকে সরানো হলো — ১৮ সেপ্টেম্বর ২০২৬।
-
-                         ── মালিকের প্রশ্ন, আর সেটাই সঠিক ছিল ───────────────────────────
-                         *"যদি Accounts থেকেই টাকা নেওয়া হয়, তাহলে 'টাকাটা কীভাবে এল'
-                         সেটা Accounts-এর ব্যাপার — Finance থেকে শুধু work order যাবে না?"*
-
-                         ── ⚠️ তিনটা কারণে বাক্সটা দুর্বল ছিল ────────────────────────────
-                         ⓘ ওর একটা ঘরও খাতার সারিতে **সংরক্ষণ হত না** — বাইশটা ঘর বসে
-                         থাকত কেবল তিনটা মান বয়ে নেওয়ার জন্য।
-
-                         ⛔ টাকার নিয়মগুলো ওপাশে, ঘরগুলো এপাশে: আগাম তারিখের চেকে টাকা
-                         নড়ে না, BEFTN পরদিন ক্রেডিট হয়, MFS-এর চার্জ খরচের খাতে যায়,
-                         একই ব্যাংক রেফারেন্স দুইবার নেওয়া যায় না
-                         ([[VoucherService::assertBankReferenceIsFree]])। ⚠️ খাতার পর্দা
-                         এর একটাও জানত না, তাই এখানে এমন সমন্বয় ভরা যেত যা ভাউচার পরে
-                         অস্বীকার করত — আর ব্যবহারকারী জানতেন এক পর্দা পরে।
-
-                         ⛔ আর এটা ঠিক সেই ফাঁদ যা [[capital/partials/state]]-এ আগেই লেখা
-                         আছে: *"টাকা ঢোকার দুইটা আলাদা পথ থাকলে একদিন একটায় চার্জের ঘর
-                         যোগ হবে, অন্যটায় না, আর কেউ ধরবে না কারণ দুইটাই কাজ করে।"*
-
-                         ── ⭐ এখন যা হয় ────────────────────────────────────────────────
-                         খাতা লেখে **ঘটনা ও শর্ত**, আর ফিতার বোতাম ভাউচারকে একটা ছোট
-                         নির্দেশ পাঠায় — কে · কত · কী বাবদ। ⓘ বাকি সব প্রশ্ন রসিদ বা
-                         পরিশোধের পর্দা করে, যেখানে নিয়মগুলোও থাকে।
-
-                         ⓘ `partials/voucher-box.blade.php` মোছা হয়নি: নমুনার কাগজে
-                         বাক্সটা আছে, আর সিদ্ধান্তটা কোনোদিন উল্টালে ফাইলটা ফিরিয়ে আনা
-                         এক লাইনের কাজ। ⚠️ কিন্তু আজ কোনো পর্দা ওটা ডাকে না। --}}
-
-                    {{-- ⭐ সংযুক্তি — ভাড়ার চুক্তিপত্র। ⚠️ কত বছর, কত বাড়বে, জামানত কত — সব ওখানে। --}}
-                    <div class="sm:col-span-2">
-                        {{-- ⭐ নাম বদলাল — "সংযুক্তি" নয়, "চুক্তি / সনদ" (১৮ সেপ্টেম্বর ২০২৬)।
-
-                             ── মালিকের প্রশ্ন, আর সেটা ন্যায্য ছিল ─────────────────────────
-                             *"টাকা যদি Accounts নেয়, সংযুক্তিও তো সেখানেই থাকার কথা।"*
-
-                             ── ⓘ উত্তর: কাগজ দুই রকম, আর দুইটার মালিক আলাদা ────────────────
-                             · **ভাউচারের কাগজ** — ব্যাংক স্লিপ, চেকের ছবি, MFS-এর স্ক্রিনশট।
-                               ⓘ ওগুলো *টাকা নড়ার প্রমাণ*, আর ওগুলো রসিদেই থাকে।
-                             · **খাতার কাগজ** — মঞ্জুরিপত্র, FDR-এর সার্টিফিকেট, ভাড়ার
-                               চুক্তিপত্র, ধারের স্ট্যাম্প। ⓘ ওগুলো *শর্তের প্রমাণ*।
-
-                             ── ⛔ দ্বিতীয় দলটা ভাউচারে রাখা যায় না, দুই কারণে ────────────
-                             ⚠️ ব্যাংক সুবিধা মঞ্জুর হয়েছে অথচ এক টাকাও তোলা হয়নি — ভাউচারই
-                             নেই, কাগজটা তখন কোথায় থাকবে?
-
-                             ⚠️ আর একটা FDR-এ ছয় বছরে বিশটা লেনদেন হয়, সার্টিফিকেট একটাই।
-                             ⛔ যেটাতেই রাখা হোক, বাকি উনিশটা থেকে ওটা খুঁজে পাওয়া যেত না।
-
-                             ⭐ তাই ঘরটা থাকে, কিন্তু নামটা সৎ হয়: "সংযুক্তি" পড়ে মানুষ
-                             ব্যাংক স্লিপ দিতেন, আর ওটা ভুল জায়গায় বসত। --}}
-                        <label for="rent-paper" class="mb-1 block text-sm font-medium">
-                            {{ __('finance::field.book_paper') }}
-                        </label>
-                        <input id="rent-paper" type="file" name="paper"
-                               x-on:change="$store.scanner.begin($el, 'paper')"
-                               class="w-full text-sm file:me-2 file:rounded-(--radius-field)
-                                      file:border file:border-(--color-border) file:bg-(--color-surface-app)
-                                      file:px-3 file:py-1.5 file:text-sm">
-                    <span class="mt-1 block text-2xs text-(--color-ink-muted)">{{ __('finance::field.book_paper_hint') }}</span>
-                    </div>
-
-                    <x-ui.button type="submit">{{ __('finance::action.rental_open') }}</x-ui.button>
-                </div>
-            </form>
-        </section>
-    @endcan
+    </section>
 </x-layouts.app>

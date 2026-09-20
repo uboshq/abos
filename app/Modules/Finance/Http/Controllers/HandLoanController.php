@@ -45,7 +45,7 @@ class HandLoanController extends Controller implements HasMiddleware
     {
         return [
             new Middleware('can:finance.hand_loan.view', only: ['index', 'show']),
-            new Middleware('can:finance.hand_loan.create', only: ['store']),
+            new Middleware('can:finance.hand_loan.create', only: ['create', 'store']),
             new Middleware('can:finance.hand_loan.move', only: ['move', 'settle']),
         ];
     }
@@ -67,9 +67,68 @@ class HandLoanController extends Controller implements HasMiddleware
      */
     public function index(Request $request): View
     {
+        $standing = $this->loans->standing();
+
+        /*
+         * ⭐ খোঁজা — তালিকা টুলবারে এল, মালিকের নির্দেশে (১৯ সেপ্টেম্বর ২০২৬)।
+         *
+         * ⓘ নাম, কোড বা মোবাইল ধরে, মেমরিতে — তালিকাটা খোলা হাতধারের, দশে
+         * গোনা ([[HandLoanService::standing()]]-এর মন্তব্য)। ⚠️ উপরের দুই
+         * যোগফল ছাঁকা হয় না: "কত পাব, কত দেব" প্রশ্নটা পুরো প্রতিষ্ঠানের।
+         */
+        $term = mb_strtolower(trim((string) $request->query('q')));
+
+        $rows = $term === '' ? $standing['rows'] : array_values(array_filter(
+            $standing['rows'],
+            fn (array $row) => str_contains(mb_strtolower(implode(' ', array_filter([
+                $row['account']->person?->name_en,
+                $row['account']->person?->name_bn,
+                $row['account']->person?->code,
+                $row['account']->person?->mobile,
+            ]))), $term),
+        ));
+
+        /*
+         * ⭐ ট্যাব — "তারা দেবে · আমরা দেব" (মালিকের নমুনা: মূলধনের পাতা, ১৯ সেপ্টেম্বর ২০২৬)।
+         *
+         * ⓘ দিকটা চিহ্ন থেকে, [[partials/side]]-এর মতোই। ⚠️ "সব"-ও থাকে —
+         * শোধ হয়ে যাওয়া (শূন্য) খাতা দুই দিকের কোনোটাতেই পড়ে না, আর
+         * ট্যাব দুইটা হলে ওরা পর্দা থেকে হারাত।
+         */
+        $sideOf = fn (array $row) => bccomp((string) $row['balance'], '0', 4);
+
+        $counts = [
+            'all' => count($rows),
+            'they' => count(array_filter($rows, fn ($r) => $sideOf($r) > 0)),
+            'we' => count(array_filter($rows, fn ($r) => $sideOf($r) < 0)),
+        ];
+
+        $tab = in_array($request->query('tab'), ['they', 'we'], true) ? (string) $request->query('tab') : 'all';
+
+        if ($tab !== 'all') {
+            $rows = array_values(array_filter($rows,
+                fn ($r) => $tab === 'they' ? $sideOf($r) > 0 : $sideOf($r) < 0));
+        }
+
         return view('finance::hand-loan.index', [
             'menu' => $this->menu->forUser($request->user()),
-            'standing' => $this->loans->standing(),
+            'standing' => $standing,
+            'rows' => $rows,
+            'tab' => $tab,
+            'counts' => $counts,
+        ]);
+    }
+
+    /**
+     * নতুন হাতধারের ফর্ম — নিজের পাতায় (১৯ সেপ্টেম্বর ২০২৬)।
+     *
+     * ⓘ আগে ফর্মটা তালিকার পাতার উপরে বসত, আর মালিক তালিকাটাই খুঁজে
+     * পাচ্ছিলেন না (*"এগুলোর লিস্ট কোথায়?"*)। এখন অন্য মডিউলের মতো।
+     */
+    public function create(Request $request): View
+    {
+        return view('finance::hand-loan.create', [
+            'menu' => $this->menu->forUser($request->user()),
             'people' => Person::query()->active()->orderBy('name_en')
                 ->pluck('name_en', 'id'),
             'accounts' => $this->moneyAccounts(),

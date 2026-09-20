@@ -12,52 +12,94 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('finance::menu.expense') }}</x-slot:title>
 
-    <x-slot:header>
-        <x-ui.page-header :title="__('finance::menu.expense')"
-                          :subtitle="__('finance::message.expense_note')" />
-    </x-slot:header>
+    {{--
+        ⭐ বাকি তালিকার গড়নে — ১৯ সেপ্টেম্বর ২০২৬, মালিক: *"সব পাতাতেই সমস্যা"*।
 
-    {{-- সময়ের পরিসর — ডিফল্ট চলতি মাস, কারণ ভাড়া-বেতন-বিদ্যুৎ মাসের
-         হিসাব, আর "আজ কত গেল" প্রশ্নটা কেউ করে না। --}}
-    <form method="GET" class="mb-3 flex flex-wrap items-end gap-2">
-        <x-ui.field name="from" type="date" :label="__('finance::field.from')" :value="$from" />
-        <x-ui.field name="to" type="date" :label="__('finance::field.to')" :value="$to" />
+        ⓘ আগে শিরোনাম পাতার মাথায়, তার নিচে খোলা তারিখের ফর্ম আর তার এক
+        কোণে "নতুন খরচ", তারপর আলাদা বাক্সে খাতের তালিকা। ⭐ এখন গ্রাহক আর
+        ভাউচারের তালিকার মতো: টুলবার (শিরোনাম · বর্ণনা · + নতুন খরচ, নিচের
+        লাইনে ছাঁকনি · খোঁজা · সরঞ্জাম) → খাতের তালিকা, একই বাক্সে। তারিখ
+        দুইটা টুলবারের ছাঁকনিতে, ভাউচারের পাতার মতোই।
 
-        <x-ui.button type="submit" tone="secondary">{{ __('core.action.apply') }}</x-ui.button>
+        ⓘ টুলবার কেবল খাতের তালিকার — খোঁজা, কলাম, ঘনত্ব আর রপ্তানি ওটাকেই
+        ধরে। নিচের "অপেক্ষায়" আর "সাম্প্রতিক" আগের মতোই নিজের বাক্সে, নিজের
+        শিরোনামে। ⓘ সময়টা খাতের শিরোনামের ডানে লেখা থাকে: ছাঁকনির প্যানেল
+        বন্ধ থাকলেও কোন সময়ের সংখ্যা তা পর্দায় থাকা চাই।
+    --}}
+    @php
+        $expenseColumns = [
+            ['key' => 'head', 'label' => __('finance::field.head'),
+             'render' => fn ($r) => $r['account']->name()],
+            ['key' => 'now', 'label' => __('finance::field.this_period'), 'numeric' => true, 'width' => '11rem',
+             'render' => fn ($r) => view('ui.amount-link', [
+                 'value' => $r['now'],
+                 'href' => route('accounts.coa.show', $r['account']).'#transactions',
+             ])],
+            ['key' => 'before', 'label' => __('finance::field.period_before'), 'numeric' => true, 'width' => '11rem',
+             'render' => fn ($r) => \App\Core\Support\Money::format($r['before'])],
+            ['key' => 'change', 'label' => __('finance::field.change'), 'numeric' => true, 'width' => '10rem',
+             'render' => fn ($r) => view('finance::expense.partials.change', ['row' => $r])],
+            /* খাতের খতিয়ান — খোলার মতো রেকর্ড; দেখার অনুমতি না থাকলে লিংক নয় */
+            ['key' => 'do', 'label' => __('core.table.actions'), 'width' => '7rem',
+             'render' => fn ($r) => auth()->user()?->can('view', $r['account'])
+                 ? new \Illuminate\Support\HtmlString('<a href="'.e(route('accounts.coa.show', $r['account']).'#transactions').'"'
+                     .' class="inline-flex min-h-(--spacing-touch) items-center rounded-(--radius-field) px-2 text-sm'
+                     .' text-(--color-link) transition-colors hover:bg-(--color-surface-hover) print-hide">'
+                     .e(__('core.action.view')).'</a>')
+                 : '—'],
+        ];
+    @endphp
 
-        <span class="flex-1"></span>
+    <div data-boxed class="mb-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
+                bg-(--color-surface-card)">
+        <form method="GET" class="contents">
+            <x-ui.toolbar :title="__('finance::menu.expense')"
+                          :subtitle="__('finance::message.expense_note')"
+                          :columns="$expenseColumns"
+                          :search-placeholder="__('finance::message.head_search')">
+                <x-slot:actions>
+                    {{-- খরচ লেখা হয় ভাউচারেই — এখানে আরেকটা ফর্ম বানালে একই
+                         জিনিসের দুইটা পথ হত, আর দুইটার যাচাই একদিন আলাদা হয়ে যেত। --}}
+                    {{-- ⓘ `@can` নতুন — বোতামটা ভাউচার বানানোর পাতায় নিয়ে যায়, আর ওই
+                         রুট `accounts.voucher.create` অনুমতি চায়। অনুমতি ছাড়া বোতামটা
+                         দেখালে ক্লিকে ৪০৩ — একটা মৃত বোতাম। --}}
+                    @can('accounts.voucher.create')
+                        <x-ui.button tone="primary" icon="plus"
+                                     :href="route('accounts.voucher.create', ['type' => 'expense'])">
+                            {{ __('finance::action.new_expense') }}
+                        </x-ui.button>
+                    @endcan
+                </x-slot:actions>
 
-        {{-- খরচ লেখা হয় ভাউচারেই — এখানে আরেকটা ফর্ম বানালে একই
-             জিনিসের দুইটা পথ হত, আর দুইটার যাচাই একদিন আলাদা হয়ে যেত। --}}
-        <x-ui.button tone="primary" icon="plus"
-                     :href="route('accounts.voucher.create', ['type' => 'expense'])">
-            {{ __('finance::action.new_expense') }}
-        </x-ui.button>
-    </form>
+                {{-- সময়ের পরিসর — ডিফল্ট চলতি মাস, কারণ ভাড়া-বেতন-বিদ্যুৎ মাসের
+                     হিসাব, আর "আজ কত গেল" প্রশ্নটা কেউ করে না। --}}
+                <x-ui.date name="from"
+                           value="{{ $from }}"
+                           aria-label="{{ __('finance::field.from') }}"
+                           :submit-on-change="true"
+                           class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
+                <x-ui.date name="to"
+                           value="{{ $to }}"
+                           aria-label="{{ __('finance::field.to') }}"
+                           :submit-on-change="true"
+                           class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
+            </x-ui.toolbar>
+        </form>
 
-    <section data-boxed class="mb-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
-                    bg-(--color-surface-card)">
-        <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-3 font-semibold">
+        <h2 class="flex flex-wrap items-center gap-2 border-b border-(--color-border) bg-(--color-section-head)
+                   px-3 py-2 text-sm font-semibold">
             {{ __('finance::field.by_head') }}
+            <span class="ms-auto text-xs font-normal tabular-nums text-(--color-ink-muted)">
+                {{ \App\Core\Support\DateFormat::format($from) }} – {{ \App\Core\Support\DateFormat::format($to) }}
+            </span>
         </h2>
 
         <x-ui.table
-            :empty="__('finance::message.no_expense_yet')"
+            :compact="request()->boolean('compact')"
+            :empty="filled(request('q')) ? __('core.empty.no_results') : __('finance::message.no_expense_yet')"
             :rows="$heads"
-            :columns="[
-                ['key' => 'head', 'label' => __('finance::field.head'),
-                 'render' => fn ($r) => $r['account']->name()],
-                ['key' => 'now', 'label' => __('finance::field.this_period'), 'numeric' => true, 'width' => '11rem',
-                 'render' => fn ($r) => view('ui.amount-link', [
-                     'value' => $r['now'],
-                     'href' => route('accounts.coa.show', $r['account']).'#transactions',
-                 ])],
-                ['key' => 'before', 'label' => __('finance::field.period_before'), 'numeric' => true, 'width' => '11rem',
-                 'render' => fn ($r) => \App\Core\Support\Money::format($r['before'])],
-                ['key' => 'change', 'label' => __('finance::field.change'), 'numeric' => true, 'width' => '10rem',
-                 'render' => fn ($r) => view('finance::expense.partials.change', ['row' => $r])],
-            ]" />
-    </section>
+            :columns="$expenseColumns" />
+    </div>
 
     {{--
         অনুমোদনের অপেক্ষায় — উপরের যোগফলে এগুলো **নেই**।

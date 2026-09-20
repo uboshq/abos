@@ -13,54 +13,69 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('finance::menu.plan') }}</x-slot:title>
 
-    <x-slot:header>
-        <x-ui.page-header :title="__('finance::menu.plan')"
-                          :subtitle="__('finance::message.plan_note')" />
-    </x-slot:header>
+    {{--
+        ⭐ মাথাটা বাকি পাতার মতো — ১৯ সেপ্টেম্বর ২০২৬, মালিক: *"সব পাতাতেই সমস্যা"*।
 
-    {{-- কত দূর এল — লাইন গুনে, বিভাগ গুনে নয়।
+        ⓘ এটা তালিকা নয়, মানচিত্র — তাই টুলবারের কেবল শিরোনাম · বর্ণনা, আর
+        ছাপা ও রিফ্রেশ। খোঁজা, ঘনত্ব, রপ্তানি আর শেয়ার বন্ধ: নিচের কার্ডগুলো
+        ওদের কোনোটা মানে না, আর যে বোতাম কিছু করে না সেটা মৃত বোতাম।
+        ⓘ কত দূর এল — সেই সারাংশটা একই বাক্সে, টুলবারের নিচে (বাকি পাতার
+        যোগফলের মতো)। বিভাগের কার্ডগুলো আগের মতোই নিচে।
+    --}}
+    <div data-boxed class="mb-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
+                bg-(--color-surface-card)">
+        <form method="GET" class="contents">
+            <x-ui.toolbar :title="__('finance::menu.plan')"
+                          :subtitle="__('finance::message.plan_note')"
+                          :search="false"
+                          :density="false"
+                          :export="false"
+                          :share="false" />
+        </form>
 
-         বিভাগ গুনলে "৩৩-এর ১৬" শোনায় ভালো, কিন্তু একটা বিভাগে দশটা
-         লাইন আর অন্যটায় একটা। লাইন গুনলে সংখ্যাটা সত্যিকারের কাজের
-         অনুপাত বলে। --}}
-    @php
-        $pct = $tally['total'] > 0 ? (int) round($tally['done'] / $tally['total'] * 100) : 0;
-    @endphp
+        {{-- কত দূর এল — লাইন গুনে, বিভাগ গুনে নয়।
 
-    <section data-boxed class="mb-4 rounded-(--radius-card) border border-(--color-border)
-                    bg-(--color-surface-card) p-4">
-        <div class="flex flex-wrap items-baseline gap-3">
-            <span class="num text-2xl font-bold">{{ $tally['done'] }}</span>
-            <span class="text-(--color-ink-muted)">/</span>
-            <span class="num text-lg">{{ $tally['total'] }}</span>
-            <span class="text-sm text-(--color-ink-muted)">{{ __('finance::message.lines_done') }}</span>
+             বিভাগ গুনলে "৩৩-এর ১৬" শোনায় ভালো, কিন্তু একটা বিভাগে দশটা
+             লাইন আর অন্যটায় একটা। লাইন গুনলে সংখ্যাটা সত্যিকারের কাজের
+             অনুপাত বলে। --}}
+        @php
+            $pct = $tally['total'] > 0 ? (int) round($tally['done'] / $tally['total'] * 100) : 0;
+        @endphp
 
-            <span class="flex-1"></span>
+        <section class="p-4">
+            <div class="flex flex-wrap items-baseline gap-3">
+                <span class="num text-2xl font-bold">{{ $tally['done'] }}</span>
+                <span class="text-(--color-ink-muted)">/</span>
+                <span class="num text-lg">{{ $tally['total'] }}</span>
+                <span class="text-sm text-(--color-ink-muted)">{{ __('finance::message.lines_done') }}</span>
 
-            <span class="num text-lg font-semibold">{{ $pct }}%</span>
+                <span class="flex-1"></span>
 
-            {{--
-                শেষ কবে হাতে মিলিয়ে দেখা হয়েছে।
+                <span class="num text-lg font-semibold">{{ $pct }}%</span>
 
-                ⚠️ পাহারাগুলো **মরা লিংক** আর **হারানো দরজা** ধরে, কিন্তু
-                একটা লাইন "বাকি" লেখা থেকে যাওয়া ধরতে পারে না — কাজটা
-                হয়ে যাওয়ার পরেও। ৪ সেপ্টেম্বর ২০২৬-এ দুইবার ঠিক সেটাই
-                পাওয়া গেছে।
+                {{--
+                    শেষ কবে হাতে মিলিয়ে দেখা হয়েছে।
 
-                ⭐ তারিখটা তাই এখানে, চোখের সামনে: **ছয় মাসের পুরনো তারিখ
-                নিজেই বলে দেয় সংখ্যাটা কতটা বিশ্বাস করা যায়।**
-            --}}
-            <span class="text-2xs text-(--color-ink-muted)">
-                {{ __('finance::message.reconciled_on', [
-                    'date' => \App\Core\Support\DateFormat::format(\App\Modules\Finance\Support\FinancePlan::RECONCILED_ON),
-                ]) }}
-            </span>
-        </div>
+                    ⚠️ পাহারাগুলো **মরা লিংক** আর **হারানো দরজা** ধরে, কিন্তু
+                    একটা লাইন "বাকি" লেখা থেকে যাওয়া ধরতে পারে না — কাজটা
+                    হয়ে যাওয়ার পরেও। ৪ সেপ্টেম্বর ২০২৬-এ দুইবার ঠিক সেটাই
+                    পাওয়া গেছে।
 
-        <div class="mt-2 h-2 overflow-hidden rounded-full bg-(--color-surface-sunken)">
-            <div class="h-full bg-(--color-brand-600)" style="width: {{ $pct }}%"></div>
-        </div>
-    </section>
+                    ⭐ তারিখটা তাই এখানে, চোখের সামনে: **ছয় মাসের পুরনো তারিখ
+                    নিজেই বলে দেয় সংখ্যাটা কতটা বিশ্বাস করা যায়।**
+                --}}
+                <span class="text-2xs text-(--color-ink-muted)">
+                    {{ __('finance::message.reconciled_on', [
+                        'date' => \App\Core\Support\DateFormat::format(\App\Modules\Finance\Support\FinancePlan::RECONCILED_ON),
+                    ]) }}
+                </span>
+            </div>
+
+            <div class="mt-2 h-2 overflow-hidden rounded-full bg-(--color-surface-sunken)">
+                <div class="h-full bg-(--color-brand-600)" style="width: {{ $pct }}%"></div>
+            </div>
+        </section>
+    </div>
 
     <div class="grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
         @foreach ($sections as $section)

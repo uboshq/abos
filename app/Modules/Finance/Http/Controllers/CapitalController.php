@@ -98,6 +98,19 @@ class CapitalController extends Controller implements HasMiddleware
              */
             'entries' => CapitalEntry::query()->with(['account', 'person'])
                 ->when($personId, fn ($q, $id) => $q->where('person_id', $id))
+                /*
+                 * ⭐ খোঁজা — টুলবারের ঘরটা সত্যিই কাজ করে (১৯ সেপ্টেম্বর ২০২৬)।
+                 *
+                 * ⓘ নম্বর, বিবরণ, আর মানুষের নাম/কোড (মাস্টার ডেটা থেকে)।
+                 * ⛔ খোঁজার ঘর যা খোঁজে না, সেটা মৃত বোতাম।
+                 */
+                ->when(trim((string) $request->query('q')) ?: null, fn ($q, $term) => $q->where(
+                    fn ($w) => $w->where('document_no', 'like', "%{$term}%")
+                        ->orWhere('narration', 'like', "%{$term}%")
+                        ->orWhereHas('person', fn ($p) => $p->where('name_en', 'like', "%{$term}%")
+                            ->orWhere('name_bn', 'like', "%{$term}%")
+                            ->orWhere('code', 'like', "%{$term}%")),
+                ))
                 ->orderByDesc('trx_date')->orderByDesc('id')->paginate(50)->withQueryString(),
             /*
              * ⓘ মুনাফাটা স্থিতিপত্র থেকে — **একটাই উৎস**।

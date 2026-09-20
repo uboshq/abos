@@ -120,14 +120,20 @@
                                     :accounts="$money"
                                     :selected="old('money_account_id')" />
 
-                <div class="flex items-end">
-                    <x-ui.button type="submit" tone="primary" class="w-full">
-                        {{ __('finance::action.record_movement') }}
-                    </x-ui.button>
-                </div>
-
                 <div class="sm:col-span-2 xl:col-span-5">
                     <x-ui.field name="note" :label="__('finance::field.note')" :value="old('note')" />
+                </div>
+
+                {{-- ⭐ বোতাম নিজের সারিতে, নিচে বাঁয়ে — মালিক, ১৯ সেপ্টেম্বর ২০২৬:
+                     *"সব পাতাতেই সমস্যা"*।
+
+                     ⛔ আগে বোতামটা একটা `flex items-end`-এর ভেতরে পাঁচ কলামের
+                     গ্রিডের **একটা** ঘরে বসত, তাই লেখাটা কয়েক লাইনে ভাঙত।
+                     ⓘ এখন পুরো সারি জুড়ে, অন্য ফর্মের মতো। --}}
+                <div class="flex flex-wrap items-center gap-2 sm:col-span-2 xl:col-span-5">
+                    <x-ui.button type="submit" tone="primary">
+                        {{ __('finance::action.record_movement') }}
+                    </x-ui.button>
                 </div>
             </form>
         </section>

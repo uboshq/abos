@@ -106,10 +106,10 @@ final class TheFiveBooksOpenedAndTheIncludesWereThereTest extends TestCase
         $screens = [
             ['finance.capital.create', []],
             ['finance.withdrawal.create', []],
-            ['finance.deposit.index', ['issuer' => 'bank']],
-            ['finance.hand_loan.index', []],
-            ['finance.bank_facility.index', []],
-            ['finance.rental.index', []],
+            ['finance.deposit.create', ['issuer' => 'bank']],
+            ['finance.hand_loan.create', []],
+            ['finance.bank_facility.create', []],
+            ['finance.rental.create', []],
         ];
 
         foreach ($screens as [$name, $params]) {

@@ -249,7 +249,10 @@
                     <span class="mt-1 block text-2xs text-(--color-ink-muted)">{{ __('finance::field.book_paper_hint') }}</span>
             </div>
 
-            <div class="flex flex-wrap items-end gap-2">
+            {{-- ⭐ বোতাম দুইটা নিজের সারিতে, নিচে বাঁয়ে — মালিক, ১৯ সেপ্টেম্বর
+                 ২০২৬: *"সব পাতাতেই সমস্যা"*। ⛔ আগে ওরা তিন কলামের গ্রিডের
+                 **একটা** ঘরে বসত, তাই লম্বা লেখা কয়েক লাইনে ভাঙত। --}}
+            <div class="flex flex-wrap items-center gap-2 sm:col-span-2 xl:col-span-3">
                 <x-ui.button type="submit" tone="primary">
                     {{ __('finance::action.save_withdrawal_row') }}
                 </x-ui.button>

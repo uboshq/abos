@@ -42,28 +42,82 @@
         && $shared->isNotEmpty()
         && bccomp(ltrim($gap, '-'), '0.01', 4) > 0;
     $trim = fn (string $n) => rtrim(rtrim($n, '0'), '.');
+
+    /*
+     * ⓘ দুই ট্যাবের কলাম এখানে, টেবিলের গায়ে নয় — টুলবারের কলাম-মেনুও
+     * একই তালিকা পড়ে (১৯ সেপ্টেম্বর ২০২৬)। ⚠️ দুই জায়গায় লিখলে একদিন
+     * মেনুতে এমন কলাম থাকত যেটা টেবিলে নেই।
+     */
+    $ownerColumns = [
+        ['key' => 'name', 'label' => __('finance::field.who'),
+         'render' => fn ($p) => view('finance::capital.partials.owner-link', ['position' => $p])],
+        ['key' => 'type', 'label' => __('finance::field.as'),
+         'render' => fn ($p) => __('finance::who.'.$p['type'])],
+        ['key' => 'contributed', 'label' => __('finance::field.put_in'), 'numeric' => true,
+         'render' => fn ($p) => \App\Core\Support\Money::format($p['contributed'])],
+        ['key' => 'withdrawn', 'label' => __('finance::field.taken_out'), 'numeric' => true,
+         'render' => fn ($p) => \App\Core\Support\Money::format($p['withdrawn'])],
+        ['key' => 'net', 'label' => __('finance::field.stands_at'), 'numeric' => true,
+         'render' => fn ($p) => \App\Core\Support\Money::format($p['net'])],
+        ['key' => 'share', 'label' => __('finance::field.share'), 'numeric' => true,
+         /* ⓘ অংশ হাতে লেখা না থাকলে মূলধনের অনুপাতে হিসাব হয় (`share_source`
+            = capital) — তখন পাশে ছোট করে বলা থাকে, যাতে কেউ ভাবেন না ওটা চুক্তি */
+         'render' => fn ($p) => $p['share'] === null
+             ? '—'
+             : $trim((string) $p['share']).'%'.((($p['share_source'] ?? null) === 'capital')
+                 ? ' ('.__('finance::field.share_by_capital').')'
+                 : '')],
+        ['key' => 'profit_share', 'label' => __('finance::field.profit_share_now'), 'numeric' => true,
+         'render' => fn ($p) => $p['profit_share'] === null
+             ? '—'
+             : \App\Core\Support\Money::format($p['profit_share'])],
+    ];
+
+    $entryColumns = [
+        ['key' => 'trx_date', 'label' => __('finance::field.date'), 'width' => '8rem',
+         'render' => fn ($e) => \App\Core\Support\DateFormat::format($e->trx_date)],
+        ['key' => 'document_no', 'label' => __('core.print.document_no'), 'width' => '9rem'],
+        ['key' => 'person', 'label' => __('finance::field.who'),
+         'render' => fn ($e) => $e->person?->name() ?? '—'],
+        ['key' => 'entry_type', 'label' => __('finance::field.kind'), 'width' => '8rem',
+         'render' => fn ($e) => __('finance::kind.'.$e->entry_type)],
+
+        ['key' => 'contributor_type', 'label' => __('finance::field.as'), 'width' => '8rem',
+         'render' => fn ($e) => __('finance::who.'.$e->contributor_type)],
+
+        ['key' => 'share_percent', 'label' => __('finance::field.share'), 'numeric' => true,
+         'width' => '7rem',
+         'render' => fn ($e) => $e->share_percent === null
+             ? '—'
+             : $trim((string) $e->share_percent).'%'],
+        ['key' => 'amount', 'label' => __('finance::field.amount'), 'numeric' => true, 'width' => '10rem',
+         'render' => fn ($e) => \App\Core\Support\Money::format($e->amount)],
+        /* ⚠️ চওড়া, কারণ ভিতরে খাতের ঘর, নম্বরের ঘর আর বোতাম —
+           তিনটা। সরু রাখলে লেখাগুলো লম্বালম্বি ভেঙে যায়। */
+        ['key' => 'status', 'label' => __('finance::field.state'), 'width' => '22rem',
+         'render' => fn ($e) => view('finance::capital.partials.state', ['entry' => $e])],
+
+        /*
+         * ⛔ সম্পাদনা ও মোছা — কেবল খসড়ায়।
+         *
+         * পোস্ট হওয়া সারিতে বোতাম দুইটা আসে না, আর সেটা সৌজন্য
+         * মাত্র: আসল পাহারা [[CapitalController::assertStillADraft()]]-এ,
+         * কারণ ঠিকানা টাইপ করে বা পুরনো ট্যাব থেকেও অনুরোধ আসতে
+         * পারে। ⓘ **মেনুতে লুকানো আর দরজায় তালা দেওয়া এক জিনিস নয়** —
+         * আজ এই পার্থক্যটা মালিকানার পর্দাতেও ধরা পড়েছে।
+         */
+        ['key' => 'actions', 'label' => '', 'width' => '3rem',
+         'render' => fn ($e) => $e->status !== \App\Modules\Finance\Models\CapitalEntry::DRAFT
+             ? ''
+             : view('finance::capital.partials.row-actions', ['entry' => $e])],
+    ];
+
+    // ⓘ কলাম-মেনু আর ঘনত্ব যে ট্যাব খোলা, তার টেবিলেই খাটে
+    $columns = $tab === 'owners' ? $ownerColumns : $entryColumns;
 @endphp
 
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('finance::menu.capital') }}</x-slot:title>
-
-    <x-slot:header>
-        {{-- ⭐ "+ নতুন" উপরে, বাকি পর্দাগুলোর মতোই।
-
-             ⛔ ফর্মটা আগে তালিকার মাঝখানে গোঁজা ছিল, আর মালিক ধরেছেন
-             যে বাকি পর্দায় উপরে বোতাম থাকে। ⓘ এক রকম না হলে মানুষ
-             প্রতিটা পর্দায় নতুন করে খোঁজেন কোথায় কী। --}}
-        <x-ui.page-header :title="__('finance::menu.capital')"
-                          :subtitle="__('finance::message.capital_note')">
-            <x-slot:actions>
-                @can('finance.capital.create')
-                    <x-ui.button tone="primary" icon="plus" :href="route('finance.capital.create')">
-                        {{ __('finance::action.new_contribution') }}
-                    </x-ui.button>
-                @endcan
-            </x-slot:actions>
-        </x-ui.page-header>
-    </x-slot:header>
 
     @if (session('saved'))
         <p role="alert" class="mb-3 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2
@@ -79,8 +133,42 @@
         </div>
     @endif
 
+    <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+    {{-- ⭐ শিরোনাম, "+ নতুন" আর খোঁজা — বাক্সের মাথায়, বাকি তালিকার মতো;
+         ট্যাব তার নিচে, একই বাক্সে। মালিক, ১৯ সেপ্টেম্বর ২০২৬:
+         *"সব মডিউলেই একই অবস্থা, সব ঠিক করো"*। --}}
+    <form method="GET" class="contents">
+        {{-- ⓘ ঘনত্ব বা কলাম বদলালে ট্যাব আর একজনের ছাঁকনি হারায় না --}}
+        @if ($tab === 'owners')
+            <input type="hidden" name="tab" value="owners">
+        @endif
+        @if ($person)
+            <input type="hidden" name="person" value="{{ $person->getKey() }}">
+        @endif
+
+        {{-- ⓘ খোঁজা কেবল লেনদেনে — মালিকের ট্যাবটা খাতা থেকে গোনা হিসাব,
+             ওখানে খোঁজার ঘর কিছুই ছাঁকত না (মৃত বোতাম) --}}
+        <x-ui.toolbar :title="__('finance::menu.capital')"
+            :subtitle="__('finance::message.capital_note')"
+            :columns="$columns"
+            :search="$tab === 'entries'"
+            :search-placeholder="__('finance::message.capital_search')"
+            {{-- ⓘ ট্যাব আর ব্যক্তি ছাঁকনির চিপ নয় — ট্যাব নিজেই দেখায়, আর ব্যক্তির
+                 নামসহ চিপ নিচে আছে ("সবার সারি দেখুন") --}}
+            :quiet="['tab', 'person']">
+            {{-- ⭐ "+ নতুন" উপরে, বাকি পর্দাগুলোর মতোই — এখন শিরোনামের ডানে --}}
+            <x-slot:actions>
+                @can('finance.capital.create')
+                    <x-ui.button tone="primary" icon="plus" :href="route('finance.capital.create')">
+                        {{ __('finance::action.new_contribution') }}
+                    </x-ui.button>
+                @endcan
+            </x-slot:actions>
+        </x-ui.toolbar>
+    </form>
+
     {{-- ট্যাবের সারি --}}
-    <nav class="mb-3 flex flex-wrap gap-1 border-b border-(--color-border) text-sm"
+    <nav class="flex flex-wrap gap-1 border-b border-(--color-border) px-2 text-sm"
          aria-label="{{ __('finance::menu.capital') }}">
         @foreach ($tabs as $key => $label)
             <a href="{{ route('finance.capital.index', $key === 'entries' ? [] : ['tab' => $key]) }}"
@@ -101,8 +189,7 @@
 
     @if ($tab === 'owners')
         {{-- ── মালিক ও বিনিয়োগকারী — কে কোথায় দাঁড়িয়ে ──────────────────────── --}}
-        <section data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
-                        bg-(--color-surface-card)">
+        <section>
             <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-3 font-semibold">
                 {{ __('finance::field.where_each_stands') }}
             </h2>
@@ -128,37 +215,14 @@
 
                  ⓘ নামটা লিংক — লেনদেন ট্যাবে কেবল তাঁর সারিগুলো খোলে। --}}
             <x-ui.table
+                :compact="request()->boolean('compact')"
                 :empty="__('finance::message.no_capital_yet')"
                 :rows="$positions"
-                :columns="[
-                    ['key' => 'name', 'label' => __('finance::field.who'),
-                     'render' => fn ($p) => view('finance::capital.partials.owner-link', ['position' => $p])],
-                    ['key' => 'type', 'label' => __('finance::field.as'),
-                     'render' => fn ($p) => __('finance::who.'.$p['type'])],
-                    ['key' => 'contributed', 'label' => __('finance::field.put_in'), 'numeric' => true,
-                     'render' => fn ($p) => \App\Core\Support\Money::format($p['contributed'])],
-                    ['key' => 'withdrawn', 'label' => __('finance::field.taken_out'), 'numeric' => true,
-                     'render' => fn ($p) => \App\Core\Support\Money::format($p['withdrawn'])],
-                    ['key' => 'net', 'label' => __('finance::field.stands_at'), 'numeric' => true,
-                     'render' => fn ($p) => \App\Core\Support\Money::format($p['net'])],
-                    ['key' => 'share', 'label' => __('finance::field.share'), 'numeric' => true,
-                     /* ⓘ অংশ হাতে লেখা না থাকলে মূলধনের অনুপাতে হিসাব হয় (`share_source`
-                        = capital) — তখন পাশে ছোট করে বলা থাকে, যাতে কেউ ভাবেন না ওটা চুক্তি */
-                     'render' => fn ($p) => $p['share'] === null
-                         ? '—'
-                         : $trim((string) $p['share']).'%'.((($p['share_source'] ?? null) === 'capital')
-                             ? ' ('.__('finance::field.share_by_capital').')'
-                             : '')],
-                    ['key' => 'profit_share', 'label' => __('finance::field.profit_share_now'), 'numeric' => true,
-                     'render' => fn ($p) => $p['profit_share'] === null
-                         ? '—'
-                         : \App\Core\Support\Money::format($p['profit_share'])],
-                ]" />
+                :columns="$ownerColumns" />
         </section>
     @else
         {{-- ── লেনদেন ─────────────────────────────────────────────────────── --}}
-        <section data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
-                        bg-(--color-surface-card)">
+        <section>
             <h2 class="flex flex-wrap items-center gap-2 border-b border-(--color-border) bg-(--color-section-head) px-4 py-3 font-semibold">
                 {{ __('finance::field.contributions') }}
 
@@ -175,48 +239,13 @@
             </h2>
 
             <x-ui.table
-                :empty="__('finance::message.no_capital_yet')"
+                :compact="request()->boolean('compact')"
+                :empty="request('q') ? __('core.empty.no_results') : __('finance::message.no_capital_yet')"
                 :rows="$entries"
-                :columns="[
-                    ['key' => 'trx_date', 'label' => __('finance::field.date'), 'width' => '8rem',
-                     'render' => fn ($e) => \App\Core\Support\DateFormat::format($e->trx_date)],
-                    ['key' => 'document_no', 'label' => __('core.print.document_no'), 'width' => '9rem'],
-                    ['key' => 'person', 'label' => __('finance::field.who'),
-                     'render' => fn ($e) => $e->person?->name() ?? '—'],
-                    ['key' => 'entry_type', 'label' => __('finance::field.kind'), 'width' => '8rem',
-                     'render' => fn ($e) => __('finance::kind.'.$e->entry_type)],
-
-                    ['key' => 'contributor_type', 'label' => __('finance::field.as'), 'width' => '8rem',
-                     'render' => fn ($e) => __('finance::who.'.$e->contributor_type)],
-
-                    ['key' => 'share_percent', 'label' => __('finance::field.share'), 'numeric' => true,
-                     'width' => '7rem',
-                     'render' => fn ($e) => $e->share_percent === null
-                         ? '—'
-                         : $trim((string) $e->share_percent).'%'],
-                    ['key' => 'amount', 'label' => __('finance::field.amount'), 'numeric' => true, 'width' => '10rem',
-                     'render' => fn ($e) => \App\Core\Support\Money::format($e->amount)],
-                    /* ⚠️ চওড়া, কারণ ভিতরে খাতের ঘর, নম্বরের ঘর আর বোতাম —
-                       তিনটা। সরু রাখলে লেখাগুলো লম্বালম্বি ভেঙে যায়। */
-                    ['key' => 'status', 'label' => __('finance::field.state'), 'width' => '22rem',
-                     'render' => fn ($e) => view('finance::capital.partials.state', ['entry' => $e])],
-
-                    /*
-                     * ⛔ সম্পাদনা ও মোছা — কেবল খসড়ায়।
-                     *
-                     * পোস্ট হওয়া সারিতে বোতাম দুইটা আসে না, আর সেটা সৌজন্য
-                     * মাত্র: আসল পাহারা [[CapitalController::assertStillADraft()]]-এ,
-                     * কারণ ঠিকানা টাইপ করে বা পুরনো ট্যাব থেকেও অনুরোধ আসতে
-                     * পারে। ⓘ **মেনুতে লুকানো আর দরজায় তালা দেওয়া এক জিনিস নয়** —
-                     * আজ এই পার্থক্যটা মালিকানার পর্দাতেও ধরা পড়েছে।
-                     */
-                    ['key' => 'actions', 'label' => '', 'width' => '3rem',
-                     'render' => fn ($e) => $e->status !== \App\Modules\Finance\Models\CapitalEntry::DRAFT
-                         ? ''
-                         : view('finance::capital.partials.row-actions', ['entry' => $e])],
-                ]" />
+                :columns="$entryColumns" />
 
             <x-ui.pager :rows="$entries" />
         </section>
     @endif
+    </div>
 </x-layouts.app>

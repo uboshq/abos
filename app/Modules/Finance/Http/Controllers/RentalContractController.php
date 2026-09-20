@@ -60,8 +60,9 @@ class RentalContractController extends Controller implements HasMiddleware
              * মালিক ঠিক এই কারণেই বলেন "Edge খুলে নিজে দেখো"।
              */
             new Middleware('can:finance.rental.view', only: ['index', 'show']),
+            // ⓘ `create` — নতুন চুক্তির নিজের পাতা (১৯ সেপ্টেম্বর ২০২৬), একই চাবি
             new Middleware('can:finance.rental.create', only: [
-                'store', 'adjust', 'revise', 'topUp',
+                'create', 'store', 'adjust', 'revise', 'topUp',
             ]),
 
             /*
@@ -75,13 +76,34 @@ class RentalContractController extends Controller implements HasMiddleware
 
     public function index(Request $request): View
     {
+        /*
+         * ⭐ দুইটা ট্যাব — চালু · বন্ধ (মালিক, ১৯ সেপ্টেম্বর ২০২৬:
+         * *"সব পাতাতেই সমস্যা"*)। ⓘ আগে "বন্ধগুলোও দেখাও" একটা চেকবক্স ছিল;
+         * এখন মূলধনের পাতার মতো ট্যাব, প্রতিটার পাশে গোনা।
+         *
+         * ⚠️ পুরনো `?closed=1` লিংকও বন্ধের ট্যাবেই খোলে — কারও বুকমার্ক
+         * ভাঙে না।
+         */
+        $tab = $request->query('tab') === 'closed' || $request->boolean('closed')
+            ? 'closed' : 'running';
+
         $query = RentalContract::query()
             ->with(['account', 'expenseAccount'])
             ->when(
-                ! $request->boolean('closed'),
+                $tab === 'running',
                 fn ($q) => $q->active(),
                 fn ($q) => $q->where('status', RentalContract::CLOSED),
             )
+            /*
+             * ⭐ খোঁজা — টুলবারের ঘরটা সত্যিই কাজ করে (১৯ সেপ্টেম্বর ২০২৬)।
+             * ⓘ নম্বর, বাড়িওয়ালা, তাঁর ফোন, আর কোন জায়গা (`subject`)।
+             */
+            ->when(trim((string) $request->query('q')) ?: null, fn ($q, $term) => $q->where(
+                fn ($w) => $w->where('document_no', 'like', "%{$term}%")
+                    ->orWhere('counterparty', 'like', "%{$term}%")
+                    ->orWhere('counterparty_phone', 'like', "%{$term}%")
+                    ->orWhere('subject', 'like', "%{$term}%"),
+            ))
             ->orderBy('ends_on');
 
         return view('finance::rental.index', [
@@ -96,7 +118,27 @@ class RentalContractController extends Controller implements HasMiddleware
              * ঘটে — কাগজটা কোথাও থাকে, তারিখটা কারো মনে থাকে না।
              */
             'endingSoon' => RentalContract::query()->endingSoon()->orderBy('ends_on')->get(),
-            'showClosed' => $request->boolean('closed'),
+            'tab' => $tab,
+
+            // ⓘ ট্যাবের পাশের গোনা — খোঁজায় ছাঁকা নয়, মোট কয়টা চুক্তি
+            'counts' => [
+                'running' => RentalContract::query()->active()->count(),
+                'closed' => RentalContract::query()->where('status', RentalContract::CLOSED)->count(),
+            ],
+        ]);
+    }
+
+    /**
+     * নতুন চুক্তির ফর্ম — নিজের পাতায় (১৯ সেপ্টেম্বর ২০২৬)।
+     *
+     * ⓘ আগে ফর্মটা তালিকার নিচে বসত, আর তালিকা ও ফর্ম একে অন্যকে চাপা
+     * দিত। ⭐ এখন হাতধারের মতো: তালিকায় "+ নতুন চুক্তি", ফর্ম এখানে। ভুল
+     * হলে Laravel এই পাতাতেই ফেরায়, পুরনো লেখা সহ।
+     */
+    public function create(Request $request): View
+    {
+        return view('finance::rental.create', [
+            'menu' => $this->menu->forUser($request->user()),
             'money' => $this->moneyAccounts(),
             'heads' => Account::query()->postable()->active()->orderBy('code')->get(),
         ]);

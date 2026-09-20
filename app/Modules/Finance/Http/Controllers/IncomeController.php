@@ -73,9 +73,40 @@ class IncomeController extends Controller implements HasMiddleware
             'menu' => $this->menu->forUser($request->user()),
             'from' => $from,
             'to' => $to,
-            'heads' => $rows,
+            'heads' => $this->matching($rows, trim((string) $request->query('q', ''))),
+
+            /* ⚠️ ছাঁকার আগের সারি থেকে — খোঁজা যোগফল বদলায় না (নিচে `matching`) */
             'totals' => $this->split($rows),
         ]);
+    }
+
+    /**
+     * খোঁজা — খাতের নাম (বাংলা বা ইংরেজি) বা কোড দিয়ে।
+     *
+     * ⓘ ১৯ সেপ্টেম্বর ২০২৬ — মালিক: *"সব পাতাতেই সমস্যা"*। পাতাটা এখন
+     * বাকি তালিকার মতো টুলবার পায়, আর টুলবারের খোঁজার ঘর মৃত রাখা যায় না।
+     *
+     * ⓘ সস্তা: সারিগুলো আগেই মেমরিতে, আর খাত হাতে গোনা — নতুন কোয়েরি লাগে
+     * না। দুই ভাষার নামই দেখা হয়, কারণ কারো পর্দা ইংরেজিতে চলে আর তিনি
+     * বাংলা নামে খোঁজেন (বা উল্টোটা)।
+     *
+     * ⚠️ উপরের তিনটা যোগফল ছাঁকা হয় **না** — "কতটা বিক্রয় ছাড়া এল" পুরো
+     * সময়ের প্রশ্ন; "ভাড়া" খুঁজলে মোট আয় ভাড়ার সমান দেখালে সংখ্যাটা মিথ্যা হত।
+     *
+     * @param  list<array{account: Account, now: string, before: string}>  $rows
+     * @return list<array{account: Account, now: string, before: string}>
+     */
+    private function matching(array $rows, string $q): array
+    {
+        if ($q === '') {
+            return $rows;
+        }
+
+        return array_values(array_filter(
+            $rows,
+            fn (array $row) => collect([$row['account']->code, $row['account']->name_en, $row['account']->name_bn])
+                ->contains(fn ($text) => filled($text) && mb_stripos((string) $text, $q) !== false),
+        ));
     }
 
     /**

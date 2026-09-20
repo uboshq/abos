@@ -88,7 +88,7 @@ class ExpenseController extends Controller implements HasMiddleware
             'menu' => $this->menu->forUser($request->user()),
             'from' => $from,
             'to' => $to,
-            'heads' => $this->heads($from, $to),
+            'heads' => $this->matching($this->heads($from, $to), trim((string) $request->query('q', ''))),
             'waiting' => $this->waiting(),
 
             /*
@@ -106,6 +106,32 @@ class ExpenseController extends Controller implements HasMiddleware
                 ->orderByDesc('trx_date')->orderByDesc('id')
                 ->limit(20)->get(),
         ]);
+    }
+
+    /**
+     * খোঁজা — খাতের নাম (বাংলা বা ইংরেজি) বা কোড দিয়ে, কেবল "খাত ধরে" তালিকায়।
+     *
+     * ⓘ ১৯ সেপ্টেম্বর ২০২৬ — মালিক: *"সব পাতাতেই সমস্যা"*। টুলবারটা বসে
+     * খাতের তালিকার মাথায়, তাই খোঁজাও ওটাকেই ছাঁকে। নিচের "অপেক্ষায়" আর
+     * "সাম্প্রতিক" নিজের নিজের প্রশ্নের উত্তর — ওগুলো অটুট।
+     *
+     * ⓘ সস্তা: সারিগুলো আগেই মেমরিতে, আর খাত হাতে গোনা — নতুন কোয়েরি
+     * লাগে না। আয়ের পর্দাতেও হুবহু একই নিয়ম।
+     *
+     * @param  list<array{account: Account, now: string, before: string}>  $rows
+     * @return list<array{account: Account, now: string, before: string}>
+     */
+    private function matching(array $rows, string $q): array
+    {
+        if ($q === '') {
+            return $rows;
+        }
+
+        return array_values(array_filter(
+            $rows,
+            fn (array $row) => collect([$row['account']->code, $row['account']->name_en, $row['account']->name_bn])
+                ->contains(fn ($text) => filled($text) && mb_stripos((string) $text, $q) !== false),
+        ));
     }
 
     /**

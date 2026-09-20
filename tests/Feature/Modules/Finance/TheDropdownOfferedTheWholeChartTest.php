@@ -62,7 +62,7 @@ final class TheDropdownOfferedTheWholeChartTest extends TestCase
      */
     public function test_the_liability_dropdown_offers_only_the_loan_accounts(): void
     {
-        $page = $this->get(route('finance.bank_facility.index'));
+        $page = $this->get(route('finance.bank_facility.create'));
         $page->assertOk();
 
         $options = $this->optionsOf($page->getContent(), 'liability_account_id');
@@ -119,7 +119,7 @@ final class TheDropdownOfferedTheWholeChartTest extends TestCase
      */
     public function test_the_money_dropdown_offers_only_money_accounts(): void
     {
-        $page = $this->get(route('finance.bank_facility.index'));
+        $page = $this->get(route('finance.bank_facility.create'));
         $page->assertOk();
 
         $options = $this->optionsOf($page->getContent(), 'money_account_id');

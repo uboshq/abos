@@ -241,7 +241,7 @@ final class TheBankGaveALimitAndTheStockDecidedTest extends TestCase
      */
     public function test_the_screen_opens_and_the_form_creates_a_facility(): void
     {
-        $this->get(route('finance.bank_facility.index'))
+        $this->get(route('finance.bank_facility.create'))
             ->assertOk()
             ->assertSee('name="kind"', false)
             ->assertSee('name="stock_value"', false);

@@ -110,7 +110,7 @@ class BankAndMobileMoneyAreNotTheSameThingTest extends TestCase
         $screens = [
             'আদায়' => route('sales.collection.create'),
             'মূলধন' => route('finance.capital.index'),
-            'ব্যাংক আমানত' => route('finance.deposit.index', ['issuer' => 'bank']),
+            'ব্যাংক আমানত' => route('finance.deposit.create', ['issuer' => 'bank']),
         ];
 
         $missing = [];

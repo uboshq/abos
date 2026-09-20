@@ -139,6 +139,8 @@ Route::middleware('auth')->prefix('finance')->group(function () {
      */
     Route::prefix('bank-facilities')->name('bank_facility.')->group(function () {
         Route::get('/', [BankFacilityController::class, 'index'])->name('index');
+        // ⓘ নতুন সুবিধার ফর্ম নিজের পাতায় — ১৯ সেপ্টেম্বর ২০২৬
+        Route::get('/create', [BankFacilityController::class, 'create'])->name('create');
         Route::post('/', [BankFacilityController::class, 'store'])->name('store');
 
         Route::get('/{bankFacility}', [BankFacilityController::class, 'show'])
@@ -150,6 +152,8 @@ Route::middleware('auth')->prefix('finance')->group(function () {
 
     Route::prefix('hand-loans')->name('hand_loan.')->group(function () {
         Route::get('/', [HandLoanController::class, 'index'])->name('index');
+        // ⓘ নতুন হাতধারের ফর্ম নিজের পাতায় — ১৯ সেপ্টেম্বর ২০২৬
+        Route::get('/create', [HandLoanController::class, 'create'])->name('create');
         Route::post('/', [HandLoanController::class, 'store'])->name('store');
 
         Route::get('/{handLoan}', [HandLoanController::class, 'show'])
@@ -170,6 +174,8 @@ Route::middleware('auth')->prefix('finance')->group(function () {
      */
     Route::prefix('rentals')->name('rental.')->group(function () {
         Route::get('/', [RentalContractController::class, 'index'])->name('index');
+        // ⓘ নতুন চুক্তির ফর্ম নিজের পাতায় — ১৯ সেপ্টেম্বর ২০২৬
+        Route::get('/create', [RentalContractController::class, 'create'])->name('create');
         Route::post('/', [RentalContractController::class, 'store'])->name('store');
 
         Route::get('/{contract}', [RentalContractController::class, 'show'])
@@ -205,7 +211,11 @@ Route::middleware('auth')->prefix('finance')->group(function () {
         Route::get('/{issuer}', [DepositController::class, 'index'])
             ->whereIn('issuer', DepositKind::ISSUERS)->name('index');
 
-        Route::post('/{issuer}', [DepositController::class, 'store'])
+        // ⓘ নতুন জমার ফর্ম নিজের পাতায়, ইস্যুয়ার সহ — ১৯ সেপ্টেম্বর ২০২৬
+        Route::get('/{issuer}/create', [DepositController::class, 'create'])
+            ->whereIn('issuer', DepositKind::ISSUERS)->name('create');
+
+        Route::post('/{issuer}',[DepositController::class, 'store'])
             ->whereIn('issuer', DepositKind::ISSUERS)->name('store');
 
         /*

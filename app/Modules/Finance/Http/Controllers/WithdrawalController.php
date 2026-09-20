@@ -45,7 +45,8 @@ class WithdrawalController extends Controller implements HasMiddleware
     {
         return [
             new Middleware('can:finance.withdrawal.view', only: ['index']),
-            new Middleware('can:finance.withdrawal.create', only: ['store']),
+            // ⓘ `create` — লেখার পাতাও একই চাবিতে; আগে পাতাটা খোলা থাকত, আটকাত কেবল জমা
+            new Middleware('can:finance.withdrawal.create', only: ['create', 'store']),
             new Middleware('can:finance.withdrawal.post', only: ['post']),
             new Middleware('can:finance.withdrawal.cap', only: ['cap']),
         ];
@@ -55,14 +56,42 @@ class WithdrawalController extends Controller implements HasMiddleware
     {
         $month = $request->query('month');
 
+        /*
+         * ⭐ দুইটা ট্যাব আর সত্যিকারের খোঁজা — মালিক, ১৯ সেপ্টেম্বর ২০২৬:
+         * *"সব পাতাতেই সমস্যা"*।
+         *
+         * ⓘ তালিকার ট্যাবে খোঁজা: নম্বর, কেন, আর মানুষটার নাম (দুই ভাষায়),
+         * কোড বা মোবাইল। ⚠️ "কে কোথায়" ছাঁকা হয় না — সীমার হিসাবটা সবার।
+         */
+        $tab = $request->query('tab') === 'standing' ? 'standing' : 'rows';
+        $term = trim((string) $request->query('q'));
+
+        $standing = $this->withdrawals->standing(
+            is_string($month) && $month !== '' ? $month.'-01' : null,
+        );
+
         return view('finance::withdrawal.index', [
             'menu' => $this->menu->forUser($request->user()),
+            'tab' => $tab,
             'month' => is_string($month) && $month !== '' ? $month : now()->format('Y-m'),
-            'standing' => $this->withdrawals->standing(
-                is_string($month) && $month !== '' ? $month.'-01' : null,
-            ),
+            'standing' => $standing,
             'rows' => Withdrawal::query()->with(['moneyAccount', 'voucher', 'person'])
-                ->orderByDesc('trx_date')->orderByDesc('id')->paginate(50),
+                ->when($term !== '', fn ($q) => $q->where(
+                    fn ($w) => $w->where('document_no', 'like', "%{$term}%")
+                        ->orWhere('reason', 'like', "%{$term}%")
+                        ->orWhereHas('person', fn ($p) => $p->where('name_en', 'like', "%{$term}%")
+                            ->orWhere('name_bn', 'like', "%{$term}%")
+                            ->orWhere('code', 'like', "%{$term}%")
+                            ->orWhere('mobile', 'like', "%{$term}%")),
+                ))
+                // ⓘ পাতা বদলালে খোঁজা আর ট্যাব হারায় না
+                ->orderByDesc('trx_date')->orderByDesc('id')->paginate(50)->withQueryString(),
+
+            // ⓘ ট্যাবের পাশের গোনা — খোঁজায় ছাঁকা নয়, মোট কয়টা
+            'counts' => [
+                'rows' => Withdrawal::query()->count(),
+                'standing' => count($standing),
+            ],
             /*
              * কে তুলতে পারেন — মালিক, অংশীদার।
              *
