@@ -7,4 +7,10 @@ return [
     'payment' => 'Payment',
     'cash_out' => 'Cash Out',
     'send_money' => 'Send Money',
+
+    /* Wallet brand names — see lang/bn/wallet.php. */
+    'bkash' => 'bKash',
+    'nagad' => 'Nagad',
+    'rocket' => 'Rocket',
+    'upay' => 'Upay',
 ];

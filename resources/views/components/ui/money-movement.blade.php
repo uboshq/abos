@@ -249,7 +249,12 @@
                 border-l-2 border-l-(--color-brand-500) bg-(--color-surface-sunken) p-3">
         <div class="grid gap-3 sm:grid-cols-3">
             <x-ui.select name="wallet" :label="__('accounts::field.wallet')" :selected="$was('wallet')"
-                         :options="['bkash' => 'বিকাশ', 'nagad' => 'নগদ', 'rocket' => 'রকেট', 'upay' => 'উপায়']" />
+                         :options="[
+                             'bkash' => __('accounts::wallet.bkash'),
+                             'nagad' => __('accounts::wallet.nagad'),
+                             'rocket' => __('accounts::wallet.rocket'),
+                             'upay' => __('accounts::wallet.upay'),
+                         ]" />
 
             <x-ui.select name="wallet_medium" :label="__('accounts::field.wallet_medium')"
                          :selected="$was('wallet_medium')"

@@ -508,6 +508,7 @@ return [
         'total' => 'Total',
         'in_words' => 'In words',
         'phone' => 'Phone',
+        'bin' => 'BIN',
         'printed_at' => 'Printed',
 
         // ⚠️ The hotline is written in both languages, each in its own
@@ -983,5 +984,23 @@ return [
         'preview_stop' => 'Stop preview',
         'preview_started' => 'Preview on — walk through any screen in the ERP.',
         'preview_stopped' => 'Preview stopped.',
+    ],
+
+    /* Error page wording — see lang/bn/core.php. */
+    'error' => [
+        'title_403' => 'This screen is not yours to open',
+        'body_403' => 'Your account does not have permission for this page. Ask whoever grants permissions if you need it.',
+        'title_404' => 'Nothing lives at this address',
+        'body_404' => 'The page moved, was renamed, or never existed.',
+        'title_419' => 'The page sat open too long',
+        'body_419' => 'For safety the form expired. Open the page again and retry — you will have to retype what you had.',
+        'title_429' => 'A little slower',
+        'body_429' => 'Too many attempts in a short time. Wait a minute and try again.',
+        'title_500' => 'Something broke on our side',
+        'body_500' => 'The error has been written down and we are looking. Try again; tell us if it keeps happening.',
+        'title_503' => 'Brief maintenance',
+        'body_503' => 'The system is down for a few minutes. Please come back shortly.',
+        'go_home' => 'Go to the start',
+        'code' => 'Code',
     ],
 ];

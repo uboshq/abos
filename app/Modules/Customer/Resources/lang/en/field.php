@@ -46,4 +46,8 @@ return [
     'portal_last_login' => 'Last signed in',
     'portal_password' => 'Password',
     'portal_password_again' => 'Password again',
+
+    /* Import template columns — see lang/bn/field.php. */
+    'party_type' => 'Party type',
+    'payment_term' => 'Payment term',
 ];

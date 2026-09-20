@@ -104,7 +104,7 @@
         <div class="company-meta">
             @if ($company->phone){{ __('core.print.phone') }}: {{ $company->phone }}@endif
             @if ($company->phone && $company->bin) · @endif
-            @if ($company->bin)BIN: {{ $company->bin }}@endif
+            @if ($company->bin){{ __('core.print.bin') }}: {{ $company->bin }}@endif
         </div>
     @endif
 </div>
