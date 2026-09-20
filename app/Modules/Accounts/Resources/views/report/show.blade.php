@@ -15,6 +15,20 @@
 
     $filters = $result->filters;
 
+    /*
+        ⛔ প্রকল্প বাছার তালিকা — পাঠায় কেবল Accounts-এর কন্ট্রোলার।
+
+        ⚠️ ২০ সেপ্টেম্বর ২০২৬: `$centres` যোগ হয়েছিল কেবল ঐ এক
+        কন্ট্রোলারে, অথচ এই পর্দাটা **আটটা** কন্ট্রোলার দেখায় —
+        Approval, Customer, Inventory, Purchase, Restaurant, Sales,
+        Supplier আর Accounts। ফলে লাইভে ৫০টা রিপোর্ট পাতা একসাথে
+        ৫০০ দিয়েছিল।
+
+        ⭐ ডিফল্টটা এখানেই, কন্ট্রোলারে নয় — নবম কন্ট্রোলার যোগ হলে
+        তাকেও মনে রাখতে হত, আর সাতবার ভুল হওয়া জিনিস অষ্টমবারেও হবে।
+    */
+    $centres = $centres ?? collect();
+
     $previous = \App\Core\Engines\Report\ReportEngine::COMPARE_PREVIOUS;
     $lastYear = \App\Core\Engines\Report\ReportEngine::COMPARE_LAST_YEAR;
 
