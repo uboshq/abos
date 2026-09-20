@@ -73,6 +73,17 @@
                                 :value="old('code', $company->code)"
                                 :placeholder="$isNew ? __('core.create.code_auto') : null"
                                 :hint="$isNew ? __('core.create.code_auto_hint') : __('system_admin::message.code_still_free')" />
+                @elseif (auth()->user()?->roles->contains('name', \App\Core\Services\PermissionSyncer::SUPER_ADMIN_ROLE))
+                    {{-- ⭐ কাগজ বেরিয়ে গেছে, তবু সুপার অ্যাডমিন বদলাতে পারেন —
+                         ২০ সেপ্টেম্বর ২০২৬। ⓘ নিশ্চিত করতে পুরনো কোডটা হুবহু
+                         লিখতে হয়, বছর খোলার মতোই। --}}
+                    <x-ui.field name="code" :label="__('master_data::field.code')"
+                                :value="old('code', $company->code)"
+                                :hint="__('system_admin::message.code_needs_confirm', ['code' => $company->code])" />
+
+                    <x-ui.field name="code_confirm" :label="__('system_admin::field.confirm_old_code', ['code' => $company->code])"
+                                :value="old('code_confirm')"
+                                :hint="__('system_admin::message.code_locked')" />
                 @else
                     {{-- ⓘ লুকানো নয়, তালাবদ্ধ: কোডটা দেখা যায়, আর কেন বদলানো
                          যায় না সেটাও লেখা থাকে। --}}

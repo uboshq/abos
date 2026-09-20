@@ -32,4 +32,5 @@ return [
     'current_owner' => 'বর্তমান মালিক',
     'new_owner' => 'নতুন মালিক',
     'transfer_now' => 'মালিকানা হস্তান্তর করুন',
+    'confirm_old_code' => 'নিশ্চিত করতে লিখুন: :code',
 ];

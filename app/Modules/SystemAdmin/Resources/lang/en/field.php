@@ -30,4 +30,5 @@ return [
     'current_owner' => 'Current owner',
     'new_owner' => 'New owner',
     'transfer_now' => 'Transfer ownership',
+    'confirm_old_code' => 'Type to confirm: :code',
 ];

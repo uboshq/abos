@@ -7,6 +7,7 @@ namespace App\Modules\SystemAdmin\Http\Controllers;
 use App\Core\Engines\Image\ImageEngine;
 use App\Core\Services\CompanyProvisioner;
 use App\Core\Services\MenuBuilder;
+use App\Core\Services\PermissionSyncer;
 use App\Core\Support\CodeFromName;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
@@ -280,9 +281,21 @@ class CompanyController extends Controller implements HasMiddleware
              * জায়গা: পর্দা ঘরটা লুকায় ঐ উত্তর দেখে, আর এখানেও একই উত্তর।
              */
             'code' => [
-                Rule::excludeIf(! $company->canChangeCode()),
+                Rule::excludeIf(! $this->mayChangeCode($request, $company)),
                 'required', 'string', 'max:16', 'alpha_dash',
                 Rule::unique('companies', 'code')->ignore($company->id),
+            ],
+
+            /*
+             * ⚠️ কাগজ বেরিয়ে যাওয়ার পরে কোড বদলাতে হলে পুরনো কোডটা হুবহু
+             * লিখতে হয় — বছর খোলার মতোই। ⛔ শর্তটা না থাকলে একটা ভুল ক্লিকে
+             * প্রতিষ্ঠানের পরিচয় বদলে যেত, আর ছাপা কাগজের সাথে আর মিলত না।
+             */
+            'code_confirm' => [
+                Rule::requiredIf(fn () => $company->codeChangeNeedsSuperAdmin()
+                    && filled($request->input('code'))
+                    && strtoupper(trim((string) $request->input('code'))) !== $company->code),
+                'nullable', 'string',
             ],
 
             'name_en' => ['required', 'string', 'max:160'],
@@ -341,7 +354,16 @@ class CompanyController extends Controller implements HasMiddleware
         /* ⓘ কোডটা সবসময় বড় হাতের — তালিকা, ছাপা কাগজ আর রপ্তানিতে একরকম দেখায় */
         if (isset($data['code'])) {
             $data['code'] = strtoupper(trim($data['code']));
+
+            if ($data['code'] !== $company->code && $company->codeChangeNeedsSuperAdmin()
+                && trim((string) $request->input('code_confirm')) !== $company->code) {
+                return back()->withInput()->withErrors([
+                    'code_confirm' => __('system_admin::message.code_confirm_old', ['code' => $company->code]),
+                ]);
+            }
         }
+
+        unset($data['code_confirm']);
 
         $company->update([...$data, ...$logo]);
 
@@ -480,5 +502,20 @@ class CompanyController extends Controller implements HasMiddleware
         return back()->with('saved', $company->is_active
             ? __('system_admin::message.company_enabled')
             : __('system_admin::message.company_disabled'));
+    }
+
+    /**
+     * এই অনুরোধে কোডটা বদলানো যাবে কি না।
+     *
+     * ⓘ দুইটা পথ: কোম্পানিতে এখনো কিছু ঘটেনি (তখন যে কেউ), অথবা
+     * সুপার অ্যাডমিন — আর তখন পুরনো কোডটা হুবহু লিখে নিশ্চিত করতে হয়।
+     */
+    private function mayChangeCode(Request $request, Company $company): bool
+    {
+        if ($company->canChangeCode()) {
+            return true;
+        }
+
+        return $request->user()?->roles->contains('name', PermissionSyncer::SUPER_ADMIN_ROLE) ?? false;
     }
 }

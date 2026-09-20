@@ -74,13 +74,19 @@ final class TheCompanyCodeCouldNeverBeFixedTest extends TestCase
 
         $this->assertFalse($company->fresh()->canChangeCode(), 'নম্বর ইস্যুর পরেও কোড খোলা।');
 
+        /*
+         * ⚠️ পরীক্ষাটা প্রথমে ধরে নিয়েছিল অনুরোধটা চুপচাপ কোডটুকু ফেলে দেবে
+         * আর নামটা বসিয়ে দেবে। ⓘ কিন্তু ডেমোর মালিক সুপার অ্যাডমিন, আর
+         * তাঁর জন্য দরজাটা খোলা — কেবল পুরনো কোড লিখে নিশ্চিত করতে হয়।
+         * ⛔ না লিখলে গোটা অনুরোধই থামে, নামসহ; আর সেটাই ঠিক, কারণ অর্ধেক
+         * বদল সংরক্ষণ করা মানে ব্যবহারকারীকে মিথ্যা বলা।
+         */
         $this->put(route('system_admin.company.update', $company->id), [
             'code' => 'NOPE',
             'name_en' => 'Renamed Anyway',
-        ])->assertRedirect();
+        ])->assertSessionHasErrors('code_confirm');
 
         $this->assertSame($company->code, $company->fresh()->code, 'তালা সত্ত্বেও কোড বদলে গেছে।');
-        $this->assertSame('Renamed Anyway', $company->fresh()->name_en, 'নামটা বদলানো উচিত ছিল।');
     }
 
     /** খাতায় একটা সারি থাকলেও তালা — কাগজ না ছাপলেও হিসাব বেরিয়ে গেছে। */
@@ -92,6 +98,34 @@ final class TheCompanyCodeCouldNeverBeFixedTest extends TestCase
             'ডেমোর খাতায় কোনো সারি নেই — মাপটা তখন অর্থহীন।');
 
         $this->assertFalse($company->canChangeCode(), 'খাতায় সারি থাকা সত্ত্বেও কোড খোলা।');
+    }
+
+    /**
+     * ⭐ কাগজ বেরিয়ে যাওয়ার পরেও সুপার অ্যাডমিন বদলাতে পারেন — পুরনো কোডটা
+     * হুবহু লিখে। ⓘ মালিকের আসল কোম্পানিতে পড়ে ছিল কেবল পরীক্ষার দুইটা সারি,
+     * আর তাতেই আসল ব্যবসার নামের সাথে ভুল কোড চিরকাল বসে থাকত।
+     */
+    public function test_a_super_admin_can_change_it_by_typing_the_old_code(): void
+    {
+        $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
+
+        $this->assertFalse($company->canChangeCode(), 'এই কোম্পানিতে তো কাজ হয়েছে — কোড খোলা থাকার কথা নয়।');
+
+        /* ⛔ পুরনো কোড না লিখলে কিছুই বদলায় না */
+        $this->put(route('system_admin.company.update', $company->id), [
+            'code' => 'NEWCODE',
+            'name_en' => $company->name_en,
+        ])->assertSessionHasErrors('code_confirm');
+
+        $this->assertSame('TDEPOT', $company->fresh()->code, 'নিশ্চিত না করেই কোড বদলে গেছে।');
+
+        $this->put(route('system_admin.company.update', $company->id), [
+            'code' => 'NEWCODE',
+            'code_confirm' => 'TDEPOT',
+            'name_en' => $company->name_en,
+        ])->assertRedirect();
+
+        $this->assertSame('NEWCODE', $company->fresh()->code, 'সুপার অ্যাডমিনও বদলাতে পারলেন না।');
     }
 
     private function aFreshCompany(): Company
