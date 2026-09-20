@@ -167,6 +167,13 @@ Route::middleware('auth')->prefix('finance')->group(function () {
         Route::get('/{handLoan}', [HandLoanController::class, 'show'])
             ->whereNumber('handLoan')->name('show');
 
+        /*
+         * ⭐ পক্ষের সাথে জোড়া — মানচিত্র §১৪খ, ২১ সেপ্টেম্বর ২০২৬।
+         * ⓘ নতুন হাতধারের ফর্মে ঘরটা ছিল; পুরনো সারির জন্য এই দরজাটা।
+         */
+        Route::post('/{handLoan}/link', [HandLoanController::class, 'link'])
+            ->whereNumber('handLoan')->name('link');
+
         Route::post('/{handLoan}/move', [HandLoanController::class, 'move'])
             ->whereNumber('handLoan')->name('move');
 

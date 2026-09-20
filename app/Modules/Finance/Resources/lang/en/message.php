@@ -150,4 +150,5 @@ return [
     'settlement_charge_line' => 'Outstanding :outstanding + charge :charge = :total',
     'settlement_basis_unknown' => 'A charge on the interest still to come is not worked out yet — it depends on whether the bank counts interest flat or reducing, and a wrong figure here is money.',
     'schedule_totals' => 'Instalment :instalment · interest :interest · paid in all :total',
+    'party_linked' => 'Linked — their loan and their dues now answer to one name',
 ];

@@ -162,4 +162,5 @@ return [
     'settlement_charge_line' => 'বকেয়া :outstanding + চার্জ :charge = :total',
     'settlement_basis_unknown' => 'বাকি সুদের উপর চার্জ হিসাব এখনো করা হয় না — ব্যাংক flat না reducing পদ্ধতিতে সুদ গোনে, সেটা ঠিক না জেনে অঙ্ক দেখানো হবে না।',
     'schedule_totals' => 'কিস্তি :instalment · মোট সুদ :interest · মোট পরিশোধ :total',
+    'party_linked' => 'জোড়া সংরক্ষিত — এখন তাঁর ধার আর বাকির হিসাব এক নামে মেলে',
 ];

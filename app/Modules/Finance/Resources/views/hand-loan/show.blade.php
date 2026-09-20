@@ -85,6 +85,42 @@
         <p class="mb-4 text-sm text-(--color-ink-muted)">{{ $account->note }}</p>
     @endif
 
+    {{-- ── ⭐ পক্ষের সাথে জোড়া — মানচিত্র §১৪খ, ২১ সেপ্টেম্বর ২০২৬ ──────
+
+         ⚠️ কেন জোড়াটা দরকার: একই মানুষ প্রায়ই একসাথে ডিলার আর ধারদাতা।
+         ⓘ জোড়া থাকলে তাঁর হাতধার আর তাঁর বাকির হিসাব এক নামে মেলানো যায়;
+         না থাকলে খাতায় **দুইটা আলাদা মানুষ** মনে হয়, আর টাকাটা দুই জায়গায়
+         ভাগ হয়ে থাকে।
+
+         ⓘ নতুন হাতধারের ফর্মে ঘরটা আগে থেকেই ছিল। ⛔ কিন্তু দরকারটা পড়ে
+         **পরে** — যখন কেউ খেয়াল করেন ধারদাতা লোকটাই আসলে তাঁদের ডিলার। --}}
+    @can('finance.hand_loan.create')
+        <section data-boxed class="mb-4 rounded-(--radius-card) border border-(--color-border)
+                        bg-(--color-surface-card) p-4">
+            <h2 class="mb-1 font-semibold">{{ __('finance::field.party_link') }}</h2>
+            <p class="mb-3 text-2xs text-(--color-ink-muted)">{{ __('finance::message.party_link_hint') }}</p>
+
+            <form method="POST" action="{{ route('finance.hand_loan.link', $account) }}"
+                  class="flex flex-wrap items-end gap-2">
+                @csrf
+
+                <div class="min-w-64 flex-1">
+                    {{-- ⓘ চলতি জোড়াটা বাছা থাকে; খালি ঘর মানে জোড়া খুলে দাও —
+                         ভুল জোড়া শোধরানোর পথ না থাকলে কেউ জোড়া লাগাতেই ভয় পেতেন --}}
+                    <x-ui.select name="party"
+                                 :label="__('finance::field.party_link')"
+                                 :options="$parties"
+                                 :placeholder="__('finance::field.party_none')"
+                                 :selected="$account->partner_type !== null
+                                     ? $account->partner_type.':'.$account->partner_id
+                                     : null" />
+                </div>
+
+                <x-ui.button type="submit" tone="secondary">{{ __('core.action.save') }}</x-ui.button>
+            </form>
+        </section>
+    @endcan
+
     {{-- ── টাকা দেওয়া বা নেওয়া ───────────────────────────────────────
          একটাই ফর্ম, একটা দিক-বাছাই দিয়ে। চারটা ধরন (ধার দিলাম · ধার
          নিলাম · ফেরত দিলাম · ফেরত পেলাম) রাখলে সাথে একটা নিয়মও লাগত —
@@ -117,7 +153,14 @@
                      সার্ভার লেনদেন নম্বর চেয়ে আটকে দিত — ঘরটা ছাড়াই। --}}
                 <x-ui.money-account name="money_account_id" required codes
                                     :label="__('finance::field.money_account')"
-                                    :accounts="$money"
+                                    {{-- ⛔ আগে এখানে `$money` লেখা ছিল, অথচ কন্ট্রোলার পাঠায়
+                                         `accounts` — ফলে খালি লেখা চলে যেত আর কম্পোনেন্ট
+                                         অক্ষরের উপর `->id` পড়তে গিয়ে **প্রতিটা চালু হাতধারের
+                                         পাতা ৫০০ দিত** (২১ সেপ্টেম্বর ২০২৬)।
+
+                                         ⚠️ পাতাটার কোনো পরীক্ষা ছিল না, তাই ভুলটা চুপচাপ
+                                         বসে ছিল — সেটাও এই কমিটে যোগ হলো। --}}
+                                    :accounts="$accounts"
                                     :selected="old('money_account_id')" />
 
                 <div class="sm:col-span-2 xl:col-span-5">

@@ -46,7 +46,8 @@ class HandLoanController extends Controller implements HasMiddleware
     {
         return [
             new Middleware('can:finance.hand_loan.view', only: ['index', 'show']),
-            new Middleware('can:finance.hand_loan.create', only: ['create', 'store', 'storePerson']),
+            /* ⓘ জোড়া লাগানো খোলার মতোই ক্ষমতা — যিনি হাতধার খুলতে পারেন, তিনিই */
+            new Middleware('can:finance.hand_loan.create', only: ['create', 'store', 'storePerson', 'link']),
             new Middleware('can:finance.hand_loan.move', only: ['move', 'settle']),
         ];
     }
@@ -400,7 +401,45 @@ class HandLoanController extends Controller implements HasMiddleware
                 ->orderByDesc('moved_on')->orderByDesc('id')->get(),
 
             'accounts' => $this->moneyAccounts(),
+
+            /*
+             * ⭐ পক্ষের সাথে জোড়া — অর্থের মানচিত্র §১৪খ, ২১ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ নতুন হাতধারের ফর্মে ঘরটা আগে থেকেই ছিল, কিন্তু **পুরনো**
+             * সারিগুলোর জোড়া লাগানোর কোনো পথ ছিল না — অথচ জোড়া দরকার
+             * হয় ঠিক পরে, যখন কেউ খেয়াল করেন ধারদাতা লোকটাই আসলে
+             * তাঁদের ডিলার।
+             */
+            'parties' => $this->parties(),
         ]);
+    }
+
+    /**
+     * ⭐ একটা চালু হাতধার কোনো গ্রাহক বা সরবরাহকারীর সাথে জোড়া লাগানো।
+     *
+     * ── ⚠️ কেন জোড়াটা দরকার ─────────────────────────────────────────
+     * একই মানুষ প্রায়ই একসাথে ডিলার আর ধারদাতা। ⓘ জোড়া থাকলে তাঁর
+     * হাতধার আর তাঁর বাকির হিসাব এক নামে মেলানো যায়; না থাকলে খাতায়
+     * **দুইটা আলাদা মানুষ** মনে হত, আর টাকাটা দুই জায়গায় ভাগ হয়ে থাকত।
+     *
+     * ⓘ খালি পাঠালে জোড়াটা খুলে যায় — ভুল জোড়া লাগানোটাও একটা ভুল,
+     * আর সেটা শোধরানোর পথ না থাকলে মানুষ জোড়া লাগাতেই ভয় পেতেন।
+     */
+    public function link(Request $request, HandLoanAccount $handLoan): RedirectResponse
+    {
+        $data = $request->validate([
+            'party' => ['nullable', 'string', 'regex:/^(customer|supplier):[0-9]+$/'],
+        ]);
+
+        if (filled($data['party'] ?? null)) {
+            [$kind, $id] = explode(':', (string) $data['party']);
+
+            $handLoan->forceFill(['partner_type' => $kind, 'partner_id' => (int) $id])->save();
+        } else {
+            $handLoan->forceFill(['partner_type' => null, 'partner_id' => null])->save();
+        }
+
+        return back()->with('saved', __('finance::message.party_linked'));
     }
 
     public function move(Request $request, HandLoanAccount $handLoan): RedirectResponse
