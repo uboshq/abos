@@ -48,26 +48,8 @@
                 @endif
                 @unless ($held)
                     <x-ui.print-menu :documents="[
-                        [
-                            'label' => __('sales::doc.invoice'),
-                            'url' => route('sales.print.invoice', $invoice),
-
-                            /* ⓘ কোন মাপে ছাপা হবে, কতবার বেরিয়েছে, আর গ্রাহককে
-                               পাঠানোর পথ — তিনটাই এই তিনটা ঘর থেকে */
-                            'paper_setting' => 'sales.print.paper.invoice',
-                            'type' => \App\Modules\Sales\Models\PrintJob::INVOICE,
-                            'id' => $invoice->id,
-                            'no' => $invoice->document_no,
-                            'share' => ['route' => 'sales.print.invoice', 'params' => ['invoice' => $invoice->id]],
-                        ],
-
-                        /* ⛔ খসড়ায় পাঠানোর পথ নেই: ওটা এখনো চূড়ান্ত নয়, আর
-                           গ্রাহকের হাতে গেলে সেটাই বিল বলে ধরে নেওয়া হত */
-                        [
-                            'label' => __('core.print.draft_notice'),
-                            'url' => route('sales.print.draft', $invoice),
-                            'paper_setting' => 'sales.print.paper.invoice',
-                        ],
+                        ['label' => __('sales::doc.invoice'), 'url' => route('sales.print.invoice', $invoice)],
+                        ['label' => __('core.print.draft_notice'), 'url' => route('sales.print.draft', $invoice)],
                     ]" />
                 @endunless
             </x-slot:actions>
@@ -81,9 +63,6 @@
             {{ session('saved') }}
         </div>
     @endif
-
-    {{-- গ্রাহককে পাঠানোর লিংক — "পাঠান" চাপার পরে --}}
-    <x-ui.shared-link :message="__('sales::doc.invoice').' '.$invoice->document_no" />
 
     <x-ui.errors />
 

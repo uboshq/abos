@@ -11,7 +11,4 @@ return [
     'screen_direct' => 'Show the Direct Purchase screen',
     'screen_orders' => 'Show the Purchase Orders screen',
     'screen_receipts' => 'Show the Goods Receipt (GRN) screen',
-    'paper_bill' => 'Paper for the purchase bill',
-    'paper_order' => 'Paper for the purchase order',
-    'paper_receipt' => 'Paper for the goods receipt',
 ];

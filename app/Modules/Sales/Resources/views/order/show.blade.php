@@ -25,8 +25,8 @@
                     @endcan
                 @endif
                 <x-ui.print-menu :documents="[
-                    ['label' => __('sales::doc.order'), 'url' => route('sales.print.order', $order), 'paper_setting' => 'sales.print.paper.order', 'type' => 'sales_order', 'id' => $order->id, 'no' => $order->document_no, 'share' => ['route' => 'sales.print.order', 'params' => ['order' => $order->id]]],
-                    ['label' => __('sales::doc.delivery_order'), 'url' => route('sales.print.delivery_order', $order), 'paper_setting' => 'sales.print.paper.order'],
+                    ['label' => __('sales::doc.order'), 'url' => route('sales.print.order', $order)],
+                    ['label' => __('sales::doc.delivery_order'), 'url' => route('sales.print.delivery_order', $order)],
                 ]" />
             </x-slot:actions>
         </x-ui.page-header>

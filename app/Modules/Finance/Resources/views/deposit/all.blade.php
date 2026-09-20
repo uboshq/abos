@@ -21,6 +21,23 @@
         <x-ui.page-header :title="__('finance::menu.deposits_all')"
                           :subtitle="__('finance::message.deposits_all_hint')" />
 
+        {{-- ⭐ ধরনের তালিকা থেকে আসা ছাঁকনি — ২০ সেপ্টেম্বর ২০২৬।
+             ⓘ ছাঁকনিটা চুপচাপ বসলে মানুষ ভাবতেন এটাই সব জমা, আর সংখ্যাটা
+             কম মনে হত। ⚠️ তাই কোন ধরন ছাঁকা হয়েছে সেটা লেখা থাকে, আর
+             পাশেই সব দেখার পথ। --}}
+        @if (($kind ?? null) !== null)
+            <p class="mt-3 flex flex-wrap items-center gap-2 text-sm">
+                <span class="rounded-(--radius-pill) border border-(--color-border) px-3 py-0.5">
+                    {{ __('finance::field.deposit_kind') }}: {{ $kind->name() }}
+                </span>
+
+                <a href="{{ route('finance.deposit.all') }}"
+                   class="text-(--color-brand-500) underline-offset-2 hover:underline">
+                    {{ __('finance::action.show_everyone') }}
+                </a>
+            </p>
+        @endif
+
         <section data-boxed
                  class="mt-5 overflow-hidden rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card)">
@@ -28,7 +45,9 @@
                 :empty="__('finance::message.no_deposit_yet')"
                 :rows="$deposits"
                 :columns="[
-                    ['key' => 'document_no', 'label' => __('core.print.document_no'), 'width' => '9rem'],
+                    // ⭐ নম্বরটা নিজের পাতায় খোলে — মালিকের নির্দেশ, ২০ সেপ্টেম্বর ২০২৬
+                    ['key' => 'document_no', 'label' => __('core.print.document_no'), 'width' => '9rem',
+                     'render' => fn ($d) => view('finance::deposit.partials.number', ['deposit' => $d])],
 
                     /*
                      * ইস্যুকারীর কলামটা এখানে বাড়তি — তিনটা মিশে আছে,

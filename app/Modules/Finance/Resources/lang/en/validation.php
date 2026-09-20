@@ -41,4 +41,7 @@ return [
     'person_pick_or_type' => 'Either pick from the list or type a new name, not both.',
     'capital_needs_a_name' => 'Pick who is contributing, or type a new name.',
     'facility_needs' => 'A :kind facility cannot be worked out without this field.',
+
+    'kind_in_use' => 'Deposits were opened under :name, so it cannot be removed — deactivate it instead and the old papers stay whole.',
+
 ];

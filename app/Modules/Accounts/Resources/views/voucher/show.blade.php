@@ -72,21 +72,6 @@
                     @endcan
                 @endif
 
-                {{-- ⭐ ছাপার বোতাম — ২০ সেপ্টেম্বর ২০২৬।
-
-                     ⚠️ রুটটা (`accounts.voucher.print`) অনেক আগে থেকেই ছিল,
-                     কিন্তু কোনো পর্দা থেকে সেখানে যাওয়ার পথ ছিল না: ভাউচার
-                     ছাপতে হলে ঠিকানা হাতে লিখতে হত। ⓘ তাই মাপ, ফাইল আর
-                     গোনা — তিনটাই এখানে একসাথে এল। --}}
-                <x-ui.print-menu :documents="[[
-                    'label' => $voucher->document_no,
-                    'url' => route('accounts.voucher.print', $voucher),
-                    'paper_setting' => 'accounts.print.paper.voucher',
-                    'type' => 'accounts_voucher',
-                    'id' => $voucher->id,
-                    'no' => $voucher->document_no,
-                ]]" />
-
                 @unless ($voucher->isCancelled())
                     @can('accounts.voucher.delete')
                         {{-- বাতিলের কারণ বাধ্যতামূলক — কারণ ছাড়া বাতিল করা

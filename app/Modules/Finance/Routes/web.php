@@ -8,6 +8,7 @@ use App\Modules\Finance\Http\Controllers\BankChargeController;
 use App\Modules\Finance\Http\Controllers\CarrierAndLabourController;
 use App\Modules\Finance\Http\Controllers\CapitalController;
 use App\Modules\Finance\Http\Controllers\DepositController;
+use App\Modules\Finance\Http\Controllers\DepositKindController;
 use App\Modules\Finance\Http\Controllers\ExpenseController;
 use App\Modules\Finance\Http\Controllers\HandLoanController;
 use App\Modules\Finance\Http\Controllers\IncomeController;
@@ -197,6 +198,31 @@ Route::middleware('auth')->prefix('finance')->group(function () {
 
         Route::post('/{contract}/close', [RentalContractController::class, 'close'])
             ->whereNumber('contract')->name('close');
+    });
+
+    /*
+     * ⭐ জমার ধরন — অর্থের মানচিত্র §১৪ক, ২০ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ `deposits/` গ্রুপের **বাইরে**, আর সেটা ইচ্ছাকৃত: ওখানে `/{issuer}`
+     * বসে আছে, আর "kinds" ঐ তিনটা নামের একটা নয়। ⛔ ভিতরে রাখলে
+     * বাইন্ডিং ওটাকে একটা ইস্যুয়ার ভেবে ৪০৪ দিত।
+     */
+    Route::prefix('deposit-kinds')->name('deposit_kind.')->group(function () {
+        Route::get('/', [DepositKindController::class, 'index'])->name('index');
+        Route::get('/create', [DepositKindController::class, 'create'])->name('create');
+        Route::post('/', [DepositKindController::class, 'store'])->name('store');
+
+        Route::get('/{depositKind}/edit', [DepositKindController::class, 'edit'])
+            ->whereNumber('depositKind')->name('edit');
+        Route::put('/{depositKind}', [DepositKindController::class, 'update'])
+            ->whereNumber('depositKind')->name('update');
+
+        // ⓘ চালু-বন্ধ POST-এ: অবস্থা বদলানো পড়ার কাজ নয়
+        Route::post('/{depositKind}/toggle', [DepositKindController::class, 'toggle'])
+            ->whereNumber('depositKind')->name('toggle');
+
+        Route::delete('/{depositKind}', [DepositKindController::class, 'destroy'])
+            ->whereNumber('depositKind')->name('destroy');
     });
 
     Route::prefix('deposits')->name('deposit.')->group(function () {

@@ -55,6 +55,7 @@ return [
     'cancel_is_not_closing' => 'Closing means the bank paid it back; cancelling means it never existed',
     'hand_loan_note' => 'Money lent on a word — who owes us, and whom we owe',
     'hand_loan_search' => 'Search by name, code or mobile…',
+    'party_link_hint' => 'If this person is also your customer or supplier, pick them — then the loan and the ledger read as one person.',
     'facility_search' => 'Search by bank, branch, sanction no. or note…',
     'deposit_search' => 'Search by number, institution, branch, reference or name…',
     'head_search' => 'Search by head name or code…',
@@ -118,4 +119,14 @@ return [
     'facility_balance_lives_in' => 'What has been drawn is not kept here — the figure lives in the ledger of :account.',
     'drawing_power_note' => 'Stock and receivables less the margin is what can be drawn today, whatever the sanctioned limit says.',
     'capital_from_receipt' => 'Taken in through receipt :no — already in the books; this row only lists it here.',
+
+    'kind_note' => 'Bank and savings schemes — a new scheme is added here',
+    'kind_search' => 'Search by code or name…',
+    'kind_shape_hint' => 'The shape decides which fields the deposit form opens: instalments, or an account for the profit.',
+    'kind_saved' => ':name saved.',
+    'kind_on' => ':name is active again.',
+    'kind_off' => ':name deactivated — it is no longer offered on new papers, and the old ones are untouched.',
+    'kind_removed' => ':name removed.',
+    'no_kinds' => 'No kinds yet.',
+
 ];

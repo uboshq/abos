@@ -5,5 +5,4 @@ declare(strict_types=1);
 return [
     'show_left_employees' => 'Show employees who have left',
     'attendance_affects_salary' => 'Absence reduces salary',
-    'paper_payslip' => 'Paper for payslips',
 ];

@@ -142,6 +142,14 @@ return [
         'vouchers' => 'Vouchers',
         'control' => 'Books control',
 
+        /* Finance's own folds — the owner's words, 20 Sep 2026. The six
+           groups above are fixed in core, so these live inside one. */
+        'overview' => 'Watch',
+        'ownership' => 'Ownership',
+        'liability' => 'What we owe',
+        'savings' => 'Savings',
+        'contracts' => 'Contracts',
+
         /* A dimmed row reads the same whether it means "not for you" or
            "not built yet" — only the words tell them apart (3 Sep 2026) */
         'coming_soon' => 'Coming soon',

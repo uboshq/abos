@@ -25,8 +25,8 @@
                     @endcan
                 @endif
                 <x-ui.print-menu :documents="[
-                    ['label' => __('sales::doc.challan'), 'url' => route('sales.print.challan', $challan), 'paper_setting' => 'sales.print.paper.challan', 'type' => 'sales_challan', 'id' => $challan->id, 'no' => $challan->document_no, 'share' => ['route' => 'sales.print.challan', 'params' => ['challan' => $challan->id]]],
-                    ['label' => __('sales::doc.gatepass'), 'url' => route('sales.print.gatepass', $challan), 'paper_setting' => 'sales.print.paper.challan'],
+                    ['label' => __('sales::doc.challan'), 'url' => route('sales.print.challan', $challan)],
+                    ['label' => __('sales::doc.gatepass'), 'url' => route('sales.print.gatepass', $challan)],
                 ]" />
             </x-slot:actions>
         </x-ui.page-header>

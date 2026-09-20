@@ -33,4 +33,9 @@ return [
     'rental_close_now' => 'Close',
     'close_facility' => 'Close the facility',
     'new_hand_loan' => 'New hand loan',
+
+    'new_kind' => 'New kind',
+    'kind_on' => 'Activate',
+    'kind_off' => 'Deactivate',
+
 ];

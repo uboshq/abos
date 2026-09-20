@@ -5,6 +5,9 @@ declare(strict_types=1);
 return [
     'deposits_all' => 'All deposits',
 
+    // ⭐ One menu row for all three issuers — 20 September 2026
+    'deposits' => 'Deposits',
+
     'capital' => 'Capital & investment',
     'plan' => 'Finance map',
     'expense' => 'Expenses by Head',
@@ -16,4 +19,7 @@ return [
     'withdrawal' => 'Withdrawals',
     'income' => 'Income',
     'rental' => 'Rentals & deposits',
+
+    'deposit_kinds' => 'Deposit kinds',
+
 ];

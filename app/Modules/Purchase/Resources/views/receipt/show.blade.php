@@ -53,7 +53,7 @@
                     খসড়ার কপি থাকত, অন্যটায় না।
                 --}}
                 <x-ui.print-menu :documents="[
-                    ['label' => __('purchase::doc.receipt'), 'url' => route('purchase.print.receipt', $receipt), 'paper_setting' => 'purchase.print.paper.receipt', 'type' => 'purchase_receipt', 'id' => $receipt->id, 'no' => $receipt->document_no],
+                    ['label' => __('purchase::doc.receipt'), 'url' => route('purchase.print.receipt', $receipt)],
                 ]" />
             </x-slot:actions>
         </x-ui.page-header>

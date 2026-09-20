@@ -81,16 +81,34 @@ class DepositController extends Controller implements HasMiddleware
      */
     public function all(Request $request): View
     {
+        /*
+         * ⭐ এক ধরনের সব জমা — মালিকের নির্দেশ, ২০ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ জমার ধরনের তালিকায় "কয়টায় ব্যবহৃত" সংখ্যাটা নিষ্প্রাণ ছিল।
+         * ⚠️ ওটা নামানোর মতো একমাত্র পাতা এটাই: সংখ্যাটা **সব অবস্থার,
+         * সব ইস্যুকারীর** জমা গোনে, আর ইস্যুকারীর পাতাগুলো অবস্থার ট্যাবে
+         * ছাঁকা। ⛔ ওখানে নামালে সংখ্যা আর তালিকা দুইটা আলাদা কথা বলত।
+         */
+        $kind = $request->query('kind') === null
+            ? null
+            : DepositKind::query()->find((int) $request->query('kind'));
+
         return view('finance::deposit.all', [
             'menu' => $this->menu->forUser($request->user()),
+            'kind' => $kind,
 
             /*
-             * ⚠️ ছাঁকনি নেই, ইচ্ছাকৃতভাবে — টালির সংখ্যার সাথে
-             * **হুবহু** মিলতে হবে। ডিফল্টে কোনো ইস্যুকারী ধরে নিলে
-             * পাতাটা কম দেখাত, আর সেটাই ছিল আসল আপত্তি।
+             * ⚠️ নিজে থেকে কোনো ছাঁকনি বসে না, ইচ্ছাকৃতভাবে — টালির
+             * সংখ্যার সাথে **হুবহু** মিলতে হবে। ডিফল্টে কোনো ইস্যুকারী
+             * ধরে নিলে পাতাটা কম দেখাত, আর সেটাই ছিল আসল আপত্তি।
+             *
+             * ⓘ `kind` কেবল তখনই ছাঁকে যখন কেউ ধরনের তালিকার সংখ্যাটায়
+             * ক্লিক করে আসেন — ড্যাশবোর্ডের টালির লিংকে ওটা নেই, তাই
+             * ঐ সংখ্যাটার সাথে এখনো হুবহু মেলে।
              */
             'deposits' => Deposit::query()
                 ->with(['kind', 'movements'])
+                ->when($kind !== null, fn ($q) => $q->where('kind_id', $kind->id))
                 ->orderByRaw('CASE WHEN status = ? THEN 0 ELSE 1 END', [Deposit::ACTIVE])
                 ->orderByRaw('matures_on IS NULL')
                 ->orderBy('matures_on')
@@ -109,7 +127,26 @@ class DepositController extends Controller implements HasMiddleware
          * ⓘ চালু · শেষ দুই ট্যাব, মূলধনের পাতার মতো। ⚠️ "শেষ"-এ ভাঙা আর
          * বাতিল দুইটাই — মেয়াদের কলামটাই বলে দেয় কোনটা কী।
          */
-        $tab = $request->query('tab') === 'closed' ? 'closed' : 'active';
+        /*
+         * ⭐ চারটা ট্যাব — অর্থের মানচিত্র §১৪ক, ২০ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ চালু · শেষ আগেই ছিল। নতুন দুইটা মালিকের তালিকা থেকে:
+         *   · **মেয়াদ আসছে** — সামনের ৩০/৬০/৯০ দিনে যেগুলোর মেয়াদ শেষ।
+         *     ⚠️ এই একটা তারিখ ফসকালে টাকাটা ব্যাংকে আপনা থেকে নতুন
+         *     মেয়াদে আটকে যায়, প্রায়ই কম হারে।
+         *   · **বন্ধক দেওয়া** — কোন জমা কোন ঋণের জামানতে, আর কতটা খালি।
+         *     ⓘ কলামটা (`pledged_to_loan_id`) ছিল, পর্দা ছিল না।
+         */
+        $tab = in_array($request->query('tab'), ['closed', 'maturing', 'pledged'], true)
+            ? (string) $request->query('tab')
+            : 'active';
+
+        // ⓘ কত দিনের ভিতরে — মালিকের তিনটা জানালা, ডিফল্ট ৩০
+        $within = in_array((int) $request->query('within'), [30, 60, 90], true)
+            ? (int) $request->query('within')
+            : 30;
+
+        $maturingBy = now()->addDays($within)->endOfDay();
 
         $term = trim((string) $request->query('q'));
 
@@ -118,12 +155,27 @@ class DepositController extends Controller implements HasMiddleware
             'issuer' => $issuer,
             'standing' => $this->deposits->standing($issuer),
             'tab' => $tab,
+            'within' => $within,
 
             // ⓘ ট্যাবের পাশের গোনা — খোঁজায় ছাঁকা হয় না, ট্যাবের মোট সংখ্যা
             'counts' => [
                 'active' => Deposit::query()->issuedBy($issuer)->open()->count(),
                 'closed' => Deposit::query()->issuedBy($issuer)
                     ->where('status', '!=', Deposit::ACTIVE)->count(),
+
+                /*
+                 * ⚠️ দুইটাই কেবল **চালু** জমার মধ্যে: বন্ধ হয়ে যাওয়া জমার
+                 * মেয়াদ বা বন্ধক নিয়ে আর কিছু করার নেই, আর গুনলে সংখ্যাটা
+                 * রোজ বাড়ত আর কেউ ওটার দিকে তাকাত না।
+                 */
+                'maturing' => Deposit::query()->issuedBy($issuer)->open()
+                    ->whereNotNull('matures_on')
+                    ->where('matures_on', '<=', $maturingBy)
+                    ->count(),
+
+                'pledged' => Deposit::query()->issuedBy($issuer)->open()
+                    ->whereNotNull('pledged_to_loan_id')
+                    ->count(),
             ],
 
             /*
@@ -138,11 +190,37 @@ class DepositController extends Controller implements HasMiddleware
              * নামে। ⚠️ মোড়কের `where(fn …)` জরুরি, নাহলে `orWhere`
              * ইস্যুয়ার আর ট্যাবের শর্ত পাশ কাটিয়ে যেত।
              */
+            /*
+             * ⭐ ইস্যুকারীর ট্যাব — মালিকের সিদ্ধান্ত, ২০ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ মেনুতে এখন একটাই সারি ("আমানত"); ব্যাংক · সঞ্চয়পত্র · বন্ড
+             * পর্দার উপরের ট্যাব। ⚠️ গোনাটা **চলতি ট্যাবের ভিতরে**: "মেয়াদ
+             * আসছে"-তে দাঁড়িয়ে বন্ডের পাশে যে সংখ্যাটা দেখা যায়, ক্লিক
+             * করলে ঠিক সেই কয়টা সারিই আসে। মোট সংখ্যা দেখালে প্রতিবার
+             * ট্যাব বদলে অন্য সংখ্যা পেয়ে মানুষ গুনতে বসতেন।
+             */
+            'issuerCounts' => collect(DepositKind::ISSUERS)
+                ->mapWithKeys(fn (string $one) => [$one => Deposit::query()
+                    ->issuedBy($one)
+                    ->when($tab === 'closed',
+                        fn ($q) => $q->where('status', '!=', Deposit::ACTIVE),
+                        fn ($q) => $q->open())
+                    ->when($tab === 'maturing', fn ($q) => $q
+                        ->whereNotNull('matures_on')
+                        ->where('matures_on', '<=', $maturingBy))
+                    ->when($tab === 'pledged', fn ($q) => $q->whereNotNull('pledged_to_loan_id'))
+                    ->count()])
+                ->all(),
+
             'deposits' => Deposit::query()
                 ->issuedBy($issuer)
                 ->when($tab === 'closed',
                     fn ($q) => $q->where('status', '!=', Deposit::ACTIVE),
                     fn ($q) => $q->open())
+                ->when($tab === 'maturing', fn ($q) => $q
+                    ->whereNotNull('matures_on')
+                    ->where('matures_on', '<=', $maturingBy))
+                ->when($tab === 'pledged', fn ($q) => $q->whereNotNull('pledged_to_loan_id'))
                 ->when($term !== '', fn ($q) => $q->where(
                     fn ($w) => $w->where('document_no', 'like', "%{$term}%")
                         ->orWhere('institution', 'like', "%{$term}%")
@@ -152,7 +230,7 @@ class DepositController extends Controller implements HasMiddleware
                         ->orWhereHas('person', fn ($p) => $p->where('name_en', 'like', "%{$term}%")
                             ->orWhere('name_bn', 'like', "%{$term}%")),
                 ))
-                ->with(['kind', 'movements', 'person'])
+                ->with(['kind', 'movements', 'person', 'pledgedToLoan'])
                 ->orderByRaw('CASE WHEN status = ? THEN 0 ELSE 1 END', [Deposit::ACTIVE])
                 ->orderByRaw('matures_on IS NULL')
                 ->orderBy('matures_on')

@@ -88,27 +88,6 @@
                                                        class="mt-1 size-4">
                                                 <span>{{ __($setting['label']) }}</span>
                                             </label>
-                                        @elseif ($setting['type'] === 'choice')
-                                            {{-- ⭐ বাছাইয়ের ঘর — ছাপার কাগজের মাপের জন্য (২০ সেপ্টেম্বর ২০২৬)।
-
-                                                 ⓘ মালিক চেয়েছেন কোন কাগজে ছাপা হবে সেটা তিনি ঠিক করে
-                                                 দেবেন। ⚠️ লেখার ঘরে ছাড়লে কেউ "৮০" লিখতেন আর সেটা
-                                                 চুপচাপ A4 হয়ে যেত — তিনটা মাপের বাইরে কিছু বৈধ নয়। --}}
-                                            <label class="block">
-                                                <span class="mb-1 block text-sm font-medium">
-                                                    {{ __($setting['label']) }}
-                                                </span>
-                                                <select name="settings[{{ $setting['key'] }}]"
-                                                        class="h-(--spacing-field) w-full max-w-40 rounded-(--radius-field)
-                                                               border border-(--color-border) bg-(--color-surface-card) px-3">
-                                                    @foreach ($setting['options'] ?? [] as $option)
-                                                        <option value="{{ $option }}"
-                                                                @selected((string) $setting['value'] === (string) $option)>
-                                                            {{ \App\Core\Engines\Print\PaperSize::of($option)->label() }}
-                                                        </option>
-                                                    @endforeach
-                                                </select>
-                                            </label>
                                         @else
                                             <label class="block">
                                                 <span class="mb-1 block text-sm font-medium">

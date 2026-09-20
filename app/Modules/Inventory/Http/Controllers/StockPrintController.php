@@ -7,13 +7,10 @@ namespace App\Modules\Inventory\Http\Controllers;
 use App\Core\Engines\Print\PaperSize;
 use App\Core\Engines\Print\PrintableDocument;
 use App\Core\Engines\Print\PrintEngine;
-use App\Core\Services\PaperTrail;
-use App\Core\Services\SettingsService;
 use App\Core\Support\DateFormat;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Http\Controllers\Controller;
-use App\Models\DocumentDelivery;
 use App\Modules\Inventory\Models\StockTransfer;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -46,15 +43,7 @@ use Illuminate\Routing\Controllers\Middleware;
  */
 class StockPrintController extends Controller implements HasMiddleware
 {
-    public function __construct(
-        private readonly PrintEngine $print,
-
-        // কোন কাগজে ছাপা হবে — মালিকের বসানো মাপ
-        private readonly SettingsService $settings,
-
-        // ছাপা · নামানো · পাঠানো · খোলা — সব কাগজের এক হিসাব
-        private readonly PaperTrail $trail,
-    ) {}
+    public function __construct(private readonly PrintEngine $print) {}
 
     public static function middleware(): array
     {
@@ -101,11 +90,11 @@ class StockPrintController extends Controller implements HasMiddleware
                 : null,
         );
 
-        /*
-         * ⭐ কাগজের মাপ মালিকের বসানো, হাতে লেখা A4 নয় (২০ সেপ্টেম্বর ২০২৬)।
-         * ⓘ ঠিকানায় চাওয়া মাপ আগে, তারপর সেটিং — কারণ [[PaperSize::chosen()]]-এ।
-         */
-        $paper = PaperSize::chosen($request->query('paper'), $this->settings->get('inventory.print.paper.transfer'));
+        $paper = $request->query('paper', PaperSize::A4);
+
+        if (! in_array($paper, PaperSize::all(), true)) {
+            $paper = PaperSize::A4;
+        }
 
         $pdf = $this->print->render(
             template: 'print.document',
@@ -116,24 +105,9 @@ class StockPrintController extends Controller implements HasMiddleware
             paper: $paper,
         );
 
-        /*
-         * ⭐ কাগজটা বেরোল — ছাপা হয়ে, নাকি ফাইল হয়ে (২০ সেপ্টেম্বর ২০২৬)।
-         *
-         * ⓘ মালিকের চাওয়া: *"কয়টা কাগজ প্রিন্ট হল কয়টা শেয়ার হইল"*। ⚠️ দুইটা
-         * আলাদা গোনা হয়, কারণ "ছেপে দিয়েছি" আর "ফাইল পাঠিয়েছি" এক কথা নয়।
-         * ⛔ ফাইলটা আলাদা করে আঁকা হয় না — উপরের `$pdf`-ই নামে।
-         */
-        $asFile = $request->boolean('download');
-
-        $this->trail->record(
-            'inventory_transfer', (int) $transfer->id, $paper,
-            $asFile ? DocumentDelivery::DOWNLOADED : DocumentDelivery::PRINTED,
-            $transfer->document_no,
-        );
-
         return response($pdf, 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => ($asFile ? 'attachment' : 'inline').'; filename="'.$transfer->document_no.'.pdf"',
+            'Content-Disposition' => 'inline; filename="'.$transfer->document_no.'.pdf"',
         ]);
     }
 
