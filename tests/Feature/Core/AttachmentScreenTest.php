@@ -220,4 +220,84 @@ class AttachmentScreenTest extends TestCase
         $this->assertSame(0, Attachment::query()->count());
         $this->assertSame(1, Attachment::withTrashed()->count());
     }
+
+    /**
+     * ⛔ অন্যের তোলা কাগজ যে-কেউ মুছতে পারেন না — ২১ সেপ্টেম্বর ২০২৬।
+     *
+     * ── কী ভাঙা ছিল ─────────────────────────────────────────────────
+     * মোছার পথটা `create` অনুমতি দিয়ে যাচাই হত, আর ঐ যুক্তিটা লেখা
+     * হয়েছিল **যোগ করার** জন্য (সরবরাহকারীর বিল পোস্টের পরে আসে, তাই
+     * `update`-এর "খসড়া হলে তবেই" শর্তে আটকে যেত)।
+     *
+     * ⚠️ কিন্তু সেটা মোছাতেও ব্যবহার করায় দাঁড়াল: যিনি একটা ক্রয় বিল
+     * বানাতে পারেন, তিনি **যেকোনো** বিলের স্ক্যান করা আসল কাগজ মুছে
+     * দিতে পারেন। ⛔ আর ঐ কাগজটাই ছয় মাস পরে একমাত্র প্রমাণ।
+     *
+     * ⓘ এই পরীক্ষাটা **বিক্রয়কর্মী** দিয়ে চালানো, মালিক দিয়ে নয় —
+     * মালিকের সব অধিকার আছে, তাই তাঁকে দিয়ে মাপলে দাবিটা কিছুই
+     * প্রমাণ করত না।
+     */
+    public function test_someone_else_cannot_remove_a_paper_they_did_not_upload(): void
+    {
+        $this->post(route('attachment.store'), [
+            'source_type' => PurchaseBill::drillSourceType(),
+            'source_id' => $this->bill->id,
+            'file' => UploadedFile::fake()->create('the-real-bill.pdf', 10, 'application/pdf'),
+        ])->assertRedirect();
+
+        $paper = Attachment::query()->firstOrFail();
+
+        /*
+         * ⭐ বিলটা নিশ্চিত করা — আর এটাই নিরীক্ষার আসল দৃশ্য।
+         *
+         * ⓘ খসড়া বিলে `update` এমনিতেই খোলা, আর সেটা ঠিক: যিনি বিলটা
+         * সম্পাদনা করতে পারেন তিনি তার কাগজও সামলাতে পারেন।
+         * ⛔ কিন্তু **নিশ্চিত হওয়ার পরে** সম্পাদনা কেবল super_admin-এর,
+         * অথচ পুরনো নিয়মে যে-কেউ বিল বানাতে পারলেই ঐ স্ক্যান করা আসল
+         * কাগজটা মুছে দিতে পারতেন — আর ছয় মাস পরে ওটাই একমাত্র প্রমাণ।
+         */
+        app(PurchaseBillService::class)->confirm($this->bill->refresh());
+
+        $other = User::query()->where('email', 'accounts@abos.test')->firstOrFail();
+
+        /*
+         * ⚠️ ধনাত্মক নিয়ন্ত্রণ, আর এটাই এই পরীক্ষার আসল মেরুদণ্ড।
+         *
+         * ⓘ অধিকারটা এখানে **হাতে দেওয়া**, ডেমোর ভূমিকার উপর ছেড়ে নয় —
+         * ভূমিকার তালিকা কোনোদিন বদলালে ইনি বিল বানানোর অধিকার হারাতেন,
+         * আর তখন নিচের ৪০৩-টা ঠিক কারণে নয়, **ভুল কারণে** সবুজ থাকত।
+         *
+         * ⛔ কারণ প্রমাণের জিনিসটা হলো: পুরনো নিয়মে (`create`) এই মোছাটা
+         * পাশ করে যেত, নতুন নিয়মে যায় না।
+         */
+        $other->givePermissionTo('purchase.bill.create');
+        $other->unsetRelation('permissions')->unsetRelation('roles');
+
+        $this->assertTrue(
+            $other->can('create', PurchaseBill::class),
+            'ধনাত্মক নিয়ন্ত্রণটাই ভেঙেছে — ইনি বিল বানাতে পারেন না, তাই নিচের দাবিটা কিছুই প্রমাণ করে না।'
+        );
+
+        $this->actingAs($other)
+            ->delete(route('attachment.destroy', $paper))
+            ->assertForbidden();
+
+        $this->assertSame(1, Attachment::query()->count(), '⛔ অন্যের কাগজটা মুছে গেছে।');
+    }
+
+    /** ⓘ নিজের ভুল ছবিটা নিজে সরাতে পারা চাই — নাহলে ভুল কাগজটাই থেকে যাবে। */
+    public function test_the_person_who_uploaded_it_can_remove_it(): void
+    {
+        $this->post(route('attachment.store'), [
+            'source_type' => PurchaseBill::drillSourceType(),
+            'source_id' => $this->bill->id,
+            'file' => UploadedFile::fake()->create('blurry.jpg', 10, 'image/jpeg'),
+        ])->assertRedirect();
+
+        $paper = Attachment::query()->firstOrFail();
+
+        $this->delete(route('attachment.destroy', $paper))->assertRedirect();
+
+        $this->assertSame(0, Attachment::query()->count());
+    }
 }

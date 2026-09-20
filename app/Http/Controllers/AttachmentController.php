@@ -126,11 +126,39 @@ class AttachmentController extends Controller
     {
         $document = $this->document($attachment->source_entity, (int) $attachment->source_entity_id);
 
-        $this->authorizeAttaching($document);
+        $this->authorizeRemoving($attachment, $document);
 
         $this->attachments->delete($attachment);
 
         return back()->with('saved', __('core.attachment.removed'));
+    }
+
+    /**
+     * কাগজ **সরানোর** অনুমতি — যোগ করার চেয়ে কড়া।
+     *
+     * ── ⛔ কী ভাঙা ছিল, ২১ সেপ্টেম্বর ২০২৬ ──────────────────────────
+     * মোছার পথটাও `authorizeAttaching()` ডাকত, অর্থাৎ `create`। ⚠️ নিচের
+     * যুক্তিটা **যোগ করার** জন্য লেখা হয়েছিল আর ঠিকই ছিল — কিন্তু সেটা
+     * মোছার জন্যও ব্যবহার করায় দাঁড়াল: যিনি একটা ক্রয় বিল বানাতে পারেন,
+     * তিনি **যেকোনো** বিলের স্ক্যান করা আসল কাগজটা মুছে দিতে পারেন।
+     *
+     * ── ⭐ এখনকার নিয়ম: নিজের ভুল শোধরান, অন্যেরটা নয় ───────────────
+     * ⓘ যিনি কাগজটা তুলেছেন তিনি সেটা সরাতে পারেন — ভুল ছবি তোলা
+     * নিত্যদিনের ব্যাপার, আর তার জন্য অন্য কাউকে ডাকতে হলে মানুষ বরং
+     * ভুল কাগজটা রেখেই দেবেন।
+     * ⓘ আর যাঁর ডকুমেন্টটা **সম্পাদনার** অধিকার আছে, তিনি যে কারোরটাই
+     * সরাতে পারেন — সেটাই তদারকির স্বাভাবিক জায়গা।
+     *
+     * ⚠️ সারিটা নরম-মোছা হয় আর অডিটে কে কখন সরাল লেখা থাকে, তাই এটা
+     * তথ্য হারানোর প্রশ্ন নয় — প্রশ্নটা হলো কার কাগজ কে সরাতে পারবে।
+     */
+    private function authorizeRemoving(Attachment $attachment, Model $document): void
+    {
+        if ((int) $attachment->uploaded_by === (int) auth()->id()) {
+            return;
+        }
+
+        $this->authorize('update', $document);
     }
 
     /**

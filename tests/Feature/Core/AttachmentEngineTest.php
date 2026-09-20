@@ -75,6 +75,32 @@ class AttachmentEngineTest extends TestCase
         $this->assertMatchesRegularExpression('/[0-9a-f-]{36}/', basename($attachment->stored_path));
     }
 
+    /**
+     * ⛔ যে ফাইলগুলো ব্রাউজারেই কোড চালায় — ২১ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⓘ কেন এগুলো আলাদা করে ─────────────────────────────────────
+     * উপরের তালিকাটা "প্রোগ্রাম" ধরে বানানো ছিল, আর `.svg`/`.html` দেখতে
+     * প্রোগ্রাম নয়। ⚠️ কিন্তু ভিতরে `<script>` বসে, আর ব্রাউজার সেটা
+     * **ঐ সাইটেরই অংশ হিসেবে** চালায় — অর্থাৎ লগইন করা ব্যবহারকারীর হয়ে।
+     *
+     * ⓘ আজ ফাইল যায় `attachment` হিসেবে, তাই ব্রাউজার চালায় না। ⛔ কিন্তু
+     * mime-টা ব্রাউজারের বলা, আর সেটাই ফেরত দেওয়া হয় — তাই কোনোদিন
+     * "ভিতরেই দেখুন" পর্দা বসলেই ওটা সংরক্ষিত XSS হত।
+     */
+    public function test_files_that_run_in_the_browser_are_refused(): void
+    {
+        foreach (['logo.svg', 'report.html', 'page.htm', 'sheet.xsl'] as $name) {
+            try {
+                $this->engine->store(UploadedFile::fake()->create($name, 1), 'customer', 'Customer', 1);
+                $this->fail("{$name} should not be accepted — it runs in the browser.");
+            } catch (AttachmentException $e) {
+                $this->assertStringContainsString('cannot be attached', $e->getMessage());
+            }
+        }
+
+        $this->assertSame(0, Attachment::query()->count());
+    }
+
     public function test_executable_types_are_refused(): void
     {
         foreach (['shell.php', 'setup.exe', 'run.bat', 'payload.phar'] as $name) {
