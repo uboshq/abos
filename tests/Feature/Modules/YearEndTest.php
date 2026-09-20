@@ -22,6 +22,7 @@ use App\Modules\Supplier\Models\Supplier;
 use App\Modules\Supplier\Services\SupplierService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
@@ -256,19 +257,28 @@ class YearEndTest extends TestCase
     // ── নম্বর সিরিজ ───────────────────────────────────────────────────
 
     /**
-     * reset_yearly চালু থাকলে ক্রম আবার ১ থেকে।
+     * ⭐ ছকে বছর থাকলে ক্রম আবার ১ থেকে — আর তখনই সেটা নিরাপদ।
      *
-     * কলামটা এতদিন সংরক্ষিত হত কিন্তু কেউ পড়ত না — বছর বদলানোর কোনো
-     * ব্যবস্থাই ছিল না, তাই সেটার কোনো অর্থও ছিল না।
+     * ── ⚠️ এই পরীক্ষাটা ২০ সেপ্টেম্বর ২০২৬-এ বদলাতে হয়েছে ──────────────
+     * আগে এটা `CUS`-এ `reset_yearly` বসিয়ে ১ আশা করত, আর ছকে বছর আছে
+     * কি না সেটা দেখত না। ⛔ কিন্তু ওটাই ছিল সেই ভুলটা যা লাইভে ধরা
+     * পড়েছে: বছরহীন ছকে গুনতি ১-এ ফিরলে নতুন বছরের নম্বর পুরনো বছরের
+     * হুবহু সমান হয়, আর কাগজটা আর কাটাই যায় না।
+     *
+     * ⓘ তাই এখন শর্তটা দুইটা: পতাকা **আর** ছকে বছর।
      */
-    public function test_a_yearly_series_restarts_at_one(): void
+    public function test_a_series_with_a_year_in_its_format_restarts_at_one(): void
     {
         $engine = app(NumberSeriesEngine::class);
 
         $engine->next('CUS');
         $engine->next('CUS');
 
-        NumberSeries::query()->where('doc_type', 'CUS')->update(['reset_yearly' => true, 'start_number' => 1]);
+        NumberSeries::query()->where('doc_type', 'CUS')->update([
+            'format' => '{PREFIX}-{FY}-{SEQ}',
+            'reset_yearly' => true,
+            'start_number' => 1,
+        ]);
 
         $newYear = $this->service()->close($this->year);
 
@@ -278,6 +288,50 @@ class YearEndTest extends TestCase
             ->firstOrFail();
 
         $this->assertSame(1, $series->next_number);
+        $this->assertTrue($series->reset_yearly, 'বছরওয়ালা ছকে রিসেট বহন হয়নি।');
+    }
+
+    /**
+     * ⛔⛔ ছকে বছর না থাকলে গুনতি ফেরে **না** — আর কাগজটা কাটা **যায়**।
+     *
+     * ── এটাই আজ লাইভে ভাঙা, ২০ সেপ্টেম্বর ২০২৬ ────────────────────────
+     * `number_series`-এর ১৬০টা সারির সবগুলোয় `reset_yearly` চালু, অথচ
+     * কোনো ছকে বছর নেই। ⓘ বছর বন্ধ হলে গুনতি ১-এ ফিরত, নম্বর হত আগের
+     * বছরের হুবহু সমান, `issued_numbers`-এর unique সেটা আটকাত, লেনদেন
+     * rollback হত — আর rollback-এ গুনতির বাড়াটাও মুছে যেত। ⚠️ ফলে নতুন
+     * বছরের প্রথম কাগজটা **কখনো** কাটা যেত না।
+     *
+     * ⭐ তাই দাবিটা "next_number কত" নয়, **"কাগজটা বেরোল কি না"** —
+     * সংখ্যাটা রোগের লক্ষণ, আর কাগজ না কাটতে পারাটাই রোগ।
+     */
+    public function test_without_a_year_the_first_paper_of_the_new_year_still_comes_out(): void
+    {
+        $engine = app(NumberSeriesEngine::class);
+
+        $old = $engine->next('CUS');
+
+        /*
+         * ⚠️ ভুল মানটা বসানো হয় নম্বর কাটার **পরে**, আর মডেলকে পাশ
+         * কাটিয়ে — লাইভে ঠিক এভাবেই এসেছে (কেউ লেখেনি, কলামের default
+         * বসে গেছে)। ⓘ আগে বসালে নম্বর কাটার সময় সারিটা সেভ হত, আর
+         * তখনই তার নিজের পাহারা মানটা শুধরে দিত।
+         */
+        DB::table('number_series')->where('doc_type', 'CUS')->update(['reset_yearly' => 1]);
+
+        $newYear = $this->service()->close($this->year);
+
+        $series = NumberSeries::query()
+            ->where('doc_type', 'CUS')
+            ->where('financial_year_id', $newYear->id)
+            ->firstOrFail();
+
+        $this->assertGreaterThan(1, $series->next_number,
+            'বছরহীন ছকেও গুনতি ১-এ ফিরে গেছে — এখান থেকেই কাগজটা আটকাত।');
+
+        // ⭐ আর আসল দাবিটা: কাগজটা সত্যিই বেরোয়, আর আগেরটার সমান নয়
+        $fresh = $engine->next('CUS', date: $newYear->starts_on->copy());
+
+        $this->assertNotSame($old, $fresh, "নতুন বছরের প্রথম কাগজ {$fresh} — আগেরটার হুবহু সমান।");
     }
 
     public function test_a_continuous_series_keeps_counting(): void

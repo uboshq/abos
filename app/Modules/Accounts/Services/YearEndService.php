@@ -501,6 +501,20 @@ final class YearEndService
                 continue;
             }
 
+            /*
+             * ⛔ পতাকাটা একা যথেষ্ট নয় — ছকেও বছর থাকতে হবে।
+             *
+             * ⚠️ ২০ সেপ্টেম্বর ২০২৬: লাইভের প্রতিটা সারিতে `reset_yearly`
+             * চালু অথচ ছক `{PREFIX}-{SEQ}`। এখানে কেবল পতাকাটা দেখা হত,
+             * তাই বছর বন্ধ হলে গুনতি ১-এ ফিরত আর নতুন বছরের প্রথম
+             * কাগজটা পুরনো নম্বরেই ধাক্কা খেয়ে **কখনো কাটা যেত না**।
+             *
+             * ⓘ সারিটা নিজেই এখন মানটা শোধরায় ([[NumberSeries::booted()]]),
+             * কিন্তু পুরনো সারিগুলো ডাটাবেজে এখনো ভুল — তাই এখানে
+             * ছকটা দেখেই সিদ্ধান্ত, বসানো মানটা নয়।
+             */
+            $resets = $before->reset_yearly && NumberSeriesProvisioner::resetsWith((string) $before->format);
+
             // ছক ও উপসর্গ সবসময় বহন করা হয় — ব্যবহারকারী গত বছর যা
             // ঠিক করেছিলেন সেটা নতুন বছরে হারানোর কোনো কারণ নেই
             $series->forceFill([
@@ -508,8 +522,8 @@ final class YearEndService
                 'suffix' => $before->suffix,
                 'format' => $before->format,
                 'padding' => $before->padding,
-                'reset_yearly' => $before->reset_yearly,
-                'next_number' => $before->reset_yearly ? $before->start_number : $before->next_number,
+                'reset_yearly' => $resets,
+                'next_number' => $resets ? $before->start_number : $before->next_number,
             ])->save();
         }
     }

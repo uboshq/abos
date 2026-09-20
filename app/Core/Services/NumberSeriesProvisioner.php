@@ -173,12 +173,25 @@ final class NumberSeriesProvisioner
                         continue;
                     }
 
+                    $format = self::formatFor($module->docTypes[$docType]);
+
                     NumberSeries::create([
                         'module' => $module->code,
                         'doc_type' => $docType,
                         'prefix' => self::FRIENDLY_PREFIX[$docType] ?? $docType,
-                        'format' => self::formatFor($module->docTypes[$docType]),
+                        'format' => $format,
                         'padding' => 4,
+
+                        /*
+                         * ⛔ এই ঘরটা এখানে লেখাই হত না, আর কলামের নিজের
+                         * default `true` — ২০ সেপ্টেম্বর ২০২৬ পর্যন্ত।
+                         *
+                         * ⓘ উপরের [[formatFor()]]-এর মন্তব্যে নিয়মটা লেখাই
+                         * ছিল ("রিসেট বন্ধ থাকতেই হবে"), আর ঠিক এই
+                         * পদ্ধতিটাই সেটা মানত না। ⚠️ ফল: লাইভে ১৬০টা সারির
+                         * সবগুলোয় বছর-রিসেট চালু, অথচ কোনো ছকে বছর নেই।
+                         */
+                        'reset_yearly' => self::resetsWith($format),
                         'next_number' => 1,
                         'start_number' => 1,
                         'financial_year_id' => $year->id,

@@ -436,13 +436,37 @@ final class ReportEngine
         $opening = '0';
 
         if ($page > 1) {
-            $before = ($report->query)($filters)
-                ->reorder()
-                ->forPage(1, ($page - 1) * $perPage)
-                ->get();
+            /*
+             * ⛔ এখানে `->reorder()` ছিল — ২০ সেপ্টেম্বর ২০২৬ পর্যন্ত।
+             *
+             * ⚠️ ওটা লেজারের নিজের `orderBy('trx_date')->orderBy('id')`
+             * **মুছে দিত**, আর ক্রম ছাড়া `forPage(1, N)`-এর মানে দাঁড়াত
+             * "যেকোনো N সারি"। ⓘ সারির **সংখ্যা** ঠিক আসত, তাই যোগফলটা
+             * দেখতে বিশ্বাসযোগ্য — কিন্তু কোন সারিগুলো, সেটা MySQL-এর
+             * খেয়াল। ⛔ ফল: দ্বিতীয় পাতা থেকে চলমান ব্যালেন্স ভুল, আর
+             * ভুলটা প্রতিবার একই রকমও নয়।
+             *
+             * ⭐ আগের সারিগুলো এখন PHP-তে আনাই হয় না — যোগটা SQL-এ।
+             * ⓘ ৫০ নম্বর পাতায় আগে ৪,৯০০টা সারি মেমোরিতে উঠত, কেবল
+             * দুইটা সংখ্যা বের করতে। ⚠️ ক্রমটা ভেতরের কোয়েরিতেই থাকে,
+             * কারণ **কোন** সারিগুলো গোনা হবে সেটা ক্রমই ঠিক করে; বাইরের
+             * যোগফল ক্রম নিয়ে মাথা ঘামায় না।
+             */
+            $earlier = ($report->query)($filters)->forPage(1, ($page - 1) * $perPage);
 
+            $sums = DB::connection($earlier->getConnection()->getName())
+                ->query()
+                ->fromSub($earlier, 'earlier')
+                ->selectRaw('COALESCE(SUM(debit), 0) as debit, COALESCE(SUM(credit), 0) as credit')
+                ->first();
+
+            /*
+             * ⓘ যোগফলটা এক সারি, আর সেটা [[RunningBalance]]-এর ভিতর দিয়েই
+             * যায় — টাকার অঙ্ক bcmath ছাড়া জোড়া লাগে না, আর নিয়মটা দুই
+             * জায়গায় লিখলে একদিন দুইটা আলাদা উত্তর দিত।
+             */
             $opening = RunningBalance::sumOf(
-                $before,
+                $sums === null ? [] : [$sums],
                 fn ($row) => ((array) $row)['debit'] ?? 0,
                 fn ($row) => ((array) $row)['credit'] ?? 0,
             );
