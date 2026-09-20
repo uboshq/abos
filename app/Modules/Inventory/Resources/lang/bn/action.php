@@ -39,4 +39,5 @@ return [
     'add_place' => 'যোগ করুন',
     'retire_place' => 'নিষ্ক্রিয়',
     'places' => 'জায়গা',
+    'place_row' => 'এই সারিটা বসাও',
 ];

@@ -112,4 +112,6 @@ return [
     'place_updated' => 'The place was updated.',
     'place_retired' => 'The place is retired. Past rows are untouched.',
     'no_places' => 'No blocks or racks are set up in this warehouse. Placement will then show only the warehouse, which is normal for a small shop.',
+    'no_returns_to_place' => 'No returned goods are waiting to be placed.',
+    'no_purchases_to_place' => 'No purchased goods are waiting to be placed.',
 ];

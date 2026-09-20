@@ -10,6 +10,12 @@
     ⚠️ "সব বসিয়ে দিন" বোতাম নেই, ইচ্ছাকৃতভাবে। দশ কার্টনের দুইটা ভাঙা
     হলে এক চাপে সবটা বসানোর সুযোগ থাকলে ভাঙা মালও বসে যেত। ঘরে পুরোটা
     আগে থেকে বসানো থাকে — **কমাতে হলে ইচ্ছে করে কমাতে হয়।**
+
+    ── ⭐ দুই ভাগ — মালিকের ছবি, ২০ সেপ্টেম্বর ২০২৬ ─────────────────────
+    ক্রয়ের কাগজ আর ফেরতের কাগজ আলাদা দুই ভাগে। ⓘ এক তালিকায় মিশলে
+    গুদামের লোককে প্রতিটা সারি পড়ে বুঝতে হত মালটা গাড়ি থেকে নামল না
+    গ্রাহকের কাছ থেকে ফিরল — আর দুইটার পরীক্ষা এক নয়: ফেরত মাল ভাঙা
+    কি না সেটা দেখে নিতে হয়, নতুন চালানে গোনা মিলিয়ে নিলেই হয়।
 --}}
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('inventory::menu.placement') }}</x-slot:title>
@@ -42,10 +48,12 @@
         {{-- খালি অবস্থাটা সুখবর, ব্যর্থতা নয় — বাক্যটাও সেটাই বলে --}}
         <x-ui.empty-state :message="__('inventory::message.nothing_to_place')" />
     @else
-        <form method="POST" action="{{ route('inventory.stock.placement.store') }}"
-              x-data="stockPlacement(@js($places))">
-            @csrf
-
+        {{--
+            ⓘ Alpine-এর ঘরটা এখন সব ফর্মের **উপরে**, ভেতরে নয়। ⭐ কারণ
+            প্রতিটা কাগজের নিজের ফর্ম (দেখুন [[stock/partials/paper]]), অথচ
+            উপরের "সবার জন্য" বারটা সব কাগজের সারিতেই বসাতে পারা চাই।
+        --}}
+        <div x-data="stockPlacement(@js($places))">
             {{--
                 ⭐ "একবার বেছে, সবগুলোয় বসাও" — মালিকের ছবির উপরের সারি
                 ("Combine Selection For All Listed Products")।
@@ -57,7 +65,7 @@
                 মাল যেন এক চাপে বসে না যায়", আর সেটা অক্ষত।
 
                 ⓘ গুদামে কোনো তাক বসানো না থাকলে বারটা আসেই না — তখন
-                ছোট দোকানের জন্য নিচের একটাই বোতামই যথেষ্ট।
+                ছোট দোকানের জন্য প্রতিটা কাগজের নিচের বোতামই যথেষ্ট।
             --}}
             <template x-if="anyPlaces">
                 <section data-boxed
@@ -94,152 +102,33 @@
                 </section>
             </template>
 
-            <div class="grid gap-4">
-                @foreach ($papers as $key => $paper)
-                    <section data-boxed
-                             class="rounded-(--radius-card) border border-(--color-border)
-                                    bg-(--color-surface-card) p-4">
+            {{--
+                ⚠️ ভাগ দুইটা সবসময়ই দেখা যায়, খালি হলেও — আর সেটা
+                ইচ্ছাকৃত। ⓘ "ফেরতের কিছু বসানোর নেই" লেখাটা একটা উত্তর;
+                ভাগটা না থাকলে গুদামের লোক ভাবতেন ফেরতের মাল বুঝি অন্য
+                কোথাও বসাতে হয়, আর খুঁজতে বেরোতেন।
+            --}}
+            @foreach ([
+                'purchase' => 'no_purchases_to_place',
+                'return' => 'no_returns_to_place',
+            ] as $group => $emptyWord)
+                <h2 class="mb-2 mt-6 font-semibold first:mt-0">
+                    {{ __('inventory::label.'.$group.'_placement') }}
+                </h2>
 
-                        <header class="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-                            <h2 class="font-semibold">
-                                {{-- ⭐ প্রতিটা সারি থেকে উৎসের কাগজে যাওয়া যায় — মালিকের
-                                     স্থায়ী নিয়ম। নম্বর না থাকলে অন্তত উৎসটা দেখানো হয়,
-                                     যাতে সারিটা কোথা থেকে এল তা কখনো অজানা না থাকে। --}}
-                                {{ $paper['document_no'] ?: $paper['source_type'] }}
-                            </h2>
-                            <span class="text-2xs text-(--color-ink-muted)">{{ $paper['trx_date'] }}</span>
-                        </header>
-
-                        <div class="overflow-x-auto">
-                            <table class="ui-list w-full">
-                                <thead>
-                                    <tr class="text-start text-2xs text-(--color-ink-muted)">
-                                        <th class="text-start">{{ __('inventory::field.product') }}</th>
-                                        <th class="text-start">{{ __('inventory::field.warehouse') }}</th>
-                                        {{-- ⓘ তিনটা ঘর কেবল তখনই, যখন ঐ গুদামে তাক বসানো আছে --}}
-                                        @foreach (['depth_1', 'depth_2', 'depth_3'] as $depth)
-                                            <template x-if="anyPlaces">
-                                                <th class="text-start">{{ __('inventory::field.'.$depth) }}</th>
-                                            </template>
-                                        @endforeach
-                                        <th class="text-end">{{ __('inventory::field.unplaced') }}</th>
-                                        <th class="text-end">{{ __('inventory::field.unplaced_free') }}</th>
-                                    </tr>
-                                </thead>
-
-                                <tbody>
-                                    @foreach ($paper['lines'] as $i => $line)
-                                        @php $name = "lines[{$key}-{$i}]"; @endphp
-
-                                        {{--
-                                            ⓘ সারির নিজের অবস্থা — চারটা ঘরের নির্বাচন।
-                                            `rows`-এ নিজেকে লিখিয়ে রাখে, তাই উপরের
-                                            **Set** বোতামটা তাকে খুঁজে পায়। ⚠️ `w`
-                                            গুদামের আইডি: Set কেবল **একই গুদামের**
-                                            সারিতে বসে, নাহলে এক গুদামের র‍্যাক অন্য
-                                            গুদামের সারিতে বসে যেত।
-                                        --}}
-                                        <tr class="border-t border-(--color-border)"
-                                            x-data="{ w: {{ (int) $line['warehouse_id'] }}, block: '', rack: '', shelf: '' }"
-                                            x-init="rows.push($data)">
-                                            <td class="">
-                                                {{ $line['product_code'] }} — {{ $line['product_name'] }}
-                                                @if ($line['batch_no'])
-                                                    <span class="text-2xs text-(--color-ink-muted)">
-                                                        ({{ $line['batch_no'] }})
-                                                    </span>
-                                                @endif
-
-                                                <input type="hidden" name="{{ $name }}[product_id]"
-                                                       value="{{ $line['product_id'] }}">
-                                                <input type="hidden" name="{{ $name }}[warehouse_id]"
-                                                       value="{{ $line['warehouse_id'] }}">
-                                                <input type="hidden" name="{{ $name }}[batch_id]"
-                                                       value="{{ $line['batch_id'] }}">
-                                                {{-- উৎসটাও যায়: বসানোর সারিটা মূল কাগজের
-                                                     দলেই লেখা হয়, নাহলে যোগফল কাটাকাটি হত
-                                                     না আর কাগজটা তালিকায় রয়ে যেত --}}
-                                                <input type="hidden" name="{{ $name }}[source_type]"
-                                                       value="{{ $paper['source_type'] }}">
-                                                <input type="hidden" name="{{ $name }}[source_id]"
-                                                       value="{{ $paper['source_id'] }}">
-                                            </td>
-
-                                            <td class="">{{ $line['warehouse_name'] }}</td>
-
-                                            {{--
-                                                ব্লক ▸ র‍্যাক ▸ শেলফ — উপরেরটা না বাছলে
-                                                নিচেরটা খালি, ইচ্ছাকৃতভাবে।
-
-                                                ⛔ "বাবা না বাছলে সব দেখাও" লিখলে গুদামের
-                                                লোক অন্য র‍্যাকের শেলফ বেছে ফেলতে পারতেন,
-                                                আর কার্টনটা খাতায় এক জায়গায় হাতে আরেক
-                                                জায়গায় থাকত। যুক্তিটা `placement.js`-এ,
-                                                তাই তার পরীক্ষা আছে।
-                                            --}}
-                                            @foreach (['block' => 1, 'rack' => 2, 'shelf' => 3] as $slot => $depth)
-                                                <td>
-                                                    <template x-if="hasPlaces(w)">
-                                                        <select x-model="{{ $slot }}"
-                                                                x-on:change="rowChanged($data, '{{ $slot }}')"
-                                                                class="h-(--spacing-field-compact) w-32
-                                                                       rounded-(--radius-field) border
-                                                                       border-(--color-border)
-                                                                       bg-(--color-surface-card) px-2">
-                                                            <option value="">—</option>
-                                                            <template x-for="o in optionsFor(w, {{ $depth }}, {{ $slot === 'block' ? 'null' : ($slot === 'rack' ? 'block' : 'rack') }})"
-                                                                      :key="o.id">
-                                                                <option :value="o.id" x-text="o.name"></option>
-                                                            </template>
-                                                        </select>
-                                                    </template>
-                                                </td>
-                                            @endforeach
-
-                                            {{-- ⭐ সার্ভারে যায় একটাই — সবচেয়ে গভীরটা।
-                                                 উপরের ধাপগুলো `parent` বেয়ে ফেরত পাওয়া
-                                                 যায়, তাই তিনটা পাঠালে একই সত্যের তিনটা
-                                                 কপি যেত, আর তিন কপি একদিন আলাদা হয়ই। --}}
-                                            <input type="hidden" name="{{ $name }}[storage_location_id]"
-                                                   :value="deepest($data)">
-
-                                            <td class="text-end">
-                                                <input type="number" step="0.0001" min="0"
-                                                       max="{{ $line['waiting'] }}"
-                                                       name="{{ $name }}[qty]"
-                                                       value="{{ $line['waiting'] }}"
-                                                       class="num h-(--spacing-field) w-28 rounded-(--radius-field)
-                                                              border border-(--color-border)
-                                                              bg-(--color-surface-card) px-2 text-end">
-                                            </td>
-
-                                            <td class="text-end">
-                                                @if (bccomp($line['waiting_free'], '0', 4) > 0)
-                                                    <input type="number" step="0.0001" min="0"
-                                                           max="{{ $line['waiting_free'] }}"
-                                                           name="{{ $name }}[free_qty]"
-                                                           value="{{ $line['waiting_free'] }}"
-                                                           class="num h-(--spacing-field) w-28 rounded-(--radius-field)
-                                                                  border border-(--color-border)
-                                                                  bg-(--color-surface-card) px-2 text-end">
-                                                @else
-                                                    <span class="text-(--color-ink-muted)">—</span>
-                                                @endif
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-                    </section>
-                @endforeach
-            </div>
-
-            <button type="submit"
-                    class="mt-4 h-(--spacing-field) rounded-(--radius-field) bg-(--color-brand-600)
-                           px-4 text-sm font-medium text-white transition-opacity hover:opacity-90">
-                {{ __('inventory::action.place') }}
-            </button>
-        </form>
+                @if ($groups[$group] === [])
+                    <p class="rounded-(--radius-card) border border-(--color-border)
+                              bg-(--color-surface-card) px-4 py-3 text-sm text-(--color-ink-muted)">
+                        {{ __('inventory::message.'.$emptyWord) }}
+                    </p>
+                @else
+                    <div class="grid gap-4">
+                        @foreach ($groups[$group] as $paper)
+                            @include('inventory::stock.partials.paper', ['paper' => $paper])
+                        @endforeach
+                    </div>
+                @endif
+            @endforeach
+        </div>
     @endif
 </x-layouts.app>

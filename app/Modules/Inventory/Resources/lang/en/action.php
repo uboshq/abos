@@ -39,4 +39,5 @@ return [
     'add_place' => 'Add',
     'retire_place' => 'Retire',
     'places' => 'Places',
+    'place_row' => 'Place this line',
 ];

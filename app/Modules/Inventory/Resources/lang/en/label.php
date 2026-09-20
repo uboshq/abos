@@ -15,4 +15,6 @@ return [
     'opens_in_new_tab' => 'Opens in a new tab.',
     'chosen' => 'chosen',
     'combine_selection' => 'Combine selection for all listed products',
+    'purchase_placement' => 'Purchase Related Stock Placement',
+    'return_placement' => 'Return Related Stock Placement',
 ];

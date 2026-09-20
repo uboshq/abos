@@ -118,4 +118,8 @@ return [
     'sort' => 'Order',
     'path' => 'Path',
     'parent_place' => 'Inside',
+    'party' => 'With whom',
+    'paper_no' => 'Paper',
+    'paper_id' => 'ID',
+    'processed_by' => 'Processed by',
 ];

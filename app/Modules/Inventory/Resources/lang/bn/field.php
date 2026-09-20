@@ -139,4 +139,8 @@ return [
     'sort' => 'ক্রম',
     'path' => 'পথ',
     'parent_place' => 'কার নিচে',
+    'party' => 'কার',
+    'paper_no' => 'কাগজ',
+    'paper_id' => 'আইডি',
+    'processed_by' => 'কে করলেন',
 ];

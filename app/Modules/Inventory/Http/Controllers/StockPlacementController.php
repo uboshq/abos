@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Modules\Inventory\Http\Controllers;
 
+use App\Core\Engines\Drill\DrillResolver;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\StorageLocation;
@@ -74,11 +76,42 @@ class StockPlacementController extends Controller implements HasMiddleware
      */
     public function index(Request $request): View
     {
+        $papers = $this->waiting();
+
         return view('inventory::stock.placement', [
             'menu' => $this->menu->forUser($request->user()),
-            'papers' => $papers = $this->waiting(),
+            'papers' => $papers,
             'places' => $this->placesIn($papers),
+
+            /*
+             * ⭐ দুই ভাগ — মালিকের ছবি, ২০ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ ক্রয়ের কাগজ আর ফেরতের কাগজ এক তালিকায় মিশলে গুদামের
+             * লোককে প্রতিটা সারি পড়ে বুঝতে হত মালটা গাড়ি থেকে নামল না
+             * গ্রাহকের কাছ থেকে ফিরল — আর দুইটার পরীক্ষা এক নয়।
+             *
+             * ⚠️ ফেরতের ভাগটা আজ খালি থাকতে পারে: বিক্রয় ফেরতের মাল
+             * এখনও সোজা তাকে ওঠে ([[SalesReturnService]])। ⓘ তবু ভাগটা
+             * আছে, কারণ নিয়মটা বদলালে সারিগুলো ইতিমধ্যেই ঠিক জায়গায় বসবে।
+             */
+            'groups' => [
+                'purchase' => array_filter($papers, fn (array $paper) => ! $this->isReturn($paper)),
+                'return' => array_filter($papers, fn (array $paper) => $this->isReturn($paper)),
+            ],
         ]);
+    }
+
+    /**
+     * এই কাগজটা কি ফেরতের।
+     *
+     * ⓘ উৎসের নামেই লেখা থাকে (`sales_return`, `purchase_return`) —
+     * তাই অন্য মডিউলের ক্লাসের নাম ধরে ডাকতে হয় না।
+     *
+     * @param  array<string, mixed>  $paper
+     */
+    private function isReturn(array $paper): bool
+    {
+        return str_contains((string) $paper['source_type'], 'return');
     }
 
     /**
@@ -191,6 +224,10 @@ class StockPlacementController extends Controller implements HasMiddleware
                 'm.source_type', 'm.source_id',
                 DB::raw('MAX(m.document_no) as document_no'),
                 DB::raw('MIN(m.trx_date) as trx_date'),
+
+                /* ⭐ কে বুঝিয়ে দিলেন — মালিকের ছবির "Process By"।
+                   ⓘ এক কাগজের সব সারি একজনেরই লেখা, তাই MAX ধরলেই চলে। */
+                DB::raw('MAX(m.created_by) as created_by'),
                 'm.product_id', 'p.code as product_code', 'p.name_en as product_name',
                 'm.warehouse_id', 'w.name_en as warehouse_name',
                 'm.batch_id', 'b.batch_no',
@@ -209,6 +246,7 @@ class StockPlacementController extends Controller implements HasMiddleware
                 'source_type' => $row->source_type,
                 'source_id' => (int) $row->source_id,
                 'trx_date' => $row->trx_date,
+                'created_by' => $row->created_by === null ? null : (int) $row->created_by,
                 'lines' => [],
             ];
 
@@ -223,6 +261,42 @@ class StockPlacementController extends Controller implements HasMiddleware
                 'waiting' => (string) $row->waiting,
                 'waiting_free' => (string) $row->waiting_free,
             ];
+        }
+
+        return $this->withTheirFacts($papers);
+    }
+
+    /**
+     * কাগজের মাথার চারটা কথা — কার, কোন চালান, কবে, কে করলেন।
+     *
+     * ⭐ মালিকের ছবি, ২০ সেপ্টেম্বর ২০২৬ — কাগজের মাথায় সরবরাহকারী,
+     * চালান নম্বর, তারিখ আর কে প্রক্রিয়া করলেন। ⓘ গুদামের লোক হাতে
+     * একটা কাগজ নিয়ে দাঁড়ান; ওই কাগজটাই খুঁজে নিতে পারা চাই।
+     *
+     * ⛔ ক্রয় মডিউলের নাম ধরে ডাকা হয় না: মজুদ ক্রয়ের উপর নির্ভর
+     * করে না ([[BoundariesTest]])। ⓘ তাই সরবরাহকারীর নাম আর কাগজের নম্বর
+     * আসে কোরের drill রেজিস্ট্রি থেকে — যে মডিউল কাগজটা বানায়,
+     * নামটাও সে-ই দেয়। ⭐ আর কাগজে যাওয়ার লিংকটাও সাথেই আসে।
+     *
+     * @param  array<string, array<string, mixed>>  $papers
+     * @return array<string, array<string, mixed>>
+     */
+    private function withTheirFacts(array $papers): array
+    {
+        $drill = app(DrillResolver::class);
+
+        $users = User::query()
+            ->whereIn('id', array_filter(array_column($papers, 'created_by')))
+            ->pluck('name', 'id')
+            ->all();
+
+        foreach ($papers as $key => $paper) {
+            $seen = $drill->describe($paper['source_type'], $paper['source_id']);
+
+            $papers[$key]['party'] = $seen['resolved'] ? $seen['label'] : null;
+            $papers[$key]['document_no'] = $paper['document_no'] ?: $seen['document_no'];
+            $papers[$key]['route'] = $seen['resolved'] ? $seen['route'] : null;
+            $papers[$key]['by'] = $users[$paper['created_by']] ?? null;
         }
 
         return $papers;
@@ -259,7 +333,26 @@ class StockPlacementController extends Controller implements HasMiddleware
              * ওখান দিয়েই যায়।
              */
             'lines.*.storage_location_id' => ['nullable', 'integer'],
+
+            /*
+             * ⭐ কেবল একটা সারি — মালিকের ছবির তিরচিহ্ন, ২০ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ বোতামের নিজের নাম-মান ফরমের সাথে যায়, তাই কোনো JS লাগে
+             * না। ⚠️ মানটা সারির চাবি হতে হয় — অচেনা চাবি দিলে কিছুই
+             * বসে না, আর সেটাই নিরাপদ: ভুল সারি বসানোর চেয়ে কিছু না
+             * বসাই ভালো।
+             */
+            'only' => ['nullable', 'string', 'max:40'],
         ]);
+
+        /*
+         * ⓘ একটা সারির বোতাম চাপলে বাকি সারিগুলো ফেলে দেওয়া হয়।
+         * ⭐ দশ কার্টনের আটটা আজ, বাকি দুইটা কাল — পুরো কাগজটা
+         * আটকে থাকার দরকার নেই।
+         */
+        if (($data['only'] ?? null) !== null) {
+            $data['lines'] = array_intersect_key($data['lines'], [$data['only'] => true]);
+        }
 
         $placed = 0;
 

@@ -15,4 +15,6 @@ return [
     'opens_in_new_tab' => 'নতুন ট্যাবে খুলবে।',
     'chosen' => 'টা বাছা হয়েছে',
     'combine_selection' => 'সব সারির জন্য একসাথে বাছুন',
+    'purchase_placement' => 'ক্রয়ের মাল বসানো',
+    'return_placement' => 'ফেরত আসা মাল বসানো',
 ];
