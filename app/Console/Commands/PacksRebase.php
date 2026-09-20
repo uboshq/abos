@@ -67,7 +67,11 @@ class PacksRebase extends Command
                 $this->line("    পরিমাণ: {$report['qty_before']} → {$report['qty_after']}");
                 $this->line("    মূল্য:  {$report['value_before']} → {$report['value_after']}");
 
-                if (bccomp($report['value_before'], $report['value_after'], 2) !== 0) {
+                if ($report['layers_split'] > 0) {
+                    $this->line("    খরচের স্তর ভাগ হলো: {$report['layers_split']}টা (অবশিষ্ট বহনের জন্য, মূল্য হুবহু রাখতে)");
+                }
+
+                if (bccomp($report['value_before'], $report['value_after'], 4) !== 0) {
                     $this->error('    ⛔ মূল্য বদলে গেছে — এটা হওয়ার কথা নয়, লেখা হয়নি।');
                 }
             });
@@ -79,6 +83,16 @@ class PacksRebase extends Command
             return self::FAILURE;
         }
 
+        $this->newLine();
+
+        /*
+         * ⚠️ যা লুকানো হয় না: ছাপা লাইনে "পরিমাণ × দর" আর বিলের অঙ্ক
+         * পয়সার ভগ্নাংশ আলাদা দেখাতে পারে। ⓘ ২ কার্টন × ১৭২.৫৪ = ৩৪৫.০৮,
+         * আর ৪৮ পিস × ৭.১৮৯১ = ৩৪৫.০৭৬৮ — কারণ প্রতি-পিস দর চার ঘরেই
+         * লেখা যায়। ⭐ বিলের টাকা (`amount`) অক্ষত থাকে, তাই খাতার অঙ্ক
+         * বদলায় না; কেবল কাগজে গুণ করলে শেষ পয়সার ভগ্নাংশে ফারাক।
+         */
+        $this->line('ⓘ পুরনো কাগজে "পরিমাণ × দর" বিলের অঙ্কের চেয়ে পয়সার ভগ্নাংশ আলাদা দেখাতে পারে — বিলের টাকা অপরিবর্তিত।');
         $this->newLine();
         $this->info($apply ? 'লেখা শেষ।' : 'কিছুই লেখা হয়নি (--apply দিলে লিখবে)।');
 

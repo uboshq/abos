@@ -171,6 +171,95 @@ final class BringingTheStockDownToPiecesKeepsItsValueTest extends TestCase
     }
 
     /**
+     * ⭐ লাইভের হুবহু সংখ্যা — ২৩ কার্টন @ ১৭২.৫৪, মোট ৩,৯৬৮.৪২।
+     *
+     * ── ⛔ এটাই সেই কেস যা পাহারা ধরেছিল, ২০ সেপ্টেম্বর ২০২৬ ─────────
+     * দরটা ২৪ দিয়ে ভাগ করে চার ঘরে গোল করলে ৫৫২ পিসে দাঁড়াত ৩,৯৬৮.৪৩৮৪ —
+     * ১.৮৪ পয়সা বেশি, আর লাইভের dry-run সেটা দেখেই থেমেছিল।
+     *
+     * ⭐ এখন অবশিষ্টটা বহন করা হয়: কিছু পিস নিচের দরে, বাকিগুলো এক ধাপ
+     * বেশি দরে — যোগফল **হুবহু** ৩,৯৬৮.৪২, শেষ অঙ্ক পর্যন্ত।
+     */
+    public function test_the_live_numbers_come_out_to_the_last_digit(): void
+    {
+        CostLayer::query()->where('product_id', $this->product->id)->delete();
+
+        CostLayer::query()->create([
+            'company_id' => CompanyContext::id(), 'product_id' => $this->product->id,
+            'source_type' => 'opening', 'source_id' => $this->product->id,
+            'trx_date' => now()->toDateString(), 'qty_in' => '23', 'qty_remaining' => '23',
+            'unit_cost' => '172.54',
+        ]);
+
+        $report = app(PackRebase::class)->run($this->product, $this->piece, '24', apply: true);
+
+        $this->assertSame('3968.4200', $report['value_before']);
+        $this->assertSame($report['value_before'], $report['value_after'],
+            'মূল্য শেষ অঙ্ক পর্যন্ত মেলেনি।');
+
+        $layers = CostLayer::query()->where('product_id', $this->product->id)->orderBy('id')->get();
+
+        // ⓘ এক দরে বসে না, তাই দুই সারি — নিচের দর আর এক ধাপ বেশি দর
+        $this->assertCount(2, $layers, 'অবশিষ্ট বহনের সারিটা বসেনি।');
+        $this->assertSame(1, $report['layers_split']);
+
+        $this->assertSame(0, bccomp('552', (string) $layers->sum(fn ($l) => (float) $l->qty_remaining), 0),
+            'মোট পরিমাণ ৫৫২ পিস হয়নি।');
+
+        $total = $layers->reduce(
+            fn (string $sum, $l) => bcadd($sum, bcmul((string) $l->qty_remaining, (string) $l->unit_cost, 4), 4),
+            '0',
+        );
+        $this->assertSame('3968.4200', $total);
+
+        // ⚠️ দুই দরের ফারাক ঠিক এক ধাপ — নইলে "বহন" নয়, আন্দাজ
+        $this->assertSame('0.0001', bcsub((string) $layers[1]->unit_cost, (string) $layers[0]->unit_cost, 4));
+    }
+
+    /**
+     * ⭐ বিলের টাকা অক্ষত, আর ছাড় দরের ভিতরে ঢোকে না।
+     *
+     * ── ⛔ কেন এই দাবিটা লাগল, ২০ সেপ্টেম্বর ২০২৬ ─────────────────────
+     * প্রথমে দরটা `amount ÷ পরিমাণ` করে বসানো হয়েছিল। ⚠️ কিন্তু লাইনের
+     * `amount`-এ ছাড় (আর ভ্যাট) ধরা থাকে, তাই ১০ টাকা ছাড়ের একটা লাইনে
+     * ছাড়টা নীরবে **দরের** ভিতরে ঢুকে যেত — কাগজে দাম এক, খাতায় আরেক।
+     * ⓘ মিউটেশনে ধরা পড়েছে: পরীক্ষাটা তখন দুই পথের পার্থক্য দেখত না।
+     */
+    public function test_a_discounted_line_keeps_its_money_and_its_rate(): void
+    {
+        $invoice = DB::table('sal_invoices')->insertGetId([
+            'public_id' => (string) \Illuminate\Support\Str::uuid7(),
+            'company_id' => CompanyContext::id(),
+            'branch_id' => Company::query()->whereKey(CompanyContext::id())->first()->defaultBranch()?->id,
+            'customer_id' => \App\Modules\Customer\Models\Customer::query()->value('id'),
+            'document_no' => 'TINV-1', 'trx_date' => now()->toDateString(),
+            'status' => 'draft', 'total' => '335.08',
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        // ২ কার্টন @ ১৭২.৫৪, ১০ টাকা ছাড় → বিলে ৩৩৫.০৮
+        DB::table('sal_invoice_lines')->insert([
+            'public_id' => (string) \Illuminate\Support\Str::uuid7(),
+            'sales_invoice_id' => $invoice, 'product_id' => $this->product->id,
+            'qty' => '2', 'rate' => '172.54', 'discount' => '10', 'amount' => '335.08',
+            'unit_cost' => '172.54', 'line_no' => 1,
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        app(PackRebase::class)->run($this->product, $this->piece, '24', apply: true);
+
+        $line = DB::table('sal_invoice_lines')->where('product_id', $this->product->id)->first();
+
+        $this->assertSame(0, bccomp('335.08', (string) $line->amount, 4), 'বিলের টাকা বদলে গেছে।');
+        $this->assertSame(0, bccomp('10', (string) $line->discount, 4), 'ছাড় বদলে গেছে।');
+        $this->assertSame(0, bccomp('48', (string) $line->qty, 4), 'পরিমাণ ২৪ গুণ হয়নি।');
+
+        // ⓘ দর = আগের দর ÷ ২৪, ছাড়সহ টাকা থেকে নয় (নইলে ৬.৯৮ আসত)
+        $this->assertSame(0, bccomp(bcdiv('172.54', '24', 4), (string) $line->rate, 4),
+            'দরের ভিতরে ছাড় ঢুকে গেছে।');
+    }
+
+    /**
      * ⛔ যে পণ্য আগে থেকেই ঐ এককে, তাকে নামানোর কিছু নেই — আর বার্তাটা
      * সেটাই বলে, "একক বসানো নেই" নয়।
      */
