@@ -2,8 +2,9 @@
 @php
     $columns = [
         ['key' => 'code', 'label' => __('inventory::field.code'), 'width' => '9rem'],
+        /* নামটা গুদামের নিজের পাতায় নিয়ে যায় — ২০ সেপ্টেম্বর ২০২৬ */
         ['key' => 'name_en', 'label' => __('inventory::field.name'), 'width' => '18rem',
-         'render' => fn ($w) => $w->name()],
+         'render' => fn ($w) => view('inventory::warehouse.partials.name-link', ['warehouse' => $w])],
         ['key' => 'branch_id', 'label' => __('inventory::field.branch'),
          'render' => fn ($w) => $w->branch?->name()],
         ['key' => 'is_default', 'label' => __('inventory::field.is_default'), 'width' => '9rem',

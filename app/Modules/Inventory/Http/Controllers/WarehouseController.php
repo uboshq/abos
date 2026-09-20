@@ -10,12 +10,15 @@ use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
+use App\Modules\Inventory\Models\StorageLocation;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Inventory\Services\StockService;
 use App\Modules\Inventory\Services\WarehouseService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -154,5 +157,42 @@ class WarehouseController extends Controller implements HasMiddleware
         $data['is_default'] = $request->boolean('is_default');
 
         return $data;
+    }
+
+    /**
+     * এক গুদামের নিজের পাতা — কী আছে, কার হাতে, আর কোথায় বসে।
+     *
+     * ── কেন পাতাটা লাগল, ২০ সেপ্টেম্বর ২০২৬ ─────────────────────────
+     * ভাড়ার চুক্তি এখন গুদামের সাথে জোড়া যায়, আর তখনই ধরা পড়ল গুদামের
+     * কোনো পাতাই নেই — কেবল তালিকা আর সম্পাদনার ফর্ম। মালিককে জানানোর
+     * পর: *"ok"*। ⓘ প্রশ্নটা রোজকার: "এই গুদামে কত টাকার মাল আছে, ভাড়া
+     * কত, আর দায়িত্বে কে?"
+     *
+     * ── কেন ভাড়ার সংখ্যা এখানে গোনা হয় না ───────────────────────────
+     * ⛔ মজুদ মডিউল অর্থ মডিউলের নাম জানে না, আর জানা উচিতও নয় — ঠিক এই
+     * সীমাটা আজই অর্থের দিকে সারানো হয়েছে। তাই ভাড়ার ঘরটা একটা **লিংক**,
+     * সংখ্যা নয়: ছাঁকা তালিকাটা অর্থের পাতাতেই খোলে।
+     */
+    public function show(Request $request, Warehouse $warehouse, StockService $stock): View
+    {
+        $this->authorize('view', $warehouse);
+
+        $states = $stock->statesForAll($warehouse);
+
+        /*
+         * ⓘ "কয়টা পণ্য" মানে যার আজ কিছু আছে — শূন্য সারিগুলো নয়।
+         * ⚠️ শূন্যগুলো গুনলে সংখ্যাটা ক্যাটালগের আকার বলত, গুদামের নয়।
+         */
+        $withStock = collect($states)->filter(fn (array $s) => bccomp((string) ($s['floor'] ?? '0'), '0', 4) !== 0);
+
+        return view('inventory::warehouse.show', [
+            'menu' => $this->menu->forUser($request->user()),
+            'warehouse' => $warehouse->load('branch'),
+            'productCount' => $withStock->count(),
+            'places' => StorageLocation::query()->where('warehouse_id', $warehouse->id)->count(),
+            'rentalUrl' => Route::has('finance.rental.index')
+                ? route('finance.rental.index', ['subject' => 'warehouse:'.$warehouse->id])
+                : null,
+        ]);
     }
 }

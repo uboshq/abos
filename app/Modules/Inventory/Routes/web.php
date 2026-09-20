@@ -53,6 +53,13 @@ Route::middleware('auth')->prefix('inventory')->group(function () {
         Route::get('/', [WarehouseController::class, 'index'])->name('index');
         Route::get('/create', [WarehouseController::class, 'create'])->name('create');
         Route::post('/', [WarehouseController::class, 'store'])->name('store');
+        /*
+         * গুদামের নিজের পাতা — ২০ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ `/create`-এর নিচে, কারণ পথটা সংখ্যায় বাঁধা (`whereNumber`) —
+         * নাহলে "create" কে একটা গুদামের আইডি ভেবে বাইন্ডিং ৪০৪ দিত।
+         */
+        Route::get('/{warehouse}', [WarehouseController::class, 'show'])->whereNumber('warehouse')->name('show');
         Route::get('/{warehouse}/edit', [WarehouseController::class, 'edit'])->whereNumber('warehouse')->name('edit');
         Route::put('/{warehouse}', [WarehouseController::class, 'update'])->whereNumber('warehouse')->name('update');
         Route::delete('/{warehouse}', [WarehouseController::class, 'destroy'])->whereNumber('warehouse')->name('destroy');
