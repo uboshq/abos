@@ -6,6 +6,7 @@ namespace App\Modules\Accounts\Models;
 
 use App\Core\Concerns\BelongsToCompanyThroughParent;
 use App\Core\Concerns\HasPublicId;
+use App\Core\Concerns\IsAudited;
 use App\Modules\Purchase\Models\PurchaseBill;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -32,6 +33,21 @@ final class VoucherBillShare extends Model
     use BelongsToCompanyThroughParent;
     use HasPublicId;
 
+    /*
+     * ⭐ অডিট — ২১ সেপ্টেম্বর ২০২৬, অডিটে ধরা।
+     *
+     * ⛔ এই টেবিলটা অডিটের বাইরে ছিল, আর কেউ টের পায়নি: পাহারাটা
+     * (`EveryChangeableRowRemembersWhoChangedIt`) নোঙর হিসেবে `
+class`
+     * খুঁজত, তাই `final class` কোনোদিন দেখতই না।
+     *
+     * ⚠️ আর জিনিসটা টাকার: কোন ক্রয় বিলের বিপরীতে কত বসল, সেটা এখানেই
+     * লেখা। ⓘ ভাউচার সম্পাদনায় সারিগুলো প্রতিবার **মুছে নতুন করে**
+     * লেখা হয় ([[VoucherService]]), অর্থাৎ সরবরাহকারীর বিলের মধ্যে টাকা
+     * সরত আর কোনো হিসাব থাকত না।
+     */
+    use IsAudited;
+
     protected $table = 'acc_voucher_bill_shares';
 
     protected $fillable = [
@@ -53,6 +69,31 @@ final class VoucherBillShare extends Model
     protected function companyParent(): string
     {
         return 'voucher';
+    }
+
+    /**
+     * অডিটের সারিটা কার খাতায় — ভাউচারের, প্রসঙ্গের নয়।
+     *
+     * ── ⛔ কেন এটা নাম ধরে বলা দরকার, ২১ সেপ্টেম্বর ২০২৬ ─────────────
+     * এই সারির নিজের `company_id` নেই; সে তার ভাউচারের মাধ্যমে বাঁধা।
+     * ⓘ [[IsAudited]] তখন চলতি প্রসঙ্গ থেকে আইডিটা নিত, আর **প্রসঙ্গ
+     * ঐ সারিটা সত্যিই আছে কি না জানে না**।
+     *
+     * ⚠️ আর অডিট লেখার চেষ্টা ব্যর্থ হলে সেটা চুপ করে থাকে না — **মূল
+     * কাজটাকেই ফেলে দেয়**। ⛔ অর্থাৎ ভাউচার সংরক্ষণ করতে গিয়ে ৫০০,
+     * আর ব্যবহারকারী বুঝতেই পারেন না কী হলো।
+     *
+     * ⭐ ভাউচারটাই একমাত্র সৎ উৎস: সারিটা যার, খাতাটাও তার।
+     */
+    public function auditCompanyId(): ?int
+    {
+        return $this->voucher?->company_id;
+    }
+
+    /** ⓘ একই কারণে শাখাটাও — ভাউচার কোন অফিসের কাগজ, সে-ই জানে। */
+    public function auditBranchId(): ?int
+    {
+        return $this->voucher?->branch_id;
     }
 
     public function voucher(): BelongsTo
