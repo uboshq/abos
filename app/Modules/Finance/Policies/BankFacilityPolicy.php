@@ -24,10 +24,6 @@ use App\Modules\Finance\Models\BankFacility;
  */
 class BankFacilityPolicy
 {
-    public function viewAny(User $user): bool
-    {
-        return $user->can('finance.bank_facility.view');
-    }
 
     public function view(User $user, BankFacility $document): bool
     {

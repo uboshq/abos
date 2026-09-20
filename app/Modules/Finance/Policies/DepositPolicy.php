@@ -24,10 +24,6 @@ use App\Modules\Finance\Models\Deposit;
  */
 class DepositPolicy
 {
-    public function viewAny(User $user): bool
-    {
-        return $user->can('finance.deposit.view');
-    }
 
     public function view(User $user, Deposit $document): bool
     {

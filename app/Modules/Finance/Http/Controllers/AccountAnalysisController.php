@@ -49,7 +49,13 @@ class AccountAnalysisController extends Controller implements HasMiddleware
             'from' => $from,
             'to' => $to,
             'account' => $account,
+            /*
+             * ⛔ দল বাদ — ২১ সেপ্টেম্বর ২০২৬। তালিকায় দল থাকলে কেউ
+             * বেছে ফেলতেন, আর দলের নিজের কোনো সারি নেই বলে পর্দা
+             * খালি দেখাত — বা ভেঙে পড়ত।
+             */
             'accounts' => Account::query()
+                ->postable()
                 ->where('is_active', true)
                 ->orderBy('code')
                 ->get()

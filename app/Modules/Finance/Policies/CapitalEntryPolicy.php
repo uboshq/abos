@@ -24,10 +24,6 @@ use App\Modules\Finance\Models\CapitalEntry;
  */
 class CapitalEntryPolicy
 {
-    public function viewAny(User $user): bool
-    {
-        return $user->can('finance.capital.view');
-    }
 
     public function view(User $user, CapitalEntry $document): bool
     {

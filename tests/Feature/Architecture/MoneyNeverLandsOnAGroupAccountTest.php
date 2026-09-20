@@ -60,7 +60,16 @@ final class MoneyNeverLandsOnAGroupAccountTest extends TestCase
      * ⓘ এখন সরল নিয়ম: `Account::query()` থেকে শুরু করে একই বাক্যের
      * ভেতরে (`;` পার না করে) প্রথম `get`/`pluck`/`first` পর্যন্ত।
      */
-    private const PICKER = '/Account::query\(\)[^;]*?->(?:get|pluck|first)\(/s';
+    /*
+     * ⛔ শুরুতে শব্দসীমা — ২১ সেপ্টেম্বর ২০২৬।
+     *
+     * ⚠️ আগের রূপ `InstitutionAccount::query()`-এর ভিতরেও মিলত, আর
+     * তাতে তিনটা ফাইল বছরের পর বছর মিথ্যা লাল দেখাত — ওগুলো
+     * খাতের তালিকাই নয়, সেতু টেবিলের সারি। ⓘ মিথ্যা লাল দুইভাবে
+     * ক্ষতি করে: সতি্যকারের ভুলগুলো চাপা পড়ে, আর একদিন কেউ
+     * গার্ডটাকেই বন্ধ করে দেয়।
+     */
+    private const PICKER = '/(?<![A-Za-z_])Account::query\(\)[^;]*?->(?:get|pluck|first)\(/s';
 
     /**
      * যে জায়গাগুলোয় দল থাকাই স্বাভাবিক — কারণসহ।
@@ -117,6 +126,30 @@ final class MoneyNeverLandsOnAGroupAccountTest extends TestCase
                  */
                 foreach (['postable()', 'is_group', '->money()', 'ofMoneyKind('] as $filters) {
                     if (str_contains($chain, $filters)) {
+                        continue 2;
+                    }
+                }
+
+                /*
+                 * ⭐ আরো দুইটা রূপ, যেখানে দল থাকা **কোনো বিপদই নয়** —
+                 * ২১ সেপ্টেম্বর ২০২৬, নিরীক্ষার গ৩।
+                 *
+                 * ⓘ `whereKey(` — আইডিগুলো **আগেই বাছা হয়ে গেছে**, এই
+                 * খোঁজাটা কেবল নাম আনে ([[ApprovalFacts]]: অনুমোদনের পর্দায়
+                 * কোন খাত কী নামে)। ⛔ নাম দেখিয়ে কেউ দলে টাকা বসাতে
+                 * পারেন না; টাকাটা কোথায় বসবে সেটা ঠিক হয়েছিল অন্য পর্দায়।
+                 *
+                 * ⓘ `MONEY_PARENTS` — টাকার **মা-খাতগুলো**, আর মা সংজ্ঞাতেই
+                 * দল। ⚠️ ওগুলো তোলা হয় শুধু আইডি পাওয়ার জন্য, আর তার
+                 * পরের কোয়েরিটাই `is_group = false` দিয়ে ছাঁকে — কোডেই
+                 * লেখা আছে ([[LoanController]], [[DirectPurchaseController]])।
+                 *
+                 * ⛔ দুইটাকেই GROUPS_BELONG_HERE-এ ফাইল ধরে ছাড় দেওয়া যেত,
+                 * কিন্তু তাতে **গোটা ফাইলটা** অন্ধ হয়ে যেত — আর ঐ ফাইলে
+                 * কাল একটা সত্যিকারের নির্বাচক বসলে পাহারাটা চুপ থাকত।
+                 */
+                foreach (['whereKey(', 'MONEY_PARENTS'] as $notAPicker) {
+                    if (str_contains($chain, $notAPicker)) {
                         continue 2;
                     }
                 }

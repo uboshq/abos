@@ -24,10 +24,6 @@ use App\Modules\Finance\Models\HandLoanAccount;
  */
 class HandLoanAccountPolicy
 {
-    public function viewAny(User $user): bool
-    {
-        return $user->can('finance.hand_loan.view');
-    }
 
     public function view(User $user, HandLoanAccount $document): bool
     {

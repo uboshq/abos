@@ -8,7 +8,10 @@
 @php
     use App\Core\Support\Money;
 
-    $paid = $policy->premiums->filter->isPaid()->sum(fn ($p) => (float) $p->amount);
+    /* ⓘ টাকার যোগ bcmath-এ — float-এ পয়সা হারায়,
+       আর এই সংখ্যাটাই বলে প্রিমিয়াম আর কত বাকি */
+    $paid = $policy->premiums->filter->isPaid()
+        ->reduce(fn ($c, $p) => bcadd($c, (string) $p->amount, 4), '0');
 @endphp
 
 <x-layouts.app :menu="$menu">

@@ -131,7 +131,7 @@
                 <h2 class="text-sm font-semibold">{{ __('finance::menu.bank_facility') }}</h2>
                 <span class="ms-auto text-sm tabular-nums">
                     {{ __('finance::field.limit_amount') }}:
-                    <strong>{{ Money::format($facilities->sum(fn ($f) => (float) $f->limit_amount)) }}</strong>
+                    <strong>{{ Money::format($facilities->reduce(fn ($c, $f) => bcadd($c, (string) $f->limit_amount, 4), '0')) }}</strong>
                 </span>
             </header>
 
@@ -156,7 +156,7 @@
                 <h2 class="text-sm font-semibold">{{ __('finance::menu.deposit_bank') }}</h2>
                 <span class="ms-auto text-sm tabular-nums">
                     {{ __('finance::institution.total') }}:
-                    <strong>{{ Money::format($deposits->sum(fn ($d) => (float) $d->principal)) }}</strong>
+                    <strong>{{ Money::format($deposits->reduce(fn ($c, $d) => bcadd($c, (string) $d->principal, 4), '0')) }}</strong>
                 </span>
             </header>
 
@@ -188,9 +188,9 @@
                 <h2 class="text-sm font-semibold">{{ __('finance::institution.policies') }}</h2>
                 <span class="ms-auto text-sm tabular-nums">
                     {{ __('finance::insurance.sum_insured') }}:
-                    <strong>{{ Money::format($policies->where('is_active', true)->sum(fn ($p) => (float) $p->sum_insured)) }}</strong>
+                    <strong>{{ Money::format($policies->where('is_active', true)->reduce(fn ($c, $p) => bcadd($c, (string) $p->sum_insured, 4), '0')) }}</strong>
                     · {{ __('finance::insurance.premium') }}:
-                    <strong>{{ Money::format($policies->where('is_active', true)->sum(fn ($p) => (float) $p->premium)) }}</strong>
+                    <strong>{{ Money::format($policies->where('is_active', true)->reduce(fn ($c, $p) => bcadd($c, (string) $p->premium, 4), '0')) }}</strong>
                 </span>
             </header>
 

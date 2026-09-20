@@ -84,7 +84,10 @@ final class BankCharges
             ->groupBy('bank_id')
             ->get();
 
-        $banks = Account::query()->whereIn('id', $rows->pluck('bank_id')->filter())->get()->keyBy('id');
+        /* ⓘ `postable()` — আইডিগুলো খাতা থেকে আসে বলে দল আসার কথা নয়,
+           তবু লেখা থাকলে পড়ে বোঝা যায় এখানে দল অসম্ভব */
+        $banks = Account::query()->postable()
+            ->whereIn('id', $rows->pluck('bank_id')->filter())->get()->keyBy('id');
 
         $institutions = InstitutionAccount::query()
             ->with('institution')
@@ -110,7 +113,10 @@ final class BankCharges
                 'count' => (int) $r->n,
                 'amount' => (string) $r->amount,
             ])
-            ->sortByDesc(fn ($b) => (float) $b['amount'])
+            /* ⓘ সাজানোও bcmath-এ — float-এ নিলে দুই পয়সার ফারাকে
+               সারি দুইটা উলটাপালটা বসত, আর সেটা কেউ ধরত না */
+            ->sort(fn ($a, $b) => bccomp((string) $b['amount'], (string) $a['amount'], 4))
+            ->values()
             ->values();
     }
 
@@ -136,6 +142,7 @@ final class BankCharges
     private function chargeAccountIds(): array
     {
         return Account::query()
+            ->postable()
             ->whereIn('code', [StandardChart::BANK_CHARGES, StandardChart::MFS_CHARGES])
             ->get()
             ->flatMap(fn (Account $a) => $a->selfAndDescendants()->pluck('id'))

@@ -54,6 +54,44 @@ class EveryPolicyRuleIsActuallyReachedTest extends TestCase
     private const UNREACHED_ON_PURPOSE = [];
 
     /**
+     * যে নীতিগুলো রুট থেকে নয়, কাগজপত্রের ঘর থেকে পৌঁছায় — কারণসহ।
+     *
+     * ── ⓘ ২১ সেপ্টেম্বর ২০২৬ ─────────────────────────────
+     * এই পাঁচটা নীতি লেখা হয়েছিল একটাই কারণে: [[components/ui/attachments]]
+     * জিজ্ঞেস করে `can('create', $document)`, আর নীতি না থাকলে Laravel
+     * নীরবে `false` বলত — কাগজ তোলার ঘরটাই পর্দায় আসত না, মালিকের
+     * জন্যও নয়। ⓘ ডাকটা ব্লেড থেকে, রুট থেকে নয় — তাই রুট টেবিল
+     * ধরে খুঁজলে ওদের অনাথ মনে হয়।
+     *
+     * ⚠️ তালিকায় বসানো মানে ছাড় দেওয়া নয় — পর্দার পাহারা ওখানে
+     * অনুমতির মিডলওয়্যারে ([[EveryRouteIsGuardedTest]] সেটা দেখে)।
+     *
+     * @var array<string, string>
+     */
+    private const REACHED_WITHOUT_A_ROUTE = [
+        'BankFacilityPolicy' => 'কাগজপত্রের ঘর থেকে ডাকা হয়; পর্দার পাহারা অনুমতির মিডলওয়্যারে',
+        'CapitalEntryPolicy' => 'একই কারণে',
+        'DepositPolicy' => 'একই কারণে',
+        'HandLoanAccountPolicy' => 'একই কারণে',
+        'RentalContractPolicy' => 'একই কারণে',
+
+        /*
+         * ⓘ নিচের তিনটা অন্য কারণে — ২১ সেপ্টেম্বর ২০২৬।
+         *
+         * ৪ারা পৌঁছায় কন্ট্রোলারের ভিতর থেকে, স্পষ্ট `$this->authorize()` ডাকে —
+         * রুট টেবিলে নয়, কারণ কন্ট্রোলারগুলো `resourcePermissions()` ব্যবহার
+         * করে না। ⚠️ এই পরীক্ষাটা ইচ্ছাকৃতভাবে কেবল রুট টেবিল পড়ে (উপরের
+         * মন্তব্যে কারণ লেখা), তাই স্পষ্ট ডাকগুলো তার চোখে পড়ে না।
+         *
+         * ⓘ যাচাই করা হয়েছে, ডাকগুলো সত্যিই আছে — নিচে পথসহ লেখা,
+         * যাতে পরের জন নিজে দেখে নিতে পারেন — আর সরানো হলে লাল হয়।
+         */
+        'EmployeePolicy' => 'EmployeeController:131,147,158,170 — authorize() ধরে, রুট ধরে নয়',
+        'PayslipPolicy' => 'PayslipPrintController:49 — পাতাটা যায় তার রানের শাখা ধরে',
+        'UserPolicy' => 'UserController:177,192 — আর জোড়াটা AppServiceProvider-এ Gate::policy() দিয়ে',
+    ];
+
+    /**
      * Laravel-এর নিজের নিয়ম, নীতিলেখকের নয়।
      *
      * `before()` প্রতিটা প্রশ্নের আগে চলে আর কোনো ক্ষমতার নাম নয়;
@@ -132,8 +170,14 @@ class EveryPolicyRuleIsActuallyReachedTest extends TestCase
         $orphans = [];
 
         foreach ($this->policyClasses() as $policy) {
+            $name = class_basename($policy);
+
+            if (array_key_exists($name, self::REACHED_WITHOUT_A_ROUTE)) {
+                continue;
+            }
+
             if (($reachedByRoute[$this->modelFor($policy)] ?? []) === []) {
-                $orphans[] = class_basename($policy);
+                $orphans[] = $name;
             }
         }
 

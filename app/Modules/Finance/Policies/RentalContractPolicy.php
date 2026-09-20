@@ -24,10 +24,6 @@ use App\Modules\Finance\Models\RentalContract;
  */
 class RentalContractPolicy
 {
-    public function viewAny(User $user): bool
-    {
-        return $user->can('finance.rental.view');
-    }
 
     public function view(User $user, RentalContract $document): bool
     {

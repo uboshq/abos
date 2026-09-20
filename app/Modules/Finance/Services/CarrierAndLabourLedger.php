@@ -89,7 +89,9 @@ final class CarrierAndLabourLedger
             })
             ->reject(fn ($p) => bccomp($p['opening'], '0', 4) === 0 && bccomp($p['charged'], '0', 4) === 0
                 && bccomp($p['paid'], '0', 4) === 0)
-            ->sortByDesc(fn ($p) => (float) $p['closing'])
+            /* ⓘ একই কারণে bcmath — টাকা float-এ তুলনা করা হয় না */
+            ->sort(fn ($a, $b) => bccomp((string) $b['closing'], (string) $a['closing'], 4))
+            ->values()
             ->values();
     }
 

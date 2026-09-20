@@ -242,7 +242,23 @@ class EveryRawQueryNamesItsCompanyTest extends TestCase
          * ([[App\Modules\Purchase\Services\LastPaidRate]]) — কোড পড়ে নয়,
          * "আমারটা কি এই পাহারার আওতায় পড়ে?" প্রশ্নটা করে।
          */
-        foreach (['DB::table(', 'DB::query('] as $entry) {
+        /*
+         * ⭐ আর পাঁচটা প্রবেশপথ, ২১ সেপ্টেম্বর ২০২৬ — অডিটে ধরা।
+         *
+         * ⛔ `DB::select`, `DB::statement`, `DB::insert`, `DB::update`,
+         * `DB::delete` — এগুলোই সবচেয়ে **কাঁচা**: হাতে লেখা SQL, কোনো
+         * বিল্ডার নেই, কোনো স্কোপ নেই। ⚠️ অথচ পাহারাটা ওগুলো একবারও
+         * দেখত না, আর ঠিক ওখান দিয়েই একটা টেন্যান্ট-ফাঁস নীরবে ঢুকতে
+         * পারত — যে জিনিসটা আটকাতে এই ফাইলটা লেখা।
+         *
+         * ⓘ টেবিলের নাম এখানে উদ্ধৃতিতে থাকে না (SQL-এর ভিতরে), তাই
+         * `$table` null-ই থাকে — অর্থাৎ ছাড় পেতে হলে `company_id`
+         * লিখতেই হবে, নাহলে DECLARED-এ কারণসহ।
+         */
+        foreach ([
+            'DB::table(', 'DB::query(',
+            'DB::select(', 'DB::statement(', 'DB::insert(', 'DB::update(', 'DB::delete(',
+        ] as $entry) {
             $offset = 0;
 
             while (($at = strpos($source, $entry, $offset)) !== false) {
