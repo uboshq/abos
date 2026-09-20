@@ -143,8 +143,14 @@ final class PaperTrail
         ?string $documentNo = null,
     ): DocumentShare {
         return DB::transaction(function () use ($routeName, $routeParams, $documentType, $documentId, $paper, $documentNo) {
+            /*
+             * ⚠️ রুটের নামটাও মেলে — নাহলে একই ধরন ও আইডির অন্য একটা
+             * কাগজের পুরনো লিংকটাই ফিরে আসত, আর মানুষ ভাবতেন নতুন কাগজটা
+             * পাঠিয়েছেন (abos-8b ধরেছে, ২০ সেপ্টেম্বর ২০২৬)।
+             */
             $alive = DocumentShare::query()
                 ->alive()
+                ->where('route_name', $routeName)
                 ->where('document_type', $documentType)
                 ->where('document_id', $documentId)
                 ->where('paper', $paper)

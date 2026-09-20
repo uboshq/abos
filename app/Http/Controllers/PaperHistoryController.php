@@ -8,7 +8,6 @@ use App\Core\Services\MenuBuilder;
 use App\Core\Services\PaperTrail;
 use App\Models\DocumentDelivery;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 
 /**
@@ -45,8 +44,20 @@ class PaperHistoryController extends Controller
         // ⛔ চেনা কাগজ না হলে এখানেই শেষ — অনুমতি না জানলে দেখানো নয়
         abort_unless(array_key_exists($type, PaperTrail::DOCUMENT_ROUTES), 404);
 
-        foreach (PaperTrail::abilitiesFor($type) as $ability) {
-            abort_unless(Gate::allows($ability), 403);
+        $abilities = PaperTrail::abilitiesFor($type);
+
+        /*
+         * ⛔ খালি তালিকা = দরজা বন্ধ, খোলা নয়।
+         *
+         * ⚠️ কেবল `foreach` থাকলে খালি তালিকায় শরীরটা একবারও চলত না আর
+         * পাতাটা **খুলে যেত** — fail-open (abos-8b ধরেছে, ২০ সেপ্টেম্বর
+         * ২০২৬)। ⓘ আজ প্রতিটা ছাপার রুটেই `can:` আছে বলে বিপদটা ঘুমিয়ে
+         * ছিল; কেউ একটার পাহারা মেথডে সরালেই জেগে উঠত।
+         */
+        abort_if($abilities === [], 403);
+
+        foreach ($abilities as $ability) {
+            $this->authorize($ability);
         }
 
         $rows = DocumentDelivery::query()

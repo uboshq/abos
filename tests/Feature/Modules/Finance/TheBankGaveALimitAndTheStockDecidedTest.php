@@ -246,9 +246,21 @@ final class TheBankGaveALimitAndTheStockDecidedTest extends TestCase
             ->assertSee('name="kind"', false)
             ->assertSee('name="stock_value"', false);
 
+        /*
+         * ⭐ ব্যাংকটা এখন তালিকা থেকে, হাতে লেখা নাম থেকে নয় (২০ সেপ্টেম্বর
+         * ২০২৬)। ⓘ `institution_new` হলো ফর্মের ইনলাইন "+" — তালিকায়
+         * ব্যাংকটা না থাকলে ওখানেই খোলা যায়, আর দোকানে সেটাই আসল পথ।
+         *
+         * ⚠️ আগে এখানে `'bank' => '…'` ছিল, আর ফর্মের নিয়ম কড়া হওয়ার পর
+         * পরীক্ষাটা লাল হয়। ⛔ নিয়ম শিথিল না করে পরীক্ষাটাই শোধরানো হলো:
+         * "কার কাছে সীমা" প্রশ্নের উত্তর ছাড়া সীমাটা কেবল একটা সংখ্যা।
+         *
+         * ⓘ সেবার স্তরে (`$this->service->open()`) `bank` লেখাটা এখনো
+         * চলে — কড়াকড়িটা ফর্মের, কারণ ভুলটা হয় ফর্মেই।
+         */
         $this->post(route('finance.bank_facility.store'), [
             'kind' => BankFacility::CC,
-            'bank' => 'Islami Bank Bangladesh PLC',
+            'institution_new' => 'Islami Bank Bangladesh PLC',
             'sanctioned_on' => now()->toDateString(),
             'limit_amount' => '5000000',
             'money_account_id' => $this->accountId(),

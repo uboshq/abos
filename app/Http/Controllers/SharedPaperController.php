@@ -67,6 +67,25 @@ class SharedPaperController extends Controller
 
         abort_if($route === null, Response::HTTP_NOT_FOUND);
 
+        /*
+         * ⛔⛔ দ্বিতীয় তালা — রুটটা তালিকাভুক্ত ছাপার রুট, আর GET।
+         *
+         * ── ⚠️ কেন লিংক বানানোর জায়গায় পাহারা যথেষ্ট নয় ─────────────
+         * এই পথটা মিডলওয়্যার **ইচ্ছাকৃতভাবে** এড়িয়ে যায় (গ্রাহকের লগইন
+         * নেই), তাই এখানে যা চলে তা লগইন ছাড়া, CSRF ছাড়া, আর ৩০ দিন ধরে
+         * বারবার চলে। ⛔ একটা POST রুট এই পথে ঢুকলে সেটা আর "কাগজ দেখা"
+         * নয় — সেটা বাইরের কারো হাতে দেওয়া একটা বোতাম।
+         *
+         * ⓘ সারিটা আগেই যাচাই হয়ে বসেছে ([[PaperShareController]]), তবু
+         * এখানে আবার — কারণ সারিটা ডেটাবেসে, আর ডেটাবেসের সারি একদিন
+         * অন্য কোনো পথে বসতে পারে। ⚠️ পাহারা যেখানে কাজটা হয়, সেখানেই।
+         */
+        abort_unless(
+            in_array($share->route_name, PaperTrail::DOCUMENT_ROUTES, true)
+                && in_array('GET', $route->methods(), true),
+            Response::HTTP_NOT_FOUND,
+        );
+
         $target = $this->requestFor($share, $route);
 
         app()->instance('request', $target);

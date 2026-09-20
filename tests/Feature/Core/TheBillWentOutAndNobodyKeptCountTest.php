@@ -174,6 +174,69 @@ final class TheBillWentOutAndNobodyKeptCountTest extends TestCase
     }
 
     /**
+     * ⛔⛔ নামে "print" আছে, কিন্তু কাগজ নয় — এগুলোর লিংক বানানো যায় না।
+     *
+     * ── ⚠️ কেন এই পরীক্ষাটা আগেরটার চেয়ে আলাদা ──────────────────────
+     * উপরের পরীক্ষাটা `accounts.voucher.index` দিয়ে দেখত — যার নামে
+     * "print" নেই। ⓘ তাই পুরনো সাবস্ট্রিং নিয়মেই সেটা পাশ করত, আর নিচের
+     * তিনটা রুট **হাট করে খোলা থাকলেও** পরীক্ষাটা সবুজই থাকত। পাহারাটা
+     * যা ধরার কথা, ঠিক সেটাই সে কোনোদিন চেষ্টা করেনি
+     * (abos-8b ধরেছে, ২০ সেপ্টেম্বর ২০২৬)।
+     *
+     * ⛔ `sales.print_queue.settle` সবচেয়ে খারাপটা: POST, অবস্থা বদলায়।
+     * ওটার লিংক বেরোলে গ্রাহকের হাতে ৩০ দিনের একটা বোতাম চলে যেত —
+     * লগইন ছাড়া, CSRF ছাড়া, যতবার খুশি।
+     */
+    public function test_a_route_named_print_that_is_not_a_paper_cannot_be_shared(): void
+    {
+        foreach ([
+            'sales.print_queue.index',   // গোটা কোম্পানির ছাপার সারির তালিকা
+            'sales.print_queue.settle',  // ⛔ POST — অবস্থা বদলায়
+            'inventory.label.print',     // কোন রেকর্ড, তা ঠিকানা থেকে নেয়
+        ] as $name) {
+            $this->post(route('paper.share'), [
+                'route' => $name,
+                'params' => [],
+                'document_type' => self::KIND,
+                'document_id' => $this->voucher->id,
+                'paper' => PaperSize::A4,
+            ])->assertNotFound();
+        }
+
+        $this->assertSame(0, DocumentShare::query()->count(),
+            'নামে "print" থাকা একটা অ-কাগজ রুটের গোপন লিংক তৈরি হয়েছে।');
+    }
+
+    /**
+     * ⛔ নথির ধরন বানিয়ে লেখা যায় না।
+     *
+     * ⓘ ঘরটা মুক্ত লেখা ছিল, তাই একটা বিলের লিংক "hr_payslip" নামে ফাইল
+     * করা যেত — আর তখন গোনা, ইতিহাস আর পুরনো-লিংক-ফেরানো সব ভুল নামের
+     * নিচে বসত।
+     */
+    public function test_the_document_type_must_be_one_we_know(): void
+    {
+        $this->post(route('paper.share'), [
+            'route' => 'accounts.voucher.print',
+            'params' => ['voucher' => $this->voucher->id],
+            'document_type' => 'kichu_ekta',
+            'document_id' => $this->voucher->id,
+            'paper' => PaperSize::A4,
+        ])->assertSessionHasErrors('document_type');
+
+        // ⛔ আর চেনা ধরন হলেও রুটটা ঐ ধরনেরই হতে হবে
+        $this->post(route('paper.share'), [
+            'route' => 'accounts.voucher.print',
+            'params' => ['voucher' => $this->voucher->id],
+            'document_type' => 'hr_payslip',
+            'document_id' => $this->voucher->id,
+            'paper' => PaperSize::A4,
+        ])->assertNotFound();
+
+        $this->assertSame(0, DocumentShare::query()->count());
+    }
+
+    /**
      * ⭐ গোনাটা একটা দরজা — "কে ছেপেছে, কখন" তার পিছনেই।
      *
      * ⓘ মালিক গোনা চেয়েছিলেন জবাবদিহির জন্য, তথ্যের জন্য নয়। তাই
@@ -250,7 +313,7 @@ final class TheBillWentOutAndNobodyKeptCountTest extends TestCase
     private function nobody(): User
     {
         return User::factory()->create([
-            'company_id' => CompanyContext::id(),
+            'current_company_id' => CompanyContext::id(),
         ]);
     }
 
