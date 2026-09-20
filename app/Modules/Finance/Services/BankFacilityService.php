@@ -113,6 +113,10 @@ class BankFacilityService
                 ? ($data['instalments_paid'] ?? null)
                 : null,
 
+            'early_charge' => $data['early_charge'] ?? null,
+            'early_charge_kind' => $data['early_charge_kind'] ?? null,
+            'early_charge_basis' => $data['early_charge_basis'] ?? null,
+
             'stock_value' => $data['stock_value'] ?? null,
             'margin_percent' => $data['margin_percent'] ?? null,
 
@@ -313,6 +317,67 @@ class BankFacilityService
     }
 
     /**
+     * আজ সব শোধ করলে কত লাগবে — বকেয়া, চার্জ, আর মোট।
+     *
+     * ── ⓘ মালিকের নির্দেশ, ২০ সেপ্টেম্বর ২০২৬ ──────────────
+     * *"majpothe setelment korle ze extra charge ase ta soho korbe"*।
+     * ⓘ শতাংশ হলে বকেয়ার উপর, থোক হলে যা লেখা আছে তাই।
+     *
+     * ── ⚠️ সুদের উপর শতাংশ এখনো হিসাব হয় না ────────────────
+     * ⛔ বাকি সুদ কত, সেটা বের করতে হলে বাকি কিস্তিগুলোর সুদাংশ
+     * জানতে হয়, আর সেটা নির্ভর করে ব্যাংক flat না reducing হিসাব
+     * করে তার উপর। ⓘ মালিকের উত্তর না আসা পর্যন্ত অনুমান করা হয়নি:
+     * ভিত্তি `interest` লেখা থাকলে চার্জ শূন্য দেখায় আর কারণটা লেখা
+     * থাকে — ভুল সংখ্যা দেখানোর চেয়ে শূন্য দেখানো ভালো।
+     *
+     * @return array{outstanding: string, charge: string, total: string, unknown: bool}
+     */
+    public function settlementToday(BankFacility $facility): array
+    {
+        $outstanding = $this->standing(collect([$facility]))[$facility->id]['used'] ?? '0';
+
+        $amount = (string) ($facility->early_charge ?? '0');
+        $kind = (string) ($facility->early_charge_kind ?? '');
+
+        if (bccomp($amount, '0', 4) <= 0 || $kind === '') {
+            return [
+                'outstanding' => $outstanding,
+                'charge' => '0.0000',
+                'total' => $outstanding,
+                'unknown' => false,
+            ];
+        }
+
+        if ($kind === BankFacility::CHARGE_FLAT) {
+            return [
+                'outstanding' => $outstanding,
+                'charge' => $amount,
+                'total' => bcadd($outstanding, $amount, 4),
+                'unknown' => false,
+            ];
+        }
+
+        // ⛔ সুদের উপর শতাংশ — ভিত্তিটা এখনো মালিকের উত্তরের অপেক্ষায়
+        if ((string) $facility->early_charge_basis === BankFacility::ON_INTEREST) {
+            return [
+                'outstanding' => $outstanding,
+                'charge' => '0.0000',
+                'total' => $outstanding,
+                'unknown' => true,
+            ];
+        }
+
+        $charge = bcdiv(bcmul($outstanding, $amount, 4), '100', 4);
+
+        return [
+            'outstanding' => $outstanding,
+            'charge' => $charge,
+            'total' => bcadd($outstanding, $charge, 4),
+            'unknown' => false,
+        ];
+    }
+
+    /**
      * যেগুলো নবায়ন করতে হবে — ৩০ দিনের ভিতরে।
      *
      * ⛔ এই তালিকাটা না থাকলে যা ঘটে তা নীরব: CC-র মঞ্জুরি ফুরিয়ে যায়,
@@ -369,6 +434,16 @@ class BankFacilityService
             ->groupBy('account_id')
             ->pluck(DB::raw('SUM(credit - debit)'), 'account_id');
 
+        /* ⓘ কার খোলা বকেয়া ইতিমধ্যে খাতায় বসেছে — এক কোয়েরিতে */
+        $opened = DB::table('ledger_entries')
+            ->where('company_id', CompanyContext::id())
+            ->where('source_type', self::OPENING_SOURCE)
+            ->whereIn('source_id', $facilities->pluck('id')->all())
+            ->distinct()
+            ->pluck('source_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
         $standing = [];
 
         foreach ($facilities as $facility) {
@@ -377,7 +452,20 @@ class BankFacilityService
             // ⓘ CC-তে টাকা বেরোলে ব্যাংকের জের ঋণাত্মক, আর ঋণ ততটাই
             $ledger = (string) ($balances[$account] ?? '0');
 
-            $used = bcadd((string) ($facility->opening_drawn ?? '0'), $ledger, 4);
+            /*
+             * ⛔ খোলা বকেয়া দুইবার গোনা যাবে না — ২০ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ আগে `opening_drawn` কেবল একটা লেখা সংখ্যা ছিল, খাতায়
+             * যেত না — তাই খাতার সাথে যোগ করতে হত। ⭐ এখন "আগে থেকেই
+             * চলছে" বললে ওটা খাতায় বসে, তাই যোগ করলে বকেয়া দ্বিগুণ
+             * দেখাত — আর মাঝপথে শোধের চার্জও দ্বিগুণ হত।
+             *
+             * ⚠️ পুরনো সারিগুলোর খোলা দাখিলা নেই, তাই ওদের লেখা
+             * সংখ্যাটাই যোগ হয় — নাহলে ওদের বকেয়া হঠাৎ শূন্য দেখাত।
+             */
+            $used = in_array((int) $facility->id, $opened, true)
+                ? $ledger
+                : bcadd((string) ($facility->opening_drawn ?? '0'), $ledger, 4);
 
             // ⛔ ঋণাত্মক "ব্যবহৃত" মানে বেশি শোধ — পর্দায় ওটা শূন্য
             if (bccomp($used, '0', 4) < 0) {

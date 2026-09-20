@@ -10,6 +10,7 @@ use App\Models\Company;
 use App\Models\LedgerEntry;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Finance\Models\BankFacility;
 use App\Modules\Finance\Models\Institution;
@@ -167,6 +168,99 @@ final class TheLoanFormAskedEveryQuestionToEveryKindTest extends TestCase
         $this->assertSame(9, $after['left']);
     }
 
+    /**
+     * ⭐ ২৪ মাসের ঋণে ৭টা কিস্তি শোধ হলে বকেয়া ঠিক কত।
+     *
+     * ⓘ পর্দা নয়, টাকা ধরে — পর্দার পরীক্ষা ২০০ দেখেই সবুজ হয়।
+     */
+    public function test_the_outstanding_after_seven_of_twenty_four(): void
+    {
+        $facility = $this->openRunningLoan(['instalments' => 24, 'instalment_amount' => '50000',
+            'opening_drawn' => '1200000', 'instalments_paid' => 0]);
+
+        /* ⓘ `1101` একটা দল — টাকা বসে ক্যাশ কাউন্টারে */
+        $till = app(CashTillService::class)->ensurePrimaryTill()->account;
+
+        // সাতটা কিস্তি শোধ — প্রতিটা ৪০,০০০ আসল
+        for ($i = 1; $i <= 7; $i++) {
+            app(PostingEngine::class)->post(
+                sourceType: 'test_emi',
+                sourceId: $i,
+                trxDate: now()->toDateString(),
+                lines: [
+                    ['account_id' => (int) $facility->liability_account_id, 'debit' => '50000'],
+                    ['account_id' => (int) $till->id, 'credit' => '50000'],
+                ],
+            );
+        }
+
+        $standing = app(BankFacilityService::class)->instalmentStanding($facility->fresh());
+
+        $this->assertSame(7, $standing['paid']);
+        $this->assertSame(17, $standing['left']);
+
+        // ১২,০০,০০০ বিয়োগ ৭ × ৫০,০০০ = ৮,৫০,০০০
+        $this->assertSame(0, bccomp(
+            app(BankFacilityService::class)->settlementToday($facility->fresh())['outstanding'],
+            '850000', 4,
+        ), 'বকেয়ার অঙ্কটা মিলছে না।');
+    }
+
+    /**
+     * ⭐ মাঝপথে শোধ করলে চার্জসহ মোট কত।
+     */
+    public function test_settling_early_adds_the_charge(): void
+    {
+        $facility = $this->openRunningLoan([
+            'instalments' => 24, 'instalment_amount' => '50000',
+            'opening_drawn' => '1000000', 'instalments_paid' => 0,
+            'early_charge' => '2', 'early_charge_kind' => 'percent',
+            'early_charge_basis' => 'principal',
+        ]);
+
+        $seen = app(BankFacilityService::class)->settlementToday($facility);
+
+        $this->assertSame(0, bccomp($seen['outstanding'], '1000000', 4));
+        $this->assertSame(0, bccomp($seen['charge'], '20000', 4), 'দুই শতাংশ চার্জ মিলছে না।');
+        $this->assertSame(0, bccomp($seen['total'], '1020000', 4));
+    }
+
+    /**
+     * ⭐ থোক চার্জ হলে যা লেখা, তাই।
+     */
+    public function test_a_flat_charge_is_taken_as_written(): void
+    {
+        $facility = $this->openRunningLoan([
+            'opening_drawn' => '1000000', 'instalments_paid' => 0,
+            'early_charge' => '15000', 'early_charge_kind' => 'flat',
+        ]);
+
+        $seen = app(BankFacilityService::class)->settlementToday($facility);
+
+        $this->assertSame(0, bccomp($seen['charge'], '15000', 4));
+        $this->assertSame(0, bccomp($seen['total'], '1015000', 4));
+    }
+
+    /**
+     * ⛔ বাকি সুদের উপর চার্জ — অনুমান করা হয় না, বলা হয়।
+     *
+     * ⓘ মালিকের উত্তর না আসা পর্যন্ত ভুল সংখ্যা দেখানোর চেয়ে
+     * "এখনো হিসাব হয় না" বলা সৎ।
+     */
+    public function test_a_charge_on_future_interest_says_so_instead_of_guessing(): void
+    {
+        $facility = $this->openRunningLoan([
+            'opening_drawn' => '1000000', 'instalments_paid' => 0,
+            'early_charge' => '2', 'early_charge_kind' => 'percent',
+            'early_charge_basis' => 'interest',
+        ]);
+
+        $seen = app(BankFacilityService::class)->settlementToday($facility);
+
+        $this->assertTrue($seen['unknown']);
+        $this->assertSame(0, bccomp($seen['charge'], '0', 4));
+    }
+
     /** টাকার সব খাতের যোগফল — একটাও নড়লে এটা বদলায়। */
     private function moneyTotal(): string
     {
@@ -177,13 +271,13 @@ final class TheLoanFormAskedEveryQuestionToEveryKindTest extends TestCase
     }
 
     /** আগে থেকেই চলা একটা মেয়াদি ঋণ — ছয় লাখ বকেয়া, দুইটা কিস্তি দেওয়া। */
-    private function openRunningLoan(): BankFacility
+    private function openRunningLoan(array $with = []): BankFacility
     {
-        $this->post(route('finance.bank_facility.store'), $this->terms([
+        $this->post(route('finance.bank_facility.store'), $this->terms(array_merge([
             'already_running' => '1',
             'opening_drawn' => '600000',
             'instalments_paid' => 2,
-        ]))->assertSessionHasNoErrors();
+        ], $with)))->assertSessionHasNoErrors();
 
         return BankFacility::query()->latest('id')->firstOrFail();
     }

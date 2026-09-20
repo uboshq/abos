@@ -270,6 +270,15 @@ class BankFacilityController extends Controller implements HasMiddleware
             'down_payment' => ['nullable', 'numeric', 'min:0'],
             'charges' => ['nullable', 'numeric', 'min:0'],
 
+            /*
+             * ⭐ মাঝপথে শোধের চার্জ — ২০ সেপ্টেম্বর ২০২৬।
+             * ⓘ শতাংশ হলে ১০০-এর বেশি হতে পারে না; থোক হলে পারে,
+             * তাই উপরের সীমাটা শতাংশের ক্ষেত্রেই।
+             */
+            'early_charge' => ['nullable', 'numeric', 'min:0'],
+            'early_charge_kind' => ['nullable', Rule::in(BankFacility::CHARGE_KINDS)],
+            'early_charge_basis' => ['nullable', Rule::in(BankFacility::CHARGE_BASES)],
+
             'security_type' => ['nullable', Rule::in(BankFacility::SECURITIES)],
             'security_value' => ['nullable', 'numeric', 'min:0'],
             'guarantors' => ['nullable', 'string', 'max:500'],
@@ -318,6 +327,17 @@ class BankFacilityController extends Controller implements HasMiddleware
              * সংখ্যা আর খাতা একদিন আলাদা কথা বলত।
              */
             'instalments' => $this->facilities->instalmentStanding($bankFacility),
+
+            /*
+             * ⓘ এখন কত বকেয়া — তালিকার পাতা যে হিসাবটা দেখায়,
+             * হুবহু সেটাই ([[BankFacilityService::standing]])। ⚠️ দুই পর্দায়
+             * দুই রকম হলে মানুষ কোনটা বিশ্বাস করবেন সেটাই বলতে পারতেন না।
+             */
+            'outstanding' => $this->facilities->standing(collect([$bankFacility]))[$bankFacility->id]['used']
+                ?? '0',
+
+            /* ⭐ আজ শোধ করলে কত — বকেয়া, চার্জ, মোট */
+            'settlement' => $this->facilities->settlementToday($bankFacility),
         ]);
     }
 

@@ -353,4 +353,13 @@ return [
     'outstanding_today' => 'আজকের বকেয়া',
     'instalments_paid' => 'কয়টা কিস্তি ইতিমধ্যে দেওয়া',
     'instalments_left' => 'বাকি কিস্তি',
+    'early_charge' => 'মাঝপথে শোধের চার্জ',
+    'early_charge_kind' => 'চার্জের ধরন',
+    'early_charge_basis' => 'শতাংশটা কার উপর',
+    'early_charge_none' => 'চার্জ নেই',
+    'charge_percent' => 'বকেয়ার শতাংশ',
+    'charge_flat' => 'থোক টাকা',
+    'charge_on_principal' => 'বকেয়া আসল',
+    'charge_on_interest' => 'বাকি সুদ',
+    'settlement_today' => 'আজ শোধ করলে',
 ];

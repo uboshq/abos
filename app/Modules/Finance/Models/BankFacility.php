@@ -69,6 +69,33 @@ class BankFacility extends Model implements Drillable
     public const KINDS = [self::CC, self::TERM, self::LTR, self::LEASE, self::GUARANTEE];
 
     /**
+     * মাঝপথে শোধ করলে ব্যাংক যা নেয় — শতাংশ, নাকি থোক।
+     *
+     * ⓘ মালিকের কথা, ২০ সেপ্টেম্বর ২০২৬: *"majpothe setelment korle
+     * ze extra charge ase ta soho korbe"*। ⚠️ ব্যাংকভেদে দুই রকম,
+     * তাই দুইটাই রাখা হয়েছে।
+     */
+    public const CHARGE_PERCENT = 'percent';
+
+    public const CHARGE_FLAT = 'flat';
+
+    /** @var list<string> */
+    public const CHARGE_KINDS = [self::CHARGE_PERCENT, self::CHARGE_FLAT];
+
+    /**
+     * শতাংশটা কার উপর — বকেয়া আসল, নাকি বাকি সুদ।
+     *
+     * ⛔ ডিফল্ট বসানো হয়নি — মালিকের উত্তরের অপেক্ষায় (দুই
+     * ব্যাংকে দুই রকম, আর ভুলটা টাকার)।
+     */
+    public const ON_PRINCIPAL = 'principal';
+
+    public const ON_INTEREST = 'interest';
+
+    /** @var list<string> */
+    public const CHARGE_BASES = [self::ON_PRINCIPAL, self::ON_INTEREST];
+
+    /**
      * জামানতের ধরন।
      *
      * ⓘ `LIEN` মানে আমাদের নিজের এফডিআর ব্যাংকে বন্ধক — আর ঐ জোড়াটা
@@ -98,6 +125,7 @@ class BankFacility extends Model implements Drillable
         'limit_amount', 'interest_rate', 'term_months', 'renews_on',
         'stock_value', 'margin_percent', 'instalments', 'instalment_amount',
         'down_payment', 'charges',
+        'early_charge', 'early_charge_kind', 'early_charge_basis',
         'security_type', 'security_value', 'guarantors', 'covenant', 'last_statement_on',
         'opening_drawn', 'opening_instalments_paid',
         'liability_account_id', 'money_account_id',
@@ -121,6 +149,7 @@ class BankFacility extends Model implements Drillable
             'instalment_amount' => 'decimal:4',
             'down_payment' => 'decimal:4',
             'charges' => 'decimal:4',
+            'early_charge' => 'decimal:4',
             'security_value' => 'decimal:4',
         ];
     }

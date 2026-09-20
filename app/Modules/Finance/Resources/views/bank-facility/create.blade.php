@@ -50,11 +50,39 @@
               class="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             @csrf
 
-            <x-ui.select name="kind" :label="__('finance::field.facility_kind')"
-                         x-model="kind"
-                         :options="collect(\App\Modules\Finance\Models\BankFacility::KINDS)
-                             ->mapWithKeys(fn (string $k) => [$k => __('finance::field.facility_' . $k)])"
-                         :selected="old('kind', \App\Modules\Finance\Models\BankFacility::CC)" required />
+            {{-- ⭐ ধরনগুলো ট্যাব, ড্রপডাউন নয় — মালিকের নির্দেশ, ২০ সেপ্টেম্বর ২০২৬:
+                 *"loane type zemon Tram Loan, cc/od, lc/ltr, lige, bank garantee,
+                 egulo alada alada tab e daw dropdawn na diye"*।
+
+                 ── ⓘ কেন ট্যাব সত্যিই আলাদা ───────────────────────────────
+                 পাঁচটা ধরনের ঘর আলাদা, তাই ড্রপডাউন বদলালে ফর্মের অর্ধেক
+                 বদলে যায় — আর সেটা দেখে মানুষ ভাবেন কিছু হারিয়ে গেছে।
+                 ⭐ ট্যাব হলে বাছার আগেই বোঝা যায় কোনটায় কী লাগবে, আর
+                 বাছাইটা পর্দায় সবসময় লেখা থাকে।
+
+                 ⚠️ ঘরটা তবু একটা `hidden` input — সার্ভারে `kind` আগের
+                 মতোই যায়, তাই যাচাই ও সেবার কোনো কিছু বদলাতে হয়নি। --}}
+            <div class="sm:col-span-2 xl:col-span-4">
+                <span class="text-2xs text-(--color-ink-muted)">
+                    {{ __('finance::field.facility_kind') }}
+                </span>
+
+                <input type="hidden" name="kind" :value="kind">
+
+                <div role="tablist" class="mt-1 flex flex-wrap gap-2">
+                    @foreach (\App\Modules\Finance\Models\BankFacility::KINDS as $k)
+                        <button type="button" role="tab"
+                                x-on:click="kind = '{{ $k }}'"
+                                :aria-selected="kind === '{{ $k }}'"
+                                :class="kind === '{{ $k }}'
+                                    ? 'border-(--color-brand-500) font-semibold text-(--color-ink)'
+                                    : 'border-(--color-border) text-(--color-ink-muted)'"
+                                class="min-h-(--spacing-touch) rounded-(--radius-pill) border px-4 text-sm">
+                            {{ __('finance::field.facility_'.$k) }}
+                        </button>
+                    @endforeach
+                </div>
+            </div>
 
             {{-- ⭐ ব্যাংকটা এখন তালিকা থেকে — ২০ সেপ্টেম্বর ২০২৬।
 
@@ -243,6 +271,37 @@
                 <x-ui.select name="liability_account_id" :label="__('finance::field.liability_account')"
                              :options="$liabilityAccounts->mapWithKeys(fn ($a) => [$a->id => $a->code . ' · ' . $a->name()])"
                              :selected="old('liability_account_id')" />
+            </template>
+
+            {{-- ⭐ মাঝপথে শোধ করলে ব্যাংক যা নেয় — মালিকের নির্দেশ,
+                 ২০ সেপ্টেম্বর ২০২৬: *"majpothe setelment korle ze extra
+                 charge ase ta soho korbe"*।
+
+                 ⓘ কেবল কিস্তির ঋণে: চলতি মূলধন বা গ্যারান্টিতে "আগে শোধ"
+                 বলে কিছু নেই। ⚠️ শতাংশ না থোক — ব্যাংকভেদে দুই রকম, তাই
+                 দুইটাই রাখা। ⛔ শতাংশটা কীসের উপর (বকেয়া আসল না বাকি সুদ)
+                 সেটাও ঘর, কারণ ওটাও ব্যাংকভেদে আলাদা আর ভুলটা টাকার। --}}
+            <template x-if="hasInstalments">
+                <div class="contents">
+                    <x-ui.field name="early_charge" type="number" step="0.01" inputmode="decimal"
+                                :label="__('finance::field.early_charge')"
+                                :value="old('early_charge')" numeric />
+
+                    <x-ui.select name="early_charge_kind"
+                                 :label="__('finance::field.early_charge_kind')"
+                                 :options="collect(\App\Modules\Finance\Models\BankFacility::CHARGE_KINDS)
+                                     ->mapWithKeys(fn (string $k) => [$k => __('finance::field.charge_'.$k)])"
+                                 :placeholder="__('finance::field.early_charge_none')"
+                                 :selected="old('early_charge_kind')" />
+
+                    <x-ui.select name="early_charge_basis"
+                                 :label="__('finance::field.early_charge_basis')"
+                                 :options="collect(\App\Modules\Finance\Models\BankFacility::CHARGE_BASES)
+                                     ->mapWithKeys(fn (string $b) => [$b => __('finance::field.charge_on_'.$b)])"
+                                 :placeholder="__('finance::field.early_charge_none')"
+                                 :hint="__('finance::message.early_charge_basis_hint')"
+                                 :selected="old('early_charge_basis')" />
+                </div>
             </template>
 
             {{-- ⭐ এই ঋণ নতুন, নাকি আগে থেকেই চলছে — মালিকের নির্দেশ,

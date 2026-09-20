@@ -146,4 +146,7 @@ return [
     'opening_touches_no_bank' => 'That money arrived years ago, so no bank account is touched — only the liability and retained earnings.',
     'instalments_paid_hint' => 'How many were paid before this was put in the system. The ones after that are counted from the ledger.',
     'instalment_standing' => ':paid paid, :left left',
+    'early_charge_basis_hint' => 'Banks differ — pick what the sanction letter says.',
+    'settlement_charge_line' => 'Outstanding :outstanding + charge :charge = :total',
+    'settlement_basis_unknown' => 'A charge on the interest still to come is not worked out yet — it depends on whether the bank counts interest flat or reducing, and a wrong figure here is money.',
 ];

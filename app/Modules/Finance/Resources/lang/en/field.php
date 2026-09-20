@@ -323,4 +323,13 @@ return [
     'outstanding_today' => 'Outstanding today',
     'instalments_paid' => 'Instalments already paid',
     'instalments_left' => 'Instalments left',
+    'early_charge' => 'Early settlement charge',
+    'early_charge_kind' => 'Charge shape',
+    'early_charge_basis' => 'Percent of what',
+    'early_charge_none' => 'No charge',
+    'charge_percent' => 'Percent of the outstanding',
+    'charge_flat' => 'A flat amount',
+    'charge_on_principal' => 'Outstanding principal',
+    'charge_on_interest' => 'Interest still to come',
+    'settlement_today' => 'If settled today',
 ];

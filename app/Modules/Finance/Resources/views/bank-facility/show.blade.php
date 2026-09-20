@@ -33,6 +33,53 @@
          ব্যবহারকারী নয় — ৩৬টা show-পর্দার ২৩টাতেই এটা ছিল না। --}}
     <x-ui.errors />
 
+    {{-- ⭐ চলতি অবস্থা — মালিকের নির্দেশ, ২০ সেপ্টেম্বর ২০২৬।
+
+         ── ⓘ তিনটা সংখ্যা, তিনটাই খাতা থেকে ──────────────────────────
+         কয়টা কিস্তি শোধ, কয়টা বাকি, আর এখন কত বকেয়া। ⛔ কোনোটাই
+         সংরক্ষিত নয় ([[BankFacilityService::instalmentStanding]] ও
+         [[standing()]]) — সংরক্ষিত সংখ্যা আর খতিয়ান একদিন আলাদা কথা
+         বলত, আর ব্যাংকের সাথে মেলানোর দিন কোনটা সত্যি তা বলা যেত না।
+
+         ⚠️ পট্টিটা পাতার একদম উপরে, কারণ ঋণের পাতা খুলে মানুষ এই
+         তিনটাই দেখতে আসেন — মঞ্জুরির শর্ত নয়, ওগুলো একবার পড়া হয়। --}}
+    <section data-boxed
+             class="mb-4 grid gap-3 rounded-(--radius-card) border border-(--color-border)
+                    bg-(--color-surface-card) p-4 sm:grid-cols-3">
+        <div>
+            <p class="text-2xs text-(--color-ink-muted)">{{ __('finance::field.instalments_paid') }}</p>
+            <p class="num text-lg font-semibold">{{ $instalments['paid'] }}</p>
+        </div>
+
+        <div>
+            <p class="text-2xs text-(--color-ink-muted)">{{ __('finance::field.instalments_left') }}</p>
+            <p class="num text-lg font-semibold">{{ $instalments['left'] }}</p>
+        </div>
+
+        <div>
+            <p class="text-2xs text-(--color-ink-muted)">{{ __('finance::field.outstanding_today') }}</p>
+            <p class="num text-lg font-semibold"><x-ui.amount :value="$outstanding" /></p>
+        </div>
+    </section>
+
+    {{-- ⭐ আজ শোধ করলে কত — মালিকের নির্দেশ, ২০ সেপ্টেম্বর ২০২৬।
+         ⓘ চার্জ লেখা না থাকলে সারিটা আসে না — শূন্য চার্জ দেখানো
+         আর চার্জ না থাকা এক কথা নয়। --}}
+    @if (($settlement['unknown'] ?? false) || bccomp($settlement['charge'] ?? '0', '0', 4) > 0)
+        <p class="mb-4 rounded-(--radius-field) bg-badge-warning-bg px-3 py-2 text-sm text-badge-warning-ink">
+            <strong>{{ __('finance::field.settlement_today') }}:</strong>
+            @if ($settlement['unknown'])
+                {{ __('finance::message.settlement_basis_unknown') }}
+            @else
+                {{ __('finance::message.settlement_charge_line', [
+                    'outstanding' => \App\Core\Support\Money::format($settlement['outstanding']),
+                    'charge' => \App\Core\Support\Money::format($settlement['charge']),
+                    'total' => \App\Core\Support\Money::format($settlement['total']),
+                ]) }}
+            @endif
+        </p>
+    @endif
+
     <div class="grid gap-4 lg:grid-cols-2">
 
         {{-- মঞ্জুরি --}}
