@@ -17,7 +17,7 @@ return [
     'withdrawal_amount' => 'উত্তোলনের পরিমাণ',
     'taken_from' => 'যে খাত থেকে',
     'withdrawal_kind_box' => 'উত্তোলনের ধরন',
-    'facility_book_tag' => 'মঞ্জুরি, জামানত, নবায়ন — ধারের চেয়ে অন্য জাত',
+    'facility_book_tag' => 'ব্যাংক থেকে নেওয়া ঋণ ও সুবিধা',
     'facility_book_note' => 'নতুন খাতা — সাতটার তালিকায় ছিল না',
     'security_and_terms' => 'জামানত ও শর্ত',
     'drawing_power_box' => 'ড্রয়িং পাওয়ার ও ব্যবহার',

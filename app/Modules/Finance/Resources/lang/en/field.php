@@ -14,7 +14,7 @@ return [
     'withdrawal_amount' => 'Amount drawn',
     'taken_from' => 'Taken from',
     'withdrawal_kind_box' => 'Kind of withdrawal',
-    'facility_book_tag' => 'Sanction, security, renewal - a different animal from a hand loan',
+    'facility_book_tag' => 'Loans and facilities taken from a bank',
     'facility_book_note' => 'A new book - it was not in the list of seven',
     'security_and_terms' => 'Security and terms',
     'drawing_power_box' => 'Drawing power and usage',
