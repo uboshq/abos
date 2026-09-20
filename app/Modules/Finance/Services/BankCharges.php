@@ -45,25 +45,11 @@ final class BankCharges
           and s.source_id = ledger_entries.source_id
           and s.account_id in (select id from accounts where money_kind in (?, ?) and is_group = 0))';
 
-    /**
-     * @param  ?int  $bankId  কেবল এই ব্যাংকের কাটাগুলো — "কতবার" সংখ্যাটার পিছনের তালিকা
-     * @return LengthAwarePaginator<int, LedgerEntry>
-     */
-    public function rows(string $from, string $to, int $perPage = 100, ?int $bankId = null): LengthAwarePaginator
+    /** @return LengthAwarePaginator<int, LedgerEntry> */
+    public function rows(string $from, string $to, int $perPage = 100): LengthAwarePaginator
     {
-        $query = $this->base($from, $to)
-            ->selectRaw('ledger_entries.*, '.self::BANK_OF.' as bank_id', [Account::BANK, Account::MFS]);
-
-        /*
-         * ⚠️ `where bank_id = ?` চলবে না — ওটা একটা উপ-কোয়েরির ছদ্মনাম, আর
-         * MySQL WHERE-এ ছদ্মনাম চেনে না। ⓘ তাই উপ-কোয়েরিটাই আবার লেখা হয়;
-         * প্যারামিটারের ক্রমও তাই তিনটা: BANK, MFS, তারপর খাতটা।
-         */
-        if ($bankId !== null) {
-            $query->whereRaw(self::BANK_OF.' = ?', [Account::BANK, Account::MFS, $bankId]);
-        }
-
-        return $query
+        return $this->base($from, $to)
+            ->selectRaw('ledger_entries.*, '.self::BANK_OF.' as bank_id', [Account::BANK, Account::MFS])
             ->orderByDesc('trx_date')
             ->orderByDesc('id')
             ->paginate($perPage)
@@ -73,7 +59,7 @@ final class BankCharges
     /**
      * ব্যাংক ধরে — কতবার আর কত, পুরো সময়ের উপর।
      *
-     * @return Collection<int, array{bank: ?Account, institution: ?string, institution_id: ?int, count: int, amount: string}>
+     * @return Collection<int, array{bank: ?Account, institution: ?string, count: int, amount: string}>
      */
     public function byBank(string $from, string $to): Collection
     {
@@ -90,23 +76,12 @@ final class BankCharges
             ->with('institution')
             ->whereIn('account_id', $banks->keys())
             ->get()
-            /*
-             * ⭐ নামের সাথে আইডিটাও (২০ সেপ্টেম্বর ২০২৬)।
-             *
-             * ⚠️ আগে কেবল নামটা আসত, আর তাতেই পর্দায় ঘরটা মরা থাকত: নাম
-             * দিয়ে কোনো পাতায় যাওয়া যায় না। ⓘ মালিকের নিয়মটা এখানে খাটে —
-             * ঘরে যদি কোনো জিনিসের নাম থাকে, ঘরটা সেই জিনিসটা খোলে।
-             */
-            ->mapWithKeys(fn (InstitutionAccount $l) => [$l->account_id => [
-                'label' => $l->institution?->label(),
-                'id' => $l->institution_id === null ? null : (int) $l->institution_id,
-            ]]);
+            ->mapWithKeys(fn (InstitutionAccount $l) => [$l->account_id => $l->institution?->label()]);
 
         return $rows
             ->map(fn ($r) => [
                 'bank' => $banks[$r->bank_id] ?? null,
-                'institution' => $institutions[$r->bank_id]['label'] ?? null,
-                'institution_id' => $institutions[$r->bank_id]['id'] ?? null,
+                'institution' => $institutions[$r->bank_id] ?? null,
                 'count' => (int) $r->n,
                 'amount' => (string) $r->amount,
             ])

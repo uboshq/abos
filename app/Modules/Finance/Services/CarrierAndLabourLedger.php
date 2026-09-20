@@ -57,21 +57,10 @@ final class CarrierAndLabourLedger
             ->groupBy('party_type', 'party_id')
             ->get();
 
-        $pairs = $rows->map(fn ($r) => [(string) $r->party_type, (int) $r->party_id]);
-
-        $labels = $this->parties->labelsOf($pairs);
-
-        /*
-         * ⭐ পক্ষের নিজের পাতার ঠিকানা (২০ সেপ্টেম্বর ২০২৬)।
-         *
-         * ⓘ `key` ধরে এই পর্দার ছাঁকনি চলে — সেটা আগেই ছিল। ⚠️ কিন্তু
-         * "ঐ পরিবহনকারীর সাথে আর কী কী" প্রশ্নটা এই পর্দার বাইরে, তাঁর
-         * নিজের পাতায়; সেই দ্বিতীয় দরজাটাই এতদিন ছিল না।
-         */
-        $routes = $this->parties->routesOf($pairs);
+        $labels = $this->parties->labelsOf($rows->map(fn ($r) => [(string) $r->party_type, (int) $r->party_id]));
 
         return $rows
-            ->map(function ($r) use ($labels, $routes) {
+            ->map(function ($r) use ($labels) {
                 $key = $r->party_type ? $r->party_type.':'.$r->party_id : '';
                 $opening = (string) $r->opening;
                 $charged = (string) $r->charged;
@@ -80,7 +69,6 @@ final class CarrierAndLabourLedger
                 return [
                     'key' => $key,
                     'label' => $key === '' ? __('finance::carrier_labour.no_party') : ($labels[$key] ?? $key),
-                    'route' => $routes[$key] ?? null,
                     'opening' => $opening,
                     'charged' => $charged,
                     'paid' => $paid,

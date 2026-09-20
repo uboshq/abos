@@ -41,14 +41,6 @@
             <header class="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-(--color-border) px-4 py-2">
                 <h2 class="text-sm font-semibold">{{ __('finance::institution.accounts') }}</h2>
                 <span class="text-2xs text-(--color-ink-muted)">{{ __('finance::institution.accounts_hint') }}</span>
-                {{-- ⚠️ এই পাতার যোগফলগুলো ইচ্ছাকৃতভাবে সাদা — সিদ্ধান্ত, ভুলে
-                     যাওয়া নয় (২০ সেপ্টেম্বর ২০২৬)।
-
-                     ⓘ মালিকের নিয়ম: সংখ্যা তার পিছনের সারিগুলো খোলে। কিন্তু
-                     এখানে সারিগুলো যোগফলের ঠিক নিচেই দাঁড়িয়ে আছে — লিংকটা
-                     চোখকে যেখানে নিয়ে যেত, চোখ এমনিতেই সেখানে। ⛔ ছাঁকা
-                     তালিকার পাতা বানিয়ে সেখানে পাঠালে একই জিনিস দুইবার
-                     দেখানো হত, আর ফেরার পথ একটা বাড়ত। --}}
                 <span class="ms-auto text-sm tabular-nums">
                     {{ __('finance::institution.total') }}: <strong>{{ Money::format($balanceTotal) }}</strong>
                 </span>
@@ -74,16 +66,7 @@
                                         {{ $link['account']->label() }}
                                     </a>
                                 </td>
-                                {{-- ⭐ জেরটাও খতিয়ানে নামে — মালিকের কথা, ২০ সেপ্টেম্বর
-                                     ২০২৬: সংখ্যা মানে তার পিছনের সারিগুলো। ⓘ নামের ঘরে
-                                     লিংকটা ছিল, কিন্তু চোখ যায় সংখ্যাটায়, আর হাতও যায়
-                                     সেখানেই — মানুষ নামে ক্লিক করে না, টাকায় করে। --}}
-                                <td class="num px-4 py-2 tabular-nums">
-                                    <a href="{{ route('accounts.report.show', ['slug' => 'ledger', 'account_id' => $link['account']->id]) }}"
-                                       class="text-(--color-brand-600) underline-offset-2 hover:underline">
-                                        {{ Money::format($link['balance']) }}
-                                    </a>
-                                </td>
+                                <td class="num px-4 py-2 tabular-nums">{{ Money::format($link['balance']) }}</td>
                                 <td class="px-4 py-2 text-end">
                                     @can('finance.institution.manage')
                                         <form method="POST"
@@ -164,14 +147,7 @@
                 ['key' => 'document_no', 'label' => __('core.table.document'), 'width' => '9rem',
                  'render' => fn ($d) => view('finance::institution.partials.deposit-link', ['deposit' => $d])],
                 ['key' => 'kind', 'label' => __('finance::field.facility_kind'), 'width' => '10rem',
-                 /* ⓘ আমানতের ধরনটার নিজের পাতা আছে — সম্পাদনার ফর্ম, আর সেখানেই
-                ঐ ধরনের নিয়মগুলো লেখা। ⚠️ লিংকটা কেবল যাঁর ক্ষমতা আছে তাঁর
-                জন্য, নাহলে সবাইকে একটা ৪০৩-এর দিকে পাঠানো হত। */
-             'render' => fn ($d) => $d->deposit_kind_id && auth()->user()?->can('finance.deposit_kind.manage')
-                 ? view('finance::institution.partials.kind-link', [
-                     'id' => $d->deposit_kind_id, 'label' => $d->kind?->name() ?? '—',
-                 ])
-                 : ($d->kind?->name() ?? '—')],
+                 'render' => fn ($d) => $d->kind?->name() ?? '—'],
                 ['key' => 'reference_no', 'label' => __('finance::field.reference_no'), 'width' => '10rem',
                  'render' => fn ($d) => $d->reference_no ?: '—'],
                 ['key' => 'principal', 'label' => __('finance::field.principal'), 'numeric' => true, 'width' => '10rem',

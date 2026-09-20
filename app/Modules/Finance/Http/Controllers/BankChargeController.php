@@ -51,13 +51,6 @@ class BankChargeController extends Controller implements HasMiddleware
         [$from, $to] = $this->range($period, $request);
 
         /*
-         * ⭐ "৭ বার" সংখ্যাটার পিছনের তালিকা — ঐ এক ব্যাংকের কাটাগুলো।
-         * ⓘ উপরের যোগফল বদলায় না, কেবল নিচের সারিগুলো ছাঁকা হয়: প্রশ্নটা
-         * "ঐ সাতটা কী কী", "মোট কত" নয়।
-         */
-        $bankId = $request->integer('bank_id') ?: null;
-
-        /*
          * ⓘ তালিকা আর যোগফল আলাদা দুইটা প্রশ্ন: সারি পাতা ভাগ করে আসে,
          * "ব্যাংক ধরে" যোগফল আসে পুরো সময়ের উপর
          * ([[Tests\Feature\Architecture\EveryListScreenPaginatesTest]])।
@@ -69,8 +62,7 @@ class BankChargeController extends Controller implements HasMiddleware
             'to' => $to,
             'byBank' => $this->charges->byBank($from, $to),
             'total' => $this->charges->total($from, $to),
-            'bank_id' => $bankId,
-            'rows' => $this->charges->rows($from, $to, bankId: $bankId),
+            'rows' => $this->charges->rows($from, $to),
         ]);
     }
 

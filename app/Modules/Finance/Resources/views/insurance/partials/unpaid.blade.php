@@ -1,12 +1,1 @@
-{{--
-    "অপরিশোধিত" — আর চাপলে কোনগুলো অপরিশোধিত।
-
-    ⭐ মালিকের কথা, ২০ সেপ্টেম্বর ২০২৬: *"সব জায়গায় হাইপার লিংক দেওয়ার কথা"*।
-    ⓘ ব্যাজটা একটা সারির দলের হয়ে দাঁড়িয়ে আছে — ঐ পলিসির বকেয়া কিস্তিগুলো।
-    সেগুলো থাকে পলিসির পাতায়, তাই ব্যাজটা সেখানেই নামে।
-
-    @param $policy  যে পলিসির কিস্তি বাকি
---}}
-<a href="{{ route('finance.insurance.show', $policy) }}" class="inline-block">
-    <x-ui.badge tone="pending">{{ __('finance::insurance.unpaid') }}</x-ui.badge>
-</a>
+<x-ui.badge tone="pending">{{ __('finance::insurance.unpaid') }}</x-ui.badge>

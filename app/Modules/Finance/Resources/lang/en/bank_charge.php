@@ -26,6 +26,4 @@ return [
     'narration' => 'Narration',
     'unknown_bank' => 'Unknown — no bank line on the document',
     'none' => 'No charge was deducted in this period.',
-    'only_this_bank' => 'Showing only the charges of :name',
-    'show_all_banks' => 'Show every bank',
 ];

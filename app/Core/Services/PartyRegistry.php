@@ -8,7 +8,6 @@ use App\Core\Engines\Drill\DrillResolver;
 use App\Core\Module\ModuleRegistry;
 use App\Core\Support\CompanyContext;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Route;
 
 /**
  * খতিয়ানের সারিতে যাদের নাম বসতে পারে — গ্রাহক, সরবরাহকারী।
@@ -189,63 +188,6 @@ final class PartyRegistry
         }
 
         return $labels;
-    }
-
-    /**
-     * ⭐ অনেকগুলো পক্ষের **পাতার ঠিকানা** একবারে — নামের পাশাপাশি।
-     *
-     * ── কেন নামের সাথে ঠিকানাটাও ────────────────────────────────────
-     * মালিকের কথা, ২০ সেপ্টেম্বর ২০২৬: *"সব জায়গায় হাইপার লিংক দেওয়ার
-     * কথা, but notun kaje kotaw hyperlink dicche na"*। ⚠️ রিপোর্টগুলোতে
-     * পক্ষের নাম বসত [[labelsOf]] দিয়ে, আর নাম দিয়ে কোনো পাতায় যাওয়া
-     * যায় না — তাই প্রতিটা রিপোর্টে ঐ ঘরগুলো মরা থাকত।
-     *
-     * ⛔ প্রতিটা রিপোর্টে "সরবরাহকারী হলে এই রুট" লেখা হয়নি — ঠিকানাটা
-     * আসে মডেলের নিজের `drillRoute()` থেকে, অর্থাৎ ঐ একটাই মানচিত্র
-     * ([[App\Core\Contracts\Drillable]])। নতুন ধরনের পক্ষ যোগ হলে
-     * রিপোর্টগুলোতে কিছু বদলাতে হয় না।
-     *
-     * @param  iterable<array{0: string, 1: int}>  $pairs  [ধরন, id]
-     * @return array<string, array{0: string, 1: array<string, mixed>}>  "ধরন:id" => [রুট, ঘর]
-     */
-    public function routesOf(iterable $pairs): array
-    {
-        $byType = [];
-
-        foreach ($pairs as [$type, $id]) {
-            if ($type !== null && $type !== '' && (int) $id > 0) {
-                $byType[$type][] = (int) $id;
-            }
-        }
-
-        $routes = [];
-
-        foreach ($byType as $type => $ids) {
-            $model = $this->modelFor($type);
-
-            if ($model === null) {
-                continue;
-            }
-
-            foreach ($model::query()->whereKey(array_unique($ids))->get() as $row) {
-                if (! method_exists($row, 'drillRoute')) {
-                    continue;
-                }
-
-                $route = $row->drillRoute();
-
-                /*
-                 * ⚠️ রুটটা সত্যিই নিবন্ধিত কি না দেখে নেওয়া হয় — মডিউলটা
-                 * বন্ধ থাকলে রুটও থাকে না, আর তখন `route()` ছুঁড়ে ফেলত
-                 * আর গোটা রিপোর্টটাই ৫০০ হয়ে যেত।
-                 */
-                if (isset($route[0]) && Route::has($route[0])) {
-                    $routes[$type.':'.$row->getKey()] = [$route[0], $route[1] ?? []];
-                }
-            }
-        }
-
-        return $routes;
     }
 
     private function modelFor(string $type): ?Model

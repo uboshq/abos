@@ -4,15 +4,14 @@ declare(strict_types=1);
 
 namespace App\Modules\Finance\Services;
 
+use App\Core\Services\PartyRegistry;
 use App\Core\Support\CompanyContext;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\VoucherService;
-use App\Modules\Customer\Models\Customer;
 use App\Modules\Finance\Models\HandLoanAccount;
 use App\Modules\Finance\Models\HandLoanMovement;
-use App\Modules\Supplier\Models\Supplier;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -375,35 +374,37 @@ final class HandLoanService
     }
 
     /**
-     * জোড়া পক্ষগুলোর নাম — ধরন ধরে, দুইটা কোয়েরিতে।
+     * জোড়া পক্ষগুলোর নাম — ধরন প্রতি একটা প্রশ্ন।
      *
      * ── ⭐ মানচিত্র §১৪খ, ২০ সেপ্টেম্বর ২০২৬ ────────────────────────────
      * কলামটা (`partner_id`/`partner_type`) অনেক দিন ধরেই ছিল, পর্দা ছিল না।
      * ⓘ নাম দেখাতে হলে নামগুলো আনতে হয়, আর সারি ধরে আনলে দশটা খাতায়
      * দশটা কোয়েরি হত।
      *
+     * ── ⛔ গ্রাহক ও সরবরাহকারীর নাম এখানে ধরে ডাকা হয় না ───────────────
+     * ⚠️ অর্থ ঐ দুইটা মডিউলের উপর নির্ভর করে না ([[BoundariesTest]])।
+     * ⓘ তাই নামগুলো আসে কোরের [[PartyRegistry]] থেকে — পক্ষের ধরনগুলো
+     * মডিউল নিজেই ঘোষণা করে, আর নতুন ধরন এলে এখানে কিছু বদলাতে হয় না।
+     *
      * @param  Collection<int, HandLoanAccount>  $accounts
      * @return array<string, array<int, string>>
      */
     private function partnerNames(Collection $accounts): array
     {
-        $ids = fn (string $kind) => $accounts
-            ->where('partner_type', $kind)
-            ->pluck('partner_id')
-            ->filter()
-            ->unique()
+        $pairs = $accounts
+            ->filter(fn (HandLoanAccount $a) => $a->partner_type !== null && $a->partner_id !== null)
+            ->map(fn (HandLoanAccount $a) => [(string) $a->partner_type, (int) $a->partner_id])
+            ->values()
             ->all();
 
-        $customers = $ids('customer');
-        $suppliers = $ids('supplier');
+        $out = [];
 
-        return [
-            'customer' => $customers === [] ? [] : Customer::query()->whereKey($customers)->get()
-                ->mapWithKeys(fn (Customer $c) => [(int) $c->id => $c->name()])->all(),
+        foreach (app(PartyRegistry::class)->labelsOf($pairs) as $key => $name) {
+            [$type, $id] = explode(':', $key, 2);
+            $out[$type][(int) $id] = $name;
+        }
 
-            'supplier' => $suppliers === [] ? [] : Supplier::query()->whereKey($suppliers)->get()
-                ->mapWithKeys(fn (Supplier $s) => [(int) $s->id => $s->name()])->all(),
-        ];
+        return $out;
     }
 
     /**

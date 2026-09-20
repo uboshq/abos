@@ -41,12 +41,7 @@
         <dl class="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
             <div>
                 <dt class="text-2xs text-(--color-ink-muted)">{{ __('finance::insurance.insurer') }}</dt>
-                <dd class="font-medium">
-                    @include('finance::institution.partials.link', [
-                        'id' => $policy->institution_id,
-                        'label' => $policy->institution?->label() ?? '—',
-                    ])
-                </dd>
+                <dd class="font-medium">{{ $policy->institution?->label() ?? '—' }}</dd>
             </div>
             <div>
                 <dt class="text-2xs text-(--color-ink-muted)">{{ __('finance::insurance.sum_insured') }}</dt>

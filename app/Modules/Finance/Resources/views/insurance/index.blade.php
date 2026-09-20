@@ -23,13 +23,8 @@
          'render' => fn ($p) => $p->subject],
         ['key' => 'covers', 'label' => __('finance::insurance.covers'), 'width' => '8rem',
          'render' => fn ($p) => __('finance::insurance.covers_'.$p->covers)],
-        /* ⭐ বিমাকারীর নাম তার নিজের পাতায় যায় — মালিকের কথা, ২০ সেপ্টেম্বর ২০২৬:
-           *"সব জায়গায় হাইপার লিংক দেওয়ার কথা"*। ⓘ পলিসি দেখে পরের প্রশ্নটা
-           প্রায় সবসময় "ঐ ব্যাংকে আর কী কী আছে" — উত্তরটা ঐ পাতাতেই। */
         ['key' => 'insurer', 'label' => __('finance::insurance.insurer'), 'width' => '12rem',
-         'render' => fn ($p) => view('finance::institution.partials.link', [
-             'id' => $p->institution_id, 'label' => $p->institution?->label() ?? '—',
-         ])],
+         'render' => fn ($p) => $p->institution?->label() ?? '—'],
         ['key' => 'sum_insured', 'label' => __('finance::insurance.sum_insured'), 'numeric' => true, 'width' => '9rem',
          'render' => fn ($p) => Money::format($p->sum_insured)],
         ['key' => 'premium', 'label' => __('finance::insurance.premium'), 'numeric' => true, 'width' => '8rem',
@@ -38,7 +33,7 @@
          'render' => fn ($p) => view('finance::insurance.partials.renewal', ['policy' => $p])],
         ['key' => 'unpaid', 'label' => __('finance::insurance.premiums'), 'width' => '8rem',
          'render' => fn ($p) => $p->premiums->contains(fn ($x) => $x->status === InsurancePremium::DRAFT)
-             ? view('finance::insurance.partials.unpaid', ['policy' => $p])
+             ? view('finance::insurance.partials.unpaid')
              : '—'],
         ['key' => 'actions', 'label' => __('core.table.actions'), 'width' => '6rem',
          'render' => fn ($p) => view('finance::insurance.partials.row-actions', ['policy' => $p])],

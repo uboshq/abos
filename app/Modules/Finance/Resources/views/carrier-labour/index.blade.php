@@ -80,17 +80,8 @@
             <header class="flex flex-wrap items-baseline gap-x-4 border-b border-(--color-border) px-4 py-2 text-sm">
                 <a href="{{ route('finance.carrier_labour.index', $keep) }}"
                    class="text-(--color-brand-600) underline-offset-2 hover:underline">{{ __('finance::carrier_labour.back') }}</a>
-                {{-- ⭐ যাঁর খতিয়ান দেখছি, তাঁর নামটা তাঁর পাতায় নিয়ে যায়
-                     (২০ সেপ্টেম্বর ২০২৬)। ⓘ ঠিকানাটা সেবা থেকেই আসে, তাই
-                     এখানে কোনো মডিউলের নাম লেখা নেই। --}}
-                @php ($chosen = $parties->firstWhere('key', $party))
                 <h2 class="font-semibold">
-                    @if (! empty($chosen['route']))
-                        <a href="{{ route($chosen['route'][0], $chosen['route'][1]) }}"
-                           class="text-(--color-brand-600) underline-offset-2 hover:underline">{{ $chosen['label'] }}</a>
-                    @else
-                        {{ $chosen['label'] ?? __('finance::carrier_labour.no_party') }}
-                    @endif
+                    {{ optional($parties->firstWhere('key', $party))['label'] ?? __('finance::carrier_labour.no_party') }}
                 </h2>
                 {{-- ⓘ "শুরুতে বাকি" সময়ের শুরুর, আর "আনা হলো" এই পাতার আগের সারিগুলো ধরে --}}
                 <span class="ms-auto tabular-nums">{{ __('finance::carrier_labour.opening') }}:

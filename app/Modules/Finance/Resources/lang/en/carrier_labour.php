@@ -28,5 +28,4 @@ return [
     'none' => 'Nothing accrued or paid in this period.',
     'no_head' => 'This payable head is missing from the chart — press "Install standard chart".',
     'brought' => 'Brought forward',
-    'open_party' => 'Open their own page',
 ];

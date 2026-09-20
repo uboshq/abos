@@ -7,17 +7,16 @@ namespace App\Modules\Finance\Http\Controllers;
 use App\Core\Engines\Attachment\AttachmentEngine;
 use App\Core\Engines\Attachment\AttachmentException;
 use App\Core\Services\MenuBuilder;
+use App\Core\Services\PartyRegistry;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
-use App\Modules\Customer\Models\Customer;
 use App\Modules\Finance\Models\HandLoanAccount;
 use App\Modules\Finance\Models\HandLoanMovement;
 use App\Modules\Finance\Services\HandLoanService;
 use App\Modules\MasterData\Models\Person;
 use App\Modules\MasterData\Services\PersonResolver;
-use App\Modules\Supplier\Models\Supplier;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -171,17 +170,7 @@ class HandLoanController extends Controller implements HasMiddleware
              * ⓘ চাবিটা "customer:12" ছাঁদে, তাই একটাই ঘরে দুই রকম পক্ষ ধরে —
              * পর্দায় কোনো Alpine লাগে না। ⚠️ কেবল সক্রিয়রা, আর নামে সাজানো।
              */
-            'parties' => Customer::query()->where('is_active', true)->orderBy('name_en')->get()
-                ->mapWithKeys(fn (Customer $c) => [
-                    'customer:'.$c->id => __('finance::field.party_customer').' — '.$c->name(),
-                ])
-                ->merge(
-                    Supplier::query()->where('is_active', true)->orderBy('name_en')->get()
-                        ->mapWithKeys(fn (Supplier $s) => [
-                            'supplier:'.$s->id => __('finance::field.party_supplier').' — '.$s->name(),
-                        ]),
-                )
-                ->all(),
+            'parties' => $this->parties(),
         ]);
     }
 
@@ -336,7 +325,44 @@ class HandLoanController extends Controller implements HasMiddleware
     }
 
     /**
-     * নগদ ও ব্যাংকের নিচের খাতগুলো।
+     * পক্ষের সাথে জোড়ার তালিকা — "customer:12" => "গ্রাহক — নাম"।
+     *
+     * ── ⛔ গ্রাহক-সরবরাহকারীকে নাম ধরে ডাকা হয় না ─────────────────────
+     * ⚠️ অর্থ ঐ দুইটা মডিউলের উপর নির্ভর করে না ([[BoundariesTest]])।
+     * ⓘ তালিকাটা তাই কোরের [[PartyRegistry]] থেকে — পক্ষের ধরন যে
+     * মডিউল ঘোষণা করে, নামটাও সে-ই দেয়।
+     *
+     * ⓘ চাবিটা "customer:12" ছাঁদে, তাই একটাই ঘরে দুই রকম পক্ষ ধরে —
+     * পর্দায় কোনো Alpine লাগে না।
+     *
+     * @return array<string, string>
+     */
+    private function parties(): array
+    {
+        $out = [];
+
+        foreach (app(PartyRegistry::class)->forPicker() as $group) {
+            /*
+             * ⓘ কেবল গ্রাহক ও সরবরাহকারী — হাতধারের প্রশ্নটা "ইনি কি
+             * আমার ব্যবসারও কেউ"। ⛔ কর্মচারী বা ব্যক্তি এখানে নয়:
+             * মানুষটা তো উপরের ঘরেই বাছা হচ্ছে, আর দুইবার বাছলে কোনটা
+             * আসল সেটা অস্পষ্ট হত।
+             */
+            if (! in_array($group['type'], ['customer', 'supplier'], true)) {
+                continue;
+            }
+
+            foreach ($group['options'] as $option) {
+                $out[$group['type'].':'.$option['id']] =
+                    __('finance::field.party_'.$group['type']).' — '.$option['label'];
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * টাকার খাতগুলো — নগদ, ব্যাংক, মোবাইল।
      *
      * @return Collection<int, Account>
      */
