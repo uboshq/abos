@@ -71,6 +71,21 @@
          'render' => fn ($p) => $p['profit_share'] === null
              ? '—'
              : \App\Core\Support\Money::format($p['profit_share'])],
+
+        /*
+         * ⭐ উত্তোলন বনাম লাভ ও মূলধন — অর্থের মানচিত্র §১৩, ২০ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ একজন তুলতে পারেন তাঁর মূলধন + লাভের অংশ পর্যন্ত। বেশি তুললে
+         * সংখ্যাটা লাল, আর সেটা আসলে অন্য অংশীদারের টাকা হাতে নেওয়া।
+         * ⓘ হিসাবটা [[CapitalService::positions()]]-এ।
+         */
+        ['key' => 'settle', 'label' => __('finance::field.taken_vs_share'), 'numeric' => true,
+         'render' => fn ($p) => $p['overdrawn'] !== null
+             ? new \Illuminate\Support\HtmlString(
+                 '<span class="text-(--color-badge-danger-ink)">'
+                 .e(__('finance::field.over_taken', ['amount' => \App\Core\Support\Money::format($p['overdrawn'])]))
+                 .'</span>')
+             : __('finance::field.can_still_take', ['amount' => \App\Core\Support\Money::format($p['can_take'])])],
     ];
 
     $entryColumns = [

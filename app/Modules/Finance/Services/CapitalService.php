@@ -426,6 +426,33 @@ final class CapitalService
             $out[$i]['profit_share'] = ($profit === null || $position['share'] === null)
                 ? null
                 : bcdiv(bcmul($profit, $position['share'], 6), '100', 4);
+
+            /*
+             * ⭐ উত্তোলন বনাম লাভ ও মূলধনের মিলকরণ — অর্থের মানচিত্র §১৩,
+             * ২০ সেপ্টেম্বর ২০২৬।
+             *
+             * ── ⓘ প্রশ্নটা অংশীদারি ব্যবসার পুরনো ঝগড়া ───────────────────
+             * *"আমি আমার পাওনার বেশি তুলে ফেলেছি কি?"* ⓘ একজন তুলতে পারেন
+             * তাঁর **মূলধন + তাঁর লাভের অংশ** পর্যন্ত; তার বেশি তোলা মানে
+             * আসলে অন্য অংশীদারের টাকা হাতে নেওয়া।
+             *
+             * ⚠️ লোকসানের বছরে লাভের অংশ ঋণাত্মক, আর তখন সীমা মূলধনের
+             * **নিচে** নামে — ঐটাই ঠিক, আর `bcadd` নিজেই সেটা করে।
+             *
+             * ⓘ অংশ জানা না থাকলে (`profit_share` নাল) সীমা কেবল মূলধন।
+             * ⛔ লাভের অংশ শূন্য ধরে নিলে সীমাটা মিথ্যা নিশ্চয়তা দিত।
+             */
+            $allowance = bcadd(
+                $position['contributed'],
+                (string) ($out[$i]['profit_share'] ?? '0'),
+                4,
+            );
+
+            $over = bcsub($position['withdrawn'], $allowance, 4);
+
+            $out[$i]['allowance'] = $allowance;
+            $out[$i]['overdrawn'] = bccomp($over, '0', 4) > 0 ? $over : null;
+            $out[$i]['can_take'] = bccomp($over, '0', 4) < 0 ? bcmul($over, '-1', 4) : '0.0000';
         }
 
         return $out;

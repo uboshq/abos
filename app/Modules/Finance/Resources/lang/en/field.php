@@ -175,6 +175,10 @@ return [
     'person_name' => 'With whom',
     'mobile' => 'Mobile',
     'hand_loan_balance' => 'Outstanding',
+    'taken_vs_share' => 'Against their share',
+    'over_taken' => ':amount over',
+    'can_still_take' => ':amount still available',
+
     'facility_used' => 'Used',
     'facility_left' => 'Limit left',
     'hl_side' => 'Which way',
