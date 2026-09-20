@@ -12,6 +12,7 @@ use App\Core\Concerns\ScopedToUserBranch;
 use App\Core\Contracts\Drillable;
 use App\Models\Branch;
 use App\Models\User;
+use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Supplier\Models\Supplier;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -199,7 +200,40 @@ class PurchaseBill extends Model implements Drillable
             ->whereHas('payment', fn ($q) => $q->posted())
             ->sum('amount');
 
-        return (string) ($paid ?: '0');
+        /*
+         * ⓘ ভাউচারে দেওয়া টাকাও যোগ হয় ([[paidByPaymentVouchers()]])।
+         * তালিকা `withPaid()` দিয়ে এলে ওটাও সারির সাথেই এসেছে, তাই
+         * তখন আর কোয়েরি নয় — দুই পথে একই অঙ্ক।
+         */
+        $byVoucher = $preloaded === null
+            ? $this->paidByPaymentVouchers()
+            : (string) ($this->getAttribute('voucher_paid_total') ?? '0');
+
+        return bcadd((string) ($paid ?: '0'), $byVoucher, 4);
+    }
+
+    /**
+     * এই বিলের বিপরীতে লেখা পরিশোধ ভাউচার — ২০ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⭐ কেন লাগল ────────────────────────────────────────────────────
+     * মালিকের নিয়মে ক্রয়ের কাউন্টারের টাকা এখন **পরিশোধ ভাউচার**
+     * ([[DirectPurchaseService::payOneWay()]]), ক্রয়ের নিজের কাগজ নয়।
+     * ⛔ কেবল পুরনো কাগজ গুনলে কাউন্টারে টাকা দেওয়া প্রতিটা বিল
+     * "পুরো বাকি" দেখাত, আর তাগাদার তালিকায় থেকে যেত — ঠিক যে ভুলটা
+     * বিক্রয়ের দিকে [[SalesInvoice::paidByReceiptVouchers()]] সারিয়েছে।
+     *
+     * ⓘ কেবল **খাতায় বসা** ভাউচার: সইয়ের অপেক্ষায় থাকা খসড়া টাকা নয়।
+     * ⚠️ বিলের বিপরীতে লেখা **রসিদ** (ফেরত টাকা) এখানে যোগ হয় না — ক্রয়
+     * ফেরতের নিজের পথ আছে, আর মেশালে বাকিটা দুইবার কমত।
+     */
+    public function paidByPaymentVouchers(): string
+    {
+        return (string) (Voucher::query()
+            ->where('type', Voucher::PAYMENT)
+            ->where('against_type', static::drillSourceType())
+            ->where('against_id', $this->getKey())
+            ->posted()
+            ->sum('amount') ?: '0');
     }
 
     /**
@@ -217,8 +251,24 @@ class PurchaseBill extends Model implements Drillable
             ->whereColumn('pur_payment_lines.purchase_bill_id', 'pur_bills.id')
             ->whereHas('payment', fn ($q) => $q->posted());
 
+        /*
+         * ⭐ পরিশোধ ভাউচারও — [[paidByPaymentVouchers()]]-এর হুবহু শর্ত।
+         * ⚠️ এখানে বাদ পড়লে তালিকায় বিলটা পুরো বাকি দেখাত আর একক পাতায়
+         * শোধ — ঠিক ঐ দুই-অঙ্কের ভুল, যার কথা উপরের মন্তব্যে লেখা।
+         */
+        $byVoucher = Voucher::query()
+            ->selectRaw('COALESCE(SUM(amount), 0)')
+            ->where('type', Voucher::PAYMENT)
+            ->where('against_type', static::drillSourceType())
+            ->whereColumn('against_id', 'pur_bills.id')
+            ->posted();
+
         // pur_bills.* না দিলে addSelect শুধু সাব-কোয়েরিটাই আনত
-        return $query->addSelect(['pur_bills.*', 'paid_total' => $paid]);
+        return $query->addSelect([
+            'pur_bills.*',
+            'paid_total' => $paid,
+            'voucher_paid_total' => $byVoucher,
+        ]);
     }
 
     /**

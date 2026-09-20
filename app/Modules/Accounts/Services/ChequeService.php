@@ -134,9 +134,21 @@ final class ChequeService
 
         $bankName = $data['bank_name'] ?? null;
 
+        /*
+         * ⭐ দিকটা এখন বলে দেওয়া যায় — ২০ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ কাউন্টারে গ্রাহকের চেক **নেওয়া** হয়, আর ক্রয়ের কাউন্টারে
+         * সরবরাহকারীকে চেক **দেওয়া** হয় — দুইটাই রেজিস্টারে ওঠে, টাকা
+         * পোস্ট করে ভাউচার। ⚠️ ডিফল্ট আগের মতোই "নেওয়া", তাই পুরনো
+         * প্রতিটা ডাক অবিকল আগের মতো চলে।
+         */
+        $direction = ($data['direction'] ?? null) === Cheque::ISSUED
+            ? Cheque::ISSUED
+            : Cheque::RECEIVED;
+
         // একই চেক দুইবার নয় — DB-র unique পাহারার আগে বোধগম্য বার্তা
         $exists = Cheque::query()
-            ->where('direction', Cheque::RECEIVED)
+            ->where('direction', $direction)
             ->where('bank_name', $bankName)
             ->where('cheque_no', $chequeNo)
             ->exists();
@@ -151,7 +163,7 @@ final class ChequeService
             'company_id' => CompanyContext::id(),
             'branch_id' => CompanyContext::branchId(),
             'document_no' => $this->numbers->next('CHQ'),
-            'direction' => Cheque::RECEIVED,
+            'direction' => $direction,
             'cheque_date' => $data['cheque_date'],
             'received_on' => $data['received_on'] ?? now()->toDateString(),
             'cheque_no' => $chequeNo,

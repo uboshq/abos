@@ -8,9 +8,15 @@ use App\Core\Support\CompanyContext;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\ReadsPackedQuantities;
+use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Accounts\Services\CashTillService;
+use App\Modules\Accounts\Services\ChequeService;
+use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Accounts\Services\VoucherApproval;
+use App\Modules\Accounts\Services\VoucherService;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\MasterData\Models\PaymentMethod;
-use App\Modules\Purchase\Models\Payment;
 use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Purchase\Models\PurchaseBillGiftLine;
 use Illuminate\Support\Facades\DB;
@@ -46,8 +52,11 @@ final class DirectPurchaseService
 
     public function __construct(
         private readonly PurchaseBillService $bills,
-        private readonly PaymentService $payments,
         private readonly StockService $stock,
+        private readonly VoucherService $vouchers,
+        private readonly VoucherApproval $voucherApproval,
+        private readonly ChequeService $cheques,
+        private readonly CashTillService $tills,
     ) {}
 
     /**
@@ -56,7 +65,7 @@ final class DirectPurchaseService
      * @param  array<string, mixed>  $data
      * @param  list<array<string, mixed>>  $lines
      * @param  list<array<string, mixed>>  $gifts  মিল যা সাথে দিয়ে দিল
-     * @return array{bill: PurchaseBill, payment: Payment|null}
+     * @return array{bill: PurchaseBill, payments: list<Voucher>}
      */
     public function complete(array $data, array $lines, array $gifts = []): array
     {
@@ -145,9 +154,10 @@ final class DirectPurchaseService
              */
             $this->stampSalesPrices($bill->fresh(['lines.product']));
 
-            $payment = $this->payNow($data, $bill);
+            // ⓘ ২০ সেপ্টেম্বর ২০২৬ থেকে টাকাটা পরিশোধ ভাউচার, ক্রয়ের নিজের কাগজ নয়
+            $payments = $this->payNow($data, $bill);
 
-            return ['bill' => $bill->fresh(['lines', 'giftLines']), 'payment' => $payment];
+            return ['bill' => $bill->fresh(['lines', 'giftLines']), 'payments' => $payments];
         });
     }
 
@@ -451,78 +461,46 @@ final class DirectPurchaseService
     }
 
     /**
-     * হাতে হাতে দেওয়া টাকা।
+     * হাতে হাতে দেওয়া টাকা — প্রতিটা সারি একটা পরিশোধ ভাউচার।
      *
-     * শূন্য বা ফাঁকা হলে কিছুই হয় না — বাকিতে কেনাটাই স্বাভাবিক, আর
-     * শূন্য টাকার একটা পরিশোধ ভাউচার খাতায় শুধু আবর্জনা।
+     * ── ⭐ মালিকের সিদ্ধান্ত, ২০ সেপ্টেম্বর ২০২৬ ──────────────────────────
+     * *"বিক্রয় counter-এর নিয়মেই করো।"* ⓘ বিক্রয়ের কাউন্টারে প্রতিটা জমা
+     * এখন রসিদ ভাউচার ([[DirectSaleService::counterVoucher()]]); ক্রয়ের
+     * কাউন্টারে প্রতিটা পরিশোধ তেমনি একটা **পরিশোধ ভাউচার**, সরবরাহকারীর
+     * নামে আর বিলের সাথে বাঁধা। ⛔ আগে এটা ক্রয়ের নিজের "পরিশোধ" কাগজ হত,
+     * আর ঐ কাগজ ভাউচার তালিকায় কোনোদিন উঠত না।
+     *
+     * ── ⚠️ একটা জায়গায় বিক্রয়ের থেকে আলাদা, আর কারণটা ঘটনার ─────────────
+     * বিক্রয়ে সই না হলে **সবকিছু** অপেক্ষা করে — মাল বেরোয় না। ⛔ ক্রয়ে মাল
+     * ইতিমধ্যে গুদামে ঢুকে গেছে; ওটা খাতায় না বসালে গুদাম আর খাতা আলাদা কথা
+     * বলত। ⓘ তাই বিল ও মাল এগোয়, আর কেবল **টাকাটা** খসড়া ভাউচার হয়ে সইয়ের
+     * অপেক্ষায় থাকে — ছক বসানো থাকলে (`counter_payment`)।
+     *
+     * ⓘ শূন্য বা ফাঁকা হলে কিছুই হয় না — বাকিতে কেনাটাই স্বাভাবিক।
      *
      * @param  array<string, mixed>  $data
+     * @return list<Voucher>
      */
-    private function payNow(array $data, PurchaseBill $bill): ?Payment
+    private function payNow(array $data, PurchaseBill $bill): array
     {
         /*
-         * ── একাধিক জমা এলে সেগুলোই ─────────────────────────────────
-         *
-         * পর্দা এখন `deposits[]` পাঠায়, কিন্তু পুরনো একক ঘরটাও এখনো
-         * চলে — API, ইমপোর্ট আর সিডার ওটাই পাঠায়, আর ওগুলো ভাঙার কোনো
-         * কারণ নেই।
-         *
-         * ⚠️ দুইটা একসাথে এলে `deposits` জেতে: ওটাই বিস্তারিত, আর
-         * ব্যবহারকারী শেষ যেটা লিখেছেন। ⓘ বিক্রয়ের দিকেও হুবহু এই
-         * নিয়ম, তাই দুই পর্দা একই আচরণ করে।
+         * পর্দা `deposits[]` পাঠায়, কিন্তু পুরনো একক ঘরটাও চলে — API,
+         * ইমপোর্ট আর সিডার ওটাই পাঠায়। ⚠️ দুইটা একসাথে এলে `deposits`
+         * জেতে: ওটাই বিস্তারিত, আর ব্যবহারকারী শেষ যেটা লিখেছেন।
          */
-        if (filled($data['deposits'] ?? null)) {
-            return $this->payEachWay($data['deposits'], $bill);
-        }
-
-        $amount = (string) ($data['paid_now'] ?? '0');
-
-        if (! is_numeric($amount) || bccomp($amount, '0', 4) <= 0) {
-            return null;
-        }
-
-        $payment = $this->payments->create(
-            [
-                'supplier_id' => $bill->supplier_id,
+        $rows = filled($data['deposits'] ?? null)
+            ? $data['deposits']
+            : [[
+                'amount' => $data['paid_now'] ?? '0',
                 'account_id' => $data['paid_from_account_id'] ?? null,
-                'trx_date' => $bill->trx_date,
-                'amount' => $amount,
-                'narration' => __('purchase::message.paid_against', ['no' => $bill->document_no]),
-            ],
-            [['purchase_bill_id' => $bill->id, 'amount' => $amount]],
-        );
+            ]];
 
-        return $this->payments->confirm($payment);
-    }
-
-    /**
-     * সারি ধরে ধরে পরিশোধ — নগদ কিছু, চেকে কিছু, bKash-এ কিছু।
-     *
-     * ── কেন প্রতিটা সারির নিজের পরিশোধ ──────────────────────────────
-     * একটা পরিশোধে একটাই খাত আর একটাই উপায় বসে (`pur_payments`)। তিন
-     * পথে টাকা গেলে সেটা তিনটা ঘটনা — একটা নয় — আর খাতাতেও তিনটাই
-     * আলাদা দেখা দরকার: ব্যাংকের সারিতে চেকটা, নগদের সারিতে নগদটা।
-     *
-     * ⛔ একটা পরিশোধে মোট অঙ্ক বসালে টাকাটা একটা খাত থেকেই গেছে বলে
-     * লেখা থাকত, আর মাস শেষে নগদ মিলত না।
-     *
-     * ⓘ দিকটা নিয়ে ভাবতে হয় না: [[PaymentService]] ক্রয়ের পরিশোধ
-     * জানে, তাই টাকা **কমে** — বিক্রয়ের মতো বাড়ে না।
-     *
-     * ⚠️ উপায়ের `kind` → পরিশোধের `instrument`। ক্রেতা নতুন উপায় যোগ
-     * করলে তার `kind` চেনা মানগুলোর একটা না হলে ঘরটা খালি যাবে, আর
-     * "কীভাবে দেওয়া হলো" প্রশ্নের উত্তর হারাত।
-     *
-     * @param  list<array<string, mixed>>  $rows
-     */
-    private function payEachWay(array $rows, PurchaseBill $bill): ?Payment
-    {
         $methods = PaymentMethod::query()
             ->whereIn('id', array_filter(array_column($rows, 'payment_method_id')))
             ->get()
             ->keyBy('id');
 
-        $last = null;
+        $made = [];
 
         foreach ($rows as $row) {
             $amount = (string) ($row['amount'] ?? '0');
@@ -533,25 +511,105 @@ final class DirectPurchaseService
 
             $method = $methods->get((int) ($row['payment_method_id'] ?? 0));
 
-            $payment = $this->payments->create(
-                [
-                    'supplier_id' => $bill->supplier_id,
-                    'account_id' => $row['account_id'] ?? null,
-                    'trx_date' => $bill->trx_date,
-                    'amount' => $amount,
-                    'instrument' => $method?->kind,
-                    'instrument_no' => $row['reference'] ?? null,
-                    'instrument_date' => $row['ref_date'] ?? null,
-                    'narration' => $row['narration']
-                        ?? __('purchase::message.paid_against', ['no' => $bill->document_no]),
-                ],
-                [['purchase_bill_id' => $bill->id, 'amount' => $amount]],
-            );
-
-            $last = $this->payments->confirm($payment);
+            $made[] = $this->payOneWay($row, $method?->kind, $method?->code, $bill);
         }
 
-        return $last;
+        return $made;
+    }
+
+    /**
+     * এক সারির টাকা — ভাউচার, আর চেক হলে রেজিস্টারেও।
+     *
+     * ⓘ দিকটা নিয়ে ভাবতে হয় না: পরিশোধে "to" ডেবিট (সরবরাহকারীর দেনা কমে),
+     * "from" ক্রেডিট (টাকা কমে) — [[VoucherService::twoLineEntry()]]।
+     *
+     * @param  array<string, mixed>  $row
+     */
+    private function payOneWay(array $row, ?string $kind, ?string $instrument, PurchaseBill $bill): Voucher
+    {
+        $isCheque = $kind === 'cheque';
+
+        /*
+         * ⚠️ চেকে টাকা আজ যায় না — দেনাটা ২১১৫ "ইস্যু করা চেকে" বসে, আর
+         * ব্যাংক থেকে কাটে চেক পাশ হওয়ার দিন ([[ChequeService::clear()]])।
+         * ⛔ সরাসরি ব্যাংক খাত থেকে কাটলে ব্যাংকের জের আগেই কমে যেত।
+         */
+        $moneyAccount = $isCheque
+            ? $this->account(StandardChart::CHEQUES_ISSUED)->id
+            : (int) (($row['account_id'] ?? null) ?: $this->tills->ensurePrimaryTill()->account_id);
+
+        $narration = $row['narration'] ?? __('purchase::message.paid_against', ['no' => $bill->document_no]);
+
+        $voucher = $this->vouchers->create(
+            [
+                'type' => Voucher::PAYMENT,
+                'trx_date' => $bill->trx_date,
+                'party_type' => 'supplier',
+                'party_id' => $bill->supplier_id,
+                'instrument' => $instrument,
+                'instrument_no' => $row['reference'] ?? null,
+                'instrument_date' => $row['ref_date'] ?? null,
+                'from_bank' => $row['bank_name'] ?? null,
+                'narration' => $narration,
+                'against_type' => PurchaseBill::drillSourceType(),
+                'against_id' => $bill->id,
+                'origin' => Voucher::ORIGIN_COUNTER,
+            ],
+            $this->vouchers->twoLineEntry(
+                Voucher::PAYMENT,
+                $moneyAccount,
+                (int) $this->account(StandardChart::PAYABLE)->id,
+                (string) $row['amount'],
+                $narration,
+            ),
+        );
+
+        /*
+         * ⓘ ছক বসানো থাকলে অনুরোধটা এখানেই লেখা হয়, আর ভাউচার খসড়া থেকে
+         * যায় — টাকাটা খাতায় বসে না। ⚠️ বিল ও মাল তবু এগোয় (উপরের ব্যাখ্যা)।
+         */
+        if ($this->voucherApproval->stopping($voucher) !== null) {
+            return $voucher;
+        }
+
+        $voucher = $this->vouchers->post($voucher);
+
+        if ($isCheque) {
+            /*
+             * চেকের জীবন রেজিস্টারে — পাশ · ফেরত · PDC · একই চেক দুইবার নয়।
+             * ⓘ `voucher_id` দিয়ে বাঁধা, তাই ফেরত এলে ঠিক এই ভাউচারটাই বাতিল
+             * হয় ([[ChequeService::bounce()]]), আর টাকা দেনায় ফিরে আসে।
+             */
+            $this->cheques->record([
+                'direction' => \App\Modules\Accounts\Models\Cheque::ISSUED,
+                'voucher_id' => $voucher->id,
+                'party_type' => 'supplier',
+                'party_id' => $bill->supplier_id,
+                'cheque_no' => $row['reference'] ?? null,
+                'cheque_date' => $row['ref_date'] ?? $bill->trx_date,
+                'bank_name' => $row['bank_name'] ?? null,
+                'bank_account_id' => $row['account_id'] ?? null,
+                'amount' => (string) $row['amount'],
+                'received_on' => $bill->trx_date,
+                'narration' => $narration,
+            ]);
+        }
+
+        return $voucher;
+    }
+
+    /** খাতটা — না থাকলে বোধগম্য বার্তা, নীরব ব্যর্থতা নয়। */
+    private function account(string $code): Account
+    {
+        $account = Account::query()->postable()->where('code', $code)->first();
+
+        if ($account === null) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'deposits' => __('purchase::validation.no_account_for', ['code' => $code]),
+            ]);
+        }
+
+        return $account;
     }
 
     /**

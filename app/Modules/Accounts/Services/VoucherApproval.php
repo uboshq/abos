@@ -38,6 +38,15 @@ final class VoucherApproval
     /** কাউন্টারের ডিপোজিটের অনুমোদনের কাজ — [[stopping()]]। */
     public const COUNTER_DEPOSIT = 'counter_deposit';
 
+    /**
+     * ক্রয়ের কাউন্টারে দেওয়া টাকা — ২০ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ মালিকের কথা: *"বিক্রয় কাউন্টারের নিয়মেই করো।"* ⚠️ তবু ছকটা
+     * আলাদা, কারণ ঘটনাটাই উল্টো: ওখানে টাকা আসে, এখানে টাকা যায়। ⛔ এক
+     * ছকে বাঁধলে যিনি ক্রয়ে সই চান তিনি বিক্রয়ের প্রতিটা জমাও আটকাতেন।
+     */
+    public const COUNTER_PAYMENT = 'counter_payment';
+
     public function __construct(private readonly ApprovalEngine $approvals) {}
 
     /**
@@ -55,9 +64,15 @@ final class VoucherApproval
          * ⓘ *"কাউন্টারের জন্য আলাদা নিয়ম, বাকিগুলো আলাদা।"* ⚠️ না করলে
          * কাউন্টারে সই চাইতে গিয়ে হিসাবের প্রতিটা হাতে লেখা রসিদ আটকাত।
          */
-        $action = $voucher->origin === Voucher::ORIGIN_COUNTER
-            ? self::COUNTER_DEPOSIT
-            : (string) $voucher->type;
+        $action = match (true) {
+            // ⓘ ২০ সেপ্টেম্বর: ক্রয়ের কাউন্টারের পরিশোধও কাউন্টারের নিজের ছকে
+            $voucher->origin === Voucher::ORIGIN_COUNTER && $voucher->type === Voucher::PAYMENT
+                => self::COUNTER_PAYMENT,
+
+            $voucher->origin === Voucher::ORIGIN_COUNTER => self::COUNTER_DEPOSIT,
+
+            default => (string) $voucher->type,
+        };
 
         $latest = $this->approvals->latestFor($voucher, $action);
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'group_takes_no_money' => '":name" is a head, not an account — money leaving it shows up in no balance. Pick one of the accounts under it.',
     'no_lines' => 'At least one line is needed — a document with no lines does nothing.',
+    'no_account_for' => 'Account :code is missing from the chart, or is not postable — install the chart first.',
     'only_draft_confirms' => ':no is not a draft, so it cannot be confirmed again.',
     'only_draft_edits' => ':no is not a draft — cancel it and make a new one to change a posted document.',
     'already_cancelled' => ':no was already cancelled.',

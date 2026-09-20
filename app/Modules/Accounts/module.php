@@ -434,6 +434,9 @@ return [
 
         // ⭐ কাউন্টারের ডিপোজিট — হাতে লেখা রসিদ থেকে আলাদা নিয়ম (১৯ সেপ্টেম্বর)
         'counter_deposit' => 'accounts::approval.counter_deposit',
+
+        // ⭐ ক্রয়ের কাউন্টারে দেওয়া টাকা — উল্টো দিক, তাই নিজের নিয়ম (২০ সেপ্টেম্বর)
+        'counter_payment' => 'accounts::approval.counter_payment',
         'transfer' => 'accounts::approval.transfer',
         'cash_count' => 'accounts::approval.cash_count',
         'year_end' => 'accounts::approval.year_end',

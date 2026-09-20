@@ -15,6 +15,7 @@ return [
     'year_end' => 'Year-end closing',
     'expense' => 'Expense voucher',
     'counter_deposit' => 'Counter deposit',
+    'counter_payment' => 'Counter payment',
     'receipt' => 'Receipt voucher',
     'payment' => 'Payment voucher',
     'journal' => 'Journal voucher',
