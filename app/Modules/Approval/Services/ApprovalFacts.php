@@ -9,6 +9,7 @@ use App\Models\Approval;
 use App\Modules\Accounts\Models\Account;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
+use Throwable;
 
 /**
  * অনুমোদনের সারিতে কাগজের তিনটা কথা — কার, কী বাবদ, কোথায়।
@@ -32,6 +33,9 @@ use Illuminate\Support\Collection;
  */
 final class ApprovalFacts
 {
+    /** কোন কাগজের লাইনে খাত থাকে — একবার দেখে মনে রাখা হয়। */
+    private static array $linesCarryAccounts = [];
+
     /** টাকার খাত যে ঘরগুলোয় বসতে পারে, অগ্রাধিকারের ক্রমে। */
     private const ACCOUNT_FIELDS = ['money_account_id', 'account_id', 'bank_account_id', 'to_account_id', 'from_account_id'];
 
@@ -62,10 +66,15 @@ final class ApprovalFacts
             $documents = $class::query()
                 /*
                  * ⓘ ভাউচারে টাকার খাতটা মাথায় নয়, দাখিলার লাইনে — তাই
-                 * লাইনগুলোও একবারেই আসে। যে কাগজে `lines` নেই সেখানে
-                 * চাওয়া হয় না, নাহলে Eloquent ছুঁড়ত।
+                 * লাইনগুলোও একবারেই আসে।
+                 *
+                 * ⚠️ `lines()` থাকা মানেই `lines.account` থাকা নয় — ২০
+                 * সেপ্টেম্বর ২০২৬, abos-d1-এর ধরা। বিক্রয় বিলের লাইনে
+                 * `account` সম্পর্কটা নেই, আর ওরকম একটা অনুরোধ ইনবক্সে এলে
+                 * Eloquent ছুঁড়ত — অর্থাৎ পুরো ইনবক্স ৫০০। তাই লাইনের
+                 * মডেলটাকে জিজ্ঞেস করা হয়, কাগজটাকে নয়।
                  */
-                ->when(method_exists($class, 'lines'), fn ($q) => $q->with('lines.account'))
+                ->when($this->linesCarryAccounts($class), fn ($q) => $q->with('lines.account'))
                 ->whereKey(array_values(array_unique($ids)))
                 ->get()
                 ->keyBy(fn (Model $m) => (int) $m->getKey());
@@ -182,7 +191,7 @@ final class ApprovalFacts
          * দাখিলার লাইনে যে খাতটা নগদ · ব্যাংক · মোবাইল, সেটাই "কোথায়" —
          * ভাউচারের তালিকাও ঠিক এভাবেই পড়ে।
          */
-        if ($this->has($document, 'lines')) {
+        if ($this->has($document, 'lines') && $this->linesCarryAccounts($document::class)) {
             $money = $document->lines
                 ->map(fn ($line) => $line->account)
                 ->first(fn ($account) => $account !== null && $account->money_kind !== null);
@@ -238,6 +247,35 @@ final class ApprovalFacts
         $value = $row->name ?? null;
 
         return is_string($value) && $value !== '' ? $value : null;
+    }
+
+    /**
+     * এই কাগজের লাইনে খাতের সম্পর্ক আছে কি না — লাইনের মডেলকে জিজ্ঞেস করে।
+     *
+     * ⓘ ভাউচারের লাইনে আছে, বিক্রয় বা ক্রয়ের বিলের লাইনে নেই (ওখানে
+     * পণ্য থাকে, খাত নয়)। ⛔ কাগজটার নিজের `lines()` দেখে সিদ্ধান্ত নিলে
+     * বিক্রয় বিলের একটা অনুরোধেই পুরো ইনবক্স ৫০০ দিত।
+     *
+     * @param  class-string<Model>  $class
+     */
+    private function linesCarryAccounts(string $class): bool
+    {
+        if (! method_exists($class, 'lines')) {
+            return false;
+        }
+
+        if (! array_key_exists($class, self::$linesCarryAccounts)) {
+            try {
+                $related = (new $class)->lines()->getRelated();
+
+                self::$linesCarryAccounts[$class] = method_exists($related, 'account');
+            } catch (Throwable) {
+                // ⓘ সম্পর্কটা পড়া গেল না — তখন না-চাওয়াই নিরাপদ
+                self::$linesCarryAccounts[$class] = false;
+            }
+        }
+
+        return self::$linesCarryAccounts[$class];
     }
 
     /**
