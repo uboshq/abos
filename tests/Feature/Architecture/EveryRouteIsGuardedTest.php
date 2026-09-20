@@ -274,6 +274,18 @@ class EveryRouteIsGuardedTest extends TestCase
          * (নিরীক্ষক নয়) · বোতাম (কেবল সিদ্ধান্তদাতা)।
          */
         'approval.inbox.show' => 'নিজের অনুরোধ · সিদ্ধান্তদাতা · approval.report — তিনটা প্রশ্ন show()-এর ভেতরে',
+
+        /*
+         * ভাউচারের ফর্মে "এখন কত পাওনা" ঘরটা — চাবি দুইটার যেকোনো একটা।
+         *
+         * ⛔ `accounts.report` দিয়ে আটকানো যায় না: ক্যাশিয়ারের
+         * `accounts.voucher.create` আছে, `accounts.report` নেই — ঘরটা
+         * তিনিই রোজ দেখেন, আর আটকালে তিনি কেবল "—" পেতেন।
+         *
+         * ⓘ আর `middleware()`-এ দুইটা `only:` মানে দুইটাই লাগবে (AND);
+         * এখানে দরকার OR, তাই শর্তটা পদ্ধতির ভেতরে।
+         */
+        'accounts.voucher.due' => 'accounts.voucher.create অথবা accounts.voucher.update — abort_unless() due()-এর শুরুতে',
     ];
 
     /**
