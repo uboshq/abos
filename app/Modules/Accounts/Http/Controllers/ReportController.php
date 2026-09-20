@@ -47,6 +47,8 @@ class ReportController extends Controller implements HasMiddleware
          */
         'by-cost-centre' => 'accounts.by_cost_centre',
         'expense-by-head' => 'accounts.expense_by_head',
+        // ⭐ খাতভিত্তিক আয় — সেতুটা মেনুর সারির সাথেই, উপরের ইতিহাস দেখুন
+        'income-by-head' => 'accounts.income_by_head',
         'cash-book' => 'accounts.cash_book',
         'bank-book' => 'accounts.bank_book',
 

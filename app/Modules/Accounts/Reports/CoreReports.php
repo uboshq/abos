@@ -36,6 +36,8 @@ final class CoreReports
         $engine->register(self::inflow());
         $engine->register(self::byCostCentre());
         $engine->register(self::expenseByHead());
+        // ⭐ আয়ের আয়না — ২০ সেপ্টেম্বর ২০২৬ (অর্থের মানচিত্র §১০)
+        $engine->register(self::incomeByHead());
     }
 
     /**
@@ -640,6 +642,51 @@ final class CoreReports
             columns: [
                 ['key' => 'account_name', 'label' => 'accounts::field.expense_head', 'type' => ReportColumn::TEXT],
                 ['key' => 'spent', 'label' => 'accounts::field.spent', 'type' => ReportColumn::MONEY],
+            ],
+        );
+    }
+
+    /**
+     * কোন খাতে কত আয় — খরচের আয়না।
+     *
+     * ── ⭐ কেন লাগল, ২০ সেপ্টেম্বর ২০২৬ ─────────────────────────────
+     * অর্থের মানচিত্রে §১০-এর "আয়ের শ্রেণি" লাইনটা বাকি ছিল, অথচ
+     * খরচের দিকে ঠিক একই পাতা ([[expenseByHead()]]) অনেক দিন ধরেই আছে।
+     * ⓘ মালিকের প্রশ্নটা রোজকার: *"এই মাসে ভাড়া থেকে কত এল, সুদ থেকে কত"*।
+     *
+     * ── ⚠️ চিহ্নটা উল্টো, আর সেটাই মূল কথা ──────────────────────────
+     * আয়ের খাত ক্রেডিটে বাড়ে, তাই `credit − debit`। ⛔ খরচের সূত্র নকল
+     * করলে প্রতিটা সংখ্যা ঋণাত্মক দেখাত, আর সবচেয়ে বড় আয়টা তালিকার
+     * নিচে পড়ে থাকত।
+     *
+     * ⓘ অনুমতি `accounts.report` — লাভ-ক্ষতির সংখ্যা এখানে নেই, কেবল আয়।
+     */
+    public static function incomeByHead(): ReportDefinition
+    {
+        return new ReportDefinition(
+            key: 'accounts.income_by_head',
+            title: 'accounts::field.income_by_head',
+            filters: ['date_range', 'branch'],
+            groupBy: 'account_id',
+            query: fn (array $f) => DB::table('ledger_entries')
+                ->join('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
+                ->where('ledger_entries.company_id', $f['company_id'])
+                ->whereBetween('ledger_entries.trx_date', [$f['from'], $f['to']])
+                ->when($f['branch_id'], fn ($q, $branch) => $q->where('ledger_entries.branch_id', $branch))
+                ->where('accounts.type', Account::INCOME)
+
+                // ⓘ গ্রুপে দাখিলা বসে না — শর্তটা তবু লেখা, দাবিটা পড়ে বোঝা যাক
+                ->where('accounts.is_group', false)
+                ->groupBy('ledger_entries.account_id', 'accounts.code', 'accounts.name_en', 'accounts.name_bn')
+                ->orderByRaw('SUM(ledger_entries.credit - ledger_entries.debit) DESC')
+                ->select([
+                    'ledger_entries.account_id',
+                    DB::raw(self::accountName()),
+                    DB::raw('SUM(ledger_entries.credit - ledger_entries.debit) as earned'),
+                ]),
+            columns: [
+                ['key' => 'account_name', 'label' => 'accounts::field.income_head', 'type' => ReportColumn::TEXT],
+                ['key' => 'earned', 'label' => 'accounts::field.earned', 'type' => ReportColumn::MONEY],
             ],
         );
     }
