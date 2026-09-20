@@ -137,7 +137,7 @@ class DepositController extends Controller implements HasMiddleware
          *   · **বন্ধক দেওয়া** — কোন জমা কোন ঋণের জামানতে, আর কতটা খালি।
          *     ⓘ কলামটা (`pledged_to_loan_id`) ছিল, পর্দা ছিল না।
          */
-        $tab = in_array($request->query('tab'), ['closed', 'maturing', 'pledged'], true)
+        $tab = in_array($request->query('tab'), ['closed', 'maturing', 'pledged', 'institution'], true)
             ? (string) $request->query('tab')
             : 'active';
 
@@ -176,6 +176,9 @@ class DepositController extends Controller implements HasMiddleware
                 'pledged' => Deposit::query()->issuedBy($issuer)->open()
                     ->whereNotNull('pledged_to_loan_id')
                     ->count(),
+
+                // ⓘ কয়টা প্রতিষ্ঠান — ঠিক যতটা সারি ওই ট্যাবে
+                'institution' => count($this->byInstitution($issuer)),
             ],
 
             /*
@@ -199,6 +202,15 @@ class DepositController extends Controller implements HasMiddleware
              * করলে ঠিক সেই কয়টা সারিই আসে। মোট সংখ্যা দেখালে প্রতিবার
              * ট্যাব বদলে অন্য সংখ্যা পেয়ে মানুষ গুনতে বসতেন।
              */
+            /*
+             * ⭐ "কোন প্রতিষ্ঠানে" — মালিকের নির্দেশ, ২০ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ তাঁর সংশোধন: *"আমানত to আর্থিক প্রতিষ্ঠান theke ase"* —
+             * হাতধার আর ভাড়া মানুষের সাথে, কিন্তু আমানত রাখা হয়
+             * প্রতিষ্ঠানে। ⭐ "কার নামে" তাই কলামই রয়ে গেছে।
+             */
+            'institutions' => $tab !== 'institution' ? [] : $this->byInstitution($issuer),
+
             'issuerCounts' => collect(DepositKind::ISSUERS)
                 ->mapWithKeys(fn (string $one) => [$one => Deposit::query()
                     ->issuedBy($one)
@@ -291,6 +303,74 @@ class DepositController extends Controller implements HasMiddleware
                 ->orderByDesc('id')
                 ->get(),
         ]);
+    }
+
+    /**
+     * কোন প্রতিষ্ঠানে কত — এক সারিতে একটা ব্যাংক।
+     *
+     * ⭐ মালিকের সংশোধন, ২০ সেপ্টেম্বর ২০২৬: *"আমানত to আর্থিক
+     * প্রতিষ্ঠান theke ase"*। ⓘ হাতধার আর ভাড়া মানুষের সাথে, কিন্তু
+     * একটা FDR খোলা হয় একটা ব্যাংকে।
+     *
+     * ── ⚠️ পুরনো সারিগুলো লুকায় না ────────────────────
+     * ⓘ `institution_id` বসা শুরু হয়েছে পরে; পুরনো আমানতে ওটা খালি
+     * থাকতে পারে (নাম মিলিয়ে বসানোর কাজটা ইচ্ছাকৃতভাবে কেবল
+     * প্রস্তাব দেয়)। ⛔ ওগুলো ছেঁকে দিলে যোগফল কম দেখাত, আর কেউ
+     * ধরত না — তাই ওরা "প্রতিষ্ঠান বসানো হয়নি" নামে একটা সারিতে
+     * একসাথে থাকে, আর কাজটা বাকি আছে সেটাও চোখে পড়ে।
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function byInstitution(string $issuer): array
+    {
+        $rows = [];
+
+        $deposits = Deposit::query()->issuedBy($issuer)->open()->get();
+
+        /*
+         * ⚠️ নামগুলো একবারেই তোলা, সারি ধরে নয়। ⓘ আর সম্পর্কটা
+         * (`institution()`) এখানে সরাসরি পড়া যায় না: একই নামে একটা
+         * কলামও আছে (পুরনো টাইপ করা নাম), আর কলামটাই জেতে।
+         */
+        $names = Institution::query()
+            ->whereIn('id', $deposits->pluck('institution_id')->filter()->unique()->all())
+            ->get()
+            ->mapWithKeys(fn (Institution $one) => [(int) $one->id => $one->name()])
+            ->all();
+
+        foreach ($deposits as $deposit) {
+            $id = $deposit->institution_id === null ? 0 : (int) $deposit->institution_id;
+
+            $rows[$id] ??= [
+                'id' => $id === 0 ? null : $id,
+                'name' => $id === 0
+                    ? __('finance::message.institution_not_linked')
+                    : ($names[$id] ?? $deposit->institution),
+                'count' => 0,
+                'total' => '0',
+                'next' => null,
+            ];
+
+            $rows[$id]['count']++;
+            $rows[$id]['total'] = bcadd($rows[$id]['total'], (string) $deposit->principal, 4);
+
+            /*
+             * ⓘ পরের মেয়াদ — এই ব্যাংকে যেটা সবার আগে শেষ হচ্ছে।
+             * ⚠️ এই একটা তারিখ ফসকালে টাকাটা আপনা থেকে নতুন
+             * মেয়াদে আটকে যায়, প্রায়ই কম হারে।
+             */
+            if ($deposit->matures_on !== null
+                && ($rows[$id]['next'] === null || $deposit->matures_on->lt($rows[$id]['next']))) {
+                $rows[$id]['next'] = $deposit->matures_on;
+            }
+        }
+
+        $out = array_values($rows);
+
+        // ⓘ বড় টাকা আগে — প্রশ্নটা সবসময় "সবচেয়ে বেশি কোথায়"
+        usort($out, fn (array $a, array $b) => bccomp($b['total'], $a['total'], 4));
+
+        return $out;
     }
 
     /**

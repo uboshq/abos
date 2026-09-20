@@ -26,6 +26,10 @@
         'maturing' => __('finance::field.dep_tab_maturing'),
         'pledged' => __('finance::field.dep_tab_pledged'),
         'closed' => __('finance::state.closed'),
+
+        /* ⭐ কোন প্রতিষ্ঠানে — মালিকের সংশোধন, ২০ সেপ্টেম্বর ২০২৬।
+           ⓘ আমানত মানুষের সাথে নয়, প্রতিষ্ঠানে রাখা হয়। */
+        'institution' => __('finance::field.dep_tab_institution'),
     ];
 
     /*
@@ -222,6 +226,9 @@
         </section>
 
         {{-- ── যা যা আছে ─────────────────────────────────────────────────── --}}
+        @if ($tab === 'institution')
+            @include('finance::deposit.partials.institutions', ['institutions' => $institutions])
+        @else
         <x-ui.table
             :compact="request()->boolean('compact')"
             :empty="filled(request('q')) ? __('core.empty.no_results') : __('finance::message.no_deposit_yet')"
@@ -229,5 +236,6 @@
             :columns="$depColumns" />
 
         <x-ui.pager :rows="$deposits" />
+        @endif
     </div>
 </x-layouts.app>

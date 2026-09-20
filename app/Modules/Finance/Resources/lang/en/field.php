@@ -316,4 +316,6 @@ return [
     'hl_open_accounts' => 'Open accounts',
     'person_mobile' => 'Mobile',
     'rental_how_many' => 'Contracts',
+    'dep_tab_institution' => 'Where it is kept',
+    'dep_next_maturity' => 'Next maturity',
 ];

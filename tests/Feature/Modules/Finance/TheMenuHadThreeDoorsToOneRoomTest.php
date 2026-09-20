@@ -170,6 +170,30 @@ final class TheMenuHadThreeDoorsToOneRoomTest extends TestCase
             );
     }
 
+    /**
+     * ⭐ "কোন প্রতিষ্ঠানে" ট্যাব — মালিকের সংশোধন, ২০ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ আমানত মানুষের সাথে নয় — প্রতিষ্ঠানে রাখা হয়। ⚠️ আর যে পুরনো
+     * আমানতে প্রতিষ্ঠান বসানো হয়নি, সেগুলো লুকায় না — নাহলে যোগফল
+     * কম দেখাত আর কেউ ধরত না।
+     */
+    public function test_the_deposits_tab_counts_by_institution(): void
+    {
+        $this->openADeposit(DepositKind::BANK);
+
+        $page = $this->get(route('finance.deposit.index', ['issuer' => 'bank', 'tab' => 'institution']))
+            ->assertOk();
+
+        $rows = $page->viewData('institutions');
+
+        $this->assertCount(1, $rows);
+        $this->assertSame(1, $rows[0]['count']);
+        $this->assertSame('100000.0000', $rows[0]['total']);
+        $this->assertNotNull($rows[0]['next']);
+
+        $this->assertSame(count($rows), $page->viewData('counts')['institution']);
+    }
+
     /** @return array<string, list<array<string, mixed>>> */
     private function menu(): array
     {

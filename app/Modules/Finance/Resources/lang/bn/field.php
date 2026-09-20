@@ -346,4 +346,6 @@ return [
     'hl_open_accounts' => 'খোলা হিসাব',
     'person_mobile' => 'মোবাইল',
     'rental_how_many' => 'কয়টা চুক্তি',
+    'dep_tab_institution' => 'কোন প্রতিষ্ঠানে',
+    'dep_next_maturity' => 'পরের মেয়াদ',
 ];

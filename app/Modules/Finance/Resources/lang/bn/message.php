@@ -154,4 +154,5 @@ return [
     'person_added' => ':who তালিকায় যোগ হলো।',
     'no_people_yet' => 'তালিকায় এখনো কেউ নেই।',
     'no_rental_people' => 'কোনো চুক্তি এখনো তালিকার কারও সাথে জোড়া নেই।',
+    'institution_not_linked' => 'প্রতিষ্ঠান বসানো হয়নি',
 ];

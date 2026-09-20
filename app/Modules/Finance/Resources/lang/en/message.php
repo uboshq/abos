@@ -142,4 +142,5 @@ return [
     'person_added' => ':who is on the list now.',
     'no_people_yet' => 'Nobody on the list yet.',
     'no_rental_people' => 'No contract is linked to anybody on the list yet.',
+    'institution_not_linked' => 'No institution linked yet',
 ];
