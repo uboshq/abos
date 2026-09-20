@@ -62,9 +62,10 @@
             'key' => 'floor',
             'label' => __('inventory::field.floor'),
             'numeric' => true,
-            'width' => '8rem',
-            'render' => fn ($p) => view('ui.amount-link', [
-                'value' => $p->floor_total,
+            'width' => '10rem',
+            'render' => fn ($p) => view('inventory::partials.qty-in-packs', [
+                'qty' => $p->floor_total,
+                'ladder' => $ladders[$p->id] ?? [],
                 'href' => route('inventory.product.show', $p).'#movements',
             ]),
         ],

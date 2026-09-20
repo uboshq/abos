@@ -11,6 +11,7 @@ use App\Core\Support\Money;
 use App\Http\Controllers\Controller;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Inventory\Services\PackConversion;
 use App\Modules\Inventory\Services\StockAdjustmentService;
 use App\Modules\Inventory\Services\StockCountService;
 use App\Modules\Inventory\Services\StockService;
@@ -45,6 +46,9 @@ class StockController extends Controller implements HasMiddleware
          * একটা জায়গা তৈরি হয়, আর কে কেন করল তার একটা কাগজও।
          */
         private readonly StockCountService $counts,
+
+        // পরিমাণ প্যাকে ভেঙে দেখানোর সিঁড়িটা এখান থেকে আসে
+        private readonly PackConversion $packs,
     ) {}
 
     public static function middleware(): array
@@ -143,9 +147,21 @@ class StockController extends Controller implements HasMiddleware
 
         $sort = $this->applySort($query, $request, $this->sorts());
 
+        $products = $query->paginate(50)->withQueryString();
+
         return view('inventory::stock.index', [
             'menu' => $this->menu->forUser($request->user()),
-            'products' => $query->paginate(50)->withQueryString(),
+            'products' => $products,
+
+            /*
+             * ⭐ প্রতিটা পণ্যের প্যাকের সিঁড়ি — পরিমাণ ভেঙে দেখানোর জন্য
+             * (২০ সেপ্টেম্বর ২০২৬, মালিকের কথায়)।
+             *
+             * ⚠️ একবারেই সব পণ্যের, সারি ধরে নয় — পঞ্চাশ সারির পাতায়
+             * পণ্যপ্রতি একটা কোয়েরি মানে পঞ্চাশটা কোয়েরি, আর ঠিক ওই
+             * ভুলটাই একবার আদায়ের পর্দাকে ধীর করে দিয়েছিল।
+             */
+            'ladders' => $this->packs->laddersFor($products->getCollection(), packsOnly: true),
             'warehouses' => Warehouse::query()->active()->orderBy('code')->get(),
             'warehouse' => $warehouse,
             'sort' => $sort,

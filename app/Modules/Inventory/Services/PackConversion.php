@@ -240,6 +240,48 @@ final class PackConversion
      */
     public function optionsFor(iterable $products): array
     {
+        $options = [];
+
+        foreach ($this->laddersFor($products) as $productId => $ladder) {
+            if (count($ladder) < 2) {
+                continue;
+            }
+
+            $options[$productId] = array_map(
+                fn (array $step) => ['id' => $step['unit']->id, 'label' => $step['unit']->name()],
+                $ladder,
+            );
+        }
+
+        return $options;
+    }
+
+    /**
+     * অনেক পণ্যের সিঁড়ি একসাথে — পর্দায় পরিমাণ ভেঙে দেখানোর জন্য।
+     *
+     * ⭐ ২০ সেপ্টেম্বর ২০২৬, মালিকের কথায়: পর্দা "১৯৩ পিস" দেখায়, অথচ
+     * তিনি গোনেন "৮ কার্টন ১ পিস"। ⓘ ভাগটা করে [[PackBreakdown]], আর
+     * সিঁড়িটা লাগে এখান থেকে।
+     *
+     * ⚠️ পণ্যপ্রতি একটা করে কোয়েরি নয় — [[optionsFor()]]-এর একই কারণ:
+     * পঞ্চাশ সারির পাতায় ওটা পঞ্চাশটা কোয়েরি হত। ⓘ তাই দুইটাই এখন
+     * এই একটা পদ্ধতির উপর দাঁড়ানো, আর সিঁড়ির নিয়ম এক জায়গাতেই থাকে।
+     *
+     * ── ⚠️ `$packsOnly` — কোন সিঁড়িটা কোথায় ─────────────────────────────
+     * এন্ট্রির ড্রপডাউনে সার্বজনীন এককও লাগে: কেউ ডজনে লিখতেই পারেন।
+     * ⛔ কিন্তু মজুদ **দেখানোর** সময় ওগুলো কেবল গোলমাল বাড়ায় — যে
+     * পণ্যের নিজের কোনো প্যাক নেই, তার নিচেও "৬ ডজন · ৩ পিস" বসত,
+     * অথচ ঐ পণ্যটা কেউ ডজনে গোনে না।
+     *
+     * ⭐ মালিকের কথাটা ছিল পণ্যের নিজের প্যাক নিয়ে — কার্টনে কত, সেটা
+     * কোম্পানি ঠিক করে। তাই দেখানোর সিঁড়িতে কেবল পণ্যের নিজের সারি
+     * আর তার ভিত্তি একক।
+     *
+     * @param  iterable<Product>  $products
+     * @return array<int, list<array{unit: Unit, factor: string}>>
+     */
+    public function laddersFor(iterable $products, bool $packsOnly = false): array
+    {
         $units = Unit::query()->active()->with('baseUnit')->get();
 
         if ($units->isEmpty()) {
@@ -259,26 +301,21 @@ final class PackConversion
             ->get()
             ->groupBy('product_id');
 
-        $options = [];
+        $ladders = [];
 
         foreach ($products as $product) {
             if ($product->unit_id === null) {
                 continue;
             }
 
-            $ladder = $this->ladder($product, $units, $packs->get($product->id, collect()));
+            $own = $packs->get($product->id, collect());
 
-            if (count($ladder) < 2) {
-                continue;
-            }
-
-            $options[$product->id] = array_map(
-                fn (array $step) => ['id' => $step['unit']->id, 'label' => $step['unit']->name()],
-                $ladder,
-            );
+            $ladders[$product->id] = $packsOnly
+                ? $this->ladder($product, $units->whereIn('id', $own->pluck('unit_id')->push($product->unit_id)->all()), $own)
+                : $this->ladder($product, $units, $own);
         }
 
-        return $options;
+        return $ladders;
     }
 
     /**
