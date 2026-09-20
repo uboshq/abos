@@ -55,7 +55,14 @@ class RentalContract extends Model implements Drillable
 
     protected $fillable = [
         'company_id', 'branch_id', 'document_no',
-        'counterparty', 'counterparty_phone', 'subject',
+        /*
+         * ⭐ পক্ষ আর জিনিস দুইটাই এখন জোড়া লাগে — ২০ সেপ্টেম্বর ২০২৬।
+         * ⓘ টাইপ করা নাম দুইটা (`counterparty`, `subject`) রয়ে গেছে:
+         * পুরনো চুক্তিগুলোর নাম ওখানেই, আর তালিকায় নেই এমন জিনিসের
+         * জন্য ঘরটা এখনো কাজে লাগে।
+         */
+        'counterparty', 'counterparty_phone', 'party_type', 'party_id',
+        'subject', 'subject_type', 'subject_id',
         'account_id', 'expense_account_id',
         'deposit_amount', 'monthly_rent', 'monthly_adjustment', 'advance_months', 'tax_rate', 'rent_day',
         'starts_on', 'term_months', 'ends_on',
@@ -153,6 +160,20 @@ class RentalContract extends Model implements Drillable
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('status', self::ACTIVE);
+    }
+
+    /**
+     * ⭐ এই জায়গার চুক্তিগুলো — ২০ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ উল্টো দিকের প্রশ্নটার জন্য: গুদামের পাতা খুলে "এটার ভাড়া কত,
+     * জামানত কত, চুক্তি কবে শেষ"। ⚠️ এই দিকটাই আসল কারণ — যে ভাড়া কোনো
+     * জায়গার সাথে মেলে না, সেটাই ছেড়ে আসা গুদামের ভাড়া দিতে থাকায়।
+     *
+     * @param  Builder<RentalContract>  $query
+     */
+    public function scopeForSubject(Builder $query, string $type, int|string $id): Builder
+    {
+        return $query->where('subject_type', $type)->where('subject_id', $id);
     }
 
     /**

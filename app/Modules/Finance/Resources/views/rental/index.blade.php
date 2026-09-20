@@ -23,9 +23,12 @@
              '<a href=\'' . route('finance.rental.show', $c) . '\' '
              . 'class=\'text-(--color-brand-500) underline-offset-2 hover:underline\'>'
              . e($c->counterparty) . '</a>')],
+        /*
+         * ⭐ কী ভাড়া নেওয়া — এখন জিনিসটার পাতাতেই নামে (২০ সেপ্টেম্বর ২০২৬)।
+         * ⓘ পুরনো চুক্তিতে জোড়া নেই, তখন আগের মতোই কেবল লেখা।
+         */
         ['key' => 'subject', 'label' => __('finance::field.rental_subject'),
-         'render' => fn ($c) => new \Illuminate\Support\HtmlString(
-             '<span class=\'text-(--color-ink-muted)\'>' . e($c->subject) . '</span>')],
+         'render' => fn ($c) => view('finance::rental.partials.place', ['contract' => $c])],
         ['key' => 'monthly_rent', 'label' => __('finance::field.rental_rent'), 'numeric' => true,
          'render' => fn ($c) => \App\Core\Support\Money::format($c->monthly_rent)],
         ['key' => 'cash', 'label' => __('finance::field.rental_cash'), 'numeric' => true,
@@ -105,6 +108,24 @@
                 </x-slot:actions>
             </x-ui.toolbar>
         </form>
+
+        {{-- ⭐ এই জায়গার চুক্তি — ছাঁকনিটা চুপচাপ বসে না (২০ সেপ্টেম্বর ২০২৬)।
+             ⚠️ না লিখলে মানুষ ভাবতেন এটাই সব চুক্তি, আর সংখ্যাটা কম মনে হত। --}}
+        @if (($subject ?? null) !== null)
+            <p class="flex flex-wrap items-center gap-2 border-b border-(--color-border) px-3 py-2 text-sm">
+                <span class="rounded-(--radius-pill) border border-(--color-border) px-3 py-0.5">
+                    {{ __('finance::field.rental_subject_'.$subject['type']) }}
+                    @if (($subjectSeen['label'] ?? null) !== null)
+                        — {{ $subjectSeen['label'] }}
+                    @endif
+                </span>
+
+                <a href="{{ route('finance.rental.index') }}"
+                   class="text-(--color-brand-500) underline-offset-2 hover:underline">
+                    {{ __('finance::action.show_everyone') }}
+                </a>
+            </p>
+        @endif
 
         {{-- ট্যাবের সারি — প্রতিটার পাশে কয়টা চুক্তি --}}
         <nav class="flex flex-wrap gap-1 border-b border-(--color-border) px-2 text-sm"

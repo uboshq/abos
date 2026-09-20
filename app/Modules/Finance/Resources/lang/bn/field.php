@@ -251,6 +251,21 @@ return [
     'state' => 'অবস্থা',
     'waiting_approval' => 'অনুমোদনের অপেক্ষায়',
     'rental_counterparty' => 'কার সাথে',
+
+    /*
+     * ⭐ দুইটা তালিকা — মালিকের নির্দেশ, ২০ সেপ্টেম্বর ২০২৬।
+     * ⓘ উপরের দুইটা ঘর (নাম, বিষয়) রয়ে গেছে তালিকায় নেই এমন
+     * বাড়িওয়ালা বা জিনিসের জন্য।
+     */
+    'rental_party' => 'কার সাথে — তালিকা থেকে',
+    'rental_party_none' => 'তালিকায় নেই, নাম লিখব',
+    'rental_subject_pick' => 'কী ভাড়া নেওয়া',
+    'rental_subject_none' => 'তালিকায় নেই, লিখে দেব',
+    'rental_subject_warehouse' => 'গুদাম',
+    'rental_subject_branch' => 'শাখা / অফিস',
+    'rental_subject_vehicle' => 'গাড়ি',
+    'rental_subject_fixed_asset' => 'স্থায়ী সম্পদ',
+    'rental_place' => 'কোন জায়গা',
     'rental_phone' => 'ফোন',
     'rental_subject' => 'কীসের জন্য',
     'rental_deposit' => 'জামানত',

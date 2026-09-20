@@ -63,6 +63,20 @@ class RentalContractService
                 'counterparty' => (string) $data['counterparty'],
                 'counterparty_phone' => $data['counterparty_phone'] ?? null,
                 'subject' => $data['subject'] ?? null,
+
+                /*
+                 * ⭐ কার সাথে, আর কী ভাড়া নেওয়া — জোড়া দুইটা,
+                 * ২০ সেপ্টেম্বর ২০২৬ (মালিকের নির্দেশ)।
+                 *
+                 * ⓘ উপরের দুইটা লেখার ঘর তবু ভরা থাকে: পুরনো চুক্তির
+                 * নাম ওখানেই, আর তালিকায় নেই এমন জিনিসের জন্য ঘরটা
+                 * এখনো একমাত্র পথ। ⚠️ জোড়া না থাকাটাও একটা উত্তর, তাই
+                 * ঘর দুইটা ঐচ্ছিক — `null` বসে, আর কিছু ভাঙে না।
+                 */
+                'party_type' => $data['party_type'] ?? null,
+                'party_id' => $data['party_id'] ?? null,
+                'subject_type' => $data['subject_type'] ?? null,
+                'subject_id' => $data['subject_id'] ?? null,
                 'account_id' => $this->depositHead($data)->id,
                 'expense_account_id' => $this->expenseHead($data)->id,
                 'deposit_amount' => $deposit,

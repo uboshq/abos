@@ -227,6 +227,18 @@ return [
     'state' => 'State',
     'waiting_approval' => 'Waiting for approval',
     'rental_counterparty' => 'With whom',
+
+    /* Two pickers — the owner's instruction, 20 Sep 2026. The typed
+       boxes stay for a landlord or a place that is not on a list. */
+    'rental_party' => 'With whom — from the list',
+    'rental_party_none' => 'Not on the list, I will type the name',
+    'rental_subject_pick' => 'What is rented',
+    'rental_subject_none' => 'Not on the list, I will type it',
+    'rental_subject_warehouse' => 'Warehouse',
+    'rental_subject_branch' => 'Branch / office',
+    'rental_subject_vehicle' => 'Vehicle',
+    'rental_subject_fixed_asset' => 'Fixed asset',
+    'rental_place' => 'Which place',
     'rental_phone' => 'Phone',
     'rental_subject' => 'What for',
     'rental_deposit' => 'Deposit',

@@ -32,9 +32,40 @@
               class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             @csrf
 
-            <x-ui.field name="counterparty" :label="__('finance::field.rental_counterparty')" required />
+            {{-- ⭐ কার সাথে — এখন তালিকা থেকে, ২০ সেপ্টেম্বর ২০২৬।
+
+                 মালিকের প্রশ্ন: *“কার সাথে * কীসের জন্য etar list kothay pabo?”*
+                 ⛔ তালিকা ছিল না, দুইটাই খোলা লেখা। ⚠️ তাতে "Al Amin",
+                 "Al-Amin" আর "আল আমিন" তিনজন বাড়িওয়ালা হয়ে যেতেন, আর
+                 একজনকে দেওয়া ভাড়া তিন খাতায় ছড়াত।
+
+                 ⓘ নামের ঘরটা তবু আছে, নিচে — তালিকায় নেই এমন বাড়িওয়ালার
+                 জন্য। তালিকা থেকে বাছলে নামটা আপনা থেকেই বসে যায়। --}}
+            <x-ui.select name="party" :label="__('finance::field.rental_party')"
+                         :options="$parties"
+                         :placeholder="__('finance::field.rental_party_none')"
+                         :hint="__('finance::message.rental_party_hint')"
+                         :selected="old('party')" />
+
+            <x-ui.field name="counterparty" :label="__('finance::field.rental_counterparty')"
+                        :hint="__('finance::message.rental_typed_name')" />
             <x-ui.field name="counterparty_phone" :label="__('finance::field.rental_phone')" />
-            <x-ui.field name="subject" :label="__('finance::field.rental_subject')" />
+
+            {{-- ⭐ কী ভাড়া নেওয়া — গুদাম, শাখা, গাড়ি, সম্পদ।
+
+                 মালিকের কথা: *“গোডাউনের সাথে এটার একটা লিংক করা উচিত হেড
+                 অফিসের সাথে লিংক করা উচিত”*। ⭐ আসল লাভ উল্টো দিকে:
+                 গুদামের পাতা খুলে দেখা যায় ভাড়া কত, জামানত কত, চুক্তি
+                 কবে শেষ। ⚠️ যে ভাড়া কোনো জায়গার সাথে মেলে না, সেটাই
+                 ডিপোকে ছেড়ে আসা গুদামের ভাড়া দিতে থাকায়। --}}
+            <x-ui.select name="subject_pick" :label="__('finance::field.rental_subject_pick')"
+                         :options="$subjects"
+                         :placeholder="__('finance::field.rental_subject_none')"
+                         :hint="__('finance::message.rental_subject_hint')"
+                         :selected="old('subject_pick')" />
+
+            <x-ui.field name="subject" :label="__('finance::field.rental_subject')"
+                        :hint="__('finance::message.rental_typed_subject')" />
 
             <x-ui.field name="deposit_amount" type="number" step="0.0001" min="0"
                         :label="__('finance::field.rental_deposit')" required />

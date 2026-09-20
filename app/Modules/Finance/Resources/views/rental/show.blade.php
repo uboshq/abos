@@ -40,6 +40,34 @@
         </div>
     @endif
 
+    {{-- ⭐ কার সাথে আর কী ভাড়া নেওয়া — দুইটাই এখন নিজের পাতায় নামে
+         (মালিকের নির্দেশ, ২০ সেপ্টেম্বর ২০২৬)।
+
+         ⓘ পুরনো চুক্তিতে জোড়া নেই — তখন এই সারিটা বসে না, আর উপরের
+         নাম-বিষয় আগের মতোই লেখা থাকে। ⚠️ জিনিসটা মুছে গেলে লেখা বসে,
+         লিংক নয়: ভাঙা লিংকের চেয়ে লেখা ভালো। --}}
+    @php
+        $place = app(\App\Modules\Finance\Services\RentalSubjects::class)
+            ->describe($contract->subject_type, $contract->subject_id);
+    @endphp
+
+    @if ($contract->subject_type !== null)
+        <p class="mb-4 flex flex-wrap items-center gap-2 text-sm">
+            <span class="text-(--color-ink-muted)">{{ __('finance::field.rental_place') }}:</span>
+
+            <span class="rounded-(--radius-pill) border border-(--color-border) px-3 py-0.5">
+                {{ __('finance::field.rental_subject_'.$contract->subject_type) }}
+            </span>
+
+            @if ($place['route'] === null)
+                <span>{{ $place['label'] ?? __('finance::message.rental_place_gone') }}</span>
+            @else
+                <a href="{{ route($place['route'][0], $place['route'][1] ?? []) }}"
+                   class="text-(--color-brand-500) underline-offset-2 hover:underline">{{ $place['label'] }}</a>
+            @endif
+        </p>
+    @endif
+
     <section data-boxed
              class="mb-4 grid gap-3 rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card) p-4 sm:grid-cols-2 lg:grid-cols-4">

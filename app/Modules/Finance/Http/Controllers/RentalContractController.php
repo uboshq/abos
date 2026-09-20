@@ -7,10 +7,12 @@ namespace App\Modules\Finance\Http\Controllers;
 use App\Core\Engines\Attachment\AttachmentEngine;
 use App\Core\Engines\Attachment\AttachmentException;
 use App\Core\Services\MenuBuilder;
+use App\Core\Services\PartyRegistry;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Finance\Models\RentalContract;
 use App\Modules\Finance\Services\RentalContractService;
+use App\Modules\Finance\Services\RentalSubjects;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -106,7 +108,40 @@ class RentalContractController extends Controller implements HasMiddleware
             ))
             ->orderBy('ends_on');
 
+        /*
+         * ⭐ এই জায়গার চুক্তি — মালিকের নির্দেশ, ২০ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ উল্টো দিকটাই আসল লাভ: গুদামের দিক থেকে প্রশ্ন — *"এটার
+         * ভাড়া কত, জামানত কত, চুক্তি কবে শেষ"*। ⚠️ ছাঁকনিটা
+         * পথে থাকে (`?subject=warehouse:3`), তাই জিনিসটার পাতা থেকে একটা
+         * লিংকই যথেষ্ট।
+         *
+         * ⛔ ছাঁকা হলে ট্যাবটা মানা হয় না, চালু আর বন্ধ দুইটাই আসে:
+         * গুদাম ছেড়ে আসার পরও প্রশ্নটা ওঠে — “জামানতটা ফেরত এসেছিল কি” — আর তখন সেটা বন্ধের ঘরে।
+         */
+        $subject = null;
+
+        if (filled($request->query('subject'))) {
+            [$type, $id] = array_pad(explode(':', (string) $request->query('subject'), 2), 2, null);
+
+            if (app(RentalSubjects::class)->knows((string) $type) && (int) $id > 0) {
+                $subject = ['type' => (string) $type, 'id' => (int) $id];
+            }
+        }
+
+        if ($subject !== null) {
+            $query = RentalContract::query()
+                ->with(['account', 'expenseAccount'])
+                ->forSubject($subject['type'], $subject['id'])
+                ->orderBy('ends_on');
+        }
+
         return view('finance::rental.index', [
+            'subject' => $subject,
+            'subjectSeen' => $subject === null
+                ? null
+                : app(RentalSubjects::class)->describe($subject['type'], $subject['id']),
+
             'menu' => $this->menu->forUser($request->user()),
             'contracts' => $query->paginate(50)->withQueryString(),
 
@@ -141,6 +176,16 @@ class RentalContractController extends Controller implements HasMiddleware
             'menu' => $this->menu->forUser($request->user()),
             'money' => $this->moneyAccounts(),
             'heads' => Account::query()->postable()->active()->orderBy('code')->get(),
+
+            /*
+             * ⭐ দুইটা তালিকা — মালিকের নির্দেশ, ২০ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ *"কার সাথে * কীসের জন্য etar list kothay pabo?"* — দুইটাই
+             * মুক্ত-লেখা ঘর ছিল। ⚠️ তাতে একজন বাড়িওয়ালা তিন বানানে তিনজন
+             * হয়ে যেতেন, আর একজনকে দেওয়া ভাড়া তিন খাতায় ছড়াত।
+             */
+            'parties' => $this->parties(),
+            'subjects' => app(RentalSubjects::class)->forPicker(),
         ]);
     }
 
@@ -164,8 +209,18 @@ class RentalContractController extends Controller implements HasMiddleware
 
     public function store(Request $request): RedirectResponse
     {
-        $contract = $this->contracts->open($request->validate([
-            'counterparty' => ['required', 'string', 'max:191'],
+        $data = $request->validate([
+            /*
+             * ⭐ তালিকা থেকে বাছা, নাহলে হাতে লেখা — ২০ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ `party` ঘরটা "person:3" ছাঁদে, হাতধারের মতোই। ⚠️ নামের
+             * ঘরটা তবু রয়ে গেছে: তালিকায় নেই এমন বাড়িওয়ালার জন্য,
+             * আর পুরনো চুক্তিগুলোর নাম ওখানেই লেখা।
+             */
+            'party' => ['nullable', 'string', 'max:40'],
+            'subject_pick' => ['nullable', 'string', 'max:40'],
+
+            'counterparty' => ['required_without:party', 'nullable', 'string', 'max:191'],
             'counterparty_phone' => ['nullable', 'string', 'max:40'],
             'subject' => ['nullable', 'string', 'max:191'],
             'deposit_amount' => ['required', 'numeric', 'min:0'],
@@ -191,7 +246,11 @@ class RentalContractController extends Controller implements HasMiddleware
             // এক জায়গায়: [[VoucherService::assertBankReferenceIsFree]]
             'instrument_no' => ['nullable', 'string', 'max:64'],
             'note' => ['nullable', 'string', 'max:500'],
-        ]));
+        ]);
+
+        $this->splitThePicks($data);
+
+        $contract = $this->contracts->open($data);
 
         $this->keepThePaper($request, $contract);
 
@@ -268,6 +327,89 @@ class RentalContractController extends Controller implements HasMiddleware
         ]));
 
         return back()->with('saved', __('finance::message.rental_closed_done'));
+    }
+
+    /**
+     * কার সাথে চুক্তি — ব্যক্তি, গ্রাহক বা সরবরাহকারী।
+     *
+     * ⓘ তালিকাটা কোরের [[PartyRegistry]] থেকে, কারণ অর্থ গ্রাহক বা
+     * সরবরাহকারী মডিউলের উপর নির্ভর করে না ([[BoundariesTest]])।
+     * ⚠️ কর্মচারী বাদ: কর্মচারীর কাছ থেকে ঘর ভাড়া নেওয়া হলে তিনি
+     * সেখানে বাড়িওয়ালা, কর্মচারী নয় — আর তাঁর নামটা ব্যক্তির তালিকাতেই।
+     *
+     * @return array<string, string>
+     */
+    private function parties(): array
+    {
+        $out = [];
+
+        foreach (app(PartyRegistry::class)->forPicker() as $group) {
+            if (! in_array($group['type'], ['person', 'customer', 'supplier'], true)) {
+                continue;
+            }
+
+            foreach ($group['options'] as $option) {
+                $out[$group['type'].':'.$option['id']] = $group['label'].' — '.$option['label'];
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * বাছাই করা দুইটা ঘর → চারটা কলাম।
+     *
+     * ── ⭐ মালিকের নির্দেশ, ২০ সেপ্টেম্বর ২০২৬ ──────────────────────────
+     * *"কার সাথে * কীসের জন্য etar list kothay pabo?"* — দুইটাই এখন
+     * তালিকা থেকে আসে। ⓘ পর্দায় একটা ঘর ("person:3"), খাতায় দুইটা কলাম:
+     * ধরন আর আইডি — হাতধারের হুবহু একই ছক।
+     *
+     * ⭐ নামটাও বসে যায়: তালিকা থেকে বাছলে `counterparty`-তে ঐ পক্ষের
+     * নামই লেখা হয়। ⚠️ নাহলে পুরনো তালিকা আর রিপোর্টগুলো, যেগুলো
+     * টাইপ করা নামটা পড়ে, খালি ঘর দেখাত।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function splitThePicks(array &$data): void
+    {
+        $parties = app(PartyRegistry::class);
+
+        if (filled($data['party'] ?? null)) {
+            [$type, $id] = array_pad(explode(':', (string) $data['party'], 2), 2, null);
+
+            if ($parties->knows((string) $type) && (int) $id > 0
+                && $parties->exists((string) $type, (int) $id)) {
+                $data['party_type'] = $type;
+                $data['party_id'] = (int) $id;
+
+                if (blank($data['counterparty'] ?? null)) {
+                    $data['counterparty'] = $parties->labelsOf([[$type, (int) $id]])[$type.':'.$id]
+                        ?? (string) $type;
+                }
+            }
+        }
+
+        if (filled($data['subject_pick'] ?? null)) {
+            [$type, $id] = array_pad(explode(':', (string) $data['subject_pick'], 2), 2, null);
+
+            $subjects = app(RentalSubjects::class);
+
+            if ($subjects->knows((string) $type) && (int) $id > 0) {
+                $seen = $subjects->describe((string) $type, (int) $id);
+
+                if ($seen['label'] !== null) {
+                    $data['subject_type'] = $type;
+                    $data['subject_id'] = (int) $id;
+
+                    // ⓘ লেখার ঘরটা খালি থাকলে জিনিসটার নামই বসে
+                    if (blank($data['subject'] ?? null)) {
+                        $data['subject'] = $seen['label'];
+                    }
+                }
+            }
+        }
+
+        unset($data['party'], $data['subject_pick']);
     }
 
     /** @return Collection<int, Account> */

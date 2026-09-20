@@ -129,4 +129,12 @@ return [
     'kind_removed' => ':name removed.',
     'no_kinds' => 'No kinds yet.',
 
+    /* The two rental pickers — 20 Sep 2026 */
+    'rental_party_hint' => 'If the landlord is already on your list, pick them — then the rent, the deposit and the dues all read as one person.',
+    'rental_subject_hint' => 'Which godown, which office, which vehicle — pick it and the contract also shows on that thing\'s own page.',
+    'rental_typed_name' => 'Picking from the list fills this in by itself.',
+    'rental_typed_subject' => 'Type it here when it is not on a list — a meter, or space for a signboard.',
+    'rental_place_gone' => 'That thing is no longer on the list',
+    'rental_for_place' => 'Contracts for this place',
+
 ];
