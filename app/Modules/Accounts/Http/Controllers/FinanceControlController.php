@@ -15,6 +15,7 @@ use App\Models\LedgerEntry;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\DuplicateParties;
 use App\Modules\Accounts\Services\MonthEndChecklist;
+use App\Modules\Accounts\Services\PostingBacklog;
 use App\Modules\Backup\Models\BackupRun;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Scheduling\Schedule;
@@ -59,7 +60,7 @@ class FinanceControlController extends Controller implements HasMiddleware
     /**
      * পোস্টিং মনিটর — একটা দিনে কোন কাগজ কতবার খাতায় উঠল, আর কী আটকে আছে।
      */
-    public function posting(Request $request): View
+    public function posting(Request $request, PostingBacklog $backlog): View
     {
         $tab = $request->query('tab') === 'stuck' ? 'stuck' : 'posted';
         $date = $this->date($request->query('date'));
@@ -104,6 +105,14 @@ class FinanceControlController extends Controller implements HasMiddleware
         return view('accounts::control.posting', [
             'menu' => $this->menu->forUser($request->user()),
             'tab' => $tab,
+            /*
+             * ⭐ যে কাগজ নিশ্চিত হয়েও খাতায় ওঠেনি — ২০ সেপ্টেম্বর ২০২৬,
+             * মালিকের *"Accounts e post pending hoye thakle bujha zay na"*।
+             * ⓘ ভাউচারের খসড়ার চেয়ে এটা বেশি বিপজ্জনক: কাগজে কাজ শেষ
+             * দেখায়, অথচ লাভ-ক্ষতি আর বকেয়া দুইটাই ভুল বলে।
+             */
+            'notPosted' => $tab === 'stuck' ? $backlog->notInTheBooks() : [],
+            'awaiting' => $tab === 'stuck' ? $backlog->awaitingSignature() : [],
             'date' => $date,
             'posted' => $posted,
             'stuck' => $stuck,

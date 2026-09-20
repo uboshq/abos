@@ -71,6 +71,54 @@
         ])
 
         @if ($tab === 'stuck')
+            {{-- ⭐ নিশ্চিত হয়েও খাতায় ওঠেনি — ২০ সেপ্টেম্বর ২০২৬, মালিকের
+                 *"Accounts e post pending hoye thakle bujha zay na"*।
+
+                 ⓘ সবার উপরে, আর খসড়ার আগে: খসড়া দেখলে বোঝা যায় কাজ বাকি,
+                 কিন্তু নিশ্চিত হওয়া বিল দেখে সবাই ভাবেন কাজ শেষ — অথচ
+                 খাতায় নেই মানে লাভ-ক্ষতি আর বকেয়া দুইটাই ভুল বলছে। --}}
+            @if ($notPosted !== [])
+                <section class="border-b border-(--color-border)" data-not-posted>
+                    <h2 class="flex items-baseline gap-2 bg-(--color-badge-danger-bg) px-4 py-2
+                               text-sm font-semibold text-(--color-badge-danger-ink)">
+                        {{ __('accounts::control.not_posted') }}
+                        <span class="num">{{ count($notPosted) }}</span>
+                    </h2>
+
+                    <p class="border-b border-(--color-border) px-4 py-2 text-2xs text-(--color-ink-muted)">
+                        {{ __('accounts::control.not_posted_note', ['days' => \App\Modules\Accounts\Services\PostingBacklog::LOOK_BACK_DAYS]) }}
+                    </p>
+
+                    <x-ui.table :rows="$notPosted" :columns="[
+                        ['key' => 'trx_date', 'label' => __('accounts::control.date'), 'width' => '8rem',
+                         'render' => fn ($r) => \App\Core\Support\DateFormat::format($r['trx_date'])],
+                        ['key' => 'source', 'label' => __('accounts::control.source'), 'width' => '11rem',
+                         'render' => fn ($r) => \Illuminate\Support\Facades\Lang::has('core.source.'.$r['source'])
+                             ? __('core.source.'.$r['source'])
+                             : $r['source']],
+                        ['key' => 'document_no', 'label' => __('core.print.document_no'), 'width' => '12rem',
+                         'render' => fn ($r) => $r['document_no'] ?: '—'],
+                        ['key' => 'amount', 'label' => __('accounts::control.amount'), 'numeric' => true, 'width' => '10rem',
+                         'render' => fn ($r) => $r['amount'] === null ? '—' : \App\Core\Support\Money::format($r['amount'])],
+                    ]" />
+                </section>
+            @endif
+
+            {{-- অন্য মডিউলের কাগজ সইয়ের অপেক্ষায় — ভাউচারগুলো নিচের তালিকায় --}}
+            @if ($awaiting !== [])
+                <p class="flex flex-wrap items-center gap-2 border-b border-(--color-border) px-4 py-2 text-sm">
+                    <span class="text-(--color-ink-muted)">{{ __('accounts::control.awaiting_elsewhere') }}</span>
+                    @foreach ($awaiting as $module => $count)
+                        <a href="{{ route('approval.inbox.index', ['module' => $module]) }}"
+                           class="rounded-(--radius-pill) bg-(--color-badge-pending-bg) px-2.5 py-1 text-2xs
+                                  text-(--color-badge-pending-ink) hover:underline">
+                            {{ \Illuminate\Support\Facades\Lang::has('core.module.'.$module) ? __('core.module.'.$module) : $module }}
+                            <span class="num">{{ $count }}</span>
+                        </a>
+                    @endforeach
+                </p>
+            @endif
+
             <x-ui.table :rows="$stuck" :columns="$stuckColumns" :empty="__('accounts::control.nothing_stuck')" />
         @else
             <x-ui.table :rows="$posted" :columns="$postedColumns" :empty="__('accounts::control.nothing_posted')" />

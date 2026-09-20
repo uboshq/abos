@@ -83,4 +83,10 @@ return [
     'same_phone' => 'Same mobile',
     'same_name' => 'Same name',
     'no_duplicates' => 'No duplicates found in this list.',
+    'not_posted' => 'Confirmed, not in the books',
+    'not_posted_note' => 'These papers were confirmed, yet the ledger holds no row in their name — so profit and dues are both wrong right now. Last :days days.',
+    'awaiting_elsewhere' => 'Awaiting a signature elsewhere:',
+    'pending_posting' => 'Not in the books',
+    'pending_posting_note' => 'Confirmed papers with no ledger row',
+    'not_posted_count' => '{1} One confirmed paper never reached the books|[2,*] :count confirmed papers never reached the books',
 ];

@@ -11,6 +11,7 @@ use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Models\MoneyTransfer;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\AccountsFacts;
+use App\Modules\Accounts\Services\PostingBacklog;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
@@ -32,6 +33,7 @@ class AccountsDashboardController extends Controller implements HasMiddleware
     public function __construct(
         private readonly MenuBuilder $menu,
         private readonly AccountsFacts $facts,
+        private readonly PostingBacklog $backlog,
     ) {}
 
     public static function middleware(): array
@@ -74,6 +76,16 @@ class AccountsDashboardController extends Controller implements HasMiddleware
              * এখনো দাতার হাতে — দুইটাই এমন অবস্থা যা কেউ ইচ্ছাকৃতভাবে
              * রেখে দেয় না, শুধু ভুলে যায়।
              */
+            /*
+             * ⭐ নিশ্চিত হয়েও খাতায় ওঠেনি — ২০ সেপ্টেম্বর ২০২৬, মালিকের
+             * *"Accounts e post pending hoye thakle bujha zay na"*।
+             *
+             * ⓘ সংখ্যাটা এখানেই, কারণ যিনি জানেন না কিছু আটকে আছে তিনি
+             * পোস্টিং মনিটরে যাবেনই না — আর এটা ঠিক সেই ধরনের ভুল যা
+             * নিজে থেকে চোখে পড়ে না ([[PostingBacklog]])।
+             */
+            'notPosted' => $this->backlog->count(),
+
             'draftVouchers' => Voucher::query()->draft()->count(),
             'pendingTransfers' => MoneyTransfer::query()->pending()->count(),
 

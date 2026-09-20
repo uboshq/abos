@@ -22,7 +22,7 @@
 
     <x-ui.errors />
 
-    @if ($draftVouchers > 0 || $pendingTransfers > 0)
+    @if ($draftVouchers > 0 || $pendingTransfers > 0 || $notPosted > 0)
         <section data-boxed class="mb-4 rounded-(--radius-card) border border-(--color-warning)
                         bg-(--color-badge-warning-bg) p-4">
             <h2 class="font-semibold text-(--color-badge-warning-ink)">
@@ -30,6 +30,21 @@
             </h2>
 
             <ul class="mt-2 space-y-1 text-sm text-(--color-badge-warning-ink)">
+                {{-- ⭐ সবার আগে, আর ইচ্ছে করে — ২০ সেপ্টেম্বর ২০২৬।
+
+                     খসড়া ভাউচার বা অপেক্ষমাণ হস্তান্তর দেখে বোঝা যায় কাজ
+                     বাকি। কিন্তু নিশ্চিত হওয়া বিল খাতায় না উঠলে কাগজে সব
+                     শেষ দেখায়, অথচ লাভ-ক্ষতি আর বকেয়া দুইটাই ভুল — তাই
+                     এই সারিটা উপরে। --}}
+                @if ($notPosted > 0)
+                    <li>
+                        <a href="{{ route('accounts.control.posting', ['tab' => 'stuck']) }}"
+                           class="underline underline-offset-2" data-not-posted-count="{{ $notPosted }}">
+                            {{ trans_choice('accounts::control.not_posted_count', $notPosted, ['count' => $notPosted]) }}
+                        </a>
+                    </li>
+                @endif
+
                 @if ($draftVouchers > 0)
                     <li>
                         <a href="{{ route('accounts.voucher.index', ['type' => 'journal', 'status' => 'draft']) }}"
