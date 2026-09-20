@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\MoneyCategory;
 use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Accounts\Services\AccountService;
 use App\Modules\Accounts\Services\AccountsFacts;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Models\Customer;
@@ -69,6 +70,34 @@ class TheReceiptAskedTwelveQuestionsAndKnewSixTest extends TestCase
             ->firstOrFail();
     }
 
+    /**
+     * একটা সত্যিকারের ব্যাংক খাত — না থাকলে বানিয়ে নেওয়া হয়।
+     *
+     * ⛔ নগদে ফেরত যাওয়া যায় না: এই পরীক্ষাটাই চার্জ নিয়ে, আর
+     * চার্জ কেবল ব্যাংক বা MFS-এ হয় ([[VoucherService]])। ⚠️ নগদে নেমে
+     * গেলে পরীক্ষাটা নিজেই নিজের বিরুদ্ধে যেত — যে জিনিসটা নিষিদ্ধ,
+     * সেটা দিয়েই দাবিটা প্রমাণ করতে চাইত।
+     *
+     * ⓘ ডেমোর ছকে `money_kind = bank` বসানো কোনো খাত নেই, আর
+     * সেটাই এই দাবিটাকে লাল রাখত — তাও এমন একটা ভুলে যার সাথে
+     * চার্জের কোনো সম্পর্কই নেই।
+     */
+    private function aBankAccount(): Account
+    {
+        $found = Account::query()->where('money_kind', Account::BANK)
+            ->postable()->active()->orderBy('code')->first();
+
+        if ($found !== null) {
+            return $found;
+        }
+
+        return app(AccountService::class)->create([
+            'code' => StandardChart::BANK.'-01',
+            'name_en' => 'Test bank account',
+            'parent_id' => Account::query()->where('code', StandardChart::BANK)->value('id'),
+        ]);
+    }
+
     private function receivable(): Account
     {
         return StandardChart::find(StandardChart::RECEIVABLE)
@@ -110,6 +139,17 @@ class TheReceiptAskedTwelveQuestionsAndKnewSixTest extends TestCase
         return $this->post(
             route('accounts.voucher.store', ['type' => Voucher::RECEIPT]),
             [
+                /*
+                 * ⚠️ ঠিকানার `{type}` মেনুর জন্য — যাচাই পড়ে **ফর্মের**
+                 * ঘরটা ([[VoucherRequest::rules()]]-এ `type` required)।
+                 *
+                 * ⛔ ঘরটা না পাঠানোয় এই ফাইলের ছয়টা দাবি লাল ছিল, আর
+                 * বার্তাটা বলত "ধরন দিতেই হবে" — অর্থাৎ অনুরোধটা
+                 * যাচাইয়েই আটকে যেত, আর পরীক্ষাগুলো যা মাপতে চেয়েছিল
+                 * তার কাছেই পৌঁছাত না। ⓘ সহোদর পরীক্ষাগুলো শুরু থেকেই
+                 * দুই জায়গাতেই পাঠায় ([[TheOwnersCapitalWasBookedAsACustomerPayingTest]])।
+                 */
+                'type' => Voucher::RECEIPT,
                 'trx_date' => now()->toDateString(),
                 'amount' => '1000',
                 'from_account_id' => $this->receivable()->id,
@@ -233,7 +273,7 @@ class TheReceiptAskedTwelveQuestionsAndKnewSixTest extends TestCase
      */
     public function test_a_bank_charge_leaves_the_contribution_whole(): void
     {
-        $bank = $this->moneyAccount(Account::BANK);
+        $bank = $this->aBankAccount();
 
         $this->postReceipt([
             'amount' => '8000',
