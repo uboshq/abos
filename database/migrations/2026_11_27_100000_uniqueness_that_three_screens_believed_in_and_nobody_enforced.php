@@ -28,6 +28,18 @@ use Illuminate\Support\Facades\Schema;
  *
  * ⭐ আর ঐ ফাঁকটা খোলা থাকলেও আমদানিকারক আর ভুল পণ্য বাছে না — সেটা
  * এখন দুইটার বেশি মিললে থেমে যায় ([[OpeningStockImporter]])।
+ *
+ * ── ⛔ এই মাইগ্রেশনটা একবার লাইভে অর্ধেক বসেছিল, ২১ সেপ্টেম্বর ২০২৬ ──
+ * প্রথম রূপে `number_series`-এর NULL `branch_id`-তে sentinel ০ বসানো
+ * হত। ⚠️ কিন্তু কলামটায় `branches(id)`-এর foreign key আছে, আর **শাখা ০
+ * বলে কিছু নেই** — তাই ঐ লাইনেই মাইগ্রেশন ছুঁড়ে থেমে গেল, অথচ তার
+ * আগের ধাপে বারকোডের সূচকটা **বসে গিয়েছিল**। ⓘ `migrate` ব্যর্থ হলে
+ * Laravel সারিটা `migrations` টেবিলে লেখে না, তাই লাইভে সূচক ছিল আর
+ * `migrate:status` বলত Pending — অর্থাৎ পরের রানে "Duplicate key name"।
+ *
+ * ⭐ তাই এখন **প্রতিটা ধাপ আগে দেখে নেয় জিনিসটা ইতিমধ্যে আছে কি না**।
+ * একটা মাইগ্রেশন যেটা দ্বিতীয়বার চালানো যায় না, সেটা লাইভে একবার
+ * আটকালে আর কোনোদিন চলে না।
  */
 return new class extends Migration
 {
@@ -49,22 +61,7 @@ return new class extends Migration
             $this->uniqueOn($table, ['company_id', $column], $table.'_company_document_unique');
         }
 
-        /*
-         * ⛔ `number_series_scope_unique` NULL-ভেদ্য ছিল।
-         *
-         * ⚠️ MySQL-এ unique index-এ NULL একাধিকবার বসে। `branch_id` আর
-         * `financial_year_id` দুইটাই nullable, তাই একই `doc_type`-এ
-         * দুইটা সারি থাকতে পারত — আর তখন দুইটা কাউন্টার একই কাগজের
-         * নম্বর কাটত, দুইজনে দুই রকম।
-         *
-         * ⓘ সারানোটা সোজা: NULL-এর বদলে ০ বসে, আর কলাম দুইটা NOT NULL।
-         * ⚠️ ০ মানে "কোনো শাখা নয়/কোনো বছর নয়" — আগের NULL-এর হুবহু
-         * একই মানে, কিন্তু unique index এবার সত্যিই কামড়ায়।
-         */
-        if (Schema::hasTable('number_series')) {
-            DB::table('number_series')->whereNull('branch_id')->update(['branch_id' => 0]);
-            DB::table('number_series')->whereNull('financial_year_id')->update(['financial_year_id' => 0]);
-        }
+        $this->numberSeriesScopeReallyBites();
     }
 
     public function down(): void
@@ -74,6 +71,83 @@ return new class extends Migration
         foreach (array_keys(self::DOCUMENT_NUMBERS) as $table) {
             $this->dropIfThere($table, $table.'_company_document_unique');
         }
+
+        $this->dropIfThere('number_series', 'number_series_scope_bites');
+
+        foreach (['branch_key', 'financial_year_key'] as $column) {
+            if (Schema::hasTable('number_series') && Schema::hasColumn('number_series', $column)) {
+                Schema::table('number_series', fn (Blueprint $t) => $t->dropColumn($column));
+            }
+        }
+    }
+
+    /**
+     * ⛔ `number_series_scope_unique` NULL-ভেদ্য ছিল।
+     *
+     * ⚠️ MySQL-এ unique index-এ NULL একাধিকবার বসে। `branch_id` আর
+     * `financial_year_id` দুইটাই nullable, তাই একই `doc_type`-এ দুইটা
+     * সারি থাকতে পারত — আর তখন দুইটা কাউন্টার একই কাগজের নম্বর কাটত,
+     * দুইজনে দুই রকম।
+     *
+     * ── ⛔ যে পথটা বন্ধ ─────────────────────────────────────────────
+     * NULL-এর বদলে ০ বসানো যায় না: দুইটা কলামেই foreign key আছে
+     * (`branches`, `financial_years`), আর শূন্য আইডির কোনো শাখা বা বছর
+     * নেই। ⚠️ লাইভে ঠিক এখানেই মাইগ্রেশন ছুঁড়েছিল।
+     *
+     * ── ⭐ যে পথটা খোলা ─────────────────────────────────────────────
+     * দুইটা **generated** কলাম, `COALESCE(…, 0)` — generated কলামে
+     * foreign key থাকে না, তাই ০ বসাতে বাধা নেই। ⓘ `branch_id`
+     * NULL-ই থেকে যায়, একটা সারিও বদলায় না; কেবল সূচকটা এবার সত্যিই
+     * কামড়ায়।
+     *
+     * ⓘ পুরনো সূচকটা তোলা হয় না — ওটা ক্ষতি করে না, আর foreign key
+     * গুলো কোন সূচকের উপর দাঁড়িয়ে আছে সেটা লাইভে অনুমান করার জিনিস নয়।
+     */
+    private function numberSeriesScopeReallyBites(): void
+    {
+        if (! Schema::hasTable('number_series') || DB::getDriverName() !== 'mysql') {
+            return;
+        }
+
+        foreach (['branch_id' => 'branch_key', 'financial_year_id' => 'financial_year_key'] as $from => $key) {
+            if (Schema::hasColumn('number_series', $key)) {
+                continue;
+            }
+
+            DB::statement(
+                "ALTER TABLE `number_series` ADD COLUMN `{$key}` BIGINT UNSIGNED"
+                ." AS (COALESCE(`{$from}`, 0)) STORED"
+            );
+        }
+
+        if ($this->indexIsThere('number_series', 'number_series_scope_bites')) {
+            return;
+        }
+
+        /*
+         * ⚠️ নকল থাকলে এখানেও থামা হয় না — উপরের `uniqueOn()`-এর একই
+         * নিয়ম। ⓘ কিন্তু নকলটা গোনা হয় generated কলাম ধরে, কারণ
+         * প্রশ্নটা ঠিক ওটাই: "০ ধরে দেখলে কি দুইটা সারি এক হয়ে যায়"।
+         */
+        $clashes = DB::table('number_series')
+            ->selectRaw('company_id, COALESCE(branch_id, 0) as b, doc_type, COALESCE(financial_year_id, 0) as y')
+            ->groupBy('company_id', 'b', 'doc_type', 'y')
+            ->havingRaw('COUNT(*) > 1')
+            ->count();
+
+        if ($clashes > 0) {
+            error_log("[number_series] {$clashes} scope(s) already hold more than one counter — "
+                .'the unique index was skipped; two counters are cutting numbers for one document type.');
+
+            return;
+        }
+
+        Schema::table('number_series', function (Blueprint $blueprint) {
+            $blueprint->unique(
+                ['company_id', 'branch_key', 'doc_type', 'financial_year_key'],
+                'number_series_scope_bites',
+            );
+        });
     }
 
     /**
@@ -91,6 +165,18 @@ return new class extends Migration
             if (! Schema::hasColumn($table, $column)) {
                 return;
             }
+        }
+
+        /*
+         * ⭐ আগে থেকে থাকলে চুপচাপ এগিয়ে যাওয়া — ২১ সেপ্টেম্বর ২০২৬।
+         *
+         * ⚠️ লাইভে এই সূচকটা বসে গিয়েছিল আর মাইগ্রেশনটা পরের ধাপে
+         * ছুঁড়েছিল, তাই সারিটা `migrations`-এ লেখা হয়নি। ⛔ এই যাচাইটা
+         * না থাকলে পরের রান "Duplicate key name" দিয়ে থামত, আর
+         * মাইগ্রেশনটা চিরকালের জন্য আটকে যেত।
+         */
+        if ($this->indexIsThere($table, $name)) {
+            return;
         }
 
         $duplicates = DB::table($table)
@@ -120,18 +206,31 @@ return new class extends Migration
         });
     }
 
+    /**
+     * এই নামে সূচকটা ইতিমধ্যে আছে কি না।
+     *
+     * ⓘ `Schema::getIndexes()` ড্রাইভার-নিরপেক্ষ, তাই sqlite-এও চলে —
+     * পরীক্ষাগুলো MySQL-এ চললেও কেউ একদিন অন্য ড্রাইভারে চালাতে পারেন।
+     */
+    private function indexIsThere(string $table, string $name): bool
+    {
+        foreach (Schema::getIndexes($table) as $index) {
+            if (($index['name'] ?? null) === $name) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private function dropIfThere(string $table, string $name): void
     {
-        if (! Schema::hasTable($table)) {
+        if (! Schema::hasTable($table) || ! $this->indexIsThere($table, $name)) {
             return;
         }
 
-        try {
-            Schema::table($table, function (Blueprint $blueprint) use ($name) {
-                $blueprint->dropUnique($name);
-            });
-        } catch (\Throwable) {
-            // ⓘ বসেইনি (নকল ছিল) — তখন তোলারও কিছু নেই
-        }
+        Schema::table($table, function (Blueprint $blueprint) use ($name) {
+            $blueprint->dropUnique($name);
+        });
     }
 };
