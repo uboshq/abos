@@ -53,6 +53,15 @@ return [
     'line_no' => 'ক্রম',
     'state' => 'অবস্থা',
     'customer' => 'গ্রাহক',
+
+    // ⭐ আদেশের খোঁজ — ধাপগুলোর নাম (১৯ সেপ্টেম্বর ২০২৬)
+    'delivered_of_ordered' => 'গেছে / চাওয়া',
+    'stage' => 'ধাপ',
+    'stage_all' => 'সব',
+    'stage_placed' => 'আদেশ হয়েছে',
+    'stage_partial' => 'কিছু গেছে',
+    'stage_delivered' => 'মাল গেছে',
+    'stage_billed' => 'বিল হয়েছে',
     'delivered' => 'দেওয়া হয়েছে',
     'uninvoiced' => 'বিল হয়নি',
     'uninvoiced_value' => 'বিল না-হওয়া মূল্য',

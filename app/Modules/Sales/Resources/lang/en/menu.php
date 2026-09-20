@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'orders' => 'Sales Orders',
+    'order_track' => 'Order Tracking',
     'receipts' => 'Goods Received',
     'bills' => 'Purchase Bills',
     'pending_orders' => 'Pending Sales Orders',

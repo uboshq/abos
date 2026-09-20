@@ -29,6 +29,10 @@ return [
     'bill_confirmed' => 'Bill posted — the liability is now in the supplier\'s name.',
     'bill_cancelled' => 'Bill cancelled.',
     'no_orders' => 'No sales orders yet.',
+
+    'order_track_note' => 'Where each order stands — how much has gone out, and whether it is billed',
+    'order_track_search' => 'Search by order number or customer…',
+    'no_orders_to_track' => 'No orders to track.',
     'no_receipts' => 'Nothing received yet.',
     'no_bills' => 'No purchase bills yet.',
     'order_search' => 'Search by number or customer…',

@@ -117,6 +117,16 @@ return [
                 'setting' => 'sales.screen_direct'],
             ['label' => 'sales::menu.orders', 'icon' => 'book', 'route' => 'sales.order.index', 'permission' => 'sales.order.view',
                 'setting' => 'sales.screen_orders'],
+
+            /*
+             * ⭐ আদেশের খোঁজ — মালিকের চাওয়া, ১৯ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ আদেশের সারির ঠিক পরে: প্রশ্নটা ("আমার আদেশটা কোথায়")
+             * আদেশ দেখার পরেই ওঠে। ⚠️ একই সুইচে (`screen_orders`) —
+             * যে ডিপো আদেশের পর্দা বন্ধ রাখে, তার খোঁজার পাতাও লাগে না।
+             */
+            ['label' => 'sales::menu.order_track', 'icon' => 'search', 'route' => 'sales.order.track',
+                'permission' => 'sales.order.view', 'setting' => 'sales.screen_orders'],
             ['label' => 'sales::menu.challans', 'icon' => 'challan', 'route' => 'sales.challan.index', 'permission' => 'sales.challan.view',
                 'setting' => 'sales.screen_challans'],
 

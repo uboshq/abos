@@ -74,6 +74,11 @@ Route::middleware('auth')->prefix('sales')->group(function () {
 
     Route::prefix('orders')->name('order.')->group(function () {
         Route::get('/', [SalesOrderController::class, 'index'])->name('index');
+        /*
+         * ⭐ আদেশ কোথায় দাঁড়িয়ে — মালিকের চাওয়া, ১৯ সেপ্টেম্বর ২০২৬।
+         * ⓘ `{order}`-এর আগে, কারণ "track" একটা স্থির পথ।
+         */
+        Route::get('/track', [SalesOrderController::class, 'track'])->name('track');
         Route::get('/create', [SalesOrderController::class, 'create'])->name('create');
         Route::post('/', [SalesOrderController::class, 'store'])->name('store');
         Route::get('/{order}', [SalesOrderController::class, 'show'])->whereNumber('order')->name('show');

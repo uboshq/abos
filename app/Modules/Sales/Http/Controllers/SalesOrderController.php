@@ -15,6 +15,7 @@ use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Sales\Http\Requests\SalesOrderRequest;
 use App\Modules\Sales\Models\SalesOrder;
+use App\Modules\Sales\Services\OrderTracking;
 use App\Modules\Sales\Services\SalesOrderService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -40,9 +41,45 @@ class SalesOrderController extends Controller implements HasMiddleware
     {
         return [
             ...static::resourcePermissions(SalesOrder::class, 'order'),
+            // ⓘ ট্র্যাকিং পাতাটা কেবল পড়ার — আদেশ দেখার অনুমতিই যথেষ্ট
+            new Middleware('can:sales.order.view', only: ['track']),
             new Middleware('can:sales.order.update', only: ['confirm']),
             new Middleware('can:sales.order.cancel', only: ['cancel']),
         ];
+    }
+
+    /**
+     * আদেশ কোথায় দাঁড়িয়ে — আদেশ · আংশিক · মাল গেছে · বিল হয়েছে।
+     *
+     * ── ⭐ মালিকের চাওয়া, ১৯ সেপ্টেম্বর ২০২৬ ─────────────────────────
+     * *"এখানে Order Tracking-এর ব্যবস্থা করতে হবে… অ্যাপ ১০০% হওয়ার পর
+     * সব customer তার নিজের, employee তার অধীনের সকল order ট্রেস করতে
+     * পারবে।"*
+     *
+     * ⓘ আজ পাতাটা কর্মীদের — সব আদেশ, আর প্রতিটার ধাপ। ⚠️ গ্রাহকের
+     * নিজের আদেশ পরের ধাপ, কিন্তু আজকের পাতাটা সত্যিকারের কাজ করে:
+     * "আসছে" লেখা খালি বোতাম বসানো এখানে নিয়মবিরুদ্ধ।
+     *
+     * ⓘ হিসাবটা [[OrderTracking]]-এ, আর সেখানেই লেখা কেন সাব-কোয়েরি।
+     */
+    public function track(Request $request, OrderTracking $tracking): View
+    {
+        $term = trim((string) $request->query('q')) ?: null;
+        $stage = in_array($request->query('stage'), OrderTracking::STAGES, true)
+            ? (string) $request->query('stage')
+            : 'all';
+
+        // ⓘ গ্রাহকের পাতা থেকে এলে কেবল তাঁর আদেশ — সংখ্যা আর তালিকা এক কথা বলে
+        $customerId = (int) $request->query('customer') ?: null;
+
+        return view('sales::order.track', [
+            'menu' => $this->menu->forUser($request->user()),
+            'orders' => $tracking->rows($term, $stage, $customerId),
+            'counts' => $tracking->counts($term, $customerId),
+            'tracking' => $tracking,
+            'stage' => $stage,
+            'customer' => $customerId === null ? null : Customer::query()->find($customerId),
+        ]);
     }
 
     public function index(Request $request): View
