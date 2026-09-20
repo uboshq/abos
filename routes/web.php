@@ -70,6 +70,16 @@ Route::middleware('auth')->group(function () {
     Route::post('/notifications/read-all', [NotificationController::class, 'readAll'])
         ->name('notifications.read-all');
 
+    /*
+     * কে কোন খবর পেতে চান — ২০ সেপ্টেম্বর ২০২৬, মালিকের *"বিজ্ঞপ্তির
+     * সেটিংস ta koro"*। ⓘ স্থির পথ, তাই /{notification}-এর নিচে বসলেও
+     * সমস্যা নেই: ঐ রুটে `whereNumber` আছে, তাই "settings" ওখানে মেলে না।
+     */
+    Route::get('/notifications/settings', [NotificationController::class, 'settings'])
+        ->name('notifications.settings');
+    Route::put('/notifications/settings', [NotificationController::class, 'updateSettings'])
+        ->name('notifications.settings.update');
+
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile');
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar');

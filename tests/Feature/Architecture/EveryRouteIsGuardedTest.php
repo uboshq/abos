@@ -297,6 +297,14 @@ class EveryRouteIsGuardedTest extends TestCase
      * "নিজের প্রোফাইল দেখার" চাবি আলাদা করে দিতে হত।
      */
     private const ANY_SIGNED_IN_USER = [
+        /*
+         * নিজের ঘণ্টার সুইচ — ২০ সেপ্টেম্বর ২০২৬। কোম্পানির কোনো তথ্য
+         * নেই, আর নিজের খবর বন্ধ করতে অনুমতি লাগলে প্রতিটা নতুন কর্মীকে
+         * একটা করে চাবি দিতে হত।
+         */
+        'notifications.settings' => 'নিজের পছন্দ — কোন খবর পাবেন',
+        'notifications.settings.update' => 'নিজের পছন্দ সংরক্ষণ',
+
         'dashboard' => 'হোম পর্দা — সংখ্যাগুলো নিজেরাই অনুমতি দেখে ছাঁকা হয় (DashboardRegistry)',
 
         /*

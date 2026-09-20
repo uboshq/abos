@@ -143,5 +143,18 @@
                 {{ __('core.notice.none') }}
             </p>
         @endforelse
+
+        {{-- ⭐ "কোন খবর পাব" — ২০ সেপ্টেম্বর ২০২৬, মালিকের *"বিজ্ঞপ্তির
+             সেটিংস ta koro"*।
+
+             ⓘ সেটিংসের দরজাটা ঘণ্টার ভিতরেই, কারণ প্রশ্নটা ঠিক তখনই মাথায়
+             আসে যখন একটা অবাঞ্ছিত খবর চোখে পড়ে। প্রোফাইলের গভীরে রাখলে
+             মানুষ খুঁজতেন না, খবরগুলো দেখাই ছেড়ে দিতেন। --}}
+        <a href="{{ route('notifications.settings') }}"
+           class="flex items-center gap-2 border-t border-(--color-border) px-3 py-2 text-2xs
+                  text-(--color-ink-muted) hover:bg-(--color-surface-hover) hover:text-(--color-ink)">
+            <x-ui.icon name="settings" class="size-3.5" />
+            {{ __('core.notify.settings_link') }}
+        </a>
     </div>
 </div>

@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Core\Services\MenuBuilder;
 use App\Core\Services\NotificationService;
+use App\Core\Support\NotificationKinds;
 use App\Models\Notification;
+use App\Models\NotificationChoice;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\View\View;
 
 /**
  * বিজ্ঞপ্তি খোলা ও পড়া।
@@ -18,7 +22,58 @@ use Illuminate\Http\Request;
  */
 class NotificationController extends Controller
 {
-    public function __construct(private readonly NotificationService $notifications) {}
+    public function __construct(
+        private readonly NotificationService $notifications,
+        private readonly MenuBuilder $menu,
+    ) {}
+
+    /**
+     * কে কোন খবর পেতে চান — নিজের পছন্দ, নিজের পাতা।
+     *
+     * ── কেন এখানে অনুমতি লাগে না ─────────────────────────────────────
+     * এটা নিজের প্রোফাইলের মতোই ব্যক্তিগত: কোম্পানির কোনো তথ্য নেই, আর
+     * নিজের ঘণ্টা বন্ধ করতে কারো অনুমতি লাগার কথা নয়। ⛔ অনুমতি বসালে
+     * প্রতিটা নতুন কর্মীকে "নিজের সেটিংস দেখার" চাবি আলাদা করে দিতে হত।
+     */
+    public function settings(Request $request): View
+    {
+        $user = $request->user();
+
+        return view('notifications.settings', [
+            'menu' => $this->menu->forUser($user),
+            'kinds' => NotificationKinds::all(),
+            'silenced' => NotificationChoice::silencedFor((int) $user->id),
+        ]);
+    }
+
+    /**
+     * ⓘ কেবল **বন্ধ**গুলোর সারি রাখা হয়, চালুগুলোর সারি মুছে ফেলা হয় —
+     * তাই পরে নতুন ধরনের খবর যোগ হলে সেটা নিজে থেকেই চালু থাকে, আর
+     * পুরনো একটা সারি নীরবে সেটা বন্ধ করে রাখে না।
+     */
+    public function updateSettings(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+        $wanted = array_map('strval', (array) $request->input('kinds', []));
+
+        foreach (array_keys(NotificationKinds::all()) as $type) {
+            if (in_array($type, $wanted, true)) {
+                NotificationChoice::query()
+                    ->where('user_id', $user->id)
+                    ->where('type', $type)
+                    ->delete();
+
+                continue;
+            }
+
+            NotificationChoice::query()->updateOrCreate(
+                ['user_id' => $user->id, 'type' => $type],
+                ['enabled' => false],
+            );
+        }
+
+        return back()->with('saved', __('core.notify.settings_saved'));
+    }
 
     /**
      * একটা খবর খোলা — পড়া হিসেবে বসিয়ে তার গন্তব্যে পাঠানো।

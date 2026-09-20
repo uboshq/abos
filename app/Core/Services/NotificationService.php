@@ -6,6 +6,7 @@ namespace App\Core\Services;
 
 use App\Core\Support\CompanyContext;
 use App\Models\Notification;
+use App\Models\NotificationChoice;
 use App\Models\User;
 use Illuminate\Support\Collection;
 
@@ -21,6 +22,9 @@ use Illuminate\Support\Collection;
  */
 final class NotificationService
 {
+    /** @var array<int, list<string>> এই অনুরোধে কার কোন ধরন বন্ধ, একবার দেখা */
+    private array $silenced = [];
+
     /** নিজের কাজ নিজে করলে নিজেকে খবর দেওয়ার মানে নেই। */
     public function send(
         User|int $user,
@@ -42,6 +46,19 @@ final class NotificationService
             return null;
         }
 
+        /*
+         * ⭐ যিনি এই ধরনের খবর চান না, তাঁকে পাঠানো হয় না — ২০ সেপ্টেম্বর
+         * ২০২৬, মালিকের *"বিজ্ঞপ্তির সেটিংস ta koro"*।
+         *
+         * ⓘ ছাঁকনিটা এখানে, পর্দায় নয়: না-দেখানো সারিও ঘণ্টার সংখ্যায়
+         * গোনা হত, আর "৩টা নতুন" দেখে খুলে কিছুই না পাওয়ার চেয়ে খারাপ
+         * কিছু নেই। ⛔ পছন্দ না লেখা থাকলে খবরটা যায় — চুপচাপ গিলে ফেলার
+         * চেয়ে বাড়তি একটা খবর ভালো।
+         */
+        if (! $this->wants($userId, $type)) {
+            return null;
+        }
+
         return Notification::create([
             'company_id' => CompanyContext::id(),
             'user_id' => $userId,
@@ -58,6 +75,21 @@ final class NotificationService
      * @param  iterable<User|int>  $users
      * @return Collection<int, Notification>
      */
+    /**
+     * এই মানুষটা এই ধরনের খবর চান কি না।
+     *
+     * ⚠️ উত্তরটা অনুরোধের মধ্যে মনে রাখা হয়: একটা ছকে দশজন অনুমোদনকারী
+     * থাকলে sendMany() দশবার একই প্রশ্ন করত।
+     */
+    private function wants(int $userId, string $type): bool
+    {
+        if (! array_key_exists($userId, $this->silenced)) {
+            $this->silenced[$userId] = NotificationChoice::silencedFor($userId);
+        }
+
+        return ! in_array($type, $this->silenced[$userId], true);
+    }
+
     public function sendMany(
         iterable $users,
         string $type,
