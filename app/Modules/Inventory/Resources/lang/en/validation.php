@@ -105,4 +105,5 @@ return [
     'pack_per_unknown' => 'The unit it is measured in is not in this product’s table — add that row first.',
     'pack_splits_base' => '1 :unit comes to part of a :base — but :base does not split. Check the size.',
     'pack_default_unknown' => 'The pack chosen as a default is not in this product’s table.',
+    'already_that_unit' => ":product's stock is already counted in :unit — there is nothing to bring down.",
 ];
