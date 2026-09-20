@@ -457,7 +457,19 @@ class VoucherRequest extends FormRequest
         if ($this->isJournal()) {
             return $rules + [
                 'lines' => ['required', 'array', 'min:2'],
-                'lines.*.account_id' => ['nullable', 'integer'],
+                /*
+                 * ⛔ কোম্পানি যাচাই — ২১ সেপ্টেম্বর ২০২৬ (অডিট ঙ২)।
+                 *
+                 * ⚠️ আগে কেবল `integer` ছিল। ⓘ পোস্টিং ইঞ্জিন শেষমেশ
+                 * ধরত, কিন্তু ততক্ষণে **খসড়াটা সেভ হয়ে গেছে** — অন্য
+                 * কোম্পানির একটা খাত নিয়ে বসে আছে, আর ব্যবহারকারী
+                 * পোস্ট করার দিন একটা অনুবাদহীন ৫০০ পান।
+                 *
+                 * ⭐ ছাঁচটা এই ফাইলেই আছে — `expense_account_id`।
+                 */
+                'lines.*.account_id' => ['nullable', 'integer',
+                    Rule::exists('accounts', 'id')
+                    ->where('company_id', CompanyContext::id())],
                 'lines.*.debit' => ['nullable', 'numeric', 'min:0'],
                 'lines.*.credit' => ['nullable', 'numeric', 'min:0'],
                 'lines.*.narration' => ['nullable', 'string', 'max:500'],
@@ -488,8 +500,13 @@ class VoucherRequest extends FormRequest
         }
 
         return $rules + [
-            'from_account_id' => ['required', 'integer', 'different:to_account_id'],
-            'to_account_id' => ['required', 'integer'],
+            /* ⛔ কোম্পানি যাচাই — একই কারণ, একই দিন (অডিট ঙ২) */
+            'from_account_id' => ['required', 'integer', 'different:to_account_id',
+                Rule::exists('accounts', 'id')
+                    ->where('company_id', CompanyContext::id())],
+            'to_account_id' => ['required', 'integer',
+                Rule::exists('accounts', 'id')
+                    ->where('company_id', CompanyContext::id())],
             'amount' => ['required', 'numeric', 'gt:0'],
 
             /*

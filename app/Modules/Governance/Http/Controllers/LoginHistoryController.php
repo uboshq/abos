@@ -79,7 +79,9 @@ class LoginHistoryController extends Controller implements HasMiddleware
             ->where(fn (Builder $q) => $q
                 ->where('company_id', CompanyContext::id())
                 ->orWhere(fn (Builder $w) => $w->whereNull('company_id')
-                    ->whereIn('identifier', self::identifiersHere())))
+                    ->where(fn (Builder $who) => $who
+                        ->whereIn('identifier', self::identifiersHere())
+                        ->orWhereNotIn('identifier', self::identifiersAnywhere()))))
             ->with('user')
             ->when($request->query('user'), fn (Builder $q, $id) => $q->where('user_id', (int) $id))
             ->when($request->query('only') === 'failed', fn (Builder $q) => $q->failed())
@@ -108,7 +110,9 @@ class LoginHistoryController extends Controller implements HasMiddleware
                 ->where(fn (Builder $q) => $q
                     ->where('company_id', CompanyContext::id())
                     ->orWhere(fn (Builder $w) => $w->whereNull('company_id')
-                        ->whereIn('identifier', self::identifiersHere())))
+                        ->where(fn (Builder $who) => $who
+                            ->whereIn('identifier', self::identifiersHere())
+                            ->orWhereNotIn('identifier', self::identifiersAnywhere()))))
                 ->failed()
                 ->where('created_at', '>=', now()->subDay())
                 ->count(),
@@ -125,7 +129,9 @@ class LoginHistoryController extends Controller implements HasMiddleware
                     ->where(fn (Builder $q) => $q
                         ->where('company_id', CompanyContext::id())
                         ->orWhere(fn (Builder $w) => $w->whereNull('company_id')
-                            ->whereIn('identifier', self::identifiersHere())))
+                            ->where(fn (Builder $who) => $who
+                                ->whereIn('identifier', self::identifiersHere())
+                                ->orWhereNotIn('identifier', self::identifiersAnywhere()))))
                     ->distinct()->pluck('user_id')->filter())
                 ->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))
                 ->orderBy('name')
@@ -155,6 +161,36 @@ class LoginHistoryController extends Controller implements HasMiddleware
     {
         return User::query()
             ->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))
+            ->get(['email', 'login_id'])
+            ->flatMap(fn (User $u) => [$u->email, $u->login_id])
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * ⭐ গোটা ইনস্টলেশনের সব নাম — কেবল ছাঁকার জন্য, দেখানোর জন্য নয়।
+     *
+     * ── ⚠️ কেন এই দ্বিতীয় তালিকাটা লাগল ────────────────────────
+     * প্রথম সারাইয়ে অচেনা নামের **সব** চেষ্টা লুকিয়ে ফেলেছিলাম, আর
+     * তাতে খাতাটার মূল কাজটাই চলে গিয়েছিল: *"একই নামে পঁচিশটা মানে
+     * কেউ পাসওয়ার্ড আন্দাজ করছে"* — সেটা আর কেউ দেখতে পেত না
+     * (abos-8b ধরেছে, ২১ সেপ্টেম্বর ২০২৬)।
+     *
+     * ⭐ পার্থক্যটা ধারালো, আর দুইটা ক্ষেত্র এক করে ফেলা ভুল ছিল:
+     *   · নামটা **অন্য কোম্পানির কারো** → ওটা তাঁদের কথা, লুকানো ঠিক
+     *   · নামটা **কারোই নয়** → ওটা আক্রমণকারীর বানানো নাম, আর আইপিটাও
+     *     তার; আক্রমণটা কোনো একটা কোম্পানির উপর নয়, **সবার উপর**
+     *
+     * ⓘ তালিকাটা কেবল `whereNotIn`-এ যায় — একটা নামও পর্দায় ওঠে না।
+     *
+     * @return list<string>
+     */
+    private static function identifiersAnywhere(): array
+    {
+        return User::query()
+            ->withoutGlobalScopes()
             ->get(['email', 'login_id'])
             ->flatMap(fn (User $u) => [$u->email, $u->login_id])
             ->filter()
