@@ -7,13 +7,16 @@ namespace App\Modules\Restaurant\Http\Controllers;
 use App\Core\Concerns\AuthorizesResource;
 use App\Core\Concerns\SortsLists;
 use App\Core\Services\MenuBuilder;
+use App\Core\Support\DocumentStatus;
 use App\Http\Controllers\Controller;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Restaurant\Http\Requests\RecipeRequest;
+use App\Modules\Restaurant\Models\Production;
 use App\Modules\Restaurant\Models\Recipe;
 use App\Modules\Restaurant\Models\RecipeLine;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\DB;
@@ -181,6 +184,22 @@ class RecipeController extends Controller implements HasMiddleware
     {
         $data = $request->validated();
 
+        /*
+         * ⛔ রান্না হয়ে গেলে ধরন আর পদ বদলানো যায় না — ২০ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⚠️ কী ঘটত ────────────────────────────────────────────────
+         * হাঁড়ির রেসিপি (`batch`) রান্নার মুহূর্তেই উপকরণ কাটে। সেটা
+         * পরে `to_order` করলে [[SalesInvoiceService]] **প্রতিটা বিক্রয়েও**
+         * আবার কাটত — চাল সকালে একবার গেছে, বিক্রয়ে আবার যায়। ⛔ মজুদ
+         * তখন কমতেই থাকত, আর কেউ কারণ খুঁজে পেত না।
+         *
+         * ⓘ উপকরণের সারি বদলানো যায় — রাঁধুনী পরিমাণ শোধরান, আর সেটা
+         * পুরনো কাগজ বদলায় না। ⛔ কেবল ধরন আর কোন পদ, এই দুইটাই আটকানো।
+         */
+        if ($recipe->exists) {
+            $this->assertStillFree($recipe, $data);
+        }
+
         return DB::transaction(function () use ($recipe, $data) {
             $recipe->fill([
                 'product_id' => $data['product_id'],
@@ -204,6 +223,38 @@ class RecipeController extends Controller implements HasMiddleware
 
             return $recipe->fresh(['lines.product', 'product']);
         });
+    }
+
+    /**
+     * এই রেসিপি কি এখনও অব্যবহৃত — ধরন ও পদ বদলানোর আগে।
+     *
+     * ⓘ রান্না হয়ে গেলে (উৎপাদনের সারি আছে) দুইটাই আটকে যায়।
+     * ⚠️ বাতিল উৎপাদন গোনা হয় না: ওগুলোর উপকরণ ফেরত দেওয়া হয়েছে,
+     * তাই ওরা মজুদের উপর আর কোনো দাবি রাখে না।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function assertStillFree(Recipe $recipe, array $data): void
+    {
+        $changesKind = (string) $data['kind'] !== (string) $recipe->kind;
+        $changesDish = (int) $data['product_id'] !== (int) $recipe->product_id;
+
+        if (! $changesKind && ! $changesDish) {
+            return;
+        }
+
+        $cooked = Production::query()
+            ->where('recipe_id', $recipe->id)
+            ->where('status', '<>', DocumentStatus::CANCELLED)
+            ->exists();
+
+        if (! $cooked) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            $changesKind ? 'kind' : 'product_id' => __('restaurant::validation.recipe_in_use'),
+        ]);
     }
 
     /**
