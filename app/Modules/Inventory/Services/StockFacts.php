@@ -457,15 +457,35 @@ final class StockFacts
          * ⓘ আর টেস্টে সময় জমিয়ে রাখা (`Carbon::setTestNow`) তখনই কাজ
          * করে যখন তারিখটা অ্যাপ থেকে আসে — ডাটাবেস ওই জমাটা মানে না।
          */
-        $today = Carbon::today()->toDateString();
 
+        /*
+         * ⭐ শর্তটা কলামের **উপর** নয়, কলামের **বিপরীতে** — ২১ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⛔ আগে কী ছিল ────────────────────────────────────────────
+         *     DATEDIFF(?, l.trx_date) >= ?
+         *
+         * ⚠️ কলামটা একটা ফাংশনের ভিতরে ঢুকে গেলে MySQL আর সূচক ব্যবহার
+         * করতে পারে না — তাকে **প্রতিটা সারিতে** ফাংশনটা চালিয়ে দেখতে
+         * হয়। ⓘ `cost_layer_fifo (company_id, product_id, trx_date, id)`
+         * সূচকটা আছে, কিন্তু এই শর্তে সেটা অকেজো ছিল।
+         *
+         * ── ⓘ অ্যাপের ঘড়িটাই রাখা হয়েছে ────────────────────────────
+         * তারিখটা আগের মতোই PHP থেকে আসে (`Carbon::today()`), ডাটাবেসের
+         * `CURDATE()` থেকে নয় — [[NobodyAsksTheDatabaseWhatDayItIsTest]]
+         * ঠিক সেটাই পাহারা দেয়। ⭐ কেবল বিয়োগটা এখন আগেই হয়ে যায়, আর
+         * কলামের সাথে তুলনা হয় সরল বড়/ছোট দিয়ে।
+         *
+         * ⚠️ দিক উল্টে যায়: "যত **পুরনো**" মানে তারিখ তত **ছোট**।
+         * তাই `DATEDIFF >= minDays` হয় `trx_date <= আজ - minDays`।
+         */
         $q = DB::table('inv_cost_layers as l')
             ->where('l.company_id', CompanyContext::id())
             ->where('l.qty_remaining', '>', 0)
-            ->whereRaw('DATEDIFF(?, l.trx_date) >= ?', [$today, $minDays]);
+            ->where('l.trx_date', '<=', Carbon::today()->subDays($minDays)->toDateString());
 
         if ($maxDays !== null) {
-            $q->whereRaw('DATEDIFF(?, l.trx_date) < ?', [$today, $maxDays]);
+            /* ⓘ `<` ছিল, তাই এখানে `>` — সীমাটা ঠিক ঐ দিনেই শেষ। */
+            $q->where('l.trx_date', '>', Carbon::today()->subDays($maxDays)->toDateString());
         }
 
         return $q;
