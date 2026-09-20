@@ -314,6 +314,13 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
             ->whereNumber('reconciliation')->name('show');
         Route::post('/{reconciliation}/mark', [BankReconciliationController::class, 'mark'])
             ->whereNumber('reconciliation')->name('mark');
+        /*
+         * ⭐ ব্যাংকের স্টেটমেন্ট তোলা — মানচিত্র §৯, ২০ সেপ্টেম্বর ২০২৬।
+         * ⓘ হিসাবরক্ষকের অনুমতিতেই (`reconciliation.manage`), প্রশাসকের
+         * ইমপোর্ট পর্দায় যাওয়ার দরকার নেই।
+         */
+        Route::post('/{reconciliation}/statement', [BankReconciliationController::class, 'statement'])
+            ->whereNumber('reconciliation')->name('statement');
         Route::post('/{reconciliation}/confirm', [BankReconciliationController::class, 'confirm'])
             ->whereNumber('reconciliation')->name('confirm');
         Route::post('/{reconciliation}/reopen', [BankReconciliationController::class, 'reopen'])

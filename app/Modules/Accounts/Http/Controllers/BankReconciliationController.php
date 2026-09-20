@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Http\Controllers;
 
+use App\Core\Services\ImportRunner;
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\BankReconciliation;
 use App\Modules\Accounts\Services\BankReconciliationService;
+use App\Modules\Accounts\Services\BankStatementService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -30,6 +32,8 @@ class BankReconciliationController extends Controller implements HasMiddleware
 {
     public function __construct(
         private readonly BankReconciliationService $recons,
+        private readonly BankStatementService $statements,
+        private readonly ImportRunner $imports,
         private readonly MenuBuilder $menu,
     ) {}
 
@@ -37,7 +41,7 @@ class BankReconciliationController extends Controller implements HasMiddleware
     {
         return [
             new Middleware('can:accounts.reconciliation.view', only: ['index', 'show']),
-            new Middleware('can:accounts.reconciliation.manage', only: ['create', 'store', 'mark', 'confirm']),
+            new Middleware('can:accounts.reconciliation.manage', only: ['create', 'store', 'mark', 'confirm', 'statement']),
             new Middleware('can:accounts.reconciliation.reopen', only: ['reopen']),
         ];
     }
@@ -103,6 +107,17 @@ class BankReconciliationController extends Controller implements HasMiddleware
                 ->sortBy([['voucher.trx_date', 'asc'], ['id', 'asc']])
                 ->values(),
             'summary' => $this->recons->summary($reconciliation),
+
+            /*
+             * ⭐ পর্দার নতুন অর্ধেক: **ব্যাংক যা জানে, আমরা জানি না**।
+             * ⓘ এতদিন কেবল উল্টো দিকটা দেখা যেত — আমাদের কোন সারি ব্যাংকে
+             * ওঠেনি। ⚠️ অথচ মাস শেষে তফাত থেকে যাওয়ার আসল কারণ প্রায়ই
+             * এই দিকটাই: চার্জ, সুদ, ফেরত আসা চেক।
+             */
+            'fromBank' => $this->statements->unmatchedFor(
+                $reconciliation->bankAccount,
+                $reconciliation->statement_date->toDateString(),
+            ),
         ]);
     }
 
@@ -132,6 +147,45 @@ class BankReconciliationController extends Controller implements HasMiddleware
         $this->recons->mark($reconciliation, $data['lines'] ?? []);
 
         return back()->with('status', __('accounts::recon.marked'));
+    }
+
+    /**
+     * ⭐ ব্যাংকের স্টেটমেন্ট তোলা — মানচিত্র §৯।
+     *
+     * ── ⚠️ কেন সাধারণ ইমপোর্টের পর্দা দিয়ে নয় ──────────────────────
+     * ওখানে যেতে লাগে `system_admin.import.manage` — নতুন কোম্পানি বসানোর
+     * ক্ষমতা। ⛔ কিন্তু স্টেটমেন্ট তোলা মাসের রোজকার কাজ, আর সেটা করেন
+     * হিসাবরক্ষক। ⓘ তাই দরজাটা এখানে, `accounts.reconciliation.manage`-এর
+     * পিছনে; কিন্তু ফাইল পড়া, যাচাই আর ভুল-সারির হিসাব সবই কাঠামোরই
+     * ([[ImportRunner]]) — দ্বিতীয় একটা পাঠক লেখা হয়নি।
+     *
+     * ⓘ তোলার পরপরই নিজে থেকে মেলানোর চেষ্টা হয়, আর যা মেলে না সেটাই
+     * পর্দায় থাকে — ওটাই আসল প্রশ্ন।
+     */
+    public function statement(Request $request, BankReconciliation $reconciliation): RedirectResponse
+    {
+        $request->validate([
+            /*
+             * ⚠️ `csv,txt` দুইটাই — উইন্ডোজের এক্সেল CSV ফাইলকে
+             * `text/plain` বলে পাঠায়, আর কেবল csv লিখলে ব্যবহারকারীর
+             * নিজের ফাইলটাই ফিরিয়ে দেওয়া হত (সাধারণ ইমপোর্টের পর্দায়
+             * এই ভুলটা একবার হয়েছিল)।
+             */
+            'file' => ['required', 'file', 'mimes:csv,txt', 'max:5120'],
+        ]);
+
+        $result = $this->imports->run('bank_statement', $request->file('file'));
+
+        $matched = $this->statements->matchAgainstBooks(
+            $reconciliation->bankAccount,
+            $reconciliation->statement_date->toDateString(),
+        );
+
+        return back()->with('status', __('accounts::recon.statement_loaded', [
+            'rows' => $result['imported'],
+            'matched' => $matched,
+            'bad' => count($result['failed']),
+        ]));
     }
 
     public function confirm(BankReconciliation $reconciliation): RedirectResponse

@@ -58,6 +58,51 @@
             'render' => fn ($l) => view('accounts::reconciliation.partials.money', ['value' => $l->credit]),
         ],
     ];
+
+    /*
+        ⭐ ব্যাংকের নিজের সারিগুলোর কলাম (২০ সেপ্টেম্বর ২০২৬)।
+
+        ⚠️ নামগুলো ব্যাংকের চোখে লেখা — "ব্যাংক নিয়েছে" আর "ব্যাংক জমা
+        করেছে"। ⓘ আমাদের "জমা/উত্তোলন" লিখলে মানুষ দুই তালিকার দুই দিক
+        মিলিয়ে ফেলতেন, কারণ ব্যাংকের কাগজে দিকটা উল্টো।
+    */
+    $bankColumns = [
+        [
+            'key' => 'trx_date',
+            'label' => __('accounts::recon.date'),
+            'width' => '7rem',
+            'render' => fn ($b) => $b->trx_date?->format('d M Y'),
+        ],
+        [
+            'key' => 'description',
+            'label' => __('accounts::recon.narration'),
+            'render' => fn ($b) => $b->description ?: '—',
+        ],
+        [
+            'key' => 'reference',
+            'label' => __('accounts::field.instrument_no'),
+            'width' => '9rem',
+            'render' => fn ($b) => $b->reference ?: '—',
+        ],
+        [
+            'key' => 'debit',
+            'label' => __('accounts::field.withdrawn'),
+            'numeric' => true,
+            'width' => '10rem',
+            'render' => fn ($b) => bccomp((string) $b->debit, '0', 4) > 0
+                ? view('accounts::reconciliation.partials.money', ['value' => $b->debit])
+                : '',
+        ],
+        [
+            'key' => 'credit',
+            'label' => __('accounts::field.deposited'),
+            'numeric' => true,
+            'width' => '10rem',
+            'render' => fn ($b) => bccomp((string) $b->credit, '0', 4) > 0
+                ? view('accounts::reconciliation.partials.money', ['value' => $b->credit])
+                : '',
+        ],
+    ];
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -117,6 +162,60 @@
 
     @if (! $summary['agrees'])
         <p class="mb-4 text-sm text-(--color-ink-muted)">{{ __('accounts::recon.does_not_agree_hint') }}</p>
+    @endif
+
+    {{--
+        ⭐ ব্যাংক যা জানে, আমাদের বই জানে না — মানচিত্র §৯, ২০ সেপ্টেম্বর ২০২৬।
+
+        ── ⚠️ কেন এই অংশটা টিকের তালিকার **উপরে** ──────────────────────
+        নিচের তালিকাটা বলে "আমাদের কোন সারি ব্যাংকে ওঠেনি" — সেটা সাধারণত
+        সময়ের ব্যাপার, চেক পাশ হতে দেরি। ⓘ কিন্তু তফাত থেকে যাওয়ার আসল
+        কারণ প্রায়ই এই উপরের তালিকাটা: চার্জ, সুদ, এসএমএস ফি, ফেরত আসা
+        চেক — যেগুলো কেউ বইয়ে তোলেনি, কারণ কেউ জানতই না ঘটেছে।
+
+        ⛔ এখান থেকে কোনো দাখিলা নিজে থেকে বসে না। ব্যাংক "SERVICE CHARGE"
+        লিখলে সেটা কোন খরচের খাতে যাবে ব্যাংক জানে না — মানুষ জানেন, আর
+        তিনি স্বাভাবিক দরজা দিয়েই ভাউচার বসান।
+    --}}
+    @if ($recon->isDraft())
+        @can('accounts.reconciliation.manage')
+            <form method="POST" action="{{ route('accounts.reconciliation.statement', $recon) }}"
+                  enctype="multipart/form-data"
+                  class="mb-4 flex flex-wrap items-end gap-2 rounded-(--radius-card)
+                         border border-(--color-border) bg-(--color-surface-card) p-3">
+                @csrf
+
+                <label class="text-2xs text-(--color-ink-muted)">
+                    {{ __('accounts::recon.statement_file') }}
+                    <input type="file" name="file" accept=".csv,text/csv,text/plain" required
+                           class="block h-(--spacing-field) rounded-(--radius-field)
+                                  border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                </label>
+
+                <x-ui.button type="submit" tone="secondary">
+                    {{ __('accounts::recon.load_statement') }}
+                </x-ui.button>
+
+                {{-- ⓘ নমুনা ফাইলটা কাঠামোরই — কলামের নাম ওখান থেকেই আসে --}}
+                <a href="{{ route('system_admin.import.template', 'bank_statement') }}"
+                   class="text-2xs text-(--color-brand-600) underline-offset-2 hover:underline">
+                    {{ __('accounts::recon.statement_sample') }}
+                </a>
+            </form>
+        @endcan
+    @endif
+
+    @if ($fromBank->isNotEmpty())
+        <section data-boxed
+                 class="mb-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
+                        bg-(--color-surface-card)">
+            <header class="border-b border-(--color-border) px-4 py-2">
+                <h2 class="text-sm font-semibold">{{ __('accounts::recon.only_at_the_bank') }}</h2>
+                <p class="text-2xs text-(--color-ink-muted)">{{ __('accounts::recon.only_at_the_bank_hint') }}</p>
+            </header>
+
+            <x-ui.table :rows="$fromBank" :columns="$bankColumns" :empty="'—'" />
+        </section>
     @endif
 
     <form method="POST" action="{{ route('accounts.reconciliation.mark', $recon) }}">

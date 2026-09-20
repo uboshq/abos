@@ -305,4 +305,8 @@ return [
     'amount_paid' => 'পরিশোধিত টাকা',
     'payment_method' => 'পেমেন্ট মেথড',
     'confirm_year' => 'নিশ্চিত করতে লিখুন: :name',
+    'bank_account_code' => 'ব্যাংক খাতের কোড',
+    'withdrawn' => 'ব্যাংক নিয়েছে',
+    'deposited' => 'ব্যাংক জমা করেছে',
+    'running_balance' => 'ব্যাংকের চলতি জের',
 ];

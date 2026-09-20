@@ -4,6 +4,7 @@ declare(strict_types=1);
 use App\Modules\Accounts\Dashboard\AccountsActivity;
 use App\Modules\Accounts\Dashboard\AccountsDashboard;
 use App\Modules\Accounts\Dashboard\AccountsWidgets;
+use App\Modules\Accounts\Imports\BankStatementImporter;
 use App\Modules\Accounts\Imports\ChartOfAccountsImporter;
 use App\Modules\Accounts\Imports\OpeningBalanceImporter;
 use App\Modules\Accounts\Integrity\AccountsChecks;
@@ -411,6 +412,16 @@ return [
     'imports' => [
         'chart_of_accounts' => ChartOfAccountsImporter::class,
         'opening_balance' => OpeningBalanceImporter::class,
+        /*
+         * ⭐ ব্যাংকের স্টেটমেন্ট — মানচিত্র §৯ (২০ সেপ্টেম্বর ২০২৬)।
+         *
+         * ⚠️ বাকি দুইটার মতো এটা "পুরনো খাতা তোলা" নয় — এটা **ব্যাংকের
+         * বক্তব্য** বসায়, আর তা থেকে একটাও দাখিলা বইয়ে যায় না।
+         * ⓘ হিসাবরক্ষকের নিজের দরজাটা মিলকরণের পর্দায়
+         * ([[BankReconciliationController::statement()]]) — এখানে থাকায়
+         * নমুনা ফাইল আর ভুল-সারির তালিকা বিনা খরচে পাওয়া যায়।
+         */
+        'bank_statement' => BankStatementImporter::class,
     ],
 
     /*

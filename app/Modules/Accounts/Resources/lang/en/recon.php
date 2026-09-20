@@ -53,4 +53,10 @@ return [
     'does_not_agree' => 'Still :difference unexplained — a reconciliation cannot be closed until the difference is zero.',
     'already_confirmed' => 'This reconciliation is closed. Reopen it first.',
     'not_confirmed' => 'This reconciliation is not closed.',
+    'statement_file' => 'Bank statement (CSV)',
+    'load_statement' => 'Load the statement',
+    'statement_sample' => 'Sample file',
+    'statement_loaded' => ':rows lines loaded, :matched matched on their own, :bad skipped',
+    'only_at_the_bank' => 'The bank knows, our books do not',
+    'only_at_the_bank_hint' => 'On the statement but not yet in our books — a charge, interest, or a bounced cheque. Enter the voucher and the line matches itself.',
 ];

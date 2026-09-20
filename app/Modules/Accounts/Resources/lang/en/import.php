@@ -18,4 +18,9 @@ return [
      * that none was done.
      */
     'opening_refused' => 'Nothing was loaded — opening balances go in whole or not at all. Half of them would leave the books out of balance, and working out which rows went in is the hard part. Fix the rows listed below and upload again; nothing in your system has changed yet.',
+    'bank_statement' => 'Bank statement',
+    'no_such_bank_account' => 'No bank or MFS account has the code :code',
+    'bad_date' => 'Could not read the date :value — write it as day/month/year',
+    'no_amount_on_line' => 'The line carries no money — one of debit or credit is needed',
+    'both_sides_filled' => 'Both debit and credit carry money — the columns are mismatched',
 ];
