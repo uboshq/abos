@@ -338,6 +338,9 @@ class BankFacilityController extends Controller implements HasMiddleware
 
             /* ⭐ আজ শোধ করলে কত — বকেয়া, চার্জ, মোট */
             'settlement' => $this->facilities->settlementToday($bankFacility),
+
+            /* ⭐ কিস্তির তালিকা — মাস, আসল, সুদ, জের (মালিকের ছবি) */
+            'schedule' => $this->facilities->schedule($bankFacility),
         ]);
     }
 

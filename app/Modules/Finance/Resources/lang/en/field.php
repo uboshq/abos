@@ -332,4 +332,9 @@ return [
     'charge_on_principal' => 'Outstanding principal',
     'charge_on_interest' => 'Interest still to come',
     'settlement_today' => 'If settled today',
+    'instalment_schedule' => 'Instalment schedule',
+    'show_schedule' => 'Month by month',
+    'principal_part' => 'Principal',
+    'interest_part' => 'Interest',
+    'balance_left' => 'Balance',
 ];

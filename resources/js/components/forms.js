@@ -630,6 +630,23 @@ export function expenseFields (config) {
  * শাখার হতেই পারে। ⚠️ আর কেউ আগে থেকে কিছু লিখে থাকলে সেটা রাখা হয় —
  * টাইপ করা জিনিস নীরবে বদলে গেলে ফর্মের উপর বিশ্বাস চলে যায়।
  */
+/*
+ * মাসিক কিস্তি — ক্ষয়িষ্ণু জেরে (reducing balance)।
+ *
+ *     EMI = P × r × (1+r)ⁿ ÷ ((1+r)ⁿ − 1),  r = বার্ষিক হার ÷ 12 ÷ 100
+ *
+ * ⓘ হার শূন্য হলে সোজা ভাগ, নাহলে শূন্য দিয়ে ভাগ পড়ত।
+ */
+function emi (principal, annualRate, months) {
+    const r = annualRate / 12 / 100
+
+    if (r <= 0) return principal / months
+
+    const growth = Math.pow(1 + r, months)
+
+    return principal * r * growth / (growth - 1)
+}
+
 export function bankFacilityForm ({ kind = 'cc', branches = {}, branch = '', typedBranch = false, running = false } = {}) {
     const n = (v) => {
         v = (v ?? '').toString().trim()
@@ -681,7 +698,17 @@ export function bankFacilityForm ({ kind = 'cc', branches = {}, branch = '', typ
             this.typedBranch = this.branch.toString().trim() !== ''
         },
 
-        /* সীমা + হার + সংখ্যা → কিস্তির অঙ্ক */
+        /*
+         * সীমা + হার + সংখ্যা → কিস্তির অঙ্ক, ক্ষয়িষ্ণু জেরে।
+         *
+         * ⛔ আগে সরল সুদে গোনা হত, আর সেটা টাকার ভুল ছিল: ২৫,০০,০০০ ·
+         * ১৩.৫৫% · ৩৬ কিস্তিতে পর্দা বলত ৯৭,৬৭৩.৬১, ব্যাংক বলে
+         * ৮৪,৮৯৮.৯৬ — তিন বছরে ৪.৬ লাখ টাকার ফারাক (মালিক ধরেছেন,
+         * ২১ সেপ্টেম্বর ২০২৬)।
+         *
+         * ⓘ সূত্রটা সার্ভারেও হুবহু এক ([[LoanSchedule::instalment]]) —
+         * পর্দা আর খাতা দুই সংখ্যা বললে কোনটা সত্যি তা বলা যেত না।
+         */
         fromTerms () {
             const p = n(this.limit)
             const r = n(this.rate)
@@ -689,13 +716,16 @@ export function bankFacilityForm ({ kind = 'cc', branches = {}, branch = '', typ
 
             if (p === null || p <= 0 || c === null || c < 1) return
 
-            const years = c / 12
-            const total = p + (p * (r === null ? 0 : r) / 100 * years)
-
-            this.instalment = (total / c).toFixed(2)
+            this.instalment = emi(p, r === null ? 0 : r, c).toFixed(2)
         },
 
-        /* কিস্তির অঙ্ক টাইপ হলো → হার নতুন করে */
+        /*
+         * কিস্তির অঙ্ক টাইপ হলো → হার নতুন করে।
+         *
+         * ⓘ ক্ষয়িষ্ণু জেরে হারটা সূত্র উল্টে বের করা যায় না — তাই
+         * দ্বিভাজন: শূন্য থেকে শুরু করে দুই পাশ থেকে চেপে আসা। ⚠️ ষাট
+         * ধাপে পয়সার নিচে নেমে যায়, আর সেটা ব্রাউজারে চোখেই পড়ে না।
+         */
         fromInstalment () {
             const p = n(this.limit)
             const c = n(this.count)
@@ -703,13 +733,27 @@ export function bankFacilityForm ({ kind = 'cc', branches = {}, branch = '', typ
 
             if (p === null || p <= 0 || c === null || c < 1 || a === null) return
 
-            const years = c / 12
+            // ⛔ সুদহীন কিস্তির চেয়ে কম হলে হার ঋণাত্মক হত — ব্যাংক তা দেয় না
+            if (a <= p / c) {
+                this.rate = '0.00'
 
-            if (years <= 0) return
+                return
+            }
 
-            const rate = ((a * c) - p) / p / years * 100
+            let low = 0
+            let high = 100
 
-            this.rate = rate.toFixed(2)
+            for (let i = 0; i < 60; i++) {
+                const mid = (low + high) / 2
+
+                if (emi(p, mid, c) > a) {
+                    high = mid
+                } else {
+                    low = mid
+                }
+            }
+
+            this.rate = ((low + high) / 2).toFixed(2)
         },
     }
 }

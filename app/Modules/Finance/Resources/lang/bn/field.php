@@ -362,4 +362,9 @@ return [
     'charge_on_principal' => 'বকেয়া আসল',
     'charge_on_interest' => 'বাকি সুদ',
     'settlement_today' => 'আজ শোধ করলে',
+    'instalment_schedule' => 'কিস্তির তালিকা',
+    'show_schedule' => 'মাসে মাসে দেখান',
+    'principal_part' => 'আসল',
+    'interest_part' => 'সুদ',
+    'balance_left' => 'জের',
 ];

@@ -51,11 +51,32 @@ final class CashForecast
             'receivables' => '0', 'loans_in' => '0', 'payables' => '0', 'loans_out' => '0',
         ]);
 
-        foreach (SalesInvoice::query()->posted()->withCollected()->get() as $invoice) {
+        /*
+         * ⛔ নব্বই দিনের বাইরের কাগজ আনা হয় না — ২১ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⚠️ এটা গতির কথা, আর গতির ভুল হঠাৎ থামে ────────────────
+         * আগে কোম্পানির **প্রতিটা** পোস্ট করা চালান আর বিল একসাথে
+         * মেমরিতে উঠত। ⓘ বছরে ৩০,০০০ চালানের ডিপোতে দ্বিতীয় বছরে
+         * ৬০,০০০ সারি — আর তার পর একদিন পাতাটা সময় শেষ হয়ে থামত।
+         *
+         * ⭐ আর সারিগুলো কাজেও লাগত না: [[bucketOf()]] নব্বই দিনের
+         * পরের সবকিছু `null` ফেরত দেয়, আর [[add()]] সেগুলো ফেলে দেয়।
+         * ⓘ তাই এই ছাঁকনিতে পর্দার একটা সংখ্যাও বদলায় না।
+         *
+         * ⚠️ তারিখহীন কাগজগুলো তবু আসে — ওরা "এখন" ঘরে পড়ে,
+         * আর বাদ দিলে বকেয়া পাওনা পর্দা থেকে মুছে যেত।
+         */
+        $horizon = $today->copy()->addDays(max(self::BUCKETS))->toDateString();
+
+        $withinHorizon = fn ($q) => $q->where(
+            fn ($w) => $w->whereNull('due_on')->orWhereDate('due_on', '<=', $horizon),
+        );
+
+        foreach (SalesInvoice::query()->posted()->withCollected()->tap($withinHorizon)->get() as $invoice) {
             $this->add($sums, $this->bucketOf($invoice->due_on, $today), 'receivables', $invoice->dueAmount());
         }
 
-        foreach (PurchaseBill::query()->posted()->withPaid()->get() as $bill) {
+        foreach (PurchaseBill::query()->posted()->withPaid()->tap($withinHorizon)->get() as $bill) {
             $this->add($sums, $this->bucketOf($bill->due_on, $today), 'payables', $bill->dueAmount());
         }
 
@@ -63,6 +84,9 @@ final class CashForecast
             ->with('loan')
             ->where('status', LoanInstalment::DUE)
             ->whereHas('loan', fn ($q) => $q->whereIn('status', DocumentStatus::POSTED))
+
+            /* ⓘ কিস্তিও একই জানালায় — পরেরগুলো পর্দায় আসে না */
+            ->whereDate('due_date', '<=', $horizon)
             ->get();
 
         foreach ($instalments as $row) {

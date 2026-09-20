@@ -357,13 +357,39 @@ class BankFacilityService
             ];
         }
 
-        // ⛔ সুদের উপর শতাংশ — ভিত্তিটা এখনো মালিকের উত্তরের অপেক্ষায়
+        /*
+         * ⭐ বাকি সুদের উপর শতাংশ — এখন হিসাব হয়, ২১ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ মালিকের ব্যাংক ক্ষয়িষ্ণু জেরে সুদ গোনে, তাই বাকি সুদ বলতে
+         * বাকি কিস্তিগুলোর সুদাংশের যোগফল ([[LoanSchedule::interestLeft]])।
+         * ⚠️ কয়টা দেওয়া হয়েছে সেটা খাতা থেকেই গোনা।
+         */
         if ((string) $facility->early_charge_basis === BankFacility::ON_INTEREST) {
+            $months = (int) ($facility->instalments ?? 0);
+
+            if ($months < 1) {
+                return [
+                    'outstanding' => $outstanding,
+                    'charge' => '0.0000',
+                    'total' => $outstanding,
+                    'unknown' => true,
+                ];
+            }
+
+            $left = LoanSchedule::interestLeft(
+                (string) $facility->limit_amount,
+                (string) ($facility->interest_rate ?? '0'),
+                $months,
+                $this->instalmentStanding($facility)['paid'],
+            );
+
+            $charge = bcdiv(bcmul($left, $amount, 4), '100', 4);
+
             return [
                 'outstanding' => $outstanding,
-                'charge' => '0.0000',
-                'total' => $outstanding,
-                'unknown' => true,
+                'charge' => $charge,
+                'total' => bcadd($outstanding, $charge, 4),
+                'unknown' => false,
             ];
         }
 
@@ -375,6 +401,32 @@ class BankFacilityService
             'total' => bcadd($outstanding, $charge, 4),
             'unknown' => false,
         ];
+    }
+
+    /**
+     * কিস্তির তালিকা — মাস, আসল, সুদ, জের।
+     *
+     * ⓘ মালিকের ছবির চারটা কলাম (২১ সেপ্টেম্বর ২০২৬)। ⭐ প্রথম মাসে
+     * সুদ বেশি আসল কম, শেষ মাসে উল্টো, আর শেষ সারিতে জের ঠিক শূন্য।
+     *
+     * ⛔ কিস্তি নেই এমন সুবিধায় (CC, গ্যারান্টি) তালিকাটাই আসে না।
+     *
+     * @return array{rows: list<array<string, mixed>>, instalment: string,
+     *     interest_total: string, paid_total: string}|null
+     */
+    public function schedule(BankFacility $facility): ?array
+    {
+        $months = (int) ($facility->instalments ?? 0);
+
+        if ($months < 1 || bccomp((string) $facility->limit_amount, '0', 4) <= 0) {
+            return null;
+        }
+
+        return LoanSchedule::build(
+            (string) $facility->limit_amount,
+            (string) ($facility->interest_rate ?? '0'),
+            $months,
+        );
     }
 
     /**

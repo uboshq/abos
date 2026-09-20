@@ -80,6 +80,62 @@
         </p>
     @endif
 
+    {{-- ⭐ কিস্তির তালিকা — মালিকের ছবি, ২১ সেপ্টেম্বর ২০২৬।
+
+         ⓘ চারটা কলাম: মাস · আসল · সুদ · জের। প্রথম মাসে সুদ বেশি
+         আসল কম, শেষ মাসে উল্টো — ক্ষয়িষ্ণু জেরে সুদ বসে বলেই।
+         ⚠️ শেষ সারিতে জের ঠিক শূন্য; না হলে খাতায় দুই পয়সার ঋণ
+         চিরকাল পড়ে থাকত। --}}
+    @if (($schedule ?? null) !== null)
+        <section data-boxed
+                 class="mb-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
+                        bg-(--color-surface-card)">
+            <header class="flex flex-wrap items-baseline justify-between gap-2 border-b border-(--color-border) p-4">
+                <h2 class="font-semibold">{{ __('finance::field.instalment_schedule') }}</h2>
+
+                <p class="text-sm text-(--color-ink-muted)">
+                    {{ __('finance::message.schedule_totals', [
+                        'instalment' => \App\Core\Support\Money::format($schedule['instalment']),
+                        'interest' => \App\Core\Support\Money::format($schedule['interest_total']),
+                        'total' => \App\Core\Support\Money::format($schedule['paid_total']),
+                    ]) }}
+                </p>
+            </header>
+
+            {{-- ⓘ লম্বা তালিকা ভাঁজ করা, কারণ রোজকার কাজে লাগে না —
+                 লাগে বছরে একবার, বা ব্যাংকের কাগজ মেলানোর দিন। --}}
+            <details>
+                <summary class="cursor-pointer px-4 py-2 text-sm text-(--color-brand-600)">
+                    {{ __('finance::field.show_schedule') }}
+                </summary>
+
+                <div class="overflow-x-auto">
+                    <table class="ui-list w-full">
+                        <thead>
+                            <tr class="text-2xs text-(--color-ink-muted)">
+                                <th class="text-start">{{ __('finance::field.month') }}</th>
+                                <th class="text-end">{{ __('finance::field.principal_part') }}</th>
+                                <th class="text-end">{{ __('finance::field.interest_part') }}</th>
+                                <th class="text-end">{{ __('finance::field.balance_left') }}</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            @foreach ($schedule['rows'] as $row)
+                                <tr class="border-t border-(--color-border)">
+                                    <td class="num">{{ $row['month'] }}</td>
+                                    <td class="text-end"><x-ui.amount :value="$row['principal']" /></td>
+                                    <td class="text-end"><x-ui.amount :value="$row['interest']" /></td>
+                                    <td class="text-end"><x-ui.amount :value="$row['balance']" /></td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </details>
+        </section>
+    @endif
+
     <div class="grid gap-4 lg:grid-cols-2">
 
         {{-- মঞ্জুরি --}}

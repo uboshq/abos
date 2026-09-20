@@ -161,4 +161,5 @@ return [
     'early_charge_basis_hint' => 'ব্যাংকভেদে আলাদা — মঞ্জুরিপত্রে যা লেখা, তাই বাছুন।',
     'settlement_charge_line' => 'বকেয়া :outstanding + চার্জ :charge = :total',
     'settlement_basis_unknown' => 'বাকি সুদের উপর চার্জ হিসাব এখনো করা হয় না — ব্যাংক flat না reducing পদ্ধতিতে সুদ গোনে, সেটা ঠিক না জেনে অঙ্ক দেখানো হবে না।',
+    'schedule_totals' => 'কিস্তি :instalment · মোট সুদ :interest · মোট পরিশোধ :total',
 ];

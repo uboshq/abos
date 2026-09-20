@@ -15,6 +15,7 @@ use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Finance\Models\BankFacility;
 use App\Modules\Finance\Models\Institution;
 use App\Modules\Finance\Services\BankFacilityService;
+use App\Modules\Finance\Services\LoanSchedule;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -242,12 +243,12 @@ final class TheLoanFormAskedEveryQuestionToEveryKindTest extends TestCase
     }
 
     /**
-     * ⛔ বাকি সুদের উপর চার্জ — অনুমান করা হয় না, বলা হয়।
+     * ⭐ বাকি সুদের উপর চার্জ — এখন হিসাব হয়।
      *
-     * ⓘ মালিকের উত্তর না আসা পর্যন্ত ভুল সংখ্যা দেখানোর চেয়ে
-     * "এখনো হিসাব হয় না" বলা সৎ।
+     * ⓘ মালিকের ব্যাংক ক্ষয়িষ্ণু জেরে সুদ গোনে (২১ সেপ্টেম্বর ২০২৬),
+     * তাই বাকি সুদ বলতে বাকি কিস্তিগুলোর সুদাংশের যোগফল।
      */
-    public function test_a_charge_on_future_interest_says_so_instead_of_guessing(): void
+    public function test_a_charge_on_future_interest_is_counted_from_the_schedule(): void
     {
         $facility = $this->openRunningLoan([
             'opening_drawn' => '1000000', 'instalments_paid' => 0,
@@ -257,8 +258,16 @@ final class TheLoanFormAskedEveryQuestionToEveryKindTest extends TestCase
 
         $seen = app(BankFacilityService::class)->settlementToday($facility);
 
-        $this->assertTrue($seen['unknown']);
-        $this->assertSame(0, bccomp($seen['charge'], '0', 4));
+        $this->assertFalse($seen['unknown'], 'হিসাবটা এখনো "জানি না" বলছে।');
+
+        // ⓘ ১২,০০,০০০ · ১০% · ১২ কিস্তির বাকি সুদের দুই শতাংশ
+        $interestLeft = LoanSchedule::interestLeft('1200000', '10', 12, 0);
+        $expected = bcdiv(bcmul($interestLeft, '2', 4), '100', 4);
+
+        $this->assertSame(0, bccomp($seen['charge'], $expected, 4),
+            'চার্জটা কিস্তির তালিকা থেকে আসেনি।');
+
+        $this->assertSame(1, bccomp($seen['charge'], '0', 4), 'চার্জ শূন্য দেখাচ্ছে।');
     }
 
     /** টাকার সব খাতের যোগফল — একটাও নড়লে এটা বদলায়। */
