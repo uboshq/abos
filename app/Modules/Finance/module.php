@@ -164,6 +164,25 @@ return [
              * খোঁজেন। ⚠️ কিন্তু এক পর্দায় মেলানো যেত না — মঞ্জুরি,
              * জামানত, ড্রয়িং পাওয়ার আর নবায়ন, একটাও হাতধারে নেই।
              */
+
+            /*
+             * ⭐ আর্থিক প্রতিষ্ঠান দায়ের **আগে** — মালিকের নির্দেশ,
+             * ২১ সেপ্টেম্বর ২০২৬।
+             *
+             * ── ⛔ আগে এটা সেটিংসে ছিল, আর সেটাই ভুল ছিল ────────────
+             * ২০ সেপ্টেম্বরের মেনু গোছানোয় সারিটা "সেটআপ" দলে নামিয়ে
+             * দেওয়া হয়েছিল। ⚠️ মালিক সেটা **খুঁজেই পাননি** — বললেন
+             * *"আগে ছিল এখন নাই"*। সারিটা মুছিনি, কিন্তু যেখানে চোখ
+             * যায় সেখান থেকে সরিয়ে দেওয়া আর মুছে ফেলা এক জিনিস।
+             *
+             * ⓘ ক্রমটা কাজের ক্রম: আগে প্রতিষ্ঠান বসাতে হয়, তারপরই
+             * তার কাছ থেকে ঋণ, তাতে আমানত, আর তার সাথে বীমা। ⭐ সেটআপ
+             * দলে রাখলে ক্রমটা উল্টো হত — লোকে ঋণের ফর্মে গিয়ে খালি
+             * ড্রপডাউন দেখে তারপর খুঁজতে বেরোতেন।
+             */
+            ['label' => 'finance::institution.title', 'cluster' => 'liability', 'icon' => 'building',
+                'route' => 'finance.institution.index', 'permission' => 'finance.institution.view'],
+
             ['label' => 'finance::menu.bank_facility', 'cluster' => 'liability', 'icon' => 'building',
                 'route' => 'finance.bank_facility.index', 'permission' => 'finance.bank_facility.view'],
             ['label' => 'finance::menu.hand_loan', 'cluster' => 'liability', 'icon' => 'handover',
@@ -228,8 +247,11 @@ return [
             ['label' => 'finance::menu.deposit_kinds', 'icon' => 'settings',
                 'route' => 'finance.deposit_kind.index', 'permission' => 'finance.deposit.view'],
 
-            ['label' => 'finance::institution.title', 'icon' => 'building',
-                'route' => 'finance.institution.index', 'permission' => 'finance.institution.view'],
+            /*
+             * ⓘ আর্থিক প্রতিষ্ঠান এখান থেকে উপরে গেছে, দায়ের আগে
+             * (২১ সেপ্টেম্বর ২০২৬) — একই সারি দুই জায়গায় রাখলে মেনু
+             * নিজেই বলত না কোনটা আসল জায়গা।
+             */
         ],
     ],
 
