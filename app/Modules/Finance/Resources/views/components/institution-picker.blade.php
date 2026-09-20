@@ -14,12 +14,32 @@
             'institutions' => $institutions,   // [id => নাম]
             'selected' => old('institution_id', $row->institution_id),
             'field' => 'institution_id',       // ঐচ্ছিক
+            'onPick' => 'pickedBank($event.target.value)',  // ঐচ্ছিক
         ])
 --}}
 @php
     $field ??= 'institution_id';
     $label ??= __('finance::institution.which');
     $selected ??= old($field);
+
+    /*
+     * ⛔ বাছাই করলে কিছু ঘটবে কি না — আর সেটা **ঐচ্ছিক**।
+     *
+     * ── ⚠️ কেন ২১ সেপ্টেম্বর ২০২৬-এ এটা বসাতে হলো ───────────────────
+     * ব্যাংক ঋণের ফর্মে `pickedBank()` লেখা ছিল, ঠিকঠাক কাজও করত, আর
+     * তিনটা ইউনিট পরীক্ষা ওটাকে সবুজ বলত। ⛔ কিন্তু **কেউ ওটাকে ডাকত
+     * না** — এই ঘরের `select`-এ কোনো `x-on:change` ছিল না। পরীক্ষাগুলো
+     * ফাংশনটাকে সরাসরি ডাকত, তাই তারা প্রমাণ করত ফাংশনটা কাজ করে, এটা
+     * নয় যে কেউ ওটাকে ডাকে।
+     *
+     * ⭐ মালিক বললেন *"শাখা auto bose na, bosar kotha cilo"* — আর তিনি
+     * ঠিক ছিলেন: ব্যাংক বাছলে কিচ্ছু হত না।
+     *
+     * ⓘ ঐচ্ছিক, কারণ একই ঘর আমানত ও বীমার ফর্মেও বসে, যেখানে ঐ
+     * ফাংশনটা নেই — আর না থাকলে Alpine নীরবে থেমে না গিয়ে কনসোলে
+     * ভুল ছাপত।
+     */
+    $onPick ??= null;
 @endphp
 
 <div class="space-y-2">
@@ -29,6 +49,7 @@
                  :label="$label"
                  :options="$institutions"
                  :selected="$selected"
+                 @if ($onPick) x-on:change="{{ $onPick }}" @endif
                  placeholder="—" />
 
     <details class="text-sm" @if ($errors->has('institution_new')) open @endif>

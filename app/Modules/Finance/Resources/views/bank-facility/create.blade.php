@@ -95,6 +95,9 @@
                 'institutions' => $institutions,
                 'selected' => old('institution_id'),
                 'label' => __('finance::field.bank'),
+
+                /* ⭐ এই তারটাই ছিল না — ফাংশনটা ছিল, ডাকার কেউ ছিল না। */
+                'onPick' => 'pickedBank($event.target.value)',
             ])
             {{-- ⭐ ব্যাংক বাছলে শাখা নিজে থেকে — মালিকের কথা, ২০ সেপ্টেম্বর ২০২৬:
                  *"ব্যাংক select korle শাখা auto asar kotha"*।
