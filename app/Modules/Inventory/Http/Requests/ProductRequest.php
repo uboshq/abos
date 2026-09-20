@@ -68,8 +68,29 @@ class ProductRequest extends FormRequest
             'category_id' => ['nullable', 'integer',
                 Rule::exists('mdm_product_categories', 'id')->where('company_id', $companyId)],
 
-            'unit_id' => ['nullable', 'integer',
+            /*
+             * ⭐ একক বাধ্যতামূলক — মালিকের সিদ্ধান্ত, ১৯ সেপ্টেম্বর ২০২৬।
+             * ⓘ প্যাকের টেবিল base ছাড়া দাঁড়ায় না ("১ কার্টন = ২৪ **কী**?"),
+             * আর লাইভে ৬টা পণ্য একক ছাড়াই বসে ছিল। (ইমপোর্ট আর সিডার এই
+             * দরজা দিয়ে যায় না; তাদের জন্য `abos:packs-backfill`।)
+             */
+            'unit_id' => ['required', 'integer',
                 Rule::exists('mdm_units', 'id')->where('company_id', $companyId)],
+
+            /*
+             * প্যাকের টেবিল — "১ কার্টন = ১২ বক্স"। এখানে কেবল আকার; মাপ,
+             * শিকল, চক্র আর বারকোড যাচাই [[ProductPackService]]-এ, কারণ
+             * সেগুলো সারিগুলো একসাথে দেখে তবে বলা যায়।
+             */
+            'pack_table' => ['nullable', 'boolean'],
+            'packs' => ['nullable', 'array', 'max:20'],
+            'packs.*' => ['array'],
+            'packs.*.unit_id' => ['nullable', 'integer'],
+            'packs.*.per_qty' => ['nullable', 'numeric'],
+            'packs.*.per_unit_id' => ['nullable', 'integer'],
+            'packs.*.barcode' => ['nullable', 'string', 'max:64'],
+            'pack_defaults' => ['nullable', 'array'],
+            'pack_defaults.*' => ['nullable', 'integer'],
             'tax_id' => ['nullable', 'integer',
                 Rule::exists('mdm_taxes', 'id')->where('company_id', $companyId)],
 

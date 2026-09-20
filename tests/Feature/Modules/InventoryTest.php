@@ -601,6 +601,8 @@ class InventoryTest extends TestCase
             ->post(route('inventory.product.store'), [
                 'name_en' => 'Screen Product',
                 'name_bn' => 'স্ক্রিন পণ্য',
+                // একক এখন বাধ্যতামূলক — মালিকের সিদ্ধান্ত, ১৯ সেপ্টেম্বর ২০২৬
+                'unit_id' => \App\Modules\MasterData\Models\Unit::query()->where('code', 'PCS')->value('id'),
                 'barcode' => '1234567890123',
                 'purchase_price' => '90.50',
                 'sale_price' => '110.00',

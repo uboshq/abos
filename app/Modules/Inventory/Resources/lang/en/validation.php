@@ -94,4 +94,15 @@ return [
     // rather than that the type is wrong.
     'image_only' => 'That file is not an image. Use JPEG, PNG or WebP — the right name is not enough if the contents are not an image.',
     'location_not_in_warehouse' => 'That place is not in this warehouse.',
+    /* Product packs — ProductPackService, 19 September 2026 */
+    'unit_locked' => 'This product’s stock and papers are counted in :unit — changing the unit now would give every old number a new meaning (12 pieces suddenly 12 cartons). Open a new product instead.',
+    'unit_change_needs_packs' => 'The packs were written against the old unit — write the pack table again for the new unit and save.',
+    'pack_is_base' => ':unit is this product’s own unit — it is always 1 and needs no pack row.',
+    'pack_twice' => ':unit is written twice — one product has one size per unit.',
+    'pack_qty_positive' => 'How much is in 1 :unit must be a number above zero.',
+    'pack_of_itself' => '1 :unit cannot be measured in :unit — pick another unit.',
+    'pack_circle' => 'The packs measure each other in a circle (carton in boxes, box in cartons) — measure one of them in the product’s own unit.',
+    'pack_per_unknown' => 'The unit it is measured in is not in this product’s table — add that row first.',
+    'pack_splits_base' => '1 :unit comes to part of a :base — but :base does not split. Check the size.',
+    'pack_default_unknown' => 'The pack chosen as a default is not in this product’s table.',
 ];

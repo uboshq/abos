@@ -32,7 +32,7 @@ class ProductUnit extends Model
     protected $table = 'inv_product_units';
 
     protected $fillable = [
-        'company_id', 'product_id', 'unit_id', 'factor',
+        'company_id', 'product_id', 'unit_id', 'factor', 'per_qty', 'per_unit_id',
         'is_purchase_default', 'is_sales_default', 'is_pos_default', 'is_counter_default',
         'barcode', 'is_active', 'created_by',
     ];
@@ -41,6 +41,7 @@ class ProductUnit extends Model
     {
         return [
             'factor' => 'decimal:6',
+            'per_qty' => 'decimal:6',
             'is_purchase_default' => 'boolean',
             'is_sales_default' => 'boolean',
             'is_pos_default' => 'boolean',
@@ -57,6 +58,12 @@ class ProductUnit extends Model
     public function unit(): BelongsTo
     {
         return $this->belongsTo(Unit::class);
+    }
+
+    /** "১ কার্টন = ১২ **বক্স**" — কিসের হিসাবে লেখা হয়েছিল। */
+    public function perUnit(): BelongsTo
+    {
+        return $this->belongsTo(Unit::class, 'per_unit_id');
     }
 
     /** এটা কি পণ্যের base — যে এককে মজুদ গোনা হয়। */

@@ -113,6 +113,8 @@ class EveryRawQueryNamesItsCompanyTest extends TestCase
         'app/Modules/Inventory/Services/PackSnapshot.php' => 'গোটা ডেটাবেসের আঙুলের ছাপ, ইচ্ছে করে কোম্পানি-নিরপেক্ষ: '
             .'প্রমাণটা "কোনো কোম্পানিতেই মজুদ বা লাইন বদলায়নি"; লাইন-টেবিলে company_id নেই; '
             .'আর ছাপে কেবল সারির সংখ্যা ও md5 বেরোয়, কোনো সারির লেখা নয়',
+        'app/Modules/Inventory/Services/ProductPackService.php' => 'পণ্যের একক বদলানোর আগে কোনো মজুদ বা লাইন আছে কি না — '
+            .'পণ্যের id দিয়ে, আর পণ্যটা নিজেই কোম্পানি-স্কোপে বাছা; লাইন-টেবিলে company_id নেই',
         'app/Console/Commands/CatchUpNumbers.php' => 'ছাঁকনিটা শর্তসাপেক্ষে বসে (`$where[\'scoped\']`), কারণ নম্বর '
             .'সিরিজের কিছু টেবিল ইচ্ছাকৃতভাবেই কোম্পানি-নিরপেক্ষ; '
             .'বসানোর সময় সিরিজের নিজের company_id ব্যবহার হয়',

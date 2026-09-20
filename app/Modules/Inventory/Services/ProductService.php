@@ -9,6 +9,7 @@ use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Support\DocumentStatus;
 use App\Models\IssuedNumber;
 use App\Modules\Inventory\Models\Product;
+use App\Modules\Inventory\Models\ProductUnit;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -23,6 +24,7 @@ final class ProductService
     public function __construct(
         private readonly NumberSeriesEngine $numbers,
         private readonly DuplicationEngine $duplicates,
+        private readonly ProductPackService $packs,
     ) {}
 
     /**
@@ -36,7 +38,9 @@ final class ProductService
 
         $this->assertImportable($data);
 
-        return DB::transaction(function () use ($data) {
+        [$data, $packs, $defaults] = $this->splitPacks($data);
+
+        return DB::transaction(function () use ($data, $packs, $defaults) {
             $givenCode = filled($data['code'] ?? null);
 
             $data['code'] = $givenCode ? trim((string) $data['code']) : $this->numbers->next('PRD');
@@ -50,6 +54,11 @@ final class ProductService
                 'is_active' => $data['is_active'] ?? true,
                 'created_by' => auth()->id(),
             ]);
+
+            // ⓘ প্যাক এলে একই ট্রানজ্যাকশনে — ভুল প্যাকে পণ্যটাও তৈরি হয় না
+            if ($packs !== null && $product->unit_id !== null) {
+                $this->packs->sync($product, $packs, $defaults);
+            }
 
             if (! $givenCode) {
                 IssuedNumber::query()
@@ -81,9 +90,28 @@ final class ProductService
             $this->assertBarcodeIsFree($data['barcode'], $product->id);
         }
 
-        $product->update($data);
+        /*
+         * ⛔ base বদলানো — মজুদ বা কাগজ হয়ে গেলে আর নয় (মালিকের নিয়ম,
+         * ১৯ সেপ্টেম্বর ২০২৬)। কারণ [[ProductPackService::assertBaseCanChange()]]-এ।
+         * ⓘ একক ছিলই না এমন পণ্যে প্রথমবার একক বসানো সবসময় চলে।
+         */
+        $newUnit = array_key_exists('unit_id', $data) ? (int) $data['unit_id'] : (int) $product->unit_id;
 
-        return $product->fresh();
+        [$data, $packs, $defaults] = $this->splitPacks($data);
+
+        if ($product->unit_id !== null && $newUnit !== (int) $product->unit_id) {
+            $this->packs->assertBaseCanChange($product, $packs !== null);
+        }
+
+        return DB::transaction(function () use ($product, $data, $packs, $defaults) {
+            $product->update($data);
+
+            if ($packs !== null && $product->unit_id !== null) {
+                $this->packs->sync($product, $packs, $defaults);
+            }
+
+            return $product->fresh();
+        });
     }
 
     /**
@@ -94,6 +122,34 @@ final class ProductService
      * আটকালে ব্যবহারকারী বাধ্য হতেন একটা ভুয়া সমন্বয় দিয়ে মজুদ শূন্য
      * করতে — যা আসল মালটা লুকিয়ে ফেলত।
      */
+    /**
+     * প্যাকের দুই ঘর পণ্যের ঘর থেকে আলাদা করা।
+     *
+     * ⚠️ পণ্যের মডেল অচেনা ঘর পেলে থেমে যায় (MassAssignmentException) —
+     * আর সেটাই ঠিক, নইলে টাইপো নীরবে হারাত। তাই `packs` আর
+     * `pack_defaults` আগে তুলে নেওয়া হয়।
+     *
+     * ⓘ `packs` না এলে null — মানে "টেবিলটা ছোঁয়া হবে না", খালি তালিকা
+     * নয়। খালি তালিকা মানে "সব প্যাক সরাও"।
+     *
+     * ⚠️ `pack_table`: ফর্মে সব সারি মুছে জমা দিলে ব্রাউজার `packs` ঘরটা
+     * পাঠায়ই না — তখন "ছোঁয়া হবে না" আর "সব সরাও" আলাদা করা যেত না, আর
+     * শেষ প্যাকটা কখনো মোছা যেত না। তাই ফর্ম একটা লুকানো চিহ্ন পাঠায়:
+     * টেবিলটা এই ফর্মে ছিল।
+     *
+     * @return array{0: array<string, mixed>, 1: ?array, 2: array}
+     */
+    private function splitPacks(array $data): array
+    {
+        $sent = array_key_exists('packs', $data) || ! empty($data['pack_table']);
+        $packs = $sent ? (array) ($data['packs'] ?? []) : null;
+        $defaults = (array) ($data['pack_defaults'] ?? []);
+
+        unset($data['packs'], $data['pack_defaults'], $data['pack_table']);
+
+        return [$data, $packs, $defaults];
+    }
+
     public function deactivate(Product $product): Product
     {
         $product->refresh()->forceFill(['is_active' => false])->save();
@@ -165,7 +221,14 @@ final class ProductService
             ->where('barcode', $barcode)
             ->when($exceptId, fn ($q, $id) => $q->whereKeyNot($id))
             ->withTrashed()
-            ->exists();
+            ->exists()
+
+            /*
+             * ⚠️ কোনো পণ্যের প্যাকের বারকোডও (কার্টনের গায়েরটা) —
+             * ১৯ সেপ্টেম্বর ২০২৬। নইলে এই পিসের নম্বর আর অন্য কারো কার্টনের
+             * নম্বর এক হত, আর স্ক্যানার দুইটার একটা বেছে নিত।
+             */
+            || ProductUnit::query()->where('barcode', $barcode)->exists();
 
         if ($taken) {
             throw ValidationException::withMessages([
