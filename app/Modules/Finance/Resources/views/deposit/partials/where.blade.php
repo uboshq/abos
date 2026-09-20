@@ -5,7 +5,17 @@
      কাজে লাগে না — "১২৩৪৫৬" কোন ব্যাংকের তা না জানলে অর্থহীন। এক
      ঘরে থাকলে দুইটা একসাথে পড়া যায়; আলাদা কলামে চোখ দুইবার যেত। --}}
 <span class="inline-flex flex-col">
-    <span>{{ $deposit->institution }}</span>
+    {{-- ⓘ নিরীক্ষা চ১, ২১ সেপ্টেম্বর ২০২৬ — প্রতিষ্ঠানের নাম তার নিজের পাতায় খোলে।
+
+         ⛔ নামটা নিছক লেখা ছিল, অথচ প্রতিষ্ঠানের পাতায় ঐ ব্যাংকের সব
+         কিছু একসাথে থাকে — ঋণসীমা, জমা, বীমা। ⚠️ পুরনো সারিতে
+         `institution_id` নাও থাকতে পারে (তালিকা আসার আগের জমা), তখন
+         আগের মতোই নিছক লেখা। --}}
+    <span>
+        @include('finance::partials.institution-link', [
+            'id' => $deposit->institution_id, 'label' => $deposit->institution,
+        ])
+    </span>
 
     @if ($deposit->branch_name || $deposit->reference_no)
         <span class="text-2xs text-(--color-ink-muted)">

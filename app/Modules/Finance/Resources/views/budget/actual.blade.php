@@ -14,7 +14,7 @@
 
     $columns = [
         ['key' => 'account', 'label' => __('finance::budget.account'),
-         'render' => fn ($r) => $r['account']->code.' — '.$r['account']->name()],
+         'render' => fn ($r) => view('finance::budget.partials.account-link', ['account' => $r['account']])],
     ];
 
     if ($byCenter) {

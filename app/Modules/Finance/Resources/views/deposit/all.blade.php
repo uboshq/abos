@@ -63,7 +63,7 @@
                          .($d->kind->issuer === 'national_savings' ? 'savings' : $d->kind->issuer))],
 
                     ['key' => 'kind', 'label' => __('finance::field.deposit_kind'),
-                     'render' => fn ($d) => $d->kind->name()],
+                     'render' => fn ($d) => view('finance::deposit.partials.kind-link', ['deposit' => $d])],
                     ['key' => 'institution', 'label' => __('finance::field.institution'),
                      'render' => fn ($d) => view('finance::deposit.partials.where', ['deposit' => $d])],
                     ['key' => 'held_by', 'label' => __('finance::field.held_by'), 'width' => '9rem',

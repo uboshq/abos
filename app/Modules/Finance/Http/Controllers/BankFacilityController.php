@@ -128,6 +128,8 @@ class BankFacilityController extends Controller implements HasMiddleware
     private function facilityList(string $tab, string $term): LengthAwarePaginator
     {
         return BankFacility::query()
+            // ⓘ তালিকায় প্রতিষ্ঠানের কলাম আছে — নাহলে প্রতি সারিতে একটা কোয়েরি
+            ->with('institution')
             ->when($tab === 'closed',
                 fn ($q) => $q->where('status', DocumentStatus::CLOSED),
                 fn ($q) => $q->where('status', '!=', DocumentStatus::CLOSED))

@@ -7,10 +7,15 @@
 --}}
 @php
     $columns = [
-        ['key' => 'code', 'label' => __('finance::field.kind_code'), 'width' => '8rem'],
+        ['key' => 'code', 'label' => __('finance::field.kind_code'), 'width' => '8rem',
+         'render' => fn ($k) => view('finance::deposit-kind.partials.name-link', [
+             'kind' => $k, 'text' => $k->code,
+         ])],
 
         ['key' => 'name', 'label' => __('finance::field.kind_name'),
-         'render' => fn ($k) => $k->name()],
+         'render' => fn ($k) => view('finance::deposit-kind.partials.name-link', [
+             'kind' => $k, 'text' => $k->name(),
+         ])],
 
         ['key' => 'issuer', 'label' => __('finance::field.kind_issuer'), 'width' => '11rem',
          'render' => fn ($k) => __('finance::menu.deposit_'.($k->issuer === 'national_savings' ? 'savings' : $k->issuer))],

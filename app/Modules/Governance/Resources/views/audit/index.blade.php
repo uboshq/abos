@@ -11,7 +11,10 @@
         ['key' => 'created_at', 'label' => __('governance::field.when'), 'width' => '12rem',
          'render' => fn ($t) => $t->created_at->format('d M Y, H:i')],
         ['key' => 'user', 'label' => __('governance::field.who'), 'width' => '11rem',
-         'render' => fn ($t) => $t->user?->name ?? __('governance::message.system')],
+         'render' => fn ($t) => view('governance::partials.user-link', [
+             'id' => $t->user_id,
+             'label' => $t->user?->name ?? __('governance::message.system'),
+         ])],
         ['key' => 'action', 'label' => __('governance::field.action'), 'width' => '8rem',
          'render' => fn ($t) => __('governance::action.' . $t->action)],
         ['key' => 'record', 'label' => __('governance::field.record'),

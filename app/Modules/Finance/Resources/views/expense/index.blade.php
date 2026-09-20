@@ -29,7 +29,7 @@
     @php
         $expenseColumns = [
             ['key' => 'head', 'label' => __('finance::field.head'),
-             'render' => fn ($r) => $r['account']->name()],
+             'render' => fn ($r) => view('finance::partials.head-link', ['account' => $r['account']])],
             ['key' => 'now', 'label' => __('finance::field.this_period'), 'numeric' => true, 'width' => '11rem',
              'render' => fn ($r) => view('ui.amount-link', [
                  'value' => $r['now'],

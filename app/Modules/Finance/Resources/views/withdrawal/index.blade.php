@@ -41,9 +41,12 @@
     $wdColumns = [
         ['key' => 'trx_date', 'label' => __('finance::field.date'), 'width' => '9rem',
          'render' => fn ($w) => \App\Core\Support\DateFormat::format($w->trx_date)],
-        ['key' => 'document_no', 'label' => __('core.print.document_no'), 'width' => '10rem'],
+        ['key' => 'document_no', 'label' => __('core.print.document_no'), 'width' => '10rem',
+         'render' => fn ($w) => view('finance::withdrawal.partials.number', ['row' => $w])],
         ['key' => 'person', 'label' => __('finance::field.who'),
-         'render' => fn ($w) => $w->person?->name() ?? '—'],
+         'render' => fn ($w) => view('finance::partials.person-link', [
+             'id' => $w->person_id, 'label' => $w->person?->name(),
+         ])],
         ['key' => 'kind', 'label' => __('finance::field.withdrawal_kind_box'), 'width' => '10rem',
          'render' => fn ($w) => __('finance::field.kind_'.($w->kind ?: 'drawing'))],
         ['key' => 'in_kind', 'label' => __('finance::field.in_kind'), 'width' => '9rem',
@@ -64,7 +67,9 @@
 
     $standColumns = [
         ['key' => 'name', 'label' => __('finance::field.who'),
-         'render' => fn ($r) => $r['name']],
+         'render' => fn ($r) => view('finance::partials.person-link', [
+             'id' => $r['person_id'], 'label' => $r['name'],
+         ])],
         ['key' => 'cap', 'label' => __('finance::field.monthly_cap'), 'numeric' => true,
          'width' => '10rem',
          'render' => fn ($r) => $r['cap'] === null

@@ -12,7 +12,9 @@
          'render' => fn ($r) => $r->created_at?->format('d M Y, H:i')],
 
         ['key' => 'who', 'label' => __('governance::field.who'), 'width' => '12rem',
-         'render' => fn ($r) => $r->who()],
+         'render' => fn ($r) => view('governance::partials.user-link', [
+             'id' => $r->user_id, 'label' => $r->who(),
+         ])],
 
         /*
          * ফল — রঙ একা যথেষ্ট নয়, লেখাও থাকে।

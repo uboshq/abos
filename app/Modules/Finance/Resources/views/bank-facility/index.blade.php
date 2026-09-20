@@ -28,6 +28,21 @@
              '<a href=\'' . route('finance.bank_facility.show', $f->id) . '\' '
              . 'class=\'text-brand-500 underline-offset-2 hover:underline\'>'
              . e($f->bank) . '</a>')],
+        /*
+         * ⭐ প্রতিষ্ঠান — নিরীক্ষা চ১, ২১ সেপ্টেম্বর ২০২৬।
+         *
+         * ⛔ তালিকায় `bank` লেখাটা ছিল আর সেটা **সুবিধার নিজের পাতায়**
+         * নামত — প্রতিষ্ঠানের পাতায় যাওয়ার কোনো পথ ছিল না, অথচ
+         * সম্পর্কটা (`institution_id`) অনেক দিন ধরেই আছে।
+         *
+         * ⚠️ `bank` ঘরটা থেকে যায়: ওখানে শাখাসহ হাতে লেখা নামটা বসে,
+         * আর দুইটা এক জিনিস নয় — "ইসলামী ব্যাংক, গুলশান" বনাম
+         * তালিকার "ইসলামী ব্যাংক"।
+         */
+        ['key' => 'institution', 'label' => __('finance::field.institution'), 'width' => '12rem',
+         'render' => fn ($f) => view('finance::partials.institution-link', [
+             'id' => $f->institution_id, 'label' => $f->institution?->name(),
+         ])],
         ['key' => 'kind', 'label' => __('finance::field.facility_kind'), 'width' => '10rem',
          'render' => fn ($f) => __('finance::field.facility_' . $f->kind)],
         /* ⓘ চুক্তিটা `numeric`, `align`/`money` নয় — কম্পোনেন্টের

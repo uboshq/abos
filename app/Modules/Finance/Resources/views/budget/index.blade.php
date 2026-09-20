@@ -10,8 +10,9 @@
 
     $columns = [
         ['key' => 'account', 'label' => __('finance::budget.account'),
-         'render' => fn ($r) => $r['account']->code.' — '.$r['account']->name()
-             .($r['center'] ? ' · '.$r['center']->name() : '')],
+         'render' => fn ($r) => view('finance::budget.partials.account-link', [
+             'account' => $r['account'], 'center' => $r['center'],
+         ])],
     ];
 
     foreach (range(1, 12) as $m) {

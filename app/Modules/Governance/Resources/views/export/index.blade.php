@@ -12,7 +12,9 @@
         ['key' => 'created_at', 'label' => __('governance::field.when'), 'width' => '12rem',
          'render' => fn ($r) => $r->created_at?->format('d M Y, H:i')],
         ['key' => 'user', 'label' => __('governance::field.who'), 'width' => '11rem',
-         'render' => fn ($r) => $r->who()],
+         'render' => fn ($r) => view('governance::partials.user-link', [
+             'id' => $r->user_id, 'label' => $r->who(),
+         ])],
         ['key' => 'title', 'label' => __('governance::field.what_was_taken'),
          'render' => fn ($r) => $r->title ?: $r->route],
 
