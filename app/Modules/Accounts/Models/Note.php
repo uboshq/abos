@@ -77,6 +77,11 @@ class Note extends Model implements Drillable
         return [
             'trx_date' => 'date',
             'confirmed_at' => 'datetime',
+
+            /* ⚠️ টাকার ঘরে float ঢুকলে ভুলটা নীরব — তাই `decimal:4` */
+            'amount' => 'decimal:4',
+            'tax_amount' => 'decimal:4',
+            'total' => 'decimal:4',
             'cancelled_at' => 'datetime',
         ];
     }
@@ -117,20 +122,28 @@ class Note extends Model implements Drillable
     }
 
     /**
-     * ⚠️ দুই দিকের দুইটা আলাদা `source_type`, আর সেটা জরুরি।
+     * ⭐ একটাই নাম, দুই দিকের জন্য — আর প্রথমে ভুল সিদ্ধান্ত নিয়েছিলাম।
      *
-     * ⓘ খতিয়ানের সারিতে "কোন ধরনের কাগজ" প্রশ্নের উত্তর এই লেখাটাই দেয়।
-     * ⛔ দুইটাকে এক নামে ডাকলে রিপোর্টে গ্রাহকের ছাড় আর সরবরাহকারীর দাবি
-     * এক পাল্লায় উঠত, অথচ ওরা বইয়ের দুই দিকের জিনিস।
+     * ── ⚠️ যা করতে গিয়েছিলাম, আর কেন সেটা চলল না ───────────────────
+     * প্রথমে দুইটা আলাদা নাম রেখেছিলাম (`credit_note`, `debit_note`),
+     * যুক্তি ছিল "রিপোর্টে যেন দুই দিক না মেশে"। ⛔ কিন্তু মানচিত্রের
+     * একটা নাম একটাই ক্লাস দাবি করতে পারে, আর দুই নামে এক ক্লাস বসালে
+     * খতিয়ানের ঘর থেকে **লিংকটা কোনোদিন তৈরিই হত না, আর কোনো ত্রুটিও
+     * আসত না** ([[Tests\Feature\Architecture\DrillSourcesTest]] ধরেছে)।
+     *
+     * ⓘ আর আসল কথা: যুক্তিটাই দুর্বল ছিল। দুই দিক এমনিতেই আলাদা — একটা
+     * বসে প্রাপ্যে (১১১০), অন্যটা প্রদেয়তে (২১১১)। খাতটাই পার্থক্যটা
+     * বলে, নামের দরকার ছিল না।
      */
     public static function drillSourceType(): string
     {
-        return 'credit_note';
+        return 'note';
     }
 
+    /** ⓘ দাখিলা বসানোর সময় এই নামটাই যায় — [[NoteService::confirm()]] */
     public function sourceType(): string
     {
-        return $this->isCredit() ? 'credit_note' : 'debit_note';
+        return self::drillSourceType();
     }
 
     public function drillDocumentNo(): string

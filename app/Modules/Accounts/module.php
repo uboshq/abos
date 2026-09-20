@@ -391,9 +391,8 @@ return [
     ],
 
     'drill_sources' => [
-        /* ⭐ দুই দিকের দুইটা নাম, একই মডেল — [[Note::sourceType()]] */
-        'credit_note' => Note::class,
-        'debit_note' => Note::class,
+        /* ⓘ এক নাম, দুই দিক — খাতটাই পার্থক্য বলে ([[Note::drillSourceType()]]) */
+        'note' => Note::class,
         'cheque' => Cheque::class,
         'account' => Account::class,
         'cash_till' => CashTill::class,

@@ -60,6 +60,7 @@ class EveryChangeableRowRemembersWhoChangedItTest extends TestCase
         'App\Models\ExportLog' => 'কে কী রপ্তানি করল — নিজেই একটা লগ',
         'App\Models\ErrorEvent' => 'ভুলের খাতা — ব্যবস্থাটা নিজে লেখে, মানুষ নয়',
         'App\Models\Notification' => 'পড়া/না-পড়া ছাড়া কিছু বদলায় না',
+        'App\Models\DocumentDelivery' => 'কাগজ বেরোনোর ঘটনা — একবার ঘটে, কেউ বদলায় না (২০ সেপ্টেম্বর ২০২৬)',
 
         // ── ব্যক্তির নিজের সুবিধা, ব্যবসার তথ্য নয় ──────────────────
         'App\Models\SavedView' => 'নিজের তালিকার নিজের ছাঁকনি',

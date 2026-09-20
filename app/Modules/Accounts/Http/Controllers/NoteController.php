@@ -107,7 +107,8 @@ class NoteController extends Controller implements HasMiddleware
         $data = $request->validate([
             'direction' => ['required', Rule::in(Note::DIRECTIONS)],
             'party_id' => ['required', 'integer', 'min:1'],
-            'trx_date' => ['required', 'date'],
+            /* ⛔ কাল-পরশুর তারিখে নোট কাটা যায় না — বই ভবিষ্যৎ চেনে না */
+            'trx_date' => ['required', 'date', 'before_or_equal:today'],
             'amount' => ['required', 'numeric', 'gt:0'],
             'tax_amount' => ['nullable', 'numeric', 'min:0'],
             'reason' => ['required', Rule::in(Note::REASONS)],

@@ -65,7 +65,7 @@ final class APriceCouldBeWrongAndNothingCouldSaySoTest extends TestCase
 
         app(NoteService::class)->confirm($note);
 
-        $entries = LedgerEntry::query()->where('source_type', 'credit_note')->get();
+        $entries = LedgerEntry::query()->where('source_type', 'note')->get();
 
         $this->assertCount(3, $entries, 'তিনটা সারি বসার কথা — ফেরত, ভ্যাট, আর প্রাপ্য।');
 
@@ -97,7 +97,7 @@ final class APriceCouldBeWrongAndNothingCouldSaySoTest extends TestCase
 
         app(NoteService::class)->confirm($note);
 
-        $entries = LedgerEntry::query()->where('source_type', 'debit_note')->get();
+        $entries = LedgerEntry::query()->where('source_type', 'note')->get();
 
         $this->assertCount(2, $entries, 'ভ্যাট ছাড়া দুইটা সারিই বসার কথা।');
 
@@ -140,7 +140,7 @@ final class APriceCouldBeWrongAndNothingCouldSaySoTest extends TestCase
         $note = $this->note(Note::CREDIT, $this->customerId, amount: '500', tax: '0');
 
         $this->assertSame(DocumentStatus::DRAFT, $note->status);
-        $this->assertSame(0, LedgerEntry::query()->where('source_type', 'credit_note')->count());
+        $this->assertSame(0, LedgerEntry::query()->where('source_type', 'note')->count());
     }
 
     /**

@@ -6,6 +6,7 @@ namespace App\Modules\Accounts\Models;
 
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
+use App\Core\Concerns\IsAudited;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -27,6 +28,7 @@ class BankStatementLine extends Model
 {
     use BelongsToCompany;
     use HasPublicId;
+    use IsAudited;
 
     protected $table = 'acc_bank_statement_lines';
 
@@ -43,6 +45,15 @@ class BankStatementLine extends Model
         return [
             'trx_date' => 'date',
             'matched_at' => 'datetime',
+
+            /*
+             * ⚠️ `decimal:4` — নাহলে মানটা string হয়ে ফেরে আর কেউ `+`
+             * লিখলেই PHP float বানিয়ে ফেলে, আর টাকার হিসাবে float মানে
+             * নীরব ভুল।
+             */
+            'debit' => 'decimal:4',
+            'credit' => 'decimal:4',
+            'balance' => 'decimal:4',
         ];
     }
 
