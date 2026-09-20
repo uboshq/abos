@@ -174,7 +174,20 @@ class WhoGotInTest extends TestCase
     /** @param  list<string>  $extra */
     private function clerk(array $extra = []): User
     {
-        Permission::findOrCreate('governance.audit.view', 'web');
+        /*
+         * ⚠️ চাবিগুলো **নাম ধরে** বানানো, কারণ factory-র ব্যবহারকারীর
+         * কোনো ভূমিকা নেই আর অনুমতিটা না থাকলে Spatie থামিয়ে দেয়।
+         *
+         * ⓘ `governance.login.view` যোগ হলো ২১ সেপ্টেম্বর ২০২৬-এ:
+         * ১৮ সেপ্টেম্বরে চারটা খাতা এক চাবিতে খুলত, আর সেগুলো আলাদা করা
+         * হয় ([[e2282f78]])। ⛔ লগইনের খাতা তখন `governance.login.view`
+         * চাইতে শুরু করে, কিন্তু এই পরীক্ষাটা পুরনো `audit.view`-ই
+         * দিচ্ছিল — তাই পর্দাটা ৪০৩ দিত, আর লালটা দেখে মনে হত খাতাটাই
+         * ভেঙেছে।
+         */
+        foreach (['governance.audit.view', 'governance.login.view'] as $name) {
+            Permission::findOrCreate($name, 'web');
+        }
 
         $user = User::factory()->create(['password' => Hash::make('password')]);
         $user->companies()->attach($this->company, ['is_active' => true]);
@@ -199,7 +212,7 @@ class WhoGotInTest extends TestCase
     {
         $this->tryLogin('admin', 'letmein');
 
-        $this->actingAs($this->clerk(['governance.audit.view']))
+        $this->actingAs($this->clerk(['governance.login.view']))
             ->get(route('governance.login.index'))
             ->assertOk()
             ->assertSee('admin')
