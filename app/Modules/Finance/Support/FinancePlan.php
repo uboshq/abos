@@ -132,7 +132,7 @@ final class FinancePlan
                     ['বছর শেষ', 'accounts.year_end.index', null],
                     ['পিরিয়ড বন্ধ ও খোলা', 'accounts.period.index', null],
                     ['খোলা ব্যালেন্স', 'inventory.stock.opening', 'মজুদের খোলা ব্যালেন্স'],
-                    ['খাত বিশ্লেষণ', null, 'বাকি'],
+                    ['খাত বিশ্লেষণ', 'finance.account_analysis.index', 'এক খাতের চলাচল — মাস, পক্ষ, উল্টো খাত ধরে'],
                 ],
             ],
             [
@@ -156,8 +156,8 @@ final class FinancePlan
                     ['দেনার তালিকা', 'supplier.report.show:payable-list', null],
                     ['দেনার বয়স', 'supplier.report.show:ageing', null],
                     ['পরিশোধ', 'purchase.payment.index', null],
-                    ['পরিশোধের সময়সূচি', null, 'বাকি'],
-                    ['ট্রান্সপোর্ট ও শ্রমিকের খতিয়ান', null, 'বাকি — ডিপোর বিশেষ খতিয়ান'],
+                    ['পরিশোধের সময়সূচি', 'purchase.payment_schedule.index', 'ক্রয়ের পাতায় — বিলের শেষ তারিখ ক্রয়ই জানে'],
+                    ['ট্রান্সপোর্ট ও শ্রমিকের খতিয়ান', 'finance.carrier_labour.index', null],
                 ],
             ],
             [
@@ -195,7 +195,11 @@ final class FinancePlan
                     ['ব্যাংক মিলকরণ', 'accounts.reconciliation.index', null],
                     ['ব্যাংকে-ব্যাংকে হস্তান্তর', 'accounts.transfer.index', 'কন্ট্রা'],
                     ['ব্যাংক স্টেটমেন্ট আমদানি', null, 'বাকি'],
-                    ['ব্যাংক চার্জ', null, 'বাকি'],
+                    ['ব্যাংক চার্জ', 'finance.bank_charge.index', null],
+                    ['আর্থিক প্রতিষ্ঠান', 'finance.institution.index', 'ব্যাংক · MFS · বিমা কোম্পানি, আর হিসাবের খাতের সাথে জোড়া'],
+                    ['নতুন প্রতিষ্ঠান', 'finance.institution.create', null],
+                    ['বীমা পলিসি', 'finance.insurance.index', 'পলিসি ও প্রিমিয়াম, মেয়াদ শেষের আগে'],
+                    ['নতুন পলিসি', 'finance.insurance.create', null],
                 ],
             ],
             [
