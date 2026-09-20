@@ -86,9 +86,9 @@ final class FinancePlan
                     ['টাকার হেফাজত', 'accounts.custody', null],
                     ['বকেয়ার সংক্ষেপ', 'customer.report.show:due-list', null],
                     ['দেনার সংক্ষেপ', 'supplier.report.show:payable-list', null],
-                    ['CFO ড্যাশবোর্ড', null, 'বাকি — Financial Health ও Liquidity Score'],
+                    ['CFO ড্যাশবোর্ড', 'finance.cfo', 'নগদ, প্রাপ্য, দেনা আর তারল্য এক পাতায়'],
                     ['ঝুঁকির ড্যাশবোর্ড', null, 'পরের ধাপ'],
-                    ['বাজেটের অবস্থা', null, 'বাকি — §১৬ বাজেট আগে লাগবে'],
+                    ['বাজেটের অবস্থা', 'finance.budget.actual', 'ফিন্যান্স ড্যাশবোর্ড ও CFO পাতার কার্ড'],
                     ['ট্রেজারি সংক্ষেপ', null, 'পরের ধাপ — বহু-কোম্পানি হলে'],
                     ['অপেক্ষমাণ অনুমোদন', 'approval.inbox.index', 'অনুমোদন কেন্দ্র থেকে'],
                 ],
@@ -183,7 +183,7 @@ final class FinancePlan
                     ['নগদ গণনা', 'accounts.count.index', null],
                     ['টাকা হস্তান্তর', 'accounts.transfer.index', null],
                     ['টাকা ও হেফাজত', 'accounts.custody', null],
-                    ['নগদের পূর্বাভাস', null, 'বাকি'],
+                    ['নগদের পূর্বাভাস', 'finance.forecast.cash', '৩০ · ৬০ · ৯০ দিন — প্রাপ্য, দেনা আর কিস্তি ধরে'],
                 ],
             ],
             [
@@ -389,9 +389,10 @@ final class FinancePlan
                 'no' => '১৬',
                 'title' => 'বাজেট',
                 'items' => [
-                    ['বাজেট পরিকল্পনা', null, 'বাকি'],
-                    ['বাজেট বনাম প্রকৃত', null, 'বাকি'],
-                    ['বিভাগভিত্তিক বাজেট', null, 'বাকি'],
+                    ['বাজেট পরিকল্পনা', 'finance.budget.index', 'খাত ও মাস ধরে, ঐচ্ছিক খরচের কেন্দ্রসহ'],
+                    ['নতুন বাজেট', 'finance.budget.create', null],
+                    ['বাজেট বনাম প্রকৃত', 'finance.budget.actual', 'প্রকৃত অঙ্ক খতিয়ান থেকে, দ্বিতীয় কপি নয়'],
+                    ['বিভাগভিত্তিক বাজেট', 'finance.budget.centers', null],
                 ],
             ],
             [
@@ -515,7 +516,7 @@ final class FinancePlan
                     ['আদায়ের তালিকা', 'accounts.report.show:inflow', null],
                     ['কোন কেন্দ্রে কত', 'accounts.report.show:by-cost-centre', null],
                     ['উত্তোলনের রিপোর্ট', 'finance.withdrawal.index', 'কে কত নিলেন, মাস ধরে'],
-                    ['বাজেটের রিপোর্ট', null, 'বাকি — §১৬'],
+                    ['বাজেটের রিপোর্ট', 'finance.budget.report', null],
                 ],
             ],
             [
