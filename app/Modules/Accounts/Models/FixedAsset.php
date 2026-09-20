@@ -160,6 +160,26 @@ class FixedAsset extends Model implements Drillable
         return 'fixed_asset';
     }
 
+    /**
+     * বিদায়ের দিনের দাখিলার নিজস্ব চাবি।
+     *
+     * ── ⛔ কী ভাঙা ছিল, ২০ সেপ্টেম্বর ২০২৬ ─────────────────
+     * নিবন্ধন আর বিদায় — দুইটাই `fixed_asset#<id>` নামে খাতায় বসত।
+     * ⚠️ [[PostingEngine::assertNotAlreadyPosted]] নিবন্ধনের সারিগুলো খোলা
+     * দেখে বিদায়টাই আটকে দিত — ফলে **যে সম্পদের টাকার উৎস লেখা
+     * আছে, সেটা আর বিক্রি করাই যেত না**। ⛔ আর সবচেয়ে খারাপ ফলটা
+     * নীরব: বিক্রির টাকা খাতায় উঠত না, সম্পদটা স্থিতিপত্রে থেকে যেত,
+     * আর প্রতি মাসে এমন জিনিসের উপর অবচয় বসত যেটা আর নেই।
+     *
+     * ⓘ অবচয় এই ফাঁদে পড়েনি, কারণ তার নিজের সারি আছে
+     * ([[DepreciationEntry]]) — তাই প্রতি মাসে আলাদা আইডি। ⭐ বিদায়ের
+     * সারি নেই, তাই চাবিটাই আলাদা হয়।
+     */
+    public static function disposalSourceType(): string
+    {
+        return 'asset_disposal';
+    }
+
     public function drillDocumentNo(): string
     {
         return $this->document_no;

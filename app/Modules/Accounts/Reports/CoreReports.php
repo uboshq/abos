@@ -434,8 +434,13 @@ final class CoreReports
                  * ব্যালেন্স শিটে বাদ দেওয়ার দরকার নেই: ওখানে আয়-ব্যয়
                  * থাকেই না, আর সঞ্চিত মুনাফার লাইনটা ওখানে থাকা জরুরি।
                  */
-                ->when($dateRange, fn ($q) => $q->where(
-                    'ledger_entries.source_type', '!=', YearEndService::CLOSE_SOURCE,
+                /*
+                 * ⚠️ দুইটা নামই বাদ — ২০ সেপ্টেম্বর ২০২৬। আগে কেবল
+                 * `year_close` বাদ যেত, আর `year_close:reversal` গোনা হত —
+                 * তাই বছর আবার খুললে লাভ দ্বিগুণ দেখাত।
+                 */
+                ->when($dateRange, fn ($q) => $q->whereNotIn(
+                    'ledger_entries.source_type', YearEndService::closingSources(),
                 ))
                 ->groupBy(
                     'ledger_entries.account_id', 'accounts.code',

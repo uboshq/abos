@@ -58,6 +58,28 @@ final class YearEndService
     public const CLOSE_SOURCE = 'year_close';
 
     /**
+     * বছর আবার খুললে বন্ধের দাখিলাটা যে নামে উলটায়
+     * ([[PostingEngine::reverse]] নামের শেষে `:reversal` বসায়)।
+     */
+    public const CLOSE_REVERSAL = self::CLOSE_SOURCE.':reversal';
+
+    /**
+     * বছর বন্ধ করার দাখিলার দুইটা নাম — বসানো আর উলটানো।
+     *
+     * ── ⛔ কেন এক জায়গায়, ২০ সেপ্টেম্বর ২০২৬ ───────────────
+     * চার জায়গায় চার রকম লেখা ছিল: কেউ কেবল `year_close` বাদ দিত,
+     * কেউ কিছুই বাদ দিত না। ⚠️ ফলে একই বছরের লাভ তিন পর্দায় তিন
+     * রকম দেখাত — স্থিতিপত্রে দ্বিগুণ, রিপোর্টে শূন্য। ⓘ এখন নাম
+     * দুইটা এখানেই লেখা, আর সবাই এখান থেকেই পড়ে।
+     *
+     * @return list<string>
+     */
+    public static function closingSources(): array
+    {
+        return [self::CLOSE_SOURCE, self::CLOSE_REVERSAL];
+    }
+
+    /**
      * কী কী ঘটবে — কিছু না বদলে।
      *
      * বছর বন্ধ করা যায় না ফেরানো, তাই আগে দেখে নেওয়ার একটা পথ থাকতেই
@@ -501,6 +523,16 @@ final class YearEndService
             ->join('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
             ->where('accounts.type', $type)
             ->whereBetween('ledger_entries.trx_date', [$year->starts_on, $year->ends_on])
+
+            /*
+             * ⛔ বন্ধের দাখিলাটা বাদ — ২০ সেপ্টেম্বর ২০২৬।
+             *
+             * বন্ধ করা মানে আয়-ব্যয়ের খাতগুলো শূন্য করা। ⚠️ ওই সারিগুলো
+             * গুনলে **যেকোনো বন্ধ বছরের ফল শূন্য** দেখাত — অর্থাৎ বছর
+             * বন্ধ করার সাথে সাথেই ওই বছরে কত লাভ হয়েছিল সেটা মুছে যেত।
+             * ⓘ উলটানো সারিও বাদ, নাহলে বছর আবার খুললে লাভ দ্বিগুণ দেখাত।
+             */
+            ->whereNotIn('ledger_entries.source_type', self::closingSources())
             ->selectRaw('COALESCE(SUM(ledger_entries.credit) - SUM(ledger_entries.debit), 0) as net')
             ->first();
 

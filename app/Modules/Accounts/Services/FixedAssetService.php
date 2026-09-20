@@ -396,8 +396,14 @@ final class FixedAssetService
                     : ['account_id' => $asset->expense_account_id, 'debit' => bcmul($difference, '-1', 4)];
             }
 
+            /*
+             * ⚠️ নিবন্ধনের চাবি নয়, বিদায়ের নিজস্ব চাবি
+             * ([[FixedAsset::disposalSourceType]])। ⛔ একই চাবি দিলে যে সম্পদের
+             * টাকার উৎস লেখা আছে তার বিদায় পোস্টিং ইঞ্জিন আটকে দেয়,
+             * আর গোটা লেনদেন ফিরে যায় — বিক্রির টাকাও খাতায় বসে না।
+             */
             $this->posting->post(
-                sourceType: FixedAsset::drillSourceType(),
+                sourceType: FixedAsset::disposalSourceType(),
                 sourceId: $asset->id,
                 trxDate: $on->toDateString(),
                 lines: $lines,
