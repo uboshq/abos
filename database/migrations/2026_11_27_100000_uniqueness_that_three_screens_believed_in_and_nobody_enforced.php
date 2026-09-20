@@ -114,9 +114,21 @@ return new class extends Migration
                 continue;
             }
 
+            /*
+             * ⛔ VIRTUAL, STORED নয় — ২১ সেপ্টেম্বর ২০২৬।
+             *
+             * ⚠️ STORED কলাম বসাতে MySQL গোটা টেবিল নতুন করে লেখে
+             * (ALGORITHM=COPY), আর সেই লেখার সময় foreign key গুলো
+             * আবার বাঁধতে গিয়ে থেমে যায় — লোকালে হুবহু এই ভুলে
+             * (errno 1215) তিনটা পরীক্ষা লাল হয়েছিল।
+             *
+             * ⓘ VIRTUAL কলাম কেবল সংজ্ঞা — সারি ছোঁয়া হয় না, তাই
+             * রিবিল্ডও নেই। ⭐ আর MySQL 5.7+ ভার্চুয়াল কলামেও সূচক
+             * বসাতে দেয়, আর অদ্বিতীয়তার পাহারাটা STORED-এর মতোই কাজ করে।
+             */
             DB::statement(
                 "ALTER TABLE `number_series` ADD COLUMN `{$key}` BIGINT UNSIGNED"
-                ." AS (COALESCE(`{$from}`, 0)) STORED"
+                ." AS (COALESCE(`{$from}`, 0)) VIRTUAL"
             );
         }
 
