@@ -290,4 +290,5 @@ return [
     'withdrawn' => 'Taken by the bank',
     'deposited' => 'Paid in by the bank',
     'running_balance' => 'Running balance at the bank',
+    'pick_a_project' => 'Pick a project',
 ];

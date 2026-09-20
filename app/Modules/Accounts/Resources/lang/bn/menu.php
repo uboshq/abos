@@ -63,4 +63,5 @@ return [
     'by_cost_centre' => 'কোন কেন্দ্রে কত',
     'expense_by_head' => 'খাতভিত্তিক খরচ',
     'income_by_head' => 'খাতভিত্তিক আয়',
+    'project_ledger' => 'প্রকল্পভিত্তিক খতিয়ান',
 ];

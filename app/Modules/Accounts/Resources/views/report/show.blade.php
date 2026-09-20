@@ -187,6 +187,29 @@
                     </label>
                 @endif
 
+                {{-- ⭐ প্রকল্প বাছা — মানচিত্র §১৮, ২০ সেপ্টেম্বর ২০২৬।
+
+                     ⚠️ না বাছলে পর্দা খালি, আর সেটাই ঠিক: "প্রকল্পভিত্তিক
+                     খতিয়ান" মানেই একটা প্রকল্পের খতিয়ান। ⓘ ছাঁকনি ছাড়া
+                     দেখালে ওটা গোটা খতিয়ান হয়ে যেত, আর নামের সাথে পর্দার
+                     কোনো সম্পর্ক থাকত না। --}}
+                @if ($centres->isNotEmpty())
+                    <label class="min-w-0 flex-1 sm:max-w-xs">
+                        <span class="sr-only">{{ __('accounts::field.cost_center') }}</span>
+                        <select name="cost_center_id"
+                                class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
+                                       bg-(--color-surface-app) px-2 text-sm">
+                            <option value="">{{ __('accounts::field.pick_a_project') }}</option>
+                            @foreach ($centres as $centre)
+                                <option value="{{ $centre->id }}"
+                                        @selected(($filters['cost_center_id'] ?? null) == $centre->id)>
+                                    {{ $centre->code }} — {{ $centre->name() }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </label>
+                @endif
+
                 @if ($branches->isNotEmpty())
                     <label>
                         <span class="sr-only">{{ __('core.company.branch') }}</span>

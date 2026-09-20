@@ -42,4 +42,5 @@ return [
     'by_cost_centre' => 'By cost centre',
     'expense_by_head' => 'Expenses by head',
     'income_by_head' => 'Income by head',
+    'project_ledger' => 'Project ledger',
 ];

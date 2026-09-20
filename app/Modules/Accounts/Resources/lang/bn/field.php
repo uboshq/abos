@@ -309,4 +309,5 @@ return [
     'withdrawn' => 'ব্যাংক নিয়েছে',
     'deposited' => 'ব্যাংক জমা করেছে',
     'running_balance' => 'ব্যাংকের চলতি জের',
+    'pick_a_project' => 'প্রকল্প বাছুন',
 ];

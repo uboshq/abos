@@ -155,6 +155,19 @@ return [
                 'route_params' => ['slug' => 'by-cost-centre'], 'permission' => 'accounts.report'],
 
             /*
+             * ⭐ প্রকল্পভিত্তিক খতিয়ান — মানচিত্র §১৮, ২০ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ উপরেরটার পাশেই, কারণ দুইটা একই মাত্রার দুই প্রশ্ন:
+             * ওটা বলে "কোন প্রকল্পে মোট কত", এটা বলে "সেই টাকাটা
+             * কোথায় গেল"। ⚠️ সারিটা মেনুতে বসানোর একই মুহূর্তে
+             * SLUGS-এও বসেছে — আগে দুইবার এই সেতুটা ভুলে যাওয়ায়
+             * রিপোর্ট তৈরি থেকেও পর্দায় পৌঁছায়নি।
+             */
+            ['label' => 'accounts::menu.project_ledger', 'icon' => 'columns', 'route' => 'accounts.report.show',
+                'route_params' => ['slug' => 'project-ledger'], 'permission' => 'accounts.report'],
+
+
+            /*
              * ⭐ কোন খাতে কত খরচ — অর্থ মডিউল থেকে এখানে।
              *
              * ⚠️ অনুমতি ইচ্ছাকৃতভাবে `accounts.report`, `.final` নয় —

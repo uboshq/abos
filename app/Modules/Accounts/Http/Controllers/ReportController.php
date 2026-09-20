@@ -9,6 +9,7 @@ use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\CostCenter;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
@@ -46,6 +47,15 @@ class ReportController extends Controller implements HasMiddleware
          * রিপোর্টেও একই জিনিস ঘটেছিল।
          */
         'by-cost-centre' => 'accounts.by_cost_centre',
+
+        /*
+         * ⭐ প্রকল্পভিত্তিক খতিয়ান — মানচিত্র §১৮, ২০ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ উপরেরটা যোগফল, এটা সারি — "প্রকল্পে মোট কত" আর "টাকাটা
+         * কোথায় গেল" দুইটা আলাদা প্রশ্ন, আর দ্বিতীয়টার উত্তর যোগফলে নেই।
+         */
+        'project-ledger' => 'accounts.project_ledger',
+
         'expense-by-head' => 'accounts.expense_by_head',
         // ⭐ খাতভিত্তিক আয় — সেতুটা মেনুর সারির সাথেই, উপরের ইতিহাস দেখুন
         'income-by-head' => 'accounts.income_by_head',
@@ -107,7 +117,7 @@ class ReportController extends Controller implements HasMiddleware
 
         $result = $this->reports->run(
             $key,
-            $request->only(['from', 'to', 'branch_id', 'account_id', 'top', 'compare']),
+            $request->only(['from', 'to', 'branch_id', 'account_id', 'cost_center_id', 'top', 'compare']),
             page: max(1, (int) $request->query('page', 1)),
         );
 
@@ -134,6 +144,19 @@ class ReportController extends Controller implements HasMiddleware
             'accounts' => $definition->hasFilter('account')
                 ? Account::query()->postable()->active()->orderBy('code')->get()
                 : collect(),
+
+            /*
+             * ⭐ প্রকল্প বাছার তালিকা (২০ সেপ্টেম্বর ২০২৬)।
+             *
+             * ⓘ ডিপোতে "প্রকল্প" আর "খরচের কেন্দ্র" একই জিনিস — রুট,
+             * গুদাম, গাড়ি, বা একটা কাজ। ⚠️ খতিয়ানে আলাদা কলাম বসালে
+             * হ্যাশ-শিকলের সই করা ঘরের তালিকা বদলাত, আর আগের প্রতিটা
+             * সারির হ্যাশ অবৈধ হয়ে যেত ([[App\Core\Security\LedgerChain]])।
+             */
+            'centres' => $definition->hasFilter('cost_centre')
+                ? CostCenter::query()->where('is_active', true)->orderBy('code')->get()
+                : collect(),
+
 
             /*
              * পক্ষের ধরনের ছাঁকনি — এই পর্দায় সবসময় খালি, আর সেটাই ঠিক।

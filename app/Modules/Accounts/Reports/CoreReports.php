@@ -35,6 +35,8 @@ final class CoreReports
         $engine->register(self::cashFlow());
         $engine->register(self::inflow());
         $engine->register(self::byCostCentre());
+        // ⭐ প্রকল্পভিত্তিক খতিয়ান — ২০ সেপ্টেম্বর ২০২৬ (অর্থের মানচিত্র §১৮)
+        $engine->register(self::projectLedger());
         $engine->register(self::expenseByHead());
         // ⭐ আয়ের আয়না — ২০ সেপ্টেম্বর ২০২৬ (অর্থের মানচিত্র §১০)
         $engine->register(self::incomeByHead());
@@ -190,6 +192,84 @@ final class CoreReports
                 ['key' => 'credit', 'label' => 'core.table.credit', 'type' => ReportColumn::MONEY],
                 // চলমান ব্যালেন্স যোগ করা হয় না — শেষ সারির মানটাই ব্যালেন্স,
                 // যোগফল দেখালে অর্থহীন একটা সংখ্যা আসত।
+                ['key' => 'balance', 'label' => 'core.table.balance', 'type' => ReportColumn::MONEY, 'total' => false],
+            ],
+        );
+    }
+
+    /**
+     * ⭐ প্রকল্পভিত্তিক খতিয়ান — মানচিত্র §১৮, ২০ সেপ্টেম্বর ২০২৬।
+     *
+     * ── কেন [[byCostCentre]] দিয়ে কাজ চলে না ────────────────────────
+     * ওটা **যোগফল**: কোন কেন্দ্রে মোট কত খরচ, কত আয়। ⓘ কিন্তু "খতিয়ান"
+     * শব্দটার মানে আলাদা — তারিখ ধরে প্রতিটা সারি, আর চলমান জের। ⚠️
+     * প্রকল্পের হিসাব নিয়ে যে প্রশ্নটা সত্যিই ওঠে সেটা "মোট কত" নয়,
+     * **"টাকাটা কোথায় গেল"** — আর তার উত্তর সারিগুলোতে, যোগফলে নয়।
+     *
+     * ── ⚠️ "প্রকল্প" আর "খরচের কেন্দ্র" এখানে একই জিনিস ─────────────
+     * ⓘ ডিপোতে প্রকল্প মানে একটা রুট, একটা গুদাম, একটা গাড়ি, বা একটা
+     * কাজ — আর ঐ মাত্রাটা ছকে আগে থেকেই আছে (`cost_center_id`), খতিয়ান
+     * থেকে ভাউচার পর্যন্ত পুরো পথেই।
+     *
+     * ⛔ আলাদা একটা `project_id` কলাম বসানো হয়নি, আর কারণটা ছোট নয়:
+     * খতিয়ানের প্রতিটা সারি হ্যাশ-শিকলে বাঁধা, আর সই করা ঘরের তালিকায়
+     * ([[App\Core\Security\LedgerChain::SIGNED]]) নতুন নাম ঢোকালে
+     * **আগের প্রতিটা সারির হ্যাশ অবৈধ** হয়ে যেত — অর্থাৎ খাতা
+     * "বদলানো হয়েছে" বলে চিৎকার করত, অথচ কিছুই বদলায়নি। ⓘ প্রকল্পকে
+     * সত্যিই আলাদা মাত্রা বানাতে হলে সেটা মালিকের সিদ্ধান্ত, আর তার
+     * সাথে শিকলের একটা যুগ-বদল লাগবে।
+     *
+     * ⓘ সব ধরনের খাত রাখা হয় — [[byCostCentre]]-এর মতো কেবল আয়-ব্যয়
+     * নয়। ⚠️ খতিয়ানে "প্রকল্পের টাকা কোন ব্যাংক থেকে বেরোল" সারিটাও
+     * দরকার; ওটা বাদ দিলে জেরটাই মিলত না।
+     */
+    public static function projectLedger(): ReportDefinition
+    {
+        return new ReportDefinition(
+            key: 'accounts.project_ledger',
+            title: 'accounts::menu.project_ledger',
+            filters: ['date_range', 'branch', 'cost_centre'],
+            runningBalance: true,
+            query: fn (array $f) => DB::table('ledger_entries')
+                ->leftJoin('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
+                ->where('ledger_entries.company_id', $f['company_id'])
+
+                /*
+                 * ⛔ কেন্দ্র না বাছলে কিছুই দেখানো হয় না।
+                 *
+                 * ⚠️ ছাঁকনিটা না বসালে এটা গোটা খতিয়ান হয়ে যেত, আর
+                 * "প্রকল্পভিত্তিক" নামের সাথে পর্দার কোনো সম্পর্ক থাকত না।
+                 * ⓘ `0` দিলে কোনো সারি মেলে না — খালি পর্দাই ঠিক উত্তর,
+                 * কারণ প্রশ্নটাই এখনো করা হয়নি।
+                 */
+                ->where('ledger_entries.cost_center_id', $f['cost_center_id'] ?? 0)
+                ->when($f['branch_id'], fn ($q, $branch) => $q->where('ledger_entries.branch_id', $branch))
+                ->whereBetween('ledger_entries.trx_date', [$f['from'], $f['to']])
+                ->orderBy('ledger_entries.trx_date')
+                ->orderBy('ledger_entries.id')
+                ->select([
+                    'ledger_entries.trx_date',
+                    'ledger_entries.document_no',
+                    self::accountName(),
+                    'ledger_entries.narration',
+                    'ledger_entries.debit',
+                    'ledger_entries.credit',
+                    'ledger_entries.source_type',
+                    'ledger_entries.source_id',
+                ]),
+            columns: [
+                ['key' => 'trx_date', 'label' => 'core.print.date', 'type' => ReportColumn::DATE, 'width' => '7rem'],
+                [
+                    'key' => 'document_no',
+                    'label' => 'core.table.document',
+                    'type' => ReportColumn::DOCUMENT,
+                    'source_type' => 'source_type',
+                    'source_id' => 'source_id',
+                ],
+                ['key' => 'account_name', 'label' => 'core.print.account', 'type' => ReportColumn::TEXT],
+                ['key' => 'narration', 'label' => 'core.table.narration'],
+                ['key' => 'debit', 'label' => 'core.table.debit', 'type' => ReportColumn::MONEY],
+                ['key' => 'credit', 'label' => 'core.table.credit', 'type' => ReportColumn::MONEY],
                 ['key' => 'balance', 'label' => 'core.table.balance', 'type' => ReportColumn::MONEY, 'total' => false],
             ],
         );
