@@ -144,6 +144,39 @@ final class TheRentWentToATypedNameForATypedPlaceTest extends TestCase
         $page->assertSee(route('finance.rental.index'), escape: false);
     }
 
+    /**
+     * ⭐ "কার সাথে" ট্যাব — এক সারিতে একজন বাড়িওয়ালা।
+     *
+     * ⚠️ হাতে লেখা নামে খোলা চুক্তি এখানে গোনা হয় না — যাঁর নাম
+     * তালিকায় নেই, তাঁর সারিও নেই।
+     */
+    public function test_the_with_whom_tab_lists_the_landlords(): void
+    {
+        $person = $this->landlord();
+
+        $this->post(route('finance.rental.store'), $this->terms([
+            'party' => 'person:'.$person->id,
+        ]))->assertSessionHasNoErrors();
+
+        // ⓘ দ্বিতীয়টা হাতে লেখা নামে, তাই সারিতে আসার কথা নয়
+        $this->post(route('finance.rental.store'), $this->terms([
+            'counterparty' => 'নাম লেখা বাড়িওয়ালা',
+        ]))->assertSessionHasNoErrors();
+
+        $page = $this->get(route('finance.rental.index', ['tab' => 'people']))->assertOk();
+
+        $rows = $page->viewData('people');
+
+        $this->assertCount(1, $rows);
+        $this->assertSame('person', $rows[0]['party_type']);
+        $this->assertSame($person->id, $rows[0]['party_id']);
+        $this->assertSame(1, $rows[0]['contracts']);
+        $this->assertSame(1, $rows[0]['running']);
+        $this->assertSame('30000.0000', $rows[0]['rent']);
+
+        $this->assertSame(count($rows), $page->viewData('counts')['people']);
+    }
+
     private function landlord(): Person
     {
         return Person::query()->create([

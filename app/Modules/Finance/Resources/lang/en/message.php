@@ -137,4 +137,9 @@ return [
     'rental_place_gone' => 'That thing is no longer on the list',
     'rental_for_place' => 'Contracts for this place',
 
+
+    /* The "with whom" tab — the owner's instruction, 20 Sep 2026 */
+    'person_added' => ':who is on the list now.',
+    'no_people_yet' => 'Nobody on the list yet.',
+    'no_rental_people' => 'No contract is linked to anybody on the list yet.',
 ];

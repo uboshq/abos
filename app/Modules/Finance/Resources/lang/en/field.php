@@ -311,4 +311,9 @@ return [
     'shape_periodic_payout' => 'One deposit, profit paid out',
     'shape_instalment' => 'Paid in monthly',
 
+    'hl_tab_people' => 'With whom',
+    'hl_new_person' => 'New name',
+    'hl_open_accounts' => 'Open accounts',
+    'person_mobile' => 'Mobile',
+    'rental_how_many' => 'Contracts',
 ];

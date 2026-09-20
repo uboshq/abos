@@ -53,6 +53,9 @@
     $rentTabs = [
         'running' => __('finance::state.active'),
         'closed' => __('finance::state.closed'),
+
+        /* ⭐ কার সাথে — বাড়িওয়ালার তালিকা, মালিকের নির্দেশ ২০ সেপ্টেম্বর ২০২৬ */
+        'people' => __('finance::field.hl_tab_people'),
     ];
 @endphp
 <x-layouts.app :menu="$menu">
@@ -173,11 +176,15 @@
             </section>
         @endif
 
-        <x-ui.table :rows="$contracts"
-                    :columns="$rentColumns"
-                    :compact="request()->boolean('compact')"
-                    :empty="request('q') ? __('core.empty.no_results') : __('finance::message.no_rentals')" />
+        @if ($tab === 'people')
+            @include('finance::rental.partials.people', ['people' => $people])
+        @else
+            <x-ui.table :rows="$contracts"
+                        :columns="$rentColumns"
+                        :compact="request()->boolean('compact')"
+                        :empty="request('q') ? __('core.empty.no_results') : __('finance::message.no_rentals')" />
 
-        <x-ui.pager :rows="$contracts" />
+            <x-ui.pager :rows="$contracts" />
+        @endif
     </section>
 </x-layouts.app>

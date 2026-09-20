@@ -157,6 +157,13 @@ Route::middleware('auth')->prefix('finance')->group(function () {
         Route::get('/create', [HandLoanController::class, 'create'])->name('create');
         Route::post('/', [HandLoanController::class, 'store'])->name('store');
 
+        /*
+         * ⭐ তালিকায় নতুন নাম — মালিকের নির্দেশ, ২০ সেপ্টেম্বর ২০২৬।
+         * ⓘ "কার সাথে" ট্যাবেই নাম যোগ হয়, মাস্টারে যেতে হয় না।
+         * ⛔ তবু সারিটা `mdm_people`-তেই বসে — দ্বিতীয় কোনো তালিকা নয়।
+         */
+        Route::post('/people', [HandLoanController::class, 'storePerson'])->name('person.store');
+
         Route::get('/{handLoan}', [HandLoanController::class, 'show'])
             ->whereNumber('handLoan')->name('show');
 

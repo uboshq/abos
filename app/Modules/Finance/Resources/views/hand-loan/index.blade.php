@@ -104,7 +104,9 @@
                        'they' => __('finance::message.hand_loan_they_owe'),
                        'we' => __('finance::message.hand_loan_we_owe'),
                        /* ⭐ মনে করিয়ে দেওয়া — তারিখ পেরোনো বা ত্রিশ দিনের ভিতরে (§১৪খ) */
-                       'due' => __('finance::field.hl_tab_due')] as $key => $label)
+                       'due' => __('finance::field.hl_tab_due'),
+                       /* ⭐ কার সাথে — মানুষের তালিকা, মালিকের নির্দেশ ২০ সেপ্টেম্বর ২০২৬ */
+                       'people' => __('finance::field.hl_tab_people')] as $key => $label)
                 <a href="{{ route('finance.hand_loan.index', array_filter([
                         'tab' => $key === 'all' ? null : $key,
                         'q' => request('q'),
@@ -122,10 +124,14 @@
             @endforeach
         </nav>
 
-        <x-ui.table :rows="$rows"
-                    :columns="$hlColumns"
-                    :compact="request()->boolean('compact')"
-                    :empty="filled(request('q')) ? __('core.empty.no_results') : __('finance::message.no_hand_loan_yet')" />
+        @if ($tab === 'people')
+            @include('finance::hand-loan.partials.people', ['people' => $people])
+        @else
+            <x-ui.table :rows="$rows"
+                        :columns="$hlColumns"
+                        :compact="request()->boolean('compact')"
+                        :empty="filled(request('q')) ? __('core.empty.no_results') : __('finance::message.no_hand_loan_yet')" />
+        @endif
     </div>
 
 </x-layouts.app>

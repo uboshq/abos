@@ -38,4 +38,5 @@ return [
     'kind_on' => 'Activate',
     'kind_off' => 'Deactivate',
 
+    'add_person' => 'Add the name',
 ];

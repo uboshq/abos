@@ -86,8 +86,14 @@ class RentalContractController extends Controller implements HasMiddleware
          * ⚠️ পুরনো `?closed=1` লিংকও বন্ধের ট্যাবেই খোলে — কারও বুকমার্ক
          * ভাঙে না।
          */
-        $tab = $request->query('tab') === 'closed' || $request->boolean('closed')
-            ? 'closed' : 'running';
+        /*
+         * ⭐ তৃতীয় ট্যাব "কার সাথে" — মালিকের নির্দেশ, ২০ সেপ্টেম্বর ২০২৬।
+         * ⓘ হাতধারের ট্যাবের হুবহু একই ছাঁদ: একটাই মানুষের তালিকা, তিন দরজা।
+         */
+        $tab = $request->query('tab') === 'people'
+            ? 'people'
+            : ($request->query('tab') === 'closed' || $request->boolean('closed')
+                ? 'closed' : 'running');
 
         $query = RentalContract::query()
             ->with(['account', 'expenseAccount'])
@@ -136,7 +142,15 @@ class RentalContractController extends Controller implements HasMiddleware
                 ->orderBy('ends_on');
         }
 
+        /*
+         * ⓘ সারি প্রতি একজন মানুষ — কয়টা চুক্তি, মাসে কত ভাড়া,
+         * আর কত জামানত তাঁর কাছে পড়ে আছে। ⚠️ শেষেরটাই দামি: চুক্তি
+         * শেষ হলে ওই টাকাটা ফেরত আসার কথা।
+         */
+        $people = $tab !== 'people' ? [] : $this->peopleRows();
+
         return view('finance::rental.index', [
+            'people' => $people,
             'subject' => $subject,
             'subjectSeen' => $subject === null
                 ? null
@@ -159,6 +173,9 @@ class RentalContractController extends Controller implements HasMiddleware
             'counts' => [
                 'running' => RentalContract::query()->active()->count(),
                 'closed' => RentalContract::query()->where('status', RentalContract::CLOSED)->count(),
+
+                // ⓘ কতজন মানুষ — ঠিক যতটা সারি ওই ট্যাবে
+                'people' => count($this->peopleRows()),
             ],
         ]);
     }
@@ -327,6 +344,54 @@ class RentalContractController extends Controller implements HasMiddleware
         ]));
 
         return back()->with('saved', __('finance::message.rental_closed_done'));
+    }
+
+    /**
+     * এক সারিতে একজন বাড়িওয়ালা — কয়টা চুক্তি, মাসে কত, জামানত কত।
+     *
+     * ⓘ সারিগুলো একটাই মানুষের তালিকা (`mdm_people`) থেকে — দ্বিতীয়
+     * টেবিল নয়। ⚠️ যে চুক্তিগুলো হাতে লেখা নামে (জোড়া নেই) সেগুলো
+     * এই সারিগুলোয় গোনা হয় না — আর সেটাই ঠিক: যাঁর নাম তালিকায় নেই,
+     * তাঁর সারিও নেই। ⓘ প্রতিটা চুক্তির পাতা থেকে জোড়া বসানো যায়।
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function peopleRows(): array
+    {
+        $rows = [];
+
+        $contracts = RentalContract::query()
+            ->whereNotNull('party_type')
+            ->whereNotNull('party_id')
+            ->get();
+
+        foreach ($contracts as $contract) {
+            $key = $contract->party_type.':'.$contract->party_id;
+
+            $rows[$key] ??= [
+                'party_type' => (string) $contract->party_type,
+                'party_id' => (int) $contract->party_id,
+                'name' => $contract->counterparty,
+                'contracts' => 0,
+                'running' => 0,
+                'rent' => '0',
+                'deposit' => '0',
+            ];
+
+            $rows[$key]['contracts']++;
+
+            if ($contract->isActive()) {
+                $rows[$key]['running']++;
+                $rows[$key]['rent'] = bcadd($rows[$key]['rent'], (string) $contract->monthly_rent, 4);
+                $rows[$key]['deposit'] = bcadd($rows[$key]['deposit'], $contract->depositLeft(), 4);
+            }
+        }
+
+        $out = array_values($rows);
+
+        usort($out, fn (array $a, array $b) => [$b['running'], $a['name']] <=> [$a['running'], $b['name']]);
+
+        return $out;
     }
 
     /**

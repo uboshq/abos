@@ -341,4 +341,9 @@ return [
     'shape_periodic_payout' => 'একবারে জমা, নিয়মিত মুনাফা',
     'shape_instalment' => 'মাসে মাসে জমা',
 
+    'hl_tab_people' => 'কার সাথে',
+    'hl_new_person' => 'নতুন নাম',
+    'hl_open_accounts' => 'খোলা হিসাব',
+    'person_mobile' => 'মোবাইল',
+    'rental_how_many' => 'কয়টা চুক্তি',
 ];

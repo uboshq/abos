@@ -46,7 +46,7 @@ class HandLoanController extends Controller implements HasMiddleware
     {
         return [
             new Middleware('can:finance.hand_loan.view', only: ['index', 'show']),
-            new Middleware('can:finance.hand_loan.create', only: ['create', 'store']),
+            new Middleware('can:finance.hand_loan.create', only: ['create', 'store', 'storePerson']),
             new Middleware('can:finance.hand_loan.move', only: ['move', 'settle']),
         ];
     }
@@ -127,11 +127,29 @@ class HandLoanController extends Controller implements HasMiddleware
             'they' => count(array_filter($rows, fn ($r) => $sideOf($r) > 0)),
             'we' => count(array_filter($rows, fn ($r) => $sideOf($r) < 0)),
             'due' => count(array_filter($rows, $needsChasing)),
+
+            /* ⓘ মানুষের সংখ্যা — খোঁজায় ছাঁকা নয়, ঠিক যতটা সারি ওই ট্যাবে */
+            'people' => count($this->peopleRows($standing['rows'], '')),
         ];
 
-        $tab = in_array($request->query('tab'), ['they', 'we', 'due'], true)
+        $tab = in_array($request->query('tab'), ['they', 'we', 'due', 'people'], true)
             ? (string) $request->query('tab')
             : 'all';
+
+        /*
+         * ⭐ "কার সাথে" — মালিকের নির্দেশ, ২০ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ তাঁর কথা: *"eta হাতধার ekta tab e কার সাথে list thakbe"* —
+         * মানুষের তালিকাটা মাস্টারে নয়, যেখানে কাজ হয় সেখানে।
+         *
+         * ⛔ দ্বিতীয় কোনো টেবিল নয়: সারিগুলো একটাই মানুষের তালিকা
+         * (`mdm_people`) থেকেই আসে। ⚠️ নাহলে "Al Amin", "Al-Amin" আর
+         * "আল আমিন" তিনজন হয়ে যেতেন, আর একজনের পাওনা তিন ভাগে ছিড়ত।
+         *
+         * ⓘ যাঁদের খোলা হিসাব আছে তাঁরা আগে, তারপর বাকিরা — তালিকায়
+         * নাম যোগ করার পর সেটা যেন হারিয়ে না যায়।
+         */
+        $people = $tab !== 'people' ? [] : $this->peopleRows($standing['rows'], $term);
 
         if ($tab !== 'all') {
             $rows = array_values(array_filter($rows, match ($tab) {
@@ -147,7 +165,71 @@ class HandLoanController extends Controller implements HasMiddleware
             'rows' => $rows,
             'tab' => $tab,
             'counts' => $counts,
+            'people' => $people,
         ]);
+    }
+
+    /**
+     * এক সারিতে একজন মানুষ — তাঁর পাওনা, দেনা আর খোলা হিসাব।
+     *
+     * ⓘ যোগফলগুলো উপরের তালিকা থেকেই আসে — নতুন কোয়েরি নয়, তাই
+     * দুই জায়গায় দুই রকম সংখ্যা হওয়ার পথই নেই।
+     *
+     * @param  list<array<string, mixed>>  $rows
+     * @return list<array<string, mixed>>
+     */
+    private function peopleRows(array $rows, string $term): array
+    {
+        $byPerson = [];
+
+        foreach ($rows as $row) {
+            $person = $row['account']->person;
+
+            if ($person === null) {
+                continue;
+            }
+
+            $id = (int) $person->id;
+            $balance = (string) $row['balance'];
+
+            $byPerson[$id] ??= ['person' => $person, 'to_us' => '0', 'by_us' => '0', 'open' => 0];
+            $byPerson[$id]['open']++;
+
+            if (bccomp($balance, '0', 4) > 0) {
+                $byPerson[$id]['to_us'] = bcadd($byPerson[$id]['to_us'], $balance, 4);
+            } else {
+                $byPerson[$id]['by_us'] = bcadd($byPerson[$id]['by_us'], bcmul($balance, '-1', 4), 4);
+            }
+        }
+
+        /*
+         * ⓘ তালিকার বাকি মানুষগুলোও থাকে, শূন্য নিয়ে। ⚠️ নাহলে এই
+         * ট্যাবে নতুন একটা নাম যোগ করার সাথে সাথেই সেটা পর্দা থেকে
+         * হারিয়ে যেত, আর মানুষ ভাবতেন সংরক্ষণ হয়নি।
+         */
+        foreach (Person::query()->active()->orderBy('name_en')->get() as $person) {
+            $byPerson[(int) $person->id] ??= [
+                'person' => $person, 'to_us' => '0', 'by_us' => '0', 'open' => 0,
+            ];
+        }
+
+        $out = array_values($byPerson);
+
+        if ($term !== '') {
+            $out = array_values(array_filter($out, fn (array $r) => str_contains(
+                mb_strtolower(implode(' ', array_filter([
+                    $r['person']->name_en, $r['person']->name_bn,
+                    $r['person']->code, $r['person']->mobile,
+                ]))),
+                $term,
+            )));
+        }
+
+        // ⓘ যাঁদের হিসাব খোলা তাঁরা আগে, তারপর নামের ক্রমে
+        usort($out, fn (array $a, array $b) => [$b['open'] > 0, $a['person']->name()]
+            <=> [$a['open'] > 0, $b['person']->name()]);
+
+        return $out;
     }
 
     /**
@@ -172,6 +254,30 @@ class HandLoanController extends Controller implements HasMiddleware
              */
             'parties' => $this->parties(),
         ]);
+    }
+
+    /**
+     * তালিকায় একটা নতুন নাম — "কার সাথে" ট্যাব থেকেই।
+     *
+     * ⓘ নামটা বসে সেই একটাই মানুষের তালিকায় ([[PersonResolver]]), তাই
+     * এখানে লেখা নাম আর মাস্টারের নাম একই সারি। ⛔ দ্বিতীয় টেবিল নয়:
+     * তাহলে একজন মানুষ দুই খাতায় দুইজন হয়ে যেতেন।
+     */
+    public function storePerson(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'name_bn' => ['required', 'string', 'max:120'],
+            'mobile' => ['nullable', 'string', 'max:32'],
+        ]);
+
+        $payload = [
+            'person_new' => $data['name_bn'],
+            'person_mobile' => $data['mobile'] ?? null,
+        ];
+
+        $this->people->resolve($payload);
+
+        return back()->with('saved', __('finance::message.person_added', ['who' => $data['name_bn']]));
     }
 
     public function store(Request $request): RedirectResponse

@@ -86,7 +86,9 @@ final class TheHandLoanListWasBuriedUnderItsFormTest extends TestCase
         /* ⭐ চতুর্থ গোনা "বকেয়া" — মানচিত্র §১৪খ, ২০ সেপ্টেম্বর ২০২৬।
            ⓘ তাড়া দেওয়ার তারিখ পেরোনো হিসাবগুলো; এখানে কারোরই তারিখ বসানো
            নেই, তাই শূন্য। */
-        $this->assertSame(['all' => 2, 'they' => 1, 'we' => 1, 'due' => 0],
+        /* ⭐ পঞ্চম গোনা "কার সাথে" — মানুষের তালিকার সারি,
+           মালিকের নির্দেশ ২০ সেপ্টেম্বর ২০২৬। ⓘ এখানে দুইজন মানুষ। */
+        $this->assertSame(['all' => 2, 'they' => 1, 'we' => 1, 'due' => 0, 'people' => 2],
             $they->viewData('counts'));
 
         $we = $this->get(route('finance.hand_loan.index', ['tab' => 'we']))->assertOk();
