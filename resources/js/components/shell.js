@@ -238,3 +238,16 @@ export function shareMenu ({ url }) {
         },
     }
 }
+
+/** গ্রাহককে পাঠানোর লিংক — কপি করার বোতামসহ */
+export function sharedLink ({ url }) {
+    return {
+        copied: false,
+
+        copy () {
+            navigator.clipboard.writeText(url)
+            this.copied = true
+            setTimeout(() => { this.copied = false }, 2000)
+        },
+    }
+}

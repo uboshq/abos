@@ -16,7 +16,7 @@
                     </form>
                 @endcan
                 <x-ui.print-menu :documents="[
-                    ['label' => __('sales::doc.collection'), 'url' => route('sales.print.receipt', $collection)],
+                    ['label' => __('sales::doc.collection'), 'url' => route('sales.print.receipt', $collection), 'paper_setting' => 'sales.print.paper.receipt', 'type' => 'sales_collection', 'id' => $collection->id, 'no' => $collection->document_no, 'share' => ['route' => 'sales.print.receipt', 'params' => ['collection' => $collection->id]]],
                 ]" />
             </x-slot:actions>
         </x-ui.page-header>

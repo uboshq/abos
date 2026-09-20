@@ -40,7 +40,7 @@
             ['key' => 'bill', 'label' => __('purchase::schedule.bill'), 'width' => '10rem',
              'render' => fn ($bill) => view('purchase::payment-schedule.partials.bill', ['bill' => $bill])],
             ['key' => 'supplier', 'label' => __('purchase::schedule.supplier'),
-             'render' => fn ($bill) => $bill->supplier?->name() ?? '—'],
+             'render' => fn ($bill) => view('purchase::payment-schedule.partials.supplier', ['bill' => $bill])],
             ['key' => 'total', 'label' => __('purchase::schedule.total'), 'numeric' => true, 'width' => '9rem',
              'render' => fn ($bill) => Money::format($bill->total)],
             ['key' => 'amount', 'label' => __('purchase::schedule.due'), 'numeric' => true, 'width' => '9rem',

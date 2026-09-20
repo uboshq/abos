@@ -93,10 +93,22 @@ final class AccountAnalysis
             ->limit(15)
             ->get();
 
-        $labels = $this->parties->labelsOf($partyRows->map(fn ($r) => [(string) $r->party_type, (int) $r->party_id]));
+        $pairs = $partyRows->map(fn ($r) => [(string) $r->party_type, (int) $r->party_id]);
+
+        $labels = $this->parties->labelsOf($pairs);
+
+        /*
+         * ⭐ নামের সাথে তার পাতার ঠিকানাটাও (২০ সেপ্টেম্বর ২০২৬)।
+         *
+         * ⚠️ আগে কেবল নামটা বেরোত, আর ধরন-আইডি জোড়াটা এখানেই হারিয়ে যেত —
+         * তাই পর্দায় ঘরটা মরা থাকত। ⓘ মালিকের নিয়ম: ঘরে কারো নাম থাকলে
+         * ঘরটা তাঁকে খোলে।
+         */
+        $routes = $this->parties->routesOf($pairs);
 
         $parties = $partyRows->map(fn ($r) => [
             'label' => $labels[$r->party_type.':'.$r->party_id] ?? $r->party_type.' #'.$r->party_id,
+            'route' => $routes[$r->party_type.':'.$r->party_id] ?? null,
             'debit' => (string) $r->d,
             'credit' => (string) $r->c,
             'count' => (int) $r->n,

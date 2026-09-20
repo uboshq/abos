@@ -7,10 +7,13 @@ namespace App\Modules\Purchase\Http\Controllers;
 use App\Core\Engines\Print\PaperSize;
 use App\Core\Engines\Print\PrintableDocument;
 use App\Core\Engines\Print\PrintEngine;
+use App\Core\Services\PaperTrail;
+use App\Core\Services\SettingsService;
 use App\Core\Support\DateFormat;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Http\Controllers\Controller;
+use App\Models\DocumentDelivery;
 use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Purchase\Models\PurchaseOrder;
 use App\Modules\Purchase\Models\PurchaseReceipt;
@@ -41,7 +44,15 @@ use Illuminate\Support\Collection;
  */
 class PurchasePrintController extends Controller implements HasMiddleware
 {
-    public function __construct(private readonly PrintEngine $print) {}
+    public function __construct(
+        private readonly PrintEngine $print,
+
+        // কোন কাগজে ছাপা হবে — মালিকের বসানো মাপ
+        private readonly SettingsService $settings,
+
+        // ছাপা · নামানো · পাঠানো · খোলা — সব কাগজের এক হিসাব
+        private readonly PaperTrail $trail,
+    ) {}
 
     public static function middleware(): array
     {
@@ -81,7 +92,7 @@ class PurchasePrintController extends Controller implements HasMiddleware
 
         return $this->pdf(
             $request, $doc, (string) $bill->total, (string) $bill->document_no,
-            document: $bill,
+            document: $bill, kind: 'purchase_bill', paperSetting: 'purchase.print.paper.bill',
         );
     }
 
@@ -111,7 +122,7 @@ class PurchasePrintController extends Controller implements HasMiddleware
 
         return $this->pdf(
             $request, $doc, (string) $order->total, (string) $order->document_no,
-            document: $order,
+            document: $order, kind: 'purchase_order', paperSetting: 'purchase.print.paper.order',
         );
     }
 
@@ -141,7 +152,8 @@ class PurchasePrintController extends Controller implements HasMiddleware
             narration: $receipt->narration,
         );
 
-        return $this->pdf($request, $doc, '0', (string) $receipt->document_no, document: $receipt);
+        return $this->pdf($request, $doc, '0', (string) $receipt->document_no,
+            document: $receipt, kind: 'purchase_receipt', paperSetting: 'purchase.print.paper.receipt');
     }
 
     /**
@@ -171,7 +183,7 @@ class PurchasePrintController extends Controller implements HasMiddleware
 
         return $this->pdf(
             $request, $doc, (string) $return->total, (string) $return->document_no,
-            document: $return,
+            document: $return, kind: 'purchase_return', paperSetting: 'purchase.print.paper.bill',
         );
     }
 
@@ -263,14 +275,24 @@ class PurchasePrintController extends Controller implements HasMiddleware
         string $amount,
         string $documentNo,
         ?object $document = null,
-    ): Response {
-        $paper = $request->query('paper', PaperSize::A4);
 
-        // অজানা মাপে ৪০৪ নয় — পুরনো বুকমার্কের জন্য কাগজ আটকে যাওয়ার
-        // কোনো কারণ নেই।
-        if (! in_array($paper, PaperSize::all(), true)) {
-            $paper = PaperSize::A4;
-        }
+        /*
+         * ⛔ এই দুইটা আগে ছিল না, আর তাতেই দুইটা ভুল হচ্ছিল (২০ সেপ্টেম্বর ২০২৬)।
+         *
+         * ⚠️ এক: চারটা কাগজই `purchase_paper` নামে গোনা হত, তাই ৫ নম্বর বিল
+         * আর ৫ নম্বর আদেশের হিসাব এক হয়ে যেত। ⓘ নামটা এখন কাগজভেদে আলাদা।
+         *
+         * ⚠️ দুই: মাপ সবসময় বিলের সেটিং থেকে আসত — মালিক আদেশের জন্য অন্য
+         * মাপ বসালে সেটা কেউ মানত না, অথচ পর্দায় ঐ মাপটাই দাগানো থাকত।
+         */
+        string $kind = 'purchase_bill',
+        string $paperSetting = 'purchase.print.paper.bill',
+    ): Response {
+        /*
+         * ⭐ কাগজের মাপ মালিকের বসানো, হাতে লেখা A4 নয় (২০ সেপ্টেম্বর ২০২৬)।
+         * ⓘ ঠিকানায় চাওয়া মাপ আগে, তারপর সেটিং — কারণ [[PaperSize::chosen()]]-এ।
+         */
+        $paper = PaperSize::chosen($request->query('paper'), $this->settings->get($paperSetting));
 
         /*
          * বাতিল করা কাগজের গায়ে "বাতিল"।
@@ -301,9 +323,24 @@ class PurchasePrintController extends Controller implements HasMiddleware
             watermark: $cancelled ? __('core.print.cancelled_watermark') : null,
         );
 
+        /*
+         * ⭐ কাগজটা বেরোল — ছাপা হয়ে, নাকি ফাইল হয়ে (২০ সেপ্টেম্বর ২০২৬)।
+         *
+         * ⓘ মালিকের চাওয়া: *"কয়টা কাগজ প্রিন্ট হল কয়টা শেয়ার হইল"*। ⚠️ দুইটা
+         * আলাদা গোনা হয়, কারণ "ছেপে দিয়েছি" আর "ফাইল পাঠিয়েছি" এক কথা নয়।
+         * ⛔ ফাইলটা আলাদা করে আঁকা হয় না — উপরের `$pdf`-ই নামে।
+         */
+        $asFile = $request->boolean('download');
+
+        $this->trail->record(
+            $kind, (int) ($document?->id ?? 0), $paper,
+            $asFile ? DocumentDelivery::DOWNLOADED : DocumentDelivery::PRINTED,
+            $documentNo,
+        );
+
         return response($pdf, 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="'.$documentNo.'.pdf"',
+            'Content-Disposition' => ($asFile ? 'attachment' : 'inline').'; filename="'.$documentNo.'.pdf"',
         ]);
     }
 

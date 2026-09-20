@@ -4,14 +4,16 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Http\Controllers;
 
-use Illuminate\Validation\ValidationException;
 use App\Core\Engines\Print\PaperSize;
 use App\Core\Engines\Print\PrintableDocument;
 use App\Core\Engines\Print\PrintEngine;
+use App\Core\Services\PaperTrail;
+use App\Core\Services\SettingsService;
 use App\Core\Support\DateFormat;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Http\Controllers\Controller;
+use App\Models\DocumentDelivery;
 use App\Modules\Inventory\Services\IssuedLots;
 use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\DeliveryChallan;
@@ -23,6 +25,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Validation\ValidationException;
 
 /**
  * বিক্রয়ের কাগজ — ছয়টা ডকুমেন্ট, তিনটা কাগজ।
@@ -52,6 +55,12 @@ class SalesPrintController extends Controller implements HasMiddleware
 
         // কাগজটা বেরোল কি না, আর কতবার — DUPLICATE-এর ভিত্তি
         private readonly PrintQueue $queue,
+
+        // কোন কাগজে ছাপা হবে, সেটা মালিক বসিয়ে দেন
+        private readonly SettingsService $settings,
+
+        // ছাপা · নামানো · পাঠানো · খোলা — সব কাগজের এক হিসাব
+        private readonly PaperTrail $trail,
     ) {}
 
     public static function middleware(): array
@@ -109,6 +118,7 @@ class SalesPrintController extends Controller implements HasMiddleware
         return $this->pdf(
             $request, $doc, (string) $invoice->total, $invoice->document_no,
             type: PrintJob::INVOICE, id: $invoice->id, document: $invoice,
+            paperSetting: 'sales.print.paper.invoice',
         );
     }
 
@@ -182,6 +192,7 @@ class SalesPrintController extends Controller implements HasMiddleware
         return $this->pdf(
             $request, $doc, (string) $challan->total, $challan->document_no,
             type: PrintJob::CHALLAN, id: $challan->id, document: $challan,
+            paperSetting: 'sales.print.paper.challan',
         );
     }
 
@@ -208,7 +219,8 @@ class SalesPrintController extends Controller implements HasMiddleware
             notice: __('core.print.no_price_notice'),
         );
 
-        return $this->pdf($request, $doc, '0', $challan->document_no, document: $challan);
+        return $this->pdf($request, $doc, '0', $challan->document_no, document: $challan,
+            paperSetting: 'sales.print.paper.challan');
     }
 
     public function order(Request $request, SalesOrder $order): Response
@@ -229,7 +241,8 @@ class SalesPrintController extends Controller implements HasMiddleware
             narration: $order->narration,
         );
 
-        return $this->pdf($request, $doc, (string) $order->total, $order->document_no, document: $order);
+        return $this->pdf($request, $doc, (string) $order->total, $order->document_no, document: $order,
+            paperSetting: 'sales.print.paper.order');
     }
 
     /**
@@ -268,7 +281,8 @@ class SalesPrintController extends Controller implements HasMiddleware
             notice: __('core.print.no_price_notice'),
         );
 
-        return $this->pdf($request, $doc, '0', $order->document_no, document: $order);
+        return $this->pdf($request, $doc, '0', $order->document_no, document: $order,
+            paperSetting: 'sales.print.paper.order');
     }
 
     /** টাকার রসিদ — আদায়ের কাগজ। */
@@ -297,7 +311,8 @@ class SalesPrintController extends Controller implements HasMiddleware
             narration: $collection->narration,
         );
 
-        return $this->pdf($request, $doc, (string) $collection->amount, $collection->document_no, document: $collection);
+        return $this->pdf($request, $doc, (string) $collection->amount, $collection->document_no, document: $collection,
+            paperSetting: 'sales.print.paper.receipt');
     }
 
     // ── সহায়ক ───────────────────────────────────────────────────────────
@@ -437,7 +452,6 @@ class SalesPrintController extends Controller implements HasMiddleware
         return $this->qty($free);
     }
 
-
     /**
      * @return array<string, string>
      */
@@ -498,14 +512,13 @@ class SalesPrintController extends Controller implements HasMiddleware
         ?string $type = null,
         ?int $id = null,
         ?object $document = null,
+        string $paperSetting = 'sales.print.paper.invoice',
     ): Response {
-        $paper = $request->query('paper', PaperSize::A4);
-
-        // অজানা মাপ এলে ৪০৪ নয়, A4 — পুরনো বুকমার্ক বা হাতে বদলানো URL
-        // দিয়ে কাগজটা ছাপা না হওয়ার কোনো কারণ নেই
-        if (! in_array($paper, PaperSize::all(), true)) {
-            $paper = PaperSize::A4;
-        }
+        /*
+         * ⭐ কাগজের মাপ: ঠিকানায় যা চাওয়া হয়েছে, নয়তো মালিকের বসানো মাপ।
+         * ⓘ কারণটা [[PaperSize::chosen()]]-এ — আগে এখানে হাতে লেখা A4 ছিল।
+         */
+        $paper = PaperSize::chosen($request->query('paper'), $this->settings->get($paperSetting));
 
         /*
          * বাতিল করা কাগজের গায়ে "বাতিল" — সবার আগে।
@@ -580,9 +593,29 @@ class SalesPrintController extends Controller implements HasMiddleware
             $this->queue->printed($job);
         }
 
+        /*
+         * ⭐ কাগজটা কোথায় গেল — ছাপা নাকি ফাইল হয়ে নামানো (২০ সেপ্টেম্বর ২০২৬)।
+         *
+         * ⓘ মালিকের চাওয়া: *"কয়টা কাগজ প্রিন্ট হল কয়টা শেয়ার হইল এটা যাতে
+         * একটা হিসাব থাকে"*, আর *"sathe pdf o zate dwa zay"*। ⚠️ দুইটা আলাদা
+         * গোনা হয়, কারণ "ছেপে দিয়েছি" আর "ফাইল পাঠিয়েছি" এক কথা নয়।
+         *
+         * ⛔ একই আঁকা, দুইটা পথ নয়: উপরের `$pdf` যা, নামানো ফাইলও তা-ই।
+         * গ্রাহকের কপি আর আমাদের কপি আলাদা হওয়ার পথটাই বন্ধ।
+         */
+        $asFile = $request->boolean('download');
+
+        if ($type !== null && $id !== null) {
+            $this->trail->record(
+                $type, $id, $paper,
+                $asFile ? DocumentDelivery::DOWNLOADED : DocumentDelivery::PRINTED,
+                $documentNo,
+            );
+        }
+
         return response($pdf, 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="'.$documentNo.'.pdf"',
+            'Content-Disposition' => ($asFile ? 'attachment' : 'inline').'; filename="'.$documentNo.'.pdf"',
         ]);
     }
 }

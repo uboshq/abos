@@ -65,7 +65,12 @@
         <section data-boxed
                  class="mb-4 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
             <header class="flex flex-wrap items-baseline gap-x-4 gap-y-1 border-b border-(--color-border) px-4 py-2 text-sm">
-                <h2 class="font-semibold">{{ $account->label() }} — {{ __('finance::account_analysis.by_month') }}</h2>
+                {{-- ⭐ খাতের নামটাও খতিয়ানে নামে, গোটা সময়টা ধরে। --}}
+                <h2 class="font-semibold">
+                    <a href="{{ route('accounts.report.show', ['slug' => 'ledger', 'account_id' => $account->id, 'from' => $from, 'to' => $to]) }}"
+                       class="text-(--color-brand-600) underline-offset-2 hover:underline">{{ $account->label() }}</a>
+                    — {{ __('finance::account_analysis.by_month') }}
+                </h2>
                 <span class="ms-auto tabular-nums">{{ __('finance::account_analysis.opening') }}: <strong>{{ Money::format($report['opening']) }}</strong></span>
                 <span class="tabular-nums">{{ __('finance::account_analysis.closing') }}: <strong>{{ Money::format($report['closing']) }}</strong></span>
             </header>
@@ -75,14 +80,28 @@
                  'render' => fn ($m) => view('finance::account-analysis.partials.month-link', ['m' => $m, 'account' => $account])],
                 ['key' => 'opening', 'label' => __('finance::account_analysis.opening'), 'numeric' => true,
                  'render' => fn ($m) => Money::format($m['opening'])],
+
+                /* ⭐ যোগফল আর গোনা — তিনটাই ঐ মাসের খতিয়ানে নামে (২০ সেপ্টেম্বর
+                   ২০২৬)। ⓘ “জুলাইয়ে ১২টা সারি, ৳ ৮,৪০০ ডেবিট” পড়ার পরের
+                   প্রশ্নটা সবসময়ই “কোন বারোটা” — আগে উত্তরটা বাঁ দিকের এক
+                   ঘরে লুকানো ছিল, আর কেউ জানত না ওটা ক্লিক করা যায়।
+
+                   ⚠️ খোলা ও বন্ধের জেরে লিংক নেই: ওগুলো কোনো সারির যোগ নয়,
+                   ঐ মুহূর্তের অবস্থা — ক্লিক করলে ভুল সারিগুলো দেখাত। */
                 ['key' => 'debit', 'label' => __('finance::account_analysis.debit'), 'numeric' => true,
-                 'render' => fn ($m) => Money::format($m['debit'])],
+                 'render' => fn ($m) => view('finance::account-analysis.partials.month-link', [
+                     'm' => $m, 'account' => $account, 'text' => Money::format($m['debit']),
+                 ])],
                 ['key' => 'credit', 'label' => __('finance::account_analysis.credit'), 'numeric' => true,
-                 'render' => fn ($m) => Money::format($m['credit'])],
+                 'render' => fn ($m) => view('finance::account-analysis.partials.month-link', [
+                     'm' => $m, 'account' => $account, 'text' => Money::format($m['credit']),
+                 ])],
                 ['key' => 'closing', 'label' => __('finance::account_analysis.closing'), 'numeric' => true,
                  'render' => fn ($m) => Money::format($m['closing'])],
                 ['key' => 'count', 'label' => __('finance::account_analysis.entries'), 'numeric' => true, 'width' => '6rem',
-                 'render' => fn ($m) => $m['count']],
+                 'render' => fn ($m) => view('finance::account-analysis.partials.month-link', [
+                     'm' => $m, 'account' => $account, 'text' => $m['count'],
+                 ])],
             ]" />
         </section>
 
@@ -111,7 +130,7 @@
                 </h2>
                 <x-ui.table :rows="$report['parties']" :empty="'—'" :columns="[
                     ['key' => 'label', 'label' => __('finance::account_analysis.party'),
-                     'render' => fn ($p) => $p['label']],
+                     'render' => fn ($p) => view('finance::account-analysis.partials.party-link', ['p' => $p])],
                     ['key' => 'debit', 'label' => __('finance::account_analysis.debit'), 'numeric' => true,
                      'render' => fn ($p) => Money::format($p['debit'])],
                     ['key' => 'credit', 'label' => __('finance::account_analysis.credit'), 'numeric' => true,

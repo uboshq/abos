@@ -6,9 +6,12 @@ use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\MfaController;
 use App\Http\Controllers\ModuleDashboardController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\PaperHistoryController;
+use App\Http\Controllers\PaperShareController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SavedViewController;
 use App\Http\Controllers\SearchController;
+use App\Http\Controllers\SharedPaperController;
 use App\Http\Controllers\WorkspaceController;
 use Illuminate\Support\Facades\Route;
 
@@ -135,6 +138,20 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/company/switch', [WorkspaceController::class, 'switchCompany'])->name('company.switch');
     Route::post('/branch/switch', [WorkspaceController::class, 'switchBranch'])->name('branch.switch');
+    /*
+     * "গ্রাহককে পাঠান" — কাগজটার গোপন লিংক বানানো।
+     * ⓘ অনুমতি ঐ কাগজের ছাপার রুট থেকেই নেওয়া হয়, আলাদা ক্ষমতা নয়
+     * ([[App\Http\Controllers\PaperShareController]])।
+     */
+    Route::post('/papers/share', [PaperShareController::class, 'store'])->name('paper.share');
+
+    /*
+     * ⭐ গোনাটার পিছনের তালিকা — "৪ বার ছাপা" চাপলে কে কখন, তা খোলে।
+     * মালিকের কথা, ২০ সেপ্টেম্বর ২০২৬: *"সব জায়গায় হাইপার লিংক"*, আর
+     * এই সংখ্যাটা তো গোনার জন্য নয় — জবাবদিহির জন্য।
+     */
+    Route::get('/papers/history', [PaperHistoryController::class, 'show'])->name('paper.history');
+
     Route::post('/locale/switch', [WorkspaceController::class, 'switchLocale'])->name('locale.switch');
     Route::post('/theme/switch', [WorkspaceController::class, 'switchTheme'])->name('theme.switch');
 });
@@ -153,5 +170,19 @@ Route::middleware('auth')->group(function () {
  */
 Route::get('/profile/email/confirm/{token}', [ProfileController::class, 'confirmEmailChange'])
     ->name('profile.email.confirm');
+
+/*
+ * গ্রাহকের হাতে যাওয়া কাগজের লিংক — ⚠️ ইচ্ছাকৃতভাবে `auth`-এর বাইরে।
+ *
+ * ⓘ মালিকের সিদ্ধান্ত, ২০ সেপ্টেম্বর ২০২৬: বিল বা রসিদ হোয়াটসঅ্যাপে
+ * পাঠানো যাবে। গ্রাহকের লগইন নেই, তাই লিংকটাই চাবি — অনুমান করা যায় না
+ * এমন ৬৪ অক্ষর, একটা মাত্র কাগজ, আর ৩০ দিনে নিজে থেকে মৃত্যু।
+ *
+ * ⛔ এই পথে আর কিছুতে পৌঁছানো যায় না, আর কোনো সেশনও তৈরি হয় না —
+ * বিস্তার [[App\Http\Controllers\SharedPaperController]]-এ।
+ */
+Route::get('/p/{token}', [SharedPaperController::class, 'show'])
+    ->where('token', '[A-Za-z0-9]{64}')
+    ->name('paper.shared');
 
 require __DIR__.'/auth.php';
