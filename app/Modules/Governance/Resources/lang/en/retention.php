@@ -24,6 +24,7 @@ return [
         'errors' => 'Error log',
         'notifications' => 'Notifications',
         'backups' => 'Backup files',
+        'reports' => 'Generated report files',
         'form_marks' => 'Form submission marks — to stop double posting',
     ],
 ];

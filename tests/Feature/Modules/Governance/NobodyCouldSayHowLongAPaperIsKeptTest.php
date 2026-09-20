@@ -64,9 +64,13 @@ final class NobodyCouldSayHowLongAPaperIsKeptTest extends TestCase
     /**
      * ⛔ যে সারিগুলো "চিরকাল" বলা হয়, সেগুলো সত্যিই কেউ মোছে না।
      *
-     * ⓘ মাপটা তালিকার বিরুদ্ধেই: কোনো দিন কেউ খতিয়ান ছাঁটার কাজ বসালে
-     * এই দাবিটা লাল হবে, আর তখন পর্দার লেখাটাও বদলাতে হবে — নাহলে পর্দা
-     * মিথ্যা বলত।
+     * ── ⚠️ এই পরীক্ষাটা একটা বৃত্ত ছিল, ২০ সেপ্টেম্বর ২০২৬ পর্যন্ত ──────
+     * আগে এখানে `kept === FOREVER` দিয়ে ছেঁকে `by === 'nobody'` মেলানো হত।
+     * ⛔ কিন্তু সেবার কোডে `by`-টা **ঐ একই লাইনে** `kept` থেকেই বানানো হত,
+     * তাই দাবিটা কখনো লাল হতে পারত না — খতিয়ান ছাঁটার কাজ বসালেও না।
+     *
+     * ⭐ এখন মাপটা কোডের **বাইরে** থেকে: শিডিউলে সত্যিই যে কাজগুলো সারি
+     * মোছে, সেগুলোর সাথে মেলানো হয়।
      */
     public function test_the_forever_rows_are_not_pruned_by_the_schedule(): void
     {
@@ -75,8 +79,46 @@ final class NobodyCouldSayHowLongAPaperIsKeptTest extends TestCase
 
         $this->assertGreaterThan(3, $forever->count(), 'চিরকাল থাকা সারির তালিকাটা সন্দেহজনকভাবে ছোট।');
 
+        /* ⓘ যে কমান্ডগুলো সারি ছাঁটে — শিডিউলে এগুলোই বসানো আছে। */
+        $pruners = ['abos:backup-due', 'submitted-forms-prune', 'abos:reports-due'];
+
         foreach ($forever as $row) {
             $this->assertSame('nobody', $row['by'], $row['key'].': "চিরকাল" বলা হচ্ছে, অথচ কেউ মোছে।');
         }
+
+        /* ⛔ আর উল্টো দিকটা: যা মোছা হয়, তার প্রতিটাই তালিকায় আছে তো? */
+        $scheduled = collect(app(WhatIsKeptHowLong::class)->all())
+            ->where('by', 'schedule')
+            ->pluck('key');
+
+        $this->assertSame(
+            count($pruners),
+            $scheduled->count(),
+            'শিডিউলে '.count($pruners).'টা কাজ সারি মোছে, অথচ পর্দায় '.$scheduled->count()
+                .'টা সারি "মোছা হয়" বলছে — কোনো একটা টেবিল চুপচাপ মুছছে।'
+        );
+    }
+
+    /**
+     * ⛔ সংখ্যাটা এই কোম্পানির, সবার মিলিয়ে নয়।
+     *
+     * ⚠️ `DB::table()->count()` গ্লোবাল স্কোপ মানে না, তাই এক কোম্পানির
+     * লোক অন্য কোম্পানির ব্যবসার **আকার** পড়ে ফেলতে পারতেন।
+     */
+    public function test_the_counts_belong_to_this_company_only(): void
+    {
+        $mine = collect(app(WhatIsKeptHowLong::class)->all())->firstWhere('key', 'vouchers');
+
+        $everyones = (int) \Illuminate\Support\Facades\DB::table('vouchers')->count();
+        $thisOne = (int) \Illuminate\Support\Facades\DB::table('vouchers')
+            ->where('company_id', \App\Core\Support\CompanyContext::id())
+            ->count();
+
+        /* ⓘ ডেমোতে দ্বিতীয় কোম্পানির সারি না থাকলে মাপটা কিছুই প্রমাণ করে না। */
+        if ($everyones === $thisOne) {
+            $this->markTestSkipped('ডেমোতে অন্য কোম্পানির ভাউচার নেই — তুলনাটা অর্থহীন।');
+        }
+
+        $this->assertSame($thisOne, $mine['rows'], 'গণনায় অন্য কোম্পানির সারিও উঠে এসেছে।');
     }
 }

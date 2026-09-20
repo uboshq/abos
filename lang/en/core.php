@@ -452,6 +452,8 @@ return [
         'name' => 'Name',
         'type' => 'Type',
         'size' => 'Size',
+        'description' => 'Description',
+        'status' => 'Status',
         'actions' => 'Actions',
         'serial' => 'SL#',
         'date' => 'Date',

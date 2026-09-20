@@ -522,6 +522,8 @@ return [
         'name' => 'নাম',
         'type' => 'ধরন',
         'size' => 'আকার',
+        'description' => 'বিবরণ',
+        'status' => 'অবস্থা',
         'actions' => 'কাজ',
         'serial' => 'ক্রম',
         'date' => 'তারিখ',
