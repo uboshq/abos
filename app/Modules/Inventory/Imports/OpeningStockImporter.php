@@ -10,6 +10,7 @@ use App\Modules\Inventory\Models\StockMovement;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\OpeningStockService;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\ValidationException;
 
 /**
  * শুরুর দিনের মজুদ — ফাইল ধরে।
@@ -154,8 +155,29 @@ final class OpeningStockImporter implements Importer
             return null;
         }
 
-        return Product::query()->where('code', $key)->first()
-            ?? Product::query()->where('barcode', $key)->first();
+        $byCode = Product::query()->where('code', $key)->first();
+
+        if ($byCode !== null) {
+            return $byCode;
+        }
+
+        /*
+         * ⛔ একাধিক পণ্যে একই বারকোড থাকলে থেমে যাওয়া হয় — ২১ সেপ্টেম্বর ২০২৬।
+         *
+         * ⚠️ আগে সে চুপচাপ প্রথমটা (ছোট আইডি) বেছে নিত, আর শুরুর
+         * মজুদ **ভুল পণ্যে** বসত — কেউ কোনোদিন টের পেত না, কারণ
+         * দুইটা পণ্যেরই নাম কাছাকাছি। ⓘ ডাটাবেসে unique বসলেও পুরনো
+         * ডেটায় নকল থাকতে পারে, তাই পাহারাটা এখানেও।
+         */
+        $byBarcode = Product::query()->where('barcode', $key)->take(2)->get();
+
+        if ($byBarcode->count() > 1) {
+            throw ValidationException::withMessages([
+                'product' => __('inventory::validation.barcode_is_not_alone', ['barcode' => $key]),
+            ]);
+        }
+
+        return $byBarcode->first();
     }
 
     /**

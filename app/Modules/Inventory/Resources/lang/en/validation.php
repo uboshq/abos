@@ -106,4 +106,5 @@ return [
     'pack_splits_base' => '1 :unit comes to part of a :base — but :base does not split. Check the size.',
     'pack_default_unknown' => 'The pack chosen as a default is not in this product’s table.',
     'already_that_unit' => ":product's stock is already counted in :unit — there is nothing to bring down.",
+    'barcode_is_not_alone' => 'Barcode :barcode belongs to more than one product, so there is no way to say which one this stock is for. Fix the barcodes first, or use the product code.',
 ];
