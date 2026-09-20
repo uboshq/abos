@@ -547,7 +547,7 @@ final class FinancePlan
                 'items' => [
                     ['হিসাবের সেটিংস', 'accounts.settings', null],
                     ['কন্ট্রোল প্যানেল', 'system_admin.control-panel', 'প্রতিটা ঘরের সুইচ'],
-                    ['বিজ্ঞপ্তির সেটিংস', null, 'পরের ধাপ'],
+                    ['বিজ্ঞপ্তির সেটিংস', 'notifications.settings', 'কে কোন খবর পাবেন — নিজের পছন্দ, ঘণ্টার ভিতর থেকেই'],
                 ],
             ],
             [
