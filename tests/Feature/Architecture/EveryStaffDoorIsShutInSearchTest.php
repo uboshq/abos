@@ -12,6 +12,7 @@ use App\Models\Branch;
 use App\Models\Company;
 use App\Models\User;
 use App\Models\UserDataScope;
+use App\Modules\Inventory\Models\Warehouse;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -248,11 +249,24 @@ class EveryStaffDoorIsShutInSearchTest extends TestCase
      * ⓘ "উৎস দেখা যায় না" আর "সারি আসে না" এক প্রশ্ন নয় — আর এই
      * রিপোতে আজ ঠিক ঐ দুইটা গুলিয়ে ফেলার দাম দেওয়া হয়েছে।
      *
-     * ── ⭐ কেন গুদাম দিয়ে পরীক্ষা ────────────────────────────────────
+     * ── ⭐ কেন বিক্রয় চালান দিয়ে, গুদাম দিয়ে নয় ─────────────────────
      * মেপে দেখা: ৪৫টা উৎসের **১৫টা** `ScopedToUserBranch` ব্যবহার করে,
-     * আর ওটা একটা **গ্লোবাল স্কোপ** — তাই খোঁজার কোয়েরিতেও আপনাআপনি
-     * বসে। ⓘ গুদাম তার একটা, আর ডেমোতে দুইটা গুদাম **দুই আলাদা শাখায়**
-     * (WH-MMS ও WH-NTK) — অর্থাৎ ফিক্সচারটা আগে থেকেই আছে।
+     * আর ওটা একটা **গ্লোবাল স্কোপ** — তাই খোঁজার কোয়েরিতেও আপনাআপনি বসে।
+     *
+     * ⛔ ২১ সেপ্টেম্বর ২০২৬ পর্যন্ত এটা **গুদাম** দিয়ে মাপা হত, আর দাবিটা
+     * দুই কারণে অর্থহীন ছিল:
+     *   ১. বিক্রয়কর্মীর গুদাম দেখার অনুমতিই নেই (`viewAny` মিথ্যা), তাই
+     *      উৎসটাই তাঁর খোঁজায় আসত না — মেপে দেখা: তিনি ৪৯টার মধ্যে ১৯টা
+     *      উৎস দেখেন, গুদাম তার বাইরে।
+     *   ২. `Warehouse` শাখা নয়, **গুদাম** ধরে ছাঁকে
+     *      ([[ScopedToUserWarehouse]]) — আর পরীক্ষাটা বসাত শাখার সীমা।
+     *
+     * ⚠️ ফল: দুইটা দাবিই ফাঁকা তালিকায় সত্যি হত। নিচের "অন্য শাখা পাওয়া
+     * যায় না" দাবিটা সবুজ ছিল কারণ **কিছুই** পাওয়া যেত না।
+     *
+     * ⭐ বিক্রয় চালান দুইটাই মেটায়: সে `ScopedToUserBranch` ব্যবহার করে,
+     * আর বিক্রয়কর্মী সেটা দেখার অধিকার রাখেন — অর্থাৎ ফাঁকা তালিকা আর
+     * সঠিক ছাঁকনি এখানে আলাদা করে চেনা যায়।
      *
      * ⚠️ বাকি ৩০টা উৎস শাখা-সীমা মানে না, কিন্তু সেটা খোঁজার ফাঁক নয়:
      * ওগুলো মাস্টার ডাটা (একক, কর, পদবি, গ্রাহক) যা **কোম্পানি-ব্যাপী**,
@@ -261,7 +275,21 @@ class EveryStaffDoorIsShutInSearchTest extends TestCase
      */
     public function test_a_branch_limited_user_cannot_find_another_branch(): void
     {
-        $mms = Branch::query()->where('code', 'MMS')->firstOrFail();
+        /*
+         * ⭐ অনুমতিটা হাতে দেওয়া, আর এটাই এই পরীক্ষার মেরুদণ্ড।
+         *
+         * ⛔ বিক্রয়কর্মীর ভূমিকায় গুদাম দেখার অধিকার নেই, তাই উৎসটাই
+         * তাঁর খোঁজায় আসত না — আর নিচের দুইটা দাবিই **ফাঁকা তালিকায়**
+         * সত্যি হয়ে যেত।
+         *
+         * ⓘ দিয়ে দেওয়ার পর প্রশ্নটা আসল প্রশ্ন হয়: উৎস দেখতে পারেন,
+         * তবু কি **অন্য গুদামের সারি** আসে?
+         */
+        $this->salesman->givePermissionTo('inventory.warehouse.view');
+        $this->salesman->unsetRelation('permissions')->unsetRelation('roles');
+        $this->salesman = $this->salesman->fresh();
+
+        $mine = Warehouse::query()->where('code', 'WH-MMS')->firstOrFail();
 
         /*
          * ⓘ সীমাটা এখানে বসানো হয়, ডেমোতে নয় — ডেমোর কারও কোনো সীমা
@@ -269,11 +297,20 @@ class EveryStaffDoorIsShutInSearchTest extends TestCase
          * নিয়ম)। ⚠️ তাই সীমা না বসিয়ে পরীক্ষা করলে দাবিটা কিছুই
          * প্রমাণ করত না।
          */
+        /*
+         * ⚠️ সীমাটা **গুদামের**, শাখার নয় — আর আগে ঠিক এখানেই ভুল ছিল।
+         *
+         * ⛔ [[Warehouse]] `ScopedToUserWarehouse` ব্যবহার করে, অর্থাৎ
+         * সে গুদামের তালিকা দেখে। শাখার সীমা বসালে ঐ ছাঁকনিটা **কিছুই
+         * করত না** (`idsFor(WAREHOUSE)` খালি ফেরায় → ছাঁকনি বসেই না),
+         * আর তবু পরীক্ষাটা সবুজ থাকত — কারণ অনুমতির অভাবে তালিকাটাই
+         * ফাঁকা ছিল। দুইটা ভুল একে অন্যকে ঢেকে রাখছিল।
+         */
         UserDataScope::query()->create([
             'company_id' => CompanyContext::id(),
             'user_id' => $this->salesman->id,
-            'scope_type' => UserDataScope::BRANCH,
-            'scope_id' => $mms->id,
+            'scope_type' => UserDataScope::WAREHOUSE,
+            'scope_id' => $mine->id,
         ]);
 
         /*
