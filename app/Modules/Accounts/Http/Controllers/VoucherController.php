@@ -17,6 +17,7 @@ use App\Models\Branch;
 use App\Models\User;
 use App\Modules\Accounts\Http\Requests\VoucherRequest;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Models\CostCenter;
 use App\Modules\Accounts\Models\MoneyCategory;
 use App\Modules\Accounts\Models\Voucher;
@@ -123,7 +124,7 @@ class VoucherController extends Controller implements HasMiddleware
          */
         $vouchers->getCollection()->load('lines.account');
 
-        $partyNames = app(\App\Core\Services\PartyRegistry::class)->labelsOf(
+        $partyNames = app(PartyRegistry::class)->labelsOf(
             $vouchers->getCollection()
                 ->filter(fn (Voucher $v) => $v->party_type !== null && $v->party_id !== null)
                 ->map(fn (Voucher $v) => [(string) $v->party_type, (int) $v->party_id]),
@@ -636,8 +637,44 @@ class VoucherController extends Controller implements HasMiddleware
         $money = Account::query()->money()->postable()->active()->orderBy('code')->get();
         $all = Account::query()->postable()->active()->orderBy('code')->get();
 
+        /*
+         * ⭐ নগদ কেবল নিজের ক্যাশবাক্সে — ২১ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⓘ মালিকের নিয়ম ─────────────────────────────────────────
+         * *"cash e sudu tar nijer cash accounts e taka nite parbe, tai
+         * app er dorkar nai — din sese emnite tar kachtekei buje nibe"*।
+         *
+         * ⚠️ অর্থাৎ নগদে অনুমোদন তুলে দেওয়ার **শর্তটাই** হলো এই সীমা।
+         * ⛔ শর্তটা না বসিয়ে অনুমোদন তুললে যে কেউ যেকোনো ক্যাশ খাতে
+         * টাকা বসাতে পারত, আর দিন শেষে মেলানোর সময় সেটা ধরাই পড়ত না —
+         * একটা জাল তুলে নেওয়া হত, বদলে কিছু বসত না।
+         *
+         * ── ⓘ ব্যাংক ও MFS অচ্ছুত নয় ──────────────────────────────
+         * সীমাটা **কেবল নগদে**। ব্যাংক/MFS-এ টাকা প্রতিষ্ঠানের খাতেই
+         * যায় আর সেখানে অনুমোদন থাকছে, তাই ওখানে তালিকা ছাঁকার কারণ নেই।
+         *
+         * ── ⚠️ যাঁর বাক্স নেই, তাঁর নগদের ঘরটাই খালি ─────────────────
+         * ⓘ আর সেটাই ঠিক উত্তর: বাক্স ছাড়া মানুষের হাতে নগদ গেলে সেটা
+         * কার হেফাজতে তার কোনো উত্তর থাকে না। ⛔ পর্দা তখন বলে দেয়
+         * কেন ঘরটা খালি ([[accounts::message.no_till_of_your_own]])।
+         */
+        $myTills = CashTill::query()
+            ->active()
+            ->heldBy((int) auth()->id())
+            ->pluck('account_id')
+            ->all();
+
+        $cashForMe = $money
+            ->filter(fn (Account $a) => ! $a->isCash() || in_array((int) $a->id, $myTills, true))
+            ->values();
+
         return [
-            'moneyAccounts' => $money,
+            /*
+             * ⓘ টাকার ঘরে যায় ছাঁকা তালিকাটা — নিজের বাক্স ছাড়া অন্য
+             * কারও নগদ খাত এখানে আসে না।
+             */
+            'moneyAccounts' => $cashForMe,
+            'hasOwnTill' => $myTills !== [],
             'allAccounts' => $all,
 
             /*

@@ -94,4 +94,7 @@ return [
     'year_reopen_super_admin' => 'Only a super admin can reopen a closed year.',
     'year_not_closed' => 'That year is not closed.',
     'year_reopen_latest_only' => 'Only the year closed most recently can be reopened — right now that is ":name".',
+    /* Cash only into your own till - 21 September 2026. */
+    'cash_not_your_till' => ':account is not your till - cash can only go into your own.',
+    'no_till_of_your_own' => 'No till is held in your name, so cash cannot be taken - choose bank or MFS.',
 ];

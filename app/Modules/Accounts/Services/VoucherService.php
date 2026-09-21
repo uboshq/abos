@@ -16,6 +16,7 @@ use App\Models\FinancialYear;
 use App\Models\IssuedNumber;
 use App\Modules\Accounts\Events\VoucherPosted;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Models\VoucherLine;
 use Illuminate\Database\Eloquent\Collection;
@@ -262,6 +263,7 @@ final class VoucherService
         $voucher->load('lines.account');
 
         $this->assertLinesArePostable($voucher);
+        $this->assertCashLandsInOwnTill($voucher);
         $this->assertBankReferenceIsFree($voucher);
 
         /*
@@ -679,6 +681,62 @@ final class VoucherService
      * তুললেন, ম্যানেজারও তুললেন। আটকায় না: একই বিলের বিপরীতে দুইটা
      * আলাদা পাঠানো — ওটা বিলের বরাদ্দের কাজ, আলাদা পাহারা।
      */
+    /**
+     * নগদ কেবল নিজের ক্যাশবাক্সে — সার্ভারের দিকের তালা।
+     *
+     * ── ⭐ মালিকের নিয়ম, ২১ সেপ্টেম্বর ২০২৬ ────────────────────────
+     * *"cash e sudu tar nijer cash accounts e taka nite parbe, tai
+     * app er dorkar nai — din sese emnite tar kachtekei buje nibe"*।
+     *
+     * ⚠️ নগদে অনুমোদন তুলে দেওয়ার **শর্তটাই** এই সীমা। ⛔ শর্তটা না
+     * বসিয়ে অনুমোদন তুললে যে কেউ যেকোনো ক্যাশ খাতে টাকা বসাতে পারত,
+     * আর দিন শেষে মেলানোর সময় ধরাই পড়ত না।
+     *
+     * ── ⓘ পর্দা ছাঁকা যথেষ্ট নয় ───────────────────────────────────
+     * ফর্মে তালিকাটা ছাঁকা হয়েছে, কিন্তু সেটা কেবল **দেখানো**।
+     * ⛔ এই অ্যাপে একবার রপ্তানি "বন্ধ" করা হয়েছিল শুধু বোতাম লুকিয়ে,
+     * আর ঠিকানা টাইপ করলেই ফাইল নামত। তাই তালাটা এখানেও।
+     *
+     * ── ⓘ কারা ছাড় পান ───────────────────────────────────────────
+     * ⚠️ কনসোল ও সিডারে কোনো ব্যবহারকারী নেই — তখন নিয়মটা চলে না,
+     * নাহলে মাইগ্রেশন ও ইমপোর্ট ভাঙত। ⓘ আর যাঁর কোনো বাক্স **নেই**
+     * তাঁর জন্য নিয়মটা খাটে: তিনি কোনো নগদ খাতেই বসাতে পারবেন না,
+     * কারণ টাকাটা কার হেফাজতে তার উত্তর থাকে না।
+     */
+    private function assertCashLandsInOwnTill(Voucher $voucher): void
+    {
+        $userId = (int) (auth()->id() ?? 0);
+
+        if ($userId === 0) {
+            return;
+        }
+
+        $cash = $voucher->lines
+            ->map(fn (VoucherLine $line) => $line->account)
+            ->first(fn (?Account $a) => $a !== null && $a->isCash());
+
+        if ($cash === null) {
+            return;
+        }
+
+        $mine = CashTill::query()
+            ->active()
+            ->heldBy($userId)
+            ->pluck('account_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        if (in_array((int) $cash->id, $mine, true)) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'lines' => $mine === []
+                ? __('accounts::validation.no_till_of_your_own')
+                : __('accounts::validation.cash_not_your_till', ['account' => $cash->label()]),
+        ]);
+    }
+
     private function assertBankReferenceIsFree(Voucher $voucher): void
     {
         $account = $voucher->lines
