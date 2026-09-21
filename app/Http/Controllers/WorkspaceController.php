@@ -9,11 +9,15 @@ use App\Core\Dashboard\DashboardRegistry;
 use App\Core\Engines\Dashboard\DashboardEngine;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\Accent;
+use App\Core\Support\CompanyContext;
 use App\Core\Support\LookRegistry;
 use App\Core\Support\Ui;
+use App\Models\Company;
 use App\Models\LookSkin;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -42,8 +46,29 @@ class WorkspaceController extends Controller
      */
     public function dashboard(Request $request): View
     {
+        $menu = $this->menu->forUser($request->user());
+
         return view('workspace.dashboard', [
-            'menu' => $this->menu->forUser($request->user()),
+            'menu' => $menu,
+
+            /*
+             * ⭐ মেনু খালি হলে কারণটা ঠিকমতো বলা — ২১ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ দুইটা অবস্থা দেখতে এক, উত্তর সম্পূর্ণ আলাদা:
+             *   কোথাও ভূমিকা নেই       → প্রশাসককে বলতে হবে
+             *   অন্য কোম্পানিতে আছে  → উপর থেকে কোম্পানি বদলালেই হয়
+             *
+             * ⛔ লাইভে একজন কর্মীর বেলায় ঠিক দ্বিতীয়টা ঘটেছিল (মেপে
+             * দেখা): ভূমিকা Demo-তে, আর তিনি দাঁড়িয়ে Test Company-তে।
+             * ⚠️ তখন "কোনো ভূমিকা দেওয়া হয়নি" বলা সরাসরি **মিথ্যা** —
+             * ভূমিকা আছে, তিনি ভুল দরজায়। ⓘ মিথ্যা কারণ দিলে মানুষ
+             * প্রশাসকের কাছে ছোটেন, আর তিনিও খুঁজে পান না — সবই ঠিক আছে।
+             *
+             * ⚠️ খোঁজাটা কেবল মেনু খালি হলে — রোজকার পাতা খোলায় একটা
+             * বাড়তি কোয়েরি বসানোর কোনো কারণ নেই।
+             */
+            'roleLivesIn' => $menu === [] ? $this->whereTheirRolesAre($request->user()) : [],
+
             'groups' => $this->widgets->forUser($request->user()),
 
             /*
@@ -68,6 +93,37 @@ class WorkspaceController extends Controller
              */
             'happenings' => $this->activity->forUser($request->user()),
         ]);
+    }
+
+    /**
+     * এই ব্যবহারকারীর ভূমিকা কোন কোম্পানিগুলোতে আছে — চলতিটা ছাড়া।
+     *
+     * ⓘ অনুমতির ব্যবস্থায় `teams` চালু, আর দলটা হলো কোম্পানি —
+     * তাই `model_has_roles`-এর সারিতেই লেখা আছে ভূমিকাটা কোথায় খাটে।
+     *
+     * ⚠️ কেবল সেই কোম্পানিগুলো, যেগুলোতে তিনি সত্যিই ঢুকতে পারেন।
+     * ⛔ নাহলে পর্দা অমন একটা দরজা দেখাত যেটা তাঁর জন্য খোলেই না —
+     * আগের মিথ্যার চেয়েও খারাপ।
+     *
+     * @return list<string>
+     */
+    private function whereTheirRolesAre(?User $user): array
+    {
+        if ($user === null) {
+            return [];
+        }
+
+        return Company::query()
+            ->whereIn('id', DB::table('model_has_roles')
+                ->where('model_id', $user->id)
+                ->where('model_type', $user->getMorphClass())
+                ->whereNot('company_id', CompanyContext::id())
+                ->pluck('company_id'))
+            ->whereIn('id', $user->companies()->pluck('companies.id'))
+            ->orderBy('name_en')
+            ->get()
+            ->map(fn (Company $company) => $company->name())
+            ->all();
     }
 
     /**

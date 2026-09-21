@@ -70,6 +70,38 @@ final class ANewUserSawAnEmptyScreenAndNoReasonTest extends TestCase
             ->assertDontSee(__('core.dashboard.no_module_at_all'));
     }
 
+    /**
+     * ⭐ ভূমিকা অন্য কোম্পানিতে থাকলে পর্দা **সেই কোম্পানির নাম** বলে।
+     *
+     * ── ⓘ লাইভে মেপে পাওয়া, ২১ সেপ্টেম্বর ২০২৬ ──────────────────────
+     * একজনের ভূমিকা বসেছিল Demo-তে, আর তিনি দাঁড়িয়ে ছিলেন Test
+     * Company-তে। ⛔ তাঁকে *"কোনো ভূমিকা দেওয়া হয়নি"* বলা **মিথ্যা**
+     * হত — ভূমিকা তো ছিল, কেবল অন্য দরজায়।
+     *
+     * ⚠️ আর মিথ্যা কারণ দিলে তিনি প্রশাসকের কাছে ছোটেন, প্রশাসকও খুঁজে
+     * পান না — কারণ ফর্মে সবই ঠিক দেখায়। ⭐ সঠিক উত্তরটা তাঁকে এক
+     * ক্লিকে কাজে ফিরিয়ে দেয়।
+     */
+    public function test_a_user_whose_role_is_in_another_company_is_told_which_one(): void
+    {
+        $elsewhere = Company::query()->whereKeyNot($this->company->id)->firstOrFail();
+
+        $user = $this->aNewUser();
+        $user->companies()->syncWithoutDetaching([$elsewhere->id]);
+
+        // ⓘ ভূমিকাটা বসে ঐ কোম্পানির নামে — এখানে নয়
+        setPermissionsTeamId($elsewhere->id);
+        $user->unsetRelation('roles')->syncRoles(['Warehouse']);
+        setPermissionsTeamId($this->company->id);
+
+        $this->actingAs(User::query()->findOrFail($user->id));
+
+        $this->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee(__('core.dashboard.role_lives_elsewhere', ['companies' => $elsewhere->name()]))
+            ->assertDontSee(__('core.dashboard.no_module_at_all'));
+    }
+
     private function aNewUser(): User
     {
         $user = User::query()->create([

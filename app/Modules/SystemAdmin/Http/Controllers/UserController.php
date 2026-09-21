@@ -28,6 +28,7 @@ use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
 /**
  * ব্যবহারকারী — কে ঢুকতে পারেন, আর কী করতে পারেন।
@@ -243,7 +244,7 @@ class UserController extends Controller implements HasMiddleware
         $before = $user->roles->pluck('name')->sort()->values()->all();
         $after = array_values($data['roles'] ?? []);
 
-        $user->syncRoles($after);
+        // ⓘ ভূমিকা বসে নিচে — কোম্পানির তালিকা ঠিক হওয়ার পর ([[rolesInEveryCompany()]])
 
         if ($before !== collect($after)->sort()->values()->all()) {
             $this->audit->recordAction($user, 'roles_changed',
@@ -307,6 +308,8 @@ class UserController extends Controller implements HasMiddleware
 
         $user->companies()->sync($companies);
 
+        $this->rolesInEveryCompany($user, $after, array_keys($companies));
+
         $afterCompanies = $this->companyCodesOf($user);
 
         if ($beforeCompanies !== $afterCompanies) {
@@ -315,6 +318,105 @@ class UserController extends Controller implements HasMiddleware
         }
 
         $this->applyScopes($user, $data);
+    }
+
+    /**
+     * ভূমিকা বসে **প্রতিটা টিক দেওয়া কোম্পানিতে**।
+     *
+     * ── ⛔ মালিকের অভিযোগ, ২১ সেপ্টেম্বর ২০২৬ ─────────────────
+     * *"abu kawser manage role er onumoti dewa ache, tar poreo keno
+     * dekhabe na"* — ফর্মে দুইটা কোম্পানি (DEM, TCL) আর দুইটা
+     * ভূমিকা টিক দেওয়া ছিল। ⛔ তবু লাইভে মেপে দেখা গেল সারি দুইটাই
+     * কেবল DEM-এ — আর তিনি দাঁড়িয়ে ছিলেন TCL-এ, তাই পর্দা ফাঁকা।
+     *
+     * ── ⚠️ কারণ ──────────────────────────────────────
+     * অনুমতির ব্যবস্থায় `teams` চালু, আর দলটা কোম্পানি
+     * ([[CompanyContext::set()]] প্রতিবার `setPermissionsTeamId()` ডাকে)।
+     * তাই একবারের `syncRoles()` লিখত কেবল **প্রশাসক তখন যে কোম্পানিতে
+     * বসে আছেন** তার নামে — ফর্মে কয়টা কোম্পানি টিক দেওয়া হলো তাতে
+     * কিছু যায়-আসত না।
+     *
+     * ⚠️ আর পর্দায় লেখা কথাটা সরাসরি **মিথ্যা** ছিল: *"রোল
+     * ব্যবহারকারী ধরে বসে, কোম্পানি ধরে নয় — দুই কোম্পানিতে একই
+     * অধিকার থাকবে"*। ⭐ এখন কথাটা সত্যি।
+     *
+     * ── ⓘ দুইটা সূক্ষ্ম বিষয় ─────────────────────────────
+     * ① কোম্পানির তালিকাটা **ফর্ম থেকে** নেওয়া, সম্পর্ক থেকে নয় —
+     *   `sync()`-এর পরেও `companies()` পুরনো তালিকা ফেরত দেয় (ঠিক
+     *   নিচের `$beforeCompanies`-এর মন্তব্যে লেখা ফাঁদটা)।
+     * ② যে কোম্পানিতে ভূমিকার সারিটা নেই, সেখানে সেটা বসে যায়,
+     *   অনুমতিসহ নকল হয়ে ([[makeSureTheseRolesExistHere()]])।
+     *
+     * @param  list<string>  $roles
+     * @param  list<int>  $companyIds
+     */
+    private function rolesInEveryCompany(User $user, array $roles, array $companyIds): void
+    {
+        $was = CompanyContext::id();
+
+        try {
+            foreach ($companyIds as $companyId) {
+                setPermissionsTeamId((int) $companyId);
+
+                $this->makeSureTheseRolesExistHere((int) $companyId, $roles);
+
+                $user->unsetRelation('roles')->syncRoles($roles);
+            }
+        } finally {
+            setPermissionsTeamId($was);
+        }
+
+        /*
+         * ⛔ যে কোম্পানির টিক তুলে নেওয়া হলো, সেখানকার ভূমিকাও যায়।
+         *
+         * ⚠️ উপরের লুপ কেবল টিক দেওয়া কোম্পানিগুলোতে হাত দেয়, তাই
+         * বাদ পড়া কোম্পানির সারিটা এমনিতে **রয়ে যেত**। কাউকে বের
+         * করে দিয়ে ছয় মাস পরে আবার ঢোকালে তাঁর পুরনো ক্ষমতা নীরবে
+         * ফিরে আসত — কেউ সেটা টিকও দেয়নি।
+         */
+        DB::table('model_has_roles')
+            ->where('model_type', $user->getMorphClass())
+            ->where('model_id', $user->getKey())
+            ->whereNotIn('company_id', $companyIds === [] ? [0] : $companyIds)
+            ->delete();
+
+        /*
+         * ⚠️ অনুমতির ক্যাশ চব্বিশ ঘণ্টা ধরে জমে থাকে — না মুছলে
+         * "সংরক্ষিত হয়েছে" বলার পরেও পুরনো উত্তরটাই ফিরত।
+         */
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+    }
+
+    /**
+     * এই কোম্পানিতে ভূমিকাগুলো না থাকলে বসিয়়ে দেওয়া — অনুমতিসহ।
+     *
+     * ⓘ মেপে দেখা: `accountant` ছিল কেবল এক নম্বর কোম্পানিতে। ⛔ তখন
+     * `syncRoles()` সরাসরি ছোঁড়ত: *"There is no role named `accountant`"*।
+     *
+     * ⚠️ অনুমতি নকল হয় একই নামের পুরনো সারি থেকে — দুই কোম্পানিতে
+     * "ম্যানেজার" দুই রকম হলে নামটাই মিথ্যা হয়ে যেত।
+     *
+     * @param  list<string>  $roles
+     */
+    private function makeSureTheseRolesExistHere(int $companyId, array $roles): void
+    {
+        foreach ($roles as $name) {
+            if (Role::query()->where('name', $name)->where('company_id', $companyId)->exists()) {
+                continue;
+            }
+
+            $elsewhere = Role::query()->with('permissions')->where('name', $name)->first();
+
+            if ($elsewhere === null) {
+                continue;
+            }
+
+            Role::query()->create([
+                'name' => $name,
+                'guard_name' => $elsewhere->guard_name,
+                'company_id' => $companyId,
+            ])->syncPermissions($elsewhere->permissions);
+        }
     }
 
     /**

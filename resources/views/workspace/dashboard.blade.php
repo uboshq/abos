@@ -630,8 +630,23 @@
              কিছু নেই"* পড়লে মানুষ ভাবেন আজ কাজ হয়নি, অথচ তাঁর তো
              কোনো দরজাই খোলা হয়নি। ⓘ দুইটা অবস্থায় দুই কথা, আর
              দ্বিতীয়টা বলে দেয় **কাকে বলতে হবে** — নিয়ম ১। --}}
-        <x-ui.empty-state :message="$menu === []
-            ? __('core.dashboard.no_module_at_all')
-            : __('core.dashboard.nothing_to_show')" />
+        {{-- ⛔ তিনটা অবস্থা, তিন কথা — ২১ সেপ্টেম্বর ২০২৬।
+
+             ⓘ সবচেয়ে পরেরটা লাইভে মেপে পাওয়া: একজনের ভূমিকা ছিল Demo-তে,
+             আর তিনি দাঁড়িয়ে ছিলেন Test Company-তে। ⚠️ তাঁকে "কোনো ভূমিকা
+             দেওয়া হয়নি" বলা মিথ্যা হত, আর মিথ্যা কারণ দিলে তিনি
+             প্রশাসকের কাছে ছোটেন, আর প্রশাসকও খুঁজে পান না — কারণ সবই
+             ঠিক আছে। ⭐ সঠিক উত্তরটা তাঁকে এক ক্লিকে কাজে ফিরিয়ে দেয়। --}}
+        @php
+            $why = match (true) {
+                $menu !== [] => __('core.dashboard.nothing_to_show'),
+                ($roleLivesIn ?? []) !== [] => __('core.dashboard.role_lives_elsewhere', [
+                    'companies' => implode(', ', $roleLivesIn),
+                ]),
+                default => __('core.dashboard.no_module_at_all'),
+            };
+        @endphp
+
+        <x-ui.empty-state :message="$why" />
     @endif
 </x-layouts.app>
