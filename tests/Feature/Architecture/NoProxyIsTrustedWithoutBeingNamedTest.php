@@ -46,11 +46,25 @@ final class NoProxyIsTrustedWithoutBeingNamedTest extends TestCase
          * বলত। ⚠️ আজ সকালেই [[AlpineHandlersHaveAScopeTest]] ঠিক এই
          * ফাঁদে পড়েছিল।
          */
-        $code = preg_replace('#/\*.*?\*/#s', '', $source) ?? $source;
-        $code = preg_replace('#^\s*//.*$#m', '', $code) ?? $code;
+        $code = $this->codeOnly($source);
+
+        /*
+         * ⚠️ ছাঁটাটা ভারবাহী: ফাইলটায় একটা মন্তব্য আছে যেখানে পুরনো
+         * `trustProxies` লাইনটা উদ্ধৃত — কেন সরানো হয়েছে তা বোঝাতে।
+         * ⛔ ছাঁটা না হলে এই দাবিটা চিরকাল লাল থাকত।
+         *
+         * ⓘ আর ছাঁটা **বেশি** হলে উল্টোটা: ফাইলটা খালি হয়ে যেত, কিছুই
+         * মিলত না, আর দাবিটা চিরকাল সবুজ। তাই দুই দিকেই মাপা হয়।
+         */
+        $this->assertStringContainsString('trustProxies', $code, implode(PHP_EOL, [
+            'মন্তব্য ছাঁটার পর `trustProxies` লাইনটাই আর নেই।',
+            '',
+            'হয় ছাঁটার নিয়মটা বেশি খেয়ে ফেলেছে, নয় সিদ্ধান্তটা সত্যিই',
+            'মুছে গেছে — দুইটার যেকোনোটাই পাহারাটাকে অন্ধ করে দেয়।',
+        ]));
 
         $this->assertDoesNotMatchRegularExpression(
-            "/trustProxies\s*\(\s*at:\s*'\*'/",
+            $this->wideOpen(),
             $code,
             implode("\n", [
                 "bootstrap/app.php-এ trustProxies(at: '*') বসানো আছে।",
@@ -75,10 +89,60 @@ final class NoProxyIsTrustedWithoutBeingNamedTest extends TestCase
      */
     public function test_the_decision_is_written_down(): void
     {
+        /*
+         * ⚠️ **ছাঁটা** কোড পড়া হয়, কাঁচা সোর্স নয় — ২২ সেপ্টেম্বর ২০২৬।
+         *
+         * ⛔ আগে কাঁচা ফাইলটা পড়া হত, আর ফাইলে একটা মন্তব্য আছে যেখানে
+         * পুরনো `trustProxies` লাইনটা উদ্ধৃত। ⓘ অর্থাৎ কেউ আসল লাইনটা
+         * মুছে ফেললেও এই দাবিটা সবুজ থাকত — **মন্তব্যটাই তাকে সন্তুষ্ট
+         * করত**, আর সিদ্ধান্তটা ডিফল্টের ভরসায় চলে যেত।
+         */
         $this->assertStringContainsString(
             'trustProxies',
-            (string) file_get_contents(base_path('bootstrap/app.php')),
+            $this->codeOnly((string) file_get_contents(base_path('bootstrap/app.php'))),
             'trustProxies লাইনটাই নেই — সিদ্ধান্তটা লেখা থাকা দরকার, ডিফল্টের ভরসায় নয়।',
         );
+    }
+
+    /** ⓘ মন্তব্য বাদ — ফাইলটা পুরনো লাইনটা উদ্ধৃত করে, আর সেটা কোড নয়। */
+    private function codeOnly(string $source): string
+    {
+        $code = preg_replace('#/\*.*?\*/#s', '', $source) ?? $source;
+
+        return preg_replace('#^\s*//.*$#m', '', $code) ?? $code;
+    }
+
+    /**
+     * ⭐ পাহারাটা সত্যিই খোলা প্রক্সি ধরতে পারে — ২২ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ দুইটা দাবিই এতদিন কেবল বলত *"খারাপ জিনিসটা পাইনি"*, আর ছেঁড়া
+     * জালও হুবহু ঐ কথাই বলত। ⚠️ তাই জালটাকে জানা মাছ খাওয়ানো হয়।
+     */
+    public function test_the_rule_actually_catches_a_wide_open_proxy(): void
+    {
+        $bad = '<?php $middleware->trustProxies(at: \'*\');';
+
+        $this->assertMatchesRegularExpression($this->wideOpen(), $this->codeOnly($bad),
+            'সব উৎস বিশ্বাস করার লাইনটাই চোখে পড়ছে না — পাহারাটা অন্ধ।');
+
+        $fine = '<?php $middleware->trustProxies(at: []);';
+
+        $this->assertDoesNotMatchRegularExpression($this->wideOpen(), $this->codeOnly($fine),
+            'খালি তালিকাকেও খোলা প্রক্সি বলছে — তাহলে প্রতিটা রান লাল হত।');
+
+        /*
+         * ⛔ মন্তব্যের ভিতরের লাইনটা গোনা যাবে না — ঠিক এই কারণেই
+         * ছাঁটাটা আছে, আর ফাইলে ঐরকম একটা মন্তব্য সত্যিই আছে।
+         */
+        $quoted = '<?php /* আগে ছিল: $middleware->trustProxies(at: \'*\'); */ $middleware->trustProxies(at: []);';
+
+        $this->assertDoesNotMatchRegularExpression($this->wideOpen(), $this->codeOnly($quoted),
+            'মন্তব্যে উদ্ধৃত পুরনো লাইনটাকেও অপরাধী গণ্য করা হচ্ছে।');
+    }
+
+    /** ⓘ নিয়মটা এক জায়গায় — সুইপ আর নিজের পরীক্ষা দুইটাই এটাই ডাকে। */
+    private function wideOpen(): string
+    {
+        return '/trustProxies\s*\(\s*at:\s*[\'"]\*[\'"]/';
     }
 }
