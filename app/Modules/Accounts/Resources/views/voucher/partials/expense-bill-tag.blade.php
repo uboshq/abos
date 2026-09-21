@@ -146,7 +146,7 @@
             (১৪rem), আর বাকি দুইটা লেখা তার ঠিক পাশে বসে — যতটুকু জায়গা
             লাগে ততটুকুই।
         --}}
-        <div class="mt-3 flex flex-wrap items-start gap-x-8 gap-y-3">
+        <div class="mt-3 flex flex-wrap items-start gap-x-6 gap-y-3">
             {{--
                 ভাগ হবে কীসের অনুপাতে — পরিমাণ, মূল্য, না ওজন।
 
@@ -161,7 +161,7 @@
                 ⓘ দুইটা ভুল একসাথে: অপশন নেই, আর থাকলেও বাছা হত না।
             --}}
             {{--
-                ⭐ `max-w-xs` — ড্রপডাউনটা অকারণে লম্বা হয় না।
+                ⭐ `max-w-48` (১২rem) — ড্রপডাউনটা অকারণে লম্বা হয় না।
 
                 ⚠️ ২১ সেপ্টেম্বর ২০২৬-এ এখানে লেখা ছিল যে `sm:w-56`
                 বান্ডিলে নেই — **ওটা ভুল ছিল**। যে স্ক্রিপ্টে যাচাই
@@ -169,16 +169,18 @@
                 মধ্যে মাত্র ৬৪২টা ক্লাস গুনেছিল— তাই `lg:grid-cols-2`-ও
                 "নেই" বলত, অথচ সেটা পর্দায় কাজ করছিল।
 
-                ⓘ তবু `max-w-xs` ই রাখা হলো: ওটা **সর্বোচ্চ** মাপ বলে
-                (২০rem), তাই ছোট পর্দায় ঘরটা পুরো চওড়া নেয়।
-                `sm:w-56` হলো **নির্দিষ্ট** মাপ (১৪rem) — জায়গা থাকুক বা না থাকুক।
+                ⓘ `max-w-48` **সর্বোচ্চ** মাপ, নির্দিষ্ট নয়
+                — তাই ছোট পর্দায় ঘরটা পুরো চওড়া নেয়, আর বড় পর্দায় ১২rem-এ থামে।
+                ⚠️ `flex-nowrap` বান্ডিলে **নেই** — যাচাই করা। তাই এক লাইনটা
+                জোর করে নয়, মাপ ছোট করে পাওয়া হয়েছে — আর সেটাই ভালো:
+                ফোনে তিনটা এক লাইনে চাপালে পড়াই যেত না।
 
                 ⛔ মূল শিক্ষাটা তবু খাটে: CSS আগে থেকে বিল্ড করা (লাইভে
                 node নেই), তাই বান্ডিলে নেই এমন ক্লাস লিখলে কিছুই হয় না —
                 ব্রাউজার চুপচাপ উপেক্ষা করে। পাহারাটা
                 `AClassTheBundleNeverHeardOfDoesNothingTest`।
             --}}
-            <div class="w-full max-w-xs">
+            <div class="w-full max-w-48">
             <x-ui.select name="alloc_basis" :label="__('accounts::field.alloc_basis')"
                          :options="[
                              'qty' => __('accounts::field.basis_qty'),
@@ -198,13 +200,13 @@
                 থাকত।
             --}}
             <div>
-                <span class="block text-sm text-(--color-ink-muted)">{{ __('accounts::field.kind') }}</span>
-                <p class="mt-1 text-sm font-medium" x-text="isDirect ? directLabel : indirectLabel"></p>
+                <span class="block text-sm whitespace-nowrap text-(--color-ink-muted)">{{ __('accounts::field.kind') }}</span>
+                <p class="mt-1 text-sm font-medium whitespace-nowrap" x-text="isDirect ? directLabel : indirectLabel"></p>
             </div>
 
             <div>
-                <span class="block text-sm text-(--color-ink-muted)">{{ __('accounts::field.lands_where') }}</span>
-                <p class="mt-1 text-sm font-medium" x-text="isDirect ? landsGoods : landsHead"></p>
+                <span class="block text-sm whitespace-nowrap text-(--color-ink-muted)">{{ __('accounts::field.lands_where') }}</span>
+                <p class="mt-1 text-sm font-medium whitespace-nowrap" x-text="isDirect ? landsGoods : landsHead"></p>
             </div>
         </div>
 
