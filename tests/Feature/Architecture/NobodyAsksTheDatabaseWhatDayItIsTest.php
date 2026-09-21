@@ -46,6 +46,15 @@ class NobodyAsksTheDatabaseWhatDayItIsTest extends TestCase
         'CURDATE', 'CURTIME', 'CURRENT_DATE', 'CURRENT_TIME',
         'CURRENT_TIMESTAMP', 'NOW', 'SYSDATE', 'UTC_DATE',
         'UTC_TIME', 'UTC_TIMESTAMP', 'LOCALTIME', 'LOCALTIMESTAMP',
+
+        /*
+         * ⛔ এটা তালিকায় ছিল না — ২১ সেপ্টেম্বর ২০২৬, অডিটে ধরা।
+         *
+         * ⓘ `UNIX_TIMESTAMP()` আর্গুমেন্ট ছাড়া ডাকলে সে-ও ডাটাবেজের
+         * নিজের ঘড়িই পড়ে, কেবল উত্তরটা সেকেন্ডে দেয়। ⚠️ বাকি বারোটার
+         * সাথে তার কোনো পার্থক্য নেই — সার্ভারের সময় অ্যাপের সময় নয়।
+         */
+        'UNIX_TIMESTAMP',
     ];
 
     /**
@@ -67,7 +76,7 @@ class NobodyAsksTheDatabaseWhatDayItIsTest extends TestCase
         $found = [];
 
         foreach ($this->sources() as $file) {
-            foreach ($this->sqlStrings($file) as $line => $sql) {
+            foreach ($this->sqlStrings($file) as ['line' => $line, 'sql' => $sql]) {
                 foreach (self::CLOCKS as $clock) {
                     if (preg_match('/\b'.$clock.'\s*\(/i', $sql)
                         || preg_match('/\b'.$clock.'\b(?!\s*\()/i', $sql) && str_contains($clock, '_')) {
@@ -102,23 +111,40 @@ class NobodyAsksTheDatabaseWhatDayItIsTest extends TestCase
     public function test_the_guard_actually_finds_one(): void
     {
         $file = tempnam(sys_get_temp_dir(), 'clock').'.php';
+
+        /*
+         * ⭐ তৃতীয় লাইনটা **এক লাইনে দুইটা স্ট্রিং** — ২১ সেপ্টেম্বর ২০২৬।
+         *
+         * ⛔ আগে [[sqlStrings()]] লাইন নম্বরকে চাবি করত, তাই একই লাইনের
+         * আগের স্ট্রিংটা চাপা পড়ত। ⚠️ আর ঐ আকারটাই এখানে সবচেয়ে
+         * স্বাভাবিক: `->selectRaw('… NOW() …', ['…'])`। তাই নমুনাটাও
+         * এখন ঠিক ওভাবেই লেখা, নইলে দাবিটা ফাঁকটা মাপতই না।
+         */
         file_put_contents($file, <<<'PHP'
             <?php
             // CURDATE() এই মন্তব্যে আছে, আর ধরা পড়ার কথা নয়
-            $q = DB::raw('DATEDIFF(a.b, CURDATE()) as c');
+            $q = DB::raw('DATEDIFF(a.b, CURDATE()) as c'); $r = q('x', 'NOW() as n');
             PHP);
 
         $hits = [];
 
-        foreach ($this->sqlStrings($file) as $sql) {
-            if (preg_match('/\bCURDATE\s*\(/i', $sql)) {
-                $hits[] = $sql;
+        foreach ($this->sqlStrings($file) as ['sql' => $sql]) {
+            foreach (['CURDATE', 'NOW'] as $clock) {
+                if (preg_match('/\b'.$clock.'\s*\(/i', $sql)) {
+                    $hits[] = $clock;
+                }
             }
         }
 
         unlink($file);
 
-        $this->assertCount(1, $hits, 'মন্তব্যের ভিতরেরটা গোনা হয়েছে, অথবা আসলটা ধরা পড়েনি।');
+        sort($hits);
+
+        $this->assertSame(
+            ['CURDATE', 'NOW'],
+            $hits,
+            'এক লাইনের দুইটা স্ট্রিংয়ের একটা হারিয়েছে, অথবা মন্তব্যের ভিতরেরটা গোনা হয়েছে।',
+        );
     }
 
     /**
@@ -170,7 +196,7 @@ class NobodyAsksTheDatabaseWhatDayItIsTest extends TestCase
     /**
      * ফাইলের কেবল স্ট্রিং টোকেনগুলো — মন্তব্য ও কোড বাদ।
      *
-     * @return array<int, string> লাইন => লেখা
+     * @return list<array{line: int, sql: string}> লাইন => লেখা
      */
     private function sqlStrings(string $file): array
     {
@@ -182,7 +208,21 @@ class NobodyAsksTheDatabaseWhatDayItIsTest extends TestCase
             }
 
             if (in_array($token[0], [T_CONSTANT_ENCAPSED_STRING, T_ENCAPSED_AND_WHITESPACE], true)) {
-                $out[$token[2]] = $token[1];
+                /*
+                 * ⛔ এখানে ছিল `$out[$token[2]] = $token[1];` — অর্থাৎ
+                 * চাবিটা **লাইন নম্বর**, আর একই লাইনের আগের স্ট্রিংগুলো
+                 * চাপা পড়ে যেত (২১ সেপ্টেম্বর ২০২৬, অডিটে ধরা)।
+                 *
+                 * ⚠️ ঠিক যে ধরনের লেখা এখানে বেশি হয়, সেখানেই ফাঁকটা:
+                 * `->selectRaw('… NOW() …', ['…'])` এক লাইনে লেখা থাকলে
+                 * শেষ স্ট্রিংটাই কেবল দেখা হত, আর `NOW()` চুপচাপ পার
+                 * হয়ে যেত।
+                 *
+                 * ⓘ এখন প্রতিটা স্ট্রিং আলাদা সারি, আর লাইন নম্বরটা
+                 * সারির ভিতরে — বার্তায় জায়গাটা বলা যায়, অথচ কিছু
+                 * হারায় না।
+                 */
+                $out[] = ['line' => $token[2], 'sql' => $token[1]];
             }
         }
 
