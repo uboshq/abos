@@ -14,6 +14,7 @@ use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Tests\RealAccounts;
 use Tests\TestCase;
 
@@ -218,6 +219,60 @@ class TheBooksCouldBeEditedAndNobodyWouldKnowTest extends TestCase
         $this->assertFalse($result['ok'], 'শেষের সারিটা নেই, তবু চেইন সবুজ।');
         $this->assertSame(LedgerChain::TAIL, $result['reason']);
         $this->assertSame($result['expected'] - 1, $result['checked']);
+    }
+
+    /**
+     * ⭐ সিল ছাড়া একটা ভুয়া সারি ঢোকালে — ২১ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⛔ এই পরীক্ষাটা না থাকায় পাহারাটার গায়ে একটা গর্ত ছিল ───────
+     * উপরের তিনটা পরীক্ষা **যা আছে তা বদলানো** মাপে: অঙ্ক বদলানো,
+     * তারিখ সরানো, শেষ থেকে কাটা। ⚠️ কিন্তু কেউ **নতুন একটা সারি
+     * যোগ করলে** কী হয়, সেটা কেউ কোনোদিন মাপেনি।
+     *
+     * ⓘ আর ভুয়া দাখিলা ঢোকানোই তো সবচেয়ে সাধারণ কারচুপি — খরচ
+     * বাড়ানো, পেমেন্ট দেখানো যা হয়নি।
+     *
+     * ⛔ মেপে দেখা গেল `verify()` ঐ সারিটা **এড়িয়ে যেত** (`row_hash`
+     * খালি বলে), আর শেষে মাথার সংখ্যাটা মেলাত সে যতগুলো সারি হ্যাশ
+     * করেছে তার সাথে — যতগুলো আছে তার সাথে নয়। দুইটাই মিলত, আর
+     * রোজকার যাচাই বলত "সব ঠিক আছে"।
+     */
+    public function test_a_row_slipped_in_without_a_seal_is_caught(): void
+    {
+        $ids = $this->postThreeLines();
+
+        $last = DB::table('ledger_entries')->where('id', end($ids))->first();
+
+        /*
+         * ⚠️ হুবহু সেই আক্রমণটাই: ইঞ্জিন এড়িয়ে সরাসরি একটা সারি, আর
+         * `row_hash` ইচ্ছা করে খালি। ⓘ মডেল দিয়ে বসালে `creating` হুক
+         * সিল বসিয়ে দিত, তাই কাঁচা কোয়েরি — যেভাবে কেউ সত্যিই করত।
+         */
+        $forged = (array) $last;
+        unset($forged['id']);
+
+        $forged['row_hash'] = null;
+        $forged['prev_hash'] = null;
+        $forged['debit'] = '99999.00';
+        $forged['credit'] = '0.00';
+        $forged['public_id'] = (string) Str::uuid();
+
+        DB::table('ledger_entries')->insert($forged);
+
+        $result = LedgerChain::verify($this->depot->id);
+
+        $this->assertFalse($result['ok'], implode(PHP_EOL, [
+            'সিল ছাড়া একটা ভুয়া সারি ঢোকানো হয়েছে, তবু খাতা সবুজ।',
+            '',
+            'অর্থাৎ কেউ ডেটাবেসে সরাসরি একটা পেমেন্ট বসিয়ে দিলে রোজকার',
+            'যাচাই সেটা ধরবে না — আর সিলটা ঠিক ঐ জিনিসটার জন্যই বসানো।',
+        ]));
+
+        $this->assertSame(LedgerChain::UNSEALED, $result['reason'],
+            'ভাঙাটা ধরা পড়েছে, কিন্তু ভুল কারণ দেখিয়ে — মানুষ তখন ভুল জায়গায় খুঁজবেন।');
+
+        $this->assertNotNull($result['broken_at'],
+            'কোন সারিটা সিল ছাড়া, সেটা বলা হয়নি — খুঁজতে হলে পুরো খাতা হাতড়াতে হবে।');
     }
 
     // ── ৩ · যা ভাঙার কথা নয় ──────────────────────────────────────────
