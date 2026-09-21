@@ -7,6 +7,21 @@
 --}}
 @php
     $columns = [
+        /*
+         * ⭐ ক্রম · কোড · নাম · ধরন · ঠিকানা · মোবাইল · প্রদেয় · অবস্থা · কাজ
+         * — মালিকের নিজের ছক, ২১ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ তিনটা জিনিস যোগ হলো: ক্রম, ঠিকানা আর কাজের কলাম।
+         * ⚠️ ক্রমটা গোটা তালিকার, পাতার নয় (`firstItem()` ধরে) — নাহলে
+         * দ্বিতীয় পাতাতেও ১ থেকে শুরু হত।
+         */
+        [
+            'key' => 'sl',
+            'label' => __('core.table.serial'),
+            'numeric' => true,
+            'width' => '4rem',
+            'render' => fn ($s, $i) => (string) (($suppliers->firstItem() ?? 1) + $i),
+        ],
         [
             'key' => 'code',
             'label' => __('supplier::field.code'),
@@ -23,6 +38,16 @@
             'key' => 'party_type_id',
             'label' => __('supplier::field.party_type'),
             'render' => fn ($s) => $s->partyType?->name(),
+        ],
+        /*
+         * ⓘ ঠিকানা — দুইজন একই নামের সরবরাহকারীকে আলাদা করার সবচেয়ে
+         * সহজ উপায়। ⚠️ লম্বা ঠিকানা সারিটা ভেঙে দেয়, তাই প্রস্থ বাঁধা।
+         */
+        [
+            'key' => 'address_en',
+            'label' => __('supplier::field.address'),
+            'width' => '16rem',
+            'render' => fn ($s) => $s->address() ?: '—',
         ],
         ['key' => 'phone', 'label' => __('supplier::field.phone'), 'width' => '9rem'],
         [
@@ -42,6 +67,17 @@
             'label' => __('supplier::field.state'),
             'width' => '7rem',
             'render' => fn ($s) => view('supplier::partials.state-badge', ['supplier' => $s]),
+        ],
+
+        /*
+         * ⓘ কাজের কলামটা মালিকের ছকের শেষ ঘর, আর এতদিন ছিলই না।
+         * ⛔ "মুছুন" নেই — কারণ [[supplier::partials.row-actions]]-এ।
+         */
+        [
+            'key' => 'actions',
+            'label' => __('core.table.actions'),
+            'width' => '6rem',
+            'render' => fn ($s) => view('supplier::partials.row-actions', ['supplier' => $s]),
         ],
     ];
 @endphp
