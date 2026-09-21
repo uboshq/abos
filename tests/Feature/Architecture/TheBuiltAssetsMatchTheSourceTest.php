@@ -45,6 +45,7 @@ final class TheBuiltAssetsMatchTheSourceTest extends TestCase
 
         $builtAt = (int) filemtime($manifest);
         $newer = [];
+        $looked = 0;
 
         foreach (self::SOURCES as $dir) {
             $path = base_path($dir);
@@ -54,11 +55,37 @@ final class TheBuiltAssetsMatchTheSourceTest extends TestCase
             }
 
             foreach ($this->filesIn($path) as $file) {
+                $looked++;
+
                 if ((int) filemtime($file) > $builtAt) {
                     $newer[] = str_replace(base_path().DIRECTORY_SEPARATOR, '', $file);
                 }
             }
         }
+
+        /*
+         * ⛔ এই গোনাটা না থাকায় পাহারাটা অন্ধ ছিল — ২২ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ মেপে দেখা: `SOURCES`-এ না-থাকা একটা ফোল্ডার বসালে
+         * `is_dir` ব্যর্থ হয়, `continue` চলে, `$newer` খালি থাকে —
+         * আর দাবিটা **শূন্যটা ফাইল দেখে পাস করে**।
+         *
+         * ⚠️ ফোল্ডার সরানো কাল্পনিক নয় — `resources/js` থেকে একটা
+         * অংশ অন্য নামে সরলে এই তালিকা হালনাগাদ করতে ভুললেই
+         * পাহারাটা চিরকাল সবুজ হয়ে যেত, আর পুরনো বিল্ড লাইভে যেত।
+         *
+         * ⓘ মেঝেটা ২০, আসল সংখ্যা ৩২ — স্বাভাবিক রিফ্যাক্টরে ফাইল
+         * কমতে-বাড়তে পারে বলে হুবহু বসানো হয়নি; কিন্তু শূন্য বা
+         * হাতেগোনা কয়টা দেখা মানে শনাক্তকারীটাই ভাঙা।
+         */
+        $this->assertGreaterThan(20, $looked, implode("\n", [
+            '⛔ পাহারাটা মাত্র '.$looked.'টা সোর্স ফাইল দেখেছে।',
+            '',
+            'ⓘ `SOURCES`-এর ফোল্ডারগুলো এখনো আছে কি না দেখুন: '
+                .implode(', ', self::SOURCES),
+            '',
+            '⚠️ এটা না ধরলে নিচের দাবিটা কিছু না দেখেই সবুজ থাকত।',
+        ]));
 
         sort($newer);
 
