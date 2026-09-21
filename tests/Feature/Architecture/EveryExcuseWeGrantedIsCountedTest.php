@@ -42,7 +42,6 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
         'AnAuditedModelMustSayWhoseBooksItBelongsToTest::EXEMPT',
         'EveryAlpineHandlerIsActuallyWiredTest::NOT_WIRED_ON_PURPOSE',
         'EveryChangeableRowRemembersWhoChangedItTest::EXEMPT',
-        'EveryListScreenPaginatesTest::NOT_REALLY_A_LIST',
         'EveryListScreenPaginatesTest::STILL_BEING_DONE',
         'EveryMasterNamesItsDuplicateGuardTest::EXEMPT',
         'EveryPolicyRuleIsActuallyReachedTest::REACHED_WITHOUT_A_ROUTE',
@@ -67,6 +66,13 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
     /**
      * চাহিদা ও তথ্য — এগুলো ছাড় নয়, তাই গোনায় নেই।
      *
+     * ⓘ `NOT_REALLY_A_LIST`-এর ২৬টা সারি **গঠনগত**, অলসতা নয় — একটাই
+     * POST-ওয়ালা ফর্ম, গাছ, দেয়ালে ঝোলানো বোর্ড, আর স্থির সংখ্যার
+     * তালিকা (বারোটা মাস, দশটা নীতি)। ⚠️ পাতা ভাগ করলে ভরা ঘর হারাত।
+     * ⛔ ২৭তম সারিটা (`finance.hand_loan.index`) সরিয়ে
+     * `STILL_BEING_DONE`-এ নেওয়া হয়েছে: ওর সারি **ব্যবসার সাথে বাড়ে**,
+     * আর যোগফলটা আলাদা কোয়েরিতে নিলেই পাতা ভাগ করা যায়।
+     *
      * ⓘ `NO_COMPANY_COLUMN` একটা **তথ্য**: ঐ টেবিলগুলোয় কোম্পানির ঘর
      * সত্যিই নেই, আর সেটা কমানো যায় না। ⚠️ `AS_SHIPPED` একটা ভিত্তিরেখা,
      * আর বাকি দুইটা মালিকের চাওয়া — ওগুলো **বাড়াই উচিত**।
@@ -74,6 +80,7 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      * @var list<string>
      */
     private const NOT_EXCUSES = [
+        'EveryListScreenPaginatesTest::NOT_REALLY_A_LIST',
         'EveryRawQueryNamesItsCompanyTest::NO_COMPANY_COLUMN',
         'EveryUserListAsksWhichCompanyTest::MUST_ASK',
         'MoneyMovementHasEveryFieldTheOwnerAskedForTest::FIELDS',
@@ -86,7 +93,7 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      * ⭐ মালিকের ratchet নিয়ম: **কেবল কমবে**। বাড়াতে হলে এই লাইনটা
      * বদলাতে হয়, আর সেটা একটা সিদ্ধান্ত যা কমিটে চোখে পড়ে।
      */
-    private const CEILING = 242;
+    private const CEILING = 216;
 
     public function test_the_excuses_only_go_down(): void
     {
