@@ -155,7 +155,7 @@
 
     @if ($tools->isNotEmpty())
         <nav data-sf-utilitybar aria-label="{{ __('core.brand.name') }}"
-             class="no-print fixed inset-x-0 bottom-0 z-30 hidden items-center gap-4
+             class="print-hide fixed inset-x-0 bottom-0 z-30 hidden items-center gap-4
                     border-t border-(--color-footer-border) bg-(--color-footer)
                     px-4 py-1.5 md:flex">
             @foreach ($tools as $item)

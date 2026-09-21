@@ -25,7 +25,7 @@
 --}}
 @if ($stages !== [])
     <nav data-process-band
-         class="no-print hidden shrink-0 gap-0.5 overflow-x-auto bg-(--color-surface-card)
+         class="print-hide hidden shrink-0 gap-0.5 overflow-x-auto bg-(--color-surface-card)
                 px-3 pt-2 md:flex md:px-5"
          aria-label="{{ __('core.band.process') }}">
 
