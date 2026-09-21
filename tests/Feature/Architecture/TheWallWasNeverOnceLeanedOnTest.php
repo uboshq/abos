@@ -12,6 +12,8 @@ use App\Models\Branch;
 use App\Models\Company;
 use App\Models\User;
 use App\Models\UserDataScope;
+use App\Modules\Inventory\Models\Product;
+use App\Modules\Inventory\Models\StockMovement;
 use App\Modules\Inventory\Models\Warehouse;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Database\Eloquent\Model;
@@ -129,6 +131,40 @@ final class TheWallWasNeverOnceLeanedOnTest extends TestCase
         $this->assertNotContains($theirs->id, $seen, 'অন্যের গুদামটা দেয়াল পেরিয়ে এসেছে।');
     }
 
+    /**
+     * ⭐ আর দেয়ালটা সত্যিকারের কাগজও আটকায় — গুদামের তালিকা নয়।
+     *
+     * ── ⚠️ কেন উপরের দাবিটা যথেষ্ট নয় ───────────────────────────────
+     * ওখানে ছাঁকনিটা মাপা হয় [[Warehouse]]-এ, আর গুদামের **নিজের**
+     * তালিকায় ছাঁকনি বসে `id`-তে — উনিশটা মডেলের মধ্যে ওটাই সবচেয়ে
+     * অ-প্রতিনিধিত্বমূলক, একমাত্র ব্যতিক্রম। ⛔ `warehouse_id` ঘর ধরে
+     * আসল ছাঁকনিটা ওখানে কখনো চলেই না।
+     *
+     * ⓘ abos-8b-র আজকের অভিজ্ঞতা এক ধাপ এগিয়ে: *"কামড়ায়" দাবিটাও
+     * অন্ধ হতে পারে যদি কামড়ানোর মতো ডেটাই না থাকে*। ওঁদের বেলায়
+     * ডেমোতে গুদাম একটাই ছিল, তাই দাবিটা এড়িয়ে যেত — দ্বিতীয় গুদামটা
+     * পরীক্ষা নিজে বানানোর পরেই ভাঙা দেয়ালটা ধরা পড়ে।
+     *
+     * ⚠️ তাই এখানে **সীমার বাইরের সারিটা নিজে হাতে বসানো হয়**, আর
+     * তার পরেই দাবি করা হয় সে দেখা যায় না। নাহলে খালি সারণিতে
+     * দাবিটা সবুজ হত কিছু না ছেঁকেই।
+     */
+    public function test_the_wall_stops_a_real_document_not_just_the_warehouse_list(): void
+    {
+        $mine = Warehouse::query()->withoutGlobalScopes()->firstOrFail();
+        $theirs = $this->aSecondWarehouse();
+
+        $here = $this->aMovementIn($mine);
+        $there = $this->aMovementIn($theirs);
+
+        $this->actingAs($this->aUserWithLimits($mine->id));
+
+        $seen = StockMovement::query()->pluck('id')->all();
+
+        $this->assertContains($here->id, $seen, 'নিজের গুদামের চলাচলটাই দেখা যাচ্ছে না।');
+        $this->assertNotContains($there->id, $seen, 'অন্য গুদামের চলাচলটা দেয়াল পেরিয়ে এসেছে।');
+    }
+
     // ── মাপার যন্ত্রপাতি ─────────────────────────────────────────────
 
     /**
@@ -242,6 +278,28 @@ final class TheWallWasNeverOnceLeanedOnTest extends TestCase
             'name_en' => 'Wall Test Warehouse',
             'name_bn' => 'দেয়াল পরীক্ষার গুদাম',
             'is_active' => true,
+        ]);
+    }
+
+    /**
+     * ঐ গুদামে একটা মজুদের চলাচল — দেয়ালের দুই পাশে একটা করে।
+     *
+     * ⚠️ `withoutGlobalScopes()` দিয়ে বসানো, কারণ সারিটা বসানোর সময়
+     * এখনো কেউ লগইন করেননি — আর লগইনের পরে বসাতে গেলে সীমার বাইরের
+     * সারিটা নিজেই ছাঁকনিতে আটকে যেত, অর্থাৎ বসতই না।
+     */
+    private function aMovementIn(Warehouse $warehouse): StockMovement
+    {
+        return StockMovement::query()->withoutGlobalScopes()->create([
+            'company_id' => $warehouse->company_id,
+            'branch_id' => $warehouse->branch_id,
+            'warehouse_id' => $warehouse->id,
+            'product_id' => Product::query()->withoutGlobalScopes()->value('id'),
+            'trx_date' => now()->toDateString(),
+            'floor_change' => '1.0000',
+            'source_type' => 'wall_test',
+            'source_id' => 0,
+            'narration' => 'দেয়াল পরীক্ষা',
         ]);
     }
 
