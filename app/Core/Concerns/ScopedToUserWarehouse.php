@@ -55,12 +55,7 @@ trait ScopedToUserWarehouse
                 return;
             }
 
-            $model = $builder->getModel();
-            $column = $model->getTable().'.'.$model->warehouseScopeColumn();
-
-            $builder->where(function (Builder $q) use ($column, $ids): void {
-                $q->whereIn($column, $ids)->orWhereNull($column);
-            });
+            $builder->getModel()->applyWarehouseScope($builder, $ids);
         });
     }
 
@@ -79,6 +74,36 @@ trait ScopedToUserWarehouse
     public function warehouseScopeColumn(): string
     {
         return 'warehouse_id';
+    }
+
+    /**
+     * ছাঁকনিটা কীভাবে বসে — ডিফল্টে নিজের ঘরেই।
+     *
+     * ── ⛔ কেন এই ফাঁকটা লাগল, ২১ সেপ্টেম্বর ২০২৬ ───────────────────
+     * লাইভে `/sales/lots/trace` দুই কোম্পানিতেই ৫০০ দিয়েছিল:
+     *
+     *     Unknown column 'inv_batches.warehouse_id' in 'WHERE'
+     *
+     * ℹ কারণ: লটের সারণিতে গুদামের ঘর **নেই**, আর থাকার কথাও নয় —
+     * একটা লট একসাথে কয়েকটা গুদামে পড়ে থাকতে পারে। লটটা কোথায়
+     * আছে সেটা বলে তার চলাচলগুলো।
+     *
+     * ── ⚠️ আর ভুলটা কতদিন চুপ ছিল ────────────────────────────────
+     * ছাঁকনিটা কেবল তখনই কামড়ায় যখন কারও গুদামের সীমা বসানো
+     * আছে। ⛔ লাইভে কারো ছিল না, তাই পাতাটা বহুদিন সবুজ দেখিয়েছে —
+     * প্রথম সীমা বসানোর দিনেই পাতাটা ভেঙেছে। ℹ অর্থাৎ নিরাপত্তার
+     * ঘরটা কোনোদিন খাটেইনি, আর সেটাই এখানকার আসল খবর।
+     *
+     * @param  Builder<static>  $builder
+     * @param  list<int>  $ids
+     */
+    public function applyWarehouseScope(Builder $builder, array $ids): void
+    {
+        $column = $this->getTable().'.'.$this->warehouseScopeColumn();
+
+        $builder->where(function (Builder $q) use ($column, $ids): void {
+            $q->whereIn($column, $ids)->orWhereNull($column);
+        });
     }
 
     /**

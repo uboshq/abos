@@ -86,6 +86,51 @@ class Batch extends Model implements Drillable
     }
 
     /**
+     * ⛔ লটের গুদাম-ছাঁকনি চলাচলের ভিতর দিয়ে — ২১ সেপ্টেম্বর ২০২৬।
+     *
+     * ── কী ভাঙা ছিল ─────────────────────────────────────────────────
+     * [[ScopedToUserWarehouse]] ডিফল্টে `warehouse_id` ঘরটা খোঁজে, আর
+     * `inv_batches`-এ ঘরটা **নেই**। ⚠️ ফলে কারও গুদামের সীমা বসানো
+     * থাকলে লাইভে `/sales/lots/trace` ৫০০ দিত:
+     *
+     *     Unknown column 'inv_batches.warehouse_id' in 'WHERE'
+     *
+     * ⓘ ঘরটা না থাকাই ঠিক: একটা লট একসাথে কয়েকটা গুদামে পড়ে থাকতে
+     * পারে। ⭐ সে কোথায় আছে সেটা বলে তার চলাচলগুলো, আর ছাঁকনিটাও
+     * সেখান দিয়েই যায়।
+     *
+     * ── ⚠️ `orWhereDoesntHave` কেন লাগে ─────────────────────────────
+     * ⛔ ছাড়া রাখলে **সদ্য তৈরি, এখনো কোনো চলাচল হয়নি** এমন লট
+     * তালিকা থেকে উধাও হত — মাল এসেছে, লট খোলা হয়েছে, আর যিনি খুললেন
+     * তিনিই সেটা দেখতে পেতেন না। ⓘ ট্রেইটের নিজের নিয়মও তাই: গুদামহীন
+     * সারি ছাঁকনিতে পড়ে না।
+     *
+     * @param  Builder<static>  $builder
+     * @param  list<int>  $ids
+     */
+    public function applyWarehouseScope(Builder $builder, array $ids): void
+    {
+        /*
+         * ⛔ ভিতরের কোয়েরিটা **নিজেও ছাঁকা** — আর এই লাইনটা ছাড়া
+         * দেয়ালটা উল্টো দিকে কাজ করত।
+         *
+         * ⓘ [[StockMovement]]-এও একই ট্রেইট বসানো, তাই `whereHas
+         * ('movements')` আপনা থেকেই কেবল **আমার** গুদামের সারি দেখত।
+         * ⚠️ ফলে অন্য গুদামের লটের কোনো "দৃশ্যমান" চলাচল থাকত না, আর
+         * সে `orWhereDoesntHave`-এর ঘরে পড়ে **দেখা যেত** — অর্থাৎ
+         * ছাঁকনিটা ঠিক যা আটকাতে বসানো, সেটাই ছেড়ে দিত।
+         *
+         * ⭐ পরীক্ষায় ধরা পড়েছে, লাইভে নয়: দ্বিতীয় গুদামের লটটা
+         * তালিকায় উঠে এসেছিল।
+         */
+        $unscoped = fn (Builder $m) => $m->withoutGlobalScope('user-warehouse');
+
+        $builder->where(fn (Builder $q) => $q
+            ->whereHas('movements', fn (Builder $m) => $unscoped($m)->whereIn('warehouse_id', $ids))
+            ->orWhereDoesntHave('movements', $unscoped));
+    }
+
+    /**
      * এই ব্যাচে এখন কতটা আছে।
      *
      * তাকের সংখ্যা (`floor_change`), কারণ ব্যাচ একটা ভৌত লট — কতটা
