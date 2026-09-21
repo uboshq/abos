@@ -66,7 +66,7 @@ final class TheDoorClosedOnOneScreenStayedOpenOnTheDashboardTest extends TestCas
         $tiles = PurchaseDashboard::dashboard()->tiles;
 
         // ⚠️ খালি তালিকায় নিচের দাবি দুইটাই অর্থহীন হত
-        $this->assertGreaterThan(2, count($tiles),
+        $this->assertGreaterThanOrEqual(4, count($tiles),
             'ড্যাশবোর্ডে টালিই নেই — দাবিটা তাহলে কিছুই মাপছে না।');
 
         $hrefs = array_map(fn ($t) => $t->href, $tiles);

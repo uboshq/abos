@@ -12,6 +12,7 @@ use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\MasterData\Models\ReasonCode;
+use App\Modules\MasterData\Services\MasterListService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -265,12 +266,21 @@ final class TheSameGoodsSatInThreeWarehousesAndTheReportSaidOneNumberTest extend
         $rows = $module['menu']['reports'] ?? [];
 
         // ⚠️ খালি তালিকায় নিচের লুপটা কিছুই মাপত না
-        $this->assertGreaterThan(5, count($rows),
+        /*
+         * ⛔ মেঝেটা ढিলা ছিল — d1-এর পর্যবেক্ষণ, ২২ সেপ্টেম্বর ২০২৬।
+         *
+         * ⚠️ আসল সংখ্যার অনেক নিচে মেঝে বসালে দাবিটা **নীরব ক্ষয়**
+         * ধরতে পারে না: অর্ধেক সারি হারিয়ে গেলেও সবুজ থাকত।
+         *
+         * ⓘ নিয়ম: বাড়লে ভাঙে না, কমলে ভাঙে। একটা সারি সরানো
+         * সচেতন সিদ্ধান্ত হওয়া চাই — তখন এই সংখ্যাটাও হাতে বদলাবেন।
+         */
+        $this->assertGreaterThanOrEqual(10, count($rows),
             'মেনুর reports অংশে সারি পাওয়া গেল না — দাবিটা তাহলে ফাঁকা।');
 
         $known = $this->iconNames();
 
-        $this->assertGreaterThan(30, count($known),
+        $this->assertGreaterThanOrEqual(59, count($known),
             'আইকনের তালিকাই পড়া গেল না — তখন সবকিছুকেই "নেই" বলা হত।');
 
         $seen = [];
@@ -320,6 +330,56 @@ final class TheSameGoodsSatInThreeWarehousesAndTheReportSaidOneNumberTest extend
             $this->storeName('a'),
             $this->storeName('b'),
         ], true);
+    }
+
+    /**
+     * ⭐ ব্যবহৃত কারণ-কোড শক্ত করে মোছা যায় না — নিষ্ক্রিয় হয়।
+     *
+     * ── ⛔ কেন এই দাবিটা রিপোর্টের ফাইলে, ২২ সেপ্টেম্বর ২০২৬ ────
+     * `inv_stock_movements.reason_code_id`-এর বিদেশি চাবি `nullOnDelete`।
+     * ⓘ অর্থাৎ কারণ-কোড সত্যি মুছলে চলাচলের সারিতে "কেন"
+     * প্রশ্নের উত্তরটাই শূন্য হয়ে যেত — সারিটা থাকত, কারণটা নয়।
+     *
+     * ⭐ কিন্তু এক স্তর উপরে ইতিমধ্যেই একটা পাহারা আছে:
+     * [[MasterListService::delete()]] `information_schema`-কে জিজ্ঞাসা
+     * করে কে এই সারির দিকে দেখায়, আর কেউ দেখালে মোছে না —
+     * নিষ্ক্রিয় করে। ⓘ তাই বিপদটা তাত্ত্বিক, আর এই দাবিটাই
+     * তার প্রমাণ।
+     *
+     * ⚠️ ওই পাহারার দাবি আগে কেবল **পক্ষের ধরনে** লেখা ছিল
+     * ([[PartyTypeSeedTest]])। নিয়মটা টেবিল-নিরপেক্ষ বলে কারণ-কোডেও
+     * খাটার কথা — কিন্তু এই রিপোর্টের ইতিহাস ঠিক ওর উপরেই
+     * দাঁড়ানো, তাই শৃঙ্খলটা এখানে নির্দিষ্ট করে মাপা হয়।
+     */
+    public function test_a_reason_code_in_use_cannot_be_deleted_out_from_under_the_history(): void
+    {
+        $this->receive('a', '30');
+
+        $reason = $this->adjustTo('a', '24');
+
+        $removed = app(MasterListService::class)->delete($reason);
+
+        $this->assertFalse($removed, implode("\n", [
+            'ব্যবহৃত কারণ-কোডটা শক্ত করে মুছে গেছে।',
+            '',
+            '⛔ বিদেশি চাবিটা `nullOnDelete` — তাই চলাচলের সারিতে "কেন"',
+            '   প্রশ্নের উত্তরটাই শূন্য হয়ে যেত, সারিটা থেকেও।',
+        ]));
+
+        $still = ReasonCode::query()->withTrashed()->whereKey($reason->id)->first();
+
+        $this->assertNotNull($still, 'কারণ-কোডটা টেবিল থেকেই উধাও।');
+
+        $this->assertFalse((bool) $still->is_active,
+            'মোছা আটকেছে, কিন্তু নিষ্ক্রিয়ও হয়নি — ব্যবহারকারী ভাববেন কিছুই ঘটেনি।');
+
+        /* ⭐ আর ইতিহাসটা তার "কেন" নিয়েই দাঁড়িয়ে আছে */
+        $row = $this->historyOfMine()[0] ?? null;
+
+        $this->assertNotNull($row, 'সমন্বয়ের সারিটাই নেই।');
+
+        $this->assertSame($this->reasonLabel($reason), (string) $row['reason_name'],
+            'সারিটা আছে, কিন্তু কারণটা হারিয়ে গেছে।');
     }
 
     /** পরীক্ষার নিজের একটা গুদাম — শুরুর অবস্থা শূন্য। */
