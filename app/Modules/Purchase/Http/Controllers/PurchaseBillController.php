@@ -317,9 +317,38 @@ class PurchaseBillController extends Controller implements HasMiddleware
      */
     private function formData(): array
     {
+        $products = Product::query()->active()->with('unit')->orderBy('name_en')->get();
+
         return [
             'suppliers' => Supplier::query()->active()->orderBy('name_en')->get(),
-            'products' => Product::query()->active()->with('unit')->orderBy('name_en')->get(),
+            'products' => $products,
+
+            /*
+             * ⭐ গতবারের দর ও নীতি — মালিকের নির্দেশ, ২১ সেপ্টেম্বর ২০২৬।
+             *
+             * ── ⓘ মালিকের কথা ──────────────────────────────────────
+             * *"একবার ক্রয় করার পর দ্বিতীয়বার করার সময়, রেট সহ চারটে
+             * বক্স অটো বসবে।"*
+             *
+             * ⚠️ সরাসরি ক্রয়ের পর্দা এই তথ্যটা আগে থেকেই পেত
+             * ([[DirectPurchaseService]]), আর দর বদলালে দাম নাড়ানোর
+             * নিয়মটাও তৈরিই ছিল (`pricing.js`)। ⛔ কেবল **বিলের পর্দায়**
+             * তথ্যটা কোনোদিন পাঠানো হত না, তাই বাক্স চারটা খালি বসে
+             * থাকত আর নাড়ানোর মতো কিছুই থাকত না।
+             *
+             * ⓘ শূন্য দরের পণ্য বাদ — যেটা কোনোদিন কেনা হয়নি তার
+             * "গতবার" বলে কিছু নেই, আর ০ বসিয়ে দিলে সেটা একটা সংখ্যা
+             * হিসেবে পড়া হত।
+             */
+            'pricing' => $products
+                ->filter(fn (Product $p) => (float) ($p->purchase_price ?? 0) > 0)
+                ->mapWithKeys(fn (Product $p) => [$p->id => [
+                    'rate' => (string) $p->purchase_price,
+                    'sale' => (string) ($p->sale_price ?? ''),
+                    'anchor' => (string) ($p->pricing_anchor ?? ''),
+                    'pct' => $p->pricing_pct !== null ? (string) $p->pricing_pct : '',
+                ]])
+                ->all(),
         ];
     }
 

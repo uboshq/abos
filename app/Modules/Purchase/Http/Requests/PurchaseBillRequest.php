@@ -81,6 +81,20 @@ class PurchaseBillRequest extends FormRequest
              * দাম শূন্য করে দিত।
              */
             'lines.*.sales_price' => ['nullable', 'numeric', 'min:0'],
+
+            /*
+             * ⭐ দরের নীতি — মালিকের নির্দেশ, ২১ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ মানুষটা markup না margin ধরে চলেন, আর কত শতাংশ — সেটা
+             * এই কাগজেই বলা হয়, তাই এখান থেকেই পণ্যে ফেরত যায়।
+             * ⚠️ নাহলে দ্বিতীয়বার কেনার সময় বাক্স চারটা আবার খালি বসত।
+             *
+             * ⛔ `Rule::in` দুইটা মানেই সীমিত: পর্দা থেকে যা খুশি এলে
+             * পণ্যের ঘরে অচেনা একটা শব্দ বসত, আর পরের বার কোনো নিয়মই
+             * মিলত না।
+             */
+            'lines.*.pricing_anchor' => ['nullable', Rule::in(['markup', 'margin'])],
+            'lines.*.pricing_pct' => ['nullable', 'numeric', 'min:0', 'max:1000'],
             'lines.*.discount' => ['nullable', 'numeric', 'min:0'],
             'lines.*.tax' => ['nullable', 'numeric', 'min:0'],
             'lines.*.narration' => ['nullable', 'string', 'max:500'],

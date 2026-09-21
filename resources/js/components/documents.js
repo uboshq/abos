@@ -225,6 +225,13 @@ export function purchaseLineEditor (config = {}) {
         packs: config.packs,
         packDefaults: config.packDefaults || {},
         lots: config.lots,
+
+        /*
+         * ⓘ পণ্যপ্রতি গতবারের দর ও নীতি — ক্রয়ের পর্দা দেয়, বাকিরা নয়।
+         * ⚠️ ডিফল্ট `{}`, তাই যে ফর্ম এটা পাঠায় না তার আচরণ এক চুলও
+         * বদলায় না ([[seedFromProduct]])।
+         */
+        pricing: config.pricing || {},
         unitsFor(row) {
             return this.packs[row.product_id] ?? [];
         },
@@ -240,6 +247,62 @@ export function purchaseLineEditor (config = {}) {
             const chosen = (this.packDefaults || {})[productId];
 
             return chosen === undefined ? '' : String(chosen);
+        },
+
+        /*
+         * পণ্য বাছলে গতবারের চারটা সংখ্যা বসে — ২১ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⭐ মালিকের কথা ──────────────────────────────────────────
+         * *"একবার ক্রয় করার পর দ্বিতীয়বার করার সময়, রেট সহ চারটে বক্স
+         * অটো বসবে। ক্রয় মূল্য বাড়লে বা কমলে বাকিগুলো সেম % অনুযায়ী
+         * নোটিশ দিয়ে বাড়বে কমবে।"*
+         *
+         * ⓘ দ্বিতীয় অর্ধেকটা আগে থেকেই ছিল — `pricing.js` দর বদলালে
+         * নীতি ধরে দাম নাড়ে। ⛔ প্রথম অর্ধেকটাই ছিল না: পণ্যের নীতি
+         * কোনোদিন পর্দায় পৌঁছাত না, তাই বাক্স চারটা খালি বসে থাকত আর
+         * নাড়ানোর মতো কিছুই থাকত না।
+         *
+         * ⚠️ ঘরটা খালি থাকলেই কেবল বসানো হয় — মানুষ যা টাইপ করেছেন তা
+         * কখনো মুছে দেওয়া হয় না। ⓘ নাহলে পণ্য বদলে আবার ফিরে এলে তাঁর
+         * লেখা দর উধাও হত।
+         *
+         * ⓘ `pricing` না দিলে কিছুই বদলায় না — ছয়টা ফর্ম এই সম্পাদকটা
+         * ভাগ করে, আর ক্রয় ছাড়া বাকিগুলোয় দাম বসানোর প্রশ্নই ওঠে না।
+         */
+        /*
+         * পণ্য বাছার একটাই দরজা — একক আর দাম, দুইটাই।
+         *
+         * ⚠️ আগে ব্লেডে সরাসরি `row.unit_id = defaultUnit(...)` লেখা
+         * ছিল। ⛔ দামের কাজটা পাশে বসালে অ্যাট্রিবিউটে দুইটা বাক্য হত,
+         * আর CSP-Alpine অ্যাট্রিবিউটের ভিতরে একাধিক বাক্য পড়ে না —
+         * চুপচাপ কিছুই হত না।
+         */
+        pickProduct(row) {
+            row.unit_id = this.defaultUnit(row.product_id);
+            this.seedFromProduct(row);
+        },
+
+        seedFromProduct(row) {
+            const known = (this.pricing || {})[row.product_id];
+
+            if (! known) {
+                return;
+            }
+
+            if (! row.rate && known.rate) {
+                row.rate = String(known.rate);
+            }
+
+            if (! row.sales_price && known.sale) {
+                row.sales_price = String(known.sale);
+            }
+
+            if (known.anchor && ! row.markup && ! row.margin) {
+                if (known.anchor === 'markup') row.markup = String(known.pct);
+                if (known.anchor === 'margin') row.margin = String(known.pct);
+
+                row.anchor = known.anchor;
+            }
         },
 
         /*

@@ -127,6 +127,7 @@
                  packs: @js($packs),
                  packDefaults: @js($packDefaults),
                  lots: @js($lotProducts),
+                 pricing: @js($pricing ?? []),
                })">
 
     <div class="table-responsive">
@@ -170,7 +171,7 @@
                     <tr class="border-b border-(--color-border)">
                         <td class="cell-input" data-label="{{ __('purchase::field.product') }}">
                             <select :name="'lines[' + (i) + '][product_id]'" x-model="row.product_id" required
-                                    @change="row.unit_id = defaultUnit(row.product_id)"
+                                    @change="pickProduct(row)"
                                     class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                                            bg-(--color-surface-card) px-2">
                                 <option value="">-</option>
