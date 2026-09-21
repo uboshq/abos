@@ -75,10 +75,21 @@ final class TheWallWasNeverOnceLeanedOnTest extends TestCase
     {
         $models = $this->walledModels();
 
-        $this->assertGreaterThan(
-            10,
+        /*
+         * ⚠️ গোনাটা আঁটসাঁট, "দশের বেশি" নয়।
+         *
+         * ⓘ ২২ সেপ্টেম্বর ২০২৬-এ মাপা: ঠিক উনিশটা। ⛔ ঢিলা শর্তটা
+         * উনিশ থেকে বারোয় নেমে গেলেও চুপ থাকত — অর্থাৎ সাতটা মডেলের
+         * দেয়াল নীরবে খসে গেলেও পরীক্ষা সবুজই থাকত।
+         *
+         * ⭐ সংখ্যাটা **বাড়লে** কিছু ভাঙে না; কমলে ভাঙে, আর ভাঙাই উচিত —
+         * একটা দেয়াল সরানো সচেতন সিদ্ধান্ত হওয়া চাই, দুর্ঘটনা নয়।
+         */
+        $this->assertGreaterThanOrEqual(
+            19,
             count($models),
-            'দেয়াল-ঘেরা মডেল প্রায় পাওয়াই গেল না — খোঁজার কলটাই ভাঙা, পরীক্ষাটা কিছুই দেখছে না।',
+            'দেয়াল-ঘেরা মডেলের সংখ্যা কমে গেছে ('.count($models).'টা, আগে ছিল ১৯)। '
+            .'কোনো মডেল থেকে ছাঁকনিটা সরানো হয়েছে, নাকি খোঁজার কলটাই ভেঙেছে?',
         );
 
         $this->actingAs($this->aUserWithLimits());
@@ -183,13 +194,32 @@ final class TheWallWasNeverOnceLeanedOnTest extends TestCase
         foreach ($walk as $file) {
             $path = str_replace(DIRECTORY_SEPARATOR, '/', $file->getPathname());
 
-            if (! $file->isFile() || ! str_contains($path, '/Models/') || ! str_ends_with($path, '.php')) {
+            /*
+             * ⚠️ `/Models/` ফোল্ডারটা শর্ত নয় — এটাই ছিল অন্ধ জায়গা।
+             *
+             * ⓘ abos-f9-র সূত্র, ২২ সেপ্টেম্বর ২০২৬: *পাহারা যখন লেখা
+             * বা পথ ঘেঁটে মান খোঁজে, সে প্রায়ই পাশের ঘরটা পড়ে — গঠনটা
+             * লোড করা গেলে ঘেঁটে বের করবেন না।*
+             *
+             * ⛔ আগে শর্তটা ছিল "পথে `/Models/` আছে"। আজ উনিশটাই ওখানে
+             * বসে, কিন্তু কোনোদিন একটা দেয়াল-ঘেরা মডেল অন্য ফোল্ডারে
+             * বসলে সে **নীরবে বাদ পড়ত** — আর নিচের গোনার পাহারাটাও
+             * (>১০) একটা কমে যাওয়া টের পেত না।
+             *
+             * ⭐ তাই শর্তটা এখন গঠনের: ক্লাসটা সত্যিই [[Model]] কি না।
+             */
+            if (! $file->isFile() || ! str_ends_with($path, '.php')) {
                 continue;
             }
 
             $class = 'App\\'.str_replace('/', '\\', substr($path, strpos($path, '/app/') + 5, -4));
 
             if (! class_exists($class) || ! is_subclass_of($class, Model::class)) {
+                continue;
+            }
+
+            // ⓘ বিমূর্ত ভিত্তি-ক্লাসের নিজের টেবিল নেই, `query()` ছুঁড়ত
+            if ((new \ReflectionClass($class))->isAbstract()) {
                 continue;
             }
 
