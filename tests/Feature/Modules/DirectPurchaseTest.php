@@ -14,7 +14,8 @@ use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\StockService;
-use App\Modules\Purchase\Models\Payment;
+use App\Modules\Accounts\Models\Voucher;
+use App\Modules\MasterData\Models\PaymentMethod;
 use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Supplier\Models\Supplier;
 use Database\Seeders\DemoSeeder;
@@ -204,10 +205,25 @@ class DirectPurchaseTest extends TestCase
      */
     public function test_the_pricing_helper_is_loaded_on_the_page(): void
     {
-        $html = $this->get(route('purchase.direct.create'))->assertOk()->getContent();
+        /*
+         * ⛔ ডাকটা এখন ব্লেডে নয়, মডিউলে — ২১ সেপ্টেম্বর ২০২৬।
+         *
+         * ⚠️ পরীক্ষাটা লেখা হয়েছিল যখন যুক্তিটা পাতার ভিতরে `<script>`-এ ছিল,
+         * তাই সে HTML-এ লেখাটা খুঁজত। ⓘ CSP-এর কাজে যুক্তি `resources/js`-এ
+         * গেছে, তাই লেখাটা এখন বান্ডিলে — কোড ঠিকই আছে, পরীক্ষাটাই
+         * পুরনো দুনিয়া মাপছিল।
+         *
+         * ⭐ উদ্দেশ্য বদলায়নি: ফাংশনটা পাওয়া যায় কি না। তাই দুই মাথাই
+         * দেখা হয়: কাউন্টারের মডিউল তাকে ডাকে, আর `app.js` তাকে ব্রাউজারে
+         * প্রকাশ করে। ⛔ একটা হারালে `priced()` প্রতিবার ব্যতিক্রম ছুঁড়ত, আর
+         * Alpine-এর ভিতরে ছোড়া ব্যতিক্রম নীরবে থেমে যায়।
+         */
+        $this->get(route('purchase.direct.create'))->assertOk();
 
-        $this->assertStringContainsString('window.abos.reprice', $html,
-            'দর নির্ধারণের ফাংশনটা পর্দা থেকে ডাকা হচ্ছে না।');
+        $module = resource_path('js/counter/direct-purchase.js');
+
+        $this->assertStringContainsString('window.abos.reprice', (string) file_get_contents($module),
+            'দর নির্ধারণের ফাংশনটা কাউন্টারের মডিউল থেকে ডাকা হচ্ছে না।');
 
         $bundle = resource_path('js/app.js');
 
@@ -275,24 +291,59 @@ class DirectPurchaseTest extends TestCase
 
     public function test_money_paid_on_the_spot_becomes_a_confirmed_payment(): void
     {
+        /*
+         * ⓘ পর্দা `deposits[]` পাঠায়, আর পুরনো `paid_now` ঘরটাও চলে।
+         *
+         * ⛔ কিন্তু পুরনো ঘরে **লেনদেন নম্বরের জায়গা নেই**, আর ব্যাংক
+         * থেকে টাকা গেলে সেটা বাধ্যতামূলক — ওটা ছাড়া পরে ব্যাংকের সাথে
+         * মেলানো যায় না। ⚠️ তাই পরীক্ষাটা নীরবে প্রত্যাখ্যাত হয়ে যেত, আর
+         * `assertRedirect()` তাতেও সবুজ থাকত — ফিরে যাওয়াটাও একটা
+         * redirect। ⓘ `assertSessionHasNoErrors()` যোগ করার পরই কারণটা দেখা গেল।
+         */
         $this->post(route('purchase.direct.store'), $this->payload([
-            'paid_now' => '2000',
-            'paid_from_account_id' => $this->moneyAccount()->id,
-        ]))->assertRedirect();
+            'deposits' => [[
+                'amount' => '2000',
+                // ⛔ চেক নয় — চেকে টাকা যায় "ইস্যু করা চেক" খাতে, ব্যাংক থেকে নয়
+                'payment_method_id' => PaymentMethod::query()->where('kind', 'bank')->value('id'),
+                'account_id' => $this->moneyAccount()->id,
+                'reference' => 'TRF-2000',
+            ]],
+        ]))->assertSessionHasNoErrors()->assertRedirect();
 
-        $payment = Payment::query()->latest('id')->firstOrFail();
+        /*
+         * ⛔ কাউন্টারের পরিশোধ এখন **ভাউচার** — মালিকের সিদ্ধান্ত, ২০ সেপ্টেম্বর
+         * ২০২৬: *"বিক্রয় counter-এর নিয়মেই করো।"*
+         *
+         * ⚠️ পরীক্ষাটা ক্রয়ের নিজের "পরিশোধ" কাগজ খুঁজত, যেটা ঐ দিন থেকে এই
+         * পথে আর তৈরি হয় না — তাই লাল, আর কোড নির্দোষ।
+         *
+         * ⭐ দাবিটা বদলায়নি, কেবল কাগজটার নাম।
+         */
+        /*
+         * ⚠️ ভাউচারটা **এই বিলের সাথে বাঁধা** ধরেই খোঁজা হয়। ⓘ `latest()`
+         * দিয়ে খুঁজলে অন্য পরিশোধের ভাউচার (যেমন গাড়িভাড়া) ধরা পড়তে পারে,
+         * আর তখন দাবিটা ভুল কাগজ মাপত।
+         */
+        $bill = PurchaseBill::query()->latest('id')->firstOrFail();
 
-        $this->assertSame(DocumentStatus::CONFIRMED, $payment->status);
-        $this->assertSame(0, bccomp((string) $payment->amount, '2000', 4));
+        $voucher = Voucher::query()
+            ->where('type', Voucher::PAYMENT)
+            ->where('against_type', PurchaseBill::drillSourceType())
+            ->where('against_id', $bill->id)
+            ->firstOrFail();
 
-        // টাকাটা যে খাত থেকে গেছে বলা হয়েছিল, সেখান থেকেই গেছে
+        $this->assertSame(DocumentStatus::CONFIRMED, $voucher->status);
+        $this->assertEqualsWithDelta(2000.0, (float) $voucher->amount, 0.0001, 'ভাউচারের অঙ্ক');
+
+        // টাকাটা যে খাত থেকে গেছে বলা হয়েছিল, সেখান থেকেই গেছে
         $credited = LedgerEntry::query()
-            ->where('source_type', Payment::drillSourceType())
-            ->where('source_id', $payment->id)
+            // ⓘ প্রতিটা ভাউচার-ধরনের নিজের source_type; drillSourceType() নয়
+            ->where('source_type', Voucher::SOURCE_TYPES[Voucher::PAYMENT])
+            ->where('source_id', $voucher->id)
             ->where('account_id', $this->moneyAccount()->id)
             ->sum('credit');
 
-        $this->assertSame(0, bccomp((string) $credited, '2000', 4));
+        $this->assertEqualsWithDelta(2000.0, (float) $credited, 0.0001, 'খাত থেকে যাওয়া টাকা');
     }
 
     public function test_paying_without_saying_where_from_is_refused(): void

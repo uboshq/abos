@@ -578,6 +578,31 @@ final class PurchaseBillService
     private function applySalesPrices(PurchaseBill $bill): void
     {
         foreach ($bill->lines as $line) {
+            if ($line->product === null) {
+                continue;
+            }
+
+            /*
+             * ⭐ ক্রয়দরটা সবসময় বসে — মালিকের অভিযোগ, ২১ সেপ্টেম্বর ২০২৬।
+             *
+             * *"ekbar purchase er por egulo auto suggest korar kotha —
+             * last price"* — অথচ একবার কিনেও পরের বার ঘরগুলো খালিই আসত।
+             *
+             * ⛔ কারণ: পুরো স্ট্যাম্পিংটা **বিক্রয়দর লেখা হয়েছে কি না** তার
+             * উপর দাঁড়াত। ⚠️ কিন্তু "এই বিলে বিক্রয়দর ঠিক করিনি" আর "কত
+             * দামে কিনলাম ভুলে যাও" — এক কথা নয়। ⓘ কত দামে কিনলাম সেটা
+             * সিদ্ধান্ত নয়, **ঘটনা** — কাগজে লেখাই আছে।
+             *
+             * ⭐ তাই তিনটা আলাদা সিদ্ধান্ত, একটা দরজা নয়:
+             *   ক্রয়দর  → সবসময় (ঘটনা)
+             *   বিক্রয়দর → লেখা থাকলে (`null` = "দাম বদলাব না")
+             *   নীতি     → নোঙর লেখা থাকলে
+             *
+             * ⓘ `$line->rate` ইতিমধ্যেই মূল এককে নামানো ([[ReadsPackedQuantities::packed()]]),
+             * তাই কার্টনের দাম পিসের ঘরে বসার ভয় নেই।
+             */
+            $line->product->update(['purchase_price' => (string) $line->rate]);
+
             if ($line->sales_price === null) {
                 continue;
             }

@@ -107,6 +107,57 @@ class TheRateOutranThePriceAndNobodyToldTheCounterTest extends TestCase
         $this->assertEqualsWithDelta(40.0, (float) $this->product->pricing_pct, 0.0001);
     }
 
+    /**
+     * ⭐ একবার কিনলে ক্রয়দরটা পণ্যে বসে — বিক্রয়দর ঠিক না করলেও।
+     *
+     * ── ⓘ মালিকের অভিযোগ, ২১ সেপ্টেম্বর ২০২৬ ──────────────────
+     * *"ekbar purchase er por egulo auto suggest korar kotha — last
+     * price"*। ⛔ পুরো স্ট্যাম্পিংটা বিক্রয়দরের উপর দাঁড়াত, তাই যিনি
+     * কেবল মাল তুলেছেন, দাম পরে ঠিক করবেন ভাবেন — তাঁর **কত দামে
+     * কিনলেন সেটাও হারিয়ে যেত**।
+     *
+     * ⚠️ "এই বিলে দাম ঠিক করিনি" আর "কত দামে কিনলাম ভুলে যাও" —
+     * এক কথা নয়। ⓘ দ্বিতীয়টা সিদ্ধান্তই নয়, ঘটনা।
+     */
+    public function test_the_rate_is_remembered_even_when_no_price_was_decided(): void
+    {
+        $this->product->forceFill(['purchase_price' => '0', 'sale_price' => '0'])->save();
+
+        $this->post(route('purchase.direct.store'), $this->payload([
+            'rate' => '137.50',
+            // ⛔ বিক্রয়দর লেখা হয়নি — ঘরটা ইচ্ছাকৃতভাবে খালি
+        ]))->assertRedirect();
+
+        $this->product->refresh();
+
+        $this->assertEqualsWithDelta(
+            137.50,
+            (float) $this->product->purchase_price,
+            0.0001,
+            'একবার কিনেও ক্রয়দরটা পণ্যে বসেনি — পরের বার ঘরটা খালিই আসবে।',
+        );
+    }
+
+    /**
+     * ⛔ আর খালি বিক্রয়দর পুরনো দাম মুছে দেয় না।
+     *
+     * ⚠️ এই দাবিটা না থাকলে "ক্রয়দর সবসময় বসানো" সারাইটা সহজেই
+     * অতিক্রম করত — শূন্য বিক্রয়দর বসিয়ে দিলে পরদিন কাউন্টারে প্রতিটা
+     * পণ্য বিনামূল্যে বিক্রি হত।
+     */
+    public function test_an_empty_price_does_not_wipe_the_price_that_was_there(): void
+    {
+        $this->product->forceFill(['sale_price' => '250'])->save();
+
+        $this->post(route('purchase.direct.store'), $this->payload([
+            'rate' => '100',
+        ]))->assertRedirect();
+
+        $this->product->refresh();
+
+        $this->assertEqualsWithDelta(250.0, (float) $this->product->sale_price, 0.0001);
+    }
+
     /** ⛔ আসল পরীক্ষাটা: দর বেড়েছে, দাম বাড়ানো হয়নি — সফটওয়্যার বাড়াবে। */
     public function test_the_software_raises_a_price_the_buyer_forgot_to_raise(): void
     {
