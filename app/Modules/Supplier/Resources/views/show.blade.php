@@ -131,28 +131,67 @@
     </div>
 
     {{-- লেনদেন — অঙ্কটা কোথা থেকে এল (নিয়ম ১) --}}
-    <section id="transactions" class="scroll-mt-24 mt-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
+    @php
+        /*
+         * খতিয়ানের কলামগুলো একবার লেখা — টুলবার আর ছক দুইজনেই পড়ে।
+         *
+         * ⛔ আগে এগুলো `x-ui.table`-এর ভিতরে ইনলাইন ছিল, আর সেজন্যই
+         * টুলবারের "কলাম" মেনুটা এখানে বসানোই যেত না: সে তালিকাটা
+         * হাতে পায় না বলে **কিছুই দেখাত না**, আর নামমাত্র একটা বোতাম
+         * হয়ে থাকত।
+         */
+        $ledgerColumns = [
+            ['key' => 'trx_date', 'label' => __('core.table.date'), 'width' => '8rem',
+             'render' => fn ($e) => \App\Core\Support\DateFormat::format($e->trx_date)],
+            ['key' => 'document', 'label' => __('core.table.document'),
+             'render' => fn ($e) => view('supplier::partials.entry-source', ['entry' => $e])],
+            ['key' => 'narration', 'label' => __('core.table.narration')],
+            ['key' => 'debit', 'label' => __('core.table.debit'), 'numeric' => true, 'width' => '8rem',
+             'render' => fn ($e) => \App\Core\Support\Money::isZero($e->debit) ? '' : \App\Core\Support\Money::format($e->debit)],
+            ['key' => 'credit', 'label' => __('core.table.credit'), 'numeric' => true, 'width' => '8rem',
+             'render' => fn ($e) => \App\Core\Support\Money::isZero($e->credit) ? '' : \App\Core\Support\Money::format($e->credit)],
+            ['key' => 'balance', 'label' => __('core.table.balance'), 'numeric' => true, 'width' => '9rem',
+             'render' => fn ($e) => \App\Core\Support\Money::format($e->running_balance)],
+        ];
+    @endphp
+
+    <section id="transactions" data-boxed class="scroll-mt-24 mt-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">
-        <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-3 font-semibold">
-            {{ __('supplier::section.transactions') }}
-        </h2>
+        {{--
+            ⭐ টুলবার — মালিকের নির্দেশ, ২১ সেপ্টেম্বর ২০২৬:
+            *"lal mak kora joygay eta bosabe, same vabe customer e o"*।
+
+            ── ⛔ যে বোতামগুলো এখানে **নেই**, আর কেন ─────────────────────
+            খোঁজা · ছাঁকনি · সাজানো — তিনটাই ঠিকানায় চাবি বসায়, আর এই
+            পাতার কন্ট্রোলার ঐ চাবিগুলো **পড়েই না**। ⚠️ বসালে তিনটা
+            জীবন্ত দেখতে বোতাম হত যেগুলো চাপলে কিছুই বদলাত না — ঠিক
+            সেই মৃত বোতাম, যার তেইশটা আজ রাতে সারানো হয়েছে।
+
+            ⓘ মালিক নিজেই বলেছেন *"ok za lage ta daw"* — তাই যা সত্যিই
+            কাজ করে কেবল সেটুকুই: কলাম, ঘনত্ব, রপ্তানি, ভাগ, ছাপা, নতুন করে।
+
+            ── ⭐ ছাপাটা এখানে লিংক, বোতাম নয় ──────────────────────────
+            পর্দায় আজকেরটা উপরে, কাগজে ব্যাংকের খাতার মতো পুরনো আগে।
+            ⓘ তাই ছাপার আগে `?ledger=asc` ঠিকানায় যাওয়া হয়, আর সেখানে
+            পৌঁছেই ছাপা শুরু হয়।
+        --}}
+        <form method="GET" class="contents">
+            <x-ui.toolbar :title="__('supplier::section.transactions')"
+                          :search="false"
+                          :filter="false"
+                          :columns="$ledgerColumns"
+                          {{-- ℹ এই দুইটা ছাঁকনি নয়, দৃশ্যের অবস্থা — না বললে টুলবার
+                               "asc" আর "1" লেখা দুইটা কাঁচা চিপ তুলত, আর সরাতে গেলে
+                               কাগজের ক্রমটাই হারাত। --}}
+                          :quiet="['ledger', 'print']"
+                          :print-href="request()->fullUrlWithQuery(['ledger' => 'asc', 'print' => 1])" />
+        </form>
 
         <x-ui.table
             :empty="__('supplier::message.no_transactions')"
             :rows="$entries"
-            :columns="[
-                ['key' => 'trx_date', 'label' => __('core.table.date'), 'width' => '8rem',
-                 'render' => fn ($e) => \App\Core\Support\DateFormat::format($e->trx_date)],
-                ['key' => 'document', 'label' => __('core.table.document'),
-                 'render' => fn ($e) => view('supplier::partials.entry-source', ['entry' => $e])],
-                ['key' => 'narration', 'label' => __('core.table.narration')],
-                ['key' => 'debit', 'label' => __('core.table.debit'), 'numeric' => true, 'width' => '8rem',
-                 'render' => fn ($e) => \App\Core\Support\Money::isZero($e->debit) ? '' : \App\Core\Support\Money::format($e->debit)],
-                ['key' => 'credit', 'label' => __('core.table.credit'), 'numeric' => true, 'width' => '8rem',
-                 'render' => fn ($e) => \App\Core\Support\Money::isZero($e->credit) ? '' : \App\Core\Support\Money::format($e->credit)],
-                ['key' => 'balance', 'label' => __('core.table.balance'), 'numeric' => true, 'width' => '9rem',
-                 'render' => fn ($e) => \App\Core\Support\Money::format($e->running_balance)],
-            ]" />
+            :compact="request()->boolean('compact')"
+            :columns="$ledgerColumns" />
 
         <x-ui.pager :rows="$entries" />
     </section>

@@ -66,6 +66,22 @@
      * মালিকের ভাষার নিয়ম ভাঙত। অনুবাদ অনুমান করা যায় না।
      */
     'filterLabels' => [],
+
+    /*
+     * ছাপার আগে যে ঠিকানায় যেতে হবে — খতিয়ানের জন্য।
+     *
+     * ── ⭐ মালিকের নিয়ম, ২১ সেপ্টেম্বর ২০২৬ ──────────────────────────
+     * *"Transactions dekhar somoy ajker date sobar upore … but print er
+     * somoy ba printe dile bank er moto ledger dekhabe"* — পর্দায় নতুন
+     * আগে, কাগজে পুরনো আগে।
+     *
+     * ⛔ সাধারণ ছাপার বোতামটা পর্দায় যা আছে তা-ই ছাপে, তাই খতিয়ানের
+     * বেলায় সে **উল্টো ক্রমে** ছাপত। ⓘ ঠিকানা দিলে বোতামটা লিংক হয়ে
+     * যায়: আগে সঠিক ক্রমে পাতাটা আসে, তারপর ছাপা শুরু হয়।
+     *
+     * ⚠️ না দিলে আচরণ আগের মতোই — পর্দারটাই ছাপে।
+     */
+    'printHref' => null,
 ])
 
 {{--
@@ -757,7 +773,21 @@
                 </div>
             @endif
 
-            @if ($print)
+            @if ($print && $printHref)
+                {{-- ⓘ ক্রম বদলে তবেই ছাপা — `printHref`-এর ব্যাখ্যা উপরে।
+                     ⚠️ এটা `<a>`, `<button>` নয়: বোতাম হলে সে ফর্মটা জমা
+                     দিত আর ঠিকানার `ledger=asc` হারিয়ে যেত। --}}
+                <a href="{{ $printHref }}"
+                   aria-label="{{ __('core.action.print') }}"
+                   class="flex min-h-(--spacing-touch) items-center gap-1.5 rounded-(--radius-field) px-2
+                          text-sm text-(--color-ink-muted) transition-colors
+                          hover:bg-(--color-surface-hover) hover:text-(--color-ink)">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" class="size-4 shrink-0 fill-current">
+                        <path d="M7 3h10v4H7V3ZM5 9h14a2 2 0 0 1 2 2v6h-4v4H7v-4H3v-6a2 2 0 0 1 2-2Zm4 8h6v4H9v-4Z"/>
+                    </svg>
+                    <span class="hidden xl:inline">{{ __('core.action.print') }}</span>
+                </a>
+            @elseif ($print)
                 {{-- ছাপা ব্রাউজারেরই কাজ; আলাদা রুট বানানো মানে একই টেবিল
                      দ্বিতীয়বার তৈরি করা, আর দুইটার একটা পরে ঠিক করতে
                      ভুলে যাওয়া। ছাপার নিজস্ব CSS আছে। --}}
@@ -771,6 +801,18 @@
                     </svg>
                     <span class="hidden xl:inline">{{ __('core.action.print') }}</span>
                 </button>
+            @endif
+
+            @if ($print && request()->boolean('print'))
+                {{--
+                    ⓘ ছাপার লিংক থেকে এসেছি — এখন নিজে থেকেই ছাপা শুরু হোক।
+
+                    ⛔ এই ঘরটা না থাকলে জিনিসটা **আধখানা** হত: মানুষ সঠিক
+                    ক্রমের পাতায় পৌঁছাতেন, তারপর নিজে ছাপার বোতাম খুঁজতেন,
+                    আর সেটা আবার পর্দারটাই ছাপত। ⚠️ ABOS-এর সবচেয়ে সাধারণ
+                    রোগ ঠিক এটাই — কাজটা হয়েছে, শেষ জোড়াটা লাগানো হয়নি।
+                --}}
+                <span data-print-on-load hidden></span>
             @endif
 
             @if ($refresh)

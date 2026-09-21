@@ -128,4 +128,26 @@ export function wireActions (root = document) {
 
         window.location = url.toString()
     })
+
+    /*
+     * ⭐ ছাপার লিংক থেকে এসে নিজে থেকেই ছাপা — খতিয়ানের ক্রমের জন্য।
+     *
+     * ⓘ মালিকের নিয়ম: পর্দায় নতুন আগে, কাগজে পুরনো আগে। ⛔ ছাপার
+     * বোতামটা পর্দারটাই ছাপে, তাই খতিয়ানে সে বোতাম নয় — লিংক, যে আগে
+     * `?ledger=asc&print=1`-এ নিয়ে যায়। এই ঘরটা শেষ জোড়াটা লাগায়।
+     *
+     * ⚠️ `load`, `DOMContentLoaded` নয়: হরফ আর ছকের প্রস্থ বসার **আগেই**
+     * ছাপা শুরু হলে কাগজে কলামগুলো সরে যেত। ⓘ পাতাটা ইতিমধ্যেই পুরো
+     * এসে গেলে (bfcache, বা দেরিতে বসানো স্ক্রিপ্ট) `load` আর আসে না,
+     * তাই সেই বেলায় সরাসরি ডাকা হয়।
+     */
+    const printOnLoad = root.querySelector?.('[data-print-on-load]')
+
+    if (printOnLoad) {
+        if (document.readyState === 'complete') {
+            window.print()
+        } else {
+            window.addEventListener('load', () => window.print(), { once: true })
+        }
+    }
 }
