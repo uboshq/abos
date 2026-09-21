@@ -827,6 +827,56 @@ export function productPacks ({ rows = [], base = 0, baseName = '', names = {}, 
          */
         defaults,
 
+        /*
+         * ⛔ একক বদলালে base-ও বদলায় — ২১ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⚠️ মালিক যা দেখতেন ─────────────────────────────
+         * *"একক পরিবর্তন করতে গেলে এটা দেখায় কেন"* — সংরক্ষণে চারবার
+         * *"ডিফল্ট হিসেবে যে প্যাক বাছা হয়েছে, সেটা এই পণ্যের টেবিলে
+         * নেই"*। ⓘ চারবার, কারণ চারটা কাজের চারটা ডিফল্ট
+         * ([[ProductPackService::KINDS]])।
+         *
+         * ── ⛔ কেন ─────────────────────────────────────────
+         * `base` পাতা আঁকার সময়ে বসানো হত (`$product->unit_id`), আর
+         * "base" বাছলে রেডিওটা **ঐ আইডিটাই** পাঠায়, শূন্য নয়। তাই
+         * উপরে একক বদলালেও রেডিওগুলো **পুরনো** এককের আড়াইডি পাঠাত।
+         * সার্ভার আগে নতুন এককটা বসায়, তারপর দেখে পাঠানো ডিফল্টটা নতুন
+         * base-ও নয়, প্যাকের তালিকাতেও নেই — তখন চারটা অস্বীকার।
+         *
+         * ⓘ তাই এককের ঘরটা শোনা হয়। যে ডিফল্টগুলো পুরনো base-এর
+         * দিকে তাকিয়ে ছিল, তারা নতুনটায় যায় — হুবহু [[dropped()]]-এর নিয়মে।
+         * ⚠️ যেগুলো সতি্যিকারের প্যাকের দিকে তাকিয়ে, তারা যেখানে ছিল
+         * সেখানেই থাকে — একক বদলালে "কার্টনে কিনি" বাতিল হওয়ার কারণ নেই।
+         */
+        init () {
+            const field = this.$el.closest('form')?.querySelector('[name="unit_id"]')
+
+            if (!field) {
+                return
+            }
+
+            field.addEventListener('change', () => this.baseBecame(field.value))
+        },
+
+        /** নতুন base — নামও সাথে যায়, নাহলে সারিটা পুরনো নাম নিয়ে বসে থাকত */
+        baseBecame (unitId) {
+            const was = this.base
+            const now = Number(unitId) || 0
+
+            if (now === was) {
+                return
+            }
+
+            this.base = now
+            this.baseName = this.nameOf(now)
+
+            for (const kind of ['purchase', 'sales', 'pos', 'counter']) {
+                if (String(this.defaults[kind]) === String(was)) {
+                    this.defaults[kind] = now
+                }
+            }
+        },
+
         add () {
             this.rows.push({ unit_id: '', per_qty: '', per_unit_id: '', barcode: '' })
         },

@@ -58,8 +58,11 @@
             <tbody>
                 {{-- base — বাঁধা সারি, সবসময় ১ --}}
                 <tr class="border-b border-(--color-border)">
+                    {{-- ⓘ নামটা Alpine থেকে, PHP থেকে নয় — ২১ সেপ্টেম্বর ২০২৬।
+                         ⚠️ উপরে একক বদলালে এই সারিটা পুরনো নাম নিয়ে বসে থাকত,
+                         আর মানুষ ভাবতেন বদলটা লাগেইনি ([[productPacks::baseBecame()]])। --}}
                     <td data-label="{{ __('inventory::pack.unit') }}">
-                        {{ $baseName }}
+                        <span x-text="baseName">{{ $baseName }}</span>
                         <span class="text-2xs text-(--color-ink-muted)">{{ __('inventory::pack.is_base') }}</span>
                     </td>
                     <td class="num text-end" data-label="{{ __('inventory::pack.per_qty') }}">1</td>
@@ -117,11 +120,18 @@
                             <select :name="'packs[' + i + '][per_unit_id]'" x-model="row.per_unit_id"
                                     class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border
                                            border-(--color-border) bg-(--color-surface-card) px-2">
-                                <option value="{{ $product->unit_id }}">{{ $baseName }}</option>
+                                {{-- ⛔ base-এর জন্য আলাদা কোনো বিকল্প নেই — ২১ সেপ্টেম্বর ২০২৬।
+
+                                     আগে base একবার আলাদা বসত, আর নিচের লুপ তাকে বাদ
+                                     দিত — তাতে নকল হত না। ⚠️ কিন্তু বাদ দেওয়ার শর্তটা
+                                     সার্ভারে সংরক্ষিত এককটা ধরে, তাই উপরে একক বদলালে
+                                     নতুনটা **দুইবার** আসত আর পুরনোটা তালিকা থেকেই হারাত।
+
+                                     ⓘ সব একক একবার করে থাকলে দুইটাই মেটে: নকলও নেই,
+                                     আর বাছাইতা সবসময় জায়গা পায় — উপরের মন্তব্য যে কারণে
+                                     সবগুলো সার্ভার থেকে আঁকাতে বলেছে, হুবহু সেই কারণেই। --}}
                                 @foreach ($units as $unit)
-                                    @if ($unit->id !== $product->unit_id)
-                                        <option value="{{ $unit->id }}">{{ $unit->name() }}</option>
-                                    @endif
+                                    <option value="{{ $unit->id }}">{{ $unit->name() }}</option>
                                 @endforeach
                             </select>
                         </td>

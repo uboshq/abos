@@ -41,7 +41,7 @@ final class ProductPackService
      * @param  array<int|string, array<string, mixed>>  $rows  base ছাড়া বাকি প্যাক
      * @param  array<string, mixed>  $defaults  কাজ → একক-id (না দিলে base)
      */
-    public function sync(Product $product, array $rows, array $defaults = []): void
+    public function sync(Product $product, array $rows, array $defaults = [], ?int $wasBase = null): void
     {
         $base = (int) $product->unit_id;
 
@@ -57,7 +57,7 @@ final class ProductPackService
         $factors = $errors === [] ? $this->factors($clean, $base, $baseUnit, $errors) : [];
 
         $this->checkBarcodes($product, $clean, $errors);
-        $chosen = $this->defaults($defaults, $base, array_keys($clean), $errors);
+        $chosen = $this->defaults($defaults, $base, array_keys($clean), $errors, $wasBase);
 
         if ($errors !== []) {
             throw ValidationException::withMessages($errors);
@@ -306,12 +306,35 @@ final class ProductPackService
      * @param  list<int>  $packUnits
      * @return array<string, int>
      */
-    private function defaults(array $defaults, int $base, array $packUnits, array &$errors): array
+    private function defaults(array $defaults, int $base, array $packUnits, array &$errors, ?int $wasBase = null): array
     {
         $chosen = [];
 
         foreach (self::KINDS as $kind) {
             $unitId = (int) ($defaults[$kind] ?? 0);
+
+            /*
+             * ⭐ পুরনো base-এর আইডি এলে সেটা "base"-ই বোঝায় — ২১ সেপ্টেম্বর ২০২৬।
+             *
+             * ── ⛔ মালিকের অভিযোগ ───────────────────────────────
+             * *"একক পরিবর্তন করতে গেলে এটা দেখায় কেন"* — আর একই বাক্য
+             * চারবার, কারণ চারটা কাজের চারটা ডিফল্ট।
+             *
+             * ⓘ পর্দায় "base" বাছলে রেডিওটা শূন্য নয়, **বেস এককের
+             * আইডিটাই** পাঠায়। সার্ভার আগে নতুন এককটা বসায়, তারপর
+             * দেখে পাঠানো আইডিটা নতুন base-ও নয়, প্যাকের তালিকাতেও
+             * নেই — আর অস্বীকার করত।
+             *
+             * ⚠️ পর্দার দিকটা সারানো হয়েছে ([[productPacks::baseBecame()]]),
+             * কিন্তু সেটাই যথেষ্ট নয়: আগে খোলা একটা ট্যাব এখনও পুরনো
+             * আইডি পাঠাবে। ⛔ তাই সার্ভারও জানে base আগে কী ছিল।
+             *
+             * ⚠️ পাহারাটা আলগা হয়নি — সত্যিকারের অচেনা একক এখনো
+             * অস্বীকৃত, কেবল **যে আইডিটা এই সংরক্ষণেই base ছিল** সেটাই ছাড়।
+             */
+            if ($wasBase !== null && $unitId === $wasBase && $unitId !== $base) {
+                $unitId = 0;
+            }
 
             if ($unitId !== 0 && $unitId !== $base && ! in_array($unitId, $packUnits, true)) {
                 $errors["pack_defaults.{$kind}"] = __('inventory::validation.pack_default_unknown');

@@ -103,11 +103,15 @@ final class ProductService
             $this->packs->assertBaseCanChange($product, $packs !== null);
         }
 
-        return DB::transaction(function () use ($product, $data, $packs, $defaults) {
+        // ⓘ কোন এককটা base ছিল — বদলানোর আগেই ধরে রাখা, কারণটা
+        // [[ProductPackService::defaults()]]-এ
+        $wasBase = $product->unit_id === null ? null : (int) $product->unit_id;
+
+        return DB::transaction(function () use ($product, $data, $packs, $defaults, $wasBase) {
             $product->update($data);
 
             if ($packs !== null && $product->unit_id !== null) {
-                $this->packs->sync($product, $packs, $defaults);
+                $this->packs->sync($product, $packs, $defaults, $wasBase);
             }
 
             return $product->fresh();
