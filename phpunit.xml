@@ -31,6 +31,38 @@
 
             চালাতে: php artisan test, আর testsuite ঘরটা money
         -->
+
+        <!--
+            ⭐ প্রতিটা কমিটে — ২২ সেপ্টেম্বর ২০২৬।
+
+            ⓘ নিচের `money` সুটটা ২৪ মিনিট নেয়, তাই সেটা দিনে দুইবার
+            চলে। ⚠️ যে নিয়ম ঐ গেটে ধরা পড়ে, সেটা ভাঙা অবস্থায়
+            ঘণ্টার পর ঘণ্টা থাকতে পারে।
+
+            ⛔ আজ ঠিক সেটাই হয়েছে: ভাড়ার পাতায় একটা রুট অনুমতি ছাড়া
+            বসে গিয়েছিল, আর লগইন করা যে কেউ খাতায় নতুন পক্ষ বসাতে
+            পারতেন — কয়েক ঘণ্টা লাইভে। ⓘ ধরেছে
+            [[EveryRouteIsGuardedTest]], আর সে **দুই সেকেন্ডে** চলে।
+
+            ⭐ এই পাঁচটার একটাও ডেটাবেস ছোঁয় না — মেপে ১৮ সেকেন্ডে
+            ৩০টা দাবি। ⚠️ তাই এটা `money`-র বদলি নয়, তার আগের ধাপ:
+            এরা খাতা দেখতে পায় না, ওরা পায়।
+
+            চালাতে: php artisan test, আর testsuite ঘরটা money-fast
+        -->
+        <testsuite name="money-fast">
+            <!-- কোনো দরজা পাহারা ছাড়া নয় — ২২ সেপ্টেম্বর একটা খোলা দরজা এটাই ধরেছে -->
+            <file>tests/Feature/Architecture/EveryRouteIsGuardedTest.php</file>
+            <!-- কমিট না করা ক্লাস ডাকা হচ্ছে না — লাইভে সাদা পর্দা -->
+            <file>tests/Feature/Architecture/EveryClassTheCodeCallsIsActuallyCommittedTest.php</file>
+            <!-- লেখা প্রতিটা নিয়ম সত্যিই কোনো পথে পৌঁছায় -->
+            <file>tests/Feature/Architecture/EveryPolicyRuleIsActuallyReachedTest.php</file>
+            <!-- নতুন কোনো দাবি অজুহাত দিয়ে এড়িয়ে যাচ্ছে না -->
+            <file>tests/Feature/Architecture/ASkippedTestReadsAsAPassingOneTest.php</file>
+            <!-- টাকার অঙ্ক — গোনা, গোল করা, লেখা -->
+            <file>tests/Feature/Core/MoneyTest.php</file>
+        </testsuite>
+
         <testsuite name="money">
             <!-- খাতার সিল — বদলানো, মোছা, আর সিল ছাড়া সারি ঢোকানো -->
             <file>tests/Feature/Core/TheBooksCouldBeEditedAndNobodyWouldKnowTest.php</file>
@@ -52,6 +84,8 @@
             <file>tests/Feature/Architecture/EveryRouteIsGuardedTest.php</file>
             <!-- কমিট না করা ক্লাস ডাকা হচ্ছে না — লাইভে সাদা পর্দা -->
             <file>tests/Feature/Architecture/EveryClassTheCodeCallsIsActuallyCommittedTest.php</file>
+            <!-- নতুন কোনো দাবি অজুহাত দিয়ে এড়িয়ে যাচ্ছে না -->
+            <file>tests/Feature/Architecture/ASkippedTestReadsAsAPassingOneTest.php</file>
             <!-- মেনুর প্রতিটা পাতা সত্যিই খোলে -->
             <file>tests/Feature/Architecture/EveryMenuPageOpensBeforeItIsDeployedTest.php</file>
         </testsuite>
