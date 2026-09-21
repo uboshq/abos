@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Architecture;
 
+use App\Core\Support\Money;
 use Tests\TestCase;
 
 /**
@@ -63,7 +64,6 @@ final class EveryClassTheCodeCallsIsActuallyCommittedTest extends TestCase
             }
 
             foreach ($this->appClassesUsedIn($src) as $class) {
-                $path = 'app/'.str_replace('\\', '/', substr($class, strlen('App\\'))).'.php';
 
                 /*
                  * ⛔ শর্তটা দুইটা, আর দুইটাই লাগে:
@@ -75,7 +75,7 @@ final class EveryClassTheCodeCallsIsActuallyCommittedTest extends TestCase
                  * ফাইল ডিস্কেও নেই সেটা এখানেই ভাঙত — লাইভের অপেক্ষা
                  * করতে হত না।
                  */
-                if (! isset($tracked[$path]) && is_file(base_path($path))) {
+                if ($this->onDiskButNotInGit($class, $tracked)) {
                     $missing[] = $class.'  ← '.$relative;
                 }
             }
@@ -111,6 +111,93 @@ final class EveryClassTheCodeCallsIsActuallyCommittedTest extends TestCase
      *
      * @return array<string, true>
      */
+    /**
+     * ⭐ সিদ্ধান্তটা এক জায়গায় — সুইপ আর নিজের পরীক্ষা দুইটাই এটাই ডাকে।
+     *
+     * ⚠️ আলাদা করা হয়েছে যাতে নিচের পরীক্ষাটা **আসল যুক্তিটাই** চালাতে
+     * পারে, তার একটা নকল নয় — নকল হলে দুইটা আলাদা হয়ে যেত আর পরীক্ষা
+     * সবুজ থেকেও সুইপ অন্ধ হত।
+     *
+     * @param  array<string, bool>  $tracked
+     */
+    private function onDiskButNotInGit(string $class, array $tracked): bool
+    {
+        $path = 'app/'.str_replace('\\', '/', substr($class, strlen('App\\'))).'.php';
+
+        return ! isset($tracked[$path]) && is_file(base_path($path));
+    }
+
+    /**
+     * ⭐ পাহারাটা সত্যিই একটা ধরতে পারে — ২২ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⛔ কেন এটা লাগল ─────────────────────────────────────────────
+     * এই পাহারাটা **দুইটা ডিপ্লয়-গেটেই** আছে, অথচ কেউ কোনোদিন মাপেনি
+     * সে কিছু ধরতে পারে কি না। ⚠️ উপরের ফাইল-গোনাটা **খালি জাল** ধরে,
+     * **ছেঁড়া জাল** নয়: `appClassesUsedIn()`-এর প্যাটার্ন ভাঙলে সুইপ
+     * ছয়শো ফাইল পড়ে, কিছু পায় না, আর সবুজ হয়।
+     *
+     * ⓘ তাই একটা সত্যিকারের কমিট করা ক্লাস নিয়ে তালিকা থেকে নামটা
+     * তুলে নেওয়া হয় — ঠিক যেন সেটা কমিট করা হয়নি — আর দেখা হয়
+     * পাহারাটা তাকে ধরে কি না।
+     */
+    public function test_the_guard_catches_a_class_that_is_not_in_git(): void
+    {
+        $tracked = $this->trackedAppFiles();
+
+        $this->assertNotSame([], $tracked, 'গিট থেকে কিছুই পড়া গেল না — পরীক্ষাটা কিছু মাপছে না।');
+
+        $class = Money::class;
+        $path = 'app/Core/Support/Money.php';
+
+        $this->assertArrayHasKey($path, $tracked, 'Money.php গিটে নেই — নমুনাটাই ভুল।');
+
+        $this->assertFalse($this->onDiskButNotInGit($class, $tracked),
+            'কমিট করা একটা ক্লাসকে পাহারা অপরাধী বলছে — তাহলে প্রতিটা রান লাল হত।');
+
+        // ⓘ ঠিক যেন কেউ ফাইলটা কমিট করতে ভুলে গেছে
+        unset($tracked[$path]);
+
+        $this->assertTrue($this->onDiskButNotInGit($class, $tracked), implode(PHP_EOL, [
+            'একটা ক্লাস ডিস্কে আছে অথচ গিটে নেই, আর পাহারা সেটা ধরতে পারল না।',
+            '',
+            'অর্থাৎ ডিপ্লয়ের দুইটা গেটই এই প্রশ্নে অন্ধ — লাইভে সাদা পর্দা',
+            'আসবে, আর এখানে সব সবুজ থাকবে।',
+        ]));
+    }
+
+    /**
+     * ⭐ `use` লাইন থেকে ক্লাসের নাম তোলাটাও প্রমাণ করা দরকার।
+     *
+     * ⚠️ এটাই আসল জাল: প্যাটার্নটা ভাঙলে সুইপের কাছে প্রতিটা ফাইল
+     * নিরপরাধ মনে হবে। ⓘ আর ভাঙাটা নীরব — একটা `\\` কম বা বেশি হলেই যথেষ্ট।
+     */
+    public function test_the_reader_actually_finds_the_classes_a_file_uses(): void
+    {
+        $src = implode(PHP_EOL, [
+            '<?php',
+            'namespace App\\Demo;',
+            'use App\\Core\\Support\\Money;',
+            'use App\\Modules\\Sales\\Models\\SalesOrder;',
+            'use Illuminate\\Support\\Str;',
+            'use App\\Core\\Support\\Money as Taka;',
+        ]);
+
+        $found = $this->appClassesUsedIn($src);
+
+        $this->assertContains('App\\Core\\Support\\Money', $found,
+            '`use` লাইন থেকে ক্লাসের নামই তোলা যাচ্ছে না — জালটা ছেঁড়া।');
+
+        $this->assertContains('App\\Modules\\Sales\\Models\\SalesOrder', $found,
+            'মডিউলের ক্লাস তোলা যাচ্ছে না।');
+
+        /*
+         * ⓘ অ্যাপের বাইরের ক্লাস বাদ — নাহলে প্রতিটা `Illuminate\\…`
+         * অপরাধী গণ্য হত আর তালিকাটা পড়ার অযোগ্য হয়ে যেত।
+         */
+        $this->assertNotContains('Illuminate\\Support\\Str', $found,
+            'অ্যাপের বাইরের ক্লাসও তোলা হচ্ছে।');
+    }
+
     private function trackedAppFiles(): array
     {
         $out = [];
