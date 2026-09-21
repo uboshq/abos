@@ -85,8 +85,27 @@
                              :selected="$receipt->warehouse_id ?? $order?->warehouse_id"
                              placeholder="-" required />
 
+{{--
+                    ⛔ তারিখটা আজকের দিয়ে ভরে দেওয়া হয় না — ২১ সেপ্টেম্বর ২০২৬।
+
+                    ── ⭐ মালিকের নির্দেশ ─────────────────────────────────
+                    *"Received on, Billing date egulo faka thakbe, hate fill
+                    korar por create hobe"*।
+
+                    ── ⚠️ কেন কথাটা ন্যায্য ───────────────────────────────
+                    কাগজটা আজকের নাও হতে পারে: সরবরাহকারীর বিল তিন দিন আগের,
+                    মাল পরশু এসেছে। ⓘ ঘরটা আগে থেকে ভরা থাকলে মানুষ সেটা
+                    **পড়েন না** — চোখ পরের ঘরে চলে যায়, আর আজকের তারিখেই
+                    কাগজটা বসে যায়।
+
+                    ⛔ ফল নীরব: খাতায় ভুল দিনে ভুক্তি, মাসের হিসাব মেলে না,
+                    আর কেউ বলতে পারে না কেন। ⚠️ খালি ঘর জোর করে প্রশ্নটা
+                    করায় — "কোন তারিখ?"
+
+                    ⓘ `required` থেকে যায়, তাই খালি রেখে সংরক্ষণ করা যায় না।
+                --}}
                 <x-ui.field name="trx_date" type="date" :label="__('purchase::field.date')"
-                            :value="old('trx_date', $receipt->trx_date?->toDateString() ?? now()->toDateString())"
+                            :value="old('trx_date', $receipt->trx_date?->toDateString())"
                             required />
             </div>
 

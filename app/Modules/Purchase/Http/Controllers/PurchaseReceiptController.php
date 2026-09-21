@@ -89,7 +89,24 @@ class PurchaseReceiptController extends Controller implements HasMiddleware
 
         return view('purchase::receipt.form', [
             'menu' => $this->menu->forUser($request->user()),
-            'receipt' => new PurchaseReceipt(['trx_date' => now()->toDateString()]),
+            /*
+             * ⛔ তারিখটা আজকের দিয়ে ভরা হয় না — ২১ সেপ্টেম্বর ২০২৬।
+             *
+             * ⭐ মালিকের নির্দেশ: *"Received on, Billing date egulo faka
+             * thakbe, hate fill korar por create hobe"*।
+             *
+             * ⚠️ কাগজটা আজকের নাও হতে পারে: সরবরাহকারীর বিল তিন দিন
+             * আগের, মাল পরশু এসেছে। ⓘ ঘরটা আগে থেকে ভরা থাকলে মানুষ
+             * সেটা **পড়েন না** — চোখ পরের ঘরে চলে যায়, আর আজকের
+             * তারিখেই কাগজটা বসে যায়।
+             *
+             * ⛔ ফল নীরব: খাতায় ভুল দিনে ভুক্তি, মাসের হিসাব মেলে না,
+             * আর কেউ বলতে পারে না কেন।
+             *
+             * ⓘ ঘরটা `required` থেকে যায়, তাই খালি রেখে সংরক্ষণ করা
+             * যায় না — খালি ঘর জোর করে প্রশ্নটা করায়।
+             */
+            'receipt' => new PurchaseReceipt,
             'order' => $order,
             'orders' => PurchaseOrder::query()->open()->with('supplier')
                 ->orderByDesc('trx_date')->limit(200)->get(),
