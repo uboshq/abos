@@ -20,6 +20,7 @@ return [
     'main_branch_note' => 'At least one branch is needed — without it there is nowhere for a transaction to sit. More can be added later.',
     'financial_year_note' => 'In Bangladesh the year runs July to June. The dates are filled in already, because a calendar year would put every report out of step with the tax office.',
     'users_note' => 'Who can sign in, to which company, and what they may do. Users are never deleted — deactivating keeps their name on old paperwork.',
+    'no_role' => 'No role',
     'roles_note' => 'A named set of permissions. Every depot splits the work differently, so roles are rows here rather than names in code.',
     // প্রতিটা তালিকার খোঁজার ঘর কী কী দিয়ে খোঁজে — ঘরের ভেতরের লেখা
     'user_search' => 'Search by name or email',

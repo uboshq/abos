@@ -7,7 +7,29 @@
     উত্তর হারায়। নিষ্ক্রিয় করা যায় — তখন আর ঢোকা যায় না, ইতিহাস থাকে।
 --}}
 @php
-    /* কলাম ধরে — `x-ui.table` স্লট পড়ে না, সারি আসে :rows থেকে। */
+    /*
+     * কলাম ধরে — `x-ui.table` স্লট পড়ে না, সারি আসে :rows থেকে।
+     *
+     * ── ⭐ মালিকের নমুনা, ২১ সেপ্টেম্বর ২০২৬ ───────────────
+     * *"nexus er user management-y zevabe eivabe koro"* — ছবিসহ নাম,
+     * চিপে ভূমিকা, যোগাযোগ, শাখা, দুই ধাপ, আর অবস্থা।
+     *
+     * ⚠️ নমুনার দুইটা কলাম ABOS-এ **বসানো হয়নি**, আর কারণটা
+     * একই: ঘর দুইটা সারণিতে নেই —
+     *
+     *   ⛔ *"Drives as"* — কে কোন গাড়ি চালান। ABOS-এ গাড়িই নেই।
+     *   ⛔ *"Must change password"* — পরেরবার ঢুকলে পাসওয়ার্ড
+     *     বদলাতে বাধ্য করা। `users`-এ এমন কোনো ঘর নেই।
+     *
+     * ℹ দুইটাই নতুন ঘর চায়, আর নতুন ঘর আমি নিজে থেকে বানাইনি —
+     * মালিককে জিজ্ঞেস করাই সতিকারের কাজ। ⚠️ খালি কলাম বসালে
+     * সেটা একটা মিথ্যা প্রতিশ্রুতি হয়ে থাকত।
+     *
+     * ── ℹ কোম্পানির কলামটা গেল কেন ───────────────────────
+     * তালিকাটা আগেই চলতি কোম্পানিতে ছাঁকা (UserController::index)। ⛔ তাই
+     * কলামটায় প্রতিটা সারিতে একই সংকেত বসত — যে কলাম সব সারিতে
+     * একই কথা বলে সে কেবল চওড়া নেয়। ℹ শাখাটা বরং বদলায়।
+     */
     $columns = [
         [
             'key' => 'name',
@@ -15,20 +37,29 @@
             'render' => fn ($u) => view('system_admin::user.partials.name', ['user' => $u]),
         ],
         [
-            'key' => 'email',
-            'label' => __('core.profile.email'),
-        ],
-        [
             'key' => 'roles',
             'label' => __('system_admin::field.roles'),
-            'render' => fn ($u) => $u->roles->pluck('name')
-                ->map(fn (string $n) => \App\Core\Support\RoleLabel::for($n))
-                ->implode(', ') ?: '-',
+            'render' => fn ($u) => view('system_admin::user.partials.roles', ['user' => $u]),
         ],
         [
-            'key' => 'companies',
-            'label' => __('core.company.company'),
-            'render' => fn ($u) => $u->companies->map(fn ($c) => $c->code)->implode(', ') ?: '-',
+            'key' => 'contact',
+            'label' => __('core.profile.contact'),
+            'render' => fn ($u) => view('system_admin::user.partials.contact', ['user' => $u]),
+        ],
+        [
+            'key' => 'branch',
+            'label' => __('core.company.branch'),
+            'render' => fn ($u) => view('system_admin::user.partials.branch', ['user' => $u]),
+        ],
+        [
+            'key' => 'two_step',
+            'label' => __('system_admin::field.two_step'),
+            'render' => fn ($u) => view('system_admin::user.partials.security', ['user' => $u]),
+        ],
+        [
+            'key' => 'status',
+            'label' => __('core.table.status'),
+            'render' => fn ($u) => view('system_admin::user.partials.status', ['user' => $u]),
         ],
         [
             'key' => 'last_login_at',
