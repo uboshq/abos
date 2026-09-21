@@ -12,6 +12,7 @@ use App\Core\Engines\Dashboard\Listing;
 use App\Core\Engines\Dashboard\Series;
 use App\Core\Engines\Dashboard\Stat;
 use App\Core\Engines\Dashboard\Tile;
+use App\Core\Services\SettingsService;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Modules\Sales\Metrics\SalesMetrics;
@@ -72,12 +73,21 @@ final class SalesDashboard implements ProvidesDashboard
             subtitle: __('sales::dashboard.subtitle'),
 
             tiles: [
-                new Tile(
-                    label: __('sales::action.new_invoice'),
-                    href: route('sales.invoice.create'),
-                    permission: 'sales.invoice.create',
-                    icon: 'receipt',
-                ),
+                /*
+                 * ⭐ প্রথম বোতামটা সরাসরি বিক্রয় — মালিকের নির্দেশ, ২১ সেপ্টেম্বর ২০২৬।
+                 *
+                 * ⓘ *"New invoice name kicui thakbena eta direct sales hobe"* —
+                 * কাউন্টারে দিনের কাজটা বিল লেখা নয়, **মাল বেচা** — আর
+                 * সরাসরি বিক্রয়ে এক চাপেই চালান, বিল আর জমা তিনটাই হয়।
+                 * ⛔ বিলের ফর্ম আলাদা কাজ: মাল আগেই গেছে, এখন কেবল কাগজ।
+                 *
+                 * ⚠️ পর্দাটা বন্ধ রাখা যায় (`sales.screen_direct`), আর মেনুর সারিটা
+                 * সেটা মানে — তাই টাইলটাও মানে। ⛔ নাহলে যে পর্দাটা লুকিয়ে
+                 * রাখা হয়েছে, ড্যাশবোর্ড তার দরজা খুলে রাখত, আর সেটা
+                 * মালিকের নিজের সিদ্ধান্তকেই অগ্রাহ্য করত। ⓘ বন্ধ থাকলে বিলের
+                 * বোতামটাই থাকে, আগের মতো।
+                 */
+                self::firstAction(),
                 new Tile(
                     label: __('sales::action.new_order'),
                     href: route('sales.order.create'),
@@ -265,5 +275,30 @@ final class SalesDashboard implements ProvidesDashboard
             ->orderByDesc('total')
             ->limit(8)
             ->get();
+    }
+
+    /**
+     * প্রথম দ্রুত-কাজ — সরাসরি বিক্রয়, নয়তো নতুন বিল।
+     *
+     * ⓘ অনুমতিটা মেনুর সারির হুবহু একটাই (`sales.challan.create`) —
+     * সরাসরি বিক্রয়ে মাল বেরোয়, তাই চালান কাটার চাবিটাই আসল।
+     */
+    private static function firstAction(): Tile
+    {
+        $on = app(SettingsService::class)->get('sales.screen_direct', true);
+
+        return $on
+            ? new Tile(
+                label: __('sales::menu.direct'),
+                href: route('sales.direct.create'),
+                permission: 'sales.challan.create',
+                icon: 'sales',
+            )
+            : new Tile(
+                label: __('sales::action.new_invoice'),
+                href: route('sales.invoice.create'),
+                permission: 'sales.invoice.create',
+                icon: 'receipt',
+            );
     }
 }

@@ -28,7 +28,10 @@
     @if ($dashboard->tiles !== [])
         <div class="mb-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             @foreach ($dashboard->tiles as $tile)
-                <a href="{{ $tile->href }}" data-boxed
+                {{-- ⓘ `data-tile` — পরীক্ষা যেন ক্লাসের নাম ধরে না ঝুলে থাকে।
+                     ⚠️ পাতার অন্যত্রও একই ঠিকানা থাকতে পারে (মেনুতে), তাই
+                     "প্রথম বোতামটা কোথায় নামে" প্রশ্নটা গোটা পাতা খুঁজে বলা যায় না। --}}
+                <a href="{{ $tile->href }}" data-boxed data-tile
                    class="flex items-center gap-3 rounded-(--radius-card) border border-(--color-brand-500)
                           bg-(--color-surface-hover) px-4 py-3 text-sm font-semibold text-(--color-brand-700)">
                     @if ($tile->icon)
