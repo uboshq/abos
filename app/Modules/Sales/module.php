@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Core\Engines\Print\PaperSize;
 use App\Modules\Sales\Auth\CustomerProvider;
 use App\Modules\Sales\Dashboard\SalesActivity;
 use App\Modules\Sales\Dashboard\SalesDashboard;
@@ -530,32 +531,32 @@ return [
             'key' => 'sales.print.paper.invoice',
             'label' => 'sales::settings.paper_invoice',
             'type' => 'choice',
-            'options' => \App\Core\Engines\Print\PaperSize::all(),
-            'default' => \App\Core\Engines\Print\PaperSize::A4,
+            'options' => PaperSize::all(),
+            'default' => PaperSize::A4,
             'group' => 'print',
         ],
         [
             'key' => 'sales.print.paper.challan',
             'label' => 'sales::settings.paper_challan',
             'type' => 'choice',
-            'options' => \App\Core\Engines\Print\PaperSize::all(),
-            'default' => \App\Core\Engines\Print\PaperSize::A4,
+            'options' => PaperSize::all(),
+            'default' => PaperSize::A4,
             'group' => 'print',
         ],
         [
             'key' => 'sales.print.paper.order',
             'label' => 'sales::settings.paper_order',
             'type' => 'choice',
-            'options' => \App\Core\Engines\Print\PaperSize::all(),
-            'default' => \App\Core\Engines\Print\PaperSize::A4,
+            'options' => PaperSize::all(),
+            'default' => PaperSize::A4,
             'group' => 'print',
         ],
         [
             'key' => 'sales.print.paper.receipt',
             'label' => 'sales::settings.paper_receipt',
             'type' => 'choice',
-            'options' => \App\Core\Engines\Print\PaperSize::all(),
-            'default' => \App\Core\Engines\Print\PaperSize::A4,
+            'options' => PaperSize::all(),
+            'default' => PaperSize::A4,
             'group' => 'print',
         ],
         /*

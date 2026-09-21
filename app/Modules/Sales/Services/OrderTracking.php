@@ -7,6 +7,7 @@ namespace App\Modules\Sales\Services;
 use App\Core\Support\DocumentStatus;
 use App\Modules\Sales\Models\SalesOrder;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -140,7 +141,7 @@ final class OrderTracking
     }
 
     /** কতটা চাওয়া হয়েছিল। */
-    private function orderedQty(): \Illuminate\Database\Query\Builder
+    private function orderedQty(): Builder
     {
         return DB::table('sal_order_lines')
             ->selectRaw('COALESCE(SUM(ordered_qty), 0)')
@@ -152,7 +153,7 @@ final class OrderTracking
      *
      * ⓘ খসড়া চালানও গোনা হয় না: কাগজ লেখা হয়েছে মানে মাল বেরোয়নি।
      */
-    private function deliveredQty(): \Illuminate\Database\Query\Builder
+    private function deliveredQty(): Builder
     {
         return DB::table('sal_challan_lines')
             ->join('sal_challans', 'sal_challans.id', '=', 'sal_challan_lines.delivery_challan_id')
@@ -163,7 +164,7 @@ final class OrderTracking
     }
 
     /** এই আদেশের মালের বিল হয়েছে কয়টা। */
-    private function invoiceCount(): \Illuminate\Database\Query\Builder
+    private function invoiceCount(): Builder
     {
         return DB::table('sal_invoice_lines')
             ->join('sal_challan_lines', 'sal_challan_lines.id', '=', 'sal_invoice_lines.delivery_challan_line_id')
