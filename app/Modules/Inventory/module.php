@@ -162,6 +162,12 @@ return [
                 'route_params' => ['slug' => 'stock-summary'], 'permission' => 'inventory.report'],
             ['label' => 'inventory::menu.stock_value', 'icon' => 'scale', 'route' => 'inventory.report.show',
                 'route_params' => ['slug' => 'stock-value'], 'permission' => 'inventory.report'],
+
+            /* ⭐ গুদামভিত্তিক মজুদ ও সমন্বয়ের ইতিহাস — ২১ সেপ্টেম্বর ২০২৬ */
+            ['label' => 'inventory::menu.stock_by_warehouse', 'icon' => 'building', 'route' => 'inventory.report.show',
+                'route_params' => ['slug' => 'stock-by-warehouse'], 'permission' => 'inventory.report'],
+            ['label' => 'inventory::menu.adjustments', 'icon' => 'clock', 'route' => 'inventory.report.show',
+                'route_params' => ['slug' => 'adjustments'], 'permission' => 'inventory.report'],
             ['label' => 'inventory::menu.hold_report', 'icon' => 'lock', 'route' => 'inventory.report.show',
                 'route_params' => ['slug' => 'hold'], 'permission' => 'inventory.report'],
 

@@ -8,6 +8,7 @@ use App\Core\Engines\Report\ReportColumn;
 use App\Core\Engines\Report\ReportDefinition;
 use App\Core\Engines\Report\ReportEngine;
 use App\Modules\Inventory\Models\Product;
+use App\Modules\Inventory\Services\StockService;
 use Illuminate\Database\Query\Expression;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -28,6 +29,8 @@ final class StockReports
         $engine->register(self::expiring());
         $engine->register(self::stockByBatch());
         $engine->register(self::stockValue());
+        $engine->register(self::stockByWarehouse());
+        $engine->register(self::adjustments());
     }
 
     /**
@@ -237,7 +240,7 @@ final class StockReports
                 ->select([
                     'p.code as product_code',
                     self::productName(),
-                    'w.name_en as warehouse_name',
+                    self::warehouseName(),
                     'b.batch_no',
                     'b.expiry_date',
                     DB::raw('COALESCE(SUM(m.floor_change), 0) as on_hand'),
@@ -358,7 +361,7 @@ final class StockReports
                     'm.trx_date',
                     'm.document_no',
                     self::productName(),
-                    'w.name_en as warehouse_name',
+                    self::warehouseName(),
                     'm.floor_change',
                     'm.reserved_change',
                     'm.hold_change',
@@ -496,6 +499,218 @@ final class StockReports
     }
 
     /**
+     * একই পণ্য কোন গুদামে কত।
+     *
+     * ── ⭐ কেন আলাদা রিপোর্ট, [[stockSummary]]-তে কলাম যোগ নয় ──────────
+     * মজুদ-সারাংশ প্রশ্নের উত্তর দেয় *"কী কত আছে"* — এক পণ্য, এক সারি।
+     * ⓘ কিন্তু তিনটা গুদাম থাকলে ঐ এক সারিটা **যোগফল**, আর যোগফল
+     * দিয়ে চালান পাঠানো যায় না: ৫০ কার্টন আছে শুনে কেউ অর্ডার নেন,
+     * পরে দেখা যায় ৪৫টা অন্য গুদামে।
+     *
+     * ⚠️ ঐ এক কলাম যোগ করলে সারাংশের প্রতিটা সারি গুদামের সংখ্যা গুণ
+     * হয়ে যেত, আর রোজকার প্রশ্নটাই কঠিন হত।
+     *
+     * ── ⛔ যে জোড়া শূন্যে নেমেছে, তার সারি আসে না ─────────────────────
+     * পণ্য × গুদাম মানে সারির সংখ্যা গুণফল। ⓘ মাল একবার ঢুকে পুরোটা
+     * বেরিয়ে গেলে জোড়াটার সব যোগফল শূন্য — সেই সারিগুলো রাখলে তালিকাটা
+     * পড়ার অযোগ্য হত, আর আসল সারিগুলো তার ভিতরে হারাত।
+     *
+     * ⚠️ শর্তটা পাঁচটা ভাণ্ডারই দেখে, কেবল `floor` নয়। ⓘ সদ্য আসা কিন্তু
+     * কেউ বুঝে নেয়নি এমন মালের `floor` শূন্য অথচ `unplaced` আছে —
+     * [[stockSummary]]-তে ঠিক এই ভুলেই মাল "উধাও" দেখাত।
+     */
+    public static function stockByWarehouse(): ReportDefinition
+    {
+        return new ReportDefinition(
+            key: 'inventory.stock_by_warehouse',
+            title: 'inventory::menu.stock_by_warehouse',
+            filters: ['date_range', 'branch'],
+
+            /*
+             * ⛔ `groupBy` পর্দার দল নয় — ইঞ্জিনের **গোনার** চাবি।
+             *
+             * ⚠️ কোয়েরিতে SQL `GROUP BY` আছে, আর তখন `null` দিলে ইঞ্জিন
+             * `$query->count()` চালাত — যা দলভিত্তিক কোয়েরিতে **প্রতি
+             * দলের একটা করে সারি** ফেরত দেয়, মোট দলের সংখ্যা নয়। ⓘ ফল:
+             * পাতা-সংখ্যা ভুল, আর শেষ পাতাগুলো অদৃশ্য।
+             *
+             * ⓘ চাবিটা পণ্য+গুদাম জোড়া, কারণ সারিটা ঐ জোড়ারই।
+             */
+            groupBy: 'pair_key',
+            query: fn (array $f) => DB::table('inv_stock_movements as m')
+                ->join('inv_products as p', 'p.id', '=', 'm.product_id')
+                ->join('inv_warehouses as w', 'w.id', '=', 'm.warehouse_id')
+                ->where('m.company_id', $f['company_id'])
+                ->when($f['branch_id'], fn ($q, $b) => $q->where('m.branch_id', $b))
+
+                /*
+                 * ⓘ শুরুর তারিখ ধরা হয় না — মজুদ একটা মুহূর্তের অবস্থা,
+                 * পরিসরের নয়। [[stockSummary]]-তেও হুবহু একই যুক্তি।
+                 */
+                ->where('m.trx_date', '<=', $f['to'])
+
+                /*
+                 * ⚠️ লাইভে `ONLY_FULL_GROUP_BY` চালু, তাই নির্বাচিত
+                 * প্রতিটা অ-সমষ্টি কলাম এখানে থাকতেই হবে। ⛔ একটা বাদ
+                 * পড়লে স্থানীয়ভাবে চলত আর লাইভে ৫০০ হত।
+                 */
+                ->groupBy(
+                    'm.product_id', 'p.code', 'p.name_en', 'p.name_bn',
+                    'm.warehouse_id', 'w.code', 'w.name_en', 'w.name_bn',
+                )
+                ->havingRaw('SUM(m.floor_change) <> 0 OR SUM(m.reserved_change) <> 0
+                             OR SUM(m.hold_change) <> 0 OR SUM(m.unplaced_change) <> 0
+                             OR SUM(m.free_change) <> 0')
+                ->orderBy('p.code')
+                ->orderBy('w.code')
+                ->select([
+                    'm.product_id',
+                    self::productName(),
+                    self::warehouseName(),
+                    DB::raw("CONCAT(m.product_id, '-', m.warehouse_id) as pair_key"),
+                    DB::raw("'".Product::drillSourceType()."' as party_type_literal"),
+                    DB::raw('SUM(m.floor_change) as floor'),
+                    DB::raw('SUM(m.reserved_change) as reserved'),
+                    DB::raw('SUM(m.hold_change) as hold'),
+                    DB::raw('SUM(m.unplaced_change) as unplaced'),
+
+                    /*
+                     * ⓘ ফ্রি মাল খরচের স্তরে নেই (ফ্রির দাম নেই), তাই
+                     * পরিমাণটা কেবল এখান থেকেই বের হয়।
+                     */
+                    DB::raw('SUM(m.free_change) as free'),
+
+                    /*
+                     * ⛔ `available`-এ `unplaced` নেই, আর থাকবেও না —
+                     * বসানো হয়নি এমন মাল বিক্রয়যোগ্য নয়।
+                     */
+                    DB::raw('SUM(m.floor_change) - SUM(m.reserved_change) - SUM(m.hold_change) as available'),
+                ]),
+            columns: [
+                [
+                    'key' => 'product_name',
+                    'label' => 'inventory::field.product',
+                    'type' => ReportColumn::DOCUMENT,
+                    'source_type' => 'party_type_literal',
+                    'source_id' => 'product_id',
+                ],
+                ['key' => 'warehouse_name', 'label' => 'inventory::field.warehouse'],
+
+                /*
+                 * ⚠️ `QUANTITY`, `MONEY` নয় — যদিও পাশের পুরনো মজুদ-
+                 * রিপোর্টগুলো পরিমাণেও `MONEY` লেখে।
+                 *
+                 * ⓘ পার্থক্যটা আজ কেবল দশমিক ঘর (৩ বনাম ২), কিন্তু নামটা
+                 * মিথ্যা হলে একদিন কেউ টাকার চিহ্ন বা মুদ্রা বসাবে, আর
+                 * কার্টনের সংখ্যায় "৳" বসে যাবে।
+                 */
+                ['key' => 'floor', 'label' => 'inventory::field.floor', 'type' => ReportColumn::QUANTITY],
+                ['key' => 'reserved', 'label' => 'inventory::field.reserved', 'type' => ReportColumn::QUANTITY],
+                ['key' => 'hold', 'label' => 'inventory::field.hold', 'type' => ReportColumn::QUANTITY],
+                ['key' => 'unplaced', 'label' => 'inventory::field.unplaced', 'type' => ReportColumn::QUANTITY],
+                ['key' => 'free', 'label' => 'inventory::field.free', 'type' => ReportColumn::QUANTITY],
+                ['key' => 'available', 'label' => 'inventory::field.available', 'type' => ReportColumn::QUANTITY],
+            ],
+        );
+    }
+
+    /**
+     * কে কবে কেন মজুদ বদলেছে।
+     *
+     * ── ⭐ "সমন্বয়" মানে যে চলাচলে একটা কারণ লেখা আছে ─────────────────
+     * বিক্রয় বা ক্রয়ে মাল নড়ে কাগজের নিয়মে — সেখানে "কেন" প্রশ্নটার
+     * উত্তর কাগজটাই। ⓘ কিন্তু গণনার পরে সমন্বয় বা মাল আটকানো — ওগুলো
+     * **মানুষের সিদ্ধান্ত**, আর [[StockService::move()]] সেখানে একটা
+     * `reason_code_id` লিখতে বাধ্য করে।
+     *
+     * ⚠️ তাই ছাঁকনিটা কোনো উৎসের নামের তালিকা নয়, `reason_code_id`-র
+     * উপস্থিতি। ⓘ নতুন কোনো কারণসহ চলাচল যোগ হলে সে নিজে থেকেই এই
+     * রিপোর্টে আসবে — কেউ তালিকা হালনাগাদ করতে ভুলে গেলেও।
+     *
+     * ── ⛔ কারণের টেবিলে LEFT JOIN, INNER নয় ─────────────────────────
+     * কারণ-কোড মাস্টার থেকে মুছে ফেলা যায়। ⚠️ INNER JOIN হলে ঐ কোড
+     * ব্যবহার করা **সব পুরনো সারি নীরবে উধাও** হত — আর তখন ইতিহাসটাই
+     * মিথ্যা: মাল বদলেছে, অথচ রিপোর্ট বলছে কেউ কিছু বদলায়নি।
+     *
+     * ⓘ হিসাবের রিপোর্টে খাতের নামে INNER JOIN দিয়ে সারি হারানোটা এই
+     * রিপোতে একবার ধরাও পড়েছে — [[reasonName]]-এর মন্তব্য দেখুন।
+     * ⚠️ একই কারণে `users`-এও LEFT JOIN: মানুষ কোম্পানি ছাড়ে, সারি থাকে।
+     */
+    public static function adjustments(): ReportDefinition
+    {
+        return new ReportDefinition(
+            key: 'inventory.adjustments',
+            title: 'inventory::menu.adjustments',
+            filters: ['date_range', 'branch'],
+            query: fn (array $f) => DB::table('inv_stock_movements as m')
+                ->join('inv_products as p', 'p.id', '=', 'm.product_id')
+                ->join('inv_warehouses as w', 'w.id', '=', 'm.warehouse_id')
+                ->leftJoin('mdm_reason_codes as r', 'r.id', '=', 'm.reason_code_id')
+                ->leftJoin('users as u', 'u.id', '=', 'm.created_by')
+                ->where('m.company_id', $f['company_id'])
+                ->when($f['branch_id'], fn ($q, $b) => $q->where('m.branch_id', $b))
+
+                /* ⓘ এটা ঘটনার তালিকা, অবস্থার নয় — তাই পুরো পরিসর। */
+                ->whereBetween('m.trx_date', [$f['from'], $f['to']])
+                /*
+                 * ⛔ ছাঁকনিটা কেবল `reason_code_id` ধরে ছিল, আর সেটা ভাঙা ছিল।
+                 *
+                 * ⚠️ বিদেশি চাবিটা `nullOnDelete` — কারণ-কোড সত্যি মুছলে
+                 * ডাটাবেস চলাচলের সারিতে `reason_code_id` **শূন্য করে দেয়**।
+                 * ⓘ তখন সারিটা LEFT JOIN-এর আগেই, **ছাঁকনিতেই** বাদ পড়ত —
+                 * অর্থাৎ LEFT JOIN দিয়ে যে বিপদটা ঠেকানোর কথা, সেটাই
+                 * অন্য দিক দিয়ে ফিরে আসত।
+                 *
+                 * ⭐ ধরা পড়েছে মিউটেশনে, ২১ সেপ্টেম্বর ২০২৬।
+                 *
+                 * ⓘ এখন দুই দিক থেকে: সমন্বয় ও আটকানো সবসময় আসে
+                 * (`source_type` খালি হয় না, বদলায়ও না), আর ভবিষ্যতে
+                 * কারণসহ নতুন কোনো চলাচল যোগ হলে সেও নিজে থেকেই।
+                 */
+                ->where(fn ($q) => $q
+                    ->whereIn('m.source_type', [StockService::ADJUSTMENT, StockService::HOLD])
+                    ->orWhereNotNull('m.reason_code_id'))
+
+                /* ⭐ নতুনটা আগে — ইতিহাস পড়া হয় শেষ থেকে। */
+                ->orderByDesc('m.trx_date')
+                ->orderByDesc('m.id')
+                ->select([
+                    'm.trx_date',
+                    'm.document_no',
+                    'm.source_type',
+                    'm.source_id',
+                    self::productName(),
+                    self::warehouseName(),
+                    self::reasonName(),
+
+                    /* ⚠️ মানুষটা মুছে গেলেও সারিটা থাকে — তাই fallback। */
+                    DB::raw("COALESCE(u.name, '?') as changed_by"),
+
+                    'm.floor_change',
+                    'm.hold_change',
+                    'm.narration',
+                ]),
+            columns: [
+                ['key' => 'trx_date', 'label' => 'core.print.date', 'type' => ReportColumn::DATE, 'width' => '7rem'],
+                [
+                    'key' => 'document_no',
+                    'label' => 'core.table.document',
+                    'type' => ReportColumn::DOCUMENT,
+                    'source_type' => 'source_type',
+                    'source_id' => 'source_id',
+                ],
+                ['key' => 'product_name', 'label' => 'inventory::field.product'],
+                ['key' => 'warehouse_name', 'label' => 'inventory::field.warehouse'],
+                ['key' => 'reason_name', 'label' => 'inventory::field.reason'],
+                ['key' => 'changed_by', 'label' => 'inventory::field.changed_by'],
+                ['key' => 'floor_change', 'label' => 'inventory::field.floor', 'type' => ReportColumn::QUANTITY],
+                ['key' => 'hold_change', 'label' => 'inventory::field.hold', 'type' => ReportColumn::QUANTITY],
+                ['key' => 'narration', 'label' => 'inventory::field.narration'],
+            ],
+        );
+    }
+
+    /**
      * পণ্যের নাম — কোড সহ, ব্যবহারকারীর ভাষায়।
      */
     private static function productName(): Expression
@@ -505,6 +720,25 @@ final class StockReports
             : 'p.name_en';
 
         return DB::raw("CONCAT(p.code, ' - ', {$name}) as product_name");
+    }
+
+    /**
+     * গুদামের নাম — ব্যবহারকারীর ভাষায়।
+     *
+     * ── ⛔ আগে এটা ছিল না, আর [[stockLedger]] `w.name_en` লিখত ─────────
+     * ফলে বাংলায় পড়া ব্যবহারকারী মজুদ খতিয়ানে গুদামের নাম **ইংরেজিতে**
+     * দেখতেন, অথচ ঠিক পাশের কলামে পণ্যের নাম বাংলায়। ⚠️ কিছুই ভাঙত না,
+     * তাই কেউ অভিযোগও করেনি — এক পাতায় দুই ভাষা।
+     *
+     * ⓘ [[productName]]-এর হুবহু একই নিয়ম: বাংলা নাম খালি হলে ইংরেজিটা।
+     */
+    private static function warehouseName(): Expression
+    {
+        $name = app()->getLocale() === 'bn'
+            ? "COALESCE(NULLIF(w.name_bn, ''), w.name_en)"
+            : 'w.name_en';
+
+        return DB::raw("{$name} as warehouse_name");
     }
 
     /**

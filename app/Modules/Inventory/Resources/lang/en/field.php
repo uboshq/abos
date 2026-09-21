@@ -43,6 +43,7 @@ return [
     'unplaced' => 'Not placed',
     'unplaced_free' => 'Not placed (free)',
     'reason' => 'Reason',
+    'changed_by' => 'Changed by',
     'counted' => 'Counted',
     'difference' => 'Difference',
     'state' => 'Status',

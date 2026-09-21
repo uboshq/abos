@@ -63,6 +63,7 @@ return [
     'unplaced' => 'বসেনি',
     'unplaced_free' => 'বসেনি (ফ্রি)',
     'reason' => 'কারণ',
+    'changed_by' => 'কে বদলাল',
     'counted' => 'গোনা হলো',
     'difference' => 'পার্থক্য',
     'state' => 'অবস্থা',

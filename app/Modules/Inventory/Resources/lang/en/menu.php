@@ -28,4 +28,6 @@ return [
     'kitchen_tickets' => 'Kitchen screen',
     'places' => 'Places in the warehouse',
     'stock_value' => 'Stock with value',
+    'stock_by_warehouse' => 'Stock by warehouse',
+    'adjustments' => 'Who changed the stock',
 ];

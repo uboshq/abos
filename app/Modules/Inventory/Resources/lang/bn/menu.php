@@ -35,4 +35,6 @@ return [
     'kitchen_tickets' => 'রান্নাঘরের পর্দা',
     'places' => 'গুদামের ভিতরের জায়গা',
     'stock_value' => 'মজুদ মূল্যসহ',
+    'stock_by_warehouse' => 'গুদামভিত্তিক মজুদ',
+    'adjustments' => 'সমন্বয়ের ইতিহাস',
 ];
