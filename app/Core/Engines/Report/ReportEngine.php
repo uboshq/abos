@@ -6,6 +6,7 @@ namespace App\Core\Engines\Report;
 
 use App\Core\Support\CompanyContext;
 use App\Core\Support\RunningBalance;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -66,6 +67,16 @@ final class ReportEngine
         $filters = $this->normaliseFilters($report, $filters);
 
         $query = ($report->query)($filters);
+
+        /*
+         * ⭐ খোঁজার শব্দটা এখানে বসে — যোগফল ও গণনার **আগে**।
+         *
+         * ⓘ নিচের দুইটা লাইন `clone $query` নেয়, তাই এখানে বসালে
+         * যোগফল আর সারির সংখ্যা আপনা থেকেই খোঁজা ফলের হয়ে যায়।
+         * ⛔ পরে বসালে পর্দায় দশটা সারি দেখা যেত আর নিচে চারশোর
+         * যোগফল — আর সংখ্যাটা ভুল বলে চেনার কোনো উপায় থাকত না।
+         */
+        $query = $this->applySearch($report, $query, $filters['q'] ?? null);
 
         // যোগফল পুরো ফলের উপর — আলাদা কোয়েরিতে, কারণ পাতাভিত্তিক যোগফল
         // ভুল উত্তর দেয় এবং সেটা ভুল বলে চেনাও যায় না।
@@ -386,6 +397,57 @@ final class ReportEngine
      *
      * যোগফলের মতোই সমাধান — কোয়েরিটাকে সাব-কোয়েরি বানিয়ে তার উপর গণনা।
      */
+    /**
+     * ⭐ পর্দার খোঁজার ঘর — ৪১টা রিপোর্টে একটাই জায়গা।
+     *
+     * ── ⓘ কেন `HAVING`, `WHERE` নয় ──────────────────────────────────
+     * খোঁজাটা **পর্দায় যা দেখা যাচ্ছে** তার উপর হয়, ভিতরের টেবিলের
+     * কলামের উপর নয় — ব্যবহারকারী যে নামটা চোখে দেখছেন সেটাই টাইপ
+     * করেন। ⚠️ কিন্তু ঐ নামগুলো ছদ্মনাম (`supplier_name`), আর ছদ্মনাম
+     * `WHERE`-এ ব্যবহার করা যায় না। ⓘ `HAVING`-এ যায়।
+     *
+     * ⛔ সহজ বিকল্প ছিল পুরো কোয়েরিটাকে একটা সাবকোয়েরিতে মুড়ে দেওয়া
+     * (ইঞ্জিন যোগফলের জন্য তা-ই করে)। কিন্তু সাবকোয়েরির ভিতরের
+     * `ORDER BY` MySQL ফেলে দিতে পারে, আর তখন **খুঁজলেই সারির ক্রম
+     * বদলে যেত** — একটা রিপোর্ট যেটা বড় থেকে ছোট সাজানো, খুঁজলে আর
+     * সাজানো থাকত না, অথচ কিছুই ভাঙত না।
+     *
+     * ⓘ ৪১টা রিপোর্টেই মেপে দেখা হয়েছে `HAVING` চলে (MySQL ৮.৪)।
+     *
+     * ── ⚠️ কোন কলামে খোঁজা হয় ──────────────────────────────────────
+     * কেবল লেখার কলামে — নাম, নথি, তারিখ। ⛔ টাকার কলামে নয়: `১২৩`
+     * টাইপ করলে `১২৩৪৫.০০`ও মিলত, আর ফলটা দেখতে এলোমেলো লাগত।
+     *
+     * @param  Builder|\Illuminate\Database\Eloquent\Builder  $query
+     */
+    private function applySearch(ReportDefinition $report, $query, mixed $term)
+    {
+        $term = is_string($term) ? trim($term) : '';
+
+        if ($term === '') {
+            return $query;
+        }
+
+        $columns = $report->searchableColumns();
+
+        if ($columns === []) {
+            return $query;
+        }
+
+        /*
+         * ⚠️ কলামের নামগুলো ঘোষণা থেকে আসে, ব্যবহারকারীর কাছ থেকে নয় —
+         * তাই ওগুলো নিরাপদ। শব্দটা বাঁধা মান হিসেবেই যায়।
+         *
+         * ⓘ `\` আর `%` আর `_` পালানো হয়: না করলে কেউ `%` টাইপ করলে
+         * সব সারি মিলত, আর খোঁজাটা কিছুই ছাঁকত না।
+         */
+        $needle = '%'.str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $term).'%';
+
+        $sql = implode(' OR ', array_map(fn (string $c) => "`{$c}` LIKE ?", $columns));
+
+        return $query->havingRaw('('.$sql.')', array_fill(0, count($columns), $needle));
+    }
+
     private function countFor(ReportDefinition $report, $query): int
     {
         if ($report->groupBy === null) {

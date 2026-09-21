@@ -147,7 +147,21 @@
 
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
-            <x-ui.toolbar :title="__($report->title)" :count="trans_choice('accounts::message.row_count', $result->totalRows, ['count' => $result->totalRows])" :search="false"
+            {{--
+                ⭐ খোঁজার ঘর — ২১ সেপ্টেম্বর ২০২৬, মালিকের নির্দেশ
+                *"report e search bar diba"*।
+
+                ⛔ এতদিন এখানে `:search="false"` লেখা ছিল, অর্থাৎ ঘরটা
+                ইচ্ছা করে বন্ধ করা ছিল। ⓘ চারশো সারির একটা রিপোর্টে একটা
+                নাম খুঁজতে হলে পাতা ধরে ধরে নামা ছাড়া উপায় ছিল না।
+
+                ⚠️ খোঁজাটা পাতার উপর নয়, পুরো ফলের উপর — [[ReportEngine]]
+                শব্দটা কোয়েরিতে বসায়, তাই নিচের যোগফল আর সারির সংখ্যাও
+                খোঁজা ফলেরই হয়। পাতায় ছাঁকলে দশটা সারির পাশে চারশোর
+                যোগফল বসত।
+            --}}
+            <x-ui.toolbar :title="__($report->title)" :count="trans_choice('accounts::message.row_count', $result->totalRows, ['count' => $result->totalRows])"
+                          :search="$report->searchableColumns() !== []"
                           :columns="$menuColumns">
                 @if ($report->hasFilter('date_range'))
                     {{--

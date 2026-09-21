@@ -77,7 +77,17 @@ class StockReportController extends Controller implements HasMiddleware
 
         $result = $this->reports->run(
             $key,
-            $request->only(['from', 'to', 'branch_id', 'top', 'compare']),
+            /*
+             * ⭐ ঘরগুলো ঘোষণা থেকেই — ২১ সেপ্টেম্বর ২০২৬।
+             *
+             * ⛔ আগে এখানে একটা হাতে লেখা তালিকা ছিল, আর আটটা রিপোর্ট
+             * কন্ট্রোলারে আটটা তালিকা এক ছিল না। ⚠️ ছয়টা `party_type_id`
+             * পাঠাত না, অথচ রিপোর্টগুলো ছাঁকনিটা ঘোষণা করত আর পর্দায় ঘরটা
+             * আঁকা হত — ব্যবহারকারী বেছে দিতেন আর কিছুই বদলাত না।
+             *
+             * ⓘ যে ঘোষণা থেকে ঘরটা আঁকা হয়, এখন সেখান থেকেই পড়া হয়।
+             */
+            $request->only($definition->requestKeys()),
             page: max(1, (int) $request->query('page', 1)),
         );
 

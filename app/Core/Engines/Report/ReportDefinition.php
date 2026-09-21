@@ -134,6 +134,82 @@ final class ReportDefinition
         return array_values(array_filter($this->columns, fn (ReportColumn $c) => $c->total));
     }
 
+    /**
+     * একটা ঘোষিত ছাঁকনি ঠিকানায় কোন নামে আসে।
+     *
+     * ⓘ নামদুটো এক নয়: ঘোষণায় `branch`, ঠিকানায় `branch_id`। আগে এই
+     * অনুবাদটা আটটা কন্ট্রোলারে আটবার হাতে লেখা ছিল।
+     *
+     * @var array<string, list<string>>
+     */
+    private const ASKED_AS = [
+        'date_range' => ['from', 'to'],
+        'branch' => ['branch_id'],
+        'party_type' => ['party_type_id'],
+        'cost_centre' => ['cost_center_id'],
+        'account' => ['account_id'],
+    ];
+
+    /**
+     * ⭐ ঠিকানা থেকে যে ঘরগুলো নেওয়া হবে — ঘোষণা থেকেই।
+     *
+     * ── ⛔ কেন এটা কোরে, কন্ট্রোলারে নয় (২১ সেপ্টেম্বর ২০২৬) ────────
+     * আটটা রিপোর্ট কন্ট্রোলারের প্রতিটায় `$request->only([...])`-এর
+     * একটা **হাতে লেখা** তালিকা ছিল, আর তালিকাগুলো এক ছিল না।
+     *
+     * ⚠️ ফল: ছয়টা কন্ট্রোলার `party_type_id` পাঠাত না, অথচ রিপোর্টগুলো
+     * ছাঁকনিটা **ঘোষণা করত** আর পর্দায় ঘরটা আঁকা হত। ⛔ ব্যবহারকারী
+     * বেছে দিতেন, পাতা আবার আসত, আর **কিছুই বদলাত না** — কোনো ত্রুটি
+     * নেই, কোনো পরীক্ষা লাল নেই। মালিকের কথা: *"Filter Fanctional
+     * korba full"*।
+     *
+     * ⓘ এখন ঘরটা যে ঘোষণা থেকে **আঁকা** হয়, সেই একই ঘোষণা থেকেই
+     * **পড়া** হয় — দুইটা আলাদা হওয়ার আর কোনো উপায় নেই।
+     *
+     * @return list<string>
+     */
+    public function requestKeys(): array
+    {
+        $keys = [];
+
+        foreach ($this->filters as $filter) {
+            foreach (self::ASKED_AS[$filter] ?? [$filter] as $key) {
+                $keys[] = $key;
+            }
+        }
+
+        /*
+         * ⓘ এই তিনটা কোনো রিপোর্টের নিজস্ব নয় — প্রতিটা তালিকার সাথেই
+         * আসে, তাই ঘোষণায় লেখার কিছু নেই।
+         *
+         * ⚠️ `top` কেবল তখনই কিছু করে যখন রিপোর্ট `rankBy` বলে দিয়েছে
+         * (ইঞ্জিন নিজে দেখে নেয়), আর `compare` কেবল `date_range` থাকলে।
+         * ⛔ তবু দুইটাই সবসময় পাঠানো হয়: না পাঠালে ইঞ্জিনের ঐ
+         * পরীক্ষাগুলো কোনোদিন চলতই না, আর নিয়মটা দুই জায়গায় দুইবার
+         * লেখা হত।
+         */
+        return [...$keys, 'q', 'top', 'compare'];
+    }
+
+    /**
+     * কোন কলামগুলোতে খোঁজা যায়।
+     *
+     * ⓘ লেখার কলাম — নাম, নথির নম্বর, তারিখ। ⛔ টাকা আর পরিমাণ বাদ:
+     * ওখানে `১২৩` লিখলে `১২৩৪৫.০০`ও মিলত। শতাংশ বাদ, কারণ ওটা
+     * কষা সংখ্যা, কেউ ওটা ধরে খোঁজেন না।
+     *
+     * @return list<string>
+     */
+    public function searchableColumns(): array
+    {
+        $searchable = [ReportColumn::TEXT, ReportColumn::DOCUMENT, ReportColumn::DATE];
+
+        return array_values(array_map(
+            fn (ReportColumn $c) => $c->key,
+            array_filter($this->columns, fn (ReportColumn $c) => in_array($c->type, $searchable, true)),
+        ));
+    }
+
     public function hasFilter(string $name): bool
     {
         return in_array($name, $this->filters, true);

@@ -147,6 +147,18 @@ final class PartyReports
                 ->where('customers.company_id', $f['company_id'])
                 ->whereNull('customers.deleted_at')
                 ->where('customers.is_active', true)
+
+                /*
+                 * ⭐ শাখার ছাঁকনিটা এতদিন আঁকা হত আর কিছুই করত না —
+                 * ২১ সেপ্টেম্বর ২০২৬-এ মেপে ধরা পড়েছে।
+                 *
+                 * ⓘ এই তালিকায় শাখার মানে একটাই, আর সেটা পরিষ্কার:
+                 * গ্রাহকের **নিজের** শাখা। ⚠️ এখানে কোনো লেনদেন সাজানো
+                 * হচ্ছে না, একটা মানুষের তালিকা — তাই "কোন শাখার
+                 * বিক্রি" প্রশ্নটাই ওঠে না।
+                 */
+                ->when($f['branch_id'], fn ($q, $b) => $q->where('customers.branch_id', $b))
+
                 ->where(fn ($q) => $q->whereNull('customers.credit_limit')
                     ->orWhere('customers.credit_limit', '<=', 0))
 
