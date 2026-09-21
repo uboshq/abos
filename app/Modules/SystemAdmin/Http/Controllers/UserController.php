@@ -182,7 +182,7 @@ class UserController extends Controller implements HasMiddleware
             'scopes' => $this->scopesOf($user, UserDataScope::BRANCH),
             'houseScopes' => collect(array_keys($this->scopeKinds()))
                 ->mapWithKeys(fn (string $t) => [$t => $this->scopesOf($user, $t)])->all(),
-            ...$this->formData(),
+            ...$this->formData($user),
         ]);
     }
 
@@ -740,12 +740,51 @@ class UserController extends Controller implements HasMiddleware
     /**
      * @return array<string, mixed>
      */
-    private function formData(): array
+    /**
+     * ফর্মের তালিকাগুলো — ভূমিকা, কোম্পানি, শাখা, গুদাম।
+     *
+     * ⓘ `$user` লাগে কেবল একটা কারণে: যাঁর ইতিমধ্যেই সুপার
+     * অ্যাডমিন ভূমিকাটা আছে, তাঁর তালিকায় সেটা থাকতে হবে।
+     */
+    private function formData(?User $user = null): array
     {
         $companies = Company::query()->orderBy('code')->get();
 
         return [
-            'roles' => Role::query()->orderBy('name')->get(),
+            /*
+             * ⭐ প্রতিটা ভূমিকা একবার — মালিকের নির্দেশ, ২১ সেপ্টেম্বর ২০২৬।
+             *
+             * *"ekhane tinti kore roll keno"* — ভূমিকার সারি কোম্পানি
+             * ধরে জমা থাকে (`roles.company_id`), তাই প্রতিটা নাম
+             * কোম্পানির সংখ্যায় গুণ হয়ে পর্দায় আসত। ⛔ মেপে দেখা:
+             * ২৬টা সারি, আলাদা নাম মাত্র ১৪। তিন কোম্পানির লাইভে
+             * তিনটা করে — আর দুইটা "Warehouse" দেখতে হুবহু এক।
+             *
+             * ⓘ সংরক্ষণ হয় **নাম ধরে** (`syncRoles` নাম নেয়), তাই তিনটা
+             * সারির যেকোনোটায় টিক দিলে একই ফল — তিনটা দেখানোর দরকারই
+             * নেই, আর দেখালে মানুষ ভাবেন তিনটা আলাদা জিনিস।
+             *
+             * ── ⛔ সুপার অ্যাডমিন এই তালিকায় নেই ───────────────────
+             * মালিক: *"সুপার অ্যাডমিন কেন থাকবে? সুপার অ্যাডমিন শুধু
+             * একজনেই পাবে"*। ⓘ ওটা গোটা ব্যবস্থার চাবি — বাকি
+             * তেরোটার পাশে টিকবক্স হয়ে বসলে দেখতে হয় সাধারণ একটা
+             * সিদ্ধান্তের মতো, আর **যে জিনিস দেখতে সাধারণ, সেটা
+             * সাবধানে করা হয় না**।
+             *
+             * ⭐ ওটা দেওয়ার নিজস্ব পাতা আগে থেকেই আছে — মালিকানা
+             * হস্তান্তর (`system_admin.ownership.*`), যেখানে কাজটা দেখতেও বড়।
+             *
+             * ⚠️ যাঁর ইতিমধ্যেই ভূমিকাটা আছে, তাঁর সেটা তালিকায় থাকে —
+             * নাহলে তাঁকে সম্পাদনা করলেই টিকটা খসে যেত, আর মালিক
+             * নীরবে নিজের চাবি হারাতেন।
+             */
+            'roles' => Role::query()
+                ->orderBy('name')
+                ->get()
+                ->unique('name')
+                ->reject(fn (Role $role) => $role->name === PermissionSyncer::SUPER_ADMIN_ROLE
+                    && $user?->hasRole(PermissionSyncer::SUPER_ADMIN_ROLE) !== true)
+                ->values(),
             'companies' => $companies,
 
             /*
