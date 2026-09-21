@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Accounts\Http\Controllers;
 
 use App\Core\Services\MenuBuilder;
+use App\Core\Services\PartyRegistry;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
@@ -13,8 +14,6 @@ use App\Modules\Accounts\Models\AssetTransfer;
 use App\Modules\Accounts\Models\FixedAsset;
 use App\Modules\Accounts\Services\FixedAssetService;
 use App\Modules\Accounts\Services\StandardChart;
-use App\Modules\MasterData\Models\Person;
-use App\Modules\Supplier\Models\Supplier;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -105,10 +104,42 @@ class FixedAssetController extends Controller implements HasMiddleware
              * *"ok tik koro"*। তিনটা তালিকা, কারণ উত্তরটা তিন রকম হতে
              * পারে: কোন মানুষ, কোন খাত, নাকি কোন বিক্রেতা।
              */
-            'people' => Person::query()->active()->orderBy('name_en')->get(),
+            /*
+             * ⭐ পক্ষের তালিকা কোর থেকে — ২১ সেপ্টেম্বর ২০২৬, সীমারেখার নিরীক্ষা।
+             *
+             * ── ⚠️ আগে কী ছিল ───────────────────────────────────────
+             * `MasterData\Models\Person` আর `Supplier\Models\Supplier`
+             * সরাসরি ডাকা হত। ⛔ কিন্তু accounts প্রায় সবার নিচের স্তরে;
+             * ঐ দুইটাই **accounts-এর উপর দাঁড়িয়ে আছে**, তাই নির্ভরতাটা
+             * ঘোষণা করলে চক্র হত আর রেজিস্ট্রি বুট-টাইমেই থামাত।
+             *
+             * ⭐ এখানে কোনো নতুন চুক্তি লাগেনি: কোর আগে থেকেই জানে
+             * "পক্ষ কারা" ([[PartyRegistry]]), আর প্রতিটা মডিউল নিজের
+             * `module.php`-তে `parties` ঘোষণা করে সেটা ভরে দেয়।
+             * ⓘ অর্থাৎ নির্ভরতাটা উল্টাতে হয়নি — **সরানো** গেছে।
+             */
+            'people' => $this->partyList('person'),
             'moneyAccounts' => Account::query()->money()->active()->orderBy('code')->get(),
-            'suppliers' => Supplier::query()->where('is_active', true)->orderBy('name_en')->get(),
+            'suppliers' => $this->partyList('supplier'),
         ]);
+    }
+
+    /**
+     * এক ধরনের পক্ষের তালিকা — `[id => নাম]`।
+     *
+     * ⓘ কোর নিজে কোনো মডিউলের নাম জানে না; ধরনগুলো আসে মডিউলের
+     * ঘোষণা থেকে ([[PartyRegistry::forPicker()]])। ⚠️ ধরনটা না থাকলে
+     * খালি তালিকা — মডিউলটা বন্ধ থাকলে ঘরটা ফাঁকা দেখায়, পাতা ভাঙে না।
+     *
+     * @return array<int, string>
+     */
+    private function partyList(string $type): array
+    {
+        $group = collect(app(PartyRegistry::class)->forPicker())->firstWhere('type', $type);
+
+        return collect($group['options'] ?? [])
+            ->mapWithKeys(fn (array $row) => [$row['id'] => $row['label']])
+            ->all();
     }
 
     public function show(Request $request, FixedAsset $asset): View

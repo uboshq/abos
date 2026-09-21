@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Core\Contracts\KnowsWhereAPersonsMoneyBelongs;
+use App\Core\Contracts\TurnsATypedNameIntoAParty;
 use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Engines\Drill\DrillResolver;
 use App\Core\Services\DataScope;
@@ -10,6 +11,7 @@ use App\Core\Services\FormIsNotSubmittedTwice;
 use App\Core\Services\LedgerBalances;
 use App\Core\Services\ListExport;
 use App\Core\Services\NobodyKnowsWhereTheMoneyBelongs;
+use App\Core\Services\NobodyCanMakeAParty;
 use App\Core\Services\Ownership;
 use App\Core\Services\PermissionOverrides;
 use App\Core\Services\SettingsService;
@@ -119,6 +121,15 @@ class AppServiceProvider extends ServiceProvider
          * ডিফল্ট রাখে ([[App\Core\Contracts\KnowsWhereAPersonsMoneyBelongs]])।
          */
         $this->app->bind(KnowsWhereAPersonsMoneyBelongs::class, NobodyKnowsWhereTheMoneyBelongs::class);
+
+        /*
+         * ⭐ হাতে লেখা নাম থেকে সারি — কেউ না পারলে "পারি না"।
+         *
+         * ⓘ উপরেরটার হুবহু একই কারণ: চুক্তিটা পূরণ করে MasterData, আর
+         * সে বন্ধ থাকলে কনটেইনার ছুঁড়ে ফেলত — তখন ভাউচারের যাচাইই
+         * ভাঙত ([[App\Core\Contracts\TurnsATypedNameIntoAParty]])।
+         */
+        $this->app->bind(TurnsATypedNameIntoAParty::class, NobodyCanMakeAParty::class);
 
         /*
          * রপ্তানির সংগ্রাহক — অনুরোধ প্রতি একটা।

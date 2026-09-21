@@ -167,6 +167,19 @@ return [
         ],
     ],
 
+    /*
+     * ⭐ হাতে লেখা নাম → মানুষের সারি; কথাটা MasterData-রই।
+     *
+     * ⚠️ ২১ সেপ্টেম্বর ২০২৬: আগে Accounts সরাসরি `PersonResolver` ডাকত,
+     * আর তাতে তীরটা উল্টো হত — নিচের `depends_on`-এ লেখা আছে এই মডিউল
+     * accounts চেনে, উল্টোটা নয়। ⛔ ঘোষণা করলে চক্র হত।
+     *
+     * ⓘ এখন কথাটা যার, সে-ই বলে; Accounts কেবল চুক্তিটা চায়।
+     */
+    'bindings' => [
+        \App\Core\Contracts\TurnsATypedNameIntoAParty::class => \App\Modules\MasterData\Services\TypedNamesBecomePeople::class,
+    ],
+
     'permissions' => [
         'master_data.view',
         'master_data.manage',

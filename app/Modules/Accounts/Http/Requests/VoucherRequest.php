@@ -6,13 +6,13 @@ namespace App\Modules\Accounts\Http\Requests;
 
 use App\Core\Services\PartyRegistry;
 use App\Core\Contracts\KnowsWhereAPersonsMoneyBelongs;
+use App\Core\Contracts\TurnsATypedNameIntoAParty;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\Money;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\MoneyCategory;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
-use App\Modules\MasterData\Services\PersonResolver;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -117,16 +117,24 @@ class VoucherRequest extends FormRequest
         $typed = trim((string) $this->input('party_new', ''));
 
         if ($typed !== '' && (int) $this->input('party_id', 0) <= 0) {
-            $fields = [
-                'person_new' => $typed,
-                'person_mobile' => (string) $this->input('party_mobile', ''),
-            ];
+            /*
+             * ⭐ চুক্তিটা জিজ্ঞেস করা হয়, মডিউলটা নয় — ২১ সেপ্টেম্বর ২০২৬।
+             *
+             * ⚠️ আগে সরাসরি `MasterData\Services\PersonResolver` ডাকা হত।
+             * ⛔ কিন্তু MasterData নিজেই accounts-এর উপর দাঁড়িয়ে, তাই
+             * নির্ভরতাটা ঘোষণা করলে চক্র হত আর রেজিস্ট্রি বুট-টাইমেই
+             * থামাত ([[TurnsATypedNameIntoAParty]])।
+             *
+             * ⓘ কেউ চুক্তিটা না মেটালে উত্তর `null` — হাতে লেখা নামটা
+             * সারি হয় না, কিন্তু যাচাই ভাঙে না।
+             */
+            $parties = app(TurnsATypedNameIntoAParty::class);
 
-            $personId = app(PersonResolver::class)->resolve($fields);
+            $personId = $parties->fromTypedName($typed, (string) $this->input('party_mobile', ''));
 
             if ($personId !== null) {
                 $this->merge([
-                    'party_type' => 'person',
+                    'party_type' => $parties->partyType(),
                     'party_id' => $personId,
                 ]);
             }

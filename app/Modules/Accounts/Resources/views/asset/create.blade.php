@@ -156,8 +156,10 @@
                             class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border)
                                    bg-(--color-surface-app) px-2">
                         <option value="">—</option>
-                        @foreach ($people as $person)
-                            <option value="{{ $person->id }}" @selected(old('funding_person_id') == $person->id)>{{ $person->name() }}</option>
+                        {{-- ⓘ তালিকাটা এখন কোর থেকে আসে (`[id => নাম]`), মডিউলের
+                             মডেল থেকে নয় — সীমারেখার কারণ কন্ট্রোলারে লেখা। --}}
+                        @foreach ($people as $id => $name)
+                            <option value="{{ $id }}" @selected(old('funding_person_id') == $id)>{{ $name }}</option>
                         @endforeach
                     </select>
                 </label>
@@ -180,8 +182,8 @@
                             class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border)
                                    bg-(--color-surface-app) px-2">
                         <option value="">—</option>
-                        @foreach ($suppliers as $supplier)
-                            <option value="{{ $supplier->id }}" @selected(old('funding_supplier_id') == $supplier->id)>{{ $supplier->name() }}</option>
+                        @foreach ($suppliers as $id => $name)
+                            <option value="{{ $id }}" @selected(old('funding_supplier_id') == $id)>{{ $name }}</option>
                         @endforeach
                     </select>
                 </label>
