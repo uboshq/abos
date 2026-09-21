@@ -17,7 +17,7 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('finance::menu.deposits_all') }}</x-slot:title>
 
-    <div class="shell py-6">
+    <div class="py-6">
         <x-ui.page-header :title="__('finance::menu.deposits_all')"
                           :subtitle="__('finance::message.deposits_all_hint')" />
 

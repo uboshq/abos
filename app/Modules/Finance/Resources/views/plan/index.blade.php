@@ -77,7 +77,7 @@
         </section>
     </div>
 
-    <div class="grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
+    <div class="grid gap-3 lg:grid-cols-2">
         @foreach ($sections as $section)
             @php
                 $done = collect($section['items'])

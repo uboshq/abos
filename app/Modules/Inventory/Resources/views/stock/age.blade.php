@@ -8,7 +8,7 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('inventory::analysis.age_title') }}</x-slot:title>
 
-    <div class="shell py-6">
+    <div class="py-6">
         <h1 class="text-xl font-bold text-(--color-ink)">{{ __('inventory::analysis.age_title') }}</h1>
         <p class="mt-1 text-sm text-(--color-ink-muted)">{{ __('inventory::analysis.age_note') }}</p>
 
