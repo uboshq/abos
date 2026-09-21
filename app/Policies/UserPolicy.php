@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\SystemAdmin\Policies;
+namespace App\Policies;
 
 use App\Core\Services\PermissionSyncer;
 use App\Models\User;
@@ -11,6 +11,29 @@ use Spatie\Permission\Models\Role;
 
 /**
  * একজন ব্যবহারকারীকে কে বদলাতে পারে, আর কাকে কোন ভূমিকা দিতে পারে।
+ *
+ * ── ⭐ কেন ফাইলটা কোরে, SystemAdmin-এ নয় (২১ সেপ্টেম্বর ২০২৬) ────────
+ * ⓘ এটা এতদিন `Modules\SystemAdmin\Policies`-এ ছিল, আর তাতে **কোর
+ * একটা মডিউলের নাম জানত** — সীমারেখার শেষ লঙ্ঘনটা ছিল ঠিক এই লাইনটাই।
+ *
+ * ⚠️ কিন্তু এই শ্রেণি SystemAdmin-এর কিছুই ব্যবহার করে না: চারটা
+ * নির্ভরতাই কোর বা vendor ([[PermissionSyncer]], [[User]],
+ * [[UserPermissionOverride]], Spatie-র `Role`)। ⓘ মডেলটা কোরের,
+ * নিয়মগুলোও কোরের জিনিস দিয়ে লেখা — তাই পলিসিটাও কোরের।
+ *
+ * ⛔ বিকল্প ছিল `module.php`-তে একটা `policies` ঘর বানানো, আর সেটা
+ * **খারাপ** হত: তাতে যেকোনো মডিউল কোরের মডেলের উপর পলিসি দাবি করার
+ * দরজা পেত। একটা তীর সারাতে গিয়ে নয়টার সমান একটা গর্ত।
+ *
+ * ── ⚠️ ফাইলটা এখান থেকে সরালে যা হয় ──────────────────
+ * ⓘ `app/Policies` কেবল একটা সুন্দর ঠিকানা নয় — Laravel ঠিক
+ * ওখানেই নিজে থেকে খোঁজে (`App\Models\User` →
+ * `App\Policies\UserPolicy`)।
+ *
+ * ⛔ অর্থাৎ নিয়মগুলো দরজায় পৌঁছায় দুই সুতোয়: এই ঠিকানা,
+ * আর AppServiceProvider-এর স্পষ্ট `Gate::policy()`। দুইটাই
+ * ছিঁড়লে পাহারাটা **নীরবে** উবে যায় — তাই
+ * [[EveryPolicyRuleIsActuallyReachedTest]] ফলটা মাপে।
  *
  * ── ⛔ নিরীক্ষার ফলাফল ৩.৪, ১২ সেপ্টেম্বর ২০২৬ ─────────────────────────
  * *"SystemAdmin-এ রেকর্ড-স্তরের পলিসি নেই।"* ⓘ মিডলওয়্যার বলত "আপনি

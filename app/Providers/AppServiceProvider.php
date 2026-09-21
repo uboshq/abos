@@ -10,8 +10,8 @@ use App\Core\Services\DataScope;
 use App\Core\Services\FormIsNotSubmittedTwice;
 use App\Core\Services\LedgerBalances;
 use App\Core\Services\ListExport;
-use App\Core\Services\NobodyKnowsWhereTheMoneyBelongs;
 use App\Core\Services\NobodyCanMakeAParty;
+use App\Core\Services\NobodyKnowsWhereTheMoneyBelongs;
 use App\Core\Services\Ownership;
 use App\Core\Services\PermissionOverrides;
 use App\Core\Services\SettingsService;
@@ -20,7 +20,7 @@ use App\Core\Support\AlpineLiteral;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\Csp;
 use App\Models\User;
-use App\Modules\SystemAdmin\Policies\UserPolicy;
+use App\Policies\UserPolicy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Blade;
@@ -84,10 +84,29 @@ class AppServiceProvider extends ServiceProvider
         });
 
         /*
-         * ⓘ ব্যবহারকারীর পলিসি নিজে খুঁজে পাওয়া যায় না: মডেলটা কোরে
-         * (`App\Models\User`), আর Laravel পলিসি খোঁজে মডেলের পাশের
-         * `Policies`-এ। নিয়মগুলো SystemAdmin-এর, তাই পলিসিও সেখানে —
-         * কেবল জোড়াটা এখানে বাঁধা। বিস্তার [[UserPolicy]]-তে।
+         * ⭐ ব্যবহারকারীর মডেল কোন নীতিতে পৌঁছাবে — ২১ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⓘ লাইনটা কি দরকার? মেপে দেখা হয়েছে ──────────────────────
+         * ⚠️ আজকের আগ পর্যন্ত এখানে লেখা ছিল *"পলিসি নিজে খুঁজে পাওয়া
+         * যায় না"* — আর ঐ কথাটা তখন **সত্যি ছিল**: ফাইলটা ছিল
+         * `Modules\SystemAdmin\Policies`-এ, ওখানে Laravel তাকায় না।
+         *
+         * ⓘ আজ ফাইলটা `app/Policies`-এ সরেছে (কারণ [[UserPolicy]]-র
+         * মাথায়), আর Laravel ঠিক ওখানেই নিজে থেকে খোঁজে:
+         * `App\Models\User` → `App\Policies\UserPolicy`। অর্থাৎ এই
+         * লাইনটা এখন **আর একমাত্র সুতো নয়**।
+         *
+         * ── ⛔ তবু লাইনটা রাখা হলো, আর এটাই ভাবনার জায়গা ─────────────
+         * abos-8b বলেছিলেন সরানোর পর ইচ্ছা করে ভেঙে দেখতে। ভাঙা হলো —
+         * আর কিছুই লাল হলো না, কারণ অনুমানটা ধরে ফেলল। ⚠️ তাতে একটা
+         * ফাঁদ তৈরি হয়: কেউ *"লাইনটা তো অকেজো"* ভেবে মুছে দিতে পারেন,
+         * তারপর কেউ ফাইলটা আবার সরালে **নীরবে** রেকর্ড-স্তরের পাহারাটা
+         * উবে যায় আর কোনো পরীক্ষা কিছু বলে না।
+         *
+         * ⭐ তাই সুতো দুইটাই রাখা, আর যা মাপা হয় সেটা সুতো নয় — ফল:
+         * [[EveryPolicyRuleIsActuallyReachedTest]]::test_the_gate_really_
+         * reaches_the_user_policy() জিজ্ঞেস করে দরজা সত্যিই কোথায়
+         * পৌঁছায়। দুইটাই ছিঁড়লে সেটা লাল হয়, কারণসহ।
          */
         Gate::policy(User::class, UserPolicy::class);
 

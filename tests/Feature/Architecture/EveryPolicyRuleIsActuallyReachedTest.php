@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Architecture;
 
+use App\Models\User;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 use ReflectionClass;
 use ReflectionMethod;
@@ -88,7 +90,7 @@ class EveryPolicyRuleIsActuallyReachedTest extends TestCase
          */
         'EmployeePolicy' => 'EmployeeController:131,147,158,170 — authorize() ধরে, রুট ধরে নয়',
         'PayslipPolicy' => 'PayslipPrintController:49 — পাতাটা যায় তার রানের শাখা ধরে',
-        'UserPolicy' => 'UserController:177,192 — আর জোড়াটা AppServiceProvider-এ Gate::policy() দিয়ে',
+        'UserPolicy' => 'UserController:177,192 — আর জোড়াটা দুই সুতোয়, test_the_gate_really_reaches_the_user_policy() দেখুন',
     ];
 
     /**
@@ -188,6 +190,62 @@ class EveryPolicyRuleIsActuallyReachedTest extends TestCase
             '',
             'কন্ট্রোলারটা সম্ভবত resourcePermissions() ব্যবহার করে না,',
             'অথবা মডেলের নাম আর নীতির নাম আর মেলে না।',
+        ]));
+    }
+
+    /**
+     * ⭐ ব্যবহারকারীর নীতিটা সত্যিই দরজায় বসানো আছে।
+     *
+     * ── ⚠️ কেন এই একটা নীতির জন্য আলাদা পরীক্ষা, ২১ সেপ্টেম্বর ২০২৬ ──
+     * abos-8b বলেছিলেন: *"সরানোর পর ইচ্ছা করে ভাঙুন — `Gate::policy()`
+     * লাইনটা মন্তব্য করে দেখুন [[TheUserAdminCouldTakeTheOwnersKeyTest]]
+     * লাল হয়। না হলে পলিসিটা আসলে কেউ ডাকছে না, আর তখন সেটাই বড় খবর।"*
+     *
+     * ⓘ ভাঙা হলো, আর **লাল হলো না** — কিন্তু কারণটা ভয়ের নয়, উল্টোটা:
+     * ফাইলটা আজ `app/Policies/UserPolicy.php`-এ সরেছে, আর ঠিক ওখানেই
+     * Laravel নিজে থেকে খোঁজে (`App\Models\User` → `App\Policies\UserPolicy`)।
+     * অর্থাৎ জোড়াটা এখন **দুই সুতোয়** ঝুলছে: স্পষ্ট `Gate::policy()`
+     * আর Laravel-এর নিজের অনুমান।
+     *
+     * ⛔ আর সেখানেই ফাঁদ: দুইটা সুতোর যেকোনো একটা ছিঁড়লে কিছুই লাল হয়
+     * না, তাই কেউ *"লাইনটা তো অকেজো"* ভেবে মুছে দিতে পারেন, আর পরে কেউ
+     * ফাইলটা আবার মডিউলে ফেরত নিলে **নীরবে** সব দরজা খুলে যায় —
+     * নীতি না থাকলে Laravel প্রশ্নটা কন্ট্রোলারের অনুমতির চাবির হাতে
+     * ছেড়ে দেয়, আর রেকর্ড-স্তরের পাহারাটা আর থাকে না।
+     *
+     * ⭐ তাই সুতোদুটো নয়, **ফলটা** মাপা হয়: দরজা সত্যিই কোন নীতিতে
+     * পৌঁছায়। দুইটাই ছিঁড়লে এই পরীক্ষাটা লাল হয়।
+     */
+    public function test_the_gate_really_reaches_the_user_policy(): void
+    {
+        $reached = Gate::getPolicyFor(User::class);
+
+        /*
+         * ⚠️ `assertInstanceOf(UserPolicy::class, …)` লেখা হয়নি ইচ্ছা করে।
+         *
+         * ⓘ মেপে দেখা গেল: ফাইলটা সরিয়ে ফেললে ঐ লাইনটা *"Class does not
+         * exist"* বলে **থেমে** যায়, আর নিচের কথাগুলো কেউ পড়েই না। ⛔
+         * অর্থাৎ ঠিক যে অবস্থাটা সবচেয়ে বিপজ্জনক, সেটাতেই বার্তাটা
+         * হারিয়ে যেত। তাই শ্রেণিটা নাম ধরে ছোঁয়া হয় না।
+         */
+        $this->assertNotNull($reached, implode(PHP_EOL, [
+            'ব্যবহারকারীর মডেলের জন্য দরজা কোনো নীতিতেই পৌঁছাচ্ছে না।',
+            '',
+            'মানে কে কার খাতা বদলাতে পারেন সেই সিদ্ধান্তটা আর কোথাও নেওয়া',
+            'হচ্ছে না — ব্যবহারকারী-প্রশাসক আবার মালিকের ইমেইল আর পাসওয়ার্ড',
+            'বদলাতে পারেন, তারপর মালিক হয়ে ঢুকতে পারেন।',
+            '(দেখুন TheUserAdminCouldTakeTheOwnersKeyTest)',
+            '',
+            'হয় AppServiceProvider-এ Gate::policy(User::class, UserPolicy::class)',
+            'ফিরিয়ে আনুন, নয় ফাইলটা app/Policies-এ রাখুন — Laravel ওখানেই',
+            'নিজে থেকে খোঁজে।',
+        ]));
+
+        $this->assertSame('UserPolicy', class_basename($reached), implode(PHP_EOL, [
+            'দরজাটা পৌঁছাচ্ছে, কিন্তু অন্য একটা নীতিতে: '.$reached::class,
+            '',
+            'অর্থাৎ কারও নতুন নীতি ব্যবহারকারীর মডেল দখল করে নিয়েছে, আর',
+            'উপরের নিয়মগুলো আর চলছে না।',
         ]));
     }
 
