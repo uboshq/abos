@@ -79,8 +79,22 @@ class RentalContractController extends Controller implements HasMiddleware
              */
             new Middleware('can:finance.rental.view', only: ['index', 'show']),
             // ⓘ `create` — নতুন চুক্তির নিজের পাতা (১৯ সেপ্টেম্বর ২০২৬), একই চাবি
+            /*
+             * ⛔ `storePerson` এখানে ছিল না — ২১ সেপ্টেম্বর ২০২৬।
+             *
+             * ⚠️ ট্যাব থেকে বাড়িওয়ালা তৈরির পথটা আজ রাতেই বসানো হয়েছে,
+             * আর ছাঁচটা নেওয়া হয়েছে [[HandLoanController]] থেকে — যেখানে
+             * `storePerson` তালিকায় **আছে**। ⓘ এখানে একটা শব্দ বাদ পড়েছে,
+             * আর তাতে রুটটা পাহারার বাইরে থেকে গিয়েছিল: **লগইন করা যে
+             * কেউ** খাতায় নতুন পক্ষ বসাতে পারতেন।
+             *
+             * ⭐ ধরেছে [[EveryRouteIsGuardedTest]], ডিপ্লয়ের ঠিক আগে —
+             * আর ওটা চালানোই হয়েছে কারণ আজ রাতে টাকার সুটটা গেট হিসেবে
+             * নেওয়া হয়েছে। ⚠️ আগের চালে গেটটা ছিল না, তাই রুটটা কয়েক
+             * ঘণ্টা লাইভে ছিল।
+             */
             new Middleware('can:finance.rental.create', only: [
-                'create', 'store', 'adjust', 'revise', 'topUp',
+                'create', 'store', 'storePerson', 'adjust', 'revise', 'topUp',
             ]),
 
             /*
