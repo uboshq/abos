@@ -289,7 +289,7 @@
                 @if ($facility->closed_on === null)
                     <form method="POST" action="{{ route('finance.bank_facility.close', $facility) }}"
                           class="mt-4"
-                          onsubmit="return confirm('{{ __('finance::message.facility_close_confirm') }}')">
+                          data-confirm="{{ __('finance::message.facility_close_confirm') }}">
                         @csrf
                         <x-ui.button type="submit" tone="secondary">
                             {{ __('finance::action.close_facility') }}

@@ -55,7 +55,7 @@
                         {{ __('core.look.import') }}
 
                         <input type="file" name="file" accept=".json,application/json" required
-                               onchange="this.form.submit()" class="sr-only">
+                               data-action="submit-form" class="sr-only">
                     </label>
                 </form>
 

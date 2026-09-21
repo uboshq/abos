@@ -211,7 +211,7 @@
                     @push('detached-forms')
                         <form id="view-destroy-{{ $view->id }}" method="POST"
                               action="{{ route('views.destroy', $view) }}" class="hidden"
-                              onsubmit="return confirm('{{ __('core.view.confirm_remove', ['name' => $view->name]) }}')">
+                              data-confirm="{{ __('core.view.confirm_remove', ['name' => $view->name]) }}">
                             @csrf
                             @method('DELETE')
                         </form>

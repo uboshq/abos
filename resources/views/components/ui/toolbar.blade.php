@@ -485,7 +485,7 @@
                  খাটে: খোঁজা → Sort → সরঞ্জাম। --}}
             <label class="order-3 flex items-center gap-2 text-sm">
                 <span class="whitespace-nowrap text-(--color-ink-muted)">{{ __('core.toolbar.sort_by') }}</span>
-                <select name="sort" onchange="this.form.submit()"
+                <select name="sort" data-action="submit-form"
                         class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
                                bg-(--color-surface-app) px-2 text-sm">
                     @foreach ($sort as $value => $label)
@@ -699,7 +699,7 @@
                              তাই পাহারাটা টিকিয়ে রাখতে হলে দুটোই দরকার।
                              লেবেল আর লেখা হুবহু এক রাখা হয়েছে: আলাদা হলে
                              স্ক্রিন রিডার একটা শুনত আর চোখে দেখা যেত অন্যটা। --}}
-                        <button type="button" onclick="window.print()"
+                        <button type="button" data-action="print"
                                 aria-label="{{ __('core.toolbar.export_pdf') }}"
                                 class="block w-full px-3 py-2 text-start text-sm hover:bg-(--color-surface-hover)">
                             {{ __('core.toolbar.export_pdf') }}
@@ -761,7 +761,7 @@
                 {{-- ছাপা ব্রাউজারেরই কাজ; আলাদা রুট বানানো মানে একই টেবিল
                      দ্বিতীয়বার তৈরি করা, আর দুইটার একটা পরে ঠিক করতে
                      ভুলে যাওয়া। ছাপার নিজস্ব CSS আছে। --}}
-                <button type="button" onclick="window.print()"
+                <button type="button" data-action="print"
                         aria-label="{{ __('core.action.print') }}"
                         class="flex min-h-(--spacing-touch) items-center gap-1.5 rounded-(--radius-field) px-2
                                text-sm text-(--color-ink-muted) transition-colors

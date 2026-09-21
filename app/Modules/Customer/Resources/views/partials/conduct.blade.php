@@ -74,7 +74,7 @@
                     @can('customer.conduct.manage')
                         <form method="POST" action="{{ route('customer.conduct.retire', $note) }}"
                               class="ms-auto"
-                              onsubmit="return confirm('{{ __('customer::conduct.was_retired') }}')">
+                              data-confirm="{{ __('customer::conduct.was_retired') }}">
                             @csrf
                             <button type="submit"
                                     class="text-2xs text-(--color-ink-muted) underline hover:text-(--color-ink)">

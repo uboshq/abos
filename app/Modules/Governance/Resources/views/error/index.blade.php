@@ -86,7 +86,7 @@
                           :export="false" :search="false">
                 <label class="flex items-center gap-1.5 text-sm">
                     <input type="checkbox" name="only" value="all" @checked(request('only') === 'all')
-                           onchange="this.form.submit()">
+                           data-action="submit-form">
                     {{ __('governance::action.show_seen_too') }}
                 </label>
             </x-ui.toolbar>

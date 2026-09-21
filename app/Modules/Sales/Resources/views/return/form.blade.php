@@ -109,9 +109,7 @@
                 <x-ui.select name="sales_invoice_id" :label="__('sales::field.invoice')"
                              :options="$invoices->mapWithKeys(fn ($i) => [$i->id => $i->document_no.' — '.$i->customer?->name()])"
                              :selected="$invoice?->id ?? $return->sales_invoice_id" placeholder="-"
-                             onchange="if (this.value) {
-                                 window.location = '{{ route('sales.return.create') }}?sales_invoice_id=' + this.value;
-                             }" />
+                             data-go-to="{{ route('sales.return.create') }}" data-go-param="sales_invoice_id" />
 
                 <x-ui.select name="reason_code_id" :label="__('sales::field.reason')"
                              :options="$reasons->mapWithKeys(fn ($r) => [$r->id => $r->name()])"

@@ -29,7 +29,7 @@
                 @can('delete', $till)
                     @if ($till->is_active)
                         <form method="POST" action="{{ route('accounts.till.destroy', $till) }}"
-                              onsubmit="return confirm('{{ __('accounts::message.close_till_confirm') }}')">
+                              data-confirm="{{ __('accounts::message.close_till_confirm') }}">
                             @csrf
                             @method('DELETE')
                             <x-ui.button type="submit" tone="secondary">

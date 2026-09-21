@@ -82,7 +82,7 @@
         @method($method)
 
         <button type="submit"
-                @if ($confirm) onclick="return confirm('{{ $confirm }}')" @endif
+                @if ($confirm) data-confirm="{{ $confirm }}" @endif
                 data-state-pill {{ $attributes->merge(['class' => $pill.' cursor-pointer transition-opacity hover:opacity-85']) }}
                 style="{{ $skin }} font-size: {{ $font }}">
             @if ($active)

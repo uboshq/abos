@@ -79,7 +79,7 @@
                      ঘনত্ব আর রিফ্রেশেও জমা পড়ে, আর "0" গেলে টুলবার সেটাকে
                      চালু ছাঁকনি ভেবে একটা অর্থহীন চিপ আঁকত। কন্ট্রোলার
                      খালিকে শূন্যই পড়ে। --}}
-                <select id="person" name="person" onchange="this.form.submit()"
+                <select id="person" name="person" data-action="submit-form"
                         class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
                                bg-(--color-surface-app) px-2 text-sm">
                     <option value="">{{ __('approval::field.my_inbox') }}</option>

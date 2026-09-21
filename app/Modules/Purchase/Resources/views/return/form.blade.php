@@ -88,9 +88,7 @@
                                   ফর্মে কোনো x-data নেই, তাই Alpine
                                   অ্যাট্রিবিউটটা পড়তই না আর বিল বাছলে
                                   কিচ্ছু হত না। বিক্রয় ফেরতেও একই ভুল ছিল। --}}
-                             onchange="if (this.value) {
-                                 window.location = '{{ route('purchase.return.create') }}?purchase_bill_id=' + this.value;
-                             }" />
+                             data-go-to="{{ route('purchase.return.create') }}" data-go-param="purchase_bill_id" />
 
                 {{-- কারণটা ঐচ্ছিক নয় বলা যায় না — পুরনো মাল ফেরত এলে
                      কারণ জানা না-ও থাকতে পারে। কিন্তু থাকলে রিপোর্টে

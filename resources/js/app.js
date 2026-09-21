@@ -1,4 +1,5 @@
 import Alpine from '@alpinejs/csp'
+import { wireActions } from './components/actions.js'
 import { reprice } from './pricing.js'
 import { abosDate } from './date.js'
 import { listKeys } from './list-keys.js'
@@ -125,6 +126,12 @@ listKeys()
  * ⓘ এটা না থাকায় মেনুটা কোনো তালিকাতেই কিছু লুকাত না; কারণ `columns.js`-এ।
  */
 listenForColumnChoice()
+
+/*
+ * ⛔ ছাপা ও "বদলালেই জমা" — CSP ইনলাইন হ্যান্ডলার চালাতে দেয় না।
+ * ⓘ কারণটা [[actions.js]]-এ; মালিকের "print buton kaj kore na"।
+ */
+wireActions()
 
 /*
  * ⛔ একটা ফর্ম একবারই জমা — প্রথম স্তর, ১৩ সেপ্টেম্বর ২০২৬।

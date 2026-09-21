@@ -23,7 +23,7 @@
                 @can('delete', $account)
                     @if ($account->is_active)
                         <form method="POST" action="{{ route('accounts.coa.destroy', $account) }}"
-                              onsubmit="return confirm('{{ __('accounts::message.deactivate_confirm') }}')">
+                              data-confirm="{{ __('accounts::message.deactivate_confirm') }}">
                             @csrf
                             @method('DELETE')
                             <x-ui.button type="submit" tone="secondary">

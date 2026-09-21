@@ -18,7 +18,7 @@
 
                     @if ($location->is_active)
                         <form method="POST" action="{{ route('master_data.location.destroy', $location) }}"
-                              onsubmit="return confirm('{{ __('master_data::message.deactivate_confirm') }}')">
+                              data-confirm="{{ __('master_data::message.deactivate_confirm') }}">
                             @csrf
                             @method('DELETE')
                             <x-ui.button type="submit" tone="secondary">

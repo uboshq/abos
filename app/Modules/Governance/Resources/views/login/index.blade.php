@@ -90,7 +90,7 @@
 
                 <label class="flex items-center gap-1.5 text-sm">
                     <input type="checkbox" name="only" value="failed" @checked(request('only') === 'failed')
-                           onchange="this.form.submit()">
+                           data-action="submit-form">
                     {{ __('governance::action.only_failed') }}
                 </label>
 

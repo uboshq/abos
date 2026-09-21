@@ -151,7 +151,7 @@
 
                     @if ($user->avatarUrl())
                         <form method="POST" action="{{ route('profile.avatar.remove') }}"
-                              onsubmit="return confirm('{{ __('core.profile.remove_confirm') }}')">
+                              data-confirm="{{ __('core.profile.remove_confirm') }}">
                             @csrf
                             @method('DELETE')
                             <x-ui.button type="submit" tone="secondary">

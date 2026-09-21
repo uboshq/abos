@@ -23,7 +23,7 @@
                               'date' => \App\Core\Support\DateFormat::format($sheet['as_of']),
                           ])">
             <x-slot:actions>
-                <x-ui.button tone="secondary" icon="print" onclick="window.print()">
+                <x-ui.button tone="secondary" icon="print" data-action="print">
                     {{ __('core.action.print') }}
                 </x-ui.button>
             </x-slot:actions>

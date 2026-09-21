@@ -24,7 +24,7 @@
                 @can('delete', $supplier)
                     @if ($supplier->is_active)
                         <form method="POST" action="{{ route('supplier.destroy', $supplier) }}"
-                              onsubmit="return confirm('{{ __('supplier::message.deactivate_confirm') }}')">
+                              data-confirm="{{ __('supplier::message.deactivate_confirm') }}">
                             @csrf
                             @method('DELETE')
                             <x-ui.button type="submit" tone="secondary">

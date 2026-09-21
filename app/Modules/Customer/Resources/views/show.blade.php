@@ -21,7 +21,7 @@
                 @can('delete', $customer)
                     @if ($customer->is_active)
                         <form method="POST" action="{{ route('customer.destroy', $customer) }}"
-                              onsubmit="return confirm('{{ __('customer::message.deactivate_confirm') }}')">
+                              data-confirm="{{ __('customer::message.deactivate_confirm') }}">
                             @csrf
                             @method('DELETE')
                             <x-ui.button type="submit" tone="secondary">
@@ -216,7 +216,7 @@
 
                 @if ($customer->portal_enabled)
                     <form method="POST" action="{{ route('customer.portal.destroy', $customer) }}"
-                          onsubmit="return confirm('{{ __('customer::message.portal_disable_confirm') }}')"
+                          data-confirm="{{ __('customer::message.portal_disable_confirm') }}"
                           class="flex items-end">
                         @csrf
                         @method('DELETE')

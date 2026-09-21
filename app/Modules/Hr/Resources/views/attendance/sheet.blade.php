@@ -33,7 +33,7 @@
             <span class="mb-1 block text-2xs font-semibold uppercase tracking-wide
                          text-(--color-ink-muted)">{{ __('hr::field.month') }}</span>
             <input type="month" name="month" value="{{ $month->format('Y-m') }}"
-                   onchange="this.form.submit()"
+                   data-action="submit-form"
                    class="rounded-(--radius-field) border border-(--color-border)
                           bg-(--color-surface-app) px-2 py-1.5 text-sm">
         </label>

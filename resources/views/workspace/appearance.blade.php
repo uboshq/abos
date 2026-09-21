@@ -181,7 +181,7 @@
                         <input type="radio" name="accent" value="{{ $key }}"
                                @checked($key === $current['accent'])
                                class="sr-only"
-                               onchange="this.form.requestSubmit()">
+                               data-action="submit-form">
 
                         <span class="size-5 shrink-0 rounded-full ring-1 ring-black/10"
                               style="background: {{ $accent['swatch'] }}" aria-hidden="true"></span>
@@ -215,7 +215,7 @@
                         <input type="radio" name="theme" value="{{ $theme }}"
                                @checked($theme === $current['theme'])
                                class="sr-only"
-                               onchange="this.form.requestSubmit()">
+                               data-action="submit-form">
                         <span class="text-sm">{{ __('core.appearance.' . $theme) }}</span>
                     </label>
                 @endforeach
@@ -239,7 +239,7 @@
                         <input type="radio" name="locale" value="{{ $code }}"
                                @checked($code === $current['locale'])
                                class="sr-only"
-                               onchange="this.form.requestSubmit()">
+                               data-action="submit-form">
                         <span class="text-sm">{{ $label }}</span>
                     </label>
                 @endforeach

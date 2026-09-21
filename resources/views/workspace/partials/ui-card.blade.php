@@ -75,7 +75,7 @@
         submit ঘটনা দুইটাই মানে।
     --}}
     <input type="radio" name="ui" value="{{ $key }}" @checked($selected) class="sr-only"
-           onchange="this.form.requestSubmit()">
+           data-action="submit-form">
 
     {{--
         নমুনাটা — রং, ঘনত্ব, **আর মেনু কোথায়**।
