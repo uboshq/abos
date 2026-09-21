@@ -6,7 +6,9 @@ namespace App\Modules\Accounts\Services;
 
 use App\Core\Engines\Approval\ApprovalEngine;
 use App\Models\Approval;
+use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Accounts\Models\VoucherLine;
 
 /**
  * ভাউচার পোস্ট করার আগে অনুমোদন লাগে কি না।
@@ -64,10 +66,35 @@ final class VoucherApproval
          * ⓘ *"কাউন্টারের জন্য আলাদা নিয়ম, বাকিগুলো আলাদা।"* ⚠️ না করলে
          * কাউন্টারে সই চাইতে গিয়ে হিসাবের প্রতিটা হাতে লেখা রসিদ আটকাত।
          */
+        /*
+         * ⭐ নিজের বাক্সে নগদ — সই লাগে না, ২১ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⓘ মালিকের নিয়ম ─────────────────────────────────────────
+         * *"bank mfs e gele approval e asbe, cash e sudu tar nijer cash
+         * accounts e taka nite parbe tai app er dorkar nai — din sese
+         * emnite tar kachtekei buje nibe"*।
+         *
+         * ── ⚠️ ছাড়টা একা দাঁড়ায় না ────────────────────────────────
+         * এর শর্ত [[VoucherService::assertCashLandsInOwnTill()]]: নগদ
+         * কেবল **নিজের নামে বসা বাক্সেই** যেতে পারে। ⛔ ঐ সীমা ছাড়া
+         * এই ছাড়টা মানে যে কেউ যেকোনো ক্যাশ খাতে টাকা বসিয়ে দিতে
+         * পারত, আর দিন শেষে মেলানোর সময় ধরাই পড়ত না।
+         *
+         * ⓘ তাই দুইটা একসাথে পড়তে হয়: সীমাটা আগে বসেছে, ছাড়টা পরে।
+         *
+         * ── ⓘ কেবল রসিদ, আর কেবল নগদ ─────────────────────────────
+         * ⚠️ পরিশোধে (টাকা বেরোনো) ছাড় নেই — নিজের বাক্স থেকে টাকা
+         * বের করা আর নিজের বাক্সে টাকা নেওয়া এক ঝুঁকি নয়।
+         * ⛔ ব্যাংক ও MFS-এ টাকা প্রতিষ্ঠানের খাতে যায়, তাই সেখানে
+         * সই আগের মতোই লাগে।
+         */
+        if ($voucher->type === Voucher::RECEIPT && $this->landsInCash($voucher)) {
+            return null;
+        }
+
         $action = match (true) {
             // ⓘ ২০ সেপ্টেম্বর: ক্রয়ের কাউন্টারের পরিশোধও কাউন্টারের নিজের ছকে
-            $voucher->origin === Voucher::ORIGIN_COUNTER && $voucher->type === Voucher::PAYMENT
-                => self::COUNTER_PAYMENT,
+            $voucher->origin === Voucher::ORIGIN_COUNTER && $voucher->type === Voucher::PAYMENT => self::COUNTER_PAYMENT,
 
             $voucher->origin === Voucher::ORIGIN_COUNTER => self::COUNTER_DEPOSIT,
 
@@ -156,5 +183,20 @@ final class VoucherApproval
         }
 
         return $voucher->updated_at->greaterThan($approval->decided_at);
+    }
+
+    /**
+     * টাকাটা কি নগদে নামছে?
+     *
+     * ⓘ সারিগুলো দেখা হয়, হেডারের `money_account_id` নয় — ওটা বসে
+     * পোস্ট করার **সময়**, আর অনুমোদনের প্রশ্নটা তারও আগে ওঠে।
+     * ⚠️ হেডার দেখলে উত্তরটা সবসময় "না" আসত, আর ছাড়টা কোনোদিন
+     * খাটত না।
+     */
+    private function landsInCash(Voucher $voucher): bool
+    {
+        return $voucher->lines
+            ->map(fn (VoucherLine $line) => $line->account)
+            ->contains(fn (?Account $a) => $a !== null && $a->isCash());
     }
 }

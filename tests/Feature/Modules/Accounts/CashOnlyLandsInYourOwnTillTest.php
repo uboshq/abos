@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace Tests\Feature\Modules\Accounts;
 
 use App\Core\Support\CompanyContext;
+use App\Models\ApprovalFlow;
+use App\Models\ApprovalFlowStep;
 use App\Models\Company;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Accounts\Services\VoucherApproval;
 use App\Modules\Accounts\Services\VoucherService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -55,6 +58,31 @@ final class CashOnlyLandsInYourOwnTillTest extends TestCase
 
         $this->user = User::query()->where('email', 'owner@abos.test')->firstOrFail();
         $this->actingAs($this->user);
+
+        /*
+         * ⛔ ছকটা পরীক্ষা নিজেই বানায়, আর এটাই এই ফাইলের সবচেয়ে দামি লাইন।
+         *
+         * ⚠️ প্রথমে ছক ছাড়াই দাবিগুলো লেখা হয়েছিল, আর সেগুলো **ছাড়
+         * বন্ধ করে দিলেও সবুজ থাকত**: ছক না থাকলে কিছুই আটকায় না, তাই
+         * `stopping()` এমনিতেই `null` ফেরাত।
+         *
+         * ⓘ অর্থাৎ দাবিটা "নগদে সই লাগে না" প্রমাণ করত না — প্রমাণ করত
+         * "এই ডেটাবেসে কোনো অনুমোদনই নেই"। ⭐ লাইভে ছকটা **চালু আছে**
+         * (accounts/receipt), তাই পরীক্ষাটাও সেই অবস্থাতেই চলা উচিত।
+         */
+        $flow = ApprovalFlow::create([
+            'company_id' => $this->company->id,
+            'module' => 'accounts',
+            'action' => 'receipt',
+            'is_active' => true,
+        ]);
+
+        ApprovalFlowStep::create([
+            'approval_flow_id' => $flow->id,
+            'level' => 1,
+            'approver_type' => 'user',
+            'approver_id' => $this->user->id,
+        ]);
     }
 
     public function test_cash_into_my_own_till_is_allowed(): void
@@ -122,6 +150,48 @@ final class CashOnlyLandsInYourOwnTillTest extends TestCase
         $voucher = $this->receiptInto($bank, '500');
 
         $this->assertNotNull($voucher->id, 'ব্যাংকে আদায় আটকে গেছে — সীমাটা কেবল নগদের কথা।');
+    }
+
+    /**
+     * ⭐ নিজের বাক্সে নগদ — সই লাগে না (ধাপ ২)।
+     *
+     * ⓘ মালিকের নিয়ম: *"cash e ... app er dorkar nai — din sese
+     * emnite tar kachtekei buje nibe"*।
+     *
+     * ⚠️ ছাড়টা একা দাঁড়ায় না: উপরের দাবিগুলোই তার শর্ত — নগদ কেবল
+     * নিজের বাক্সে যেতে পারে। ⛔ শর্ত ছাড়া ছাড় দিলে যে কেউ যেকোনো
+     * ক্যাশ খাতে টাকা বসিয়ে সই ছাড়াই পোস্ট করে ফেলত।
+     */
+    public function test_cash_into_my_own_till_needs_no_signature(): void
+    {
+        $mine = $this->cashAccount('CASH-MINE');
+        $this->till($mine, $this->user->id);
+
+        $voucher = $this->receiptInto($mine, '500');
+
+        $this->assertNull(app(VoucherApproval::class)->stopping($voucher),
+            '⛔ নিজের বাক্সে নগদ নিতেও সই চাওয়া হচ্ছে।');
+    }
+
+    /**
+     * ⛔ আর ব্যাংক বা MFS-এ সই আগের মতোই — এটাই দাবির অন্য অর্ধেক।
+     *
+     * ⓘ ওখানে টাকা প্রতিষ্ঠানের খাতে যায়, কারও নিজের বাক্সে নয়।
+     * ⚠️ কেবল "নগদে ছাড়" মাপলে কেউ শর্তটা তুলে সব রসিদে ছাড় দিলেও
+     * সবুজ থাকত, আর ব্যাংকের টাকা নীরবে সই ছাড়া বসত।
+     */
+    public function test_a_bank_receipt_still_needs_its_signature(): void
+    {
+        $bank = Account::query()->where('money_kind', Account::BANK)->postable()->active()->first();
+
+        if ($bank === null) {
+            $this->markTestSkipped('ডেমোতে কোনো ব্যাংক খাত নেই।');
+        }
+
+        $voucher = $this->receiptInto($bank, '500');
+
+        $this->assertNotNull(app(VoucherApproval::class)->stopping($voucher),
+            '⛔ ব্যাংকে আদায় সই ছাড়াই এগিয়ে যাচ্ছে।');
     }
 
     /**
