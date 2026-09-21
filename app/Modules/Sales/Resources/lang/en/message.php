@@ -250,6 +250,14 @@ return [
     /* ⭐ No party, no product list — the owner's rule, 6 Sep 2026.
        ⚠️ The line says what to DO, not merely what is refused. */
     'pick_customer_first' => 'Choose the customer first — the rate and the credit limit depend on who is buying.',
+
+    /*
+     * ⭐ অর্ডারের পর্দার সতর্কবার্তা — ২১ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ সীমা ছাড়ানো অর্ডার নেওয়ার আগেই জানা দরকার, ডেলিভারির দিন নয়।
+     * ⚠️ এটা কিছু **আটকায় না** — অর্ডার নেওয়া যাবে, কেবল জানা থাকবে।
+     */
+    'credit_limit_crossed' => 'Past the credit limit',
     /* An invoice is a result, not a starting point - 21 September 2026. */
     'invoice_needs_a_paper' => 'An invoice is not made from nothing - start from an order or a direct sale.',
 ];

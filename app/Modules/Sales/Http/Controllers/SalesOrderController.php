@@ -17,6 +17,7 @@ use App\Modules\Sales\Http\Requests\SalesOrderRequest;
 use App\Modules\Sales\Models\SalesOrder;
 use App\Modules\Sales\Services\OrderTracking;
 use App\Modules\Sales\Services\SalesOrderService;
+use App\Modules\Sales\Services\SellableStock;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -186,10 +187,55 @@ class SalesOrderController extends Controller implements HasMiddleware
      */
     private function formData(): array
     {
+        /*
+         * ⚠️ `withOutstanding()` — নিচের `customerTerms`-এর জন্য, আর
+         * কারণটা গোনার। প্রতিটা ক্রেতার বকেয়া ওখানে চাওয়া হয়, আর
+         * স্কোপটা না দিলে `outstanding()` নিজে খাতা খুঁজত — ক্রেতাপ্রতি
+         * একটা কোয়েরি। ⓘ ছয়জনের ডেমোতে চোখে পড়ে না, তিন হাজার
+         * ক্রেতার ডিপোতে পাতা খোলা মানেই তিন হাজার কোয়েরি।
+         */
+        $customers = Customer::query()->active()->withOutstanding()->orderBy('name_en')->get();
+        $products = Product::query()->active()->with('unit')->orderBy('name_en')->get();
+
         return [
-            'customers' => Customer::query()->active()->orderBy('name_en')->get(),
+            'customers' => $customers,
             'warehouses' => Warehouse::query()->active()->orderBy('code')->get(),
-            'products' => Product::query()->active()->with('unit')->orderBy('name_en')->get(),
+            'products' => $products,
+
+            /*
+             * ⭐ ক্রেতার খাতা — ২১ সেপ্টেম্বর ২০২৬, মালিকের নির্দেশে।
+             *
+             * ⓘ পুরো তালিকাটা পাতার সাথেই একবার যায়, তাই ক্রেতা বদলালে
+             * নতুন কোনো অনুরোধ লাগে না — কাউন্টারের পর্দা ঠিক এভাবেই করে।
+             */
+            'customerTerms' => $customers->mapWithKeys(fn (Customer $c) => [$c->id => [
+                'limit' => (float) $c->credit_limit,
+                'due' => (float) $c->outstanding(),
+            ]])->all(),
+
+            /*
+             * ⭐ বারকোড → পণ্য।
+             *
+             * ⚠️ বারকোড ছাড়া পণ্যগুলো বাদ, নাহলে একটা ফাঁকা চাবি সব
+             * বারকোডহীন পণ্যের একটাকে ধরে বসত।
+             */
+            'barcodes' => $products
+                ->filter(fn (Product $p) => (string) $p->barcode !== '')
+                ->mapWithKeys(fn (Product $p) => [(string) $p->barcode => (string) $p->id])
+                ->all(),
+
+            /*
+             * ⭐ কতটা বেচা যায় — কাউন্টারের **একই** সূত্রে।
+             *
+             * ⛔ এখানে আলাদা করে গুনলে একই পণ্যের পাশে দুই পর্দায় দুইটা
+             * সংখ্যা বসত ([[SellableStock]]-এ কারণ লেখা)।
+             *
+             * ⓘ গুদাম ধরা হয় না: অর্ডারের ফর্মে গুদামের ঘরটা বদলানো যায়,
+             * আর পাতাটা তখন নতুন করে আসে না। ⚠️ তাই সংখ্যাটা **সব গুদাম
+             * মিলিয়ে** — একটা ইঙ্গিত হিসেবে সেটাই সৎ, কারণ একটা নির্দিষ্ট
+             * গুদামের সংখ্যা দেখিয়ে সেটা বাসি রাখা আরও খারাপ।
+             */
+            'stock' => app(SellableStock::class)->byProduct(),
         ];
     }
 

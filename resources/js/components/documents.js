@@ -12,6 +12,9 @@ export function salesLineEditor (config = {}) {
         rows: config.rows,
         packs: config.packs,
         packDefaults: config.packDefaults || {},
+
+        // ⓘ কেবল অর্ডারের পর্দা এটা পাঠায়; বাকিদের কাছে `{}`।
+        stock: config.stock || {},
         unitsFor(row) {
             return this.packs[row.product_id] ?? [];
         },
@@ -78,8 +81,140 @@ export function salesLineEditor (config = {}) {
             return this.rows.reduce((sum, row) => sum + this.amount(row), 0);
         },
 
+        /*
+         * ⭐ মোটটা ভেঙে দেখানো — ২১ সেপ্টেম্বর ২০২৬, অর্ডারের পর্দার জন্য।
+         *
+         * ⓘ নিচে এতদিন কেবল একটা সংখ্যা বসত। ⚠️ কিন্তু মালিক অর্ডার
+         * নেওয়ার সময় ছাড় দেন, আর "মোট কত" আর "ছাড় কত" এক সংখ্যায়
+         * মিশে গেলে ফোনে গ্রাহককে বলার মতো কিছু থাকে না।
+         *
+         * ⛔ যোগফলগুলো সার্ভারে আবার কষা হয় ([[CalculatesLineTotals]]) —
+         * এগুলো কেবল সেভ করার আগে চোখে দেখার জন্য।
+         */
+        get subtotal() {
+            return this.rows.reduce(function (sum, row) {
+                return sum + (parseFloat(row.qty) || 0) * (parseFloat(row.rate) || 0);
+            }, 0);
+        },
+        get discountTotal() {
+            return this.rows.reduce(function (sum, row) {
+                return sum + (parseFloat(row.discount) || 0);
+            }, 0);
+        },
+        get taxTotal() {
+            return this.rows.reduce(function (sum, row) {
+                return sum + (parseFloat(row.tax) || 0);
+            }, 0);
+        },
+
+        /*
+         * ⭐ এই পণ্যের কতটা বিক্রয়যোগ্য আছে।
+         *
+         * ── ⛔ এটা অর্ডার আটকায় না, আর সেটা ইচ্ছাকৃত ─────────────────
+         * abos-8b-র কথা, আর কথাটা ঠিক: অর্ডার **ভবিষ্যতের কাগজ**। মাল
+         * কাল আসতে পারে, আর আজ মজুদ নেই বলে অর্ডারটা নেওয়া যাবে না —
+         * এমন নিয়ম ব্যবসাটাই আটকে দিত।
+         *
+         * ⓘ তাই কেবল দেখানো হয়। ⚠️ মজুদের তালিকা না এলে (`{}`) ঘরটাই
+         * আসে না — অন্য পাঁচটা ফর্মে তখন কিছুই বদলায় না।
+         */
+        stockFor(row) {
+            const key = String(row.product_id || '');
+
+            if (key === '' || this.stock[key] === undefined) return null;
+
+            return parseFloat(this.stock[key]) || 0;
+        },
+
         init() {
             if (this.rows.length === 0) this.add();
+        },
+    }
+}
+
+/*
+ * ⭐ অর্ডারের পর্দার উপরের অংশ — ২১ সেপ্টেম্বর ২০২৬।
+ *
+ * ── ⓘ মালিকের নির্দেশ ও তাঁর উত্তর ───────────────────────────────────
+ * *"New order form ali update koro zate direct sales er activiti gulo hoy
+ * ekhane, ekhon to ekhane kichui hoyna"* — অর্ডারের ফর্মে সরাসরি বিক্রয়ের
+ * সুবিধাগুলো চাই।
+ *
+ * ⛔ কিন্তু সবটা নয়। জিজ্ঞেস করা হয়েছিল *"অর্ডার নেওয়ার সময় কি টাকাও
+ * নেন?"*, আর মালিকের উত্তর: **না, অর্ডার আলাদা, টাকা পরে**। তাই টাকা
+ * নেওয়ার প্যানেল, ক্যাশ ড্রয়ার আর নোট গোনা এখানে **নেই** — বসালে
+ * ব্যবহারকারী ভাবতেন টাকা নেওয়া হয়ে গেছে, অথচ কিছুই হয়নি।
+ *
+ * ⚠️ এই শ্রেণিটা সারির হিসাব জানে না — ওটা `salesLineEditor`-এর কাজ।
+ * এখানে কেবল ক্রেতাটি কে, আর তাঁর খাতা কেমন।
+ */
+export function salesOrderDesk (config = {}) {
+    return {
+        terms: config.terms || {},
+        barcodes: config.barcodes || {},
+        customerId: String(config.customerId || ''),
+        code: '',
+        missed: '',
+
+        /* বাছা ক্রেতার ঘরগুলো — কেউ না বাছলে `null`, আর পটিটাই আসে না। */
+        get party() {
+            const found = this.terms[this.customerId];
+
+            return found === undefined ? null : found;
+        },
+
+        /*
+         * ⭐ সীমা ছাড়ানো আছে কি না — **অর্ডার নেওয়ার আগেই**।
+         *
+         * ⓘ abos-8b-র কথা: এটা ডেলিভারির দিন জানা মানে দেরিতে জানা।
+         * ⚠️ সংখ্যাটা কেবল **আজকের বকেয়া**; এই অর্ডারটা এখনো খাতায়
+         * ওঠেনি, তাই ওটা এর মধ্যে ধরা নেই।
+         *
+         * ⛔ সীমা শূন্য মানে "সীমা বসানো হয়নি", "শূন্য টাকার সীমা" নয় —
+         * তাই তখন কোনো সতর্কবার্তা নেই।
+         */
+        get overLimit() {
+            const party = this.party;
+
+            if (party === null) return false;
+
+            const limit = parseFloat(party.limit) || 0;
+
+            if (limit <= 0) return false;
+
+            return (parseFloat(party.due) || 0) > limit;
+        },
+
+        /*
+         * ⭐ বারকোড — স্ক্যান করলে সারিটা নিজেই বসে।
+         *
+         * ── ⓘ কেন এটা সারির সম্পাদককে সরাসরি ছোঁয় না ────────────────
+         * `salesLineEditor` আগে থেকেই `bulk-applied` সংকেতটা শোনে (বাল্ক
+         * শীটের জন্য বানানো)। ⭐ তাই বারকোডটা ঐ একই সংকেতই পাঠায় —
+         * দুইটা শ্রেণির মধ্যে নতুন কোনো জোড়া লাগে না, আর সারি মিলিয়ে
+         * বসানোর নিয়মটাও (একই পণ্য দুইবার এলে পরিমাণ বসে) এমনিই পাওয়া যায়।
+         *
+         * ⚠️ না মিললে ঘরটা খালি হয় না — কোডটা পর্দায় থাকে, নাহলে
+         * স্ক্যানারটা কাজ করল কি না সেটাই বোঝা যেত না।
+         */
+        scan() {
+            const code = String(this.code || '').trim();
+
+            if (code === '') return;
+
+            const productId = this.barcodes[code];
+
+            if (productId === undefined) {
+                this.missed = code;
+                return;
+            }
+
+            this.missed = '';
+            this.code = '';
+
+            this.$dispatch('bulk-applied', {
+                rows: [{ product_id: String(productId), qty: '1' }],
+            });
         },
     }
 }

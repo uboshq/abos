@@ -15,6 +15,16 @@
     'linkField' => null,
     'linkOptions' => [],
     'showDiscount' => true,
+
+    /*
+     * ⭐ দুইটা ঐচ্ছিক জিনিস — ২১ সেপ্টেম্বর ২০২৬, অর্ডারের পর্দার জন্য।
+     *
+     * ⚠️ ছয়টা ফর্ম এই কম্পোনেন্টটা ব্যবহার করে, তাই দুইটাই **বন্ধ
+     * অবস্থায়** শুরু হয়। ⓘ `stock` খালি থাকলে মজুদের ইঙ্গিতটা আঁকাই
+     * হয় না, আর বাকি পাঁচটা ফর্মে একটা পিক্সেলও বদলায় না।
+     */
+    'stock' => [],
+    'showBreakdown' => false,
 ])
 
 @php
@@ -50,6 +60,7 @@
                  rows: @js($lines),
                  packs: @js($packs),
                  packDefaults: @js($packDefaults),
+                 stock: @js((object) $stock),
                })"
      @bulk-applied.window="absorb($event.detail.rows)">
 
@@ -88,6 +99,24 @@
                                     <option value="{{ $product->id }}">{{ $product->code }} - {{ $product->name() }}</option>
                                 @endforeach
                             </select>
+
+                            @if ($stock !== [])
+                                {{--
+                                    ⭐ কতটা বিক্রয়যোগ্য আছে — ২১ সেপ্টেম্বর ২০২৬।
+
+                                    ⛔ এটা অর্ডার **আটকায় না**, আর সেটা ইচ্ছাকৃত: অর্ডার
+                                    ভবিষ্যতের কাগজ, মাল কাল আসতে পারে। আজ মজুদ নেই বলে
+                                    অর্ডারটা নেওয়া যাবে না — এমন নিয়ম ব্যবসাটাই আটকে দিত।
+
+                                    ⓘ সংখ্যাটা পণ্যের ঘরের নিচে বসে, আলাদা কলামে নয় —
+                                    কলাম বাড়ালে নিচের যোগফলের সারিটা ছয়টা ফর্মেই সরে যেত।
+                                --}}
+                                <p class="mt-1 text-xs text-(--color-ink-muted)"
+                                   x-show="stockFor(row) !== null">
+                                    {{ __('sales::field.available_short') }}:
+                                    <span class="tabular" x-text="stockFor(row)"></span>
+                                </p>
+                            @endif
                         </td>
 
                         @if ($linkField)
@@ -173,6 +202,32 @@
             </tbody>
 
             <tfoot>
+                @if ($showBreakdown)
+                    {{--
+                        ⭐ মোটটা ভেঙে — ২১ সেপ্টেম্বর ২০২৬।
+
+                        ⓘ নিচে এতদিন কেবল একটা সংখ্যা বসত। ⚠️ মালিক অর্ডার নেওয়ার
+                        সময় ছাড় দেন, আর "মোট কত" আর "ছাড় কত" এক সংখ্যায় মিশে
+                        গেলে ফোনে গ্রাহককে বলার মতো কিছু থাকে না।
+
+                        ⛔ সার্ভারই শেষ কথা ([[CalculatesLineTotals]]) — এগুলো কেবল
+                        সেভ করার আগে চোখে দেখার জন্য।
+                    --}}
+                    @foreach ([
+                        'sales::field.subtotal' => 'subtotal',
+                        'sales::field.discount' => 'discountTotal',
+                        'sales::field.tax' => 'taxTotal',
+                    ] as $label => $value)
+                        <tr class="text-(--color-ink-muted)">
+                            <td class="cell text-end" colspan="{{ ($showDiscount ? 5 : 3) + ($linkField ? 1 : 0) + ($packs !== [] ? 1 : 0) }}">
+                                {{ __($label) }}
+                            </td>
+                            <td class="num cell" x-text="{{ $value }}.toFixed(2)"></td>
+                            <td></td>
+                        </tr>
+                    @endforeach
+                @endif
+
                 <tr>
                     {{-- এককের ঘরটা এলে মোটের সারিও এক ঘর পিছিয়ে বসে, নাহলে
                          যোগফলটা টাকার কলামের নিচ থেকে সরে যেত --}}
