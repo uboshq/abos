@@ -44,8 +44,7 @@ final class NoIndexNameStandsAtTheEdgeTest extends TestCase
      * @var array<string, string>
      */
     private const AT_THE_EDGE = [
-        'mdm_exchange_rates_company_id_currency_id_effective_from_unique' =>
-            '৬৩ — MasterData-র, আর নাম বদলাতে চলতি ডেটাবেসেও rename লাগে (২১ সেপ্টেম্বর ২০২৬)',
+        'mdm_exchange_rates_company_id_currency_id_effective_from_unique' => '৬৩ — MasterData-র, আর নাম বদলাতে চলতি ডেটাবেসেও rename লাগে (২১ সেপ্টেম্বর ২০২৬)',
         'mdm_exchange_rates_company_id_currency_id_effective_from_index' => '৬২ — একই টেবিল, একই কারণ',
         'customer_conduct_notes_company_id_customer_id_is_active_index' => '৬১ — Customer-এর',
         'inv_stock_movements_company_id_product_id_warehouse_id_index' => '৬০ — Inventory-র',
