@@ -46,11 +46,42 @@
 
 @php
     $columns = [
+        /*
+         * ⭐ ক্রম · কোড · নাম — আলাদা তিনটা কলাম, ২১ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ মালিকের নিজের লেখা তালিকা: *"SL#, Code, Product Name, Unit,
+         * Stock On floor, …"*। ⚠️ আগে কোড আর নাম একটাই কলামে জোড়া ছিল
+         * ("PRD-0001 - Cosmos 40gm"), তাই **কোড ধরে সাজানো বা চোখ বুলিয়ে
+         * খোঁজা** যেত না — গুদামে মানুষ কোড ধরেই খোঁজেন।
+         *
+         * ⓘ ক্রমটা পাতা ধরে গোনা নয়, **গোটা তালিকার**: `firstItem()`
+         * ধরে শুরু। ⛔ নাহলে দ্বিতীয় পাতাতেও ১ থেকে শুরু হত, আর
+         * "৫২ নম্বর সারিটা দেখুন" বলার কোনো উপায় থাকত না।
+         */
+        [
+            'key' => 'sl',
+            'label' => __('core.table.serial'),
+            'numeric' => true,
+            'width' => '4rem',
+            'render' => fn ($p, $i) => (string) (($products->firstItem() ?? 1) + $i),
+        ],
         [
             'key' => 'code',
+            'label' => __('inventory::field.code'),
+            'width' => '9rem',
+            'render' => fn ($p) => view('inventory::partials.product-link', [
+                'product' => $p,
+                'show' => 'code',
+            ]),
+        ],
+        [
+            'key' => 'name',
             'label' => __('inventory::field.product'),
-            'width' => '22rem',
-            'render' => fn ($p) => view('inventory::partials.product-link', ['product' => $p]),
+            'width' => '18rem',
+            'render' => fn ($p) => view('inventory::partials.product-link', [
+                'product' => $p,
+                'show' => 'name',
+            ]),
         ],
         [
             'key' => 'unit_id',

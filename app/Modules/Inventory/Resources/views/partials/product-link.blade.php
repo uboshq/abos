@@ -1,7 +1,29 @@
-{{-- পণ্যের কোড ও নাম, তার নিজের পাতায় ক্লিকযোগ্য — নিয়ম ১। --}}
+{{--
+    পণ্যের কোড ও নাম, তার নিজের পাতায় ক্লিকযোগ্য — নিয়ম ১।
+
+    ⭐ `$show` দিয়ে কেবল একটা অংশ চাওয়া যায় — ২১ সেপ্টেম্বর ২০২৬।
+
+    ⓘ মালিক মজুদের তালিকায় কোড আর নাম **আলাদা কলামে** চেয়েছেন, কারণ
+    গুদামে মানুষ কোড ধরে খোঁজেন আর জোড়া লেখা থাকলে কোড ধরে সাজানোও
+    যায় না। ⚠️ তবু দুইটাই একই অংশীদারে থাকে, নাহলে দুই কলামে দুই রকম
+    লিংক বা দুই রকম চিহ্ন বসে যেত।
+
+    ⓘ `$show` না দিলে আগের আচরণই — "কোড - নাম", আর বাকি সব পর্দা সেটাই
+    ব্যবহার করে।
+--}}
+@php
+    $show ??= 'both';
+@endphp
+
 <a href="{{ route('inventory.product.show', $product) }}"
    class="text-(--color-brand-500) underline-offset-2 hover:underline">
-    {{ $product->code }} - {{ $product->name() }}
+    @if ($show === 'code')
+        {{ $product->code }}
+    @elseif ($show === 'name')
+        {{ $product->name() }}
+    @else
+        {{ $product->code }} - {{ $product->name() }}
+    @endif
 </a>
 
 {{--
@@ -15,8 +37,11 @@
     কেনা হচ্ছে না। ⓘ দুইটা তথ্য একসাথে না দিলে যেকোনো একটা ভুল
     সিদ্ধান্তে নিয়ে যায় — হয় মাল ভুলে যাওয়া, নয় বন্ধ পণ্য আবার অর্ডার
     করা।
+
+    ⓘ চিহ্নটা নামের সাথে, কোডের সাথে নয় — দুই কলামে দুইবার বসলে সারিটা
+    ভরে যেত।
 --}}
-@unless ($product->is_active)
+@unless ($product->is_active || $show === 'code')
     <span class="ms-1.5 inline-flex items-center rounded-(--radius-field) bg-(--color-surface-sunken)
                  px-1.5 py-0.5 text-2xs text-(--color-ink-muted)"
           title="{{ __('inventory::message.inactive_but_held') }}">
