@@ -393,6 +393,27 @@ class BankFacilityService
             ];
         }
 
+        /*
+         * ⛔ ভিত্তি না বলা থাকলে অঙ্কটা দেখানো হয় না — ২১ সেপ্টেম্বর ২০২৬।
+         *
+         * ⚠️ আগে এই শেষ লাইনটা **চুপচাপ আসল ধরে নিত**। ১০ লাখ
+         * বকেয়ায় ২% আসলের উপর মানে ২০,০০০ টাকা, আর বাকি সুদের
+         * উপর হলে সংখ্যাটা সম্পূর্ণ আলাদা — অর্থাৎ অনুমানটাই টাকা।
+         *
+         * ⓘ মালিকের উত্তর (২১ সেপ্টেম্বর): *"manual korbo"* — তিনি
+         * প্রতিবার নিজে বেছে নেবেন, কোনো ডিফল্ট চান না। তাই না বাছলে
+         * উত্তরটা হবে "জানি না", আর পর্দা সেটাই বলবে
+         * ([[bank-facility/show]] মানে `unknown`)।
+         */
+        if ((string) $facility->early_charge_basis !== BankFacility::ON_PRINCIPAL) {
+            return [
+                'outstanding' => $outstanding,
+                'charge' => '0.0000',
+                'total' => $outstanding,
+                'unknown' => true,
+            ];
+        }
+
         $charge = bcdiv(bcmul($outstanding, $amount, 4), '100', 4);
 
         return [
