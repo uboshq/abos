@@ -103,6 +103,25 @@ final class ModuleDefinition
         public readonly array $docTypes,
         /** @var array<string, class-string> source_type => model */
         public readonly array $drillSources,
+
+        /**
+         * এই মডিউলের যে কাগজগুলো নিশ্চিত হলেই খাতায় ওঠার কথা।
+         *
+         * ── ⚠️ কেন `drill_sources` যথেষ্ট নয় ─────────────────────────
+         * আদেশ, চালান আর গ্রহণও drill source, কিন্তু ওগুলো খাতায় ওঠে
+         * **না**। ⛔ ওদেরও "আটকে আছে" বললে তালিকাটা রোজ মিথ্যা বলত,
+         * আর তিন দিনে কেউ আর ওটা দেখত না।
+         *
+         * ── ⭐ কেন মডিউল বলে, Accounts নয় ───────────────────────────
+         * ⓘ তালিকাটা আগে [[PostingBacklog]]-এ হাতে লেখা ছিল, অর্থাৎ
+         * accounts ছয়টা Sales ও Purchase মডেলের নাম জানত। ⚠️ ঐ দুইটাই
+         * accounts-এর উপর দাঁড়িয়ে, তাই নির্ভরতাটা ঘোষণা করলে চক্র হত।
+         * ⭐ এখন যার কাগজ, সে-ই বলে — আর নতুন মডিউল এলে কোরে একটা
+         * লাইনও লিখতে হয় না (২১ সেপ্টেম্বর ২০২৬)।
+         *
+         * @var array<string, class-string> `source_type` => মডেল
+         */
+        public readonly array $postsToTheBooks,
         /**
          * একই নাম দুইবার ঢোকা ঠেকানোর নিয়ম — কোন মডেল, কোন ঘরগুলো তুলনা হবে।
          *
@@ -484,6 +503,7 @@ final class ModuleDefinition
             permissions: array_values($raw['permissions'] ?? []),
             docTypes: $raw['doc_types'] ?? [],
             drillSources: $raw['drill_sources'] ?? [],
+            postsToTheBooks: $raw['posts_to_the_books'] ?? [],
             duplicates: self::validateDuplicates($raw['duplicates'] ?? [], $path),
             settings: array_values($raw['settings'] ?? []),
             reports: self::validateReports($raw['reports'] ?? [], $path),

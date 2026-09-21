@@ -208,6 +208,16 @@ return [
         'PR' => 'purchase::doc.return',
     ],
 
+    /*
+     * ⭐ যে কাগজগুলো নিশ্চিত হলেই খাতায় ওঠার কথা (২১ সেপ্টেম্বর ২০২৬)।
+     * ⚠️ ক্রয়াদেশ ও গ্রহণ নেই — ওগুলো খতিয়ানে ওঠে না।
+     */
+    'posts_to_the_books' => [
+        'purchase_bill' => PurchaseBill::class,
+        'purchase_return' => PurchaseReturn::class,
+        'purchase_payment' => Payment::class,
+    ],
+
     'drill_sources' => [
         'purchase_order' => PurchaseOrder::class,
         'purchase_receipt' => PurchaseReceipt::class,

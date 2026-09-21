@@ -8,12 +8,7 @@ use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Models\Approval;
 use App\Modules\Accounts\Models\Voucher;
-use App\Modules\Purchase\Models\Payment;
-use App\Modules\Purchase\Models\PurchaseBill;
-use App\Modules\Purchase\Models\PurchaseReturn;
-use App\Modules\Sales\Models\Collection;
-use App\Modules\Sales\Models\SalesInvoice;
-use App\Modules\Sales\Models\SalesReturn;
+use App\Core\Module\ModuleRegistry;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
@@ -46,14 +41,32 @@ final class PostingBacklog
      *
      * @var array<string, class-string<Model>>
      */
-    public const MUST_REACH_THE_BOOKS = [
-        'sales_invoice' => SalesInvoice::class,
-        'sales_return' => SalesReturn::class,
-        'collection' => Collection::class,
-        'purchase_bill' => PurchaseBill::class,
-        'purchase_return' => PurchaseReturn::class,
-        'purchase_payment' => Payment::class,
-    ];
+    /**
+     * ⭐ তালিকাটা এখন মডিউলের ঘোষণা থেকে — ২১ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⚠️ আগে কী ছিল ───────────────────────────────────────────
+     * ছয়টা মডেলের নাম এখানে হাতে লেখা ছিল, অর্থাৎ accounts Sales ও
+     * Purchase-এর ভিতরে হাত দিত। ⛔ ঐ দুইটাই accounts-এর উপর দাঁড়িয়ে,
+     * তাই নির্ভরতাটা ঘোষণাও করা যেত না — চক্র হত।
+     *
+     * ⓘ এখন যার কাগজ সে-ই বলে (`module.php`-র `posts_to_the_books`),
+     * আর এই ফাইলটা কেবল পড়ে। ⭐ নতুন মডিউল এলে এখানে একটা লাইনও
+     * লিখতে হবে না — ঠিক যেভাবে মেনু, অনুমতি আর রিপোর্ট কাজ করে।
+     *
+     * @return array<string, class-string<Model>>
+     */
+    public function mustReachTheBooks(): array
+    {
+        $all = [];
+
+        foreach (app(ModuleRegistry::class)->all() as $module) {
+            foreach ($module->postsToTheBooks as $sourceType => $model) {
+                $all[$sourceType] = $model;
+            }
+        }
+
+        return $all;
+    }
 
     /**
      * কত দিন পিছনে দেখা হয়।
@@ -71,7 +84,7 @@ final class PostingBacklog
         $since = CarbonImmutable::today()->subDays(self::LOOK_BACK_DAYS)->toDateString();
         $rows = [];
 
-        foreach (self::MUST_REACH_THE_BOOKS as $source => $class) {
+        foreach ($this->mustReachTheBooks() as $source => $class) {
             $model = new $class;
 
             $stuck = $class::query()
@@ -134,7 +147,7 @@ final class PostingBacklog
         $since = CarbonImmutable::today()->subDays(self::LOOK_BACK_DAYS)->toDateString();
         $total = 0;
 
-        foreach (self::MUST_REACH_THE_BOOKS as $source => $class) {
+        foreach ($this->mustReachTheBooks() as $source => $class) {
             $model = new $class;
 
             $total += DB::table($model->getTable())

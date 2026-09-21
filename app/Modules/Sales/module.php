@@ -368,6 +368,21 @@ return [
         'CMC' => 'sales::doc.commission',
     ],
 
+    /*
+     * ⭐ যে কাগজগুলো নিশ্চিত হলেই খাতায় ওঠার কথা (২১ সেপ্টেম্বর ২০২৬)।
+     *
+     * ⚠️ আদেশ ও চালান এখানে নেই, আর সেটা ইচ্ছাকৃত: ওগুলো খতিয়ানে ওঠে
+     * না। ⛔ ওদের "আটকে আছে" বললে তালিকাটা রোজ মিথ্যা বলত।
+     *
+     * ⓘ আগে এই নামগুলো [[PostingBacklog]]-এ হাতে লেখা ছিল, অর্থাৎ
+     * accounts এই মডিউলের ভিতরে হাত দিত — অথচ তীরটা উল্টো দিকের।
+     */
+    'posts_to_the_books' => [
+        'sales_invoice' => SalesInvoice::class,
+        'sales_return' => SalesReturn::class,
+        'collection' => Collection::class,
+    ],
+
     'drill_sources' => [
         'commission_claim' => CommissionClaim::class,
         'sales_order' => SalesOrder::class,
