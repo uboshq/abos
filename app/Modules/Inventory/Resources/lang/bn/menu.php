@@ -34,4 +34,5 @@ return [
     'kitchen_board' => 'রান্নাঘরের বোর্ড',
     'kitchen_tickets' => 'রান্নাঘরের পর্দা',
     'places' => 'গুদামের ভিতরের জায়গা',
+    'stock_value' => 'মজুদ মূল্যসহ',
 ];

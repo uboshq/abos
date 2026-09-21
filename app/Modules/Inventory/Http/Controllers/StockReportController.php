@@ -49,6 +49,10 @@ class StockReportController extends Controller implements HasMiddleware
            নয় — এই তালিকার বাকি সব ঠিকানাও তাই। */
         'stock-by-batch' => 'inventory.stock_by_batch',
 
+        /* ⭐ মজুদ মূল্যসহ — ২১ সেপ্টেম্বর ২০২৬, মালিকের নির্দেশে।
+           ⓘ হাইফেন, আন্ডারস্কোর নয় — এই তালিকার বাকি সব ঠিকানাও তাই। */
+        'stock-value' => 'inventory.stock_value',
+
         /* ⓘ খাদ্য-খরচ এখানে ছিল — ১৫ সেপ্টেম্বর ২০২৬-এ রেস্তোরাঁয় গেছে
            ([[App\Modules\Restaurant\Http\Controllers\RestaurantReportController]]),
            মালিকের দাগানো অনুযায়ী। প্রশ্নটা রান্না করা খাবারের, মজুদের নয়। */

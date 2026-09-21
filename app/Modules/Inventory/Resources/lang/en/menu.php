@@ -27,4 +27,5 @@ return [
     'kitchen_board' => 'Kitchen board',
     'kitchen_tickets' => 'Kitchen screen',
     'places' => 'Places in the warehouse',
+    'stock_value' => 'Stock with value',
 ];

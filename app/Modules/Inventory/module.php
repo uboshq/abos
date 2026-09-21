@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Core\Engines\Print\PaperSize;
 use App\Models\UserDataScope;
 use App\Modules\Inventory\Dashboard\InventoryDashboard;
 use App\Modules\Inventory\Dashboard\InventoryWidgets;
@@ -159,6 +160,8 @@ return [
                 'route_params' => ['slug' => 'stock-ledger'], 'permission' => 'inventory.report'],
             ['label' => 'inventory::menu.stock_summary', 'icon' => 'scale', 'route' => 'inventory.report.show',
                 'route_params' => ['slug' => 'stock-summary'], 'permission' => 'inventory.report'],
+            ['label' => 'inventory::menu.stock_value', 'icon' => 'scale', 'route' => 'inventory.report.show',
+                'route_params' => ['slug' => 'stock-value'], 'permission' => 'inventory.report'],
             ['label' => 'inventory::menu.hold_report', 'icon' => 'lock', 'route' => 'inventory.report.show',
                 'route_params' => ['slug' => 'hold'], 'permission' => 'inventory.report'],
 
@@ -475,16 +478,16 @@ return [
             'key' => 'inventory.print.paper.label',
             'label' => 'inventory::settings.paper_label',
             'type' => 'choice',
-            'options' => \App\Core\Engines\Print\PaperSize::all(),
-            'default' => \App\Core\Engines\Print\PaperSize::A4,
+            'options' => PaperSize::all(),
+            'default' => PaperSize::A4,
             'group' => 'print',
         ],
         [
             'key' => 'inventory.print.paper.transfer',
             'label' => 'inventory::settings.paper_transfer',
             'type' => 'choice',
-            'options' => \App\Core\Engines\Print\PaperSize::all(),
-            'default' => \App\Core\Engines\Print\PaperSize::A4,
+            'options' => PaperSize::all(),
+            'default' => PaperSize::A4,
             'group' => 'print',
         ],
         [

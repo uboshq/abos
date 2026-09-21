@@ -122,4 +122,14 @@ return [
     'paper_no' => 'Paper',
     'paper_id' => 'ID',
     'processed_by' => 'Processed by',
+
+    /* ⓘ Columns of the valued stock report — 21 September 2026. */
+    'qty_opening' => 'Opening qty',
+    'amount_opening' => 'Opening value',
+    'qty_in' => 'In qty',
+    'amount_in' => 'In value',
+    'qty_out' => 'Out qty',
+    'amount_out' => 'Out value',
+    'qty_closing' => 'Closing qty',
+    'amount_closing' => 'Closing value',
 ];

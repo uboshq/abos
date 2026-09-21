@@ -27,6 +27,163 @@ final class StockReports
         $engine->register(self::holdReport());
         $engine->register(self::expiring());
         $engine->register(self::stockByBatch());
+        $engine->register(self::stockValue());
+    }
+
+    /**
+     * একই মজুদ, কিন্তু টাকায় — প্রতিটা ঘরে পরিমাণ **আর** মূল্য।
+     *
+     * ── ⭐ মালিকের নির্দেশ, ২১ সেপ্টেম্বর ২০২৬ ───────────────────────
+     * *"মজুদ list e in Qty with Velu/Amount diye alada মজুদ list koro
+     * zate purches price, sales price, opening stock, in, out, Closing
+     * stock protitir qnty soho duti velu thakbe"*।
+     *
+     * ⓘ **আলাদা** রিপোর্ট, পুরনোটায় কলাম যোগ নয় — আর সেটাই চাওয়া
+     * হয়েছে। মজুদের পর্দা দিনে বহুবার খোলা হয় গুদামের প্রশ্নে ("কত
+     * আছে, কতটা বেচা যাবে"), আর সেখানে বারোটা কলাম বসালে রোজকার
+     * কাজটাই কঠিন হত। ⚠️ টাকার প্রশ্নটা আলাদা মানুষ, আলাদা সময়ে করেন।
+     *
+     * ── ⛔ সংখ্যাগুলো পণ্যের দাম গুণ করে বের করা **হয় না** ───────────
+     * সহজ পথটা হত `qty × purchase_price`, আর সেটা **মিথ্যা** হত: আজকের
+     * ক্রয়মূল্য দিয়ে ছয় মাস আগের মাল মাপা হত। ⓘ একই পণ্য ৮০ টাকায়
+     * কিনে পরে ৯৫-এ কিনলে দুইটা দামই সত্য, আর কোনটা কোন মালে বসবে
+     * সেটা FIFO ঠিক করে।
+     *
+     * ⭐ তাই টাকাটা আসে খরচের স্তর থেকে, যেখানে হিসাবটা আগেই লেখা:
+     *   · আগমন  → [[CostLayer]]      — `qty_in`, `unit_cost`
+     *   · নির্গমন → [[CostLayerUse]]  — `qty`, আর **`amount` লেখাই আছে**
+     *
+     * ⓘ অর্থাৎ এই রিপোর্টের টাকা আর খাতার টাকা একই উৎস থেকে আসে; দুইটা
+     * আলাদা হওয়ার উপায় নেই। প্রারম্ভিক মজুদেও দাম বসে
+     * ([[OpeningStockService]]), তাই পুরনো মালের ঘর ফাঁকা থাকে না।
+     *
+     * ── ⚠️ শাখার ছাঁকনি নেই, আর সেটা লুকানো হয়নি ────────────────────
+     * ⛔ `inv_cost_layers`-এ `branch_id` নেই — খরচ কোম্পানিভিত্তিক, কারণ
+     * এক শাখার কেনা মাল অন্য শাখা থেকে বেচা যায় আর তাতে দামটা বদলায়
+     * না। ⓘ ছাঁকনিটা দেখিয়ে **উপেক্ষা** করলে সংখ্যাটা ভুল বলে পড়া হত,
+     * তাই ঘরটাই নেই।
+     */
+    public static function stockValue(): ReportDefinition
+    {
+        /*
+         * ⓘ চারটা উপ-কোয়েরি, তারপর বিয়োগ — কারণ "প্রারম্ভিক" বলে কোনো
+         * টেবিল নেই। ⚠️ প্রারম্ভিক = শুরুর তারিখের **আগের** সব আগমন
+         * বিয়োগ সব নির্গমন, ঠিক যেভাবে খাতার ওপেনিং বের হয়।
+         */
+        $in = fn (array $f, ?string $from) => DB::table('inv_cost_layers')
+            ->where('company_id', $f['company_id'])
+            ->when($from, fn ($q) => $q->where('trx_date', '>=', $from))
+            ->where('trx_date', '<=', $f['to'])
+            ->groupBy('product_id')
+            ->select([
+                'product_id',
+                DB::raw('SUM(qty_in) as q'),
+                DB::raw('SUM(qty_in * unit_cost) as v'),
+            ]);
+
+        $out = fn (array $f, ?string $from) => DB::table('inv_cost_layer_uses')
+            ->where('company_id', $f['company_id'])
+            ->when($from, fn ($q) => $q->where('trx_date', '>=', $from))
+            ->where('trx_date', '<=', $f['to'])
+            ->groupBy('product_id')
+            ->select([
+                'product_id',
+                DB::raw('SUM(qty) as q'),
+                /* ⓘ `amount` স্তরে লেখাই আছে — গুণ করে বের করা হয় না। */
+                DB::raw('SUM(amount) as v'),
+            ]);
+
+        return new ReportDefinition(
+            key: 'inventory.stock_value',
+            title: 'inventory::menu.stock_value',
+            filters: ['date_range'],
+            groupBy: 'product_id',
+            query: function (array $f) use ($in, $out) {
+                /*
+                 * ⓘ প্রারম্ভিকের জন্য উপ-কোয়েরিগুলো চলে **শুরুর আগের
+                 * দিন পর্যন্ত**, তাই `to` বদলে দেওয়া হয়। ⚠️ `from`-ও
+                 * একই দিন ধরলে শুরুর দিনের লেনদেন দুইবার গোনা হত —
+                 * একবার প্রারম্ভিকে, একবার "আগমনে"।
+                 */
+                $before = ['company_id' => $f['company_id']] + [
+                    'to' => Carbon::parse($f['from'])->subDay()->toDateString(),
+                ];
+
+                return DB::table('inv_products as p')
+                    ->leftJoin('mdm_units as u', 'u.id', '=', 'p.unit_id')
+                    ->leftJoinSub($in($before, null), 'oi', 'oi.product_id', '=', 'p.id')
+                    ->leftJoinSub($out($before, null), 'oo', 'oo.product_id', '=', 'p.id')
+                    ->leftJoinSub($in($f, $f['from']), 'pi', 'pi.product_id', '=', 'p.id')
+                    ->leftJoinSub($out($f, $f['from']), 'po', 'po.product_id', '=', 'p.id')
+                    ->where('p.company_id', $f['company_id'])
+                    /*
+                     * ⛔ যে পণ্যের এই পরিসরে কিছুই ঘটেনি আর প্রারম্ভিকও
+                     * শূন্য, তার সারি আসে না। ⚠️ নাহলে গোটা পণ্য-তালিকা
+                     * শূন্যের সারি হয়ে ছাপা হত, আর আসল সারিগুলো তার
+                     * ভিতরে হারাত।
+                     */
+                    ->whereRaw('COALESCE(oi.q,0) <> 0 OR COALESCE(oo.q,0) <> 0
+                                OR COALESCE(pi.q,0) <> 0 OR COALESCE(po.q,0) <> 0')
+                    ->orderBy('p.code')
+                    ->select([
+                        'p.id as product_id',
+                        self::productName(),
+                        DB::raw("'".Product::drillSourceType()."' as party_type_literal"),
+                        DB::raw(app()->getLocale() === 'bn'
+                            ? "COALESCE(NULLIF(u.name_bn, ''), u.name_en) as unit_name"
+                            : 'u.name_en as unit_name'),
+
+                        'p.purchase_price',
+                        'p.sale_price',
+
+                        DB::raw('COALESCE(oi.q,0) - COALESCE(oo.q,0) as opening_qty'),
+                        DB::raw('COALESCE(oi.v,0) - COALESCE(oo.v,0) as opening_value'),
+
+                        DB::raw('COALESCE(pi.q,0) as in_qty'),
+                        DB::raw('COALESCE(pi.v,0) as in_value'),
+
+                        DB::raw('COALESCE(po.q,0) as out_qty'),
+                        DB::raw('COALESCE(po.v,0) as out_value'),
+
+                        /*
+                         * ⓘ সমাপনী গোনা হয়, আলাদা করে খোঁজা হয় না —
+                         * তাই "প্রারম্ভিক + আগমন − নির্গমন" সমীকরণটা
+                         * সারিতে সবসময় মেলে। ⚠️ দুই জায়গা থেকে দুইভাবে
+                         * আনলে কোনো একদিন দুইটা আলাদা হত, আর পাঠক
+                         * বুঝতেন না কোনটা সত্য।
+                         */
+                        DB::raw('COALESCE(oi.q,0) - COALESCE(oo.q,0)
+                                 + COALESCE(pi.q,0) - COALESCE(po.q,0) as closing_qty'),
+                        DB::raw('COALESCE(oi.v,0) - COALESCE(oo.v,0)
+                                 + COALESCE(pi.v,0) - COALESCE(po.v,0) as closing_value'),
+                    ]);
+            },
+            columns: [
+                [
+                    'key' => 'product_name',
+                    'label' => 'inventory::field.product',
+                    'type' => ReportColumn::DOCUMENT,
+                    'source_type' => 'party_type_literal',
+                    'source_id' => 'product_id',
+                ],
+                ['key' => 'unit_name', 'label' => 'inventory::field.unit', 'width' => '5rem'],
+
+                ['key' => 'purchase_price', 'label' => 'inventory::field.purchase_price', 'type' => ReportColumn::MONEY],
+                ['key' => 'sale_price', 'label' => 'inventory::field.sale_price', 'type' => ReportColumn::MONEY],
+
+                ['key' => 'opening_qty', 'label' => 'inventory::field.qty_opening', 'type' => ReportColumn::QUANTITY],
+                ['key' => 'opening_value', 'label' => 'inventory::field.amount_opening', 'type' => ReportColumn::MONEY],
+
+                ['key' => 'in_qty', 'label' => 'inventory::field.qty_in', 'type' => ReportColumn::QUANTITY],
+                ['key' => 'in_value', 'label' => 'inventory::field.amount_in', 'type' => ReportColumn::MONEY],
+
+                ['key' => 'out_qty', 'label' => 'inventory::field.qty_out', 'type' => ReportColumn::QUANTITY],
+                ['key' => 'out_value', 'label' => 'inventory::field.amount_out', 'type' => ReportColumn::MONEY],
+
+                ['key' => 'closing_qty', 'label' => 'inventory::field.qty_closing', 'type' => ReportColumn::QUANTITY],
+                ['key' => 'closing_value', 'label' => 'inventory::field.amount_closing', 'type' => ReportColumn::MONEY],
+            ],
+        );
     }
 
     /**
