@@ -64,10 +64,21 @@
 
         <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                {{--
+                    ⭐ আদেশটা বাধ্যতামূলক — মালিকের নিয়ম, ২১ সেপ্টেম্বর ২০২৬:
+                    *"kono direct challan kata zabena, order ref. e challan hobe"*।
+
+                    ⚠️ ঘরটা আগে ঐচ্ছিক ছিল, তাই মানুষ গোটা ফর্মটা ভরে
+                    সংরক্ষণে গিয়ে বন্ধ দরজা পেতেন। ⓘ নিয়মটা এখন পর্দাতেই
+                    বলা, আর আসল পাহারাটা [[DeliveryChallanRequest]]-এর
+                    `authorize()`-এ — পর্দার `required` কেবল ভদ্রতা,
+                    ঠিকানা টাইপ করলে সে কিছুই আটকায় না।
+                --}}
                 <x-ui.select name="sales_order_id" :label="__('sales::field.order')"
                              :options="$orders->mapWithKeys(fn ($o) => [$o->id => $o->document_no . ' - ' . $o->customer?->name()])"
                              :selected="$order?->id ?? $challan->sales_order_id"
-                             placeholder="-" />
+                             :hint="__('sales::message.challan_needs_an_order')"
+                             placeholder="-" required />
                 <x-ui.select name="customer_id" :label="__('sales::field.customer')"
                              :options="$customers->mapWithKeys(fn ($c) => [$c->id => $c->name()])"
                              :selected="$order?->customer_id ?? $challan->customer_id" placeholder="-" required />
