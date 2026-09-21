@@ -80,9 +80,7 @@ final class EveryRightWeHandOutStopsSomethingTest extends TestCase
                 continue;
             }
 
-            if (! str_contains($haystack, "'".$permission."'")
-                && ! str_contains($haystack, 'can:'.$permission)
-                && ! str_contains($haystack, '"'.$permission.'"')) {
+            if (! $this->isCheckedSomewhere($permission, $haystack)) {
                 $idle[] = $module.' — '.$permission;
             }
         }
@@ -124,6 +122,91 @@ final class EveryRightWeHandOutStopsSomethingTest extends TestCase
     /**
      * @return array<string, string> অনুমতি => মডিউলের নাম
      */
+    /**
+     * ⭐ নিয়মটা এক জায়গায় — সুইপ আর নিজের পরীক্ষা দুইটাই এটাই ডাকে।
+     *
+     * ⚠️ নকল করলে দুইটা আলাদা হয়ে যেত, আর তখন নিজের পরীক্ষা সবুজ
+     * থাকত অথচ সুইপ চুপচাপ কিছু খুঁজে পাওয়া বন্ধ করত।
+     */
+    private function isCheckedSomewhere(string $permission, string $haystack): bool
+    {
+        return str_contains($haystack, "'".$permission."'")
+            || str_contains($haystack, 'can:'.$permission)
+            || str_contains($haystack, '"'.$permission.'"');
+    }
+
+    /**
+     * ⭐ পাহারাটা অলস আর যাচাই-হওয়া অনুমতির তফাত বোঝে — ২২ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ উপরের গোনাটা (>১৫০) **খালি জাল** ধরে। ⚠️ কিন্তু জাল ছেঁড়া
+     * কি না ধরে না — নিয়মটা উল্টে গেলে সুইপ প্রতিটা অনুমতিকে নিরীহ
+     * বলত, আর ভূমিকার পর্দায় মিথ্যা টিকের ঘরগুলো বসেই থাকত।
+     */
+    public function test_the_rule_can_tell_a_checked_right_from_an_idle_one(): void
+    {
+        $haystack = 'can:sales.order.view'."'inventory.stock.view'";
+
+        $this->assertTrue($this->isCheckedSomewhere('sales.order.view', $haystack),
+            'রুটে বসানো `can:` দেখেও পাহারা বলছে অনুমতিটা অলস।');
+
+        $this->assertTrue($this->isCheckedSomewhere('inventory.stock.view', $haystack),
+            'কোডে উদ্ধৃত অনুমতিটাও চোখে পড়ছে না।');
+
+        $this->assertFalse($this->isCheckedSomewhere('nobody.checks.this', $haystack),
+            'যে অনুমতি কোথাও নেই তাকেও যাচাই-হওয়া বলছে — তাহলে কিছুই ধরা পড়বে না।');
+    }
+
+    /**
+     * ⛔ খড়ের গাদায় ঘোষণাগুলো থাকতে পারে না — এটাই আসল ফাঁদ।
+     *
+     * ── ⚠️ কেন এটা সবচেয়ে বিপজ্জনক ─────────────────────────────────
+     * `module.php`-তে প্রতিটা অনুমতি **ঘোষিত** হয়। ⓘ ঐ ফাইলগুলো যদি
+     * গাদায় হুবহু ঢুকে যেত, তবে প্রতিটা অনুমতি **নিজের ঘোষণাটাই**
+     * খুঁজে পেত, আর পাহারাটা চিরকাল সবুজ থাকত — একটাও অলস অনুমতি
+     * কোনোদিন ধরা পড়ত না।
+     *
+     * ⓘ বাদ দেওয়াটা একটা `str_ends_with` মাত্র। ভুলে গেলে কেউ টের
+     * পেত না, তাই এখানে মাপা হয়।
+     */
+    public function test_the_declarations_themselves_are_not_in_the_haystack(): void
+    {
+        $haystack = $this->everythingButTheDeclarations();
+
+        $this->assertNotSame('', $haystack, 'গাদাটাই খালি — কিছু পড়া হয়নি।');
+
+        /*
+         * ⓘ একটা সত্যিকারের ঘোষণার ফাইল থেকে এমন একটা টুকরো নেওয়া হয়
+         * যা **কেবল ঐ ফাইলই** বানাতে পারে — অনুমতির তালিকার শুরুটা,
+         * তার গঠনসহ।
+         *
+         * ⚠️ কেবল `'permissions' =>` খুঁজলে হত না: ঐ শব্দদুটো একটা
+         * কনসোল কমান্ডেও আছে, আর তখন পাহারাটা নিরপরাধ ফাইলকে দোষ দিত।
+         * ⓘ প্রথম চালে আমার দাবিটা ঠিক সেই ভুলটাই করেছিল।
+         */
+        $declaration = (string) file_get_contents(app_path('Modules/Accounts/module.php'));
+
+        $at = strpos($declaration, "'permissions' => [");
+
+        $this->assertNotFalse($at, 'নমুনার ঘোষণার ফাইলেই অনুমতির তালিকা নেই — নমুনাটা বদলান।');
+
+        $chunk = substr($declaration, $at, 200);
+
+        /*
+         * ⚠️ `assertStringNotContainsString` নয় — ব্যর্থ হলে সে গোটা
+         * গাদাটা ছাপে, আর সেটা কয়েক কোটি অক্ষর। ⓘ যে ব্যর্থতা পড়া
+         * যায় না, সেটা প্রায় ব্যর্থতা না হওয়ার সমান।
+         */
+        $this->assertFalse(str_contains($haystack, $chunk), implode(PHP_EOL, [
+            'ঘোষণার ফাইলটাই খড়ের গাদায় ঢুকে পড়েছে।',
+            '',
+            '⛔ তাহলে প্রতিটা অনুমতি নিজের ঘোষণাটাই খুঁজে পাবে, আর একটাও',
+            'অলস অনুমতি কোনোদিন ধরা পড়বে না — চিরকাল সবুজ, চিরকাল অন্ধ।',
+            '',
+            'everythingButTheDeclarations()-এ module.php বাদ দেওয়ার',
+            'লাইনটা দেখুন।',
+        ]));
+    }
+
     private function declaredPermissions(): array
     {
         $out = [];
