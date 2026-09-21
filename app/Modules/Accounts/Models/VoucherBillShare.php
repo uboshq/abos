@@ -7,7 +7,6 @@ namespace App\Modules\Accounts\Models;
 use App\Core\Concerns\BelongsToCompanyThroughParent;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
-use App\Modules\Purchase\Models\PurchaseBill;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -101,8 +100,18 @@ class`
         return $this->belongsTo(Voucher::class);
     }
 
-    public function purchaseBill(): BelongsTo
-    {
-        return $this->belongsTo(PurchaseBill::class, 'purchase_bill_id');
-    }
+    /*
+     * ⛔ `purchaseBill()` সম্পর্কটা তোলা হলো — ২১ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⚠️ কেন ─────────────────────────────────────────────────────
+     * ওটাই ছিল accounts → Purchase নির্ভরতার একমাত্র সূত্র, অথচ
+     * **কোথাও ব্যবহার হত না** (গোটা কোডবেস ও পরীক্ষায় খুঁজে দেখা)।
+     * ⓘ Purchase নিজে accounts-এর উপর দাঁড়িয়ে, তাই নির্ভরতাটা ঘোষণাও
+     * করা যেত না — চক্র হত।
+     *
+     * ⭐ তাই উল্টানোর দরকার পড়েনি, সরালেই হয়েছে। ⓘ `purchase_bill_id`
+     * কলামটা আছেই — কোন বিলের ভাগ, সেটা তো ওটাই বলে। ⚠️ ভবিষ্যতে
+     * বিলের বিস্তারিত লাগলে ড্রিল বা চুক্তি দিয়ে আনতে হবে, সরাসরি
+     * সম্পর্ক দিয়ে নয়।
+     */
 }

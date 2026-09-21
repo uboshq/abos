@@ -136,6 +136,20 @@ return [
         ],
     ],
 
+    /*
+     * ⭐ ভাউচারের ফর্মে এই মডিউলের তালিকা — ২১ সেপ্টেম্বর ২০২৬।
+     *
+     * ⚠️ আগে Accounts-এর কন্ট্রোলার এই মডিউলের মডেল সরাসরি ডাকত,
+     * অথচ নিচের `depends_on`-এ লেখা আছে এই মডিউল accounts চেনে —
+     * উল্টোটা নয়। ⛔ ঘোষণা করলে চক্র হত।
+     *
+     * ⓘ ঘরটা ভাউচারের পর্দায় বসে, কিন্তু তালিকাটা যার, সে-ই দেয়
+     * ([[App\Core\Contracts\OffersChoicesOnAForm]])।
+     */
+    'form_choices' => [
+        \App\Modules\Purchase\Services\TaggableBillsOnTheVoucherForm::class,
+    ],
+
     'permissions' => [
         'purchase.order.view',
         'purchase.order.create',

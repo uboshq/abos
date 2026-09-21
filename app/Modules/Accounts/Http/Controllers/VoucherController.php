@@ -7,6 +7,7 @@ namespace App\Modules\Accounts\Http\Controllers;
 use App\Core\Concerns\SortsLists;
 use App\Core\Engines\Attachment\AttachmentEngine;
 use App\Core\Engines\Drill\DrillResolver;
+use App\Core\Services\FormChoices;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\PartyRegistry;
 use App\Core\Support\CompanyContext;
@@ -23,10 +24,6 @@ use App\Modules\Accounts\Services\AccountsFacts;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\VoucherApproval;
 use App\Modules\Accounts\Services\VoucherService;
-use App\Modules\MasterData\Models\PartyType;
-use App\Modules\MasterData\Models\TransferMode;
-use App\Modules\Purchase\Models\PurchaseBill;
-use App\Modules\Supplier\Models\Supplier;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -674,7 +671,6 @@ class VoucherController extends Controller implements HasMiddleware
              * ⚠️ টেবিলটা ২১ অক্টোবর থেকে বসানো, আর আজ পর্যন্ত **কোনো ফর্মে
              * ঘরটা ছিল না** — আজকের চেনা রোগ: নিয়ম লেখা, অথচ অপৌঁছানো।
              */
-            'transferModes' => TransferMode::query()->orderBy('code')->pluck('name_en', 'id'),
 
             /*
              * জাবেদার সারিতে বাছার মতো পক্ষগুলো।
@@ -712,14 +708,6 @@ class VoucherController extends Controller implements HasMiddleware
              * প্রতিষ্ঠান। ⛔ তাই তালিকাটা কোডে লেখা হয়নি — লিখলে একদিন
              * মাস্টারে একটা ধরন যোগ হত আর এই পর্দায় আসত না।
              */
-            'payeeTypes' => PartyType::query()
-                ->where('company_id', CompanyContext::id())
-                ->whereIn('applies_to', ['supplier', 'both'])
-                ->where('is_active', true)
-                ->orderBy('name_bn')
-                ->get()
-                ->mapWithKeys(fn ($t) => [$t->id => $t->name_bn ?? $t->name_en])
-                ->all(),
 
             /*
              * প্রতিটা ধরনের নিজের লোকজন — ধরন বাছলে নামের ঘরটা
@@ -730,17 +718,6 @@ class VoucherController extends Controller implements HasMiddleware
              * আর পর্দা নাম লেখার ঘরটাই দেখাবে। ⓘ সরবরাহকারীর ফর্মে
              * ধরন বসানো শুরু করলেই এটা নিজে থেকে কাজ করবে।
              */
-            'payeesByType' => Supplier::query()
-                ->where('company_id', CompanyContext::id())
-                ->where('is_active', true)
-                ->whereNotNull('party_type_id')
-                ->orderBy('name_bn')
-                ->get(['id', 'name_bn', 'name_en', 'party_type_id'])
-                ->groupBy(fn ($s) => (string) $s->party_type_id)
-                ->map(fn ($group) => $group
-                    ->map(fn ($s) => ['id' => (int) $s->id, 'label' => $s->name_bn ?? $s->name_en])
-                    ->values())
-                ->all(),
 
             /*
              * ⭐ যে চালানগুলোয় এই খরচটা বসতে পারে — মালিকের ট্যাগের তালিকা।
@@ -760,35 +737,20 @@ class VoucherController extends Controller implements HasMiddleware
              * ব্যবসার ছন্দ থেকে: মাল আসার পর ভাড়ার বিল দিন তিনেকের
              * মধ্যেই আসে, আর দুই মাস যথেষ্ট বেশি।
              */
-            'taggableBills' => PurchaseBill::query()
-                /*
-                 * ⛔ `goods_summary` সারিগুলো পড়ে, তাই ওগুলো আগেই নিয়ে আসতে হয়।
-                 *
-                 * ⓘ এই রিপোতে অলস লোড বন্ধ (`preventLazyLoading`), আর সেটা
-                 * সুবিধা: লুকানো N+1 এখানে নীরবে ধীর হয় না, সাথে সাথে ভাঙে।
-                 *
-                 * ⚠️ কিন্তু ভাঙাটা দেখা গেছে কেবল মালিকের মেশিনে: পরীক্ষার
-                 * ডেটায় ট্যাগ করার মতো একটাও চালান নেই, তাই টেবিলটাই আঁকা
-                 * হত না আর সবুজ থাকত। ⓘ লেখা রহিল: খালি ডেটায় সবুজ
-                 * হওয়া আর কাজ করা এক কথা নয়।
-                 */
-                ->with(['lines.product'])
-                ->where('company_id', CompanyContext::id())
-                ->where('trx_date', '>=', now()->subDays(60)->toDateString())
-                ->withSum('billShares as already_charged', 'share_amount')
-                ->withSum('lines as total_qty', 'qty')
+            /*
+             * ⭐ অন্য মডিউলের ঘরগুলো — ২১ সেপ্টেম্বর ২০২৬, সীমারেখার নিরীক্ষা।
+             *
+             * ⚠️ আগে এখানে চারটা তালিকা হাতে লেখা ছিল: `TransferMode`,
+             * `PartyType` (MasterData), `Supplier`, আর `PurchaseBill`
+             * (Purchase)। ⛔ তিনটা মডিউলই accounts-এর উপর দাঁড়িয়ে, তাই
+             * নির্ভরতাগুলো ঘোষণাও করা যেত না — চক্র হত।
+             *
+             * ⭐ এখন যার তালিকা, সে-ই দেয় ([[FormChoices]])। ⓘ মডিউল বন্ধ
+             * থাকলে তার ঘরটা আসে না আর পর্দা ফাঁকা দেখায় — ভাঙে না,
+             * তাই ভিউতে `?? []` ধরে নেওয়া হয়।
+             */
+            ...app(FormChoices::class)->for('accounts.voucher'),
 
-                /*
-                 * মূল্যও লাগে — ভাগ কেবল পরিমাণে হয় না।
-                 *
-                 * ⓘ "ভাগ হবে কীসের অনুপাতে" ঘরটা পরিমাণ ও মূল্য —
-                 * দুইটাই বলে। ⛔ মূল্যের যোগফল না আনলে ও বাছাইটা
-                 * পর্দায় থাকত আর কাজ করত না।
-                 */
-                ->withSum('lines as total_value', 'amount')
-                ->orderByDesc('trx_date')->orderByDesc('id')
-                ->limit(50)
-                ->get(),
             'expenseAccounts' => $all->where('type', Account::EXPENSE)->values(),
 
             /*

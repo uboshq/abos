@@ -7,6 +7,7 @@ namespace App\Core\Module;
 use App\Core\Contracts\ChecksItsOwnBooks;
 use App\Core\Contracts\ContributesActivity;
 use App\Core\Contracts\ContributesFacts;
+use App\Core\Contracts\OffersChoicesOnAForm;
 use App\Core\Contracts\DashboardWidgets;
 use App\Core\Contracts\Importer;
 use App\Core\Contracts\ProvidesDashboard;
@@ -122,6 +123,20 @@ final class ModuleDefinition
          * @var array<string, class-string> `source_type` => মডেল
          */
         public readonly array $postsToTheBooks,
+
+        /**
+         * অন্য মডিউলের ফর্মে এই মডিউল যে তালিকাগুলো দেয়।
+         *
+         * ⓘ ছাঁচটা `facts`-এর হুবহু, কেবল জায়গাটা আলাদা: ওটা রেকর্ডের
+         * পাতায় কথা বলে, এটা ফর্মের ঘর ভরে ([[OffersChoicesOnAForm]])।
+         *
+         * ⚠️ ভাউচারের ফর্মে চারটা ঘর অন্য মডিউলের তথ্য চাইত, আর
+         * কন্ট্রোলার ঐ মডেলগুলো সরাসরি ডাকত — অথচ তিনটাই accounts-এর
+         * উপর দাঁড়িয়ে, তাই নির্ভরতাটা ঘোষণাও করা যেত না (২১ সেপ্টেম্বর ২০২৬)।
+         *
+         * @var list<class-string<OffersChoicesOnAForm>>
+         */
+        public readonly array $formChoices,
         /**
          * একই নাম দুইবার ঢোকা ঠেকানোর নিয়ম — কোন মডেল, কোন ঘরগুলো তুলনা হবে।
          *
@@ -504,6 +519,7 @@ final class ModuleDefinition
             docTypes: $raw['doc_types'] ?? [],
             drillSources: $raw['drill_sources'] ?? [],
             postsToTheBooks: $raw['posts_to_the_books'] ?? [],
+            formChoices: $raw['form_choices'] ?? [],
             duplicates: self::validateDuplicates($raw['duplicates'] ?? [], $path),
             settings: array_values($raw['settings'] ?? []),
             reports: self::validateReports($raw['reports'] ?? [], $path),
