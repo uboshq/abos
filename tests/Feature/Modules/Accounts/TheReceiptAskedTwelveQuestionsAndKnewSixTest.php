@@ -372,20 +372,21 @@ class TheReceiptAskedTwelveQuestionsAndKnewSixTest extends TestCase
      */
     public function test_a_party_from_another_company_is_not_readable(): void
     {
-        $other = Company::query()->where('id', '!=', $this->company->id)->first();
-
-        if ($other === null) {
-            $this->markTestSkipped('ডেমোতে দ্বিতীয় কোম্পানি নেই — দাবিটা মাপা যাচ্ছে না।');
-        }
-
-        $stranger = Customer::query()
-            ->withoutGlobalScopes()
-            ->where('company_id', $other->id)
-            ->first();
-
-        if ($stranger === null) {
-            $this->markTestSkipped('অন্য কোম্পানিতে কোনো গ্রাহক নেই — দাবিটা মাপা যাচ্ছে না।');
-        }
+        /*
+         * ⭐ অন্য কোম্পানির গ্রাহকটা পরীক্ষা নিজেই বানায় — ২১ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⛔ আগে এখানে দুইটা `markTestSkipped` ছিল ─────────────────────
+         * ডেমোর দ্বিতীয় কোম্পানিতে (FMART) একজনও গ্রাহক নেই, তাই এই
+         * দাবিটা লেখা হওয়ার দিন থেকে **একবারও চলেনি**।
+         *
+         * ⚠️ আর এটা যেনতেন দাবি নয় — এটাই প্রমাণ করে আইডি এক এক করে
+         * বাড়িয়ে অন্য কোম্পানির বকেয়া পড়ে ফেলা যায় না। ⓘ মেপে দেখা
+         * গেছে চারটা টাকার সুট "passed" বলছিল, অথচ ৩১টার ৩টা এড়ানো।
+         *
+         * ⓘ গ্রাহকটা নকল করে বানানো হয়, ঘর ধরে ধরে আন্দাজ করে নয় —
+         * তাতে পরের মাইগ্রেশনেই ভাঙত।
+         */
+        $stranger = $this->customerInAnotherCompany();
 
         $this->getJson(route('accounts.voucher.due', [
             'party_type' => 'customer',
@@ -424,5 +425,52 @@ class TheReceiptAskedTwelveQuestionsAndKnewSixTest extends TestCase
     {
         $this->postReceipt(['against_id' => 42])->assertSessionHasErrors('against_type');
         $this->postReceipt(['against_type' => 'capital_entry'])->assertSessionHasErrors('against_id');
+    }
+
+    /**
+     * অন্য একটা কোম্পানির একজন গ্রাহক — না থাকলে বানানো হয়।
+     *
+     * ⚠️ দ্বিতীয় কোম্পানিটাও না থাকলে সেটা আর এড়িয়ে যাওয়ার কারণ নয়,
+     * ব্যর্থতার কারণ: তখন এই ফাইলের কোম্পানি-সংক্রান্ত দাবিগুলোর
+     * কোনোটাই মাপা যায় না, আর সেটা জানা দরকার।
+     */
+    private function customerInAnotherCompany(): Customer
+    {
+        $other = Company::query()->where('id', '!=', $this->company->id)->first();
+
+        $this->assertNotNull($other, implode(PHP_EOL, [
+            'দ্বিতীয় কোনো কোম্পানিই নেই।',
+            '',
+            'তাহলে কোম্পানির দেয়াল মাপার কোনো উপায় নেই — আর সেটা',
+            'এড়িয়ে যাওয়ার কারণ নয়, থামার কারণ।',
+        ]));
+
+        $stranger = Customer::query()
+            ->withoutGlobalScopes()
+            ->where('company_id', $other->id)
+            ->first();
+
+        if ($stranger !== null) {
+            return $stranger;
+        }
+
+        /*
+         * ⓘ এই কোম্পানির একজনকে নকল করে অন্য কোম্পানিতে বসানো হয় —
+         * তাতে প্রতিটা ঘর বৈধ থাকে, আর কেবল মালিকানা বদলায়।
+         */
+        $mine = Customer::query()->withoutGlobalScopes()
+            ->where('company_id', $this->company->id)->firstOrFail();
+
+        $stranger = $mine->replicate(['public_id']);
+
+        $stranger->forceFill([
+            'company_id' => $other->id,
+            'branch_id' => $other->defaultBranch()?->id,
+            'code' => 'STRANGER-'.$other->id,
+            'name_en' => 'Stranger Traders',
+            'name_bn' => 'অন্য কোম্পানির ক্রেতা',
+        ])->save();
+
+        return $stranger->refresh();
     }
 }

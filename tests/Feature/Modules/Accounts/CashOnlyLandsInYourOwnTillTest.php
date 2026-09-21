@@ -149,11 +149,7 @@ final class CashOnlyLandsInYourOwnTillTest extends TestCase
      */
     public function test_a_bank_account_is_not_restricted(): void
     {
-        $bank = Account::query()->where('money_kind', Account::BANK)->postable()->active()->first();
-
-        if ($bank === null) {
-            $this->markTestSkipped('ডেমোতে কোনো ব্যাংক খাত নেই।');
-        }
+        $bank = $this->bankAccount();
 
         $voucher = $this->receiptInto($bank, '500');
 
@@ -190,11 +186,7 @@ final class CashOnlyLandsInYourOwnTillTest extends TestCase
      */
     public function test_a_bank_receipt_still_needs_its_signature(): void
     {
-        $bank = Account::query()->where('money_kind', Account::BANK)->postable()->active()->first();
-
-        if ($bank === null) {
-            $this->markTestSkipped('ডেমোতে কোনো ব্যাংক খাত নেই।');
-        }
+        $bank = $this->bankAccount();
 
         $voucher = $this->receiptInto($bank, '500');
 
@@ -274,6 +266,40 @@ final class CashOnlyLandsInYourOwnTillTest extends TestCase
         return $account;
     }
 
+    /**
+     * ⭐ একটা ব্যাংক খাত — পরীক্ষা নিজেই বানায়, ২১ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⛔ আগে এখানে `markTestSkipped` ছিল, আর সেটাই ফাঁদ ─────────────
+     * ডেমোতে একটা ব্যাংক খাত আছে, কিন্তু সেটা **পোস্টেবল নয়** — তাই
+     * উপরের দুইটা দাবি লেখা হওয়ার দিন থেকে **একবারও চলেনি**।
+     *
+     * ⚠️ আর রিপোর্টে এড়ানো দাবি আর সবুজ দাবি প্রায় একরকম দেখায়:
+     * চারটা সুট চালিয়ে "passed" পাওয়া গেছে, অথচ ৩১টার ৩টা এড়ানো।
+     * ⓘ যে নিয়ম কোনোদিন চলেনি, সে নিয়ম নয় — আশা।
+     *
+     * ⓘ নিচের [[cashAccount()]]-এর মতোই একটা বৈধ ভাইকে নকল করা হয়,
+     * কেবল ধরনটা ব্যাংক করে — ঘর ধরে ধরে আন্দাজ করলে পরের
+     * মাইগ্রেশনেই ভাঙত।
+     */
+    private function bankAccount(): Account
+    {
+        $existing = Account::query()
+            ->where('money_kind', Account::BANK)
+            ->postable()
+            ->active()
+            ->first();
+
+        if ($existing !== null) {
+            return $existing;
+        }
+
+        $account = $this->cashAccount('BANK-TEST');
+
+        $account->forceFill(['money_kind' => Account::BANK])->save();
+
+        return $account->refresh();
+    }
+
     private function till(Account $account, int $holderId): CashTill
     {
         return CashTill::create([
@@ -297,12 +323,39 @@ final class CashOnlyLandsInYourOwnTillTest extends TestCase
      */
     private function receiptInto(Account $money, string $amount): Voucher
     {
-        $other = Account::query()->postable()->active()->whereKeyNot($money->id)->firstOrFail();
+        /*
+         * ⚠️ বিপরীত লাইনটা **টাকার খাত হতে পারে না** — আর এটা শেখা হয়েছে
+         * দাবিটা প্রথমবার সত্যিই চলার দিনে, ২২ সেপ্টেম্বর ২০২৬।
+         *
+         * ⛔ আগে এখানে প্রথম পোস্টেবল খাতটাই নেওয়া হত, আর ডেমোতে সেটা
+         * "Main Counter" — একটা **নগদ** খাত। ⓘ ছাড়ের নিয়মটা দেখে
+         * *"কোনো একটা লাইন নগদে পড়ছে কি না"*, তাই ব্যাংকের রসিদটাও
+         * ছাড় পেয়ে যেত — অথচ দাবিটা ঠিক উল্টোটা মাপতে বসানো।
+         *
+         * ⓘ আসল রসিদে বিপরীত দিকটা পার্টি বা আয়ের খাত, টাকার খাত নয়।
+         */
+        $other = Account::query()
+            ->postable()
+            ->active()
+            ->whereKeyNot($money->id)
+            ->whereNull('money_kind')
+            ->firstOrFail();
+
+        /*
+         * ⓘ ব্যাংক বা MFS হলে লেনদেন নম্বরটা লাগে — নাহলে সেবা নিজেই
+         * আটকায় ([[VoucherService]], `bank_reference_required`)।
+         *
+         * ⚠️ এটা লেখার দরকার পড়ল কেবল আজ, যেদিন দাবিদুটো প্রথমবার
+         * সত্যিই চলল। ⓘ এতদিন ওরা `markTestSkipped`-এ পালাত, তাই
+         * ফিক্সচারের এই ফাঁকটা কারও চোখে পড়েনি।
+         */
+        $bankLike = in_array($money->money_kind, [Account::BANK, Account::MFS], true);
 
         $voucher = app(VoucherService::class)->create([
             'type' => Voucher::RECEIPT,
             'trx_date' => now()->toDateString(),
             'narration' => 'পরীক্ষা',
+            'instrument_no' => $bankLike ? 'TRX-TEST-77' : null,
         ], [
             ['account_id' => $money->id, 'debit' => $amount, 'credit' => '0'],
             ['account_id' => $other->id, 'debit' => '0', 'credit' => $amount],

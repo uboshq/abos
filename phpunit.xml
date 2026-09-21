@@ -11,6 +11,50 @@
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
         </testsuite>
+
+        <!--
+            ⭐ ডিপ্লয়ের আগে অন্তত এইগুলো — ২১ সেপ্টেম্বর ২০২৬।
+
+            ⛔ কেন একটা আলাদা নাম দরকার হলো: শেয়ার করা গাছে পুরো সুট
+            চালানো যায় না। ছয় ঘণ্টার রানের মাঝপথে একজন সহকর্মী ফাইল
+            সেভ করলেই রানটা অচল হয় (d1-এর একটা এভাবেই বাতিল হয়েছে),
+            তাই যিনি ডিপ্লয় করেন তিনি **যে পথে হাত পড়েছে** কেবল তার
+            টেস্ট চালান।
+
+            ⚠️ ফল: নিজের পথের বাইরের লাল কেউ দেখে না। ঠিক ঐ ফাঁকে
+            টাকার উপর একটা `(float)` main-এ ঢুকে বসে ছিল, আর পাহারাটা
+            লাল হয়েও কারও চোখে পড়েনি।
+
+            ⓘ এই তালিকাটা "জরুরি টেস্ট" নয়। এগুলো সেইগুলো যাদের লাল
+            হওয়ার মানে **খাতা ভুল, নয়তো একটা দরজা খোলা** — বদলটা
+            যা নিয়েই হোক।
+
+            চালাতে: php artisan test, আর testsuite ঘরটা money
+        -->
+        <testsuite name="money">
+            <!-- খাতার সিল — বদলানো, মোছা, আর সিল ছাড়া সারি ঢোকানো -->
+            <file>tests/Feature/Core/TheBooksCouldBeEditedAndNobodyWouldKnowTest.php</file>
+            <!-- আমাদের নিজের মাইগ্রেশন যেন সিলটা না ভাঙে -->
+            <file>tests/Feature/Core/OurOwnMigrationBrokeTheSealTest.php</file>
+            <!-- দুই-তরফা মেলানো, আর একই কাগজ দুইবার খাতায় না ওঠা -->
+            <file>tests/Feature/Core/PostingEngineTest.php</file>
+            <!-- টাকার অঙ্ক — গোনা, গোল করা, লেখা -->
+            <file>tests/Feature/Core/MoneyTest.php</file>
+            <!-- কোথাও টাকা float হয়ে না যাওয়া -->
+            <file>tests/Feature/Architecture/MoneyIsNeverAFloatTest.php</file>
+            <!-- বছর বন্ধ — মুনাফা সঞ্চিত মুনাফায় বসে -->
+            <file>tests/Feature/Modules/YearEndTest.php</file>
+            <!-- মালিকের চাবি — কে কার খাতা বদলাতে পারে -->
+            <file>tests/Feature/Modules/SystemAdmin/TheUserAdminCouldTakeTheOwnersKeyTest.php</file>
+            <!-- লেখা প্রতিটা নিয়ম সত্যিই কোনো পথে পৌঁছায় -->
+            <file>tests/Feature/Architecture/EveryPolicyRuleIsActuallyReachedTest.php</file>
+            <!-- কোনো দরজা পাহারা ছাড়া নয় -->
+            <file>tests/Feature/Architecture/EveryRouteIsGuardedTest.php</file>
+            <!-- কমিট না করা ক্লাস ডাকা হচ্ছে না — লাইভে সাদা পর্দা -->
+            <file>tests/Feature/Architecture/EveryClassTheCodeCallsIsActuallyCommittedTest.php</file>
+            <!-- মেনুর প্রতিটা পাতা সত্যিই খোলে -->
+            <file>tests/Feature/Architecture/EveryMenuPageOpensBeforeItIsDeployedTest.php</file>
+        </testsuite>
     </testsuites>
     <source>
         <include>
