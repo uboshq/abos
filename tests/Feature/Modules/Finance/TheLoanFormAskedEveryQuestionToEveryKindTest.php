@@ -227,6 +227,40 @@ final class TheLoanFormAskedEveryQuestionToEveryKindTest extends TestCase
     }
 
     /**
+     * ⛔ শতাংশ আছে, ভিত্তি নেই — তখন অঙ্কটা দেখানো হয় না।
+     *
+     * ── ⚠️ কেন এটা টাকার প্রশ্ন ─────────────────────────────
+     * ১০ লাখ বকেয়ায় ২% আসলের উপর মানে ২০,০০০ টাকা, আর বাকি
+     * সুদের উপর হলে সংখ্যাটা সম্পূর্ণ আলাদা। ⛔ সেবাটা আগে
+     * **চুপচাপ আসল ধরে নিত** — ফর্মে কিছু আগে থেকে বাছা নেই,
+     * ডাটাবেসেও default নেই, অথচ হিসাবের শেষ লাইনটা অনুমান
+     * করত।
+     *
+     * ⓘ মালিকের উত্তর, ২১ সেপ্টেম্বর ২০২৬: *"manual korbo"* — তিনি
+     * প্রতিবার নিজে বেছে নেবেন। তাই না বললে উত্তর "জানি না"।
+     */
+    public function test_a_percentage_with_no_basis_is_not_guessed(): void
+    {
+        $facility = $this->openRunningLoan([
+            'instalments' => 24, 'instalment_amount' => '50000',
+            'opening_drawn' => '1000000', 'instalments_paid' => 0,
+            'early_charge' => '2', 'early_charge_kind' => 'percent',
+            // ⛔ ভিত্তির ঘরটা ইচ্ছাকৃতভাবে খালি
+        ]);
+
+        $seen = app(BankFacilityService::class)->settlementToday($facility);
+
+        $this->assertTrue($seen['unknown'], 'ভিত্তি না বলা সত্ত্বেও সেবাটা একটা উত্তর দিয়েছে।');
+        $this->assertSame(0, bccomp($seen['charge'], '0', 4), 'অনুমান করা একটা চার্জ বসেছে।');
+
+        /*
+         * ⚠️ মোট বকেয়ার সমান থাকতে হবে — চার্জ যোগ না করা মানে
+         * শূন্য যোগ করা নয়; পর্দা বলবে হিসাবটা করা যায়নি।
+         */
+        $this->assertSame(0, bccomp($seen['total'], $seen['outstanding'], 4));
+    }
+
+    /**
      * ⭐ থোক চার্জ হলে যা লেখা, তাই।
      */
     public function test_a_flat_charge_is_taken_as_written(): void
