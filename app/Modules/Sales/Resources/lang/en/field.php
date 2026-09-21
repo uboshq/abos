@@ -395,4 +395,6 @@ return [
     'slab_from' => 'Band from',
     'slab_to' => 'Band to',
     'choose' => 'Choose',
+    /* The receipts behind the collected figure - 21 September 2026. */
+    'money_received' => 'Money received',
 ];

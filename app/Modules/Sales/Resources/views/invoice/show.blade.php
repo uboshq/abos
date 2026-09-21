@@ -203,7 +203,64 @@
             </div>
         </section>
 
-        <x-ui.attachments :document="$invoice" />
+        {{--
+        ⭐ টাকাটা কোন কাগজে এল — ২১ সেপ্টেম্বর ২০২৬।
+
+        ── ⛔ মালিকের প্রশ্ন ────────────────────────────────────────────
+        *"INV-0004 ekta deposit diyechi ta haralo keno?"* — আর টাকাটা
+        হারায়নি: আদায় ৫৪৩, বকেয়া ১৭৪.৬৫, সবই ঠিক গোনা হচ্ছিল।
+
+        ⚠️ **হারিয়েছিল কাগজটা।** রসিদের নম্বরটা এই পাতায় কোথাও লেখা ছিল
+        না। ⓘ পাতাটা রসিদ দেখাত কেবল **সইয়ের অপেক্ষায়** থাকা জমার
+        বেলায় (উপরের ব্লকটা); নিশ্চিত হয়ে গেলে সে তালিকা থেকে উধাও।
+
+        ⭐ একটা সংখ্যা যোগ হয়েছে দেখা, আর **কোন কাগজে** যোগ হয়েছে জানা —
+        দুইটা আলাদা প্রশ্ন। দ্বিতীয়টার উত্তর ছাড়া কেউ মেলাতে পারেন না,
+        আর তখন মনে হয় টাকাটাই হারিয়ে গেছে।
+
+        ⓘ নম্বরটা ক্লিকযোগ্য (নিয়ম ১) — ভাউচারের নিজের পাতায় যায়।
+    --}}
+    @if ($invoice->receiptVouchers->isNotEmpty())
+        <section data-boxed
+                 class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+            <h2 class="mb-3 font-semibold">{{ __('sales::field.money_received') }}</h2>
+
+            <x-ui.table
+                :rows="$invoice->receiptVouchers"
+                :empty="__('sales::message.no_receipts_yet')"
+                :columns="[
+                    [
+                        'key' => 'trx_date',
+                        'label' => __('core.print.date'),
+                        'width' => '8rem',
+                        'render' => fn ($v) => \App\Core\Support\DateFormat::format($v->trx_date),
+                    ],
+                    [
+                        'key' => 'document_no',
+                        'label' => __('core.table.document'),
+                        'width' => '10rem',
+                        'render' => fn ($v) => view('sales::components.doc-link', [
+                            'document' => $v,
+                            'route' => 'accounts.voucher.show',
+                        ]),
+                    ],
+                    [
+                        'key' => 'narration',
+                        'label' => __('accounts::field.narration'),
+                        'render' => fn ($v) => $v->narration ?: '—',
+                    ],
+                    [
+                        'key' => 'amount',
+                        'label' => __('sales::field.amount'),
+                        'numeric' => true,
+                        'width' => '10rem',
+                        'render' => fn ($v) => \App\Core\Support\Money::format($v->amount),
+                    ],
+                ]" />
+        </section>
+    @endif
+
+    <x-ui.attachments :document="$invoice" />
 
         @can('delete', $invoice)
             @if ($invoice->status !== \App\Core\Support\DocumentStatus::CANCELLED)

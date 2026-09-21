@@ -167,6 +167,35 @@ class SalesInvoice extends Model implements Drillable
      * ⚠️ বিলের বিপরীতে লেখা পরিশোধ (ফেরত টাকা) এখানে বিয়োগ হয় না — ফেরত
      * বিক্রয়ের নিজের পথ আছে, আর এখানে মেশালে বকেয়া দুইবার বাড়ত।
      */
+    /**
+     * এই বিলের বিপরীতে যে রসিদগুলো কাটা হয়েছে — কাগজ ধরে।
+     *
+     * ── ⛔ মালিকের প্রশ্ন, ২১ সেপ্টেম্বর ২০২৬ ───────────────────────
+     * *"INV-0004 ekta deposit diyechi ta haralo keno?"* — আর টাকাটা
+     * হারায়নি: [[paidByReceiptVouchers()]] ওটা গুনেই রেখেছিল, বকেয়াও
+     * ঠিক দেখাচ্ছিল (৭১৭.৬৫ − ৫৪৩ = ১৭৪.৬৫)।
+     *
+     * ⚠️ **হারিয়েছিল কাগজটা।** বিলের পাতায় রসিদের নম্বরটা কোথাও লেখা
+     * ছিল না, তাই "টাকাটা কোন কাগজে গেল" প্রশ্নের উত্তর পর্দায় ছিল না।
+     * ⓘ পাতাটা রসিদ দেখাত কেবল **সইয়ের অপেক্ষায়** থাকা জমার বেলায়;
+     * নিশ্চিত হয়ে গেলে সে আর তালিকায় আসত না।
+     *
+     * ⭐ একটা সংখ্যা যোগ হয়েছে দেখা আর **কোন কাগজে** যোগ হয়েছে জানা
+     * দুইটা আলাদা প্রশ্ন। দ্বিতীয়টার উত্তর ছাড়া কেউ মেলাতে পারেন না।
+     *
+     * ⓘ শর্তগুলো `paidByReceiptVouchers()`-এর হুবহু — তালিকা আর যোগফল
+     * আলাদা হলে পাঠক দুইটা আলাদা সত্য পেতেন।
+     */
+    public function receiptVouchers(): HasMany
+    {
+        return $this->hasMany(Voucher::class, 'against_id')
+            ->where('type', Voucher::RECEIPT)
+            ->where('against_type', static::drillSourceType())
+            ->posted()
+            ->orderBy('trx_date')
+            ->orderBy('id');
+    }
+
     public function paidByReceiptVouchers(): string
     {
         return (string) (Voucher::query()

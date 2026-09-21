@@ -260,4 +260,5 @@ return [
     'credit_limit_crossed' => 'Past the credit limit',
     /* An invoice is a result, not a starting point - 21 September 2026. */
     'invoice_needs_a_paper' => 'An invoice is not made from nothing - start from an order or a direct sale.',
+    'no_receipts_yet' => 'No receipt has been written against this invoice yet.',
 ];
