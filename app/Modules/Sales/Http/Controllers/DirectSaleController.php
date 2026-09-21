@@ -721,7 +721,23 @@ class DirectSaleController extends Controller implements HasMiddleware
                     'reorder' => (string) $p->reorder_level,
                     'free_available' => bcsub((string) $p->free_total, (string) $p->free_reserved_total, 4),
                 ];
-            });
+            })
+            /*
+             * ⛔ মজুদ শূন্য হলে খোঁজার তালিকায় আসে না — মালিকের নির্দেশ,
+             * ২১ সেপ্টেম্বর ২০২৬: *"0 stock products ekhane asbe na"*।
+             *
+             * ⓘ কাউন্টারে তালিকাটা বেচার জন্য, দেখার জন্য নয়। যে মাল নেই
+             * তার সারি বিক্রেতাকে কেবল পেরোতে হয় — আর ডিপোতে শূন্য মজুদের
+             * পণ্যই বেশি, তাই শুরুর তিরিশটা সারির পুরোটাই শূন্য দিয়ে ভরা থাকত।
+             *
+             * ⚠️ ছাঁকনিটা মানচিত্রের **পরে**, SQL-এ নয়। ⓘ কারণ অর্ডারে-রান্না
+             * খাবারের নিজের মজুদ শূন্যই থাকে, অথচ উপকরণ দিয়ে চল্লিশ প্লেট
+             * হয় ([[RecipeService::sellableQty()]])। ⛔ SQL-এ ছাঁকলে বিরিয়ানি তালিকা
+             * থেকেই হারাত, আর সেটা শূন্য দেখানোর চেয়েও খারাপ।
+             */
+            ->filter(fn (object $p) => bccomp((string) $p->available, '0', 4) > 0
+                || bccomp((string) $p->free_available, '0', 4) > 0)
+            ->values();
     }
 
     private function warehouse(Request $request): ?Warehouse
