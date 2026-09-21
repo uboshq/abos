@@ -16,6 +16,7 @@ use App\Modules\Inventory\Services\StockAdjustmentService;
 use App\Modules\Inventory\Services\StockCountService;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\MasterData\Models\ReasonCode;
+use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -97,7 +98,28 @@ class StockController extends Controller implements HasMiddleware
          */
         $query = Product::query()
             ->search($request->query('q'))
-            ->active()
+            /*
+             * ⛔ নিষ্ক্রিয় পণ্যও আসে — যদি তার গায়ে মাল থাকে।
+             *
+             * ── ⚠️ মালিক যা দেখেছেন, ২১ সেপ্টেম্বর ২০২৬ ─────────────
+             * *"দুটো বিল, এটাও ইনভেন্টরিতে যাচ্ছে না"*। ⓘ কিন্তু গেছে:
+             * PBL-0001 ৫৭৬ ইউনিট মেঝেতে বসিয়েছে, চালানে ২৪ গেছে, পড়ে
+             * আছে ৫৫২। ⛔ পণ্যটা (`Cosmos 40gm`) নিষ্ক্রিয়, আর এখানে
+             * শুধু `active()` থাকায় সারিটাই আসত না।
+             *
+             * ⭐ অর্থাৎ **গুদামে মাল, পর্দায় কিছু নেই** — আর টাকা ইতিমধ্যে
+             * খরচ হয়ে গেছে। ⓘ ঠিক এই ভুলটার কথা
+             * [[StockReports::stockSummary]]-তেও লেখা আছে: *"এভাবেই মাল
+             * উধাও দেখায়"*। সেখানে সারাই হয়েছিল, এই পর্দায় হয়নি।
+             *
+             * ⚠️ নিষ্ক্রিয় করা মানে *"আর কিনব না"*, **কখনোই** *"যা আছে
+             * তা ভুলে যাও"*। ⓘ তাই নিয়মটা এখন: সক্রিয়, **অথবা** এখনো
+             * কিছু ধরে আছে। শূন্য হয়ে যাওয়া নিষ্ক্রিয় পণ্য আগের মতোই
+             * তালিকার বাইরে — সেগুলো নিয়ে কারও কিছু করার নেই।
+             */
+            ->where(fn (EloquentBuilder $q) => $q
+                ->active()
+                ->orWhereIn('inv_products.id', $this->stillHoldingSomething($warehouse)))
             ->with('unit')
             ->select('inv_products.*')
             ->selectSub($this->sumOf('floor_change', $warehouse), 'floor_total')
@@ -173,6 +195,29 @@ class StockController extends Controller implements HasMiddleware
     /**
      * এক পণ্যের এক ধরনের চলাচলের যোগফল — সাব-সিলেক্ট হিসেবে।
      */
+    /**
+     * যে পণ্যগুলো এখনো কিছু ধরে আছে — নিষ্ক্রিয় হলেও।
+     *
+     * ⓘ চারটা ঘরই গোনা হয়: মেঝে, আটকানো, বসার অপেক্ষায়, আর ফ্রি।
+     * ⚠️ কেবল `floor` দেখলে যে মাল সদ্য এসেছে অথচ কেউ গুদামে বসায়নি
+     * (`unplaced`) সে আবার অদৃশ্য হত — একই ভুলের আরেক দরজা।
+     *
+     * ⓘ গুদামের ছাঁকনি এখানেও লাগে: নেত্রকোনার মাল দেখতে চাইলে
+     * ময়মনসিংহের মজুদ এই পণ্যটাকে তালিকায় টেনে আনার কথা নয়।
+     */
+    private function stillHoldingSomething(?Warehouse $warehouse): Builder
+    {
+        return DB::table('inv_stock_movements')
+            ->select('product_id')
+            ->where('company_id', CompanyContext::id())
+            ->when($warehouse, fn (Builder $q, Warehouse $w) => $q->where('warehouse_id', $w->id))
+            ->groupBy('product_id')
+            ->havingRaw('COALESCE(SUM(floor_change), 0) <> 0
+                      OR COALESCE(SUM(hold_change), 0) <> 0
+                      OR COALESCE(SUM(unplaced_change), 0) <> 0
+                      OR COALESCE(SUM(free_change), 0) <> 0');
+    }
+
     private function sumOf(string $column, ?Warehouse $warehouse): Builder
     {
         return DB::table('inv_stock_movements')

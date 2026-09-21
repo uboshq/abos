@@ -114,4 +114,7 @@ return [
     'no_places' => 'No blocks or racks are set up in this warehouse. Placement will then show only the warehouse, which is normal for a small shop.',
     'no_returns_to_place' => 'No returned goods are waiting to be placed.',
     'no_purchases_to_place' => 'No purchased goods are waiting to be placed.',
+
+    /* Why a switched-off product is still listed — 21 September 2026. */
+    'inactive_but_held' => 'This product is switched off, but it is listed because stock is still held.',
 ];
