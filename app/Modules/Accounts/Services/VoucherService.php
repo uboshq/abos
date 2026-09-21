@@ -719,21 +719,14 @@ final class VoucherService
             return;
         }
 
-        $mine = CashTill::query()
-            ->active()
-            ->heldBy($userId)
-            ->pluck('account_id')
-            ->map(fn ($id) => (int) $id)
-            ->all();
-
-        if (in_array((int) $cash->id, $mine, true)) {
+        if (CashTill::mayUse($userId, (int) $cash->id)) {
             return;
         }
 
         throw ValidationException::withMessages([
-            'lines' => $mine === []
-                ? __('accounts::validation.no_till_of_your_own')
-                : __('accounts::validation.cash_not_your_till', ['account' => $cash->label()]),
+            'lines' => CashTill::heldByAnyone()
+                ? __('accounts::validation.cash_not_your_till', ['account' => $cash->label()])
+                : __('accounts::validation.no_till_of_your_own'),
         ]);
     }
 

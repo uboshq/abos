@@ -124,6 +124,14 @@ final class CashOnlyLandsInYourOwnTillTest extends TestCase
      */
     public function test_a_user_with_no_till_cannot_take_cash(): void
     {
+        /*
+         * ⚠️ নিয়মটা জাগাতে হয়: অন্তত একটা বাক্স কারও নামে বসলে তবেই
+         * সে খাটে। ⛔ শর্তটা ছাড়া দাবিটা লেখা ছিল আর লাল হলো — ডেমোর
+         * কোনো বাক্সেরই মালিক নেই। ⓘ ভুলটা কোডের নয়, দাবির।
+         */
+        $this->till($this->cashAccount('CASH-SOMEONE'), User::query()
+            ->whereKeyNot($this->user->id)->firstOrFail()->id);
+
         $any = $this->cashAccount('CASH-MINE');
 
         $this->expectException(ValidationException::class);
@@ -192,6 +200,34 @@ final class CashOnlyLandsInYourOwnTillTest extends TestCase
 
         $this->assertNotNull(app(VoucherApproval::class)->stopping($voucher),
             '⛔ ব্যাংকে আদায় সই ছাড়াই এগিয়ে যাচ্ছে।');
+    }
+
+    /**
+     * ⭐ কারও নামে বাক্স বসানো না থাকলে নিয়মটা ঘুমায়।
+     *
+     * ── ⛔ লাইভে যা হয়েছিল, ২১ সেপ্টেম্বর ২০২৬ ─────────────────────
+     * নিয়মটা কড়া করে বসানোর পর মালিক **নগদই বাছতে পারলেন না**:
+     * তিনটা ক্যাশবাক্সের একটারও `holder_id` বসানো ছিল না, তাই "নিজের
+     * বাক্স" বলে কিছুই মিলত না আর ড্রপডাউনে কেবল ব্যাংক থাকত।
+     *
+     * ⚠️ একটা পাহারা যা কাজটাই বন্ধ করে দেয়, সেটা পাহারা নয় — কয়েক
+     * দিনেই কেউ ওটা তুলে দেয়। ⭐ তাই নিয়মটা তখনই জাগে যখন ব্যবসা
+     * সেটা ব্যবহার শুরু করে: অন্তত একটা বাক্স কারও নামে বসলে।
+     */
+    public function test_the_rule_sleeps_until_a_till_has_a_holder(): void
+    {
+        CashTill::query()->update(['holder_id' => null]);
+
+        $any = $this->cashAccount('CASH-ANY');
+
+        $voucher = $this->receiptInto($any, '500');
+
+        $this->assertNotNull($voucher->id, implode('
+', [
+            '⛔ কেউ বাক্সের মালিক না হয়েও নগদ আটকে গেছে।',
+            '',
+            '⚠️ তখন কেউ নগদ নিতেই পারেন না, আর পাহারাটা কাজের বদলে বাধা হয়।',
+        ]));
     }
 
     /**

@@ -658,14 +658,8 @@ class VoucherController extends Controller implements HasMiddleware
          * কার হেফাজতে তার কোনো উত্তর থাকে না। ⛔ পর্দা তখন বলে দেয়
          * কেন ঘরটা খালি ([[accounts::message.no_till_of_your_own]])।
          */
-        $myTills = CashTill::query()
-            ->active()
-            ->heldBy((int) auth()->id())
-            ->pluck('account_id')
-            ->all();
-
         $cashForMe = $money
-            ->filter(fn (Account $a) => ! $a->isCash() || in_array((int) $a->id, $myTills, true))
+            ->filter(fn (Account $a) => ! $a->isCash() || CashTill::mayUse(auth()->id(), (int) $a->id))
             ->values();
 
         return [
@@ -674,7 +668,6 @@ class VoucherController extends Controller implements HasMiddleware
              * কারও নগদ খাত এখানে আসে না।
              */
             'moneyAccounts' => $cashForMe,
-            'hasOwnTill' => $myTills !== [],
             'allAccounts' => $all,
 
             /*
