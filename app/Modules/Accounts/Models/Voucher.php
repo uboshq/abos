@@ -319,6 +319,37 @@ class Voucher extends Model implements Drillable
         return __('accounts::voucher.'.$this->type);
     }
 
+    /**
+     * ভাউচারটার নিজের নাম — কোথা থেকে এসেছে সেটা ধরে।
+     *
+     * ── ⭐ মালিকের নির্দেশ, ২১ সেপ্টেম্বর ২০২৬ ───────────────────────
+     * *"ei আদায় ভাউচার er nam hobe sales added deposit"* — বিক্রয়ের
+     * পর্দা থেকে নেওয়া জমার রসিদটা যেন খুলেই বলে দেয় সে কার।
+     *
+     * ── ⚠️ কেন `origin` একা যথেষ্ট নয় ───────────────────────────────
+     * ⓘ `counter` লেখাটা **দুই জায়গায়** বসে: বিক্রয়ে জমা নেওয়ার সময়
+     * আর ক্রয়ে পরিশোধ করার সময়। ⛔ কেবল origin ধরে নাম দিলে ক্রয়ের
+     * পরিশোধের কাগজেও "বিক্রয়ে যোগ করা জমা" লেখা উঠত — এক শব্দের ভুল,
+     * আর টাকার কাগজে ভুল দিক দেখানোর চেয়ে খারাপ কিছু নেই।
+     *
+     * ⭐ তাই জোড়াটা মাপা হয়: **ধরন আর উৎস একসাথে**।
+     *
+     * ⓘ অন্য সব ভাউচারে `null` ফেরে, আর পর্দা তখন আগের মতোই
+     * `typeLabel()` দেখায় — কোনো পাতায় কিছু বদলায় না।
+     */
+    public function originLabel(): ?string
+    {
+        if ($this->origin !== self::ORIGIN_COUNTER) {
+            return null;
+        }
+
+        return match ($this->type) {
+            self::RECEIPT => __('accounts::voucher.origin_sales_deposit'),
+            self::PAYMENT => __('accounts::voucher.origin_purchase_payment'),
+            default => null,
+        };
+    }
+
     /** ডেবিট ও ক্রেডিটের যোগফল — সমান না হলে পোস্ট হয় না। */
     public function totals(): array
     {

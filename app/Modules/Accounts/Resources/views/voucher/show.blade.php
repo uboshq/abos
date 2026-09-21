@@ -46,7 +46,7 @@
     <x-slot:title>{{ $voucher->document_no }}</x-slot:title>
 
     <x-slot:header>
-        <x-ui.page-header :title="$voucher->document_no" :subtitle="$voucher->typeLabel()">
+        <x-ui.page-header :title="$voucher->document_no" :subtitle="$voucher->originLabel() ?? $voucher->typeLabel()">
             <x-slot:actions>
                 @if ($voucher->isDraft())
                     @can('accounts.voucher.update')

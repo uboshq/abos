@@ -5,6 +5,8 @@ declare(strict_types=1);
 return [
     'receipt' => 'আদায় ভাউচার',
     'payment' => 'পরিশোধ ভাউচার',
+    'origin_sales_deposit' => 'বিক্রয়ে যোগ করা জমা',
+    'origin_purchase_payment' => 'ক্রয়ে যোগ করা পরিশোধ',
     'expense' => 'খরচ ভাউচার',
     'journal' => 'জাবেদা ভাউচার',
     'contra' => 'কন্ট্রা ভাউচার',
