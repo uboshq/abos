@@ -66,6 +66,10 @@ class MoneyIsNeverAFloatTest extends TestCase
 
         sort($floats);
 
+        // ⓘ কলামই না পড়লে উপরের খোঁজাটা অর্থহীন — খালি হাতে সবুজ।
+        $this->assertGreaterThan(100, count($this->columns()),
+            'ডাটাবেজের কলামই পড়া হয়নি — এই পরীক্ষাটা তখন কিছুই দেখছে না।');
+
         $this->assertSame([], $floats, implode("\n", [
             'এই কলামগুলো ভাসমান সংখ্যা। টাকা হলে একদিন ট্রায়াল ব্যালেন্সে',
             'এক পয়সার পার্থক্য আসবে, আর সেটা কোনো এন্ট্রি ধরে খুঁজে পাওয়া যাবে না।',
@@ -233,6 +237,7 @@ class MoneyIsNeverAFloatTest extends TestCase
         'app/Models/Attachment.php' => 'ফাইলের আকার, টাকা নয়',
         'app/Modules/Inventory/Http/Requests/StockTransferRequest.php' => 'তুলনা — খালি সারি ছাঁকা',
         'app/Modules/Purchase/Http/Controllers/DirectPurchaseController.php' => 'তুলনা — শূন্যের বেশি কি না',
+        'app/Modules/Purchase/Http/Controllers/PurchaseBillController.php' => 'তুলনা — দর শূন্যের বেশি কি না (২১ সেপ্টেম্বর ২০২৬)',
         'app/Modules/Purchase/Http/Requests/PaymentRequest.php' => 'তুলনা — খালি সারি ছাঁকা',
         'app/Modules/Purchase/Http/Requests/PurchaseReturnRequest.php' => 'তুলনা — খালি সারি ছাঁকা',
         'app/Modules/Purchase/Services/DirectPurchaseService.php' => 'তুলনা, আর ব্রাউজারে পাঠানো মান',
@@ -285,8 +290,10 @@ class MoneyIsNeverAFloatTest extends TestCase
     public function test_no_new_float_cast_creeps_into_the_code(): void
     {
         $offenders = [];
+        $swept = 0;
 
         foreach ($this->phpAndBladeFiles() as $path) {
+            $swept++;
             $relative = str_replace(DIRECTORY_SEPARATOR, '/', substr($path, strlen(base_path()) + 1));
 
             // নিজের ঘরে bcmath-এর মোড়ক লেখা হয়, ওখানে ব্যতিক্রম স্বাভাবিক
@@ -296,7 +303,7 @@ class MoneyIsNeverAFloatTest extends TestCase
 
             $body = $this->withoutComments(file_get_contents($path));
 
-            if (preg_match('/\(float\)|floatval\s*\(|\(double\)/', $body) !== 1) {
+            if (! $this->castsToFloat($body)) {
                 continue;
             }
 
@@ -305,8 +312,10 @@ class MoneyIsNeverAFloatTest extends TestCase
             }
         }
 
-        $this->assertSame([], $offenders,
-            'টাকা বা পরিমাণ float-এ নেওয়া হয়েছে। ইচ্ছাকৃত হলে FLOAT_IS_DELIBERATE-এ '
+        $this->assertGreaterThan(500, $swept,
+            'ফাইলই পড়া হয়নি — জাল খালি, তাই কিছু ধরা পড়েনি।');
+
+        $this->assertSame([], $offenders, 'টাকা বা পরিমাণ float-এ নেওয়া হয়েছে। ইচ্ছাকৃত হলে FLOAT_IS_DELIBERATE-এ '
             .'কারণসহ লিখুন:
 '.implode('
 ', $offenders));
@@ -332,8 +341,7 @@ class MoneyIsNeverAFloatTest extends TestCase
                 continue;
             }
 
-            if (preg_match('/\(float\)|floatval\s*\(|\(double\)/',
-                $this->withoutComments(file_get_contents($path))) !== 1) {
+            if (! $this->castsToFloat($this->withoutComments((string) file_get_contents($path)))) {
                 $stale[] = $relative.' (cast আর নেই)';
             }
         }
@@ -345,6 +353,46 @@ class MoneyIsNeverAFloatTest extends TestCase
     }
 
     /** @return list<string> app-এর প্রতিটা PHP ও Blade ফাইল */
+    /**
+     * ⭐ নিয়মটা এক জায়গায় — সুইপ আর নিজের পরীক্ষা দুইটাই এটাই ডাকে।
+     *
+     * ⚠️ দুইবার লিখলে দুইটা আলাদা হয়ে যেত, আর তখন নিজের পরীক্ষাটা
+     * সবুজ থাকত অথচ সুইপ চুপচাপ কিছু খুঁজে পাওয়া বন্ধ করে দিত।
+     */
+    private function castsToFloat(string $code): bool
+    {
+        return preg_match('/\(float\)|floatval\s*\(|\(double\)/', $code) === 1;
+    }
+
+    /**
+     * ⭐ পাহারাটা সত্যিই একটা ধরতে পারে — ২১ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⛔ কেন এটা লাগল ─────────────────────────────────────────────
+     * একটা নিরপেক্ষ পাঠে দেখা গেল আমাদের কাঠামো-পাহারাগুলোর একটা বড়
+     * অংশ **কখনো প্রমাণ করে না যে তারা কিছু ধরতে পারে**। ⚠️ তারা
+     * কেবল বলে "কোনো অপরাধী পাইনি" — আর জালটা ছেঁড়া হলেও ঠিক ঐ কথাই
+     * বলত।
+     *
+     * ⓘ তাই জালটাকে একটা **জানা মাছ** খাওয়ানো হয়। ধরতে না পারলে এই
+     * পরীক্ষাটা লাল হয়, আর উপরের সুইপের সবুজটা তখন আর বিশ্বাসযোগ্য নয়।
+     */
+    public function test_the_float_detector_actually_finds_one(): void
+    {
+        foreach (['$x = (float) $row->amount;', '$x = floatval($y);', '$x = (double) $y;'] as $bad) {
+            $this->assertTrue($this->castsToFloat($bad),
+                'এই লেখাটায় float cast আছে, অথচ পাহারা ধরতে পারল না: '.$bad);
+        }
+
+        /*
+         * ⓘ উল্টো দিকটাও — নাহলে একটা পাহারা যা সব কিছুকে অপরাধী বলে,
+         * সেও উপরের তিনটা দাবি পাস করে ফেলত।
+         */
+        foreach (['$x = (int) $y;', '$x = bcadd($a, $b, 4);', '// (float) পুরনো কথা'] as $fine) {
+            $this->assertFalse($this->castsToFloat($this->withoutComments($fine)),
+                'এখানে float cast নেই, তবু পাহারা অপরাধী বলছে: '.$fine);
+        }
+    }
+
     private function phpAndBladeFiles(): array
     {
         $out = [];

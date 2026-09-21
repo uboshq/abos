@@ -9,6 +9,7 @@ use App\Core\Concerns\FiltersByDate;
 use App\Core\Concerns\SortsLists;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\DocumentStatus;
+use App\Core\Support\Money;
 use App\Http\Controllers\Controller;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
@@ -208,9 +209,30 @@ class SalesOrderController extends Controller implements HasMiddleware
              * ⓘ পুরো তালিকাটা পাতার সাথেই একবার যায়, তাই ক্রেতা বদলালে
              * নতুন কোনো অনুরোধ লাগে না — কাউন্টারের পর্দা ঠিক এভাবেই করে।
              */
+            /*
+             * ⚠️ অঙ্কগুলো **স্ট্রিং** হয়ে যায়, float হয়ে নয়।
+             *
+             * ⛔ প্রথমে `(float)` লেখা হয়েছিল, আর [[MoneyIsNeverAFloatTest]]
+             * সেটা ধরে ফেলল — ঠিক কাজ করেছে। ⓘ পর্দায় সংখ্যাটা কেবল
+             * দেখানো হয় (`x-text`), তাই float বানানোর কোনো দরকারই নেই,
+             * অথচ ১২৩৪.৫৬ একদিন ১২৩৪.৫৬০০০০০০০১ হয়ে ফুটে উঠতে পারত।
+             *
+             * ⓘ সীমা ছাড়ানোর তুলনাটা ব্রাউজারে `parseFloat` দিয়ে হয়, আর
+             * সেখানে স্ট্রিং দিলেও একই উত্তর।
+             */
             'customerTerms' => $customers->mapWithKeys(fn (Customer $c) => [$c->id => [
-                'limit' => (float) $c->credit_limit,
-                'due' => (float) $c->outstanding(),
+                /*
+                 * ⓘ দুইটা ঘর, দুইটা কাজ। কাঁচা মানটা তুলনার জন্য (সীমা
+                 * ছাড়িয়েছে কি না), আর লেখাটা দেখানোর জন্য।
+                 *
+                 * ⚠️ একটাই ঘর রাখলে হয় পর্দায় `5000.0000` ফুটত (ঘরটা
+                 * `decimal:4`), নয় তুলনায় `12,31,87,500.00`-র কমাগুলো
+                 * `parseFloat` ভেঙে দিত।
+                 */
+                'limit' => (string) $c->credit_limit,
+                'due' => (string) $c->outstanding(),
+                'limit_text' => Money::format($c->credit_limit),
+                'due_text' => Money::format($c->outstanding()),
             ]])->all(),
 
             /*

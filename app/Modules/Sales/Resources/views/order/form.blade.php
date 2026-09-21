@@ -101,10 +101,10 @@
                         bg-(--color-surface-app) px-3 py-2 text-sm"
                  x-show="party !== null" x-cloak>
                 <span class="text-(--color-ink-muted)">{{ __('sales::field.outstanding') }}:</span>
-                <span class="tabular font-medium" x-text="party ? party.due : ''"></span>
+                <span class="tabular font-medium" x-text="party ? party.due_text : ''"></span>
 
                 <span class="text-(--color-ink-muted)">{{ __('sales::field.credit_limit') }}:</span>
-                <span class="tabular font-medium" x-text="party ? party.limit : ''"></span>
+                <span class="tabular font-medium" x-text="party ? party.limit_text : ''"></span>
 
                 <span class="rounded-(--radius-field) bg-(--color-badge-danger-bg) px-2 py-0.5
                              text-(--color-badge-danger-ink)"

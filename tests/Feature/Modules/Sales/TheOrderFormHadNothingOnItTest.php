@@ -76,7 +76,7 @@ final class TheOrderFormHadNothingOnItTest extends TestCase
         $this->assertStringContainsString('salesOrderDesk(', $html,
             'অর্ডারের ডেস্কটাই পাতায় নেই — ক্রেতার পটি, বারকোড, কিছুই চলবে না।');
 
-        $this->assertStringContainsString('&quot;limit&quot;:5000', $html, implode(PHP_EOL, [
+        $this->assertStringContainsString('&quot;limit&quot;:&quot;5000', $html, implode(PHP_EOL, [
             'ক্রেতার ক্রেডিট সীমা ব্রাউজারে পৌঁছায়নি।',
             '',
             'তাহলে সীমা ছাড়ানোর সতর্কবার্তাটা কোনোদিন উঠবে না, আর',
