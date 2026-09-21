@@ -35,8 +35,25 @@ final class PurchaseDashboard implements ProvidesDashboard
             subtitle: __('purchase::dashboard.subtitle'),
 
             tiles: [
-                new Tile(label: __('purchase::action.new_bill'), href: route('purchase.bill.create'),
-                    permission: 'purchase.bill.create', icon: 'receipt'),
+                /*
+                 * ⭐ "নতুন বিল" নয়, "সরাসরি ক্রয়" — মালিক, ২১ সেপ্টেম্বর ২০২৬।
+                 *
+                 * ── ⛔ ১৯ সেপ্টেম্বরের সিদ্ধান্তটা এখানে পৌঁছায়নি ──────────
+                 * সেদিন ক্রয় বিলের **তালিকা** থেকে "নতুন বিল" তুলে দেওয়া
+                 * হয়েছিল, আর কারণটা লেখাও আছে: *বিল জন্মায় মাল গ্রহণে আর
+                 * সরাসরি ক্রয়ে, আপনা থেকে*। ⚠️ কিন্তু ড্যাশবোর্ডের টালিটা
+                 * রয়ে গিয়েছিল — এক পর্দায় দরজা বন্ধ, পাশের পর্দায় খোলা।
+                 *
+                 * ⓘ ফল রোজকার ভাষায়: এখান থেকে ঢুকলে একটা **খালি** বিল
+                 * খুলত, যার পেছনে কোনো মাল গ্রহণ নেই — আর তখন মজুদ আর
+                 * খাতা দুইটা আলাদা গল্প বলত।
+                 *
+                 * ⚠️ অনুমতিটা `purchase.bill.create`-ই থাকে, কারণ সরাসরি
+                 * ক্রয়ও শেষে একটা বিলই জন্ম দেয় — [[DirectPurchaseController]]
+                 * নিজেও ঠিক এই অনুমতিটাই দাবি করে।
+                 */
+                new Tile(label: __('purchase::menu.direct'), href: route('purchase.direct.create'),
+                    permission: 'purchase.bill.create', icon: 'purchase'),
                 new Tile(label: __('purchase::action.new_order'), href: route('purchase.order.create'),
                     permission: 'purchase.order.create', icon: 'plus'),
                 new Tile(label: __('purchase::menu.payments'), href: route('purchase.payment.index'),
