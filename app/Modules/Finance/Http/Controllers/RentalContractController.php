@@ -253,10 +253,23 @@ class RentalContractController extends Controller implements HasMiddleware
             'mobile' => ['nullable', 'string', 'max:32'],
         ]);
 
-        $this->people->resolve([
+        /*
+         * ⛔ চলকে রেখে পাঠাতে হয়, সরাসরি অ্যারে নয় — ২১ সেপ্টেম্বর ২০২৬।
+         *
+         * ⚠️ [[PersonResolver::resolve()]] তার আর্গুমেন্ট **রেফারেন্সে**
+         * নেয় (সে ভিতরে `person_id` বসিয়ে দেয়)। ⛔ সরাসরি লেখা অ্যারে
+         * পাঠালে PHP বলে *"could not be passed by reference"* — আর
+         * লাইভে ৫০০।
+         *
+         * ⓘ হাতধারে ঠিক এভাবেই লেখা ছিল। আমি "হুবহু একই ছাঁচ" বলে
+         * নকল করেছিলাম, অথচ এই একটা জিনিসই বদলে ফেলেছিলাম।
+         */
+        $payload = [
             'person_new' => $data['name_bn'],
             'person_mobile' => $data['mobile'] ?? null,
-        ]);
+        ];
+
+        $this->people->resolve($payload);
 
         return back()->with('saved', __('finance::message.person_added', ['who' => $data['name_bn']]));
     }
