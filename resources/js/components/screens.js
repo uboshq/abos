@@ -12,6 +12,9 @@
  * ⓘ ভিতরের যুক্তি হুবহু সরানো — মন্তব্যসহ।
  */
 
+import { taka } from './money.js'
+
+
 /*
  * নোট গোনার হিসাব।
  *
@@ -49,9 +52,7 @@ export function cashCount({ zeroConfirm = '' } = {}) {
             );
         },
         format(n) {
-            return (n || 0).toLocaleString('en-US', {
-                minimumFractionDigits: 2, maximumFractionDigits: 2,
-            });
+            return taka(n);
         },
         /*
          * খালি ড্রয়ারও গোনা যায় — কিন্তু জিজ্ঞেস করে।
@@ -99,9 +100,7 @@ export function journalForm() {
             return this.debit > 0 || this.credit > 0;
         },
         format(n) {
-            return (n || 0).toLocaleString('en-US', {
-                minimumFractionDigits: 2, maximumFractionDigits: 2,
-            });
+            return taka(n);
         },
         /*
          * $root, $el নয় — আর এই এক অক্ষরেই ফিচারটা মরে ছিল।

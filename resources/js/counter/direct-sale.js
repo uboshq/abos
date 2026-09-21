@@ -26,6 +26,9 @@
  * ⭐ এখন সবগুলোই একটা অবজেক্টে, তাই ফাংশনটা বিশুদ্ধ — যা লাগে তা সে
  * চায়, আর ব্লেড কেবল দেয়।
  */
+
+import { taka } from '../components/money.js'
+
 export default function directSale({
     catalogue, customers, walkinId, vatEnabled, packs,
     paymentTermDefault, carriers, depositMethods, moneyAccounts,
@@ -1473,9 +1476,7 @@ export default function directSale({
         },
 
         money(v) {
-            return Number(v || 0).toLocaleString('en-US', {
-                minimumFractionDigits: 2, maximumFractionDigits: 2,
-            });
+            return taka(v);
         },
 
         qty(v) {

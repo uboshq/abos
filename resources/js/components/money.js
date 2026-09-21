@@ -29,6 +29,25 @@ export function moneyAccount ({ chosen = '' } = {}) {
     }
 }
 
+/**
+ * টাকার অঙ্ক লেখার একটাই নিয়ম — লাখ-কোটির কমা।
+ *
+ * ── ⛔ কেন এক জায়গায়, ২১ সেপ্টেম্বর ২০২৬ ────────────────────
+ * পাঁচটা ফাইলে সাতবার আলাদা করে `toLocaleString('en-US')` লেখা ছিল।
+ * ⚠️ তাতে সার্ভারের লেখা ([[Money::format]]) আর পর্দার লেখা একই
+ * সংখ্যা দুই রকম দেখাত — কাউন্টারে `1,234,567`, আর ছাপা কাগজে
+ * `12,34,567`।
+ *
+ * ⓘ `en-IN` ইংরেজি অঙ্কেই লেখে, কেবল কমার জায়গা বাংলাদেশ-
+ * ভারতের নিয়মে — সার্ভারের সাথে হুবহু এক।
+ */
+export function taka (value, { decimals = 2 } = {}) {
+    return Number(value || 0).toLocaleString('en-IN', {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals,
+    })
+}
+
 /** নোট গুনে মোট — বড় নোট থেকে ছোট, যা বসানো হয়েছে */
 export function countNotes (notes) {
     return Object.entries(notes)

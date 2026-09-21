@@ -13,6 +13,9 @@
  * এক ধাপে সব করলে ভাঙলে কারণ খুঁজে পাওয়া যেত না। ⭐ নিরীক্ষার নিজের
  * কথা: *"একবারে সব নয় — ছোট ছোট টুকরায় সরান।"*
  */
+
+import { taka } from '../components/money.js'
+
 /*
  * সরাসরি ক্রয়ের পর্দা।
  *
@@ -1336,9 +1339,7 @@ export default function directPurchase({
         },
 
         money(v) {
-            return Number(v || 0).toLocaleString('en-US', {
-                minimumFractionDigits: 2, maximumFractionDigits: 2,
-            });
+            return taka(v);
         },
 
         qty(v) {

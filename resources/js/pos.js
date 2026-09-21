@@ -7,6 +7,9 @@
  * `texts`)। যুক্তি হুবহু।
  */
 
+import { taka } from './components/money.js'
+
+
 export function pos(catalogue, walkinId, resumed, discountOn, methods, { urls = {}, texts = {} } = {}) {
     return {
         catalogue,
@@ -305,9 +308,7 @@ export function pos(catalogue, walkinId, resumed, discountOn, methods, { urls = 
         },
 
         money(v) {
-            return Number(v || 0).toLocaleString('en-US', {
-                minimumFractionDigits: 2, maximumFractionDigits: 2,
-            });
+            return taka(v);
         },
 
         qty(v) {

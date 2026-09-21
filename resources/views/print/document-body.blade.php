@@ -108,11 +108,31 @@
                     @if ($showFree)
                         <th class="num" style="width: 16mm">{{ __('core.print.free_qty') }}</th>
                     @endif
+                    {{-- ⭐ টাকার ঘর দুইটা চৌড়া — ২১ সেপ্টেম্বর ২০২৬।
+
+                         লাখ-কোটির কমায় সংখ্যা লম্বা হয় (প্রতি লাখে একটা করে কমা),
+                         আর `.num`-এ `white-space: nowrap` — না ধরলে লেখাটা ঘর ছাড়িয়ে
+                         পাশের ঘরে ওঠে। ⛔ ভাঙে না, চুপচাপ বিশ্রী হয়।
+
+                         ── ⚠️ মাপা হয়েছে ঘরের নিজের মাপে, শিরোনামের মাপে নয় ──────
+                         ⛔ প্রথমবার ৯পয়েন্টে মেপে ভুল মাপ বসানো হয়েছিল — `th` ৯পয়েন্টে,
+                         কিন্তু `td`-তে কোনো `font-size` নেই, তাই সে `body` থেকে পায়
+                         (`$paper->fontSize` — A4-তে ১০)। ⓘ [[abos-77]] মিলিয়ে দেখে ধরেছে।
+
+                         mPDF-এর `GetStringWidth()` দিয়ে মাপা, dejavusans, ঘরের নিজের মাপে:
+                           A4 ১০pt   `12,31,87,500.00` = ২৯.২mm → ৩৬মিমি ঘরে ধরে (১২ কোটি)
+                           ৮০mm ৮.৫pt `1,23,456.00`     = ১৮.১mm → ২১মিমি ঘরে ধরে (এক লাখ)
+                           ৫৮ mm ৭.৫pt `12,34,567.00`    = ১৭.৭mm → ২১মিমি ঘরে ধরে (১২ লাখ)
+
+                         ⚠️ থার্মালে এর বেশি বাড়ানো যায় না: ৮০mm-এ পণ্যের ঘর নেমে ১৭mm,
+                         ৫৮-এ ১৪mm — নামটা আরও ছোট করলে পণ্য চেনাই যাবে না। ⓘ তার
+                         বেশি দরকার হলে প্রশ্নটা আর মাপের নয় — রসিদে পয়সার `.00`
+                         রাখা হবে কি না, আর সেটা মালিকের সিদ্ধান্ত। --}}
                     @if ($showRate)
-                        <th class="num" style="width: {{ $thermal ? '15mm' : '24mm' }}">{{ __('core.print.rate') }}</th>
+                        <th class="num" style="width: {{ $thermal ? '17mm' : '32mm' }}">{{ __('core.print.rate') }}</th>
                     @endif
                     @if ($showAmount)
-                        <th class="num" style="width: {{ $thermal ? '18mm' : '28mm' }}">{{ __('core.print.amount') }}</th>
+                        <th class="num" style="width: {{ $thermal ? '21mm' : '36mm' }}">{{ __('core.print.amount') }}</th>
                     @endif
                 </tr>
             </thead>
@@ -170,7 +190,7 @@
             @foreach ($doc->totals as $label => $value)
                 <tr @if ($loop->last) class="grand" @endif>
                     <td>{{ __($label) }}</td>
-                    <td class="num" style="width: {{ $thermal ? '20mm' : '32mm' }}">{{ $value }}</td>
+                    <td class="num" style="width: {{ $thermal ? '21mm' : '36mm' }}">{{ $value }}</td>
                 </tr>
             @endforeach
         </table>

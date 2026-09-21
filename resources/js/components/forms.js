@@ -9,6 +9,9 @@
  * কারণ ব্লেডে ওগুলো Alpine-এর `with`-এর ভিতরে ছিল আর এখানে সাধারণ JS।
  */
 
+import { taka } from './money.js'
+
+
 /*
  * খাতের ফর্ম — বাবা বাছলে পরের কোড আর ধরন (নগদ/ব্যাংক/MFS) আসে।
  * ⓘ ডাকটা ব্যর্থ হলে চুপ: ঘরটা খালি রাখলে সার্ভার নিজেই নম্বর বসায়।
@@ -119,9 +122,7 @@ export function simpleVoucherBox (config) {
          */
         get dueText () {
             const n = Number(this.due)
-            const shown = Math.abs(n).toLocaleString(undefined, {
-                minimumFractionDigits: 2, maximumFractionDigits: 2,
-            })
+            const shown = taka(Math.abs(n))
 
             return shown + ' — ' + (n < 0 ? config.weOweThem : config.theyOweUs)
         },
@@ -349,7 +350,7 @@ export function openingValue () {
         get value () {
             const v = (parseFloat(this.qty) || 0) * (parseFloat(this.rate) || 0)
 
-            return v ? v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'
+            return v ? taka(v) : '—'
         },
     }
 }
