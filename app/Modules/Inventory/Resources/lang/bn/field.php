@@ -160,5 +160,10 @@ return [
     'qty_out' => 'নির্গমন পরিমাণ',
     'amount_out' => 'নির্গমন মূল্য',
     'qty_closing' => 'সমাপনী পরিমাণ',
+    'free_opening' => 'প্রারম্ভিক ফ্রি',
+    'free_in' => 'আগমন ফ্রি',
+    'free_out' => 'নির্গমন ফ্রি',
+    'free_closing' => 'সমাপনী ফ্রি',
+    'qty_total_with_free' => 'মোট পরিমাণ (ফ্রি সহ)',
     'amount_closing' => 'সমাপনী মূল্য',
 ];

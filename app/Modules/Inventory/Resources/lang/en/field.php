@@ -132,5 +132,10 @@ return [
     'qty_out' => 'Out qty',
     'amount_out' => 'Out value',
     'qty_closing' => 'Closing qty',
+    'free_opening' => 'Opening free',
+    'free_in' => 'In free',
+    'free_out' => 'Out free',
+    'free_closing' => 'Closing free',
+    'qty_total_with_free' => 'Total qty (with free)',
     'amount_closing' => 'Closing value',
 ];

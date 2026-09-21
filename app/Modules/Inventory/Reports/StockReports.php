@@ -96,12 +96,38 @@ final class StockReports
                 DB::raw('SUM(amount) as v'),
             ]);
 
+        /*
+         * ফ্রি মাল — চলাচলের টেবিল থেকে, খরচের স্তর থেকে নয়।
+         *
+         * ── ⛔ কেন আলাদা উৎস, ২২ সেপ্টেম্বর ২০২৬ ─────────────────────
+         * `inv_cost_layers`-এ ফ্রির কোনো কলামই নেই — স্কিমা দেখে যাচাই
+         * করা: `qty_in`, `qty_remaining`, `unit_cost`, ব্যস। ⓘ কারণটা
+         * যুক্তিসঙ্গত: **ফ্রি মালের দাম নেই**, তাই তার কোনো খরচ-স্তরও
+         * নেই। ⚠️ উপরের চারটা `joinSub` দিয়ে খুঁজলে চিরকাল শূন্য পাওয়া
+         * যেত, আর সেটা দেখতে "ফ্রি মাল নেই"-এর মতোই লাগত।
+         *
+         * ⭐ `free_change` চিহ্নসহ, তাই আগমন ও নির্গমন আলাদা করতে
+         * `GREATEST`: ঢুকলে ধনাত্মক, বেরোলে ঋণাত্মক। ⓘ আর `fnet`
+         * আলাদা করে রাখা হয় না — সমাপনী গোনা হয় (আগমন − নির্গমন),
+         * ঠিক যেভাবে টাকার দিকটা গোনা হয়, যাতে সারিতে সমীকরণটা মেলে।
+         */
+        $free = fn (array $f, ?string $from) => DB::table('inv_stock_movements')
+            ->where('company_id', $f['company_id'])
+            ->when($from, fn ($q) => $q->where('trx_date', '>=', $from))
+            ->where('trx_date', '<=', $f['to'])
+            ->groupBy('product_id')
+            ->select([
+                'product_id',
+                DB::raw('SUM(GREATEST(free_change, 0)) as fin'),
+                DB::raw('SUM(GREATEST(-free_change, 0)) as fout'),
+            ]);
+
         return new ReportDefinition(
             key: 'inventory.stock_value',
             title: 'inventory::menu.stock_value',
             filters: ['date_range'],
             groupBy: 'product_id',
-            query: function (array $f) use ($in, $out) {
+            query: function (array $f) use ($in, $out, $free) {
                 /*
                  * ⓘ প্রারম্ভিকের জন্য উপ-কোয়েরিগুলো চলে **শুরুর আগের
                  * দিন পর্যন্ত**, তাই `to` বদলে দেওয়া হয়। ⚠️ `from`-ও
@@ -118,6 +144,8 @@ final class StockReports
                     ->leftJoinSub($out($before, null), 'oo', 'oo.product_id', '=', 'p.id')
                     ->leftJoinSub($in($f, $f['from']), 'pi', 'pi.product_id', '=', 'p.id')
                     ->leftJoinSub($out($f, $f['from']), 'po', 'po.product_id', '=', 'p.id')
+                    ->leftJoinSub($free($before, null), 'of', 'of.product_id', '=', 'p.id')
+                    ->leftJoinSub($free($f, $f['from']), 'pf', 'pf.product_id', '=', 'p.id')
                     ->where('p.company_id', $f['company_id'])
                     /*
                      * ⛔ যে পণ্যের এই পরিসরে কিছুই ঘটেনি আর প্রারম্ভিকও
@@ -125,8 +153,19 @@ final class StockReports
                      * শূন্যের সারি হয়ে ছাপা হত, আর আসল সারিগুলো তার
                      * ভিতরে হারাত।
                      */
+                    /*
+                     * ⚠️ ফ্রিও শর্তে আছে — ২২ সেপ্টেম্বর ২০২৬।
+                     *
+                     * ⛔ আগে শর্তটা কেবল খরচের স্তর দেখত। ⓘ ফলে যে পণ্য
+                     * **শুধু ফ্রি হিসেবে** এসেছে, তার কোনো স্তর নেই বলে
+                     * সারিটাই আসত না — গুদামে মাল আছে, রিপোর্টে পণ্যটাই
+                     * নেই। ⚠️ ঠিক সেই ধরনটা যেটা [[stockSummary]]-তেও
+                     * একবার ধরা পড়েছে।
+                     */
                     ->whereRaw('COALESCE(oi.q,0) <> 0 OR COALESCE(oo.q,0) <> 0
-                                OR COALESCE(pi.q,0) <> 0 OR COALESCE(po.q,0) <> 0')
+                                OR COALESCE(pi.q,0) <> 0 OR COALESCE(po.q,0) <> 0
+                                OR COALESCE(of.fin,0) <> 0 OR COALESCE(of.fout,0) <> 0
+                                OR COALESCE(pf.fin,0) <> 0 OR COALESCE(pf.fout,0) <> 0')
                     ->orderBy('p.code')
                     ->select([
                         'p.id as product_id',
@@ -140,12 +179,15 @@ final class StockReports
                         'p.sale_price',
 
                         DB::raw('COALESCE(oi.q,0) - COALESCE(oo.q,0) as opening_qty'),
+                        DB::raw('COALESCE(of.fin,0) - COALESCE(of.fout,0) as opening_free'),
                         DB::raw('COALESCE(oi.v,0) - COALESCE(oo.v,0) as opening_value'),
 
                         DB::raw('COALESCE(pi.q,0) as in_qty'),
+                        DB::raw('COALESCE(pf.fin,0) as in_free'),
                         DB::raw('COALESCE(pi.v,0) as in_value'),
 
                         DB::raw('COALESCE(po.q,0) as out_qty'),
+                        DB::raw('COALESCE(pf.fout,0) as out_free'),
                         DB::raw('COALESCE(po.v,0) as out_value'),
 
                         /*
@@ -157,8 +199,25 @@ final class StockReports
                          */
                         DB::raw('COALESCE(oi.q,0) - COALESCE(oo.q,0)
                                  + COALESCE(pi.q,0) - COALESCE(po.q,0) as closing_qty'),
+                        DB::raw('COALESCE(of.fin,0) - COALESCE(of.fout,0)
+                                 + COALESCE(pf.fin,0) - COALESCE(pf.fout,0) as closing_free'),
                         DB::raw('COALESCE(oi.v,0) - COALESCE(oo.v,0)
                                  + COALESCE(pi.v,0) - COALESCE(po.v,0) as closing_value'),
+
+                        /*
+                         * ⭐ মালিকের *"last e Total qty Diba free soho"* —
+                         * হাতে যত মাল, কেনা আর ফ্রি একসাথে।
+                         *
+                         * ⛔ এই সংখ্যাটা **টাকার কলামের সাথে মিলবে না**,
+                         * আর মেলার কথাও নয়: ফ্রি মালের দাম শূন্য, তাই
+                         * সমাপনী মূল্য কেবল কেনা মালেরই। ⓘ লেবেলে তাই
+                         * "ফ্রি সহ" কথাটা থাকে — নাহলে পাঠক ভাবতেন
+                         * হিসাব মেলেনি, আর ঐ সন্দেহ গোটা রিপোর্টে বসত।
+                         */
+                        DB::raw('COALESCE(oi.q,0) - COALESCE(oo.q,0)
+                                 + COALESCE(pi.q,0) - COALESCE(po.q,0)
+                                 + COALESCE(of.fin,0) - COALESCE(of.fout,0)
+                                 + COALESCE(pf.fin,0) - COALESCE(pf.fout,0) as closing_total'),
                     ]);
             },
             columns: [
@@ -174,17 +233,29 @@ final class StockReports
                 ['key' => 'purchase_price', 'label' => 'inventory::field.purchase_price', 'type' => ReportColumn::MONEY],
                 ['key' => 'sale_price', 'label' => 'inventory::field.sale_price', 'type' => ReportColumn::MONEY],
 
+                /*
+                 * ⓘ প্রতিটা পরিমাণের **ঠিক পাশে** তার ফ্রি — মালিকের
+                 * *"egulor pase free qty diye dio"*। ⚠️ সবগুলো ফ্রি
+                 * একসাথে শেষে বসালে পাঠককে চোখ দুই দিকে নিতে হত,
+                 * আর তখন কোন ফ্রি কোন ঘরের তা গুলিয়ে যেত।
+                 */
                 ['key' => 'opening_qty', 'label' => 'inventory::field.qty_opening', 'type' => ReportColumn::QUANTITY],
+                ['key' => 'opening_free', 'label' => 'inventory::field.free_opening', 'type' => ReportColumn::QUANTITY],
                 ['key' => 'opening_value', 'label' => 'inventory::field.amount_opening', 'type' => ReportColumn::MONEY],
 
                 ['key' => 'in_qty', 'label' => 'inventory::field.qty_in', 'type' => ReportColumn::QUANTITY],
+                ['key' => 'in_free', 'label' => 'inventory::field.free_in', 'type' => ReportColumn::QUANTITY],
                 ['key' => 'in_value', 'label' => 'inventory::field.amount_in', 'type' => ReportColumn::MONEY],
 
                 ['key' => 'out_qty', 'label' => 'inventory::field.qty_out', 'type' => ReportColumn::QUANTITY],
+                ['key' => 'out_free', 'label' => 'inventory::field.free_out', 'type' => ReportColumn::QUANTITY],
                 ['key' => 'out_value', 'label' => 'inventory::field.amount_out', 'type' => ReportColumn::MONEY],
 
                 ['key' => 'closing_qty', 'label' => 'inventory::field.qty_closing', 'type' => ReportColumn::QUANTITY],
+                ['key' => 'closing_free', 'label' => 'inventory::field.free_closing', 'type' => ReportColumn::QUANTITY],
                 ['key' => 'closing_value', 'label' => 'inventory::field.amount_closing', 'type' => ReportColumn::MONEY],
+
+                ['key' => 'closing_total', 'label' => 'inventory::field.qty_total_with_free', 'type' => ReportColumn::QUANTITY],
             ],
         );
     }
