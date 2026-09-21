@@ -250,4 +250,6 @@ return [
     /* ⭐ No party, no product list — the owner's rule, 6 Sep 2026.
        ⚠️ The line says what to DO, not merely what is refused. */
     'pick_customer_first' => 'Choose the customer first — the rate and the credit limit depend on who is buying.',
+    /* An invoice is a result, not a starting point - 21 September 2026. */
+    'invoice_needs_a_paper' => 'An invoice is not made from nothing - start from an order or a direct sale.',
 ];

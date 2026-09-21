@@ -88,4 +88,5 @@ return [
     'new_scheme' => 'New scheme',
     'add_band' => 'Add a band',
     'activate_scheme' => 'Activate',
+    'cancel_invoice' => 'Cancel invoice',
 ];

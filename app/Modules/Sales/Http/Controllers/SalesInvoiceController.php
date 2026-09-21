@@ -4,22 +4,22 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Http\Controllers;
 
-use App\Modules\Sales\Services\DirectSaleService;
-use App\Modules\Accounts\Services\VoucherApproval;
-use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Concerns\AuthorizesResource;
 use App\Core\Concerns\FiltersByDate;
 use App\Core\Concerns\SortsLists;
+use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\ProcessBand;
 use App\Http\Controllers\Controller;
+use App\Modules\Accounts\Services\VoucherApproval;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Sales\Http\Requests\SalesInvoiceRequest;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesInvoice;
+use App\Modules\Sales\Services\DirectSaleService;
 use App\Modules\Sales\Services\SalesInvoiceService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -195,16 +195,55 @@ class SalesInvoiceController extends Controller implements HasMiddleware
         ]);
     }
 
+    /**
+     * বিল কেবল একটা কাগজের উপর বসে — শূন্য থেকে নয়।
+     *
+     * ── ⛔ মালিকের নির্দেশ, ২১ সেপ্টেম্বর ২০২৬ ──────────────────────
+     * *"new invoice bolte kono from thakbe na, just duto poth thakbe —
+     * ek order, dui direct sales. baki poth bondo koro, r kono vabei
+     * bill generate hobe na"*।
+     *
+     * ── ⚠️ কেন কথাটা ন্যায্য ─────────────────────────────────────────
+     * ⓘ INV-0002 ড্যাশবোর্ডের "নতুন বিল" বোতাম থেকে হয়েছিল — একটা
+     * **খালি ফর্ম**, যার পিছনে কোনো অর্ডার নেই, কোনো চালান নেই, কোনো
+     * মজুদের হিসাব নেই। ⛔ ফল: ৫৬,৯৬,৫৯,০৭,৪১২ টাকার একটা বিল, আর
+     * কেউ কিছু বলার নেই, কারণ মেলানোর মতো কোনো কাগজই ছিল না।
+     *
+     * ⭐ বিল একটা **ফল**, একটা শুরু নয়: হয় অর্ডার → চালান → বিল, নয়
+     * সরাসরি বিক্রয় (যেখানে কার্ট, মজুদ আর টাকা একসাথে মেলে)।
+     *
+     * ── ⓘ বোতাম লুকানো যথেষ্ট নয় ───────────────────────────────────
+     * ⚠️ ড্যাশবোর্ডের সারিটা তুলে দেওয়া হয়েছে, কিন্তু ঠিকানা টাইপ
+     * করলেই পর্দা খুলত। ⛔ এই অ্যাপে ঠিক ঐ ভুলটা আগে একবার হয়েছে
+     * (রপ্তানি বন্ধ করা হয়েছিল কেবল বোতাম লুকিয়ে)। তাই দরজাটা
+     * **এখানে** বন্ধ।
+     */
     public function create(Request $request): View
     {
+        $challan = $this->chosenChallan($request);
+
+        abort_if($challan === null, 404, __('sales::message.invoice_needs_a_paper'));
+
         return view('sales::invoice.form', [
             'menu' => $this->menu->forUser($request->user()),
             'invoice' => new SalesInvoice(['trx_date' => now()->toDateString()]),
-            'challan' => $this->chosenChallan($request),
+            'challan' => $challan,
             ...$this->formData(),
         ]);
     }
 
+    /**
+     * ⛔ আর জমা দেওয়ার দরজাটাও একই শর্তে — ২১ সেপ্টেম্বর ২০২৬।
+     *
+     * ⚠️ কেবল `create()` আটকালে ফাঁকটা থেকে যেত: ফর্মটা না খুলেও কেউ
+     * সরাসরি এখানে POST করে বিল বানাতে পারত। ⓘ মালিকের কথা ছিল *"r
+     * kono vabei bill generate hobe na"* — "কোনোভাবেই", অর্থাৎ পর্দা
+     * নয়, **পথ** বন্ধ।
+     *
+     * ⓘ সরাসরি বিক্রয় এই দরজা দিয়ে আসে না — তার নিজের রুট
+     * (`sales.direct.store`), আর সে [[SalesInvoiceService]]-কে সরাসরি
+     * ডাকে। ⭐ তাই এখানে তালা দিলে ঐ পথটা অক্ষত থাকে।
+     */
     public function store(SalesInvoiceRequest $request): RedirectResponse
     {
         $document = $this->service->create($request->documentData(), $request->lineData());

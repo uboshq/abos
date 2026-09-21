@@ -64,13 +64,28 @@ final class TheFirstButtonOnTheCounterSaidTheWrongJobTest extends TestCase
      * ⚠️ মেনুর সারিটা `sales.screen_direct` মানে; টাইলটা না মানলে
      * ড্যাশবোর্ড মালিকের নিজের সিদ্ধান্তকেই অগ্রাহ্য করত।
      */
-    public function test_a_company_that_hid_the_direct_screen_keeps_the_invoice_button(): void
+    public function test_a_company_that_hid_the_direct_screen_gets_the_order_button(): void
     {
         app(SettingsService::class)->set('sales.screen_direct', false);
 
         $first = $this->firstTile((string) $this->get(route('module.dashboard', ['module' => 'sales']))->assertOk()->getContent());
 
-        $this->assertStringContainsString(route('sales.invoice.create'), $first);
+        /*
+         * ⭐ এখানে আগে বিলের ফর্ম ছিল — ২১ সেপ্টেম্বর ২০২৬-এ বদলেছে।
+         *
+         * ⓘ দাবিটার উদ্দেশ্য বদলায়নি: সুইচ বন্ধ থাকলে ড্যাশবোর্ড যেন
+         * **বন্ধ দরজায়** না পাঠায়। কেবল গন্তব্যটা বদলেছে।
+         *
+         * ⛔ মালিকের নিয়ম: বিলের দুইটাই দরজা — আদেশ আর সরাসরি বিক্রয়।
+         * ⚠️ INV-0002 (৫৬,৯৬,৫৯,০৭,৪১২ টাকা) ঠিক এই টাইল থেকেই হয়েছিল:
+         * একটা খালি ফর্ম, পিছনে কোনো কাগজ নেই, মেলানোর কিছু নেই।
+         *
+         * ⓘ এখন খালি ফর্মটা ৪০৪ দেয়, তাই টাইলটা রেখে দিলে ব্যবহারকারী
+         * একটা বন্ধ দরজায় গিয়ে পড়তেন — পুরনো দাবিটা তখন **ভাঙা আচরণই**
+         * পাহারা দিত। দাবি: [[AnInvoiceHasOnlyTwoDoorsTest]]।
+         */
+        $this->assertStringContainsString(route('sales.order.create'), $first);
+        $this->assertStringNotContainsString(route('sales.invoice.create'), $first);
         $this->assertStringNotContainsString(route('sales.direct.create'), $first);
     }
 

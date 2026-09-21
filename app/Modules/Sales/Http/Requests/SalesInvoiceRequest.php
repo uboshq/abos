@@ -11,6 +11,29 @@ use Illuminate\Validation\Rule;
 /** বিক্রয় বিলের ইনপুট। */
 class SalesInvoiceRequest extends FormRequest
 {
+    /**
+     * বিল শূন্য থেকে জন্মায় না — দরজাটা যাচাইয়েরও আগে।
+     *
+     * ⛔ মালিকের নির্দেশ, ২১ সেপ্টেম্বর ২০২৬: *"r kono vabei bill
+     * generate hobe na"* — দুইটাই পথ, আদেশ আর সরাসরি বিক্রয়।
+     *
+     * ── ⚠️ কেন এখানে, কন্ট্রোলারে নয় ────────────────────────────────
+     * প্রথমে তালাটা কন্ট্রোলারের `store()`-এ বসানো হয়েছিল, আর সেটা
+     * **কোনোদিন চলত না**: ফর্ম-রিকোয়েস্টের যাচাই কন্ট্রোলারের আগে
+     * চলে, তাই একটা আধা-ভরা POST যাচাইয়ে আটকে যেত আর তালাটা পর্যন্ত
+     * পৌঁছাতই না। ⓘ ধরা পড়েছে পাহারাটা লাল হওয়ায়।
+     *
+     * ⭐ `authorize()` সবার আগে চলে, তাই উত্তরটা সবসময় একই — ৪০৪,
+     * যাচাইয়ের ভুলের তালিকা নয়।
+     *
+     * ⓘ সরাসরি বিক্রয় এই দরজা দিয়ে আসে না — তার নিজের রুট, আর সে
+     * [[SalesInvoiceService]]-কে সরাসরি ডাকে।
+     */
+    public function authorize(): bool
+    {
+        return $this->isMethod('PUT') || filled($this->input('delivery_challan_id'));
+    }
+
     public function rules(): array
     {
         $companyId = CompanyContext::id();

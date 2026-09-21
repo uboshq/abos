@@ -45,6 +45,24 @@
             'width' => '8rem',
             'render' => fn ($d) => view('sales::components.status-badge', ['document' => $d]),
         ],
+
+        /*
+         * ⭐ সারির কাজ — ২১ সেপ্টেম্বর ২০২৬, মালিকের নির্দেশে।
+         *
+         * ⓘ ছবিতে তিনি ডান ধারের **খালি কলামটা** দাগ দিয়ে দেখিয়েছেন,
+         * আর কথাটা ন্যায্য ছিল: জায়গাটা রাখা ছিল, কিছু বসানো হয়নি।
+         * ⚠️ খালি কলাম মৃত বোতামের মতোই — পর্দা বলে কিছু একটা আছে,
+         * আর নেই।
+         *
+         * ⛔ "মুছুন" নেই, আর সেটা ইচ্ছাকৃত — কারণ [[invoice.partials
+         * .row-actions]]-এ লেখা।
+         */
+        [
+            'key' => 'actions',
+            'label' => __('core.table.actions'),
+            'width' => '4rem',
+            'render' => fn ($d) => view('sales::invoice.partials.row-actions', ['invoice' => $d]),
+        ],
     ];
 @endphp
 

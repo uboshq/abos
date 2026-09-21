@@ -282,6 +282,18 @@ final class SalesDashboard implements ProvidesDashboard
      *
      * ⓘ অনুমতিটা মেনুর সারির হুবহু একটাই (`sales.challan.create`) —
      * সরাসরি বিক্রয়ে মাল বেরোয়, তাই চালান কাটার চাবিটাই আসল।
+     *
+     * -- Why the fallback changed, 21 September 2026 -----------------
+     * This tile used to fall back to a BLANK invoice form when the
+     * direct-sale switch was off: no order behind it, no challan, and
+     * nothing to reconcile the stock against.
+     *
+     * INV-0002 was made exactly that way -- an invoice for
+     * 56,965,907,412 with no paper to check it against.
+     *
+     * The owner's rule: an invoice has two doors, an order and a
+     * direct sale. So the fallback is now a new order, and the invoice
+     * is born downstream of it (order -> challan -> invoice).
      */
     private static function firstAction(): Tile
     {
@@ -295,10 +307,10 @@ final class SalesDashboard implements ProvidesDashboard
                 icon: 'sales',
             )
             : new Tile(
-                label: __('sales::action.new_invoice'),
-                href: route('sales.invoice.create'),
-                permission: 'sales.invoice.create',
-                icon: 'receipt',
+                label: __('sales::action.new_order'),
+                href: route('sales.order.create'),
+                permission: 'sales.order.create',
+                icon: 'clipboard',
             );
     }
 }
