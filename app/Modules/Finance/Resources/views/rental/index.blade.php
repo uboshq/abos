@@ -55,7 +55,7 @@
         'closed' => __('finance::state.closed'),
 
         /* ⭐ কার সাথে — বাড়িওয়ালার তালিকা, মালিকের নির্দেশ ২০ সেপ্টেম্বর ২০২৬ */
-        'people' => __('finance::field.hl_tab_people'),
+        'people' => __('finance::field.rental_tab_people'),
     ];
 @endphp
 <x-layouts.app :menu="$menu">

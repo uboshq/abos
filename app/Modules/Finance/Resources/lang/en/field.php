@@ -339,4 +339,6 @@ return [
     'balance_left' => 'Balance',
     /* A new landlord, typed on the "with whom" tab - 21 September 2026. */
     'rental_new_person' => 'New landlord',
+    /* The rental screen names the role instead of the relation - 21 September 2026. */
+    'rental_tab_people' => 'Landlords',
 ];

@@ -100,6 +100,49 @@ final class ANewLandlordCanBeTypedOnTheTabTest extends TestCase
     }
 
     /**
+     * ⛔ একই নামে দ্বিতীয়বার — থামে, আর করণীয়টা বলে।
+     *
+     * ⓘ [[DuplicationEngine]] নাম মিললে থামায়: এক পক্ষের দুইটা সারি
+     * হলে বকেয়াও দুই ভাগ হয়ে যায়।
+     */
+    public function test_the_same_name_twice_is_stopped(): void
+    {
+        $this->post(route('finance.rental.person.store'), ['name_bn' => 'করিম মিয়া']);
+
+        $before = Person::query()->count();
+
+        $this->from(route('finance.rental.index', ['tab' => 'people']))
+            ->post(route('finance.rental.person.store'), ['name_bn' => 'করিম মিয়া'])
+            ->assertSessionHasErrors();
+
+        $this->assertSame($before, Person::query()->count(),
+            '⛔ একই নামে দ্বিতীয় একটা সারি বসে গেছে।');
+    }
+
+    /**
+     * ⭐ আর টিক দিলে সত্যিই এগোয় — এটাই আসল দাবি।
+     *
+     * ── ⛔ মালিক যেখানে আটকে গিয়েছিলেন ─────────────────────────────
+     * বার্তাটা বলত *"ঘরটা টিক দিয়ে আবার সংরক্ষণ করুন"*, অথচ এই ফর্মে
+     * **ঘরটাই ছিল না**। ⚠️ অর্থাৎ ব্যবস্থাটা একটা করণীয় বলত যা করা
+     * যেত না — থামা আর দরজা বন্ধ করা এক জিনিস হয়ে গিয়েছিল।
+     */
+    public function test_ticking_the_box_lets_a_real_namesake_through(): void
+    {
+        $this->post(route('finance.rental.person.store'), ['name_bn' => 'করিম মিয়া']);
+
+        $before = Person::query()->count();
+
+        $this->post(route('finance.rental.person.store'), [
+            'name_bn' => 'করিম মিয়া',
+            'allow_duplicate' => '1',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame($before + 1, Person::query()->count(),
+            '⛔ টিক দেওয়ার পরেও দ্বিতীয় নামটা বসেনি — বার্তাটা মিথ্যা করণীয় বলছে।');
+    }
+
+    /**
      * পাহারাটা সত্যিই তাকায়।
      *
      * ⓘ উপরের দাবিগুলো সবুজ থাকত যদি রুটটাই না থাকত — তখন `route()`

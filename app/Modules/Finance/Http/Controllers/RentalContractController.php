@@ -13,6 +13,7 @@ use App\Modules\Accounts\Models\Account;
 use App\Modules\Finance\Models\RentalContract;
 use App\Modules\Finance\Services\RentalContractService;
 use App\Modules\Finance\Services\RentalSubjects;
+use App\Modules\MasterData\Models\Person;
 use App\Modules\MasterData\Services\PersonResolver;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -251,6 +252,15 @@ class RentalContractController extends Controller implements HasMiddleware
         $data = $request->validate([
             'name_bn' => ['required', 'string', 'max:120'],
             'mobile' => ['nullable', 'string', 'max:32'],
+            /*
+             * ⭐ একই নামে আগে কেউ থাকলে — ২১ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ [[DuplicationEngine]] তখন থামে আর বলে *"সত্যিই আলাদা
+             * প্রতিষ্ঠান হলে ঘরটা টিক দিয়ে আবার সংরক্ষণ করুন"*। ⛔ কিন্তু
+             * এই ফর্মে **ঘরটাই ছিল না**, তাই মালিক থেমে যেতেন আর এগোনোর
+             * কোনো পথ থাকত না — বার্তাটা এমন একটা ঘরের কথা বলত যা নেই।
+             */
+            'allow_duplicate' => ['nullable', 'boolean'],
         ]);
 
         /*
@@ -267,6 +277,7 @@ class RentalContractController extends Controller implements HasMiddleware
         $payload = [
             'person_new' => $data['name_bn'],
             'person_mobile' => $data['mobile'] ?? null,
+            'allow_duplicate' => (bool) ($data['allow_duplicate'] ?? false),
         ];
 
         $this->people->resolve($payload);
@@ -435,6 +446,35 @@ class RentalContractController extends Controller implements HasMiddleware
                 $rows[$key]['rent'] = bcadd($rows[$key]['rent'], (string) $contract->monthly_rent, 4);
                 $rows[$key]['deposit'] = bcadd($rows[$key]['deposit'], $contract->depositLeft(), 4);
             }
+        }
+
+        /*
+         * ⭐ চুক্তিহীন মানুষগুলোও থাকেন, শূন্য নিয়ে — ২১ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⛔ মালিক যা দেখেছেন ─────────────────────────────────────
+         * এই ট্যাব থেকেই একটা নতুন বাড়িওয়ালার নাম বসানো যায়, কিন্তু
+         * সংরক্ষণের পর তিনি **এই তালিকায় আসতেন না** — কারণ সারিগুলো
+         * কেবল চুক্তি থেকে গড়া হত। ⚠️ মালিকের কথা: *"হাতধারে গিয়েছে"*,
+         * আর ঠিকই: হাতধারের ট্যাব সব মানুষ দেখায়, তাই তিনি ওখানে
+         * দেখা দিতেন — যে পর্দায় বসানো হয়েছে সেখানে নয়।
+         *
+         * ⓘ হাতধারে কারণটা আগেই লেখা: *"নাহলে নতুন একটা নাম যোগ করার
+         * সাথে সাথেই সেটা পর্দা থেকে হারিয়ে যেত, আর মানুষ ভাবতেন
+         * সংরক্ষণ হয়নি।"* ⭐ একই দরজা বসিয়েছি, অথচ এই নিয়মটা আনিনি।
+         *
+         * ⓘ কেবল ব্যক্তি — গ্রাহক ও সরবরাহকারীর নিজের তালিকা আছে, আর
+         * তাঁদের সবাইকে এখানে ঢালা মানে ভাড়ার পর্দায় গোটা খাতা।
+         */
+        foreach (Person::query()->active()->orderBy('name_en')->get() as $person) {
+            $rows['person:'.$person->id] ??= [
+                'party_type' => 'person',
+                'party_id' => (int) $person->id,
+                'name' => $person->name(),
+                'contracts' => 0,
+                'running' => 0,
+                'rent' => '0',
+                'deposit' => '0',
+            ];
         }
 
         $out = array_values($rows);

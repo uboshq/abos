@@ -32,6 +32,27 @@
             <x-ui.field name="name_bn" :label="__('finance::field.rental_new_person')" required />
             <x-ui.field name="mobile" :label="__('finance::field.person_mobile')" />
 
+            {{--
+                ⭐ একই নামে আগে কেউ থাকলে এই ঘরটা আসে — ২১ সেপ্টেম্বর ২০২৬।
+
+                ⓘ নকল ঠেকানোর নিয়মটা থামিয়ে বলে *"সত্যিই আলাদা প্রতিষ্ঠান
+                হলে ঘরটা টিক দিয়ে আবার সংরক্ষণ করুন"*। ⛔ ঘরটা না থাকায়
+                মালিক আটকে গিয়েছিলেন — বার্তাটা এমন কিছুর কথা বলত যা
+                পর্দায় নেই।
+
+                ⚠️ ঘরটা কেবল ভুলের পরে, সবসময় নয়: সবসময় থাকলে সবাই
+                অভ্যাসবশে টিক দিয়ে রাখতেন আর পাহারাটাই অর্থহীন হত।
+                ⓘ শর্তটা চাবির নাম ধরে নয় (`name_en` না `name_bn` —
+                সেটা নিয়মের উপর নির্ভর করে), তাই যেকোনো ভুলেই দেখা যায়।
+            --}}
+            @if ($errors->any())
+                <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
+                    <input type="checkbox" name="allow_duplicate" value="1"
+                           @checked(old('allow_duplicate')) class="size-4">
+                    {{ __('core.duplicate.allow') }}
+                </label>
+            @endif
+
             <x-ui.button type="submit" tone="primary">{{ __('finance::action.add_person') }}</x-ui.button>
         </form>
     @endcan
