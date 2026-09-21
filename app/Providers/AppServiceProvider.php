@@ -2,15 +2,16 @@
 
 namespace App\Providers;
 
+use App\Core\Contracts\KnowsWhereAPersonsMoneyBelongs;
 use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Engines\Drill\DrillResolver;
 use App\Core\Services\DataScope;
 use App\Core\Services\FormIsNotSubmittedTwice;
+use App\Core\Services\LedgerBalances;
 use App\Core\Services\ListExport;
+use App\Core\Services\NobodyKnowsWhereTheMoneyBelongs;
 use App\Core\Services\Ownership;
 use App\Core\Services\PermissionOverrides;
-use App\Core\Contracts\KnowsWhereAPersonsMoneyBelongs;
-use App\Core\Services\NobodyKnowsWhereTheMoneyBelongs;
 use App\Core\Services\SettingsService;
 use App\Core\Services\ShellFacts;
 use App\Core\Support\AlpineLiteral;
@@ -204,6 +205,15 @@ class AppServiceProvider extends ServiceProvider
          * স্কোপে বাছা, আর পরের অনুরোধ অন্য কোম্পানির হতে পারে।
          */
         $this->app->scoped(DrillResolver::class);
+
+        /*
+         * ⭐ খাতের কাঁচা জের — একই কারণে scoped।
+         *
+         * ⓘ [[Account::balanceOn]] প্রতিটা পাতা-খাতে একটা করে যোগফল
+         * চালাত (মেপে দেখা: ১৯০ খাতের ছকে ৮১টা কোয়েরি)। ⛔ বাঁধন ছাড়া
+         * আগে-তোলা তথ্যটা পরের ডাকে আর থাকত না।
+         */
+        $this->app->scoped(LedgerBalances::class);
     }
 
     /**
