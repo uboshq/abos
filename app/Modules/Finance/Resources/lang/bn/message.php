@@ -157,6 +157,7 @@ return [
     'institution_not_linked' => 'প্রতিষ্ঠান বসানো হয়নি',
     'opening_touches_no_bank' => 'টাকাটা বছর আগেই এসেছিল, তাই ব্যাংক হিসাব ছোঁয়া হবে না — কেবল দায় আর সঞ্চিত মুনাফা।',
     'instalments_paid_hint' => 'ব্যবস্থায় তোলার আগে যতগুলো দেওয়া হয়েছিল। এর পরেরগুলো খাতা থেকেই গোনা হয়।',
+    'instalments_left_hint' => 'তিনটার যেকোনো একটা লিখুন — বাকি দুইটা নিজে থেকেই বসবে। এই ঘরটা সংরক্ষণ হয় না।',
     'instalment_standing' => ':paid দেওয়া হয়েছে, :left বাকি',
     'early_charge_basis_hint' => 'ব্যাংকভেদে আলাদা — মঞ্জুরিপত্রে যা লেখা, তাই বাছুন।',
     'settlement_charge_line' => 'বকেয়া :outstanding + চার্জ :charge = :total',

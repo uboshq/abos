@@ -46,6 +46,18 @@
                   'branch' => old('branch_name', ''),
                   'typedBranch' => filled(old('branch_name')),
                   'running' => (bool) old('already_running'),
+
+                  /* ℹ পুরনো বারের লেখা ঘরগুলো ফিরিয়ে দেওয়া — `x-model` নিজের
+                     মান দিয়ে ইনপুট ভরে, তাই `value` অ্যাট্রিবিউটটা একা যথেষ্ট নয়।
+                     ⛔ না দিলে বারোটা ঘর ভরার পর একটা ভুলে পাতা ফিরলে
+                     কিস্তির ঘরগুলো **খালি ফিরত**। */
+                  'limit' => (string) old('limit', ''),
+                  'rate' => (string) old('interest_rate', ''),
+                  'count' => (string) old('instalments', ''),
+                  'instalment' => (string) old('instalment_amount', ''),
+                  'paid' => (string) old('instalments_paid', ''),
+                  'left' => (string) old('instalments_left', ''),
+                  'outstanding' => (string) old('opening_drawn', ''),
               ]))"
               class="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             @csrf
@@ -326,16 +338,45 @@
 
             <template x-if="running">
                 <div class="contents">
+                    {{--
+                        ⭐ তিনটা ঘর, একটাই সত্য — মালিকের নির্দেশ, ২১ সেপ্টেম্বর ২০২৬।
+
+                        *"কয়টা কিস্তি ইতিমধ্যে দেওয়া … তার পর বাকি আর কত কিস্তি রয়েছে auto
+                        আসবে, তার পর আজকের বকেয়া outstanding auto আসবে, যেকোনো একটা
+                        দিলে বাকি গুলো auto হবে"*
+
+                        ℹ যাঁর হাতে যেটা আছে তিনি সেটাই দেন: কেউ গুনে বলতে পারেন কয়টা
+                        কিস্তি দিয়েছেন, আর বেশিরভাগের হাতে থাকে ব্যাংকের কাগজ, যেখানে
+                        কেবল আজকের বকেয়াটাই লেখা।
+
+                        ⚠️ বকেয়াটা **কিস্তি × বাকি** নয় — ক্ষয়িষ্ণু জেরে বাকি
+                        কিস্তিগুলোর বর্তমান মূল্য। ⛔ গুণ করলে ভবিষ্যতের সুদটাও আজকের
+                        বকেয়ায় ঢুকত, আর খাতায় দায়টা ব্যাংকের কাগজের চেয়ে বড় হয়ে বসত।
+                    --}}
                     <x-ui.field name="opening_drawn" type="number" step="0.01" inputmode="decimal"
                                 :label="__('finance::field.outstanding_today')"
                                 :value="old('opening_drawn')" numeric
-                                :hint="__('finance::message.opening_touches_no_bank')" />
+                                :hint="__('finance::message.opening_touches_no_bank')"
+                                x-model="outstanding" x-on:input="fromOutstanding()" />
 
                     <template x-if="hasInstalments">
-                        <x-ui.field name="instalments_paid" type="number" inputmode="numeric"
-                                    :label="__('finance::field.instalments_paid')"
-                                    :value="old('instalments_paid')" numeric
-                                    :hint="__('finance::message.instalments_paid_hint')" />
+                        <div class="contents">
+                            <x-ui.field name="instalments_paid" type="number" inputmode="numeric"
+                                        :label="__('finance::field.instalments_paid')"
+                                        :value="old('instalments_paid')" numeric
+                                        :hint="__('finance::message.instalments_paid_hint')"
+                                        x-model="paid" x-on:input="fromPaid()" />
+
+                            {{-- ℹ এই ঘরটা সংরক্ষণ হয় না — মোট কিস্তি আর দেওয়া
+                                 কিস্তি দুইটাই খাতায় আছে, তাই বাকিটা তৃতীয় একটা সংখ্যা
+                                 নয়, ওয়ার ফল। ⛔ সংরক্ষণ করলে একদিন তিনটা সংখ্যা
+                                 একে অপরের সাথে মিলত না, আর কোনটা সত্য বলা যেত না। --}}
+                            <x-ui.field name="instalments_left" type="number" inputmode="numeric"
+                                        :label="__('finance::field.instalments_left')"
+                                        :value="old('instalments_left')" numeric
+                                        :hint="__('finance::message.instalments_left_hint')"
+                                        x-model="left" x-on:input="fromLeft()" />
+                        </div>
                     </template>
                 </div>
             </template>

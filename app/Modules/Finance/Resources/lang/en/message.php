@@ -145,6 +145,7 @@ return [
     'institution_not_linked' => 'No institution linked yet',
     'opening_touches_no_bank' => 'That money arrived years ago, so no bank account is touched — only the liability and retained earnings.',
     'instalments_paid_hint' => 'How many were paid before this was put in the system. The ones after that are counted from the ledger.',
+    'instalments_left_hint' => 'Type any one of the three — the other two fill themselves. This box is not saved.',
     'instalment_standing' => ':paid paid, :left left',
     'early_charge_basis_hint' => 'Banks differ — pick what the sanction letter says.',
     'settlement_charge_line' => 'Outstanding :outstanding + charge :charge = :total',

@@ -662,7 +662,47 @@ function emi (principal, annualRate, months) {
     return principal * r * growth / (growth - 1)
 }
 
-export function bankFacilityForm ({ kind = 'cc', branches = {}, branch = '', typedBranch = false, running = false } = {}) {
+/*
+ * ক্ষয়িষ্ণু জেরে `left`টা কিস্তি বাকি থাকলে এখন কত পাওনা।
+ *
+ * ⓘ বাকি কিস্তিগুলোর বর্তমান মূল্য — যোগ করে নয়, সূত্রে। ⚠️ কেবল
+ * `কিস্তি × বাকি` লিখলে ভবিষ্যতের সুদটাও আজকের বকেয়ায় ঢুকে যেত, আর
+ * সংখ্যাটা ব্যাংকের কাগজের চেয়ে অনেক বড় দেখাত।
+ */
+function balanceLeft (instalment, annualRate, left) {
+    const r = annualRate / 12 / 100
+
+    if (r <= 0) return instalment * left
+
+    return instalment * (1 - Math.pow(1 + r, -left)) / r
+}
+
+/*
+ * উল্টো দিক — এই বকেয়াটা আর কয়টা কিস্তির সমান।
+ *
+ * ⛔ `fromInstalment()`-এর মতো দ্বিভাজন লাগে না, সূত্রটা সোজাসুজি
+ * উল্টানো যায়। ⚠️ তবে বকেয়া সুদহীন সিলিংয়ের (`কিস্তি ÷ r`) সমান বা
+ * বেশি হলে লগারিদমটা সংজ্ঞাহীন — তখন ব্যাংক এই কিস্তিতে টাকাটা
+ * কোনোদিনই শোধ হয় না বলছে, আর `null` ফিরিয়ে ঘরটা ছোঁয়াই হয় না।
+ */
+function countLeft (instalment, annualRate, balance) {
+    const r = annualRate / 12 / 100
+
+    if (instalment <= 0) return null
+    if (r <= 0) return balance / instalment
+
+    const shrink = 1 - balance * r / instalment
+
+    if (shrink <= 0) return null
+
+    return -Math.log(shrink) / Math.log(1 + r)
+}
+
+export function bankFacilityForm ({
+    kind = 'cc', branches = {}, branch = '', typedBranch = false, running = false,
+    count = '', instalment = '', rate = '', limit = '',
+    paid = '', left = '', outstanding = '',
+} = {}) {
     const n = (v) => {
         v = (v ?? '').toString().trim()
 
@@ -676,10 +716,25 @@ export function bankFacilityForm ({ kind = 'cc', branches = {}, branch = '', typ
         typedBranch,
         running,
 
-        limit: '',
-        rate: '',
-        count: '',
-        instalment: '',
+        limit,
+        rate,
+        count,
+        instalment,
+
+        /*
+         * ⭐ চলতি ঋণের তিনটা ঘর — মালিকের নির্দেশ, ২১ সেপ্টেম্বর ২০২৬:
+         * *"কয়টা কিস্তি ইতিমধ্যে দেওয়া … তার পর বাকি আর কত কিস্তি
+         * রয়েছে auto আসবে, তার পর আজকের বকেয়া outstanding auto আসবে,
+         * যেকোনো একটা দিলে বাকিগুলো auto হবে"*।
+         *
+         * ⓘ তিনটাই একই সত্যের তিন রূপ, তাই যেটা হাতে আছে সেটাই দেওয়া
+         * যায়: কেউ জানেন কয়টা দিয়েছেন, কেউ ব্যাংকের কাগজে বকেয়াটা
+         * দেখেন। ⚠️ একটাকে "আসল" ধরে বাকি দুইটা কেবল দেখানো হলে যাঁর
+         * হাতে অন্য সংখ্যাটা আছে তাঁকে মাথায় হিসাব করতে হত।
+         */
+        paid,
+        left,
+        outstanding,
 
         /* ⓘ ধরনটা বদলালে কোন ঘরগুলো থাকবে — পর্দার `x-show` এগুলোই পড়ে */
         get hasInstalments () {
@@ -769,6 +824,64 @@ export function bankFacilityForm ({ kind = 'cc', branches = {}, branch = '', typ
             }
 
             this.rate = ((low + high) / 2).toFixed(2)
+        },
+
+        /* কয়টা দেওয়া হয়েছে টাইপ হলো → বাকি কয়টা, আর আজকের বকেয়া */
+        fromPaid () {
+            const c = n(this.count)
+            const p = n(this.paid)
+
+            if (c === null || c < 1 || p === null || p < 0 || p > c) return
+
+            this.left = String(c - p)
+            this.drawnFromLeft(c - p)
+        },
+
+        /* বাকি কয়টা টাইপ হলো → কয়টা দেওয়া, আর আজকের বকেয়া */
+        fromLeft () {
+            const c = n(this.count)
+            const l = n(this.left)
+
+            if (c === null || c < 1 || l === null || l < 0 || l > c) return
+
+            this.paid = String(c - l)
+            this.drawnFromLeft(l)
+        },
+
+        /*
+         * আজকের বকেয়া টাইপ হলো → আর কয়টা কিস্তি, আর কয়টা দেওয়া হয়েছে।
+         *
+         * ⓘ ব্যাংকের কাগজে বকেয়াটাই লেখা থাকে, কিস্তির গোনা নয় — তাই
+         * এই দিকটাই সবচেয়ে বেশি ব্যবহার হবে।
+         */
+        fromOutstanding () {
+            const c = n(this.count)
+            const a = n(this.instalment)
+            const b = n(this.outstanding)
+
+            if (c === null || c < 1 || a === null || a <= 0 || b === null || b <= 0) return
+
+            const l = countLeft(a, n(this.rate) ?? 0, b)
+
+            if (l === null) return
+
+            const rounded = Math.min(c, Math.max(0, Math.round(l)))
+
+            this.left = String(rounded)
+            this.paid = String(c - rounded)
+        },
+
+        /*
+         * ⚠️ বকেয়াটা কেবল তখনই বসে যখন কিস্তির অঙ্কটা জানা — নাহলে
+         * গোনার মতো কিছুই নেই, আর ০ বসিয়ে দিলে সেটা একটা **উত্তর**
+         * হিসেবে পড়া হত।
+         */
+        drawnFromLeft (left) {
+            const a = n(this.instalment)
+
+            if (a === null || a <= 0) return
+
+            this.outstanding = balanceLeft(a, n(this.rate) ?? 0, left).toFixed(2)
         },
     }
 }
