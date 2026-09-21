@@ -112,6 +112,35 @@ abstract class TestCase extends BaseTestCase
         return parent::setUpTraits();
     }
 
+    /**
+     * এই নামটা কি সবার ভাগের, নাকি এই সেশনের নিজের?
+     *
+     * ── ⛔ কেন নিয়মটা মন্তব্যে রেখে দেওয়া যথেষ্ট ছিল না ──────────────
+     * উপরের টীকায় নিয়মটা **পরিষ্কার লেখা ছিল** — প্রত্যেকে নিজের নামে
+     * ডাটাবেজ নেবে। ⓘ ২২ সেপ্টেম্বর ২০২৬-এ দুইটা সেশন একই রাতে
+     * দুইজনেই ভুলেছে, আর **দুইজনেরই নিজের নোটে কথাটা লেখা ছিল**।
+     *
+     * ⚠️ অর্থাৎ দোষটা মনে রাখার নয়, যন্ত্রটার: ডিফল্টটা যদি ব্যক্তিগত
+     * হত, ভোলার সুযোগই থাকত না। ⭐ আর একটা অলিখিত নিয়ম আর কোনো নিয়ম না
+     * থাকা যেমন কার্যত এক, তেমনি **মন্তব্যে লেখা নিয়ম আর বলবৎ না করা
+     * নিয়মও কার্যত এক**।
+     *
+     * ── ⓘ CI কেন ছাড় পায় ───────────────────────────────────────────
+     * সেখানে `abos_test` একটা ক্ষণস্থায়ী কন্টেইনারে একা বসে
+     * (`.github/workflows/ci.yml`), কেউ তার সাথে ভাগ করে না। ⚠️ ছাড়টা
+     * না দিলে এই পাহারাটা প্রতিটা বিল্ড লাল করে দিত — অর্থাৎ পাহারা
+     * হয়ে দাঁড়াত নিজেই একটা ভাঙা জিনিস।
+     */
+    private static function sharedByEverySession(string $database): bool
+    {
+        if ($database !== 'abos_test') {
+            return false;
+        }
+
+        // ⓘ GitHub Actions দুইটাই বসায়; যেকোনো একটাই যথেষ্ট
+        return (getenv('CI') ?: '') === '' && (getenv('GITHUB_ACTIONS') ?: '') === '';
+    }
+
     private function refuseToTouchRealData(): void
     {
         /*
@@ -133,7 +162,31 @@ abstract class TestCase extends BaseTestCase
             return;
         }
 
-        if ($database === '' || str_starts_with($database, 'abos_test')) {
+        if ($database === '') {
+            return;
+        }
+
+        if (self::sharedByEverySession($database)) {
+            throw new RuntimeException(
+                "⛔ পরীক্ষা থামানো হলো — সংযোগটা সবার ভাগের 'abos_test'-এ গেছে।\n\n"
+                .'এই নামটা `phpunit.xml`-এ হার্ডকোড করা, তাই যে-ই `DB_DATABASE=` '
+                ."বসাতে ভুলবে সে এখানেই এসে পড়ে — অর্থাৎ ডিফল্টটাই ফাঁদ।\n\n"
+                .'দুইটা সেশন একসাথে এখানে চললে দুইজনের `migrate:fresh` একে অন্যের '
+                ."টেবিল ড্রপ করে, আর ফল হয় এরকম বার্তা:\n\n"
+                ."    Deadlock found when trying to get lock\n"
+                ."    Table 'abos_test.companies' doesn't exist\n\n"
+                .'⚠️ দুইটাই পড়তে **হুবহু নিজের কোডের রিগ্রেশনের মতো**, তাই সময়টা '
+                ."নষ্ট হয় নিজের সারাই সন্দেহ করতে।\n\n"
+                ."নিজের নামে একটা নিন (`d1`-এর জায়গায় আপনার সেশনের নাম):\n\n"
+                .'    mysql -u root -e "create database if not exists abos_test_d1'
+                ." character set utf8mb4 collate utf8mb4_unicode_ci;\"\n"
+                ."    DB_DATABASE=abos_test_d1 php artisan test …\n\n"
+                .'ⓘ CI-তে এই পাহারাটা চুপ থাকে — সেখানে `abos_test` নিজের '
+                .'কন্টেইনারে একা থাকে, ভাগাভাগির প্রশ্নই নেই।'
+            );
+        }
+
+        if (str_starts_with($database, 'abos_test')) {
             return;
         }
 
