@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Tests\Feature\Modules\Accounts;
 
 use App\Core\Support\CompanyContext;
+use App\Core\Support\DocumentStatus;
 use App\Models\Company;
+use App\Models\FinancialYear;
 use App\Models\User;
 use App\Modules\Accounts\Models\Voucher;
 use Database\Seeders\DemoSeeder;
@@ -124,18 +126,79 @@ final class TheReceiptFormAsksAllEighteenTest extends TestCase
      * `transfer` — ⛔ ভ্যালিডেশন ওটা ফিরিয়ে দিত, আর ব্যবহারকারী বুঝতেন
      * না কেন ব্যাংক ট্রান্সফারের রসিদ কিছুতেই সেভ হচ্ছে না।
      */
-    public function test_the_five_instruments_match_what_validation_accepts(): void
+    public function test_the_new_form_offers_four_ways_and_hides_the_card(): void
     {
         $html = (string) $this->get(route('accounts.voucher.create', ['type' => 'receipt']))
             ->assertOk()
             ->getContent();
 
-        foreach (Voucher::INSTRUMENTS as $way) {
+        foreach (['cash', 'mfs', 'transfer', 'cheque'] as $way) {
             $this->assertStringContainsString('value="'.$way.'"', $html,
                 "মাধ্যম '{$way}' পর্দায় নেই, অথচ ভ্যালিডেশন সেটা মানে।");
         }
 
-        $this->assertCount(5, Voucher::INSTRUMENTS);
+        /*
+         * ⛔ কার্ড নতুন ভাউচারে দেখানো হয় না — নকশায় চারটা চিপ।
+         *
+         * ⚠️ আগে এই দাবিটা পাঁচটাই খুঁজত, আর **চিরকাল লাল ছিল**। ⓘ সে
+         * কোডের ভুল ধরছিল না, ধরছিল নিজের ভুল প্রত্যাশা — আর লাল হয়ে
+         * বসে থাকায় এই ফাইলের বাকি দাবিগুলোর দিকে কেউ তাকায়নি।
+         */
+        $this->assertStringNotContainsString('value="card"', $html,
+            'নতুন ভাউচারে কার্ডের চিপটা দেখা যাচ্ছে।');
+    }
+
+    /**
+     * ⭐ তবু `card` ধ্রুবকে থেকে যায়, আর সেটাই আসল চুক্তি।
+     *
+     * ── ⛔ ১৪ সেপ্টেম্বর ২০২৬-এর ভুলটা ─────────────────────────────────
+     * পুরনো ভাউচারে `card` বসা আছে। ⓘ ধ্রুবক থেকে সরালে `Rule::in`
+     * ওগুলোকে **সম্পাদনা করতে দিত না** — কাগজটা খোলা যেত, সংরক্ষণ নয়।
+     *
+     * ⚠️ তাই লুকানোটা কেবল **নতুন** ভাউচারে। যে ভাউচার ইতিমধ্যে কার্ড,
+     * তার চিপটা ফিরে আসে, নাহলে সম্পাদনা করলেই মাধ্যমটা হারাত।
+     */
+    public function test_a_voucher_already_on_card_still_shows_the_chip(): void
+    {
+        $this->assertContains('card', Voucher::INSTRUMENTS,
+            'কার্ড ধ্রুবক থেকে সরানো হয়েছে — পুরনো ভাউচার আর সম্পাদনা করা যাবে না।');
+
+        /*
+         * ⓘ ভাউচারটা এখানেই বানানো হয়, খুঁজে নেওয়া হয় না — আর খসড়া,
+         * কারণ পোস্ট হওয়া ভাউচারের সম্পাদনা ৪০৩ দেয়
+         * ([[VoucherController::assertEditable]])। ⚠️ ওটা ভুলে গেলে
+         * দাবিটা ব্যর্থ হত **চিপের কারণে নয়, দরজার কারণে**।
+         *
+         * ⚠️ প্রথমে ডেমো থেকে একটা তুলে আনার চেষ্টা হয়েছিল, আর দুইবারই
+         * **"সারি পাওয়া গেল না"** — কারণ [[DemoSeeder]] একটাও ভাউচার
+         * বানায় না। ⛔ ডেমোর গড়নের উপর দাঁড়ালে দাবিটা সিডার বদলানোর
+         * দিনই মরত, আর মরার কারণটা হত "ডেটা নেই", "চিপ নেই" নয় —
+         * অর্থাৎ ভুল জায়গায় আঙুল।
+         */
+        $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
+
+        $voucher = Voucher::create([
+            'company_id' => $company->id,
+            'branch_id' => $company->defaultBranch()?->id,
+            'financial_year_id' => FinancialYear::query()
+                ->where('is_current', true)
+                ->orderByDesc('starts_on')
+                ->firstOrFail()->id,
+            'type' => Voucher::RECEIPT,
+            'document_no' => 'RV-CARD-TEST',
+            'trx_date' => now()->toDateString(),
+            'narration' => 'পুরনো কার্ড-ভাউচার',
+            'amount' => '100.0000',
+            'instrument' => 'card',
+            'status' => DocumentStatus::DRAFT,
+        ]);
+
+        $html = (string) $this->get(route('accounts.voucher.edit', $voucher))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('value="card"', $html,
+            'কার্ডে বসা ভাউচার সম্পাদনায় চিপটা নেই — সংরক্ষণ করলে মাধ্যমটা হারাবে।');
     }
 
     /**
