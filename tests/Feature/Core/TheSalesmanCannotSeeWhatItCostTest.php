@@ -50,7 +50,37 @@ class TheSalesmanCannotSeeWhatItCostTest extends TestCase
         FieldSecurity::forget();
 
         $this->product = Product::query()->orderBy('id')->firstOrFail();
-        $this->product->forceFill(['purchase_price' => '640'])->save();
+        $this->product->forceFill(['purchase_price' => self::COST])->save();
+    }
+
+    /**
+     * ক্রয়মূল্য — এমন একটা সংখ্যা যা পাতায় আর কোথাও আসে না।
+     *
+     * ⚠️ ২০ সেপ্টেম্বর ২০২৬: আগে এটা ছিল ৬৪০, আর দাবিগুলো গোটা পাতায় কাঁচা
+     * "640" খুঁজত। CSP কমিট (9b93cc03) command-center-এর ডায়ালগে
+     * `max-width:640px` বসাল — তখন থেকে প্রতিটা পাতায় "640" আছে, আর
+     * "দেখা যায় না"-র দুইটা দাবি **ভুল কারণে লাল** হলো। ⓘ কাঁচা সংখ্যা
+     * পাতার CSS-এও থাকতে পারে; তাই অদ্ভুত একটা সংখ্যা, আর সেটার প্রতিটা
+     * লেখার রূপ ([[costOnPage()]])।
+     */
+    private const COST = '6431.77';
+
+    /**
+     * পাতায় দামটা কোনো রূপে আছে কি না — কমাসহ, কমা ছাড়া, চার দশমিকে,
+     * আর বাংলা অঙ্কে।
+     *
+     * ⓘ "নেই" দাবির জন্য এটা জরুরি: একটা রূপ খুঁজলে পর্দা অন্য রূপে
+     * দেখালেও দাবিটা সবুজ থাকত — ফাঁস থাকত, পাহারা চুপ।
+     */
+    private function costOnPage(string $html): bool
+    {
+        foreach (['6431.77', '6,431.77', '6431.7700', '৬,৪৩১.৭৭', '৬৪৩১.৭৭'] as $form) {
+            if (str_contains($html, $form)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -109,7 +139,7 @@ class TheSalesmanCannotSeeWhatItCostTest extends TestCase
             ->getContent();
 
         $this->assertStringContainsString(FieldSecurity::mask(), $html);
-        $this->assertStringNotContainsString('640', $html, 'ক্রয়মূল্যটা পর্দায় রয়ে গেছে।');
+        $this->assertFalse($this->costOnPage($html), 'ক্রয়মূল্যটা পর্দায় রয়ে গেছে।');
     }
 
     /**
@@ -127,7 +157,7 @@ class TheSalesmanCannotSeeWhatItCostTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        $this->assertStringContainsString('640', $html);
+        $this->assertTrue($this->costOnPage($html), 'মালিক নিজের ক্রয়মূল্য দেখছেন না।');
     }
 
     // ── দরজা ২ · সম্পাদনার ফর্ম ──────────────────────────────────────
@@ -146,7 +176,7 @@ class TheSalesmanCannotSeeWhatItCostTest extends TestCase
             ->getContent();
 
         $this->assertStringNotContainsString('name="purchase_price"', $html);
-        $this->assertStringNotContainsString('640', $html);
+        $this->assertFalse($this->costOnPage($html), 'সম্পাদনার ফর্মে ক্রয়মূল্য দেখা যাচ্ছে।');
     }
 
     // ── দরজা ৩ · হাতে বানানো অনুরোধ ──────────────────────────────────
@@ -177,7 +207,7 @@ class TheSalesmanCannotSeeWhatItCostTest extends TestCase
 
         $this->assertSame(
             0,
-            bccomp('640', (string) $this->product->fresh()->purchase_price, 2),
+            bccomp(self::COST, (string) $this->product->fresh()->purchase_price, 2),
             'দেখা যায় না এমন একটা ঘর হাতে বানানো অনুরোধে বদলে গেছে।',
         );
     }
