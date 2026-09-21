@@ -88,34 +88,21 @@ return [
 
         'transactions' => [
             /*
-             * ⭐ ইনভয়েস তালিকা — ড্যাশবোর্ডের ঠিক পরে, ১৯ সেপ্টেম্বর ২০২৬।
+             * ⭐ ক্রমটা কাগজের নিজের ধারা ধরে — মালিকের নির্দেশ, ২১ সেপ্টেম্বর ২০২৬।
              *
-             * মালিক: *"Dashboard er por 'Invoice list' banaw zate sob sales
-             * invoice takbe"*। ⓘ তালিকাটা আগে থেকেই ছিল ("বিক্রয় বিল"),
-             * আর সেটা সত্যিই সব বিল দেখায় — কাউন্টার, সরাসরি বিক্রয়, চালান
-             * থেকে বানানো — কেবল বাতিলগুলো একটা বোতামের পেছনে।
+             * ── ⓘ কেন এই ক্রম ─────────────────────────────────────────
+             * বিক্রয়ে কাগজগুলো একটার পর একটা জন্মায়: আদেশ আসে → মাল
+             * যায় (চালান) → গাড়ি ছাড়ে (শিপমেন্ট) → বিল হয় → ফেরত এলে
+             * ফেরত। মেনুটা সেই ধারাতেই সাজানো, যাতে নতুন কর্মীও উপর
+             * থেকে নিচে পড়ে কাজের ক্রমটা বুঝে নিতে পারেন।
              *
-             * ⚠️ তাই নতুন পাতা নয়, একই সারিটা উপরে উঠল আর নাম বদলাল। ⛔ দুই
-             * মেনুতে একই তালিকা রাখা মালিকের নিজের নিয়মের বিরুদ্ধে (*"ekoi
-             * jinis dui jaygay dorkar nai"*)।
-             *
-             * ⓘ গ্রুপটা `transactions`, আলাদা কিছু নয় — মেনু-গ্রুপের নাম
-             * কোরে বাঁধা ([[ModuleDefinition::MENU_GROUPS]])।
+             * ⚠️ এটা ১৯ সেপ্টেম্বরের সিদ্ধান্তের উল্টো — তখন মালিক
+             * বলেছিলেন *"Dashboard er por 'Invoice list'"*, আর সারিটা
+             * সবার উপরে বসেছিল। ⓘ এক ক্লিকের সুবিধাটা তবু যায়নি:
+             * ড্যাশবোর্ডের নিজের টাইলেই ইনভয়েস তালিকা আছে
+             * ([[SalesDashboard]])। তাই মেনু ধারা মানে, আর দ্রুত-পথটা
+             * ড্যাশবোর্ডে থাকে।
              */
-            ['label' => 'sales::menu.invoices', 'icon' => 'receipt', 'route' => 'sales.invoice.index', 'permission' => 'sales.invoice.view'],
-
-            ['label' => 'sales::menu.pos', 'icon' => 'cash', 'route' => 'sales.pos.index', 'permission' => 'sales.pos',
-                'setting' => 'sales.screen_pos'],
-
-            /*
-             * শিফট — কাউন্টারের ঠিক নিচে, একই সুইচের পেছনে।
-             *
-             * যে ব্যবসায় কাউন্টারের পর্দাই নেই, তার ড্রয়ারের শিফটও নেই।
-             */
-            ['label' => 'sales::menu.shift', 'icon' => 'clock', 'route' => 'sales.shift.index', 'permission' => 'sales.pos',
-                'setting' => 'sales.screen_pos'],
-            ['label' => 'sales::menu.direct', 'icon' => 'sales', 'route' => 'sales.direct.create', 'permission' => 'sales.challan.create',
-                'setting' => 'sales.screen_direct'],
             ['label' => 'sales::menu.orders', 'icon' => 'book', 'route' => 'sales.order.index', 'permission' => 'sales.order.view',
                 'setting' => 'sales.screen_orders'],
 
@@ -128,6 +115,10 @@ return [
              */
             ['label' => 'sales::menu.order_track', 'icon' => 'search', 'route' => 'sales.order.track',
                 'permission' => 'sales.order.view', 'setting' => 'sales.screen_orders'],
+
+            ['label' => 'sales::menu.direct', 'icon' => 'sales', 'route' => 'sales.direct.create', 'permission' => 'sales.challan.create',
+                'setting' => 'sales.screen_direct'],
+
             ['label' => 'sales::menu.challans', 'icon' => 'challan', 'route' => 'sales.challan.index', 'permission' => 'sales.challan.view',
                 'setting' => 'sales.screen_challans'],
 
@@ -141,6 +132,18 @@ return [
              */
             ['label' => 'sales::menu.shipments', 'icon' => 'share', 'route' => 'sales.shipment.index',
                 'permission' => 'sales.shipment.view', 'setting' => 'sales.screen_shipments'],
+
+            /*
+             * ⓘ ইনভয়েস তালিকা — মাল যাওয়ার পরে, কারণ বিলটাও তখনই
+             * সত্যি হয়। তালিকাটা সব বিল দেখায় (কাউন্টার, সরাসরি
+             * বিক্রয়, চালান থেকে বানানো), কেবল বাতিলগুলো একটা বোতামের
+             * পেছনে।
+             *
+             * ⛔ দুই মেনুতে একই তালিকা রাখা হয় না — মালিকের নিজের নিয়ম
+             * (*"ekoi jinis dui jaygay dorkar nai"*)।
+             */
+            ['label' => 'sales::menu.invoices', 'icon' => 'receipt', 'route' => 'sales.invoice.index', 'permission' => 'sales.invoice.view'],
+
             /*
              * ⭐ "আদায়" বোতাম নেই — মালিকের নির্দেশ, ১৯ সেপ্টেম্বর ২০২৬ (ক্রয়ের
              * "পরিশোধ"-এর মতোই): গ্রাহকের টাকা নেওয়া হিসাবের রসিদ ভাউচারের কাজ,
@@ -163,6 +166,27 @@ return [
              */
             ['label' => 'sales::menu.print_queue', 'icon' => 'printer', 'route' => 'sales.print_queue.index',
                 'permission' => 'sales.invoice.view'],
+
+            /*
+             * ⓘ POS ও শিফ্ট তালিকার শেষে — মালিকের দেওয়া ক্রমে এই দুইটা
+             * সারি নেই, আর কাগজের ধারাটা এক টানে পড়া যাওয়াই চাওয়া — মাঝখানে
+             * কাউন্টারের দুইটা সারি পড়লে ধারাটা থেমে যেত।
+             *
+             * ⚠️ মালিকের তালিকায় এই দুইটা ছিল না, কারণ তাঁর ডিপোতে
+             * POS-এর সুইচ বন্ধ — সারিগুলো তাঁর পর্দাতেই আসে না। ⛔ তাই
+             * তুলে দেওয়া হয়নি; যে ব্যবসা POS চালায় তার কাছে ওটাই
+             * দিনের প্রধান পর্দা।
+             */
+            ['label' => 'sales::menu.pos', 'icon' => 'cash', 'route' => 'sales.pos.index', 'permission' => 'sales.pos',
+                'setting' => 'sales.screen_pos'],
+
+            /*
+             * শিফট — কাউন্টারের ঠিক নিচে, একই সুইচের পেছনে।
+             *
+             * যে ব্যবসায় কাউন্টারের পর্দাই নেই, তার ড্রয়ারের শিফটও নেই।
+             */
+            ['label' => 'sales::menu.shift', 'icon' => 'clock', 'route' => 'sales.shift.index', 'permission' => 'sales.pos',
+                'setting' => 'sales.screen_pos'],
         ],
         'reports' => [
             ['label' => 'sales::menu.pending_orders', 'icon' => 'clock', 'route' => 'sales.report.show',
