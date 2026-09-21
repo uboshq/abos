@@ -13,6 +13,7 @@ use App\Core\Contracts\Drillable;
 use App\Models\Branch;
 use App\Models\User;
 use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Accounts\Models\VoucherBillShare;
 use App\Modules\Supplier\Models\Supplier;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -121,11 +122,11 @@ class PurchaseBill extends Model implements Drillable
      * দেখিয়ে দেব"*, কারণ কখনো সত্যিই দুইবার ভাড়া লাগে (ফেরত,
      * পুনঃপরিবহন)।
      *
-     * @return HasMany<\App\Modules\Accounts\Models\VoucherBillShare, $this>
+     * @return HasMany<VoucherBillShare, $this>
      */
     public function billShares(): HasMany
     {
-        return $this->hasMany(\App\Modules\Accounts\Models\VoucherBillShare::class, 'purchase_bill_id');
+        return $this->hasMany(VoucherBillShare::class, 'purchase_bill_id');
     }
 
     /**
@@ -136,16 +137,41 @@ class PurchaseBill extends Model implements Drillable
      */
     public function getGoodsSummaryAttribute(): string
     {
-        $names = $this->lines->take(3)
-            ->map(fn ($l) => $l->product?->display_name ?? $l->product?->name_bn ?? '—')
-            ->filter()
-            ->all();
+        $all = $this->goods_names;
+        $names = array_slice($all, 0, self::GOODS_SHOWN);
 
         if ($names === []) {
             return '—';
         }
 
-        return implode(' · ', $names).($this->lines->count() > 3 ? ' …' : '');
+        return implode(' · ', $names).(count($all) > self::GOODS_SHOWN ? ' …' : '');
+    }
+
+    /**
+     * চালানের **সব** মালের নাম — কাটা নয়, ভাঁজ খুললে যা দেখা যায়।
+     *
+     * ── ⭐ কেন আলাদা করে বসানো হলো, ২১ সেপ্টেম্বর ২০২৬ ──────────────
+     * মালিকের কথা: *"goods e item zodi ekhane besi hoy tahole vaj kora
+     * thbe"* — অর্থাৎ ঘরটা ছোট থাকবে, কিন্তু চাইলে পুরোটা দেখা যাবে।
+     *
+     * ⛔ নামটা কীভাবে বের হয় (`display_name`, নাহলে `name_bn`, নাহলে
+     * `—`) সেই নিয়মটা দুই জায়গায় লিখলে একদিন দুইটা আলাদা হয়ে যেত:
+     * ভাঁজ করা অবস্থায় এক নাম, খোলা অবস্থায় আরেক। ⓘ তাই নিয়মটা
+     * এখানেই একবার, আর [[getGoodsSummaryAttribute]] এটাকেই কেটে নেয়।
+     *
+     * ⚠️ `lines` আগেই eager-load করা (`with(['lines.product'])`), আর
+     * রিপোতে `preventLazyLoading` চালু — তাই এখানে নতুন কোনো কোয়েরি
+     * হয় না, আর হলে সেটা ব্যতিক্রম ছুড়ত।
+     *
+     * @return list<string>
+     */
+    public function getGoodsNamesAttribute(): array
+    {
+        return $this->lines
+            ->map(fn ($l) => $l->product?->display_name ?? $l->product?->name_bn ?? '—')
+            ->filter()
+            ->values()
+            ->all();
     }
 
     /**
@@ -317,6 +343,19 @@ class PurchaseBill extends Model implements Drillable
      * গুদামের খতিয়ানে দেখা যায় মালটা কোন কাগজে ঢুকেছিল।
      */
     public const STOCK_SOURCE = 'purchase_bill';
+
+    /**
+     * ভাঁজ করা অবস্থায় কয়টা মালের নাম দেখা যাবে।
+     *
+     * ⓘ সংখ্যাটা এখানে একবার, কারণ **দুই জায়গায় লাগে**: এক, নামগুলো
+     * কাটতে ([[getGoodsSummaryAttribute]]); দুই, "ভাঁজটা আদৌ লাগবে কি
+     * না" ঠিক করতে (খরচ ভাউচারের চালান-ট্যাগের ঘরে)।
+     *
+     * ⛔ দুই জায়গায় আলাদা সংখ্যা বসলে দুইটাই "কাজ করত", কেবল ভুল করে:
+     * ঘরটা "…" দেখাত অথচ ভাঁজ খুলত না, বা ভাঁজ খুলে একই তিনটা নামই
+     * আবার দেখাত।
+     */
+    public const GOODS_SHOWN = 3;
 
     // ── Drillable ───────────────────────────────────────────────────────
 

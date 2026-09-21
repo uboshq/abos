@@ -94,8 +94,59 @@
                                        @checked($picked)
                                        x-on:change="toggle({{ $i }}, $event.target.checked)">
                             </td>
-                            <td class="p-2 font-medium">{{ $bill->document_no }}</td>
-                            <td class="p-2">{{ $bill->goods_summary }}</td>
+                            {{--
+                                ⭐ চালান নম্বরটা খুলে দেখা যায় — মালিক, ২১ সেপ্টেম্বর ২০২৬:
+                                *"bill no hyper link kore daw zate vew kore dekte pari"*।
+
+                                ⚠️ `target="_blank"` — এটা সুবিধা নয়, **রক্ষা**। পাতাটা
+                                একটা অর্ধসমাপ্ত ভাউচারের ফর্ম। একই ট্যাবে খুললে তারিখ,
+                                খাত, টিক দেওয়া চালান, বসানো ভাগ — সব হারাত, আর
+                                ফেরত এসে তিনি দেখতেন খালি ফর্ম।
+
+                                ⛔ `@can('view', $bill)` — যার দেখার অনুমতি নেই তাঁকে
+                                লিংক দিলে ক্লিক করে তিনি 403 পেতেন। ⓘ মালিকের
+                                পুরনো নিয়ম: যে ঘর কোথাও নিয়ে যায় না, সেটা সাদা থাকে।
+                            --}}
+                            <td class="p-2 font-medium">
+                                @can('view', $bill)
+                                    <a href="{{ route('purchase.bill.show', ['bill' => $bill->id]) }}"
+                                       target="_blank" rel="noopener"
+                                       class="underline underline-offset-2 hover:no-underline">{{ $bill->document_no }}</a>
+                                @else
+                                    {{ $bill->document_no }}
+                                @endcan
+                            </td>
+                            {{--
+                                ⭐ মাল বেশি হলে ভাঁজ — মালিক, ২১ সেপ্টেম্বর ২০২৬:
+                                *"goods e item zodi ekhane besi hoy tahole vaj kora thbe"*।
+
+                                ⓘ `goods_summary` আগেই তিনটায় কেটে " …" বসায়। তাই
+                                তিনটা বা তার কম হলে ভাঁজ লাগেই না — খালি তিরচিহ্ন
+                                দিলে কেউ ক্লিক করে দেখতেন হুবহু একই লেখা।
+
+                                ⚠️ `<details>` — Alpine নয়। এই টেবিলটা নিজেই একটা
+                                Alpine স্কোপের ভিতরে, আর সারিগুলো `x-show`-এ লুকায়।
+                                প্রতি সারিতে আরেকটা `x-data` বসালে স্কোপ চিতা লম্বা হত,
+                                আর `<details>` বিনা জাভাস্ক্রিপ্টেই খোলে।
+
+                                ⛔ কয়টা দেখাবে সেই সংখ্যাটা এখানে লেখা নয়। সেটা
+                                `PurchaseBill::GOODS_SHOWN` — কাটা আর ভাঁজ, দুইটাই একই
+                                সংখ্যা ধরে, নাহলে একদিন দুইটা আলাদা হয়ে যেত।
+                            --}}
+                            <td class="p-2">
+                                @if (count($bill->goods_names) > \App\Modules\Purchase\Models\PurchaseBill::GOODS_SHOWN)
+                                    <details>
+                                        <summary class="cursor-pointer">{{ $bill->goods_summary }}</summary>
+                                        <ul class="mt-1 list-inside list-disc text-xs text-(--color-ink-muted)">
+                                            @foreach ($bill->goods_names as $name)
+                                                <li>{{ $name }}</li>
+                                            @endforeach
+                                        </ul>
+                                    </details>
+                                @else
+                                    {{ $bill->goods_summary }}
+                                @endif
+                            </td>
                             <td class="num p-2 text-end">{{ $bill->total_qty }}</td>
                             <td class="num p-2 text-end text-(--color-ink-muted)">
                                 {{ bccomp((string) $bill->already_charged, '0', 4) > 0 ? number_format((string) $bill->already_charged, 2) : '—' }}
