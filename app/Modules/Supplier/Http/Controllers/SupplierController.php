@@ -180,7 +180,7 @@ class SupplierController extends Controller implements HasMiddleware
      */
     private function vendorTypeId(): ?int
     {
-        return \App\Modules\MasterData\Models\PartyType::query()
+        return PartyType::query()
             ->where('code', Supplier::VENDOR_CODE)
             ->where('is_active', true)
             ->value('id');
@@ -243,6 +243,29 @@ class SupplierController extends Controller implements HasMiddleware
         $entries->getCollection()->each(function (LedgerEntry $entry) use ($running) {
             $entry->running_balance = $running->add($entry->credit, $entry->debit);
         });
+
+        /*
+         * ⭐ পর্দায় নতুন আগে, কাগজে ব্যাংকের খাতার মতো — ২১ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⓘ মালিকের নিয়ম ─────────────────────────────────────────
+         * *"Transactions dekhar somoy ajker date sobar upore ... but
+         * print er somoy ba printe dile bank er moto ledger dekhabe"*।
+         *
+         * ⭐ আর দুইটা আলাদা হওয়াই ঠিক: পর্দায় মানুষ দেখেন **শেষ কী
+         * হলো**, কাগজে মেলান **শুরু থেকে**। ব্যাংকের স্টেটমেন্টও তাই।
+         *
+         * ── ⚠️ উল্টানোটা গোনার **পরে**, আর সেটাই আসল কথা ─────────────
+         * ⛔ কোয়েরিতে `orderByDesc` বসালে চলমান জেরটা উল্টো দিক থেকে
+         * গুনত আর প্রতিটা সারির জের মিথ্যা হত। ⓘ তাই গোনা আগের মতোই
+         * পুরনো → নতুন, কেবল **দেখানোর ক্রমটা** উল্টে দেওয়া হয় —
+         * সংখ্যাগুলো সারির সাথেই থাকে।
+         *
+         * ⓘ `?ledger=asc` দিলে কাগজের ক্রম ফিরে আসে; ছাপার পথ ওটাই
+         * ব্যবহার করে।
+         */
+        if ($request->query('ledger') !== 'asc') {
+            $entries->setCollection($entries->getCollection()->reverse()->values());
+        }
 
         return view('supplier::show', [
             'menu' => $this->menu->forUser($request->user()),
