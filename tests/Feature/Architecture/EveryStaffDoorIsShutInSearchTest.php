@@ -8,7 +8,6 @@ use App\Core\Engines\Search\SearchEngine;
 use App\Core\Engines\Search\SearchHit;
 use App\Core\Services\DataScope;
 use App\Core\Support\CompanyContext;
-use App\Models\Branch;
 use App\Models\Company;
 use App\Models\User;
 use App\Models\UserDataScope;

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Architecture;
 
+use App\Models\User;
 use App\Notifications\EmailChangeLink;
 use App\Notifications\EmailChangeWarning;
 use App\Notifications\PasswordResetLink;
@@ -110,7 +111,7 @@ final class TheLetterKnowsWhoItIsWritingToTest extends TestCase
      */
     public function test_the_warning_letter_is_complete(): void
     {
-        $user = new \App\Models\User(['name' => 'Md. Al-Amin']);
+        $user = new User(['name' => 'Md. Al-Amin']);
         $user->locale = 'bn';
 
         $words = $this->wordsOf((new EmailChangeWarning('notun@abos.test'))->toMail($user));
@@ -131,7 +132,7 @@ final class TheLetterKnowsWhoItIsWritingToTest extends TestCase
      */
     public function test_the_password_reset_letter_is_complete(): void
     {
-        $user = new \App\Models\User(['name' => 'Md. Al-Amin', 'email' => 'keu@abos.test']);
+        $user = new User(['name' => 'Md. Al-Amin', 'email' => 'keu@abos.test']);
         $user->locale = 'bn';
 
         $words = $this->wordsOf((new PasswordResetLink('token-ta'))->toMail($user));

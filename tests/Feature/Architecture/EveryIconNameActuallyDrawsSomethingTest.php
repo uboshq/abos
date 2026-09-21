@@ -130,7 +130,7 @@ final class EveryIconNameActuallyDrawsSomethingTest extends TestCase
      * মডিউল-ঘোষণাগুলো আলাদা করে পড়া হয় বলে ঐ চলকগুলোর উৎসই ঢাকা পড়ে।
      *
      * @param  int|null  $occurrences  কতবার একটা নাম লেখা আছে — খোঁজাটা
-     *                                  সত্যিই ফাইল পড়ছে কি না তার প্রমাণ।
+     *                                 সত্যিই ফাইল পড়ছে কি না তার প্রমাণ।
      * @return array<string, string>
      */
     private function iconNamesInUse(?int &$occurrences = null): array

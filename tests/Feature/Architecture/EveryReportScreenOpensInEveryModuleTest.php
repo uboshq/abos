@@ -114,7 +114,7 @@ final class EveryReportScreenOpensInEveryModuleTest extends TestCase
         $this->assertSame([], $leaking, implode("\n", array_merge(
             ['এই পাতাগুলোয় একটা কম্পোনেন্ট লেখা হিসেবে ছাপা হয়েছে:', ''],
             $leaking,
-            ['', 'ⓘ প্রায়ই কারণ একটাই: attribute-এর ভিতরে একটা ASCII "'."\""
+            ['', 'ⓘ প্রায়ই কারণ একটাই: attribute-এর ভিতরে একটা ASCII "'.'"'
                 .' — এমনকি মন্তব্যের ভিতরেও।']
         )));
     }
