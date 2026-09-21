@@ -193,6 +193,15 @@ Route::middleware('auth')->prefix('finance')->group(function () {
         Route::get('/create', [RentalContractController::class, 'create'])->name('create');
         Route::post('/', [RentalContractController::class, 'store'])->name('store');
 
+        /*
+         * নতুন বাড়িওয়ালা — "কার সাথে" ট্যাব থেকেই।
+         *
+         * ⓘ `{contract}`-এর আগে, কারণ `/people` একটা সংখ্যা নয় আর
+         * নিচের রুটটা `whereNumber` দিয়ে বাঁধা — তবু ক্রমটা স্পষ্ট
+         * রাখা হলো, যাতে পরে কেউ শর্তটা তুলে দিলেও এটা আগে মেলে।
+         */
+        Route::post('/people', [RentalContractController::class, 'storePerson'])->name('person.store');
+
         Route::get('/{contract}', [RentalContractController::class, 'show'])
             ->whereNumber('contract')->name('show');
 

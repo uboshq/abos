@@ -367,4 +367,6 @@ return [
     'principal_part' => 'আসল',
     'interest_part' => 'সুদ',
     'balance_left' => 'জের',
+    /* ⭐ ভাড়ার "কার সাথে" ট্যাবে নতুন নাম — ২১ সেপ্টেম্বর ২০২৬। */
+    'rental_new_person' => 'নতুন বাড়িওয়ালার নাম',
 ];

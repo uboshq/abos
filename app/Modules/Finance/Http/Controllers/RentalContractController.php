@@ -13,6 +13,7 @@ use App\Modules\Accounts\Models\Account;
 use App\Modules\Finance\Models\RentalContract;
 use App\Modules\Finance\Services\RentalContractService;
 use App\Modules\Finance\Services\RentalSubjects;
+use App\Modules\MasterData\Services\PersonResolver;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -40,6 +41,20 @@ class RentalContractController extends Controller implements HasMiddleware
         private readonly RentalContractService $contracts,
         private readonly MenuBuilder $menu,
         private readonly AttachmentEngine $attachments,
+
+        /*
+         * ⭐ নতুন বাড়িওয়ালা এখান থেকেই — ২১ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ মালিকের নির্দেশ: *"varar chukti o jamanot e কার সাথে creat
+         * er bebosta koro"*। ⚠️ ট্যাবটা তালিকা দেখাত, কিন্তু নতুন নাম
+         * যোগ করার পথ ছিল না — মাস্টার ডেটায় গিয়ে বসিয়ে ফিরে আসতে হত।
+         *
+         * ⛔ আর নামটা এখানে নিজের টেবিলে যায় না: [[PersonResolver]]
+         * একটাই মানুষের তালিকায় (`mdm_people`) বসায়। ⓘ নাহলে "Karim",
+         * "Karim Mia" আর "করিম মিয়া" তিনজন হয়ে যেতেন, আর একজনের
+         * জামানত তিন ভাগে ছিঁড়ত — হাতধারে ঠিক এই কারণেই একই পথ।
+         */
+        private readonly PersonResolver $people,
     ) {}
 
     public static function middleware(): array
@@ -222,6 +237,28 @@ class RentalContractController extends Controller implements HasMiddleware
                 ->get(),
             'money' => $this->moneyAccounts(),
         ]);
+    }
+
+    /**
+     * নতুন বাড়িওয়ালা — তালিকা ছেড়ে কোথাও না গিয়ে।
+     *
+     * ⓘ হাতধারের [[HandLoanController::storePerson]]-এর হুবহু ছাঁচ:
+     * একই যাচাই, একই `PersonResolver`, একই `back()`। ⚠️ দুই জায়গায়
+     * দুই রকম নিয়ম হলে একই মানুষ দুই পর্দায় দুইভাবে বসতেন।
+     */
+    public function storePerson(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'name_bn' => ['required', 'string', 'max:120'],
+            'mobile' => ['nullable', 'string', 'max:32'],
+        ]);
+
+        $this->people->resolve([
+            'person_new' => $data['name_bn'],
+            'person_mobile' => $data['mobile'] ?? null,
+        ]);
+
+        return back()->with('saved', __('finance::message.person_added', ['who' => $data['name_bn']]));
     }
 
     public function store(Request $request): RedirectResponse

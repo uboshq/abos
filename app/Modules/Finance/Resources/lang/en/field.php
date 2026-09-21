@@ -337,4 +337,6 @@ return [
     'principal_part' => 'Principal',
     'interest_part' => 'Interest',
     'balance_left' => 'Balance',
+    /* A new landlord, typed on the "with whom" tab - 21 September 2026. */
+    'rental_new_person' => 'New landlord',
 ];

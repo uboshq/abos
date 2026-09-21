@@ -10,6 +10,33 @@
     সেটাই সৎ: যাঁর নাম তালিকায় নেই, তাঁর সারিও নেই। ⭐ জোড়াটা বসানো যায়
     চুক্তির নিজের পাতা থেকে, আর তারপর তিনি এখানে এসে যান।
 --}}
+{{--
+    ⭐ নতুন বাড়িওয়ালা এখানেই — ২১ সেপ্টেম্বর ২০২৬।
+
+    ⓘ মালিকের নির্দেশ: *"varar chukti o jamanot e কার সাথে creat er
+    bebosta koro"*। ⚠️ ট্যাবটা তালিকা দেখাত, কিন্তু নাম যোগ করার কোনো
+    পথ ছিল না — মাস্টার ডেটায় গিয়ে বসিয়ে ফিরে আসতে হত, আর কাজের
+    মাঝপথে পর্দা ছেড়ে যাওয়াই সবচেয়ে বড় বাধা।
+
+    ⓘ হাতধারের ফর্মটার হুবহু একই — একই ঘর, একই অনুমতির ধরন, একই
+    `PersonResolver`। ⛔ দুই পর্দায় দুই রকম হলে একই মানুষ দুইভাবে বসতেন।
+
+    ⓘ মোবাইলটা ঐচ্ছিক, কিন্তু ভাড়া চাইতে গেলে ওটাই লাগে।
+--}}
+<div class="border-b border-(--color-border) p-3">
+    @can('finance.rental.create')
+        <form method="POST" action="{{ route('finance.rental.person.store') }}"
+              class="flex flex-wrap items-end gap-2">
+            @csrf
+
+            <x-ui.field name="name_bn" :label="__('finance::field.rental_new_person')" required />
+            <x-ui.field name="mobile" :label="__('finance::field.person_mobile')" />
+
+            <x-ui.button type="submit" tone="primary">{{ __('finance::action.add_person') }}</x-ui.button>
+        </form>
+    @endcan
+</div>
+
 <x-ui.table
     :rows="$people"
     :compact="request()->boolean('compact')"
