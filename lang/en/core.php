@@ -262,6 +262,7 @@ return [
         // The zero rows fold into one line — "looked, nothing there"
         'nothing_pending' => 'Nothing pending on one other thing|Nothing pending on :count other things',
         'nothing_to_show' => 'Nothing to show here — the figures come from the modules you have permission to open.',
+        'no_module_at_all' => 'No role has been given to you yet, so no module opens — ask your administrator to set one.',
         'foundation_ready' => 'The foundation is in place',
         'foundation_note' => 'Core engines, tenant scoping, approvals, attachments and both languages are working. Modules sit on top of this.',
     ],
