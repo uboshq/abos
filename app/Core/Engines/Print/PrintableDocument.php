@@ -44,6 +44,20 @@ final class PrintableDocument
         public readonly ?string $amountInWords = null,
         public readonly ?string $narration = null,
         public readonly ?string $notice = null,
+
+        /**
+         * ⭐ এই কাগজের বিপরীতে আসা টাকার সারিগুলো — ২২ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ মালিকের নমুনা বিলের বাঁ-নিচে একটা ছোট ছক: ক্রম · লেনদেন
+         * নম্বর · তারিখ · কোন পথে · বিবরণ · টাকা। ⚠️ উদ্দেশ্য একটাই —
+         * গ্রাহক যেন ফোন করে জিজ্ঞেস না করেন *"আমার জমাটা বসেছে কি না"*।
+         *
+         * ⛔ খালি রাখলে ছকটা আঁকাই হয় না, তাই যে কাগজে টাকার প্রশ্ন
+         * নেই (চালান, অর্ডার) সেখানে কিছুই বদলায় না।
+         *
+         * @var list<array{no: int, ref: string, date: string, method: string, narration: string, amount: string}>
+         */
+        public readonly array $payments = [],
     ) {}
 
     /**
