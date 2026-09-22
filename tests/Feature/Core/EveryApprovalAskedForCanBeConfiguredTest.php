@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Core;
 
 use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Accounts\Services\VoucherApproval;
 use App\Modules\Approval\Services\ApprovalFlowService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -72,6 +73,30 @@ class EveryApprovalAskedForCanBeConfiguredTest extends TestCase
          */
         foreach (Voucher::TYPES as $type) {
             $asked[] = 'accounts.'.$type;
+        }
+
+        /*
+         * ⛔ কাউন্টারের কাজ দুইটা — আর এগুলোর নাম **ধরনও নয়, লেখাও নয়**।
+         *
+         * ── ⓘ ফাঁকটা কী ছিল, ২২ সেপ্টেম্বর ২০২৬ ─────────────────────
+         * [[VoucherApproval::stopping()]] কাজের নামটা একটা `match`-এ ঠিক
+         * করে, আর দুইটা শাখা `self::COUNTER_DEPOSIT` / `self::COUNTER_PAYMENT`
+         * ফেরায়। ⚠️ ডাকার সময় লেখা থাকে `action: $action` — একটা চলক।
+         *
+         * ⛔ তাই উপরের regex ওদের দেখত না, `Voucher::TYPES`-এও ওরা নেই।
+         * ⓘ ফলে ১৯ নভেম্বর ঘোষণা দুইটা বসার দিন থেকে এই পরীক্ষাটা লাল
+         * ছিল, আর বার্তাটা ছিল উল্টো: *"কেউ এগুলোতে অনুমোদন চায় না"* —
+         * অথচ চাওয়া হয়, কেবল পাহারাটা দেখতে পেত না।
+         *
+         * ⭐ ধ্রুবকগুলো reflection দিয়ে পড়া হয়, হাতে লেখা হয় না — তাই
+         * কাল একটা তৃতীয় কাউন্টার-কাজ যোগ হলে সেটাও নিজে থেকেই গোনা হবে।
+         */
+        foreach ((new \ReflectionClass(VoucherApproval::class))->getConstants() as $name => $value) {
+            if ($name === 'MODULE' || ! is_string($value)) {
+                continue;
+            }
+
+            $asked[] = VoucherApproval::MODULE.'.'.$value;
         }
 
         return array_values(array_unique($asked));
