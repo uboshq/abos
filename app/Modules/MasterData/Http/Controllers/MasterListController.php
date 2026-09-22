@@ -108,10 +108,25 @@ class MasterListController extends Controller implements HasMiddleware
             'model' => Unit::class,
             'route' => 'unit',
             'title' => 'master_data::menu.units',
+            /*
+             * ⭐ প্রতিটা ঘরের পাশে এক লাইন — ধাপ ৮, ২২ সেপ্টেম্বর ২০২৬।
+             *
+             * ⛔ "রূপান্তর" শব্দটা **দিক বলে না**: কার্টনে ১২ পিস,
+             * নাকি পিসে ১২ কার্টন? ⚠️ উল্টো বসালে মজুদের প্রতিটা
+             * সংখ্যা একশো ৪৪ গুণ ভুল হয়, আর কিছুই লাল হয় না।
+             *
+             * ⓘ দ্বিতীয় বিভ্রান্তিটা প্যাক আসার পরে: এখানে বসানো
+             * সংখ্যাটা **সার্বজনীন** (ডজন = ১২), আর কার্টনে কত সেটা
+             * পণ্যভেদে আলাদা ([[ProductUnit]])। ⛔ এখানে কার্টন = ১২
+             * বসালে কেউ ভাবতেন সব পণ্যের কার্টনে বারোটা।
+             */
             'fields' => [
-                'base_unit_id' => ['type' => 'select', 'label' => 'master_data::field.base_unit', 'options' => 'units'],
-                'factor' => ['type' => 'number', 'label' => 'master_data::field.factor', 'step' => '0.000001'],
-                'allows_fraction' => ['type' => 'switch', 'label' => 'master_data::field.allows_fraction'],
+                'base_unit_id' => ['type' => 'select', 'label' => 'master_data::field.base_unit',
+                    'options' => 'units', 'hint' => 'master_data::message.base_unit_hint'],
+                'factor' => ['type' => 'number', 'label' => 'master_data::field.factor',
+                    'step' => '0.000001', 'hint' => 'master_data::message.factor_hint'],
+                'allows_fraction' => ['type' => 'switch', 'label' => 'master_data::field.allows_fraction',
+                    'hint' => 'master_data::message.allows_fraction_hint'],
             ],
             'columns' => ['factor', 'allows_fraction'],
         ],

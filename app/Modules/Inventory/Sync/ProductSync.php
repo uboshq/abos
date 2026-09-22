@@ -11,6 +11,7 @@ use App\Core\Engines\Sync\SyncRejection;
 use App\Core\Security\FieldSecurity;
 use App\Models\User;
 use App\Modules\Inventory\Models\Product;
+use App\Modules\Inventory\Models\ProductUnit;
 use Illuminate\Support\Carbon;
 
 /**
@@ -63,8 +64,14 @@ final class ProductSync implements SyncsToDevices
      */
     public function pull(User $user, ?Carbon $since, int $limit): array
     {
+        /*
+         * ⭐ প্যাকগুলোও একসাথে — ধাপ ৭, ২২ সেপ্টেম্বর ২০২৬।
+         *
+         * ⚠️ লুপের ভিতরে ডাকলে পাঁচশো পণ্যের সিঙ্কে পাঁচশো
+         * কোয়ারি হত — ফোনের প্রথম সিঙ্কটাই সবচেয়ে বড়।
+         */
         $query = Product::query()
-            ->with(['unit:id,code,name_en,name_bn'])
+            ->with(['unit:id,code,name_en,name_bn', 'packs.unit:id,code,name_en,name_bn'])
             ->orderBy('updated_at')
             ->orderBy('id')
             ->limit($limit);
@@ -103,10 +110,68 @@ final class ProductSync implements SyncsToDevices
                 'salePrice' => (string) $product->sale_price,
 
                 'purchasePrice' => $showsCost ? (string) $product->purchase_price : null,
+
+                /*
+                 * ⭐ পণ্যের নিজের প্যাক — কার্টনে কত, আর গায়ে কোন বারকোড।
+                 *
+                 * ── ⛔ যা ভাঙা ছিল ──────────────────────────────
+                 * ফোন পণ্যের **ভিত্তি এককটাই** জানত। ⚠️ তাই অফলাইনে
+                 * অর্ডার লেখা যেত কেবল পিসে, আর বিক্রেতা কার্টনে গুনে
+                 * মাথায় গুণ করে লিখতেন — আর ভুল হলে সেটা ধরা পড়ত
+                 * মাল ডেলিভারির দিন।
+                 *
+                 * ⓘ বারকোডটাও যায়, কারণ ফোনেই স্ক্যান হয় — ডেস্কটপের
+                 * পর্দায় যে মানচিত্রটা যায় ([[SalesOrderController]]), এটা তারই
+                 * অফলাইন রূপ।
+                 *
+                 * ⚠️ নিষ্ক্রিয় সারি বাদ: প্যাকটা বন্ধ করা হলেও ফোনে
+                 * রেখে দিলে সেলসম্যান একটা অস্বীকৃত এককে অর্ডার লিখতেন।
+                 *
+                 * ⛔ ফাঁকা তালিকা `null` হয়ে বাদ পড়ে (`array_filter`), তাই
+                 * যে পণ্যের প্যাক নেই তার পেলোয়াড এক বাইটও বাড়ে না।
+                 */
+                'packs' => $this->packs($product) ?: null,
+
                 'isActive' => (bool) $product->is_active,
             ], fn ($value) => $value !== null),
             updatedAt: $product->updated_at ?? $product->created_at ?? now(),
         ))->all();
+    }
+
+    /**
+     * পণ্য ফোন থেকে বসানো যায় না — মালিকের সিদ্ধান্ত: নেট ছাড়া শুধু অর্ডার।
+     *
+     * আর এখানে সেটা আরও স্পষ্ট: একটা নতুন পণ্য মানে একটা কোড, একটা
+     * একক, একটা ভ্যাটের হার আর দুইটা দাম — পাঁচটাই অফিসের সিদ্ধান্ত,
+     * আর ভুল হলে সেটা প্রতিটা ভবিষ্যৎ বিলে বসে থাকে।
+     */
+    /**
+     * এই পণ্যের প্যাকগুলো, ফোনের জন্য।
+     *
+     * ⓘ বড়ড় থেকে ছোট — `packs()` সম্পর্কটাই `factor` ধরে
+     * সাজানো, তাই ফোনেও কার্টন আগে দেখা যাবে।
+     *
+     * @return list<array{unitCode: ?string, unitNameBn: ?string, factor: string, barcode: ?string}>
+     */
+    private function packs(Product $product): array
+    {
+        return $product->packs
+            ->filter(fn (ProductUnit $pack) => (bool) $pack->is_active)
+            ->map(fn (ProductUnit $pack) => array_filter([
+                'unitCode' => $pack->unit?->code,
+                'unitNameBn' => $pack->unit?->name_bn,
+                /*
+                 * ⓘ `decimal:6`, তাই সরাসরি ঢাললে যায় `"12.000000"`।
+                 *
+                 * ⚠️ ফোনে ওটা পর্দায় বসত বা সংখ্যায় বদলাতে হত, আর
+                 * ডেস্কটপের মানচিত্রে (`PackConversion::barcodesFor()`) যায়
+                 * `"12"` — এক জিনিসের দুই রূপ দুই পর্দায়।
+                 */
+                'factor' => rtrim(rtrim((string) $pack->factor, '0'), '.'),
+                'barcode' => $pack->barcode,
+            ], fn ($value) => $value !== null))
+            ->values()
+            ->all();
     }
 
     /**

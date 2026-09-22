@@ -38,4 +38,7 @@ return [
     'levels_nav' => 'Levels',
     'need_parent_first' => 'There is no :parent yet — a :level needs one above it, so make a :parent first.',
     'level_empty' => 'No :level yet.',
+    'base_unit_hint' => 'The unit this one is measured in — a dozen is measured in pieces.',
+    'factor_hint' => 'How many base units are in one of these: 1 dozen = 12 pieces, so 12. The carton size for a particular product is set on that product, not here.',
+    'allows_fraction_hint' => 'Whether half and quarter amounts are allowed — yes for kg, no for pieces.',
 ];

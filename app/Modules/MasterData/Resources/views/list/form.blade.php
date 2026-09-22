@@ -97,10 +97,19 @@
                 <div class="grid gap-3 sm:grid-cols-2">
                     @foreach ($spec['fields'] as $name => $field)
                         @if ($field['type'] === 'switch')
-                            <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm sm:col-span-2">
+                            {{-- ⓘ ইঙ্গিতটা লেবেলের **ভিতরে**, নিচে নয় — নাহলে
+                                 গ্রিডে ওটা পরের ঘরের পাশে গিয়ে বসত। --}}
+                            <label class="flex min-h-(--spacing-touch) items-start gap-2 text-sm sm:col-span-2">
                                 <input type="checkbox" name="{{ $name }}" value="1"
-                                       @checked(old($name, $record->{$name})) class="size-4">
-                                {{ __($field['label']) }}
+                                       @checked(old($name, $record->{$name})) class="mt-1 size-4">
+                                <span>
+                                    {{ __($field['label']) }}
+                                    @if ($field['hint'] ?? false)
+                                        <span class="block text-2xs text-(--color-ink-muted)">
+                                            {{ __($field['hint']) }}
+                                        </span>
+                                    @endif
+                                </span>
                             </label>
 
                         @elseif ($field['type'] === 'select')
@@ -162,14 +171,24 @@
                                         @endforeach
                                     @endif
                                 </select>
+
+                                @if ($field['hint'] ?? false)
+                                <p class="mt-1 text-2xs text-(--color-ink-muted)">{{ __($field['hint']) }}</p>
+                            @endif
                             </label>
 
                         @else
-                            <x-ui.field :name="$name" :label="__($field['label'])"
-                                        :type="$field['type'] === 'number' ? 'number' : 'text'"
-                                        step="{{ $field['step'] ?? 'any' }}"
-                                        :value="old($name, $record->{$name})"
-                                        :numeric="$field['type'] === 'number'" />
+                            <div>
+                                <x-ui.field :name="$name" :label="__($field['label'])"
+                                            :type="$field['type'] === 'number' ? 'number' : 'text'"
+                                            step="{{ $field['step'] ?? 'any' }}"
+                                            :value="old($name, $record->{$name})"
+                                            :numeric="$field['type'] === 'number'" />
+
+                                @if ($field['hint'] ?? false)
+                                <p class="mt-1 text-2xs text-(--color-ink-muted)">{{ __($field['hint']) }}</p>
+                            @endif
+                            </div>
                         @endif
                     @endforeach
                 </div>

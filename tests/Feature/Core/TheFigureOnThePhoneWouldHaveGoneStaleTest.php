@@ -13,6 +13,9 @@ use App\Models\User;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Models\Customer;
+use App\Modules\Inventory\Models\Product;
+use App\Modules\Inventory\Models\ProductUnit;
+use App\Modules\MasterData\Models\Unit;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -228,6 +231,105 @@ class TheFigureOnThePhoneWouldHaveGoneStaleTest extends TestCase
         );
 
         $this->assertSame([], $stock, 'মজুদ — না। রোলে inventory.stock.view নেই, আর থাকার কথাও নয়।');
+    }
+
+    /**
+     * ⭐ পণ্যের প্যাকগুলোও ফোনে যায় — ধাপ ৭, ২২ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⛔ যা ভাঙা ছিল ───────────────────────────────────
+     * পেলোয়াডে পণ্যের **ভিত্তি এককটাই** ছিল। ⚠️ তাই অফলাইনে
+     * অর্ডার লেখা যেত কেবল পিসে, আর বিক্রেতা কার্টনে গুনে
+     * মাথায় গুণ করে লিখতেন।
+     *
+     * ⓘ এই রিপোর চেনা আকার: ডেস্কটপে জিনিসটা আছে, ফোনে নেই,
+     * আর কিছুই লাল হয় না — দুই পর্দা দুই কথা বলে।
+     */
+    public function test_the_packs_reach_the_phone_with_their_quantities(): void
+    {
+        $product = Product::query()->whereNotNull('unit_id')->firstOrFail();
+
+        $carton = Unit::query()->where('id', '!=', $product->unit_id)->firstOrFail();
+
+        ProductUnit::query()->create([
+            'company_id' => $this->company->id,
+            'product_id' => $product->id,
+            'unit_id' => $carton->id,
+            'factor' => '12',
+            'barcode' => 'CTN-SYNC-7',
+            'is_active' => true,
+        ]);
+
+        $mine = $this->payloadFor($product);
+
+        $this->assertArrayHasKey('packs', $mine, implode(PHP_EOL, [
+            'প্যাকগুলো ফোনে যায়নি।',
+            '',
+            '⛔ তাহলে অফলাইনে অর্ডার লেখা যাবে কেবল পিসে।',
+        ]));
+
+        $this->assertSame('12', $mine['packs'][0]['factor'],
+            'কার্টনে কত সেটা যায়নি — এসেছে '.($mine['packs'][0]['factor'] ?? 'কিছুই না').'।');
+
+        $this->assertSame('CTN-SYNC-7', $mine['packs'][0]['barcode'],
+            'প্যাকের বারকোডটা যায়নি, তাই ফোনে কার্টন স্ক্যান করা যাবে না।');
+    }
+
+    /**
+     * ⛔ নিষ্ক্রিয় প্যাক ফোনে যায় না, আর প্যাকহীন পণ্যে ঘরটাই নেই।
+     *
+     * ── ⚠️ দুইটা আলাদা ক্ষতি ───────────────────────────
+     * বন্ধ করা একক ফোনে রেখে দিলে সেলসম্যান একটা **অস্বীকৃত**
+     * এককে অর্ডার লিখতেন, আর সেটা ধরা পড়ত সার্ভারে পৌঁছানোর পর।
+     *
+     * ⓘ আর যে পণ্যের কোনো প্যাক নেই তার পেলোয়াডে একটা খালি
+     * ঘর বসানো মানে প্রতিটা সিঙ্কে বাড়তি বাইট, বিনা কারণে।
+     */
+    public function test_a_switched_off_pack_stays_behind(): void
+    {
+        $product = Product::query()->whereNotNull('unit_id')->firstOrFail();
+
+        $carton = Unit::query()->where('id', '!=', $product->unit_id)->firstOrFail();
+
+        ProductUnit::query()->create([
+            'company_id' => $this->company->id,
+            'product_id' => $product->id,
+            'unit_id' => $carton->id,
+            'factor' => '24',
+            'barcode' => 'CTN-OFF-7',
+            'is_active' => false,
+        ]);
+
+        $mine = $this->payloadFor($product);
+
+        $this->assertArrayNotHasKey('packs', $mine, implode(PHP_EOL, [
+            'বন্ধ করা প্যাকটাও ফোনে গেছে।',
+            '',
+            '⛔ সেলসম্যান একটা অস্বীকৃত এককে অর্ডার লিখবেন।',
+        ]));
+    }
+
+    /**
+     * এই পণ্যের পেলোয়াডটা।
+     *
+     * ⚠️ নিজে সূচক লেখা হয় না (`[0]`) — ডেমোর ক্রম বদলালে
+     * দাবিটা অন্য পণ্য মাপত, আর সবুজ-লাল দুইটাই ভুল কারণে হত।
+     *
+     * @return array<string, mixed>
+     */
+    private function payloadFor(Product $product): array
+    {
+        foreach ($this->productPayloads($this->owner()) as $payload) {
+            if (($payload['code'] ?? null) === $product->code) {
+                return $payload;
+            }
+        }
+
+        $this->fail('পণ্যটাই সিঙ্কে নেই: '.$product->code);
+    }
+
+    private function owner(): User
+    {
+        return User::query()->where('email', 'owner@abos.test')->firstOrFail();
     }
 
     /**
