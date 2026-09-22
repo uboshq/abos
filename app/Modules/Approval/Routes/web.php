@@ -26,6 +26,10 @@ Route::middleware('auth')->prefix('approvals')->group(function () {
     Route::get('/reports/{slug}', [ApprovalReportController::class, 'show'])->name('report.show');
 
     Route::get('/flows', [ApprovalFlowController::class, 'index'])->name('flow.index');
+    /* ⭐ কোথায় সই বসানো যায়, আর কোথায় বসানো আছে — মালিকের
+       প্রশ্নের উত্তর, ২২ সেপ্টেম্বর ২০২৬। ℹ `{flow}`-এর আগে, নাহলে
+       "coverage" একটা আইডি ভেবে বাঁধাই ভাঙত। */
+    Route::get('/flows/coverage', [ApprovalFlowController::class, 'coverage'])->name('flow.coverage');
     Route::get('/flows/create', [ApprovalFlowController::class, 'create'])->name('flow.create');
     Route::post('/flows', [ApprovalFlowController::class, 'store'])->name('flow.store');
     Route::get('/flows/{flow}/edit', [ApprovalFlowController::class, 'edit'])

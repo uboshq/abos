@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'coverage' => 'Where approval is required',
     'inbox' => 'Waiting for me',
     'mine' => 'My requests',
     'inbox_of' => 'Waiting for :name',

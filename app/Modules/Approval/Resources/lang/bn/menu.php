@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'coverage' => 'কোথায় সই লাগে',
     'inbox' => 'আমার সিদ্ধান্তের অপেক্ষায়',
     'mine' => 'আমার অনুরোধ',
     'inbox_of' => ':name-এর সিদ্ধান্তের অপেক্ষায়',

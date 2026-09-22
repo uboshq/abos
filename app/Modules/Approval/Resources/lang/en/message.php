@@ -3,6 +3,11 @@
 declare(strict_types=1);
 
 return [
+    'coverage_on' => 'Required',
+    'coverage_off' => 'Switched off',
+    'coverage_none' => 'Not set up',
+    'coverage_count' => ':on / :all',
+    'coverage_note' => 'Where approval can be required, and where it is set up in this company. With no rule, nothing is stopped — and no screen says so.',
     'approved' => 'Approved.',
     'rejected' => 'Sent back.',
     'withdrawn' => 'The request was withdrawn.',
