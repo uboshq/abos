@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Core\Concerns\BelongsToCompany;
+use App\Core\Concerns\HasPublicId;
+use App\Core\Concerns\IsAudited;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -24,6 +26,18 @@ use Illuminate\Database\Eloquent\Model;
 final class BranchModule extends Model
 {
     use BelongsToCompany;
+
+    /*
+     * ⭐ অডিট — ২২ সেপ্টেম্বর ২০২৬, [[EveryChangeableRowRemembersWhoChangedIt]]
+     * নাম ধরে ধরার পর।
+     *
+     * ⚠️ সারিটা প্রথমে "কেবল একটা সেটিং" মনে হয়েছিল, তাই বাদ পড়েছিল।
+     * ⛔ কিন্তু প্রশ্নটা ভাবুন: *"নেত্রকোনার LC কে বন্ধ করল, আর কবে?"* —
+     * অডিট ছাড়া ঐ প্রশ্নের উত্তর নেই, আর একটা গোটা ডিপোর অর্ধেক পর্দা
+     * উধাও হয়ে যাওয়াটা ঠিক ঐ ধরনের ঘটনা যার উত্তর মানুষ খোঁজেন।
+     */
+    use HasPublicId;
+    use IsAudited;
 
     protected $fillable = [
         'company_id',
