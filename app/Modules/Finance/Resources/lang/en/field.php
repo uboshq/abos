@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'profit_to_share' => 'Profit to share',
+    'still_owed' => 'Still owed',
+    'year_end_kind' => 'Where it goes',
     'gets' => 'Gets',
     'the_split' => 'Who gets what',
     'split_total' => 'Split total',
@@ -86,6 +88,7 @@ return [
     'in_kind_cash' => 'Cash',
     'in_kind_asset' => 'Equipment / asset',
     'in_kind_goods' => 'Goods',
+    'in_kind_profit' => 'Declared profit',
     'received_into' => 'Received into',
     'loan_principal' => 'Amount',
     'opening_repaid' => 'Repaid so far',

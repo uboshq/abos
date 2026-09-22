@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Finance\Http\Controllers;
 
 use App\Core\Services\MenuBuilder;
+use App\Modules\Finance\Models\CapitalEntry;
 use App\Modules\Finance\Models\ProfitShare;
 use App\Modules\Finance\Services\CapitalService;
 use App\Modules\Finance\Services\ProfitDistribution;
@@ -12,6 +13,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
@@ -53,7 +55,7 @@ final class ProfitDistributionController implements HasMiddleware
              * সিদ্ধান্ত নিতে পারেন না; ওটা মালিকের কাজ, আর
              * `capital.post` চাবিটা ঠিক ওই মানুষটাকেই চেনে।
              */
-            new Middleware('can:finance.capital.post', only: ['declare']),
+            new Middleware('can:finance.capital.post', only: ['declare', 'capitalise']),
         ];
     }
 
@@ -117,6 +119,37 @@ final class ProfitDistributionController implements HasMiddleware
     }
 
     /**
+     * ⭐ বছর শেষে যা তোলা হয়নি, তা মূলধনে।
+     *
+     * ── ⭐ মালিকের কথা, ২২ সেপ্টেম্বর ২০২৬ ───────────────
+     * *"র থাকলে বছর শেষে capital-এ যোগ হবে বা invest-এ"*।
+     *
+     * ⛔ ঘোষণার মতোই এটাও `capital.post`-এর কাজ — খসড়া বলে
+     * কিছু নেই, আর সারিটা মালিকানার অংশ বদলায়।
+     */
+    public function capitalise(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'trx_date' => ['required', 'date', 'before_or_equal:today'],
+            'entry_type' => ['required', Rule::in(CapitalEntry::KINDS)],
+            'narration' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $entries = $this->distribution->capitalise([
+            'trx_date' => (string) $data['trx_date'],
+            'entry_type' => (string) $data['entry_type'],
+            'narration' => $data['narration'] ?? null,
+        ]);
+
+        return redirect()
+            ->route('finance.profit.index')
+            ->with('saved', __('finance::message.profit_capitalised', [
+                'no' => $entries[0]->voucher?->document_no ?? $entries[0]->document_no,
+                'count' => count($entries),
+            ]));
+    }
+
+    /**
      * পাতার স্থির অংশ — মেনু, চলতি মুনাফা, আর আগের ঘোষণাগুলো।
      *
      * @return array<string, mixed>
@@ -131,6 +164,12 @@ final class ProfitDistributionController implements HasMiddleware
         return [
             'menu' => $this->menu->forUser($request->user()),
             'positions' => $this->capital->positions(null),
+
+            /*
+             * ⓘ কার কত এখনো পড়ে আছে — বছর-শেষের বাক্সটা এটা
+             * দিয়েই ঠিক করে নিজে দেখা যাবে কি না।
+             */
+            'outstanding' => $this->distribution->outstanding(),
             'history' => ProfitShare::query()
                 ->posted()
                 ->with('person')

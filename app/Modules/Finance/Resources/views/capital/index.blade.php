@@ -104,6 +104,18 @@
         ['key' => 'entry_type', 'label' => __('finance::field.kind'), 'width' => '8rem',
          'render' => fn ($e) => __('finance::kind.'.$e->entry_type)],
 
+        /*
+         * ⭐ কী দিয়ে এল — ২২ সেপ্টেম্বর ২০২৬।
+         *
+         * ⚠️ বছর শেষে না-তোলা লাভ এখন মূলধনে বসে
+         * ([[ProfitDistribution::capitalise()]])। ⓘ এই ঘরটা না থাকলে
+         * সারিটা হুবহু একটা নগদ অনুদানের মতো দেখাত, আর
+         * মালিক জিজ্ঞেস করতেন *"এই টাকাটা কোথা থেকে এল"*
+         * — আর পর্দার কাছে উত্তর থাকত না।
+         */
+        ['key' => 'in_kind', 'label' => __('finance::field.in_kind'), 'width' => '8rem',
+         'render' => fn ($e) => __('finance::field.in_kind_'.($e->in_kind ?: 'cash'))],
+
         ['key' => 'contributor_type', 'label' => __('finance::field.as'), 'width' => '8rem',
          'render' => fn ($e) => __('finance::who.'.$e->contributor_type)],
 

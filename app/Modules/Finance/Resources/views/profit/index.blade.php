@@ -36,6 +36,22 @@
          'render' => fn ($r) => $money($r['amount'])],
     ];
 
+    /*
+     * ⭐ কার কত এখনো পাওনা — বছর-শেষের বাক্সে।
+     *
+     * ⓘ অঙ্কটা ঘোষিত বাদ তোলা বাদ আগেই মূলধনে যাওয়া
+     * ([[ProfitDistribution::outstandingFor()]]) — তিনটাই বাদ দিলে
+     * তবেই সংখ্যাটা সত্যিকারের পাওনা।
+     */
+    $owedColumns = [
+        ['key' => 'name', 'label' => __('finance::field.who')],
+        ['key' => 'amount', 'label' => __('finance::field.still_owed'), 'numeric' => true,
+         'render' => fn ($r) => $money($r['amount'])],
+    ];
+
+    $owedTotal = collect($outstanding)
+        ->reduce(fn (string $sum, $r) => bcadd($sum, $r['amount'], 4), '0');
+
     $historyColumns = [
         ['key' => 'trx_date', 'label' => __('core.print.date'),
          'render' => fn ($r) => $r->trx_date?->format('d-m-Y')],
@@ -172,6 +188,53 @@
 
         {{-- ── কে কী পেয়েছেন, আগে ────────────────────────────────────── --}}
         <div class="min-w-0 space-y-4">
+            {{--
+                ⭐ বছর শেষে যা বাকি — মালিকের তৃতীয় ধাপ।
+
+                ⓘ *"র থাকলে বছর শেষে capital-এ যোগ হবে বা invest-এ"*।
+                ⚠️ কারও কিছু বাকি না থাকলে বাক্সটাই আসে না — একটা
+                খালি বোতাম দেখানো মানে একটা প্রশ্ন তৈরি করা।
+            --}}
+            @if ($outstanding !== [])
+                <section data-boxed
+                         class="rounded-(--radius-card) border border-(--color-border)
+                                bg-(--color-surface-card) p-4">
+                    <h2 class="mb-1 font-semibold">{{ __('finance::action.capitalise_now') }}</h2>
+
+                    <p class="mb-3 text-2xs text-(--color-ink-muted)">
+                        {{ __('finance::message.capitalise_note') }}
+                    </p>
+
+                    <x-ui.table :rows="$outstanding" :columns="$owedColumns" />
+
+                    <p class="mt-3 flex items-center justify-between border-t border-(--color-border) pt-2 text-sm">
+                        <span class="text-(--color-ink-muted)">{{ __('finance::field.still_owed') }}</span>
+                        <span class="num font-semibold">{{ $money($owedTotal) }}</span>
+                    </p>
+
+                    <form method="POST" action="{{ route('finance.profit.capitalise') }}" class="mt-3 space-y-3">
+                        @csrf
+
+                        <x-ui.field name="trx_date" type="date"
+                                    :label="__('core.print.date')"
+                                    :max="now()->format('Y-m-d')"
+                                    :value="now()->format('Y-m-d')" required />
+
+
+                        <x-ui.select name="entry_type" :label="__('finance::field.year_end_kind')"
+                                     :options="collect(\App\Modules\Finance\Models\CapitalEntry::KINDS)
+                                         ->mapWithKeys(fn ($k) => [$k => __('finance::kind.'.$k)])"
+                                     :selected="\App\Modules\Finance\Models\CapitalEntry::CONTRIBUTION" />
+
+                        <button type="submit"
+                                class="min-h-(--spacing-touch) w-full rounded-(--radius-field)
+                                       border border-(--color-border) px-4 text-sm font-semibold">
+                            {{ __('finance::action.capitalise_now') }}
+                        </button>
+                    </form>
+                </section>
+            @endif
+
             <section data-boxed
                      class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
                 <h2 class="mb-3 font-semibold">{{ __('finance::field.past_distributions') }}</h2>

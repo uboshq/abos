@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 return [
     'profit_to_share' => 'যত মুনাফা ভাগ হবে',
+    'still_owed' => 'এখনো পাওনা',
+    'year_end_kind' => 'কোথায় যাবে',
     'gets' => 'পাবেন',
     'the_split' => 'কে কত পাবেন',
     'split_total' => 'ভাগের যোগফল',
@@ -95,6 +97,7 @@ return [
     'in_kind_cash' => 'টাকা',
     'in_kind_asset' => 'যন্ত্রপাতি / সম্পদ',
     'in_kind_goods' => 'পণ্য',
+    'in_kind_profit' => 'ঘোষিত লাভ',
     'received_into' => 'যে খাতে জমা',
     'loan_principal' => 'টাকার পরিমাণ',
     'opening_repaid' => 'এ পর্যন্ত ফেরত',

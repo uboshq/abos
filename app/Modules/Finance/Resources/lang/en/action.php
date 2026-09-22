@@ -6,6 +6,7 @@ return [
     'declare_profit' => 'Distribute profit',
     'see_the_split' => 'See the split',
     'declare_now' => 'Declare',
+    'capitalise_now' => 'Add the remaining profit to capital',
     'show_everyone' => 'Show everyone',
     'save_withdrawal_row' => 'Save the withdrawal row',
     'withdrawal_list' => 'List and monthly cap',

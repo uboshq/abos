@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'profit_share' => 'লাভ বণ্টন',
+    'profit_to_capital' => 'বছর শেষে মূলধনে',
     'capital' => 'মূলধন',
     'deposit' => 'জমা',
     'withdrawal' => 'উত্তোলন',

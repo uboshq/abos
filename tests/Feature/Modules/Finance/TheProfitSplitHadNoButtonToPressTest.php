@@ -211,6 +211,77 @@ final class TheProfitSplitHadNoButtonToPressTest extends TestCase
             ->assertSessionHasNoErrors();
     }
 
+    /**
+     * ⭐ বছর-শেষের বোতামটাও সত্যি কাজ করে।
+     *
+     * ── ⚠️ এই ফাইলে কেন, সেবার ফাইলে নয় ────────────────
+     * [[TheProfitNobodyTookHadNowhereToGoTest]] অঙ্কটা মাপে — দায়
+     * কমে কি না, মালিকানা বাড়ে কি না। ⓘ কিন্তু সে সেবাটাকে
+     * সরাসরি ডাকে — রুট মুছলে, চাবি বদলালে বা ফর্মের
+     * ঠিকানা ভুল হলে সে সবুজই থাকত।
+     */
+    public function test_the_year_end_button_moves_the_money(): void
+    {
+        $this->actingAs($this->owner)
+            ->post(route('finance.profit.declare'), [
+                'trx_date' => now()->toDateString(),
+                'profit' => '100000',
+            ])
+            ->assertSessionHas('saved');
+
+        /*
+         * ⭐ পাতায় বাক্সটা দেখা যায় তো? ⓘ না দেখা গেলে নিচের
+         * POST-টা পাস করলেও মানুষ কখনো সেখানে পৌঁছাতেন না।
+         */
+        $this->actingAs($this->owner)
+            ->get(route('finance.profit.index'))
+            ->assertOk()
+            ->assertSee(__('finance::action.capitalise_now'));
+
+        $this->actingAs($this->owner)
+            ->post(route('finance.profit.capitalise'), [
+                'trx_date' => now()->toDateString(),
+                'entry_type' => CapitalEntry::CONTRIBUTION,
+            ])
+            ->assertRedirect(route('finance.profit.index'))
+            ->assertSessionHas('saved');
+
+        $rows = CapitalEntry::query()->where('in_kind', CapitalEntry::PROFIT)->get();
+
+        $this->assertCount(2, $rows, implode("
+", [
+            'বোতামটা চাপা হলো, অথচ মূলধনের সারি বসল না।',
+        ]));
+
+        $sum = $rows->reduce(fn (string $s, $r) => bcadd($s, (string) $r->amount, 4), '0');
+
+        $this->assertSame(0, bccomp($sum, '100000', 4),
+            'মূলধনে গেল '.$sum.', যাওযার কথা ১,০০,০০০।');
+
+        /*
+         * ⛔ বাক্সটা এখন আর থাকার কথা নয় — কারও কিছু বাকি
+         * নেই। ⓘ এই অর্ধেকটা না মাপলে `@if` শর্তটা তুলে দিলেও
+         * দাবিটা সবুজ থাকত, আর মালিক একটা খালি বোতাম দেখতেন।
+         */
+        $this->actingAs($this->owner)
+            ->get(route('finance.profit.index'))
+            ->assertOk()
+            ->assertDontSee(__('finance::action.capitalise_now'));
+
+        /*
+         * ⭐ মূলধনের পাতায় টাকাটা কোথা থেকে এল সেটা লেখা আছে।
+         *
+         * ⚠️ ঘরটা না থাকলে সারিটা হুবহু একটা **নগদ অনুদানের**
+         * মতো দেখাত — দুইটাই "মূলধন", দুইটারই একই অঙ্ক।
+         * ⓘ তখন *"এই টাকাটা কোথা থেকে এল"* প্রশ্নের উত্তর
+         * কেবল খতিয়ানে থাকত, পর্দায় না।
+         */
+        $this->actingAs($this->owner)
+            ->get(route('finance.capital.index'))
+            ->assertOk()
+            ->assertSee(__('finance::field.in_kind_profit'));
+    }
+
     private function contribute(string $code, string $name, string $amount): void
     {
         $person = Person::query()->create([

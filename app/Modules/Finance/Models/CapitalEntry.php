@@ -83,6 +83,20 @@ class CapitalEntry extends Model implements Drillable, SettledByAVoucher
     /** @var list<string> */
     public const IN_KINDS = [self::CASH, self::ASSET, self::GOODS];
 
+    /**
+     * ⭐ ঘোষিত লাভ যা বছর শেষে মূলধনে রেখে দেওয়া হলো।
+     *
+     * ── ⚠️ এটা `IN_KINDS`-এ নেই, আর সেটা ইচ্ছাকৃত ─────────
+     * `IN_KINDS` হলো **মানুষ যা বাছতে পারেন** — ফর্মের তালিকা
+     * আর ভ্যালিডেশন দুইটাই ওখান থেকে আসে। ⓘ কেউ হাতে
+     * *"লাভ দিয়ে মূলধন দিলাম"* বলতে পারেন না — সারিটা কেবল
+     * [[ProfitDistribution::capitalise()]] বসায়।
+     *
+     * ⛔ তালিকায় ঢুকালে ফর্মে একটা অপশন দেখা যেত যেটা
+     * খাতায় কোনো দাখিলা বসাত না — নাম আছে, কাজ নেই।
+     */
+    public const PROFIT = 'profit';
+
     public const KINDS = [self::CONTRIBUTION, self::INVESTMENT];
 
     public const DRAFT = 'draft';

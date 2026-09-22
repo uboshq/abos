@@ -72,6 +72,14 @@ Route::middleware('auth')->prefix('finance')->group(function () {
         Route::get('/', [ProfitDistributionController::class, 'index'])->name('index');
         Route::post('/preview', [ProfitDistributionController::class, 'preview'])->name('preview');
         Route::post('/declare', [ProfitDistributionController::class, 'declare'])->name('declare');
+
+        /*
+         * ⭐ বছর শেষে যা বাকি — মালিকের তৃতীয় ধাপ।
+         *
+         * ⓘ একই পাতায়, কারণ প্রশ্নটা একই: কার কত পাওনা
+         * ছিল, আর সেটা এখন কোথায় যাচ্ছে।
+         */
+        Route::post('/capitalise', [ProfitDistributionController::class, 'capitalise'])->name('capitalise');
     });
 
     Route::prefix('capital')->name('capital.')->group(function () {

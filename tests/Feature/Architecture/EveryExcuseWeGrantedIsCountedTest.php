@@ -69,6 +69,7 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
         'EveryUserListAsksWhichCompanyTest::EXEMPT_QUERY',
         'MoneyIsNeverAFloatTest::FLOAT_IS_DELIBERATE',
         'MoneyNeverLandsOnAGroupAccountTest::GROUPS_BELONG_HERE',
+        'OnlyTheEngineWritesToTheLedgerTest::WRITES_ONLY_THE_SEAL',
         'NoDatabaseDumpRidesAlongInACommitTest::FINE',
         'NoIndexNameStandsAtTheEdgeTest::AT_THE_EDGE',
         'NoSensitiveFieldIsPrintedInTheOpenTest::OPEN_ON_PURPOSE',
@@ -114,6 +115,21 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
          * গোনে সহায়কগুলো সত্যিই কোডে আছে কি না।
          */
         'EveryGroupedReportGroupsByWhatItSelectsTest::BILINGUAL',
+
+        /*
+         * ⭐ এটাও ছাড় নয় — ২২ সেপ্টেম্বর ২০২৬।
+         *
+         * [[OnlyTheEngineWritesToTheLedgerTest]] বলে খতিয়ানে লেখে
+         * কেবল ইঞ্জিন। `THE_ENGINE` সেই ইঞ্জিনের **নাম**।
+         *
+         * ⛔ নামটা মুছলে পাহারা শক্ত হয় না — সে নিজের
+         * নকশার বিরুদ্ধেই লাল হয়, আর কাউকে ফেরত বসাতে হয়।
+         * ⓘ তার লেখাগুলো ওই পরীক্ষার **নিয়ন্ত্রণ সারি**ও।
+         *
+         * ⚠️ আসল ছাড়টা আলাদা তালিকায় — `WRITES_ONLY_THE_SEAL`,
+         * আর সেটা উপরে গোনা হয়েছে।
+         */
+        'OnlyTheEngineWritesToTheLedgerTest::THE_ENGINE',
     ];
 
     /**
@@ -122,7 +138,35 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      * ⭐ মালিকের ratchet নিয়ম: **কেবল কমবে**। বাড়াতে হলে এই লাইনটা
      * বদলাতে হয়, আর সেটা একটা সিদ্ধান্ত যা কমিটে চোখে পড়ে।
      */
-    private const CEILING = 219;
+    private const CEILING = 221;
+
+    /*
+     * ── ⓘ ২১৯ → ২২১, ২২ সেপ্টেম্বর ২০২৬ ───────────────────
+     * একটা সারি: `OnlyTheEngineWritesToTheLedgerTest::WRITES_ONLY_THE_SEAL`
+     * — [[LedgerChain]] ইঞ্জিন এড়িয়ে খতিয়ানে লেখে, তবে কেবল
+     * সিলের ঘর।
+     *
+     * ⭐ নতুন পাহারাটা দুইটা তালিকা নিয়ে এসেছে, কিন্তু এখানে
+     * গোনা হয়েছে **একটা**। ⓘ `THE_ENGINE` ছাড় নয় — সে নিয়মটার
+     * সংজ্ঞা, আর তার নাম মুছলে পাহারা শক্ত হয় না।
+     *
+     * ⚠️ সিদ্ধান্তটা ইচ্ছাকৃত: এক তালিকায় দুইটা নাম রাখলে হিসাবটা
+     * উল্টো কথা বলত — ইঞ্জিনকে একটা অজুহাত লিখত।
+     *
+     * ⓘ `LedgerChain` যদি কখনো `debit`/`credit`-ও ছোঁয়, তখন এই
+     * সারিটা একটা গর্ত হয়ে যাবে — আর সেই দিনটার জন্যই এটা
+     * এখানে গোনা হলো।
+     *
+     * ── ⚠️ দ্বিতীয় সারিটা আমার নয়, আর তবু গোনা ───────────
+     * হিসাব করে পেয়েছিলাম ২২০ (২১৯ + আমার একটা), মেপে এল
+     * ২২১। ⛔ অনুমান করে ছাদ বসানো মানে একটা সংখ্যা লেখা
+     * যার কারণ কেউ জানে না, তাই প্রতিটা তালিকার আকার
+     * গুনে দেখা হয়েছে।
+     *
+     * ⓘ বাড়তি সারিটা `EveryListScreenPaginatesTest::STILL_BEING_DONE`-এ:
+     * `approval.flow.index`, একজন সহকর্মীর staged কাজ। ⭐ সংখ্যাটা
+     * **মাপা**, অনুমান করা নয়।
+     */
 
     /*
      * ── ⚠️ ২১৬ → ২১৯, ২২ সেপ্টেম্বর ২০২৬ — আর এটা একটা সিদ্ধান্ত ─────

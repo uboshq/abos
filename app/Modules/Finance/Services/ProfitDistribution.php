@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace App\Modules\Finance\Services;
 
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
+use App\Core\Support\CompanyContext;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\VoucherService;
+use App\Modules\Finance\Models\CapitalEntry;
 use App\Modules\Finance\Models\ProfitShare;
 use App\Modules\Finance\Models\Withdrawal;
+use App\Modules\MasterData\Models\Person;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -208,7 +211,199 @@ final class ProfitDistribution
             ->where('kind', Withdrawal::PROFIT_SHARE)
             ->sum('amount') ?: '0');
 
-        return bcsub($declared, $taken, 4);
+        /*
+         * ⭐ মূলধনে যাওয়া অংশটাও আর পাওনা নয়।
+         *
+         * ⛔ এটা না বাদ দিলে একটা টাকা দুইবার দেওয়া যেত:
+         * একবার মূলধনে যোগ হয়, তারপর আবার নগদে তোলা যেত —
+         * আর ২১৯০-এর জের হয়ে যেত ঋণাত্মক, অর্থাৎ খাতা বলত
+         * অংশীদার ব্যবসাকে টাকা দেবেন।
+         */
+        $capitalised = (string) (CapitalEntry::query()
+            ->posted()
+            ->where('person_id', $personId)
+            ->where('in_kind', CapitalEntry::PROFIT)
+            ->sum('amount') ?: '0');
+
+        return bcsub(bcsub($declared, $taken, 4), $capitalised, 4);
+    }
+
+    /**
+     * যাঁদের ঘোষিত ভাগ এখনো পড়ে আছে।
+     *
+     * ⓘ শূন্য বা ঋণাত্মক বাদ — বছর শেষে যাঁর কিছু বাকি নেই
+     * তাঁকে তালিকায় রাখার মানে হয় না।
+     *
+     * @return list<array{person_id: int, name: string, amount: string}>
+     */
+    public function outstanding(): array
+    {
+        $ids = ProfitShare::query()
+            ->posted()
+            ->distinct()
+            ->pluck('person_id')
+            ->all();
+
+        $people = Person::query()->whereKey($ids)->get()->keyBy('id');
+
+        $out = [];
+
+        foreach ($ids as $id) {
+            $person = $people->get((int) $id);
+
+            if ($person === null) {
+                continue;
+            }
+
+            $left = $this->outstandingFor((int) $id);
+
+            if (bccomp($left, '0', 4) <= 0) {
+                continue;
+            }
+
+            $out[] = [
+                'person_id' => (int) $id,
+                'name' => $person->name(),
+                'amount' => $left,
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * ⭐ বছর শেষে যা বাকি, তা মূলধনে।
+     *
+     * ── ⭐ মালিকের কথা, ২২ সেপ্টেম্বর ২০২৬ ──────────────
+     * *"র থাকলে বছর শেষে capital-এ যোগ হবে বা invest-এ"*।
+     *
+     * ⓘ তাই ধরনটা বাছা যায় — অনুদান নাকি বিনিয়োগ।
+     *
+     * ── ⚠️ দাখিলায় নগদ কোথাও নেই ─────────────────────
+     * Dr ২১৯০ / Cr ৩১০০ — একটা দায় মালিকানায় বদলাল, ব্যাংক বা
+     * ক্যাশবাক্স নড়ল না। ⓘ তাই [[CapitalService::post()]] এখানে
+     * খাটে না — সে একটা টাকার খাত চায়, আর এখানে সেটা নেই।
+     *
+     * ── ⓘ সারিও লেখা হয়, কেবল দাখিলা নয় ─────────────
+     * [[CapitalService::positions()]] অংশ গোনে [[CapitalEntry]] সারি
+     * ধরে। ⛔ কেবল খতিয়ানে লিখলে মূলধনে যোগ হওয়া লাভ
+     * কারও **অংশ বাড়াত না**, আর পরের বছরের ভাগ ভুল হত।
+     *
+     * @param array{trx_date: string, entry_type?: string, narration?: string|null} $data
+     * @return list<CapitalEntry>
+     */
+    public function capitalise(array $data): array
+    {
+        $rows = $this->outstanding();
+
+        if ($rows === []) {
+            throw ValidationException::withMessages([
+                'trx_date' => __('finance::validation.nothing_left_to_capitalise'),
+            ]);
+        }
+
+        $kind = ($data['entry_type'] ?? '') ?: CapitalEntry::CONTRIBUTION;
+
+        if (! in_array($kind, CapitalEntry::KINDS, true)) {
+            throw ValidationException::withMessages([
+                'entry_type' => __('finance::validation.unknown_capital_kind'),
+            ]);
+        }
+
+        return DB::transaction(function () use ($data, $kind, $rows) {
+            $payable = $this->account(StandardChart::PROFIT_PAYABLE);
+            $capital = $this->account(StandardChart::OWNER_CAPITAL);
+
+            $lines = [];
+
+            foreach ($rows as $row) {
+                $lines[] = [
+                    'account_id' => $payable->id,
+                    'debit' => $row['amount'],
+                    'credit' => '0',
+                    'party_type' => 'person',
+                    'party_id' => $row['person_id'],
+                ];
+
+                $lines[] = [
+                    'account_id' => $capital->id,
+                    'debit' => '0',
+                    'credit' => $row['amount'],
+                    'party_type' => 'person',
+                    'party_id' => $row['person_id'],
+                ];
+            }
+
+            /*
+             * ⓘ নম্বরটা ভাউচারের, সারির নয় — কারণ বাতিলের
+             * ঘটনাটা একটাই, আর সব কয়টা সারি তার সাথে যায়।
+             */
+            $voucher = $this->vouchers->create([
+                'type' => Voucher::JOURNAL,
+                'trx_date' => $data['trx_date'],
+                'narration' => $data['narration'] ?? __('finance::message.capitalise_narration'),
+            ], $lines);
+
+            $this->vouchers->post($voucher);
+
+            $entries = [];
+
+            foreach ($rows as $row) {
+                $entries[] = CapitalEntry::query()->create([
+                    'branch_id' => CompanyContext::branchId(),
+
+                    /*
+                     * ⛔ প্রতিটা সারির নিজস্ব নম্বর।
+                     *
+                     * ⚠️ একটা নম্বর সবার গায়ে বসানো হয়েছিল
+                     * ([[ProfitShare]]-এর মতো), আর তাতে দ্বিতীয়
+                     * সারিটাই বসত না — `acc_capital_entries`-এ
+                     * `document_no` কোম্পানিপ্রতি **ইউনিক**।
+                     *
+                     * ⓘ পার্থক্যটা ইচ্ছাকৃত: লাভের ভাগ **একটা
+                     * ঘোষণা**র কয়েকটা লাইন, আর মূলধনের সারি
+                     * প্রত্যেকটাই নিজে একটা নথি।
+                     */
+                    'document_no' => $this->numbers->next('PCAP'),
+                    'person_id' => $row['person_id'],
+
+                    /*
+                     * ⓘ যিনি যে পরিচয়ে আগে মূলধন দিয়েছিলেন, সেই
+                     * পরিচয়েই এই সারিটাও বসে। ⚠️ নিজে একটা ধরন
+                     * বসালে [[CapitalService::positions()]] একজন মানুষকে
+                     * দুই সারিতে দেখাত — সে `person_id`-এর সাথে
+                     * `contributor_type`-ও ধরে দল বাঁধে।
+                     */
+                    'contributor_type' => $this->contributorType($row['person_id']),
+
+                    'entry_type' => $kind,
+                    'in_kind' => CapitalEntry::PROFIT,
+                    'trx_date' => $data['trx_date'],
+                    'amount' => $row['amount'],
+                    'narration' => $data['narration'] ?? null,
+                    'status' => CapitalEntry::POSTED,
+                    'voucher_id' => $voucher->id,
+                    'posted_at' => now(),
+                    'created_by' => auth()->id(),
+                ]);
+            }
+
+            return $entries;
+        });
+    }
+
+    /**
+     * এই মানুষটা আগে কিসের পরিচয়ে মূলধন দিয়েছেন।
+     *
+     * ⓘ না পাওয়া গেলে অংশীদার — লাভের ভাগ পাওয়া মানুষের
+     * সবচেয়ে স্বাভাবিক পরিচয়।
+     */
+    private function contributorType(int $personId): string
+    {
+        return (string) (CapitalEntry::query()
+            ->where('person_id', $personId)
+            ->orderByDesc('id')
+            ->value('contributor_type') ?: CapitalEntry::PARTNER);
     }
 
     /**
