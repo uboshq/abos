@@ -6,6 +6,8 @@ namespace App\Core\Services;
 
 use App\Core\Module\ModuleDefinition;
 use App\Core\Module\ModuleRegistry;
+use App\Core\Support\CompanyContext;
+use App\Models\BranchModule;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
@@ -21,6 +23,13 @@ use Illuminate\Support\Str;
  */
 final class MenuBuilder
 {
+    /**
+     * ⓘ এই অনুরোধে এই শাখায় বন্ধ থাকা মডিউলগুলো — একবার পড়ে রাখা।
+     *
+     * @var list<string>|null
+     */
+    private ?array $branchOff = null;
+
     public function __construct(
         private readonly ModuleRegistry $registry,
         private readonly SettingsService $settings,
@@ -529,8 +538,38 @@ final class MenuBuilder
      *
      * সেটিংটা ঐচ্ছিক: যে মডিউল সুইচ ঘোষণা করেনি সেটা সবসময় চালু ধরা হয়।
      */
+    /**
+     * মডিউলটা এই ব্যবহারকারীর পর্দায় আসবে কি না।
+     *
+     * ── ⓘ দুইটা সুইচ, দুইটা আলাদা প্রশ্ন (২৮ নভেম্বর ২০২৬) ────────────
+     * **কোম্পানির** সুইচ বলে *"এই ব্যবসা রেস্তোরাঁ মডিউলটা নেয়ইনি"*।
+     * **শাখার** সুইচ বলে *"এই ডিপোতে লাগে না, ঐ ডিপোতে লাগে"*।
+     *
+     * ⛔ ক্রমটা উল্টানো যায় না: শাখা এমন কিছু **চালু করতে পারে না** যা
+     * কোম্পানি বন্ধ রেখেছে। ⓘ পারলে একটা শাখা এমন মডিউল খুলে ফেলত যা
+     * প্রতিষ্ঠান কোনোদিন কেনেনি।
+     *
+     * ⚠️ শাখার সারি **না থাকা** মানে চালু — [[BranchModule]]-এ কারণ লেখা।
+     */
     private function moduleEnabled(ModuleDefinition $module): bool
     {
-        return (bool) $this->settings->get($module->code.'.enabled', true);
+        if (! (bool) $this->settings->get($module->code.'.enabled', true)) {
+            return false;
+        }
+
+        return ! in_array($module->code, $this->switchedOffInThisBranch(), true);
+    }
+
+    /**
+     * ⓘ একবার পড়া হয়, তারপর মনে রাখা।
+     *
+     * ⚠️ প্রতিটা মডিউলের জন্য আলাদা কোয়েরি করলে সাইডবার আঁকতে চৌদ্দটা
+     * কোয়েরি লাগত — আর সাইডবার **প্রতিটা পাতায়** আঁকা হয়।
+     *
+     * @return list<string>
+     */
+    private function switchedOffInThisBranch(): array
+    {
+        return $this->branchOff ??= BranchModule::switchedOffIn(CompanyContext::branchId());
     }
 }

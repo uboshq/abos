@@ -113,6 +113,18 @@ return [
             ['label' => 'system_admin::menu.control_panel', 'icon' => 'settings', 'route' => 'system_admin.control-panel', 'permission' => 'system_admin.settings.manage'],
 
             /*
+             * ⭐ শাখার মডিউল — কন্ট্রোল প্যানেলের ঠিক নিচে, ২৮ নভেম্বর ২০২৬।
+             *
+             * ⓘ ক্রমটা ইচ্ছাকৃত: উপরেরটা ঠিক করে **প্রতিষ্ঠান কোন মডিউল নিয়েছে**,
+             * আর এটা ঠিক করে **সেগুলোর কোনটা কোন ডিপোতে চলবে**। ⚠️ উল্টো ক্রমে
+             * মানুষ এমন মডিউল শাখায় খুঁজতেন যেটা কোম্পানিই নেয়নি।
+             *
+             * ⛔ একই চাবি — দুইটা একই প্রশ্নের দুই অর্ধেক।
+             */
+            ['label' => 'system_admin::branch_module.title', 'icon' => 'building', 'route' => 'system_admin.branch-module',
+                'permission' => 'system_admin.settings.manage'],
+
+            /*
              * ⭐ প্রতিষ্ঠানের সেটিংস — কন্ট্রোল প্যানেলের ঠিক পরে, ৭ সেপ্টেম্বর ২০২৬।
              *
              * ⚠️ ক্রমটা ইচ্ছাকৃত: কন্ট্রোল প্যানেল ঠিক করে **কোন পর্দাগুলো

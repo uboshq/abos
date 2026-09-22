@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\SystemAdmin\Http\Controllers\BranchModuleController;
 use App\Modules\SystemAdmin\Http\Controllers\CompanyController;
 use App\Modules\SystemAdmin\Http\Controllers\ControlPanelController;
 use App\Modules\SystemAdmin\Http\Controllers\CustomFieldController;
@@ -74,6 +75,19 @@ Route::middleware('auth')->prefix('system')->group(function () {
 
     Route::get('/control-panel', [ControlPanelController::class, 'edit'])->name('control-panel');
     Route::put('/control-panel', [ControlPanelController::class, 'update'])->name('control-panel.update');
+
+    /*
+     * শাখার মডিউল — ২৮ নভেম্বর ২০২৬।
+     *
+     * ⓘ কন্ট্রোল প্যানেল বলে *"এই ব্যবসা মডিউলটা নেয়ইনি"*; এটা বলে
+     * *"এই ডিপোতে লাগে না, ঐ ডিপোতে লাগে"*। ⚠️ আগে দ্বিতীয় কথাটা বলার
+     * কোনো উপায় ছিল না — সুইচ ছিল কেবল কোম্পানির স্তরে।
+     *
+     * ⛔ একই চাবি (`settings.manage`), কারণ দুইটা পর্দা একই প্রশ্নের
+     * দুই অর্ধেক, আর অর্ধেক উত্তর বদলানোর অধিকার কোনো অধিকার নয়।
+     */
+    Route::get('/branch-modules', [BranchModuleController::class, 'edit'])->name('branch-module');
+    Route::put('/branch-modules', [BranchModuleController::class, 'update'])->name('branch-module.update');
 
     /*
      * প্রতিষ্ঠানের সেটিংস — ৭ সেপ্টেম্বর ২০২৬।

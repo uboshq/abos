@@ -513,6 +513,35 @@ export function switchBoard ({ on = {} } = {}) {
                 this.changed[el.name] = true
             }
         },
+
+        /*
+         * ⭐ "সব বাছাই" — একটা টিকে গোটা ছকটা।
+         *
+         * ⚠️ কাজটা এখানে, ব্লেডে নয়: আমাদের Alpine হলো `@alpinejs/csp`,
+         * আর ওখানে ইনলাইন এক্সপ্রেশন চলে না — কেবল মেথডের নাম।
+         *
+         * ⛔ কেবল `box.checked` বসালে হত না। ⓘ তিনটা জিনিস একসাথে
+         * নড়তে হয়: DOM-এর টিক, `on` (ব্যাজগুলো ওটা দেখে), আর
+         * `changed` (নিচের পটির গুনতি)। ⚠️ একটা বাদ পড়লে পর্দা আর
+         * সার্ভার দুই কথা বলত।
+         *
+         * ⓘ `data-key` ছাড়া ঘরগুলো ছোঁয়া হয় না, তাই একই কম্পোনেন্ট
+         * ব্যবহার করা অন্য পর্দাগুলোর আচরণ অবিকল আগের মতো থাকে।
+         */
+        setAll (el) {
+            const form = el.form ?? el.closest('form')
+
+            if (! form) return
+
+            for (const box of form.querySelectorAll('input[type=checkbox][data-key]')) {
+                // ⛔ ধরা সারি (যেমন যে মডিউলটা পর্দাটাই ধরে আছে) নড়ে না।
+                if (box.disabled) continue
+
+                box.checked = el.checked
+                this.on[box.dataset.key] = el.checked
+                this.touch(box)
+            }
+        },
     }
 }
 
