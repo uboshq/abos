@@ -841,6 +841,65 @@
         display: none !important;
     }
 
+    /* ⛔ নিচের নীল নেভিগেশন বারটাও — ২২ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ ওটা `<nav class="bottom-nav fixed …">`, আর উপরের নিয়মটা খোঁজে
+     * `footer.fixed` — তাই সে **ছাপা হয়ে যেত**, গোটা প্রস্থ জুড়ে নিরেট
+     * নীল রঙে। ⚠️ কাগজে ওটা টোনার ছাড়া কিছুই নয়, আর মালিকের
+     * *"print e vul ase"* অভিযোগের একটা অংশ ঠিক এটাই।
+     *
+     * ⭐ ধরা পড়েছে হেডলেস Chrome-এ সত্যিই ছেপে, ছবিটা চোখে দেখে —
+     * কোনো পরীক্ষা এটা ধরত না, কারণ পর্দায় কিছুই ভাঙে না। */
+    .bottom-nav {
+        display: none !important;
+    }
+
+    /*
+     * ⛔ ছাপার পাতা `md` ব্রেকপয়েন্টের চেয়ে **সরু** — ২২ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⚠️ এক কারণ, দুইটা রোগ ─────────────────────────────────────
+     * ⓘ ছক দুই চেহারায় আঁকা হয়: মোবাইলে প্রতিটা সারি একটা card,
+     * `min-width: 768px`-এ আসল টেবিল। ⛔ কিন্তু Letter কাগজে ছাপার
+     * বাক্সটা ~৭৪০px (৮.৫in মার্জিন বাদে), আর A4-তে আরো সরু — অর্থাৎ
+     * **৭৬৮ পেরোয় না**।
+     *
+     * ⚠️ ফল: খতিয়ানের পাঁচ কলামের ছক কাগজে **সারি-প্রতি একটা খাড়া
+     * কার্ড** হয়ে ছাপত — প্রতিটা সারিতে লেবেলগুলো আবার লেখা, টাকার
+     * কলাম আর এক রেখায় নেই, আর কাগজ তিনগুণ। ⓘ একই কারণে মোবাইলের
+     * নিচের বারটাও `md:hidden` পেরিয়ে দেখা দিত।
+     *
+     * ⭐ তাই ছাপায় চেহারাটা প্রস্থ ধরে নয়, **ঠিক করে দেওয়া** — কাগজের
+     * প্রস্থ যাই হোক, ছক ছকই থাকে।
+     */
+    .table-cards:not(.as-cards) thead {
+        position: static !important;
+        width: auto !important;
+        height: auto !important;
+        overflow: visible !important;
+        clip: auto !important;
+    }
+
+    .table-cards:not(.as-cards) tr {
+        display: table-row !important;
+        margin-bottom: 0 !important;
+        border: 0 !important;
+        border-bottom: 1px solid var(--color-border) !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+        padding: 0 !important;
+    }
+
+    .table-cards:not(.as-cards) td {
+        display: table-cell !important;
+        border: 0 !important;
+    }
+
+    /* ⓘ লেবেলটা কার্ডের জন্য (`td::before`) — ছকে হেডার আছে, তাই
+       ওটা থাকলে প্রতিটা ঘরে নামটা দুইবার পড়ত। */
+    .table-cards:not(.as-cards) td::before {
+        content: none !important;
+    }
+
     /* টুলবারের বোতামগুলো কাগজে অর্থহীন, কিন্তু ফিল্টারের মানগুলো
        নয়: "কোন তারিখ থেকে কোন তারিখ" না থাকলে কাগজটা পড়ে বোঝা
        যায় না কীসের রিপোর্ট। তাই বোতাম যায়, ঘর থাকে। */
