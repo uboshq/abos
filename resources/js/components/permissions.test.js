@@ -24,7 +24,8 @@ const MODULE = `
           <th><input type="checkbox" data-permission-column="create"></th>
         </tr>
       </thead>
-      <tbody>
+      <tbody data-permission-section="transactions">
+        <tr><th><label><input type="checkbox" data-permission-section-all></label></th></tr>
         <tr>
           <td><input type="checkbox" name="permissions[]" value="sales.order.view" data-permission-cell="view" checked></td>
           <td><input type="checkbox" name="permissions[]" value="sales.order.create" data-permission-cell="create"></td>
@@ -33,6 +34,9 @@ const MODULE = `
           <td><input type="checkbox" name="permissions[]" value="sales.invoice.view" data-permission-cell="view"></td>
           <td><input type="checkbox" name="permissions[]" value="sales.invoice.create" data-permission-cell="create"></td>
         </tr>
+      </tbody>
+      <tbody data-permission-section="reports">
+        <tr><th><label><input type="checkbox" data-permission-section-all></label></th></tr>
         <tr>
           <td colspan="2"><input type="checkbox" name="permissions[]" value="sales.scheme.manage" data-permission-cell="manage"></td>
         </tr>
@@ -167,5 +171,43 @@ describe('অনুমতির "সব" টিক', () => {
 
         expect(all.indeterminate).toBe(true)
         expect(all.checked).toBe(false)
+    })
+
+    /*
+     * ⭐ ভাগের টিক — মালিকের নমুনা, ২২ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ এই দুইটা দাবি ছাড়া নতুন কোডটার কোনো পাহারা নেই: ১১২টা পুরনো
+     * দাবি সবুজ ছিল, আর তাদের একটাও এই লাইনগুলো ছোঁয়নি।
+     */
+    it('ভাগের টিক ঐ ভাগের সব ঘর বসায়', () => {
+        const section = root.querySelector('[data-permission-section="transactions"]')
+        const all = section.querySelector('[data-permission-section-all]')
+
+        all.checked = true
+        fire(all)
+
+        for (const cell of section.querySelectorAll('input[name="permissions[]"]')) {
+            expect(cell.checked).toBe(true)
+        }
+    })
+
+    /*
+     * ⛔ আর এটাই দামি দাবিটা — ভাগের টিক **নিজের ভাগেই** থামে।
+     *
+     * ⚠️ সীমাটা না থাকলে "রিপোর্টের সব" চাপলে গোটা মডিউলের সব টিক পড়ত।
+     * ⓘ অর্থাৎ বোতামটা যা লেখা আছে তার চেয়ে অনেক বেশি করত — আর
+     * অনুমতির পর্দায় ওটাই সবচেয়ে বিপজ্জনক ভুল, কারণ ফলটা নীরব:
+     * মানুষ পায় দরকারের চেয়ে বেশি অধিকার, আর পর্দা ঠিকই দেখায়।
+     */
+    it('ভাগের টিক অন্য ভাগে ছড়ায় না', () => {
+        const reports = root.querySelector('[data-permission-section="reports"]')
+        const other = root.querySelector('[value="sales.invoice.create"]')
+        const all = reports.querySelector('[data-permission-section-all]')
+
+        all.checked = true
+        fire(all)
+
+        expect(root.querySelector('[value="sales.scheme.manage"]').checked).toBe(true)
+        expect(other.checked).toBe(false)
     })
 })

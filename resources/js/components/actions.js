@@ -184,7 +184,7 @@ export function wireActions (root = document) {
             return
         }
 
-        const bulk = box.matches('[data-permission-all], [data-permission-column]')
+        const bulk = box.matches('[data-permission-all], [data-permission-column], [data-permission-section-all]')
 
         /*
          * ⛔ একটাই শ্রোতা, দুইটা নয় — আর এই লাইনটা দুঃখ করে শেখা।
@@ -201,7 +201,21 @@ export function wireActions (root = document) {
                 ? 'input[name="permissions[]"]'
                 : `input[data-permission-cell="${column}"]`
 
-            for (const cell of module.querySelectorAll(wanted)) {
+            /*
+             * ⭐ ভাগের টিকটা কেবল **নিজের ভাগের ভিতরে** কাজ করে।
+             *
+             * ⛔ `module` ধরে খুঁজলে "রিপোর্টের সব" চাপলে গোটা মডিউলের
+             * সব টিক পড়ত — অর্থাৎ বোতামটা যা লেখা আছে তার চেয়ে অনেক
+             * বেশি করত, আর সেটাই অনুমতির পর্দায় সবচেয়ে বিপজ্জনক ভুল।
+             *
+             * ⓘ `<tbody data-permission-section>` সারিগুলোর মালিক, তাই
+             * সীমাটা DOM-এই আছে — আলাদা কোনো তালিকা রাখতে হয় না।
+             */
+            const scope = box.matches('[data-permission-section-all]')
+                ? box.closest('[data-permission-section]')
+                : module
+
+            for (const cell of (scope ?? module).querySelectorAll(wanted)) {
                 cell.checked = box.checked
             }
         } else if (! box.matches('input[name="permissions[]"]')) {

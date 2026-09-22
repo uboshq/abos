@@ -230,8 +230,35 @@
                                         <th class="py-2 pl-3 font-medium">{{ __('system_admin::permission.column_special') }}</th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    @foreach ($block['rows'] as $row)
+                                {{--
+                                    ⭐ প্রতিটা ভাগের নিজের দেহ — মালিকের নমুনা, ২২ সেপ্টেম্বর ২০২৬।
+                                
+                                    ── ⛔ আগে সব সারি একটানা ছিল ─────────────────────────────
+                                    হিসাব মডিউলে বাইশটা সারি একসাথে, কোনো মাথা ছাড়া। ⚠️ যিনি
+                                    *"সব রিপোর্ট দেখতে দাও, আর কিছু নয়"* চান, তাঁকে বাইশটা নাম
+                                    পড়ে বেছে নিতে হত — আর একটা ভুলে গেলে কেউ বলত না।
+                                
+                                    ⭐ এখন ভাগের মাথায় একটা টিক, আর ঐ কাজটা এক ক্লিক।
+                                
+                                    ⓘ `<tbody>` একাধিক থাকতে পারে, আর সেটাই ঠিক ছাঁচ: ভাগটা
+                                    সারিগুলোর **মালিক**, কেবল উপরে বসা একটা লেবেল নয়।
+                                --}}
+                                @foreach ($block['sections'] as $section => $part)
+                                <tbody data-permission-section="{{ $section }}">
+                                    <tr class="bg-(--color-surface-muted)">
+                                        <th scope="colgroup" colspan="{{ count($columns) + 2 }}"
+                                            class="px-0 py-1.5 text-left text-xs font-semibold text-(--color-ink-muted)">
+                                            <label class="flex cursor-pointer items-center gap-2">
+                                                <input type="checkbox" data-permission-section-all
+                                                       class="size-3.5 rounded border-(--color-border)"
+                                                       @checked(count(array_intersect($part['all'], $chosen)) === count($part['all']) && $part['all'] !== [])
+                                                       aria-label="{{ $part['label'] }} — {{ __('system_admin::permission.select_all') }}">
+                                                {{ $part['label'] }}
+                                            </label>
+                                        </th>
+                                    </tr>
+
+                                    @foreach ($part['rows'] as $row)
                                         <tr class="border-b border-(--color-border) last:border-0">
                                             <th scope="row" class="py-2 pr-3 text-left font-normal">{{ $row['label'] }}</th>
 
@@ -282,6 +309,7 @@
                                         </tr>
                                     @endforeach
                                 </tbody>
+                                @endforeach
                             </table>
                         </div>
                     </div>

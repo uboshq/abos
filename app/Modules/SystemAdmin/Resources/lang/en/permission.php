@@ -143,5 +143,14 @@ return [
     'owner_locked' => 'Owner role — can do everything, cannot be changed',
     'granted' => ':on / :all',
     'select_all' => 'All',
+
+    'sections' => [
+        'master' => 'Master data',
+        'transactions' => 'Transactions',
+        'reports' => 'Reports',
+        'settings' => 'Settings',
+        'dashboard' => 'Dashboard',
+        'other' => 'Other rights',
+    ],
     'select_all_module' => 'Select all in this module',
 ];

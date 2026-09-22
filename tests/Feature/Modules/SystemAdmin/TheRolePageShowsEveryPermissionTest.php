@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modules\SystemAdmin;
 
+use App\Core\Services\PermissionSyncer;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\User;
@@ -68,7 +69,7 @@ final class TheRolePageShowsEveryPermissionTest extends TestCase
     {
         $role = Role::query()
             ->where('company_id', CompanyContext::id())
-            ->where('name', '!=', \App\Core\Services\PermissionSyncer::SUPER_ADMIN_ROLE)
+            ->where('name', '!=', PermissionSyncer::SUPER_ADMIN_ROLE)
             ->whereHas('permissions')
             ->firstOrFail();
 
@@ -79,10 +80,38 @@ final class TheRolePageShowsEveryPermissionTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        /* ⓘ ব্রাউজার যা পাঠাত — কেবল চালু থাকা ঘরগুলো। */
-        preg_match_all('/name="permissions\[\]" value="([^"]+)"\s+class="[^"]*"\s+checked/', $html, $m);
+        /*
+         * ⓘ ব্রাউজার যা পাঠাত — কেবল চালু থাকা ঘরগুলো।
+         *
+         * ── ⛔ ছাঁচটা ভাঙা ছিল, ২২ সেপ্টেম্বর ২০২৬ ──────────────────
+         * আগে লেখা ছিল `value="…"\s+class="…"\s+checked` — অর্থাৎ
+         * `class`-এর **ঠিক পরেই** `checked` থাকতে হত। ⚠️ কিন্তু
+         * [[role/partials/switch.blade.php]] মাঝে `data-permission-cell`
+         * বসায়, তাই ছকের একটা ঘরও কোনোদিন মিলত না — কেবল "বিশেষ
+         * অধিকার"-এর চিপগুলো মিলত, কারণ ওদের ঐ বৈশিষ্ট্যটা নেই।
+         *
+         * ⛔ আর যেদিন পরীক্ষার ভূমিকাটায় একটাও বিশেষ অধিকার রইল না,
+         * সেদিন দাবিটা লাল হলো — কোড বদলায়নি, **ডেটা বদলেছে**।
+         * ⓘ অর্থাৎ এতদিন সে ছকের সারিগুলো মাপছিল বলে মনে হত, অথচ
+         * মাপছিল কেবল চিপগুলো।
+         *
+         * ⭐ এখন যেকোনো ক্রমে বৈশিষ্ট্য চলে, কেবল `>` পেরোনো যায় না —
+         * নাহলে পরের `<input>`-এর `checked` এই ঘরটার বলে গোনা হত।
+         */
+        preg_match_all('/name="permissions\[\]" value="([^"]+)"[^>]*\schecked/', $html, $m);
 
         $this->assertNotEmpty($m[1], 'চালু থাকা একটা ঘরও পড়া যায়নি — ছাঁচটা পর্দার সাথে মেলেনি।');
+
+        /*
+         * ⭐ আর ছকের সারিও ধরা পড়ে, কেবল চিপ নয়।
+         *
+         * ⛔ এই লাইনটা ছাড়া ছাঁচটা আবার নীরবে সরু হয়ে যেতে পারত, আর
+         * দাবিটা "কিছু তো পেয়েছি" বলে সবুজ থাকত।
+         */
+        $this->assertNotEmpty(
+            preg_grep('/^(?!.*\.manage$).*/', $m[1]) ?: [],
+            '⛔ কেবল "বিশেষ অধিকার"-এর ঘরগুলো মিলেছে — ছকের সারিগুলো ছাঁচে পড়ছে না।',
+        );
 
         $this->actingAs($this->owner)
             ->put(route('system_admin.role.update', $role), [

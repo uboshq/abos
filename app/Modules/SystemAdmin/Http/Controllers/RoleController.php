@@ -248,8 +248,46 @@ class RoleController extends Controller implements HasMiddleware
     {
         $labels = [];
 
+        /*
+         * ⭐ কোন অনুমতি কোন ভাগে — মালিকের নমুনা, ২২ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⓘ ভাগটা কোথা থেকে ───────────────────────────────────────
+         * মেনু **আগে থেকেই** ভাগ করা (`master` · `transactions` ·
+         * `reports` · `settings`), আর প্রতিটা সারিতে অনুমতির নাম বসানো।
+         * ⭐ তাই নতুন কোনো তালিকা বানানো হয়নি: মানুষ মেনুতে জিনিসটা যে
+         * ভাগে দেখেন, অনুমতির পর্দাতেও সেই ভাগেই দেখবেন।
+         *
+         * ⚠️ হাতে আরেকটা তালিকা লিখলে দুইটা একদিন আলাদা হয়ে যেত — আর
+         * তখন কোনটা সত্যি, কেউ বলতে পারত না।
+         */
+        $sections = [];
+
         foreach ($this->modules->all() as $module) {
             $labels[$module->code] = $module->label();
+
+            foreach ($module->menu as $section => $rows) {
+                foreach ($rows as $row) {
+                    $permission = $row['permission'] ?? null;
+
+                    if (! is_string($permission) || $permission === '') {
+                        continue;
+                    }
+
+                    /*
+                     * ⓘ বিষয়টা অনুমতির নাম থেকে — শেষ অংশটা ক্রিয়া
+                     * (`view`, `manage`), বাকিটা বিষয়।
+                     *
+                     * ⚠️ প্রথম ভাগটাই থাকে: একই বিষয় দুই ভাগে থাকলে
+                     * (তালিকা `master`-এ, রিপোর্ট `reports`-এ) সারিটা
+                     * দুইবার দেখানো হত, আর টিক দিলে একটা বসত অন্যটা নয়।
+                     */
+                    $parts = explode('.', $permission);
+                    array_pop($parts);
+                    $subject = implode('.', $parts);
+
+                    $sections[$subject] ??= $section;
+                }
+            }
         }
 
         $matrix = [];
@@ -300,6 +338,17 @@ class RoleController extends Controller implements HasMiddleware
                 $rows[] = [
                     'key' => $subject,
                     'label' => $this->subjectLabel($subject),
+
+                    /*
+                     * ⓘ মেনুতে না থাকা অনুমতিগুলো `other`-এ — আর ওগুলো
+                     * সত্যিই আছে: অনেক অনুমতি কোনো মেনু সারির সাথে
+                     * জোড়া নয় (অনুমোদন, বিশেষ অধিকার)।
+                     *
+                     * ⛔ চুপচাপ বাদ দেওয়া যেত না — যে অনুমতি পর্দায় নেই
+                     * সেটা কেউ দিতেও পারেন না, আর ব্যবস্থাটা তখন
+                     * নীরবে অসম্পূর্ণ।
+                     */
+                    'section' => $sections[$subject] ?? 'other',
                     'cells' => $cells,
                     'manage' => $spans,
                     'special' => collect($verbs)
@@ -312,9 +361,46 @@ class RoleController extends Controller implements HasMiddleware
             usort($rows, fn (array $a, array $b) => [str_contains($a['key'], '.'), $a['label']]
                 <=> [str_contains($b['key'], '.'), $b['label']]);
 
+            /*
+             * ⭐ সারিগুলো দলে — মালিকের নমুনা, ২২ সেপ্টেম্বর ২০২৬।
+             *
+             * ── ⛔ আগে সব সারি একটানা ছিল, আর কেন সেটা কাজ করত না ─────
+             * হিসাব মডিউলে বাইশটা সারি একসাথে, কোনো মাথা ছাড়া। ⚠️ যিনি
+             * *"সব রিপোর্ট দেখতে দাও, আর কিছু নয়"* চান, তাঁকে বাইশটা
+             * নাম পড়ে বেছে নিতে হত — আর একটা ভুলে গেলে কেউ বলত না।
+             *
+             * ⭐ এখন প্রতিটা দলের নিজের মাথা ও নিজের "সব বাছুন", তাই
+             * ঐ কাজটা **একটা ক্লিক**।
+             *
+             * ⓘ ক্রমটা স্থির (নিচের `SECTIONS`), মেনুর ক্রম নয় — প্রতিটা
+             * মডিউলে একই ক্রম থাকলে চোখ জায়গাটা মনে রাখে।
+             */
+            $sectioned = [];
+
+            foreach (array_keys(self::SECTIONS) as $section) {
+                $inSection = array_values(array_filter($rows, fn (array $r) => $r['section'] === $section));
+
+                if ($inSection === []) {
+                    continue;
+                }
+
+                $sectioned[$section] = [
+                    'label' => __(self::SECTIONS[$section]),
+                    'rows' => $inSection,
+                    'all' => collect($inSection)
+                        ->flatMap(fn (array $r) => [
+                            ...array_values($r['cells']),
+                            ...array_filter([$r['manage']]),
+                            ...array_keys($r['special']),
+                        ])
+                        ->all(),
+                ];
+            }
+
             $grid[$module] = [
                 'label' => $labels[$module] ?? $this->subjectLabel($module),
                 'rows' => $rows,
+                'sections' => $sectioned,
                 'all' => collect($rows)
                     ->flatMap(fn (array $r) => [...array_values($r['cells']), ...array_filter([$r['manage']]), ...array_keys($r['special'])])
                     ->all(),
@@ -347,6 +433,34 @@ class RoleController extends Controller implements HasMiddleware
         'create' => ['create'],
         'update' => ['update'],
         'delete' => ['delete', 'cancel'],
+    ];
+
+    /**
+     * ⭐ অনুমতির পর্দার ভাগগুলো — মালিকের নমুনা, ২২ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⓘ নামগুলো মেনুর নিজের ভাগ থেকেই ────────────────────────────
+     * প্রতিটা `module.php`-র মেনু ইতিমধ্যে এই চাবিগুলোতে ভাগ করা।
+     * ⚠️ হাতে আরেকটা তালিকা বানালে দুইটা একদিন আলাদা হয়ে যেত, আর তখন
+     * অনুমতির পর্দা আর মেনু দুই রকম বলত।
+     *
+     * ── ⚠️ ক্রমটা স্থির, মেনুর ক্রম নয় ──────────────────────────────
+     * প্রতিটা মডিউলে একই ক্রম থাকলে চোখ জায়গাটা মনে রাখে — "রিপোর্ট
+     * সবসময় নিচে"। ⛔ মেনুর ক্রম ধরলে এক মডিউলে `master` আগে, অন্যটায়
+     * `transactions` আগে হত।
+     *
+     * ⓘ `other` — যে অনুমতিগুলো কোনো মেনু সারির সাথে জোড়া নয়
+     * (অনুমোদন, বিশেষ অধিকার)। ⛔ ওগুলো বাদ দেওয়া যেত না: যে অনুমতি
+     * পর্দায় নেই সেটা কেউ দিতেও পারেন না।
+     *
+     * @var array<string, string>
+     */
+    private const SECTIONS = [
+        'master' => 'system_admin::permission.sections.master',
+        'transactions' => 'system_admin::permission.sections.transactions',
+        'reports' => 'system_admin::permission.sections.reports',
+        'settings' => 'system_admin::permission.sections.settings',
+        'dashboard' => 'system_admin::permission.sections.dashboard',
+        'other' => 'system_admin::permission.sections.other',
     ];
 
     private function subjectLabel(string $subject): string
