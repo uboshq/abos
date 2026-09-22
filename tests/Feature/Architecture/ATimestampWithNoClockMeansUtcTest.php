@@ -41,6 +41,7 @@ class ATimestampWithNoClockMeansUtcTest extends TestCase
     public function test_every_timestamp_names_its_clock(): void
     {
         $bare = [];
+        $looked = 0;
 
         foreach ($this->sources() as $file) {
             /*
@@ -59,12 +60,36 @@ class ATimestampWithNoClockMeansUtcTest extends TestCase
 
             foreach (['createFromTimestamp', 'createFromTimestampMs'] as $call) {
                 foreach ($this->argumentsOf($src, $call) as $args) {
+                    $looked++;
+
                     if (! str_contains($args, ',')) {
                         $bare[] = str_replace(base_path().DIRECTORY_SEPARATOR, '', $file).' — '.$call;
                     }
                 }
             }
         }
+
+        /*
+         * ⛔ এই গোনাটা না থাকায় পাহারাটা অন্ধ ছিল — ২২ সেপ্টেম্বর ২০২৬।
+         *
+         * ⭐ মেপে দেখা: উপরের দুইটা ডাকের নাম বদলে দিলে `$bare`
+         * খালি থাকে, আর ফাইলটা **চারটা দাবি সবুজ** করে দেয় —
+         * একটাও ডাক না দেখে।
+         *
+         * ⚠️ নাম বদলানো কাল্পনিক নয়: Carbon এর আগেও API বদলেছে,
+         * আর তৃতীয় কোনো রূপ (`createFromTimestampUTC`) এলে এই তালিকাটা
+         * পুরনো হয়ে যাবে — নীরবে। ⓘ তখন এই গোনাটাই কথা বলবে।
+         *
+         * ⓘ মেঝে ৫, আজকের সংখ্যা ৯ (আটটা ফাইলে) — দুই-একটা সরলে
+         * ভাঙবে না, কিন্তু শনাক্তকারী মরলে ধরা পড়বে।
+         */
+        $this->assertGreaterThan(5, $looked, implode("\n", [
+            '⛔ পাহারাটা মাত্র '.$looked.'টা টাইমস্ট্যাম্প-ডাক দেখেছে।',
+            '',
+            'ⓘ Carbon-এ নতুন কোনো রূপ এলে উপরের তালিকায় নামটা যোগ করুন।',
+            '',
+            '⚠️ এটা না ধরলে নিচের দাবিটা একটাও ডাক না দেখেই সবুজ থাকত।',
+        ]));
 
         $this->assertSame([], array_values(array_unique($bare)), implode("\n", [
             'এই জায়গাগুলোয় টাইমস্ট্যাম্প পড়া হচ্ছে ঘড়ি না বলে:',
