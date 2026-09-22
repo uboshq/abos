@@ -170,12 +170,36 @@ final class WithdrawalService
         }
 
         return DB::transaction(function () use ($withdrawal, $from, $reference) {
-            $drawings = StandardChart::find(StandardChart::DRAWINGS);
+            /*
+             * ⭐ লাভের ভাগ ও অন্য উত্তোলন এক খাতে যায় না — ২২ সেপ্টেম্বর ২০২৬।
+             *
+             * ── ⛔ যা ভাঙা ছিল ─────────────────────────────────
+             * `Withdrawal::PROFIT_SHARE` ধরনটা আগে থেকেই ছিল, কিন্তু
+             * দাখিলা **সবসময়** `DRAWINGS`-এ যেত। ⓘ অর্থাৎ ধরনটা
+             * পর্দায় একটা লেবেল ছিল, খাতায় কোনো পার্থক্য করত না।
+             *
+             * ⚠️ ফল: মালিক নিজের ঘোষিত লাভ তুললে খাতা সেটাকে
+             * **মূলধন প্রত্যাহার** বলত, আর প্রদেয় মুনাফার জের কমত না —
+             * একিদকে দায় বসে থাকত, অন্যদিকে মূলধন কমত। দুইটাই ভুল।
+             *
+             * ── ⭐ মালিকের নকশা, ২২ সেপ্টেম্বর ২০২৬ ──────────────
+             * *"টাকাটা তুলে নেবেন"* — ঘোষণায় দায় বসে
+             * ([[ProfitDistribution]]), আর তোলা মানে সেই দায় শোধ।
+             * ⓘ তাই ডেবিটটা যায় প্রদেয় মুনাফায়, উত্তোলন খাতে নয়।
+             *
+             * ⚠️ বাকি দুই ধরন (নিজের খরচ, বেতন) আগের মতোই —
+             * ওগুলো সত্যিই মূলধন কমায়।
+             */
+            $head = $withdrawal->kind === Withdrawal::PROFIT_SHARE
+                ? StandardChart::PROFIT_PAYABLE
+                : StandardChart::DRAWINGS;
+
+            $drawings = StandardChart::find($head);
 
             if ($drawings === null) {
                 throw ValidationException::withMessages([
                     'account_id' => __('finance::validation.chart_head_missing', [
-                        'code' => StandardChart::DRAWINGS,
+                        'code' => $head,
                     ]),
                 ]);
             }
