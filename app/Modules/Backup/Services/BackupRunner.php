@@ -6,6 +6,7 @@ namespace App\Modules\Backup\Services;
 
 use App\Core\Engines\Backup\DestinationFactory;
 use App\Core\Services\BackupService;
+use App\Core\Services\NotificationService;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\User;
@@ -45,7 +46,70 @@ final class BackupRunner
     public function __construct(
         private readonly BackupService $backups,
         private readonly DestinationFactory $factory,
+        private readonly NotificationService $notify,
     ) {}
+
+    /**
+     * ⭐ ব্যর্থতাটা কাউকে বলা — ২২ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⛔ এতদিন কাউকে বলা হত না ────────────────────────────────────
+     * ব্যর্থতা খাতায় উঠত (উপরের `recordFailure()`), আর সেখানেই থেমে
+     * থাকত। ⚠️ ব্যাকআপ ব্যর্থ হয় রাত দুইটায়, আর পরদিন সকালে কিছুই
+     * আলাদা দেখায় না — অ্যাপ স্বাভাবিক চলে, কাজ হয়, কেবল ঐ রাতের
+     * কপিটা নেই।
+     *
+     * ⛔ জানা যেত কেবল সেদিন, যেদিন কপিটা ফেরানোর দরকার পড়ত — আর
+     * তখন প্রশ্নটা আর "কেন ব্যর্থ হলো" নয়, "কত দিনের কাজ গেল"।
+     *
+     * ── ⓘ কারা খবর পান ─────────────────────────────────────────────
+     * যাঁদের `backup.view` অনুমতি আছে — ভূমিকা ধরে নয়, `can()` ধরে,
+     * কারণ অধিকারটা ব্যক্তিগত ব্যতিক্রমেও কাড়া যায় ([[DueNotices]]-এ
+     * একই কারণ লেখা)।
+     *
+     * ── ⚠️ কেন রোজ ব্যর্থ হলে রোজই চিঠি ────────────────────────────
+     * পুনরাবৃত্তি চাপা দেওয়ার লোভ হয়। ⛔ কিন্তু ব্যাকআপ রোজ ব্যর্থ
+     * হওয়া মানে **রোজ একদিনের কাজ অরক্ষিত** — ওটা পুরনো খবর নয়, নতুন
+     * ক্ষতি। ⓘ যিনি বিরক্ত হবেন তিনি হয় ঠিক করবেন, নয় সেটিংসে গিয়ে
+     * বন্ধ করবেন — দুইটাই একটা সিদ্ধান্ত, আর নীরবতা কোনোটাই নয়।
+     *
+     * ⓘ `local_only` এখানে পড়ে না: ওটা ব্যর্থতা নয়, একটা **স্থায়ী
+     * সতর্কতা** (কপিটা আছে, কিন্তু একই ডিস্কে)। ⚠️ রোজ ওটার চিঠি
+     * পাঠালে মানুষ ব্যাকআপের চিঠি দেখাই ছেড়ে দিতেন — আর তারপর
+     * সত্যিকারের ব্যর্থতার চিঠিটাও।
+     */
+    private function tellSomeone(BackupRun $run, ?string $reason, array &$told = []): void
+    {
+        $who = User::query()
+            ->where('is_active', true)
+            ->whereHas('companies', fn ($q) => $q->whereKey($run->company_id))
+            ->get()
+            ->filter(fn (User $user) => $user->can('backup.view'))
+
+            /*
+             * ⛔ একই মানুষকে দুইবার নয় — ২২ সেপ্টেম্বরে নিজেই ধরা।
+             *
+             * ⚠️ `recordFailure()` প্রতিটা কোম্পানির জন্য আলাদা সারি লেখে,
+             * কিন্তু ডাম্পটা **একটাই** — একবার ব্যর্থ হয়েছে, তিনবার নয়।
+             * ⛔ ছাঁকনিটা না থাকলে তিন কোম্পানিতে থাকা একজন মালিক একই
+             * রাতের ব্যর্থতার **তিনটা চিঠি** পেতেন, আর তৃতীয় রাতেই
+             * ব্যাকআপের চিঠি দেখা ছেড়ে দিতেন।
+             */
+            ->reject(fn (User $user) => in_array((int) $user->id, $told, true));
+
+        foreach ($who as $user) {
+            $told[] = (int) $user->id;
+        }
+
+        $this->notify->sendMany(
+            $who,
+            'backup.failed',
+            __('backup::message.notify_failed'),
+            __('backup::message.notify_failed_body', [
+                'reason' => $reason ?? __('backup::message.notify_failed_no_reason'),
+            ]),
+            route('backup.index'),
+        );
+    }
 
     /**
      * এখনই একটা ব্যাকআপ, আর তার পুরো হিসাব।
@@ -80,6 +144,8 @@ final class BackupRunner
                 'status' => 'failed',
                 'error' => $e->getMessage(),
             ]);
+
+            $this->tellSomeone($run->fresh(), $e->getMessage());
 
             throw $e;
         }
@@ -196,6 +262,19 @@ final class BackupRunner
                 },
             ]);
 
+            /*
+             * ⚠️ `partial` মানে কপিটা কোথাও গেছে, কোথাও যায়নি — আর
+             * যেখানে যায়নি সেটা মেরামত না করলে ৩-২-১-এর একটা শর্ত
+             * নীরবে খসে পড়ে থাকে। ⓘ `local_only` বা `success`-এ কিছু
+             * বলা হয় না; কারণ উপরে `tellSomeone()`-এ লেখা।
+             */
+            if ($run->fresh()?->status === 'partial') {
+                $this->tellSomeone($run->fresh(), implode('; ', array_map(
+                    fn (array $f) => $f['name'].' — '.__($f['reason']),
+                    $failed,
+                )));
+            }
+
             if ($ok !== [] || $failed !== []) {
                 $console?->line(sprintf(
                     '  গন্তব্য: %dটায় গেছে, %dটায় যায়নি',
@@ -226,6 +305,9 @@ final class BackupRunner
     {
         $file = $made !== null ? (string) $made['file'] : null;
 
+        /* ⓘ কাকে বলা হয়ে গেছে — কোম্পানির লুপ জুড়ে একটাই তালিকা */
+        $told = [];
+
         foreach (Company::query()->pluck('id') as $companyId) {
             CompanyContext::set((int) $companyId);
 
@@ -242,6 +324,8 @@ final class BackupRunner
                 'error' => mb_substr($failure->getMessage(), 0, 2000),
                 'triggered_by' => 'schedule',
             ]);
+
+            $this->tellSomeone($run, $failure->getMessage(), $told);
 
             if ($whileVerifying) {
                 BackupVerification::create([

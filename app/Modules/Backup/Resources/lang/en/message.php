@@ -15,4 +15,8 @@ return [
 
     'nothing_yet' => 'No backup has been taken yet.',
     'download_warning' => 'This one file holds everything the company has — prices, salaries, dues. Keep it somewhere safe.',
+
+    'notify_failed' => '⛔ Last night the backup failed',
+    'notify_failed_body' => 'Reason: :reason — until this is put right, every day of work is going unbacked.',
+    'notify_failed_no_reason' => 'no reason was recorded',
 ];

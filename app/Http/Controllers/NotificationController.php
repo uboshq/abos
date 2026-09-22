@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\NotificationService;
+use App\Core\Support\MailReach;
 use App\Core\Support\NotificationKinds;
 use App\Models\Notification;
 use App\Models\NotificationChoice;
@@ -39,10 +40,30 @@ class NotificationController extends Controller
     {
         $user = $request->user();
 
+        $chosen = NotificationChoice::mailChoicesFor((int) $user->id);
+
+        /*
+         * ⭐ পর্দায় প্রতিটা ধরনের জন্য চিঠির টিকটা **আগে থেকেই** ঠিক
+         * অবস্থায় থাকে — তিনি কিছু বলে থাকলে তাঁর কথা, নাহলে ধরনটার
+         * নিজের নিয়ম।
+         *
+         * ⛔ সবগুলো খালি দেখালে মানুষ ভাবতেন কোনো চিঠিই যায় না, আর
+         * ⚠️ তারপর সংরক্ষণে চাপ দিলে **সত্যিই যাওয়া বন্ধ হয়ে যেত** —
+         * একটা পর্দা যা দেখায় তা-ই সে সংরক্ষণ করে, আর এখানে দেখানোটা
+         * ভুল হলে বন্ধ করাটা নীরব হত।
+         */
+        $mailed = [];
+
+        foreach (array_keys(NotificationKinds::all()) as $type) {
+            $mailed[$type] = $chosen[$type] ?? NotificationKinds::mailedByDefault($type);
+        }
+
         return view('notifications.settings', [
             'menu' => $this->menu->forUser($user),
             'kinds' => NotificationKinds::all(),
             'silenced' => NotificationChoice::silencedFor((int) $user->id),
+            'mailed' => $mailed,
+            'postable' => ! MailReach::silent(),
         ]);
     }
 
@@ -55,9 +76,21 @@ class NotificationController extends Controller
     {
         $user = $request->user();
         $wanted = array_map('strval', (array) $request->input('kinds', []));
+        $byMail = array_map('strval', (array) $request->input('mailed', []));
 
         foreach (array_keys(NotificationKinds::all()) as $type) {
-            if (in_array($type, $wanted, true)) {
+            $bell = in_array($type, $wanted, true);
+            $mail = in_array($type, $byMail, true);
+
+            /*
+             * ⭐ সারিটা মুছে ফেলা হয় কেবল তখন, যখন **দুইটা দিকই ডিফল্টে**।
+             *
+             * ⓘ মূল নিয়মটা মাইগ্রেশনে লেখা: সারি না থাকা মানে "যা স্বাভাবিক
+             * তাই" — আর ⚠️ সেটা এখন দুইটা প্রশ্নের উত্তর, একটার নয়। ⛔ কেবল
+             * ঘণ্টা দেখে মুছলে একজনের "এই খবরটা চিঠিতে চাই না" কথাটা নীরবে
+             * হারিয়ে যেত, আর পরের মাসে চিঠি আবার আসতে শুরু করত।
+             */
+            if ($bell && $mail === NotificationKinds::mailedByDefault($type)) {
                 NotificationChoice::query()
                     ->where('user_id', $user->id)
                     ->where('type', $type)
@@ -66,9 +99,15 @@ class NotificationController extends Controller
                 continue;
             }
 
+            /*
+             * ⚠️ ঘণ্টা বন্ধ থাকলে চিঠিও বন্ধ — পর্দায় ঐ টিকটা তখন নিষ্ক্রিয়
+             * থাকে, আর এখানেও সেটা মেনে নেওয়া হয়। ⛔ নাহলে একজন খবরটা বন্ধ
+             * করে দিতেন অথচ **ইনবক্সে সেটা আসতেই থাকত**, আর তিনি ভাবতেন
+             * সুইচটাই ভাঙা।
+             */
             NotificationChoice::query()->updateOrCreate(
                 ['user_id' => $user->id, 'type' => $type],
-                ['enabled' => false],
+                ['enabled' => $bell, 'by_email' => $bell && $mail],
             );
         }
 

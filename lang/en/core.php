@@ -927,6 +927,12 @@ return [
         'settings_saved' => 'Your notification choices are saved.',
         'settings_warning' => 'Switching one off only stops the news — the work still waits for you on its own screen.',
         'settings_link' => 'Which news I get',
+        'by_email' => 'By email',
+        'mail_silent' => '⚠️ This server has no mail set up, so ticking "By email" will not send anything yet. Your choice is kept, and letters start going out the day mail is configured.',
+        'mail_greeting' => ':name, here is something from ABOS for you —',
+        'mail_button' => 'Open it in ABOS',
+        'mail_fallback' => 'If the button does not open, paste this address into your browser:',
+        'mail_optout' => 'To stop letters like this one, open ABOS, go to "Which news I get" and untick "By email".',
         'kind' => [
             'approval_approved' => 'When my paper is approved',
             'approval_approved_note' => 'A paper you sent for approval has been signed.',
@@ -938,6 +944,8 @@ return [
             'deposit_maturing_note' => 'From thirty days out, once a week. ⚠️ Off means the bank rolls the money over on its own.',
             'hand_loan_due' => 'When a hand loan falls due',
             'hand_loan_due_note' => 'Overdue, or due within thirty days. ⓘ Loans with no date never send one.',
+            'backup_failed' => 'When a backup fails',
+            'backup_failed_note' => 'The nightly backup could not be taken or could not reach a destination, with the reason. ⛔ Off means you learn about it on the day you need the backup.',
         ],
     ],
     'look' => [

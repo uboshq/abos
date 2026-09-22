@@ -19,13 +19,42 @@ class NotificationChoice extends Model
 {
     use HasPublicId;
 
-    protected $fillable = ['user_id', 'type', 'enabled'];
+    protected $fillable = ['user_id', 'type', 'enabled', 'by_email'];
 
     protected function casts(): array
     {
         return [
             'enabled' => 'boolean',
+
+            /*
+             * ⓘ `null` একটা আলাদা উত্তর — *"আমি কিছু বলিনি"* — আর সেটাই
+             * ⭐ ডিফল্টে নামার সংকেত ([[NotificationKinds]])।
+             *
+             * ⚠️ তাই `boolean` কাস্টের সাথে **পড়ার জায়গায় `??` নয়,
+             * `=== null` দেখতে হয়**: `(bool) null` আর `(bool) false`
+             * এক জিনিস দেখায়, অথচ একটা মানে "ধরনের নিয়ম চলুক" আর
+             * অন্যটা "আমি নিজে বন্ধ করেছি"।
+             */
+            'by_email' => 'boolean',
         ];
+    }
+
+    /**
+     * এই মানুষটা কোন ধরনগুলোর ব্যাপারে চিঠির কথা **নিজে** বলেছেন।
+     *
+     * ⓘ ফেরত আসে `type => bool` — যা তালিকায় নেই তার মানে তিনি কিছু
+     * বলেননি, আর তখন ধরনটার নিজের নিয়ম চলে।
+     *
+     * @return array<string, bool>
+     */
+    public static function mailChoicesFor(int $userId): array
+    {
+        return self::query()
+            ->where('user_id', $userId)
+            ->whereNotNull('by_email')
+            ->pluck('by_email', 'type')
+            ->map(fn ($on) => (bool) $on)
+            ->all();
     }
 
     public function user(): BelongsTo

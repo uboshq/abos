@@ -251,3 +251,41 @@ export function sharedLink ({ url }) {
         },
     }
 }
+
+/**
+ * বিজ্ঞপ্তির সেটিংসের একটা সারি — ঘণ্টা আর চিঠি, পাশাপাশি।
+ *
+ * ── ⭐ কেন `x-model` নয়, DOM থেকে পড়া ───────────────────────────────
+ * সার্ভার প্রতিটা টিকের অবস্থা `@checked` দিয়ে বসিয়ে দেয়। ⛔ `x-model`
+ * বসালে Alpine চালু হওয়ার মুহূর্তে **নিজের শুরুর মান দিয়ে ওটা মুছে
+ * দিত** — পর্দা খুললেই সব টিক উল্টে যেত, অথচ কেউ কিছু ছোঁয়নি, আর
+ * সংরক্ষণে চাপ দিলে ঐ উল্টো অবস্থাটাই সত্যি হয়ে যেত।
+ *
+ * ⓘ তাই HTML-ই সত্যের একমাত্র উৎস, আর এই কম্পোনেন্ট কেবল একটা নিয়ম
+ * মানায়: ঘণ্টা বন্ধ থাকলে চিঠিও বন্ধ।
+ *
+ * ── ⚠️ কেন টিকটা নিভিয়ে দেওয়াই যথেষ্ট নয় ───────────────────────────
+ * নিষ্ক্রিয় (`disabled`) ঘর ফর্মের সাথে পাঠানোই হয় না, তাই সার্ভারে
+ * ওটা "চাই না" হিসেবে পৌঁছায় — আর কন্ট্রোলারেও একই নিয়ম আলাদা করে
+ * লেখা আছে। ⓘ দুই জায়গায় এক কথা, কারণ পর্দার নিয়ম কখনো পাহারা নয়:
+ * JS বন্ধ থাকলেও উত্তরটা একই হতে হবে।
+ */
+export function notifyRow () {
+    return {
+        init () {
+            const bell = this.$el.querySelector('[data-notify-bell]')
+            const mail = this.$el.querySelector('[data-notify-mail]')
+            const label = this.$el.querySelector('[data-notify-mail-label]')
+
+            if (! bell || ! mail) return
+
+            const follow = () => {
+                mail.disabled = ! bell.checked
+                label?.classList.toggle('opacity-40', ! bell.checked)
+            }
+
+            bell.addEventListener('change', follow)
+            follow()
+        },
+    }
+}
