@@ -124,7 +124,7 @@
                 @else
                     <div class="grid gap-4">
                         @foreach ($groups[$group] as $paper)
-                            @include('inventory::stock.partials.paper', ['paper' => $paper])
+                            @include('inventory::stock.partials.paper', ['paper' => $paper, 'first' => $loop->first])
                         @endforeach
                     </div>
                 @endif

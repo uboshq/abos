@@ -54,6 +54,29 @@
             </div>
         </header>
 
+        {{-- ⭐ সারিগুলো গোটানো থাকে — মালিকের নির্দেশ, ২২ সেপ্টেম্বর ২০২৬।
+
+             ⛔ আগে প্রতিটা কাগজের সব সারি একসাথে খোলা থাকত। ⚠️ দশটা কাগজ
+             জমলে পাতাটা এত লম্বা হত যে গুদামের লোক হাতের কাগজটা খুঁজেই
+             পেতেন না — অথচ তিনি একবারে **একটাই** কাগজ বসান।
+
+             ⓘ মাথার চারটা কথা (কার · কোন চালান · কবে · কে) গোটানো
+             অবস্থাতেও দেখা যায়, কারণ ঐটুকু দিয়েই কাগজ চেনা হয়।
+
+             ⚠️ `<details>` ইচ্ছাকৃত, Alpine নয়: সারিগুলো বন্ধ অবস্থাতেও
+             DOM-এ থাকে, তাই উপরের "সবার জন্য" বারটা ওদের পায়, আর
+             JavaScript বন্ধ থাকলেও কাগজটা খোলা-বন্ধ করা যায়। --}}
+        <details class="group" @if ($first ?? false) open @endif>
+            <summary class="-mx-1 flex cursor-pointer items-center gap-2 rounded-(--radius-field)
+                            px-1 py-2 text-sm text-(--color-ink-muted)
+                            hover:bg-(--color-surface-muted)">
+                <x-ui.icon name="chevron_down"
+                           class="size-4 transition-transform group-open:rotate-180" />
+
+                {{ trans_choice('inventory::message.lines_waiting', count($paper['lines']),
+                    ['count' => count($paper['lines'])]) }}
+            </summary>
+
         <div class="overflow-x-auto">
             <table class="ui-list w-full">
                 <thead>
@@ -202,5 +225,6 @@
                        px-4 text-sm font-medium text-white transition-opacity hover:opacity-90">
             {{ __('inventory::action.place') }}
         </button>
+        </details>
     </form>
 </section>

@@ -23,6 +23,7 @@ return [
     /* The count is named: somebody may have placed two of six lines. */
     'placed_narration' => 'Goods taken in',
     'placed' => ':count line(s) taken in — these can be sold from now on.',
+    'lines_waiting' => 'One line waiting to be put away — open|:count lines waiting to be put away — open',
     'nothing_to_place' => 'Nothing waiting to be placed — everything that arrived has been taken in.',
     'adjust_matched' => 'The count matched the books — no adjustment was needed.',
     'held' => 'Stock held.',
