@@ -23,13 +23,6 @@ use Illuminate\Support\Str;
  */
 final class MenuBuilder
 {
-    /**
-     * ⓘ এই অনুরোধে এই শাখায় বন্ধ থাকা মডিউলগুলো — একবার পড়ে রাখা।
-     *
-     * @var list<string>|null
-     */
-    private ?array $branchOff = null;
-
     public function __construct(
         private readonly ModuleRegistry $registry,
         private readonly SettingsService $settings,
@@ -58,8 +51,30 @@ final class MenuBuilder
          */
         $exact = $this->aRowOwnsThisRoute();
 
+        /*
+         * ⓘ এই শাখায় বন্ধ থাকা মডিউলগুলো — এক মেনু আঁকায় একবার।
+         *
+         * ⚠️ প্রতিটা মডিউলের জন্য আলাদা কোয়েরি করলে সাইডবার আঁকতে চৌদ্দটা
+         * কোয়েরি লাগত, আর সাইডবার **প্রতিটা পাতায়** আঁকা হয়।
+         *
+         * ── ⛔ কেন উত্তরটা বস্তুর গায়ে রাখা হয় না ──────────────────────
+         * প্রথম খসড়ায় `$this->branchOff ??= …` লেখা ছিল, ধরে নিয়ে যে একটা
+         * [[MenuBuilder]] একটাই অনুরোধ সামলায়। ⚠️ **ধরে নেওয়াটা ভুল**:
+         * Laravel-এর `Route` নিজের কন্ট্রোলারটা মনে রেখে দেয়
+         * (`Route::getController()`), তাই একই বস্তু পরের অনুরোধেও ফিরে
+         * আসে — আর সাথে **আগের উত্তরটাও**।
+         *
+         * ⛔ ফোনের `/me` পরীক্ষায় ধরা পড়েছে: শাখায় মডিউল বন্ধ করার পরেও
+         * ফোন সেটা পেত। ⓘ ওয়েবে সবুজ ছিল, কারণ ওখানে প্রতিবার নতুন বস্তু
+         * বানানো হত — অর্থাৎ ভুলটা কেবল তখনই দেখা যেত যখন **একই
+         * প্রক্রিয়ায় দুইবার** মেনু আঁকা হয়।
+         *
+         * ⭐ তাই আয়ুটা এখন ঠিক যতটা হওয়া উচিত: এক মেনু আঁকা।
+         */
+        $switchedOff = BranchModule::switchedOffIn(CompanyContext::branchId());
+
         foreach ($this->registry->all() as $module) {
-            if (! $this->moduleEnabled($module)) {
+            if (! $this->moduleEnabled($module, $switchedOff)) {
                 continue;
             }
 
@@ -550,26 +565,15 @@ final class MenuBuilder
      * প্রতিষ্ঠান কোনোদিন কেনেনি।
      *
      * ⚠️ শাখার সারি **না থাকা** মানে চালু — [[BranchModule]]-এ কারণ লেখা।
+     *
+     * @param  list<string>  $switchedOff  এই শাখায় ইচ্ছা করে বন্ধ করা মডিউলগুলো
      */
-    private function moduleEnabled(ModuleDefinition $module): bool
+    private function moduleEnabled(ModuleDefinition $module, array $switchedOff): bool
     {
         if (! (bool) $this->settings->get($module->code.'.enabled', true)) {
             return false;
         }
 
-        return ! in_array($module->code, $this->switchedOffInThisBranch(), true);
-    }
-
-    /**
-     * ⓘ একবার পড়া হয়, তারপর মনে রাখা।
-     *
-     * ⚠️ প্রতিটা মডিউলের জন্য আলাদা কোয়েরি করলে সাইডবার আঁকতে চৌদ্দটা
-     * কোয়েরি লাগত — আর সাইডবার **প্রতিটা পাতায়** আঁকা হয়।
-     *
-     * @return list<string>
-     */
-    private function switchedOffInThisBranch(): array
-    {
-        return $this->branchOff ??= BranchModule::switchedOffIn(CompanyContext::branchId());
+        return ! in_array($module->code, $switchedOff, true);
     }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modules\SystemAdmin;
 
+use App\Core\Module\ModuleRegistry;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
@@ -238,7 +239,7 @@ final class EveryBranchHadToTakeEveryModuleTest extends TestCase
         $onScreen = $m[1];
 
         $this->assertSame(
-            array_keys(app(\App\Core\Module\ModuleRegistry::class)->all()),
+            array_keys(app(ModuleRegistry::class)->all()),
             $onScreen,
             'পর্দার সারিগুলো রেজিস্ট্রির সাথে মেলে না — কোনো মডিউলের সুইচই নেই, '
             .'অথবা একটা দুইবার আছে।'
@@ -264,6 +265,74 @@ final class EveryBranchHadToTakeEveryModuleTest extends TestCase
         $this->actingAs($stranger)
             ->get(route('system_admin.branch-module'))
             ->assertForbidden();
+    }
+
+    /**
+     * ⭐ ফোনটাও একই সুইচ মানে — আর সেটা আলাদা করে মাপা হয়।
+     *
+     * ── ⓘ কেন ধরে নেওয়া যেত না ──────────────────────────────────────
+     * [[MeController]] ওয়েবের সেই একই [[MenuBuilder::forUser()]] ডাকে,
+     * তাই "এমনিতেই কাজ করবে" বলা যেত। ⚠️ কিন্তু *"একই ফাংশন ডাকে"* আর
+     * *"একই উত্তর পায়"* এক কথা নয়: ফোনের উত্তরটা **ব্যবহারকারীর নিজের
+     * শাখা** ধরে তৈরি হয় (`current_branch_id`), পর্দার মতো চলতি
+     * প্রসঙ্গ ধরে নয়।
+     *
+     * ⛔ তাই এখানে সত্যিই লগইন করে `/me` চাওয়া হয়। ⓘ না করলে দাবিটা
+     * মাপা নয়, অনুমান থাকত — আর ফোনে ভুল মেনু মানে একজন বিক্রয়কর্মী
+     * এমন পর্দা পান যেটা তাঁর ডিপোতে নেই।
+     */
+    public function test_the_phone_honours_the_branch_switch_too(): void
+    {
+        $phoneUser = User::query()->where('email', 'sales@abos.test')->firstOrFail();
+
+        $phoneUser->forceFill([
+            'current_company_id' => $this->here->company_id,
+            'current_branch_id' => $this->here->id,
+        ])->save();
+
+        $before = $this->menuOverTheWire();
+
+        $this->assertNotSame([], $before, 'ফোন কোনো মডিউলই পায়নি — মাপার কিছু নেই।');
+
+        // ⓘ ফোন যেটা সত্যিই পায় তেমন একটা মডিউল, নাহলে অনুপস্থিতির মানে নেই।
+        $code = $before[0];
+
+        $this->switchOff($code, $this->here);
+
+        $this->assertNotContains($code, $this->menuOverTheWire(),
+            'শাখায় বন্ধ করা মডিউলটা ফোনে এখনো যাচ্ছে।');
+    }
+
+    /**
+     * ⓘ `/me`-র মেনুতে যে মডিউলগুলো এসেছে।
+     *
+     * @return list<string>
+     */
+    private function menuOverTheWire(): array
+    {
+        /*
+         * ⚠️ প্রতিবার গার্ডটা ভুলিয়ে দিতে হয়। ⓘ লগইন সফল হলে Laravel ঐ
+         * অনুরোধের গার্ডে মানুষটাকে মনে রেখে দেয়, আর পরের `/me` তখন
+         * **আগের অবস্থার** উত্তর ফেরত দিত — দুইটা অনুরোধই ২০০, তাই
+         * ভুলটা নীরব ([[ThePhoneCouldNotAskWhoItWasTest]]-এ কারণ লেখা)।
+         */
+        $this->app['auth']->forgetGuards();
+
+        $token = $this->postJson('/api/v1/auth/login', [
+            'identifier' => 'sales@abos.test',
+            'password' => 'password',
+            'deviceId' => 'branch-module-test',
+            'appVersion' => '0.1.0',
+            'platform' => 'android',
+        ])->json('accessToken');
+
+        $this->app['auth']->forgetGuards();
+
+        $menu = $this->withToken($token)->getJson('/api/v1/me')
+            ->assertOk()
+            ->json('menu');
+
+        return array_values(array_column($menu ?? [], 'code'));
     }
 
     // ── হাতিয়ার ────────────────────────────────────────────────────────
