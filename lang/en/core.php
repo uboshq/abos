@@ -272,6 +272,22 @@ return [
         'receivable' => 'Receivable',
         'payable' => 'Payable',
     ],
+    'licence' => [
+        'title' => 'Software licence',
+        'missing' => 'No ABOS licence is installed on this server. Enter the activation code and the licence downloads itself.',
+        'unreadable' => 'The licence could not be read. The file may be damaged — fetch it again with your code.',
+        'forged' => 'The licence signature does not match. It was not issued for this software, or it has been altered.',
+        'expired' => 'The licence ran out on :date. Everything works again once it is renewed — nothing has been lost.',
+        'valid' => 'The licence is valid.',
+        'buyer' => 'Issued to',
+        'expires_on' => 'Valid until',
+        'never_expires' => 'No expiry',
+        'days_left' => ':days days left',
+        'companies' => 'Companies allowed',
+        'unlimited' => 'No limit',
+        'still_open' => 'Your own books stay open even after expiry — backup and export always work. Unpaid means no new work, never your data held hostage.',
+        'how_to_renew' => 'Contact your supplier to renew, then enter the new code below.',
+    ],
 
     'brand' => [
         'developed_by' => 'Developed by Al-Amin Shuvo',

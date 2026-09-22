@@ -8,6 +8,7 @@ use App\Http\Middleware\ExportListing;
 use App\Http\Middleware\NormalizeUnicodeInput;
 use App\Http\Middleware\OneSubmitPerForm;
 use App\Http\Middleware\RefuseSwitchedOffScreens;
+use App\Http\Middleware\RefuseWorkWithoutALicence;
 use App\Http\Middleware\ResolveCompanyContext;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -165,6 +166,24 @@ return Application::configure(basePath: dirname(__DIR__))
              * কোম্পানি তা না জেনে কোন সুইচ পড়তে হবে বলা যায় না।
              */
             RefuseSwitchedOffScreens::class,
+
+            /*
+             * ⭐ লাইসেন্সের তালা — ২২ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ `RefuseSwitchedOffScreens`-এর ঠিক পরে, আর কারণটা একই
+             * পরিবারের: দুইটাই "এই পর্দাটা আজ খোলা কি না" বলে। ⚠️
+             * কোম্পানির প্রসঙ্গের **পরে**, কারণ তালাবদ্ধ পর্দাটা
+             * ব্যবহারকারীর নিজের ভাষায় কথা বলে।
+             *
+             * ── ⛔ আর এই লাইনটাই প্রায় বাদ পড়েছিল ──────────────────
+             * ক্লাসটা লেখা হয়েছিল, পরীক্ষাও লেখা হয়েছিল — কিন্তু
+             * এখানে বসানো হয়নি, তাই **তালাটা কোনোদিন চলত না**।
+             * ⓘ ধরা পড়েছে পরীক্ষা চালিয়ে: তিনটা দাবি বলল "তালাবদ্ধ
+             * হওয়ার কথা, অথচ পাতা খুলছে"।
+             *
+             * ⚠️ ABOS-এর চেনা রোগ, আবার: কাজটা হয়েছে, জোড়াটা নয়।
+             */
+            RefuseWorkWithoutALicence::class,
 
             /*
              * ?export=csv থাকলে পর্দার তালিকাটা ফাইল হয়ে নামে।

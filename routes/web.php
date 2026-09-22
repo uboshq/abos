@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\AttachmentController;
+use App\Http\Controllers\LicenceController;
 use App\Http\Controllers\MfaController;
 use App\Http\Controllers\ModuleDashboardController;
 use App\Http\Controllers\NotificationController;
@@ -24,6 +25,18 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth')->group(function () {
     Route::get('/', [WorkspaceController::class, 'dashboard'])->name('dashboard');
+
+    /*
+     * ⭐ কাগজের অবস্থা — আর এই পর্দাটা তালার বাইরে।
+     *
+     * ⓘ [[RefuseWorkWithoutALicence]] বাকি সব পথ বন্ধ করে এখানে পাঠায়।
+     * ⛔ এটাও তালাবদ্ধ হলে মানুষ একটা অন্তহীন চক্রে পড়তেন — তালাবদ্ধ
+     * পর্দা থেকে তালাবদ্ধ পর্দায়, আর কোথাও কারণ লেখা থাকত না।
+     *
+     * ⚠️ `auth`-এর ভিতরেই, কারণ কাগজের বিবরণ (ক্রেতার নাম, মেয়াদ)
+     * বাইরের কারো দেখার কথা নয় — কেবল তালাটার বাইরে, লগইনের নয়।
+     */
+    Route::get('/licence', [LicenceController::class, 'show'])->name('licence.show');
 
     /*
      * উপরের খোঁজার ঘরের পিছনের তার।
