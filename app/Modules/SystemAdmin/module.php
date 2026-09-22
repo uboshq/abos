@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Core\Engines\Print\PrintFormat;
+use App\Core\Engines\Print\PrintProfile;
 use App\Core\Support\DateFormat;
 use App\Modules\SystemAdmin\Dashboard\SystemAdminDashboard;
 
@@ -148,6 +150,16 @@ return [
              * দেয়, আর আলাদা চাবি দিলে কাউকে অর্ধেক উত্তর দেওয়ার অধিকার দেওয়া হত।
              */
             ['label' => 'system_admin::settings.title', 'icon' => 'settings', 'route' => 'system_admin.settings',
+                'permission' => 'system_admin.settings.manage'],
+
+            /*
+             * ⭐ ছাপার নিয়ন্ত্রণ — সেটিংসের ঠিক পরে, ২২ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ সারিটা না থাকলে পর্দাটা তৈরি হয়েও কেউ খুঁজে পেতেন না, আর
+             * ⚠️ আজ রাতেই ফিন্যান্স মানচিত্রে ঠিক সেই জিনিসটা ধরা পড়েছে:
+             * লাভ ভাগাভাগির পর্দা মাসখানেক তৈরি ছিল, কেবল কেউ জানত না।
+             */
+            ['label' => 'system_admin::settings.print_title', 'icon' => 'printer', 'route' => 'system_admin.print_control',
                 'permission' => 'system_admin.settings.manage'],
 
             /*
@@ -309,6 +321,55 @@ return [
     'drill_sources' => [],
 
     'settings' => [
+        /*
+         * ⭐ প্রতিটা কাগজের নিজের সুইচ — মালিকের নির্দেশ, ২২ সেপ্টেম্বর ২০২৬।
+         *
+         * *"ইনভয়েজে কি লোগো দেবে পস প্রিন্টারে কি লোগো দেবে, কোনটা সব আলাদা
+         * আলাদা ম্যানেজ করা যায় … কি কি কলাম দিবে কোনটার পর কোনটা সব কিছুই
+         * নিয়ন্ত্রণ হবে সুইচে।"*
+         *
+         * ── ⚠️ কেন হাতে লেখা নয়, লুপে ─────────────────────────────────
+         * পাঁচটা কাগজ × তিনটা সুইচ = পনেরোটা সারি। ⓘ হাতে লিখলে ষষ্ঠ কাগজ
+         * যোগ করার দিনে তিনটার দুইটা মনে থাকত, আর তৃতীয়টা নীরবে ডিফল্টে
+         * পড়ে থাকত — ⛔ কোনো ভুল দেখা যেত না, কেবল একটা কাগজ সুইচ মানত না।
+         *
+         * ⓘ `'group' => 'print_paper'` মানে সারিগুলো সাধারণ সেটিংস পর্দায়
+         * ওঠে না — ওগুলোর নিজের পর্দা আছে, কারণ **ক্রম** বদলানোর জন্য
+         * সুইচ বা লেখার ঘর কোনোটাই যথেষ্ট নয়।
+         */
+        ...array_merge(...array_map(fn (string $target) => [
+            [
+                'key' => "print.{$target}.format",
+                'label' => 'system_admin::settings.print_format',
+                'type' => 'choice',
+                'options' => PrintFormat::all(),
+                'option_label' => 'core.print.format.',
+                'default' => $target === 'pos' ? 'compact' : 'standard',
+                'group' => 'print_paper',
+            ],
+            /*
+             * ⚠️ ডিফল্ট `null`, খালি তালিকা নয় — আর তফাতটা দামি।
+             *
+             * ⓘ `null` মানে *"বসানো রূপ যা বলে তাই"*, আর `[]` মানে *"কিছুই
+             * দেখাবে না"*। ⛔ দুইটাকে এক ধরলে কেউ সব সুইচ বন্ধ করে সেভ করার
+             * পরেও কাগজটা আগের মতোই ছাপত, আর কারণটা কেউ খুঁজে পেত না।
+             */
+            [
+                'key' => "print.{$target}.parts",
+                'label' => 'system_admin::settings.print_parts',
+                'type' => 'json',
+                'default' => null,
+                'group' => 'print_paper',
+            ],
+            [
+                'key' => "print.{$target}.columns",
+                'label' => 'system_admin::settings.print_columns',
+                'type' => 'json',
+                'default' => null,
+                'group' => 'print_paper',
+            ],
+        ], PrintProfile::TARGETS)),
+
         [
             'key' => 'print.show_vendor_credit',
             'label' => 'core.print.show_vendor_credit',

@@ -101,10 +101,23 @@
                                                 <select name="settings[{{ $setting['key'] }}]"
                                                         class="h-(--spacing-field) w-full max-w-40 rounded-(--radius-field)
                                                                border border-(--color-border) bg-(--color-surface-card) px-3">
+                                                    {{-- ⛔ নামটা এখানে হাতে লেখা `PaperSize::of()` দিয়ে আসত —
+                                                         ২২ সেপ্টেম্বর ২০২৬-এ ধরা পড়েছে।
+
+                                                         ⚠️ অর্থাৎ **কাগজের মাপ ছাড়া অন্য কোনো বাছাই যোগ করলেই**
+                                                         `PaperSize::of()` একটা `InvalidArgumentException` ছুঁড়ত,
+                                                         আর গোটা সেটিংস পাতাটা ৫০০ দিত — ⓘ যে সুইচটা যোগ করা
+                                                         হলো তার সাথে যার কোনো সম্পর্ক নেই, এমন সব সুইচও।
+
+                                                         ⭐ এখন ঘোষণাটাই বলে দেয় নামগুলো কোথায়: `option_label`
+                                                         একটা অনুবাদের উপসর্গ। ⓘ না থাকলে পুরনো আচরণ, তাই
+                                                         কাগজের মাপের সারিগুলো একটুও বদলায়নি। --}}
                                                     @foreach ($setting['options'] ?? [] as $option)
                                                         <option value="{{ $option }}"
                                                                 @selected((string) $setting['value'] === (string) $option)>
-                                                            {{ \App\Core\Engines\Print\PaperSize::of($option)->label() }}
+                                                            {{ isset($setting['option_label'])
+                                                                ? __($setting['option_label'].$option)
+                                                                : \App\Core\Engines\Print\PaperSize::of($option)->label() }}
                                                         </option>
                                                     @endforeach
                                                 </select>

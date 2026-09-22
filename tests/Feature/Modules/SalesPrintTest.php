@@ -6,6 +6,7 @@ namespace Tests\Feature\Modules;
 
 use App\Core\Engines\Print\PaperSize;
 use App\Core\Engines\Print\PrintableDocument;
+use App\Core\Engines\Print\PrintProfile;
 use App\Core\Support\AmountInWords;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
@@ -213,6 +214,9 @@ class SalesPrintTest extends TestCase
         $html = View::make('print.document-body', [
             'doc' => $document,
             'paper' => PaperSize::of(PaperSize::THERMAL_80),
+
+            /* ⓘ সরাসরি ভিউ আঁকলে প্রোফাইলটা হাতে দিতে হয় — [[PrintEngine]] ওটা নিজে দেয় */
+            'profile' => PrintProfile::everything(),
         ])->render();
 
         $this->assertStringContainsString('white-space: nowrap', $html);
@@ -231,6 +235,7 @@ class SalesPrintTest extends TestCase
         $wide = View::make('print.document-body', [
             'doc' => $document,
             'paper' => PaperSize::of(PaperSize::A4),
+            'profile' => PrintProfile::everything(),
         ])->render();
 
         $this->assertStringContainsString('অ্যান্ড সন্স', $wide);

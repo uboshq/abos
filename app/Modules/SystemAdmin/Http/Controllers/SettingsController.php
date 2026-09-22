@@ -59,6 +59,17 @@ class SettingsController extends Controller implements HasMiddleware
      */
     private const OWNED_BY_CONTROL_PANEL = 'screens';
 
+    /**
+     * ⚠️ ছাপার সুইচগুলোও এই পর্দার নয় — ২২ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ মালিকের নির্দেশ: *"ইনভয়েজের জন্য কন্ট্রোল প্যানেলে আলাদা ট্যাব
+     * করো … কি কি কলাম দিবে কোনটার পর কোনটা সব কিছুই নিয়ন্ত্রণ হবে
+     * সুইচে"*। ⛔ এই পর্দাটা সুইচ আর লেখার ঘর ছাড়া কিছু আঁকতে জানে না,
+     * আর **ক্রম** ওই দুইটার কোনোটাই নয় — উপরে-নিচে সরানোর একটা তালিকা
+     * লাগে। তাই ছাপার ভাগটা নিজের পর্দায়।
+     */
+    private const OWNED_BY_PRINT_SCREEN = 'print_paper';
+
     public function __construct(
         private readonly SettingsService $settings,
         private readonly ModuleRegistry $modules,
@@ -242,7 +253,11 @@ class SettingsController extends Controller implements HasMiddleware
         return array_filter(
             $this->settings->definitions(),
             fn (array $d) => ! ($d['menu'] ?? false)
-                && ($d['group'] ?? 'general') !== self::OWNED_BY_CONTROL_PANEL,
+                && ! in_array(
+                    $d['group'] ?? 'general',
+                    [self::OWNED_BY_CONTROL_PANEL, self::OWNED_BY_PRINT_SCREEN],
+                    true,
+                ),
         );
     }
 

@@ -1,0 +1,288 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Core\Engines\Print;
+
+use App\Core\Services\SettingsService;
+
+/**
+ * এই কাগজে কী আসবে, কোন কলাম, কোন ক্রমে — কোম্পানির চূড়ান্ত সিদ্ধান্ত।
+ *
+ * ── ⭐ মালিকের নির্দেশ, ২২ সেপ্টেম্বর ২০২৬ ────────────────────────────
+ * *"ইনভয়েজের জন্য কন্ট্রোল প্যানেলে আলাদা ট্যাব করো যাতে, ইনভয়েজে কি
+ * লোগো দেবে পস প্রিন্টারে কি লোগো দেবে, কোনটা সব আলাদা আলাদা ম্যানেজ
+ * করা যায়। … কি কি প্রিন্টে আসবে কি কি কলাম দিবে কোনটার পর কোনটা সব
+ * কিছুই নিয়ন্ত্রণ হবে সুইচে।"*
+ *
+ * ── ⚠️ কেন কাগজ ধরে ধরে, একটা সেটিং নয় ───────────────────────────────
+ * ⓘ একই দোকানে বিল যায় A4-তে আর কাউন্টারের রসিদ যায় রোলে। ⛔ একটামাত্র
+ * "লোগো দেখাও" সুইচ দিলে তার একটাকে বাঁচাতে গিয়ে অন্যটা নষ্ট হত — আর
+ * ঠিক এই কারণেই কাগজের মাপও কাগজ ধরে ধরে বসানো ([[PaperSize::chosen]])।
+ *
+ * ⭐ তাই প্রতিটা কাগজের নিজের প্রোফাইল: বিল · পস রসিদ · চালান · অর্ডার ·
+ * আদায়ের রসিদ।
+ *
+ * ── ⓘ উত্তরটা কোথা থেকে আসে ──────────────────────────────────────────
+ * তিন ধাপে, আর ক্রমটা গুরুত্বপূর্ণ:
+ *   ১. [[PrintFormat]] — বাছা রূপটা সব সুইচ ভরে দেয়
+ *   ২. কোম্পানির নিজের বদল — কেবল যেগুলো সত্যিই বদলানো হয়েছে
+ *   ৩. কাগজের প্রস্থ — ৫৮mm রোলে আটটা কলাম ধরে না, আর ধরালে পড়া যায় না
+ *
+ * ⚠️ তৃতীয় ধাপটা বাদ দেওয়া যায় না। ⓘ সুইচ দিয়ে সব কলাম চালু করে দেওয়া
+ * যায়, কিন্তু রোলের প্রস্থ কোনো সুইচ মানে না — না ছাঁটলে টাকার অঙ্কটাই
+ * কেটে যেত, আর কাটা অঙ্কের রসিদ কোনো রসিদই নয়।
+ */
+final class PrintProfile
+{
+    /** কোন কাগজ — প্রতিটার নিজের সুইচ। */
+    public const TARGETS = ['invoice', 'pos', 'challan', 'order', 'receipt'];
+
+    /**
+     * কাগজের যে অংশগুলো আলাদা করে চালু-বন্ধ করা যায়।
+     *
+     * ⚠️ এটা কেবল নাম নয় — [[shows()]] ছাড়া অন্য কোথাও এই তালিকার বাইরের
+     * নাম জিজ্ঞেস করলে চুপচাপ `false` ফিরত, আর একটা অংশ নীরবে উধাও হত।
+     * ⓘ সেজন্য [[EveryPrintPartIsRealTest]] মিলিয়ে দেখে প্রতিটা নাম
+     * কাগজে সত্যিই কোথাও ব্যবহার হয়।
+     */
+    public const PARTS = [
+        'logo',            // প্রতিষ্ঠানের লোগো
+        'company_name',    // প্রতিষ্ঠানের নাম
+        'address',         // ঠিকানা
+        'phone',           // ফোন
+        'bin',             // BIN
+        'title',           // কাগজের শিরোনাম — "বিক্রয় বিল"
+        'meta',            // উপরের ঘরগুলো — নম্বর, তারিখ, গ্রাহক
+        'band',            // ব্যান্ড-ভিত্তিক ভাগ ও উপ-মোট
+        'totals',          // টাকার সারিগুলো
+        'words',           // টাকাটা কথায়
+        'paid_table',      // আদায়ের ছক
+        'narration',       // মন্তব্য
+        'signatures',      // স্বাক্ষরের ঘর
+        'printed_at',      // কখন, কে ছেপেছেন
+        'vendor_line',     // নিচের হটলাইন
+    ];
+
+    /**
+     * পণ্যের ছকের কলাম — আর প্রতিটার ঘরের মাপ।
+     *
+     * ── ⚠️ মাপগুলো অনুমান নয়, মাপা ─────────────────────────────────────
+     * ⓘ টাকার ঘরগুলো mPDF-এর `GetStringWidth()` দিয়ে dejavusans-এ, ঘরের
+     * **নিজের** ফন্ট-মাপে মাপা হয়েছে (২১ সেপ্টেম্বর ২০২৬)। ⛔ প্রথমবার
+     * পাশের শিরোনামের ৯পয়েন্ট দেখে মাপা হয়েছিল, অথচ ঘরটা ছাপে
+     * `$paper->fontSize`-এ — ১০.৫% তফাত, আর ঠিক ততটুকুই উপচে পড়ত।
+     *
+     * ⓘ `null` মানে মাপ দেওয়া নেই — পণ্যের নাম বাকিটুকু নিয়ে নেয়।
+     *
+     * ── ⭐ থার্মালের দুইটা ঘর চওড়া হলো, ২২ সেপ্টেম্বর ২০২৬ ─────────────
+     * দর ১০ → ১৭মিমি, টাকা ১৪ → ১৫মিমি। ⓘ কারণটা মাপা: ঐ পাহারাটা
+     * বলল ৮০মিমিতে `12,345.60` লাগে ১৩.৩৫মিমি অথচ ঘরে ছিল ৯.২৪মিমি,
+     * আর `1,23,456` লাগে ১৩.৩৫ অথচ জায়গা ছিল ১৩.০০।
+     *
+     * ⚠️ জায়গাটা এসেছে পণ্যের নামের ঘর থেকে, আর সেটা মেপে নেওয়া: ৮০মিমি
+     * রোলে ছাপার প্রস্থ ৭২ — ১১ + ১৭ + ১৫ বাদ দিলে নামের জন্য ২৯মিমি
+     * থাকে (মেঝে ১৭)। ৫৮-তে তিনটা কলাম ধরে, তাই ৪৮ − ১১ − ১৫ = ২২মিমি
+     * (মেঝে ১৪)। ⛔ এর বেশি কাটলে পণ্য চেনাই যেত না।
+     *
+     * @return array<string, array{a4: ?string, thermal: ?string, num: bool, keep: int}>
+     */
+    public static function columnTable(): array
+    {
+        /*
+         * `keep` — সরু কাগজে কোনটা আগে যায়।
+         *
+         * ⭐ বড় সংখ্যা মানে বেশি জরুরি। ⓘ ৫৮mm রোলে তিনটা কলাম ধরে, তাই
+         * নাম · পরিমাণ · টাকা বাঁচে আর বাকিগুলো ঝরে। ⚠️ ক্রমটা মালিক
+         * বদলাতে পারেন, কিন্তু **কোনটা আগে ঝরবে** সেটা কাগজের প্রস্থের
+         * প্রশ্ন, পছন্দের নয়।
+         */
+        return [
+            'sl' => ['a4' => '10mm', 'thermal' => '4mm', 'num' => false, 'keep' => 2],
+            'code' => ['a4' => '22mm', 'thermal' => null, 'num' => false, 'keep' => 1],
+            'name' => ['a4' => null, 'thermal' => null, 'num' => false, 'keep' => 9],
+            'unit' => ['a4' => '16mm', 'thermal' => null, 'num' => false, 'keep' => 3],
+            'qty' => ['a4' => '20mm', 'thermal' => '11mm', 'num' => true, 'keep' => 8],
+            'free' => ['a4' => '16mm', 'thermal' => null, 'num' => true, 'keep' => 4],
+            'rate' => ['a4' => '32mm', 'thermal' => '17mm', 'num' => true, 'keep' => 6],
+            'amount' => ['a4' => '36mm', 'thermal' => '15mm', 'num' => true, 'keep' => 7],
+        ];
+    }
+
+    /** @return list<string> */
+    public static function columnNames(): array
+    {
+        return array_keys(self::columnTable());
+    }
+
+    private function __construct(
+        public readonly string $target,
+        public readonly PrintFormat $format,
+        /** @var list<string> */
+        private readonly array $parts,
+        /** @var list<string> */
+        private readonly array $columns,
+    ) {}
+
+    /**
+     * এই কাগজের প্রোফাইল — বাছা রূপ, তারপর কোম্পানির নিজের বদল।
+     *
+     * ⚠️ `null` আর `[]` এক নয়, আর তফাতটা এখানে দামি: ⓘ সেটিং না থাকা
+     * মানে *"রূপটা যা বলে তাই"*, আর একটা খালি তালিকা মানে *"কিছুই
+     * দেখাবে না"*। ⛔ দুইটাকে এক ধরলে কেউ সব সুইচ বন্ধ করে সেভ করার পর
+     * কাগজটা নীরবে আগের মতোই ছাপত, আর কারণটা কেউ খুঁজে পেত না।
+     */
+    public static function for(string $target, SettingsService $settings): self
+    {
+        $target = in_array($target, self::TARGETS, true) ? $target : 'invoice';
+
+        $format = PrintFormat::of((string) $settings->get(
+            "print.{$target}.format",
+            $target === 'pos' ? 'compact' : 'standard',
+        ));
+
+        $parts = $settings->get("print.{$target}.parts", null);
+        $columns = $settings->get("print.{$target}.columns", null);
+
+        return new self(
+            target: $target,
+            format: $format,
+            parts: is_array($parts) ? self::onlyKnown($parts, self::PARTS) : $format->parts,
+            columns: is_array($columns) ? self::onlyKnown($columns, self::columnNames()) : $format->columns,
+        );
+    }
+
+    /**
+     * সব কিছু দেখাও — যে কাগজ এখনো সুইচের আওতায় আসেনি তার জন্য।
+     *
+     * ── ⚠️ কেন একটা নিরপেক্ষ প্রোফাইল লাগে ───────────────────────────
+     * ⓘ ভাউচার, বেতনশিট আর লেবেল একই ছাপার ইঞ্জিন দিয়ে যায়, কিন্তু
+     * তাদের কোনো টার্গেট নেই। ⛔ ওদের জন্য "বিল"-এর প্রোফাইল ধরে নিলে
+     * কেউ বিলের একটা সুইচ বন্ধ করামাত্র **ভাউচারের কাগজও নীরবে বদলে
+     * যেত** — আর ঐ জোড়াটা কেউ অনুমান করতে পারত না।
+     *
+     * ⭐ তাই ওরা এটা পায়: সব অংশ চালু, চলতি কলাম-ক্রম, আর কোনো সেটিং
+     * পড়া হয় না। ⓘ অর্থাৎ যে কাগজ সুইচে আসেনি, সে **অবিকল আগের মতোই**।
+     */
+    public static function everything(): self
+    {
+        $standard = PrintFormat::of('standard');
+
+        return new self(
+            target: 'invoice',
+            format: $standard,
+            parts: self::PARTS,
+            columns: $standard->columns,
+        );
+    }
+
+    /**
+     * অচেনা নাম ছেঁটে ফেলা, কিন্তু **ক্রমটা রেখে**।
+     *
+     * ⓘ ক্রমটাই মালিকের *"কোনটার পর কোনটা"*, তাই `array_intersect` নয় —
+     * ওটা প্রথম তালিকার ক্রম রাখে, আর এখানে সেটাই চাই, কিন্তু
+     * পুনরাবৃত্তিও ছাঁটতে হয়। ⚠️ একটা কলাম দুইবার থাকলে ছকটা দুইবার
+     * আঁকত, আর যোগফল মেলাতে গিয়ে মানুষ পাগল হত।
+     *
+     * @param  list<string>  $wanted
+     * @param  list<string>  $known
+     * @return list<string>
+     */
+    private static function onlyKnown(array $wanted, array $known): array
+    {
+        $out = [];
+
+        foreach ($wanted as $name) {
+            if (is_string($name) && in_array($name, $known, true) && ! in_array($name, $out, true)) {
+                $out[] = $name;
+            }
+        }
+
+        return $out;
+    }
+
+    public function shows(string $part): bool
+    {
+        return in_array($part, $this->parts, true);
+    }
+
+    /** @return list<string> */
+    public function parts(): array
+    {
+        return $this->parts;
+    }
+
+    /**
+     * মালিক যে কলামগুলো বসিয়েছেন — কাগজের প্রস্থে ছাঁটার **আগে**।
+     *
+     * ⚠️ নিয়ন্ত্রণের পর্দা এটাই জিজ্ঞেস করে, [[columnsFor()]] নয়। ⓘ ওটা
+     * একটা নির্দিষ্ট কাগজে কী **ছাপা হবে** তা বলে — ৫৮মিমি রোলে পাঁচটা
+     * কলাম ঝরে যায়। ⛔ সেটিংসের পর্দায় ঐ উত্তরটা দেখালে মালিক নিজের
+     * বসানো কলামগুলোই আর দেখতে পেতেন না, আর ফিরিয়ে আনার পথও থাকত না।
+     *
+     * @return list<string>
+     */
+    public function chosenColumns(): array
+    {
+        return $this->columns;
+    }
+
+    /**
+     * এই কাগজে যে কলামগুলো সত্যিই ছাপা হবে — মালিকের ক্রমে, প্রস্থে ছাঁটা।
+     *
+     * ── ⚠️ টাকার কলাম কেবল সুইচে নয়, ডকুমেন্টেও ──────────────────────
+     * ⓘ গেটপাস ও ডেলিভারি অর্ডারে দাম থাকে না, আর সেটা ইচ্ছাকৃত: ঐ কাগজ
+     * দারোয়ান ও চালকের হাতে যায়। ⛔ সুইচ দিয়ে দাম ফিরিয়ে আনতে দিলে
+     * একদিন কেউ ভুল করে চালু করত, আর কোন গ্রাহক কী দরে কেনেন তা গাড়ি
+     * পর্যন্ত পৌঁছে যেত। তাই `showMoney` সুইচের **উপরে**।
+     *
+     * @return list<string>
+     */
+    public function columnsFor(PaperSize $paper, bool $showMoney, bool $hasFree): array
+    {
+        $table = self::columnTable();
+
+        $wanted = array_values(array_filter($this->columns, function (string $name) use ($table, $paper, $showMoney, $hasFree) {
+            if (! $showMoney && in_array($name, ['rate', 'amount'], true)) {
+                return false;
+            }
+
+            /*
+             * ⭐ ফ্রি-র কলাম কেবল তখনই, যখন এই কাগজে সত্যিই কোনো ফ্রি আছে।
+             *
+             * ⓘ ১৮ সেপ্টেম্বরের নিয়মটাই — নাহলে প্রতিটা চালানে একটা
+             * শূন্যের কলাম জায়গা নিত।
+             */
+            if ($name === 'free' && ! $hasFree) {
+                return false;
+            }
+
+            /* সরু কাগজে যে কলামের জন্য কোনো মাপই বসানো হয়নি, সে ওখানে যায় না */
+            return ! $paper->isThermal || $name === 'name' || $table[$name]['thermal'] !== null;
+        }));
+
+        /*
+         * এখনো বেশি হলে কম-জরুরিগুলো ঝরে।
+         *
+         * ⚠️ ছাঁটাইটা ক্রম ধরে নয়, `keep` ধরে — ⓘ মালিক নামটা শেষে বসালেও
+         * নামটাই থাকবে, কারণ নাম ছাড়া রসিদ পড়াই যায় না।
+         */
+        $budget = $paper->maxColumns();
+
+        if (count($wanted) <= $budget) {
+            return $wanted;
+        }
+
+        $ranked = $wanted;
+        usort($ranked, fn ($a, $b) => $table[$b]['keep'] <=> $table[$a]['keep']);
+        $kept = array_slice($ranked, 0, $budget);
+
+        return array_values(array_filter($wanted, fn ($name) => in_array($name, $kept, true)));
+    }
+
+    /** @return array{a4: ?string, thermal: ?string, num: bool, keep: int} */
+    public function column(string $name): array
+    {
+        return self::columnTable()[$name];
+    }
+}

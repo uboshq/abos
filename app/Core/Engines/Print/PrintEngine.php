@@ -43,6 +43,16 @@ final class PrintEngine
         ?string $locale = null,
         ?Company $company = null,
         ?string $watermark = null,
+
+        /*
+         * ⭐ কোন কাগজের সুইচগুলো মানা হবে — ২২ সেপ্টেম্বর ২০২৬।
+         *
+         * ⚠️ নাল মানে *"এই কাগজ এখনো সুইচের আওতায় আসেনি"*, আর তখন
+         * [[PrintProfile::everything()]] — সব চালু, কোনো সেটিং পড়া হয়
+         * না। ⛔ এখানে চুপচাপ `'invoice'` ধরে নিলে বিলের একটা সুইচ বন্ধ
+         * করামাত্র ভাউচার ও বেতনশিটের কাগজও বদলে যেত।
+         */
+        ?string $profile = null,
     ): string {
         $size = PaperSize::of($paper);
         $locale = $locale ?? app()->getLocale();
@@ -63,6 +73,9 @@ final class PrintEngine
                 'paper' => $size,
                 'locale' => $locale,
                 'settings' => $this->settings,
+                'profile' => $profile === null
+                    ? PrintProfile::everything()
+                    : PrintProfile::for($profile, $this->settings),
             ])->render();
         } finally {
             app()->setLocale($previous);

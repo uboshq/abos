@@ -13,6 +13,7 @@ use App\Modules\SystemAdmin\Http\Controllers\OwnershipController;
 use App\Modules\SystemAdmin\Http\Controllers\ReportDownloadController;
 use App\Modules\SystemAdmin\Http\Controllers\ReportScheduleController;
 use App\Modules\SystemAdmin\Http\Controllers\RoleController;
+use App\Modules\SystemAdmin\Http\Controllers\PrintControlController;
 use App\Modules\SystemAdmin\Http\Controllers\SettingsController;
 use App\Modules\SystemAdmin\Http\Controllers\SetupController;
 use App\Modules\SystemAdmin\Http\Controllers\UserController;
@@ -126,6 +127,19 @@ Route::middleware('auth')->prefix('system')->group(function () {
      */
     Route::get('/settings', [SettingsController::class, 'edit'])->name('settings');
     Route::put('/settings', [SettingsController::class, 'update'])->name('settings.update');
+
+    /*
+     * ⭐ ছাপার নিয়ন্ত্রণ — মালিকের নির্দেশ, ২২ সেপ্টেম্বর ২০২৬।
+     *
+     * *"ইনভয়েজের জন্য কন্ট্রোল প্যানেলে আলাদা ট্যাব করো … কি কি প্রিন্টে
+     * আসবে কি কি কলাম দিবে কোনটার পর কোনটা সব কিছুই নিয়ন্ত্রণ হবে সুইচে।"*
+     *
+     * ⓘ সেটিংসের পাশে, তার ভিতরে নয়: ঐ পর্দা সুইচ ও লেখার ঘর আঁকে, আর
+     * **ক্রম** ওই দুইটার কোনোটাই নয়। ⚠️ একই চাবি (`settings.manage`),
+     * কারণ প্রশ্নটা একই — প্রতিষ্ঠান তার কাগজ কেমন চায়।
+     */
+    Route::get('/print-control', [PrintControlController::class, 'edit'])->name('print_control');
+    Route::put('/print-control', [PrintControlController::class, 'update'])->name('print_control.update');
 
     /*
      * নির্ধারিত রিপোর্ট — সূচি ব্যবস্থাপনা ও ফাইল নামানো।

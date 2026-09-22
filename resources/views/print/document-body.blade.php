@@ -14,11 +14,6 @@
         $thermal = $paper->isThermal;
         $columns = $paper->maxColumns();
 
-        // ৫৮mm-এ তিনটা কলাম, ৮০mm-এ চারটা, A4-তে সবগুলো
-        $showUnit = $columns >= 8;
-        $showRate = $doc->showMoney && $columns >= 4;
-        $showAmount = $doc->showMoney;
-
         /*
          * ⭐ ফ্রি পরিমাণ আলাদা — ১৮ সেপ্টেম্বর ২০২৬, মালিকের নির্দেশে।
          *
@@ -43,8 +38,54 @@
             fn (array $line) => ($line['free'] ?? '') !== '' && $line['free'] !== '0',
         );
 
-        $showFree = $hasFree && $columns >= 8;
-        $freeInNote = $hasFree && ! $showFree;
+        /*
+         * ⭐ কোন কলাম, কোন ক্রমে — মালিকের সুইচ থেকে, ২২ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ আগে এখানে সাতটা হাতে লেখা `$show…` ছিল, আর ক্রমটা মার্কআপেই
+         * বাঁধা ছিল। ⚠️ ক্রম বদলাতে হলে ছয় জায়গায় কেটে বসাতে হত — একবার
+         * শিরোনামে, একবার ঘরে — আর দুইটা মিলিয়ে না রাখলে **কাগজের
+         * শিরোনাম এক কলামের, ঘরটা আরেকটার** হত। ⛔ ঐ ভুলটা চোখে ধরা
+         * পড়ত না, কারণ সংখ্যাগুলো ঠিক জায়গাতেই দেখাত, কেবল নাম ভুল।
+         *
+         * ⭐ এখন একটাই তালিকা, আর শিরোনাম ও ঘর দুইটাই ওটাকেই লুপ করে —
+         * দুইটার আলাদা হওয়ার পথটাই বন্ধ।
+         */
+        $cols = $profile->columnsFor($paper, $doc->showMoney, $hasFree);
+
+        /* সরু কাগজে ফ্রি-র কলাম বাদ পড়ে, তাই সংখ্যাটা নামের নিচে যায় — হারায় না */
+        $freeInNote = $hasFree && ! in_array('free', $cols, true);
+
+        /*
+         * ⭐ ব্যান্ড-ভিত্তিক ভাগ — মালিকের নমুনা, ২২ সেপ্টেম্বর ২০২৬।
+         *
+         * *"এই রকম একটি ফরমেট রাখ যাতে ব্যান্ড ওয়াইজ দেখা যায়"* — ঐ
+         * কাগজে সারিগুলো ব্র্যান্ড ধরে দল বাঁধা, আর প্রতিটা দলের শেষে
+         * একটা উপ-মোট: *"Jabed Food Sub.Total: 46,665.02"*।
+         *
+         * ⓘ কাজটা চোখের: পনেরো সারির বিলে কোন কোম্পানির মাল কত টাকার
+         * হলো, সেটা যোগ না করেই দেখা যায় — আর পরিবেশকের হিসাব ঐ
+         * সংখ্যাটা ধরেই মেলে।
+         *
+         * ⚠️ সারিগুলো **সাজানো হয় না**, কেবল পাশাপাশি দল দেখে উপ-মোট
+         * বসে। ⛔ সাজাতে গেলে কাগজের ক্রম আর বিলে লেখা ক্রম আলাদা হয়ে
+         * যেত, আর গুদামের লোক সারি ধরে মাল মেলাতে গিয়ে হারিয়ে যেতেন।
+         */
+        /*
+         * ⭐ যোগটা এখানে হয় না — সারির গায়েই লেখা আসে।
+         *
+         * ⓘ [[SalesPrintController::closeEachBand()]] প্রতিটা দলের শেষ
+         * সারিতে `band_total` বসিয়ে দেয়, `bcadd`-এ, **কাঁচা** অঙ্ক ধরে।
+         *
+         * ⛔ প্রথম খসড়ায় যোগটা এই ফাইলেই হচ্ছিল, কাগজে ছাপা লেখা থেকে
+         * কমা ছেঁটে। ⚠️ ওটা দুইভাবে ভাঙত: বাংলা অঙ্কে `bcadd` কিছুই
+         * বুঝত না, আর থার্মালে পয়সা ছাঁটা থাকে বলে যোগফলটা কয়েক পয়সা
+         * কম আসত — ⓘ আর কয়েক পয়সার ভুল ঠিক ততটাই ভুল, কেবল ধরা পড়তে
+         * বেশি সময় নেয়।
+         */
+        $banded = $profile->shows('band')
+            && ! $thermal
+            && $doc->showMoney
+            && collect($doc->lines)->contains(fn (array $line) => ($line['band_total'] ?? '') !== '');
     @endphp
 
     @if ($doc->notice)
@@ -57,6 +98,7 @@
         </div>
     @endif
 
+    @if ($profile->shows('meta'))
     <table class="meta">
         @php
             $metaRows = collect($doc->meta)->filter(fn ($value) => filled($value));
@@ -94,98 +136,116 @@
             </tr>
         @endforeach
     </table>
+    @endif
 
     @if ($doc->lines !== [])
         <table class="lines">
             <thead>
                 <tr>
-                    <th style="width: {{ $thermal ? '4mm' : '10mm' }}">#</th>
-                    <th>{{ __('core.print.item') }}</th>
-                    @if ($showUnit)
-                        <th style="width: 16mm">{{ __('core.print.unit') }}</th>
-                    @endif
-                    <th class="num" style="width: {{ $thermal ? '11mm' : '20mm' }}">{{ __('core.print.qty') }}</th>
-                    @if ($showFree)
-                        <th class="num" style="width: 16mm">{{ __('core.print.free_qty') }}</th>
-                    @endif
-                    {{-- ⭐ টাকার ঘর দুইটা চৌড়া — ২১ সেপ্টেম্বর ২০২৬।
+                    @foreach ($cols as $name)
+                        @php $col = $profile->column($name); @endphp
 
-                         লাখ-কোটির কমায় সংখ্যা লম্বা হয় (প্রতি লাখে একটা করে কমা),
-                         আর `.num`-এ `white-space: nowrap` — না ধরলে লেখাটা ঘর ছাড়িয়ে
-                         পাশের ঘরে ওঠে। ⛔ ভাঙে না, চুপচাপ বিশ্রী হয়।
-
-                         ── ⚠️ মাপা হয়েছে ঘরের নিজের মাপে, শিরোনামের মাপে নয় ──────
-                         ⛔ প্রথমবার ৯পয়েন্টে মেপে ভুল মাপ বসানো হয়েছিল — `th` ৯পয়েন্টে,
-                         কিন্তু `td`-তে কোনো `font-size` নেই, তাই সে `body` থেকে পায়
-                         (`$paper->fontSize` — A4-তে ১০)। ⓘ [[abos-77]] মিলিয়ে দেখে ধরেছে।
-
-                         mPDF-এর `GetStringWidth()` দিয়ে মাপা, dejavusans, ঘরের নিজের মাপে:
-                           A4 ১০pt   `12,31,87,500.00` = ২৯.২mm → ৩৬মিমি ঘরে ধরে (১২ কোটি)
-                           ৮০mm ৮.৫pt `1,23,456.00`     = ১৮.১mm → ২১মিমি ঘরে ধরে (এক লাখ)
-                           ৫৮ mm ৭.৫pt `12,34,567.00`    = ১৭.৭mm → ২১মিমি ঘরে ধরে (১২ লাখ)
-
-                         ⚠️ থার্মালে এর বেশি বাড়ানো যায় না: ৮০mm-এ পণ্যের ঘর নেমে ১৭mm,
-                         ৫৮-এ ১৪mm — নামটা আরও ছোট করলে পণ্য চেনাই যাবে না। ⓘ তার
-                         বেশি দরকার হলে প্রশ্নটা আর মাপের নয় — রসিদে পয়সার `.00`
-                         রাখা হবে কি না, আর সেটা মালিকের সিদ্ধান্ত। --}}
-                    @if ($showRate)
-                        <th class="num" style="width: {{ $thermal ? '10mm' : '32mm' }}">{{ __('core.print.rate') }}</th>
-                    @endif
-                    @if ($showAmount)
-                        <th class="num" style="width: {{ $thermal ? '14mm' : '36mm' }}">{{ __('core.print.amount') }}</th>
-                    @endif
+                        {{-- ⓘ ঘরের মাপগুলো [[PrintProfile::columnTable()]]-এ, আর ওগুলো
+                             অনুমান নয় — mPDF-এর `GetStringWidth()` দিয়ে dejavusans-এ,
+                             ঘরের নিজের ফন্ট-মাপে মাপা। ⚠️ প্রথমবার পাশের শিরোনামের
+                             ৯পয়েন্ট দেখে মাপা হয়েছিল, অথচ ঘরটা ছাপে `$paper->fontSize`-এ
+                             — ১০.৫% তফাত, আর ঠিক ততটুকুই উপচে পড়ত। --}}
+                        <th @class(['num' => $col['num']])
+                            @if ($col[$thermal ? 'thermal' : 'a4'] !== null)
+                                style="width: {{ $col[$thermal ? 'thermal' : 'a4'] }}"
+                            @endif>{{ __('core.print.column.'.$name) }}</th>
+                    @endforeach
                 </tr>
             </thead>
 
             <tbody>
                 @foreach ($doc->lines as $index => $line)
-                    <tr>
-                        <td>{{ $index + 1 }}</td>
-                        <td>
-                            {{ $line['name'] }}
+                    <tr @class(['alt' => $profile->format->zebra && $index % 2 === 1])>
+                        @foreach ($cols as $name)
+                            @php $col = $profile->column($name); @endphp
 
-                            {{--
-                                লাইনের নিচের ছোট লেখা — ব্যাচ ও মেয়াদ।
+                            <td @class(['num' => $col['num']])>
+                                @switch($name)
+                                    @case('sl')
+                                        {{ $index + 1 }}
+                                        @break
 
-                                ── কেন আলাদা কলাম নয় ────────────────────
-                                সরু কাগজে (৫৮mm) কলামের সংখ্যাই বাজেট।
-                                ব্যাচের জন্য একটা কলাম কাটলে পণ্যের নামটা
-                                ভেঙে দুই-তিন লাইনে যেত, আর নামটাই সবচেয়ে
-                                বেশি পড়া হয়।
+                                    @case('code')
+                                        {{ $line['code'] ?? '' }}
+                                        @break
 
-                                খালি হলে কিছুই আসে না, তাই যে ব্যবসায় লট
-                                ধরা হয় না তার কাগজ অবিকল আগের মতো।
-                            --}}
-                            @if (($line['note'] ?? '') !== '')
-                                <div class="note">{{ $line['note'] }}</div>
-                            @endif
+                                    @case('name')
+                                        {{--
+                                            ⓘ কোডের নিজের কলাম না থাকলে কোডটা নামের সাথেই
+                                            বসে — ⚠️ নাহলে যে কাগজে কোডের কলাম বন্ধ, সেখান
+                                            থেকে কোডটা নীরবে উধাও হত, আর গুদামে মাল মেলানো
+                                            হয় কোড ধরে, নাম ধরে নয়।
+                                        --}}
+                                        {{ ($line['code'] ?? '') !== '' && ! in_array('code', $cols, true)
+                                            ? $line['code'].' - '.$line['name']
+                                            : $line['name'] }}
 
-                            {{-- ⭐ সরু কাগজে ফ্রি-টা এখানে — কলাম নেই, তবু
-                                 সংখ্যাটা হারায় না। ⓘ পাশের `$showFree`-এর মন্তব্য দেখুন। --}}
-                            @if ($freeInNote && ($line['free'] ?? '') !== '' && $line['free'] !== '0')
-                                <div class="note">{{ __('core.print.free_qty') }}: {{ $line['free'] }}</div>
-                            @endif
-                        </td>
-                        @if ($showUnit)
-                            <td>{{ $line['unit'] }}</td>
-                        @endif
-                        <td class="num">{{ $line['qty'] }}</td>
-                        @if ($showFree)
-                            <td class="num">{{ ($line['free'] ?? '') !== '' && $line['free'] !== '0' ? $line['free'] : '' }}</td>
-                        @endif
-                        @if ($showRate)
-                            <td class="num">{{ $line['rate'] }}</td>
-                        @endif
-                        @if ($showAmount)
-                            <td class="num">{{ $paper->money($line['amount']) }}</td>
-                        @endif
+                                        {{--
+                                            লাইনের নিচের ছোট লেখা — ব্যাচ ও মেয়াদ।
+
+                                            ── কেন আলাদা কলাম নয় ────────────────────
+                                            সরু কাগজে (৫৮mm) কলামের সংখ্যাই বাজেট।
+                                            ব্যাচের জন্য একটা কলাম কাটলে পণ্যের নামটা
+                                            ভেঙে দুই-তিন লাইনে যেত, আর নামটাই সবচেয়ে
+                                            বেশি পড়া হয়।
+
+                                            খালি হলে কিছুই আসে না, তাই যে ব্যবসায় লট
+                                            ধরা হয় না তার কাগজ অবিকল আগের মতো।
+                                        --}}
+                                        @if (($line['note'] ?? '') !== '')
+                                            <div class="note">{{ $line['note'] }}</div>
+                                        @endif
+
+                                        {{-- ⭐ সরু কাগজে ফ্রি-টা এখানে — কলাম নেই, তবু
+                                             সংখ্যাটা হারায় না। --}}
+                                        @if ($freeInNote && ($line['free'] ?? '') !== '' && $line['free'] !== '0')
+                                            <div class="note">{{ __('core.print.free_qty') }}: {{ $line['free'] }}</div>
+                                        @endif
+                                        @break
+
+                                    @case('unit')
+                                        {{ $line['unit'] }}
+                                        @break
+
+                                    @case('qty')
+                                        {{ $line['qty'] }}
+                                        @break
+
+                                    @case('free')
+                                        {{ ($line['free'] ?? '') !== '' && $line['free'] !== '0' ? $line['free'] : '' }}
+                                        @break
+
+                                    @case('rate')
+                                        {{ $line['rate'] }}
+                                        @break
+
+                                    @case('amount')
+                                        {{ $paper->money($line['amount']) }}
+                                        @break
+                                @endswitch
+                            </td>
+                        @endforeach
                     </tr>
+
+                    {{-- দলের শেষ সারি — তার নিচেই উপ-মোট --}}
+                    @if ($banded && ($line['band_total'] ?? '') !== '')
+                        @include('print.partials.band-total', [
+                            'label' => $line['group'] ?? '',
+                            'amount' => $line['band_total'],
+                            'span' => count($cols),
+                        ])
+                    @endif
                 @endforeach
             </tbody>
         </table>
     @endif
 
-    @if ($doc->showMoney && $doc->totals !== [])
+    @if ($doc->showMoney && $doc->totals !== [] && $profile->shows('totals'))
         <table class="totals">
             @foreach ($doc->totals as $label => $value)
                 <tr @if ($loop->last) class="grand" @endif>
@@ -196,19 +256,29 @@
         </table>
     @endif
 
-    @if ($doc->showMoney && $doc->amountInWords)
+    @if ($doc->showMoney && $doc->amountInWords && $profile->shows('words'))
         <div class="words">
             <strong>{{ __('core.print.in_words') }}:</strong> {{ $doc->amountInWords }}
         </div>
     @endif
 
-    @if ($doc->narration)
+    {{-- ⭐ আদায়ের ছক — কাগজের বাঁ-নিচে, টাকার সারিগুলোর পরে।
+
+         ⓘ ছকটা আঁকে [[print/partials/payments]], আর সারিগুলো তোলে
+         [[SalesPrintController::paymentsAgainst()]]। ⚠️ খালি হলে
+         partial-টা নিজেই কিছু আঁকে না, তাই চালান ও অর্ডারের কাগজ
+         অপরিবর্তিত। --}}
+    @if ($profile->shows('paid_table'))
+        @include('print.partials.payments', ['payments' => $doc->payments])
+    @endif
+
+    @if ($doc->narration && $profile->shows('narration'))
         <div class="words">
             <strong>{{ __('core.table.narration') }}:</strong> {{ $doc->narration }}
         </div>
     @endif
 
-    @if ($doc->signatures !== [])
+    @if ($doc->signatures !== [] && $profile->shows('signatures'))
         <table class="signatures">
             <tr>
                 @php

@@ -7,6 +7,7 @@ namespace App\Modules\Sales\Http\Controllers;
 use App\Core\Engines\Print\PaperSize;
 use App\Core\Engines\Print\PrintableDocument;
 use App\Core\Engines\Print\PrintEngine;
+use App\Core\Engines\Print\PrintProfile;
 use App\Core\Services\PaperTrail;
 use App\Core\Services\SettingsService;
 use App\Core\Support\DateFormat;
@@ -14,6 +15,7 @@ use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Http\Controllers\Controller;
 use App\Models\DocumentDelivery;
+use App\Modules\Accounts\Models\Account;
 use App\Modules\Inventory\Services\IssuedLots;
 use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\DeliveryChallan;
@@ -104,7 +106,31 @@ class SalesPrintController extends Controller implements HasMiddleware
         $doc = new PrintableDocument(
             title: __('sales::doc.invoice'),
             meta: $this->invoiceMeta($invoice),
-            lines: $this->productLines($invoice->lines, 'qty', $this->lotsForInvoice($invoice), band: true),
+            /*
+             * ⭐ ব্র্যান্ড ধরে ভাগ — মালিকের নির্দেশ, ২২ সেপ্টেম্বর ২০২৬।
+             *
+             * ⚠️ সুইচটা এখনো এখানে বাঁধা (`band: true`) — ছাপার সব সুইচ
+             * এক জায়গায় আনার কাজ চলছে (abos-8b, `PrintProfile`), আর
+             * সেটা এলে এই লাইনটা ওখান থেকে উত্তর নেবে।
+             *
+             * ⓘ ততদিন বিলে ভাগটা চালু, আর সেটাই মালিকের চাওয়া — তিনি
+             * বিলের কাগজ দেখিয়েই বলেছেন।
+             */
+            lines: $this->productLines(
+                $invoice->lines,
+                'qty',
+                $this->lotsForInvoice($invoice),
+                /*
+                 * ⛔ এখানে হাতে লেখা `band: true` ছিল — ২২ সেপ্টেম্বর ২০২৬-এ সরানো।
+                 *
+                 * ⚠️ তাতে সুইচ দাঁড়াত **দুইটা**: এখানে একটা, আর
+                 * [[PrintProfile]]-এ মালিকের একটা। ⓘ মালিক তাঁরটা চালু
+                 * করলে কিছুই হত না, কারণ এখানকারটা বন্ধ — আর উল্টোটাও।
+                 * ⛔ কোনো ভুল দেখা যেত না, কেবল সুইচটা কাজ করত না, আর
+                 * কারণটা দুই ফাইল দূরে।
+                 */
+                band: $this->profileFor($request, 'sales.print.paper.invoice')->shows('band'),
+            ),
 
             /*
              * ⭐ বিলের নিচে টাকার পুরো গল্প — মালিকের নমুনা, ২২ সেপ্টেম্বর ২০২৬।
@@ -113,10 +139,26 @@ class SalesPrintController extends Controller implements HasMiddleware
              * হাতে নিয়ে সবার আগে যে প্রশ্নটা করেন — *"আমার মোট কত
              * পাওনা?"* — তার উত্তর কাগজে ছিলই না।
              */
-            totals: $this->invoiceTotals($invoice),
+            totals: $this->invoiceTotals(
+                $invoice,
+                roll: PaperSize::of(PaperSize::chosen(
+                    $request->query('paper'),
+                    $this->settings->get('sales.print.paper.invoice'),
+                ))->isThermal,
+            ),
 
             signatures: ['core.print.prepared_by', 'core.print.received_by'],
             narration: $invoice->narration,
+
+            /*
+             * ⭐ আদায়ের ছক — মালিকের নমুনা, ২২ সেপ্টেম্বর ২০২৬।
+             *
+             * ⚠️ সুইচটা এখনো এখানে বাঁধা নয়: [[PrintProfile]]-এর কাজ
+             * চলছে (abos-8b), আর ওটা এলে ছকটাও ওখান থেকে উত্তর নেবে।
+             * ⓘ ততদিন খালি হলে ছকটা এমনিতেই আঁকা হয় না, তাই যে বিলে
+             * একটাও জমা নেই সেখানে কাগজ আগের মতোই থাকে।
+             */
+            payments: $this->paymentsAgainst($invoice),
         );
 
         /*
@@ -163,13 +205,12 @@ class SalesPrintController extends Controller implements HasMiddleware
          * ⭐ ধরা পড়েছে সত্যিকারের একটা বিক্রয় করে, কারণ পাহারাটা কেবল
          * **চালান-সহ** বিলে জাগে — আর সেটাই কাউন্টারের একমাত্র পথ।
          */
-        /* ⓘ `brandRow`-ও সাথে — নাহলে প্রতিটা সারিতে একটা করে কোয়েরি যেত */
-        $invoice->load(['lines.product.unit', 'lines.product.brandRow', 'lines.challanLine', 'customer', 'branch']);
+        $invoice->load(['lines.product.unit', 'lines.challanLine', 'customer', 'branch']);
 
         $doc = new PrintableDocument(
             title: __('sales::doc.invoice'),
             meta: $this->invoiceMeta($invoice),
-            lines: $this->productLines($invoice->lines, 'qty', $this->lotsForInvoice($invoice), band: true),
+            lines: $this->productLines($invoice->lines, 'qty', $this->lotsForInvoice($invoice)),
             totals: $this->totals($invoice),
             signatures: [],
             narration: $invoice->narration,
@@ -203,7 +244,7 @@ class SalesPrintController extends Controller implements HasMiddleware
         return $this->pdf(
             $request, $doc, (string) $challan->total, $challan->document_no,
             type: PrintJob::CHALLAN, id: $challan->id, document: $challan,
-            paperSetting: 'sales.print.paper.challan',
+            paperSetting: 'sales.print.paper.challan', target: 'challan',
         );
     }
 
@@ -231,7 +272,7 @@ class SalesPrintController extends Controller implements HasMiddleware
         );
 
         return $this->pdf($request, $doc, '0', $challan->document_no, document: $challan,
-            paperSetting: 'sales.print.paper.challan');
+            paperSetting: 'sales.print.paper.challan', target: 'challan');
     }
 
     public function order(Request $request, SalesOrder $order): Response
@@ -253,7 +294,7 @@ class SalesPrintController extends Controller implements HasMiddleware
         );
 
         return $this->pdf($request, $doc, (string) $order->total, $order->document_no, document: $order,
-            paperSetting: 'sales.print.paper.order');
+            paperSetting: 'sales.print.paper.order', target: 'order');
     }
 
     /**
@@ -293,7 +334,7 @@ class SalesPrintController extends Controller implements HasMiddleware
         );
 
         return $this->pdf($request, $doc, '0', $order->document_no, document: $order,
-            paperSetting: 'sales.print.paper.order');
+            paperSetting: 'sales.print.paper.order', target: 'order');
     }
 
     /** টাকার রসিদ — আদায়ের কাগজ। */
@@ -323,7 +364,7 @@ class SalesPrintController extends Controller implements HasMiddleware
         );
 
         return $this->pdf($request, $doc, (string) $collection->amount, $collection->document_no, document: $collection,
-            paperSetting: 'sales.print.paper.receipt');
+            paperSetting: 'sales.print.paper.receipt', target: 'receipt');
     }
 
     // ── সহায়ক ───────────────────────────────────────────────────────────
@@ -393,6 +434,116 @@ class SalesPrintController extends Controller implements HasMiddleware
     }
 
     /**
+     * ⓘ টাকার খাতার নাম — একবার তুলে মনে রাখা।
+     *
+     * ⚠️ ভাউচারে খাতার সম্পর্ক নেই, কেবল `money_account_id` ঘরটা আছে।
+     * ⛔ সারি ধরে ধরে কোয়েরি করলে দশটা রসিদে দশটা কোয়েরি লাগত, আর
+     * কাগজ ছাপা এমনিতেই ধীর।
+     *
+     * @var array<int, string>
+     */
+    private array $accountNames = [];
+
+    private function accountName(int $id): string
+    {
+        if ($id === 0) {
+            return '';
+        }
+
+        return $this->accountNames[$id] ??= (string) (
+            Account::query()->whereKey($id)->first()?->name() ?? ''
+        );
+    }
+
+    /**
+     * ⭐ এই বিলের বিপরীতে যে টাকাগুলো এসেছে — কাগজেই, সারি ধরে।
+     *
+     * ── ⓘ মালিকের নমুনা (২২ সেপ্টেম্বর ২০২৬) ─────────────────────────
+     * বিলের বাঁ-নিচে একটা ছোট ছক: ক্রম · লেনদেন নম্বর · তারিখ · কোন পথে ·
+     * বিবরণ · টাকা। ⚠️ উদ্দেশ্য একটাই — গ্রাহক যেন ফোন করে জিজ্ঞেস না
+     * করেন *"আমার ঐ জমাটা বসেছে কি না"*।
+     *
+     * ── ⛔ সবচেয়ে বড় ফাঁদ, আর সেটা এড়ানোর একমাত্র উপায় ───────────────
+     * ⚠️ গ্রাহকের **সব** জমা ছাপলে ছকের যোগফল আর উপরের "পরিশোধ" লাইনটা
+     * দুই কথা বলত — আর পাঠক ভাবতেন কোথাও টাকা দুইবার গোনা হয়েছে।
+     *
+     * ⭐ তাই ছকটা হুবহু সেই দুইটা উৎস থেকেই আসে যেগুলো দিয়ে
+     * [[SalesInvoice::collectedAmount()]] অঙ্কটা বানায়:
+     *
+     *   ১. এই বিলে কাটা আদায়ের সারি (`collectionLines`, খাতায় বসা)
+     *   ২. এই বিলের বিপরীতে রসিদ ভাউচার (`receiptVouchers`, খাতায় বসা)
+     *
+     * ⓘ অর্থাৎ **যোগফল মেলাটা গঠনগত**, কাকতালীয় নয় — আর পাহারাটা ঠিক
+     * সেটাই মাপে।
+     *
+     * @return list<array{no: int, ref: string, date: string, method: string, narration: string, amount: string}>
+     */
+    private function paymentsAgainst(SalesInvoice $invoice): array
+    {
+        $rows = [];
+
+        foreach ($invoice->collectionLines()->with('collection.account')->get() as $line) {
+            $collection = $line->collection;
+
+            // ⚠️ খসড়া আদায় টাকা নয় — শর্তটা যোগফলেরও হুবহু।
+            /*
+             * ⛔ [[DocumentStatus::POSTED]] একটা **তালিকা** (`confirmed` +
+             * `closed`), একটা মান নয়।
+             *
+             * ⚠️ প্রথম খসড়ায় `!==` দিয়ে মেলানো হয়েছিল, আর তুলনাটা সবসময়
+             * সত্যি হত — অর্থাৎ প্রতিটা সারি বাদ পড়ত আর **ছকটা কাগজে
+             * চিরকাল খালি আসত**। ⓘ পাতা ২০০ দিত, দেখতেও ঠিক লাগত; ধরা
+             * পড়েছে কেবল *"দুইটা জমা বসালাম, ছকে দুইটা আছে তো?"* প্রশ্নে।
+             */
+            if ($collection === null || ! in_array($collection->status, DocumentStatus::POSTED, true)) {
+                continue;
+            }
+
+            $rows[] = [
+                'ref' => (string) $collection->document_no,
+                'date' => $collection->trx_date,
+                'method' => (string) ($collection->account?->name() ?? ''),
+                'narration' => (string) ($collection->narration ?? ''),
+                'amount' => (string) $line->amount,
+            ];
+        }
+
+        foreach ($invoice->receiptVouchers()->get() as $voucher) {
+            $rows[] = [
+                'ref' => (string) $voucher->document_no,
+                'date' => $voucher->trx_date,
+
+                /*
+                 * ⓘ "কোন পথে" — খাতার নাম, কারণ ওটাই মানুষ চেনে
+                 * ("নগদ", "ব্র্যাক ব্যাংক")। ⚠️ যন্ত্রের নাম
+                 * (`money_kind`) ছাপলে গ্রাহকের কাছে ওটা কিছুই বলত না।
+                 */
+                'method' => $this->accountName((int) $voucher->money_account_id),
+                'narration' => (string) ($voucher->narration ?? ''),
+                'amount' => (string) $voucher->amount,
+            ];
+        }
+
+        // ⓘ তারিখের ক্রমে — গ্রাহক কাগজটা উপর থেকে নিচে পড়েন।
+        usort($rows, fn (array $a, array $b) => [$a['date'], $a['ref']] <=> [$b['date'], $b['ref']]);
+
+        $out = [];
+
+        foreach ($rows as $i => $row) {
+            $out[] = [
+                'no' => $i + 1,
+                'ref' => $row['ref'],
+                'date' => DateFormat::format($row['date']),
+                'method' => $row['method'],
+                'narration' => $row['narration'],
+                'amount' => $this->money($row['amount']),
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
      * বিলের নিচের টাকার সারিগুলো — মালিকের নমুনার ক্রমেই।
      *
      * ⓘ উপ-মোট → ছাড় → ভ্যাট → মোট (উপরের [[totals()]] থেকে), তারপর
@@ -410,7 +561,7 @@ class SalesPrintController extends Controller implements HasMiddleware
      *
      * @return array<string, string>
      */
-    private function invoiceTotals(SalesInvoice $invoice): array
+    private function invoiceTotals(SalesInvoice $invoice, bool $roll = false): array
     {
         $rows = $this->totals($invoice);
 
@@ -424,9 +575,25 @@ class SalesPrintController extends Controller implements HasMiddleware
         $rows['sales::print.invoice_due'] = $this->money($due);
 
         /*
-         * ⓘ গ্রাহক না থাকলে (কাউন্টারের নগদ) আগের বকেয়ার প্রশ্নই নেই।
+         * ⛔ খতিয়ানের সারি দুইটা সরু রোলে যায় না — ২২ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⚠️ কীভাবে ধরা পড়ল ───────────────────────────────────────
+         * [[NoPrintedFigureOverflowsItsColumnTest]] লাল হলো: ৮০মিমি
+         * রসিদে `12,31,87,500` বসেছে একটা **১৫মিমি** ঘরে। ⓘ সংখ্যাটা
+         * এই বিলের নয় — ঐ গ্রাহকের **মোট পাওনা**, যা আজকের বিলের
+         * চেয়ে হাজার গুণ বড় হতে পারে।
+         *
+         * ⛔ আর ভুলটা নীরব: mPDF অভিযোগ করে না, সংখ্যাটা চুপচাপ পাশের
+         * ঘরে উঠে যায় আর কাগজটা বেরিয়ে যায়।
+         *
+         * ⓘ এটা সুইচ নয়, নিয়ম — আর সেটাই ঠিক: থার্মালে কোনো প্রস্থই
+         * যথেষ্ট নয়, কারণ বকেয়ার কোনো সীমা নেই। ⚠️ সুইচ বানালে কেউ
+         * একদিন চালু করতেন, আর কাগজটা আবার নীরবে ভাঙত।
+         *
+         * ⭐ কাউন্টারের রসিদে সারি দুইটার দরকারও নেই: ওখানে এখনই
+         * মিটিয়ে দেওয়া হয়, আর পুরো খতিয়ান বিলের কাগজের জিনিস।
          */
-        $customer = $invoice->customer;
+        $customer = $roll ? null : $invoice->customer;
 
         if ($customer !== null) {
             $earlier = bcsub($customer->outstanding(), $due, 4);
@@ -698,6 +865,30 @@ class SalesPrintController extends Controller implements HasMiddleware
     }
 
     /**
+     * এই অনুরোধে কোন কাগজের সুইচগুলো মানা হবে।
+     *
+     * ── ⭐ কেন থার্মাল হলে "পস" — মালিকের নির্দেশ, ২২ সেপ্টেম্বর ২০২৬ ──
+     * *"ইনভয়েজে কি লোগো দেবে পস প্রিন্টারে কি লোগো দেবে"*।
+     *
+     * ⓘ বিল আর কাউন্টারের রসিদ একই রুট দিয়ে বেরোয় — পস পর্দা
+     * `sales.print.invoice`-এ `paper=80mm` দিয়ে পাঠায়। ⚠️ তাই "কোন
+     * কাগজ" প্রশ্নের উত্তর রুটে নেই, **কাগজের মাপে আছে**।
+     *
+     * ⛔ একটাই প্রোফাইল দিলে লোগো নিয়ে সিদ্ধান্তটা অসম্ভব হত: A4-তে
+     * লোগো চাই, ৫৮মিমি রোলে ওটা একটা ধূসর দাগ।
+     */
+    private function profileFor(Request $request, string $paperSetting, string $target = 'invoice'): PrintProfile
+    {
+        $paper = PaperSize::chosen($request->query('paper'), $this->settings->get($paperSetting));
+
+        if ($target === 'invoice' && PaperSize::of($paper)->isThermal) {
+            $target = 'pos';
+        }
+
+        return PrintProfile::for($target, $this->settings);
+    }
+
+    /**
      * PDF হিসেবে ফেরত।
      *
      * ব্রাউজারে খোলে, নামানো হয় না (`inline`): বেশিরভাগ সময় কাগজটা দেখে
@@ -712,6 +903,9 @@ class SalesPrintController extends Controller implements HasMiddleware
         ?int $id = null,
         ?object $document = null,
         string $paperSetting = 'sales.print.paper.invoice',
+
+        /* ⓘ কোন কাগজের সুইচ — [[profileFor()]] থার্মাল হলে নিজেই "পস" বানায় */
+        string $target = 'invoice',
     ): Response {
         /*
          * ⭐ কাগজের মাপ: ঠিকানায় যা চাওয়া হয়েছে, নয়তো মালিকের বসানো মাপ।
@@ -779,6 +973,7 @@ class SalesPrintController extends Controller implements HasMiddleware
                 'title' => $doc->title.' '.$documentNo,
             ],
             paper: $paper,
+            profile: $this->profileFor($request, $paperSetting, $target)->target,
 
             /*
              * বাতিল বিলের গায়ে কোনাকুনি জলছাপ -- উপরের বাক্সের সাথে,

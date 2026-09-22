@@ -255,6 +255,9 @@ final class TheFreeCartonWasInvisibleEverywhereTest extends TestCase
                 totals: [],
             ),
             'paper' => \App\Core\Engines\Print\PaperSize::of('a4'),
+
+            /* ⓘ সরাসরি ভিউ আঁকলে প্রোফাইলটা হাতে দিতে হয় — [[PrintEngine]] ওটা নিজে দেয় */
+            'profile' => \App\Core\Engines\Print\PrintProfile::everything(),
         ])->render();
     }
 
