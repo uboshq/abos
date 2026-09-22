@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modules\SystemAdmin;
 
-use App\Core\Services\PermissionSyncer;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\User;
@@ -46,8 +45,18 @@ final class TheirRolesSatInOneCompanyAndTheOtherWentBlankTest extends TestCase
         parent::setUp();
         $this->seed(DemoSeeder::class);
 
+        /*
+         * ⚠️ `orderBy` ছাড়া `first()` ইঞ্জিনের খেয়াল — MySQL আর MariaDB
+         * আলাদা সারি ফেরত দিতে পারে, আর তখন একই পরীক্ষা এক মেশিনে সবুজ
+         * আর অন্যটায় লাল হয়। ⛔ ২২ সেপ্টেম্বর ২০২৬-এ ঠিক তা-ই হয়েছে:
+         * আমার ডাটাবেসে পাস, সঙ্গীর ডাটাবেসে ফেল।
+         */
         $this->alpha = Company::query()->where('code', 'TDEPOT')->firstOrFail();
-        $this->beta = Company::query()->where('code', '!=', 'TDEPOT')->firstOrFail();
+
+        $this->beta = Company::query()
+            ->where('code', '!=', 'TDEPOT')
+            ->orderBy('id')
+            ->firstOrFail();
 
         CompanyContext::set($this->alpha->id, $this->alpha->defaultBranch()?->id);
     }
@@ -112,8 +121,8 @@ final class TheirRolesSatInOneCompanyAndTheOtherWentBlankTest extends TestCase
     {
         $user = $this->ownerOfBoth();
 
-        // ⓘ β-তে ইচ্ছা করে **ছোট** একটা ভূমিকা বসানো।
-        $small = $this->aSmallerRoleIn($this->beta);
+        // ⓘ β-তে ইচ্ছা করে **আলাদা** একটা ভূমিকা বসানো।
+        $small = $this->aRoleUnlike($this->beta, $this->hisOwnRoles($user));
 
         $this->wipeRolesIn($this->beta, $user);
 
@@ -152,7 +161,7 @@ final class TheirRolesSatInOneCompanyAndTheOtherWentBlankTest extends TestCase
     public function test_a_person_with_different_roles_per_company_is_skipped(): void
     {
         $user = $this->ownerOfBoth();
-        $small = $this->aSmallerRoleIn($this->beta);
+        $small = $this->aRoleUnlike($this->beta, $this->hisOwnRoles($user));
 
         $this->wipeRolesIn($this->beta, $user);
 
@@ -187,6 +196,25 @@ final class TheirRolesSatInOneCompanyAndTheOtherWentBlankTest extends TestCase
         return $user;
     }
 
+    /**
+     * ⓘ মানুষটা α-তে যে ভূমিকাগুলো ধরে আছেন।
+     *
+     * ⚠️ এটাই সেই তালিকা যার **চেয়ে আলাদা** কিছু β-তে বসাতে হবে —
+     * নাহলে "কোম্পানিভেদে আলাদা" দৃশ্যটাই তৈরি হয় না।
+     *
+     * @return list<string>
+     */
+    private function hisOwnRoles(User $user): array
+    {
+        $mine = $this->rolesIn($this->alpha, $user);
+
+        $this->assertNotSame([], $mine,
+            'মালিকের α-তে কোনো ভূমিকাই নেই — তাহলে এই পরীক্ষাটা যে দৃশ্যটা বানাতে চায় '
+            .'সেটাই বানানো যায় না, আর লালটা বাগের কথা বলত না।');
+
+        return $mine;
+    }
+
     /** @return list<string> */
     private function rolesIn(Company $company, User $user): array
     {
@@ -212,15 +240,35 @@ final class TheirRolesSatInOneCompanyAndTheOtherWentBlankTest extends TestCase
             ->delete();
     }
 
-    /** ⓘ এই কোম্পানির এমন একটা ভূমিকা যেটা মালিকের ভূমিকা নয়। */
-    private function aSmallerRoleIn(Company $company): Role
+    /**
+     * ⓘ এই কোম্পানির এমন একটা ভূমিকা যেটা মানুষটার **অন্য কোম্পানির
+     * ভূমিকার সাথে মেলে না**।
+     *
+     * ── ⛔ কেন নামটা হিসাব করে বাছা হয়, আন্দাজে নয় ──────────────────
+     * আগে কেবল "সুপার-অ্যাডমিন ছাড়া প্রথমটা" নেওয়া হত, আর ধরে নেওয়া
+     * হত সেটা মালিকের ভূমিকার চেয়ে আলাদা। ⚠️ **ধরে নেওয়াটাই ছিল
+     * ফাঁদ**: ভূমিকা দুইটা মিলে গেলে গোটা দৃশ্যটাই ভেঙে যায় — তখন
+     * কোম্পানিভেদে ভূমিকা আর "আলাদা" থাকে না, কমান্ড কাউকে ছাড়ে না,
+     * আর পরীক্ষাটা এমন একটা কারণে লাল হয় যার সাথে বাগের সম্পর্ক নেই।
+     *
+     * ⭐ তাই শর্তটা এখন হাতে বসানো, আর না মিললে পরীক্ষাটা **স্পষ্ট
+     * করে সেটাই বলে** — রহস্যময় লালের বদলে।
+     *
+     * @param  list<string>  $notThese
+     */
+    private function aRoleUnlike(Company $company, array $notThese): Role
     {
         $role = Role::query()
             ->where('company_id', $company->id)
-            ->where('name', '!=', PermissionSyncer::SUPER_ADMIN_ROLE)
+            ->whereNotIn('name', $notThese)
+            ->orderBy('id')
             ->first();
 
-        $this->assertNotNull($role, 'তুলনা করার মতো দ্বিতীয় ভূমিকা নেই।');
+        $this->assertNotNull(
+            $role,
+            'এই কোম্পানিতে এমন কোনো ভূমিকা নেই যেটা মানুষটার নিজের ভূমিকার চেয়ে আলাদা — '
+            .'তাহলে "কোম্পানিভেদে ভূমিকা আলাদা" দৃশ্যটাই বানানো যায় না, আর পরীক্ষাটা কিছুই মাপছে না।'
+        );
 
         return $role;
     }
