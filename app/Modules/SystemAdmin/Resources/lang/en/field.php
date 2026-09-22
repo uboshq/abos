@@ -18,6 +18,7 @@ return [
     // ── Users and roles ─────────────────────────────────────────────
     'user_name' => 'Name',
     'login_id' => 'User name',
+    'login_id_hint' => 'They can type this instead of their email when signing in — starts with a lowercase letter, 3 to 40 characters. Leave it empty and they sign in by email only.',
     'password' => 'Password',
     'password_hint' => 'At least eight characters. What you type is never shown again — if it is forgotten, set a new one.',
     'password_blank_hint' => 'Leave empty to keep the current password.',

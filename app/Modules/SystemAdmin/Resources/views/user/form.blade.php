@@ -49,6 +49,29 @@
                 <x-ui.field name="email" type="email" :label="__('core.profile.email')"
                             :value="old('email', $user->email)" required />
 
+                {{--
+                    ⛔ লগইন নামের ঘরটা এখানে ছিল না — ২২ সেপ্টেম্বর ২০২৬,
+                    মালিকের *"Login ID kothay?"*।
+
+                    ⓘ ঘরটা `users`-এ বহুদিন আছে, লগইনের পর্দা সেটা
+                    **মেনেও নেয়** ([[CredentialCheck]]), আর তালিকায়
+                    কলামটাও দেখানো হয়। ⛔ কেবল বসানোর জায়গাটা ছিল
+                    শুধু নিজের প্রোফাইলে।
+
+                    ⚠️ ফলে প্রশাসক কারো লগইন নাম **দেখতে পেতেন, দিতে
+                    পারতেন না** — নতুন কর্মীকে ইমেইল দিয়ে ঢুকিয়ে তারপর
+                    "এবার নিজের প্রোফাইলে গিয়ে একটা আইডি বসান" বলতে হত।
+                    ⓘ আবার সেই চেনা আকৃতি: অংশগুলো সবই ছিল, জোড়াটা নয়।
+
+                    ⓘ নিয়মগুলো হুবহু [[ProfileController::updateProfile()]]-এর —
+                    ছোট হাতের অক্ষরে শুরু, ৩ থেকে ৪০। দুই পর্দা দুই রকম
+                    বললে একজন এমন আইডি বসাতে পারতেন যা দিয়ে তিনি নিজেই
+                    আর লগইন করতে পারতেন না।
+                --}}
+                <x-ui.field name="login_id" :label="__('system_admin::field.login_id')"
+                            :value="old('login_id', $user->login_id)"
+                            :hint="__('system_admin::field.login_id_hint')" />
+
                 {{-- পাসওয়ার্ড কখনো ভরে দেখানো হয় না — পর্দার HTML-এ থাকলে
                      যে কেউ দেখে ফেলতে পারতেন। সম্পাদনায় খালি মানে
                      "আগেরটাই থাক", মুছে দেওয়া নয়। --}}
@@ -61,6 +84,27 @@
                 <x-ui.select name="locale" :label="__('core.appearance.language')"
                              :options="['bn' => 'বাংলা', 'en' => 'English']"
                              :selected="old('locale', $user->locale ?? 'bn')" required />
+
+                {{--
+                    ⛔ মোবাইল ও মন্তব্যের ঘর দুইটাও এখানে ছিল না — একই
+                    দিনে, একই কারণে ([[login_id]]-র টীকা দেখুন)।
+
+                    ⚠️ দুইটাই **তালিকায় কলাম হিসেবে দেখানো হয়**, তাই
+                    প্রশাসক ঘরগুলো দেখতেন আর ভাবতেন কেউ ভরেনি — অথচ
+                    ভরার কোনো উপায়ই ছিল না। ⓘ মন্তব্যের কলামটা তিন
+                    সারিতেই খালি ছিল, আর সেটাই ধরিয়ে দিল।
+
+                    ⓘ মোবাইলটা কেবল যোগাযোগের ঘর নয় — [[CredentialCheck]]
+                    ওটা দিয়েও লগইন করতে দেয়।
+                --}}
+                <x-ui.field name="mobile" :label="__('core.profile.mobile')"
+                            :value="old('mobile', $user->mobile)" />
+
+                {{-- ⓘ *"ছুটিতে আছেন"*, *"অক্টোবর থেকে বিক্রয়ে"* — যে কথাগুলো
+                     কোনো ঘরে পড়ে না। ⛔ জায়গা না থাকলে মানুষ ওগুলো নামের
+                     ঘরে লেখে, আর তখন নামটাই নষ্ট হয় (মাইগ্রেশনের টীকা)। --}}
+                <x-ui.field name="remarks" :label="__('core.table.remarks')"
+                            :value="old('remarks', $user->remarks)" />
 
                 <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
                     <input type="hidden" name="is_active" value="0">

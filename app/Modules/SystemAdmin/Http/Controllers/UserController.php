@@ -157,6 +157,20 @@ class UserController extends Controller implements HasMiddleware
             $user = User::create([
                 'name' => $data['name'],
                 'email' => $data['email'],
+
+                /*
+                 * ⚠️ খালি ঘর মানে `null`, খালি স্ট্রিং নয়।
+                 *
+                 * ⛔ `''` বসলে দুইজনের লগইন নাম "এক" হয়ে যেত আর unique
+                 * সূচক দ্বিতীয়জনকে আটকাত — অথচ কেউ কোনো আইডি বসায়ইনি।
+                 * ⓘ [[CredentialCheck]]-এর টীকাতেও একই কথা: খালিরা সবাই
+                 * NULL, আর NULL কারো সমান নয়।
+                 */
+                'login_id' => blank($data['login_id'] ?? null) ? null : $data['login_id'],
+
+                'mobile' => $data['mobile'] ?? null,
+                'remarks' => $data['remarks'] ?? null,
+
                 'password' => $data['password'],
                 'locale' => $data['locale'],
                 'is_active' => filter_var($data['is_active'] ?? false, FILTER_VALIDATE_BOOL),
@@ -203,6 +217,13 @@ class UserController extends Controller implements HasMiddleware
             $user->update([
                 'name' => $data['name'],
                 'email' => $data['email'],
+
+                /* ⓘ কারণটা store()-এ লেখা — খালি ঘর `null`, `''` নয় */
+                'login_id' => blank($data['login_id'] ?? null) ? null : $data['login_id'],
+
+                'mobile' => $data['mobile'] ?? null,
+                'remarks' => $data['remarks'] ?? null,
+
                 'locale' => $data['locale'],
                 'is_active' => filter_var($data['is_active'] ?? false, FILTER_VALIDATE_BOOL),
             ]);
@@ -720,6 +741,42 @@ class UserController extends Controller implements HasMiddleware
             'name' => ['required', 'string', 'max:191'],
             'email' => ['required', 'email', 'max:191',
                 Rule::unique('users', 'email')->ignore($user?->id)->whereNull('deleted_at')],
+
+            /*
+             * ⭐ লগইন নাম — ২২ সেপ্টেম্বর ২০২৬, মালিকের *"Login ID kothay?"*।
+             *
+             * ⓘ নিয়মগুলো হুবহু [[ProfileController::updateProfile()]]-এর,
+             * আর সেটা ইচ্ছাকৃত: একই ঘর দুই পর্দা থেকে ভরা যায়, তাই দুই
+             * জায়গায় দুই নিয়ম থাকলে প্রশাসক এমন একটা আইডি বসাতে পারতেন
+             * যেটা ব্যবহারকারী নিজে বসাতে পারতেন না — আর কেউ বলতে পারত
+             * না কোনটা ঠিক।
+             *
+             * ⚠️ `nullable` — বহু ব্যবহারকারীর কোনো লগইন নাম নেই, তাঁরা
+             * ইমেইল দিয়ে ঢোকেন। ⛔ `required` দিলে **প্রতিটা পুরনো
+             * ব্যবহারকারীর সম্পাদনা আটকে যেত**, এমনকি কেবল মোবাইল নম্বর
+             * বদলাতে গেলেও।
+             *
+             * ⓘ অনন্যতা `deleted_at` ছাড়াই — নরম-মোছা একজনের আইডি
+             * পুনর্ব্যবহার করলে [[CredentialCheck]] দুইজনকে পেত।
+             */
+            'login_id' => ['nullable', 'string', 'min:3', 'max:40',
+                'regex:/^[a-z][a-z0-9._-]*$/',
+                Rule::unique('users', 'login_id')->ignore($user?->id)],
+
+            /*
+             * ⭐ মোবাইল ও মন্তব্য — একই দিনে, একই কারণে।
+             *
+             * ⚠️ দুইটাই তালিকায় কলাম হিসেবে দেখানো হয়, অথচ ভরার কোনো
+             * পথ ছিল না। ⓘ মন্তব্যের কলামটা প্রতিটা সারিতে খালি
+             * ছিল — আর ওটাই প্রশ্নটা তুলল।
+             *
+             * ⓘ মোবাইলের নিয়মটা [[ProfileController]]-এর মতোই ঢিলা
+             * (`max:25`): দেশের কোড, ড্যাশ, ফাঁকা — মানুষ যেভাবে লেখেন।
+             * ⛔ কড়া ছাঁচ বসালে সঠিক নম্বরও আটকাত, আর ঘরটা তখন
+             * না-থাকার চেয়েও খারাপ হত।
+             */
+            'mobile' => ['nullable', 'string', 'max:25'],
+            'remarks' => ['nullable', 'string', 'max:255'],
 
             /*
              * নতুন ব্যবহারকারীতে পাসওয়ার্ড লাগে, সম্পাদনায় নয়।

@@ -33,7 +33,26 @@ use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
-#[Fillable(['name', 'email', 'password', 'locale', 'theme', 'ui', 'accent', 'is_active'])]
+/*
+ * ⭐ `login_id`, `mobile`, `remarks` যোগ — ২২ সেপ্টেম্বর ২০২৬।
+ *
+ * ── ⛔ আর এটা প্রায় ভুলে যাওয়া হয়েছিল ────────────────────────────────
+ * তিনটা ঘরই ফর্মে বসানো হয়েছিল, যাচাইয়ের নিয়মও লেখা হয়েছিল, দুইটা
+ * সংরক্ষণের পথেও বসানো হয়েছিল। ⚠️ তবু ফর্মটা **৫০০** দিত, কারণ এই
+ * তালিকাটা বদলানো হয়নি।
+ *
+ * ⓘ আমি ধরে নিয়েছিলাম `$fillable` নেই মানে সব ঘর খোলা — উল্টোটা সত্যি,
+ * আর তালিকাটা একটা attribute-এ বসে বলে `grep fillable`-ও ওটা মেলায়নি।
+ * ⭐ ধরা পড়েছে পাহারাটা চালিয়ে; অনুমান করে নয়।
+ *
+ * ⚠️ পরের জনের জন্য: এখানে নাম বসানো ছাড়া কোনো নতুন ঘর ফর্ম থেকে
+ * সংরক্ষিত হয় না, আর ব্যর্থতাটা **নীরব নয় — ৫০০**, তাই অন্তত সেটা
+ * চোখে পড়ে।
+ */
+#[Fillable([
+    'name', 'email', 'password', 'locale', 'theme', 'ui', 'accent', 'is_active',
+    'login_id', 'mobile', 'remarks',
+])]
 /*
  * গোপন চাবি ও পুনরুদ্ধার কোড কোনো JSON বা লগে যায় না।
  *
