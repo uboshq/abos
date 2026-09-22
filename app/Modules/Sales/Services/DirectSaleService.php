@@ -17,6 +17,7 @@ use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\BatchAllocator;
+use App\Modules\Inventory\Services\FreeAllowance;
 use App\Modules\Inventory\Services\ReadsPackedQuantities;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\MasterData\Models\PaymentMethod;
@@ -81,6 +82,8 @@ final class DirectSaleService
 
         $customer = $this->resolveCustomer($data['customer_id'] ?? null);
         $warehouse = $this->resolveWarehouse($data['warehouse_id'] ?? null);
+
+        $this->assertFreeStaysWithinTheRatio($lines, $warehouse);
 
         /*
          * ⭐ কাউন্টারের ডিপোজিটে সই লাগলে — সবকিছু খসড়া, ১৯ সেপ্টেম্বর ২০২৬।
@@ -649,6 +652,62 @@ final class DirectSaleService
      * ফ্রিটা তার সাথেই যেতে হবে, নাহলে একই গাড়িতে যাওয়া মালের অর্ধেক
      * আজকের খাতায় আর অর্ধেক কালকের খাতায় পড়ত।
      */
+    /**
+     * ফ্রি মাল অনুপাতের বেশি নয় — মালিকের নিয়ম, ২২ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⭐ নিয়মটা ───────────────────────────────────────────────────
+     * *"ফ্রি কম দিতে পারবে কিন্তু কোন ভাবেই বেশি দিতে পারবে না।"*
+     * ⓘ আর প্রাপ্যটা আসে **যে লটের মাল বেরোচ্ছে** তার অনুপাত থেকে
+     * ([[FreeAllowance]])।
+     *
+     * ── ⚠️ কেন দেয়ালটা এখানে, পর্দায় নয় ────────────────────────────
+     * পর্দার ঘরে সীমা বসানো সহজ, কিন্তু বিল এখানে আসতে পারে অন্য পথেও
+     * — কাউন্টার, আদেশ থেকে, কিংবা কাল যোগ হওয়া কোনো পর্দা। ⛔ দেয়াল
+     * পর্দায় থাকলে **প্রতিটা নতুন পথ একটা করে ফাঁক**।
+     *
+     * ⓘ পর্দা প্রাপ্যটা আগেই দেখাবে, যাতে কেউ ভুল করে সময় নষ্ট না
+     * করেন — কিন্তু সেটা সৌজন্য, দেয়াল নয়।
+     *
+     * ── ⛔ আর ব্যতিক্রমের কোনো দরজা নেই ─────────────────────────────
+     * মালিকের সিদ্ধান্ত: *"কোনো দরজা নেই"*। ⚠️ ম্যানেজারও বাড়াতে
+     * পারবেন না। ⓘ একটা খোলা ঘর তিন মাসে অভ্যাস হয়ে যেত, আর তখন
+     * নিয়মটা কাগজে থাকত, কাজে নয়।
+     *
+     * @param  list<array<string, mixed>>  $lines
+     */
+    private function assertFreeStaysWithinTheRatio(array $lines, Warehouse $warehouse): void
+    {
+        $allowance = app(FreeAllowance::class);
+
+        foreach ($lines as $line) {
+            $free = (string) ($line['free_qty'] ?? '0');
+
+            if (bccomp($free, '0', 4) <= 0) {
+                continue;
+            }
+
+            $product = Product::query()->find($line['product_id'] ?? null);
+
+            if ($product === null) {
+                continue;
+            }
+
+            $may = $allowance->on($product, $warehouse, (string) ($line['qty'] ?? '0'));
+
+            if (bccomp($free, $may, 4) <= 0) {
+                continue;
+            }
+
+            throw ValidationException::withMessages([
+                'lines' => __('sales::validation.free_beyond_ratio', [
+                    'product' => $product->name(),
+                    'free' => rtrim(rtrim($free, '0'), '.'),
+                    'allowed' => rtrim(rtrim($may, '0'), '.'),
+                ]),
+            ]);
+        }
+    }
+
     private function moveFreeStock(DeliveryChallan $challan, Warehouse $warehouse): void
     {
         foreach ($challan->lines as $line) {

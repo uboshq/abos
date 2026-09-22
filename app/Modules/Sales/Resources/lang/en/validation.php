@@ -12,6 +12,8 @@ return [
     'no_cash_counter' => 'There is no cash counter yet. Open one first — without it there is no way to say whose custody the money went into.',
     'unknown_payment_method' => 'That payment method was not found, or it has been switched off.',
     'reference_required' => 'Money taken through :method needs its transaction number — without it there is no way to reconcile against the statement later.',
+    'free_beyond_ratio' => ':product — :free free given, but the ratio of this lot allows at most :allowed. '
+        .'You cannot pass on more free goods than the supplier gave.',
     'no_lines' => 'At least one line is needed — a document with no lines does nothing.',
     'invoice_no_taken' => 'Invoice :no already exists — give it a different number.',
 
