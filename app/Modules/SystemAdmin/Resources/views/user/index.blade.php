@@ -8,33 +8,49 @@
 --}}
 @php
     /*
-     * কলাম ধরে — `x-ui.table` স্লট পড়ে না, সারি আসে :rows থেকে।
+     * ব্যবহারকারীর তালিকা — মালিকের নমুনা, ২২ সেপ্টেম্বর ২০২৬।
      *
-     * ── ⭐ মালিকের নমুনা, ২১ সেপ্টেম্বর ২০২৬ ───────────────
-     * *"nexus er user management-y zevabe eivabe koro"* — ছবিসহ নাম,
-     * চিপে ভূমিকা, যোগাযোগ, শাখা, দুই ধাপ, আর অবস্থা।
+     * *"ব্যবহারকারী তালিকা এইরকম ক্লিন একটা লিস্ট করো"* — সমতল কলাম,
+     * এক সারিতে একজন, আর প্রতিটা তথ্য নিজের ঘরে।
      *
-     * ⚠️ নমুনার দুইটা কলাম ABOS-এ **বসানো হয়নি**, আর কারণটা
-     * একই: ঘর দুইটা সারণিতে নেই —
+     * ── ⚠️ সকালের ছাঁচ থেকে কেন সরানো ──────────────────────────
+     * ℹ আগে ছিল ছবিসহ নাম, আর নিচে ছোট হরফে `@লগইন · ভূমিকা`।
+     * ⛔ মালিকের নতুন নমুনায় ওগুলো **আলাদা কলাম**, আর কারণটা
+     * বাস্তব: এক ঘরে তিন তথ্য থাকলে **খোঁজা যায় না, সাজানোও যায় না** —
+     * লগইনের নাম ধরে খুঁজতে গেলে নামের ঘরটাই মিলাতে হত।
      *
-     *   ⛔ *"Drives as"* — কে কোন গাড়ি চালান। ABOS-এ গাড়িই নেই।
-     *   ⛔ *"Must change password"* — পরেরবার ঢুকলে পাসওয়ার্ড
-     *     বদলাতে বাধ্য করা। `users`-এ এমন কোনো ঘর নেই।
-     *
-     * ℹ দুইটাই নতুন ঘর চায়, আর নতুন ঘর আমি নিজে থেকে বানাইনি —
-     * মালিককে জিজ্ঞেস করাই সতিকারের কাজ। ⚠️ খালি কলাম বসালে
-     * সেটা একটা মিথ্যা প্রতিশ্রুতি হয়ে থাকত।
-     *
-     * ── ℹ কোম্পানির কলামটা গেল কেন ───────────────────────
-     * তালিকাটা আগেই চলতি কোম্পানিতে ছাঁকা (UserController::index)। ⛔ তাই
-     * কলামটায় প্রতিটা সারিতে একই সংকেত বসত — যে কলাম সব সারিতে
-     * একই কথা বলে সে কেবল চওড়া নেয়। ℹ শাখাটা বরং বদলায়।
+     * ── ℹ `সারি` কলামটা পাতা ধরে গোনে ─────────────────────────
+     * ⛔ `$loop->index + 1` লিখলে দ্বিতীয় পাতাও ১ থেকে শুরু হত, আর
+     * দুই পাতায় দুইটা "১ নম্বর" বসত।
      */
+    $serial = ($users->currentPage() - 1) * $users->perPage();
+
     $columns = [
+        [
+            'key' => 'serial',
+            'label' => __('core.table.serial'),
+            'width' => '4rem',
+            'numeric' => true,
+            'render' => function ($u) use (&$serial) {
+                return ++$serial;
+            },
+        ],
         [
             'key' => 'name',
             'label' => __('system_admin::field.user_name'),
             'render' => fn ($u) => view('system_admin::user.partials.name', ['user' => $u]),
+        ],
+        [
+            'key' => 'login_id',
+            'label' => __('system_admin::field.login_id'),
+            'width' => '9rem',
+            'render' => fn ($u) => $u->login_id ?: '—',
+        ],
+        [
+            'key' => 'code',
+            'label' => __('core.table.code'),
+            'width' => '7rem',
+            'render' => fn ($u) => $u->code ?: '—',
         ],
         [
             'key' => 'roles',
@@ -42,9 +58,17 @@
             'render' => fn ($u) => view('system_admin::user.partials.roles', ['user' => $u]),
         ],
         [
-            'key' => 'contact',
-            'label' => __('core.profile.contact'),
-            'render' => fn ($u) => view('system_admin::user.partials.contact', ['user' => $u]),
+            /*
+             * ℹ কোম্পানি ফিরে এসেছে — সকালে সরানো হয়েছিল।
+             *
+             * ⛔ যুক্তি ছিল: তালিকাটা চলতি কোম্পানিতে ছাঁকা, তাই কলামটা
+             * প্রতি সারিতে একই কথা বলত। ⚠️ কিন্তু যুক্তিটা অসম্পূর্ণ ছিল:
+             * একজন মানুষ **একাধিক কোম্পানিতে** থাকতে পারেন, আর
+             * ঘরটা বলে তিনি আর কোথায় ঢুকতে পারেন — সেটা এক কথা নয়।
+             */
+            'key' => 'companies',
+            'label' => __('core.company.company'),
+            'render' => fn ($u) => $u->companies->map(fn ($c) => $c->code)->implode(', ') ?: '—',
         ],
         [
             'key' => 'branch',
@@ -52,25 +76,35 @@
             'render' => fn ($u) => view('system_admin::user.partials.branch', ['user' => $u]),
         ],
         [
-            'key' => 'two_step',
-            'label' => __('system_admin::field.two_step'),
-            'render' => fn ($u) => view('system_admin::user.partials.security', ['user' => $u]),
+            'key' => 'mobile',
+            'label' => __('core.profile.mobile'),
+            'width' => '9rem',
+            'render' => fn ($u) => $u->mobile
+                ? new \Illuminate\Support\HtmlString(
+                    '<a class="hover:underline" href="tel:'.e($u->mobile).'">'.e($u->mobile).'</a>')
+                : '—',
+        ],
+        [
+            'key' => 'email',
+            'label' => __('core.profile.email'),
+            'render' => fn ($u) => new \Illuminate\Support\HtmlString(
+                '<a class="hover:underline" href="mailto:'.e($u->email).'">'.e($u->email).'</a>'),
+        ],
+        [
+            'key' => 'remarks',
+            'label' => __('core.table.remarks'),
+            'render' => fn ($u) => $u->remarks ?: '',
         ],
         [
             'key' => 'status',
             'label' => __('core.table.status'),
+            'width' => '7rem',
             'render' => fn ($u) => view('system_admin::user.partials.status', ['user' => $u]),
-        ],
-        [
-            'key' => 'last_login_at',
-            'label' => __('system_admin::field.last_login'),
-            'render' => fn ($u) => $u->last_login_at
-                ? \App\Core\Support\DateFormat::format($u->last_login_at)
-                : '-',
         ],
         [
             'key' => 'actions',
             'label' => __('core.table.actions'),
+            'width' => '6rem',
             'render' => fn ($u) => view('system_admin::user.partials.edit', ['user' => $u]),
         ],
     ];

@@ -457,6 +457,7 @@ return [
         'description' => 'Description',
         'status' => 'Status',
         'actions' => 'Actions',
+        'remarks' => 'Remarks',
         'serial' => 'SL#',
         'date' => 'Date',
         'from_date' => 'From date',

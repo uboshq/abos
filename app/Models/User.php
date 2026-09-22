@@ -46,6 +46,42 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, HasPublicId, HasRoles, Notifiable, SoftDeletes;
 
+    /**
+     * ⭐ সংকেত — `USR0001` — মালিকের নমুনা, ২২ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⛔ কেন মডেলে, কন্ট্রোলারে নয় ────────────────────────────────
+     * প্রথম চালে লাইনটা `UserController::store()`-এ বসানো হয়েছিল, আর
+     * পরীক্ষা সাথে সাথে লাল: **ডেমো সিডারের তিনজনের সংকেত নেই**।
+     *
+     * ⓘ কারণ ব্যবহারকারী কেবল ঐ এক পথে জন্মায় না — সিডার, ফ্যাক্টরি,
+     * `FirstRun::open()`, আর ভবিষ্যতের ইমপোর্টার সবাই সরাসরি
+     * `User::create()` ডাকে। ⚠️ তখন তালিকায় কিছু সারিতে সংকেত, কিছুতে
+     * ড্যাশ — আর কেউ বুঝত না কেন।
+     *
+     * ⭐ মডেলের হুকে বসালে **যে পথেই** একজন মানুষ জন্মান, সংকেত পান।
+     *
+     * ── ⚠️ সবচেয়ে বড় সংখ্যার পরেরটা, গোনা নয় ──────────────────────
+     * ⛔ `count() + 1` লিখলে একজন মুছে গেলে পরেরজন **আগের কারো
+     * সংকেতটাই** পেতেন, আর তখন *"USR0007 মাল বুঝে নিয়েছেন"* কথাটা
+     * দুইজনকে বোঝাত। ⓘ নরম-মোছা সারিও গোনায় থাকে (`withTrashed`),
+     * কারণ ওদের নাম পুরনো কাগজে বসে আছে।
+     */
+    protected static function booted(): void
+    {
+        static::creating(function (self $user): void {
+            if (filled($user->code)) {
+                return;
+            }
+
+            $last = (int) self::query()->withTrashed()
+                ->where('code', 'like', 'USR%')
+                ->selectRaw('MAX(CAST(SUBSTRING(code, 4) AS UNSIGNED)) AS n')
+                ->value('n');
+
+            $user->code = 'USR'.str_pad((string) ($last + 1), 4, '0', STR_PAD_LEFT);
+        });
+    }
+
     /*
      * ⛔ কে ঢুকতে পারেন — সেই সিদ্ধান্তটাও এখন খাতায়, ১২ সেপ্টেম্বর ২০২৬।
      *

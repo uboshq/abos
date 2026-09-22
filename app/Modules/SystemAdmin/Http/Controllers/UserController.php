@@ -67,7 +67,7 @@ class UserController extends Controller implements HasMiddleware
         return view('system_admin::user.index', [
             'menu' => $this->menu->forUser($request->user()),
             'users' => User::query()
-                ->with(['roles', 'currentBranch'])
+                ->with(['roles', 'currentBranch', 'companies'])
 
                 /*
                  * ⛔ চলতি কোম্পানির ব্যবহারকারীরাই — ৬ সেপ্টেম্বর ২০২৬।

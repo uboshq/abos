@@ -527,6 +527,7 @@ return [
         'description' => 'বিবরণ',
         'status' => 'অবস্থা',
         'actions' => 'কাজ',
+        'remarks' => 'মন্তব্য',
         'serial' => 'ক্রম',
         'date' => 'তারিখ',
         'from_date' => 'যে তারিখ থেকে',

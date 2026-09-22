@@ -17,6 +17,7 @@ return [
     'financial_year' => 'Financial year',
     // ── Users and roles ─────────────────────────────────────────────
     'user_name' => 'Name',
+    'login_id' => 'User name',
     'password' => 'Password',
     'password_hint' => 'At least eight characters. What you type is never shown again — if it is forgotten, set a new one.',
     'password_blank_hint' => 'Leave empty to keep the current password.',
