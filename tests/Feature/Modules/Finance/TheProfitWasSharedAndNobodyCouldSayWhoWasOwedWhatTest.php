@@ -9,6 +9,7 @@ use App\Models\Company;
 use App\Models\LedgerEntry;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Finance\Models\CapitalEntry;
 use App\Modules\Finance\Models\ProfitShare;
@@ -254,6 +255,78 @@ final class TheProfitWasSharedAndNobodyCouldSayWhoWasOwedWhatTest extends TestCa
         }
     }
 
+    /**
+     * ⛔ ঘোষণার একটা দাখিলাও দল-খাতে বসে না।
+     *
+     * ── ⚠️ যা ভাঙা ছিল, ২২ সেপ্টেম্বর ২০২৬ ──────────────────
+     * খাত বেছে নেওয়ার সহায়কটা কেবল কোড মিলাত — `where('code', …)`
+     * — আর যা আসত তাই নিত, দল হলেও। এখন `postable()` ছাঁকে।
+     *
+     * ── ⭐ মিউটেশন যা দেখাল ────────────────────────────
+     * চার্টে ২১৯০-কে দল বানিয়ে আর `postable()` সরিয়ে চালালাম।
+     * ⓘ দাবিটা লাল হলো, কিন্তু আমার নিজের বাক্যে নয় —
+     * খতিয়ান-ইঞ্জিন নিজেই ফিরিয়ে দিল:
+     * *"গ্রুপ খাতে সরাসরি লেনদেন বসে না"*।
+     *
+     * ⚠️ অর্থাৎ ক্ষতিটা **নীরব ভুল জের ছিল না** — ছিল পোস্ট
+     * করার মাঝপথে একটা ছুঁড়ে ফেলা। `postable()` বাধাটা আগে
+     * নিয়ে আসে, যেখানে বার্তাটা *"চার্টে এই খাতটা নেই"* —
+     * যা সত্যিই বোঝা যায়।
+     *
+     * ⓘ তাই দাবিটা যা সত্যি পাহারা দেয়: চার্ট বা সহায়ক
+     * বদলালে ঘোষণাটা আর চুপচাপ বসবে না — হয় সারিগুলো
+     * পোস্টযোগ্য খাতে বসবে, নয়তো এই পরীক্ষাটা লাল হবে।
+     */
+    public function test_no_line_lands_on_a_group_head(): void
+    {
+        $rows = $this->distribute('100000');
+
+        /*
+         * ⓘ গোটা খতিয়ান নয় — কেবল এই ঘোষণার ভাউচারটা। ⚠️ ডেমোর
+         * পুরনো সারি গুনলে দাবিটা অন্য কারণে লাল হত, আর তখন
+         * এটা আর লাভ-বণ্টনের পাহারা থাকত না।
+         */
+        $voucherId = (int) $rows[0]->voucher_id;
+
+        $this->assertGreaterThan(0, $voucherId, 'ঘোষণার সারি কোনো ভাউচারের কথা জানে না।');
+
+        /*
+         * ⓘ `ledger_entries`-এ `voucher_id` বলে কোনো ঘর নেই — উৎসটা
+         * `source_type` + `source_id` দিয়ে লেখা হয়, আর প্রতিটা
+         * ভাউচার-ধরনের নিজস্ব নাম আছে ([[Voucher::SOURCE_TYPES]])।
+         *
+         * ⭐ নামটা নিজে লিখি না — ভাউচারটাকে জিজ্ঞেস করি।
+         * ⚠️ হাতে লেখা নাম ভুল হলে সংগ্রহ খালি আসত, আর নিচের
+         * দাবিটা মিথ্যা সবুজ হত।
+         */
+        $voucher = Voucher::query()->findOrFail($voucherId);
+
+        $lines = LedgerEntry::query()
+            ->where('source_type', Voucher::SOURCE_TYPES[$voucher->type])
+            ->where('source_id', $voucherId)
+            ->get();
+
+        $this->assertGreaterThanOrEqual(2, $lines->count(), implode("\n", [
+            'ভাউচারে দুইটার কম সারি — ঘোষণাটা কি সত্যিই খাতায় বসল?',
+            '',
+            'ⓘ খালি সংগ্রহে নিচের দাবিটা সবসময় সবুজ থাকত।',
+        ]));
+
+        $onGroups = Account::query()
+            ->whereIn('id', $lines->pluck('account_id')->unique()->all())
+            ->where('is_group', true)
+            ->pluck('code')
+            ->sort()
+            ->values()
+            ->all();
+
+        $this->assertSame([], $onGroups, implode("\n", [
+            'এই দল-খাতে টাকা বসেছে: '.implode(', ', $onGroups),
+            '',
+            '⛔ সারিটা খতিয়ানে দেখা যাবে, অথচ কোনো যোগফলে আসবে না।',
+        ]));
+    }
+
     // ── সহায়ক ───────────────────────────────────────────────────────
 
     /**
@@ -262,6 +335,7 @@ final class TheProfitWasSharedAndNobodyCouldSayWhoWasOwedWhatTest extends TestCa
      *
      * @return list<ProfitShare>
      */
+
     private function distribute(string $profit): array
     {
         $positions = app(CapitalService::class)->positions($profit);

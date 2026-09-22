@@ -10,6 +10,7 @@ use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\VoucherService;
 use App\Modules\Finance\Models\ProfitShare;
+use App\Modules\Finance\Models\Withdrawal;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -182,6 +183,35 @@ final class ProfitDistribution
     }
 
     /**
+     * এই মানুষের ঘোষিত মুনাফার কতটুকু এখনো তোলা হয়নি।
+     *
+     * ── ⓘ খাতিয়ান না, সারি ধরে ──────────────────────────
+     * `2190` খাতের জের সবার মিলিত, আর প্রশ্নটা ব্যক্তির।
+     * ⚠️ লাইনে পক্ষ বসানো আছে বলে খতিয়ান থেকেও বের করা যেত,
+     * কিন্তু সারি দুইটাই নিজের টেবিলে আছে — ঘোষণা
+     * [[ProfitShare]]-এ, তোলা [[Withdrawal]]-এ। ⓘ অনুমোদিত সারি
+     * ধরে গোনাই এই রিপোর ছাঁচ ([[CapitalService::withdrawnBy]])।
+     *
+     * ⛔ খসড়া গোনা হয় না — দুই পাশেই। তাহলে না-বসা টাকা
+     * দিয়ে দায় বাড়ত বা কমত।
+     */
+    public function outstandingFor(int $personId): string
+    {
+        $declared = (string) (ProfitShare::query()
+            ->posted()
+            ->where('person_id', $personId)
+            ->sum('amount') ?: '0');
+
+        $taken = (string) (Withdrawal::query()
+            ->posted()
+            ->where('person_id', $personId)
+            ->where('kind', Withdrawal::PROFIT_SHARE)
+            ->sum('amount') ?: '0');
+
+        return bcsub($declared, $taken, 4);
+    }
+
+    /**
      * ⛔ শূন্য বা ঋণাত্মক মুনাফা ভাগ করা যায় না।
      *
      * ⚠️ লোকসানের বেলায় "ভাগ" কথাটারই অর্থ নেই — ওটা মূলধন খাওয়া,
@@ -200,7 +230,17 @@ final class ProfitDistribution
 
     private function account(string $code): Account
     {
-        $account = Account::query()->where('code', $code)->first();
+        /*
+         * ⛔ `postable()` — দল-খাত বাদ, ২২ সেপ্টেম্বর ২০২৬।
+         *
+         * ⚠️ আগে কেবল কোড মিলানো হত, আর যা আসত তাই নেওয়া
+         * হত — দল হলেও। ⓘ দল-খাতে বসা জের খতিয়ানে দেখা যায়,
+         * অথচ যোগফল থেকে নীরবে বাদ পড়ে — খাতা ঠিক দেখায়,
+         * আর মেলে না।
+         *
+         * ⭐ ধরা পড়েছে `MoneyNeverLandsOnAGroupAccount`-এ।
+         */
+        $account = Account::query()->postable()->where('code', $code)->first();
 
         if ($account === null) {
             /*

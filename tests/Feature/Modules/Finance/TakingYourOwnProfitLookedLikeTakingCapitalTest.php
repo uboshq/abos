@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modules\Finance;
 
+use App\Core\Support\Money;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\LedgerEntry;
@@ -17,6 +18,7 @@ use App\Modules\Finance\Services\WithdrawalService;
 use App\Modules\MasterData\Models\Person;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 /**
@@ -136,6 +138,70 @@ final class TakingYourOwnProfitLookedLikeTakingCapitalTest extends TestCase
     }
 
     // ── সহায়ক ───────────────────────────────────────────────────────
+
+    /**
+     * ⭐ অংশীদারের বেতন ব্যবসার **খরচ**, মূলধন প্রত্যাহার নয়।
+     *
+     * ── ⛔ এটাই সবচেয়ে বেশি ক্ষতি করত ──────────────────────────────
+     * চার্টে লেখা ছিল `SALARY → ৫২০১ খরচ`, কিন্তু কোড সবাইকে উত্তোলন
+     * খাতে পাঠাত। ⓘ ফলে খরচটা খাতায় আসতই না — **মুনাফা বেশি দেখাত**,
+     * আর করযোগ্য আয় ভুল হত।
+     */
+    public function test_a_partners_salary_is_an_expense(): void
+    {
+        $drawingsBefore = $this->movement(StandardChart::DRAWINGS)['debit'];
+
+        $this->take(Withdrawal::SALARY, '12000');
+
+        $salary = $this->movement(StandardChart::SALARY_EXPENSE);
+
+        $this->assertSame(0, bccomp($salary['debit'], '12000', 4), implode("\n", [
+            'বেতন খরচের খাতে বসেনি — বসেছে '.$salary['debit'].'।',
+            '',
+            '⛔ তাহলে খরচটা খাতায় আসে না, আর মুনাফা বেশি দেখায়।',
+        ]));
+
+        $this->assertSame(0, bccomp($this->movement(StandardChart::DRAWINGS)['debit'], $drawingsBefore, 4),
+            'বেতন উত্তোলন খাতেও বসেছে — একটা জিনিস দুই জায়গায়।');
+    }
+
+    /**
+     * ⛔ ঘোষিত মুনাফার চেয়ে বেশি তোলা যায় না।
+     *
+     * ── ⚠️ কেন এটা লাগল ────────────────────────────────────────────
+     * লাভের ভাগ তোলা মানে প্রদেয় মুনাফা থেকে ডেবিট। ⛔ ঘোষণাই না হলে
+     * ওই খাতে তাঁর নামে কিছুই নেই — তখন **ঋণাত্মক দায়** তৈরি হত,
+     * অর্থাৎ খাতা বলত অংশীদার ব্যবসাকে টাকা দেবেন।
+     *
+     * ⓘ এই ফাঁকটা আমি নিজেই তৈরি করেছিলাম খাত বদলানোর সময়।
+     */
+    public function test_taking_more_profit_than_declared_is_refused(): void
+    {
+        try {
+            // ঘোষিত ৪০,০০০ (একমাত্র অংশীদার), তাই ৭৫,০০০ বেশি
+            $this->take(Withdrawal::PROFIT_SHARE, '75000');
+
+            $this->fail('ঘোষিত মুনাফার চেয়ে বেশি তোলা গেল।');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('amount', $e->errors());
+
+            $this->assertSame(
+                [__('finance::validation.more_than_declared', [
+                    'left' => Money::format('40000'),
+                ])],
+                $e->errors()['amount'],
+                'আটকেছে, কিন্তু অন্য নিয়মে।',
+            );
+        }
+
+        /*
+         * ⚠️ `assertSame('0', …)` নয় — যোগফল আসে `"0.0000"` হয়ে, আর
+         * হুবহু লেখা মেলালে দাবিটা মিথ্যা লাল হয়। ⓘ টাকার তুলনা
+         * সবসময় `bccomp` দিয়ে, লেখা দিয়ে নয়।
+         */
+        $this->assertSame(0, bccomp($this->movement(StandardChart::PROFIT_PAYABLE)['debit'], '0', 4),
+            'আটকানোর পরেও খাতায় কিছু বসেছে।');
+    }
 
     private function take(string $kind, string $amount): void
     {

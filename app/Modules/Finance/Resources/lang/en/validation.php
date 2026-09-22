@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'more_than_declared' => 'Cannot take more than the declared profit — :left is left. Declare a distribution first, or change the kind to a drawing.',
     'profit_must_be_positive' => 'Profit that is zero or negative cannot be shared — a loss is a separate decision.',
     'nobody_has_a_share' => 'Nobody has capital left, so there is no one to share with.',
     'chart_account_missing' => 'Account :code is not installed for this company. Run: php artisan abos:sync-chart',

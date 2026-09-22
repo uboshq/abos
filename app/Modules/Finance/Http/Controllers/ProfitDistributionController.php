@@ -84,7 +84,20 @@ final class ProfitDistributionController implements HasMiddleware
     public function declare(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'trx_date' => ['required', 'date'],
+            /*
+             * ⛔ আগামী তারিখে ঘোষণা নয় — ২২ সেপ্টেম্বর ২০২৬।
+             *
+             * ⚠️ আগে কেবল `['required', 'date']` ছিল, আর ঘোষণা
+             * মানেই খাতায় বসা — খসড়া বলে কিছু নেই। ফলে আগামী
+             * মাসের তারিখে একটা ভাউচার ঢুকিয়ে দেওয়া যেত।
+             *
+             * ⓘ তালা পেছনের দিকটা পাহারা দেয়, সামনের দিকটা কেউ নয়।
+             * আর ভবিষ্যতের একটা সারি বসলে **আজকের সংখ্যাই** ভুল
+             * হয় — সারিটা খাতায় আছে, অথচ ঘটনাটা এখনো ঘটেনি।
+             *
+             * ⭐ ধরা পড়েছে `NoDocumentIsDatedInTheFuture`-এ।
+             */
+            'trx_date' => ['required', 'date', 'before_or_equal:today'],
             'profit' => ['required', 'numeric', 'gt:0'],
             'narration' => ['nullable', 'string', 'max:500'],
         ]);

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'more_than_declared' => 'ঘোষিত মুনাফার চেয়ে বেশি তোলা যাবে না — বাকি আছে :left। আগে বণ্টন ঘোষণা করুন, নয়তো ধরনটা "নিজের খরচ" করুন।',
     'profit_must_be_positive' => 'মুনাফা শূন্য বা ৮ণাত্মক হলে ভাগ করা যায় না — লোকসান আলাদা সিদ্ধান্ত।',
     'nobody_has_a_share' => 'এখনো কারও বাকি মূলধন নেই, তাই ভাগ বসানোর কেউ নেই।',
     'chart_account_missing' => 'খাত :code এই কোম্পানিতে বসেনি। চালান: php artisan abos:sync-chart',

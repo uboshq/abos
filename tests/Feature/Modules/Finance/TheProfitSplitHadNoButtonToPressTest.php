@@ -157,6 +157,52 @@ final class TheProfitSplitHadNoButtonToPressTest extends TestCase
             'অনুমতি ছাড়া ঘোষণা খাতায় বসে গেছে।');
     }
 
+    /**
+     * ⛔ আগামীকালের তারিখে ঘোষণা করা যায় না।
+     *
+     * ── ⚠️ কেন পর্দা দিয়ে, ফাইল পড়ে নয় ─────────────────────
+     * [[NoDocumentIsDatedInTheFutureTest]] সোর্সের লেখা পড়ে দেখে
+     * `before_or_equal` শব্দটা আছে কি না। ⓘ কিন্তু লেখা মিথ্যা
+     * বলতে পারে — নিয়মটা ভুল বাক্সে বসলে, বা ফর্ম অন্য
+     * পথে ঘোষণা করলেও সেই পাহারা সবুজই থাকত।
+     *
+     * ⭐ তাই এই দাবিটা মানুষের পথে দাঁড়ায়: ফর্মে আগামীকাল বসিয়ে
+     * বোতাম চাপা, আর খাতা ফাঁকা থাকে কি না দেখা।
+     *
+     * ⓘ ভবিষ্যতের একটা সারি বসলে **আজকের জেরই** ভুল দেখায় —
+     * দেনাটা খাতায় আছে, অথচ লাভটা এখনো ঘোষিত হওয়ার কথা নয়।
+     */
+    public function test_tomorrow_cannot_be_declared(): void
+    {
+        $response = $this->actingAs($this->owner)
+            ->from(route('finance.profit.index'))
+            ->post(route('finance.profit.declare'), [
+                'trx_date' => now()->addDay()->toDateString(),
+                'profit' => '100000',
+            ]);
+
+        $response->assertSessionHasErrors('trx_date');
+
+        $this->assertSame(0, ProfitShare::query()->count(), implode("\n", [
+            'আগামীকালের তারিখে ঘোষণা খাতায় বসে গেছে।',
+            '',
+            '⛔ তাহলে আজকের জের একটা না-ঘটা ঘটনাও গোনে।',
+        ]));
+
+        /*
+         * ⭐ নিয়মটা সীমায় ঠিক বসেছে তো? ⓘ `before_or_equal:tomorrow`
+         * লেখা থাকলে উপরের দাবিটাও সবুজ থাকত না, কিন্তু
+         * `:yesterday` লেখা থাকলে থাকত — আর তখন আজকের
+         * ঘোষণাটাই আটকাত, যা মালিকের রোজের কাজ।
+         */
+        $this->actingAs($this->owner)
+            ->post(route('finance.profit.declare'), [
+                'trx_date' => now()->toDateString(),
+                'profit' => '100000',
+            ])
+            ->assertSessionHasNoErrors();
+    }
+
     private function contribute(string $code, string $name, string $amount): void
     {
         $person = Person::query()->create([

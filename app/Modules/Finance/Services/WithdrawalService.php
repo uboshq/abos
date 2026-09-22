@@ -48,6 +48,13 @@ final class WithdrawalService
         private readonly NumberSeriesEngine $numbers,
         private readonly VoucherService $vouchers,
         private readonly ApprovalEngine $approvals,
+
+        /*
+         * ⓘ ঘোষিত মুনাফার কতটুকু বাকি — লাভের ভাগ তোলার সীমা।
+         * ⚠️ এই একটা ধরনেই লাগে, তবু নির্ভরতায় বসে: সেবার ভিতরে
+         * `app()` ডাকলে পরীক্ষায় বদলানো যেত না।
+         */
+        private readonly ProfitDistribution $profits,
     ) {}
 
     /**
@@ -152,6 +159,54 @@ final class WithdrawalService
             ]);
         }
 
+        /*
+         * ⛔ ঘোষণা না হওয়া লাভ তোলা যায় না — ২২ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ লাভের ভাগ তোলা মানে [[StandardChart::PROFIT_PAYABLE]] থেকে
+         * ডেবিট। ⚠️ কিন্তু ঘোষণাই না হলে ওই খাতে তাঁর নামে কিছুই
+         * নেই — তখন ডেবিট করলে **ख़ণাত্মক দায়** তৈরি হত, অর্থাৎ
+         * খাতা বলত অংশীদার ব্যবসাকে টাকা দেবেন।
+         *
+         * ⭐ আটকানো হয়, নীরবে অন্য খাতে পাঠানো হয় না: ঘোষণা ছাড়া
+         * তোলা টাকা সত্যিই উত্তোলন, আর সেটা ব্যবহারকারীর বলার
+         * কথা, কোডের আন্দাজের নয়।
+         */
+        if ($withdrawal->kind === Withdrawal::PROFIT_SHARE) {
+            $left = $this->profits->outstandingFor((int) $withdrawal->person_id);
+
+            if (bccomp((string) $withdrawal->amount, $left, 4) > 0) {
+                throw ValidationException::withMessages([
+                    'amount' => __('finance::validation.more_than_declared', [
+                        'left' => Money::format($left),
+                    ]),
+                ]);
+            }
+        }
+
+        /*
+         * ⛔ ঘোষণা না হওয়া লাভ তোলা যায় না — ২২ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ লাভের ভাগ তোলা মানে [[StandardChart::PROFIT_PAYABLE]] থেকে
+         * ডেবিট। ⚠️ কিন্তু ঘোষণাই না হলে ওই খাতে তাঁর নামে কিছুই
+         * নেই — তখন ডেবিট করলে **ख़ণাত্মক দায়** তৈরি হত, অর্থাৎ
+         * খাতা বলত অংশীদার ব্যবসাকে টাকা দেবেন।
+         *
+         * ⭐ আটকানো হয়, নীরবে অন্য খাতে পাঠানো হয় না: ঘোষণা ছাড়া
+         * তোলা টাকা সত্যিই উত্তোলন, আর সেটা ব্যবহারকারীর বলার
+         * কথা, কোডের আন্দাজের নয়।
+         */
+        if ($withdrawal->kind === Withdrawal::PROFIT_SHARE) {
+            $left = $this->profits->outstandingFor((int) $withdrawal->person_id);
+
+            if (bccomp((string) $withdrawal->amount, $left, 4) > 0) {
+                throw ValidationException::withMessages([
+                    'amount' => __('finance::validation.more_than_declared', [
+                        'left' => Money::format($left),
+                    ]),
+                ]);
+            }
+        }
+
         $pending = $this->approvals->latestFor($withdrawal, 'withdrawal');
 
         /*
@@ -190,9 +245,31 @@ final class WithdrawalService
              * ⚠️ বাকি দুই ধরন (নিজের খরচ, বেতন) আগের মতোই —
              * ওগুলো সত্যিই মূলধন কমায়।
              */
-            $head = $withdrawal->kind === Withdrawal::PROFIT_SHARE
-                ? StandardChart::PROFIT_PAYABLE
-                : StandardChart::DRAWINGS;
+            /*
+             * ⛔ চার্টে তিন ধরনের ম্যাপিং লেখা ছিল, কোড একটাও মানত না।
+             *
+             * ⓘ `StandardChart`-এ `3210`-এর পাশে হুবহু এই ছকটা লেখা:
+             * DRAWING → ৩২০০, SALARY → ৫২০১, PROFIT_SHARE → ৩২১০।
+             * ⚠️ কিন্তু তিন ধরনই ৩২০০-এ যেত — মন্তব্যে নিয়ম,
+             * বলবৎ কোথাও নয়।
+             *
+             * ── ⛔ বেতনটা সবচেয়ে বেশি ক্ষতি করত ───────────────
+             * অংশীদারের বেতন ব্যবসার **খরচ**, মূলধন প্রত্যাহার নয়।
+             * ⓘ উত্তোলন খাতে বসানো মানে খরচটা খাতায় আসেই না —
+             * মুনাফা বেশি দেখায়, আর করযোগ্য আয় ভুল হয়।
+             *
+             * ── ⭐ মালিকের নকশায় লাভের ভাগ ২১৯০-এ, ৩২১০-এ নয় ─────
+             * চার্টের ছকটা একটা পুরনো নকশার: লাভ তোলা মানে সরাসরি
+             * মালিকানা কমা — কোনো ঘোষণা নেই, কোনো দায় নেই।
+             * ⓘ মালিক ২২ সেপ্টেম্বর ২০২৬-এ অন্য নকশা বেছেছেন:
+             * *"টাকাটা তুলে নেবেন"* — আগে ঘোষণায় দায় বসে, তারপর
+             * তোলা মানে সেই দায় শোধ। ⚠️ তাই ৩২১০ নয়, ২১৯০।
+             */
+            $head = match ($withdrawal->kind) {
+                Withdrawal::PROFIT_SHARE => StandardChart::PROFIT_PAYABLE,
+                Withdrawal::SALARY => StandardChart::SALARY_EXPENSE,
+                default => StandardChart::DRAWINGS,
+            };
 
             $drawings = StandardChart::find($head);
 
