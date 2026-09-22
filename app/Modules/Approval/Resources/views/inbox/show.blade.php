@@ -148,8 +148,17 @@
                                  : $d->level],
                             ['key' => 'user', 'label' => __('approval::field.approver'),
                              'render' => fn ($d) => $d->user?->name],
-                            ['key' => 'decision', 'label' => __('approval::field.status'), 'width' => '8rem',
-                             'render' => fn ($d) => __('approval::status.'.$d->decision)],
+                            /* ⭐ ফরওয়ার্ড হলে কার কাছে গেল সেটাও এখানেই — ২২ সেপ্টেম্বর ২০২৬।
+
+                               ⚠️ নামটা ছাড়া সারিটা বলত "অন্যের কাছে পাঠানো",
+                               আর প্রশ্নটা থেকে যেত: **কার** কাছে? ⛔ ঐ উত্তরটা
+                               হারালে "কে সই করেছিল" প্রশ্নের শিকলটাই ছিঁড়ে যায়,
+                               আর ঐ শিকলের জন্যই গোটা ব্যবস্থাটা আছে। */
+                            ['key' => 'decision', 'label' => __('approval::field.status'), 'width' => '12rem',
+                             'render' => fn ($d) => $d->decision === \App\Models\ApprovalDecision::FORWARDED
+                                 && $d->forwardedTo !== null
+                                 ? __('approval::status.'.$d->decision).' → '.$d->forwardedTo->name
+                                 : __('approval::status.'.$d->decision)],
                             ['key' => 'remarks', 'label' => __('approval::field.remarks')],
                             ['key' => 'decided_at', 'label' => __('approval::field.requested_at'), 'width' => '11rem',
                              'render' => fn ($d) => $d->decided_at?->format('d M Y, H:i')],
@@ -200,6 +209,45 @@
                         {{ __('approval::action.reject') }}
                     </x-ui.button>
                 </form>
+
+                {{-- ⭐ সইটা অন্যের হাতে দেওয়া — ২২ সেপ্টেম্বর ২০২৬।
+
+                     ⓘ তালিকায় কেবল তাঁরাই, যাঁদের নাম কোনো সচল ছকে আছে
+                     (মালিকের সিদ্ধান্ত)। ⚠️ যে কারো কাছে পাঠানো গেলে ছকটা
+                     আর "কে সই দিতে পারেন" প্রশ্নের উত্তর থাকত না।
+
+                     ⛔ বোতামটা সবার শেষে, আর কারণটা ক্রমে: প্রথমে সই,
+                     তারপর ফেরত, তারপর হাতবদল। ⓘ মানুষ উপরেরটা আগে পড়েন,
+                     তাই সহজ পথটা যেন উপরে থাকে। --}}
+                @if ($forwardTo !== [])
+                    <form method="POST" action="{{ route('approval.inbox.forward', $approval->id) }}"
+                          class="rounded-(--radius-card) border border-(--color-border)
+                                 bg-(--color-surface-card) p-4">
+                        @csrf
+
+                        <x-ui.select name="to"
+                                     :label="__('approval::field.forward_to')"
+                                     :options="$forwardTo"
+                                     :placeholder="__('approval::field.forward_pick')"
+                                     required />
+
+                        {{-- ⓘ কারণ ছাড়া নয়: যাঁর হাতে কাগজটা পড়বে তাঁর
+                             প্রথম প্রশ্ন "আমাকে কেন?" — উত্তর না থাকলে তিনি
+                             আবার কাউকে পাঠান, আর কাগজটা ঘুরতে থাকে। --}}
+                        <label class="mt-3 block">
+                            <span class="mb-1 block text-2xs uppercase tracking-wide text-(--color-ink-muted)">
+                                {{ __('approval::field.remarks') }} *
+                            </span>
+                            <textarea name="remarks" rows="2" maxlength="500" required
+                                      class="w-full rounded-(--radius-field) border border-(--color-border)
+                                             bg-(--color-surface-app) px-2 py-1.5 text-sm"></textarea>
+                        </label>
+
+                        <x-ui.button type="submit" tone="secondary" class="mt-3 w-full">
+                            {{ __('approval::action.forward') }}
+                        </x-ui.button>
+                    </form>
+                @endif
             @elseif ($approval->status === \App\Models\Approval::PENDING)
                 <p class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)
                           p-4 text-sm text-(--color-ink-muted)">

@@ -7,4 +7,5 @@ return [
     'approved' => 'Approved',
     'rejected' => 'Sent back',
     'cancelled' => 'Withdrawn',
+    'forwarded' => 'Passed on',
 ];

@@ -32,7 +32,7 @@ class Approval extends Model implements Drillable
 
     protected $fillable = [
         'company_id', 'approvable_type', 'approvable_id', 'module', 'action',
-        'amount', 'status', 'current_level', 'payload',
+        'amount', 'status', 'current_level', 'assigned_to', 'payload',
         'requested_reason', 'requested_by', 'requested_at', 'decided_at',
     ];
 
@@ -95,6 +95,17 @@ class Approval extends Model implements Drillable
         }
 
         return bccomp($signed, $amount, 4) === 0;
+    }
+
+    /**
+     * ⭐ এখন কার হাতে — ফরওয়ার্ড হয়ে থাকলে।
+     *
+     * ⚠️ খালি হলে ছকের স্বাভাবিক নিয়ম চলে; ভরা থাকলে **কেবল ইনিই**
+     * এই স্তরে সই দিতে পারেন ([[ApprovalEngine::canDecide()]])।
+     */
+    public function assignee(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_to');
     }
 
     public function decisions(): HasMany

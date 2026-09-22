@@ -46,4 +46,5 @@ return [
      * So the limit and the way round it go in one line.
      */
     'report_counts_only' => 'These are counts, so there is nothing to open on a row. To see a particular request, go to "Waiting for me", or open the pending / approved / turned-down report — every row there opens.',
+    'forwarded' => 'Passed on to :name.',
 ];

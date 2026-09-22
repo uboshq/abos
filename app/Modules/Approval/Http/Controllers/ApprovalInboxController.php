@@ -6,11 +6,8 @@ namespace App\Modules\Approval\Http\Controllers;
 
 use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Services\MenuBuilder;
-use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Models\Approval;
-use App\Models\ApprovalFlow;
-use App\Models\ApprovalFlowStep;
 use App\Models\User;
 use App\Modules\Approval\Services\ApprovalFacts;
 use App\Modules\Approval\Services\ApprovalFlowService;
@@ -74,8 +71,12 @@ class ApprovalInboxController extends Controller implements HasMiddleware
              * ⓘ `can:approval.decide` বসিয়ে রাখলে **যিনি কোনো ছকে নেই
              * তিনি পাতাটাই খুলতে পারতেন না** — অর্থাৎ ছাঁকনিটা ঠিক
              * তাঁদের জন্যই অদৃশ্য হত যাঁদের জন্য বানানো।
+             *
+             * ⓘ `forward`-ও এই একই চাবিতে: যিনি সই দিতে পারেন কেবল
+             * তিনিই সেটা অন্যকে দিতে পারেন। ⛔ আলাদা চাবি দিলে এমন কেউ
+             * কাগজ পাঠাতে পারতেন যিনি নিজে ওটায় সই দিতেই পারতেন না।
              */
-            new Middleware('can:approval.decide', only: ['approve', 'reject']),
+            new Middleware('can:approval.decide', only: ['approve', 'reject', 'forward']),
 
             /*
              * ⚠️ `show` এখানে নেই, আর সেটা ইচ্ছাকৃত।
@@ -267,47 +268,19 @@ class ApprovalInboxController extends Controller implements HasMiddleware
     }
 
     /**
-     * যাঁদের সই কোনো না কোনো ছকে লাগে।
+     * ⓘ এই কোম্পানির সইকারীরা — সংজ্ঞাটা এখন ইঞ্জিনে।
      *
-     * ── কেন এই তালিকাটা, "সব ব্যবহারকারী" নয় ───────────────────────
-     * যাঁর নাম কোনো ছকে নেই তাঁর ইনবক্স সবসময় খালি। ওই নামগুলো
-     * ড্রপডাউনে রাখলে তালিকাটা লম্বা হত, আর প্রতিটা খালি উত্তর পাঠককে
-     * ভাবাত "কিছু কি ভাঙা?"
+     * ── ⚠️ কেন সরানো হলো, ২২ সেপ্টেম্বর ২০২৬ ────────────────────────
+     * ফরওয়ার্ড বসানোর সময় ঠিক এই তালিকাটাই দ্বিতীয়বার দরকার হলো —
+     * *"কার কাছে পাঠানো যায়"*। ⛔ দুই জায়গায় দুইবার লিখলে একদিন
+     * একটা বদলাত আর অন্যটা পুরনো নিয়মে চলত, আর পার্থক্যটা **নীরব**
+     * হত: ইনবক্স একজনকে দেখাত, বাছাইয়ের তালিকা আরেকজনকে।
      *
-     * ⚠️ কোম্পানির সীমাটা এখানে হাতে বসাতে হয়: `User`-এ কোনো global
-     * scope নেই (সে বহু কোম্পানিতে থাকতে পারেন), তাই `User::query()`
-     * **সব টেন্যান্টের** নাম ফেরায়।
-     *
-     * @return array<int, string> id => নাম
+     * @return array<int, string>
      */
     private function theSigners(): array
     {
-        $steps = ApprovalFlowStep::query()
-            ->whereIn('approval_flow_id', ApprovalFlow::query()->where('is_active', true)->select('id'))
-            ->get(['approver_type', 'approver_id']);
-
-        $byName = [];
-        $byRole = [];
-
-        foreach ($steps as $step) {
-            $step->approver_type === ApprovalFlowStep::BY_USER
-                ? $byName[] = (int) $step->approver_id
-                : $byRole[] = (int) $step->approver_id;
-        }
-
-        return User::query()
-            ->whereHas('companies', fn ($q) => $q->where('companies.id', CompanyContext::id()))
-            ->where(function ($q) use ($byName, $byRole): void {
-                $q->whereIn('id', $byName);
-
-                if ($byRole !== []) {
-                    // রোল ধরে বসানো ছক — ওই রোলের সবাই সই দিতে পারেন
-                    $q->orWhereHas('roles', fn ($r) => $r->whereIn('roles.id', $byRole));
-                }
-            })
-            ->orderBy('name')
-            ->pluck('name', 'id')
-            ->all();
+        return $this->engine->signers();
     }
 
     /** আমার করা অনুরোধগুলো — নতুন আগে। */
@@ -329,7 +302,7 @@ class ApprovalInboxController extends Controller implements HasMiddleware
         /** @var User $user */
         $user = $request->user();
 
-        $entry = Approval::query()->with(['requester', 'decisions.user'])->findOrFail($approval);
+        $entry = Approval::query()->with(['requester', 'decisions.user', 'decisions.forwardedTo'])->findOrFail($approval);
 
         /*
          * ── তিনটা আলাদা প্রশ্ন, আর ওদের এক করা যাবে না ──────────────
@@ -407,6 +380,19 @@ class ApprovalInboxController extends Controller implements HasMiddleware
 
             'canDecide' => $canDecide,
 
+            /*
+             * ⭐ কার কাছে পাঠানো যায় — কেবল ছকে নাম থাকা সইকারীরা।
+             *
+             * ⚠️ নিজেকে বাদ: কাগজটা নিজের হাতেই ফেরত দেওয়ার কোনো মানে
+             * নেই, আর তালিকায় নিজের নাম থাকলে কেউ একবার ভুল করবেনই।
+             *
+             * ⓘ সিদ্ধান্ত দিতে পারেন না এমন কাউকে ফর্মটাই দেখানো হয় না
+             * (`$canDecide`), তাই তালিকাটাও তখন খালি।
+             */
+            'forwardTo' => $canDecide
+                ? array_diff_key($this->engine->signers(), [(int) $user->id => true])
+                : [],
+
             // ⓘ স্তর ধরে ধাপের নাম — "ধাপ ২" কে, সেটা বলার জন্য
             'stepNames' => $this->engine->stepNamesFor($entry),
         ]);
@@ -431,6 +417,41 @@ class ApprovalInboxController extends Controller implements HasMiddleware
      * "না" শুনে মানুষ প্রথমেই জানতে চান কেন। কারণটা না লিখলে তিনি
      * একই অনুরোধ আবার পাঠান, আর দ্বিতীয়বারও একই কারণে না হয়।
      */
+    /**
+     * ⭐ কাগজটা অন্যের হাতে দেওয়া।
+     *
+     * ── ⓘ কারণ লেখা বাধ্যতামূলক, ঠিক ফেরত পাঠানোর মতো ───────────────
+     * কাগজটা কারো হাতে এসে পড়লে তাঁর প্রথম প্রশ্ন *"আমাকে কেন?"*। ⛔
+     * উত্তর না থাকলে তিনি আবার কাউকে পাঠান, আর কাগজটা ঘুরতেই থাকে।
+     *
+     * ── ⚠️ কার কাছে যাবে, সেটা এখানে যাচাই হয় না ────────────────────
+     * নিয়মটা ইঞ্জিনে ([[ApprovalEngine::forward()]]), কারণ ওটা
+     * ব্যবসার নিয়ম — পর্দার নয়। ⓘ এখানে বসালে আগামীকাল কোনো কনসোল
+     * কমান্ড বা API ওটা এড়িয়ে যেতে পারত।
+     */
+    public function forward(Request $request, int $approval): RedirectResponse
+    {
+        $validated = $request->validate([
+            'to' => ['required', 'integer', 'min:1'],
+            'remarks' => ['required', 'string', 'max:500'],
+        ]);
+
+        $entry = Approval::query()->findOrFail($approval);
+
+        /*
+         * ⚠️ `User::query()` কোম্পানির দেয়ালের বাইরে — `User`-এ কোনো
+         * গ্লোবাল স্কোপ নেই। ⓘ তাই ব্যক্তিটা সত্যিই এই কোম্পানির সইকারী
+         * কি না সেটা ইঞ্জিন মেলায়; এখানে কেবল সারিটা তোলা হয়।
+         */
+        $to = User::query()->findOrFail($validated['to']);
+
+        $this->engine->forward($entry, $request->user(), $to, $validated['remarks']);
+
+        return redirect()
+            ->route('approval.inbox.index')
+            ->with('saved', __('approval::message.forwarded', ['name' => $to->name]));
+    }
+
     public function reject(Request $request, int $approval): RedirectResponse
     {
         $validated = $request->validate(['remarks' => ['required', 'string', 'max:500']]);

@@ -38,4 +38,8 @@ return [
     'party' => 'Party',
     'what_for' => 'What for',
     'where_money' => 'Where',
+
+    // Only people named in an active flow — the owner's rule, 22 September 2026.
+    'forward_to' => 'Pass it to',
+    'forward_pick' => 'Choose someone',
 ];

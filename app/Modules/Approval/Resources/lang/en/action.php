@@ -14,4 +14,5 @@ return [
     'by_role' => 'Role',
     'by_user' => 'Person',
     'always' => 'Every time',
+    'forward' => 'Pass it on',
 ];

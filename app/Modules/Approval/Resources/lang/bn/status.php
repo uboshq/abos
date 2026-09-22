@@ -7,4 +7,5 @@ return [
     'approved' => 'অনুমোদিত',
     'rejected' => 'ফেরত',
     'cancelled' => 'প্রত্যাহৃত',
+    'forwarded' => 'অন্যের কাছে পাঠানো',
 ];

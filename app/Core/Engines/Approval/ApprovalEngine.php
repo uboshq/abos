@@ -190,6 +190,106 @@ final class ApprovalEngine
     }
 
     /**
+     * ⭐ সইটা অন্যের হাতে দেওয়া — ২২ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⓘ কেন এটা তৃতীয় একটা সিদ্ধান্ত, নতুন ধাপ নয় ──────────────────
+     * ছকে লেখা *"দুই ধাপ"*, আর ফরওয়ার্ড করলে যদি বাড়তি একটা ধাপ বসত,
+     * তবে সইয়ের সংখ্যা বেড়ে যেত আর ছকটা নিজের কথা রাখত না। ⚠️ যে ছক
+     * নিজের কথা রাখে না, সেটা কেউ বিশ্বাস করে না।
+     *
+     * ⭐ তাই **ধাপটাই হাত বদলায়** — `current_level` নড়ে না, কেবল
+     * `assigned_to` বসে।
+     *
+     * ── ⛔ কার কাছে পাঠানো যায় — মালিকের সিদ্ধান্ত ───────────────────
+     * কেবল তাঁদের কাছে **যাঁদের নাম কোনো না কোনো সচল ছকে আছে**
+     * ([[signers()]])। ⓘ মালিকের কথা: যে কারো কাছে পাঠানো গেলে ছকটা আর
+     * *"কে সই দিতে পারেন"* প্রশ্নের উত্তর থাকত না — যে কেউ যে কাউকে
+     * দিয়ে সই করিয়ে নিতে পারতেন।
+     *
+     * ⚠️ কড়া থেকে ঢিলা করা সহজ, উল্টোটা কঠিন — তাই শুরুটা কড়া।
+     *
+     * ── ⓘ কারণ লেখা বাধ্যতামূলক ─────────────────────────────────────
+     * কাগজটা কারো হাতে এসে পড়লে তাঁর প্রথম প্রশ্ন *"আমাকে কেন?"*। ⛔
+     * উত্তর না থাকলে তিনি আবার কাউকে পাঠান, আর কাগজটা ঘুরতে থাকে।
+     */
+    public function forward(Approval $approval, User $by, User $to, string $remarks): Approval
+    {
+        $this->assertPending($approval);
+        $this->assertCanDecide($approval, $by);
+
+        if ($to->id === $by->id) {
+            throw new RuntimeException('An approval cannot be forwarded to the person forwarding it.');
+        }
+
+        if (! array_key_exists((int) $to->id, $this->signers())) {
+            throw new RuntimeException(
+                "User {$to->id} is not named in any active approval flow of this company."
+            );
+        }
+
+        return DB::transaction(function () use ($approval, $by, $to, $remarks) {
+            ApprovalDecision::create([
+                'approval_id' => $approval->id,
+                'level' => $approval->current_level,
+                'user_id' => $by->id,
+                'forwarded_to' => $to->id,
+                'decision' => ApprovalDecision::FORWARDED,
+                'remarks' => $remarks,
+                'decided_at' => now(),
+            ]);
+
+            $approval->update(['assigned_to' => $to->id]);
+
+            return $approval->fresh();
+        });
+    }
+
+    /**
+     * ⭐ এই কোম্পানির যাঁরা কোনো না কোনো সচল ছকে সইকারী।
+     *
+     * ⚠️ রোল ধরে বসানো ছকে **ঐ রোলের সবাই** সই দিতে পারেন, তাই তাঁরাও
+     * এই তালিকায় আসেন।
+     *
+     * ⓘ তালিকাটা দুইটা কাজে লাগে — ফরওয়ার্ডের বাছাই, আর ইনবক্সে অন্য
+     * কারো সারি দেখা। ⛔ দুই জায়গায় দুইবার লিখলে একদিন একটা বদলাত আর
+     * অন্যটা পুরনো নিয়মেই চলত, আর পার্থক্যটা **নীরব** হত।
+     *
+     * @return array<int, string> আইডি => নাম
+     */
+    public function signers(): array
+    {
+        $steps = ApprovalFlowStep::query()
+            ->whereIn('approval_flow_id', ApprovalFlow::query()->where('is_active', true)->select('id'))
+            ->get(['approver_type', 'approver_id']);
+
+        $byName = [];
+        $byRole = [];
+
+        foreach ($steps as $step) {
+            $step->approver_type === ApprovalFlowStep::BY_USER
+                ? $byName[] = (int) $step->approver_id
+                : $byRole[] = (int) $step->approver_id;
+        }
+
+        if ($byName === [] && $byRole === []) {
+            return [];
+        }
+
+        return User::query()
+            ->whereHas('companies', fn ($q) => $q->where('companies.id', CompanyContext::id()))
+            ->where(function ($q) use ($byName, $byRole): void {
+                $q->whereIn('id', $byName === [] ? [0] : $byName);
+
+                if ($byRole !== []) {
+                    $q->orWhereHas('roles', fn ($r) => $r->whereIn('roles.id', $byRole));
+                }
+            })
+            ->orderBy('name')
+            ->pluck('name', 'id')
+            ->all();
+    }
+
+    /**
      * প্রত্যাখ্যান — এক স্তরের একটা "না"-ই যথেষ্ট।
      *
      * বাকি স্তরে পাঠানো হয় না, কারণ নিচের স্তর না চাইলে উপরের স্তরের
@@ -388,26 +488,46 @@ final class ApprovalEngine
          * তাই এমন একটা শর্ত যা কখনো সত্যি হয় না — ডাটাবেজ ওটা দেখেই
          * থেমে যায়, আর ডাকা পক্ষকে আলাদা করে "খালি" সামলাতে হয় না।
          */
-        if ($tuples === []) {
-            return Approval::query()->whereRaw('1 = 0');
-        }
-
         $query = Approval::query()
             ->pending()
             // অনুরোধকারীর নাম প্রতিটা সারিতে দেখানো হয়, তাই সাথেই আসে
             ->with('requester')
-            ->where(function (Builder $any) use ($tuples): void {
-                foreach ($tuples as [$module, $action, $type, $levels]) {
-                    $any->orWhere(function (Builder $one) use ($module, $action, $type, $levels): void {
-                        $one->where('module', $module)
-                            ->where('action', $action)
-                            // ⚠️ নথির ধরনটাও শর্তে, কারণ একই কাজে দুইটা
-                            // ছক থাকতে পারে — একটা নির্দিষ্ট নথির, একটা
-                            // সবার — আর দুইটায় অনুমোদনকারী আলাদা।
-                            ->where('approvable_type', $type)
-                            ->whereIn('current_level', $levels);
-                    });
+            ->where(function (Builder $outer) use ($tuples, $user): void {
+                /*
+                 * ⭐ আমার হাতে দেওয়া — ছকে আমি থাকি বা না থাকি।
+                 *
+                 * ⛔ আগে এখানে ছকে-নেই মানুষের জন্য `1 = 0` ফেরত যেত, আর
+                 * কোনো কোয়েরিই পাঠানো হত না। ⚠️ ফরওয়ার্ড আসার পর সেটা
+                 * ভুল হয়ে গেল: যাঁর কাছে পাঠানো হলো তিনি ছকে না-ও থাকতে
+                 * পারেন — **না থাকাটাই তো পাঠানোর কারণ**।
+                 */
+                $outer->where('assigned_to', $user->id);
+
+                if ($tuples === []) {
+                    return;
                 }
+
+                $outer->orWhere(function (Builder $mine) use ($tuples): void {
+                    /*
+                     * ⚠️ ফরওয়ার্ড হয়ে গেলে কাগজটা আর ছকের লোকের ইনবক্সে
+                     * থাকে না। ⛔ থাকলে দুইজন একই কাগজ দেখতেন, দুইজনই
+                     * ভাবতেন অন্যজন দেখছেন, আর কেউ ধরত না।
+                     */
+                    $mine->whereNull('assigned_to')
+                        ->where(function (Builder $any) use ($tuples): void {
+                            foreach ($tuples as [$module, $action, $type, $levels]) {
+                                $any->orWhere(function (Builder $one) use ($module, $action, $type, $levels): void {
+                                    $one->where('module', $module)
+                                        ->where('action', $action)
+                                        // ⚠️ নথির ধরনটাও শর্তে, কারণ একই কাজে দুইটা
+                                        // ছক থাকতে পারে — একটা নির্দিষ্ট নথির, একটা
+                                        // সবার — আর দুইটায় অনুমোদনকারী আলাদা।
+                                        ->where('approvable_type', $type)
+                                        ->whereIn('current_level', $levels);
+                                });
+                            }
+                        });
+                });
             })
             // ইনি এই স্তরে আগেই সিদ্ধান্ত দিয়েছেন — আর দেখানোর কিছু নেই
             ->whereNotExists(function (QueryBuilder $already) use ($user): void {
@@ -415,7 +535,16 @@ final class ApprovalEngine
                     ->from('approval_decisions')
                     ->whereColumn('approval_decisions.approval_id', 'approvals.id')
                     ->whereColumn('approval_decisions.level', 'approvals.current_level')
-                    ->where('approval_decisions.user_id', $user->id);
+                    ->where('approval_decisions.user_id', $user->id)
+                    /*
+                     * ⚠️ ফরওয়ার্ড সিদ্ধান্ত নয়, তাই গোনা হয় না।
+                     *
+                     * ⛔ গুনলে যিনি কাগজটা পাঠিয়েছিলেন তাঁর ইনবক্স থেকে
+                     * ওটা চিরতরে হারিয়ে যেত — ফেরত এলেও।
+                     * ⓘ নিয়মটা [[canDecide()]]-এর হুবহু, আর দুইটা এক না
+                     * থাকলে ইনবক্স আর বোতাম দুই কথা বলত।
+                     */
+                    ->where('approval_decisions.decision', '!=', ApprovalDecision::FORWARDED);
             });
 
         $this->exceptOwnBeyondLimit($query, $user);
@@ -512,10 +641,28 @@ final class ApprovalEngine
          * ব্যবহার করে ([[flowOf]] · [[levelsIn]]), যাতে ইনবক্স আর এই
          * প্রশ্নটা কখনো দুই কথা না বলে।
          */
-        $levels = $this->levelsIn($this->flowOf($approval), $user);
+        /*
+         * ⭐ কাগজটা কারো হাতে দেওয়া থাকলে ছকের নিয়ম সাময়িকভাবে সরে যায়।
+         *
+         * ── ⚠️ কেন সরতেই হয় ────────────────────────────────────────
+         * যাঁর কাছে পাঠানো হলো তিনি **এই ছকের এই স্তরে নেই** — থাকলে
+         * পাঠানোরই দরকার হত না। ⛔ ছকের শর্তটা রেখে দিলে ফরওয়ার্ড করা
+         * কাগজ কেউ খুলতেই পারতেন না, আর জিনিসটা কাজ করত না।
+         *
+         * ⓘ বদলে নিরাপত্তাটা সরু হয়: ভরা থাকলে **কেবল ঐ একজনই**।
+         * ⚠️ অর্থাৎ ফরওয়ার্ড ক্ষমতা ছড়ায় না, সরায় — মূল সইকারীও তখন
+         * আর ঐ স্তরে সই দিতে পারেন না, যতক্ষণ না কাগজটা ফেরত আসে।
+         */
+        if ($approval->assigned_to !== null) {
+            if ((int) $approval->assigned_to !== (int) $user->id) {
+                return false;
+            }
+        } else {
+            $levels = $this->levelsIn($this->flowOf($approval), $user);
 
-        if (! in_array((int) $approval->current_level, $levels, true)) {
-            return false;
+            if (! in_array((int) $approval->current_level, $levels, true)) {
+                return false;
+            }
         }
 
         /*
@@ -545,9 +692,17 @@ final class ApprovalEngine
             return false;
         }
 
+        /*
+         * ⓘ ইনি এই স্তরে আগেই সিদ্ধান্ত দিয়েছেন কি না।
+         *
+         * ⚠️ ফরওয়ার্ড **সিদ্ধান্ত নয়** — "হ্যাঁ"-ও নয়, "না"-ও নয়। ⛔
+         * ওটাকেও গুনলে যিনি কাগজটা পাঠিয়েছিলেন, ফেরত এলে তিনি আর সই
+         * দিতে পারতেন না, আর কাগজটা চিরকাল আটকে থাকত।
+         */
         return ! $approval->decisions()
             ->where('level', $approval->current_level)
             ->where('user_id', $user->id)
+            ->where('decision', '!=', ApprovalDecision::FORWARDED)
             ->exists();
     }
 

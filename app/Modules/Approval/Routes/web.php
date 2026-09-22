@@ -47,4 +47,14 @@ Route::middleware('auth')->prefix('approvals')->group(function () {
         ->whereNumber('approval')->name('inbox.reject');
     Route::post('/{approval}/withdraw', [ApprovalInboxController::class, 'withdraw'])
         ->whereNumber('approval')->name('inbox.withdraw');
+
+    /*
+     * ⭐ সই অন্যের হাতে দেওয়া — ২২ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ চাবিটা `approval.decide`-ই, আলাদা কিছু নয়: যিনি সই দিতে পারেন
+     * কেবল তিনিই সেটা অন্যকে দিতে পারেন। ⛔ আলাদা চাবি দিলে এমন কেউ
+     * কাগজ পাঠাতে পারতেন যিনি নিজে ওটায় সই দিতেই পারতেন না।
+     */
+    Route::post('/{approval}/forward', [ApprovalInboxController::class, 'forward'])
+        ->whereNumber('approval')->name('inbox.forward');
 });
