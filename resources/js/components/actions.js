@@ -25,6 +25,36 @@
  * টের পেত না। ⓘ `requestSubmit()` আসল বোতাম চাপার মতোই আচরণ করে।
  */
 
+/*
+ * একটা মডিউলে কয়টা অনুমতি দেওয়া আছে — ব্যাজটা নতুন করে লেখা।
+ *
+ * ⓘ লেখার ছাঁচটা **অনুবাদ থেকেই** আসে (`data-permission-label`), তাই
+ * JS-এ কোনো লেখা নকল করা হয় না। ⚠️ প্রথম চালে লেখাটার ভিতরের সংখ্যা
+ * regex দিয়ে বদলানো হয়েছিল — ⛔ ওটা ভুল ছিল: বাংলা অঙ্ক (১২ / ৪৩)
+ * এলে `\d` কিছুই মিলত না, আর ব্যাজটা চিরকাল পুরনো সংখ্যা দেখাত।
+ */
+function countPermissions (module) {
+    const badge = module.querySelector('[data-permission-count]')
+
+    if (! badge) {
+        return
+    }
+
+    const total = badge.dataset.permissionTotal
+    const on = module.querySelectorAll('input[name="permissions[]"]:checked').length
+
+    badge.textContent = (badge.dataset.permissionLabel ?? ':on / :all')
+        .replace(':on', String(on))
+        .replace(':all', String(total))
+
+    const all = module.querySelector('[data-permission-all]')
+
+    if (all) {
+        all.checked = on > 0 && String(on) === String(total)
+        all.indeterminate = on > 0 && String(on) !== String(total)
+    }
+}
+
 const PRINT = '[data-action="print"]'
 const SUBMIT = '[data-action="submit-form"]'
 const CONFIRM = '[data-confirm]'
@@ -128,6 +158,69 @@ export function wireActions (root = document) {
 
         window.location = url.toString()
     })
+
+    /*
+     * ⭐ অনুমতির পর্দায় "সব" টিক — মালিকের নমুনা, ২২ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⛔ কেন লাগল ─────────────────────────────────────────────────
+     * একটা নতুন ভূমিকা বানাতে **দুইশোর বেশি ক্লিক** লাগত। ⚠️ মানুষ
+     * তখন যা করে: সবচেয়ে কাছাকাছি একটা পুরনো ভূমিকা বেছে নেয়। ⓘ ফলে
+     * মানুষ পায় দরকারের চেয়ে **বেশি** অনুমতি, আর কাগজে ব্যবস্থাটা
+     * নিখুঁত দেখায়।
+     *
+     * ── ⓘ দুইটা স্তর ───────────────────────────────────────────────
+     * `[data-permission-all]`    — গোটা মডিউল
+     * `[data-permission-column]` — ঐ মডিউলের একটা কলাম (দেখা · যোগ …)
+     *
+     * ⚠️ `manage` ঘরগুলো কলামের টিকে পড়ে না: ওরা তিন কলাম জুড়ে বসে,
+     * তাই "সব দেখা" চাপলে ওগুলোও টিক হলে মানুষ **মুছতেও** পারতেন।
+     * ⓘ মডিউলের টিক ওদের ধরে, কারণ ওখানে উদ্দেশ্যটা স্পষ্ট।
+     */
+    root.addEventListener('change', (event) => {
+        const box = event.target
+        const module = box?.closest?.('[data-permission-module]')
+
+        if (! module) {
+            return
+        }
+
+        const bulk = box.matches('[data-permission-all], [data-permission-column]')
+
+        /*
+         * ⛔ একটাই শ্রোতা, দুইটা নয় — আর এই লাইনটা দুঃখ করে শেখা।
+         *
+         * ℹ প্রথম চালে গোনাটা আলাদা একটা শ্রোতায় ছিল, মডিউলের গায়ে।
+         * ⚠️ ঘটনাটা আগে মডিউলে পৌঁছায়, পরে root-এ — তাই গোনাটা চলত
+         * **আগে**, আর সে `all.checked` ওই মুহূর্তেই `false` করে দিত
+         * (আংশিক বলে)। ⛔ তারপর এই শ্রোতা ওই `false`-টা পড়ে **সব টিক
+         * তুলে দিত** — টিক দিলে সব খালি হয়ে যেত।
+         */
+        if (bulk) {
+            const column = box.dataset.permissionColumn
+            const wanted = column === undefined
+                ? 'input[name="permissions[]"]'
+                : `input[data-permission-cell="${column}"]`
+
+            for (const cell of module.querySelectorAll(wanted)) {
+                cell.checked = box.checked
+            }
+        } else if (! box.matches('input[name="permissions[]"]')) {
+            return
+        }
+
+        countPermissions(module)
+    })
+
+    /*
+     * ⚠️ `<summary>`-এর ভিতরে ক্লিক করলে ব্রাউজার বাক্সটা ভাঁজ করে —
+     * টিক দিতে গিয়ে মডিউলটা বন্ধ হয়ে যেত।
+     */
+    root.addEventListener('click', (event) => {
+        if (event.target?.closest?.('summary [data-permission-all]')) {
+            event.stopPropagation()
+        }
+    })
+
 
     /*
      * ⭐ ছাপার লিংক থেকে এসে নিজে থেকেই ছাপা — খতিয়ানের ক্রমের জন্য।

@@ -130,6 +130,19 @@
                 </div>
             </section>
 
+            {{--
+                ⭐ দুই কলামে মডিউল — মালিকের নমুনা, ২২ সেপ্টেম্বর ২০২৬।
+
+                ℹ চৌদ্দটা মডিউল একটার পর একটা বসলে পর্দাটা অনেক লম্বা হয়,
+                আর নিচের মডিউলগুলো কেউ স্ক্রল করে দেখেই না।
+
+                ⚠️ কেবল `2xl`-এ দুই কলাম: ভিতরের ছকটার নিজেরই
+                `min-w-[40rem]`, তাই তার চেয়ে সরু পর্দায় ভাগ করলে প্রতিটা
+                মডিউলে আড়াআড়ি স্ক্রলবার উঠত — লম্বা পর্দার চেয়ে খারাপ।
+
+                ℹ `items-start` — ভাঁজ খুললে পাশের বাক্সটা যেন লম্বা না হয়।
+            --}}
+            <div class="grid items-start gap-3 2xl:grid-cols-2">
             @foreach ($grid as $module => $block)
                 @php
                     $on = count(array_intersect($block['all'], $chosen));
@@ -142,7 +155,30 @@
                                     [&::-webkit-details-marker]:hidden">
                         <span class="text-(--color-ink-muted) transition group-open:rotate-90" aria-hidden="true">▸</span>
                         <span class="flex-1 font-semibold">{{ $block['label'] }}</span>
-                        <span @class([
+
+                        {{--
+                            ⭐ গোটা মডিউল একসাথে — মালিকের নমুনা, ২২ সেপ্টেম্বর ২০২৬।
+
+                            ⛔ আগে একটা নতুন ভূমিকা বানাতে **দুইশোর বেশি ক্লিক** লাগত,
+                            আর মানুষ তখন যা করে: সবচেয়ে কাছাকাছি একটা ভূমিকা খুঁজে নিয়ে
+                            কাজ চালায়। ⚠️ ফলে মানুষ পায় তার দরকারের চেয়ে বেশি অনুমতি — আর
+                            সেটা অনুমতি ব্যবস্থা না থাকার চেয়েও খারাপ, কারণ কাগজে দেখায় ঠিক আছে।
+
+                            ℹ `<summary>`-এ চেকবক্স বসালে ক্লিক করলে বাক্সটা ভাঁজ হয়ে যায় —
+                            সেটা থামানো JS-এ, ইনলাইনে নয় (CSP)।
+                        --}}
+                        <label class="flex cursor-pointer items-center gap-1.5 text-xs text-(--color-ink-muted)"
+                               title="{{ __('system_admin::permission.select_all_module') }}">
+                            <input type="checkbox" data-permission-all
+                                   class="size-4 rounded border-(--color-border)"
+                                   @checked($on === $all && $all > 0)>
+                            <span class="hidden sm:inline">{{ __('system_admin::permission.select_all') }}</span>
+                        </label>
+
+                        <span data-permission-count
+                              data-permission-total="{{ $all }}"
+                              data-permission-label="{{ __('system_admin::permission.granted', ['on' => ':on', 'all' => ':all']) }}"
+                              @class([
                                   'rounded-full px-2 py-0.5 text-xs tabular-nums',
                                   'bg-(--color-badge-success-bg) text-(--color-badge-success-ink)' => $on > 0,
                                   'bg-(--color-surface-muted) text-(--color-ink-muted)' => $on === 0,
@@ -155,8 +191,23 @@
                                 <thead>
                                     <tr class="border-b border-(--color-border) text-left text-xs text-(--color-ink-muted)">
                                         <th class="py-2 pr-3 font-medium">{{ __('system_admin::permission.column_subject') }}</th>
-                                        @foreach ($columns as $label)
-                                            <th class="w-20 px-2 py-2 text-center font-medium">{{ $label }}</th>
+                                        {{--
+                                            ⭐ কলামের মাথায়ও একটা টিক — "এই মডিউলের সব দেখা"।
+
+                                            ℹ Skin Soft-এ এটা ভাগ ধরে (Settings · Reports); আমাদের
+                                            সারিগুলো পর্দা, ভাগ নয় — তাই এখানে উপযুক্ত ছাঁচটা কলাম।
+                                            ⛔ "সবকিছু দেখা যাবে, কিছুই বদলানো যাবে না" — সবচেয়ে সাধারণ
+                                            ভূমিকাটা এক ক্লিকে বসে।
+                                        --}}
+                                        @foreach ($columns as $column => $label)
+                                            <th class="w-20 px-2 py-2 text-center font-medium">
+                                                <label class="flex cursor-pointer flex-col items-center gap-1">
+                                                    <span>{{ $label }}</span>
+                                                    <input type="checkbox" data-permission-column="{{ $column }}"
+                                                           class="size-3.5 rounded border-(--color-border)"
+                                                           aria-label="{{ $label }} — {{ __('system_admin::permission.select_all') }}">
+                                                </label>
+                                            </th>
                                         @endforeach
                                         <th class="py-2 pl-3 font-medium">{{ __('system_admin::permission.column_special') }}</th>
                                     </tr>
@@ -174,6 +225,7 @@
                                                             'label' => $row['label'].' — '.__('system_admin::permission.verbs.manage'),
                                                             'checked' => in_array($row['manage'], $chosen, true),
                                                             'caption' => __('system_admin::permission.manage_spans'),
+                                                            'cell' => 'manage',
                                                         ])
                                                     </td>
                                                 @elseif ($row['manage'] && in_array($column, ['update', 'delete'], true))
@@ -184,6 +236,7 @@
                                                             'name' => $row['cells'][$column],
                                                             'label' => $row['label'].' — '.$label,
                                                             'checked' => in_array($row['cells'][$column], $chosen, true),
+                                                            'cell' => $column,
                                                         ])
                                                     </td>
                                                 @else
@@ -216,6 +269,7 @@
                     </div>
                 </details>
             @endforeach
+            </div>
 
             <div class="flex flex-wrap justify-end gap-2">
                 <x-ui.button tone="secondary" :href="route('system_admin.role.index')">

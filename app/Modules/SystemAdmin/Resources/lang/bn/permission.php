@@ -169,4 +169,6 @@ return [
     'no_users' => 'এই রোলে এখনো কেউ নেই।',
     'owner_locked' => 'মালিকের রোল — সব পারে, বদলানো যায় না',
     'granted' => ':on / :all',
+    'select_all' => 'সব',
+    'select_all_module' => 'গোটা মডিউল একসাথে',
 ];

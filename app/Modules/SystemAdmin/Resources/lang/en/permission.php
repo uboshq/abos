@@ -142,4 +142,6 @@ return [
     'no_users' => 'Nobody holds this role yet.',
     'owner_locked' => 'Owner role — can do everything, cannot be changed',
     'granted' => ':on / :all',
+    'select_all' => 'All',
+    'select_all_module' => 'Select all in this module',
 ];
