@@ -77,6 +77,21 @@
                 </span>
             </label>
 
+            {{-- কেন নিয়মটা বসানো — মালিকের চাওয়া, ২২ সেপ্টেম্বর ২০২৬।
+
+                 ছয় মাস পরে "ক্রয়ের পরিশোধে দুইজনের সই" দেখে কেউ কারণ
+                 খুঁজে পেত না। তখন হয় নিয়মটা ভয়ে রয়ে যায়, নয় কেউ কারণ
+                 না জেনেই তুলে দেয় — দুইটাই খারাপ। --}}
+            <label class="block sm:col-span-2">
+                <span class="mb-1 block text-2xs uppercase tracking-wide text-(--color-ink-muted)">
+                    {{ __('approval::field.why') }}
+                </span>
+                <textarea name="remarks" rows="2" maxlength="500"
+                          placeholder="{{ __('approval::message.remarks_hint') }}"
+                          class="w-full rounded-(--radius-field) border border-(--color-border)
+                                 bg-(--color-surface-app) px-2 py-1.5 text-sm">{{ old('remarks', $flow->remarks) }}</textarea>
+            </label>
+
             <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
                 <input type="hidden" name="is_active" value="0">
                 <input type="checkbox" name="is_active" value="1"
@@ -91,6 +106,7 @@
             @php
                 $existing = old('steps', $flow->steps?->map(fn ($s) => [
                     'level' => $s->level,
+                    'step_name' => $s->step_name,
                     'approver_type' => $s->approver_type,
                     'approver_id' => $s->approver_id,
                     'requires_all' => $s->requires_all,
@@ -106,10 +122,27 @@
                         $chosen = ($step['approver_type'] ?? '').'|'.($step['approver_id'] ?? '');
                     @endphp
 
-                    <div class="grid gap-2 sm:grid-cols-[5rem_1fr_auto]">
+                    <div class="grid gap-2 sm:grid-cols-[5rem_10rem_1fr_auto]">
                         <input type="number" name="steps[{{ $index }}][level]" min="1" max="9"
                                value="{{ $step['level'] ?? $index + 1 }}"
                                aria-label="{{ __('approval::field.level') }}"
+                               class="rounded-(--radius-field) border border-(--color-border)
+                                      bg-(--color-surface-app) px-2 py-1.5 text-sm">
+
+                        {{-- ধাপের নাম — "সুপারভাইজার", "সিইও"।
+
+                             নম্বর বলে ক্রমটা, নাম বলে কাজটা। অনুমোদনের
+                             অনুরোধ খুলে "ধাপ ২" দেখে কেউ বলতে পারত না
+                             ওটা কে, অথচ যিনি সই করবেন তাঁর কাছে ঐ
+                             প্রশ্নটাই প্রথম।
+
+                             ঐচ্ছিক, কারণ পুরনো ছকগুলোর নাম নেই — আর
+                             বাধ্য করলে মানুষ "ধাপ ২" লিখে ফর্ম পার
+                             করতেন, যা নম্বরটার চেয়ে বেশি কিছু বলত না। --}}
+                        <input type="text" name="steps[{{ $index }}][step_name]" maxlength="64"
+                               value="{{ $step['step_name'] ?? '' }}"
+                               placeholder="{{ __('approval::field.step_name') }}"
+                               aria-label="{{ __('approval::field.step_name') }}"
                                class="rounded-(--radius-field) border border-(--color-border)
                                       bg-(--color-surface-app) px-2 py-1.5 text-sm">
 

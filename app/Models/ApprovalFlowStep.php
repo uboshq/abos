@@ -19,7 +19,7 @@ class ApprovalFlowStep extends Model
 
     public const BY_USER = 'user';
 
-    protected $fillable = ['approval_flow_id', 'level', 'approver_type', 'approver_id', 'requires_all'];
+    protected $fillable = ['approval_flow_id', 'level', 'step_name', 'approver_type', 'approver_id', 'requires_all'];
 
     protected function casts(): array
     {

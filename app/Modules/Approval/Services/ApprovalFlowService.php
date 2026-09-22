@@ -81,6 +81,7 @@ class ApprovalFlowService
                 // index দুইটা একই ছক আটকাতে পারত না
                 'document_type' => $data['document_type'] ?? '',
                 'threshold_amount' => $data['threshold_amount'] ?? null,
+                'remarks' => trim((string) ($data['remarks'] ?? '')) ?: null,
                 'is_active' => (bool) ($data['is_active'] ?? true),
             ]);
 
@@ -108,6 +109,8 @@ class ApprovalFlowService
                 // index দুইটা একই ছক আটকাতে পারত না
                 'document_type' => $data['document_type'] ?? '',
                 'threshold_amount' => $data['threshold_amount'] ?? null,
+                'remarks' => trim((string) ($data['remarks'] ?? '')) ?: null,
+                // ⚠️ `code` ইচ্ছাকৃতভাবে বাদ — সংকেত একবার বসলে আর বদলায় না
                 'is_active' => (bool) ($data['is_active'] ?? true),
             ]);
 
@@ -159,6 +162,8 @@ class ApprovalFlowService
             ApprovalFlowStep::create([
                 'approval_flow_id' => $flow->id,
                 'level' => (int) $step['level'],
+                // ⓘ নাম ঐচ্ছিক — খালি দিলে পর্দা "ধাপ ২" দেখায়, আগের মতোই
+                'step_name' => trim((string) ($step['step_name'] ?? '')) ?: null,
                 'approver_type' => $step['approver_type'],
                 'approver_id' => (int) $step['approver_id'],
                 'requires_all' => (bool) ($step['requires_all'] ?? false),

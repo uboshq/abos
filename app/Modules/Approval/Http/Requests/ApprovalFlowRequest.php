@@ -32,10 +32,21 @@ class ApprovalFlowRequest extends FormRequest
              * আলাদা আচরণ করে।
              */
             'threshold_amount' => ['nullable', 'numeric', 'min:0'],
+
+            /*
+             * নিয়মটা কেন বসানো — ঐচ্ছিক, কিন্তু সীমা বাঁধা।
+             *
+             * ⓘ ৫০০ অক্ষর কলামের সমান। ⚠️ যাচাই না বসালে লম্বা লেখা
+             * ডেটাবেজে গিয়ে কাটা পড়ত, আর মানুষ সংরক্ষণের পরেই দেখতেন
+             * তাঁর শেষ বাক্যটা নেই — কোনো ত্রুটি ছাড়াই।
+             */
+            'remarks' => ['nullable', 'string', 'max:500'],
             'is_active' => ['nullable', 'boolean'],
 
             'steps' => ['required', 'array', 'min:1'],
             'steps.*.level' => ['required', 'integer', 'min:1', 'max:9'],
+            // ⓘ "সুপারভাইজার", "সিইও" — নাম না দিলে পর্দা নম্বরই দেখায়
+            'steps.*.step_name' => ['nullable', 'string', 'max:64'],
             'steps.*.approver_type' => ['required', Rule::in([ApprovalFlowStep::BY_ROLE, ApprovalFlowStep::BY_USER])],
             'steps.*.approver_id' => ['required', 'integer', 'min:1'],
             'steps.*.requires_all' => ['nullable', 'boolean'],
@@ -85,6 +96,7 @@ class ApprovalFlowRequest extends FormRequest
 
             $steps[] = [
                 'level' => $step['level'] ?? 1,
+                'step_name' => $step['step_name'] ?? null,
                 'approver_type' => $type,
                 'approver_id' => $id,
                 'requires_all' => ! empty($step['requires_all']),

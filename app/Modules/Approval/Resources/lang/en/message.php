@@ -17,6 +17,7 @@ return [
     'no_flows_hint' => 'Without a rule, discounts, cancellations and back-dated entries all go through unasked.',
 
     'threshold_hint' => 'Leave it empty and every one needs approval. Ask the owner to sign off a 50-taka discount and nobody follows the rule — and once it is skipped, the whole thing is decoration.',
+    'remarks_hint' => 'So that in six months someone can still find the reason — who asked for it, and after what.',
     'document_gone' => 'The document is no longer there.',
     'document_not_yours' => 'The document is there, but you do not have the permission to open it. What you see here is the approval record — who asked, at which level, and who decided what.',
     'awaiting' => 'Waiting for approval — the request has been sent.',

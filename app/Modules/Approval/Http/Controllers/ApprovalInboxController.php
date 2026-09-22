@@ -375,6 +375,9 @@ class ApprovalInboxController extends Controller implements HasMiddleware
             'documentHidden' => ! $mayReadDocument,
 
             'canDecide' => $canDecide,
+
+            // ⓘ স্তর ধরে ধাপের নাম — "ধাপ ২" কে, সেটা বলার জন্য
+            'stepNames' => $this->engine->stepNamesFor($entry),
         ]);
     }
 

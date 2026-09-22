@@ -104,7 +104,11 @@
                         :empty="__('approval::field.decisions')"
                         :rows="$approval->decisions"
                         :columns="[
-                            ['key' => 'level', 'label' => __('approval::field.level'), 'width' => '5rem'],
+                            /* ⓘ নাম থাকলে '২ · সুপারভাইজার', না থাকলে আগের মতোই '২' */
+                            ['key' => 'level', 'label' => __('approval::field.level'), 'width' => '9rem',
+                             'render' => fn ($d) => isset($stepNames[$d->level])
+                                 ? $d->level.' · '.$stepNames[$d->level]
+                                 : $d->level],
                             ['key' => 'user', 'label' => __('approval::field.approver'),
                              'render' => fn ($d) => $d->user?->name],
                             ['key' => 'decision', 'label' => __('approval::field.status'), 'width' => '8rem',
