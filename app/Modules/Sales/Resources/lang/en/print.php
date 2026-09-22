@@ -9,4 +9,9 @@ return [
     'invoice_due' => 'Due on this bill',
     'previous_due' => 'Previous due',
     'outstanding' => 'Total outstanding',
+
+    // The paid-against table under the bill — the owner's sample, 22 September 2026.
+    'payments_title' => 'Received into accounts',
+    'txn_no' => 'Transaction ID',
+    'method' => 'Payment method',
 ];
