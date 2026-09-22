@@ -9,6 +9,7 @@ use App\Core\Concerns\HasActiveState;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Concerns\IsMasterRecord;
+use App\Core\Concerns\SharedAcrossCompaniesWhenAsked;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
 use Illuminate\Database\Eloquent\Builder;
@@ -31,6 +32,7 @@ class SalaryHead extends Model
     use HasPublicId;
     use IsAudited;
     use IsMasterRecord;
+    use SharedAcrossCompaniesWhenAsked;
     use SoftDeletes;
 
     protected $table = 'hr_salary_heads';

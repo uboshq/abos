@@ -9,6 +9,7 @@ use App\Core\Concerns\HasActiveState;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Concerns\IsMasterRecord;
+use App\Core\Concerns\SharedAcrossCompaniesWhenAsked;
 use App\Core\Contracts\Drillable;
 use App\Models\Branch;
 use App\Models\User;
@@ -39,6 +40,7 @@ class Employee extends Model implements Drillable
     use HasPublicId;
     use IsAudited;
     use IsMasterRecord;
+    use SharedAcrossCompaniesWhenAsked;
     use SoftDeletes;
 
     protected $table = 'hr_employees';

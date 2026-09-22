@@ -221,7 +221,22 @@ final class SettingsService
 
     public function get(string $key, mixed $fallback = null): mixed
     {
-        $companyId = CompanyContext::id();
+        /*
+         * ⭐ কিছু সুইচ গোটা ব্যবস্থার, একটা কোম্পানির নয় — ২২ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⛔ কেন এটা লাগল ─────────────────────────────────────────
+         * মালিক চাইলেন HR গ্রুপ-ভিত্তিক করার সুইচ। ⚠️ কিন্তু সেটিং
+         * কোম্পানি ধরে বসে, তাই TCL সুইচটা চালু করলে **TCL দেখত DEM-এর
+         * কর্মী, আর DEM দেখত না TCL-এর**।
+         *
+         * ⛔ আর DEM কখনো রাজি হয়নি। ⓘ এক পাশ থেকে খোলা একটা দেয়াল
+         * সুবিধা নয়, ফাঁস — আর সবচেয়ে খারাপ ধরনের ফাঁস, কারণ যিনি
+         * দেখা যাচ্ছেন তিনি জানেনই না।
+         *
+         * ⭐ তাই `'scope' => 'product'` লেখা সুইচগুলো কোম্পানির সারি
+         * পড়েই না — একটাই উত্তর, সবার জন্য এক।
+         */
+        $companyId = $this->isProductWide($key) ? null : CompanyContext::id();
         $cacheKey = $companyId.'|'.$key;
 
         if (array_key_exists($cacheKey, $this->cache)) {
@@ -287,6 +302,18 @@ final class SettingsService
         return (bool) $this->get($key);
     }
 
+    /**
+     * এই সুইচটা কি গোটা ব্যবস্থার?
+     *
+     * ⚠️ অচেনা চাবি → না। ⓘ নিরাপদ দিকটা এখানে "কোম্পানির", কারণ ভুল
+     * করে একটা সাধারণ সুইচ সবার জন্য এক করে দিলে এক কোম্পানির পছন্দ
+     * নীরবে বাকিদের উপর বসে যেত।
+     */
+    public function isProductWide(string $key): bool
+    {
+        return ($this->definitions()[$key]['scope'] ?? 'company') === 'product';
+    }
+
     public function set(string $key, mixed $value): void
     {
         $definition = $this->definitions()[$key] ?? null;
@@ -297,7 +324,8 @@ final class SettingsService
             );
         }
 
-        $companyId = CompanyContext::id();
+        /* ⓘ পড়ার নিয়মের সাথে মিল — নাহলে লেখা হত এক জায়গায়, পড়া হত অন্য জায়গায় */
+        $companyId = $this->isProductWide($key) ? null : CompanyContext::id();
 
         Setting::query()->updateOrCreate(
             ['company_id' => $companyId, 'key' => $key],

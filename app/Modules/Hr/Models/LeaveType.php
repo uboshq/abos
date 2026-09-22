@@ -9,6 +9,7 @@ use App\Core\Concerns\HasActiveState;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Concerns\IsMasterRecord;
+use App\Core\Concerns\SharedAcrossCompaniesWhenAsked;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -30,6 +31,7 @@ class LeaveType extends Model
     use HasPublicId;
     use IsAudited;
     use IsMasterRecord;
+    use SharedAcrossCompaniesWhenAsked;
     use SoftDeletes;
 
     protected $table = 'hr_leave_types';

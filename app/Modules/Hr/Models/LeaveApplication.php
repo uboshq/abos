@@ -7,6 +7,7 @@ namespace App\Modules\Hr\Models;
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Core\Concerns\SharedAcrossCompaniesWhenAsked;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -26,6 +27,7 @@ class LeaveApplication extends Model
     use HasFactory;
     use HasPublicId;
     use IsAudited;
+    use SharedAcrossCompaniesWhenAsked;
     use SoftDeletes;
 
     protected $table = 'hr_leave_applications';

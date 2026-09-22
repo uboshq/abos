@@ -54,6 +54,19 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
         'EveryRouteIsGuardedTest::OPEN_TO_THE_WORLD',
         'EveryRouteIsGuardedTest::TOKEN_SYNC',
         'EveryUserListAsksWhichCompanyTest::EXEMPT',
+
+        /*
+         * ⛔ এটা সত্যিই একটা ছাড়, আর গোনায় আসা উচিত — ২২ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ তিনটা কোয়েরি কোম্পানির ছাঁকনি ছাড়াই চলে, আর তিনটারই কারণ
+         * লেখা (ইমেইলের অনন্যতা গোটা ব্যবস্থার, এককালীন টোকেন, আর
+         * বাদ-দেওয়ার তালিকা)। ⚠️ কারণ থাকা মানেই ছাড়টা ছাড় নয় — এমন নয়।
+         *
+         * ⭐ উপরের `EXEMPT` ফাইল ধরে ছাড় দিত, তাই একটা ফাইল = এক সারি।
+         * ⓘ এটা কোয়েরি ধরে, তাই তিন — আর সেটাই সৎ: তিনটা আলাদা
+         * সিদ্ধান্ত, তিনটা আলাদা সারি, তিনবার গোনা।
+         */
+        'EveryUserListAsksWhichCompanyTest::EXEMPT_QUERY',
         'MoneyIsNeverAFloatTest::FLOAT_IS_DELIBERATE',
         'MoneyNeverLandsOnAGroupAccountTest::GROUPS_BELONG_HERE',
         'NoDatabaseDumpRidesAlongInACommitTest::FINE',
@@ -85,6 +98,22 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
         'EveryUserListAsksWhichCompanyTest::MUST_ASK',
         'MoneyMovementHasEveryFieldTheOwnerAskedForTest::FIELDS',
         'TheOtherNineLooksWereNotTouchedTest::AS_SHIPPED',
+
+        /*
+         * ⭐ এটা ছাড় নয়, তার উল্টো — ২২ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ তালিকাটা বলে **কোন সহায়কগুলো ভাষা ধরে ঘর বদলায়**
+         * (`productName()`, `warehouseName()` …), আর প্রতিটা নাম
+         * পাহারাটাকে আরও একটা জায়গা দেখতে বলে।
+         *
+         * ⚠️ নাম মুছলে পাহারা **কম** দেখে, বেশি নয় — তাই ছাড়ের
+         * ছাদে গোনা হলে সংখ্যাটা উল্টো কথা বলত: চোখ বাড়ানোকে
+         * "আরেকটা অজুহাত" হিসেবে লিখত।
+         *
+         * ⓘ আর তালিকাটার নিজের পাহারা আছে — ঐ ফাইলের শেষ দাবিটা
+         * গোনে সহায়কগুলো সত্যিই কোডে আছে কি না।
+         */
+        'EveryGroupedReportGroupsByWhatItSelectsTest::BILINGUAL',
     ];
 
     /**
@@ -93,7 +122,26 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      * ⭐ মালিকের ratchet নিয়ম: **কেবল কমবে**। বাড়াতে হলে এই লাইনটা
      * বদলাতে হয়, আর সেটা একটা সিদ্ধান্ত যা কমিটে চোখে পড়ে।
      */
-    private const CEILING = 216;
+    private const CEILING = 219;
+
+    /*
+     * ── ⚠️ ২১৬ → ২১৯, ২২ সেপ্টেম্বর ২০২৬ — আর এটা একটা সিদ্ধান্ত ─────
+     * তিনটা সারি যোগ হয়েছে `EveryUserListAsksWhichCompanyTest::EXEMPT_QUERY`
+     * থেকে, আর **একটাও নতুন ছাড় নয়** — আগের একটা ছাড়কে ভেঙে তিনটা করা
+     * হয়েছে।
+     *
+     * ⓘ আগে `ProfileController.php` আর `LoginHistoryController.php`
+     * **ফাইল ধরে** ছাড় পেত, তাই গোনায় আসত দুইটা সারি। ⛔ কিন্তু
+     * ফাইল-ছাড় ঐ ফাইলের **ভবিষ্যতের ভুলগুলোও** ঢেকে দিত।
+     *
+     * ⭐ এখন ছাড়টা কোয়েরি ধরে, তাই তিনটা আলাদা কোয়েরি তিনবার গোনা হয়।
+     * ⚠️ সংখ্যাটা বেড়েছে, অথচ **পাহারা শক্ত হয়েছে** — আর সেটাই এই
+     * ছাদটার একটা সীমা: সে ছাড়ের **সংখ্যা** গোনে, **সূক্ষ্মতা** নয়।
+     *
+     * ⓘ যদি কেউ পরে ঐ তিনটা কোয়েরি সরিয়ে দেন, ছাদটা ২১৬-এ ফেরত নেওয়া
+     * উচিত — আর ছাড়ের নিজের পাহারা (`test_every_exemption_still_belongs
+     * _to_a_real_query`) সেদিন লাল হয়ে মনে করিয়ে দেবে।
+     */
 
     public function test_the_excuses_only_go_down(): void
     {

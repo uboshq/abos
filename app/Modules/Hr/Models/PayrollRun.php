@@ -9,6 +9,7 @@ use App\Core\Concerns\HasDocumentStatus;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Concerns\ScopedToUserBranch;
+use App\Core\Concerns\SharedAcrossCompaniesWhenAsked;
 use App\Core\Contracts\Drillable;
 use App\Models\Branch;
 use App\Models\User;
@@ -34,6 +35,7 @@ class PayrollRun extends Model implements Drillable
     use HasPublicId;
     use IsAudited;
     use ScopedToUserBranch;
+    use SharedAcrossCompaniesWhenAsked;
     use SoftDeletes;
 
     protected $table = 'hr_payroll_runs';
