@@ -104,7 +104,16 @@ class SalesPrintController extends Controller implements HasMiddleware
             title: __('sales::doc.invoice'),
             meta: $this->invoiceMeta($invoice),
             lines: $this->productLines($invoice->lines, 'qty', $this->lotsForInvoice($invoice)),
-            totals: $this->totals($invoice),
+
+            /*
+             * ⭐ বিলের নিচে টাকার পুরো গল্প — মালিকের নমুনা, ২২ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ আগে কেবল উপ-মোট, ছাড়, ভ্যাট আর মোট যেত। ⛔ গ্রাহক বিল
+             * হাতে নিয়ে সবার আগে যে প্রশ্নটা করেন — *"আমার মোট কত
+             * পাওনা?"* — তার উত্তর কাগজে ছিলই না।
+             */
+            totals: $this->invoiceTotals($invoice),
+
             signatures: ['core.print.prepared_by', 'core.print.received_by'],
             narration: $invoice->narration,
         );
@@ -322,12 +331,95 @@ class SalesPrintController extends Controller implements HasMiddleware
      */
     private function invoiceMeta(SalesInvoice $invoice): array
     {
-        return [
+        $meta = [
             'core.print.document_no' => $invoice->document_no,
             'core.print.date' => DateFormat::format($invoice->trx_date),
             'sales::field.customer' => $invoice->customer?->name() ?? '',
             'sales::field.due_on' => DateFormat::format($invoice->due_on),
         ];
+
+        /*
+         * ⭐ পরিবহনের ঘর — মালিকের নমুনা, ২২ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⓘ কেন বিলে, অথচ তথ্যটা চালানের ─────────────────────────
+         * মাল যায় চালানে, আর গাড়ি-চালকের নামও ওখানেই লেখা। ⚠️ কিন্তু
+         * গ্রাহকের হাতে যায় **বিল**, আর তিনি মাল বুঝে নেওয়ার সময়
+         * মেলাতে চান কোন গাড়িতে এসেছে।
+         *
+         * ⛔ তাই ঘরগুলো **যোগ হয় কেবল যদি সত্যিই জানা থাকে** — খালি
+         * ঘর ছাপা মানে কাগজে একটা প্রশ্ন, উত্তর নয়। ⓘ কাউন্টারের
+         * নগদ বিক্রিতে কোনো চালানই নেই, আর সেখানে "গাড়ি: —" লেখা
+         * থাকলে মানুষ খুঁজতেন কোথায় ভুল হলো।
+         */
+        $challan = $invoice->lines->first()?->challanLine?->challan;
+
+        if ($challan !== null) {
+            $plate = $challan->vehiclePlate();
+            $driver = (string) ($challan->driver_name ?? '');
+
+            if ($plate !== '' && $plate !== null) {
+                $meta['sales::field.vehicle_no'] = $plate;
+            }
+
+            if ($driver !== '') {
+                $meta['sales::field.driver_name'] = $driver;
+            }
+        }
+
+        return $meta;
+    }
+
+    /**
+     * বিলের নিচের টাকার সারিগুলো — মালিকের নমুনার ক্রমেই।
+     *
+     * ⓘ উপ-মোট → ছাড় → ভ্যাট → মোট (উপরের [[totals()]] থেকে), তারপর
+     * পরিশোধ → এই বিলের বকেয়া → আগের বকেয়া → সব মিলিয়ে পাওনা।
+     *
+     * ── ⚠️ "আগের বকেয়া" বের করার ফাঁদ ──────────────────────────────
+     * গ্রাহকের মোট পাওনার (`outstanding()`) ভিতরে **এই বিলটাও আছে**।
+     * ⛔ সরাসরি ছাপলে আজকের বিলটা দুইবার গোনা হত, আর "সব মিলিয়ে"
+     * সারিটা সবসময় বেশি দেখাত — নীরবে, কারণ প্রতিটা সংখ্যা আলাদা
+     * করে ঠিক।
+     *
+     * ⓘ তাই বিয়োগ করা হয়, আর ফলটা ঋণাত্মক হলে শূন্য ধরা হয়: গ্রাহক
+     * আগাম টাকা দিয়ে রাখলে "আগের বকেয়া −৫,০০০" লেখা কাগজে বিভ্রান্তি
+     * ছাড়া কিছু দিত না।
+     *
+     * @return array<string, string>
+     */
+    private function invoiceTotals(SalesInvoice $invoice): array
+    {
+        $rows = $this->totals($invoice);
+
+        $paid = $invoice->collectedAmount();
+        $due = $invoice->dueAmount();
+
+        if (bccomp($paid, '0', 4) > 0) {
+            $rows['sales::print.paid'] = $this->money($paid);
+        }
+
+        $rows['sales::print.invoice_due'] = $this->money($due);
+
+        /*
+         * ⓘ গ্রাহক না থাকলে (কাউন্টারের নগদ) আগের বকেয়ার প্রশ্নই নেই।
+         */
+        $customer = $invoice->customer;
+
+        if ($customer !== null) {
+            $earlier = bcsub($customer->outstanding(), $due, 4);
+
+            if (bccomp($earlier, '0', 4) < 0) {
+                $earlier = '0';
+            }
+
+            if (bccomp($earlier, '0', 4) > 0) {
+                $rows['sales::print.previous_due'] = $this->money($earlier);
+            }
+
+            $rows['sales::print.outstanding'] = $this->money(bcadd($earlier, $due, 4));
+        }
+
+        return $rows;
     }
 
     /**
