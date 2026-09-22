@@ -165,6 +165,26 @@ class PurchaseBill extends Model implements Drillable
      *
      * @return list<string>
      */
+    /**
+     * ⭐ নামগুলো ভাঁজ করা লাগবে কি না।
+     *
+     * ── ⛔ কেন সিদ্ধান্তটা এখানে, ভিউতে নয় ──────────────
+     * খরচের ভাউচারের পর্দাটা `accounts` মডিউলের, আর
+     * `accounts`-এর `depends_on` **ইচ্ছাকৃতভাবে ফাঁকা** — বাকি
+     * সবাই এর উপর দাঁড়ায়, তাই এর কারও উপর দাঁড়ানো চলে না।
+     *
+     * ⚠️ ভিউতে `PurchaseBill::GOODS_SHOWN` লেখা ছিল, আর
+     * [[BoundariesTest]] সেটা ধরেছে। ⓘ সংখ্যাটা তো এই
+     * শ্রেণিরই — তার উত্তরটাও এখান থেকেই আসা উচিত।
+     *
+     * ⭐ বাড়তি লাভ: কাটা ([[goods_summary]]) আর ভাঁজ — দুইটাই
+     * এখন একটাই সংখ্যা ধরে, দুই জায়গায় লেখা নয়।
+     */
+    public function getGoodsFoldedAttribute(): bool
+    {
+        return count($this->goods_names) > self::GOODS_SHOWN;
+    }
+
     public function getGoodsNamesAttribute(): array
     {
         return $this->lines

@@ -129,12 +129,16 @@
                                 প্রতি সারিতে আরেকটা `x-data` বসালে স্কোপ চিতা লম্বা হত,
                                 আর `<details>` বিনা জাভাস্ক্রিপ্টেই খোলে।
 
-                                ⛔ কয়টা দেখাবে সেই সংখ্যাটা এখানে লেখা নয়। সেটা
-                                `PurchaseBill::GOODS_SHOWN` — কাটা আর ভাঁজ, দুইটাই একই
-                                সংখ্যা ধরে, নাহলে একদিন দুইটা আলাদা হয়ে যেত।
+                                ⛔ কয়টা দেখাবে সেই সংখ্যাটা এখানে লেখা নয়। চালানটাই
+                                বলে দেয় ([[PurchaseBill::goods_folded]]) — কাটা আর ভাঁজ
+                                দুইটাই একই সংখ্যা ধরে, নাহলে একদিন আলাদা হয়ে যেত।
+
+                                ⓘ ভিউটা `Purchase`-কে নাম ধরে ডাকে না: `accounts`-এর
+                                উপর বাকি সবাই দাঁড়ায়, তাই সে কারও উপর দাঁড়াতে
+                                পারে না ([[BoundariesTest]])।
                             --}}
                             <td class="p-2">
-                                @if (count($bill->goods_names) > \App\Modules\Purchase\Models\PurchaseBill::GOODS_SHOWN)
+                                @if ($bill->goods_folded)
                                     <details>
                                         <summary class="cursor-pointer">{{ $bill->goods_summary }}</summary>
                                         <ul class="mt-1 list-inside list-disc text-xs text-(--color-ink-muted)">

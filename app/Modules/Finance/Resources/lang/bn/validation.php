@@ -5,7 +5,6 @@ declare(strict_types=1);
 return [
     'more_than_declared' => 'ঘোষিত মুনাফার চেয়ে বেশি তোলা যাবে না — বাকি আছে :left। আগে বণ্টন ঘোষণা করুন, নয়তো ধরনটা "নিজের খরচ" করুন।',
     'nothing_left_to_capitalise' => 'ঘোষিত লাভের কারও কিছু বাকি নেই — সবাই তুলে নিয়েছেন বা আগেই মূলধনে যোগ হয়েছে।',
-    'unknown_capital_kind' => 'মূলধনে নাকি বিনিয়োগে — এই দুইটার একটা বাছতে হবে।',
     'profit_must_be_positive' => 'মুনাফা শূন্য বা ঋণাত্মক হলে ভাগ করা যায় না — লোকসান আলাদা সিদ্ধান্ত।',
     'nobody_has_a_share' => 'এখনো কারও বাকি মূলধন নেই, তাই ভাগ বসানোর কেউ নেই।',
     'chart_account_missing' => 'খাত :code এই কোম্পানিতে বসেনি। চালান: php artisan abos:sync-chart',
@@ -13,7 +12,7 @@ return [
     'capital_already_posted' => ':no আগেই খাতায় বসেছে',
     'not_a_postable_account' => 'এটা একটা মাথা, খাত নয়',
     'unknown_contributor_type' => 'অচেনা পরিচয়',
-    'unknown_capital_kind' => 'অচেনা ধরন',
+    'unknown_capital_kind' => 'মূলধনে নাকি বিনিয়োগে — এই দুইটার একটা বাছতে হবে।',
     'capital_must_be_positive' => 'অঙ্কটা শূন্যের বেশি হতে হবে',
     'deposit_must_be_positive' => 'মূলধনটা শূন্যের বেশি হতে হবে',
     'unknown_holder' => 'কার নামে — ব্যবসা না মালিক, একটা বেছে নিন',

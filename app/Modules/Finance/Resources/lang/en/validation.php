@@ -5,7 +5,6 @@ declare(strict_types=1);
 return [
     'more_than_declared' => 'Cannot take more than the declared profit — :left is left. Declare a distribution first, or change the kind to a drawing.',
     'nothing_left_to_capitalise' => 'Nobody has any declared profit left — it has all been taken or already added to capital.',
-    'unknown_capital_kind' => 'Choose one: added to capital, or held as an investment.',
     'profit_must_be_positive' => 'Profit that is zero or negative cannot be shared — a loss is a separate decision.',
     'nobody_has_a_share' => 'Nobody has capital left, so there is no one to share with.',
     'chart_account_missing' => 'Account :code is not installed for this company. Run: php artisan abos:sync-chart',
@@ -13,7 +12,7 @@ return [
     'capital_already_posted' => ':no is already posted',
     'not_a_postable_account' => 'That is a heading, not an account',
     'unknown_contributor_type' => 'Unknown contributor type',
-    'unknown_capital_kind' => 'Unknown kind',
+    'unknown_capital_kind' => 'Choose one: added to capital, or held as an investment.',
     'capital_must_be_positive' => 'The amount must be more than zero',
     'deposit_must_be_positive' => 'The principal must be more than zero',
     'unknown_holder' => 'Say whose name it is in, the business or the owner',
