@@ -7,4 +7,6 @@ return [
     'new_user' => 'নতুন ব্যবহারকারী',
     'new_role' => 'নতুন রোল',
     'remove_logo' => 'লোগোটা তুলে দিন',
+    'deactivate_company' => 'কোম্পানিটি নিষ্ক্রিয় করুন',
+    'activate_company' => 'কোম্পানিটি সচল করুন',
 ];

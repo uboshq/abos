@@ -296,6 +296,7 @@ class CompanyController extends Controller implements HasMiddleware
     {
         abort_unless($request->user()?->canAccessCompany((int) $company->id), 404);
     }
+
     public function edit(Request $request, Company $company): View
     {
         $this->mustBeYourCompany($request, $company);
@@ -546,6 +547,29 @@ class CompanyController extends Controller implements HasMiddleware
         if ($company->id === CompanyContext::id() && $company->is_active) {
             return back()->withErrors([
                 'is_active' => __('system_admin::message.cannot_disable_current'),
+            ]);
+        }
+
+        /*
+         * ⛔ শেষ সচল কোম্পানিটা নিষ্ক্রিয় করা যায় না — ২২ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⚠️ কেন উপরের পাহারাটা যথেষ্ট নয় ─────────────────────────
+         * ওটা কেবল **চলতি** কোম্পানিকে বাঁচায়। ⓘ কিন্তু কেউ A-তে
+         * দাঁড়িয়ে B নিষ্ক্রিয় করতে পারেন, তারপর B-তে গিয়ে A — আর
+         * দুই ধাপে দুইটাই বন্ধ।
+         *
+         * ⛔ তখন **কেউ কোথাও ঢুকতে পারতেন না**: [[ResolveCompanyContext]]
+         * কোনো সচল কোম্পানি না পেলে প্রসঙ্গ খালি রাখে, আর প্রতিটা
+         * পর্দা ফাঁকা। ⚠️ ফেরার একমাত্র পথ তখন ডাটাবেজ — অর্থাৎ
+         * একটা ক্লিকে নিজেকে বাইরে তালাবদ্ধ করে ফেলা।
+         *
+         * ⓘ পাহারাটা এখানে, পর্দায় নয়: বোতামটা লুকিয়ে রাখলে ঠিকানা
+         * দিয়ে পাঠালে কাজটা তবু হত — আজ রাতেই শাখার মডিউলে ঠিক ঐ
+         * ভুলটা ধরা পড়েছে (সুইচ ছিল আড়াল, বাধা নয়)।
+         */
+        if ($company->is_active && Company::query()->where('is_active', true)->count() <= 1) {
+            return back()->withErrors([
+                'is_active' => __('system_admin::message.cannot_disable_last_company'),
             ]);
         }
 

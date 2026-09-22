@@ -7,4 +7,6 @@ return [
     'new_user' => 'New user',
     'new_role' => 'New role',
     'remove_logo' => 'Remove the logo',
+    'deactivate_company' => 'Deactivate this company',
+    'activate_company' => 'Activate this company',
 ];

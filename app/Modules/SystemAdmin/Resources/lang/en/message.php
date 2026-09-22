@@ -52,4 +52,7 @@ return [
     'code_locked' => 'This code is already on paper and in exports, so it cannot change now.',
     'code_needs_confirm' => 'This code has already gone onto paper and into exports. To change it, type the old code (:code) below.',
     'code_confirm_old' => 'Type the old code ":code" exactly to confirm.',
+
+    'confirm_deactivate_company' => 'Nobody will be able to enter this company. No data is deleted — you can switch it back on at any time.',
+    'cannot_disable_last_company' => 'This is the only active company — switching it off would lock everyone out. Activate another company first.',
 ];
