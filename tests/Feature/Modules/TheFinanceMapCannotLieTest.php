@@ -96,6 +96,7 @@ class TheFinanceMapCannotLieTest extends TestCase
     public function test_every_built_line_opens(): void
     {
         $broken = [];
+        $walked = 0;
 
         foreach (FinancePlan::sections() as $section) {
             foreach ($section['items'] as [$label, $route, $note]) {
@@ -105,19 +106,126 @@ class TheFinanceMapCannotLieTest extends TestCase
                     continue;
                 }
 
-                $status = $this->get($url)->getStatusCode();
+                $walked++;
 
-                /* ৩০২ ঠিক আছে — কিছু পর্দা ছাঁকনি নিয়ে নিজের দিকে পাঠায় */
-                if (! in_array($status, [200, 302], true)) {
+                $response = $this->get($url);
+                $status = $response->getStatusCode();
+
+                if ($status === 302) {
+                    $to = $this->refusedBy((string) $response->headers->get('Location'));
+
+                    if ($to !== null) {
+                        $broken[] = "§{$section['no']} {$label} → {$url} = 302 → {$to}";
+                    }
+
+                    continue;
+                }
+
+                if ($status !== 200) {
                     $broken[] = "§{$section['no']} {$label} → {$url} = {$status}";
                 }
             }
         }
 
+        /*
+         * ⛔ শূন্য সংগ্রহে চালানো assertion সবসময় সবুজ।
+         *
+         * ⓘ `urlFor()` সবগুলোতে `null` ফেরালে নিচের দাবিটা নীরবে
+         * পাস করত, আর পাহারাটা অলংকার হয়ে যেত।
+         */
+        $this->assertGreaterThan(100, $walked, implode("\n", [
+            'মানচিত্রের লিংকগুলো হাঁটাই হয়নি — পাওয়া গেছে '.$walked.'টা।',
+            '',
+            'ⓘ তাহলে নিচের দাবিটা কিছুই মাপছে না।',
+        ]));
+
         $this->assertSame([], $broken, implode("\n", [
             'মানচিত্রে "হয়েছে" লেখা, অথচ খোলে না:',
             ...$broken,
+            '',
+            'ⓘ ৩০২ নিজেই ভুল নয় — কিছু পর্দা ছাঁকনি নিয়ে',
+            'নিজের দিকেই পাঠায়। ⛔ কিন্তু লগইন বা লাইসেন্সের',
+            'তালায় পাঠালে সেটা একটা **বন্ধ দরজা**, আর মানচিত্র',
+            'তবু বলত "হয়েছে"।',
         ]));
+    }
+
+    /**
+     * ⭐ তালা-দেখা যন্ত্রটা হ্যাঁও বলতে পারে, নাও বলতে পারে।
+     *
+     * ── ⚠️ কেন এটা লাগল ────────────────────────────────
+     * আজ মানচিত্রের একটা লিংকও ৩০২ দেয় না — সবগুলো ২০০।
+     * ⛔ অর্থাৎ উপরের শর্তটা এখনও **একবারও চলেনি**। লেখা
+     * আছে, আর সেটা কাজ করে কি না কেউ জানে না — এই রিপোর
+     * সবচেয়ে চেনা আকার।
+     *
+     * ── ⓘ তিনটা সারি: দুইটা বন্ধ, একটা খোলা ───────────────
+     * যন্ত্রটা কেবল "হ্যাঁ" বলতে পারলে সব ৩০২ লাল হত —
+     * মিথ্যা লাল, আর একদিন কেউ গার্ডটাই বন্ধ করত।
+     * কেবল "না" বলতে পারলে শর্তটা অলংকার।
+     *
+     * ⭐ নামগুলো হাতে লেখা নয় — `route()` দিয়ে তৈরি, তাই
+     * ঠিকানা বদলালে এই দাবিটাও সঙ্গে বদলায়।
+     */
+    public function test_the_lock_detector_can_say_yes_and_no(): void
+    {
+        $this->assertSame('login', $this->refusedBy(route('login')), implode("
+", [
+            'লগইনে ফেরত পাঠানোটাই ধরা পড়ল না।',
+            '',
+            '⛔ তাহলে ৩০২-এর শর্তটা একটা অলংকার — বন্ধ দরজাও',
+            '"হয়েছে" লেখা থাকত।',
+        ]));
+
+        $this->assertSame('licence.show', $this->refusedBy(route('licence.show')),
+            'লাইসেন্সের তালাটা ধরা পড়ল না।');
+
+        /*
+         * ⚠️ আর উল্টো দিকটাও: স্বাভাবিক একটা পর্দায়
+         * পাঠালে সেটা বন্ধ দরজা নয়। ⓘ এটা না থাকলে একটা
+         * সবকিছুকে-বন্ধ-বলা যন্ত্রও উপরের দুইটা দাবি পাস করত।
+         */
+        $this->assertNull($this->refusedBy(route('finance.capital.index')),
+            'স্বাভাবিক একটা পর্দাকেও বন্ধ দরজা বলছে — যন্ত্রটা সবাইকে হ্যাঁ বলে।');
+    }
+
+    /**
+     * ৩০২-টা কি সত্যিই একটা ফিরিয়ে দেওয়া?
+     *
+     * ── ⚠️ কেন সব ৩০২ নিষিদ্ধ করা হয় না ─────────────────
+     * কিছু পর্দা ছাঁকনি নিয়ে নিজের দিকেই পাঠায় — সেটা
+     * স্বাভাবিক, আর ওগুলো লাল করলে মিথ্যা লাল শুরু হত।
+     *
+     * ── ⭐ তাই প্রশ্নটা "কোথায় পাঠাল" ────────────────────
+     * লগইন বা লাইসেন্সের পর্দা মানে পাতাটা সত্যি খোলেনি।
+     *
+     * ⓘ ঠিকানাটা রাউটারকে দিয়ে চেনানো হয়, পথের লেখা
+     * মিলিয়ে নয় — ঠিকানা বদলালে হাতে লেখা `'/login'`
+     * নীরবে মেলা বন্ধ করত, আর পাহারাটা সবুজ হয়ে যেত।
+     *
+     * @return string|null বন্ধ দরজা হলে তার নাম, নাহলে `null`
+     */
+    private function refusedBy(string $location): ?string
+    {
+        if ($location === '') {
+            return null;
+        }
+
+        $path = '/'.ltrim((string) parse_url($location, PHP_URL_PATH), '/');
+
+        foreach (app('router')->getRoutes() as $candidate) {
+            if ('/'.ltrim($candidate->uri(), '/') !== $path) {
+                continue;
+            }
+
+            $name = (string) $candidate->getName();
+
+            if ($name === 'login' || str_starts_with($name, 'licence.')) {
+                return $name;
+            }
+        }
+
+        return null;
     }
 
     /**
