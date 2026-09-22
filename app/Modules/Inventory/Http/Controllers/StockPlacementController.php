@@ -239,11 +239,36 @@ class StockPlacementController extends Controller implements HasMiddleware
         $papers = [];
 
         foreach ($rows as $row) {
-            $key = $row->source_type.':'.$row->source_id;
+            /*
+             * ⭐ দলটা **কাগজ ধরে**, উৎসের নাম ধরে নয় — ২২ সেপ্টেম্বর ২০২৬।
+             *
+             * ── ⛔ মালিকের প্রশ্ন ───────────────────────────────────
+             * *"একটা বিল ক্রয় হলো, কিন্তু দুটো ভাগ কেন?"* — একই বিল
+             * (PBL-0004) পর্দায় দুইটা কার্ড হয়ে বসত: একটার আইডি
+             * `purchase_bill-free:8`, অন্যটার `purchase_bill-8`।
+             *
+             * ── ⓘ কেন ─────────────────────────────────────────────
+             * ফ্রি মাল নিজের উৎস-নামে চলে (`…:free`), আর কারণটা ঠিকই
+             * আছে — ফ্রি কার্টনের ক্রয়মূল্য নেই, তাই সে আলাদা ভাণ্ডারে
+             * ঢোকে আর বাতিলের সময় আলাদা করে চেনা যায়
+             * ([[PurchaseBillService::bringInFree()]])।
+             *
+             * ⚠️ কিন্তু ওটা **হিসাবের ভাগ**, আর এটা **কাজের পর্দা**।
+             * গুদামের লোকের কাছে একটাই লরি, একটাই কাগজ, একটাই কাজ —
+             * তাঁকে একই বিল দুইবার খুঁজে বের করতে হত।
+             *
+             * ⛔ আর দেখতেও ভুল লাগত: ফ্রি কার্ডে টাকার ঘরগুলোয় বসানো
+             * থাকত `0.0000`, আর টাকার কার্ডে ফ্রির ঘরে `—` — দুইটা
+             * কার্ডেই অর্ধেক ঘর মৃত।
+             */
+            $key = $this->paperOf($row->source_type).':'.$row->source_id;
 
             $papers[$key] ??= [
                 'document_no' => $row->document_no,
-                'source_type' => $row->source_type,
+
+                /* ⓘ মাথার নামটা মূল কাগজের — ড্রিলও ওটাই ধরে খোঁজে */
+                'source_type' => $this->paperOf($row->source_type),
+
                 'source_id' => (int) $row->source_id,
                 'trx_date' => $row->trx_date,
                 'created_by' => $row->created_by === null ? null : (int) $row->created_by,
@@ -251,6 +276,21 @@ class StockPlacementController extends Controller implements HasMiddleware
             ];
 
             $papers[$key]['lines'][] = [
+                /*
+                 * ⚠️ উৎসের নামটা **সারির নিজের**, কার্ডের নয়।
+                 *
+                 * ⛔ বসানোর সারিটা যে উৎসে এসেছিল ঠিক সেই উৎসেই লিখতে
+                 * হয়, নাহলে আসা আর বসানো দুইটা আলাদা দলে পড়ে, যোগফল
+                 * কাটাকাটি হয় না, আর কাগজটা তালিকা থেকে **কোনোদিন
+                 * সরে না** ([[StockService::place()]]-এর ৪ সেপ্টেম্বরের
+                 * টীকা)।
+                 *
+                 * ⓘ তাই কার্ড এক হলেও ফ্রি সারি নিজের `…:free` নামটা
+                 * সাথে নিয়েই চলে।
+                 */
+                'source_type' => $row->source_type,
+                'source_id' => (int) $row->source_id,
+
                 'product_id' => (int) $row->product_id,
                 'product_code' => $row->product_code,
                 'product_name' => $row->product_name,
@@ -264,6 +304,20 @@ class StockPlacementController extends Controller implements HasMiddleware
         }
 
         return $this->withTheirFacts($papers);
+    }
+
+    /**
+     * এই উৎস-নামটা কোন কাগজের — ফ্রি-র লেজ কেটে।
+     *
+     * ⓘ `purchase_bill:free` আর `purchase_bill` একই কাগজ, কেবল দুই
+     * রকম মাল। ⚠️ `:free:cancel`-ও আছে (বাতিলের সারি), তাই কাটা হয়
+     * **প্রথম `:free` থেকে**, শেষেরটা থেকে নয়।
+     */
+    private function paperOf(string $sourceType): string
+    {
+        $at = strpos($sourceType, ':free');
+
+        return $at === false ? $sourceType : substr($sourceType, 0, $at);
     }
 
     /**
