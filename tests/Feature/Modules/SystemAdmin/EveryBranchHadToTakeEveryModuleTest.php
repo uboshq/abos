@@ -211,6 +211,47 @@ final class EveryBranchHadToTakeEveryModuleTest extends TestCase
         $this->assertContains($mine, $this->menuCodesIn($this->here));
     }
 
+    /**
+     * ⛔ পর্দাটা সত্যিই আঁকা হয় কি না।
+     *
+     * ── ⚠️ কেন এটা আলাদা করে দরকার ছিল ──────────────────────────────
+     * উপরের পরীক্ষাগুলো সব `PUT` করে, আর নিচেরটা ৪০৩ মাপে — অর্থাৎ
+     * **ব্লেডটা একবারও রেন্ডার হয় না**। ⓘ একটা টাইপো, একটা না-থাকা
+     * অনুবাদের কী, একটা ভুল কম্পোনেন্টের নাম — সব সবুজ থাকত, আর
+     * মালিক পর্দায় গিয়ে সাদা পাতা পেতেন।
+     *
+     * ⓘ তাই এখানে সত্যিই আঁকা হয়, আর ভিতরের ঘরগুলো গোনা হয়।
+     */
+    public function test_the_screen_actually_draws(): void
+    {
+        $html = $this->actingAs($this->owner)
+            ->get(route('system_admin.branch-module'))
+            ->assertOk()
+            ->getContent();
+
+        // ⓘ দুইটা শাখাই ট্যাব হিসেবে আছে — নাহলে একটাতে যাওয়ার পথই নেই।
+        $this->assertStringContainsString($this->here->name(), $html);
+        $this->assertStringContainsString($this->there->name(), $html);
+
+        preg_match_all('/name="modules\[([^\]]+)\]"/', $html, $m);
+
+        $onScreen = $m[1];
+
+        $this->assertSame(
+            array_keys(app(\App\Core\Module\ModuleRegistry::class)->all()),
+            $onScreen,
+            'পর্দার সারিগুলো রেজিস্ট্রির সাথে মেলে না — কোনো মডিউলের সুইচই নেই, '
+            .'অথবা একটা দুইবার আছে।'
+        );
+
+        // ⛔ যে মডিউলটা পর্দাটাই ধরে আছে, তার ঘরটা ধরা (`disabled`) থাকার কথা।
+        $this->assertMatchesRegularExpression(
+            '/name="modules\[system_admin\]"[^>]*disabled/s',
+            $html,
+            'নিজের মডিউলের ঘরটা খোলা — পর্দায় বসেই কেউ পর্দাটা বন্ধ করে ফেলতে পারেন।'
+        );
+    }
+
     public function test_the_screen_is_behind_the_settings_key(): void
     {
         $stranger = User::query()->where('email', '!=', 'owner@abos.test')
