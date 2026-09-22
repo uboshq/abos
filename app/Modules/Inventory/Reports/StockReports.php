@@ -304,7 +304,23 @@ final class StockReports
 
                 ->where('m.company_id', $f['company_id'])
                 ->when($f['branch_id'], fn ($q, $b) => $q->where('m.branch_id', $b))
-                ->groupBy('p.code', 'p.name_en', 'p.name_bn', 'w.name_en', 'b.batch_no', 'b.expiry_date')
+                /*
+                 * ⛔ `w.name_bn` এখানে ছিল না — ২২ সেপ্টেম্বর ২০২৬।
+                 *
+                 * ⚠️ [[warehouseName()]] বাংলায় `COALESCE(NULLIF(w.name_bn,
+                 * ''), w.name_en)` বাছে, আর `ONLY_FULL_GROUP_BY` তখন গোটা
+                 * প্রশ্নটাই বাতিল করে — পাতাটা **৫০০** দিত।
+                 *
+                 * ⓘ পাশের `p.name_bn` ঠিকই বসানো ছিল, তাই এটা নীতির ভুল
+                 * নয়, লেখার সময়ের একটা বাদ পড়া।
+                 *
+                 * ⛔ আর ধরা পড়েনি কারণ ভুলটা **কেবল বাংলায়** ঘটে:
+                 * ইংরেজিতে `w.name_bn` ছোঁয়াই হয় না, আর মালিকের লাইভ
+                 * অ্যাকাউন্ট ইংরেজিতে পড়ে। ⚠️ সাথে ব্যাচের সুইচও বন্ধ,
+                 * তাই সারিটা মেনুতেও আসত না — **দুইটা আলাদা পর্দা**
+                 * একসাথে একটা ভাঙা পাতাকে অদৃশ্য রেখেছিল।
+                 */
+                ->groupBy('p.code', 'p.name_en', 'p.name_bn', 'w.name_en', 'w.name_bn', 'b.batch_no', 'b.expiry_date')
                 ->havingRaw('COALESCE(SUM(m.floor_change), 0) + COALESCE(SUM(m.free_change), 0) > 0')
                 ->orderBy('p.code')
                 ->orderBy('b.expiry_date')
