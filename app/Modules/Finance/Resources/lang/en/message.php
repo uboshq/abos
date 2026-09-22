@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'profit_narration' => 'Profit distribution :no',
     'share_total_off' => 'Ownership adds up to :total% — :gap% is not written against anyone. Check the partners\' shares.',
     'showing_one_person' => 'Showing :name\'s rows',
     'cash_matches' => 'The count matches the amount.',

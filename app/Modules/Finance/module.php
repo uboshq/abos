@@ -446,6 +446,9 @@ return [
      */
     'doc_types' => [
         'CAP' => 'finance::doc.capital',
+
+        /* ⭐ লাভ বণ্টন — নিজের নম্বর, কারণ এক ঘোষণায় অনেক সারি */
+        'PDS' => 'finance::doc.profit_share',
         'DEP' => 'finance::doc.deposit',
 
         /* উত্তোলন — নিজের নম্বর, কারণ অনুমোদনে এটাই পরিচয় */

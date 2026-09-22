@@ -3,6 +3,9 @@
 declare(strict_types=1);
 
 return [
+    'profit_must_be_positive' => 'মুনাফা শূন্য বা ৮ণাত্মক হলে ভাগ করা যায় না — লোকসান আলাদা সিদ্ধান্ত।',
+    'nobody_has_a_share' => 'এখনো কারও বাকি মূলধন নেই, তাই ভাগ বসানোর কেউ নেই।',
+    'chart_account_missing' => 'খাত :code এই কোম্পানিতে বসেনি। চালান: php artisan abos:sync-chart',
     'charge_eats_the_whole_thing' => 'চার্জ মোট অঙ্কের চেয়ে কম হতে হবে — নাহলে খাতে কিছুই ঢুকত না।',
     'capital_already_posted' => ':no আগেই খাতায় বসেছে',
     'not_a_postable_account' => 'এটা একটা মাথা, খাত নয়',

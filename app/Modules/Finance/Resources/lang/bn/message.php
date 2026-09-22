@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'profit_narration' => 'লাভ বণ্টন :no',
     'share_total_off' => 'মোট মালিকানা :total% — :gap% কারও নামে লেখা নেই। অংশীদারদের অংশ মিলিয়ে নিন।',
     'showing_one_person' => ':name-এর সারিগুলো দেখানো হচ্ছে',
     'cash_matches' => 'গোনা আর লেখা মিলেছে।',

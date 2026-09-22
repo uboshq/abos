@@ -3,6 +3,9 @@
 declare(strict_types=1);
 
 return [
+    'profit_must_be_positive' => 'Profit that is zero or negative cannot be shared — a loss is a separate decision.',
+    'nobody_has_a_share' => 'Nobody has capital left, so there is no one to share with.',
+    'chart_account_missing' => 'Account :code is not installed for this company. Run: php artisan abos:sync-chart',
     'charge_eats_the_whole_thing' => 'The charge must be less than the amount, or nothing would land in the account.',
     'capital_already_posted' => ':no is already posted',
     'not_a_postable_account' => 'That is a heading, not an account',
