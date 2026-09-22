@@ -52,9 +52,11 @@ final class ALinkThatLooksAliveAndIsNotTest extends TestCase
         $this->assertNotSame([], $valid, 'একটাও report.show রুট পাওয়া গেল না — পাহারাটা কি অন্ধ?');
 
         $dead = [];
+        $looked = 0;
 
         foreach ($this->sourceFiles() as $file => $source) {
             foreach ($this->linksIn($source) as [$routeName, $slug]) {
+                $looked++;
                 if (! isset($valid[$routeName])) {
                     $dead[] = "{$file} — '{$routeName}' নামে কোনো রুট নেই";
 
@@ -67,6 +69,31 @@ final class ALinkThatLooksAliveAndIsNotTest extends TestCase
                 }
             }
         }
+
+        /*
+         * ⛔ এই গোনাটা না থাকায় পাহারার **শনাক্তকারী দিকটা** অন্ধ
+         * ছিল — ২২ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ রুটের দিকটা উপরের `assertNotSame` দিয়ে রক্ষিত ছিল।
+         * ⚠️ কিন্তু [[linksIn()]]-এর দুইটা প্যাটার্নই মেরে দিলেও
+         * `$dead` খালি থাকত, আর দাবিটা পাস করত — মেপে দেখা।
+         *
+         * ⭐ এটা কাল্পনিক বিপদ নয়: প্যাটার্ন দুইটার একটা এই
+         * সেপ্টেম্বরেই যোগ করা হয়েছে, কারণ লিখার দ্বিতীয় রূপটা
+         * কোনোদিন দেখা হত না। ⓘ তৃতীয় একটা রূপ এলে এই গোনাটাই
+         * বলবে যে সংখ্যাটা মেলেনি।
+         *
+         * ⓘ মেঝে ১৫, আজকের সংখ্যা ২৫ — একটা-দুইটা লিংক সরলে
+         * ভাঙবে না, কিন্তু শনাক্তকারী মরলে ধরা পড়বে।
+         */
+        $this->assertGreaterThan(15, $looked, implode("\n", [
+            '⛔ পাহারাটা মাত্র '.$looked.'টা report.show লিংক পেয়েছে।',
+            '',
+            'ⓘ লিংক লেখার কোনো নতুন রূপ এলে [[linksIn()]]-এ প্যাটার্ন',
+            '   যোগ করতে হবে — নাহলে নতুন লিংকগুলো দেখাই হবে না।',
+            '',
+            '⚠️ এটা না ধরলে নিচের দাবিটা একটাও লিংক না দেখেই সবুজ থাকত।',
+        ]));
 
         $this->assertSame([], $dead, implode("\n", array_merge(
             ['এই লিংকগুলো দেখতে জীবন্ত, চাপলে ৪০৪:', ''],
