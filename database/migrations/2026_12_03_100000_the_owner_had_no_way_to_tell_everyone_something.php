@@ -77,6 +77,7 @@ return new class extends Migration
 
         Schema::create('notice_roles', function (Blueprint $table) {
             $table->id();
+            $table->publicId();
             $table->foreignId('notice_id')->constrained('notices')->cascadeOnDelete();
 
             /*
@@ -94,6 +95,7 @@ return new class extends Migration
 
         Schema::create('notice_reads', function (Blueprint $table) {
             $table->id();
+            $table->publicId();
             $table->foreignId('notice_id')->constrained('notices')->cascadeOnDelete();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->timestamp('read_at');
