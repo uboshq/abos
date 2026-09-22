@@ -124,9 +124,22 @@ final class VoucherApproval
          * ওর যমজ, আর দুই জায়গায় দুই রকম নিয়ম লিখলে পার্থক্যটা **নীরব**
          * হত: ভাউচারের সই টিকে যেত, বাকি সব কাগজের যেত না।
          */
-        if ($latest?->status === Approval::APPROVED
-            && $latest->covers((string) $voucher->amount)) {
-            return null;
+        $superseded = null;
+
+        if ($latest?->status === Approval::APPROVED) {
+            if ($latest->covers((string) $voucher->amount)) {
+                return null;
+            }
+
+            /*
+             * ⭐ পুরনো সইটা কোন অঙ্কের ছিল — নিয়মটা কোরের
+             * [[DocumentApproval::stopping()]]-এ একবারই লেখা।
+             *
+             * ⚠️ অঙ্ক বদলালে নিচে নতুন অনুরোধ বসে, আর সইকারীর ইনবক্সে
+             * একই ভাউচার দ্বিতীয়বার আসে। ⛔ কারণ না জানলে সেটা ভুলের
+             * মতো দেখায়।
+             */
+            $superseded = $latest;
         }
 
         /*
@@ -159,6 +172,12 @@ final class VoucherApproval
             module: self::MODULE,
             action: $action,
             amount: (string) $voucher->amount,
+
+            // ⓘ কারণসহ [[DocumentApproval::stopping()]]-এ — ঘরটা এতদিন খালি পড়ে ছিল।
+            payload: $superseded === null ? null : [
+                'supersedes' => (int) $superseded->id,
+                'was_amount' => $superseded->amount === null ? null : (string) $superseded->amount,
+            ],
 
             /*
              * ⚠️ কে চাইছেন — `auth()->id()`-র উপর ছেড়ে দেওয়া যায় না।

@@ -59,6 +59,29 @@
                                 {{ __('approval::message.changed_since_asked') }}
                             </p>
                         @endif
+
+                        {{-- ⭐ এই অনুরোধটা আগের একটা সইয়ের বদলে।
+
+                             ⚠️ ── কেন লাইনটা লাগে ────────────────────────────
+                             অঙ্ক বদলে গেলে পুরনো সই আর কাগজটা ঢাকে না
+                             ([[Approval::covers()]]), তাই নতুন একটা অনুরোধ বসে —
+                             আর সইকারীর ইনবক্সে **একই কাগজ দ্বিতীয়বার** আসে।
+
+                             ⛔ কারণ না জানলে সেটা ভুলের মতো দেখায়, আর মানুষ
+                             ভাবেন ব্যবস্থাটা অকারণে দুইবার চাইছে। ⓘ পুরনো
+                             অঙ্কটা পাশে থাকলে তিনি নিজেই দেখতে পান কী বদলেছে। --}}
+                        @php $was = $approval->payload['was_amount'] ?? null; @endphp
+
+                        @if (($approval->payload['supersedes'] ?? null) !== null)
+                            <p class="mt-1 rounded-(--radius-field) bg-(--color-badge-draft-bg) px-2 py-1
+                                      text-2xs text-(--color-badge-draft-ink)">
+                                {{ $was === null
+                                    ? __('approval::message.supersedes_plain')
+                                    : __('approval::message.supersedes', [
+                                        'was' => \App\Core\Support\Money::format($was),
+                                    ]) }}
+                            </p>
+                        @endif
                     </div>
 
                     <div class="sm:col-span-2">

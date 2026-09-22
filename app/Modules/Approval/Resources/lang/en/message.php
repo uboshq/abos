@@ -28,6 +28,10 @@ return [
 
     // The amount is the one from the day it was asked for; the paper may have moved since.
     'changed_since_asked' => 'The document was changed after this was asked for — the amount above is the one from then. Open the document before you sign.',
+
+    // The same paper has come round twice, and why — otherwise it reads as a mistake.
+    'supersedes' => 'This is not new work — it was signed at :was, then the document changed, so it needs signing again.',
+    'supersedes_plain' => 'This is not new work — it was signed once, then the document changed, so it needs signing again.',
     'document_not_yours' => 'The document is there, but you do not have the permission to open it. What you see here is the approval record — who asked, at which level, and who decided what.',
     'awaiting' => 'Waiting for approval — the request has been sent.',
     'level_of' => 'Level :current of :total',

@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Tests\Feature\Modules\Approval;
 
 use App\Core\Engines\Approval\ApprovalEngine;
+use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\Money;
 use App\Models\Approval;
 use App\Models\ApprovalFlow;
 use App\Models\ApprovalFlowStep;
@@ -133,6 +135,61 @@ final class TheSignerWasLookingAtLastWeeksNumberTest extends TestCase
             ->getContent();
 
         $this->assertFalse($this->warns($html));
+    }
+
+    /**
+     * ⭐ একই কাগজ দ্বিতীয়বার এলে পর্দা কারণটা বলে।
+     *
+     * ── ⚠️ কেন এটা আলাদা করে মাপা ──────────────────────────────────
+     * অঙ্ক বদলালে পুরনো সই আর কাগজটা ঢাকে না, তাই নতুন একটা অনুরোধ
+     * বসে ([[Approval::covers()]])। ⛔ সইকারীর দিক থেকে সেটা দেখতে
+     * **ভুলের মতো** — একই জিনিস আবার কেন চাইছে?
+     *
+     * ⓘ পরীক্ষাটা ব্লেডটাকে সত্যিই আঁকে, কারণ ঘরটা ভরা থাকা আর পর্দায়
+     * লেখাটা দেখা যাওয়া এক কথা নয়।
+     */
+    public function test_a_second_round_says_why_it_came_back(): void
+    {
+        [$approval, $document] = $this->aPendingRequest();
+
+        app(ApprovalEngine::class)->approve($approval, $this->manager);
+
+        /*
+         * ⚠️ কেরানি সেজে ডাকা — `approvals.requested_by` null নিতে পারে না,
+         * আর এই কাগজে `created_by` নেই। ⓘ বাস্তবেও অনুরোধটা যিনি "নিশ্চিত"
+         * চাপেন তাঁর নামেই বসে ([[DocumentApproval::stopping()]])।
+         */
+        $this->actingAs($this->asked);
+
+        // ⛔ এখন কাগজটা ৫ লাখ — পুরনো সই আর ঢাকে না।
+        $again = app(DocumentApproval::class)
+            ->stopping($document->fresh(), 'sales', 'discount', '500000');
+
+        $this->assertNotNull($again, 'অঙ্ক বদলেও নতুন সই চাওয়া হয়নি।');
+
+        $html = $this->asManager()->get(route('approval.inbox.show', $again->id))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertTrue(
+            str_contains($html, __('approval::message.supersedes', [
+                'was' => Money::format('50000.0000'),
+            ])),
+            'পর্দা বলছে না কেন একই কাগজ দ্বিতীয়বার এসেছে — সইকারী ভাববেন এটা ভুল।'
+        );
+    }
+
+    /** ⓘ প্রথমবারের অনুরোধে ঐ লাইনটা থাকে না — নাহলে কথাটার মূল্য থাকত না। */
+    public function test_a_first_round_does_not_claim_to_replace_anything(): void
+    {
+        [$approval] = $this->aPendingRequest();
+
+        $html = $this->asManager()->get(route('approval.inbox.show', $approval->id))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertFalse(str_contains($html, __('approval::message.supersedes_plain')));
+        $this->assertFalse(str_contains($html, 'supersedes'));
     }
 
     // ── হাতিয়ার ────────────────────────────────────────────────────────

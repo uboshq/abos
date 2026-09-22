@@ -102,6 +102,36 @@ final class TheSignatureWasGivenForFiftyThousandTest extends TestCase
         $this->assertSame('500000.0000', (string) $again->amount,
             'নতুন অনুরোধটা পুরনো অঙ্কেই বসেছে — তাহলে সইটা আবার ভুল কাগজের হত।');
         $this->assertNotSame($asked->id, $again->id, 'পুরনো অনুমোদনটাই ফেরত এসেছে।');
+
+        /*
+         * ⭐ আর নতুন অনুরোধটা **কেন** এসেছে, সেটাও সে নিজে বলে।
+         *
+         * ⚠️ ছাড়া সইকারীর ইনবক্সে একই কাগজ দ্বিতীয়বার এসে হাজির হত আর
+         * দেখতে ভুলের মতো লাগত। ⓘ `approvals.payload` ঘরটা প্রথম দিন
+         * থেকেই এর জন্য রাখা ছিল, আর আজ পর্যন্ত খালি পড়ে ছিল।
+         */
+        $this->assertSame($asked->id, $again->payload['supersedes'] ?? null,
+            'নতুন অনুরোধটা বলতে পারছে না সে কোন সইয়ের বদলে এসেছে।');
+
+        $this->assertSame('50000.0000', $again->payload['was_amount'] ?? null,
+            'পুরনো অঙ্কটা লেখা নেই — তাহলে পর্দা বলতে পারবে না কী বদলেছে।');
+    }
+
+    /**
+     * ⛔ যে অনুরোধ কারো বদলে আসেনি, সে যেন সেটা দাবিও না করে।
+     *
+     * ⚠️ ঘরটা সবসময় ভরা থাকলে পর্দা **প্রতিটা** অনুরোধে "আগে সই
+     * হয়েছিল" লিখত, আর তখন কথাটার কোনো মূল্য থাকত না।
+     */
+    public function test_a_first_request_claims_to_replace_nothing(): void
+    {
+        $this->aFlowAbove('5000');
+
+        $first = $this->guard->stopping($this->document(), 'sales', 'discount', '50000');
+
+        $this->assertNotNull($first);
+        $this->assertNull($first->payload,
+            'প্রথম অনুরোধটাই বলছে সে কারো বদলে এসেছে।');
     }
 
     /** ⓘ অঙ্ক নামলেও সই বাতিল — কারণ "কত কম চলবে" প্রশ্নের সৎ উত্তর নেই। */

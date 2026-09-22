@@ -72,9 +72,27 @@ final class DocumentApproval
          * বার `latestFor()` সেই নতুন pending সারিটাই পায় — তাই উপরের
          * অসীম লুপটা ফেরে না।
          */
-        if ($latest?->status === Approval::APPROVED
-            && $latest->covers($amount)) {
-            return null;
+        $superseded = null;
+
+        if ($latest?->status === Approval::APPROVED) {
+            if ($latest->covers($amount)) {
+                return null;
+            }
+
+            /*
+             * ⭐ পুরনো সইটা কোন অঙ্কের ছিল — মনে রাখা হয়, ২২ সেপ্টেম্বর ২০২৬।
+             *
+             * ── ⚠️ কেন, নাহলে দ্বিতীয় অনুরোধটা রহস্য ───────────────────
+             * অঙ্ক বদলালে নিচে নতুন একটা অনুরোধ বসে, আর সইকারীর ইনবক্সে
+             * **একই কাগজ দ্বিতীয়বার** এসে হাজির হয়। ⛔ কারণ না জানলে
+             * সেটা দেখতে ভুলের মতো লাগে, আর মানুষ ভাবেন ব্যবস্থাটা
+             * দুইবার চাইছে।
+             *
+             * ⓘ কারণটা লিখে রাখলে পর্দা বলতে পারে: *"আগের সই ছিল ৫০
+             * হাজারে, কাগজ এখন ৫ লাখ"* — আর তখন দ্বিতীয় অনুরোধটা
+             * **ব্যাখ্যা**, বিরক্তি নয়।
+             */
+            $superseded = $latest;
         }
 
         /*
@@ -93,6 +111,17 @@ final class DocumentApproval
             module: $module,
             action: $action,
             amount: $amount,
+
+            /*
+             * ⓘ `approvals.payload` ঘরটা প্রথম দিন থেকেই আছে, আর মাইগ্রেশনে
+             * লেখা ছিল এটা "প্রস্তাবিত বদলটা" ধরার জন্য। ⚠️ আজ পর্যন্ত
+             * কোনো ডাকা জায়গা ওটা ভরত না, তাই লাইভে সবগুলোই NULL।
+             */
+            payload: $superseded === null ? null : [
+                'supersedes' => (int) $superseded->id,
+                'was_amount' => $superseded->amount === null ? null : (string) $superseded->amount,
+            ],
+
             reason: $reason,
 
             /*
