@@ -31,19 +31,20 @@
          সকালে লাইভে ৭২টা ছক বসেছে, আর এক পর্দায় সব ঢালা মানে মানুষ স্ক্রল
          করে খোঁজেন, আর খুঁজে না পেয়ে ধরে নেন নিয়মটা নেই।
 
-         ⛔ ঘনত্ব আর রপ্তানি এখনো বন্ধ, আর কারণটা বদলায়নি: এটা ছক নয়,
-         কার্ডের তালিকা। ঘনত্ব কেবল `x-ui.table` মানে, আর রপ্তানির ফাইল
-         টেবিলের কলাম থেকেই বানানো হয়।
+         ⭐ রপ্তানিও চালু। ⓘ কার্ডগুলোকে `x-ui.table`-এ বদলানো হয়নি —
+         একটা ছকের নিচে তার ধাপগুলো বসে, আর সেটা এক সারিতে ধরে না। তার
+         বদলে কন্ট্রোলার নিজেই ফাইলের টেবিলটা বানায়
+         ([[ApprovalFlowController::offerTheListAsAFile()]]), আর ধাপগুলো
+         এক ঘরে জোড়া লেগে যায়।
 
-         ⚠️ রপ্তানি চালু করতে হলে কার্ডগুলোকে `x-ui.table`-এ নিতে হত —
-         কিন্তু একটা ছকের নিচে তার ধাপগুলো বসে, আর সেটা এক সারিতে ধরে না।
-         ⓘ মৃত বোতাম বসানোর চেয়ে না বসানো ভালো, আর ওটা এই ফাইলের নিজেরই
-         নিয়ম — তাই রপ্তানিটা আলাদা কাজ হিসেবে রইল। --}}
+         ⛔ ঘনত্ব এখনো বন্ধ, আর কারণটা বদলায়নি: ওটা কেবল `x-ui.table`
+         মানে, আর এখানে কোনো ছক নেই। ⓘ মৃত বোতাম বসানোর চেয়ে না বসানো
+         ভালো — ওটা এই ফাইলের নিজেরই নিয়ম। --}}
     <div data-boxed class="mb-3 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
             <x-ui.toolbar :title="__('approval::menu.flows')"
                           :count="trans_choice('core.count.records', $flows->total(), ['count' => $flows->total()])"
-                          :density="false" :export="false">
+                          :density="false">
                 <x-slot:actions>
                     <x-ui.button tone="primary" icon="plus" :href="route('approval.flow.create')">
                         {{ __('approval::action.new_flow') }}

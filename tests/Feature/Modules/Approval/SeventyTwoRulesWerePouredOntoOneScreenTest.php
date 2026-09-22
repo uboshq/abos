@@ -202,6 +202,78 @@ final class SeventyTwoRulesWerePouredOntoOneScreenTest extends TestCase
     }
 
     /**
+     * ⭐ তালিকাটা ফাইল হয়েও নামে — CSV।
+     *
+     * ── ⓘ কেন কার্ডের তালিকা থেকেও এটা করা গেল ──────────────────────
+     * রপ্তানির ফাইল সাধারণত `x-ui.table` ধরিয়ে দেয়, আর এই পর্দায় কোনো
+     * ছক নেই। ⚠️ কার্ডগুলোকে ছকে বদলানো যেত না — একটা ছকের নিচে তার
+     * ধাপগুলো বসে, আর সেটা এক সারিতে ধরে না। ⭐ তাই কন্ট্রোলার নিজেই
+     * টেবিলটা বানায়, আর ধাপগুলো এক ঘরে জোড়া লেগে যায়।
+     */
+    public function test_the_list_comes_down_as_a_file(): void
+    {
+        $this->manyFlows();
+
+        $response = $this->get(route('approval.flow.index', ['export' => 'csv']))->assertOk();
+
+        $this->assertStringContainsString(
+            'text/csv',
+            (string) $response->headers->get('content-type'),
+            'CSV চাওয়ার পরেও ফাইল নয়, পাতাই ফিরেছে।',
+        );
+
+        // ⓘ উত্তরটা স্ট্রিম নয়, সাধারণ Response — মিডলওয়্যার পুরো দেহটা একবারে বসায়
+        $csv = (string) $response->getContent();
+
+        $this->assertStringContainsString(__('approval::field.code'), $csv, 'ফাইলে কলামের শিরোনামই নেই।');
+        $this->assertStringContainsString('AN', $csv, 'ফাইলে একটাও সংকেত নেই।');
+    }
+
+    /**
+     * ⛔ আর খোঁজা দিয়ে ছেঁকে নিলে **ছাঁকা তালিকাটাই** নামে।
+     *
+     * ── ⚠️ কেন এই দাবিটা আলাদা ──────────────────────────────────────
+     * উপরেরটা কেবল বলে "ফাইল আসে"। ⓘ ছাঁকনিটা রপ্তানির পথে না পৌঁছালে
+     * ফাইলে **গোটা তালিকা** নামত, আর মানুষ সেটা খুলে ভাবতেন খোঁজাটা
+     * কাজ করেনি — বা আরো খারাপ, ভুল তালিকা নিয়ে কাজ করতেন।
+     */
+    public function test_the_file_carries_only_what_the_search_kept(): void
+    {
+        $made = $this->manyFlows();
+
+        $response = $this->get(route('approval.flow.index', ['export' => 'csv', 'q' => 'purchase']))->assertOk();
+
+        /*
+         * ⚠️ আগে এই দাবিটা সরাসরি দেহটা পড়ত, আর সেটা **কখনো লাল হত না**।
+         *
+         * ⓘ মেপে দেখা: capture-টা সরিয়ে দিলে উত্তরটা আর CSV থাকে না,
+         * ফিরে আসে সাধারণ HTML পাতা — আর ঐ পাতাতেও ছাঁকা তালিকাই থাকে।
+         * ⛔ অর্থাৎ দাবিটা ফাইল নয়, পর্দা মাপত, আর রপ্তানি পুরোপুরি ভাঙা
+         * থাকলেও সবুজ দেখাত।
+         */
+        $this->assertStringContainsString(
+            'text/csv',
+            (string) $response->headers->get('content-type'),
+            'ছাঁকা তালিকা চাওয়ার পর ফাইল নয়, পাতাই ফিরেছে।',
+        );
+
+        $csv = (string) $response->getContent();
+
+        $wanted = $made->where('module', 'purchase')->pluck('code');
+        $unwanted = $made->where('module', 'inventory')->pluck('code');
+
+        $this->assertTrue(
+            $wanted->contains(fn (string $code) => str_contains($csv, $code)),
+            'ছাঁকা তালিকার একটা ছকও ফাইলে নেই।',
+        );
+
+        $this->assertFalse(
+            $unwanted->contains(fn (string $code) => str_contains($csv, $code)),
+            'ছাঁকনির বাইরের ছকও ফাইলে নেমেছে।',
+        );
+    }
+
+    /**
      * এক পাতার চেয়ে বেশি ছক — ঘোষিত কাজের তালিকা থেকে নেওয়া।
      *
      * ⚠️ সেবা স্তর দিয়ে নয়, সরাসরি — সেবা স্তর ঘোষিত জোড়া ছাড়া কিছু

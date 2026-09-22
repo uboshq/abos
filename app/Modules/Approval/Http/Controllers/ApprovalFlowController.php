@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Approval\Http\Controllers;
 
+use App\Core\Services\ListExport;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
@@ -14,6 +15,7 @@ use App\Modules\Approval\Services\ApprovalFlowService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\View\View;
@@ -87,13 +89,88 @@ class ApprovalFlowController extends Controller implements HasMiddleware
             // ⓘ পাতা বদলালে খোঁজাটা হারায় না
             ->withQueryString();
 
+        $choices = $this->flows->choices();
+
+        $this->offerTheListAsAFile($flows, $choices, $names);
+
         return view('approval::flow.index', [
             'menu' => $this->menu->forUser($request->user()),
             'flows' => $flows,
-            'choices' => $this->flows->choices(),
+            'choices' => $choices,
             'names' => $names,
             'q' => $q,
         ]);
+    }
+
+    /**
+     * তালিকাটা ফাইল হিসেবেও দেওয়া — CSV ও Excel।
+     *
+     * ── ⛔ কেন এটা কন্ট্রোলারে, পর্দায় নয় ──────────────────────────
+     * রপ্তানির ফাইলটা [[ListExport]] বানায় একটা **ধরা-টেবিল** থেকে, আর
+     * সাধারণত সেটা ধরিয়ে দেয় `x-ui.table`। ⚠️ কিন্তু এই পর্দাটা ছক নয়,
+     * **কার্ডের তালিকা** — একটা ছকের নিচে তার ধাপগুলো বসে, আর সেটা এক
+     * সারিতে ধরে না।
+     *
+     * ⓘ তাই কার্ডগুলো ছকে বদলানোর বদলে টেবিলটা এখানেই বানানো হয়:
+     * প্রতিটা ছক এক সারি, আর ধাপগুলো **এক ঘরে জোড়া লেগে** যায়
+     * (*"১ · সুপারভাইজার — ব্যবস্থাপক"*)। ⭐ পর্দা যেমন ছিল তেমনই থাকে,
+     * আর ফাইলটা স্প্রেডশিটে খোলার মতো হয়।
+     *
+     * ── ⚠️ কেবল চাওয়া হলেই ─────────────────────────────────────────
+     * ⓘ প্রতিটা পাতা লোডে টেবিলটা বানানো মানে প্রতিবার সব ধাপের নাম
+     * সাজানো — অথচ ফাইলটা কেউ চায় হাজারবারে একবার।
+     *
+     * ── ⓘ ফাইলে যায় এই পাতার সারিগুলো ─────────────────────────────
+     * টুলবারের লেখাতেই বলা আছে (*"এই পাতায় যা দেখছেন, ঠিক তাই"*), আর
+     * গোটা রিপোতে রপ্তানি এভাবেই চলে। ⚠️ খোঁজা দিয়ে ছেঁকে নিলে ছাঁকা
+     * তালিকাটাই নামে — অর্থাৎ যা দরকার তা বের করে নেওয়া যায়।
+     *
+     * @param  LengthAwarePaginator<int, ApprovalFlow>  $flows
+     * @param  array<string, array{label: string, actions: array<string, string>}>  $choices
+     * @param  array{role: array<int, string>, user: array<int, string>}  $names
+     */
+    private function offerTheListAsAFile($flows, array $choices, array $names): void
+    {
+        $export = app(ListExport::class);
+
+        if (! $export->wanted()) {
+            return;
+        }
+
+        $columns = [
+            ['key' => 'code', 'label' => __('approval::field.code'), 'render' => null],
+            ['key' => 'module', 'label' => __('approval::field.module'), 'render' => null],
+            ['key' => 'action', 'label' => __('approval::field.action'), 'render' => null],
+            ['key' => 'threshold', 'label' => __('approval::field.threshold'), 'render' => null],
+            ['key' => 'steps', 'label' => __('approval::field.steps'), 'render' => null],
+            ['key' => 'active', 'label' => __('approval::field.active'), 'render' => null],
+            ['key' => 'why', 'label' => __('approval::field.why'), 'render' => null],
+        ];
+
+        $export->capture($columns, $flows, function (ApprovalFlow $flow, array $column) use ($choices, $names) {
+            return match ($column['key']) {
+                'code' => $flow->code,
+                'module' => $choices[$flow->module]['label'] ?? $flow->module,
+                'action' => __($choices[$flow->module]['actions'][$flow->action] ?? $flow->action),
+
+                // ⓘ সীমা না থাকা মানে "সবসময় লাগে" — খালি ঘর ওটা বলে না
+                'threshold' => $flow->threshold_amount === null
+                    ? __('approval::action.always')
+                    : (string) $flow->threshold_amount,
+
+                'steps' => $flow->steps
+                    ->map(fn ($step) => trim(
+                        $step->level
+                        .($step->step_name !== null ? ' · '.$step->step_name : '')
+                        .' — '.($names[$step->approver_type][$step->approver_id] ?? '')
+                    ))
+                    ->implode('; '),
+
+                'active' => __($flow->is_active ? 'core.state.active' : 'core.state.inactive'),
+                'why' => $flow->remarks,
+                default => '',
+            };
+        });
     }
 
     /**
