@@ -514,8 +514,17 @@ return [
         'bin' => 'BIN',
         'printed_at' => 'Printed',
 
-        // ⚠️ The hotline is written in both languages, each in its own
-        //    digits. Change it here AND in bn/core.php.
+        /*
+         * ⚠️ Change it here AND in bn/core.php.
+         *
+         * ⛔ The old note here said each language keeps "its own digits".
+         * The owner settled it the other way on 22 September 2026: the
+         * number is written in English digits in both, because nothing in
+         * the product renders a figure in Bengali digits — money, dates,
+         * quantities and document numbers all print in English — so a
+         * Bengali hotline was the only exception on the whole page, and a
+         * number you have to dial is the worst place for one.
+         */
         'vendor_line' => 'Powered by UNIVER BANGLADESH',
         'hotline' => 'Hotline 01911048185',
         'prepared_by' => 'Prepared by',
