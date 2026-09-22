@@ -18,6 +18,7 @@ return [
 
     'inbox_capped' => 'Showing the :shown oldest; :total are waiting in all.',
     'no_requests' => 'You have not asked for an approval yet.',
+    'no_match' => 'No rule matches this search — try another word, or clear it to see the whole list.',
     'no_flows' => 'No rules are set up — so nothing needs approval anywhere.',
     'no_flows_hint' => 'Without a rule, discounts, cancellations and back-dated entries all go through unasked.',
 

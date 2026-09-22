@@ -27,15 +27,23 @@
          page-header-এ। মালিকের নির্দেশ, ১৯ সেপ্টেম্বর ২০২৬: *"সব মডিউলেই
          একই অবস্থা, সব ঠিক করো"*।
 
-         ⓘ এটা ছক নয়, কার্ডের তালিকা — তাই খোঁজা, ঘনত্ব আর রপ্তানি বন্ধ:
-         কন্ট্রোলার কোনো `q` পড়ে না, ঘনত্ব কেবল `x-ui.table` মানে, আর
-         রপ্তানির ফাইল টেবিলের কলাম থেকেই বানানো হয়। ⛔ ওগুলো রাখলে তিনটা
-         মৃত বোতাম হত। কার্ডগুলো যেমন ছিল তেমনই, টুলবারের বাক্সের নিচে। --}}
+         ⭐ খোঁজা এখন চালু — মালিকের নির্দেশ, ২২ সেপ্টেম্বর ২০২৬। ⓘ ঐদিন
+         সকালে লাইভে ৭২টা ছক বসেছে, আর এক পর্দায় সব ঢালা মানে মানুষ স্ক্রল
+         করে খোঁজেন, আর খুঁজে না পেয়ে ধরে নেন নিয়মটা নেই।
+
+         ⛔ ঘনত্ব আর রপ্তানি এখনো বন্ধ, আর কারণটা বদলায়নি: এটা ছক নয়,
+         কার্ডের তালিকা। ঘনত্ব কেবল `x-ui.table` মানে, আর রপ্তানির ফাইল
+         টেবিলের কলাম থেকেই বানানো হয়।
+
+         ⚠️ রপ্তানি চালু করতে হলে কার্ডগুলোকে `x-ui.table`-এ নিতে হত —
+         কিন্তু একটা ছকের নিচে তার ধাপগুলো বসে, আর সেটা এক সারিতে ধরে না।
+         ⓘ মৃত বোতাম বসানোর চেয়ে না বসানো ভালো, আর ওটা এই ফাইলের নিজেরই
+         নিয়ম — তাই রপ্তানিটা আলাদা কাজ হিসেবে রইল। --}}
     <div data-boxed class="mb-3 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
             <x-ui.toolbar :title="__('approval::menu.flows')"
-                          :count="trans_choice('core.count.records', $flows->count(), ['count' => $flows->count()])"
-                          :search="false" :density="false" :export="false">
+                          :count="trans_choice('core.count.records', $flows->total(), ['count' => $flows->total()])"
+                          :density="false" :export="false">
                 <x-slot:actions>
                     <x-ui.button tone="primary" icon="plus" :href="route('approval.flow.create')">
                         {{ __('approval::action.new_flow') }}
@@ -45,7 +53,18 @@
         </form>
     </div>
 
-    @if ($flows->isEmpty())
+    {{-- ⚠️ খোঁজার পর খালি পাওয়া আর সত্যিই কিছু না থাকা — দুইটা আলাদা কথা।
+
+         ⓘ "এখনো কোনো ছক বসানো হয়নি" পড়ে মানুষ নতুন একটা বানাতে যেতেন,
+         অথচ নিয়মটা হয়তো আছে, কেবল তাঁর লেখা শব্দটার সাথে মেলেনি। --}}
+    @if ($flows->isEmpty() && $q !== '')
+        <div data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-6">
+            <p class="text-sm font-medium">{{ __('approval::message.no_match') }}</p>
+            {{-- ⓘ যা লেখা হয়েছিল সেটা ফিরিয়ে দেখানো — নাহলে মানুষ
+                 বুঝতে পারেন না ছাঁকনিটা এখনো চালু আছে কি না। --}}
+            <p class="mt-1 text-sm text-(--color-ink-muted)">&ldquo;{{ $q }}&rdquo;</p>
+        </div>
+    @elseif ($flows->isEmpty())
         <div data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-6">
             <p class="text-sm font-medium">{{ __('approval::message.no_flows') }}</p>
             <p class="mt-1 max-w-(--spacing-prose-max) text-sm text-(--color-ink-muted)">
@@ -58,12 +77,26 @@
                 <div data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div>
+                            {{-- ⭐ সংকেত — মালিকের চাওয়া, ২২ সেপ্টেম্বর ২০২৬।
+
+                                 একটা নিয়মকে কথায় বা রিপোর্টে নাম ধরে ডাকার
+                                 জন্য। ⓘ `public_id` আছে, কিন্তু ওটা UUID —
+                                 মুখে বলার মতো নয়। --}}
+                            <p class="text-2xs font-mono text-(--color-ink-muted)">{{ $flow->code }}</p>
                             <p class="font-medium">
                                 {{ __($choices[$flow->module]['actions'][$flow->action] ?? $flow->action) }}
                                 <span class="text-(--color-ink-muted)">
                                     · {{ $choices[$flow->module]['label'] ?? $flow->module }}
                                 </span>
                             </p>
+                            @if (filled($flow->remarks))
+                                {{-- ⓘ কারণটা তালিকাতেই — সম্পাদনায় ঢুকে দেখতে
+                                     হলে কেউ দেখত না, আর সেটাই ঘরটা বসানোর
+                                     পুরো কারণ। --}}
+                                <p class="mt-1 max-w-(--spacing-prose-max) text-sm text-(--color-ink-muted)">
+                                    {{ $flow->remarks }}
+                                </p>
+                            @endif
 
                             <p class="mt-0.5 text-2xs text-(--color-ink-muted)">
                                 {{ $flow->threshold_amount === null
@@ -117,4 +150,6 @@
             @endforeach
         </div>
     @endif
+
+    {{ $flows->links() }}
 </x-layouts.app>
