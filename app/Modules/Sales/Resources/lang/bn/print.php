@@ -11,6 +11,8 @@ declare(strict_types=1);
  * বাড়ি যেতেন।
  */
 return [
+    'total_item' => 'মোট আইটেম',
+    'delivery_qty' => 'মোট পরিমাণ',
     'paid' => 'পরিশোধিত',
     'invoice_due' => 'এই বিলের বকেয়া',
     'previous_due' => 'আগের বকেয়া',

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modules\Sales;
 
+use App\Core\Engines\Print\PrintableDocument;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\Money;
 use App\Models\Company;
@@ -167,6 +168,28 @@ final class TheBillListedFifteenItemsAndGroupedNoneTest extends TestCase
         );
     }
 
+    /**
+     * ⭐ কয়টা পণ্য আর মোট কত মাল — বিলের মাথায়।
+     *
+     * ── ⓘ মালিকের নমুনা, ২২ সেপ্টেম্বর ২০২৬ ─────────────────────────
+     * তাঁর পাঠানো বিলে উপরে লেখা থাকে *"Total Item: 15"* আর
+     * *"Delivery Qty. 656"*। ⚠️ ডিলারের কাছে মাল নামানোর সময় ওটাই
+     * প্রথম মিলিয়ে দেখা হয়।
+     *
+     * ── ⚠️ দাবিটা সংখ্যা ধরে, ঘর আছে কি না ধরে নয় ───────────────────
+     * ⛔ কেবল চাবিটা আছে কি না দেখলে শূন্য বসে থাকলেও সবুজ থাকত, আর
+     * কাগজে *"মোট আইটেম: ০"* ছাপা হত — যা কোনো বিলেই সত্যি নয়।
+     */
+    public function test_the_head_carries_the_item_count_and_the_quantity(): void
+    {
+        $meta = $this->paperOf()->meta;
+
+        $this->assertSame('4', $meta['sales::print.total_item'] ?? null, 'পণ্যের সংখ্যাটা ভুল।');
+
+        /* ⓘ সারিগুলো ২ · ৩ · ৪ · ৫ — মোট ১৪ */
+        $this->assertSame('14', $meta['sales::print.delivery_qty'] ?? null, 'মোট পরিমাণটা ভুল।');
+    }
+
     /*
      * ⛔ সরু কাগজে ভাগটা আঁকা হয় না — তবে দাবিটা এখানে নেই, ইচ্ছাকৃত।
      *
@@ -201,5 +224,21 @@ final class TheBillListedFifteenItemsAndGroupedNoneTest extends TestCase
         $this->assertNotNull($seen, 'ছাপার পর্দাটা কোনো কাগজ পায়নি।');
 
         return $seen->lines;
+    }
+
+    /** গোটা কাগজটা — মাথা ও সারি দুইটাই দরকার হলে। */
+    private function paperOf(): PrintableDocument
+    {
+        $seen = null;
+
+        View::composer('print.*', function ($view) use (&$seen) {
+            $seen ??= $view->getData()['doc'] ?? null;
+        });
+
+        $this->get(route('sales.print.invoice', ['invoice' => $this->invoice->id]))->assertOk();
+
+        $this->assertNotNull($seen, 'ছাপার পর্দাটা কোনো কাগজ পায়নি।');
+
+        return $seen;
     }
 }

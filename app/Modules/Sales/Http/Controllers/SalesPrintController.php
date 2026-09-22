@@ -338,6 +338,27 @@ class SalesPrintController extends Controller implements HasMiddleware
             'core.print.date' => DateFormat::format($invoice->trx_date),
             'sales::field.customer' => $invoice->customer?->name() ?? '',
             'sales::field.due_on' => DateFormat::format($invoice->due_on),
+
+            /*
+             * ⭐ কয়টা পণ্য আর মোট কত মাল — মালিকের নমুনা, ২২ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ তাঁর পাঠানো বিলে উপরে লেখা থাকে *"Total Item: 15"* আর
+             * *"Delivery Qty. 656"*। ⚠️ ডিলারের কাছে মাল নামানোর সময়
+             * ওটাই প্রথম মিলিয়ে দেখা হয় — কয়টা আইটেম, মোট কত কার্টন।
+             *
+             * ⛔ না থাকলে গুদামের লোককে সারি গুনে যোগ করতে হত, আর
+             * ত্রিশ সারির বিলে সেটা রোজ ভুল হত।
+             *
+             * ⓘ সংখ্যা দুইটা **মোটের ঘরে নয়, মাথায়** — ওগুলো টাকা নয়,
+             * আর টাকার ঘরে বসালে কাগজে `১৫.০০` ছাপা হত।
+             */
+            'sales::print.total_item' => (string) $invoice->lines->count(),
+            'sales::print.delivery_qty' => $this->qty(
+                $invoice->lines->reduce(
+                    fn (string $sum, $line) => bcadd($sum, (string) $line->qty, 4),
+                    '0',
+                )
+            ),
         ];
 
         /*
