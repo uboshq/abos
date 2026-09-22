@@ -48,6 +48,7 @@
           x-data="salesOrderDesk({
               terms: @js($customerTerms),
               barcodes: @js((object) $barcodes),
+              packBarcodes: @js((object) $packBarcodes),
               customerId: @js((string) old('customer_id', $order->customer_id)),
           })">
         @csrf

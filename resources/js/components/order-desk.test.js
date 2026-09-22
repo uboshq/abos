@@ -86,6 +86,55 @@ describe('salesOrderDesk — বারকোড', () => {
 
         expect(d.$dispatch).not.toHaveBeenCalled()
     })
+
+    /*
+     * ⭐ ধাপ ৬ — কার্টনের বারকোড স্ক্যান করলে কার্টনের পরিমাণ।
+     *
+     * ⛔ বারকোডগুলো সংরক্ষিত হত, অথচ কেউ খুঁজত না — ঘরটা
+     * আছে, কাজ নেই।
+     */
+    const packBarcodes = { 'CTN-1': { product_id: 42, qty: '12' } }
+
+    it('প্যাকের বারকোডে প্যাকের পরিমাণ বসে, ১ নয়', () => {
+        const d = desk({ barcodes, packBarcodes })
+
+        d.code = 'CTN-1'
+        d.scan()
+
+        expect(d.$dispatch).toHaveBeenCalledWith('bulk-applied', {
+            rows: [{ product_id: '42', qty: '12' }],
+        })
+
+        expect(d.code).toBe('')
+        expect(d.missed).toBe('')
+    })
+
+    /*
+     * ⚠️ পণ্যের নিজের বারকোড এখনো এক পিসই।
+     *
+     * ⓘ এই দাবিটা না থাকলে দুই তালিকার ক্রম উল্টালেও
+     * উপরেরটা সবুজ থাকত, আর পিস স্ক্যান করলে বারোটা বসত।
+     */
+    it('পণ্যের বারকোড আগে, আর সেটায় পরিমাণ ১', () => {
+        const d = desk({ barcodes, packBarcodes })
+
+        d.code = 'BAR-1'
+        d.scan()
+
+        expect(d.$dispatch).toHaveBeenCalledWith('bulk-applied', {
+            rows: [{ product_id: '42', qty: '1' }],
+        })
+    })
+
+    it('দুই তালিকার কোনোটাতেই না মিললে কোডটা পর্দায় থাকে', () => {
+        const d = desk({ barcodes, packBarcodes })
+
+        d.code = 'CTN-9'
+        d.scan()
+
+        expect(d.$dispatch).not.toHaveBeenCalled()
+        expect(d.missed).toBe('CTN-9')
+    })
 })
 
 describe('salesLineEditor — ভাঙা যোগফল ও মজুদ', () => {

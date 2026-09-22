@@ -14,6 +14,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Inventory\Services\PackConversion;
 use App\Modules\Sales\Http\Requests\SalesOrderRequest;
 use App\Modules\Sales\Models\SalesOrder;
 use App\Modules\Sales\Services\OrderTracking;
@@ -245,6 +246,19 @@ class SalesOrderController extends Controller implements HasMiddleware
                 ->filter(fn (Product $p) => (string) $p->barcode !== '')
                 ->mapWithKeys(fn (Product $p) => [(string) $p->barcode => (string) $p->id])
                 ->all(),
+
+            /*
+             * ⭐ প্যাকের বারকোড → পণ্য ও পরিমাণ — ধাপ ৬, ২২ সেপ্টেম্বর ২০২৬।
+             *
+             * ⛔ বারকোডগুলো সংরক্ষিত হত, কিন্তু কোনো পর্দা ওগুলো
+             * খুঁজত না — স্ক্যানার কেবল পণ্যের নিজেরটা মিলাত।
+             *
+             * ⓘ আলাদা চাবি, এক মানচিত্রে মিশিয়ে নয়: পণ্যের
+             * বারকোডে পরিমাণ সবসময় ১, আর প্যাকেরটাতে `factor`।
+             * ⚠️ মিশালে একটাই মানচিত্রে দুই রকম মান বসত, আর JS-এ
+             * কেন একটায় সংখ্যা আর অন্যটায় বস্তু তা বোঝা যেত না।
+             */
+            'packBarcodes' => app(PackConversion::class)->barcodesFor($products),
 
             /*
              * ⭐ কতটা বেচা যায় — কাউন্টারের **একই** সূত্রে।

@@ -9,6 +9,8 @@ use App\Models\Company;
 use App\Models\User;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
+use App\Modules\Inventory\Models\ProductUnit;
+use App\Modules\MasterData\Models\Unit;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -103,6 +105,52 @@ final class TheOrderFormHadNothingOnItTest extends TestCase
             '',
             'অর্থাৎ বারকোডহীন পণ্যগুলোও ঢুকেছে, আর তখন ফাঁকা ঘরে Enter',
             'চাপলে এলোমেলো একটা পণ্য সারিতে বসে যেত।',
+        ]));
+    }
+
+    /**
+     * ⭐ প্যাকের বারকোডও পাতায় যায়, আর সাথে পরিমাণটাও — ধাপ ৬।
+     *
+     * ── ⛔ যা ভাঙা ছিল, ২২ সেপ্টেম্বর ২০২৬ ──────────────────
+     * পণ্যের ফর্মে প্রতিটা প্যাকের বারকোড লেখা যেত আর সংরক্ষিতও
+     * হত। ⚠️ কিন্তু কোনো পর্দা ওগুলো খুঁজত না — ঘরটা আছে,
+     * কাজ নেই, আর কিছুই লাল হত না।
+     *
+     * ⓘ এই দাবিটা পরিমাণটাও দেখে, কেবল বারকোডটা নয় —
+     * কার্টন স্ক্যান করে যদি ১ বসত, তবে কাজটার মানেই থাকত না।
+     */
+    public function test_the_pack_barcode_reaches_the_page_with_its_quantity(): void
+    {
+        $product = Product::query()->whereNotNull('unit_id')->firstOrFail();
+
+        $carton = Unit::query()->where('id', '!=', $product->unit_id)->firstOrFail();
+
+        ProductUnit::query()->create([
+            'company_id' => CompanyContext::id(),
+            'product_id' => $product->id,
+            'unit_id' => $carton->id,
+            'factor' => '12',
+            'barcode' => 'CTN-ORD-77',
+            'is_active' => true,
+        ]);
+
+        $html = $this->form();
+
+        $this->assertStringContainsString('CTN-ORD-77', $html,
+            'প্যাকের বারকোডটা ব্রাউজারে পৌঁছায়নি — কার্টন স্ক্যান করলে কিছুই হবে না।');
+
+        $this->assertStringContainsString('packBarcodes:', $html,
+            'স্ক্যানারকে তালিকাটা দেওয়াই হয়নি — ফর্মে জোড়াটা নেই।');
+
+        /*
+         * ⭐ পরিমাণটাও সাথে গেছে তো? ⓘ `@js` ছাপার সময় কোটগুলো
+         * HTML-এন্টিটি হয়ে যায়, তাই খোঁজাটা সেই রূপেই।
+         */
+        $this->assertStringContainsString('&quot;qty&quot;:&quot;12&quot;', $html, implode(PHP_EOL, [
+            'প্যাকের পরিমাণটা পাতায় নেই।',
+            '',
+            '⛔ তাহলে কার্টন স্ক্যান করলে এক পিস বসত, আর কার্টনের',
+            'দামে এক পিস বিক্রি হত।',
         ]));
     }
 

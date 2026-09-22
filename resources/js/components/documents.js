@@ -152,6 +152,14 @@ export function salesOrderDesk (config = {}) {
     return {
         terms: config.terms || {},
         barcodes: config.barcodes || {},
+
+        /*
+         * প্যাকের বারকোড → `{ product_id, qty }` — ধাপ ৬।
+         *
+         * ⓘ ডিফল্ট `{}`, তাই যে ফর্ম এটা পাঠায় না তার
+         * আচরণ এক চুলও বদলায় না।
+         */
+        packBarcodes: config.packBarcodes || {},
         customerId: String(config.customerId || ''),
         code: '',
         missed: '',
@@ -202,9 +210,24 @@ export function salesOrderDesk (config = {}) {
 
             if (code === '') return;
 
+            /*
+             * ⭐ আগে পণ্যের নিজের বারকোড, তারপর প্যাকের — ধাপ ৬।
+             *
+             * ── ⛔ যা ভাঙা ছিল ──────────────────────────────
+             * প্যাকের গায়ের বারকোড সংরক্ষিত হত, অথচ কেউ ওটা
+             * খুঁজত না। ⚠️ কার্টন স্ক্যান করলে *"পাওয়া যায়নি"*
+             * বলত, আর বিক্রেতা পণ্যটা হাতে খুঁজে পরিমাণটাও হাতে
+             * লিখতেন — আর ভুল হলে কার্টনের দামে এক পিস বিক্রি হত।
+             *
+             * ⓘ ক্রমটা ইচ্ছাকৃত: পণ্যের নিজের বারকোড এক পিস
+             * বোঝায়, তাই সেটা আগে। ⚠️ দুই তালিকায় একই কোড থাকার
+             * কথা নয় — [[ProductPackService]] সেটা আটকায় — কিন্তু ধরা
+             * থাকলে উত্তরটা অনুমানের বদলে নিয়মে ঠিক হয়।
+             */
             const productId = this.barcodes[code];
+            const pack = this.packBarcodes[code];
 
-            if (productId === undefined) {
+            if (productId === undefined && pack === undefined) {
                 this.missed = code;
                 return;
             }
@@ -212,9 +235,11 @@ export function salesOrderDesk (config = {}) {
             this.missed = '';
             this.code = '';
 
-            this.$dispatch('bulk-applied', {
-                rows: [{ product_id: String(productId), qty: '1' }],
-            });
+            const row = productId !== undefined
+                ? { product_id: String(productId), qty: '1' }
+                : { product_id: String(pack.product_id), qty: String(pack.qty) };
+
+            this.$dispatch('bulk-applied', { rows: [row] });
         },
     }
 }
