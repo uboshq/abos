@@ -40,7 +40,6 @@ return new class extends Migration
     {
         Schema::create('acc_profit_shares', function (Blueprint $table) {
             $table->id();
-            $table->publicId();
 
             $table->foreignId('company_id')->constrained('companies')->cascadeOnDelete();
             $table->foreignId('branch_id')->nullable()->constrained('branches')->nullOnDelete();
