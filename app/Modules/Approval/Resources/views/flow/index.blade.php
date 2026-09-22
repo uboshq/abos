@@ -89,6 +89,26 @@
                                 <span class="text-(--color-ink-muted)">
                                     · {{ $choices[$flow->module]['label'] ?? $flow->module }}
                                 </span>
+
+                                {{-- ⛔ বন্ধ নিয়ম চেনা যেত না — ২২ সেপ্টেম্বর ২০২৬।
+
+                                     ⚠️ আগে কথাটা লেখা থাকত সীমার পাশে, ছোট ধূসর
+                                     অক্ষরে, আর শব্দটা ছিল **"প্রত্যাহৃত"** — যেটা
+                                     একটা *অনুরোধ* প্রত্যাহারের শব্দ, *নিয়ম* বন্ধ
+                                     করার নয়। ⛔ অর্থাৎ পর্দাটা কেবল চুপ ছিল না,
+                                     ভুল কথা বলত।
+
+                                     ⓘ আর `coverage` পর্দা একই জিনিসকে বলত "বন্ধ",
+                                     ব্যাজ পরিয়ে। ⚠️ দুইটা পর্দা একই সত্য নিয়ে
+                                     দুই কথা বললে সেটা কিছু না দেখানোর চেয়ে খারাপ —
+                                     তাই এখানে একই শব্দ, একই রঙ
+                                     ([[coverage-state.blade.php]])। --}}
+                                @unless ($flow->is_active)
+                                    <span class="ms-1 rounded-full bg-(--color-badge-pending-bg)
+                                                 px-2 py-0.5 text-2xs text-(--color-badge-pending-ink)">
+                                        {{ __('approval::message.coverage_off') }}
+                                    </span>
+                                @endunless
                             </p>
                             @if (filled($flow->remarks))
                                 {{-- ⓘ কারণটা তালিকাতেই — সম্পাদনায় ঢুকে দেখতে
@@ -103,9 +123,6 @@
                                 {{ $flow->threshold_amount === null
                                     ? __('approval::action.always')
                                     : __('approval::field.threshold').': '.\App\Core\Support\Money::format($flow->threshold_amount) }}
-                                @unless ($flow->is_active)
-                                    · {{ __('approval::status.cancelled') }}
-                                @endunless
                             </p>
                         </div>
 
