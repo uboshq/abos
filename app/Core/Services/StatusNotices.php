@@ -7,6 +7,8 @@ namespace App\Core\Services;
 use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
+use App\Models\Notice;
+use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -92,6 +94,20 @@ final class StatusNotices
                  * লাল বার্তা পাশাপাশি রাখলে মানুষ দুইটাকেই একটা ভেবে
                  * একটাই পড়েন, আর তখন ভুলটা কোনটা তা আর বোঝা যায় না।
                  */
+                /*
+                 * ⭐ মালিকের নিজের নোটিশ — সবার আগে, ২২ সেপ্টেম্বর ২০২৬।
+                 *
+                 * ⓘ নিচের বাকিগুলো **যন্ত্রের কথা** (ব্যাকআপ বাসি, খসড়া
+                 * পড়ে আছে)। ⚠️ এটা **মানুষের কথা**, আর মানুষ যখন কিছু
+                 * বলার জন্য নোটিশ লেখেন তখন সেটা যন্ত্রের রোজকার
+                 * সতর্কতার পিছনে পড়ে থাকা উচিত নয়।
+                 *
+                 * ⛔ সব নোটিশ বারে আসে না — কেবল যেগুলোয় লেখক নিজে টিক
+                 * দিয়েছেন। ⓘ সবগুলো পাঠালে জরুরি কথাটা ভিড়ে হারাত, আর
+                 * বারটা আবার "কেউ পড়ে না" অবস্থায় ফিরত।
+                 */
+                ...$this->ownNotices(),
+
                 $backupNotice = $this->backupNotice(),
                 $backupNotice === null ? $this->mirrorNotice() : null,
                 $this->approvalNotice(),
@@ -199,6 +215,47 @@ final class StatusNotices
             'url' => Route::has('approval.inbox.index') ? route('approval.inbox.index') : null,
             'tone' => 'pending',
         ];
+    }
+
+    /**
+     * ⭐ প্রতিষ্ঠানের নিজের লেখা নোটিশগুলো — বারের জন্য।
+     *
+     * ── ⓘ কেন এখানে কোনো নিয়ম লেখা হয়নি ────────────────────────────
+     * *"কে কোন নোটিশ দেখবেন"* প্রশ্নের উত্তর একটাই জায়গায়
+     * ([[NoticeBoard]])। ⚠️ এখানে দ্বিতীয়বার লিখলে একদিন বারে এমন
+     * একটা নোটিশ ঘুরত যেটা বোর্ডে খুলে পড়াই যেত না — আর ঐ পার্থক্যটা
+     * **নীরব** হত।
+     *
+     * ⛔ লগইন করা কেউ না থাকলে খালি। ⓘ বারটা তখন আঁকাই হয় না, কিন্তু
+     * কনসোল বা কিউ থেকে ডাকা হলে যেন ছুঁড়ে না ফেলে।
+     *
+     * @return list<array{text: string, url: ?string, tone: string}>
+     */
+    private function ownNotices(): array
+    {
+        $user = auth()->user();
+
+        if (! $user instanceof User) {
+            return [];
+        }
+
+        return app(NoticeBoard::class)->forTicker($user)
+            ->map(fn (Notice $notice): array => [
+                'text' => (string) $notice->title,
+
+                /*
+                 * ⓘ ক্লিক করলে পুরো নোটিশটা — নিয়ম ১। ⚠️ শিরোনামটা
+                 * বারে ধরে, বিস্তারিত ধরে না; পথটা না থাকলে মানুষ
+                 * জানতেন কিছু একটা হয়েছে, কী হয়েছে তা নয়।
+                 */
+                'url' => Route::has('system_admin.notice.show')
+                    ? route('system_admin.notice.show', $notice->id)
+                    : null,
+
+                // ⓘ নীল — এটা সতর্কতা নয়, খবর।
+                'tone' => 'info',
+            ])
+            ->all();
     }
 
     /**

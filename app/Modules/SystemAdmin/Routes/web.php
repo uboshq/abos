@@ -8,6 +8,7 @@ use App\Modules\SystemAdmin\Http\Controllers\ControlPanelController;
 use App\Modules\SystemAdmin\Http\Controllers\CustomFieldController;
 use App\Modules\SystemAdmin\Http\Controllers\ImportController;
 use App\Modules\SystemAdmin\Http\Controllers\LookController;
+use App\Modules\SystemAdmin\Http\Controllers\NoticeController;
 use App\Modules\SystemAdmin\Http\Controllers\OwnershipController;
 use App\Modules\SystemAdmin\Http\Controllers\ReportDownloadController;
 use App\Modules\SystemAdmin\Http\Controllers\ReportScheduleController;
@@ -88,6 +89,31 @@ Route::middleware('auth')->prefix('system')->group(function () {
      */
     Route::get('/branch-modules', [BranchModuleController::class, 'edit'])->name('branch-module');
     Route::put('/branch-modules', [BranchModuleController::class, 'update'])->name('branch-module.update');
+
+    /*
+     * নোটিশ — প্রতিষ্ঠানের নিজের কথা, ২২ সেপ্টেম্বর ২০২৬।
+     *
+     * ⛔ `index` আর `show`-এ কোনো চাবি নেই, আর সেটা ইচ্ছাকৃত: নোটিশ
+     * **সবার জন্য**। ⓘ চাবি চাইলে ঠিক তাঁরাই বাদ পড়তেন যাঁদের জন্য
+     * নোটিশটা লেখা। ⚠️ কে কোনটা দেখবেন সেটা ভূমিকা ঠিক করে
+     * ([[NoticeBoard::forUser()]]), আর `show()` নিজে সেটা মেলায়।
+     *
+     * ⓘ লেখা-বদলানোর দরজাগুলো চাবির পিছনে।
+     */
+    Route::get('/notices', [NoticeController::class, 'index'])->name('notice.index');
+
+    Route::middleware('can:system_admin.notice.manage')->group(function () {
+        Route::get('/notices/new', [NoticeController::class, 'create'])->name('notice.create');
+        Route::post('/notices', [NoticeController::class, 'store'])->name('notice.store');
+        Route::get('/notices/{notice}/edit', [NoticeController::class, 'edit'])
+            ->whereNumber('notice')->name('notice.edit');
+        Route::put('/notices/{notice}', [NoticeController::class, 'update'])
+            ->whereNumber('notice')->name('notice.update');
+    });
+
+    /* ⚠️ `{notice}`-টা সবার শেষে — নাহলে `/notices/new` এখানে ধরা পড়ত। */
+    Route::get('/notices/{notice}', [NoticeController::class, 'show'])
+        ->whereNumber('notice')->name('notice.show');
 
     /*
      * প্রতিষ্ঠানের সেটিংস — ৭ সেপ্টেম্বর ২০২৬।
