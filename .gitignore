@@ -58,3 +58,7 @@ Thumbs.db
 # Python-এর নিজের ক্যাশ — tools/-এর স্ক্রিপ্টগুলো চালালে তৈরি হয়।
 # এটা কমিটে থাকলে প্রতিবার স্ক্রিপ্ট চালানোই একটা "পরিবর্তন" দেখাত।
 /tools/__pycache__/
+
+# ছাপা মাপার অস্থায়ী ফল — tools/print-check.*
+/public/__printcheck
+/storage/app/printcheck
