@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Engines\Print;
 
+use App\Core\Support\Money;
 use InvalidArgumentException;
 
 /**
@@ -48,6 +49,57 @@ final class PaperSize
                 "Unknown paper size '{$name}'. Use a4, 80mm or 58mm."
             ),
         };
+    }
+
+    /**
+     * এই কাগজে টাকাটা যেভাবে ছাপা হবে।
+     *
+     * ── ⭐ থার্মালে পয়সা নেই — মালিক, ২২ সেপ্টেম্বর ২০২৬ ───
+     * *"ok bad daw rounding kore nilei holo"*।
+     *
+     * ⓘ কারণটা জায়গার: ৫৪smm কাগজে দুই পাশে ২mm মার্জিন বাদ
+     * দিলে থাকে ৫৪mm। ⛔ কলামগুলো নিত ৬ + ১৩ + ১৭ + ২১ = **৫৭mm**
+     * — অর্থাৎ পণ্যের নামের জন্য কিছুই থাকত না।
+     *
+     * ⚠️ `.00` বাদ দিলে প্রতিটা টাকার ঘর প্রায় ৫৮০mm কম লাগে,
+     * আর সেই জায়গাটাই নামে যায়।
+     *
+     * ── ⛔ যা হারায়, আর সেটা জেনেই বসানো ──────────────────
+     * রাউন্ড করা সারিগুলো যোগ করলে রাউন্ড করা মোটের সাথে এক-দুই
+     * টাকার ফারাক হতে পারে। ⓘ খাতায় অংকটা পয়সাসহ অক্ষত থাকে —
+     * এটা কেবল **ছাপার** রূপ, হিসাবের নয়।
+     *
+     * ⚠️ A4-তে কিছুই বদলায় না — ওখানে জায়গার সমস্যা নেই।
+     */
+    public function decimals(): int
+    {
+        return $this->isThermal ? 0 : 2;
+    }
+
+    /**
+     * আগেই সাজানো একটা অংককে এই কাগজের রূপ দেওয়া।
+     *
+     * ⓘ কন্ট্রোলারগুলো টাকা সাজিয়েই পাঠায়, আর কাগজটা ঠিক হয়
+     * তার পরে। ⭐ তাই বদলটা এখানেই — চারটা কন্ট্রোলারে নয়।
+     *
+     * ⚠️ সংখ্যা না হলে (যেমন "—") যেমন আছে তেমনই ফেরত যায়।
+     */
+    public function money(?string $formatted): string
+    {
+        $formatted = (string) $formatted;
+
+        if (! $this->isThermal || $formatted === '') {
+            return $formatted;
+        }
+
+        /* দলের কমা তুলে নিলে পড়ার মতো সংখ্যা থাকে */
+        $bare = str_replace(',', '', $formatted);
+
+        if (! is_numeric($bare)) {
+            return $formatted;
+        }
+
+        return Money::format($bare, 0);
     }
 
     /** @return list<string> */

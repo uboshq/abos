@@ -99,12 +99,12 @@
         <table class="lines">
             <thead>
                 <tr>
-                    <th style="width: {{ $thermal ? '6mm' : '10mm' }}">#</th>
+                    <th style="width: {{ $thermal ? '4mm' : '10mm' }}">#</th>
                     <th>{{ __('core.print.item') }}</th>
                     @if ($showUnit)
                         <th style="width: 16mm">{{ __('core.print.unit') }}</th>
                     @endif
-                    <th class="num" style="width: {{ $thermal ? '13mm' : '20mm' }}">{{ __('core.print.qty') }}</th>
+                    <th class="num" style="width: {{ $thermal ? '11mm' : '20mm' }}">{{ __('core.print.qty') }}</th>
                     @if ($showFree)
                         <th class="num" style="width: 16mm">{{ __('core.print.free_qty') }}</th>
                     @endif
@@ -129,10 +129,10 @@
                          বেশি দরকার হলে প্রশ্নটা আর মাপের নয় — রসিদে পয়সার `.00`
                          রাখা হবে কি না, আর সেটা মালিকের সিদ্ধান্ত। --}}
                     @if ($showRate)
-                        <th class="num" style="width: {{ $thermal ? '17mm' : '32mm' }}">{{ __('core.print.rate') }}</th>
+                        <th class="num" style="width: {{ $thermal ? '10mm' : '32mm' }}">{{ __('core.print.rate') }}</th>
                     @endif
                     @if ($showAmount)
-                        <th class="num" style="width: {{ $thermal ? '21mm' : '36mm' }}">{{ __('core.print.amount') }}</th>
+                        <th class="num" style="width: {{ $thermal ? '14mm' : '36mm' }}">{{ __('core.print.amount') }}</th>
                     @endif
                 </tr>
             </thead>
@@ -177,7 +177,7 @@
                             <td class="num">{{ $line['rate'] }}</td>
                         @endif
                         @if ($showAmount)
-                            <td class="num">{{ $line['amount'] }}</td>
+                            <td class="num">{{ $paper->money($line['amount']) }}</td>
                         @endif
                     </tr>
                 @endforeach
@@ -190,7 +190,7 @@
             @foreach ($doc->totals as $label => $value)
                 <tr @if ($loop->last) class="grand" @endif>
                     <td>{{ __($label) }}</td>
-                    <td class="num" style="width: {{ $thermal ? '21mm' : '36mm' }}">{{ $value }}</td>
+                    <td class="num" style="width: {{ $thermal ? '15mm' : '36mm' }}">{{ $paper->money($value) }}</td>
                 </tr>
             @endforeach
         </table>
