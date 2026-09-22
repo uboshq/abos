@@ -25,6 +25,9 @@ return [
     'threshold_hint' => 'Leave it empty and every one needs approval. Ask the owner to sign off a 50-taka discount and nobody follows the rule — and once it is skipped, the whole thing is decoration.',
     'remarks_hint' => 'So that in six months someone can still find the reason — who asked for it, and after what.',
     'document_gone' => 'The document is no longer there.',
+
+    // The amount is the one from the day it was asked for; the paper may have moved since.
+    'changed_since_asked' => 'The document was changed after this was asked for — the amount above is the one from then. Open the document before you sign.',
     'document_not_yours' => 'The document is there, but you do not have the permission to open it. What you see here is the approval record — who asked, at which level, and who decided what.',
     'awaiting' => 'Waiting for approval — the request has been sent.',
     'level_of' => 'Level :current of :total',

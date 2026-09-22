@@ -45,6 +45,20 @@
                         <dd class="tabular text-sm">
                             {{ $approval->amount === null ? '—' : \App\Core\Support\Money::format($approval->amount) }}
                         </dd>
+
+                        {{-- ⛔ অঙ্কটা সই চাওয়ার দিনের, আজকের নয়।
+
+                             ⚠️ অপেক্ষায় থাকা কাগজ খসড়াই থাকে, আর খসড়া বদলানো
+                             যায়। ⓘ কারণসহ [[ApprovalInboxController::show()]]-এ।
+
+                             ⭐ লাইনটা অঙ্কের **নিচে**, পাতার মাথায় নয় — যিনি
+                             সংখ্যাটা পড়ছেন তাঁর চোখ তখন ঠিক ওখানেই। --}}
+                        @if ($changedSinceAsked)
+                            <p class="mt-1 rounded-(--radius-field) bg-(--color-badge-draft-bg) px-2 py-1
+                                      text-2xs text-(--color-badge-draft-ink)">
+                                {{ __('approval::message.changed_since_asked') }}
+                            </p>
+                        @endif
                     </div>
 
                     <div class="sm:col-span-2">

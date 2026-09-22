@@ -361,11 +361,42 @@ class ApprovalInboxController extends Controller implements HasMiddleware
 
         $mayReadDocument = $mine || $canDecide;
 
+        $document = $mayReadDocument ? $this->documentOf($entry) : null;
+
         return view('approval::inbox.show', [
             'menu' => $this->menu->forUser($user),
             'approval' => $entry,
+
+            /*
+             * ⛔ পর্দায় যে অঙ্কটা লেখা, সেটা **সই চাওয়ার দিনের** অঙ্ক।
+             *
+             * ── ⚠️ কেন এটা বলা দরকার, ২২ সেপ্টেম্বর ২০২৬ ────────────
+             * অনুমোদন পাওয়ার অপেক্ষায় থাকা কাগজ **খসড়াই থাকে, আর খসড়া
+             * সম্পাদনা করা যায়**। ⓘ `approvals.amount` বসে অনুরোধের
+             * সময়, তারপর আর বদলায় না।
+             *
+             * ⛔ ফলে সইকারী ৫০ হাজার দেখে সই দিতে পারতেন, অথচ কাগজটা
+             * ততক্ষণে ৫ লাখ। ⚠️ টাকাটা পাশ হয় না — [[Approval::covers()]]
+             * পোস্টের সময় আটকায় — কিন্তু **মানুষটা ভুল সংখ্যা দেখে সই
+             * দিয়েছেন**, আর খাতায় তাঁর নামই থাকে।
+             *
+             * ── ⓘ কেন `updated_at`, অঙ্ক মিলিয়ে নয় ─────────────────
+             * ইনবক্স সতেরো রকম কাগজ দেখায়, আর "অঙ্ক" প্রত্যেকটায় আলাদা
+             * ঘরে থাকে। ⚠️ ওদের নাম জানতে গেলে কোরকে প্রতিটা মডিউলের
+             * ভিতরে তাকাতে হত (§১৯.৭)। ⭐ "কাগজটা কি নড়েছে" প্রশ্নটার
+             * উত্তর সব কাগজেই একভাবে আছে।
+             *
+             * ⚠️ তাই মাঝে মাঝে মিথ্যা সতর্কতা আসবে — সম্পর্কিত সারি
+             * সেভ হলেও `updated_at` নড়ে। ⓘ সেটা মেনে নেওয়া হলো: এই
+             * ভুলটা মানুষকে **তাকাতে** বলে, আর উল্টো ভুলটা তাঁকে না
+             * জানিয়ে সই করায়।
+             */
+            'changedSinceAsked' => $document !== null
+                && $entry->requested_at !== null
+                && $document->getAttribute('updated_at') !== null
+                && $document->getAttribute('updated_at')->greaterThan($entry->requested_at),
             'labels' => $this->flows->labels(),
-            'document' => $mayReadDocument ? $this->documentOf($entry) : null,
+            'document' => $document,
 
             /*
              * "নেই" আর "আপনার জন্য নয়" — পর্দাটা দুইটাকে এক দেখাতে
