@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Architecture;
 
 use App\Core\Module\ModuleRegistry;
+use App\Core\Services\MenuSwitches;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
@@ -140,7 +141,7 @@ final class EveryMenuPageOpensBeforeItIsDeployedTest extends TestCase
         $out = [];
 
         foreach (app(ModuleRegistry::class)->all() as $module) {
-            foreach ($module->menu as $items) {
+            foreach ($module->menu as $group => $items) {
                 foreach ($items as $item) {
                     $name = $item['route'] ?? null;
 
@@ -160,9 +161,28 @@ final class EveryMenuPageOpensBeforeItIsDeployedTest extends TestCase
                      * ⭐ সাতটা পাতা এভাবেই ৪০৪ দিচ্ছিল (ব্যাচ, মুদ্রা,
                      * গাড়ি, কাউন্টার, শিফট) — কোনোটাই ভাঙা নয়, সবগুলোই
                      * ডেমোতে বন্ধ।
+                     *
+                     * ── ⛔ কিন্তু সুইচ তিন স্তরের, আর এটা দেখত একটা ──
+                     * ⚠️ এখানে কেবল **সারির নিজের** `setting` দেখা হত।
+                     * ⓘ মডিউল বা গ্রুপ বন্ধ থাকলেও দরজাটা ৪০৪ দেয়
+                     * ([[RefuseSwitchedOffScreens::switchFor()]] তিনটাই
+                     * দেখে), অথচ পাহারাটা সারিটা হাঁটতে যেত।
+                     *
+                     * ⛔ ২২ সেপ্টেম্বর ২০২৬-এ মালিক রেস্তোরাঁ মডিউলটা
+                     * বন্ধ করলেন, আর পাহারাটা **ছয়টা ৪০৪ নিয়ে লাল হয়ে
+                     * বসে রইল** — ছয়টাই নিখুঁত আচরণ। ⚠️ সবচেয়ে বাজে
+                     * দিকটা হলো সবাই কারণটা "জানত", তাই লালটা আর কেউ
+                     * পড়ত না — আর ঐ লালের নিচে একটা আসল ভুল মাসের পর
+                     * মাস লুকিয়ে থাকতে পারত।
+                     *
+                     * ⭐ নিয়মটা এখন [[MenuSwitches::itemIsOn()]] থেকেই
+                     * আসে — মেনু আঁকার সময় যেটা চলে, হুবহু সেটাই। ⓘ দুই
+                     * জায়গায় দুইবার লিখলে একদিন একটা বদলাত, আর
+                     * পার্থক্যটা নীরব হত।
                      */
-                    if (isset($item['setting'])
-                        && ! app(SettingsService::class)->get((string) $item['setting'], true)) {
+                    if (! app(MenuSwitches::class)->itemIsOn(
+                        app(SettingsService::class), $module, (string) $group, $item
+                    )) {
                         continue;
                     }
 

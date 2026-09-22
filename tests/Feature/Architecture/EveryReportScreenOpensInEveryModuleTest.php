@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Architecture;
 
+use App\Core\Module\ModuleRegistry;
+use App\Core\Services\MenuSwitches;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
@@ -55,6 +57,29 @@ final class EveryReportScreenOpensInEveryModuleTest extends TestCase
          * পিছনের প্রতিটা রিপোর্ট চিরকাল অমাপা থেকে যেত।
          */
         app(SettingsService::class)->set('inventory.batch_enabled', true);
+
+        /*
+         * ⭐ আর প্রতিটা মডিউলের সুইচও — ২২ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⛔ কী ঘটেছিল ───────────────────────────────────────────
+         * মালিক রেস্তোরাঁ মডিউলটা বন্ধ করলেন, আর
+         * [[RefuseSwitchedOffScreens]] ঠিক যা করার তাই করল — ৪০৪। ⓘ
+         * কিন্তু এই পাহারাটা **রুটের তালিকা** থেকে পর্দা গোনে, তাই সে
+         * ঐ ৪০৪-টাকে ভাঙা পাতা বলে ধরল, আর লাল হয়ে বসে রইল।
+         *
+         * ⚠️ প্রথমে ভেবেছিলাম বন্ধ মডিউলের রিপোর্টগুলো **বাদ** দেব।
+         * ⛔ কিন্তু সেটা উপরের সিদ্ধান্তটারই উল্টো: বাদ দিলে রেস্তোরাঁর
+         * প্রতিটা রিপোর্ট **চিরকাল অমাপা** থেকে যেত, আর যেদিন মালিক
+         * মডিউলটা আবার চালু করতেন সেদিন ভাঙা পাতাগুলো একসাথে বেরোত।
+         *
+         * ⭐ তাই উল্টো পথ: সুইচগুলো **চালু করে** মাপা। ⓘ পাহারাটার কাজ
+         * কোডটা কাজ করে কি না বলা, কোন কোম্পানি কী কিনেছে তা নয়।
+         */
+        foreach (app(ModuleRegistry::class)->all() as $module) {
+            app(SettingsService::class)->set(
+                app(MenuSwitches::class)->forModule($module->code), true
+            );
+        }
     }
 
     /**
