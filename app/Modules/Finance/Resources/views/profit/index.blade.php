@@ -101,8 +101,17 @@
                                 :label="__('finance::field.profit_to_share')"
                                 :value="old('profit', $profit)" numeric required />
 
+                    {{--
+                        ⓘ `max` বসানো — তারিখ বাছাইয়েই আগামীকাল ধরা যায় না।
+
+                        ⚠️ এটা পাহারা নয়, সৌজন্য — আসল বাধাটা
+                        [[ProfitDistributionController]]-এ `before_or_equal:today`।
+                        ⓘ দুইটাই থাকে: ব্রাউজারটা ভুলটা আগে থামায়,
+                        সার্ভারটা শেষে রুখে দেয়।
+                    --}}
                     <x-ui.field name="trx_date" type="date"
                                 :label="__('core.print.date')"
+                                :max="now()->format('Y-m-d')"
                                 :value="old('trx_date', now()->format('Y-m-d'))" required />
 
                     <x-ui.field name="narration"
@@ -169,6 +178,8 @@
 
                 <x-ui.table :rows="$history" :columns="$historyColumns"
                             :empty="__('finance::message.no_distribution_yet')" />
+
+                <x-ui.pager :rows="$history" />
             </section>
         </div>
     </div>

@@ -57,9 +57,17 @@ final class TheProfitSplitHadNoButtonToPressTest extends TestCase
      */
     public function test_the_page_opens_and_the_menu_leads_to_it(): void
     {
-        $this->actingAs($this->owner)
-            ->get(route('finance.profit.index'))
-            ->assertOk();
+        $page = $this->actingAs($this->owner)
+            ->get(route('finance.profit.index'));
+
+        $page->assertOk();
+
+        /*
+         * ⓘ তারিখের ঘরে `max` সত্যি পৌঁছায় কি না। ⚠️ `x-ui.field`
+         * একটা অধোষিত গুণ নিরবে গিলে ফেলতে পারত, আর সৌজন্যটা
+         * থাকত কেবল ব্লেডের লেখায়।
+         */
+        $page->assertSee('max="'.now()->format('Y-m-d').'"', false);
 
         /*
          * ⛔ সারিতা মেনুতে না থাকলে পাতাটা কেবল ঠিকানা জানা লোকের।

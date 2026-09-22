@@ -136,8 +136,17 @@ final class ProfitDistributionController implements HasMiddleware
                 ->with('person')
                 ->orderByDesc('trx_date')
                 ->orderByDesc('id')
-                ->limit(50)
-                ->get(),
+                /*
+                 * ⭐ পাতা করা, `limit(50)` নয় — ২২ সেপ্টেম্বর ২০২৬।
+                 *
+                 * ⚠️ `limit` পাতাটাকে হালকা রাখত, কিন্তু বছর ঘুরলে
+                 * পানচাশতম ঘোষণার পরেরগুলো দেখার কোনো পথ থাকত না —
+                 * সারিগুলো খাতায় আছে, পর্দায় নেই, আর কিছুই ভাঙে না।
+                 *
+                 * ⓘ ধরা পড়েছে `EveryListScreenPaginates`-এ।
+                 */
+                ->paginate(50)
+                ->withQueryString(),
             'profit' => null,
             'preview' => null,
         ];

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Finance\Models;
 
 use App\Core\Concerns\BelongsToCompany;
+use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\MasterData\Models\Person;
@@ -30,6 +31,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class ProfitShare extends Model
 {
     use BelongsToCompany;
+    use HasPublicId;
     use IsAudited;
     use SoftDeletes;
 
