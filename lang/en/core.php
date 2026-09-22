@@ -514,6 +514,7 @@ return [
         'link_ready' => 'Link ready — good for 30 days',
         'copy_link' => 'Copy link',
         'whatsapp' => 'Send on WhatsApp',
+        'sub_total' => 'Sub total',
         'free_qty' => 'Free',
         'paper' => [
             'a4' => 'A4',

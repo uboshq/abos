@@ -98,12 +98,13 @@ class SalesPrintController extends Controller implements HasMiddleware
          * ⭐ ধরা পড়েছে সত্যিকারের একটা বিক্রয় করে, কারণ পাহারাটা কেবল
          * **চালান-সহ** বিলে জাগে — আর সেটাই কাউন্টারের একমাত্র পথ।
          */
-        $invoice->load(['lines.product.unit', 'lines.challanLine', 'customer', 'branch']);
+        /* ⓘ `brandRow`-ও সাথে — নাহলে প্রতিটা সারিতে একটা করে কোয়েরি যেত */
+        $invoice->load(['lines.product.unit', 'lines.product.brandRow', 'lines.challanLine', 'customer', 'branch']);
 
         $doc = new PrintableDocument(
             title: __('sales::doc.invoice'),
             meta: $this->invoiceMeta($invoice),
-            lines: $this->productLines($invoice->lines, 'qty', $this->lotsForInvoice($invoice)),
+            lines: $this->productLines($invoice->lines, 'qty', $this->lotsForInvoice($invoice), band: true),
 
             /*
              * ⭐ বিলের নিচে টাকার পুরো গল্প — মালিকের নমুনা, ২২ সেপ্টেম্বর ২০২৬।
@@ -162,12 +163,13 @@ class SalesPrintController extends Controller implements HasMiddleware
          * ⭐ ধরা পড়েছে সত্যিকারের একটা বিক্রয় করে, কারণ পাহারাটা কেবল
          * **চালান-সহ** বিলে জাগে — আর সেটাই কাউন্টারের একমাত্র পথ।
          */
-        $invoice->load(['lines.product.unit', 'lines.challanLine', 'customer', 'branch']);
+        /* ⓘ `brandRow`-ও সাথে — নাহলে প্রতিটা সারিতে একটা করে কোয়েরি যেত */
+        $invoice->load(['lines.product.unit', 'lines.product.brandRow', 'lines.challanLine', 'customer', 'branch']);
 
         $doc = new PrintableDocument(
             title: __('sales::doc.invoice'),
             meta: $this->invoiceMeta($invoice),
-            lines: $this->productLines($invoice->lines, 'qty', $this->lotsForInvoice($invoice)),
+            lines: $this->productLines($invoice->lines, 'qty', $this->lotsForInvoice($invoice), band: true),
             totals: $this->totals($invoice),
             signatures: [],
             narration: $invoice->narration,
@@ -479,7 +481,27 @@ class SalesPrintController extends Controller implements HasMiddleware
      * @param  array<int, string>  $lots  পণ্যের আইডি → ব্যাচের লেখা
      * @return list<array{name: string, qty: string, unit: string, rate: string, amount: string, note: string}>
      */
-    private function productLines($lines, string $qtyField, array $lots = []): array
+    /**
+     * ⭐ ব্র্যান্ড ধরে ভাগ আর উপ-মোট — মালিকের নির্দেশ, ২২ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ তিনি Univer-এর একটা বিল পাঠিয়ে বললেন: *"এই রকম একটি ফরমেট রাখ
+     * যাতে ব্যান্ড ওয়াইজ দেখা যায়"*। ⚠️ ওখানে সারিগুলো ব্র্যান্ড ধরে দল
+     * বাঁধা, আর প্রতিটা দলের শেষে একটা করে উপ-মোট।
+     *
+     * ── ⚠️ উপ-মোট এখানে গোনা হয়, পর্দায় নয় ─────────────────────────
+     * ব্লেডে গুনতে হলে **ছাপার জন্য সাজানো লেখা** যোগ করতে হত
+     * (`১২,৩৪৫.৬৭`), আর সেটা সংখ্যা নয়। ⓘ এখানে কাঁচা `amount`
+     * হাতের কাছেই, তাই যোগটা সঠিক আর একবারই হয়।
+     *
+     * ⭐ দলের **শেষ সারিতে** সংখ্যাটা বসে, তাই পর্দাকে কোনো হিসাব করতে
+     * হয় না — সে কেবল দেখে ঘরটা ভরা কি না।
+     *
+     * ── ⓘ ব্র্যান্ড না থাকলে ────────────────────────────────────────
+     * নাম খালি রাখা হয়, আর তখন ঐ সারিগুলো নিজেরাই একটা দল — ⚠️ সবাইকে
+     * "অন্যান্য" নামে ঢোকালে কাগজে এমন একটা শব্দ ছাপা হত যা মালিকের
+     * ব্র্যান্ডের তালিকায় নেই।
+     */
+    private function productLines($lines, string $qtyField, array $lots = [], bool $band = false): array
     {
         /*
          * যে প্যাকে লেখা হয়েছিল সেটাই কাগজে — "২ বাক্স", "২০০ পিস" নয়।
@@ -487,8 +509,21 @@ class SalesPrintController extends Controller implements HasMiddleware
          * গুদামের লোক বাক্স গোনেন, আর ক্রেতা যা চেয়েছিলেন কাগজে সেটাই
          * দেখতে চান। ভেতরের হিসাব পিসেই চলে; এই দুইটা ঘর কেবল চোখের।
          */
-        return $lines->map(fn ($line) => [
-            'name' => $this->productName($line),
+        $rows = $lines->map(fn ($line) => [
+            /*
+             * ⭐ কোড আর নাম আলাদা ঘরে — ২২ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ মালিকের নমুনায় কোডের নিজের কলাম আছে ("Company/Code")।
+             * ⚠️ আগে দুইটা এক তারে জোড়া ছিল (`CODE - নাম`), তাই কোডের
+             * জন্য আলাদা কলাম বসানোর কোনো উপায়ই ছিল না।
+             *
+             * ⛔ চলতি কাগজ একটুও বদলায়নি: কোডের কলাম বন্ধ থাকলে
+             * [[print/document-body]] কোডটা নামের সাথেই জুড়ে দেয় —
+             * নাহলে গুদামের কাগজ থেকে কোডটা নীরবে উধাও হত, আর মাল
+             * মেলানো হয় কোড ধরে, নাম ধরে নয়।
+             */
+            'code' => (string) ($line->product?->code ?? ''),
+            'name' => (string) ($line->product?->name() ?? ''),
             'qty' => $this->qty($line->packedQty($qtyField)),
             'unit' => $line->packedUnitName(),
             'rate' => $this->money($line->packedRate('rate', $qtyField)),
@@ -511,7 +546,58 @@ class SalesPrintController extends Controller implements HasMiddleware
              * আগের মতো।
              */
             'free' => $this->freeOf($line),
+
+            /* ⓘ দলের নাম — খালি হলে পর্দা ভাগটাই আঁকে না */
+            'group' => $band ? $this->brandOf($line) : '',
         ])->values()->all();
+
+        return $band ? $this->closeEachBand($rows, $lines) : $rows;
+    }
+
+    /**
+     * এই সারির ব্র্যান্ডের নাম।
+     *
+     * ⚠️ `brandRow`, `brand` নয় — পণ্যে দুইটাই আছে, আর পুরনোটা মুক্ত
+     * লেখা ([[Product]]-এর মন্তব্যে কারণ)। ⓘ দল বাঁধতে হলে **একই নামের
+     * একই বানান** লাগে, আর সেটা কেবল সম্পর্কটাই দেয়।
+     */
+    private function brandOf($line): string
+    {
+        return (string) ($line->product?->brandRow?->name() ?? '');
+    }
+
+    /**
+     * প্রতিটা দলের শেষ সারিতে তার উপ-মোট বসানো।
+     *
+     * ⚠️ ক্রম বদলানো হয় না — সারিগুলো যেভাবে সাজানো ছিল সেভাবেই থাকে।
+     * ⛔ ব্র্যান্ড ধরে সাজিয়ে দিলে বিলের সারির ক্রম বদলে যেত, আর
+     * গুদামের লোক যে ক্রমে মাল তুলেছেন কাগজ আর সেই ক্রমে থাকত না।
+     *
+     * ⓘ তাই দল মানে **পাশাপাশি বসা একই ব্র্যান্ডের সারি**, আর একই
+     * ব্র্যান্ড দুই জায়গায় ছড়ালে দুইটা উপ-মোট হবে — যা সত্যি কথাই বলে।
+     *
+     * @param  list<array<string, mixed>>  $rows
+     * @return list<array<string, mixed>>
+     */
+    private function closeEachBand(array $rows, $lines): array
+    {
+        $amounts = $lines->values()->pluck('amount')->all();
+        $running = '0';
+
+        foreach ($rows as $i => $row) {
+            $running = bcadd($running, (string) ($amounts[$i] ?? '0'), 4);
+
+            $lastOfBand = ! isset($rows[$i + 1]) || $rows[$i + 1]['group'] !== $row['group'];
+
+            if (! $lastOfBand) {
+                continue;
+            }
+
+            $rows[$i]['band_total'] = $this->money($running);
+            $running = '0';
+        }
+
+        return $rows;
     }
 
     /**
