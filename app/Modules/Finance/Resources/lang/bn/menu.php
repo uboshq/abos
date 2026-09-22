@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'profit_share' => 'লাভ বণ্টন',
     'deposits_all' => 'সব জমা',
 
     /*

@@ -3,6 +3,9 @@
 declare(strict_types=1);
 
 return [
+    'declare_profit' => 'Distribute profit',
+    'see_the_split' => 'See the split',
+    'declare_now' => 'Declare',
     'show_everyone' => 'Show everyone',
     'save_withdrawal_row' => 'Save the withdrawal row',
     'withdrawal_list' => 'List and monthly cap',

@@ -3,6 +3,9 @@
 declare(strict_types=1);
 
 return [
+    'declare_profit' => 'লাভ বণ্টন করুন',
+    'see_the_split' => 'ভাগটা দেখুন',
+    'declare_now' => 'ঘোষণা করুন',
     'show_everyone' => 'সবার সারি দেখুন',
     'save_withdrawal_row' => 'উত্তোলনের সারি সংরক্ষণ',
     'withdrawal_list' => 'তালিকা ও মাসিক সীমা',

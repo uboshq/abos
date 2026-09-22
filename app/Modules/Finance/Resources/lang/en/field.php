@@ -3,6 +3,12 @@
 declare(strict_types=1);
 
 return [
+    'profit_to_share' => 'Profit to share',
+    'gets' => 'Gets',
+    'the_split' => 'Who gets what',
+    'split_total' => 'Split total',
+    'out_of' => 'Out of profit',
+    'past_distributions' => 'Past distributions',
     'tab_entries' => 'Entries',
     'owners_investors' => 'Owners & Investors',
     'share_by_capital' => 'by capital',

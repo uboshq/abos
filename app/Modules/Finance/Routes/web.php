@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-use App\Modules\Finance\Http\Controllers\BankFacilityController;
 use App\Modules\Finance\Http\Controllers\AccountAnalysisController;
 use App\Modules\Finance\Http\Controllers\BankChargeController;
-use App\Modules\Finance\Http\Controllers\CarrierAndLabourController;
+use App\Modules\Finance\Http\Controllers\BankFacilityController;
 use App\Modules\Finance\Http\Controllers\CapitalController;
+use App\Modules\Finance\Http\Controllers\CarrierAndLabourController;
 use App\Modules\Finance\Http\Controllers\DepositController;
 use App\Modules\Finance\Http\Controllers\DepositKindController;
 use App\Modules\Finance\Http\Controllers\ExpenseController;
@@ -15,6 +15,7 @@ use App\Modules\Finance\Http\Controllers\IncomeController;
 use App\Modules\Finance\Http\Controllers\InstitutionController;
 use App\Modules\Finance\Http\Controllers\InsuranceController;
 use App\Modules\Finance\Http\Controllers\PlanController;
+use App\Modules\Finance\Http\Controllers\ProfitDistributionController;
 use App\Modules\Finance\Http\Controllers\RentalContractController;
 use App\Modules\Finance\Http\Controllers\WithdrawalController;
 use App\Modules\Finance\Models\DepositKind;
@@ -59,6 +60,20 @@ Route::middleware('auth')->prefix('finance')->group(function () {
      * `post` আলাদা একটা POST, কারণ ওটাই আসল ঘটনা: লিখে রাখা নিরীহ,
      * পোস্ট করা মানে খাতায় টাকা বসে যাওয়া।
      */
+    /*
+     * ⭐ লাভ বণ্টন — মালিক, ২২ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ মূলধনের পাশে, কারণ প্রশ্নটা একই মানুষের: কে কত দিয়েছেন,
+     * আর কে কত পাবেন। ⚠️ `preview` POST, GET নয় — সংখ্যাটা
+     * ঠিকানায় বসলে কেউ লিংক শেয়ার করলেই অন্যের পর্দায় অন্য
+     * মুনাফার ভাগ দেখাত।
+     */
+    Route::prefix('profit')->name('profit.')->group(function () {
+        Route::get('/', [ProfitDistributionController::class, 'index'])->name('index');
+        Route::post('/preview', [ProfitDistributionController::class, 'preview'])->name('preview');
+        Route::post('/declare', [ProfitDistributionController::class, 'declare'])->name('declare');
+    });
+
     Route::prefix('capital')->name('capital.')->group(function () {
         Route::get('/', [CapitalController::class, 'index'])->name('index');
         Route::get('/create', [CapitalController::class, 'create'])->name('create');
@@ -264,7 +279,7 @@ Route::middleware('auth')->prefix('finance')->group(function () {
         Route::get('/{issuer}/create', [DepositController::class, 'create'])
             ->whereIn('issuer', DepositKind::ISSUERS)->name('create');
 
-        Route::post('/{issuer}',[DepositController::class, 'store'])
+        Route::post('/{issuer}', [DepositController::class, 'store'])
             ->whereIn('issuer', DepositKind::ISSUERS)->name('store');
 
         /*

@@ -1,18 +1,26 @@
 <?php
 
 declare(strict_types=1);
+use App\Core\Contracts\KnowsWhereAPersonsMoneyBelongs;
+use App\Modules\Accounts\Events\AccountFormOpened;
+use App\Modules\Accounts\Events\AccountSaved;
+use App\Modules\Accounts\Events\VoucherPosted;
 use App\Modules\Finance\Dashboard\FinanceDashboard;
+use App\Modules\Finance\Listeners\CapitalFromReceipt;
+use App\Modules\Finance\Listeners\InstitutionFieldOnAccountForm;
+use App\Modules\Finance\Listeners\InstitutionFromAccountForm;
 use App\Modules\Finance\Models\BankFacility;
 use App\Modules\Finance\Models\CapitalEntry;
 use App\Modules\Finance\Models\Deposit;
 use App\Modules\Finance\Models\DepositMovement;
 use App\Modules\Finance\Models\HandLoanAccount;
 use App\Modules\Finance\Models\HandLoanMovement;
-use App\Modules\Finance\Models\InsurancePremium;
 use App\Modules\Finance\Models\Institution;
+use App\Modules\Finance\Models\InsurancePremium;
 use App\Modules\Finance\Models\RentalAdjustment;
 use App\Modules\Finance\Models\RentalContract;
 use App\Modules\Finance\Models\Withdrawal;
+use App\Modules\Finance\Services\CapitalContributors;
 
 /**
  * অর্থ — টাকা কোথা থেকে আসে, কোথায় থাকে, কোথায় যায়, আর কার।
@@ -72,7 +80,7 @@ return [
          */
         'purchase',
         'sales',
-        'inventory','accounts', 'master_data'],
+        'inventory', 'accounts', 'master_data'],
 
     'dashboard' => FinanceDashboard::class,
 
@@ -164,6 +172,10 @@ return [
              */
             ['label' => 'finance::menu.capital', 'cluster' => 'ownership', 'icon' => 'building',
                 'route' => 'finance.capital.index', 'permission' => 'finance.capital.view'],
+
+            /* ⭐ লাভ বণ্টন — মালিকানার দলেই, মূলধনের পাশে */
+            ['label' => 'finance::menu.profit_share', 'cluster' => 'ownership', 'icon' => 'scale',
+                'route' => 'finance.profit.index', 'permission' => 'finance.capital.view'],
 
             /*
              * ── দায় ─────────────────────────────────────────────────
@@ -284,7 +296,7 @@ return [
      * ⓘ এখন কথাটা যার, সে-ই বলে; Accounts কেবল চুক্তিটা চায়।
      */
     'bindings' => [
-        \App\Core\Contracts\KnowsWhereAPersonsMoneyBelongs::class => \App\Modules\Finance\Services\CapitalContributors::class,
+        KnowsWhereAPersonsMoneyBelongs::class => CapitalContributors::class,
     ],
 
     'permissions' => [
@@ -577,10 +589,10 @@ return [
      * ২০২৬, মালিকের কথায়। বিস্তার [[CapitalFromReceipt]]-এ।
      */
     'listeners' => [
-        \App\Modules\Accounts\Events\VoucherPosted::class => [\App\Modules\Finance\Listeners\CapitalFromReceipt::class],
+        VoucherPosted::class => [CapitalFromReceipt::class],
 
         // ⓘ খাতের ফর্মে "কোন প্রতিষ্ঠান" — ঘর আঁকা আর জমা ([[InstitutionFieldOnAccountForm]])
-        \App\Modules\Accounts\Events\AccountFormOpened::class => [\App\Modules\Finance\Listeners\InstitutionFieldOnAccountForm::class],
-        \App\Modules\Accounts\Events\AccountSaved::class => [\App\Modules\Finance\Listeners\InstitutionFromAccountForm::class],
+        AccountFormOpened::class => [InstitutionFieldOnAccountForm::class],
+        AccountSaved::class => [InstitutionFromAccountForm::class],
     ],
 ];

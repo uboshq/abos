@@ -3,6 +3,10 @@
 declare(strict_types=1);
 
 return [
+    'profit_flow' => 'On the day it is declared the money moves from retained earnings into profit payable — it becomes a debt of the business. Withdrawals come out of there, and whatever is still unclaimed at year end is added to capital.',
+    'declare_is_final' => 'Declaring is not a draft — it posts to the books, and the only way back is a reversing entry.',
+    'no_distribution_yet' => 'No profit has been distributed yet.',
+    'profit_declared' => 'Profit distribution :no — :count shares posted.',
     'profit_narration' => 'Profit distribution :no',
     'share_total_off' => 'Ownership adds up to :total% — :gap% is not written against anyone. Check the partners\' shares.',
     'showing_one_person' => 'Showing :name\'s rows',

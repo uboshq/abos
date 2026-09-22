@@ -3,6 +3,12 @@
 declare(strict_types=1);
 
 return [
+    'profit_to_share' => 'যত মুনাফা ভাগ হবে',
+    'gets' => 'পাবেন',
+    'the_split' => 'কে কত পাবেন',
+    'split_total' => 'ভাগের যোগফল',
+    'out_of' => 'যে মুনাফার উপর',
+    'past_distributions' => 'আগের বণ্টন',
     // ⭐ মূলধনের দুই ট্যাব — ১৯ সেপ্টেম্বর ২০২৬
     'tab_entries' => 'লেনদেন',
     'owners_investors' => 'মালিক ও বিনিয়োগকারী',

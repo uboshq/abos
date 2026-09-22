@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'profit_share' => 'Profit distribution',
     'deposits_all' => 'All deposits',
 
     // ⭐ One menu row for all three issuers — 20 September 2026
