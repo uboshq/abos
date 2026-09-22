@@ -119,6 +119,46 @@ class EveryUserListAsksWhichCompanyTest extends TestCase
     ];
 
     /**
+     * ⭐ ছাড় **একটা কোয়েরির**, গোটা ফাইলের নয় — ২২ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⛔ কেন ফাইল ধরে ছাড় দেওয়া বিপজ্জনক ─────────────────────────
+     * [[LoginHistoryController]]-এ তিনটা `User::query()`: দুইটা ঠিকঠাক
+     * ছাঁকা, একটা ইচ্ছাকৃতভাবে বিশ্বজনীন। ⚠️ ফাইলটা ছাড় দিলে ভালো
+     * দুইটাও পাহারার বাইরে চলে যেত — আর কাল কেউ ঐ ফাইলে একটা
+     * সত্যিকারের ফাঁস যোগ করলে কিছুই লাল হত না।
+     *
+     * ⓘ তাই চাবিটা কোয়েরির ভিতরের একটা **স্বতন্ত্র টুকরো**। ⛔ কোয়েরিটা
+     * বদলে গেলে টুকরোটা আর মেলে না, ছাড়টা নিজে থেকেই ফুরিয়ে যায়, আর
+     * পাহারা আবার প্রশ্ন করে। ⭐ একটা ছাড় যা নিজে থেকে মেয়াদ হারায়,
+     * সেটাই একমাত্র নিরাপদ ছাড়।
+     *
+     * @var array<string, string>
+     */
+    private const EXEMPT_QUERY = [
+        /*
+         * ⓘ তালিকাটা কেবল `whereNotIn`-এ যায় — একটা নামও পর্দায় ওঠে
+         * না। ⛔ ছাঁকলে উল্টো ফাঁস হত: তখন অন্য কোম্পানির নামে করা
+         * ব্যর্থ চেষ্টাগুলো **এই কোম্পানির তালিকায়** এসে পড়ত, আর
+         * সেটাই ঠিক ফাঁকটা যেটা বন্ধ করতে ফাংশনটা লেখা হয়েছে।
+         */
+        '->withoutGlobalScopes()' => 'identifiersAnywhere() — নামগুলো কেবল বাদ দেওয়ার তালিকা বানায়, পর্দায় যায় না',
+
+        /*
+         * ⓘ এককালীন টোকেন ধরে **একজনকে** তোলা, তালিকা নয়। ⚠️ লিংকটা
+         * ইমেইল থেকে খোলা হয়, তখন কোনো কোম্পানি বাছাই হয়নি — ছাঁকনির
+         * প্রসঙ্গই নেই।
+         */
+        "->where('pending_email_token'" => 'ইমেইল বদলের টোকেন — কোম্পানি-প্রসঙ্গের আগেই খোলা হয়',
+
+        /*
+         * ⛔ ইমেইল গোটা ব্যবস্থায় অনন্য, কোম্পানি ধরে নয়। ⚠️ ছাঁকলে দুই
+         * কোম্পানিতে একই ইমেইল বসতে পারত, আর তখন [[CredentialCheck]]
+         * **কাকে ঢোকাবে জানত না** — অর্থাৎ ছাঁকনিটা লগইনই ভাঙত।
+         */
+        '->whereKeyNot($user->getKey())' => 'ইমেইল দখল হয়ে আছে কি না — অনন্যতা গোটা ব্যবস্থার, কোম্পানির নয়',
+    ];
+
+    /**
      * ছাঁকনিবিহীন `Model::query()` খোঁজা।
      *
      * ⚠️ পুরো কোয়েরিটা এক লাইনে থাকে না, তাই খোঁজাটা লাইন ধরে নয় —
@@ -169,6 +209,11 @@ class EveryUserListAsksWhichCompanyTest extends TestCase
                         continue;
                     }
 
+                    /* ⓘ এই একটা কোয়েরির ছাড় আছে কি না — ফাইলের নয় */
+                    if ($this->exemptQuery($statement) !== null) {
+                        continue;
+                    }
+
                     $offenders[] = $relative.' → '.$short.'::query()  ('.$filter.' লাগে)';
                 }
             }
@@ -184,6 +229,57 @@ class EveryUserListAsksWhichCompanyTest extends TestCase
             ."  ->where('company_id', CompanyContext::id())\n\n"
             .'সত্যিই ছাঁকনির দরকার না থাকলে EXEMPT-এ **কারণসহ** লিখুন।',
         );
+    }
+
+    /**
+     * ⭐ প্রতিটা ছাড় সত্যিই কোনো কোয়েরিতে বসে আছে — ২২ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⛔ ছাড়ের আসল বিপদ ───────────────────────────────────────────
+     * ছাড় দেওয়ার দিন কারণটা সত্যি থাকে। ⚠️ কিন্তু কোয়েরিটা বদলে গেলে,
+     * সরে গেলে, বা মুছে গেলে ছাড়টা **থেকে যায়** — আর তখন সে আর কিছু
+     * ছাড় দেয় না, কেবল ভবিষ্যতের একটা ফাঁদ হয়ে বসে থাকে।
+     *
+     * ⛔ আর যেদিন কেউ ভুল করে ঐ একই টুকরো লিখে ফেলবেন, তাঁর সত্যিকারের
+     * ফাঁকটা **নীরবে ছাড় পেয়ে যাবে** — কারণ কেউ মনে রাখেনি ছাড়টা কেন
+     * বসেছিল।
+     *
+     * ⭐ তাই ছাড়ের তালিকাটাও পাহারায়: যে ছাড় আর কোথাও লাগে না, সেটা
+     * এখানে লাল হয়, আর মুছে ফেলতে হয়।
+     */
+    public function test_every_exemption_still_belongs_to_a_real_query(): void
+    {
+        $used = [];
+
+        foreach (File::allFiles(base_path('app')) as $file) {
+            if ($file->getExtension() !== 'php') {
+                continue;
+            }
+
+            $code = $file->getContents();
+
+            foreach (array_keys(self::MUST_ASK) as $model) {
+                foreach ($this->statementsAfter($code, class_basename($model).'::query()') as $statement) {
+                    foreach (array_keys(self::EXEMPT_QUERY) as $mark) {
+                        if (str_contains($statement, $mark)) {
+                            $used[$mark] = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        $stale = array_values(array_diff(array_keys(self::EXEMPT_QUERY), array_keys($used)));
+
+        $this->assertSame([], $stale, implode('
+', [
+            '⛔ এই ছাড়গুলো আর কোনো কোয়েরিতে বসে নেই:',
+            '',
+            ...$stale,
+            '',
+            '⚠️ কোয়েরিটা বদলে গেছে বা মুছে গেছে, কিন্তু ছাড়টা রয়ে গেছে।',
+            'ⓘ মুছে ফেলুন — নাহলে একদিন কেউ ঐ টুকরোটা লিখে ফেললে তাঁর',
+            'সত্যিকারের ফাঁকটাও নীরবে ছাড় পেয়ে যাবে।',
+        ]));
     }
 
     /**
@@ -262,6 +358,23 @@ class EveryUserListAsksWhichCompanyTest extends TestCase
      * ⚠️ `firstOrFail()`/`find()` প্রাথমিক কী ধরে — ওগুলো তালিকা নয়,
      * একটা সারি, আর সেখানে অধিকারের প্রশ্নটা আলাদা (policy/404)।
      */
+    /**
+     * এই কোয়েরিটার নিজের ছাড় লেখা আছে কি না।
+     *
+     * ⓘ ফেরত আসে কারণটা, `true` নয় — নিচের দাবিটা ওটা দিয়ে মিলিয়ে
+     * দেখে যে প্রতিটা ছাড় সত্যিই কোনো কোয়েরিতে বসে আছে।
+     */
+    private function exemptQuery(string $statement): ?string
+    {
+        foreach (self::EXEMPT_QUERY as $mark => $why) {
+            if (str_contains($statement, $mark)) {
+                return $why;
+            }
+        }
+
+        return null;
+    }
+
     private function asksWhichCompany(string $statement): bool
     {
         foreach ([
