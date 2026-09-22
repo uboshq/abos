@@ -335,6 +335,70 @@ final class EveryBranchHadToTakeEveryModuleTest extends TestCase
         return array_values(array_column($menu ?? [], 'code'));
     }
 
+    /**
+     * ⛔ মেনু থেকে লুকানো আর দরজা বন্ধ করা এক জিনিস নয়।
+     *
+     * ── ⚠️ এই ভুলটা রিপোতে আগেও একবার হয়েছে ─────────────────────────
+     * [[RefuseSwitchedOffScreens]] ফাইলটাই লেখা হয়েছিল ঠিক এই কারণে:
+     * কোম্পানির সুইচ বন্ধ করলে সারিটা মেনু থেকে সরত, কিন্তু **ঠিকানা
+     * জানা থাকলে পর্দাটা খুলত** — বুকমার্ক, আগের ট্যাব, কারও পাঠানো
+     * লিংক। ⓘ HP-র পরীক্ষক ১৩ আগস্ট ধরেছিলেন।
+     *
+     * ⛔ শাখার সুইচ বসানোর দিন আমি কেবল মেনুটাই শিখিয়েছিলাম, অর্থাৎ
+     * **একই ভুল নতুন স্তরে** ফিরে আসছিল। ⚠️ পরীক্ষাটা না লিখলে ধরা
+     * পড়ত না, কারণ মেনুর পরীক্ষাগুলো সবুজই থাকত।
+     */
+    public function test_a_switched_off_module_will_not_open_by_its_address(): void
+    {
+        $code = $this->aModuleInTheMenu();
+
+        $door = $this->aScreenOf($code);
+
+        $this->assertNotNull($door, 'ঐ মডিউলের কোনো খোলা দরজাই নেই — মাপার কিছু নেই।');
+
+        /*
+         * ⓘ আগে প্রমাণ করা হয় দরজাটা **খোলা ছিল**। ⚠️ না করলে একটা
+         * চিরকাল-৪০৪ রুটেও পরীক্ষাটা সবুজ থাকত, আর সেটা পাহারা নয়।
+         */
+        $this->actingAs($this->owner)->get($door)->assertOk();
+
+        $this->switchOff($code, $this->here);
+
+        $this->actingAs($this->owner)->get($door)
+            ->assertNotFound();
+    }
+
+    /**
+     * ⓘ এই মডিউলের এমন একটা পর্দা যেটা প্যারামিটার ছাড়াই খোলে।
+     *
+     * ⚠️ প্যারামিটারওয়ালা রুট এড়ানো হয় ইচ্ছা করেই — ওখানে ৪০৪ আসতে
+     * পারে **সারিটা নেই** বলেও, আর তখন পরীক্ষাটা ভুল জিনিস মাপত।
+     */
+    private function aScreenOf(string $code): ?string
+    {
+        foreach (app(ModuleRegistry::class)->all()[$code]->menu as $items) {
+            foreach ($items as $item) {
+                if (($item['planned'] ?? false) || ($item['route_params'] ?? []) !== []) {
+                    continue;
+                }
+
+                if (! Route::has($item['route'])) {
+                    continue;
+                }
+
+                $url = route($item['route'], [], false);
+
+                if (str_contains($url, '{')) {
+                    continue;
+                }
+
+                return $url;
+            }
+        }
+
+        return null;
+    }
+
     // ── হাতিয়ার ────────────────────────────────────────────────────────
 
     /**

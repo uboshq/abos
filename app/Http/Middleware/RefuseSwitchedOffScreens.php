@@ -7,6 +7,8 @@ namespace App\Http\Middleware;
 use App\Core\Module\ModuleRegistry;
 use App\Core\Services\MenuSwitches;
 use App\Core\Services\SettingsService;
+use App\Core\Support\CompanyContext;
+use App\Models\BranchModule;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -77,6 +79,23 @@ final class RefuseSwitchedOffScreens
             return $next($request);
         }
 
+        /*
+         * ⭐ শাখার সুইচ — ২২ সেপ্টেম্বর ২০২৬।
+         *
+         * ⛔ শাখা-প্রতি মডিউল বসানোর দিন ([[BranchModule]]) কেবল মেনুটাই
+         * শেখানো হয়েছিল। ⚠️ অর্থাৎ ঠিক **এই ফাইলটা যে ভুলের জন্য লেখা
+         * হয়েছিল** সেটাই আবার ফিরে এসেছিল, নতুন স্তরে: সারিটা মেনু থেকে
+         * সরত, কিন্তু ঠিকানা জানা থাকলে পর্দাটা দিব্যি খুলত।
+         *
+         * ⓘ উপরের মন্তব্যেই কথাটা লেখা — *"সুইচটা ছিল আড়াল, বাধা নয়"*।
+         * ⭐ তাই একই দরজায় দুইটা স্তরই দেখা হয়, একই উত্তর নিয়ে (৪০৪)।
+         */
+        $module = $this->moduleFor($name, $route->parameters());
+
+        if ($module !== null && $this->switchedOffInThisBranch($module)) {
+            abort(404, __('core.message.screen_switched_off'));
+        }
+
         $setting = $this->switchFor($name, $route->parameters());
 
         /*
@@ -95,6 +114,71 @@ final class RefuseSwitchedOffScreens
     }
 
     /**
+     * ⓘ রুটের নামটা যে মডিউলের, সেই উপসর্গসহ নাম।
+     *
+     * ── কোরের শেয়ার করা রুট কোন মডিউলের, তা ঠিকানা বলে ────────────
+     * `module.dashboard` বারোটা মডিউলের ড্যাশবোর্ড একই কন্ট্রোলারে
+     * আঁকে, তাই নামটা কোনো মডিউলের উপসর্গ বহন করে না। ⚠️ উপসর্গ ধরে
+     * খোঁজা তখন কোনোদিন মিলত না, আর **বন্ধ মডিউলের ড্যাশবোর্ডও ঠিকানা
+     * দিলে খুলে যেত** (৩ সেপ্টেম্বর ২০২৬)।
+     *
+     * ⓘ মডিউলের নামটা ঠিকানার `{module}` অংশ থেকেই আসে, তাই কোরে কোনো
+     * মডিউলের নাম লেখা থাকে না (§১৯.৭)।
+     *
+     * @param  array<string, mixed>  $params
+     */
+    private function scopedName(string $name, array $params): string
+    {
+        return $name === self::CORE_MODULE_DASHBOARD && is_string($params['module'] ?? null)
+            ? $params['module'].'.dashboard'
+            : $name;
+    }
+
+    /**
+     * এই রুটটা কোন মডিউলের — না বলা গেলে null।
+     *
+     * ⓘ [[switchFor()]]-র প্রথম লুপটাই, কেবল সুইচের কী-র বদলে মডিউলের
+     * কোড ফেরায়। ⚠️ ঐ লুপটা কোম্পানির সুইচ **বন্ধ** থাকলেই কেবল উত্তর
+     * দেয়, আর শাখার প্রশ্নটা তার আগেই করতে হয়।
+     *
+     * @param  array<string, mixed>  $params
+     */
+    private function moduleFor(string $name, array $params): ?string
+    {
+        $scoped = $this->scopedName($name, $params);
+
+        foreach ($this->registry->all() as $module) {
+            if (str_starts_with($scoped, $module->code.'.')) {
+                return $module->code;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * ⛔ এই শাখায় মডিউলটা ইচ্ছা করে বন্ধ করা আছে কি।
+     *
+     * ── ⚠️ কেন উত্তরটা মনে রাখা হয় না ───────────────────────────────
+     * মিডলওয়্যার প্রতি অনুরোধে নতুন করে তৈরি হয় বলে মনে রাখা নিরাপদ
+     * *মনে হয়*। ⓘ কিন্তু ২২ সেপ্টেম্বরেই [[MenuBuilder]]-এ ঠিক ঐ
+     * অনুমানটা ভুল প্রমাণ হয়েছে (Laravel-এর `Route` কন্ট্রোলার মনে
+     * রাখে), আর তার দাম ছিল একটা **নীরব ভুল মেনু**।
+     *
+     * ⭐ একটা ছোট, ইনডেক্স করা টেবিলে একটা কোয়েরির চেয়ে বাসি উত্তরের
+     * ঝুঁকিটা বড়। ⓘ শাখা বাছা না থাকলে কোয়েরিই হয় না
+     * ([[BranchModule::switchedOffIn()]])।
+     */
+    private function switchedOffInThisBranch(string $module): bool
+    {
+        return in_array(
+            $module,
+            BranchModule::switchedOffIn(CompanyContext::branchId()),
+            true
+        );
+    }
+
+    /**
      * এই রুটটা কোন সুইচের পেছনে — না থাকলে null।
      *
      * @param  array<string, mixed>  $params
@@ -104,21 +188,13 @@ final class RefuseSwitchedOffScreens
         $this->build();
 
         /*
-         * ── কোরের শেয়ার করা রুট কোন মডিউলের, তা ঠিকানা বলে ────────────
-         * `module.dashboard` বারোটা মডিউলের ড্যাশবোর্ড একই কন্ট্রোলারে
-         * আঁকে, তাই নামটা কোনো মডিউলের উপসর্গ বহন করে না। নিচের
-         * `str_starts_with()` তখন কোনোদিন মিলত না, আর **বন্ধ মডিউলের
-         * ড্যাশবোর্ডও ঠিকানা দিলে খুলে যেত** (৩ সেপ্টেম্বর ২০২৬)।
+         * ⓘ কারণটা [[scopedName()]]-এ একবারই লেখা — দুই কপি রাখলে একদিন
+         * একটা বদলাত আর অন্যটা পুরনো কথাটাই বলে যেত।
          *
-         * মডিউলের নামটা ঠিকানার `{module}` অংশ থেকেই আসে, তাই কোরে
-         * কোনো মডিউলের নাম লেখা থাকে না (§১৯.৭)।
-         *
-         * নামটা কেবল **এই দুইটা লুপের জন্য** বদলানো হয়; নিচের `exact`
+         * ⚠️ নামটা কেবল **এই দুইটা লুপের জন্য** বদলানো হয়; নিচের `exact`
          * তালিকা ঘোষিত নামেই খোঁজে, কারণ সেখানে প্যারামিটারও মেলানো হয়।
          */
-        $scoped = $name === self::CORE_MODULE_DASHBOARD && is_string($params['module'] ?? null)
-            ? $params['module'].'.dashboard'
-            : $name;
+        $scoped = $this->scopedName($name, $params);
 
         // মডিউলের নিজের সুইচ আগে: পুরো মডিউল বন্ধ থাকলে ভেতরের সারির
         // সুইচ কী বলছে তা অবান্তর (সেকশন ১৯.৫)।
