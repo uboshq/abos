@@ -8,9 +8,11 @@ use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\Money;
 use App\Http\Controllers\Controller;
+use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\StockMovement;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Inventory\Services\BatchService;
 use App\Modules\Inventory\Services\OpeningStockService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -97,6 +99,17 @@ class OpeningStockController extends Controller implements HasMiddleware
             'unit_cost' => ['required', 'numeric', 'gt:0'],
             'trx_date' => ['nullable', 'date', 'before_or_equal:today'],
             'narration' => ['nullable', 'string', 'max:500'],
+
+            /*
+             * ⓘ লট — ঐচ্ছিক এখানে, বাধ্যতামূলক সেবায়।
+             *
+             * ⚠️ পর্দায় `required` বসালে নিয়মটা **পর্দার** হয়ে যেত, আর
+             * শুরুর মজুদ আসে দুই পথে: এই ফর্ম আর এক্সেল আমদানি
+             * ([[OpeningStockImporter]])। ⛔ দেয়াল পর্দায় থাকলে দ্বিতীয়
+             * পথটা একটা ফাঁক — আর ঠিক ঐ পথেই হাজার সারি একসাথে ঢোকে।
+             */
+            'batch_no' => ['nullable', 'string', 'max:60'],
+            'expiry_date' => ['nullable', 'date'],
         ]);
 
         $product = Product::query()->findOrFail($validated['product_id']);
@@ -109,6 +122,7 @@ class OpeningStockController extends Controller implements HasMiddleware
             unitCost: (string) $validated['unit_cost'],
             date: $validated['trx_date'] ?? null,
             narration: $validated['narration'] ?? null,
+            batch: $this->lotFor($product, $validated),
         );
 
         return back()->with('saved', __('inventory::message.opening_saved', [
@@ -116,6 +130,29 @@ class OpeningStockController extends Controller implements HasMiddleware
             'qty' => Money::format($validated['qty']),
             'value' => Money::format(bcmul((string) $validated['qty'], (string) $validated['unit_cost'], 4)),
         ]));
+    }
+
+    /**
+     * এই লাইনের লট — লট ধরা পণ্য না হলে কিছুই না।
+     *
+     * ── ⚠️ কেন লট ধরা না হলে নম্বরটা ফেলে দেওয়া হয় ──────────────────
+     * ⓘ চাল-ডাল-সাবানে লট নেই। ⛔ কেউ ভুল করে ঘরটা ভরে ফেললে ওখানে
+     * একটা লট জন্মাত যার কোনো অর্থ নেই, আর রিকলের খাতায় একটা মিথ্যা
+     * সারি বসত। ⚠️ পণ্যটা কী বলছে সেটাই শেষ কথা, ঘরটা কী পেয়েছে তা নয়।
+     *
+     * @param  array<string, mixed>  $validated
+     */
+    private function lotFor(Product $product, array $validated): ?Batch
+    {
+        if (! $product->track_batch) {
+            return null;
+        }
+
+        return app(BatchService::class)->receive(
+            product: $product,
+            batchNo: (string) ($validated['batch_no'] ?? ''),
+            expiry: $validated['expiry_date'] ?? null,
+        );
     }
 
     /**

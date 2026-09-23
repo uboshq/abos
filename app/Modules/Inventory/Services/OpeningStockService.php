@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Inventory\Services;
 
 use App\Modules\Accounts\Services\OpeningBalanceService;
+use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\StockMovement;
 use App\Modules\Inventory\Models\Warehouse;
@@ -48,6 +49,15 @@ final class OpeningStockService
     /**
      * এক পণ্য, এক গুদাম — পরিমাণ ও দর।
      *
+     * ── ⚠️ লট ধরা পণ্যে লটটা বাধ্যতামূলক, ২৩ সেপ্টেম্বর ২০২৬ ──────────
+     * ⓘ মালিকের নিয়ম *"লট ছাড়া মাল ঢুকবেও না"*। ⛔ এই দরজাটা এতদিন
+     * লটের কথা জানতই না, তাই শুরুর দিনের গোটা মজুদটা ঢুকত লট ছাড়া —
+     * আর ঢোকার পরদিনই সেটা [[StrandedStock]]-এর কাজ হয়ে যেত।
+     *
+     * ⚠️ ক্রয়ের পথ দুইটা এটা আগে থেকেই আটকাত ([[BringsInLots]])। ⓘ
+     * পাহারা একটা **অবস্থা** আগলায়, একটা দরজা নয় — আর এখানে ঠিক সেই
+     * ভুলটাই হয়েছিল: নিয়মটা বসানো হয়েছিল দুইটা দরজায়, সব দরজায় নয়।
+     *
      * @throws ValidationException
      */
     public function bringIn(
@@ -57,10 +67,11 @@ final class OpeningStockService
         string $unitCost,
         Carbon|string|null $date = null,
         ?string $narration = null,
+        ?Batch $batch = null,
     ): StockMovement {
-        $this->assertSane($product, $warehouse, $qty, $unitCost);
+        $this->assertSane($product, $warehouse, $qty, $unitCost, $batch);
 
-        return DB::transaction(function () use ($product, $warehouse, $qty, $unitCost, $date, $narration) {
+        return DB::transaction(function () use ($product, $warehouse, $qty, $unitCost, $date, $narration, $batch) {
             $movement = $this->stock->move(
                 product: $product,
                 warehouse: $warehouse,
@@ -70,6 +81,7 @@ final class OpeningStockService
                 date: $date,
                 documentNo: self::DOCUMENT_NO,
                 narration: $narration ?? __('inventory::message.opening_narration'),
+                batch: $batch,
             );
 
             /*
@@ -138,8 +150,43 @@ final class OpeningStockService
     }
 
     /** @throws ValidationException */
-    private function assertSane(Product $product, Warehouse $warehouse, string $qty, string $unitCost): void
-    {
+    private function assertSane(
+        Product $product,
+        Warehouse $warehouse,
+        string $qty,
+        string $unitCost,
+        ?Batch $batch = null,
+    ): void {
+        /*
+         * ⛔ লট ধরা পণ্যে লট ছাড়া শুরুর মজুদ নয়।
+         *
+         * ⚠️ বার্তাটা ক্রয়ের পথের সাথে একই ([[BatchService]]), ইচ্ছাকৃতভাবে
+         * — ⓘ দুই দরজায় একই অবস্থার দুই রকম কথা শুনলে ব্যবহারকারী ভাবতেন
+         * নিয়ম দুইটা আলাদা।
+         */
+        if ($product->track_batch && $batch === null) {
+            throw ValidationException::withMessages([
+                'batch_no' => __('inventory::validation.batch_no_required', [
+                    'product' => $product->name(),
+                ]),
+            ]);
+        }
+
+        /*
+         * ⛔ আর লটটা এই পণ্যেরই।
+         *
+         * ⚠️ অন্য পণ্যের লট বসলে রিকলের ফোন ভুল ক্রেতার কাছে যেত, আর
+         * যাঁদের কাছে যাওয়ার কথা তাঁরা বাদ পড়তেন।
+         */
+        if ($batch !== null && $batch->product_id !== $product->id) {
+            throw ValidationException::withMessages([
+                'batch_no' => __('inventory::validation.lot_of_another_product', [
+                    'lot' => $batch->batch_no,
+                    'product' => $product->name(),
+                ]),
+            ]);
+        }
+
         if (bccomp($qty, '0', 4) <= 0) {
             throw ValidationException::withMessages([
                 'qty' => __('inventory::message.opening_needs_qty'),

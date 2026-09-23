@@ -79,6 +79,18 @@
                     <span class="num font-semibold" x-text="value">—</span>
                 </div>
 
+                {{--
+                    লট — কেবল যে পণ্যে লট ধরা হয়, তার জন্য।
+
+                    ⓘ ঘর দুইটা সবসময়ই দেখা যায়, কারণ কোন পণ্যে লট ধরা
+                    আছে তা বাছার আগে জানা যায় না। ⚠️ লট ধরা না হলে
+                    সার্ভার নম্বরটা নীরবে ফেলে দেয় — নাহলে চালে-ডালে
+                    একটা অর্থহীন লট জন্মাত।
+                --}}
+                <x-ui.field name="batch_no" :label="__('inventory::field.batch_no')" />
+
+                <x-ui.field name="expiry_date" type="date" :label="__('inventory::field.expiry_date')" />
+
                 <x-ui.field name="trx_date" type="date" :label="__('inventory::field.date')"
                             :value="now()->toDateString()" />
 

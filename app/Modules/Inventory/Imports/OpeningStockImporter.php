@@ -8,6 +8,7 @@ use App\Core\Contracts\Importer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\StockMovement;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Inventory\Services\BatchService;
 use App\Modules\Inventory\Services\OpeningStockService;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
@@ -59,6 +60,19 @@ final class OpeningStockImporter implements Importer
             'qty' => ['label' => 'inventory::field.quantity', 'required' => true],
             'unit_cost' => ['label' => 'inventory::field.purchase_price', 'required' => true],
             'trx_date' => ['label' => 'core.table.date', 'required' => false],
+
+            /*
+             * লট — কলামে ঐচ্ছিক, সারিতে নয়।
+             *
+             * ⓘ একটা ফাইলে লট-ধরা আর লট-না-ধরা দুই রকম পণ্যই থাকে —
+             * চালের সারিতে ঘরটা খালিই থাকবে। ⚠️ কলামটাই বাধ্যতামূলক
+             * করলে যাঁদের কোনো পণ্যে লট নেই তাঁদের ফাইলও ফিরে যেত।
+             *
+             * ⛔ যে পণ্যে লট ধরা হয় তার সারিতে খালি থাকলে সেটা সারির
+             * নিজের ত্রুটি হয়ে দেখা দেয় — ফাইলটা বসার আগেই।
+             */
+            'batch_no' => ['label' => 'inventory::field.batch_no', 'required' => false],
+            'expiry_date' => ['label' => 'inventory::field.expiry_date', 'required' => false],
         ];
     }
 
@@ -114,6 +128,18 @@ final class OpeningStockImporter implements Importer
          * পর্দাটাও একই নিয়ম মানে (`openProducts()` বসানো জোড়া বাদ
          * দেয়), তাই ফাইল আর পর্দা এক কথা বলে।
          */
+        /*
+         * ⛔ লট ধরা পণ্যে লট নম্বর ছাড়া সারি নয় — মালিকের নিয়ম।
+         *
+         * ⚠️ দেয়ালটা [[OpeningStockService]]-এও আছে, আর সেটাই আসল
+         * দেয়াল। ⓘ এখানকারটা তার বদলে নয়, তার **আগে** — না হলে
+         * পাঁচশো সারির ফাইল মাঝপথে একটা ব্যতিক্রমে থামত, আর
+         * কোন সারিতে থেমেছে তা বলার উপায় থাকত না।
+         */
+        if ($product !== null && $product->track_batch && blank($row['batch_no'] ?? null)) {
+            $errors[] = __('inventory::validation.batch_no_required', ['product' => $product->name()]);
+        }
+
         if ($product !== null && $warehouse !== null && $this->alreadyOpened($product, $warehouse)) {
             $errors[] = __('inventory::validation.opening_already_set', [
                 'product' => $product->name(),
@@ -143,6 +169,15 @@ final class OpeningStockImporter implements Importer
             unitCost: (string) $row['unit_cost'],
             date: filled($row['trx_date']) ? Carbon::parse($row['trx_date'])->toDateString() : null,
             narration: __('inventory::message.opening_from_file'),
+            batch: $product->track_batch
+                ? app(BatchService::class)->receive(
+                    product: $product,
+                    batchNo: (string) ($row['batch_no'] ?? ''),
+                    expiry: filled($row['expiry_date'] ?? null)
+                        ? Carbon::parse($row['expiry_date'])->toDateString()
+                        : null,
+                )
+                : null,
         );
     }
 
