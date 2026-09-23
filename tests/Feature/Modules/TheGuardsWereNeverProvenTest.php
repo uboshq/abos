@@ -215,16 +215,27 @@ class TheGuardsWereNeverProvenTest extends TestCase
     /** নতুন রোল বানানো যায়, আর তাতে ঠিক যা টিক দেওয়া হলো তাই বসে। */
     public function test_a_depot_can_make_a_role_of_its_own(): void
     {
-        $this->actingAs($this->owner)
+        $response = $this->actingAs($this->owner)
             ->post(route('system_admin.role.store'), [
                 'name' => 'store_keeper',
                 'permissions' => ['sales.challan.view', 'sales.challan.create'],
-            ])
-            ->assertRedirect(route('system_admin.role.index'));
+            ]);
 
         $role = Role::query()->where('name', 'store_keeper')->first();
 
         $this->assertNotNull($role);
+
+        /*
+         * ⭐ ফেরার ঠিকানাটা সদ্য বানানো রোলটাই — ২৪ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ আগে তালিকায় ফিরত; তালিকা আর সম্পাদনা এক পর্দা হওয়ার পর
+         * ঐ কারণটা আর নেই ([[RoleController::store()]])।
+         *
+         * ⚠️ ঠিকানাটা মেলানো হয় **রোলটা তুলে আনার পরে**, কারণ আগে
+         * তার `id` জানা যায় না। ⛔ খালি `assertRedirect()` লিখলে দাবিটা
+         * যেকোনো ঠিকানায় সবুজ থাকত — লগইনের পাতাতেও।
+         */
+        $response->assertRedirect(route('system_admin.role.edit', $role));
         $this->assertSame(['sales.challan.create', 'sales.challan.view'],
             $role->permissions->pluck('name')->sort()->values()->all());
     }

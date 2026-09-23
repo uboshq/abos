@@ -268,6 +268,54 @@
             </div>
         </section>
 
+        {{-- ⭐ আসল ক্ষমতা — মালিকের স্পেক §৮, ২৪ সেপ্টেম্বর ২০২৬।
+
+             ── ⛔ কেন এই ঘরটা স্পেকে "সবচেয়ে দরকারি" ────────────────────
+             ⓘ স্পেকের কথা: *"সাপোর্টে সবচেয়ে বেশি আসা প্রশ্নটাই এটা — সে
+             কেন এই পাতাটা দেখতে পাচ্ছে না?"*
+
+             ⚠️ এই পর্দায় রোলের নামগুলো আগেও ছিল, কিন্তু **কোন রোল কী
+             দিচ্ছে** তা ছিল না। ⛔ উত্তর পেতে হলে রোলের পর্দায় গিয়ে একটা
+             একটা করে রোল খুলে ছক মেলাতে হত, আর মাথায় যোগ করতে হত।
+
+             ⓘ সংখ্যাগুলো মাপা — কারণসহ [[UserController::effectiveAccess()]]।
+             ⚠️ সারিটা **শুধুমাত্র পড়ার**: বদল হয় উপরের রোলের ঘরে, আর
+             এখানে তার ফলটা দেখা যায়। ⛔ দুই জায়গায় বদলানো গেলে কোনটা
+             আসল তা বলার উপায় থাকত না। --}}
+        @if ($effective !== [])
+            <section data-boxed
+                     class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+                <h2 class="text-base font-semibold">{{ __('system_admin::permission.effective_access') }}</h2>
+                <p class="mt-1 text-xs text-(--color-ink-muted)">
+                    {{ __('system_admin::permission.effective_access_note') }}
+                </p>
+
+                <div class="mt-3 grid gap-px bg-(--color-border) md:grid-cols-2 xl:grid-cols-3">
+                    @foreach ($effective as $row)
+                        <div class="flex items-baseline justify-between gap-3 bg-(--color-surface-card) px-3 py-2">
+                            <span class="min-w-0">
+                                <span class="block truncate text-sm">{{ $row['label'] }}</span>
+
+                                {{-- ⭐ "কোথা থেকে এল" — স্পেক এটা আলাদা করে দাগিয়ে বলে।
+                                     ⛔ কেবল ✓/✕ দেখালে প্রশ্নটার উত্তর মেলে না। --}}
+                                <span class="block truncate text-2xs text-(--color-ink-muted)">
+                                    {{ $row['from'] === []
+                                        ? __('system_admin::permission.from_nowhere')
+                                        : __('system_admin::permission.from_roles', ['roles' => implode(' · ', $row['from'])]) }}
+                                </span>
+                            </span>
+
+                            <span @class([
+                                'num flex-none rounded-full px-2 py-0.5 text-xs tabular-nums',
+                                'bg-(--color-badge-success-bg) text-(--color-badge-success-ink)' => $row['held'] > 0,
+                                'bg-(--color-surface-muted) text-(--color-ink-muted)' => $row['held'] === 0,
+                            ])>{{ $row['held'] }} / {{ $row['all'] }}</span>
+                        </div>
+                    @endforeach
+                </div>
+            </section>
+        @endif
+
         <div class="flex flex-wrap gap-2">
             <x-ui.button type="submit" tone="primary">{{ __('core.action.save') }}</x-ui.button>
             <x-ui.button tone="secondary" :href="route('system_admin.user.index')">

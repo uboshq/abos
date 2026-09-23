@@ -11,6 +11,7 @@ use App\Core\Services\MenuBuilder;
 use App\Core\Services\Ownership;
 use App\Core\Services\PermissionSyncer;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\RoleLabel;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Models\Company;
@@ -55,6 +56,9 @@ class UserController extends Controller implements HasMiddleware
         private readonly MenuBuilder $menu,
         private readonly AuditEngine $audit,
         private readonly Ownership $ownership,
+
+        /* ⓘ আসল ক্ষমতার সারিগুলো মডিউলের ঘোষণা থেকেই — [[effectiveAccess()]]। */
+        private readonly ModuleRegistry $modules,
     ) {}
 
     public static function middleware(): array
@@ -142,6 +146,9 @@ class UserController extends Controller implements HasMiddleware
             'user' => new User(['is_active' => true, 'locale' => 'bn']),
             'scopes' => [],
             'houseScopes' => [],
+
+            /* ⓘ নতুন ব্যবহারকারীর এখনো কোনো ক্ষমতা নেই — ঘরটা আঁকাই হয় না। */
+            'effective' => [],
             ...$this->formData(),
         ]);
     }
@@ -197,8 +204,94 @@ class UserController extends Controller implements HasMiddleware
             'scopes' => $this->scopesOf($user, UserDataScope::BRANCH),
             'houseScopes' => collect(array_keys($this->scopeKinds()))
                 ->mapWithKeys(fn (string $t) => [$t => $this->scopesOf($user, $t)])->all(),
+            'effective' => $this->effectiveAccess($user),
             ...$this->formData($user),
         ]);
+    }
+
+    /**
+     * ⭐ আসল ক্ষমতা — মালিকের স্পেক §৮, ২৪ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⛔ কেন এটা স্পেকে "সবচেয়ে দরকারি" ────────────────────────────
+     * ⓘ স্পেকের কথা: *"সাপোর্টে সবচেয়ে বেশি আসা প্রশ্নটাই এটা — সে কেন
+     * এই পাতাটা দেখতে পাচ্ছে না?"*
+     *
+     * ⚠️ এই পর্দায় আগে রোলের নামগুলো ছিল, কিন্তু **কোন রোল কী দিচ্ছে**
+     * তা ছিল না। ⛔ ফলে উত্তর পেতে হলে রোলের পর্দায় গিয়ে একটা একটা করে
+     * রোল খুলে ছক মেলাতে হত — চারটা রোল মানে চারটা পর্দা, আর মাথায়
+     * যোগ করা।
+     *
+     * ── ⚠️ প্রতিটা সারির পাশে "কোথা থেকে এল" ─────────────────────────
+     * ⓘ স্পেক এটা আলাদা করে দাগিয়ে বলে: *"কেবল ✓/✕ দেখালে প্রশ্নটার
+     * উত্তর মেলে না, আর পর্দাটা বানিয়েও লাভ হয় না।"*
+     *
+     * ── ⓘ যা এখানে **নেই**, আর কেন ───────────────────────────────────
+     * স্পেকের সূত্রে *"উত্তরাধিকার"* আর *"অস্থায়ী অনুমতি"*ও আছে। ⛔
+     * দুইটার একটাও এখনো বানানো হয়নি, তাই সারিতে ওদের নাম বসালে সেটা
+     * মিথ্যা হত — আর এই পর্দাটার একমাত্র কাজই সত্যি বলা।
+     *
+     * @return list<array{label: string, held: int, all: int, from: list<string>}>
+     */
+    private function effectiveAccess(User $user): array
+    {
+        /*
+         * ⓘ `setPermissionsTeamId` ছাড়া spatie চলতি কোম্পানির রোল
+         * খোঁজে, আর এই পর্দাটা সবসময় চলতি কোম্পানিরই — [[formData()]]
+         * একই অনুমান ধরে।
+         */
+        $byPermission = [];
+
+        foreach ($user->roles as $role) {
+            foreach ($role->permissions as $permission) {
+                $byPermission[$permission->name][] = RoleLabel::for($role->name);
+            }
+        }
+
+        /*
+         * ⭐ সরাসরি দেওয়া অনুমতিও গোনা হয়।
+         *
+         * ⚠️ spatie একজনকে রোল ছাড়াও অনুমতি দিতে দেয়। ⛔ ওগুলো বাদ দিলে
+         * পর্দাটা বলত *"এটা তার নেই"*, অথচ সে দিব্যি পাতাটা খুলতে
+         * পারতেন — আর তখন এই পর্দাটাই মিথ্যাবাদী।
+         */
+        foreach ($user->getDirectPermissions() as $permission) {
+            $byPermission[$permission->name][] = __('system_admin::permission.granted_directly');
+        }
+
+        $out = [];
+
+        foreach ($this->modules->all() as $module) {
+            $all = 0;
+            $held = 0;
+            $from = [];
+
+            foreach ($module->permissions as $name) {
+                $all++;
+
+                if (! isset($byPermission[$name])) {
+                    continue;
+                }
+
+                $held++;
+                $from = [...$from, ...$byPermission[$name]];
+            }
+
+            /* ⓘ যে মডিউলে কিছুই নেই, তার সারিও থাকে — *"অর্থ ✕"*,
+             * স্পেকের নমুনায় ঠিক এই সারিটাই। ⛔ বাদ দিলে পর্দাটা
+             * "নেই" আর "এমন মডিউলই নেই" আলাদা করতে পারত না। */
+            if ($all === 0) {
+                continue;
+            }
+
+            $out[] = [
+                'label' => $module->label(),
+                'held' => $held,
+                'all' => $all,
+                'from' => array_values(array_unique($from)),
+            ];
+        }
+
+        return $out;
     }
 
     public function update(Request $request, User $user): RedirectResponse
