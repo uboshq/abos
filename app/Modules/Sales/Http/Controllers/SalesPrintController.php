@@ -837,6 +837,26 @@ class SalesPrintController extends Controller implements HasMiddleware
             $rows['core.print.tax'] = $this->money($document->tax);
         }
 
+        /*
+         * ⭐ পয়সা মেলানোর সারি — মালিকের নির্দেশ, ২৩ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ *"রাউন্ডিং শুধু পজ এ"* — আর কাগজে ঠিক সেটাই ঘটে, কোনো
+         * বাড়তি সুইচ ছাড়াই: অঙ্কটা **কেবল কাউন্টারে** বসে, তাই শূন্য
+         * নয় এমন সারিটা কেবল কাউন্টারের রসিদেই ওঠে।
+         *
+         * ⚠️ আলাদা সুইচ বানানো হয়নি ইচ্ছাকৃতভাবে: তাতে দুইটা সুইচ হত
+         * (একটা এন্ট্রির, একটা ছাপার), আর একটা চালু অন্যটা বন্ধ থাকলে
+         * মেলানো অঙ্কটা খাতায় বসত অথচ কাগজে দেখা যেত না — ⛔ গ্রাহকের
+         * হাতের কাগজ আর খাতা তখন দুই কথা বলত।
+         *
+         * ⓘ মোটের **আগে**, কারণ ওটা মোটকে বদলায়।
+         */
+        $rounding = (string) ($document->rounding_amount ?? '0');
+
+        if (bccomp($rounding, '0', 4) !== 0) {
+            $rows['sales::field.rounding'] = $this->money($rounding);
+        }
+
         $rows['core.print.total'] = $this->money($document->total);
 
         return $rows;

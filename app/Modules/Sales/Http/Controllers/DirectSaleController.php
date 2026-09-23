@@ -9,7 +9,6 @@ use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
-use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Http\Controllers\Controller;
 use App\Models\NumberSeries;
@@ -558,7 +557,21 @@ class DirectSaleController extends Controller implements HasMiddleware
                 Rule::exists('inv_products', 'id')->where('company_id', $companyId)],
             'lines.*.qty' => ['required', 'numeric', 'gt:0'],
             'lines.*.free_qty' => ['nullable', 'numeric', 'min:0'],
-            'lines.*.rate' => ['required', 'numeric', 'min:0'],
+            /*
+             * ⛔ দর শূন্য নয় — মালিকের নির্দেশ, ২৩ সেপ্টেম্বর ২০২৬।
+             *
+             * তাঁর কথা: *"sales price chara entry nibe na"*।
+             *
+             * ── ⚠️ শূন্য দরে বিক্রির ক্ষতিটা নীরব ─────────────────────
+             * ⓘ মাল গুদাম থেকে নামে, খরচ খাতায় বসে, কিন্তু আয় শূন্য —
+             * ⛔ অর্থাৎ প্রতিটা শূন্য-দরের সারি খাতায় **সরাসরি লোকসান**
+             * লেখে, আর কোনো পর্দা লাল হয় না।
+             *
+             * ⓘ ফ্রি বা উপহারের মাল এতে আটকায় না: ওগুলোর নিজের ঘর ও
+             * নিজের টেবিল আছে (`free_qty`, উপহারের সারি), আর সেখানে দর
+             * চাওয়াই হয় না।
+             */
+            'lines.*.rate' => ['required', 'numeric', 'gt:0'],
             'lines.*.discount_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
 
             'gifts' => ['nullable', 'array'],

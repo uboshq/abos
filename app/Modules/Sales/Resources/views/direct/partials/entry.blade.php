@@ -473,6 +473,64 @@
                                  ⓘ `self-end` — লেবেলবিহীন বোতামটা যেন পাশের
                                  ঘরগুলোর **নিচের কিনারায়** বসে, লেবেলের সারিতে
                                  উঠে না যায়। --}}
+                            {{-- ⭐ তিনটা বোতাম "কার্টে যোগ করুন"-এর ঠিক উপরে — মালিকের
+                                 নির্দেশ, ২৩ সেপ্টেম্বর ২০২৬।
+
+                                 তাঁর কথা: *"উপহার · ক্রয়মূল্য · ঘর খালি করুন —
+                                 কার্টে যোগ করুন er upore zevabe dewa eivabe bosaw,
+                                 এই লাইন er box theke soriye"*, আর ছবিতে লাল দাগ
+                                 দিয়ে জায়গাটা ঘেরা — একটার নিচে একটা, খাড়া।
+
+                                 ── ⓘ কেন এটা আগের সিদ্ধান্তের সাথে মেলে ────────────
+                                 ৩ সেপ্টেম্বরে এই চারটা বোতাম একসাথে ছিল, যুক্তি:
+                                 *"উপরে কত, নিচে কী করব"*। ⚠️ ৬ সেপ্টেম্বরে "কার্টে
+                                 যোগ করুন" এন্ট্রির সারিতে এল, আর বাকি তিনটা পিছনে
+                                 রয়ে গেল — জোড়াটা তখনই ভেঙেছিল। ⭐ এখন চারটাই আবার
+                                 এক জায়গায়, হাত যেখানে ঘরগুলো ভরছে ঠিক সেখানেই।
+
+                                 ⓘ `self-end` নয় — খাড়া সারিটা নিজেই নিচে শেষ হয়,
+                                 আর শেষ বোতামটা ("কার্টে যোগ করুন") ঘরগুলোর কিনারায়
+                                 বসে। ⚠️ ক্রমটা মালিকের লেখা, অনুমান করে বদলাবেন না। --}}
+                            <div class="flex flex-col justify-end gap-1">
+                            @if ($show['gift'])
+                                {{-- ⚠️ এখানে `:disabled`, একটা কোলন — আর নিচে
+                                     "নিশ্চিত করুন" বোতামে `::disabled`, দুইটা।
+                                     **দুইটাই ঠিক**: Blade কেবল কম্পোনেন্ট ট্যাগে
+                                     `::`-কে `:`-এ নামায়। সাধারণ ট্যাগে দুইটা দিলে
+                                     অ্যাট্রিবিউটটা হুবহু `::disabled` হয়ে ব্রাউজারে
+                                     যায়, আর **Alpine নীরবে উপেক্ষা করে** — বোতামটা
+                                     সক্রিয় দেখাত, চাপলে কিছু হত না।
+
+                                     ⭐ পর্দায় কিছুই ভাঙা দেখাত না, JS ত্রুটিও ছিল না।
+                                     ধরেছে `AlpineBindingsReachTheBrowserTest`। --}}
+                                <button type="button" @click="openGift()" :disabled="! picked"
+                                        class="w-full rounded-(--radius-field) leading-tight border border-(--color-badge-pending-ink)/30 disabled:opacity-40
+                                               bg-(--color-badge-pending-bg) px-1 py-1.5 text-2xs font-medium
+                                               text-(--color-badge-pending-ink)">
+                                    {{ __('sales::field.gift') }}
+                                </button>
+                            @endif
+
+                            {{-- ক্রয়মূল্য — ভেতরের কথা, গ্রাহককে পড়ে শোনানোর
+                                 জন্য নয়। তাই বোতামের পেছনে: চোখে পড়ে না,
+                                 কিন্তু দরকার হলে এক চাপ দূরে। --}}
+                            <button type="button" @click="showCosting = ! showCosting"
+                                    class="w-full rounded-(--radius-field) leading-tight border border-(--color-border)
+                                           px-1 py-1.5 text-2xs font-medium">
+                                {{ __('sales::field.costing') }}
+                            </button>
+
+                            <span x-show="showCosting" x-cloak
+                                  class="num text-end text-xs text-(--color-ink-muted)"
+                                  x-text="picked ? money(picked.cost) : ''"></span>
+
+                            <button type="button" @click="clearEntry()"
+                                    class="w-full rounded-(--radius-field) leading-tight bg-(--color-danger)/10 px-2 py-1.5
+                                           text-2xs font-medium text-(--color-danger) hover:bg-(--color-danger)/20">
+                                {{ __('sales::action.clear_data') }}
+                            </button>
+                            </div>
+
                             <button type="button" @click="addToCart()" :disabled="! picked"
                                     class="h-(--spacing-field-dense) self-end whitespace-nowrap rounded-(--radius-field)
                                            bg-(--color-success) px-2 text-2xs font-semibold leading-tight

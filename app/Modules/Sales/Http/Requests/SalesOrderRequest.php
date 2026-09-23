@@ -39,7 +39,21 @@ class SalesOrderRequest extends FormRequest
             'lines.*.unit_id' => ['nullable', 'integer',
                 Rule::exists('mdm_units', 'id')->where('company_id', $companyId)],
 
-            'lines.*.rate' => ['required', 'numeric', 'min:0'],
+            /*
+             * ⛔ দর শূন্য নয় — মালিকের নির্দেশ, ২৩ সেপ্টেম্বর ২০২৬।
+             *
+             * তাঁর কথা: *"sales price chara entry nibe na"*।
+             *
+             * ── ⚠️ শূন্য দরে বিক্রির ক্ষতিটা নীরব ─────────────────────
+             * ⓘ মাল গুদাম থেকে নামে, খরচ খাতায় বসে, কিন্তু আয় শূন্য —
+             * ⛔ অর্থাৎ প্রতিটা শূন্য-দরের সারি খাতায় **সরাসরি লোকসান**
+             * লেখে, আর কোনো পর্দা লাল হয় না।
+             *
+             * ⓘ ফ্রি বা উপহারের মাল এতে আটকায় না: ওগুলোর নিজের ঘর ও
+             * নিজের টেবিল আছে (`free_qty`, উপহারের সারি), আর সেখানে দর
+             * চাওয়াই হয় না।
+             */
+            'lines.*.rate' => ['required', 'numeric', 'gt:0'],
             'lines.*.discount' => ['nullable', 'numeric', 'min:0'],
             'lines.*.tax' => ['nullable', 'numeric', 'min:0'],
             'lines.*.narration' => ['nullable', 'string', 'max:500'],

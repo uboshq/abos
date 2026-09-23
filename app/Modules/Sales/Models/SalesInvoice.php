@@ -62,7 +62,7 @@ class SalesInvoice extends Model implements Drillable
         'parked_at',
 
         'customer_id', 'warehouse_id', 'trx_date', 'due_on',
-        'subtotal', 'discount', 'tax', 'total', 'cost_of_goods',
+        'subtotal', 'discount', 'tax', 'rounding_amount', 'total', 'cost_of_goods',
         'status', 'narration', 'created_by',
         'cancelled_by', 'cancelled_at', 'cancel_reason',
     ];
@@ -77,6 +77,7 @@ class SalesInvoice extends Model implements Drillable
             'subtotal' => 'decimal:4',
             'discount' => 'decimal:4',
             'tax' => 'decimal:4',
+            'rounding_amount' => 'decimal:4',
             'total' => 'decimal:4',
             'cost_of_goods' => 'decimal:4',
         ];

@@ -92,6 +92,9 @@ class PosController extends Controller implements HasMiddleware
             // কাউন্টারে ছাড়ের ঘরটা প্রতি-কোম্পানি সুইচে (নিয়ম ৭)
             'discountOn' => $this->settings->enabled('sales.field_line_discount'),
 
+            /* ⭐ কাউন্টারে পয়সা মেলানোর ঘর — ডিফল্টে বন্ধ, কারণটা module.php-তে */
+            'roundingOn' => $this->settings->enabled('sales.pos_rounding'),
+
             /*
              * টাকা নেওয়ার উপায়গুলো।
              *
@@ -188,6 +191,54 @@ class PosController extends Controller implements HasMiddleware
             'idempotency_key' => ['nullable', 'string', 'max:64'],
 
             /*
+             * ⭐ পয়সা মেলানো — মালিকের নির্দেশ, ২৩ সেপ্টেম্বর ২০২৬।
+             *
+             * ⚠️ `min:0` নেই, আর সেটাই একমাত্র ব্যতিক্রম: রাউন্ডিংয়ের
+             * কাজই দুই দিকে মেলানো (৯৯.৬০ → ১০০, আবার ১০০.৪০ → ১০০)।
+             *
+             * ⛔ সীমাটা এখানেই দেখা হয়, পর্দায় নয়। ⓘ পর্দার বাধা যথেষ্ট
+             * নয় — যে কেউ সরাসরি অনুরোধ পাঠাতে পারে, আর তখন "রাউন্ডিং"
+             * নাম দিয়ে যেকোনো অঙ্ক মোট থেকে কেটে নেওয়া যেত, যা কোনো
+             * ছাড়ের রিপোর্টে ধরা পড়ত না। ⓘ নিয়মটা সরাসরি বিক্রয়ের
+             * [[DirectSaleController]]-এ আগে থেকেই আছে, একই সেটিং ধরে।
+             *
+             * ⓘ সুইচ বন্ধ থাকলে এখানে সীমা দেখার কিছু নেই — অঙ্কটা
+             * নিচে শূন্য করে দেওয়া হয়, তাই যাচাইয়ের প্রশ্নই ওঠে না।
+             */
+            'rounding_amount' => ['nullable', 'numeric', function (string $attr, mixed $value, callable $fail) {
+                if (! $this->settings->enabled('sales.pos_rounding')) {
+                    return;
+                }
+
+                /*
+                 * ⚠️ তুলনাটা `bccomp`-এ, `(float)`-এ নয়।
+                 *
+                 * ⓘ সরাসরি বিক্রয়ের একই নিয়মটা float দিয়ে লেখা, আর ঐ
+                 * ফাইলটা [[MoneyIsNeverAFloatTest]]-এর ছাড়ের তালিকায় —
+                 * ⛔ কিন্তু ছাড়ের কারণ হিসেবে ওখানে লেখা *"ব্রাউজারে
+                 * পাঠানো মান"*, যা এই লাইনটার সাথে মেলেই না।
+                 *
+                 * ⭐ তাই নকল করে আরেকটা ছাড় নেওয়ার বদলে অঙ্কটা ঠিক করে
+                 * লেখা — পাহারাটার নিজের কথাই: *"ছাড় না বাড়িয়ে জিনিসটা
+                 * সারানোই আসল উত্তর"*।
+                 */
+                $max = (string) $this->settings->get('sales.rounding_max', '0');
+
+                if (bccomp($max, '0', 4) <= 0) {
+                    return;
+                }
+
+                /* ⓘ পরম মান — ঋণাত্মক রাউন্ডিংও সীমার ভিতরে থাকতে হবে */
+                $size = bccomp((string) $value, '0', 4) < 0
+                    ? bcmul((string) $value, '-1', 4)
+                    : (string) $value;
+
+                if (bccomp($size, $max, 4) > 0) {
+                    $fail(__('sales::validation.rounding_over_limit', ['max' => $max]));
+                }
+            }],
+
+            /*
              * তোলা বিলটার নম্বর — থাকলে ওটাই সম্পূর্ণ হয়।
              *
              * না পাঠালে আগের মতোই নতুন বিল, তাই পুরনো টিল বা পরীক্ষার
@@ -199,7 +250,21 @@ class PosController extends Controller implements HasMiddleware
             'lines.*.product_id' => ['required', 'integer',
                 Rule::exists('inv_products', 'id')->where('company_id', $companyId)],
             'lines.*.qty' => ['required', 'numeric', 'gt:0'],
-            'lines.*.rate' => ['required', 'numeric', 'min:0'],
+            /*
+             * ⛔ দর শূন্য নয় — মালিকের নির্দেশ, ২৩ সেপ্টেম্বর ২০২৬।
+             *
+             * তাঁর কথা: *"sales price chara entry nibe na"*।
+             *
+             * ── ⚠️ শূন্য দরে বিক্রির ক্ষতিটা নীরব ─────────────────────
+             * ⓘ মাল গুদাম থেকে নামে, খরচ খাতায় বসে, কিন্তু আয় শূন্য —
+             * ⛔ অর্থাৎ প্রতিটা শূন্য-দরের সারি খাতায় **সরাসরি লোকসান**
+             * লেখে, আর কোনো পর্দা লাল হয় না।
+             *
+             * ⓘ ফ্রি বা উপহারের মাল এতে আটকায় না: ওগুলোর নিজের ঘর ও
+             * নিজের টেবিল আছে (`free_qty`, উপহারের সারি), আর সেখানে দর
+             * চাওয়াই হয় না।
+             */
+            'lines.*.rate' => ['required', 'numeric', 'gt:0'],
             'lines.*.discount' => ['nullable', 'numeric', 'min:0'],
 
             /*
@@ -213,6 +278,22 @@ class PosController extends Controller implements HasMiddleware
             'approver_email' => ['nullable', 'string', 'email', 'max:255'],
             'approver_password' => ['nullable', 'string', 'max:255'],
         ]);
+
+        /*
+         * ⛔ সুইচ বন্ধ থাকলে অঙ্কটা সত্যিই বাদ, কেবল অযাচাই নয়।
+         *
+         * ── ⚠️ প্রথম খসড়ায় এটা ছিল না, আর মন্তব্যটা মিথ্যা বলত ────────
+         * যাচাইয়ের ভিতরে কেবল `return` লেখা ছিল, অর্থাৎ সুইচ বন্ধ থাকলে
+         * **সীমা দেখা হত না** — কিন্তু অঙ্কটা ঠিকই সেবায় চলে যেত। ⓘ ফল
+         * হত উল্টো: সুইচ বন্ধ করাই রাউন্ডিংকে **সীমাহীন** করে দিত।
+         *
+         * ⚠️ পর্দা ঘরটা আঁকে না বলে সাধারণ ব্যবহারে কিছুই ঘটত না, আর
+         * ঠিক সেজন্যই ভুলটা নীরব থাকত — ধরা পড়ত কেবল যে সরাসরি অনুরোধ
+         * পাঠায় তার হাতে, আর তিনি সেটা বলতে আসতেন না।
+         */
+        if (! $this->settings->enabled('sales.pos_rounding')) {
+            $data['rounding_amount'] = '0';
+        }
 
         $result = $this->pos->checkout($data, $data['lines']);
 
@@ -280,7 +361,21 @@ class PosController extends Controller implements HasMiddleware
             'lines.*.product_id' => ['required', 'integer',
                 Rule::exists('inv_products', 'id')->where('company_id', $companyId)],
             'lines.*.qty' => ['required', 'numeric', 'gt:0'],
-            'lines.*.rate' => ['required', 'numeric', 'min:0'],
+            /*
+             * ⛔ দর শূন্য নয় — মালিকের নির্দেশ, ২৩ সেপ্টেম্বর ২০২৬।
+             *
+             * তাঁর কথা: *"sales price chara entry nibe na"*।
+             *
+             * ── ⚠️ শূন্য দরে বিক্রির ক্ষতিটা নীরব ─────────────────────
+             * ⓘ মাল গুদাম থেকে নামে, খরচ খাতায় বসে, কিন্তু আয় শূন্য —
+             * ⛔ অর্থাৎ প্রতিটা শূন্য-দরের সারি খাতায় **সরাসরি লোকসান**
+             * লেখে, আর কোনো পর্দা লাল হয় না।
+             *
+             * ⓘ ফ্রি বা উপহারের মাল এতে আটকায় না: ওগুলোর নিজের ঘর ও
+             * নিজের টেবিল আছে (`free_qty`, উপহারের সারি), আর সেখানে দর
+             * চাওয়াই হয় না।
+             */
+            'lines.*.rate' => ['required', 'numeric', 'gt:0'],
             'lines.*.discount' => ['nullable', 'numeric', 'min:0'],
         ]);
 

@@ -10,12 +10,28 @@
 import { taka } from './components/money.js'
 
 
-export function pos(catalogue, walkinId, resumed, discountOn, methods, { urls = {}, texts = {} } = {}) {
+export function pos(catalogue, walkinId, resumed, discountOn, methods, roundingOn = false, { urls = {}, texts = {} } = {}) {
     return {
         catalogue,
         walkinId,
         discountOn,
         methods,
+        roundingOn,
+
+        /*
+         * ⭐ কাউন্টারে পয়সা মেলানো — চিহ্ন আর অঙ্ক আলাদা ঘরে।
+         *
+         * ── ⚠️ কেন একটা ঘরে নয় ──────────────────────────────────────
+         * ⛔ প্রথম খসড়ায় একটাই ঘর ছিল যেখানে ঋণচিহ্ন হাতে লেখা যেত।
+         * ⓘ সরাসরি বিক্রয়ের পর্দায় ঠিক ওই জিনিসটা **ইচ্ছা করে** বন্ধ
+         * করা আছে, আর কারণটা ওখানেই লেখা: ভুলে `-৪৩০০` বসে যেতে পারে।
+         *
+         * ⚠️ কাউন্টারে ঝুঁকিটা আরও বেশি — ওখানে মানুষ ক্রেতার সামনে
+         * দাঁড়িয়ে দ্রুত টাইপ করেন। ⭐ অঙ্কটা সবসময় ধনাত্মক, দিকটা একটা
+         * বাছাই — ভুল করা কঠিন।
+         */
+        roundingSign: '+',
+        roundingInput: '',
 
         /*
          * ভাগ করে পরিশোধ — শুরুতে বন্ধ।
@@ -303,8 +319,34 @@ export function pos(catalogue, walkinId, resumed, discountOn, methods, { urls = 
             return base - off;
         },
 
-        get total() {
+        /*
+         * ⭐ পয়সা মেলানোর অঙ্কটা মোটের ভিতরে — ২৩ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ মালিক: *"সুইচ দাও রাউন্ডিং এর জন্য"*। ⚠️ ঋণাত্মকও বৈধ —
+         * কাজটাই দুই দিকে মেলানো (৯৯.৬০ → ১০০, আবার ১০০.৪০ → ১০০)।
+         *
+         * ⛔ সংখ্যাটা এখানে কেবল **চোখের জন্য**: আসল মোট সার্ভারে আবার
+         * কষা হয় ([[SalesInvoiceService::replaceLines]])। ⓘ তাই দুইটা
+         * আলাদা হলে ক্যাশিয়ার যা দেখেছেন আর খাতায় যা বসেছে তার তফাত
+         * হত — আর ঐ জোড়াটা একটা পরীক্ষা ধরে রাখে।
+         */
+        get lineSum() {
             return this.lines.reduce((sum, l) => sum + this.lineTotal(l), 0);
+        },
+
+        /* সার্ভারে চিহ্নসহ একটাই সংখ্যা যায় — দুইটা ঘর কেবল চোখের */
+        get roundingValue() {
+            const size = Math.abs(Number(this.roundingInput || 0));
+
+            return this.roundingSign === '-' ? -size : size;
+        },
+
+        get rounding() {
+            return roundingOn ? this.roundingValue : 0;
+        },
+
+        get total() {
+            return this.lineSum + this.rounding;
         },
 
         money(v) {

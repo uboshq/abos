@@ -324,6 +324,13 @@ final class SalesInvoiceService
                 'trx_date' => $trxDate->toDateString(),
                 'due_on' => $data['due_on'] ?? null,
                 'narration' => $data['narration'] ?? null,
+
+                /*
+                 * ⓘ সারি বসানোর আগে, কারণ [[replaceLines()]] মোট গুনতে
+                 * গিয়ে এই ঘরটাই পড়ে। ⚠️ পরে বসালে প্রথম হিসাবটা
+                 * রাউন্ডিং ছাড়া বসত।
+                 */
+                'rounding_amount' => $data['rounding_amount'] ?? '0',
                 'status' => DocumentStatus::DRAFT,
                 'created_by' => auth()->id(),
             ]);
@@ -362,6 +369,16 @@ final class SalesInvoiceService
                 'due_on' => $data['due_on'] ?? null,
                 'narration' => $data['narration'] ?? null,
                 'financial_year_id' => $this->resolveFinancialYear($trxDate)->id,
+
+                /*
+                 * ⚠️ চাবিটা না এলে **আগেরটাই থাকে**, শূন্য নয়।
+                 *
+                 * ⓘ ধরে-রাখা বিল তোলার সময় ([[PosService::resume]]) পর্দা
+                 * মাথার সব ঘর ফেরত পাঠায় না। ⛔ `?? '0'` লিখলে কাউন্টারে
+                 * মেলানো পয়সাটা তোলার পর নীরবে মুছে যেত, আর মোট বদলে
+                 * যেত এমনভাবে যে কেউ কারণ খুঁজে পেত না।
+                 */
+                'rounding_amount' => $data['rounding_amount'] ?? $invoice->rounding_amount,
             ]);
 
             $this->replaceLines($invoice, $lines);
@@ -841,6 +858,27 @@ final class SalesInvoiceService
             $totals = $this->addToTotals($totals, $figures);
             $cost = bcadd($cost, bcmul($qty, $unitCost, 4), 4);
         }
+
+        /*
+         * ⭐ পয়সা মেলানোর অঙ্কটা মোটের ভিতরে — ২৩ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ মালিক: *"রাউন্ডিং শুধু পজ এ"*, তারপর *"পস-এ যোগ করো,
+         * সরাসরি বিক্রয়েও থাক"*।
+         *
+         * ── ⚠️ কেন এখানে, কন্ট্রোলারে নয় ────────────────────────────
+         * সারি বদলালেই মোট নতুন করে গোনা হয়। ⛔ রাউন্ডিংটা যদি বাইরে
+         * কোথাও যোগ করা হত, তবে একটা সারি যোগ করামাত্র মোট আবার
+         * রাউন্ডিং ছাড়া বসে যেত — আর ভুলটা **নীরব**: কাগজে ঘরটা
+         * দেখা যেত, কেবল মোটে ধরা থাকত না।
+         *
+         * ⓘ `$invoice->rounding_amount` মাথার ঘর থেকেই এসেছে, কারণ
+         * [[create()]] সারি বসানোর **আগে** মাথাটা লেখে।
+         *
+         * ⚠️ `bcadd`, যোগ চিহ্ন নয় — আর ঋণাত্মকও বৈধ: রাউন্ডিংয়ের
+         * কাজই দুই দিকে মেলানো (৯৯.৬০ → ১০০, আবার ১০০.৪০ → ১০০)।
+         */
+        $rounding = (string) ($invoice->rounding_amount ?? '0');
+        $totals['total'] = bcadd($totals['total'], $rounding, 4);
 
         $invoice->update([...$totals, 'cost_of_goods' => $cost]);
 

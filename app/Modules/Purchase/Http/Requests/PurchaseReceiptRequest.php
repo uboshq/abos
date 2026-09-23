@@ -49,7 +49,17 @@ class PurchaseReceiptRequest extends FormRequest
             'lines.*.unit_id' => ['nullable', 'integer',
                 Rule::exists('mdm_units', 'id')->where('company_id', $companyId)],
 
-            'lines.*.rate' => ['required', 'numeric', 'min:0'],
+            /*
+             * ⛔ দর শূন্য নয় — মালিকের নির্দেশ, ২৩ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ কারণটা [[PurchaseBillRequest]]-এ বিস্তারিত লেখা: শূন্য দরে
+             * মাল ঢুকলে মজুদের মূল্য কম বসে, আর ঐ মাল বিক্রি হলে পুরোটাই
+             * মুনাফা বলে গোনা হয়। ⚠️ কোনো পর্দা লাল হয় না।
+             *
+             * ⛔ চারটা দরজাতেই এক নিয়ম — একটা খোলা রাখলে মাল ওদিক দিয়েই
+             * ঢুকত, আর পাহারাটা থাকত নামমাত্র।
+             */
+            'lines.*.rate' => ['required', 'numeric', 'gt:0'],
 
             /*
              * বিক্রয়মূল্য — মাল আসার মুহূর্তেই।

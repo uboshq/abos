@@ -527,6 +527,47 @@ return [
             'amount' => 'Amount',
         ],
 
+        'sample' => [
+            'title' => [
+                'invoice' => 'Sales Invoice (sample)',
+                'pos' => 'Counter Receipt (sample)',
+                'challan' => 'Delivery Challan (sample)',
+                'order' => 'Sales Order (sample)',
+                'receipt' => 'Money Receipt (sample)',
+                'voucher' => 'Voucher (sample)',
+            ],
+            'meta' => [
+                'no' => 'No.',
+                'date' => 'Date',
+                'party' => 'Customer',
+                'branch' => 'Branch',
+            ],
+            'party' => 'Sample Traders',
+            'branch' => 'Sample Branch',
+            'item' => 'Sample item',
+            'unit' => 'pcs',
+            'note' => 'A line note shows up here',
+            'narration' => 'This paper is a sample - not a real document',
+            'words' => 'Eleven thousand taka only',
+            'total' => [
+                'sub' => 'Sub total',
+                'discount' => 'Discount',
+                'net' => 'Net payable',
+            ],
+            'sign' => [
+                'receiver' => 'Received by',
+                'issuer' => 'For the company',
+            ],
+            'method' => [
+                'cash' => 'Cash',
+                'bank' => 'Bank',
+            ],
+            'account' => [
+                'cash' => 'Cash in hand',
+                'sales' => 'Sales',
+            ],
+        ],
+
         'format' => [
             'standard' => 'Standard',
             'distributor' => 'Distributor - bands and payments',

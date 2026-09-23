@@ -405,7 +405,17 @@ class DirectPurchaseController extends Controller implements HasMiddleware
                 Rule::exists('inv_products', 'id')->where('company_id', $companyId)],
             'lines.*.qty' => ['required', 'numeric', 'gt:0'],
             'lines.*.free_qty' => ['nullable', 'numeric', 'min:0'],
-            'lines.*.rate' => ['required', 'numeric', 'min:0'],
+            /*
+             * ⛔ দর শূন্য নয় — মালিকের নির্দেশ, ২৩ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ কারণটা [[PurchaseBillRequest]]-এ বিস্তারিত লেখা: শূন্য দরে
+             * মাল ঢুকলে মজুদের মূল্য কম বসে, আর ঐ মাল বিক্রি হলে পুরোটাই
+             * মুনাফা বলে গোনা হয়। ⚠️ কোনো পর্দা লাল হয় না।
+             *
+             * ⛔ চারটা দরজাতেই এক নিয়ম — একটা খোলা রাখলে মাল ওদিক দিয়েই
+             * ঢুকত, আর পাহারাটা থাকত নামমাত্র।
+             */
+            'lines.*.rate' => ['required', 'numeric', 'gt:0'],
             'lines.*.discount' => ['nullable', 'numeric', 'min:0'],
             'lines.*.tax' => ['nullable', 'numeric', 'min:0'],
             'lines.*.sales_price' => ['nullable', 'numeric', 'min:0'],

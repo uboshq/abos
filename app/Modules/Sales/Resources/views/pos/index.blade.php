@@ -95,7 +95,7 @@
         preventDefault দরকার: F2 ব্রাউজারের নিজের কাজ নয়, কিন্তু কিছু
         ব্রাউজারে F4/F8 ঠিকানার বার বা ডিবাগারে যায়।
     --}}
-    <div x-data="pos(@js($products), @js($walkinId), @js($resumed), @js($discountOn), @js($methods), {
+    <div x-data="pos(@js($products), @js($walkinId), @js($resumed), @js($discountOn), @js($methods), @js($roundingOn), {
              urls: { bill: @js(route('sales.pos.bill')), lookup: @js(route('sales.pos.lookup')) },
              texts: { billNotFound: @js(__('sales::message.pos_bill_not_found')) },
          })"
@@ -304,6 +304,43 @@
                         {{ __('sales::message.pos_empty_cart') }}
                     </p>
                 </div>
+
+                {{-- ⭐ পয়সা মেলানো — মালিকের সুইচে, ২৩ সেপ্টেম্বর ২০২৬।
+
+                     ⓘ মোটের **উপরে** বসে, কারণ ওটা মোটকে বদলায় — নিচে
+                     বসালে চোখ বড় সংখ্যাটা পড়ার পর নিচে গিয়ে জানত যে
+                     ওটা আসলে অন্য সংখ্যা।
+
+                     ⚠️ `step="0.01"` আর কোনো `min` নেই: ঋণাত্মক বৈধ,
+                     কারণ কাজটাই দুই দিকে মেলানো। ⓘ সীমাটা সার্ভারে
+                     (`sales.rounding_max`) — পর্দার বাধা যথেষ্ট নয়। --}}
+                @if ($roundingOn)
+                    <div class="flex items-center justify-between gap-2">
+                        <label class="text-sm" for="rounding">
+                            {{ __('sales::field.rounding') }}
+                        </label>
+
+                        {{-- ⚠️ চিহ্ন আর অঙ্ক আলাদা — সরাসরি বিক্রয়ের পর্দার একই ছক।
+                             ⛔ ঋণচিহ্ন টাইপ করতে দিলে ভুলে `-৪৩০০` বসে যেতে পারে, আর
+                             কাউন্টারে সেই ঝুঁকিটা বেশি: ক্রেতার সামনে দ্রুত টাইপ হয়। --}}
+                        <span class="flex items-center gap-1">
+                            <select x-model="roundingSign" aria-label="{{ __('sales::field.rounding') }}"
+                                    class="h-(--spacing-field) w-12 rounded-(--radius-field) border
+                                           border-(--color-border) bg-(--color-surface-card) px-1 text-center">
+                                <option value="+">+</option>
+                                <option value="-">−</option>
+                            </select>
+
+                            <input id="rounding" type="number" step="0.01" min="0"
+                                   x-model="roundingInput" inputmode="decimal"
+                                   class="num h-(--spacing-field) w-20 rounded-(--radius-field) border
+                                          border-(--color-border) bg-(--color-surface-card) px-2 text-end">
+                        </span>
+
+                        {{-- সার্ভারে চিহ্নসহ একটাই সংখ্যা যায় --}}
+                        <input type="hidden" name="rounding_amount" :value="roundingValue">
+                    </div>
+                @endif
 
                 {{-- মোট --}}
                 <div class="border-t border-(--color-border) pt-2">

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Engines\Approval;
 
+use App\Core\Support\Money;
 use App\Models\Approval;
 use Illuminate\Database\Eloquent\Model;
 
@@ -175,8 +176,72 @@ final class DocumentApproval
                 ? __('core.approval.rejected', [
                     'reason' => (string) $stopping->decisions()->latest('id')->value('remarks'),
                 ])
-                : __('core.approval.awaiting'),
+                : $this->awaitingWord($stopping, $module, $action),
         );
+    }
+
+    /**
+     * "অপেক্ষায়" বার্তাটা — **কেন** অপেক্ষায়, সেটাসহ।
+     *
+     * ── ⭐ মালিকের প্রশ্ন, ২৩ সেপ্টেম্বর ২০২৬ ─────────────────────────
+     * তিনি একটা বিলের পর্দা দেখিয়ে বললেন: *"limit nai keno ei kota
+     * likhena?"* — কাগজে বাকির সীমা ৫০,০০০, বিল ৮৯,৭২০, আর বার্তাটা
+     * কেবল বলছিল *"অনুমোদনের জন্য পাঠানো হয়েছে"*।
+     *
+     * ⛔ নিয়মটা এই ফাইলের বাইরে আগেই লেখা ছিল, আর মানা হয়নি: [[lang/bn/core]]-এ
+     * এই দুইটা বার্তার মাথায় মন্তব্য — *"'না' বলার কারণটা বার্তার সাথেই
+     * যায়, নাহলে পরের কাজটা হয় একটা ফোন কল"*। ⓘ `rejected` কারণ বলত,
+     * `awaiting` বলত না।
+     *
+     * ⚠️ আর কারণটা কোথাও খুঁজতে হয় না — অনুরোধের সারিতে `requested_reason`
+     * আর `amount` দুইটাই আগে থেকেই বসে। ⓘ সেগুলো অব্যবহৃত ছিল, অর্থাৎ
+     * তথ্যটা জমা হচ্ছিল আর কেউ পড়ছিল না।
+     *
+     * ⓘ কারণ না থাকলে পুরনো বাক্যটাই ফেরে — যে ছকে কারণ লেখা হয় না,
+     * তার বার্তা একটুও বদলায় না।
+     */
+    private function awaitingWord(Approval $stopping, string $module, string $action): string
+    {
+        $why = trim((string) $stopping->requested_reason);
+
+        /*
+         * ⚠️ কারণ না থাকলে চুপ করে থাকা নয় — **কোন ছক** থামিয়েছে সেটা বলা।
+         *
+         * ⓘ বেশিরভাগ ডাকে `reason` হিসেবে কাগজের মন্তব্য যায়, আর ওটা
+         * প্রায়ই খালি। ⛔ তখন পুরনো বার্তাটা ফিরত, আর মালিকের প্রশ্নটাই
+         * থেকে যেত: *কীসের জন্য পাঠানো হলো?*
+         *
+         * ⭐ ছকের নামটা মডিউল নিজেই ঘোষণা করে (`<module>::approval.<action>`),
+         * তাই এখানে কোনো মডিউলের নাম হাতে লেখা নেই — কোর কোনো মডিউল
+         * চেনে না (সেকশন ১৯.৭)।
+         *
+         * ⓘ অনুবাদ না থাকলে `__()` চাবিটাই ফেরত দেয় — তখন কাঁচা চাবি
+         * দেখানোর চেয়ে পুরনো বাক্যটাই ভালো, আর সেটাই করা হয়।
+         */
+        if ($why === '') {
+            $key = "{$module}::approval.{$action}";
+            $what = __($key);
+
+            if ($what === $key) {
+                return __('core.approval.awaiting');
+            }
+
+            $why = $what;
+        }
+
+        /*
+         * ⓘ অঙ্কটা থাকলে সাথে যায় — *"৳৮৯,৭২০"* পড়লে মানুষ সাথে সাথে
+         * বোঝেন কোন কাগজটার কথা হচ্ছে। ⚠️ সব ছক অঙ্ক পাঠায় না, তাই
+         * শূন্য হলে কিছুই বসে না — শূন্য টাকার কথা বললে বার্তাটা বরং
+         * বিভ্রান্ত করত।
+         */
+        $amount = (string) ($stopping->amount ?? '0');
+
+        if (bccomp($amount, '0', 4) > 0) {
+            $why .= ' · ৳'.Money::format($amount);
+        }
+
+        return __('core.approval.awaiting_because', ['reason' => $why]);
     }
 
     /**

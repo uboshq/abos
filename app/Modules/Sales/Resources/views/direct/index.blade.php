@@ -591,74 +591,53 @@
                                 <span>{{ __('sales::field.running_total') }}</span>
                                 <span class="num" x-text="'৳' + money(subTotal)"></span>
                             </div>
+
+                            {{-- ⭐ আর কত বাকিতে দেওয়া যাবে — মালিকের নির্দেশ, ২৩ সেপ্টেম্বর ২০২৬।
+
+                                 তাঁর কথা: *"avelable Cr Limit … এই লাইন box e চলতি মোট er niche"*।
+
+                                 ── ⛔ হিসাবটা আগে থেকেই লেখা ছিল, দেখানো হত না ──────────
+                                 `availableCredit` getter-টা কারণসহ লেখা — *"বাকির সীমা
+                                 ৭৫,০০০ একটা চুক্তির সংখ্যা, কাউন্টারের নয়; যাঁর ৭০,০০০
+                                 আগেই বাকি, তাঁর জন্য খোলা আছে মাত্র ৫,০০০"*। ⚠️ অথচ
+                                 সংখ্যাটা কোনো পর্দায় উঠত না — কাজ হয়ে ছিল, জোড়াটা ছিল না।
+
+                                 ⓘ সীমা ০ হলে সারিটা আসে না: শূন্য মানে *"বাকি বন্ধ"*,
+                                 আর সেটা আলাদা কথা — ঐ যুক্তিটাও getter-এর মন্তব্যে লেখা।
+
+                                 ⚠️ ঋণাত্মক হলে লাল: সীমা ইতিমধ্যেই পেরিয়ে গেছে, আর
+                                 ⛔ কাউন্টারে ঐ মুহূর্তটা **চালান নিশ্চিত করার আগেই**
+                                 চোখে পড়া দরকার, পরে নয়। --}}
+                            <template x-if="(Number(customer.limit) || 0) > 0">
+                                <div class="flex justify-between">
+                                    <span class="text-(--color-ink-muted)">
+                                        {{ __('sales::field.available_credit') }}
+                                    </span>
+                                    <span class="num font-semibold"
+                                          :class="availableCredit < 0 ? 'text-(--color-danger)' : ''"
+                                          x-text="'৳' + money(availableCredit)"></span>
+                                </div>
+                            </template>
                         </div>
 
-                        {{-- ⚠️ বোতামগুলো "এই লাইন" বাক্সের **ভেতরে**, একদম নিচে।
+                        {{-- ⛔ তিনটা বোতাম এখান থেকে **সরানো হয়েছে** — ২৩ সেপ্টেম্বর ২০২৬।
 
-                             ── মালিকের নির্দেশ (৩ সেপ্টেম্বর ২০২৬) ────────────
-                             *"Gift, Add to Cart, Costing, Clear Data — eigulo
-                             baton this line box er ekdom niche bosbe"*।
+                             মালিকের নির্দেশ: *"উপহার · ক্রয়মূল্য · ঘর খালি করুন —
+                             কার্টে যোগ করুন er upore zevabe dewa eivabe bosaw,
+                             এই লাইন er box theke soriye"*।
 
-                             ── কেন এটা ঠিক ────────────────────────────────────
-                             বোতামগুলো বাক্সের বাইরে ভাসত, আর ওদের সাথে অঙ্কের
-                             কোনো দৃশ্যমান সম্পর্ক ছিল না। **অথচ ওরা ঠিক ওই
-                             অঙ্কটার উপরেই কাজ করে** — "কার্টে যোগ করুন" মানে
-                             ওই ৳-টাকেই কার্টে ফেলা।
+                             ⓘ ওরা এখন [[direct/partials/entry]]-তে, "কার্টে যোগ
+                             করুন" বোতামের ঠিক উপরে খাড়া সারিতে।
 
-                             এখন এক বাক্সে: **উপরে কত, নিচে কী করব।**
+                             ── ⚠️ আগের যুক্তিটা এখানে লেখা থাকল, মুছে নয় ────────
+                             ৩ সেপ্টেম্বর ২০২৬-এ মালিক এগুলো **এই বাক্সেই** চেয়েছিলেন,
+                             আর কারণ ছিল *"উপরে কত, নিচে কী করব"*। ⓘ ৬ সেপ্টেম্বরে
+                             "কার্টে যোগ করুন" এন্ট্রির সারিতে চলে যায়, আর তাতে ঐ
+                             জোড়াটা ভেঙে যায়: কাজের বোতামগুলো এক প্রান্তে, আর
+                             যেটা দিয়ে কাজ শেষ হয় সেটা অন্য প্রান্তে।
 
-                             ⚠️ ক্রমটা মালিকের লেখা, অনুমান করে বদলাবেন না।
-                             আর "সব মুছুন" নিচের বারে আলাদা — দুইটা মুছে ফেলার
-                             বোতাম পাশাপাশি থাকলে ভুল চাপ পড়া নিশ্চিত ছিল। --}}
-                        {{-- ⭐ তিনটা বোতাম **এক সারিতে** — মালিকের নির্দেশ,
-                             ৬ সেপ্টেম্বর ২০২৬: *"Gift, Costing, Clear Data
-                             এক লাইন রাখো।"*
-
-                             ⓘ চতুর্থটা ("কার্টে যোগ করুন") এখান থেকে উঠে
-                             এন্ট্রির সারিতে গেছে, তাই বাকি তিনটা ঠিক তিন
-                             কলামেই বসে — আগের `grid-cols-2` চারটার জন্য ছিল,
-                             আর তিনটা নিয়ে ওটা **দুই সারি + একটা ফাঁকা ঘর**
-                             হত। --}}
-                        <div class="mt-3 grid grid-cols-3 gap-1 border-t border-(--color-badge-success-ink)/20 pt-3">
-                        @if ($show['gift'])
-                            {{-- ⚠️ এখানে `:disabled`, একটা কোলন — আর নিচে
-                                 "নিশ্চিত করুন" বোতামে `::disabled`, দুইটা।
-                                 **দুইটাই ঠিক**: Blade কেবল কম্পোনেন্ট ট্যাগে
-                                 `::`-কে `:`-এ নামায়। সাধারণ ট্যাগে দুইটা দিলে
-                                 অ্যাট্রিবিউটটা হুবহু `::disabled` হয়ে ব্রাউজারে
-                                 যায়, আর **Alpine নীরবে উপেক্ষা করে** — বোতামটা
-                                 সক্রিয় দেখাত, চাপলে কিছু হত না।
-
-                                 ⭐ পর্দায় কিছুই ভাঙা দেখাত না, JS ত্রুটিও ছিল না।
-                                 ধরেছে `AlpineBindingsReachTheBrowserTest`। --}}
-                            <button type="button" @click="openGift()" :disabled="! picked"
-                                    class="w-full rounded-(--radius-field) leading-tight border border-(--color-badge-pending-ink)/30 disabled:opacity-40
-                                           bg-(--color-badge-pending-bg) px-1 py-1.5 text-2xs font-medium
-                                           text-(--color-badge-pending-ink)">
-                                {{ __('sales::field.gift') }}
-                            </button>
-                        @endif
-
-                        {{-- ক্রয়মূল্য — ভেতরের কথা, গ্রাহককে পড়ে শোনানোর
-                             জন্য নয়। তাই বোতামের পেছনে: চোখে পড়ে না,
-                             কিন্তু দরকার হলে এক চাপ দূরে। --}}
-                        <button type="button" @click="showCosting = ! showCosting"
-                                class="w-full rounded-(--radius-field) leading-tight border border-(--color-border)
-                                       px-1 py-1.5 text-2xs font-medium">
-                            {{ __('sales::field.costing') }}
-                        </button>
-
-                        <span x-show="showCosting" x-cloak
-                              class="num col-span-full text-end text-xs text-(--color-ink-muted)"
-                              x-text="picked ? money(picked.cost) : ''"></span>
-
-                        <button type="button" @click="clearEntry()"
-                                class="w-full rounded-(--radius-field) leading-tight bg-(--color-danger)/10 px-2 py-1.5
-                                       text-2xs font-medium text-(--color-danger) hover:bg-(--color-danger)/20">
-                            {{ __('sales::action.clear_data') }}
-                        </button>
-
-                        </div>
+                             ⛔ তাই এটা মত বদল নয়, **আগের সিদ্ধান্তটা সম্পূর্ণ হওয়া** —
+                             চারটা বোতাম আবার একসাথে, এবার এন্ট্রির পাশে। --}}
                     </div>
                     {{--
                         ── ছবির ঘরটা তুলে দেওয়া হলো (৩ সেপ্টেম্বর ২০২৬) ──────
