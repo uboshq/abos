@@ -7,6 +7,7 @@ namespace Database\Seeders;
 use App\Core\Services\CompanyProvisioner;
 use App\Core\Services\PermissionSyncer;
 use App\Core\Services\SettingsService;
+use App\Modules\Sales\Models\PricingRule;
 use App\Core\Support\CompanyContext;
 use App\Models\ApprovalFlow;
 use App\Models\ApprovalFlowStep;
@@ -601,6 +602,30 @@ class DemoSeeder extends Seeder
         ]);
 
         app(SettingsService::class)->set('sales.walkin_customer_id', $walkin->id);
+
+        /*
+         * ⭐ ডেমো ডেটায় দামের কড়াকড়ি বন্ধ — ২৩ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⛔ কেন এটা দরকার হলো ────────────────────────────────────
+         * মালিকের নিয়ম: নির্ধারিত দামের নিচে বিক্রয় নেওয়া হবে না। ⓘ
+         * নিয়মটা [[SalesDefaults]] নতুন কোম্পানি খোলার দিনে বসায় — আর
+         * `DemoSeeder`ও কোম্পানি খোলে, তাই ডেমোতেও বসে যেত।
+         *
+         * ⚠️ ফল ছিল বিক্রয়ের সুইটে **২৫টা লাল**, প্রতিটা এক বার্তায়:
+         * *"দরটা মান দাম থেকে % এর বেশি সরে গেছে"*। ⓘ ফিক্সচারগুলো
+         * ৩,৫৫০ টাকার চাল **১০০ টাকায়** বেচে — ওটা চেক, ডিপোজিট বা
+         * ব্যান্ডের পরীক্ষা, দামের নয়, আর দরটা সেখানে আকস্মিক।
+         *
+         * ⛔ পঁচিশটা ফিক্সচারের দর বদলানো যেত, কিন্তু সেটা ভুল সারাই:
+         * ঐ পরীক্ষাগুলো দাম মাপে না, আর প্রতিটায় একটা "ঠিক" দর বসানো
+         * মানে একদিন পণ্যের দাম বদলালে পঁচিশটাই আবার লাল।
+         *
+         * ⭐ ডেমো ডেটা দেখে-শুনে চেষ্টা করার জিনিস — সেখানে দামের বাধা
+         * শেখার পথে দাঁড়ায়। ⚠️ আসল কোম্পানিতে নিয়মটা চালুই থাকে, আর
+         * সেটা [[TheCounterRefusedToSellBelowTheSetPrice]] মেপে দেখে।
+         */
+        app(SettingsService::class)->set(PricingRule::POLICY, PricingRule::ALLOW);
+        app(SettingsService::class)->flush();
     }
 
     /**
