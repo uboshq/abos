@@ -44,6 +44,27 @@
             </label>
 
             <div class="grid gap-4 sm:grid-cols-2">
+                {{--
+                    অগ্রাধিকার — আর এটা কেবল রং নয়, আচরণ।
+
+                    ⓘ যেটা *গুরুত্বপূর্ণ* বা তার উপরে, সেটা নিচের বারে ওঠে।
+                    যেটা *অত্যন্ত জরুরি* বা তার উপরে, সেটা সরানো যায় না আর
+                    ডিফল্টে সই চায়।
+
+                    ⚠️ তাই এই ঘরটা সাজসজ্জা নয় — এখানে বসানো শব্দটাই
+                    ঠিক করে নোটিশটা কার চোখে কতবার পড়বে।
+                --}}
+                <x-ui.select name="priority"
+                             :label="__('core.notice.priority_label')"
+                             :options="collect(\App\Core\Support\NoticePriority::cases())
+                                 ->mapWithKeys(fn ($p) => [$p->value => $p->label()])"
+                             :value="old('priority', $notice->priority?->value ?? 'normal')" />
+
+                <x-ui.field name="summary"
+                            :label="__('core.notice.summary_label')"
+                            :value="old('summary', $notice->summary)"
+                            maxlength="300" />
+
                 <x-ui.field name="starts_on" type="date"
                             :label="__('system_admin::notice.starts_on')"
                             :value="old('starts_on', $notice->starts_on?->format('Y-m-d'))" />

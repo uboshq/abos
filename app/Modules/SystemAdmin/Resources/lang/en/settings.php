@@ -24,6 +24,11 @@ return [
     'print_columns_note' => 'Which columns, and in what order. The number is the position - smaller comes first.',
     'print_column_off' => 'Off',
     'print_reset' => 'Back to the chosen format',
+    'print_papers' => 'Papers',
+    'print_sample' => 'Sample',
+    'print_sample_note' => 'Every format is drawn below on a made-up paper. Look first, then pick one and save.',
+    'print_sample_of' => 'Sample of :format',
+    'print_sample_open' => 'Open this sample full size',
     'print_saved' => 'Print switches saved',
     'auto_logout_minutes' => 'Minutes of inactivity before automatic logout',
     'date_format' => 'How dates are written',
@@ -33,4 +38,10 @@ return [
     'note' => 'Every rule the modules declare — in one place, per company.',
     'screens_live_in_control_panel' => 'Which screens are visible — that lives in the Control Panel',
     'saved' => '{0}Nothing changed|{1}One setting saved|[2,*]:count settings saved',
+
+    'notice_bar_max' => 'Most notices on the bottom bar',
+    'notice_remind_after' => 'First reminder (hours)',
+    'notice_remind_again' => 'Second reminder (hours)',
+    'notice_escalate_after' => 'Escalate after (hours)',
+    'notice_creator_cannot_approve' => 'The writer of a critical notice cannot approve it',
 ];

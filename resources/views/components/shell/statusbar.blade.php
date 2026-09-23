@@ -182,6 +182,28 @@
                                 {{ $notice['text'] }}
                             </span>
                         @endif
+
+                        {{-- সরানোর ক্রস — কেবল মানুষের লেখা নোটিশে, আর
+                             কেবল যেগুলো সরানো যায়।
+
+                             ⓘ যন্ত্রের সতর্কতায় (ব্যাকআপ হয়নি) কোনো ক্রস নেই —
+                             ⛔ ওটা সরালে সমস্যাটা সরত না, কেবল খবরটা সরত।
+
+                             ⚠️ দ্বিতীয় কপিতে ফর্মটা আঁকা হয় না: লুপের জন্য রাখা
+                             কপিটা `aria-hidden`, আর ওখানে বোতাম রাখলে একই কাজের
+                             দুইটা বোতাম থাকত, যার একটা পর্দায় দেখাই যায় না। --}}
+                        @if ($copy === 0 && ($notice['id'] ?? null) && ($notice['can_dismiss'] ?? false)
+                            && \Illuminate\Support\Facades\Route::has('system_admin.notice.dismiss'))
+                            <form method="POST"
+                                  action="{{ route('system_admin.notice.dismiss', $notice['id']) }}"
+                                  class="inline-flex">
+                                @csrf
+                                <button type="submit"
+                                        title="{{ __('core.notice.dismiss') }}"
+                                        aria-label="{{ __('core.notice.dismiss') }}"
+                                        class="px-1 leading-none opacity-60 hover:opacity-100">&times;</button>
+                            </form>
+                        @endif
                     @endforeach
                 </span>
             @endfor

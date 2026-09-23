@@ -9,6 +9,8 @@ use App\Modules\SystemAdmin\Http\Controllers\CustomFieldController;
 use App\Modules\SystemAdmin\Http\Controllers\ImportController;
 use App\Modules\SystemAdmin\Http\Controllers\LookController;
 use App\Modules\SystemAdmin\Http\Controllers\NoticeController;
+use App\Modules\SystemAdmin\Http\Controllers\NoticeReportController;
+use App\Modules\SystemAdmin\Http\Controllers\NoticeTemplateController;
 use App\Modules\SystemAdmin\Http\Controllers\OwnershipController;
 use App\Modules\SystemAdmin\Http\Controllers\ReportDownloadController;
 use App\Modules\SystemAdmin\Http\Controllers\ReportScheduleController;
@@ -103,7 +105,71 @@ Route::middleware('auth')->prefix('system')->group(function () {
      */
     Route::get('/notices', [NoticeController::class, 'index'])->name('notice.index');
 
+    /*
+     * নোটিশের হিসাব — নিজের চাবি।
+     *
+     * ⓘ সংখ্যাগুলো কর্মীদের নাম ধরে বলে *"কে এখনো মানেননি"* —
+     * ⚠️ ওটা সবার দেখার জিনিস নয়, তাই লেখার চাবির সাথেও এটা
+     * মেলানো হয়নি।
+     *
+     * ⛔ পথটা `{notice}`-এর **আগে**, নাহলে `analytics` কথাটাকে একটা
+     * নোটিশের নম্বর ভাবা হত।
+     */
+    /* নোটিশের দুইটা রিপোর্ট — স্পেক, ধারা ২৯ */
+    Route::get('/reports/{slug}', [NoticeReportController::class, 'show'])->name('report.show');
+
+    Route::get('/notices/analytics', [NoticeController::class, 'analytics'])
+        ->middleware('can:system_admin.notice.analytics')->name('notice.analytics');
+
+    /*
+     * বার থেকে সরিয়ে দেওয়া — লেখার চাবির বাইরে, ইচ্ছাকৃত।
+     *
+     * ⓘ সরানোটা পাঠকের কাজ, আর সরালে কেবল নিজের পর্দা থেকে
+     * সরে। ⚠️ লেখার চাবি চাইলে গুদামের কেউ একটা পুরনো নোটিশ
+     * চিরকাল চোখের সামনে নিয়ে ঘুরতেন।
+     */
+    /*
+     * সই দেওয়া — লেখার চাবির বাইরে, সরানোর মতোই।
+     *
+     * ⓘ সই দেন পাঠক। ⚠️ লেখার চাবি চাইলে যাঁদের জন্য নোটিশ
+     * তাঁরাই সই দিতে পারতেন না, আর সংখ্যাটা চিরকাল শূন্য থাকত।
+     */
+    Route::post('/notices/{notice}/sign', [NoticeController::class, 'sign'])
+        ->whereNumber('notice')->name('notice.sign');
+
+    Route::post('/notices/{notice}/dismiss', [NoticeController::class, 'dismiss'])
+        ->whereNumber('notice')->name('notice.dismiss');
+
     Route::middleware('can:system_admin.notice.manage')->group(function () {
+        /*
+         * নোটিশের ছাঁচ — লেখার চাবির নিচেই।
+         *
+         * ⓘ ছাঁচ বানানো মানে ভবিষ্যতের নোটিশের শুরুটা ঠিক করা —
+         * ⚠️ অগ্রাধিকারও ওখানে বসে, তাই এটা লেখার কাজই।
+         */
+        /*
+         * প্রত্যাহার · সংরক্ষণাগার · ফেরত — মোছার বদলে তিনটা পথ।
+         *
+         * ⓘ `Route::delete` নেই, আর সেটা ইচ্ছাকৃত: ⛔ প্রকাশিত নোটিশ
+         * মোছা যায় না ([[Notice]]-এর `deleting` পাহারা), তাই একটা মোছার
+         * বোতাম থাকলে সেটা প্রতিবার একটা ত্রুটি দেখাত।
+         */
+        Route::post('/notices/{notice}/recall', [NoticeController::class, 'recall'])
+            ->whereNumber('notice')->name('notice.recall');
+        Route::post('/notices/{notice}/archive', [NoticeController::class, 'archive'])
+            ->whereNumber('notice')->name('notice.archive');
+        Route::post('/notices/{notice}/restore', [NoticeController::class, 'restore'])
+            ->whereNumber('notice')->name('notice.restore');
+
+        Route::get('/notices/templates', [NoticeTemplateController::class, 'index'])
+            ->name('notice.template.index');
+        Route::post('/notices/templates', [NoticeTemplateController::class, 'store'])
+            ->name('notice.template.store');
+        Route::post('/notices/templates/{template}/use', [NoticeTemplateController::class, 'use'])
+            ->whereNumber('template')->name('notice.template.use');
+        Route::delete('/notices/templates/{template}', [NoticeTemplateController::class, 'destroy'])
+            ->whereNumber('template')->name('notice.template.destroy');
+
         Route::get('/notices/new', [NoticeController::class, 'create'])->name('notice.create');
         Route::post('/notices', [NoticeController::class, 'store'])->name('notice.store');
         Route::get('/notices/{notice}/edit', [NoticeController::class, 'edit'])
@@ -128,6 +194,7 @@ Route::middleware('auth')->prefix('system')->group(function () {
     Route::get('/settings', [SettingsController::class, 'edit'])->name('settings');
     Route::put('/settings', [SettingsController::class, 'update'])->name('settings.update');
 
+
     /*
      * ⭐ ছাপার নিয়ন্ত্রণ — মালিকের নির্দেশ, ২২ সেপ্টেম্বর ২০২৬।
      *
@@ -140,6 +207,20 @@ Route::middleware('auth')->prefix('system')->group(function () {
      */
     Route::get('/print-control', [PrintControlController::class, 'edit'])->name('print_control');
     Route::put('/print-control', [PrintControlController::class, 'update'])->name('print_control.update');
+
+    /*
+     * ⭐ রূপের নমুনা — মালিকের নির্দেশ, ২৩ সেপ্টেম্বর ২০২৬।
+     *
+     * *"print e invoice template vew kore deke select korar bebosta koro.
+     * zate age sample dekha zay tarpor select kora zay"*।
+     *
+     * ⓘ একই চাবি, কারণ এটা ঐ পর্দারই একটা অংশ — নিয়ন্ত্রণের পাতাটা
+     * নিজের iframe-এ এটাকেই ডাকে। ⚠️ কাগজটা [[PrintSample]]-এর বানানো,
+     * ডেটাবেস থেকে তোলা কারও বিল নয় — নাহলে এই রুটটা বিক্রয়ের কাগজ
+     * দেখার একটা দ্বিতীয় দরজা হত।
+     */
+    Route::get('/print-control/preview', [PrintControlController::class, 'preview'])
+        ->name('print_control.preview');
 
     /*
      * নির্ধারিত রিপোর্ট — সূচি ব্যবস্থাপনা ও ফাইল নামানো।

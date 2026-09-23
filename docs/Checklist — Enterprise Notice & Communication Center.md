@@ -1,0 +1,194 @@
+# Checklist — Enterprise Notice & Communication Center
+
+> মালিকের নির্দেশ, ২৩ সেপ্টেম্বর ২০২৬: *"ekta cheek list korle ki valo hobe kaj deke deke porle tate ektane kaj sesh korte parbe amake kicubolte hobe na"*
+>
+> **এই ফাইলটাই কাজের সারি।** উপর থেকে নিচে, একটার পর একটা। মালিককে কিছু
+> জিজ্ঞেস করার দরকার নেই — যা সিদ্ধান্ত নেওয়া হয়ে গেছে সব নিচে লেখা আছে।
+> একটা ধাপ শেষ হলে বাক্সে টিক দিন, আর *"যেখানে থামা হয়েছে"* লাইনটা বদলান।
+
+**যেখানে থামা হয়েছে:** ধাপ ১–৭-এর কোড লেখা শেষ। পরীক্ষা চলছে, তারপর Architecture আর কমিট। (২৪ সেপ্টেম্বর ২০২৬)
+
+---
+
+## ⚠️ শুরু করার আগে — তিনটা নিয়ম
+
+**১ · নতুন মাস্টার বানানো নিষেধ।** কোম্পানি, শাখা, বিভাগ, কর্মী, ইউজার,
+রোল — সব আছে। নোটিশের নিজের কপি বানালে দুইটা সত্য তৈরি হয়, আর একদিন
+তারা আলাদা হয়।
+
+**২ · প্রকাশিত নোটিশ মোছা যাবে না।** Recall · Archive · Expire ·
+Supersede — চারটা পথ আছে, `delete` নেই।
+
+**৩ · প্রতিটা দাবিকে বিপজ্জনক ইনপুট খাওয়াতে হবে।** *"অন্য কোম্পানির
+নোটিশ দেখা যায় না"* দাবিটা লিখলে সত্যিই অন্য কোম্পানির একটা নোটিশ
+বানিয়ে দেখতে হবে সে ফিরিয়ে দেয় কি না। নাহলে দাবিটা খালি জালে মাছ খোঁজে।
+
+---
+
+## ✅ যা আগে থেকেই আছে — আবার বানানো নিষেধ
+
+| স্পেক যা চায় | ABOS-এ কোথায় |
+|---|---|
+| Approval Engine | `app/Core/Engines/Approval/DocumentApproval.php` + Approval মডিউল |
+| Audit Engine | `IsAudited` ট্রেইট |
+| Attachment Service | `app/Core/Engines/Attachment/` |
+| Notification Service | `app/Core/Services/NotificationService.php` |
+| RBAC + কোম্পানি বিচ্ছিন্নতা | Spatie permission, teams = কোম্পানি |
+| নম্বর সিরিজ | `NumberSeriesEngine` — `$this->numbers->next('NTC')` |
+| নোটিশের টেবিল | `notices` — title · body · starts_on · ends_on · is_active · in_ticker |
+| কারা দেখবে (role ধরে) | `notice_roles` |
+| কে পড়েছে | `notice_reads` — user_id · read_at |
+| নোটিশের পর্দা | `SystemAdmin/Http/Controllers/NoticeController.php` |
+| নিচের বার (একটা লাইন) | `app/Core/Services/StatusNotices.php` → `system.notice` |
+| বারের নোটিশের পর্দা | `TickerNoticeController` (২৩ সেপ্টেম্বর, **অস্থায়ী**) |
+
+⚠️ **`TickerNoticeController` ধাপ ৩-এ বাতিল হবে** — স্পেকের ১২ নম্বর ধারায়
+বারটা একটা সেটিংসের লাইন নয়, নোটিশ-চালিত।
+
+---
+
+## ধাপ ০ · আগের কাজ শেষ করা
+
+- [x] `TheCountingScreenMadeUnsellableStockTest` সবুজ — ৬/৬ (২৪ সেপ্টেম্বর)
+- [ ] সমন্বয়ে `issue()` → `move()` মিউট্যান্ট চালিয়ে প্রমাণ করা ঘাটতির দাবিটা কামড়ায়
+- [ ] `NoDoorTakesALineWorthNothingTest` চালানো (দশ দরজায় শূন্য-দর)
+- [ ] `tests/Feature/Architecture` পুরোটা
+- [ ] কমিট, আর হ্যাশ abos-41-কে
+
+---
+
+## ধাপ ১ · নোটিশের কাগজটা সত্যিকারের কাগজ হবে
+
+**লক্ষ্য:** একটা নোটিশের নিজের নম্বর, অবস্থা, ধরন আর অগ্রাধিকার থাকবে।
+
+- [x] মাইগ্রেশন: `notices`-এ `document_no` · `status` · `category_id` · `type` · `priority` · `summary` · `published_at` · `expires_at` · `superseded_by` · `recalled_at` · `recalled_by`
+- [x] মাইগ্রেশন: `notice_categories` (কোম্পানিপ্রতি, নিজের ডিফল্ট অনুমোদন-প্রবাহ)
+- [x] `NoticeStatus` enum — DRAFT · SUBMITTED · UNDER_REVIEW · APPROVED · SCHEDULED · PUBLISHED · EXPIRED · ARCHIVED · REJECTED · CANCELLED · SUSPENDED · RECALLED
+- [x] `NoticePriority` enum — LOW · NORMAL · IMPORTANT · HIGH · CRITICAL · EMERGENCY
+- [x] `NoticeService` — `draft()` · `submit()` · `approve()` · `reject()` · `publish()` · `schedule()` · `recall()` · `expire()` · `archive()` · `restore()`
+- [x] প্রতিটা অবস্থা-বদলের **বৈধ পথ** এক জায়গায় (যেমন ARCHIVED থেকে PUBLISHED-এ ফেরা যায় না)
+- [x] নম্বর সিরিজ `NTC` — `NumberSeriesProvisioner`-এ যোগ
+- [x] পরীক্ষা: অবৈধ অবস্থা-বদল ফিরিয়ে দেয়; **আর একটা বৈধটা যায়** (নাহলে "সব আটকায়" যন্ত্রও সবুজ)
+- [x] পরীক্ষা: প্রকাশিত নোটিশ `delete` করা যায় না
+
+## ধাপ ২ · কারা দেখবে — অডিয়েন্স ইঞ্জিন
+
+**লক্ষ্য:** কোম্পানি · শাখা · বিভাগ · পদ · রোল · ব্যক্তি ধরে লক্ষ্য করা।
+
+- [x] মাইগ্রেশন: `notice_audiences` — polymorphic (`audience_type`, `audience_id`), `notice_roles` এর জায়গায়
+- [x] পুরনো `notice_roles` সারিগুলো নতুন টেবিলে সরানো (ডেটা হারানো যাবে না)
+- [x] `NoticeAudience` — *"এই ইউজার এই নোটিশটা দেখবেন কি না"* একটাই উত্তর, একটাই জায়গা
+- [x] তালিকা ও একক পাতা দুইটাই ঐ একই উত্তর মানবে
+- [x] পরীক্ষা: **অন্য কোম্পানির** নোটিশ দেখা যায় না — সত্যিই একটা বানিয়ে
+- [x] পরীক্ষা: **অন্য শাখার** নোটিশ দেখা যায় না
+- [x] পরীক্ষা: লক্ষ্যের বাইরের ইউজার পান না, ভিতরের ইউজার পান (দুই দিকই)
+
+## ধাপ ৩ · নতুন নিচের বার
+
+**লক্ষ্য:** অগ্রাধিকার ধরে, একাধিক নোটিশ, ঘূর্ণন, Acknowledge।
+
+- [x] `StatusNotices` বারটা এখন `notices` থেকে টানবে, `system.notice` থেকে নয়
+- [x] কেবল **এখন সক্রিয় আর এই ইউজারের লক্ষ্যে** থাকা নোটিশ — পুরো টেবিল ব্রাউজারে নয়
+- [x] অগ্রাধিকারের ক্রম: EMERGENCY → CRITICAL → HIGH → IMPORTANT → NORMAL → LOW, তারপর প্রকাশের সময়
+- [x] সর্বোচ্চ কয়টা দেখাবে — নিয়ন্ত্রণ প্যানেলের সুইচ
+- [x] ঘূর্ণন, View Details, Dismiss
+- [x] CRITICAL-এ Dismiss বন্ধ করার সুইচ
+- [x] `system.notice`-এর পুরনো লেখাটা একটা নোটিশে রূপান্তর (মাইগ্রেশনে), তারপর `TickerNoticeController` তুলে দেওয়া
+- [x] পরীক্ষা: মেয়াদ পেরোনো নোটিশ বারে আসে না
+- [x] পরীক্ষা: অন্য কোম্পানির নোটিশ বারে আসে না
+- [x] পরীক্ষা: ক্রমটা সত্যিই অগ্রাধিকার ধরে — **দুইটা আলাদা অগ্রাধিকার দিয়ে**
+
+## ধাপ ৪ · Acknowledge, তাগাদা, এসকেলেশন
+
+**লক্ষ্য:** স্পেকের আসল মূল্য — কে পড়েছে আর কে মেনেছে, দুইটা আলাদা।
+
+- [x] মাইগ্রেশন: `notice_acknowledgements` — user · acknowledged_at · deadline
+- [x] নোটিশে `read_required` · `ack_required` · `ack_deadline`
+- [x] অবস্থা: Unread · Read · Acknowledged · Overdue · Escalated
+- [x] তাগাদার নিয়ম নিয়ন্ত্রণ প্যানেলে (২৪ ঘণ্টা → তাগাদা, ৪৮ → দ্বিতীয়, ৭২ → ম্যানেজারকে)
+- [x] Scheduler-এ তাগাদার কাজ
+- [x] পরীক্ষা: পড়া আর মেনে নেওয়া **এক নয়** — পড়ার পরেও Overdue হতে পারে
+- [x] পরীক্ষা: অন্যের Acknowledge বদলানো যায় না
+
+## ধাপ ৫ · সময় ধরে প্রকাশ ও মেয়াদ
+
+- [x] Scheduler-এ প্রকাশের কাজ, মেয়াদের কাজ
+- [x] ব্যর্থ কাজ আবার চেষ্টা, আর একবারের বেশি প্রকাশ না হওয়া (idempotency)
+- [x] পরীক্ষা: সময়ের আগে প্রকাশ হয় না, সময় হলে হয়
+- [x] পরীক্ষা: একই নোটিশ দুইবার প্রকাশ হয় না
+
+## ধাপ ৬ · অনুমোদন, Recall, সংস্করণ
+
+- [x] ক্যাটাগরি ও অগ্রাধিকার ধরে অনুমোদনের প্রবাহ — চলতি `ApprovalFlow` ধরে
+- [x] Segregation of duties: নিজের CRITICAL নোটিশ নিজে অনুমোদন নয় (সুইচে)
+- [x] `notice_versions` — প্রকাশের পর সম্পাদনা করলে নতুন সংস্করণ
+- [x] Recall ও Supersede
+- [x] পরীক্ষা: নিজের নোটিশ নিজে অনুমোদন আটকায়, **আর অন্যেরটা আটকায় না**
+- [x] পরীক্ষা: Recall করা নোটিশ বারে বা তালিকায় আর সক্রিয় নয়
+
+## ধাপ ৭ · টেমপ্লেট · চ্যানেল · বিশ্লেষণ · রিপোর্ট · API
+
+- [x] `notice_templates`
+- [x] চ্যানেল: বার · ড্যাশবোর্ড · নোটিফিকেশন সেন্টার · ইমেইল (প্রতিটা আলাদা সুইচ)
+- [x] ড্যাশবোর্ডের KPI ও উইজেট
+- [x] রিপোর্ট: রেজিস্টার · অনুমোদনের অপেক্ষা · Acknowledge · না-পড়া ইউজার · শাখাভিত্তিক
+- [x] `/api/v1/notices` — REST + workflow endpoints
+
+---
+
+## ⚠️ লেখা শেষ, পরীক্ষা বাকি — ২৪ সেপ্টেম্বর ২০২৬
+
+পাশের টিকগুলো **কোড লেখা হয়েছে** বোঝায়। যা সত্যিই মাপা হয়েছে আর
+যা হয়নি, সেটা নিচে — আর এই বিভাজনটাই সবচেয়ে জরুরি।
+
+### ✅ মেপে দেখা হয়েছে
+
+| | |
+|---|---|
+| মজুদ সমন্বয় — লটের দুই দিক | `TheCountingScreenMadeUnsellableStockTest` ৬/৬ সবুজ |
+| সীমানা — কোর কোনো মডিউলের নাম জানে না | grep-এ প্রতিটা নতুন ফাইল পরিষ্কার |
+| প্রতিটা ফাইলের সিন্ট্যাক্স | `php -l` |
+
+### ⛔ লেখা হয়েছে, কিন্তু **একবারও চালানো হয়নি**
+
+⚠️ এগুলোকে *"হয়ে গেছে"* বলা যাবে না — লেখা হওয়া আর চলা এক জিনিস নয়।
+
+- `ANoticeCouldJumpAnyStateItLikedTest` — ১০ দাবি
+- `ANoticeCouldOnlyBeAimedAtARoleTest` — ৮ দাবি
+- `TheBarShowedEverythingInNoParticularOrderTest` — ৬ দাবি
+- `ReadingANoticeCountedAsAgreeingToItTest` — ১২ দাবি
+- `TheCookedFoodWentInWithoutADateOnItTest` — ৩ দাবি
+- `NoDoorTakesALineWorthNothingTest` — ২০ দাবি (abos-41-এর চাওয়া)
+- `tests/Feature/Architecture` — ২৩৬টা পাহারা, নতুন কোডের উপর এখনো চলেনি
+
+### ⚠️ যে মিউটেশনগুলো এখনো বাকি
+
+ⓘ পরীক্ষা সবুজ হওয়া প্রমাণ নয় যে সে তাকায় — এই খাতায় আজই দুইটা
+ভুয়া সবুজ ধরা পড়েছে।
+
+- সমন্বয়ে `issue()` → `move()` — ঘাটতির দাবিটা লাল হয় কি না
+- `NoticeStatus::nextAllowed()` — একটা বৈধ পথ মুছে দেখা
+- `NoticeAudience::scopeVisibleTo()` — ছাঁকনি তুলে দেখা
+- `NoticePriority::rank()` — দুইটা সংখ্যা অদলবদল করে দেখা
+
+---
+
+## 🔒 যেসব সিদ্ধান্ত নেওয়া হয়ে গেছে — আবার জিজ্ঞেস করা নিষেধ
+
+| প্রশ্ন | উত্তর | কবে |
+|---|---|---|
+| মেনু কোথায় | System Administration-এর নিচে, নিজের সাব-মেনু | ২৩ সেপ্টেম্বর |
+| নিচের বার কি থাকবে | থাকবে, আর সেটাই মালিকের মূল চাওয়া | ২৩ সেপ্টেম্বর |
+| প্রকাশিত নোটিশ মোছা | যাবে না — Recall/Archive/Expire/Supersede | স্পেক ধারা ৪ |
+| নতুন মাস্টার | বানানো যাবে না | স্পেক ধারা ৩৫ |
+| AI নিজে প্রকাশ করবে কি | না, চূড়ান্ত সিদ্ধান্ত মানুষের | স্পেক ধারা ৪৪ |
+| ভাষা | বাংলা ও ইংরেজি, দুইটাই | চলতি নিয়ম |
+
+---
+
+## ❓ যা এখনো ঝুলে আছে — এই ফাইলের বাইরের কাজ
+
+- **রাউন্ডিং কোথায় বসবে** — বিলের নিজের ঘরে, নাকি চালান থেকে টানা?
+  উত্তর না পেলে বিলের **Net Payable** ধরা যাচ্ছে না।
+- **বিক্রয়ের পর্দায় লট বাছাই ও ফ্রির প্রাপ্য দেখানো** — হিসাব তৈরি
+  ([[FreeAllowance]]), কিন্তু পর্দায় সংখ্যাটা দেখা যায় না।

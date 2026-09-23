@@ -5,7 +5,11 @@ declare(strict_types=1);
 namespace App\Modules\SystemAdmin\Http\Controllers;
 
 use App\Core\Services\MenuBuilder;
+use App\Core\Services\NoticeAcknowledgement;
+use App\Core\Services\NoticeAnalytics;
+use App\Core\Services\NoticeAudience;
 use App\Core\Services\NoticeBoard;
+use App\Core\Services\NoticeLifecycle;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Models\Notice;
@@ -56,7 +60,14 @@ class NoticeController extends Controller
              * যেত না, অথচ *"কে পড়েছিল"* প্রশ্নটা ওঠে ঠিক তখনই।
              */
             'notices' => $mine
-                ? Notice::query()->with('author')->orderByDesc('id')->paginate(50)->withQueryString()
+                /*
+                 * ⓘ `audience`-ও সাথে — তালিকার প্রতিটা সারি ওটা পড়ে।
+                 *
+                 * ⚠️ ছাড়া পঞ্চাশ সারির পাতায় পঞ্চাশটা কোয়েরি হত — ⛔ আর
+                 * এই ভুলটা এই খাতায় আগেও ধরা পড়েছে (সরবরাহকারীর প্রদেয়)।
+                 */
+                ? Notice::query()->with(['author', 'audience'])
+                    ->orderByDesc('id')->paginate(50)->withQueryString()
                 : null,
 
             'mine' => $mine ? null : $this->board->forUser($user),
@@ -95,6 +106,16 @@ class NoticeController extends Controller
             'canManage' => $canManage,
 
             /*
+             * ⭐ এই মানুষটা এই নোটিশের সাথে কোথায় দাঁড়িয়ে।
+             *
+             * ⓘ পাতাটা এইমাত্র *পড়া* দাগ দিয়েছে, তাই উত্তরটা
+             * সাধারণত `read` বা `acknowledged` হবে। ⚠️ সংখ্যাটা
+             * [[NoticeAcknowledgement]] থেকে নেওয়া, এখানে গোনা নয় — ⓘ একই
+             * প্রশ্ন API আর হিসাবের পর্দাতেও লাগে।
+             */
+            'standing' => app(NoticeAcknowledgement::class)->standingOf($entry, $user),
+
+            /*
              * ⭐ কে পড়েছেন, কে পড়েননি — কেবল প্রশাসকের জন্য।
              *
              * ⚠️ সহকর্মী কে পড়েনি সেটা জানার কোনো কারণ নেই, আর ওটা
@@ -102,6 +123,111 @@ class NoticeController extends Controller
              */
             'readers' => $canManage ? $this->readers($entry) : null,
         ]);
+    }
+
+    /**
+     * ⛔ বার থেকে সরিয়ে দেওয়া — পড়া নয়।
+     *
+     * ── ⓘ যে চাবিটা লাগে না ────────────────────────────
+     * ⓘ নোটিশ লেখার চাবি (`notice.manage`) এখানে চাওয়া হয় না।
+     * ⚠️ সরানোটা পাঠকের কাজ, লেখকের নয় — আর সরালে কেবল
+     * **নিজের** পর্দা থেকে সরে।
+     *
+     * ⛔ আর যে নোটিশ এই মানুষটার দিকে তাক করা নয়, সেটা সরানোরও
+     * কিছু নেই — [[NoticeAudience]] সেই প্রশ্নটারও একমাত্র উত্তরদাতা।
+     */
+    public function dismiss(Request $request, int $notice): RedirectResponse
+    {
+        $entry = Notice::query()->findOrFail($notice);
+        $user = $request->user();
+
+        abort_unless(app(NoticeAudience::class)->reaches($entry, $user), 403);
+
+        $moved = app(NoticeBoard::class)->pushAside($entry, $user);
+
+        return back()->with($moved ? 'saved' : 'error', __($moved
+            ? 'core.notice.pushed_aside'
+            : 'core.notice.cannot_push_aside'));
+    }
+
+    /**
+     * ⭐ নোটিশের হিসাব — কতজন পড়েছেন, কতজন মেনেছেন।
+     *
+     * ⓘ সংখ্যাগুলো [[NoticeAnalytics]] থেকে, এই পর্দা নিজে গোনে না —
+     * ⚠️ একই সংখ্যা রিপোর্ট আর API-তেও লাগে, আর তিন জায়গায়
+     * তিনবার গুনলে একদিন তিনটা আলাদা উত্তর দেখাত।
+     */
+    public function analytics(Request $request): View
+    {
+        $numbers = app(NoticeAnalytics::class);
+
+        return view('system_admin::notice.analytics', [
+            'menu' => $this->menu->forUser($request->user()),
+            'byStatus' => $numbers->byStatus(),
+            'waiting' => $numbers->waitingOnSignatures(),
+            'numbers' => $numbers,
+        ]);
+    }
+
+    /**
+     * ⭐ সই দেওয়া — পড়া নয়।
+     *
+     * ── ⓘ কেন এখানেও লেখার চাবি লাগে না ──────────────────
+     * ⚠️ সই দেন পাঠক, লেখক নয় — আর লেখার চাবি চাইলে গুদামের
+     * কেউ কোনোদিন সই দিতে পারতেন না, অথচ নোটিশটা তাঁদের জন্যই।
+     *
+     * ⓘ পাহারাটা [[NoticeAcknowledgement]]-এ: লক্ষ্যের বাইরের কেউ
+     * সই দিতে পারেন না, আর যে নোটিশ সই চায় না তাতেও নয়।
+     */
+    public function sign(Request $request, int $notice): RedirectResponse
+    {
+        $entry = Notice::query()->findOrFail($notice);
+
+        app(NoticeAcknowledgement::class)->sign($entry, $request->user(), $request);
+
+        return back()->with('saved', __('core.notice.signed'));
+    }
+
+    /**
+     * ⛔ প্রকাশের পরে ফিরিয়ে নেওয়া — মোছা নয়।
+     *
+     * ── ⭐ মালিকের স্পেক, ধারা ২৬ ───────────────────────────
+     * *"Published Notice ভুল হলে Delete না করে Recall ব্যবহার করতে হবে"*।
+     *
+     * ⓘ কারণটা বাধ্যতামূলক, আর সেটা সেবায় বসানো — ⚠️ এখানে আবার
+     * লিখলে API বা সময়ের কাজ থেকে প্রত্যাহার করলে কারণ ছাড়াই
+     * হত।
+     */
+    public function recall(Request $request, int $notice): RedirectResponse
+    {
+        $entry = Notice::query()->findOrFail($notice);
+
+        app(NoticeLifecycle::class)->recall($entry, (string) $request->input('reason', ''));
+
+        return back()->with('saved', __('core.notice.recalled_done'));
+    }
+
+    /**
+     * সংরক্ষণাগারে তুলে রাখা — খোঁজা যায়, দেখা যায় না।
+     */
+    public function archive(Request $request, int $notice): RedirectResponse
+    {
+        app(NoticeLifecycle::class)->archive(Notice::query()->findOrFail($notice));
+
+        return back()->with('saved', __('core.notice.archived_done'));
+    }
+
+    /**
+     * ⭐ সংরক্ষণাগার থেকে ফিরিয়ে আনা — খসড়া হয়ে।
+     *
+     * ⓘ সরাসরি প্রকাশে ফেরার পথ নেই: ⛔ থাকলে দুই বছরের পুরনো
+     * একটা নোটিশ অনুমোদন ছাড়াই সবার চোখের সামনে চলে আসত।
+     */
+    public function restore(Request $request, int $notice): RedirectResponse
+    {
+        app(NoticeLifecycle::class)->restore(Notice::query()->findOrFail($notice));
+
+        return back()->with('saved', __('core.notice.restored_done'));
     }
 
     public function create(Request $request): View
@@ -130,20 +256,31 @@ class NoticeController extends Controller
     {
         $data = $this->validated($request);
 
-        $entry = DB::transaction(function () use ($data, $request) {
-            $notice = Notice::create([
-                'title' => $data['title'],
-                'body' => $data['body'] ?? null,
-                'starts_on' => $data['starts_on'] ?? null,
-                'ends_on' => $data['ends_on'] ?? null,
-                'is_active' => (bool) ($data['is_active'] ?? false),
-                'in_ticker' => (bool) ($data['in_ticker'] ?? false),
-                'created_by' => $request->user()?->id,
-            ]);
+        $entry = DB::transaction(function () use ($data) {
+            /*
+             * ⚠️ নোটিশটা [[NoticeLifecycle]] দিয়ে জন্মায়, `Notice::create()` দিয়ে নয়।
+             *
+             * ⓘ নম্বর (`NTC-…`) বসে, অবস্থা `DRAFT` হয়, আর অগ্রাধিকার দেখে
+             * বারে যাবে কি না ঠিক হয়। ⛔ সরাসরি বানালে তিনটাই এই পর্দায়
+             * আবার লিখতে হত, আর পরের পর্দায় আবার।
+             */
+            $life = app(NoticeLifecycle::class);
+
+            $notice = $life->draft($data);
 
             $this->setAudience($notice, $data['roles'] ?? []);
 
-            return $notice;
+            /*
+             * ⓘ পর্দা থেকে লেখা নোটিশ সাথে সাথেই প্রকাশিত হয়।
+             *
+             * ⚠️ এটা অনুমোদনের শর্ত এড়ানো নয়: ⓘ নিজের জরুরি নোটিশ
+             * নিজে অনুমোদন করা যায় না, আর সে পাহারাটা [[NoticeLifecycle]]-এ
+             * বসানো — এই পথেও সেটাই আটকাবে।
+             *
+             * ⛔ এখানে কিছু না করলে পুরনো পর্দার প্রতিটা নোটিশ খসড়া হয়ে
+             * পড়ে থাকত, আর কেউ বুঝতেন না কেন।
+             */
+            return $life->publish($life->approve($life->submit($notice)));
         });
 
         return redirect()
@@ -157,14 +294,21 @@ class NoticeController extends Controller
         $data = $this->validated($request);
 
         DB::transaction(function () use ($entry, $data) {
-            $entry->update([
-                'title' => $data['title'],
-                'body' => $data['body'] ?? null,
-                'starts_on' => $data['starts_on'] ?? null,
-                'ends_on' => $data['ends_on'] ?? null,
-                'is_active' => (bool) ($data['is_active'] ?? false),
-                'in_ticker' => (bool) ($data['in_ticker'] ?? false),
-            ]);
+            /*
+             * ⭐ প্রকাশিত নোটিশ বদলালে পুরনো লেখাটা রেখে দেওয়া হয়।
+             *
+             * ⓘ নোটিশটা ইতিমধ্যে মানুষ পড়েছে। ⛔ লেখাটা বদলে দিলে ছয়
+             * মাস পরে *"আমি এটা পড়িনি"* বলা মানুষটাকে দেখানোর মতো কিছু
+             * থাকত না।
+             *
+             * ⚠️ খসড়ায় সংস্করণ রাখা হয় না — ⓘ কেউ দেখেইনি, আর প্রতিটা
+             * টাইপের ভুল সংস্করণ হলে তালিকাটাই অপাঠ্য হত।
+             */
+            if ($entry->status?->isLive()) {
+                app(NoticeLifecycle::class)->reviseInPlace($entry, $data, $data['change_note'] ?? null);
+            } else {
+                $entry->update($data);
+            }
 
             $this->setAudience($entry, $data['roles'] ?? []);
         });
@@ -194,6 +338,18 @@ class NoticeController extends Controller
             'in_ticker' => ['nullable', 'boolean'],
             'roles' => ['array'],
             'roles.*' => ['string', 'max:125'],
+
+            /*
+             * ⓘ অগ্রাধিকার — ঐচ্ছিক, আর খালি হলে সাধারণ।
+             *
+             * ⚠️ বাধ্যতামূলক করলে পুরনো ফর্ম থেকে আসা প্রতিটা অনুরোধ
+             * ফিরে যেত — ⛔ আর ভুলটা দেখা যেত ডিপ্লয়ের পরে।
+             */
+            'priority' => ['nullable', 'string', 'max:16'],
+            'summary' => ['nullable', 'string', 'max:300'],
+            'ack_required' => ['nullable', 'boolean'],
+            'ack_deadline' => ['nullable', 'date'],
+            'change_note' => ['nullable', 'string', 'max:300'],
         ]);
     }
 
@@ -212,9 +368,25 @@ class NoticeController extends Controller
 
         $known = array_keys($this->roles());
 
-        foreach (array_unique(array_intersect($roles, $known)) as $role) {
+        $chosen = array_values(array_unique(array_intersect($roles, $known)));
+
+        foreach ($chosen as $role) {
             NoticeRole::create(['notice_id' => $notice->id, 'role' => $role]);
         }
+
+        /*
+         * ⭐ নতুন ঘরেও বসে — আর এই দুইবার লেখাটা অস্থায়ী।
+         *
+         * ⓘ পুরনো `notice_roles` এখনো কয়েক জায়গা পড়ে
+         * ([[Notice]]-এর `scopeForRoles`)। ⚠️ একই দিনে নতুন ঘর বসানো আর
+         * পুরনো পথ কাটা করলে কাটাটা ধরা পড়ত ডিপ্লয়ের পরে।
+         *
+         * ⓘ পুরনো পথটা তোলার দিনে এই লাইন দুইটাও যাবে।
+         */
+        app(NoticeAudience::class)->aimAt(
+            $notice,
+            array_map(fn (string $role) => 'role:'.$role, $chosen),
+        );
     }
 
     /**

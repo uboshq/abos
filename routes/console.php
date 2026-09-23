@@ -70,6 +70,34 @@ Schedule::command('abos:books-check')
         logger()->critical('বইয়ের যাচাই ভেঙেছে — হাতে দেখতে হবে।');
     });
 
+/*
+ * ⭐ দেরি হওয়া অনুমোদন — প্রতি ঘণ্টায়, ২৪ সেপ্টেম্বর ২০২৬।
+ *
+ * ⛔ এর আগে একটা অনুরোধ **চিরকাল** পড়ে থাকতে পারত — কেউ
+ * মনে করাত না, কারও কাছে যেত না।
+ *
+ * ⓘ ঘণ্টায়, মিনিটে নয়: সময়গুলো ঘণ্টায় মাপা (`sla_hours`),
+ * তাই মিনিটে চালানো মানে ষাটবার একই প্রশ্ন করে উনষাটবার "না" শোনা।
+ */
+Schedule::command('abos:approvals-due')
+    ->hourly()
+    ->withoutOverlapping();
+
+/*
+ * নোটিশের সময়ের কাজ — প্রকাশ, মেয়াদ, তাগাদা।
+ *
+ * ── ⚠️ কেন ঘণ্টায়, দিনে একবার নয় ────────────────────────
+ * ⓘ কেউ সকাল ১০টায় প্রকাশের সময় বসালে দিনে একবারের কাজ
+ * নোটিশটা পরদিন প্রকাশ করত। ⛔ ছুটির খবর ছুটির পরদিন এলে
+ * সেটা কোনো খবরই নয়।
+ *
+ * ⓘ একাধিকবার চলা নিরাপদ: তিনটা কাজের প্রতিটাই যা হয়ে গেছে
+ * তা আবার করে না ([[NoticeScheduler]])।
+ */
+Schedule::command('abos:notices-due')
+    ->hourly()
+    ->withoutOverlapping();
+
 Schedule::command('abos:backup-due')
     ->hourlyAt((int) explode(':', (string) config('abos.backup.daily_at'))[1])
     ->when(fn () => now()->format('H:i') >= (string) config('abos.backup.daily_at'))

@@ -6,6 +6,8 @@ use App\Core\Engines\Print\PrintFormat;
 use App\Core\Engines\Print\PrintProfile;
 use App\Core\Support\DateFormat;
 use App\Modules\SystemAdmin\Dashboard\SystemAdminDashboard;
+use App\Modules\SystemAdmin\Dashboard\NoticeWidgets;
+use App\Modules\SystemAdmin\Reports\NoticeReports;
 
 /**
  * System Administration — কোম্পানি, শাখা, ব্যবহারকারী, Control Panel।
@@ -54,6 +56,26 @@ return [
     'depends_on' => ['master_data'],
 
     'dashboard' => SystemAdminDashboard::class,
+
+    /*
+     * ⭐ এই মডিউলটা বন্ধ করা যায় না — মালিকের নির্দেশ, ২৪ সেপ্টেম্বর ২০২৬।
+     *
+     * *"সিস্টেম এডমিন বাই ডিফল্ট কোনোভাবে বন্ধ হবে না। একটা লক করে দিও।"*
+     *
+     * ── ⛔ কী ভাঙত ──────────────────────────────────────────────────
+     * কন্ট্রোল প্যানেলের প্রথম ট্যাবে প্রতিটা মডিউলের একটা সুইচ, আর
+     * এই মডিউলেরটাও। ⚠️ ওটা বন্ধ করে সংরক্ষণ করলে
+     * [[RefuseSwitchedOffScreens]] `system_admin.` উপসর্গের **সব**
+     * রুটে ৪০৪ দিত — আর কন্ট্রোল প্যানেল নিজেই ঐ উপসর্গের ভিতরে।
+     *
+     * ⓘ অর্থাৎ দরজাটা ভিতর থেকে বন্ধ হয়ে যেত, চাবিসহ: ইউজার, রোল,
+     * কোম্পানি, সেটিংস — ফেরার কোনো পথ নেই, ডাটাবেসে হাত না দিয়ে।
+     *
+     * ⚠️ এটা কেবল **গোটা মডিউলের** সুইচ আটকায়। ⓘ ভিতরের পর্দাগুলো
+     * (নোটিশ, রিপোর্টের সময়সূচি…) আগের মতোই বন্ধ করা যায় — কারণটা
+     * [[ModuleDefinition::$essential]]-এ।
+     */
+    'essential' => true,
 
     'menu' => [
         'dashboard' => [
@@ -106,6 +128,12 @@ return [
          * বাসি ছিল, কেউ টের পায়নি।
          */
         'reports' => [
+            /* নোটিশের দুইটা রিপোর্ট — স্পেক, ধারা ২৯ */
+            ['label' => 'core.notice.report_register', 'icon' => 'list', 'route' => 'system_admin.report.show',
+                'route_params' => ['slug' => 'notice-register'], 'permission' => 'system_admin.notice.analytics'],
+            ['label' => 'core.notice.report_signatures', 'icon' => 'check_circle', 'route' => 'system_admin.report.show',
+                'route_params' => ['slug' => 'notice-signatures'], 'permission' => 'system_admin.notice.analytics'],
+
             ['label' => 'system_admin::menu.report_schedules', 'icon' => 'calendar', 'route' => 'system_admin.reports.schedule.index',
                 'permission' => 'system_admin.reports.schedule'],
         ],
@@ -136,7 +164,41 @@ return [
              * ⓘ বাকিরা নোটিশে পৌঁছান নিচের চলন্ত বারের লিংক থেকে —
              * যেখানে নোটিশটা এমনিতেই তাঁদের চোখের সামনে ঘুরছে।
              */
+            /*
+             * নিচের বারের নোটিশ — বোর্ডের পাশে, আর সেটা ইচ্ছাকৃত।
+             *
+             * ⓘ দুইটাই বার্তা, কিন্তু আকার আলাদা: বোর্ডে নোটিশের
+             * নিজের কাগজ — লেখক, তারিখ, কারা দেখবেন, কে পড়েছেন।
+             * ⚠️ এটা একটা লাইন, সবার নিচে, সবসময় — ঘোষণা নয়,
+             * দেয়ালে সাঁটা কাগজ।
+             */
+
             ['label' => 'system_admin::notice.title', 'icon' => 'bell', 'route' => 'system_admin.notice.index',
+                'permission' => 'system_admin.notice.manage'],
+
+            /*
+             * নোটিশের হিসাব — কতজন পড়েছেন, কতজন মেনেছেন।
+             *
+             * ⓘ নিজের চাবি, কারণ সংখ্যাগুলো কর্মীদের নাম ধরে বলে
+             * *"কে এখনো মানেননি"* — ⚠️ ওটা সবার দেখার জিনিস নয়।
+             */
+            ['label' => 'core.notice.analytics_title', 'icon' => 'reports', 'route' => 'system_admin.notice.analytics',
+                'permission' => 'system_admin.notice.analytics'],
+            /*
+             * নোটিশ সেন্টারের তিনটা দরজা — স্পেক, ধারা ২।
+             *
+             * ⓘ স্পেকে ষোলটা সাব-মেনুর কথা লেখা, কিন্তু তার বেশিরভাগই
+             * একটাই তালিকার **ছাঁকনি** — খসড়া, অনুমোদনের অপেক্ষা,
+             * নির্ধারিত, প্রকাশিত, মেয়াদ শেষ, সংরক্ষণাগার।
+             *
+             * ⛔ প্রতিটাকে নিজের মেনু দিলে সাতটা মেনু একই পর্দায় যেত,
+             * কেবল আলাদা ছাঁকনিতে — ⚠️ আর মেনুর লম্বা তালিকাই মানুষকে
+             * মেনু পড়া বন্ধ করে দেয়।
+             *
+             * ⭐ তাই ছাঁকনিগুলো তালিকার ভিতরে, আর মেনুতে তিনটা সত্যিকারের
+             * আলাদা কাজ: বোর্ড, হিসাব, আর ছাঁচ।
+             */
+            ['label' => 'core.notice.templates_title', 'icon' => 'book', 'route' => 'system_admin.notice.template.index',
                 'permission' => 'system_admin.notice.manage'],
 
             /*
@@ -242,6 +304,21 @@ return [
          * লেখা। ⓘ কে কোনটা দেখবেন সেটা ঠিক করে **ভূমিকা**
          * ([[NoticeBoard::forUser()]]), অনুমতি নয়।
          */
+        /*
+         * নোটিশের চাবিগুলো ভাগ করা — স্পেক, ধারা ১৬।
+         *
+         * ⚠️ একটা `manage` চাবিতে সব থাকলে যিনি খসড়া লেখেন তিনি
+         * নিজেই প্রকাশ আর প্রত্যাহারও করতে পারতেন — ⛔ আর তখন
+         * অনুমোদনের ধাপটা কেবল একটা বোতাম, পাহারা নয়।
+         *
+         * ⓘ পুরনো `manage` চাবিটা **রয়ে গেল** — লাইভে ভূমিকার সাথে
+         * ওটা বাঁধা, আর একই দিনে চাবি ভাগ করা আর পুরনোটা কাড়া করলে
+         * পরদিন কেউ নোটিশের পর্দায় ঢুকতেই পারতেন না।
+         */
+        'system_admin.notice.approve',
+        'system_admin.notice.publish',
+        'system_admin.notice.recall',
+        'system_admin.notice.analytics',
         'system_admin.notice.manage',
         'system_admin.role.manage',
         'system_admin.settings.manage',
@@ -316,7 +393,38 @@ return [
         ],
     ],
 
-    'doc_types' => [],
+    /*
+     * হোম পর্দায় নোটিশের দুইটা সংখ্যা — স্পেক, ধারা ৫।
+     *
+     * ⓘ দশটা KPI কার্ডের কথা লেখা, আর সবগুলোর জায়গা নোটিশের
+     * নিজের হিসাবের পর্দায়। ⛔ হোম পর্দায় দশটা বসালে বাকি মডিউলের
+     * সংখ্যাগুলো চাপা পড়ত, আর হোম পর্দাটাই একটা রিপোর্ট হয়ে যেত।
+     */
+    /*
+     * নোটিশের দুইটা রিপোর্ট — স্পেক, ধারা ২৯।
+     *
+     * ⓘ এগারোটা নাম লেখা, কিন্তু তার আটটা একই তালিকার ছাঁকনি।
+     * ⛔ প্রতিটার জন্য আলাদা রিপোর্ট লিখলে আটটা প্রায়-একই ফাইল
+     * হত, আর একদিন একটায় কলাম যোগ হত অন্যটায় নয়।
+     */
+    'reports' => [
+        NoticeReports::class,
+    ],
+
+    'widgets' => [
+        NoticeWidgets::class,
+    ],
+
+    'doc_types' => [
+        /*
+         * নোটিশের নিজের নম্বর — NTC-2026-2027-0001।
+         *
+         * ⓘ নম্বরটা খসড়া বানানোর সময়েই বসে, প্রকাশের সময় নয়।
+         * ⚠️ প্রকাশে বসালে অনুমোদনের আলোচনায় নোটিশটাকে নাম ধরে
+         * ডাকা যেত না, অথচ আলোচনাটা হয় ঠিক তখনই।
+         */
+        'NTC' => 'core.notice.doc_type',
+    ],
 
     'drill_sources' => [],
 
@@ -433,22 +541,77 @@ return [
             'default' => 15,
             'group' => 'general',
         ],
+        /*
+         * নিজের জরুরি নোটিশ নিজে অনুমোদন নয় — স্পেক, ধারা ১৭।
+         *
+         * ⚠️ এক-মানুষের অফিসে এটা বন্ধ রাখতেই হবে — ⓘ সেখানে
+         * লেখক আর অনুমোদক একই মানুষ, আর নিয়মটা চালু রাখলে
+         * কোনো জরুরি নোটিশই বেরোত না।
+         */
         [
-            /*
-             * প্রতিষ্ঠানের নিজের নোটিশ — নিচের বারে সবার চোখে পড়ে।
-             *
-             * যেমন: "ওভার ডিউ আছে ও যাদের লেনদেন খারাপ তাদের বাকি দেওয়া
-             * নিষেধ"। এটা সিস্টেমের কোনো অবস্থা নয়, প্রতিষ্ঠানের সিদ্ধান্ত —
-             * তাই এটা লেখার জায়গা সেটিংস, আর দেখার জায়গা প্রতিটা পাতা।
-             *
-             * এখানে রাখা হয়েছে বারের ভেতরে সম্পাদনার বোতাম বসানোর বদলে:
-             * সেটিংস এক জায়গায় থাকে, chrome-এর ভেতরে নয়।
-             */
-            'key' => 'system.notice',
-            'label' => 'system_admin::settings.notice',
-            'type' => 'string',
-            'default' => '',
+            'key' => 'notice.creator_cannot_approve',
+            'label' => 'system_admin::settings.notice_creator_cannot_approve',
+            'type' => 'boolean',
+            'default' => true,
             'group' => 'general',
         ],
+
+        /*
+         * তাগাদার তিন ধাপ — মালিকের স্পেক, ধারা ১৯।
+         *
+         * ⓘ ২৪ ঘণ্টা → তাগাদা, ৪৮ → দ্বিতীয়, ৭২ → উপরে জানানো।
+         * ⚠️ তিনটাই সুইচে, কারণ একটা কারখানার ২৪ ঘণ্টা আর একটা
+         * ডিপোর ২৪ ঘণ্টা এক জিনিস নয় — ডিপো শুক্রবার বন্ধ।
+         */
+        [
+            'key' => 'notice.remind_after_hours',
+            'label' => 'system_admin::settings.notice_remind_after',
+            'type' => 'integer',
+            'default' => 24,
+            'group' => 'general',
+        ],
+        [
+            'key' => 'notice.remind_again_hours',
+            'label' => 'system_admin::settings.notice_remind_again',
+            'type' => 'integer',
+            'default' => 48,
+            'group' => 'general',
+        ],
+        [
+            'key' => 'notice.escalate_after_hours',
+            'label' => 'system_admin::settings.notice_escalate_after',
+            'type' => 'integer',
+            'default' => 72,
+            'group' => 'general',
+        ],
+
+        /*
+         * বারে একসাথে কয়টা নোটিশ ধরবে — ২৩ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ একটা অফিসে যেকোনো দিন পাঁচ-ছয়টা নোটিশ সক্রিয় থাকে।
+         * ⛔ সবগুলো একসাথে দিলে জরুরি কথাটা ভিড়ে হারায়, আর তখন
+         * বারটা মানুষ পড়াই বন্ধ করে দেয় — আর ঠিক সেদিনই আগুন
+         * লাগার নোটিশটা ওখানে থাকে।
+         */
+        [
+            'key' => 'notice.bar_max',
+            'label' => 'system_admin::settings.notice_bar_max',
+            'type' => 'integer',
+            'default' => 3,
+            'group' => 'general',
+        ],
+
+        /*
+         * ⓘ `system.notice` এই তালিকায় আর নেই — ২৩ সেপ্টেম্বর ২০২৬।
+         *
+         * ⭐ মালিক বললেন *"etar jonno alada menu koro"*, আর ঘরটা
+         * [[TickerNoticeController]]-এ গেছে — নিজের পর্দা, নিজের মেনু।
+         *
+         * ⚠️ কী-টা বদলায়নি, তাই লাইভে সেভ করা লেখাটা যেমন
+         * ছিল তেমনই থাকবে আর নতুন পর্দায় দেখাবে।
+         *
+         * ⛔ দুই জায়গায় রাখলে একই মান দুই পর্দায় সম্পাদনা করা
+         * যেত, আর কেউ একটা বদলে অন্যটা খুঁজত।
+         */
     ],
 ];

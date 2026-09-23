@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\MeController;
+use App\Http\Controllers\Api\NoticeApiController;
 use App\Http\Controllers\Api\SyncController;
 use App\Http\Middleware\ResolveCompanyContext;
 use Illuminate\Support\Facades\Route;
@@ -99,6 +100,23 @@ Route::prefix('v1')
     ])
     ->name('api.')
     ->group(function (): void {
+        /*
+         * নোটিশ — পড়া, মেনে নেওয়া, আর বারের তালিকা।
+         *
+         * ── ⚠️ কেন এখানে কোনো `can:` চাবি নেই ──────────────
+         * ⓘ এই দরজাগুলো ব্যবসার ডেটা দেয় না — দেয় **তাঁর নিজের
+         * নোটিশ**। ⛔ চাবি চাইলে ডিলার বা সরবরাহকারী — যাঁদের
+         * কর্মীর চাবি নেই — নিজেদের নোটিশও পড়তে পারতেন না।
+         *
+         * ⓘ ছাঁকনিটা এক ধাপ ভেতরে — [[NoticeAudience]], আর সেটাই
+         * পর্দা, বার আর API তিনটার একমাত্র উত্তরদাতা।
+         */
+        Route::get('/notices', [NoticeApiController::class, 'index'])->name('notices.index');
+        Route::get('/notices/bar', [NoticeApiController::class, 'bar'])->name('notices.bar');
+        Route::post('/notices/{notice}/read', [NoticeApiController::class, 'read'])->name('notices.read');
+        Route::post('/notices/{notice}/acknowledge', [NoticeApiController::class, 'acknowledge'])
+            ->name('notices.acknowledge');
+
         /*
          * "আমি কে, আর আমি কী দেখব" — অ্যাপের প্রথম প্রশ্ন।
          *

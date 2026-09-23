@@ -38,6 +38,77 @@
                      তারপর লাইন ভাঙা। ⛔ উল্টো ক্রমে `<br>`-ও পালাত। --}}
                 <div class="whitespace-pre-line text-sm">{{ $notice->body }}</div>
             </div>
+
+            {{--
+                সইয়ের বোতাম — কেবল যে নোটিশ সই চায়।
+
+                ⓘ পড়া আর সই এক নয়। পাতাটা খোলামাত্র *পড়া* দাগ পড়ে
+                যায়; সই দিতে মানুষকে এই বোতামে চাপতে হয়।
+
+                ⚠️ এই ফর্কটাই পুরো ব্যবস্থাটার মূল্য: ⛔ এক ঘরে রাখলে
+                *"নতুন নীতিমালা কে মেনেছেন"* প্রশ্নের উত্তর হত *"পাতাটা কে
+                খুলেছেন"*।
+            --}}
+            {{--
+                প্রত্যাহার · সংরক্ষণাগার · ফেরত — মোছার বদলে তিনটা পথ।
+
+                ⛔ এখানে কোনো "মুছুন" বোতাম নেই, আর সেটা ইচ্ছাকৃত: প্রকাশিত
+                নোটিশ মানুষ পড়ে ফেলেছে। ⓘ মুছলে খাতা বলত কথাটা কেউ
+                জানে না, অথচ গোটা অফিস জানে।
+
+                ⚠️ প্রত্যাহারে কারণ বাধ্যতামূলক — ছয় মাস পরে *"ওটা কেন তুলে
+                নেওয়া হলো"* প্রশ্নের এই লেখাটাই একমাত্র উত্তর।
+            --}}
+            @if ($canManage && $notice->status)
+                <div data-boxed
+                     class="rounded-(--radius-card) border border-(--color-border)
+                            bg-(--color-surface-card) p-4">
+
+                    @if ($notice->status->isLive())
+                        <form method="POST" action="{{ route('system_admin.notice.recall', $notice->id) }}"
+                              class="space-y-2">
+                            @csrf
+                            <x-ui.field name="reason" :label="__('core.notice.why_label')" required maxlength="300" />
+                            <x-ui.button type="submit">{{ __('core.notice.recall_action') }}</x-ui.button>
+                        </form>
+                    @endif
+
+                    @if ($notice->status->canBecome(\App\Core\Support\NoticeStatus::ARCHIVED))
+                        <form method="POST" action="{{ route('system_admin.notice.archive', $notice->id) }}"
+                              class="mt-2">
+                            @csrf
+                            <x-ui.button type="submit">{{ __('core.notice.archive_action') }}</x-ui.button>
+                        </form>
+                    @endif
+
+                    @if ($notice->status === \App\Core\Support\NoticeStatus::ARCHIVED)
+                        <form method="POST" action="{{ route('system_admin.notice.restore', $notice->id) }}">
+                            @csrf
+                            <x-ui.button type="submit">{{ __('core.notice.restore_action') }}</x-ui.button>
+                        </form>
+                    @endif
+                </div>
+            @endif
+
+            @if ($notice->ack_required)
+                <div data-boxed
+                     class="rounded-(--radius-card) border border-(--color-border)
+                            bg-(--color-surface-card) p-4">
+                    <div class="mb-2 flex items-center gap-2 text-sm">
+                        <span class="text-(--color-ink-muted)">{{ __('core.notice.your_standing') }}</span>
+                        <span class="font-medium">{{ $standing->label() }}</span>
+                    </div>
+
+                    @if ($standing->stillOwes())
+                        <form method="POST" action="{{ route('system_admin.notice.sign', $notice->id) }}">
+                            @csrf
+                            <x-ui.button type="submit" tone="primary">
+                                {{ __('core.notice.sign_it') }}
+                            </x-ui.button>
+                        </form>
+                    @endif
+                </div>
+            @endif
         </div>
 
         <div class="space-y-4">

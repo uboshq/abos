@@ -113,6 +113,16 @@ final class StatusNotices
                 $this->approvalNotice(),
                 $this->draftNotice(),
                 $this->transferNotice(),
+
+                /*
+                 * ⭐ মেয়াদ ফুরিয়ে আসছে — ২৪ সেপ্টেম্বর ২০২৬।
+                 *
+                 * ⓘ খসড়া বা ঝুলে থাকা কাগজের পরে, কারণ ওগুলো **আজকের
+                 * কাজ**। ⚠️ মেয়াদ কালকের ক্ষতি, কিন্তু ক্ষতিটা বড়:
+                 * খসড়া কাগজ কাল পোস্ট করা যায়, মেয়াদ পেরোনো মাল কাল
+                 * আর ফেরত পাঠানো যায় না।
+                 */
+                $this->expiryNotice(),
                 // প্রতিষ্ঠানের নিজের নোটিশ সবার শেষে, কিন্তু বারে সবচেয়ে
                 // বেশি জায়গা নেয় — ওটা নিয়ম, ক্ষণিকের অবস্থা নয়, তাই
                 // সিস্টেমের সতর্কতাগুলো আগে চোখে পড়া উচিত
@@ -242,6 +252,16 @@ final class StatusNotices
         return app(NoticeBoard::class)->forTicker($user)
             ->map(fn (Notice $notice): array => [
                 'text' => (string) $notice->title,
+
+                /*
+                 * ⓘ id আর সরানো যায় কি না — বারের ক্রসটার জন্য।
+                 *
+                 * ⚠️ যন্ত্রের বার্তাগুলোতে এই দুইটা ঘর থাকে না, আর সেটাই
+                 * ঠিক: ⛔ ব্যাকআপ হয়নি বলে সতর্কতা সরানো গেলে সমস্যাটা
+                 * সরত না, কেবল খবরটা সরত।
+                 */
+                'id' => $notice->id,
+                'can_dismiss' => $notice->priority?->canBeDismissed() ?? true,
 
                 /*
                  * ⓘ ক্লিক করলে পুরো নোটিশটা — নিয়ম ১। ⚠️ শিরোনামটা
@@ -389,6 +409,105 @@ final class StatusNotices
     /**
      * @return array{text: string, url: ?string, tone: string}|null
      */
+    /**
+     * ⭐ যত লটের মেয়াদ ফুরিয়ে আসছে — ২৪ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⛔ রিপোর্টটা ছিল, তবু মাল নষ্ট হত ─────────────────────────────
+     * মেয়াদের রিপোর্ট (`inventory.expiring`) আগে থেকেই আছে, দিন-গোনা
+     * সহ। ⚠️ কিন্তু **কেউ ওটা নিজে থেকে খোলে না** — খোলে তখনই, যখন
+     * কেউ বলে খুলতে। ⓘ ফল: রিপোর্টটা নিখুঁতভাবে জানাত মাল মেয়াদ
+     * পেরিয়ে গেছে, আর ফেরত পাঠানোর সময়টা ততক্ষণে চলে গেছে।
+     *
+     * ⭐ এটা ঠিক সেই **অনুপস্থিত জোড়া**: হিসাবটা ছিল, খবরটা যেত না।
+     *
+     * ── ⚠️ দিনের সংখ্যাটা প্রতিষ্ঠানের, কোডের নয় ──────────────────────
+     * ৯০ দিন ওষুধে ঠিক, ⛔ দুধে অর্থহীন। ⓘ তাই `expiry_alert_days`
+     * সেটিং থেকে, আর শূন্য মানে সতর্কতা বন্ধ।
+     *
+     * ── ⛔ আর তারিখটা অ্যাপের ঘড়ি ধরে, ডাটাবেজের নয় ──────────────────
+     * ⚠️ `CURDATE()` উত্তর দেয় **ডাটাবেজ সার্ভারের** ঘড়ি ধরে। ⓘ ২৫
+     * আগস্ট ২০২৬-এ লাইভে দুইটা সত্যিই আলাদা ছিল, আর মেয়াদের হিসাবে
+     * এক দিনের ভুল মানে ফেরত পাঠানোর সুযোগ হাতছাড়া। ⭐ একই কারণ
+     * মেয়াদের রিপোর্টের গায়েও লেখা আছে।
+     *
+     * @return array{text: string, url: ?string, tone: string}|null
+     */
+    private function expiryNotice(): ?array
+    {
+        if (! Schema::hasTable('inv_batches') || ! Schema::hasTable('inv_stock_movements')) {
+            return null;
+        }
+
+        $days = (int) app(SettingsService::class)->get('inventory.expiry_alert_days', 0);
+
+        if ($days <= 0) {
+            return null;
+        }
+
+        $today = Carbon::today();
+
+        /*
+         * ⛔ শূন্য বা ঋণাত্মক লট বাদ — তালিকাটা কাজের জিনিস, ইতিহাস নয়।
+         *
+         * ⚠️ এটা না থাকলে গত বছরের ফুরিয়ে যাওয়া প্রতিটা লট গোনা হত,
+         * আর সংখ্যাটা এত বড় হত যে কেউ আর পড়ত না।
+         */
+        $count = DB::table('inv_batches as b')
+            ->leftJoin('inv_stock_movements as m', 'm.batch_id', '=', 'b.id')
+            ->where('b.company_id', CompanyContext::id())
+            ->whereNull('b.deleted_at')
+            ->whereNotNull('b.expiry_date')
+            ->whereDate('b.expiry_date', '<=', $today->copy()->addDays($days)->toDateString())
+            ->groupBy('b.id')
+            ->havingRaw('COALESCE(SUM(m.floor_change), 0) > 0')
+
+            /*
+             * ⛔ কেবল যে কলামটা ধরে ভাগ করা হয়েছে — `select *` নয়।
+             *
+             * ── ⚠️ এটা প্রথম চেষ্টায় ভুল ছিল, আর মেপে ধরা পড়েছে ───────
+             * ⓘ ডিফল্টে বিল্ডার `select *` পাঠায়, আর `group by b.id`-র
+             * সাথে সেটা `ONLY_FULL_GROUP_BY`-তে ৫০০ দেয়:
+             * *"Expression #15 of SELECT list is not in GROUP BY
+             * clause"*। ⛔ লাইভ MySQL-এ ওই মোডটা চালু, তাই গোটা
+             * অ্যাপের **প্রতিটা পাতা** ভাঙত — নিচের বারটা সব পাতায় বসে।
+             *
+             * ⚠️ গুনতিটা এখানেই হয়, `count()` কোয়েরি দিয়ে নয়: ⓘ
+             * `having` সহ গুনতে গেলে বিল্ডার ভিতরের কোয়েরিটাকে
+             * সাব-কোয়েরি বানায়, আর তাতে একই মোডে আবার ফাঁদ।
+             */
+            ->select('b.id')
+            ->get()
+            ->count();
+
+        if ($count === 0) {
+            return null;
+        }
+
+        return [
+            'text' => trans_choice('core.notice.expiring_batches', $count, [
+                'count' => $count,
+                'days' => $days,
+            ]),
+
+            /*
+             * ⓘ রিপোর্টটা আগে থেকেই আছে, তাই নতুন কোনো পর্দা নয় —
+             * ⚠️ বার্তাটা কেবল মানুষকে ওখানে **নিয়ে যায়**, আর সেটাই
+             * এতদিন অনুপস্থিত ছিল।
+             */
+            'url' => Route::has('inventory.report.show')
+                ? route('inventory.report.show', ['slug' => 'expiring'])
+                : null,
+
+            /*
+             * ⚠️ `warning`, `danger` নয়। ⓘ মাল এখনো নষ্ট হয়নি — এটা
+             * এখনো কিছু করার মতো সময় থাকার খবর। ⛔ লাল করলে ওটা
+             * ব্যাকআপ-নেই বার্তার সমান জরুরি দেখাত, আর তখন দুইটাই
+             * উপেক্ষিত হত।
+             */
+            'tone' => 'warning',
+        ];
+    }
+
     private function transferNotice(): ?array
     {
         if (! Schema::hasTable('money_transfers')) {

@@ -43,6 +43,13 @@
                     <thead>
                         <tr class="border-b border-(--color-border)">
                             <th class="text-start">{{ __('system_admin::notice.field_title') }}</th>
+                            {{-- অবস্থা আর অগ্রাধিকার — ২৪ সেপ্টেম্বর ২০২৬।
+
+                                 ⓘ আগে তালিকায় কেবল শিরোনাম আর সময় ছিল। ⛔ খসড়া,
+                                 অনুমোদনের অপেক্ষা আর প্রকাশিত নোটিশ তাতে একই রকম
+                                 দেখাত, আর কেউ বলতে পারত না কোনটা সত্যিই বেরিয়েছে। --}}
+                            <th class="text-start">{{ __('core.table.status') }}</th>
+                            <th class="text-start">{{ __('core.notice.priority_label') }}</th>
                             <th class="text-start">{{ __('system_admin::notice.roles') }}</th>
                             <th class="text-start">{{ __('system_admin::notice.period') }}</th>
                             <th class="text-end"><span class="sr-only">{{ __('core.action.view') }}</span></th>
@@ -73,6 +80,22 @@
                                             {{ __('system_admin::notice.off') }}
                                         </span>
                                     @endif
+                                </td>
+
+                                <td data-label="{{ __('core.table.status') }}">
+                                    @if ($row->status)
+                                        <span class="rounded-(--radius-badge) px-2 py-0.5 text-2xs
+                                                     {{ $row->status->isLive()
+                                                         ? 'bg-(--color-badge-success-bg) text-(--color-badge-success-ink)'
+                                                         : 'bg-(--color-badge-draft-bg) text-(--color-badge-draft-ink)' }}">
+                                            {{ $row->status->label() }}
+                                        </span>
+                                    @endif
+                                </td>
+
+                                <td class="text-(--color-ink-muted)"
+                                    data-label="{{ __('core.notice.priority_label') }}">
+                                    {{ $row->priority?->label() }}
                                 </td>
 
                                 <td class="text-(--color-ink-muted)"
