@@ -38,6 +38,14 @@
         </div>
     @endif
 
+    {{--
+        ⓘ উপরের ঘরগুলো — নম্বর, তারিখ, পক্ষ, শাখা।
+
+        ⚠️ বন্ধ করা যায়, কিন্তু তাতে কাগজটার নম্বরও যায় —
+        মালিক চায়লে পারবেন, কারণ কেউ কেউ উপরের ঘরগুলো
+        ছাপা কাগজে হাতে লেখেন।
+    --}}
+    @if ($profile->shows('meta'))
     <table class="meta">
         <tr>
             <td class="label" style="width: 22mm">{{ __('core.print.document_no') }}</td>
@@ -69,6 +77,7 @@
             </tr>
         @endif
     </table>
+    @endif
 
     <table class="lines">
         <thead>
@@ -108,6 +117,7 @@
         </tbody>
     </table>
 
+    @if ($profile->shows('totals'))
     <table class="totals">
         <tr class="grand">
             <td>{{ __('core.print.total') }}</td>
@@ -115,20 +125,34 @@
             <td class="num" style="width: {{ $thermal ? '16mm' : '28mm' }}">{{ $voucher['total_credit'] }}</td>
         </tr>
     </table>
+    @endif
 
-    @if (! empty($voucher['amount_in_words']))
+    @if ($profile->shows('words') && ! empty($voucher['amount_in_words']))
         <div class="words">
             <strong>{{ __('core.print.in_words') }}:</strong> {{ $voucher['amount_in_words'] }}
         </div>
     @endif
 
-    @if (! empty($voucher['narration']))
+    @if ($profile->shows('narration') && ! empty($voucher['narration']))
         <div class="words">
             <strong>{{ __('core.table.narration') }}:</strong> {{ $voucher['narration'] }}
         </div>
     @endif
 
-    @if ($settings->get('accounts.print_signature_lines', true))
+    {{--
+        ⚠️ দুইটা সুইচ, আর দুইটাই মানা হয় — ২৩ সেপ্টেম্বর ২০২৬।
+
+        সইয়ের ঘর বন্ধ করার একটা পুরনো সেটিং আগে থেকেই ছিল
+        (`accounts.print_signature_lines`), আর কেউ ওটা বন্ধ করে
+        রেখে থাকতে পারেন। ⛔ কেবল নতুন সুইচটা মানলে তাঁর
+        কাগজে সইয়ের ঘর **নিজে থেকে ফিরে আসত**, আর কেন তিনি
+        বুঝতেন না।
+
+        ⓘ তাই দুইটাই হ্যাঁ বললে তবেই ছাপা হয়। পুরনো সেটিংটা
+        একদিন তুলে দেওয়া যাবে, কিন্তু সেটা আলাদা একটা
+        সিদ্ধান্ত, আর মালিকের।
+    --}}
+    @if ($profile->shows('signatures') && $settings->get('accounts.print_signature_lines', true))
         {{--
             সইয়ের ঘরগুলো কন্ট্রোলারের ঠিক করা, এখানকার নয়।
 

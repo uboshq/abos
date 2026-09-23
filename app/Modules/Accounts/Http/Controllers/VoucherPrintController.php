@@ -96,6 +96,16 @@ class VoucherPrintController extends Controller implements HasMiddleware
             paper: $paper,
 
             watermark: $this->watermarkFor($voucher),
+
+            /*
+             * ⭐ এই কাগজটা এখন সুইচের আওতায় — ২৩ সেপ্টেম্বর ২০২৬।
+             *
+             * ⚠️ এটা না দিলে [[PrintProfile::everything()]] চলত — সব
+             * অংশ চালু, কোনো সেটিং পড়া হয় না। ⓘ ফলে মালিক
+             * ভাউচারের সুইচ বদলে সেভ করতেন, আর কাগজে কিছুই
+             * বদলাত না — সুইচগুলো আঁকা হত, কিন্তু দরজাটা বন্ধ।
+             */
+            profile: 'voucher',
         );
 
         /*

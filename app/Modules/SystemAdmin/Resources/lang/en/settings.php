@@ -16,6 +16,7 @@ return [
         'challan' => 'Delivery challan',
         'order' => 'Sales order',
         'receipt' => 'Collection receipt',
+        'voucher' => 'Voucher (receipt, payment, expense, journal)',
     ],
     'print_pick_format' => 'Pick a ready-made format',
     'print_pick_format_note' => 'Picking one fills the switches below; each can then be changed on its own.',

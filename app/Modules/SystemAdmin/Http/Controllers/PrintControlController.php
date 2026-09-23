@@ -68,6 +68,15 @@ class PrintControlController extends Controller implements HasMiddleware
                 'parts' => $profile->parts(),
 
                 /*
+                 * ⛔ এই কাগজে যেগুলো সত্যি আঁকা যায় — `PARTS` নয়।
+                 *
+                 * ⓘ ভাউচার `document-body` বাড়ায় না, তাই ব্যান্ড আর
+                 * আদায়ের ছক ওখানে নেই। ⚠️ সুইচ দুইটা দেখালে মালিক
+                 * ওগুলো বদলে দেখতেন কিছুই হয় না।
+                 */
+                'allParts' => PrintProfile::partsFor($target),
+
+                /*
                  * ⓘ চালু কলামগুলো মালিকের ক্রমে, তারপর বন্ধগুলো।
                  *
                  * ⚠️ বন্ধগুলোও দেখাতে হয় — নাহলে একটা কলাম বন্ধ করার পর
@@ -84,7 +93,6 @@ class PrintControlController extends Controller implements HasMiddleware
         return view('system_admin::print-control.edit', [
             'menu' => $this->menu->forUser($request->user()),
             'papers' => $papers,
-            'allParts' => PrintProfile::PARTS,
             'formats' => PrintFormat::all(),
         ]);
     }

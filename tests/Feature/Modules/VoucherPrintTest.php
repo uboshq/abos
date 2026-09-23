@@ -180,6 +180,53 @@ class VoucherPrintTest extends TestCase
      * আসল রিকোয়েস্ট চালানো হয়, তার ডেটা ধরা হয়, আর সেই ডেটা দিয়ে
      * টেমপ্লেটটাই HTML-এ রেন্ডার করা হয়। ওটাই কাগজে যায়।
      */
+    /**
+     * ⭐ মালিকের সুইচটা ভাউচারের কাগজেও খাটে — ২৩ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⛔ আগে কী হত ───────────────────────────────────
+     * ভাউচার কোনো প্রোফাইল পাঠাত না, তাই
+     * [[PrintProfile::everything()]] চলত — সব অংশ চালু, কোনো সেটিং
+     * পড়া হত না।
+     *
+     * ⚠️ এটা পরীক্ষা করা দরকার কারণ জোড়াটা তিন জায়গায় ভাঙতে
+     * পারে: টার্গেট তালিকায় না থাকলে, কন্ট্রোলার `profile:` না
+     * পাঠালে, বা কাগজ `shows()` না জিজ্ঞেস করলে। ⓘ তিনটার
+     * যেকোনো একটা ভাঙলে **কিছুই লাল হত না** — কাগজটা ঠিকই
+     * ছাপত, কেবল সুইচটা মানত না।
+     */
+    public function test_switching_a_part_off_really_removes_it_from_the_voucher(): void
+    {
+        $voucher = $this->receipt();
+
+        $with = $this->paperHtml($voucher);
+
+        $this->assertStringContainsString(__('core.print.in_words'), $with,
+            'কথায় অঙ্কটা তো আগে থেকেই ছাপা হত না — দাবিটা কিছুই মাপছে না।');
+
+        /*
+         * ⓘ সব অংশ রেখে কেবল একটা ফেলা — তাহলে লাল হলে জানা
+         * যায় কোন সুইচটা কাজ করেনি। ⚠️ সব বন্ধ করলে কাগজ খালি
+         * আসত, আর তাতে কোনটা কারণ বোঝা যেত না।
+         */
+        app(\App\Core\Services\SettingsService::class)->set(
+            'print.voucher.parts',
+            array_values(array_diff(\App\Core\Engines\Print\PrintProfile::partsFor('voucher'), ['words'])),
+        );
+
+        $without = $this->paperHtml($voucher);
+
+        $this->assertStringNotContainsString(__('core.print.in_words'), $without, implode(PHP_EOL, [
+            'সুইচটা বন্ধ করার পরেও কথায় অঙ্কটা ছাপা হচ্ছে।',
+            '',
+            '⛔ তিনটার একটা জোড়া নেই: টার্গেট, `profile:`, বা `shows()`।',
+            'ⓘ মালিক সুইচ বদলে সেভ করতেন, আর কাগজে কিছুই হত না।',
+        ]));
+
+        /* ⭐ আর বাকিটা অবিকল — একটা সুইচ গোটা কাগজ মুছে দেয় না। */
+        $this->assertStringContainsString($voucher->document_no, $without,
+            'একটা অংশ বন্ধ করায় কাগজের নম্বররও উধাও হয়েছে।');
+    }
+
     private function paperHtml(Voucher $voucher, string $paper = PaperSize::A4): string
     {
         $seen = [];

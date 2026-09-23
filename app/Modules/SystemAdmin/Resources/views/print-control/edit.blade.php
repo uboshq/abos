@@ -89,7 +89,7 @@
                             </p>
 
                             <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                                @foreach ($allParts as $part)
+                                @foreach ($paper['allParts'] as $part)
                                     <label class="flex min-h-(--spacing-touch) items-start gap-2 text-sm">
                                         <input type="checkbox"
                                                name="papers[{{ $paper['code'] }}][parts][{{ $part }}]"
