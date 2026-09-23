@@ -19,4 +19,5 @@ return [
     'oldest' => 'Oldest first',
 
     'dish' => 'Dish name',
+    'count_pending' => 'Unsettled first',
 ];

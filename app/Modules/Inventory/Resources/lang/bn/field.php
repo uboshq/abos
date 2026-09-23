@@ -167,4 +167,9 @@ return [
     'free_closing' => 'সমাপনী ফ্রি',
     'qty_total_with_free' => 'মোট পরিমাণ (ফ্রি সহ)',
     'amount_closing' => 'সমাপনী মূল্য',
+    'against' => 'যে কাগজের বিপরীতে',
+    'book_qty' => 'খাতায়',
+    'counted_qty' => 'গোনা হলো',
+    'counted_by' => 'গুনেছেন',
+    'approved_by' => 'মেনে নিয়েছেন',
 ];

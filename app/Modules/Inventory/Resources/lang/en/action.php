@@ -40,4 +40,8 @@ return [
     'retire_place' => 'Retire',
     'places' => 'Places',
     'place_row' => 'Place this line',
+    'new_count' => 'New count',
+    'load_sheet' => 'Load the sheet',
+    'blind_count' => 'Blind count (hide book quantity)',
+    'settle_count' => 'Accept the difference',
 ];

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'reorder_alert' => 'পুনঃক্রয়ের সতর্কতা',
+    'expiry_alert_days' => 'মেয়াদ শেষের কত দিন আগে সতর্ক করবে (০ = বন্ধ)',
     'non_moving_days' => 'কত দিন না নড়লে অচল',
     'brand_enabled' => 'ব্র্যান্ডের ঘর',
     'batch_enabled' => 'ব্যাচ ও মেয়াদ ধরা হবে',

@@ -156,6 +156,15 @@ return [
             ['label' => 'inventory::menu.transfers', 'icon' => 'swap', 'route' => 'inventory.transfer.index', 'permission' => 'inventory.transfer.view'],
 
             /*
+             * ⭐ মাল গোনা — ২৪ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ লেনদেনের ভাগেই, রিপোর্টে নয়: গোনা পড়ার জিনিস নয়,
+             * ⚠️ ওটা করার জিনিস, আর শেষে খাতা বদলে দেয়।
+             */
+            ['label' => 'inventory::menu.counts', 'icon' => 'check-circle', 'route' => 'inventory.count.index',
+                'permission' => 'inventory.count.view'],
+
+            /*
              * রান্না — লেনদেনে, রেসিপির পাশে নয়।
              *
              * রেসিপি একটা নিয়ম, বছরে দুইবার বদলায়। রান্না একটা ঘটনা,
@@ -176,6 +185,15 @@ return [
                 'route_params' => ['slug' => 'stock-by-warehouse'], 'permission' => 'inventory.report'],
             ['label' => 'inventory::menu.adjustments', 'icon' => 'clock', 'route' => 'inventory.report.show',
                 'route_params' => ['slug' => 'adjustments'], 'permission' => 'inventory.report'],
+            /*
+             * ⭐ সংরক্ষিত মাল — ২৪ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ আটকানো মালের ঠিক পাশে, কারণ দুইটাই একই প্রশ্নের দুই
+             * উত্তর: *"মাল আছে, তবু বেচা যাচ্ছে না কেন"*।
+             */
+            ['label' => 'inventory::menu.reserved_report', 'icon' => 'lock', 'route' => 'inventory.report.show',
+                'route_params' => ['slug' => 'reserved'], 'permission' => 'inventory.report'],
+
             ['label' => 'inventory::menu.hold_report', 'icon' => 'lock', 'route' => 'inventory.report.show',
                 'route_params' => ['slug' => 'hold'], 'permission' => 'inventory.report'],
 
@@ -337,6 +355,30 @@ return [
         'inventory.transfer.receive',
         'inventory.transfer.cancel',
 
+        /*
+         * ⭐ গণনার তিনটা চাবি — ২৪ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⛔ পর্দাটা ছিল না, অথচ ইঞ্জিনটা ছিল ─────────────────────
+         * [[StockCountService]]-এ `record()` ও `approve()` দুইটাই লেখা
+         * আছে, সই-সহ। ⚠️ কিন্তু কোনো রুট ওটাকে ডাকত না — গোনার
+         * একমাত্র পথ ছিল সমন্বয়ের পর্দার ভিতরে **এক সারি**, অর্থাৎ
+         * একবারে একটা পণ্য। ⛔ গুদাম গোনা মানে একশো পণ্য, আর একশো বার
+         * সমন্বয়ের পাতা খোলা কেউ করে না — তাই গোনা হতই না।
+         *
+         * ── ⚠️ কেন গোনা আর মেনে নেওয়া দুই চাবি ──────────────────────
+         * গোনা একটা **পর্যবেক্ষণ** — খাতা এক চুলও নড়ে না, তাই ওটা
+         * গুদামের লোকের কাজ। ⛔ মেনে নেওয়া একটা **সিদ্ধান্ত**: ওই
+         * মুহূর্তে মাল খাতা থেকে উবে যায় বা বিনা টাকায় জন্ম নেয়।
+         *
+         * ⓘ একই চাবিতে রাখলে যিনি গোনেন তিনিই নিজের গোনাটা মেনে
+         * নিতে পারতেন, আর তখন গোনার কোনো মানেই থাকত না — এটা ঠিক
+         * সেই কারণেই আলাদা, যে কারণে স্থানান্তরে পাঠানো আর বুঝে
+         * নেওয়া আলাদা।
+         */
+        'inventory.count.view',
+        'inventory.count.create',
+        'inventory.count.approve',
+
         'inventory.report',
         'inventory.manage',
     ],
@@ -371,6 +413,12 @@ return [
 
             'inventory.stock.opening',
             'inventory.transfer.view', 'inventory.transfer.create', 'inventory.transfer.receive',
+
+            /*
+             * ⓘ গুদামের লোক গোনেন, কিন্তু মেনে নেন না
+             * (`count.approve` এখানে নেই, ইচ্ছাকৃতভাবে)।
+             */
+            'inventory.count.view', 'inventory.count.create',
             'inventory.product.view',
         ],
         'Field Sales' => ['inventory.product.view'],
@@ -530,6 +578,33 @@ return [
             'label' => 'inventory::settings.reorder_alert',
             'type' => 'boolean',
             'default' => true,
+            'group' => 'entry',
+        ],
+        [
+            /*
+             * ⭐ মেয়াদের সতর্কতা কত দিন আগে — ২৪ সেপ্টেম্বর ২০২৬।
+             *
+             * ── ⛔ রিপোর্টটা ছিল, সতর্কতাটা ছিল না ──────────────────────
+             * মেয়াদের রিপোর্ট (`inventory.expiring`) আগে থেকেই আছে, আর
+             * সে দিন-গোনা সহ সব দেখায়। ⚠️ কিন্তু **কেউ ওটা খোলে না**
+             * যতক্ষণ না কেউ বলে খুলতে। ⓘ ফল: মাল মেয়াদ পেরিয়ে যাওয়ার
+             * পর রিপোর্টটা নিখুঁতভাবে সেটা জানাত, আর ফেরত পাঠানোর
+             * সময়টা ততক্ষণে চলে গেছে।
+             *
+             * ⭐ তাই সংখ্যাটা এখন নিচের চলন্ত বারে নিজে থেকে ওঠে
+             * ([[StatusNotices]])।
+             *
+             * ── ⚠️ কেন সংখ্যাটা বসানো যায় ─────────────────────────────
+             * ৯০ দিন ওষুধের জন্য ঠিক, ⛔ কিন্তু দুধের জন্য অর্থহীন —
+             * ওখানে সাত দিনও দেরি। ⓘ তাই কোডে লিখে রাখা যায় না।
+             *
+             * ⛔ শূন্য দিলে সতর্কতাটা বন্ধ, আর সেটাই ব্যাচ না-ধরা
+             * প্রতিষ্ঠানের জন্য ঠিক আচরণ।
+             */
+            'key' => 'inventory.expiry_alert_days',
+            'label' => 'inventory::settings.expiry_alert_days',
+            'type' => 'integer',
+            'default' => 30,
             'group' => 'entry',
         ],
         [

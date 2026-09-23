@@ -13,4 +13,6 @@ return [
     'on_the_way' => 'রাস্তায়',
     'arrived' => 'পৌঁছেছে',
     'cancelled' => 'বাতিল',
+    'count_waiting' => 'অপেক্ষায়',
+    'count_settled' => 'মীমাংসিত',
 ];

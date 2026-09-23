@@ -27,6 +27,7 @@ final class StockReports
         $engine->register(self::stockSummary());
         $engine->register(self::holdReport());
         $engine->register(self::expiring());
+        $engine->register(self::reservedReport());
         $engine->register(self::stockByBatch());
         $engine->register(self::stockValue());
         $engine->register(self::stockByWarehouse());
@@ -800,6 +801,85 @@ final class StockReports
     /**
      * পণ্যের নাম — কোড সহ, ব্যবহারকারীর ভাষায়।
      */
+    /**
+     * ⭐ সংরক্ষিত মাল — কোন কাগজের বিপরীতে, ২৪ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⛔ সংখ্যাটা ছিল, কারণটা ছিল না ────────────────────────────────
+     * `available = floor − reserved − hold` — হিসাবটা [[StockService]]-এ
+     * আগে থেকেই আছে, আর গুদামভিত্তিক রিপোর্টে `reserved` কলামটাও আছে।
+     *
+     * ⚠️ কিন্তু ওখানে কেবল **সংখ্যা**: *"১২ কার্টন সংরক্ষিত"*। ⛔ কার
+     * জন্য, কোন কাগজের বিপরীতে, কবে থেকে — কিছুই নয়। ⓘ ফল: গুদামের
+     * লোক দেখতেন মাল আছে অথচ বিক্রি করা যায় না, আর কেন তা জানার কোনো
+     * পথ ছিল না। ⚠️ তখন মানুষ সংরক্ষণটা জোর করে ছাড়িয়ে নিত, আর যে
+     * ক্রেতার জন্য রাখা ছিল তিনি খালি হাতে ফিরতেন।
+     *
+     * ⭐ তাই সারিগুলো **উৎস কাগজ ধরে** ভাগ করা — চলাচলের সারিতে
+     * `source_type` ও `source_id` আগে থেকেই লেখা থাকে।
+     */
+    public static function reservedReport(): ReportDefinition
+    {
+        return new ReportDefinition(
+            key: 'inventory.reserved',
+            title: 'inventory::menu.reserved_report',
+            filters: ['date_range', 'branch'],
+            groupBy: 'product_id',
+            query: fn (array $f) => DB::table('inv_stock_movements as m')
+                ->join('inv_products as p', 'p.id', '=', 'm.product_id')
+                ->leftJoin('inv_warehouses as w', 'w.id', '=', 'm.warehouse_id')
+                ->where('m.company_id', $f['company_id'])
+                ->when($f['branch_id'], fn ($q, $b) => $q->where('m.branch_id', $b))
+                ->where('m.trx_date', '<=', $f['to'])
+                ->where('m.reserved_change', '<>', 0)
+                ->groupBy(
+                    'm.product_id', 'p.code', 'p.name_en', 'p.name_bn',
+                    'm.warehouse_id', 'w.code', 'w.name_en', 'w.name_bn',
+                    'm.source_type', 'm.source_id',
+                )
+
+                /*
+                 * ⛔ যে সংরক্ষণ ইতিমধ্যে ছেড়ে দেওয়া হয়েছে তার সারি আসে
+                 * না। ⓘ ছাড়ার সময় একটা ঋণাত্মক সারি বসে, তাই যোগফল
+                 * শূন্য — ⚠️ শর্তটা না থাকলে তালিকাটা গত বছরের প্রতিটা
+                 * ছেড়ে দেওয়া সংরক্ষণ নিয়ে ভরে যেত।
+                 */
+                ->havingRaw('SUM(m.reserved_change) <> 0')
+                ->orderBy('p.code')
+                ->select([
+                    'm.product_id',
+                    self::productName(),
+                    DB::raw("'".Product::drillSourceType()."' as party_type_literal"),
+                    self::warehouseName(),
+                    'm.source_type',
+                    'm.source_id',
+                    DB::raw('SUM(m.reserved_change) as reserved'),
+                ]),
+            columns: [
+                [
+                    'key' => 'product_name',
+                    'label' => 'inventory::field.product',
+                    'type' => ReportColumn::DOCUMENT,
+                    'source_type' => 'party_type_literal',
+                    'source_id' => 'product_id',
+                ],
+                ['key' => 'warehouse_name', 'label' => 'inventory::field.warehouse'],
+
+                /*
+                 * ⓘ কাগজটা ক্লিক করা যায় — ⚠️ *"কেন আটকে আছে"* প্রশ্নের
+                 * উত্তর সংখ্যায় নেই, কাগজটার ভিতরে।
+                 */
+                [
+                    'key' => 'source_id',
+                    'label' => 'inventory::field.against',
+                    'type' => ReportColumn::DOCUMENT,
+                    'source_type' => 'source_type',
+                    'source_id' => 'source_id',
+                ],
+                ['key' => 'reserved', 'label' => 'inventory::field.reserved', 'type' => ReportColumn::QUANTITY],
+            ],
+        );
+    }
+
     private static function productName(): Expression
     {
         $name = app()->getLocale() === 'bn'

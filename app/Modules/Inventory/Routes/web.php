@@ -8,6 +8,7 @@ use App\Modules\Inventory\Http\Controllers\OpeningStockController;
 use App\Modules\Inventory\Http\Controllers\StrandedStockController;
 use App\Modules\Inventory\Http\Controllers\ProductController;
 use App\Modules\Inventory\Http\Controllers\StockAnalysisController;
+use App\Modules\Inventory\Http\Controllers\StockCountController;
 use App\Modules\Inventory\Http\Controllers\StockController;
 use App\Modules\Inventory\Http\Controllers\StockOverviewController;
 use App\Modules\Inventory\Http\Controllers\StockPlacementController;
@@ -186,6 +187,27 @@ Route::middleware('auth')->prefix('inventory')->group(function () {
             ->whereNumber('transfer')->name('receive');
         Route::post('/{transfer}/cancel', [StockTransferController::class, 'cancel'])
             ->whereNumber('transfer')->name('cancel');
+    });
+
+    /*
+     * ⭐ মাল গোনা — ২৪ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⛔ ইঞ্জিনটা ছিল, দরজাটা ছিল না ────────────────────────────────
+     * [[StockCountService]]-এ `record()` ও `approve()` দুইটাই লেখা, সই
+     * সহ। ⚠️ কিন্তু কোনো রুট ওটাকে ডাকত না — গোনার একমাত্র পথ ছিল
+     * সমন্বয়ের পর্দার ভিতরে এক সারি, অর্থাৎ একবারে একটা পণ্য।
+     *
+     * ⓘ `approve` আলাদা রুট, কারণ ওটা আলাদা চাবি: গোনা একটা
+     * পর্যবেক্ষণ, মেনে নেওয়া একটা সিদ্ধান্ত ([[StockCountPolicy]])।
+     */
+    Route::prefix('counts')->name('count.')->group(function () {
+        Route::get('/', [StockCountController::class, 'index'])->name('index');
+        Route::get('/create', [StockCountController::class, 'create'])->name('create');
+        Route::post('/', [StockCountController::class, 'store'])->name('store');
+        Route::get('/{count}', [StockCountController::class, 'show'])
+            ->whereNumber('count')->name('show');
+        Route::post('/{count}/approve', [StockCountController::class, 'approve'])
+            ->whereNumber('count')->name('approve');
     });
 
     /*

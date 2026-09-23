@@ -131,4 +131,12 @@ return [
     'lot_assign_note' => 'Nothing is moved — only the lot is recorded. The quantity and the value do not change.',
     'lot_waiting_title' => 'Still without a lot',
     'lot_waiting_none' => 'Nothing is lot-less any more — all of it has been assigned.',
+    'no_counts' => 'No counts yet.',
+    'count_note' => 'Counting changes nothing on its own - the difference is only settled when someone accepts it.',
+    'count_needs_warehouse' => 'Pick a warehouse to load its sheet.',
+    'count_blank_is_not_zero' => 'Leave a row blank if you did not count it. Blank is not zero - a blank row leaves the books untouched.',
+    'count_recorded' => 'The count is saved. The books have not moved yet.',
+    'count_approved' => 'The difference is settled and the books are updated.',
+    'count_settle_note' => 'Accepting writes the difference into the books. It cannot be undone.',
+    'count_waiting_for_approver' => 'This count is waiting for someone who can accept the difference.',
 ];

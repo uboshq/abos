@@ -38,4 +38,6 @@ return [
     'stock_value' => 'মজুদ মূল্যসহ',
     'stock_by_warehouse' => 'গুদামভিত্তিক মজুদ',
     'adjustments' => 'সমন্বয়ের ইতিহাস',
+    'reserved_report' => 'সংরক্ষিত মাল',
+    'counts' => 'মাল গোনা',
 ];

@@ -139,4 +139,9 @@ return [
     'free_closing' => 'Closing free',
     'qty_total_with_free' => 'Total qty (with free)',
     'amount_closing' => 'Closing value',
+    'against' => 'Against',
+    'book_qty' => 'On the books',
+    'counted_qty' => 'Counted',
+    'counted_by' => 'Counted by',
+    'approved_by' => 'Accepted by',
 ];

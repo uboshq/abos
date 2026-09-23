@@ -31,4 +31,6 @@ return [
     'stock_value' => 'Stock with value',
     'stock_by_warehouse' => 'Stock by warehouse',
     'adjustments' => 'Who changed the stock',
+    'reserved_report' => 'Reserved stock',
+    'counts' => 'Stock Counts',
 ];
