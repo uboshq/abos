@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
+use App\Core\Concerns\IsAudited;
 use App\Core\Support\NoticePriority;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -22,6 +23,7 @@ final class NoticeCategory extends Model
 {
     use BelongsToCompany;
     use HasPublicId;
+    use IsAudited;
 
     protected $fillable = [
         'company_id', 'code', 'name_en', 'name_bn',

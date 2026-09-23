@@ -94,7 +94,18 @@ final class NoticeAnalytics
             ->withCount(['signatures', 'reads'])
             ->orderByDesc('published_at')
             ->get()
-            ->filter(fn (Notice $n) => $n->signatures_count < $n->reads_count)
+            /*
+             * ⛔ শূন্য সই মানেও অপেক্ষা — আর এটা মেপে শেখা।
+             *
+             * ⓘ আগে কেবল `signatures_count < reads_count` দেখা হত। ⚠️ যে
+             * নোটিশ এইমাত্র বেরিয়েছে — কেউ পড়েনি, কেউ সই দেননি —
+             * তার দুইটাই শূন্য, আর শূন্য শূন্যের চেয়ে ছোট নয়।
+             *
+             * ⛔ ফলে ঠিক যে নোটিশটা সবচেয়ে বেশি তাগাদা চায়, সেই
+             * তালিকা থেকে বাদ পড়ত — নীরবে।
+             */
+            ->filter(fn (Notice $n) => $n->signatures_count === 0
+                || $n->signatures_count < $n->reads_count)
             ->values();
     }
 }

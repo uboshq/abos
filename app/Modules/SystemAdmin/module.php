@@ -198,6 +198,9 @@ return [
              * ⭐ তাই ছাঁকনিগুলো তালিকার ভিতরে, আর মেনুতে তিনটা সত্যিকারের
              * আলাদা কাজ: বোর্ড, হিসাব, আর ছাঁচ।
              */
+            ['label' => 'core.notice.categories_title', 'icon' => 'filter', 'route' => 'system_admin.notice.category.index',
+                'permission' => 'system_admin.notice.manage'],
+
             ['label' => 'core.notice.templates_title', 'icon' => 'book', 'route' => 'system_admin.notice.template.index',
                 'permission' => 'system_admin.notice.manage'],
 
@@ -315,8 +318,17 @@ return [
          * ওটা বাঁধা, আর একই দিনে চাবি ভাগ করা আর পুরনোটা কাড়া করলে
          * পরদিন কেউ নোটিশের পর্দায় ঢুকতেই পারতেন না।
          */
-        'system_admin.notice.approve',
-        'system_admin.notice.publish',
+        /*
+         * ⛔ `approve` আর `publish` এখনো ঘোষিত নয়, আর সেটাই সৎ।
+         *
+         * ⓘ আজ পর্দা থেকে লেখা নোটিশ সাথে সাথেই প্রকাশিত হয় — সই আর
+         * প্রকাশের নিজের কোনো পর্দা নেই। ⚠️ তবু চাবি দুইটা ঘোষণা করলে
+         * ভূমিকার পর্দায় দুইটা টিকের ঘর বসত যা কিছুই আটকায় না —
+         * ⛔ আর মিথ্যা টিকের ঘর না থাকা চাবির চেয়েও খারাপ।
+         *
+         * ⓘ অনুমোদনের প্রবাহটা যেদিন নিজের পর্দা পাবে, সেদিন দুইটা
+         * ফিরবে — যাচাইয়ের জায়গাসহ।
+         */
         'system_admin.notice.recall',
         'system_admin.notice.analytics',
         'system_admin.notice.manage',
@@ -407,6 +419,18 @@ return [
      * ⛔ প্রতিটার জন্য আলাদা রিপোর্ট লিখলে আটটা প্রায়-একই ফাইল
      * হত, আর একদিন একটায় কলাম যোগ হত অন্যটায় নয়।
      */
+    /*
+     * নকল-পাহারা — দুইটা মাস্টারের নাম দুইবার বসতে পারে না।
+     *
+     * ⓘ দুইটা *নিরাপত্তা সতর্কতা* ধরন থাকলে লেখক প্রতিবার ভাবতেন
+     * কোনটা বাছবেন, আর দুইটার ডিফল্ট অগ্রাধিকার আলাদা হলে একই
+     * ধরনের নোটিশ দুই রকম আচরণ করত — নীরবে।
+     */
+    'duplicates' => [
+        ['model' => \App\Models\NoticeCategory::class, 'name' => ['name_en', 'name_bn']],
+        ['model' => \App\Models\NoticeTemplate::class, 'name' => ['name_en', 'name_bn']],
+    ],
+
     'reports' => [
         NoticeReports::class,
     ],

@@ -149,17 +149,18 @@ Supersede — চারটা পথ আছে, `delete` নেই।
 | সীমানা — কোর কোনো মডিউলের নাম জানে না | grep-এ প্রতিটা নতুন ফাইল পরিষ্কার |
 | প্রতিটা ফাইলের সিন্ট্যাক্স | `php -l` |
 
-### ⛔ লেখা হয়েছে, কিন্তু **একবারও চালানো হয়নি**
+### ✅ এরপর যা সবুজ হয়েছে — ৮১টা দাবি
 
-⚠️ এগুলোকে *"হয়ে গেছে"* বলা যাবে না — লেখা হওয়া আর চলা এক জিনিস নয়।
+| | |
+|---|---|
+| জীবনচক্র · অডিয়েন্স · বার · Acknowledge · Scheduler · টেমপ্লেট · সংস্করণ | ৬১ |
+| দশ দরজায় শূন্য-দর | ২০ |
 
-- `ANoticeCouldJumpAnyStateItLikedTest` — ১০ দাবি
-- `ANoticeCouldOnlyBeAimedAtARoleTest` — ৮ দাবি
-- `TheBarShowedEverythingInNoParticularOrderTest` — ৬ দাবি
-- `ReadingANoticeCountedAsAgreeingToItTest` — ১২ দাবি
+### ⛔ লেখা হয়েছে, চালানো বাকি
+
+- `TheNoticeScreensWereWiredButNobodyLookedTest` — ১২ দাবি (টেমপ্লেট · ধরন · দুই রিপোর্ট · হিসাব · API)
 - `TheCookedFoodWentInWithoutADateOnItTest` — ৩ দাবি
-- `NoDoorTakesALineWorthNothingTest` — ২০ দাবি (abos-41-এর চাওয়া)
-- `tests/Feature/Architecture` — ২৩৬টা পাহারা, নতুন কোডের উপর এখনো চলেনি
+- `tests/Feature/Architecture` — নতুন কোডের উপর চলছে
 
 ### ⚠️ যে মিউটেশনগুলো এখনো বাকি
 

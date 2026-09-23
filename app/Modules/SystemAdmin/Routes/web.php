@@ -9,6 +9,7 @@ use App\Modules\SystemAdmin\Http\Controllers\CustomFieldController;
 use App\Modules\SystemAdmin\Http\Controllers\ImportController;
 use App\Modules\SystemAdmin\Http\Controllers\LookController;
 use App\Modules\SystemAdmin\Http\Controllers\NoticeController;
+use App\Modules\SystemAdmin\Http\Controllers\NoticeCategoryController;
 use App\Modules\SystemAdmin\Http\Controllers\NoticeReportController;
 use App\Modules\SystemAdmin\Http\Controllers\NoticeTemplateController;
 use App\Modules\SystemAdmin\Http\Controllers\OwnershipController;
@@ -154,12 +155,33 @@ Route::middleware('auth')->prefix('system')->group(function () {
          * মোছা যায় না ([[Notice]]-এর `deleting` পাহারা), তাই একটা মোছার
          * বোতাম থাকলে সেটা প্রতিবার একটা ত্রুটি দেখাত।
          */
-        Route::post('/notices/{notice}/recall', [NoticeController::class, 'recall'])
-            ->whereNumber('notice')->name('notice.recall');
-        Route::post('/notices/{notice}/archive', [NoticeController::class, 'archive'])
-            ->whereNumber('notice')->name('notice.archive');
-        Route::post('/notices/{notice}/restore', [NoticeController::class, 'restore'])
-            ->whereNumber('notice')->name('notice.restore');
+        /*
+         * ⓘ তিনটাই `notice.recall` চায়, লেখার চাবির উপরে।
+         *
+         * ⚠️ যিনি নোটিশ লেখেন আর যিনি প্রকাশিত নোটিশ তুলে নেন —
+         * দুইজন এক হতে হবে এমন কোনো কথা নেই। ⛔ লেখার চাবিই যথেষ্ট
+         * ধরলে গুদামের কেউ গোটা অফিসের পড়া একটা নোটিশ এক ক্লিকে
+         * তুলে নিতে পারতেন।
+         */
+        Route::middleware('can:system_admin.notice.recall')->group(function () {
+            Route::post('/notices/{notice}/recall', [NoticeController::class, 'recall'])
+                ->whereNumber('notice')->name('notice.recall');
+            Route::post('/notices/{notice}/archive', [NoticeController::class, 'archive'])
+                ->whereNumber('notice')->name('notice.archive');
+            Route::post('/notices/{notice}/restore', [NoticeController::class, 'restore'])
+                ->whereNumber('notice')->name('notice.restore');
+        });
+
+        /*
+         * নোটিশের ধরন — লেখার চাবির নিচেই।
+         *
+         * ⓘ ক্যাটাগরি বলে এই ধরনের নোটিশ সাধারণত কতটা জরুরি —
+         * ⚠️ সেটা ঠিক করা লেখার কাজ, পড়ার নয়।
+         */
+        Route::get('/notices/categories', [NoticeCategoryController::class, 'index'])
+            ->name('notice.category.index');
+        Route::post('/notices/categories', [NoticeCategoryController::class, 'store'])
+            ->name('notice.category.store');
 
         Route::get('/notices/templates', [NoticeTemplateController::class, 'index'])
             ->name('notice.template.index');

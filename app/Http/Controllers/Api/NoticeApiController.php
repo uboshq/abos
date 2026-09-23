@@ -37,7 +37,19 @@ final class NoticeApiController extends Controller
         $user = $request->user();
         $standing = app(NoticeAcknowledgement::class);
 
-        $notices = app(NoticeBoard::class)->forUser($user)->map(fn (Notice $notice) => [
+        /*
+         * ⛔ পাতা ভাগ — আর API-তে এটা পর্দার চেয়েও জরুরি।
+         *
+         * ⓘ একটা অফিসে সক্রিয় নোটিশ আজ পাঁচটা, তাই সব সারি পাঠানো
+         * আজ নিরীহ দেখায়। ⚠️ কিন্তু যে ক্লায়েন্ট রোজ পোল করে, সে ছয় মাস
+         * পরে প্রতিটা কলে গোটা টেবিল টানবে — ⛔ আর মেমরি শেষ হলে ৫০০।
+         *
+         * ⓘ গঠনগত কারণে ছাড় দেওয়া যেত না: নোটিশের সারি ব্যবসার
+         * সাথে বাড়ে, আর ওটাই ছাড়ের একমাত্র বৈধ কারণ।
+         */
+        $page = app(NoticeBoard::class)->queryFor($user)->paginate(50)->withQueryString();
+
+        $notices = $page->getCollection()->map(fn (Notice $notice) => [
             'id' => $notice->public_id,
             'no' => $notice->document_no,
             'title' => $notice->title,
@@ -50,7 +62,21 @@ final class NoticeApiController extends Controller
             'standing' => $standing->standingOf($notice, $user)->value,
         ])->values();
 
-        return response()->json(['data' => $notices]);
+        return response()->json([
+            'data' => $notices,
+
+            /*
+             * ⓘ কয়টা আছে আর কয় পাতা — ফোনকে বলা হয়।
+             *
+             * ⚠️ না বললে ক্লায়েন্ট জানত না আরও পাতা আছে কি না, আর
+             * পাতা ভাগটা তখন **নীরবে সারি খাওয়া** হয়ে দাঁড়াত।
+             */
+            'meta' => [
+                'page' => $page->currentPage(),
+                'pages' => $page->lastPage(),
+                'total' => $page->total(),
+            ],
+        ]);
     }
 
     /** ⓘ বারে যা যাবে — অগ্রাধিকার ধরে, সীমা মেনে। */

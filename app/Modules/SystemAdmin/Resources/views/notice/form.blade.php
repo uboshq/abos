@@ -54,6 +54,20 @@
                     ⚠️ তাই এই ঘরটা সাজসজ্জা নয় — এখানে বসানো শব্দটাই
                     ঠিক করে নোটিশটা কার চোখে কতবার পড়বে।
                 --}}
+                {{--
+                    ধরন — আর এটা বসালে অগ্রাধিকার নিজে থেকেই বসার কথা।
+
+                    ⓘ ঘরটা খালি রাখা যায়: অনেক নোটিশ কোনো ধরনেই পড়ে না।
+                    ⚠️ বাধ্যতামূলক করলে প্রথম দিনে কোনো ধরনই নেই বলে একটা
+                    নোটিশও লেখা যেত না।
+                --}}
+                <x-ui.select name="notice_category_id"
+                             :label="__('core.notice.category_label')"
+                             :options="\\App\\Models\\NoticeCategory::query()->orderBy('code')->get()
+                                 ->mapWithKeys(fn ($c) => [$c->id => $c->code.' - '.$c->name()])"
+                             placeholder="-"
+                             :value="old('notice_category_id', $notice->notice_category_id)" />
+
                 <x-ui.select name="priority"
                              :label="__('core.notice.priority_label')"
                              :options="collect(\App\Core\Support\NoticePriority::cases())

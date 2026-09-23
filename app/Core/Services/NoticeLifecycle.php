@@ -9,6 +9,7 @@ use App\Core\Support\CompanyContext;
 use App\Core\Support\NoticePriority;
 use App\Core\Support\NoticeStatus;
 use App\Models\Notice;
+use App\Models\NoticeCategory;
 use App\Models\NoticeTemplate;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -50,7 +51,21 @@ final class NoticeLifecycle
     public function draft(array $data): Notice
     {
         return DB::transaction(function () use ($data) {
-            $priority = $this->priorityOf($data['priority'] ?? null);
+            /*
+             * ⭐ অগ্রাধিকার — হাতে দেওয়াটা আগে, নাহলে ধরনের ডিফল্ট।
+             *
+             * ⓘ ক্যাটাগরি বলে *"এই ধরনের নোটিশ সাধারণত কতটা জরুরি"*।
+             * ⚠️ ডিফল্টটা উপরে বসালে মানুষ হাতে বাছার পরেও ধরনের
+             * সিদ্ধান্তটাই জিতত — নীরবে।
+             *
+             * ⓘ ডিফল্টটা বসানোর মূল কারণ ভুলে যাওয়া: *"নিরাপত্তা
+             * সতর্কতা"* লিখতে গিয়ে প্রতিবার হাতে জরুরি বাছতে হলে কোনো
+             * একদিন কেউ ভুলতেন, আর ঐ নোটিশটা বারেই যেত না।
+             */
+            $priority = $this->priorityOf(
+                $data['priority']
+                    ?? NoticeCategory::query()->find($data['notice_category_id'] ?? null)?->default_priority?->value
+            );
 
             /*
              * ⚠️ `forceCreate`, `create` নয় — আর কারণটা মেপে শেখা।
@@ -430,7 +445,7 @@ final class NoticeLifecycle
         /*
          * ⚠️ `status` মডেলে enum হয়ে ফেরে, কিন্তু এখানে ধরে নেওয়া হয়নি।
          *
-         * ⓘ পুরনো সারি বা কাঁচা `DB::table()` থেকে আসা নোটিশে ওটা লেখা
+         * ⓘ পুরনো সারি বা কোয়েরি-বিল্ডার থেকে আসা নোটিশে ওটা লেখা
          * হয়েই থাকতে পারে। ⛔ ধরে নিলে ঐ পথগুলোয় একটা `TypeError` পড়ত,
          * আর সেটা পড়ত ছাপার সময়, পরীক্ষায় নয়।
          */

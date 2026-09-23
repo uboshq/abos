@@ -35,6 +35,25 @@ final class NoticeBoard
      */
     public function forUser(User $user, ?Carbon $day = null): Collection
     {
+        return $this->queryFor($user, $day)->get();
+    }
+
+    /**
+     * ⭐ একই উত্তর, তবে সারি নয় — কোয়েরি।
+     *
+     * ── ⚠️ কেন এই দুইটা আলাদা ─────────────────────────────
+     * ⓘ পর্দা আর বার সব সারি চায় — সংখ্যাটা একটা অফিসে ছোট।
+     * ⛔ কিন্তু API-তে নয়: যে ক্লায়েন্ট রোজ পোল করে, সে ছয় মাস
+     * পরে প্রতিটা কলে গোটা টেবিল টানত, আর একদিন মেমরি শেষ।
+     *
+     * ⓘ ধরা পড়েছে [[EveryListScreenPaginatesTest]]-এ, abos-41-এর রানে —
+     * ⚠️ আর সেটাই প্রমাণ যে পুরো ডিরেক্টরি চালানোর নিয়মটা অলংকার
+     * নয়: পাহারাটা নোটিশের সাথে কোনো সম্পর্কের নয়, তবু সেই ধরল।
+     *
+     * @return \Illuminate\Database\Eloquent\Builder<Notice>
+     */
+    public function queryFor(User $user, ?Carbon $day = null)
+    {
         $query = Notice::query()
             ->liveOn($day ?? Carbon::today())
             ->with(['author', 'targets']);
@@ -53,8 +72,7 @@ final class NoticeBoard
 
         return $query
             ->orderByDesc('starts_on')
-            ->orderByDesc('id')
-            ->get();
+            ->orderByDesc('id');
     }
 
     /**

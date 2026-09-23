@@ -57,6 +57,19 @@ final class NoticeWidgets implements DashboardWidgets
                 label: __('core.notice.unread_widget'),
                 value: (string) $unread,
                 href: route('system_admin.notice.index'),
+
+                /*
+                 * ⚠️ চাবিটা বাধ্যতামূলক, আর এটা মেপে শেখা।
+                 *
+                 * ⛔ না দিলে [[Widget]]-এর গঠনকারক ব্যতিক্রম ছুঁড়ত, আর
+                 * **গোটা হোম পর্দাটা ৫০০** দিত — ধরা পড়েছে
+                 * [[EveryMenuPageOpensBeforeItIsDeployedTest]]-এ, যে পাহারাটা
+                 * সত্যিকারের পাতা আঁকে।
+                 *
+                 * ⓘ সোর্স-পড়া পাহারা এটা কখনো ধরত না।
+                 */
+                permission: 'system_admin.notice.manage',
+
                 tone: $unread > 0 ? 'warn' : 'neutral',
                 sort: 7,
                 icon: 'bell',
@@ -67,6 +80,7 @@ final class NoticeWidgets implements DashboardWidgets
                 label: __('core.notice.to_sign_widget'),
                 value: (string) $owed,
                 href: route('system_admin.notice.index'),
+                permission: 'system_admin.notice.manage',
 
                 /*
                  * ⚠️ সই বাকি থাকা কেবল একটা খবর নয়, একটা **দায়** —

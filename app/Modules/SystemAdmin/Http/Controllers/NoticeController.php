@@ -18,6 +18,7 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Spatie\Permission\Models\Role;
 
@@ -346,6 +347,8 @@ class NoticeController extends Controller
              * ফিরে যেত — ⛔ আর ভুলটা দেখা যেত ডিপ্লয়ের পরে।
              */
             'priority' => ['nullable', 'string', 'max:16'],
+            'notice_category_id' => ['nullable', 'integer',
+                Rule::exists('notice_categories', 'id')->where('company_id', CompanyContext::id())],
             'summary' => ['nullable', 'string', 'max:300'],
             'ack_required' => ['nullable', 'boolean'],
             'ack_deadline' => ['nullable', 'date'],
