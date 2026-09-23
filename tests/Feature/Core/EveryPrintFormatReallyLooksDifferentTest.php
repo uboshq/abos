@@ -68,7 +68,7 @@ final class EveryPrintFormatReallyLooksDifferentTest extends TestCase
 
         foreach (PrintFormat::all() as $name) {
             $print = $this->paperFor($name);
-            $fingerprint = md5($print);
+            $fingerprint = $this->fingerprint($print);
 
             if (isset($seen[$fingerprint])) {
                 $same[] = "{$seen[$fingerprint]} = {$name}";
@@ -141,6 +141,22 @@ final class EveryPrintFormatReallyLooksDifferentTest extends TestCase
 
         $this->assertContains(__('core.print.column.code'), $sample,
             '⛔ নমুনার রূপে কোডের কলামটাই নেই — অথচ ঐ কাগজে ওটা দ্বিতীয় কলাম।');
+    }
+
+    /**
+     * এই কাগজটা দেখতে কেমন — ফাঁকা জায়গা বাদে।
+     *
+     * ── ⚠️ কেন গুটিয়ে নেওয়া, কাঁচা HTML নয় ───────────────────────────
+     * ⓘ ব্লেডের শর্তগুলো ছাপা না হলেও **নতুন লাইন আর ইন্ডেন্ট রেখে যায়**।
+     * ⛔ তাই দুইটা রূপ হুবহু একই কাগজ আঁকলেও তাদের কাঁচা লেখা আলাদা হত,
+     * আর দাবিটা সবুজ থাকত — অথচ মালিকের চোখে কাগজ দুইটা এক।
+     *
+     * ⚠️ অর্থাৎ জালটায় একটা ফুটো ছিল, আর ফুটোটা ঠিক সেই মাছের মাপের
+     * যেটা ধরার জন্য জালটা পাতা। ⓘ মালিক কাগজ দেখেন, সাদা জায়গা নয়।
+     */
+    private function fingerprint(string $html): string
+    {
+        return md5(trim((string) preg_replace('/\s+/u', ' ', $html)));
     }
 
     /**
