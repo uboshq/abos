@@ -136,8 +136,13 @@
 
             <label class="mt-3 flex items-center gap-2 rounded-(--radius-field) border border-(--color-border) px-2">
                 <x-ui.icon name="search" class="size-4 text-(--color-ink-muted)" />
-                <input type="search" x-model="q" placeholder="{{ __('system_admin::permission.search_roles') }}"
+                {{-- ⓘ `data-shortcut` — স্পেক §২.৯-এর `Ctrl+K` এই ঘরটাই খোঁজে।
+                     ⚠️ ক্লাস বা `x-model` ধরে খুঁজলে পর্দার সাজ বদলানোর দিন
+                     শর্টকাটটা নীরবে মরে যেত। --}}
+                <input type="search" x-model="q" data-shortcut="search-roles"
+                       placeholder="{{ __('system_admin::permission.search_roles') }}"
                        aria-label="{{ __('system_admin::permission.search_roles') }}"
+                       title="Ctrl+K"
                        class="min-h-(--spacing-touch) w-full border-0 bg-transparent p-0 text-sm focus:ring-0">
             </label>
 
@@ -309,7 +314,21 @@
                            placeholder="{{ __('system_admin::permission.search_permissions') }}"
                            aria-label="{{ __('system_admin::permission.search_permissions') }}"
                            class="min-h-(--spacing-touch) w-full border-0 bg-transparent p-0 text-sm focus:ring-0">
+
+                    {{-- ⭐ শর্টকাটগুলো পর্দাতেই লেখা — স্পেক §২.৯।
+
+                         ⛔ না লিখলে ওগুলো থাকত আর কেউ জানত না, আর না-জানা
+                         শর্টকাট আর না-থাকা শর্টকাট একই জিনিস। ⓘ সরু পর্দায়
+                         লুকানো: ওখানে কি-বোর্ডই নেই। --}}
+                    <span class="hidden flex-none gap-1 text-2xs text-(--color-ink-muted) sm:flex">
+                        <kbd class="rounded border border-(--color-border) px-1">Ctrl</kbd>
+                        <kbd class="rounded border border-(--color-border) px-1">F</kbd>
+                    </span>
                 </label>
+
+                <p class="mt-1 text-2xs text-(--color-ink-muted)">
+                    {{ __('system_admin::permission.shortcuts') }}
+                </p>
 
                 <div class="mt-2 flex flex-wrap items-center gap-2">
                     <x-ui.button type="button" tone="secondary" data-permission-bulk="view">

@@ -59,9 +59,27 @@ function fire (element) {
     element.dispatchEvent(new window.Event('change', { bubbles: true }))
 }
 
+/*
+ * ⛔ প্রতিটা দাবি **নতুন একটা মোড়ক** পায় — ২৪ সেপ্টেম্বর ২০২৬।
+ *
+ * ── ⚠️ আগে কী হচ্ছিল ────────────────────────────────────────────────
+ * আগে এখানে লেখা ছিল `document.body.innerHTML = html; wireActions(body)`।
+ * ⓘ `innerHTML` ভিতরটা বদলায়, কিন্তু `document.body` **একই এলিমেন্ট**
+ * থেকে যায় — আর শ্রোতাগুলো বসে ঐ এলিমেন্টেই।
+ *
+ * ⛔ ফলে প্রতিটা `beforeEach` আরেক সেট শ্রোতা জমা করত: পঁচিশতম দাবিতে
+ * একটা ক্লিক **ছাব্বিশবার** চলত।
+ *
+ * ⚠️ আর এটা এতদিন ধরা পড়েনি, কারণ পুরনো দাবিগুলো সবই **একই ফলে গিয়ে
+ * থামে**: `checked = true` ছাব্বিশবার বসালেও ফল এক। ⓘ ধরা পড়ল প্রথম
+ * যেদিন একটা দাবি **কতবার** ঘটল তা গুনল (`Ctrl+S` → `requestSubmit`)।
+ *
+ * ⭐ এখন মোড়কটা নতুন, তাই শ্রোতাও নতুন — আর প্রতিটা দাবি ঠিক একবার মাপে।
+ */
 function mount (html) {
-    document.body.innerHTML = html
-    root = document.body
+    document.body.innerHTML = '<div data-test-root></div>'
+    root = document.body.firstElementChild
+    root.innerHTML = html
     wireActions(root)
 }
 
@@ -224,6 +242,7 @@ describe('অনুমতির "সব" টিক', () => {
  */
 const SCREEN = `
 <form>
+  <input type="search" data-shortcut="search-roles">
   <button type="button" data-permission-bulk="all">সব</button>
   <button type="button" data-permission-bulk="none">কিছুই না</button>
   <button type="button" data-permission-bulk="view">শুধু দেখা</button>
@@ -400,5 +419,105 @@ describe('ছকে খোঁজা', () => {
         type('এমন কিছু নেই')
 
         expect(empty.hidden).toBe(false)
+    })
+})
+
+/*
+ * ⭐ কি-বোর্ড — মালিকের স্পেক §২.৯, ২৪ সেপ্টেম্বর ২০২৬।
+ *
+ * ⚠️ এই দাবিগুলো ছাড়া শর্টকাটগুলোর কোনো পাহারা নেই, আর ওদের ভাঙা
+ * সবচেয়ে নীরব: পর্দায় লেখাটা (`Ctrl+F অনুমতি খুঁজুন`) থেকে যেত, কেবল
+ * কাজটা হত না — আর কেউ ওটা বাগ বলে লিখত না, নিজের কি-বোর্ডকে দুষত।
+ */
+function keydown (key, options = {}) {
+    const target = options.on ?? root.querySelector('[data-permission-grid], form') ?? root
+    const event = new window.KeyboardEvent('keydown', {
+        key,
+        ctrlKey: options.ctrl ?? false,
+        bubbles: true,
+        cancelable: true,
+    })
+
+    target.dispatchEvent(event)
+
+    return event
+}
+
+describe('কি-বোর্ড', () => {
+    beforeEach(() => mount(SCREEN))
+
+    it('Ctrl+F অনুমতি খোঁজার ঘরে ফোকাস দেয়', () => {
+        keydown('f', { ctrl: true })
+
+        expect(document.activeElement).toBe(root.querySelector('[data-permission-search]'))
+    })
+
+    it('Ctrl+K রোল খোঁজার ঘরে ফোকাস দেয়', () => {
+        keydown('k', { ctrl: true })
+
+        expect(document.activeElement).toBe(root.querySelector('[data-shortcut="search-roles"]'))
+    })
+
+    /*
+     * ⭐ Esc খোঁজাটা মোছে, **আর ছকটাও ফিরিয়ে আনে**।
+     *
+     * ⛔ কেবল `value = ''` লিখলে ব্রাউজার নিজে থেকে `input` ঘটনাটা পাঠায়
+     * না। ⚠️ তখন ঘরটা খালি দেখাত অথচ ছকে অর্ধেক সারি আড়ালেই থাকত — আর
+     * ব্যবহারকারী ভাবতেন ঐ অনুমতিগুলো সত্যিই নেই।
+     */
+    it('Esc খোঁজা মোছে আর আড়াল করা সারিগুলো ফিরিয়ে আনে', () => {
+        const field = root.querySelector('[data-permission-search]')
+
+        type('purchase.bill')
+
+        expect(boxes('[data-permission-row][hidden]').length).toBeGreaterThan(0)
+
+        keydown('Escape', { on: field })
+
+        expect(field.value).toBe('')
+        expect(boxes('[data-permission-row][hidden]')).toHaveLength(0)
+    })
+
+    /*
+     * ⛔ আর খালি ঘরে Esc গেলা হয় না।
+     *
+     * ⚠️ গিললে ব্রাউজারের নিজের আচরণ মরত (খোলা ড্রপডাউন বন্ধ করা), আর
+     * সেটা আমাদের দেওয়ার জিনিসই নয়।
+     */
+    it('খালি ঘরে Esc ব্রাউজারের হাতেই থাকে', () => {
+        const field = root.querySelector('[data-permission-search]')
+        const event = keydown('Escape', { on: field })
+
+        expect(event.defaultPrevented).toBe(false)
+    })
+
+    /*
+     * ⛔ আর এটাই সবচেয়ে দামি পাল্টা-দাবি: যে পাতায় ছক নেই, সেখানে
+     * `Ctrl+S` ছোঁয়া হয় না।
+     *
+     * ⚠️ শ্রোতাটা `document`-এ বসে, তাই গোটা অ্যাপ জুড়ে চলে। ⓘ শর্ত
+     * ছাড়া বসালে **প্রতিটা পর্দায়** ব্রাউজারের নিজের "সংরক্ষণ" মরে
+     * যেত — আর সেটা আমাদের দেওয়ার জিনিস নয়।
+     */
+    it('ছক না থাকলে Ctrl+S ব্রাউজারের হাতেই থাকে', () => {
+        mount('<main><p>অন্য একটা পর্দা</p></main>')
+
+        const event = keydown('s', { ctrl: true, on: root })
+
+        expect(event.defaultPrevented).toBe(false)
+    })
+
+    it('ছক থাকলে Ctrl+S ফর্মটা জমা দেয়', () => {
+        const form = root.querySelector('form')
+        let submitted = 0
+
+        /* ⓘ jsdom-এ `requestSubmit` আছে, কিন্তু সে সত্যিকারের navigation
+         * করতে গিয়ে ভুল দেয় — তাই এখানে কেবল ডাকাটাই মাপা হয়। */
+        form.requestSubmit = () => { submitted++ }
+
+        const event = keydown('s', { ctrl: true })
+
+        expect(submitted).toBe(1)
+        expect(event.defaultPrevented).toBe(true)
     })
 })

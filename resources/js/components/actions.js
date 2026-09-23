@@ -358,6 +358,87 @@ export function wireActions (root = document) {
     })
 
     /*
+     * ⭐ অনুমতির পর্দার কি-বোর্ড — মালিকের স্পেক §২.৯, ২৪ সেপ্টেম্বর ২০২৬।
+     *
+     *     Ctrl+K  রোল খোঁজা      Ctrl+F  অনুমতি খোঁজা
+     *     Ctrl+S  সংরক্ষণ         Esc     খোঁজা মুছে ফেলা
+     *
+     * ── ⛔ কেন এটা কেবল সুবিধা নয় ───────────────────────────────────
+     * ⓘ ছকে চোদ্দটা মডিউল, চারশোর বেশি অনুমতি। ⚠️ যিনি রোজ দশটা রোল
+     * গোছান, তাঁর প্রতিটা খোঁজায় মাউস তুলে ঘরটা খুঁজে বের করতে হত —
+     * আর ঐ ঘর্ষণটাই মানুষকে *"সব বাছুন"* চাপতে শেখায়।
+     *
+     * ── ⚠️ প্রতিটা শর্টকাট নিজের ঘর না পেলে চুপ করে সরে যায় ─────────
+     * ⛔ `Ctrl+S` গোটা অ্যাপে আটকে দিলে অন্য পর্দায় ব্রাউজারের নিজের
+     * "সংরক্ষণ" মরে যেত — আর সেটা আমাদের দেওয়ার জিনিসই নয়। ⓘ তাই
+     * ঘরটা আছে কি না দেখে তবেই `preventDefault()`।
+     *
+     * ── ⓘ ↑ ↓ আর Space এখানে **নেই**, আর সেটা ইচ্ছাকৃত ──────────────
+     * স্পেক ওগুলোও চায়, আর নিজেই শর্তটা লিখে দেয়: *"Space কাজ করতে হলে
+     * সারিটা ফোকাসযোগ্য হতে হবে"*। ⓘ আজ ফোকাস পায় কেবল চেকবক্সটা, আর
+     * সেখানে Space **আগে থেকেই** কাজ করে (ব্রাউজারের নিজের আচরণ)।
+     *
+     * ⛔ সারি ধরে চলাচল দিতে হলে roving-tabindex বসাতে হয় — প্রতিটা
+     * সারিতে `tabindex`, তীরে সেটা সরানো, আর স্ক্রিন-রিডারের জন্য
+     * `role="grid"`। ⚠️ অর্ধেক বসালে ফল উল্টো: ট্যাব চাপলে ফোকাস এমন
+     * জায়গায় যায় যেখান থেকে ফেরা যায় না। তাই ওটা আলাদা কাজ, আর
+     * স্পেকের ধাপ ৬-এ লেখা।
+     */
+    root.addEventListener('keydown', (event) => {
+        const roleSearch = () => root.querySelector?.('[data-shortcut="search-roles"]')
+        const permissionSearch = () => root.querySelector?.('[data-permission-search]')
+
+        /*
+         * ⓘ Esc কেবল খোঁজার ঘরেই, আর কেবল ঘরে কিছু লেখা থাকলে।
+         *
+         * ⚠️ খালি ঘরে Esc গিলে ফেললে ব্রাউজারের নিজের আচরণ (খোলা
+         * ড্রপডাউন বন্ধ করা) মরত। ⛔ আর মোছার পর `input` ঘটনাটা
+         * **হাতে পাঠাতে হয়**: `value = ''` লিখলে ব্রাউজার নিজে থেকে
+         * ঐ ঘটনাটা পাঠায় না, তাই ছকটা ছাঁকা অবস্থাতেই বসে থাকত।
+         */
+        if (event.key === 'Escape') {
+            const field = event.target
+
+            if (field?.matches?.('[data-permission-search], [data-shortcut="search-roles"]')
+                && field.value !== '') {
+                event.preventDefault()
+                field.value = ''
+                field.dispatchEvent(new Event('input', { bubbles: true }))
+            }
+
+            return
+        }
+
+        if (! event.ctrlKey && ! event.metaKey) {
+            return
+        }
+
+        const key = event.key?.toLowerCase?.()
+
+        if (key === 'k' || key === 'f') {
+            const field = key === 'k' ? roleSearch() : permissionSearch()
+
+            if (field) {
+                event.preventDefault()
+                field.focus()
+                field.select?.()
+            }
+
+            return
+        }
+
+        if (key === 's') {
+            /* ⓘ ছকের ফর্মটাই — পাতায় অন্য ফর্ম থাকলে সেটা ছোঁয়া হয় না। */
+            const form = permissionSearch()?.closest('form')
+
+            if (form) {
+                event.preventDefault()
+                form.requestSubmit?.()
+            }
+        }
+    })
+
+    /*
      * ⭐ ছাপার লিংক থেকে এসে নিজে থেকেই ছাপা — খতিয়ানের ক্রমের জন্য।
      *
      * ⓘ মালিকের নিয়ম: পর্দায় নতুন আগে, কাগজে পুরনো আগে। ⛔ ছাপার

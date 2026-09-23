@@ -171,6 +171,9 @@ return [
     'read_only_preset' => 'View only',
     'nothing_matched' => 'Nothing matched that search.',
 
+    /* ⓘ কারণসহ bn/permission.php-তে। */
+    'shortcuts' => 'Ctrl+K search roles · Ctrl+F search permissions · Ctrl+S save · Esc clear search',
+
     'state_granted' => 'Granted',
     'state_denied' => 'Not granted',
     'state_absent' => 'This screen has no such action',
