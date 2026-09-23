@@ -50,7 +50,29 @@
          * ⭐ এখন একটাই তালিকা, আর শিরোনাম ও ঘর দুইটাই ওটাকেই লুপ করে —
          * দুইটার আলাদা হওয়ার পথটাই বন্ধ।
          */
-        $cols = $profile->columnsFor($paper, $doc->showMoney, $hasFree);
+        /*
+         * ⭐ দাম দেখানো হবে কি না — একটাই উত্তর, একটাই জায়গায়।
+         *
+         * ⓘ মালিকের নির্দেশ (২৩ সেপ্টেম্বর ২০২৬): *"দাম থাকবে না থাকবে,
+         * তার সুইচ থাকবে"*। ⚠️ শর্তটা **এবং**: কাগজ অনুমতি দিলে
+         * (`showMoney`) **আর** সুইচ চালু থাকলে (`prices`)।
+         *
+         * ⛔ দুইটার ভূমিকা আলাদা, আর গুলিয়ে ফেলা চলে না:
+         *   `showMoney` → **নিয়ম**। গেটপাস ও ডেলিভারি অর্ডার কোডেই
+         *                  `false` বলে, আর ওটা বদলানোর জিনিস নয়।
+         *   `prices`    → **পছন্দ**। মালিক পর্দা থেকে বসান।
+         *
+         * ⚠️ তাই সুইচ চালু করেও কেউ গেটপাসে দর আনতে পারবেন না — আর
+         * ওটাই নিরাপদ দিক।
+         *
+         * ⓘ উত্তরটা এখানে একবার বের করা হয়, কারণ নিচে **তিন জায়গায়**
+         * লাগে (কলাম · মোট · কথায় অঙ্ক)। ⛔ তিনবার লিখলে একদিন একটা
+         * বদলাত আর বাকি দুইটা নয় — তখন কাগজে দর নেই অথচ নিচে মোট
+         * বসে থাকত, আর সংখ্যাটার উৎসই খুঁজে পাওয়া যেত না।
+         */
+        $money = $doc->showMoney && $profile->shows('prices');
+
+        $cols = $profile->columnsFor($paper, $money, $hasFree);
 
         /* সরু কাগজে ফ্রি-র কলাম বাদ পড়ে, তাই সংখ্যাটা নামের নিচে যায় — হারায় না */
         $freeInNote = $hasFree && ! in_array('free', $cols, true);
@@ -82,9 +104,13 @@
          * কম আসত — ⓘ আর কয়েক পয়সার ভুল ঠিক ততটাই ভুল, কেবল ধরা পড়তে
          * বেশি সময় নেয়।
          */
+        /* ⚠️ ব্যান্ডের উপ-মোটও টাকার সারি — তাই সেও `$money` দেখে।
+           ⛔ `$doc->showMoney` রেখে দিলে দাম-সুইচ বন্ধ করার পরেও
+           ব্র্যান্ডের যোগফলগুলো বসে থাকত: কাগজে একটাও দর নেই, অথচ
+           মাঝে মাঝে "ব্র্যান্ড মোট ১,৫৫৫" — সংখ্যাটা রইল, উৎসটা গেল। */
         $banded = $profile->shows('band')
             && ! $thermal
-            && $doc->showMoney
+            && $money
             && collect($doc->lines)->contains(fn (array $line) => ($line['band_total'] ?? '') !== '');
     @endphp
 
@@ -245,7 +271,7 @@
         </table>
     @endif
 
-    @if ($doc->showMoney && $doc->totals !== [] && $profile->shows('totals'))
+    @if ($money && $doc->totals !== [] && $profile->shows('totals'))
         <table class="totals">
             @foreach ($doc->totals as $label => $value)
                 <tr @if ($loop->last) class="grand" @endif>
@@ -256,7 +282,7 @@
         </table>
     @endif
 
-    @if ($doc->showMoney && $doc->amountInWords && $profile->shows('words'))
+    @if ($money && $doc->amountInWords && $profile->shows('words'))
         <div class="words">
             <strong>{{ __('core.print.in_words') }}:</strong> {{ $doc->amountInWords }}
         </div>

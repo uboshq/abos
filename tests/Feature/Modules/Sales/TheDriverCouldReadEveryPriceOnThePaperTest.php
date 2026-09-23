@@ -136,7 +136,78 @@ final class TheDriverCouldReadEveryPriceOnThePaperTest extends TestCase
             'চালানের কাগজেও দর নেই — তাহলে উপরের পরীক্ষাটা কেবল একটা খালি পাতা মাপছে।');
     }
 
+    // ── ⭐ মালিকের সুইচ — ২৩ সেপ্টেম্বর ২০২৬ ──────────────────────────
+
+    /**
+     * ⭐ সুইচ বন্ধ করলে চালানের কাগজ থেকে দাম উধাও।
+     *
+     * ⓘ মালিকের কথা: *"দাম থাকবে না থাকবে, তার সুইচ থাকবে"*।
+     * ⚠️ একটা টিক, আর তাতে চারটাই — দর, টাকা, মোট, কথায় লেখা অঙ্ক।
+     */
+    public function test_the_owner_can_switch_the_prices_off(): void
+    {
+        $challan = $this->aChallanWithARateOf('777.77');
+
+        $this->assertStringContainsString('777.77', $this->paperFor(
+            route('sales.print.challan', $challan)
+        ), 'সুইচ চালু অবস্থাতেই দর নেই — তাহলে নিচের মাপটার মানে থাকে না।');
+
+        $this->switchPricesOff();
+
+        $html = $this->paperFor(route('sales.print.challan', $challan));
+
+        $this->assertStringNotContainsString('777.77', $html,
+            'সুইচ বন্ধ করার পরেও চালানে দর ছাপা হচ্ছে — সুইচটা কিছুই করছে না।');
+    }
+
+    /**
+     * ⛔ আর সুইচ বন্ধ হলে **মোট**ও যায়।
+     *
+     * ⚠️ এটাই আসল কারণ যে সুইচটা একটা, চারটা নয়। ⓘ কেবল কলাম নামালে
+     * কাগজে একটাও দর থাকত না, অথচ নিচে *"সর্বমোট ১,৫৫৫"* বসে থাকত —
+     * সংখ্যাটা রইল, উৎসটা গেল, আর পাঠক বুঝতেই পারতেন না ওটা কীসের।
+     */
+    public function test_switching_prices_off_takes_the_total_with_it(): void
+    {
+        $challan = $this->aChallanWithARateOf('777.77');
+
+        $this->switchPricesOff();
+
+        $html = $this->paperFor(route('sales.print.challan', $challan));
+
+        $this->assertStringNotContainsString('1,555.54', $html,
+            'দর গেছে, অথচ মোটটা রয়ে গেছে — সংখ্যাটার উৎস কাগজে নেই।');
+    }
+
+    /**
+     * ⛔ আর সুইচ **চালু** করেও গেটপাসে দর আনা যায় না।
+     *
+     * ⚠️ দুইটার ভূমিকা আলাদা: `showMoney` **নিয়ম** (গেটপাস কোডেই না
+     * বলে), আর সুইচটা **পছন্দ**। ⓘ শর্তটা **এবং**, তাই পছন্দ কখনো
+     * নিয়মকে ছাপিয়ে যেতে পারে না।
+     *
+     * ⛔ উল্টোটা হলে মালিক নিজের অজান্তে চালকের কাগজে দর এনে ফেলতেন —
+     * তিনি ভাবতেন চালানের সুইচ দিচ্ছেন।
+     */
+    public function test_the_switch_cannot_put_prices_on_a_gatepass(): void
+    {
+        $challan = $this->aChallanWithARateOf('777.77');
+
+        // ⓘ সুইচটা চালুই আছে (ডিফল্ট), তবু গেটপাসে দর নেই।
+        $this->assertStringNotContainsString('777.77', $this->paperFor(
+            route('sales.print.gatepass', $challan)
+        ), 'সুইচ চালু বলে গেটপাসেও দর উঠেছে — পছন্দ নিয়মকে ছাপিয়ে গেছে।');
+    }
+
     // ── হাতিয়ার ────────────────────────────────────────────────────────
+
+    /** ⓘ চালানের কাগজে দামের সুইচটা নামিয়ে দেওয়া। */
+    private function switchPricesOff(): void
+    {
+        $parts = array_values(array_diff(PrintProfile::PARTS, ['prices']));
+
+        app(SettingsService::class)->set('print.challan.parts', $parts);
+    }
 
     /**
      * ⓘ চালানের প্রোফাইল A4-তে যে কলামগুলো আঁকবে।

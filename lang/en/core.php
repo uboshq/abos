@@ -553,6 +553,8 @@ return [
             'title' => 'Document title',
             'meta' => 'Header fields',
             'band' => 'Band sub-totals',
+            // The owner's one switch, 23 September 2026 — four things together.
+            'prices' => 'Prices (rate, amount, totals, in words)',
             'totals' => 'Money rows',
             'words' => 'Amount in words',
             'paid_table' => 'Payments received',
@@ -984,6 +986,7 @@ return [
      */
     'approval' => [
         'awaiting' => 'This has gone for approval. It moves on once the approver decides.',
+        'awaiting_because' => 'This has gone for approval — :reason. It moves on once the approver decides.',
         'rejected' => 'Approval was refused — :reason. Put that right, edit the document, and it can go again.',
     ],
 
