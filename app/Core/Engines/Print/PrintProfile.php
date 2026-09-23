@@ -235,6 +235,37 @@ final class PrintProfile
     }
 
     /**
+     * ⭐ নমুনা দেখার জন্য — মালিকের নির্দেশ, ২৩ সেপ্টেম্বর ২০২৬।
+     *
+     * তাঁর কথা: *"zate age sample dekha zay tarpor select kora zay"*।
+     *
+     * ── ⛔ কেন [[for()]] দিয়ে হয় না ─────────────────────────────────
+     * `for()` **সংরক্ষিত** সেটিংস পড়ে — অর্থাৎ যে রূপটা ইতিমধ্যে বাছা
+     * আছে সেটাই। ⚠️ কিন্তু নমুনার পুরো কথাই হলো **বাছার আগে** দেখা,
+     * তাই এখানে রূপটা হাতে দেওয়া হয় আর সেটিংস ছোঁয়াই হয় না।
+     *
+     * ⛔ সেটিংস পড়লে আরও খারাপ কিছু হত: কোম্পানির পুরনো ওভাররাইডগুলো
+     * (`print.<target>.parts`) নতুন রূপটার উপর বসে যেত, আর মালিক এমন
+     * একটা নমুনা দেখতেন যা **কোনো রূপেরই আসল চেহারা নয়**।
+     */
+    public static function previewing(string $target, string $format): self
+    {
+        $target = in_array($target, self::TARGETS, true) ? $target : 'invoice';
+
+        $chosen = PrintFormat::of($format);
+
+        return new self(
+            target: $target,
+            format: $chosen,
+
+            /* ⓘ এই কাগজ যেগুলো সত্যিই আঁকতে পারে, তার বাইরে নয়। */
+            parts: array_values(array_intersect($chosen->parts, self::partsFor($target))),
+
+            columns: $chosen->columns,
+        );
+    }
+
+    /**
      * সব কিছু দেখাও — যে কাগজ এখনো সুইচের আওতায় আসেনি তার জন্য।
      *
      * ── ⚠️ কেন একটা নিরপেক্ষ প্রোফাইল লাগে ───────────────────────────

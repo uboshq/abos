@@ -85,6 +85,56 @@ final class PrintEngine
     }
 
     /**
+     * ⭐ নমুনা — PDF নয়, হুবহু সেই HTML.
+     *
+     * ── ⭐ মালিকের নির্দেশ, ২৩ সেপ্টেম্বর ২০২৬ ────────────
+     * *"print e invoice template vew kore deke select korar bebosta koro.
+     * zate age sample dekha zay tarpor select kora zay"*।
+     *
+     * ── ⚠️ কেন PDF নয় ─────────────────────────────────────
+     * তেরোটা রূপের তেরোটা PDF বানানো মানে mPDF তেরোবার চালানো,
+     * আর পড়ার জন্য প্রতিটার দরকার একটা করে PDF দেখার যন্ত্র। ⛔ ফোনে
+     * একটা পাতায় তেরোটা PDF দর্শক খুললে পাতাটাই খুলত না।
+     *
+     * ℹ HTML-টা একই লেআউট, একই CSS, একই ব্লেড — অর্থাৎ যা
+     * দেখা যায় তাই ছাপা হয়। ⚠️ নমুনার জন্য আলাদা একটা ছান্চ লিখলে
+     * সেটা একদিন আসল কাগজ থেকে সরে যেত, আর মালিক একটা দেখে আরেকটা
+     * পেতেন — যে ভুলটা ধরা পড়ত কেবল ছাপার পরে।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function preview(
+        string $template,
+        array $data,
+        string $paper,
+        PrintProfile $profile,
+        ?string $locale = null,
+        ?Company $company = null,
+    ): string {
+        $size = PaperSize::of($paper);
+        $locale = $locale ?? app()->getLocale();
+        $company = $company ?? $this->currentCompany();
+
+        $view = $this->resolveTemplate($template);
+
+        $previous = app()->getLocale();
+        app()->setLocale($locale);
+
+        try {
+            return View::make($view, [
+                ...$data,
+                'company' => $company,
+                'paper' => $size,
+                'locale' => $locale,
+                'settings' => $this->settings,
+                'profile' => $profile,
+            ])->render();
+        } finally {
+            app()->setLocale($previous);
+        }
+    }
+
+    /**
      * ছাপার ভাষা ডকুমেন্টের সাথে সেভ করা থাকে (সেকশন ১৮.৫)।
      *
      * গ্রাহক বাংলায় ইনভয়েস পেলে পুনঃপ্রিন্টেও বাংলাই আসতে হবে — নাহলে
