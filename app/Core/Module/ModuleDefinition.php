@@ -7,9 +7,9 @@ namespace App\Core\Module;
 use App\Core\Contracts\ChecksItsOwnBooks;
 use App\Core\Contracts\ContributesActivity;
 use App\Core\Contracts\ContributesFacts;
-use App\Core\Contracts\OffersChoicesOnAForm;
 use App\Core\Contracts\DashboardWidgets;
 use App\Core\Contracts\Importer;
+use App\Core\Contracts\OffersChoicesOnAForm;
 use App\Core\Contracts\ProvidesDashboard;
 use App\Core\Contracts\ProvidesMetrics;
 use App\Core\Contracts\ProvisionsCompany;
@@ -104,6 +104,23 @@ final class ModuleDefinition
         public readonly array $docTypes,
         /** @var array<string, class-string> source_type => model */
         public readonly array $drillSources,
+
+        /**
+         * ⛔ এই মডিউলের যে কাজগুলোতে **টাকা নড়ে**।
+         *
+         * ── ⭐ মালিকের সিদ্ধান্ত, ২৪ সেপ্টেম্বর ২০২৬ ─────────────
+         * *"টাকা নড়ার কাজে bulk নিষিদ্ধ"* — ওগুলো একটা একটা
+         * করে দেখে সই দিতে হবে ([[BulkApproval]])।
+         *
+         * ── ⚠️ কেন মডিউল বলে, অনুমোদন নয় ───────────────────
+         * ⓘ `postsToTheBooks`-এর হুবহু একই যুক্তি: তালিকাটা
+         * অনুমোদনে হাতে লেখা থাকলে নতুন একটা টাকার কাজ যোগ
+         * হওয়ার দিন কেউ ওখানে বসাতে ভুলে যেত, আর সেটা
+         * **নীরবে bulk-এ ঢুকে পড়ত**।
+         *
+         * @var list<string> কাজের নাম, `approvals`-এর চাবিগুলোর মধ্যে থেকে
+         */
+        public readonly array $movesMoney,
 
         /**
          * এই মডিউলের যে কাগজগুলো নিশ্চিত হলেই খাতায় ওঠার কথা।
@@ -430,6 +447,35 @@ final class ModuleDefinition
          * @var class-string|null
          */
         public readonly ?string $dashboard = null,
+
+        /**
+         * ⭐ এই মডিউলটা বন্ধ করা যায় না — মালিকের নির্দেশ, ২৪ সেপ্টেম্বর ২০২৬।
+         *
+         * *"সিস্টেম এডমিন বাই ডিফল্ট কোনোভাবে বন্ধ হবে না। একটা লক করে দিও।"*
+         *
+         * ── ⛔ কী ভাঙত, আর কতটা ─────────────────────────────────────
+         * প্রতিটা মডিউল নিজে থেকেই একটা `<code>.enabled` সুইচ পায়
+         * ([[MenuSwitches::forModule()]]), আর কন্ট্রোল প্যানেলের প্রথম
+         * ট্যাবে তার চেকবক্সও আঁকা হয়। ⚠️ সেটা বন্ধ করে সংরক্ষণ করলে
+         * [[RefuseSwitchedOffScreens]] ঐ মডিউলের **প্রতিটা** রুটে ৪০৪
+         * দেয় — উপসর্গ ধরে।
+         *
+         * ⛔ প্রশাসনের মডিউলের বেলায় ঐ রুটগুলোর ভিতরেই থাকে
+         * **কন্ট্রোল প্যানেল নিজে**। ⓘ অর্থাৎ একটা ক্লিকে দরজাটা ভিতর
+         * থেকে বন্ধ হয়ে যেত, চাবিসহ: ইউজার, রোল, কোম্পানি, সেটিংস —
+         * সবটা, আর ফেরার কোনো পথ নেই। ⚠️ ডাটাবেসে হাত না দিয়ে
+         * ফেরানো যেত না।
+         *
+         * ── ⓘ কেন মডিউল বলে, কোর নয় ─────────────────────────────────
+         * কোরে *"system_admin বন্ধ করতে দিও না"* লিখলে §১৯.৭ ভাঙত —
+         * কোর কোনো মডিউলের নাম জানে না। ⭐ এখন যে মডিউল নিজেকে
+         * অপরিহার্য বলে, কোর কেবল সেটা মানে।
+         *
+         * ⚠️ এটা **মডিউলের সুইচ** বন্ধ করে, ভিতরের মেনু সারিগুলোর নয়:
+         * প্রশাসনের একটা নির্দিষ্ট পর্দা (যেমন নোটিশ) লাগে না বললে
+         * সেটা আগের মতোই বন্ধ করা যায়। ⛔ গোটা মডিউলটাই কেবল নয়।
+         */
+        public readonly bool $essential = false,
     ) {}
 
     /**
@@ -529,6 +575,11 @@ final class ModuleDefinition
             integrity: self::validateIntegrity($raw['integrity'] ?? [], $path),
             activity: self::validateActivity($raw['activity'] ?? [], $path),
             approvals: self::validateApprovals($raw['approvals'] ?? [], $path),
+            movesMoney: self::validateMovesMoney(
+                $raw['moves_money'] ?? [],
+                $raw['approvals'] ?? [],
+                $path,
+            ),
             roleTemplates: self::validateRoleTemplates(
                 $raw['role_templates'] ?? [],
                 $raw['permissions'] ?? [],
@@ -560,6 +611,16 @@ final class ModuleDefinition
             ),
             path: $path,
             namespace: $namespace,
+
+            /*
+             * ⚠️ চাবিটা না থাকলে `false` — অর্থাৎ একটা মডিউল
+             * **নিজে থেকে** অপরিহার্য হয় না, তাকে বলতে হয়।
+             *
+             * ⛔ উল্টোটা হলে একদিন কেউ চাবিটা লিখতে ভুলত আর মডিউলটা
+             * নীরবে বন্ধ-করা-যায়-না হয়ে বসে থাকত, অথচ ক্রেতা ওটা
+             * নেনইনি।
+             */
+            essential: (bool) ($raw['essential'] ?? false),
         );
     }
 
@@ -1200,6 +1261,37 @@ final class ModuleDefinition
      * @param  array<string, mixed>  $approvals
      * @return array<string, string>
      */
+    /**
+     * ⛔ যে কাজগুলোতে টাকা নড়ে — আর প্রতিটাকে সত্যিকারের কাজ হতে হবে।
+     *
+     * ── ⚠️ কেন নামটা `approvals`-এ থাকতেই হবে ────────────────
+     * ⓘ একটা বানান ভুল হলে সেটা **কোথাও মিলত না**, আর
+     * `BulkApproval` ওই কাজটাকে নিরাপদ ভাবত। ⛔ অর্থাৎ একটা
+     * টাইপোই টাকার কাগজকে bulk-এ ঢুকিয়ে দিত, নীরবে।
+     *
+     * @param  array<int, mixed>  $movesMoney
+     * @param  array<string, mixed>  $approvals
+     * @return list<string>
+     */
+    private static function validateMovesMoney(array $movesMoney, array $approvals, string $path): array
+    {
+        $out = [];
+
+        foreach ($movesMoney as $action) {
+            if (! is_string($action) || ! array_key_exists($action, $approvals)) {
+                throw new InvalidArgumentException(
+                    "{$path}: moves_money lists '".(is_string($action) ? $action : gettype($action))
+                    ."', which is not one of this module's approval actions. A name that matches nothing "
+                    .'would let that paper into bulk approval without anyone noticing.'
+                );
+            }
+
+            $out[] = $action;
+        }
+
+        return $out;
+    }
+
     private static function validateApprovals(array $approvals, string $path): array
     {
         foreach ($approvals as $action => $label) {

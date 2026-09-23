@@ -154,6 +154,18 @@ final class MenuSwitches
                 'code' => $module->code,
                 'label' => $module->label(),
                 'key' => $this->forModule($module->code),
+
+                /*
+                 * ⭐ কিছু মডিউল বন্ধ করা যায় না — ২৪ সেপ্টেম্বর ২০২৬।
+                 *
+                 * ⓘ মডিউলটা নিজে বলে ([[ModuleDefinition::$essential]]),
+                 * তাই কোরে কোনো মডিউলের নাম লেখা নেই (§১৯.৭)।
+                 *
+                 * ⚠️ সারিটা তবু তালিকায় **থাকে**: ভিতরের পর্দাগুলোর
+                 * সুইচ ওখান থেকেই আসে। ⛔ গোটা সারিটা বাদ দিলে
+                 * প্রশাসনের একটা পর্দাও আর বন্ধ করা যেত না।
+                 */
+                'essential' => $module->essential,
                 'groups' => $groups,
             ];
         }

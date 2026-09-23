@@ -26,6 +26,39 @@
 
     <section data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">
+        {{-- ⭐ অপরিহার্য মডিউলে সুইচ নয়, তালা — মালিকের নির্দেশ,
+             ২৪ সেপ্টেম্বর ২০২৬।
+
+             *"সিস্টেম এডমিন বাই ডিফল্ট কোনোভাবে বন্ধ হবে না। একটা লক করে দিও।"*
+
+             ── ⛔ কী ভাঙত ─────────────────────────────────────────────
+             ⚠️ এই একটা চেকবক্স তুলে সংরক্ষণ করলে প্রশাসনের **প্রতিটা**
+             পর্দা ৪০৪ দিত — কন্ট্রোল প্যানেল নিজেও, কারণ সেও ঐ মডিউলের।
+             ⓘ অর্থাৎ ফেরার পথ থাকত না, ডাটাবেসে হাত না দিয়ে।
+
+             ⚠️ সারিটা তবু থাকে, আর ভিতরের পর্দাগুলোর সুইচও — কেবল
+             **গোটা মডিউলের** সুইচটা নেই। ⛔ সারিটা লুকালে প্রশাসনের
+             একটা পর্দাও আর বন্ধ করা যেত না।
+
+             ⓘ পাহারাটা কেবল এই পর্দায় নয়: সার্ভারও চাবিটা আর লেখে না
+             ([[ControlPanelController::saveMenuSwitches()]]), আর পড়েও না
+             ([[RefuseSwitchedOffScreens]])। --}}
+        @if ($module['essential'] ?? false)
+            <div class="flex min-h-(--spacing-touch) items-center gap-3 border-b border-(--color-border)
+                        bg-(--color-section-head) px-4 py-3"
+                 title="{{ __('system_admin::control.module_locked_why') }}">
+                <x-ui.icon name="lock" class="size-4 flex-none text-(--color-ink-muted)" />
+
+                <span class="font-semibold">{{ $module['label'] }}</span>
+
+                <span class="flex-1"></span>
+
+                <span class="rounded-(--radius-field) bg-(--color-surface-muted) px-2 py-0.5 text-2xs
+                             text-(--color-ink-muted)">
+                    {{ __('system_admin::control.module_locked') }}
+                </span>
+            </div>
+        @else
         {{-- মডিউলের নিজের সুইচ — শিরোনামের সাথেই, কারণ এটাই সবচেয়ে
              বড় সিদ্ধান্ত: বন্ধ করলে নিচের সবটা অর্থহীন। --}}
         <label class="flex min-h-(--spacing-touch) items-center gap-3 border-b border-(--color-border)
@@ -46,6 +79,7 @@
                 {{ __('system_admin::control.module_off') }}
             </span>
         </label>
+        @endif
 
         {{-- প্রথম ট্যাবে ভেতরটা আসে না — ওখানে প্রশ্ন একটাই: *কোন
              মডিউলগুলো এই ব্যবসায় লাগে?* ভেতরে যেতে হলে মডিউলের

@@ -9,6 +9,7 @@ use App\Core\Services\MenuBuilder;
 use App\Core\Services\MenuSwitches;
 use App\Core\Services\SettingsService;
 use App\Http\Controllers\Controller;
+use App\Modules\SystemAdmin\Support\ControlPanelTabs;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -35,6 +36,7 @@ class ControlPanelController extends Controller implements HasMiddleware
         private readonly ModuleRegistry $registry,
         private readonly MenuBuilder $menu,
         private readonly MenuSwitches $switches,
+        private readonly ControlPanelTabs $tabs,
     ) {}
 
     public static function middleware(): array
@@ -60,7 +62,7 @@ class ControlPanelController extends Controller implements HasMiddleware
         return view('system_admin::control-panel.edit', [
             'menu' => $this->menu->forUser($request->user()),
             'tab' => $tab,
-            'tabs' => $this->tabs(),
+            'tabs' => $this->tabs->all(),
 
             /*
              * ⭐ মডিউল-পেরোনো ট্যাব হলে **কেবল সেই ট্যাবের সারিগুলো**।
@@ -73,7 +75,7 @@ class ControlPanelController extends Controller implements HasMiddleware
              * `settings->get()`। তাই এক দরজায় বদলালে অন্য দরজাতেও
              * বদলায় — মালিকের "সেটিংস এক জায়গায়" নিয়মটা অক্ষত।
              */
-            'modules' => in_array($tab, $this->crossTabs(), true)
+            'modules' => in_array($tab, $this->tabs->crossTabs(), true)
                 ? $this->crossTab($tab)
                 : $this->byModule(),
 
@@ -147,7 +149,19 @@ class ControlPanelController extends Controller implements HasMiddleware
         $state = [];
 
         foreach ($this->switches->tree() as $module) {
-            $state[$module['key']] = (bool) $this->settings->get($module['key'], true);
+            /*
+             * ⭐ অপরিহার্য মডিউল সবসময় চালু — ২৪ সেপ্টেম্বর ২০২৬।
+             *
+             * ⚠️ পর্দায় ভিতরের ভাগগুলো `x-show="on[key]"` দিয়ে দেখানো
+             * হয়। ⛔ কোনো ডাটাবেসে চাবিটা আগে থেকেই `false` বসে থাকলে
+             * প্রশাসনের **ভিতরের সব সুইচ উধাও** হয়ে যেত — অথচ সার্ভার
+             * ঐ চাবিটা আর মানেই না ([[RefuseSwitchedOffScreens]])।
+             *
+             * ⓘ অর্থাৎ পর্দা আর সার্ভার দুই কথা বলত, আর পর্দাটাই হত
+             * মিথ্যাবাদী।
+             */
+            $state[$module['key']] = ($module['essential'] ?? false)
+                || (bool) $this->settings->get($module['key'], true);
 
             foreach ($module['groups'] as $group) {
                 $state[$group['key']] = (bool) $this->settings->get($group['key'], true);
@@ -155,87 +169,6 @@ class ControlPanelController extends Controller implements HasMiddleware
         }
 
         return $state;
-    }
-
-    /**
-     * কোন কোন ট্যাব আছে।
-     *
-     * ── কেন প্রথমটা "মডিউল ও মেনু" ──────────────────────────────────
-     * মালিক বললেন জরুরি কাজগুলো এক পর্দায় রাখতে। এখানে এসে মানুষ যা
-     * করে তা প্রায় সবসময় একটাই: **কিছু একটা চালু বা বন্ধ করা**।
-     * বাকি সুইচগুলো (পেছনের তারিখ কত দিন, ছাপার ঘর) একবার বসিয়ে
-     * বছরের পর বছর ছোঁয়া হয় না।
-     *
-     * @return list<array{key: string, label: string}>
-     */
-    private function tabs(): array
-    {
-        $tabs = [[
-            'key' => 'switches',
-            'label' => __('system_admin::control.tab_switches'),
-        ]];
-
-        /*
-         * ট্যাবের তালিকা রেজিস্ট্রি থেকে, ঘোষিত সেটিংস থেকে নয়।
-         *
-         * আগে কেবল সেই মডিউলগুলোর ট্যাব হত যারা নিজে সেটিং ঘোষণা করেছে।
-         * এখন প্রতিটা মডিউলের মেনুরও সুইচ আছে, তাই একটা মডিউল সেটিং না
-         * ঘোষণা করলেও তার ট্যাব লাগে — নাহলে তার পর্দাগুলো বন্ধ করার
-         * কোনো জায়গাই থাকত না।
-         */
-        /*
-         * ⭐ মডিউল পেরোনো ট্যাব — মালিকের নির্দেশ, ৫ সেপ্টেম্বর ২০২৬।
-         *
-         * ── কেন এটা লাগল ────────────────────────────────────────────
-         * *"Direct Purchase, Direct Sales — এইগুলোর সুইচগুলো কন্ট্রোল
-         * প্যানেলে আলাদা ট্যাবে রাখো।"* কিন্তু ওই দুইটা **দুই
-         * মডিউলে**, আর আজকের প্রতিটা ট্যাব একটা করে মডিউল। কাউন্টারের
-         * লোক একটাই কাজ করেন, অথচ তার সুইচ খুঁজতে দুই জায়গায় যেতে হত।
-         *
-         * ── ⚠️ কোরে কোনো মডিউলের নাম নেই, ইচ্ছাকৃতভাবে ──────────────
-         * সহজ পথ ছিল এখানে "purchase আর sales-এর অমুক সেটিংগুলো" লিখে
-         * দেওয়া। ⛔ তাতে §১৯.৭ ভাঙত: কোর জানত কোন মডিউল আছে আর তাদের
-         * সেটিংয়ের নাম কী। আর কাল POS বা রেস্টুরেন্টের কাউন্টার এলে
-         * **এই ফাইলটা আবার খুলতে হত**।
-         *
-         * ⭐ বদলে সেটিং নিজেই বলে সে কোথায় বসতে চায় —
-         * `'tab' => 'counter'`। ট্যাবটা তখন নিজে থেকেই জন্মায়, আর
-         * কেউ ঘোষণা না করলে জন্মায়ই না (খালি ট্যাব নেই)।
-         */
-        foreach ($this->crossTabs() as $key) {
-            $tabs[] = ['key' => $key, 'label' => __('system_admin::settings_group.'.$key)];
-        }
-
-        foreach ($this->switches->tree() as $module) {
-            $tabs[] = ['key' => $module['code'], 'label' => $module['label']];
-        }
-
-        return $tabs;
-    }
-
-    /**
-     * যে ট্যাবগুলো মডিউল পেরিয়ে যায় — ঘোষণা থেকে গোনা।
-     *
-     * ⓘ ক্রমটা ঘোষণার ক্রম নয়, বর্ণানুক্রমও নয় — **প্রথম যে সেটিং
-     * ট্যাবটার নাম বলল** সেই ক্রম। ⚠️ নাহলে একটা মডিউল যোগ হলেই
-     * ট্যাবের সারি নড়ত, আর যিনি অভ্যাসে তৃতীয় ট্যাবে ক্লিক করেন তিনি
-     * অন্য জায়গায় গিয়ে পড়তেন।
-     *
-     * @return list<string>
-     */
-    private function crossTabs(): array
-    {
-        $found = [];
-
-        foreach ($this->settings->definitions() as $definition) {
-            $tab = $definition['tab'] ?? null;
-
-            if ($tab !== null && ! in_array($tab, $found, true)) {
-                $found[] = (string) $tab;
-            }
-        }
-
-        return $found;
     }
 
     /**
@@ -454,8 +387,25 @@ class ControlPanelController extends Controller implements HasMiddleware
 
         $known = [];
 
+        /*
+         * ⭐ অপরিহার্য মডিউলের সুইচটা এখান থেকে বসে না — ২৪ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ মালিকের নির্দেশ: *"সিস্টেম এডমিন বাই ডিফল্ট কোনোভাবে বন্ধ
+         * হবে না। একটা লক করে দিও।"*
+         *
+         * ── ⚠️ কেন পর্দায় তালা আঁকাই যথেষ্ট নয় ──────────────────────
+         * ⛔ ফর্মটা যে কেউ বদলে পাঠাতে পারেন (`scope[]`-এ নামটা বসিয়ে)।
+         * ⓘ পর্দায় চেকবক্সটা না থাকলেও সার্ভার ঐ চাবিটা লিখে ফেলত, আর
+         * তারপর গোটা প্রশাসন মডিউলটাই ৪০৪ — ফেরার পথ ছাড়া।
+         *
+         * ⭐ তাই চাবিটা `$known`-এই ঢোকে না, আর নিচের লুপ অচেনা চাবি
+         * নীরবে ফেলে দেয়। ⚠️ *"বদলেছে"* গুনতিতেও ওটা আসে না, তাই
+         * বার্তাটা সত্যি কথাই বলে।
+         */
         foreach ($this->switches->tree() as $module) {
-            $known[$module['key']] = true;
+            if (! ($module['essential'] ?? false)) {
+                $known[$module['key']] = true;
+            }
 
             foreach ($module['groups'] as $group) {
                 $known[$group['key']] = true;
