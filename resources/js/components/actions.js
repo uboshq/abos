@@ -235,6 +235,127 @@ export function wireActions (root = document) {
         }
     })
 
+    /*
+     * ⭐ গোটা পর্দার তিনটা বোতাম — মালিকের স্পেক §২.৫, ২৪ সেপ্টেম্বর ২০২৬।
+     *
+     * `all`  — সব অনুমতি
+     * `none` — কিছুই না
+     * `view` — শুধু দেখা
+     *
+     * ── ⛔ কেন "শুধু দেখা" আলাদা করে দরকার ───────────────────────────
+     * ⓘ বাস্তবে সবচেয়ে চাওয়া ভূমিকাটা ঐটাই: *"সবকিছু দেখবে, কিছুই
+     * বদলাবে না"* (অডিটর, মালিকের আত্মীয়, ব্যাংকের লোক)। ⚠️ ওটা হাতে
+     * বানাতে হলে চোদ্দটা মডিউলের প্রতিটা "দেখা" কলামে আলাদা টিক —
+     * চোদ্দ ক্লিক, আর একটা ভুলে গেলে কেউ বলে না।
+     *
+     * ⛔ সহজ পথটা নিরাপদ পথ না হলে মানুষ "সব বাছুন" চেপে দেয়, তারপর
+     * কয়েকটা তুলে নেয় — আর তখন যেটা তুলতে ভুলে যায় সেটাই দুর্ঘটনা।
+     *
+     * ── ⚠️ `view` কেন `manage` ঘরগুলো ছোঁয় না ───────────────────────
+     * ⓘ `manage` একাই তৈরি · সম্পাদনা · মোছা — তিনটাই। ⛔ "শুধু দেখা"
+     * চেপে ওগুলো টিক হলে বোতামটা তার নামের **উল্টো** কাজ করত, আর
+     * ব্যবহারকারী জানতেনই না যে তিনি মোছার অধিকার দিয়ে ফেলেছেন।
+     */
+    root.addEventListener('click', (event) => {
+        const button = event.target.closest?.('[data-permission-bulk]')
+
+        if (! button) {
+            return
+        }
+
+        event.preventDefault()
+
+        const grid = button.closest('form') ?? root
+        const mode = button.dataset.permissionBulk
+
+        for (const box of grid.querySelectorAll('input[name="permissions[]"]')) {
+            box.checked = mode === 'all'
+                || (mode === 'view' && box.dataset.permissionCell === 'view')
+        }
+
+        /*
+         * ⚠️ ভাঁজ করা মডিউলের টিকও বদলায়, তাই গুনতিটা **সব** মডিউলে
+         * নতুন করে লিখতে হয় — নাহলে ব্যাজে পুরনো সংখ্যা বসে থাকত, আর
+         * ব্যবহারকারী ঐ সংখ্যাটাই বিশ্বাস করতেন।
+         */
+        for (const module of grid.querySelectorAll('[data-permission-module]')) {
+            countPermissions(module)
+
+            /* ⓘ যে মডিউলে এখন কিছু আছে সেটা খুলে দেখানো হয় — নাহলে
+             * "সব বাছুন" চেপে পর্দায় কোনো বদলই চোখে পড়ত না। */
+            if (mode !== 'none') {
+                module.open = module.querySelector('input[name="permissions[]"]:checked') !== null
+            }
+        }
+    })
+
+    /*
+     * ⭐ ছকে খোঁজা — মালিকের স্পেক §২.৫, ২৪ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⛔ কেন ─────────────────────────────────────────────────────
+     * ⓘ ছকে চোদ্দটা মডিউল, চারশোর বেশি অনুমতি, আর প্রায় সবগুলো ভাঁজ
+     * করা। ⚠️ একটা নির্দিষ্ট অনুমতি খুঁজতে ভাঁজগুলো একে একে খুলে চোখে
+     * খুঁজতে হত — আর না পেলে মানুষ ধরে নেয় জিনিসটা নেই।
+     *
+     * ── ⓘ কোন লেখাটায় খোঁজা হয় ────────────────────────────────────
+     * সারির `data-permission-text`-এ ব্লেড **কাঁচা অনুমতির নামগুলোও**
+     * বসিয়ে দেয় (`sales.invoice.approve`)। ⚠️ ওটা ছাড়া সাপোর্টের কেউ
+     * কাঁচা নামটা লিখে খুঁজলে কিছুই মিলত না, অথচ সে ঐ নামটাই জানে।
+     *
+     * ⚠️ খোঁজা **কোনো টিক বদলায় না** — কেবল আড়াল করে। ⛔ আড়াল করা
+     * সারির টিকটা DOM-এ থেকে যায়, তাই জমা দিলেও ঐ অনুমতিগুলো যায়:
+     * খোঁজা একটা চশমা, কাঁচি নয়।
+     */
+    root.addEventListener('input', (event) => {
+        const field = event.target.closest?.('[data-permission-search]')
+
+        if (! field) {
+            return
+        }
+
+        const form = field.closest('form') ?? root
+        const term = field.value.trim().toLowerCase()
+        let shown = 0
+
+        for (const module of form.querySelectorAll('[data-permission-module]')) {
+            let inModule = 0
+
+            for (const row of module.querySelectorAll('[data-permission-row]')) {
+                const hit = term === '' || (row.dataset.permissionText ?? '').includes(term)
+
+                row.hidden = ! hit
+                inModule += hit ? 1 : 0
+            }
+
+            /*
+             * ⚠️ ভাগের মাথাটাও আড়াল হয় যখন তার নিচে একটাও সারি নেই —
+             * ⛔ নাহলে খোঁজার পর ছকে কেবল কয়েকটা খালি মাথা পড়ে থাকত
+             * ("লেনদেন", "রিপোর্ট"), আর দেখে মনে হত কিছু একটা মিলেছে।
+             */
+            for (const body of module.querySelectorAll('[data-permission-section]')) {
+                const head = body.querySelector('[data-permission-section-head]')
+
+                if (head) {
+                    head.hidden = body.querySelector('[data-permission-row]:not([hidden])') === null
+                }
+            }
+
+            module.hidden = inModule === 0
+            shown += inModule
+
+            /* ⓘ মেলা মডিউলগুলো নিজে থেকেই খোলে — নাহলে খুঁজে পেয়েও
+             * জিনিসটা ভাঁজের ভিতরে লুকানো থাকত। */
+            if (term !== '' && inModule > 0) {
+                module.open = true
+            }
+        }
+
+        const empty = form.querySelector('[data-permission-empty]')
+
+        if (empty) {
+            empty.hidden = shown > 0 || term === ''
+        }
+    })
 
     /*
      * ⭐ ছাপার লিংক থেকে এসে নিজে থেকেই ছাপা — খতিয়ানের ক্রমের জন্য।

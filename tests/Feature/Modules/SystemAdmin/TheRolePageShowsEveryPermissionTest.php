@@ -118,7 +118,14 @@ final class TheRolePageShowsEveryPermissionTest extends TestCase
                 'name' => $role->name,
                 'permissions' => $m[1],
             ])
-            ->assertRedirect(route('system_admin.role.index'));
+            /*
+             * ⭐ সংরক্ষণের পর রোলটাতেই থাকা — ২৪ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ আগে তালিকায় ফিরত, কারণ তালিকা আর সম্পাদনা আলাদা পর্দা
+             * ছিল। ⚠️ এখন একটাই পর্দা, তাই কারণটা আর নেই
+             * ([[RoleController::store()]])।
+             */
+            ->assertRedirect(route('system_admin.role.edit', $role));
 
         $this->assertSame($before, collect($role->fresh()->getPermissionNames())->sort()->values()->all());
     }

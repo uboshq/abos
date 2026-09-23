@@ -8,12 +8,14 @@ use App\Core\Module\ModuleRegistry;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\PermissionSyncer;
 use App\Core\Support\CompanyContext;
-use App\Core\Support\RoleLabel;
 use App\Http\Controllers\Controller;
+use App\Models\ApprovalFlowStep;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -48,51 +50,34 @@ class RoleController extends Controller implements HasMiddleware
         return [new Middleware('can:system_admin.role.manage')];
     }
 
+    /**
+     * ⭐ তালিকা আর সম্পাদনা এখন **এক পর্দা** — ২৪ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⛔ মালিকের প্রশ্ন ───────────────────────────────────────────
+     * *"ekoi jinis dui porda keno?"* — আর কথাটা ঠিক ছিল। ⓘ তালিকার
+     * পর্দায় রোলের নাম, গুনতি আর একটা "সম্পাদনা" লিংক; সম্পাদনার
+     * পর্দায় **বাঁ কলামে ঠিক সেই তালিকাটাই** আবার। ⚠️ অর্থাৎ একই
+     * জিনিস দুইবার, আর দুইটা আলাদা করে রক্ষণাবেক্ষণ করতে হত।
+     *
+     * ⛔ দাম কেবল সদৃশতা নয়: রোল বদলাতে গেলে তালিকা → সম্পাদনা →
+     * সংরক্ষণ → তালিকা, প্রতিবার পুরো পাতা নতুন করে। ⚠️ পরপর তিনটা
+     * রোল গোছাতে ন'বার পাতা বদলাত।
+     *
+     * ⭐ এখন একটাই পর্দা (স্পেক §২.০): বাঁয়ে তালিকা, মাঝে ছক, ডানে
+     * বিবরণ। ⓘ `index` মানে *"কোনো রোল বাছা হয়নি"* — তাই `role` শূন্য,
+     * আর মাঝের কলাম বাছাই করতে বলে।
+     */
     public function index(Request $request): View
     {
-        return view('system_admin::role.index', [
+        return view('system_admin::role.form', [
             'menu' => $this->menu->forUser($request->user()),
-            /*
-             * ⛔ চলতি কোম্পানির রোলই — ৭ সেপ্টেম্বর ২০২৬।
-             *
-             * ── ⚠️ কেন আজ এটা লাগল, গতকাল লাগত না ──────────────────────
-             * এতদিন রোল ছিল **বিশ্বজনীন**, তাই ছাঁকনির প্রশ্নই ছিল না —
-             * সবার একটাই `owner`, একটাই `salesman`। ⓘ আজ spatie teams
-             * চালু হওয়ায় প্রতিটা কোম্পানি নিজের কপি পেয়েছে।
-             *
-             * ⛔ ছাঁকনি ছাড়া এই তালিকাটা **সব ক্রেতার রোল** দেখাত, আর
-             * পাশের `update()` অন্য কোম্পানিরটা বদলাতে দিত — অর্থাৎ যে
-             * ফাঁকটা বন্ধ করতে teams চালু করা হলো, সেটাই এই পর্দায় খোলা
-             * থাকত।
-             *
-             * ⚠️ spatie নিজে `Role::query()`-তে কোনো global scope বসায় না
-             * — সে টিমটা দেখে **বরাদ্দ ও যাচাইয়ের সময়**। ⓘ তালিকা ছাঁকা
-             * আমাদের কাজ, আর হাতের কাজ ভুলে যাওয়া যায়।
-             */
-            'roles' => Role::query()
-                ->where('company_id', CompanyContext::id())
-                ->withCount(['permissions', 'users'])
-                ->orderBy('name')
-                ->get()
+            'role' => null,
+            'held' => [],
+            'members' => collect(),
+            'approvalPower' => [],
 
-                /*
-                 * টুলবারের খোঁজা — রোলের নাম, ১৯ সেপ্টেম্বর ২০২৬।
-                 *
-                 * ⚠️ কোয়েরিতে নয়, তোলা তালিকার উপর — ইচ্ছাকৃত। পর্দায় যে
-                 * নামটা দেখা যায় সেটা [[RoleLabel]]-এর অনুবাদ ("মালিক"),
-                 * আর টেবিলে বসে কাঁচা নাম (`super_admin`)। ⛔ ডাটাবেজে খুঁজলে
-                 * চোখে দেখা নামটা লিখে কিছুই মিলত না। ⓘ রোল হাতেগোনা, তাই
-                 * দুইটাতেই মেলানোর খরচ নেই।
-                 */
-                ->when(trim((string) $request->query('q')) !== '', function ($roles) use ($request) {
-                    $term = Str::lower(trim((string) $request->query('q')));
-
-                    return $roles->filter(fn (Role $role) => Str::contains(
-                        Str::lower($role->name.' '.RoleLabel::for($role->name)),
-                        $term,
-                    ))->values();
-                }),
-            'ownerRole' => PermissionSyncer::SUPER_ADMIN_ROLE,
+            /* ⓘ ছকটা এখানে আঁকা হয় না — কারণসহ [[formData()]]-এ। */
+            ...$this->formData(withGrid: false),
         ]);
     }
 
@@ -103,6 +88,7 @@ class RoleController extends Controller implements HasMiddleware
             'role' => new Role,
             'held' => [],
             'members' => collect(),
+            'approvalPower' => [],
             ...$this->formData(),
         ]);
     }
@@ -114,8 +100,15 @@ class RoleController extends Controller implements HasMiddleware
         $role = Role::create(['name' => $data['name'], 'guard_name' => 'web']);
         $role->syncPermissions($data['permissions'] ?? []);
 
+        /*
+         * ⭐ সংরক্ষণের পর রোলটাতেই থাকা — ২৪ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ আগে তালিকায় ফিরত, কারণ তালিকা আর সম্পাদনা আলাদা পর্দা ছিল।
+         * ⚠️ এখন একটাই পর্দা, তাই তালিকায় ফেরা মানে **সদ্য বানানো
+         * রোলটা ছেড়ে দেওয়া** — আর প্রায় সবসময়ই পরের কাজটা ঐ রোলেই।
+         */
         return redirect()
-            ->route('system_admin.role.index')
+            ->route('system_admin.role.edit', $role)
             ->with('saved', __('system_admin::message.role_created', ['name' => $role->name]));
     }
 
@@ -129,6 +122,7 @@ class RoleController extends Controller implements HasMiddleware
             'role' => $role,
             'held' => $role->permissions->pluck('name')->all(),
             'members' => $role->users()->orderBy('name')->get(['users.id', 'users.name', 'users.email']),
+            'approvalPower' => $this->approvalPower($role),
             ...$this->formData(),
         ]);
     }
@@ -143,8 +137,9 @@ class RoleController extends Controller implements HasMiddleware
         $role->update(['name' => $data['name']]);
         $role->syncPermissions($data['permissions'] ?? []);
 
+        /* ⓘ কারণটা [[store()]]-এ একবারই লেখা। */
         return redirect()
-            ->route('system_admin.role.index')
+            ->route('system_admin.role.edit', $role)
             ->with('saved', __('system_admin::message.role_updated', ['name' => $role->name]));
     }
 
@@ -183,20 +178,6 @@ class RoleController extends Controller implements HasMiddleware
      */
     private function validated(Request $request, ?Role $role): array
     {
-        /*
-         * ⛔ নামের ছাঁচ কেবল **নতুন নামে** — ১৯ সেপ্টেম্বর ২০২৬।
-         *
-         * ⓘ টেমপ্লেটের রোলগুলো মডিউল থেকে আসে, আর তাদের নাম এই ছাঁচে
-         * পড়ে না: `Manager`, `Field Sales`, `HR`, `Warehouse`। ⚠️ ফলে
-         * ঐ রোলগুলোর একটাও এই পর্দা থেকে **সংরক্ষণই করা যেত না** — নাম
-         * না ছুঁয়ে কেবল একটা অনুমতি বদলালেও বলত "নামের ছাঁচ ভুল"।
-         * ধরা পড়েছে নতুন ছকের পাহারায় (`TheRolePageShowsEveryPermissionTest`)।
-         *
-         * ⓘ নাম অপরিবর্তিত থাকলে ছাঁচ প্রশ্নই নয় — কোড যে নামটা খোঁজে
-         * সেটা তো বদলাচ্ছে না।
-         */
-        $keepsItsName = $role !== null && $request->input('name') === $role->name;
-
         return $request->validate([
             /*
              * ⚠️ নামের অদ্বিতীয়তা **কোম্পানির ভেতরে**, বিশ্বজুড়ে নয় —
@@ -210,16 +191,46 @@ class RoleController extends Controller implements HasMiddleware
              * ⚠️ আর ফাঁসও: বার্তাটা জানিয়ে দিত অন্য কোথাও ওই নামের রোল
              * আছে কি না।
              */
+            /*
+             * ⛔ নামের ছাঁচের নিয়মটা **উঠে গেল** — ২৪ সেপ্টেম্বর ২০২৬।
+             *
+             * ── ⚠️ মালিকের প্রশ্ন, আর নিয়মটা মেপে দেখা ─────────────
+             * পর্দায় লেখা ছিল *"ছোট হাতের ইংরেজি অক্ষর ও আন্ডারস্কোর
+             * (store_keeper)"*, আর নিয়মটা ছিল `^[a-z][a-z0-9_]*$`।
+             *
+             * ⛔ কিন্তু **ব্যবস্থাটা নিজেই ঐ নিয়ম মানে না**। মডিউলের
+             * ঘোষিত রোল টেমপ্লেটগুলোর নাম: `Manager`, `Field Sales`,
+             * `HR`, `Warehouse` — একটাও ছাঁচে পড়ে না, অথচ ওগুলোই
+             * প্রতিটা কোম্পানিতে বসে।
+             *
+             * ⚠️ আগের মেরামতটা ছিল *"নাম না বদলালে ছাঁচ দেখব না"* —
+             * অর্থাৎ নিয়মটা টিকিয়ে রেখে তার ফলটা লুকানো। ⓘ ফল:
+             * `Field Sales` রোলটা খোলা যেত, কিন্তু নামের একটা অক্ষর
+             * বদলালেই পর্দা বলত ছাঁচ ভুল — অথচ ঐ নামটাই কোড নিজে বসায়।
+             *
+             * ── ⓘ ছাঁচটা কী পাহারা দিত, তা খুঁজে দেখা ───────────────
+             * রোলের নাম কোডে মেলানো হয় কেবল **এক জায়গায়**:
+             * `PermissionSyncer::SUPER_ADMIN_ROLE` (`hasRole()`, চারটা
+             * ফাইল)। ⓘ আর ঐ রোলটা এই পর্দা থেকে ছোঁয়াই যায় না
+             * ([[assertNotTheOwnerRole()]])। ⛔ অর্থাৎ ছাঁচটা যা
+             * পাহারা দিত বলে দাবি করত, তার কিছুই সে পাহারা দিত না।
+             *
+             * ⭐ যে নিয়ম পণ্যের নিজের ডেটা ভাঙে, সেটা নিয়ম নয় — ভুল।
+             * ⓘ অদ্বিতীয়তা আর দৈর্ঘ্য থাকল; ওগুলোর পিছনে আসল কারণ আছে।
+             *
+             * ── ⚠️ নামের অদ্বিতীয়তা কোম্পানির ভেতরে, বিশ্বজুড়ে নয় ──
+             * ⓘ teams চালু হওয়ার পর প্রতিটা কোম্পানির নিজের
+             * "বিক্রয়কর্মী" আছে। ⛔ ছাঁকনি ছাড়া নিয়মটা বলত *"এই নামে
+             * একটা রোল আছে"* — অন্য কারও কোম্পানিতে — আর ব্যবহারকারী
+             * নিজের কোম্পানিতে সেই নামটা বসাতেই পারতেন না। ⚠️ আর
+             * ফাঁসও: বার্তাটা জানিয়ে দিত অন্য কোথাও ঐ নাম আছে কি না।
+             */
             'name' => ['required', 'string', 'max:64',
-                ...($keepsItsName ? [] : ['regex:/^[a-z][a-z0-9_]*$/']),
                 Rule::unique('roles', 'name')
                     ->where('company_id', CompanyContext::id())
                     ->ignore($role?->id)],
             'permissions' => ['nullable', 'array'],
             'permissions.*' => [Rule::exists('permissions', 'name')],
-        ], [
-            // নামটা কোডে বসে (`$user->can(...)`), তাই ছাঁচটা বাঁধা
-            'name.regex' => __('system_admin::validation.role_name_shape'),
         ]);
     }
 
@@ -242,10 +253,29 @@ class RoleController extends Controller implements HasMiddleware
      * ⛔ কোনো অনুমতি বাদ পড়ে না — ছকে না ধরলে বিশেষ কলামে যায়।
      * `TheRolePageShowsEveryPermissionTest` গুনে দেখে।
      *
+     * ── ⓘ তালিকার পর্দায় ছকটা বানানো হয় না ──────────────────────────
+     * ⚠️ `index` কোনো রোল বাছে না, তাই পর্দায় ছকটা আঁকাই হয় না। ⛔ তবু
+     * এখানে সেটা বানালে প্রতিবার চারশোর বেশি অনুমতি তুলে, চোদ্দটা
+     * মডিউলে ভাগ করে, সাজিয়ে — তারপর ফেলে দেওয়া হত।
+     *
+     * ⓘ বাঁ কলামের তালিকা আর মাথার কার্ডগুলো দুই পর্দাতেই লাগে, তাই
+     * ওগুলো সবসময়ই আসে।
+     *
      * @return array<string, mixed>
      */
-    private function formData(): array
+    private function formData(bool $withGrid = true): array
     {
+        if (! $withGrid) {
+            $roles = $this->rolesOfThisCompany();
+
+            return [
+                'grid' => [],
+                'roleList' => $this->grouped($roles),
+                'ownerRole' => PermissionSyncer::SUPER_ADMIN_ROLE,
+                'summary' => $this->summary($roles),
+            ];
+        }
+
         $labels = [];
 
         /*
@@ -411,14 +441,210 @@ class RoleController extends Controller implements HasMiddleware
         $order = array_flip(array_keys($labels));
         uksort($grid, fn (string $a, string $b) => [$order[$a] ?? PHP_INT_MAX, $a] <=> [$order[$b] ?? PHP_INT_MAX, $b]);
 
+        $roles = $this->rolesOfThisCompany();
+
         return [
             'grid' => $grid,
-            'roleList' => Role::query()
-                ->where('company_id', CompanyContext::id())
-                ->withCount('users')
-                ->orderBy('name')
-                ->get(),
+            'roleList' => $this->grouped($roles),
             'ownerRole' => PermissionSyncer::SUPER_ADMIN_ROLE,
+            'summary' => $this->summary($roles),
+        ];
+    }
+
+    /**
+     * ⛔ চলতি কোম্পানির রোলই — ৭ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⚠️ কেন এটা লাগে ─────────────────────────────────────────────
+     * এতদিন রোল ছিল **বিশ্বজনীন**, তাই ছাঁকনির প্রশ্নই ছিল না।
+     * ⓘ spatie teams চালু হওয়ায় প্রতিটা কোম্পানি নিজের কপি পেয়েছে।
+     *
+     * ⛔ ছাঁকনি ছাড়া বাঁ কলামটা **সব ক্রেতার রোল** দেখাত, আর
+     * `update()` অন্য কোম্পানিরটা বদলাতে দিত — অর্থাৎ যে ফাঁকটা বন্ধ
+     * করতে teams চালু করা হলো, সেটাই এই পর্দায় খোলা থাকত।
+     *
+     * ⚠️ spatie নিজে `Role::query()`-তে কোনো global scope বসায় না — সে
+     * টিমটা দেখে **বরাদ্দ ও যাচাইয়ের সময়**। ⓘ তালিকা ছাঁকা আমাদের
+     * কাজ, আর হাতের কাজ ভুলে যাওয়া যায়।
+     *
+     * ⓘ `permissions_count` বাঁ কলামের সারিতে বসে — স্পেক §২.৩-এ
+     * প্রতিটা সারিতে নাম · গুনতি। ⛔ আগে এটা কেবল পুরনো তালিকার পর্দায়
+     * গোনা হত, আর ঐ পর্দাটা এখন নেই।
+     *
+     * @return Collection<int, Role>
+     */
+    private function rolesOfThisCompany(): Collection
+    {
+        return Role::query()
+            ->where('company_id', CompanyContext::id())
+            ->withCount(['users', 'permissions'])
+            ->orderBy('name')
+            ->get();
+    }
+
+    /**
+     * ⭐ বাঁ কলামের তিন ভাগ — মালিকের স্পেক §২.৩, ২৪ সেপ্টেম্বর ২০২৬।
+     *
+     * ```
+     * ⭐ সিস্টেম রোল     🏢 ব্যবসায়িক রোল     📦 নিজের বানানো রোল
+     * ```
+     *
+     * ── ⚠️ ভাগটা মেপে, ধরে নিয়ে নয় ──────────────────────────────────
+     * ⛔ নামের তালিকা হাতে লেখা যেত (`'Manager', 'HR', …`) আর পর্দাটা
+     * হুবহু নকশার মতো দেখাত। ⚠️ কিন্তু নতুন মডিউল একটা টেমপ্লেট আনলে
+     * তার রোলটা *"নিজের বানানো"* ভাগে গিয়ে বসত — আর **কোনো ভুল
+     * দেখাত না**, কেবল একটা সারি ভুল জায়গায় চুপ করে থাকত।
+     *
+     * ⭐ তাই ভাগটা রেজিস্ট্রি থেকেই আসে: যে নামটা কোনো মডিউলের
+     * `role_templates`-এ ঘোষিত, সেটা ব্যবসায়িক; মালিকের রোলটা
+     * সিস্টেমের; বাকি সব নিজের বানানো। ⓘ কোরে কোনো মডিউলের নাম
+     * লেখা হয় না (§১৯.৭)।
+     *
+     * @param  Collection<int, Role>  $roles
+     * @return array<string, array{label: string, roles: Collection<int, Role>}>
+     */
+    private function grouped($roles): array
+    {
+        $fromModules = [];
+
+        foreach ($this->modules->all() as $module) {
+            foreach (array_keys($module->roleTemplates) as $name) {
+                $fromModules[(string) $name] = true;
+            }
+        }
+
+        $of = function (Role $role) use ($fromModules): string {
+            if ($role->name === PermissionSyncer::SUPER_ADMIN_ROLE) {
+                return 'system';
+            }
+
+            return isset($fromModules[$role->name]) ? 'business' : 'custom';
+        };
+
+        $out = [];
+
+        foreach (self::ROLE_GROUPS as $key => $label) {
+            $inGroup = $roles->filter(fn (Role $r) => $of($r) === $key)->values();
+
+            /* ⓘ খালি ভাগের মাথা দেখানো হয় না — তিনটা মাথা, শূন্য সারি। */
+            if ($inGroup->isEmpty()) {
+                continue;
+            }
+
+            $out[$key] = ['label' => __($label), 'roles' => $inGroup];
+        }
+
+        return $out;
+    }
+
+    /**
+     * ⭐ এই রোল কোন কাগজে অনুমোদন দিতে পারে — স্পেক §২.৬, §৬।
+     *
+     * ── ⛔ কেন এটা পর্দায় থাকতেই হবে ─────────────────────────────────
+     * ⓘ অনুমোদনের ক্ষমতা অনুমতির ছকে **আসেই না**: ওটা বসে
+     * [[ApprovalFlowStep]]-এ, রোলের আইডি ধরে — একটা সম্পূর্ণ আলাদা
+     * পর্দায় (অনুমোদন প্রবাহ)।
+     *
+     * ⚠️ ফল: রোলের পর্দা দেখে কেউ বুঝতেই পারতেন না যে এই রোলটা
+     * পঞ্চাশ লাখ টাকার কাগজ ছাড়তে পারে। ⛔ অর্থাৎ পর্দাটা *"এই রোল কী
+     * পারে"* প্রশ্নের উত্তর দিত বলে দেখাত, অথচ সবচেয়ে দামি ক্ষমতাটা
+     * সেখানে ছিল না।
+     *
+     * ── ⓘ সংখ্যাগুলো মাপা, কল্পনা নয় ─────────────────────────────────
+     * স্পেকের নমুনায় *"৳১,০০,০০০ ✓ · ৳৫,০০,০০০ ✓ · তার উপরে ✕"* লেখা।
+     * ⛔ ওগুলো বসিয়ে দেওয়া যেত আর পর্দাটা হুবহু নকশার মতো দেখাত —
+     * কিন্তু তখন ঘরটা **সাজসজ্জা**। ⭐ এখানে যা দেখা যায় তার প্রতিটা
+     * সারি ডাটাবেসের একটা সত্যিকারের ধাপ।
+     *
+     * ⚠️ নিষ্ক্রিয় প্রবাহ বাদ (`is_active`): ⛔ ওগুলো দেখালে পর্দা
+     * বলত রোলটা এমন কিছু পারে যা আজ কেউ তার কাছে পাঠায়ই না।
+     *
+     * ── ⓘ নামটা রেজিস্ট্রি থেকে, Approval মডিউল থেকে নয় ──────────────
+     * ⚠️ `ApprovalFlowService::choices()` ঠিক এই কাজটাই করে, কিন্তু সে
+     * Approval মডিউলের। ⛔ এখান থেকে তাকে ডাকলে SystemAdmin-কে
+     * `depends_on`-এ Approval লিখতে হত ([[BoundariesTest]]), আর তখন
+     * Approval মডিউল বন্ধ করা কোম্পানিতে **রোলের পর্দাই খুলত না**।
+     *
+     * ⭐ ঐ সেবাটাও তো রেজিস্ট্রি থেকেই পড়ে (`$module->approvals`) —
+     * তাই এখানে সরাসরি সেটাই পড়া হয়। ⓘ দুইটা কপি নয়, একই উৎস।
+     *
+     * @return list<array{label: string, module: string, level: int, threshold: ?string}>
+     */
+    private function approvalPower(Role $role): array
+    {
+        if (! $role->exists) {
+            return [];
+        }
+
+        $names = [];
+
+        foreach ($this->modules->all() as $module) {
+            foreach ($module->approvals as $action => $key) {
+                $names[$module->code.'.'.$action] = [__($key), $module->label()];
+            }
+        }
+
+        return ApprovalFlowStep::query()
+            ->where('approver_type', ApprovalFlowStep::BY_ROLE)
+            ->where('approver_id', $role->id)
+            ->whereHas('flow', fn ($q) => $q->where('is_active', true))
+            ->with('flow')
+            ->get()
+            ->map(function (ApprovalFlowStep $step) use ($names): array {
+                $module = (string) $step->flow?->module;
+                $action = (string) $step->flow?->action;
+
+                /*
+                 * ⚠️ নাম না মিললে কাঁচা নামটাই — ⛔ চাবিটা ছাপা হয় না।
+                 * ⓘ একটা মডিউল বন্ধ থাকলে বা ঘোষণাটা সরে গেলে সারিটা
+                 * তবু পড়া যায়, আর ক্ষমতাটা লুকিয়ে যায় না।
+                 */
+                [$label, $moduleLabel] = $names[$module.'.'.$action] ?? [$action, $module];
+
+                return [
+                    'label' => $label,
+                    'module' => $moduleLabel,
+                    'level' => $step->level,
+                    'threshold' => $step->flow?->threshold_amount === null
+                        ? null
+                        : (string) $step->flow->threshold_amount,
+                ];
+            })
+            ->sortBy([['module', 'asc'], ['level', 'asc']])
+            ->values()
+            ->all();
+    }
+
+    /** @var array<string, string> */
+    private const ROLE_GROUPS = [
+        'system' => 'system_admin::permission.group_system',
+        'business' => 'system_admin::permission.group_business',
+        'custom' => 'system_admin::permission.group_custom',
+    ];
+
+    /**
+     * মাথার সারাংশ — মালিকের স্পেকের Overview Card।
+     *
+     * ── ⚠️ প্রতিটা সংখ্যা মেপে, কল্পনা নয় ─────────────────────────────
+     * ⓘ স্পেকে উদাহরণ হিসেবে *"২৪৮ · ৩২ · ৮৬"* লেখা। ⛔ ওগুলো বসিয়ে
+     * দেওয়া যেত আর পর্দাটা দেখতে হুবহু নকশার মতো হত — কিন্তু তখন
+     * কার্ডগুলো **সাজসজ্জা**, আর একদিন কেউ ওগুলো বিশ্বাস করে সিদ্ধান্ত
+     * নিতেন।
+     *
+     * ⓘ যে ঘরগুলোর পিছনে এখনো কোনো ব্যবস্থা নেই (অস্থায়ী অনুমতি,
+     * ঝুঁকির মাত্রা), সেগুলো এখানে **নেই** — ⚠️ শূন্য দেখানোও একটা
+     * উত্তর, আর ওটা মিথ্যা: শূন্য মানে *"একটাও নেই"*, *"এখনো বানানো
+     * হয়নি"* নয়।
+     *
+     * @param  Collection<int, Role>  $roles
+     * @return array<string, int>
+     */
+    private function summary($roles): array
+    {
+        return [
+            'users' => User::query()->count(),
+            'roles' => $roles->count(),
+            'permissions' => Permission::query()->count(),
+            'unassigned' => $roles->where('users_count', 0)->count(),
         ];
     }
 

@@ -59,13 +59,15 @@ function fire (element) {
     element.dispatchEvent(new window.Event('change', { bubbles: true }))
 }
 
-beforeEach(() => {
-    document.body.innerHTML = MODULE
+function mount (html) {
+    document.body.innerHTML = html
     root = document.body
     wireActions(root)
-})
+}
 
 describe('অনুমতির "সব" টিক', () => {
+    beforeEach(() => mount(MODULE))
+
     it('মডিউলের টিকে ঐ মডিউলের সবকিছু বসে — manage সহ', () => {
         const all = root.querySelector('[data-permission-module="sales"] [data-permission-all]')
 
@@ -209,5 +211,194 @@ describe('অনুমতির "সব" টিক', () => {
 
         expect(root.querySelector('[value="sales.scheme.manage"]').checked).toBe(true)
         expect(other.checked).toBe(false)
+    })
+})
+
+/*
+ * ⭐ গোটা পর্দার বোতাম আর ছকে খোঁজা — মালিকের স্পেক §২.৫,
+ * ২৪ সেপ্টেম্বর ২০২৬।
+ *
+ * ⓘ আলাদা একটা ছাঁচ, উপরেরটার সাথে মেশানো নয়: এখানে সারিগুলোর
+ * `data-permission-text` লাগে আর দুইটা মডিউলেই `view` ঘর লাগে —
+ * উপরের ছাঁচটা বদলালে ওখানকার আটটা দাবির মানে ঘুরে যেত।
+ */
+const SCREEN = `
+<form>
+  <button type="button" data-permission-bulk="all">সব</button>
+  <button type="button" data-permission-bulk="none">কিছুই না</button>
+  <button type="button" data-permission-bulk="view">শুধু দেখা</button>
+  <input type="search" data-permission-search>
+  <p data-permission-empty hidden>কিছু মেলেনি</p>
+
+  <details data-permission-module="sales">
+    <summary>
+      <span data-permission-count data-permission-total="3" data-permission-label=":on / :all">0 / 3</span>
+    </summary>
+    <table>
+      <tbody data-permission-section="transactions">
+        <tr data-permission-section-head><th>লেনদেন</th></tr>
+        <tr data-permission-row data-permission-text="বিক্রয় বিল sales.invoice.view sales.invoice.approve">
+          <td><input type="checkbox" name="permissions[]" value="sales.invoice.view" data-permission-cell="view"></td>
+          <td><input type="checkbox" name="permissions[]" value="sales.invoice.approve"></td>
+        </tr>
+      </tbody>
+      <tbody data-permission-section="reports">
+        <tr data-permission-section-head><th>রিপোর্ট</th></tr>
+        <tr data-permission-row data-permission-text="বিক্রয় স্কিম sales.scheme.manage">
+          <td><input type="checkbox" name="permissions[]" value="sales.scheme.manage" data-permission-cell="manage"></td>
+        </tr>
+      </tbody>
+    </table>
+  </details>
+
+  <details data-permission-module="purchase">
+    <summary><span data-permission-count data-permission-total="1" data-permission-label=":on / :all">0 / 1</span></summary>
+    <table>
+      <tbody data-permission-section="transactions">
+        <tr data-permission-section-head><th>লেনদেন</th></tr>
+        <tr data-permission-row data-permission-text="ক্রয় বিল purchase.bill.view">
+          <td><input type="checkbox" name="permissions[]" value="purchase.bill.view" data-permission-cell="view"></td>
+        </tr>
+      </tbody>
+    </table>
+  </details>
+</form>`
+
+const press = (mode) => root.querySelector(`[data-permission-bulk="${mode}"]`)
+    .dispatchEvent(new window.Event('click', { bubbles: true }))
+
+function type (term) {
+    const field = root.querySelector('[data-permission-search]')
+
+    field.value = term
+    field.dispatchEvent(new window.Event('input', { bubbles: true }))
+}
+
+describe('গোটা পর্দার বোতাম', () => {
+    beforeEach(() => mount(SCREEN))
+
+    it('"সব" চাপলে প্রতিটা মডিউলের প্রতিটা ঘর বসে', () => {
+        press('all')
+
+        expect(boxes('input[name="permissions[]"]:checked')).toHaveLength(4)
+    })
+
+    it('"কিছুই না" চাপলে সব তুলে যায়', () => {
+        press('all')
+        press('none')
+
+        expect(boxes('input[name="permissions[]"]:checked')).toHaveLength(0)
+    })
+
+    /*
+     * ⛔ আর এটাই দামি দাবিটা।
+     *
+     * ⚠️ "শুধু দেখা" যদি `manage` ঘরটাও বসাত, বোতামটা তার নামের
+     * **উল্টো** কাজ করত: ⓘ `manage` মানে তৈরি · সম্পাদনা · **মোছা**।
+     * ⛔ ব্যবহারকারী "শুধু দেখা" পড়ে ক্লিক করতেন আর নীরবে মোছার
+     * অধিকার দিয়ে ফেলতেন — আর পর্দা ঠিকই দেখাত।
+     */
+    it('"শুধু দেখা" কেবল দেখার ঘর বসায় — manage বা অনুমোদন নয়', () => {
+        press('view')
+
+        expect(root.querySelector('[value="sales.invoice.view"]').checked).toBe(true)
+        expect(root.querySelector('[value="purchase.bill.view"]').checked).toBe(true)
+        expect(root.querySelector('[value="sales.scheme.manage"]').checked).toBe(false)
+        expect(root.querySelector('[value="sales.invoice.approve"]').checked).toBe(false)
+    })
+
+    /*
+     * ⓘ ভাঁজ করা মডিউলের ব্যাজও নতুন করে লেখা হয়।
+     *
+     * ⛔ নাহলে "সব" চাপার পর ব্যাজে `0 / 1` বসে থাকত, আর ব্যবহারকারী
+     * ধরে নিতেন ঐ মডিউলে কিছুই বসেনি।
+     */
+    it('ভাঁজ করা মডিউলের গোনাও বদলায়', () => {
+        press('all')
+
+        const badges = boxes('[data-permission-count]').map((b) => b.textContent.trim())
+
+        expect(badges).toEqual(['3 / 3', '1 / 1'])
+    })
+})
+
+describe('ছকে খোঁজা', () => {
+    beforeEach(() => mount(SCREEN))
+
+    /*
+     * ⚠️ খোঁজার শব্দটা `purchase.bill`, "ক্রয়" নয় — আর কারণটা মনে
+     * রাখার মতো: ⛔ **"ক্রয়" শব্দটা "বিক্রয়"-এর ভিতরেই আছে**, তাই
+     * ওটা দিয়ে খুঁজলে দুইটা সারিই সত্যি সত্যিই মেলে।
+     *
+     * ⓘ প্রথম খসড়ায় দাবিটা ঐ শব্দেই লেখা ছিল আর লাল হয়েছিল — কোডের
+     * দোষে নয়, দাবিটার দোষে। ⭐ একটা দাবি যা ভুল কারণে লাল হয়, সে
+     * একদিন ভুল কারণে সবুজও হবে।
+     */
+    it('যে সারি মেলে না সেটা আড়ালে যায়', () => {
+        type('purchase.bill')
+
+        expect(root.querySelector('[data-permission-text*="purchase.bill"]').hidden).toBe(false)
+        expect(root.querySelector('[data-permission-text*="sales.invoice"]').hidden).toBe(true)
+    })
+
+    /*
+     * ⭐ কাঁচা নামেও মেলে — সাপোর্টের কেউ ঐ নামটাই জানেন।
+     *
+     * ⚠️ পর্দায় `sales.invoice.approve` লেখাটা কোথাও দেখা যায় না, তাই
+     * কেবল চোখে দেখা লেখায় খুঁজলে এই খোঁজাটা কিছুই ফেরাত না।
+     */
+    it('কাঁচা অনুমতির নাম লিখেও মেলে', () => {
+        type('sales.invoice.approve')
+
+        expect(root.querySelector('[data-permission-text*="বিক্রয় বিল"]').hidden).toBe(false)
+        expect(root.querySelector('[data-permission-module="purchase"]').hidden).toBe(true)
+    })
+
+    /*
+     * ⛔ খালি ভাগের মাথাও আড়ালে যায়।
+     *
+     * ⚠️ নাহলে খোঁজার পর ছকে কেবল "লেনদেন" · "রিপোর্ট" মাথাগুলো পড়ে
+     * থাকত, আর দেখে মনে হত কিছু একটা মিলেছে।
+     */
+    it('যে ভাগে কিছু মেলেনি তার মাথাও আড়ালে যায়', () => {
+        type('স্কিম')
+
+        const sales = root.querySelector('[data-permission-module="sales"]')
+        const heads = [...sales.querySelectorAll('[data-permission-section-head]')]
+
+        expect(heads.map((h) => h.hidden)).toEqual([true, false])
+    })
+
+    /*
+     * ⚠️ খোঁজা একটা চশমা, কাঁচি নয় — আড়ালে যাওয়া সারির টিক থাকে।
+     *
+     * ⛔ এটা না মাপলে একদিন কেউ "আড়াল" মানে "বাদ" ধরে নিয়ে কোডটা
+     * বদলাত, আর খোঁজার পর সংরক্ষণ করলে **বাকি সব অনুমতি নীরবে চলে
+     * যেত** — ঠিক যে ভুলটা পর্দায় দেখা যায় না।
+     */
+    it('আড়াল করা সারির টিক অক্ষত থাকে', () => {
+        press('all')
+        type('ক্রয়')
+
+        expect(root.querySelector('[value="sales.invoice.view"]').checked).toBe(true)
+        expect(boxes('input[name="permissions[]"]:checked')).toHaveLength(4)
+    })
+
+    it('খোঁজা মুছে দিলে সব আবার ফেরে', () => {
+        type('ক্রয়')
+        type('')
+
+        expect(boxes('[data-permission-row][hidden]')).toHaveLength(0)
+        expect(boxes('[data-permission-module][hidden]')).toHaveLength(0)
+    })
+
+    it('কিছুই না মিললে বার্তাটা দেখা যায়', () => {
+        const empty = root.querySelector('[data-permission-empty]')
+
+        expect(empty.hidden).toBe(true)
+
+        type('এমন কিছু নেই')
+
+        expect(empty.hidden).toBe(false)
     })
 })

@@ -24,7 +24,6 @@ return [
     'owner_transfer_left_nobody' => 'The transfer was rolled back — it would have left this company with no active owner. The previous owner still holds it.',
     'owner_needs_company' => 'It is not clear which company this would own, so the role was not applied — '
         .'choose a company first. (Whether there is already an owner is counted per company.)',
-    'role_name_shape' => 'A role name takes lowercase letters, digits and underscores (store_keeper).',
     // Names the name back: the rule is not about the field being
     // required, it is about this name yielding no ASCII code.
     'code_needs_latin' => 'Please type the code — no code could be made from “:name”, because codes are always written in Latin letters and go into every document number.',

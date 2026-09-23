@@ -136,6 +136,12 @@ return [
     'column_special' => 'Special',
     'manage_spans' => 'Manage — create · edit · delete together',
     'roles' => 'Roles',
+
+    /* Header summary - the owner's Overview Cards */
+    'card_users' => 'Users',
+    'card_roles' => 'Roles',
+    'card_permissions' => 'Permissions',
+    'card_unassigned' => 'Roles with nobody',
     'search_roles' => 'Search roles',
     'users_in_role' => 'Users in this role',
     'search_users' => 'Search names',
@@ -153,4 +159,37 @@ return [
         'other' => 'Other rights',
     ],
     'select_all_module' => 'Select all in this module',
+
+    /* ⓘ কারণসহ bn/permission.php-তে। */
+    'group_system' => 'System roles',
+    'group_business' => 'Business roles',
+    'group_custom' => 'Roles you made',
+
+    'search_permissions' => 'Search module, screen or permission',
+    'select_everything' => 'Select all',
+    'clear_everything' => 'Clear all',
+    'read_only_preset' => 'View only',
+    'nothing_matched' => 'Nothing matched that search.',
+
+    'state_granted' => 'Granted',
+    'state_denied' => 'Not granted',
+    'state_absent' => 'This screen has no such action',
+    'legend' => 'Cell states',
+
+    'people_count' => ':count people',
+    'made_on' => 'made :date',
+    'changed_on' => 'last changed :date',
+
+    'approval_power' => 'Approval power',
+    'approval_level' => 'Step :level',
+    'approval_always' => 'Every document',
+
+    'effective_access' => 'Effective access',
+    'effective_access_note' => 'What this user can really do today, and which role it came from.',
+    'from_roles' => 'from :roles',
+    'from_nowhere' => 'nothing',
+    'granted_directly' => 'granted directly',
+
+    'pick_a_role' => 'Pick a role on the left',
+    'pick_a_role_note' => 'Choose a role and every permission it holds appears here as a grid — or create a new one.',
 ];

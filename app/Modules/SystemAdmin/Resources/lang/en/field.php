@@ -24,7 +24,8 @@ return [
     'password_blank_hint' => 'Leave empty to keep the current password.',
     'roles' => 'Roles',
     'role_name' => 'Role name',
-    'role_name_hint' => 'Lowercase letters and underscores (store_keeper) — the name is used in code too.',
+    /* ⓘ কারণসহ bn/field.php-তে। */
+    'role_name_hint' => 'Shown exactly as you type it — the name is used once per company.',
     'permission_count' => 'Permissions',
     'user_count' => 'Users',
     'last_login' => 'Last signed in',
