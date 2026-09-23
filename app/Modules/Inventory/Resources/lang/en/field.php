@@ -27,6 +27,7 @@ return [
     'sale_price' => 'Sale price',
     'margin' => 'Margin',
     'markup' => 'Markup',
+    'track_batch' => 'Track lots (batches)',
     'reorder_level' => 'Reorder level',
     'product' => 'Product',
     'warehouse' => 'Warehouse',

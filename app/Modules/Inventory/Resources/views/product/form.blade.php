@@ -164,6 +164,29 @@
                             :value="old('reorder_level', $product->reorder_level)"
                             :hint="__('inventory::message.reorder_hint')" numeric />
             </div>
+
+            {{-- ⭐ লট ধরা হবে কি না — মালিকের নিয়ম, ২৩ সেপ্টেম্বর ২০২৬।
+
+                 ⓘ তাঁর কথা: *"লট ছাড়া মাল ঢুকবেও না, বেরোবেও না"*। লট মানে
+                 একসাথে আসা মালের একটা চালান, যার নিজের মেয়াদ আছে।
+
+                 ⚠️ ঘরটা আগস্ট থেকেই টেবিলে ছিল, কিন্তু **কোনো পর্দা ওটা
+                 ছুঁত না** — অর্থাৎ সুইচটা বাস্তবে ছিলই না, আর লাইভের ১৭৭টা
+                 পণ্যের একটাতেও লট চালু হয়নি।
+
+                 ⓘ দুইটা জিনিস এর উপর দাঁড়িয়ে: মেয়াদ ধরা (আর রিকল), আর
+                 ফ্রি মালের অনুপাত — কোন লটে কত ফ্রি এসেছিল। --}}
+            <label class="mt-3 flex min-h-(--spacing-touch) items-start gap-2 text-sm">
+                <input type="hidden" name="track_batch" value="0">
+                <input type="checkbox" name="track_batch" value="1" class="mt-0.5 size-4"
+                       @checked(old('track_batch', $product->track_batch ?? true))>
+                <span>
+                    {{ __('inventory::field.track_batch') }}
+                    <span class="mt-0.5 block text-2xs text-(--color-ink-muted)">
+                        {{ __('inventory::message.track_batch_hint') }}
+                    </span>
+                </span>
+            </label>
         </section>
 
         {{-- পণ্যের ছবি — সংরক্ষণ ও যাচাই ব্যাকএন্ডে (A3)। এখানে কেবল ঘর;

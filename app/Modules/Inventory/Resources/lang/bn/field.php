@@ -42,6 +42,7 @@ return [
     'sale_price' => 'বিক্রয়মূল্য',
     'margin' => 'মার্জিন',
     'markup' => 'মার্কআপ',
+    'track_batch' => 'লট (ব্যাচ) ধরে রাখা হবে',
     'reorder_level' => 'পুনঃক্রয়ের স্তর',
     'product' => 'পণ্য',
     'warehouse' => 'গুদাম',

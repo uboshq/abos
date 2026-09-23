@@ -46,6 +46,18 @@ class Product extends Model implements Drillable
     protected $fillable = [
         'company_id', 'code', 'name_en', 'name_bn', 'barcode', 'primary_image_id',
         'brand', 'category', 'brand_id', 'category_id', 'unit_id', 'tax_id',
+
+        /*
+         * ⭐ লট ধরা হবে কি না — ২৩ সেপ্টেম্বর ২০২৬।
+         *
+         * ⚠️ ঘরটা আগস্ট থেকেই আছে, কিন্তু `fillable`-এ ছিল না — অর্থাৎ
+         * **চালু করার কোনো পথই ছিল না**, না ফর্মে, না কোথাও। ⓘ ধরা
+         * পড়েছে ফ্রি মালের অনুপাতের কাজ করতে গিয়ে: পরীক্ষায়
+         * `update(['track_batch' => true])` নীরবে কিছুই করত না।
+         *
+         * ⓘ মালিকের নিয়ম: *"লট ছাড়া মাল ঢুকবেও না, বেরোবেও না"*।
+         */
+        'track_batch',
         'purchase_price', 'sale_price', 'pricing_anchor', 'pricing_pct', 'reorder_level',
         'status', 'is_active', 'created_by',
     ];

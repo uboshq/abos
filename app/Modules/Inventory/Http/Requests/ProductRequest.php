@@ -82,6 +82,15 @@ class ProductRequest extends FormRequest
              * শিকল, চক্র আর বারকোড যাচাই [[ProductPackService]]-এ, কারণ
              * সেগুলো সারিগুলো একসাথে দেখে তবে বলা যায়।
              */
+            /*
+             * ⭐ লট ধরা হবে কি না — মালিকের নিয়ম, ২৩ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ *"লট ছাড়া মাল ঢুকবেও না, বেরোবেও না"*। ⚠️ ঘরটা আগে
+             * থেকেই ছিল, কিন্তু কোনো পর্দা বা যাচাই ওটা ছুঁত না — তাই
+             * সুইচটা বাস্তবে ছিলই না।
+             */
+            'track_batch' => ['nullable', 'boolean'],
+
             'pack_table' => ['nullable', 'boolean'],
             'packs' => ['nullable', 'array', 'max:20'],
             'packs.*' => ['array'],
