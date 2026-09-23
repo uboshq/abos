@@ -21,7 +21,7 @@
     <form method="POST"
           action="{{ $isNew ? route('system_admin.reports.schedule.store') : route('system_admin.reports.schedule.update', $schedule) }}"
           x-data="{ freq: '{{ $sel('frequency', 'daily') }}' }"
-          class="max-w-3xl space-y-4">
+          class="max-w-screen-2xl space-y-4">
         @csrf
         @unless ($isNew) @method('PUT') @endunless
 

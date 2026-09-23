@@ -23,31 +23,7 @@
         </div>
     @endif
 
-    {{-- ── ট্যাব, ৩০ আগস্ট ২০২৬ ────────────────────────────────────────
-         মালিকের কথা: "এত লম্বা জিনিস Ctrl+F কইরা খুঁইজা বাইর করতে হবে না,
-         প্রত্যেকটা জিনিস আলাদা আলাদা রাখ।"
-
-         তিপ্পান্নটা সুইচ এক পাতায় ছিল, আর এখন যোগ হচ্ছে একশোর বেশি মেনু
-         সারি। এক পাতায় দেড়শো সুইচ মানে কেউ কিছু খুঁজে পায় না, তাই কেউ
-         কিছু বদলায়ও না — জিনিসটা থাকা আর না থাকা সমান।
-
-         ট্যাবগুলো লিংক, JS নয়: প্রতিটার নিজের ঠিকানা থাকে, তাই কেউ
-         "মজুদের সুইচগুলো" বুকমার্ক করে রাখতে পারেন, আর ফিরে গেলে একই
-         জায়গায় ফেরে। --}}
-    <nav class="mb-4 flex flex-wrap gap-1 border-b border-(--color-border) print-hide"
-         aria-label="{{ __('system_admin::menu.control_panel') }}">
-        @foreach ($tabs as $one)
-            <a href="{{ route('system_admin.control-panel', ['tab' => $one['key']]) }}"
-               @class([
-                   'min-h-(--spacing-touch) rounded-t-(--radius-field) px-3 py-2 text-sm transition-colors',
-                   'border-b-2 border-(--color-brand-600) font-semibold' => $tab === $one['key'],
-                   'text-(--color-ink-muted) hover:bg-(--color-surface-hover)' => $tab !== $one['key'],
-               ])
-               @if ($tab === $one['key']) aria-current="page" @endif>
-                {{ $one['label'] }}
-            </a>
-        @endforeach
-    </nav>
+    @include('system_admin::control-panel.partials.tabs')
 
     {{-- খালি-অবস্থা এখন গাছটাও হিসেবে ধরে।
 
@@ -87,7 +63,21 @@
                    ([[MenuSwitches::itemIsOn()]])। --}}
               x-data="switchBoard({ on: @js($switchState ?? []) })"
               @change="touch($event.target)"
-              class="max-w-3xl space-y-4 pb-20">
+              {{-- ⭐ চওড়ার বাঁধনটা তুলে নেওয়া হলো — মালিকের নির্দেশ, ২৩ সেপ্টেম্বর ২০২৬।
+
+                   তাঁর কথা: *"সব কটি পর্দা স্ক্রল করে দেখতে হয়, but এগুলো
+                   পাশাপাশি রাখার পর্যাপ্ত জায়গা আছে"*।
+
+                   ⛔ এখানে `max-w-3xl` ছিল — অর্থাৎ পর্দা যত চওড়াই হোক, পুরো
+                   পাতাটা ৭৬৮ পিক্সেলে বাঁধা থাকত। ⓘ বাঁধনটা পড়ার জন্য ঠিক
+                   (লম্বা লাইন পড়া কষ্ট), কিন্তু ⚠️ এই পাতার সারিগুলো লেখা নয়,
+                   **সুইচ** — একটা চেকবক্স আর একটা ছোট নাম। ⛔ ফলে ডান পাশের
+                   অর্ধেকের বেশি ফাঁকা পড়ে থাকত, আর তালিকাটা নামত অনেক নিচে।
+
+                   ⓘ `max-w-screen-2xl` রাখা হয়েছে, বাঁধনহীন নয় — খুব চওড়া
+                   মনিটরে গ্রিডটা এত ছড়িয়ে যেত যে চোখকে বাঁ থেকে ডানে অনেক
+                   দূর যেতে হত, আর সেটা স্ক্রলের চেয়ে ভালো কিছু নয়। --}}
+              class="max-w-screen-2xl space-y-4 pb-20">
             @csrf
             @method('PUT')
 
@@ -108,9 +98,19 @@
                         {{ $module['label'] }}
                     </h2>
 
-                    <div class="divide-y divide-(--color-border)">
+                    {{-- ⭐ সেটিংসের ভাগগুলোও পাশাপাশি — একই কারণ, ২৩ সেপ্টেম্বর ২০২৬।
+
+                         ⓘ উপরের মেনু-গাছে যা করা হয়েছে, এখানেও তাই: ভাগ
+                         পাশাপাশি বসে, ভাগের ভিতরের ঘরগুলো আগের মতোই খাড়া।
+                         ⚠️ দুই জায়গায় দুই রকম হলে একই পাতায় দুই রকম আচরণ
+                         থাকত, আর মানুষ প্রতিবার নতুন করে বুঝত।
+
+                         ⓘ দুই কলামেই থেমেছি, তিনে নয় — সেটিংসের ঘরে লেখার
+                         ইনপুট ও বাছাইয়ের ঘর থাকে, আর ⚠️ তিন কলামে ওগুলো এত
+                         সরু হত যে বসানো মানটাই পড়া যেত না। --}}
+                    <div class="grid items-start gap-px bg-(--color-border) lg:grid-cols-2 2xl:grid-cols-3">
                         @foreach ($module['groups'] as $group => $settings)
-                            <div class="p-4">
+                            <div class="bg-(--color-surface-card) p-4">
                                 {{-- গ্রুপের নাম মডিউলের নিজের অনুবাদ থেকে।
                                      না থাকলে অনুবাদের কী-টাই ফেরত আসে, আর
                                      তখন একটা সাধারণ নাম দেখানো হয় — কাঁচা
@@ -213,7 +213,7 @@
             <div x-show="count > 0" x-cloak
                  class="fixed inset-x-0 bottom-(--spacing-bottom-nav) z-40 border-t border-(--color-border)
                         bg-(--color-surface-card) px-4 py-3 shadow-lg md:bottom-0">
-                <div class="mx-auto flex max-w-3xl items-center gap-3">
+                <div class="mx-auto flex max-w-screen-2xl items-center gap-3">
                     <span class="text-sm">
                         <span class="num font-semibold" x-text="count"></span>
                         {{ __('system_admin::message.unsaved') }}

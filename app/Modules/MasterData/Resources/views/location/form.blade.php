@@ -32,7 +32,7 @@
               : route('master_data.location.update', $location) }}"
           x-data="{ busy: false }"
           @submit="busy ? $event.preventDefault() : (busy = true)"
-          class="max-w-3xl space-y-4">
+          class="max-w-screen-2xl space-y-4">
         @csrf
         @unless ($isNew) @method('PUT') @endunless
 

@@ -30,13 +30,13 @@
     @endif
 
     {{-- ⚠️ সীমানাটা ফর্মেই লেখা — মানুষ নোট আর ফেরত নিয়মিত গুলিয়ে ফেলেন --}}
-    <p class="mb-4 max-w-3xl rounded-(--radius-field) bg-(--color-surface-sunken) px-3 py-2
+    <p class="mb-4 max-w-screen-2xl rounded-(--radius-field) bg-(--color-surface-sunken) px-3 py-2
               text-sm text-(--color-ink-muted)">
         {{ __('accounts::note.no_goods_move') }}
     </p>
 
     <form method="POST" action="{{ route('accounts.note.store') }}"
-          class="max-w-3xl rounded-(--radius-card) border border-(--color-border)
+          class="max-w-screen-2xl rounded-(--radius-card) border border-(--color-border)
                  bg-(--color-surface-card) p-4">
         @csrf
 

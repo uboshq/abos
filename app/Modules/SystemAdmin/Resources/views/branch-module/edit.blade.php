@@ -47,7 +47,7 @@
                    (`resources/js/components/forms.js`-এ `switchBoard`)। --}}
               x-data="switchBoard({ on: @js(collect($modules)->pluck('on', 'code')->all()) })"
               @change="touch($event.target)"
-              class="max-w-3xl space-y-4 pb-20">
+              class="max-w-screen-2xl space-y-4 pb-20">
             @csrf
             @method('PUT')
 
@@ -145,7 +145,7 @@
             <div x-show="count > 0" x-cloak
                  class="fixed inset-x-0 bottom-(--spacing-bottom-nav) z-40 border-t border-(--color-border)
                         bg-(--color-surface-card) px-4 py-3 shadow-lg md:bottom-0">
-                <div class="mx-auto flex max-w-3xl items-center gap-3">
+                <div class="mx-auto flex max-w-screen-2xl items-center gap-3">
                     <span class="text-sm">
                         <span class="num font-semibold" x-text="count"></span>
                         {{ __('system_admin::message.unsaved') }}

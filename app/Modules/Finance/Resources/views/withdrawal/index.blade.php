@@ -193,7 +193,7 @@
                     </p>
 
                     <form method="POST" action="{{ route('finance.withdrawal.cap') }}"
-                          class="grid max-w-4xl gap-3 sm:grid-cols-2">
+                          class="grid max-w-screen-2xl gap-3 sm:grid-cols-2">
                         @csrf
 
                         {{-- ⛔ সীমাটা এখন ব্যক্তির সারির উপর বসে, নামের উপর নয়।

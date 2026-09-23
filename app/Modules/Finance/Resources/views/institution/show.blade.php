@@ -36,7 +36,7 @@
 
     @if ($institution->kind !== \App\Modules\Finance\Models\Institution::INSURANCE)
         <section data-boxed
-                 class="mb-4 max-w-5xl overflow-hidden rounded-(--radius-card) border border-(--color-border)
+                 class="mb-4 max-w-screen-2xl overflow-hidden rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card)">
             <header class="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-(--color-border) px-4 py-2">
                 <h2 class="text-sm font-semibold">{{ __('finance::institution.accounts') }}</h2>
@@ -125,7 +125,7 @@
 
     @if ($facilities->isNotEmpty())
         <section data-boxed
-                 class="mb-4 max-w-5xl overflow-hidden rounded-(--radius-card) border border-(--color-border)
+                 class="mb-4 max-w-screen-2xl overflow-hidden rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card)">
             <header class="flex flex-wrap items-baseline gap-x-3 border-b border-(--color-border) px-4 py-2">
                 <h2 class="text-sm font-semibold">{{ __('finance::menu.bank_facility') }}</h2>
@@ -150,7 +150,7 @@
 
     @if ($deposits->isNotEmpty())
         <section data-boxed
-                 class="mb-4 max-w-5xl overflow-hidden rounded-(--radius-card) border border-(--color-border)
+                 class="mb-4 max-w-screen-2xl overflow-hidden rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card)">
             <header class="flex flex-wrap items-baseline gap-x-3 border-b border-(--color-border) px-4 py-2">
                 <h2 class="text-sm font-semibold">{{ __('finance::menu.deposit_bank') }}</h2>
@@ -182,7 +182,7 @@
 
     @if ($policies->isNotEmpty() || $institution->kind === \App\Modules\Finance\Models\Institution::INSURANCE)
         <section data-boxed
-                 class="mb-4 max-w-5xl overflow-hidden rounded-(--radius-card) border border-(--color-border)
+                 class="mb-4 max-w-screen-2xl overflow-hidden rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card)">
             <header class="flex flex-wrap items-baseline gap-x-3 border-b border-(--color-border) px-4 py-2">
                 <h2 class="text-sm font-semibold">{{ __('finance::institution.policies') }}</h2>

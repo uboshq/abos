@@ -21,7 +21,7 @@
 
     @if ($locked)
         <div role="status"
-             class="mb-4 max-w-3xl rounded-(--radius-field) bg-(--color-badge-warning-bg) px-3 py-2 text-sm
+             class="mb-4 max-w-screen-2xl rounded-(--radius-field) bg-(--color-badge-warning-bg) px-3 py-2 text-sm
                     text-(--color-badge-warning-ink)">
             {{ __('accounts::validation.system_account_locked', ['name' => $account->name()]) }}
         </div>
@@ -68,7 +68,7 @@
               url: @js(route('accounts.coa.next-code')),
           })"
           @submit="guard($event)"
-          class="max-w-3xl space-y-4">
+          class="max-w-screen-2xl space-y-4">
         @csrf
         @unless ($isNew) @method('PUT') @endunless
 

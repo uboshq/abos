@@ -25,7 +25,7 @@
         </div>
     @endif
 
-    <form method="POST" action="{{ route('accounts.settings.update') }}" class="max-w-3xl space-y-4">
+    <form method="POST" action="{{ route('accounts.settings.update') }}" class="max-w-screen-2xl space-y-4">
         @csrf
         @method('PUT')
 

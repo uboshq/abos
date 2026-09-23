@@ -62,7 +62,7 @@
     @endif
 
     <section data-boxed
-             class="max-w-4xl rounded-(--radius-card) border border-(--color-border)
+             class="max-w-screen-2xl rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card) p-4">
         <dl class="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
             <div>

@@ -90,7 +90,7 @@
         <div x-show="chosen > 0" x-cloak
              class="fixed inset-x-0 bottom-(--spacing-bottom-nav) z-40 border-t border-(--color-border)
                     bg-(--color-surface-card) px-4 py-3 shadow-lg md:bottom-0">
-            <div class="mx-auto flex max-w-5xl flex-wrap items-center gap-3">
+            <div class="mx-auto flex max-w-screen-2xl flex-wrap items-center gap-3">
                 <span class="text-sm">
                     <span class="num font-semibold" x-text="chosen"></span>
                     {{ __('inventory::label.chosen') }}

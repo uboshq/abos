@@ -39,7 +39,7 @@
     @endif
 
     <section data-boxed
-             class="mb-4 max-w-5xl rounded-(--radius-card) border border-(--color-border)
+             class="mb-4 max-w-screen-2xl rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card) p-4">
         <dl class="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
             <div>
@@ -78,7 +78,7 @@
     @include('finance::partials.handoff', ['voucher' => 'payment'])
 
     <section data-boxed
-             class="max-w-5xl overflow-hidden rounded-(--radius-card) border border-(--color-border)
+             class="max-w-screen-2xl overflow-hidden rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">
         <h2 class="border-b border-(--color-border) px-4 py-2 text-sm font-semibold">
             {{ __('finance::insurance.premiums') }}

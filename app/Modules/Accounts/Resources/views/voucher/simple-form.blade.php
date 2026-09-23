@@ -138,7 +138,7 @@
           {{-- ⛔ রসিদ ও পরিশোধও চওড়া — ১৯ সেপ্টেম্বর ২০২৬, মালিক: *"bame faka jayga
                komale box e sari vange na"*। ⓘ `max-w-3xl`-এ পাতাটা মাঝখানে সরু বসত,
                দুই পাশ ফাঁকা, আর নিচের সারির "কার মাধ্যমে" লেখা কেটে যেত। --}}
-          class="{{ $expenseLayout || $contraLayout || $partyAbove ? 'max-w-6xl' : 'max-w-3xl' }} space-y-4">
+          class="{{ $expenseLayout || $contraLayout || $partyAbove ? 'max-w-6xl' : 'max-w-screen-2xl' }} space-y-4">
         @csrf
         @unless ($isNew) @method('PUT') @endunless
         <input type="hidden" name="type" value="{{ $type }}">

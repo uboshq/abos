@@ -16,7 +16,7 @@
 
     @if ($errors->any())
         <div role="alert"
-             class="mb-4 max-w-4xl rounded-(--radius-field) bg-(--color-badge-danger-bg) px-3 py-2 text-sm
+             class="mb-4 max-w-screen-2xl rounded-(--radius-field) bg-(--color-badge-danger-bg) px-3 py-2 text-sm
                     text-(--color-badge-danger-ink)">
             <ul class="list-inside list-disc">
                 @foreach ($errors->all() as $error)
@@ -27,7 +27,7 @@
     @endif
 
     <section data-boxed
-             class="max-w-4xl rounded-(--radius-card) border border-(--color-border)
+             class="max-w-screen-2xl rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card) p-4">
         <form method="POST" action="{{ route('finance.insurance.renew', $policy) }}"
               class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">

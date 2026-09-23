@@ -23,7 +23,7 @@
         </div>
     @endif
 
-    <section data-boxed class="max-w-5xl rounded-(--radius-card) border border-(--color-border)
+    <section data-boxed class="max-w-screen-2xl rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card) p-4">
         <form method="POST" action="{{ route('finance.budget.store') }}"
               x-data="{ busy: false }"

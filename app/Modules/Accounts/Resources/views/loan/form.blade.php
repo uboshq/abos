@@ -27,7 +27,7 @@
     <form method="POST" action="{{ route('accounts.loan.store') }}"
           x-data="{ kind: '{{ old('kind', \App\Modules\Accounts\Models\Loan::TERM) }}', busy: false }"
           @submit="busy ? $event.preventDefault() : (busy = true)"
-          class="max-w-3xl space-y-4">
+          class="max-w-screen-2xl space-y-4">
         @csrf
 
         @if ($errors->any())

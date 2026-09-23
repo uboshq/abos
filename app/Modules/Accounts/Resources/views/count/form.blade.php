@@ -19,7 +19,7 @@
     <form method="POST" action="{{ route('accounts.count.store') }}"
           x-data="cashCount({ zeroConfirm: @js(__('accounts::message.zero_count_confirm')) })"
           @submit="guard($event)"
-          class="max-w-3xl space-y-4">
+          class="max-w-screen-2xl space-y-4">
         @csrf
 
         @if ($errors->any())
