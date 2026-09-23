@@ -119,4 +119,16 @@ return [
 
     /* Why a switched-off product is still listed — 21 September 2026. */
     'inactive_but_held' => 'This product is switched off, but it is listed because stock is still held.',
+
+    /*
+     * ⓘ Giving stranded stock a lot — 23 September 2026.
+     *
+     * ⚠️ The reason is written on the row itself: six months on, two
+     * opposite rows would otherwise read as goods leaving and coming back.
+     */
+    'lot_assigned_narration' => 'Lot :lot written on — nothing was moved, only the lot recorded.',
+    'lot_assigned' => ':qty of :product now belongs to lot :lot — the stock figure has not moved.',
+    'lot_assign_note' => 'Nothing is moved — only the lot is recorded. The quantity and the value do not change.',
+    'lot_waiting_title' => 'Still without a lot',
+    'lot_waiting_none' => 'Nothing is lot-less any more — all of it has been assigned.',
 ];

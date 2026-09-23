@@ -145,6 +145,14 @@ return [
              */
             ['label' => 'inventory::menu.issue', 'icon' => 'outbox', 'route' => 'inventory.stock.issue', 'permission' => 'inventory.stock.adjust'],
             ['label' => 'inventory::menu.opening', 'icon' => 'plus', 'route' => 'inventory.stock.opening', 'permission' => 'inventory.stock.opening'],
+
+            /*
+             * লট বসানো — খোলা মজুদের পরে, আর সেটা ইচ্ছাকৃত।
+             *
+             * ⓘ দুইটাই শুরুর দিকের কাজ, কিন্তু প্রশ্ন আলাদা: খোলা মজুদ
+             * বলে *"তাকে কত ছিল"*, আর এটা বলে *"সেগুলো কোন লটের"*।
+             */
+            ['label' => 'inventory::menu.lot_assign', 'icon' => 'attachment', 'route' => 'inventory.stock.lot', 'permission' => 'inventory.stock.lot'],
             ['label' => 'inventory::menu.transfers', 'icon' => 'swap', 'route' => 'inventory.transfer.index', 'permission' => 'inventory.transfer.view'],
 
             /*
@@ -307,6 +315,17 @@ return [
         'inventory.stock.opening',
 
         /*
+         * লট বসানোর নিজের চাবি — ২৩ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ এই কাজে পরিমাণ বা দাম এক চুলও বদলায় না, তাই এটা
+         * সমন্বয়ের চাবির নিচে নয়। ⚠️ কিন্তু যা বদলায় সেটা রিকলের
+         * খাতা: কোন কার্টন কোন লটের। ⛔ ভুল বসলে সেটা কোথাও
+         * লাল হয় না — ধরা পড়ে রিকলের দিন, যেদিন ভুল ক্রেতাকে
+         * ফোন যায়। ⓘ তাই যিনি মাল গুনে বুঝে নেন, চাবিটা তাঁরই।
+         */
+        'inventory.stock.lot',
+
+        /*
          * স্থানান্তরের চাবি চারটা, আর পাঠানো ও বুঝে নেওয়া আলাদা।
          *
          * পাঠান এক গুদামের লোক, বুঝে নেন অন্য গুদামের। একজনেই দুইটা
@@ -346,6 +365,9 @@ return [
              * তাঁরই — দূর থেকে অনুমোদন করা কেউ নন।
              */
             'inventory.stock.place',
+
+            /* ⓘ কোন কার্টন কোন লটের, সেটা গুদামের লোকই জানেন */
+            'inventory.stock.lot',
 
             'inventory.stock.opening',
             'inventory.transfer.view', 'inventory.transfer.create', 'inventory.transfer.receive',

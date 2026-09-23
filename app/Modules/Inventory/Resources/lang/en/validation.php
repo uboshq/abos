@@ -27,7 +27,7 @@ return [
     'free_batch_short' => 'Not enough free :product across its lots — :short short. Expired lots were not counted.',
     'batch_no_required' => ':product is tracked by lot, so the lot number has to be written down as the goods come in — there is no way to learn it later.',
     'batch_short' => 'Not enough :product across its lots — :short short. Unexpired lots only; check whether some has expired.',
-    'batch_untracked_stock' => ':qty of :product is on the shelf, but it arrived before lot tracking began — there is no way to know which lot it belongs to, so it cannot be sold. Put it back in through Opening Stock, this time with a lot.',
+    'batch_untracked_stock' => ':qty of :product is on the shelf, but it arrived before lot tracking began — there is no way to know which lot it belongs to, so it cannot be sold. Give it a lot on the Stock > Assign a lot screen — the goods do not have to be moved.',
     'reprice_needs_a_reason' => 'Say why — in six months this line will be the only answer to that question.',
     'not_a_price' => 'A price must be a number, and not negative.',
 
@@ -107,4 +107,9 @@ return [
     'pack_default_unknown' => 'The pack chosen as a default is not in this product’s table.',
     'already_that_unit' => ":product's stock is already counted in :unit — there is nothing to bring down.",
     'barcode_is_not_alone' => 'Barcode :barcode belongs to more than one product, so there is no way to say which one this stock is for. Fix the barcodes first, or use the product code.',
+
+    'lot_of_another_product' => 'Lot :lot does not belong to :product. Putting a lot from a different product on these goods would send the recall call to the wrong buyers.',
+    'lot_needs_qty' => 'Say how much gets the lot — zero does nothing.',
+    'lot_over_untracked' => 'Only :have of :product is lot-less in this warehouse, so no more than that can be given a lot. Past that, goods whose lot is already known would move into the new lot, and the same carton would sit in two lots.',
+    'lot_over_untracked_free' => 'Only :have free :product is lot-less — no more than that.',
 ];

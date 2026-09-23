@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Modules\Inventory\Http\Controllers\BatchController;
 use App\Modules\Inventory\Http\Controllers\LabelController;
 use App\Modules\Inventory\Http\Controllers\OpeningStockController;
+use App\Modules\Inventory\Http\Controllers\StrandedStockController;
 use App\Modules\Inventory\Http\Controllers\ProductController;
 use App\Modules\Inventory\Http\Controllers\StockAnalysisController;
 use App\Modules\Inventory\Http\Controllers\StockController;
@@ -126,6 +127,16 @@ Route::middleware('auth')->prefix('inventory')->group(function () {
         // খোলা মজুদ — পুরনো খাতা থেকে আসার দিনের কাজ, সমন্বয় নয়
         Route::get('/opening', [OpeningStockController::class, 'index'])->name('opening');
         Route::post('/opening', [OpeningStockController::class, 'store'])->name('opening.store');
+
+        /*
+         * লট বসানো — মাল আনা নয়, নাম বসানো।
+         *
+         * ⓘ লট ধরা চালু করার আগেকার মজুদ বিক্রয়ের বাছাইয়ে আসে না —
+         * সেই মালগুলোর লট এখান থেকে বসানো হয়। ⚠️ খোলা মজুদের পর্দায়
+         * নয়, কারণ ওটা মাল **আনে** — আর এই মাল আগে থেকেই তাকে।
+         */
+        Route::get('/lot', [StrandedStockController::class, 'index'])->name('lot');
+        Route::post('/lot', [StrandedStockController::class, 'store'])->name('lot.store');
         Route::post('/hold', [StockController::class, 'storeHold'])->name('hold');
         Route::post('/release', [StockController::class, 'storeRelease'])->name('release');
     });

@@ -16,6 +16,7 @@ return [
     'stock_age' => 'Stock Age',
     'transfers' => 'Stock Transfers',
     'opening' => 'Opening Stock',
+    'lot_assign' => 'Assign a lot',
     'issue' => 'Stock Issue',
     'expiring' => 'Expiring Soon',
     'trace' => 'Trace a lot (recall)',
