@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import directSale from './direct-sale.js'
+import { magics } from '../components/index.js'
 
 /*
  * কাউন্টারে বিক্রয়ের অঙ্ক।
@@ -27,8 +28,29 @@ const product = (over = {}) => ({
     ...over,
 })
 
+/*
+ * ⭐ Alpine যে জিনিসগুলো নিজে বসায় — `$num`, `$nextTick`, `$refs`।
+ *
+ * ⚠️ এগুলো কম্পোনেন্টের নিজের নয়, তাই পরীক্ষায় হাতে বসাতে হয়। ⛔ নইলে
+ * `addToCart()` ডাকলেই `this.$num is not a function`, আর এই ফাইলের অঙ্কের
+ * পরীক্ষাগুলো কখনো `addToCart()` ডাকে না বলে ফাঁকটা এতদিন চোখে পড়েনি।
+ *
+ * ⓘ `$num` **আসল জায়গা থেকেই** নেওয়া ([[components/index.js]]-এর
+ * `magics`), হাতে লেখা নয় — ⛔ হাতে লিখলে পরীক্ষা ঐ নকলটাই মাপত, আর
+ * আসলটা বদলে গেলেও সবুজ থাকত।
+ *
+ * ⓘ `$refs.search` একটা সত্যিকারের ডাকযোগ্য ঘর, খালি বস্তু নয় —
+ * `addToCart()` ওকে `?.` ছাড়াই ডাকে, তাই খালি রাখলে পরীক্ষা ভাঙত
+ * এমন এক জায়গায় যার সাথে দাবিটার সম্পর্ক নেই।
+ */
+const withMagics = (c) => Object.assign(c, {
+    $num: magics.num,
+    $nextTick: (fn) => fn(),
+    $refs: { search: { focus: () => {} } },
+})
+
 /** ফাঁকা একটা কাউন্টার — ব্লেড যা যা দেয় তার ন্যূনতম রূপ। */
-const counter = (over = {}) => directSale({
+const counter = (over = {}) => withMagics(directSale({
     catalogue: [product()],
     customers: [],
     walkinId: 1,
@@ -42,7 +64,7 @@ const counter = (over = {}) => directSale({
     hasErrors: false,
     texts: { notForSales: 'বিক্রয়ের জন্য নয়' },
     ...over,
-})
+}))
 
 describe('লাইনের ভিত্তি', () => {
     let c
@@ -199,5 +221,100 @@ describe('ভ্যাট — সহ না বাদে', () => {
 
         expect(c.entryVat).toBe(0)
         expect(c.isInclusive(c.picked)).toBe(false)
+    })
+})
+
+/*
+ * ⭐ কার্টের সারি উপরে ফিরিয়ে আনা — মালিকের নির্দেশ, ২৫ সেপ্টেম্বর ২০২৬।
+ *
+ * ── ⛔ যে ফাঁকটা এটা বন্ধ করে ─────────────────────────────────────────
+ * কার্টের ঘরগুলো লেখার ছিল, তাই সারিটা কার্টে ওঠার **পরে** দর বা পরিমাণ
+ * বদলানো যেত — আর তখন এন্ট্রির একটা নিয়মও চলত না: নির্ধারিত দামের নিচে
+ * বিক্রি, ফ্রি-র অনুপাত, মজুদ, কিছুই না।
+ *
+ * ⓘ মালিকের কথা: *"upore za atkay ta niche edite atkay na"*।
+ */
+describe('কার্টের সারি উপরে ফিরিয়ে আনা', () => {
+    const filled = () => {
+        const c = counter()
+        c.picked = product()
+        c.entry.qty = '3'
+        c.entry.rate = '50'
+
+        return c
+    }
+
+    it('সারিটা এন্ট্রির ঘরে ফেরে', async () => {
+        const c = filled()
+        await c.addToCart()
+
+        expect(c.lines).toHaveLength(1)
+        expect(c.picked).toBe(null)
+
+        await c.editLine(0)
+
+        expect(c.picked?.id).toBe(1)
+        expect(c.entry.qty).toBe('3')
+        expect(c.entry.rate).toBe('50')
+    })
+
+    /*
+     * ⛔ আর এটাই আসল দাবি: সারিটা **সরে আসে**, কপি হয় না।
+     *
+     * ⚠️ কপি হলে "কার্টে যোগ করুন" চাপার পর একই পণ্য দুইবার বসত, আর
+     * ব্যবহারকারী ভাবতেন তিনি কেবল বদলেছেন — ⓘ আর ভুলটা ধরা পড়ত
+     * বিলের মোটে, যেখানে কেউ সারি গোনে না।
+     */
+    it('কার্ট থেকে সরে আসে, কপি হয় না', async () => {
+        const c = filled()
+        await c.addToCart()
+        await c.editLine(0)
+
+        expect(c.lines).toHaveLength(0)
+
+        await c.addToCart()
+
+        expect(c.lines).toHaveLength(1)
+    })
+
+    /*
+     * ⚠️ হাতে কিছু লেখা থাকলে সেটা আগে কার্টে তোলা হয়।
+     *
+     * ⛔ নাহলে ঐ এন্ট্রিটা নীরবে হারাত — আর হারানো এন্ট্রি সবচেয়ে
+     * বিরক্তিকর ভুল, কারণ কেউ জানেই না কী হারাল।
+     */
+    it('হাতের এন্ট্রি হারায় না', async () => {
+        const c = filled()
+        await c.addToCart()
+
+        c.picked = product()
+        c.entry.qty = '7'
+        c.entry.rate = '50'
+
+        await c.editLine(0)
+
+        expect(c.lines).toHaveLength(1)
+        expect(c.lines[0].qty).toBe('7')
+        expect(c.entry.qty).toBe('3')
+    })
+
+    /* ⓘ ছাড় শতাংশেই ফেরে — কার্টে ওটাই রাখা হয়। */
+    it('ছাড় শতাংশসহ ফেরে', async () => {
+        const c = filled()
+        c.entry.discountInput = '10%'
+        await c.addToCart()
+        await c.editLine(0)
+
+        expect(c.entry.discountInput).toBe('10%')
+    })
+
+    /* ⛔ পাল্টা-দাবি: নেই এমন সারিতে কিছুই ঘটে না। */
+    it('অচেনা সূচকে কিছুই ঘটে না', async () => {
+        const c = filled()
+        await c.addToCart()
+        await c.editLine(9)
+
+        expect(c.lines).toHaveLength(1)
+        expect(c.picked).toBe(null)
     })
 })

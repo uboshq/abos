@@ -920,10 +920,17 @@ export default function directSale({
          * আটকালে অন্য পথে আসা বিল — কাউন্টার, আদেশ, কালকের নতুন পর্দা —
          * প্রতিটাই একটা করে ফাঁক হত।
          */
+        /**
+         * ⓘ সত্য/মিথ্যা ফেরায় — ২৫ সেপ্টেম্বর ২০২৬।
+         *
+         * ⚠️ আগে কিছুই ফেরাত না। ⛔ [[editLine()]]-কে জানতে হয় হাতের
+         * সারিটা সত্যিই কার্টে উঠল কি না; না উঠলে (ফ্রি সীমা ছাড়িয়েছে)
+         * সে কার্টের সারিটা তুলে আনলে **দুইটা সারিই হারাত**।
+         */
         async addToCart() {
-            if (! this.picked) return;
+            if (! this.picked) return false;
 
-            if (! await this.freeFitsTheRatio()) return;
+            if (! await this.freeFitsTheRatio()) return false;
 
             this.lines.push({
                 key: this.nextKey++,
@@ -942,6 +949,8 @@ export default function directSale({
 
             this.clearEntry();
             this.$nextTick(() => this.$refs.search.focus());
+
+            return true;
         },
 
         /**
@@ -993,6 +1002,62 @@ export default function directSale({
             } catch (e) {
                 return true;
             }
+        },
+
+        /**
+         * ⭐ কার্টের একটা সারি এন্ট্রির বাক্সে ফিরিয়ে আনা — মালিকের নির্দেশ,
+         * ২৫ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⛔ কেন এটা লাগল ─────────────────────────────────────────────
+         * কার্টের ঘরগুলো লেখার ছিল, তাই সারিটা কার্টে ওঠার **পরে** দর বা
+         * পরিমাণ বদলানো যেত — আর তখন এন্ট্রির **একটা নিয়মও চলত না**:
+         * নির্ধারিত দামের নিচে বিক্রি, ফ্রি-র অনুপাত, মজুদ — কিছুই না।
+         *
+         * ⓘ মালিকের কথা: *"upore za atkay ta niche edite atkay na"*।
+         * ⚠️ একই তথ্যের দুইটা দরজা, একটায় পাহারা — আর ঢিলা দরজাটাই
+         * ব্যবহার হয়।
+         *
+         * ── ⭐ কেন তুলে আনা, জায়গায় বদলানো নয় ──────────────────────────
+         * এন্ট্রির বাক্সে নিয়মগুলো **আগে থেকেই** বসানো, আর সেগুলো
+         * `picked` ও `entry` ধরে কাজ করে। ⓘ সারিটা ওখানে ফিরিয়ে আনলে
+         * নতুন কোনো পাহারা লিখতে হয় না — পুরনোগুলোই আবার খাটে।
+         *
+         * ⚠️ সারিটা কার্ট থেকে **সরিয়ে** আনা হয়, কপি করা হয় না: ⛔ কপি
+         * করলে "কার্টে যোগ করুন" চাপার পর একই পণ্য দুইবার বসত, আর
+         * ব্যবহারকারী ভাবতেন তিনি কেবল বদলেছেন।
+         *
+         * ⓘ হাতে কিছু লেখা থাকলে সেটা আগে কার্টে তোলা হয়, নাহলে ওটা
+         * নীরবে হারাত — আর হারানো এন্ট্রি সবচেয়ে বিরক্তিকর ভুল।
+         */
+        async editLine(index) {
+            const line = this.lines[index];
+
+            if (! line) return;
+
+            if (this.picked && ! await this.addToCart()) return;
+
+            /*
+             * ⚠️ `splice` উপরের `addToCart()`-এর **পরে**: ⓘ ওটা তালিকায়
+             * একটা সারি যোগ করে, তাই আগে সরালে সূচকটা এক ঘর সরে যেত আর
+             * ভুল সারিটা তোলা হত।
+             */
+            this.lines.splice(index, 1);
+
+            this.picked = this.catalogue.find(p => p.id === line.id) || null;
+
+            this.entry = {
+                qty: line.qty || '',
+                freeQty: line.freeQty || '',
+                rate: line.rate || '',
+
+                /* ⓘ ছাড় শতাংশেই ফেরে — কার্টে ওটাই রাখা হয়। */
+                discountInput: line.discountPercent ? String(line.discountPercent) + '%' : '',
+                unitId: line.unitId || '',
+                gifts: line.gifts || [],
+            };
+
+            this.freeWarning = '';
+            this.$nextTick(() => this.$refs.search?.focus());
         },
 
         clearEntry() {

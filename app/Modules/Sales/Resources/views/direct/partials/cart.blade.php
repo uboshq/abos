@@ -36,26 +36,49 @@
                                         <input type="hidden" :name="'lines[' + (i) + '][unit_id]'" :value="line.unitId || ''">
                                     </td>
 
-                                    <td class="cell-input text-end" data-label="{{ __('sales::field.unit_price') }}">
-                                        <input type="number" step="0.0001" min="0" x-model="line.rate"
-                                               :name="'lines[' + (i) + '][rate]'"
-                                               class="num h-(--spacing-field-dense) w-full sm:w-24 rounded-(--radius-field) border
-                                                      border-(--color-border) bg-(--color-surface-app) px-2 text-end">
+                                    {{-- ⛔ কার্টের ঘরগুলো আর লেখার নয় — মালিকের নির্দেশ,
+                                         ২৫ সেপ্টেম্বর ২০২৬।
+
+                                         তাঁর কথা: *"পণ্যের cart list e entry bebosta
+                                         takle upore za atkay ta niche edite atkay na"*।
+
+                                         ── ⛔ যে ফাঁকটা এতদিন খোলা ছিল ───────────────
+                                         এন্ট্রির বাক্সে প্রতিটা নিয়ম বসানো — দর নির্ধারিত
+                                         দামের নিচে কি না, ফ্রি সীমা ছাড়িয়েছে কি না,
+                                         মজুদ আছে কি না। ⚠️ কিন্তু সারিটা কার্টে ওঠার
+                                         **পরে** ঐ ঘরগুলোতেই দর বা পরিমাণ বদলানো যেত,
+                                         আর তখন **একটা নিয়মও চলত না**।
+
+                                         ⓘ একই তথ্যের দুইটা দরজা, একটায় পাহারা — আর
+                                         বাইরে থেকে সব ঠিক দেখায়। ⛔ দরজা দুইটা হলে
+                                         ঢিলাটাই ব্যবহার হয়।
+
+                                         ⭐ এখন সংখ্যাগুলো কেবল দেখা যায়, আর বদলানোর
+                                         একটাই পথ: সম্পাদনার চিহ্নে চেপে সারিটা উপরের
+                                         এন্ট্রি বাক্সে ফেরত নেওয়া, যেখানে সব পাহারা আছে।
+
+                                         ⚠️ লুকানো ঘরগুলো ছাড়া চলে না — পড়ার ঘর জমা
+                                         দেওয়ার সময় কিছুই পাঠায় না, আর তখন সার্ভারে
+                                         প্রতিটা সারির দর ও পরিমাণ **খালি** যেত। --}}
+                                    {{-- ⚠️ লেখাটা `<span>`-এ, লুকানো ঘরটা তার পাশে —
+                                         ⛔ `x-text` ঘরটার **ভেতরটা মুছে** লেখা বসায়,
+                                         তাই `<td>`-তে বসালে লুকানো ঘরটাও উড়ে যেত আর
+                                         সার্ভারে প্রতিটা সারি খালি পৌঁছাত। --}}
+                                    <td class="num cell text-end" data-label="{{ __('sales::field.unit_price') }}">
+                                        <span x-text="money(line.rate)"></span>
+                                        <input type="hidden" :name="'lines[' + (i) + '][rate]'" :value="line.rate">
                                     </td>
 
-                                    <td class="cell-input text-end" data-label="{{ __('sales::field.quantity') }}">
-                                        <input type="number" step="0.01" min="0.01" x-model="line.qty"
-                                               :name="'lines[' + (i) + '][qty]'"
-                                               class="num h-(--spacing-field-dense) w-full sm:w-20 rounded-(--radius-field) border
-                                                      border-(--color-border) bg-(--color-surface-app) px-2 text-end">
+                                    <td class="num cell text-end" data-label="{{ __('sales::field.quantity') }}">
+                                        <span x-text="qty(line.qty)"></span>
+                                        <input type="hidden" :name="'lines[' + (i) + '][qty]'" :value="line.qty">
                                     </td>
 
                                     @if ($show['free_qty'])
-                                        <td class="cell-input text-end" data-label="{{ __('sales::field.free_unit') }}">
-                                            <input type="number" step="0.01" min="0" x-model="line.freeQty"
-                                                   :name="'lines[' + (i) + '][free_qty]'"
-                                                   class="num h-(--spacing-field-dense) w-full sm:w-20 rounded-(--radius-field) border
-                                                          border-(--color-border) bg-(--color-surface-app) px-2 text-end">
+                                        <td class="num cell text-end" data-label="{{ __('sales::field.free_unit') }}">
+                                            <span x-text="line.freeQty ? qty(line.freeQty) : ''"></span>
+                                            <input type="hidden" :name="'lines[' + (i) + '][free_qty]'"
+                                                   :value="line.freeQty || ''">
                                         </td>
                                     @endif
 
@@ -63,12 +86,10 @@
                                         x-text="qty($num(line.qty || 0) + $num(line.freeQty || 0))"></td>
 
                                     @if ($show['line_discount'])
-                                        <td class="cell-input text-end" data-label="{{ __('sales::field.dis') }}">
-                                            <input type="number" step="0.01" min="0" max="100"
-                                                   x-model="line.discountPercent"
-                                                   :name="'lines[' + (i) + '][discount_percent]'"
-                                                   class="num h-(--spacing-field-dense) w-full sm:w-20 rounded-(--radius-field) border
-                                                          border-(--color-border) bg-(--color-surface-app) px-2 text-end">
+                                        <td class="num cell text-end" data-label="{{ __('sales::field.dis') }}">
+                                            <span x-text="line.discountPercent || 0"></span>
+                                            <input type="hidden" :name="'lines[' + (i) + '][discount_percent]'"
+                                                   :value="line.discountPercent || 0">
                                         </td>
                                     @endif
 
@@ -80,11 +101,38 @@
                                     <td class="num cell font-medium" data-label="{{ __('sales::field.amount') }}"
                                         x-text="money(lineNet(line))"></td>
 
+                                    {{-- ⭐ সম্পাদনার চিহ্ন, `✕`-এর আগে — মালিকের নির্দেশ,
+                                         ২৫ সেপ্টেম্বর ২০২৬: *"cance X cinner age edite
+                                         cinno lagaw zate produts aber chart boxe ese
+                                         edite hoy"*।
+
+                                         ⓘ সারিটা কার্ট থেকে উঠে **এন্ট্রি বাক্সে** ফেরত
+                                         যায় — সেখানেই দর, পরিমাণ, ফ্রি ও ছাড় বদলানো যায়,
+                                         আর সেখানেই প্রতিটা নিয়ম বসানো।
+
+                                         ⚠️ ক্রম ইচ্ছাকৃত: সম্পাদনা আগে, মোছা পরে। ⛔ দুইটা
+                                         চিহ্ন পাশাপাশি থাকলে ধ্বংসাত্মকটা **শেষে** থাকা
+                                         উচিত, নাহলে তাড়াহুড়োর ক্লিকটা ওখানেই পড়ে। --}}
                                     <td class="cell-input text-end">
-                                        <button type="button" @click="lines.splice(i, 1)"
-                                                aria-label="{{ __('sales::action.remove_line') }}"
-                                                class="rounded-(--radius-field) px-2 py-1 text-(--color-ink-muted)
-                                                       hover:bg-(--color-surface-hover)">&times;</button>
+                                        <span class="inline-flex items-center gap-0.5">
+                                            {{-- ⚠️ লেখাটা স্থির, তাই সাধারণ অ্যাট্রিবিউট — `:aria-label`
+                                                 নয়। ⛔ CSP-Alpine এক্সপ্রেশনে কেবল কম্পোনেন্টের নিজের
+                                                 নাম ও অপারেটর চলে, আর কিছু না চললে সে **চুপচাপ বাঁধাই
+                                                 ছেড়ে দেয়** — কনসোলে কিছু আসে না, শুধু ঘরটা খালি থাকে।
+                                                 ⓘ পাশের `✕` বোতামটাও তাই করে। --}}
+                                            <button type="button" @click="editLine(i)"
+                                                    aria-label="{{ __('sales::action.edit_line') }}"
+                                                    title="{{ __('sales::action.edit_line') }}"
+                                                    class="rounded-(--radius-field) px-2 py-1 text-(--color-ink-muted)
+                                                           hover:bg-(--color-surface-hover)">
+                                                <x-ui.icon name="edit" class="size-4" />
+                                            </button>
+
+                                            <button type="button" @click="lines.splice(i, 1)"
+                                                    aria-label="{{ __('sales::action.remove_line') }}"
+                                                    class="rounded-(--radius-field) px-2 py-1 text-(--color-ink-muted)
+                                                           hover:bg-(--color-surface-hover)">&times;</button>
+                                        </span>
                                     </td>
                                 </tr>
 

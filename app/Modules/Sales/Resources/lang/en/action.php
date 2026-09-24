@@ -12,6 +12,9 @@ return [
     'edit' => 'Edit',
     'add_line' => 'Add a line',
     'remove_line' => 'Remove',
+
+    /* ⓘ কারণসহ bn/action.php-তে — লেখাটা "Edit" নয়, কারণ সারিটা উপরে ফেরে। */
+    'edit_line' => 'Take back up to edit',
     'show_cancelled' => 'Show cancelled too',
     'receive_against' => 'Receive against this order',
     'bill_against' => 'Bill this receipt',
