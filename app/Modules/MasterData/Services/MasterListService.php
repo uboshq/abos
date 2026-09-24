@@ -662,115 +662,7 @@ final class MasterListService implements ProvisionsCompany
             ['WHOLE', 'Wholesale Price', 'পাইকারি দর', []],
         ]);
 
-        $made['reasons'] = $this->seed(ReasonCode::class, [
-            ['DAMAGE', 'Damaged goods', 'ক্ষতিগ্রস্ত পণ্য',
-                ['context' => ReasonCode::SALES_RETURN, 'returns_to_stock' => false]],
-            ['EXPIRED', 'Expired', 'মেয়াদোত্তীর্ণ',
-                ['context' => ReasonCode::SALES_RETURN, 'returns_to_stock' => false]],
-            ['WRONG', 'Wrong item delivered', 'ভুল পণ্য দেওয়া হয়েছে',
-                ['context' => ReasonCode::SALES_RETURN, 'returns_to_stock' => true]],
-            ['UNSOLD', 'Not sold', 'বিক্রি হয়নি',
-                ['context' => ReasonCode::SALES_RETURN, 'returns_to_stock' => true]],
-            ['COUNT', 'Counting difference', 'গণনার পার্থক্য',
-                ['context' => ReasonCode::STOCK_ADJUSTMENT, 'returns_to_stock' => true]],
-            ['LOST', 'Lost or stolen', 'হারানো বা চুরি',
-                ['context' => ReasonCode::STOCK_ADJUSTMENT, 'returns_to_stock' => false,
-                    'needs_approval' => true]],
-            ['MISTAKE', 'Entry mistake', 'এন্ট্রির ভুল',
-                ['context' => ReasonCode::CANCELLATION, 'returns_to_stock' => true]],
-
-            /*
-             * বিক্রি ছাড়া মাল বেরোনোর তিনটা কারণ, তিনটা আলাদা খাত।
-             *
-             * খাতগুলো এখানে বসে না — কোড থেকে খাতের id জানা যায় না, আর
-             * প্রতিষ্ঠানভেদে খরচের খাত আলাদাও হতে পারে। বসানো হয় ছক
-             * ইনস্টল হওয়ার পর (CompanyProvisioner-এর ক্রম), আর সেটাই
-             * ReasonCode::linkStandardAccounts() করে।
-             *
-             * তৃতীয়টার খাত ৩২০০ উত্তোলন — খরচ নয়। মালিকের নিজের
-             * ব্যবহারকে খরচ লিখলে ব্যবসার মুনাফা কম দেখায় আর বছরশেষে
-             * কে কত নিল তা বলার উপায় থাকে না।
-             */
-            ['ENTERTAIN', 'Office entertainment', 'অফিসের আপ্যায়ন',
-                ['context' => ReasonCode::STOCK_ISSUE, 'returns_to_stock' => false]],
-            ['GIFT', 'Gift given', 'উপহার দেওয়া হয়েছে',
-                ['context' => ReasonCode::STOCK_ISSUE, 'returns_to_stock' => false,
-                    'needs_approval' => true]],
-            ['OWNUSE', 'Owner personal use', 'মালিকের ব্যক্তিগত ব্যবহার',
-                ['context' => ReasonCode::STOCK_ISSUE, 'returns_to_stock' => false,
-                    'needs_approval' => true]],
-            ['SAMPLE', 'Sample given', 'নমুনা দেওয়া হয়েছে',
-                ['context' => ReasonCode::STOCK_ISSUE, 'returns_to_stock' => false]],
-
-            /*
-             * মাল আটকে রাখার কারণ — তিনটা, আর তৃতীয়টা বাকি দুইটার মতো নয়।
-             *
-             * প্রথম দুইটা সমস্যা: মাল নষ্ট, বা ফেরত এসেছে আর দেখা হয়নি।
-             * তৃতীয়টা সিদ্ধান্ত — মালিক দাম বাড়ার অপেক্ষায় মাল ছাড়ছেন না।
-             * একই "আটকানো" সংখ্যার নিচে তিনটাই থাকে, তাই কারণ আলাদা না
-             * রাখলে "৪০ বস্তা আটকানো" দেখে মালিক ভাবতেন তার মালে সমস্যা,
-             * অথচ ৩৫ বস্তা তিনি নিজেই আটকে রেখেছেন।
-             *
-             * এই তিনটা না থাকলে আটকানোর ফর্মের কারণের ঘর ফাঁকা থাকত, আর
-             * কারণ ছাড়া আটকানো যায় না — মানে সুবিধাটাই অচল থাকত।
-             */
-            ['HOLD-DMG', 'Damaged, awaiting decision', 'ক্ষতিগ্রস্ত, সিদ্ধান্তের অপেক্ষায়',
-                ['context' => ReasonCode::HOLD, 'returns_to_stock' => false]],
-            ['HOLD-RET', 'Returned, awaiting check', 'ফেরত এসেছে, যাচাইয়ের অপেক্ষায়',
-                ['context' => ReasonCode::HOLD, 'returns_to_stock' => true]],
-            ['HOLD-PRICE', 'Held back for a better price', 'দাম বাড়ার অপেক্ষায় আটকানো',
-                ['context' => ReasonCode::HOLD, 'returns_to_stock' => true]],
-
-            /*
-             * ⭐ চতুর্থটা — বাতিল, ২৪ সেপ্টেম্বর ২০২৬।
-             *
-             * ── ⓘ কেন এটা তিনটার সাথে ছিল না ───────────────────────
-             * উপরের তিনটা **অপেক্ষার** কারণ: সিদ্ধান্ত এখনো হয়নি।
-             * ⚠️ এটা সিদ্ধান্তের **পরের** অবস্থা — দেখা হয়েছে, আর
-             * মালটা নেওয়া হবে না।
-             *
-             * ⭐ মালিকের স্পেকে এটাই `REJECTED`, আর তার পাশের
-             * `QUARANTINE` হলো উপরের `HOLD-RET` (ফেরত এসেছে, যাচাইয়ের
-             * অপেক্ষায়)। ⓘ অর্থাৎ অবস্থাগুলো ABOS-এ আলাদা বালতি নয়,
-             * **আটকানোর কারণ** — আর সেটাই ঠিক: মালটা একই তাকে থাকে,
-             * কেবল কেন আটকে আছে সেটা বদলায়।
-             *
-             * ⛔ আলাদা বালতি বানালে `available = floor − reserved −
-             * hold` সূত্রটা ভাঙত, আর প্রতিটা রিপোর্টে নতুন কলাম বসত —
-             * অথচ মালিকের প্রশ্নটা একটাই: *"মাল আছে, বেচা যাচ্ছে না
-             * কেন"*, আর সেটার উত্তর ইতিমধ্যে আটকানোর রিপোর্টে আছে।
-             *
-             * ⚠️ `returns_to_stock => false` — বাতিল মাল ছেড়ে দিলে
-             * সেটা বিক্রয়যোগ্য মজুদে ফেরে না; ⛔ ফিরলে যে মাল
-             * পরিদর্শনে বাদ পড়েছে সেটাই পরদিন বিক্রি হয়ে যেত।
-             */
-            ['HOLD-REJ', 'Rejected on inspection', 'পরিদর্শনে বাতিল',
-                ['context' => ReasonCode::HOLD, 'returns_to_stock' => false]],
-
-            /*
-             * ⭐ পঞ্চমটা — পথে, ২৪ সেপ্টেম্বর ২০২৬।
-             *
-             * ── ⛔ যে ফাঁকটা ছিল ───────────────────────────────────
-             * স্থানান্তর রওনা হলে মালটা উৎসেই আটকে যায়
-             * ([[StockTransferService::dispatch()]]), কিন্তু **কোনো
-             * কারণ ছাড়া**। ⚠️ ফলে আটকানোর রিপোর্টে পথের মাল আর
-             * সমস্যার মাল একই রকম দেখাত — কারণের ঘরটা ফাঁকা।
-             *
-             * ⓘ ঐ রিপোর্টের একমাত্র কাজই কারণ আলাদা করা: *"৫
-             * ক্ষতিগ্রস্ত, ৩৫ দাম বাড়ার অপেক্ষায়"*। ⛔ কারণহীন একটা
-             * বড় সারি ঠিক সেই কাজটাই নষ্ট করত, আর মালিক ভাবতেন তাঁর
-             * মালে সমস্যা।
-             *
-             * ⭐ মালিকের স্পেকে এটাই `IN_TRANSIT` — ⓘ এখানেও আলাদা
-             * বালতি নয়, আটকানোর একটা কারণ, বাকি চারটার মতোই।
-             *
-             * ⚠️ `returns_to_stock => true` — ট্রাক ফিরে এলে মালটা
-             * দিব্যি বিক্রয়যোগ্য; ⛔ মালে কোনো দোষ নেই, কেবল ঠিকানা
-             * বদলাচ্ছিল।
-             */
-            ['HOLD-TRN', 'On the way to another warehouse', 'অন্য গুদামের পথে',
-                ['context' => ReasonCode::HOLD, 'returns_to_stock' => true]],
-        ]);
+        $made['reasons'] = $this->seed(ReasonCode::class, self::reasonRows());
 
         /*
          * মুদ্রা ও গাড়ির ধরন — সুইচ বন্ধ থাকলেও বসে।
@@ -927,6 +819,191 @@ final class MasterListService implements ProvisionsCompany
      * @param  class-string<Model>  $model
      * @param  list<array{0:string,1:string,2:string,3:array<string,mixed>}>  $rows
      */
+    /**
+     * ⭐ কারণ কোডের আদি তালিকা — এক জায়গায়, ২৫ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⛔ কেন আলাদা পদ্ধতিতে সরানো হলো ──────────────────────────────
+     * তালিকাটা [[installDefaults()]]-এর ভিতরে লেখা ছিল, আর ওটা চলে
+     * **কেবল নতুন কোম্পানি বসানোর সময়**। ⚠️ ফলে পরে যোগ করা কোনো কারণ
+     * চলমান কোম্পানিতে কোনোদিন পৌঁছাত না — [[seed()]] শুরুতেই থামে যদি
+     * তালিকায় একটাও সারি থাকে।
+     *
+     * ⓘ একই ভুল ছকে ও অনুমতিতে আগে দুইবার হয়েছে
+     * ([[SyncChart]], [[SyncPermissions]])। এটা তৃতীয়বার, আর এবার
+     * তালিকাটা দুই জায়গা থেকে পড়া যায়।
+     *
+     * @return list<array{0: string, 1: string, 2: string, 3: array<string, mixed>}>
+     */
+    public static function reasonRows(): array
+    {
+        return [
+            ['DAMAGE', 'Damaged goods', 'ক্ষতিগ্রস্ত পণ্য',
+                ['context' => ReasonCode::SALES_RETURN, 'returns_to_stock' => false]],
+            ['EXPIRED', 'Expired', 'মেয়াদোত্তীর্ণ',
+                ['context' => ReasonCode::SALES_RETURN, 'returns_to_stock' => false]],
+            ['WRONG', 'Wrong item delivered', 'ভুল পণ্য দেওয়া হয়েছে',
+                ['context' => ReasonCode::SALES_RETURN, 'returns_to_stock' => true]],
+            ['UNSOLD', 'Not sold', 'বিক্রি হয়নি',
+                ['context' => ReasonCode::SALES_RETURN, 'returns_to_stock' => true]],
+            ['COUNT', 'Counting difference', 'গণনার পার্থক্য',
+                ['context' => ReasonCode::STOCK_ADJUSTMENT, 'returns_to_stock' => true]],
+            ['LOST', 'Lost or stolen', 'হারানো বা চুরি',
+                ['context' => ReasonCode::STOCK_ADJUSTMENT, 'returns_to_stock' => false,
+                    'needs_approval' => true]],
+            ['MISTAKE', 'Entry mistake', 'এন্ট্রির ভুল',
+                ['context' => ReasonCode::CANCELLATION, 'returns_to_stock' => true]],
+
+            /*
+             * বিক্রি ছাড়া মাল বেরোনোর তিনটা কারণ, তিনটা আলাদা খাত।
+             *
+             * খাতগুলো এখানে বসে না — কোড থেকে খাতের id জানা যায় না, আর
+             * প্রতিষ্ঠানভেদে খরচের খাত আলাদাও হতে পারে। বসানো হয় ছক
+             * ইনস্টল হওয়ার পর (CompanyProvisioner-এর ক্রম), আর সেটাই
+             * ReasonCode::linkStandardAccounts() করে।
+             *
+             * তৃতীয়টার খাত ৩২০০ উত্তোলন — খরচ নয়। মালিকের নিজের
+             * ব্যবহারকে খরচ লিখলে ব্যবসার মুনাফা কম দেখায় আর বছরশেষে
+             * কে কত নিল তা বলার উপায় থাকে না।
+             */
+            ['ENTERTAIN', 'Office entertainment', 'অফিসের আপ্যায়ন',
+                ['context' => ReasonCode::STOCK_ISSUE, 'returns_to_stock' => false]],
+            ['GIFT', 'Gift given', 'উপহার দেওয়া হয়েছে',
+                ['context' => ReasonCode::STOCK_ISSUE, 'returns_to_stock' => false,
+                    'needs_approval' => true]],
+            ['OWNUSE', 'Owner personal use', 'মালিকের ব্যক্তিগত ব্যবহার',
+                ['context' => ReasonCode::STOCK_ISSUE, 'returns_to_stock' => false,
+                    'needs_approval' => true]],
+            ['SAMPLE', 'Sample given', 'নমুনা দেওয়া হয়েছে',
+                ['context' => ReasonCode::STOCK_ISSUE, 'returns_to_stock' => false]],
+
+            /*
+             * মাল আটকে রাখার কারণ — তিনটা, আর তৃতীয়টা বাকি দুইটার মতো নয়।
+             *
+             * প্রথম দুইটা সমস্যা: মাল নষ্ট, বা ফেরত এসেছে আর দেখা হয়নি।
+             * তৃতীয়টা সিদ্ধান্ত — মালিক দাম বাড়ার অপেক্ষায় মাল ছাড়ছেন না।
+             * একই "আটকানো" সংখ্যার নিচে তিনটাই থাকে, তাই কারণ আলাদা না
+             * রাখলে "৪০ বস্তা আটকানো" দেখে মালিক ভাবতেন তার মালে সমস্যা,
+             * অথচ ৩৫ বস্তা তিনি নিজেই আটকে রেখেছেন।
+             *
+             * এই তিনটা না থাকলে আটকানোর ফর্মের কারণের ঘর ফাঁকা থাকত, আর
+             * কারণ ছাড়া আটকানো যায় না — মানে সুবিধাটাই অচল থাকত।
+             */
+            ['HOLD-DMG', 'Damaged, awaiting decision', 'ক্ষতিগ্রস্ত, সিদ্ধান্তের অপেক্ষায়',
+                ['context' => ReasonCode::HOLD, 'returns_to_stock' => false]],
+            ['HOLD-RET', 'Returned, awaiting check', 'ফেরত এসেছে, যাচাইয়ের অপেক্ষায়',
+                ['context' => ReasonCode::HOLD, 'returns_to_stock' => true]],
+            ['HOLD-PRICE', 'Held back for a better price', 'দাম বাড়ার অপেক্ষায় আটকানো',
+                ['context' => ReasonCode::HOLD, 'returns_to_stock' => true]],
+
+            /*
+             * ⭐ চতুর্থটা — বাতিল, ২৪ সেপ্টেম্বর ২০২৬।
+             *
+             * ── ⓘ কেন এটা তিনটার সাথে ছিল না ───────────────────────
+             * উপরের তিনটা **অপেক্ষার** কারণ: সিদ্ধান্ত এখনো হয়নি।
+             * ⚠️ এটা সিদ্ধান্তের **পরের** অবস্থা — দেখা হয়েছে, আর
+             * মালটা নেওয়া হবে না।
+             *
+             * ⭐ মালিকের স্পেকে এটাই `REJECTED`, আর তার পাশের
+             * `QUARANTINE` হলো উপরের `HOLD-RET` (ফেরত এসেছে, যাচাইয়ের
+             * অপেক্ষায়)। ⓘ অর্থাৎ অবস্থাগুলো ABOS-এ আলাদা বালতি নয়,
+             * **আটকানোর কারণ** — আর সেটাই ঠিক: মালটা একই তাকে থাকে,
+             * কেবল কেন আটকে আছে সেটা বদলায়।
+             *
+             * ⛔ আলাদা বালতি বানালে `available = floor − reserved −
+             * hold` সূত্রটা ভাঙত, আর প্রতিটা রিপোর্টে নতুন কলাম বসত —
+             * অথচ মালিকের প্রশ্নটা একটাই: *"মাল আছে, বেচা যাচ্ছে না
+             * কেন"*, আর সেটার উত্তর ইতিমধ্যে আটকানোর রিপোর্টে আছে।
+             *
+             * ⚠️ `returns_to_stock => false` — বাতিল মাল ছেড়ে দিলে
+             * সেটা বিক্রয়যোগ্য মজুদে ফেরে না; ⛔ ফিরলে যে মাল
+             * পরিদর্শনে বাদ পড়েছে সেটাই পরদিন বিক্রি হয়ে যেত।
+             */
+            ['HOLD-REJ', 'Rejected on inspection', 'পরিদর্শনে বাতিল',
+                ['context' => ReasonCode::HOLD, 'returns_to_stock' => false]],
+
+            /*
+             * ⭐ পঞ্চমটা — পথে, ২৪ সেপ্টেম্বর ২০২৬।
+             *
+             * ── ⛔ যে ফাঁকটা ছিল ───────────────────────────────────
+             * স্থানান্তর রওনা হলে মালটা উৎসেই আটকে যায়
+             * ([[StockTransferService::dispatch()]]), কিন্তু **কোনো
+             * কারণ ছাড়া**। ⚠️ ফলে আটকানোর রিপোর্টে পথের মাল আর
+             * সমস্যার মাল একই রকম দেখাত — কারণের ঘরটা ফাঁকা।
+             *
+             * ⓘ ঐ রিপোর্টের একমাত্র কাজই কারণ আলাদা করা: *"৫
+             * ক্ষতিগ্রস্ত, ৩৫ দাম বাড়ার অপেক্ষায়"*। ⛔ কারণহীন একটা
+             * বড় সারি ঠিক সেই কাজটাই নষ্ট করত, আর মালিক ভাবতেন তাঁর
+             * মালে সমস্যা।
+             *
+             * ⭐ মালিকের স্পেকে এটাই `IN_TRANSIT` — ⓘ এখানেও আলাদা
+             * বালতি নয়, আটকানোর একটা কারণ, বাকি চারটার মতোই।
+             *
+             * ⚠️ `returns_to_stock => true` — ট্রাক ফিরে এলে মালটা
+             * দিব্যি বিক্রয়যোগ্য; ⛔ মালে কোনো দোষ নেই, কেবল ঠিকানা
+             * বদলাচ্ছিল।
+             */
+            ['HOLD-TRN', 'On the way to another warehouse', 'অন্য গুদামের পথে',
+                ['context' => ReasonCode::HOLD, 'returns_to_stock' => true]],
+        ];
+    }
+
+    /**
+     * ⭐ যে কারণগুলো এখনো নেই, কেবল সেগুলো বসায় — ২৫ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⛔ কেন [[seed()]]-কে যোগমুখী করা হয়নি ─────────────────────────
+     * ঐ একটা পদ্ধতি আটটা মাস্টার তালিকা বসায়। ⚠️ যোগমুখী করলে কোনো
+     * কোম্পানি যে সারিগুলো **ইচ্ছাকৃতভাবে মুছেছেন** সেগুলোও ফিরে আসত,
+     * আর `makeDefault()` তাঁর বেছে নেওয়া ডিফল্ট উল্টে দিতে পারত।
+     *
+     * ⛔ একটা ফাঁকা কলামের চেয়ে সেটা অনেক খারাপ: ⓘ ফাঁকা কলাম দেখা যায়,
+     * আর নিজে থেকে ফিরে আসা সারি দেখা যায় না।
+     *
+     * ── ⓘ কারণ-কোডে ডিফল্ট বলে কিছু নেই ─────────────────────────────
+     * তাই এখানে `makeDefault()`-এর প্রশ্নই ওঠে না — ⚠️ এই তালিকাটার
+     * জন্য যোগ করা নিরাপদ, বাকিগুলোর জন্য নয়।
+     *
+     * ⚠️ একটা সারিতে ব্যতিক্রম হলে গোটা সিঙ্ক থামে না: ⛔ থামলে
+     * প্রথম গড়বড়ওয়ালা কোম্পানির পরের সবাই বাদ পড়ত, আর কেউ জানত না
+     * কতদূর হয়েছে।
+     *
+     * @return int কয়টা নতুন সারি বসল
+     */
+    public function installMissingReasons(): int
+    {
+        /*
+         * ⛔ `withTrashed()` — নাহলে সিঙ্কটা নিজের প্রতিশ্রুতিই ভাঙত।
+         *
+         * ⚠️ কারণ-কোড soft-delete করে। মুছে ফেলা সারি সাধারণ কোয়েরিতে
+         * দেখা যায় না, তাই কোডটা "নেই" মনে হত আর সিঙ্ক ওটা **আবার
+         * বসিয়ে দিত** — অর্থাৎ কোম্পানি যে কারণটা ইচ্ছাকৃতভাবে সরিয়েছেন
+         * সেটাই পরদিন তালিকায় ফিরে আসত।
+         *
+         * ⓘ ঠিক এই আচরণটা এড়াতেই [[seed()]] যোগমুখী করা হয়নি; একই
+         * ভুল এখানে পিছনের দরজা দিয়ে ঢুকছিল।
+         */
+        $have = ReasonCode::withTrashed()->pluck('code')->all();
+        $added = 0;
+
+        foreach (self::reasonRows() as [$code, $en, $bn, $extra]) {
+            if (in_array($code, $have, true)) {
+                continue;
+            }
+
+            unset($extra['is_default']);
+
+            $this->create(ReasonCode::class, [
+                'code' => $code,
+                'name_en' => $en,
+                'name_bn' => $bn,
+                ...$extra,
+            ]);
+
+            $added++;
+        }
+
+        return $added;
+    }
+
     private function seed(string $model, array $rows): int
     {
         if ($model::query()->exists()) {
