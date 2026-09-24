@@ -70,6 +70,14 @@ Route::middleware('auth')->prefix('sales')->group(function () {
     Route::prefix('direct')->name('direct.')->group(function () {
         Route::get('/', [DirectSaleController::class, 'create'])->name('create');
         Route::post('/', [DirectSaleController::class, 'store'])->name('store');
+
+        /*
+         * এই মালে কতটা ফ্রি — সারি যোগ করার আগে জিজ্ঞাসা।
+         *
+         * ⓘ এটা প্রশ্ন, আদেশ নয় — ⚠️ কিছু বসায় না, কেবল সংখ্যাটা
+         * বলে। দেয়ালটা [[DirectSaleService]]-এই থাকে।
+         */
+        Route::get('/free-allowed', [DirectSaleController::class, 'freeAllowed'])->name('free_allowed');
     });
 
     Route::prefix('orders')->name('order.')->group(function () {

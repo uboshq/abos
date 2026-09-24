@@ -24,6 +24,8 @@ use App\Modules\MasterData\Models\PaymentTerm;
 use App\Modules\Sales\Services\DirectSaleService;
 use App\Modules\Supplier\Models\Supplier;
 use Illuminate\Http\RedirectResponse;
+use App\Modules\Inventory\Services\FreeAllowance;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
@@ -357,6 +359,58 @@ class DirectSaleController extends Controller implements HasMiddleware
                 'sales_qty' => $this->settings->get('sales.field_sales_qty', true),
                 'free_qty_total' => $this->settings->get('sales.field_free_qty_total', true),
                 'total_qty' => $this->settings->get('sales.field_total_qty', true),
+            ],
+        ]);
+    }
+
+    /**
+     * ⭐ এই মালে কতটা ফ্রি দেওয়া যাবে — সারি যোগ করার **আগে**।
+     *
+     * ── ⭐ মালিকের নির্দেশ, ২৪ সেপ্টেম্বর ২০২৬ ────────────────────
+     * *"অনুপাতের বেশি ফ্রি দিলে বিল প্রডাক্ট এন্টিতেই আটকে যাবে, কার্টে
+     * যোগ হবে না আর ওয়ার্নিং দিবে ফ্রি এতটা দেওয়া যাবে"*।
+     *
+     * ── ⚠️ দেয়ালটা এখনো সেবায়, এটা কেবল উত্তর ────────────────
+     * ⓘ [[DirectSaleService]] বিল বসানোর সময়ঙ3 মিলিয়ে দেখে। ⛔ শুধু
+     * পর্দায় আটকালে অন্য পথে আসা বিল — কাউন্টার, আদেশ, কালকের
+     * নতুন পর্দা — প্রতিটাই একটা করে ফাঁক হত।
+     *
+     * ⭐ তাই এটা দেয়াল নয়, এটা **দেয়ালটা কোথায় তা আগে বলা** —
+     * ⓘ মানুষ সারি যোগ করার মুহূর্তেই জানবেন, বিল শেষ করার পর নয়।
+     */
+    public function freeAllowed(Request $request): JsonResponse
+    {
+        $companyId = CompanyContext::id();
+
+        $data = $request->validate([
+            'product_id' => ['required', 'integer',
+                Rule::exists('inv_products', 'id')->where('company_id', $companyId)],
+            'warehouse_id' => ['nullable', 'integer',
+                Rule::exists('inv_warehouses', 'id')->where('company_id', $companyId)],
+            'qty' => ['required', 'numeric', 'gt:0'],
+        ]);
+
+        $product = Product::query()->findOrFail($data['product_id']);
+
+        $warehouse = isset($data['warehouse_id'])
+            ? Warehouse::query()->find($data['warehouse_id'])
+            : Warehouse::query()->where('is_default', true)->first();
+
+        /*
+         * ⓘ গুদাম না থাকলে সীমা বলা যায় না — তখন চুপ করাই সৎ।
+         *
+         * ⛔ শূন্য বললে পর্দা ভাবত *"কোনো ফ্রি দেওয়া যাবে না"*, আর
+         * সেটা মিথ্যা — প্রশ্নটারই উত্তর নেই।
+         */
+        if ($warehouse === null) {
+            return response()->json(['data' => ['known' => false, 'allowed' => null]]);
+        }
+
+        return response()->json([
+            'data' => [
+                'known' => true,
+                'allowed' => app(FreeAllowance::class)
+                    ->on($product, $warehouse, (string) $data['qty']),
             ],
         ]);
     }
