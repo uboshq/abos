@@ -31,6 +31,7 @@ use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -382,13 +383,36 @@ class DirectSaleController extends Controller implements HasMiddleware
     {
         $companyId = CompanyContext::id();
 
-        $data = $request->validate([
+        /*
+         * ⚠️ যাচাইটা নিজে হাতে, `$request->validate()` দিয়ে নয় — ২৫ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⛔ কী ধরা পড়েছে ────────────────────────────────────────────
+         * এই অ্যাপে JSON উত্তর দেওয়া হয় **কেবল `api/*` পথে**
+         * (`bootstrap/app.php`-এর `shouldRenderJsonWhen`)। ⓘ এই দরজাটা
+         * `sales/direct/…`, তাই `validate()` ছুঁড়লে উত্তরটা ৪২২ নয় —
+         * **৩০২, হোমে রিডাইরেক্ট**, এমনকি `Accept: application/json`-এও।
+         *
+         * ⚠️ আর ক্ষতিটা নীরব: কাউন্টারের JS `answer.ok` দেখে, আর রিডাইরেক্ট
+         * অনুসরণ করে একটা ২০০ HTML পাতা আসে। ⛔ তখন `json()` ছোঁড়ে, ধরা
+         * পড়ে, আর সারিটা **কোনো বাধা ছাড়াই কার্টে চলে যায়** — অর্থাৎ
+         * সীমাটা থাকত, কিন্তু কথা বলত না।
+         *
+         * ⓘ দরজাটা `api/*`-এ সরানো যেত, কিন্তু তাতে একই পর্দার একটা
+         * ঠিকানা দুই জায়গায় ভাগ হত। ⭐ এখানে উত্তরটা নিজেই বলা সহজ ও সৎ।
+         */
+        $check = Validator::make($request->all(), [
             'product_id' => ['required', 'integer',
                 Rule::exists('inv_products', 'id')->where('company_id', $companyId)],
             'warehouse_id' => ['nullable', 'integer',
                 Rule::exists('inv_warehouses', 'id')->where('company_id', $companyId)],
             'qty' => ['required', 'numeric', 'gt:0'],
         ]);
+
+        if ($check->fails()) {
+            return response()->json(['message' => $check->errors()->first()], 422);
+        }
+
+        $data = $check->validated();
 
         $product = Product::query()->findOrFail($data['product_id']);
 
