@@ -110,6 +110,10 @@ return [
      * So the figure is always shown positive and the direction is the label.
      */
     'previous_due' => 'Previous Due',
+
+    /* ⓘ Reasons in bn/field.php — it is what is LEFT today, not the
+       agreed limit, and the two are not the same number. */
+    'credit_left' => 'Credit left',
     'previous_advance' => 'Previous Credit',
     /* 'due' is declared above with the challan/invoice block — same word, so not twice. */
     'advance' => 'Credit',

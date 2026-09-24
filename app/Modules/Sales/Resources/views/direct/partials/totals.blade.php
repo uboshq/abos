@@ -337,6 +337,58 @@
                     <span class="num"
                           x-text="customer.due ? money($abs(customer.due)) : '—'"></span>
                 </div>
+
+                {{--
+                    ── ⭐ আর কত বাকিতে দেওয়া যাবে ─────────────────────────
+
+                    মালিকের নির্দেশ, ২৫ সেপ্টেম্বর ২০২৬: *"Available Balance
+                    বিলের মোট box e আগের বকেয়া er niche dilei valo hobe"*।
+
+                    ── ⛔ কেন ঠিক এখানে ───────────────────────────────────
+                    ⓘ উপরে আগের বকেয়া, নিচে মোট বকেয়ার বড়িটা। ⭐ সীমার
+                    সংখ্যাটা ঐ দুইটার **মাঝখানে** বসলে তিনটা একসাথে একটা
+                    বাক্য হয়ে যায়: *"এত বাকি ছিল · এত খোলা আছে · মোট এত
+                    দাঁড়াল"*।
+
+                    ── ⚠️ সংখ্যাটা `creditLeft`, `availableCredit` নয় ──────
+                    ⓘ `availableCredit` `outstanding` ধরে চলে, আর সে উদ্বৃত্ত
+                    জমাকে ঋণাত্মক হতে দেয়। ⛔ তাতে বেশি টাকা গুনলে সীমার
+                    ঘরটা বেড়ে যেত — অর্থাৎ বাড়তি টাকা গুনে পুরনো বাকির
+                    সীমাও পার করানো যেত। ⭐ `creditLeft` সেবার ছাঁকনিটাই
+                    ব্যবহার করে ([[SalesInvoiceService::assertWithinCreditLimit()]])।
+
+                    ── ⓘ তিনটা অবস্থা, তিনটা আলাদা কথা ────────────────────
+                    ক্রেতা বাছা হয়নি → `—` · সীমা শূন্য → "বাকি বন্ধ" ·
+                    সীমা আছে → সংখ্যা। ⚠️ শূন্য দেখালে মানুষ ভাবতেন ধার
+                    শেষ, অথচ কথাটা আলাদা — বাকিতে দেওয়াই বন্ধ।
+
+                    ── ⚠️ রঙটা শর্ত দেখে ───────────────────────────────────
+                    নগদে সীমা খাটেই না, তাই তখন সংখ্যাটা ধূসর — ⛔ উজ্জ্বল
+                    থাকলে বিক্রেতা ভাবতেন ওটা এই বিলে কিছু আটকাচ্ছে।
+                --}}
+                <template x-if="hasCustomer">
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="text-(--color-ink-muted)">
+                            {{ __('sales::field.credit_left') }}
+                        </span>
+
+                        <template x-if="creditIsClosed">
+                            <span class="text-2xs font-semibold text-(--color-ink-muted)">
+                                {{ __('sales::field.credit_closed') }}
+                            </span>
+                        </template>
+
+                        <template x-if="hasCreditLimit">
+                            <span class="num font-semibold"
+                                  :class="! termUsesCredit
+                                    ? 'text-(--color-ink-muted)'
+                                    : (creditLeft > 0
+                                        ? 'text-(--color-success)'
+                                        : 'text-(--color-danger)')"
+                                  x-text="'৳' + money(creditLeft)"></span>
+                        </template>
+                    </div>
+                </template>
             </div>
 
             {{--

@@ -457,6 +457,22 @@
                                      x-text="freeWarning" role="alert"></div>
                             @endif
 
+                            {{-- ⭐ বাকির সীমা ছাড়ালে — মালিকের নির্দেশ,
+                                 ২৫ সেপ্টেম্বর ২০২৬।
+
+                                 ⚠️ এটা ফ্রি-র বার্তার **বাইরে**, আর কারণটা
+                                 সূক্ষ্ম: ওটা `@if ($show['free_qty'])`-এর
+                                 ভিতরে বসে। ⛔ ভিতরে রাখলে যে কোম্পানি ফ্রি
+                                 বন্ধ রেখেছে, তাদের পর্দায় সারিটা নীরবে
+                                 কার্টে যেত না আর **একটাও কারণ দেখাত না**।
+
+                                 ⓘ হিসাবটা গোটা ঝুড়ি ধরে, তাই বার্তাটা এই
+                                 সারির নয় — পুরো বিলের। --}}
+                            <div x-show="creditWarning" x-cloak
+                                 class="col-span-full rounded-(--radius-field) bg-(--color-badge-danger-bg)
+                                        px-3 py-1.5 text-xs text-(--color-badge-danger-ink)"
+                                 x-text="creditWarning" role="alert"></div>
+
                             {{-- মোট পরিমাণ নিজে থেকেই — বিক্রয় + ফ্রি।
 
                                  হাতে লিখতে দিলে কেউ ভুল যোগ করত, আর গুদাম

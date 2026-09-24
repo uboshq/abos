@@ -31,6 +31,7 @@ use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -334,6 +335,32 @@ class DirectSaleController extends Controller implements HasMiddleware
              */
             'paymentTerms' => $this->paymentTerms(),
             'paymentTermDefault' => 'cash',
+
+            /*
+             * ⭐ বাকির সীমার নিয়মগুলো পর্দায় — মালিকের নির্দেশ,
+             * ২৫ সেপ্টেম্বর ২০২৬: *"Available Balance … blocks entry"*।
+             *
+             * ── ⛔ দেয়ালটা নতুন নয়, খবরটা দেরিতে আসত ─────────────────
+             * ⓘ আসল দেয়াল সেবায় আগে থেকেই আছে
+             * ([[SalesInvoiceService::assertWithinCreditLimit()]])। ⚠️ কিন্তু
+             * সে কথা বলে **সংরক্ষণের সময়** — অর্থাৎ ত্রিশটা সারি তোলার পরে,
+             * আর তখন কোন সারিটা বাদ দিলে চলবে তা কেউ বলে না।
+             *
+             * ── ⚠️ কেন সুইচগুলোও পাঠাতে হয় ───────────────────────────
+             * ⛔ পর্দা যদি নিজের মতো একটা নিয়ম বানাত, তবে দুইটা উত্তর হত:
+             * পর্দা আটকাত যেখানে সেবা দেয়, বা উল্টোটা। ⓘ প্রথমটা বিক্রি
+             * বন্ধ করত, দ্বিতীয়টা মিথ্যা আশা দিত — দুইটাই খারাপ।
+             *
+             * ⓘ তাই সেবার প্রতিটা শর্তই এখানে যায়, হুবহু একই নামে।
+             * `canOverride` — যাঁর চাবি আছে তাঁর কাছে পর্দা আটকাবেই না,
+             * ঠিক যেমন সেবাও আটকায় না ([[CustomerPolicy]])।
+             */
+            'creditRules' => [
+                'enabled' => $this->settings->enabled('customer.credit_limit_enabled'),
+                'blocks' => $this->settings->enabled('customer.block_over_limit'),
+                'zeroBlocks' => $this->settings->enabled('customer.zero_limit_blocks'),
+                'canOverride' => Gate::allows('overrideCreditLimit', Customer::class),
+            ],
 
             /*
              * ঘরগুলো কোম্পানি চাইলে বন্ধ করতে পারে (নিয়ম ৭)।

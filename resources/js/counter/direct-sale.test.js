@@ -62,7 +62,10 @@ const counter = (over = {}) => withMagics(directSale({
     moneyAccounts: [],
     draftKey: 'test.counter',
     hasErrors: false,
-    texts: { notForSales: 'বিক্রয়ের জন্য নয়' },
+    texts: {
+        notForSales: 'বিক্রয়ের জন্য নয়',
+        creditBeyondLimit: 'আর ৳:left বাকি দেওয়া যাবে',
+    },
     ...over,
 }))
 
@@ -316,5 +319,175 @@ describe('কার্টের সারি উপরে ফিরিয়ে 
 
         expect(c.lines).toHaveLength(1)
         expect(c.picked).toBe(null)
+    })
+})
+
+/*
+ * ⭐ বাকির সীমা কার্টেই আটকায় — মালিকের নির্দেশ, ২৫ সেপ্টেম্বর ২০২৬।
+ *
+ * ── ⛔ দেয়ালটা নতুন নয়, খবরটা দেরিতে আসত ────────────────────────────
+ * আসল দেয়াল সেবায় ([[SalesInvoiceService::assertWithinCreditLimit()]]),
+ * কিন্তু সে কথা বলে **সংরক্ষণের সময়** — ত্রিশটা সারি তোলার পরে, আর তখন
+ * কোনটা বাদ দিলে চলবে তা কেউ বলে না।
+ *
+ * ── ⚠️ তাই প্রতিটা দাবি সেবার নিয়মটাই মাপে ───────────────────────────
+ * ⛔ পর্দা একটু কড়া হলে সে এমন বিক্রি আটকাত যা সেবা মেনে নিত, আর
+ * বিক্রেতা কারণ খুঁজে পেতেন না। একটু ঢিলা হলে মিথ্যা আশা দিত।
+ */
+describe('বাকির সীমা — কার্টেই আটকায়', () => {
+    /** সীমা আছে এমন একজন ক্রেতা, আর সব সুইচ চালু। */
+    const onCredit = (over = {}) => {
+        const c = counter({
+            customers: { 7: { limit: 10000, due: 8000, days: 30, name: 'রহিম' } },
+            creditRules: { enabled: true, blocks: true, zeroBlocks: false, canOverride: false },
+            ...over,
+        })
+
+        c.customerId = '7'
+        c.creditTerm = 'credit:30'
+
+        return c
+    }
+
+    /** ঐ ক্রেতার ঘরে একটা সারি বসানোর আয়োজন। */
+    const entry = (c, rate) => {
+        c.picked = product()
+        c.entry.qty = '1'
+        c.entry.rate = String(rate)
+    }
+
+    it('সীমার ভিতরে থাকলে সারিটা যায়', async () => {
+        const c = onCredit()
+        entry(c, 1500)
+
+        expect(await c.addToCart()).toBe(true)
+        expect(c.lines).toHaveLength(1)
+        expect(c.creditWarning).toBe('')
+    })
+
+    /*
+     * ⛔ এটাই আসল দাবি। ⚠️ বকেয়া ৮,০০০, সীমা ১০,০০০ — খোলা ২,০০০।
+     * ২,৫০০ টাকার সারিটা ওটা ছাড়ায়, তাই কার্টেই থামে।
+     */
+    it('সীমা ছাড়ালে সারিটা কার্টে যায় না', async () => {
+        const c = onCredit()
+        entry(c, 2500)
+
+        expect(await c.addToCart()).toBe(false)
+        expect(c.lines).toHaveLength(0)
+        expect(c.creditWarning).not.toBe('')
+    })
+
+    /*
+     * ⭐ **গোটা ঝুড়ি ধরে, সারি ধরে নয়** — মালিকের নির্দেশ।
+     *
+     * ⛔ সারি ধরে দেখলে ১,২০০-র দুইটা সারি আলাদাভাবে নিরীহ দেখাত
+     * (দুইটাই ২,০০০-এর কম), অথচ মিলে ২,৪০০ — সীমা পার।
+     */
+    it('সারি ধরে নয়, পুরো ঝুড়ি ধরে গোনে', async () => {
+        const c = onCredit()
+
+        entry(c, 1200)
+        expect(await c.addToCart()).toBe(true)
+
+        entry(c, 1200)
+        expect(await c.addToCart()).toBe(false)
+        expect(c.lines).toHaveLength(1)
+    })
+
+    /*
+     * ⚠️ বার্তায় **যতটুকু খোলা আছে** থাকে, যতটুকু ছাড়িয়েছে তা নয়।
+     * ⛔ নাহলে বিক্রেতা কমাতে কমাতে চেষ্টা করতেন।
+     */
+    it('বার্তাটা যতটুকু খোলা আছে তা বলে', async () => {
+        const c = onCredit()
+        entry(c, 2500)
+        await c.addToCart()
+
+        expect(c.creditWarning).toContain('2,000')
+    })
+
+    /*
+     * ⛔ নগদে সীমার প্রশ্নই ওঠে না — সেবাও `unpaid <= 0` দেখে ফিরে যায়।
+     *
+     * ⚠️ আর এটাই সবচেয়ে জরুরি পাল্টা-দাবি: কার্ট গড়ার সময় জমার ঘর
+     * এখনো খালি, তাই টাকার অঙ্ক দেখে বিচার করলে **প্রতিটা নগদ বিক্রিই**
+     * মাঝপথে আটকে যেত।
+     */
+    it('নগদে কিছুই আটকায় না', async () => {
+        const c = onCredit()
+        c.creditTerm = 'cash'
+        entry(c, 50000)
+
+        expect(await c.addToCart()).toBe(true)
+        expect(c.creditWarning).toBe('')
+    })
+
+    /* ⛔ পাল্টা-দাবি: সুইচ বন্ধ থাকলে পর্দাও আটকায় না — সেবা যেমন আটকায় না। */
+    it('সীমার সুইচ বন্ধ থাকলে আটকায় না', async () => {
+        const c = onCredit({
+            creditRules: { enabled: false, blocks: true, zeroBlocks: false, canOverride: false },
+        })
+        entry(c, 50000)
+
+        expect(await c.addToCart()).toBe(true)
+    })
+
+    it('আটকানোর সুইচ বন্ধ থাকলে আটকায় না', async () => {
+        const c = onCredit({
+            creditRules: { enabled: true, blocks: false, zeroBlocks: false, canOverride: false },
+        })
+        entry(c, 50000)
+
+        expect(await c.addToCart()).toBe(true)
+    })
+
+    /* ⛔ যাঁর চাবি আছে তাঁকে পর্দাও আটকায় না — [[CustomerPolicy]] যেমন। */
+    it('চাবি থাকলে আটকায় না', async () => {
+        const c = onCredit({
+            creditRules: { enabled: true, blocks: true, zeroBlocks: false, canOverride: true },
+        })
+        entry(c, 50000)
+
+        expect(await c.addToCart()).toBe(true)
+    })
+
+    /*
+     * ⓘ সীমা শূন্য মানে "বাকি বন্ধ", আর সেটা সুইচ দিয়ে ঠিক হয়।
+     * ⚠️ `zeroBlocks` বন্ধ থাকলে শূন্য সীমা কিছুই আটকায় না — নাহলে
+     * নতুন গ্রাহকের প্রথম বিলটাই আটকে যেত।
+     */
+    it('সীমা শূন্য — সুইচ বন্ধ থাকলে যায়, চালু থাকলে যায় না', async () => {
+        const open = onCredit({ customers: { 7: { limit: 0, due: 0, days: 30, name: 'নতুন' } } })
+        entry(open, 500)
+        expect(await open.addToCart()).toBe(true)
+
+        const shut = onCredit({
+            customers: { 7: { limit: 0, due: 0, days: 30, name: 'নতুন' } },
+            creditRules: { enabled: true, blocks: true, zeroBlocks: true, canOverride: false },
+        })
+        entry(shut, 500)
+        expect(await shut.addToCart()).toBe(false)
+    })
+
+    /*
+     * ⚠️ জমা দিলে বাকিটা কমে, তাই সীমাও খোলে — সেবার
+     * `unpaid = total − payingNow`-এর আয়না।
+     */
+    it('জমা দিলে সীমা খুলে যায়', async () => {
+        const c = onCredit()
+        c.deposits = [{ amount: '1000' }]
+        entry(c, 2500)
+
+        expect(await c.addToCart()).toBe(true)
+    })
+
+    /* ⛔ ক্রেতা না বাছলে সীমার প্রশ্নই নেই — নগদ খদ্দের। */
+    it('ক্রেতা না বাছলে আটকায় না', async () => {
+        const c = onCredit()
+        c.customerId = ''
+        entry(c, 50000)
+
+        expect(await c.addToCart()).toBe(true)
     })
 })

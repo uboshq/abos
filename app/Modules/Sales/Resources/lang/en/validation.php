@@ -12,6 +12,14 @@ return [
     'no_cash_counter' => 'There is no cash counter yet. Open one first — without it there is no way to say whose custody the money went into.',
     'unknown_payment_method' => 'That payment method was not found, or it has been switched off.',
     'reference_required' => 'Money taken through :method needs its transaction number — without it there is no way to reconcile against the statement later.',
+    'free_over_allowance' => 'At most :allowed free can go on this line — no more than the supplier gave.',
+
+    /*
+     * ⓘ The number is what is LEFT, not what was exceeded — reasons in
+     * bn/validation.php. It is checked on the whole basket, so the figure
+     * already counts everything in the cart.
+     */
+    'credit_left_is_only' => 'Only ৳:left of credit is left for this customer — this line goes past it.',
     'free_beyond_ratio' => ':product — :free free given, but the ratio of this lot allows at most :allowed. '
         .'You cannot pass on more free goods than the supplier gave.',
     'no_lines' => 'At least one line is needed — a document with no lines does nothing.',

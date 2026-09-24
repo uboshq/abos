@@ -71,9 +71,11 @@
               texts: @js([
                   'notForSales' => __('sales::message.not_for_sales'),
                   'freeBeyondRatio' => __('sales::validation.free_over_allowance'),
+                  'creditBeyondLimit' => __('sales::validation.credit_left_is_only'),
               ]),
               freeAllowedUrl: @js(route('sales.direct.free_allowed')),
               warehouseId: @js($warehouse?->id),
+              creditRules: @js($creditRules),
           })"
           @bulk-applied.window="absorbBulk($event.detail.rows)"
 

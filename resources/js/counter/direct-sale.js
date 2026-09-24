@@ -32,8 +32,17 @@ import { taka } from '../components/money.js'
 export default function directSale({
     catalogue, customers, walkinId, vatEnabled, packs,
     paymentTermDefault, carriers, depositMethods, moneyAccounts,
-    draftKey, hasErrors, texts, freeAllowedUrl, warehouseId,
+    draftKey, hasErrors, texts, freeAllowedUrl, warehouseId, creditRules,
 }) {
+    /*
+     * ⚠️ ডিফল্টটা **সব বন্ধ**, আর সেটা ইচ্ছাকৃত।
+     *
+     * ⛔ পর্দাটা পুরনো খসড়া বা অন্য কোনো পথ থেকে নিয়ম ছাড়া বসলে
+     * সে নিজে থেকে আটকাবে না — আটকানোর দায়িত্ব সেবার, আর সে ঠিকই
+     * ধরবে। ⓘ উল্টোটা হলে (ডিফল্টে আটকানো) পর্দা এমন বিক্রি বন্ধ
+     * করত যা সেবা দিব্যি মেনে নিত, আর কারণটা কেউ খুঁজে পেত না।
+     */
+    const credit = creditRules ?? { enabled: false, blocks: false, zeroBlocks: false, canOverride: false };
     return {
         catalogue,
 
@@ -54,6 +63,10 @@ export default function directSale({
          * তাই বার্তাটাই একমাত্র চিহ্ন।
          */
         freeWarning: '',
+
+        /* ⓘ বাকির সীমা ছাড়ানোর বার্তা — `freeWarning`-এর পাশেই বসে,
+             আর একই জায়গায় দেখানো হয়। */
+        creditWarning: '',
         customers,
         vatEnabled,
         term: '',
@@ -930,6 +943,8 @@ export default function directSale({
         async addToCart() {
             if (! this.picked) return false;
 
+            if (! this.creditFitsTheLimit()) return false;
+
             if (! await this.freeFitsTheRatio()) return false;
 
             this.lines.push({
@@ -951,6 +966,43 @@ export default function directSale({
             this.$nextTick(() => this.$refs.search.focus());
 
             return true;
+        },
+
+        /**
+         * ⭐ এই সারিটা তুললে বাকির সীমা ছাড়ায় কি না — মালিকের নির্দেশ,
+         * ২৫ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⛔ কেন এখানে, সংরক্ষণে নয় ──────────────────────────────
+         * ⓘ সেবা ঠিকই আটকায়, কিন্তু সে কথা বলে **সব শেষে**। ⚠️ তখন
+         * ত্রিশটা সারি তোলা হয়ে গেছে, আর বার্তাটা বলে না কোনটা বাদ
+         * দিলে চলবে। ⭐ এখানে সংখ্যাটা বলা হয়: *"আর এতটুকু বাকি
+         * দেওয়া যাবে"* — তাই মানুষটা তখনই ঠিক করতে পারেন।
+         *
+         * ── ⚠️ এটা দেয়াল নয়, দেয়ালটা কোথায় তা আগে বলা ─────────────
+         * ⛔ অন্য পথে আসা বিল — অর্ডার, পোর্টাল, API — এখান দিয়ে যায়
+         * না। ⓘ আসল দেয়াল সেবায়, আর সে-ই শেষ কথা বলে।
+         *
+         * @return {boolean} সারিটা তোলা যাবে কি না
+         */
+        creditFitsTheLimit() {
+            this.creditWarning = '';
+
+            if (! this.creditIsWatched) return true;
+
+            if (this.creditLeftAfterEntry >= 0) return true;
+
+            /*
+             * ⓘ বার্তাটা **যতটুকু খোলা আছে** বলে, "সীমা পেরিয়ে গেছে" নয়।
+             *
+             * ⛔ কেবল "পেরিয়ে গেছে" বললে মানুষ কমাতে কমাতে চেষ্টা করতেন,
+             * আর প্রতিবার আবার বাধা পেতেন। ⚠️ ঋণাত্মক হলে শূন্য দেখানো
+             * হয় — "-৫০০ টাকা বাকি দেওয়া যাবে" একটা অর্থহীন বাক্য।
+             */
+            const left = this.creditLeft > 0 ? this.creditLeft : 0;
+
+            this.creditWarning = texts.creditBeyondLimit.replace(':left', this.money(left));
+
+            return false;
         },
 
         /**
@@ -1636,6 +1688,93 @@ export default function directSale({
          * *"ক্রেতা বাছা হয়নি"* থেকে আলাদা কথা। */
         get creditIsClosed() {
             return this.hasCustomer && ! this.hasCreditLimit;
+        },
+
+        /*
+         * ⭐ বাকির সীমা — পর্দার হিসাব, সেবার নিয়ম হুবহু।
+         *
+         * ── ⛔ কেন আয়নাটা হুবহু হতে হয় ─────────────────────────────
+         * আসল দেয়াল [[SalesInvoiceService::assertWithinCreditLimit()]]-এ।
+         * ⚠️ পর্দা যদি একটু কড়া হয়, সে এমন বিক্রি আটকাবে যা সেবা মেনে
+         * নিত — আর বিক্রেতা কারণ খুঁজে পাবেন না। একটু ঢিলা হলে সে
+         * "ঠিক আছে" বলে ত্রিশটা সারি তুলতে দেবে, আর সংরক্ষণে গিয়ে
+         * সব ভেঙে পড়বে। ⓘ দুইটাই খারাপ, তাই শর্তগুলো সেবা থেকেই আসে।
+         */
+
+        /*
+         * ⓘ নগদে সীমার প্রশ্নই ওঠে না — সেবাও `unpaid <= 0` দেখে ফিরে
+         * যায়। ⚠️ কিন্তু কার্ট গড়ার সময় জমার ঘর এখনো খালি, তাই
+         * টাকার অঙ্ক দেখে বিচার করলে **প্রতিটা নগদ বিক্রিই** মাঝপথে
+         * আটকে যেত। ⛔ তাই শর্তটা দেখা হয়, অঙ্কটা নয়।
+         */
+        get termUsesCredit() {
+            return this.termKind !== '' && this.termKind !== 'cash';
+        },
+
+        /* এই বিলে সীমাটা সত্যিই পাহারা দেবে কি না — পাঁচটা শর্তই লাগে। */
+        get creditIsWatched() {
+            return credit.enabled
+                && credit.blocks
+                && ! credit.canOverride
+                && this.hasCustomer
+                && this.termUsesCredit
+                && (this.hasCreditLimit || credit.zeroBlocks);
+        },
+
+        /*
+         * এই বিলের যতটুকু বাকি থেকে যাবে।
+         *
+         * ⓘ সেবার `unpaid = total − payingNow`-এর আয়না। ⚠️ ঋণাত্মক
+         * হতে দেওয়া হয় না: বিলের চেয়ে বেশি জমা পড়লে উদ্বৃত্তটা
+         * **আগের বকেয়া থেকে বিয়োগ হয়ে যেত**, আর তখন সীমা ছাড়ানো
+         * একজন বাড়তি টাকা গুনে পুরনো বাকির সীমাও পার করাতে পারতেন।
+         */
+        get creditUnpaid() {
+            const unpaid = this.netPayable - this.deposit;
+
+            return unpaid > 0 ? unpaid : 0;
+        },
+
+        /*
+         * আর কতটা বাকিতে দেওয়া যাবে — সীমা বসানো থাকলে।
+         *
+         * ⚠️ `availableCredit` নয়: ওটা `outstanding` ধরে চলে, আর
+         * `outstanding` উদ্বৃত্ত জমাকে ঋণাত্মক হতে দেয় (পক্ষের হিসাবে
+         * ওটা সত্যি)। ⓘ সীমার প্রশ্নে সেবা ছাঁকনিটা বসায়, তাই এখানেও।
+         */
+        get creditLeft() {
+            return (Number(this.customer.limit) || 0)
+                - (Number(this.customer.due) || 0)
+                - this.creditUnpaid;
+        },
+
+        /*
+         * হাতের এন্ট্রিটা যোগ করলে সীমা ছাড়াবে কি না।
+         *
+         * ⭐ **পুরো ঝুড়ি ধরে, সারি ধরে নয়** — মালিকের নির্দেশ।
+         * ⓘ `netPayable` গোটা কার্ট গোনে, আর তার সাথে এই লাইনটা যোগ
+         * হয়। ⚠️ সারি ধরে দেখলে দশটা ছোট সারি মিলে সীমা পেরিয়ে যেত,
+         * অথচ প্রতিটা আলাদাভাবে নিরীহ দেখাত।
+         *
+         * ── ⛔ ছাঁকনিটা **শেষে**, আগে নয় ─────────────────────────────
+         * ⚠️ প্রথমে লেখা হয়েছিল `creditLeft - entryNet`, আর পরীক্ষাটা
+         * ধরিয়ে দিল ওটা ভুল: `creditLeft` তার নিজের অঙ্কটা শূন্যে
+         * ছেঁকে ফেলে, তাই **কার্ট খালি থাকা অবস্থায় জমার সুবিধাটা
+         * হারিয়ে যেত** — ১,০০০ টাকা জমা দিয়েও সীমা এক পয়সাও খুলত না।
+         *
+         * ⓘ সেবা একটাই সংখ্যা ছাঁকে (`unpaid = total − payingNow`), তাই
+         * এখানেও যোগ-বিয়োগ সব আগে, ছাঁকনি একবার, শেষে।
+         */
+        get creditUnpaidWithEntry() {
+            const unpaid = this.netPayable + this.entryNet - this.deposit;
+
+            return unpaid > 0 ? unpaid : 0;
+        },
+
+        get creditLeftAfterEntry() {
+            return (Number(this.customer.limit) || 0)
+                - (Number(this.customer.due) || 0)
+                - this.creditUnpaidWithEntry;
         },
 
         get counts() {
