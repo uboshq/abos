@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'order' => 'ক্রয় আদেশ',
-    'receipt' => 'মাল বুঝে নেওয়া',
+    'receipt' => 'মাল গ্রহণ',
     'bill' => 'ক্রয় বিল',
     'payment' => 'পরিশোধ',
     'return' => 'ক্রয় ফেরত',

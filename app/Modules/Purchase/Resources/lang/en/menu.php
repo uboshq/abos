@@ -4,7 +4,17 @@ declare(strict_types=1);
 
 return [
     'orders' => 'Purchase Orders',
-    'receipts' => 'Goods Received',
+    /*
+     * ⭐ "Goods Receipt", not "Goods Received" — 25 Sep 2026.
+     *
+     * ⓘ The menu row lives in Inventory now and reads "Goods Receipt";
+     * this key is what the screen itself is titled. ⛔ Two spellings for
+     * one screen read as two screens, which is exactly the confusion the
+     * owner asked to end on the Bangla side.
+     *
+     * ⚠️ "Received" is a verb; the list holds papers, not actions.
+     */
+    'receipts' => 'Goods Receipt',
     'bills' => 'Purchase Bills',
     'payments' => 'Payments',
     'returns' => 'Purchase Returns',

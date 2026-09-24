@@ -13,6 +13,6 @@ return [
     'screen_receipts' => 'মাল গ্রহণের (GRN) পর্দা দেখাও',
     'paper_bill' => 'ক্রয় বিল কোন কাগজে',
     'paper_order' => 'ক্রয় আদেশ কোন কাগজে',
-    'paper_receipt' => 'মাল বুঝে নেওয়ার কাগজ কোন মাপে',
+    'paper_receipt' => 'মাল গ্রহণের কাগজ কোন মাপে',
     'screen_requisitions' => 'ক্রয়ের চাহিদার পর্দা দেখাও',
 ];
