@@ -27,6 +27,8 @@ return [
     'background_jobs' => 'Background jobs',
     'profit_loss' => 'Profit & Loss',
     'group_report' => 'Group Accounts',
+    'inter_company' => 'Inter-company Money',
+    'inter_company_new' => 'New — money to a sister company',
     'balance_sheet' => 'Balance Sheet',
     'cash_flow' => 'Cash Flow',
     'settings' => 'Settings',

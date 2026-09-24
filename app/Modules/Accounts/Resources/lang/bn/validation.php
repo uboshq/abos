@@ -62,6 +62,12 @@ return [
     'bank_reference_required' => ':account-এ টাকা গেলে ব্যাংক/বিকাশের লেনদেন নম্বরটা লাগবে — ওটা ছাড়া পরে ব্যাংকের সাথে মেলানো যাবে না।',
     'bank_reference_used' => 'লেনদেন নম্বর :reference আগেই বসেছে — ভাউচার :no। একই টাকা দুইবার খাতায় তোলা যায় না।',
 
+    'inter_company_their_books' => ':company-এর খাতায় সমস্যা — :problem',
+    'inter_company_same' => 'নিজের কোম্পানিকে টাকা পাঠানো যায় না।',
+    'inter_company_not_mine' => 'দুইটা কোম্পানিতেই আপনার সদস্যপদ থাকতে হবে।',
+    'inter_company_needs_money_account' => 'টাকার খাত বাছুন (নগদ, ব্যাংক বা এমএফএস)।',
+    'inter_company_no_control' => 'ভাই-কোম্পানির চলতি হিসাবের খাত (:code) এই কোম্পানির ছকে নেই।',
+    'inter_company_amount' => 'টাকার অঙ্ক শূন্যের বেশি হতে হবে।',
     'already_posted' => ':no ভাউচারটা আগেই পোস্ট করা হয়েছে।',
     'already_cancelled' => 'ভাউচারটা আগেই বাতিল করা হয়েছে।',
     'cancelled_cannot_post' => 'বাতিল করা ভাউচার পোস্ট করা যায় না।',

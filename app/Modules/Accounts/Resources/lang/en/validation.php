@@ -50,6 +50,12 @@ return [
     'bank_reference_required' => 'Money moving through :account needs its bank or MFS transaction number — without it there is no way to reconcile later.',
     'bank_reference_used' => 'Transaction number :reference is already on voucher :no. The same money cannot be booked twice.',
 
+    'inter_company_their_books' => 'In the books of :company — :problem',
+    'inter_company_same' => 'A company cannot send money to itself.',
+    'inter_company_not_mine' => 'You must belong to both companies.',
+    'inter_company_needs_money_account' => 'Choose a money account (cash, bank or MFS).',
+    'inter_company_no_control' => 'The inter-company current account (:code) is not in this company\'s chart.',
+    'inter_company_amount' => 'The amount must be more than zero.',
     'already_posted' => 'Voucher :no has already been posted.',
     'already_cancelled' => 'This voucher is already cancelled.',
     'cancelled_cannot_post' => 'A cancelled voucher cannot be posted.',

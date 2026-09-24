@@ -48,6 +48,8 @@ return [
     'background_jobs' => 'পটভূমির কাজ',
     'profit_loss' => 'লাভ-ক্ষতি হিসাব',
     'group_report' => 'গ্রুপের হিসাব',
+    'inter_company' => 'ভাই-কোম্পানির টাকা',
+    'inter_company_new' => 'নতুন — ভাই-কোম্পানিকে টাকা',
     'balance_sheet' => 'স্থিতিপত্র',
     'cash_flow' => 'নগদ প্রবাহ',
     'settings' => 'সেটিংস',

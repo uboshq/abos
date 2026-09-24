@@ -189,6 +189,21 @@ class DemoSeeder extends Seeder
                          * [[TheOwnerCouldNotSeeHisCompaniesTogetherTest::test_the_group_page_needs_its_own_key]]-এ।
                          */
                         'accounts.report.group',
+
+                        /*
+                         * ⛔ পঞ্চমবার — একই দিনে, একই ঢালাও নিয়মে।
+                         *
+                         * ⓘ `accounts.inter_company` **অন্য কোম্পানির
+                         * খাতায় দাখিলা লেখে**। ⚠️ উপরের চারটা ছিল সীমা
+                         * ডিঙানোর চাবি; এটা সীমা **পেরোনোর**।
+                         *
+                         * ⭐ এবার ফাঁদটা ধরা পড়েছে টেস্টের আগেই — কারণ
+                         * আজ সকালে ঠিক এই জায়গাতেই ঠোকর খেয়েছি, আর
+                         * নিয়মটা চেনা হয়ে গেছে: `accounts.` দিয়ে শুরু
+                         * হওয়া প্রতিটা নতুন চাবি হিসাবরক্ষক **আপনাআপনি**
+                         * পান, আর কেউ কিছু বলে না।
+                         */
+                        'accounts.inter_company',
                     ])
                     ->get()
             );

@@ -14,6 +14,7 @@ use App\Modules\Accounts\Http\Controllers\ChequeController;
 use App\Modules\Accounts\Http\Controllers\FinanceControlController;
 use App\Modules\Accounts\Http\Controllers\FixedAssetController;
 use App\Modules\Accounts\Http\Controllers\GroupReportController;
+use App\Modules\Accounts\Http\Controllers\InterCompanyController;
 use App\Modules\Accounts\Http\Controllers\LoanController;
 use App\Modules\Accounts\Http\Controllers\MoneyCustodyController;
 use App\Modules\Accounts\Http\Controllers\MoneyTransferController;
@@ -256,6 +257,19 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
      */
     Route::get('/reports/group', [GroupReportController::class, 'show'])
         ->name('group_report');
+
+    /*
+     * ভাই-কোম্পানির টাকা — দুই খাতায় এক লেনদেন।
+     *
+     * ⓘ রিপোর্টের নিচে নয়, নিজের পথে: এটা **পড়ার** পর্দা নয়, লেখার।
+     * ⚠️ আর যা লেখে তা সাধারণ ভাউচার নয় — অন্য কোম্পানির খাতায় দাখিলা।
+     * ⛔ তাই চাবিটাও আলাদা (`accounts.inter_company`), ভাউচারের নয়।
+     */
+    Route::prefix('inter-company')->name('inter_company.')->group(function () {
+        Route::get('/', [InterCompanyController::class, 'index'])->name('index');
+        Route::get('/create', [InterCompanyController::class, 'create'])->name('create');
+        Route::post('/', [InterCompanyController::class, 'store'])->name('store');
+    });
 
     Route::get('/reports/{slug}', [ReportController::class, 'show'])->name('report.show');
 

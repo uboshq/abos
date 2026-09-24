@@ -142,6 +142,12 @@ return [
             ['label' => 'accounts::menu.voucher_list', 'cluster' => 'vouchers', 'icon' => 'list', 'route' => 'accounts.voucher.list', 'permission' => 'accounts.report'],
             ['label' => 'accounts::menu.money_custody', 'icon' => 'lock', 'route' => 'accounts.custody', 'permission' => 'accounts.till.view'],
             ['label' => 'accounts::menu.money_transfer', 'icon' => 'share', 'route' => 'accounts.transfer.index', 'permission' => 'accounts.transfer.create'],
+            /*
+             * ⓘ টাকা সরানোর ঠিক পাশে, আর সেটা ইচ্ছাকৃত: দুইটাই "টাকা এক
+             * জায়গা থেকে আরেক জায়গায়"। ⚠️ পার্থক্য একটাই, আর সেটাই সব —
+             * এটা **কোম্পানির সীমানা** পেরোয়, তাই চাবিও আলাদা।
+             */
+            ['label' => 'accounts::menu.inter_company', 'icon' => 'handover', 'route' => 'accounts.inter_company.index', 'permission' => 'accounts.inter_company'],
             ['label' => 'accounts::menu.cash_count', 'icon' => 'cash', 'route' => 'accounts.count.index', 'permission' => 'accounts.count.create'],
         ],
         'reports' => [
@@ -345,6 +351,20 @@ return [
          * ([[GroupLedgerService]])।
          */
         'accounts.report.group',
+
+        /*
+         * ⛔ ভাই-কোম্পানির টাকা — নিজের চাবি, ২৫ সেপ্টেম্বর ২০২৬।
+         *
+         * ⚠️ `accounts.voucher.create` যথেষ্ট নয়: এই পর্দাটা **অন্য
+         * কোম্পানির খাতায় দাখিলা লেখে**। ⓘ বাকি প্রতিটা লেখার পর্দা
+         * নিজের কোম্পানির ভেতরে থাকে, তাই রোজ ভাউচার লেখেন এমন কারো
+         * হাতে এটা আপনাআপনি চলে যাওয়া উচিত নয়।
+         *
+         * ⓘ চাবিটা "সব কোম্পানি" খোলে না — [[InterCompanyService]]
+         * প্রতিটা লেখার আগে দেখে নেয় ব্যবহারকারী **দুইটা কোম্পানিতেই**
+         * আছেন কি না (`company_user` পিভট)।
+         */
+        'accounts.inter_company',
         'accounts.till.view',
 
         /*
