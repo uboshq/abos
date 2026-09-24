@@ -9,7 +9,10 @@ use App\Modules\Purchase\Http\Controllers\PurchaseBillController;
 use App\Modules\Purchase\Http\Controllers\PurchaseOrderController;
 use App\Modules\Purchase\Http\Controllers\PurchasePrintController;
 use App\Modules\Purchase\Http\Controllers\PurchaseReceiptController;
+use App\Modules\Purchase\Http\Controllers\PurchaseContractController;
 use App\Modules\Purchase\Http\Controllers\PurchaseReportController;
+use App\Modules\Purchase\Http\Controllers\PurchaseRequisitionController;
+use App\Modules\Purchase\Http\Controllers\RfqController;
 use App\Modules\Purchase\Http\Controllers\PurchaseReturnController;
 use Illuminate\Support\Facades\Route;
 
@@ -69,6 +72,75 @@ Route::middleware('auth')->prefix('purchase')->group(function () {
          */
         Route::get('/last-rates/{supplier}', [DirectPurchaseController::class, 'lastRates'])
             ->whereNumber('supplier')->name('last_rates');
+    });
+
+    /*
+     * ⭐ ক্রয়ের চাহিদা — ২৪ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ কাগজের গল্পে এটাই প্রথম: চাওয়া → আদেশ → গ্রহণ → বিল। তাই
+     * রুটগুলোও আদেশের আগে।
+     *
+     * ⚠️ `order` রুট দুইটা আলাদা, কারণ ওটা চাহিদার কাজ নয় —
+     * **আদেশ বানানো**, আর চাবিটাও আদেশের
+     * ([[PurchaseRequisitionController::middleware()]])।
+     */
+    Route::prefix('requisitions')->name('requisition.')->group(function () {
+        Route::get('/', [PurchaseRequisitionController::class, 'index'])->name('index');
+        Route::get('/create', [PurchaseRequisitionController::class, 'create'])->name('create');
+        Route::post('/', [PurchaseRequisitionController::class, 'store'])->name('store');
+        Route::get('/{requisition}', [PurchaseRequisitionController::class, 'show'])
+            ->whereNumber('requisition')->name('show');
+        Route::post('/{requisition}/approve', [PurchaseRequisitionController::class, 'approve'])
+            ->whereNumber('requisition')->name('approve');
+        Route::post('/{requisition}/order', [PurchaseRequisitionController::class, 'storeOrder'])
+            ->whereNumber('requisition')->name('order');
+        Route::post('/{requisition}/cancel', [PurchaseRequisitionController::class, 'cancel'])
+            ->whereNumber('requisition')->name('cancel');
+    });
+
+    /*
+     * ⭐ দরপত্রের অনুরোধ ও তুলনা — ২৪ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ চাহিদার পরে, আদেশের আগে — কাগজের গল্পের ক্রমেই।
+     *
+     * ⚠️ `quote` দুইটা আলাদা চাবিতে: অনুরোধ পাঠানো ক্রয় বিভাগের
+     * কাজ, আর দর **লেখা** অন্য কাজ — ওটা সরবরাহকারীর কাগজ থেকে
+     * টুকে বসানো, আর ঐ সংখ্যাগুলোই পরে সিদ্ধান্তের ভিত্তি
+     * ([[RfqPolicy]])।
+     */
+    /*
+     * ⭐ ক্রয় চুক্তি — ২৪ সেপ্টেম্বর ২০২৬।
+     *
+     * ⚠️ `rate` রুটটা আদেশের পর্দার জন্য, আর তার চাবিও আদেশের —
+     * ⓘ যিনি আদেশ লেখেন তাঁরই ওটা লাগে, আর চুক্তির তালিকা দেখার
+     * অনুমতি তাঁর না-ও থাকতে পারে।
+     *
+     * ⛔ ঠিকানাটা `{contract}`-এর আগে, কারণ `rate` একটা সংখ্যা
+     * নয় — পরে রাখলে Laravel ওটাকে চুক্তির আইডি ধরে খুঁজত।
+     */
+    Route::prefix('contracts')->name('contract.')->group(function () {
+        Route::get('/', [PurchaseContractController::class, 'index'])->name('index');
+        Route::get('/create', [PurchaseContractController::class, 'create'])->name('create');
+        Route::get('/rate', [PurchaseContractController::class, 'rate'])->name('rate');
+        Route::post('/', [PurchaseContractController::class, 'store'])->name('store');
+        Route::get('/{contract}', [PurchaseContractController::class, 'show'])
+            ->whereNumber('contract')->name('show');
+        Route::post('/{contract}/activate', [PurchaseContractController::class, 'activate'])
+            ->whereNumber('contract')->name('activate');
+    });
+
+    Route::prefix('rfqs')->name('rfq.')->group(function () {
+        Route::get('/', [RfqController::class, 'index'])->name('index');
+        Route::get('/create', [RfqController::class, 'create'])->name('create');
+        Route::post('/', [RfqController::class, 'store'])->name('store');
+        Route::get('/{rfq}', [RfqController::class, 'show'])
+            ->whereNumber('rfq')->name('show');
+        Route::post('/{rfq}/send', [RfqController::class, 'send'])
+            ->whereNumber('rfq')->name('send');
+        Route::get('/{rfq}/quote', [RfqController::class, 'quote'])
+            ->whereNumber('rfq')->name('quote');
+        Route::post('/{rfq}/quote', [RfqController::class, 'storeQuote'])
+            ->whereNumber('rfq')->name('quote.store');
     });
 
     Route::prefix('orders')->name('order.')->group(function () {

@@ -236,7 +236,27 @@ final class QualityInspectionService
      */
     private function lotFor(Product $product, array $data): ?Batch
     {
-        if (! $product->track_batch || blank($data['batch_no'] ?? null)) {
+        if (! $product->track_batch) {
+            return null;
+        }
+
+        /*
+         * ⭐ লটটা আগে থেকেই জানা থাকলে সেটাই — ২৪ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ পর্দা থেকে আসে লটের **নম্বর** (মানুষ নম্বর টাইপ করেন), আর
+         * [[OpenInspectionsForGoodsThatNeedThem]] থেকে আসে **লটটাই**:
+         * মালটা তখন গুদামে উঠে গেছে, আর তার লট ইতিমধ্যেই জন্মেছে।
+         *
+         * ⛔ নম্বর ধরে আবার খুঁজলে [[BatchService::receive()]] সেটা
+         * find-or-create করত, আর মেয়াদের তারিখ না পাঠালে একটা **দ্বিতীয়
+         * লট** জন্মাতে পারত — একই নম্বরের দুইটা লট মানে মজুদ দুই ভাগ,
+         * আর রিকলের দিন একটা ভাগ খুঁজেই পাওয়া যেত না।
+         */
+        if (filled($data['batch_id'] ?? null)) {
+            return Batch::query()->find($data['batch_id']);
+        }
+
+        if (blank($data['batch_no'] ?? null)) {
             return null;
         }
 

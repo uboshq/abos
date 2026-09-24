@@ -8,4 +8,8 @@ return [
     'bill' => 'Purchase Bill',
     'payment' => 'Payment',
     'return' => 'Purchase Return',
+    'requisition' => 'Purchase Requisition',
+    'rfq' => 'Request for Quotation',
+    'quotation' => 'Supplier Quotation',
+    'contract' => 'Purchase Contract',
 ];

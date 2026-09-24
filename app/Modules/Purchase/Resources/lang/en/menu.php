@@ -15,4 +15,7 @@ return [
     'uninvoiced' => 'Received, Not Invoiced',
     'by_supplier' => 'Purchases by Supplier',
     'direct' => 'Direct Purchase',
+    'requisitions' => 'Purchase Requisitions',
+    'rfqs' => 'Requests for Quotation',
+    'contracts' => 'Purchase Contracts',
 ];

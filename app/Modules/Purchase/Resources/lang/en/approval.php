@@ -15,4 +15,5 @@ return [
     'bill' => 'Posting a purchase bill',
     'payment' => 'Paying a supplier',
     'return' => 'Purchase return',
+    'requisition' => 'Purchase requisition',
 ];

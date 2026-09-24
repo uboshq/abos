@@ -92,4 +92,12 @@ return [
     'shipment' => 'Shipment',
     'take_new_price' => 'Use the new price',
     'keep_old_price' => 'Keep the old price',
+    'new_requisition' => 'New requisition',
+    'approve_requisition' => 'Approve it',
+    'make_order' => 'Turn it into an order',
+    'new_rfq' => 'New request',
+    'send_rfq' => 'Send it out',
+    'add_quotation' => 'Record a quotation',
+    'new_contract' => 'New contract',
+    'activate_contract' => 'Make it live',
 ];

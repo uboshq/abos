@@ -20,6 +20,7 @@ use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\CostLayerService;
 use App\Modules\Inventory\Services\ReadsPackedQuantities;
 use App\Modules\Inventory\Services\StockService;
+use App\Modules\Purchase\Events\GoodsReceived;
 use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Purchase\Models\PurchaseOrder;
 use App\Modules\Purchase\Models\PurchaseOrderLine;
@@ -322,7 +323,7 @@ final class PurchaseReceiptService
             reason: $receipt->narration,
         );
 
-        return DB::transaction(function () use ($receipt) {
+        $confirmed = DB::transaction(function () use ($receipt) {
             foreach ($receipt->lines as $line) {
                 /*
                  * প্রতিটা লাইনের জন্য একটা করে চলাচল, এবং source হিসেবে
@@ -412,6 +413,28 @@ final class PurchaseReceiptService
 
             return $receipt->fresh(['lines']);
         });
+
+        /*
+         * ⭐ ঘটনাটা লেনদেনের **বাইরে** — ২৪ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⓘ কেন বাইরে ───────────────────────────────────────────
+         * ভিতরে ছুড়লে একজন শ্রোতার ব্যতিক্রম গোটা গ্রহণটাই ফিরিয়ে
+         * দিত — অর্থাৎ ট্রাক থেকে নামা মাল খাতায় উঠত না, কারণ একটা
+         * পরিদর্শনের কাগজ খুলতে পারেনি। ⛔ মাল আসা থামানো আর একটা
+         * কাগজ না খোলা এক জিনিস নয়।
+         *
+         * ⚠️ উল্টো ঝুঁকিটাও সত্যি: শ্রোতা ব্যর্থ হলে মাল ঢুকে যায় আর
+         * কাগজটা খোলে না। ⓘ কিন্তু ব্যর্থতাটা **নীরব নয়** — ব্যতিক্রমটা
+         * উপরে যায়, আর ব্যবহারকারী দেখেন। নজিরটা
+         * [[InvoiceConfirmed]]-এর, আর কারণটাও একই।
+         *
+         * ⛔ দাখিলা, স্টক চলাচল আর নম্বর — তিনটাই উপরের লেনদেনে হয়ে
+         * গেছে, আর সেখানেই থাকবে: ইভেন্ট একদিন হারায়, খাতা হারানো
+         * যায় না।
+         */
+        event(GoodsReceived::from($confirmed));
+
+        return $confirmed;
     }
 
     /**

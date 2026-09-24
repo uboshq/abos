@@ -6,6 +6,8 @@ use App\Core\Engines\Print\PaperSize;
 use App\Modules\Purchase\Dashboard\PurchaseDashboard;
 use App\Modules\Purchase\Dashboard\PurchaseWidgets;
 use App\Modules\Purchase\Integrity\PurchaseChecks;
+use App\Modules\Purchase\Events\GoodsReceived;
+use App\Modules\Purchase\Listeners\OpenInspectionsForGoodsThatNeedThem;
 use App\Modules\Purchase\Models\Payment;
 use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Purchase\Models\PurchaseOrder;
@@ -91,6 +93,42 @@ return [
         ],
 
         'transactions' => [
+            /*
+             * ⭐ চাহিদা — ২৪ সেপ্টেম্বর ২০২৬, ডিফল্টে **বন্ধ**।
+             *
+             * ⚠️ মালিকের সিদ্ধান্ত: দরপত্রের সামনের অংশটা বানানো
+             * হবে, কিন্তু সুইচে বন্ধ অবস্থায়। ⛔ ছোট দোকান চাহিদাপত্র
+             * লেখে না — মালিক নিজেই চান আর নিজেই কেনেন, আর তার
+             * মেনুতে সারিটা সারা বছর অব্যবহৃত পড়ে থাকত।
+             *
+             * ⓘ সারিটা সবার আগে, কারণ কাগজের গল্পে এটাই প্রথম:
+             * চাওয়া → আদেশ → গ্রহণ → বিল।
+             */
+            ['label' => 'purchase::menu.requisitions', 'icon' => 'list', 'route' => 'purchase.requisition.index',
+                'permission' => 'purchase.requisition.view', 'setting' => 'purchase.screen_requisitions'],
+
+            /*
+             * ⭐ দরপত্র — ২৪ সেপ্টেম্বর ২০২৬, ডিফল্টে **বন্ধ**।
+             *
+             * ⓘ চাহিদার সাথে একই সুইচে, কারণ দুইটা একই কাজের দুই
+             * ধাপ: যে প্রতিষ্ঠান চাহিদাপত্র লেখে না, সে দরপত্রও
+             * ডাকে না। ⚠️ আলাদা সুইচ দিলে কেউ একটা চালু আর
+             * অন্যটা বন্ধ রেখে অর্ধেক পথ পেত।
+             */
+            ['label' => 'purchase::menu.rfqs', 'icon' => 'megaphone', 'route' => 'purchase.rfq.index',
+                'permission' => 'purchase.rfq.view', 'setting' => 'purchase.screen_requisitions'],
+
+            /*
+             * ⭐ চুক্তি — ২৪ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ সুইচ ছাড়া, ইচ্ছাকৃতভাবে: ⚠️ চুক্তি দরপত্রের
+             * অংশ নয়। ⛔ যে ছোট দোকান দরপত্র ডাকে না, সে-ও
+             * বছরের শুরুতে সরবরাহকারীর সাথে দর ঠিক করে — আর
+             * ওটা লিখে রাখার জায়গা তারও লাগে।
+             */
+            ['label' => 'purchase::menu.contracts', 'icon' => 'handover', 'route' => 'purchase.contract.index',
+                'permission' => 'purchase.contract.view'],
+
             ['label' => 'purchase::menu.direct', 'icon' => 'purchase', 'route' => 'purchase.direct.create', 'permission' => 'purchase.bill.create',
                 'setting' => 'purchase.screen_direct'],
             ['label' => 'purchase::menu.orders', 'icon' => 'book', 'route' => 'purchase.order.index', 'permission' => 'purchase.order.view',
@@ -184,6 +222,52 @@ return [
     ],
 
     'permissions' => [
+        /*
+         * ⭐ চাহিদার তিনটা চাবি — ২৪ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⚠️ চাওয়া আর মঞ্জুর করা এক অধিকার নয় ─────────────────
+         * ⓘ চাওয়া প্রায় সবার কাজ: গুদামের লোক, দোকানের লোক,
+         * অফিসের যে কেউ। ⛔ মঞ্জুর করা একটা **সিদ্ধান্ত** — ঐ
+         * মুহূর্তে প্রতিষ্ঠান টাকা খরচের পথে এক ধাপ এগোয়।
+         *
+         * ⚠️ এক চাবিতে রাখলে যিনি চান তিনিই নিজের চাওয়া মঞ্জুর
+         * করতেন, আর অনুমোদনের ধাপটার কোনো মানেই থাকত না।
+         *
+         * ⓘ আদেশে রূপান্তরের আলাদা চাবি নেই — ওটা `order.create`,
+         * কারণ কাজটা সত্যিই সেটাই।
+         */
+        'purchase.requisition.view',
+        'purchase.requisition.create',
+        'purchase.requisition.approve',
+
+        /*
+         * ⭐ দরপত্রের তিনটা চাবি — ২৪ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⚠️ পাঠানো আর দর লেখা এক অধিকার নয় ───────────────
+         * ⓘ অনুরোধ পাঠানো ক্রয় বিভাগের কাজ। ⛔ দর **লেখা** অন্য
+         * কাজ: ওটা সরবরাহকারীর কাগজ থেকে টুকে বসানো, আর ঐ
+         * সংখ্যাগুলোই পরে সিদ্ধান্তের ভিত্তি।
+         *
+         * ⚠️ এক চাবিতে রাখলে যিনি অনুরোধ পাঠান তিনিই দর বসাতে
+         * পারতেন — আর তখন *"তিনজনের দর নিয়ে তুলনা করা হয়েছে"*
+         * কথাটার কোনো স্বাধীন সাক্ষী থাকত না।
+         */
+        /*
+         * ⭐ চুক্তির তিনটা চাবি — ২৪ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⚠️ লেখা আর চালু করা এক অধিকার নয় ────────────────
+         * ⓘ খসড়া লেখা কেরানির কাজও হতে পারে। ⛔ **চালু করা**
+         * মানে ঐ দরটাকে প্রতিষ্ঠানের কথা বানিয়ে দেওয়া —
+         * এরপর থেকে প্রতিটা আদেশ ঐ সংখ্যার বিরুদ্ধে মেলানো হবে।
+         */
+        'purchase.contract.view',
+        'purchase.contract.create',
+        'purchase.contract.activate',
+
+        'purchase.rfq.view',
+        'purchase.rfq.create',
+        'purchase.quotation.create',
+
         'purchase.order.view',
         'purchase.order.create',
         'purchase.order.update',
@@ -240,6 +324,31 @@ return [
     ],
 
     'doc_types' => [
+        /*
+         * ⭐ চাহিদা — PR-2026-2027-0001, ২৪ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ নিজের সিরিজ, কারণ চাহিদাটা আদেশের **আগের** কাগজ, আর
+         * ⚠️ দুইটা একই সিরিজে থাকলে নম্বর দেখে বোঝা যেত না কোনটা
+         * চাওয়া আর কোনটা প্রতিশ্রুতি।
+         */
+        'PR' => 'purchase::doc.requisition',
+
+        /*
+         * ⭐ দরপত্র ও দর — ২৪ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ দুইটা আলাদা সিরিজ, কারণ দুইটা আলাদা কাগজ: একটা
+         * আমাদের প্রশ্ন, অন্যটা তাঁদের উত্তর। ⚠️ এক সিরিজে
+         * রাখলে নম্বর দেখে বোঝা যেত না কোনটা কার কাগজ।
+         */
+        /*
+         * ⭐ চুক্তি — PC-2026-2027-0001, ২৪ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ নিজের সিরিজ, কারণ চুক্তি কোনো লেনদেন নয় — একটা
+         * **নিয়ম**, আর সে বছরের পর বছর টেকে।
+         */
+        'PC' => 'purchase::doc.contract',
+        'RFQ' => 'purchase::doc.rfq',
+        'QT' => 'purchase::doc.quotation',
         'PO' => 'purchase::doc.order',
         'GRN' => 'purchase::doc.receipt',
         'PBL' => 'purchase::doc.bill',
@@ -287,6 +396,15 @@ return [
      * পারে না।
      */
     'approvals' => [
+        /*
+         * ⭐ চাহিদার অনুমোদন — ২৪ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ অঙ্কটা **আন্দাজি** মোট, আর সেটাই ঠিক: চাহিদায় আসল
+         * দাম বলে কিছু নেই। ⚠️ তবু আন্দাজটাই একমাত্র সংখ্যা যা
+         * সিদ্ধান্তের **আগে** পাওয়া যায়, আর অনুমোদনের পুরো কথাই
+         * হলো সিদ্ধান্তের আগে থামা।
+         */
+        'requisition' => 'purchase::approval.requisition',
         'order' => 'purchase::approval.order',
         'receipt' => 'purchase::approval.receipt',
         'bill' => 'purchase::approval.bill',
@@ -370,6 +488,25 @@ return [
          * আদেশ ছাড়া মাল ঢোকে না।
          */
         [
+            /*
+             * ⭐ চাহিদার পর্দা — ডিফল্টে বন্ধ, ২৪ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ উপরের তিনটার উল্টো: ওগুলো ডিফল্টে চালু, কারণ
+             * প্রায় সবাই ব্যবহার করে। ⚠️ চাহিদাপত্র বড়
+             * প্রতিষ্ঠানের জিনিস — যেখানে যিনি চান আর যিনি কেনেন
+             * দুইজন আলাদা মানুষ।
+             *
+             * ⛔ `holds` নেই, ইচ্ছাকৃতভাবে: চাহিদা কোনো মাল বা
+             * টাকা ধরে রাখে না, তাই সুইচ বন্ধ করলে কিছু আটকায় না।
+             * ⓘ কাগজগুলো থেকে যায়, কেবল মেনুর সারিটা যায়।
+             */
+            'key' => 'purchase.screen_requisitions',
+            'label' => 'purchase::settings.screen_requisitions',
+            'type' => 'boolean',
+            'default' => false,
+            'group' => 'screens',
+        ],
+        [
             'key' => 'purchase.screen_direct',
             'label' => 'purchase::settings.screen_direct',
             'type' => 'boolean',
@@ -452,5 +589,41 @@ return [
             'default' => true,
             'group' => 'entry',
         ],
+    ],
+
+    /*
+     * ⭐ ক্রয় যা ঘোষণা করে — ২৪ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ তালিকাটা একটা **চুক্তি**: অন্য মডিউল এটা দেখে ঠিক করে কার কথা
+     * শুনবে। ⚠️ তালিকা না থাকলে জানার একমাত্র উপায় হত গোটা কোডবেসে
+     * `event(` খোঁজা, আর তখন কোনটা ইচ্ছাকৃত চুক্তি আর কোনটা ভিতরের
+     * খুঁটিনাটি তা বোঝা যেত না।
+     *
+     * ⛔ চালানের **দাখিলা ও স্টক চলাচল ইভেন্টে যায় না** — ওগুলো
+     * `confirm()`-এর ভিতরে, একই লেনদেনে। ইভেন্ট একদিন হারায়; খাতা
+     * হারানো যায় না।
+     */
+    'events' => [
+        GoodsReceived::class,
+    ],
+
+    /*
+     * নিজের ঘটনা নিজেই শোনা — পরিদর্শনের কাগজ।
+     *
+     * ── ⚠️ কেন `confirm()`-এর ভিতরে নয় ──────────────────────────────
+     * কাগজটা গ্রহণের অংশ নয়। ⛔ পরিদর্শনের সেবা ব্যতিক্রম ছুড়লে
+     * গোটা গ্রহণটা ফিরে যাওয়া উচিত নয় — ট্রাক থেকে নামা মাল খাতায়
+     * না ওঠা আর একটা কাগজ না খোলা এক জিনিস নয়।
+     *
+     * ── ⓘ কেন শ্রোতাটা মজুদে নয়, এখানে ──────────────────────────────
+     * মজুদের `depends_on`-এ ক্রয় নেই, আর থাকার কথাও নয় — তীরটা উল্টো
+     * দিকে (ক্রয় মজুদকে চেনে)। ⚠️ মজুদে লিখলে [[BoundariesTest]]
+     * ধরত, আর উল্টো ঘোষণা একটা চক্র বানাত।
+     *
+     * ⭐ নজিরটা [[SendTheOrderToTheKitchen]]-এর: নির্ভরতার তীর যেদিকে
+     * সত্যি, ফাইলটাও সেদিকে।
+     */
+    'listeners' => [
+        GoodsReceived::class => [OpenInspectionsForGoodsThatNeedThem::class],
     ],
 ];

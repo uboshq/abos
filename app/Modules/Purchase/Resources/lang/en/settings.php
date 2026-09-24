@@ -14,4 +14,5 @@ return [
     'paper_bill' => 'Paper for the purchase bill',
     'paper_order' => 'Paper for the purchase order',
     'paper_receipt' => 'Paper for the goods receipt',
+    'screen_requisitions' => 'Show the purchase requisition screen',
 ];

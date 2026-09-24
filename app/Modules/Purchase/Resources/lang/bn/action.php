@@ -74,4 +74,12 @@ return [
     'shipment' => 'আমদানি চালান',
     'take_new_price' => 'নতুন দাম নিন',
     'keep_old_price' => 'পুরনো দামই থাক',
+    'new_requisition' => 'নতুন চাহিদা',
+    'approve_requisition' => 'মঞ্জুর করুন',
+    'make_order' => 'আদেশে রূপান্তর করুন',
+    'new_rfq' => 'নতুন অনুরোধ',
+    'send_rfq' => 'পাঠিয়ে দিন',
+    'add_quotation' => 'একটা দর লিখুন',
+    'new_contract' => 'নতুন চুক্তি',
+    'activate_contract' => 'চালু করুন',
 ];
