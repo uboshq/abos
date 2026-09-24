@@ -8,11 +8,14 @@ use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Contracts\Drillable;
+use App\Core\Engines\Approval\ApprovalEngine;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Support\Carbon;
 
 /** একটা অনুমোদনের অনুরোধ। polymorphic — যেকোনো ডকুমেন্টে বসে। */
 class Approval extends Model implements Drillable
@@ -32,8 +35,9 @@ class Approval extends Model implements Drillable
 
     protected $fillable = [
         'company_id', 'approvable_type', 'approvable_id', 'module', 'action',
-        'amount', 'status', 'current_level', 'assigned_to', 'payload',
+        'amount', 'status', 'current_level', 'assigned_to', 'payload', 'state_hash',
         'requested_reason', 'requested_by', 'requested_at', 'decided_at',
+        'due_at', 'reminded_at', 'escalated_at', 'escalated_to',
     ];
 
     protected function casts(): array
@@ -43,6 +47,9 @@ class Approval extends Model implements Drillable
             'current_level' => 'integer',
             'payload' => 'array',
             'requested_at' => 'datetime',
+            'due_at' => 'datetime',
+            'reminded_at' => 'datetime',
+            'escalated_at' => 'datetime',
             'decided_at' => 'datetime',
         ];
     }
@@ -98,6 +105,32 @@ class Approval extends Model implements Drillable
     }
 
     /**
+     * ⭐ সইটা যে কাগজে দেওয়া হয়েছিল, কাগজটা এখনো সেটাই?
+     *
+     * ── ⭐ মালিকের সিদ্ধান্ত, ২৪ সেপ্টেম্বর ২০২৬ ─────────────
+     * *"যেকোনো ঘর বদলালেই"* সই বাতিল। ⛔ আগে কেবল টাকার
+     * অঙ্ক দেখা হত, তাই অঙ্ক ঠিক রেখে পণ্য বদলে দিলে
+     * পুরনো সইটাই চলত।
+     *
+     * ── ⓘ ছাপ না থাকলে পুরনো নিয়ম ──────────────────────
+     * লাইভে আগে থেকে বসে থাকা অনুরোধগুলোর কোনো ছাপ নেই।
+     * ⚠️ তখন "বদলেছে" বললে ডিপ্লয়ের দিন প্রতিটা অপেক্ষমাণ
+     * কাগজ নতুন করে সই চাইত — একদিনে শত কাগজ।
+     */
+    public function stillCovers(?string $amount, ?string $hash): bool
+    {
+        if (! $this->covers($amount)) {
+            return false;
+        }
+
+        if ($this->state_hash === null || $hash === null) {
+            return true;
+        }
+
+        return hash_equals((string) $this->state_hash, $hash);
+    }
+
+    /**
      * ⭐ এখন কার হাতে — ফরওয়ার্ড হয়ে থাকলে।
      *
      * ⚠️ খালি হলে ছকের স্বাভাবিক নিয়ম চলে; ভরা থাকলে **কেবল ইনিই**
@@ -106,6 +139,109 @@ class Approval extends Model implements Drillable
     public function assignee(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    /**
+     * ⭐ মনে করানোর সময়৷ সীমার আগেই।
+     *
+     * ⓘ ধাপে `warn_hours` বসানো না থাকলে সীমার **অর্ধেক**।
+     * ⚠️ আন্দাজ, কিন্তু চুপ থাকার চেয়ে ভালো — আর ধাপে
+     * বসিয়ে বদলানো যায়।
+     */
+    /**
+     * ⭐ যে কাগজটার জন্য অনুমোদন চাওয়া হয়েছে।
+     *
+     * ── ⛔ এই সম্পর্কটা এতদিন **ছিল না**, ২৪ সেপ্টেম্বর ২০২৬ ──
+     * ⓘ কলাম দুইটা (`approvable_type`, `approvable_id`) প্রথম দিন
+     * থেকেই আছে, আর পর্দাগুলো কাগজটা **হাতে খুঁজত**
+     * ([[ApprovalInboxController::documentOf()]])।
+     *
+     * ⚠️ কিন্তু `$approval->approvable` লেখা স্বাভাবিক, আর Eloquent
+     * অজানা অ্যাট্রিবিউটে **ব্যতিক্রম ছোঁড়ে না, `null` দেয়**।
+     *
+     * ⛔ ফল: দুইটা নতুন কোড নীরবে মরা ছিল — *"সইয়ের পর কাগজ
+     * বদলেছে"* সারিটা কখনো আসত না, আর শাখা ধরে বসানো
+     * কর্তৃত্বের সীমা কোনোদিন খাটত না। ⓘ দুইটাই মেপে ধরা পড়েছে,
+     * পড়ে নয়।
+     */
+    public function approvable(): MorphTo
+    {
+        return $this->morphTo();
+    }
+
+    public function warnAt(): ?Carbon
+    {
+        if ($this->due_at === null || $this->requested_at === null) {
+            return null;
+        }
+
+        $step = $this->currentStep();
+
+        /*
+         * ⭐ ঘড়িটা **এই ধাপের**, অনুরোধের দিনের নয় — ২৪ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⛔ যা ভাঙা ছিল ───────────────────────────────────
+         * ⓘ ধাপ এগোলে `due_at` নতুন করে বসে, কিন্তু `requested_at`
+         * দিন-কয়েকের পুরনো। ⚠️ তাই অনুরোধের দিন থেকে গুনলে
+         * দ্বিতীয় ধাপের মানুষ কাগজটা **হাতে পাওয়ার মুহূর্তেই**
+         * সতর্কবার্তা পেতেন।
+         *
+         * ⛔ আর ক্ষতিটা একটা অর্থহীন বার্তার চেয়ে বড়: বার্তাগুলো এত
+         * ঘন হত যে কেউ আর পড়ত না — আর তখন সত্যিকারের দেরির
+         * বার্তাটা ওই ভিড়ে হারাত।
+         *
+         * ── ⓘ ধাপের শুরুটা কোথা থেকে ────────────────────────
+         * `due_at - sla_hours` — কারণ [[ApprovalSla::dueFor()]] ঠিক ওভাবেই
+         * `due_at` বসায়। ⭐ একটাই নিয়ম, উল্টো দিকে পড়া — তাই
+         * দুইটা কখনো আলাদা হতে পারে না।
+         */
+        $start = $step?->sla_hours !== null
+            ? $this->due_at->copy()->subHours((int) $step->sla_hours)
+            : $this->requested_at;
+
+        if ($step?->warn_hours !== null) {
+            return $start->copy()->addHours((int) $step->warn_hours);
+        }
+
+        /*
+         * ⓘ কিছু না বসালে সময়সীমার **অর্ধেক** — একটা আন্দাজ,
+         * কিন্তু চুপ থাকার চেয়ে ভালো, আর ধাপে বসিয়ে বদলানো যায়।
+         */
+        $minutes = (int) round($start->diffInMinutes($this->due_at) / 2);
+
+        return $start->copy()->addMinutes($minutes);
+    }
+
+    /**
+     * এই অনুরোধ এখন যে ধাপে দাঁড়িয়ে।
+     *
+     * ⚠️ নথি-ধরন ধরে ছকটা খোঁজা হয় ([[ApprovalEngine::flowOf]]-এর
+     * একই কারণে), নাহলে নথি-নির্দিষ্ট ছকে বসা অনুরোধ ভুল
+     * ছকের ধাপ গুনত।
+     */
+    public function currentStep(): ?ApprovalFlowStep
+    {
+        /*
+         * ⛔ লুকঅাপটা নিজে করা হয় না — ইঞ্জিনকে জিজ্জাসা করা হয়।
+         *
+         * ── ⚠️ নিজে করতে গিয়ে যা ভাঙা ছিল, ২৪ সেপ্টেম্বর ২০২৬ ─────
+         * ⓘ ছক সংরক্ষণের সময় *"সব ধরনে"* লেখা হয় **খালি স্ট্রিং**
+         * দিয়ে, আর সেটা ইচ্ছাকৃত ([[ApprovalFlowService]]-এ কারণ লেখা:
+         * unique index `null` দুইবার আটকাতে পারে না)।
+         *
+         * ⛔ কিন্তু এখানে fallback-এ `whereNull('document_type')` খোঁজা হত —
+         * অর্থাৎ পর্দা থেকে বসানো **প্রতিটা** ছকে এটা `null` ফেরাত।
+         *
+         * ⚠️ আর তার উপর যা যা দাঁড়ানো, সব নীরবে মরে যেত:
+         * ও `warnAt()` ধাপ পেত না, তাই `warn_hours` কখনো খাটত না
+         * ও `abos:approvals-due` গন্তব্য পেত না — প্রতিটা দেরি `no_target`
+         * ও গন্তব্যের মানুষ কোনোদিন সই দিতে পারতেন না
+         *
+         * ⭐ তাই নিয়মটা এক জায়গায়: [[ApprovalEngine::stepsFor()]]।
+         */
+        return app(ApprovalEngine::class)
+            ->stepsFor($this)
+            ->firstWhere('level', $this->current_level);
     }
 
     public function decisions(): HasMany

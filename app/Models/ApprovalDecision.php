@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Core\Concerns\HasPublicId;
+use App\Core\Concerns\IsAudited;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -19,6 +20,7 @@ class ApprovalDecision extends Model
 {
     use HasFactory;
     use HasPublicId;
+    use IsAudited;
 
     /*
      * ⛔ মানগুলো এতদিন কাঁচা লেখা ছিল, নাম ছিল না।
@@ -43,8 +45,27 @@ class ApprovalDecision extends Model
      */
     public const FORWARDED = 'forwarded';
 
+    /**
+     * ⭐ বাতিলের কারণ — বাছাই করা, মুক্ত লেখা নয়।
+     *
+     * ⓘ মুক্ত লেখাও থাকে (`remarks`), কিন্তু **গোনার** জন্য কোড
+     * লাগে। ⚠️ কেবল মুক্ত লেখা রাখলে *"দাম ভুল"* দশ বানানে
+     * লেখা হত, আর কোনো রিপোর্ট ওগুলোকে এক করতে পারত না।
+     *
+     * @var list<string>
+     */
+    public const REASONS = [
+        'price',        // দাম ভুল
+        'document',     // কাগজপত্র অসম্পূর্ণ
+        'credit',       // বাকির সীমা
+        'budget',       // বাজেট নেই
+        'policy',       // নিয়মের বিরুদ্ধে
+        'other',        // অন্য কারণ
+    ];
+
     protected $fillable = [
-        'approval_id', 'level', 'user_id', 'forwarded_to', 'decision', 'remarks', 'decided_at',
+        'approval_id', 'level', 'user_id', 'on_behalf_of', 'forwarded_to', 'decision', 'reason_code',
+        'remarks', 'decided_at',
     ];
 
     protected function casts(): array
@@ -66,5 +87,31 @@ class ApprovalDecision extends Model
     public function forwardedTo(): BelongsTo
     {
         return $this->belongsTo(User::class, 'forwarded_to');
+    }
+
+    /**
+     * ⛔ একটা সিদ্ধান্ত বদলানো বা মোছা যায় না।
+     *
+     * ── ⚠️ কেন এটা লাগল ───────────────────────────────
+     * ⓘ আজ কোনো সম্পাদনার পথ নেই — কিন্তু সেটা **দুর্ঘটনাক্রমে**,
+     * নকশায় নয়। ⛔ আগামীকাল কেউ একটা সম্পাদনার পর্দা লিখলে
+     * কিছুই আটকাত না, আর নিরীক্ষার গোটা ভিত্তিটাই নড়ত।
+     *
+     * ⓘ ছাড়: কেবল সারিটা তৈরি হওয়ার মুহূর্তেই লেখা হয়।
+     */
+    protected static function booted(): void
+    {
+        static::updating(function (self $decision) {
+            throw new \RuntimeException(
+                '⭔ অনুমোদনের সিদ্ধান্ত বদলানো যায় না — সিদ্ধান্ত #'.$decision->id
+                .'। ভুল হলে নতুন একটা অনুরোধ বসানোই একমাত্র পথ।'
+            );
+        });
+
+        static::deleting(function (self $decision) {
+            throw new \RuntimeException(
+                '⭔ অনুমোদনের সিদ্ধান্ত মোছা যায় না — সিদ্ধান্ত #'.$decision->id.'।'
+            );
+        });
     }
 }

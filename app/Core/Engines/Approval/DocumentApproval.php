@@ -44,13 +44,45 @@ final class DocumentApproval
      *                               থাকলে `null`, আর তখন সীমা যা-ই হোক
      *                               অনুমোদন লাগে (`ApprovalFlow::appliesTo`)
      */
+    /**
+     * @param  array<string, mixed>  $fields
+     */
     public function stopping(
         Model $document,
         string $module,
         string $action,
         ?string $amount = null,
         ?string $reason = null,
+        array $fields = [],
     ): ?Approval {
+        /*
+         * ⭐ ঘরগুলো কাগজ থেকেই — ২৪ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⛔ শর্ত বসালে প্রবাহটা **বন্ধ** হয়ে যেত ─────────────
+         * ⓘ সাতটা সেবা [[assertClear()]] ডাকে, আর একটা ঘর পাঠাত
+         * না। ⚠️ [[ApprovalCondition::matches()]] ঘর না পেলে *"মেলে না"*
+         * বলে — তাই একটা শর্ত লেখা হত অনুমোদন তুলে দেওয়া।
+         *
+         * ⛔ ফলটা সবচেয়ে খারাপ দিকে: মালিক শর্ত লিখে ভাবতেন নিয়ম
+         * কড়া হলো, অথচ কাগজগুলো সই ছাড়াই পার হত।
+         *
+         * ── ⓘ কেন সাত জায়গায় তালিকা লেখা হয়নি ──────────────
+         * [[DocumentFingerprint]]-এর অবিকল একই যুক্তি: তালিকা রাখলে
+         * প্রতিটা মডিউলকে মনে করে *"এই ঘরটা পাঠা"* লিখতে হত, আর
+         * মানুষ যেটা মনে রাখতে হয় সেটাই ভোলে।
+         *
+         * ⚠️ ডাকা জায়গা নিজে ঘর পাঠালে **সেটাই জেতে** — কারণ কিছু
+         * শর্ত কাগজের ঘরে থাকে না (যেমন হিসাব করা শতকরা)।
+         */
+        $onThePaper = ApprovalEngine::fieldsOf($document);
+
+        /*
+         * ⚠️ ডাকা জায়গার ঘর সবসময় জেতে, আর কাগজের ঘরগুলো তার
+         * উপরে যোগ হয় — কিছু শর্ত কাগজের ঘরে থাকে না (যেমন
+         * হিসাব করা শতকরা), আর তখন সেবাটা নিজে পাঠায়।
+         */
+        $matchOn = [...$onThePaper, ...$fields];
+
         $latest = $this->approvals->latestFor($document, $action);
 
         /*
@@ -75,8 +107,16 @@ final class DocumentApproval
          */
         $superseded = null;
 
+        /*
+         * ⭐ কাগজটা এখন যেমন আছে — তার ছাপ।
+         *
+         * ⓘ একবারই নেওয়া হয়, আর দুই জায়গায় লাগে: সইটা এখনো
+         * খাটে কি না দেখতে, আর নতুন অনুরোধে বসাতে।
+         */
+        $hash = app(DocumentFingerprint::class)->of($document);
+
         if ($latest?->status === Approval::APPROVED) {
-            if ($latest->covers($amount)) {
+            if ($latest->stillCovers($amount, $hash)) {
                 return null;
             }
 
@@ -118,10 +158,37 @@ final class DocumentApproval
              * লেখা ছিল এটা "প্রস্তাবিত বদলটা" ধরার জন্য। ⚠️ আজ পর্যন্ত
              * কোনো ডাকা জায়গা ওটা ভরত না, তাই লাইভে সবগুলোই NULL।
              */
-            payload: $superseded === null ? null : [
-                'supersedes' => (int) $superseded->id,
-                'was_amount' => $superseded->amount === null ? null : (string) $superseded->amount,
-            ],
+            /*
+             * ⭐ দুইটা জিনিস একই ঘরে, আর সেটা ইচ্ছাকৃত।
+             *
+             * ⓘ কাগজের ঘরগুলো — শর্ত মাপার জন্য
+             * ([[ApprovalCondition]]) — আর পুরনো সইটা কোন অঙ্কে ছিল।
+             *
+             * ⚠️ একই ঘরে রাখা হয়েছে কারণ দুইটাই *"এই
+             * অনুরোধটা কোন বাস্তবতায় বসেছিল"* প্রশ্নের উত্তর,
+             * আর দুইটাই পরে পড়ে দেখার জন্য।
+             */
+            payload: array_filter([
+                ...$fields,
+
+                /*
+                 * ⭐ ঘরের **নাম**, মান নয়।
+                 *
+                 * ⓘ [[ApprovalExceptions::flowsThatCanNeverCatch()]]-এর দরকার
+                 * কেবল নামগুলো: *"এই কাজে কোন ঘরগুলো সত্যিই আসে"*।
+                 *
+                 * ⛔ মানগুলো রাখলে প্রতিটা সারি মোটা হত, আর বেতনের
+                 * অঙ্ক একটা দ্বিতীয় টেবিলে জমা হত — যেটা কেউ চায়নি।
+                 */
+                'fields_seen' => array_keys($matchOn) ?: null,
+                'supersedes' => $superseded === null ? null : (int) $superseded->id,
+                'was_amount' => $superseded?->amount === null ? null : (string) $superseded->amount,
+            ], fn ($v) => $v !== null) ?: null,
+
+            stateHash: $hash,
+
+            // ⓘ মাপা হয় গোটা কাগজ দিয়ে, জমা থাকে কেবল নাম
+            matchOn: $matchOn,
 
             reason: $reason,
 
@@ -149,6 +216,9 @@ final class DocumentApproval
      *
      * @param  string  $field  ফর্মের কোন ঘরের নিচে বার্তাটা বসবে
      */
+    /**
+     * @param  array<string, mixed>  $fields  শর্ত মাপার জন্য কাগজের ঘর
+     */
     public function assertClear(
         Model $document,
         string $module,
@@ -156,8 +226,9 @@ final class DocumentApproval
         string $field,
         ?string $amount = null,
         ?string $reason = null,
+        array $fields = [],
     ): void {
-        $stopping = $this->stopping($document, $module, $action, $amount, $reason);
+        $stopping = $this->stopping($document, $module, $action, $amount, $reason, $fields);
 
         if ($stopping === null) {
             return;
@@ -253,6 +324,28 @@ final class DocumentApproval
      */
     private function changedSince(Model $document, Approval $approval): bool
     {
+        /*
+         * ⭐ প্রশ্নটা ছাপকে করা হয়, ঘড়িকে নয় — ২৪ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⛔ ঘড়ি ধরে মাপার ভুলটা ───────────────────────────
+         * ⓘ আগে লেখা ছিল `updated_at > decided_at`। ⚠️ MySQL-এর
+         * DATETIME সেকেন্ডে মাপে, তাই একই সেকেন্ডে ফেরত আর সংশোধন
+         * হলে দুইটা **সমান**, আর উত্তর হত *"বদলায়নি"*।
+         *
+         * ⛔ ফল নীরব: যিনি ফেরত পেয়ে সঙ্গে সঙ্গে তারিখটা ঠিক করলেন,
+         * তাঁর দ্বিতীয় অনুরোধটা গিলে ফেলা হত, আর কাগজটা ফেরত অবস্থায়
+         * বসে থাকত — কোনো বার্তা ছাড়া।
+         *
+         * ── ⓘ পুরনো সারিগুলোর ছাপ নেই ──────────────────────────
+         * ওগুলোর জন্য ঘড়ির নিয়মটা থাকে, অবিকল আগের মতো।
+         */
+        if ($approval->state_hash !== null) {
+            return ! hash_equals(
+                (string) $approval->state_hash,
+                app(DocumentFingerprint::class)->of($document),
+            );
+        }
+
         $changed = $document->getAttribute('updated_at');
 
         if ($approval->decided_at === null || $changed === null) {

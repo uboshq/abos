@@ -52,6 +52,20 @@ final class ApprovalEngine
     private ?string $selfLimit = null;
 
     /**
+     * ঘড়ির হিসাব — একবারই বানানো।
+     *
+     * ⓘ কনস্ট্রাক্টরে নেওয়া হয়নি: ইঞ্জিনটা
+     * [[AppServiceProvider]]-এ scoped বাঁধা, আর সেই বাঁধাটাতে হাত দেওয়া
+     * মানে একটা অসম্পর্কিত ফাইল ছোঁয়া।
+     */
+    private ?ApprovalSla $sla = null;
+
+    private function sla(): ApprovalSla
+    {
+        return $this->sla ??= new ApprovalSla;
+    }
+
+    /**
      * অনুমোদন লাগবে কি না — লাগলে অনুরোধ তৈরি করে ফেরত দেয়, নাহলে null।
      *
      * null ফেরা মানে "এগিয়ে যাও", তাই কলিং কোড সরল থাকে:
@@ -65,10 +79,43 @@ final class ApprovalEngine
         ?array $payload = null,
         ?string $reason = null,
         ?int $userId = null,
+
+        /*
+         * ⭐ কাগজটা অনুরোধের দিন যেমন ছিল — তার ছাপ।
+         *
+         * ⓘ `null` দিলে আচরণ পুরনো মতো — কেবল অঙ্ক দেখা হয়।
+         * ⚠️ যে সেবাগুলো সরাসরি `request()` ডাকে তাদের কিছু বদলাতে
+         * হয় না, আর এটাই উদ্দেশ্য।
+         */
+        ?string $stateHash = null,
+
+        /*
+         * ⭐ শর্ত মাপার ঘরগুলো — ২৪ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⛔ কেন এটা `payload` থেকে আলাদা ───────────────────
+         * ⓘ আগে `payload` দুইটা কাজ করত: শর্ত মাপা, আর জমা
+         * থাকা। ⚠️ গোটা কাগজ দিয়ে মাপতে গেলে তখন গোটা কাগজ
+         * জমা হত — প্রতিটা সারি মোটা, আর **বেতনের অঙ্ক** একটা
+         * দ্বিতীয় টেবিলে জমা হত।
+         *
+         * ⓘ `null` দিলে `payload`-ই মাপা হয় — পুরনো সব ডাকা জায়গা
+         * অবিকল আগের মতো চলে।
+         */
+        ?array $matchOn = null,
     ): ?Approval {
         $flow = $this->flowFor($module, $action, class_basename($document));
 
-        if ($flow === null || ! $flow->appliesTo($amount)) {
+        /*
+         * ⭐ টাকার অঙ্ক ছাড়াও শর্ত — ২৪ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ `$payload` কলামটা আগে থেকেই ছিল, আর কেউ কোনোদিন
+         * ওটা পড়েনি — এই রিপোর চেনা আকৃতি। ⚠️ এখন মডিউল
+         * কাগজের ঘরগুলো ওখানে পাঠায়, আর শর্ত ঐগুলোর উপর মাপা হয়।
+         *
+         * ⛔ শর্তের তালিকা খালি হলে আচরণ **অবিকল আগের মতো** —
+         * পুরনো প্রবাহগুলো কেবল অঙ্কটাই চেনে।
+         */
+        if ($flow === null || ! $flow->catches($amount, $matchOn ?? $payload ?? [])) {
             return null;
         }
 
@@ -92,6 +139,14 @@ final class ApprovalEngine
             return $existing;
         }
 
+        /*
+         * ⭐ প্রথম ধাপের ঘড়ি — ২৪ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ ধাপে সময়সীমা না বসানো থাকলে `null` — অর্থাৎ
+         * পুরনো প্রবাহগুলো **অবিকল আগের মতো** চলে।
+         */
+        $first = $flow->steps->firstWhere('level', 1);
+
         return Approval::create([
             'company_id' => CompanyContext::id(),
             'approvable_type' => $document::class,
@@ -105,6 +160,8 @@ final class ApprovalEngine
             'requested_reason' => $reason,
             'requested_by' => $userId ?? auth()->id(),
             'requested_at' => now(),
+            'due_at' => $this->sla()->dueFor($first),
+            'state_hash' => $stateHash,
         ]);
     }
 
@@ -123,11 +180,14 @@ final class ApprovalEngine
      *
      * @param  string  $documentType  কাগজের ক্লাসের ছোট নাম (`class_basename`)
      */
-    public function requires(string $module, string $action, ?string $amount, string $documentType): bool
+    /**
+     * @param  array<string, mixed>  $fields  কাগজের ঘরগুলো — শর্ত মাপার জন্য
+     */
+    public function requires(string $module, string $action, ?string $amount, string $documentType, array $fields = []): bool
     {
         $flow = $this->flowFor($module, $action, $documentType);
 
-        return $flow !== null && $flow->appliesTo($amount);
+        return $flow !== null && $flow->catches($amount, $fields);
     }
 
     /**
@@ -143,6 +203,17 @@ final class ApprovalEngine
                 'approval_id' => $approval->id,
                 'level' => $approval->current_level,
                 'user_id' => $user->id,
+
+                /*
+                 * ⭐ কার হয়ে — ২৪ সেপ্টেম্বর ২০২৬।
+                 *
+                 * ⓘ `user_id` যিনি সত্যি চাপ দিলেন, আর এটা যাঁর হয়ে।
+                 * ⛔ একজনের নাম রাখলে পরে *"এটা কে দিয়েছিল"*
+                 * প্রশ্নের উত্তর অর্ধেক হত, আর নিরীক্ষায় অর্ধেক
+                 * উত্তর কোনো উত্তরই নয়।
+                 */
+                'on_behalf_of' => $this->delegatorAt($approval, $user),
+
                 'decision' => 'approved',
                 'remarks' => $remarks,
                 'decided_at' => now(),
@@ -158,14 +229,27 @@ final class ApprovalEngine
 
             // একই স্তরে দুইজন থাকলে এবং সবার সম্মতি লাগলে — বাকিরা না দিলে
             // স্তরটা এখনো শেষ হয়নি।
-            if ($currentStep?->requires_all) {
-                $required = $steps->where('level', $approval->current_level)->count();
+            /*
+             * ⭐ এই ধাপে কয়জনের সই লাগবে — ২৪ সেপ্টেম্বর ২০২৬।
+             *
+             * ⛔ আগে দুইটাই চরম ছিল: `requires_all` মানে সবাই,
+             * নাহলে একজন। ⚠️ *"তিনজনের মধ্যে যেকোনো দুইজন"* বলা
+             * যেত না, অথচ কমিটি বাস্তবে ওভাবেই চলে।
+             *
+             * ⓘ `requires_all` চালু থাকলে সে-ই জেতে — পুরনো প্রবাহের
+             * আচরণ এক চুলও বদলায় না।
+             */
+            $atLevel = $steps->where('level', $approval->current_level);
+
+            $needed = self::signaturesNeededAt($atLevel);
+
+            if ($needed > 1) {
                 $given = $approval->decisions()
                     ->where('level', $approval->current_level)
                     ->where('decision', 'approved')
                     ->count();
 
-                if ($given < $required) {
+                if ($given < $needed) {
                     return $approval->fresh();
                 }
             }
@@ -173,7 +257,23 @@ final class ApprovalEngine
             $nextLevel = $steps->where('level', '>', $approval->current_level)->min('level');
 
             if ($nextLevel !== null) {
-                $approval->update(['current_level' => $nextLevel]);
+                /*
+                 * ⭐ পরের ধাপের ঘড়ি নতুন করে শুরু — ২৪ সেপ্টেম্বর ২০২৬।
+                 *
+                 * ⛔ না বসালে তিন ধাপের একটা কাগজে **প্রথম ধাপের
+                 * ঘড়িই** শেষ পর্যন্ত চলত, আর দ্বিতীয় ধাপের মানুষ
+                 * জন্মের মুহূর্তেই দেরি করে ফেলতেন।
+                 *
+                 * ⓘ মনে করানো আর উপরে পাঠানোর ছাপও মুছে যায় —
+                 * নতুন মানুষ, নতুন হিসাব।
+                 */
+                $approval->update([
+                    'current_level' => $nextLevel,
+                    'due_at' => $this->sla()->dueFor($steps->firstWhere('level', $nextLevel)),
+                    'reminded_at' => null,
+                    'escalated_at' => null,
+                    'escalated_to' => null,
+                ]);
 
                 return $approval->fresh();
             }
@@ -295,17 +395,42 @@ final class ApprovalEngine
      * বাকি স্তরে পাঠানো হয় না, কারণ নিচের স্তর না চাইলে উপরের স্তরের
      * মতামত নেওয়ার কোনো অর্থ নেই — আর সেটা চাইলে অনুরোধ নতুন করে করতে হবে।
      */
-    public function reject(Approval $approval, User $user, string $remarks): Approval
+    /**
+     * @param  string|null  $reasonCode  বাতিলের কারণ ([[ApprovalDecision::REASONS]])
+     */
+    public function reject(Approval $approval, User $user, string $remarks, ?string $reasonCode = null): Approval
     {
         $this->assertPending($approval);
         $this->assertCanDecide($approval, $user);
 
-        return DB::transaction(function () use ($approval, $user, $remarks) {
+        /*
+         * ⛔ অচেনা কারণ বসানো যায় না।
+         *
+         * ⓘ নয়তো রিপোর্টে দশ রকম বানান জমত, আর *"কেন বাতিল
+         * হয়* প্রশ্নের উত্তর আবার হারিয়ে যেত।
+         */
+        if ($reasonCode !== null && ! in_array($reasonCode, ApprovalDecision::REASONS, true)) {
+            $reasonCode = 'other';
+        }
+
+        return DB::transaction(function () use ($approval, $user, $remarks, $reasonCode) {
             ApprovalDecision::create([
                 'approval_id' => $approval->id,
                 'level' => $approval->current_level,
                 'user_id' => $user->id,
+
+                /*
+                 * ⭐ কার হয়ে — ২৪ সেপ্টেম্বর ২০২৬।
+                 *
+                 * ⓘ `user_id` যিনি সত্যি চাপ দিলেন, আর এটা যাঁর হয়ে।
+                 * ⛔ একজনের নাম রাখলে পরে *"এটা কে দিয়েছিল"*
+                 * প্রশ্নের উত্তর অর্ধেক হত, আর নিরীক্ষায় অর্ধেক
+                 * উত্তর কোনো উত্তরই নয়।
+                 */
+                'on_behalf_of' => $this->delegatorAt($approval, $user),
+
                 'decision' => 'rejected',
+                'reason_code' => $reasonCode,
                 'remarks' => $remarks,
                 'decided_at' => now(),
             ]);
@@ -488,11 +613,13 @@ final class ApprovalEngine
          * তাই এমন একটা শর্ত যা কখনো সত্যি হয় না — ডাটাবেজ ওটা দেখেই
          * থেমে যায়, আর ডাকা পক্ষকে আলাদা করে "খালি" সামলাতে হয় না।
          */
+        $escalated = $this->escalatedTuples($user);
+
         $query = Approval::query()
             ->pending()
             // অনুরোধকারীর নাম প্রতিটা সারিতে দেখানো হয়, তাই সাথেই আসে
             ->with('requester')
-            ->where(function (Builder $outer) use ($tuples, $user): void {
+            ->where(function (Builder $outer) use ($tuples, $escalated, $user): void {
                 /*
                  * ⭐ আমার হাতে দেওয়া — ছকে আমি থাকি বা না থাকি।
                  *
@@ -502,6 +629,39 @@ final class ApprovalEngine
                  * পারেন — **না থাকাটাই তো পাঠানোর কারণ**।
                  */
                 $outer->where('assigned_to', $user->id);
+
+                /*
+                 * ⭐ সময় পার হয়ে উপরে এসেছে — ২৪ সেপ্টেম্বর ২০২৬।
+                 *
+                 * ── ⛔ এই শাখাটা না থাকলে দুইটা অংশ দুই কথা বলত ──────
+                 * ⓘ [[canDecide()]] গন্তব্যের মানুষকে *"হ্যাঁ"* বলে, আর
+                 * এই কোয়েরি কাগজটা তাঁর তালিকায় আনত না।
+                 *
+                 * ⚠️ ফল নীরব: কাগজটা সত্যিই ইনার সইয়ের অপেক্ষায়, অথচ
+                 * তালিকাতেই আসে না — আর **চিরকাল ঝুলে থাকে**।
+                 *
+                 * ⓘ ঠিক এই পার্থক্যটার জন্যই [[TheInboxAgreesWithTheDecisionTest]]।
+                 */
+                if ($escalated !== []) {
+                    $outer->orWhere(function (Builder $up) use ($escalated): void {
+                        $up->whereNotNull('escalated_at')
+                            /*
+                             * ⚠️ কাগজটা কারো হাতে দেওয়া থাকলে নয় — তখন
+                             * কেবল ঐ একজনের, আর সেটা উপরের শাখায়।
+                             */
+                            ->whereNull('assigned_to')
+                            ->where(function (Builder $any) use ($escalated): void {
+                                foreach ($escalated as [$module, $action, $type, $levels]) {
+                                    $any->orWhere(function (Builder $one) use ($module, $action, $type, $levels): void {
+                                        $one->where('module', $module)
+                                            ->where('action', $action)
+                                            ->where('approvable_type', $type)
+                                            ->whereIn('current_level', $levels);
+                                    });
+                                }
+                            });
+                    });
+                }
 
                 if ($tuples === []) {
                     return;
@@ -595,6 +755,64 @@ final class ApprovalEngine
      * @return list<array{0: string, 1: string, 2: string, 3: list<int>}>
      *                                                                    module · action · approvable_type · যেসব স্তর ইনার
      */
+    /**
+     * ⭐ যে কাগজগুলো দেরি হলে ইনার কাছে আসে।
+     *
+     * ⓘ [[decidableTuples()]]-এর অবিকল একই ছাঁচ, আর সেটা
+     * ইচ্ছাকৃত: নথির ধরনটা ছকে সংক্ষিপ্ত নামে লেখা, আর উল্টো
+     * দিকে যাওয়ার কোনো নির্ভরযোগ্য পথ নেই।
+     *
+     * ⚠️ তাই প্রশ্নটা SQL-এ লেখা হয় না: সারিতে যে ধরনগুলো
+     * আছে সেগুলো তোলা হয় (একটা ছোট DISTINCT), আর প্রতিটার ছকটা
+     * মেমরিতেই বাছা হয়।
+     *
+     * @return list<array{0: string, 1: string, 2: string, 3: list<int>}>
+     */
+    private function escalatedTuples(User $user): array
+    {
+        $types = Approval::query()->pending()
+            ->whereNotNull('escalated_at')
+            ->select('module', 'action', 'approvable_type')
+            ->distinct()
+            ->get();
+
+        if ($types->isEmpty()) {
+            return [];   // ⓘ কোনো কাগজই উপরে পাঠানো নয় — আর কাজ নেই
+        }
+
+        $roleIds = $this->roleIds($user);
+        $sla = app(ApprovalSla::class);
+        $tuples = [];
+
+        foreach ($types as $row) {
+            $flow = $this->flowFor($row->module, $row->action, class_basename((string) $row->approvable_type));
+
+            $levels = [];
+
+            foreach ($flow?->steps ?? [] as $step) {
+                $target = $sla->escalationTarget($step);
+
+                if ($target === null) {
+                    continue;
+                }
+
+                $mine = $target['type'] === ApprovalFlowStep::BY_USER
+                    ? $target['id'] === (int) $user->id
+                    : in_array($target['id'], $roleIds, true);
+
+                if ($mine) {
+                    $levels[] = (int) $step->level;
+                }
+            }
+
+            if ($levels !== []) {
+                $tuples[] = [$row->module, $row->action, $row->approvable_type, array_values(array_unique($levels))];
+            }
+        }
+
+        return $tuples;
+    }
+
     private function decidableTuples(User $user): array
     {
         /*
@@ -633,6 +851,74 @@ final class ApprovalEngine
         return $tuples;
     }
 
+    /**
+     * ⭐ একটা স্তরে কয়জনের সই লাগবে।
+     *
+     * ── ⛔ প্রশ্নটা **স্তরের**, একটা সারির নয় ───────────────
+     * ⓘ `min_approvals` আর `requires_all` ঘর দুইটা **প্রতিটা
+     * সারিতে** আলাদা করে বসে — ফর্মে প্রতি সারিতে একটা ঘর।
+     *
+     * ⚠️ তাই তিনজনের একটা ধাপে কেউ প্রথম সারিতে ১ আর দ্বিতীয়ে ২
+     * লিখলে উত্তরটা **সারির ক্রমের উপর** নির্ভর করত — আর ওই
+     * ক্রমটা কোথাও বাঁধা নয়। ⛔ ফল নীরব: একদিন একজনের সইতেই
+     * কাগজ এগিয়ে যেত, আর কেউ বুঝত না কেন।
+     *
+     * ── ⓘ সবচেয়ে **কড়া** উত্তরটা জেতে ─────────────────────
+     * একটা সারিতেও `requires_all` চালু থাকলে সবার সই লাগে, আর
+     * `min_approvals`-এর সবচেয়ে বড় সংখ্যাটাই খাটে।
+     *
+     * ⚠️ কারণ সন্দেহে একটা বাড়তি সই চাওয়া কাজ ধীর করে, আর
+     * একটা কম সই টাকা নড়িয়ে দেয়।
+     *
+     * @param  \Illuminate\Support\Collection<int, ApprovalFlowStep>  $atLevel
+     */
+    /**
+     * ⭐ কাগজের ঘরগুলো — শর্ত মাপার জন্য।
+     *
+     * ── ⛔ কেন নিয়মটা এখানে, দুই যমজে নয় ──────────────────
+     * ⓘ [[DocumentApproval]] আর [[VoucherApproval]] একই কাজের দুইটা
+     * রূপ। ⚠️ দুই জায়গায় লিখলে একদিন একটা বদলাত আর অন্যটা
+     * পুরনো নিয়মে চলত — আর পার্থক্যটা নীরব: ভাউচারে শর্ত
+     * খাটত, বাকি কাগজে খাটত না।
+     *
+     * ── ⓘ কেবল সরল মান ───────────────────────────────
+     * সংখ্যা, লেখা, হ্যাঁ/না — যা একটা শর্তের ডান পাশে বসতে পারে।
+     * ⛔ অ্যারে বা অবজেক্ট বাদ, আর যন্ত্রের নিজের ঘরও (সময়, হ্যাশ,
+     * গোনা) — ওগুলোর উপর শর্ত বসানোর কোনো অর্থ নেই।
+     *
+     * @return array<string, mixed>
+     */
+    public static function fieldsOf(Model $document): array
+    {
+        $skip = ['id', 'company_id', 'branch_id', 'created_at', 'updated_at', 'deleted_at',
+            'created_by', 'updated_by', 'public_id', 'row_hash', 'prev_hash'];
+
+        $out = [];
+
+        foreach ($document->getAttributes() as $key => $value) {
+            if (in_array($key, $skip, true) || is_array($value) || is_object($value)) {
+                continue;
+            }
+
+            $out[$key] = $value;
+        }
+
+        return $out;
+    }
+
+    public static function signaturesNeededAt($atLevel): int
+    {
+        if ($atLevel->isEmpty()) {
+            return 1;
+        }
+
+        if ($atLevel->contains(fn (ApprovalFlowStep $step) => (bool) $step->requires_all)) {
+            return $atLevel->count();
+        }
+
+        return max(1, (int) $atLevel->max('min_approvals'));
+    }
+
     public function canDecide(Approval $approval, User $user): bool
     {
         /*
@@ -661,7 +947,37 @@ final class ApprovalEngine
             $levels = $this->levelsIn($this->flowOf($approval), $user);
 
             if (! in_array((int) $approval->current_level, $levels, true)) {
-                return false;
+                /*
+                 * ⭐ ভারপ্রাপ্ত মানুষ — ২৪ সেপ্টেম্বর ২০২৬।
+                 *
+                 * ⓘ তিনি নিজে এই স্তরে নেই — থাকলে ভার দেওয়ার
+                 * দরকারই হত না। ⚠️ তাই প্রশ্নটা পাল্টায়:
+                 * যাঁদের হয়ে তিনি সই দিতে পারেন, তাঁদের কেউ কি
+                 * এই স্তরে আছেন?
+                 */
+                if ($this->delegatorAt($approval, $user) !== null) {
+                    return true;
+                }
+
+                /*
+                 * ⭐ কাগজটা উপরে পাঠানো হয়েছে, আর গন্তব্য ইনি।
+                 *
+                 * ── ⛔ এই জোড়টা না থাকলে গোটা ব্যবস্থাটা সাজসজ্জা ─────
+                 * ⓘ `abos:approvals-due` সময় পার হলে `escalated_at` বসায়
+                 * আর গন্তব্যের মানুষটাকে খবর পাঠায়।
+                 *
+                 * ⚠️ কিন্তু তিনি ঐ ধাপে **নেই** — থাকলে উপরে পাঠানোরই
+                 * দরকার হত না। ⛔ তাই আগে তিনি খবর পেতেন, পাতাটা খুলতেন,
+                 * আর বোতামটা থাকত না — আর কেউ বলত না কেন।
+                 *
+                 * ── ⓘ কেন `escalated_to` নয়, ধাপের ঘর দুইটা ───────────
+                 * `escalated_to` একজনের ঘর, আর গন্তব্য একটা **রোল** হতে
+                 * পারে। ⚠️ সেখানে প্রথম জনের নাম বসে শুধু *"কার হাতে
+                 * গেল"* জানার জন্য — দখল নেওয়ার জন্য নয়। ⓘ তাই প্রশ্নটা
+                 * ধাপকে করা হয়, আর রোলের সবাই সই দিতে পারেন।
+                 */
+                return $approval->escalated_at !== null
+                    && $this->escalatedTo($approval, $user);
             }
         }
 
@@ -689,6 +1005,20 @@ final class ApprovalEngine
         if ($approval->requested_by === $user->id
             && ! $this->withinSelfLimit($approval)
             && ! $this->isSuperAdmin($user)) {
+            return false;
+        }
+
+        /*
+         * ⭐ কর্তৃত্বের সীমা — ২৪ সেপ্টেম্বর ২০২৬।
+         *
+         * ⛔ আগে প্রবাহে একটা ধাপে *"বিক্রয় ব্যবস্থাপক"* লেখা
+         * থাকলে **যেকোনো** বিক্রয় ব্যবস্থাপক **যেকোনো** অঙ্কে
+         * সই দিতে পারতেন — দশ লাখের অর্ডারেও।
+         *
+         * ⓘ সীমা বসানো না থাকলে [[AuthorityService]] হ্যাঁ বলে,
+         * তাই যাঁরা সীমা বসাননি তাঁদের কাছে আচরণ অবিকল আগের মতো।
+         */
+        if (! app(AuthorityService::class)->allows($user, $approval, $approval->branch_id ?? null)) {
             return false;
         }
 
@@ -857,6 +1187,26 @@ final class ApprovalEngine
      *
      * @return array<int, string>
      */
+    /**
+     * ⭐ এই অনুরোধের প্রবাহের ধাপগুলো — স্তর ধরে সাজানো।
+     *
+     * ── ⛔ কেন [[stepNamesFor]] দিয়ে এটা করা যায় না ───────────
+     * ⓘ ওটা **নামহীন ধাপ বাদ দেয়**, আর সেটা ওখানে ঠিক: নাম
+     * না থাকলে পর্দা নম্বরটাই দেখায়।
+     *
+     * ⚠️ কিন্তু *"কয়টা ধাপ আছে"* প্রশ্নে ওটা মিথ্যা বলত:
+     * নাম না বসানো প্রবাহে উত্তর হত **শূন্য**, আর যাত্রাপথের
+     * পর্দাটা কোনো ভুল না দেখিয়েই খালি থাকত।
+     *
+     * @return \Illuminate\Support\Collection<int, ApprovalFlowStep>
+     */
+    public function stepsFor(Approval $approval): \Illuminate\Support\Collection
+    {
+        return collect($this->flowOf($approval)?->steps ?? [])
+            ->sortBy('level')
+            ->values();
+    }
+
     public function stepNamesFor(Approval $approval): array
     {
         $names = [];
@@ -880,6 +1230,54 @@ final class ApprovalEngine
      *
      * @return list<int>
      */
+    /**
+     * ⭐ এই অনুরোধে ইনি কার হয়ে সই দিতে পারেন।
+     *
+     * ⓘ `null` ফিরলে কারও হয়ে নয় — এই স্তরে তাঁর কোনো কাজ নেই।
+     *
+     * ⚠️ যিনি ভার দিয়েছেন তাঁকেও **এই স্তরে থাকতে হবে**।
+     * ⛔ নাহলে যেকেউ যেকারও হয়ে ভার নিয়ে সব কাগজে সই দিতে
+     * পারতেন — ভার ক্ষমতা **সরায়**, তৈরি করে না।
+     */
+    private function delegatorAt(Approval $approval, User $user): ?int
+    {
+        $flow = $this->flowOf($approval);
+
+        foreach (app(DelegationService::class)->actingFor($user, $approval->module, $approval->action) as $fromId) {
+            $from = User::find($fromId);
+
+            if ($from !== null && in_array((int) $approval->current_level, $this->levelsIn($flow, $from), true)) {
+                return $fromId;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * ⭐ উপরে পাঠানো কাগজটা কি ইনার কাছে গেল?
+     *
+     * ⓘ উত্তরটা ধাপের `escalate_to_type`/`escalate_to_id` থেকে — সেই
+     * একই ঘর দুইটা থেকে [[ApprovalSla::escalationTarget()]] খবরটা পাঠায়।
+     *
+     * ⛔ দুই জায়গায় দুই রকম হলে পার্থক্যটা নীরব হত: খবর যেত
+     * একজনের কাছে, আর সই দিতে পারতেন অন্য কেউ।
+     */
+    private function escalatedTo(Approval $approval, User $user): bool
+    {
+        $target = app(ApprovalSla::class)->escalationTarget($approval->currentStep());
+
+        if ($target === null) {
+            return false;
+        }
+
+        if ($target['type'] === ApprovalFlowStep::BY_USER) {
+            return (int) $target['id'] === (int) $user->id;
+        }
+
+        return in_array((int) $target['id'], $this->roleIds($user), true);
+    }
+
     private function levelsIn(?ApprovalFlow $flow, User $user): array
     {
         if ($flow === null) {

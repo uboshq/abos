@@ -73,6 +73,11 @@ class ApprovalFlow extends Model
         });
     }
 
+    public function conditions(): HasMany
+    {
+        return $this->hasMany(ApprovalCondition::class, 'approval_flow_id');
+    }
+
     public function steps(): HasMany
     {
         return $this->hasMany(ApprovalFlowStep::class)->orderBy('level');
@@ -96,5 +101,56 @@ class ApprovalFlow extends Model
         }
 
         return bccomp((string) $amount, (string) $this->threshold_amount, 4) >= 0;
+    }
+
+    /**
+     * ⭐ এই কাগজে এই প্রবাহটা ধরবে কি না — সব শর্ত মিলিয়ে।
+     *
+     * ── ⓘ দুইটা পর্যায় ──────────────────────────────────
+     * প্রথমে টাকার সীমা ([[appliesTo]]), তারপর বাকি শর্তগুলো।
+     * ⚠️ সীমাটা আলাদা রাখা হয়েছে কারণ পুরনো প্রবাহগুলো
+     * ওটাই চেনে, আর শর্তের তালিকা খালি হলে আচরণ **অবিকল
+     * আগের মতো** থাকে।
+     *
+     * ── ⛔ সব শর্ত মিলতে হয় (AND) ───────────────────────
+     * ⓘ OR দরকার হলে **দুইটা আলাদা প্রবাহ** বানানো যায়,
+     * আর তখন প্রতিটার নিজের ধাপ ও সময়সীমা থাকে।
+     *
+     * @param  array<string, mixed>  $fields  কাগজের ঘরগুলো
+     */
+    public function catches(?string $amount, array $fields = []): bool
+    {
+        if (! $this->appliesTo($amount)) {
+            return false;
+        }
+
+        foreach ($this->conditions as $condition) {
+            if (! $condition->matches($fields)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * ⛔ যে শর্তগুলো কখনো মিলতেই পারবে না।
+     *
+     * ── ⚠️ নীরব ভুলটা এখানে ──────────────────────────────
+     * ⓘ শর্ত বসানো হলো এমন একটা ঘরের উপর যেটা ওই কাজের
+     * মডিউল কখনো পাঠায় না। ⛔ তখন প্রবাহটা **কখনো ধরে না**,
+     * আর মালিক ভাবেন অনুমোদন বসানো আছে।
+     *
+     * @param  list<string>  $known  মডিউল যে ঘরগুলো পাঠায়
+     * @return list<string>
+     */
+    public function unknownFields(array $known): array
+    {
+        return $this->conditions
+            ->pluck('field')
+            ->reject(fn (string $f) => in_array($f, $known, true))
+            ->unique()
+            ->values()
+            ->all();
     }
 }

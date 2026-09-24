@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Accounts\Services;
 
 use App\Core\Engines\Approval\ApprovalEngine;
+use App\Core\Engines\Approval\DocumentFingerprint;
 use App\Models\Approval;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
@@ -126,8 +127,22 @@ final class VoucherApproval
          */
         $superseded = null;
 
+        /*
+         * ⭐ কাগজটা সইয়ের দিন যেমন ছিল — তার ছাপ।
+         *
+         * ── ⛔ এই ফাঁকটা ঠিক টাকার পথেই খোলা ছিল ──────────────
+         * ⓘ [[DocumentApproval::stopping()]] ২৪ সেপ্টেম্বর থেকে গোটা
+         * কাগজের ছাপ মেলায় (মালিকের সিদ্ধান্ত: *"যেকোনো ঘর
+         * বদলালেই"*)। ⚠️ কিন্তু এই যমজ ক্লাসটা কেবল অঙ্ক দেখত।
+         *
+         * ⛔ ফল: অঙ্ক ঠিক রেখে ভাউচারের খাত, পক্ষ, বা তারিখ
+         * বদলে "পোস্ট" চাপলে পুরনো সইটাই চলত — আর সেটা
+         * সবচেয়ে খারাপ জায়গা, কারণ ভাউচারেই টাকা নড়ে।
+         */
+        $hash = app(DocumentFingerprint::class)->of($voucher);
+
         if ($latest?->status === Approval::APPROVED) {
-            if ($latest->covers((string) $voucher->amount)) {
+            if ($latest->stillCovers((string) $voucher->amount, $hash)) {
                 return null;
             }
 
@@ -173,6 +188,26 @@ final class VoucherApproval
             action: $action,
             amount: (string) $voucher->amount,
 
+            /*
+             * ⓘ ছাপটা এখানেও যায় — নাহলে পরে মেলানোর কিছু থাকত না।
+             * ⚠️ অর্থাৎ উপরের `stillCovers()` সবসময় *"হাঁ, ঢাকে"* বলত
+             * (`state_hash` খালি মানে পুরনো আচরণ), আর দাবিটা সবুজ
+             * থাকত — কারণ সে কখনো দেখতেই যেত না।
+             */
+            stateHash: $hash,
+
+            /*
+             * ⭐ শর্ত মাপা হয় গোটা ভাউচার দিয়ে।
+             *
+             * ⛔ এটা না দিলে `payload` মাপা হত, আর সেটা এখানে খালি —
+             * অর্থাৎ হিসাবের কোনো কাজে শর্ত বসালে প্রবাহটা **কখনো
+             * ধরত না**, আর অনুমোদন নীরবে উঠে যেত।
+             *
+             * ⓘ নিয়মটা [[ApprovalEngine::fieldsOf()]]-এ, এই ফাইলে নয় —
+             * দুই যমজে দুই নিয়ম হলে পার্থক্যটা নীরব হত।
+             */
+            matchOn: ApprovalEngine::fieldsOf($voucher),
+
             // ⓘ কারণসহ [[DocumentApproval::stopping()]]-এ — ঘরটা এতদিন খালি পড়ে ছিল।
             payload: $superseded === null ? null : [
                 'supersedes' => (int) $superseded->id,
@@ -209,6 +244,23 @@ final class VoucherApproval
      */
     private function changedSince(Voucher $voucher, Approval $approval): bool
     {
+        /*
+         * ⭐ প্রশ্নটা ছাপকে, ঘড়িকে নয় — নিয়মটা
+         * [[DocumentApproval::changedSince()]]-এর অবিকল এক।
+         *
+         * ⛔ `updated_at > decided_at` সেকেন্ডে মাপে, তাই একই সেকেন্ডে
+         * ফেরত আর সংশোধন হলে দ্বিতীয় অনুরোধটা নীরবে গিলে ফেলা হত।
+         *
+         * ⚠️ দুই জায়গায় দুই নিয়ম হলে পার্থক্যটা নীরব হত: ভাউচার
+         * আবার পাঠানো যেত, বাকি সব কাগজ যেত না — বা উল্টোটা।
+         */
+        if ($approval->state_hash !== null) {
+            return ! hash_equals(
+                (string) $approval->state_hash,
+                app(DocumentFingerprint::class)->of($voucher),
+            );
+        }
+
         if ($approval->decided_at === null || $voucher->updated_at === null) {
             return false;
         }

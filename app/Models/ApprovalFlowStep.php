@@ -19,11 +19,22 @@ class ApprovalFlowStep extends Model
 
     public const BY_USER = 'user';
 
-    protected $fillable = ['approval_flow_id', 'level', 'step_name', 'approver_type', 'approver_id', 'requires_all'];
+    protected $fillable = [
+        'approval_flow_id', 'level', 'step_name', 'approver_type', 'approver_id', 'requires_all',
+        'sla_hours', 'warn_hours', 'escalate_hours', 'escalate_to_type', 'escalate_to_id',
+        'min_approvals',
+    ];
 
     protected function casts(): array
     {
-        return ['level' => 'integer', 'requires_all' => 'boolean'];
+        return [
+            'level' => 'integer',
+            'requires_all' => 'boolean',
+            'sla_hours' => 'integer',
+            'warn_hours' => 'integer',
+            'escalate_hours' => 'integer',
+            'min_approvals' => 'integer',
+        ];
     }
 
     public function flow(): BelongsTo
