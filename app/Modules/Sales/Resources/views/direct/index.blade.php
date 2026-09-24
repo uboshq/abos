@@ -664,13 +664,24 @@
                                     {{ __('sales::field.available_credit') }}
                                 </span>
 
-                                <template x-if="customerId && (Number(customer.limit) || 0) > 0">
+                                {{-- ⛔ শর্তগুলো এখন JS-এর getter, অভিব্যক্তি নয় —
+                                     ২৫ সেপ্টেম্বর ২০২৬।
+
+                                     ⚠️ আগে এখানে `Number(customer.limit)` লেখা ছিল,
+                                     আর **`@alpinejs/csp`-এ বাইরের ফাংশন ডাকা যায় না**।
+                                     ⓘ ফলে তিনটা শাখার একটাও কোনোদিন আঁকা হয়নি — সারিটা
+                                     বসানোর দিন থেকেই মরা ছিল, আর কোথাও কোনো ত্রুটি
+                                     দেখায়নি।
+
+                                     ⭐ কারণ ও মাপ [[direct-sale.js]]-এর `hasCreditLimit`
+                                     getter-এর পাশে লেখা। --}}
+                                <template x-if="hasCreditLimit">
                                     <span class="num font-semibold"
                                           :class="availableCredit < 0 ? 'text-(--color-danger)' : ''"
                                           x-text="'৳' + money(availableCredit)"></span>
                                 </template>
 
-                                <template x-if="customerId && ! ((Number(customer.limit) || 0) > 0)">
+                                <template x-if="creditIsClosed">
                                     <span class="text-(--color-ink-muted)">
                                         {{ __('sales::field.credit_closed') }}
                                     </span>
@@ -679,7 +690,7 @@
                                 {{-- ⓘ ক্রেতা বাছা হয়নি — ড্যাশ, শূন্য নয়। ⚠️ "৳০"
                                      লিখলে মনে হত বাকি দেওয়ার জায়গা শেষ, অথচ
                                      প্রশ্নটাই এখনো ওঠেনি। --}}
-                                <template x-if="! customerId">
+                                <template x-if="! hasCustomer">
                                     <span class="text-(--color-ink-muted)">—</span>
                                 </template>
                             </div>

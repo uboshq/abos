@@ -32,10 +32,28 @@ import { taka } from '../components/money.js'
 export default function directSale({
     catalogue, customers, walkinId, vatEnabled, packs,
     paymentTermDefault, carriers, depositMethods, moneyAccounts,
-    draftKey, hasErrors, texts,
+    draftKey, hasErrors, texts, freeAllowedUrl, warehouseId,
 }) {
     return {
         catalogue,
+
+        /*
+         * ফ্রি-র সীমা জানার ঠিকানা আর গুদামটা।
+         *
+         * ⓘ গুদাম ছাড়া অনুপাতের প্রশ্নেরই উত্তর নেই — ফ্রি কোন গুদামের
+         * কোন লটে এসেছিল, সেটাই তো হিসাব।
+         */
+        freeAllowedUrl,
+        warehouseId,
+
+        /*
+         * ⚠️ সীমা ছাড়ানোর বার্তা — এন্ট্রির ঘরের নিচেই, উপরে নয়।
+         *
+         * ⓘ পর্দার উপরে দেখালে মানুষ যেখানে টাইপ করছেন সেখান থেকে চোখ
+         * সরাতে হত। ⛔ আর সারিটা কার্টে যায়নি বলে নিচে কিছুই বদলায় না,
+         * তাই বার্তাটাই একমাত্র চিহ্ন।
+         */
+        freeWarning: '',
         customers,
         vatEnabled,
         term: '',
@@ -885,8 +903,27 @@ export default function directSale({
             this.panel = '';
         },
 
-        addToCart() {
+        /*
+         * সারিটা কার্টে যাওয়ার আগে ফ্রি-র হিসাব মিলিয়ে নেওয়া।
+         *
+         * ── ⭐ মালিকের নির্দেশ, ২৪ সেপ্টেম্বর ২০২৬ ────────────────────
+         * *"অনুপাতের বেশি ফ্রি দিলে বিল প্রডাক্ট এন্টিতেই আটকে যাবে,
+         * কার্টে যোগ হবে না আর ওয়ার্নিং দিবে ফ্রি এতটা দেওয়া যাবে"*।
+         *
+         * ── ⚠️ কেন বিল শেষ হওয়ার পর নয় ─────────────────────────────
+         * ⓘ আগে ভুলটা ধরা পড়ত সেভ করার সময়, অর্থাৎ ত্রিশটা সারি তোলার
+         * পরে। ⛔ তখন কোন সারিটা দোষী তা খুঁজতে হত, আর সংখ্যাটা কত
+         * হলে চলত সেটা কেউ বলত না।
+         *
+         * ── ⛔ এটা দেয়াল নয়, দেয়ালটা কোথায় তা আগে বলা ────────────────
+         * ⚠️ আসল দেয়াল সেবায় ([[DirectSaleService]])। ⓘ শুধু পর্দায়
+         * আটকালে অন্য পথে আসা বিল — কাউন্টার, আদেশ, কালকের নতুন পর্দা —
+         * প্রতিটাই একটা করে ফাঁক হত।
+         */
+        async addToCart() {
             if (! this.picked) return;
+
+            if (! await this.freeFitsTheRatio()) return;
 
             this.lines.push({
                 key: this.nextKey++,
@@ -905,6 +942,57 @@ export default function directSale({
 
             this.clearEntry();
             this.$nextTick(() => this.$refs.search.focus());
+        },
+
+        /**
+         * এই সারির ফ্রি-টা অনুপাতে ধরে কি না।
+         *
+         * ⓘ ফ্রি না দিলে প্রশ্নটাই ওঠে না — তখন সার্ভারকে ডাকা হয় না,
+         * আর রোজকার বিক্রিতে একটাও বাড়তি অনুরোধ যায় না।
+         *
+         * ⚠️ উত্তর না পেলে সারিটা **আটকানো হয় না**। ⓘ নেটওয়ার্ক পড়ে
+         * গেলে কাউন্টার বন্ধ হয়ে যাওয়ার চেয়ে সারিটা যাওয়া ভালো —
+         * ⛔ আসল দেয়াল সেবায়, আর সে ঠিকই ধরবে।
+         */
+        async freeFitsTheRatio() {
+            this.freeWarning = '';
+
+            const free = this.$num(this.entry.freeQty);
+            const qty = this.$num(this.entry.qty || '1');
+
+            if (! (free > 0) || ! (qty > 0)) return true;
+
+            try {
+                const url = new URL(this.freeAllowedUrl, window.location.origin);
+                url.searchParams.set('product_id', this.picked.id);
+                url.searchParams.set('qty', qty);
+
+                if (this.warehouseId) url.searchParams.set('warehouse_id', this.warehouseId);
+
+                const answer = await fetch(url, { headers: { Accept: 'application/json' } });
+
+                if (! answer.ok) return true;
+
+                const { data } = await answer.json();
+
+                if (! data || ! data.known) return true;
+
+                const allowed = this.$num(data.allowed);
+
+                if (free <= allowed) return true;
+
+                /*
+                 * ⓘ বার্তাটা সংখ্যাটাই বলে — "বেশি হয়ে গেছে" নয়।
+                 *
+                 * ⛔ সীমাটা না বললে মানুষ কমাতে কমাতে চেষ্টা করতেন, আর
+                 * প্রতিবার একটা করে অনুরোধ যেত।
+                 */
+                this.freeWarning = texts.freeBeyondRatio.replace(':allowed', this.qty(allowed));
+
+                return false;
+            } catch (e) {
+                return true;
+            }
         },
 
         clearEntry() {
@@ -1448,6 +1536,41 @@ export default function directSale({
          */
         get availableCredit() {
             return (Number(this.customer.limit) || 0) - this.outstanding;
+        },
+
+        /*
+         * ⛔ পর্দার শর্তগুলো এখানে, ব্লেডে নয় — ২৫ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⚠️ কেন সারিটা কোনোদিন আসেনি ─────────────────────────────
+         * ব্লেডে লেখা ছিল `x-if="(Number(customer.limit) || 0) > 0"`।
+         * ⓘ প্রকল্পটা **`@alpinejs/csp`** ব্যবহার করে, আর সেখানে
+         * অভিব্যক্তির ভিতরে **বাইরের ফাংশন ডাকা যায় না** — `Number`
+         * ঐ সীমিত পরিসরে নেই।
+         *
+         * ⛔ ফাঁদটা নিখুঁতভাবে নীরব: ব্লেড কম্পাইল হয়, পাতা ২০০ দেয়,
+         * কোনো JS ত্রুটি নেই — Alpine চুপচাপ ঐ অংশটা আঁকা বাদ দেয়।
+         * ⚠️ মালিক বারবার বলেছেন *"bose ni"*, আর আমি প্রতিবার ভুল
+         * জায়গায় খুঁজেছি (সার্ভারের পেলোড, সেটিংস, ডিপ্লয়)।
+         *
+         * ⓘ মেপে দেখা: গোটা `views/`-এ যে `x-if`-গুলো কাজ করে
+         * (`giftDraft`, `depositExcess > 0`, `entryUnits.length === 0`,
+         * `vatMode === 'exclusive' || …`) — একটাও বাইরের ফাংশন ডাকে না।
+         *
+         * ⭐ তাই হিসাবটা এখানে, আর পর্দায় কেবল নাম — ঠিক `giftDraft`-এর
+         * মতো। ⚠️ নতুন কোনো শর্ত ব্লেডে লিখলে এই ফাঁদে আবার পড়বেন।
+         */
+        get hasCustomer() {
+            return this.customerId !== '';
+        },
+
+        get hasCreditLimit() {
+            return this.hasCustomer && (Number(this.customer.limit) || 0) > 0;
+        },
+
+        /* ⓘ ক্রেতা বাছা, কিন্তু সীমা শূন্য — *"বাকি বন্ধ"*, আর সেটা
+         * *"ক্রেতা বাছা হয়নি"* থেকে আলাদা কথা। */
+        get creditIsClosed() {
+            return this.hasCustomer && ! this.hasCreditLimit;
         },
 
         get counts() {
