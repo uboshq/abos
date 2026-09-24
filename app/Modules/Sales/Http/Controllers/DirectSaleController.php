@@ -534,6 +534,16 @@ class DirectSaleController extends Controller implements HasMiddleware
              * [[SalesInvoiceService]] সেটা ট্রানজেকশনের ভেতরে ধরে।
              */
             'invoice_no' => ['nullable', 'string', 'max:32'],
+
+            /*
+             * ⭐ "খসড়া রাখুন" বোতামের চিহ্ন — ২৫ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ `in:0,1` ইচ্ছাকৃত, `boolean` নয়। ⚠️ `boolean` `"true"`,
+             * `"yes"`, `"on"` সবই মেনে নেয়, আর তখন পর্দার লুকানো ঘরটা
+             * কী পাঠাচ্ছে তা নিয়ে দুইটা মত তৈরি হত। ⛔ একটাই মান
+             * বোঝানো হয়, আর সেবা ঠিক ঐটাই দেখে।
+             */
+            'save_as_draft' => ['nullable', 'in:0,1'],
             'discount_amount' => ['nullable', 'numeric', 'min:0'],
             'expense_amount' => ['nullable', 'numeric', 'min:0'],
             /*

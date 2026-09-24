@@ -78,11 +78,21 @@ class SalesPrintController extends Controller implements HasMiddleware
     public function invoice(Request $request, SalesInvoice $invoice): Response
     {
         /*
-         * ⛔ কাউন্টারে আটকে থাকা বিক্রয়ের বিল ছাপা হয় না — মালিকের নিয়ম
-         * (১৯ সেপ্টেম্বর): *"কোনো print option আসবে না যতক্ষণ approve হচ্ছে।"*
+         * ⛔ খসড়া বিল ছাপা হয় না — মালিকের নিয়ম।
+         *
+         * ১৯ সেপ্টেম্বর: *"কোনো print option আসবে না যতক্ষণ approve হচ্ছে।"*
+         * ২৫ সেপ্টেম্বর, আরও সোজা করে: *"খসড়া print hobe na"*।
+         *
+         * ── ⚠️ শর্তটা বদলেছে, আর কারণটা জরুরি ──────────────────────
+         * আগে এখানে [[SalesInvoice::isHeldAtCounter()]] ছিল, আর সে
+         * **দুইটা** শর্ত মেলাত: খসড়া *আর* সইয়ের অপেক্ষায় একটা জমা।
+         * ⛔ কিন্তু খসড়া হওয়ার এখন দুইটা পথ, আর "খসড়া রাখুন" বোতামে
+         * বানানো কাগজে কোনো জমাই থাকে না — তাই ওটা পাহারা পেরিয়ে
+         * যেত। ⓘ পাহারাটা ঘটনা ধরে লেখা ছিল, অবস্থা ধরে নয়।
+         *
          * ⓘ বোতামটা পাতায় লুকানো; এটা ঠিকানা টাইপ করে আসার পাহারা।
          */
-        if ($invoice->isHeldAtCounter()) {
+        if ($invoice->isNotFinalYet()) {
             throw ValidationException::withMessages([
                 'status' => __('sales::validation.held_no_print', ['no' => $invoice->document_no]),
             ]);
@@ -183,11 +193,18 @@ class SalesPrintController extends Controller implements HasMiddleware
     public function draft(Request $request, SalesInvoice $invoice): Response
     {
         /*
-         * ⛔ কাউন্টারে আটকে থাকা বিক্রয়ের বিল ছাপা হয় না — মালিকের নিয়ম
-         * (১৯ সেপ্টেম্বর): *"কোনো print option আসবে না যতক্ষণ approve হচ্ছে।"*
-         * ⓘ বোতামটা পাতায় লুকানো; এটা ঠিকানা টাইপ করে আসার পাহারা।
+         * ⛔ খসড়া বিল ছাপা হয় না — মালিকের নিয়ম, ২৫ সেপ্টেম্বর ২০২৬:
+         * *"খসড়া print hobe na"*।
+         *
+         * ── ⚠️ এই দরজাটা জলছাপ দেওয়া, তবু বন্ধ ─────────────────────
+         * ⓘ এখানকার কাগজে *"চূড়ান্ত নয়"* লেখা থাকে। ⛔ কিন্তু কাউন্টারে
+         * ছাপা কাগজটা গ্রাহকের হাতে যায়, আর কেউ জলছাপ পড়ে না — কাগজ
+         * হাতে পেলে মানুষ ধরে নেন কাজটা হয়ে গেছে।
+         *
+         * ⚠️ শর্তটা আগে [[isHeldAtCounter()]] ছিল, আর সে সইয়ের অপেক্ষায়
+         * থাকা জমা খুঁজত — "খসড়া রাখুন" বোতামের কাগজে যেটা নেই।
          */
-        if ($invoice->isHeldAtCounter()) {
+        if ($invoice->isNotFinalYet()) {
             throw ValidationException::withMessages([
                 'status' => __('sales::validation.held_no_print', ['no' => $invoice->document_no]),
             ]);

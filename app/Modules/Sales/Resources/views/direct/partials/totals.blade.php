@@ -581,11 +581,49 @@
                      পুরো প্রস্থে আর সবার নিচে: কাউন্টারে এটাই শেষ চাপ, আর
                      অঙ্কটা গায়ে লেখা বলে **কত টাকার কাগজ পাকা হচ্ছে সেটা
                      চাপ দেওয়ার আগেই চোখে পড়ে** (মালিকের সিদ্ধান্ত)। --}}
-                <x-ui.button type="submit" tone="primary" class="mt-2 w-full py-2" x-ref="confirm"
-                             ::disabled="! canConfirm">
-                    {{ __('sales::action.confirm') }}
-                    <span class="num ms-2 font-semibold" x-text="'৳' + money(netPayable)"></span>
-                </x-ui.button>
+                {{--
+                    ── ⭐ দুইটা বোতাম, একটাই ফর্ম — মালিকের নির্দেশ,
+                         ২৫ সেপ্টেম্বর ২০২৬ ─────────────────────────────
+
+                    তাঁর কথা: *"নিশ্চিত করুন botam er jaygay duti butam
+                    dilam ekta khosora, r ekta conf."*। ⓘ হোল্ড বোতামটা
+                    তিনি পরে বাদ দিয়েছেন: *"হোল্ড বোতামটা lagbe na"*।
+
+                    ── ⓘ কেন দুইটা `<form>` নয় ──────────────────────────
+                    ⚠️ পর্দার সব ঘর একটাই ফর্মে — ত্রিশটা সারি, জমা,
+                    খরচ, পরিবহন। ⛔ দুইটা ফর্ম করলে ঘরগুলো কোনটায় বসবে
+                    সেই প্রশ্ন উঠত, আর একটাতে বসালে অন্যটা খালি বিল
+                    পাঠাত।
+
+                    ⭐ তাই একটাই ফর্ম, আর পার্থক্যটা একটা লুকানো ঘরে —
+                    বোতামটা চাপার **মুহূর্তে** ভরে যায়।
+
+                    ── ⛔ কেন ঘরটা আগে থেকে `0` ─────────────────────────
+                    ⚠️ খালি রাখলে আর "খসড়া" চাপলে ঘরটা `1` হত, কিন্তু
+                    তারপর "নিশ্চিত" চাপলে সে **`1`-ই থেকে যেত** — কারণ
+                    কেউ ওটা আবার মুছত না। ⓘ ফলে বিলটা নীরবে খসড়া হয়ে
+                    বসে থাকত, আর দেখতে হুবহু সফল সংরক্ষণের মতো।
+                --}}
+                <input type="hidden" name="save_as_draft" x-ref="asDraft" value="0">
+
+                <div class="mt-2 grid grid-cols-3 gap-2">
+                    {{-- ⓘ খসড়াটা এক ঘর, নিশ্চিত দুই ঘর — চাপটা ডানে,
+                         আর রোজকার কাজটাই বড়। --}}
+                    <x-ui.button type="submit" tone="ghost" class="py-2"
+                                 @click="$refs.asDraft.value = '1'"
+                                 ::disabled="! canConfirm">
+                        {{ __('sales::action.save_draft') }}
+                    </x-ui.button>
+
+                    {{-- ⚠️ এখানে ঘরটা আবার `0` করা হয়: একবার খসড়া চেপে
+                         মত বদলালে পুরনো মানটা রয়ে যেত। --}}
+                    <x-ui.button type="submit" tone="primary" class="col-span-2 py-2" x-ref="confirm"
+                                 @click="$refs.asDraft.value = '0'"
+                                 ::disabled="! canConfirm">
+                        {{ __('sales::action.confirm') }}
+                        <span class="num ms-2 font-semibold" x-text="'৳' + money(netPayable)"></span>
+                    </x-ui.button>
+                </div>
             </div>
 
         </aside>

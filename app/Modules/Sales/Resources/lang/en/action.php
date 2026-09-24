@@ -81,6 +81,9 @@ return [
      * says what the press does, and here one press either brings a whole
      * unfinished invoice back or throws it away for good.
      */
+    /* ⓘ A verb, like its neighbour "Confirm" — reasons in bn/action.php. */
+    'save_draft' => 'Save as draft',
+
     'draft_restore' => 'Bring it back',
     'draft_discard' => 'Throw it away',
 

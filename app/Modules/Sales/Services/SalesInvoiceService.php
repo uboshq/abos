@@ -414,7 +414,21 @@ final class SalesInvoiceService
          * ⓘ ঠিক পথটা [[DirectSaleService::finishHeld()]], আর সে চালানটা **আগে**
          * নিশ্চিত করে তারপর এখানে আসে — তাই তখন এই পাহারা বাধা দেয় না।
          */
-        if ($invoice->isHeldAtCounter() && $this->challanStillDraft($invoice)) {
+        /*
+         * ⚠️ শর্তটা ২৫ সেপ্টেম্বর ২০২৬-এ সংশোধিত।
+         *
+         * আগে লেখা ছিল `isHeldAtCounter() && challanStillDraft()` — অর্থাৎ
+         * **জমা সইয়ের অপেক্ষায় আছে কি**, সেটাও দেখা হত। ⛔ কিন্তু কাউন্টারের
+         * "খসড়া রাখুন" বোতামে বানানো কাগজে কোনো জমাই নেই, তাই প্রথম শর্তটা
+         * মিথ্যা হত আর বিলটা এই দরজা দিয়েই নিশ্চিত হয়ে যেত।
+         *
+         * ⓘ ফলটা ঠিক উপরের মন্তব্যে লেখা বিপদটাই: **বিল খাতায় বসত, চালান
+         * খসড়াই থাকত** — কাগজে বিক্রি, গুদামে মাল।
+         *
+         * ⭐ চালান খসড়া থাকা মানেই মাল বেরোয়নি; জমা থাক বা না থাক, সেটা
+         * আলাদা প্রশ্ন। তাই শর্তটা এখন একটাই।
+         */
+        if ($this->challanStillDraft($invoice)) {
             throw ValidationException::withMessages([
                 'status' => __('sales::validation.held_use_finish', ['no' => $invoice->document_no]),
             ]);

@@ -304,7 +304,17 @@ class SalesInvoiceController extends Controller implements HasMiddleware
          * হলে [[DirectSaleService::finishHeld()]] পরিষ্কার বার্তা দেয়; হলে
          * চালান, মাল, বিল আর ডিপোজিট একসাথে খাতায় ওঠে।
          */
-        if ($invoice->isHeldAtCounter()) {
+        /*
+         * ⚠️ শর্তটা ২৫ সেপ্টেম্বর ২০২৬-এ চওড়া করা হলো।
+         *
+         * আগে ছিল `isHeldAtCounter()` — অর্থাৎ কেবল সইয়ের অপেক্ষায়
+         * থাকা জমাওয়ালা কাগজ। ⛔ "খসড়া রাখুন" বোতামে বানানো কাগজ
+         * ঐ শর্ত মিলত না, আর নিচের সাধারণ দরজায় চলে যেত — যেখানে
+         * বিল নিশ্চিত হত কিন্তু **চালান খসড়াই থেকে যেত**।
+         *
+         * ⓘ প্রশ্নটা এখন অবস্থা ধরে: কাগজ খসড়া, আর মাল এখনো গুদামে।
+         */
+        if ($invoice->waitsAtTheCounter()) {
             app(DirectSaleService::class)->finishHeld($invoice);
 
             return redirect()
