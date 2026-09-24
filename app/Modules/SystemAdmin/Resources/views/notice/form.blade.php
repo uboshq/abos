@@ -63,7 +63,18 @@
                 --}}
                 <x-ui.select name="notice_category_id"
                              :label="__('core.notice.category_label')"
-                             :options="\\App\\Models\\NoticeCategory::query()->orderBy('code')->get()
+                             {{-- ⛔ ব্যাকস্ল্যাশ একটা, দুইটা নয় — ২৫ সেপ্টেম্বর ২০২৬।
+
+                                  ⓘ এখানে `\\App\\Models\\…` লেখা ছিল, আর কম্পাইল করা
+                                  ব্লেডে সেটা `\\App\\Models\\…`-ই থাকত: অবৈধ PHP।
+                                  ⛔ ফল — নোটিশ লেখার ও সম্পাদনার পর্দা **৫০০**,
+                                  আর ভুলটা HEAD-এ কমিট হয়ে বসে ছিল।
+
+                                  ⚠️ ক্ষতটা এসেছিল একটা python প্যাচ থেকে: সেখানে
+                                  `\\` লিখলে ফাইলে `\` পড়ে, কিন্তু raw স্ট্রিংয়ে
+                                  দুইটাই টিকে যায় — আর আউটপুটে সেটা দেখা যায় না।
+                                  ⓘ তাই ক্লাসের নাম বসানো প্যাচ python দিয়ে নয়। --}}
+                             :options="\App\Models\NoticeCategory::query()->orderBy('code')->get()
                                  ->mapWithKeys(fn ($c) => [$c->id => $c->code.' - '.$c->name()])"
                              placeholder="-"
                              :value="old('notice_category_id', $notice->notice_category_id)" />

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modules\SystemAdmin;
 
+use App\Core\Services\NoticeAudience;
 use App\Core\Services\NoticeBoard;
 use App\Core\Services\StatusNotices;
 use App\Core\Support\CompanyContext;
@@ -210,6 +211,17 @@ final class TheOwnerHadNoWayToTellEveryoneSomethingTest extends TestCase
                 'body' => 'ঈদের ছুটি',
                 'is_active' => '1',
                 'in_ticker' => '1',
+
+                /*
+                 * ⚠️ অগ্রাধিকারটা এখানে **লাগে**, আর কারণটা মেপে শেখা।
+                 *
+                 * ⓘ [[NoticeLifecycle::draft()]] বারে যাওয়া ঠিক করে
+                 * অগ্রাধিকার দেখে (`goesToTheBar()`), ফর্মের ঘরটা দেখে নয়।
+                 * ⛔ অগ্রাধিকার না দিলে নোটিশটা `NORMAL` হয়, আর `NORMAL`
+                 * বারে যায় না — তখন নিচের দাবিটা লাল হত, যদিও নিয়মটা
+                 * ঠিকই কাজ করছে।
+                 */
+                'priority' => 'important',
                 'roles' => ['salesman'],
             ])
             ->assertRedirect();
@@ -219,6 +231,35 @@ final class TheOwnerHadNoWayToTellEveryoneSomethingTest extends TestCase
         $this->assertTrue($notice->in_ticker);
         $this->assertSame(['salesman'], $notice->audience()->pluck('role')->all());
         $this->assertSame($this->owner->id, (int) $notice->created_by);
+    }
+
+    /**
+     * ⛔ সাধারণ নোটিশ বারে ওঠে না, ঘরটা টিক দেওয়া থাকলেও।
+     *
+     * ── ⭐ মালিকের স্পেক, ধারা ৮ ──────────────────────────────────────
+     * `LOW`/`NORMAL` সাধারণ নোটিফিকেশন; বারে যায় `IMPORTANT` থেকে।
+     *
+     * ── ⚠️ কেন দাবিটা আলাদা করে লাগে ────────────────────────────────
+     * ⓘ উপরেরটা একা থাকলে *"ফর্মের ঘরটাই মেনে নাও"* লিখেও সবুজ পাওয়া
+     * যেত। ⛔ আর তখন ছুটির খবর রোজ বারে থাকত, আর ভরা বার মানে না-পড়া
+     * বার — ঠিক যে রোগটা এই নিয়মটা ঠেকাতে লেখা।
+     */
+    public function test_an_ordinary_notice_stays_off_the_bar(): void
+    {
+        $this->actingAs($this->owner)
+            ->post(route('system_admin.notice.store'), [
+                'title' => 'সাধারণ খবর',
+                'body' => 'তেমন জরুরি নয়',
+                'is_active' => '1',
+                'in_ticker' => '1',
+                'priority' => 'normal',
+            ])
+            ->assertRedirect();
+
+        $this->assertFalse(
+            Notice::query()->where('title', 'সাধারণ খবর')->firstOrFail()->in_ticker,
+            'সাধারণ নোটিশটা বারে উঠে গেছে — ঘরটা টিক দেওয়া ছিল বলে।',
+        );
     }
 
     /** ⛔ লেখার দরজা চাবির পিছনে — পড়ার দরজা নয়। */
@@ -309,6 +350,28 @@ final class TheOwnerHadNoWayToTellEveryoneSomethingTest extends TestCase
 
             $notice->audience()->create(['role' => $role]);
         }
+
+        /*
+         * ⭐ নতুন ঘরেও বসানো — আর এটা মেপে শেখা, ২৫ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⛔ কী ধরা পড়েছিল ──────────────────────────────────────────
+         * ⓘ এই সহায়কটা কেবল পুরনো `notice_roles`-এ লিখত, অথচ
+         * [[NoticeBoard::queryFor()]] এখন পড়ে [[NoticeAudience]] দিয়ে,
+         * নতুন `notice_audiences` ঘর থেকে।
+         *
+         * ⚠️ ফল ছিল নীরব আর উল্টো: নতুন ঘরে সারি না থাকা মানে *"কাউকে
+         * বাছা হয়নি"*, অর্থাৎ *"সবাই দেখবেন"*। ⛔ তাই ভূমিকা বেছে দেওয়া
+         * নোটিশ **সবার** কাছে পৌঁছাত, আর দাবিটা লাল হত এমন একটা কারণে
+         * যা কোডে নেই — পরীক্ষাটার নিজের দরজায়।
+         *
+         * ⓘ আসল পর্দা দুই ঘরেই লেখে ([[NoticeController::setAudience()]]),
+         * তাই এই সহায়কটাও তাই করে — নাহলে দাবিটা এমন একটা দৃশ্য মাপত
+         * যা বাস্তবে কখনো তৈরি হয় না।
+         */
+        app(NoticeAudience::class)->aimAt(
+            $notice,
+            array_map(fn (string $role) => 'role:'.$role, $roles),
+        );
 
         return $notice->fresh();
     }
