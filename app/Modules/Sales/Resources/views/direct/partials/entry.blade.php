@@ -381,21 +381,8 @@
                          চওড়া পর্দাতেও অকারণে স্ক্রল করত। ⓘ সর্বনিম্ন মাপই
                          যথেষ্ট — জায়গা থাকলে তারা বাড়ে, না থাকলে মোড়কটা
                          স্ক্রল করে। --}}
-                    {{-- ⛔ অষ্টম কলামটা যোগ করতেই হলো — ২৪ সেপ্টেম্বর ২০২৬।
-
-                         ⚠️ ছকে সাতটা কলাম লেখা ছিল, আর তিনটা বোতামের বাক্সটা
-                         অষ্টম সন্তান। ⓘ CSS grid তখন তাকে **পরের সারিতে, বাঁ
-                         কিনারায়** নামিয়ে দেয় — মালিক ছবিতে ঠিক সেটাই দেখিয়েছেন:
-                         বোতামগুলো নিচে বাঁয়ে, আর তীর এঁকে ডানের ফাঁকা জায়গাটা।
-
-                         ⛔ ভুলটা নীরব: ব্লেড কম্পাইল হয়, পাতা ২০০ দেয়, বোতাম
-                         তিনটা কাজও করে — কেবল **ভুল জায়গায়** বসে। ⓘ কোনো পাহারা
-                         এটা ধরে না, কারণ কোনো পাহারা পর্দার দিকে তাকায় না।
-
-                         ⓘ শেষ কলামটাও `auto` — বোতামগুলোর নিজের চওড়ার সমান,
-                         আর বাকি সাতটার মাপ অপরিবর্তিত। --}}
                     <div class="grid items-end gap-2 grid-cols-2 sm:grid-cols-3
-                                lg:grid-cols-[3.5rem_4rem_3.5rem_4rem_minmax(4.5rem,1fr)_minmax(5.5rem,1fr)_auto_auto]
+                                lg:grid-cols-[3.5rem_4rem_3.5rem_4rem_minmax(4.5rem,1fr)_minmax(5.5rem,1fr)_auto]
                                 gap-x-1.5">
                             <x-sales::entry-field label="sales::field.qty" width="w-full">
                                 <input type="number" step="0.01" min="0" x-model="entry.qty"
@@ -502,68 +489,6 @@
                                            text-white disabled:opacity-50">
                                 {{ __('sales::action.add_to_cart') }}
                             </button>
-
-                            {{-- ⭐ তিনটা বোতাম — এন্ট্রির সারির **সবার ডানে**,
-                                 মালিকের নির্দেশ, ২৪ সেপ্টেম্বর ২০২৬।
-
-                                 তাঁর কথা: *"Qty, UoM, Free Qty, UoM, Total Qty,
-                                 Sales Rate, 'কার্টে যোগ করুন' — ei gulor dane cilo
-                                 age, sekhanei dio"*।
-
-                                 ── ⚠️ একই দিনে দুইবার সরেছে, আর সেটা লিখে রাখা দরকার ──
-                                 ⓘ প্রথমে তিনি বলেছিলেন *"ager jaygay daw"*, আর আমি
-                                 ধরে নিয়েছিলাম সেটা "এই লাইন" বাক্স (৩ সেপ্টেম্বরের
-                                 জায়গা)। ⛔ অনুমানটা ভুল ছিল — তিনি পরের বার্তায়
-                                 জায়গাটা ঘরগুলোর নাম ধরে বলে দিয়েছেন।
-                                 ⚠️ পর্দার জায়গা নিয়ে অনুমান করা যায় না; যিনি রোজ
-                                 ব্যবহার করেন তিনিই বলেন কোনটা কোথায়।
-
-                                 ⓘ `flex flex-col` — তিনটা একটার নিচে একটা, আর
-                                 `self-end` যাতে খাড়া সারিটা পাশের ঘরগুলোর **নিচের
-                                 কিনারায়** বসে, লেবেলের সারিতে উঠে না যায়।
-
-                                 ⛔ ক্রমটা তাঁর লেখা, অনুমান করে বদলাবেন না। আর
-                                 "সব মুছুন" নিচের বারে আলাদাই থাকে — দুইটা মুছে
-                                 ফেলার বোতাম পাশাপাশি থাকলে ভুল চাপ পড়া নিশ্চিত। --}}
-                            <div class="flex flex-col justify-end gap-1 self-end">
-                            @if ($show['gift'])
-                                {{-- ⚠️ এখানে `:disabled`, একটা কোলন — আর নিচে
-                                     "নিশ্চিত করুন" বোতামে `::disabled`, দুইটা।
-                                     **দুইটাই ঠিক**: Blade কেবল কম্পোনেন্ট ট্যাগে
-                                     `::`-কে `:`-এ নামায়। সাধারণ ট্যাগে দুইটা দিলে
-                                     অ্যাট্রিবিউটটা হুবহু `::disabled` হয়ে ব্রাউজারে
-                                     যায়, আর **Alpine নীরবে উপেক্ষা করে** — বোতামটা
-                                     সক্রিয় দেখাত, চাপলে কিছু হত না।
-
-                                     ⭐ পর্দায় কিছুই ভাঙা দেখাত না, JS ত্রুটিও ছিল না।
-                                     ধরেছে `AlpineBindingsReachTheBrowserTest`। --}}
-                                <button type="button" @click="openGift()" :disabled="! picked"
-                                        class="w-full rounded-(--radius-field) leading-tight border border-(--color-badge-pending-ink)/30 disabled:opacity-40
-                                               bg-(--color-badge-pending-bg) px-1 py-1.5 text-2xs font-medium
-                                               text-(--color-badge-pending-ink)">
-                                    {{ __('sales::field.gift') }}
-                                </button>
-                            @endif
-
-                            {{-- ক্রয়মূল্য — ভেতরের কথা, গ্রাহককে পড়ে শোনানোর
-                                 জন্য নয়। তাই বোতামের পেছনে: চোখে পড়ে না,
-                                 কিন্তু দরকার হলে এক চাপ দূরে। --}}
-                            <button type="button" @click="showCosting = ! showCosting"
-                                    class="w-full rounded-(--radius-field) leading-tight border border-(--color-border)
-                                           px-1 py-1.5 text-2xs font-medium">
-                                {{ __('sales::field.costing') }}
-                            </button>
-
-                            <span x-show="showCosting" x-cloak
-                                  class="num text-end text-xs text-(--color-ink-muted)"
-                                  x-text="picked ? money(picked.cost) : ''"></span>
-
-                            <button type="button" @click="clearEntry()"
-                                    class="w-full rounded-(--radius-field) leading-tight bg-(--color-danger)/10 px-2 py-1.5
-                                           text-2xs font-medium text-(--color-danger) hover:bg-(--color-danger)/20">
-                                {{ __('sales::action.clear_data') }}
-                            </button>
-                            </div>
 
                         </div>
                     </div>

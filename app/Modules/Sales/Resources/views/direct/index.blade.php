@@ -627,29 +627,118 @@
                                  ⚠️ যে সারি কখনো আসে না আর যে সারি বানানোই হয়নি, দুইটা
                                  পর্দায় হুবহু এক দেখায়।
 
-                                 ⭐ তাই এখন ক্রেতা বাছা থাকলেই সারিটা আসে, আর শূন্য হলে
-                                 সে **নিজের মুখে বলে** "বাকি বন্ধ"। ⓘ ক্রেতা বাছা না
-                                 থাকলে তবু আসে না — তখন প্রশ্নটারই কোনো বিষয় নেই। --}}
-                            <template x-if="customerId">
-                                <div class="flex justify-between">
+                                 ── ⛔ দ্বিতীয়বারও ভুল করেছিলাম ────────────────────
+                                 প্রথম সারাইয়ে শর্তটা `limit > 0` থেকে `customerId`-তে
+                                 বদলেছিলাম — অর্থাৎ ক্রেতা বাছা না থাকলে সারিটা তবু
+                                 আসত না। ⚠️ মালিক খালি পর্দায় তাকিয়ে আবার বললেন
+                                 *"bosbe kintu koroni"*, আর কথাটা ঠিক ছিল: **তিনি যা
+                                 দেখতে পান না, সেটা তাঁর কাছে নেই**।
+
+                                 ⭐ এখন সারিটার কোনো শর্ত নেই — সে সবসময় "চলতি মোট"-এর
+                                 নিচে বসে, আর অবস্থা অনুযায়ী তিনটার একটা বলে:
+
+                                     ক্রেতা বাছা হয়নি   —
+                                     সীমা শূন্য          বাকি বন্ধ
+                                     সীমা আছে           ৳ কত বাকি দেওয়া যাবে
+
+                                 ⓘ একটা সবসময়-দৃশ্যমান সারি একটা সবসময়-লুকানো সারির
+                                 চেয়ে ভালো, এমনকি যখন তার বলার কিছু নেই: ⚠️ ফাঁকা
+                                 জায়গা দেখে বোঝা যায় না জিনিসটা **নেই** নাকি **বানানোই
+                                 হয়নি**, আর একটা ড্যাশ দেখে দুইটাই বোঝা যায়। --}}
+                            <div class="flex justify-between">
+                                <span class="text-(--color-ink-muted)">
+                                    {{ __('sales::field.available_credit') }}
+                                </span>
+
+                                <template x-if="customerId && (Number(customer.limit) || 0) > 0">
+                                    <span class="num font-semibold"
+                                          :class="availableCredit < 0 ? 'text-(--color-danger)' : ''"
+                                          x-text="'৳' + money(availableCredit)"></span>
+                                </template>
+
+                                <template x-if="customerId && ! ((Number(customer.limit) || 0) > 0)">
                                     <span class="text-(--color-ink-muted)">
-                                        {{ __('sales::field.available_credit') }}
+                                        {{ __('sales::field.credit_closed') }}
                                     </span>
+                                </template>
 
-                                    <template x-if="(Number(customer.limit) || 0) > 0">
-                                        <span class="num font-semibold"
-                                              :class="availableCredit < 0 ? 'text-(--color-danger)' : ''"
-                                              x-text="'৳' + money(availableCredit)"></span>
-                                    </template>
-
-                                    <template x-if="! ((Number(customer.limit) || 0) > 0)">
-                                        <span class="text-(--color-ink-muted)">
-                                            {{ __('sales::field.credit_closed') }}
-                                        </span>
-                                    </template>
-                                </div>
-                            </template>
+                                {{-- ⓘ ক্রেতা বাছা হয়নি — ড্যাশ, শূন্য নয়। ⚠️ "৳০"
+                                     লিখলে মনে হত বাকি দেওয়ার জায়গা শেষ, অথচ
+                                     প্রশ্নটাই এখনো ওঠেনি। --}}
+                                <template x-if="! customerId">
+                                    <span class="text-(--color-ink-muted)">—</span>
+                                </template>
+                            </div>
                         </div>
+                    </div>
+
+                    {{-- ⭐ তিনটা বোতাম — ডান কলামে, "এই লাইন" বাক্সের **ঠিক নিচে**।
+                         মালিকের ছবি, ২৪ সেপ্টেম্বর ২০২৬: লাল বাক্স দিয়ে ঘেরা
+                         ফাঁকা জায়গাটা, আর তীর এঁকে দেখানো।
+
+                         ── ⛔ একই দিনে তিনবার সরেছে, আর তিনবারই আমার পাঠের ভুল ──
+                         ⓘ ১ম: *"ager jaygay daw"* → আমি ধরলাম "এই লাইন" বাক্সের
+                         **ভিতরে** (৩ সেপ্টেম্বরের জায়গা)। ভুল।
+                         ⓘ ২য়: *"Qty … Sales Rate … কার্টে যোগ করুন — ei gulor dane"*
+                         → আমি ধরলাম এন্ট্রির সারির ভিতরে, অষ্টম কলাম। আবার ভুল —
+                         ওটা এন্ট্রি কার্ডের ভিতরে পড়ে, আর তিনি কার্ডের **বাইরের**
+                         ফাঁকা জায়গাটা দেখাচ্ছিলেন।
+                         ⭐ ৩য়: ছবিতে লাল বাক্স — এই জায়গাটা।
+
+                         ⚠️ দুইবার শব্দ পড়ে ধরে নিয়েছি, দুইবারই ভুল। ⛔ পর্দার
+                         জায়গা শব্দে বোঝা যায় না; ছবিটাই একমাত্র সঠিক উৎস ছিল।
+
+                         ── ⓘ কেন এখানে বসলে ঠিক জায়গায় পড়ে ──────────────────
+                         মোড়ক গ্রিডটা `lg:grid-cols-[1fr_14rem]`, আর `items-start`
+                         বলে ডান কলামটা টানটান হয় না — তাই "এই লাইন"-এর নিচে
+                         জায়গাটা ফাঁকা পড়ে থাকত। ⭐ এই বাক্সটা ঐ কলামের দ্বিতীয়
+                         সারি, তাই ঠিক ওখানেই বসে।
+
+                         ⚠️ `lg:col-start-2` ছাড়া চলে না: `lg:` -এর নিচে কলাম
+                         একটাই, আর তখন বাক্সটা নিজে থেকেই পুরো প্রস্থে নামে —
+                         ⓘ ফোনে সেটাই ঠিক।
+
+                         ⛔ ক্রমটা মালিকের লেখা, অনুমান করে বদলাবেন না। আর
+                         "সব মুছুন" নিচের বারে আলাদাই থাকে — দুইটা মুছে ফেলার
+                         বোতাম পাশাপাশি থাকলে ভুল চাপ পড়া নিশ্চিত। --}}
+                    <div class="flex flex-col gap-1 lg:col-start-2">
+                        @if ($show['gift'])
+                            {{-- ⚠️ এখানে `:disabled`, একটা কোলন — আর নিচে
+                                 "নিশ্চিত করুন" বোতামে `::disabled`, দুইটা।
+                                 **দুইটাই ঠিক**: Blade কেবল কম্পোনেন্ট ট্যাগে
+                                 `::`-কে `:`-এ নামায়। সাধারণ ট্যাগে দুইটা দিলে
+                                 অ্যাট্রিবিউটটা হুবহু `::disabled` হয়ে ব্রাউজারে
+                                 যায়, আর **Alpine নীরবে উপেক্ষা করে** — বোতামটা
+                                 সক্রিয় দেখাত, চাপলে কিছু হত না।
+
+                                 ⭐ পর্দায় কিছুই ভাঙা দেখাত না, JS ত্রুটিও ছিল না।
+                                 ধরেছে `AlpineBindingsReachTheBrowserTest`। --}}
+                            <button type="button" @click="openGift()" :disabled="! picked"
+                                    class="w-full rounded-(--radius-field) leading-tight border border-(--color-badge-pending-ink)/30 disabled:opacity-40
+                                           bg-(--color-badge-pending-bg) px-1 py-1.5 text-2xs font-medium
+                                           text-(--color-badge-pending-ink)">
+                                {{ __('sales::field.gift') }}
+                            </button>
+                        @endif
+
+                        {{-- ক্রয়মূল্য — ভেতরের কথা, গ্রাহককে পড়ে শোনানোর
+                             জন্য নয়। তাই বোতামের পেছনে: চোখে পড়ে না,
+                             কিন্তু দরকার হলে এক চাপ দূরে। --}}
+                        <button type="button" @click="showCosting = ! showCosting"
+                                class="w-full rounded-(--radius-field) leading-tight border border-(--color-border)
+                                       px-1 py-1.5 text-2xs font-medium">
+                            {{ __('sales::field.costing') }}
+                        </button>
+
+                        <span x-show="showCosting" x-cloak
+                              class="num text-end text-xs text-(--color-ink-muted)"
+                              x-text="picked ? money(picked.cost) : ''"></span>
+
+                        <button type="button" @click="clearEntry()"
+                                class="w-full rounded-(--radius-field) leading-tight bg-(--color-danger)/10 px-2 py-1.5
+                                       text-2xs font-medium text-(--color-danger) hover:bg-(--color-danger)/20">
+                            {{ __('sales::action.clear_data') }}
+                        </button>
                     </div>
                     {{--
                         ── ছবির ঘরটা তুলে দেওয়া হলো (৩ সেপ্টেম্বর ২০২৬) ──────
