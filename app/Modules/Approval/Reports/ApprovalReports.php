@@ -230,32 +230,60 @@ final class ApprovalReports
             title: 'approval::menu.report_bottleneck',
             filters: [],
             groupBy: 'step_key',
-            query: fn (array $f) => DB::table('approvals')
-                ->where('approvals.company_id', $f['company_id'])
-                ->where('approvals.status', Approval::PENDING)
-                ->groupBy('approvals.module', 'approvals.action', 'approvals.current_level')
-                ->orderByDesc(DB::raw('COUNT(*)'))
-                ->select([
-                    DB::raw("CONCAT(approvals.module, '.', approvals.action, '#', approvals.current_level) as step_key"),
-                    self::whatLabel(),
-                    DB::raw('approvals.current_level as level'),
-                    DB::raw('COUNT(*) as waiting_count'),
+            query: function (array $f) {
+                /*
+                 * ⓘ একটাই সময়, দুই জায়গায় ব্যবহার হয়।
+                 *
+                 * ⚠️ দুইটা আলাদা `now()` লিখলে গড় আর সবচেয়ে পুরনো
+                 * দুইটা ভিন্ন মুহূর্ত ধরত — পার্থক্যটা মিলিসেকেন্ডের,
+                 * কিন্তু দুইটা সং্যা একই সারিতে বসে, আর তখন "গড় বেশি,
+                 * সবচেয়ে পুরনো কম" এমন অসম্ভব জোড়া সম্ভব হত।
+                 */
+                $asOf = now()->toDateTimeString();
 
-                    /*
+                return DB::table('approvals')
+                    ->where('approvals.company_id', $f['company_id'])
+                    ->where('approvals.status', Approval::PENDING)
+                    ->groupBy('approvals.module', 'approvals.action', 'approvals.current_level')
+                    ->orderByDesc(DB::raw('COUNT(*)'))
+                    ->select([
+                        DB::raw("CONCAT(approvals.module, '.', approvals.action, '#', approvals.current_level) as step_key"),
+                        self::whatLabel(),
+                        DB::raw('approvals.current_level as level'),
+                        DB::raw('COUNT(*) as waiting_count'),
+
+                        /*
                      * ⓘ ঘণ্টায় গুনে দিনে ভাঙা — [[byUser]]-এর একই কারণে:
                      * সরাসরি দিনে গুনলে আজকের সবগুলো শূন্য দেখাত।
                      */
-                    DB::raw(
-                        'ROUND(AVG(TIMESTAMPDIFF(HOUR, approvals.requested_at, ?)) / 24, 1) as avg_days',
-                        [now()->toDateTimeString()]
-                    ),
+                        /*
+                     * ⛔ বাইন্ডিং নয়, মানটা সরাসরি বসানো।
+                     *
+                     * ── ⚠️ কেন `?` এখানে চলে না ────────────────────
+                     * ⓘ [[ReportEngine]] যোগফলের জন্য সারিগুলোকে একটা
+                     * মোড়ক-কোয়েরিতে ঢোকায়: `select SUM(t.x) from (…) t`।
+                     * ⛔ ভিতরের বাইন্ডিংগুলো ঐ মোড়কে বাহিত হয় না, আর
+                     * রিপোর্টটা `Invalid parameter number` দিত।
+                     *
+                     * ── ⓘ তবু ডাটাবেজের ঘড়ি নয় ──────────────────────
+                     * সময়টা PHP থেকে আসে, তাই অ্যাপ আর ডাটাবেজের
+                     * ঘড়ি আলাদা হলেও সংখ্যাটা বদলায় না
+                     * ([[NobodyAsksTheDatabaseWhatDayItIsTest]])।
+                     *
+                     * ⚠️ মানটা আমাদের নিজের `now()` — কখনো ব্যবহারকারীর
+                     * ইনপুট নয়। ⛔ এখানে কখনো ইনপুট বসাবেন না — বাইন্ডিং
+                     * নেই, তাই রক্ষাও নেই।
+                     */
+                        DB::raw(
+                            "ROUND(AVG(TIMESTAMPDIFF(HOUR, approvals.requested_at, '".$asOf."')) / 24, 1) as avg_days"
+                        ),
 
-                    /* ⛔ সবচেয়ে পুরনোটা কত দিন ধরে বসে আছে */
-                    DB::raw(
-                        'ROUND(MAX(TIMESTAMPDIFF(HOUR, approvals.requested_at, ?)) / 24, 1) as worst_days',
-                        [now()->toDateTimeString()]
-                    ),
-                ]),
+                        /* ⛔ সবচেয়ে পুরনোটা কত দিন ধরে বসে আছে */
+                        DB::raw(
+                            "ROUND(MAX(TIMESTAMPDIFF(HOUR, approvals.requested_at, '".$asOf."')) / 24, 1) as worst_days"
+                        ),
+                    ]);
+            },
             columns: [
                 ['key' => 'what', 'label' => 'approval::field.action'],
                 ['key' => 'level', 'label' => 'approval::field.level',
