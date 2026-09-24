@@ -445,6 +445,16 @@
                                            class="h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
                                                   bg-(--color-surface-app) px-2 text-sm text-(--color-ink-muted)">
                                 </x-sales::entry-field>
+
+                                {{-- সীমা ছাড়ালে সারিটা কার্টে যায় না, আর এই লাইনটাই
+                                     একমাত্র চিহ্ন — নিচে কিছুই বদলায় না।
+
+                                     ⚠️ বার্তায় সংখ্যাটাই থাকে — ⛔ "বেশি হয়েগেছে" বললে
+                                     মানুষ কমাতে কমাতে চেষ্টা করতেন। --}}
+                                <div x-show="freeWarning" x-cloak
+                                     class="col-span-full rounded-(--radius-field) bg-(--color-badge-danger-bg)
+                                            px-3 py-1.5 text-xs text-(--color-badge-danger-ink)"
+                                     x-text="freeWarning" role="alert"></div>
                             @endif
 
                             {{-- মোট পরিমাণ নিজে থেকেই — বিক্রয় + ফ্রি।
@@ -473,25 +483,36 @@
                                  ⓘ `self-end` — লেবেলবিহীন বোতামটা যেন পাশের
                                  ঘরগুলোর **নিচের কিনারায়** বসে, লেবেলের সারিতে
                                  উঠে না যায়। --}}
-                            {{-- ⭐ তিনটা বোতাম "কার্টে যোগ করুন"-এর ঠিক উপরে — মালিকের
-                                 নির্দেশ, ২৩ সেপ্টেম্বর ২০২৬।
+                            <button type="button" @click="addToCart()" :disabled="! picked"
+                                    class="h-(--spacing-field-dense) self-end whitespace-nowrap rounded-(--radius-field)
+                                           bg-(--color-success) px-2 text-2xs font-semibold leading-tight
+                                           text-white disabled:opacity-50">
+                                {{ __('sales::action.add_to_cart') }}
+                            </button>
 
-                                 তাঁর কথা: *"উপহার · ক্রয়মূল্য · ঘর খালি করুন —
-                                 কার্টে যোগ করুন er upore zevabe dewa eivabe bosaw,
-                                 এই লাইন er box theke soriye"*, আর ছবিতে লাল দাগ
-                                 দিয়ে জায়গাটা ঘেরা — একটার নিচে একটা, খাড়া।
+                            {{-- ⭐ তিনটা বোতাম — এন্ট্রির সারির **সবার ডানে**,
+                                 মালিকের নির্দেশ, ২৪ সেপ্টেম্বর ২০২৬।
 
-                                 ── ⓘ কেন এটা আগের সিদ্ধান্তের সাথে মেলে ────────────
-                                 ৩ সেপ্টেম্বরে এই চারটা বোতাম একসাথে ছিল, যুক্তি:
-                                 *"উপরে কত, নিচে কী করব"*। ⚠️ ৬ সেপ্টেম্বরে "কার্টে
-                                 যোগ করুন" এন্ট্রির সারিতে এল, আর বাকি তিনটা পিছনে
-                                 রয়ে গেল — জোড়াটা তখনই ভেঙেছিল। ⭐ এখন চারটাই আবার
-                                 এক জায়গায়, হাত যেখানে ঘরগুলো ভরছে ঠিক সেখানেই।
+                                 তাঁর কথা: *"Qty, UoM, Free Qty, UoM, Total Qty,
+                                 Sales Rate, 'কার্টে যোগ করুন' — ei gulor dane cilo
+                                 age, sekhanei dio"*।
 
-                                 ⓘ `self-end` নয় — খাড়া সারিটা নিজেই নিচে শেষ হয়,
-                                 আর শেষ বোতামটা ("কার্টে যোগ করুন") ঘরগুলোর কিনারায়
-                                 বসে। ⚠️ ক্রমটা মালিকের লেখা, অনুমান করে বদলাবেন না। --}}
-                            <div class="flex flex-col justify-end gap-1">
+                                 ── ⚠️ একই দিনে দুইবার সরেছে, আর সেটা লিখে রাখা দরকার ──
+                                 ⓘ প্রথমে তিনি বলেছিলেন *"ager jaygay daw"*, আর আমি
+                                 ধরে নিয়েছিলাম সেটা "এই লাইন" বাক্স (৩ সেপ্টেম্বরের
+                                 জায়গা)। ⛔ অনুমানটা ভুল ছিল — তিনি পরের বার্তায়
+                                 জায়গাটা ঘরগুলোর নাম ধরে বলে দিয়েছেন।
+                                 ⚠️ পর্দার জায়গা নিয়ে অনুমান করা যায় না; যিনি রোজ
+                                 ব্যবহার করেন তিনিই বলেন কোনটা কোথায়।
+
+                                 ⓘ `flex flex-col` — তিনটা একটার নিচে একটা, আর
+                                 `self-end` যাতে খাড়া সারিটা পাশের ঘরগুলোর **নিচের
+                                 কিনারায়** বসে, লেবেলের সারিতে উঠে না যায়।
+
+                                 ⛔ ক্রমটা তাঁর লেখা, অনুমান করে বদলাবেন না। আর
+                                 "সব মুছুন" নিচের বারে আলাদাই থাকে — দুইটা মুছে
+                                 ফেলার বোতাম পাশাপাশি থাকলে ভুল চাপ পড়া নিশ্চিত। --}}
+                            <div class="flex flex-col justify-end gap-1 self-end">
                             @if ($show['gift'])
                                 {{-- ⚠️ এখানে `:disabled`, একটা কোলন — আর নিচে
                                      "নিশ্চিত করুন" বোতামে `::disabled`, দুইটা।
@@ -530,13 +551,6 @@
                                 {{ __('sales::action.clear_data') }}
                             </button>
                             </div>
-
-                            <button type="button" @click="addToCart()" :disabled="! picked"
-                                    class="h-(--spacing-field-dense) self-end whitespace-nowrap rounded-(--radius-field)
-                                           bg-(--color-success) px-2 text-2xs font-semibold leading-tight
-                                           text-white disabled:opacity-50">
-                                {{ __('sales::action.add_to_cart') }}
-                            </button>
 
                         </div>
                     </div>

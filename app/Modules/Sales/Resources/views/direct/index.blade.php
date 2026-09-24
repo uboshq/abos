@@ -68,7 +68,12 @@
               moneyAccounts: @js($moneyAccounts),
               draftKey: 'abos.direct-sale.{{ App\Core\Support\CompanyContext::id() }}.{{ auth()->id() }}',
               hasErrors: @js($errors->any()),
-              texts: @js(['notForSales' => __('sales::message.not_for_sales')]),
+              texts: @js([
+                  'notForSales' => __('sales::message.not_for_sales'),
+                  'freeBeyondRatio' => __('sales::validation.free_over_allowance'),
+              ]),
+              freeAllowedUrl: @js(route('sales.direct.free_allowed')),
+              warehouseId: @js($warehouse?->id),
           })"
           @bulk-applied.window="absorbBulk($event.detail.rows)"
 
@@ -553,24 +558,24 @@
                                 </div>
                             @endif
 
-                            {{-- ভ্যাট — পুরো কাগজের ধরন এখানেই বদলানো যায় --}}
-                            @if ($vatEnabled)
-                                <div class="flex items-center gap-2">
-                                    <dt class="text-(--color-ink-muted)">{{ __('sales::field.vat') }}</dt>
-                                    <dd class="flex flex-1 items-center gap-1">
-                                        <select x-model="vatMode"
-                                                title="{{ __('sales::field.vat_per_product_hint') }}"
-                                                class="h-(--spacing-inline) w-20 rounded-(--radius-field) border
-                                                       border-(--color-border) bg-(--color-surface-card) px-1">
-                                            <option value="">{{ __('sales::field.vat_per_product') }}</option>
-                                            <option value="exclusive">{{ __('sales::field.vat_exclusive') }}</option>
-                                            <option value="inclusive">{{ __('sales::field.vat_inclusive') }}</option>
-                                            <option value="exempt">{{ __('sales::field.vat_exempt') }}</option>
-                                        </select>
-                                        <span class="num ms-auto w-16 text-end" x-text="money(entryVat)"></span>
-                                    </dd>
-                                </div>
-                            @endif
+                            {{-- ⛔ ভ্যাটের সারিটা এই বাক্স থেকে **উঠে গেছে** —
+                                 মালিকের নির্দেশ, ২৪ সেপ্টেম্বর ২০২৬:
+                                 *"This Line box e VAT bad daw"*।
+
+                                 ── ⓘ কিছুই হারায়নি, আর সেটা মেপে দেখা ──────────
+                                 ভ্যাটের ধরন বদলানোর দ্বিতীয় জায়গা আগে থেকেই আছে —
+                                 নিচের যোগফলের প্যানেলে ([[direct/partials/totals]]),
+                                 আর ওখানেরটাই **আসল**: সেটা `name="vat_mode"` নিয়ে
+                                 ফর্মের সাথে জমা যায়, এখানেরটা যেত না।
+
+                                 ⚠️ অর্থাৎ এটা দুইটা নিয়ন্ত্রণের একটা সরানো, একটামাত্র
+                                 নিয়ন্ত্রণ মুছে ফেলা নয় — ⛔ যাচাই করা হয়েছে
+                                 (`grep vatMode`), নাহলে কাউন্টারে ভ্যাটের ধরন আর
+                                 বদলানোই যেত না।
+
+                                 ⓘ ভ্যাটের **অঙ্কটা** অক্ষত: `entryVat` নিট মূল্যের
+                                 ভিতরে আগের মতোই বসে ([[direct-sale.js]])। এখানে কেবল
+                                 সারিটা আর দেখানো হয় না। --}}
 
                             @foreach ([
                                 'sales::field.net_value' => 'entryNet',
@@ -619,25 +624,6 @@
                                 </div>
                             </template>
                         </div>
-
-                        {{-- ⛔ তিনটা বোতাম এখান থেকে **সরানো হয়েছে** — ২৩ সেপ্টেম্বর ২০২৬।
-
-                             মালিকের নির্দেশ: *"উপহার · ক্রয়মূল্য · ঘর খালি করুন —
-                             কার্টে যোগ করুন er upore zevabe dewa eivabe bosaw,
-                             এই লাইন er box theke soriye"*।
-
-                             ⓘ ওরা এখন [[direct/partials/entry]]-তে, "কার্টে যোগ
-                             করুন" বোতামের ঠিক উপরে খাড়া সারিতে।
-
-                             ── ⚠️ আগের যুক্তিটা এখানে লেখা থাকল, মুছে নয় ────────
-                             ৩ সেপ্টেম্বর ২০২৬-এ মালিক এগুলো **এই বাক্সেই** চেয়েছিলেন,
-                             আর কারণ ছিল *"উপরে কত, নিচে কী করব"*। ⓘ ৬ সেপ্টেম্বরে
-                             "কার্টে যোগ করুন" এন্ট্রির সারিতে চলে যায়, আর তাতে ঐ
-                             জোড়াটা ভেঙে যায়: কাজের বোতামগুলো এক প্রান্তে, আর
-                             যেটা দিয়ে কাজ শেষ হয় সেটা অন্য প্রান্তে।
-
-                             ⛔ তাই এটা মত বদল নয়, **আগের সিদ্ধান্তটা সম্পূর্ণ হওয়া** —
-                             চারটা বোতাম আবার একসাথে, এবার এন্ট্রির পাশে। --}}
                     </div>
                     {{--
                         ── ছবির ঘরটা তুলে দেওয়া হলো (৩ সেপ্টেম্বর ২০২৬) ──────
