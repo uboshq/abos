@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Core;
 
 use App\Core\Module\ModuleRegistry;
+use App\Core\Services\SettingsService;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
@@ -261,6 +262,32 @@ class ModuleMenuTest extends TestCase
          * ⭐ আর এটাই সত্যিকারের অবস্থা: মানুষ মেনু দেখেন একটা কোম্পানিতে
          * দাঁড়িয়ে, শূন্যে নয়।
          */
+        /*
+         * ⭐ প্রতিটা মডিউলের সুইচ খোলা হয় — ২৫ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⛔ পাহারাটা তিন দিন লাল ছিল, আর কেউ টের পায়নি ──────
+         * ২২ সেপ্টেম্বরে (`3ad894e2`) রেস্টুরেন্ট মডিউলটা ইচ্ছাকৃতভাবে
+         * বন্ধ হয়েছে — `restaurant.enabled`, default `false`, কারণ কেউ এখনো
+         * রান্নাঘর চালায় না। ⓘ বন্ধ মডিউলের সারি মেনুতে আসে না, আর
+         * এই পাহারার পরিকল্পিত সারিগুলো সবই রেস্টুরেন্টের।
+         *
+         * ── ⚠️ কেন সুইচ খোলা, আশার তালিকা ছাঁটা নয় ────────────
+         * ⓘ তালিকা ছাঁটলে দাবিটা আজকের **সুইচের অবস্থা** মাপত —
+         * যা ব্যবসার সিদ্ধান্ত, ঘোষণার সত্যতা নয়। ⛔ আর কালকে আরেকটা
+         * মডিউল বন্ধ হলে পাহারাটা আবার লাল হত, আর কেউ আবার ছাঁটত।
+         *
+         * ⭐ সুইচ খুললে দাবিটা যা বলে ঠিক তাই মাপে।
+         */
+        CompanyContext::forCompany($company->id, function (): void {
+            $switches = app(SettingsService::class);
+
+            foreach (app(ModuleRegistry::class)->all() as $one) {
+                $switches->set($one->code.'.enabled', true);
+            }
+
+            $switches->flush();
+        });
+
         $rendered = CompanyContext::forCompany(
             $company->id,
             fn () => collect(app(MenuBuilder::class)->forUser($user->fresh()))
