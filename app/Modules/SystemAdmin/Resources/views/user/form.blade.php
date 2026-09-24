@@ -126,10 +126,39 @@
 
             <div class="mt-3 flex flex-wrap gap-x-6 gap-y-2">
                 @foreach ($roles as $role)
+                    @php
+                        /*
+                         * ⛔ সুপ্রিম কর্তৃত্বের ঘরটা তালাবদ্ধ — ২৫ সেপ্টেম্বর ২০২৬।
+                         *
+                         * ⭐ মালিকের কথা: *"role kokonoi edite kora zabena"*।
+                         * ⓘ তালাটা কেবল **ইতিমধ্যেই যিনি ধরে আছেন** তাঁর ঘরে;
+                         * নতুন করে দেওয়ার প্রশ্নটা [[UserPolicy::grantRole()]]-এই মীমাংসিত।
+                         */
+                        $held = in_array($role->name, $chosenRoles, true);
+                        $locked = $held
+                            && $role->name === \App\Core\Services\PermissionSyncer::SUPER_ADMIN_ROLE;
+                    @endphp
+
                     <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
                         <input type="checkbox" name="roles[]" value="{{ $role->name }}" class="size-4"
-                               @checked(in_array($role->name, $chosenRoles, true))>
+                               @checked($held) @disabled($locked)>
+
+                        @if ($locked)
+                            {{-- ⚠️ এই ঘরটা বাদ দিলে তালাটা নিজেই তালা ভাঙত।
+
+                                 ⓘ `disabled` চেকবক্স ব্রাউজার **পাঠায়ই না**। ⛔ তাই
+                                 শুধু নিষ্ক্রিয় করলে সংরক্ষণের সময় রোলটা তালিকায় থাকত না,
+                                 আর সার্ভার সেটাকে *"তুলে নেওয়া হয়েছে"* পড়ত — অর্থাৎ নামউচ্চারণ
+                                 করতে চাওয়া পর্দাটাই নামিয়ে দিত। --}}
+                            <input type="hidden" name="roles[]" value="{{ $role->name }}">
+                        @endif
+
                         {{ \App\Core\Support\RoleLabel::for($role->name) }}
+
+                        @if ($locked)
+                            <x-ui.icon name="lock" :size="14" class="text-(--color-ink-muted)" />
+                            <span class="sr-only">{{ __('system_admin::validation.supreme_role_is_locked') }}</span>
+                        @endif
                     </label>
                 @endforeach
             </div>

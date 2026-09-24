@@ -304,6 +304,7 @@ class UserController extends Controller implements HasMiddleware
         $this->assertRolesWithinReach($request, $user, $data);
 
         $this->assertNotLockingThemselvesOut($request, $user, $data);
+        $this->assertSupremeRoleStays($user, $data);
         $this->assertOwnershipRules($user, $data);
 
         DB::transaction(function () use ($user, $data) {
@@ -792,6 +793,48 @@ class UserController extends Controller implements HasMiddleware
                 filter_var($data['is_active'] ?? false, FILTER_VALIDATE_BOOL),
             );
         }
+    }
+
+    /**
+     * ⛔ সুপার অ্যাডমিনের রোলটা এই পর্দা দিয়ে তোলা যায় না।
+     *
+     * ── ⭐ মালিকের কথা, ২৪ সেপ্টেম্বর ২০২৬ ───────────────
+     * *"role kokonoi edite kora zabena"* — ⓘ নাম, পদবি, ইমেইল, মোবাইল
+     * সব বদলানো যাবে, কেবল রোলটা নয়।
+     *
+     * ── ⛔ যে ফাঁকটা খোলা ছিল, আর কেন আগের দুইটা পাহারা ধরত না ──
+     * ⓘ [[UserController::assertNotLockingThemselvesOut()]] কেবল **নিজেকে**
+     * বাঁচায় — সম্পাদক আর সম্পাদিত এক না হলে সে সাথে সাথেই ফিরে যায়।
+     * ⓘ [[Ownership::assertCompanyKeepsAnOwner()]] কেবল **শেষ** মালিককে বাঁচায়।
+     *
+     * ⛔ তাই দুইজন মালিক থাকলে একজন অন্যজনকে এক ক্লিকে নামিয়ে
+     * দিতে পারতেন, আর কিছুই আটকাত না।
+     *
+     * ── ⚠️ পর্দার তালা যথেষ্ট নয় ─────────────────────────
+     * ⓘ `disabled` চেকবক্স শুধু চোখকে আটকায়। ⛔ ফর্ম যে কেউ বদলে
+     * পাঠাতে পারেন, তাই আসল দেয়ালটা এখানে।
+     *
+     * ── ⓘ এটা একমুখী দরজা নয় ───────────────────────────
+     * নামানোর পথ আছে — মালিকানা হস্তান্তরের পর্দা
+     * ([[Ownership::transfer()]]), যে লেনদেনের ভিতরেই গুনে দেখে কোম্পানিটা
+     * মালিকহীন হয়নি। ⭐ অর্থাৎ নামানো একটা **হস্তান্তর**, সম্পাদনা নয়।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function assertSupremeRoleStays(User $user, array $data): void
+    {
+        /* ⓘ `store()` থেকে ডাকা হয় না — নতুন মানুষের কোনো রোলই নেই */
+        if (! $user->hasRole(PermissionSyncer::SUPER_ADMIN_ROLE)) {
+            return;
+        }
+
+        if (in_array(PermissionSyncer::SUPER_ADMIN_ROLE, $data['roles'] ?? [], true)) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'roles' => __('system_admin::validation.supreme_role_is_locked'),
+        ]);
     }
 
     private function assertNotLockingThemselvesOut(Request $request, User $user, array $data): void

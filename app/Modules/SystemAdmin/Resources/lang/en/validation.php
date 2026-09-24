@@ -27,5 +27,9 @@ return [
     // Names the name back: the rule is not about the field being
     // required, it is about this name yielding no ASCII code.
     'code_needs_latin' => 'Please type the code — no code could be made from “:name”, because codes are always written in Latin letters and go into every document number.',
+    // The way down is a handover, not an edit — so the message names it.
+    'supreme_role_is_locked' => 'The supreme authority role cannot be taken off on this screen. '
+        .'Everything else here can be changed. To hand the key to someone else, use Transfer ownership, '
+        .'which checks in the same breath that this company is not left without an owner.',
     'role_beyond_your_own' => ':roles carries permissions you do not have yourself — nobody can hand out more power than they hold. Ask the owner.',
 ];
