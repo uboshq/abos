@@ -83,6 +83,15 @@ return [
                 'route_params' => ['module' => 'system_admin'], 'permission' => 'system_admin.settings.manage'],
         ],
 
+        /*
+         * ⭐ এই দলটা ভাঁজ হয় না — সারিগুলো সোজা বারে, ২৪ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ মালিকের কথা: *"System Administration e master group bad diye
+         * direct bare menu bosaw"*। ⚠️ চারটা সারির জন্য একটা ড্রপডাউন
+         * মানে প্রতিবার একটা বাড়তি ক্লিক, আর চারটা এমনিতেই এক সারিতে ধরে।
+         *
+         * ⛔ `'loose'` সারি-প্রতি, দল-প্রতি নয় — [[MenuBuilder]]-এ কারণটা।
+         */
         'master' => [
             /*
              * কোম্পানি ও শাখা — একটাই পর্দা, দুইটা নয়।
@@ -92,15 +101,15 @@ return [
              * আরেকটা বাছাইয়ের ঘর লাগত। কোম্পানির পাতাতেই তার শাখাগুলো
              * থাকলে প্রশ্নটাই ওঠে না।
              */
-            ['label' => 'system_admin::menu.companies', 'icon' => 'building', 'route' => 'system_admin.company.index', 'permission' => 'system_admin.company.manage'],
-            ['label' => 'system_admin::menu.users', 'icon' => 'people', 'route' => 'system_admin.user.index', 'permission' => 'system_admin.user.manage'],
-            ['label' => 'system_admin::menu.roles', 'icon' => 'lock', 'route' => 'system_admin.role.index', 'permission' => 'system_admin.role.manage'],
+            ['label' => 'system_admin::menu.companies', 'icon' => 'building', 'route' => 'system_admin.company.index', 'loose' => true, 'permission' => 'system_admin.company.manage'],
+            ['label' => 'system_admin::menu.users', 'icon' => 'people', 'route' => 'system_admin.user.index', 'loose' => true, 'permission' => 'system_admin.user.manage'],
+            ['label' => 'system_admin::menu.roles', 'icon' => 'lock', 'route' => 'system_admin.role.index', 'loose' => true, 'permission' => 'system_admin.role.manage'],
             /*
              * ⓘ সারিটা ব্যবহারকারী ও ভূমিকার **পরে**, কারণ কাজটা বছরে
              * একবারও হয় না — আর যে কাজ রোজ লাগে না, সেটা তালিকার মাথায়
              * বসলে রোজকার কাজগুলো একটা ঘর নিচে নেমে যায়।
              */
-            ['label' => 'system_admin::menu.ownership', 'icon' => 'handover', 'route' => 'system_admin.ownership.show', 'permission' => 'system_admin.ownership.transfer'],
+            ['label' => 'system_admin::menu.ownership', 'icon' => 'handover', 'route' => 'system_admin.ownership.show', 'loose' => true, 'permission' => 'system_admin.ownership.transfer'],
         ],
         /*
          * নিরীক্ষার পর্দাগুলো এখানে নেই — Governance-এ আছে।
@@ -140,7 +149,16 @@ return [
         'settings' => [
             ['label' => 'core.import.title', 'route' => 'system_admin.import.index',
                 'permission' => 'system_admin.import.manage'],
-            ['label' => 'system_admin::menu.control_panel', 'icon' => 'settings', 'route' => 'system_admin.control-panel', 'permission' => 'system_admin.settings.manage'],
+            /*
+             * ⭐ সারিটা বারে, সেটিংসের ভাঁজে নয় — ২৪ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ মালিকের কথা: *"Control Panel setings er baire thakbe bare"*।
+             * ⚠️ দলটা `settings`-ই থাকল, কারণ সেটাই সত্যি — কেবল আঁকার
+             * জায়গাটা বদলাল। ⛔ দল বদলালে সেটিংসের পর্দায় সারিটা হারাত।
+             */
+            ['label' => 'system_admin::menu.control_panel', 'icon' => 'settings',
+                'route' => 'system_admin.control-panel', 'loose' => true,
+                'permission' => 'system_admin.settings.manage'],
 
             /*
              * ⭐ শাখার মডিউল — কন্ট্রোল প্যানেলের ঠিক নিচে, ২৮ নভেম্বর ২০২৬।
@@ -173,7 +191,25 @@ return [
              * দেয়ালে সাঁটা কাগজ।
              */
 
-            ['label' => 'system_admin::notice.title', 'icon' => 'bell', 'route' => 'system_admin.notice.index',
+            /*
+             * ⭐ নোটিশের পর্দাগুলো নিজের ভাঁজে, বারেই — ২৪ সেপ্টেম্বর ২০২৬।
+             *
+             * ── ⓘ মালিকের কথা ──────────────────────────────────────
+             * *"Notices holo main menu tar vitore sub menu gulo thakbe …
+             * Bare Notice er vitore notice er sob thakbe"*।
+             *
+             * ── ⛔ আগে যা ছিল ───────────────────────────────────────
+             * চারটা নোটিশের সারি সেটিংসের ভাঁজে ছড়িয়ে ছিল — কোম্পানির
+             * সেটিংস আর নম্বর সিরিজের মাঝখানে। ⚠️ ওরা একসাথে নয় বলে
+             * *"নোটিশের জিনিসগুলো কোথায়"* প্রশ্নের উত্তর ছিল
+             * *"সেটিংস খুলে খুঁজুন"*।
+             *
+             * ⓘ `cluster` একই নামের সারিগুলোকে এক ড্রপডাউনে বসায়
+             * ([[shell.modulebar]]), আর `loose` সেটাকে বারে তোলে।
+             */
+            ['label' => 'system_admin::notice.title', 'icon' => 'bell',
+                'route' => 'system_admin.notice.index',
+                'cluster' => 'notice', 'loose' => true,
                 'permission' => 'system_admin.notice.manage'],
 
             /*
@@ -183,6 +219,7 @@ return [
              * *"কে এখনো মানেননি"* — ⚠️ ওটা সবার দেখার জিনিস নয়।
              */
             ['label' => 'core.notice.analytics_title', 'icon' => 'reports', 'route' => 'system_admin.notice.analytics',
+                'cluster' => 'notice', 'loose' => true,
                 'permission' => 'system_admin.notice.analytics'],
             /*
              * নোটিশ সেন্টারের তিনটা দরজা — স্পেক, ধারা ২।
@@ -199,9 +236,11 @@ return [
              * আলাদা কাজ: বোর্ড, হিসাব, আর ছাঁচ।
              */
             ['label' => 'core.notice.categories_title', 'icon' => 'filter', 'route' => 'system_admin.notice.category.index',
+                'cluster' => 'notice', 'loose' => true,
                 'permission' => 'system_admin.notice.manage'],
 
             ['label' => 'core.notice.templates_title', 'icon' => 'book', 'route' => 'system_admin.notice.template.index',
+                'cluster' => 'notice', 'loose' => true,
                 'permission' => 'system_admin.notice.manage'],
 
             /*
@@ -218,14 +257,21 @@ return [
                 'permission' => 'system_admin.settings.manage'],
 
             /*
-             * ⭐ ছাপার নিয়ন্ত্রণ — সেটিংসের ঠিক পরে, ২২ সেপ্টেম্বর ২০২৬।
+             * ── ⛔ ছাপার সারিটা এখানে আর নেই, ২৪ সেপ্টেম্বর ২০২৬ ─────
              *
-             * ⓘ সারিটা না থাকলে পর্দাটা তৈরি হয়েও কেউ খুঁজে পেতেন না, আর
-             * ⚠️ আজ রাতেই ফিন্যান্স মানচিত্রে ঠিক সেই জিনিসটা ধরা পড়েছে:
-             * লাভ ভাগাভাগির পর্দা মাসখানেক তৈরি ছিল, কেবল কেউ জানত না।
+             * ⓘ মালিকের কথা: *"Control Panel e printing ache aber menute
+             * keno dila, ekoi jinis dui jaygay keno?"* — আর কথাটা ঠিক।
+             *
+             * ⚠️ ২২ সেপ্টেম্বর সারিটা বসানো হয়েছিল একটা সত্যি ভয় থেকে:
+             * পর্দা তৈরি হয়েও কেউ খুঁজে পান না। ⓘ কিন্তু তার পরদিনই
+             * পর্দাটা কন্ট্রোল প্যানেলের **ট্যাব** হয়েছে
+             * ([[ControlPanelTabs]]) — মালিকেরই কথায়: *"print seting
+             * alada seting hobe, ekhane alada tab hobe"*।
+             *
+             * ⛔ তখন মেনুর সারিটা আর দ্বিতীয় দরজা নয়, **দ্বিতীয় ঠিকানা**:
+             * একই পর্দা দুই জায়গায় থাকলে "কোনটা আসল" প্রশ্ন ওঠে।
+             * ⚠️ ভয়টা মিটে গেছে — কন্ট্রোল প্যানেল এখন নিজেই বারে।
              */
-            ['label' => 'system_admin::settings.print_title', 'icon' => 'printer', 'route' => 'system_admin.print_control',
-                'permission' => 'system_admin.settings.manage'],
 
             /*
              * ⭐ নম্বর সিরিজ — কন্ট্রোল প্যানেলের ঠিক পাশে।

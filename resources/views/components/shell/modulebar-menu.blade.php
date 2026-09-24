@@ -1,5 +1,14 @@
 @props([
     'label',
+
+    /*
+     * ⭐ ভাঁজটার চাবি — অনূদিত নামটা নয়, ২৪ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ মাপার একটা স্থায়ী হাতল লাগে, আর `label` সেটা হতে পারে না:
+     * ⛔ ভাষা বদলালে ওটা বদলায়, তাই বাংলায় চালানো পরীক্ষা ইংরেজি
+     * নাম খুঁজে কিছুই পেত না — আর সবুজ-লালটা ভাষার উপর দাঁড়াত।
+     */
+    'fold' => null,
     'icon' => null,
     'tint' => '',
     'items',
@@ -44,6 +53,7 @@
     </button>
 
     <div x-show="open" x-cloak x-transition.opacity
+         @if ($fold) data-modulebar-fold="{{ $fold }}" @endif
          class="absolute start-0 top-full z-30 mt-1 max-h-80 min-w-48 overflow-y-auto
                 rounded-(--radius-card) border border-(--color-border)
                 bg-(--color-surface-card) py-1 shadow-lg">

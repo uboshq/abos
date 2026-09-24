@@ -140,6 +140,7 @@ return [
 
         /* দলের ভেতরের ভাঁজ — এক নামে কয়েকটা পর্দা (১৯ সেপ্টেম্বর ২০২৬) */
         'vouchers' => 'Vouchers',
+        'notice' => 'Notices',
         'control' => 'Books control',
 
         /* Finance's own folds — the owner's words, 20 Sep 2026. The six

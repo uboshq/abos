@@ -145,21 +145,6 @@
      */
     $neverGrouped = ['transactions'];
 
-    $loose = $grouped
-        ? collect($current['groups'])
-            ->filter(fn ($items, $g) => in_array($g, $neverGrouped, true))
-            ->flatMap(fn ($items, $g) => collect($items)
-                ->filter(fn ($r) => ($r['url'] ?? null) !== null)
-                ->map(fn ($r) => $r + ['group' => $g]))
-            ->values()
-        : collect();
-
-    $groups = $grouped
-        ? collect($current['groups'])
-            ->map(fn ($items) => collect($items)->filter(fn ($r) => ($r['url'] ?? null) !== null)->values())
-            ->filter(fn ($items) => $items->isNotEmpty())
-            ->reject(fn ($items, $g) => in_array($g, $neverGrouped, true))
-        : collect();
 @endphp
 
 {{--
@@ -260,74 +245,96 @@
                 `module.php`-তে `dashboard` সবার উপরে লেখা, তাই ক্রমটা
                 আলাদা করে বসাতে হয়নি; ঠিক জায়গা থেকে আসছে।
             --}}
-            @foreach ($current['groups'] as $name => $raw)
-                @php
-                    $items = collect($raw)->filter(fn ($r) => ($r['url'] ?? null) !== null)
-                        ->map(fn ($r) => $r + ['group' => $name])->values();
-                    $activeItem = $items->firstWhere('active', true);
-                @endphp
+            @php
+                /*
+                 * ── ⭐ বারের ঘরগুলো — আগে গোনা, তারপর আঁকা, ২৪ সেপ্টেম্বর ২০২৬ ──
+                 *
+                 * ⓘ আগে দলটা হয় পুরো খুলত, নয় পুরো ভাঁজ হত। ⛔ তাতে মালিকের
+                 * চাওয়াটা বলাই যেত না: *"Control Panel setings er baire thakbe
+                 * bare"* — অর্থাৎ **একটা দলের একটা সারি** বাইরে, বাকিরা ভিতরে।
+                 *
+                 * ⭐ তাই ঘরগুলো এখানে তালিকা হিসেবে তৈরি হয়, আর নিচে একটাই লুপ
+                 * ওদের আঁকে। ⚠️ একটাই লুপ থাকা বাধ্যতামূলক: দুইটা লুপ হলে খোলা
+                 * সারিগুলো আগে আর ভাঁজগুলো পরে পড়ত, আর "ড্যাশবোর্ড সব জায়গায়
+                 * প্রথমে" (১৪ সেপ্টেম্বর) ভাঙত।
+                 */
+                $cells = collect();
 
-                @continue ($items->isEmpty())
+                foreach ($current['groups'] as $name => $raw) {
+                    $items = collect($raw)
+                        ->filter(fn ($r) => ($r['url'] ?? null) !== null)
+                        ->map(fn ($r) => $r + ['group' => $name])
+                        ->values();
 
-                @if (in_array($name, $neverGrouped, true) || $items->count() === 1)
-                    {{-- ⓘ ভাঁজ না হওয়া গ্রুপ (লেনদেন), আর এক-পর্দার গ্রুপ —
-                         দুইটাই সরাসরি ঘর। এক আইটেমের ড্রপডাউন মানে একটা
-                         ক্লিক নষ্ট: খুলে দেখা যায় ভিতরে যা ছিল বাইরেই লেখা। --}}
-                    @php
-                        /*
-                         * ⭐ দলের ভিতরের ভাঁজ — ১৯ সেপ্টেম্বর ২০২৬, মালিক: ভাউচার তালিকা,
-                         * আদায়, পরিশোধ, খরচ, জাবেদা, কন্ট্রা *"eigulo mile ekta group
-                         * korlei hoy"*। একই `cluster` নামের সারিগুলো প্রথমটার জায়গায়
-                         * এক ড্রপডাউনে বসে; বাকিরা আগের মতো সরাসরি ঘর। ⓘ ভাঁজে একটাই
-                         * সারি বাকি থাকলে (বাকিগুলো সুইচে বন্ধ) সেটা সরাসরি ঘর — এক
-                         * সারির ড্রপডাউন মানে একটা ক্লিক নষ্ট।
-                         */
-                        $cells = [];
-                        $clustered = [];
+                    if ($items->isEmpty()) {
+                        continue;
+                    }
 
-                        foreach ($items as $tab) {
-                            $cluster = $tab['cluster'] ?? null;
-                            $members = $cluster === null ? collect() : $items->where('cluster', $cluster)->values();
+                    $out = $items->filter(fn ($r) => ($r['loose'] ?? false) === true)->values();
+                    $in = $items->reject(fn ($r) => ($r['loose'] ?? false) === true)->values();
 
-                            if ($members->count() < 2) {
-                                $cells[] = ['tab' => $tab];
-                            } elseif (! isset($clustered[$cluster])) {
-                                $clustered[$cluster] = true;
-                                $cells[] = ['cluster' => $cluster, 'items' => $members];
-                            }
+                    /*
+                     * ⓘ ভাঁজ না হওয়া দল (লেনদেন), আর ভাঁজে একটাই সারি বাকি —
+                     * দুইটাই পুরোটা বাইরে। ⛔ এক সারির ড্রপডাউন মানে একটা ক্লিক
+                     * নষ্ট: খুলে দেখা যায় ভিতরে যা ছিল বাইরেই লেখা।
+                     */
+                    if (in_array($name, $neverGrouped, true) || $in->count() === 1) {
+                        $out = $items;
+                        $in = collect();
+                    }
+
+                    /*
+                     * ⭐ দলের ভিতরের ভাঁজ — ১৯ সেপ্টেম্বর ২০২৬, মালিক: ভাউচার
+                     * তালিকা, আদায়, পরিশোধ, খরচ, জাবেদা, কন্ট্রা *"eigulo mile
+                     * ekta group korlei hoy"*। একই `cluster` নামের সারিগুলো
+                     * প্রথমটার জায়গায় এক ড্রপডাউনে বসে; বাকিরা সরাসরি ঘর।
+                     */
+                    $already = [];
+
+                    foreach ($out as $tab) {
+                        $cluster = $tab['cluster'] ?? null;
+                        $members = $cluster === null ? collect() : $out->where('cluster', $cluster)->values();
+
+                        if ($members->count() < 2) {
+                            $cells[] = ['tab' => $tab, 'group' => $name];
+                        } elseif (! isset($already[$cluster])) {
+                            $already[$cluster] = true;
+                            $cells[] = ['fold' => $cluster, 'items' => $members,
+                                'icon' => $members->first()['icon'] ?? $groupIcon($name), 'group' => $name];
                         }
-                    @endphp
+                    }
 
-                    @foreach ($cells as $cell)
-                        @if (isset($cell['cluster']))
-                            <x-shell.modulebar-menu :label="__('core.menu.'.$cell['cluster'])"
-                                                    :icon="$cell['items']->first()['icon'] ?? $groupIcon($name)"
-                                                    :tint="$groupTint($name)"
-                                                    :items="$cell['items']" />
-                            @continue
-                        @endif
+                    if ($in->isNotEmpty()) {
+                        $cells[] = ['fold' => $name, 'items' => $in,
+                            'icon' => $groupIcon($name), 'group' => $name];
+                    }
+                }
+            @endphp
 
-                        @php $tab = $cell['tab']; @endphp
-                        <a href="{{ $tab['url'] }}"
-                           @class([
-                               'shrink-0 whitespace-nowrap -ms-px px-3 py-1 text-xs transition-colors first:ms-0 first:rounded-s-(--radius-field)',
-                               'modulebar-cell modulebar-cell-on' => $tab['active'] ?? false,
-                               'modulebar-cell' => ! ($tab['active'] ?? false),
-                           ])
-                           @if ($tab['active'] ?? false) aria-current="page" @endif>
-                            <span class="flex items-center gap-1.5">
-                                <x-ui.icon :name="$tab['icon'] ?? $groupIcon($tab['group'])" :size="14"
-                                           :class="$groupTint($tab['group'])" />
-                                {{ $tab['label'] }}
-                            </span>
-                        </a>
-                    @endforeach
-                @else
-                    <x-shell.modulebar-menu :label="__('core.menu.'.$name)"
-                                            :icon="$groupIcon($name)"
-                                            :tint="$groupTint($name)"
-                                            :items="$items" />
+            @foreach ($cells as $cell)
+                @if (isset($cell['fold']))
+                    <x-shell.modulebar-menu :fold="$cell['fold']"
+                                            :label="__('core.menu.'.$cell['fold'])"
+                                            :icon="$cell['icon']"
+                                            :tint="$groupTint($cell['group'])"
+                                            :items="$cell['items']" />
+                    @continue
                 @endif
+
+                @php $tab = $cell['tab']; @endphp
+                <a href="{{ $tab['url'] }}"
+                   @class([
+                       'shrink-0 whitespace-nowrap -ms-px px-3 py-1 text-xs transition-colors first:ms-0 first:rounded-s-(--radius-field)',
+                       'modulebar-cell modulebar-cell-on' => $tab['active'] ?? false,
+                       'modulebar-cell' => ! ($tab['active'] ?? false),
+                   ])
+                   @if ($tab['active'] ?? false) aria-current="page" @endif>
+                    <span class="flex items-center gap-1.5">
+                        <x-ui.icon :name="$tab['icon'] ?? $groupIcon($tab['group'])" :size="14"
+                                   :class="$groupTint($tab['group'])" />
+                        {{ $tab['label'] }}
+                    </span>
+                </a>
             @endforeach
         @endif
     </nav>
