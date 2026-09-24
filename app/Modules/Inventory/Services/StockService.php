@@ -229,6 +229,20 @@ final class StockService
         ?string $documentNo = null,
         ?string $narration = null,
         string $hold = '0',
+
+        /*
+         * কেন মালটা বেরোল — সবার শেষে, ডিফল্ট `null`।
+         *
+         * ⓘ বিক্রয়ে কারণ লাগে না — কাগজটাই কারণ। ⚠️ কিন্তু সমন্বয়ে
+         * কারণটাই মূল খবর: নষ্ট হয়েছিল না চুরি গিয়েছিল, আর সেই
+         * উত্তরটা খুঁজতে ছয় মাস পরে এই সারিগুলোই পড়া হবে।
+         *
+         * ⛔ কারণটা **প্রতিটা** সারিতে বসে, প্রথমটায় নয় — ধরা মাল বা
+         * আটকানোর অংকের মতো এটা ভাগ করার জিনিস নয়। ⓘ তিন লট জুড়ে
+         * একটা ঘাটতি হলে তিন সারির তিনটার কারণই একই, আর দুইটা সারি
+         * কারণহীন রেখে দিলে খাতায় তারা অব্যাখ্যাত হয়ে থাকত।
+         */
+        ?ReasonCode $reason = null,
     ): array {
         $out = bcmul($qty, '-1', 4);
 
@@ -244,6 +258,7 @@ final class StockService
                 date: $date,
                 documentNo: $documentNo,
                 narration: $narration,
+                reason: $reason,
             )];
         }
 
@@ -275,6 +290,7 @@ final class StockService
                 date: $date,
                 documentNo: $documentNo,
                 narration: $narration,
+                reason: $reason,
                 batch: $slice['batch'],
             );
         }
@@ -442,6 +458,24 @@ final class StockService
         ReasonCode $reason,
         Carbon|string|null $date = null,
         ?string $narration = null,
+
+        /*
+         * ⭐ দুইটা ঐচ্ছিক ঘর — ২৪ সেপ্টেম্বর ২০২৬, গুণমান পরিদর্শনের জন্য।
+         *
+         * ── ⛔ কেন এগুলো এখানে, আর পরিদর্শনের সেবায় নয় ───────────────
+         * [[QualityInspectionService]] প্রথমে সরাসরি [[move()]] ডাকত,
+         * কারণ তার লট আর কাগজের নম্বর দুইটাই লাগে। ⚠️ তাতে **উপরের
+         * দুইটা পাহারা এড়িয়ে যেত**: কারণটা সত্যিই আটকানোর কারণ কি না,
+         * আর যা বেচা যায় তার বেশি আটকানো হচ্ছে কি না।
+         *
+         * ⛔ দ্বিতীয়টা এড়ানো মানে বিক্রয়যোগ্য মজুদ ঋণাত্মক হয়ে যাওয়া,
+         * আর ঋণাত্মক "বিক্রয়যোগ্য" বলে কিছু নেই।
+         *
+         * ⭐ নিয়মটা দুই জায়গায় লেখার বদলে ঘর দুইটা এখানে যোগ করা হলো —
+         * শেষে, ডিফল্ট খালি, তাই আগের একটা ডাকও বদলাতে হয়নি।
+         */
+        ?Batch $batch = null,
+        ?string $documentNo = null,
     ): StockMovement {
         if (bccomp($qty, '0', 4) <= 0) {
             throw ValidationException::withMessages([
@@ -475,7 +509,9 @@ final class StockService
             hold: $qty,
             reason: $reason,
             date: $date,
+            documentNo: $documentNo,
             narration: $narration,
+            batch: $batch,
         );
     }
 
