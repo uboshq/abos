@@ -701,7 +701,19 @@
                          ⛔ ক্রমটা মালিকের লেখা, অনুমান করে বদলাবেন না। আর
                          "সব মুছুন" নিচের বারে আলাদাই থাকে — দুইটা মুছে ফেলার
                          বোতাম পাশাপাশি থাকলে ভুল চাপ পড়া নিশ্চিত। --}}
-                    <div class="flex flex-col gap-1 lg:col-start-2">
+                    {{-- ⭐ তিনটা পাশাপাশি, একটার নিচে একটা নয় — মালিকের নির্দেশ,
+                         ২৪ সেপ্টেম্বর ২০২৬: *"egulo pasa pasi bosbe"*।
+
+                         ⓘ ৬ সেপ্টেম্বরেও তিনি একই কথা বলেছিলেন (*"Gift, Costing,
+                         Clear Data এক লাইন রাখো"*) — অর্থাৎ এটা নতুন সিদ্ধান্ত নয়,
+                         একই পছন্দ দ্বিতীয়বার। ⚠️ আমি জায়গা বদলাতে গিয়ে ছাঁচটাও
+                         বদলে ফেলেছিলাম, অথচ তিনি কেবল জায়গার কথা বলেছিলেন।
+
+                         ⛔ `grid-cols-3`, `flex` নয়: তিনটা ঘর **সমান ভাগ** পায়,
+                         তাই "ঘর খালি করুন" লম্বা বলে সে বেশি জায়গা টেনে নেয় না।
+                         ⓘ কলামটা ১৪rem, তাই প্রতিটা বোতাম ≈৯০px — লম্বা লেখাটা
+                         দুই লাইনে ভাঁজ হয়, আর `leading-tight` তাতে উচ্চতা ধরে রাখে। --}}
+                    <div class="grid grid-cols-3 items-start gap-1 lg:col-start-2">
                         @if ($show['gift'])
                             {{-- ⚠️ এখানে `:disabled`, একটা কোলন — আর নিচে
                                  "নিশ্চিত করুন" বোতামে `::disabled`, দুইটা।
@@ -730,15 +742,17 @@
                             {{ __('sales::field.costing') }}
                         </button>
 
-                        <span x-show="showCosting" x-cloak
-                              class="num text-end text-xs text-(--color-ink-muted)"
-                              x-text="picked ? money(picked.cost) : ''"></span>
-
                         <button type="button" @click="clearEntry()"
                                 class="w-full rounded-(--radius-field) leading-tight bg-(--color-danger)/10 px-2 py-1.5
                                        text-2xs font-medium text-(--color-danger) hover:bg-(--color-danger)/20">
                             {{ __('sales::action.clear_data') }}
                         </button>
+
+                        {{-- ⓘ ক্রয়মূল্যের সংখ্যাটা তিন কলাম জুড়ে, বোতামের সারির নিচে।
+                             ⚠️ একটা কলামে বসালে ≈৯০px-এ একটা দাম কাটা পড়ত। --}}
+                        <span x-show="showCosting" x-cloak
+                              class="num col-span-full text-end text-xs text-(--color-ink-muted)"
+                              x-text="picked ? money(picked.cost) : ''"></span>
                     </div>
                     {{--
                         ── ছবির ঘরটা তুলে দেওয়া হলো (৩ সেপ্টেম্বর ২০২৬) ──────
