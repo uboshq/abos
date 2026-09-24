@@ -6,7 +6,6 @@ use App\Modules\Accounts\Http\Controllers\AccountsDashboardController;
 use App\Modules\Accounts\Http\Controllers\AccountsSettingsController;
 use App\Modules\Accounts\Http\Controllers\BalanceSheetController;
 use App\Modules\Accounts\Http\Controllers\BankReconciliationController;
-use App\Modules\Accounts\Http\Controllers\NoteController;
 use App\Modules\Accounts\Http\Controllers\BooksIntegrityController;
 use App\Modules\Accounts\Http\Controllers\CashCountController;
 use App\Modules\Accounts\Http\Controllers\CashTillController;
@@ -14,10 +13,12 @@ use App\Modules\Accounts\Http\Controllers\ChartOfAccountsController;
 use App\Modules\Accounts\Http\Controllers\ChequeController;
 use App\Modules\Accounts\Http\Controllers\FinanceControlController;
 use App\Modules\Accounts\Http\Controllers\FixedAssetController;
+use App\Modules\Accounts\Http\Controllers\GroupReportController;
 use App\Modules\Accounts\Http\Controllers\LoanController;
 use App\Modules\Accounts\Http\Controllers\MoneyCustodyController;
 use App\Modules\Accounts\Http\Controllers\MoneyTransferController;
 use App\Modules\Accounts\Http\Controllers\MoneyTransferPrintController;
+use App\Modules\Accounts\Http\Controllers\NoteController;
 use App\Modules\Accounts\Http\Controllers\PeriodLockController;
 use App\Modules\Accounts\Http\Controllers\ReportController;
 use App\Modules\Accounts\Http\Controllers\VoucherController;
@@ -235,6 +236,26 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
      */
     Route::get('/reports/balance-sheet', [BalanceSheetController::class, 'show'])
         ->name('balance_sheet');
+
+    /*
+     * গ্রুপের হিসাব — স্থিতিপত্রের মতোই catch-all-এর **আগে**।
+     *
+     * ── ⛔ কেন এটাও ইঞ্জিনের বাইরে ───────────────────────────────────
+     * ⚠️ [[ReportEngine]] ছাঁকনিতে একটাই `company_id` বসায়
+     * (`ReportEngine.php` — `$filters['company_id'] = CompanyContext::id()`),
+     * আর প্রতিটা রিপোর্ট-ক্লোজার ঐ একটা মানই `where`-এ বসায়।
+     *
+     * ⓘ মেপে দেখা: ঐ ছাঁকনিটা **৫৩ জায়গায়, ১০টা রিপোর্ট ফাইলে**
+     * ব্যবহৃত। ⛔ ইঞ্জিনটাকে একাধিক কোম্পানি নিতে শেখালে ঐ ৫৩টা
+     * জায়গার প্রতিটাতে `=` থেকে `whereIn` বদলাতে হত — আর একটাও বাদ
+     * পড়লে ঐ রিপোর্ট নীরবে **কেবল এক কোম্পানির** সংখ্যা দেখাত।
+     * ⚠️ গ্রুপের যোগফলে ভুল সংখ্যা দেখতে ঠিক সঠিকের মতোই লাগে।
+     *
+     * ⭐ তাই আলাদা পাতা, আর সে [[GroupLedgerService]] দিয়ে সোজা
+     * query builder-এ পড়ে — দেয়াল ছোঁয়া ছাড়াই।
+     */
+    Route::get('/reports/group', [GroupReportController::class, 'show'])
+        ->name('group_report');
 
     Route::get('/reports/{slug}', [ReportController::class, 'show'])->name('report.show');
 

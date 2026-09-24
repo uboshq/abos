@@ -232,6 +232,8 @@ return [
     'deposit_into' => 'Deposit into',
     'as_of' => 'As of',
     'all_branches' => 'All branches',
+    'group_from' => 'From',
+    'group_to' => 'To',
     'assets' => 'Assets',
     'liabilities_and_equity' => 'Liabilities & Equity',
     'total_assets' => 'Total assets',

@@ -26,6 +26,7 @@ return [
     'month_end' => 'Month-end checklist',
     'background_jobs' => 'Background jobs',
     'profit_loss' => 'Profit & Loss',
+    'group_report' => 'Group Accounts',
     'balance_sheet' => 'Balance Sheet',
     'cash_flow' => 'Cash Flow',
     'settings' => 'Settings',

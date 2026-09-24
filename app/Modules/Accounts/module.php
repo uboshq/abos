@@ -1,9 +1,13 @@
 <?php
 
 declare(strict_types=1);
+use App\Core\Engines\Print\PaperSize;
 use App\Modules\Accounts\Dashboard\AccountsActivity;
 use App\Modules\Accounts\Dashboard\AccountsDashboard;
 use App\Modules\Accounts\Dashboard\AccountsWidgets;
+use App\Modules\Accounts\Events\AccountFormOpened;
+use App\Modules\Accounts\Events\AccountSaved;
+use App\Modules\Accounts\Events\VoucherPosted;
 use App\Modules\Accounts\Imports\BankStatementImporter;
 use App\Modules\Accounts\Imports\ChartOfAccountsImporter;
 use App\Modules\Accounts\Imports\OpeningBalanceImporter;
@@ -16,8 +20,8 @@ use App\Modules\Accounts\Models\Loan;
 use App\Modules\Accounts\Models\LoanInstalment;
 use App\Modules\Accounts\Models\LoanMovement;
 use App\Modules\Accounts\Models\MoneyCategory;
-use App\Modules\Accounts\Models\Note;
 use App\Modules\Accounts\Models\MoneyTransfer;
+use App\Modules\Accounts\Models\Note;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Reports\CoreReports;
 use App\Modules\Accounts\Services\CashTillService;
@@ -71,7 +75,7 @@ return [
          * ([[FinanceControlController]])। ⚠️ চক্র হয় না: Backup
          * কারও উপর দাঁড়ায় না (২১ সেপ্টেম্বর ২০২৬ — সীমারেখার নিরীক্ষা)।
          */
-        'backup',],
+        'backup', ],
 
     'dashboard' => AccountsDashboard::class,
 
@@ -173,7 +177,6 @@ return [
             ['label' => 'accounts::menu.project_ledger', 'icon' => 'columns', 'route' => 'accounts.report.show',
                 'route_params' => ['slug' => 'project-ledger'], 'permission' => 'accounts.report'],
 
-
             /*
              * ⭐ কোন খাতে কত খরচ — অর্থ মডিউল থেকে এখানে।
              *
@@ -220,6 +223,12 @@ return [
              */
             ['label' => 'accounts::menu.balance_sheet', 'icon' => 'grid', 'route' => 'accounts.balance_sheet', 'permission' => 'accounts.report.final'],
             ['label' => 'accounts::menu.cash_flow', 'icon' => 'refresh', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'cash-flow'], 'permission' => 'accounts.report.final'],
+            /*
+             * ⓘ চূড়ান্ত হিসাবগুলোর পরেই, আর সেটা ইচ্ছাকৃত: গ্রুপের ছবিটা
+             * এক কোম্পানির লাভ-ক্ষতি ও স্থিতিপত্র পড়ার **পরের** প্রশ্ন,
+             * আগের নয়।
+             */
+            ['label' => 'accounts::menu.group_report', 'icon' => 'building', 'route' => 'accounts.group_report', 'permission' => 'accounts.report.group'],
         ],
         'settings' => [
             // বছর সমাপনী রোজকার কাজ নয়, তাই সেটিংসের সাথে — আর অনুমতিও
@@ -321,6 +330,21 @@ return [
         'accounts.period.reopen',
         'accounts.report',
         'accounts.report.final',
+
+        /*
+         * ⭐ গ্রুপের হিসাবের নিজের চাবি — ২৫ সেপ্টেম্বর ২০২৬।
+         *
+         * ⛔ `accounts.report.final` যথেষ্ট নয়, আর সেটা ইচ্ছাকৃত।
+         * ⚠️ বাকি প্রতিটা রিপোর্ট **একটা** কোম্পানির ভিতরে থাকে; এই
+         * পাতাটা সীমানা পেরোয়। ⓘ যিনি ADI-র চূড়ান্ত হিসাব দেখতে পারেন
+         * তিনি স্বয়ংক্রিয়ভাবে TCL ও DEM-এর যোগফলও দেখবেন — এটা ধরে
+         * নেওয়া যায় না, মালিকই ঠিক করবেন।
+         *
+         * ⓘ চাবিটা "সব কোম্পানি" খোলে না — কেবল পাতাটা খোলে, আর পাতা
+         * দেখায় তাঁর নিজের `company_user` সারিগুলোই
+         * ([[GroupLedgerService]])।
+         */
+        'accounts.report.group',
         'accounts.till.view',
 
         /*
@@ -583,16 +607,16 @@ return [
             'key' => 'accounts.print.paper.voucher',
             'label' => 'accounts::settings.paper_voucher',
             'type' => 'choice',
-            'options' => \App\Core\Engines\Print\PaperSize::all(),
-            'default' => \App\Core\Engines\Print\PaperSize::A4,
+            'options' => PaperSize::all(),
+            'default' => PaperSize::A4,
             'group' => 'print',
         ],
         [
             'key' => 'accounts.print.paper.transfer',
             'label' => 'accounts::settings.paper_transfer',
             'type' => 'choice',
-            'options' => \App\Core\Engines\Print\PaperSize::all(),
-            'default' => \App\Core\Engines\Print\PaperSize::A4,
+            'options' => PaperSize::all(),
+            'default' => PaperSize::A4,
             'group' => 'print',
         ],
         [
@@ -637,8 +661,8 @@ return [
      * (রসিদ মূলধনের খাতে গেলে মূলধনের তালিকায় তোলা)।
      */
     'events' => [
-        \App\Modules\Accounts\Events\VoucherPosted::class,
-        \App\Modules\Accounts\Events\AccountSaved::class,
-        \App\Modules\Accounts\Events\AccountFormOpened::class,
+        VoucherPosted::class,
+        AccountSaved::class,
+        AccountFormOpened::class,
     ],
 ];

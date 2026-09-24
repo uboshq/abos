@@ -47,6 +47,7 @@ return [
     'month_end' => 'মাস-শেষের চেকলিস্ট',
     'background_jobs' => 'পটভূমির কাজ',
     'profit_loss' => 'লাভ-ক্ষতি হিসাব',
+    'group_report' => 'গ্রুপের হিসাব',
     'balance_sheet' => 'স্থিতিপত্র',
     'cash_flow' => 'নগদ প্রবাহ',
     'settings' => 'সেটিংস',

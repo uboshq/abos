@@ -7,7 +7,6 @@ namespace Database\Seeders;
 use App\Core\Services\CompanyProvisioner;
 use App\Core\Services\PermissionSyncer;
 use App\Core\Services\SettingsService;
-use App\Modules\Sales\Models\PricingRule;
 use App\Core\Support\CompanyContext;
 use App\Models\ApprovalFlow;
 use App\Models\ApprovalFlowStep;
@@ -28,6 +27,7 @@ use App\Modules\MasterData\Models\Location;
 use App\Modules\MasterData\Models\ReasonCode;
 use App\Modules\MasterData\Models\Unit;
 use App\Modules\MasterData\Services\LocationService;
+use App\Modules\Sales\Models\PricingRule;
 use App\Modules\Supplier\Services\SupplierService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -168,6 +168,27 @@ class DemoSeeder extends Seeder
                     ->whereNotIn('name', [
                         'accounts.backdate.override',
                         'accounts.period.reopen',
+
+                        /*
+                         * ⛔ চতুর্থবার — ২৫ সেপ্টেম্বর ২০২৬।
+                         *
+                         * ⓘ উপরের মন্তব্য বলে ফাঁদটা তিনবার ঘটেছে। এবার
+                         * `accounts.report.group` ঘোষণা করামাত্র ঢালাও
+                         * `accounts.%` নিয়মটা সেটা হিসাবরক্ষককে **দিয়ে
+                         * দিল** — আবারও কোনো ভুলবার্তা ছাড়াই।
+                         *
+                         * ⚠️ আর এটা আগের তিনটার চেয়েও গুরুতর: ওগুলো
+                         * নিজের কোম্পানির ভেতরের সীমা ডিঙাত, এটা
+                         * **কোম্পানির সীমানা** পেরোয়। ⓘ হিসাবরক্ষক
+                         * TDEPOT-এ বসেন; এই চাবি পেলে তিনি গ্রুপের পাতাটা
+                         * খুলতে পারতেন। ⭐ ফাঁস হত না (পাতা কেবল তাঁর
+                         * নিজের পিভটের কোম্পানিগুলো দেখায়), কিন্তু পাতাটা
+                         * তাঁর জন্য নয় — গ্রুপের ছবি মালিকের।
+                         *
+                         * ⓘ ধরা পড়ল
+                         * [[TheOwnerCouldNotSeeHisCompaniesTogetherTest::test_the_group_page_needs_its_own_key]]-এ।
+                         */
+                        'accounts.report.group',
                     ])
                     ->get()
             );
