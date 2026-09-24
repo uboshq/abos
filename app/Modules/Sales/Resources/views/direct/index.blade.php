@@ -613,14 +613,40 @@
                                  ⚠️ ঋণাত্মক হলে লাল: সীমা ইতিমধ্যেই পেরিয়ে গেছে, আর
                                  ⛔ কাউন্টারে ঐ মুহূর্তটা **চালান নিশ্চিত করার আগেই**
                                  চোখে পড়া দরকার, পরে নয়। --}}
-                            <template x-if="(Number(customer.limit) || 0) > 0">
+                            {{-- ⛔ সারিটা আর লুকায় না — মালিকের নির্দেশ, ২৪ সেপ্টেম্বর ২০২৬:
+                                 *"Avelable Cr. Limit bose ni setaw dekho"*।
+
+                                 ── ⚠️ আগে কী হচ্ছিল ────────────────────────────────
+                                 শর্ত ছিল `limit > 0`, তাই সীমা না বসানো ক্রেতায় সারিটা
+                                 **একেবারেই আসত না**। ⓘ লাইভে মেপে দেখা: TCL-এর ৩ জনের
+                                 ৩ জনেরই সীমা আছে, DEM-এ ৩ জনের ২ জন, আর ADI-তে ক্রেতাই
+                                 নেই — অর্থাৎ ঐ কোম্পানিতে সারিটা কোনোদিন দেখা যেত না।
+
+                                 ⛔ যুক্তিটা ছিল *"শূন্য মানে বাকি বন্ধ, আর সেটা আলাদা
+                                 কথা"* — কথাটা ঠিক, কিন্তু **উত্তরটা লুকানো ভুল সমাধান**।
+                                 ⚠️ যে সারি কখনো আসে না আর যে সারি বানানোই হয়নি, দুইটা
+                                 পর্দায় হুবহু এক দেখায়।
+
+                                 ⭐ তাই এখন ক্রেতা বাছা থাকলেই সারিটা আসে, আর শূন্য হলে
+                                 সে **নিজের মুখে বলে** "বাকি বন্ধ"। ⓘ ক্রেতা বাছা না
+                                 থাকলে তবু আসে না — তখন প্রশ্নটারই কোনো বিষয় নেই। --}}
+                            <template x-if="customerId">
                                 <div class="flex justify-between">
                                     <span class="text-(--color-ink-muted)">
                                         {{ __('sales::field.available_credit') }}
                                     </span>
-                                    <span class="num font-semibold"
-                                          :class="availableCredit < 0 ? 'text-(--color-danger)' : ''"
-                                          x-text="'৳' + money(availableCredit)"></span>
+
+                                    <template x-if="(Number(customer.limit) || 0) > 0">
+                                        <span class="num font-semibold"
+                                              :class="availableCredit < 0 ? 'text-(--color-danger)' : ''"
+                                              x-text="'৳' + money(availableCredit)"></span>
+                                    </template>
+
+                                    <template x-if="! ((Number(customer.limit) || 0) > 0)">
+                                        <span class="text-(--color-ink-muted)">
+                                            {{ __('sales::field.credit_closed') }}
+                                        </span>
+                                    </template>
                                 </div>
                             </template>
                         </div>

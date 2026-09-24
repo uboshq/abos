@@ -182,6 +182,8 @@ return [
      * the address line and must not push the address into a second row.
      */
     'available_credit' => 'Available Cr. Limit :',
+    /* ⓘ কারণসহ bn/field.php-তে। */
+    'credit_closed' => 'No credit',
 
     /* A limit of zero stops credit, not goods — so it is said in words,
        never as "0", which reads as "nothing may be sold". */
