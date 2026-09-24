@@ -28,6 +28,7 @@ final class StockReports
         $engine->register(self::holdReport());
         $engine->register(self::expiring());
         $engine->register(self::reservedReport());
+        $engine->register(self::replenishment());
         $engine->register(self::stockByBatch());
         $engine->register(self::stockValue());
         $engine->register(self::stockByWarehouse());
@@ -878,6 +879,138 @@ final class StockReports
                 ['key' => 'reserved', 'label' => 'inventory::field.reserved', 'type' => ReportColumn::QUANTITY],
             ],
         );
+    }
+
+    /**
+     * ⭐ কী কিনতে হবে, আর কতটা — ২৪ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⛔ পুনঃক্রয়ের স্তর বলত কখন, কোনোদিন বলত না কতটা ────────────────
+     * ড্যাশবোর্ডে *"এর নিচে নেমেছে"* তালিকা আগে থেকেই আছে, আর সেটা
+     * প্রশ্নের প্রথম অর্ধেকের উত্তর দেয়। ⚠️ দ্বিতীয় অর্ধেকটা — **কতটা
+     * কিনব** — কোথাও ছিল না, তাই মানুষ আন্দাজে অর্ডার দিতেন।
+     *
+     * ⓘ আন্দাজ দুই দিকেই ভুল হয়: কম কিনলে দুই সপ্তাহ পরে আবার একই
+     * তালিকায়, বেশি কিনলে টাকা গুদামে পড়ে থাকে।
+     *
+     * ── ⚠️ প্রস্তাবিত পরিমাণটা কীভাবে বের হয় ─────────────────────────
+     * ⭐ সর্বোচ্চ মজুদ বলা থাকলে **সর্বোচ্চ − হাতে যা আছে** — কারণ
+     * লক্ষ্যটা তো ওটাই। ⓘ না বলা থাকলে একবারের অর্ডারের পরিমাণ
+     * (`reorder_qty`), আর সেটাও না থাকলে পুনঃক্রয়ের স্তর পর্যন্ত ভরা।
+     *
+     * ⛔ কোনোটাই না থাকলে সারিটা আসে, কিন্তু প্রস্তাব খালি — ⚠️ একটা
+     * বানানো সংখ্যা বসানোর চেয়ে *"বলা নেই"* বলা ভালো, কারণ বানানো
+     * সংখ্যা দিয়েই অর্ডার চলে যেত।
+     */
+    public static function replenishment(): ReportDefinition
+    {
+        $available = '(select COALESCE(SUM(m.floor_change - m.reserved_change - m.hold_change), 0)
+                       from inv_stock_movements m
+                       where m.product_id = p.id and m.company_id = p.company_id)';
+
+        /*
+         * ⚠️ `GREATEST(..., 0)` — ⛔ ছাড়া হাতে থাকা মাল সর্বোচ্চের
+         * উপরে গেলে প্রস্তাবটা **ঋণাত্মক** হত, আর কেউ ওটা পড়ে ভাবতেন
+         * বিক্রি করতে বলা হচ্ছে।
+         */
+        $suggested = 'CASE
+                WHEN p.max_level IS NOT NULL THEN GREATEST(p.max_level - '.$available.", 0)
+                WHEN p.reorder_qty IS NOT NULL THEN p.reorder_qty
+                WHEN p.reorder_level IS NOT NULL THEN GREATEST(p.reorder_level - ".$available.', 0)
+                ELSE NULL
+            END';
+
+        return new ReportDefinition(
+            key: 'inventory.replenishment',
+            title: 'inventory::menu.replenishment',
+            filters: ['branch'],
+
+            /*
+             * ⛔ `groupBy` নেই, ইচ্ছাকৃতভাবে।
+             *
+             * ⚠️ কোয়েরিটা কিছুই যোগ করে না — প্রতি পণ্যে এক সারি।
+             * ⓘ `groupBy` বসালে গুনতিটা একটা বাড়তি সাব-কোয়েরিতে মোড়া
+             * হত, আর রিপোর্টটা এমন একটা দাবি করত যা সত্যি নয়।
+             *
+             * ⓘ `rankBy`-ও নেই: ওটা *"উপরের কয়টা, আর তারা মোটের কত
+             * অংশ"* প্রশ্নের জন্য, আর ঘাটতির ক্ষেত্রে ঐ প্রশ্নটার কোনো
+             * মানে হয় না — ⚠️ পাঁচটা পণ্যের ঘাটতি মোট ঘাটতির ষাট
+             * শতাংশ, এই বাক্যটা কাউকে কিছুই বলে না।
+             */
+            query: fn (array $f) => DB::table('inv_products as p')
+                ->where('p.company_id', $f['company_id'])
+                ->whereNull('p.deleted_at')
+                ->where('p.is_active', true)
+
+                /*
+                 * ⛔ যে পণ্যে পুনঃক্রয়ের স্তর বলা নেই, সে এই তালিকায়
+                 * আসে না। ⚠️ আনলে গোটা পণ্য-তালিকাটাই চলে আসত, আর যে
+                 * দশটা সত্যিই ফুরিয়ে আসছে সেগুলো হাজারটার ভিড়ে হারাত।
+                 *
+                 * ── ⛔ শর্তটা `> 0`, `whereNotNull` নয় ───────────────
+                 * ⚠️ প্রথম চেষ্টায় `whereNotNull('p.reorder_level')`
+                 * লেখা হয়েছিল, আর সেটা **কিছুই ছাঁকত না**: ঘরটা
+                 * `NOT NULL DEFAULT 0`, অর্থাৎ কখনো খালি হয় না।
+                 *
+                 * ⓘ ফল হত উল্টোটা: স্তরবিহীন প্রতিটা পণ্যের শর্তটা
+                 * দাঁড়াত `available <= 0`, তাই **শূন্য মজুদের প্রতিটা
+                 * পণ্য** তালিকায় ঢুকে পড়ত — হাজারটা সারি, আর যে দশটা
+                 * সত্যিই কিনতে হবে সেগুলো ভিড়ে হারাত।
+                 *
+                 * ⭐ এখানে শূন্যই *"বলা নেই"*, আর সেটাই ছাঁকনি।
+                 */
+                ->where('p.reorder_level', '>', 0)
+                ->whereRaw($available.' <= p.reorder_level')
+                ->orderByRaw('(p.reorder_level - '.$available.') desc')
+                ->select([
+                    'p.id as product_id',
+                    DB::raw("'".Product::drillSourceType()."' as party_type_literal"),
+                    self::productNameFrom('p'),
+                    DB::raw($available.' as available'),
+                    'p.reorder_level',
+                    'p.max_level',
+                    'p.lead_days',
+                    DB::raw('(p.reorder_level - '.$available.') as shortfall'),
+                    DB::raw($suggested.' as suggested'),
+                ]),
+            columns: [
+                [
+                    'key' => 'product_name',
+                    'label' => 'inventory::field.product',
+                    'type' => ReportColumn::DOCUMENT,
+                    'source_type' => 'party_type_literal',
+                    'source_id' => 'product_id',
+                ],
+                ['key' => 'available', 'label' => 'inventory::field.available', 'type' => ReportColumn::QUANTITY],
+                ['key' => 'reorder_level', 'label' => 'inventory::overview.reorder_level', 'type' => ReportColumn::QUANTITY],
+                ['key' => 'shortfall', 'label' => 'inventory::field.shortfall', 'type' => ReportColumn::QUANTITY],
+                ['key' => 'max_level', 'label' => 'inventory::field.max_level', 'type' => ReportColumn::QUANTITY],
+
+                /*
+                 * ⓘ দিনের সংখ্যাটা পাশে থাকে, কারণ *"কতটা"* প্রশ্নের
+                 * উত্তরটা একা কিছু বলে না — ⚠️ সাত দিনের সরবরাহ আর
+                 * ষাট দিনের সরবরাহে একই ঘাটতির জরুরিত্ব এক নয়।
+                 */
+                ['key' => 'lead_days', 'label' => 'inventory::field.lead_days'],
+
+                ['key' => 'suggested', 'label' => 'inventory::field.suggested_order', 'type' => ReportColumn::QUANTITY],
+            ],
+        );
+    }
+
+    /**
+     * পণ্যের নাম, যে উপনামেই টেবিলটা জোড়া হোক।
+     *
+     * ⓘ [[productName()]] `p` উপনাম ধরে নেয় আর সেটাই বেশিরভাগ জায়গায়
+     * ঠিক; ⚠️ কিন্তু নতুন কোয়েরিতে উপনাম বদলালে ওটা নীরবে ভুল কলাম
+     * পড়ত, তাই এখানে উপনামটা হাতে দেওয়া।
+     */
+    private static function productNameFrom(string $alias): Expression
+    {
+        $name = app()->getLocale() === 'bn'
+            ? "COALESCE(NULLIF({$alias}.name_bn, ''), {$alias}.name_en)"
+            : "{$alias}.name_en";
+
+        return DB::raw("CONCAT({$alias}.code, ' - ', {$name}) as product_name");
     }
 
     private static function productName(): Expression

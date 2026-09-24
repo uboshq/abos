@@ -90,6 +90,8 @@ class ProductRequest extends FormRequest
              * সুইচটা বাস্তবে ছিলই না।
              */
             'track_batch' => ['nullable', 'boolean'],
+            'qc_required' => ['nullable', 'boolean'],
+            'track_serial' => ['nullable', 'boolean'],
 
             'pack_table' => ['nullable', 'boolean'],
             'packs' => ['nullable', 'array', 'max:20'],
@@ -106,6 +108,21 @@ class ProductRequest extends FormRequest
             'purchase_price' => ['nullable', 'numeric', 'min:0'],
             'sale_price' => ['nullable', 'numeric', 'min:0'],
             'reorder_level' => ['nullable', 'numeric', 'min:0'],
+
+            /*
+             * ⭐ পরিকল্পনার তিনটা ঘর — ২৪ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ তিনটাই `nullable`, আর খালি মানে *"বলা নেই"*। ⛔ শূন্য
+             * ধরলে প্রতিটা পণ্যের সর্বোচ্চ মজুদ শূন্য হত, আর গোটা
+             * গুদাম চিরকাল "অতিরিক্ত" দেখাত।
+             *
+             * ⚠️ `qc_required` এখানে নেই, কারণ ওটা চেকবক্স —
+             * `track_batch`-এর মতোই লুকানো `0` সহ যায়, আর নিচের
+             * `boolean` ছাঁকনিতে পড়ে।
+             */
+            'max_level' => ['nullable', 'numeric', 'min:0'],
+            'reorder_qty' => ['nullable', 'numeric', 'min:0'],
+            'lead_days' => ['nullable', 'integer', 'min:0', 'max:365'],
 
             'is_active' => ['nullable', 'boolean'],
 

@@ -8,6 +8,8 @@ use App\Modules\Inventory\Http\Controllers\OpeningStockController;
 use App\Modules\Inventory\Http\Controllers\StrandedStockController;
 use App\Modules\Inventory\Http\Controllers\ProductController;
 use App\Modules\Inventory\Http\Controllers\StockAnalysisController;
+use App\Modules\Inventory\Http\Controllers\QualityInspectionController;
+use App\Modules\Inventory\Http\Controllers\SerialNumberController;
 use App\Modules\Inventory\Http\Controllers\StockCountController;
 use App\Modules\Inventory\Http\Controllers\StockController;
 use App\Modules\Inventory\Http\Controllers\StockOverviewController;
@@ -208,6 +210,37 @@ Route::middleware('auth')->prefix('inventory')->group(function () {
             ->whereNumber('count')->name('show');
         Route::post('/{count}/approve', [StockCountController::class, 'approve'])
             ->whereNumber('count')->name('approve');
+    });
+
+    /*
+     * ⭐ গুণমান পরিদর্শন — ২৪ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ `decide` আলাদা রুট, কারণ ওটা আলাদা চাবি: কাগজ খোলা মানে
+     * *"এই মালটা দেখা দরকার"*, আর রায় মানে *"এই মাল নেওয়া হবে না"* —
+     * আর দ্বিতীয়টায় মাল আটকে যায় ([[QualityInspectionPolicy]])।
+     */
+    Route::prefix('quality')->name('qc.')->group(function () {
+        Route::get('/', [QualityInspectionController::class, 'index'])->name('index');
+        Route::get('/create', [QualityInspectionController::class, 'create'])->name('create');
+        Route::post('/', [QualityInspectionController::class, 'store'])->name('store');
+        Route::get('/{inspection}', [QualityInspectionController::class, 'show'])
+            ->whereNumber('inspection')->name('show');
+        Route::post('/{inspection}/decide', [QualityInspectionController::class, 'decide'])
+            ->whereNumber('inspection')->name('decide');
+    });
+
+    /*
+     * ⭐ সিরিয়াল নম্বর — ২৪ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ তিনটাই যথেষ্ট: তালিকা (নম্বর ধরে খোঁজা), ঢোকানোর ফর্ম, আর
+     * সংরক্ষণ। ⚠️ বেরোনোর পথটা এখানে নেই, ইচ্ছাকৃতভাবে — পিস বেরোয়
+     * বিক্রয়ের কাগজে, আর সেই জোড়াটা বিক্রয়ের দিক থেকে লাগাতে হবে
+     * ([[SerialNumberService::issue()]] প্রস্তুত হয়ে আছে)।
+     */
+    Route::prefix('serials')->name('serial.')->group(function () {
+        Route::get('/', [SerialNumberController::class, 'index'])->name('index');
+        Route::get('/create', [SerialNumberController::class, 'create'])->name('create');
+        Route::post('/', [SerialNumberController::class, 'store'])->name('store');
     });
 
     /*

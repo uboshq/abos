@@ -55,6 +55,17 @@ class StockReportController extends Controller implements HasMiddleware
         'stock-by-warehouse' => 'inventory.stock_by_warehouse',
         'adjustments' => 'inventory.adjustments',
 
+        /*
+         * ⭐ দুইটা নতুন — ২৪ সেপ্টেম্বর ২০২৬।
+         *
+         * ⛔ উপরের `expiring`-এর গল্পটা এখানেই আবার ফিরত: রিপোর্ট
+         * লেখা, ইঞ্জিনে নিবন্ধিত, মেনুতে সারি — আর এই একটা লাইন না
+         * থাকলে ক্লিকে ৪০৪। ⓘ মন্তব্যটা পড়া ছিল বলেই এবার আগে বসানো
+         * হলো, পরে ধরা পড়ার বদলে।
+         */
+        'reserved' => 'inventory.reserved',
+        'replenishment' => 'inventory.replenishment',
+
         /* ⓘ খাদ্য-খরচ এখানে ছিল — ১৫ সেপ্টেম্বর ২০২৬-এ রেস্তোরাঁয় গেছে
            ([[App\Modules\Restaurant\Http\Controllers\RestaurantReportController]]),
            মালিকের দাগানো অনুযায়ী। প্রশ্নটা রান্না করা খাবারের, মজুদের নয়। */

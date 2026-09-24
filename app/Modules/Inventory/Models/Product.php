@@ -58,7 +58,35 @@ class Product extends Model implements Drillable
          * ⓘ মালিকের নিয়ম: *"লট ছাড়া মাল ঢুকবেও না, বেরোবেও না"*।
          */
         'track_batch',
+
+        /*
+         * ⭐ এই পণ্যে পরিদর্শন লাগে কি না — ২৪ সেপ্টেম্বর ২০২৬।
+         *
+         * ⚠️ উপরের `track_batch`-এর হুবহু যমজ, আর একই ফাঁদ: ঘরটা
+         * মাইগ্রেশনে থাকলেও `fillable`-এ না থাকলে চালু করার কোনো
+         * পথই থাকত না, আর ভুলটা **নীরব** — ফর্ম সেভ হত, টিকটা
+         * বসত না।
+         */
+        'qc_required',
+
+        /*
+         * ⭐ পিস ধরে ধরে নম্বর — ২৪ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ উপরের দুইটার তৃতীয় যমজ। ⚠️ সব পণ্যে চাইলে চাল-ডালের
+         * প্রতিটা বস্তার নম্বর বসাতে হত, আর গুদাম থেমে যেত।
+         */
+        'track_serial',
         'purchase_price', 'sale_price', 'pricing_anchor', 'pricing_pct', 'reorder_level',
+
+        /*
+         * ⭐ পরিকল্পনার তিনটা ঘর — ২৪ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ `reorder_level` বলে **কখন** কিনতে হবে; এই তিনটা বলে
+         * **কতটা** আর **কত আগে**। ⚠️ তিনটাই ঐচ্ছিক — বাধ্যতামূলক
+         * করলে হাজার পণ্যে তিন হাজার সংখ্যা বসাতে হত, আর কেউ
+         * বসাত না।
+         */
+        'max_level', 'reorder_qty', 'lead_days',
         'status', 'is_active', 'created_by',
     ];
 
@@ -69,6 +97,18 @@ class Product extends Model implements Drillable
             'sale_price' => 'decimal:4',
             'pricing_pct' => 'decimal:4',
             'reorder_level' => 'decimal:4',
+
+            /*
+             * ⭐ পরিকল্পনার দুইটা ঘরও `decimal:4` — ২৪ সেপ্টেম্বর ২০২৬।
+             *
+             * ⚠️ cast ছাড়া DECIMAL কলাম **string** হয়ে ফেরে, আর কেউ
+             * `+` লিখলেই PHP ওটাকে float বানিয়ে ফেলে। ⓘ টাকার হিসাবে
+             * float মানে পয়সা হারানো, আর ভুলটা মাসের পর মাস চুপ থাকে।
+             *
+             * ⓘ ধরেছে [[EveryDecimalColumnIsCastAsADecimalOnItsModelTest]]।
+             */
+            'max_level' => 'decimal:4',
+            'reorder_qty' => 'decimal:4',
             'is_active' => 'boolean',
         ];
     }

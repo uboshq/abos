@@ -187,6 +187,76 @@
                     </span>
                 </span>
             </label>
+
+            {{-- ⭐ এই পণ্যে পরিদর্শন লাগে কি না — ২৪ সেপ্টেম্বর ২০২৬।
+
+                 ⓘ মালিকের সিদ্ধান্ত: গুণমান পরীক্ষা **পণ্য ধরে ধরে** চালু,
+                 সব পণ্যে নয়। ⚠️ ডিফল্ট বন্ধ, আর সেটাই একমাত্র নিরাপদ
+                 ডিফল্ট: চালু ধরলে আজ থেকে প্রতিটা চাল-ডালের বস্তা
+                 পরিদর্শনের অপেক্ষায় আটকে থাকত।
+
+                 ⛔ উপরের লটের ঘরটার ঠিক পাশে, ইচ্ছাকৃতভাবে — দুইটাই একই
+                 জাতের সিদ্ধান্ত, আর দুইটাই টেবিলে থেকেও পর্দায় না থাকলে
+                 নীরবে অচল হয়ে পড়ে (লটের ঘরটার সাথে আগস্ট থেকে সেপ্টেম্বর
+                 পর্যন্ত ঠিক সেটাই হয়েছিল)। --}}
+            <label class="mt-3 flex min-h-(--spacing-touch) items-start gap-2 text-sm">
+                <input type="hidden" name="qc_required" value="0">
+                <input type="checkbox" name="qc_required" value="1" class="mt-0.5 size-4"
+                       @checked(old('qc_required', $product->qc_required ?? false))>
+                <span>
+                    {{ __('inventory::field.qc_required') }}
+                    <span class="mt-0.5 block text-2xs text-(--color-ink-muted)">
+                        {{ __('inventory::message.qc_required_hint') }}
+                    </span>
+                </span>
+            </label>
+
+            {{-- ⭐ প্রতিটা পিসের নিজের নম্বর — ২৪ সেপ্টেম্বর ২০২৬।
+
+                 ⓘ উপরের দুইটার তৃতীয় যমজ, আর তিনটাই একই জাতের প্রশ্ন:
+                 এই পণ্যে বাড়তি হিসাব রাখা হবে কি না।
+
+                 ⚠️ ডিফল্ট বন্ধ। ⛔ সব পণ্যে চাইলে চাল-ডালের প্রতিটা
+                 বস্তার নম্বর বসাতে হত, আর গুদাম থেমে যেত। --}}
+            <label class="mt-3 flex min-h-(--spacing-touch) items-start gap-2 text-sm">
+                <input type="hidden" name="track_serial" value="0">
+                <input type="checkbox" name="track_serial" value="1" class="mt-0.5 size-4"
+                       @checked(old('track_serial', $product->track_serial ?? false))>
+                <span>
+                    {{ __('inventory::field.track_serial') }}
+                    <span class="mt-0.5 block text-2xs text-(--color-ink-muted)">
+                        {{ __('inventory::message.track_serial_hint') }}
+                    </span>
+                </span>
+            </label>
+        </section>
+
+        {{-- ── পরিকল্পনা ────────────────────────────────────────────────
+             ⭐ ২৪ সেপ্টেম্বর ২০২৬। ⓘ `reorder_level` বলে **কখন** কিনতে
+             হবে; এই তিনটা বলে **কতটা** আর **কত আগে**।
+
+             ⚠️ তিনটাই ঐচ্ছিক, আর খালি মানে "বলা নেই" — ⛔ শূন্য নয়।
+             শূন্য ধরলে প্রতিটা পণ্যের সর্বোচ্চ মজুদ শূন্য হত, আর গোটা
+             গুদাম চিরকাল "অতিরিক্ত" দেখাত। --}}
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+            <h2 class="mb-1 font-semibold">{{ __('inventory::section.planning') }}</h2>
+            <p class="mb-3 text-xs text-(--color-ink-muted)">
+                {{ __('inventory::message.planning_hint') }}
+            </p>
+
+            <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                <x-ui.field name="max_level" type="number" step="0.01"
+                            :label="__('inventory::field.max_level')"
+                            :value="old('max_level', $product->max_level)" />
+
+                <x-ui.field name="reorder_qty" type="number" step="0.01"
+                            :label="__('inventory::field.reorder_qty')"
+                            :value="old('reorder_qty', $product->reorder_qty)" />
+
+                <x-ui.field name="lead_days" type="number" step="1" min="0"
+                            :label="__('inventory::field.lead_days')"
+                            :value="old('lead_days', $product->lead_days)" />
+            </div>
         </section>
 
         {{-- পণ্যের ছবি — সংরক্ষণ ও যাচাই ব্যাকএন্ডে (A3)। এখানে কেবল ঘর;
