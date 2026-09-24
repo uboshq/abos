@@ -5,10 +5,23 @@ declare(strict_types=1);
 namespace App\Modules\SystemAdmin\Dashboard;
 
 use App\Core\Contracts\DashboardWidgets;
+use App\Core\Dashboard\Widget;
 use App\Core\Services\NoticeAcknowledgement;
+/*
+ * ⛔ `Core\Dashboard\Widget`, `Core\Support\Widget` নয় — ২৪ সেপ্টেম্বর ২০২৬।
+ *
+ * ── ⚠️ কেন এটা লোকালে ধরা পড়েনি, আর লাইভে গোটা হোম পর্দা মেরে দিল ──
+ * ⓘ ভুল namespace-এ ক্লাসটা নেই, তাই অটোলোডার `Class not found` ছোঁড়ে —
+ * আর ছোঁড়ে **কেবল সারিটা সত্যিই আঁকার সময়**।
+ *
+ * ⛔ লোকালে `composer dump-autoload`-এর পুরনো ম্যাপে নামটা মিলে যাচ্ছিল;
+ * লাইভে তাজা ম্যাপে মেলেনি। ⚠️ ফলে প্রতিটা সোর্স-পড়া পাহারা সবুজ ছিল,
+ * `php -l` সবুজ ছিল, আর **সবার হোম পর্দা ৫০০** দিচ্ছিল।
+ *
+ * ⓘ ধরা পড়েছে একমাত্র লাইভের স্বাস্থ্য-হাঁটায় — ৩৮২টা পাতার দুইটা।
+ * ⭐ আর সেটাই ঐ ধাপটা কখনো বাদ না দেওয়ার কারণ।
+ */
 use App\Core\Services\NoticeBoard;
-use App\Core\Support\NoticeStatus;
-use App\Core\Support\Widget;
 use App\Models\Notice;
 use App\Models\User;
 

@@ -8,15 +8,15 @@ use App\Modules\SystemAdmin\Http\Controllers\ControlPanelController;
 use App\Modules\SystemAdmin\Http\Controllers\CustomFieldController;
 use App\Modules\SystemAdmin\Http\Controllers\ImportController;
 use App\Modules\SystemAdmin\Http\Controllers\LookController;
-use App\Modules\SystemAdmin\Http\Controllers\NoticeController;
 use App\Modules\SystemAdmin\Http\Controllers\NoticeCategoryController;
+use App\Modules\SystemAdmin\Http\Controllers\NoticeController;
 use App\Modules\SystemAdmin\Http\Controllers\NoticeReportController;
 use App\Modules\SystemAdmin\Http\Controllers\NoticeTemplateController;
 use App\Modules\SystemAdmin\Http\Controllers\OwnershipController;
+use App\Modules\SystemAdmin\Http\Controllers\PrintControlController;
 use App\Modules\SystemAdmin\Http\Controllers\ReportDownloadController;
 use App\Modules\SystemAdmin\Http\Controllers\ReportScheduleController;
 use App\Modules\SystemAdmin\Http\Controllers\RoleController;
-use App\Modules\SystemAdmin\Http\Controllers\PrintControlController;
 use App\Modules\SystemAdmin\Http\Controllers\SettingsController;
 use App\Modules\SystemAdmin\Http\Controllers\SetupController;
 use App\Modules\SystemAdmin\Http\Controllers\UserController;
@@ -116,8 +116,22 @@ Route::middleware('auth')->prefix('system')->group(function () {
      * ⛔ পথটা `{notice}`-এর **আগে**, নাহলে `analytics` কথাটাকে একটা
      * নোটিশের নম্বর ভাবা হত।
      */
-    /* নোটিশের দুইটা রিপোর্ট — স্পেক, ধারা ২৯ */
-    Route::get('/reports/{slug}', [NoticeReportController::class, 'show'])->name('report.show');
+    /*
+     * ⛔ নোটিশের রিপোর্ট — আর এই সারিটা লাইভে একটা পর্দা গিলে ফেলেছিল।
+     *
+     * ── ⚠️ কী হয়েছিল, ২৪ সেপ্টেম্বর ২০২৬ ────────────────────────────
+     * এটা ছিল `/reports/schedules`-এর **উপরে**, আর `{slug}` যেকোনো শব্দ
+     * ধরে। ⓘ ফলে রিপোর্টের সময়সূচির পর্দাটা এই কন্ট্রোলারে যেত, সে
+     * `schedules` নামে কোনো রিপোর্ট না পেয়ে ৪০৪ দিত।
+     *
+     * ⛔ আর ভুলটা কোথাও লাল হত না: কন্ট্রোলারটা **ঠিক কাজই** করছিল
+     * (অচেনা slug-এ ৪০৪ দেওয়াই তার দাবি), রুটটাও ঠিক ছিল, কেবল **ক্রমটা**
+     * ভুল ছিল। ⓘ ধরা পড়েছে একমাত্র লাইভের স্বাস্থ্য-হাঁটায়।
+     *
+     * ⭐ তাই প্যারামিটারওয়ালা পথ সবসময় **সব লেখা পথের পরে** — ঠিক যে
+     * নিয়মটা নিচে `{notice}`-এর বেলায় আগে থেকেই লেখা আছে।
+     */
+    /* ⓘ সারিটা এখন সময়সূচির রুটগুলোর **নিচে** — কারণসহ ওখানেই লেখা। */
 
     Route::get('/notices/analytics', [NoticeController::class, 'analytics'])
         ->middleware('can:system_admin.notice.analytics')->name('notice.analytics');
@@ -216,7 +230,6 @@ Route::middleware('auth')->prefix('system')->group(function () {
     Route::get('/settings', [SettingsController::class, 'edit'])->name('settings');
     Route::put('/settings', [SettingsController::class, 'update'])->name('settings.update');
 
-
     /*
      * ⭐ ছাপার নিয়ন্ত্রণ — মালিকের নির্দেশ, ২২ সেপ্টেম্বর ২০২৬।
      *
@@ -266,6 +279,26 @@ Route::middleware('auth')->prefix('system')->group(function () {
         Route::get('/runs/{run}/download', [ReportDownloadController::class, 'download'])
             ->whereNumber('run')->name('download');
     });
+
+    /*
+     * ⛔ নোটিশের রিপোর্ট — আর এই সারিটা লাইভে একটা পর্দা গিলে ফেলেছিল।
+     *
+     * ── ⚠️ কী হয়েছিল, ২৪ সেপ্টেম্বর ২০২৬ ────────────────────────────
+     * সারিটা ছিল উপরে, সময়সূচির রুটগুলোর **আগে**, আর `{slug}` যেকোনো
+     * শব্দ ধরে। ⓘ ফলে `/system/reports/schedules` এই কন্ট্রোলারে যেত,
+     * সে `schedules` নামে কোনো রিপোর্ট না পেয়ে ৪০৪ দিত — আর রিপোর্টের
+     * সময়সূচির পর্দাটা **লাইভে পুরোপুরি অদৃশ্য** ছিল।
+     *
+     * ⛔ ভুলটা কোথাও লাল হয়নি, কারণ প্রতিটা টুকরো আলাদাভাবে ঠিক ছিল:
+     * কন্ট্রোলারটা অচেনা slug-এ ৪০৪ দেয় — ওটাই তার ঘোষিত দাবি; রুট
+     * দুইটাও ঠিক। ⚠️ ভুল ছিল কেবল **ক্রম**, আর ক্রম কোনো ফাইলের ভিতরে
+     * দেখা যায় না।
+     *
+     * ⓘ ধরা পড়েছে একমাত্র লাইভের স্বাস্থ্য-হাঁটায় — ৩৮২টা পাতার একটা।
+     * ⭐ নিয়মটা এই ফাইলেই আগে থেকে লেখা আছে (`{notice}`-এর বেলায়):
+     * প্যারামিটারওয়ালা পথ সবসময় সব লেখা পথের পরে।
+     */
+    Route::get('/reports/{slug}', [NoticeReportController::class, 'show'])->name('report.show');
 
     /*
      * কোম্পানি ও শাখা।
