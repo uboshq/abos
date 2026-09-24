@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
+use App\Core\Concerns\IsAudited;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -26,6 +27,21 @@ class ApprovalCondition extends Model
     use BelongsToCompany;
     use HasFactory;
     use HasPublicId;
+
+    /*
+     * ⭐ অডিট — ২৫ সেপ্টেম্বর ২০২৬, পাহারাটাই ধরিয়ে দিয়েছে।
+     *
+     * ── ⛔ কেন এটা বাদ পড়া চলে না ──────────────────────────────────
+     * এই সারিগুলোই ঠিক করে **কোন কাগজে অনুমোদন লাগবে**। ⚠️ একটা শর্ত
+     * নীরবে বদলে দিলে (`>= 500000` কে `>= 5000000`) অনুমোদনের দরজাটা
+     * খোলা থেকে যায়, অথচ পর্দায় প্রবাহটা দিব্যি চালু দেখায়।
+     *
+     * ⓘ পাশের প্রতিটা ভাই-মডেল আগে থেকেই অডিট করা — [[Approval]],
+     * [[ApprovalFlow]], [[ApprovalLimit]], [[ApprovalDelegation]],
+     * [[ApprovalDecision]]। ⛔ কেবল এটাই বাদ ছিল, আর সেটা সিদ্ধান্ত
+     * নয়, ভুলে যাওয়া — তাই ছাড়ের তালিকায় না লিখে অডিটটাই বসানো হলো।
+     */
+    use IsAudited;
 
     /** যে অপারেটরগুলো চেনা — এর বাইরে কিছু বসানো যায় না। */
     public const OPERATORS = ['>', '>=', '<', '<=', '=', '!=', 'in'];
