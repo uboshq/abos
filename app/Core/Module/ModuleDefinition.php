@@ -516,7 +516,56 @@ final class ModuleDefinition
                     }
                 }
 
-                if (! in_array($item['permission'], $raw['permissions'] ?? [], true)) {
+                /*
+                 * ⭐ অতিথি সারি — ২৪ সেপ্টেম্বর ২০২৬।
+                 *
+                 * ── ⓘ কেন একটা মডিউল অন্যের পর্দার সারি রাখে ────────────
+                 * মালিকের সীমানার টেবিল বলে *"মাল গ্রহণ"* Inventory-র কাজ,
+                 * অথচ কাগজ-সেবা-রুট সবই Purchase-এ। ⛔ এক দিনে ভিতরটা
+                 * সরালে কয়েক দিন গ্রহণের পর্দা ভাঙা থাকত, আর মাল আসা
+                 * বন্ধ হয়ে যেত। ⭐ তাই আগে **দরজাটা** সরে, ভিতরটা পরে।
+                 *
+                 * ── ⚠️ তবু পাহারাটা ঢিলে হয় না ─────────────────────────
+                 * ⛔ "অন্য মডিউলের কী হলে ছেড়ে দাও" লিখলে একটা টাইপোও
+                 * ছাড় পেত (`purchse.receipt.view`), আর সারিটা চিরকাল
+                 * অদৃশ্য থাকত — ঠিক যে শাস্তিটা এই পাহারা ঠেকাতে লেখা।
+                 *
+                 * ⭐ তাই সারিটাকে **নিজে বলতে হয়** সে কার ঘর ধার করছে
+                 * (`'from' => 'purchase'`), আর তিনটাই — রুট, চাবি, সুইচ —
+                 * ঐ নামে শুরু হতে হবে। ⓘ তিনটার একটাও না মিললে ভুলটা
+                 * এখানেই ধরা পড়ে, আর বার্তাটা কোনটা মেলেনি তা বলে।
+                 *
+                 * ⓘ ঘোষণাটা ইচ্ছাকৃত ঝামেলা: অতিথি সারি বিরল হওয়া উচিত,
+                 * আর প্রতিটা এমন সারির পেছনে একটা সিদ্ধান্ত থাকা উচিত।
+                 * ⚠️ [[MenuSwitches::itemIsOn()]] ঐ মডিউলের সুইচও দেখে,
+                 * নাহলে ক্রয় বন্ধ করলে সারিটা দেখা যেত আর ক্লিকে ৪০৪।
+                 */
+                $host = $item['from'] ?? null;
+
+                if ($host !== null) {
+                    if ($host === $code) {
+                        throw new InvalidArgumentException(
+                            "{$path}: menu item '{$item['route']}' says from: '{$host}', but that is this module "
+                            .'itself. A guest row belongs to another module, and saying so here only hides that '
+                            .'nothing is being borrowed.'
+                        );
+                    }
+
+                    foreach (['route', 'permission', 'setting'] as $field) {
+                        if (! isset($item[$field])) {
+                            continue;
+                        }
+
+                        if (! str_starts_with((string) $item[$field], $host.'.')) {
+                            throw new InvalidArgumentException(
+                                "{$path}: menu item '{$item['route']}' is borrowed from '{$host}', so its "
+                                ."{$field} must start with '{$host}.' — got '{$item[$field]}'. A guest row that "
+                                .'half belongs to two modules would answer one way in the menu and another at '
+                                .'the door.'
+                            );
+                        }
+                    }
+                } elseif (! in_array($item['permission'], $raw['permissions'] ?? [], true)) {
                     throw new InvalidArgumentException(
                         "{$path}: menu item '{$item['route']}' asks for permission '{$item['permission']}', which "
                         .'this module does not declare. Nobody would ever be granted it, so the item would be '
@@ -532,7 +581,7 @@ final class ModuleDefinition
                  * সবচেয়ে সম্ভাব্য কারণ, আর টাইপোর শাস্তি একটা হারিয়ে
                  * যাওয়া মেনু সারি হওয়া উচিত নয়।
                  */
-                if (isset($item['setting'])) {
+                if (isset($item['setting']) && $host === null) {
                     $declared = array_column($raw['settings'] ?? [], 'key');
 
                     if (! in_array($item['setting'], $declared, true)) {
