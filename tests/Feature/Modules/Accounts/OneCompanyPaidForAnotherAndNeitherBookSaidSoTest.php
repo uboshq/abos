@@ -119,6 +119,96 @@ final class OneCompanyPaidForAnotherAndNeitherBookSaidSoTest extends TestCase
     }
 
     /**
+     * ⭐ অন্য কোম্পানির **খরচ** সরাসরি দেওয়া — দ্বিতীয় দফা।
+     *
+     * ── ⓘ কেন এটা আলাদা দাবি ────────────────────────────────────────
+     * টাকা সরানোর দাবিটা সবুজ থাকলেও এটা ধরা পড়ত না: প্রথম দফায় পাওয়ার
+     * দিকে **কেবল** টাকার খাত মানা হত, তাই খরচের খাত দিলে সেবা ভ্যালিডেশন
+     * ছুঁড়ত। ⚠️ আর ঐ ব্যর্থতাটা কেউ খুঁজত না, কারণ পর্দার তালিকাতেও
+     * খরচের খাত ছিল না — দুই দিকেই সীমা, তাই কোনো অসঙ্গতি দেখা যেত না।
+     */
+    public function test_their_expense_can_be_paid_directly(): void
+    {
+        [$owner, $alpha, $beta] = $this->cast();
+
+        CompanyContext::set((int) $alpha->id);
+
+        /* ⓘ তাদের একটা খরচের খাত — নাম টাইপ করা হয় না, ধরন ধরে খোঁজা */
+        $theirExpense = CompanyContext::forCompany((int) $beta->id, fn () => Account::query()
+            ->where('type', Account::EXPENSE)
+            ->where('is_group', false)
+            ->where('is_active', true)
+            ->orderBy('code')
+            ->firstOrFail());
+
+        $transfer = app(InterCompanyService::class)->record($owner, [
+            'counter_company_id' => $beta->id,
+            'trx_date' => now()->toDateString(),
+            'amount' => '1200.0000',
+            'purpose' => 'তাদের দোকানভাড়া',
+            'from_account_id' => $this->money($alpha)->id,
+            'to_account_id' => $theirExpense->id,
+        ]);
+
+        $this->assertTrue($transfer->isBalanced(), 'খরচ দেওয়ার বেলায় দুই পাশ বসেনি।');
+
+        /*
+         * ⭐ আসল দাবি: **তাদের খরচের খাতটাই** ডেবিট হয়েছে।
+         *
+         * ⚠️ কেবল "দুইটা ভাউচার আছে" যথেষ্ট নয় — টাকার খাতে বসলেও দুইটাই
+         * থাকত, আর তখন TCL-এর নগদ বেড়ে যেত অথচ ভাড়াটা কোথাও বসত না।
+         */
+        $line = CompanyContext::forCompany((int) $beta->id, fn () => DB::table('voucher_lines')
+            ->where('voucher_id', $transfer->in_voucher_id)
+            ->where('account_id', $theirExpense->id)
+            ->firstOrFail());
+
+        $this->assertSame(0, bccomp((string) $line->debit, '1200', 4), implode(PHP_EOL, [
+            'তাদের খরচের খাতে ১২০০ ডেবিট হয়নি — পেলাম '.$line->debit,
+            '',
+            'ⓘ এটাই খরচ দেওয়া আর টাকা সরানোর একমাত্র পার্থক্য: ডেবিট',
+            'কোন খাতে বসল।',
+        ]));
+
+        /* ⛔ আর আমাদের দিকে চলতি হিসাবই ডেবিট, খরচ নয় — খরচটা তাদের */
+        $ours = $this->controlLine($alpha, (int) $transfer->out_voucher_id);
+
+        $this->assertSame(0, bccomp((string) $ours->debit, '1200', 4),
+            'আমাদের খাতায় চলতি হিসাব ডেবিট হয়নি — খরচটা আমাদের নয়, পাওনা।');
+    }
+
+    /**
+     * ⛔ আয়ের খাতে দেওয়া যাবে না — সীমাটা সত্যিই আছে কি না।
+     *
+     * ⚠️ এই দাবিটা ছাড়া `CAN_RECEIVE` তালিকাটা অর্থহীন হত: তিনটা ধরন
+     * খোলার পর কেউ যদি ঢালাও "যেকোনো খাত" করে দিত, উপরের দাবিগুলো
+     * সবুজই থাকত।
+     */
+    public function test_their_income_account_is_refused(): void
+    {
+        [$owner, $alpha, $beta] = $this->cast();
+
+        CompanyContext::set((int) $alpha->id);
+
+        $theirIncome = CompanyContext::forCompany((int) $beta->id, fn () => Account::query()
+            ->where('type', Account::INCOME)
+            ->where('is_group', false)
+            ->orderBy('code')
+            ->firstOrFail());
+
+        $this->expectException(ValidationException::class);
+
+        app(InterCompanyService::class)->record($owner, [
+            'counter_company_id' => $beta->id,
+            'trx_date' => now()->toDateString(),
+            'amount' => '500.0000',
+            'purpose' => 'হওয়ার কথা নয়',
+            'from_account_id' => $this->money($alpha)->id,
+            'to_account_id' => $theirIncome->id,
+        ]);
+    }
+
+    /**
      * ⛔ দুইটা কোম্পানিতেই সদস্যপদ না থাকলে কিছুই লেখা হয় না।
      */
     public function test_someone_outside_the_pair_is_refused(): void

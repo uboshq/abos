@@ -43,23 +43,24 @@ class InterCompanyController extends Controller implements HasMiddleware
 
     public function index(Request $request): View
     {
+        $rows = InterCompanyTransfer::query()
+            ->with(['counterCompany', 'creator'])
+            ->latest('trx_date')
+            ->latest('id')
+            ->paginate(50)
+            ->withQueryString();
+
         return view('accounts::inter-company.index', [
             'menu' => $this->menu->forUser($request->user()),
+            'rows' => $rows,
 
             /*
-             * ⓘ [[BelongsToCompany]] ছাঁকে, তাই এখানে নিজের কোম্পানির
-             * **দেওয়া** লেনদেনগুলোই আসে।
-             *
-             * ⚠️ পাওয়াগুলো এই তালিকায় নেই, আর সেটা লুকানো হয়নি —
-             * পর্দায় লেখা আছে। ⓘ পাওয়ার দিকটা দেখতে হলে ঐ কোম্পানিতে
-             * সুইচ করতে হয়, কারণ দাখিলাটা ওখানেই বসেছে।
+             * ⭐ প্রতিটা সারি কী ধরনের ছিল — গোটা পাতার জন্য **একটাই**
+             * কোয়েরি। ⛔ মডেলে একটা `kind()` বসিয়ে সারি-প্রতি ডাকলে
+             * ৫০টা সারিতে ৫০টা কোয়েরি হত, আর ধীরগতিটা কোথাও লাল হত না।
              */
-            'rows' => InterCompanyTransfer::query()
-                ->with(['counterCompany', 'creator'])
-                ->latest('trx_date')
-                ->latest('id')
-                ->paginate(50)
-                ->withQueryString(),
+            'kinds' => InterCompanyService::kindsOf($rows),
+
         ]);
     }
 
@@ -105,9 +106,17 @@ class InterCompanyController extends Controller implements HasMiddleware
              * প্রসঙ্গ ফিরিয়ে দেয়, তাই এর পরের কোয়েরিগুলো নিজের
              * কোম্পানিতেই থাকে।
              */
-            'theirMoney' => $chosen === null
+            /*
+             * ⭐ তাদের দিকে তিন ধরনের খাত — টাকা, খরচ, দায়।
+             *
+             * ⓘ কোনটা বাছা হলো তার উপরেই নির্ভর করে কাজটা কী: টাকার খাত
+             * মানে টাকা সরানো, খরচের খাত মানে তাদের খরচ দেওয়া, দায়ের
+             * খাত মানে তাদের দেনা মেটানো। ⚠️ তিনটাই একই আকারের দাখিলা,
+             * তাই আলাদা পর্দা লাগে না — কেবল তালিকাটা চওড়া।
+             */
+            'theirAccounts' => $chosen === null
                 ? collect()
-                : CompanyContext::forCompany($chosen, fn () => $this->moneyAccounts()),
+                : CompanyContext::forCompany($chosen, fn () => $this->receivingAccounts()),
 
             /*
              * ⭐ কেবল সেই কোম্পানিগুলো যেগুলোতে ব্যবহারকারী নিজে আছেন,
@@ -135,7 +144,11 @@ class InterCompanyController extends Controller implements HasMiddleware
             ]));
     }
 
-    /** @return Collection<int, Account> */
+    /**
+     * দেওয়ার দিকের খাত — কেবল টাকা।
+     *
+     * @return Collection<int, Account>
+     */
     private function moneyAccounts()
     {
         return Account::query()
@@ -143,5 +156,27 @@ class InterCompanyController extends Controller implements HasMiddleware
             ->where('is_group', false)
             ->orderBy('code')
             ->get(['id', 'code', 'name_en', 'name_bn']);
+    }
+
+    /**
+     * পাওয়ার দিকের খাত — টাকা, খরচ বা দায়।
+     *
+     * ⭐ ধরনগুলো [[InterCompanyService::CAN_RECEIVE]] থেকে নেওয়া, এখানে
+     * হাতে লেখা নয়।
+     *
+     * ⛔ প্রথম লেখায় তালিকাটা এখানে আবার টাইপ করা ছিল, আর পাশে একটা
+     * মন্তব্য ছিল *"দুইটা মিলিয়ে রাখতে হবে"*। ⚠️ ওরকম মন্তব্য কোনো
+     * পাহারা নয়: একদিন সেবায় একটা ধরন যোগ হত আর পর্দায় হত না, তখন
+     * ব্যবহারকারী ঐ খাতটা বাছতেই পারতেন না — আর কেউ বুঝত না কেন।
+     * ⓘ তাই ধ্রুবকটা `public`, আর সত্যটা একটাই জায়গায়।
+     */
+    private function receivingAccounts()
+    {
+        return Account::query()
+            ->whereIn('type', InterCompanyService::CAN_RECEIVE)
+            ->where('is_group', false)
+            ->where('is_active', true)
+            ->orderBy('code')
+            ->get(['id', 'code', 'name_en', 'name_bn', 'type']);
     }
 }

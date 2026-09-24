@@ -18,8 +18,11 @@
     <x-slot:title>{{ __('accounts::menu.inter_company_new') }}</x-slot:title>
 
     <x-slot:header>
+        {{-- ⓘ উপশিরোনামটা বদলেছে দ্বিতীয় দফায়: আগে লেখা ছিল "কেবল টাকা
+             সরানো", আর সেটা এখন মিথ্যা হয়ে গেছে — খরচ ও দায় দুইটাও খোলা।
+             ⚠️ পুরনো বাক্যটা রেখে দিলে পর্দা নিজের সম্পর্কেই ভুল বলত। --}}
         <x-ui.page-header :title="__('accounts::menu.inter_company_new')"
-                          :subtitle="__('accounts::message.inter_company_moves_money_only')" />
+                          :subtitle="__('accounts::message.inter_company_three_kinds')" />
     </x-slot:header>
 
     <x-ui.errors />
@@ -82,12 +85,19 @@
 
                  ⓘ কন্ট্রোলার সেটা এনেছে CompanyContext::forCompany() দিয়ে,
                  যে finally-তে আগের প্রসঙ্গ ফিরিয়ে দেয় — নাহলে এই
-                 অনুরোধের বাকি প্রতিটা কোয়েরি ভুল কোম্পানিতে চলত। --}}
+                 অনুরোধের বাকি প্রতিটা কোয়েরি ভুল কোম্পানিতে চলত।
+
+                 ⭐ আর এখানে **কোনটা বাছা হলো তার উপরেই নির্ভর করে কাজটা
+                 কী** — টাকার খাত মানে টাকা সরানো, খরচের খাত মানে তাদের
+                 খরচ দেওয়া, দায়ের খাত মানে তাদের দেনা মেটানো। ⓘ তাই
+                 ইঙ্গিতটা ঘরের নিচেই লেখা, নাহলে ব্যবহারকারী বুঝতেন না
+                 কেন খরচের খাতও তালিকায় আছে। --}}
             <x-ui.select name="to_account_id"
                          :label="__('accounts::field.inter_company_to')"
-                         :options="$theirMoney->mapWithKeys(fn ($a) => [$a->id => $label($a)])"
+                         :options="$theirAccounts->mapWithKeys(fn ($a) => [$a->id => $label($a)])"
                          :selected="old('to_account_id')"
                          :placeholder="__('accounts::field.inter_company_pick')"
+                         :hint="__('accounts::message.inter_company_to_hint')"
                          required />
 
             <div class="md:col-span-2">

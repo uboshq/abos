@@ -63,6 +63,7 @@ return [
     'bank_reference_used' => 'লেনদেন নম্বর :reference আগেই বসেছে — ভাউচার :no। একই টাকা দুইবার খাতায় তোলা যায় না।',
 
     'inter_company_their_books' => ':company-এর খাতায় সমস্যা — :problem',
+    'inter_company_needs_receiving_account' => 'তাদের দিকে টাকার খাত, খরচের খাত বা দায়ের খাত বাছুন (আয় বা মূলধন নয়)।',
     'inter_company_same' => 'নিজের কোম্পানিকে টাকা পাঠানো যায় না।',
     'inter_company_not_mine' => 'দুইটা কোম্পানিতেই আপনার সদস্যপদ থাকতে হবে।',
     'inter_company_needs_money_account' => 'টাকার খাত বাছুন (নগদ, ব্যাংক বা এমএফএস)।',

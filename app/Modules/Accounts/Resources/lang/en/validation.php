@@ -51,6 +51,7 @@ return [
     'bank_reference_used' => 'Transaction number :reference is already on voucher :no. The same money cannot be booked twice.',
 
     'inter_company_their_books' => 'In the books of :company — :problem',
+    'inter_company_needs_receiving_account' => 'On their side choose a money, expense or liability account (not income or equity).',
     'inter_company_same' => 'A company cannot send money to itself.',
     'inter_company_not_mine' => 'You must belong to both companies.',
     'inter_company_needs_money_account' => 'Choose a money account (cash, bank or MFS).',
