@@ -459,9 +459,23 @@
                          `tokens.css`-এ ঐ টোকেনের পাশে। ⛔ সংক্ষেপে: জমিন যত
                          সবুজ, ভিতরের সবকিছু তত খারাপ — কারণ ভিতরের রংগুলো
                          নিরপেক্ষ গাঢ় কার্ডের সাথে মেপে বাছা। --}}
+                    {{-- ⭐ ডান কলামের মোড়ক — "এই লাইন" আর তার নিচের তিনটা বোতাম
+                         **একসাথে**, মালিকের নির্দেশ ২৪ সেপ্টেম্বর ২০২৬:
+                         *"uporer faka ongshe mark kora lal box er vitor fit kore daw"*।
+
+                         ── ⛔ কেন ফাঁকটা পড়েছিল ───────────────────────────────
+                         মোড়ক গ্রিডে বাঁ কলামটা **একটাই ছক-ঘর** (কাগজের বাক্স +
+                         এন্ট্রি কার্ড একসাথে), আর সেটা লম্বা। ⓘ বোতামগুলো আলাদা
+                         ছক-ঘর হওয়ায় তারা পড়ত **দ্বিতীয় সারিতে** — আর দ্বিতীয়
+                         সারি শুরু হয় বাঁ কলামটা শেষ হওয়ার পরে।
+                         ⚠️ ফলে "এই লাইন"-এর নিচে একটা লম্বা ফাঁক, আর বোতামগুলো
+                         অনেক নিচে — ছবিতে ঠিক সেটাই।
+
+                         ⭐ এখন দুইটাই এক মোড়কে, আর মোড়কটাই ছক-ঘর। ⓘ `space-y-2`
+                         বোতামগুলোকে প্যানেলের ঠিক নিচে এনে বসায়, ফাঁক ছাড়া। --}}
+                    <div class="space-y-2 lg:col-start-2 lg:col-end-[-1] lg:row-start-1">
                     <div class="rounded-(--radius-card) border border-(--color-success)/40
-                                bg-(--color-surface-success-tint) p-3 shadow-sm
-                                lg:col-start-2 lg:col-end-[-1] lg:row-start-1"
+                                bg-(--color-surface-success-tint) p-3 shadow-sm"
                          style="box-shadow: inset var(--rail-tile-on-edge-w, 2px) 0 0 var(--color-state-on)">
                         {{--
                             ── লেবেল বাঁয়ে, অঙ্ক ডানে — এক সারিতে ─────────────
@@ -713,7 +727,7 @@
                          তাই "ঘর খালি করুন" লম্বা বলে সে বেশি জায়গা টেনে নেয় না।
                          ⓘ কলামটা ১৪rem, তাই প্রতিটা বোতাম ≈৯০px — লম্বা লেখাটা
                          দুই লাইনে ভাঁজ হয়, আর `leading-tight` তাতে উচ্চতা ধরে রাখে। --}}
-                    <div class="grid grid-cols-3 items-start gap-1 lg:col-start-2">
+                    <div class="grid grid-cols-3 items-start gap-1">
                         @if ($show['gift'])
                             {{-- ⚠️ এখানে `:disabled`, একটা কোলন — আর নিচে
                                  "নিশ্চিত করুন" বোতামে `::disabled`, দুইটা।
@@ -754,6 +768,7 @@
                               class="num col-span-full text-end text-xs text-(--color-ink-muted)"
                               x-text="picked ? money(picked.cost) : ''"></span>
                     </div>
+                    </div>{{-- ডান কলামের মোড়ক শেষ --}}
                     {{--
                         ── ছবির ঘরটা তুলে দেওয়া হলো (৩ সেপ্টেম্বর ২০২৬) ──────
 
