@@ -641,7 +641,27 @@ class RoleController extends Controller implements HasMiddleware
     private function summary($roles): array
     {
         return [
-            'users' => User::query()->count(),
+            /*
+             * ⛔ চলতি কোম্পানির ব্যবহারকারীই — ২৪ সেপ্টেম্বর ২০২৬।
+             *
+             * ⚠️ এখানে লেখা ছিল খালি `User::query()->count()`, আর সেটা
+             * **সব ক্রেতার ব্যবহারকারী** গুনত। ⓘ কার্ডটা তখন বলত
+             * *"২৪৮ জন"*, অথচ এই প্রতিষ্ঠানে হয়তো বারো জন।
+             *
+             * ⛔ ক্ষতিটা কেবল ভুল সংখ্যা নয়: কার্ডগুলো বানানোই হয়েছিল
+             * *"সাজসজ্জা নয়, মেপে পাওয়া"* বলে — আর একটা মেপে-পাওয়া
+             * সংখ্যা যদি অন্য কোম্পানির মানুষ গোনে, তবে সে সবচেয়ে
+             * খারাপ ধরনের মিথ্যা: বিশ্বাসযোগ্য।
+             *
+             * ⓘ [[User]] [[BaseEntity]]-র গ্লোবাল স্কোপ পায় না — সে
+             * `companies` পিভটে ঝোলে, তাই ছাঁকনিটা **হাতে বসাতে হয়**,
+             * আর হাতের কাজ ভুলে যাওয়া যায়। ⚠️ ধরেছে
+             * [[EveryUserListAsksWhichCompanyTest]], আর ছাঁচটা
+             * [[UserController::index()]]-এর হুবহু একই।
+             */
+            'users' => User::query()
+                ->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))
+                ->count(),
             'roles' => $roles->count(),
             'permissions' => Permission::query()->count(),
             'unassigned' => $roles->where('users_count', 0)->count(),
