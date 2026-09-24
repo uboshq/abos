@@ -14,6 +14,7 @@ use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\StockTransfer;
 use App\Modules\Inventory\Models\StockTransferLine;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\MasterData\Models\ReasonCode;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -178,6 +179,7 @@ final class StockTransferService
                     sourceType: StockTransfer::STOCK_SOURCE,
                     sourceId: $transfer->id,
                     hold: (string) $line->qty,
+                    reason: $this->onTheWay(),
                     date: $transfer->trx_date,
                     documentNo: $transfer->document_no,
                     narration: __('inventory::message.transfer_on_the_way', ['no' => $transfer->document_no]),
@@ -229,6 +231,7 @@ final class StockTransferService
                     sourceId: $transfer->id,
                     qty: (string) $line->qty,
                     hold: bcmul((string) $line->qty, '-1', 4),
+                    reason: $this->onTheWay(),
                     date: now(),
                     documentNo: $transfer->document_no,
                     narration: __('inventory::message.transfer_left', ['no' => $transfer->document_no]),
@@ -298,6 +301,7 @@ final class StockTransferService
                         sourceType: StockTransfer::STOCK_SOURCE,
                         sourceId: $transfer->id,
                         hold: bcmul((string) $line->qty, '-1', 4),
+                        reason: $this->onTheWay(),
                         date: now(),
                         documentNo: $transfer->document_no,
                         narration: $reason,
@@ -314,6 +318,31 @@ final class StockTransferService
 
             return $transfer->fresh(['lines']);
         });
+    }
+
+    /**
+     * ⭐ "অন্য গুদামের পথে" — আটকানোর কারণ, ২৪ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⛔ তিন জায়গাতেই একই কারণ, নাহলে রিপোর্ট ভুতুড়ে হত ─────────────
+     * আটকানোর রিপোর্ট সারি ভাগ করে **কারণ ধরে**, আর শূন্যে নেমে আসা
+     * জোড়া বাদ দেয়। ⚠️ রওনার সারিতে কারণ বসিয়ে ছাড়ার সারিতে না বসালে
+     * যোগফল দুই ভাগ হয়ে যেত: `+৪০ পথে` আর `−৪০ (কারণ নেই)` — দুইটাই
+     * টিকে থাকত, আর মাল পৌঁছে যাওয়ার পরও চিরকাল "পথে" দেখাত।
+     *
+     * ── ⓘ না পেলে `null`, ব্যতিক্রম নয় ─────────────────────────────
+     * ⛔ সারিটা মাস্টার তালিকার, আর কেউ ওটা মুছে ফেলতে পারেন। ⚠️ তখন
+     * ব্যতিক্রম ছুড়লে **মাল পাঠানোই বন্ধ** হয়ে যেত — একটা তালিকার
+     * সারির জন্য গুদামের কাজ থামানো অসম্ভব বেশি দাম।
+     *
+     * ⓘ `null` ফিরলে আচরণটা ২৪ সেপ্টেম্বরের আগের মতোই: মালটা আটকায়,
+     * কেবল কারণের ঘরটা ফাঁকা থাকে।
+     */
+    private function onTheWay(): ?ReasonCode
+    {
+        return ReasonCode::query()
+            ->where('code', 'HOLD-TRN')
+            ->where('context', ReasonCode::HOLD)
+            ->first();
     }
 
     /** @param list<array<string, mixed>> $lines */
