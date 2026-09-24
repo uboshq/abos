@@ -292,7 +292,7 @@ class ApprovalFlowController extends Controller implements HasMiddleware
 
     public function store(ApprovalFlowRequest $request): RedirectResponse
     {
-        $this->flows->create($request->validated(), $request->steps());
+        $this->flows->create($request->validated(), $request->steps(), $request->conditions());
 
         return redirect()->route('approval.flow.index')->with('saved', __('approval::message.flow_saved'));
     }
@@ -312,6 +312,7 @@ class ApprovalFlowController extends Controller implements HasMiddleware
             ApprovalFlow::query()->findOrFail($flow),
             $request->validated(),
             $request->steps(),
+            $request->conditions(),
         );
 
         return redirect()->route('approval.flow.index')->with('saved', __('approval::message.flow_saved'));

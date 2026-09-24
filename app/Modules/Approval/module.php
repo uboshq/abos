@@ -53,7 +53,7 @@ return [
          * ⓘ অনুমোদনের তথ্য হিসাবের ভাউচার পড়ে ([[ApprovalFacts]])।
          * ⚠️ চক্র হয় না: accounts কারও উপর দাঁড়ায় না (২১ সেপ্টেম্বর ২০২৬ — সীমারেখার নিরীক্ষা)।
          */
-        'accounts',],
+        'accounts', ],
 
     'menu' => [
         'dashboard' => [
@@ -64,6 +64,9 @@ return [
         'approval' => [
             ['label' => 'approval::menu.inbox', 'icon' => 'inbox', 'route' => 'approval.inbox.index', 'permission' => 'approval.decide'],
             ['label' => 'approval::menu.mine', 'icon' => 'people', 'route' => 'approval.inbox.mine', 'permission' => 'approval.view'],
+
+            /* ⭐ সইয়ের ভার — যিনি সই দেন, তিনিই দিতে পারেন */
+            ['label' => 'approval::menu.delegation', 'icon' => 'handover', 'route' => 'approval.delegation.index', 'permission' => 'approval.decide'],
         ],
         /*
          * চারটা রিপোর্ট — §২.৮।
@@ -82,10 +85,24 @@ return [
                 'route_params' => ['slug' => 'rejected'], 'permission' => 'approval.report'],
             ['label' => 'approval::menu.report_by_user', 'icon' => 'people', 'route' => 'approval.report.show',
                 'route_params' => ['slug' => 'by-user'], 'permission' => 'approval.report'],
+
+            /* ⭐ কোন ধাপে জমে আছে, আর কেন বাতিল হয় — ২৪ সেপ্টেম্বর ২০২৬ */
+            ['label' => 'approval::menu.report_bottleneck', 'icon' => 'alert-triangle', 'route' => 'approval.report.show',
+                'route_params' => ['slug' => 'bottleneck'], 'permission' => 'approval.report'],
+            ['label' => 'approval::menu.report_why_rejected', 'icon' => 'reports', 'route' => 'approval.report.show',
+                'route_params' => ['slug' => 'why-rejected'], 'permission' => 'approval.report'],
         ],
 
         'settings' => [
             ['label' => 'approval::menu.flows', 'icon' => 'swap', 'route' => 'approval.flow.index', 'permission' => 'approval.flow.manage'],
+
+            /* ⛔ নিয়মের বাইরে — ছয় ধরনের নীরব ভুল, ২৪ সেপ্টেম্বর ২০২৬ */
+            ['label' => 'approval::exception.title', 'icon' => 'alert-triangle', 'route' => 'approval.exception.index', 'permission' => 'approval.flow.manage'],
+
+            /* ⭐ কোন রোল কত টাকা পর্যন্ত — ২৪ সেপ্টেম্বর ২০২৬।
+               ⚠️ চাবিটা `flow.manage`-ই: সীমা বসানো আর প্রবাহ
+               বসানো একই ক্ষমতা — দুইটাই বলে "কে কী অনুমোদন করতে পারবে"। */
+            ['label' => 'approval::menu.limits', 'icon' => 'scale', 'route' => 'approval.limit.index', 'permission' => 'approval.flow.manage'],
         ],
     ],
 

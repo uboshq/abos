@@ -14,4 +14,8 @@ return [
     'report_approved' => 'Approved',
     'report_rejected' => 'Turned down',
     'report_by_user' => 'Decisions by person',
+    'delegation' => 'Delegation',
+    'report_bottleneck' => 'Where it gets stuck',
+    'report_why_rejected' => 'Why requests are refused',
+    'limits' => 'Authority limits',
 ];

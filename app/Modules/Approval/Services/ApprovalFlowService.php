@@ -6,6 +6,7 @@ namespace App\Modules\Approval\Services;
 
 use App\Core\Module\ModuleRegistry;
 use App\Models\Approval;
+use App\Models\ApprovalCondition;
 use App\Models\ApprovalFlow;
 use App\Models\ApprovalFlowStep;
 use Illuminate\Support\Facades\DB;
@@ -67,13 +68,13 @@ class ApprovalFlowService
      * @param  array<string, mixed>  $data
      * @param  list<array{level: mixed, approver_type: mixed, approver_id: mixed, requires_all?: mixed}>  $steps
      */
-    public function create(array $data, array $steps): ApprovalFlow
+    public function create(array $data, array $steps, array $conditions = []): ApprovalFlow
     {
         $this->assertKnownAction((string) $data['module'], (string) $data['action']);
         $this->assertSteps($steps);
         $this->assertNotDuplicated($data);
 
-        return DB::transaction(function () use ($data, $steps) {
+        return DB::transaction(function () use ($data, $steps, $conditions) {
             $flow = ApprovalFlow::create([
                 'module' => $data['module'],
                 'action' => $data['action'],
@@ -86,8 +87,9 @@ class ApprovalFlowService
             ]);
 
             $this->replaceSteps($flow, $steps);
+            $this->replaceConditions($flow, $conditions);
 
-            return $flow->fresh('steps');
+            return $flow->fresh(['steps', 'conditions']);
         });
     }
 
@@ -95,19 +97,33 @@ class ApprovalFlowService
      * @param  array<string, mixed>  $data
      * @param  list<array{level: mixed, approver_type: mixed, approver_id: mixed, requires_all?: mixed}>  $steps
      */
-    public function update(ApprovalFlow $flow, array $data, array $steps): ApprovalFlow
+    public function update(ApprovalFlow $flow, array $data, array $steps, array $conditions = []): ApprovalFlow
     {
         $this->assertKnownAction((string) $data['module'], (string) $data['action']);
         $this->assertSteps($steps);
         $this->assertNotDuplicated($data, $flow);
 
-        return DB::transaction(function () use ($flow, $data, $steps) {
+        return DB::transaction(function () use ($flow, $data, $steps, $conditions) {
             $flow->update([
                 'module' => $data['module'],
                 'action' => $data['action'],
-                // "সব ধরনে" একটা আসল মান, অনুপস্থিতি নয় — নাহলে unique
-                // index দুইটা একই ছক আটকাতে পারত না
-                'document_type' => $data['document_type'] ?? '',
+
+                /*
+                 * ⛔ অনুপস্থিত চাবি মানে *"বদলানো হয়নি"*, *"মুশে দাও"* নয়।
+                 *
+                 * ── ⚠️ যা ভাঙা ছিল, ২৪ সেপ্টেম্বর ২০২৬ ────────────────
+                 * লেখা ছিল `?? ''`, আর ফর্মে ঘরটা নেই। ⛔ তাই
+                 * `document_type = 'SalesInvoice'` বসানো একটা ছক কেবল
+                 * খুলে সংরক্ষণ করলেই *"সব ধরনে"* হয়ে যেত — অর্থাৎ
+                 * ওই ছকটা হঠাৎ আরও অনেক কাগজ আটকাত।
+                 *
+                 * ⓘ ভুলটা সম্পূর্ণ নীরব: কোনো ত্রুটি নেই, পর্দায় কিছু
+                 * বদলায় না। ⚠️ ফর্মে একটা লুকানো ঘরও বসেছে, কিন্তু
+                 * পর্দা কখনো শেষ কথা নয় — তাই নিয়মটা এখানে।
+                 */
+                'document_type' => array_key_exists('document_type', $data)
+                    ? ($data['document_type'] ?? '')
+                    : $flow->document_type,
                 'threshold_amount' => $data['threshold_amount'] ?? null,
                 'remarks' => trim((string) ($data['remarks'] ?? '')) ?: null,
                 // ⚠️ `code` ইচ্ছাকৃতভাবে বাদ — সংকেত একবার বসলে আর বদলায় না
@@ -115,8 +131,9 @@ class ApprovalFlowService
             ]);
 
             $this->replaceSteps($flow, $steps);
+            $this->replaceConditions($flow, $conditions);
 
-            return $flow->fresh('steps');
+            return $flow->fresh(['steps', 'conditions']);
         });
     }
 
@@ -167,6 +184,54 @@ class ApprovalFlowService
                 'approver_type' => $step['approver_type'],
                 'approver_id' => (int) $step['approver_id'],
                 'requires_all' => (bool) ($step['requires_all'] ?? false),
+
+                /*
+                 * ⚠️ `?? null` । `(int)` নয় — আর সেটাই সবটা।
+                 *
+                 * ⓘ এই ঘরগুলোতে `null` একটা **অর্থবহ মান**:
+                 * *"এই ধাপে ঘড়ি নেই"*। ⛔ শূন্য বসলে সেটা
+                 * *"সাথে সাথে দেরি"* হয়ে যেত, আর প্রতিটা পুরনো প্রবাহ
+                 * সংরক্ষণ করলেই তার কাগজগুলো জন্মেই লাল হত।
+                 */
+                'sla_hours' => $step['sla_hours'] ?? null,
+                'warn_hours' => $step['warn_hours'] ?? null,
+                'escalate_hours' => $step['escalate_hours'] ?? null,
+                'escalate_to_type' => $step['escalate_to_type'] ?? null,
+                'escalate_to_id' => $step['escalate_to_id'] ?? null,
+
+                /*
+                 * ⛔ এই একটায় `null` চলে না — উপরের পাঁচটার মতো নয়।
+                 *
+                 * ⓘ কলামটা `NOT NULL DEFAULT 1`। ⚠️ ডিফল্ট কেবল
+                 * তখনই খাটে যখন ঘরটা INSERT-এ **থাকেই না**; Eloquent
+                 * ঘরটা পাঠায়, তাই `null` পাঠানো মানে সরাসরি নিষেধাজ্ঞা
+                 * ভাঙা — আর কড়া sql_mode-এ সেটা সংরক্ষণই ফেলে দেয়।
+                 */
+                'min_approvals' => $step['min_approvals'] ?? 1,
+            ]);
+        }
+    }
+
+    /**
+     * ⭐ শর্তগুলো — পুরোটা বদলে বসানো, [[replaceSteps]]-এর মতোই।
+     *
+     * ⚠️ সারি ধরে মেলাতে গেলে *"কোন সারিটা কোনটা"* ঠিক করতে
+     * হত, আর একটা ভুল মিলে দুই শর্তের মান উল্টে যেত — যেমন
+     * *"ছাড় > ১০"* হয়ে যেত *"পরিমাণ > ১০"*। ⛔ দুইটাই বৈধ, তাই
+     * কোথাও কিছু লাল হত না।
+     *
+     * @param  list<array<string, mixed>>  $conditions
+     */
+    private function replaceConditions(ApprovalFlow $flow, array $conditions): void
+    {
+        $flow->conditions()->delete();
+
+        foreach ($conditions as $condition) {
+            ApprovalCondition::create([
+                'approval_flow_id' => $flow->id,
+                'field' => $condition['field'],
+                'operator' => $condition['operator'],
+                'value' => $condition['value'],
             ]);
         }
     }

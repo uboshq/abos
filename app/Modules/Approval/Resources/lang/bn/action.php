@@ -15,4 +15,12 @@ return [
     'by_user' => 'ব্যক্তি',
     'always' => 'সব ক্ষেত্রে',
     'forward' => 'অন্যের কাছে পাঠান',
+    'delegate' => 'ভার দিন',
+    'delegation_stop' => 'বন্ধ করুন',
+    'bulk_approve' => 'বাছাই করাগুলোয় সই',
+    'pick_all' => 'সব বাছাই',
+    'add_limit' => 'সীমা বসান',
+    'previous' => 'আগেরটা',
+    'next' => 'পরেরটা',
+    'send_back' => 'সংশোধনে ফেরত',
 ];

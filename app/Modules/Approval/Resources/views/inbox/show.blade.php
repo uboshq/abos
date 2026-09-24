@@ -13,6 +13,15 @@
             :title="$labels[$approval->module.'.'.$approval->action] ?? $approval->module.' · '.$approval->action"
             :subtitle="$approval->requested_at?->format('d M Y, H:i')">
             <x-slot:actions>
+                {{-- ⭐ ঘড়িটা অবস্থার পাশে — ২৪ সেপ্টেম্বর ২০২৬।
+
+                     ⓘ ইনবক্সে লাল দেখে কেউ এখানে এলে চিহ্নটা যেন
+                     থাকে — নাহলে ওই তথ্যটা ঠিক সিদ্ধান্তের মুহূর্তে হারাত। --}}
+                @include('approval::inbox.partials.clock', [
+                    'approval' => $approval,
+                    'state' => $slaState,
+                ])
+
                 <x-ui.badge :tone="match ($approval->status) {
                     \App\Models\Approval::APPROVED => 'success',
                     \App\Models\Approval::REJECTED => 'danger',
@@ -21,14 +30,86 @@
                 }">
                     {{ __('approval::status.'.$approval->status) }}
                 </x-ui.badge>
+
+                {{-- ⭐ আগের আর পরের — সারির ক্রম ইনবক্সেরই।
+
+                     ⛔ বারোটা অনুরোধে সই দিতে হলে আগে বারোবার
+                     তালিকায় ফিরতে হত, আর প্রতিবার খুঁজতে হত কোনটা
+                     শেষ দেখা হয়েছিল। ⓘ তীর দুইটা কেবল তাঁর জন্য
+                     যিনি সই দিতে পারেন — অন্যদের কোনো সারি নেই। --}}
+                @if ($prev || $next)
+                    <span class="flex items-center gap-1">
+                        @if ($prev)
+                            <a href="{{ route('approval.inbox.show', $prev) }}" data-approval-prev
+                               class="rounded-(--radius-field) border border-(--color-border) px-2 py-1 text-sm
+                                      hover:bg-(--color-surface-hover)"
+                               aria-label="{{ __('approval::action.previous') }}"
+                               title="{{ __('approval::action.previous') }}">&larr;</a>
+                        @endif
+
+                        @if ($next)
+                            <a href="{{ route('approval.inbox.show', $next) }}" data-approval-next
+                               class="rounded-(--radius-field) border border-(--color-border) px-2 py-1 text-sm
+                                      hover:bg-(--color-surface-hover)"
+                               aria-label="{{ __('approval::action.next') }}"
+                               title="{{ __('approval::action.next') }}">&rarr;</a>
+                        @endif
+                    </span>
+                @endif
             </x-slot:actions>
         </x-ui.page-header>
     </x-slot:header>
 
     <x-ui.errors />
 
-    <div class="grid gap-4 lg:grid-cols-3">
-        <div class="space-y-4 lg:col-span-2">
+    {{-- ⭐ তিন কলাম — ২৪ সেপ্টেম্বর ২০২৬।
+
+         বাঁয়ে যাত্রাপথ (কোথায় আছে) · মাঝখানে কাগজ · ডানে সিদ্ধান্ত।
+
+         ⚠️ ডান কলামটা `sticky`: লম্বা কাগজ পড়তে পড়তে নিচে
+         নামলে সইয়ের বোতাম দুইটা পর্দার বাইরে চলে যেত, আর
+         মানুষ ফিরে উপরে যেতেন — ঠিক যখন তিনি সিদ্ধান্ত নিয়ে
+         ফেলেছেন। ⓘ ছোট পর্দায় কলামগুলো একের পর এক, তাই
+         `lg:` থেকেই — ফোনে sticky বসালে ওটা কাগজটা ঢেকে দিত। --}}
+    <div class="grid gap-4 lg:grid-cols-[16rem_1fr_20rem] lg:items-start">
+        {{-- ── বাঁ কলাম: যাত্রাপথ ──────────────────── --}}
+        @if ($timeline !== [])
+            <aside data-boxed
+                   class="order-last min-w-0 rounded-(--radius-card) border border-(--color-border)
+                          bg-(--color-surface-card) p-4 lg:order-first lg:sticky lg:top-4">
+                <h2 class="mb-2 text-sm font-semibold">{{ __('approval::field.journey') }}</h2>
+
+                @include('approval::inbox.partials.timeline', ['timeline' => $timeline])
+
+                {{-- ⭐ পাশের তথ্য — কার, কী বাবদ, কোথায়।
+
+                     ── ⛔ কেন এগুলো এই পাতায়ই ───────────────────────
+                     ⓘ যিনি সই দিতে বসেছেন তাঁর পরের প্রশ্ন সবসময়
+                     একটাই: *"কার কাগজ, কী বাবদ"*। ⚠️ উত্তরটা অন্য
+                     পর্দায় থাকলে তিনি হয় সেখানে যান, নয় **না দেখেই
+                     সই দেন** — আর দ্বিতীয়টাই বেশি হয়। --}}
+                @if (array_filter($facts))
+                    <dl class="mt-3 space-y-2 border-t border-(--color-border) pt-3">
+                        @foreach ([
+                            'party' => __('approval::field.party'),
+                            'about' => __('approval::field.what_for'),
+                            'where' => __('approval::field.where_money'),
+                        ] as $key => $label)
+                            @if (($facts[$key] ?? null))
+                                <div>
+                                    <dt class="text-2xs uppercase tracking-wide text-(--color-ink-muted)">
+                                        {{ $label }}
+                                    </dt>
+                                    <dd class="text-sm">{{ $facts[$key] }}</dd>
+                                </div>
+                            @endif
+                        @endforeach
+                    </dl>
+                @endif
+            </aside>
+        @endif
+
+        <div class="min-w-0 space-y-4">
             <div data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
                 <dl class="grid gap-3 sm:grid-cols-2">
                     <div>
@@ -137,23 +218,28 @@
                         {{ __('approval::field.decisions') }}
                     </h2>
 
+                    {{-- ⭐ ফরওয়ার্ড হলে কার কাছে গেল সেটা সারিতে।
+
+                         ⚠️ নামটা ছাড়া সারিটা বলত *‹অন্যের কাছে পাঠানো›*, আর
+                         প্রশ্নটা থেকে যেত: **কার** কাছে? ⛔ ঐ উত্তরটা হারালে
+                         *‹কে সই করেছিল›* প্রশ্নের শিকলটা ছিঁড়ে যায়, আর ঐ
+                         শিকলের জন্যই গোটা ব্যবস্থাটা আছে।
+
+                         ⓘ মন্তব্যটা ট্যাগের বাইরে — কারণটা
+                         [[NoBladeTagIsQuietlyLeftAsTextTest]]-এ।
+
+                         ⓘ স্তরের ঘরে নাম থাকলে ‹২ · সুপারভাইজার›,
+                         না থাকলে আগের মতোই ‹২›। --}}
                     <x-ui.table
                         :empty="__('approval::field.decisions')"
                         :rows="$approval->decisions"
                         :columns="[
-                            /* ⓘ নাম থাকলে '২ · সুপারভাইজার', না থাকলে আগের মতোই '২' */
                             ['key' => 'level', 'label' => __('approval::field.level'), 'width' => '9rem',
                              'render' => fn ($d) => isset($stepNames[$d->level])
                                  ? $d->level.' · '.$stepNames[$d->level]
                                  : $d->level],
                             ['key' => 'user', 'label' => __('approval::field.approver'),
                              'render' => fn ($d) => $d->user?->name],
-                            /* ⭐ ফরওয়ার্ড হলে কার কাছে গেল সেটাও এখানেই — ২২ সেপ্টেম্বর ২০২৬।
-
-                               ⚠️ নামটা ছাড়া সারিটা বলত «অন্যের কাছে পাঠানো»,
-                               আর প্রশ্নটা থেকে যেত: **কার** কাছে? ⛔ ঐ উত্তরটা
-                               হারালে «কে সই করেছিল» প্রশ্নের শিকলটাই ছিঁড়ে যায়,
-                               আর ঐ শিকলের জন্যই গোটা ব্যবস্থাটা আছে। */
                             ['key' => 'decision', 'label' => __('approval::field.status'), 'width' => '12rem',
                              'render' => fn ($d) => $d->decision === \App\Models\ApprovalDecision::FORWARDED
                                  && $d->forwardedTo !== null
@@ -167,9 +253,24 @@
             @endif
         </div>
 
-        <div class="space-y-3">
+        <div class="min-w-0 space-y-3 lg:sticky lg:top-4">
             @if ($approval->status === \App\Models\Approval::PENDING && $canDecide)
+                {{-- ⛔ সইয়ের আগে একটা প্রশ্ন — আর শর্টকাট এটা এড়াতে পারে না।
+
+                     ⓘ নিশ্চিতকরণটা [[actions.js]]-এর `data-confirm`-এ, অর্থাৎ
+                     ফর্মটা যেখান থেকেই জমা হোক — বোতাম, Enter, বা
+                     স্ক্রিপ্ট — প্রশ্নটা আসবেই। ⚠️ তাই নিচের কি-বোর্ড
+                     কখনো `requestSubmit()` ডাকে না, আর ডাকলেও এড়ানো যেত না।
+
+                     ⛔ প্রশ্নটা শুধু সইয়ে, ফেরতে নয়: ভুল "হ্যাঁ" টাকা
+                     নড়িয়ে দেয়, আর ভুল "না" কেবল একটা কাগজ থামায় —
+                     যেটা আবার পাঠানো যায়। --}}
                 <form method="POST" action="{{ route('approval.inbox.approve', $approval->id) }}"
+                      data-confirm="{{ $approval->amount === null
+                          ? __('approval::message.approve_confirm_plain')
+                          : __('approval::message.approve_confirm', [
+                              'amount' => \App\Core\Support\Money::format($approval->amount),
+                          ]) }}"
                       class="rounded-(--radius-card) border border-(--color-border)
                              bg-(--color-surface-card) p-4">
                     @csrf
@@ -178,7 +279,7 @@
                         <span class="mb-1 block text-2xs uppercase tracking-wide text-(--color-ink-muted)">
                             {{ __('approval::field.remarks') }}
                         </span>
-                        <textarea name="remarks" rows="3" maxlength="500"
+                        <textarea name="remarks" rows="3" maxlength="500" data-approval-remarks
                                   class="w-full rounded-(--radius-field) border border-(--color-border)
                                          bg-(--color-surface-app) px-2 py-1.5 text-sm"></textarea>
                     </label>
@@ -196,7 +297,22 @@
                              bg-(--color-surface-card) p-4">
                     @csrf
 
-                    <label class="block">
+                    {{-- ⭐ কারণটা বাছাই করা হয়, শুধু লেখা নয় — ধাপ ১০।
+
+                         ⓘ মুক্ত লেখাটাও থাকে, আর সেটাই মানুষটার জন্য।
+                         ⚠️ কোডটা রিপোর্টের জন্য: *"দাম ভুল"* দশ বানানে
+                         লেখা হলে *"কেন বাতিল হয়"* প্রশ্নের কোনো উত্তর
+                         থাকত না — আর ওটাই সবচেয়ে কাজের প্রশ্ন।
+
+                         ⓘ বাধ্যতামূলক নয়: না বাছলে ইঞ্জিন খালিই রাখে,
+                         আর পুরনো সারিগুলোর মতোই সেটা "অব্যক্ত" হয়ে গোনা হয়। --}}
+                    <x-ui.select name="reason_code"
+                                 :label="__('approval::field.reason_code')"
+                                 :options="collect(\App\Models\ApprovalDecision::REASONS)
+                                     ->mapWithKeys(fn ($r) => [$r => __('approval::reason.'.$r)])"
+                                 :placeholder="__('approval::field.reason_pick')" />
+
+                    <label class="mt-3 block">
                         <span class="mb-1 block text-2xs uppercase tracking-wide text-(--color-ink-muted)">
                             {{ __('approval::field.remarks') }} *
                         </span>
@@ -207,6 +323,49 @@
 
                     <x-ui.button type="submit" tone="danger" class="mt-3 w-full">
                         {{ __('approval::action.reject') }}
+                    </x-ui.button>
+                </form>
+
+                {{-- ⭐ "সংশোধন করে আনুন" — বাতিল থেকে আলাদা পথ।
+
+                     ── ⓘ কেন এটা পার্থক্য তৈরি করে ───────────────────
+                     ⛔ *"না"* আর *"অল্প ভুল আছে, ঠিক করে আনুন"* এক কথা
+                     নয়। ⓘ প্রথমটা একটা ব্যবসায়িক সিদ্ধান্ত, দ্বিতীয়টা
+                     একটা কাগজের ভুল — আর *"কেন বাতিল হয়"* রিপোর্টে
+                     দুইটা এক গোনা হলে সংখ্যাটা কোনো প্রশ্নের উত্তর দিত না।
+
+                     ── ⚠️ কেন এটা একটা **চতুর্থ অবস্থা** নয় ────────────
+                     ⓘ পার্থক্যটা কারণ-কোডেই ধরা পড়ে (`document`), আর পরের
+                     পথটাও অবিকল এক: কাগজটা সংশোধন করলে ছাপ বদলায়, আর
+                     [[DocumentApproval::stopping()]] নিজে নতুন অনুরোধ বসায়।
+
+                     ⛔ নতুন একটা অবস্থা বসালে ইঞ্জিন, ছয়টা পর্দা, চারটা
+                     রিপোর্ট আর bulk — সবগুলোর `match` শাখা বাড়াতে হত, আর
+                     যেখানে বাড়ানো হত না সেখানে কাগজটা **নীরবে অদৃশ্য** হত। --}}
+                <form method="POST" action="{{ route('approval.inbox.reject', $approval->id) }}"
+                      class="rounded-(--radius-card) border border-(--color-border)
+                             bg-(--color-surface-card) p-4">
+                    @csrf
+
+                    {{-- ⓘ কারণ-কোডটা লুকানো ঘরে, বাহিরে নয়।
+
+                         ⛔ ড্রপডাউনে রাখলে দুইটা ফর্মে একই প্রশ্ন দুইবার
+                         থাকত, আর ব্যবহারকারী *"সংশোধনে ফেরত"* বেছে কারণে
+                         *"দাম ভুল"* লিখতে পারতেন — দুইটা পরস্পরবিরোধী। --}}
+                    <input type="hidden" name="reason_code" value="document">
+
+                    <label class="block">
+                        <span class="mb-1 block text-2xs uppercase tracking-wide text-(--color-ink-muted)">
+                            {{ __('approval::field.what_to_fix') }} *
+                        </span>
+                        <textarea name="remarks" rows="2" maxlength="500" required
+                                  placeholder="{{ __('approval::message.send_back_hint') }}"
+                                  class="w-full rounded-(--radius-field) border border-(--color-border)
+                                         bg-(--color-surface-app) px-2 py-1.5 text-sm"></textarea>
+                    </label>
+
+                    <x-ui.button type="submit" tone="warning" class="mt-3 w-full" data-shortcut="send-back">
+                        {{ __('approval::action.send_back') }}
                     </x-ui.button>
                 </form>
 
@@ -249,11 +408,19 @@
                     </form>
                 @endif
             @elseif ($approval->status === \App\Models\Approval::PENDING)
+                {{-- ⭐ কেন পারছেন না — তিনটা কারণের মধ্যে কোনটা।
+
+                     ── ⛔ আগে দুইটাই লেখা হত ───────────────────────
+                     নিজের অনুরোধ, নাহলে *"আপনার পালা নয়"*। ⚠️ কিন্তু
+                     কর্তৃত্বের সীমা পার হলেও সেই একই লেখা উঠত — আর সেটা
+                     মিথ্যা: পালা তাঁরই, কেবল অঙ্কটা বড়।
+
+                     ⛔ ফল নীরব: তিনি ধরে নিতেন কাগজটা অন্য কারো
+                     কাছে আছে আর অপেক্ষা করতেন — অথচ কাগজটা কারো
+                     কাছে নেই। --}}
                 <p class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)
                           p-4 text-sm text-(--color-ink-muted)">
-                    {{ $approval->requested_by === auth()->id()
-                        ? __('approval::message.own_request')
-                        : __('approval::message.not_your_turn') }}
+                    {{ $whyNot ?? __('approval::message.not_your_turn') }}
                 </p>
             @endif
 
@@ -267,4 +434,66 @@
             @endif
         </div>
     </div>
+
+    {{-- ⭐ কি-বোর্ড — হাত যেন কি-বোর্ড না ছাড়ে।
+
+         ── ⛔ যা এখানে ইচ্ছাকৃতভাবে **নেই** ────────────────────
+         সই বা ফেরতের কোনো শর্টকাট নেই। ⚠️ একটা অক্ষরে পাঁচ
+         লাখ টাকা পাস করা দ্রুততা নয়, দুর্ঘটনা — আর ওই ভুলটা
+         ফেরানো যায় না। ⓘ শর্টকাটগুলো কেবল **পৌঁছানোর** —
+         ঘরে যাওয়া, পাতা বদলানো — কখনো **করার** নয়।
+
+         ── ⓘ কেন এখানে, actions.js-এ নয় ─────────────────────
+         ঘরগুলো এই পর্দার নিজের, আর শেয়ার্ড ফাইলে পর্দা-নির্দিষ্ট
+         সিলেক্টর জমলে একদিন কেউ পর্দাটা মুছে দেবেন আর কোডটা
+         থেকে যাবে। --}}
+    <script @nonce>
+        (() => {
+            /* ⚠️ লেখার ঘরে কার্সার থাকলে তীর দিয়ে পাতা বদলাবে না —
+               নাহলে মন্তব্য লেখার সময় বাঁ তীরে কাগজটাই বদলে যেত। */
+            const typing = (el) => el && (el.isContentEditable
+                || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName))
+
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape' && typing(event.target)) {
+                    event.target.blur()
+
+                    return
+                }
+
+                if (event.ctrlKey || event.metaKey) {
+                    if (event.key?.toLowerCase?.() !== 'k') {
+                        return
+                    }
+
+                    const box = document.querySelector('[data-approval-remarks]')
+
+                    if (box) {
+                        event.preventDefault()
+                        box.focus()
+                    }
+
+                    return
+                }
+
+                if (typing(event.target)) {
+                    return
+                }
+
+                /* ⓘ তীর দুইটা কেবল তখনই চলে যখন লিংকটা সত্যি আছে।
+                   ⛔ নাহলে শেষ কাগজে ডান তীর চাপলে কিছুই হত না, আর
+                   মানুষ ভাবতেন কি-বোর্ডটাই কাজ করছে না। */
+                const to = event.key === 'ArrowLeft'
+                    ? document.querySelector('[data-approval-prev]')
+                    : (event.key === 'ArrowRight'
+                        ? document.querySelector('[data-approval-next]')
+                        : null)
+
+                if (to) {
+                    event.preventDefault()
+                    window.location.href = to.href
+                }
+            })
+        })()
+    </script>
 </x-layouts.app>

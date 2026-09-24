@@ -148,6 +148,39 @@
                 </div>
         @endif
 
+        {{-- ⭐ দেরির চিপ — ২৪ সেপ্টেম্বর ২০২৬।
+
+             ⓘ সংখ্যাটা শূন্য হলে চিপটাই থাকে না, মডিউলের চিপগুলোর মতোই:
+             ⛔ "দেরি ০" লেখা একটা চিপ চেপে খালি তালিকা পাওয়ার চেয়ে
+             খারাপ কিছু নেই, আর ওটা ঠিক ভালো দিনগুলোতেই জায়গা নিত।
+
+             ⚠️ লিংকে ব্যক্তি আর মডিউল দুইটাই সাথে যায় — নাহলে "দেরি"
+             চাপলে বাকি ছাঁকনিগুলো নীরবে উঠে যেত, আর সংখ্যাটা বদলে
+             যাওয়ায় মনে হত ছাঁকনিটা কাজ করেছে। --}}
+        @if ($lateCount > 0)
+            @php
+                $keepAll = array_filter([
+                    'person' => $person ?: null,
+                    'module' => $selected !== '' ? $selected : null,
+                ]);
+            @endphp
+
+            <div class="flex flex-wrap items-center gap-2 border-b border-(--color-border) px-3 py-2">
+                <a href="{{ route('approval.inbox.index', $late ? $keepAll : $keepAll + ['late' => 1]) }}"
+                   @class([
+                       'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium
+                        transition-colors hover:bg-(--color-surface-hover)',
+                       'border-(--color-badge-danger-ink) bg-(--color-badge-danger-bg)
+                        text-(--color-badge-danger-ink)' => $late,
+                       'border-(--color-border) bg-(--color-surface-card) text-(--color-ink-body)' => ! $late,
+                   ])
+                   @if ($late) aria-current="true" @endif>
+                    {{ __('approval::field.late') }}
+                    <span>{{ $lateCount }}</span>
+                </a>
+            </div>
+        @endif
+
         {{-- কাটা পড়েছে কি না, আর কতটা — কেবল সত্যিই কাটা পড়লে।
 
              নিচে যা দেখা যাচ্ছে সেটাই সবটা নয়, আর সেটা না বললে পাতাটা
@@ -165,13 +198,42 @@
             </p>
         @endif
 
+        {{-- ⭐ একসাথে সই — মালিকের সিদ্ধান্ত ৫, ২৪ সেপ্টেম্বর ২০২৬।
+
+             ⛔ টাকা নড়ে এমন কাজে চেকবক্সটা **আঁকাই হয় না** — মালিকের
+             সিদ্ধান্ত: ওগুলো একটা একটা করে খুলে দেখতে হবে। ⓘ তবু
+             [[BulkApproval]] সার্ভারেও আলাদা করে দেখে, কারণ একটা লুকানো
+             চেকবক্স হাতে বানিয়ে পাঠানো যায় আর পর্দা কখনো শেষ কথা নয়।
+
+             ⚠️ ফর্মটা টেবিলের **বাইরে** মোড়ানো, কারণ `x-ui.table` নিজে
+             একটা `<table>` আঁকে — ভেতরে `<form>` বসালে HTML ওটাকে
+             টেবিলের বাইরে ঠেলে দিত, আর চেকবক্সগুলো কোনো ফর্মেই থাকত না। --}}
+        <form method="POST" action="{{ route('approval.inbox.bulk') }}">
+            @csrf
+
+            @php
+                /*
+                 * ⓘ `in_array` নয়, চাবি ধরে খোঁজা — তালিকাটা পঞ্চাশ সারি,
+                 * আর প্রতিটা সারিতে পঞ্চাশটা মিলানো মানে আড়াই হাজার তুলনা।
+                 */
+                $canPick = array_flip($bulkable);
+            @endphp
+
         <x-ui.table
             :empty="__('approval::message.nothing_waiting')"
             :rows="$approvals"
             :compact="request()->boolean('compact')"
             :columns="[
+                ['key' => 'pick', 'label' => __('approval::field.pick'), 'width' => '3rem',
+                 'render' => fn ($a) => isset($canPick[$a->id])
+                     ? view('approval::inbox.partials.pick', ['approval' => $a])
+                     : ''],
                 ['key' => 'requested_at', 'label' => __('approval::field.requested_at'), 'width' => '11rem',
                  'render' => fn ($a) => $a->requested_at?->format('d M Y, H:i')],
+                ['key' => 'sla', 'label' => __('approval::field.sla'), 'width' => '9rem',
+                 'render' => fn ($a) => view('approval::inbox.partials.clock', [
+                     'approval' => $a, 'state' => $sla[$a->id] ?? 'none',
+                 ])],
                 ['key' => 'module', 'label' => __('approval::field.action'),
                  'render' => fn ($a) => view('approval::inbox.partials.what', ['approval' => $a, 'labels' => $labels])],
                 ['key' => 'party', 'label' => __('approval::field.party'), 'width' => '11rem',
@@ -187,5 +249,52 @@
                 ['key' => 'open', 'label' => '', 'width' => '7rem',
                  'render' => fn ($a) => view('approval::inbox.partials.open', ['approval' => $a])],
             ]" />
+
+            {{-- ⓘ বোতামটা কেবল তখনই, যখন সত্যিই বাছাই করার কিছু আছে।
+
+                 ⛔ সবসময় দেখালে টাকার কাগজভরা একটা ইনবক্সে বোতামটা
+                 জীবন্ত দেখাত, চাপলে "বাছাই করা কিছু নেই" — আর পাঠক
+                 ভাবতেন ব্যবস্থাটা ভাঙা। --}}
+            @if ($bulkable !== [])
+                <div class="flex flex-wrap items-center gap-3 border-t border-(--color-border) px-4 py-3">
+                    <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
+                        <input type="checkbox" id="pick-all" class="size-4">
+                        {{ __('approval::action.pick_all') }}
+                    </label>
+
+                    <x-ui.button type="submit" tone="primary">
+                        {{ __('approval::action.bulk_approve') }}
+                    </x-ui.button>
+
+                    {{-- ⚠️ সীমাটা লেখা থাকে, লুকানো হয় না।
+
+                         ⓘ চেকবক্সটা যেখানে নেই সেখানে পাঠক ভাবতে পারেন
+                         সারিটা ভাঙা। ⛔ কারণটা না লিখলে তিনি একই কাগজে
+                         বারবার চেষ্টা করতেন। --}}
+                    <p class="text-2xs text-(--color-ink-muted)">
+                        {{ __('approval::message.bulk_only_paper') }}
+                    </p>
+                </div>
+            @endif
+        </form>
     </div>
+
+    {{-- "সব বাছাই" — JavaScript বন্ধ থাকলে ঘরটা কিছুই করে না, আর
+         প্রতিটা সারির নিজের চেকবক্স তখনও কাজ করে। ⓘ তাই এটা সুবিধা,
+         শর্ত নয় — ঠিক সেভাবেই বসানো। --}}
+    <script @nonce>
+        (() => {
+            const all = document.getElementById('pick-all');
+
+            if (! all) {
+                return;
+            }
+
+            all.addEventListener('change', () => {
+                document.querySelectorAll('input[name="ids[]"]').forEach((box) => {
+                    box.checked = all.checked;
+                });
+            });
+        })();
+    </script>
 </x-layouts.app>

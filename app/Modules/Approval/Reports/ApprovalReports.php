@@ -45,6 +45,8 @@ final class ApprovalReports
         $engine->register(self::approved());
         $engine->register(self::rejected());
         $engine->register(self::byUser());
+        $engine->register(self::bottleneck());
+        $engine->register(self::whyRejected());
     }
 
     /**
@@ -208,6 +210,102 @@ final class ApprovalReports
      * একটা গণনা। গোষ্ঠীবদ্ধ সারি থেকে ড্রিল করার ব্যবস্থা ইঞ্জিনে নেই,
      * আর সেটা এখানে নীরবে লুকানোর চেয়ে লিখে রাখা ভালো।
      */
+    /**
+     * ⭐ কোন ধাপে সবচেয়ে বেশি আটকায় — ২৪ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⚠️ কেন "কে দেরি করে" থেকে আলাদা ──────────────────
+     * ⓘ [[byUser]] গোনে **যাঁরা সিদ্ধান্ত দিয়েছেন** — অর্থাৎ যাঁরা
+     * কাজ করেছেন। ⛔ যে ধাপে কাগজ **এখনো বসে আছে** সেটা ওখানে
+     * কখনো আসে না — আর ঠিক সেটাই মালিকের প্রশ্ন।
+     *
+     * ── ⓘ সারিটা ধাপ, মানুষ নয় ───────────────────────────
+     * একটা ধাপে তিনজন থাকতে পারেন। ⚠️ মানুষ ধরে গুনলে
+     * একটা আটকে থাকা কাগজ তিনবার গোনা হত, আর সংখ্যাটা মিথ্যা
+     * বলত।
+     */
+    public static function bottleneck(): ReportDefinition
+    {
+        return new ReportDefinition(
+            key: 'approval.bottleneck',
+            title: 'approval::menu.report_bottleneck',
+            filters: [],
+            groupBy: 'step_key',
+            query: fn (array $f) => DB::table('approvals')
+                ->where('approvals.company_id', $f['company_id'])
+                ->where('approvals.status', Approval::PENDING)
+                ->groupBy('approvals.module', 'approvals.action', 'approvals.current_level')
+                ->orderByDesc(DB::raw('COUNT(*)'))
+                ->select([
+                    DB::raw("CONCAT(approvals.module, '.', approvals.action, '#', approvals.current_level) as step_key"),
+                    self::whatLabel(),
+                    DB::raw('approvals.current_level as level'),
+                    DB::raw('COUNT(*) as waiting_count'),
+
+                    /*
+                     * ⓘ ঘণ্টায় গুনে দিনে ভাঙা — [[byUser]]-এর একই কারণে:
+                     * সরাসরি দিনে গুনলে আজকের সবগুলো শূন্য দেখাত।
+                     */
+                    DB::raw(
+                        'ROUND(AVG(TIMESTAMPDIFF(HOUR, approvals.requested_at, NOW())) / 24, 1) as avg_days'
+                    ),
+
+                    /* ⛔ সবচেয়ে পুরনোটা কত দিন ধরে বসে আছে */
+                    DB::raw(
+                        'ROUND(MAX(TIMESTAMPDIFF(HOUR, approvals.requested_at, NOW())) / 24, 1) as worst_days'
+                    ),
+                ]),
+            columns: [
+                ['key' => 'what', 'label' => 'approval::field.action'],
+                ['key' => 'level', 'label' => 'approval::field.level',
+                    'type' => ReportColumn::QUANTITY, 'width' => '6rem'],
+                ['key' => 'waiting_count', 'label' => 'approval::field.waiting_count',
+                    'type' => ReportColumn::QUANTITY, 'width' => '8rem'],
+                ['key' => 'avg_days', 'label' => 'approval::field.avg_days',
+                    'type' => ReportColumn::QUANTITY, 'width' => '8rem'],
+                ['key' => 'worst_days', 'label' => 'approval::field.worst_days',
+                    'type' => ReportColumn::QUANTITY, 'width' => '8rem'],
+            ],
+        );
+    }
+
+    /**
+     * ⭐ কেন বাতিল হয় — কারণ ধরে গোনা।
+     *
+     * ⓘ এই রিপোর্টটাই কারণ-কোডের একমাত্র কারণ। ⚠️ কেবল
+     * মুক্ত লেখা রাখলে *"দাম ভুল"* দশ বানানে লেখা হত, আর
+     * এই সংখ্যাগুলো কখনো এক হত না।
+     */
+    public static function whyRejected(): ReportDefinition
+    {
+        return new ReportDefinition(
+            key: 'approval.why_rejected',
+            title: 'approval::menu.report_why_rejected',
+            filters: ['date_range'],
+            groupBy: 'reason_code',
+            query: fn (array $f) => DB::table('approval_decisions')
+                ->join('approvals', 'approvals.id', '=', 'approval_decisions.approval_id')
+                ->where('approvals.company_id', $f['company_id'])
+                ->where('approval_decisions.decision', 'rejected')
+                ->whereBetween('approval_decisions.decided_at', [$f['from'].' 00:00:00', $f['to'].' 23:59:59'])
+                ->groupBy('approval_decisions.reason_code')
+                ->orderByDesc(DB::raw('COUNT(*)'))
+                ->select([
+                    /*
+                     * ⓘ পুরনো সারিগুলোর কোনো কারণ-কোড নেই (`null`)।
+                     * ⚠️ ওগুলোকে বাদ দিলে যোগফল বাস্তবের চেয়ে কম দেখাত,
+                     * আর মালিক ভাবতেন বাতিল কম হয়।
+                     */
+                    DB::raw("COALESCE(approval_decisions.reason_code, 'unstated') as reason_code"),
+                    DB::raw('COUNT(*) as rejected_count'),
+                ]),
+            columns: [
+                ['key' => 'reason_code', 'label' => 'approval::field.reason_code'],
+                ['key' => 'rejected_count', 'label' => 'approval::field.rejected_count',
+                    'type' => ReportColumn::QUANTITY, 'width' => '8rem'],
+            ],
+        );
+    }
+
     public static function byUser(): ReportDefinition
     {
         return new ReportDefinition(

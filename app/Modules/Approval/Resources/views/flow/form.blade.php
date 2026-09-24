@@ -61,6 +61,15 @@
                      ঘরে বসে; JavaScript ছাড়া চলে না বলে দুইটাই পাঠানো হয় --}}
                 <input type="hidden" name="module" id="flow-module" value="{{ old('module', $flow->module) }}">
                 <input type="hidden" name="action" id="flow-action" value="{{ old('action', $flow->action) }}">
+
+                {{-- ⛔ নথি-ধরনটা ফিরে যায়, নাহলে সম্পাদনা করলেই মুছে যেত।
+
+                     ⚠️ ঘরটা পর্দায় নেই (আজ ওটা হাতে বসানো হয় না), আর
+                     সেবা অনুপস্থিত চাবিকে *"সব ধরনে"* পড়ত। ⓘ ফল: একটা
+                     নথি-নির্দিষ্ট ছক কেবল খুলে সংরক্ষণ করলেই **সব ধরনের
+                     কাগজ ধরতে শুরু করত** — কোনো ত্রুটি ছাড়া। --}}
+                <input type="hidden" name="document_type"
+                       value="{{ old('document_type', $flow->document_type) }}">
             </label>
 
             <label class="block">
@@ -110,6 +119,12 @@
                     'approver_type' => $s->approver_type,
                     'approver_id' => $s->approver_id,
                     'requires_all' => $s->requires_all,
+                    'min_approvals' => $s->min_approvals,
+                    'sla_hours' => $s->sla_hours,
+                    'warn_hours' => $s->warn_hours,
+                    'escalate_hours' => $s->escalate_hours,
+                    'escalate_to_type' => $s->escalate_to_type,
+                    'escalate_to_id' => $s->escalate_to_id,
                 ])->all() ?? []);
 
                 // যা আছে তার নিচে তিনটা খালি সারি
@@ -179,6 +194,138 @@
                                    @checked($step['requires_all'] ?? false) class="size-4">
                             <span class="whitespace-nowrap">{{ __('approval::field.requires_all') }}</span>
                         </label>
+                    </div>
+
+                    {{-- ⭐ ঘড়ি, গন্তব্য আর কয়জনের সই — ২৪ সেপ্টেম্বর ২০২৬।
+
+                         ⓘ একই ধাপের দ্বিতীয় সারি, প্রথমটার নিচে ইন্ডেন্ট করা।
+                         ⛔ আলাদা কার্ডে নিলে "কোন ঘড়িটা কোন ধাপের" প্রশ্নটা
+                         আবার ফিরত, আর একটা ভুল মিলে তিন ঘণ্টার সীমা চলে যেত
+                         অন্য ধাপে — দুইটাই বৈধ, তাই কোথাও কিছু লাল হত না।
+
+                         ⚠️ ঘরগুলো খালি রাখলে কিছুই বদলায় না: `null` মানে
+                         "এই ধাপে ঘড়ি নেই", আর পুরনো ছকগুলো অবিকল আগের মতো চলে। --}}
+                    <div class="mb-1 grid gap-2 border-l-2 border-(--color-border) pl-3
+                                sm:ml-2 sm:grid-cols-[6rem_6rem_6rem_6rem_1fr]">
+                        <input type="number" name="steps[{{ $index }}][min_approvals]" min="1" max="9"
+                               value="{{ $step['min_approvals'] ?? '' }}"
+                               placeholder="{{ __('approval::field.min_approvals') }}"
+                               title="{{ __('approval::message.min_approvals_hint') }}"
+                               aria-label="{{ __('approval::field.min_approvals') }}"
+                               class="rounded-(--radius-field) border border-(--color-border)
+                                      bg-(--color-surface-app) px-2 py-1.5 text-sm">
+
+                        <input type="number" name="steps[{{ $index }}][sla_hours]" min="1" max="8760"
+                               value="{{ $step['sla_hours'] ?? '' }}"
+                               placeholder="{{ __('approval::field.sla_hours') }}"
+                               title="{{ __('approval::message.sla_hint') }}"
+                               aria-label="{{ __('approval::field.sla_hours') }}"
+                               class="rounded-(--radius-field) border border-(--color-border)
+                                      bg-(--color-surface-app) px-2 py-1.5 text-sm">
+
+                        <input type="number" name="steps[{{ $index }}][warn_hours]" min="1" max="8760"
+                               value="{{ $step['warn_hours'] ?? '' }}"
+                               placeholder="{{ __('approval::field.warn_hours') }}"
+                               aria-label="{{ __('approval::field.warn_hours') }}"
+                               class="rounded-(--radius-field) border border-(--color-border)
+                                      bg-(--color-surface-app) px-2 py-1.5 text-sm">
+
+                        <input type="number" name="steps[{{ $index }}][escalate_hours]" min="1" max="8760"
+                               value="{{ $step['escalate_hours'] ?? '' }}"
+                               placeholder="{{ __('approval::field.escalate_hours') }}"
+                               aria-label="{{ __('approval::field.escalate_hours') }}"
+                               class="rounded-(--radius-field) border border-(--color-border)
+                                      bg-(--color-surface-app) px-2 py-1.5 text-sm">
+
+                        {{-- ⓘ গন্তব্যও একটাই ঘরে, সইকারীর মতোই — কারণটা
+                             [[ApprovalFlowRequest::prepareForValidation()]]-এ। --}}
+                        @php
+                            $target = ($step['escalate_to_type'] ?? '').'|'.($step['escalate_to_id'] ?? '');
+                        @endphp
+
+                        <select name="steps[{{ $index }}][escalate_to]"
+                                title="{{ __('approval::message.escalate_hint') }}"
+                                aria-label="{{ __('approval::field.escalate_to') }}"
+                                class="rounded-(--radius-field) border border-(--color-border)
+                                       bg-(--color-surface-app) px-2 py-1.5 text-sm">
+                            <option value="">{{ __('approval::field.escalate_to') }}</option>
+
+                            <optgroup label="{{ __('approval::action.by_role') }}">
+                                @foreach ($roles as $role)
+                                    <option value="role|{{ $role->id }}" @selected($target === 'role|'.$role->id)>
+                                        {{ $role->name }}
+                                    </option>
+                                @endforeach
+                            </optgroup>
+
+                            <optgroup label="{{ __('approval::action.by_user') }}">
+                                @foreach ($users as $user)
+                                    <option value="user|{{ $user->id }}" @selected($target === 'user|'.$user->id)>
+                                        {{ $user->name }}
+                                    </option>
+                                @endforeach
+                            </optgroup>
+                        </select>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+
+        {{-- ⭐ টাকার অঙ্ক ছাড়াও শর্ত — ধাপ ৩।
+
+             ⚠️ ঘরের নামটা হাতে লিখতে হয়, কারণ প্রতিটা মডিউল আলাদা ঘর
+             পাঠায় আর কোনো একক তালিকা নেই। ⛔ ভুল নাম লিখলে ছকটা
+             **কখনো ধরে না**, আর সেটা সম্পূর্ণ নীরব — তাই
+             [[ApprovalExceptions]] ঐ ফাঁকটা আলাদা করে খুঁজে দেখায়। --}}
+        <div data-boxed class="rounded-(--radius-card) border border-(--color-border)
+                    bg-(--color-surface-card) p-4">
+            <h2 class="mb-1 text-sm font-semibold">{{ __('approval::field.conditions') }}</h2>
+
+            <p class="mb-3 text-2xs text-(--color-ink-muted)">
+                {{ __('approval::message.conditions_hint') }}
+            </p>
+
+            @php
+                $conditions = old('conditions', $flow->conditions?->map(fn ($c) => [
+                    'field' => $c->field,
+                    'operator' => $c->operator,
+                    'value' => $c->value,
+                ])->all() ?? []);
+
+                // যা আছে তার নিচে তিনটা খালি সারি — ধাপগুলোর মতোই
+                $conditionRows = array_pad(array_values($conditions), count($conditions) + 3, null);
+            @endphp
+
+            <div class="space-y-2">
+                @foreach ($conditionRows as $index => $condition)
+                    <div class="grid gap-2 sm:grid-cols-[1fr_7rem_1fr]">
+                        <input type="text" name="conditions[{{ $index }}][field]" maxlength="64"
+                               value="{{ $condition['field'] ?? '' }}"
+                               placeholder="{{ __('approval::field.condition_field') }}"
+                               aria-label="{{ __('approval::field.condition_field') }}"
+                               class="rounded-(--radius-field) border border-(--color-border)
+                                      bg-(--color-surface-app) px-2 py-1.5 text-sm">
+
+                        {{-- ⓘ তুলনাগুলো মডেল থেকে, এখানে হাতে লেখা নয় —
+                             নতুন একটা যোগ হলে পর্দাটা নিজেই জেনে যায়। --}}
+                        <select name="conditions[{{ $index }}][operator]"
+                                aria-label="{{ __('approval::field.condition_operator') }}"
+                                class="rounded-(--radius-field) border border-(--color-border)
+                                       bg-(--color-surface-app) px-2 py-1.5 text-sm">
+                            @foreach (\App\Models\ApprovalCondition::OPERATORS as $operator)
+                                <option value="{{ $operator }}"
+                                        @selected(($condition['operator'] ?? '') === $operator)>
+                                    {{ $operator }}
+                                </option>
+                            @endforeach
+                        </select>
+
+                        <input type="text" name="conditions[{{ $index }}][value]" maxlength="255"
+                               value="{{ $condition['value'] ?? '' }}"
+                               placeholder="{{ __('approval::field.condition_value') }}"
+                               aria-label="{{ __('approval::field.condition_value') }}"
+                               class="rounded-(--radius-field) border border-(--color-border)
+                                      bg-(--color-surface-app) px-2 py-1.5 text-sm">
                     </div>
                 @endforeach
             </div>

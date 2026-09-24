@@ -15,4 +15,12 @@ return [
     'by_user' => 'Person',
     'always' => 'Every time',
     'forward' => 'Pass it on',
+    'delegate' => 'Hand over',
+    'delegation_stop' => 'Stop',
+    'bulk_approve' => 'Sign the selected',
+    'pick_all' => 'Select all',
+    'add_limit' => 'Add a limit',
+    'previous' => 'Previous',
+    'next' => 'Next',
+    'send_back' => 'Send back to fix',
 ];

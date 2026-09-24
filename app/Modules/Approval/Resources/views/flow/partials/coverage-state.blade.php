@@ -18,3 +18,30 @@
         {{ __('approval::message.coverage_on') }}
     </span>
 @endif
+
+{{-- ⛔ ঘড়ি বসানো, যাওয়ার জায়গা নেই — ২৪ সেপ্টেম্বর ২০২৬।
+
+     ── ⚠️ কেন এই লাইনটা ঠিক এখানে ──────────────────────────────────
+     ⓘ [[ApprovalExceptions]] ফাঁকটা আলাদা পর্দায়ও দেখায়। ⛔ তবু এখানে
+     লাগে, আর কারণটা মানুষের: মালিক সময়সীমাটা বসান **এই** সারিটার
+     সম্পাদনা থেকে, আর তখনই তিনি ধরে নেন দেরি হলে কিছু একটা হবে।
+
+     ⚠️ গন্তব্য না বসালে কাগজ **কোথাও যায় না** — সময় পার হয়, ঘণ্টার
+     কমান্ড চলে, আর কিছুই ঘটে না। ⓘ ভুলটা সম্পূর্ণ নীরব, তাই সেটা
+     যেখানে জন্মায় সেখানেই বলা হয়। --}}
+@php
+    $sla = app(\App\Core\Engines\Approval\ApprovalSla::class);
+
+    $holes = collect($row['flow']?->steps ?? [])
+        ->filter(fn ($step) => $sla->hasHoleAt($step))
+        ->pluck('level')
+        ->all();
+@endphp
+
+@if ($holes !== [])
+    <span class="mt-1 block rounded-(--radius-field) bg-(--color-badge-danger-bg) px-2 py-0.5
+                 text-2xs text-(--color-badge-danger-ink)"
+          title="{{ __('approval::message.escalate_hint') }}">
+        {{ __('approval::message.coverage_hole', ['levels' => implode(', ', $holes)]) }}
+    </span>
+@endif

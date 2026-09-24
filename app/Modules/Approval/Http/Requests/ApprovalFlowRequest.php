@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Approval\Http\Requests;
 
+use App\Models\ApprovalCondition;
 use App\Models\ApprovalFlowStep;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -50,6 +51,41 @@ class ApprovalFlowRequest extends FormRequest
             'steps.*.approver_type' => ['required', Rule::in([ApprovalFlowStep::BY_ROLE, ApprovalFlowStep::BY_USER])],
             'steps.*.approver_id' => ['required', 'integer', 'min:1'],
             'steps.*.requires_all' => ['nullable', 'boolean'],
+
+            /*
+             * ⭐ ঘড়ি — ২৪ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ `nullable` আর `min:1` — দুইটাই লাগে। ⛔ `0` ঢুকতে
+             * দিলে সেটা *"সাথে সাথে দেরি"* মানে দাঁড়াত, আর প্রতিটা
+             * কাগজ জন্মেই লাল হত — খালি রাখাই *"ঘড়ি নেই"* বলার
+             * একমাত্র পথ।
+             */
+            'steps.*.sla_hours' => ['nullable', 'integer', 'min:1', 'max:8760'],
+            'steps.*.warn_hours' => ['nullable', 'integer', 'min:1', 'max:8760'],
+            'steps.*.escalate_hours' => ['nullable', 'integer', 'min:1', 'max:8760'],
+            'steps.*.escalate_to_type' => ['nullable', Rule::in([ApprovalFlowStep::BY_ROLE, ApprovalFlowStep::BY_USER])],
+            'steps.*.escalate_to_id' => ['nullable', 'integer', 'min:1'],
+
+            /*
+             * ⭐ এক ধাপে কয়জনের সই — ডিফল্ট ১।
+             *
+             * ⚠️ `required` নয়: পুরনো সারিগুলোতে ঘরটা নেই, আর
+             * বাধ্য করলে পুরনো প্রবাহ সংরক্ষণই করা যেত না।
+             */
+            'steps.*.min_approvals' => ['nullable', 'integer', 'min:1', 'max:9'],
+
+            /*
+             * ⭐ টাকার অঙ্ক ছাড়াও শর্ত — ধাপ ৩।
+             *
+             * ⓘ ঘরের নামটা হাতে লেখা হয়, কারণ প্রতিটা মডিউল
+             * আলাদা ঘর পাঠায়। ⛔ তাই ভুল নাম লেখা সম্ভব, আর সেটা
+             * **নীরব** — প্রবাহটা কখনো ধরত না। ⓘ সেই ফাঁকটা
+             * [[ApprovalExceptions::flowsThatCanNeverCatch()]] ধরে।
+             */
+            'conditions' => ['nullable', 'array'],
+            'conditions.*.field' => ['required', 'string', 'max:64'],
+            'conditions.*.operator' => ['required', Rule::in(ApprovalCondition::OPERATORS)],
+            'conditions.*.value' => ['required', 'string', 'max:255'],
         ];
     }
 
@@ -61,6 +97,27 @@ class ApprovalFlowRequest extends FormRequest
     public function steps(): array
     {
         return $this->validated()['steps'] ?? [];
+    }
+
+    /**
+     * ⭐ শর্তগুলো — খালি সারি ছাড়া।
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function conditions(): array
+    {
+        return $this->validated()['conditions'] ?? [];
+    }
+
+    /**
+     * ⓘ খালি ঘর মানে `null` — শূন্য নয়।
+     *
+     * ⚠️ একটা আলাদা মেথড, কারণ চারটা ঘরে একই প্রশ্ন, আর
+     * চার জায়গায় লিখলে একটায় ভুল হত — আর সেটা নীরব।
+     */
+    private static function positiveOrNull(mixed $value): ?int
+    {
+        return ($value === null || $value === '' || (int) $value < 1) ? null : (int) $value;
     }
 
     /**
@@ -94,15 +151,62 @@ class ApprovalFlowRequest extends FormRequest
                 continue;
             }
 
+            /*
+             * ⓘ গন্তব্যও একটাই ঘরে ("role|3"), সইকারীর মতোই।
+             * ⛔ আলাদা রাখলে *"ধরন: রোল, ব্যক্তি: রফিক"* এমন অসম্ভব
+             * জোড়া সংরক্ষিত হয়ে যেত, আর কাগজ কারো কাছে যেত না।
+             */
+            $target = (string) ($step['escalate_to'] ?? '');
+            [$targetType, $targetId] = str_contains($target, '|')
+                ? explode('|', $target, 2)
+                : [null, null];
+
             $steps[] = [
                 'level' => $step['level'] ?? 1,
                 'step_name' => $step['step_name'] ?? null,
                 'approver_type' => $type,
                 'approver_id' => $id,
                 'requires_all' => ! empty($step['requires_all']),
+
+                /*
+                 * ⚠️ খালি ঘর মানে `null`, `0` নয়।
+                 *
+                 * ⓘ HTML খালি ঘর ফাঁকা লেখা পাঠায়, আর সেটাকে
+                 * সংখ্যা করলে `0` হয়। ⛔ তাহলে *"ঘড়ি নেই"* বলার কোনো পথ
+                 * থাকত না — একটা পুরনো প্রবাহ সংরক্ষণ করলেই তার সব
+                 * কাগজ সঙ্গে সঙ্গে দেরি হয়ে যেত।
+                 */
+                'sla_hours' => self::positiveOrNull($step['sla_hours'] ?? null),
+                'warn_hours' => self::positiveOrNull($step['warn_hours'] ?? null),
+                'escalate_hours' => self::positiveOrNull($step['escalate_hours'] ?? null),
+                'escalate_to_type' => $targetType ?: null,
+                'escalate_to_id' => ($targetId ?? '') !== '' ? $targetId : null,
+                'min_approvals' => self::positiveOrNull($step['min_approvals'] ?? null),
             ];
         }
 
-        $this->merge(['steps' => $steps]);
+        /*
+         * ⓘ শর্তের খালি সারিগুলোও ছাঁকা হয় — ধাপের মতোই।
+         * ⛔ না ছাঁকলে *"ঘরের নাম দিন"* বলে ফর্ম আটকাত, অথচ
+         * ব্যবহারকারী ওই সারিগুলো ছুঁয়েও দেখেননি।
+         */
+        $conditions = [];
+
+        foreach ($this->input('conditions', []) as $condition) {
+            $field = trim((string) ($condition['field'] ?? ''));
+            $value = trim((string) ($condition['value'] ?? ''));
+
+            if ($field === '' || $value === '') {
+                continue;
+            }
+
+            $conditions[] = [
+                'field' => $field,
+                'operator' => (string) ($condition['operator'] ?? '>'),
+                'value' => $value,
+            ];
+        }
+
+        $this->merge(['steps' => $steps, 'conditions' => $conditions]);
     }
 }

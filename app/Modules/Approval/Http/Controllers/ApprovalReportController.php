@@ -36,6 +36,8 @@ class ApprovalReportController extends Controller implements HasMiddleware
      */
     private const SLUGS = [
         'pending' => 'approval.pending',
+        'bottleneck' => 'approval.bottleneck',
+        'why-rejected' => 'approval.why_rejected',
         'approved' => 'approval.approved',
         'rejected' => 'approval.rejected',
         'by-user' => 'approval.by_user',
@@ -54,6 +56,8 @@ class ApprovalReportController extends Controller implements HasMiddleware
      */
     private const NOT_CLICKABLE = [
         'by-user' => 'approval::message.report_counts_only',
+        'bottleneck' => 'approval::message.report_counts_only',
+        'why-rejected' => 'approval::message.report_counts_only',
     ];
 
     public function __construct(
