@@ -36,7 +36,19 @@ class InterCompanyRequest extends FormRequest
              */
             'counter_company_id' => ['required', 'integer', 'exists:companies,id'],
 
-            'trx_date' => ['required', 'date'],
+            /*
+             * ⛔ `before_or_equal:today` — ভবিষ্যতের তারিখ নয়।
+             *
+             * ⚠️ প্রথম লেখায় কেবল `date` ছিল, আর সেটা কালকের তারিখে
+             * টাকা সরানো মেনে নিত। ⓘ তাতে দুই খাতায় এমন দাখিলা বসত যা
+             * এখনো ঘটেনি — আর মাস শেষের হিসাব সেটা গুনে ফেলত।
+             *
+             * ⭐ ধরা পড়েছে [[NoDocumentIsDatedInTheFutureTest]]-এ, আর
+             * সে ফাইলের নাম ও সমাধান দুইটাই বলে দিয়েছে। ⓘ আমার নিজের
+             * চারটা দাবির একটাও এটা ধরতে পারত না — সবগুলোই আজকের
+             * তারিখ ব্যবহার করে।
+             */
+            'trx_date' => ['required', 'date', 'before_or_equal:today'],
 
             /*
              * ⚠️ `numeric` আর `min:0.0001` — `min:0` নয়।
