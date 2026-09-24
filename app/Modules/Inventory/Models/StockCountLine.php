@@ -7,6 +7,7 @@ namespace App\Modules\Inventory\Models;
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Modules\Inventory\Models\Batch;
 use App\Modules\MasterData\Models\ReasonCode;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -30,7 +31,7 @@ class StockCountLine extends Model
     protected $table = 'inv_stock_count_lines';
 
     protected $fillable = [
-        'company_id', 'stock_count_id', 'product_id',
+        'company_id', 'stock_count_id', 'product_id', 'batch_id',
         'book_qty', 'counted_qty', 'difference', 'unit_cost', 'reason_code_id',
     ];
 
@@ -47,6 +48,17 @@ class StockCountLine extends Model
     public function count(): BelongsTo
     {
         return $this->belongsTo(StockCount::class, 'stock_count_id');
+    }
+
+    /**
+     * গুনে পাওয়া বাড়তি মালটা কোন লটে বসবে।
+     *
+     * ⓘ ঘাটতির সারিতে খালি, আর সেটাই ঠিক — কোন লট থেকে মাল
+     * যাবে তা মানুষ বলে না, FEFO বলে।
+     */
+    public function batch(): BelongsTo
+    {
+        return $this->belongsTo(Batch::class);
     }
 
     public function product(): BelongsTo

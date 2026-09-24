@@ -8,9 +8,11 @@ use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
+use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\StockCount;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Inventory\Services\BatchService;
 use App\Modules\MasterData\Models\ReasonCode;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -114,6 +116,7 @@ final class StockCountService
                 $count->lines()->create([
                     'company_id' => CompanyContext::id(),
                     'product_id' => $product->id,
+                    'batch_id' => $this->lotFor($product, $line)?->id,
                     'book_qty' => $bookQty,
                     'counted_qty' => $line['counted_qty'],
                     'difference' => bcsub($line['counted_qty'], $bookQty, 4),
@@ -208,6 +211,7 @@ final class StockCountService
                     date: $count->count_date,
                     narration: $count->narration ?: $count->document_no,
                     unitCost: $line->unit_cost === null ? null : (string) $line->unit_cost,
+                    batch: $line->batch,
                 );
 
                 $line->update(['reason_code_id' => $reason->id]);
@@ -252,6 +256,31 @@ final class StockCountService
      * @param  list<array{product_id?: int|string, counted_qty?: int|string}>  $lines
      * @return list<array{product_id: int|string, counted_qty: string}>
      */
+    /**
+     * এই সারির লট — লট ধরা পণ্য না হলে কিছুই না।
+     *
+     * ⓘ নম্বরটা খালি থাকলেও কিছুই না — ঘাটতির সারিতে লট লাগে না,
+     * আর মিলে যাওয়া সারিতে কোনো চলাচলই হয় না। ⚠️ বাধ্যতামূলক
+     * করার জায়গাটা [[StockAdjustmentService]], কারণ পার্থক্যটা ওখানেই
+     * জানা — বাড়তি না ঘাটতি।
+     *
+     * @param  array<string, mixed>  $line
+     */
+    private function lotFor(Product $product, array $line): ?Batch
+    {
+        if (! $product->track_batch || blank($line['batch_no'] ?? null)) {
+            return null;
+        }
+
+        return app(BatchService::class)->receive(
+            product: $product,
+            batchNo: (string) $line['batch_no'],
+            expiry: filled($line['expiry_date'] ?? null)
+                ? Carbon::parse($line['expiry_date'])->toDateString()
+                : null,
+        );
+    }
+
     private function cleanLines(array $lines): array
     {
         $out = [];
@@ -281,7 +310,20 @@ final class StockCountService
             }
 
             $seen[$productId] = true;
-            $out[] = ['product_id' => $productId, 'counted_qty' => $counted];
+            $out[] = [
+                'product_id' => $productId,
+                'counted_qty' => $counted,
+                /*
+                 * ⓘ লট নম্বরটা এখানে কেবল বহন করা হয়, যাচাই নয়।
+                 *
+                 * ⚠️ লট লাগবে কি না তা নির্ভর করে খাতা আর তাকের
+                 * পার্থক্যের উপর, আর সেটা এখনো গোনাই হয়নি। ⛔ এখানে
+                 * চাইলে ঘাটতির সারিতেও লট চাওয়া হত, অথচ ওখানে কোন
+                 * লট যাবে তা FEFO বলে, মানুষ নয়।
+                 */
+                'batch_no' => $line['batch_no'] ?? null,
+                'expiry_date' => $line['expiry_date'] ?? null,
+            ];
         }
 
         return $out;

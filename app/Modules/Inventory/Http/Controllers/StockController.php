@@ -326,6 +326,15 @@ class StockController extends Controller implements HasMiddleware
         ], [[
             'product_id' => $data['product']->id,
             'counted_qty' => (string) $request->input('counted'),
+
+            /*
+             * ⓘ লটের ঘরটা সারির সাথে যায়, কাগজের সাথে নয়।
+             *
+             * ⚠️ এখানে সারি একটাই, কিন্তু কাগজটা বহু-সারির — আর লট
+             * পণ্যের জিনিস, কাগজের নয়।
+             */
+            'batch_no' => $request->input('batch_no'),
+            'expiry_date' => $request->input('expiry_date'),
         ]]);
 
         $this->counts->approve($count, $data['reason']);
@@ -444,6 +453,17 @@ class StockController extends Controller implements HasMiddleware
              * পাহারাটা তাই সার্ভিসে, যেখানে পার্থক্যটা জানা।
              */
             'unit_cost' => ['nullable', 'numeric', 'min:0'],
+
+            /*
+             * লট — এখানেও ঐচ্ছিক, আর ঠিক দরের কারণেই।
+             *
+             * ⓘ লট লাগবে কি না তা জানা যায় গোনার পর — বেশি পাওয়া
+             * গেলে লাগে, কম পাওয়া গেলে লাগে না। ⛔ পর্দায় `required`
+             * বসালে ঘাটতির সময়েও একটা লট নম্বর চাওয়া হত, আর মানুষ
+             * যা মনে আসে তাই লিখতেন।
+             */
+            'batch_no' => ['nullable', 'string', 'max:60'],
+            'expiry_date' => ['nullable', 'date'],
         ]);
 
         $reason = ReasonCode::query()->findOrFail($request->integer('reason_code_id'));

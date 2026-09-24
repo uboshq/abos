@@ -8,6 +8,7 @@ use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Support\CompanyContext;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\StockMovement;
 use App\Modules\Inventory\Models\Warehouse;
@@ -122,6 +123,7 @@ final class StockAdjustmentService
         Carbon|string|null $date = null,
         ?string $narration = null,
         ?string $unitCost = null,
+        ?Batch $batch = null,
     ): ?StockMovement {
         $current = $this->stock->floorQty($product, $warehouse);
         $difference = bcsub($countedQty, $current, 4);
@@ -139,19 +141,86 @@ final class StockAdjustmentService
             ]);
         }
 
+        /*
+         * ⛔ বাড়তি মাল লট ছাড়া মেঝেতে ওঠে না — মালিকের নির্দেশ, ২৩ সেপ্টেম্বর ২০২৬।
+         *
+         * ⚠️ এতদিন উঠত, আর তার ফলটা ছিল উল্টো: ⓘ যে পর্দার কাজ মজুদের
+         * ভুল **সারানো**, সে-ই এমন মাল বানাত যা বিক্রয়ের বাছাইয়ে আসে
+         * না — গুনে পাওয়া পাঁচ কার্টন ঢোকার মুহূর্তেই অবিক্রেয়।
+         *
+         * ⓘ লট ধরা হয় না এমন পণ্যে ঘরটা চাওয়াই হয় না — চালে-সাবানে লট
+         * চাপালে প্রতিটা সারিতে একটা বানানো নম্বর বসত, আর বানানো লট
+         * রিকলের খাতায় একটা মিথ্যা সারি ([[OpeningStockService]]-এ একই
+         * সীমা, একই কারণে)।
+         */
+        if ($surplus && $product->track_batch && $batch === null) {
+            throw ValidationException::withMessages([
+                'batch_no' => __('inventory::validation.batch_no_required', [
+                    'product' => $product->name(),
+                ]),
+            ]);
+        }
+
+        if ($batch !== null && $batch->product_id !== $product->id) {
+            throw ValidationException::withMessages([
+                'batch_no' => __('inventory::validation.lot_of_another_product', [
+                    'lot' => $batch->batch_no,
+                    'product' => $product->name(),
+                ]),
+            ]);
+        }
+
         return DB::transaction(function () use (
-            $product, $warehouse, $reason, $date, $narration, $difference, $surplus, $unitCost
+            $product, $warehouse, $reason, $date, $narration, $difference, $surplus, $unitCost, $batch
         ) {
-            $movement = $this->stock->move(
-                product: $product,
-                warehouse: $warehouse,
-                sourceType: StockService::ADJUSTMENT,
-                sourceId: $product->id,
-                floor: $difference,
-                reason: $reason,
-                date: $date,
-                narration: $narration,
-            );
+            /*
+             * ⚠️ দুই দিকে দুই পথ, আর তফাতটা কেবল সুবিধার নয়।
+             *
+             * ⭐ **বাড়তি** মাল আসে বাইরে থেকে, তাই কোন লটে বসবে সেটা
+             * মানুষকেই বলতে হয় — `move()`, হাতে দেওয়া লট ধরে।
+             *
+             * ⛔ **ঘাটতি** মাল যায় তাক থেকে, আর কোন লট থেকে গেল সেটা
+             * মানুষের বলার কথা নয় — পুরনোটা আগে, ঠিক যে নিয়মে বিক্রি
+             * হয়। ⓘ তাই `issue()`, `move()` নয়।
+             *
+             * ── ⚠️ `move()`-এ ঘাটতি লিখলে যা ঘটত, আর কেন সেটা নীরব ───
+             * ⓘ মালটা **মোট** মেঝে থেকে কমত, অথচ প্রতিটা লটের হিসাব
+             * অক্ষত থাকত। ⛔ দুইটা যোগফল তখন আলাদা: লট বলে ৫০, মেঝে
+             * বলে ৪৫।
+             *
+             * ⚠️ এর পরের বিক্রয়টা লট দেখে বরাদ্দ করত, আর "আছে" পেত —
+             * চালান ছাপা হত, মাল দিতে গিয়ে পাওয়া যেত না। ⓘ কোনো
+             * ত্রুটি নেই, কোথাও লাল নেই; ভুলটা ধরা পড়ত গুদামে মাল
+             * খুঁজতে গিয়ে।
+             */
+            $movement = $surplus
+                ? $this->stock->move(
+                    product: $product,
+                    warehouse: $warehouse,
+                    sourceType: StockService::ADJUSTMENT,
+                    sourceId: $product->id,
+                    floor: $difference,
+                    reason: $reason,
+                    date: $date,
+                    narration: $narration,
+                    batch: $batch,
+                )
+                /*
+                 * ⓘ কয়টা সারি হবে তা আগে জানা যায় না — তিন লট জুড়ে
+                 * ঘাটতি হলে তিনটা। ⚠️ খরচ ও খতিয়ানের নোঙর প্রথমটা,
+                 * ঠিক যেভাবে [[StockTransferService]] করে: একটা কাগজ,
+                 * একটা দাখিলা, কয়টা লট তাতে কিছু যায় আসে না।
+                 */
+                : $this->stock->issue(
+                    product: $product,
+                    warehouse: $warehouse,
+                    sourceType: StockService::ADJUSTMENT,
+                    sourceId: $product->id,
+                    qty: bcmul($difference, '-1', 4),
+                    date: $date,
+                    narration: $narration,
+                    reason: $reason,
+                )[0];
 
             /*
              * মালের দাম আগে, খতিয়ান পরে — কারণ খতিয়ানের অঙ্কটা দাম থেকেই আসে।

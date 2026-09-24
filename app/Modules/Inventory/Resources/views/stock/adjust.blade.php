@@ -70,6 +70,21 @@
                     আছে। বেশি পাওয়া গেলে সার্ভার দর ছাড়া এগোবে না, আর
                     কারণটা বার্তায় বলে দেয়।
                 --}}
+                {{--
+                    লট — কেবল গুনে **বেশি** পাওয়া গেলে।
+
+                    ⓘ কম পাওয়া গেলে ঘরটা খালি রাখুন — কোন লট থেকে মাল কমল
+                    সেটা ব্যবস্থা নিজেই ঠিক করে, পুরনোটা আগে — ঠিক যে নিয়মে
+                    বিক্রি হয়। ⚠️ দুই জায়গায় দুই নিয়ম হলে মেয়াদ পেরোনো লট
+                    তাকে পড়ে থাকত।
+
+                    ⛔ লট ধরা পণ্যে বেশি পাওয়া গেলে এটা বাধ্যতামূলক, আর
+                    দেয়ালটা সেবায় — কারণ বেশি না কম তা জানা যায় গোনার পর।
+                --}}
+                <x-ui.field name="batch_no" :label="__('inventory::field.batch_no')" />
+
+                <x-ui.field name="expiry_date" type="date" :label="__('inventory::field.expiry_date')" />
+
                 <x-ui.field name="unit_cost" type="number" step="0.01" min="0" inputmode="decimal"
                             :label="__('inventory::field.surplus_rate')" numeric />
                 <p class="-mt-2 text-2xs text-(--color-ink-muted)">
