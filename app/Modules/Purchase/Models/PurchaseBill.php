@@ -39,6 +39,49 @@ class PurchaseBill extends Model implements Drillable
 
     protected $table = 'pur_bills';
 
+    /**
+     * ⭐ তিন-মুখী মিলকরণের ফল — মালিকের স্পেকের শব্দেই।
+     *
+     * ── ⚠️ কেন `EXCEPTION` আর `MISMATCH` আলাদা ───────────────────────
+     * ⓘ `MISMATCH` মানে **সংখ্যা মেলেনি** — দর বা পরিমাণে ফাঁক, আর
+     * ফাঁকটা মাপা যায়। ⛔ `EXCEPTION` মানে **মেলানোই যায়নি**: আদেশ
+     * নেই, চালান নেই, বা কাগজটা অন্য সরবরাহকারীর।
+     *
+     * ⚠️ দুইটা এক করে ফেললে তালিকাটা মিথ্যা বলত — যে বিলে দুই টাকার
+     * ফাঁক আর যে বিলের কোনো আদেশই নেই, দুইটা একই সারিতে বসত, অথচ
+     * প্রথমটা হিসাবরক্ষকের কাজ আর দ্বিতীয়টা ক্রয় বিভাগের।
+     */
+    public const MATCH_MATCHED = 'matched';
+
+    public const MATCH_PARTIAL = 'partial';
+
+    public const MATCH_MISMATCH = 'mismatch';
+
+    public const MATCH_EXCEPTION = 'exception';
+
+    /** @var list<string> */
+    public const MATCH_STATES = [
+        self::MATCH_MATCHED,
+        self::MATCH_PARTIAL,
+        self::MATCH_MISMATCH,
+        self::MATCH_EXCEPTION,
+    ];
+
+    /**
+     * ⛔ যে ফলগুলো মানুষের নজর চায়।
+     *
+     * ⓘ `matched` তালিকায় আসে না — মিলে যাওয়া বিল নিয়ে কারও কিছু
+     * করার নেই, আর ওগুলো দেখালে ব্যতিক্রমের তালিকাটা গোটা বিলের
+     * তালিকা হয়ে যেত।
+     *
+     * @var list<string>
+     */
+    public const MATCH_NEEDS_ATTENTION = [
+        self::MATCH_PARTIAL,
+        self::MATCH_MISMATCH,
+        self::MATCH_EXCEPTION,
+    ];
+
     protected $fillable = [
         'company_id', 'branch_id', 'financial_year_id', 'document_no',
         'supplier_id', 'warehouse_id', 'trx_date', 'due_on', 'supplier_bill_no',
@@ -81,6 +124,15 @@ class PurchaseBill extends Model implements Drillable
 
         'subtotal', 'discount', 'tax', 'total',
         'status', 'narration', 'created_by',
+
+        /*
+         * ⭐ তিন-মুখী মিলকরণের ফল — ২৪ সেপ্টেম্বর ২০২৬।
+         *
+         * ⚠️ `$fillable`-এ না লিখলে `preventSilentlyDiscardingAttributes()`
+         * ব্যতিক্রম ছুড়ত local ও testing-এ, আর লাইভে ঘর দুইটা **নীরবে
+         * খালি** যেত — অর্থাৎ পাহারাটা থাকত কেবল কাগজে।
+         */
+        'match_state', 'match_difference',
         'cancelled_by', 'cancelled_at', 'cancel_reason',
     ];
 
@@ -102,6 +154,9 @@ class PurchaseBill extends Model implements Drillable
             // ⓘ বাকি টাকার ঘরগুলোর সমান মাপ — নাহলে যোগ-বিয়োগে
             // এক পয়সা করে হারাত, আর ধরা পড়ত মাস শেষে
             'transport_cost' => 'decimal:4',
+
+            // ⓘ বাকি টাকার ঘরগুলোর সমান মাপ — মিলকরণের পার্থক্যও টাকা
+            'match_difference' => 'decimal:4',
         ];
     }
 

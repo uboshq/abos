@@ -3,6 +3,14 @@
 declare(strict_types=1);
 
 return [
+    'receipts' => 'Deliveries',
+    'promised' => 'With a promised date',
+    'on_time' => 'On time',
+    'late_days' => 'Average days late',
+    'previous_rate' => 'Previous rate',
+    'rate_change' => 'Change',
+    'match_state' => 'Match',
+    'match_gap' => 'Gap',
     'supplier' => 'Supplier',
     'product' => 'Product',
     'gift' => 'Gift',

@@ -8,6 +8,7 @@ use App\Core\Engines\Report\ReportColumn;
 use App\Core\Engines\Report\ReportDefinition;
 use App\Core\Engines\Report\ReportEngine;
 use App\Core\Support\DocumentStatus;
+use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Purchase\Models\PurchaseOrder;
 use App\Modules\Purchase\Models\PurchaseReceipt;
 use Illuminate\Database\Query\Expression;
@@ -26,6 +27,9 @@ final class PurchaseReports
         $engine->register(self::pendingOrders());
         $engine->register(self::uninvoiced());
         $engine->register(self::bySupplier());
+        $engine->register(self::matchExceptions());
+        $engine->register(self::priceHistory());
+        $engine->register(self::supplierPerformance());
     }
 
     /**
@@ -241,7 +245,262 @@ final class PurchaseReports
         );
     }
 
+    /**
+     * ⭐ যে বিলগুলো মেলেনি — ২৪ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⭐ মালিকের স্পেক ──────────────────────────────────────────────
+     * *"3-Way Matching mandatory architecture হবে"*, আর ফলটা হবে
+     * `MATCHED` · `PARTIAL_MATCH` · `MISMATCH` · `EXCEPTION`।
+     *
+     * ── ⛔ এর আগে যা হত ──────────────────────────────────────────────
+     * তিনটা সুইচ আগে থেকেই কাজ করত, কিন্তু ফলটা কোথাও থাকত না। ⚠️ সুইচ
+     * বন্ধ থাকলে বিলটা চুপচাপ পাশ হয়ে যেত আর পার্থক্যটা কেবল
+     * মূল্য-পার্থক্য খাতে বসত। ⓘ ফল: *"কোন বিলগুলো মেলেনি"* প্রশ্নের
+     * উত্তর বের করতে হিসাবের খাত ধরে উল্টোদিকে হাঁটতে হত।
+     *
+     * ── ⚠️ মিলে যাওয়া বিল এই তালিকায় নেই, ইচ্ছাকৃতভাবে ────────────────
+     * ⛔ ওগুলো দেখালে এটা গোটা বিলের তালিকা হয়ে যেত, আর যে তিনটা
+     * সত্যিই দেখার দরকার সেগুলো একশোটার ভিড়ে হারাত।
+     */
+    public static function matchExceptions(): ReportDefinition
+    {
+        return new ReportDefinition(
+            key: 'purchase.match_exceptions',
+            title: 'purchase::menu.match_exceptions',
+            filters: ['date_range', 'branch'],
+
+            /*
+             * ⛔ `rankBy` নেই, ইচ্ছাকৃতভাবে।
+             *
+             * ⓘ ওটা প্রতিটা সারিতে *"মোটের কত অংশ"* কলাম বসায়, আর
+             * ⚠️ *"এই বিলটা সব ফাঁকের ৪০%"* বাক্যটা কাউকে কিছুই বলে
+             * না। ⛔ তার উপর ফাঁক ঋণাত্মকও হতে পারে (সরবরাহকারী কম
+             * দরে বিল পাঠালে), আর তখন শতাংশটা অর্থহীন।
+             *
+             * ⭐ বড় ফাঁক আগে — সেটা `orderByRaw` করেই হয়, নিচে।
+             */
+            query: fn (array $f) => DB::table('pur_bills as b')
+                ->join('suppliers as s', 's.id', '=', 'b.supplier_id')
+                ->where('b.company_id', $f['company_id'])
+                ->when($f['branch_id'], fn ($q, $br) => $q->where('b.branch_id', $br))
+                ->whereBetween('b.trx_date', [$f['from'], $f['to']])
+                ->whereNull('b.deleted_at')
+
+                /*
+                 * ⚠️ খাতায় বসা বিল — খসড়া নয়। ⓘ খসড়ায় মিলকরণের
+                 * প্রশ্নই ওঠে না, আর `match_state` তখন খালিই থাকে।
+                 */
+                ->whereIn('b.status', DocumentStatus::POSTED)
+                ->whereIn('b.match_state', PurchaseBill::MATCH_NEEDS_ATTENTION)
+                ->orderByRaw('ABS(COALESCE(b.match_difference, 0)) desc')
+                ->select([
+                    'b.id as bill_id',
+                    'b.document_no',
+                    'b.trx_date',
+                    DB::raw("'supplier' as source_type_literal"),
+                    'b.supplier_id',
+                    self::supplierName(),
+                    'b.match_state',
+                    'b.total',
+                    'b.match_difference as gap',
+                ]),
+            columns: [
+                ['key' => 'trx_date', 'label' => 'purchase::field.date', 'type' => ReportColumn::DATE, 'width' => '7rem'],
+                ['key' => 'document_no', 'label' => 'core.print.document_no', 'width' => '11rem'],
+                [
+                    'key' => 'supplier_name',
+                    'label' => 'purchase::field.supplier',
+                    'type' => ReportColumn::DOCUMENT,
+                    'source_type' => 'source_type_literal',
+                    'source_id' => 'supplier_id',
+                ],
+                ['key' => 'match_state', 'label' => 'purchase::field.match_state', 'width' => '9rem'],
+                ['key' => 'total', 'label' => 'purchase::field.total', 'type' => ReportColumn::MONEY],
+
+                /*
+                 * ⓘ ফাঁকটা আলাদা কলামে, কারণ *"মেলেনি"* কথাটা একাই কিছু
+                 * বলে না — ⚠️ দুই টাকার অমিল আর দুই লাখ টাকার অমিল এক
+                 * জিনিস নয়, আর কোনটা আগে দেখতে হবে সেটা এই সংখ্যাটাই বলে।
+                 */
+                ['key' => 'gap', 'label' => 'purchase::field.match_gap', 'type' => ReportColumn::MONEY],
+            ],
+        );
+    }
+
+    /**
+     * ⭐ ক্রয়ের দরের ইতিহাস — ২৪ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⭐ মালিকের স্পেক ──────────────────────────────────────────────
+     * *"Purchase Price History"* — পণ্য · সরবরাহকারী · তারিখ · পরিমাণ ·
+     * আগের দর · এখনকার দর · পার্থক্য।
+     *
+     * ── ⛔ এর আগে যতটুকু ছিল ─────────────────────────────────────────
+     * [[LastPaidRate]] কেবল **শেষ** দরটা বলত, আর সেটা সরাসরি ক্রয়ের
+     * পর্দায় দরাদরির জন্য। ⚠️ কিন্তু *"এই মালের দর গত ছয় মাসে কীভাবে
+     * উঠল"* প্রশ্নের কোনো উত্তর ছিল না — আর দর বাড়ার ধরনটাই বলে দেয়
+     * কোন সরবরাহকারী সুযোগ নিচ্ছেন।
+     *
+     * ── ⚠️ আগের দরটা একই সরবরাহকারীর, যে কারো নয় ─────────────────────
+     * ⛔ `LAG()` কেবল পণ্য ধরে নিলে অন্য সরবরাহকারীর দর আগের সারিতে
+     * বসত, আর পার্থক্যের কলামটা তখন মিথ্যা বলত: দুই দোকানের দুই দর
+     * দেখে মনে হত একজন দাম বাড়িয়েছেন।
+     *
+     * ⓘ সেজন্য ভাগটা **সরবরাহকারী + পণ্য** ধরে, আর ক্রমটা তারিখ ধরে।
+     */
+    public static function priceHistory(): ReportDefinition
+    {
+        $cancelled = DocumentStatus::CANCELLED;
+
+        /*
+         * ⚠️ উইন্ডো ফাংশন — MySQL 8 ও MariaDB 10.2 দুইটাতেই আছে, আর
+         * লাইভ দুইটার একটাতেই চলে। ⓘ হাতে জোড়া লাগালে (self-join)
+         * একই ফল পেতে প্রতিটা সারিতে একটা সাব-কোয়েরি লাগত, আর হাজার
+         * সারির রিপোর্টে সেটা মিনিট নিত।
+         */
+        $previous = 'LAG(l.rate) OVER (PARTITION BY b.supplier_id, l.product_id ORDER BY b.trx_date, b.id)';
+
+        return new ReportDefinition(
+            key: 'purchase.price_history',
+            title: 'purchase::menu.price_history',
+            filters: ['date_range', 'branch'],
+            query: fn (array $f) => DB::table('pur_bill_lines as l')
+                ->join('pur_bills as b', 'b.id', '=', 'l.purchase_bill_id')
+                ->join('suppliers as s', 's.id', '=', 'b.supplier_id')
+                ->join('inv_products as p', 'p.id', '=', 'l.product_id')
+                ->where('b.company_id', $f['company_id'])
+                ->when($f['branch_id'], fn ($q, $br) => $q->where('b.branch_id', $br))
+                ->whereBetween('b.trx_date', [$f['from'], $f['to']])
+                ->whereNull('b.deleted_at')
+
+                /*
+                 * ⚠️ বাতিল বিল বাদ। ⓘ বাতিল মানে ঘটনাটা ঘটেনি — ওই দর
+                 * দেখিয়ে দরাদরি করতে গেলে সরবরাহকারী বলতেন *"ওটা তো
+                 * ফেরত গেছে"*, আর কথাটা তাঁরই ঠিক হত।
+                 */
+                ->where('b.status', '<>', $cancelled)
+                ->orderBy('p.code')
+                ->orderBy('s.code')
+                ->orderBy('b.trx_date')
+                ->select([
+                    'b.trx_date',
+                    'b.document_no',
+                    DB::raw("'supplier' as source_type_literal"),
+                    'b.supplier_id',
+                    self::supplierName(),
+                    'l.product_id',
+                    self::productName(),
+                    'l.qty',
+                    'l.rate',
+                    DB::raw($previous.' as previous_rate'),
+                    DB::raw('l.rate - '.$previous.' as rate_change'),
+                ]),
+            columns: [
+                ['key' => 'trx_date', 'label' => 'purchase::field.date', 'type' => ReportColumn::DATE, 'width' => '7rem'],
+                ['key' => 'product_name', 'label' => 'purchase::field.product'],
+                [
+                    'key' => 'supplier_name',
+                    'label' => 'purchase::field.supplier',
+                    'type' => ReportColumn::DOCUMENT,
+                    'source_type' => 'source_type_literal',
+                    'source_id' => 'supplier_id',
+                ],
+                ['key' => 'document_no', 'label' => 'core.print.document_no', 'width' => '11rem'],
+                ['key' => 'qty', 'label' => 'purchase::field.quantity', 'type' => ReportColumn::QUANTITY],
+                ['key' => 'previous_rate', 'label' => 'purchase::field.previous_rate', 'type' => ReportColumn::MONEY],
+                ['key' => 'rate', 'label' => 'purchase::field.rate', 'type' => ReportColumn::MONEY],
+
+                /*
+                 * ⓘ পার্থক্যটাই আসল কলাম — ⚠️ দুইটা দর পাশাপাশি থাকলেও
+                 * মানুষ মাথায় বিয়োগ করে না, আর তখন যে সারিতে দর লাফ
+                 * দিয়েছে সেটা চোখেই পড়ে না।
+                 */
+                ['key' => 'rate_change', 'label' => 'purchase::field.rate_change', 'type' => ReportColumn::MONEY],
+            ],
+        );
+    }
+
     /** পণ্যের নাম — কোড সহ, ব্যবহারকারীর ভাষায়। */
+    /**
+     * ⭐ সরবরাহকারীর কার্যক্ষমতা — ২৪ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⭐ মালিকের স্পেক ──────────────────────────────────────────────
+     * *"On-time Delivery · Fill Rate · Quality Rejection · Return Rate ·
+     * Price Variance · Response Time · Purchase Volume"*।
+     *
+     * ── ⓘ সাতটার মধ্যে যে চারটা আজ সত্যিই মাপা যায় ───────────────────
+     * ⚠️ বাকি তিনটা মাপতে হলে এমন তথ্য লাগত যা ABOS আজ রাখে না
+     * (দরপত্রের জবাবের সময়, চুক্তির দর)। ⛔ ওগুলোর জন্য একটা শূন্য
+     * কলাম বসালে রিপোর্টটা মিথ্যা বলত — *"শূন্য"* আর *"জানা নেই"* এক
+     * জিনিস নয়, আর প্রথমটা দেখে কেউ সরবরাহকারী বদলে ফেলতেন।
+     *
+     * ⓘ তাই আজ চারটা, আর বাকিগুলো যেদিন তথ্যটা আসবে সেদিন।
+     *
+     * ── ⚠️ "সময়মতো" মাপা হয় আদেশের প্রতিশ্রুত দিন ধরে ────────────────
+     * ⛔ `expected_on` খালি থাকলে সেই আদেশটা গোনাই হয় না: ⓘ কোনো দিন
+     * বলা না থাকলে দেরি বলে কিছু নেই, আর ধরে-নেওয়া একটা দিন বসালে
+     * সরবরাহকারীকে এমন প্রতিশ্রুতির দায়ে ফেলা হত যা তিনি দেননি।
+     */
+    public static function supplierPerformance(): ReportDefinition
+    {
+        $cancelled = DocumentStatus::CANCELLED;
+
+        return new ReportDefinition(
+            key: 'purchase.supplier_performance',
+            title: 'purchase::menu.supplier_performance',
+            filters: ['date_range', 'branch'],
+            groupBy: 'supplier_id',
+
+            /* ⓘ যাঁর কাছ থেকে সবচেয়ে বেশি কেনা হয়, তাঁর দেরিটাই সবচেয়ে দামি */
+            rankBy: 'receipts',
+            query: fn (array $f) => DB::table('pur_receipts as r')
+                ->join('suppliers as s', 's.id', '=', 'r.supplier_id')
+                ->leftJoin('pur_orders as o', 'o.id', '=', 'r.purchase_order_id')
+                ->where('r.company_id', $f['company_id'])
+                ->when($f['branch_id'], fn ($q, $br) => $q->where('r.branch_id', $br))
+                ->whereBetween('r.trx_date', [$f['from'], $f['to']])
+                ->whereNull('r.deleted_at')
+                ->where('r.status', '<>', $cancelled)
+                ->groupBy('r.supplier_id', 's.code', 's.name_en', 's.name_bn')
+                ->orderByRaw('COUNT(*) desc')
+                ->select([
+                    'r.supplier_id',
+                    DB::raw("'supplier' as source_type_literal"),
+                    self::supplierName(),
+                    DB::raw('COUNT(*) as receipts'),
+
+                    /*
+                     * ⓘ যে চালানগুলোর পিছনে একটা প্রতিশ্রুত দিন আছে —
+                     * কেবল ওগুলোই সময়ের হিসাবে ধরা হয়।
+                     */
+                    DB::raw('SUM(CASE WHEN o.expected_on IS NOT NULL THEN 1 ELSE 0 END) as promised'),
+                    DB::raw('SUM(CASE WHEN o.expected_on IS NOT NULL
+                                       AND r.trx_date <= o.expected_on THEN 1 ELSE 0 END) as on_time'),
+
+                    /*
+                     * ⚠️ গড় দেরি — কেবল যেগুলো সত্যিই দেরি হয়েছে।
+                     * ⛔ আগে-আসা চালানগুলো ঋণাত্মক দিন দিত, আর তাতে গড়
+                     * নেমে গিয়ে দেরিটা লুকিয়ে যেত।
+                     */
+                    DB::raw('AVG(CASE WHEN o.expected_on IS NOT NULL
+                                       AND r.trx_date > o.expected_on
+                                      THEN DATEDIFF(r.trx_date, o.expected_on) END) as late_days'),
+                ]),
+            columns: [
+                [
+                    'key' => 'supplier_name',
+                    'label' => 'purchase::field.supplier',
+                    'type' => ReportColumn::DOCUMENT,
+                    'source_type' => 'source_type_literal',
+                    'source_id' => 'supplier_id',
+                ],
+                ['key' => 'receipts', 'label' => 'purchase::field.receipts'],
+                ['key' => 'promised', 'label' => 'purchase::field.promised'],
+                ['key' => 'on_time', 'label' => 'purchase::field.on_time'],
+                ['key' => 'late_days', 'label' => 'purchase::field.late_days'],
+            ],
+        );
+    }
+
     private static function productName(): Expression
     {
         $name = app()->getLocale() === 'bn'

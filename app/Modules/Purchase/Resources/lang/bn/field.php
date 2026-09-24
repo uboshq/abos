@@ -3,6 +3,14 @@
 declare(strict_types=1);
 
 return [
+    'receipts' => 'চালান',
+    'promised' => 'দিন বলা ছিল',
+    'on_time' => 'সময়মতো',
+    'late_days' => 'গড়ে কত দিন দেরি',
+    'previous_rate' => 'আগের দর',
+    'rate_change' => 'বদল',
+    'match_state' => 'মিলকরণ',
+    'match_gap' => 'ফাঁক',
     'supplier' => 'সরবরাহকারী',
     'product' => 'পণ্য',
     'gift' => 'উপহার',

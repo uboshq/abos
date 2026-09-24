@@ -42,6 +42,21 @@ class PurchaseReportController extends Controller implements HasMiddleware
         'by-supplier' => ['key' => 'purchase.by_supplier', 'permission' => 'purchase.report'],
 
         /*
+         * ⭐ তিনটা নতুন — ২৪ সেপ্টেম্বর ২০২৬।
+         *
+         * ⛔ তালিকাটা **স্পষ্ট**, নিয়ম দিয়ে বানানো নয় ('-' → '_')।
+         * ⚠️ প্রথমবার ওটাই ভুলে গিয়ে রিপোর্ট তিনটা রেজিস্টার করা
+         * হয়েছিল আর মেনুর সারিও বসেছিল, কিন্তু ক্লিক করলে ৪০৪ —
+         * ⓘ কারণ রুটটা এই তালিকাটাই দেখে, রেজিস্ট্রি নয়।
+         *
+         * ⭐ স্পষ্ট তালিকার লাভটা এখানেই: চাবিটা প্রতি রিপোর্টে
+         * আলাদা করে বলা যায়, আর মেনু ও রুট একই কথা বলে।
+         */
+        'match-exceptions' => ['key' => 'purchase.match_exceptions', 'permission' => 'purchase.report'],
+        'price-history' => ['key' => 'purchase.price_history', 'permission' => 'purchase.report'],
+        'supplier-performance' => ['key' => 'purchase.supplier_performance', 'permission' => 'purchase.report'],
+
+        /*
          * দুইটাই ক্রয়মূল্য ও মার্জিন খুলে দেখায়, তাই নিজের চাবি।
          */
         'settlement' => ['key' => 'purchase.settlement', 'permission' => 'purchase.settlement.view'],

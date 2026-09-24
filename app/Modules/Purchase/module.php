@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Core\Engines\Print\PaperSize;
 use App\Modules\Purchase\Dashboard\PurchaseDashboard;
 use App\Modules\Purchase\Dashboard\PurchaseWidgets;
 use App\Modules\Purchase\Integrity\PurchaseChecks;
@@ -13,6 +14,7 @@ use App\Modules\Purchase\Models\PurchaseReturn;
 use App\Modules\Purchase\Reports\PurchaseReports;
 use App\Modules\Purchase\Reports\ReturnOnCapitalReport;
 use App\Modules\Purchase\Reports\SettlementReport;
+use App\Modules\Purchase\Services\TaggableBillsOnTheVoucherForm;
 
 /**
  * Purchase — প্ল্যান Phase 7।
@@ -108,8 +110,39 @@ return [
         'reports' => [
             ['label' => 'purchase::menu.pending_orders', 'icon' => 'clock', 'route' => 'purchase.report.show',
                 'route_params' => ['slug' => 'pending-orders'], 'permission' => 'purchase.report'],
+            /*
+             * ⭐ মিলকরণের ব্যতিক্রম — ২৪ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ *"কোন বিলগুলো মেলেনি"* — মালিকের স্পেকের ৩-মুখী
+             * মিলকরণের ফল। ⚠️ সারিটা বিনা-বিলের ঠিক পাশে, কারণ
+             * দুইটাই একই প্রশ্নের দুই দিক: কাগজ তিনটা মিলছে কি না।
+             */
+            ['label' => 'purchase::menu.match_exceptions', 'icon' => 'alert-triangle',
+                'route' => 'purchase.report.show',
+                'route_params' => ['slug' => 'match-exceptions'], 'permission' => 'purchase.report'],
+
             ['label' => 'purchase::menu.uninvoiced', 'icon' => 'alert-triangle', 'route' => 'purchase.report.show',
                 'route_params' => ['slug' => 'uninvoiced'], 'permission' => 'purchase.report'],
+            /*
+             * ⭐ দরের ইতিহাস — ২৪ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ সরবরাহকারীর পাশে, কারণ প্রশ্নটা একই সারির: *"এঁর কাছ
+             * থেকে কত দরে কিনছি, আর দরটা কোনদিকে যাচ্ছে"*।
+             */
+            /*
+             * ⭐ সরবরাহকারীর কার্যক্ষমতা — ২৪ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ দরের ইতিহাসের পাশে: দাম আর সময়, দুইটাই এক সরবরাহকারীর
+             * সম্পর্কে দুইটা আলাদা প্রশ্ন, আর দুইটাই দরাদরির কাজে লাগে।
+             */
+            ['label' => 'purchase::menu.supplier_performance', 'icon' => 'clock',
+                'route' => 'purchase.report.show',
+                'route_params' => ['slug' => 'supplier-performance'], 'permission' => 'purchase.report'],
+
+            ['label' => 'purchase::menu.price_history', 'icon' => 'scale',
+                'route' => 'purchase.report.show',
+                'route_params' => ['slug' => 'price-history'], 'permission' => 'purchase.report'],
+
             ['label' => 'purchase::menu.by_supplier', 'icon' => 'supplier', 'route' => 'purchase.report.show',
                 'route_params' => ['slug' => 'by-supplier'], 'permission' => 'purchase.report'],
 
@@ -147,7 +180,7 @@ return [
      * ([[App\Core\Contracts\OffersChoicesOnAForm]])।
      */
     'form_choices' => [
-        \App\Modules\Purchase\Services\TaggableBillsOnTheVoucherForm::class,
+        TaggableBillsOnTheVoucherForm::class,
     ],
 
     'permissions' => [
@@ -261,6 +294,20 @@ return [
         'return' => 'purchase::approval.return',
     ],
 
+    /*
+     * ⛔ যে কাজগুলোতে **টাকা নড়ে** — ২৪ সেপ্টেম্বর ২০২৬।
+     *
+     * ⭐ মালিকের সিদ্ধান্ত: এগুলোতে **একসাথে সই দেওয়া যায় না**
+     * ([[BulkApproval]]) — একটা একটা করে দেখে দিতে হবে।
+     *
+     * ⓘ পরিশোধ টাকা বের করে, আর বিল দেনা বসায়।
+     *
+     * ⚠️ নামগুলো `approvals`-এ থাকতেই হবে — [[ModuleDefinition]]
+     * মিলিয়ে দেখে। ⛔ একটা টাইপো নীরবে কাগজটাকে bulk-এ
+     * ঢুকিয়ে দিত।
+     */
+    'moves_money' => ['payment', 'bill'],
+
     'reports' => [
         PurchaseReports::class,
         SettlementReport::class,
@@ -294,24 +341,24 @@ return [
             'key' => 'purchase.print.paper.bill',
             'label' => 'purchase::settings.paper_bill',
             'type' => 'choice',
-            'options' => \App\Core\Engines\Print\PaperSize::all(),
-            'default' => \App\Core\Engines\Print\PaperSize::A4,
+            'options' => PaperSize::all(),
+            'default' => PaperSize::A4,
             'group' => 'print',
         ],
         [
             'key' => 'purchase.print.paper.order',
             'label' => 'purchase::settings.paper_order',
             'type' => 'choice',
-            'options' => \App\Core\Engines\Print\PaperSize::all(),
-            'default' => \App\Core\Engines\Print\PaperSize::A4,
+            'options' => PaperSize::all(),
+            'default' => PaperSize::A4,
             'group' => 'print',
         ],
         [
             'key' => 'purchase.print.paper.receipt',
             'label' => 'purchase::settings.paper_receipt',
             'type' => 'choice',
-            'options' => \App\Core\Engines\Print\PaperSize::all(),
-            'default' => \App\Core\Engines\Print\PaperSize::A4,
+            'options' => PaperSize::all(),
+            'default' => PaperSize::A4,
             'group' => 'print',
         ],
         /*
