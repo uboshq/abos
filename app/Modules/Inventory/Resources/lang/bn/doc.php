@@ -8,5 +8,6 @@ return [
     'transfer' => 'স্টক স্থানান্তর',
     'warehouse_code' => 'গুদাম কোড',
     'production' => 'রান্না',
+    'quality_inspection' => 'গুণমান পরিদর্শন',
     'stock_count' => 'মাল গোনা',
 ];

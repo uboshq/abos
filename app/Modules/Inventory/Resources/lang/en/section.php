@@ -15,4 +15,5 @@ return [
 
     'production_head' => 'The cooking',
     'production_used' => 'What went in',
+    'planning' => 'Planning',
 ];

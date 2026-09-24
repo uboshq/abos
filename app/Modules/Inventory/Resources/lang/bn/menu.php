@@ -40,4 +40,7 @@ return [
     'adjustments' => 'সমন্বয়ের ইতিহাস',
     'reserved_report' => 'সংরক্ষিত মাল',
     'counts' => 'মাল গোনা',
+    'quality' => 'গুণমান পরিদর্শন',
+    'replenishment' => 'কী কিনতে হবে',
+    'serials' => 'সিরিয়াল নম্বর',
 ];

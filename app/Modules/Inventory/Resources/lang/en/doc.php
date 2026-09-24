@@ -8,5 +8,6 @@ return [
     'transfer' => 'Stock Transfer',
     'warehouse_code' => 'Warehouse Code',
     'production' => 'Cooking',
+    'quality_inspection' => 'Quality Inspection',
     'stock_count' => 'Stock Count',
 ];

@@ -15,4 +15,13 @@ return [
     'cancelled' => 'বাতিল',
     'count_waiting' => 'অপেক্ষায়',
     'count_settled' => 'মীমাংসিত',
+    'qc_pending' => 'রায় বাকি',
+    'qc_approved' => 'গৃহীত',
+    'qc_quarantine' => 'কোয়ারেন্টাইন',
+    'qc_rejected' => 'বাতিল',
+    'serial_in_stock' => 'গুদামে',
+    'serial_sold' => 'গ্রাহকের কাছে',
+    'serial_returned' => 'ফেরত এসেছে',
+    'under_warranty' => 'ওয়ারেন্টিতে',
+    'no_warranty' => 'ওয়ারেন্টি নেই',
 ];

@@ -20,4 +20,5 @@ return [
 
     'dish' => 'Dish name',
     'count_pending' => 'Unsettled first',
+    'qc_pending' => 'Undecided first',
 ];

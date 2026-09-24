@@ -33,4 +33,7 @@ return [
     'adjustments' => 'Who changed the stock',
     'reserved_report' => 'Reserved stock',
     'counts' => 'Stock Counts',
+    'quality' => 'Quality Inspection',
+    'replenishment' => 'What to buy',
+    'serials' => 'Serial Numbers',
 ];

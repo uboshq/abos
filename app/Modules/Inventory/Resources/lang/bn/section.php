@@ -15,4 +15,5 @@ return [
 
     'production_head' => 'রান্নার কাগজ',
     'production_used' => 'যা যা গেল',
+    'planning' => 'পরিকল্পনা',
 ];
