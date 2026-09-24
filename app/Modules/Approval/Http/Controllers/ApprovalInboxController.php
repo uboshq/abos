@@ -83,7 +83,22 @@ class ApprovalInboxController extends Controller implements HasMiddleware
              * তিনিই সেটা অন্যকে দিতে পারেন। ⛔ আলাদা চাবি দিলে এমন কেউ
              * কাগজ পাঠাতে পারতেন যিনি নিজে ওটায় সই দিতেই পারতেন না।
              */
-            new Middleware('can:approval.decide', only: ['approve', 'reject', 'forward']),
+            /*
+             * ⛔ `bulkApprove` এই তালিকায় না থাকায় রুটটা খোলা ছিল।
+             *
+             * ⚠️ মেনুতে বোতামটা লুকানো থাকলেও লগইন করা যে কেউ
+             * সরাসরি POST করতে পারতেন — আর একসাথে একশোটা কাগজে
+             * সই দেওয়ার চেয়ে খারাপ আর কিছু নেই।
+             *
+             * ⓘ [[BulkApproval]] প্রতিটা সারি আলাদা করে `canDecide()`
+             * দিয়ে যেত, তাই কাগজ পাশ হত না — তবু দরজাটা খোলা
+             * থাকা আর দরজাটা বন্ধ থাকা এক কথা নয়।
+             *
+             * ⭐ ধরা পড়েছে [[EveryRouteIsGuardedTest]] লাল হয়ে — আমার
+             * নিজের কোনো দাবি এটা ধরত না, কারণ প্রতিটাতেই মানুষটার
+             * কোনো না কোনো চাবি ছিল।
+             */
+            new Middleware('can:approval.decide', only: ['approve', 'reject', 'forward', 'bulkApprove']),
 
             /*
              * ⚠️ `show` এখানে নেই, আর সেটা ইচ্ছাকৃত।

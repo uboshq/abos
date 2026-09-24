@@ -117,6 +117,22 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
         'EveryGroupedReportGroupsByWhatItSelectsTest::BILINGUAL',
 
         /*
+         * ⭐ এটা ছাড় নয়, তার উল্টো — ২৪ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ তালিকাটা বলে **কোন কাজগুলোতে টাকা নড়ে** (পরিশোধ,
+         * উত্তোলন, আদায়, বছর বন্ধ …), আর প্রতিটা নাম
+         * [[EveryModuleSaysWhereMoneyMovesTest]]-কে আরও একটা জায়গা
+         * মিলিয়ে দেখতে বলে।
+         *
+         * ⚠️ নাম মুছলে পাহারা **কম** দেখে, বেশি নয় — তাই ছাড়ের
+         * ছাদে গোনা হলে সংখ্যাটা উল্টো কথা বলত।
+         *
+         * ⓘ আর তালিকাটা হাতে লেখা ইচ্ছাকৃত: রেজিস্ট্রি থেকে
+         * পড়লে দাবিটা নিজেকেই মেলাত ([[never-supply-the-name-yourself]])।
+         */
+        'EveryModuleSaysWhereMoneyMovesTest::MONEY',
+
+        /*
          * ⭐ এটাও ছাড় নয় — ২২ সেপ্টেম্বর ২০২৬।
          *
          * [[OnlyTheEngineWritesToTheLedgerTest]] বলে খতিয়ানে লেখে

@@ -246,12 +246,14 @@ final class ApprovalReports
                      * সরাসরি দিনে গুনলে আজকের সবগুলো শূন্য দেখাত।
                      */
                     DB::raw(
-                        'ROUND(AVG(TIMESTAMPDIFF(HOUR, approvals.requested_at, NOW())) / 24, 1) as avg_days'
+                        'ROUND(AVG(TIMESTAMPDIFF(HOUR, approvals.requested_at, ?)) / 24, 1) as avg_days',
+                        [now()->toDateTimeString()]
                     ),
 
                     /* ⛔ সবচেয়ে পুরনোটা কত দিন ধরে বসে আছে */
                     DB::raw(
-                        'ROUND(MAX(TIMESTAMPDIFF(HOUR, approvals.requested_at, NOW())) / 24, 1) as worst_days'
+                        'ROUND(MAX(TIMESTAMPDIFF(HOUR, approvals.requested_at, ?)) / 24, 1) as worst_days',
+                        [now()->toDateTimeString()]
                     ),
                 ]),
             columns: [

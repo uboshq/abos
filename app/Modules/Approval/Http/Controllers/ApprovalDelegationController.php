@@ -6,6 +6,7 @@ namespace App\Modules\Approval\Http\Controllers;
 
 use App\Core\Engines\Approval\DelegationService;
 use App\Core\Services\MenuBuilder;
+use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Models\ApprovalDelegation;
 use App\Models\User;
@@ -67,7 +68,24 @@ final class ApprovalDelegationController extends Controller implements HasMiddle
                 ->with('from')
                 ->get(),
 
+            /*
+             * ⛔ কেবল এই কোম্পানির মানুষ — সুবিধা নয়, শর্ত।
+             *
+             * ── ⚠️ যা ফাঁস হচ্ছিল, ২৪ সেপ্টেম্বর ২০২৬ ────────────────
+             * ⓘ `User`-এ কোনো global scope নেই — একজন মানুষ একাধিক
+             * কোম্পানিতে থাকতে পারেন, তাই সম্পর্কটা pivot-এ।
+             *
+             * ⛔ ফল: সরল `User::query()` লিখলে এই ড্রপডাউনে **অন্য
+             * কোম্পানির মানুষের নাম** আসত — আর ক্ষতিটা নাম দেখার
+             * চেয়ে বড়: তাঁদের হাতে **এই কোম্পানির সইয়ের ভার** দিয়েও
+             * দেওয়া যেত।
+             *
+             * ⓘ ছাঁচটা [[ApprovalFlowController::companyUsers()]]-এর — নতুন
+             * কিছু বানানো হয়নি, কারণ দুই রকম করলে তৃতীয় জায়গায়
+             * তৃতীয় রকম হয়।
+             */
             'people' => User::query()
+                ->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))
                 ->where('id', '!=', $user->id)
                 ->orderBy('name')
                 ->get(['id', 'name']),
