@@ -47,4 +47,6 @@ return [
     'new_inspection' => 'New inspection',
     'decide' => 'Record the decision',
     'add_serials' => 'Add serial numbers',
+    'issue_serials' => 'Issue pieces',
+    'dispose' => 'Dispose of rejected goods',
 ];

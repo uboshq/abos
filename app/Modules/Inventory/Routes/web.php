@@ -225,6 +225,8 @@ Route::middleware('auth')->prefix('inventory')->group(function () {
         Route::post('/', [QualityInspectionController::class, 'store'])->name('store');
         Route::get('/{inspection}', [QualityInspectionController::class, 'show'])
             ->whereNumber('inspection')->name('show');
+        Route::post('/{inspection}/dispose', [QualityInspectionController::class, 'dispose'])
+            ->whereNumber('inspection')->name('dispose');
         Route::post('/{inspection}/decide', [QualityInspectionController::class, 'decide'])
             ->whereNumber('inspection')->name('decide');
     });
@@ -241,6 +243,16 @@ Route::middleware('auth')->prefix('inventory')->group(function () {
         Route::get('/', [SerialNumberController::class, 'index'])->name('index');
         Route::get('/create', [SerialNumberController::class, 'create'])->name('create');
         Route::post('/', [SerialNumberController::class, 'store'])->name('store');
+
+        /*
+         * ⭐ পিস বেরোনো — ২৫ সেপ্টেম্বর ২০২৬।
+         *
+         * ⛔ স্থির পথ `issue` আগে বসানোর দরকার নেই, কারণ এই গ্রুপে
+         * কোনো `{serial}` প্যারামিটার নেই — ⓘ কিন্তু একদিন এলে
+         * এই দুইটা সারি তার **উপরে** রাখতে হবে।
+         */
+        Route::get('/issue', [SerialNumberController::class, 'issue'])->name('issue');
+        Route::post('/issue', [SerialNumberController::class, 'storeIssue'])->name('issue.store');
     });
 
     /*

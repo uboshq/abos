@@ -155,5 +155,11 @@ return [
     'serial_one_per_line' => 'One number per line. A scanner sends a new line after each scan, so you can just keep scanning.',
     'serial_no_products' => 'No product is marked as keeping a number for every piece. Tick it on the product first.',
     'serials_added' => '{1} One serial number is on the books.|[2,*] :count serial numbers are on the books.',
+    'serials_issued' => '{1} One piece has gone out.|[2,*] :count pieces have gone out.',
+    'serial_issue_note' => 'Warranty starts the day a piece goes out, not the day it arrived - months spent in the warehouse cannot eat into the buyer\'s cover.',
+    'serial_none_in_stock' => 'No pieces are in the warehouse yet. Serial numbers have to be entered first.',
+    'serial_scan_hint' => 'Scan or type - one number to a line.',
+    'qc_disposed' => 'The goods have left the books and the loss is in the ledger.',
+    'qc_dispose_note' => 'The hold is released and the goods leave the shelf together, so they are never sellable for even a moment in between.',
     'track_serial_hint' => 'For pieces that carry a warranty - each one gets its own number and its own history.',
 ];

@@ -47,4 +47,6 @@ return [
     'new_inspection' => 'নতুন পরিদর্শন',
     'decide' => 'রায় লিখুন',
     'add_serials' => 'সিরিয়াল নম্বর বসান',
+    'issue_serials' => 'পিস বের করুন',
+    'dispose' => 'বাতিল মাল বিনাশ',
 ];

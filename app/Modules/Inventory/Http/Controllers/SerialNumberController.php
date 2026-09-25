@@ -44,7 +44,7 @@ class SerialNumberController extends Controller implements HasMiddleware
     {
         return [
             new Middleware('can:inventory.serial.view', only: ['index']),
-            new Middleware('can:inventory.serial.manage', only: ['create', 'store']),
+            new Middleware('can:inventory.serial.manage', only: ['create', 'store', 'issue', 'storeIssue']),
         ];
     }
 
@@ -133,6 +133,77 @@ class SerialNumberController extends Controller implements HasMiddleware
             ->route('inventory.serial.index')
             ->with('saved', trans_choice('inventory::message.serials_added', count($made), [
                 'count' => count($made),
+            ]));
+    }
+
+    /**
+     * ⭐ পিস বেরোনোর পর্দা — ২৫ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⛔ ইঞ্জিনটার কোনো দরজাই ছিল না ──────────────────────────────
+     * [[SerialNumberService::issue()]] লেখা হয়েছিল ২৪ সেপ্টেম্বরে, আর
+     * সেদিন থেকে **একটাও পথ ওটাতে পৌঁছাত না** — না পর্দা, না রুট, না
+     * API। ⚠️ ফলে পিস ঢুকত, কোনোদিন বেরোত না, আর প্রতিটা নম্বর চিরকাল
+     * `IN_STOCK` হয়ে বসে থাকত।
+     *
+     * ⓘ ওয়ারেন্টির গোটা প্রশ্নটাই এর উপর দাঁড়ানো: *"এই পিসটা কবে
+     * গেল, আর মেয়াদ আছে কি"* — আর বেরোনোর তারিখ ছাড়া ওয়ারেন্টি শুরুই
+     * হয় না ([[SerialNumber::underWarranty()]])।
+     *
+     * ── ⚠️ কেন বিক্রয়ের কাগজ থেকে আপনা-আপনি নয় ─────────────────────
+     * ⓘ ওটাই শেষ গন্তব্য, কিন্তু তাতে বিক্রয়ের সারিতে নম্বর লেখার ঘর
+     * লাগে — আর ঐ কোড অন্য মডিউলে। ⛔ সেই জোড়াটা না বসা পর্যন্ত
+     * ইঞ্জিনটা অচল রাখার কোনো কারণ নেই: এই পর্দা আজ থেকেই প্রশ্নটার
+     * উত্তর দিতে পারে, আর কাল বিক্রয় জুড়লে ওটা **এই একই সেবাই** ডাকবে।
+     */
+    public function issue(Request $request): View
+    {
+        return view('inventory::serial.issue', [
+            'menu' => $this->menu->forUser($request->user()),
+
+            /*
+             * ⓘ কেবল যে পিসগুলো এখনো গুদামে — ⛔ বেরিয়ে যাওয়া নম্বর
+             * তালিকায় রাখলে কেউ ওটা বেছে নিতেন, আর সেবা ব্যতিক্রম
+             * ছুড়ত ("এই পিস আগেই বেরিয়ে গেছে")। ⚠️ যে ভুলটা আগেই
+             * ঠেকানো যায়, সেটা ব্যতিক্রম দিয়ে ঠেকানো অপচয়।
+             */
+            'inStock' => SerialNumber::query()
+                ->where('status', SerialNumber::IN_STOCK)
+                ->with('product')
+                ->orderBy('serial_no')
+                ->limit(500)
+                ->get(),
+        ]);
+    }
+
+    public function storeIssue(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            /* ⓘ গ্রহণের ঘরের মতোই — প্রতি লাইনে একটা নম্বর, স্ক্যানারের ভাষা */
+            'serials' => ['required', 'string', 'max:20000'],
+            'issued_on' => ['required', 'date', 'before_or_equal:today'],
+            'sold_to' => ['nullable', 'string', 'max:160'],
+
+            /*
+             * ⛔ শূন্য মানে *"ওয়ারেন্টি নেই"*, খালি নয় — ⓘ তাই ঘরটা
+             * `nullable` **আর** `integer`, আর সেবা শূন্যে দুইটা তারিখই
+             * খালি রাখে।
+             */
+            'warranty_months' => ['nullable', 'integer', 'min:0', 'max:600'],
+        ]);
+
+        $gone = $this->serials->issue(
+            serials: preg_split('/\r\n|\r|\n/', $data['serials']) ?: [],
+            data: [
+                'issued_on' => $data['issued_on'],
+                'sold_to' => $data['sold_to'] ?? null,
+                'warranty_months' => $data['warranty_months'] ?? 0,
+            ],
+        );
+
+        return redirect()
+            ->route('inventory.serial.index')
+            ->with('saved', trans_choice('inventory::message.serials_issued', count($gone), [
+                'count' => count($gone),
             ]));
     }
 }
