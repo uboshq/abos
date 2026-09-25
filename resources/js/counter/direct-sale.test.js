@@ -491,3 +491,146 @@ describe('বাকির সীমা — কার্টেই আটকায
         expect(await c.addToCart()).toBe(true)
     })
 })
+
+/*
+ * ⭐ লট বাছাই — মালিকের সিদ্ধান্ত, ২৫ সেপ্টেম্বর ২০২৬।
+ *
+ * ── ⓘ তাঁকে দুইটা বিকল্প দেওয়া হয়েছিল ───────────────────────────────
+ * না বাছলে FEFO চলবে, নাকি বাছা **বাধ্যতামূলক**। ⚠️ সুপারিশ ছিল
+ * প্রথমটার (পুরনো মাল আপনা থেকে আগে যায়), আর তিনি দ্বিতীয়টা বেছেছেন।
+ *
+ * ⛔ তাঁর সিদ্ধান্তের যে ঝুঁকিটা বলা হয়েছিল — তাড়াহুড়োয় উপরেরটাই বাছা
+ * হবে — সেটা কমাতে তালিকা মেয়াদের ক্রমে আসে, যারটা আগে ফুরাবে সে উপরে।
+ */
+describe('লট বাছাই — বাধ্যতামূলক, আর একই লট দুইবার নয়', () => {
+    const LOTS = {
+        1: [
+            { id: '11', productId: '1', no: 'B-A', expiry: '2027-01-01', qty: '50' },
+            { id: '12', productId: '1', no: 'B-B', expiry: '2027-06-01', qty: '80' },
+        ],
+    }
+
+    /** লট ধরা একটা পণ্য, আর তার দুইটা লট। */
+    const tracked = (over = {}) => {
+        const c = counter({
+            lots: LOTS,
+            texts: {
+                notForSales: 'বিক্রয়ের জন্য নয়',
+                creditBeyondLimit: 'আর ৳:left বাকি দেওয়া যাবে',
+                lotIsRequired: 'লট বাছতে হবে',
+                lotAlreadyInCart: 'এই লট কার্টে আগেই আছে',
+            },
+            ...over,
+        })
+
+        c.picked = product({ trackBatch: true })
+        c.entry.qty = '2'
+        c.entry.rate = '100'
+
+        return c
+    }
+
+    it('লট ধরা পণ্যে ঘরটা দেখা যায়, আর লটগুলো পাওয়া যায়', () => {
+        const c = tracked()
+
+        expect(c.needsLot).toBe(true)
+        expect(c.entryLots).toHaveLength(2)
+    })
+
+    /*
+     * ⛔ পাল্টা-দাবি, আর এটা ছাড়া উপরেরটার কোনো মানে নেই: ⚠️ "সব পণ্যে
+     * ঘর দেখাও" লিখলেও ওটা সবুজ থাকত, আর তখন ডিপোর চাল-ডাল-সাবানের
+     * প্রতিটা সারিতে একটা বাড়তি বাছাই বসত।
+     */
+    it('লট ধরা নয় এমন পণ্যে ঘরটাই নেই', () => {
+        const c = tracked()
+        c.picked = product()
+
+        expect(c.needsLot).toBe(false)
+    })
+
+    it('লট না বাছলে সারিটা কার্টে যায় না', async () => {
+        const c = tracked()
+
+        expect(await c.addToCart()).toBe(false)
+        expect(c.lines).toHaveLength(0)
+        expect(c.lotWarning).not.toBe('')
+    })
+
+    it('লট বাছলে যায়, আর সারিতে লটটা থাকে', async () => {
+        const c = tracked()
+        c.entry.batchId = '11'
+
+        expect(await c.addToCart()).toBe(true)
+        expect(c.lines[0].batchId).toBe('11')
+        expect(c.lines[0].batchNo).toBe('B-A')
+    })
+
+    /*
+     * ⭐ মালিকের নিয়ম: **প্রতি লটে এক সারি**। ⓘ আলাদা লট হলে দুইটা
+     * সারি ঠিকই থাকে — সেটাই তো নিয়মের মানে।
+     */
+    it('আলাদা লট হলে দুইটা সারি হয়', async () => {
+        const c = tracked()
+
+        c.entry.batchId = '11'
+        expect(await c.addToCart()).toBe(true)
+
+        c.picked = product({ trackBatch: true })
+        c.entry.qty = '3'
+        c.entry.rate = '100'
+        c.entry.batchId = '12'
+        expect(await c.addToCart()).toBe(true)
+
+        expect(c.lines).toHaveLength(2)
+    })
+
+    /* ⛔ কিন্তু একই লট দুইবার নয়। */
+    it('একই লট দুইবার দিলে আটকায়', async () => {
+        const c = tracked()
+
+        c.entry.batchId = '11'
+        expect(await c.addToCart()).toBe(true)
+
+        c.picked = product({ trackBatch: true })
+        c.entry.qty = '3'
+        c.entry.rate = '100'
+        c.entry.batchId = '11'
+
+        expect(await c.addToCart()).toBe(false)
+        expect(c.lines).toHaveLength(1)
+        expect(c.lotWarning).toBe('এই লট কার্টে আগেই আছে')
+    })
+
+    /*
+     * ⚠️ দুইটা বার্তা আলাদা, আর সেটাই জরুরি — ⛔ এক বার্তা দিলে
+     * বিক্রেতা বুঝতেন না লট **বাছতে** হবে না **বদলাতে** হবে।
+     */
+    it('দুইটা কারণের বার্তা দুইটা আলাদা', async () => {
+        const c = tracked()
+        await c.addToCart()
+        const missing = c.lotWarning
+
+        c.entry.batchId = '11'
+        await c.addToCart()
+
+        c.picked = product({ trackBatch: true })
+        c.entry.qty = '1'
+        c.entry.rate = '100'
+        c.entry.batchId = '11'
+        await c.addToCart()
+
+        expect(c.lotWarning).not.toBe(missing)
+    })
+
+    /* ⓘ সারিটা উপরে ফিরলে লটটাও ফেরে — নাহলে আবার বাছতে হত। */
+    it('সারি উপরে ফিরলে লটটাও ফেরে', async () => {
+        const c = tracked()
+        c.entry.batchId = '12'
+        await c.addToCart()
+
+        await c.editLine(0)
+
+        expect(c.entry.batchId).toBe('12')
+    })
+})

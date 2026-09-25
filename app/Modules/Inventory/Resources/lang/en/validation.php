@@ -24,6 +24,9 @@ return [
 
     // Batch allocation
     'qty_positive' => 'Say how much — a quantity of zero picks no lot at all.',
+
+    /* ⓘ Not the shortfall message — reasons in bn/validation.php. */
+    'chosen_lot_short' => 'Lot :lot has only :available — pick another lot, or lower the quantity.',
     'free_batch_short' => 'Not enough free :product across its lots — :short short. Expired lots were not counted.',
     'batch_no_required' => ':product is tracked by lot, so the lot number has to be written down as the goods come in — there is no way to learn it later.',
     'batch_short' => 'Not enough :product across its lots — :short short. Unexpired lots only; check whether some has expired.',

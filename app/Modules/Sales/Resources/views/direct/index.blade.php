@@ -58,6 +58,7 @@
     <form method="POST" action="{{ route('sales.direct.store') }}"
           x-data="directSale({
               catalogue: @js($products),
+              lots: @js($lots),
               customers: @js($customerTerms),
               walkinId: {{ $walkinId }},
               vatEnabled: {{ $vatEnabled ? 'true' : 'false' }},
@@ -72,6 +73,8 @@
                   'notForSales' => __('sales::message.not_for_sales'),
                   'freeBeyondRatio' => __('sales::validation.free_over_allowance'),
                   'creditBeyondLimit' => __('sales::validation.credit_left_is_only'),
+                  'lotIsRequired' => __('sales::validation.lot_must_be_chosen'),
+                  'lotAlreadyInCart' => __('sales::validation.lot_already_in_cart'),
               ]),
               freeAllowedUrl: @js(route('sales.direct.free_allowed')),
               warehouseId: @js($warehouse?->id),

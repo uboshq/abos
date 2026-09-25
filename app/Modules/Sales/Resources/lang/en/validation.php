@@ -20,6 +20,14 @@ return [
      * already counts everything in the cart.
      */
     'credit_left_is_only' => 'Only ৳:left of credit is left for this customer — this line goes past it.',
+
+    /* ⓘ Reasons in bn/validation.php — the owner chose mandatory lots. */
+    'lot_must_be_chosen' => 'This item needs a lot — without one, a return or a recall cannot be traced.',
+    'lot_already_in_cart' => 'That lot is already in the cart — pick another, or take that row back up to edit.',
+
+    /* ⓘ The service names the product — reasons in bn/validation.php. */
+    'lot_must_be_chosen_for' => ':product needs a lot.',
+    'lot_twice_in_one_bill' => ':product — the same lot cannot appear on two lines. Merge them, or pick another lot.',
     'free_beyond_ratio' => ':product — :free free given, but the ratio of this lot allows at most :allowed. '
         .'You cannot pass on more free goods than the supplier gave.',
     'no_lines' => 'At least one line is needed — a document with no lines does nothing.',

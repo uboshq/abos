@@ -84,6 +84,7 @@ final class DirectSaleService
         $warehouse = $this->resolveWarehouse($data['warehouse_id'] ?? null);
 
         $this->assertFreeStaysWithinTheRatio($lines, $warehouse);
+        $this->assertEveryTrackedLineNamesItsLot($lines);
 
         /*
          * ⭐ কাউন্টারের ডিপোজিটে সই লাগলে — সবকিছু খসড়া, ১৯ সেপ্টেম্বর ২০২৬।
@@ -507,6 +508,18 @@ final class DirectSaleService
 
             // প্যাকটা চালান পর্যন্ত যায়, আর সেখানেই একবার নামে
             'unit_id' => $line['unit_id'] ?? null,
+
+            /*
+             * ⭐ বিক্রেতার বাছা লট — ২৫ সেপ্টেম্বর ২০২৬।
+             *
+             * ⚠️ এখানে না বসালে বাছাইটা **নীরবে হারাত**: সেবা লট চাইত,
+             * যাচাই করত, আর তারপর চালানে বসত লট ছাড়া। ⛔ মাল বেরোত FEFO
+             * ধরে — অর্থাৎ সম্ভবত **অন্য লট থেকে** — আর কাগজে এক লট,
+             * গুদামে আরেকটা।
+             *
+             * ⓘ লট ধরা নয় এমন পণ্যে `null`, আর সেটাই ঠিক।
+             */
+            'batch_id' => ($line['batch_id'] ?? '') === '' ? null : (int) $line['batch_id'],
         ], $lines));
     }
 
@@ -719,6 +732,68 @@ final class DirectSaleService
      *
      * @param  list<array<string, mixed>>  $lines
      */
+    /**
+     * ⭐ লট ধরা প্রতিটা সারি তার লট বলে, আর একই লট দুইবার নয়।
+     *
+     * ── ⓘ মালিকের সিদ্ধান্ত, ২৫ সেপ্টেম্বর ২০২৬ ─────────────────────
+     * তাঁকে দুইটা বিকল্প দেওয়া হয়েছিল — না বাছলে FEFO চলবে, নাকি বাছা
+     * বাধ্যতামূলক। ⚠️ আমি প্রথমটার সুপারিশ করেছিলাম; তিনি দ্বিতীয়টা
+     * বেছেছেন।
+     *
+     * ── ⛔ দেয়ালটা এখানে, পর্দায় নয় ─────────────────────────────────
+     * ⓘ পর্দাও আটকায়, কিন্তু সেটা সুবিধা — দেয়াল নয়। ⚠️ অন্য পথে আসা
+     * বিল (API, পুরনো খসড়া, কালকের নতুন পর্দা) পর্দার পাহারা দেখে না।
+     * ⛔ লট ছাড়া একটা সারি ঢুকে গেলে ফেরত বা রিকলের সুতোটা ছিঁড়ে
+     * যেত, আর সেটা ধরা পড়ত কেবল রিকলের দিন।
+     *
+     * ── ⚠️ দুইটা আলাদা নিয়ম, দুইটা আলাদা বার্তা ────────────────────
+     * ⓘ "লট বাছা হয়নি" আর "একই লট দুইবার" আলাদা ভুল, আর বিক্রেতার
+     * করণীয়ও আলাদা। ⛔ এক বার্তায় মিশিয়ে দিলে তিনি বুঝতেন না লট
+     * **বাছতে** হবে না **বদলাতে** হবে।
+     *
+     * @param  list<array<string, mixed>>  $lines
+     */
+    private function assertEveryTrackedLineNamesItsLot(array $lines): void
+    {
+        $seen = [];
+
+        foreach ($lines as $line) {
+            $product = Product::query()->find($line['product_id'] ?? null);
+
+            if ($product === null || ! $product->track_batch) {
+                continue;
+            }
+
+            $batchId = (string) ($line['batch_id'] ?? '');
+
+            if ($batchId === '') {
+                throw ValidationException::withMessages([
+                    'lines' => __('sales::validation.lot_must_be_chosen_for', [
+                        'product' => $product->name(),
+                    ]),
+                ]);
+            }
+
+            /*
+             * ⓘ চাবিটা পণ্য **আর** লট মিলিয়ে — ⚠️ কেবল লট ধরলে দুইটা
+             * আলাদা পণ্যের লট কখনো মিলত না (লট পণ্যের নিজের), তাই
+             * পাহারাটা কিছুই ধরত না; আর কেবল পণ্য ধরলে **আলাদা লটের
+             * দুইটা সারিও** আটকে যেত — অথচ সেটাই মালিকের চাওয়া।
+             */
+            $key = $product->id.':'.$batchId;
+
+            if (isset($seen[$key])) {
+                throw ValidationException::withMessages([
+                    'lines' => __('sales::validation.lot_twice_in_one_bill', [
+                        'product' => $product->name(),
+                    ]),
+                ]);
+            }
+
+            $seen[$key] = true;
+        }
+    }
+
     private function assertFreeStaysWithinTheRatio(array $lines, Warehouse $warehouse): void
     {
         $allowance = app(FreeAllowance::class);

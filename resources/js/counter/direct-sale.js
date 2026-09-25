@@ -32,8 +32,16 @@ import { taka } from '../components/money.js'
 export default function directSale({
     catalogue, customers, walkinId, vatEnabled, packs,
     paymentTermDefault, carriers, depositMethods, moneyAccounts,
-    draftKey, hasErrors, texts, freeAllowedUrl, warehouseId, creditRules,
+    draftKey, hasErrors, texts, freeAllowedUrl, warehouseId, creditRules, lots,
 }) {
+    /*
+     * ⓘ লটের তালিকা — পণ্যের আইডি ধরে, মেয়াদের ক্রমে সাজানো।
+     *
+     * ⚠️ ডিফল্ট `{}`, কারণ গুদাম বাছা না থাকলে সার্ভার কিছুই পাঠায় না।
+     * ⛔ `undefined` রেখে দিলে প্রতিটা লট-খোঁজা একটা ত্রুটি হত, আর
+     * পর্দাটা মাঝপথে জমে যেত।
+     */
+    const lotBook = lots ?? {};
     /*
      * ⚠️ ডিফল্টটা **সব বন্ধ**, আর সেটা ইচ্ছাকৃত।
      *
@@ -67,6 +75,9 @@ export default function directSale({
         /* ⓘ বাকির সীমা ছাড়ানোর বার্তা — `freeWarning`-এর পাশেই বসে,
              আর একই জায়গায় দেখানো হয়। */
         creditWarning: '',
+
+        /* ⓘ লট বাছা হয়নি, বা ঐ লট কার্টে আগে থেকেই আছে। */
+        lotWarning: '',
         customers,
         vatEnabled,
         term: '',
@@ -91,7 +102,8 @@ export default function directSale({
          * বাছাই নয়, অবস্থান** — লাইন মুছলে উপহারও যায়, আর
          * ভুল লাইনে বসার কোনো পথই নেই।
          */
-        entry: { qty: '', freeQty: '', rate: '', discountInput: '', unitId: '', gifts: [] },
+        /* ⓘ `batchId` — লট ধরা পণ্যে বাধ্যতামূলক, বাকিতে অব্যবহৃত */
+        entry: { qty: '', freeQty: '', rate: '', discountInput: '', unitId: '', gifts: [], batchId: '' },
 
         // পণ্যপ্রতি প্যাকের তালিকা — সার্ভার থেকে একবারেই
         packs,
@@ -943,6 +955,8 @@ export default function directSale({
         async addToCart() {
             if (! this.picked) return false;
 
+            if (! this.lotIsChosenAndFree()) return false;
+
             if (! this.creditFitsTheLimit()) return false;
 
             if (! await this.freeFitsTheRatio()) return false;
@@ -960,6 +974,14 @@ export default function directSale({
                 discountPercent: this.entryDiscountPercent,
                 unitId: this.entry.unitId || '',
                 gifts: this.entry.gifts,
+
+                /*
+                 * ⓘ লট ধরা পণ্যে আইডি, বাকিতে খালি। ⚠️ লটের নম্বরটাও
+                 * সাথে রাখা হয় — ⛔ কার্টে কেবল আইডি থাকলে সারিটা পড়ে
+                 * বোঝা যেত না কোন লট গেল, আর বিক্রেতাকে আইডি মেলাতে হত।
+                 */
+                batchId: this.entry.batchId || '',
+                batchNo: this.entryLots.find(l => String(l.id) === String(this.entry.batchId))?.no || '',
             });
 
             this.clearEntry();
@@ -984,6 +1006,38 @@ export default function directSale({
          *
          * @return {boolean} সারিটা তোলা যাবে কি না
          */
+        /**
+         * ⭐ লট বাছা হয়েছে, আর ঐ লট কার্টে আগে থেকে নেই।
+         *
+         * ⚠️ দুইটা আলাদা কারণে সারিটা থামে, আর বার্তা দুইটাই আলাদা —
+         * ⛔ একটাই বার্তা দিলে বিক্রেতা বুঝতেন না লট **বাছতে** হবে না
+         * **বদলাতে** হবে।
+         *
+         * ⓘ পণ্য লট ধরা না হলে প্রশ্নটাই ওঠে না, আর `batchId` খালিই
+         * যায় — ডিপোর চাল-ডাল-সাবানের আচরণ এক চুলও বদলায় না।
+         *
+         * @return {boolean} সারিটা তোলা যাবে কি না
+         */
+        lotIsChosenAndFree() {
+            this.lotWarning = '';
+
+            if (! this.needsLot) return true;
+
+            if (this.entry.batchId === '') {
+                this.lotWarning = texts.lotIsRequired;
+
+                return false;
+            }
+
+            if (this.lotAlreadyInCart(this.entry.batchId)) {
+                this.lotWarning = texts.lotAlreadyInCart;
+
+                return false;
+            }
+
+            return true;
+        },
+
         creditFitsTheLimit() {
             this.creditWarning = '';
 
@@ -1106,15 +1160,21 @@ export default function directSale({
                 discountInput: line.discountPercent ? String(line.discountPercent) + '%' : '',
                 unitId: line.unitId || '',
                 gifts: line.gifts || [],
+
+                /* ⓘ লটটাও ফেরে — ⚠️ নাহলে সারিটা উপরে এনে আবার নামানোর
+                     সময় বিক্রেতাকে লট **আবার** বাছতে হত, আর তাড়াহুড়োয়
+                     অন্য লট বসে যেত। */
+                batchId: line.batchId || '',
             };
 
             this.freeWarning = '';
+            this.lotWarning = '';
             this.$nextTick(() => this.$refs.search?.focus());
         },
 
         clearEntry() {
             this.picked = null;
-            this.entry = { qty: '', freeQty: '', rate: '', discountInput: '', unitId: '', gifts: [] };
+            this.entry = { qty: '', freeQty: '', rate: '', discountInput: '', unitId: '', gifts: [], batchId: '' };
             this.giftDraft = null;
             this.term = '';
             this.showCosting = false;
@@ -1707,6 +1767,55 @@ export default function directSale({
          * টাকার অঙ্ক দেখে বিচার করলে **প্রতিটা নগদ বিক্রিই** মাঝপথে
          * আটকে যেত। ⛔ তাই শর্তটা দেখা হয়, অঙ্কটা নয়।
          */
+        /*
+         * ⭐ লট — মালিকের নির্দেশ, ২৫ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⓘ মালিকের সিদ্ধান্ত: বাছা **বাধ্যতামূলক** ───────────────
+         * তাঁকে বিকল্প দুইটা দেওয়া হয়েছিল — না বাছলে FEFO চলবে, নাকি
+         * বাছা বাধ্যতামূলক। ⚠️ আমি প্রথমটার সুপারিশ করেছিলাম (পুরনো মাল
+         * আপনা থেকে আগে যায়), আর তিনি দ্বিতীয়টা বেছেছেন।
+         *
+         * ⛔ তাঁর সিদ্ধান্তের যে ঝুঁকিটা আমি বলেছিলাম — তাড়াহুড়োয়
+         * উপরেরটাই বাছা হবে — সেটা কমাতে তালিকাটা **মেয়াদের ক্রমে**
+         * আসে, অর্থাৎ যারটা আগে ফুরাবে সে উপরে। ⓘ ক্রমটা সেবার
+         * ([[BatchAllocator::candidates()]]) হুবহু একই।
+         */
+
+        /** এই পণ্যের বাছাইযোগ্য লটগুলো — না থাকলে খালি। */
+        get entryLots() {
+            return this.picked ? (lotBook[String(this.picked.id)] ?? []) : [];
+        },
+
+        /** ⓘ পর্দায় ঘরটা দেখাবে কি না — চাল-ডাল-সাবানে আসেই না। */
+        get needsLot() {
+            return !! this.picked?.trackBatch;
+        },
+
+        /*
+         * ⛔ **একই লট দুইবার নয়** — মালিকের নিয়ম।
+         *
+         * ⚠️ একই পণ্যের একই লট দুইটা সারিতে থাকলে কোনটা কতটা তা কাগজে
+         * বোঝা যেত না, আর ফেরত বা রিকলের সময় সুতোটা ছিঁড়ে যেত।
+         * ⓘ কিন্তু **আলাদা লট** হলে দুইটা সারি ঠিকই থাকে — সেটাই তো
+         * "প্রতি লটে এক সারি"।
+         */
+        lotAlreadyInCart(batchId) {
+            return this.lines.some(
+                l => String(l.id) === String(this.picked?.id) && String(l.batchId) === String(batchId),
+            );
+        },
+
+        /* ⓘ তালিকায় দেখানোর লেখা — নম্বর, মেয়াদ, আর কতটা আছে। */
+        lotLabel(lot) {
+            const parts = [lot.no];
+
+            if (lot.expiry) parts.push(lot.expiry);
+
+            parts.push(this.qty(lot.qty));
+
+            return parts.join(' · ');
+        },
+
         get termUsesCredit() {
             return this.termKind !== '' && this.termKind !== 'cash';
         },

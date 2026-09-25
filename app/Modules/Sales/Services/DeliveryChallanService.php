@@ -269,6 +269,15 @@ final class DeliveryChallanService
                     reserved: bccomp($release, '0', 4) > 0 ? bcmul($release, '-1', 4) : '0',
                     date: $challan->trx_date,
                     documentNo: $challan->document_no,
+
+                    /*
+                     * ⭐ বিক্রেতা লট বাছলে সেটাই যায় — ২৫ সেপ্টেম্বর ২০২৬।
+                     *
+                     * ⓘ `null` হলে আগের আচরণ হুবহু: FEFO। ⚠️ সাধারণ চালান
+                     * (অর্ডার থেকে, পোর্টাল থেকে) লট বাছে না, আর তাদের
+                     * সারিতে ঘরটা খালি — তাই তাদের কিছুই বদলায় না।
+                     */
+                    batch: $line->batch,
                 );
 
                 $this->assertWithinPrintedPrice($line, $movements);
@@ -468,6 +477,25 @@ final class DeliveryChallanService
             DeliveryChallanLine::create([
                 'delivery_challan_id' => $challan->id,
                 'product_id' => $productId,
+
+                /*
+                 * ⭐ বিক্রেতার বাছা লট — ২৫ সেপ্টেম্বর ২০২৬।
+                 *
+                 * ── ⛔ এখানেই শিকলটা ছিঁড়ে ছিল ─────────────────────────
+                 * ⓘ এই পদ্ধতিটা ঘরগুলো **হাতে বেছে** নেয়, তাই তালিকায়
+                 * না থাকা যেকোনো ঘর নীরবে পড়ে যায় — কোনো ত্রুটি নয়।
+                 * ⚠️ `fillable`-এ `batch_id` বসানো ছিল, সেবা লট চাইত আর
+                 * যাচাইও করত, তবু সারিটা চালানে বসত **লট ছাড়া**।
+                 *
+                 * ⛔ আর ফলটা নিখুঁতভাবে নীরব: মাল বেরোত FEFO ধরে,
+                 * অর্থাৎ সম্ভবত অন্য লট থেকে। কাগজে এক লট, গুদামে
+                 * আরেকটা, আর ধরা পড়ত কেবল রিকলের দিন।
+                 *
+                 * ⓘ সাধারণ চালানে (অর্ডার, পোর্টাল) ঘরটা আসেই না, আর
+                 * তখন `null` — আগের আচরণ হুবহু।
+                 */
+                'batch_id' => $line['batch_id'] ?? null,
+
                 'sales_order_line_id' => $orderLine?->id,
                 'delivered_qty' => $qty,
                 'entered_qty' => $pack['entered_qty'],

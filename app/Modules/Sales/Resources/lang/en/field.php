@@ -114,6 +114,10 @@ return [
     /* ⓘ Reasons in bn/field.php — it is what is LEFT today, not the
        agreed limit, and the two are not the same number. */
     'credit_left' => 'Credit left',
+
+    /* ⓘ Beside the product name, only for lot-tracked items. */
+    'lot' => 'Lot',
+    'lot_pick' => 'Pick a lot',
     'previous_advance' => 'Previous Credit',
     /* 'due' is declared above with the challan/invoice block — same word, so not twice. */
     'advance' => 'Credit',

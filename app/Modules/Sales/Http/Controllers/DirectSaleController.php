@@ -15,6 +15,7 @@ use App\Models\NumberSeries;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Models\Customer;
+use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\PackConversion;
@@ -91,6 +92,15 @@ class DirectSaleController extends Controller implements HasMiddleware
         return view('sales::direct.index', [
             'menu' => $this->menu->forUser($request->user()),
             'products' => $this->catalogue($warehouse),
+
+            /*
+             * ⭐ লট ধরা পণ্যের লটগুলো — পণ্যের আইডি ধরে, মেয়াদের ক্রমে।
+             *
+             * ⓘ তালিকাটা একবারই যায়, ঠিক পণ্যের তালিকার মতো — ⚠️ পণ্য
+             * বাছার পর আলাদা অনুরোধ পাঠালে কাউন্টারে প্রতিটা সারিতে
+             * একটা করে অপেক্ষা যোগ হত।
+             */
+            'lots' => $this->lotsFor($warehouse),
 
             /*
              * ── প্যাকের একক — "২ বাক্স @ ৮০০" ─────────────────────────
@@ -689,6 +699,20 @@ class DirectSaleController extends Controller implements HasMiddleware
             'lines.*.rate' => ['required', 'numeric', 'gt:0'],
             'lines.*.discount_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
 
+            /*
+             * ⭐ লট — মালিকের সিদ্ধান্ত, ২৫ সেপ্টেম্বর ২০২৬: বাছা বাধ্যতামূলক।
+             *
+             * ⚠️ এখানে `nullable`, আর সেটা ইচ্ছাকৃত — ⓘ "বাধ্যতামূলক" কেবল
+             * **লট ধরা** পণ্যে, আর কোন পণ্য কোনটা তা এই নিয়ম জানে না।
+             * ⛔ `required` লিখলে চাল-ডাল-সাবানের প্রতিটা সারিও লট চাইত।
+             *
+             * ⓘ আসল দেয়ালটা সেবায় ([[DirectSaleService]]), কারণ সেখানেই
+             * পণ্যটা হাতে আসে। ⚠️ এখানকার নিয়মটা কেবল **আকার** দেখে:
+             * সংখ্যা কি না, আর এই কোম্পানির লট কি না।
+             */
+            'lines.*.batch_id' => ['nullable', 'integer',
+                Rule::exists('inv_batches', 'id')->where('company_id', $companyId)],
+
             'gifts' => ['nullable', 'array'],
             'gifts.*.product_id' => ['nullable', 'integer',
                 Rule::exists('inv_products', 'id')->where('company_id', $companyId)],
@@ -759,6 +783,63 @@ class DirectSaleController extends Controller implements HasMiddleware
      *
      * @return Collection<int, object>
      */
+    /**
+     * ⭐ লট ধরা পণ্যের লটগুলো — মালিকের নির্দেশ, ২৫ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⓘ কেন ক্রমটা সেবার সাথে হুবহু এক ─────────────────────────────
+     * `unexpired()` ও `fefo()` — ঠিক যে দুইটা স্কোপ
+     * [[BatchAllocator::candidates()]] ব্যবহার করে। ⚠️ নিজের মতো একটা
+     * ক্রম লিখলে পর্দা এক লট উপরে দেখাত আর সেবা অন্যটা নিত, আর
+     * পার্থক্যটা কেবল মেয়াদ ফুরানোর দিন ধরা পড়ত।
+     *
+     * ⛔ মেয়াদ পেরোনো লট তালিকায় আসেই না — ⚠️ মালিক "লট বাছা
+     * বাধ্যতামূলক" বেছেছেন, আর বাছাইয়ের তালিকায় মেয়াদোত্তীর্ণ মাল
+     * থাকলে তাড়াহুড়োয় সেটাই বাছা হত।
+     *
+     * ── ⚠️ কোয়েরি একটাই, পণ্যপ্রতি নয় ───────────────────────────────
+     * ⓘ `$batch->balance($warehouse)` প্রতিটা লটের জন্য আলাদা কোয়েরি
+     * চালাত। ⛔ দুইশো লটের গুদামে ওটা দুইশো কোয়েরি, আর ধীরগতিটা
+     * কোথাও লাল হত না।
+     *
+     * @return array<int, list<array<string, string>>>  পণ্যের আইডি ধরে
+     */
+    private function lotsFor(?Warehouse $warehouse): array
+    {
+        if ($warehouse === null) {
+            return [];
+        }
+
+        $balances = DB::table('inv_stock_movements')
+            ->selectRaw('batch_id, COALESCE(SUM(floor_change), 0) as qty')
+            ->where('company_id', CompanyContext::id())
+            ->where('warehouse_id', $warehouse->id)
+            ->whereNotNull('batch_id')
+            ->groupBy('batch_id')
+            ->pluck('qty', 'batch_id');
+
+        return Batch::query()
+            ->whereIn('product_id', Product::query()->active()->where('track_batch', true)->select('id'))
+            ->unexpired()
+            ->fefo()
+            ->get()
+            ->map(fn (Batch $b) => [
+                'id' => (string) $b->id,
+                'productId' => (string) $b->product_id,
+                'no' => (string) $b->batch_no,
+                'expiry' => $b->expiry_date?->toDateString() ?? '',
+                'qty' => (string) ($balances[$b->id] ?? '0'),
+            ])
+            /*
+             * ⛔ যে লটে কিছু নেই সে বাছাইয়ের তালিকায় আসে না। ⓘ ওটা বেছে
+             * ফেললে সারিটা কার্টে উঠত আর সংরক্ষণের সময় ভেঙে পড়ত —
+             * অর্থাৎ ভুলটা ধরা পড়ত ত্রিশটা সারি তোলার পরে।
+             */
+            ->filter(fn (array $lot) => bccomp($lot['qty'], '0', 4) > 0)
+            ->groupBy('productId')
+            ->map(fn ($rows) => $rows->values()->all())
+            ->all();
+    }
+
     private function catalogue(?Warehouse $warehouse): Collection
     {
         $sum = fn (string $column) => DB::table('inv_stock_movements')
@@ -848,6 +929,15 @@ class DirectSaleController extends Controller implements HasMiddleware
                      */
                     'reorder' => (string) $p->reorder_level,
                     'free_available' => bcsub((string) $p->free_total, (string) $p->free_reserved_total, 4),
+
+                    /*
+                     * ⭐ লট ধরা পণ্য কি না — মালিকের নির্দেশ, ২৫ সেপ্টেম্বর ২০২৬।
+                     *
+                     * ⓘ পর্দাটা এটা দেখেই ঠিক করে লট বাছাইয়ের ঘরটা দেখাবে
+                     * কি না। ⚠️ ডিপোর চাল-ডাল-সাবানে ঘরটা আসেই না — ⛔ প্রতিটা
+                     * সারিতে একটা বাড়তি বাছাই কেবল টাইপিং বাড়াত।
+                     */
+                    'trackBatch' => (bool) $p->track_batch,
                 ];
             })
             /*

@@ -151,6 +151,43 @@
                                           class="num shrink-0 rounded-(--radius-field) border border-(--color-border)
                                                  px-2 py-0.5 text-2xs font-medium text-(--color-ink-muted)"
                                           x-text="(picked && picked.code)"></span>
+
+                                    {{-- ⭐ লট বাছাই — পণ্যের নামের পাশে, মালিকের
+                                         নির্দেশ, ২৫ সেপ্টেম্বর ২০২৬।
+
+                                         ── ⓘ কেন এখানে, নিচের ঘরগুলোর সাথে নয় ─────
+                                         ⭐ লট **পণ্যেরই পরিচয়** — কোন কার্টনটা যাচ্ছে।
+                                         ⚠️ নিচে পরিমাণ-দর-ছাড়ের সাথে বসালে ওটা
+                                         আরেকটা সংখ্যার ঘর মনে হত, অথচ ওটা সংখ্যা নয়,
+                                         **কোনটা** — তাই নামের পাশেই।
+
+                                         ── ⛔ কেবল লট ধরা পণ্যে ────────────────────
+                                         ⓘ ডিপোর চাল-ডাল-সাবানে ঘরটা আসেই না —
+                                         প্রতিটা সারিতে একটা বাড়তি বাছাই কেবল
+                                         টাইপিং বাড়াত।
+
+                                         ── ⚠️ ক্রমটা মেয়াদের ─────────────────────
+                                         ⓘ যারটা আগে ফুরাবে সে উপরে, আর ক্রমটা সেবার
+                                         ([[BatchAllocator::candidates()]]) হুবহু একই।
+                                         ⛔ মালিক "লট বাছা বাধ্যতামূলক" বেছেছেন, আর
+                                         তাতে ঝুঁকি ছিল তাড়াহুড়োয় উপরেরটাই বাছা হবে —
+                                         ⭐ তাই উপরেরটাই যেন পুরনোটা হয়। --}}
+                                    <template x-if="needsLot">
+                                        <label class="shrink-0">
+                                            <span class="sr-only">{{ __('sales::field.lot') }}</span>
+
+                                            <select x-model="entry.batchId"
+                                                    class="h-(--spacing-field-dense) max-w-40 rounded-(--radius-field)
+                                                           border border-(--color-border) bg-(--color-surface-app)
+                                                           px-2 text-xs">
+                                                <option value="">{{ __('sales::field.lot_pick') }}</option>
+
+                                                <template x-for="lot in entryLots" :key="lot.id">
+                                                    <option :value="lot.id" x-text="lotLabel(lot)"></option>
+                                                </template>
+                                            </select>
+                                        </label>
+                                    </template>
                                 </div>
 
                                 <label class="block" x-show="pickerOpen" x-cloak>
@@ -472,6 +509,16 @@
                                  class="col-span-full rounded-(--radius-field) bg-(--color-badge-danger-bg)
                                         px-3 py-1.5 text-xs text-(--color-badge-danger-ink)"
                                  x-text="creditWarning" role="alert"></div>
+
+                            {{-- ⓘ লটের বার্তা — বাছা হয়নি, বা ঐ লট কার্টে আগেই আছে।
+                                 ⚠️ আলাদা ঘর, কারণ দুইটা বার্তা একসাথে দেখা যেতে পারে:
+                                 সীমা ছাড়িয়েছে **আর** লট বাছা হয়নি। ⛔ একটা ঘরে
+                                 দুইটা বসালে দ্বিতীয়টা প্রথমটাকে মুছে দিত, আর
+                                 বিক্রেতা একটা কারণ সারিয়ে আবার আটকে যেতেন। --}}
+                            <div x-show="lotWarning" x-cloak
+                                 class="col-span-full rounded-(--radius-field) bg-(--color-badge-danger-bg)
+                                        px-3 py-1.5 text-xs text-(--color-badge-danger-ink)"
+                                 x-text="lotWarning" role="alert"></div>
 
                             {{-- মোট পরিমাণ নিজে থেকেই — বিক্রয় + ফ্রি।
 

@@ -8,6 +8,7 @@ use App\Core\Concerns\BelongsToCompanyThroughParent;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Modules\Inventory\Concerns\HasEnteredPack;
+use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Product;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -23,8 +24,16 @@ class DeliveryChallanLine extends Model
 
     protected $table = 'sal_challan_lines';
 
+    /*
+     * ⚠️ `batch_id` তালিকায় না থাকলে সে **নীরবে** বাদ পড়ত — ⛔ Eloquent
+     * `fillable`-এর বাইরের ঘর চুপচাপ ফেলে দেয়, কোনো ত্রুটি নয়।
+     *
+     * ⓘ ফল হত: বিক্রেতা লট বাছতেন, সেবা যাচাই করত, আর সারিটা চালানে
+     * বসত লট ছাড়া — তারপর মাল বেরোত FEFO ধরে, অর্থাৎ **অন্য লট থেকে**।
+     * ⚠️ কাগজে এক লট, গুদাম থেকে গেছে আরেকটা, আর ধরা পড়ত রিকলের দিন।
+     */
     protected $fillable = [
-        'delivery_challan_id', 'product_id', 'sales_order_line_id',
+        'delivery_challan_id', 'product_id', 'batch_id', 'sales_order_line_id',
         'delivered_qty', 'entered_qty', 'entered_unit_id',
         'free_qty', 'rate', 'discount_percent',
         'amount', 'line_no', 'narration',
@@ -60,6 +69,18 @@ class DeliveryChallanLine extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    /**
+     * ⭐ বিক্রেতার বাছা লট — ২৫ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ `null` হলে মালটা FEFO ধরে বেরোবে, অর্থাৎ আগের আচরণ। ⚠️ সাধারণ
+     * চালানে (অর্ডার থেকে, পোর্টাল থেকে) লট বাছা হয় না, আর হওয়ারও
+     * দরকার নেই — কাউন্টারেই কেবল মানুষটা কার্টনটা হাতে ধরে দেখেন।
+     */
+    public function batch(): BelongsTo
+    {
+        return $this->belongsTo(Batch::class);
     }
 
     public function orderLine(): BelongsTo

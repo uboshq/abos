@@ -30,7 +30,27 @@
 
                                     <td class="cell" data-label="{{ __('sales::field.item_name') }}">
                                         <span x-text="line.name"></span>
+
+                                        {{-- ⭐ লট নম্বরটা নামের নিচে — মালিকের নিয়মে
+                                             প্রতি লটে এক সারি, তাই একই পণ্যের দুইটা
+                                             সারি পাশাপাশি বসতে পারে। ⛔ নম্বরটা না
+                                             দেখালে ঐ দুইটা সারি **একই রকম দেখাত**,
+                                             আর বিক্রেতা ভাবতেন ভুল করে দুইবার
+                                             বসেছে। --}}
+                                        <template x-if="line.batchNo">
+                                            <span class="block text-2xs text-(--color-ink-muted)"
+                                                  x-text="@js(__('sales::field.lot')) + ' ' + line.batchNo"></span>
+                                        </template>
+
                                         <input type="hidden" :name="'lines[' + (i) + '][product_id]'" :value="line.id">
+
+                                        {{-- ⚠️ লুকানো ঘরটা সবসময় যায়, খালি হলেও — ⓘ লট
+                                             ধরা নয় এমন পণ্যে সার্ভার খালি মানটা উপেক্ষা
+                                             করে, আর ঘরটা শর্তসাপেক্ষ করলে সারির সূচক
+                                             মিলত ঠিকই, কিন্তু পড়তে গিয়ে বোঝা কঠিন হত
+                                             কোন সারিতে লট গেল কোনটায় নয়। --}}
+                                        <input type="hidden" :name="'lines[' + (i) + '][batch_id]'"
+                                               :value="line.batchId || ''">
                                         {{-- বাছা প্যাকের একক — সার্ভার এটা দেখেই
                                              "২ বাক্স"-কে পিসে নামায়, দর সহ --}}
                                         <input type="hidden" :name="'lines[' + (i) + '][unit_id]'" :value="line.unitId || ''">
