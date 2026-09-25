@@ -28,3 +28,28 @@
 <input type="hidden" :name="'deposits[' + i + '][ref_date]'" :value="row.refDate">
 <input type="hidden" :name="'deposits[' + i + '][reference]'" :value="row.reference">
 <input type="hidden" :name="'deposits[' + i + '][narration]'" :value="row.narration">
+
+{{--
+    ── ⭐ আদায় ভাউচারের তিনটা ঘর, ২৫ সেপ্টেম্বর ২০২৬ ───────────────────
+    মালিকের নির্দেশ: *"জমা যোগ botam clic korle eirokom 100% same pop up
+    open hobe"* — অর্থাৎ কাউন্টারের জমাও আদায় ভাউচারের মতো পূর্ণ হবে।
+
+    ⓘ ঘর তিনটা `vouchers` টেবিলে **আগে থেকেই ছিল** (১৪ নভেম্বরের
+    মাইগ্রেশন), কেবল কাউন্টারের পথটা ওগুলো বহন করত না।
+--}}
+<input type="hidden" :name="'deposits[' + i + '][moved_at]'" :value="row.movedAt">
+<input type="hidden" :name="'deposits[' + i + '][carried_by]'" :value="row.carriedBy">
+
+{{--
+    ── ⚠️ নোটের গোনা: একটা ঘর নয়, প্রতিটা নোটের নিজের ঘর ────────────
+    সার্ভার `deposits[0][note_counts][500]` আকারে চায়, তাই এখানেও
+    `x-for`। ⛔ একটা JSON স্ট্রিং পাঠালে যাচাইয়ের নিয়মটা
+    (`note_counts.*` → integer) কখনো চলত না, আর যেকোনো লেখা ঢুকে পড়ত।
+
+    ⓘ শূন্যগুলো এখানে ছাঁকা হয় না — সেটা করে
+    [[DirectSaleService::notesOf()]], কারণ পর্দার কাজ পাঠানো, সিদ্ধান্ত
+    নেওয়া নয়।
+--}}
+<template x-for="[face, count] in Object.entries(row.noteCounts || {})" :key="face">
+    <input type="hidden" :name="'deposits[' + i + '][note_counts][' + face + ']'" :value="count">
+</template>

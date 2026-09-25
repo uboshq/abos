@@ -436,6 +436,18 @@ final class DirectSaleService
                 'instrument_date' => $row['ref_date'] ?? null,
                 'from_bank' => $row['bank_name'] ?? null,
                 'narration' => $narration,
+
+                /*
+                 * ⭐ তিনটা ঘর কাউন্টারের জমাতেও — ২৫ সেপ্টেম্বর ২০২৬।
+                 *
+                 * ⓘ এটাই শেষ জোড়। ⚠️ যাচাই ও সারি দুইটাতে নাম বসিয়েও
+                 * এখানে ভুলে গেলে ঘরগুলো **ভাউচারে পৌঁছাত না**, আর
+                 * ফর্ম দিব্যি ৩০২ দিত — ব্যর্থতাটা দেখা যেত কেবল
+                 * খতিয়ানের সারিটা পড়লে।
+                 */
+                'moved_at' => $row['moved_at'] ?? null,
+                'carried_by' => $row['carried_by'] ?? null,
+                'note_counts' => $row['note_counts'] ?? null,
                 'against_type' => SalesInvoice::drillSourceType(),
                 'against_id' => $invoice->id,
                 'origin' => Voucher::ORIGIN_COUNTER,
@@ -1069,6 +1081,39 @@ final class DirectSaleService
      * @param  array<string, mixed>  $data
      * @return list<array{amount: string, account_id: mixed, kind: ?string, instrument: ?string, reference: ?string, ref_date: ?string, bank_name: ?string, narration: ?string}>
      */
+    /**
+     * নোটের গোনা — কেবল যেগুলো সত্যিই গোনা হয়েছে।
+     *
+     * ── ⓘ কেন শূন্যগুলো ফেলে দেওয়া হয় ──────────────────────────────
+     * পর্দা দশটা ঘরই পাঠায় (১০০০ থেকে ১ পর্যন্ত), আর বিক্রেতা সাধারণত
+     * দুই-তিনটা ভরেন। ⛔ সব রেখে দিলে প্রতিটা নগদ জমার সাথে দশটা `0`
+     * খতিয়ানে বসত।
+     *
+     * ⚠️ আর কিছুই গোনা না হলে উত্তর `null`, খালি অ্যারে নয় — কলামটা
+     * `json` আর `nullable`, তাই `[]` বসালে "গোনা হয়েছে, কিছু পাওয়া
+     * যায়নি" বলে পড়া যেত। ⓘ দুইটা আলাদা কথা।
+     *
+     * @return array<string, int>|null
+     */
+    private function notesOf(mixed $notes): ?array
+    {
+        if (! is_array($notes)) {
+            return null;
+        }
+
+        $kept = [];
+
+        foreach ($notes as $face => $count) {
+            $n = (int) $count;
+
+            if ($n > 0) {
+                $kept[(string) $face] = $n;
+            }
+        }
+
+        return $kept === [] ? null : $kept;
+    }
+
     private function depositRows(array $data): array
     {
         $rows = [];
@@ -1113,6 +1158,27 @@ final class DirectSaleService
                 // চেকের ব্যাংকের নাম — কেবল চেকের সারিতে অর্থপূর্ণ
                 'bank_name' => ($row['bank_name'] ?? '') ?: null,
                 'narration' => ($row['narration'] ?? '') ?: null,
+
+                /*
+                 * ⭐ আদায় ভাউচারের তিনটা ঘর — ২৫ সেপ্টেম্বর ২০২৬।
+                 *
+                 * ⚠️ এই তালিকাটা **হাতে বাছা**, তাই নাম না বসালে ঘরটা
+                 * নীরবে হারায়। ⓘ abos-13 আজ ঠিক এই আকারে একটা ভাঙা
+                 * জোড় পেয়েছেন: `batch_id` `fillable`-এ ছিল, যাচাইও
+                 * হত, তবু সারিতে বসত না — আর মাল বেরোত অন্য লট থেকে।
+                 */
+                'moved_at' => ($row['moved_at'] ?? '') ?: null,
+                'carried_by' => ($row['carried_by'] ?? null) ?: null,
+
+                /*
+                 * ⓘ শূন্য গোনাগুলো ফেলে দেওয়া হয়।
+                 *
+                 * ⚠️ পর্দা দশটা ঘরই পাঠায়, বেশিরভাগ খালি। ⛔ সব রেখে
+                 * দিলে প্রতিটা নগদ জমার সাথে দশটা `0` খতিয়ানে বসত, আর
+                 * "৫০০ টাকার নোট কয়টা এসেছিল" প্রশ্নের উত্তর খুঁজতে
+                 * গিয়ে শূন্যের সারি পেরোতে হত।
+                 */
+                'note_counts' => $this->notesOf($row['note_counts'] ?? null),
             ];
         }
 

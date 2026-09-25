@@ -226,6 +226,85 @@
                           bg-(--color-surface-card) px-2 text-2xs">
         </label>
 
+        {{-- ── ⭐ আদায় ভাউচারের তিনটা ঘর, ২৫ সেপ্টেম্বর ২০২৬ ──────────────
+             মালিকের নির্দেশ: *"জমা যোগ botam clic korle eirokom 100% same
+             pop up open hobe"*, আর তিনটা ঘর বাদ — *"ডিপোজিটরের ধরন ·
+             ডিপোজিটরের নাম · কোন বিলের বিপরীতে — ei gulo bad dilei hobe"*।
+
+             ⓘ ঐ তিনটার উত্তরই চালান থেকে আগে থেকে জানা: ধরন সবসময়
+             "গ্রাহক", নামটা চালানের ক্রেতা, আর বিলটা এই চালানটাই।
+             ⚠️ রাখলে ক্ষতিও ছিল — কেউ **অন্য** গ্রাহক বা **অন্য** বিল
+             বেছে ফেলতে পারতেন, আর টাকাটা ভুল জায়গায় বসত। --}}
+        <label class="block">
+            <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('accounts::field.moved_at') }}</span>
+            <input type="time" x-model="depositDraft.movedAt"
+                   class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
+                          bg-(--color-surface-card) px-2 text-2xs">
+        </label>
+
+        {{-- ⓘ বাহক — গরমিল হলে এই নামটাই প্রথম প্রশ্ন।
+             ⚠️ তালিকাটা `carriers`, আর সেটা আগে থেকেই কম্পোনেন্টে আছে
+             (উপহারের পাশের ঘরটা ওটাই ব্যবহার করে) — তাই নতুন কিছু
+             পাঠাতে হয়নি। --}}
+        <label class="block" x-show="carriers.length > 0" x-cloak>
+            <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('accounts::field.carried_by') }}</span>
+            <select x-model="depositDraft.carriedBy"
+                    class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
+                           bg-(--color-surface-card) px-2 text-2xs">
+                <option value="">—</option>
+                <template x-for="c in carriers" :key="c.id">
+                    <option :value="c.id" x-text="c.name"></option>
+                </template>
+            </select>
+        </label>
+
+        {{-- ── ⚠️ নোটের হিসাব — কেবল নগদে ──────────────────────────────
+             ⓘ চেক বা বিকাশের টাকায় নোট গোনার প্রশ্নই ওঠে না, আর ঘরগুলো
+             দেখালে বিক্রেতা ভাবতেন কিছু ভরতে হবে।
+
+             ⛔ শর্তটা `kind === 'cash'` নয়, কারণ উপায়ের সারি না থাকলেও
+             নগদ জমা নেওয়া যায় (তখন `methodId` খালি)। ⓘ তাই প্রশ্নটা
+             উল্টো করে: **কোনো উপায় বাছা হয়নি, নাকি যেটা বাছা হয়েছে
+             সেটা নগদ** — দুইটাই নগদের ক্ষেত্র। --}}
+        <div class="col-span-2 sm:col-span-3 lg:col-span-6"
+             x-show="depositIsCash" x-cloak>
+            <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('accounts::field.note_breakdown') }}</span>
+
+            <div class="grid grid-cols-5 gap-1">
+                @foreach ([1000, 500, 200, 100, 50, 20, 10, 5, 2, 1] as $face)
+                    <label class="flex items-center gap-1">
+                        <span class="num w-8 text-end text-2xs text-(--color-ink-muted)">{{ $face }}</span>
+                        <span class="text-2xs text-(--color-ink-muted)">×</span>
+                        <input type="number" min="0" step="1"
+                               x-model="depositDraft.noteCounts[{{ $face }}]"
+                               class="num h-(--spacing-field-compact) w-full rounded-(--radius-field)
+                                      border border-(--color-border) bg-(--color-surface-card)
+                                      px-1 text-end text-2xs">
+                    </label>
+                @endforeach
+            </div>
+
+            {{-- ⚠️ গোনা আর লেখা আলাদা হলে **দেখানো হয়, আটকানো হয় না**।
+                 ⓘ বিক্রেতা আংশিক গুনতে পারেন, বা গুনতে ভুল করতে পারেন —
+                 আদায় ভাউচারও ঠিক এভাবেই আচরণ করে। --}}
+            {{-- ⓘ চাবি দুইটা আদায় ভাউচারেরই — `count_agrees` ও
+                 `count_differs`। ⛔ প্রথমে `notes_match`/`notes_differ`
+                 লিখেছিলাম, আর ঐ নামে কিছু **নেই**: পর্দায় চাবিটাই
+                 ছাপা হত, আর [[EveryTranslationKeyExistsTest]] লাল হত।
+
+                 ⚠️ `@js(...)` দিয়ে, স্ট্রিং জোড়া দিয়ে নয় — বাংলা লেখায়
+                 একটা উদ্ধৃতি চিহ্ন থাকলেই Alpine-এর অভিব্যক্তিটা
+                 ভাঙত, আর সেটা কেবল ঐ ভাষায় দেখা যেত। --}}
+            <p class="mt-1 rounded px-1.5 py-0.5 text-2xs"
+               x-show="$num(depositCounted) > 0" x-cloak
+               :class="depositCountMatches
+                   ? 'bg-(--color-badge-success-bg) text-(--color-badge-success-ink)'
+                   : 'bg-(--color-badge-warning-bg) text-(--color-badge-warning-ink)'"
+               x-text="depositCountMatches
+                   ? @js(__('accounts::message.count_agrees'))
+                   : @js(__('accounts::message.count_differs'))"></p>
+        </div>
+
         {{-- ⓘ বোতামটাও সারির শেষ ঘরে — `items-end` থাকায় ঘরগুলোর নিচের
              কিনারার সাথে মিলে বসে, লেবেলের উচ্চতা যা-ই হোক। --}}
         <x-ui.button type="button" tone="primary"
