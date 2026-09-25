@@ -50,6 +50,20 @@
     [[DirectSaleService::notesOf()]], কারণ পর্দার কাজ পাঠানো, সিদ্ধান্ত
     নেওয়া নয়।
 --}}
-<template x-for="[face, count] in Object.entries(row.noteCounts || {})" :key="face">
-    <input type="hidden" :name="'deposits[' + i + '][note_counts][' + face + ']'" :value="count">
+{{-- ⚠️ তালিকাটা কম্পোনেন্ট থেকে, `Object.entries` দিয়ে নয় —
+     ২৫ সেপ্টেম্বর ২০২৬।
+
+     ⛔ আগে লেখা ছিল `x-for="[face, count] in Object.entries(...)"`।
+     `@alpinejs/csp`-এ **বাইরের নাম ডাকা যায় না** (`Object` নেই), আর
+     বিন্যাস ভেঙে নেওয়াও সে পড়ে না।
+
+     ⓘ ফলটা নিখুঁতভাবে নীরব হত: Alpine বাঁধাইটা চুপচাপ ছেড়ে দিত, তাই
+     এই লুকানো ঘরগুলো **কখনো আঁকা হত না** — আর নোটের হিসাব সার্ভারে
+     পৌঁছাত না, কোনো ত্রুটি ছাড়াই।
+
+     ⭐ ধরা পড়েছে [[csp-expressions.test.js]]-এ, বান্ডিল বাঁধার ঠিক
+     আগে। হিসাবটা এখন [[direct-sale.js]]-এর `notesOf()`-এ। --}}
+<template x-for="note in notesOf(row)" :key="note.face">
+    <input type="hidden" :name="'deposits[' + i + '][note_counts][' + note.face + ']'"
+           :value="note.count">
 </template>

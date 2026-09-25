@@ -1654,6 +1654,30 @@ export default function directSale({
             return kind === undefined || kind === null || kind === '' || kind === 'cash';
         },
 
+        /**
+         * ⭐ নোটের সারিগুলো **তালিকা** হিসেবে — ২৫ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⛔ কেন এটা লাগল ─────────────────────────────────────────
+         * ব্লেডে লেখা ছিল
+         * `x-for="[face, count] in Object.entries(row.noteCounts || {})"`।
+         * ⚠️ `@alpinejs/csp`-এ **বাইরের নাম ডাকা যায় না** (`Object` নেই),
+         * আর বিন্যাস ভেঙে নেওয়াও (destructuring) সে পড়ে না।
+         *
+         * ⛔ ফলটা নিখুঁতভাবে নীরব: Alpine বাঁধাইটা চুপচাপ ছেড়ে দিত, তাই
+         * লুকানো ঘরগুলো **কখনো আঁকা হত না** — আর সার্ভারে নোটের হিসাব
+         * কোনোদিন পৌঁছাত না। কোনো ত্রুটি নয়, কনসোলে একটা লাইনও নয়।
+         *
+         * ⓘ ধরা পড়েছে [[csp-expressions.test.js]]-এ, বান্ডিল বাঁধার
+         * ঠিক আগে। ⭐ `Object.entries` কম্পোনেন্টের ভিতরে দিব্যি চলে —
+         * নিষেধটা কেবল পর্দার এক্সপ্রেশনে।
+         *
+         * @return {Array<{face: string, count: number}>}
+         */
+        notesOf(row) {
+            return Object.entries(row?.noteCounts || {})
+                .map(([face, count]) => ({ face, count }));
+        },
+
         /* গোনা টাকা — নোট × সংখ্যা, সবগুলোর যোগ। */
         get depositCounted() {
             return Object.entries(this.depositDraft.noteCounts || {})
