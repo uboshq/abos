@@ -294,6 +294,7 @@ return [
     'driver_name' => 'Driver',
     'requested_by' => 'Asked by',
     'department' => 'Department',
+    'cost_center' => 'Cost centre (for the budget)',
     'needed_by' => 'Needed by',
     'purpose' => 'What for',
     'estimated_rate' => 'Estimated rate',

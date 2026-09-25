@@ -54,6 +54,24 @@
                 <x-ui.field name="department" :label="__('purchase::field.department')"
                             :value="old('department')" />
 
+                {{-- The budget's own field, and the only one it reads.
+
+                     The department box above is free text - a label a person
+                     types. A budget row is keyed to a cost centre, so without
+                     this the two halves never met and nobody could ask what
+                     this department had left for the month.
+
+                     Optional on purpose: leave it empty and no budget is
+                     looked for, so a depot that does not use budgets is
+                     never stopped. The list is empty until somebody sets a
+                     centre up, and an empty list is the right answer then. --}}
+                @if ($costCentres->isNotEmpty())
+                    <x-ui.select name="cost_center_id"
+                                 :label="__('purchase::field.cost_center')"
+                                 :options="$costCentres->mapWithKeys(fn ($c) => [$c->id => $c->name()])"
+                                 :selected="old('cost_center_id')" placeholder="-" />
+                @endif
+
                 <x-ui.field name="purpose" :label="__('purchase::field.purpose')"
                             :value="old('purpose')" />
             </div>

@@ -14,6 +14,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Purchase\Models\PurchaseRequisition;
+use App\Modules\Accounts\Models\CostCenter;
 use App\Modules\Purchase\Services\PurchaseRequisitionService;
 use App\Modules\Supplier\Models\Supplier;
 use Illuminate\Http\RedirectResponse;
@@ -106,6 +107,13 @@ class PurchaseRequisitionController extends Controller implements HasMiddleware
         return view('purchase::requisition.form', [
             'menu' => $this->menu->forUser($request->user()),
             'products' => Product::query()->active()->with('unit')->orderBy('name_en')->get(),
+
+            /*
+             * Only the active centres, and an empty list is a real answer:
+             * a depot that has never set one up sees no dropdown and the
+             * budget limit simply never applies to it.
+             */
+            'costCentres' => CostCenter::query()->active()->orderBy('code')->get(),
         ]);
     }
 
@@ -123,6 +131,15 @@ class PurchaseRequisitionController extends Controller implements HasMiddleware
              */
             'needed_by' => ['nullable', 'date'],
             'department' => ['nullable', 'string', 'max:120'],
+
+            /*
+             * Optional, and that is what keeps the budget limit optional:
+             * without a centre no budget is looked for and the paper is
+             * approved as before.
+             */
+            'cost_center_id' => ['nullable', 'integer',
+                Rule::exists('acc_cost_centers', 'id')
+                    ->where('company_id', CompanyContext::id())],
             'purpose' => ['nullable', 'string', 'max:2000'],
             'narration' => ['nullable', 'string', 'max:2000'],
 

@@ -62,6 +62,15 @@ final class PurchaseRequisitionService
                     : null,
                 'requested_by' => $data['requested_by'] ?? auth()->id(),
                 'department' => $data['department'] ?? null,
+
+                /*
+                 * The name a person types and the link the books use are two
+                 * different fields, and neither is guessed from the other.
+                 * "Sales" and "sales dept" are not the same string, and
+                 * matching them by hand once would put the money against the
+                 * wrong department for good.
+                 */
+                'cost_center_id' => $data['cost_center_id'] ?? null,
                 'purpose' => $data['purpose'] ?? null,
                 'narration' => $data['narration'] ?? null,
                 'status' => DocumentStatus::DRAFT,
@@ -101,6 +110,8 @@ final class PurchaseRequisitionService
                 'lines' => __('purchase::validation.requisition_needs_lines'),
             ]);
         }
+
+        $this->assertWithinBudget($requisition);
 
         $this->approvals->assertClear(
             document: $requisition,
@@ -222,6 +233,117 @@ final class PurchaseRequisitionService
         ]);
 
         return $requisition->fresh();
+    }
+
+    /**
+     * The department's money for this month, before anyone signs.
+     *
+     * Checked before the approval flow on purpose. Behind it, the flow would
+     * call somebody in to sign and the limit would hand the paper back after
+     * they had - their time wasted on a question that could not arise.
+     *
+     * The limit is opt-in three times over: nothing happens without a cost
+     * centre on the paper, without a budget row for that centre and month, or
+     * with a budget of zero. A depot that does not use budgets never sees it.
+     * Making it compulsory would have added a feature by stopping everybody
+     * else's work.
+     *
+     * It refuses rather than warns. "Over budget, carry on" is not a limit;
+     * in two weeks it is a habit nobody reads. Refusing is safe here because
+     * the company wrote the number themselves - entering a budget is how they
+     * say this is a limit. And it stops a requisition, not an order, so the
+     * buying department is never blocked from restocking.
+     *
+     * Approved requisitions are what counts as spent. Waiting for bills would
+     * make the limit act too late: ten requisitions approved, and on the day
+     * the bills arrive the budget is three times over. A promise is the thing
+     * to count. Cancelled papers are not counted - a promise withdrawn holds
+     * no money.
+     */
+    private function assertWithinBudget(PurchaseRequisition $requisition): void
+    {
+        $centre = $requisition->cost_center_id;
+
+        if ($centre === null) {
+            return;
+        }
+
+        $on = $requisition->trx_date ?? now();
+
+        $budget = $this->budgetFor((int) $centre, (int) $on->format('Y'), (int) $on->format('n'));
+
+        if (bccomp($budget, '0', 4) <= 0) {
+            return;
+        }
+
+        $already = $this->committedIn((int) $centre, $on);
+        $asking = $requisition->estimatedTotal();
+
+        if (bccomp(bcadd($already, $asking, 4), $budget, 4) <= 0) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'cost_center_id' => __('purchase::validation.requisition_over_budget', [
+                'budget' => $budget,
+                'already' => $already,
+                'asking' => $asking,
+            ]),
+        ]);
+    }
+
+    /**
+     * That centre's budget for that month, across every account.
+     *
+     * Budget rows are keyed by account, and a requisition names no account -
+     * nor should it: the person who needs something knows what they need, and
+     * which account it lands in is the bookkeeper's question.
+     *
+     * More than that, a purchase order buys stock, an asset, while a budget
+     * only knows income and expense accounts. Matching on account would have
+     * answered zero every time and the limit would never have bitten.
+     *
+     * So it is counted the way the question is actually asked: what does this
+     * department have for this month, all told.
+     */
+    private function budgetFor(int $costCentreId, int $year, int $month): string
+    {
+        return DB::table('fin_budgets')
+            ->where('company_id', CompanyContext::id())
+            ->where('cost_center_id', $costCentreId)
+            ->where('year', $year)
+            ->where('month', $month)
+            ->pluck('amount')
+            ->reduce(fn (string $sum, $amount) => bcadd($sum, (string) $amount, 4), '0');
+    }
+
+    /**
+     * What that centre has already had approved that month.
+     *
+     * This paper is left out: counting it here would count its own figure
+     * twice and the limit would bite at half the budget.
+     */
+    private function committedIn(int $costCentreId, Carbon $on): string
+    {
+        return PurchaseRequisition::query()
+            ->where('cost_center_id', $costCentreId)
+            ->whereYear('trx_date', (int) $on->format('Y'))
+            ->whereMonth('trx_date', (int) $on->format('n'))
+            /*
+             * The one list, not a copy of it.
+             *
+             * This read CONFIRMED and CLOSED by hand, which is the same two
+             * values DocumentStatus::POSTED holds - and that is exactly the
+             * trouble: one of the two would be changed one day and the other
+             * would keep answering the old question. A guard caught it.
+             */
+            ->whereIn('status', DocumentStatus::POSTED)
+            ->with('lines')
+            ->get()
+            ->reduce(
+                fn (string $sum, PurchaseRequisition $row) => bcadd($sum, $row->estimatedTotal(), 4),
+                '0',
+            );
     }
 
     /**

@@ -48,7 +48,7 @@ class PurchaseRequisition extends Model
 
     protected $fillable = [
         'company_id', 'branch_id', 'document_no', 'trx_date', 'needed_by',
-        'requested_by', 'department', 'purpose', 'narration',
+        'requested_by', 'department', 'cost_center_id', 'purpose', 'narration',
         'status', 'purchase_order_id', 'created_by',
         'cancelled_by', 'cancelled_at', 'cancel_reason',
     ];

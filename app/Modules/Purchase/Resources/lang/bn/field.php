@@ -280,6 +280,7 @@ return [
     'driver_name' => 'চালক',
     'requested_by' => 'চেয়েছেন',
     'department' => 'বিভাগ',
+    'cost_center' => 'খরচের কেন্দ্র (বাজেটের জন্য)',
     'needed_by' => 'কবে লাগবে',
     'purpose' => 'কী কাজে',
     'estimated_rate' => 'আন্দাজি দর',
