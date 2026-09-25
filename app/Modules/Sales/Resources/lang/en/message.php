@@ -112,6 +112,9 @@ return [
     'direct_extra_kept' => 'The extra :amount stays on the customer account and comes off the next invoice.',
     'direct_narration' => ':no — deposit against a direct sale',
     'not_for_sales' => 'Not for Sales',
+
+    /* ⓘ An opportunity, not a warning — reasons in bn/message.php. */
+    'free_next_at' => 'Take :more more and another free comes with it.',
     'pick_item_to_see_stock' => 'Pick an item to see its stock.',
     'nothing_added' => 'Nothing added yet. Pick an item above and press Add to Cart.',
     'gift_none' => 'No gifts.',

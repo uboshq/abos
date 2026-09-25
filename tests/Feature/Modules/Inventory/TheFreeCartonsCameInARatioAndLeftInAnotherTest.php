@@ -181,6 +181,97 @@ final class TheFreeCartonsCameInARatioAndLeftInAnotherTest extends TestCase
     /**
      * একটা লট, আর তার সাথে আসা টাকার ও ফ্রি মাল — ক্রয় যেভাবে লেখে।
      */
+    /**
+     * ⭐ আর কতটা নিলে পরের ফ্রি — মালিকের নির্দেশ, ২৫ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⓘ তাঁর উদাহরণ, হুবহু ───────────────────────────────────────
+     * *"২৪ ctn e ১ ctn hole kew zodi ২০ purches kore take warning
+     * masses dibe but atkabe na"*।
+     *
+     * ⚠️ সংখ্যাটাই বলা হয় (*"আর ৪"*), *"২৪ লাগে"* নয় — ⛔ দ্বিতীয়টা
+     * বললে বিক্রেতাকে গ্রাহকের সামনে দাঁড়িয়ে বিয়োগ করতে হত।
+     */
+    public function test_it_says_how_much_more_earns_the_next_free(): void
+    {
+        $lot = $this->goodsArrived(paid: '24', free: '1');
+
+        $ratio = app(FreeRatio::class);
+
+        $this->assertSame('4', $ratio->shortOfNextFree($lot, '20'),
+            '⛔ ২৪-এ ১ অনুপাতে ২০ কার্টনের পর আর ৪ লাগে।');
+
+        $this->assertSame('0', $ratio->allowedOn($lot, '20'),
+            '⛔ ২৪ পূর্ণ হয়নি, তবু ফ্রি পাওনা দেখাচ্ছে।');
+    }
+
+    /**
+     * ⭐ ঠিক অনুপাতে পৌঁছালে পরেরটা পুরো এক ধাপ দূরে।
+     *
+     * ⚠️ এটাই `upTo()`-র আসল পরীক্ষা: ২৪-এ দাঁড়িয়ে উত্তরটা ০ হলে
+     * বার্তাটা দেখাতই না, আর ২৪ হলে বিক্রেতা ভাবতেন আরও ২৪ লাগবে
+     * দ্বিতীয়টার জন্য — ⓘ যা সত্যি।
+     */
+    public function test_standing_exactly_on_the_ratio_the_next_one_is_a_full_step_away(): void
+    {
+        $lot = $this->goodsArrived(paid: '24', free: '1');
+
+        $this->assertSame('1', app(FreeRatio::class)->allowedOn($lot, '24'),
+            '⛔ ২৪ কার্টনে ১ ফ্রি পাওনা।');
+
+        $this->assertSame('24', app(FreeRatio::class)->shortOfNextFree($lot, '24'),
+            '⛔ দ্বিতীয় ফ্রি-র জন্য আরও ২৪ লাগে।');
+    }
+
+    /**
+     * ⛔ অনুপাত না থাকা লটে কোনো বার্তা নয় — মালিকের সম্মতিতে।
+     *
+     * ⚠️ শূন্য ফেরালে পর্দা চুপ থাকে। ⓘ নাহলে ডিপোর চাল-ডাল-সাবানের
+     * প্রতিটা সারিতে একটা অর্থহীন *"আর কত নিলে ফ্রি"* বসত — অথচ ঐ
+     * লটে ফ্রি বলে কিছু আসেইনি।
+     */
+    public function test_a_lot_that_came_without_free_says_nothing(): void
+    {
+        $dry = $this->goodsArrived(paid: '100', free: '0', lot: 'LOT-DRY');
+
+        $this->assertSame('0', app(FreeRatio::class)->shortOfNextFree($dry, '20'),
+            '⛔ ফ্রি না আসা লটেও "আর কত নিলে ফ্রি" বলা হচ্ছে।');
+    }
+
+    /**
+     * ⭐ দুইটা লট দুই অনুপাতে — উত্তরও দুই রকম।
+     *
+     * ⛔ এটাই সেই কারণ যে কাউন্টার এখন **বাছা লটের** অনুপাত জিজ্ঞেস
+     * করে, FEFO-র নয়। ⚠️ একটা লটের উত্তর অন্যটায় বসালে ফ্রি ভুল
+     * বসত, নীরবে — কারণ সংখ্যাটা দেখতে নিখুঁতই লাগত।
+     */
+    public function test_two_lots_two_answers(): void
+    {
+        $tight = $this->goodsArrived(paid: '24', free: '1', lot: 'LOT-TIGHT');
+        $loose = $this->goodsArrived(paid: '10', free: '1', lot: 'LOT-LOOSE');
+
+        $ratio = app(FreeRatio::class);
+
+        /*
+         * ⚠️ এই দাবিটা একবার ভুল লেখা হয়েছিল, আর ভুলটা শিক্ষণীয়।
+         *
+         * ⛔ প্রথমে লেখা ছিল `'0'` — যুক্তি ছিল *"২০ কার্টনে দুইটা ফ্রি
+         * পূর্ণ, তাই আর কিছু লাগে না"*। ⓘ কিন্তু পদ্ধতিটা ঐ প্রশ্নের
+         * উত্তর দেয় না; সে বলে **পরেরটার জন্য আর কত** — আর অনুপাত
+         * থাকলে ঐ সংখ্যাটা কখনো শূন্য হয় না।
+         *
+         * ⭐ অর্থাৎ লালটা পড়েছিল কোডের উপর, অথচ ভুলটা ছিল দাবিতে।
+         * ⚠️ দাবিটা শিথিল না করে **প্রশ্নটা ঠিক করা হলো**।
+         */
+        $this->assertSame('4', $ratio->shortOfNextFree($tight, '20'),
+            '⛔ ২৪-এ ১ অনুপাতে ২০ কার্টনের পর তৃতীয় ধাপ আরও ৪ দূরে।');
+
+        $this->assertSame('2', $ratio->allowedOn($loose, '20'),
+            '⛔ ১০-এ ১ অনুপাতে ২০ কার্টনে দুইটা ফ্রি পাওনা।');
+
+        $this->assertSame('10', $ratio->shortOfNextFree($loose, '20'),
+            '⛔ দুইটা পূর্ণ হয়েছে, আর তৃতীয়টার জন্য আরও ১০ লাগে।');
+    }
+
     private function goodsArrived(string $paid, string $free, string $lot = 'LOT-1'): Batch
     {
         $batch = Batch::query()->create([

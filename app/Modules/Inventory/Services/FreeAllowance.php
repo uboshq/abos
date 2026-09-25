@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Inventory\Services;
 
+use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 
@@ -72,5 +73,33 @@ final class FreeAllowance
         }
 
         return $total;
+    }
+
+    /**
+     * ⭐ **বাছা** লটের অনুপাতে কত ফ্রি — ২৫ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⛔ কেন [[on()]] দিয়ে চলে না ────────────────────────────────
+     * ওটা FEFO ধরে ঠিক করে *কোন* লট থেকে মাল যেত, আর সেই লটগুলোর
+     * অনুপাত যোগ করে। ⚠️ কিন্তু মালিকের সিদ্ধান্তে বিক্রেতা এখন লট
+     * **নিজে বাছেন**, আর মাল ঐ লট থেকেই বেরোয়।
+     *
+     * ⛔ ফলে `on()` এমন একটা লটের অনুপাত বলত যা এই বিলে ছোঁয়াই হবে
+     * না — আর সংখ্যাটা দেখতে নিখুঁত লাগত। ⓘ দুইটা লটের অনুপাত এক
+     * হলে কেউ টের পেত না; আলাদা হলে ফ্রি ভুল বসত, নীরবে।
+     *
+     * @return array{allowed: string, short: string}
+     *         `allowed` — এই পরিমাণে যত ফ্রি পাওনা
+     *         `short`   — আর কতটা নিলে পরের ফ্রি
+     */
+    public function onLot(Batch $batch, string $qty): array
+    {
+        if (bccomp($qty, '0', 4) <= 0) {
+            return ['allowed' => '0', 'short' => '0'];
+        }
+
+        return [
+            'allowed' => $this->ratio->allowedOn($batch, $qty),
+            'short' => $this->ratio->shortOfNextFree($batch, $qty),
+        ];
     }
 }

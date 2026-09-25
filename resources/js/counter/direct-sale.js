@@ -78,6 +78,13 @@ export default function directSale({
 
         /* ⓘ লট বাছা হয়নি, বা ঐ লট কার্টে আগে থেকেই আছে। */
         lotWarning: '',
+
+        /*
+         * ⓘ *"আর ৪ নিলে ১ ফ্রি"* — ⚠️ এটা **সতর্কবার্তা নয়**, তাই
+         * `freeWarning`-এর সাথে এক ঘরে বসে না। ⛔ একই ঘরে দিলে লাল
+         * রঙে একটা সুখবর দেখাত, আর বিক্রেতা ভাবতেন কিছু ভুল হয়েছে।
+         */
+        freeHint: '',
         customers,
         vatEnabled,
         term: '',
@@ -184,9 +191,22 @@ export default function directSale({
          */
         deposits: [],
 
+        /*
+         * ⭐ আদায় ভাউচারের তিনটা ঘর — মালিকের নির্দেশ, ২৫ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ `movedAt` (কখন) · `carriedBy` (কার মাধ্যমে) · `noteCounts`
+         * (নোটের হিসাব)। ⚠️ ঘর তিনটা `vouchers` টেবিলে আগে থেকেই ছিল,
+         * কেবল কাউন্টারের পথটা ওগুলো বহন করত না।
+         *
+         * ⛔ `noteCounts` একটা বস্তু, আর সেটা প্রতিবার **নতুন করে**
+         * বানাতে হয়: একটাই বস্তু বারবার ব্যবহার করলে দ্বিতীয় জমার
+         * গোনাগুলো প্রথমটার ভিতরেও বদলে যেত, কারণ দুইটা সারি একই
+         * বস্তুর দিকে তাকাত।
+         */
         depositDraft: {
             methodId: '', accountId: '', amount: '',
             reference: '', refDate: '', narration: '',
+            movedAt: '', carriedBy: '', noteCounts: {},
         },
         panel: '',
         carriers,
@@ -1069,6 +1089,73 @@ export default function directSale({
          * গেলে কাউন্টার বন্ধ হয়ে যাওয়ার চেয়ে সারিটা যাওয়া ভালো —
          * ⛔ আসল দেয়াল সেবায়, আর সে ঠিকই ধরবে।
          */
+        /**
+         * ⭐ ফ্রি-র ঘরটা অনুপাত ধরে আপনা থেকে ভরে — মালিকের নির্দেশ,
+         * ২৫ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⓘ তাঁর কথা ─────────────────────────────────────────────
+         * *"free ze ponnote ache ta auto retio onuzayi bosbe — ২৪ ctn e
+         * ১ ctn hole kew zodi ২০ purches kore take warning masses dibe
+         * but atkabe na, kintu ২৪ ctn e free hole ২০ free zabe na"*।
+         *
+         * ── ⚠️ তিনটা সিদ্ধান্ত, তিনটাই মালিকের সম্মতিতে ──────────────
+         * ⓘ ১ · বসানোর পর বিক্রেতা **কমাতে পারেন, বাড়াতে পারেন না** —
+         *        বাড়ানো আগের মতোই আটকায়।
+         * ⓘ ২ · অনুপাত না থাকা লটে ঘরটা ০, আর **কোনো বার্তা নয়** —
+         *        ⛔ নাহলে ডিপোর প্রতিটা সারিতে একটা অর্থহীন বার্তা বসত।
+         * ⓘ ৩ · বার্তাটা সবসময় বলে **আর কত নিলে পরের ফ্রি** — ⭐ ঐ
+         *        সংখ্যাটা দিয়েই বিক্রেতা গ্রাহককে রাজি করাতে পারেন।
+         *
+         * ── ⛔ কেন হাতে লেখা মান মুছে দেওয়া হয় না ───────────────────
+         * ⚠️ বিক্রেতা ইচ্ছে করে কমালে পরের কি-স্ট্রোকেই সেটা আবার বেড়ে
+         * যেত, আর তিনি বুঝতেন না কে বদলাচ্ছে। ⓘ তাই কেবল **পরিমাণ বা
+         * লট বদলালে** ভরা হয়, ফ্রি-র ঘর ছোঁয়ার পর নয়।
+         */
+        async fillFreeFromTheRatio() {
+            this.freeHint = '';
+
+            if (! this.picked || ! this.needsLot || this.entry.batchId === '') {
+                return;
+            }
+
+            const qty = this.$num(this.entry.qty || '0');
+
+            if (! (qty > 0)) return;
+
+            try {
+                const url = new URL(this.freeAllowedUrl, window.location.origin);
+                url.searchParams.set('product_id', this.picked.id);
+                url.searchParams.set('qty', qty);
+                url.searchParams.set('batch_id', this.entry.batchId);
+
+                if (this.warehouseId) url.searchParams.set('warehouse_id', this.warehouseId);
+
+                const answer = await fetch(url, { headers: { Accept: 'application/json' } });
+
+                if (! answer.ok) return;
+
+                const { data } = await answer.json();
+
+                if (! data || ! data.known) return;
+
+                this.entry.freeQty = this.$num(data.allowed) > 0 ? String(data.allowed) : '';
+
+                /*
+                 * ⓘ বার্তাটা কেবল তখন, যখন **আর কিছু নিলে সত্যিই কিছু
+                 * পাওয়া যায়**। ⚠️ অনুপাতহীন লটে `short` শূন্য আসে, আর
+                 * তখন চুপ থাকাই ঠিক।
+                 */
+                const short = this.$num(data.short);
+
+                if (short > 0) {
+                    this.freeHint = texts.freeNextAt.replace(':more', this.qty(data.short));
+                }
+            } catch (e) {
+                /* ⓘ নেটওয়ার্ক পড়ে গেলে ঘরটা যেমন ছিল তেমনই — ⛔ শূন্য
+                     বসিয়ে দিলে প্রাপ্য ফ্রি নীরবে হারাত। */
+            }
+        },
+
         async freeFitsTheRatio() {
             this.freeWarning = '';
 
@@ -1083,6 +1170,9 @@ export default function directSale({
                 url.searchParams.set('qty', qty);
 
                 if (this.warehouseId) url.searchParams.set('warehouse_id', this.warehouseId);
+
+                /* ⓘ লট বাছা থাকলে **তারই** অনুপাত — মাল ঐ লট থেকেই বেরোয়। */
+                if (this.entry.batchId) url.searchParams.set('batch_id', this.entry.batchId);
 
                 const answer = await fetch(url, { headers: { Accept: 'application/json' } });
 
@@ -1548,6 +1638,40 @@ export default function directSale({
         },
 
         /*
+         * নোটের ঘরগুলো দেখানো হবে কি — ২৫ সেপ্টেম্বর ২০২৬।
+         *
+         * ⚠️ শর্তটা `kind === 'cash'` **নয়**, আর সেটাই আসল কথা: উপায়ের
+         * সারি না থাকলেও নগদ জমা নেওয়া যায় (তখন `methodId` খালি, আর
+         * সার্ভার প্রধান টিলের নগদ ধরে নেয়)।
+         *
+         * ⛔ `kind === 'cash'` লিখলে ঠিক ঐ ক্ষেত্রে ঘরগুলো **উধাও** হত —
+         * অর্থাৎ যে কোম্পানি উপায়ের সারি বসায়নি, তাদের নগদ গোনার ঘরটাই
+         * থাকত না, আর কেউ বলতে পারত না কেন।
+         */
+        get depositIsCash() {
+            const kind = this.depositMethodRow?.kind;
+
+            return kind === undefined || kind === null || kind === '' || kind === 'cash';
+        },
+
+        /* গোনা টাকা — নোট × সংখ্যা, সবগুলোর যোগ। */
+        get depositCounted() {
+            return Object.entries(this.depositDraft.noteCounts || {})
+                .reduce((sum, [face, count]) => sum + (Number(face) * Number(count || 0)), 0);
+        },
+
+        /*
+         * গোনা আর লেখা মেলে কি।
+         *
+         * ⓘ তুলনাটা পয়সার ঘর ধরে: নোট সবসময় পূর্ণ টাকা, কিন্তু লেখা
+         * অঙ্কে পয়সা থাকতে পারে (১৫০০.৫০)। ⚠️ `===` দিলে ঐ ক্ষেত্রে
+         * কোনোদিন মিলত না, আর সতর্কবার্তাটা চিরকাল লাল থাকত।
+         */
+        get depositCountMatches() {
+            return Math.abs(this.depositCounted - Number(this.depositDraft.amount || 0)) < 0.005;
+        },
+
+        /*
          * ⚠️ শর্তটা **খাত**, উপায় নয় — আর কারণটা মাপা।
          *
          * খাতা যেটা সত্যিই দেখে সেটা খাত; উপায় কেবল বলে
@@ -1635,9 +1759,17 @@ export default function directSale({
                 refDate: this.depositRefDate,
             });
 
+            /*
+             * ⚠️ `noteCounts: {}` — প্রতিবার **নতুন** বস্তু।
+             *
+             * ⛔ পুরনোটা মুছে আবার ব্যবহার করলে (`for (k in) delete`)
+             * ঠেলে দেওয়া সারিটা একই বস্তুর দিকে তাকাত, আর পরের জমার
+             * গোনাগুলো আগের সারিতেও বদলে যেত — নীরবে।
+             */
             this.depositDraft = {
                 methodId: '', accountId: '', amount: '',
                 reference: '', refDate: '', narration: '',
+                movedAt: '', carriedBy: '', noteCounts: {},
             };
 
             this.clearDepositDate();

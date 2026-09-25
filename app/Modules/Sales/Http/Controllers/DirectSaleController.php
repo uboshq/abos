@@ -18,15 +18,15 @@ use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Inventory\Services\FreeAllowance;
 use App\Modules\Inventory\Services\PackConversion;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\MasterData\Models\PaymentMethod;
 use App\Modules\MasterData\Models\PaymentTerm;
 use App\Modules\Sales\Services\DirectSaleService;
 use App\Modules\Supplier\Models\Supplier;
-use Illuminate\Http\RedirectResponse;
-use App\Modules\Inventory\Services\FreeAllowance;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
@@ -443,6 +443,9 @@ class DirectSaleController extends Controller implements HasMiddleware
             'warehouse_id' => ['nullable', 'integer',
                 Rule::exists('inv_warehouses', 'id')->where('company_id', $companyId)],
             'qty' => ['required', 'numeric', 'gt:0'],
+
+            /* ⓘ ঐচ্ছিক — লট বললে তারই অনুপাত, না বললে পুরনো পথ। */
+            'batch_id' => ['nullable', 'integer'],
         ]);
 
         if ($check->fails()) {
@@ -467,11 +470,38 @@ class DirectSaleController extends Controller implements HasMiddleware
             return response()->json(['data' => ['known' => false, 'allowed' => null]]);
         }
 
+        /*
+         * ⭐ লট বলা থাকলে **তারই** অনুপাত — ২৫ সেপ্টেম্বর ২০২৬।
+         *
+         * ⚠️ মালিকের সিদ্ধান্তে বিক্রেতা এখন লট নিজে বাছেন, আর মাল ঐ
+         * লট থেকেই বেরোয়। ⛔ FEFO ধরে হিসাব করলে সংখ্যাটা এমন একটা
+         * লটের অনুপাত বলত যা এই বিলে ছোঁয়াই হবে না — আর দুইটা লটের
+         * অনুপাত আলাদা হলে ফ্রি ভুল বসত, নীরবে।
+         *
+         * ⓘ লট না বললে পুরনো পথ অবিকল — অন্য পর্দা (চালান, পোর্টাল)
+         * এখনো লট পাঠায় না, আর তাদের কিছু বদলায় না।
+         */
+        $batch = isset($data['batch_id'])
+            ? Batch::query()->where('product_id', $product->id)->find($data['batch_id'])
+            : null;
+
+        if ($batch !== null) {
+            return response()->json(['data' => [
+                'known' => true,
+                ...app(FreeAllowance::class)->onLot($batch, (string) $data['qty']),
+            ]]);
+        }
+
         return response()->json([
             'data' => [
                 'known' => true,
                 'allowed' => app(FreeAllowance::class)
                     ->on($product, $warehouse, (string) $data['qty']),
+
+                /* ⓘ লট ছাড়া *"আর কত নিলে"* বলা যায় না — কোন লটের
+                     অনুপাত ধরে বলব সেটাই জানা নেই। ⚠️ শূন্য বললে পর্দা
+                     ভাবত "আর কিছু লাগবে না", তাই খালি। */
+                'short' => '',
             ],
         ]);
     }
@@ -675,6 +705,50 @@ class DirectSaleController extends Controller implements HasMiddleware
             'deposits.*.ref_date' => ['nullable', 'date'],
             'deposits.*.reference' => ['nullable', 'string', 'max:64'],
             'deposits.*.narration' => ['nullable', 'string', 'max:191'],
+
+            /*
+             * ⭐ আদায় ভাউচারের তিনটা ঘর — মালিকের নির্দেশ, ২৫ সেপ্টেম্বর ২০২৬।
+             *
+             * ── ⓘ কেন এগুলো এখানে এল ─────────────────────────────────
+             * *"জমা যোগ botam clic korle eirokom 100% same pop up open
+             * hobe"* — অর্থাৎ কাউন্টারের জমা আদায় ভাউচারের মতোই পূর্ণ
+             * হবে: কখন এল, কার হাত দিয়ে এল, আর নগদ হলে কোন নোটে।
+             *
+             * ⚠️ ঘর তিনটা `vouchers` টেবিলে **আগে থেকেই আছে**
+             * (১৪ নভেম্বরের মাইগ্রেশন), তাই নতুন কিছু বসাতে হয়নি —
+             * কেবল কাউন্টারের পথটা ওগুলো বহন করত না।
+             *
+             * ── ⛔ নাম তিন জায়গায় বসাতে হয়, আর একটাও বাদ পড়লে নীরব ───
+             * যাচাই এখানে · সারি [[DirectSaleService::depositRows()]]-এ ·
+             * ভাউচার [[DirectSaleService::counterVoucher()]]-এ। ⓘ তিনটাই
+             * ঘর **হাতে বেছে** নেয়। ⚠️ abos-13 আজ ঠিক এই আকারে একটা
+             * ভাঙা জোড় পেয়েছেন: `batch_id` `fillable`-এ ছিল, সেবা ওটা
+             * চাইত ও যাচাই করত, তবু সারিতে বসত না — কারণ
+             * `replaceLines()`-এর হাতে-বাছা তালিকায় নামটা ছিল না।
+             */
+            'deposits.*.moved_at' => ['nullable', 'date_format:H:i'],
+
+            /*
+             * ⓘ বাহক — কেবল এই কোম্পানির মানুষ।
+             *
+             * ⚠️ `exists:users,id` যথেষ্ট নয়: ব্যবহারকারীর টেবিলে কোনো
+             * কোম্পানি-স্কোপ নেই (বহু-কোম্পানি পিভট ধরে), তাই ঢালাও
+             * `exists` অন্য ক্রেতার মানুষকেও মেনে নিত।
+             */
+            'deposits.*.carried_by' => ['nullable', 'integer',
+                Rule::exists('company_user', 'user_id')
+                    ->where('company_id', CompanyContext::id())],
+
+            /*
+             * নোটের হিসাব — চাবি নোটের মান, মান কতটা।
+             *
+             * ⚠️ যোগফলটা এখানে মেলানো হয় না, আর সেটা ইচ্ছাকৃত: গোনা
+             * টাকা আর লেখা টাকা আলাদা হতেই পারে (বিক্রেতা গুনতে ভুল
+             * করেন, বা আংশিক গোনেন)। ⓘ পর্দা পার্থক্যটা **দেখায়**,
+             * আটকায় না — ঠিক আদায় ভাউচারের মতোই।
+             */
+            'deposits.*.note_counts' => ['nullable', 'array'],
+            'deposits.*.note_counts.*' => ['nullable', 'integer', 'min:0', 'max:100000'],
             'narration' => ['nullable', 'string', 'max:500'],
 
             'lines' => ['required', 'array', 'min:1'],
@@ -801,7 +875,7 @@ class DirectSaleController extends Controller implements HasMiddleware
      * চালাত। ⛔ দুইশো লটের গুদামে ওটা দুইশো কোয়েরি, আর ধীরগতিটা
      * কোথাও লাল হত না।
      *
-     * @return array<int, list<array<string, string>>>  পণ্যের আইডি ধরে
+     * @return array<int, list<array<string, string>>> পণ্যের আইডি ধরে
      */
     private function lotsFor(?Warehouse $warehouse): array
     {

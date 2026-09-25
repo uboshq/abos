@@ -113,7 +113,7 @@ return [
 
     /* ⓘ Reasons in bn/field.php — it is what is LEFT today, not the
        agreed limit, and the two are not the same number. */
-    'credit_left' => 'Credit left',
+    'credit_left' => 'Available Limit',
 
     /* ⓘ Beside the product name, only for lot-tracked items. */
     'lot' => 'Lot',

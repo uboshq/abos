@@ -176,7 +176,11 @@
                                         <label class="shrink-0">
                                             <span class="sr-only">{{ __('sales::field.lot') }}</span>
 
+                                            {{-- ⓘ লট বদলালেও ফ্রি নতুন করে বসে —
+                                                 ⚠️ অনুপাত লটের নিজের, আর দুইটা
+                                                 লট দুই অনুপাতে আসতে পারে। --}}
                                             <select x-model="entry.batchId"
+                                                    @change="fillFreeFromTheRatio()"
                                                     class="h-(--spacing-field-dense) max-w-40 rounded-(--radius-field)
                                                            border border-(--color-border) bg-(--color-surface-app)
                                                            px-2 text-xs">
@@ -422,7 +426,16 @@
                                 lg:grid-cols-[3.5rem_4rem_3.5rem_4rem_minmax(4.5rem,1fr)_minmax(5.5rem,1fr)_auto]
                                 gap-x-1.5">
                             <x-sales::entry-field label="sales::field.qty" width="w-full">
+                                {{-- ⭐ পরিমাণ বদলালেই ফ্রি অনুপাত ধরে বসে —
+                                     মালিকের নির্দেশ, ২৫ সেপ্টেম্বর ২০২৬।
+
+                                     ⚠️ `@change`, `@input` নয় — ⓘ প্রতিটা
+                                     কি-স্ট্রোকে সার্ভারে গেলে "২" লিখে "২৪"
+                                     করার পথে তিনটা অনুরোধ যেত, আর মাঝেরগুলোর
+                                     উত্তর কাজে লাগত না। ⛔ `@change` ঘরটা
+                                     ছাড়ার পর একবারই ডাকে। --}}
                                 <input type="number" step="0.01" min="0" x-model="entry.qty"
+                                       @change="fillFreeFromTheRatio()"
                                        class="num h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-app) px-2 text-end text-sm">
                             </x-sales::entry-field>
@@ -519,6 +532,22 @@
                                  class="col-span-full rounded-(--radius-field) bg-(--color-badge-danger-bg)
                                         px-3 py-1.5 text-xs text-(--color-badge-danger-ink)"
                                  x-text="lotWarning" role="alert"></div>
+
+                            {{-- ⭐ *"আর ৪ নিলে ১ ফ্রি"* — মালিকের নির্দেশ,
+                                 ২৫ সেপ্টেম্বর ২০২৬: *"warning masses dibe
+                                 but atkabe na"*।
+
+                                 ⚠️ রঙটা **হলুদ, লাল নয়** — ⓘ এটা বাধা নয়,
+                                 সুযোগ। ⛔ লাল দিলে বিক্রেতা ভাবতেন কিছু ভুল
+                                 হয়েছে আর সংখ্যাটা পড়তেনই না; অথচ ঐ সংখ্যাটা
+                                 দিয়েই তিনি গ্রাহককে আরেকটু নিতে রাজি করাতে
+                                 পারেন।
+
+                                 ⓘ `role="status"`, `alert` নয় — একই কারণে। --}}
+                            <div x-show="freeHint" x-cloak
+                                 class="col-span-full rounded-(--radius-field) bg-(--color-badge-pending-bg)
+                                        px-3 py-1.5 text-xs text-(--color-badge-pending-ink)"
+                                 x-text="freeHint" role="status"></div>
 
                             {{-- মোট পরিমাণ নিজে থেকেই — বিক্রয় + ফ্রি।
 
