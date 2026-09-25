@@ -197,6 +197,42 @@ final class TheCounterCouldOnlyFinishAndNeverPauseTest extends TestCase
     }
 
     /**
+     * ⭐ পর্দায় বোতাম দুইটা সত্যিই মানটা পাঠায়।
+     *
+     * ── ⛔ এই দাবিটা একটা কমিট-করা বাগ ধরেছিল ───────────────────────
+     * প্রথম লেখায় বোতাম দুইটা করত `@click="$refs.asDraft.value = '1'"`।
+     * ⚠️ প্রকল্পটা `@alpinejs/csp` ব্যবহার করে, আর সেখানে এক্সপ্রেশনের
+     * ভিতর থেকে **DOM-এর ঘরে লেখা নিষিদ্ধ** — Alpine চুপচাপ বাঁধাইটা
+     * ছেড়ে দেয়, কোনো ত্রুটি ছাড়াই।
+     *
+     * ⛔ ফল: "খসড়া রাখুন" চাপলে বিলটা **পাকাই হয়ে যেত**। ⓘ আর এই
+     * ফাইলের বাকি দাবিগুলো সবুজ থাকত, কারণ তারা সরাসরি POST করে —
+     * ব্লেডটা কখনো চালায় না।
+     *
+     * ⭐ তাই দাবিটা **পর্দার লেখা** মাপে: দুইটা submit বোতাম, দুইটাই
+     * `name="save_as_draft"`, আর মান `1` ও `0`। ⓘ HTML-এর নিয়মে
+     * চাপা বোতামটার মানই ফর্মে যায়, তাই Alpine-এর দরকারই নেই।
+     */
+    public function test_the_two_buttons_really_carry_their_value(): void
+    {
+        $html = (string) $this->get(route('sales.direct.create'))->assertOk()->getContent();
+
+        $this->assertStringContainsString('name="save_as_draft" value="1"', $html,
+            '⛔ "খসড়া রাখুন" বোতামটা মানটা পাঠায় না — চাপলে বিলটা পাকা হয়ে যাবে।');
+
+        $this->assertStringContainsString('name="save_as_draft" value="0"', $html,
+            '⛔ "নিশ্চিত করুন" বোতামটা মানটা পাঠায় না।');
+
+        /*
+         * ⚠️ পাল্টা-যাচাই: পুরনো ভাঙা রূপটা যেন ফিরে না আসে। ⓘ `$refs`
+         * দিয়ে DOM-এ লেখা CSP-Alpine-এ নীরবে ব্যর্থ হয়, তাই ওটা
+         * থাকলে পর্দা দেখতে ঠিকই লাগত।
+         */
+        $this->assertStringNotContainsString('$refs.asDraft', $html,
+            '⛔ DOM-এ লেখা ঐ পুরনো রূপটা ফিরে এসেছে — CSP-Alpine ওটা চুপচাপ ছেড়ে দেয়।');
+    }
+
+    /**
      * ⭐ খসড়াটা পরে নিশ্চিত করা যায়, আর তখন মালও গুদাম থেকে বেরোয়।
      *
      * ── ⛔ এই দাবিটা দুইটা আসল ফাঁক ধরেছিল ──────────────────────────

@@ -604,21 +604,40 @@
                     কেউ ওটা আবার মুছত না। ⓘ ফলে বিলটা নীরবে খসড়া হয়ে
                     বসে থাকত, আর দেখতে হুবহু সফল সংরক্ষণের মতো।
                 --}}
-                <input type="hidden" name="save_as_draft" x-ref="asDraft" value="0">
+                {{-- ── ⛔ Alpine নয়, সাধারণ HTML — ২৫ সেপ্টেম্বর ২০২৬ ──────
 
+                     ⚠️ প্রথমে লেখা হয়েছিল একটা লুকানো ঘর আর
+                     `@click="$refs.asDraft.value = '1'"`। ⛔ **ওটা কখনো
+                     চলত না**: প্রকল্পটা `@alpinejs/csp` ব্যবহার করে, আর
+                     সেখানে এক্সপ্রেশনের ভিতর থেকে **DOM-এর ঘরে লেখা
+                     নিষিদ্ধ** — Alpine চুপচাপ বাঁধাইটা ছেড়ে দেয়।
+
+                     ⓘ ফল হত নিখুঁতভাবে নীরব: পর্দা খুলত, দুইটা বোতাম
+                     দেখা যেত, আর "খসড়া রাখুন" চাপলে বিলটা **পাকাই হয়ে
+                     যেত**। ⚠️ আমার সাতটা phpunit দাবি সবুজ ছিল, কারণ
+                     তারা সরাসরি POST করে — ব্লেডটা কখনো চালায় না।
+                     ⭐ ধরা পড়েছে [[csp-expressions.test.js]]-এ।
+
+                     ── ⭐ কেন এই রূপটা ভালো, কেবল "চলে" নয় ────────────
+                     একটা submit বোতামের `name`/`value` **কেবল তখনই**
+                     ফর্মে যায় যখন ঐ বোতামটাই চাপা হয়েছে — এটা HTML-এর
+                     নিজের নিয়ম। ⓘ তাই কোনো অবস্থা রাখতে হয় না, আর
+                     "একবার খসড়া চেপে পরে নিশ্চিত চাপলে পুরনো মান রয়ে
+                     যাবে" সমস্যাটাই জন্মায় না।
+
+                     ⚠️ Alpine দিয়ে করলে আরেকটা দৌড় থাকত: `:value`
+                     বাঁধাই পরের টিকে বসে, অথচ ফর্ম জমা হয় **এখনই**। --}}
                 <div class="mt-2 grid grid-cols-3 gap-2">
                     {{-- ⓘ খসড়াটা এক ঘর, নিশ্চিত দুই ঘর — চাপটা ডানে,
                          আর রোজকার কাজটাই বড়। --}}
                     <x-ui.button type="submit" tone="ghost" class="py-2"
-                                 @click="$refs.asDraft.value = '1'"
+                                 name="save_as_draft" value="1"
                                  ::disabled="! canConfirm">
                         {{ __('sales::action.save_draft') }}
                     </x-ui.button>
 
-                    {{-- ⚠️ এখানে ঘরটা আবার `0` করা হয়: একবার খসড়া চেপে
-                         মত বদলালে পুরনো মানটা রয়ে যেত। --}}
                     <x-ui.button type="submit" tone="primary" class="col-span-2 py-2" x-ref="confirm"
-                                 @click="$refs.asDraft.value = '0'"
+                                 name="save_as_draft" value="0"
                                  ::disabled="! canConfirm">
                         {{ __('sales::action.confirm') }}
                         <span class="num ms-2 font-semibold" x-text="'৳' + money(netPayable)"></span>
