@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Inventory\Http\Controllers;
 
 use App\Core\Concerns\AuthorizesResource;
+use App\Core\Engines\Attachment\AttachmentEngine;
+use App\Core\Engines\Attachment\AttachmentException;
 use App\Core\Concerns\FiltersByDate;
 use App\Core\Concerns\SortsLists;
 use App\Core\Services\MenuBuilder;
@@ -14,6 +16,7 @@ use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\QualityInspection;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\QualityInspectionService;
+use App\Modules\MasterData\Models\ReasonCode;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -43,6 +46,7 @@ class QualityInspectionController extends Controller implements HasMiddleware
 
     public function __construct(
         private readonly QualityInspectionService $inspections,
+        private readonly AttachmentEngine $attachments,
         private readonly MenuBuilder $menu,
     ) {}
 
@@ -58,7 +62,7 @@ class QualityInspectionController extends Controller implements HasMiddleware
              * তাদের একটাও নয়। ⛔ এই লাইনটা না থাকলে রুটটা **খোলা**
              * থাকত, আর যে কেউ মাল বাতিল করে দিতে পারত।
              */
-            new Middleware('can:decide,inspection', only: ['decide']),
+            new Middleware('can:decide,inspection', only: ['decide', 'dispose']),
         ];
     }
 
@@ -132,6 +136,30 @@ class QualityInspectionController extends Controller implements HasMiddleware
         return view('inventory::quality.show', [
             'menu' => $this->menu->forUser($request->user()),
             'inspection' => $inspection,
+
+            /*
+             * ⓘ বিনাশের খাত বাছার তালিকা — কেবল সমন্বয়ের কারণগুলো।
+             * ⚠️ আটকানোর কারণ দেখালে কেউ "দাম বাড়ার অপেক্ষায়" বেছে
+             * ক্ষতিটা ভুল খাতে পাঠাতেন।
+             */
+            'writeOffReasons' => ReasonCode::query()
+                ->where('context', ReasonCode::STOCK_ADJUSTMENT)
+                ->orderBy('code')
+                ->get(),
+
+            /*
+             * ⭐ সনদ ও ছবি — ২৫ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ রায়টা একটা দাবি; কাগজটা তার প্রমাণ। ⚠️ প্রমাণ ছাড়া
+             * ছয় মাস পরে *"কেন বাতিল করা হয়েছিল"* প্রশ্নের উত্তর
+             * থাকে কেবল একটা মন্তব্যের ঘরে, আর সরবরাহকারীর সাথে
+             * তর্কে ওটা যথেষ্ট নয়।
+             */
+            'papers' => $this->attachments->listFor(
+                'inventory',
+                QualityInspection::PAPER_ENTITY,
+                (int) $inspection->getKey(),
+            ),
         ]);
     }
 
@@ -155,6 +183,8 @@ class QualityInspectionController extends Controller implements HasMiddleware
             'remarks' => ['nullable', 'string', 'max:2000'],
         ]);
 
+        $this->keepThePaper($request, $inspection);
+
         $this->inspections->decide(
             inspection: $inspection,
             result: $data['result'],
@@ -166,6 +196,78 @@ class QualityInspectionController extends Controller implements HasMiddleware
         return redirect()
             ->route('inventory.qc.show', $inspection)
             ->with('saved', __('inventory::message.qc_decided'));
+    }
+
+    /**
+     * ⭐ বাতিল মাল বিনাশ — ২৫ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ চাবিটা রায় দেওয়ারই (`decide`), নতুন কোনো চাবি নয় — ⚠️ বিনাশ
+     * রায়েরই ধারাবাহিকতা, আলাদা কোনো ক্ষমতা নয়। ⛔ নতুন চাবি বানালে
+     * কেউ একদিন রায় দিতে পারতেন অথচ নিজের রায় কার্যকর করতে পারতেন না,
+     * আর তখন কাগজটা ঝুলে থাকত।
+     */
+    public function dispose(Request $request, QualityInspection $inspection): RedirectResponse
+    {
+        $data = $request->validate([
+            'qty' => ['required', 'numeric', 'gt:0'],
+
+            /*
+             * ⛔ ক্ষতিটা কোন খাতে যাবে, সেটা ব্যবহারকারীর বাছাই —
+             * ⓘ নষ্ট, চুরি আর মেয়াদোত্তীর্ণ এক খাতে যায় না, আর
+             * খাতটা ঠিক করে কারণ কোড ([[ReasonCode::account]])।
+             */
+            'reason_code_id' => ['required', 'integer',
+                Rule::exists('mdm_reason_codes', 'id')
+                    ->where('company_id', CompanyContext::id())],
+
+            'narration' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $this->inspections->dispose(
+            inspection: $inspection,
+            qty: (string) $data['qty'],
+            writeOff: ReasonCode::query()->findOrFail($data['reason_code_id']),
+            narration: $data['narration'] ?? null,
+        );
+
+        return redirect()
+            ->route('inventory.qc.show', $inspection)
+            ->with('saved', __('inventory::message.qc_disposed'));
+    }
+
+    /**
+     * ⭐ রায়ের সাথে আসা সনদ বা ছবি রেখে দেওয়া।
+     *
+     * ── ⚠️ কেন ব্যর্থতা রায়টাকে ফেলে দেয় না ─────────────────────────
+     * ⛔ ফাইলটা বড়, বা ধরনটা অনুমোদিত নয় — এই দুইটা কারণেই
+     * [[AttachmentEngine]] ব্যতিক্রম ছোড়ে। ⚠️ সেটা উপরে যেতে দিলে
+     * **রায়টাই বসত না**, আর পরিদর্শক দেখতেন মাল এখনো অপেক্ষায় —
+     * অথচ তিনি সিদ্ধান্ত দিয়ে ফেলেছেন।
+     *
+     * ⓘ তাই কাগজটা হারায়, রায়টা নয়, আর ব্যবহারকারী একটা সতর্কবার্তা
+     * দেখেন। ⛔ নীরবে গিলে ফেলা হয় না: নাহলে তিনি ভাবতেন ছবিটা
+     * উঠেছে, আর ছয় মাস পরে খুঁজতে গিয়ে পেতেন না।
+     *
+     * ⓘ নজিরটা [[DepositController::keepThePaper()]]-এর, হুবহু।
+     */
+    private function keepThePaper(Request $request, QualityInspection $inspection): void
+    {
+        if (! $request->hasFile('paper')) {
+            return;
+        }
+
+        try {
+            $this->attachments->store(
+                file: $request->file('paper'),
+                module: 'inventory',
+                entity: QualityInspection::PAPER_ENTITY,
+                entityId: (int) $inspection->getKey(),
+            );
+        } catch (AttachmentException $refused) {
+            session()->flash('warning', __('core.attachment.refused', [
+                'reason' => $refused->getMessage(),
+            ]));
+        }
     }
 
     /**

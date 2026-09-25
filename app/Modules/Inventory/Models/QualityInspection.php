@@ -46,6 +46,20 @@ class QualityInspection extends Model
      * ⚠️ আর এগুলো একটা **রায়**। ⛔ দুইটা এক জায়গায় রাখলে "বাতিল"
      * শব্দটার দুইটা মানে হত: কাগজটা বাতিল, নাকি মালটা বাতিল।
      */
+    /**
+     * ⭐ সংযুক্তির খাতায় এই কাগজটার নাম — ২৫ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ [[AttachmentEngine]] তিনটা জিনিস দিয়ে ফাইল খোঁজে: মডিউল, কাগজের
+     * ধরন, আর id। ⚠️ বাকি মডিউলগুলো ধরনটা `drillSourceType()` থেকে নেয়,
+     * কিন্তু পরিদর্শনের কাগজ [[Drillable]] নয় — ⛔ কেবল একটা নামের জন্য
+     * ড্রিল-ডাউনের গোটা চুক্তি বসানো অপচয়।
+     *
+     * ⚠️ নামটা **কখনো বদলানো যাবে না**: বদলালে আগের সব সনদ ও ছবি
+     * খাতায় থেকে যেত আর কোনো পর্দা ওগুলো খুঁজে পেত না — ⓘ ফাইল হারায়
+     * না, কেবল পথটা হারায়, আর সেটা আরও খারাপ কারণ কেউ টের পায় না।
+     */
+    public const PAPER_ENTITY = 'quality_inspection';
+
     public const PENDING = 'pending';
 
     public const APPROVED = 'approved';
@@ -65,7 +79,7 @@ class QualityInspection extends Model
     protected $fillable = [
         'company_id', 'branch_id', 'document_no', 'inspected_on',
         'product_id', 'batch_id', 'warehouse_id',
-        'inspected_qty', 'accepted_qty', 'rejected_qty',
+        'inspected_qty', 'accepted_qty', 'rejected_qty', 'disposed_qty',
         'criteria', 'remarks', 'source_type', 'source_id',
         'status', 'inspected_by', 'created_by',
     ];
@@ -77,6 +91,7 @@ class QualityInspection extends Model
             'inspected_qty' => 'decimal:4',
             'accepted_qty' => 'decimal:4',
             'rejected_qty' => 'decimal:4',
+            'disposed_qty' => 'decimal:4',
         ];
     }
 

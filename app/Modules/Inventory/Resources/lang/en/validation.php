@@ -124,4 +124,8 @@ return [
     'serial_taken' => 'These numbers are already on the books: :no',
     'serial_unknown' => 'No piece carries the number :no.',
     'serial_already_out' => 'The piece :no has already gone out.',
+    'qc_dispose_needs_verdict' => 'Goods cannot be disposed of before the inspection has a verdict.',
+    'qc_dispose_needs_qty' => 'How much to dispose of has to be a positive number.',
+    'qc_dispose_needs_place' => 'This paper names no product or warehouse, so nothing can be taken off the shelf.',
+    'qc_dispose_over' => 'This paper holds :held - no more than that can be disposed of.',
 ];

@@ -95,7 +95,11 @@
              ⛔ ঘরগুলো কেবল তখনই, যখন নীতি বলে এই মানুষটা পারেন **আর**
              রায় এখনো হয়নি ([[QualityInspectionPolicy::decide()]])। --}}
         @can('decide', $inspection)
-            <form method="POST" action="{{ route('inventory.qc.decide', $inspection) }}"
+            {{-- ⛔ `enctype` ছাড়া ফাইলটা পাঠানোই যেত না, আর **কোনো ভুলও
+                 দেখাত না** — ⓘ ব্রাউজার চুপচাপ কেবল নামটা পাঠাত, আর
+                 পরিদর্শক ভাবতেন সনদটা উঠেছে। --}}
+            <form method="POST" enctype="multipart/form-data"
+                  action="{{ route('inventory.qc.decide', $inspection) }}"
                   data-boxed
                   class="rounded-(--radius-card) border border-(--color-border)
                          bg-(--color-surface-card) p-4">
@@ -125,6 +129,30 @@
                 </div>
 
                 <div class="mt-3 flex flex-wrap items-center gap-3">
+                    {{-- ⭐ সনদ বা ছবি — রায়ের প্রমাণ, ২৫ সেপ্টেম্বর ২০২৬।
+
+                         ⓘ রায়টা একটা দাবি; কাগজটা তার প্রমাণ। ⚠️ ছয় মাস
+                         পরে সরবরাহকারী যখন বলেন *"মাল তো ঠিকই ছিল"*,
+                         তখন মন্তব্যের ঘরে লেখা এক লাইন যথেষ্ট নয়।
+
+                         ⓘ ঘরটা ঐচ্ছিক: বেশিরভাগ পরিদর্শনে ছবি লাগে না,
+                         আর বাধ্যতামূলক করলে মানুষ যেকোনো একটা ছবি তুলে
+                         দিতেন — তাতে প্রমাণের মান বাড়ত না, কেবল কাজ বাড়ত। --}}
+                    <div class="mb-3">
+                        <label for="paper" class="mb-1 block text-sm font-medium">
+                            {{ __('inventory::field.qc_paper') }}
+                        </label>
+
+                        <input id="paper" type="file" name="paper"
+                               class="w-full text-sm file:me-2 file:rounded-(--radius-field)
+                                      file:border file:border-(--color-border)
+                                      file:bg-(--color-surface-app) file:px-3 file:py-1.5 file:text-sm">
+
+                        <span class="mt-1 block text-2xs text-(--color-ink-muted)">
+                            {{ __('inventory::field.qc_paper_hint') }}
+                        </span>
+                    </div>
+
                     <x-ui.button type="submit" tone="primary">
                         {{ __('inventory::action.decide') }}
                     </x-ui.button>
@@ -141,5 +169,77 @@
                 </p>
             @endif
         @endcan
+
+        {{-- ⭐ বাতিল মাল বিনাশ — ২৫ সেপ্টেম্বর ২০২৬।
+
+             ── ⛔ কেন এই বোতামটা লাগল ──────────────────────────────────
+             রায়ে বাতিল হলে মালটা আটকে যেত, আর **চিরকাল আটকেই থাকত**:
+             গুদামে জায়গা নিত, মজুদের মূল্যে গোনা হত, অথচ বিক্রি করা
+             যেত না।
+
+             ⚠️ আগে এটা করতে হত দুই ধাপে — আটকানো ছেড়ে, তারপর স্টক
+             সমন্বয়ে বাদ দিয়ে। ⛔ আর ঐ দুই ধাপের **মাঝখানে মালটা
+             বিক্রয়যোগ্য**, কারণ আটকানো ছাড়ার সাথে সাথেই সংখ্যাটা ফিরে
+             আসে। ⓘ পরিদর্শনে বাতিল হওয়া ওষুধ ঐ কয়েক সেকেন্ডে কাউন্টার
+             থেকে বেরিয়ে যেতে পারত, আর কোথাও কোনো ভুল দেখাত না।
+
+             ⓘ পুনঃকাজের জন্য আলাদা বোতাম নেই, আর দরকারও নেই: ওটা
+             আটকানো **ছেড়ে দেওয়া**, আর তার দরজা মজুদের পর্দায় আগে
+             থেকেই আছে। --}}
+        @can('decide', $inspection)
+            @if (in_array($inspection->status, [
+                \App\Modules\Inventory\Models\QualityInspection::REJECTED,
+                \App\Modules\Inventory\Models\QualityInspection::QUARANTINE,
+            ], true) && $writeOffReasons->isNotEmpty())
+                <form method="POST" action="{{ route('inventory.qc.dispose', $inspection) }}"
+                      data-boxed
+                      class="rounded-(--radius-card) border border-(--color-border)
+                             bg-(--color-surface-card) p-4">
+                    @csrf
+
+                    <h2 class="mb-1 font-semibold">{{ __('inventory::action.dispose') }}</h2>
+
+                    <p class="mb-3 text-xs text-(--color-ink-muted)">
+                        {{ __('inventory::message.qc_dispose_note') }}
+                    </p>
+
+                    <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                        <x-ui.field name="qty" type="number" step="0.01"
+                                    :label="__('inventory::field.dispose_qty')" required />
+
+                        {{-- ⛔ ক্ষতিটা কোন খাতে যাবে — নষ্ট, চুরি আর
+                             মেয়াদোত্তীর্ণ এক খাতে যায় না। --}}
+                        <x-ui.select name="reason_code_id" :label="__('inventory::field.reason')"
+                                     :options="$writeOffReasons->mapWithKeys(fn ($r) => [$r->id => $r->name()])"
+                                     placeholder="-" required />
+
+                        <x-ui.field name="narration" :label="__('inventory::field.narration')" />
+                    </div>
+
+                    <div class="mt-3">
+                        <x-ui.button type="submit" tone="danger">
+                            {{ __('inventory::action.dispose') }}
+                        </x-ui.button>
+                    </div>
+                </form>
+            @endif
+        @endcan
+
+        {{-- ⓘ যে কাগজগুলো ইতিমধ্যে আছে। ⚠️ রায়ের ফর্মটা রায় হয়ে গেলে
+             আর দেখা যায় না, কিন্তু কাগজগুলো **সবসময়** দেখা যেতে হবে —
+             ⛔ নাহলে প্রমাণটা থাকত অথচ কেউ ওটা খুঁজে পেত না। --}}
+        @if ($papers->isNotEmpty())
+            <section data-boxed
+                     class="rounded-(--radius-card) border border-(--color-border)
+                            bg-(--color-surface-card) p-4">
+                <h2 class="mb-2 font-semibold">{{ __('inventory::field.qc_papers') }}</h2>
+
+                <ul class="list-inside list-disc text-sm">
+                    @foreach ($papers as $paper)
+                        <li>{{ $paper->original_name ?: '—' }}</li>
+                    @endforeach
+                </ul>
+            </section>
+        @endif
     </div>
 </x-layouts.app>

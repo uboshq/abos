@@ -45,6 +45,7 @@ final class QualityInspectionService
     public function __construct(
         private readonly NumberSeriesEngine $numbers,
         private readonly StockService $stock,
+        private readonly StockAdjustmentService $adjustments,
     ) {}
 
     /**
@@ -214,6 +215,127 @@ final class QualityInspectionService
      * দুইটাই বসায়, তাই না পাওয়া মানে কেউ তালিকা থেকে মুছে দিয়েছেন,
      * আর তখন থামা উচিত।
      */
+    /**
+     * ⭐ বাতিল মাল বিনাশ — খাতা থেকেও যায়, ২৫ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⛔ কেন এটা এক ধাপ হতেই হবে ──────────────────────────────────
+     * আজ পর্যন্ত এটা করতে হত দুই ধাপে: আগে আটকানো ছেড়ে দেওয়া, তারপর
+     * স্টক সমন্বয়ে বাদ দেওয়া। ⚠️ আর ঐ দুই ধাপের **মাঝখানে মালটা
+     * বিক্রয়যোগ্য** — কারণ `available = floor − reserved − hold`, আর
+     * আটকানো ছেড়ে দেওয়ার সাথে সাথেই সংখ্যাটা ফিরে আসে।
+     *
+     * ⛔ অর্থাৎ পরিদর্শনে বাতিল হওয়া ওষুধ ঐ কয়েক সেকেন্ডে কাউন্টার
+     * থেকে বিক্রি হয়ে যেতে পারত, আর কোথাও কোনো ভুল দেখাত না।
+     *
+     * ── ⚠️ কেন উল্টো ক্রমে নয় ───────────────────────────────────────
+     * আগে তাক থেকে বাদ দিয়ে পরে আটকানো ছাড়লে মাঝখানে `hold > floor`
+     * হত, আর বিক্রয়যোগ্য সংখ্যাটা **ঋণাত্মক** দেখাত। ⓘ দুইটাই এক
+     * লেনদেনে, তাই কোনো মাঝখানই নেই।
+     *
+     * ── ⓘ দুইটা কারণ, আর দুইটাই দরকার ──────────────────────────────
+     * ছাড়ার সারিতে বসে **কেন আটকানো ছিল** (`HOLD-REJ`), আর বাদ দেওয়ার
+     * সারিতে বসে **কোন খাতে ক্ষতিটা যাবে** — দ্বিতীয়টা ব্যবহারকারীর
+     * বাছাই, কারণ নষ্ট আর চুরি এক খাতে যায় না।
+     *
+     * @param  string  $qty  কতটা বিনাশ হবে
+     * @param  ReasonCode  $writeOff  ক্ষতির খাত ঠিক করে যে কারণ
+     */
+    public function dispose(
+        QualityInspection $inspection,
+        string $qty,
+        ReasonCode $writeOff,
+        ?string $narration = null,
+    ): void {
+        /*
+         * ⛔ কেবল যে কাগজে রায় হয়ে গেছে, আর রায়টা মাল আটকে রেখেছে।
+         * ⚠️ অপেক্ষমাণ কাগজে বিনাশ করতে দিলে পরিদর্শক দেখার আগেই মাল
+         * চলে যেত, আর পরিদর্শনটার কোনো মানেই থাকত না।
+         */
+        if (! in_array($inspection->status, [
+            QualityInspection::REJECTED,
+            QualityInspection::QUARANTINE,
+        ], true)) {
+            throw ValidationException::withMessages([
+                'status' => __('inventory::validation.qc_dispose_needs_verdict'),
+            ]);
+        }
+
+        if (! is_numeric($qty) || bccomp($qty, '0', 4) <= 0) {
+            throw ValidationException::withMessages([
+                'qty' => __('inventory::validation.qc_dispose_needs_qty'),
+            ]);
+        }
+
+        $inspection->loadMissing(['product', 'warehouse']);
+
+        $product = $inspection->product;
+        $warehouse = $inspection->warehouse;
+
+        if ($product === null || $warehouse === null) {
+            throw ValidationException::withMessages([
+                'status' => __('inventory::validation.qc_dispose_needs_place'),
+            ]);
+        }
+
+        /*
+         * ⚠️ এই কাগজটা যতটা আটকে রেখেছে, তার বেশি নয়।
+         *
+         * ⛔ গুদামে মোট আটকানো পরিমাণ দেখে সীমা বসালে একটা কাগজ দিয়ে
+         * **অন্য কাগজের** আটকানো মাল বিনাশ করা যেত — ⓘ আর দুইটা
+         * পরিদর্শনের বাতিল মাল একই তাকে পাশাপাশি থাকাটাই স্বাভাবিক।
+         */
+        $held = $this->heldBy($inspection);
+
+        if (bccomp($qty, $held, 4) > 0) {
+            throw ValidationException::withMessages([
+                'qty' => __('inventory::validation.qc_dispose_over', ['held' => $held]),
+            ]);
+        }
+
+        DB::transaction(function () use ($inspection, $product, $warehouse, $qty, $writeOff, $narration) {
+            /* ⓘ প্রথমে আটকানো ছাড়া — কারণটা ঐ আটকানোরই */
+            $this->stock->release(
+                product: $product,
+                warehouse: $warehouse,
+                qty: $qty,
+                reason: $this->reasonFor($inspection->status),
+                date: now(),
+            );
+
+            /* ⓘ তারপর তাক থেকে বাদ, আর ক্ষতিটা খতিয়ানে */
+            $this->adjustments->issue(
+                product: $product,
+                warehouse: $warehouse,
+                qty: $qty,
+                reason: $writeOff,
+                date: now(),
+                narration: $narration ?? $inspection->document_no,
+            );
+
+            $inspection->forceFill([
+                'disposed_qty' => bcadd((string) ($inspection->disposed_qty ?? '0'), $qty, 4),
+            ])->save();
+        });
+    }
+
+    /**
+     * এই কাগজটা এখনো কতটা আটকে রেখেছে।
+     *
+     * ⓘ রায়ে যতটা আটকানো হয়েছিল, তার থেকে যতটা ইতিমধ্যে বিনাশ হয়েছে।
+     * ⚠️ পুনঃকাজে ছেড়ে দেওয়া মাল এখানে গোনা হয় না — ⛔ ওটা ছাড়ার
+     * পর্দার কাজ, আর সেখান দিয়ে গেলে এই কাগজের হিসাব বদলায় না।
+     */
+    private function heldBy(QualityInspection $inspection): string
+    {
+        $held = $this->holdFor(
+            (string) $inspection->status,
+            (string) $inspection->accepted_qty,
+            (string) $inspection->rejected_qty,
+        );
+
+        return bcsub($held, (string) ($inspection->disposed_qty ?? '0'), 4);
+    }
+
     private function reasonFor(string $result): ReasonCode
     {
         $code = $result === QualityInspection::REJECTED ? 'HOLD-REJ' : 'HOLD-RET';
