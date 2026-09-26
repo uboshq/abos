@@ -32,6 +32,18 @@ use Illuminate\Notifications\Notification;
  * ⭐ ওয়ার্কার বসানোর দিন এখানে `implements ShouldQueue` যোগ করাই
  * যথেষ্ট — কিন্তু **আগে নয়**, আর সেটা পাহারা দেয়
  * [[Tests\Feature\Core\TheNewsLeavesTheBuildingTest]]।
+ *
+ * ── ⚠️ ২৬ সেপ্টেম্বর ২০২৬-এর সংশোধন ───────────────────────────────
+ * ⓘ কোডে worker বসানো আছে ১৭ সেপ্টেম্বর থেকে: `routes/console.php`
+ * প্রতি মিনিটে `queue:work --stop-when-empty --max-time=50 --tries=3`
+ * চালায়। ⚠️ তাই উপরের *"চলছে শূন্যটা"* মাপটা সাবধানে পড়তে হবে —
+ * `--stop-when-empty` কাজ না পেলে সাথে সাথে বেরিয়ে যায়, আর প্রক্রিয়ার
+ * তালিকায় তখন worker **কখনোই** দেখা যায় না। ⓘ সত্যিই চলে কি না, সেটা
+ * নির্ভর করে ঐ সার্ভারের cron-এ `schedule:run` বসানো আছে কি না তার উপর।
+ *
+ * ⛔ তবু `ShouldQueue` বসানোর আগে আরেকটা জিনিস লাগে: ব্যর্থ চিঠি যায়
+ * `failed_jobs`-এ, আর ঐ টেবিলের কোনো পর্দা নেই। ⚠️ তখন *"সফল দেখানো
+ * ব্যর্থতা"* ফিরত, শুধু অন্য টেবিলে।
  */
 final class NewsByMail extends Notification
 {

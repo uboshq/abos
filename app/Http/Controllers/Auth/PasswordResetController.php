@@ -91,6 +91,13 @@ class PasswordResetController extends Controller
      *
      * ⭐ ওয়ার্কার চালু হওয়ার দিন এখানে `ShouldQueue` বসানোই সঠিক পদক্ষেপ।
      * কথাটা লেখা রইল যাতে কেউ ভেবে না নেন ফাঁকটা নেই।
+     *
+     * ⚠️ ২৬ সেপ্টেম্বর ২০২৬-এর সংশোধন: *"কোনো ওয়ার্কার চলে না"* কথাটা আর
+     * সত্য নয়। ১৭ সেপ্টেম্বর থেকে `routes/console.php` প্রতি মিনিটে
+     * `queue:work --stop-when-empty` চালায়, যদি সার্ভারের cron-এ
+     * `schedule:run` বসানো থাকে। ⓘ সত্য থাকল কেবল এটুকু: কোনো কাজ কিউতে
+     * দেওয়া হয় না। ⛔ ব্যর্থ কাজ যায় `failed_jobs`-এ, যার কোনো পর্দা নেই —
+     * তাই এখানে কিউ বসানোর আগে সেই পর্দাটা লাগবে ([[NewsByMail]]-এর মন্তব্য)।
      */
     public function email(Request $request): RedirectResponse
     {
