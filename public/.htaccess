@@ -36,3 +36,14 @@
 <IfModule mod_mime.c>
     AddType application/vnd.android.package-archive .apk
 </IfModule>
+
+# ── PHP-র সংস্করণ বাইরে না বলা — ২৭ সেপ্টেম্বর ২০২৬ (অডিট §৯) ──
+#
+# ⓘ লাইভের cPanel-এ `expose_php` বন্ধ করার ঘর নেই (MultiPHP INI-র সাধারণ
+# তালিকায় নেই), তাই প্রতিটা উত্তরে `X-Powered-By: PHP/8.x` যেত — আক্রমণকারীকে
+# বিনা খরচে সংস্করণ বলে দেওয়া। ⓘ শুধু Apache এই ফাইল পড়ে; Mac mini-র nginx
+# পড়ে না, সেখানে `fastcgi_hide_header X-Powered-By` আলাদা করে বসে।
+<IfModule mod_headers.c>
+    Header always unset X-Powered-By
+    Header unset X-Powered-By
+</IfModule>
