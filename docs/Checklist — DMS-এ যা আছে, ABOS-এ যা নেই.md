@@ -1,6 +1,6 @@
 # চেকলিস্ট · DMS-এ যা আছে, ABOS-এ যা নেই
 
-**তারিখ:** ২০২৬-০৮-১৮
+**তারিখ:** ২০২৬-০৮-১৮ · শেষ যাচাই ২০২৬-০৯-২৬ (নিচে)
 **কীভাবে বানানো:** অনুমানে নয় — `e:\DMS\ubos-dms`-এর ১৬টা মডিউলের প্রতিটা
 entity আর `core/`-এর ২১টা প্যাকেজ ধরে ধরে, তারপর প্রতিটার জন্য ABOS-এ
 খুঁজে দেখে। "আছে" মানে কোডে সত্যিই পাওয়া গেছে; "নেই" মানে খুঁজে পাওয়া
@@ -36,25 +36,131 @@ entity আর `core/`-এর ২১টা প্যাকেজ ধরে ধর
 
 ---
 
+## যাচাই · ২৬ সেপ্টেম্বর ২০২৬ — প্রতিটা সারি কোড থেকে আবার
+
+⚠️ **নিচের ভাগ ১–১১-এর টেবিলগুলো ১৮ আগস্টের। যেখানে দুইটা আলাদা কথা বলে,
+এই টেবিলটাই জেতে।** abos-d3 ধরেছিলেন যে `Scheme`, `CommissionRule` আর পোর্টালের
+চাবি আছে, অথচ কাগজ বলছিল "নেই"। মাপতে গিয়ে দেখা গেল আরও অনেক সারি পুরনো।
+
+⓵ **কীভাবে মাপা:** মডেলের তালিকা `git ls-files` থেকে (গোনা ফাইল, খোঁজা নয়),
+আর প্রতিটা "নেই" `git grep` দিয়ে, পুরো `app/` আর সব মাইগ্রেশনে। ⚠️ মেশিন
+তখন ভীষণ ব্যস্ত ছিল, আর Grep যন্ত্র একবার আংশিক ফল দিয়েছিল (যেমন
+`PricingRule` মডেল আছে, অথচ মাইগ্রেশনের খোঁজে আসেনি)। তাই "নেই" কেবল
+তখনই লেখা হয়েছে যখন `git grep`-ও শূন্য দিয়েছে। কমিটহীন ফাইলও দেখা হয়েছে
+(`git ls-files -o`)।
+
+### হিসাব ও অর্থ
+
+| DMS-এ | আজ | প্রমাণ |
+|---|---|---|
+| `Cheque` | ✅ | `app/Modules/Accounts/Models/Cheque.php` |
+| `BankAccount` | ✅ | খাতে `is_bank` (১৮টা ফাইলে পড়া হয়), আর খাতটা কোন ব্যাংকের তা `app/Modules/Finance/Models/InstitutionAccount.php`। ⓘ চেক-বইয়ের পাতার ঘর এই দফায় মাপা হয়নি |
+| `BankReconciliation` | ✅ | `Accounts/Services/BankReconciliationService.php` |
+| `BankStatementLine` | ✅ | `Accounts/Models/BankStatementLine.php`; ফাইল থেকে তোলা `Accounts/Imports/BankStatementImporter.php`, নিবন্ধিত `Accounts/module.php:520`; মেলানো `matched_line_id` |
+| `CostCenter` | ✅ | `Accounts/Models/CostCenter.php` |
+| `Budget`, `BudgetLine` | ✅ | `Finance/Models/Budget.php:29-31` — একটা সারিই একটা লাইন (মাস × খাত × খরচকেন্দ্র)। সীমার দেয়াল `Purchase/Services/PurchaseRequisitionService.php:114` |
+| `Expense`, `ExpenseCategory` | ✅ | `Accounts/Models/MoneyCategory.php` আর সহজ খরচের ফর্ম `Accounts/Resources/views/voucher/simple-form.blade.php` |
+| `FixedAsset`, অবচয় | ✅ | `Accounts/Models/FixedAsset.php`, `DepreciationEntry.php` |
+| `CapitalEntry` | ✅ | `Finance/Models/CapitalEntry.php`, `Finance/Http/Controllers/CapitalController.php` |
+| `Withdrawal`, `WithdrawalLimit` | ✅ | `Finance/Models/Withdrawal.php`, `WithdrawalLimit.php`; সীমা পড়ে `Finance/Services/WithdrawalService.php` |
+
+### বিক্রয় ও পরিবেশন
+
+| DMS-এ | আজ | প্রমাণ |
+|---|---|---|
+| `Scheme`, `CommissionRule` | ✅ নিয়ম আছে · 🟨 নিজে থেকে বসে না | `Sales/Models/Scheme.php` (মূল্য · পরিমাণ · স্ল্যাব; পণ্য · শ্রেণি · ব্র্যান্ড · এলাকা ধরে), `Sales/Models/CommissionRule.php`। ⚠️ হিসাব করে `Sales/Services/CommissionEngine.php`, আর তাকে ডাকে **কেবল** `Sales/Http/Controllers/SchemeController.php:41` — বিল নিশ্চিত হওয়ার সময় কেউ ডাকে না। ⓘ ট্রেড প্রোমোশন আলাদা মডিউলে আসছে (`app/Modules/Promotion/`, abos-39, এখনো কমিটহীন) |
+| `CommissionEntry` | ✅ | `Sales/Models/CommissionClaim.php` |
+| `SalesRepresentative`, `DealerAssignment` | ⛔ | `Sales/Models/SalesTarget.php:34` — কেবল `user_id · branch_id · month · amount`। ⛔ কোন কর্মী কোন ডিলার বা এলাকা দেখেন, সেটা কোথাও বাঁধা নেই। ⭐ মালিকের সিদ্ধান্ত ২৬ সেপ্টেম্বর (ক): বিক্রয়কর্মী কেবল নিজের ডিলার ও এলাকা দেখবেন — নকশা চলছে (`docs/Plan — বিক্রয়কর্মী ও ডিলারের বাঁধন.md`) |
+| `PricingRule` | ✅ | `Sales/Models/PricingRule.php`, পড়া হয় `Sales/Services/SalesInvoiceService.php:714` |
+
+### মজুদ · ক্রয় · মানুষ
+
+| DMS-এ | আজ | প্রমাণ |
+|---|---|---|
+| `DamageEntry` | 🟨 আগের মতোই | আলাদা নথি নেই (`damage_entr`/`damage_note` খুঁজে শূন্য); ক্ষতি যায় সমন্বয়ের পথে কারণ-কোড ধরে |
+| `PurchaseRequisition` | ✅ | `Purchase/Models/PurchaseRequisition.php` |
+| `EmployeeAdvance` | 🟨 | কেবল খাত আছে — `Accounts/Services/StandardChart.php:403` (`1131`)। ⛔ অগ্রিমের নথি নেই, বেতনে কাটার পথও নেই (`app/Modules/Hr`-এ advance নামে কোনো ফাইল নেই) |
+| `PayrollSettings` | 🟨 | ⓘ `payroll.*` বা `hr.*` নামে কোনো সেটিং-চাবি পাওয়া যায়নি; বেতনের নিয়ম `SalaryHead` আর `SalaryStructure`-এ |
+
+### মাস্টার ডাটা
+
+| DMS-এ | আজ | প্রমাণ |
+|---|---|---|
+| `Manufacturer` | ⛔ | `manufacturer` খুঁজে গোটা `app/`-এ শূন্য |
+| `MdmBank` | ✅ | `Finance/Models/Institution.php` (ব্যাংক, MFS, বীমা — এক তালিকা) |
+| `BusinessPartner` | 🟨 আগের মতোই | `Customer` আর `Supplier` আলাদা; একই পক্ষকে দুই দিকে খুঁজে বের করে `Accounts/Services/DuplicateParties.php` |
+| `PartnerConductNote` | ✅ ক্রেতার জন্য | `Customer/Models/CustomerConduct.php:23`; ⓘ সরবরাহকারীর জন্য নেই |
+| `PriceList` | 🟨 আগের মতোই — **মাস্টার আছে, ব্যবহার নেই** | নামটা কেবল `MasterData`-র ভিতরে (`MasterListController`, `MasterListService`, `module.php`); Sales বা Inventory-র কোনো ফাইল তালিকাটা পড়ে না |
+
+### নিরাপত্তা ও শাসন
+
+| DMS-এ | আজ | প্রমাণ |
+|---|---|---|
+| `CompanyModuleSetting` | ✅ | `app/Models/BranchModule.php` — শাখা পর্যন্ত মডিউলের সুইচ |
+| `SelfApprovalRule` | ✅ | `approval.self_limit` — `Core/Engines/Approval/ApprovalEngine.php:1005`, `:1093` |
+| `UserPermissionOverride` | ✅ | `app/Models/UserPermissionOverride.php` |
+| `UserDataScope` | ✅ | `app/Models/UserDataScope.php`, `Core/Concerns/ScopedToUserBranch.php`, `ScopedToUserWarehouse.php` |
+| `SecurityPolicy` | ⛔ | পাসওয়ার্ডের দৈর্ঘ্য-মেয়াদের নীতি নেই। ⓘ `Core/Support/Csp.php`-এর *security policy* ব্রাউজারের CSP, আলাদা জিনিস |
+| `PasswordHistoryEntry` | ⛔ | `password_histor` খুঁজে শূন্য |
+| `UserSession` | ⛔ | Laravel-এর `sessions` টেবিল আছে (`0001_01_01_000000_create_users_table.php`), কিন্তু *"কোন যন্ত্রে ঢুকে আছি"* পর্দা বা দূর থেকে বের করার পথ নেই (`logoutOtherDevices` খুঁজে শূন্য) |
+| `BusinessCategory` | ⛔ | খুঁজে শূন্য |
+| `CompanyNotice` | ✅ | Notice Center — `app/Models/Notice.php` ও সঙ্গী মডেল |
+
+### অনুমোদন
+
+| DMS-এ | আজ | প্রমাণ |
+|---|---|---|
+| `ApprovalDelegation` | ✅ | `app/Models/ApprovalDelegation.php`, `Core/Engines/Approval/DelegationService.php` |
+| `ApprovalMatrixRule` | ✅ | শর্ত `app/Models/ApprovalCondition.php`, রোল ধরে টাকার সীমা `app/Models/ApprovalLimit.php` (`AuthorityService.php:29`) |
+
+### কোরের ইঞ্জিন
+
+| DMS-এ | আজ | প্রমাণ |
+|---|---|---|
+| `core/duplication` | ✅ · ⛔ ছবির perceptual hash | `Core/Engines/Duplication/DuplicationEngine.php`, `Core/Services/DuplicateGuard.php`; ছবির হ্যাশ খুঁজে শূন্য |
+| `core/notification` | ✅ | `NotificationService` |
+| `core/search` | ✅ | `Core/Engines/Search/SearchEngine.php` |
+| `core/integration` (SMS, WhatsApp) | ⛔ | কোনো গেটওয়ে ক্লাস নেই; SMS শব্দটা কেবল মন্তব্যে (`Sales/Events/InvoiceConfirmed.php:19`)। নকশা: `docs/Plan — Integration Platform ও Auto Approval.md` |
+| ডিজিটাল স্বাক্ষর ও সিল | ⛔ | ছাপায় কেবল সইয়ের ঘরের লেবেল (`Core/Engines/Print/PrintableDocument.php:34`), কোনো যাচাইযোগ্য স্বাক্ষর নয় |
+| `core/sync` | ⚠️ **বদলেছে** | আগে লেখা ছিল *"ইচ্ছাকৃতভাবে নয়"*। এখন ফোনের জন্য `Core/Engines/Sync/*` আছে (`routes/api.php:155`)। ⓘ মজুদ দুই জায়গায় সত্য হয় কি না — পুরনো আপত্তিটা — এই দফায় মাপা হয়নি |
+| `core/theme` | ✅ ইঞ্জিন আছে | `app/Models/LookSkin.php`, `LookSkinVersion.php`, `Core/Services/LookSkinService.php` (প্রকাশ ও আগের সংস্করণে ফেরা) |
+
+### গ্রাহক পোর্টাল ও মোবাইল
+
+| DMS-এ | আজ | প্রমাণ |
+|---|---|---|
+| `PortalAccessAccount` | ✅ গ্রাহকের সারিতে | `portal_password`, `portal_enabled`, `portal_last_login_at` — `database/migrations/2026_09_17_100000_the_dealer_could_never_see_his_own_ledger.php:46-48`; লগইনে মিনিটে পাঁচবারের তালা `Sales/Routes/web.php:309-314`। ⓘ ব্যর্থ চেষ্টায় হিসাব বন্ধ বা পাসওয়ার্ড বদলের বাধ্যবাধকতা নেই |
+| `DepositClaim` | ✅ | `Sales/Models/DepositClaim.php` |
+| `SupportTicket` | ⛔ | খুঁজে শূন্য |
+| `MobileDeviceRegistration` | ✅ | `app/Models/SyncDevice.php` |
+
+---
+
 ## কাজের তালিকা · এখনো সত্যিকারের ফাঁক
 
-ক্রমটা ব্যবসার দাম ধরে, বর্ণমালা ধরে নয়।
+⚠️ ২৬ সেপ্টেম্বর ২০২৬-এ নতুন করে লেখা। আগের তালিকার ১৩টার মধ্যে ৯টা এখন
+আছে (উপরের টেবিল), সেগুলো তালিকা থেকে সরে ✅-এ গেছে; বাকি ৪টা
+(`EmployeeAdvance`, `SecurityPolicy`, `UserSession`, `BusinessCategory`) নিচে থেকে গেল। ক্রমটা ব্যবসার দাম ধরে।
 
 | | ফাঁক | কেন লাগে | আকার |
 |---|---|---|---|
-| ⬜ | **`Scheme` · `CommissionRule`** | **পরিবেশনের ব্যবসা এটার উপরেই চলে** — স্ল্যাব ও টিয়ার ধরে ট্রেড স্কিম, ভূমিকা ধরে কমিশন। ABOS-এ কেবল *দাবি* (`sal_commission_claims`) আছে, **নিয়ম নেই** | বড় |
-| ⬜ | **`PricingRule`** | মান দাম থেকে কতটা সরা যাবে, আর সরলে কী — মানা / সতর্কতা / অনুমোদন | মাঝারি |
-| ⬜ | **`CapitalEntry` · `Withdrawal`** | মালিকের পুঁজি ঢোকা-বেরোনো ও উত্তোলনের সীমা | মাঝারি |
-| ⬜ | **`MdmBank`** | ব্যাংক-মাস্টার। আজ ব্যাংক কেবল একটা `Account` সারি (`is_bank`) — শাখা, হিসাব নম্বর, চেক-বইয়ের ঘর নেই | ছোট |
-| ⬜ | **`Budget` · `BudgetLine`** | খরচের সীমা, আর সীমা ছাড়ালে কী হবে | মাঝারি |
-| ⬜ | **`PurchaseRequisition`** | ক্রয়ের অনুরোধ — অর্ডারের আগের ধাপ | মাঝারি |
-| ⬜ | **`EmployeeAdvance`** | কর্মীর অগ্রিম ও বেতনে কাটা | ছোট |
+| ⬜ | **কর্মী ↔ ডিলার/এলাকার বাঁধন** | মালিকের সিদ্ধান্ত (ক): বিক্রয়কর্মী কেবল নিজের ডিলার দেখবেন। আজ বাঁধনটাই নেই (`SalesTarget.php:34`) | বড় — প্রতিটা তালিকা ও রিপোর্টে ছাঁকনি |
+| ⬜ | **কমিশন বিলের সাথে নিজে থেকে** | নিয়ম আছে, কিন্তু হিসাব কেবল স্কিমের পর্দা থেকে (`SchemeController.php:41`) | মাঝারি |
+| ⬜ | **`PriceList` ব্যবহার** | মাস্টার আছে, কোনো বিল পড়ে না — পর্দায় বসানো দাম কিছুই বদলায় না | মাঝারি |
+| ⬜ | **`EmployeeAdvance`** | খাত আছে, নথি আর বেতনে কাটা নেই | ছোট |
 | ⬜ | **`SecurityPolicy` · `PasswordHistoryEntry`** | পাসওয়ার্ডের নীতি — দৈর্ঘ্য, মেয়াদ, পুরনোটা আবার নয় | ছোট |
 | ⬜ | **`UserSession`** | কে এখন কোথা থেকে ঢুকে আছেন, আর দূর থেকে বের করে দেওয়া | ছোট |
-| ⬜ | **`ApprovalDelegation`** | ছুটিতে থাকলে অনুমোদনের ভার অন্যের কাছে — নাহলে গোটা শৃঙ্খল আটকে থাকে | ছোট |
-| ⬜ | **`BusinessCategory`** | ব্যবসার ধরন ধরে মডিউলের প্রিসেট (`project_business_category_presets`) | ছোট |
-| ⬜ | **`CompanyNotice`** | কোম্পানির নিজের নোটিশ, সবার পর্দায় | ছোট |
-| ⬜ | **`PortalAccessAccount`** | ডিলার পোর্টালের চাবি — পোর্টালটা আছে, চাবি দেওয়ার ব্যবস্থা নেই | ছোট |
+| ⬜ | **`DamageEntry`** | *"এই মাসে কত টাকার মাল নষ্ট হলো"* এক প্রশ্নে | ছোট |
+| ⬜ | **`Manufacturer`** | ব্র্যান্ড আছে, প্রস্তুতকারক নেই | ছোট |
+| ⬜ | **`BusinessCategory`** | ব্যবসার ধরন ধরে মডিউলের প্রিসেট — ⓘ অনেক ব্যবসায়ীর কাছে বিক্রির জন্য কাজে লাগে | ছোট |
+| ⬜ | **SMS / WhatsApp** | নকশা আছে (Integration Platform-এর প্রস্তাব) | মাঝারি |
+| ⬜ | **`SupportTicket`** | ডিলারের অভিযোগ | ছোট |
+
+### সরে যাওয়া সারি, যাতে কেউ আবার না বানান
+
+`Scheme` · `CommissionRule` · `PricingRule` · `CapitalEntry` · `Withdrawal` ·
+`MdmBank` · `Budget` · `PurchaseRequisition` · `ApprovalDelegation` ·
+`CompanyNotice` · `PortalAccessAccount` — প্রমাণ উপরের টেবিলে।
 
 ### যেগুলো এই তালিকায় নেই, ইচ্ছাকৃতভাবে
 
