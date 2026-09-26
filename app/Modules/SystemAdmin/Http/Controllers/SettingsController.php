@@ -199,6 +199,11 @@ class SettingsController extends Controller implements HasMiddleware
                 continue;
             }
 
+            /* ⛔ কেবল সুপার অ্যাডমিনের সুইচ — নিয়মটা [[SettingsService::mayChange()]]-এ */
+            if (! $this->settings->mayChange($key, $request->user())) {
+                continue;
+            }
+
             $this->settings->set($key, $value);
             $changed++;
         }

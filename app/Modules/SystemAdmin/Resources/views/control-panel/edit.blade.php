@@ -7,6 +7,8 @@
 
     কোনো মডিউলের নাম এখানে লেখা নেই — মডিউল যা ঘোষণা করে সেটাই দেখায়।
 --}}
+@inject('settingsGate', 'App\Core\Services\SettingsService')
+
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('system_admin::menu.control_panel') }}</x-slot:title>
 
@@ -147,11 +149,20 @@
 
                                         @if ($setting['type'] === 'boolean')
                                             <label class="flex min-h-(--spacing-touch) items-start gap-2 text-sm">
+                                                {{-- ⛔ কেবল সুপার অ্যাডমিনের সুইচ — ২৬ সেপ্টেম্বর ২০২৬।
+                                                     ⓘ আসল পাহারা সার্ভারে ([[SettingsService::mayChange()]]);
+                                                     এখানে কেবল দেখানো, যাতে কেউ টিপে ভাবেন না বদলেছে। --}}
+                                                @php($locked = ! $settingsGate->mayChange($setting['key'], auth()->user()))
                                                 <input type="checkbox" name="settings[{{ $setting['key'] }}]"
-                                                       value="1" @checked($setting['value'])
+                                                       value="1" @checked($setting['value']) @disabled($locked)
                                                        data-was="{{ $setting['value'] ? '1' : '' }}"
                                                        class="mt-1 size-4">
-                                                <span>{{ __($setting['label']) }}</span>
+                                                <span>
+                                                    {{ __($setting['label']) }}
+                                                    @if ($locked)
+                                                        <span class="block text-xs text-(--color-ink-muted)">{{ __('system_admin::settings.super_admin_only') }}</span>
+                                                    @endif
+                                                </span>
                                             </label>
                                         @elseif (! empty($setting['options']))
                                             {{--

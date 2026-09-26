@@ -338,57 +338,6 @@
                           x-text="customer.due ? money($abs(customer.due)) : '—'"></span>
                 </div>
 
-                {{--
-                    ── ⭐ আর কত বাকিতে দেওয়া যাবে ─────────────────────────
-
-                    মালিকের নির্দেশ, ২৫ সেপ্টেম্বর ২০২৬: *"Available Balance
-                    বিলের মোট box e আগের বকেয়া er niche dilei valo hobe"*।
-
-                    ── ⛔ কেন ঠিক এখানে ───────────────────────────────────
-                    ⓘ উপরে আগের বকেয়া, নিচে মোট বকেয়ার বড়িটা। ⭐ সীমার
-                    সংখ্যাটা ঐ দুইটার **মাঝখানে** বসলে তিনটা একসাথে একটা
-                    বাক্য হয়ে যায়: *"এত বাকি ছিল · এত খোলা আছে · মোট এত
-                    দাঁড়াল"*।
-
-                    ── ⚠️ সংখ্যাটা `creditLeft`, `availableCredit` নয় ──────
-                    ⓘ `availableCredit` `outstanding` ধরে চলে, আর সে উদ্বৃত্ত
-                    জমাকে ঋণাত্মক হতে দেয়। ⛔ তাতে বেশি টাকা গুনলে সীমার
-                    ঘরটা বেড়ে যেত — অর্থাৎ বাড়তি টাকা গুনে পুরনো বাকির
-                    সীমাও পার করানো যেত। ⭐ `creditLeft` সেবার ছাঁকনিটাই
-                    ব্যবহার করে ([[SalesInvoiceService::assertWithinCreditLimit()]])।
-
-                    ── ⓘ তিনটা অবস্থা, তিনটা আলাদা কথা ────────────────────
-                    ক্রেতা বাছা হয়নি → `—` · সীমা শূন্য → "বাকি বন্ধ" ·
-                    সীমা আছে → সংখ্যা। ⚠️ শূন্য দেখালে মানুষ ভাবতেন ধার
-                    শেষ, অথচ কথাটা আলাদা — বাকিতে দেওয়াই বন্ধ।
-
-                    ── ⚠️ রঙটা শর্ত দেখে ───────────────────────────────────
-                    নগদে সীমা খাটেই না, তাই তখন সংখ্যাটা ধূসর — ⛔ উজ্জ্বল
-                    থাকলে বিক্রেতা ভাবতেন ওটা এই বিলে কিছু আটকাচ্ছে।
-                --}}
-                <template x-if="hasCustomer">
-                    <div class="flex items-center justify-between gap-2">
-                        <span class="text-(--color-ink-muted)">
-                            {{ __('sales::field.credit_left') }}
-                        </span>
-
-                        <template x-if="creditIsClosed">
-                            <span class="text-2xs font-semibold text-(--color-ink-muted)">
-                                {{ __('sales::field.credit_closed') }}
-                            </span>
-                        </template>
-
-                        <template x-if="hasCreditLimit">
-                            <span class="num font-semibold"
-                                  :class="! termUsesCredit
-                                    ? 'text-(--color-ink-muted)'
-                                    : (creditLeft > 0
-                                        ? 'text-(--color-success)'
-                                        : 'text-(--color-danger)')"
-                                  x-text="'৳' + money(creditLeft)"></span>
-                        </template>
-                    </div>
-                </template>
             </div>
 
             {{--
@@ -426,6 +375,67 @@
                           x-text="'৳' + money($abs(outstanding))"></span>
                 </div>
             </div>
+
+            {{--
+                ── ⭐ বাকির সীমা — বকেয়ার বড়ির **নিচে** ─────────────────────
+
+                মালিকের নির্দেশ, ২৫ সেপ্টেম্বর ২০২৬: *"বাকি দেওয়া যাবে etar nam
+                poriborton hoye, বকেয়া er niche bosbe"* — নাম "অবশিষ্ট সীমা",
+                আর জায়গা মোট বকেয়ার ঠিক নিচে।
+
+                ── ⓘ তিনটা সারি, দরকার হলে তবেই ────────────────────────────
+                ⓵ **বিল না হওয়া ডিও ও খসড়া** — কেবল শূন্যের বেশি হলে। মালিক
+                  (২৬ সেপ্টেম্বর): মাল বেরোলেই আর খসড়া হলেই সীমা আটকায়।
+                  ⚠️ সারিটা না দেখালে অবশিষ্ট সীমা "লিমিট − বকেয়া"-র সাথে মিলত
+                  না, আর বিক্রেতা ভাবতেন সংখ্যাটা ভুল।
+                ⓶ **অবশিষ্ট সীমা** — কখনো ঋণাত্মক নয়; পার হলে ০।
+                ⓷ **সীমা পার — ৳…** — লাল, কেবল পার হলে। মালিক: *"limit over
+                  hole Available Limit niche likha thakbe limit over eto taka"*।
+
+                ⚠️ সংখ্যাগুলো সেবার হিসাবের আয়না ([[CreditExposure]]): খাতার
+                বকেয়া + আটকে থাকা + এই বিলের বাকি। ⓘ রং শর্ত দেখে — নগদে সীমা
+                কার্টে খাটে না, তাই তখন ধূসর।
+            --}}
+            <template x-if="hasCustomer">
+                <div class="space-y-1 px-3 pb-1 text-2xs">
+                    <template x-if="creditHeld > 0">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-(--color-ink-muted)">{{ __('sales::message.credit_held') }}</span>
+                            <span class="num" x-text="'৳' + money(creditHeld)"></span>
+                        </div>
+                    </template>
+
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="text-(--color-ink-muted)">
+                            {{ __('sales::field.credit_left') }}
+                        </span>
+
+                        <template x-if="creditIsClosed">
+                            <span class="text-2xs font-semibold text-(--color-ink-muted)">
+                                {{ __('sales::field.credit_closed') }}
+                            </span>
+                        </template>
+
+                        <template x-if="hasCreditLimit">
+                            <span class="num font-semibold"
+                                  :class="! termUsesCredit
+                                    ? 'text-(--color-ink-muted)'
+                                    : (creditLeft > 0
+                                        ? 'text-(--color-success)'
+                                        : 'text-(--color-danger)')"
+                                  x-text="'৳' + money(creditLeft > 0 ? creditLeft : 0)"></span>
+                        </template>
+                    </div>
+
+                    <template x-if="hasCreditLimit && creditOver > 0">
+                        <div class="flex items-center justify-between gap-2 rounded-(--radius-field)
+                                    bg-(--color-danger) px-2 py-0.5 font-bold text-white">
+                            <span>{{ __('sales::message.credit_over') }}</span>
+                            <span class="num" x-text="'৳' + money(creditOver)"></span>
+                        </div>
+                    </template>
+                </div>
+            </template>
 
             {{--
                 ── পরিমাণের দল — আলাদা রঙে ────────────────────────────────

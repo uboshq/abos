@@ -44,4 +44,5 @@ return [
     'notice_remind_again' => 'Second reminder (hours)',
     'notice_escalate_after' => 'Escalate after (hours)',
     'notice_creator_cannot_approve' => 'The writer of a critical notice cannot approve it',
+    'super_admin_only' => 'Only a super admin can change this',
 ];

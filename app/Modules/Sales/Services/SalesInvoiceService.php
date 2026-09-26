@@ -11,13 +11,11 @@ use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
-use App\Core\Support\Money;
 use App\Models\Approval;
 use App\Models\FinancialYear;
 use App\Models\IssuedNumber;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
-use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\CostLayerService;
@@ -30,7 +28,6 @@ use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Models\SalesInvoiceLine;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -65,6 +62,7 @@ final class SalesInvoiceService
         private readonly CostLayerService $costs,
         private readonly SettingsService $settings,
         private readonly ApprovalEngine $approvals,
+        private readonly CreditExposure $credit,
     ) {}
 
     /**
@@ -101,14 +99,6 @@ final class SalesInvoiceService
      */
     private function assertWithinCreditLimit(SalesInvoice $invoice, string $payingNow = '0'): void
     {
-        if (! $this->settings->enabled('customer.credit_limit_enabled')) {
-            return;
-        }
-
-        if (! $this->settings->enabled('customer.block_over_limit')) {
-            return;
-        }
-
         $customer = $invoice->customer;
 
         if ($customer === null) {
@@ -116,46 +106,29 @@ final class SalesInvoiceService
         }
 
         /*
-         * ⚠️ ঋণাত্মক হতে দেওয়া যাবে না।
+         * ⛔ দেয়ালটা এখন [[CreditExposure]]-এ — ২৬ সেপ্টেম্বর ২০২৬।
          *
-         * ⓘ কাউন্টারে বিলের চেয়ে বেশি টাকা গোনা স্বাভাবিক — বাকিটা ফেরত
-         * যায়, বা গ্রাহকের খাতায় অগ্রিম হয়ে বসে। ⛔ ছাঁকনি ছাড়া ওই
-         * উদ্বৃত্তটা **বকেয়া থেকে বিয়োগ হয়ে যেত**, আর তখন সীমা ছাড়ানো
-         * একজন গ্রাহক বাড়তি টাকা গুনে পুরনো বাকির সীমাও পার করাতে
-         * পারতেন — এই বিলে নয়, **আগের বকেয়ায়**।
+         * ── ⓘ তিনটা জিনিস বদলাল, তিনটাই মালিকের নির্দেশে ──────────────
+         *   ⓵ ব্যবহৃত সীমা = খাতার বকেয়া **+ বিল না হওয়া চালান + খসড়া
+         *     বিল**। ⛔ আগে কেবল খাতা দেখা হত, তাই তিনটা ডিও আলাদা করে
+         *     সীমার ভিতরে দেখাত অথচ মাল বেরোত তিনগুণ।
+         *   ⓶ কোনো চাবিতে পার হয় না — `overrideCreditLimit` তোলা হয়েছে।
+         *     *"emon ki malikero"*, আর ২৬ সেপ্টেম্বর মালিক **ক** বাছলেন:
+         *     সুপার অ্যাডমিনেরও কোনো দরজা নেই।
+         *   ⓷ দুইটা সুইচের জায়গায় একটা: `customer.credit_limit_enabled`।
+         *     `block_over_limit` মানে ছিল "পার হতে দাও", আর সেটাই নিয়ম
+         *     ভাঙার দ্বিতীয় দরজা ছিল।
+         *
+         * ⓘ এই বিল নিজেকে গোনে না (`exceptInvoiceId`) — খসড়া অবস্থায় সে
+         * নিজেই সীমা আটকে রেখেছিল, নিশ্চিত করার সময় সেই টাকাটাই এখানে
+         * `total` হয়ে আসে।
          */
-        $unpaid = bcsub((string) $invoice->total, $this->money($payingNow), 4);
-
-        if (bccomp($unpaid, '0', 4) <= 0) {
-            return;
-        }
-
-        if (! $customer->wouldExceedCreditLimit($unpaid)) {
-            return;
-        }
-
-        /*
-         * নিয়মটা এখানে লেখা নেই — [[CustomerPolicy::overrideCreditLimit()]]-এ।
-         *
-         * ── কেন সরানো হলো ───────────────────────────────────────────
-         * একই সিদ্ধান্ত তিন জায়গায় লেখা ছিল: এখানে, ক্রয়াদেশের সেবায়,
-         * আর নীতিতে। নীতিরটা **কেউ ডাকত না**, আর তিনটার মধ্যে একটা
-         * ইতিমধ্যেই ভুল চাবি ধরেছিল — ক্রয়াদেশে `sales.discount.override`
-         * দেখা হত, ফলে ছাড় অনুমোদনকারী ধারের সীমাও পার করাতে পারতেন।
-         *
-         * ওটা তিন জায়গায় লেখার স্বাভাবিক পরিণতি। একটা ঘর থাকলে
-         * ভুলটা এক জায়গায় থাকত, আর ধরাও পড়ত এক জায়গায়।
-         */
-        if (Gate::allows('overrideCreditLimit', Customer::class)) {
-            return;
-        }
-
-        throw ValidationException::withMessages([
-            'customer_id' => __('sales::validation.over_credit_limit', [
-                'customer' => $customer->name(),
-                'limit' => Money::format($customer->credit_limit),
-            ]),
-        ]);
+        $this->credit->assertRoom(
+            customer: $customer,
+            adding: (string) $invoice->total,
+            payingNow: $this->money($payingNow),
+            exceptInvoiceId: (int) $invoice->id,
+        );
     }
 
     /**

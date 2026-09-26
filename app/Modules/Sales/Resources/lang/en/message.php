@@ -266,4 +266,11 @@ return [
     /* An invoice is a result, not a starting point - 21 September 2026. */
     'invoice_needs_a_paper' => 'An invoice is not made from nothing - start from an order or a direct sale.',
     'no_receipts_yet' => 'No receipt has been written against this invoice yet.',
+
+    /* ⛔ বাকির সীমার পপ-আপ — মালিকের ভাষা, ২৫–২৬ সেপ্টেম্বর ২০২৬ */
+    'credit_wall_title' => 'Over the limit — this bill cannot go',
+    'credit_wall_body' => 'This customer has ৳:left of credit left, and this bill is ৳:short over it. Take a deposit at the counter, or reduce the bill. No one may cross the credit limit — not even the owner.',
+    'credit_wall_ok' => 'Understood',
+    'credit_held' => 'Unbilled DOs and drafts',
+    'credit_over' => 'Over the limit',
 ];

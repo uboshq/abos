@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Core\Contracts\CreditHolds;
 use App\Core\Engines\Print\PaperSize;
 use App\Modules\Sales\Auth\CustomerProvider;
 use App\Modules\Sales\Dashboard\SalesActivity;
@@ -10,6 +11,7 @@ use App\Modules\Sales\Dashboard\SalesWidgets;
 use App\Modules\Sales\Events\InvoiceConfirmed;
 use App\Modules\Sales\Integrity\SalesChecks;
 use App\Modules\Sales\Metrics\SalesMetrics;
+use App\Modules\Sales\Services\CreditExposure;
 use App\Modules\Sales\Services\SalesDefaults;
 use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\CommissionClaim;
@@ -80,6 +82,17 @@ return [
      * Purchase-এ, তাই এদিকটা পরিষ্কার।
      */
     'depends_on' => ['master_data', 'accounts', 'inventory', 'customer', 'supplier'],
+
+    /*
+     * ⭐ বাকির সীমার আটকে থাকা টাকা — গ্রাহকের পাতার জন্য, ২৬ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ গ্রাহকের পাতা বিক্রয়কে চেনে না, অথচ তার "অবশিষ্ট সীমা" কাউন্টারের
+     * সংখ্যার সাথে হুবহু মিলতে হয়। ⚠️ না বাঁধলে সে কোরের শূন্য পেত, আর
+     * দুই পর্দায় দুই সংখ্যা দেখাত — কোথাও কিছু লাল হত না।
+     */
+    'bindings' => [
+        CreditHolds::class => CreditExposure::class,
+    ],
 
     'menu' => [
         'dashboard' => [

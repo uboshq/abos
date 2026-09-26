@@ -86,7 +86,7 @@
                     </span>
                 </p>
 
-                @if ($customer->wouldExceedCreditLimit('0'))
+                @if ($customer->wouldExceedCreditLimit($customer->heldCredit()))
                     {{-- সীমা ইতিমধ্যেই ছাড়িয়ে গেছে — এটা বিক্রির পর্দায় জানার
                          চেয়ে এখানে জানা ভালো। --}}
                     <p class="mt-2 rounded-(--radius-field) bg-(--color-badge-danger-bg) px-2 py-1

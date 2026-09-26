@@ -82,6 +82,8 @@ return [
 
     'not_enough_available' => 'Only :available of :product can be sold. Switch this check off in the Control Panel to take the order anyway.',
     'over_credit_limit' => 'The credit limit for :customer is :limit and this order goes past it.',
+    'no_cheque_at_counter' => 'Cheques are not taken at the counter. Only Accounts receives cheques — take cash, bank or mobile banking here.',
+    'over_credit_limit_hard' => ':customer has :left of credit left, and this paper is :short over it. Take a deposit at the counter, or reduce the bill. No one may cross the credit limit — not even the owner.',
     'unknown_challan_line' => 'That challan line is not in this company list.',
     'challan_other_customer' => 'That challan belongs to another customer.',
     'challan_not_confirmed' => ':no is not confirmed yet.',

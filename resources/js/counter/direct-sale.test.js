@@ -65,6 +65,7 @@ const counter = (over = {}) => withMagics(directSale({
     texts: {
         notForSales: 'বিক্রয়ের জন্য নয়',
         creditBeyondLimit: 'আর ৳:left বাকি দেওয়া যাবে',
+        creditWall: 'অবশিষ্ট সীমা ৳:left, এই বিল ৳:short বেশি। টাকা জমা দিন, নয়তো বিল কমান।',
     },
     ...over,
 }))
@@ -339,7 +340,7 @@ describe('বাকির সীমা — কার্টেই আটকায
     const onCredit = (over = {}) => {
         const c = counter({
             customers: { 7: { limit: 10000, due: 8000, days: 30, name: 'রহিম' } },
-            creditRules: { enabled: true, blocks: true, zeroBlocks: false, canOverride: false },
+            creditRules: { enabled: true, zeroBlocks: false },
             ...over,
         })
 
@@ -426,30 +427,28 @@ describe('বাকির সীমা — কার্টেই আটকায
     /* ⛔ পাল্টা-দাবি: সুইচ বন্ধ থাকলে পর্দাও আটকায় না — সেবা যেমন আটকায় না। */
     it('সীমার সুইচ বন্ধ থাকলে আটকায় না', async () => {
         const c = onCredit({
-            creditRules: { enabled: false, blocks: true, zeroBlocks: false, canOverride: false },
+            creditRules: { enabled: false, zeroBlocks: false },
         })
         entry(c, 50000)
 
         expect(await c.addToCart()).toBe(true)
     })
 
-    it('আটকানোর সুইচ বন্ধ থাকলে আটকায় না', async () => {
+    /*
+     * ⛔ পুরনো দুই দরজা বন্ধ — মালিকের নির্দেশ, ২৬ সেপ্টেম্বর ২০২৬।
+     *
+     * ⚠️ বিপজ্জনক ইনপুট: পুরনো পাতা বা পুরনো খসড়া থেকে `blocks: false`
+     * আর `canOverride: true` এলেও পর্দা আটকাবেই — সীমা কারও চাবিতে পার
+     * হয় না, আর "পার হতে দাও" সুইচও আর নেই।
+     */
+    it('পুরনো "পার হতে দাও" বা চাবির ঘর এলেও আটকায়', async () => {
         const c = onCredit({
-            creditRules: { enabled: true, blocks: false, zeroBlocks: false, canOverride: false },
+            creditRules: { enabled: true, blocks: false, zeroBlocks: false, canOverride: true },
         })
         entry(c, 50000)
 
-        expect(await c.addToCart()).toBe(true)
-    })
-
-    /* ⛔ যাঁর চাবি আছে তাঁকে পর্দাও আটকায় না — [[CustomerPolicy]] যেমন। */
-    it('চাবি থাকলে আটকায় না', async () => {
-        const c = onCredit({
-            creditRules: { enabled: true, blocks: true, zeroBlocks: false, canOverride: true },
-        })
-        entry(c, 50000)
-
-        expect(await c.addToCart()).toBe(true)
+        expect(await c.addToCart()).toBe(false)
+        expect(c.creditWarning).not.toBe('')
     })
 
     /*
@@ -464,7 +463,7 @@ describe('বাকির সীমা — কার্টেই আটকায
 
         const shut = onCredit({
             customers: { 7: { limit: 0, due: 0, days: 30, name: 'নতুন' } },
-            creditRules: { enabled: true, blocks: true, zeroBlocks: true, canOverride: false },
+            creditRules: { enabled: true, zeroBlocks: true },
         })
         entry(shut, 500)
         expect(await shut.addToCart()).toBe(false)
@@ -489,6 +488,174 @@ describe('বাকির সীমা — কার্টেই আটকায
         entry(c, 50000)
 
         expect(await c.addToCart()).toBe(true)
+    })
+})
+
+/*
+ * ⛔ সীমার কড়া দেয়াল — আটকে থাকা টাকা, আর নিশ্চিত করার মুহূর্তের পপ-আপ।
+ *
+ * ── ⭐ মালিকের নির্দেশ, ২৫–২৬ সেপ্টেম্বর ২০২৬ ────────────────────────
+ * *"limit mane limit 100%"* · বিল না হওয়া ডিও আর খসড়া বিলও সীমা আটকায় ·
+ * পার হলে বড় পপ-আপ আর ধ্বনি, আর একটাই বোতাম।
+ *
+ * ⚠️ পর্দার সংখ্যা সেবার আয়না ([[CreditExposure::assertRoom()]]) — পর্দা
+ * বেশি দেখালে বিক্রেতা পুরো কার্ট তুলতেন আর সেবা শেষে আটকাত।
+ */
+describe('সীমার কড়া দেয়াল — আটকে থাকা টাকা ও পপ-আপ', () => {
+    /** সীমা ১০,০০০ · বকেয়া ৫,০০০ · আটকে আছে ৪,০০০ → খোলা ১,০০০ */
+    const held = (over = {}) => {
+        const c = counter({
+            customers: { 7: { limit: 10000, due: 5000, held: 4000, days: 30, name: 'রহিম' } },
+            creditRules: { enabled: true, zeroBlocks: false },
+            ...over,
+        })
+
+        c.customerId = '7'
+        c.creditTerm = 'credit:30'
+
+        return c
+    }
+
+    const line = (c, rate) => {
+        c.picked = product()
+        c.entry.qty = '1'
+        c.entry.rate = String(rate)
+    }
+
+    /** কার্টে একটা তৈরি সারি — দর যা বলা হয়। */
+    const cartOf = (c, rate) => {
+        c.lines = [{ key: 1, id: 1, qty: '1', rate: String(rate), freeQty: '', discountPercent: '', vatRate: 0, gifts: [] }]
+    }
+
+    /** ফর্ম পাঠানোর ঘটনা — `preventDefault` ডাকা হলো কি না ধরে রাখে। */
+    const submitEvent = () => {
+        const e = { stopped: false }
+        e.preventDefault = () => { e.stopped = true }
+
+        return e
+    }
+
+    /*
+     * ⛔ আসল দাবি: ডিও আর খসড়ার ৪,০০০ বাদ দিলে খোলা থাকে মাত্র ১,০০০।
+     * ⚠️ `held` না গুনলে পর্দা ৫,০০০ দেখাত, আর ১,৫০০-র সারিটা যেত।
+     */
+    it('বিল না হওয়া ডিও ও খসড়া সীমা আটকায়', async () => {
+        const c = held()
+        line(c, 1500)
+
+        expect(await c.addToCart()).toBe(false)
+        expect(c.creditWarning).toContain('1,000')
+    })
+
+    /* ⭐ পাল্টা-দাবি: খোলা অংশের ভিতরে থাকলে সারিটা যায় */
+    it('আটকে থাকা বাদ দিয়ে যা খোলা, তার ভিতরে সারি যায়', async () => {
+        const c = held()
+        line(c, 900)
+
+        expect(await c.addToCart()).toBe(true)
+    })
+
+    /* ⓘ "সীমা পার — ৳…" সারির সংখ্যা: বাকি ১,৫০০ − খোলা ১,০০০ = ৫০০ */
+    it('সীমা কত পার হচ্ছে তা বলে', () => {
+        const c = held()
+        cartOf(c, 1500)
+
+        expect(c.creditOver).toBe(500)
+    })
+
+    /*
+     * ⛔ নিশ্চিত করলে ফর্ম যায় না, পপ-আপ আসে, ধ্বনি বাজে — আর খসড়ার
+     * আগাম সংরক্ষণও মোছে না (কার্টটা হারায় না)।
+     */
+    it('সীমা পার হলে ফর্ম থামে, পপ-আপ ও ধ্বনি', () => {
+        const c = held()
+        cartOf(c, 1500)
+
+        let rang = 0
+        c.soundTheAlarm = () => { rang++ }
+        let parked = 0
+        c.parkDraft = () => { parked++ }
+
+        const e = submitEvent()
+        c.guardSubmit(e)
+
+        expect(e.stopped).toBe(true)
+        expect(c.creditBlocked).toBe(true)
+        expect(rang).toBe(1)
+        expect(parked).toBe(0)
+    })
+
+    /* ⭐ পাল্টা-দাবি: সীমার ভিতরে ফর্ম স্বাভাবিকভাবে যায় */
+    it('সীমার ভিতরে ফর্ম যায়', () => {
+        const c = held()
+        cartOf(c, 900)
+
+        let parked = 0
+        c.parkDraft = () => { parked++ }
+
+        const e = submitEvent()
+        c.guardSubmit(e)
+
+        expect(e.stopped).toBe(false)
+        expect(c.creditBlocked).toBe(false)
+        expect(parked).toBe(1)
+    })
+
+    /*
+     * ⚠️ বিপজ্জনক ইনপুট: শর্ত "নগদ", অথচ জমা নেই। ⛔ সেবা শর্ত দেখে না —
+     * দেখে `বাকি = মোট − জমা`। পর্দা শর্ত দেখে ছেড়ে দিলে পপ-আপটা আসত না,
+     * আর কার্টটা সার্ভারে গিয়ে হারাত।
+     */
+    it('"নগদ" বেছে জমা না দিলেও নিশ্চিত করার মুহূর্তে থামে', () => {
+        const c = held()
+        c.creditTerm = 'cash'
+        cartOf(c, 1500)
+        c.soundTheAlarm = () => {}
+
+        const e = submitEvent()
+        c.guardSubmit(e)
+
+        expect(e.stopped).toBe(true)
+    })
+
+    /* ⭐ পুরো টাকা গুনলে থামে না — সেবার `unpaid <= 0` */
+    it('পুরো টাকা জমা দিলে ফর্ম যায়', () => {
+        const c = held()
+        cartOf(c, 1500)
+        c.deposits = [{ amount: '1500' }]
+        c.parkDraft = () => {}
+
+        const e = submitEvent()
+        c.guardSubmit(e)
+
+        expect(e.stopped).toBe(false)
+    })
+
+    /* ⓘ পপ-আপের লেখা — খোলা ১,০০০, বেশি ৫০০ */
+    it('পপ-আপ বলে কত খোলা আর কত বেশি', () => {
+        const c = held()
+        cartOf(c, 1500)
+
+        expect(c.creditBlockText).toContain('1,000')
+        expect(c.creditBlockText).toContain('500')
+        expect(c.creditBlockText).not.toContain(':left')
+        expect(c.creditBlockText).not.toContain(':short')
+    })
+
+    /* ⓘ "বুঝেছি" পপ-আপ বন্ধ করে — আর কিছু নয় */
+    it('বুঝেছি চাপলে পপ-আপ বন্ধ', () => {
+        const c = held()
+        c.creditBlocked = true
+        c.closeCreditBlock()
+
+        expect(c.creditBlocked).toBe(false)
+    })
+
+    /* ⚠️ শব্দযন্ত্র না থাকলে ধ্বনিটা চুপচাপ ফেরে — পপ-আপ ভাঙে না */
+    it('শব্দযন্ত্র না থাকলেও ধ্বনির ডাক ভাঙে না', () => {
+        const c = held()
+
+        expect(() => c.soundTheAlarm()).not.toThrow()
     })
 })
 

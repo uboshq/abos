@@ -85,29 +85,96 @@ class DirectSaleChequeTest extends TestCase
     }
 
     /**
-     * ১০ × ১০০ = ১০০০ টাকার একটা বিক্রি, পুরোটা একটা চেকে।
+     * ১০ × ১০০ = ১০০০ টাকার একটা বিক্রি, পুরোটা একটা চেকে — **২৬ সেপ্টেম্বরের আগের** আকারে।
      *
-     * @return array{challan: mixed, invoice: mixed, change: string}
+     * ── ⛔ কাউন্টারে চেক এখন বন্ধ — মালিকের নির্দেশ, ২৬ সেপ্টেম্বর ২০২৬ ──
+     * *"counter e cheek newar option thakbe na, cheek sudu accounts e"*।
+     * ⓘ তাই `complete()` চেক নেয় না ([[DirectSaleService::assertNoChequeAtTheCounter()]])।
+     *
+     * ── ⚠️ তবু এই পথগুলো মাপা হয় ─────────────────────────────────────────
+     * ঐ দিনের আগে কাউন্টারে নেওয়া চেক খাতায় আছে, আর ধরে রাখা বিক্রয়ে
+     * সইয়ের অপেক্ষায় থাকা চেক-ভাউচারও। ⛔ ওগুলোর ফেরত আর পাশ আজও ঠিক
+     * চলতে হবে। ⓘ তাই অবস্থাটা সেবার **নিজের** দুই ধাপ দিয়েই বানানো হয় —
+     * বিল বাকিতে, তারপর সেই বিলের বিপরীতে কাউন্টারের চেক-ভাউচার — নকল
+     * যুক্তি নয়, যাতে দাবিগুলো আসল দাখিলাই মাপে।
+     *
+     * @return array{challan: mixed, invoice: mixed}
      */
     private function sellByCheque(string $chequeNo = 'CHQ-77', string $bank = 'City Bank'): array
     {
-        return $this->sales()->complete(
+        $result = $this->sales()->complete(
             [
                 'customer_id' => $this->customer->id,
                 'warehouse_id' => $this->warehouse->id,
-                'deposits' => [[
-                    'payment_method_id' => $this->chqMethod()->id,
-                    'amount' => '1000',
-                    'reference' => $chequeNo,
-                    'ref_date' => '2026-09-20',
-                    'bank_name' => $bank,
-                ]],
             ],
             [['product_id' => $this->product->id, 'qty' => '10', 'rate' => '100', 'free_qty' => '0']],
         );
+
+        $row = [
+            'amount' => '1000.0000',
+            'account_id' => null,
+            'kind' => 'cheque',
+            'instrument' => $this->chqMethod()->code,
+            'reference' => $chequeNo,
+            'ref_date' => '2026-09-20',
+            'bank_name' => $bank,
+            'narration' => null,
+            'moved_at' => null,
+            'carried_by' => null,
+            'note_counts' => null,
+        ];
+
+        $invoice = $result['invoice'];
+        $challan = $result['challan'];
+        $customer = $this->customer;
+
+        (function () use ($row, $customer, $invoice, $challan) {
+            $this->postCounterVoucher(
+                $this->counterVoucher($row, $customer, $invoice, $challan, now()->toDateString()),
+            );
+        })->call($this->sales());
+
+        return $result;
     }
 
-    /** ★ চেকে বিক্রি — টাকা ১১০৪-এ, বিল শোধ, আর রেজিস্টারে সারি। */
+    /**
+     * ⛔ কাউন্টারে চেক আর নেওয়া হয় না — ১১০৪-এ কিছু বসে না, রেজিস্টারেও না।
+     *
+     * ⓘ আগে এই দাবি বলত চেকে বিক্রি সফল হয়। মালিকের নির্দেশে নিয়মটাই
+     * বদলেছে, তাই দাবিও উল্টেছে — ঢিলা নয়, কড়া।
+     */
+    public function test_the_counter_no_longer_takes_a_cheque(): void
+    {
+        $this->assertSame('cheque', $this->chqMethod()->kind);
+
+        try {
+            $this->sales()->complete(
+                [
+                    'customer_id' => $this->customer->id,
+                    'warehouse_id' => $this->warehouse->id,
+                    'deposits' => [[
+                        'payment_method_id' => $this->chqMethod()->id,
+                        'amount' => '1000',
+                        'reference' => 'CHQ-99',
+                        'ref_date' => '2026-09-20',
+                        'bank_name' => 'City Bank',
+                    ]],
+                ],
+                [['product_id' => $this->product->id, 'qty' => '10', 'rate' => '100', 'free_qty' => '0']],
+            );
+
+            $this->fail('⛔ কাউন্টার চেক নিয়ে ফেলল।');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('deposits', $e->errors());
+        }
+
+        $this->assertSame(0, bccomp($this->balanceOf(StandardChart::CHEQUES_IN_HAND), '0', 4),
+            '⛔ চেক ফিরিয়ে দেওয়ার পরেও ১১০৪-এ টাকা বসেছে।');
+        $this->assertFalse(Cheque::query()->where('cheque_no', 'CHQ-99')->exists(),
+            '⛔ ফেরানো চেক রেজিস্টারে উঠেছে।');
+    }
+
+    /** ★ আগে নেওয়া কাউন্টারের চেক — টাকা ১১০৪-এ, বিল শোধ, আর রেজিস্টারে সারি। */
     public function test_a_cheque_sale_lands_in_cheques_in_hand_and_registers(): void
     {
         // ধরনটা ঠিক আছে তো — নইলে পুরো পথটাই ভুল দিকে যেত

@@ -64,6 +64,7 @@ final class DirectSaleService
         private readonly VoucherService $vouchers,
         private readonly VoucherApproval $voucherApproval,
         private readonly CashTillService $tills,
+        private readonly CreditExposure $credit,
     ) {}
 
     /**
@@ -85,6 +86,7 @@ final class DirectSaleService
 
         $this->assertFreeStaysWithinTheRatio($lines, $warehouse);
         $this->assertEveryTrackedLineNamesItsLot($lines);
+        $this->assertNoChequeAtTheCounter($data);
 
         /*
          * ⭐ কাউন্টারের ডিপোজিটে সই লাগলে — সবকিছু খসড়া, ১৯ সেপ্টেম্বর ২০২৬।
@@ -146,7 +148,16 @@ final class DirectSaleService
             $this->stampExtras($challan, $data, $lines);
             $this->writeGifts($challan, $gifts, $warehouse);
 
-            $challan = $this->challans->confirm($challan->fresh(['lines']));
+            /*
+             * ⛔ বাকির সীমা চালানেই — আর গোনা টাকাসহ, ২৬ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ চালান এখানে বিলের **আগে** নিশ্চিত হয়। ⚠️ টাকাটা না পাঠালে
+             * দেয়াল পুরো চালানকে বাকি ধরত, আর নগদে পুরো দাম দেওয়া গ্রাহকও
+             * আটকে যেতেন — ঠিক ৭ সেপ্টেম্বরের ভুলটা, এবার চালানের দরজায়।
+             */
+            $deposit = $this->depositTotal($data);
+
+            $challan = $this->challans->confirm($challan->fresh(['lines']), $deposit);
 
             // ফ্রি ও উপহার — চালান নিশ্চিত হওয়ার পর, ফ্রি ভাণ্ডার থেকে
             $this->moveFreeStock($challan->fresh(['lines.product', 'giftLines.product']), $warehouse);
@@ -163,8 +174,6 @@ final class DirectSaleService
                 ],
                 $this->invoiceLines($challan),
             );
-
-            $deposit = $this->depositTotal($data);
 
             /*
              * ⚠️ গোনা টাকাটা **নিশ্চিত করার আগে** জানা দরকার, পরে নয়।
@@ -306,6 +315,22 @@ final class DirectSaleService
                 (int) $challan->id,
             );
 
+            /*
+             * ⛔ খসড়াও সীমার ভিতরে — ২৬ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ মালিক: *"bill khosora hole product zemon atkay temon customer
+             * er balanceo atkabe"*। ⚠️ তাই সীমার বেশি খসড়া রাখতে দিলে সীমার
+             * বেশি টাকা আটকে থাকত — সীমার বাইরে কোনো কাগজই তৈরি হয় না,
+             * খসড়াও না। ⓘ লেনদেনের ভিতরে, তাই বাধা পেলে চালান আর বিল
+             * দুইটাই ফিরে যায়।
+             */
+            $this->credit->assertRoom(
+                customer: $customer,
+                adding: (string) $invoice->total,
+                payingNow: $this->depositTotal($data),
+                exceptInvoiceId: (int) $invoice->id,
+            );
+
             $awaiting = [];
 
             foreach ($this->depositRows($data) as $row) {
@@ -375,15 +400,16 @@ final class DirectSaleService
         $challan = DeliveryChallan::query()->with(['lines', 'warehouse'])->findOrFail($challanId);
 
         return DB::transaction(function () use ($invoice, $vouchers, $challan) {
-            $challan = $this->challans->confirm($challan);
-
-            $this->moveFreeStock($challan->fresh(['lines.product', 'giftLines.product']), $challan->warehouse);
-
             $deposit = array_reduce(
                 $vouchers,
                 fn (string $sum, Voucher $v) => bcadd($sum, (string) $v->amount, 4),
                 '0',
             );
+
+            // ⓘ গোনা টাকাসহ — নইলে নগদে দেওয়া বিক্রয়ও চালানের সীমায় আটকাত
+            $challan = $this->challans->confirm($challan, $deposit);
+
+            $this->moveFreeStock($challan->fresh(['lines.product', 'giftLines.product']), $challan->warehouse);
 
             $invoice = $this->invoices->confirm($invoice->fresh(['lines']), $deposit);
 
@@ -1112,6 +1138,41 @@ final class DirectSaleService
         }
 
         return $kept === [] ? null : $kept;
+    }
+
+    /**
+     * ⛔ কাউন্টারে চেক নেওয়া যায় না — মালিকের নির্দেশ, ২৬ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ তাঁর কথা: *"counter e cheek newar option thakbe na, cheek sudu
+     * accounts e nite parbe, taw accounts e joma hole ledger e bosbe, tar
+     * age noy"*।
+     *
+     * ⚠️ কারণটা বাকির সীমা: কাউন্টারে চেককে টাকা ধরলে বিল সীমার ভিতরে
+     * দেখাত, মাল বেরিয়ে যেত — আর চেক ফেরত এলে ঠিক সেই আটকে যাওয়া
+     * টাকাটাই জন্মাত যা ৩.৮২% মার্জিনে কয়েক বছরের লাভ মুছে দেয়।
+     *
+     * ⓘ পর্দা চেকের উপায় দেখায়ই না; এটা দ্বিতীয় দরজা — হাতে বানানো
+     * অনুরোধ বা পুরনো ট্যাবের জন্য। দুই পথই দেখা হয়: `deposits[]` সারি,
+     * আর পুরনো একক-জমার `deposit_method` কোড।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function assertNoChequeAtTheCounter(array $data): void
+    {
+        $cheque = collect($this->depositRows($data))
+            ->contains(fn (array $row) => ($row['kind'] ?? null) === 'cheque');
+
+        $legacy = trim((string) ($data['deposit_method'] ?? ''));
+
+        if (! $cheque && $legacy !== '') {
+            $cheque = PaymentMethod::query()->where('code', $legacy)->value('kind') === 'cheque';
+        }
+
+        if ($cheque) {
+            throw ValidationException::withMessages([
+                'deposits' => __('sales::validation.no_cheque_at_counter'),
+            ]);
+        }
     }
 
     private function depositRows(array $data): array

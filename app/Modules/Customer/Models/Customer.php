@@ -9,6 +9,7 @@ use App\Core\Concerns\HasActiveState;
 use App\Core\Concerns\HasDocumentStatus;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Core\Contracts\CreditHolds;
 use App\Core\Contracts\Drillable;
 use App\Core\Services\SettingsService;
 use App\Models\Branch;
@@ -343,9 +344,26 @@ class Customer extends Model implements AuthenticatableContract, Drillable
             return null;
         }
 
-        $left = bcsub($limit, $this->outstanding(), 4);
+        /*
+         * ⭐ আটকে থাকা টাকাও বাদ — ২৬ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ বিল না হওয়া ডিও আর খসড়া বিল সীমা আটকায় (মালিকের নির্দেশ)।
+         * ⚠️ কেবল খাতা দেখলে এই পাতা কাউন্টারের চেয়ে বেশি দেখাত, আর
+         * একই গ্রাহকের দুই পর্দায় দুই সংখ্যা থাকত।
+         */
+        $left = bcsub(bcsub($limit, $this->outstanding(), 4), $this->heldCredit(), 4);
 
         return bccomp($left, '0', 4) > 0 ? $left : '0.0000';
+    }
+
+    /**
+     * খাতার বাইরে আটকে থাকা বাকি — বিল না হওয়া ডিও আর খসড়া বিল।
+     *
+     * ⓘ হিসাবটা বিক্রয়ের ([[CreditHolds]]); এই মডেল কেবল জিজ্ঞেস করে।
+     */
+    public function heldCredit(): string
+    {
+        return app(CreditHolds::class)->heldFor((int) $this->id);
     }
 
     /*

@@ -50,7 +50,11 @@ export default function directSale({
      * ধরবে। ⓘ উল্টোটা হলে (ডিফল্টে আটকানো) পর্দা এমন বিক্রি বন্ধ
      * করত যা সেবা দিব্যি মেনে নিত, আর কারণটা কেউ খুঁজে পেত না।
      */
-    const credit = creditRules ?? { enabled: false, blocks: false, zeroBlocks: false, canOverride: false };
+    /*
+     * ⛔ ২৬ সেপ্টেম্বর ২০২৬: `blocks` আর `canOverride` উঠে গেছে — সীমা চালু
+     * থাকলে সে আটকায়ই, আর কারও চাবি তাকে পার করায় না ([[CreditExposure]])।
+     */
+    const credit = creditRules ?? { enabled: false, zeroBlocks: false };
     return {
         catalogue,
 
@@ -75,6 +79,15 @@ export default function directSale({
         /* ⓘ বাকির সীমা ছাড়ানোর বার্তা — `freeWarning`-এর পাশেই বসে,
              আর একই জায়গায় দেখানো হয়। */
         creditWarning: '',
+
+        /*
+         * ⛔ সীমা পার করা বিল নিশ্চিত করতে চাইলে — বড় পপ-আপ, মালিকের নির্দেশ।
+         *
+         * ⓘ *"limit over confarm korte caile boro kore pop up notice & sound
+         * dite hobe ze eta kono vabei somvob na"*। ⚠️ কেবল একটা বোতাম —
+         * "বুঝেছি"। কোনো "তবুও চালাও" নেই, কারণ কারও জন্য সেই পথ নেই।
+         */
+        creditBlocked: false,
 
         /* ⓘ লট বাছা হয়নি, বা ঐ লট কার্টে আগে থেকেই আছে। */
         lotWarning: '',
@@ -1978,12 +1991,38 @@ export default function directSale({
 
         /* এই বিলে সীমাটা সত্যিই পাহারা দেবে কি না — পাঁচটা শর্তই লাগে। */
         get creditIsWatched() {
+            return this.creditApplies && this.termUsesCredit;
+        },
+
+        /*
+         * ⛔ সীমা এই ক্রেতায় খাটে কি না — শর্তের ধরন যা-ই হোক।
+         *
+         * ⓘ সেবা শর্ত দেখে না, দেখে কেবল `unpaid = total − জমা`
+         * ([[CreditExposure::assertRoom()]])। ⚠️ তাই নিশ্চিত করার মুহূর্তের
+         * পাহারা ([[guardSubmit()]]) এটাই দেখে — "নগদ" বেছে জমা কম দিলে
+         * সেবা ঠিকই আটকাত, আর পর্দা চুপ থাকলে পপ-আপটা কখনো আসত না।
+         *
+         * ⓘ কার্টে সারি তোলার সময়ের সতর্কতা ([[creditIsWatched]]) তবু
+         * শর্ত দেখে: নগদ বিক্রিতে জমা দেওয়ার আগেই প্রতিটা সারিতে সতর্কতা
+         * এলে কাউন্টার অচল হত।
+         */
+        get creditApplies() {
             return credit.enabled
-                && credit.blocks
-                && ! credit.canOverride
                 && this.hasCustomer
-                && this.termUsesCredit
                 && (this.hasCreditLimit || credit.zeroBlocks);
+        },
+
+        /*
+         * ⭐ খাতার বাইরে আটকে থাকা টাকা — বিল না হওয়া ডিও আর খসড়া বিল।
+         * ⓘ সার্ভার গুনে পাঠায় ([[CreditExposure::pendingFor()]])।
+         */
+        get creditHeld() {
+            return Number(this.customer.held) || 0;
+        },
+
+        /* ⛔ সীমা কত পার হচ্ছে — না হলে শূন্য। "সীমা পার — ৳…" সারির জন্য। */
+        get creditOver() {
+            return this.creditLeft < 0 ? -this.creditLeft : 0;
         },
 
         /*
@@ -2010,6 +2049,7 @@ export default function directSale({
         get creditLeft() {
             return (Number(this.customer.limit) || 0)
                 - (Number(this.customer.due) || 0)
+                - this.creditHeld
                 - this.creditUnpaid;
         },
 
@@ -2039,7 +2079,80 @@ export default function directSale({
         get creditLeftAfterEntry() {
             return (Number(this.customer.limit) || 0)
                 - (Number(this.customer.due) || 0)
+                - this.creditHeld
                 - this.creditUnpaidWithEntry;
+        },
+
+        /*
+         * ⛔ নিশ্চিত করার মুহূর্তের পাহারা — ফর্ম পাঠানোর ঠিক আগে।
+         *
+         * ⓘ সীমা পার হলে ফর্ম যায় না: বড় পপ-আপ আর সতর্ক-ধ্বনি। ⚠️ এটা
+         * দেয়াল নয় — দেয়াল সেবায় ([[CreditExposure::assertRoom()]]), আর
+         * সে-ই শেষ কথা বলে। এটা কেবল বিক্রেতাকে আগে থামায়, যাতে সার্ভার
+         * পর্যন্ত গিয়ে কার্টটা হারাতে না হয়।
+         *
+         * ⓘ "খসড়া রাখুন"-ও এখান দিয়েই যায় — খসড়াও সীমা আটকায়, তাই সীমার
+         * বাইরে খসড়াও হয় না।
+         */
+        guardSubmit(event) {
+            if (this.creditApplies && this.creditLeft < 0) {
+                event.preventDefault();
+                this.creditBlocked = true;
+                this.soundTheAlarm();
+
+                return;
+            }
+
+            this.parkDraft();
+        },
+
+        closeCreditBlock() {
+            this.creditBlocked = false;
+        },
+
+        /* ⓘ পপ-আপের লেখা — কত খোলা আছে, আর কত বেশি। */
+        get creditBlockText() {
+            const left = this.creditLeft + this.creditUnpaid;
+
+            return texts.creditWall
+                .replace(':left', this.money(left > 0 ? left : 0))
+                .replace(':short', this.money(this.creditOver));
+        },
+
+        /*
+         * ⚠️ সতর্ক-ধ্বনি — কোনো শব্দের ফাইল ছাড়া, ব্রাউজারের নিজের যন্ত্রে।
+         *
+         * ⓘ তিনটা ছোট উঁচু-নিচু টোন। ⛔ কোনো ফাইল নয়: ফাইল লাগলে সেটা
+         * বান্ডিলে বা সার্ভারে রাখতে হত, আর না পেলে ধ্বনিটা নীরবে হারাত।
+         * ⚠️ ব্রাউজার শব্দ বন্ধ রাখলে বা যন্ত্রটা না থাকলে চুপচাপ ফিরে
+         * যায় — পপ-আপটাই আসল বার্তা, ধ্বনি কেবল মনোযোগ টানে।
+         */
+        soundTheAlarm() {
+            try {
+                const Ctx = window.AudioContext || window.webkitAudioContext;
+
+                if (! Ctx) return;
+
+                const ctx = new Ctx();
+                const start = ctx.currentTime;
+
+                [880, 660, 880].forEach((freq, i) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+
+                    osc.type = 'square';
+                    osc.frequency.value = freq;
+                    gain.gain.value = 0.15;
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(start + i * 0.25);
+                    osc.stop(start + i * 0.25 + 0.2);
+                });
+
+                setTimeout(() => ctx.close(), 1200);
+            } catch (e) {
+                // শব্দ না বাজলেও পপ-আপ থাকে — সেটাই আসল বার্তা
+            }
         },
 
         get counts() {

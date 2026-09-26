@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'super_admin_only_switch' => 'Only a super admin can change these, so they were left as they were: :switches',
     'screen_holds_records' => 'These screens already hold documents, so they cannot be hidden: :screens. '
         .'Finish or cancel those documents first — otherwise they would have no way in.',
     'cannot_deactivate_yourself' => 'You cannot deactivate yourself — nobody would be left who could undo it.',

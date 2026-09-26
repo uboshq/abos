@@ -19,6 +19,8 @@
     ফর্ম হলে কেউ দুইটা ট্যাবে বদল করে একবার সেভ করতেন, আর অর্ধেকটা
     নীরবে হারিয়ে যেত।
 --}}
+@inject('settingsGate', 'App\Core\Services\SettingsService')
+
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('system_admin::settings.title') }}</x-slot:title>
 
@@ -83,10 +85,17 @@
                                     @foreach ($settings as $setting)
                                         @if ($setting['type'] === 'boolean')
                                             <label class="flex min-h-(--spacing-touch) items-start gap-2 text-sm">
+                                                {{-- ⛔ কেবল সুপার অ্যাডমিনের সুইচ — পাহারা সার্ভারে, এখানে কেবল দেখানো --}}
+                                                @php($locked = ! $settingsGate->mayChange($setting['key'], auth()->user()))
                                                 <input type="checkbox" name="settings[{{ $setting['key'] }}]"
-                                                       value="1" @checked($setting['value'])
+                                                       value="1" @checked($setting['value']) @disabled($locked)
                                                        class="mt-1 size-4">
-                                                <span>{{ __($setting['label']) }}</span>
+                                                <span>
+                                                    {{ __($setting['label']) }}
+                                                    @if ($locked)
+                                                        <span class="block text-xs text-(--color-ink-muted)">{{ __('system_admin::settings.super_admin_only') }}</span>
+                                                    @endif
+                                                </span>
                                             </label>
                                         @elseif ($setting['type'] === 'choice')
                                             {{-- ⭐ বাছাইয়ের ঘর — ছাপার কাগজের মাপের জন্য (২০ সেপ্টেম্বর ২০২৬)।

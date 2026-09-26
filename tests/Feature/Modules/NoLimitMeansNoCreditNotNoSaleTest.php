@@ -165,6 +165,11 @@ class NoLimitMeansNoCreditNotNoSaleTest extends TestCase
      */
     public function test_the_actor_cannot_simply_override_the_limit(): void
     {
+        /*
+         * ⓘ ২৬ সেপ্টেম্বর ২০২৬ থেকে চাবিটা আর নেই ([[TheLimitWasALimitForEveryoneTest]])।
+         * ⚠️ দাবিটা রাখা হলো: কেউ চাবিটা একদিন ফিরিয়ে আনলে এখানে আবার
+         * পাহারা বসবে, আর এই ফাইলের "আটকায়" দাবিগুলো অন্ধ হবে না।
+         */
         $this->assertFalse(
             auth()->user()->can('customer.credit_limit.override'),
             "এই পরীক্ষাগুলো এমন একজনের নামে চলছে যিনি সীমাটা নিজেই পার করাতে পারেন।\n"

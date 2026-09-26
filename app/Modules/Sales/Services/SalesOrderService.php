@@ -9,10 +9,8 @@ use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
-use App\Core\Support\Money;
 use App\Models\FinancialYear;
 use App\Models\IssuedNumber;
-use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\ReadsPackedQuantities;
@@ -21,7 +19,6 @@ use App\Modules\Sales\Models\SalesOrder;
 use App\Modules\Sales\Models\SalesOrderLine;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -157,8 +154,17 @@ final class SalesOrderService
             reason: $order->narration,
         );
 
-        $this->assertWithinCreditLimit($order);
-
+        /*
+         * ⓘ বাকির সীমা এখানে **দেখা হয় না** — মালিকের নির্দেশ, ২৬ সেপ্টেম্বর ২০২৬।
+         *
+         * *"customer ba SR order kikore dibe, seta DO/delivery order theke
+         * suro hobe"* — আদেশ আন্দাজের জিনিস, মাল তখনো গুদামে। ⛔ এখানে
+         * আটকালে গ্রাহক বা বিক্রয়কর্মী আদেশই দিতে পারতেন না।
+         *
+         * ⭐ দেয়ালটা এখন চালানে আর বিলে ([[CreditExposure::assertRoom()]]),
+         * যেখানে মাল গেট পার হয়। ⚠️ আর আদেশ কোনো সীমা আটকায়ও না —
+         * আটকায় কেবল বিল না হওয়া চালান আর খসড়া বিল।
+         */
         return DB::transaction(function () use ($order) {
             if ($this->settings->get('sales.reserve_on_order', true)) {
                 $warehouse = $order->warehouse ?? $this->defaultWarehouse();
@@ -313,50 +319,6 @@ final class SalesOrderService
                 ]),
             ]);
         }
-    }
-
-    /**
-     * ধারের সীমা।
-     *
-     * সীমাটা গ্রাহকের মাস্টারে, আর সেখানেই থাকা উচিত — বিক্রয়কর্মী প্রতিবার
-     * মনে রাখতে পারেন না কার কত সীমা। সীমা পেরোলে অনুমতিওয়ালা কেউ পার
-     * করাতে পারেন, আর সেটাই approval-এর জায়গা।
-     */
-    private function assertWithinCreditLimit(SalesOrder $order): void
-    {
-        $customer = $order->customer;
-
-        if ($customer === null || ! $customer->wouldExceedCreditLimit((string) $order->total)) {
-            return;
-        }
-
-        /*
-         * ── ভুল চাবি দিয়ে দরজা খুলছিল ───────────────────────────────
-         * এখানে `sales.discount.override` দেখা হত, অথচ ধারের সীমার
-         * নিজের চাবি আছে: `customer.credit_limit.override`। ফলে যিনি
-         * ছাড় অনুমোদন করতে পারেন তিনি ধারের সীমাও পার করাতে পারতেন,
-         * আর যাঁকে ঠিক এই কাজটার জন্য চাবি দেওয়া হয়েছে তিনি পারতেন
-         * না — দুইটাই উল্টো।
-         *
-         * সিডারে বিক্রয়কর্মীর বাদ-তালিকায় দুইটাই আলাদা করে লেখা, অর্থাৎ
-         * ইচ্ছাটাও চিরকাল এটাই ছিল।
-         */
-        /*
-         * আর এখন নিয়মটা এই ফাইলে নেই — [[CustomerPolicy::overrideCreditLimit()]]।
-         *
-         * উপরের ঘটনাটাই কারণ: তিন জায়গায় লেখা একটা নিয়ম একদিন দুই
-         * রকম হয়ে যায়, আর কোনটা আসল তা কেউ বলতে পারে না।
-         */
-        if (Gate::allows('overrideCreditLimit', Customer::class)) {
-            return;
-        }
-
-        throw ValidationException::withMessages([
-            'customer_id' => __('sales::validation.over_credit_limit', [
-                'customer' => $customer->name(),
-                'limit' => Money::format($customer->credit_limit),
-            ]),
-        ]);
     }
 
     private function defaultWarehouse(): ?Warehouse

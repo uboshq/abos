@@ -46,4 +46,5 @@ return [
     'notice_remind_again' => 'দ্বিতীয় তাগাদা (ঘণ্টা)',
     'notice_escalate_after' => 'উপরে জানানো (ঘণ্টা)',
     'notice_creator_cannot_approve' => 'নিজের জরুরি নোটিশ নিজে অনুমোদন করা যাবে না',
+    'super_admin_only' => 'কেবল সুপার অ্যাডমিন বদলাতে পারেন',
 ];

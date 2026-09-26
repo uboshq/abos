@@ -73,6 +73,7 @@
                   'notForSales' => __('sales::message.not_for_sales'),
                   'freeBeyondRatio' => __('sales::validation.free_over_allowance'),
                   'creditBeyondLimit' => __('sales::validation.credit_left_is_only'),
+                  'creditWall' => __('sales::message.credit_wall_body'),
                   'lotIsRequired' => __('sales::validation.lot_must_be_chosen'),
                   'lotAlreadyInCart' => __('sales::validation.lot_already_in_cart'),
                   'freeNextAt' => __('sales::message.free_next_at'),
@@ -103,7 +104,7 @@
           --}}
           x-init="lookForDraft()"
           x-effect="saveDraft()"
-          @submit="parkDraft()"
+          @submit="guardSubmit($event)"
 
           {{--
               ── কি-বোর্ডের শর্টকাট — POS-এর কী-গুলোই ─────────────────────
@@ -211,6 +212,40 @@
                         class="mt-5 w-full rounded-(--radius-field) bg-(--color-danger) px-4 py-2
                                font-semibold text-white hover:bg-(--color-danger-hover)">
                     {{ __('core.action.close') }}
+                </button>
+            </div>
+        </div>
+
+        {{--
+            ── ⛔ বাকির সীমা পার — বড় পপ-আপ, মালিকের নির্দেশ ─────────────────
+
+            মালিক, ২৫ সেপ্টেম্বর ২০২৬: *"limit over confarm korte caile boro kore
+            pop up notice & sound dite hobe ze eta kono vabei somvob na"*।
+
+            ⚠️ বোতাম কেবল একটা — "বুঝেছি"। ⛔ কোনো "তবুও চালাও" নেই, আর সীমা
+            বাড়ানোর কথাও নেই: *"kotin kore likhar karon zate malik k request na
+            korte pare kew"*। ⓘ বাইরে চাপলে বা Esc-এ বন্ধ হয় না — পড়ে "বুঝেছি"
+            চাপতে হয়।
+
+            ⓘ লেখাটা [[direct-sale.js]]-এর `creditBlockText` থেকে; সংখ্যা দুইটা
+            সেবার হিসাবের আয়না ([[CreditExposure::assertRoom()]])।
+        --}}
+        <div x-show="creditBlocked" x-cloak role="alertdialog" aria-modal="true"
+             aria-labelledby="credit-wall-title"
+             class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div class="w-full max-w-lg rounded-(--radius-card) border-2 border-(--color-danger)
+                        bg-(--color-surface-card) p-6 text-center shadow-lg">
+                <p id="credit-wall-title" class="text-3xl font-bold text-(--color-danger)">
+                    {{ __('sales::message.credit_wall_title') }}
+                </p>
+
+                <p class="mt-4 text-lg font-semibold leading-relaxed text-(--color-ink)"
+                   x-text="creditBlockText"></p>
+
+                <button type="button" @click="closeCreditBlock()" x-ref="creditWallOk"
+                        class="mt-6 w-full rounded-(--radius-field) bg-(--color-danger) px-4 py-3
+                               text-lg font-bold text-white hover:bg-(--color-danger-hover)">
+                    {{ __('sales::message.credit_wall_ok') }}
                 </button>
             </div>
         </div>

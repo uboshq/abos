@@ -266,6 +266,7 @@ class ControlPanelController extends Controller implements HasMiddleware
 
         $changed = 0;
         $refused = [];
+        $superAdminOnly = [];
 
         $changed += $this->saveMenuSwitches($scope, $submitted);
 
@@ -304,6 +305,19 @@ class ControlPanelController extends Controller implements HasMiddleware
             }
 
             /*
+             * ⛔ কেবল সুপার অ্যাডমিনের সুইচ — ২৬ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ নিয়মটা [[SettingsService::mayChange()]]-এ। ⚠️ বাদ পড়াটা
+             * নীরব নয়: `refused` তালিকায় নাম ওঠে, আর পাতায় লেখা আসে কোনটা
+             * বদলানো গেল না।
+             */
+            if (! $this->settings->mayChange($key, $request->user())) {
+                $superAdminOnly[] = __($definition['label']);
+
+                continue;
+            }
+
+            /*
              * যে পর্দায় কাগজ আছে সেটা আড়াল করতে দেওয়া হয় না।
              *
              * সুইচ বন্ধ করলে মেনু থেকে সারিটা উধাও হয়। যে কোম্পানির
@@ -324,6 +338,18 @@ class ControlPanelController extends Controller implements HasMiddleware
 
             $this->settings->set($key, $value);
             $changed++;
+        }
+
+        if ($superAdminOnly !== []) {
+            return back()
+                ->with('saved', trans_choice(
+                    'system_admin::message.switches_saved',
+                    $changed,
+                    ['count' => $changed],
+                ))
+                ->withErrors(['settings' => __('system_admin::validation.super_admin_only_switch', [
+                    'switches' => implode('; ', $superAdminOnly),
+                ])]);
         }
 
         if ($refused !== []) {

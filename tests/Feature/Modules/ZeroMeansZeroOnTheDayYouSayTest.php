@@ -153,16 +153,25 @@ class ZeroMeansZeroOnTheDayYouSayTest extends TestCase
     // ── দুই · ঠিক চাবিটাই দরজা খোলে ─────────────────────────────────
 
     /**
-     * ধারের সীমা পার করাতে ধারের চাবিই লাগে।
+     * ⛔ কোনো চাবিতেই সীমার দরজা খোলে না — মালিকেরটাতেও না।
      *
-     * মালিকের কাছে `customer.credit_limit.override` আছে, তাই তাঁর
-     * বিলটা যায়।
+     * ── ⚠️ এই দাবিটা আগে উল্টো ছিল ───────────────────────────────────
+     * আগে লেখা ছিল *"মালিকের কাছে `customer.credit_limit.override` আছে,
+     * তাই তাঁর বিলটা যায়"*। ⛔ মালিকের নির্দেশে, ২৫–২৬ সেপ্টেম্বর ২০২৬,
+     * নিয়মটাই বদলেছে: *"limit mane limit 100%, emon ki malikero"*, আর
+     * চাবিটা তোলা হয়েছে। ⓘ এটা দাবি ঢিলা করা নয় — নিয়ম বদলেছে, দাবি তার
+     * সাথে কড়া হয়েছে।
+     *
+     * ⓘ অভিনেতা মালিক — সুপার অ্যাডমিন, সব চাবি। ঠিক ঐ হাতেই ফাঁকটা খুলত।
      */
-    public function test_the_credit_key_opens_the_door(): void
+    public function test_no_key_opens_the_credit_door_not_even_the_owners(): void
     {
         $this->dealer->update(['credit_limit' => '500']);
+        $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
 
-        $this->assertSame(DocumentStatus::CONFIRMED, $this->bill('10')->status);
+        $this->expectException(ValidationException::class);
+
+        $this->bill('10');
     }
 
     /**

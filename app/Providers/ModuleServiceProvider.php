@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Core\Contracts\CreditHolds;
 use App\Core\Contracts\RecipeBook;
 use App\Core\Engines\Report\ReportEngine;
 use App\Core\Events\EventRegistry;
 use App\Core\Module\ModuleRegistry;
+use App\Core\Services\NoCreditHolds;
 use App\Core\Services\NoRecipeBook;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -45,6 +47,9 @@ class ModuleServiceProvider extends ServiceProvider
     private function bindDefaults(): void
     {
         $this->app->bind(RecipeBook::class, NoRecipeBook::class);
+
+        // ⓘ বিক্রয় বন্ধ থাকলে ডিও বা খসড়া বিল নেই — আটকে থাকা টাকা শূন্য
+        $this->app->bind(CreditHolds::class, NoCreditHolds::class);
     }
 
     /**

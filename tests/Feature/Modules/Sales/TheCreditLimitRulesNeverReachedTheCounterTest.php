@@ -92,13 +92,17 @@ final class TheCreditLimitRulesNeverReachedTheCounterTest extends TestCase
     {
         $settings = app(SettingsService::class);
 
-        $settings->set('customer.block_over_limit', true);
-        $this->assertStringContainsString('&quot;blocks&quot;:true', $this->counterHtml(),
-            '⛔ সুইচটা চালু, তবু পর্দা `blocks: true` পায়নি।');
+        /*
+         * ⓘ ২৬ সেপ্টেম্বর ২০২৬ থেকে সুইচ একটাই — `credit_limit_enabled`।
+         * `block_over_limit` ("পার হতে দাও") মালিকের নির্দেশে তোলা হয়েছে।
+         */
+        $settings->set('customer.credit_limit_enabled', true);
+        $this->assertStringContainsString('&quot;enabled&quot;:true', $this->counterHtml(),
+            '⛔ সুইচটা চালু, তবু পর্দা `enabled: true` পায়নি।');
 
-        $settings->set('customer.block_over_limit', false);
-        $this->assertStringContainsString('&quot;blocks&quot;:false', $this->counterHtml(),
-            '⛔ সুইচটা বন্ধ, তবু পর্দা `blocks: false` পায়নি — অর্থাৎ মানটা '
+        $settings->set('customer.credit_limit_enabled', false);
+        $this->assertStringContainsString('&quot;enabled&quot;:false', $this->counterHtml(),
+            '⛔ সুইচটা বন্ধ, তবু পর্দা `enabled: false` পায়নি — অর্থাৎ মানটা '
             .'সেটিংস থেকে আসছে না, আর কোম্পানির সিদ্ধান্ত পর্দায় পৌঁছায় না।');
     }
 
@@ -113,10 +117,48 @@ final class TheCreditLimitRulesNeverReachedTheCounterTest extends TestCase
     {
         $html = $this->counterHtml();
 
-        foreach (['enabled', 'blocks', 'zeroBlocks', 'canOverride'] as $key) {
+        foreach (['enabled', 'zeroBlocks'] as $key) {
             $this->assertStringContainsString('&quot;'.$key.'&quot;:', $html,
                 "⛔ `{$key}` পর্দায় যায়নি — সেবা ওটা দেখে, পর্দা দেখে না, "
                 .'আর তখন দুইটা আলাদা উত্তর দেয়।');
         }
+
+        /*
+         * ⛔ পাল্টা-দাবি — পার হওয়ার দুইটা পুরনো দরজা পর্দায়ও নেই।
+         *
+         * ⓘ মালিক, ২৬ সেপ্টেম্বর ২০২৬: সীমা কারও চাবিতে পার হয় না, আর
+         * "পার হতে দাও" সুইচও নেই। ⚠️ পর্দা এগুলো পেলে সুপার অ্যাডমিনের
+         * কাউন্টারে পাহারা চুপ থাকত, অথচ সেবা আটকাত — কার্টটা হারাত।
+         */
+        foreach (['blocks', 'canOverride'] as $key) {
+            $this->assertStringNotContainsString('&quot;'.$key.'&quot;:', $html,
+                "⛔ `{$key}` এখনো পর্দায় যাচ্ছে — সীমা পার হওয়ার পুরনো দরজাটা খোলা।");
+        }
+
+        /* ⭐ আটকে থাকা টাকা (বিল না হওয়া ডিও ও খসড়া) প্রতিটা গ্রাহকের সাথে যায় */
+        $this->assertStringContainsString('&quot;held&quot;:', $html,
+            '⛔ `held` পর্দায় যায়নি — অবশিষ্ট সীমা তখন ডিও আর খসড়া ভুলে বেশি দেখাত।');
+    }
+
+    /**
+     * ⛔ বড় পপ-আপটা পর্দায় আছে, আর ফর্ম পাঠানোর আগে পাহারা বসে।
+     *
+     * ⓘ মালিক: *"limit over confarm korte caile boro kore pop up notice & sound"*।
+     * ⚠️ লেখা খোঁজা হয়, চাবি নয় — চাবি অনুবাদে না থাকলে পর্দায় চাবির নাম
+     * ছাপা হত আর চাবি খুঁজলে সেটাও সবুজ দেখাত। ⓘ আচরণটা (ধ্বনি, থামা)
+     * মাপা হয় [[direct-sale.test.js]]-এ।
+     */
+    public function test_the_wall_popup_is_on_the_page_and_guards_the_submit(): void
+    {
+        $html = $this->counterHtml();
+
+        $this->assertStringContainsString(e(__('sales::message.credit_wall_title')), $html,
+            '⛔ সীমা পারের পপ-আপ পর্দায় নেই।');
+
+        $this->assertStringContainsString('guardSubmit($event)', $html,
+            '⛔ ফর্ম পাঠানোর আগে সীমার পাহারা নেই — পর্দা সোজা সার্ভারে যেত।');
+
+        $this->assertStringNotContainsString('@submit="parkDraft()"', $html,
+            '⛔ পুরনো সোজা-পাঠানোর দরজা এখনো আছে।');
     }
 }

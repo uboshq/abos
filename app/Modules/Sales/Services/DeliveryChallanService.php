@@ -101,6 +101,7 @@ final class DeliveryChallanService
          */
         private readonly CashTillService $tills,
         private readonly DocumentApproval $approvals,
+        private readonly CreditExposure $credit,
     ) {}
 
     /**
@@ -189,7 +190,12 @@ final class DeliveryChallanService
     /**
      * মাল বেরিয়ে গেল — স্টক নামে, ধরা ছাড়ে।
      */
-    public function confirm(DeliveryChallan $challan): DeliveryChallan
+    /**
+     * @param  string  $payingNow  এই মালের জন্য **এখনই** গোনা টাকা — কেবল
+     *                             কাউন্টার পাঠায়। ⓘ অফিসের ডিও-তে শূন্য:
+     *                             মাল যায়, টাকা আসে পরে।
+     */
+    public function confirm(DeliveryChallan $challan, string $payingNow = '0'): DeliveryChallan
     {
         if ($challan->status !== DocumentStatus::DRAFT) {
             throw ValidationException::withMessages([
@@ -201,6 +207,34 @@ final class DeliveryChallanService
 
         if ($challan->lines->isEmpty()) {
             throw ValidationException::withMessages(['lines' => __('sales::validation.no_lines')]);
+        }
+
+        /*
+         * ⛔ বাকির সীমা — অনুমোদনের **আগে**, ২৬ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⓘ মালিক যা ধরেছেন ──────────────────────────────────────
+         * ৫০,০০০ সীমার গ্রাহকে ৮৯,৭২০ টাকার কাগজ *"অনুমোদনের জন্য
+         * পাঠানো হয়েছে"* বলে দাঁড়িয়ে ছিল। ⚠️ সীমা পার করেছে বলে নয় —
+         * **অঙ্কটা বড় বলে**। নিচের `assertClear()` কাগজ অনুমোদনে পাঠিয়ে
+         * থেমে যায়, আর সীমার প্রশ্ন কখনো আসত না। ⭐ মালিকের নিয়ম:
+         * *"eta অনুমোদনের জন্য পাঠানো hobena, bill komiye nite hobe ba taka
+         * joma dite hobe"*।
+         *
+         * ── ⓘ কেন চালানে, বিলের আগে ───────────────────────────────
+         * মালিক: *"DO/delivery order theke suro hobe"*। মাল গেট পার হলেই
+         * টাকা ঝুঁকিতে — বিল হোক বা না হোক।
+         *
+         * ⚠️ `exceptChallanId`: কাউন্টারে ধরে রাখা বিক্রয়ে এই চালানের
+         * একটা খসড়া বিল আগে থেকেই সীমা আটকে রেখেছে — একই মাল, একই টাকা।
+         * ⛔ বাদ না দিলে দুইবার গোনা হত।
+         */
+        if ($challan->customer !== null) {
+            $this->credit->assertRoom(
+                customer: $challan->customer,
+                adding: (string) $challan->total,
+                payingNow: $payingNow,
+                exceptChallanId: (int) $challan->id,
+            );
         }
 
         /*

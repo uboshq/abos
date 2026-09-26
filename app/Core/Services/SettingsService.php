@@ -7,6 +7,7 @@ namespace App\Core\Services;
 use App\Core\Module\ModuleRegistry;
 use App\Core\Support\CompanyContext;
 use App\Models\Setting;
+use App\Models\User;
 use InvalidArgumentException;
 
 /**
@@ -312,6 +313,31 @@ final class SettingsService
     public function isProductWide(string $key): bool
     {
         return ($this->definitions()[$key]['scope'] ?? 'company') === 'product';
+    }
+
+    /**
+     * ⛔ এই মানুষ কি এই সুইচটা বদলাতে পারেন — ২৬ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⓘ কেন ──────────────────────────────────────────────────────────
+     * মালিক বাকির সীমা পরম করেছেন, আর বিকল্প দিয়েছেন একটাই: কোম্পানি চাইলে
+     * পুরো সীমা বন্ধ রাখবে। ⚠️ ঐ সুইচ এক চাপে **সব গ্রাহকের** সুরক্ষা তুলে
+     * দেয় — তাই সেটা কেবল সুপার অ্যাডমিনের। ⓘ সংজ্ঞায় `super_admin_only`
+     * লিখলেই চলে; নিয়মটা এক জায়গায়, আর দুইটা পর্দাই (Control Panel ও
+     * সেটিংস) এখানেই জিজ্ঞেস করে।
+     *
+     * ⓘ বদলটা খাতায় ওঠে: [[Setting]] নিরীক্ষিত — কে, কবে, আগে কী, পরে কী।
+     *
+     * ⚠️ `set()` নিজে এটা দেখে না, ইচ্ছা করে: সিডার, কনসোল আর পরীক্ষায়
+     * কোনো মানুষ থাকে না। ⓘ পাহারাটা **মানুষের দরজায়**।
+     */
+    public function mayChange(string $key, ?User $user): bool
+    {
+        if (! ($this->definitions()[$key]['super_admin_only'] ?? false)) {
+            return true;
+        }
+
+        return $user !== null
+            && $user->roles->contains('name', PermissionSyncer::SUPER_ADMIN_ROLE);
     }
 
     public function set(string $key, mixed $value): void

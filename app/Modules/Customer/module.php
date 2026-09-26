@@ -126,7 +126,13 @@ return [
         'customer.delete',
         'customer.report',
         'customer.manage',
-        'customer.credit_limit.override',
+
+        /*
+         * ⛔ `customer.credit_limit.override` তোলা হয়েছে — ২৬ সেপ্টেম্বর ২০২৬।
+         * ⓘ মালিক: *"limit mane limit 100%, emon ki malikero"* — সীমা কারও
+         * চাবিতে পার হয় না। একমাত্র পথ গ্রাহকের সীমা বাড়ানো, যা নিরীক্ষিত
+         * আর অনুমোদনে যায় (নিচের `approvals`)।
+         */
         'customer.portal',
 
         // পার্টির আচরণ — পতাকা তোলা ও নামানো, এক দায়িত্ব
@@ -235,11 +241,20 @@ return [
             'group' => 'entry',
         ],
         [
+            /*
+             * ⛔ বাকির সীমা চালু/বন্ধ — কোম্পানির একমাত্র বিকল্প, কেবল সুপার অ্যাডমিনের।
+             *
+             * ⓘ মালিক, ২৬ সেপ্টেম্বর ২০২৬: সীমা কেউ পার করতে পারবেন না, তবে
+             * কোনো কোম্পানি চাইলে পুরো সীমা বন্ধ রাখতে পারবে। ⚠️ এক চাপে সব
+             * গ্রাহকের সুরক্ষা ওঠে, তাই সুইচটা কেবল সুপার অ্যাডমিন বদলাতে
+             * পারেন ([[SettingsService::mayChange()]]), আর বদলটা খাতায় ওঠে।
+             */
             'key' => 'customer.credit_limit_enabled',
             'label' => 'customer::settings.credit_limit_enabled',
             'type' => 'boolean',
             'default' => true,
             'group' => 'entry',
+            'super_admin_only' => true,
         ],
         [
             /*
@@ -266,18 +281,16 @@ return [
             'default' => false,
             'group' => 'entry',
         ],
-        [
-            'key' => 'customer.block_over_limit',
-            'label' => 'customer::settings.block_over_limit',
-            'type' => 'boolean',
-            'default' => true,
-            'group' => 'entry',
-        ],
+        /*
+         * ⛔ `customer.block_over_limit` তোলা হয়েছে — ২৬ সেপ্টেম্বর ২০২৬।
+         * ⓘ ওটার মানে ছিল "সীমা পার হলেও বিল হতে দাও" — সীমা পার হওয়ার
+         * দ্বিতীয় দরজা। সীমা চালু থাকলে এখন সে আটকায়ই।
+         */
 
         /*
          * সীমা ছাড়ানোর সতর্কতা — হোম পর্দার করণীয় সারিতে।
          *
-         * `block_over_limit` আর এটা দুইটা আলাদা প্রশ্ন: প্রথমটা বলে
+         * সীমার দেয়াল আর এটা দুইটা আলাদা প্রশ্ন: প্রথমটা বলে
          * সীমা ছাড়ানো বিল আটকাবে কি না, এটা বলে **যাঁরা ইতিমধ্যেই
          * ছাড়িয়ে গেছেন** তাঁদের কথা মালিককে বলা হবে কি না। বিল আটকানো
          * বন্ধ রেখেও কারা ছাড়িয়েছেন তা জানতে চাওয়া স্বাভাবিক।

@@ -265,7 +265,6 @@ class DemoSeeder extends Seeder
                      * গেলেন — কোনো ভুল বার্তা ছাড়াই।
                      */
                     ->whereNotIn('name', [
-                        'customer.credit_limit.override',
                         'sales.discount.override',
 
                         /*

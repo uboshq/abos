@@ -23,6 +23,7 @@ use App\Modules\Inventory\Services\PackConversion;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\MasterData\Models\PaymentMethod;
 use App\Modules\MasterData\Models\PaymentTerm;
+use App\Modules\Sales\Services\CreditExposure;
 use App\Modules\Sales\Services\DirectSaleService;
 use App\Modules\Supplier\Models\Supplier;
 use Illuminate\Http\JsonResponse;
@@ -32,7 +33,6 @@ use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -60,6 +60,7 @@ class DirectSaleController extends Controller implements HasMiddleware
         private readonly SettingsService $settings,
         private readonly MenuBuilder $menu,
         private readonly RecipeBook $recipes,
+        private readonly CreditExposure $credit,
     ) {}
 
     public static function middleware(): array
@@ -85,6 +86,16 @@ class DirectSaleController extends Controller implements HasMiddleware
          */
         $customers = Customer::query()->active()->with('location')
             ->withOutstanding()->orderBy('name_en')->get();
+
+        /*
+         * ⭐ খাতার বাইরে আটকে থাকা টাকা — বিল না হওয়া ডিও আর খসড়া বিল।
+         *
+         * ⓘ মালিক, ২৬ সেপ্টেম্বর ২০২৬: মাল বেরোলেই আর খসড়া হলেই সীমা আটকায়।
+         * ⚠️ পর্দা কেবল `due` জানলে অবশিষ্ট সীমা বেশি দেখাত, বিক্রেতা পুরো
+         * কার্ট তুলতেন, আর সেবা শেষে আটকাত। ⓘ দলবদ্ধ দুই কোয়েরি
+         * ([[CreditExposure::pendingFor()]]) — গ্রাহকপ্রতি নয়।
+         */
+        $held = $this->credit->pendingFor($customers->pluck('id')->map(fn ($id) => (int) $id)->all());
 
         // শীট আর প্যাকের ড্রপডাউন — একই তালিকা, তাই একবারই তোলা
         $sheetProducts = Product::query()->active()->with('unit')->orderBy('name_en')->get();
@@ -158,6 +169,14 @@ class DirectSaleController extends Controller implements HasMiddleware
              */
             'depositMethods' => PaymentMethod::query()
                 ->active()
+
+                /*
+                 * ⛔ চেক কাউন্টারে নেই — মালিকের নির্দেশ, ২৬ সেপ্টেম্বর ২০২৬।
+                 * ⓘ চেক নেয় কেবল হিসাব বিভাগ; সেবাতেও একই বাধা
+                 * ([[DirectSaleService::assertNoChequeAtTheCounter()]])।
+                 * ⚠️ `kind` খালি থাকলে উপায়টা থাকে — ধরনহীন পুরনো সারি চেক নয়।
+                 */
+                ->where(fn ($q) => $q->whereNull('kind')->orWhere('kind', '!=', 'cheque'))
                 ->orderBy('code')
                 ->get()
                 ->map(fn (PaymentMethod $m): array => [
@@ -260,6 +279,7 @@ class DirectSaleController extends Controller implements HasMiddleware
             'customerTerms' => $customers->mapWithKeys(fn (Customer $c) => [$c->id => [
                 'limit' => (float) $c->credit_limit,
                 'due' => (float) $c->outstanding(),
+                'held' => (float) ($held[(int) $c->id] ?? 0),
                 'days' => (int) $c->credit_days,
                 'name' => $c->name(),
 
@@ -365,11 +385,15 @@ class DirectSaleController extends Controller implements HasMiddleware
              * `canOverride` — যাঁর চাবি আছে তাঁর কাছে পর্দা আটকাবেই না,
              * ঠিক যেমন সেবাও আটকায় না ([[CustomerPolicy]])।
              */
+            /*
+             * ⛔ ২৬ সেপ্টেম্বর ২০২৬: `blocks` আর `canOverride` উঠে গেছে।
+             * ⓘ সীমা চালু থাকলে সে আটকায়ই, আর কারও চাবি তাকে পার করায় না
+             * ([[CreditExposure]])। ⚠️ পর্দার নিয়ম সেবার হুবহু — নইলে পর্দা
+             * ছেড়ে দিত আর সেবা আটকাত, অথবা উল্টোটা।
+             */
             'creditRules' => [
-                'enabled' => $this->settings->enabled('customer.credit_limit_enabled'),
-                'blocks' => $this->settings->enabled('customer.block_over_limit'),
+                'enabled' => $this->credit->isOn(),
                 'zeroBlocks' => $this->settings->enabled('customer.zero_limit_blocks'),
-                'canOverride' => Gate::allows('overrideCreditLimit', Customer::class),
             ],
 
             /*
