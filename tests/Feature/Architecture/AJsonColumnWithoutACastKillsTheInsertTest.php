@@ -129,13 +129,43 @@ final class AJsonColumnWithoutACastKillsTheInsertTest extends TestCase
                 continue;
             }
 
-            $path = str_replace(DIRECTORY_SEPARATOR, '/', $file->getRealPath());
+            /*
+             * ⓘ `getPathname()`, `getRealPath()` নয় — মাপা কারণ।
+             *
+             * ⚠️ তালিকা করার **পরে** ফাইলটা উবে গেলে `getRealPath()`
+             * `false` ফেরায়, আর `str_replace()` তখন ছোঁড়ে:
+             *     Argument #3 ($subject) must be of type array|string, false given
+             *
+             * ⓘ এর স্ক্যান ২৫,৩৮৯টা এন্ট্রি হাঁটে, আর তার মধ্যে
+             * `storage/framework/views`-এর ২৩৫টা — যেখানে প্রতিটা রান আর
+             * `view:cache` অবিরাম লেখে আর মোছে। ⛔ কয়েকজন একসাথে
+             * কাজ করলে তাই পাহারাটা **নিজেই মরত**, আর সেটা পড়তে
+             * হুবহু কারো নিজের কোডের রিগ্রেশনের মতো লাগত।
+             *
+             * ⭐ `getPathname()` সরাসরি হরফ ফেরায়, ফাইলসিস্টেমকে
+             * জিজ্জাসা করে না — উবে যাওয়া ফাইলের পথও হরফই থাকে,
+             * তারপর `file_get_contents()` ব্যর্থ হয় আর সারিটা নির্বিঘ্নে
+             * বাদ পড়ে।
+             *
+             * ⓘ আর এখানে ওটা **বেশি** ঠিক: `vendor` এই গাছে junction,
+             * আর `getRealPath()` সেটা খুলে অন্য পথ দেয় — তখন নিচের
+             * `/vendor/` বাদ দেওয়ার শর্তটাই ফসকে যেত।
+             */
+            $path = str_replace(DIRECTORY_SEPARATOR, '/', $file->getPathname());
 
             if (! str_contains($path, '/Migrations/') && ! str_contains($path, '/migrations/')) {
                 continue;
             }
 
-            if (str_contains($path, '/vendor/')) {
+            /*
+             * ⓘ এগুলোয় কোনো মাইগ্রেশন নেই, অথচ স্ক্যানের বেশিরভাগ
+             * সময় এখানে যায় — মাপা: `node_modules`-এ ৭,৮৩০টা এন্ট্রি।
+             * ⚠️ আর `storage`-ই সেই জায়গা যেখানে ফাইল উবে যায়।
+             */
+            if (str_contains($path, '/vendor/')
+                || str_contains($path, '/node_modules/')
+                || str_contains($path, '/storage/')
+                || str_contains($path, '/public/')) {
                 continue;
             }
 
@@ -174,7 +204,8 @@ final class AJsonColumnWithoutACastKillsTheInsertTest extends TestCase
                 continue;
             }
 
-            $path = str_replace(DIRECTORY_SEPARATOR, '/', $file->getRealPath());
+            // ⓘ `getPathname()`, `getRealPath()` নয় — কারণ [[jsonColumnsByTable()]]-এ লেখা।
+            $path = str_replace(DIRECTORY_SEPARATOR, '/', $file->getPathname());
 
             if (! str_contains($path, '/Models/')) {
                 continue;
