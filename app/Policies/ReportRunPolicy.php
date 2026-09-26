@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Policies;
 
+use App\Core\Engines\Report\ReportEngine;
 use App\Models\ReportRun;
 use App\Models\User;
 
@@ -19,6 +20,32 @@ final class ReportRunPolicy
 {
     public function download(User $user, ReportRun $run): bool
     {
-        return $run->canBeDownloadedBy((int) $user->id);
+        if (! $run->canBeDownloadedBy((int) $user->id)) {
+            return false;
+        }
+
+        /*
+         * ⛔ তালিকায় থাকলেই যথেষ্ট নয় — রিপোর্টটা দেখার অনুমতি **এখনো**
+         * থাকতে হবে, ২৬ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ ছবিটা বলে ফাইলটা কার জন্য তৈরি হয়েছিল। ⚠️ কিন্তু তারপর কারও
+         * চাবি কেড়ে নেওয়া হলে তিনি নামানোর পাতায় গিয়ে গত তিন মাসের সব
+         * ফাইল নামাতে পারতেন — পর্দায় যে রিপোর্ট আর খুলতেই পারেন না,
+         * তারই সংখ্যা। ⭐ মালিকের নিয়ম: প্রত্যেকে কেবল নিজেরটা পাবেন।
+         *
+         * ⓘ সূচি মুছে গেলেও ফাইলটা থাকতে পারে, তাই মোছা সূচিও পড়া হয়।
+         * রিপোর্টটা কোড থেকে উঠে গেলে তার অনুমতিও আর জানা নেই — তখন
+         * সন্দেহে কড়া দিক, অর্থাৎ **না**।
+         */
+        $key = $run->schedule()->withTrashed()->value('report_key');
+        $reports = app(ReportEngine::class);
+
+        if ($key === null || ! in_array($key, $reports->keys(), true)) {
+            return false;
+        }
+
+        $permission = $reports->get($key)->permission;
+
+        return $permission === null || $user->can($permission);
     }
 }

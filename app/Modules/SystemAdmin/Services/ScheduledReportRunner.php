@@ -14,6 +14,7 @@ use App\Core\Support\CompanyContext;
 use App\Models\ReportRun;
 use App\Models\ReportSchedule;
 use App\Models\User;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
@@ -109,30 +110,77 @@ final class ScheduledReportRunner
             return null;
         }
 
-        $run = $this->generate($schedule, $owner);
+        /*
+         * ⛔ পাহারা ৪: প্রাপকের **নিজের** অনুমতি — চালানোর মুহূর্তে, ২৬ সেপ্টেম্বর ২০২৬।
+         *
+         * ── কী ফাঁস হচ্ছিল ────────────────────────────────────────────
+         * ⓘ অনুমতি যাচাই হত কেবল সূচি **বানানোর** দিনে
+         * ([[ScheduleService::assertRecipientsAllowed()]])। ⚠️ তারপর কারও
+         * রোল বদলালে — বিক্রয়কর্মী থেকে সরানো হলো, বা চাবিটা কেড়ে নেওয়া
+         * হলো — তিনি প্রতিদিন রিপোর্টটা পেতেই থাকতেন: খবর, ফাইল নামানোর
+         * অধিকার, সব। ⛔ আর রিপোর্টটা চলে **মালিকের** পরিচয়ে, অর্থাৎ
+         * মালিকের চোখের গোটা কোম্পানির সংখ্যা।
+         *
+         * ⭐ মালিকের নিয়ম: প্রত্যেকে কেবল নিজেরটা পাবেন। মালিকের অনুমতি
+         * প্রাপককে **ধার দেওয়া হয় না**।
+         *
+         * ⓘ যিনি বাদ পড়লেন তাঁকে সূচি থেকে মোছা হয় না — চাবি ফেরত পেলে
+         * পরের দিন থেকে আবার পান। বাদ পড়াটা কেবল এই রানের।
+         */
+        $recipients = $this->recipientsWhoMaySee($schedule, $permission);
+
+        $run = $this->generate($schedule, $owner, $recipients);
 
         $this->schedules->markRan($schedule, $run->status);
-        $this->notifyReady($schedule, $run, $owner);
+        $this->notifyReady($schedule, $run, $owner, $recipients);
 
         return $run;
     }
 
     /**
-     * মালিকের পরিচয়ে রিপোর্ট চালিয়ে ফাইল বানানো — শেষে পরিচয় পরিষ্কার।
+     * ⭐ এই রানে কোন প্রাপক রিপোর্টটা পাবেন — যাঁর নিজের অনুমতি **এখন** আছে।
+     *
+     * ⓘ প্রশ্নটা ঐ কোম্পানির ভিতরে, মালিকের প্রশ্নের অবিকল একই কারণে
+     * (উপরে, পাহারা ৩): প্রসঙ্গ ছাড়া `can()` সবসময় "না" বলে।
+     *
+     * ⚠️ ঘোষিত অনুমতি নেই এমন রিপোর্ট মালিক ছাড়া কেউ পান না — সূচি
+     * বানানোর নিয়মটাই ([[ScheduleService::assertRecipientsAllowed()]]),
+     * চালানোর সময় আবার।
+     *
+     * @return Collection<int, User>
      */
-    private function generate(ReportSchedule $schedule, User $owner): ReportRun
+    private function recipientsWhoMaySee(ReportSchedule $schedule, ?string $permission): Collection
+    {
+        if ($permission === null) {
+            return collect();
+        }
+
+        return CompanyContext::forCompany(
+            (int) $schedule->company_id,
+            fn (): Collection => $schedule->recipientUsers()
+                ->filter(fn (User $user): bool => $user->is_active !== false && $user->fresh()->can($permission))
+                ->values(),
+        );
+    }
+
+    /**
+     * মালিকের পরিচয়ে রিপোর্ট চালিয়ে ফাইল বানানো — শেষে পরিচয় পরিষ্কার।
+     *
+     * @param  Collection<int, User>  $recipients  যাঁরা এই রানে পাবেন
+     */
+    private function generate(ReportSchedule $schedule, User $owner, Collection $recipients): ReportRun
     {
         $previous = Auth::user();
         Auth::login($owner);
 
         try {
-            return CompanyContext::forCompany($schedule->company_id, function () use ($schedule, $owner): ReportRun {
+            return CompanyContext::forCompany($schedule->company_id, function () use ($schedule, $owner, $recipients): ReportRun {
                 CompanyContext::set($schedule->company_id, $this->ownerBranch($owner, $schedule->company_id));
 
                 $result = $this->reports->run($schedule->report_key, $schedule->filters ?? [], 1, self::MAX_ROWS);
 
                 $export = new ListExport;
-                ReportExport::into($export, $result, $this->mutuallyVisibleColumns($result, $owner, $schedule));
+                ReportExport::into($export, $result, $this->mutuallyVisibleColumns($result, $owner, $recipients));
 
                 $bytes = match ($schedule->format) {
                     'xlsx' => $export->xlsx(),
@@ -140,9 +188,10 @@ final class ScheduledReportRunner
                     default => $export->csv(),
                 };
 
-                // কারা এই ফাইলটা নামাতে পারবেন — এখনকার ছবি (মালিক + প্রাপক)
+                // কারা এই ফাইলটা নামাতে পারবেন — এখনকার ছবি (মালিক + যে
+                // প্রাপকদের নিজের অনুমতি আছে; সূচির কাঁচা তালিকা নয়)
                 $snapshot = collect([$owner->id])
-                    ->concat((array) $schedule->recipients)
+                    ->concat($recipients->pluck('id'))
                     ->map(fn ($id): int => (int) $id)
                     ->unique()
                     ->values()
@@ -169,13 +218,14 @@ final class ScheduledReportRunner
      * প্রাপকের যদি ক্রয়মূল্য দেখার অনুমতি না থাকে, কলামটা ফাইলেই বসে না —
      * তাই কেউ পর্দায় না-দেখা সংখ্যা ইমেইলে পান না।
      *
+     * @param  Collection<int, User>  $recipients
      * @return list<ReportColumn>
      */
-    private function mutuallyVisibleColumns(ReportResult $result, User $owner, ReportSchedule $schedule): array
+    private function mutuallyVisibleColumns(ReportResult $result, User $owner, Collection $recipients): array
     {
         $columns = $result->columnsFor($owner);
 
-        foreach ($schedule->recipientUsers() as $recipient) {
+        foreach ($recipients as $recipient) {
             $visible = array_map(fn ($c) => $c->key, $result->columnsFor($recipient));
             $columns = array_values(array_filter($columns, fn ($c) => in_array($c->key, $visible, true)));
         }
@@ -217,13 +267,16 @@ final class ScheduledReportRunner
      * ফলে NotificationService মালিককেও পায় (নিজের খবর নিজে skip করার নিয়মটা
      * এখানে বাধা দেয় না)।
      */
-    private function notifyReady(ReportSchedule $schedule, ReportRun $run, User $owner): void
+    /**
+     * @param  Collection<int, User>  $recipients
+     */
+    private function notifyReady(ReportSchedule $schedule, ReportRun $run, User $owner, Collection $recipients): void
     {
         if (! $run->hasFile()) {
             return;
         }
 
-        CompanyContext::forCompany($schedule->company_id, function () use ($schedule, $run, $owner): void {
+        CompanyContext::forCompany($schedule->company_id, function () use ($schedule, $run, $owner, $recipients): void {
             $url = Route::has('system_admin.reports.download')
                 ? route('system_admin.reports.download', $run)
                 : null;
@@ -233,9 +286,9 @@ final class ScheduledReportRunner
                 'report' => $this->reports->get($schedule->report_key)->title,
             ]);
 
-            $recipients = collect([$owner])->concat($schedule->recipientUsers())->unique('id');
+            $told = collect([$owner])->concat($recipients)->unique('id');
 
-            foreach ($recipients as $user) {
+            foreach ($told as $user) {
                 $this->notify->send($user, 'report_ready', $title, $body, $url);
             }
         });
