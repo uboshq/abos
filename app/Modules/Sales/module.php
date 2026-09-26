@@ -387,6 +387,63 @@ return [
      */
     'role_templates' => [
         /*
+         * কাউন্টার — প্রতিটা কোম্পানিতে ডিফল্টে। মালিক, ২৭ সেপ্টেম্বর ২০২৬: *"bosiye daw"*।
+         * ⓘ কাউন্টারের কর্মী সব ডিলার দেখেন (মালিক, ২৬ সেপ্টেম্বর) — নাহলে বিল করবেন কীভাবে।
+         */
+        'Counter' => [
+            'sales.challan.view',
+            'sales.challan.create',
+            'sales.invoice.view',
+            'sales.invoice.create',
+            'sales.collection.view',
+            'sales.collection.create',
+            'sales.return.view',
+            'sales.return.create',
+            'sales.pos',
+        ],
+        /*
+         * ASM — বিক্রয়কর্মীর উপরের স্তর, প্রতিটা কোম্পানিতে ডিফল্টে (মালিক, ২৭ সেপ্টেম্বর ২০২৬)।
+         * ⚠️ SR→ASM→RSM→DSM-এর বাঁধন এখনো কোডে নেই; আপাতত কেবল চাবির তালিকা।
+         */
+        'ASM' => [
+            'sales.order.view',
+            'sales.order.create',
+            'sales.challan.view',
+            'sales.invoice.view',
+            'sales.collection.view',
+            'sales.report',
+            'sales.target.view',
+            'sales.commission.view',
+        ],
+        /*
+         * RSM — ASM-এর উপরের স্তর, প্রতিটা কোম্পানিতে ডিফল্টে (মালিক, ২৭ সেপ্টেম্বর ২০২৬)।
+         * ⚠️ স্তরের বাঁধন এখনো কোডে নেই; আপাতত কেবল চাবির তালিকা।
+         */
+        'RSM' => [
+            'sales.order.view',
+            'sales.order.create',
+            'sales.challan.view',
+            'sales.invoice.view',
+            'sales.collection.view',
+            'sales.report',
+            'sales.target.view',
+            'sales.commission.view',
+        ],
+        /*
+         * DSM — বিক্রয়ের সবচেয়ে উপরের স্তর, প্রতিটা কোম্পানিতে ডিফল্টে (মালিক, ২৭ সেপ্টেম্বর ২০২৬)।
+         * ⚠️ স্তরের বাঁধন এখনো কোডে নেই; আপাতত কেবল চাবির তালিকা।
+         */
+        'DSM' => [
+            'sales.order.view',
+            'sales.order.create',
+            'sales.challan.view',
+            'sales.invoice.view',
+            'sales.collection.view',
+            'sales.report',
+            'sales.target.view',
+            'sales.commission.view',
+        ],
+        /*
          * ⭐ হিসাবরক্ষক — প্রতিটা কোম্পানিতে ডিফল্টে থাকে। মালিকের নির্দেশ, ২৭
          * সেপ্টেম্বর ২০২৬: *"Accountant role by defolt erp te create thakbe"*।
          * ⓘ জমার দাবির মঞ্জুরি কেবল তাঁর (মালিক, ২৬ সেপ্টেম্বর)।
