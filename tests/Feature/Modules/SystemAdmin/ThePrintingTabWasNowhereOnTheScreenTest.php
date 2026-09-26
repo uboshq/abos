@@ -251,15 +251,25 @@ final class ThePrintingTabWasNowhereOnTheScreenTest extends TestCase
         /*
          * ⚠️ পর্দায় তেরোটা রূপের তেরোটা iframe বসে। ⛔ তার একটা ৫০০
          * দিলে মালিক একটা ভাঙা বাক্স দেখতেন আর ধরে নিতেন রূপটাই নষ্ট।
+         *
+         * ⚠️ কেবল ২০০ মাপলে একটা ফাঁকা পাতাও পাস করত। ⓘ তাই প্রতিটা
+         * নমুনায় বানানো কাগজের নম্বরটা খোঁজা হয় — [[PrintSample]] সেটা
+         * দুই ছাঁচেই বসায় (পণ্যের কাগজের `meta`-তে, ভাউচারের
+         * `document_no`-তে)।
          */
         foreach (PrintProfile::TARGETS as $target) {
             foreach (PrintFormat::all() as $format) {
-                $this->actingAs($this->owner)
+                $html = (string) $this->actingAs($this->owner)
                     ->get(route('system_admin.print_control.preview', [
                         'paper' => $target,
                         'format' => $format,
                     ]))
-                    ->assertOk();
+                    ->assertOk()
+                    ->getContent();
+
+                $this->assertStringContainsString('SAMPLE-0001', $html,
+                    "{$target} কাগজের {$format} রূপের নমুনা ২০০ দিয়েছে, কিন্তু "
+                    .'বানানো কাগজটা আঁকেনি — পর্দায় একটা ফাঁকা বাক্স বসত।');
             }
         }
     }
