@@ -23,6 +23,8 @@ return [
         'version_code' => env('ANDROID_VERSION_CODE'),
         'version_name' => env('ANDROID_VERSION_NAME'),
         'url' => env('ANDROID_APK_URL'),
+        'apk_sha256' => env('ANDROID_APK_SHA256'),
+        'size_bytes' => env('ANDROID_APK_SIZE_BYTES'),
         'minimum_code' => env('ANDROID_MINIMUM_CODE'),
         'note' => [
             'bn' => env('ANDROID_NOTE_BN'),

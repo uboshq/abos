@@ -18,6 +18,11 @@ use Illuminate\Http\JsonResponse;
  * `versionCode: 0` বা আন্দাজি URL দিলে সেটা একটা আসল উত্তরের মতো
  * দেখাত — আর `minimumCode` ভুল হলে মাঠের প্রতিটা ফোনে দেয়াল উঠত,
  * নেট থাকা অবস্থাতেই। তাই অর্ধেক-বসানো মানও "বসানো নেই"।
+ *
+ * ── ⛔ অ্যাপ নিজে APK বসায়, তাই তিনটা দেয়াল (মালিকের সিদ্ধান্ত, ২৭ সেপ্টেম্বর) ──
+ * `url` কেবল https · `apkSha256` ৬৪ অক্ষরের ছোট-হাতের hex · `sizeBytes`
+ * ধনাত্মক সংখ্যা। ⚠️ একটাও না মিললে 503 — যে ফাইল ফোন মিলিয়ে দেখতে পারে
+ * না, সেটা বসানোর পথ সার্ভার খোলে না।
  */
 class AppVersionController extends Controller
 {
@@ -28,12 +33,17 @@ class AppVersionController extends Controller
         $code = self::whole($android['version_code'] ?? null);
         $minimum = self::whole($android['minimum_code'] ?? null);
         $url = trim((string) ($android['url'] ?? ''));
+        $sha = trim((string) ($android['apk_sha256'] ?? ''));
+        $size = self::whole($android['size_bytes'] ?? null);
 
         /*
          * ⛔ minimumCode > versionCode মানে সবচেয়ে নতুন বিল্ডও "আর চলবে না"
          * — অর্থাৎ কোনো ফোনই বাঁচত না। ⓘ ওটা ভুল বসানো, সিদ্ধান্ত নয়।
          */
-        if ($code === null || $minimum === null || $url === '' || $minimum > $code) {
+        if ($code === null || $minimum === null || $minimum > $code
+            || ! str_starts_with($url, 'https://')
+            || preg_match('/^[0-9a-f]{64}$/', $sha) !== 1
+            || $size === null) {
             return response()->json(['configured' => false], 503);
         }
 
@@ -41,6 +51,8 @@ class AppVersionController extends Controller
             'versionCode' => $code,
             'versionName' => (string) ($android['version_name'] ?? ''),
             'url' => $url,
+            'apkSha256' => $sha,
+            'sizeBytes' => $size,
             'minimumCode' => $minimum,
         ];
 

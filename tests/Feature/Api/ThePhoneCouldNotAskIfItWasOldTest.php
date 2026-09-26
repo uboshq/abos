@@ -23,6 +23,8 @@ final class ThePhoneCouldNotAskIfItWasOldTest extends TestCase
         'version_code' => '3',
         'version_name' => '0.2.0',
         'url' => 'https://erp.example.test/app/abos.apk',
+        'apk_sha256' => '3f5a00000000000000000000000000000000000000000000000000000000c09e',
+        'size_bytes' => '74213888',
         'minimum_code' => '1',
         'note' => ['bn' => 'নতুন সংস্করণ', 'en' => 'New version'],
     ];
@@ -38,6 +40,8 @@ final class ThePhoneCouldNotAskIfItWasOldTest extends TestCase
                 'versionCode' => 3,
                 'versionName' => '0.2.0',
                 'url' => 'https://erp.example.test/app/abos.apk',
+                'apkSha256' => '3f5a00000000000000000000000000000000000000000000000000000000c09e',
+                'sizeBytes' => 74213888,
                 'minimumCode' => 1,
                 'note' => ['bn' => 'নতুন সংস্করণ', 'en' => 'New version'],
             ]);
@@ -57,6 +61,7 @@ final class ThePhoneCouldNotAskIfItWasOldTest extends TestCase
 
         $this->assertStringContainsString('"versionCode":10', $raw);
         $this->assertStringContainsString('"minimumCode":1', $raw);
+        $this->assertStringContainsString('"sizeBytes":74213888', $raw, '⛔ আকার সংখ্যা — স্ট্রিং গেলে ফোনের তুলনা অক্ষর ধরে হত।');
     }
 
     /**
@@ -69,7 +74,7 @@ final class ThePhoneCouldNotAskIfItWasOldTest extends TestCase
     {
         config(['mobile.android' => [
             'version_code' => null, 'version_name' => null, 'url' => null,
-            'minimum_code' => null, 'note' => ['bn' => null, 'en' => null],
+            'apk_sha256' => null, 'size_bytes' => null, 'minimum_code' => null, 'note' => ['bn' => null, 'en' => null],
         ]]);
 
         $this->getJson('/api/v1/app/version')
@@ -120,6 +125,40 @@ final class ThePhoneCouldNotAskIfItWasOldTest extends TestCase
             ->assertOk()
             ->assertJsonPath('versionCode', 3)
             ->assertJsonMissingPath('note');
+    }
+
+    /**
+     * ⛔ অ্যাপ নিজে APK বসায় — তাই যে ফাইল ফোন মিলিয়ে দেখতে পারবে না,
+     * তার পথ সার্ভার খোলে না (মালিকের সিদ্ধান্ত, ২৭ সেপ্টেম্বর ২০২৬)।
+     *
+     * ⓘ প্রতিটা ভুল একটা একটা করে, বাকি সব ঠিক রেখে — যাতে 503-টা ঠিক
+     * ওই ভুলেরই, অন্য কোনো ঘরের নয়।
+     *
+     * @return array<string, array{0: array<string, string>}>
+     */
+    public static function unverifiableFiles(): array
+    {
+        return [
+            'sha ফাঁকা' => [['apk_sha256' => '']],
+            'sha বড় হাতের' => [['apk_sha256' => strtoupper(str_repeat('ab', 32))]],
+            'sha ৬৩ অক্ষর' => [['apk_sha256' => str_repeat('a', 63)]],
+            'sha hex নয়' => [['apk_sha256' => str_repeat('g', 64)]],
+            'আকার ফাঁকা' => [['size_bytes' => '']],
+            'আকার শূন্য' => [['size_bytes' => '0']],
+            'আকার সংখ্যা নয়' => [['size_bytes' => '74mb']],
+            'লিংক http' => [['url' => 'http://erp.example.test/app/abos.apk']],
+        ];
+    }
+
+    /** @param array<string, string> $broken */
+    #[\PHPUnit\Framework\Attributes\DataProvider('unverifiableFiles')]
+    public function test_a_file_the_phone_cannot_verify_is_not_offered(array $broken): void
+    {
+        config(['mobile.android' => $broken + self::CONFIGURED]);
+
+        $this->getJson('/api/v1/app/version')
+            ->assertStatus(503)
+            ->assertExactJson(['configured' => false]);
     }
 
     /** ⚠️ খোলা দরজা, তাই throttle — চাবির বদলে এটাই পাহারা। */
