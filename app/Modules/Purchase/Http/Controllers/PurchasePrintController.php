@@ -7,6 +7,7 @@ namespace App\Modules\Purchase\Http\Controllers;
 use App\Core\Engines\Print\PaperSize;
 use App\Core\Engines\Print\PrintableDocument;
 use App\Core\Engines\Print\PrintEngine;
+use App\Core\Security\FieldSecurity;
 use App\Core\Services\PaperTrail;
 use App\Core\Services\SettingsService;
 use App\Core\Support\DateFormat;
@@ -14,6 +15,7 @@ use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Http\Controllers\Controller;
 use App\Models\DocumentDelivery;
+use App\Modules\Inventory\Models\Product;
 use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Purchase\Models\PurchaseOrder;
 use App\Modules\Purchase\Models\PurchaseReceipt;
@@ -75,6 +77,7 @@ class PurchasePrintController extends Controller implements HasMiddleware
     public function bill(Request $request, PurchaseBill $bill): Response
     {
         $bill->load(['lines.product.unit', 'supplier', 'branch']);
+        $price = $this->showsPurchasePrice();
 
         $doc = new PrintableDocument(
             title: __('purchase::doc.bill'),
@@ -84,14 +87,15 @@ class PurchasePrintController extends Controller implements HasMiddleware
                 'purchase::field.supplier' => $bill->supplier?->name() ?? '',
                 'purchase::field.supplier_bill_no' => (string) ($bill->supplier_bill_no ?? ''),
             ],
-            lines: $this->lines($bill->lines, 'qty'),
-            totals: $this->totals($bill),
+            lines: $this->lines($bill->lines, 'qty', money: $price),
+            totals: $price ? $this->totals($bill) : [],
             signatures: ['core.print.prepared_by', 'purchase::print.checked_by'],
+            showMoney: $price,
             narration: $bill->narration,
         );
 
         return $this->pdf(
-            $request, $doc, (string) $bill->total, (string) $bill->document_no,
+            $request, $doc, $price ? (string) $bill->total : '0', (string) $bill->document_no,
             document: $bill, kind: 'purchase_bill', paperSetting: 'purchase.print.paper.bill',
         );
     }
@@ -106,6 +110,7 @@ class PurchasePrintController extends Controller implements HasMiddleware
     public function order(Request $request, PurchaseOrder $order): Response
     {
         $order->load(['lines.product.unit', 'supplier', 'branch']);
+        $price = $this->showsPurchasePrice();
 
         $doc = new PrintableDocument(
             title: __('purchase::doc.order'),
@@ -114,14 +119,15 @@ class PurchasePrintController extends Controller implements HasMiddleware
                 'core.print.date' => DateFormat::format($order->trx_date),
                 'purchase::field.supplier' => $order->supplier?->name() ?? '',
             ],
-            lines: $this->lines($order->lines, 'ordered_qty'),
-            totals: $this->totals($order),
+            lines: $this->lines($order->lines, 'ordered_qty', money: $price),
+            totals: $price ? $this->totals($order) : [],
             signatures: ['core.print.prepared_by', 'core.print.approved_by'],
+            showMoney: $price,
             narration: $order->narration,
         );
 
         return $this->pdf(
-            $request, $doc, (string) $order->total, (string) $order->document_no,
+            $request, $doc, $price ? (string) $order->total : '0', (string) $order->document_no,
             document: $order, kind: 'purchase_order', paperSetting: 'purchase.print.paper.order',
         );
     }
@@ -166,6 +172,7 @@ class PurchasePrintController extends Controller implements HasMiddleware
     public function creditNote(Request $request, PurchaseReturn $return): Response
     {
         $return->load(['lines.product.unit', 'supplier', 'warehouse', 'branch']);
+        $price = $this->showsPurchasePrice();
 
         $doc = new PrintableDocument(
             title: __('purchase::doc.return'),
@@ -175,16 +182,32 @@ class PurchasePrintController extends Controller implements HasMiddleware
                 'purchase::field.supplier' => $return->supplier?->name() ?? '',
                 'purchase::field.warehouse' => $return->warehouse?->name() ?? '',
             ],
-            lines: $this->lines($return->lines, 'qty'),
-            totals: $this->totals($return),
+            lines: $this->lines($return->lines, 'qty', money: $price),
+            totals: $price ? $this->totals($return) : [],
             signatures: ['core.print.prepared_by', 'purchase::print.supplier_signature'],
+            showMoney: $price,
             narration: $return->narration,
         );
 
         return $this->pdf(
-            $request, $doc, (string) $return->total, (string) $return->document_no,
+            $request, $doc, $price ? (string) $return->total : '0', (string) $return->document_no,
             document: $return, kind: 'purchase_return', paperSetting: 'purchase.print.paper.bill',
         );
+    }
+
+    /**
+     * ⛔ ক্রয়ের কাগজে দাম কেবল যাঁর ক্রয়মূল্য দেখার চাবি আছে — ২৭ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ বিল, আদেশ আর ফেরতের প্রতিটা সারির দরই ক্রয়মূল্য। ⚠️ আগে কাগজটা
+     * `purchase.bill.view` থাকলেই দাম ছাপত — পণ্যের পাতা যে দামটা ঢাকে
+     * ([[FieldSecurity]]), ছাপা সেটাই খুলে দিত। ⭐ চাবি না থাকলে কাগজটা মাল
+     * বুঝে নেওয়ার কাগজের মতো: পরিমাণ আছে, দর-অঙ্ক-মোট নেই।
+     *
+     * ⓘ প্রশ্নটা পণ্যের ঘোষণাকেই করা হয় — চাবির নাম এখানে হাতে লেখা নয়।
+     */
+    private function showsPurchasePrice(): bool
+    {
+        return FieldSecurity::visible(Product::class, 'purchase_price');
     }
 
     /**
