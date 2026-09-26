@@ -315,6 +315,7 @@ abos-33-এর মাঝে।
     "id": "01a0…",                  // public_id, ক্রমিক id কখনো নয় (§৩ ক)
     "documentType": "PurchaseBill",
     "documentNo": "PB-2609-0007",
+    "documentId": "01a1…",          // নথির public_id — §১০-এর `/documents/{documentType}/{documentId}`; না জানা গেলে null (২৭ সেপ্টেম্বর)
     "action": "confirm",
     "amount": "125000.0000",        // ⚠️ স্ট্রিং, সংখ্যা নয় (§৩ ঙ-এর মতো)
     "currentLevel": 2,

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Api\ApprovalApiController;
 use App\Http\Controllers\Api\AppVersionController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\MeController;
@@ -144,6 +145,24 @@ Route::prefix('v1')
          * প্রতিটা দরজা নিজে নিজের অনুমতি দেখে ([[MeController]])।
          */
         Route::get('/me', MeController::class)->name('me');
+
+        /*
+         * অনুমোদন — চুক্তি §৫। ⚠️ সিঙ্ক নয়: অফলাইনে কাজ করে না।
+         *
+         * ⓘ এখানে `can:` আছে, আর সেটা ওয়েবের সমান চাবি: ইনবক্সের মেনু আর
+         * সই-দরজা দুইটাই `approval.decide` চায়। ⛔ তবু পাহারা কেবল এটা
+         * নয় — কোন কাগজে কে সই দেবেন সেটা `canDecide()` ঠিক করে
+         * ([[ApprovalApiController]]), আর বেতন ফোনে আসেই না।
+         */
+        Route::get('/approvals/pending', [ApprovalApiController::class, 'pending'])
+            ->middleware('can:approval.decide')
+            ->name('approvals.pending');
+        Route::post('/approvals/{approval}/approve', [ApprovalApiController::class, 'approve'])
+            ->middleware('can:approval.decide')
+            ->name('approvals.approve');
+        Route::post('/approvals/{approval}/reject', [ApprovalApiController::class, 'reject'])
+            ->middleware('can:approval.decide')
+            ->name('approvals.reject');
     });
 
 Route::prefix('v1')
