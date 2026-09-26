@@ -120,7 +120,8 @@ final class AccountsWidgets implements DashboardWidgets
         ];
     }
 
-    private static function cashInHand(): string
+    /** ⓘ public — ফোনের "আজকের সংখ্যা" ([[DashboardTodayController]]) এটাই ডাকে, নিজে গোনে না। */
+    public static function cashInHand(): string
     {
         return self::sumOf(CashTill::query()->active()->pluck('account_id')->all());
     }

@@ -270,6 +270,7 @@ class EveryRouteIsGuardedTest extends TestCase
          * তাই চুরি যাওয়া refresh টোকেনে এটা খোলে না।
          */
         'api.me' => 'নিজের পরিচয় ও মেনু — ব্যবসার ডেটা নয়, আর abilities:app চায়',
+        'api.dashboard.today' => 'প্রতিটা ঘর নিজের চাবি দেখে; চাবি না থাকলে ঘরটাই নেই; রুটে can: নেই',
     ];
 
     /**

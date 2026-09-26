@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\Api\ApprovalApiController;
 use App\Http\Controllers\Api\AppVersionController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\DashboardTodayController;
 use App\Http\Controllers\Api\MeController;
 use App\Http\Controllers\Api\NoticeApiController;
 use App\Http\Controllers\Api\SyncController;
@@ -145,6 +146,13 @@ Route::prefix('v1')
          * প্রতিটা দরজা নিজে নিজের অনুমতি দেখে ([[MeController]])।
          */
         Route::get('/me', MeController::class)->name('me');
+
+        /*
+         * "আজ কেমন গেল" — চুক্তি §৮। ⚠️ `can:` নেই, ইচ্ছা করে: প্রতিটা ঘর
+         * নিজের চাবি দেখে, আর চাবি না থাকলে ঘরটাই যায় না
+         * ([[DashboardTodayController]])।
+         */
+        Route::get('/dashboard/today', DashboardTodayController::class)->name('dashboard.today');
 
         /*
          * অনুমোদন — চুক্তি §৫। ⚠️ সিঙ্ক নয়: অফলাইনে কাজ করে না।
