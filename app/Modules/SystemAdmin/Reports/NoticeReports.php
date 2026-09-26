@@ -48,6 +48,8 @@ final class NoticeReports
     {
         return new ReportDefinition(
             key: 'system_admin.notice_register',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'system_admin.notice.analytics',
             title: 'core.notice.report_register',
             filters: ['date_range'],
             query: fn (array $f) => DB::table('notices')
@@ -103,6 +105,8 @@ final class NoticeReports
     {
         return new ReportDefinition(
             key: 'system_admin.notice_signatures',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'system_admin.notice.analytics',
             title: 'core.notice.report_signatures',
             filters: ['date_range'],
             query: fn (array $f) => DB::table('notices')

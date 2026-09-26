@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\SystemAdmin\Services;
 
+use App\Core\Engines\Report\ReportDefinition;
 use App\Core\Engines\Report\ReportColumn;
 use App\Core\Engines\Report\ReportEngine;
 use App\Core\Engines\Report\ReportExport;
@@ -83,7 +84,7 @@ final class ScheduledReportRunner
         }
 
         // পাহারা ৩: মালিক ওই রিপোর্টের অনুমতি হারিয়েছেন
-        $permission = $this->reports->get($schedule->report_key)->permission;
+        $definition = $this->reports->get($schedule->report_key);
 
         /*
          * ── ⛔ প্রশ্নটা **ওই কোম্পানির ভেতরে**, ৭ সেপ্টেম্বর ২০২৬ ──────────
@@ -99,9 +100,15 @@ final class ScheduledReportRunner
          * ⭐ ধরা পড়েছে পূর্ণ সুইটে, একটামাত্র টেস্টে — আর সেই টেস্টটার
          * নামই *"পরপর দুই কোম্পানি একে অন্যের প্রসঙ্গ বয়ে নেয় না"*।
          */
-        $allowed = $permission === null || CompanyContext::forCompany(
+        /*
+         * ⛔ null আর "সবাই" নয় — ২৭ সেপ্টেম্বর ২০২৬। ⓘ আগে এখানে
+         * `$permission === null ||` ছিল, আর কোনো রিপোর্টই চাবি ঘোষণা করত না:
+         * কেবল সূচির চাবি হাতে যে কেউ লাভ-ক্ষতি পেতেন। উত্তর এখন কেবল
+         * [[ReportDefinition::allows()]]-এ — দুই-চাবির রিপোর্টে দুইটাই।
+         */
+        $allowed = CompanyContext::forCompany(
             (int) $schedule->company_id,
-            fn (): bool => $owner->fresh()->can($permission),
+            fn (): bool => $definition->allows($owner->fresh()),
         );
 
         if (! $allowed) {
@@ -127,7 +134,7 @@ final class ScheduledReportRunner
          * ⓘ যিনি বাদ পড়লেন তাঁকে সূচি থেকে মোছা হয় না — চাবি ফেরত পেলে
          * পরের দিন থেকে আবার পান। বাদ পড়াটা কেবল এই রানের।
          */
-        $recipients = $this->recipientsWhoMaySee($schedule, $permission);
+        $recipients = $this->recipientsWhoMaySee($schedule, $definition);
 
         $run = $this->generate($schedule, $owner, $recipients);
 
@@ -149,16 +156,12 @@ final class ScheduledReportRunner
      *
      * @return Collection<int, User>
      */
-    private function recipientsWhoMaySee(ReportSchedule $schedule, ?string $permission): Collection
+    private function recipientsWhoMaySee(ReportSchedule $schedule, ReportDefinition $definition): Collection
     {
-        if ($permission === null) {
-            return collect();
-        }
-
         return CompanyContext::forCompany(
             (int) $schedule->company_id,
             fn (): Collection => $schedule->recipientUsers()
-                ->filter(fn (User $user): bool => $user->is_active !== false && $user->fresh()->can($permission))
+                ->filter(fn (User $user): bool => $user->is_active !== false && $definition->allows($user->fresh()))
                 ->values(),
         );
     }

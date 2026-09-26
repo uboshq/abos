@@ -126,6 +126,8 @@ final class StockReports
 
         return new ReportDefinition(
             key: 'inventory.stock_value',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'inventory.report',
             title: 'inventory::menu.stock_value',
             filters: ['date_range'],
             groupBy: 'product_id',
@@ -290,6 +292,8 @@ final class StockReports
     {
         return new ReportDefinition(
             key: 'inventory.stock_by_batch',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'inventory.report',
             title: 'inventory::menu.stock_by_batch',
             filters: ['branch'],
             query: fn (array $f) => DB::table('inv_stock_movements as m')
@@ -372,6 +376,8 @@ final class StockReports
     {
         return new ReportDefinition(
             key: 'inventory.expiring',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'inventory.report',
             title: 'inventory::menu.expiring',
             filters: ['branch'],
             query: fn (array $f) => DB::table('inv_batches as b')
@@ -436,6 +442,8 @@ final class StockReports
     {
         return new ReportDefinition(
             key: 'inventory.stock_ledger',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'inventory.report',
             title: 'inventory::menu.stock_ledger',
             filters: ['date_range', 'branch'],
             query: fn (array $f) => DB::table('inv_stock_movements as m')
@@ -487,6 +495,8 @@ final class StockReports
     {
         return new ReportDefinition(
             key: 'inventory.stock_summary',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'inventory.report',
             title: 'inventory::menu.stock_summary',
             filters: ['date_range', 'branch'],
             groupBy: 'product_id',
@@ -553,6 +563,8 @@ final class StockReports
     {
         return new ReportDefinition(
             key: 'inventory.hold',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'inventory.report',
             title: 'inventory::menu.hold_report',
             filters: ['date_range', 'branch'],
             groupBy: 'product_id',
@@ -612,6 +624,8 @@ final class StockReports
     {
         return new ReportDefinition(
             key: 'inventory.stock_by_warehouse',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'inventory.report',
             title: 'inventory::menu.stock_by_warehouse',
             filters: ['date_range', 'branch'],
 
@@ -729,6 +743,8 @@ final class StockReports
     {
         return new ReportDefinition(
             key: 'inventory.adjustments',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'inventory.report',
             title: 'inventory::menu.adjustments',
             filters: ['date_range', 'branch'],
             query: fn (array $f) => DB::table('inv_stock_movements as m')
@@ -822,6 +838,8 @@ final class StockReports
     {
         return new ReportDefinition(
             key: 'inventory.reserved',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'inventory.report',
             title: 'inventory::menu.reserved_report',
             filters: ['date_range', 'branch'],
             groupBy: 'product_id',
@@ -921,6 +939,8 @@ final class StockReports
 
         return new ReportDefinition(
             key: 'inventory.replenishment',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'inventory.report',
             title: 'inventory::menu.replenishment',
             filters: ['branch'],
 

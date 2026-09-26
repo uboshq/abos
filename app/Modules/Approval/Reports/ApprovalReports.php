@@ -59,6 +59,8 @@ final class ApprovalReports
     {
         return new ReportDefinition(
             key: 'approval.pending',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'approval.report',
             title: 'approval::menu.report_pending',
             filters: ['date_range'],
             query: fn (array $f) => self::base($f)
@@ -161,6 +163,8 @@ final class ApprovalReports
 
         return new ReportDefinition(
             key: $key,
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'approval.report',
             title: $title,
             filters: ['date_range'],
             query: fn (array $f) => self::base($f)
@@ -227,6 +231,8 @@ final class ApprovalReports
     {
         return new ReportDefinition(
             key: 'approval.bottleneck',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'approval.report',
             title: 'approval::menu.report_bottleneck',
             filters: [],
             groupBy: 'step_key',
@@ -309,6 +315,8 @@ final class ApprovalReports
     {
         return new ReportDefinition(
             key: 'approval.why_rejected',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'approval.report',
             title: 'approval::menu.report_why_rejected',
             filters: ['date_range'],
             groupBy: 'reason_code',
@@ -340,6 +348,8 @@ final class ApprovalReports
     {
         return new ReportDefinition(
             key: 'approval.by_user',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'approval.report',
             title: 'approval::menu.report_by_user',
             filters: ['date_range'],
             groupBy: 'user_id',

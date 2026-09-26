@@ -236,23 +236,19 @@ final class ScheduleService
      */
     private function assertRecipientsAllowed(string $reportKey, array $recipientIds): void
     {
-        $permission = $this->reports->get($reportKey)->permission;
+        $definition = $this->reports->get($reportKey);
         $selfId = (int) auth()->id();
 
         $others = array_values(array_filter($recipientIds, fn (int $id): bool => $id !== $selfId));
 
-        if ($permission === null) {
-            if ($others !== []) {
-                throw ValidationException::withMessages([
-                    'recipients' => __('system_admin::schedule.report_not_shareable'),
-                ]);
-            }
-
-            return;
-        }
-
-        // নির্মাতার নিজেরও অনুমতি লাগে
-        if (auth()->user() === null || ! auth()->user()->can($permission)) {
+        /*
+         * ⛔ নির্মাতার নিজেরও অনুমতি লাগে — null হলেও, ২৭ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ আগে null-এ নির্মাতা নিজের জন্য সূচি বানাতে পারতেন, যাচাই ছাড়াই —
+         * আর কোনো রিপোর্টই চাবি ঘোষণা করত না, তাই কেবল সূচির চাবি হাতে
+         * লাভ-ক্ষতি পাওয়া যেত। উত্তর এখন [[ReportDefinition::allows()]]-এ।
+         */
+        if (! $definition->allows(auth()->user())) {
             throw ValidationException::withMessages([
                 'report_key' => __('system_admin::schedule.you_cannot_see_this'),
             ]);
@@ -261,7 +257,7 @@ final class ScheduleService
         foreach ($others as $id) {
             $user = User::query()->find($id);
 
-            if ($user === null || ! $user->can($permission)) {
+            if ($user === null || ! $definition->allows($user)) {
                 throw ValidationException::withMessages([
                     'recipients' => __('system_admin::schedule.recipient_cannot_see', [
                         'name' => $user?->name ?? (string) $id,

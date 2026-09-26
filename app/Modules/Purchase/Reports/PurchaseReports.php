@@ -82,6 +82,8 @@ final class PurchaseReports
 
         return new ReportDefinition(
             key: 'purchase.pending_orders',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'purchase.report',
             title: 'purchase::menu.pending_orders',
             filters: ['date_range', 'branch'],
             query: fn (array $f) => DB::table('pur_order_lines as ol')
@@ -146,6 +148,8 @@ final class PurchaseReports
 
         return new ReportDefinition(
             key: 'purchase.uninvoiced',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'purchase.report',
             title: 'purchase::menu.uninvoiced',
             filters: ['date_range', 'branch'],
             query: fn (array $f) => DB::table('pur_receipt_lines as rl')
@@ -195,6 +199,8 @@ final class PurchaseReports
     {
         return new ReportDefinition(
             key: 'purchase.by_supplier',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'purchase.report',
             title: 'purchase::menu.by_supplier',
             filters: ['date_range', 'branch'],
             groupBy: 'supplier_id',
@@ -266,6 +272,8 @@ final class PurchaseReports
     {
         return new ReportDefinition(
             key: 'purchase.match_exceptions',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'purchase.report',
             title: 'purchase::menu.match_exceptions',
             filters: ['date_range', 'branch'],
 
@@ -361,6 +369,8 @@ final class PurchaseReports
 
         return new ReportDefinition(
             key: 'purchase.price_history',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'purchase.report',
             title: 'purchase::menu.price_history',
             filters: ['date_range', 'branch'],
             query: fn (array $f) => DB::table('pur_bill_lines as l')
@@ -446,6 +456,8 @@ final class PurchaseReports
 
         return new ReportDefinition(
             key: 'purchase.supplier_performance',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'purchase.report',
             title: 'purchase::menu.supplier_performance',
             filters: ['date_range', 'branch'],
             groupBy: 'supplier_id',

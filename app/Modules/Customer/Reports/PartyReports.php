@@ -65,6 +65,8 @@ final class PartyReports
     {
         return new ReportDefinition(
             key: 'customer.collection',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'customer.report',
             title: 'customer::menu.collection',
             filters: ['date_range', 'branch', 'party_type'],
             groupBy: 'party_id',
@@ -131,6 +133,8 @@ final class PartyReports
     {
         return new ReportDefinition(
             key: 'customer.no_limit',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'customer.report',
             title: 'customer::menu.no_limit',
             filters: ['branch'],
             groupBy: 'id',
@@ -189,6 +193,8 @@ final class PartyReports
     {
         return new ReportDefinition(
             key: 'customer.due_list',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'customer.report',
             title: 'customer::menu.due_list',
             filters: ['date_range', 'branch', 'party_type'],
             groupBy: 'party_id',
@@ -244,6 +250,8 @@ final class PartyReports
     {
         return new ReportDefinition(
             key: 'customer.ageing',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'customer.report',
             title: 'customer::menu.ageing',
             filters: ['date_range', 'branch', 'party_type'],
             groupBy: 'party_id',

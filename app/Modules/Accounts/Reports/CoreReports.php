@@ -59,6 +59,8 @@ final class CoreReports
     {
         return new ReportDefinition(
             key: 'accounts.inflow',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'accounts.report',
             title: 'accounts::menu.inflow',
             filters: ['date_range', 'branch'],
             query: fn (array $f) => DB::table('ledger_entries')
@@ -119,6 +121,8 @@ final class CoreReports
     {
         return new ReportDefinition(
             key: 'accounts.day_book',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'accounts.report',
             title: 'accounts::menu.day_book',
             filters: ['date_range', 'branch'],
             // খাতের নাম join করে আনা হয়, id নয়: "১৪" দেখে কেউ বলতে পারে
@@ -164,6 +168,8 @@ final class CoreReports
     {
         return new ReportDefinition(
             key: 'accounts.ledger',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'accounts.report',
             title: 'accounts::menu.ledger',
             filters: ['date_range', 'branch', 'account'],
             runningBalance: true,
@@ -227,6 +233,8 @@ final class CoreReports
     {
         return new ReportDefinition(
             key: 'accounts.project_ledger',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'accounts.report',
             title: 'accounts::menu.project_ledger',
             filters: ['date_range', 'branch', 'cost_centre'],
             runningBalance: true,
@@ -280,6 +288,8 @@ final class CoreReports
     {
         return new ReportDefinition(
             key: 'accounts.trial_balance',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'accounts.report',
             asOfDate: true,
             title: 'accounts::menu.trial_balance',
             filters: ['date_range', 'branch'],
@@ -362,6 +372,8 @@ final class CoreReports
     {
         return new ReportDefinition(
             key: $key,
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'accounts.report',
             title: $title,
             filters: ['date_range', 'branch'],
             runningBalance: true,
@@ -461,6 +473,9 @@ final class CoreReports
             'accounts::menu.balance_sheet',
             Account::BALANCE_SHEET_TYPES,
             dateRange: false,
+            /* ⓘ লাইভের ব্যালেন্স শিটের পাতা আলাদা নিয়ামক ([[BalanceSheetController]]),
+               আর সেটা কেবল এই চাবি চায় — ইঞ্জিনের এই সংস্করণ ওয়েবে পৌঁছায়ই না */
+            permission: 'accounts.report.final',
         );
     }
 
@@ -475,9 +490,12 @@ final class CoreReports
         array $types,
         bool $dateRange,
         ?\Closure $summary = null,
+        string|array $permission = ['accounts.report', 'accounts.report.final'],
     ): ReportDefinition {
         return new ReportDefinition(
             key: $key,
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: $permission,
             title: $title,
             filters: ['date_range', 'branch'],
 
@@ -559,6 +577,8 @@ final class CoreReports
     {
         return new ReportDefinition(
             key: 'accounts.cash_flow',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: ['accounts.report', 'accounts.report.final'],
             title: 'accounts::menu.cash_flow',
             filters: ['date_range', 'branch'],
             groupBy: 'trx_date',
@@ -638,6 +658,8 @@ final class CoreReports
     {
         return new ReportDefinition(
             key: 'accounts.by_cost_centre',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'accounts.report',
             title: 'accounts::menu.by_cost_centre',
             filters: ['date_range', 'branch'],
             groupBy: 'cost_center_id',
@@ -702,6 +724,8 @@ final class CoreReports
     {
         return new ReportDefinition(
             key: 'accounts.expense_by_head',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'accounts.report',
             title: 'accounts::menu.expense_by_head',
             filters: ['date_range', 'branch'],
             groupBy: 'account_id',
@@ -750,6 +774,8 @@ final class CoreReports
     {
         return new ReportDefinition(
             key: 'accounts.income_by_head',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'accounts.report',
             title: 'accounts::field.income_by_head',
             filters: ['date_range', 'branch'],
             groupBy: 'account_id',

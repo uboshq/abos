@@ -76,6 +76,8 @@ final class RestaurantReports
     {
         return new ReportDefinition(
             key: 'restaurant.food_cost',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'restaurant.report',
             title: 'restaurant::menu.food_cost',
             filters: ['date_range', 'branch'],
             groupBy: 'product_id',

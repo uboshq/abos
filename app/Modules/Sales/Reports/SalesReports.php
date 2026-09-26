@@ -46,6 +46,8 @@ final class SalesReports
 
         return new ReportDefinition(
             key: 'sales.pending_orders',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'sales.report',
             title: 'sales::menu.pending_orders',
             filters: ['date_range', 'branch'],
             query: fn (array $f) => DB::table('sal_order_lines as ol')
@@ -108,6 +110,8 @@ final class SalesReports
 
         return new ReportDefinition(
             key: 'sales.uninvoiced',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'sales.report',
             title: 'sales::menu.undelivered',
             filters: ['date_range', 'branch'],
             query: fn (array $f) => DB::table('sal_challan_lines as cl')
@@ -156,6 +160,8 @@ final class SalesReports
     {
         return new ReportDefinition(
             key: 'sales.by_customer',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'sales.report',
             title: 'sales::menu.by_customer',
             filters: ['date_range', 'branch'],
             groupBy: 'customer_id',
@@ -254,6 +260,8 @@ final class SalesReports
     {
         return new ReportDefinition(
             key: 'sales.by_product',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'sales.report',
             title: 'sales::menu.by_product',
             filters: ['date_range', 'branch'],
             groupBy: 'product_id',
@@ -364,6 +372,8 @@ final class SalesReports
     {
         return new ReportDefinition(
             key: 'sales.by_brand',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'sales.report',
             title: 'sales::menu.by_brand',
             filters: ['date_range', 'branch'],
             groupBy: 'brand_id',

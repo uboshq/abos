@@ -61,6 +61,8 @@ final class ReturnOnCapitalReport
     {
         return new ReportDefinition(
             key: 'purchase.return_on_capital',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'purchase.settlement.view',
             title: 'supplier::menu.return_on_capital',
             /*
              * ⛔ শাখার ছাঁকনিটা সরানো হলো — ২১ সেপ্টেম্বর ২০২৬।

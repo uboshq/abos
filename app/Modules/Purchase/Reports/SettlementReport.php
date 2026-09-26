@@ -56,6 +56,8 @@ final class SettlementReport
     {
         return new ReportDefinition(
             key: 'purchase.settlement',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'purchase.settlement.view',
             title: 'supplier::menu.settlement',
             /*
              * ⛔ শাখার ছাঁকনিটা সরানো হলো — ২১ সেপ্টেম্বর ২০২৬।

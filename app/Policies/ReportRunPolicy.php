@@ -44,8 +44,7 @@ final class ReportRunPolicy
             return false;
         }
 
-        $permission = $reports->get($key)->permission;
-
-        return $permission === null || $user->can($permission);
+        /* ⛔ null মানে "সবাই" নয় — উত্তর কেবল [[ReportDefinition::allows()]]-এ, ২৭ সেপ্টেম্বর ২০২৬ */
+        return $reports->get($key)->allows($user);
     }
 }

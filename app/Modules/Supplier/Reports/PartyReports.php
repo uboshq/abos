@@ -50,6 +50,8 @@ final class PartyReports
     {
         return new ReportDefinition(
             key: 'supplier.payable_list',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'supplier.report',
             title: 'supplier::menu.payable_list',
             filters: ['date_range', 'branch', 'party_type'],
             groupBy: 'party_id',
@@ -144,6 +146,8 @@ final class PartyReports
     {
         return new ReportDefinition(
             key: 'supplier.payment_schedule',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'supplier.report',
             title: 'supplier::menu.payment_schedule',
             filters: ['date_range', 'branch', 'party_type'],
             query: function (array $f) {
@@ -238,6 +242,8 @@ final class PartyReports
     {
         return new ReportDefinition(
             key: 'supplier.ageing',
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
+            permission: 'supplier.report',
             title: 'supplier::menu.ageing',
             filters: ['date_range', 'branch', 'party_type'],
             groupBy: 'party_id',

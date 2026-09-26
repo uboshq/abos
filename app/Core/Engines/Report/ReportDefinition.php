@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Core\Engines\Report;
 
+use App\Core\Services\PermissionSyncer;
+use App\Models\User;
 use Closure;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Query\Builder as QueryBuilder;
@@ -84,13 +86,24 @@ final class ReportDefinition
          * অনুমতিহীন দশজনের ইমেইলে ক্রয়মূল্য পাঠাত।
          *
          * ── null মানে "সবার জন্য খোলা" নয়, "জানি না" ─────────────────
-         * null হলে সূচি রিপোর্টটা **সূচি-নির্মাতা ছাড়া কাউকে পাঠাবে না**।
-         * ঐচ্ছিক ঘর বলে বেশিরভাগ রিপোর্ট এটা ঘোষণা করবে না; তখন
-         * "null = সবাই" ধরে নিলে পাহারাটা নীরবে কিছুই যাচাই করত না।
-         * না-জানা মানে বাইরে পাঠানো নয় — যে রিপোর্ট সত্যিই বিতরণযোগ্য,
-         * কেউ একটা করে ভেবে এই ঘোষণাটা বসাবে।
+         * null হলে **সুপার অ্যাডমিন ছাড়া কেউ** পান না — সূচি, নামানো, ফোন, কেউ
+         * নয় ([[allows()]])। ⚠️ আগে লেখা ছিল "নির্মাতা নিজের জন্য পাবেন", আর
+         * তখন কোনো রিপোর্টই চাবি ঘোষণা করত না — সেটাই নিচের ফাঁক। ⛔ তাই এখন
+         * প্রতিটা নিবন্ধিত রিপোর্ট ওয়েবের দরজার চাবি ঘোষণা করে, আর
+         * [[EveryReportNamesTheKeyItsWebDoorAsksForTest]] সেটা পাহারা দেয়।
+         *
+         * ── ⛔ একাধিক চাবি = সবগুলোই লাগে, ২৭ সেপ্টেম্বর ২০২৬ ─────────────
+         * লাভ-ক্ষতি আর নগদ প্রবাহের ওয়েবের দরজা দুইটা চাবি চায়
+         * (`accounts.report` **আর** `accounts.report.final`)। ⚠️ একটা দিলে
+         * সূচি আর ফোন এমন কাউকে ছেড়ে দিত যাঁকে ওয়েব ফেরায়।
+         *
+         * ⛔ null-এ সূচি নির্মাতাকে নিজের জন্য পাঠাতে দিত — আর তাতে কেবল
+         * সূচির চাবি হাতে যে কেউ লাভ-ক্ষতি পেতেন। এখন null মানে **সুপার
+         * অ্যাডমিন ছাড়া কেউ নয়**, আর প্রশ্নটা কেবল [[allows()]]-এ।
+         *
+         * @var string|list<string>|null
          */
-        public readonly ?string $permission = null,
+        public readonly string|array|null $permission = null,
 
         /**
          * সারিগুলোর উপরে এক লাইনে ফলটা — ঐচ্ছিক।
@@ -213,6 +226,39 @@ final class ReportDefinition
     public function hasFilter(string $name): bool
     {
         return in_array($name, $this->filters, true);
+    }
+
+    /** @return list<string> ঘোষিত চাবিগুলো; ফাঁকা মানে ঘোষণা নেই */
+    public function permissions(): array
+    {
+        return array_values(array_filter((array) $this->permission, fn ($key): bool => is_string($key) && $key !== ''));
+    }
+
+    /**
+     * এই মানুষটা কি রিপোর্টটা পেতে পারেন — সূচি, চালানো, নামানো আর ফোন,
+     * চারটা দরজার একমাত্র উত্তরদাতা।
+     *
+     * ⚠️ প্রশ্নটা প্রসঙ্গের কোম্পানির ভেতরে (teams); ডাকার জন আগে কোম্পানি বসান।
+     */
+    public function allows(?User $user): bool
+    {
+        if ($user === null) {
+            return false;
+        }
+
+        $keys = $this->permissions();
+
+        if ($keys === []) {
+            return $user->roles->contains('name', PermissionSyncer::SUPER_ADMIN_ROLE);
+        }
+
+        foreach ($keys as $key) {
+            if (! $user->can($key)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public function isAsOfDate(): bool
