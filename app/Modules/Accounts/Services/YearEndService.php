@@ -543,6 +543,22 @@ final class YearEndService
              */
             $resets = $before->reset_yearly && NumberSeriesProvisioner::resetsWith((string) $before->format);
 
+            /*
+             * ⛔ গুনতি কখনো পিছায় না — অডিট §১.৮, ২৭ সেপ্টেম্বর ২০২৬।
+             *
+             * ⚠️ বছর খুলে আবার বন্ধ করলে নতুন বছরটা আগে থেকেই থাকে, আর
+             * তাতে ইতিমধ্যে নম্বর কাটা হয়ে গেছে (ধরা যাক ০১০১..০১৫০)।
+             * হুবহু বসালে গুনতি ১০১-এ ফিরত, আর প্রতিটা নতুন কাগজ "নম্বর
+             * আগেই আছে" বলে আটকে যেত। ⓘ তাই দুইটার বড়টা থাকে।
+             *
+             * ⓘ বছর-রিসেট সিরিজেও একই: প্রথম বন্ধে নতুন সারিটা সদ্য বসানো,
+             * তাই `start_number`-এই শুরু; আবার বন্ধে ওতে কাটা নম্বর আছে,
+             * তাই যেখানে আছে সেখান থেকেই চলে — একই নম্বর দুইবার নয়।
+             */
+            $carried = $resets
+                ? max((int) $before->start_number, (int) $series->next_number)
+                : max((int) $series->next_number, (int) $before->next_number);
+
             // ছক ও উপসর্গ সবসময় বহন করা হয় — ব্যবহারকারী গত বছর যা
             // ঠিক করেছিলেন সেটা নতুন বছরে হারানোর কোনো কারণ নেই
             $series->forceFill([
@@ -551,7 +567,7 @@ final class YearEndService
                 'format' => $before->format,
                 'padding' => $before->padding,
                 'reset_yearly' => $resets,
-                'next_number' => $resets ? $before->start_number : $before->next_number,
+                'next_number' => $carried,
             ])->save();
         }
     }
