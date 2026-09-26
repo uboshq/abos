@@ -13,12 +13,22 @@
     খোঁজা একটা **থেমে-যাওয়া** কাজ: মানুষ কিছু একটা করছিলেন, মাঝপথে
     খুঁজতে এলেন, তারপর ফিরে যাবেন। ⓘ আলাদা পাতায় নিয়ে গেলে ফেরার পথটা
     হারায়, আর `Esc`-এ যা ফিরে আসে সেটাই সবচেয়ে সস্তা ফেরা।
+
+    ── ⭐ কীবোর্ড, ২৭ সেপ্টেম্বর ২০২৬ (A-06, A-07) ──────────────────────
+    Ctrl+K / ⌘K যেকোনো পাতা থেকে খোলে (`hotkey()`, `window`-এ — রোলের
+    পাতায় রোল খোঁজা আগে, কারণটা shell.js-এ)। ঘরের ভিতরে ↓ ↑ বাছাই
+    সরায়, ↵ বাছা ফলটা খোলে, Esc বন্ধ করে।
+
+    ⓘ বাছা সারির রং `aria-selected:` দিয়ে — অর্থাৎ **যে অবস্থা স্ক্রিন-
+    রিডার পড়ে, চোখও ঠিক সেটাই দেখে**। আলাদা একটা "active" ক্লাস রাখলে
+    দুইটা কোনোদিন আলাদা হয়ে যেত।
 --}}
 {{-- ⓘ যুক্তিটা `resources/js/components/shell.js`-এ (commandCenter) —
      CSP-Alpine অ্যাট্রিবিউটের ভিতরে পদ্ধতি পড়তে পারে না। --}}
 <div x-data="commandCenter({ url: '{{ route('search') }}' })"
      @open-command-center.window="show()"
-     @keydown.escape.window="open = false"
+     @keydown.window="hotkey($event)"
+     @keydown.escape.window="close()"
      x-show="open" x-cloak
      x-transition.opacity.duration.100ms
      style="position:fixed;inset:0;z-index:60;display:flex;justify-content:center;
@@ -37,6 +47,12 @@
             <x-ui.icon name="search" :size="18" class="text-(--color-ink-muted)" />
 
             <input x-ref="box" x-model="q" @input="ask()" type="text"
+                   @keydown.down.prevent="next()"
+                   @keydown.up.prevent="prev()"
+                   @keydown.enter.prevent="choose($event)"
+                   role="combobox" aria-autocomplete="list"
+                   aria-controls="command-hits" :aria-expanded="hits.length > 0"
+                   :aria-activedescendant="activeId"
                    placeholder="{{ __('core.action.search_anything') }}"
                    style="flex:1;border:0;outline:none;background:transparent;
                           font-size:15px;color:var(--color-ink-body)">
@@ -61,9 +77,14 @@
                 </p>
             </template>
 
-            <template x-for="hit in hits" :key="hit.url">
-                <a :href="hit.url"
-                   class="hover:bg-(--color-surface-muted)"
+            {{-- ⓘ `role="option"` লিংকেই — ↵ আর ক্লিক একই জিনিস চাপে
+                 (shell.js-এর `choose()`)। --}}
+            <div id="command-hits" role="listbox">
+            <template x-for="(hit, i) in hits" :key="hit.url">
+                <a :href="hit.url" :id="hitId(i)"
+                   role="option" :aria-selected="isActive(i) ? 'true' : 'false'"
+                   @mousemove="point(i)"
+                   class="hover:bg-(--color-surface-muted) aria-selected:bg-(--color-surface-muted)"
                    style="display:flex;align-items:baseline;gap:10px;padding:10px 14px;
                           border-bottom:1px solid var(--color-border);text-decoration:none">
                     <span style="flex:none;font-size:11px;color:var(--color-ink-muted)"
@@ -76,6 +97,7 @@
                           x-text="hit.label"></span>
                 </a>
             </template>
+            </div>
         </div>
     </div>
 </div>

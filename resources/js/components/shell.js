@@ -12,7 +12,19 @@
  * আর পদ্ধতিটা এখানে — যেখানে সাধারণ JavaScript চলে।
  */
 
-/** যেকোনো কিছু খুঁজুন — টপবারের প্যালেট */
+/**
+ * যেকোনো কিছু খুঁজুন — টপবারের প্যালেট।
+ *
+ * ── ⭐ Ctrl+K আর তীর, ২৭ সেপ্টেম্বর ২০২৬ (A-06, A-07) ──────────────────
+ * ⛔ টপবারের বোতামের `title`-এ লেখা ছিল "(Ctrl K)", অথচ গোটা অ্যাপে ঐ
+ * চাবির কোনো শ্রোতা ছিল না — চাপলে ব্রাউজার নিজের ঠিকানা-বারে খুঁজত।
+ * ⚠️ আর প্যালেট খুললেও ফলগুলোয় যাওয়া যেত কেবল ইঁদুরে: হাত কীবোর্ড
+ * থেকে সরাতেই হত, অথচ প্যালেটের পুরো অর্থটাই ওটা না সরানো।
+ *
+ * ⓘ এখন: Ctrl+K / ⌘K যেকোনো পাতায় খোলে (`hotkey()`), ↓ ↑ বাছাই সরায়,
+ * ↵ বাছা ফলটা খোলে, Esc বন্ধ করে। বাছা সারিটা `aria-selected`, আর ঘরটা
+ * `aria-activedescendant` দিয়ে স্ক্রিন-রিডারকে বলে কোনটা বাছা।
+ */
 export function commandCenter ({ url }) {
     return {
         open: false,
@@ -21,9 +33,105 @@ export function commandCenter ({ url }) {
         busy: false,
         timer: null,
 
+        // ⓘ বাছা ফলের ক্রম — ফল না থাকলেও ০, পড়ার সময় `hits.length` দেখা হয়
+        active: 0,
+
         show () {
             this.open = true
-            this.$nextTick(() => this.$refs.box?.focus())
+            this.$nextTick(() => {
+                this.$refs.box?.focus()
+                this.$refs.box?.select?.()
+            })
+        },
+
+        /*
+         * Ctrl+K / ⌘K — পাতার যেখানেই থাকুন।
+         *
+         * ── ⚠️ রোলের পাতায় রোল খোঁজা আগে ──────────────────────────────
+         * মালিকের স্পেক §২.৯: অনুমতির পর্দায় Ctrl+K মানে **রোল খোঁজা**
+         * (`actions.js`)। ⓘ ওই শ্রোতা `document`-এ বসে, এটা `window`-এ —
+         * তাই ঘটনা আগে ওর কাছে যায়, আর ঘর পেলে সে `preventDefault()` করে।
+         * ⭐ এখানে সেটা দেখে সরে দাঁড়ানো হয়: কোন পাতার কোন চাবি, সেই
+         * তালিকা এই ফাইলে লিখতে হয় না, আর নতুন কোনো পাতা নিজের Ctrl+K
+         * চাইলে একই পথে পায়।
+         *
+         * ⛔ Shift বা Alt চাপা থাকলে নয় — Ctrl+Shift+K ফায়ারফক্সের কনসোল,
+         * আর কিছু লেআউটে Ctrl+Alt মানে AltGr (অক্ষর টাইপ করা)।
+         *
+         * ⚠️ `code === 'KeyK'`-ও দেখা হয়: বাংলা লেআউটে `key` একটা বাংলা
+         * অক্ষর, কিন্তু চাবিটা একই জায়গায়।
+         */
+        hotkey (event) {
+            if (event.defaultPrevented) return
+
+            if (! (event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey) return
+
+            const key = typeof event.key === 'string' ? event.key.toLowerCase() : ''
+
+            if (key !== 'k' && event.code !== 'KeyK') return
+
+            event.preventDefault()
+            this.show()
+        },
+
+        close () {
+            this.open = false
+        },
+
+        /** ↓ ↑ — দুই প্রান্তে থামে, ঘুরে অন্য মাথায় যায় না */
+        step (by) {
+            if (this.hits.length === 0) return
+
+            this.active = Math.min(Math.max(this.active + by, 0), this.hits.length - 1)
+
+            this.$nextTick(() => {
+                // ⚠️ `nearest` — নাহলে প্রতিটা চাপে তালিকা লাফাত
+                document.getElementById(this.hitId(this.active))?.scrollIntoView?.({ block: 'nearest' })
+            })
+        },
+
+        next () {
+            this.step(1)
+        },
+
+        prev () {
+            this.step(-1)
+        },
+
+        /*
+         * ↵ — বাছা ফলটা খোলা।
+         *
+         * ⓘ লিংকটাই চাপা হয়, ঠিকানা হাতে বসানো হয় না: ইঁদুরের ক্লিক আর
+         * ↵ তখন হুবহু একই পথে যায় — পাতার অন্য কোনো লিংক-শ্রোতাও দুইটায়
+         * একই রকম চলে।
+         *
+         * ⚠️ বাংলা IME-তে অক্ষর গড়ার মাঝখানের ↵ (`isComposing`) অক্ষরটারই —
+         * তখন ফল খুললে অর্ধেক লেখা শব্দে পাতা চলে যেত।
+         */
+        choose (event) {
+            if (event && event.isComposing) return
+
+            if (! this.hits[this.active]) return
+
+            document.getElementById(this.hitId(this.active))?.click()
+        },
+
+        /** ইঁদুর যে সারিতে, বাছাইও সেখানে — দুইটা আলাদা হাইলাইট নয় */
+        point (i) {
+            this.active = i
+        },
+
+        isActive (i) {
+            return i === this.active
+        },
+
+        hitId (i) {
+            return 'command-hit-' + i
+        },
+
+        /** ⓘ `null` হলে Alpine অ্যাট্রিবিউটটাই সরায় — খালি id নয় */
+        get activeId () {
+            return this.hits[this.active] ? this.hitId(this.active) : null
         },
 
         get tooShort () {
@@ -46,6 +154,7 @@ export function commandCenter ({ url }) {
 
             if (this.tooShort) {
                 this.hits = []
+                this.active = 0
                 this.busy = false
 
                 return
@@ -63,6 +172,8 @@ export function commandCenter ({ url }) {
                     this.hits = []
                 }
 
+                // ⚠️ নতুন ফল মানে নতুন তালিকা — পুরনো ক্রমটা অন্য জিনিস দেখাত
+                this.active = 0
                 this.busy = false
             }, 200)
         },
