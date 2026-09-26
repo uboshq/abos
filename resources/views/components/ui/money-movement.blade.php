@@ -169,8 +169,15 @@
                 সম্পাদনা করতে দিত না — ঠিক যে ভুলটা ১৪ সেপ্টেম্বরে ধরা
                 পড়েছিল। ⓘ কেবল নতুন ভাউচারে চিপটা দেখানো হয় না।
             --}}
+            {{--
+                ⭐ টাকা আসার দিকে চেক নেই — মালিকের নিয়ম, ২৬ সেপ্টেম্বর ২০২৬।
+                ⓘ গৃহীত চেক ঢোকে কেবল চেকের খাতা দিয়ে, আর খাতায় বসে পাশের
+                দিন। সার্ভারও ঠিক এই কথা বলে ([[VoucherService]]); কেবল পর্দা
+                চেক দেখালে ব্যবহারকারী পুরো ফর্ম ভরে তবে "না" শুনতেন।
+            --}}
             @foreach (\App\Modules\Accounts\Models\Voucher::INSTRUMENTS as $way)
                 @continue($way === 'card' && $was('instrument') !== 'card')
+                @continue($way === 'cheque' && $inward && $was('instrument') !== 'cheque')
                 <label class="cursor-pointer">
                     <input type="radio" name="instrument" value="{{ $way }}" class="peer sr-only"
                            x-model="method" @checked($was('instrument', 'cash') === $way)>

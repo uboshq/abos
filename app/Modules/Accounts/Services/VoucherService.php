@@ -51,6 +51,8 @@ final class VoucherService
         return DB::transaction(function () use ($data, $lines) {
             $type = $this->assertType($data['type'] ?? null);
 
+            $this->assertNoChequeReceived($type, $data['instrument'] ?? null);
+
             $trxDate = Carbon::parse($data['trx_date']);
             $year = $this->resolveFinancialYear($trxDate);
 
@@ -220,6 +222,9 @@ final class VoucherService
     {
         $this->assertEditable($voucher);
 
+        $this->assertNoChequeReceived($voucher->type,
+            array_key_exists('instrument', $data) ? $data['instrument'] : $voucher->instrument);
+
         return DB::transaction(function () use ($voucher, $data, $lines) {
             $trxDate = Carbon::parse($data['trx_date'] ?? $voucher->trx_date);
 
@@ -253,6 +258,9 @@ final class VoucherService
                 'status' => __('accounts::validation.already_posted', ['no' => $voucher->document_no]),
             ]);
         }
+
+        // ⚠️ নিয়মের আগে লেখা খসড়াও — টাকা খাতায় ওঠে ঠিক এই মুহূর্তে
+        $this->assertNoChequeReceived($voucher->type, $voucher->instrument);
 
         if ($voucher->isCancelled()) {
             throw ValidationException::withMessages([
@@ -857,6 +865,23 @@ final class VoucherService
         if (! $voucher->isEditable()) {
             throw ValidationException::withMessages([
                 'status' => __('accounts::validation.posted_cannot_edit', ['no' => $voucher->document_no]),
+            ]);
+        }
+    }
+
+    /**
+     * রসিদ ভাউচারে চেক নয় — মালিকের নিয়ম, ২৬ সেপ্টেম্বর ২০২৬।
+     *
+     * ⛔ আগে "চেক" বাছলে টাকা সেদিনই সরাসরি ব্যাংকে বা নগদে বসত, চেকের
+     * খাতায় কোনো সারি ছাড়া — পাশের অপেক্ষা নেই, ফেরত লেখার উপায়ও নেই।
+     * ⭐ গৃহীত চেক ঢোকে কেবল চেকের খাতা দিয়ে ([[ChequeService::create()]]),
+     * আর খাতায় বসে পাশের দিন। ⓘ নিজের দেওয়া চেক (পরিশোধ) আগের মতোই চলে।
+     */
+    private function assertNoChequeReceived(string $type, mixed $instrument): void
+    {
+        if ($type === Voucher::RECEIPT && $instrument === 'cheque') {
+            throw ValidationException::withMessages([
+                'instrument' => __('accounts::validation.cheque_only_through_register'),
             ]);
         }
     }

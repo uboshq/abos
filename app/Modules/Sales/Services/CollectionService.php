@@ -18,6 +18,7 @@ use App\Modules\Accounts\Models\Cheque;
 use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\ChequeService;
 use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\MasterData\Models\PaymentMethod;
 use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\CollectionLine;
 use App\Modules\Sales\Models\SalesInvoice;
@@ -56,6 +57,8 @@ final class CollectionService
      */
     public function create(array $data, array $lines): Collection
     {
+        $this->assertNoCheque($data['instrument'] ?? null);
+
         return DB::transaction(function () use ($data, $lines) {
             $trxDate = Carbon::parse($data['trx_date'] ?? now());
             $year = $this->resolveFinancialYear($trxDate);
@@ -131,6 +134,7 @@ final class CollectionService
     public function update(Collection $collection, array $data, array $lines): Collection
     {
         $this->assertEditable($collection);
+        $this->assertNoCheque($data['instrument'] ?? null);
 
         return DB::transaction(function () use ($collection, $data, $lines) {
             $trxDate = Carbon::parse($data['trx_date'] ?? $collection->trx_date);
@@ -162,6 +166,9 @@ final class CollectionService
                 'status' => __('sales::validation.only_draft_confirms', ['no' => $collection->document_no]),
             ]);
         }
+
+        // ⚠️ নিয়মের আগে লেখা খসড়াও — টাকা খাতায় ওঠে ঠিক এই মুহূর্তে
+        $this->assertNoCheque($collection->instrument);
 
         $this->assertStillFits($collection);
 
@@ -273,6 +280,44 @@ final class CollectionService
 
             return $this->cheques->markBounced($cheque, $reason);
         });
+    }
+
+    /**
+     * আদায়ের কাগজে চেক নয় — মালিকের নিয়ম, ২৬ সেপ্টেম্বর ২০২৬।
+     *
+     * ⛔ এই কাগজ নিশ্চিত হলেই Dr নগদ/ব্যাংক / Cr গ্রাহক বসে — চেকে সেটা
+     * মানে পাশের আগেই বকেয়া কমা আর সীমা খোলা। ⭐ গৃহীত চেক ঢোকে কেবল
+     * চেকের খাতা দিয়ে, আর খাতায় বসে পাশের দিন ([[ChequeService]])।
+     *
+     * ⚠️ ঘরটা হাতে লেখা, তাই বানান যা-ই হোক ধরা হয় — আর চেক-ধরনের
+     * পেমেন্ট-পদ্ধতির কোড **ও নাম** দুইটাই (ডেমোতে কোড `CHQ`)।
+     *
+     * ⛔ নাম কেন: POS এই ঘরে পদ্ধতির **নাম** পাঠায় ([[PosService]])। কোনো
+     * কোম্পানি চেক-ধরনের পদ্ধতির নাম "Post-dated cheque" রাখলে কেবল কোড
+     * মেলালে কাউন্টারের চেক পাওয়ার দিনেই খাতায় বসত।
+     */
+    private function assertNoCheque(mixed $instrument): void
+    {
+        $said = mb_strtolower(trim((string) $instrument));
+
+        if ($said === '') {
+            return;
+        }
+
+        $isCheque = in_array($said, ['cheque', 'check', 'chq', 'চেক'], true)
+            || PaymentMethod::query()
+                ->where('kind', 'cheque')
+                ->where(fn ($q) => $q
+                    ->whereRaw('LOWER(code) = ?', [$said])
+                    ->orWhereRaw('LOWER(name_en) = ?', [$said])
+                    ->orWhereRaw('LOWER(name_bn) = ?', [$said]))
+                ->exists();
+
+        if ($isCheque) {
+            throw ValidationException::withMessages([
+                'instrument' => __('accounts::validation.cheque_only_through_register'),
+            ]);
+        }
     }
 
     /**

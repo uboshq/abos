@@ -34,6 +34,13 @@ use Tests\TestCase;
  * ছিল, আর ফেরতটা লেখার কোনো উপায়ও ছিল না।
  *
  * বাংলাদেশের পরিবেশনে আদায়ের বড় অংশ চেকে, আর তার একটা অংশ ফেরত আসে।
+ *
+ * ── ⭐ নিয়ম বদলাল — মালিকের সিদ্ধান্ত, ২৬ সেপ্টেম্বর ২০২৬ ──────────────
+ * *"ক্লিয়ারিং এর পরে একাউন্টে জমা হলে তার পর"*। আগে গৃহীত চেক হাতে
+ * আসতেই Dr ১১০৪ / Cr ডিলার বসত — ডিলারের দেনা সেদিনই কমত, আর বাকির
+ * সীমাও সেদিনই খুলত। ⓘ এখন হাতে আসা কেবল রেজিস্টারে; দেনা কমে পাশের
+ * দিন (Dr ব্যাংক / Cr ডিলার)। নিচের তিনটা দাবি সেই কারণেই উল্টেছে।
+ * পুরো নতুন পথ আর পুরনো চেকের পথ: [[AChequeReachesTheBooksOnlyWhenItClearsTest]]।
  */
 class AChequeInHandIsNotMoneyYetTest extends TestCase
 {
@@ -123,9 +130,13 @@ class AChequeInHandIsNotMoneyYetTest extends TestCase
     // ── কেন্দ্রীয় দাবি ───────────────────────────────────────────────
 
     /**
-     * চেক হাতে এল — ডিলারের দেনা কমল, কিন্তু ব্যাংকে কিছুই ঢোকেনি।
+     * চেক হাতে এল — ব্যাংকে কিছুই ঢোকেনি, আর ডিলারের দেনাও কমেনি।
      *
      * এটাই পুরো কাজটা। আগে টাকাটা সাথে সাথেই ব্যাংকে বসত।
+     *
+     * ⚠️ উল্টানো দাবি, ২৬ সেপ্টেম্বর ২০২৬: আগে এখানে দাবি ছিল ১১০৪-এ
+     * ৫০,০০০ বসে আর দেনা ৫০,০০০ কমে। ⭐ মালিকের নিয়মে চেক খাতায় ওঠে
+     * কেবল পাশের পরে — তাই এখন ১১০৪ শূন্য, দেনা অপরিবর্তিত।
      */
     public function test_the_bank_does_not_move_when_the_cheque_arrives(): void
     {
@@ -136,11 +147,11 @@ class AChequeInHandIsNotMoneyYetTest extends TestCase
         $this->assertSame(0, bccomp($this->bankBalance(), '0', 2),
             'চেক হাতে আসতেই ব্যাংকে টাকা বসে গেছে — ওটা এখনো টাকা নয়।');
 
-        $this->assertSame(0, bccomp($this->balanceOf(StandardChart::CHEQUES_IN_HAND), '50000', 2),
-            'হাতে চেকের খাতে অঙ্কটা বসেনি।');
+        $this->assertSame(0, bccomp($this->balanceOf(StandardChart::CHEQUES_IN_HAND), '0', 2),
+            'চেক হাতে আসতেই ১১০৪-এ বসেছে — মালিকের নিয়মে খাতায় ওঠার কথা কেবল পাশের দিন।');
 
-        $this->assertSame(0, bccomp(bcsub($dueBefore, $this->dealerDue(), 4), '50000', 2),
-            'ডিলারের দেনা কমেনি।');
+        $this->assertSame(0, bccomp($this->dealerDue(), $dueBefore, 2),
+            'চেক হাতে আসতেই ডিলারের দেনা কমেছে — পাশ না হওয়া পর্যন্ত টাকা আসেনি।');
     }
 
     /** জমা দেওয়া কেবল অবস্থার বদল — খাতায় কিছুই নড়ে না। */
@@ -198,15 +209,20 @@ class AChequeInHandIsNotMoneyYetTest extends TestCase
     }
 
     /**
-     * তিনটা ঘটনাই খাতায় থেকে যায় — মুছে যায় না।
+     * যা খাতায় উঠেছিল তা খাতায় থেকে যায় — মুছে যায় না।
      *
      * নিরীক্ষায় "এই চেকটার কী হয়েছিল" প্রশ্নের উত্তর কেবল তখনই দেওয়া
-     * যায় যখন তিনটা সারিই আলাদা করে দেখা যায়।
+     * যায় যখন প্রতিটা ঘটনা আলাদা করে দেখা যায়।
+     *
+     * ⚠️ বদলানো দাবি, ২৬ সেপ্টেম্বর ২০২৬: আগে হাতে আসার দিনের `cheque`
+     * দাখিলাও থাকত। ⭐ মালিকের নিয়মে হাতে আসাটা এখন কেবল রেজিস্টারে,
+     * তাই খাতায় দুইটা ঘটনা — পাশ, আর পরে ফেরত।
      */
     public function test_all_three_events_stay_on_the_books(): void
     {
         $cheque = $this->received('50000');
         $this->service()->deposit($cheque);
+        $this->service()->clear($cheque->fresh());
         $this->service()->bounce($cheque->fresh(), 'সই মেলেনি');
 
         $sources = LedgerEntry::query()
@@ -214,7 +230,9 @@ class AChequeInHandIsNotMoneyYetTest extends TestCase
             ->where('source_type', 'like', 'cheque%')
             ->pluck('source_type')->unique()->values()->all();
 
-        $this->assertContains('cheque', $sources);
+        $this->assertNotContains('cheque', $sources,
+            'হাতে আসার দিনের দাখিলা বসেছে — নতুন নিয়মে ওটা কেবল রেজিস্টারে।');
+        $this->assertContains('cheque:cleared', $sources);
         $this->assertContains('cheque:bounced', $sources);
     }
 
@@ -319,7 +337,12 @@ class AChequeInHandIsNotMoneyYetTest extends TestCase
             ->assertSee('7,500.00');
     }
 
-    /** পর্দা থেকেই চেক বসানো যায়, আর খতিয়ানে পৌঁছায়। */
+    /**
+     * পর্দা থেকেই চেক বসানো যায় — রেজিস্টারে, খতিয়ানে নয়।
+     *
+     * ⚠️ উল্টানো দাবি, ২৬ সেপ্টেম্বর ২০২৬: আগে দাবি ছিল ১১০৪-এ ১২,০০০
+     * বসে। ⭐ মালিকের নিয়মে খতিয়ানে পৌঁছায় কেবল পাশের দিন।
+     */
     public function test_a_cheque_can_be_recorded_from_the_screen(): void
     {
         $this->post(route('accounts.cheque.store'), [
@@ -332,7 +355,8 @@ class AChequeInHandIsNotMoneyYetTest extends TestCase
             'bank_account_id' => $this->bank->id,
         ])->assertSessionHasNoErrors();
 
-        $this->assertSame(0, bccomp($this->balanceOf(StandardChart::CHEQUES_IN_HAND), '12000', 2));
+        $this->assertSame(0, bccomp($this->balanceOf(StandardChart::CHEQUES_IN_HAND), '0', 2),
+            'পর্দা থেকে তোলা চেক সেদিনই ১১০৪-এ বসেছে।');
 
         $this->assertDatabaseHas('acc_cheques', [
             'cheque_no' => 'SCREEN-1',

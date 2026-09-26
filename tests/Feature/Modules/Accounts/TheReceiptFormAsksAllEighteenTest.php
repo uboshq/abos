@@ -132,10 +132,23 @@ final class TheReceiptFormAsksAllEighteenTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        foreach (['cash', 'mfs', 'transfer', 'cheque'] as $way) {
+        foreach (['cash', 'mfs', 'transfer'] as $way) {
             $this->assertStringContainsString('value="'.$way.'"', $html,
                 "মাধ্যম '{$way}' পর্দায় নেই, অথচ ভ্যালিডেশন সেটা মানে।");
         }
+
+        /*
+         * ⚠️ বদলানো দাবি, ২৬ সেপ্টেম্বর ২০২৬: আগে রসিদে চারটা চিপ ছিল,
+         * চেকসহ। ⭐ মালিকের নিয়মে গৃহীত চেক ঢোকে কেবল চেকের খাতা দিয়ে,
+         * আর সার্ভার রসিদে চেক ফিরিয়ে দেয় — তাই পর্দাও আর দেখায় না।
+         * ⓘ পরিশোধে (নিজের দেওয়া চেক) চিপটা আছে।
+         */
+        $this->assertStringNotContainsString('value="cheque"', $html,
+            'রসিদের নতুন ফর্মে চেকের চিপ দেখা যাচ্ছে — সার্ভার তো ওটা ফিরিয়ে দেবে।');
+
+        $this->assertStringContainsString('value="cheque"',
+            (string) $this->get(route('accounts.voucher.create', ['type' => 'payment']))->assertOk()->getContent(),
+            'পরিশোধের ফর্ম থেকেও চেক হারিয়েছে — নিয়মটা কেবল গৃহীত চেকের।');
 
         /*
          * ⛔ কার্ড নতুন ভাউচারে দেখানো হয় না — নকশায় চারটা চিপ।

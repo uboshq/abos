@@ -8,6 +8,7 @@ use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\Money;
+use App\Models\LedgerEntry;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Cheque;
 use App\Modules\Accounts\Models\Voucher;
@@ -22,10 +23,17 @@ use Illuminate\Validation\ValidationException;
  * চেক হাতে পাওয়া আর টাকা পাওয়া এক জিনিস নয়, আর ঠিক এই পার্থক্যটাই
  * আগে কোথাও ছিল না।
  *
- *   গৃহীত চেক
- *     হাতে এল   Dr হাতে চেক (১১০৪)      Cr ডিলার
- *     পাশ হলো   Dr ব্যাংক               Cr হাতে চেক
- *     ফেরত এল   Dr ডিলার                Cr হাতে চেক
+ *   গৃহীত চেক — ⭐ মালিকের নিয়ম, ২৬ সেপ্টেম্বর ২০২৬: *"ক্লিয়ারিং এর পরে
+ *   একাউন্টে জমা হলে তার পর"*
+ *     হাতে এল          কেবল রেজিস্টারে — খাতায় কিছু নয়
+ *     পাশ হলো          Dr ব্যাংক               Cr ডিলার
+ *     পাশের আগে ফেরত   কেবল অবস্থা — উল্টানোর কিছু নেই
+ *     পাশের পরে ফেরত   Dr ডিলার                Cr ব্যাংক
+ *
+ *   ⚠️ আগের নিয়মে তোলা চেক ([[receivedIntoTheBooks()]]) হাতে আসার দিনেই
+ *   Dr ১১০৪ / Cr ডিলার পেয়েছে, আর নিজের পুরনো পথেই শেষ হয় — পাশ হলে
+ *   Dr ব্যাংক / Cr ১১০৪, ফেরত এলে Dr ডিলার / Cr ১১০৪। ⛔ নতুন পথে
+ *   পাঠালে পাশের দিন ডিলারের বকেয়া দ্বিতীয়বার কমত।
  *
  *   ইস্যু করা চেক
  *     দেওয়া হলো Dr সরবরাহকারী            Cr দেওয়া চেক (২১১৫)
@@ -67,6 +75,16 @@ final class ChequeService
             ]);
         }
 
+        /*
+         * ⛔ গৃহীত চেক কার, তা না জানলে পাশের দিনের Cr কারও নামে বসত না —
+         * টাকা এসেছে, অথচ কারও বকেয়া কমেনি।
+         */
+        if ($direction === Cheque::RECEIVED && (blank($data['party_type'] ?? null) || blank($data['party_id'] ?? null))) {
+            throw ValidationException::withMessages([
+                'party' => __('accounts::validation.cheque_needs_party'),
+            ]);
+        }
+
         return DB::transaction(function () use ($data, $direction, $amount) {
             $cheque = Cheque::query()->create([
                 'company_id' => CompanyContext::id(),
@@ -86,15 +104,20 @@ final class ChequeService
                 'created_by' => auth()->id(),
             ]);
 
-            $this->post($cheque, Cheque::STOCK_SOURCE, $cheque->received_on, $direction === Cheque::RECEIVED
-                ? [
-                    $this->line(StandardChart::CHEQUES_IN_HAND, debit: $amount),
-                    $this->partyLine($cheque, credit: $amount),
-                ]
-                : [
+            /*
+             * ⭐ গৃহীত চেক হাতে আসার দিন কেবল রেজিস্টারে — মালিকের নিয়ম,
+             * ২৬ সেপ্টেম্বর ২০২৬।
+             *
+             * ⛔ আগে এখানে Dr ১১০৪ / Cr ডিলার বসত, আর ডিলারের বকেয়া ও
+             * বাকির সীমা সেদিনই খুলে যেত — ফেরত আসতে পারে এমন কাগজে।
+             * ⓘ দেওয়া চেকের দায় আগের মতোই দেওয়ার দিন।
+             */
+            if ($direction === Cheque::ISSUED) {
+                $this->post($cheque, Cheque::STOCK_SOURCE, $cheque->received_on, [
                     $this->partyLine($cheque, debit: $amount),
                     $this->line(StandardChart::CHEQUES_ISSUED, credit: $amount),
                 ]);
+            }
 
             return $cheque->fresh();
         });
@@ -191,15 +214,30 @@ final class ChequeService
      */
     public function markBounced(Cheque $cheque, string $reason): Cheque
     {
-        $this->assertStatus($cheque, [Cheque::PENDING, Cheque::DEPOSITED]);
+        /*
+         * ⛔ কেবল আদায়ের কাগজের চেক। নিচের পাশ-ফেরত ধরে নেয় টাকাটা ১১০৪
+         * হয়ে এসেছিল — নতুন নিয়মের বা দেওয়া চেকে ডাকলে ১১০৪ ভুল হয়ে যেত।
+         */
+        if (! $cheque->postedByCollection()) {
+            throw ValidationException::withMessages([
+                'status' => __('accounts::validation.cheque_not_from_collection', ['no' => $cheque->cheque_no]),
+            ]);
+        }
 
-        $cheque->update([
-            'status' => Cheque::BOUNCED,
-            'bounce_reason' => $reason,
-            'cleared_on' => null,
-        ]);
+        $this->assertStatus($cheque, [Cheque::PENDING, Cheque::DEPOSITED, Cheque::CLEARED]);
 
-        return $cheque->fresh();
+        return DB::transaction(function () use ($cheque, $reason) {
+            /*
+             * ⚠️ পাশ হয়ে থাকলে ব্যাংকের টাকা আগে ১১০৪-এ ফেরে; আদায় বাতিল
+             * তারপর ১১০৪ থেকে গ্রাহকে ফেরায়। নাহলে ব্যাংকে এমন টাকা থেকে
+             * যেত যা ব্যাংক ফিরিয়ে নিয়েছে।
+             */
+            if ($cheque->status === Cheque::CLEARED) {
+                $this->returnToHand($cheque, now()->toDateString(), $reason);
+            }
+
+            return $this->markAs($cheque, Cheque::BOUNCED, $reason);
+        });
     }
 
     /**
@@ -235,11 +273,18 @@ final class ChequeService
         $amount = (string) $cheque->amount;
 
         return DB::transaction(function () use ($cheque, $bank, $date, $amount) {
+            /*
+             * ⭐ নতুন চেকে পাশের দিনই ডিলারের বকেয়া কমে — এর আগে খাতায়
+             * কিছুই ছিল না। ⚠️ পুরনো চেক আগেই Cr ডিলার পেয়েছে, তাই সে
+             * কেবল ১১০৪ খালি করে; নাহলে বকেয়া দুইবার কমত।
+             */
             $this->post($cheque, Cheque::STOCK_SOURCE.':cleared', $date,
                 $cheque->direction === Cheque::RECEIVED
                     ? [
                         ['account_id' => $bank->id, 'debit' => $amount],
-                        $this->line(StandardChart::CHEQUES_IN_HAND, credit: $amount),
+                        $this->receivedIntoTheBooks($cheque)
+                            ? $this->line(StandardChart::CHEQUES_IN_HAND, credit: $amount)
+                            : $this->partyLine($cheque, credit: $amount),
                     ]
                     : [
                         $this->line(StandardChart::CHEQUES_ISSUED, debit: $amount),
@@ -280,7 +325,13 @@ final class ChequeService
             ]);
         }
 
-        $this->assertStatus($cheque, [Cheque::PENDING, Cheque::DEPOSITED]);
+        /*
+         * ⓘ গৃহীত চেক পাশের পরেও ফেরত আসতে পারে — ব্যাংক টাকা দিয়ে পরে
+         * ফিরিয়ে নেয়। দেওয়া চেকে "পাশের পরে ফেরত" বলে কিছু নেই।
+         */
+        $this->assertStatus($cheque, $cheque->direction === Cheque::RECEIVED
+            ? [Cheque::PENDING, Cheque::DEPOSITED, Cheque::CLEARED]
+            : [Cheque::PENDING, Cheque::DEPOSITED]);
 
         if (trim($reason) === '') {
             throw ValidationException::withMessages([
@@ -291,16 +342,45 @@ final class ChequeService
         $date = $onDate ?? now()->toDateString();
         $amount = (string) $cheque->amount;
 
+        if ($cheque->direction === Cheque::RECEIVED && ! $this->receivedIntoTheBooks($cheque)) {
+            return DB::transaction(function () use ($cheque, $reason, $date, $amount) {
+                /*
+                 * ⭐ নতুন নিয়মের চেক: পাশের আগে খাতায় কিছুই ছিল না, তাই
+                 * উল্টানোরও কিছু নেই — কেবল অবস্থা।
+                 *
+                 * ⓘ পাশের পরে ফেরত এলে ব্যাংক থেকে টাকা যায় আর ডিলারের
+                 * বকেয়া ফেরে — **নতুন ঘটনা**, পাশের দাখিলার বাতিল নয়।
+                 */
+                if ($cheque->status === Cheque::CLEARED) {
+                    $this->post($cheque, Cheque::STOCK_SOURCE.':bounced', $date, [
+                        $this->partyLine($cheque, debit: $amount, narration: $reason),
+                        ['account_id' => $this->bankFor($cheque, null)->id, 'credit' => $amount],
+                    ]);
+                }
+
+                return $this->markAs($cheque, Cheque::BOUNCED, $reason);
+            });
+        }
+
         /*
-         * ⭐ রসিদ ভাউচার যে চেকের টাকা তুলেছে — ভাউচারটাই বাতিল (১৯ সেপ্টেম্বর ২০২৬)।
-         *
-         * ⓘ কাউন্টারের ডিপোজিট এখন রসিদ ভাউচার (Dr ১১০৪ / Cr গ্রাহক)। বাতিলের
-         * উল্টো দাখিলা ঠিক সেটাই ফেরায়: ১১০৪ খালি, গ্রাহকের খাতায় টাকাটা আবার
-         * পাওনা। ⛔ এখানে নিজের দাখিলাও বসালে টাকা **দ্বিগুণ** কাটত — ঠিক
-         * আদায়ের কাগজের চেকের মতো ফাঁদ।
+         * ⚠️ পুরনো চেক পাশ হয়ে থাকলে আগে ব্যাংকের টাকা ১১০৪-এ ফেরে, তারপর
+         * নিচের পুরনো পথ ১১০৪ থেকে ডিলারে ফেরায়। নিট ফল নতুন চেকের মতোই:
+         * Dr ডিলার / Cr ব্যাংক।
          */
-        if ($cheque->postedByVoucher()) {
-            return DB::transaction(function () use ($cheque, $reason, $date) {
+        return DB::transaction(function () use ($cheque, $reason, $date, $amount) {
+            if ($cheque->direction === Cheque::RECEIVED && $cheque->status === Cheque::CLEARED) {
+                $this->returnToHand($cheque, $date, $reason);
+            }
+
+            /*
+             * ⭐ রসিদ ভাউচার যে চেকের টাকা তুলেছে — ভাউচারটাই বাতিল (১৯ সেপ্টেম্বর ২০২৬)।
+             *
+             * ⓘ কাউন্টারের ডিপোজিট এখন রসিদ ভাউচার (Dr ১১০৪ / Cr গ্রাহক)। বাতিলের
+             * উল্টো দাখিলা ঠিক সেটাই ফেরায়: ১১০৪ খালি, গ্রাহকের খাতায় টাকাটা আবার
+             * পাওনা। ⛔ এখানে নিজের দাখিলাও বসালে টাকা **দ্বিগুণ** কাটত — ঠিক
+             * আদায়ের কাগজের চেকের মতো ফাঁদ।
+             */
+            if ($cheque->postedByVoucher()) {
                 $voucher = Voucher::query()->findOrFail($cheque->voucher_id);
 
                 if (! $voucher->isCancelled()) {
@@ -308,17 +388,9 @@ final class ChequeService
                         $date instanceof Carbon ? $date->toDateString() : (string) $date);
                 }
 
-                $cheque->update([
-                    'status' => Cheque::BOUNCED,
-                    'bounce_reason' => $reason,
-                    'cleared_on' => null,
-                ]);
+                return $this->markAs($cheque, Cheque::BOUNCED, $reason);
+            }
 
-                return $cheque->fresh();
-            });
-        }
-
-        return DB::transaction(function () use ($cheque, $reason, $date, $amount) {
             $this->post($cheque, Cheque::STOCK_SOURCE.':bounced', $date,
                 $cheque->direction === Cheque::RECEIVED
                     ? [
@@ -330,13 +402,7 @@ final class ChequeService
                         $this->partyLine($cheque, credit: $amount, narration: $reason),
                     ]);
 
-            $cheque->update([
-                'status' => Cheque::BOUNCED,
-                'bounce_reason' => $reason,
-                'cleared_on' => null,
-            ]);
-
-            return $cheque->fresh();
+            return $this->markAs($cheque, Cheque::BOUNCED, $reason);
         });
     }
 
@@ -348,11 +414,69 @@ final class ChequeService
      */
     public function cancel(Cheque $cheque, string $reason, Carbon|string|null $onDate = null): Cheque
     {
+        /*
+         * ⓘ পাশ হওয়া চেক ছেঁড়া যায় না — টাকা এসে গেছে। ব্যাংক ফিরিয়ে
+         * নিলে সেটা ফেরত ([[bounce()]]), বাতিল নয়।
+         */
+        if ($cheque->status === Cheque::CLEARED) {
+            throw ValidationException::withMessages([
+                'status' => __('accounts::validation.cleared_cheque_not_cancelled', ['no' => $cheque->cheque_no]),
+            ]);
+        }
+
         $cancelled = $this->bounce($cheque, $reason, $onDate);
 
         $cancelled->update(['status' => Cheque::CANCELLED]);
 
         return $cancelled->fresh();
+    }
+
+    /**
+     * এই গৃহীত চেক কি আগের নিয়মে হাতে আসার দিনেই খাতায় উঠেছিল?
+     *
+     * ⓘ কোনো কলাম নয়, ডেটাই উত্তর দেয় — তিনটা পথের যেকোনোটা: চেকের নিজের
+     * `cheque` দাখিলা (আগের [[create()]]), কাউন্টারের রসিদ ভাউচার, বা
+     * আদায়ের কাগজ। ⭐ তাই লাইভে আগে থেকে খোলা চেকের জন্য মাইগ্রেশন
+     * লাগে না; সেগুলো নিজের পুরনো পথেই শেষ হয়।
+     */
+    private function receivedIntoTheBooks(Cheque $cheque): bool
+    {
+        if ($cheque->postedByVoucher() || $cheque->postedByCollection()) {
+            return true;
+        }
+
+        return LedgerEntry::query()
+            ->where('source_type', Cheque::STOCK_SOURCE)
+            ->where('source_id', $cheque->id)
+            ->exists();
+    }
+
+    /**
+     * পাশ হওয়া পুরনো চেক ফেরত — ব্যাংকের টাকা ১১০৪-এ ফেরে।
+     *
+     * ⓘ পুরনো চেকের পাশ ছিল Dr ব্যাংক / Cr ১১০৪; এটা তার বিপরীত ঘটনা।
+     * এরপর পুরনো ফেরতের পথ (নিজের দাখিলা, ভাউচার বাতিল বা আদায় বাতিল)
+     * ১১০৪ থেকে গ্রাহকের কাছে ফেরায়।
+     */
+    private function returnToHand(Cheque $cheque, Carbon|string $date, string $reason): void
+    {
+        $amount = (string) $cheque->amount;
+
+        $this->post($cheque, Cheque::STOCK_SOURCE.':returned', $date, [
+            [...$this->line(StandardChart::CHEQUES_IN_HAND, debit: $amount), 'narration' => $reason],
+            ['account_id' => $this->bankFor($cheque, null)->id, 'credit' => $amount, 'narration' => $reason],
+        ]);
+    }
+
+    private function markAs(Cheque $cheque, string $status, string $reason): Cheque
+    {
+        $cheque->update([
+            'status' => $status,
+            'bounce_reason' => $reason,
+            'cleared_on' => null,
+        ]);
+
+        return $cheque->fresh();
     }
 
     /**

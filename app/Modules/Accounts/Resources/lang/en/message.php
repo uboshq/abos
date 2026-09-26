@@ -7,7 +7,7 @@ return [
     'charge_theirs_in' => 'The sender paid the charge on top, so we received the full amount and it costs us nothing.',
     'charge_ours' => 'The charge is our expense: the account receives the amount less the charge, and the party\'s ledger still shows the full amount.',
     'pdc_issued' => 'A post-dated cheque. The money does not leave until that date; the liability sits in 2115 Cheques Issued.',
-    'pdc_received' => 'A post-dated cheque. Cash does not rise until that date; the cheque sits in 1104 Cheques in Hand.',
+    'pdc_received' => 'A post-dated cheque. Nothing reaches the books, and the customer\'s due does not fall, until it clears.',
     'count_differs' => 'The counted notes do not match the amount, and it will not post until they do.',
     'count_agrees' => 'The counted notes match the amount.',
     'expense_on_credit' => '⚠️ No money leaves now — this expense becomes a payable, to be settled later.',
