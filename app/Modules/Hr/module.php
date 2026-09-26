@@ -136,6 +136,14 @@ return [
      * Field Sales/Warehouse: কেবল নিজের হাজিরা (মোবাইলে sync)।
      */
     'role_templates' => [
+        /*
+         * ⭐ হিসাবরক্ষক — প্রতিটা কোম্পানিতে ডিফল্টে থাকে। মালিকের নির্দেশ, ২৭
+         * সেপ্টেম্বর ২০২৬: *"Accountant role by defolt erp te create thakbe"*।
+         * ⓘ জমার দাবির মঞ্জুরি কেবল তাঁর (মালিক, ২৬ সেপ্টেম্বর)।
+         */
+        'Accountant' => [
+            'hr.attendance.self',
+        ],
         'HR' => [
             'hr.employee.view', 'hr.employee.manage',
             'hr.attendance.view', 'hr.attendance.manage',

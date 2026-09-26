@@ -385,6 +385,30 @@ return [
 
     /* নতুন ইনস্টলে (§৫): Manager হিসাব দেখা ও রিপোর্ট (ভাউচার বানানো accountant-এর)। */
     'role_templates' => [
+        /*
+         * ⭐ হিসাবরক্ষক — প্রতিটা কোম্পানিতে ডিফল্টে থাকে। মালিকের নির্দেশ, ২৭
+         * সেপ্টেম্বর ২০২৬: *"Accountant role by defolt erp te create thakbe"*।
+         * ⓘ জমার দাবির মঞ্জুরি কেবল তাঁর (মালিক, ২৬ সেপ্টেম্বর)।
+         */
+        'Accountant' => [
+            'accounts.view',
+            'accounts.report',
+            'accounts.report.group',
+            'accounts.voucher.create',
+            'accounts.voucher.update',
+            'accounts.cheque.view',
+            'accounts.cheque.manage',
+            'accounts.till.view',
+            'accounts.till.manage',
+            'accounts.transfer.create',
+            'accounts.transfer.confirm',
+            'accounts.reconciliation.view',
+            'accounts.reconciliation.manage',
+            'accounts.coa.view',
+            'accounts.note.view',
+            'accounts.loan.view',
+            'accounts.asset.view',
+        ],
         'Manager' => ['accounts.view', 'accounts.report'],
     ],
 

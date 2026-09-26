@@ -386,6 +386,18 @@ return [
      * Manager: দেখা ও রিপোর্ট, বানানো নয় (তদারকি; create কেরানির)।
      */
     'role_templates' => [
+        /*
+         * ⭐ হিসাবরক্ষক — প্রতিটা কোম্পানিতে ডিফল্টে থাকে। মালিকের নির্দেশ, ২৭
+         * সেপ্টেম্বর ২০২৬: *"Accountant role by defolt erp te create thakbe"*।
+         * ⓘ জমার দাবির মঞ্জুরি কেবল তাঁর (মালিক, ২৬ সেপ্টেম্বর)।
+         */
+        'Accountant' => [
+            'sales.invoice.view',
+            'sales.collection.view',
+            'sales.collection.create',
+            'sales.claim.view',
+            'sales.claim.decide',
+        ],
         'Field Sales' => [
             'sales.order.view', 'sales.order.create',
             'sales.collection.view', 'sales.collection.create',

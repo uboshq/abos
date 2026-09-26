@@ -412,6 +412,35 @@ return [
     /* নতুন ইনস্টলে (§৫): Manager অর্থের মূল দিকগুলো দেখা (বানানো/পোস্ট নয়)। */
     'role_templates' => [
         /*
+         * ⭐ হিসাবরক্ষক — প্রতিটা কোম্পানিতে ডিফল্টে থাকে। মালিকের নির্দেশ, ২৭
+         * সেপ্টেম্বর ২০২৬: *"Accountant role by defolt erp te create thakbe"*।
+         * ⓘ জমার দাবির মঞ্জুরি কেবল তাঁর (মালিক, ২৬ সেপ্টেম্বর)।
+         */
+        'Accountant' => [
+            'finance.capital.view',
+            'finance.capital.create',
+            'finance.capital.post',
+            'finance.deposit.view',
+            'finance.deposit.create',
+            'finance.deposit.move',
+            'finance.hand_loan.view',
+            'finance.hand_loan.create',
+            'finance.hand_loan.move',
+            'finance.withdrawal.view',
+            'finance.withdrawal.create',
+            'finance.withdrawal.post',
+            'finance.bank_facility.view',
+            'finance.bank_facility.create',
+            'finance.insurance.view',
+            'finance.institution.view',
+            'finance.rental.view',
+            'finance.budget.view',
+            'finance.expense.view',
+            'finance.income.view',
+            'finance.plan.view',
+            'finance.forecast.view',
+        ],
+        /*
          * ⭐ ভাড়ার চুক্তি ম্যানেজারও দেখেন — লেখেন না।
          *
          * ⚠️ কারণটা ব্যবহারিক: "কোন চুক্তি কবে শেষ, আর কত ফেরত পাব"
