@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Api\AppVersionController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\MeController;
 use App\Http\Controllers\Api\NoticeApiController;
@@ -74,6 +75,17 @@ Route::prefix('v1/auth')
             ->middleware('auth:sanctum')
             ->name('logout');
     });
+
+/*
+ * সংস্করণ — টোকেন ছাড়া, ইচ্ছা করে (চুক্তি §৬)।
+ *
+ * ⚠️ যে পুরনো বিল্ড লগইনই করতে পারে না, তাকেই বলা দরকার সে পুরনো; auth-এর
+ * ভেতরে রাখলে বার্তাটা ঠিক সেখানে পৌঁছাত না। ⓘ কোনো ব্যবসার ডেটা নেই —
+ * কেবল .env-এর চারটা মান। throttle আছে, কারণ খোলা দরজা।
+ */
+Route::get('v1/app/version', AppVersionController::class)
+    ->middleware('throttle:60,1')
+    ->name('api.app.version');
 
 /*
  * অ্যাপের নিজের দরজা — সিঙ্ক নয়।
