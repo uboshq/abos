@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../auth/auth_user.dart';
+import '../auth/session_profile.dart';
 import 'me_api.dart';
 import 'menu_item.dart';
 import 'menu_module.dart';
@@ -29,6 +30,16 @@ import 'route_registry.dart';
 /// successful login (see `SessionRepository`). The fallback is
 /// permission-filtered the identical way, so it degrades to "the same menu,
 /// no icons any fresher than the last sign-in" rather than to nothing.
+class HomeMenu {
+  const HomeMenu({required this.items, this.profile});
+
+  final List<MenuItem> items;
+
+  /// Null when `/me` could not be reached and the menu is the local
+  /// fallback — see [MenuRepository.homeFor].
+  final SessionProfile? profile;
+}
+
 class MenuRepository {
   const MenuRepository();
 
@@ -76,7 +87,16 @@ class MenuRepository {
     'orders': Icons.receipt_long_outlined,
   };
 
-  Future<List<MenuItem>> menuFor(AuthUser user) async {
+  Future<List<MenuItem>> menuFor(AuthUser user) async =>
+      (await homeFor(user)).items;
+
+  /// The menu plus which company and branch `/me` says this session is in —
+  /// one call, because they arrive in one response and the home screen
+  /// wants both. [HomeMenu.profile] is null on the offline fallback: the
+  /// header then reads the names the last successful `/me` left in
+  /// `SessionRepository`, and only after that falls back to the person's own
+  /// name.
+  Future<HomeMenu> homeFor(AuthUser user) async {
     try {
       final response = await MeApi.fetch();
       final items = <MenuItem>[];
@@ -86,9 +106,12 @@ class MenuRepository {
           if (tile != null) items.add(tile);
         }
       }
-      return ordered(items, response.user);
+      return HomeMenu(
+        items: ordered(items, response.user),
+        profile: response.profile,
+      );
     } catch (_) {
-      return ordered(_localFallback(user), user);
+      return HomeMenu(items: ordered(_localFallback(user), user));
     }
   }
 
