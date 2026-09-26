@@ -9,7 +9,6 @@
 @php
     $d = $deposit;
     $isOpen = $d->status === \App\Modules\Finance\Models\Deposit::ACTIVE;
-    $money = $accounts->mapWithKeys(fn ($a) => [$a->id => $a->name()]);
 
     /*
      * এই জমায় কি নিয়মিত কিছু করার আছে — কিস্তি বা মুনাফা।
@@ -159,7 +158,7 @@
 
                         <x-ui.money-account name="money_account_id" required
                                             :label="__('finance::field.money_account')"
-                                            :accounts="$money"
+                                            :accounts="$accounts"
                                             :selected="old('money_account_id',
                                                 $d->payout_account_id ?? $d->funded_from_account_id)" />
 
@@ -199,7 +198,7 @@
 
                     <x-ui.money-account name="money_account_id" required
                                         :label="__('finance::field.money_account')"
-                                        :accounts="$money"
+                                        :accounts="$accounts"
                                         :selected="old('money_account_id', $d->funded_from_account_id)" />
 
                     {{-- ⓘ একই সারানো — বোতাম নিজের সারিতে, নিচে বাঁয়ে --}}
