@@ -11,6 +11,7 @@ use App\Models\Company;
 use App\Models\LedgerEntry;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Inventory\Models\CostLayer;
 use App\Modules\Inventory\Models\Product;
@@ -33,6 +34,7 @@ use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
+use Tests\Concerns\PutsMoneyInTheTill;
 use Tests\TestCase;
 
 /**
@@ -63,6 +65,7 @@ use Tests\TestCase;
  */
 final class ThePurchaseCycleRanEndToEndTest extends TestCase
 {
+    use PutsMoneyInTheTill;
     use RefreshDatabase;
 
     private const QTY_ASKED = '50';
@@ -289,6 +292,10 @@ final class ThePurchaseCycleRanEndToEndTest extends TestCase
             'ⓘ কিছুই দেওয়া হয়নি, তাই বিলের পুরোটাই বাকি।');
 
         // ── ৫. পরিশোধ — পুরো বিল ─────────────────────────────────────────
+        // ⓘ নগদ শূন্যের নিচে নামে না (CashOnHand, ২৭ সেপ্টেম্বর ২০২৬) — আগে টাকাটা টিলে,
+        // মালিকের পুঁজি থেকে। কেবল এই পরিশোধের সারি মাপা হয়, তাই কোনো দাবির অঙ্ক বদলায় না।
+        $this->putMoneyIn(app(CashTillService::class)->ensurePrimaryTill()->account, self::RECEIVED_VALUE);
+
         $payment = app(PaymentService::class)->create([
             'supplier_id' => $this->supplier->id,
             'trx_date' => now()->toDateString(),

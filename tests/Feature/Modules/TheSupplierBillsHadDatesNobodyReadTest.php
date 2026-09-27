@@ -8,6 +8,7 @@ use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Models\Company;
 use App\Models\User;
+use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Purchase\Services\PaymentService;
@@ -15,6 +16,7 @@ use App\Modules\Purchase\Services\PurchaseBillService;
 use App\Modules\Supplier\Models\Supplier;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\PutsMoneyInTheTill;
 use Tests\TestCase;
 
 /**
@@ -27,6 +29,7 @@ use Tests\TestCase;
  */
 final class TheSupplierBillsHadDatesNobodyReadTest extends TestCase
 {
+    use PutsMoneyInTheTill;
     use RefreshDatabase;
 
     private Supplier $supplier;
@@ -100,6 +103,10 @@ final class TheSupplierBillsHadDatesNobodyReadTest extends TestCase
 
     private function pay(PurchaseBill $bill, string $amount): void
     {
+        // ⓘ নগদ শূন্যের নিচে নামে না (CashOnHand, ২৭ সেপ্টেম্বর ২০২৬) — আগে টাকাটা টিলে,
+        // মালিকের পুঁজি থেকে। কেবল এই পরিশোধের সারি মাপা হয়, তাই কোনো দাবির অঙ্ক বদলায় না।
+        $this->putMoneyIn(app(CashTillService::class)->ensurePrimaryTill()->account, $amount);
+
         $payments = app(PaymentService::class);
 
         $payments->confirm($payments->create(

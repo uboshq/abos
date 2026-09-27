@@ -20,6 +20,7 @@ use App\Modules\Supplier\Models\Supplier;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
+use Tests\Concerns\PutsMoneyInTheTill;
 use Tests\TestCase;
 
 /**
@@ -35,6 +36,7 @@ use Tests\TestCase;
  */
 class PurchasePaymentTest extends TestCase
 {
+    use PutsMoneyInTheTill;
     use RefreshDatabase;
 
     private Company $company;
@@ -59,6 +61,14 @@ class PurchasePaymentTest extends TestCase
 
         $this->supplier = Supplier::query()->orderBy('id')->firstOrFail();
         $this->product = Product::query()->orderBy('id')->firstOrFail();
+
+        /*
+         * ⓘ নগদ শূন্যের নিচে নামে না (CashOnHand, ২৭ সেপ্টেম্বর ২০২৬), আর
+         * DemoSeeder টিলে কিছু রাখে না। টাকা আসে মালিকের পুঁজি থেকে, খাতার
+         * নিয়মে। এই ফাইলের প্রতিটা নগদ-দাবি আগে-পরের **পার্থক্য** মাপে, তাই
+         * এখানে রাখা টাকা কোনো দাবির অঙ্ক বদলায় না।
+         */
+        $this->putMoneyIn($this->cashTillAccount(), '100000');
     }
 
     /**

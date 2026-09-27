@@ -51,6 +51,7 @@ return [
     'allocation_over_amount' => 'বিলে ভাগ করা হয়েছে :allocated টাকা, অথচ পরিশোধ :amount টাকা।',
     'unknown_account' => 'খাতটা এই কোম্পানির ছকে নেই।',
     'not_a_money_account' => ':name নগদ বা ব্যাংক জাতীয় খাত নয় — ওখান থেকে টাকা যায় না।',
+    'not_enough_money_in' => ':account-এ আছে :held — :amount দেওয়া যায় না। হাতের টাকা শূন্যের নিচে নামে না।',
 
     // ফেরত
     'zero_value_return' => 'শূন্য টাকার ফেরত খাতায় বসে না।',

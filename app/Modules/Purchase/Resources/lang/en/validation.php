@@ -43,6 +43,7 @@ return [
     'allocation_over_amount' => ':allocated has been allocated but the payment is :amount.',
     'unknown_account' => 'That account is not in this company chart.',
     'not_a_money_account' => ':name is not a cash or bank account — money does not leave from there.',
+    'not_enough_money_in' => ':account holds :held — :amount cannot be paid from it. Cash on hand never goes below zero.',
 
     // Return
     'zero_value_return' => 'A return worth nothing does not go in the books.',

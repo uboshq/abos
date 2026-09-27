@@ -21,6 +21,7 @@ use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Tests\Concerns\PutsMoneyInTheTill;
 use Tests\TestCase;
 
 /**
@@ -48,6 +49,7 @@ use Tests\TestCase;
  */
 final class AChequeIsNotMoneyUntilItClearsTest extends TestCase
 {
+    use PutsMoneyInTheTill;
     use RefreshDatabase;
 
     private User $owner;
@@ -182,6 +184,16 @@ final class AChequeIsNotMoneyUntilItClearsTest extends TestCase
 
         $money = (int) Account::query()
             ->money()->postable()->active()->orderBy('code')->value('id');
+
+        /*
+         * ⓘ নগদ শূন্যের নিচে নামে না (CashOnHand, ২৭ সেপ্টেম্বর ২০২৬) — চেক
+         * ছাড়া অন্য পথে আগে টাকাটা রাখা, মালিকের পুঁজি থেকে। চেকে টাকার খাত
+         * ছোঁয়া হয় না, তাই সেখানে রাখা হয় না: রাখলে "চেক টাকার খাত ছোঁয় না"
+         * দাবিটা ভুল কারণে বদলে যেত।
+         */
+        if (($extra['instrument'] ?? null) !== 'cheque') {
+            $this->putMoneyIn(Account::query()->findOrFail($money), '200');
+        }
 
         $service = app(PaymentService::class);
 

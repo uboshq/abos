@@ -15,6 +15,7 @@ use App\Models\FinancialYear;
 use App\Models\IssuedNumber;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Cheque;
+use App\Modules\Accounts\Services\CashOnHand;
 use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\ChequeService;
 use App\Modules\Accounts\Services\StandardChart;
@@ -221,6 +222,8 @@ final class PaymentService
             if ($payment->instrument === self::CHEQUE) {
                 return $this->settleByCheque($payment);
             }
+
+            $this->assertMoneyIsThere($payment);
 
             $this->posting->post(
                 sourceType: Payment::drillSourceType(),
@@ -481,6 +484,40 @@ final class PaymentService
      * যেকোনো খাত নিতে দিলে কেউ ভুল করে "ক্রয়" খাত থেকে পরিশোধ বসাত,
      * আর তখন খরচ দুইবার গোনা হত।
      */
+    /**
+     * টিল বা ওয়ালেটে যা নেই তা দেওয়া যায় না — লাইভ QA (hp2, TCL), PMT-0001, ২৭ সেপ্টেম্বর ২০২৬।
+     *
+     * ⛔ আগে খালি টিল থেকে ১,০০০ পরিশোধ হয়ে গেল আর টিল দাঁড়াল −১,০০০ — খাতা
+     * মিলল, বাক্স মিলল না। ⓘ নিয়মটা এক জায়গায় ([[CashOnHand]]): নগদ আর
+     * মোবাইল ব্যাংকিং শূন্যের নিচে নয়, ব্যাংক (CC/OD) নামতে পারে।
+     *
+     * ⚠️ তালা আগে, মাপা পরে, আর দুইটাই পোস্টের একই লেনদেনে — নাহলে দুইটা
+     * পরিশোধ একই মুহূর্তে একই জের দেখে দুইটাই পাশ করত।
+     */
+    private function assertMoneyIsThere(Payment $payment): void
+    {
+        $account = Account::query()->findOrFail($payment->account_id);
+        $cash = app(CashOnHand::class);
+
+        if (! $cash->guards($account)) {
+            return;
+        }
+
+        $cash->lock($account);
+
+        $short = $cash->shortfall($account, (string) $payment->amount, $payment->trx_date?->toDateString());
+
+        if ($short !== null) {
+            throw ValidationException::withMessages([
+                'amount' => __('purchase::validation.not_enough_money_in', [
+                    'account' => $account->name(),
+                    'held' => Money::format(bcsub((string) $payment->amount, $short, 4)),
+                    'amount' => Money::format((string) $payment->amount),
+                ]),
+            ]);
+        }
+    }
+
     private function resolveMoneyAccount(mixed $accountId): Account
     {
         $account = blank($accountId)
