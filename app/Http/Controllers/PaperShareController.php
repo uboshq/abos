@@ -5,12 +5,17 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Core\Engines\Print\PaperSize;
-use App\Core\Support\CompanyContext;
 use App\Core\Services\PaperTrail;
+use App\Core\Support\CompanyContext;
 use App\Models\DocumentShare;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Route as RoutingRoute;
+use Illuminate\Routing\Router;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\Rule;
 
@@ -90,16 +95,150 @@ class PaperShareController extends Controller
             $this->authorize($ability);
         }
 
+        $documentId = (int) $data['document_id'];
+
+        // ⓘ প্যারামিটার নথি থেকে বানানো — কারণটা [[PaperTrail::routeParamsFor()]]-এ
+        $params = PaperTrail::routeParamsFor($data['document_type'], $documentId);
+
+        abort_if($params === null, 404);
+
+        /*
+         * ⛔⛔ পাঠানো `params` — কেবল ঐ একটা ঘর, আর মানটা ঐ নথিরই আইডি।
+         *
+         * ── ⚠️ কী ভাঙা ছিল (অডিট ২৭ সেপ্টেম্বর ২০২৬, §৩) ─────────────
+         * `params` যেমন এল তেমনই সারিতে বসত। ⓘ ফলে নাম নিজের ভাউচারের,
+         * `params`-এ অন্য শাখার ভাউচারের নম্বর — আর খোলা লিংক ঐ অন্য
+         * কাগজটা আঁকত। বাড়তি ঘর (`paper`, `download`) দিয়ে লিংকের কাগজও
+         * বাইরে থেকে বদলানো যেত।
+         *
+         * ── ⭐ কেন যাচাইয়ের ভুল হয়ে ফেরত, চুপচাপ ফেলে দেওয়া নয় ──────
+         * (ওয়েবে সেটা ভুলসহ আগের পাতায় ফেরা; ৪২২ এই অ্যাপে কেবল `api/*`-এ)
+         * আমাদের নিজের বোতাম ([[x-ui.print-menu]]) ঠিক এই একটা ঘরই পাঠায়।
+         * ⓘ তাই অন্য কিছু এলে সেটা হয় ভাঙা একটা পাতা, নয় হাতে বানানো
+         * অনুরোধ — আর দুই ক্ষেত্রেই ফেলে দিয়ে লিংক বানালে মানুষটা ভাবতেন
+         * তিনি যা চেয়েছেন তা-ই পাঠিয়েছেন। ⚠️ ফেরত দিলে ভুলটা চোখে পড়ে।
+         *
+         * ⓘ না পাঠালে বা খালি পাঠালে চলে — প্যারামিটার তো নথি থেকেই বানানো।
+         * ⚠️ পাঠানো মানটা কোথাও ব্যবহার হয় না, কেবল মাপা হয়।
+         */
+        $key = (string) array_key_first($params);
+
+        $request->validate([
+            'params' => ['array:'.$key],
+            'params.'.$key => ['required_with:params', Rule::in([(string) $documentId])],
+        ]);
+
+        /*
+         * ⛔⛔ নথিটা খোঁজা হয় **ছাপার দরজার নিজের পথে**, এই মানুষটার চোখে।
+         *
+         * ── ⚠️ কেন এটা না থাকা ছিল আসল ফাঁক ─────────────────────────
+         * লিংক খোলার সময় কেউ লগ-ইন নেই, তাই শাখার ছাঁকনি
+         * ([[ScopedToUserBranch]]) সেখানে ঘুমিয়ে থাকে — দাঁড়িয়ে থাকে কেবল
+         * কোম্পানির দেয়াল। ⓘ অর্থাৎ শাখার দেয়াল মাপার **একমাত্র মুহূর্ত**
+         * এটাই, আর আগে এখানে নথিটা খোঁজাই হত না: ময়মনসিংহে আটকানো
+         * হিসাবরক্ষক নেত্রকোনার ভাউচারের খোলা লিংক বানাতে পারতেন।
+         *
+         * ⭐ খোঁজাটা রুটের নিজের মডেল-বাঁধন দিয়ে — ছাপার পাতায় ঢুকলে যে
+         * কোয়েরি চলে, ঠিক সেটাই (কোম্পানি + শাখা + গুদাম, মডেলে যা বসানো)।
+         * ⚠️ হাতে আলাদা কোয়েরি লিখলে একদিন মডেলে নতুন দেয়াল বসত আর এখানে
+         * বসত না।
+         */
+        $document = $this->documentAsTheDoorSeesIt($route, $params, $documentId);
+
+        /*
+         * ⓘ নথির নিজের "দেখা" নীতি থাকলে সেটাও — বেতনের পাতার শাখা যেমন
+         * রানের ভিতরে ([[PayslipPolicy]]), আর তার ছাপার দরজা ঠিক এটাই মাপে।
+         *
+         * ⚠️ ৪০৪, ৪০৩ নয়: চাবি উপরে মাপা হয়ে গেছে, তাই এখানে "না" মানে
+         * "আপনার নাগালের বাইরে" — আর নাগালের বাইরের নথির অস্তিত্বও জানানো নয়।
+         */
+        $policy = Gate::getPolicyFor($document);
+
+        if ($policy !== null && method_exists($policy, 'view')) {
+            abort_unless(Gate::allows('view', $document), 404);
+        }
+
+        $this->retireBentLinks($data['route'], $data['document_type'], $documentId, $data['paper']);
+
         $share = $this->trail->share(
             routeName: $data['route'],
-            routeParams: $data['params'] ?? [],
+            routeParams: $params,
             documentType: $data['document_type'],
-            documentId: (int) $data['document_id'],
+            documentId: $documentId,
             paper: $data['paper'],
-            documentNo: $data['document_no'] ?? null,
+
+            /*
+             * ⓘ নম্বরটা নথির নিজের, পাঠানো লেখা নয় — নাহলে ইতিহাসের পাতায়
+             * যেকোনো নম্বর বসানো যেত। ⚠️ ঘরটা যাচাইয়ে রাখা হয়েছে কেবল
+             * পুরনো পাতা যাতে ভেঙে না যায়; মানটা আর পড়া হয় না।
+             */
+            documentNo: $this->numberOf($document),
         );
 
         return back()->with('shared_link', route('paper.shared', $share->token));
+    }
+
+    /**
+     * ছাপার রুটের নিজের মডেল-বাঁধন — লগইন করা মানুষটার সব ছাঁকনি সহ।
+     *
+     * ⓘ রুটের একটা **কপি** বাঁধা হয়: আসল রুট-বস্তুটা গোটা অ্যাপের, তার
+     * প্যারামিটার বদলে রাখার কোনো কারণ নেই।
+     *
+     * ⛔ না পেলে ৪০৪ — অন্য শাখা, অন্য কোম্পানি, বা নেই, তিনটাই একই উত্তর।
+     *
+     * @param  array<string, int>  $params
+     */
+    private function documentAsTheDoorSeesIt(RoutingRoute $route, array $params, int $documentId): Model
+    {
+        $route = clone $route;
+
+        $target = Request::create(route((string) $route->getName(), $params, false), 'GET');
+        $target->setRouteResolver(fn () => $route);
+
+        $router = app(Router::class);
+
+        try {
+            $router->substituteBindings($route->bind($target));
+            $router->substituteImplicitBindings($route);
+        } catch (ModelNotFoundException) {
+            abort(404);
+        }
+
+        $document = $route->parameter((string) array_key_first($params));
+
+        // ⚠️ বাঁধন না চললে এখানে কাঁচা আইডি থাকত — সেটাও "পাওয়া যায়নি"
+        abort_unless($document instanceof Model && (int) $document->getKey() === $documentId, 404);
+
+        return $document;
+    }
+
+    /**
+     * ২৭ সেপ্টেম্বর ২০২৬-এর আগের দরজায় বসা বাঁকা লিংক — এখনই মেরে ফেলা।
+     *
+     * ── ⚠️ কেন লিংক বানানোর সময় ────────────────────────────────────
+     * [[PaperTrail::share()]] একই কাগজের বেঁচে থাকা লিংক ফেরত দেয়। ⓘ তাই
+     * পুরনো একটা বাঁকা সারি থাকলে নতুন প্রতিটা "পাঠান" ঐ সারিটাই পেত —
+     * যেটা খোলা দরজা আর আঁকে না ([[SharedPaperController]]), অর্থাৎ
+     * গ্রাহকের হাতে একটা মরা লিংক, আর কেউ বুঝত না কেন।
+     */
+    private function retireBentLinks(string $routeName, string $documentType, int $documentId, string $paper): void
+    {
+        DocumentShare::query()
+            ->alive()
+            ->where('route_name', $routeName)
+            ->where('document_type', $documentType)
+            ->where('document_id', $documentId)
+            ->where('paper', $paper)
+            ->get()
+            ->reject(fn (DocumentShare $share): bool => PaperTrail::isBoundToItsDocument($share))
+            ->each(fn (DocumentShare $share) => $share->forceFill(['revoked_at' => Carbon::now()])->save());
+    }
+
+    private function numberOf(Model $document): ?string
+    {
+        $number = $document->getAttribute('document_no');
+
+        return is_string($number) && $number !== '' ? $number : null;
     }
 
     /**
@@ -143,7 +282,7 @@ class PaperShareController extends Controller
      *
      * @return list<string>
      */
-    private function abilitiesOf(\Illuminate\Routing\Route $route): array
+    private function abilitiesOf(RoutingRoute $route): array
     {
         $out = [];
 

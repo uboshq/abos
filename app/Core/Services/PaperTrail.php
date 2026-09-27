@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Services;
 
+use App\Core\Engines\Print\PaperSize;
 use App\Core\Support\CompanyContext;
 use App\Models\DocumentDelivery;
 use App\Models\DocumentShare;
@@ -93,6 +94,76 @@ final class PaperTrail
         }
 
         return $out;
+    }
+
+    /**
+     * ঐ নথির ছাপার রুটে যে প্যারামিটার যায় — **কেবল** নথির নিজের আইডি।
+     *
+     * ── ⛔ কেন এটা বাইরে থেকে নেওয়া যায় না (অডিট ২৭ সেপ্টেম্বর ২০২৬, §৩) ──
+     * আগে লিংকের `params` যেমন এল তেমনই সারিতে বসত। ⓘ নাম থাকত নিজের
+     * ভাউচারের, অথচ `params`-এ অন্য নম্বর — আর খোলা লিংক ঐ **অন্য** কাগজটা
+     * আঁকত, যেটা লিংক বানানেওয়ালা হয়তো দেখতেই পারতেন না।
+     *
+     * ⭐ তাই প্যারামিটার এখন নথি থেকে **বানানো** হয়, আর লিংক বানানো ও খোলা
+     * দুই দরজাই এই একটা সংজ্ঞা পড়ে — দুই জায়গায় আলাদা লিখলে একদিন দুইটা
+     * দুই কথা বলত।
+     *
+     * ⚠️ রুটের প্যারামিটার ঠিক একটা না হলে `null` — "জানি না" মানে বন্ধ।
+     *
+     * @return array<string, int>|null
+     */
+    public static function routeParamsFor(string $documentType, int $documentId): ?array
+    {
+        $name = self::DOCUMENT_ROUTES[$documentType] ?? null;
+
+        $route = $name === null ? null : Route::getRoutes()->getByName($name);
+
+        if ($route === null) {
+            return null;
+        }
+
+        $names = $route->parameterNames();
+
+        if (count($names) !== 1) {
+            return null;
+        }
+
+        return [$names[0] => $documentId];
+    }
+
+    /**
+     * এই লিংকের সারিটা কি ঠিক নিজের নথিতেই বাঁধা।
+     *
+     * ⓘ রুট ঐ ধরনেরই, প্যারামিটার ঠিক [[routeParamsFor()]]-এর — একটাও বাড়তি
+     * ঘর নয়, অন্য নম্বরও নয় — আর মাপটা চেনা মাপ।
+     *
+     * ⚠️ কেন সারিটা আবার মাপা হয়: নতুন দরজা আর বাঁকা সারি বসায় না, কিন্তু
+     * ২৭ সেপ্টেম্বর ২০২৬-এর আগের দরজা বসাত — আর সেগুলো ৩০ দিন বাঁচে।
+     * ⛔ মানটা ডেটাবেসের JSON থেকে আসে, তাই তুলনা লেখা হিসেবে (`"5"` আর
+     * `5` একই নথি), কিন্তু ঘরের নাম হুবহু।
+     */
+    public static function isBoundToItsDocument(DocumentShare $share): bool
+    {
+        if ((self::DOCUMENT_ROUTES[$share->document_type] ?? null) !== $share->route_name) {
+            return false;
+        }
+
+        if (! in_array($share->paper, PaperSize::all(), true)) {
+            return false;
+        }
+
+        $expected = self::routeParamsFor($share->document_type, (int) $share->document_id);
+        $stored = $share->route_params;
+
+        if ($expected === null || ! is_array($stored) || count($stored) !== 1) {
+            return false;
+        }
+
+        $key = array_key_first($expected);
+
+        return array_key_exists($key, $stored)
+            && (is_int($stored[$key]) || is_string($stored[$key]))
+            && (string) $stored[$key] === (string) $expected[$key];
     }
 
     /**
