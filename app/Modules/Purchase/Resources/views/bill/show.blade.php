@@ -10,10 +10,24 @@
                         {{ __('core.action.edit') }}
                     </x-ui.button>
 
-                    <form method="POST" action="{{ route('purchase.bill.confirm', $bill) }}">
-                        @csrf
-                        <x-ui.button type="submit" tone="primary">{{ __('purchase::action.confirm') }}</x-ui.button>
-                    </form>
+                    {{--
+                        ⛔ নিশ্চিত বিলেও "নিশ্চিত করুন" দেখা যেত — লাইভ QA, ২৭ সেপ্টেম্বর ২০২৬।
+
+                        ⓘ `update` নীতি নিশ্চিত বিলে super admin-কে "হ্যাঁ" বলে —
+                        ইচ্ছাকৃত, উল্টে-বসানোর সম্পাদনার জন্য ([[PurchaseBillPolicy::update]])।
+                        ⚠️ কিন্তু বোতাম দুইটা একই `@can`-এ বসা ছিল, তাই সম্পাদনার
+                        অধিকার "নিশ্চিত করুন"-ও টেনে আনত — যে কাজ কেবল খসড়ায়
+                        মানে রাখে। ⛔ দেখতে মনে হত দেনা আবার বসানো যায়।
+
+                        ⓘ সেবাও আটকায় ([[PurchaseBillService::confirm]]), কিন্তু যে
+                        বোতাম চাপলে কেবল ভুলের বার্তা আসে সেটা দেখানোই উচিত নয়।
+                    --}}
+                    @if ($bill->status === \App\Core\Support\DocumentStatus::DRAFT)
+                        <form method="POST" action="{{ route('purchase.bill.confirm', $bill) }}">
+                            @csrf
+                            <x-ui.button type="submit" tone="primary">{{ __('purchase::action.confirm') }}</x-ui.button>
+                        </form>
+                    @endif
                 @endcan
                 {{--
                     ⛔ ছাপার দরজাটা কোথাও ছিল না — ১৮ সেপ্টেম্বর ২০২৬।
