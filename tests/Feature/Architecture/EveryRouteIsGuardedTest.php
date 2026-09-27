@@ -272,6 +272,8 @@ class EveryRouteIsGuardedTest extends TestCase
          */
         'api.me' => 'নিজের পরিচয় ও মেনু — ব্যবসার ডেটা নয়, আর abilities:app চায়',
         'api.dashboard.today' => 'প্রতিটা ঘর নিজের চাবি দেখে; চাবি না থাকলে ঘরটাই নেই; রুটে can: নেই',
+        'api.reports.index' => 'তালিকা প্রতিটা রিপোর্টের নিজের চাবি (ReportDefinition::permission) ধরে ছাঁকা; চাবিহীন রিপোর্ট আসেই না',
+        'api.reports.show' => 'প্রতিটা রিপোর্টের নিজের চাবি কন্ট্রোলারে দেখা হয় — চাবি নেই তো ৪০৩; ঢাকা কলাম উত্তরেই নেই',
     ];
 
     /**

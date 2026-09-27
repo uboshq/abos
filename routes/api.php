@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DashboardTodayController;
 use App\Http\Controllers\Api\MeController;
 use App\Http\Controllers\Api\NoticeApiController;
+use App\Http\Controllers\Api\ReportApiController;
 use App\Http\Controllers\Api\SyncController;
 use App\Http\Middleware\ResolveCompanyContext;
 use Illuminate\Support\Facades\Route;
@@ -171,6 +172,14 @@ Route::prefix('v1')
         Route::post('/approvals/{approval}/reject', [ApprovalApiController::class, 'reject'])
             ->middleware('can:approval.decide')
             ->name('approvals.reject');
+
+        /*
+         * রিপোর্ট — চুক্তি §৯। ⚠️ `can:` নেই, ইচ্ছা করে: প্রতিটা রিপোর্টের
+         * নিজের চাবি আছে (`ReportDefinition::$permission`), আর দরজা একটাই।
+         * ⓘ তালিকা ছাঁকা হয়, পাতায় চাবি না থাকলে ৪০৩ ([[ReportApiController]])।
+         */
+        Route::get('/reports', [ReportApiController::class, 'index'])->name('reports.index');
+        Route::get('/reports/{key}', [ReportApiController::class, 'show'])->name('reports.show');
     });
 
 Route::prefix('v1')
