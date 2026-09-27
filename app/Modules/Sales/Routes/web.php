@@ -71,6 +71,18 @@ Route::middleware('auth')->prefix('sales')->group(function () {
      * ⭐ মেনুতে আগে বসানো পর্দা — উদ্ধৃতি ও বিক্রয় আদেশ (মালিক, ২৮ সেপ্টেম্বর ২০২৬)।
      * ⓘ নাম তালিকার বাইরে হলে ৪০৪ ([[PlannedScreenController::SCREENS]])।
      */
+    /*
+     * ⭐ মূল্য তালিকা — পণ্যের বিক্রয়-দাম, সারি থেকেই বদলানো (মালিক, ২৭ সেপ্টেম্বর ২০২৬)।
+     * ⓘ দেখা sales.order.view, বদলানো inventory.product.update — কন্ট্রোলারের middleware()-এ।
+     */
+    Route::prefix('price-list')->name('price_list.')->group(function () {
+        Route::get('/', [\App\Modules\Sales\Http\Controllers\PriceListController::class, 'index'])->name('index');
+        Route::put('/{product}', [\App\Modules\Sales\Http\Controllers\PriceListController::class, 'update'])
+            ->whereNumber('product')->name('update');
+        Route::get('/{product}/history', [\App\Modules\Sales\Http\Controllers\PriceListController::class, 'history'])
+            ->whereNumber('product')->name('history');
+    });
+
     Route::get('/planned/{screen}', [\App\Modules\Sales\Http\Controllers\PlannedScreenController::class, 'show'])
         ->name('planned');
 

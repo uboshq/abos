@@ -197,8 +197,9 @@ return [
              * সেপ্টেম্বর ২০২৬: *"age bosaw, code pore korbo"*)। ⓘ আপাতত
              * [[PlannedScreenController]]-এর সৎ পাতায় যায়।
              */
-            ['label' => 'sales::planned.pricing_lists', 'cluster' => 'pricing', 'icon' => 'wallet', 'route' => 'sales.planned',
-                'route_params' => ['screen' => 'pricing_lists'], 'permission' => 'sales.order.view'],
+            // ⭐ আসল পাতা — মূল্য তালিকা, ২৭ সেপ্টেম্বর ২০২৬ (আগে 'তৈরি হচ্ছে')
+            ['label' => 'sales::planned.pricing_lists', 'cluster' => 'pricing', 'icon' => 'wallet', 'route' => 'sales.price_list.index',
+                'permission' => 'sales.order.view'],
             ['label' => 'sales::planned.pricing_customer', 'cluster' => 'pricing', 'icon' => 'wallet', 'route' => 'sales.planned',
                 'route_params' => ['screen' => 'pricing_customer'], 'permission' => 'sales.order.view'],
             ['label' => 'sales::planned.pricing_channel', 'cluster' => 'pricing', 'icon' => 'wallet', 'route' => 'sales.planned',
