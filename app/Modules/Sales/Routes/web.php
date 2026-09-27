@@ -91,6 +91,9 @@ Route::middleware('auth')->prefix('sales')->group(function () {
          * খসড়া বানানো ও পাকা করা কাউন্টারেই, তাই একই চাবি।
          */
         Route::get('/drafts', [DirectSaleController::class, 'drafts'])->name('drafts');
+        // ⓘ খসড়া সরিয়ে রাখা ও ফেরানো — তালিকার বোতাম (মালিক, ২৮ সেপ্টেম্বর ২০২৬)
+        Route::post('/drafts/{invoice}/pause', [DirectSaleController::class, 'pauseDraft'])->name('draft_pause');
+        Route::post('/drafts/{invoice}/resume', [DirectSaleController::class, 'resumeDraft'])->name('draft_resume');
 
         /*
          * এই মালে কতটা ফ্রি — সারি যোগ করার আগে জিজ্ঞাসা।

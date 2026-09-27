@@ -96,4 +96,8 @@ return [
     'activate_scheme' => 'Activate',
     'cancel_invoice' => 'Cancel invoice',
     'open_draft' => 'Open',
+    'view_draft' => 'View',
+    'pause_draft' => 'Deactivate',
+    'resume_draft' => 'Activate',
+    'delete_draft' => 'Delete',
 ];

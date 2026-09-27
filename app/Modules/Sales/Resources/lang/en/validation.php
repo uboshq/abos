@@ -151,4 +151,5 @@ return [
     'scheme_is_live' => "A live scheme's rates cannot be changed — changing them would change what earlier invoices earned. Stop it and write a new one.",
     'price_out_of_range' => ':product — the rate sits more than :tolerance% away from the standard price.',
     'slip_used_twice' => 'A collection from this customer already carries slip :no. Check that one first — entering it twice lowers their balance twice for money that came once.',
+    'draft_not_settable' => 'This draft cannot be changed now: it is confirmed or waiting for a signature.',
 ];

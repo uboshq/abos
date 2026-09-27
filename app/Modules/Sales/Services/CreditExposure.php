@@ -136,6 +136,7 @@ final class CreditExposure implements CreditHolds
             ->where('i.company_id', CompanyContext::id())
             ->whereNull('i.deleted_at')
             ->where('i.status', DocumentStatus::DRAFT)
+            ->whereNull('i.draft_paused_at')
             ->groupBy('i.customer_id')
             ->selectRaw('i.customer_id, SUM(i.total) as held')
             ->pluck('held', 'customer_id');
@@ -249,7 +250,9 @@ final class CreditExposure implements CreditHolds
             ->where('i.customer_id', $customer->id)
             ->where('i.company_id', $customer->company_id)
             ->whereNull('i.deleted_at')
-            ->where('i.status', DocumentStatus::DRAFT);
+            ->where('i.status', DocumentStatus::DRAFT)
+            // ⓘ নিষ্ক্রিয় খসড়া সীমা ধরে রাখে না ([[DirectSaleService::pauseDraft()]])
+            ->whereNull('i.draft_paused_at');
 
         if ($exceptInvoiceId !== null) {
             $query->where('i.id', '!=', $exceptInvoiceId);

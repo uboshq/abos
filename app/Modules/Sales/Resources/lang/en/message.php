@@ -278,4 +278,13 @@ return [
     'credit_held' => 'Unbilled DOs and drafts',
     'credit_over' => 'Over the limit',
     'open_draft_title' => 'This customer has an open draft',
+    'stuck_challan_signature' => 'Waiting for signature: delivery challan',
+    'stuck_invoice_signature' => 'Waiting for signature: bill',
+    'stuck_deposit_signature' => 'Waiting for signature: deposit :no',
+    'stuck_parked' => 'Kept at the counter, not confirmed',
+    'stuck_unfinished' => 'Not confirmed',
+    'draft_opens_at_counter' => 'To open, change or confirm this draft, pick it from the Pending dropdown on Direct Sale.',
+    'stuck_paused' => 'Inactive: holds no credit',
+    'draft_paused' => 'Draft :no deactivated.',
+    'draft_resumed' => 'Draft :no is active again.',
 ];

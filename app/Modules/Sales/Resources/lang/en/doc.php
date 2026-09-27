@@ -7,6 +7,7 @@ return [
     'receipt' => 'Goods Receipt',
     'bill' => 'Purchase Bill',
     'challan' => 'Delivery Challan',
+    'counter_do' => 'Counter delivery order',
     'invoice' => 'Sales Invoice',
     'collection' => 'Collection',
     'gatepass' => 'Gate Pass',

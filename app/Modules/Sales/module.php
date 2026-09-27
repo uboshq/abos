@@ -521,6 +521,9 @@ return [
     'doc_types' => [
         'SO' => 'sales::doc.order',
         'DC' => 'sales::doc.challan',
+        // ⭐ কাউন্টারের ডেলিভারি অর্ডার — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬: আলাদা উপসর্গ (DS),
+        // খসড়া আর নিশ্চিত একই সারিতে; উপসর্গটা কন্ট্রোল প্যানেলের নম্বর-সারি থেকে বদলানো যায়
+        'DS' => 'sales::doc.counter_do',
         'TRP' => 'sales::doc.shipment',
         'INV' => 'sales::doc.invoice',
         'COL' => 'sales::doc.collection',

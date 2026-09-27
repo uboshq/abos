@@ -359,7 +359,8 @@ class DirectSaleController extends Controller implements HasMiddleware
              * placeholder দেখায়, অর্থাৎ আগের আচরণেই ফেরে।
              */
             'invoicePreview' => $this->invoicePreview(),
-            'challanPreview' => $this->seriesPreview('DC'),
+            // ⓘ কাউন্টারের নিজের সারি — [[DirectSaleService::challanFor()]]-এর সাথে এক
+            'challanPreview' => $this->seriesPreview('DS'),
 
             /*
              * ⭐ রাখা খসড়া — "পেন্ডিং" তালিকা আর খোলা খসড়া (মালিকের নকশা,
@@ -1235,7 +1236,7 @@ class DirectSaleController extends Controller implements HasMiddleware
         $q = trim((string) $request->query('q', ''));
 
         $drafts = DirectSaleService::openCounterDrafts()
-            ->with(['customer.location', 'lines.challanLine.challan'])
+            ->with(['customer.location', 'lines.challanLine.challan', 'lines.product'])
             ->when($q !== '', fn ($query) => $query->search($q))
             ->orderByDesc('id')
             ->paginate(50)
@@ -1244,8 +1245,86 @@ class DirectSaleController extends Controller implements HasMiddleware
         return view('sales::direct.drafts', [
             'menu' => $this->menu->forUser($request->user()),
             'drafts' => $drafts,
+            'why' => $this->whyStuck($drafts->getCollection()),
+            'held' => $drafts->getCollection()->mapWithKeys(
+                fn (SalesInvoice $d) => [$d->id => DirectSaleService::isHeldForSignature($d)])->all(),
             'q' => $q,
         ]);
+    }
+
+    /**
+     * খসড়াটা কেন আটকে — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬: *"sudu stats dekhabe keno
+     * se atke ache"*।
+     *
+     * ⓘ তিনটা সইয়ের জায়গা দেখা হয় — চালান, বিল, আর বিলের বিপরীতে কাউন্টারের জমা
+     * (`against_*`); কোনোটাই না থাকলে কাউন্টারে রাখা খসড়া। ⚠️ এক কোয়েরিতে সব সারির,
+     * নাহলে পঞ্চাশ সারিতে পঞ্চাশবার খোঁজা হত।
+     *
+     * @param  \Illuminate\Support\Collection<int, SalesInvoice>  $drafts
+     * @return array<int, string>
+     */
+    private function whyStuck($drafts): array
+    {
+        $invoiceIds = $drafts->pluck('id')->all();
+        $challans = $drafts->mapWithKeys(fn (SalesInvoice $d) => [
+            $d->id => (int) ($d->lines->first()?->challanLine?->challan?->id ?? 0),
+        ]);
+
+        $vouchers = \App\Modules\Accounts\Models\Voucher::query()
+            ->where('against_type', SalesInvoice::drillSourceType())
+            ->whereIn('against_id', $invoiceIds)
+            ->get(['id', 'document_no', 'against_id']);
+
+        $pending = \App\Models\Approval::query()
+            ->where('status', \App\Models\Approval::PENDING)
+            ->where(fn ($q) => $q
+                ->where(fn ($w) => $w->where('approvable_type', DeliveryChallan::class)
+                    ->whereIn('approvable_id', $challans->filter()->values()->all()))
+                ->orWhere(fn ($w) => $w->where('approvable_type', SalesInvoice::class)
+                    ->whereIn('approvable_id', $invoiceIds))
+                ->orWhere(fn ($w) => $w->where('approvable_type', \App\Modules\Accounts\Models\Voucher::class)
+                    ->whereIn('approvable_id', $vouchers->pluck('id')->all())))
+            ->get(['approvable_type', 'approvable_id']);
+
+        $held = fn (string $type, int $id) => $pending->contains(
+            fn ($a) => $a->approvable_type === $type && (int) $a->approvable_id === $id);
+
+        $why = [];
+
+        foreach ($drafts as $draft) {
+            $challanId = (int) $challans->get($draft->id, 0);
+            $voucher = $vouchers->first(fn ($v) => (int) $v->against_id === $draft->id
+                && $held(\App\Modules\Accounts\Models\Voucher::class, (int) $v->id));
+
+            $why[$draft->id] = match (true) {
+                $draft->draft_paused_at !== null => __('sales::message.stuck_paused'),
+                $challanId > 0 && $held(DeliveryChallan::class, $challanId) => __('sales::message.stuck_challan_signature'),
+                $held(SalesInvoice::class, (int) $draft->id) => __('sales::message.stuck_invoice_signature'),
+                $voucher !== null => __('sales::message.stuck_deposit_signature', ['no' => $voucher->document_no]),
+                $draft->counter_draft !== null => __('sales::message.stuck_parked'),
+                default => __('sales::message.stuck_unfinished'),
+            };
+        }
+
+        return $why;
+    }
+
+    /** খসড়া নিষ্ক্রিয় — তালিকার বোতাম ([[DirectSaleService::pauseDraft()]]). */
+    public function pauseDraft(SalesInvoice $invoice): RedirectResponse
+    {
+        $this->sales->pauseDraft($invoice);
+
+        return redirect()->route('sales.direct.drafts')
+            ->with('saved', __('sales::message.draft_paused', ['no' => $invoice->document_no]));
+    }
+
+    /** খসড়া আবার সক্রিয় — সীমা আর "একটাই খসড়া" আবার যাচাই হয়। */
+    public function resumeDraft(SalesInvoice $invoice): RedirectResponse
+    {
+        $this->sales->resumeDraft($invoice);
+
+        return redirect()->route('sales.direct.drafts')
+            ->with('saved', __('sales::message.draft_resumed', ['no' => $invoice->document_no]));
     }
 
     /**
@@ -1260,7 +1339,8 @@ class DirectSaleController extends Controller implements HasMiddleware
      */
     private function pendingDrafts(): array
     {
-        return DirectSaleService::openCounterDrafts()
+        // ⓘ নিষ্ক্রিয় খসড়া ড্রপডাউনে নয় — তালিকায় থাকে ([[DirectSaleService::pauseDraft()]])
+        return DirectSaleService::activeCounterDrafts()
             ->orderByDesc('id')
             ->limit(500)
             ->with('customer')

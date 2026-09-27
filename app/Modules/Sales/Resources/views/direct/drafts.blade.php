@@ -6,8 +6,8 @@
     ([[DirectSaleController::pendingDrafts()]]-এর একই ছাঁকনি), এখানে এক
     পাতায় — কোনটা কতদিন পড়ে আছে দেখার জন্য।
 
-    ⓘ দুইটা কাজ: খোলা (কাউন্টারে, `?draft=`), আর কারণসহ বাতিল। পাকা করা
-    কেবল কাউন্টারেই — ওখানেই জমা, সীমা আর সইয়ের সব পাহারা।
+    ⓘ এখানে কেবল দেখা — কেন আটকে, আর পপ-আপে কী আছে (মালিকের নির্দেশ, ২৮
+    সেপ্টেম্বর ২০২৬)। খোলা, পাকা বা বাতিল কেবল কাউন্টারের Pending ড্রপডাউন থেকে।
 --}}
 @php
     $columns = [
@@ -49,10 +49,16 @@
             'render' => fn ($d) => \App\Core\Support\Money::format($d->total),
         ],
         [
+            // ⭐ কেন আটকে — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬ ([[DirectSaleController::whyStuck()]])
+            'key' => 'status',
+            'label' => __('sales::field.state'),
+            'render' => fn ($d) => $why[$d->id] ?? '',
+        ],
+        [
             'key' => 'actions',
             'label' => __('core.table.actions'),
-            'width' => '26rem',
-            'render' => fn ($d) => view('sales::direct.partials.draft-actions', ['draft' => $d]),
+            'width' => '24rem',
+            'render' => fn ($d) => view('sales::direct.partials.draft-actions', ['draft' => $d, 'why' => $why[$d->id] ?? '', 'held' => $held[$d->id] ?? false]),
         ],
     ];
 @endphp

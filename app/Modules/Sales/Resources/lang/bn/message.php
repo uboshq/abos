@@ -292,4 +292,13 @@ return [
     'credit_held' => 'বিল না হওয়া ডিও ও খসড়া',
     'credit_over' => 'সীমা পার',
     'open_draft_title' => 'এই ক্রেতার খসড়া খোলা আছে',
+    'stuck_challan_signature' => 'সইয়ের অপেক্ষায় — ডেলিভারি চালান',
+    'stuck_invoice_signature' => 'সইয়ের অপেক্ষায় — বিল',
+    'stuck_deposit_signature' => 'সইয়ের অপেক্ষায় — জমা :no',
+    'stuck_parked' => 'কাউন্টারে রাখা খসড়া — নিশ্চিত হয়নি',
+    'stuck_unfinished' => 'নিশ্চিত হয়নি',
+    'draft_opens_at_counter' => 'খসড়াটা খুলতে, বদলাতে বা নিশ্চিত করতে সরাসরি বিক্রয়ের Pending ড্রপডাউন থেকে খুলুন।',
+    'stuck_paused' => 'নিষ্ক্রিয় — সীমা ধরে রাখে না',
+    'draft_paused' => 'খসড়া :no নিষ্ক্রিয় করা হলো।',
+    'draft_resumed' => 'খসড়া :no আবার সক্রিয়।',
 ];

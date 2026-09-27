@@ -79,4 +79,8 @@ return [
     'activate_scheme' => 'চালু করুন',
     'cancel_invoice' => 'বিল বাতিল করুন',
     'open_draft' => 'খুলুন',
+    'view_draft' => 'দেখুন',
+    'pause_draft' => 'নিষ্ক্রিয়',
+    'resume_draft' => 'সক্রিয়',
+    'delete_draft' => 'মুছুন',
 ];

@@ -616,15 +616,22 @@ final class TheParkedBillWaitsAtTheSameCounterTest extends TestCase
         $html = $this->get(route('sales.direct.drafts'))->assertOk()->getContent();
 
         $this->assertStringContainsString(e($mine->document_no), $html, '⛔ রাখা খসড়াটা তালিকায় নেই।');
-        $this->assertStringContainsString(e(route('sales.direct.create', ['draft' => $mine->id])), $html,
-            '⛔ খসড়াটা কাউন্টারে খোলার লিংক নেই।');
-        $this->assertStringNotContainsString(e(route('sales.direct.create', ['draft' => $foreign->id])), $html,
+        /* ⭐ তালিকা কেবল দেখায় — খোলা বা বাতিল নয় (মালিক, ২৮ সেপ্টেম্বর ২০২৬) */
+        $this->assertStringNotContainsString(e(route('sales.direct.create', ['draft' => $mine->id])), $html,
+            '⛔ তালিকা থেকে খসড়া খোলার লিংক আছে — খোলা কেবল কাউন্টারের Pending থেকে।');
+        /* ⭐ মুছুন আর নিষ্ক্রিয় আছে — মালিকের দ্বিতীয় নির্দেশ, একই দিন */
+        $this->assertStringContainsString(e(route('sales.direct.discard', $mine->id)), $html, '⛔ মুছুন বোতাম নেই।');
+        $this->assertStringContainsString(e(route('sales.direct.draft_pause', $mine->id)), $html, '⛔ নিষ্ক্রিয় বোতাম নেই।');
+        $this->assertStringContainsString(e(__('sales::message.stuck_parked')), $html, '⛔ কেন আটকে — লেখা নেই।');
+        $this->assertStringContainsString(e(__('sales::action.view_draft')), $html, '⛔ দেখার বোতাম নেই।');
+        // ⓘ সারির নিজের বোতাম ধরে — নম্বর দুই কোম্পানিতে একই হতে পারে, তাই নম্বর দিয়ে নয়
+        $this->assertStringNotContainsString(e(route('sales.direct.draft_pause', $foreign->id)), $html,
             '⛔ অন্য কোম্পানির খসড়া তালিকায় এসেছে।');
 
         /* ⓘ পাকা বিল তালিকায় আসে না — কেবল এখনো খোলা খসড়া */
         $this->sell(['resume_invoice_id' => $mine->id, 'save_as_draft' => '0'])->assertSessionHasNoErrors();
 
-        $this->assertStringNotContainsString(e(route('sales.direct.create', ['draft' => $mine->id])),
+        $this->assertStringNotContainsString(e(route('sales.direct.draft_pause', $mine->id)),
             $this->get(route('sales.direct.drafts'))->assertOk()->getContent(),
             '⛔ পাকা হয়ে যাওয়া বিলটা এখনো খসড়া তালিকায়।');
     }
@@ -694,8 +701,8 @@ final class TheParkedBillWaitsAtTheSameCounterTest extends TestCase
 
         $list = $this->get(route('sales.direct.drafts'))->assertOk()->getContent();
         $this->assertStringContainsString(e($draft->document_no), $list, '⛔ চিহ্নহীন খসড়া খসড়া-তালিকায় নেই।');
-        $this->assertStringContainsString(e(route('sales.invoice.show', $draft->id)), $list,
-            '⛔ চিহ্নহীন খসড়া খোলার পথ নেই।');
+        $this->assertStringContainsString(e(__('sales::message.stuck_unfinished')), $list,
+            '⛔ চিহ্নহীন খসড়ার অবস্থা লেখা নেই।');
 
         $pending = collect($this->get(route('sales.direct.create'))->assertOk()->viewData('pendingDrafts'))->flatten(1);
         $this->assertTrue($pending->contains(fn ($d) => (int) $d['id'] === $draft->id),
@@ -709,6 +716,53 @@ final class TheParkedBillWaitsAtTheSameCounterTest extends TestCase
             '⛔ চিহ্নহীন খসড়ার চালান চালানের তালিকায় বসে আছে।');
 
         $this->sell(['save_as_draft' => '0'])->assertSessionHasErrors('customer_id');
+    }
+
+    /**
+     * ⭐ নিষ্ক্রিয় খসড়া — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬। তালিকায় থাকে, কিন্তু
+     * ক্রেতার নতুন বিল আটকায় না আর Pending-এ আসে না; সক্রিয় করতে "একটাই খসড়া"
+     * আবার যাচাই হয়।
+     */
+    public function test_a_paused_draft_frees_the_customer_and_resuming_checks_again(): void
+    {
+        $draft = $this->park();
+
+        $this->post(route('sales.direct.draft_pause', $draft))->assertSessionHasNoErrors()
+            ->assertRedirect(route('sales.direct.drafts'));
+        $this->assertNotNull($draft->fresh()->draft_paused_at);
+
+        $list = $this->get(route('sales.direct.drafts'))->assertOk()->getContent();
+        $this->assertStringContainsString(e(__('sales::message.stuck_paused')), $list, '⛔ নিষ্ক্রিয় লেখা নেই।');
+
+        $pending = collect($this->get(route('sales.direct.create'))->viewData('pendingDrafts'))->flatten(1);
+        $this->assertFalse($pending->contains(fn ($d) => (int) $d['id'] === $draft->id),
+            '⛔ নিষ্ক্রিয় খসড়া Pending-এ এসেছে।');
+
+        /* ⓘ ক্রেতা এখন নতুন খসড়া নিতে পারেন */
+        $second = $this->park();
+        $this->assertNotSame($draft->id, $second->id);
+
+        /* ⛔ আর তখন পুরনোটা সক্রিয় করা যায় না — একটাই খসড়া */
+        $this->post(route('sales.direct.draft_resume', $draft))->assertSessionHasErrors('customer_id');
+        $this->assertNotNull($draft->fresh()->draft_paused_at);
+
+        /* ⓘ নতুনটা মুছলে পুরনোটা সক্রিয় হয় */
+        $this->post(route('sales.direct.discard', $second), ['reason' => 'ভুল', 'back' => 'drafts'])
+            ->assertSessionHasNoErrors();
+        $this->post(route('sales.direct.draft_resume', $draft))->assertSessionHasNoErrors();
+        $this->assertNull($draft->fresh()->draft_paused_at);
+    }
+
+    /** ⛔ চিহ্নহীন খসড়াও তালিকা থেকে মোছা যায় — বাতিল হয়, খাতায় কিছু ওঠে না। */
+    public function test_an_unmarked_draft_can_be_deleted_from_the_list(): void
+    {
+        $draft = $this->park();
+        DB::table('sal_invoices')->where('id', $draft->id)->update(['counter_draft' => null]);
+
+        $this->post(route('sales.direct.discard', $draft), ['reason' => 'পুরনো', 'back' => 'drafts'])
+            ->assertSessionHasNoErrors()->assertRedirect(route('sales.direct.drafts'));
+
+        $this->assertSame(DocumentStatus::CANCELLED, $draft->fresh()->status);
     }
 
     /** তালিকা থেকে বাতিল করলে তালিকাতেই ফেরা — আর চাবি ছাড়া পাতাটাই বন্ধ। */
@@ -750,6 +804,25 @@ final class TheParkedBillWaitsAtTheSameCounterTest extends TestCase
 
         $this->assertSame($challans, DeliveryChallan::query()->count(),
             '⛔ একই চালান নম্বরে দ্বিতীয় একটা চালান বসেছে।');
+    }
+
+    /**
+     * ⭐ কাউন্টারের নম্বর নিজের সারিতে (DS) — খসড়া আর নিশ্চিত একই সারি; মালিকের নির্দেশ,
+     * ২৮ সেপ্টেম্বর ২০২৬। ⓘ উপসর্গটা নম্বর-সারির, তাই কন্ট্রোল প্যানেল থেকে বদলায়।
+     */
+    public function test_counter_sales_number_from_their_own_ds_series(): void
+    {
+        $draft = $this->park();
+        $this->sell(['save_as_draft' => '0'], $this->other)->assertSessionHasNoErrors();
+        $sold = SalesInvoice::query()->latest('id')->firstOrFail();
+
+        $first = (string) $this->challanOf($draft)->document_no;
+        $second = (string) $this->challanOf($sold)->document_no;
+
+        $this->assertStringStartsWith('DS', $first, '⛔ খসড়ার চালান DS সারিতে নয়।');
+        $this->assertStringStartsWith('DS', $second, '⛔ নিশ্চিত বিক্রির চালান DS সারিতে নয়।');
+        $this->assertNotSame($first, $second, '⛔ দুই বিক্রি একই নম্বর পেয়েছে।');
+        $this->assertStringStartsWith('DS', (string) $this->get(route('sales.direct.create'))->viewData('challanPreview'));
     }
 
     /**

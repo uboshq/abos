@@ -546,9 +546,80 @@ final class DirectSaleService
             ->whereHas('lines.challanLine.challan', fn ($c) => $c->where('status', DocumentStatus::DRAFT));
     }
 
+    /**
+     * খোলা **আর সক্রিয়** খসড়া — নিষ্ক্রিয়গুলো বাদ; Pending ড্রপডাউন আর "একটাই খসড়া"
+     * নিয়মের জন্য ([[pauseDraft()]])।
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<SalesInvoice>|null  $query
+     * @return \Illuminate\Database\Eloquent\Builder<SalesInvoice>
+     */
+    public static function activeCounterDrafts($query = null)
+    {
+        return self::openCounterDrafts($query)->whereNull('sal_invoices.draft_paused_at');
+    }
+
+    /** এই খসড়া কি সইয়ের অপেক্ষায় — চালান, বিল, বা তার বিপরীতে কাউন্টারের জমা। */
+    public static function isHeldForSignature(SalesInvoice $invoice): bool
+    {
+        $invoice->loadMissing('lines.challanLine');
+        $challanId = (int) ($invoice->lines->first()?->challanLine?->delivery_challan_id ?? 0);
+        $voucherIds = \App\Modules\Accounts\Models\Voucher::query()
+            ->where('against_type', SalesInvoice::drillSourceType())
+            ->where('against_id', $invoice->id)
+            ->pluck('id')->all();
+
+        return \App\Models\Approval::query()
+            ->where('status', \App\Models\Approval::PENDING)
+            ->where(fn ($q) => $q
+                ->where(fn ($w) => $w->where('approvable_type', DeliveryChallan::class)->where('approvable_id', $challanId))
+                ->orWhere(fn ($w) => $w->where('approvable_type', SalesInvoice::class)->where('approvable_id', $invoice->id))
+                ->orWhere(fn ($w) => $w->where('approvable_type', \App\Modules\Accounts\Models\Voucher::class)
+                    ->whereIn('approvable_id', $voucherIds)))
+            ->exists();
+    }
+
+    /**
+     * খসড়া নিষ্ক্রিয় — তালিকায় থাকে, কিন্তু সীমা ধরে রাখে না আর নতুন বিল আটকায় না।
+     * ⛔ সইয়ের অপেক্ষায় থাকা খসড়া নয় — ওটা অনুমোদনের পাতায় শেষ হয়।
+     */
+    public function pauseDraft(SalesInvoice $invoice): void
+    {
+        DB::transaction(function () use ($invoice) {
+            $draft = self::openCounterDrafts()->lockForUpdate()->find($invoice->getKey());
+
+            if ($draft === null || self::isHeldForSignature($draft)) {
+                throw ValidationException::withMessages(['draft' => __('sales::validation.draft_not_settable')]);
+            }
+
+            $draft->forceFill(['draft_paused_at' => now()])->save();
+        });
+    }
+
+    /**
+     * খসড়া আবার সক্রিয় — ⛔ দুই পাহারা আবার: ক্রেতার আর কোনো সক্রিয় খসড়া নয়, আর
+     * বাকির সীমায় জায়গা ([[CreditExposure::assertRoom()]])।
+     */
+    public function resumeDraft(SalesInvoice $invoice): void
+    {
+        DB::transaction(function () use ($invoice) {
+            $draft = self::openCounterDrafts()->lockForUpdate()->find($invoice->getKey());
+
+            if ($draft === null || $draft->draft_paused_at === null) {
+                throw ValidationException::withMessages(['draft' => __('sales::validation.draft_not_settable')]);
+            }
+
+            $customer = Customer::query()->lockForUpdate()->findOrFail($draft->customer_id);
+
+            $this->assertNoOtherOpenDraft($customer, $draft);
+            $this->credit->assertRoom($customer, (string) $draft->total, '0', (int) $draft->id);
+
+            $draft->forceFill(['draft_paused_at' => null])->save();
+        });
+    }
+
     private function assertNoOtherOpenDraft(Customer $customer, ?SalesInvoice $parked): void
     {
-        $open = self::openCounterDrafts(SalesInvoice::acrossBranches())
+        $open = self::activeCounterDrafts(SalesInvoice::acrossBranches())
             ->where('customer_id', $customer->id)
             ->when($parked !== null, fn ($q) => $q->whereKeyNot($parked->id))
             ->orderBy('id')
@@ -574,7 +645,12 @@ final class DirectSaleService
         DB::transaction(function () use ($invoice, $reason) {
             $invoice = SalesInvoice::query()->lockForUpdate()->find($invoice->getKey());
 
-            if ($invoice === null || $invoice->status !== 'draft' || $invoice->counter_draft === null) {
+            /* ⓘ কাউন্টারের যেকোনো খোলা খসড়া — চিহ্ন থাকুক বা না থাকুক (তালিকার "মুছুন");
+               ⛔ সইয়ের অপেক্ষায় থাকলে নয় — ওটা অনুমোদনের পাতায় প্রত্যাহার হয় */
+            $open = $invoice !== null && $invoice->status === 'draft'
+                && self::openCounterDrafts()->whereKey($invoice->id)->exists();
+
+            if (! $open || self::isHeldForSignature($invoice)) {
                 throw ValidationException::withMessages([
                     'resume_invoice_id' => __('sales::validation.parked_draft_gone'),
                 ]);
@@ -618,6 +694,8 @@ final class DirectSaleService
         if ($parked === null) {
             // ⓘ হাতে লেখা চালান নম্বর — খালি হলে সিরিজ ([[DeliveryChallanService::challanNumber()]])
             $header['document_no'] = trim((string) ($data['challan_no'] ?? '')) ?: null;
+            // ⭐ কাউন্টারের নিজের নম্বর-সারি (DS) — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬
+            $header['series'] = 'DS';
 
             return $this->challans->create($header, $this->challanLines($lines));
         }

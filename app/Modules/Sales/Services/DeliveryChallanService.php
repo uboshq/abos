@@ -121,7 +121,8 @@ final class DeliveryChallanService
             $order = $this->resolveOrder($data['sales_order_id'] ?? null);
             $warehouse = $this->resolveWarehouse($data['warehouse_id'] ?? $order?->warehouse_id);
 
-            $documentNo = $this->challanNumber(trim((string) ($data['document_no'] ?? '')));
+            // ⓘ কাউন্টার নিজের সারি চায় (`DS`), বাকিরা চালানের (`DC`)
+            $documentNo = $this->challanNumber(trim((string) ($data['document_no'] ?? '')), (string) ($data['series'] ?? 'DC'));
 
             $challan = DeliveryChallan::create([
                 'company_id' => CompanyContext::id(),
@@ -842,9 +843,9 @@ final class DeliveryChallanService
      * ⛔ হাতে লেখা নম্বর আগে কোনো চালানে বসে থাকলে পড়ার মতো বার্তা;
      * শেষ পাহারা তবু ডাটাবেসের ইউনিক ইনডেক্স (`company_id, document_no`)।
      */
-    private function challanNumber(string $given): string
+    private function challanNumber(string $given, string $docType = 'DC'): string
     {
-        if ($given !== '' && ! $this->numbers->isNextNumber('DC', $given)) {
+        if ($given !== '' && ! $this->numbers->isNextNumber($docType, $given)) {
             if (DeliveryChallan::query()->where('document_no', $given)->exists()) {
                 throw ValidationException::withMessages([
                     'challan_no' => __('sales::validation.challan_no_taken', ['no' => $given]),
@@ -855,13 +856,13 @@ final class DeliveryChallanService
         }
 
         for ($attempt = 0; $attempt < 50; $attempt++) {
-            $candidate = $this->numbers->next('DC');
+            $candidate = $this->numbers->next($docType);
 
             if (! DeliveryChallan::query()->where('document_no', $candidate)->exists()) {
                 return $candidate;
             }
         }
 
-        return $this->numbers->next('DC');
+        return $this->numbers->next($docType);
     }
 }
