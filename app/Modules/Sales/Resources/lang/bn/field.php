@@ -373,4 +373,6 @@ return [
     'carrier_phone' => 'বাহকের মোবাইল',
     'driver_phone' => 'চালকের মোবাইল',
     'no_lot' => 'লট নেই',
+    'tab_drafts' => 'খসড়া',
+    'tab_awaiting_approval' => 'অনুমোদনের অপেক্ষায়',
 ];

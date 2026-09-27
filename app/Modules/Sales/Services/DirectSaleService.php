@@ -553,6 +553,53 @@ final class DirectSaleService
      * @param  \Illuminate\Database\Eloquent\Builder<SalesInvoice>|null  $query
      * @return \Illuminate\Database\Eloquent\Builder<SalesInvoice>
      */
+    /**
+     * সইয়ের অপেক্ষায় কি না — এক কোয়েরিতে, সারি ধরে ([[isHeldForSignature()]]-এর SQL রূপ)।
+     *
+     * ⭐ মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬: নিশ্চিত করে সইয়ে পাঠানো বিক্রি খসড়া
+     * নয় (*"etato maratok vul"*)। ⓘ তিন জায়গায় সই চাওয়া হতে পারে — চালান, বিল,
+     * আর বিলের বিপরীতে কাউন্টারের জমা।
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<SalesInvoice>  $query
+     * @return \Illuminate\Database\Eloquent\Builder<SalesInvoice>
+     */
+    public static function whereHeld($query, bool $held = true)
+    {
+        $exists = fn ($q) => $q->selectRaw('1')->from('approvals as ap')
+            ->where('ap.status', \App\Models\Approval::PENDING)
+            ->where(fn ($w) => $w
+                ->where(fn ($c) => $c->where('ap.approvable_type', DeliveryChallan::class)
+                    ->whereIn('ap.approvable_id', fn ($s) => $s->select('cl.delivery_challan_id')
+                        ->from('sal_invoice_lines as il')
+                        ->join('sal_challan_lines as cl', 'cl.id', '=', 'il.delivery_challan_line_id')
+                        ->whereColumn('il.sales_invoice_id', 'sal_invoices.id')))
+                ->orWhere(fn ($c) => $c->where('ap.approvable_type', SalesInvoice::class)
+                    ->whereColumn('ap.approvable_id', 'sal_invoices.id'))
+                ->orWhere(fn ($c) => $c->where('ap.approvable_type', \App\Modules\Accounts\Models\Voucher::class)
+                    ->whereIn('ap.approvable_id', fn ($s) => $s->select('v.id')->from('vouchers as v')
+                        ->where('v.against_type', SalesInvoice::drillSourceType())
+                        ->whereColumn('v.against_id', 'sal_invoices.id'))));
+
+        return $held ? $query->whereExists($exists) : $query->whereNotExists($exists);
+    }
+
+    /**
+     * সত্যিকারের খসড়া — কাউন্টারে রাখা, সইয়ে যায়নি। ⓘ তালিকার "খসড়া" ট্যাব ও Pending-এর
+     * "খসড়া" ভাগ।
+     *
+     * @return \Illuminate\Database\Eloquent\Builder<SalesInvoice>
+     */
+    public static function trueDrafts($query = null)
+    {
+        return self::whereHeld(self::openCounterDrafts($query), false);
+    }
+
+    /** নিশ্চিত করে সইয়ে পাঠানো — "অনুমোদনের অপেক্ষায়" ট্যাব ও Pending-এর ভাগ। */
+    public static function awaitingApproval($query = null)
+    {
+        return self::whereHeld(self::openCounterDrafts($query), true);
+    }
+
     public static function activeCounterDrafts($query = null)
     {
         return self::openCounterDrafts($query)->whereNull('sal_invoices.draft_paused_at');

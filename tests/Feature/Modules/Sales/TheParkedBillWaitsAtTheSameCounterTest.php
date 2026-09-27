@@ -765,6 +765,36 @@ final class TheParkedBillWaitsAtTheSameCounterTest extends TestCase
         $this->assertSame(DocumentStatus::CANCELLED, $draft->fresh()->status);
     }
 
+    /**
+     * ⭐ নিশ্চিত করে সইয়ে পাঠানো বিক্রি খসড়া নয় — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬
+     * (*"etato maratok vul"*)। ⓘ খসড়া ট্যাবে নয়, "অনুমোদনের অপেক্ষায়" ট্যাবে; Pending-এ
+     * আলাদা ভাগে, আর খোলে অনুমোদনের পাতায় — ইনভয়েসের পাতায় নয়।
+     */
+    public function test_a_sale_waiting_for_a_signature_is_not_a_draft(): void
+    {
+        $this->counterDepositFlow();
+        $this->sell($this->bankDeposit())->assertSessionHasNoErrors();
+        $held = SalesInvoice::query()->latest('id')->firstOrFail();
+
+        $parked = $this->park([], $this->other);
+
+        $drafts = $this->get(route('sales.direct.drafts'))->assertOk()->getContent();
+        $waiting = $this->get(route('sales.direct.drafts', ['tab' => 'approval']))->assertOk()->getContent();
+
+        $this->assertStringNotContainsString(e($held->document_no), $drafts, '⛔ সইয়ের অপেক্ষার বিক্রি খসড়া ট্যাবে।');
+        $this->assertStringContainsString(e($parked->document_no), $drafts, 'প্রস্তুতিটাই ভুল — রাখা খসড়া নেই।');
+        $this->assertStringContainsString(e($held->document_no), $waiting, '⛔ অনুমোদনের অপেক্ষার ট্যাবে বিক্রিটা নেই।');
+        $this->assertStringNotContainsString(e($parked->document_no), $waiting, '⛔ রাখা খসড়া অনুমোদনের ট্যাবে।');
+
+        $pending = collect($this->get(route('sales.direct.create'))->viewData('pendingDrafts'))->flatten(1)->keyBy('id');
+
+        $this->assertSame('approval', $pending[$held->id]['group'] ?? null, '⛔ Pending-এ সইয়ের অপেক্ষার ভাগ নেই।');
+        $this->assertStringContainsString('/approval', (string) $pending[$held->id]['url'],
+            '⛔ সইয়ের অপেক্ষার বিক্রি অনুমোদনের পাতায় খোলে না।');
+        $this->assertSame('draft', $pending[$parked->id]['group'] ?? null);
+        $this->assertSame(route('sales.direct.create', ['draft' => $parked->id]), $pending[$parked->id]['url']);
+    }
+
     /** তালিকা থেকে বাতিল করলে তালিকাতেই ফেরা — আর চাবি ছাড়া পাতাটাই বন্ধ। */
     public function test_discarding_from_the_list_returns_to_the_list_and_the_list_needs_the_counter_key(): void
     {

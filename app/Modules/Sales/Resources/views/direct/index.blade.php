@@ -98,6 +98,7 @@
                   'itemAlreadyInCart' => __('sales::validation.item_already_in_cart'),
                   'freeNextAt' => __('sales::message.free_next_at'),
                   'openDraftBlocks' => __('sales::validation.open_draft_blocks_new_bill'),
+                  'pendingAwaiting' => __('sales::field.tab_awaiting_approval'),
               ]),
               pendingDrafts: @js($pendingDrafts ?? []),
               resume: @js($resume ?? null),

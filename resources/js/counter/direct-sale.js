@@ -509,8 +509,10 @@ export default function directSale({
         /** ড্রপডাউনের একটা সারির লেখা — ক্রেতা না বাছা থাকলে নামসহ। */
         pendingLabel(d) {
             const who = String(this.customerId ?? '') === '' && d.customer ? d.customer + ' · ' : '';
+            // ⭐ দুই ভাগ — সইয়ের অপেক্ষায় থাকা বিক্রি চিহ্নসহ (মালিক, ২৮ সেপ্টেম্বর ২০২৬)
+            const tag = d.group === 'approval' ? '⏳ ' + (texts.pendingAwaiting ?? '') + ' · ' : '';
 
-            return who + d.no + ' · ৳' + this.money(d.total) + ' · ' + d.date;
+            return tag + who + d.no + ' · ৳' + this.money(d.total) + ' · ' + d.date;
         },
 
         /*

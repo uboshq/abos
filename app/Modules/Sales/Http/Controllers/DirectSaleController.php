@@ -1235,7 +1235,10 @@ class DirectSaleController extends Controller implements HasMiddleware
     {
         $q = trim((string) $request->query('q', ''));
 
-        $drafts = DirectSaleService::openCounterDrafts()
+        /* ⭐ দুই ট্যাব — খসড়া আর অনুমোদনের অপেক্ষায় (মালিক, ২৮ সেপ্টেম্বর ২০২৬) */
+        $tab = $request->query('tab') === 'approval' ? 'approval' : 'drafts';
+
+        $drafts = ($tab === 'approval' ? DirectSaleService::awaitingApproval() : DirectSaleService::trueDrafts())
             ->with(['customer.location', 'lines.challanLine.challan', 'lines.product'])
             ->when($q !== '', fn ($query) => $query->search($q))
             ->orderByDesc('id')
@@ -1246,6 +1249,11 @@ class DirectSaleController extends Controller implements HasMiddleware
             'menu' => $this->menu->forUser($request->user()),
             'drafts' => $drafts,
             'why' => $this->whyStuck($drafts->getCollection()),
+            'tab' => $tab,
+            'tabCounts' => [
+                'drafts' => DirectSaleService::trueDrafts()->count(),
+                'approval' => DirectSaleService::awaitingApproval()->count(),
+            ],
             'held' => $drafts->getCollection()->mapWithKeys(
                 fn (SalesInvoice $d) => [$d->id => DirectSaleService::isHeldForSignature($d)])->all(),
             'q' => $q,
@@ -1309,6 +1317,30 @@ class DirectSaleController extends Controller implements HasMiddleware
         return $why;
     }
 
+    /** সইয়ের অপেক্ষায় থাকা বিক্রির অনুমোদন-পাতা — চালান, বিল বা জমা, যেটায় সই ঝুলছে। */
+    private function approvalUrlFor(SalesInvoice $draft): string
+    {
+        $draft->loadMissing('lines.challanLine');
+        $challanId = (int) ($draft->lines->first()?->challanLine?->delivery_challan_id ?? 0);
+        $voucherIds = \App\Modules\Accounts\Models\Voucher::query()
+            ->where('against_type', SalesInvoice::drillSourceType())
+            ->where('against_id', $draft->id)->pluck('id')->all();
+
+        $approval = \App\Models\Approval::query()
+            ->where('status', \App\Models\Approval::PENDING)
+            ->where(fn ($q) => $q
+                ->where(fn ($w) => $w->where('approvable_type', DeliveryChallan::class)->where('approvable_id', $challanId))
+                ->orWhere(fn ($w) => $w->where('approvable_type', SalesInvoice::class)->where('approvable_id', $draft->id))
+                ->orWhere(fn ($w) => $w->where('approvable_type', \App\Modules\Accounts\Models\Voucher::class)
+                    ->whereIn('approvable_id', $voucherIds)))
+            ->orderByDesc('id')
+            ->value('id');
+
+        return $approval === null
+            ? route('sales.direct.drafts', ['tab' => 'approval'])
+            : route('approval.inbox.show', $approval);
+    }
+
     /** খসড়া নিষ্ক্রিয় — তালিকার বোতাম ([[DirectSaleService::pauseDraft()]]). */
     public function pauseDraft(SalesInvoice $invoice): RedirectResponse
     {
@@ -1340,6 +1372,10 @@ class DirectSaleController extends Controller implements HasMiddleware
     private function pendingDrafts(): array
     {
         // ⓘ নিষ্ক্রিয় খসড়া ড্রপডাউনে নয় — তালিকায় থাকে ([[DirectSaleService::pauseDraft()]])
+        /* ⭐ দুই ভাগ — খসড়া (কাউন্টারে খোলে) আর অনুমোদনের অপেক্ষায় (অনুমোদনের পাতায় খোলে,
+           দেখা আর ফিরিয়ে আনা যায়) — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬ */
+        $held = DirectSaleService::awaitingApproval()->pluck('sal_invoices.id')->flip();
+
         return DirectSaleService::activeCounterDrafts()
             ->orderByDesc('id')
             ->limit(500)
@@ -1353,10 +1389,11 @@ class DirectSaleController extends Controller implements HasMiddleware
                 'customer' => (string) ($draft->customer?->name() ?? ''),
                 'total' => (string) $draft->total,
                 'date' => $draft->trx_date?->format('d-m-Y') ?? '',
-                // ⓘ কাউন্টারের ছবি থাকলে কাউন্টারেই খোলে, নাহলে (পুরনো বা সইয়ের অপেক্ষায়) বিলের পাতায়
-                'url' => $draft->counter_draft !== null
-                    ? route('sales.direct.create', ['draft' => $draft->id])
-                    : route('sales.invoice.show', $draft->id),
+                'group' => $held->has($draft->id) ? 'approval' : 'draft',
+                // ⓘ খসড়া কাউন্টারে খোলে; সইয়ের অপেক্ষায় থাকলে অনুমোদনের পাতায় (দেখা ও ফিরিয়ে আনা)
+                'url' => $held->has($draft->id)
+                    ? $this->approvalUrlFor($draft)
+                    : route('sales.direct.create', ['draft' => $draft->id]),
             ])->values()->all())
             ->all();
     }

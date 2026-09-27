@@ -414,4 +414,6 @@ return [
     'carrier_phone' => 'Carrier mobile',
     'driver_phone' => 'Driver mobile',
     'no_lot' => 'No lot',
+    'tab_drafts' => 'Drafts',
+    'tab_awaiting_approval' => 'Awaiting approval',
 ];
