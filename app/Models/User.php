@@ -5,6 +5,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Core\Services\DataScope;
 use App\Core\Support\CompanyContext;
 use App\Notifications\PasswordResetLink;
 use Database\Factories\UserFactory;
@@ -456,6 +457,25 @@ class User extends Authenticatable
                     'branch_id' => __('core.company.branch_elsewhere'),
                 ]);
             }
+
+            /*
+             * ⛔ শাখাটা মানুষটার অধিকারের ভিতরে কি না — ২৭ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ উপরের যাচাই কেবল দেখে শাখাটা ঐ কোম্পানির কি না। ⚠️ ফলে এক
+             * শাখায় বাঁধা কর্মী (`DataScope`-এর `branch` সারি) ঠিকানা দিয়ে
+             * পাঠিয়ে অন্য শাখায় ঢুকে পড়তে পারতেন — সুইচারে বোতাম না থাকলেও।
+             * ⭐ অধিকার মাপা হয় **লক্ষ্য কোম্পানির** প্রসঙ্গে, চলতিটার নয়।
+             */
+            $allowed = CompanyContext::forCompany(
+                $companyId,
+                fn () => app(DataScope::class)->idsFor($this, UserDataScope::BRANCH),
+            );
+
+            if ($allowed !== null && ! in_array((int) $branchId, $allowed, true)) {
+                throw ValidationException::withMessages([
+                    'branch_id' => __('core.company.branch_not_yours'),
+                ]);
+            }
         } else {
             $pivotBranch = $this->companies()->whereKey($companyId)->first()?->pivot->default_branch_id;
 
@@ -463,6 +483,19 @@ class User extends Authenticatable
                 $companyId,
                 fn () => $company->defaultBranch()?->id,
             );
+
+            /*
+             * ⓘ ডিফল্ট শাখা মানুষটার অধিকারের বাইরে হলে তাঁর প্রথম অনুমোদিত
+             * শাখা — ⛔ নাহলে কোম্পানি বদলানোর পথেই তিনি নিষিদ্ধ শাখায় বসতেন।
+             */
+            $allowed = CompanyContext::forCompany(
+                $companyId,
+                fn () => app(DataScope::class)->idsFor($this, UserDataScope::BRANCH),
+            );
+
+            if ($allowed !== null && ! in_array((int) $branchId, $allowed, true)) {
+                $branchId = $allowed[0];
+            }
         }
 
         $this->forceFill([

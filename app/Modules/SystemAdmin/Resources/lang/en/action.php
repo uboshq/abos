@@ -9,4 +9,6 @@ return [
     'remove_logo' => 'Remove the logo',
     'deactivate_company' => 'Deactivate this company',
     'activate_company' => 'Activate this company',
+    'activate_branch' => 'Activate branch',
+    'deactivate_branch' => 'Deactivate branch',
 ];

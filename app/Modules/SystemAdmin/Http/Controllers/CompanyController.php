@@ -13,6 +13,7 @@ use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Models\Company;
+use App\Modules\SystemAdmin\Services\BranchDesk;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -505,30 +506,12 @@ class CompanyController extends Controller implements HasMiddleware
     {
         $this->mustBeYourCompany($request, $company);
 
-        $data = $request->validate([
-            'code' => ['required', 'string', 'max:16', 'alpha_dash'],
-            'name_en' => ['required', 'string', 'max:160'],
-            'name_bn' => ['nullable', 'string', 'max:160'],
-            'address_en' => ['nullable', 'string', 'max:500'],
-            'phone' => ['nullable', 'string', 'max:32'],
-        ]);
-
-        CompanyContext::forCompany($company->id, function () use ($data) {
-            $exists = Branch::query()->where('code', strtoupper($data['code']))->exists();
-
-            if ($exists) {
-                abort(422, __('system_admin::message.branch_code_taken'));
-            }
-
-            Branch::create([
-                ...$data,
-                'code' => strtoupper($data['code']),
-
-                // প্রথম শাখাটাই ডিফল্ট — নইলে নতুন লেনদেনে কোনটা বসবে
-                // তা নির্ধারিত থাকত না
-                'is_default' => ! Branch::query()->where('is_default', true)->exists(),
-            ]);
-        });
+        /*
+         * ⓘ নিয়মগুলো এখন [[BranchDesk]]-এ — "শাখা" মেনুর পাতাও একই সেবা ডাকে
+         * (২৭ সেপ্টেম্বর ২০২৬)। ⚠️ নকল কোড আগে `abort(422)`-এ একটা খালি ভুলের
+         * পাতা দিত; এখন ঘরের পাশে বার্তা।
+         */
+        app(BranchDesk::class)->open($company, $request->validate(BranchDesk::RULES));
 
         return back()->with('saved', __('system_admin::message.branch_created'));
     }

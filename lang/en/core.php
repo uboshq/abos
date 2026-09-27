@@ -967,6 +967,7 @@ return [
            server has nobody to call. */
         'no_access' => 'You do not have access to this company.',
         'branch_elsewhere' => 'That branch does not belong to your company.',
+        'branch_not_yours' => 'You are not allowed to work in this branch. Ask an administrator to add it to your list.',
         'financial_year' => 'Financial year',
     ],
 

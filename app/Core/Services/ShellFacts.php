@@ -6,6 +6,7 @@ namespace App\Core\Services;
 
 use App\Models\Branch;
 use App\Models\Company;
+use App\Models\UserDataScope;
 use Illuminate\Support\Collection;
 
 /**
@@ -65,8 +66,18 @@ final class ShellFacts
      */
     public function branches(): Collection
     {
+        /*
+         * ⛔ কেবল যে শাখায় মানুষটার প্রবেশাধিকার আছে — ২৭ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ শাখার অধিকার ঠিক হয় [[DataScope]] দিয়ে (`branch` ধরন); কোনো সারি
+         * না থাকলে সব শাখা। ⚠️ আগে এই তালিকা কোম্পানির **সব** সচল শাখা দেখাত —
+         * এক শাখায় বাঁধা কর্মীর সুইচারে অন্য শাখাগুলোও আসত, আর দরজাও আটকাত না।
+         */
+        $allowed = app(DataScope::class)->idsFor(auth()->user(), UserDataScope::BRANCH);
+
         return $this->branches ??= Branch::query()
             ->active()
+            ->when($allowed !== null, fn ($q) => $q->whereIn('id', $allowed))
             ->orderBy('name_en')
             ->get();
     }

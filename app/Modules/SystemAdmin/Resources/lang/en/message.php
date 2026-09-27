@@ -55,4 +55,12 @@ return [
 
     'confirm_deactivate_company' => 'Nobody will be able to enter this company. No data is deleted — you can switch it back on at any time.',
     'cannot_disable_last_company' => 'This is the only active company — switching it off would lock everyone out. Activate another company first.',
+    'branch_updated' => 'Branch updated.',
+    'branch_enabled' => 'Branch activated.',
+    'branch_disabled' => 'Branch deactivated. No documents were deleted.',
+    'cannot_disable_default_branch' => 'This is the default branch — new transactions land here. Make another branch the default first.',
+    'branch_search' => 'Search by code or name',
+    'no_branches' => 'No branches yet.',
+    'branch_note' => 'Branches cannot be deleted — only deactivated. Every old document stays intact.',
+    'all_companies' => 'All companies',
 ];

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Modules\SystemAdmin\Http\Controllers\BranchModuleController;
+use App\Modules\SystemAdmin\Http\Controllers\BranchController;
 use App\Modules\SystemAdmin\Http\Controllers\CompanyController;
 use App\Modules\SystemAdmin\Http\Controllers\ControlPanelController;
 use App\Modules\SystemAdmin\Http\Controllers\CustomFieldController;
@@ -307,6 +308,16 @@ Route::middleware('auth')->prefix('system')->group(function () {
      * বিল, চালান ও খতিয়ানের সারি। নিষ্ক্রিয় করা যায় (toggle), তাতে
      * সুইচার থেকে সরে যায় কিন্তু কাগজপত্র অক্ষত থাকে।
      */
+    /* ⓘ শাখার নিজের পাতা — মালিকের নির্দেশ, ২৭ সেপ্টেম্বর ২০২৬ ([[BranchController]]) */
+    Route::prefix('branches')->name('branch.')->group(function () {
+        Route::get('/', [BranchController::class, 'index'])->name('index');
+        Route::get('/create', [BranchController::class, 'create'])->name('create');
+        Route::post('/', [BranchController::class, 'store'])->name('store');
+        Route::get('/{branch}/edit', [BranchController::class, 'edit'])->whereNumber('branch')->name('edit');
+        Route::put('/{branch}', [BranchController::class, 'update'])->whereNumber('branch')->name('update');
+        Route::post('/{branch}/toggle', [BranchController::class, 'toggle'])->whereNumber('branch')->name('toggle');
+    });
+
     Route::prefix('companies')->name('company.')->group(function () {
         Route::get('/', [CompanyController::class, 'index'])->name('index');
         Route::get('/create', [CompanyController::class, 'create'])->name('create');

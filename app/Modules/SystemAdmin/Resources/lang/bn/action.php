@@ -9,4 +9,6 @@ return [
     'remove_logo' => 'লোগোটা তুলে দিন',
     'deactivate_company' => 'কোম্পানিটি নিষ্ক্রিয় করুন',
     'activate_company' => 'কোম্পানিটি সচল করুন',
+    'activate_branch' => 'শাখা সচল করুন',
+    'deactivate_branch' => 'শাখা নিষ্ক্রিয় করুন',
 ];

@@ -102,6 +102,13 @@ return [
              * থাকলে প্রশ্নটাই ওঠে না।
              */
             ['label' => 'system_admin::menu.companies', 'icon' => 'building', 'route' => 'system_admin.company.index', 'loose' => true, 'permission' => 'system_admin.company.manage'],
+            /*
+             * ⭐ শাখার নিজের সারি — মালিকের নির্দেশ, ২৭ সেপ্টেম্বর ২০২৬।
+             * ⓘ উপরের যুক্তি (শাখা কোম্পানির ভিতরের জিনিস) ঠিক ছিল, কিন্তু শাখা
+             * খোলার পথ তখন লুকানো থাকত; মালিক আলাদা মেনু চাইলেন। ⚠️ একই চাবি
+             * (`company.manage`) — নতুন চাবি লাইভের পুরনো ভূমিকায় পৌঁছাত না।
+             */
+            ['label' => 'system_admin::menu.branches', 'icon' => 'building', 'route' => 'system_admin.branch.index', 'loose' => true, 'permission' => 'system_admin.company.manage'],
             ['label' => 'system_admin::menu.users', 'icon' => 'people', 'route' => 'system_admin.user.index', 'loose' => true, 'permission' => 'system_admin.user.manage'],
             ['label' => 'system_admin::menu.roles', 'icon' => 'lock', 'route' => 'system_admin.role.index', 'loose' => true, 'permission' => 'system_admin.role.manage'],
             /*
