@@ -375,6 +375,15 @@ return [
         '--color-topbar-hover' => '#16213a',
         '--color-topbar-ink' => '#e6ecf5',
         '--color-topbar-ink-muted' => '#93a5bf',
+        /*
+         * ⭐ মেনু-বার গাঢ় মোডেও — মালিকের ছবি, ২৮ সেপ্টেম্বর ২০২৬: *"dark mode
+         * ei barer color tik korte hobe"*। ⛔ টোকেনটা কেবল হালকা সেটে ছিল, তাই
+         * গাঢ় মোডে বারটা হালকার `#c9c9c9`-ই থেকে যেত — কালো পাতার মাঝে একটা
+         * ধূসর পটি। ⓘ রংটা টপবারের এক ধাপ উপরে, যাতে দুই বার আলাদা দেখায়;
+         * ঘরগুলোর বেভেল এই ভিত্তি ধরেই বসে ([[modulebar-cell]])।
+         */
+        '--color-modulebar' => '#18233a',
+        '--color-modulebar-border' => '#26344f',
         '--color-topnav' => '#0c1422',
         '--color-topnav-border' => '#1e2a3d',
         '--color-topnav-hover' => '#16213a',
