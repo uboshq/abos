@@ -196,18 +196,6 @@ final class WithdrawalService
          * তোলা টাকা সত্যিই উত্তোলন, আর সেটা ব্যবহারকারীর বলার
          * কথা, কোডের আন্দাজের নয়।
          */
-        if ($withdrawal->kind === Withdrawal::PROFIT_SHARE) {
-            $left = $this->profits->outstandingFor((int) $withdrawal->person_id);
-
-            if (bccomp((string) $withdrawal->amount, $left, 4) > 0) {
-                throw ValidationException::withMessages([
-                    'amount' => __('finance::validation.more_than_declared', [
-                        'left' => Money::format($left),
-                    ]),
-                ]);
-            }
-        }
-
         $pending = $this->approvals->latestFor($withdrawal, 'withdrawal');
 
         /*
