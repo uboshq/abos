@@ -413,4 +413,5 @@ return [
     'money_received' => 'Money received',
     'carrier_phone' => 'Carrier mobile',
     'driver_phone' => 'Driver mobile',
+    'no_lot' => 'No lot',
 ];

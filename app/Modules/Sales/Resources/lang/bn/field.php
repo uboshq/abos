@@ -372,4 +372,5 @@ return [
     'money_received' => 'কোন কাগজে টাকা এল',
     'carrier_phone' => 'বাহকের মোবাইল',
     'driver_phone' => 'চালকের মোবাইল',
+    'no_lot' => 'লট নেই',
 ];

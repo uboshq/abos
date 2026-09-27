@@ -570,6 +570,7 @@
                                 class="{{ $btnBase }} bg-(--color-warning) text-(--color-warning-ink)
                                        hover:bg-(--color-warning-hover)">
                             {{ __('sales::action.transportation') }}
+                            <span x-show="transportAdded" x-cloak class="ms-1" x-text="transportSummary"></span>
                         </button>
                     @endif
 

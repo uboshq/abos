@@ -290,6 +290,8 @@ export default function directSale({
          * এই কোম্পানির আগের চালান আর গাড়ির মাস্টার ([[driverSuggestions()]])।
          */
         drivers: drivers ?? [],
+        transportCost: '',
+        transportAdded: false,
         driverName: '',
         driverPhone: '',
         depositMethods,
@@ -1001,6 +1003,18 @@ export default function directSale({
             if (! draft || ! pendingUrl) return;
 
             window.location.assign(pendingUrl + '?draft=' + encodeURIComponent(String(draft.id)));
+        },
+
+        /** পরিবহনের তথ্য নেওয়া — প্যানেল বন্ধ, বোতামে ছোট সারাংশ। */
+        addTransport() {
+            this.transportAdded = true;
+            this.panel = '';
+        },
+
+        get transportSummary() {
+            const fare = Number(this.transportCost) || 0;
+
+            return fare > 0 ? '✓ ৳' + this.money(fare) : '✓';
         },
 
         closeOpenDraftPopup() {

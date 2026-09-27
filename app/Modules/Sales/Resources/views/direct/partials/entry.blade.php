@@ -172,6 +172,21 @@
                                          ⛔ মালিক "লট বাছা বাধ্যতামূলক" বেছেছেন, আর
                                          তাতে ঝুঁকি ছিল তাড়াহুড়োয় উপরেরটাই বাছা হবে —
                                          ⭐ তাই উপরেরটাই যেন পুরনোটা হয়। --}}
+                                    {{-- ⭐ লট-ধরা নয় এমন পণ্যেও ঘরটা থাকে, নিভে — মালিকের নির্দেশ, ২৮
+                                         সেপ্টেম্বর ২০২৬: *"লট বাছার ঘর … eta ase ni laive nai"*। ⓘ ঘর না থাকলে
+                                         মনে হত বানানোই হয়নি; নিভে থাকা ঘর বলে দেয় এই পণ্যে লট ধরা হয় না। --}}
+                                    <template x-if="picked && ! needsLot">
+                                        <label class="shrink-0">
+                                            <span class="sr-only">{{ __('sales::field.lot') }}</span>
+                                            <select disabled
+                                                    class="h-(--spacing-field-dense) max-w-40 rounded-(--radius-field)
+                                                           border border-(--color-border) bg-(--color-surface-muted)
+                                                           px-2 text-xs text-(--color-ink-muted)">
+                                                <option>{{ __('sales::field.no_lot') }}</option>
+                                            </select>
+                                        </label>
+                                    </template>
+
                                     <template x-if="needsLot">
                                         <label class="shrink-0">
                                             <span class="sr-only">{{ __('sales::field.lot') }}</span>

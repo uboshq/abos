@@ -1629,3 +1629,20 @@ describe('খোলা খসড়ার পপ-আপ', () => {
         expect(c.openDraftPopup).toBe(false)
     })
 })
+
+/*
+ * ── পরিবহনের "কার্টে যোগ করুন" — মালিকের প্রশ্ন, ২৮ সেপ্টেম্বর ২০২৬ ─────────
+ */
+describe('পরিবহনের যোগ বোতাম', () => {
+    it('প্যানেল বন্ধ করে আর ভাড়াসহ সারাংশ দেখায়', () => {
+        const c = counter()
+
+        c.panel = 'transport'
+        c.transportCost = '500'
+        c.addTransport()
+
+        expect(c.panel).toBe('')
+        expect(c.transportAdded).toBe(true)
+        expect(c.transportSummary).toContain('500')
+    })
+})

@@ -87,6 +87,7 @@
         <label class="block">
             <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::field.transport_cost') }}</span>
             <input type="number" step="0.01" min="0" name="transport_cost" value="{{ old('transport_cost', $resume['fields']['transport_cost'] ?? '') }}"
+                   x-model="transportCost" x-init="seedDriver($el, 'transportCost')"
                    class="num h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                           bg-(--color-surface-card) px-2 text-end text-2xs">
         </label>
@@ -121,6 +122,16 @@
                    class="num h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                           bg-(--color-surface-card) px-2 text-2xs">
         </label>
+
+        {{-- ⭐ "কার্টে যোগ করুন" — মালিকের প্রশ্ন, ২৮ সেপ্টেম্বর ২০২৬: *"etar add botam koi? botam
+             cara add hobe kemone"*। ⓘ ঘরগুলো বিলের সাথেই যায় (নাম আছে), বোতামটা প্যানেল বন্ধ
+             করে আর ডানে একটা ছোট সারাংশ দেখায় — যাতে বোঝা যায় তথ্যটা নেওয়া হয়েছে। --}}
+        <div class="sm:col-span-3 flex justify-end">
+            <x-ui.button type="button" tone="primary" class="h-(--spacing-field-compact) px-6 text-2xs"
+                         @click="addTransport()">
+                {{ __('sales::action.add_to_cart') }}
+            </x-ui.button>
+        </div>
     </div>
 
     @endif
