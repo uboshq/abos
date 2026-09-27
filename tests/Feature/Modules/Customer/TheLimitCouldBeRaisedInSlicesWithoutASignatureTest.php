@@ -226,17 +226,29 @@ final class TheLimitCouldBeRaisedInSlicesWithoutASignatureTest extends TestCase
         $this->assertSame('40000.0000', (string) $this->customer->fresh()->credit_limit);
     }
 
-    public function test_a_company_with_no_flow_is_untouched(): void
+    public function test_a_company_with_no_flow_cannot_raise_without_a_signature(): void
     {
         /*
-         * ⛔ যে কোম্পানি অনুমোদনের ছক বসায়নি, তার কাজ আজ থেকে থেমে যেতে
-         * পারে না। ⓘ একটা সুবিধা যোগ করে অন্যের কাজ থামানোর চেয়ে খারাপ
-         * কিছু নেই।
+         * ⛔ দাবিটা উল্টেছে — অডিট §১.২, ২৭ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ আগে লেখা ছিল *"যে কোম্পানি ছক বসায়নি, তার কাজ থামবে না"* —
+         * অর্থাৎ ছক না থাকলে সীমা **সই ছাড়াই** বাড়ত। ⭐ মালিকের নিয়ম:
+         * সীমা পরম, টাকার প্রতিটা সিদ্ধান্তে মানুষের সই। তাই এখন থামে,
+         * আর বার্তা বলে কোথায় ছক বসাতে হবে।
+         *
+         * ⓘ পুরো পাহারা: [[TheSignatureWasForOneLakhAndFiftyWereSetTest]]।
          */
-        $this->service()->update($this->customer, ['credit_limit' => '99999']);
+        try {
+            $this->service()->update($this->customer, ['credit_limit' => '99999']);
+            $this->fail('ছক না থাকায় সীমা সই ছাড়াই বেড়ে গেছে।');
+        } catch (ValidationException $e) {
+            $this->assertSame(
+                [__('customer::validation.limit_needs_a_flow')],
+                $e->errors()['credit_limit'] ?? null,
+            );
+        }
 
-        $this->assertSame('99999.0000', (string) $this->customer->fresh()->credit_limit,
-            'ছক না থাকলেও সীমা বাড়ানো আটকে গেছে।');
+        $this->assertSame('0.0000', (string) $this->customer->fresh()->credit_limit);
     }
 
     public function test_a_flow_with_no_threshold_behaves_the_same(): void

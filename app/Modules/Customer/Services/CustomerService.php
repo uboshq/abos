@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\Modules\Customer\Services;
 
+use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Engines\Approval\DocumentApproval;
+use App\Core\Engines\Approval\DocumentFingerprint;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Services\DuplicateGuard;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
+use App\Models\Approval;
 use App\Models\IssuedNumber;
 use App\Modules\Accounts\Services\OpeningBalanceService;
 use App\Modules\Customer\Models\Customer;
@@ -38,6 +41,7 @@ final class CustomerService
      */
     public function create(array $data): Customer
     {
+        $this->assertBornWithoutALimit($data);
         $this->assertBanglaNameIfRequired($data);
         $this->assertNotADuplicate($data);
         $this->assertOnlyOneDistributorPerPoint($data);
@@ -169,17 +173,7 @@ final class CustomerService
         $after = (string) ($data['credit_limit'] ?? $before);
 
         if (bccomp($after, $before, 4) > 0) {
-            $this->approvals->assertClear(
-                document: $customer,
-                module: 'customer',
-                action: 'credit_limit',
-                field: 'credit_limit',
-                amount: null,
-                reason: __('customer::approval.limit_raised', [
-                    'from' => $before,
-                    'to' => $after,
-                ]),
-            );
+            $this->assertRaiseIsSigned($customer, $before, $after);
         }
 
         $customer->update($data);
@@ -217,6 +211,137 @@ final class CustomerService
     }
 
     /**
+     * ⭐ সীমা বাড়ানো যায় কেবল **ঠিক সেই অঙ্কে** যেটায় সই পড়েছে — অডিট §১.২, ২৭ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⛔ যে ফাঁকটা বন্ধ হলো ────────────────────────────────────────
+     * নতুন অঙ্কটা থাকত কেবল কারণের **লেখায়**, আর সইয়ের ছাপ নেওয়া হত
+     * **পুরনো** সীমার উপর। ⚠️ ১ লাখ → ২ লাখের সই পাওয়ার পর ৫০ লাখ লিখে
+     * সেভ করলে ছাপ মিলত — কাগজটা তখনো ১ লাখেই ছিল — আর ৫০ লাখ বসে যেত।
+     *
+     * ── ⭐ এখন প্রস্তাবিত সীমাটা দুই জায়গায় বাঁধা ─────────────────────
+     * ১. অনুরোধের `amount` ঘরে — [[Approval::covers()]] হুবহু সমান চায়,
+     *    তাই এক টাকা বেশি হলেও নতুন সই লাগে। ⓘ সইকারীর ক্ষমতার সীমাও
+     *    ([[AuthorityService]]) এখন এই অঙ্ক দিয়েই মাপা হয়।
+     * ২. ছাপের ভেতরে — প্রস্তাবটা কাগজের একটা তোলা সম্পর্ক হিসেবে যায়
+     *    ([[DocumentFingerprint]] তোলা সম্পর্কও ধরে), তাই "কোন সীমা থেকে
+     *    কোন সীমা" দুইটাই ছাপে বসে।
+     *
+     * ── ⚠️ ছকের সীমা (threshold) এখনো কিছু বাছাই করে না ───────────────
+     * 653f65c8-এর নিয়ম অটুট: ধরার প্রশ্নটা ইঞ্জিনকে `null` অঙ্কে করা হয়,
+     * তাই সীমার নিচের বাড়ানোও সই চায়। ⓘ অঙ্কটা অনুরোধ বসার পরেই তার
+     * সারিতে লেখা হয় — `request()`-কে অঙ্ক দিলে threshold আবার টুকরো
+     * করে পার হওয়ার দরজা খুলত।
+     *
+     * ── ⛔ ছক না থাকলে নীরবে পার নয় ─────────────────────────────────
+     * আগে ছক না বসানো কোম্পানিতে বাড়ানো এমনিই পার হত। ⭐ মালিকের নিয়ম:
+     * টাকার প্রতিটা সিদ্ধান্তে মানুষের সই — তাই এখন থামে, আর বার্তা বলে
+     * কোথায় ছক বসাতে হবে।
+     *
+     * ⓘ পাহারা: [[TheSignatureWasForOneLakhAndFiftyWereSetTest]]।
+     */
+    private function assertRaiseIsSigned(Customer $customer, string $before, string $after): void
+    {
+        // ⓘ "200000" আর "200000.00" একই প্রস্তাব — ছাপ যেন দুইটাকে আলাদা না ভাবে
+        $after = bcadd($after, '0', 4);
+
+        $paper = $this->withProposedLimit($customer, $after);
+        $hash = app(DocumentFingerprint::class)->of($paper);
+
+        $latest = app(ApprovalEngine::class)->latestFor($customer, 'credit_limit');
+
+        if ($latest?->status === Approval::APPROVED && $latest->stillCovers($after, $hash)) {
+            return;
+        }
+
+        $reason = __('customer::approval.limit_raised', ['from' => $before, 'to' => $after]);
+
+        $held = $this->approvals->stopping(
+            document: $paper,
+            module: 'customer',
+            action: 'credit_limit',
+            amount: null,
+            reason: $reason,
+        );
+
+        if ($held === null) {
+            throw ValidationException::withMessages([
+                'credit_limit' => __('customer::validation.limit_needs_a_flow'),
+            ]);
+        }
+
+        /*
+         * ⓘ অঙ্কটা বসে কেবল **এই প্রস্তাবের জন্যই বসা** অনুরোধে — ছাপ
+         * মিলিয়ে। ⚠️ আগে থেকে ঝুলে থাকা অন্য কোনো অনুরোধ (অন্য অঙ্কের)
+         * ফেরত এলে তার অঙ্ক বদলানো যায় না — সইকারী যা পড়েছেন সেটাই থাকে।
+         */
+        if ($held->status === Approval::PENDING
+            && $held->amount === null
+            && $held->state_hash !== null
+            && hash_equals((string) $held->state_hash, $hash)) {
+            $held->update(['amount' => $after]);
+        }
+
+        // ⓘ বার্তাটা (অপেক্ষায় · প্রত্যাখ্যাত) ইঞ্জিনের নিজের — একই অনুরোধটাই ফেরে
+        $this->approvals->assertClear(
+            document: $paper,
+            module: 'customer',
+            action: 'credit_limit',
+            field: 'credit_limit',
+            amount: null,
+            reason: $reason,
+        );
+
+        // ⛔ এখানে পৌঁছানো মানে কিছু একটা থামায়নি — তবু সই ছাড়া সীমা বসবে না
+        throw ValidationException::withMessages([
+            'credit_limit' => __('core.approval.awaiting'),
+        ]);
+    }
+
+    /**
+     * গ্রাহকের একটা কপি, যার সাথে প্রস্তাবিত সীমাটা তোলা সম্পর্ক হিসেবে লাগানো।
+     *
+     * ⚠️ `withoutRelations()` — হাতের মডেলে যা-ই তোলা থাকুক (পর্দা হয়তো
+     * `partyType` তুলেছে), ছাপ যেন কেবল সারি আর প্রস্তাবটাই ধরে; নাহলে
+     * একই প্রস্তাব দুই পর্দা থেকে দুই ছাপ পেত।
+     */
+    private function withProposedLimit(Customer $customer, string $after): Customer
+    {
+        $proposal = new Customer;
+        $proposal->setRawAttributes(['credit_limit' => $after]);
+
+        $paper = $customer->withoutRelations();
+        $paper->setRelation('proposed_credit_limit', $proposal);
+
+        return $paper;
+    }
+
+    /**
+     * ⛔ নতুন গ্রাহক শূন্য সীমায় জন্মায় — ফর্ম, ইমপোর্ট, লিড, তিন দরজাতেই।
+     *
+     * ⓘ সইয়ের অনুরোধ বসে একটা **আছে এমন** কাগজে; যে গ্রাহক এখনো তৈরিই হয়নি
+     * তাঁর জন্য অনুরোধ বসানো যায় না। ⚠️ আর তৈরি করে শূন্যে নামিয়ে দিয়ে
+     * "সফল" বললে ব্যবহারকারী ভাবতেন সীমা বসেছে — নীরব ভুল। ⭐ তাই সীমা
+     * দিলে তৈরি থামে, আর বার্তা বলে: আগে তৈরি, তারপর সম্পাদনা থেকে বাড়ানো
+     * (সেখানে সই চাওয়া হয়)।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function assertBornWithoutALimit(array $data): void
+    {
+        $limit = trim((string) ($data['credit_limit'] ?? ''));
+
+        if ($limit === '' || ! is_numeric($limit)) {
+            return;
+        }
+
+        if (bccomp($limit, '0', 4) > 0) {
+            throw ValidationException::withMessages([
+                'credit_limit' => __('customer::validation.limit_on_create'),
+            ]);
+        }
+    }
+
+    /**
      * বাংলা নাম বাধ্যতামূলক কি না — Control Panel থেকে (নিয়ম ৭)।
      *
      * ডিফল্টে নয়: বাধ্যতামূলক করলে ডাটা এন্ট্রি দ্বিগুণ ভারী হয়, আর
@@ -237,6 +362,7 @@ final class CustomerService
      */
     public function assertImportable(array $data): void
     {
+        $this->assertBornWithoutALimit($data);
         $this->assertBanglaNameIfRequired($data);
 
         /*

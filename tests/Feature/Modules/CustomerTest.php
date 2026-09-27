@@ -208,6 +208,14 @@ class CustomerTest extends TestCase
 
     public function test_a_zero_credit_limit_means_unlimited_not_blocked(): void
     {
+        /*
+         * ⚠️ অডিট §১.২, ২৭ সেপ্টেম্বর ২০২৬: `customer.zero_limit_blocks`-এর
+         * ডিফল্ট এখন **চালু** — শূন্য মানে বাকি নয়। ⓘ এই দাবিটা কেবল
+         * সুইচ **বন্ধ** করা কোম্পানির জন্য সত্যি, তাই সুইচটা এখানে স্পষ্ট
+         * করে বন্ধ করা হয়। ডিফল্টের দাবি: [[TheSignatureWasForOneLakhAndFiftyWereSetTest]]।
+         */
+        app(SettingsService::class)->set('customer.zero_limit_blocks', false);
+
         $customer = $this->make(['credit_limit' => 0]);
 
         $this->assertFalse($customer->wouldExceedCreditLimit('999999.0000'));
@@ -215,7 +223,12 @@ class CustomerTest extends TestCase
 
     public function test_a_real_credit_limit_is_enforced_on_the_total_not_the_bill(): void
     {
-        $customer = $this->make(['credit_limit' => '5000.0000']);
+        /*
+         * ⓘ অডিট §১.২: নতুন গ্রাহক শূন্য সীমায় জন্মায়, সীমা বসে সই নিয়ে।
+         * এখানে সীমাটা কেবল প্রস্তুতি (প্রশ্নটা মোট বনাম বিল), তাই সরাসরি বসানো।
+         */
+        $customer = $this->make();
+        $customer->forceFill(['credit_limit' => '5000.0000'])->save();
 
         $this->entry($customer, debit: '4000.0000');
 
@@ -332,7 +345,8 @@ class CustomerTest extends TestCase
                 'name_en' => 'Screen Store',
                 'name_bn' => 'স্ক্রিন স্টোর',
                 'phone' => '01711000000',
-                'credit_limit' => '2500.00',
+                // ⓘ অডিট §১.২: নতুন গ্রাহকের সীমা শূন্য — সীমা দিলে তৈরি থামে (নিচের দাবি)
+                'credit_limit' => '0',
                 'credit_days' => 15,
                 'opening_balance' => '0',
             ])
@@ -344,6 +358,28 @@ class CustomerTest extends TestCase
         $this->assertSame('Screen Store', $customer->name('en'));
         $this->assertSame(DocumentStatus::CONFIRMED, $customer->status);
         $this->assertSame($this->user->id, $customer->created_by);
+    }
+
+    /**
+     * ⛔ পর্দা থেকেও নতুন গ্রাহক সীমা নিয়ে জন্মায় না — অডিট §১.২, ২৭ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ সীমায় সই লাগে, আর সইয়ের অনুরোধ বসে কেবল আছে এমন গ্রাহকে — তাই
+     * তৈরি থামে, আর বার্তা বলে সম্পাদনা থেকে বাড়াতে।
+     */
+    public function test_the_screen_refuses_a_new_customer_with_a_limit(): void
+    {
+        $this->actingAs($this->user)
+            ->post(route('customer.store'), [
+                'name_en' => 'Born Rich Store',
+                'phone' => '01711000009',
+                'credit_limit' => '2500.00',
+                'credit_days' => 15,
+                'opening_balance' => '0',
+            ])
+            ->assertSessionHasErrors('credit_limit');
+
+        $this->assertFalse(Customer::query()->where('name_en', 'Born Rich Store')->exists(),
+            'পর্দা দিয়ে সীমাসহ গ্রাহক তৈরি হয়ে গেছে, কারো সই ছাড়া।');
     }
 
     public function test_the_opening_balance_cannot_be_changed_after_creation(): void

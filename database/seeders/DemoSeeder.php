@@ -616,9 +616,13 @@ class DemoSeeder extends Seeder
                 'phone' => $phone,
                 'address_en' => $addressEn,
                 'address_bn' => $addressBn,
-                'credit_limit' => $limit,
+                'credit_limit' => '0',
                 'credit_days' => $days,
             ]);
+
+            if (bccomp($limit, '0', 4) > 0) {
+                $customer->forceFill(['credit_limit' => $limit])->save();
+            }
         }
 
         /*

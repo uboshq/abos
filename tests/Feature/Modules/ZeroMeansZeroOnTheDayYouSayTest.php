@@ -205,6 +205,12 @@ class ZeroMeansZeroOnTheDayYouSayTest extends TestCase
      */
     public function test_with_the_switch_off_zero_still_means_no_limit(): void
     {
+        /*
+         * ⚠️ অডিট §১.২, ২৭ সেপ্টেম্বর ২০২৬: সুইচের ডিফল্ট এখন **চালু**।
+         * ⓘ এই দাবিটা বন্ধ সুইচের, তাই বন্ধটা এখানে স্পষ্ট করে টেপা হয়।
+         */
+        app(SettingsService::class)->set('customer.zero_limit_blocks', false);
+
         $this->actingAs(User::query()->where('email', 'sales@abos.test')->firstOrFail());
 
         $this->assertFalse($this->dealer->wouldExceedCreditLimit('100000'));
