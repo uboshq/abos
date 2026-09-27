@@ -49,4 +49,6 @@ return [
     'add_serials' => 'Add serial numbers',
     'issue_serials' => 'Issue pieces',
     'dispose' => 'Dispose of rejected goods',
+    'add_split_place' => '+ Another place',
+    'remove_split_place' => 'Remove',
 ];

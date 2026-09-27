@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { applyAll, BLOCK, deepest, optionsFor, RACK, SHELF } from './placement.js'
+import { applyAll, BLOCK, blankSplit, deepest, optionsFor, overBy, RACK, SHELF, stockPlacement } from './placement.js'
 
 /*
  * তাক বাছার নিয়মগুলো — ছোট, কিন্তু ভুল হলে কার্টনটা খুঁজে পাওয়া যায় না।
@@ -79,5 +79,44 @@ describe('applyAll', () => {
         applyAll(rows, { warehouse: '', block: 1, rack: '', shelf: '' })
 
         expect(rows.every((r) => r.block === 1)).toBe(true)
+    })
+})
+
+describe('এক পণ্য, একাধিক জায়গা', () => {
+    it('উপ-সারি যোগ ও মোছা যায়, প্রতিটার নিজের তাক', () => {
+        const c = stockPlacement({})
+        const row = { qty: '23', free: '0', splits: [] }
+
+        c.addSplit(row)
+        c.addSplit(row)
+        expect(row.splits).toHaveLength(2)
+        expect(row.splits[0]).toEqual(blankSplit())
+
+        row.splits[0].shelf = '9'
+        expect(deepest(row.splits[0])).toBe('9')
+
+        c.removeSplit(row, 0)
+        expect(row.splits).toHaveLength(1)
+    })
+
+    it('মোট বসেনি-র বেশি হলে ধরা পড়ে, সমান হলে নয়', () => {
+        const c = stockPlacement({})
+        const row = { qty: '10', free: '0', splits: [{ ...blankSplit(), qty: '13' }] }
+
+        expect(c.isOver(row, '23', '0')).toBe(false)
+
+        row.splits[0].qty = '14'
+        expect(overBy(row, '23', '0')).toEqual({ qty: 1, free: 0 })
+        expect(c.isOver(row, '23', '0')).toBe(true)
+    })
+
+    it('ফ্রি-ও আলাদা গোনা হয়', () => {
+        const row = { qty: '0', free: '2', splits: [{ ...blankSplit(), free: '2' }] }
+
+        expect(overBy(row, '0', '3')).toEqual({ qty: 0, free: 1 })
+    })
+
+    it('উপ-সারির ঘরের নাম মূল সারির সাথে বাঁধা', () => {
+        expect(stockPlacement({}).splitName(3, 1, 'qty')).toBe('lines[3_1][qty]')
     })
 })

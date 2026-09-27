@@ -168,4 +168,5 @@ return [
     'serial_numbers' => 'Serial numbers',
     'warranty' => 'Warranty',
     'track_serial' => 'Keep a number for every piece',
+    'another_place' => 'Another place',
 ];

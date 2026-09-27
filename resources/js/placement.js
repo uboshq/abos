@@ -80,6 +80,30 @@ export function applyAll(rows, all) {
 }
 
 /** Alpine কম্পোনেন্ট — উপরের বিশুদ্ধ ফাংশনগুলোর পাতলা মোড়ক। */
+/*
+ * ⭐ এক পণ্য, একাধিক জায়গা — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬: *"ekoi product
+ * ekadik jaygay boste pare"*। ⓘ মূল সারির নিচে উপ-সারি, প্রতিটার নিজের তাক আর
+ * পরিমাণ; সার্ভারে প্রতিটা আলাদা সারি হয়ে যায়।
+ */
+export function blankSplit() {
+    return { block: '', rack: '', shelf: '', qty: '', free: '' }
+}
+
+/** মূল সারি আর উপ-সারি মিলিয়ে কত বেশি — `{ qty, free }`, শূন্য মানে ঠিক আছে। */
+export function overBy(row, waiting, waitingFree) {
+    const sum = (key, first) => (row.splits ?? []).reduce(
+        (total, s) => total + (Number(s[key]) || 0),
+        Number(first) || 0,
+    )
+
+    const round = (n) => Math.round(n * 10000) / 10000
+
+    return {
+        qty: Math.max(0, round(sum('qty', row.qty) - (Number(waiting) || 0))),
+        free: Math.max(0, round(sum('free', row.free) - (Number(waitingFree) || 0))),
+    }
+}
+
 export function stockPlacement(places) {
     return {
         places,
@@ -147,6 +171,25 @@ export function stockPlacement(places) {
 
         applyToAll() {
             applyAll(this.rows, this.all)
+        },
+
+        addSplit(row) {
+            row.splits.push(blankSplit())
+        },
+
+        removeSplit(row, n) {
+            row.splits.splice(n, 1)
+        },
+
+        isOver(row, waiting, waitingFree) {
+            const over = overBy(row, waiting, waitingFree)
+
+            return over.qty > 0 || over.free > 0
+        },
+
+        /* ⓘ উপ-সারির ঘরের নাম — `lines[3_1][qty]`; সার্ভার `only`-তে `3` আর `3_…` দুইটাই নেয় */
+        splitName(i, n, field) {
+            return 'lines[' + i + '_' + n + '][' + field + ']'
         },
     }
 }

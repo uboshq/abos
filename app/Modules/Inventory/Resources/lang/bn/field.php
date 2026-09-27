@@ -196,4 +196,5 @@ return [
     'serial_numbers' => 'সিরিয়াল নম্বরগুলো',
     'warranty' => 'ওয়ারেন্টি',
     'track_serial' => 'প্রতিটা পিসের নম্বর রাখা হবে',
+    'another_place' => 'আরেক জায়গা',
 ];

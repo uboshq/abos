@@ -459,7 +459,11 @@ class StockPlacementController extends Controller implements HasMiddleware
          * আটকে থাকার দরকার নেই।
          */
         if (($data['only'] ?? null) !== null) {
-            $data['lines'] = array_intersect_key($data['lines'], [$data['only'] => true]);
+            // ⓘ সারিটা আর তার উপ-সারিগুলো (`3`, `3_0`, `3_1`…) — এক পণ্য, একাধিক জায়গা
+            $only = (string) $data['only'];
+            $data['lines'] = array_filter($data['lines'],
+                fn ($key) => (string) $key === $only || str_starts_with((string) $key, $only.'_'),
+                ARRAY_FILTER_USE_KEY);
         }
 
         $placed = 0;

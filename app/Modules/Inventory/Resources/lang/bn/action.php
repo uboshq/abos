@@ -49,4 +49,6 @@ return [
     'add_serials' => 'সিরিয়াল নম্বর বসান',
     'issue_serials' => 'পিস বের করুন',
     'dispose' => 'বাতিল মাল বিনাশ',
+    'add_split_place' => '+ আরেক জায়গা',
+    'remove_split_place' => 'মুছুন',
 ];

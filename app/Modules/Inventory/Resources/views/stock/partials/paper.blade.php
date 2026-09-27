@@ -96,7 +96,6 @@
                     </tr>
                 </thead>
 
-                <tbody>
                     @foreach ($paper['lines'] as $i => $line)
                         @php $name = "lines[{$i}]"; @endphp
 
@@ -107,9 +106,13 @@
                             কেবল **একই গুদামের** সারিতে বসে, নাহলে এক গুদামের
                             র‍্যাক অন্য গুদামের সারিতে বসে যেত।
                         --}}
-                        <tr class="border-t border-(--color-border)"
-                            x-data="{ w: {{ (int) $line['warehouse_id'] }}, block: '', rack: '', shelf: '' }"
-                            x-init="rows.push($data)">
+                        {{-- ⓘ প্রতিটা পণ্যের নিজের `<tbody>` — মূল সারি আর তার উপ-সারিগুলো এক অবস্থা
+                             ভাগ করে (`splits`), আর উপরের Set কেবল মূল সারিতে বসে। --}}
+                        <tbody x-data="{ w: {{ (int) $line['warehouse_id'] }}, block: '', rack: '', shelf: '',
+                                         qty: @js((string) $line['waiting']), free: @js((string) $line['waiting_free']),
+                                         splits: [] }"
+                               x-init="rows.push($data)">
+                        <tr class="border-t border-(--color-border)">
                             <td>
                                 {{ $line['product_code'] }} — {{ $line['product_name'] }}
                                 @if ($line['batch_no'])
@@ -192,7 +195,7 @@
                                     <input type="number" step="0.0001" min="0"
                                            max="{{ $line['waiting'] }}"
                                            name="{{ $name }}[qty]"
-                                           value="{{ $line['waiting'] }}"
+                                           value="{{ $line['waiting'] }}" x-model="qty"
                                            class="num h-(--spacing-field) w-28 rounded-(--radius-field)
                                                   border border-(--color-border)
                                                   bg-(--color-surface-card) px-2 text-end">
@@ -207,7 +210,7 @@
                                     <input type="number" step="0.0001" min="0"
                                            max="{{ $line['waiting_free'] }}"
                                            name="{{ $name }}[free_qty]"
-                                           value="{{ $line['waiting_free'] }}"
+                                           value="{{ $line['waiting_free'] }}" x-model="free"
                                            class="num h-(--spacing-field) w-28 rounded-(--radius-field)
                                                   border border-(--color-border)
                                                   bg-(--color-surface-card) px-2 text-end">
@@ -229,10 +232,133 @@
                                                hover:bg-(--color-surface-hover)">
                                     {{ __('inventory::action.place_row') }}
                                 </button>
+
+                                <button type="button" x-on:click="addSplit($data)"
+                                        class="inline-flex min-h-(--spacing-touch) items-center rounded-(--radius-field)
+                                               px-2 text-sm text-(--color-brand-500) hover:bg-(--color-surface-hover)">
+                                    {{ __('inventory::action.add_split_place') }}
+                                </button>
                             </td>
                         </tr>
+
+                        {{-- ⭐ এক পণ্য, একাধিক জায়গা — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬। ⓘ প্রতিটা
+                             উপ-সারি সার্ভারে আলাদা সারি (`lines[3_1]`), নিজের তাক ও পরিমাণসহ; মোট
+                             বসেনি-র বেশি হলে পাতাতেই সতর্কতা, আর সার্ভারও নেয় না ([[StockService::place()]])। --}}
+                        <template x-for="(s, n) in splits" :key="n">
+                            <tr class="border-t border-dashed border-(--color-border) bg-(--color-surface-muted)">
+                                <td class="ps-6 text-sm text-(--color-ink-muted)">
+                                    ↳ {{ __('inventory::field.another_place') }}
+                                        <input type="hidden" :name="splitName({{ $i }}, n, 'product_id')" value="{{ $line['product_id'] }}">
+                                        <input type="hidden" :name="splitName({{ $i }}, n, 'warehouse_id')" value="{{ $line['warehouse_id'] }}">
+                                        <input type="hidden" :name="splitName({{ $i }}, n, 'batch_id')" value="{{ $line['batch_id'] }}">
+                                        <input type="hidden" :name="splitName({{ $i }}, n, 'source_type')" value="{{ $line['source_type'] ?? $paper['source_type'] }}">
+                                        <input type="hidden" :name="splitName({{ $i }}, n, 'source_id')" value="{{ $paper['source_id'] }}">
+                                    @if (($line['free_source_type'] ?? null) !== null)
+                                        <input type="hidden" :name="splitName({{ $i }}, n, 'free_source_type')"
+                                               value="{{ $line['free_source_type'] }}">
+                                    @endif
+                                    <input type="hidden" :name="splitName({{ $i }}, n, 'storage_location_id')"
+                                           :value="deepest(s)">
+                                </td>
+
+                                <td>{{ $line['warehouse_name'] }}</td>
+
+                                    <td>
+                                        <template x-if="hasPlaces(w)">
+                                            <select x-model="s.block"
+                                                    x-on:change="rowChanged(s, 'block')"
+                                                    class="h-(--spacing-field-compact) w-32 rounded-(--radius-field)
+                                                           border border-(--color-border)
+                                                           bg-(--color-surface-card) px-2">
+                                                <option value="">—</option>
+                                                <template x-for="o in optionsFor(w, 1, null)" :key="o.id">
+                                                    <option :value="o.id" x-text="o.name"></option>
+                                                </template>
+                                            </select>
+                                        </template>
+                                        <template x-if="! hasPlaces(w)">
+                                            <span class="text-(--color-ink-muted)">—</span>
+                                        </template>
+                                    </td>
+                                    <td>
+                                        <template x-if="hasPlaces(w)">
+                                            <select x-model="s.rack"
+                                                    x-on:change="rowChanged(s, 'rack')"
+                                                    class="h-(--spacing-field-compact) w-32 rounded-(--radius-field)
+                                                           border border-(--color-border)
+                                                           bg-(--color-surface-card) px-2">
+                                                <option value="">—</option>
+                                                <template x-for="o in optionsFor(w, 2, s.block)" :key="o.id">
+                                                    <option :value="o.id" x-text="o.name"></option>
+                                                </template>
+                                            </select>
+                                        </template>
+                                        <template x-if="! hasPlaces(w)">
+                                            <span class="text-(--color-ink-muted)">—</span>
+                                        </template>
+                                    </td>
+                                    <td>
+                                        <template x-if="hasPlaces(w)">
+                                            <select x-model="s.shelf"
+                                                    x-on:change="rowChanged(s, 'shelf')"
+                                                    class="h-(--spacing-field-compact) w-32 rounded-(--radius-field)
+                                                           border border-(--color-border)
+                                                           bg-(--color-surface-card) px-2">
+                                                <option value="">—</option>
+                                                <template x-for="o in optionsFor(w, 3, s.rack)" :key="o.id">
+                                                    <option :value="o.id" x-text="o.name"></option>
+                                                </template>
+                                            </select>
+                                        </template>
+                                        <template x-if="! hasPlaces(w)">
+                                            <span class="text-(--color-ink-muted)">—</span>
+                                        </template>
+                                    </td>
+
+                                <td class="text-end">
+                                    @if (bccomp($line['waiting'], '0', 4) > 0)
+                                        <input type="number" step="0.0001" min="0" max="{{ $line['waiting'] }}"
+                                               :name="splitName({{ $i }}, n, 'qty')" x-model="s.qty"
+                                               class="num h-(--spacing-field) w-28 rounded-(--radius-field)
+                                                      border border-(--color-border)
+                                                      bg-(--color-surface-card) px-2 text-end">
+                                    @else
+                                        <span class="text-(--color-ink-muted)">—</span>
+                                    @endif
+                                </td>
+
+                                <td class="text-end">
+                                    @if (bccomp($line['waiting_free'], '0', 4) > 0)
+                                        <input type="number" step="0.0001" min="0" max="{{ $line['waiting_free'] }}"
+                                               :name="splitName({{ $i }}, n, 'free_qty')" x-model="s.free"
+                                               class="num h-(--spacing-field) w-28 rounded-(--radius-field)
+                                                      border border-(--color-border)
+                                                      bg-(--color-surface-card) px-2 text-end">
+                                    @else
+                                        <span class="text-(--color-ink-muted)">—</span>
+                                    @endif
+                                </td>
+
+                                <td class="text-end">
+                                    <button type="button" x-on:click="removeSplit($data, n)"
+                                            class="inline-flex min-h-(--spacing-touch) items-center rounded-(--radius-field)
+                                                   px-2 text-sm text-(--color-danger) hover:bg-(--color-surface-hover)">
+                                        {{ __('inventory::action.remove_split_place') }}
+                                    </button>
+                                </td>
+                            </tr>
+                        </template>
+
+                        <template x-if="isOver($data, '{{ $line['waiting'] }}', '{{ $line['waiting_free'] }}')">
+                            <tr>
+                                <td colspan="8" role="alert"
+                                    class="bg-(--color-badge-danger-bg) px-3 py-1.5 text-xs text-(--color-badge-danger-ink)">
+                                    {{ __('inventory::message.split_over') }}
+                                </td>
+                            </tr>
+                        </template>
+                        </tbody>
                     @endforeach
-                </tbody>
             </table>
         </div>
 

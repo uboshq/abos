@@ -195,6 +195,61 @@ final class OneBillArrivedAsTwoPapersToPutAwayTest extends TestCase
         $this->assertSame([], $this->papersOnScreen(), '⛔ সব বসানোর পরেও কাগজটা তালিকায় রয়ে গেছে।');
     }
 
+    /**
+     * ⭐ এক পণ্য, দুই জায়গা — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬। ⓘ উপ-সারি
+     * (`lines[0_0]`) "এই সারিটা বসাও"-তেও মূল সারির সাথে যায়, আর দুই চাপ মিলে
+     * কাগজটা শেষ হয়।
+     */
+    public function test_one_product_is_split_across_two_places_in_one_press(): void
+    {
+        $this->goodsArrived();
+
+        $line = $this->papersOnScreen()[0]['lines'][0];
+        $base = [
+            'product_id' => $line['product_id'],
+            'warehouse_id' => $line['warehouse_id'],
+            'batch_id' => $line['batch_id'],
+            'source_type' => $line['source_type'],
+            'free_source_type' => $line['free_source_type'],
+            'source_id' => $line['source_id'],
+        ];
+
+        $this->post(route('inventory.stock.placement.store'), [
+            'only' => '0',
+            'lines' => [
+                '0' => $base + ['qty' => '6', 'free_qty' => '2'],
+                '0_0' => $base + ['qty' => '4', 'free_qty' => '0'],
+            ],
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame([], $this->papersOnScreen(), '⛔ দুই জায়গায় সব বসানোর পরেও কাগজটা তালিকায়।');
+    }
+
+    /** ⛔ দুই জায়গা মিলিয়ে বেশি হলে সার্ভার নেয় না — আর কিছুই বসে না। */
+    public function test_splits_that_add_up_to_more_than_waiting_are_refused(): void
+    {
+        $this->goodsArrived();
+
+        $line = $this->papersOnScreen()[0]['lines'][0];
+        $base = [
+            'product_id' => $line['product_id'],
+            'warehouse_id' => $line['warehouse_id'],
+            'batch_id' => $line['batch_id'],
+            'source_type' => $line['source_type'],
+            'source_id' => $line['source_id'],
+        ];
+
+        $this->post(route('inventory.stock.placement.store'), [
+            'lines' => [
+                '0' => $base + ['qty' => '7'],
+                '0_0' => $base + ['qty' => '4'],
+            ],
+        ])->assertSessionHasErrors();
+
+        $this->assertSame(10.0, (float) $this->papersOnScreen()[0]['lines'][0]['waiting'],
+            '⛔ বেশি চাওয়া হলেও কিছু বসে গেছে — লেনদেন উল্টায়নি।');
+    }
+
     /** একই কাগজে দশটা টাকার মাল আর দুইটা ফ্রি — দুই উৎসে, যেভাবে ক্রয় লেখে। */
     private function goodsArrived(): void
     {
