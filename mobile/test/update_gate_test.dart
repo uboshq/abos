@@ -14,6 +14,11 @@ void main() {
     versionCode: 5,
     versionName: '0.5.0',
     url: 'https://erp.adi.com.bd/app/abos-arm64.apk',
+    // docs/Contract §৬ rule খ, 27 September 2026: a release is only ever
+    // published with both, and the app offers no download without them.
+    apkSha256:
+        '3f5a0c1d2e4b6a79880f1e2d3c4b5a69788796a5b4c3d2e1f00112233445c09e',
+    sizeBytes: 74213888,
     minimumCode: 3,
     noteBn: 'নতুন সংস্করণ এসেছে।',
     noteEn: 'A new version is available.',

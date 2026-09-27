@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Two cells by two: the owner's own instruction. minWidth and minHeight are
+  what launchers older than Android 12 size from (110dp is two cells by the
+  platform's own table), targetCell is what newer ones read.
+
+  It can still be made larger by hand. A home screen is somebody's own
+  arrangement, and three lines survive being given more room.
+
+  updatePeriodMillis is 30 minutes because that is the floor Android accepts;
+  anything smaller is silently rounded up. What actually keeps this current is
+  the app's own refresh, on the Dart side.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="110dp"
+    android:minHeight="110dp"
+    android:targetCellWidth="2"
+    android:targetCellHeight="2"
+    android:minResizeWidth="110dp"
+    android:minResizeHeight="110dp"
+    android:updatePeriodMillis="1800000"
+    android:initialLayout="@layout/approvals_widget"
+    android:previewLayout="@layout/approvals_widget"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen"
+    android:description="@string/approvals_widget_description" />

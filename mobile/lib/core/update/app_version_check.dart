@@ -26,6 +26,8 @@ class AppRelease {
     required this.versionCode,
     this.versionName,
     this.url,
+    this.apkSha256,
+    this.sizeBytes,
     this.minimumCode = 0,
     this.noteBn,
     this.noteEn,
@@ -43,6 +45,35 @@ class AppRelease {
   final String? versionName;
   final String? url;
 
+  /// SHA-256 of the APK at [url], 64 lowercase hex characters. What the
+  /// downloaded file is checked against before it is ever offered to the
+  /// installer: docs/Contract section 6, rule kha.
+  final String? apkSha256;
+
+  /// The APK's exact byte count. Checked first because it is cheap: a
+  /// truncated download shows in its length long before its digest has been
+  /// computed. Also what the free-space check measures against.
+  final int? sizeBytes;
+
+  /// Whether this release can be installed from inside the app at all.
+  ///
+  /// <p>All three, or none: an https address, a well-formed hash and a real
+  /// size. The server refuses to publish a release missing any of them
+  /// (`503 {configured:false}`), so this is the second lock. A release that
+  /// fails it is still announced; it just offers no button, because a
+  /// download that cannot be verified must not be started.
+  bool get installable {
+    final address = url;
+    final hash = apkSha256?.trim() ?? '';
+    final size = sizeBytes ?? 0;
+    return address != null &&
+        Uri.tryParse(address)?.scheme == 'https' &&
+        _sha256Shape.hasMatch(hash) &&
+        size > 0;
+  }
+
+  static final RegExp _sha256Shape = RegExp(r'^[0-9a-fA-F]{64}$');
+
   /// Below this, the build must not be used at all.
   final int minimumCode;
 
@@ -59,6 +90,10 @@ class AppRelease {
       versionCode: (json['versionCode'] as num?)?.toInt() ?? 0,
       versionName: json['versionName'] as String?,
       url: json['url'] as String?,
+      apkSha256: json['apkSha256'] as String?,
+      // A number on the wire, like versionCode and for the same reason: it
+      // is compared, and "9" > "10" as text.
+      sizeBytes: (json['sizeBytes'] as num?)?.toInt(),
       minimumCode: (json['minimumCode'] as num?)?.toInt() ?? 0,
       noteBn: note is Map ? note['bn'] as String? : null,
       noteEn: note is Map ? note['en'] as String? : null,

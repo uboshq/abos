@@ -21,3 +21,34 @@ String banglaGreeting(DateTime when) {
   if (hour < 20) return 'শুভ সন্ধ্যা';
   return 'শুভ রাত্রি';
 }
+
+/// রাত · ভোর · সকাল · দুপুর · বিকাল · সন্ধ্যা — the label that goes in front
+/// of a clock time.
+///
+/// <p>Six, not three. Bangla names these parts and a depot says them; three
+/// would collapse everything before noon into "সকাল", which is how two in the
+/// morning becomes morning on a widget that is refreshed all night.
+String banglaDayPart(DateTime when) {
+  final hour = when.hour;
+  if (hour < 4) return 'রাত';
+  if (hour < 6) return 'ভোর';
+  if (hour < 12) return 'সকাল';
+  if (hour < 15) return 'দুপুর';
+  if (hour < 18) return 'বিকাল';
+  if (hour < 20) return 'সন্ধ্যা';
+  return 'রাত';
+}
+
+/// "সকাল 4:12" — a twelve-hour clock time with its part of day in front.
+///
+/// <p>The part of day is said once, here. A caller that also put
+/// [banglaDayPart] in front would print "রাত রাত 12:30".
+///
+/// <p>Digits as the rest of this app writes them. A widget that counted in
+/// one script beside an app that counts in another would be the same number
+/// read two ways.
+String banglaClock(DateTime when) {
+  final hour = when.hour % 12 == 0 ? 12 : when.hour % 12;
+  final minute = when.minute.toString().padLeft(2, '0');
+  return '${banglaDayPart(when)} $hour:$minute';
+}
