@@ -3,7 +3,8 @@
 declare(strict_types=1);
 
 return [
-    'orders' => 'Sales Orders',
+    // Owner, 28 Sep 2026: today's sales order is called a Delivery Order
+    'orders' => 'Delivery Orders',
     'order_track' => 'Order Tracking',
     'receipts' => 'Goods Received',
     'bills' => 'Purchase Bills',
