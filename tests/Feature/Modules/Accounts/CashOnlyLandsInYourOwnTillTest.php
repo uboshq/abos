@@ -237,6 +237,30 @@ final class CashOnlyLandsInYourOwnTillTest extends TestCase
      * মিথ্যা কি না। ⓘ প্রথমে `is_postable` লিখে থেমেছি — স্কোপের নাম
      * আর কলামের নাম এক ধরে নেওয়া।
      */
+    /**
+     * ⭐ কাউন্টারের খাত-তালিকায় অন্যের নগদ বাক্স নেই — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর
+     * ২০২৬: *"ekjoner cash account e r ekjon taka nite parbe na r ta onno joner idte
+     * show korbe na"*। ⓘ সরাসরি বিক্রয় আর সরাসরি ক্রয় — দুই কাউন্টারই।
+     */
+    public function test_the_counters_list_my_till_and_not_somebody_elses(): void
+    {
+        $mine = $this->cashAccount('1191');
+        $theirs = $this->cashAccount('1192');
+        $other = User::factory()->create(['current_company_id' => $this->company->id]);
+
+        $this->till($mine, $this->user->id);
+        $this->till($theirs, $other->id);
+
+        $sale = collect($this->get(route('sales.direct.create'))->assertOk()->viewData('moneyAccounts'))->pluck('id');
+        $this->assertTrue($sale->contains((string) $mine->id), 'প্রস্তুতিটাই ভুল — নিজের বাক্স বিক্রয়ের তালিকায় নেই।');
+        $this->assertFalse($sale->contains((string) $theirs->id), '⛔ অন্যের নগদ বাক্স বিক্রয়ের তালিকায়।');
+
+        $buy = collect($this->get(route('purchase.direct.create'))->assertOk()->viewData('moneyAccounts'))
+            ->map(fn ($a) => (string) (is_array($a) ? $a['id'] : $a->id));
+        $this->assertTrue($buy->contains((string) $mine->id), 'প্রস্তুতিটাই ভুল — নিজের বাক্স ক্রয়ের তালিকায় নেই।');
+        $this->assertFalse($buy->contains((string) $theirs->id), '⛔ অন্যের নগদ বাক্স ক্রয়ের তালিকায়।');
+    }
+
     private function cashAccount(string $code): Account
     {
         $sibling = Account::query()

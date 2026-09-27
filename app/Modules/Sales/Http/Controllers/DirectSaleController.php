@@ -14,6 +14,7 @@ use App\Core\Support\Money;
 use App\Http\Controllers\Controller;
 use App\Models\NumberSeries;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Batch;
@@ -253,7 +254,14 @@ class DirectSaleController extends Controller implements HasMiddleware
                     ->whereIn('code', StandardChart::MONEY_PARENTS)->select('id'))
                 ->orderBy('code')
                 ->with('parent:id,code')
-                ->get(['id', 'parent_id', 'code', 'name_en', 'name_bn'])
+                ->get(['id', 'parent_id', 'code', 'name_en', 'name_bn', 'money_kind'])
+                /*
+                 * ⛔ অন্যের নগদ বাক্স তালিকায় নয় — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬: *"ekjoner
+                 * cash account e r ekjon taka nite parbe na r ta onno joner idte show korbe na"*।
+                 * ⓘ রসিদ ভাউচারের একই নিয়ম ([[CashTill::mayUse()]], [[DepositFormOptions]]); পোস্টের
+                 * সময় সার্ভারও আটকায় ([[VoucherService::assertCashLandsInOwnTill()]])।
+                 */
+                ->filter(fn (Account $a) => ! $a->isCash() || CashTill::mayUse(auth()->id(), (int) $a->id))
                 ->map(fn (Account $a): array => [
                     'id' => (string) $a->id,
                     'label' => $a->code.' · '.$a->name(),
