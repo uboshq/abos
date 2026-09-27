@@ -157,6 +157,51 @@ final class TheBranchHadNoMenuAndTheSwitcherHadNoBranchTest extends TestCase
         $this->assertFalse($other->fresh()->is_active);
     }
 
+    /** ⭐ অব্যবহৃত শাখা মুছে যায় (soft delete), আর তালিকা থেকে সরে যায়। */
+    public function test_an_unused_branch_can_be_deleted(): void
+    {
+        $this->openBranch($this->alpha, 'GONE');
+        $branch = $this->branchesOf($this->alpha)->where('code', 'GONE')->firstOrFail();
+
+        $this->actingAs($this->owner)->from(route('system_admin.branch.index'))
+            ->delete(route('system_admin.branch.destroy', $branch->id))
+            ->assertSessionHasNoErrors();
+
+        /* ⚠️ withoutGlobalScopes() soft-delete-এর ছাঁকনিও সরায় — তাই সরাসরি `trashed()` মাপা */
+        $row = Branch::query()->withoutGlobalScopes()->find($branch->id);
+        $this->assertNotNull($row, 'শাখাটা একেবারে মুছে গেছে — soft delete হওয়ার কথা।');
+        $this->assertTrue($row->trashed(), 'অব্যবহৃত শাখা মোছেনি।');
+
+        $this->actingAs($this->owner)->get(route('system_admin.branch.index'))->assertDontSee('>GONE<', false);
+    }
+
+    /**
+     * ⛔ ব্যবহৃত শাখা মোছা যায় না — "নিষ্ক্রিয় করুন" বার্তা।
+     *
+     * ⚠️ বিপজ্জনক ইনপুট: একজন ব্যবহারকারী ঐ শাখায় বসে আছেন (`current_branch_id`)।
+     * ⓘ ডিফল্ট শাখা আর কোম্পানির শেষ শাখাও মোছা যায় না।
+     */
+    public function test_a_used_default_or_last_branch_cannot_be_deleted(): void
+    {
+        $this->openBranch($this->alpha, 'BUSY');
+        $busy = $this->branchesOf($this->alpha)->where('code', 'BUSY')->firstOrFail();
+
+        $clerk = User::factory()->create(['is_active' => true]);
+        $clerk->companies()->attach($this->alpha->id, ['is_active' => true]);
+        $clerk->forceFill(['current_company_id' => $this->alpha->id, 'current_branch_id' => $busy->id])->save();
+
+        $this->actingAs($this->owner)->from(route('system_admin.branch.index'))
+            ->delete(route('system_admin.branch.destroy', $busy->id))
+            ->assertSessionHasErrors('branch');
+        $this->assertNotNull($busy->fresh(), 'ব্যবহৃত শাখা মুছে গেছে।');
+
+        $default = $this->branchesOf($this->alpha)->where('is_default', true)->firstOrFail();
+        $this->actingAs($this->owner)->from(route('system_admin.branch.index'))
+            ->delete(route('system_admin.branch.destroy', $default->id))
+            ->assertSessionHasErrors('branch');
+        $this->assertNotNull($default->fresh());
+    }
+
     /** ⭐ সম্পাদনায় নাম বদলায়, আর কোড নিয়মে বড় হাতের হয়। */
     public function test_a_branch_can_be_renamed(): void
     {

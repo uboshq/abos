@@ -52,6 +52,7 @@ final class BranchController extends Controller implements HasMiddleware
         $rows = Branch::query()
             /* ⓘ সব কোম্পানির শাখা একসাথে — তাই গ্লোবাল স্কোপ সরিয়ে, নিজের কোম্পানিগুলো দিয়ে বাঁধা */
             ->withoutGlobalScopes()
+            ->whereNull('deleted_at') // ⚠️ withoutGlobalScopes() soft-delete-এর ছাঁকনিও সরায়
             ->with(['company' => fn ($c) => $c->withoutGlobalScopes()])
             ->whereIn('company_id', $mine)
             ->when($companyId > 0, fn ($b) => $b->where('company_id', $companyId))
@@ -128,6 +129,14 @@ final class BranchController extends Controller implements HasMiddleware
             : __('system_admin::message.branch_disabled'));
     }
 
+    /** ⭐ মুছে ফেলা — নিয়ম [[BranchDesk::remove()]]-এ; ব্যবহৃত শাখা হলে "নিষ্ক্রিয় করুন" বার্তা */
+    public function destroy(Request $request, int $branch): RedirectResponse
+    {
+        $this->desk->remove($this->yourBranch($request, $branch));
+
+        return back()->with('saved', __('system_admin::message.branch_deleted'));
+    }
+
     /**
      * ⛔ শাখাটা আপনার কোনো কোম্পানির — নাহলে ৪০৪, ৪০৩ নয়।
      *
@@ -135,7 +144,7 @@ final class BranchController extends Controller implements HasMiddleware
      */
     private function yourBranch(Request $request, int $id): Branch
     {
-        $branch = Branch::query()->withoutGlobalScopes()->findOrFail($id);
+        $branch = Branch::query()->withoutGlobalScopes()->whereNull('deleted_at')->findOrFail($id);
 
         abort_unless($request->user()?->canAccessCompany((int) $branch->company_id), 404);
 

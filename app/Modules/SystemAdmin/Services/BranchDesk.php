@@ -7,6 +7,9 @@ namespace App\Modules\SystemAdmin\Services;
 use App\Core\Support\CompanyContext;
 use App\Models\Branch;
 use App\Models\Company;
+use App\Models\UserDataScope;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -103,6 +106,100 @@ final class BranchDesk
         $branch->save();
 
         return $branch;
+    }
+
+    /**
+     * ⭐ মুছে ফেলা — কেবল যে শাখা কোথাও ব্যবহৃত নয় (মালিকের নিয়ম, ২৭ সেপ্টেম্বর ২০২৬)।
+     *
+     * ⛔ মোছা যায় না: ডিফল্ট শাখা; কোম্পানির শেষ শাখা; আর যে শাখা কোনো কাগজ,
+     * খাতা, মজুদ বা ব্যবহারকারীর সাথে যুক্ত — তখন বার্তা বলে "নিষ্ক্রিয় করুন"।
+     * ⓘ মোছা মানে soft delete ([[Branch]]-এ `SoftDeletes`) — সারিটা থাকে।
+     */
+    public function remove(Branch $branch): void
+    {
+        if ($branch->is_default) {
+            throw ValidationException::withMessages([
+                'branch' => __('system_admin::message.cannot_delete_default_branch'),
+            ]);
+        }
+
+        $siblings = Branch::query()->withoutGlobalScopes()
+            ->whereNull('deleted_at') // ⚠️ মুছে ফেলা শাখা গোনায় নয়
+            ->where('company_id', $branch->company_id)
+            ->count();
+
+        if ($siblings <= 1) {
+            throw ValidationException::withMessages([
+                'branch' => __('system_admin::message.cannot_delete_last_branch'),
+            ]);
+        }
+
+        $usedIn = $this->whereUsed($branch);
+
+        if ($usedIn !== null) {
+            throw ValidationException::withMessages([
+                'branch' => __('system_admin::message.branch_in_use', ['where' => $usedIn]),
+            ]);
+        }
+
+        $branch->delete();
+    }
+
+    /**
+     * ⭐ শাখাটা কোথায় ব্যবহৃত — প্রথম যে টেবিলে পাওয়া যায় তার নাম, নয়তো `null`।
+     *
+     * ── ⚠️ কেন হাতে লেখা তালিকা নয় ──────────────────────────────────
+     * ⓘ ডাটাবেজের প্রতিটা টেবিলের যে ঘরের নাম `branch_id`-এ শেষ হয়
+     * (`branch_id`, `current_branch_id`, `default_branch_id`, `from_branch_id`…)
+     * সেখানে খোঁজা হয়। ⛔ হাতে লেখা তালিকা একদিন নতুন মডিউলের টেবিল বাদ দিত,
+     * আর ব্যবহৃত শাখা নীরবে মুছে যেত — তার কাগজগুলো অনাথ হয়ে।
+     *
+     * ⓘ ব্যবহারকারীর শাখা-সীমা (`user_data_scopes`, ধরন `branch`) আলাদা করে দেখা
+     * হয়, কারণ সেখানে ঘরের নাম `scope_id`।
+     */
+    public function whereUsed(Branch $branch): ?string
+    {
+        foreach (Schema::getTables() as $table) {
+            $name = (string) ($table['name'] ?? '');
+
+            if ($name === '' || $name === 'branches') {
+                continue;
+            }
+
+            $columns = Schema::getColumnListing($name);
+            $refs = array_values(array_filter($columns, fn (string $c) => str_ends_with($c, 'branch_id')));
+
+            if ($refs === []) {
+                continue;
+            }
+
+            $hasCompany = in_array('company_id', $columns, true);
+
+            /*
+             * ⓘ কোম্পানির ছাঁকনি যেখানে ঘরটা আছে — শাখার id গোটা ডাটাবেজে অনন্য,
+             * তবু এক কোম্পানির প্রশ্ন আরেক কোম্পানির সারি ছোঁয় না।
+             */
+            $used = DB::table($name)
+                ->when($hasCompany, fn ($q) => $q->where('company_id', $branch->company_id))
+                ->where(function ($q) use ($refs, $branch) {
+                    foreach ($refs as $column) {
+                        $q->orWhere($column, $branch->id);
+                    }
+                })
+                ->exists();
+
+            if ($used) {
+                return $name;
+            }
+        }
+
+        $scoped = UserDataScope::query()->withoutGlobalScopes()
+            ->where('company_id', $branch->company_id)
+            ->where('scope_type', UserDataScope::BRANCH)
+            ->where('scope_id', $branch->id)
+            ->exists();
+
+        return $scoped ? 'user_data_scopes' : null;
     }
 
     private function assertCodeFree(string $code): void

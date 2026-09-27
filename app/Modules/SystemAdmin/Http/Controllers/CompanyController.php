@@ -92,7 +92,7 @@ class CompanyController extends Controller implements HasMiddleware
                  * একই প্রশ্ন, একই উত্তর)।
                  */
                 ->whereIn('id', $request->user()?->companies()->pluck('companies.id') ?? [])
-                ->withCount(['branches' => fn ($q) => $q->withoutGlobalScopes()])
+                ->withCount(['branches' => fn ($q) => $q->withoutGlobalScopes()->whereNull('deleted_at')])
 
                 /*
                  * টুলবারের খোঁজা — কোড বা নাম (ইংরেজি ও বাংলা দুইটাই),

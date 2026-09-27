@@ -316,6 +316,7 @@ Route::middleware('auth')->prefix('system')->group(function () {
         Route::get('/{branch}/edit', [BranchController::class, 'edit'])->whereNumber('branch')->name('edit');
         Route::put('/{branch}', [BranchController::class, 'update'])->whereNumber('branch')->name('update');
         Route::post('/{branch}/toggle', [BranchController::class, 'toggle'])->whereNumber('branch')->name('toggle');
+        Route::delete('/{branch}', [BranchController::class, 'destroy'])->whereNumber('branch')->name('destroy');
     });
 
     Route::prefix('companies')->name('company.')->group(function () {

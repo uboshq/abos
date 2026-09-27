@@ -63,4 +63,8 @@ return [
     'no_branches' => 'No branches yet.',
     'branch_note' => 'Branches cannot be deleted — only deactivated. Every old document stays intact.',
     'all_companies' => 'All companies',
+    'branch_deleted' => 'Branch deleted.',
+    'cannot_delete_default_branch' => 'This is the default branch — it cannot be deleted. Make another branch the default first.',
+    'cannot_delete_last_branch' => 'This is the only branch of the company — it cannot be deleted. Without a branch no transaction knows where it belongs.',
+    'branch_in_use' => 'This branch has documents, ledger rows, stock or users attached (:where) — it cannot be deleted. Deactivate it instead; old documents stay intact.',
 ];
