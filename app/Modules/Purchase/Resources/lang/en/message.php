@@ -31,6 +31,7 @@ return [
     'bill_cancelled' => 'Bill cancelled.',
     'cancel_reason_prompt' => 'Why is this being cancelled?',
     'bill_reposted' => 'The bill was changed - the old entries were reversed and the new ones posted.',
+    'bill_edit_reposts' => 'This bill is already confirmed. Saving will reverse its old ledger entries and stock, and post new ones from what you save here.',
     'edited_after_posting' => ':no was edited - the earlier entries are reversed.',
     'no_orders' => 'No purchase orders yet.',
     'no_receipts' => 'Nothing received yet.',

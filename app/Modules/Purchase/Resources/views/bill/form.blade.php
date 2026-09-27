@@ -150,6 +150,22 @@
                 {{ $why }}
             </div>
         @endisset
+
+        {{--
+            নিশ্চিত বিল সম্পাদনা — মালিকের সিদ্ধান্ত, ২৭ সেপ্টেম্বর ২০২৬।
+
+            super admin নিশ্চিত বিলও বদলাতে পারেন, আর জমা দিলে পুরনো
+            দাখিলা ও মাল উল্টে নতুনটা বসে। খসড়ার ফর্ম দেখতে হুবহু এক,
+            তাই জমা দেওয়ার আগেই কথাটা বলে রাখা। খসড়ায় বার্তা নেই —
+            সেখানে খাতায় কিছুই বসেনি।
+        --}}
+        @if (! $isNew && in_array($bill->status, \App\Core\Support\DocumentStatus::POSTED, true))
+            <div role="status"
+                 class="rounded-(--radius-field) bg-(--color-badge-warning-bg) px-3 py-2 text-sm
+                        text-(--color-badge-warning-ink)">
+                {{ __('purchase::message.bill_edit_reposts') }}
+            </div>
+        @endif
         @if ($errors->any())
             <div role="alert"
                  class="rounded-(--radius-field) bg-(--color-badge-danger-bg) px-3 py-2 text-sm
