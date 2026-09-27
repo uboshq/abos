@@ -78,9 +78,10 @@ final class DepositClaimService
      */
     public function accept(DepositClaim $claim, int $accountId, array $overrides = []): DepositClaim
     {
-        $this->assertPending($claim);
-
         return DB::transaction(function () use ($claim, $accountId, $overrides) {
+            // ⛔ অডিট §১.৪ — সারি আটকে আবার পড়া; দেখুন lockPending()
+            $this->lockPending($claim);
+
             /*
              * ডিপো অঙ্ক ও তারিখ সংশোধন করতে পারে।
              *
@@ -125,22 +126,25 @@ final class DepositClaimService
      */
     public function reject(DepositClaim $claim, string $reason): DepositClaim
     {
-        $this->assertPending($claim);
-
         if (trim($reason) === '') {
             throw ValidationException::withMessages([
                 'decision_reason' => __('sales::portal.reason_required'),
             ]);
         }
 
-        $claim->update([
-            'status' => DepositClaim::REJECTED,
-            'decision_reason' => $reason,
-            'decided_by' => auth()->id(),
-            'decided_at' => now(),
-        ]);
+        return DB::transaction(function () use ($claim, $reason) {
+            // ⛔ গ্রহণের সাথে একই তালা — নইলে গৃহীত দাবি পুরনো পাতা থেকে "নাকচ" হত
+            $this->lockPending($claim);
 
-        return $claim->refresh();
+            $claim->update([
+                'status' => DepositClaim::REJECTED,
+                'decision_reason' => $reason,
+                'decided_by' => auth()->id(),
+                'decided_at' => now(),
+            ]);
+
+            return $claim->refresh();
+        });
     }
 
     /**
@@ -156,6 +160,32 @@ final class DepositClaimService
             ->orderByDesc('claimed_on')
             ->orderByDesc('id')
             ->get();
+    }
+
+    /**
+     * দাবির সারিটা আটকে **ডাটাবেজ থেকে আবার পড়া**, তারপর অপেক্ষমাণ কি না দেখা।
+     *
+     * ── ⛔ অডিট §১.৪, ২৭ সেপ্টেম্বর ২০২৬ ─────────────────────────────
+     * আগে অবস্থাটা দেখা হত লেনদেনের বাইরে, হাতে থাকা মডেল থেকে। ⚠️ দুইবার
+     * ক্লিক করলে দুইটা অনুরোধই দাবিটা "অপেক্ষমাণ" পড়ত, আর প্রতিটা একটা
+     * **নতুন** আদায় বানাত — পোস্টিং ইঞ্জিনের "এক কাগজ একবার" পাহারা তাই
+     * ধরত না। ৳২,৫০,০০০-এর দাবিতে বকেয়া কমত ৳৫,০০,০০০।
+     *
+     * ⭐ এখন `lockForUpdate()` দ্বিতীয় অনুরোধকে প্রথমটার লেনদেন শেষ হওয়া
+     * পর্যন্ত দাঁড় করায়, আর সে পড়ে প্রথমটার ফল — "সিদ্ধান্ত হয়ে গেছে"।
+     * ⓘ হাতের মডেলটাও তাজা সারিতে বদলে দেওয়া হয়, যাতে বাকি কাজ পুরনো
+     * ছবির উপর না চলে। অবশ্যই `DB::transaction`-এর ভিতরে ডাকতে হবে।
+     */
+    private function lockPending(DepositClaim $claim): void
+    {
+        $fresh = DepositClaim::query()
+            ->whereKey($claim->getKey())
+            ->lockForUpdate()
+            ->firstOrFail();
+
+        $claim->setRawAttributes($fresh->getAttributes(), true);
+
+        $this->assertPending($claim);
     }
 
     private function assertPending(DepositClaim $claim): void
